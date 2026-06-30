@@ -19,7 +19,7 @@ from app.models import ChangeSeverity, SegmentWeatherData, WeatherChange
 from formatters.trip_report import TripReportFormatter
 from outputs.email import EmailOutput
 from services.weather_change_detection import WeatherChangeDetectionService
-from utils.timezone import tz_for_coords
+from utils.timezone import local_fmt, tz_for_coords
 
 if TYPE_CHECKING:
     from app.trip import Trip
@@ -871,16 +871,19 @@ class TripAlertService:
             weather[0].segment.start_point.lon,
         )
 
-        # Issue #816 (D): Knapper Abweichungs-Alert (kein volles Briefing).
-        from output.renderers.email.alert_compact import render_deviation_alert
-        html, plain = render_deviation_alert(
-            changes=changes,
-            segments=weather,
-            trip_name=trip.name,
-            tz=alert_tz,
-            stage_label=stage_name,
+        # Issue #917 (Slice 2): kanonischer Alert-Renderer (dynamischer Betreff).
+        from output.renderers.alert.project import to_alert_message
+        from output.renderers.alert.render import (
+            render_email, render_subject, render_telegram,
         )
-        subject = f"[{trip.name}] Wetter ändert sich seit dem Briefing"
+
+        stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
+        msg = to_alert_message(
+            changes, weather, trip.name, tz=alert_tz, stand_at=stand_at,
+        )
+        subject = render_subject(msg)
+        html, plain = render_email(msg)
+        telegram_body = render_telegram(msg)
 
         # Issue #638: Effective channels — per-alert override beats briefing channels.
         effective_channels = self._effective_alert_channels(trip)
@@ -909,7 +912,7 @@ class TripAlertService:
                 from outputs.telegram import TelegramOutput
                 TelegramOutput(self._settings).send(
                     subject=subject,
-                    body=plain,
+                    body=telegram_body,
                 )
             except Exception as e:
                 logger.error(f"Telegram alert failed for {trip.name}: {e}")

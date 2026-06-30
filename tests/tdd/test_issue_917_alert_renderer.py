@@ -371,22 +371,25 @@ class TestAC5SMS:
         return to_alert_message([change], [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00")
 
     def _make_msg_many_events(self):
-        """Genug Events um Überlauf zu erzwingen."""
+        """Genug Events um einen ECHTEN Längenüberlauf >140 Zeichen zu erzwingen.
+
+        Kopf (~25 Zeichen) + 18 Tokens à ~9 Zeichen (Vorzeichen+Code+Wert+@HH +
+        Trenner) ≈ 190 Zeichen → echter Überlauf, rein längenbasiert gekürzt.
+        """
         from src.output.renderers.alert.project import to_alert_message
-        changes = [
-            _make_change("gust_max_kmh", old=50.0, new=90.0, direction="increase",
-                          threshold=60.0, segment_id="1", occurred_at="08:00"),
-            _make_change("precip_sum_mm", old=5.0, new=30.0, direction="increase",
-                          threshold=10.0, segment_id="1", occurred_at="09:00"),
-            _make_change("wind_max_kmh", old=30.0, new=70.0, direction="increase",
-                          threshold=40.0, segment_id="1", occurred_at="10:00"),
-            _make_change("gust_max_kmh", old=90.0, new=120.0, direction="increase",
-                          threshold=60.0, segment_id="1", occurred_at="11:00"),
-            _make_change("precip_sum_mm", old=30.0, new=60.0, direction="increase",
-                          threshold=10.0, segment_id="1", occurred_at="12:00"),
-            _make_change("wind_max_kmh", old=70.0, new=100.0, direction="increase",
-                          threshold=40.0, segment_id="1", occurred_at="13:00"),
-        ]
+        metrics = ["gust_max_kmh", "precip_sum_mm", "wind_max_kmh"]
+        thresholds = {"gust_max_kmh": 60.0, "precip_sum_mm": 10.0, "wind_max_kmh": 40.0}
+        changes = []
+        for i in range(18):
+            metric = metrics[i % len(metrics)]
+            old = 30.0 + i
+            new = 70.0 + i * 3
+            hour = 6 + (i % 12)
+            changes.append(
+                _make_change(metric, old=old, new=new, direction="increase",
+                             threshold=thresholds[metric], segment_id="1",
+                             occurred_at=f"{hour:02d}:00")
+            )
         seg = _make_segment("1", km_from=5.0, km_to=18.0)
         return to_alert_message(changes, [seg], "VERYLONG-TRIPNAME", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00")
 
@@ -557,28 +560,45 @@ class TestAC8F003Residual:
 
     def test_f003_residual_code_path(self):
         """
-        Beweise den F003-Defekt: _ALERT_METRIC_COMPARISON.get(VISIBILITY, 'above')
-        gibt 'above' zurück (statt KeyError) — das ist der stille Fallback.
-        Nach Fix: dieser Pfad existiert nicht mehr (Z.519 wird zu direktem Zugriff).
+        Echter Behavioral-Test (rot vor Fix / grün nach Fix): Eine ABSOLUTE-Regel
+        mit AlertMetric.VISIBILITY ist in _ALERT_METRIC_TO_SUMMARY_FIELD gemappt
+        (visibility_min_m), aber NICHT in _ALERT_METRIC_COMPARISON. Der reale
+        Detector-Pfad _detect_absolute_changes muss daher beim Vergleichs-Lookup
+        einen KeyError werfen — statt still 'above' anzunehmen (Z.519-Defekt).
         """
-        from app.models import AlertMetric
-        from services.weather_change_detection import _ALERT_METRIC_COMPARISON
-
-        missing = AlertMetric.VISIBILITY
-
-        # Aktueller Defekt: .get() verschluckt fehlende Metrik → "above"
-        # Dieser Test bleibt RED weil er demonstriert, dass .get() 'above' liefert
-        # und wir stattdessen einen Fehler erwarten (der im echten Aufruf nie kommt)
-        result = _ALERT_METRIC_COMPARISON.get(missing, "above")
-
-        # Wir erwarten nach der Spezifikation einen KeyError.
-        # Da .get() keinen KeyError wirft, können wir nur assertieren
-        # dass das Verhalten FALSCH ist — der Test ist per Design RED:
-        pytest.fail(
-            f"F003-RESIDUAL: _ALERT_METRIC_COMPARISON.get({missing!r}, 'above') "
-            f"lieferte stille '{result}' statt KeyError. "
-            f"Fix: Z.519 auf direkten Zugriff _ALERT_METRIC_COMPARISON[rule.metric] ändern."
+        from app.models import (
+            AlertMetric, AlertRule, AlertRuleKind, AlertSeverity,
+            SegmentWeatherSummary,
         )
+        from services.weather_change_detection import (
+            WeatherChangeDetectionService, _ALERT_METRIC_COMPARISON,
+            _ALERT_METRIC_TO_SUMMARY_FIELD,
+        )
+
+        # Vorbedingung: VISIBILITY ist gemappt aufs Feld, aber NICHT auf eine
+        # Vergleichsrichtung — exakt die Lücke, die der stille Fallback verdeckte.
+        assert AlertMetric.VISIBILITY in _ALERT_METRIC_TO_SUMMARY_FIELD
+        assert AlertMetric.VISIBILITY not in _ALERT_METRIC_COMPARISON
+
+        rule = AlertRule(
+            id="vis-1",
+            kind=AlertRuleKind.ABSOLUTE,
+            metric=AlertMetric.VISIBILITY,
+            threshold=500.0,
+            severity=AlertSeverity.WARNING,
+            enabled=True,
+        )
+        service = WeatherChangeDetectionService(absolute_rules=[rule])
+
+        # visibility_min_m gesetzt → Regel kommt bis zum Vergleichs-Lookup.
+        summary = SegmentWeatherSummary(visibility_min_m=200)
+        data = _make_segment("1", km_from=0.0, km_to=10.0)
+        # Summary auf das Segment mit niedriger Sicht setzen.
+        from dataclasses import replace
+        data = replace(data, aggregated=summary)
+
+        with pytest.raises(KeyError):
+            service._detect_absolute_changes(summary, data)
 
 
 # ---------------------------------------------------------------------------

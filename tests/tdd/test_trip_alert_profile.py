@@ -55,7 +55,7 @@ def test_ac1_trip_alert_uses_compact_renderer_not_format_email():
         TripSegment,
     )
     from app.trip import AggregationConfig, Stage, Trip, Waypoint
-    from output.renderers.email.alert_compact import render_deviation_alert
+    from output.renderers.alert.render import render_deviation_alert
     from services.trip_alert import TripAlertService
 
     now = datetime.now(timezone.utc)

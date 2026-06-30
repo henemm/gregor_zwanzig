@@ -79,7 +79,7 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"min": "temp_min_c", "max": "temp_max_c", "avg": "temp_avg_c"},
         default_change_threshold=5.0,
-        sms_code="T", decimals=0, cmp="über",
+        sms_code="D", decimals=0, cmp="über",
     ),
     # Issue #914: Internal-only entry for AlertMetric.TEMPERATURE_MIN (Kältealarm).
     # cmp="unter" because cold alarm fires when temp_min_c FALLS BELOW threshold.
@@ -92,7 +92,7 @@ _METRICS: list[MetricDefinition] = [
         compact_label="TN", col_key="temp_cold", col_label="TmpMin",
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"min": "temp_min_c"},
-        sms_code="TN", decimals=0, cmp="unter",
+        sms_code="N", decimals=0, cmp="unter",
         selectable=False,
     ),
     MetricDefinition(

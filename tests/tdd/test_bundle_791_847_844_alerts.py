@@ -238,7 +238,7 @@ def test_ac2_ziel_segment_label_includes_stage():
     → build_segment_label für Ziel gibt nur "🏁 Ziel (HH:MM)" zurück.
     → "Etappe 2" fehlt im plain-Text → AssertionError.
     """
-    from output.renderers.email.alert_compact import render_deviation_alert
+    from output.renderers.alert.render import render_deviation_alert
 
     now_utc = datetime.now(timezone.utc)
 

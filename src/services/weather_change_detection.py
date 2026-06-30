@@ -516,7 +516,7 @@ class WeatherChangeDetectionService:
             # Convert enum values (e.g., ThunderLevel) to ordinals
             if isinstance(new_value, Enum):
                 new_value = _THUNDER_ORDINAL.get(new_value, 0)
-            comparison = _ALERT_METRIC_COMPARISON.get(rule.metric, "above")
+            comparison = _ALERT_METRIC_COMPARISON[rule.metric]
             # Issue #222 F003: THUNDER_LEVEL uses >= for above (user intent
             # "ab Stufe MED alarmieren" — threshold=1.0 must match MED=1).
             # Other numeric metrics keep strict > to avoid spurious noise.

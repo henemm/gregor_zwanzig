@@ -159,3 +159,4 @@ occurred_at: str | None = None   # "HH:MM" — Stunde des auslösenden (Peak-)We
 ## Changelog
 
 - 2026-06-29: Initial spec created (Slice 1 von #914).
+- 2026-06-30: Slice 2 (#917) implementiert — kanonischer Alert-Renderer (`src/output/renderers/alert/`) mit 4 Render-Pfaden (render_subject, render_email, render_telegram, render_sms) + to_alert_message()-Projektion; `alert_compact.py` gelöscht; `trip_alert._send_alert` nutzt neuen Renderer.

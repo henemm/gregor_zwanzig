@@ -411,7 +411,7 @@ def _build_alert_mime(changes, segments, trip_name):
 
     RED: alert_compact.render_deviation_alert existiert noch nicht.
     """
-    from output.renderers.email.alert_compact import render_deviation_alert
+    from output.renderers.alert.render import render_deviation_alert
     from outputs.email import build_mime_message
 
     html, plain = render_deviation_alert(

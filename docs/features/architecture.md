@@ -124,7 +124,7 @@ Manuelle Verwaltung ist nur noch im Notfall nötig — siehe `docs/runbooks/tele
 
 ### Alert-System (Deviation-Kern, Issue #816)
 
-**Komponenten:** `src/services/alert_state.py`, `src/services/trip_alert.py`, `src/services/weather_change_detection.py`, `src/output/renderers/email/alert_compact.py`
+**Komponenten:** `src/services/alert_state.py`, `src/services/trip_alert.py`, `src/services/weather_change_detection.py`, `src/output/renderers/alert/` (kanonischer Renderer seit #917)
 
 **Zweck:** Meldet **Abweichungen gegenüber dem letzten Briefing-Snapshot** statt absoluter Schwellwerte.
 
@@ -147,10 +147,13 @@ Manuelle Verwaltung ist nur noch im Notfall nötig — siehe `docs/runbooks/tele
    - `WeatherChangeDetectionService.detect_changes(cached, fresh, include_absolute=False)` — nur Δ, keine absoluten Regeln im Alert-Pfad
    - Schwellen Slice 1 (MetricCatalog-Defaults): Temp ±5°C, Wind/Böen ±20 km/h, Regen ±10 mm, Schneefallgrenze ±20 m, Gewitter ±1
 
-4. **Knapper Alert-Render-Pfad**
-   - Renderer: `src/output/renderers/email/alert_compact.py`
+4. **Kanonischer Alert-Render-Pfad (Issue #917)**
+   - Renderer: `src/output/renderers/alert/` (model.py, project.py, render.py) — ersetzt das gelöschte `alert_compact.py`
+   - 4 Render-Pfade: `render_subject()`, `render_email()`, `render_telegram()`, `render_sms()`
+   - Projektion: `to_alert_message()` erzeugt `AlertMessage` aus `WeatherChange`-Events
+   - Dynamischer Betreff: `Trip · km · Richtung · Metrik`; faktisch-generische H1
+   - Severity-Sortierung pro Metrik; ASCII-SMS ≤140 Zeichen mit Überlauf-Marker
    - Enthält NICHT: Stundentabellen, Ausblick, Gewitter-Vorschau, Pills, Vortag-Vergleich, Statistik
-   - Enthält GENAU: Kopfzeile + Pro-Metrik-Zeilen (sortiert nach Stärke) + Fußzeile
    - km-Erweiterung: `build_segment_label()` zeigt `"Etappe N, km X–Y, HH–HH"` wenn km vorhanden (Issue #801)
    - Mail-Header: `X-GZ-Mail-Type: deviation-alert` (unterscheidet von `trip-briefing` und `compare`)
 
