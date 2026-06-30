@@ -118,8 +118,9 @@ def trigger_radar_alert(user_id: str = "default"):
         source=source_label,
     )
 
-    # Empfaenger-Override: immer an gregor-test@henemm.com
-    test_settings = settings.model_copy(update={"mail_to": "gregor-test@henemm.com"})
+    # Empfaenger-Override: immer an gregor-test@henemm.com, SMTP immer über Stalwart.
+    # for_testing() leitet smtp_host → mail.henemm.com weg von Resend (Issue #924).
+    test_settings = settings.for_testing().model_copy(update={"mail_to": "gregor-test@henemm.com"})
     try:
         EmailOutput(test_settings).send(
             subject=subject,

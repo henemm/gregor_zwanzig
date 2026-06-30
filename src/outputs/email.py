@@ -107,6 +107,15 @@ class EmailOutput:
                 "Required: smtp_host, smtp_user, smtp_pass, mail_to",
             )
 
+        # Hard-Guard: Staging darf NIEMALS über Resend senden — unabhängig von is_test_mode.
+        # Issue #924: verhindert neue Code-Pfade, die for_testing() vergessen.
+        if (getattr(settings, "env", "") or "").lower() == "staging" and "resend" in (settings.smtp_host or "").lower():
+            raise OutputConfigError(
+                "email",
+                "Staging darf NICHT über Resend senden! "
+                "GZ_SMTP_HOST muss auf mail.henemm.com zeigen. "
+                "Prüfe /home/hem/gregor_zwanzig_staging/.env (Issue #924).",
+            )
         if getattr(settings, "is_test_mode", False) and "resend" in (settings.smtp_host or "").lower():
             raise OutputConfigError(
                 "email",
