@@ -311,7 +311,18 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
         if radar_staged else True
     )
 
-    if matrix_ok and validator_ok and radar_ok:
+    golden_ok = True
+    if briefing_staged:
+        try:
+            golden_result = subprocess.run(
+                ["uv", "run", "pytest", "tests/golden/email/", "-q", "--no-header", "--tb=no"],
+                cwd=repo, capture_output=True, text=True, timeout=60,
+            )
+            golden_ok = (golden_result.returncode == 0)
+        except Exception:
+            golden_ok = True  # fail-open bei uv/pytest-Infrastrukturproblem
+
+    if matrix_ok and validator_ok and radar_ok and golden_ok:
         sys.exit(0)
 
     missing = []
@@ -333,6 +344,12 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
             "  - radar_alert_mail_validator.py-Erfolgsnachweis fehlt.\n"
             "    Abhilfe: uv run python3 .claude/hooks/radar_alert_mail_validator.py "
             "gegen die echt zugestellte Radar-Alert-Mail (Exit 0)."
+        )
+    if not golden_ok:
+        missing.append(
+            "  - Golden-Email-Tests schlagen fehl (Renderer-Drift ohne Golden-Nachzug).\n"
+            "    Abhilfe: uv run python3 tests/golden/email/regenerate.py\n"
+            "    Dann Snapshots stagen: git add tests/golden/email/*.txt"
         )
     _block(
         "Mail-Inhalts-Datei(en) gestaged, aber Nachweise unvollstaendig:\n"
