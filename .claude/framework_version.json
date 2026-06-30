@@ -1,6 +1,6 @@
 {
-  "framework_version": "3.4.11",
-  "last_updated": "2026-06-29T16:00:00.000000",
+  "framework_version": "3.4.13",
+  "last_updated": "2026-06-30T13:15:00.000000",
   "installed_modules": [],
-  "notes": "Lokale Hooks manuell auf 3.4.11 gesynct (bash_gate: echo/printf fix, approval markers, shlex redirect, worktree stop-lock; hook_utils: _find_worktree_root)"
+  "notes": "edit_gate: ORCHESTRATOR_FILES-Schutz (settings.json, settings.local.json, active_workflow) vor json$-Always-Allowed eingefuegt. developer-agent: Regel 6 (keine Framework-Dateien). Fix PR #20."
 }
