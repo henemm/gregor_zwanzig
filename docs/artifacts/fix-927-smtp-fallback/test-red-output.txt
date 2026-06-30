@@ -1,0 +1,146 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/fix-927-smtp-fallback
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 9 items / 1 deselected / 8 selected
+
+tests/tdd/test_927_smtp_fallback.py FFFFF..F                             [100%]
+
+=================================== FAILURES ===================================
+__ TestAC1FallbackInitialization.test_fallback_host_stored_from_imap_settings __
+
+self = <tdd.test_927_smtp_fallback.TestAC1FallbackInitialization object at 0x76c3f5713b90>
+
+    def test_fallback_host_stored_from_imap_settings(self):
+        """
+        GIVEN: Settings mit imap_host=mail.henemm.com gesetzt
+        WHEN:  EmailOutput(settings) initialisiert wird
+        THEN:  _fallback_host ist gleich dem imap_host
+        RED:   AttributeError — _fallback_host existiert noch nicht
+        """
+        settings = _make_settings_with_imap_fallback()
+        output = EmailOutput(settings)
+        # RED: AttributeError — _fallback_host wurde noch nicht implementiert
+>       assert hasattr(output, "_fallback_host"), (
+            "EmailOutput muss _fallback_host aus settings.imap_host initialisieren"
+        )
+E       AssertionError: EmailOutput muss _fallback_host aus settings.imap_host initialisieren
+E       assert False
+E        +  where False = hasattr(<outputs.email.EmailOutput object at 0x76c3f634dc10>, '_fallback_host')
+
+tests/tdd/test_927_smtp_fallback.py:69: AssertionError
+__ TestAC1FallbackInitialization.test_fallback_user_stored_from_imap_settings __
+
+self = <tdd.test_927_smtp_fallback.TestAC1FallbackInitialization object at 0x76c3f55959d0>
+
+    def test_fallback_user_stored_from_imap_settings(self):
+        """
+        GIVEN: Settings mit imap_user gesetzt
+        WHEN:  EmailOutput(settings) initialisiert wird
+        THEN:  _fallback_user ist gleich dem imap_user
+        """
+        settings = _make_settings_with_imap_fallback()
+        output = EmailOutput(settings)
+>       assert hasattr(output, "_fallback_user"), (
+            "EmailOutput muss _fallback_user aus settings.imap_user initialisieren"
+        )
+E       AssertionError: EmailOutput muss _fallback_user aus settings.imap_user initialisieren
+E       assert False
+E        +  where False = hasattr(<outputs.email.EmailOutput object at 0x76c3f5597da0>, '_fallback_user')
+
+tests/tdd/test_927_smtp_fallback.py:82: AssertionError
+__ TestAC1FallbackInitialization.test_fallback_pass_stored_from_imap_settings __
+
+self = <tdd.test_927_smtp_fallback.TestAC1FallbackInitialization object at 0x76c3f5595c70>
+
+    def test_fallback_pass_stored_from_imap_settings(self):
+        """
+        GIVEN: Settings mit imap_pass gesetzt
+        WHEN:  EmailOutput(settings) initialisiert wird
+        THEN:  _fallback_pass ist gleich dem imap_pass
+        """
+        settings = _make_settings_with_imap_fallback()
+        output = EmailOutput(settings)
+>       assert hasattr(output, "_fallback_pass"), (
+            "EmailOutput muss _fallback_pass aus settings.imap_pass initialisieren"
+        )
+E       AssertionError: EmailOutput muss _fallback_pass aus settings.imap_pass initialisieren
+E       assert False
+E        +  where False = hasattr(<outputs.email.EmailOutput object at 0x76c3f6100f80>, '_fallback_pass')
+
+tests/tdd/test_927_smtp_fallback.py:95: AssertionError
+___ TestAC1FallbackInitialization.test_no_fallback_without_imap_credentials ____
+
+self = <tdd.test_927_smtp_fallback.TestAC1FallbackInitialization object at 0x76c3f5595df0>
+
+    def test_no_fallback_without_imap_credentials(self):
+        """
+        GIVEN: Settings ohne imap_host/user/pass
+        WHEN:  EmailOutput(settings) initialisiert wird
+        THEN:  _fallback_host ist None oder leer (kein Fallback)
+        """
+        settings = _make_settings_without_imap_fallback()
+        output = EmailOutput(settings)
+        # _fallback_host muss existieren (None bedeutet: kein Fallback konfiguriert)
+>       assert hasattr(output, "_fallback_host"), (
+            "_fallback_host muss immer existieren (None wenn nicht konfiguriert)"
+        )
+E       AssertionError: _fallback_host muss immer existieren (None wenn nicht konfiguriert)
+E       assert False
+E        +  where False = hasattr(<outputs.email.EmailOutput object at 0x76c3f5e625a0>, '_fallback_host')
+
+tests/tdd/test_927_smtp_fallback.py:109: AssertionError
+___ TestAC2NoFallbackOnAuthError.test_fallback_disabled_flag_for_auth_errors ___
+
+self = <tdd.test_927_smtp_fallback.TestAC2NoFallbackOnAuthError object at 0x76c3f5595fa0>
+
+    def test_fallback_disabled_flag_for_auth_errors(self):
+        """
+        GIVEN: EmailOutput mit Fallback-Credentials konfiguriert
+        WHEN:  EmailOutput instanziiert
+        THEN:  Objekt muss Mechanismus haben, Auth-Fehler zu erkennen (kein Fallback)
+        RED:   _TRANSIENT_ERRORS_TRIGGER_FALLBACK oder ähnliches Attribut fehlt noch
+        """
+        settings = _make_settings_with_imap_fallback()
+        output = EmailOutput(settings)
+        # Der implementierende Code muss permanente von transienten Fehlern unterscheiden.
+        # Indikator: die Klasse hat eine Konstante/Methode dafür.
+        # RED: noch nicht implementiert → dieser Test zeigt die Erwartung
+>       assert hasattr(output, "_fallback_host"), "Voraussetzung: Fallback initialisiert"
+E       AssertionError: Voraussetzung: Fallback initialisiert
+E       assert False
+E        +  where False = hasattr(<outputs.email.EmailOutput object at 0x76c3f6101340>, '_fallback_host')
+
+tests/tdd/test_927_smtp_fallback.py:136: AssertionError
+______ TestAC6FallbackLogFormat.test_fallback_log_marker_constant_exists _______
+
+self = <tdd.test_927_smtp_fallback.TestAC6FallbackLogFormat object at 0x76c3f5596450>
+
+    def test_fallback_log_marker_constant_exists(self):
+        """
+        GIVEN: EmailOutput-Klasse
+        WHEN:  nach SMTP_FALLBACK_LOG_MARKER oder _FALLBACK_LOG_MARKER gesucht
+        THEN:  Konstante oder erkennbares Muster existiert
+        RED:   Konstante wurde noch nicht definiert
+        """
+        # Prüft dass die Implementierung eine benannte Konstante hat (nicht magic string)
+        import inspect
+        import outputs.email as email_module
+        source = inspect.getsource(email_module)
+>       assert self.EXPECTED_LOG_MARKER in source, (
+            f"Log-Marker '{self.EXPECTED_LOG_MARKER}' muss in email.py als String-Literal vorkommen"
+        )
+E       AssertionError: Log-Marker '[SMTP-FALLBACK]' muss in email.py als String-Literal vorkommen
+E       assert '[SMTP-FALLBACK]' in '"""\nEmail output channel.\n\nSends weather reports via SMTP email (HTML or plain text).\n"""\nfrom __future__ import...r {max_attempts} attempts: {e}")\n                    raise OutputError("email", f"Connection error: {e}")\n\n# test\n'
+E        +  where '[SMTP-FALLBACK]' = <tdd.test_927_smtp_fallback.TestAC6FallbackLogFormat object at 0x76c3f5596450>.EXPECTED_LOG_MARKER
+
+tests/tdd/test_927_smtp_fallback.py:206: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_927_smtp_fallback.py::TestAC1FallbackInitialization::test_fallback_host_stored_from_imap_settings
+FAILED tests/tdd/test_927_smtp_fallback.py::TestAC1FallbackInitialization::test_fallback_user_stored_from_imap_settings
+FAILED tests/tdd/test_927_smtp_fallback.py::TestAC1FallbackInitialization::test_fallback_pass_stored_from_imap_settings
+FAILED tests/tdd/test_927_smtp_fallback.py::TestAC1FallbackInitialization::test_no_fallback_without_imap_credentials
+FAILED tests/tdd/test_927_smtp_fallback.py::TestAC2NoFallbackOnAuthError::test_fallback_disabled_flag_for_auth_errors
+FAILED tests/tdd/test_927_smtp_fallback.py::TestAC6FallbackLogFormat::test_fallback_log_marker_constant_exists
+================== 6 failed, 2 passed, 1 deselected in 0.24s ===================
