@@ -191,15 +191,16 @@ class TestAlertPreviewEndpoint:
         )
         assert resp.status_code == 200, f"Body: {resp.text[:200]}"
         data = resp.json()
-        assert "html" in data and "plain" in data
-        assert isinstance(data["html"], str) and isinstance(data["plain"], str)
-        expected_line = (
-            "Segment 2 (14:00–16:00) — Sichtweite (min): "
-            "12.240 m → 38.440 m (+26.200 m)"
-        )
-        assert expected_line in data["plain"], \
-            f"Plain ohne erwartete Change-Zeile. Got:\n{data['plain']}"
-        assert "Sichtweite" in data["html"] and "12.240 m" in data["html"], \
+        assert "email_html" in data and "email_plain" in data
+        assert isinstance(data["email_html"], str) and isinstance(data["email_plain"], str)
+        # Kanonischer Renderer: Werte müssen in email_plain enthalten sein
+        assert "12.240" in data["email_plain"], \
+            f"email_plain fehlt '12.240': {data['email_plain'][:300]}"
+        assert "38.440" in data["email_plain"], \
+            f"email_plain fehlt '38.440': {data['email_plain'][:300]}"
+        assert "1.000" in data["email_plain"], \
+            f"email_plain fehlt Schwelle '1.000': {data['email_plain'][:300]}"
+        assert "12.240" in data["email_html"] and "38.440" in data["email_html"], \
             "HTML muss die Sichtweite-Werte enthalten"
 
     def test_ac5_no_side_effects_no_smtp_no_throttle_write(self, client):

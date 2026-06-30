@@ -39,7 +39,13 @@ from src.app.models import (
 from src.app.profile import ActivityProfile
 from src.app.trip import Trip
 from src.app.user import ComparisonResult, LocationResult, SavedLocation
-from src.formatters.trip_report import TripReportFormatter
+from src.output.renderers.alert.project import to_alert_message
+from src.output.renderers.alert.render import (
+    render_email,
+    render_sms,
+    render_subject,
+    render_telegram,
+)
 from src.output.renderers.email.compare_html import render_compare_html
 from src.services.trip_alert import TripAlertService
 
@@ -283,14 +289,22 @@ async def alert_preview(
     ]
     segments = [_stub_segment(st) for st in body.segment_times]
 
-    report = TripReportFormatter().format_email(
-        segments=segments,
-        trip_name=trip_obj.name,
-        report_type="alert",
-        display_config=trip_obj.display_config,
-        changes=changes,
+    stand_at = datetime.now(timezone.utc).strftime("%H:%M")
+    msg = to_alert_message(
+        changes, segments, trip_obj.name,
+        tz=timezone.utc, stand_at=stand_at,
     )
-    return {"html": report.email_html, "plain": report.email_plain}
+    subject = render_subject(msg)
+    email_html, email_plain = render_email(msg)
+    telegram = render_telegram(msg)
+    sms = render_sms(msg)
+    return {
+        "subject": subject,
+        "email_html": email_html,
+        "email_plain": email_plain,
+        "telegram": telegram,
+        "sms": sms,
+    }
 
 
 # ---------------------------------------------------------------------------

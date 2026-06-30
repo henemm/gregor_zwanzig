@@ -8,7 +8,10 @@
 
 	let { trip, alertRules }: { trip: Trip; alertRules: AlertRule[] } = $props();
 
-	let html = $state('');
+	let subject = $state('');
+	let emailHtml = $state('');
+	let telegram = $state('');
+	let sms = $state('');
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 
@@ -22,14 +25,23 @@
 	async function loadPreview() {
 		loading = true;
 		error = null;
-		html = '';
+		subject = '';
+		emailHtml = '';
+		telegram = '';
+		sms = '';
 		try {
 			const payload = buildAlertPreviewPayload(alertRules, trip.stages);
-			const result = await api.post<{ html: string; plain: string }>(
-				`/api/trips/${trip.id}/alert-preview`,
-				payload
-			);
-			html = result.html;
+			const result = await api.post<{
+				subject: string;
+				email_html: string;
+				email_plain: string;
+				telegram: string;
+				sms: string;
+			}>(`/api/trips/${trip.id}/alert-preview`, payload);
+			subject = result.subject;
+			emailHtml = result.email_html;
+			telegram = result.telegram;
+			sms = result.sms;
 		} catch (e: unknown) {
 			error =
 				e && typeof e === 'object' && 'error' in e
@@ -71,13 +83,21 @@
 		</button>
 	{/if}
 
-	{#if html !== ''}
-		<iframe
-			data-testid="alert-preview-iframe"
-			srcdoc={html}
-			sandbox="allow-same-origin"
-			title="Alert-Vorschau"
-		></iframe>
+	{#if emailHtml !== '' || subject !== ''}
+		<div class="channel-section">
+			<p class="channel-label" data-testid="alert-preview-subject">{subject}</p>
+			<iframe
+				data-testid="alert-preview-iframe"
+				srcdoc={emailHtml}
+				sandbox="allow-same-origin"
+				title="Alert-Vorschau E-Mail"
+			></iframe>
+			<pre class="channel-text" data-testid="alert-preview-telegram">{telegram}</pre>
+			<div class="sms-block" data-testid="alert-preview-sms">
+				<pre class="sms-text">{sms}</pre>
+				<span class="sms-count">{sms.length}/140</span>
+			</div>
+		</div>
 	{/if}
 
 	{#if error !== null}
@@ -125,5 +145,42 @@
 		width: 100%;
 		min-height: 350px;
 		border: 0;
+	}
+	.channel-section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+	.channel-label {
+		margin: 0;
+		font-weight: 600;
+		font-size: 0.875rem;
+	}
+	.channel-text {
+		margin: 0;
+		font-size: 0.8125rem;
+		white-space: pre-wrap;
+		background: var(--g-surface-2, #f5f5f5);
+		padding: 0.5rem;
+		border-radius: 0.25rem;
+	}
+	.sms-block {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+	.sms-text {
+		margin: 0;
+		font-family: monospace;
+		font-size: 0.8125rem;
+		white-space: pre-wrap;
+		background: var(--g-surface-2, #f5f5f5);
+		padding: 0.5rem;
+		border-radius: 0.25rem;
+	}
+	.sms-count {
+		font-size: 0.75rem;
+		color: var(--g-ink-muted);
+		text-align: right;
 	}
 </style>
