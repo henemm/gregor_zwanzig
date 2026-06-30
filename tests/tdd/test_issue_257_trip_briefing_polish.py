@@ -272,7 +272,8 @@ def test_ac5_mobile_table_resp_rule():
     benötigt da die Desktop-Tabelle auf Mobile via display:none !important ausgeblendet wird.
     """
     html = _render_minimal_html()
-    assert 'class="resp"' in html, "Kein <table class=\"resp\"> im HTML"
+    # fix-911-table-jsx AC-1: Marker ist data-table="resp" (kein CSS-class mehr).
+    assert 'data-table="resp"' in html, "Kein <table data-table=\"resp\"> im HTML"
     media_start = html.find("@media")
     assert media_start != -1, "Kein @media-Block gefunden"
     media_block = html[media_start:html.find("</style>", media_start)]
@@ -290,17 +291,20 @@ def test_ac5_mobile_table_resp_rule():
 
 def test_ac6_table_has_resp_class():
     """
-    AC-6 (Teil 1): _render_html_table() gibt <table class="resp"> zurück.
+    AC-6 (Teil 1): _render_html_table() gibt <table data-table="resp"> zurück.
 
     GIVEN _render_html_table() mit mindestens einer Datenzeile aufgerufen
     WHEN das Ergebnis geprüft wird
-    THEN enthält das <table>-Element class="resp"
+    THEN enthält das <table>-Element den data-table="resp"-Marker
+
+    fix-911-table-jsx AC-1: Tabellen-Marker als data-Attribut (Outlook-safe),
+    keine CSS-Klasse mehr.
     """
     from src.output.renderers.email.html import _render_html_table
     rows = [{"time": "08:00", "temp": "15°C", "wind": "12 km/h"}]
     result = _render_html_table(rows, friendly_keys=set())
-    assert 'class="resp"' in result or "class='resp'" in result, (
-        f"<table> hat kein class='resp': {result[:200]}"
+    assert 'data-table="resp"' in result, (
+        f"<table> hat keinen data-table=\"resp\"-Marker: {result[:200]}"
     )
 
 

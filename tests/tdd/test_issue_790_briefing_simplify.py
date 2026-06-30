@@ -409,8 +409,8 @@ class TestBug798EmptyMetricsHourTable:
         segs = _build_segments()
         dc = _empty_metrics_dc()
         html = _render_html(segs, dc=dc)
-        # Find first <table class="resp"> — that's the hourly data table
-        table_start = html.find('<table class="resp">')
+        # Find first <table data-table="resp" — that's the hourly data table
+        table_start = html.find('<table data-table="resp"')
         assert table_start != -1, "Bug #798: Keine <table class=\"resp\"> im HTML gefunden"
         table_html = html[table_start:]
         header_end = table_html.find('</tr>')

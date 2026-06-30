@@ -308,7 +308,7 @@ def _render_wind_via_render_email(*, use_friendly: bool):
 def _data_cells_759(html: str) -> list[str]:
     """Extrahiert Daten-Zellen der Stundentabelle (class='resp')."""
     import re
-    m = re.search(r'<table class="resp">.*?</table>', html, re.S)
+    m = re.search(r'<table[^>]*data-table="resp"[^>]*>.*?</table>', html, re.S)
     if not m:
         return []
     return re.findall(r'<td data-label="[^"]*">(.*?)</td>', m.group(0), re.S)

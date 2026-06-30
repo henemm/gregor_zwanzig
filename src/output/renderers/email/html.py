@@ -457,7 +457,7 @@ def _render_html_table(
     if not rows:
         # Empty rows: render a minimal table skeleton so callers can still
         # detect a <table> in the body (β3 test_renderers_email expectation).
-        return '<table class="resp"><thead><tr><th>Time</th></tr></thead><tbody></tbody></table>'
+        return '<table data-table="resp" style="width:100%;border-collapse:collapse;"><thead><tr><th>Time</th></tr></thead><tbody></tbody></table>'
     cols = visible_cols(rows)
     if allowed_col_keys is not None:
         cols = [(k, label) for (k, label) in cols if k in allowed_col_keys]
@@ -521,50 +521,33 @@ def _render_html_table(
             except (TypeError, ValueError):
                 cell = str(raw_val) if raw_val is not None else "–"
 
-            # Highlighting (AC-4): threshold-based color in a <span> inside the <td>.
             # AC-10 (#911): getönte Zell-Hintergründe je Warn-Level (Vorlage RISK_CELL).
-            # Suppressed only when the metric is in explicit raw mode
-            # (use_friendly_format=False → key not in indicator_keys).
-            # Default dc (use_friendly_format=True) and Einfach dc always highlight.
-            explicitly_raw = (
-                format_modes is not None
-                and format_modes.get(key) == "raw"
-                and indicator_keys is not None
-                and key not in indicator_keys
-            )
-            highlight_color = None
+            # fix-911-table-jsx AC-2 (PO-Entscheidung): KEINE farbigen Text-Spans mehr
+            # (highlight_color war nie gewollt). Nur die Zell-Tönung (cell_bg) gilt,
+            # und zwar IMMER — unabhängig von Roh/Einfach-Modus.
             cell_bg = None  # AC-10 (#911): Zell-Hintergrundfarbe je Schweregrad
-            if not explicitly_raw:
-                try:
-                    numeric = float(raw_val) if raw_val is not None else None
-                except (TypeError, ValueError):
-                    numeric = None
+            try:
+                numeric = float(raw_val) if raw_val is not None else None
+            except (TypeError, ValueError):
+                numeric = None
 
-                # col_keys from metric catalog (not metric_ids)
-                # AC-10: caution=#fbeeb8, warn=#fad6b8, danger=#f6c5bf
-                if key == "wind" and numeric is not None and numeric > _WIND_THRESHOLD:
-                    highlight_color = "#c2410c"
-                    cell_bg = "#fad6b8" if numeric > 30 else "#fbeeb8"
-                elif key == "gust" and numeric is not None and numeric > _GUST_THRESHOLD:
-                    highlight_color = "#c2410c"
-                    cell_bg = "#f6c5bf" if numeric > 60 else ("#fad6b8" if numeric > 45 else "#fbeeb8")
-                elif key == "precip" and numeric is not None and numeric > _PRECIP_THRESHOLD:
-                    highlight_color = "#0e6fb8"
-                    cell_bg = "#f6c5bf" if numeric > 8 else ("#fad6b8" if numeric > 4 else "#fbeeb8")
-                elif key == "pop" and numeric is not None and numeric > _RAINP_THRESHOLD:
-                    highlight_color = "#0e6fb8"
-                    cell_bg = "#f6c5bf" if numeric > 85 else ("#fad6b8" if numeric > 70 else "#fbeeb8")
-                elif key == "thunder" and numeric is not None and numeric > _THUNDER_THRESHOLD:
-                    highlight_color = "#b91c1c"
-                    cell_bg = "#f6c5bf" if numeric > 30 else ("#fad6b8" if numeric > 20 else "#fbeeb8")
-                elif key == "vis" and numeric is not None:
-                    vis_km = numeric / 1000 if numeric > 100 else numeric
-                    if 0 < vis_km < _VIS_THRESHOLD:
-                        highlight_color = "#c2410c"
-                        cell_bg = "#f6c5bf" if vis_km < 0.5 else ("#fad6b8" if vis_km < 1 else "#fbeeb8")
+            # col_keys from metric catalog (not metric_ids)
+            # AC-10: caution=#fbeeb8, warn=#fad6b8, danger=#f6c5bf
+            if key == "wind" and numeric is not None and numeric > _WIND_THRESHOLD:
+                cell_bg = "#fad6b8" if numeric > 30 else "#fbeeb8"
+            elif key == "gust" and numeric is not None and numeric > _GUST_THRESHOLD:
+                cell_bg = "#f6c5bf" if numeric > 60 else ("#fad6b8" if numeric > 45 else "#fbeeb8")
+            elif key == "precip" and numeric is not None and numeric > _PRECIP_THRESHOLD:
+                cell_bg = "#f6c5bf" if numeric > 8 else ("#fad6b8" if numeric > 4 else "#fbeeb8")
+            elif key == "pop" and numeric is not None and numeric > _RAINP_THRESHOLD:
+                cell_bg = "#f6c5bf" if numeric > 85 else ("#fad6b8" if numeric > 70 else "#fbeeb8")
+            elif key == "thunder" and numeric is not None and numeric > _THUNDER_THRESHOLD:
+                cell_bg = "#f6c5bf" if numeric > 30 else ("#fad6b8" if numeric > 20 else "#fbeeb8")
+            elif key == "vis" and numeric is not None:
+                vis_km = numeric / 1000 if numeric > 100 else numeric
+                if 0 < vis_km < _VIS_THRESHOLD:
+                    cell_bg = "#f6c5bf" if vis_km < 0.5 else ("#fad6b8" if vis_km < 1 else "#fbeeb8")
 
-            if highlight_color:
-                cell = f'<span style="font-weight:700;color:{highlight_color};">{cell}</span>'
             # AC-10 (#911): Zell-Hintergrund als äußerer Wrapper im Zell-Content
             # (nicht auf <td> style, da _data_cells-Regex data-label="..." direkt vor > erwartet).
             if cell_bg:
@@ -583,7 +566,7 @@ def _render_html_table(
         trs.append(f"<tr>{tds}</tr>")
 
     return (
-        f'<table class="resp">'
+        f'<table data-table="resp" style="width:100%;border-collapse:collapse;">'
         + thead
         + f'<tbody>{"".join(trs)}</tbody>'
         + '</table>'
@@ -1078,9 +1061,13 @@ def render_html(
             return ""
 
         def _otd(content: str, *, bg: str = "", align: str = "center") -> str:
-            """Outlook-Table-Datenzelle (kompakte inline-styles für Outlook)."""
+            """Outlook-Table-Datenzelle (kompakte inline-styles für Outlook).
+
+            fix-911-table-jsx AC-3: MONO-Font (FONT_DATA) auf Data-Cells.
+            """
             return (
                 f'<td style="{bg}padding:6px 4px;text-align:{align};'
+                f'font-family:{FONT_DATA};'
                 f'font-size:11px;border-right:1px solid #f0ece1;'
                 f'border-bottom:1px solid #f0ece1;">'
                 f'{content}</td>'
@@ -1191,7 +1178,9 @@ def render_html(
             )
 
         outlook_table = (
-            f'<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;">'
+            f'<table cellpadding="0" cellspacing="0" '
+            f'style="border-collapse:collapse;width:100%;'
+            f'border-top:2px solid #1d1c1a;">'
             + outlook_thead
             + f'<tbody>{outlook_rows}</tbody>'
             + f'</table>'

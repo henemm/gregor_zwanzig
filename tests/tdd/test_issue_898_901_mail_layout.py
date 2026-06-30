@@ -172,7 +172,7 @@ class TestAC1TableGrid:
 
     def _get_hourly_rows(self, html: str) -> list[str]:
         """Return all <tr> elements from the first data table."""
-        m = re.search(r'<table[^>]*class="resp"[^>]*>(.*?)</table>', html, re.DOTALL)
+        m = re.search(r'<table[^>]*data-table="resp"[^>]*>(.*?)</table>', html, re.DOTALL)
         if not m:
             return []
         table_html = m.group(1)

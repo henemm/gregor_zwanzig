@@ -574,8 +574,11 @@ class TestAC8OutlookACCColumn:
         assert acc_pos != -1, "ACC-Header fehlt"
 
         # Nach dem ACC-Header: Risk-Dot (border-radius:50%) muss vorkommen,
-        # kein roher Prozent-Text wie "82%" oder "55%" als ACC-Wert
-        context_after_acc = html[acc_pos:acc_pos + 2000]
+        # kein roher Prozent-Text wie "82%" oder "55%" als ACC-Wert.
+        # fix-911-table-jsx AC-3: Data-Cells tragen nun font-family:FONT_DATA →
+        # Zell-HTML länger; Fenster bis Tabellenende statt fixer 2000-Zeichen.
+        table_end = html.find("</table>", acc_pos)
+        context_after_acc = html[acc_pos:table_end if table_end != -1 else acc_pos + 4000]
 
         assert "border-radius:50%" in context_after_acc, (
             "ACC-Spalte muss Risk-Dot (border-radius:50%) enthalten, "
