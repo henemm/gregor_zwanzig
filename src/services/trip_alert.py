@@ -734,19 +734,35 @@ class TripAlertService:
             # Mail-Body + Betreff via pure functions (Issue #830 -- Extraktion)
             # include_source=False: format_now_text liefert nur den Onset-Satz
             # ohne eigene Quelle-Zeile, damit genau EINE Quelle-Zeile im Body steht.
-            from outputs.radar_alert import build_radar_alert_body, build_radar_alert_subject
-            onset_text = radar_svc.format_now_text(result, tz=tz, include_source=False)
-            if _briefing_announced:
-                onset_text += ", jetzt akut"
-            else:
-                onset_text += ", im Briefing nicht angekündigt"
-            full_body = build_radar_alert_body(
-                onset_text=onset_text,
-                segment_label=segment_label,
-                cooldown_display=cooldown_display,
-                source=radar_svc.source_label(result.source),
+            from output.renderers.alert.model import AlertMessage, OnsetEvent
+            from output.renderers.alert.render import (
+                render_email, render_subject, render_telegram,
             )
-            subject = build_radar_alert_subject(trip.name, result, segment_label)
+
+            _onset_time_str = (now_utc + timedelta(minutes=result.onset_minutes)).astimezone(tz).strftime("%H:%M")
+            _intensity = radar_svc.format_now_text(result, tz=tz, include_source=False)
+            if _briefing_announced:
+                _intensity += ", jetzt akut"
+            else:
+                _intensity += ", im Briefing nicht angekündigt"
+            _onset_ev = OnsetEvent(
+                onset_minutes=result.onset_minutes,
+                onset_time=_onset_time_str,
+                km_from=active.start_point.distance_from_start_km,
+                km_to=active.end_point.distance_from_start_km,
+                is_convective=result.is_convective,
+                intensity_label=_intensity,
+                source_label=radar_svc.source_label(result.source),
+            )
+            _alert_msg = AlertMessage(
+                trip_short=trip.name[:16],
+                stand_at=now_utc.astimezone(tz).strftime("%H:%M"),
+                events=(_onset_ev,),
+                source=radar_svc.source_label(result.source),
+                cooldown_display=cooldown_display,
+            )
+            subject = render_subject(_alert_msg)
+            _html, _plain = render_email(_alert_msg)
 
             config = trip.report_config
 
@@ -756,12 +772,12 @@ class TripAlertService:
                 delivered = True
                 try:
                     if self._mail_sink is not None:
-                        self._mail_sink(subject=subject, body=full_body)
+                        self._mail_sink(subject=subject, body=_plain)
                     else:
                         EmailOutput(self._settings).send(
                             subject=subject,
-                            body=full_body,
-                            plain_text_body=full_body,
+                            body=_html,
+                            plain_text_body=_plain,
                             mail_type="radar-alert",
                         )
                 except Exception as e:
@@ -771,7 +787,7 @@ class TripAlertService:
                 delivered = True
                 try:
                     from outputs.telegram import TelegramOutput
-                    TelegramOutput(self._settings).send(subject=subject, body=onset_text)
+                    TelegramOutput(self._settings).send(subject=subject, body=render_telegram(_alert_msg))
                 except Exception as e:
                     logger.error(f"Radar alert telegram failed for {trip.id}: {e}")
 

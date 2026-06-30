@@ -314,34 +314,6 @@ def test_ac3_gate_allows_commit_after_radar_nachweis():
     )
 
 
-# ============================================================================
-# Bonus: src/outputs/radar_alert.py existiert mit expected API
-# ============================================================================
-
-def test_bonus_radar_alert_module_exports_build_functions():
-    """
-    GIVEN src/outputs/radar_alert.py
-    WHEN  importiert
-    THEN  exportiert build_radar_alert_body() und build_radar_alert_subject().
-
-    RED: Datei existiert noch nicht → ModuleNotFoundError.
-    """
-    sys.path.insert(0, str(REPO_ROOT / "src"))
-    try:
-        import importlib as _il
-        mod = _il.import_module("outputs.radar_alert")
-        assert hasattr(mod, "build_radar_alert_body"), (
-            "build_radar_alert_body fehlt in src/outputs/radar_alert.py"
-        )
-        assert hasattr(mod, "build_radar_alert_subject"), (
-            "build_radar_alert_subject fehlt in src/outputs/radar_alert.py"
-        )
-    except ModuleNotFoundError as e:
-        pytest.fail(
-            f"src/outputs/radar_alert.py existiert noch nicht oder nicht importierbar: {e}"
-        )
-
-
 def test_bonus_settings_has_env_field():
     """
     GIVEN Settings aus src/app/config.py

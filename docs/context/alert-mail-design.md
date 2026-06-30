@@ -16,7 +16,7 @@ Wetterlage. Render-Logik **einmal** im Backend (Tech-Lead-Entscheidung, siehe
 | `src/formatters/sms_trip.py` (43–52, 233–269) | `format_alert_sms()` + `SMS_SYMBOL_BY_METRIC` (doppelte SMS-Tabelle — wird entfernt). |
 | `src/outputs/telegram.py` (50–96) | Telegram-Versand (subject/body). |
 | `src/outputs/email.py` | E-Mail-Versand + `X-GZ-Mail-Type`-Header. |
-| `src/outputs/radar_alert.py` | Pure Renderer für Radar-Nowcast-Alert (separates Schema — **out of scope**, aber Referenzmuster für reine Builder). |
+| `src/outputs/radar_alert.py` | **GELÖSCHT (Issue #919)** — auf kanonischen Alert-Renderer migriert; `OnsetEvent` in `src/output/renderers/alert/model.py`. |
 | `src/services/trip_alert.py` (848–931 `_send_alert`, Betreff-Bau) | Orchestrierung Multi-Kanal-Versand; Betreff heute ad-hoc. |
 | `src/services/weather_change_detection.py` | Erzeugt `WeatherChange`-Liste (delta-only für Alerts). |
 | `src/output/renderers/email/helpers.py` (737–773) | `build_segment_label()` — km-Spanne (start_km/end_km) schon vorhanden. |
@@ -27,8 +27,7 @@ Wetterlage. Render-Logik **einmal** im Backend (Tech-Lead-Entscheidung, siehe
 ## Existing Patterns
 - **Backend rendert, Frontend zeigt**: `alert-preview`-Endpunkt liefert fertiges HTML;
   Svelte rendert nur ein `<iframe srcdoc>`. → auf alle 4 Kanäle erweiterbar.
-- **Reine Builder-Funktionen**: `radar_alert.py` (`build_radar_alert_subject/body`) als
-  Vorbild für seiteneffektfreie Renderer.
+- **Reine Builder-Funktionen**: `radar_alert.py` war Vorbild für seiteneffektfreie Renderer — seit Issue #919 gelöscht; der Onset-Pfad läuft jetzt durch denselben kanonischen Renderer (`AlertMessage(OnsetEvent(...))`).
 - **Katalog als Single Source + `/api/metrics`-Sync**: Frontend zieht Metrik-Stammdaten
   schon vom Backend (kein hartcodierter Zweit-Katalog — bis auf Compare-Wizard-Reste).
 - **Severity-Sortierung** und **km-Union** existieren konzeptionell schon (severity in

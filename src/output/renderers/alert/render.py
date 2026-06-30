@@ -13,8 +13,8 @@ from app.metric_catalog import (
     get_sms_code,
 )
 from .model import (
-    AlertEvent, AlertMessage, arrow, delta_pct, km_span, over_thr, severity,
-    side_label,
+    AlertEvent, AlertMessage, OnsetEvent, arrow, delta_pct, km_span, over_thr,
+    severity, side_label,
 )
 
 
@@ -37,7 +37,60 @@ def _km_str(msg: AlertMessage) -> str:
     return f"km {format_metric_value('km', a)}–{format_metric_value('km', b)}"
 
 
+def _render_subject_onset(msg: AlertMessage) -> str:
+    e = msg.events[0]
+    label = "Gewitter" if e.is_convective else "Regen"
+    km = f"km {int(e.km_from)}–{int(e.km_to)}"
+    return f"[{msg.trip_short}] {km} · {label} in {e.onset_minutes} Min"
+
+
+def _render_email_onset(msg: AlertMessage) -> tuple[str, str]:
+    e = msg.events[0]
+    label = "Gewitter" if e.is_convective else "Regen"
+    h1 = f"{label} in {e.onset_minutes} Min"
+    data_line = f"km {e.km_from}–{e.km_to} · {e.intensity_label} ab {e.onset_time}"
+    footer = f"Stand: heute {msg.stand_at} · km {e.km_from}–{e.km_to} · Quelle: {e.source_label}"
+    cooldown = (
+        f"Du erhältst diese Warnung höchstens einmal in {msg.cooldown_display}"
+        if msg.cooldown_display else ""
+    )
+    plain_parts = [h1, "", data_line, "", footer]
+    if cooldown:
+        plain_parts.append(cooldown)
+    plain = "\n".join(plain_parts)
+    html = (
+        "<html><body style=\"font-family:sans-serif;\">"
+        f"<h1 style=\"margin:0 0 12px;\">{_esc(h1)}</h1>"
+        f"<p>{_esc(data_line)}</p>"
+        f"<p style=\"color:#555;margin-top:16px;\">{_esc(footer)}</p>"
+    )
+    if cooldown:
+        html += f"<p>{_esc(cooldown)}</p>"
+    html += "</body></html>"
+    return html, plain
+
+
+def _render_telegram_onset(msg: AlertMessage) -> str:
+    e = msg.events[0]
+    label = "Gewitter" if e.is_convective else "Regen"
+    km = f"km {e.km_from}–{e.km_to}"
+    first = f"**{msg.trip_short} · {km} · {label} in {e.onset_minutes} Min**"
+    second = f"{e.onset_time} · {e.intensity_label} · {e.source_label}"
+    return "\n".join([first, second])
+
+
+def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
+    e = msg.events[0]
+    token = f"TH!{e.onset_minutes}" if e.is_convective else f"R!{e.onset_minutes}"
+    trip = _ascii(msg.trip_short)[:16]
+    a, b = int(round(e.km_from)), int(round(e.km_to))
+    body = f"{trip} km{a}-{b}: {token}"
+    return body if len(body) <= limit else body[:limit]
+
+
 def render_subject(msg: AlertMessage) -> str:
+    if msg.source is not None:
+        return _render_subject_onset(msg)
     evs = _sorted(msg)
     km = _km_str(msg)
     if len(evs) == 1:
@@ -70,6 +123,8 @@ def _email_line(e: AlertEvent) -> str:
 
 
 def render_email(msg: AlertMessage) -> tuple[str, str]:
+    if msg.source is not None:
+        return _render_email_onset(msg)
     evs = _sorted(msg)
     h1 = _h1(msg)
     a, b = km_span(msg.events)
@@ -98,6 +153,8 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
 
 
 def render_telegram(msg: AlertMessage) -> str:
+    if msg.source is not None:
+        return _render_telegram_onset(msg)
     evs = _sorted(msg)
     km = _km_str(msg)
     if len(evs) == 1:
@@ -118,6 +175,8 @@ def _sms_token(e: AlertEvent) -> str:
 def render_sms(msg: AlertMessage, limit: int = 140) -> str:
     """Längenbasierte Kürzung: Kopf immer; Tokens nach severity, solange das
     Ergebnis inkl. evtl. ' +k'-Suffix ≤limit bleibt; Rest → ' +k'."""
+    if msg.source is not None:
+        return _render_sms_onset(msg, limit)
     evs = _sorted(msg)
     trip = _ascii(msg.trip_short)[:16]
     a, b = km_span(msg.events)

@@ -3,7 +3,7 @@ entity_id: issue_919_radar_alert_canonical
 type: feature
 created: 2026-06-30
 updated: 2026-06-30
-status: draft
+status: implemented
 workflow: feat-919-radar-alert-canonical
 ---
 
@@ -11,7 +11,7 @@ workflow: feat-919-radar-alert-canonical
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 
@@ -127,21 +127,21 @@ Nach grünen Tests: `src/outputs/radar_alert.py` per `git rm` entfernen. Alle Im
 
 ### Automated Tests (TDD RED)
 
-- [ ] **Test 1 (AC-1):** GIVEN ein `AlertMessage` mit einem `OnsetEvent` (`is_convective=False`, `onset_minutes=12`, `km_from=5.0`, `km_to=18.0`, `source="Radar (DWD)"`) WHEN `render_subject(msg)` aufgerufen wird THEN enthält der Rückgabe-String `"km 5"` und `"Regen in 12 Min"` und enthält weder `"%"` noch `"→"`.
+- [x] **Test 1 (AC-1):** GIVEN ein `AlertMessage` mit einem `OnsetEvent` (`is_convective=False`, `onset_minutes=12`, `km_from=5.0`, `km_to=18.0`, `source="Radar (DWD)"`) WHEN `render_subject(msg)` aufgerufen wird THEN enthält der Rückgabe-String `"km 5"` und `"Regen in 12 Min"` und enthält weder `"%"` noch `"→"`.
 
-- [ ] **Test 2 (AC-2):** GIVEN ein `AlertMessage` mit einem `OnsetEvent` (`is_convective=True`, `onset_minutes=8`) WHEN `render_subject(msg)` aufgerufen wird THEN enthält der Rückgabe-String `"Gewitter in 8 Min"` und enthält nicht das Wort `"Regen"`.
+- [x] **Test 2 (AC-2):** GIVEN ein `AlertMessage` mit einem `OnsetEvent` (`is_convective=True`, `onset_minutes=8`) WHEN `render_subject(msg)` aufgerufen wird THEN enthält der Rückgabe-String `"Gewitter in 8 Min"` und enthält nicht das Wort `"Regen"`.
 
-- [ ] **Test 3 (AC-3):** GIVEN ein `AlertMessage` mit einem `OnsetEvent` und `cooldown_display="2 Stunden"` WHEN `render_email(msg)` aufgerufen wird THEN enthält der HTML-Part `"Radar (DWD)"` und der Plain-Part `"höchstens einmal in"`.
+- [x] **Test 3 (AC-3):** GIVEN ein `AlertMessage` mit einem `OnsetEvent` und `cooldown_display="2 Stunden"` WHEN `render_email(msg)` aufgerufen wird THEN enthält der HTML-Part `"Radar (DWD)"` und der Plain-Part `"höchstens einmal in"`.
 
-- [ ] **Test 4 (AC-4):** GIVEN ein `AlertMessage` mit einem `OnsetEvent` (`onset_time="14:35"`, `source_label="Radar (DWD)"`) WHEN `render_telegram(msg)` aufgerufen wird THEN enthält der Rückgabe-String `"14:35"` und `"Radar (DWD)"`.
+- [x] **Test 4 (AC-4):** GIVEN ein `AlertMessage` mit einem `OnsetEvent` (`onset_time="14:35"`, `source_label="Radar (DWD)"`) WHEN `render_telegram(msg)` aufgerufen wird THEN enthält der Rückgabe-String `"14:35"` und `"Radar (DWD)"`.
 
-- [ ] **Test 5 (AC-5, nicht-konvektiv):** GIVEN ein `AlertMessage` mit einem `OnsetEvent` (`is_convective=False`, `onset_minutes=12`) WHEN `render_sms(msg)` aufgerufen wird THEN enthält der Rückgabe-String `"R!12"`, ist maximal 140 Zeichen lang und enthält ausschliesslich GSM-7-Zeichen.
+- [x] **Test 5 (AC-5, nicht-konvektiv):** GIVEN ein `AlertMessage` mit einem `OnsetEvent` (`is_convective=False`, `onset_minutes=12`) WHEN `render_sms(msg)` aufgerufen wird THEN enthält der Rückgabe-String `"R!12"`, ist maximal 140 Zeichen lang und enthält ausschliesslich GSM-7-Zeichen.
 
-- [ ] **Test 6 (AC-5, konvektiv):** GIVEN ein `AlertMessage` mit einem `OnsetEvent` (`is_convective=True`, `onset_minutes=8`) WHEN `render_sms(msg)` aufgerufen wird THEN enthält der Rückgabe-String `"TH!8"`.
+- [x] **Test 6 (AC-5, konvektiv):** GIVEN ein `AlertMessage` mit einem `OnsetEvent` (`is_convective=True`, `onset_minutes=8`) WHEN `render_sms(msg)` aufgerufen wird THEN enthält der Rückgabe-String `"TH!8"`.
 
-- [ ] **Test 7 (AC-6):** GIVEN ein `TripAlertService` mit `_mail_sink` und einem Trip mit positivem Nowcast WHEN `check_radar_alerts` aufgerufen wird THEN enthält `subject` an `_mail_sink` den Text `"Regen in"` oder `"Gewitter in"`, und `build_radar_alert_subject` / `build_radar_alert_body` werden nicht aufgerufen.
+- [x] **Test 7 (AC-6):** GIVEN ein `TripAlertService` mit `_mail_sink` und einem Trip mit positivem Nowcast WHEN `check_radar_alerts` aufgerufen wird THEN enthält `subject` an `_mail_sink` den Text `"Regen in"` oder `"Gewitter in"`, und `build_radar_alert_subject` / `build_radar_alert_body` werden nicht aufgerufen.
 
-- [ ] **Test 8 (AC-8):** GIVEN ein `AlertMessage` mit `AlertEvent`-Events und `source=None` WHEN alle vier `render_*`-Funktionen aufgerufen werden THEN sind die Ausgaben identisch zum vorherigen Deviation-Format (Regression-Guard per Snapshot-Vergleich).
+- [x] **Test 8 (AC-8):** GIVEN ein `AlertMessage` mit `AlertEvent`-Events und `source=None` WHEN alle vier `render_*`-Funktionen aufgerufen werden THEN sind die Ausgaben identisch zum vorherigen Deviation-Format (Regression-Guard per Snapshot-Vergleich).
 
 ## Acceptance Criteria
 
@@ -175,3 +175,4 @@ Nach grünen Tests: `src/outputs/radar_alert.py` per `git rm` entfernen. Alle Im
 ## Changelog
 
 - 2026-06-30: Initial spec created
+- 2026-06-30: Implemented — 10 tests grün, `src/outputs/radar_alert.py` gelöscht, status auf `implemented` gesetzt

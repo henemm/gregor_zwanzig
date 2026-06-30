@@ -22,12 +22,25 @@ class AlertEvent:
 
 
 @dataclass(frozen=True)
+class OnsetEvent:
+    """Ein Radar-Onset-Ereignis (Niederschlag oder Gewitter im Anmarsch)."""
+    onset_minutes: int
+    onset_time: str           # "HH:MM"
+    km_from: float
+    km_to: float
+    is_convective: bool
+    intensity_label: str
+    source_label: str
+
+
+@dataclass(frozen=True)
 class AlertMessage:
     """Kanonische Alert-Nachricht über alle vier Kanäle."""
     trip_short: str
-    stand_at: str                    # "HH:MM"
-    events: tuple[AlertEvent, ...]   # ≥1
-    source: str | None = None        # RESERVIERT für Radar (#919); Deviation → None
+    stand_at: str                              # "HH:MM"
+    events: tuple[AlertEvent | OnsetEvent, ...]  # ≥1
+    source: str | None = None                  # Radar (#919): source != None → Onset-Zweig; Deviation → None
+    cooldown_display: str | None = None        # Radar (#919): Pflichttext Cooldown-Hinweis
 
 
 def direction(e: AlertEvent) -> str:
@@ -69,5 +82,5 @@ def severity(e: AlertEvent) -> float:
     return (e.threshold - e.value_to) / e.threshold
 
 
-def km_span(events: tuple[AlertEvent, ...]) -> tuple[float, float]:
+def km_span(events: tuple) -> tuple[float, float]:
     return (min(e.km_from for e in events), max(e.km_to for e in events))

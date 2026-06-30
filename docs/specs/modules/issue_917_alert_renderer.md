@@ -172,7 +172,7 @@ aber **nicht** verdrahtet (`known_channels` bleibt `{email, telegram}`).
 ## Known Limitations
 
 - **SMS-Versand bleibt out-of-scope:** `render_sms` wird gebaut + Fixture-getestet, aber nicht zugestellt (`known_channels={email,telegram}`).
-- **Radar-/Nowcast-Alert** bleibt vorerst auf eigenem Pfad (`outputs/radar_alert.py`); Konvergenz auf diesen Renderer inkl. Quelle-Zeile = Folge-Issue **#919**. Das `source`-Feld ist dafür reserviert, wird hier aber nicht befüllt/gerendert.
+- **Radar-/Nowcast-Alert** ~~bleibt vorerst auf eigenem Pfad (`outputs/radar_alert.py`)~~ — **erledigt durch Issue #919** (2026-06-30): `OnsetEvent` + `cooldown_display` in `model.py`, Onset-Zweige in alle vier `render_*`-Funktionen, `radar_alert.py` gelöscht.
 - **`delta_pct` bei `value_from == 0`:** kein sinnvoller Prozentwert → definierter Sonderfall (kein `%`, kein Crash).
 - **Briefing-SMS-Konsolidierung** (ADR-0011 Ziel-3) bleibt für den Briefing-Pfad bewusst offen (PO: „stehende Kürzel sind Gesetz").
 
