@@ -26,6 +26,16 @@
 4. Bestehenden Trip bearbeiten → Wetter-Metriken-Tab: `EditReportConfigSection`
    weiterhin sichtbar (createMode=false)
 
+## Acceptance Criteria
+
+**AC-1:** Given `/trips/new` ist offen / When Wetter-Metriken-Tab angeklickt / Then sind Morgen-Report- und Abend-Report-Karten NICHT sichtbar (createMode-Guard wirkt)
+
+**AC-2:** Given `/trips/new` ist offen / When Zeitplan-Tab angeklickt / Then sind Morgen-Report, Abend-Report, Kanäle und E-Mail-Inhalt sichtbar
+
+**AC-3:** Given Zeitplan-Tab mit Morgen-Report deaktiviert / When Wetter-Metriken-Tab und zurück zum Zeitplan-Tab / Then ist die Deaktivierung noch gespeichert (kein State-Reset)
+
+**AC-4:** Given bestehender Trip im Bearbeiten-Modus / When Wetter-Metriken-Tab geöffnet / Then Morgen-Report und Abend-Report weiterhin sichtbar (createMode=false unverändert)
+
 ## Inline-Test
 
-- [ ] Playwright: Im Anlegen-Wizard zeigt Wetter-Metriken-Tab keine `EditReportConfigSection`
+- [x] Playwright: Im Anlegen-Wizard zeigt Wetter-Metriken-Tab keine `EditReportConfigSection`
