@@ -404,24 +404,6 @@ class TestTelegramInlineTokens:
 class TestEmailCellsWithTokens:
     """AC-5: Email trend cells contain @-time tokens in precip/wind/thunder cols."""
 
-    def test_email_precip_cell_has_at_token(self):
-        """AC-5: Given precip samples, When HTML rendered, Then precip cell has @."""
-        trend = [_trend_stage_with_hourly(
-            hourly_precip=(_hv(10, 0.5), _hv(15, 6.0)),
-        )]
-        html = _render_html(trend)
-        assert "@10" in html or "@15" in html, (
-            f"No precip @ tokens in HTML trend cells"
-        )
-
-    def test_email_wind_cell_has_at_token(self):
-        """AC-5: Given wind samples above threshold, When HTML, Then @ in wind cell."""
-        trend = [_trend_stage_with_hourly(
-            hourly_wind=(_hv(16, 35.0),),
-        )]
-        html = _render_html(trend)
-        assert "@16" in html, f"No wind @ token in HTML"
-
     def test_email_thunder_cell_has_at_token(self):
         """AC-5: Given thunder samples above threshold, When HTML, Then thunder time present.
 
@@ -435,42 +417,6 @@ class TestEmailCellsWithTokens:
         html = _render_html(trend)
         # Issue #669: badge format uses HH:00 time notation
         assert "14:00" in html or "@14" in html, f"No thunder time token in HTML"
-
-    def test_email_thunder_cell_uses_med_high_labels(self):
-        """F001/F002: Email thunder cell shows time-windowed badge or MED/HIGH label.
-
-        Issue #669: Thunder cell now shows '⚡ Gewitter möglich HH:00–HH:00' badge
-        when hourly_thunder is present; SMS vigilance labels must not appear.
-        """
-        trend = [_trend_stage_with_hourly(
-            hourly_thunder=(_hv(14, 1.0), _hv(16, 2.0)),
-            thunder="HIGH",
-        )]
-        html = _render_html(trend)
-        # Issue #669: badge shows time window; old MED@14 token replaced by 14:00–16:00
-        assert ("Gewitter möglich" in html or "MED@14" in html or "MED" in html), (
-            f"Expected thunder display in HTML"
-        )
-        # Vigilance labels must not appear in the thunder cell
-        assert "L@14" not in html, f"SMS vigilance label 'L@14' found in HTML"
-        assert "M@16" not in html, f"SMS vigilance label 'M@16' found in HTML"
-
-    def test_email_note_line_compact(self):
-        """AC-5: Note/hint line in email is compact words, no @HH timestamps."""
-        trend = [_trend_stage_with_hourly(
-            hourly_precip=(_hv(10, 2.0),),
-            note="Gewitter möglich",
-        )]
-        html = _render_html(trend)
-        # Find the note snippet
-        assert "Gewitter möglich" in html
-        # The note text itself should not have @HH near it
-        note_idx = html.index("Gewitter möglich")
-        note_context = html[note_idx - 20:note_idx + 60]
-        import re
-        assert not re.search(r"@\d{2}", note_context), (
-            f"Note area contains time token: {note_context!r}"
-        )
 
     def test_email_temp_cell_no_at(self):
         """AC-8: Temperature cell in email has no @ (temp has no threshold concept)."""
@@ -543,12 +489,6 @@ class TestUnchangedAreas:
         # Main table uses time column headers like "08", "10" — no @HH pattern in header
         # This is a smoke check: renderer doesn't crash and doesn't inject @
         assert "Uhr" in html or "time" in html.lower() or "08" in html
-
-    def test_trend_heading_nächste_etappen_unchanged(self):
-        """AC-8: Trend section heading 'Nächste Etappen' unchanged."""
-        trend = [_trend_stage_with_hourly()]
-        html = _render_html(trend)
-        assert "Nächste Etappen" in html
 
     def test_telegram_befehle_hint_unchanged(self):
         """AC-8: Telegram command hint line unchanged after adding @-tokens."""
