@@ -95,16 +95,58 @@ def _segments_to_normalized_forecast(
     pop_samples: list[HourlyValue] = []
     for seg in segments:
         agg = seg.aggregated
-        # Bug #398: Synthetische Stunden-Token auf Ortszeit verankern.
-        hour = local_hour(seg.segment.start_time, tz)
-        if agg.precip_sum_mm is not None and agg.precip_sum_mm > 0:
-            rain_samples.append(HourlyValue(hour, float(agg.precip_sum_mm)))
-        if agg.wind_max_kmh is not None and agg.wind_max_kmh > 0:
-            wind_samples.append(HourlyValue(hour, float(agg.wind_max_kmh)))
-        if agg.gust_max_kmh is not None and agg.gust_max_kmh > 0:
-            gust_samples.append(HourlyValue(hour, float(agg.gust_max_kmh)))
-        if agg.pop_max_pct is not None and agg.pop_max_pct > 0:
-            pop_samples.append(HourlyValue(hour, float(agg.pop_max_pct)))
+        # Bug #925: Stunden-Token aus der ECHTEN Stunden-Zeitreihe (Ortszeit)
+        # ableiten — deckungsgleich mit der E-Mail-Tabelle. Onset@h(Peak@h) statt
+        # Etappen-Summe @ Etappen-Start. Vorbild: _build_stage_trend.
+        ts = seg.timeseries
+        if ts is not None and ts.data:
+            # Auf das Etappen-Zeitfenster filtern — identisch zu
+            # extract_hourly_rows (E-Mail), inkl. Mitternachts-Überlauf (#399).
+            start_h = seg.segment.start_time.hour
+            end_h = seg.segment.end_time.hour
+            for dp in ts.data:
+                h = dp.ts.hour
+                in_window = (start_h <= h <= end_h) if start_h <= end_h else (h >= start_h or h <= end_h)
+                if not in_window:
+                    continue
+                lh = local_hour(dp.ts, tz)
+                if dp.precip_1h_mm is not None and dp.precip_1h_mm > 0:
+                    rain_samples.append(HourlyValue(lh, float(dp.precip_1h_mm)))
+                if dp.wind10m_kmh is not None and dp.wind10m_kmh > 0:
+                    wind_samples.append(HourlyValue(lh, float(dp.wind10m_kmh)))
+                if dp.gust_kmh is not None and dp.gust_kmh > 0:
+                    gust_samples.append(HourlyValue(lh, float(dp.gust_kmh)))
+                pop = getattr(dp, "pop_pct", None)
+                if pop is not None and pop > 0:
+                    pop_samples.append(HourlyValue(lh, float(pop)))
+        else:
+            # Fail-soft: keine Stunden-Zeitreihe (Provider-Fehler) → Etappen-Aggregat
+            # am Etappen-Start als Rückfall (Bug #398-Verhalten).
+            hour = local_hour(seg.segment.start_time, tz)
+            if agg.precip_sum_mm is not None and agg.precip_sum_mm > 0:
+                rain_samples.append(HourlyValue(hour, float(agg.precip_sum_mm)))
+            if agg.wind_max_kmh is not None and agg.wind_max_kmh > 0:
+                wind_samples.append(HourlyValue(hour, float(agg.wind_max_kmh)))
+            if agg.gust_max_kmh is not None and agg.gust_max_kmh > 0:
+                gust_samples.append(HourlyValue(hour, float(agg.gust_max_kmh)))
+            if agg.pop_max_pct is not None and agg.pop_max_pct > 0:
+                pop_samples.append(HourlyValue(hour, float(agg.pop_max_pct)))
+
+    # Bug #925 / F002: Grenz-Stunden zwischen aufeinanderfolgenden Etappen
+    # (seg1.end_h == seg2.start_h, beide inklusiv) können dieselbe Stunde doppelt
+    # liefern. Pro Ortszeit-Stunde nur den Höchstwert behalten — deterministisch
+    # und konsistent mit der Peak-/Onset-Logik.
+    def _dedup_by_hour(samples: list[HourlyValue]) -> tuple[HourlyValue, ...]:
+        best: dict[int, float] = {}
+        for s in samples:
+            if s.hour not in best or s.value > best[s.hour]:
+                best[s.hour] = s.value
+        return tuple(HourlyValue(h, best[h]) for h in sorted(best))
+
+    rain_samples_d = _dedup_by_hour(rain_samples)
+    wind_samples_d = _dedup_by_hour(wind_samples)
+    gust_samples_d = _dedup_by_hour(gust_samples)
+    pop_samples_d = _dedup_by_hour(pop_samples)
 
     # Issue #121: worst-case daily confidence aggregation over segments.
     confs = [s.aggregated.confidence_pct_min for s in segments
@@ -114,10 +156,10 @@ def _segments_to_normalized_forecast(
     today = DailyForecast(
         temp_min_c=day_min,
         temp_max_c=day_max,
-        rain_hourly=tuple(rain_samples),
-        pop_hourly=tuple(pop_samples),
-        wind_hourly=tuple(wind_samples),
-        gust_hourly=tuple(gust_samples),
+        rain_hourly=rain_samples_d,
+        pop_hourly=pop_samples_d,
+        wind_hourly=wind_samples_d,
+        gust_hourly=gust_samples_d,
         confidence_pct_min=day_confidence,
     )
     return NormalizedForecast(days=(today,))
