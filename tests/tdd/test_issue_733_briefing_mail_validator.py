@@ -38,7 +38,7 @@ def _load_validator():
 # --------------------------------------------------------------------------- #
 _VALID_FULL_HTML = (
     '<div>Tag 3 - GR20</div>'
-    '<table class="resp"><thead><tr><th>Time</th><th>Temp</th></tr></thead><tbody>'
+    '<table data-table="resp" style="width:100%;border-collapse:collapse;"><thead><tr><th>Time</th><th>Temp</th></tr></thead><tbody>'
     '<tr><td data-label="Time">08:00</td><td>12°C</td></tr>'
     '<tr><td data-label="Time">09:00</td><td>14°C</td></tr>'
     '<tr><td data-label="Time">10:00</td><td>15°C</td></tr>'

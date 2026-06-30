@@ -248,13 +248,15 @@ def _check_metric_plausibility(html: str) -> list[str]:
 def _data_visible(page) -> bool:
     """True, wenn bei diesem Viewport eine Wetterdaten-Tabelle sichtbar ist.
 
-    Sichtbar = irgendeine `table.resp` ODER `.mobile-compact` mit offsetHeight>0
-    und display!='none'. Eine flache (nicht responsiv gewrappte) Tabelle ist bei
-    jeder Breite sichtbar; nur ein per @media versteckter Block ohne Gegenstueck
-    macht den Viewport leer (AC-1, #831-Klasse).
+    Sichtbar = irgendeine `table[data-table="resp"]` ODER `.mobile-compact` mit
+    offsetHeight>0 und display!='none'. Eine flache (nicht responsiv gewrappte)
+    Tabelle ist bei jeder Breite sichtbar; nur ein per @media versteckter Block
+    ohne Gegenstueck macht den Viewport leer (AC-1, #831-Klasse).
+
+    fix-911-table-jsx AC-1: Tabellen-Marker ist data-table="resp" (kein CSS-class).
     """
     return page.evaluate(
-        "()=>{const els=document.querySelectorAll('table.resp,.mobile-compact');"
+        "()=>{const els=document.querySelectorAll('table[data-table=\"resp\"],.mobile-compact');"
         "for(const el of els){const s=getComputedStyle(el);"
         "if(el.offsetHeight>0 && s.display!=='none') return true;} return false;}"
     )

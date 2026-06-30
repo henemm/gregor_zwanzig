@@ -193,7 +193,7 @@ class TestTableStructure:
         result = _render_html_table(rows, friendly_keys=set())
         thead_start = result.find("<thead>")
         thead_end = result.find("</thead>")
-        th_pos = result.find("<th>")
+        th_pos = result.find("<th ")
         assert thead_start != -1, "Kein <thead> gefunden"
         assert thead_end > thead_start, "Kein </thead> gefunden"
         assert thead_start < th_pos < thead_end, (
@@ -282,7 +282,7 @@ class TestMobileLayoutPlaywright:
             page.wait_for_load_state("networkidle")
 
             metrics = page.evaluate("""() => {
-                const tables = Array.from(document.querySelectorAll("table.resp"));
+                const tables = Array.from(document.querySelectorAll('table[data-table="resp"]'));
                 return tables.map(t => ({
                     scrollWidth: t.scrollWidth,
                     clientWidth: t.clientWidth,
@@ -327,7 +327,7 @@ class TestMobileLayoutPlaywright:
             page.wait_for_load_state("networkidle")
 
             th_visible = page.evaluate("""() => {
-                const ths = Array.from(document.querySelectorAll("table.resp th"));
+                const ths = Array.from(document.querySelectorAll('table[data-table="resp"] th'));
                 return ths.map(th => ({
                     text: th.textContent.trim(),
                     offsetHeight: th.offsetHeight,

@@ -54,9 +54,10 @@ def _require(mod, name: str):
 # Echte HTML-Bausteine mit den Renderer-Markern (verifiziert gegen render_email)
 # --------------------------------------------------------------------------- #
 def _table_resp(rows: list[tuple[str, str]], col_label: str, header_de: str) -> str:
-    """Desktop-Tabelle `<table class="resp">` mit Zeit-Spalte + einer Metrik-Spalte.
+    """Desktop-Tabelle `<table data-table="resp">` mit Zeit-Spalte + einer Metrik-Spalte.
 
     rows: Liste (HH:00, wert). header_de: deutscher Spaltenkopf der Metrik.
+    fix-911-table-jsx AC-1: Marker ist data-table="resp" (kein CSS-class).
     """
     trs = "".join(
         f'<tr><td data-label="Time">{t}</td>'
@@ -64,7 +65,8 @@ def _table_resp(rows: list[tuple[str, str]], col_label: str, header_de: str) -> 
         for t, v in rows
     )
     return (
-        f'<table class="resp"><thead><tr><th>Zeit</th><th>{header_de}</th></tr>'
+        f'<table data-table="resp" style="width:100%;border-collapse:collapse;">'
+        f'<thead><tr><th>Zeit</th><th>{header_de}</th></tr>'
         f'</thead><tbody>{trs}</tbody></table>'
     )
 

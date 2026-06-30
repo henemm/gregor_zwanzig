@@ -210,7 +210,7 @@ def test_no_viewport_mismatch_einfach(metric_id):
 
     # Desktop: alle <table class="resp"> im HTML (diese sind ausschliesslich in
     # .desktop-only Divs; .mobile-compact benutzt bis zum Fix <pre>-Bloecke)
-    desktop_tables = re.findall(r'<table[^>]*data-table="resp"[^>]*>.*?</table>', html, re.S)
+    desktop_tables = re.findall(r'<table class="resp">.*?</table>', html, re.S)
     desktop_combined = "\n".join(desktop_tables)
     desktop_has_ampel = _has_ampel(desktop_combined)
 
@@ -237,7 +237,7 @@ def test_no_viewport_mismatch_roh():
     """
     html, _plain = _render(raw=True, enabled={"temperature", "wind"})
 
-    desktop_tables = re.findall(r'<table[^>]*data-table="resp"[^>]*>.*?</table>', html, re.S)
+    desktop_tables = re.findall(r'<table class="resp">.*?</table>', html, re.S)
     desktop_combined = "\n".join(desktop_tables)
 
     mobile_inner = _mobile_compact_inner(html)

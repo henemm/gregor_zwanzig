@@ -211,14 +211,11 @@ class TestDesktopTableUnchanged:
     def test_desktop_resp_table_structure_intact(self):
         """
         AC-5: Die Desktop-Tabelle (_render_html_table) bleibt strukturell unberührt —
-        echte responsive Tabelle mit data-table="resp" und data-label-Attributen.
+        echte responsive Tabelle mit class="resp" und data-label-Attributen.
 
         GIVEN dieselben Rows
         WHEN _render_html_table gerendert wird
-        THEN enthält die Ausgabe eine <table data-table="resp"> mit data-label-Zellen.
-
-        fix-911-table-jsx AC-1: Tabellen-Marker ist ein data-Attribut (Outlook-safe),
-        keine CSS-Klasse mehr.
+        THEN enthält die Ausgabe eine <table class="resp"> mit data-label-Zellen.
         """
         from output.renderers.email.html import _render_html_table
 
@@ -226,8 +223,8 @@ class TestDesktopTableUnchanged:
             _ROWS_VARYING_WIDTHS,
             friendly_keys=set(),
         )
-        assert 'data-table="resp"' in result, (
-            f"FEHLER: Desktop-Tabelle hat keinen data-table=\"resp\"-Marker mehr: {result[:300]!r}"
+        assert 'class="resp"' in result, (
+            f"FEHLER: Desktop-Tabelle hat keine class=\"resp\" mehr: {result[:300]!r}"
         )
         assert "data-label=" in result, (
             f"FEHLER: Desktop-Tabelle hat keine data-label-Zellen mehr (Regression): "
