@@ -6,31 +6,31 @@ GR20 E3
 GR20 E3: trocken, ⚡ möglich
 
 ━━ Metriken-Überblick ━━
-  Temperatur 18–20 °C
-  Gefühlt 12–13 °C
-  🟢 Wind ab 09:00 · Spitze 19 km/h um 15:00
-  🟢 Böen ab 09:00 · Spitze 45 km/h um 15:00
-  🟡 Regen ab 09:00 · 2 mm gesamt, Spitze 09:00
+  18–20°C · Max 15:00
+  gef. min 11.8°C · 09:00
+  🟢 Wind >10 km/h ab 09:00 · max 19 (15:00)
+  🟢 Böen >20 km/h ab 09:00 · max 45 (15:00)
+  🟡 Regen ab 09:00 · 2.5 mm
   🟢 kein Gewitter
-  Bewölkung 50 %
+  50% bewölkt · Max 09:00
   Sonne 210 min
 
 ━━ Segment 1: km 0.0–0.0 | 09:00–12:00 | ↑400m → 1200m ━━
-  Time    Temp   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun 
-  ------  -----  ------  -----  -----  -----  -----  ------  ------  ----
-  09:00   17.7   11.8    16     39     2.5    –      –       ⛅       –   
-  10:00   18.0   12.0    17     40     0.0    –      –       ⛅       –   
-  11:00   18.3   12.2    18     41     0.0    –      –       ⛅       –   
-  12:00   18.6   12.4    18     42     0.0    –      –       ⛅       –   
+  Time   Temp   TmpMin   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun 
+  -----  -----  -------  ------  -----  -----  -----  -----  ------  ------  ----
+  09     17.7   17.7     11.8    16     39     2.5    –      –       ⛅       –   
+  10     18.0   18.0     12.0    17     40     0.0    –      –       ⛅       –   
+  11     18.3   18.3     12.2    18     41     0.0    –      –       ⛅       –   
+  12     18.6   18.6     12.4    18     42     0.0    –      –       ⛅       –   
 
 ━━ Segment 2: km 0.0–0.0 | 12:00–16:00 | ↑400m → 1200m ━━
-  Time    Temp   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun 
-  ------  -----  ------  -----  -----  -----  -----  ------  ------  ----
-  12:00   18.6   12.4    18     42     0.0    –      –       ⛅       –   
-  13:00   18.9   12.6    18     43     0.0    –      –       ⛅       –   
-  14:00   19.2   12.8    19     44     0.0    –      –       ⛅       –   
-  15:00   19.5   13.0    20     45     0.0    –      –       ⛅       –   
-  16:00   19.8   13.2    20     46     0.0    –      –       ⛅       –   
+  Time   Temp   TmpMin   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun 
+  -----  -----  -------  ------  -----  -----  -----  -----  ------  ------  ----
+  12     18.6   18.6     12.4    18     42     0.0    –      –       ⛅       –   
+  13     18.9   18.9     12.6    18     43     0.0    –      –       ⛅       –   
+  14     19.2   19.2     12.8    19     44     0.0    –      –       ⛅       –   
+  15     19.5   19.5     13.0    20     45     0.0    –      –       ⛅       –   
+  16     19.8   19.8     13.2    20     46     0.0    –      –       ⛅       –   
 
 
 ── Antwort-Kommandos ──
@@ -44,7 +44,7 @@ GR20 E3: trocken, ⚡ möglich
   STOP / WEITER        – Briefings deaktivieren / reaktivieren
   HILFE / HELP         – Alle Befehle anzeigen
 
-Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
+Einheiten: Temp, TmpMin, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 ------------------------------------------------------------
-Generated: 2026-06-23 13:01 UTC
+Generated: 2026-04-28 12:00 UTC
 Data: openmeteo (arome_france)

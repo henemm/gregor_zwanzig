@@ -56,14 +56,31 @@ def _distinct_hours(text: str, html: bool = False) -> list[str]:
     """
     seen: list[str] = []
     if html:
-        # Erfasst:
-        # 1. <td data-label="Time">HH:00</td>
-        # 2. <td>HH:00</td>
-        # 3. \n  HH:00   (mobile compact <pre>)
-        # 4. >HH:00 (Start einer Zelle ohne data-label, fail-soft)
-        pattern = re.compile(r'(?:data-label="Time">|<td>|>|(?:\n|^)\s*)([01]?\d|2[0-3]):00(?:\s|</td>|&nbsp;|<)')
-        for m in pattern.finditer(text):
-            h = f"{m.group(1)}:00"
+        # #928: Zeit-Zellen zeigen wieder die reine Stunde `HH` (statt `HH:00`).
+        # Damit Datenwerte (z.B. "05 · Ausblick", Temperatur "12") NICHT
+        # faelschlich als Stunde zaehlen, gilt eine zweistufige Verankerung:
+        #
+        #   * BARE `HH` (ohne `:00`) wird NUR an der echten Zeit-Zelle erkannt
+        #     (`data-label="Time">`) oder am Zeilenanfang im mobilen <pre>.
+        #     Die generischen `<td>`/`>`-Anker sind hier zu breit (bare Zahlen
+        #     kommen ueberall vor) und werden bewusst NICHT zugelassen.
+        #   * `HH:00` behaelt die breiteren Anker (`<td>`, `>`, fail-soft) —
+        #     rueckwaertskompatibel, da `HH:00` ausserhalb von Tabellen selten ist.
+        #
+        # Der distinct-Key ist in beiden Faellen die reine Stunde, damit `08`
+        # und `08:00` als dieselbe Stunde zaehlen.
+        bare_pattern = re.compile(
+            r'(?:data-label="Time">|(?:\n|^)\s*)([01]?\d|2[0-3])(?:\s|</td>|&nbsp;|<)'
+        )
+        colon_pattern = re.compile(
+            r'(?:data-label="Time">|<td>|>|(?:\n|^)\s*)([01]?\d|2[0-3]):00(?:\s|</td>|&nbsp;|<)'
+        )
+        for m in colon_pattern.finditer(text):
+            h = m.group(1)
+            if h not in seen:
+                seen.append(h)
+        for m in bare_pattern.finditer(text):
+            h = m.group(1)
             if h not in seen:
                 seen.append(h)
     else:

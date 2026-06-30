@@ -509,7 +509,7 @@ def _render_html_table(
         # <td data-label="...">(.*?)</td> weiterhin greift.
         # border-right/border-bottom für data-label-Zellen via CSS-Block (<style>).
         tds = (
-            f'<td style="{_td_grid}padding:6px;text-align:center;">'
+            f'<td style="{_td_grid}padding:6px;text-align:center;" data-label="Time">'
             f'{r["time"]}</td>'
         )
         for key, label in cols:

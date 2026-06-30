@@ -6,23 +6,23 @@ GR20 E1
 GR20 E1: 2–9°C, 🌥️, starker Regen bis 6:00, trocken ab 7:00, mäßiger Wind 35 km/h, Böen bis 70 km/h ab 6:00, ⚡ möglich 6:00–10:00
 
 ━━ Metriken-Überblick ━━
-  Temperatur 17–18 °C
-  Gefühlt 11–12 °C
-  🟢 Wind ab 06:00 · Spitze 16 km/h um 09:00
-  🟠 Böen ab 06:00 · 70 km/h
-  🔴 Regen ab 06:00 · 18 mm gesamt, Spitze 06:00
+  17–18°C · Max 09:00
+  gef. min 11.2°C · 06:00
+  🟢 Wind >10 km/h ab 06:00 · max 16 (09:00)
+  🟠 Böen >20 km/h ab 06:00 · max 70 (06:00)
+  🔴 Regen ab 06:00 · 18.5 mm
   🔴 Gewitter ab 06:00 · stärkste 06:00
-  Bewölkung 50 %
+  50% bewölkt · Max 06:00
   Sonne 120 min
 
 ━━ Segment 1: km 0.0–0.0 | 06:00–10:00 | ↑400m → 1200m ━━
-  Time    Temp   Feels   Wind   Gust   Rain   Thdr      SnowL   Cloud   Sun 
-  ------  -----  ------  -----  -----  -----  --------  ------  ------  ----
-  06:00   16.8   11.2    15     70     18.5   ⚡ mögl.   –       ⛅       –   
-  07:00   17.1   11.4    16     37     0.0    ⚡ mögl.   –       ⛅       –   
-  08:00   17.4   11.6    16     38     0.0    ⚡ mögl.   –       ⛅       –   
-  09:00   17.7   11.8    16     39     0.0    ⚡ mögl.   –       ⛅       –   
-  10:00   18.0   12.0    17     40     0.0    ⚡ mögl.   –       ⛅       –   
+  Time   Temp   TmpMin   Feels   Wind   Gust   Rain   Thdr      SnowL   Cloud   Sun 
+  -----  -----  -------  ------  -----  -----  -----  --------  ------  ------  ----
+  06     16.8   16.8     11.2    15     70     18.5   ⚡ mögl.   –       ⛅       –   
+  07     17.1   17.1     11.4    16     37     0.0    ⚡ mögl.   –       ⛅       –   
+  08     17.4   17.4     11.6    16     38     0.0    ⚡ mögl.   –       ⛅       –   
+  09     17.7   17.7     11.8    16     39     0.0    ⚡ mögl.   –       ⛅       –   
+  10     18.0   18.0     12.0    17     40     0.0    ⚡ mögl.   –       ⛅       –   
 
 
 ── Antwort-Kommandos ──
@@ -36,7 +36,7 @@ GR20 E1: 2–9°C, 🌥️, starker Regen bis 6:00, trocken ab 7:00, mäßiger W
   STOP / WEITER        – Briefings deaktivieren / reaktivieren
   HILFE / HELP         – Alle Befehle anzeigen
 
-Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
+Einheiten: Temp, TmpMin, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 ------------------------------------------------------------
-Generated: 2026-06-23 13:01 UTC
+Generated: 2026-04-28 12:00 UTC
 Data: openmeteo (arome_france)

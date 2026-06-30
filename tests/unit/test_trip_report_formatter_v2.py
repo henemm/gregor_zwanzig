@@ -144,12 +144,19 @@ class TestHourlyRows:
         )
         html = report.email_html
 
+        # #928: Zeit-Zellen zeigen die reine Stunde `HH` (nicht `HH:00`).
+        # Verankert ueber data-label="Time", damit Datenwerte nicht zaehlen.
+        import re as _re
+        time_cells = [
+            c.strip()
+            for c in _re.findall(r'data-label="Time"[^>]*>\s*([^<]+?)\s*</td>', html)
+        ]
         # Segment 1 should show hours 08, 09, 10
-        assert "08:00" in html
-        assert "09:00" in html
+        assert "08" in time_cells
+        assert "09" in time_cells
         # Segment 2 should show hours 10, 11, 12
-        assert "11:00" in html
-        assert "12:00" in html
+        assert "11" in time_cells
+        assert "12" in time_cells
 
     def test_hourly_temp_values_in_table(self):
         """GIVEN segment with timeseries, WHEN formatted,
