@@ -320,3 +320,78 @@ def test_stage_name_truncated_to_ten_chars():
     assert rendered.startswith("VeryLongSt:"), (
         f"Stage-Name nicht auf 10 Zeichen gekuerzt; expected 'VeryLongSt:' prefix in {rendered!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Issue #945: _sanitize_stage_name() edge cases (via _build_default_line).
+# _sanitize_stage_name is not exported, so we exercise it through the public
+# build path and inspect the rendered stage-name prefix (renderer adds ": ").
+# ---------------------------------------------------------------------------
+
+
+def test_stage_name_without_km():
+    """
+    Name ohne 'km' → alter 10-Zeichen-Truncate-Pfad bleibt aktiv.
+    'Alpenpass' (9 Zeichen) bleibt unverändert.
+    """
+    line = _build_default_line(stage_name="Alpenpass")
+    rendered = line.render(160)
+    assert rendered.startswith("Alpenpass:"), (
+        f"Name ohne km falsch behandelt; expected 'Alpenpass:' prefix in {rendered!r}"
+    )
+
+
+def test_stage_name_km_at_start():
+    """
+    Name der mit 'km' beginnt ('km0-11 Teilstueck') → kein Prefix,
+    nur das km-Token wird bewahrt.
+    """
+    line = _build_default_line(stage_name="km0-11 Teilstueck")
+    rendered = line.render(160)
+    assert rendered.startswith("km0-11:"), (
+        f"km-am-Anfang falsch behandelt; expected 'km0-11:' prefix in {rendered!r}"
+    )
+
+
+def test_stage_name_multiple_km():
+    """
+    Mehrere 'km'-Vorkommen ('Weg km0-11 km15-20') → nur das erste km-Token
+    (split()[0] nach dem ersten 'km') wird bewahrt, Prefix 'Weg' bleibt.
+    """
+    line = _build_default_line(stage_name="Weg km0-11 km15-20")
+    rendered = line.render(160)
+    assert rendered.startswith("Weg km0-11:"), (
+        f"Mehrfach-km falsch behandelt; expected 'Weg km0-11:' prefix in {rendered!r}"
+    )
+
+
+def test_stage_name_km_with_colon():
+    """
+    'Etappe km0-11:' → rstrip(':') entfernt den Doppelpunkt am km-Token-Ende,
+    der Renderer fügt genau EINEN Doppelpunkt nach dem Stage-Namen hinzu.
+    """
+    line = _build_default_line(stage_name="Etappe km0-11:")
+    rendered = line.render(160)
+    assert rendered.startswith("Etappe km0-11:"), (
+        f"km-mit-Doppelpunkt falsch behandelt; expected 'Etappe km0-11:' prefix in {rendered!r}"
+    )
+    # Kein doppelter Doppelpunkt: nach 'km0-11' folgt genau EIN ':'.
+    assert "km0-11::" not in rendered, (
+        f"Doppelter Doppelpunkt nach km-Token: {rendered!r}"
+    )
+
+
+def test_stage_name_km_space():
+    """
+    'Abschnitt km 5-10' — Leerzeichen nach 'km'. split()[0] nach dem
+    gefundenen 'km' liefert nur 'km', der Bereich '5-10' geht verloren.
+    Dokumentiert das aktuelle Verhalten: kein Crash, Prefix bleibt erhalten.
+    """
+    line = _build_default_line(stage_name="Abschnitt km 5-10")
+    rendered = line.render(160)
+    assert rendered.startswith("Abschnitt"), (
+        f"km-mit-Leerzeichen crasht/verändert Prefix falsch: {rendered!r}"
+    )
+    assert rendered.startswith("Abschnitt km:"), (
+        f"km-Leerzeichen-Format: erwartet 'Abschnitt km:' prefix in {rendered!r}"
+    )
