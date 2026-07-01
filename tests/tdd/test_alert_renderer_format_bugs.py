@@ -62,7 +62,7 @@ class TestKmStrNoDuplicatedUnit:
     def test_subject_contains_km_range(self):
         msg = _make_msg()
         subj = render_subject(msg)
-        assert "km 0–11 km" in subj, f"Km-Bereich fehlt im Betreff: {subj!r}"
+        assert "km 0–11" in subj, f"Km-Bereich fehlt im Betreff: {subj!r}"
 
     def test_telegram_no_km_km(self):
         msg = _make_msg()

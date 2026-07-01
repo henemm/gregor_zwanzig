@@ -208,12 +208,13 @@ class TestAC2Subject:
         assert "Schwelle" in subj or "schwelle" in subj.lower(), (
             f"'Schwelle' fehlt bei 3 Events: {subj!r}"
         )
-        # Alle Top-3 Labels (label_de) müssen enthalten sein (Issue #940)
-        from app.metric_catalog import get_metric
-        labels = [get_metric("gust").label_de, get_metric("temperature_cold").label_de,
-                  get_metric("precipitation").label_de]
+        # Alle Top-3 Kürzel (alert_label) müssen enthalten sein (Issue #952 löst
+        # #940-Langform-Erwartung ab: Alert-Renderer zeigen seitdem Kürzel, keine Langform)
+        from app.metric_catalog import get_alert_label
+        labels = [get_alert_label("gust"), get_alert_label("temperature_cold"),
+                  get_alert_label("precipitation")]
         for lbl in labels:
-            assert lbl and lbl in subj, f"Label '{lbl}' fehlt in: {subj!r}"
+            assert lbl and lbl in subj, f"Kürzel '{lbl}' fehlt in: {subj!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -632,7 +633,8 @@ class TestAC9RegressionGuard:
 # ---------------------------------------------------------------------------
 
 class TestIssue940LabelInEmail:
-    """label_de in allen E-Mail-/Telegram-Pfaden; SMS-Code unverändert."""
+    """Alert-Kürzel (alert_label, seit #952) in allen E-Mail-/Telegram-Pfaden,
+    lesbar statt reinem SMS-Code; SMS-Pfad selbst unverändert."""
 
     def _make_msg(self, field: str, direction: str, old: float, new: float, thr: float):
         from src.output.renderers.alert.project import to_alert_message
@@ -644,11 +646,11 @@ class TestIssue940LabelInEmail:
     # ── Blind spot 1+3: render_subject und _h1 (via render_email) ─────────────
 
     def test_visibility_subject_shows_sichtweite(self):
-        """render_subject: 'Sichtweite' statt 'VS'."""
+        """render_subject: 'Sicht' (Alert-Kürzel, Issue #952) statt SMS-Code 'VS'."""
         from src.output.renderers.alert.render import render_subject
         msg = self._make_msg("visibility_min_m", "decrease", 2000.0, 400.0, 1000.0)
         subj = render_subject(msg)
-        assert "Sichtweite" in subj, f"'Sichtweite' fehlt: {subj!r}"
+        assert "Sicht" in subj, f"'Sicht' fehlt: {subj!r}"
         assert " VS" not in subj and not subj.startswith("VS"), \
             f"SMS-Kürzel 'VS' als eigenständiges Token in Betreff: {subj!r}"
 
@@ -664,12 +666,12 @@ class TestIssue940LabelInEmail:
     # ── Blind spot 1: render_email body (_email_line + _h1) ───────────────────
 
     def test_visibility_email_body_shows_sichtweite(self):
-        """render_email: HTML-Body und Plaintext enthalten 'Sichtweite', nicht 'VS'."""
+        """render_email: HTML-Body und Plaintext enthalten 'Sicht' (Alert-Kürzel, #952), nicht 'VS'."""
         from src.output.renderers.alert.render import render_email
         msg = self._make_msg("visibility_min_m", "decrease", 2000.0, 400.0, 1000.0)
         html, plain = render_email(msg)
-        assert "Sichtweite" in html, f"'Sichtweite' fehlt im HTML-Body"
-        assert "Sichtweite" in plain, f"'Sichtweite' fehlt im Plaintext-Body"
+        assert "Sicht" in html, f"'Sicht' fehlt im HTML-Body"
+        assert "Sicht" in plain, f"'Sicht' fehlt im Plaintext-Body"
         assert "· VS ·" not in html and "· VS ·" not in plain, \
             f"SMS-Token '· VS ·' im E-Mail-Body gefunden"
 
@@ -696,11 +698,11 @@ class TestIssue940LabelInEmail:
     # ── Blind spot 2: render_telegram ─────────────────────────────────────────
 
     def test_visibility_telegram_shows_sichtweite(self):
-        """render_telegram: 'Sichtweite' statt 'VS'."""
+        """render_telegram: 'Sicht' (Alert-Kürzel, Issue #952) statt SMS-Code 'VS'."""
         from src.output.renderers.alert.render import render_telegram
         msg = self._make_msg("visibility_min_m", "decrease", 2000.0, 400.0, 1000.0)
         tg = render_telegram(msg)
-        assert "Sichtweite" in tg, f"'Sichtweite' fehlt in Telegram: {tg!r}"
+        assert "Sicht" in tg, f"'Sicht' fehlt in Telegram: {tg!r}"
 
     def test_freezing_level_telegram_shows_nullgradgrenze(self):
         """render_telegram: 'Nullgradgrenze' statt 'NL'."""

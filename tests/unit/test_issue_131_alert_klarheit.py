@@ -205,6 +205,37 @@ def test_ac7_format_change_line_with_segment_label():
     assert line == expected, f"Erwartet:\n  {expected}\nGot:\n  {line}"
 
 
+def test_ac7_format_change_line_unhandled_unit_no_suffix():
+    """Issue #952 Finding F001 Regressionsschutz: format_change_line() haengt fuer
+    Einheiten ausserhalb von format_metric_value()'s behandelten Branches (hier: 'cm'
+    bei snow_depth_cm) KEINE Einheit an und laesst das Nachkomma-Rauschen unveraendert
+    -- format_metric_value()'s else-Zweig ist geteilter Code (auch fuer den
+    Alert-Renderer relevant, siehe render.py::_val()) und darf nicht implizit veraendert
+    werden."""
+    from output.renderers.email.helpers import (
+        build_segment_label,
+        format_change_line,
+    )
+
+    change = WeatherChange(
+        metric="snow_depth_cm",
+        old_value=10.0,
+        new_value=25.0,
+        delta=15.0,
+        threshold=10.0,
+        severity=ChangeSeverity.MAJOR,
+        direction="increase",
+        segment_id="2",
+    )
+    segment = _make_segment_data(2, _make_summary())
+
+    label = build_segment_label(change, [segment], tz=ZoneInfo("UTC"))
+    line = format_change_line(change, label)
+
+    assert "10.0 → 25.0 (15.0)" in line, f"Alt-Format (kein Einheiten-Suffix) veraendert: {line!r}"
+    assert "cm" not in line, f"Ungewollter Einheiten-Suffix in format_change_line: {line!r}"
+
+
 def test_ac8_two_segments_render_two_distinct_lines():
     """AC-8: Zwei Sichtweite-Aenderungen → zwei separate Zeilen, eine pro Segment."""
     from output.renderers.email.helpers import (

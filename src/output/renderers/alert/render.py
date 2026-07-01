@@ -9,8 +9,11 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from app.metric_catalog import (
-    format_metric_value, get_decimals, get_label_for_field, get_metric,
-    get_sms_code,
+    format_metric_value, get_alert_label, get_decimals, get_label_for_field,
+    get_metric, get_sms_code,
+)
+from output.renderers.email.design_tokens import (
+    FONT_DATA, FONT_UI, G_ACCENT, G_DANGER, G_INK, G_INK_MUTED, G_SUCCESS,
 )
 from .model import (
     AlertEvent, AlertMessage, OnsetEvent, arrow, delta_pct, km_span, over_thr,
@@ -22,10 +25,24 @@ def _sorted(msg: AlertMessage) -> list[AlertEvent]:
     return sorted(msg.events, key=severity, reverse=True)
 
 
+_HANDLED_UNITS = {"m", "km", "hPa", "%", "km/h", "°C", "mm"}
+
+
 def _val(e: AlertEvent, value: float) -> str:
-    """Wert MIT Einheit via Katalog (Email/Telegram/Betreff)."""
+    """Wert MIT Einheit via Katalog (Email/Telegram/Betreff).
+
+    format_metric_value() formatiert nur die o.g. Einheiten mit Suffix; fuer
+    alle anderen (z.B. J/kg bei CAPE) baut dieser Renderer selbst einen
+    ganzzahligen/dezimalen Fallback MIT Einheit — bewusst lokal gehalten,
+    damit format_metric_value()'s geteilter else-Zweig fuer andere Aufrufer
+    (z.B. format_change_line) unveraendert bleibt (Issue #952 Finding F001).
+    """
     unit = get_metric(e.metric_id).unit
-    return format_metric_value(unit, round(value, get_decimals(e.metric_id)))
+    rounded = round(value, get_decimals(e.metric_id))
+    if unit in _HANDLED_UNITS:
+        return format_metric_value(unit, rounded)
+    formatted = str(int(rounded)) if float(rounded).is_integer() else str(rounded)
+    return f"{formatted} {unit}".strip()
 
 
 def _code(e: AlertEvent) -> str:
@@ -33,13 +50,13 @@ def _code(e: AlertEvent) -> str:
 
 
 def _label(e: AlertEvent) -> str:
-    """Lesbarer deutscher Name für E-Mail/Telegram (statt SMS-Kürzel)."""
-    return get_metric(e.metric_id).label_de or _code(e)
+    """Kürzel für E-Mail/Telegram/Betreff (#914-Registry, Issue #952)."""
+    return get_alert_label(e.metric_id)
 
 
 def _km_str(msg: AlertMessage) -> str:
     a, b = km_span(msg.events)
-    return f"km {int(round(a))}–{int(round(b))} km"
+    return f"km {int(round(a))}–{int(round(b))}"
 
 
 def _render_subject_onset(msg: AlertMessage) -> str:
@@ -140,18 +157,27 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
 
     plain = "\n".join([h1, ""] + [_email_line(e) for e in evs] + ["", footer])
 
+    # Verdikt-Pille: rot wenn (mindestens) ein Event über der Schwelle liegt, sonst grün.
+    any_over = any(over_thr(e) for e in evs)
+    verdict_bg = G_DANGER if any_over else G_SUCCESS
+    verdict_text = ", ".join(f"{arrow(e)} {_label(e)}" for e in evs)
+
     rows = []
     for e in evs:
-        color = "#c0392b" if over_thr(e) else "#2e7d32"
+        color = G_DANGER if over_thr(e) else G_SUCCESS
+        border = "border-top:1px solid #d8d5c9;" if rows else ""
         rows.append(
-            f"<tr><td style=\"padding:4px 0;color:{color};\">"
-            f"{_esc(_email_line(e))}</td></tr>"
+            f"<div style=\"{border}padding:8px 0;color:{color};font-family:{FONT_DATA};\">"
+            f"{_esc(_email_line(e))}</div>"
         )
     html = (
-        "<html><body style=\"font-family:sans-serif;\">"
-        f"<h1 style=\"margin:0 0 12px;\">{_esc(h1)}</h1>"
-        f"<table style=\"border-collapse:collapse;\">{''.join(rows)}</table>"
-        f"<p style=\"color:#555;margin-top:16px;\">{_esc(footer)}</p>"
+        "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
+        f"<h1 style=\"margin:0 0 12px;font-family:{FONT_UI};color:{G_INK};\">{_esc(h1)}</h1>"
+        f"<div style=\"display:inline-block;padding:4px 12px;border-radius:12px;"
+        f"background:{verdict_bg};color:#ffffff;font-family:{FONT_UI};margin-bottom:12px;\">"
+        f"{_esc(verdict_text)}</div>"
+        f"<div style=\"border-bottom:1px solid #d8d5c9;\">{''.join(rows)}</div>"
+        f"<p style=\"color:{G_INK_MUTED};margin-top:16px;font-family:{FONT_UI};\">{_esc(footer)}</p>"
         "</body></html>"
     )
     return html, plain
