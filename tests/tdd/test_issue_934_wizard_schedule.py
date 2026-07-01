@@ -403,13 +403,15 @@ class TestBug2StateErhaltTabWechsel:
                         break
                 page.wait_for_timeout(800)
 
-                # Im Edit-Modus (createMode=false): EditReportConfigSection IST sichtbar
+                # Nach #942-Fix: EditReportConfigSection ist komplett aus WeatherMetricsTab entfernt.
+                # Der Inhalt-Tab darf KEINE Zeitplan-Elemente zeigen (die gehören in den Versand-Tab).
                 morgen_sichtbar = page.locator("text=Morgen-Report").is_visible()
                 abend_sichtbar = page.locator("text=Abend-Report").is_visible()
 
-                assert morgen_sichtbar or abend_sichtbar, (
-                    f"Regression: Metriken-Tab im Edit-Modus zeigt keine Zeitplan-Elemente "
-                    f"(createMode=false sollte EditReportConfigSection zeigen)."
+                assert not (morgen_sichtbar or abend_sichtbar), (
+                    f"Bug #942 Regression: Inhalt-Tab zeigt Zeitplan-Elemente "
+                    f"(Morgen={morgen_sichtbar}, Abend={abend_sichtbar}). "
+                    f"EditReportConfigSection gehört nur in den Versand-Tab."
                 )
 
             finally:
