@@ -60,9 +60,18 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 
 | Token | Bedeutung | Beispiel |
 |-------|-----------|----------|
-| `{Name}:` | Etappen-/Location-Name (max 10 Zeichen, ASCII) | `Ballone:` |
+| `{Name}:` | Etappen-/Location-Name (max 10 Zeichen, ASCII) oder mit km-Bereich | `Ballone:` oder `GR221 km0-11:` |
 
-Name-Truncation: bei >10 Zeichen abschneiden, Umlaute zuerst ersetzen.
+**Name-Truncation & km-Bereichs-Bewahrung (Issue #936):**
+1. Umlaute ersetzen (ä→ae, ö→oe, ü→ue, ß→ss) **zuerst**.
+2. Auf "km" prüfen im Namen. Wenn gefunden:
+   - Prefix vor "km" auf **max. 10 Zeichen** kürzen.
+   - **Kompletten km-Bereich** (z.B. `km0-11`) bewahren und anhängen.
+   - Beispiel: `GR221 Mallorca km0-11` → `GR221 km0-11:` (Name gekürzt, km-Teil vollständig).
+3. Wenn kein "km": Standard-Truncation auf 10 Zeichen.
+4. Trailingde Leerzeichen und `:` entfernen.
+
+**Implementierung:** `_sanitize_stage_name()` in `src/output/tokens/builder.py`.
 
 ### 3.2 Forecast-Tokens
 
@@ -351,6 +360,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.3 | 2026-05-31 | WL-Token aus SMS entfernt (Issue #479) — `C+/C~/C?` deckt den Stabilitäts-Use-Case ab; WL-Block bleibt nur in der E-Mail erhalten, jetzt aus `min(confidence_pct_min)` der Folge-Etappen abgeleitet statt aus Z500-Ensemble-API |
 | 2.4 | 2026-06-06 | Konfigurierbare Threshold pro Metrik (Issue #624) — `MetricConfig.sms_threshold` optional per Metrik in `display_config` (Trip-Editor), Fallback auf `DEFAULTS`; E-Mail-Tabelle bleibt separate Logik |
 | 2.5 | 2026-06-26 | SMS PR-Token-Befüllung (Issue #887) — `_segments_to_normalized_forecast()` in `sms_trip.py` erzeugt synthetisches `pop_hourly` aus `agg.pop_max_pct`, damit SMS-Token `PR{p}%` nicht mehr leer bleibt |
+| 2.6 | 2026-07-01 | km-Bereichs-Bewahrung in Header (Issue #936) — `_sanitize_stage_name()` erkennt `km`-Marker und bewahrt vollständigen km-Bereich (z.B. `km0-11`) statt ihn nach 10 Zeichen abzuschneiden; Prefix gekürzt, km-Teil vollständig |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

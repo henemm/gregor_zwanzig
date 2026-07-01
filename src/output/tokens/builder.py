@@ -24,8 +24,14 @@ _UMLAUT = str.maketrans({
 
 
 def _sanitize_stage_name(name: str) -> str:
-    """Replace Umlauts FIRST, then truncate to 10 chars (sms_format.md SSOT)."""
-    return name.translate(_UMLAUT)[:10].strip().rstrip(":")
+    """Replace Umlauts FIRST, then truncate prefix to 10 chars; preserve km range."""
+    name = name.translate(_UMLAUT)
+    idx = name.find("km")
+    if idx != -1:
+        prefix = name[:idx].strip()[:10].rstrip()
+        km_part = name[idx:].split()[0]
+        return (f"{prefix} {km_part}" if prefix else km_part).rstrip(":")
+    return name[:10].strip().rstrip(":")
 
 
 # Truncation priority §6: lower drops first.
