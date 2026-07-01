@@ -21,6 +21,8 @@ export const METRIC_MAP: Record<AlertMetric, { metric: string; direction: string
 	cape:                 { metric: 'cape_max_jkg',      direction: 'above' },
 	visibility:           { metric: 'visibility_min_m',  direction: 'below_threshold' },
 	humidity:             { metric: 'humidity_avg_pct',  direction: 'above' },
+	// Issue #946: Nullgradgrenze (freezing_level).
+	freezing_level:       { metric: 'freezing_level_m',  direction: 'below' },
 };
 
 export const SEVERITY_MAP: Record<string, string> = {

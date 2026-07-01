@@ -38,6 +38,8 @@ _PRESET_TABLE: Final[list[tuple]] = [
     (AlertMetric.PRECIPITATION_SUM,    AlertRuleKind.DELTA,              20,    10,     5),
     (AlertMetric.THUNDER_LEVEL,        AlertRuleKind.DELTA,               1,     1,     1),
     (AlertMetric.SNOW_LINE,            AlertRuleKind.DELTA,             600,   400,   200),
+    # Issue #946: freezing_level (Nullgradgrenze) — Delta-Metrik, default_change_threshold 200.
+    (AlertMetric.FREEZING_LEVEL,       AlertRuleKind.DELTA,             400,   200,   100),
     (AlertMetric.TEMPERATURE_MIN,      AlertRuleKind.DELTA,               8,     5,     3),
     (AlertMetric.TEMPERATURE_MAX,      AlertRuleKind.DELTA,              10,     6,     4),
     (AlertMetric.TEMPERATURE_CHANGE,   AlertRuleKind.DELTA,              14,    10,     6),

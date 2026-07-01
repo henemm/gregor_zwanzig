@@ -20,14 +20,24 @@
 
 	let { trip, onTripUpdate, saveController }: Props = $props();
 
-	// Initialisierung: metric_alert_levels → Legacy alert_preset → Standard
+	// Issue #946: metric_alert_levels ist die EINZIGE Quelle. Sind weder
+	// metric_alert_levels noch alert_preset gesetzt → Onboarding-Zustand
+	// (kein stiller Fallback auf 'standard').
+	let isOnboarding = $state<boolean>(
+		!trip.display_config?.metric_alert_levels && !trip.display_config?.alert_preset,
+	);
+
+	// Initialisierung: metric_alert_levels → Legacy alert_preset.
+	// Im Onboarding-Zustand leere Startbelegung (Tabelle wird ohnehin ausgeblendet).
 	let currentLevels = $state<Record<AlertMetric, SensLevel>>(
 		trip.display_config?.metric_alert_levels
 			? (trip.display_config.metric_alert_levels as Record<AlertMetric, SensLevel>)
-			: migrateAlertPreset(
-					trip.display_config?.alert_preset ?? 'standard',
-					ALERTABLE_METRICS as AlertMetric[],
-				),
+			: trip.display_config?.alert_preset
+				? migrateAlertPreset(
+						trip.display_config.alert_preset,
+						ALERTABLE_METRICS as AlertMetric[],
+					)
+				: ({} as Record<AlertMetric, SensLevel>),
 	);
 
 	let alertRules = $state<AlertRule[]>(trip.alert_rules ?? []);
@@ -58,17 +68,33 @@
 		currentLevels = { ...currentLevels, [metric]: level };
 		saveController?.schedule(buildSaveFn());
 	}
+
+	// AC-5: Nutzer übernimmt bewusst die Standard-Konfiguration; verlässt Onboarding.
+	function activateStandard() {
+		currentLevels = migrateAlertPreset('standard', displayMetrics as AlertMetric[]);
+		isOnboarding = false;
+		saveController?.schedule(buildSaveFn());
+	}
 </script>
 
 <div class="alerts-tab" data-testid="alerts-tab">
 	<Eyebrow>Alerts · Sofort-Meldung</Eyebrow>
 	<h2 class="alerts-h2" data-testid="alerts-tab-heading">Sofort-Meldung zwischen den Briefings</h2>
 
-	<AlertMetricLevelTable
-		activeMetrics={displayMetrics as AlertMetric[]}
-		levels={currentLevels}
-		{onLevelChange}
-	/>
+	{#if isOnboarding}
+		<div class="onboarding" data-testid="alerts-onboarding">
+			<p>Keine Alerts konfiguriert.</p>
+			<button type="button" onclick={activateStandard} data-testid="alerts-activate-standard">
+				Standard-Konfiguration übernehmen
+			</button>
+		</div>
+	{:else}
+		<AlertMetricLevelTable
+			activeMetrics={displayMetrics as AlertMetric[]}
+			levels={currentLevels}
+			{onLevelChange}
+		/>
+	{/if}
 
 	<div class="extra-cards" class:subdued={allOff}>
 		<AlertCooldownCard bind:cooldown_minutes={cooldownMinutes} />
@@ -94,6 +120,35 @@
 		letter-spacing: -0.01em;
 		margin: 6px 0 8px;
 		color: var(--g-ink);
+	}
+
+	.onboarding {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 12px;
+		padding: 24px;
+		background: var(--g-card, #ffffff);
+		border: 1px solid var(--g-line, #e2ddd2);
+		border-radius: 12px;
+	}
+
+	.onboarding p {
+		margin: 0;
+		color: var(--g-ink);
+		font-size: 16px;
+	}
+
+	.onboarding button {
+		padding: 10px 18px;
+		min-height: 44px;
+		border: 1px solid var(--g-line, #c9c2b4);
+		border-radius: 8px;
+		background: var(--g-accent, #2f6f4f);
+		color: #ffffff;
+		font-size: 15px;
+		font-weight: 600;
+		cursor: pointer;
 	}
 
 	.extra-cards {

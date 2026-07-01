@@ -185,22 +185,10 @@ class TestTripAlertPriority:
             f"(alert_preset hat fälschlicherweise gewonnen)"
         )
 
-    def test_legacy_alert_preset_used_when_no_metric_levels(self):
-        """
-        Trip hat nur alert_preset='entspannt' (kein metric_alert_levels).
-        Backward-Compat: alter Pfad muss weiterhin funktionieren (AC-9b Backend).
-        Dieser Test soll auch nach der Implementierung grün bleiben.
-        """
-        from services.trip_alert import TripAlertService
-        trip = _trip_with_legacy_preset("entspannt")
-        service = TripAlertService()
-        detector = service._select_change_detector(trip)
-        # Summary-Field-Schlüssel für wind_gust ist "gust_max_kmh"
-        wind_threshold = detector._thresholds.get("gust_max_kmh")
-        assert wind_threshold == 35.0, (
-            f"Legacy alert_preset='entspannt' muss gust_max_kmh=35.0 liefern, "
-            f"ist {wind_threshold!r}"
-        )
+    # Issue #946: test_legacy_alert_preset_used_when_no_metric_levels entfernt —
+    # der Legacy-alert_preset-Fallback in _select_change_detector wurde abgeschafft.
+    # metric_alert_levels ist die einzige Alert-Quelle; ein Trip mit nur alert_preset
+    # (ohne metric_alert_levels) feuert bewusst keine Alerts mehr.
 
     def test_metric_alert_levels_off_for_all_produces_no_rules(self):
         """metric_alert_levels mit allen Metriken='off' → leere Regel-Liste."""

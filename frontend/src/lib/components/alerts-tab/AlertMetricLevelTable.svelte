@@ -34,7 +34,8 @@
 		fresh_snow: 'Neuschnee',
 		cape: 'CAPE',
 		visibility: 'Sichtweite',
-		humidity: 'Luftfeuchtigkeit'
+		humidity: 'Luftfeuchtigkeit',
+		freezing_level: 'Nullgradgrenze'
 	};
 
 	const allSameLevel = $derived(

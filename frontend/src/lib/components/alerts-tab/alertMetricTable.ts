@@ -31,6 +31,8 @@ export const METRIC_DEFAULTS: Record<AlertMetric, number> = {
 	cape: 600,
 	visibility: 1000,
 	humidity: 15,
+	// Issue #946: Nullgradgrenze (freezing_level).
+	freezing_level: 200,
 };
 
 // Issue #846: Preset-Schwellwert-Tabelle (alle 13 Metriken × 3 Presets).
@@ -56,6 +58,7 @@ export const METRIC_PRESETS: Record<
 		cape: 1200,
 		visibility: 500,
 		humidity: 25,
+		freezing_level: 400,
 	},
 	standard: {
 		wind_gust: 20,
@@ -71,6 +74,7 @@ export const METRIC_PRESETS: Record<
 		cape: 600,
 		visibility: 1000,
 		humidity: 15,
+		freezing_level: 200,
 	},
 	sensibel: {
 		wind_gust: 12,
@@ -86,6 +90,7 @@ export const METRIC_PRESETS: Record<
 		cape: 200,
 		visibility: 3000,
 		humidity: 10,
+		freezing_level: 100,
 	},
 };
 
@@ -206,6 +211,7 @@ export const ALERTABLE_METRICS: readonly AlertMetric[] = [
 	'cape',
 	'visibility',
 	'humidity',
+	'freezing_level',
 ];
 
 /** Metriken die THRESHOLD_CROSSING verwenden (absoluter Schwellwert, nicht Delta). */
@@ -227,6 +233,7 @@ const _METRIC_UNITS: Record<AlertMetric, string> = {
 	cape: 'J/kg',
 	visibility: 'm',
 	humidity: '%',
+	freezing_level: 'm',
 };
 
 /**
@@ -284,6 +291,7 @@ const CATALOG_TO_ALERT_METRICS: Record<string, readonly AlertMetric[]> = {
 	visibility:           ['visibility'],
 	humidity:             ['humidity'],
 	thunder_level:        ['thunder_level'],
+	freezing_level:       ['freezing_level'],
 	// Kurz-IDs aus dem Catalog
 	gust:          ['wind_gust'],
 	wind:          ['wind_change'],

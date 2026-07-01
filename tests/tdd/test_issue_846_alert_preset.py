@@ -200,16 +200,17 @@ def test_ac4_visibility_already_below_threshold_no_realert():
 # (war zuvor 13 Regeln inkl. humidity).
 
 
-def test_ac6_entspannt_has_exactly_12_rules():
-    """AC-6: `expand_preset("entspannt")` liefert exakt 12 Regeln.
+def test_ac6_entspannt_has_exactly_13_rules():
+    """AC-6: `expand_preset("entspannt")` liefert exakt 13 Regeln.
 
-    Issue #889: humidity entfernt → 12 statt vormals 13.
+    Issue #889: humidity entfernt → 12.
+    Issue #946: freezing_level ergänzt → 13.
     """
     from services.alert_preset import expand_preset
 
     rules = expand_preset("entspannt")
-    assert len(rules) == 12, (
-        f"Preset 'entspannt' muss exakt 12 Regeln liefern, erhielt: {len(rules)}"
+    assert len(rules) == 13, (
+        f"Preset 'entspannt' muss exakt 13 Regeln liefern, erhielt: {len(rules)}"
     )
 
 
@@ -347,62 +348,18 @@ def test_ac7_standard_gust_below_threshold_no_alert_and_user_isolation(
 # Preset hat Vorrang vor altem alert_rules-Array.
 
 
-def test_ac8_preset_overrides_legacy_alert_rules():
-    """AC-8: Trip mit alert_rules=[{wind_gust, threshold=35, delta}] UND
-    alert_preset="standard" → expand_preset liefert wind_gust mit Standard-Wert
-    threshold=20, NICHT 35 (Preset hat Vorrang)."""
+def test_ac8_standard_preset_gust_threshold_is_20():
+    """`expand_preset("standard")` liefert wind_gust mit Standard-Wert threshold=20.
+
+    Issue #946: Der frühere Integrations-Teil dieses Tests (alert_preset überschreibt
+    Legacy-alert_rules über _select_change_detector) wurde entfernt — dieser
+    Routing-Pfad existiert nach #946 nicht mehr (metric_alert_levels ist einzige
+    Quelle). Die reine expand_preset-Zusicherung bleibt gültig.
+    """
     from services.alert_preset import expand_preset
 
     rules = expand_preset("standard")
     gust = _rule_for(rules, AlertMetric.WIND_GUST)
     assert gust.threshold == 20, (
-        "Preset 'standard' muss Böen-Schwelle 20 liefern (Preset-Vorrang vor "
-        f"altem alert_rules-Array mit 35), war: {gust.threshold}"
-    )
-    assert gust.threshold != 35, (
-        "Der alte alert_rules-Wert (35) darf NICHT als Quelle herangezogen werden"
-    )
-
-    # Echte Integration: ein Trip mit BEIDEN Feldern (alert_preset="standard" UND
-    # einem widersprechenden alert_rules-Array mit wind_gust threshold=35) muss
-    # über _select_change_detector den Preset-Service wählen, NICHT das
-    # Legacy-Array. Damit ist die Verdrahtung
-    # display_config.alert_preset → expand_preset → from_alert_rules bewiesen.
-    #
-    # Geprüft wird die CAPE-Metrik (Summary-Feld cape_max_jkg), weil dieses Feld
-    # von keiner zweiten Preset-Metrik geteilt wird — anders als gust_max_kmh, das
-    # sich wind_gust und wind_change teilen. So ist die Standard-Schwelle (600)
-    # eindeutig dem Preset zuzuordnen und nicht dem Legacy-Wert (999).
-    from app.models import (
-        AlertRule,
-        AlertRuleKind,
-        AlertSeverity,
-        UnifiedWeatherDisplayConfig,
-    )
-    from services.trip_alert import TripAlertService
-
-    legacy_rule = AlertRule(
-        id="legacy-cape",
-        kind=AlertRuleKind.DELTA,
-        metric=AlertMetric.CAPE,
-        threshold=999.0,
-        severity=AlertSeverity.WARNING,
-        enabled=True,
-    )
-    trip = _trip("trip-ac8-integration")
-    trip.alert_rules = [legacy_rule]
-    trip.display_config = UnifiedWeatherDisplayConfig(
-        trip_id="trip-ac8-integration",
-        alert_preset="standard",
-    )
-
-    detector = TripAlertService._select_change_detector.__get__(
-        TripAlertService.__new__(TripAlertService)
-    )(trip)
-
-    # Der gewählte Service muss die Standard-Preset-Schwelle (600) für CAPE
-    # (Summary-Feld cape_max_jkg) verwenden, nicht den Legacy-Wert 999.
-    assert detector._thresholds.get("cape_max_jkg") == 600, (
-        "Preset 'standard' (CAPE-Schwelle 600) muss Vorrang vor dem Legacy-"
-        f"alert_rules-Wert (999) haben, war: {detector._thresholds.get('cape_max_jkg')}"
+        f"Preset 'standard' muss Böen-Schwelle 20 liefern, war: {gust.threshold}"
     )

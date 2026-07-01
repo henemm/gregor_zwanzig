@@ -780,6 +780,8 @@ class AlertMetric(str, Enum):
     FRESH_SNOW = "fresh_snow"
     CAPE = "cape"
     VISIBILITY = "visibility"
+    # Issue #946: Nullgradgrenze als Alert-Metrik (verwandt mit snow_line).
+    FREEZING_LEVEL = "freezing_level"
     # Issue #889 / ADR-0010: HUMIDITY ist als Alert-Auslöser entfernt (Vorboten-Metrik).
     # Der Enum-Wert bleibt bewusst als toter Eintrag erhalten, damit alt-persistierte
     # AlertRules mit metric="humidity" ohne Lade-Crash deserialisieren (Backward-Compat).

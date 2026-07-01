@@ -205,12 +205,29 @@ def _data(**summary_kwargs) -> SegmentWeatherData:
     )
 
 
+def _alert_display_config(trip_id: str) -> "UnifiedWeatherDisplayConfig":
+    """Issue #946: metric_alert_levels ist die einzige Detektor-Quelle.
+
+    wind_gust='standard' → Δ-Schwelle 20; die Testläufe fahren gust 25→60 (Δ=35),
+    also feuert der Detektor. Die alert_rules bleiben für Kanal-/Severity-Routing
+    erhalten (channels-Override etc.), steuern aber nicht mehr die Change-Erkennung.
+    """
+    from app.models import UnifiedWeatherDisplayConfig
+    return UnifiedWeatherDisplayConfig(
+        trip_id=trip_id,
+        metric_alert_levels={"wind_gust": "standard"},
+    )
+
+
 def _trip(rule: AlertRule, report_config: TripReportConfig | None = None) -> Trip:
     stage = Stage(
         id="T1", name="Tag 1", date=date.today(),
         waypoints=[Waypoint(id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0)],
     )
-    trip = Trip(id="tdd-638-trip", name="Alert Test Trip", stages=[stage])
+    trip = Trip(
+        id="tdd-638-trip", name="Alert Test Trip", stages=[stage],
+        display_config=_alert_display_config("tdd-638-trip"),
+    )
     trip.alert_rules = [rule]
     trip.report_config = report_config
     return trip
@@ -425,7 +442,10 @@ def test_mixed_rules_union_both_channels(telegram_sink, smtp_refuse, tmp_path):
         id="T1", name="Tag 1", date=date.today(),
         waypoints=[Waypoint(id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0)],
     )
-    trip = Trip(id="tdd-638-mixed", name="Mixed Rule Trip", stages=[stage])
+    trip = Trip(
+        id="tdd-638-mixed", name="Mixed Rule Trip", stages=[stage],
+        display_config=_alert_display_config("tdd-638-mixed"),
+    )
     trip.alert_rules = [rule_a, rule_b]
     trip.report_config = report_config
 
@@ -457,18 +477,18 @@ def test_mixed_rules_union_both_channels(telegram_sink, smtp_refuse, tmp_path):
 
 # ───────────────────────── Legacy-Pfad: kein alert_rules ────────────────────
 
-def test_legacy_path_no_alert_rules_still_sends_via_report_config(
+def test_channel_inheritance_no_alert_rules_uses_report_config(
     telegram_sink, smtp_refuse, tmp_path
 ):
-    """Legacy-Pfad: Trip OHNE aktive alert_rules, MIT report_config (telegram=True).
+    """Kanal-Vererbung: Trip OHNE alert_rules, MIT report_config (telegram=True).
 
-    _select_change_detector nutzt from_trip_config (Legacy) → Changes werden erkannt.
-    _effective_alert_channels muss die Briefing-Kanäle aus report_config zurückgeben
-    (statt leerem Set), damit der Alert zugestellt wird.
-
-    Vor dem Fix: active_rules=[] → for-Loop gibt leeres Set → kein /sendMessage.
-    Nach dem Fix: active_rules=[] → report_config-Kanäle als Fallback → Telegram.
+    Issue #946: Die Change-Erkennung läuft jetzt über metric_alert_levels (einzige
+    Quelle) statt über den früheren from_trip_config-Legacy-Pfad. Die eigentliche
+    Zusicherung bleibt unverändert: hat der Trip keine aktiven alert_rules, erbt
+    _effective_alert_channels die Briefing-Kanäle aus report_config (hier Telegram),
+    statt ein leeres Set zurückzugeben.
     """
+    from app.models import UnifiedWeatherDisplayConfig
     report_config = TripReportConfig(
         trip_id="tdd-638-legacy-trip",
         send_email=False,
@@ -479,8 +499,14 @@ def test_legacy_path_no_alert_rules_still_sends_via_report_config(
         id="T1", name="Tag 1", date=date.today(),
         waypoints=[Waypoint(id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0)],
     )
-    trip = Trip(id="tdd-638-legacy-trip", name="Legacy Alert Trip", stages=[stage])
-    trip.alert_rules = []  # kein alert_rules → Legacy-Detektor-Pfad
+    trip = Trip(
+        id="tdd-638-legacy-trip", name="Legacy Alert Trip", stages=[stage],
+        display_config=UnifiedWeatherDisplayConfig(
+            trip_id="tdd-638-legacy-trip",
+            metric_alert_levels={"wind_gust": "standard"},
+        ),
+    )
+    trip.alert_rules = []  # keine alert_rules → Kanäle werden aus report_config geerbt
     trip.report_config = report_config
 
     import shutil
