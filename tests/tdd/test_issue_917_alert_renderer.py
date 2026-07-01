@@ -208,12 +208,12 @@ class TestAC2Subject:
         assert "Schwelle" in subj or "schwelle" in subj.lower(), (
             f"'Schwelle' fehlt bei 3 Events: {subj!r}"
         )
-        # Top-3 Labels (label_de) müssen enthalten sein (Issue #940: label statt SMS-Code)
+        # Alle Top-3 Labels (label_de) müssen enthalten sein (Issue #940)
         from app.metric_catalog import get_metric
         labels = [get_metric("gust").label_de, get_metric("temperature_cold").label_de,
                   get_metric("precipitation").label_de]
-        found = sum(1 for lbl in labels if lbl and lbl in subj)
-        assert found >= 1, f"Kein Label gefunden in: {subj!r}"
+        for lbl in labels:
+            assert lbl and lbl in subj, f"Label '{lbl}' fehlt in: {subj!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -255,15 +255,14 @@ class TestAC3Email:
         msg = self._make_msg()
         html, plain = render_email(msg)
 
-        code_gust = get_sms_code("gust")
-        code_temp_cold = get_sms_code("temperature_cold")
+        from app.metric_catalog import get_metric
+        label_gust = get_metric("gust").label_de
+        label_temp_cold = get_metric("temperature_cold").label_de
 
-        # gust hat hier höhere severity (90 vs. Schwelle 60 → ratio 0.5)
-        # temp_cold hat ratio (0 − (−1))/0 = Sonderfall ...
-        # Hauptsache: beide Kürzel erscheinen; gust zuerst
-        assert code_gust in html or code_gust in plain, f"Gust-Kürzel fehlt"
-        idx_gust_html = html.find(code_gust)
-        idx_temp_html = html.find(code_temp_cold) if code_temp_cold else -1
+        # gust hat höhere severity → erscheint zuerst im Body (Issue #940: label_de)
+        assert label_gust in html or label_gust in plain, f"Gust-Label fehlt"
+        idx_gust_html = html.find(label_gust)
+        idx_temp_html = html.find(label_temp_cold) if label_temp_cold else -1
         if idx_gust_html != -1 and idx_temp_html != -1:
             assert idx_gust_html < idx_temp_html, (
                 f"gust soll vor temperature_cold erscheinen (severity-sortiert); "
@@ -633,7 +632,7 @@ class TestAC9RegressionGuard:
 # ---------------------------------------------------------------------------
 
 class TestIssue940LabelInEmail:
-    """render_subject und render_sms: label_de im E-Mail-Pfad, SMS-Code im SMS-Pfad."""
+    """label_de in allen E-Mail-/Telegram-Pfaden; SMS-Code unverändert."""
 
     def _make_msg(self, field: str, direction: str, old: float, new: float, thr: float):
         from src.output.renderers.alert.project import to_alert_message
@@ -642,24 +641,78 @@ class TestIssue940LabelInEmail:
         seg = _make_segment("1", km_from=0.0, km_to=10.0)
         return to_alert_message([change], [seg], "TEST", tz=ZoneInfo("Europe/Berlin"), stand_at="08:00")
 
-    def test_visibility_email_shows_sichtweite_not_vs(self):
-        """render_subject mit Sichtweite zeigt 'Sichtweite', nicht 'VS'."""
+    # ── Blind spot 1+3: render_subject und _h1 (via render_email) ─────────────
+
+    def test_visibility_subject_shows_sichtweite(self):
+        """render_subject: 'Sichtweite' statt 'VS'."""
         from src.output.renderers.alert.render import render_subject
         msg = self._make_msg("visibility_min_m", "decrease", 2000.0, 400.0, 1000.0)
         subj = render_subject(msg)
         assert "Sichtweite" in subj, f"'Sichtweite' fehlt: {subj!r}"
-        assert "VS" not in subj, f"SMS-Kürzel 'VS' darf in E-Mail-Betreff nicht erscheinen: {subj!r}"
+        assert " VS" not in subj and not subj.startswith("VS"), \
+            f"SMS-Kürzel 'VS' als eigenständiges Token in Betreff: {subj!r}"
 
-    def test_freezing_level_email_shows_nullgradgrenze_not_nl(self):
-        """render_subject mit Nullgradgrenze zeigt 'Nullgradgrenze', nicht 'NL'."""
+    def test_freezing_level_subject_shows_nullgradgrenze(self):
+        """render_subject: 'Nullgradgrenze' statt 'NL'."""
         from src.output.renderers.alert.render import render_subject
         msg = self._make_msg("freezing_level_m", "decrease", 3500.0, 2800.0, 200.0)
         subj = render_subject(msg)
         assert "Nullgradgrenze" in subj, f"'Nullgradgrenze' fehlt: {subj!r}"
-        assert "NL" not in subj, f"SMS-Kürzel 'NL' darf in E-Mail-Betreff nicht erscheinen: {subj!r}"
+        assert " NL" not in subj and not subj.startswith("NL"), \
+            f"SMS-Kürzel 'NL' als eigenständiges Token in Betreff: {subj!r}"
+
+    # ── Blind spot 1: render_email body (_email_line + _h1) ───────────────────
+
+    def test_visibility_email_body_shows_sichtweite(self):
+        """render_email: HTML-Body und Plaintext enthalten 'Sichtweite', nicht 'VS'."""
+        from src.output.renderers.alert.render import render_email
+        msg = self._make_msg("visibility_min_m", "decrease", 2000.0, 400.0, 1000.0)
+        html, plain = render_email(msg)
+        assert "Sichtweite" in html, f"'Sichtweite' fehlt im HTML-Body"
+        assert "Sichtweite" in plain, f"'Sichtweite' fehlt im Plaintext-Body"
+        assert "· VS ·" not in html and "· VS ·" not in plain, \
+            f"SMS-Token '· VS ·' im E-Mail-Body gefunden"
+
+    def test_freezing_level_email_body_shows_nullgradgrenze(self):
+        """render_email: HTML-Body und Plaintext enthalten 'Nullgradgrenze', nicht 'NL'."""
+        from src.output.renderers.alert.render import render_email
+        msg = self._make_msg("freezing_level_m", "decrease", 3500.0, 2800.0, 200.0)
+        html, plain = render_email(msg)
+        assert "Nullgradgrenze" in html, f"'Nullgradgrenze' fehlt im HTML-Body"
+        assert "Nullgradgrenze" in plain, f"'Nullgradgrenze' fehlt im Plaintext-Body"
+
+    def test_email_h1_shows_label_not_code(self):
+        """render_email _h1: Überschrift zeigt 'Böen', nicht 'G'."""
+        from src.output.renderers.alert.render import render_email
+        from src.output.renderers.alert.project import to_alert_message
+        change = _make_change("gust_max_kmh", old=50.0, new=90.0, direction="increase",
+                               threshold=60.0, segment_id="1")
+        seg = _make_segment("1", km_from=0.0, km_to=10.0)
+        msg = to_alert_message([change], [seg], "TEST", tz=ZoneInfo("Europe/Berlin"), stand_at="08:00")
+        html, plain = render_email(msg)
+        assert "Böen" in html, f"'Böen' fehlt in H1 (HTML): {html[:200]!r}"
+        assert "Böen" in plain, f"'Böen' fehlt in H1 (Plain): {plain[:200]!r}"
+
+    # ── Blind spot 2: render_telegram ─────────────────────────────────────────
+
+    def test_visibility_telegram_shows_sichtweite(self):
+        """render_telegram: 'Sichtweite' statt 'VS'."""
+        from src.output.renderers.alert.render import render_telegram
+        msg = self._make_msg("visibility_min_m", "decrease", 2000.0, 400.0, 1000.0)
+        tg = render_telegram(msg)
+        assert "Sichtweite" in tg, f"'Sichtweite' fehlt in Telegram: {tg!r}"
+
+    def test_freezing_level_telegram_shows_nullgradgrenze(self):
+        """render_telegram: 'Nullgradgrenze' statt 'NL'."""
+        from src.output.renderers.alert.render import render_telegram
+        msg = self._make_msg("freezing_level_m", "decrease", 3500.0, 2800.0, 200.0)
+        tg = render_telegram(msg)
+        assert "Nullgradgrenze" in tg, f"'Nullgradgrenze' fehlt in Telegram: {tg!r}"
+
+    # ── SMS-Pfad unverändert ───────────────────────────────────────────────────
 
     def test_visibility_sms_still_uses_vs(self):
-        """render_sms mit Sichtweite verwendet weiterhin SMS-Kürzel 'VS'."""
+        """render_sms: 'VS' bleibt erhalten."""
         from src.output.renderers.alert.render import render_sms
         msg = self._make_msg("visibility_min_m", "decrease", 2000.0, 400.0, 1000.0)
         sms = render_sms(msg)
