@@ -16,6 +16,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).parents[2]
 
 
+# doc-compliance-test
 def test_renderer_mail_gate_has_golden_check():
     """AC-1: renderer_mail_gate._do_hook() muss einen golden_ok-Check haben.
 
