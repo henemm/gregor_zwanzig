@@ -759,11 +759,6 @@
 				</div>
 			</div>
 
-		{:else if activeTab === 'metriken'}
-			<!-- Wetter-Tab: reuse WeatherMetricsTab im createMode -->
-			<!-- Issue #932 — Aktivitätstyp-Dropdown lebt jetzt im Route-Tab. -->
-			<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} />
-
 		{:else if activeTab === 'zeitplan'}
 			<!-- Zeitplan-Tab: reuse EditReportConfigSection im create-Modus -->
 			<div style="padding: 32px 40px 60px; max-width: 720px;">
@@ -776,6 +771,14 @@
 				<AlertRulesEditor bind:rules={alertRules} activeChannels={activeAlertChannels} />
 			</div>
 		{/if}
+
+		<!-- Wetter-Tab: reuse WeatherMetricsTab im createMode -->
+		<!-- Issue #932 — Aktivitätstyp-Dropdown lebt jetzt im Route-Tab. -->
+		<!-- Issue #941 — WeatherMetricsTab IMMER gemountet (per display ausgeblendet),
+		     damit isDirty/buckets/savedSnapshot bei Tab-Wechseln nicht verloren gehen. -->
+		<div style:display={activeTab === 'metriken' ? '' : 'none'}>
+			<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} />
+		</div>
 		</div><!-- /.tn-desktop -->
 
 		<!-- ══════════════════════════════════════════════════════
@@ -981,11 +984,6 @@
 					</div>
 				</div>
 
-			{:else if activeTab === 'metriken'}
-				<!-- Mobile Wetter-Tab: WeatherMetricsTab (bereits mobil, #618) -->
-				<!-- Issue #932 — Aktivitätstyp-Dropdown lebt jetzt im Route-Tab. -->
-				<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} />
-
 			{:else if activeTab === 'zeitplan'}
 				<!-- Mobile Zeitplan-Tab: Wrapper mit mobilem Padding -->
 				<div style="padding: 16px 16px 60px;">
@@ -998,6 +996,14 @@
 					<AlertRulesEditor bind:rules={alertRules} activeChannels={activeAlertChannels} />
 				</div>
 			{/if}
+
+			<!-- Mobile Wetter-Tab: WeatherMetricsTab (bereits mobil, #618) -->
+			<!-- Issue #932 — Aktivitätstyp-Dropdown lebt jetzt im Route-Tab. -->
+			<!-- Issue #941 — WeatherMetricsTab IMMER gemountet (per display ausgeblendet),
+			     damit isDirty/buckets/savedSnapshot bei Tab-Wechseln nicht verloren gehen. -->
+			<div style:display={activeTab === 'metriken' ? '' : 'none'}>
+				<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} />
+			</div>
 
 			<!-- Lock-Toast (2s bei Tap auf gesperrten Tab) -->
 			{#if lockToastMsg}
