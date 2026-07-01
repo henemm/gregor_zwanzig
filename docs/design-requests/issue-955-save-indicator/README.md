@@ -3,6 +3,8 @@
 - **Desktop:** ganz **unten rechts** in der Fenster-Ecke — ein winziges, hellgraues „✓ Gespeichert HH:MM", das nach 3 s zusätzlich halb verblasst.
 - **Mobile:** rechts, **knapp über der unteren Navigationsleiste** — noch blasser, die Uhrzeit ist kaum erkennbar.
 
+> **🟩 Der farbige Rahmen in den Screenshots ist nur eine Markierung** (grün = gespeichert, dunkelgelb = speichert) — er zeigt dir, **wo** und **wie klein** der Hinweis sitzt. Im echten Produkt gibt es diesen Rahmen **nicht**.
+
 Unten pro Tab je ein Screenshot. Für die vier Editor-Tabs (Etappen, Inhalt, Versand, Alerts) zusätzlich der **Zwischenzustand direkt nach der Änderung** („Speichere …" = noch nicht gespeichert). Für Übersicht/Vorschau gibt es nichts zu speichern → nur der Ruhezustand.
 
 > Alle Bilder liegen auch im Repo unter `docs/design-requests/issue-955-save-indicator/` (falls die Einbettung bei dir nicht rendert).
