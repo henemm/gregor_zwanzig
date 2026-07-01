@@ -144,32 +144,93 @@ def _email_line(e: AlertEvent) -> str:
     )
 
 
+def _delta_text(e: AlertEvent) -> str:
+    """'-50 %'/'+12 %' — leer wenn value_from==0 (analog _h1-Sonderfall)."""
+    d = delta_pct(e)
+    return f"{d:+d} %" if d is not None else ""
+
+
+def _verdict_single(e: AlertEvent) -> str:
+    d = _delta_text(e)
+    tail = f"{d} · " if d else ""
+    return f"{arrow(e)} {tail}jetzt {side_label(e)} Schwelle {_val(e, e.threshold)}"
+
+
+def _datablock_single(e: AlertEvent) -> list[tuple[str, str]]:
+    """3 (label, value)-Zeilen: Wert-Vergleich / Schwellwert-Status / Wo & wann."""
+    unit = get_metric(e.metric_id).unit
+    d = _delta_text(e)
+    d_suffix = f" {d}" if d else ""
+    row1 = (
+        f"{_label(e)} · {unit}",
+        f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)}{d_suffix}",
+    )
+    mark = "✓" if not over_thr(e) else "✗"
+    row2 = (
+        f"Alarm-Schwelle {_val(e, e.threshold)}",
+        f"jetzt {side_label(e)} {mark}",
+    )
+    when = _km_str_events((e,))
+    if e.occurred_at:
+        when += f" · {e.occurred_at}"
+    row3 = ("Wo & wann", when)
+    return [row1, row2, row3]
+
+
+def _km_str_events(events) -> str:
+    a, b = km_span(events)
+    return f"km {int(round(a))}–{int(round(b))}"
+
+
 def render_email(msg: AlertMessage) -> tuple[str, str]:
     if msg.source is not None:
         return _render_email_onset(msg)
     evs = _sorted(msg)
     h1 = _h1(msg)
-    a, b = km_span(msg.events)
-    km = _km_str(msg)
-    footer = (
-        f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing · {km}"
-    )
+    single = len(evs) == 1
 
-    plain = "\n".join([h1, ""] + [_email_line(e) for e in evs] + ["", footer])
+    if single:
+        e = evs[0]
+        verdict_text = _verdict_single(e)
+        data_rows = _datablock_single(e)
+        footer = f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing"
+        any_over = over_thr(e)
+        plain_data = [f"{k}: {v}" for k, v in data_rows]
+    else:
+        verdict_text = f"{arrow(evs[0])} {len(evs)} über Schwelle"
+        data_rows = [
+            (f"{_label(e)} · Schwelle {_val(e, e.threshold)}",
+             f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)} {side_label(e)}")
+            for e in evs
+        ]
+        km = _km_str(msg)
+        footer = f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing · {km}"
+        any_over = any(over_thr(e) for e in evs)
+        plain_data = [f"{k}: {v}" for k, v in data_rows]
 
-    # Verdikt-Pille: rot wenn (mindestens) ein Event über der Schwelle liegt, sonst grün.
-    any_over = any(over_thr(e) for e in evs)
     verdict_bg = G_DANGER if any_over else G_SUCCESS
-    verdict_text = ", ".join(f"{arrow(e)} {_label(e)}" for e in evs)
+    plain = "\n".join([h1, "", verdict_text, ""] + plain_data + ["", footer])
 
     rows = []
-    for e in evs:
-        color = G_DANGER if over_thr(e) else G_SUCCESS
-        border = "border-top:1px solid #d8d5c9;" if rows else ""
-        rows.append(
-            f"<div style=\"{border}padding:8px 0;color:{color};font-family:{FONT_DATA};\">"
-            f"{_esc(_email_line(e))}</div>"
-        )
+    if single:
+        threshold_status_color = G_DANGER if over_thr(e) else G_SUCCESS
+        for idx, (label, value) in enumerate(data_rows):
+            value_color = G_INK if idx != 1 else threshold_status_color
+            border = "border-top:1px solid #d8d5c9;" if rows else ""
+            rows.append(
+                f"<div style=\"{border}padding:8px 0;font-family:{FONT_DATA};\">"
+                f"<span style=\"color:{G_INK_MUTED};\">{_esc(label)}</span> "
+                f"<span style=\"color:{value_color};\">{_esc(value)}</span></div>"
+            )
+    else:
+        for e, (label, value) in zip(evs, data_rows):
+            color = G_DANGER if over_thr(e) else G_INK_MUTED
+            border = "border-top:1px solid #d8d5c9;" if rows else ""
+            rows.append(
+                f"<div style=\"{border}padding:8px 0;color:{color};font-family:{FONT_DATA};\">"
+                f"<span>{_esc(label)}</span> <span>{_esc(value)}</span></div>"
+            )
+
     html = (
         "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
         f"<h1 style=\"margin:0 0 12px;font-family:{FONT_UI};color:{G_INK};\">{_esc(h1)}</h1>"
