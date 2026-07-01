@@ -111,12 +111,22 @@ class TripAlertService:
         # If alert_rules has active rules, those are source-of-truth (disable via rule.enabled=False)
         # Issue #846: ein gesetztes (nicht-deaktiviertes) alert_preset zählt ebenso
         # als aktive Quelle und darf nicht vom report_config-Disable verschluckt werden.
+        # Issue #946: metric_alert_levels ist die einzige Alert-Quelle und darf ebenso
+        # nicht vom report_config-Disable verschluckt werden.
         has_preset = bool(
             trip.display_config
             and trip.display_config.alert_preset
             and trip.display_config.alert_preset != "deaktiviert"
         )
-        has_active_rules = has_preset or any(r.enabled for r in (trip.alert_rules or []))
+        has_metric_levels = bool(
+            trip.display_config
+            and getattr(trip.display_config, "metric_alert_levels", None)
+        )
+        has_active_rules = (
+            has_preset
+            or has_metric_levels
+            or any(r.enabled for r in (trip.alert_rules or []))
+        )
         if (
             not has_active_rules
             and trip.report_config
@@ -264,12 +274,23 @@ class TripAlertService:
             # new source-of-truth (disable via rule.enabled=False).
             # Issue #846: ein gesetztes (nicht-deaktiviertes) alert_preset zählt
             # ebenso als aktive Quelle und muss geprüft werden.
+            # Issue #946: metric_alert_levels ist die einzige Alert-Quelle — ein Trip
+            # mit gesetzten Per-Metrik-Stufen MUSS geprüft werden, auch ohne preset,
+            # alert_rules oder report_config (sonst still übersprungen → nie ein Alert).
             has_preset = bool(
                 trip.display_config
                 and trip.display_config.alert_preset
                 and trip.display_config.alert_preset != "deaktiviert"
             )
-            has_active_rules = has_preset or any(r.enabled for r in (trip.alert_rules or []))
+            has_metric_levels = bool(
+                trip.display_config
+                and getattr(trip.display_config, "metric_alert_levels", None)
+            )
+            has_active_rules = (
+                has_preset
+                or has_metric_levels
+                or any(r.enabled for r in (trip.alert_rules or []))
+            )
             if not has_active_rules and (
                 not trip.report_config or not trip.report_config.alert_on_changes
             ):

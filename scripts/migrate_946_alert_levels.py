@@ -8,7 +8,9 @@ migrate_trip() ist eine reine Funktion (transformiert nur das dict, schreibt kei
 """
 from __future__ import annotations
 
-# 13 alertfähige Metriken (ALERTABLE_METRICS).
+# 13 alertfähige Metriken (ALERTABLE_METRICS), deckungsgleich mit _PRESET_TABLE
+# in services/alert_preset.py. humidity wurde per Issue #889 als Alert-Metrik
+# entfernt; freezing_level per Issue #946 ergänzt.
 ALERTABLE_METRICS = [
     "wind_gust",
     "precipitation_sum",
@@ -22,7 +24,7 @@ ALERTABLE_METRICS = [
     "fresh_snow",
     "cape",
     "visibility",
-    "humidity",
+    "freezing_level",
 ]
 
 
