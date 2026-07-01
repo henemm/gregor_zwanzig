@@ -1,6 +1,7 @@
 <script lang="ts">
-	import type { Trip, Stage, AlertRule, ReportConfig } from '$lib/types.js';
+	import type { Trip, Stage, AlertRule, ReportConfig, ActivityType } from '$lib/types.js';
 	import { api } from '$lib/api.js';
+	import Select from '$lib/components/ui/select/Select.svelte';
 	import { goto } from '$app/navigation';
 	import EditRouteSection from './EditRouteSection.svelte';
 	// Issue #587: WeatherMetricsTab ersetzt WeatherSummaryCard im Wetter-Tab
@@ -21,6 +22,7 @@
 
 	// State: tiefe Kopie damit Cancel ohne Persistenz auch State verwirft
 	let tripName = $state(trip.name);
+	let activityType = $state<ActivityType | undefined>(trip.activity);
 	let stages: Stage[] = $state(JSON.parse(JSON.stringify(trip.stages ?? [])));
 	// Issue #345 / AC-2: display_config wird in dieser Maske NICHT mehr bearbeitet
 	// (Wetter-Tab ist der einzige Editor). Kein UI-State, kein Neu-Bauen — der Save
@@ -70,6 +72,7 @@
 			try {
 				await api.put(`/api/trips/${trip.id}`, {
 					name: tripName,
+					activity: activityType,
 					stages: stages,
 					report_config: reportConfig,
 					alert_rules: alertRules,
@@ -145,9 +148,30 @@
 			<div style="font-size: 10px; font-family: var(--g-font-mono); color: var(--g-ink-3); letter-spacing: 0.08em; margin-bottom: 4px;">ZEITRAUM</div>
 			<div style="font-size: 18px; font-weight: 600;" data-testid="edit-stats-daterange">{dateRange} · {stats.stages} Tage</div>
 		</div>
-		{#if reportSchedule.enabled}
-			<span data-testid="edit-stats-reports-badge" style="margin-left: auto; font-size: 10px; font-family: var(--g-font-mono); letter-spacing: 0.08em; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--g-ink-3); color: var(--g-ink-3);">REPORTS KONFIGURIERT</span>
-		{/if}
+		<div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+			<div style="display: flex; align-items: center; gap: 8px;">
+				<label for="activity-select" style="font-size: 10px; font-family: var(--g-font-mono); color: var(--g-ink-3); letter-spacing: 0.08em;">AKTIVITÄT</label>
+				<Select
+					id="activity-select"
+					data-testid="edit-activity-dropdown"
+					value={activityType ?? ''}
+					onchange={(e) => { activityType = (e.target as HTMLSelectElement).value as ActivityType || undefined; }}
+					style="font-size: 13px;"
+				>
+					<option value="trekking">Trekking</option>
+					<option value="skitour">Skitour</option>
+					<option value="hochtour">Hochtour</option>
+					<option value="klettersteig">Klettersteig</option>
+					<option value="mtb">MTB</option>
+					<option value="fahrrad_15">Fahrrad (15 km/h)</option>
+					<option value="fahrrad_20">Fahrrad (20 km/h)</option>
+					<option value="fahrrad_25">Fahrrad (25 km/h)</option>
+				</Select>
+			</div>
+			{#if reportSchedule.enabled}
+				<span data-testid="edit-stats-reports-badge" style="font-size: 10px; font-family: var(--g-font-mono); letter-spacing: 0.08em; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--g-ink-3); color: var(--g-ink-3);">REPORTS KONFIGURIERT</span>
+			{/if}
+		</div>
 	</div>
 
 	<!-- Tab-Leiste (eigene Implementierung analog JSX TripEditTabBar) -->
@@ -172,7 +196,7 @@
 		{#if activeTab === 'route'}
 			<EditRouteSection bind:tripName bind:stages mode="edit" />
 		{:else if activeTab === 'etappen'}
-			<EditStagesPanelNew bind:stages tripId={trip.id} showSave={false} activityType={trip.activity} />
+			<EditStagesPanelNew bind:stages tripId={trip.id} showSave={false} activityType={activityType} />
 		{:else if activeTab === 'wetter'}
 			<WeatherMetricsTab {trip} />
 		{:else if activeTab === 'reports'}
