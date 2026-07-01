@@ -71,6 +71,28 @@ always_allowed:
 # E2E Test validators are PROTECTED - require workflow to change!
 # This prevents "cheating" by adjusting tests to match broken code.
 
+# Strict Code Gate (edit_gate.py)
+# Directories whose test files are ALWAYS allowed, in every phase (before the
+# phase check). This list REPLACES the code default in edit_gate.py — so it must
+# contain the FULL default set, not just additions. Issue #948: this project keeps
+# all Playwright tests under frontend/e2e/, so "e2e/" is added here as an equal
+# test directory to "tests/". No protection loss: staging gate, e2e_verified.json,
+# renderer_mail_gate and the adversary stay untouched; src/ etc. remain blocked.
+strict_code_gate:
+  always_allowed_dirs:
+    - "Tests/"
+    - "UITests/"
+    - "Test/"
+    - "test/"
+    - "__tests__/"
+    - "tests/"
+    - "spec/"
+    - "docs/"
+    - ".claude/commands/"
+    - "scripts/"
+    - "tools/"
+    - "e2e/"
+
 # Specs Configuration
 specs:
   base_path: "docs/specs"  # Relative to project root
