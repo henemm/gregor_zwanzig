@@ -36,18 +36,23 @@ PASSWORD  = os.environ.get("GZ_VALIDATOR_PASS", "")
 # Helpers
 # ---------------------------------------------------------------------------
 
+# Session-scoped Client: genau EIN Login pro Test-Run (Rate-Limit: 30/Stunde)
+_shared_client: httpx.Client | None = None
+
 def api_login() -> httpx.Client:
-    """Login via /api/auth/login, gibt Client mit Cookie zurück."""
-    s = httpx.Client(base_url=API_URL, follow_redirects=True)
-    resp = s.post("/api/auth/login", json={"username": USER, "password": PASSWORD})
-    assert resp.status_code == 200, f"Login fehlgeschlagen: {resp.status_code} {resp.text}"
-    return s
+    """Login via /api/auth/login. Teilt denselben Client innerhalb eines Runs."""
+    global _shared_client
+    if _shared_client is None:
+        s = httpx.Client(base_url=API_URL, follow_redirects=True)
+        resp = s.post("/api/auth/login", json={"username": USER, "password": PASSWORD})
+        assert resp.status_code == 200, f"Login fehlgeschlagen: {resp.status_code} {resp.text}"
+        _shared_client = s
+    return _shared_client
 
 
 def pw_login(page):
     """Playwright-Login via /api/auth/login JSON-Endpoint (vermeidet Form-Redirect-Probleme).
     Setzt gz_session-Cookie direkt auf der Page-Context."""
-    # Login via API-Endpunkt (gibt Cookie zurück)
     resp = page.request.post(
         f"{API_URL}/api/auth/login",
         data=json.dumps({"username": USER, "password": PASSWORD}),
