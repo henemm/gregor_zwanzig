@@ -83,7 +83,9 @@ export type AlertMetric =
 	| 'fresh_snow'
 	| 'cape'
 	| 'visibility'
-	| 'humidity';
+	| 'humidity'
+	// Issue #946: Nullgradgrenze
+	| 'freezing_level';
 
 export interface AlertRule {
 	id: string;

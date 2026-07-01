@@ -27,6 +27,8 @@ export const ALERT_METRIC_LABELS: Record<
 	cape: { label_de: 'CAPE', unit: 'J/kg', comparison: '>' },
 	visibility: { label_de: 'Sichtweite', unit: 'm', comparison: '<' },
 	humidity: { label_de: 'Luftfeuchtigkeit', unit: '%', comparison: '>' },
+	// Issue #946: Nullgradgrenze
+	freezing_level: { label_de: 'Nullgradgrenze', unit: 'm', comparison: '<' },
 };
 
 export const ALERT_SEVERITY_TONE: Record<AlertSeverity, 'info' | 'warning' | 'danger'> = {

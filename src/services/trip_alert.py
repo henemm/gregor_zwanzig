@@ -226,31 +226,21 @@ class TripAlertService:
         return result
 
     def _select_change_detector(self, trip: "Trip") -> WeatherChangeDetectionService:
-        """Return detector with priority alert_rules > display_config > report_config > defaults.
+        """Return detector — metric_alert_levels is the SINGLE source of truth (Issue #946).
 
-        Issue #222 Workflow 1: alert_rules (enabled=True) is now the highest-priority
-        source for change-detection thresholds. Pure helper — directly unit-testable
-        without SMTP setup.
+        Issue #946: metric_alert_levels ist die EINZIGE Alert-Datenquelle. Null oder leer
+        = keine Alerts (NoOp-Detektor). Kein Fallback mehr auf alert_preset,
+        from_display_config() oder from_trip_config() — ein unkonfigurierter Trip darf
+        niemals Alerts für bloße Anzeige-Metriken feuern. Pure helper — direkt testbar.
         """
-        # Issue #864: Per-Metrik-Stufen haben höchste Priorität (vor globalem Preset).
+        # Issue #946: Per-Metrik-Stufen sind die einzige Quelle.
         if trip.display_config and getattr(trip.display_config, "metric_alert_levels", None):
             from services.alert_preset import expand_per_metric_levels
             rules = expand_per_metric_levels(trip.display_config.metric_alert_levels)
             return WeatherChangeDetectionService.from_alert_rules(rules)
-        # Issue #846: Alert-Preset hat höchste Priorität — expandiert zu Regeln,
-        # die das alte alert_rules-Array überschreiben (Preset-Vorrang, AC-8).
-        if trip.display_config and trip.display_config.alert_preset:
-            from services.alert_preset import expand_preset
-            rules = expand_preset(trip.display_config.alert_preset)
-            return WeatherChangeDetectionService.from_alert_rules(rules)
-        active_rules = [r for r in (trip.alert_rules or []) if r.enabled]
-        if active_rules:
-            return WeatherChangeDetectionService.from_alert_rules(active_rules)
-        if trip.display_config and trip.display_config.get_enabled_metrics():
-            return WeatherChangeDetectionService.from_display_config(trip.display_config)
-        if trip.report_config:
-            return WeatherChangeDetectionService.from_trip_config(trip.report_config)
-        return WeatherChangeDetectionService()
+        # Issue #946: kein Fallback — nicht konfiguriert = kein Alert (NoOp-Detektor
+        # ohne MetricCatalog-Defaults, erzwungen über leere Regelliste).
+        return WeatherChangeDetectionService.from_alert_rules([])
 
     def check_all_trips(self) -> int:
         """

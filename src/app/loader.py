@@ -575,6 +575,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
         per_report_layouts=per_report_layouts,
         telegram_kurzform=data.get("telegram_kurzform", False),
         alert_preset=data.get("alert_preset"),  # Issue #846
+        metric_alert_levels=data.get("metric_alert_levels"),  # Issue #946 — einzige Alert-Quelle
         updated_at=_dt.fromisoformat(data["updated_at"]) if "updated_at" in data else _dt.now(),
     )
 
@@ -1065,6 +1066,12 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "telegram_kurzform": dc.telegram_kurzform,
             "updated_at": dc.updated_at.isoformat(),
             **({"preset_name": dc.preset_name} if dc.preset_name is not None else {}),
+            # Issue #946: metric_alert_levels ist die einzige Alert-Quelle — MUSS
+            # persistiert werden, sonst verliert der Trip beim Reload seine Alert-
+            # Konfiguration. alert_preset bleibt für Backward-Compat-Migration erhalten.
+            **({"alert_preset": dc.alert_preset} if dc.alert_preset is not None else {}),
+            **({"metric_alert_levels": dc.metric_alert_levels}
+               if dc.metric_alert_levels is not None else {}),
         }
         # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
         if dc.per_channel_layouts is not None:

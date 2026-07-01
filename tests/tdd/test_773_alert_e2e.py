@@ -87,12 +87,27 @@ def _segment_weather(temp_max: float, wind_max: float, precip: float) -> Segment
 
 
 def _trip(token: str, trip_id: str) -> Trip:
+    from app.models import UnifiedWeatherDisplayConfig
+
     wp = Waypoint(
         id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0,
         time_window=TimeWindow(start=time_type(8, 0), end=time_type(10, 0)),
     )
     stage = Stage(id="T1", name="Tag 1", date=date_type.today(), waypoints=[wp])
-    trip = Trip(id=trip_id, name=f"E2E773 {token}", stages=[stage])
+    # Issue #946: metric_alert_levels ist die einzige Detektor-Quelle. Die
+    # E2E-Läufe fahren extreme temp/wind/precip-Deltas → Standard-Schwellen dieser
+    # Metriken werden gerissen. report_config bleibt für den E-Mail-Kanal aktiv.
+    trip = Trip(
+        id=trip_id, name=f"E2E773 {token}", stages=[stage],
+        display_config=UnifiedWeatherDisplayConfig(
+            trip_id=trip_id,
+            metric_alert_levels={
+                "temperature_max": "standard",
+                "wind_change": "standard",
+                "precipitation_sum": "standard",
+            },
+        ),
+    )
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=True, send_telegram=False,
         alert_on_changes=True,

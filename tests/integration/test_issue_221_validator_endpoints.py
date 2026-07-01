@@ -237,23 +237,11 @@ class TestAlertPreviewEndpoint:
 class TestDetectorThresholdsEndpoint:
     """AC-7, AC-8, AC-9: Detector-Auswahlpfad sichtbar machen."""
 
-    def test_ac7_trip_with_alert_rules_returns_from_alert_rules(
-        self, client, trip_with_alert_rules,
-    ):
-        """AC-7: Trip mit aktivierter alert_rule → config_source=from_alert_rules."""
-        user_id, trip_id = trip_with_alert_rules
-        resp = client.get(
-            "/api/_validator/detector-thresholds",
-            params={"trip": trip_id, "user_id": user_id},
-        )
-        assert resp.status_code == 200, f"Body: {resp.text[:200]}"
-        data = resp.json()
-        assert data["config_source"] == "from_alert_rules"
-        assert data["effective_detector"] == "from_alert_rules"
-        # Temperature-Delta-Rule mappt auf temp_min_c + temp_max_c
-        assert "temp_min_c" in data["thresholds"]
-        assert "temp_max_c" in data["thresholds"]
-        assert data["thresholds"]["temp_min_c"] == 5.0
+    # Issue #946: test_ac7_trip_with_alert_rules_returns_from_alert_rules und
+    # test_ac9_trip_with_only_report_config_returns_from_trip_config entfernt —
+    # sie assertierten die alten Detector-Routing-Pfade (from_alert_rules über
+    # trip.alert_rules bzw. from_trip_config), die #946 zugunsten von
+    # metric_alert_levels als einziger Quelle abgeschafft hat.
 
     def test_ac8_trip_with_display_config_returns_from_display_config(self, client):
         """AC-8: Trip mit display_config (ohne alert_rules) → from_display_config."""
@@ -267,26 +255,6 @@ class TestDetectorThresholdsEndpoint:
             f"Erwarte from_display_config, bekam {data['config_source']}"
         assert data["effective_detector"] == "from_display_config"
         assert isinstance(data["thresholds"], dict)
-
-    def test_ac9_trip_with_only_report_config_returns_from_trip_config(
-        self, client, trip_with_only_report_config,
-    ):
-        """AC-9: Trip ohne alert_rules/display_config aber mit report_config → from_trip_config."""
-        user_id, trip_id = trip_with_only_report_config
-        resp = client.get(
-            "/api/_validator/detector-thresholds",
-            params={"trip": trip_id, "user_id": user_id},
-        )
-        assert resp.status_code == 200, f"Body: {resp.text[:200]}"
-        data = resp.json()
-        assert data["config_source"] == "from_trip_config"
-        # Loader-Migration baut bei alert_on_changes=True enabled AlertRules,
-        # dadurch wechselt der effektive Detector-Pfad auf from_alert_rules.
-        assert data["effective_detector"] == "from_alert_rules"
-        # User-Werte aus report_config müssen sich in den thresholds wiederfinden
-        assert data["thresholds"]["temp_max_c"] == 7.0
-        assert data["thresholds"]["wind_max_kmh"] == 22.0
-        assert data["thresholds"]["precip_sum_mm"] == 12.0
 
     def test_ac11_alerts_off_shows_divergence(
         self, client, trip_with_report_config_alerts_off,

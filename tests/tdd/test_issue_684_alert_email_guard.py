@@ -81,12 +81,27 @@ def _segment_weather(temp_max: float, wind_max: float, precip: float) -> Segment
 def _trip(report_config: TripReportConfig | None) -> Trip:
     from datetime import date as date_type
 
+    from app.models import UnifiedWeatherDisplayConfig
+
     wp = Waypoint(
         id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0,
         time_window=TimeWindow(start=time(8, 0), end=time(10, 0)),
     )
     stage = Stage(id="T1", name="Tag 1", date=date_type.today(), waypoints=[wp])
-    trip = Trip(id="trip-684", name="Test Trip 684", stages=[stage])
+    # Issue #946: metric_alert_levels ist die einzige Detektor-Quelle. Die
+    # _significant_pair-Deltas (temp 15→45, wind 10→80, precip 0→30) reißen die
+    # Standard-Schwellen dieser Metriken → Change wird erkannt.
+    trip = Trip(
+        id="trip-684", name="Test Trip 684", stages=[stage],
+        display_config=UnifiedWeatherDisplayConfig(
+            trip_id="trip-684",
+            metric_alert_levels={
+                "temperature_max": "standard",
+                "wind_change": "standard",
+                "precipitation_sum": "standard",
+            },
+        ),
+    )
     trip.report_config = report_config
     return trip
 

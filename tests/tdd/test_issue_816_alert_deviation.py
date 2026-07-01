@@ -173,13 +173,26 @@ def _data(segment_id: int | str = 1, **summary_kwargs) -> SegmentWeatherData:
 
 
 def _trip(trip_id: str) -> Trip:
-    """Trip mit Telegram-Briefing-Kanal und aktiver Änderungs-Meldung (kein
-    alert_rule → Δ-Detektor aus report_config/Katalog)."""
+    """Trip mit Telegram-Briefing-Kanal und aktiver Änderungs-Meldung.
+
+    Issue #946: metric_alert_levels ist die einzige Detektor-Quelle. precip_sum
+    'standard' → Δ-Schwelle 10 (identisch zum früheren Katalog-Default), sodass
+    die precip-Deltas dieser Tests weiterhin exakt gleich alerten. report_config
+    bleibt für die Kanal-Vererbung (Telegram) erhalten.
+    """
+    from app.models import UnifiedWeatherDisplayConfig
+
     stage = Stage(
         id="T1", name="Tag 1", date=date(2026, 4, 5),
         waypoints=[Waypoint(id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0)],
     )
-    trip = Trip(id=trip_id, name="Abweichungs-Trip", stages=[stage])
+    trip = Trip(
+        id=trip_id, name="Abweichungs-Trip", stages=[stage],
+        display_config=UnifiedWeatherDisplayConfig(
+            trip_id=trip_id,
+            metric_alert_levels={"precipitation_sum": "standard"},
+        ),
+    )
     trip.report_config = TripReportConfig(
         trip_id=trip_id,
         send_email=False,
@@ -651,24 +664,32 @@ def test_ac8_delta_only_detection_excludes_absolute_rules():
 # Trips mit REINEN Absolute-Regeln (#809-SyncAlertRules) bekommen weiter
 # symmetrische Δ-Alerts (Invariante aus Fix-Loop 1).
 
-def test_ac8b_absolute_rule_trip_still_gets_delta_alert(telegram_sink, clean_user_dirs):
-    """AC-8b (Regression): Trip mit NUR einer absoluten WIND_GUST-Regel
-    (wie SyncAlertRules/#809 sie erzeugt) bekommt einen Alert, wenn der frische
-    Wert um ≥ MetricCatalog-Default (20 km/h) vom Briefing-Snapshot abweicht.
+def test_ac8b_wind_gust_metric_level_trip_gets_delta_alert(telegram_sink, clean_user_dirs):
+    """AC-8b (Regression, migriert für #946): Trip mit metric_alert_levels
+    {'wind_gust':'standard'} bekommt einen Δ-Alert, wenn der frische Wert um
+    ≥ 20 km/h vom Briefing-Snapshot abweicht.
 
-    Fix-Loop-1-Invariante: from_alert_rules trägt für ABSOLUTE-Regeln die
-    MetricCatalog-Δ-Schwelle in _thresholds ein, damit include_absolute=False
-    symmetrische Δ-Changes produziert — ohne absolute-Rule-Semantik.
+    Issue #946: Die frühere Fassung nutzte eine reine ABSOLUTE alert_rule
+    (#809-SyncAlertRules-Muster) als Detektor-Quelle über from_alert_rules —
+    dieser Routing-Pfad wurde abgeschafft. metric_alert_levels ist jetzt die
+    einzige Quelle; wind_gust 'standard' liefert dieselbe Δ-Schwelle 20. Die
+    Kanal-Zustellung (Telegram) bleibt über die channels-Regel erhalten.
     """
-    from app.models import AlertMetric, AlertRule, AlertRuleKind, AlertSeverity
+    from app.models import (
+        AlertMetric,
+        AlertRule,
+        AlertRuleKind,
+        AlertSeverity,
+        UnifiedWeatherDisplayConfig,
+    )
     from app.trip import Stage, Trip, Waypoint
     from services.trip_alert import TripAlertService
 
     user_id = clean_user_dirs("tdd-816-ac8b")
 
-    # Exakt das Muster das SyncAlertRules (#809) erzeugt: ABSOLUTE-Regel
-    abs_rule = AlertRule(
-        id="r-gust-absolute",
+    # channels-Regel steuert nur noch die Zustellung (Telegram), nicht die Erkennung.
+    channel_rule = AlertRule(
+        id="r-gust-channels",
         kind=AlertRuleKind.ABSOLUTE,
         metric=AlertMetric.WIND_GUST,
         threshold=50.0,
@@ -681,8 +702,14 @@ def test_ac8b_absolute_rule_trip_still_gets_delta_alert(telegram_sink, clean_use
         id="T1", name="Tag 1", date=date(2026, 4, 5),
         waypoints=[Waypoint(id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0)],
     )
-    trip = Trip(id="trip-ac8b", name="SyncAlertRules-Trip", stages=[stage])
-    trip.alert_rules = [abs_rule]
+    trip = Trip(
+        id="trip-ac8b", name="Metric-Level-Trip", stages=[stage],
+        display_config=UnifiedWeatherDisplayConfig(
+            trip_id="trip-ac8b",
+            metric_alert_levels={"wind_gust": "standard"},
+        ),
+    )
+    trip.alert_rules = [channel_rule]
     trip.report_config = None
     trip.alert_cooldown_minutes = 0
 
@@ -690,16 +717,15 @@ def test_ac8b_absolute_rule_trip_still_gets_delta_alert(telegram_sink, clean_use
     cached = [_data(gust_max_kmh=20.0)]
     _save_briefing_snapshot(user_id, trip.id, cached)
 
-    # Frischer Wert: Böen 45 km/h → Δ=25 ≥ MetricCatalog-Default 20 → Alert MUSS fallen
+    # Frischer Wert: Böen 45 km/h → Δ=25 ≥ Standard-Schwelle 20 → Alert MUSS fallen
     fresh = [_data(gust_max_kmh=45.0)]
     service = TripAlertService(settings=_settings_telegram_only(), user_id=user_id)
     result = service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
 
     assert result is True, (
-        "Trip mit reiner ABSOLUTE-Regel (#809-SyncAlertRules-Muster) hat keinen "
-        "Δ-Alert bekommen — from_alert_rules liefert leere _thresholds für den "
-        "include_absolute=False-Pfad (Fix-Loop 1 Invariante)"
+        "Trip mit metric_alert_levels={'wind_gust':'standard'} hat keinen "
+        "Δ-Alert bekommen (Δ=25 ≥ Schwelle 20)"
     )
     assert telegram_sink.send_count() == 1, (
-        "Kein Telegram-Versand trotz Δ=25 ≥ MetricCatalog-Default 20 km/h"
+        "Kein Telegram-Versand trotz Δ=25 ≥ Standard-Schwelle 20 km/h"
     )
