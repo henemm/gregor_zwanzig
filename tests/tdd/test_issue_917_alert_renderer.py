@@ -172,7 +172,7 @@ class TestAC2Subject:
         return to_alert_message(changes, [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00")
 
     def test_1event_contains_trip_km_arrow_code(self):
-        """1-Event-Betreff enthält Trip, km-Spanne, Pfeil, Kürzel."""
+        """1-Event-Betreff enthält Trip, km-Spanne, Pfeil, lesbaren Metriklabel."""
         from src.output.renderers.alert.render import render_subject
         msg = self._make_msg_1event()
         subj = render_subject(msg)
@@ -181,10 +181,10 @@ class TestAC2Subject:
         assert "km" in subj.lower(), f"km fehlt: {subj!r}"
         # Pfeil (Unicode oder ASCII)
         assert "↑" in subj or "+" in subj, f"Richtungs-Indikator fehlt: {subj!r}"
-        # Kürzel für gust
-        from app.metric_catalog import get_sms_code
-        code = get_sms_code("gust")
-        assert code in subj, f"Kürzel '{code}' fehlt: {subj!r}"
+        # label_de für gust (Issue #940: label statt SMS-Code in E-Mail/Telegram)
+        from app.metric_catalog import get_metric
+        label = get_metric("gust").label_de
+        assert label in subj, f"Label '{label}' fehlt: {subj!r}"
 
     def test_1event_format_order_trip_km_arrow_metric(self):
         """Reihenfolge: [trip] vor km vor Pfeil/Kürzel."""
@@ -208,11 +208,12 @@ class TestAC2Subject:
         assert "Schwelle" in subj or "schwelle" in subj.lower(), (
             f"'Schwelle' fehlt bei 3 Events: {subj!r}"
         )
-        # Top-3 Kürzel müssen enthalten sein
-        from app.metric_catalog import get_sms_code
-        codes = [get_sms_code("gust"), get_sms_code("temperature_cold"), get_sms_code("precipitation")]
-        found = sum(1 for c in codes if c and c in subj)
-        assert found >= 1, f"Kein Kürzel gefunden in: {subj!r}"
+        # Top-3 Labels (label_de) müssen enthalten sein (Issue #940: label statt SMS-Code)
+        from app.metric_catalog import get_metric
+        labels = [get_metric("gust").label_de, get_metric("temperature_cold").label_de,
+                  get_metric("precipitation").label_de]
+        found = sum(1 for lbl in labels if lbl and lbl in subj)
+        assert found >= 1, f"Kein Label gefunden in: {subj!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -625,3 +626,41 @@ class TestAC9RegressionGuard:
         """SMS_SYMBOL_BY_METRIC['snowfall_limit'] == 'SFL' — unveränderlich."""
         from src.formatters.sms_trip import SMS_SYMBOL_BY_METRIC
         assert SMS_SYMBOL_BY_METRIC["snowfall_limit"] == "SFL"
+
+
+# ---------------------------------------------------------------------------
+# Issue #940: E-Mail/Telegram zeigt label_de statt SMS-Kürzel; SMS unverändert
+# ---------------------------------------------------------------------------
+
+class TestIssue940LabelInEmail:
+    """render_subject und render_sms: label_de im E-Mail-Pfad, SMS-Code im SMS-Pfad."""
+
+    def _make_msg(self, field: str, direction: str, old: float, new: float, thr: float):
+        from src.output.renderers.alert.project import to_alert_message
+        change = _make_change(field, old=old, new=new, direction=direction,
+                               threshold=thr, segment_id="1")
+        seg = _make_segment("1", km_from=0.0, km_to=10.0)
+        return to_alert_message([change], [seg], "TEST", tz=ZoneInfo("Europe/Berlin"), stand_at="08:00")
+
+    def test_visibility_email_shows_sichtweite_not_vs(self):
+        """render_subject mit Sichtweite zeigt 'Sichtweite', nicht 'VS'."""
+        from src.output.renderers.alert.render import render_subject
+        msg = self._make_msg("visibility_min_m", "decrease", 2000.0, 400.0, 1000.0)
+        subj = render_subject(msg)
+        assert "Sichtweite" in subj, f"'Sichtweite' fehlt: {subj!r}"
+        assert "VS" not in subj, f"SMS-Kürzel 'VS' darf in E-Mail-Betreff nicht erscheinen: {subj!r}"
+
+    def test_freezing_level_email_shows_nullgradgrenze_not_nl(self):
+        """render_subject mit Nullgradgrenze zeigt 'Nullgradgrenze', nicht 'NL'."""
+        from src.output.renderers.alert.render import render_subject
+        msg = self._make_msg("freezing_level_m", "decrease", 3500.0, 2800.0, 200.0)
+        subj = render_subject(msg)
+        assert "Nullgradgrenze" in subj, f"'Nullgradgrenze' fehlt: {subj!r}"
+        assert "NL" not in subj, f"SMS-Kürzel 'NL' darf in E-Mail-Betreff nicht erscheinen: {subj!r}"
+
+    def test_visibility_sms_still_uses_vs(self):
+        """render_sms mit Sichtweite verwendet weiterhin SMS-Kürzel 'VS'."""
+        from src.output.renderers.alert.render import render_sms
+        msg = self._make_msg("visibility_min_m", "decrease", 2000.0, 400.0, 1000.0)
+        sms = render_sms(msg)
+        assert "VS" in sms, f"SMS-Kürzel 'VS' muss in SMS erhalten bleiben: {sms!r}"

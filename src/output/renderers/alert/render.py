@@ -32,6 +32,11 @@ def _code(e: AlertEvent) -> str:
     return get_sms_code(e.metric_id) or e.metric_id
 
 
+def _label(e: AlertEvent) -> str:
+    """Lesbarer deutscher Name für E-Mail/Telegram (statt SMS-Kürzel)."""
+    return get_metric(e.metric_id).label_de or _code(e)
+
+
 def _km_str(msg: AlertMessage) -> str:
     a, b = km_span(msg.events)
     return f"km {int(round(a))}–{int(round(b))} km"
@@ -96,11 +101,11 @@ def render_subject(msg: AlertMessage) -> str:
     if len(evs) == 1:
         e = evs[0]
         return (
-            f"[{msg.trip_short}] {km} · {arrow(e)} {_code(e)}: "
+            f"[{msg.trip_short}] {km} · {arrow(e)} {_label(e)}: "
             f"{_val(e, e.value_from)}→{_val(e, e.value_to)}"
         )
     n = len(evs)
-    top3 = ", ".join(f"{_code(e)} {_val(e, e.value_to)}" for e in evs[:3])
+    top3 = ", ".join(f"{_label(e)} {_val(e, e.value_to)}" for e in evs[:3])
     return f"[{msg.trip_short}] {km} · {arrow(evs[0])} {n} über Schwelle: {top3}"
 
 
@@ -110,13 +115,13 @@ def _h1(msg: AlertMessage) -> str:
         e = evs[0]
         d = delta_pct(e)
         suffix = f" {d:+d}%" if d is not None else ""
-        return f"{_code(e)}{suffix} seit dem Briefing"
+        return f"{_label(e)}{suffix} seit dem Briefing"
     return f"{len(evs)} Werte über der Alarm-Schwelle"
 
 
 def _email_line(e: AlertEvent) -> str:
     return (
-        f"{_code(e)} · Schwelle {_val(e, e.threshold)} · "
+        f"{_label(e)} · Schwelle {_val(e, e.threshold)} · "
         f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)} · "
         f"{side_label(e)}"
     )
@@ -159,7 +164,7 @@ def render_telegram(msg: AlertMessage) -> str:
     km = _km_str(msg)
     if len(evs) == 1:
         e = evs[0]
-        verdict = f"{msg.trip_short} · {km} · {arrow(e)} {_code(e)}"
+        verdict = f"{msg.trip_short} · {km} · {arrow(e)} {_label(e)}"
     else:
         verdict = f"{msg.trip_short} · {km} · {len(evs)} über Schwelle"
     lines = [f"**{verdict}**"] + [_email_line(e) for e in evs]
