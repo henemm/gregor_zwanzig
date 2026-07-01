@@ -2,16 +2,16 @@
 entity_id: feat_880_autosave_overlay
 type: feature
 created: 2026-06-24
-updated: 2026-06-24
-status: draft
-workflow: feat-880-autosave-overlay
+updated: 2026-07-01
+status: approved
+workflow: feat-880-overlay-tests
 ---
 
 # Autospeicher-Indikator: Timestamp + fixes Overlay
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO 'go' 2026-07-01) — als Test-Grundlage für nachgezogene E2E-Abdeckung (Issue #947). Implementierung war bereits live, Freigabe formalisiert.
 
 ## Purpose
 
