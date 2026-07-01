@@ -783,6 +783,15 @@ def cmd_complete(args: list[str]) -> None:
         print(f"BLOCKED: No execution log for '{name}'. Run: workflow.py write-log [outcome]",
               file=sys.stderr)
         sys.exit(1)
+    # Issue #960: cmd_complete must enforce the same adversary-verdict gate as
+    # an explicit `phase phase8_complete` transition. Placed before the
+    # express-sampling block below so a sampling-required round (which resets
+    # the counter and completes) is also blocked without a VERIFIED verdict —
+    # that reset path had the same silent-bypass bug as the non-express case.
+    error = _validate_transition(data, "phase8_complete")
+    if error:
+        print(f"BLOCKED: {error}", file=sys.stderr)
+        sys.exit(1)
     # Issue #828: Express-Sampling-Counter
     wf_type = data.get("workflow_type", "feature")
     if wf_type == "express":
