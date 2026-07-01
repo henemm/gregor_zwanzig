@@ -44,7 +44,7 @@ from services.daylight_service import DaylightWindow
 from services.risk_engine import RiskEngine
 from src.output.renderers.email import render_email
 from src.output.renderers.email.helpers import build_friendly_keys
-from src.output.tokens.dto import TokenLine
+from src.output.tokens.dto import MetricSpec, TokenLine
 
 
 class TripReportFormatter:
@@ -202,6 +202,15 @@ class TripReportFormatter:
             for m in dc.metrics
             if m.metric_id in SMS_SYMBOL_BY_METRIC and m.sms_threshold is not None
         }
+        # Bug #944: SMS-Symbole ohne aktive Metrik als deaktivierte Specs führen,
+        # damit SN/SFL nicht erscheinen, wenn die Metrik im Trip nicht gewählt ist —
+        # unabhängig davon, ob Schneedaten in der Vorhersage vorhanden sind.
+        active_metric_ids = {m.metric_id for m in dc.metrics}
+        _disabled_sms_specs = [
+            MetricSpec(symbol=sym, enabled=False)
+            for metric_id, sym in SMS_SYMBOL_BY_METRIC.items()
+            if metric_id not in active_metric_ids
+        ]
         # Issue #868: SMS-Text immer erzeugen (max 160 Zeichen, Standard-SMS-Limit).
         sms_text = SMSTripFormatter().format_sms(
             segments,
@@ -211,6 +220,7 @@ class TripReportFormatter:
             max_length=160,
             thresholds=_sms_thr or None,
             thunder_forecast=thunder_forecast,
+            disabled_specs=_disabled_sms_specs or None,
         )
 
         # Issue #614: Tages-Max-Kurzform anhängen wenn konfiguriert.
@@ -223,6 +233,7 @@ class TripReportFormatter:
                 max_length=4000,
                 thresholds=_sms_thr or None,
                 thunder_forecast=thunder_forecast,
+                disabled_specs=_disabled_sms_specs or None,
             )
             telegram_text = f"{telegram_text}\n\nTages-Max:\n{kurzform}"
 

@@ -542,6 +542,7 @@
 					<div class="sms-thresholds" data-testid="sms-thresholds">
 						<table class="threshold-table">
 							<tbody>
+								{#if !buckets.off.includes('wind')}
 								<ThresholdMetricRow
 									metricId="wind"
 									label="Wind (km/h)"
@@ -553,6 +554,8 @@
 									currentFloat={smsThresholds['wind'] !== undefined && smsThresholds['wind'] !== '' ? parseFloat(smsThresholds['wind']) : null}
 									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
+								{/if}
+								{#if !buckets.off.includes('gust')}
 								<ThresholdMetricRow
 									metricId="gust"
 									label="Böen (km/h)"
@@ -564,6 +567,8 @@
 									currentFloat={smsThresholds['gust'] !== undefined && smsThresholds['gust'] !== '' ? parseFloat(smsThresholds['gust']) : null}
 									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
+								{/if}
+								{#if !buckets.off.includes('precipitation')}
 								<ThresholdMetricRow
 									metricId="precipitation"
 									label="Niederschlag (mm)"
@@ -575,6 +580,8 @@
 									currentFloat={smsThresholds['precipitation'] !== undefined && smsThresholds['precipitation'] !== '' ? parseFloat(smsThresholds['precipitation']) : null}
 									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
+								{/if}
+								{#if !buckets.off.includes('rain_probability')}
 								<ThresholdMetricRow
 									metricId="rain_probability"
 									label="Regenwahrsch. (%)"
@@ -586,6 +593,8 @@
 									currentFloat={smsThresholds['rain_probability'] !== undefined && smsThresholds['rain_probability'] !== '' ? parseFloat(smsThresholds['rain_probability']) : null}
 									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
+								{/if}
+								{#if !buckets.off.includes('thunder')}
 								<ThresholdMetricRow
 									metricId="thunder"
 									label="Gewitter"
@@ -596,6 +605,8 @@
 									currentFloat={smsThresholds['thunder'] !== undefined && smsThresholds['thunder'] !== '' ? parseFloat(smsThresholds['thunder']) : null}
 									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
+								{/if}
+								{#if !buckets.off.includes('snow_depth')}
 								<ThresholdMetricRow
 									metricId="snow_depth"
 									label="Schneehöhe (cm)"
@@ -607,6 +618,8 @@
 									currentFloat={smsThresholds['snow_depth'] !== undefined && smsThresholds['snow_depth'] !== '' ? parseFloat(smsThresholds['snow_depth']) : null}
 									onChange={(id, f) => { smsThresholds = { ...smsThresholds, ['snow_depth']: String(f) }; scheduleAutoSave(); }}
 								/>
+								{/if}
+								{#if !buckets.off.includes('snowfall_limit')}
 								<ThresholdMetricRow
 									metricId="snowfall_limit"
 									label="Schneefallgrenze (m)"
@@ -618,6 +631,7 @@
 									currentFloat={smsThresholds['snowfall_limit'] !== undefined && smsThresholds['snowfall_limit'] !== '' ? parseFloat(smsThresholds['snowfall_limit']) : null}
 									onChange={(id, f) => { smsThresholds = { ...smsThresholds, ['snowfall_limit']: String(f) }; scheduleAutoSave(); }}
 								/>
+								{/if}
 							</tbody>
 						</table>
 					</div>

@@ -183,6 +183,7 @@ class SMSTripFormatter:
         tz: ZoneInfo = ZoneInfo("UTC"),
         thresholds: Optional[dict[str, float]] = None,
         thunder_forecast: Optional[dict] = None,
+        disabled_specs: Optional[list[MetricSpec]] = None,
     ) -> str:
         """Generate v2.0 SMS via TokenLine pipeline.
 
@@ -263,6 +264,13 @@ class SMSTripFormatter:
                     ]
                 else:
                     config.append(MetricSpec(symbol=sym, threshold=thr))
+
+        # Bug #944: explizit deaktivierte Metriken (enabled=False) ans Config-Ende
+        # hängen. _visible(spec_with_enabled_false) -> False unterdrückt die Token
+        # (z.B. SN/SFL) auch wenn Schneedaten in der Vorhersage vorhanden sind.
+        if disabled_specs:
+            existing_syms = {s.symbol for s in config}
+            config.extend(s for s in disabled_specs if s.symbol not in existing_syms)
 
         token_line = build_token_line(
             forecast,
