@@ -52,7 +52,9 @@
 	function buildSaveFn() {
 		const levels = { ...currentLevels };
 		return async () => {
-			await api.put(`/api/trips/${trip.id}`, {
+			// Issue #953: PUT-Antwort (vollständiger Trip) an Parent zurückgeben,
+			// sonst bleibt trip.display_config.metric_alert_levels beim Re-Mount stale.
+			const updated = await api.put<Trip>(`/api/trips/${trip.id}`, {
 				display_config: {
 					...trip.display_config,
 					metric_alert_levels: levels,
@@ -61,6 +63,7 @@
 				alert_quiet_from: quietFrom || null,
 				alert_quiet_to: quietTo || null,
 			});
+			onTripUpdate?.(updated);
 		};
 	}
 

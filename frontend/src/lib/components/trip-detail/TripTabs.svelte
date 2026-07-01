@@ -105,11 +105,13 @@
 		activeTab = resolve(initialTab);
 	});
 
-	function handleValueChange(value: string): void {
-		// AC-10: Bestätigungsdialog wenn Alerts-Tab Auto-Save noch aussteht
+	async function handleValueChange(value: string): Promise<void> {
+		// Issue #953: Ausstehenden Alerts-Auto-Save vor dem Tab-Wechsel flushen,
+		// statt einen irreführenden „Änderungen gehen verloren"-Dialog zu zeigen
+		// (die Änderung wird ohnehin gespeichert). onTripUpdate synchronisiert
+		// den Parent-State, damit der Wert beim Re-Mount erhalten bleibt.
 		if (activeTab === 'alerts' && value !== 'alerts' && saveController?.hasPending) {
-			const ok = window.confirm('Nicht gespeicherte Änderungen gehen verloren. Trotzdem wechseln?');
-			if (!ok) return;
+			await saveController.flush();
 		}
 		activeTab = value;
 		// Issue #516: kanonisches URL-Modell — ?tab=<value> statt #hash.
