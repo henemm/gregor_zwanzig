@@ -124,54 +124,24 @@ TDD-Tests MÜSSEN das tatsächliche Verhalten beweisen:
 
 ## E2E-Verifikation (Post-Push auf Staging)
 
-Die echte "funktioniert es wirklich"-Verifikation laeuft **nach** dem Push gegen
-die Staging-Umgebung (`https://staging.gregor20.henemm.com`) — **nie** durch einen
-lokalen Neustart des Live-Servers (auf dieser Maschine = Produktion). Siehe Issue #339.
+Die echte "funktioniert es wirklich"-Verifikation laeuft **nach** dem Push gegen die
+Staging-Umgebung (`https://staging.gregor20.henemm.com`) — **nie** durch einen lokalen Neustart
+des Live-Servers (auf dieser Maschine = Produktion). Siehe Issue #339.
 
-**Ablauf:** `git push origin main` → ~5 Min Staging-Auto-Deploy abwarten →
-`/e2e-verify` (gegen Staging) → `deploy-gregor-prod.sh` → Post-Deploy-Selftest (Issue #564) → Issue close.
-
-**E2E-Verifikation (`/e2e-verify`):**
-
-1. Smoke gegen Staging (`/` + `/api/health`)
-2. Scope bestimmen (frontend-only vs. backend/full-stack)
-3. frontend-only → `staging-validator` Agent prüft alle ACs aus der Spec via Playwright; schreibt `e2e_verified.json` mit `verified_commit` + `staging_verdict`
-4. backend/full-stack → Test-Trip auf Staging, Mail nur an `gregor-test@henemm.com`, IMAP-Pruefung
-5. Nachweis in `.claude/e2e_verified.json` mit `verified_commit` (HEAD-SHA), `staging_verdict` und strukturierten Findings pro AC
-
-Basis-URL fuer Browser-Checks via `GZ_SVELTE_BASE` (Default Staging):
-```bash
-GZ_SVELTE_BASE=https://staging.gregor20.henemm.com \
-  uv run python3 .claude/hooks/e2e_browser_test.py browser --check "Feature" --url "/"
-```
-
-`deploy-gregor-prod.sh` liest `e2e_verified.json` und blockiert den Prod-Deploy als Hard Gate wenn `verified_commit` nicht dem aktuellem HEAD entspricht oder `staging_verdict` nicht mit `VERIFIED` beginnt (Issue #521).
+**Ablauf:** `git push origin main` → ~5 Min Staging-Auto-Deploy → `/e2e-verify` (gegen Staging)
+→ `deploy-gregor-prod.sh` → Post-Deploy-Selftest (Issue #564) → Issue close. Der Prod-Deploy ist
+ein Hard Gate: er blockt, wenn `e2e_verified.json[verified_commit]` nicht dem HEAD entspricht
+oder `staging_verdict` nicht mit `VERIFIED` beginnt (Issue #521).
 
 **VERBOTEN:**
 - Den lokalen Live-Server stoppen oder neu starten
 - Sammel-Versand ueber alle Touren — nur der Test-Trip darf eine Mail bekommen
 - "E2E Test erfolgreich" sagen ohne Verifikation gegen Staging
 
-## Post-Deploy-Selftest (Issue #564)
-
-Nach jedem Prod-Deploy erfolgt eine automatische Nachverifikation gegen Produktion — ohne Playwright (kein Risiko für echte Sessions), stattdessen via Commit-Attestation, Health-Check und parallele HTTP-Probes auf alle aus der Staging-Verifikation bekannten AC-Pfade.
-
-**Ablauf (integriert in `/7-deploy`):**
-
-1. Commit-Attestation: `git HEAD` muss mit `e2e_verified.json[verified_commit]` übereinstimmen
-2. Health-Check: `https://gregor20.henemm.com/api/health` muss HTTP 200 + `status=ok` antworten
-3. AC-Attestation: pro Staging-Finding (max 5 parallel) HTTP GET auf entsprechende Prod-URL (erwartet 200 oder 302)
-4. Bericht: Markdown-Tabelle in `docs/artifacts/<workflow>/prod-selftest.md` mit pro-AC-Status
-5. Exit-Code: 0 = alle ACs bestätigt (PASS) oder alle ACs übersprungen (docs-only); 1 = Mismatch/Fehler
-
-**Verdict-Ableitung:**
-
-- **PASS:** alle PASS-Findings bestätigt sich in Produktion
-- **PARTIAL:** mind. ein PASS-Finding fehlt oder ist unerreichbar in Produktion
-- **FAIL:** Commit-Mismatch oder Health unreachable
-- **SKIP:** `e2e_verified.json` nicht vorhanden (docs-only Deploy)
-
-**Schutzwirkung:** Issue-Close erfolgt nur bei Exit 0. Bei PARTIAL/FAIL wird der Bericht untersucht und ggf. Rollback eingeleitet, bevor das Issue geschlossen wird. Verhindert, dass Issues geschlossen werden obwohl der Deploy still fehlschlug oder der falsche Code-Stand deployed wurde. Siehe Spec Issue #564 für technische Details.
+**Detailablauf** (E2E-Schritte, `GZ_SVELTE_BASE`-Aufruf, Post-Deploy-Selftest inkl.
+Verdict-Ableitung PASS/PARTIAL/FAIL/SKIP): **`docs/reference/operations_playbook.md`**.
+Kern-Schutzwirkung: **Issue-Close nur bei Selftest-Exit 0** — bei PARTIAL/FAIL erst Bericht
+prüfen, ggf. Rollback (Issue #564).
 
 ## Mail-Validatoren & Renderer-Gate (ZWINGEND)
 
@@ -186,7 +156,13 @@ Drei Mail-Pfade, drei Gates. **Den falschen Validator auf einen Pfad anzuwenden 
 - Lauf gegen die **echt zugestellte Staging-Mail** aus dem Stalwart-Test-Postfach (`gregor-test@henemm.com`, Creds `GZ_IMAP_*` — nie im Klartext). **Kein Mock, kein Gmail.** Geprüft wird **Plausibilität**, nicht bloß String-Presence (einfache String-Checks beweisen NICHTS).
 - **Nur bei Exit 0** darfst du „E2E Test bestanden" sagen. Falscher Validator für den Pfad → sauberes No-Op (Exit 0); fehlender Marker-Header → Exit 1.
 
-**Renderer-Commit-Gate (seit #811 — un-überspringbar, kein ENV/globaler Bypass):** `renderer_mail_gate.py` blockiert jeden `git commit`, der eine Mail-Inhalts-Datei staged (`src/output/renderers/email/*.py`, `src/formatters/*.py`, `src/outputs/email.py`), bis im aktiven Workflow **beide** Nachweise **frisch** vorliegen: (1) Modus-Matrix-Vertragstest `tests/tdd/test_issue_811_mode_matrix.py` grün (rendert `{full,compact}×{Einfach,Roh}×{briefing,alert}`, erzwingt Zahlen statt Ampel im Roh-Modus, deckt Briefing **und** Alert ab), (2) erfolgreicher `briefing_mail_validator.py`-Lauf. Anti-Stale bindet beide an sha256/`validated_at` → jede Renderer-Änderung erzwingt erneuten Lauf. **Abhilfe bei Blockade** (kein Override): beide laufen lassen — `uv run pytest tests/tdd/test_issue_811_mode_matrix.py` schreibt den Matrix-Nachweis automatisch, dann den Validator gegen die Staging-Mail grün bekommen.
+**Renderer-Commit-Gate (seit #811 — un-überspringbar, kein Bypass):** `renderer_mail_gate.py`
+blockiert jeden `git commit`, der eine Mail-Inhalts-Datei staged (`src/output/renderers/email/*.py`,
+`src/formatters/*.py`, `src/outputs/email.py`), bis im aktiven Workflow **beide** Nachweise
+**frisch** vorliegen: (1) Modus-Matrix-Vertragstest `tests/tdd/test_issue_811_mode_matrix.py` grün,
+(2) erfolgreicher `briefing_mail_validator.py`-Lauf. **Abhilfe bei Blockade** (kein Override):
+`uv run pytest tests/tdd/test_issue_811_mode_matrix.py` schreibt den Matrix-Nachweis automatisch,
+dann den Validator gegen die Staging-Mail grün bekommen.
 
 Vollständige Details (Plausibilitäts-Schwellen pro Format, Dispatch-Verhalten, Anti-Stale-Mechanik, Historie): **`docs/reference/mail_validators.md`**.
 
@@ -220,92 +196,50 @@ https://github.com/henemm/gregor_zwanzig/issues
 
 ## Pre-Test Validierung (PFLICHT!)
 
-**BEVOR du den User zum Testen aufforderst, MUSST du validieren!**
-
-```bash
-python3 .claude/validate.py
-```
-
-### Was wird geprueft:
-1. **Syntax-Check** auf alle geaenderten Python-Dateien
-2. **Import-Check** - Module lassen sich importieren
-3. **Server-Startup** - Web-UI startet fehlerfrei
-
-### Workflow:
-1. Code schreiben/aendern
-2. `python3 .claude/validate.py` ausfuehren
-3. Alle Checks gruen? -> User zum Testen auffordern
-4. Checks rot? -> Fehler beheben, erneut validieren
-
-### Nach erfolgreichem User-Test:
-```bash
-python3 .claude/validate.py --clear
-```
+**BEVOR du den User zum Testen aufforderst, MUSST du validieren!** `python3 .claude/validate.py`
+prüft Syntax + Import geänderter Python-Dateien und Server-Startup. Erst wenn **alle Checks grün**
+sind, den User zum Testen auffordern; nach erfolgreichem Test `python3 .claude/validate.py --clear`.
 
 **NIEMALS "teste es" oder "pruefe" sagen ohne vorherige Validierung!**
 
 ## Daten-Schema-Reworks (PFLICHT!)
 
-**Bei Aenderungen an Persistenz-Strukturen MUESSEN Bestandsdaten erhalten bleiben.**
+**Bei Aenderungen an Persistenz-Strukturen MUESSEN Bestandsdaten erhalten bleiben.** Grundregel:
+**Read-Modify-Write mit Merge** — bestehendes Objekt laden, nur explizit veränderte Felder
+überschreiben, Rest erhalten. **Niemals Replace** (neues Objekt aus UI-/Request-State bauen und
+speichern → Felder, die der Client nicht kennt, sind weg). Hintergrund: BUG-DATALOSS-GR221
+(Issue #102), 3 von 4 Stages verloren.
 
-Hintergrund: BUG-DATALOSS-GR221 (Issue #102). Bei einem frueheren Refactor gingen 3 von 4 Stages des GR221-Trips verloren — das Recovery war nur moeglich, weil GPX-Dateien zufaellig in einem Stash ueberlebt haben.
+**Schema-relevante Dateien:** `src/app/models.py`, `src/app/trip.py`, `src/app/loader.py`,
+`internal/model/*.go`, `internal/store/store.go`. Ein Edit daran löst automatisch den
+Pre-Snapshot-Hook `data_schema_backup.py` aus (tar.gz nach `.backups/`, Retention 20).
 
-### Schema-relevante Dateien
-
-`src/app/models.py`, `src/app/trip.py`, `src/app/loader.py`, `internal/model/*.go`, `internal/store/store.go`
-
-### Pflicht-Workflow
-
-1. **Pre-Snapshot:** Hook `data_schema_backup.py` erstellt automatisch ein tar.gz von `data/users/` nach `.backups/data-pre-rework-<ts>.tar.gz` bevor eine Schema-Datei editiert wird (Retention: 20 Stueck).
-2. **Migration mit Test:** Bei Feldumbenennung/-removal: Migration-Skript schreiben + Roundtrip-Test (load alt → migrate → load neu → assert keine Daten-Diff)
-3. **Post-Verifikation:** Nach Deploy alle Trips/Locations/Subscriptions im Frontend laden, Stage-/Waypoint-Counts gegen Pre-Snapshot vergleichen
-4. **Bei Datenverlust:** Sofortiges Rollback aus `.backups/`, Root-Cause in `docs/project/known_issues.md` dokumentieren
-
-### Anti-Pattern (verboten)
-
-```python
-# Edit-Handler baut neues Objekt aus UI-State und ueberschreibt Persistenz
-updated = Trip(id=tid, name=name_input.value, stages=ui_stages)
-save_trip(updated)  # Felder die UI nicht kennt sind weg!
-```
-
-```go
-// Backend Replace statt Merge
-var trip model.Trip
-json.Decode(r.Body, &trip)
-store.SaveTrip(trip)  // existing.aggregation, .display_config etc. weg!
-```
-
-**Korrekt:** Read-Modify-Write mit Merge — bestehendes Objekt laden, nur explizit veraenderte Felder ueberschreiben, Rest erhalten.
+Pflicht-Workflow im Detail (Migration + Roundtrip-Test, Post-Verifikation der Stage-/Waypoint-
+Counts, Rollback) und die Anti-Pattern-Codebeispiele (Python/Go): **`docs/reference/operations_playbook.md`**.
 
 ## Parallele Sessions
 
-**Ein Projektordner = hoechstens eine Claude-Session gleichzeitig.** Mehrere Sessions im selben Working-Tree kollidieren: gemeinsame Dateien (uncommittete Fremd-Arbeit verschmutzt die Sicht, `git add -A` wuerde sie mit-committen) und gemeinsame Workflow-Buchfuehrung (Session-Verwechslung).
-
-Fuer Parallelarbeit eine isolierte Arbeitskopie anlegen:
+**Ein Projektordner = hoechstens eine Claude-Session gleichzeitig.** Mehrere Sessions im selben
+Working-Tree kollidieren (gemeinsame Dateien, `git add -A` zieht Fremd-WIP mit, gemeinsame
+Workflow-Buchführung). Für Parallelarbeit eine isolierte Arbeitskopie anlegen — der
+Session-Wächter erzwingt das ohnehin und ruft bei einer zweiten Sitzung unaufgefordert
+`EnterWorktree` auf:
 
 ```bash
-bash .claude/tools/gz-workspace new <name>   # isolierter Klon unter $GZ_WS_ROOT (Default /home/hem/gz-workspaces) auf Branch ws/<name>
-bash .claude/tools/gz-workspace list         # alle Workspaces mit Branch + uncommitted-Zaehler
+bash .claude/tools/gz-workspace new <name>   # isolierter Klon auf Branch ws/<name>
+bash .claude/tools/gz-workspace list         # alle Workspaces mit Branch + uncommitted-Zähler
 bash .claude/tools/gz-workspace clean <name> # entfernen (nur wenn sauber; --force erzwingt)
 ```
 
-Danach `cd` in den Workspace und dort eine NEUE Claude-Session starten. Fuer Frontend-Arbeit dort `cd frontend && npm ci`. Jeder Workspace ist voll isoliert (eigenes `.git`/Index, eigene Dateien, eigener Workflow-State); die Klon-Objekte sind gehardlinkt (platzsparend). Hauptrepo und andere Workspaces bleiben unberuehrt.
+**Die eine Regel, die das sicher macht:** Jede Session liefert **unabhängig** aus — kein Warten
+aufeinander. Integrationspunkt ist `origin/main`, nicht der lokale Ordner. Nach `main` wird nur
+Grünes (staging-validiert) gepusht → `main` ist immer auslieferbar → ein Deploy
+(`deploy-gregor-prod.sh`, per `flock` serialisiert) darf aus jeder Session jederzeit laufen.
+**Verboten:** einen Deploy aufschieben, „bis der Ordner sauber ist" oder „die andere Session
+fertig ist" — diese Pattsituation existiert nicht mehr.
 
-**Selbst-Isolierung (automatisch):** Erkennt der Session-Wächter eine zweite Sitzung im selben Ordner, ruft Claude unaufgefordert `EnterWorktree` auf und arbeitet in der isolierten Kopie weiter — kein Beenden oder Neustart nötig, der Nutzer muss nichts tun.
-
-### Abschluss einer parallelen Session — NIE „ich warte auf die andere Session"
-
-Jede Session liefert **unabhängig** aus. Kein Warten aufeinander, keine Koordination über den geteilten Baum. Der Integrationspunkt ist `origin/main`, nicht der lokale Ordner:
-
-1. **Isoliert arbeiten** (Workspace/Worktree) — erzwingt der Session-Wächter ohnehin.
-2. **Grün?** Im eigenen Branch committen, dann `git fetch origin && git rebase origin/main`, dann nach `main` pushen. Git serialisiert gleichzeitige Pushes selbst; bei Ablehnung erneut rebasen und pushen.
-3. **Staging** aktualisiert sich automatisch (~5 Min, eigener Klon) → gegen Staging validieren.
-4. **Production ausliefern:** `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` — **aus jeder Session jederzeit gefahrlos.** Ein `flock` serialisiert gleichzeitige Deploys (zweiter Aufruf wartet kurz und liefert dann den aktuellen `origin/main`-Stand). Das Script hängt **nicht mehr** am Zustand des geteilten Arbeitsbaums.
-
-**Die eine Regel, die das sicher macht:** Nach `main` wird nur Grünes (staging-validiert) gepusht — `main` ist immer auslieferbar. Dann darf ein Deploy auch frisch gepushte Arbeit einer anderen Session mitnehmen.
-
-**Verboten:** Ein Deploy aufschieben, „bis der gemeinsame Ordner sauber ist" oder „bis die andere Session fertig ist". Diese Pattsituation existiert nicht mehr — der Deploy bringt den Code hart auf `origin/main` (untracked Live-Daten unberührt, echte uncommittete WIP wird vorher als stash-Commit + `deploy-safety/*`-Tag gesichert).
+Detailablauf (isoliert arbeiten → committen/rebasen/pushen → Staging → Deploy) und die
+WIP-Sicherung beim Deploy: **`docs/reference/operations_playbook.md`**.
 
 ## Deployment & Infrastruktur
 
@@ -328,23 +262,21 @@ Globale Server-Infos und Monitoring-Anleitung stehen in `~/.claude/CLAUDE.md`.
 | 4b | Post-Deploy-Selftest | `python3 .claude/hooks/prod_selftest.py` (Commit/Health/AC-Attestation) — nur Exit 0 fährt weiter |
 | 5 | Issue schließen | `gh issue close <N>` — nur wenn 4b Exit 0 |
 
-`systemctl restart` allein **reicht nie** — `deploy-gregor-prod.sh` macht `flock-Lock → hart auf origin/main syncen (Daten unberührt, WIP gesichert) → Go-Binary bauen → Frontend bauen → alle 3 Services restarten → Smoke-Test`. Ohne diesen vollen Lauf entsteht Code-Drift, den `check-gregor20.sh` als BetterStack-Alert meldet (siehe Issue #113). Das Script ist **parallel-session-sicher**: es blockiert nicht mehr bei „dirty" Arbeitsbaum und serialisiert gleichzeitige Deploys über `flock`. Schritt 4 darf daher aus jeder Session jederzeit laufen.
+`systemctl restart` allein **reicht nie** — `deploy-gregor-prod.sh` macht `flock-Lock → hart auf
+origin/main syncen (Daten unberührt, WIP gesichert) → Go-Binary bauen → Frontend bauen → alle 3
+Services restarten → Smoke-Test`. Ohne diesen vollen Lauf entsteht Code-Drift, den
+`check-gregor20.sh` als BetterStack-Alert meldet (Issue #113). Das Script ist
+**parallel-session-sicher** (`flock`, kein „dirty"-Block) — Schritt 4 darf aus jeder Session
+jederzeit laufen.
 
-### Was zaehlt als „Staging-validiert"?
+**„Staging-validiert"** heißt mindestens: HTTP-Smoke (`/` → 200/302, `/api/health` → 200) +
+eine geänderte Funktion manuell/Playwright durchgeklickt; bei Mail-Änderungen Test-Mail +
+IMAP-Verifikation; bei Scheduler-Änderungen `last_run` geprüft.
 
-Mindestens diese Checks gegen `https://staging.gregor20.henemm.com`:
-- HTTP-Smoke: `/` antwortet `200` oder `302`, `/api/health` antwortet `200`
-- Eine geaenderte Funktion manuell durchgeklickt (oder via Playwright fuer UI-Features)
-- Bei Mail-Aenderungen: Test-Mail aus dem Scheduler triggern und IMAP-Verifikation
-- Bei Scheduler-Aenderungen: `last_run`-Status im Endpoint geprueft
-
-### Ausnahme: Reine Doku-/Tooling-Aenderungen
-
-Wenn der Push **ausschliesslich** `.md`-Dateien, `docs/`, `.claude/`-Inhalte (Hooks/Agents/Commands), `.gitignore` o. ae. veraendert hat — **keinen Code in `src/`, `api/`, `internal/`, `frontend/`, `cmd/`** — dann:
-- Schritt 3 (Staging-Validierung) entfaellt
-- Schritt 4 (Prod-Deploy) entfaellt, **wenn** der Code-Drift-Monitor (`check-gregor20.sh`) noch keinen Alert ausloest (Drift-Schwelle > 1h gegenueber `mtime(gregor-api)`)
-
-Im Zweifel: trotzdem deployen, dann ist der Drift-Monitor auf jeden Fall ruhig.
+**Ausnahme — reine Doku-/Tooling-Änderungen:** Verändert der Push **ausschließlich** `.md`,
+`docs/`, `.claude/`, `.gitignore` o. ä. (**keinen Code in `src/`, `api/`, `internal/`,
+`frontend/`, `cmd/`**), entfallen Schritt 3 und — solange der Drift-Monitor ruhig ist — Schritt 4.
+Im Zweifel trotzdem deployen. Volle Definitionen: **`docs/reference/operations_playbook.md`**.
 
 ## Monitoring
 
