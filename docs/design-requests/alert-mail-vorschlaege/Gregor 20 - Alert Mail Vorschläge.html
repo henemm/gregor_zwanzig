@@ -289,6 +289,95 @@
   </div>
   <p class="note" style="max-width:980px;margin-top:16px">Konvention: <b>Trip · Ort (km) · Richtung · Metrik</b> in dieser Reihenfolge. Pfeil (↓/↑) in Email &amp; Telegram; in SMS das Vorzeichen <code>+</code>/<code>-</code> (gestiegen / gefallen) als Token-Präfix. SMS bleibt ASCII/GSM-7 — keine Unicode-Pfeile (auch kein <code>^</code>, das zählt dort doppelt), sonst kippt das Limit von 140 auf 70 Zeichen.</p>
 
+  <hr class="r"/>
+
+  <!-- ── NOWCAST / ONSET-ALERT ── -->
+  <div class="sec-label"><span class="num tag-good">✓</span> Nowcast · Onset-Alert (Radar) — dasselbe Schema, ohne Δ/Pfeil</div>
+  <p class="lede" style="margin-bottom:24px">Onset-Alerts („Regen/Gewitter beginnt in X Minuten") laufen durch dieselben vier Renderer wie die Abweichungs-Alerts. Kein Prozent-Delta, kein Wert-Pfeil — nur <b>Ereignis · Ort · Vorlaufzeit</b>. In der SMS markiert <code style="font-family:var(--g-font-mono);font-size:12px">!</code> den Onset (analog zu <code style="font-family:var(--g-font-mono);font-size:12px">+/−</code>), und ein Cooldown begrenzt die Warnung auf einmal pro 2 Stunden.</p>
+
+  <div class="two">
+    <div class="mail">
+      <div class="mail-head">
+        <div class="ava">G</div>
+        <div>
+          <div class="from">gregor_zwanzig@henemm.com</div>
+          <div class="subj"><span class="brk">[GR20]</span> km 5–18 · Regen in 12 Min</div>
+          <div class="meta"><b>An:</b> Henning Emmrich</div>
+          <div class="meta"><b>Antwort an:</b> gregor_zwanzig@henemm.com</div>
+        </div>
+      </div>
+      <hr class="mail-rule"/>
+      <div class="mail-body">
+        <div class="verdict" style="background:rgba(196,90,42,.12);color:var(--g-accent)">Radar-Nowcast · kein Δ, kein Pfeil</div>
+        <div class="body-h1 good-h1">Regen in 12 Min</div>
+
+        <div class="datablock">
+          <div class="datarow">
+            <span class="k">Wo &amp; wann</span>
+            <span class="v">km 5–18 · ab 14:35</span>
+          </div>
+          <div class="datarow">
+            <span class="k">Intensität</span>
+            <span class="v" style="font-weight:500;color:var(--g-ink-2)">leichter Regen</span>
+          </div>
+          <div class="datarow">
+            <span class="k">Quelle</span>
+            <span class="v" style="font-weight:500;color:var(--g-ink-2)">Radar (DWD)</span>
+          </div>
+        </div>
+
+        <div class="means" style="border-left-color:var(--g-accent)"><b>Cooldown:</b> Du erhältst diese Warnung höchstens einmal in 2 Stunden.</div>
+
+        <div class="body-foot">Stand: heute 14:23 · Quelle: Radar (DWD)</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lever-item" style="border:1px solid var(--g-rule);border-radius:var(--g-r-4);background:var(--g-card);">
+        <h3 style="margin-bottom:8px">Warum getrennt vom Deviation-Alert</h3>
+        <p>Ein Onset ist ein <b>neues Ereignis</b>, kein Wert, der eine Schwelle reißt — deshalb kein <code>1230→620</code>, kein Prozent, kein <code>↑/↓</code>. Die H1 trägt Ereignis + Vorlaufzeit, die Datenzeile Ort und Start, der Cooldown verhindert Wiederhol-Spam. Quelle wird je Koordinate automatisch gewählt (DWD/RADOLAN, GeoSphere INCA, Open-Meteo als Fallback).</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Onset · pro Kanal -->
+  <div class="sec-label" style="margin-top:52px">Erste Zeile / Token pro Kanal · Onset</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:980px;" class="chan-grid">
+    <div class="chan">
+      <div style="font-size:13px;font-weight:600;color:var(--g-accent);margin-bottom:4px">Regen-Onset · leicht</div>
+      <div class="chan-row">
+        <div class="ch-name">Betreff <span class="lim">· ~70 Z. sichtbar</span></div>
+        <div class="ch-text"><span class="brk">[GR20]</span> km 5–18 · Regen in 12 Min</div>
+      </div>
+      <div class="chan-row">
+        <div class="ch-name">Telegram <span class="lim">· fette erste Zeile</span></div>
+        <div class="ch-text"><b>GR20 · km 5–18 · Regen in 12 Min</b><br>14:35 · leichter Regen · Radar (DWD)</div>
+      </div>
+      <div class="chan-row">
+        <div class="ch-name">SMS <span class="lim">· GSM-7 · 20 / 140 Z.</span></div>
+        <div class="ch-text">GR20 km5-18: R!12</div>
+        <div class="note" style="margin-top:6px">Token <code>R</code> Regen · <code>!</code> = Onset-Marker · <code>12</code> = Vorlauf in Min. Bei Überlauf Suffix <code>+k</code>.</div>
+      </div>
+    </div>
+
+    <div class="chan">
+      <div style="font-size:13px;font-weight:600;color:var(--g-accent);margin-bottom:4px">Gewitter-Onset · konvektiv</div>
+      <div class="chan-row">
+        <div class="ch-name">Betreff <span class="lim">· ~70 Z. sichtbar</span></div>
+        <div class="ch-text"><span class="brk">[GR20]</span> km 5–18 · Gewitter in 8 Min</div>
+      </div>
+      <div class="chan-row">
+        <div class="ch-name">Telegram <span class="lim">· fette erste Zeile</span></div>
+        <div class="ch-text"><b>GR20 · km 5–18 · Gewitter in 8 Min</b><br>14:31 · Gewitter · Radar (DWD)</div>
+      </div>
+      <div class="chan-row">
+        <div class="ch-name">SMS <span class="lim">· GSM-7 · 20 / 140 Z.</span></div>
+        <div class="ch-text">GR20 km5-18: TH!8</div>
+        <div class="note" style="margin-top:6px">Token <code>TH</code> Gewitter · <code>!8</code> = Onset in 8 Min. Kein Δ-Prozentsatz, kein Wert-Pfeil wie beim Deviation-Alert.</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 </body>
 </html>

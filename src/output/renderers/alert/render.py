@@ -59,44 +59,79 @@ def _km_str(msg: AlertMessage) -> str:
     return f"km {int(round(a))}–{int(round(b))}"
 
 
+def _km_str_onset(e: OnsetEvent) -> str:
+    return f"km {int(round(e.km_from))}–{int(round(e.km_to))}"
+
+
 def _render_subject_onset(msg: AlertMessage) -> str:
     e = msg.events[0]
     label = "Gewitter" if e.is_convective else "Regen"
-    km = f"km {int(e.km_from)}–{int(e.km_to)}"
+    km = _km_str_onset(e)
     return f"[{msg.trip_short}] {km} · {label} in {e.onset_minutes} Min"
 
 
 def _render_email_onset(msg: AlertMessage) -> tuple[str, str]:
+    """Vorbild `render_email`s Deviation-Zweig (Z.185-244) — Badge/H1/Datenblock/
+    Cooldown-Box/Fußzeile auf Design-Tokens (Issue #952 reopened)."""
     e = msg.events[0]
     label = "Gewitter" if e.is_convective else "Regen"
+    badge_text = "Radar-Nowcast"
     h1 = f"{label} in {e.onset_minutes} Min"
-    data_line = f"km {e.km_from}–{e.km_to} · {e.intensity_label} ab {e.onset_time}"
-    footer = f"Stand: heute {msg.stand_at} · km {e.km_from}–{e.km_to} · Quelle: {e.source_label}"
+    km = _km_str_onset(e)
+
+    data_rows = [
+        ("Wo & wann", f"{km} · ab {e.onset_time}"),
+        ("Intensität", e.intensity_label),
+        ("Quelle", e.source_label),
+    ]
+    if e.briefing_context:
+        data_rows.append(("Briefing", e.briefing_context))
+
+    footer = f"Stand: heute {msg.stand_at} · Quelle: {e.source_label}"
     cooldown = (
-        f"Du erhältst diese Warnung höchstens einmal in {msg.cooldown_display}"
+        f"Cooldown: Du erhältst diese Warnung höchstens einmal in {msg.cooldown_display}."
         if msg.cooldown_display else ""
     )
-    plain_parts = [h1, "", data_line, "", footer]
+
+    plain_parts = [h1, "", badge_text, ""] + [f"{k}: {v}" for k, v in data_rows] + ["", footer]
     if cooldown:
         plain_parts.append(cooldown)
     plain = "\n".join(plain_parts)
+
+    rows = []
+    for label_, value in data_rows:
+        border = "border-top:1px solid #d8d5c9;" if rows else ""
+        rows.append(
+            f"<div style=\"{border}padding:8px 0;font-family:{FONT_DATA};\">"
+            f"<span style=\"color:{G_INK_MUTED};\">{_esc(label_)}</span> "
+            f"<span style=\"color:{G_INK};\">{_esc(value)}</span></div>"
+        )
+
     html = (
-        "<html><body style=\"font-family:sans-serif;\">"
-        f"<h1 style=\"margin:0 0 12px;\">{_esc(h1)}</h1>"
-        f"<p>{_esc(data_line)}</p>"
-        f"<p style=\"color:#555;margin-top:16px;\">{_esc(footer)}</p>"
+        "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
+        f"<div style=\"display:inline-block;padding:4px 12px;border-radius:12px;"
+        f"background:{G_ACCENT}1f;color:{G_ACCENT};font-family:{FONT_UI};margin-bottom:12px;\">"
+        f"{_esc(badge_text)}</div>"
+        f"<h1 style=\"margin:0 0 12px;font-family:{FONT_UI};color:{G_INK};\">{_esc(h1)}</h1>"
+        f"<div style=\"border-bottom:1px solid #d8d5c9;\">{''.join(rows)}</div>"
     )
     if cooldown:
-        html += f"<p>{_esc(cooldown)}</p>"
-    html += "</body></html>"
+        html += (
+            f"<div style=\"border-left:4px solid {G_ACCENT};padding:8px 12px;margin-top:12px;"
+            f"font-family:{FONT_UI};color:{G_INK_MUTED};\">{_esc(cooldown)}</div>"
+        )
+    html += (
+        f"<p style=\"color:{G_INK_MUTED};margin-top:16px;font-family:{FONT_UI};\">{_esc(footer)}</p>"
+        "</body></html>"
+    )
     return html, plain
 
 
 def _render_telegram_onset(msg: AlertMessage) -> str:
     e = msg.events[0]
     label = "Gewitter" if e.is_convective else "Regen"
-    km = f"km {e.km_from}–{e.km_to}"
-    first = f"**{msg.trip_short} · {km} · {label} in {e.onset_minutes} Min**"
+    km = _km_str_onset(e)
+    first = f"<b>{_esc(f'{msg.trip_short} · {km} · {label} in {e.onset_minutes} Min')}</b>"
     second = f"{e.onset_time} · {e.intensity_label} · {e.source_label}"
     return "\n".join([first, second])
 
@@ -254,7 +289,7 @@ def render_telegram(msg: AlertMessage) -> str:
         verdict = f"{msg.trip_short} · {km} · {arrow(e)} {_label(e)}"
     else:
         verdict = f"{msg.trip_short} · {km} · {len(evs)} über Schwelle"
-    lines = [f"**{verdict}**"] + [_email_line(e) for e in evs]
+    lines = [f"<b>{_esc(verdict)}</b>"] + [_email_line(e) for e in evs]
     return "\n".join(lines)
 
 

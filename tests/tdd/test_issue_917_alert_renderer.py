@@ -322,13 +322,13 @@ class TestAC4Telegram:
         return to_alert_message([change], [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00")
 
     def test_bold_first_line(self):
-        """Erste Zeile ist fett (Telegram-Markup **...**)."""
+        """Erste Zeile ist fett (Telegram-HTML-Markup <b>...</b>, parse_mode=HTML)."""
         from src.output.renderers.alert.render import render_telegram
         msg = self._make_msg()
         text = render_telegram(msg)
         first_line = text.split("\n")[0]
-        assert "**" in first_line or "*" in first_line, (
-            f"Erste Zeile nicht fett: {first_line!r}"
+        assert first_line.startswith("<b>") and first_line.endswith("</b>"), (
+            f"Erste Zeile nicht fett (HTML): {first_line!r}"
         )
 
     def test_unicode_arrows(self):

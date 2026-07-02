@@ -31,6 +31,7 @@ class OnsetEvent:
     is_convective: bool
     intensity_label: str
     source_label: str
+    briefing_context: str | None = None  # Issue #952: 4. Datenblock-Zeile (E-Mail only)
 
 
 @dataclass(frozen=True)

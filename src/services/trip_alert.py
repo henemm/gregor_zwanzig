@@ -765,7 +765,8 @@ class TripAlertService:
             # Kein Kanal konfiguriert → kein Alert (nichts zu recorden)
             can_email = self._settings.can_send_email()
             can_telegram = self._settings.can_send_telegram()
-            if not can_email and not can_telegram:
+            can_sms = self._settings.can_send_sms()
+            if not can_email and not can_telegram and not can_sms:
                 logger.warning(f"No channel configured; skipping radar alert for {trip.id}")
                 continue
 
@@ -786,23 +787,29 @@ class TripAlertService:
             # ohne eigene Quelle-Zeile, damit genau EINE Quelle-Zeile im Body steht.
             from output.renderers.alert.model import AlertMessage, OnsetEvent
             from output.renderers.alert.render import (
-                render_email, render_subject, render_telegram,
+                render_email, render_sms, render_subject, render_telegram,
             )
 
             _onset_time_str = (now_utc + timedelta(minutes=result.onset_minutes)).astimezone(tz).strftime("%H:%M")
-            _intensity = radar_svc.format_now_text(result, tz=tz, include_source=False)
-            if _briefing_announced:
-                _intensity += ", jetzt akut"
-            else:
-                _intensity += ", im Briefing nicht angekündigt"
+            # Issue #952 (reopened): kurzes Intensitäts-Label (kein format_now_text-Satz
+            # mehr — der Renderer haengt selbst "ab {onset_time}" an). Briefing-Kontext
+            # wandert in ein eigenes Feld (4. Datenblock-Zeile, nur E-Mail).
+            _briefing_context = "bereits angekündigt" if _briefing_announced else "nicht angekündigt"
+            # F002: Anzeige-Kontext mitten im Satz ("leichter Regen") -- erstes
+            # Zeichen kleinschreiben; intensity_to_text() selbst bleibt Title-Case
+            # (andere Caller nutzen es am Satzanfang). Alle Labels beginnen mit
+            # Adjektiv, daher ist [:1].lower() hier immer korrekt.
+            _label = result.intensity_label
+            _label = _label[:1].lower() + _label[1:]
             _onset_ev = OnsetEvent(
                 onset_minutes=result.onset_minutes,
                 onset_time=_onset_time_str,
                 km_from=active.start_point.distance_from_start_km,
                 km_to=active.end_point.distance_from_start_km,
                 is_convective=result.is_convective,
-                intensity_label=_intensity,
+                intensity_label=_label,
                 source_label=radar_svc.source_label(result.source),
+                briefing_context=_briefing_context,
             )
             _alert_msg = AlertMessage(
                 trip_short=trip.name[:16],
@@ -837,9 +844,20 @@ class TripAlertService:
                 delivered = True
                 try:
                     from outputs.telegram import TelegramOutput
-                    TelegramOutput(self._settings).send(subject=subject, body=render_telegram(_alert_msg))
+                    TelegramOutput(self._settings).send(
+                        subject=subject, body=render_telegram(_alert_msg),
+                        parse_mode="HTML", suppress_subject_line=True,
+                    )
                 except Exception as e:
                     logger.error(f"Radar alert telegram failed for {trip.id}: {e}")
+
+            if can_sms and config and getattr(config, "send_sms", False):
+                delivered = True
+                try:
+                    from outputs.sms import SMSOutput
+                    SMSOutput(self._settings).send(subject=subject, body=render_sms(_alert_msg))
+                except Exception as e:
+                    logger.error(f"Radar alert SMS failed for {trip.id}: {e}")
 
             if not delivered:
                 logger.info(f"Radar alert: alle Kanäle auf Trip-Ebene deaktiviert, kein Recording für {trip.id}")
@@ -981,6 +999,8 @@ class TripAlertService:
                 TelegramOutput(self._settings).send(
                     subject=subject,
                     body=telegram_body,
+                    parse_mode="HTML",
+                    suppress_subject_line=True,
                 )
             except Exception as e:
                 logger.error(f"Telegram alert failed for {trip.name}: {e}")

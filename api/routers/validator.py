@@ -39,6 +39,7 @@ from src.app.models import (
 from src.app.profile import ActivityProfile
 from src.app.trip import Trip
 from src.app.user import ComparisonResult, LocationResult, SavedLocation
+from src.output.renderers.alert.model import AlertMessage, OnsetEvent
 from src.output.renderers.alert.project import to_alert_message
 from src.output.renderers.alert.render import (
     render_email,
@@ -223,9 +224,21 @@ class SegmentTimePayload(BaseModel):
     end: str    # "HH:MM"
 
 
+class OnsetPayload(BaseModel):
+    onset_minutes: int
+    onset_time: str
+    km_from: float
+    km_to: float
+    is_convective: bool
+    intensity_label: str
+    source_label: str
+    cooldown_display: str | None = None
+
+
 class AlertPreviewBody(BaseModel):
-    changes: list[ChangePayload] = Field(..., min_length=1)
-    segment_times: list[SegmentTimePayload] = Field(..., min_length=1)
+    changes: list[ChangePayload] = Field(default_factory=list)
+    segment_times: list[SegmentTimePayload] = Field(default_factory=list)
+    onset: OnsetPayload | None = None
 
 
 def _stub_segment(seg_time: SegmentTimePayload) -> SegmentWeatherData:
@@ -274,26 +287,51 @@ async def alert_preview(
             detail=f"Trip {trip_id} nicht gefunden für User {user_id}",
         )
 
-    changes = [
-        WeatherChange(
-            metric=c.metric,
-            old_value=c.old_value,
-            new_value=c.new_value,
-            delta=c.delta,
-            threshold=c.threshold,
-            severity=ChangeSeverity(c.severity),
-            direction=c.direction,
-            segment_id=c.segment_id,
+    has_onset = body.onset is not None
+    has_deviation = bool(body.changes and body.segment_times)
+    if has_onset == has_deviation:
+        raise HTTPException(
+            status_code=422,
+            detail="Body muss genau einen von 'onset' ODER 'changes'+'segment_times' enthalten",
         )
-        for c in body.changes
-    ]
-    segments = [_stub_segment(st) for st in body.segment_times]
 
     stand_at = datetime.now(timezone.utc).strftime("%H:%M")
-    msg = to_alert_message(
-        changes, segments, trip_obj.name,
-        tz=timezone.utc, stand_at=stand_at,
-    )
+    if has_onset:
+        onset_ev = OnsetEvent(
+            onset_minutes=body.onset.onset_minutes,
+            onset_time=body.onset.onset_time,
+            km_from=body.onset.km_from,
+            km_to=body.onset.km_to,
+            is_convective=body.onset.is_convective,
+            intensity_label=body.onset.intensity_label,
+            source_label=body.onset.source_label,
+        )
+        msg = AlertMessage(
+            trip_short=trip_obj.name[:16],
+            stand_at=stand_at,
+            events=(onset_ev,),
+            source=body.onset.source_label,
+            cooldown_display=body.onset.cooldown_display,
+        )
+    else:
+        changes = [
+            WeatherChange(
+                metric=c.metric,
+                old_value=c.old_value,
+                new_value=c.new_value,
+                delta=c.delta,
+                threshold=c.threshold,
+                severity=ChangeSeverity(c.severity),
+                direction=c.direction,
+                segment_id=c.segment_id,
+            )
+            for c in body.changes
+        ]
+        segments = [_stub_segment(st) for st in body.segment_times]
+        msg = to_alert_message(
+            changes, segments, trip_obj.name,
+            tz=timezone.utc, stand_at=stand_at,
+        )
     subject = render_subject(msg)
     email_html, email_plain = render_email(msg)
     telegram = render_telegram(msg)

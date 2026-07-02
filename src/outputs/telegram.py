@@ -47,7 +47,10 @@ class TelegramOutput:
     def name(self) -> str:
         return "telegram"
 
-    def send(self, subject: str, body: str, reply_markup: dict | None = None) -> int | None:
+    def send(
+        self, subject: str, body: str, reply_markup: dict | None = None,
+        *, parse_mode: str | None = None, suppress_subject_line: bool = False,
+    ) -> int | None:
         """Send a Telegram message via Bot API.
 
         Args:
@@ -55,6 +58,10 @@ class TelegramOutput:
             body: Message body text.
             reply_markup: Optional Inline-Keyboard dict (Telegram Bot API format).
                           If None, payload is identical to the legacy format (no key added).
+            parse_mode: Optional Bot-API parse mode (e.g. "HTML"). None (default)
+                        omits the field — legacy behavior (Issue #952).
+            suppress_subject_line: True omits the "[{subject}]\\n\\n" prefix, sending
+                                    body verbatim. False (default) is legacy behavior.
 
         Returns:
             message_id (int) on success (HTTP 200 + ok:true), None otherwise.
@@ -64,7 +71,7 @@ class TelegramOutput:
         chat_id = self._settings.telegram_chat_id
         url = f"{TELEGRAM_API_BASE}/bot{token}/sendMessage"
 
-        message = f"[{subject}]\n\n{body}"
+        message = body if suppress_subject_line else f"[{subject}]\n\n{body}"
         if len(message) > MAX_MESSAGE_LENGTH:
             message = message[:MAX_MESSAGE_LENGTH]
             logger.warning("Telegram message truncated to %d chars", MAX_MESSAGE_LENGTH)
@@ -72,6 +79,8 @@ class TelegramOutput:
         payload: dict = {"chat_id": chat_id, "text": message}
         if reply_markup is not None:
             payload["reply_markup"] = reply_markup
+        if parse_mode is not None:
+            payload["parse_mode"] = parse_mode
 
         try:
             response = httpx.post(url, json=payload, timeout=self._timeout)
