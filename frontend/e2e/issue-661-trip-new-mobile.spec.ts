@@ -31,7 +31,7 @@ const DESKTOP = { width: 1280, height: 900 };
 
 // Pflicht-Eingaben Route-Tab, um Etappen freizuschalten.
 async function fillRoute(page: Page, name = 'Mobile Testtour', date = '2026-07-01') {
-	await page.getByTestId('trip-new-name-input').fill(name);
+	await page.getByTestId('trip-new-name-input-mobile').fill(name);
 	await page.getByTestId('trip-new-date-input').fill(date);
 }
 
@@ -68,7 +68,7 @@ test.describe('Issue #661 — /trips/new Mobile-Parität', () => {
 		// dem inneren role="status" prüfen (beweist Toast tatsächlich gerendert).
 		await expect(page.getByTestId('tn-lock-toast').getByRole('status')).toBeVisible();
 		// Route-Tab bleibt aktiv (Route-Eingabe weiterhin sichtbar).
-		await expect(page.getByTestId('trip-new-name-input')).toBeVisible();
+		await expect(page.getByTestId('trip-new-name-input-mobile')).toBeVisible();
 	});
 
 	// AC-3: Route-Tab gestapelt, kein H-Overflow, Floating-CTA führt weiter.

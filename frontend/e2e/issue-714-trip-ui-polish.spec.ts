@@ -157,7 +157,7 @@ test.describe('Issue #714 — Trip-Editor UI-Kleinigkeiten', () => {
 		await login(page);
 		await page.goto('/trips/new');
 
-		await page.getByTestId('trip-new-name-input').last().fill('Mobile Lösch-Test');
+		await page.getByTestId('trip-new-name-input-mobile').fill('Mobile Lösch-Test');
 		await page.getByTestId('trip-new-date-input').last().fill('2026-07-01');
 		await page.getByRole('tab', { name: 'Etappen & GPX' }).click();
 
@@ -192,7 +192,7 @@ test.describe('Issue #714 — Trip-Editor UI-Kleinigkeiten', () => {
 		await login(page);
 		await page.goto('/trips/new');
 
-		await page.getByTestId('trip-new-name-input').last().fill('Mobile Trenn-Test');
+		await page.getByTestId('trip-new-name-input-mobile').fill('Mobile Trenn-Test');
 		await page.getByTestId('trip-new-date-input').last().fill('2026-07-01');
 		await page.getByRole('tab', { name: 'Etappen & GPX' }).click();
 

@@ -57,6 +57,40 @@ async function deleteTestTrip(request: import('@playwright/test').APIRequestCont
 	await request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
 }
 
+// Fix #964 — WICHTIGER BEFUND (kein reines Selector-Rename):
+// Die interaktive HorizonChip-Toggle-UI (Klick auf einen Chip togglet horizonsMap
+// pro Metrik/Tag direkt im Trip-Detail-Tab) existiert im aktuellen DOM NICHT MEHR.
+// `MetricCheckbox.svelte` (rendert <HorizonChip>) wird von `WeatherMetricsTab.svelte`
+// seit dem v2-Rewrite (#587/#848) nicht mehr importiert/gerendert (Dead Code, nur noch
+// von eigenen Unit-Tests referenziert). `WeatherV2Reihenfolge.svelte` (die tatsächliche
+// "Reihenfolge & Darstellung"-Sektion) hat KEINE Horizont-Chips — nur Roh/Einfach-Toggle
+// + "Aus"-Button. `TablePreview.svelte` (table-preview-day-*) ist ebenfalls Dead Code —
+// die reale Live-Vorschau ist `WeatherV2MailPreview.svelte` (Email/Telegram/SMS-Tabs,
+// keine Tages-Tabellen). Verifiziert per `page.content()`-Probe gegen echten Server:
+// weder "horizon-chip" noch "table-preview-day" kommen im gerenderten HTML vor.
+//
+// horizonsMap selbst existiert weiterhin im State (initFromTrip/buildWeatherPayload)
+// und wird in SavePresetDialog nur noch READ-ONLY angezeigt (ZEITHORIZONTE-Block).
+// Es gibt AKTUELL KEINEN Klick-Pfad in der Trip-Detail-UI, um horizonsMap zu ändern.
+//
+// AC-1/AC-2/AC-3/AC-6 testen exakt diesen (nicht mehr existierenden) Chip-Klick-Pfad —
+// sie sind daher nicht auf "echten Klick-Pfad" migrierbar, ohne die entfernte Chip-UI
+// als Produktcode wiederherzustellen (außerhalb des Scopes dieses Fixes: reine
+// Testkorrektur, kein Produktcode außer dem 2-Zeilen-Rename in TripNewEditor.svelte).
+// Sie bleiben bewusst .skip mit Befund-Kommentar statt künstlich grün gebogen zu werden
+// (PO-Entscheidung nötig: Chip-UI wiederherstellen vs. Feature-Entfernung akzeptieren
+// und ACs offiziell zurückziehen — separates Folge-Issue).
+//
+// AC-5 (TablePreview 3 Tabellen) ist aus demselben Grund (Dead Code) nicht migrierbar.
+//
+// AC-4 und AC-7 sind teilweise migrierbar: der Horizon-ZUSTAND wird über einen echten
+// Backend-PUT vorab gesetzt (kein Mock — reale Persistenz, exakt das Muster das AC-4
+// im Fix-Loop #1 bereits für den Backend-Reset nutzte), der KLICK-Pfad testet dafür
+// real die noch existierenden Teile: Preset-Dialog öffnen (über den "als eigenes
+// Profil speichern"-Link, der nur bei isDirty sichtbar ist — Dirty-State wird über
+// einen ECHTEN Grundauswahl-Toggle-Klick hergestellt), Name eintragen, submitten,
+// POST-Body/UI-Summary prüfen.
+
 test.describe('Issue #343: HorizonChip-UI', () => {
 	test.beforeAll(async ({ request }) => {
 		await createTestTrip(request);
@@ -66,133 +100,57 @@ test.describe('Issue #343: HorizonChip-UI', () => {
 		await deleteTestTrip(request);
 	});
 
-	// AC-1: Klick togglet visuell + dirty-State
-	test('AC-1: Klick auf HorizonChip togglet data-active und zeigt dirty-Pill', async ({ page }) => {
+	// AC-1 — SKIP: Chip-Toggle-UI existiert nicht mehr im DOM (siehe Befund oben).
+	test.skip('AC-1: Klick auf HorizonChip togglet data-active und zeigt dirty-Pill', async () => {});
+
+	// AC-2 — SKIP: dito (kein Chip mehr, auch keine `weather-metrics-tab-checkbox-*`-
+	// Checkbox mehr im v2-Layout — Aktivierung läuft über den Grundauswahl-Toggle).
+	test.skip('AC-2: HorizonChip togglebar AUCH wenn Metrik-Checkbox aus', async () => {});
+
+	// AC-3 — SKIP: Save+Reload-Persistenz von horizonsMap ist zwar weiterhin real
+	// (siehe AC-7 unten, das denselben Persistenzpfad indirekt mitprüft), aber ohne
+	// Chip gibt es keinen UI-Klick-Pfad, der den Toggle selbst auslöst.
+	test.skip('AC-3: Save + Reload persistiert Chip-State', async () => {});
+
+	// AC-5 — SKIP: TablePreview.svelte (table-preview-day-*) ist Dead Code, wird von
+	// WeatherMetricsTab.svelte nicht gerendert.
+	test.skip('AC-5: TablePreview rendert drei Tabellen heute/morgen/uebermorgen', async () => {});
+
+	// AC-6 — SKIP: Mobile-Zeilenumbruch der Chips ist ohne existierende Chips nicht prüfbar.
+	test.skip('AC-6: Mobile-Viewport bricht HorizonChips in Zeile 2 unter Metrik-Namen', async () => {});
+
+	// AC-7: SavePresetDialog zeigt ZEITHORIZONTE-Box mit EXAKTEM Wording.
+	// Horizon-Zustand wird real via Backend-PUT gesetzt (kein Chip-Klick mehr möglich);
+	// der Dialog-Öffnen-/Anzeige-Pfad läuft über einen echten Klick.
+	test('AC-7: SavePresetDialog zeigt ZEITHORIZONTE-Block mit Wording-Zusammenfassung', async ({
+		page,
+		request: apiRequest
+	}) => {
+		await apiRequest.put(`/api/trips/${TRIP_ID}/weather-config`, {
+			data: {
+				metrics: [
+					{
+						metric_id: 'temperature',
+						enabled: true,
+						use_friendly_format: true,
+						horizons: { today: true, tomorrow: false, day_after: false }
+					}
+				]
+			}
+		});
+
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.getByTestId('trip-detail-tab-weather').click();
 		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
-		const chip = page.locator('[data-testid^="horizon-chip-"][data-day="tomorrow"]').first();
-		await expect(chip).toBeVisible();
-		await expect(chip).toHaveAttribute('data-active', 'true');
+		// Dirty-State herstellen über ein ANDERES Metrik-Toggle (Windchill), damit der
+		// oben gesetzte "temperature"-Horizon-Zustand unangetastet bleibt.
+		await page
+			.getByTestId('wm2-grundauswahl')
+			.getByRole('button', { name: 'Gefühlte Temperatur' })
+			.click();
 
-		await chip.click();
-		await expect(chip).toHaveAttribute('data-active', 'false');
-		await expect(page.getByTestId('weather-metrics-dirty-pill')).toBeVisible();
-	});
-
-	// AC-2: Chips bleiben togglebar wenn Checkbox aus
-	test('AC-2: HorizonChip togglebar AUCH wenn Metrik-Checkbox aus', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
-		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-
-		const cb = page.getByTestId('weather-metrics-tab-checkbox-cloud_total');
-		await cb.uncheck();
-
-		const chip = page.getByTestId('horizon-chip-cloud_total-today');
-		await expect(chip).toBeVisible();
-		const before = await chip.getAttribute('data-active');
-		await chip.click();
-		const after = await chip.getAttribute('data-active');
-		if (after === before) {
-			throw new Error(`Chip data-active musste sich toggeln, ist aber "${after}" geblieben`);
-		}
-		await expect(page.getByTestId('weather-metrics-dirty-pill')).toBeVisible();
-	});
-
-	// AC-3: Save + Reload bringt Horizonte unveraendert zurueck
-	test('AC-3: Save + Reload persistiert Chip-State', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
-		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-
-		const chip = page.getByTestId('horizon-chip-wind-today');
-		await expect(chip).toBeVisible();
-		const before = await chip.getAttribute('data-active');
-		await chip.click();
-		const expected = before === 'true' ? 'false' : 'true';
-		await expect(chip).toHaveAttribute('data-active', expected);
-
-		await page.getByTestId('weather-metrics-tab-save').click();
-		await expect(page.getByTestId('weather-metrics-tab-success')).toBeVisible();
-
-		await page.reload();
-		await page.getByTestId('trip-detail-tab-weather').click();
-		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-		await expect(page.getByTestId('horizon-chip-wind-today')).toHaveAttribute('data-active', expected);
-		await expect(page.getByTestId('weather-metrics-dirty-pill')).not.toBeVisible();
-	});
-
-	// AC-5: TablePreview zeigt drei Tabellen
-	test('AC-5: TablePreview rendert drei Tabellen heute/morgen/uebermorgen', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
-		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-
-		const today = page.getByTestId('table-preview-day-today');
-		const tomorrow = page.getByTestId('table-preview-day-tomorrow');
-		const dayAfter = page.getByTestId('table-preview-day-day_after');
-		await expect(today).toBeVisible();
-		await expect(tomorrow).toBeVisible();
-		await expect(dayAfter).toBeVisible();
-		await expect(today.locator('table')).toHaveCount(1);
-		await expect(tomorrow.locator('table')).toHaveCount(1);
-		await expect(dayAfter.locator('table')).toHaveCount(1);
-	});
-
-	// AC-6: Mobile-Viewport bricht HorizonChips in Zeile 2 unter Metrik-Namen
-	test('AC-6: Mobile-Viewport bricht HorizonChips in Zeile 2 unter Metrik-Namen', async ({ page }) => {
-		await page.setViewportSize({ width: 393, height: 852 });
-		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
-		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-
-		const metricLabel = page
-			.locator('[data-testid="weather-metrics-tab-checkbox-temperature"]')
-			.locator('xpath=ancestor::*[@data-slot="metric-row"][1]')
-			.locator('[data-slot="metric-label"]')
-			.first();
-		const horizonChip = page.getByTestId('horizon-chip-temperature-today');
-
-		await expect(metricLabel).toBeVisible();
-		await expect(horizonChip).toBeVisible();
-
-		const labelBox = await metricLabel.boundingBox();
-		const chipBox = await horizonChip.boundingBox();
-		expect(labelBox).not.toBeNull();
-		expect(chipBox).not.toBeNull();
-
-		// Chip ist UNTER dem Label (groesseres y) — Toleranz 5 px
-		expect(chipBox!.y).toBeGreaterThan(labelBox!.y + labelBox!.height - 5);
-		// Chip ist auf/ab Hoehe des Labels eingerueckt (gleich oder weiter rechts)
-		expect(chipBox!.x).toBeGreaterThanOrEqual(labelBox!.x - 2);
-		// Touch-Target gross genug (Spec verlangt 32 px Chip-Hoehe, 44 px Touch-Target)
-		expect(chipBox!.height).toBeGreaterThanOrEqual(44);
-	});
-
-	// AC-7: SavePresetDialog zeigt ZEITHORIZONTE-Box mit EXAKTEM Wording
-	// Fix-Loop #1 (F003): strict assertion auf "N nur heute" — vorher zu locker.
-	test('AC-7: SavePresetDialog zeigt ZEITHORIZONTE-Block mit Wording-Zusammenfassung', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
-		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-
-		// Setze temperature auf "nur heute" (tomorrow + day_after deaktivieren)
-		const morgen = page.getByTestId('horizon-chip-temperature-tomorrow');
-		if ((await morgen.getAttribute('data-active')) === 'true') {
-			await morgen.click();
-		}
-		const dayAfter = page.getByTestId('horizon-chip-temperature-day_after');
-		if ((await dayAfter.getAttribute('data-active')) === 'true') {
-			await dayAfter.click();
-		}
-
-		// State persistieren, sonst ist Preset-Trigger nicht sichtbar (versteckt wenn dirty)
-		await page.getByTestId('weather-metrics-tab-save').click();
-		await expect(page.getByTestId('weather-metrics-tab-success')).toBeVisible();
-
-		await page.getByTestId('save-preset-dialog-trigger').click();
+		await page.getByRole('button', { name: 'als eigenes Profil speichern' }).click();
 		await expect(page.getByTestId('save-preset-dialog')).toBeVisible();
 		await expect(page.getByTestId('save-preset-dialog')).toContainText(/ZEITHORIZONTE/);
 
@@ -202,11 +160,10 @@ test.describe('Issue #343: HorizonChip-UI', () => {
 		await expect(summary).toContainText(/\b\d+ nur heute\b/);
 	});
 
-	// AC-4 (Fix-Loop #1, F001): Submit speichert horizons in POST /api/metric-presets
-	// Vorher fehlte ein Submit-Test komplett — AC-4 war unbeweisbar.
+	// AC-4: Submit speichert horizons in POST /api/metric-presets.
+	// Horizon-Zustand (day_after=false) wird real via Backend-PUT vorab gesetzt; der
+	// Submit-Pfad (Dialog öffnen → Name eintragen → submitten) läuft über echte Klicks.
 	test('AC-4: Submit speichert horizons in POST /api/metric-presets', async ({ page, request: apiRequest }) => {
-		// Backend-Reset: setze Trip-Zustand auf {all horizons true} — sonst hängt
-		// dieser Test vom Vor-Zustand früherer Tests im selben Trip ab.
 		await apiRequest.put(`/api/trips/${TRIP_ID}/weather-config`, {
 			data: {
 				metrics: [
@@ -214,43 +171,35 @@ test.describe('Issue #343: HorizonChip-UI', () => {
 						metric_id: 'temperature',
 						enabled: true,
 						use_friendly_format: true,
-						horizons: { today: true, tomorrow: true, day_after: true },
-					},
-				],
-			},
+						horizons: { today: true, tomorrow: true, day_after: false }
+					}
+				]
+			}
 		});
 
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.getByTestId('trip-detail-tab-weather').click();
 		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
-		// 1. Klick auf day_after → false (Anfangszustand garantiert true durch API-Reset)
-		const chip = page.getByTestId('horizon-chip-temperature-day_after');
-		await expect(chip).toBeVisible();
-		await expect(chip).toHaveAttribute('data-active', 'true');
-		await chip.click();
-		await expect(chip).toHaveAttribute('data-active', 'false');
+		// Dirty-State herstellen über ein ANDERES Metrik-Toggle, damit die gesetzten
+		// temperature-Horizonte unangetastet bleiben (Preset-Link ist nur bei isDirty sichtbar).
+		await page
+			.getByTestId('wm2-grundauswahl')
+			.getByRole('button', { name: 'Gefühlte Temperatur' })
+			.click();
 
-		// 2. Persistieren (Preset-Trigger ist nur sichtbar wenn !isDirty)
-		await page.getByTestId('weather-metrics-tab-save').click();
-		await expect(page.getByTestId('weather-metrics-tab-success')).toBeVisible();
-
-		// 3. Dialog öffnen
-		await page.getByTestId('save-preset-dialog-trigger').click();
+		await page.getByRole('button', { name: 'als eigenes Profil speichern' }).click();
 		await expect(page.getByTestId('save-preset-dialog')).toBeVisible();
 
-		// 4. Namen eingeben (eindeutig pro Run, damit kein Duplikat-Konflikt)
 		const presetName = `AC-4-Test-Preset-${Date.now()}`;
 		await page.getByTestId('save-preset-name').fill(presetName);
 
-		// 5. POST abfangen + Submit klicken
 		const requestPromise = page.waitForRequest(
-			(req) => req.url().includes('/api/metric-presets') && req.method() === 'POST',
+			(req) => req.url().includes('/api/metric-presets') && req.method() === 'POST'
 		);
 		await page.getByTestId('save-preset-submit').click();
 		const postReq = await requestPromise;
 
-		// 6. Body inspizieren — metrics[] mit horizons pro Eintrag
 		const body = JSON.parse(postReq.postData() || '{}');
 		expect(body.name).toBe(presetName);
 		expect(Array.isArray(body.metrics)).toBe(true);
@@ -262,10 +211,10 @@ test.describe('Issue #343: HorizonChip-UI', () => {
 		expect(tempMetric.horizons).toHaveProperty('today');
 		expect(tempMetric.horizons).toHaveProperty('tomorrow');
 		expect(tempMetric.horizons).toHaveProperty('day_after');
-		// Wir haben oben day_after auf false getoggelt → muss im Payload reflektiert sein
+		// Vorab per API gesetzt: day_after=false → muss im Payload reflektiert sein.
 		expect(tempMetric.horizons.day_after).toBe(false);
 
-		// 7. Dialog schließt sich nach erfolgreichem Save
+		// Dialog schließt sich nach erfolgreichem Save
 		await expect(page.getByTestId('save-preset-dialog')).not.toBeVisible({ timeout: 5000 });
 	});
 });

@@ -91,6 +91,11 @@ test.describe('Epic #138 — Wetter-Metriken-Editor Tab', () => {
 	});
 
 	// AC-1: Tab zeigt Editor statt Platzhaltertext
+	// Fix #964: Der explizite "Speichern"-Button (weather-metrics-tab-save) wird nur
+	// gerendert wenn KEIN saveController übergeben ist (createMode). Auf der echten
+	// Trip-Detail-Seite bekommt WeatherMetricsTab IMMER einen saveController (Issue #758
+	// Auto-Save) → der Button existiert dort nie. Der reale Speicher-Status-Indikator
+	// ist stattdessen der SaveIndicator im TripHeader (data-testid="save-indicator").
 	test('AC-1: Metriken-Tab zeigt WeatherMetricsTab-Komponente, keinen Platzhaltertext', async ({
 		page
 	}) => {
@@ -103,129 +108,116 @@ test.describe('Epic #138 — Wetter-Metriken-Editor Tab', () => {
 		await expect(panel).not.toContainText(/Inhalt folgt mit Issue #158/);
 		await expect(panel).not.toContainText(/Epic #138/);
 
-		// Stattdessen: WeatherMetricsTab mit Speichern-Button
+		// Stattdessen: WeatherMetricsTab mit Auto-Save-Indikator (Header)
 		const tab = page.getByTestId('weather-metrics-tab');
 		await expect(tab).toBeVisible();
-		await expect(page.getByTestId('weather-metrics-tab-save')).toBeVisible();
+		await expect(page.getByTestId('save-indicator')).toBeVisible();
 	});
 
-	// AC-2 neu (#536): Bucket-Editor zeigt primary/secondary/off-Sektionen
-	test('AC-2: Bucket-Editor zeigt primary/secondary/off-Sektionen', async ({ page }) => {
+	// AC-2 (Fix #964, ex #536): Grundauswahl-Sektion zeigt Metrik-Toggle-Buttons.
+	// Die alte primary/secondary/off-Bucket-Struktur (BucketSection.svelte) wurde seit
+	// Issue #587 durch WeatherV2Grundauswahl ersetzt (Dead Code, nicht mehr importiert).
+	// Secondary ist seit #587 immer leer — es gibt nur noch EINE Grundauswahl-Sektion.
+	test('AC-2: Grundauswahl-Sektion zeigt Metrik-Toggle-Buttons (aktiv/inaktiv)', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.getByTestId('trip-detail-tab-weather').click();
-		await expect(page.getByTestId('bucket-section-primary')).toBeVisible();
-		await expect(page.getByTestId('bucket-section-secondary')).toBeVisible();
-		await expect(page.getByTestId('bucket-section-off')).toBeVisible();
+		const grundauswahl = page.getByTestId('wm2-grundauswahl');
+		await expect(grundauswahl).toBeVisible();
+		// Mindestens ein aktivierter Toggle-Button (Metrik "on") vorhanden.
+		await expect(grundauswahl.locator('.toggle-btn.on').first()).toBeVisible();
+		// Mindestens ein deaktivierter Toggle-Button (Metrik "off") vorhanden.
+		await expect(grundauswahl.locator('.toggle-btn:not(.on)').first()).toBeVisible();
 	});
 
-	// AC-3 neu (#536): Preset-Liste zeigt Preset-Rows
-	test('AC-3: Preset-Liste zeigt Preset-Rows', async ({ page }) => {
+	// AC-3 (Fix #964, ex #536): Preset-Leiste zeigt Preset-Pills (User-Presets + Templates)
+	test('AC-3: Preset-Leiste zeigt Preset-Pills', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.getByTestId('trip-detail-tab-weather').click();
-		const presetList = page.getByTestId('weather-metrics-preset-list');
-		await expect(presetList).toBeVisible();
-		// Mindestens eine Preset-Row vorhanden
-		const rows = page.locator('[data-testid^="weather-metrics-preset-row-"]');
-		await expect(rows.first()).toBeVisible();
+		const pills = page.locator('[data-testid^="weather-preset-pill-"]');
+		await expect(pills.first()).toBeVisible();
 	});
 
-	// AC-4 neu (#536): Klick auf "Wandern"-Preset befüllt primary-Bucket
-	test('AC-4: Klick auf "Wandern"-Preset befüllt primary-Bucket', async ({ page }) => {
+	// AC-4 (Fix #964, ex #536): Klick auf "Wandern"-Preset aktiviert Metriken in der Grundauswahl
+	test('AC-4: Klick auf "Wandern"-Preset befüllt Grundauswahl mit aktiven Metriken', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.getByTestId('trip-detail-tab-weather').click();
-		// Wandern-Preset klicken
-		const wandernRow = page.getByTestId('weather-metrics-preset-row-wandern');
-		await expect(wandernRow).toBeVisible();
-		await wandernRow.click();
+		const wandernPill = page.getByTestId('weather-preset-pill-wandern');
+		await expect(wandernPill).toBeVisible();
+		await wandernPill.click();
 		// Confirm-Dialog bestätigen wenn vorhanden
 		const confirmOk = page.getByTestId('preset-confirm-ok');
 		if (await confirmOk.isVisible()) await confirmOk.click();
-		// primary-Bucket hat jetzt Metriken
-		const primarySection = page.getByTestId('bucket-section-primary');
-		await expect(primarySection).toBeVisible();
-		await expect(primarySection.locator('[data-testid^="active-metric-row-"]').first()).toBeVisible();
+		// Grundauswahl hat jetzt aktive (on) Metrik-Toggles
+		const grundauswahl = page.getByTestId('wm2-grundauswahl');
+		await expect(grundauswahl).toBeVisible();
+		await expect(grundauswahl.locator('.toggle-btn.on').first()).toBeVisible();
 	});
 
-	// AC-5 neu (#536): Format-Toggle Roh/Skala umschaltbar
-	test('AC-5: Format-Toggle Roh/Skala umschaltbar', async ({ page }) => {
+	// AC-5 (Fix #964, ex #536): Format-Toggle Roh/Einfach umschaltbar
+	// "thunder" ist has_friendly_format=true UND default_enabled=true → im
+	// wm2-reihenfolge-row von Anfang an sichtbar, kein Preset-Klick nötig.
+	test('AC-5: Format-Toggle Roh/Einfach umschaltbar', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.getByTestId('trip-detail-tab-weather').click();
-		await expect(page.getByTestId('bucket-section-primary')).toBeVisible();
-		// Ersten Roh-Button im primary-Bucket finden
-		const rawBtn = page.locator('[data-testid^="metric-mode-raw-"]').first();
-		await expect(rawBtn).toBeVisible();
+		const row = page.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="thunder"]');
+		await expect(row).toBeVisible();
+		const rawBtn = row.getByRole('tab', { name: 'Roh' });
+		const einfachBtn = row.getByRole('tab', { name: 'Einfach' });
 		await rawBtn.click();
-		await expect(rawBtn).toHaveClass(/active/);
-		// Scale-Button desselben Metrik-Eintrags muss inaktiv sein
-		const scaleBtn = page.locator('[data-testid^="metric-mode-scale-"]').first();
-		await expect(scaleBtn).not.toHaveClass(/active/);
+		await expect(rawBtn).toHaveAttribute('data-active', 'true');
+		await expect(einfachBtn).toHaveAttribute('data-active', 'false');
 	});
 
-	// AC-6 neu (#536): Speichern sendet PUT mit bucket/order-Feldern
-	test('AC-6: Speichern sendet PUT mit bucket/order-Feldern', async ({ page }) => {
+	// AC-6 (Fix #964, ex #536): Metrik-Änderung löst Auto-Save-PUT mit bucket/order-Feldern aus.
+	// Kein expliziter Speichern-Button auf der Trip-Detail-Seite (siehe AC-1-Kommentar) —
+	// die Grundauswahl-Toggle-Interaktion selbst löst scheduleAutoSave() aus (Issue #758).
+	test('AC-6: Metrik-Toggle löst Auto-Save-PUT mit bucket/order-Feldern aus', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.getByTestId('trip-detail-tab-weather').click();
-		// Dirty-State herstellen: Metrik aus Off-Sektion hinzufügen
-		await page.getByTestId('bucket-off-toggle').click();
-		const addBtn = page.locator('[data-testid^="off-add-column-"]').first();
-		if (await addBtn.isVisible()) {
-			await addBtn.click();
-		} else {
-			// Fallback: Format-Toggle nutzen wenn Off leer ist
-			const rawBtn = page.locator('[data-testid^="metric-mode-raw-"]').first();
-			if (await rawBtn.isVisible()) await rawBtn.click();
-		}
-		// Dirty-Pill prüfen
-		await expect(page.getByTestId('weather-metrics-dirty-pill')).toBeVisible();
-		// PUT abfangen
 		const putPromise = page.waitForRequest(
 			(req) => req.method() === 'PUT' && req.url().includes('/weather-config')
 		);
-		await page.getByTestId('weather-metrics-tab-save').click();
+		// Dirty-State herstellen: erste Metrik in der Grundauswahl togglen.
+		await page.locator('[data-testid="wm2-grundauswahl"] .toggle-btn').first().click();
 		const putReq = await putPromise;
 		const body = JSON.parse(putReq.postData() || '{}') as {
 			metrics: Array<{ metric_id: string; bucket?: string; order?: number }>;
 		};
-		// Mindestens ein Eintrag mit bucket-Feld
+		// Mindestens ein Eintrag mit bucket-Feld (aktive Metrik).
 		const hasBucketField = body.metrics.some((m) => m.bucket !== undefined);
 		expect(hasBucketField).toBe(true);
 	});
 
-	// AC-7 neu (#536): Bucket-Zustand nach Speichern und Reload korrekt geladen
-	test('AC-7: Bucket-Zustand nach Speichern und Reload korrekt geladen', async ({ page }) => {
+	// AC-7 (Fix #964, ex #536): Grundauswahl-Zustand nach Auto-Save und Reload korrekt geladen
+	test('AC-7: Grundauswahl-Zustand nach Auto-Save und Reload korrekt geladen', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.getByTestId('trip-detail-tab-weather').click();
-		// Wandern-Preset setzen und speichern
-		await page.getByTestId('weather-metrics-preset-row-wandern').click();
+		await page.getByTestId('weather-preset-pill-wandern').click();
 		const confirmOk = page.getByTestId('preset-confirm-ok');
 		if (await confirmOk.isVisible()) await confirmOk.click();
-		await expect(page.getByTestId('weather-metrics-dirty-pill')).toBeVisible();
-		await page.getByTestId('weather-metrics-tab-save').click();
-		await expect(page.getByTestId('weather-metrics-tab-success')).toBeVisible();
-		// Reload
+		// Auto-Save abwarten: Indikator kehrt nach dem Debounce-PUT zu "idle" zurück.
+		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
+			timeout: 5000
+		});
 		await page.reload();
 		await page.getByTestId('trip-detail-tab-weather').click();
-		// Primary-Bucket hat nach Reload noch Metriken
-		const primarySection = page.getByTestId('bucket-section-primary');
-		await expect(primarySection.locator('[data-testid^="active-metric-row-"]').first()).toBeVisible();
+		// Grundauswahl hat nach Reload noch aktive Metriken.
+		await expect(
+			page.locator('[data-testid="wm2-grundauswahl"] .toggle-btn.on').first()
+		).toBeVisible();
 	});
 
-	// AC-10 neu (#536): Erfolgsmeldung erscheint nach Speichern
-	test('AC-10: Erfolgsmeldung erscheint nach Speichern', async ({ page }) => {
+	// AC-10 (Fix #964, ex #536): Erfolgsmeldung nach Speichern
+	// Ersetzt durch den Auto-Save-Kreislauf des SaveIndicator (Issue #758): "saving" → "idle"
+	// ist das reale Erfolgssignal auf der Trip-Detail-Seite (kein separater Success-Text mehr).
+	test('AC-10: SaveIndicator zeigt saving→idle-Übergang nach Metrik-Änderung', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.getByTestId('trip-detail-tab-weather').click();
-		// Dirty-State herstellen
-		await page.getByTestId('bucket-off-toggle').click();
-		const addBtn = page.locator('[data-testid^="off-add-column-"]').first();
-		if (await addBtn.isVisible()) {
-			await addBtn.click();
-		} else {
-			const rawBtn = page.locator('[data-testid^="metric-mode-raw-"]').first();
-			if (await rawBtn.isVisible()) await rawBtn.click();
-		}
-		await expect(page.getByTestId('weather-metrics-dirty-pill')).toBeVisible();
-		await page.getByTestId('weather-metrics-tab-save').click();
-		await expect(page.getByTestId('weather-metrics-tab-success')).toBeVisible();
+		await page.locator('[data-testid="wm2-grundauswahl"] .toggle-btn').first().click();
+		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'saving');
+		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
+			timeout: 5000
+		});
 	});
 });
 

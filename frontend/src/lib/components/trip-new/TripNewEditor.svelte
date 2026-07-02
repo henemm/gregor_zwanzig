@@ -512,7 +512,7 @@
 						<input type="text" value={name} oninput={makeNameHandler()}
 							placeholder="z.B. Karnischer Höhenweg 2026"
 							autofocus
-							data-testid="trip-new-name-input"
+							data-testid="trip-new-name-input-desktop"
 							style="width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 14px; font-family: var(--g-font-sans); border: 1.5px solid var(--g-rule); border-radius: var(--g-r-2); background: var(--g-card); color: var(--g-ink); outline: none;" />
 					</div>
 
@@ -796,7 +796,7 @@
 						<div style="display: flex; align-items: center; gap: 10px; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); padding: 0 14px; min-height: 48px;">
 							<input type="text" value={name} oninput={makeNameHandler()}
 								placeholder="z.B. Karnischer Höhenweg 2026"
-								data-testid="trip-new-name-input"
+								data-testid="trip-new-name-input-mobile"
 								style="flex: 1; border: none; outline: none; background: transparent; font-size: 16px; font-family: var(--g-font-sans); color: var(--g-ink); min-height: 44px; padding: 0;" />
 						</div>
 					</MField>

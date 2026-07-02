@@ -132,7 +132,7 @@ test('AC-4: /trips/new × klicken öffnet Bestätigungs-Dialog', async ({ page }
 	await expect(page.getByTestId('trip-new-editor')).toBeVisible();
 
 	// Name eingeben (Desktop-Input, direkt sichtbar)
-	const nameInput = page.getByTestId('trip-new-name-input').first();
+	const nameInput = page.getByTestId('trip-new-name-input-desktop');
 	await nameInput.fill('Test-Tour 708');
 
 	// Startdatum: Desktop-Input hat kein testid → via type="date" im Desktop-Bereich
