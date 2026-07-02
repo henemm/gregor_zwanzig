@@ -22,7 +22,9 @@ from .model import (
 
 
 def _sorted(msg: AlertMessage) -> list[AlertEvent]:
-    return sorted(msg.events, key=severity, reverse=True)
+    # Über-Schwelle-Events zuerst (severity-absteigend), unter-Schwelle gedämpft zuletzt
+    # (ebenfalls severity-absteigend) — Spec-Nachtrag #978 (PO 2026-07-02).
+    return sorted(msg.events, key=lambda e: (not over_thr(e), -severity(e)))
 
 
 _HANDLED_UNITS = {"m", "km", "hPa", "%", "km/h", "°C", "mm"}
@@ -43,6 +45,40 @@ def _val(e: AlertEvent, value: float) -> str:
         return format_metric_value(unit, rounded)
     formatted = str(int(rounded)) if float(rounded).is_integer() else str(rounded)
     return f"{formatted} {unit}".strip()
+
+
+def _num(e: AlertEvent, value: float) -> str:
+    """Zahl OHNE Einheit fuer die Multi-Metrik-Zeile (Issue #978).
+
+    Integer-Display bei glattem Rundungsergebnis (kein ',0'-Rauschen), sonst
+    1 Nachkommastelle mit Komma -- Tausender-Punkt bleibt in beiden Zweigen
+    erhalten (Issue #978 Finding F002). Baut die _format_de_thousand()-Logik
+    aus metric_catalog lokal nach statt sie zu importieren, damit die
+    geteilte Katalogfunktion fuer andere Aufrufer (format_change_line)
+    unveraendert bleibt (Issue #952 Finding F001, analog zur Begruendung bei
+    _val() oben).
+    """
+    decimals = get_decimals(e.metric_id)
+    rounded = round(value, decimals)
+    if float(rounded).is_integer():
+        n = int(rounded)
+        return f"{n:,}".replace(",", ".") if abs(n) >= 1000 else str(n)
+    int_part, _, frac_part = f"{rounded:,.{decimals}f}".partition(".")
+    return f"{int_part.replace(',', '.')},{frac_part}"
+
+
+def _unit_display(e: AlertEvent) -> str:
+    """Einheit fuer die Multi-Metrik-Zeile (Issue #978).
+
+    Sonderfall thunder: Katalog fuehrt die Metrik mit unit="" (historisch
+    level-basiert), die Design-Vorlage zeigt Gewitter-Werte aber als
+    Prozent (Vorschlaege.html:208/220-233/281). Lokaler Sonderfall statt
+    Katalog-Aenderung, da eine Katalog-Anpassung ein geteilter Eingriff
+    ausserhalb des Scopes dieses Fixes waere.
+    """
+    if e.metric_id == "thunder":
+        return "%"
+    return get_metric(e.metric_id).unit
 
 
 def _code(e: AlertEvent) -> str:
@@ -157,7 +193,13 @@ def render_subject(msg: AlertMessage) -> str:
             f"{_val(e, e.value_from)}→{_val(e, e.value_to)}"
         )
     n = len(evs)
-    top3 = ", ".join(f"{_label(e)} {_val(e, e.value_to)}" for e in evs[:3])
+    # Issue #978 (PO-Nachtrag): Top-3-Auswahl UND Anzeige-Reihenfolge sind
+    # severity-absteigend (kritischster zuerst), kanal-konsistent mit
+    # render_email() und render_telegram().
+    top3 = ", ".join(
+        f"{_label(e)} {_num(e, e.value_to)}{'%' if _unit_display(e) == '%' else ''}"
+        for e in evs[:3]
+    )
     return f"[{msg.trip_short}] {km} · {arrow(evs[0])} {n} über Schwelle: {top3}"
 
 
@@ -233,11 +275,19 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         plain_data = [f"{k}: {v}" for k, v in data_rows]
     else:
         verdict_text = f"{arrow(evs[0])} {len(evs)} über Schwelle"
-        data_rows = [
-            (f"{_label(e)} · Schwelle {_val(e, e.threshold)}",
-             f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)} {side_label(e)}")
-            for e in evs
-        ]
+        # Issue #978: Einheit genau einmal (am letzten Wert), Schwelle ohne
+        # Einheit -- ausser bei "%", wo sie zur Unterscheidung mitgefuehrt
+        # wird (exaktes Vorbild Design-Vorlage Zeilen 220-233).
+        data_rows = []
+        for e in evs:
+            unit = _unit_display(e)
+            unit_suffix = f" {unit}" if unit else ""
+            threshold_suffix = " %" if unit == "%" else ""
+            data_rows.append((
+                f"{_label(e)} · Schwelle {_num(e, e.threshold)}{threshold_suffix}",
+                f"{_num(e, e.value_from)} {arrow(e)} {_num(e, e.value_to)}"
+                f"{unit_suffix} {side_label(e)}",
+            ))
         km = _km_str(msg)
         footer = f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing · {km}"
         any_over = any(over_thr(e) for e in evs)
@@ -287,9 +337,19 @@ def render_telegram(msg: AlertMessage) -> str:
     if len(evs) == 1:
         e = evs[0]
         verdict = f"{msg.trip_short} · {km} · {arrow(e)} {_label(e)}"
+        lines = [f"<b>{_esc(verdict)}</b>", _email_line(e)]
     else:
         verdict = f"{msg.trip_short} · {km} · {len(evs)} über Schwelle"
-    lines = [f"<b>{_esc(verdict)}</b>"] + [_email_line(e) for e in evs]
+        # Issue #978 (PO-Nachtrag): kein "Schwelle"-Text pro Zeile (steht
+        # bereits in der fetten Kopfzeile), keine Einheiten ausser "%";
+        # severity-absteigende Reihenfolge, kanal-konsistent mit Betreff/
+        # E-Mail-Datenblock.
+        metric_line = " · ".join(
+            f"{_label(e)} {_num(e, e.value_from)}→{_num(e, e.value_to)}"
+            f"{'%' if _unit_display(e) == '%' else ''}"
+            for e in evs
+        )
+        lines = [f"<b>{_esc(verdict)}</b>", metric_line]
     return "\n".join(lines)
 
 

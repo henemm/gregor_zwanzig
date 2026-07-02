@@ -102,12 +102,16 @@ Sortierung der Events: `severity(e)` absteigend. Wert-Formatierung: `format_metr
 ```
 1 Event: <Kürzel> <delta_pct> seit dem Briefing
 ≥2:      <N> Werte über der Alarm-Schwelle
-Datenblock (1 Zeile/Event, severity-sortiert): <Kürzel> · Schwelle <thr> <einheit>   <from> <arrow> <to> <einheit>  [über|unter]
+Datenblock (1 Zeile/Event, severity-sortiert): <Kürzel> · Schwelle <thr>[%]   <from> <arrow> <to> <einheit>  [über|unter]
+  (Einheit erscheint nur einmal, am letzten Wert; Schwelle ohne Einheit außer bei "%" — Issue #978, löst die anfängliche 3×-Einheiten-Wiederholung ab)
 Pfeil rot wenn over_thr, sonst grün (kodiert Schwellseite, nicht gut/schlecht).
 Fußzeile: Stand: heute <stand_at> · verglichen mit dem letzten Briefing · km <a>–<b>
 Kein Freitext „Was heißt das", keine Empfehlung.
 ```
-**Telegram** — fette erste Zeile = Verdikt-Reihenfolge wie Betreff, Unicode-Pfeile, Datenblock wie Email-Plain.
+**Telegram** — fette erste Zeile = Verdikt-Reihenfolge wie Betreff, Unicode-Pfeile. Bei 1 Event:
+Datenblock wie Email-Plain (`<Kürzel> · Schwelle <thr> · <from> <arrow> <to> · [über|unter]`). Bei
+≥2 Events (Issue #978): eigene, kompaktere Zeile ohne "Schwelle"-Text (steht in der fetten
+Kopfzeile) und ohne Einheiten außer "%": `<K1> <from1>→<to1>[%] · <K2> <from2>→<to2>[%] · …`.
 **SMS** — ASCII/GSM-7, ≤140 Zeichen:
 ```
 <trip-kompakt> km<a>-<b>: <sign><CODE><to>[%][@<hh>] <sign><CODE><to>[%][@<hh>] … [ +k]
