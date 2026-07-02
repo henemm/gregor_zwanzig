@@ -32,8 +32,8 @@ load_dotenv(PROJECT_ROOT / ".env")
 
 TRIP_JSON = PROJECT_ROOT / "data" / "users" / "default" / "trips" / "gr221-mallorca.json"
 IMAP_HOST = os.getenv("GZ_IMAP_HOST", "mail.henemm.com")
-IMAP_USER = os.getenv("GZ_IMAP_USER")
-IMAP_PASS = os.getenv("GZ_IMAP_PASS")
+IMAP_USER = os.getenv("GZ_TEST_IMAP_USER") or os.getenv("GZ_IMAP_USER")
+IMAP_PASS = os.getenv("GZ_TEST_IMAP_PASS") or os.getenv("GZ_IMAP_PASS")
 
 
 # =====================================================================
