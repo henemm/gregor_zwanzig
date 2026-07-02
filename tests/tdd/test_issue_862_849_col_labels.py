@@ -13,8 +13,8 @@ from __future__ import annotations
 import importlib.util
 import sys
 
+import httpx
 import pytest
-import requests
 
 
 # ─── Helper: Validator aus .claude/hooks/ importieren ────────────────────────
@@ -122,7 +122,7 @@ def test_api_metrics_returns_col_label():
     THEN: Jedes Metrik-Objekt enthält das Feld 'col_label' mit nicht-leerem String
     RED: Feld fehlt in API-Response → AssertionError
     """
-    resp = requests.get(
+    resp = httpx.get(
         "https://staging.gregor20.henemm.com/api/metrics", timeout=15
     )
     assert resp.status_code == 200, f"API nicht erreichbar: {resp.status_code}"
