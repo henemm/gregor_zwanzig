@@ -136,8 +136,9 @@ class TestFormatterDestinationRendering:
             report_type="evening",
         )
 
-        assert "Ziel" in result.email_html, (
-            "HTML must contain 'Ziel' label for destination segment"
+        assert "WETTER AM ZIEL" in result.email_html, (
+            "HTML must contain the uppercase 'WETTER AM ZIEL' destination label "
+            "(design fidelity #884)"
         )
 
     def test_destination_no_distance(self):

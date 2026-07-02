@@ -3,6 +3,7 @@ Unit tests for TripReportFormatter (Feature 3.1 → v2).
 
 Updated for v2 format (hourly segment tables).
 """
+import re
 from datetime import datetime, timezone
 
 import pytest
@@ -194,8 +195,14 @@ class TestMetricsFiltering:
         report = formatter.format_email(segments, "Trip", "morning", display_config=config)
 
         html = report.email_html
-        assert "<th>Time</th>" in html
-        assert "Segment" in html  # segment header always shown
+        assert re.search(r"<th[^>]*>Time</th>", html), (
+            "HTML must contain a Time column header <th> (with or without inline style, "
+            "see #911 Outlook-Kompatibilität)"
+        )
+        assert re.search(r"SEG\s+\d+|Segment", html), (
+            "HTML must contain a segment header (either legacy 'Segment' or "
+            "current 'SEG N' short form)"
+        )
 
 
 if __name__ == "__main__":
