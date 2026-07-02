@@ -23,8 +23,10 @@ import type { AlertRule, Stage } from '../../types.ts';
 // METRIC_MAP — 9 Eintraege, TypeScript AlertMetric → Python-Feldname + direction
 // =============================================================================
 
-test('METRIC_MAP > hat genau 9 Eintraege', () => {
-	assert.equal(Object.keys(METRIC_MAP).length, 9);
+// #846: 4 neue Metriken (fresh_snow, cape, visibility, humidity) + #946: freezing_level
+// -> METRIC_MAP ist seither auf 14 Eintraege gewachsen (9 Basis + 4 aus #846 + 1 aus #946).
+test('METRIC_MAP > hat genau 14 Eintraege', () => {
+	assert.equal(Object.keys(METRIC_MAP).length, 14);
 });
 
 test('METRIC_MAP > wind_gust mappt auf gust_max_kmh / above (Spec §Data Model)', () => {

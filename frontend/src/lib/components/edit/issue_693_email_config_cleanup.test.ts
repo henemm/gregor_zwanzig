@@ -78,9 +78,12 @@ test('#693: dailySummaryMetricsSummary ignoriert unbekannte IDs', () => {
 	assert.equal(summary, 'Wind');
 });
 
-// ── AC-6: Zählung aktiver Inhalts-Bausteine (Issue #723: 3-Bausteine-Modell) ──
+// ── AC-6: Zählung aktiver Inhalts-Bausteine (Issue #723 + #785: 4-Bausteine-Modell) ──
+// #785 (closed, commit 99433806) ergänzte show_yesterday_comparison als 4. Baustein
+// (Default true). Die Fixtures setzen ihn hier explizit auf false, um die
+// ursprüngliche Testabsicht (isolierte Zählung der übrigen Bausteine) zu erhalten.
 
-test('#693: countActiveContentModules zählt nur die 3 verbleibenden Bausteine', () => {
+test('#693: countActiveContentModules zählt nur die verbleibenden Bausteine', () => {
 	const ui: MailElementUi = {
 		show_stage_stats: true,
 		// entfernte Felder (dürfen NICHT mitzählen):
@@ -89,9 +92,10 @@ test('#693: countActiveContentModules zählt nur die 3 verbleibenden Bausteine',
 		show_highlights: true,
 		show_metrics_summary: false,
 		show_outlook: false,
+		show_yesterday_comparison: false,
 		daily_summary_metrics: ['wind'],
 	};
-	// stage_stats=true, metrics_summary=false, outlook=false → 1 aktiv
+	// stage_stats=true, metrics_summary=false, outlook=false, yesterday_comparison=false → 1 aktiv
 	assert.equal(countActiveContentModules(ui), 1);
 });
 
@@ -103,12 +107,13 @@ test('#693: countActiveContentModules zählt show_metrics_summary mit', () => {
 		show_highlights: false,
 		show_metrics_summary: true,
 		show_outlook: false,
+		show_yesterday_comparison: false,
 		daily_summary_metrics: [],
 	};
 	assert.equal(countActiveContentModules(ui), 1);
 });
 
-test('#693: countActiveContentModules = 0 wenn alle 3 Bausteine aus', () => {
+test('#693: countActiveContentModules = 0 wenn alle Bausteine aus', () => {
 	const ui: MailElementUi = {
 		show_stage_stats: false,
 		show_quick_take_tags: false,
@@ -116,6 +121,7 @@ test('#693: countActiveContentModules = 0 wenn alle 3 Bausteine aus', () => {
 		show_highlights: false,
 		show_metrics_summary: false,
 		show_outlook: false,
+		show_yesterday_comparison: false,
 		daily_summary_metrics: [],
 	};
 	assert.equal(countActiveContentModules(ui), 0);
@@ -129,6 +135,7 @@ test('#693: countActiveContentModules ignoriert daily_summary_metrics (keine Bau
 		show_highlights: false,
 		show_metrics_summary: false,
 		show_outlook: false,
+		show_yesterday_comparison: false,
 		daily_summary_metrics: ['precipitation', 'wind', 'visibility', 'thunder', 'temperature'],
 	};
 	// Nur 1 Baustein aktiv (stage_stats), die 5 Kennzahlen zählen NICHT als Baustein.

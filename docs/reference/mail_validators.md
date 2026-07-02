@@ -25,7 +25,9 @@ uv run python3 .claude/hooks/email_spec_validator.py
 Prüft: Struktur, Location-Anzahl, Plausibilität, Format, Vollständigkeit der
 Orts-Vergleich-Mail. Läuft in der Acceptance-Stage gegen die Staging-Mail:
 Test-Trip mit Empfänger `gregor-test@henemm.com`, IMAP-Quelle ist das Stalwart-
-Test-Postfach (`mail.henemm.com`). Credentials aus den Settings (`GZ_IMAP_*`) —
+Test-Postfach (`mail.henemm.com`). `fetch_latest_email()` priorisiert seit #972
+`GZ_TEST_IMAP_USER`/`GZ_TEST_IMAP_PASS` vor `GZ_IMAP_*`/`GZ_SMTP_*`, sodass
+verlässlich gegen das Test-Postfach geprüft wird. Credentials aus den Settings —
 niemals im Klartext. Kein Gmail.
 
 **Nur bei Exit 0** darfst du „E2E Test bestanden" sagen. Einfache String-Checks
@@ -43,12 +45,19 @@ uv run python3 .claude/hooks/briefing_mail_validator.py
 ```
 
 Prüft format-spezifisch auf **Plausibilität** (nicht bloß String-Presence) gegen
-die echt zugestellte Mail aus dem Stalwart-Test-Postfach (`GZ_IMAP_*`, kein Mock,
-kein Gmail):
+die echt zugestellte Mail aus dem Stalwart-Test-Postfach. `fetch_latest_message()`
+priorisiert seit #972 `GZ_TEST_IMAP_USER`/`GZ_TEST_IMAP_PASS` vor
+`GZ_IMAP_*`/`GZ_SMTP_*` (Pattern wie `radar_alert_mail_validator.py`), damit der
+Validator verlässlich gegen `gregor-test@henemm.com` prüft. Kein Mock, kein Gmail.
 
 - **full:** `multipart/alternative`, je ein `text/html`- und `text/plain`-Part,
   ≥1 sequenzielle Stundentabelle (≥2 `HH:00`-Zeilen), Werte selbst-konsistent
-  (`temp_lo <= temp_hi`, Wind/Regen ≥ 0, nicht alle None/0), Subject nicht leer.
+  (`temp_lo <= temp_hi`, Wind/Regen ≥ 0, nicht alle None/0), Stunden im
+  Tagesfenster 06–22 — dieser Check läuft seit #974 nur noch auf dem HTML-Teil
+  **vor** dem ersten „🌙 Nacht am Ziel"-Marker; die Nacht-Sektion (evening-Full-
+  Mails, Ankunft→06:00 Folgetag, legitime Stunden wie 00/02/04) ist davon
+  ausgenommen und löst keinen False-Positive mehr aus. Temperatur-Range- und alle
+  übrigen Checks laufen weiter auf dem vollen HTML. Subject nicht leer.
 - **compact:** single `text/plain`, 7bit (oder QP bei reinem ASCII), `isascii`,
   < 2 KB, HART: Kopf + `== Metriken-Ueberblick ==` + Footer; Ausblick ist
   **optional** (der Renderer lässt ihn legitim weg, wenn keine Stabilität/Trend-

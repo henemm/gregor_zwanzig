@@ -1,34 +1,20 @@
-// TDD RED: Issue #386 — Startseite-Cockpit (Epic #368 Phase 2, Screen 1/6).
+// Issue #386 — Startseite-Cockpit (Epic #368 Phase 2, Screen 1/6).
 //
 // Spec: docs/specs/modules/screen_home_migration.md
 //
-// Zwei Test-Gruppen (mock-frei, echte Trip/Stage-DTO-Form als plain Objekte):
+// Test-Gruppen (mock-frei, echte Trip/Stage-DTO-Form als plain Objekte):
 //   1) tripStatus.ts-Util: tripStatus / activeOrNextTrip / todayStageIndex.
-//   2) Cockpit-Source-Inspection (kein Render): +page.svelte komponiert aus der
-//      Phase-1-Bibliothek (Card/Pill/Dot/Eyebrow/Btn/StagePill/ElevSparkline/
-//      SectionH/BriefingTimelineRow), behandelt Hero (aktiv + nächste), leeren
-//      Zustand und Rückwärtskompatibilität (TripKachel/CompareKachel).
-//
-// RED vor Implementierung:
-//   - tripStatus/activeOrNextTrip/todayStageIndex existieren NICHT → Import/Assert FAIL.
-//   - +page.svelte ist noch das alte Kachel-Grid → Source-Asserts FAIL.
+//   1b) stageStripState (Fix F001).
 //
 // Ausführung:
 //   cd frontend && node --experimental-strip-types --test src/lib/utils/homeCockpit.test.ts
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 
 import { tripStatus, activeOrNextTrip, todayStageIndex } from './tripStatus.ts';
 import { stageStripState } from '../../routes/_home/cockpitHelpers.ts';
 import type { Trip } from '../types.ts';
-
-const here = dirname(fileURLToPath(import.meta.url));
-const PAGE = join(here, '../../routes/+page.svelte');
-const readPage = () => readFileSync(PAGE, 'utf-8');
 
 // --- Test-Fixtures: echte Trip-DTO-Form (plain Objekte, KEINE Mock()) ---------
 
@@ -161,59 +147,7 @@ test('AC-4: aktiver Trip (todayIdx = 2, 5 Etappen) → done/done/active/future/f
 	assert.equal(stageStripState(todayIdx, 4), 'future');
 });
 
-// ============================================================================
-// 2) Cockpit-Source-Inspection (+page.svelte)
-// ============================================================================
-
-test('AC-9/AC-12: +page.svelte importiert aus der Phase-1-Atomic-Bibliothek', () => {
-	const src = readPage();
-	assert.match(src, /from ['"]\$lib\/components\/atoms['"]/, 'atoms-Barrel nicht importiert');
-	assert.match(
-		src,
-		/from ['"]\$lib\/components\/molecules['"]/,
-		'molecules-Barrel nicht importiert'
-	);
-});
-
-test('AC-1/AC-2/AC-4: Cockpit nutzt Hero-Bausteine (StagePill, ElevSparkline, Pill, Card)', () => {
-	const src = readPage();
-	for (const baustein of ['StagePill', 'ElevSparkline', 'Pill', 'Card']) {
-		assert.match(src, new RegExp('\\b' + baustein + '\\b'), `${baustein} fehlt im Cockpit`);
-	}
-});
-
-test('AC-1/AC-11: Hero-Pill unterscheidet aktiven Trip ("Tag X von Y") und nächsten Trip', () => {
-	const src = readPage();
-	assert.match(src, /Tag /, 'Live-Label "Tag X von Y" fehlt');
-	assert.match(src, /Nächster Trip/, 'AC-11-Label "Nächster Trip" fehlt');
-});
-
-test('AC-5: "Was geht heute raus" nutzt BriefingTimelineRow aus report_config', () => {
-	const src = readPage();
-	assert.match(src, /BriefingTimelineRow/, 'BriefingTimelineRow fehlt');
-	assert.match(src, /report_config/, 'report_config wird nicht gelesen');
-});
-
-test('AC-6: Alarm-Karte zeigt sauberen Leerzustand, KEINEN Fake-Zähler', () => {
-	const src = readPage();
-	// Hardcodierte Mock-Zähler aus der Vorlage dürfen NICHT übernommen werden.
-	assert.doesNotMatch(src, /2 ausgelöst/, 'Fake-Alarm-Zähler "2 ausgelöst" aus Mock übernommen');
-});
-
-test('AC-12: Rückwärtskompatibilität — TripKachel bleibt erreichbar; aktive Vergleiche via CompareStatusRow (ersetzt CompareKachel-Grid, Issue #571)', () => {
-	const src = readPage();
-	assert.match(src, /TripKachel/, 'TripKachel (Weitere Trips) fehlt');
-	assert.match(src, /CompareStatusRow/, 'CompareStatusRow (aktive Vergleiche) fehlt — ersetzt CompareKachel-Grid seit #571');
-});
-
-test('AC-8: Leerzustand bleibt erhalten (EmptyKachel)', () => {
-	const src = readPage();
-	assert.match(src, /EmptyKachel/, 'EmptyKachel (Leerzustand) fehlt');
-});
-
-test('AC-9: keine Hex-Farbliterale im Cockpit (nur Sandbox-Tokens)', () => {
-	const src = readPage();
-	// 3- oder 6-stellige Hex-Literale in Style-Kontexten sind verboten.
-	const offenders = [...src.matchAll(/#[0-9a-fA-F]{3,6}\b/g)].map((m) => m[0]);
-	assert.equal(offenders.length, 0, `Hex-Literale gefunden: ${offenders.join(', ')}`);
-});
+// Die frühere Gruppe "2) Cockpit-Source-Inspection (+page.svelte)" (8 Tests,
+// readFileSync + Regex gegen +page.svelte) wurde entfernt: Dateiinhalt-Checks
+// sind laut CLAUDE.md verboten (Präzedenz #893). Die Verhaltens-Tests der
+// Gruppen 1 und 1b oben bleiben unverändert bestehen.

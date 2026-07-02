@@ -129,10 +129,13 @@ def run_email_test(check_text: str, send_from_ui: bool = False) -> tuple[bool, s
         return False, f"Settings laden fehlgeschlagen: {e}"
 
     imap_host = settings.imap_host or settings.smtp_host
-    imap_user = settings.imap_user or settings.smtp_user
-    imap_pass = settings.imap_pass or settings.smtp_pass
+    # #972: Test-Postfach-Credentials priorisieren (Referenz-Pattern aus
+    # radar_alert_mail_validator.py:170-171) — sonst prueft der Validator
+    # versehentlich gegen das Produktiv-Postfach.
+    imap_user = settings.test_imap_user or settings.imap_user or settings.smtp_user
+    imap_pass = settings.test_imap_pass or settings.imap_pass or settings.smtp_pass
     if not imap_user or not imap_pass:
-        return False, "IMAP nicht konfiguriert (GZ_IMAP_USER/GZ_IMAP_PASS oder GZ_SMTP_USER/GZ_SMTP_PASS)"
+        return False, "IMAP nicht konfiguriert (GZ_TEST_IMAP_USER/GZ_IMAP_USER oder GZ_SMTP_USER/GZ_SMTP_PASS)"
 
     # Step 1: Send email from UI if requested
     if send_from_ui:

@@ -1,17 +1,13 @@
-// TDD RED — Bug #626: compareActions Toggle-Label + send-Aktion entfernen
+// Bug #626: compareActions Toggle-Label (+ #627: "send" wieder aufgenommen)
 //
 // Spec: docs/specs/bugfix/bug_626_compare_menu_actions.md
 //
-// Prüft das Soll-Verhalten nach Fix:
+// Prüft das aktuelle Soll-Verhalten:
 //   - compareActions('active') → Label 'Pausieren' für id='pause'
 //   - compareActions('paused') → Label 'Aktivieren' für id='pause'
-//   - compareActions('active') enthält KEIN 'send'-Item (AC-6)
+//   - compareActions('active'/'paused') enthält 'send'-Item (#627, Einzel-Sofortversand)
 //   - compareActions('active') enthält weiterhin: edit, preview, archive, delete
 //   - compareActions('draft') bleibt unverändert (setup + delete, 2 Einträge)
-//
-// RED-Erwartung (vor Fix):
-//   - Label-Toggle-Test FAIL (immer 'Pausieren')
-//   - send-Removal-Test FAIL ('send' noch vorhanden)
 //
 // Ausführen:
 //   cd frontend && node --experimental-strip-types --test \
@@ -63,26 +59,28 @@ describe('Bug #626 AC-3: compareActions("paused") — Label "Aktivieren"', () =>
 	});
 });
 
-// ── AC-6: send-Aktion entfernt ────────────────────────────────────────────────
+// ── #627 (closed): "send" wieder aufgenommen ──────────────────────────────────
+// Ursprünglich entfernte #626 die "send"-Aktion; #627 hat sie als echten
+// Einzel-Sofortversand wieder eingeführt (siehe subscriptionHelpers.ts:215,219).
 
-describe('Bug #626 AC-6: compareActions — keine "send"-Aktion mehr', () => {
-	test('compareActions("active") enthält KEIN Item mit id="send"', () => {
+describe('#627: compareActions — "send"-Aktion wieder vorhanden', () => {
+	test('compareActions("active") enthält genau ein Item mit id="send"', () => {
 		const actions = compareActions('active');
-		const sendItem = actions.find((a: { id: string }) => a.id === 'send');
+		const sendItems = actions.filter((a: { id: string }) => a.id === 'send');
 		assert.equal(
-			sendItem,
-			undefined,
-			'compareActions("active") darf kein "send"-Item enthalten (verschoben nach #627)'
+			sendItems.length,
+			1,
+			'compareActions("active") muss ein "send"-Item enthalten (#627)'
 		);
 	});
 
-	test('compareActions("paused") enthält KEIN Item mit id="send"', () => {
+	test('compareActions("paused") enthält genau ein Item mit id="send"', () => {
 		const actions = compareActions('paused');
-		const sendItem = actions.find((a: { id: string }) => a.id === 'send');
+		const sendItems = actions.filter((a: { id: string }) => a.id === 'send');
 		assert.equal(
-			sendItem,
-			undefined,
-			'compareActions("paused") darf kein "send"-Item enthalten (verschoben nach #627)'
+			sendItems.length,
+			1,
+			'compareActions("paused") muss ein "send"-Item enthalten (#627)'
 		);
 	});
 });
@@ -114,21 +112,22 @@ describe('Bug #626 AC-7 Regression: Pflicht-Aktionen bleiben erhalten', () => {
 		assert.ok(ids.includes('delete'), 'compareActions("active") muss "delete" enthalten');
 	});
 
-	test('compareActions("active") liefert genau 5 Einträge (ohne send)', () => {
+	// #627: "send" wieder aufgenommen -> 6 statt 5 Einträge (pause, send, preview, edit, archive, delete)
+	test('compareActions("active") liefert genau 6 Einträge', () => {
 		const actions = compareActions('active');
 		assert.equal(
 			actions.length,
-			5,
-			`compareActions("active") muss genau 5 Aktionen liefern (pause, preview, edit, archive, delete), hat aber ${actions.length}`
+			6,
+			`compareActions("active") muss genau 6 Aktionen liefern (pause, send, preview, edit, archive, delete), hat aber ${actions.length}`
 		);
 	});
 
-	test('compareActions("paused") liefert genau 5 Einträge', () => {
+	test('compareActions("paused") liefert genau 6 Einträge', () => {
 		const actions = compareActions('paused');
 		assert.equal(
 			actions.length,
-			5,
-			`compareActions("paused") muss genau 5 Aktionen liefern, hat aber ${actions.length}`
+			6,
+			`compareActions("paused") muss genau 6 Aktionen liefern, hat aber ${actions.length}`
 		);
 	});
 });

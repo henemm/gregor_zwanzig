@@ -522,20 +522,22 @@ test('toTripPayload #164 AC#15d: report_config.send_sms = briefings.channels.sms
 	assert.equal(rc.send_sms, false);
 });
 
-test('toTripPayload #164 AC#16a: report_config.morning_time = briefings.reports.morning.time', () => {
+// #231 (closed, commit bfec709d): report_config-Zeiten werden via toHHMMSS()
+// auf HH:MM:SS normalisiert -> Erwartung ist das normalisierte Format.
+test('toTripPayload #164 AC#16a: report_config.morning_time = briefings.reports.morning.time (HH:MM:SS, #231)', () => {
 	const s = makeStateWithDefaults();
 	s.briefings.reports.morning.time = '07:30';
 	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
 	assert.ok(rc, 'report_config muss vorhanden sein');
-	assert.equal(rc.morning_time, '07:30');
+	assert.equal(rc.morning_time, '07:30:00');
 });
 
-test('toTripPayload #164 AC#16b: report_config.evening_time = briefings.reports.evening.time', () => {
+test('toTripPayload #164 AC#16b: report_config.evening_time = briefings.reports.evening.time (HH:MM:SS, #231)', () => {
 	const s = makeStateWithDefaults();
 	s.briefings.reports.evening.time = '21:15';
 	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
 	assert.ok(rc, 'report_config muss vorhanden sein');
-	assert.equal(rc.evening_time, '21:15');
+	assert.equal(rc.evening_time, '21:15:00');
 });
 
 test('toTripPayload #164 AC#17a: report_config.enabled = true wenn beide Reports aktiv', () => {

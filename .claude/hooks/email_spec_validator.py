@@ -84,10 +84,13 @@ def fetch_latest_email() -> str:
     settings = Settings()
 
     imap_host = settings.imap_host or settings.smtp_host
-    imap_user = settings.imap_user or settings.smtp_user
-    imap_pass = settings.imap_pass or settings.smtp_pass
+    # #972: Test-Postfach-Credentials priorisieren (Referenz-Pattern aus
+    # radar_alert_mail_validator.py:170-171) — sonst prueft der Validator
+    # versehentlich gegen das Produktiv-Postfach.
+    imap_user = settings.test_imap_user or settings.imap_user or settings.smtp_user
+    imap_pass = settings.test_imap_pass or settings.imap_pass or settings.smtp_pass
     if not imap_user or not imap_pass:
-        raise ValueError("IMAP nicht konfiguriert (GZ_IMAP_USER/GZ_IMAP_PASS)")
+        raise ValueError("IMAP nicht konfiguriert (GZ_TEST_IMAP_USER/GZ_IMAP_USER)")
 
     imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
     imap.login(imap_user, imap_pass)

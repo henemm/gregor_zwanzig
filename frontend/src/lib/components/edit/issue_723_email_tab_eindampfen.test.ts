@@ -1,13 +1,14 @@
-// TDD RED: Issue #723 — E-Mail-Inhalt-Tab UI eindampfen (Slice 3 von #709).
+// Issue #723 — E-Mail-Inhalt-Tab UI eindampfen (Slice 3 von #709).
 //
 // Spec: docs/specs/modules/issue_723_email_tab_eindampfen.md
 //
-// Diese Tests sind ABSICHTLICH ROT, bis reportConfigWrite.ts den neuen Vertrag
-// erfüllt:
+// Prüft das aktuelle Soll-Verhalten von reportConfigWrite.ts:
 //   1. MailElementUi kennt das Feld `show_outlook` (Ausblick-Baustein, #721).
-//   2. countActiveContentModules zählt NUR die 3 verbleibenden Bausteine
-//      (show_stage_stats, show_metrics_summary, show_outlook). Die entfernten
-//      Schalter (quick_take, stability, highlights) zählen NICHT mehr mit.
+//   2. countActiveContentModules zählt die 4 Inhalts-Bausteine
+//      (show_stage_stats, show_metrics_summary, show_outlook,
+//      show_yesterday_comparison — Issue #785, commit 99433806). Die mit
+//      #723 entfernten Schalter (quick_take, stability, highlights) zählen
+//      NICHT mehr mit.
 //   3. buildMailElementWrite schreibt `show_outlook` (Default true wenn fehlt)
 //      ins Persistenz-Objekt und erhält alle Fremdfelder via Spread (entfernte
 //      Felder bleiben im Modell — Bestandsdaten-Schutz, CLAUDE.md).
@@ -32,21 +33,22 @@ import {
 	type MailElementUi,
 } from './reportConfigWrite.ts';
 
-// ── AC-1/AC-6: genau 3 Inhalts-Bausteine zählen ───────────────────────────────
+// ── AC-1/AC-6: genau 4 Inhalts-Bausteine zählen (#723 Basis + #785 Vortag-Vergleich) ──
 
-test('#723: countActiveContentModules zählt nur die 3 verbleibenden Bausteine', () => {
+test('#723/#785: countActiveContentModules zählt die 4 verbleibenden Bausteine', () => {
 	const ui: MailElementUi = {
 		show_stage_stats: true,
 		show_metrics_summary: true,
 		show_outlook: true,
+		show_yesterday_comparison: true,
 		// entfernte Bausteine — dürfen NICHT mehr mitzählen:
 		show_quick_take_tags: true,
 		show_stability: true,
 		show_highlights: true,
 		daily_summary_metrics: ['wind'],
 	};
-	// stage_stats + metrics_summary + outlook = 3
-	assert.equal(countActiveContentModules(ui), 3);
+	// stage_stats + metrics_summary + outlook + yesterday_comparison = 4
+	assert.equal(countActiveContentModules(ui), 4);
 });
 
 test('#723: countActiveContentModules ignoriert entfernte Schalter (quick_take/stability/highlights)', () => {
@@ -54,6 +56,7 @@ test('#723: countActiveContentModules ignoriert entfernte Schalter (quick_take/s
 		show_stage_stats: false,
 		show_metrics_summary: false,
 		show_outlook: false,
+		show_yesterday_comparison: false,
 		// nur entfernte Schalter aktiv → Zähler muss 0 sein:
 		show_quick_take_tags: true,
 		show_stability: true,
@@ -68,6 +71,7 @@ test('#723: countActiveContentModules zählt show_outlook einzeln', () => {
 		show_stage_stats: false,
 		show_metrics_summary: false,
 		show_outlook: true,
+		show_yesterday_comparison: false,
 		show_quick_take_tags: false,
 		show_stability: false,
 		show_highlights: false,

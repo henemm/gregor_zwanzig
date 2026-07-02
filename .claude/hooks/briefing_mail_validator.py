@@ -385,7 +385,13 @@ def _check_plausibility(html: str) -> list[str]:
         if lo > hi:
             errors.append(f"FULL: Temperatur-Range unplausibel ({lo}°C > {hi}°C)")
 
-    hours = _distinct_hours(html, html=True)
+    # #974: Der Tagesfenster-Check (06-22) darf die "Nacht am Ziel"-Sektion nicht
+    # pruefen — sie zeigt legitim die Stunden von der Ankunft bis 06:00 des
+    # Folgetags. Nur der Teil vor dem ersten Marker-Auftreten wird geprueft.
+    night_marker = html.find("Nacht am Ziel")
+    day_html = html[:night_marker] if night_marker != -1 else html
+
+    hours = _distinct_hours(day_html, html=True)
     for hour in hours:
         h = int(hour.split(":")[0])
         if h < 6 or h > 22:
@@ -537,10 +543,13 @@ def fetch_latest_message(
 
     settings = Settings()
     imap_host = settings.imap_host or settings.smtp_host
-    imap_user = settings.imap_user or settings.smtp_user
-    imap_pass = settings.imap_pass or settings.smtp_pass
+    # #972: Test-Postfach-Credentials priorisieren (Referenz-Pattern aus
+    # radar_alert_mail_validator.py:170-171) — sonst prueft der Validator
+    # versehentlich gegen das Produktiv-Postfach.
+    imap_user = settings.test_imap_user or settings.imap_user or settings.smtp_user
+    imap_pass = settings.test_imap_pass or settings.imap_pass or settings.smtp_pass
     if not imap_user or not imap_pass:
-        raise ValueError("IMAP nicht konfiguriert (GZ_IMAP_USER/GZ_IMAP_PASS)")
+        raise ValueError("IMAP nicht konfiguriert (GZ_TEST_IMAP_USER/GZ_IMAP_USER)")
 
     imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
     try:
