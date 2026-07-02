@@ -179,8 +179,13 @@ def _trip(trip_id: str) -> Trip:
     'standard' → Δ-Schwelle 10 (identisch zum früheren Katalog-Default), sodass
     die precip-Deltas dieser Tests weiterhin exakt gleich alerten. report_config
     bleibt für die Kanal-Vererbung (Telegram) erhalten.
+
+    Issue #961 (Fixture-Korrektur): Die zugehörige Weather-Tab-Metrik 'precipitation'
+    MUSS jetzt aktiv sein (enabled=True), sonst greift die Deaktivieren-Lücke und der
+    precipitation_sum-Alarm feuert bewusst nicht mehr. Realistischer Trip: Metrik im
+    Weather-Tab aktiv UND Alarm-Level gesetzt.
     """
-    from app.models import UnifiedWeatherDisplayConfig
+    from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 
     stage = Stage(
         id="T1", name="Tag 1", date=date(2026, 4, 5),
@@ -190,6 +195,7 @@ def _trip(trip_id: str) -> Trip:
         id=trip_id, name="Abweichungs-Trip", stages=[stage],
         display_config=UnifiedWeatherDisplayConfig(
             trip_id=trip_id,
+            metrics=[MetricConfig(metric_id="precipitation", enabled=True)],
             metric_alert_levels={"precipitation_sum": "standard"},
         ),
     )
@@ -680,6 +686,7 @@ def test_ac8b_wind_gust_metric_level_trip_gets_delta_alert(telegram_sink, clean_
         AlertRule,
         AlertRuleKind,
         AlertSeverity,
+        MetricConfig,
         UnifiedWeatherDisplayConfig,
     )
     from app.trip import Stage, Trip, Waypoint
@@ -706,6 +713,9 @@ def test_ac8b_wind_gust_metric_level_trip_gets_delta_alert(telegram_sink, clean_
         id="trip-ac8b", name="Metric-Level-Trip", stages=[stage],
         display_config=UnifiedWeatherDisplayConfig(
             trip_id="trip-ac8b",
+            # Issue #961 (Fixture-Korrektur): Weather-Tab-Metrik 'gust' aktiv, sonst
+            # greift die Deaktivieren-Lücke und der wind_gust-Alarm feuert nicht mehr.
+            metrics=[MetricConfig(metric_id="gust", enabled=True)],
             metric_alert_levels={"wind_gust": "standard"},
         ),
     )

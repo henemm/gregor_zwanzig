@@ -211,10 +211,14 @@ def _alert_display_config(trip_id: str) -> "UnifiedWeatherDisplayConfig":
     wind_gust='standard' → Δ-Schwelle 20; die Testläufe fahren gust 25→60 (Δ=35),
     also feuert der Detektor. Die alert_rules bleiben für Kanal-/Severity-Routing
     erhalten (channels-Override etc.), steuern aber nicht mehr die Change-Erkennung.
+
+    Issue #961 (Fixture-Korrektur): Weather-Tab-Metrik 'gust' aktiv setzen, sonst
+    greift die Deaktivieren-Lücke und der wind_gust-Alarm feuert nicht mehr.
     """
-    from app.models import UnifiedWeatherDisplayConfig
+    from app.models import MetricConfig, UnifiedWeatherDisplayConfig
     return UnifiedWeatherDisplayConfig(
         trip_id=trip_id,
+        metrics=[MetricConfig(metric_id="gust", enabled=True)],
         metric_alert_levels={"wind_gust": "standard"},
     )
 
@@ -488,7 +492,7 @@ def test_channel_inheritance_no_alert_rules_uses_report_config(
     _effective_alert_channels die Briefing-Kanäle aus report_config (hier Telegram),
     statt ein leeres Set zurückzugeben.
     """
-    from app.models import UnifiedWeatherDisplayConfig
+    from app.models import MetricConfig, UnifiedWeatherDisplayConfig
     report_config = TripReportConfig(
         trip_id="tdd-638-legacy-trip",
         send_email=False,
@@ -503,6 +507,8 @@ def test_channel_inheritance_no_alert_rules_uses_report_config(
         id="tdd-638-legacy-trip", name="Legacy Alert Trip", stages=[stage],
         display_config=UnifiedWeatherDisplayConfig(
             trip_id="tdd-638-legacy-trip",
+            # Issue #961 (Fixture-Korrektur): Weather-Tab-Metrik 'gust' aktiv setzen.
+            metrics=[MetricConfig(metric_id="gust", enabled=True)],
             metric_alert_levels={"wind_gust": "standard"},
         ),
     )

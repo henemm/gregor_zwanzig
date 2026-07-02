@@ -104,37 +104,39 @@ def _detector_is_noop(detector) -> bool:
     return True
 
 
-# ───────────────────────── Gruppe 1: AC-1 — Null = keine Alerts ─────────────
+# ───────────── Gruppe 1: AC-1 — Null-Levels + Weather-Tab-Vertrag ────────────
+#
+# Issue #961 (PO-Entscheidung Option A, 2026-07-01) hat den #946-Vertrag präzisiert:
+# metric_alert_levels ist weiterhin die Single Source für EXPLIZITE Stufen, aber der
+# Weather-Tab-Aktivierungsstatus ergänzt implizit 'standard' (Backfill) für aktive,
+# nie konfigurierte Metriken. NoOp gilt jetzt nur noch, wenn WEDER Levels gesetzt
+# sind NOCH eine Weather-Tab-Metrik aktiv ist (bzw. bei explizitem 'off').
 
 class TestAC1NullMeansNoAlerts:
-    """AC-1: metric_alert_levels=None + alert_preset=None → NoOp-Detektor."""
+    """AC-1 (migriert #961): Null-Levels ohne aktive Weather-Tab-Metrik → NoOp;
+    Null-Levels MIT aktiver Weather-Tab-Metrik → Backfill-Alarm feuert."""
 
-    def test_unconfigured_trip_with_display_metrics_is_noop(self):
-        """
-        Trip hat aktivierte Anzeige-Metrik 'gust', aber weder metric_alert_levels
-        noch alert_preset. Erwartung: Detektor OHNE Alert-Regeln (NoOp).
-
-        RED heute: Code fällt auf from_display_config() zurück und setzt
-        gust_max_kmh=20.0 → Detektor ist NICHT NoOp.
-        """
+    def test_null_levels_without_active_weather_tab_metric_is_noop(self):
+        """metric_alert_levels=None + alert_preset=None + KEINE aktive Weather-Tab-
+        Metrik → NoOp. Das ist der echte Rest-NoOp-Fall nach #961 (Option A)."""
         from services.trip_alert import TripAlertService
 
-        trip = _trip(metric_alert_levels=None, alert_preset=None, enabled_metrics=["gust"])
+        trip = _trip(metric_alert_levels=None, alert_preset=None, enabled_metrics=None)
         service = TripAlertService()
         detector = service._select_change_detector(trip)
 
         assert _detector_is_noop(detector), (
-            "Unkonfigurierter Trip (metric_alert_levels=None, alert_preset=None) muss "
-            f"einen NoOp-Detektor liefern, aber Thresholds sind "
-            f"{_detector_thresholds(detector)!r} (from_display_config-Fallback feuert)."
+            "Unkonfigurierter Trip OHNE aktive Weather-Tab-Metrik muss NoOp bleiben, "
+            f"Thresholds: {_detector_thresholds(detector)!r}."
         )
 
-    def test_unconfigured_trip_has_no_gust_threshold(self):
-        """
-        Konkreter Nachweis: 'gust' ist als Anzeige-Metrik aktiv, aber nicht als
-        Alert konfiguriert → gust_max_kmh darf KEINEN Threshold haben.
+    def test_null_levels_with_active_weather_tab_metric_fires(self):
+        """BEWUSSTE VERHALTENSÄNDERUNG (Issue #961, AC-2 — Aktivieren-Lücke; PO Option A):
 
-        RED heute: gust_max_kmh=20.0 aus MetricCatalog via from_display_config.
+        Trip hat 'gust' auf dem Weather-Tab aktiv, aber metric_alert_levels=None. Früher
+        (#946) galt das als NoOp. Seit #961 bekommt eine aktive Weather-Tab-Metrik
+        implizit 'standard' (Backfill-Default, genau wie die UI "Standard" anzeigt) →
+        der Detektor trägt jetzt eine gust_max_kmh-Schwelle und ist KEIN NoOp mehr.
         """
         from services.trip_alert import TripAlertService
 
@@ -143,21 +145,35 @@ class TestAC1NullMeansNoAlerts:
         detector = service._select_change_detector(trip)
 
         gust = _detector_thresholds(detector).get("gust_max_kmh")
-        assert gust is None, (
-            f"Ohne konfigurierte Alerts darf gust_max_kmh keinen Threshold haben, "
-            f"ist aber {gust!r}."
+        assert gust == 20.0, (
+            "Issue #961: aktive Weather-Tab-Metrik 'gust' ohne expliziten Level muss "
+            f"per Backfill gust_max_kmh=20.0 (Standard) liefern, ist aber {gust!r} "
+            f"(Thresholds: {_detector_thresholds(detector)!r})."
+        )
+        assert not _detector_is_noop(detector), (
+            "Aktive Weather-Tab-Metrik + Null-Levels darf seit #961 kein NoOp mehr sein."
         )
 
-    def test_empty_metric_alert_levels_is_noop(self):
-        """metric_alert_levels={} (leer) + alert_preset=None → NoOp (kein Fallback)."""
+    def test_empty_metric_alert_levels_with_active_weather_tab_metrics_fires(self):
+        """metric_alert_levels={} (leer) + AKTIVE Weather-Tab-Metriken → Alarm feuert.
+
+        BEWUSSTE VERHALTENSÄNDERUNG (Issue #961, AC-2 — Aktivieren-Lücke; PO-Entscheidung
+        Option A vom 2026-07-01): Früher (#946) galt leeres metric_alert_levels als
+        NoOp, egal was der Weather-Tab zeigte. Seit #961 gilt der vollständige Vertrag
+        `should_fire = weather_tab_enabled AND level != 'off'`: Eine auf dem Weather-Tab
+        aktive Metrik ohne expliziten Alarme-Tab-Eintrag bekommt implizit 'standard'
+        (Backfill-Default) — genau wie die UI ("Standard") es dem Nutzer suggeriert.
+        Daher feuert der Detektor jetzt, statt NoOp zu sein.
+        """
         from services.trip_alert import TripAlertService
 
         trip = _trip(metric_alert_levels={}, alert_preset=None, enabled_metrics=["gust", "temperature"])
         service = TripAlertService()
         detector = service._select_change_detector(trip)
 
-        assert _detector_is_noop(detector), (
-            "Leeres metric_alert_levels muss NoOp bleiben, "
+        assert not _detector_is_noop(detector), (
+            "Issue #961: Leeres metric_alert_levels + aktive Weather-Tab-Metriken "
+            "('gust', 'temperature') muss jetzt Backfill-Alarme feuern (nicht NoOp). "
             f"Thresholds: {_detector_thresholds(detector)!r}."
         )
 
@@ -261,11 +277,17 @@ class TestAC7ConfiguredTripStillFires:
         Trip mit metric_alert_levels={'wind_gust':'standard'} → Detektor enthält
         eine Delta-Regel für gust_max_kmh mit Schwelle 20.
 
-        Sollte bereits grün sein (Regression-Schutz), trotzdem geschrieben.
+        Issue #961: Weather-Tab-Metrik 'gust' MUSS aktiv sein (enabled_metrics),
+        sonst greift die Deaktivieren-Lücke und der Alarm feuert bewusst NICHT mehr.
+        Dieser Test prüft weiterhin die Kernaussage "konfiguriert UND aktiv feuert".
         """
         from services.trip_alert import TripAlertService
 
-        trip = _trip(metric_alert_levels={"wind_gust": "standard"}, alert_preset=None)
+        trip = _trip(
+            metric_alert_levels={"wind_gust": "standard"},
+            alert_preset=None,
+            enabled_metrics=["gust"],
+        )
         service = TripAlertService()
         detector = service._select_change_detector(trip)
 
@@ -276,10 +298,18 @@ class TestAC7ConfiguredTripStillFires:
         )
 
     def test_configured_trip_is_not_noop(self):
-        """Ein konfigurierter Trip darf KEIN NoOp-Detektor sein."""
+        """Ein konfigurierter UND auf dem Weather-Tab aktiver Trip darf KEIN NoOp sein.
+
+        Issue #961: enabled_metrics=['gust'] ergänzt — ohne aktive Weather-Tab-Metrik
+        greift jetzt die Deaktivieren-Lücke (NoOp gewollt).
+        """
         from services.trip_alert import TripAlertService
 
-        trip = _trip(metric_alert_levels={"wind_gust": "standard"}, alert_preset=None)
+        trip = _trip(
+            metric_alert_levels={"wind_gust": "standard"},
+            alert_preset=None,
+            enabled_metrics=["gust"],
+        )
         service = TripAlertService()
         detector = service._select_change_detector(trip)
 

@@ -243,14 +243,53 @@ class TripAlertService:
         from_display_config() oder from_trip_config() — ein unkonfigurierter Trip darf
         niemals Alerts für bloße Anzeige-Metriken feuern. Pure helper — direkt testbar.
         """
-        # Issue #946: Per-Metrik-Stufen sind die einzige Quelle.
-        if trip.display_config and getattr(trip.display_config, "metric_alert_levels", None):
+        # Issue #946 / #961: Detektor bauen, sobald der Trip explizite
+        # metric_alert_levels HAT ODER mindestens eine Weather-Tab-aktive Alarm-
+        # Metrik trägt. metric_alert_levels bleibt Single Source für explizite Stufen;
+        # die Weather-Tab-Aktivierung (display_config.metrics[]) ergänzt implizit
+        # 'standard' für aktive, aber nie konfigurierte Metriken (Aktivieren-Lücke,
+        # Issue #961). Ohne beides bleibt der NoOp-Pfad (Issue #946).
+        if trip.display_config and (
+            getattr(trip.display_config, "metric_alert_levels", None)
+            or self._has_active_alert_metric(trip.display_config)
+        ):
             from services.alert_preset import expand_per_metric_levels
-            rules = expand_per_metric_levels(trip.display_config.metric_alert_levels)
+            # Issue #961: display_config durchreichen → Weather-Tab-Aktivierungsstatus
+            # wird berücksichtigt (Deaktivieren-/Aktivieren-Lücke geschlossen).
+            rules = expand_per_metric_levels(
+                trip.display_config.metric_alert_levels or {},
+                display_config=trip.display_config,
+            )
             return WeatherChangeDetectionService.from_alert_rules(rules)
         # Issue #946: kein Fallback — nicht konfiguriert = kein Alert (NoOp-Detektor
         # ohne MetricCatalog-Defaults, erzwungen über leere Regelliste).
         return WeatherChangeDetectionService.from_alert_rules([])
+
+    @staticmethod
+    def _has_active_alert_metric(display_config: "UnifiedWeatherDisplayConfig") -> bool:
+        """Issue #961: True, wenn mindestens eine auf dem Weather-Tab GENUIN aktive
+        Metrik (echter `enabled=True`-Eintrag in `metrics[]`) auf einen bekannten
+        AlertMetric gemappt ist (dann lohnt der Aktivieren-Lücke-Backfill in
+        expand_per_metric_levels — auch ohne jeden `metric_alert_levels`-Eintrag).
+
+        Finding F002: Hier wird bewusst NICHT `is_alert_metric_active()` verwendet.
+        Dessen konservative "leeres metrics[] = aktiv"-Regel ist Backward-Compat für
+        das FILTERN bereits gesetzter Level-Einträge — sie darf aber keinen Backfill
+        auf einem komplett unkonfigurierten Trip (metric_alert_levels=None UND leeres
+        metrics[]) auslösen (Issue #946 AC-1: nicht konfiguriert = NoOp). Deshalb
+        prüfen wir hier strikt einen tatsächlich vorhandenen enabled=True-Eintrag.
+        """
+        from services.weather_change_detection import _ALERT_METRIC_TO_CATALOG_ID
+
+        if not getattr(display_config, "metrics", None):
+            return False
+        alert_catalog_ids: set[str] = set()
+        for catalog_ids in _ALERT_METRIC_TO_CATALOG_ID.values():
+            alert_catalog_ids.update(catalog_ids)
+        return any(
+            mc.enabled and mc.metric_id in alert_catalog_ids
+            for mc in display_config.metrics
+        )
 
     def check_all_trips(self) -> int:
         """

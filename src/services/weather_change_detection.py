@@ -65,29 +65,58 @@ _ALERT_DELTA_METRIC_TO_FIELDS: dict[AlertMetric, tuple[str, ...]] = {
 # TEMPERATURE_MIN maps to "temperature_cold" (cmp="unter") because cold alarms fire
 # when temp_min_c FALLS BELOW threshold — a separate catalog entry is required since
 # the "temperature" entry carries cmp="über" for the warm direction.
-# VISIBILITY uses Threshold-Crossing logic, no entry here.
-_ALERT_METRIC_TO_CATALOG_ID: dict[AlertMetric, str] = {
-    AlertMetric.WIND_GUST: "gust",
-    AlertMetric.PRECIPITATION_SUM: "precipitation",
-    AlertMetric.TEMPERATURE_MIN: "temperature_cold",  # cmp="unter" (Kältealarm)
-    AlertMetric.TEMPERATURE_MAX: "temperature",        # cmp="über"
-    AlertMetric.THUNDER_LEVEL: "thunder",
-    AlertMetric.SNOW_LINE: "freezing_level",           # cmp="unter" (tiefere Grenze = mehr Gefahr)
-    AlertMetric.FRESH_SNOW: "fresh_snow",
-    AlertMetric.CAPE: "cape",
+#
+# Issue #961: Value is now a TUPLE of catalog metric_ids (was a single str). Two
+# distinct concerns share this map:
+#   1. Comparison direction (_build_alert_metric_comparison) — derived from the
+#      FIRST catalog_id ONLY (cmp is unique per AlertMetric).
+#   2. Weather-Tab activation (is_alert_metric_active) — OR over ALL catalog_ids.
+# For TEMPERATURE_MIN the FIRST id ("temperature_cold", cmp="unter") drives the cold
+# comparison direction, while the second id ("temperature") is the Weather-Tab metric
+# the user actually toggles (there is no separate "temperature_cold" toggle).
+# SNOW_LINE hangs on two Weather-Tab metrics ("snowfall_limit", "freezing_level") —
+# OR-policy per Issue #961 (Übergangslösung, see spec / Issue #959). The FIRST id
+# ("freezing_level", cmp="unter") drives the comparison direction.
+# VISIBILITY uses Threshold-Crossing logic, no cmp entry (excluded below).
+_ALERT_METRIC_TO_CATALOG_ID: dict[AlertMetric, tuple[str, ...]] = {
+    AlertMetric.WIND_GUST: ("gust",),
+    AlertMetric.PRECIPITATION_SUM: ("precipitation",),
+    AlertMetric.TEMPERATURE_MIN: ("temperature_cold", "temperature"),  # cmp="unter" (Kältealarm); Weather-Tab: temperature
+    AlertMetric.TEMPERATURE_MAX: ("temperature",),        # cmp="über"
+    AlertMetric.THUNDER_LEVEL: ("thunder",),
+    AlertMetric.SNOW_LINE: ("snowfall_limit", "freezing_level"),  # Issue #961: OR-Policy; cmp aus "snowfall_limit" (unter)
+    AlertMetric.FRESH_SNOW: ("fresh_snow",),
+    AlertMetric.CAPE: ("cape",),
+    # Issue #961: Delta-Change-Metriken + Sichtweite ergänzt (nur für Weather-Tab-
+    # Aktivierungs-Check via is_alert_metric_active; cmp wird für Delta-Metriken
+    # nicht genutzt, ist aber wohldefiniert, da die catalog_ids existieren).
+    AlertMetric.TEMPERATURE_CHANGE: ("temperature",),
+    AlertMetric.WIND_CHANGE: ("wind",),
+    AlertMetric.PRECIPITATION_CHANGE: ("precipitation",),
+    AlertMetric.VISIBILITY: ("visibility",),
 }
+
+# Issue #961: VISIBILITY nutzt Threshold-Crossing (cmp="unter"), soll aber NICHT im
+# Absolut-/Delta-Comparison-Map landen (Issue #917 Test-Vertrag: VISIBILITY nicht in
+# _ALERT_METRIC_COMPARISON). Comparison wird nur für diese Metriken abgeleitet.
+_COMPARISON_EXCLUDED_METRICS: frozenset = frozenset({AlertMetric.VISIBILITY})
+
 
 def _build_alert_metric_comparison() -> dict[AlertMetric, str]:
     """Derive comparison direction from catalog cmp at module load.
 
-    Maps 'über' → 'above', 'unter' → 'below'.
+    Maps 'über' → 'above', 'unter' → 'below'. Uses only the FIRST catalog_id per
+    AlertMetric (Issue #961: value is now a tuple; cmp is unique per metric).
     This replaces the former hand-coded _ALERT_METRIC_COMPARISON dict
     (Issue #914/AC-2: catalog is the single source).
     """
     from app.metric_catalog import get_cmp as _catalog_get_cmp
     _cmp_map = {"über": "above", "unter": "below"}
     result: dict[AlertMetric, str] = {}
-    for metric, catalog_id in _ALERT_METRIC_TO_CATALOG_ID.items():
+    for metric, catalog_ids in _ALERT_METRIC_TO_CATALOG_ID.items():
+        if metric in _COMPARISON_EXCLUDED_METRICS:
+            continue
+        catalog_id = catalog_ids[0]
         catalog_cmp = _catalog_get_cmp(catalog_id)
         direction = _cmp_map.get(catalog_cmp)
         if direction is None:
@@ -103,6 +132,50 @@ def _build_alert_metric_comparison() -> dict[AlertMetric, str]:
 # Derived from catalog at module load — DO NOT hand-edit this dict.
 # To change a direction, update the catalog entry or _ALERT_METRIC_TO_CATALOG_ID.
 _ALERT_METRIC_COMPARISON: dict[AlertMetric, str] = _build_alert_metric_comparison()
+
+
+def is_alert_metric_active(
+    alert_metric: AlertMetric,
+    display_config: "UnifiedWeatherDisplayConfig | None",
+) -> bool:
+    """True, wenn die auf `alert_metric` gemappte(n) Weather-Tab-Metrik(en) als
+    aktiv für Alarm-Zwecke gelten.
+
+    Issue #961: Schließt die Lücke zwischen Weather-Tab (`display_config.metrics[]`)
+    und Alarm-Regeln (`metric_alert_levels`). OR-Verknüpfung bei Mehrfach-Mapping
+    (aktuell SNOW_LINE → snowfall_limit/freezing_level; Übergangslösung, siehe Spec
+    fix_961 und Issue #959).
+
+    Finding F002 (Regression-Fix): Ein Trip, der Alarm-Level gesetzt bekam, OHNE je
+    den Wetter-Tab zu berühren, hat ein KOMPLETT LEERES `metrics[]`-Array (der
+    Loader backfillt es NICHT, wenn `display_config` bereits existiert). In diesem
+    Zustand liegt gar keine bewusste Wetter-Tab-Auswahl vor — jede Alarm-Metrik gilt
+    konservativ als AKTIV (Backward-Compat, kein stiller Alarmverlust für Alt-Trips).
+
+    Sobald `metrics[]` MINDESTENS EINEN Eintrag hat, hat der Nutzer den Wetter-Tab
+    bewusst konfiguriert: Dann zählt nur die tatsächliche Aktivierung. Ein fehlender
+    Eintrag gilt hier als NICHT aktiv (identisch zur `is_metric_enabled()`-Semantik) —
+    das ist wichtig für synthetische Katalog-IDs wie "temperature_cold", die keinen
+    eigenen Wetter-Tab-Toggle haben und immer fehlen würden.
+
+    Semantik (OR über alle gemappten Catalog-IDs):
+      - metrics[] leer                       → aktiv (nie konfiguriert, konservativ)
+      - mindestens eine gemappte ID enabled=True → aktiv
+      - sonst                                → inaktiv
+
+    None-safe: fehlende display_config oder unbekannter AlertMetric → False.
+    """
+    if display_config is None:
+        return False
+    catalog_ids = _ALERT_METRIC_TO_CATALOG_ID.get(alert_metric)
+    if not catalog_ids:
+        return False
+    # Finding F002: komplett leeres metrics[] = Trip hat den Wetter-Tab nie
+    # angefasst → konservativ aktiv (kein stiller Alarmverlust für Alt-Trips).
+    if not display_config.metrics:
+        return True
+    return any(display_config.is_metric_enabled(cid) for cid in catalog_ids)
+
 
 # AlertSeverity (Issue #205) → ChangeSeverity (DTO for mail filter)
 _RULE_SEVERITY_TO_CHANGE_SEVERITY: dict[AlertSeverity, ChangeSeverity] = {
@@ -346,6 +419,11 @@ class WeatherChangeDetectionService:
         for rule in rules:
             if not rule.enabled:
                 continue
+            # Issue #961 (Finding F004): feld-granulare Backfill-Unterdrückung.
+            # Felder, die bereits von einer explizit gesetzten (Weather-Tab-aktiven)
+            # Metrik belegt sind, dürfen durch diese Backfill-Regel NICHT scharf
+            # gestellt werden — der Rest der Metrik-Felder wird aber weiterhin armiert.
+            suppressed = getattr(rule, "suppressed_fields", None) or set()
             # Issue #846: Threshold-Crossing-Semantik für VISIBILITY-Metrik und
             # explizit als THRESHOLD_CROSSING markierte Regeln.
             if (rule.kind == AlertRuleKind.THRESHOLD_CROSSING
@@ -361,6 +439,9 @@ class WeatherChangeDetectionService:
                 # Invariante: ein Trip mit SyncAlertRules (#809 — nur ABSOLUTE) bekommt
                 # Δ-Alerts mit denselben Schwellen wie der MetricCatalog-Default.
                 field_name = _ALERT_METRIC_TO_SUMMARY_FIELD.get(rule.metric)
+                # Issue #961 (F004): unterdrücktes Feld nicht seeden.
+                if field_name and field_name in suppressed:
+                    field_name = None
                 if field_name and field_name in catalog_defaults:
                     # Issue #821: Nur wenn das Feld wirklich NEU geseedet wird (nicht
                     # bereits durch eine frühere Regel belegt), als rein-geseedet merken.
@@ -382,6 +463,12 @@ class WeatherChangeDetectionService:
                         rule.metric, rule.id,
                     )
                     continue
+                # Issue #961 (F004): kollidierende Felder aus der Backfill-Regel
+                # entfernen — nur die verbleibenden Felder werden scharf gestellt.
+                if suppressed:
+                    fields = tuple(f for f in fields if f not in suppressed)
+                    if not fields:
+                        continue
                 for field_name in fields:
                     thresholds[field_name] = rule.threshold
                     severity_overrides[field_name] = rule.severity

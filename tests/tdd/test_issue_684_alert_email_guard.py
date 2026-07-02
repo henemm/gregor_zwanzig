@@ -81,7 +81,7 @@ def _segment_weather(temp_max: float, wind_max: float, precip: float) -> Segment
 def _trip(report_config: TripReportConfig | None) -> Trip:
     from datetime import date as date_type
 
-    from app.models import UnifiedWeatherDisplayConfig
+    from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 
     wp = Waypoint(
         id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0,
@@ -91,10 +91,19 @@ def _trip(report_config: TripReportConfig | None) -> Trip:
     # Issue #946: metric_alert_levels ist die einzige Detektor-Quelle. Die
     # _significant_pair-Deltas (temp 15→45, wind 10→80, precip 0→30) reißen die
     # Standard-Schwellen dieser Metriken → Change wird erkannt.
+    # Issue #961 (Fixture-Korrektur): Die zugehörigen Weather-Tab-Metriken müssen
+    # aktiv sein (enabled=True), sonst greift die Deaktivieren-Lücke und die Alarme
+    # feuern bewusst nicht mehr. temperature_max→temperature, wind_change→wind,
+    # precipitation_sum→precipitation.
     trip = Trip(
         id="trip-684", name="Test Trip 684", stages=[stage],
         display_config=UnifiedWeatherDisplayConfig(
             trip_id="trip-684",
+            metrics=[
+                MetricConfig(metric_id="temperature", enabled=True),
+                MetricConfig(metric_id="wind", enabled=True),
+                MetricConfig(metric_id="precipitation", enabled=True),
+            ],
             metric_alert_levels={
                 "temperature_max": "standard",
                 "wind_change": "standard",

@@ -803,6 +803,13 @@ class AlertRule:
     enabled: bool
     unit: str = ""
     channels: list[str] = field(default_factory=list)
+    # Issue #961 (Finding F004): Summary-/Delta-Felder dieser Metrik, die NICHT
+    # scharf gestellt werden dürfen, weil sie bereits von einer explizit gesetzten
+    # (Weather-Tab-aktiven) Metrik belegt sind. Feld-granulare Backfill-Unterdrückung:
+    # eine Backfill-Regel armiert nur die verbleibenden, nicht-kollidierenden Felder.
+    # Rein transient (nur für Backfill-Regeln aus expand_per_metric_levels gesetzt) —
+    # wird NICHT persistiert (loader.py serialisiert nur die expliziten Felder).
+    suppressed_fields: set[str] = field(default_factory=set)
 
 
 # --- F12: Großwetterlage / Stabilitäts-Label (Issue #122, refactored #479) --
