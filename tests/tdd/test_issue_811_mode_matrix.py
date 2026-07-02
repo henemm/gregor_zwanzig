@@ -361,7 +361,7 @@ def test_visibility_roh_html_no_inline_style():
     def _strip_severity_wrapper(cell: str) -> str:
         return re.sub(
             r'<span style="display:block;background:#[0-9a-fA-F]{6};'
-            r'margin:-6px -4px;padding:6px 4px;">|</span>',
+            r'margin:-6px -6px;padding:6px 6px;">|</span>',
             "", cell,
         )
 
@@ -512,7 +512,7 @@ def test_raw_full_html_no_inline_style_any_metric():
         # #911-Severity-Tönung herausfiltern: nur den display:block-background-Wrapper.
         return re.sub(
             r'<span style="display:block;background:#[0-9a-fA-F]{6};'
-            r'margin:-6px -4px;padding:6px 4px;">|</span>',
+            r'margin:-6px -6px;padding:6px 6px;">|</span>',
             "", cell,
         )
 

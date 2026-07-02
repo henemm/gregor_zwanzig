@@ -15,7 +15,7 @@ renderer directly. SPEC: docs/specs/modules/output_channel_renderers.md §A8.
 from __future__ import annotations
 
 import dataclasses
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
@@ -295,7 +295,7 @@ class TripReportFormatter:
             local_dt = dp.ts.astimezone(self._tz)
             h = local_dt.hour
             is_same_day = local_dt.date() == first_date
-            is_next_day = local_dt.date() > first_date
+            is_next_day = local_dt.date() == first_date + timedelta(days=1)
             in_range = (is_same_day and h >= arrival_hour) or (is_next_day and h <= 6)
             if in_range:
                 night_dps.append(dp)

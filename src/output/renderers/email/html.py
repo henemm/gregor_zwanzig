@@ -142,14 +142,21 @@ _RISK_DOT_COLORS = {
 }
 
 
-def _render_email_stat(label: str, value: str, unit: str, *, last: bool = False) -> str:
+def _render_email_stat(
+    label: str, value: str, unit: str, *, last: bool = False, width_pct: float = 20.0
+) -> str:
     """JSX EmailStat — label+value+unit in stat-grid cell."""
     # Issue #907: leerer String (nicht "none") — sonst entsteht durch die
     # direkte Verkettung mit "padding:" ungültiges CSS ("nonepadding:...").
     # AC-6 (#911): padding-top:14px für Abstand zur Trennlinie
     border = "" if last else "border-right:1px solid #e6e1d3;"
+    # explizite width je Zelle (JSX: gridTemplateColumns "repeat(N, 1fr)" —
+    # gleich breite Spalten) + border-bottom, damit die untere Trennlinie
+    # ueber alle Zellen hinweg durchgehend die volle Breite erreicht, statt
+    # bei content-basierter Auto-Breite Luecken zu lassen.
     return (
-        f'<td style="{border}padding:14px 12px 0 0;vertical-align:top;">'
+        f'<td style="{border}border-bottom:1px solid #e6e1d3;'
+        f'width:{width_pct:.4f}%;padding:14px 12px 0 0;vertical-align:top;">'
         f'<div style="font-family:{FONT_DATA};font-size:9px;letter-spacing:0.1em;'
         f'color:#9a978d;text-transform:uppercase;">{label}</div>'
         f'<div style="font-family:{FONT_DATA};font-size:18px;font-weight:600;'
@@ -553,7 +560,7 @@ def _render_html_table(
             if cell_bg:
                 cell = (
                     f'<span style="display:block;background:{cell_bg};'
-                    f'margin:-6px -4px;padding:6px 4px;">{cell}</span>'
+                    f'margin:-6px -6px;padding:6px 6px;">{cell}</span>'
                 )
             tds += f'<td data-label="{label}">{cell}</td>'
         # Issue #890 / AC-4: RiskDot-Spalte am Zeilenende (keine border-right — letzte Spalte).
@@ -769,13 +776,20 @@ def render_html(
             stat_cells.append(("Max Höhe", str(int(stage_stats["max_elevation_m"])), "m"))
         stat_cells.append(("Segmente", str(len(segments)), ""))
 
+        _stat_width_pct = 100.0 / len(stat_cells)
         stat_tds = ""
         for idx, (lbl, val, unit) in enumerate(stat_cells):
-            stat_tds += _render_email_stat(lbl, val, unit, last=(idx == len(stat_cells) - 1))
+            stat_tds += _render_email_stat(
+                lbl, val, unit,
+                last=(idx == len(stat_cells) - 1),
+                width_pct=_stat_width_pct,
+            )
 
+        # AC-1: keine Linie zwischen Datumszeile und Stats-Grid (PO-bestaetigt) —
+        # nur die Linie UNTER dem Stats-Grid bleibt (siehe _render_email_stat).
         stats_grid_html = (
             f'<table cellpadding="0" cellspacing="0" width="100%"'
-            f' style="border-top:1px solid #e6e1d3;border-collapse:collapse;padding:14px 0;">'
+            f' style="border-collapse:collapse;padding:14px 0;">'
             f'<tr>{stat_tds}</tr></table>'
         )
 
@@ -801,13 +815,10 @@ def render_html(
         _date_str = report_date  # Rückwärtskompatibilität
 
     # Two-column header
-    _stage_label = (
-        f"Etappe {_stage_num}" if _stage_num
-        else (stage_name[:20] if stage_name else "–")
-    )
     left_col = (
-        f'<td style="vertical-align:top;padding-bottom:14px;">'
-        + _eyebrow(f"{_rt_upper}-BRIEFING · {_stage_label}")
+        f'<td style="vertical-align:top;padding-bottom:14px;border-right:none;'
+        f'border-bottom:none;">'
+        + _eyebrow(f"{_rt_upper}-BRIEFING")
         + f'<div style="font-size:22px;font-weight:600;letter-spacing:-0.015em;'
         f'margin-top:4px;color:#1d1c1a;">{_route_title}</div>'
         + f'<div style="font-family:{FONT_DATA};font-size:13px;color:#6b6962;margin-top:4px;">'
@@ -829,7 +840,8 @@ def render_html(
         )
 
     right_col = (
-        f'<td style="vertical-align:top;text-align:right;padding-bottom:14px;">'
+        f'<td style="vertical-align:top;text-align:right;padding-bottom:14px;'
+        f'border-bottom:none;">'
         + _eyebrow("GREGOR ZWANZIG")
         + (f'<div style="font-size:14px;font-weight:600;margin-top:4px;color:#1d1c1a;">'
            f'{trip_name}</div>')
@@ -837,7 +849,7 @@ def render_html(
         + f'</td>'
     )
     header_html = (
-        f'<div style="background:{G_HEADER_BG};border-bottom:1px solid #e6e1d3;'
+        f'<div style="background:{G_HEADER_BG};'
         f'padding:22px 28px 0;">'
         f'<table width="100%" cellpadding="0" cellspacing="0"><tr>'
         + left_col + right_col
@@ -857,8 +869,15 @@ def render_html(
     seg_tables = _seg_tables_norm
 
     seg_html_parts = []
+    _cum_km = 0.0
     for seg_data, rows in zip(segments, seg_tables):
         seg = seg_data.segment
+        # Issue #956 Teil B: kumulierte Kilometer-Laufsumme über alle
+        # Streckensegmente (Ziel ist kein Streckenabschnitt).
+        _from_km = _cum_km
+        if seg.segment_id != "Ziel":
+            _cum_km += getattr(seg, "distance_km", None) or 0.0
+        _to_km = _cum_km
         if seg_data.has_error:
             seg_html_parts.append(f"""
             <div style="background:{G_BOX_DANGER_BG};border-left:4px solid {G_DANGER};padding:12px;margin:8px 0;">
@@ -920,16 +939,14 @@ def render_html(
                 + "</div>"
             )
         else:
-            elev_arrow = "↑" if e_elev >= s_elev else "↓"
             seg_id = str(seg.segment_id)
             seg_time = (
                 local_fmt(seg.start_time, tz)
                 + "–" + local_fmt(seg.end_time, tz)
             )
 
-            # JSX EmailSegmentBlock: SEG {N} + title + time/km/elev
-            seg_km = getattr(seg, "distance_km", None)
-            km_str = f" · {seg_km:.1f} km" if seg_km else ""
+            # JSX EmailSegmentBlock (Issue #956 Teil B): SEG {N} + kumulierte
+            # km-Spanne + Höhen-Spanne, ohne Etappen-Titel-Text.
             seg_header_desktop = (
                 f'<div style="display:flex;justify-content:space-between;'
                 f'align-items:baseline;padding-bottom:8px;'
@@ -937,11 +954,10 @@ def render_html(
                 f'<div style="display:flex;align-items:baseline;gap:10px;">'
                 f'<span style="font-family:{FONT_DATA};font-size:10px;font-weight:600;'
                 f'color:#c45a2a;letter-spacing:0.1em;">SEG {seg_id}</span>'
-                f'<span style="font-size:14px;font-weight:600;">'
-                f'{sub_header or seg_header_text(seg)}</span>'
                 f'</div>'
                 f'<div style="font-family:{FONT_DATA};font-size:11px;color:#6b6962;">'
-                f'{seg_time}{km_str} · {elev_arrow}{s_elev}</div>'
+                f'{seg_time} · {_from_km:.1f} km - {_to_km:.1f} km · '
+                f'{s_elev} - {e_elev} m</div>'
                 f'</div>'
             )
             desktop_div = (
@@ -1468,10 +1484,3 @@ def render_html(
 </body>
 </html>"""
     return html
-
-
-def seg_header_text(seg) -> str:
-    """Fallback segment title from start/end elevation."""
-    s_elev = int(seg.start_point.elevation_m or 0)
-    e_elev = int(seg.end_point.elevation_m or 0)
-    return f"{s_elev}m → {e_elev}m"
