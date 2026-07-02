@@ -20,11 +20,21 @@
 		title?: string;
 		eyebrow?: string;
 		snap?: SheetSnap;
+		variant?: 'modal' | 'embedded';
 		footer?: Snippet;
 		children?: Snippet;
 	}
 
-	let { open = false, onClose, title, eyebrow, snap = 'full', footer, children }: Props = $props();
+	let {
+		open = false,
+		onClose,
+		title,
+		eyebrow,
+		snap = 'full',
+		variant = 'modal',
+		footer,
+		children
+	}: Props = $props();
 
 	const heights = { full: '84%', half: '55%', peek: '32%' } as const;
 	const height = $derived(heights[snap] ?? heights.full);
@@ -41,21 +51,23 @@
 	});
 </script>
 
-{#if open}
-	<div
-		role="presentation"
-		onclick={onClose}
-		style:position="fixed"
-		style:inset="0"
-		style:background="rgba(26,26,24,0.42)"
-		style:z-index="60"
-	></div>
+{#if open || variant === 'embedded'}
+	{#if variant !== 'embedded'}
+		<div
+			role="presentation"
+			onclick={onClose}
+			style:position="fixed"
+			style:inset="0"
+			style:background="rgba(26,26,24,0.42)"
+			style:z-index="60"
+		></div>
+	{/if}
 	<div
 		data-snap={snap}
 		style:position="fixed"
 		style:left="0"
 		style:right="0"
-		style:bottom="0"
+		style:bottom={variant === 'embedded' ? '64px' : '0'}
 		style:height={height}
 		style:background="var(--g-card)"
 		style:z-index="61"

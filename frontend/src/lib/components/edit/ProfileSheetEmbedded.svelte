@@ -68,7 +68,7 @@
 </script>
 
 <div class="profile-sheet-host" data-testid="profile-sheet-host">
-	<Sheet open={true} snap={snapPosition} title="Wegpunkte" eyebrow="Etappe · {stage.name}">
+	<Sheet variant="embedded" snap={snapPosition} title="Wegpunkte" eyebrow="Etappe · {stage.name}">
 		<div class="profile-sheet-body">
 			<button
 				type="button"

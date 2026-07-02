@@ -102,7 +102,14 @@ Kein `window.*`/`document.*` ohne `browser`-Guard (Overlay-Komponenten). Unbekan
 - Visuelle Abnahme der Primitive erfolgt mit Showcase #374 (Bibliothek bis dahin inert, keine Route nutzt sie).
 - Tiefere Vereinheitlichung (Mobile-Routes auf `mobile/` umstellen) → opportunistisch bei Screen-Migration (#368 Phase 2).
 - Wrapper-Typ-Transparenz (analog #371-F003): typisierte Props als Folge-Verbesserung.
+- **Update 2026-07-01 (Issue #951):** `Sheet.svelte` hat einen additiven Prop
+  `variant?: 'modal' | 'embedded'` (Default `'modal'`, unverändertes Verhalten
+  für alle bestehenden Aufrufer) erhalten. `variant="embedded"` unterdrückt den
+  Backdrop und hebt den Panel-Boden um die BottomNav-Höhe (64px) an — für
+  dauerhaft eingebettete Sheets statt kurzzeitiger Modals. Details:
+  `docs/specs/modules/issue_951_profile_sheet_pointer.md`.
 
 ## Changelog
 
 - 2026-05-26: Initial spec created (Issue #373, Mobile-Touch-Primitives, Bridge-Ansatz)
+- 2026-07-01: Known Limitations ergänzt um Hinweis auf `Sheet.svelte`-`variant`-Prop (Issue #951)
