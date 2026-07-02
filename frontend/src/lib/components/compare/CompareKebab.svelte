@@ -33,7 +33,7 @@
 			<button
 				{...props}
 				type="button"
-				class={className}
+				class="kebab-trigger {className}"
 				onclick={(e: MouseEvent) => {
 					e.stopPropagation();
 				}}
@@ -74,3 +74,18 @@
 		</DropdownMenu.Content>
 	</DropdownMenu.Portal>
 </DropdownMenu.Root>
+
+<style>
+	/* Touch-Geräte: 28px-Optik behalten, Trefferfläche auf 44px vergrößern
+	   (Design-Vorgabe Mobile: Touch-Ziele >= 44px). */
+	@media (pointer: coarse) {
+		.kebab-trigger {
+			position: relative;
+		}
+		.kebab-trigger::after {
+			content: "";
+			position: absolute;
+			inset: -8px;
+		}
+	}
+</style>

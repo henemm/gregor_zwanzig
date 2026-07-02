@@ -110,9 +110,9 @@
 		<p style="font-size:13px;color:var(--g-bad, #a83232);margin-bottom:16px">{error}</p>
 	{/if}
 
-	<!-- Suche + Typ-Filter -->
-	<div style="display:flex;gap:16px;align-items:center;margin-bottom:20px">
-		<div style="position:relative;flex:0 0 380px">
+	<!-- Suche + Typ-Filter (umbruchfähig — auf Mobile sonst unerreichbar, s. Mobile-Audit 2026-07-02) -->
+	<div style="display:flex;gap:12px 16px;align-items:center;margin-bottom:20px;flex-wrap:wrap">
+		<div style="position:relative;flex:1 1 240px;max-width:380px">
 			<svg
 				width="14"
 				height="14"
@@ -127,10 +127,10 @@
 			<input
 				bind:value={query}
 				placeholder="Suchen…"
-				style="width:100%;padding:9px 14px 9px 34px;border:1px solid var(--g-rule);border-radius:var(--g-r-pill);background:var(--g-card);font-size:13px;font-family:var(--g-font-sans);color:var(--g-ink);outline:none"
+				style="width:100%;padding:9px 14px 9px 34px;border:1px solid var(--g-rule);border-radius:var(--g-r-pill);background:var(--g-card);font-family:var(--g-font-sans);color:var(--g-ink);outline:none"
 			/>
 		</div>
-		<div style="display:flex;align-items:center;gap:8px">
+		<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
 			{#each chips as c (c.id)}
 				{@const active = filter === c.id}
 				<button
@@ -155,20 +155,24 @@
 		</div>
 	</div>
 
-	<!-- Tabelle -->
+	<!-- Tabelle — auf Mobile horizontal wischbar (Design-Pattern B: H-Scroll statt gequetschter Spalten) -->
 	<Card padding={0} style="overflow:hidden">
-		<div
-			style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:0;padding:12px 20px;background:var(--g-paper-deep);font-size:11px;font-family:var(--g-font-mono);letter-spacing:0.18em;text-transform:uppercase;color:var(--g-ink-3);font-weight:500;border-bottom:1px solid var(--g-rule)"
-		>
-			<div>Name</div>
-			<div>Umfang</div>
-			<div>Archiviert</div>
-			<div style="text-align:right">Aktionen</div>
-		</div>
+		<div style="overflow-x:auto">
+			<div style="min-width:640px">
+				<div
+					style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:0;padding:12px 20px;background:var(--g-paper-deep);font-size:11px;font-family:var(--g-font-mono);letter-spacing:0.18em;text-transform:uppercase;color:var(--g-ink-3);font-weight:500;border-bottom:1px solid var(--g-rule)"
+				>
+					<div>Name</div>
+					<div>Umfang</div>
+					<div>Archiviert</div>
+					<div style="text-align:right">Aktionen</div>
+				</div>
 
-		{#each filtered as item, i (item.id)}
-			{@render archiveRow(item, i % 2 === 1)}
-		{/each}
+				{#each filtered as item, i (item.id)}
+					{@render archiveRow(item, i % 2 === 1)}
+				{/each}
+			</div>
+		</div>
 
 		{#if filtered.length === 0}
 			<div style="padding:40px;text-align:center;color:var(--g-ink-3);font-size:13px">

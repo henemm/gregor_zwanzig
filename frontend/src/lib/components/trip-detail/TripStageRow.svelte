@@ -38,13 +38,8 @@
 	role="button"
 	tabindex="0"
 	data-testid="trip-stage-row-{index}"
+	class="stage-row"
 	style="
-		display: grid;
-		grid-template-columns: 60px 1fr 280px 100px;
-		gap: 16px;
-		padding: 14px 18px;
-		border-bottom: 1px solid var(--g-rule-soft);
-		cursor: pointer;
 		border-left: 3px solid {active ? 'var(--g-accent)' : 'transparent'};
 		background: {active ? 'rgba(196,90,42,0.05)' : 'transparent'};
 	"
@@ -80,6 +75,7 @@
 
 	<!-- Col 3: Summary -->
 	<div
+		class="stage-row-summary"
 		style="
 			font-size: 12px;
 			font-style: italic;
@@ -99,3 +95,25 @@
 		<Pill tone={pillTone} label={pillLabel} />
 	</div>
 </div>
+
+<style>
+	.stage-row {
+		display: grid;
+		grid-template-columns: 60px minmax(0, 1fr) 280px 100px;
+		gap: 16px;
+		padding: 14px 18px;
+		border-bottom: 1px solid var(--g-rule-soft);
+		cursor: pointer;
+	}
+	/* Mobile: Summary-Spalte entfällt, Pill rückt ans Zeilenende. */
+	@media (max-width: 899px) {
+		.stage-row {
+			grid-template-columns: 40px minmax(0, 1fr) auto;
+			gap: 10px;
+			padding: 12px 14px;
+		}
+		.stage-row .stage-row-summary {
+			display: none !important;
+		}
+	}
+</style>

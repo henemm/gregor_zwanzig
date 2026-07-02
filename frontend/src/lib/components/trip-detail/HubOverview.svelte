@@ -27,17 +27,7 @@
 	}
 </script>
 
-<div
-	data-testid="hub-overview"
-	style="
-		position: relative;
-		padding: 32px 40px 60px;
-		display: grid;
-		grid-template-columns: 1fr 380px;
-		gap: 32px;
-		max-width: 1480px;
-	"
->
+<div data-testid="hub-overview" class="hub-overview">
 	<!-- Left column -->
 	<div>
 		<SectionH eyebrow="Etappen" title="Reihenfolge & Profil">
@@ -85,3 +75,26 @@
 		</Card>
 	</div>
 </div>
+
+<style>
+	.hub-overview {
+		position: relative;
+		padding: 32px 40px 60px;
+		display: grid;
+		grid-template-columns: 1fr 380px;
+		gap: 32px;
+		max-width: 1480px;
+	}
+	.hub-overview > :global(*) {
+		min-width: 0;
+	}
+	/* Mobile/Tablet: eine Spalte, kompakteres Padding — feste 380px-Spalte
+	   sprengt sonst den Viewport (Höhenprofil + Etappenliste unlesbar). */
+	@media (max-width: 899px) {
+		.hub-overview {
+			grid-template-columns: 1fr;
+			padding: 20px 16px 48px;
+			gap: 24px;
+		}
+	}
+</style>

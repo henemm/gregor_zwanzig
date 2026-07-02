@@ -391,7 +391,7 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 				{ label: 'Fertig',  value: 'fertig'  as const, count: filteredTrips.filter(t => tripStatus(t, now) === 'fertig').length },
 			] as f (f.value)}
 				<button
-					class="shrink-0 cursor-pointer"
+					class="shrink-0 cursor-pointer inline-flex items-center min-h-[44px]"
 					aria-pressed={mobileFilter === f.value}
 					onclick={() => { mobileFilter = f.value; }}
 				>

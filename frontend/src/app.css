@@ -250,6 +250,17 @@
   [data-slot="btn"][data-size="icon-sm"] { padding: 0; width: 28px; height: 28px; min-height: 28px; }
   [data-slot="btn"][data-size="icon-lg"] { padding: 0; width: 36px; height: 36px; min-height: 36px; }
 
+  /* Touch-Geräte: Icon-Buttons behalten ihre Optik, bekommen aber eine
+     unsichtbar vergrößerte Trefferfläche (Design-Vorgabe: Touch-Ziele >= 44px). */
+  @media (pointer: coarse) {
+    [data-slot="btn"][data-size^="icon"] { position: relative; }
+    [data-slot="btn"][data-size^="icon"]::after {
+      content: "";
+      position: absolute;
+      inset: -8px;
+    }
+  }
+
   /* Variants */
   [data-slot="btn"][data-variant="primary"] {
     background-color: var(--g-ink);

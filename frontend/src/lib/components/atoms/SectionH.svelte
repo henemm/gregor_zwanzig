@@ -32,7 +32,8 @@
 	style:display="flex"
 	style:align-items="flex-end"
 	style:justify-content="space-between"
-	style:gap="24px"
+	style:flex-wrap="wrap"
+	style:gap="12px 24px"
 	style:margin-bottom="16px"
 >
 	<div>

@@ -891,6 +891,11 @@
 		gap: 24px;
 		align-items: start;
 	}
+	/* Grid-Items dürfen unter ihre Min-Content-Breite schrumpfen — sonst
+	   sprengen nowrap-Zeilen (Datum, Compare-Rows) den Viewport auf Mobile. */
+	.cockpit-hero > :global(*) {
+		min-width: 0;
+	}
 	.setup-grid {
 		display: grid;
 		grid-template-columns: 1fr 1fr;

@@ -43,7 +43,7 @@
 	<button
 		data-testid="top-app-bar-hamburger"
 		onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
-		class="rounded-md p-1.5 hover:bg-accent"
+		class="rounded-md p-3 hover:bg-accent"
 		aria-label="Menu"
 	>
 		{#if mobileMenuOpen}
@@ -69,7 +69,7 @@
 		disabled
 		data-testid="top-app-bar-bell"
 		aria-label="Benachrichtigungen"
-		class="rounded-md p-1.5 opacity-40"
+		class="rounded-md p-3 opacity-40"
 	>
 		<MIcon kind="bell" size={20} />
 	</button>
@@ -77,7 +77,7 @@
 		href="/trips/new"
 		data-testid="top-app-bar-new-trip"
 		aria-label="Neuer Trip"
-		class="rounded-md p-1.5 hover:bg-accent"
+		class="rounded-md p-3 hover:bg-accent"
 	>
 		<MIcon kind="plus" size={20} />
 	</a>

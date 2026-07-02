@@ -322,7 +322,7 @@
 						<button
 							onclick={() => sendTest('email')}
 							disabled={testStatus.email === 'loading'}
-							class="shrink-0 text-sm text-blue-600 hover:underline disabled:opacity-50"
+							class="shrink-0 inline-flex items-center min-h-[44px] text-sm text-blue-600 hover:underline disabled:opacity-50"
 						>
 							{testStatus.email === 'loading' ? '...' : 'Test senden'}
 						</button>
@@ -357,13 +357,13 @@
 						<button
 							onclick={() => sendTest('telegram')}
 							disabled={testStatus.telegram === 'loading'}
-							class="shrink-0 text-sm text-blue-600 hover:underline disabled:opacity-50"
+							class="shrink-0 inline-flex items-center min-h-[44px] text-sm text-blue-600 hover:underline disabled:opacity-50"
 						>
 							{testStatus.telegram === 'loading' ? '...' : 'Test senden'}
 						</button>
 						<button
 							onclick={disconnectTelegram}
-							class="shrink-0 text-sm text-destructive hover:underline"
+							class="shrink-0 inline-flex items-center min-h-[44px] text-sm text-destructive hover:underline"
 						>
 							Trennen
 						</button>
@@ -374,7 +374,7 @@
 						<button
 							onclick={connectTelegram}
 							disabled={telegramConnecting}
-							class="shrink-0 text-sm text-blue-600 hover:underline disabled:opacity-50"
+							class="shrink-0 inline-flex items-center min-h-[44px] text-sm text-blue-600 hover:underline disabled:opacity-50"
 						>
 							{telegramConnecting ? 'Warte auf Verbindung…' : 'Mit Telegram verbinden'}
 						</button>

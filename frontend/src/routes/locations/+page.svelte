@@ -163,7 +163,7 @@
 							<div class="inline-flex gap-0.5">
 								<Btn variant="ghost" size="icon-sm" title="Wetter" onclick={() => (weatherTarget = loc)}><CloudSunIcon class="size-3.5" /></Btn>
 								<Btn variant="ghost" size="icon-sm" title="Bearbeiten" onclick={() => openEdit(loc)}><PencilIcon class="size-3.5" /></Btn>
-								<Btn variant="ghost" size="icon-sm" class="hidden sm:inline-flex" title="Löschen" onclick={() => (deleteTarget = loc)}><Trash2Icon class="size-3.5" /></Btn>
+								<Btn variant="ghost" size="icon-sm" title="Löschen" onclick={() => (deleteTarget = loc)}><Trash2Icon class="size-3.5" /></Btn>
 							</div>
 						</Table.Cell>
 					</Table.Row>
