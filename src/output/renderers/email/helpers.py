@@ -368,10 +368,40 @@ def build_units_legend(rows: list[dict]) -> str:
 AMPEL_LEGEND = "🟢 unkritisch · 🟡 Achtung · 🟠 Warnung · 🔴 Gefahr"
 
 
+_AMPEL_LEVEL_TO_EMOJI = {
+    "green": "🟢",
+    "yellow": "🟡",
+    "orange": "🟠",
+    "red": "🔴",
+}
+
+
+def _level_from_thresholds(value, thresholds: dict) -> "Optional[str]":
+    """Issue #888: shared band-level resolver for the 4-level Ampel.
+
+    Returns None for a None value; otherwise one of
+    'green'|'yellow'|'orange'|'red' based on thresholds.
+    """
+    if value is None:
+        return None
+    red = thresholds.get("red")
+    orange = thresholds.get("orange")
+    yellow = thresholds.get("yellow")
+    if red is not None and value >= red:
+        return "red"
+    if orange is not None and value >= orange:
+        return "orange"
+    if yellow is not None and value >= yellow:
+        return "yellow"
+    return "green"
+
+
 def ampel_dot(value, thresholds: dict) -> str:
     """Return 4-level traffic-light emoji for a metric value.
 
     Issue #759: SSoT fuer die Ampel-Logik (wind/gust/precip/pop).
+    Issue #888: teilt die Level-Ermittlung mit ampel_level (dieselbe Quelle
+    faerbt Emoji UND Zell-Toenung — kein Widerspruch mehr moeglich).
 
     Args:
         value:      Numeric value or None.
@@ -380,18 +410,25 @@ def ampel_dot(value, thresholds: dict) -> str:
     Returns:
         '–' for None; one of 🟢🟡🟠🔴 based on thresholds.
     """
-    if value is None:
+    level = _level_from_thresholds(value, thresholds)
+    if level is None:
         return "–"
-    red = thresholds.get("red")
-    orange = thresholds.get("orange")
-    yellow = thresholds.get("yellow")
-    if red is not None and value >= red:
-        return "🔴"
-    if orange is not None and value >= orange:
-        return "🟠"
-    if yellow is not None and value >= yellow:
-        return "🟡"
-    return "🟢"
+    return _AMPEL_LEVEL_TO_EMOJI[level]
+
+
+def ampel_level(metric_id: str, value) -> "Optional[str]":
+    """Issue #888: Ampel-Band-Level ('green'|'yellow'|'orange'|'red') fuer eine
+    Katalog-Metrik, aus denselben display_thresholds wie ampel_dot.
+
+    Wiederverwendbar fuer die Zell-Toenung in _render_html_table, damit Emoji
+    und Hintergrund garantiert aus derselben Schwellenquelle stammen.
+    Returns None wenn die Metrik unbekannt ist oder value None ist.
+    """
+    try:
+        thresholds = get_metric(metric_id).display_thresholds
+    except Exception:
+        return None
+    return _level_from_thresholds(value, thresholds)
 
 
 # Mapping: fmt_val col_key → metric catalog id fuer Ampel-Lookup

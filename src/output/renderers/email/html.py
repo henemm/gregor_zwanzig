@@ -26,6 +26,7 @@ from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
     AMPEL_LEGEND,
+    ampel_level,
     build_confidence_hint, build_metrics_summary_pills,
     build_segment_label, build_units_legend,
     derive_horizon, fmt_val, format_change_line, format_trend_tokens, pill_html,
@@ -500,6 +501,16 @@ def _render_html_table(
     _THUNDER_THRESHOLD = 0.0
     _VIS_THRESHOLD = 2.0  # km — below is critical
 
+    # Issue #888: col_key → Katalog-metric_id für die Ampel-Level-Tönung
+    # (analog build_html_indicator_keys / _AMPEL_KEY_TO_METRIC_ID, inkl. cape).
+    _COL_KEY_TO_METRIC_ID = {
+        "wind": "wind",
+        "gust": "gust",
+        "precip": "precipitation",
+        "pop": "rain_probability",
+        "cape": "cape",
+    }
+
     _dcstyle_base = (
         "font-size:13px;padding:8px 4px;font-family:{FONT_DATA};"
         "font-variant-numeric:tabular-nums;border-right:1px solid #f0ece1;text-align:center;"
@@ -512,9 +523,9 @@ def _render_html_table(
     trs = []
     for r in rows:
         # AC-1 (#900): Time-Zelle trägt inline border für Outlook-Kompatibilität.
-        # data-label-Zellen behalten style-losen Aufbau, damit der Test-Regex
-        # <td data-label="...">(.*?)</td> weiterhin greift.
-        # border-right/border-bottom für data-label-Zellen via CSS-Block (<style>).
+        # Issue #902: data-label-Datenzellen tragen jetzt ebenfalls die
+        # Inline-Border (Outlook strippt den <style>-Block); die Test-Regexes
+        # (test_759/test_811) wurden auf <td[^>]*data-label=...> verallgemeinert.
         tds = (
             f'<td style="{_td_grid}padding:6px;text-align:center;" data-label="Time">'
             f'{r["time"]}</td>'
@@ -532,15 +543,30 @@ def _render_html_table(
             # fix-911-table-jsx AC-2 (PO-Entscheidung): KEINE farbigen Text-Spans mehr
             # (highlight_color war nie gewollt). Nur die Zell-Tönung (cell_bg) gilt,
             # und zwar IMMER — unabhängig von Roh/Einfach-Modus.
+            # Issue #888: Für Ampel-Zellen (key in indicator_keys) folgt die Tönung
+            # dem Ampel-Level aus DENSELBEN Katalog-display_thresholds wie das Emoji
+            # (via ampel_level) — Emoji und Hintergrund können sich nie mehr
+            # widersprechen. Nicht-Ampel-Zellen (Roh-Modus, thunder/vis) behalten
+            # die bestehende hartcodierte Logik unverändert.
             cell_bg = None  # AC-10 (#911): Zell-Hintergrundfarbe je Schweregrad
             try:
                 numeric = float(raw_val) if raw_val is not None else None
             except (TypeError, ValueError):
                 numeric = None
 
+            _is_ampel_cell = key in (indicator_keys or set())
+            if _is_ampel_cell:
+                # Issue #888: Tönung aus dem Ampel-Level (Katalog-Schwellenquelle).
+                metric_id = _COL_KEY_TO_METRIC_ID.get(key)
+                level = ampel_level(metric_id, numeric) if metric_id else None
+                cell_bg = {
+                    "yellow": "#fbeeb8",
+                    "orange": "#fad6b8",
+                    "red": "#f6c5bf",
+                }.get(level)
             # col_keys from metric catalog (not metric_ids)
             # AC-10: caution=#fbeeb8, warn=#fad6b8, danger=#f6c5bf
-            if key == "wind" and numeric is not None and numeric > _WIND_THRESHOLD:
+            elif key == "wind" and numeric is not None and numeric > _WIND_THRESHOLD:
                 cell_bg = "#fad6b8" if numeric > 30 else "#fbeeb8"
             elif key == "gust" and numeric is not None and numeric > _GUST_THRESHOLD:
                 cell_bg = "#f6c5bf" if numeric > 60 else ("#fad6b8" if numeric > 45 else "#fbeeb8")
@@ -556,13 +582,14 @@ def _render_html_table(
                     cell_bg = "#f6c5bf" if vis_km < 0.5 else ("#fad6b8" if vis_km < 1 else "#fbeeb8")
 
             # AC-10 (#911): Zell-Hintergrund als äußerer Wrapper im Zell-Content
-            # (nicht auf <td> style, da _data_cells-Regex data-label="..." direkt vor > erwartet).
+            # (negative margins kompensieren das Zell-Padding aus dem <style>-Block).
             if cell_bg:
                 cell = (
                     f'<span style="display:block;background:{cell_bg};'
                     f'margin:-6px -6px;padding:6px 6px;">{cell}</span>'
                 )
-            tds += f'<td data-label="{label}">{cell}</td>'
+            # Issue #902: Inline-Border (Outlook-fest), identisch zur Time-Zelle.
+            tds += f'<td style="{_td_grid}" data-label="{label}">{cell}</td>'
         # Issue #890 / AC-4: RiskDot-Spalte am Zeilenende (keine border-right — letzte Spalte).
         _dot_color = _RISK_DOT_COLORS[_row_risk(r)][0]
         tds += (

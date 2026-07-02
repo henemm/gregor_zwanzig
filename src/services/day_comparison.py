@@ -228,13 +228,30 @@ def _summarize_legacy(comparison: "DayComparison") -> str:
 
 _SALIENCE_FACTOR = 0.6
 
+# Issue #896: Anzeige-Salienz für die Vortags-Zeile, entkoppelt vom Alert-Katalog
+# (metric_catalog.default_change_threshold). Seit #889/ADR-0010 ist der Katalog-Wert für
+# Vorboten-Metriken None (kein Alert-Trigger) — das ist korrekt für Alerts, aber ungeeignet
+# als Anzeige-Schwelle: der _get_threshold-Fallback (3.0) macht die Vortags-Zeile für
+# %-Metriken (humidity, cloud_total) zu geschwätzig. Werte = effektiver Stand vor #889.
+_DISPLAY_SALIENCE_OVERRIDES: dict[str, float] = {
+    "humidity": 12.0,
+    "rain_probability": 12.0,
+    "cloud_total": 18.0,
+    "pressure": 6.0,
+    "wind_chill": 3.0,
+    "dewpoint": 3.0,
+}
+
 
 def _get_threshold(metric_id: str) -> float:
     """Spürbarkeitsschwelle aus MetricCatalog × _SALIENCE_FACTOR; Fallback 3.0.
 
     Wirkt ausschließlich im Anzeige-Pfad der Vortags-Zeile.
     metric_catalog.default_change_threshold bleibt unverändert (AC-6).
+    Issue #896: Vorboten-Metriken nutzen eine entkoppelte Anzeige-Salienz.
     """
+    if metric_id in _DISPLAY_SALIENCE_OVERRIDES:
+        return _DISPLAY_SALIENCE_OVERRIDES[metric_id]
     try:
         from app.metric_catalog import get_metric
         m = get_metric(metric_id)

@@ -291,7 +291,7 @@ def _data_cells_759(html: str) -> list[str]:
     m = re.search(r'<table[^>]*data-table="resp"[^>]*>.*?</table>', html, re.S)
     if not m:
         return []
-    return re.findall(r'<td data-label="[^"]*">(.*?)</td>', m.group(0), re.S)
+    return re.findall(r'<td[^>]*data-label="[^"]*"[^>]*>(.*?)</td>', m.group(0), re.S)
 
 
 _AMPEL_EMOJIS_759 = ("🟢", "🟡", "🟠", "🔴")

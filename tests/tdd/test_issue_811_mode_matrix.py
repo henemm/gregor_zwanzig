@@ -141,7 +141,7 @@ def _data_cells(html: str) -> list[str]:
     m = re.search(r'<table[^>]*data-table="resp"[^>]*>.*?</table>', html, re.S)
     if not m:
         return []
-    return re.findall(r'<td data-label="[^"]*">(.*?)</td>', m.group(0), re.S)
+    return re.findall(r'<td[^>]*data-label="[^"]*"[^>]*>(.*?)</td>', m.group(0), re.S)
 
 
 def _has_ampel(text: str) -> bool:
@@ -571,7 +571,7 @@ def _data_cells_mobile(html: str) -> list[str]:
     # Einfach-Modus: eingebettete resp-Tabelle.
     t = re.search(r'<table[^>]*data-table="resp"[^>]*>.*?</table>', block, re.S)
     if t:
-        return re.findall(r'<td data-label="[^"]*">(.*?)</td>', t.group(0), re.S)
+        return re.findall(r'<td[^>]*data-label="[^"]*"[^>]*>(.*?)</td>', t.group(0), re.S)
     # Roh-Modus: Monospace-<pre>. Header-Zeile (beginnt mit 'Zeit') verwerfen.
     pre = re.search(r'<pre[^>]*>(.*?)</pre>', block, re.S)
     if not pre:
