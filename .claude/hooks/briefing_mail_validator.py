@@ -125,8 +125,11 @@ def _part_text(part: Message) -> str:
 _TH_RE = re.compile(r"<th[^>]*>(.*?)</th>", re.IGNORECASE | re.DOTALL)
 _ROW_RE = re.compile(r"<tr[^>]*>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
 _TD_RE = re.compile(r"<td[^>]*>(.*?)</td>", re.IGNORECASE | re.DOTALL)
-# Issue #863 — nur tbody-Inhalt scannen (Trend-Tabelle hat kein tbody)
-_TBODY_RE = re.compile(r"<tbody[^>]*>(.*?)</tbody>", re.IGNORECASE | re.DOTALL)
+# Issue #997 — ganze <table>-Blöcke isolieren, um Header/Zeilen pro Tabelle zu
+# scopen. Der Mail-Renderer schachtelt Daten-Tabellen nicht (Stundentabelle(n),
+# Trend-Tabelle liegen flach nebeneinander), daher liefert die non-greedy Regex
+# pro Tabelle genau einen Block.
+_TABLE_RE = re.compile(r"<table[^>]*>.*?</table>", re.IGNORECASE | re.DOTALL)
 _SPAN_RE = re.compile(r"<span[^>]*>(.*?)</span>", re.IGNORECASE | re.DOTALL)
 _MOBILE_PRE_RE = re.compile(
     r'class="[^"]*mobile-compact[^"]*".*?<pre[^>]*>(.*?)</pre>',
@@ -144,6 +147,18 @@ def _th_tokens(html: str) -> list[str]:
     return [_strip_tags(m) for m in _TH_RE.findall(html)]
 
 
+def _table_blocks(html: str) -> list[str]:
+    """Einzelne <table>…</table>-Blöcke (flach, wie der Renderer sie erzeugt).
+
+    Issue #997: Spalten-Checks MÜSSEN pro Tabelle gescoped werden. Sammelte man
+    th/td global über das ganze Dokument, mischte sich die Spaltenzahl mehrerer
+    Tabellen (Stundentabelle(n) je Etappe vs. 9-spaltige Trend-Tabelle) — der
+    Guard `len(cells) == len(headers)` matchte dann gegen die GLOBALE Summe und
+    keine reale Zeile passte mehr (stummer False-Negative).
+    """
+    return _TABLE_RE.findall(html)
+
+
 def _mobile_header_tokens(html: str) -> list[str]:
     """Erste nicht-leere Zeile im .mobile-compact-<pre>, per Whitespace gesplittet."""
     m = _MOBILE_PRE_RE.search(html)
@@ -159,52 +174,66 @@ def _column_values(html: str, header_de: str) -> list[float]:
     """Numerische Zellwerte der Spalte mit th-Text == header_de (über th-INDEX).
 
     Mappt NICHT über data-label (kann englisch sein), nur über die Header-Reihe.
-    Scannt ausschließlich <tbody>-Inhalte — Trend-/Stats-Tabellen ohne tbody
-    werden damit ignoriert (Issue #863).
+    Issue #997: pro <table>-Block gescoped. Nur Blöcke, deren EIGENE th-Reihe
+    header_de enthält, tragen bei; innerhalb eines Blocks zählen nur Zeilen,
+    deren <td>-Anzahl exakt zur th-Anzahl DIESES Blocks passt (Fremd-/Trend-
+    Zeilen mit abweichender Spaltenzahl werden übersprungen). Werte werden über
+    ALLE passenden Blöcke aggregiert — Mehr-Etappen-Mails (mehrere Stunden-
+    tabellen mit gleichem Header) behalten so ihr Summenverhalten über Etappen.
     """
-    headers = _th_tokens(html)
-    try:
-        idx = headers.index(header_de)
-    except ValueError:
-        return []
-    tbody_content = " ".join(m.group(1) for m in _TBODY_RE.finditer(html))
     values: list[float] = []
-    for row_html in _ROW_RE.findall(tbody_content):
-        cells = _TD_RE.findall(row_html)
-        if idx >= len(cells):
+    for block in _table_blocks(html):
+        headers = _th_tokens(block)
+        try:
+            idx = headers.index(header_de)
+        except ValueError:
             continue
-        num = re.search(r"-?\d+(?:\.\d+)?", _strip_tags(cells[idx]))
-        if num:
-            values.append(float(num.group(0)))
+        for row_html in _ROW_RE.findall(block):
+            cells = _TD_RE.findall(row_html)
+            if len(cells) != len(headers):
+                continue
+            num = re.search(r"-?\d+(?:\.\d+)?", _strip_tags(cells[idx]))
+            if num:
+                values.append(float(num.group(0)))
     return values
 
 
 def _column_hours_sum(html: str, *header_names: str) -> float | None:
-    """Summe der ‚X.Y h'-Zellen der Spalte (Sonne). None, wenn keine ‚h'-Zahl."""
-    headers = _th_tokens(html)
-    idx = next((headers.index(h) for h in header_names if h in headers), None)
-    if idx is None:
-        return None
+    """Summe der ‚X.Y h'-Zellen der Spalte (Sonne). None, wenn keine ‚h'-Zahl.
+
+    Issue #997: pro <table>-Block gescoped (analog _column_values), damit die
+    Spaltenzahl der Trend-Tabelle die Stunden-Spalte nicht verfälscht.
+    """
     total = 0.0
     found = False
-    for row_html in _ROW_RE.findall(html):
-        cells = _TD_RE.findall(row_html)
-        if idx >= len(cells):
+    for block in _table_blocks(html):
+        headers = _th_tokens(block)
+        idx = next((headers.index(h) for h in header_names if h in headers), None)
+        if idx is None:
             continue
-        m = re.search(r"(\d+(?:\.\d+)?)\s*h\b", _strip_tags(cells[idx]))
-        if m:
-            total += float(m.group(1))
-            found = True
+        for row_html in _ROW_RE.findall(block):
+            cells = _TD_RE.findall(row_html)
+            if len(cells) != len(headers):
+                continue
+            m = re.search(r"(\d+(?:\.\d+)?)\s*h\b", _strip_tags(cells[idx]))
+            if m:
+                total += float(m.group(1))
+                found = True
     return total if found else None
 
 
 def _column_num_sum(html: str, *header_names: str) -> float | None:
-    """Summe numerischer Zellen der Spalte. None, wenn Spalte fehlt."""
-    headers = _th_tokens(html)
-    idx = next((headers.index(h) for h in header_names if h in headers), None)
-    if idx is None:
+    """Summe numerischer Zellen der Spalte. None, wenn keiner der Header-Namen
+    in irgendeiner Tabelle vorkommt.
+
+    Issue #997: Der erste vorkommende Header-Name gewinnt (unverändertes
+    Verhalten); die Summe läuft über das pro-Tabelle gescopte _column_values.
+    """
+    all_headers = [h for block in _table_blocks(html) for h in _th_tokens(block)]
+    name = next((h for h in header_names if h in all_headers), None)
+    if name is None:
         return None
-    return sum(_column_values(html, headers[idx]))
+    return sum(_column_values(html, name))
 
 
 def _pills(html: str) -> list[str]:

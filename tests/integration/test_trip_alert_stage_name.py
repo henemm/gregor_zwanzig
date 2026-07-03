@@ -120,7 +120,9 @@ class TestAC1SubjectContainsStageName:
         report = formatter.format_email(
             segments=weather,
             trip_name="GR20",
-            report_type="alert",
+            # Issue #921: alert-Pfad ist tot (kanonischer Renderer); subject.py
+            # kennt kein 'alert' → 'update' ist der lebende Report-Typ.
+            report_type="update",
             changes=changes,
             stage_name=derived_stage_name,
         )
@@ -156,7 +158,8 @@ class TestAC2FallbackToDate:
         report = formatter.format_email(
             segments=weather,
             trip_name="GR20",
-            report_type="alert",
+            # Issue #921: alert-Pfad tot; 'update' ist der lebende Report-Typ.
+            report_type="update",
             stage_name=None,  # Kein Match → Fallback
         )
 

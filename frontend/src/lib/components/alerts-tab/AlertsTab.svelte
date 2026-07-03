@@ -47,7 +47,7 @@
 
 	// Nur aktiv gewählte alertable Metriken anzeigen (AC-1)
 	let displayMetrics = $derived(activeAlertableMetrics(trip.display_config?.metrics));
-	let allOff = $derived(displayMetrics.every((m) => currentLevels[m] === 'off'));
+	let allOff = $derived(displayMetrics.length > 0 && displayMetrics.every((m) => currentLevels[m] === 'off'));
 
 	function buildSaveFn() {
 		const levels = { ...currentLevels };

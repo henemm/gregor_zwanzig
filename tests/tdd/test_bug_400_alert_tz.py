@@ -39,7 +39,9 @@ def _render_alert(tz_name: str) -> tuple[str, str]:
     report = TripReportFormatter().format_email(
         segments=[seg],
         trip_name="GR20",
-        report_type="alert",
+        # Issue #921: alert-Pfad tot (kanonischer Renderer); subject.py kennt
+        # kein 'alert' → 'update' ist der lebende Report-Typ.
+        report_type="update",
         changes=[_alert_change()],
         stage_name="GR20 E3",
         tz=ZoneInfo(tz_name),

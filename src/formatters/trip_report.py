@@ -616,8 +616,10 @@ class TripReportFormatter:
         from output.subject import build_email_subject
         from output.tokens.dto import TokenLine
 
-        # 'alert' wird auf 'update' gemappt — semantisch identisch (Wetteränderung).
-        rt = "update" if report_type == "alert" else report_type
+        # Issue #921: kein produktiver Aufrufer mit report_type='alert' mehr —
+        # Alert-Versand läuft über output/renderers/alert/render.py. Toter
+        # 'alert'→'update'-Sonderfall entfernt; report_type wird durchgereicht.
+        rt = report_type
         # Stage-Name = explizite Stage falls vorhanden, sonst Datum als Diskriminator.
         # Bug #397 (F002): Datums-Fallback in Ortszeit, nicht UTC — sonst springt
         # das Datum bei Segment-Start nahe UTC-Mitternacht auf den falschen Tag.
