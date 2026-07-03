@@ -40,6 +40,7 @@ Expected at RED-time:
 """
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -400,33 +401,41 @@ class TestAC6ChannelConsistency:
     def test_telegram_local_header(self, report):
         """#397-Eigenschaft: Telegram zeigt LOKALE Stunden, nicht UTC.
 
-        Das neue #635-Format zeigt HH–HHh (Stunden ohne Minuten), z.B. "10–12h".
-        Wichtig: lokale Startstunde "10" muss vorhanden sein (CEST = UTC+2 → 08→10),
-        und UTC-Stunde "08" darf NICHT als Segment-Zeit auftauchen.
+        Issue #1001: die alte "10–12h"-Prosa-Segment-Zeile (_tg_segment_line)
+        wurde entfernt. Die lokale Stunde steckt jetzt in der 'Zt'-Spalte der
+        Segment-Tabelle — deren Rows werden bereits VOR dem Renderer via
+        local_hour() gebaut (trip_report.py._dp_to_row), Bug #397 bleibt also
+        strukturell behoben. Nachweis: lokale Stunden 10/11/12 erscheinen als
+        Tabellenzeilen, UTC-Stunde 08 taucht in keiner Zeile als Zeit-Wert auf.
         """
-        assert report.telegram_text is not None
-        # Neues #635-Format: "10–12h" enthält "10" und "12", aber nicht "10:00"/"12:00".
-        assert "10" in report.telegram_text and "12" in report.telegram_text, (
-            f"Telegram-Kanal zeigt nicht die lokale Stunde 10/12: {report.telegram_text!r}"
+        telegram_text = "\n".join(report.telegram_bubbles)
+        assert telegram_text, "report.telegram_bubbles darf nicht leer sein"
+        assert "10" in telegram_text and "12" in telegram_text, (
+            f"Telegram-Kanal zeigt nicht die lokale Stunde 10/12: {telegram_text!r}"
         )
-        # Bug-#397-Kern: UTC-Stunde 08 darf NICHT als Stunden-Range im Segment stehen.
-        # "08–" wäre UTC-Stunde (falsch); lokale Stunde "10–12h" enthält kein "08–".
-        assert "08–" not in report.telegram_text, (
-            f"Telegram-Kanal zeigt UTC-Stunde 08 als Segment-Zeit (Bug #397): {report.telegram_text!r}"
+        # Bug-#397-Kern: UTC-Stunde 08 darf NICHT als Zt-Tabellenzeile auftauchen.
+        table_time_values = [
+            ln.split()[0] for ln in telegram_text.splitlines()
+            if re.match(r"^\d{2}\s", ln)
+        ]
+        assert "08" not in table_time_values, (
+            f"Telegram-Kanal zeigt UTC-Stunde 08 als Zt-Tabellenzeile (Bug #397): "
+            f"{table_time_values!r}"
         )
 
     def test_all_channels_agree_on_local_window(self, report):
         """Alle Kanäle zeigen die LOKALE Stunde (Bug #397 Kern-Eigenschaft).
 
-        E-Mail zeigt "12:00" im Header; Telegram zeigt "12" im neuen HH–HHh-Format.
-        Gemeinsamer Nenner: der String "12" muss in allen Kanal-Texten vorhanden sein.
+        E-Mail zeigt "12:00" im Header; Telegram zeigt "12" in der 'Zt'-Spalte
+        der Segment-Tabelle. Gemeinsamer Nenner: der String "12" muss in allen
+        Kanal-Texten vorhanden sein.
 
         Signal-Kanal entfernt in Bug #610 (Schritt 2/2).
         """
         channels = {
             "email_html": report.email_html,
             "email_plain": report.email_plain,
-            "telegram": report.telegram_text,
+            "telegram": "\n".join(report.telegram_bubbles),
         }
         missing = [name for name, txt in channels.items() if not txt or "12" not in txt]
         assert not missing, f"Kanäle ohne lokale Endstunde 12 (Bug #397): {missing}"

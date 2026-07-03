@@ -179,11 +179,10 @@ class TripReportFormatter:
             shortcode=shortcode,
         )
 
-        # Issue #360: kanal-bewusster Narrow-Body fuer Telegram.
+        # Issue #1001: Multi-Bubble-Telegram-Rendering (ersetzt #360-Narrow-Body).
         # Reine Zusatzberechnung — email_plain bleibt unveraendert.
-        from src.output.renderers.narrow import render_narrow
-        telegram_text = render_narrow(
-            "telegram",
+        from src.output.renderers.narrow import render_telegram_bubbles
+        telegram_bubbles_result = render_telegram_bubbles(
             segments=segments,
             seg_tables=seg_tables,
             dc=dc,
@@ -193,6 +192,11 @@ class TripReportFormatter:
             friendly_keys=self._friendly_keys,
             stability_result=stability_result,
             multi_day_trend=effective_trend,
+            day_comparison=day_comparison,
+        )
+        telegram_bubbles = [b.text for b in telegram_bubbles_result]
+        telegram_actions_markup = (
+            telegram_bubbles_result[-1].reply_markup if telegram_bubbles_result else None
         )
 
         from src.formatters.sms_trip import SMSTripFormatter, SMS_SYMBOL_BY_METRIC
@@ -223,19 +227,11 @@ class TripReportFormatter:
             disabled_specs=_disabled_sms_specs or None,
         )
 
-        # Issue #614: Tages-Max-Kurzform anhängen wenn konfiguriert.
-        if dc.telegram_kurzform:
-            kurzform = SMSTripFormatter().format_sms(
-                segments,
-                stage_name=stage_name or trip_name,
-                report_type=report_type,
-                tz=self._tz,
-                max_length=4000,
-                thresholds=_sms_thr or None,
-                thunder_forecast=thunder_forecast,
-                disabled_specs=_disabled_sms_specs or None,
-            )
-            telegram_text = f"{telegram_text}\n\nTages-Max:\n{kurzform}"
+        # Issue #1001 AC-10: telegram_kurzform ist wirkungslos (Kurzuebersicht-
+        # Bubble erscheint unabhaengig vom Flag) — der fruehere Text-Anhang-
+        # Zweig (Issue #614) entfaellt. Feld bleibt aus Altdaten-Kompatibilitaet
+        # auf UnifiedWeatherDisplayConfig bestehen, wird hier nur nicht mehr
+        # abgefragt.
 
         return TripReport(
             trip_id=trip_id,
@@ -247,7 +243,8 @@ class TripReportFormatter:
             email_html=email_html,
             email_plain=email_plain,
             sms_text=sms_text,
-            telegram_text=telegram_text,
+            telegram_bubbles=telegram_bubbles,
+            telegram_actions_markup=telegram_actions_markup,
             triggered_by="schedule" if not changes else "change_detection",
             changes=changes if changes else [],
         )

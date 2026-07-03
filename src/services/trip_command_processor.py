@@ -133,6 +133,24 @@ _THUNDER_LABEL = {
     "HIGH": "hoch",
 }
 
+# Issue #1001: Aktionen-Bubble-Keyboard (Multi-Bubble-Telegram-Redesign).
+# Eigenes Praefix `act_` verhindert Kollision mit den `dd_*`/`tl_*`-Drilldown-
+# Callbacks oben. Dispatch der einzelnen Buttons: siehe
+# inbound_telegram_reader._CALLBACK_QUERY_MAP.
+ACTIONS_BUBBLE_BUTTONS = {
+    "inline_keyboard": [
+        [
+            {"text": "📋 Übersicht", "callback_data": "act_overview"},
+            {"text": "⏸ Pause", "callback_data": "act_pause"},
+        ],
+        [
+            {"text": "⏭ Überspringen", "callback_data": "act_skip"},
+            {"text": "📊 Spalten", "callback_data": "act_columns"},
+        ],
+        [{"text": "❓ Hilfe", "callback_data": "act_help"}],
+    ]
+}
+
 _DRILLDOWN_PATTERN = re.compile(r"^dd_(thunder|wind|precip)_(today|tomorrow)$")
 _HOURS_PATTERN = re.compile(r"^dd_hours_(today|tomorrow)$")
 
@@ -290,6 +308,14 @@ class TripCommandProcessor:
         # hilfe braucht keinen Trip-Lookup
         if key == "hilfe":
             return self._show_help()
+
+        # Issue #1001 Adversary-Finding F002: "columns" (Aktionen-Bubble-Button
+        # "📊 Spalten") braucht ebenfalls keinen Trip-Lookup — Spalten-Konfiguration
+        # ist ausschliesslich ein Frontend-Trip-Editor-Flow (siehe Spec Known
+        # Limitations), aber statt eines stillen Nichts-Tuns bekommt der Nutzer
+        # jetzt einen informativen Hinweis.
+        if key == "columns":
+            return self._show_columns_info()
 
         if key not in _VALID_COMMANDS:
             return CommandResult(
@@ -888,6 +914,22 @@ class TripCommandProcessor:
             success=True, command="hilfe",
             confirmation_subject="Hilfe",
             confirmation_body=body,
+        )
+
+    def _show_columns_info(self) -> CommandResult:
+        """Antwort auf den Aktionen-Bubble-Button "📊 Spalten" (Issue #1001 F002).
+
+        Spalten-Konfiguration hat keinen Inline-Telegram-Bearbeitungsflow
+        (Spec Known Limitations) — ein informativer Hinweis statt eines
+        stillen, unsichtbaren Nichts-Tuns.
+        """
+        return CommandResult(
+            success=True, command="columns",
+            confirmation_subject="Spalten",
+            confirmation_body=(
+                "Spalten-Konfiguration ist nur im Trip-Editor möglich:\n"
+                "https://gregor20.henemm.com"
+            ),
         )
 
     def _apply_pause(

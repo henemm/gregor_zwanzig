@@ -81,9 +81,9 @@ async def preview_sms(
         raise HTTPException(status_code=503, detail=str(e))
 
 
-def _narrow_payload(subject: str, body: str) -> dict:
-    """JSON-Antwort für Signal/Telegram-Vorschau (Issue #363)."""
-    return {
+def _narrow_payload(subject: str, body: str, bubbles: list[str] | None = None) -> dict:
+    """JSON-Antwort für Signal/Telegram-Vorschau (Issue #363, #1001 additiv)."""
+    payload = {
         "subject": subject,
         "body": body,
         "char_count": len(body),
@@ -91,6 +91,9 @@ def _narrow_payload(subject: str, body: str) -> dict:
             (len(line) for line in body.splitlines()), default=0,
         ),
     }
+    if bubbles is not None:
+        payload["bubbles"] = bubbles
+    return payload
 
 
 @router.get("/api/preview/{trip_id}/telegram")
@@ -105,10 +108,10 @@ async def preview_telegram(
         raise HTTPException(status_code=422, detail=f"Ungültiger type '{type}'")
     service = _build_service(user_id)
     try:
-        subject, body = service.render_telegram_preview(
+        subject, body, bubbles = service.render_telegram_preview(
             trip_id, user_id=user_id, report_type=type, target_date=date, demo=demo,
         )
-        return _narrow_payload(subject, body)
+        return _narrow_payload(subject, body, bubbles)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except LookupError as e:

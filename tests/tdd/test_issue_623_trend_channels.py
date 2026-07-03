@@ -64,10 +64,15 @@ def _render_plain(trend):
 
 
 def _render_narrow(channel, trend=None):
+    """Issue #1001: render_narrow() ist Telegram-exklusiv durch
+    render_telegram_bubbles() ersetzt worden — Bubbles werden fuer
+    Rueckwaertskompatibilitaet der Substring-Assertions verbunden
+    zurueckgegeben. ``channel="signal"`` wird nicht mehr unterstuetzt
+    (Signal-Kanal seit Issue #610 entfernt, siehe TestSignalNoTrend-Skip)."""
+    assert channel == "telegram", f"render_telegram_bubbles ist Telegram-exklusiv, bekam: {channel!r}"
     kw, _ = _common_render_kwargs()
-    from src.output.renderers.narrow import render_narrow
-    return render_narrow(
-        channel,
+    from src.output.renderers.narrow import render_telegram_bubbles
+    bubbles = render_telegram_bubbles(
         segments=kw["segments"],
         seg_tables=kw["seg_tables"],
         dc=kw["display_config"],
@@ -77,6 +82,7 @@ def _render_narrow(channel, trend=None):
         friendly_keys=kw["friendly_keys"],
         multi_day_trend=trend,
     )
+    return "\n".join(b.text for b in bubbles)
 
 
 # ---------------------------------------------------------------------------
@@ -330,12 +336,13 @@ class TestEmailTrendUnchanged:
 # ---------------------------------------------------------------------------
 
 class TestTelegramTrend:
-    """AC-3: Telegram body contains trend block 'Nächste Etappen'."""
+    """AC-3: Telegram body contains trend block ('Ausblick' seit Issue #1001,
+    ehemals 'Nächste Etappen' — siehe Spec Implementation Details Punkt 5)."""
 
     def test_telegram_with_trend_has_heading(self):
-        """Given telegram + trend, When rendered, Then 'Nächste Etappen' present."""
+        """Given telegram + trend, When rendered, Then 'Ausblick' present."""
         body = _render_narrow("telegram", trend=[_trend_stage()])
-        assert "Nächste Etappen" in body
+        assert "Ausblick" in body
 
     def test_telegram_trend_contains_weekday(self):
         """Given trend with weekday='Mo', When telegram, Then 'Mo' in body."""
@@ -353,15 +360,19 @@ class TestTelegramTrend:
         assert "⚡–" in body
 
     def test_telegram_trend_no_trend_no_heading(self):
-        """AC-7: Given no trend, When telegram, Then no 'Nächste Etappen'."""
+        """AC-7: Given no trend, When telegram, Then no 'Ausblick'-Bubble."""
         body = _render_narrow("telegram", trend=None)
-        assert "Nächste Etappen" not in body
+        assert "Ausblick" not in body
 
     def test_telegram_trend_line_width(self):
-        """Given trend, When telegram, Then all lines ≤40 chars."""
+        """Given trend, When telegram, Then Ausblick-Zeilen ≤ narrow._TG_PROSE_WIDTH
+        (Issue #1001: 56 statt vormals 40 — Prosa-Zeilen fuer Kopf/Kurzuebersicht/
+        Ausblick nutzen jetzt die grosszuegigere _TG_PROSE_WIDTH-Konvention)."""
+        from src.output.renderers.narrow import _TG_PROSE_WIDTH
         body = _render_narrow("telegram", trend=[_trend_stage()])
-        for line in body.split("\n"):
-            assert len(line) <= 40, f"Line too long ({len(line)}): {line!r}"
+        outlook = body.split("Ausblick", 1)[1]
+        for line in outlook.split("\n"):
+            assert len(line) <= _TG_PROSE_WIDTH, f"Line too long ({len(line)}): {line!r}"
 
     def test_telegram_trend_note_indented(self):
         """Given note, When telegram, Then indented note line present."""
@@ -369,9 +380,9 @@ class TestTelegramTrend:
         assert "↳" in body
 
     def test_telegram_trend_empty_list_no_heading(self):
-        """AC-7: Given empty list, When telegram, Then no 'Nächste Etappen'."""
+        """AC-7: Given empty list, When telegram, Then no 'Ausblick'-Bubble."""
         body = _render_narrow("telegram", trend=[])
-        assert "Nächste Etappen" not in body
+        assert "Ausblick" not in body
 
 
 # ---------------------------------------------------------------------------
@@ -458,8 +469,15 @@ class TestEmptyTrend:
 # AC-8: Signal — no trend block
 # ---------------------------------------------------------------------------
 
+@pytest.mark.skip(
+    reason=(
+        "OBSOLET: Signal-Kanal seit Issue #610 (Schritt 2/2) entfernt; "
+        "render_narrow('signal', ...) existiert zudem seit Issue #1001 nicht "
+        "mehr (Breaking Replace, nur noch render_telegram_bubbles())."
+    )
+)
 class TestSignalNoTrend:
-    """AC-8: Signal body must not contain trend block."""
+    """AC-8 (superseded): Signal body must not contain trend block."""
 
     def test_signal_no_trend_heading(self):
         """Given signal channel + trend data, When rendered, Then no 'Nächste Etappen'."""
@@ -575,14 +593,16 @@ class TestEmailContextLabelPipeline:
 # ---------------------------------------------------------------------------
 
 class TestTelegramTrendPipeline:
-    """F001+F003: TripReportFormatter.format_email must pass trend to telegram_text."""
+    """F001+F003: TripReportFormatter.format_email must pass trend to telegram_bubbles
+    (Issue #1001: telegram_text → telegram_bubbles; Ueberschrift 'Nächste Etappen' →
+    'Ausblick')."""
 
     def _make_segments(self):
         from tests.unit.test_renderers_email import _make_segment_weather
         return [_make_segment_weather()]
 
     def test_format_email_telegram_text_contains_trend_heading(self):
-        """Given format_email with multi_day_trend, When called, Then report.telegram_text has 'Nächste Etappen'."""
+        """Given format_email with multi_day_trend, When called, Then report.telegram_bubbles has 'Ausblick'."""
         from src.formatters.trip_report import TripReportFormatter
         segs = self._make_segments()
         trend = [_trend_stage()]
@@ -592,14 +612,15 @@ class TestTelegramTrendPipeline:
             report_type="evening",
             multi_day_trend=trend,
         )
-        assert "Nächste Etappen" in report.telegram_text, (
-            "F001: telegram_text missing trend — multi_day_trend not passed to render_narrow"
+        joined = "\n".join(report.telegram_bubbles)
+        assert "Ausblick" in joined, (
+            "F001: telegram_bubbles missing trend — multi_day_trend not passed to render_telegram_bubbles"
         )
 
     def test_signal_channel_removed_trend_cannot_leak(self):
         """AC-8: Signal channel removed (#610) — TripReport has no signal_text field.
 
-        Regression guard: trend is in telegram_text but Signal no longer exists
+        Regression guard: trend is in telegram_bubbles but Signal no longer exists
         as a channel, so there is no surface for trend to leak into.
         """
         from src.formatters.trip_report import TripReportFormatter
@@ -615,10 +636,10 @@ class TestTelegramTrendPipeline:
             "AC-8: signal_text must not exist — Signal channel fully removed (#610)"
         )
         # Confirm trend is correctly in telegram (not leaked elsewhere)
-        assert "Nächste Etappen" in report.telegram_text
+        assert "Ausblick" in "\n".join(report.telegram_bubbles)
 
     def test_format_email_no_trend_no_heading_in_telegram(self):
-        """AC-7: format_email without trend — telegram_text has no 'Nächste Etappen'."""
+        """AC-7: format_email without trend — telegram_bubbles has no 'Ausblick'-Bubble."""
         from src.formatters.trip_report import TripReportFormatter
         segs = self._make_segments()
         report = TripReportFormatter().format_email(
@@ -627,7 +648,7 @@ class TestTelegramTrendPipeline:
             report_type="evening",
             multi_day_trend=None,
         )
-        assert "Nächste Etappen" not in report.telegram_text
+        assert "Ausblick" not in "\n".join(report.telegram_bubbles)
 
 
 # ---------------------------------------------------------------------------
@@ -732,21 +753,23 @@ class TestTelegramTrendNoNames:
         assert "8" in body and "16" in body
 
     def test_telegram_trend_line_fits_without_name(self):
-        """AC-2: No line exceeds 40 chars with long name input."""
+        """AC-2: No line exceeds narrow._TG_PROSE_WIDTH with long name input
+        (Issue #1001: 56 statt vormals 40 — siehe TestTelegramTrend.test_telegram_trend_line_width)."""
+        from src.output.renderers.narrow import _TG_PROSE_WIDTH
         body = _render_narrow(
             "telegram",
             trend=[_trend_stage(name=self.LONG_NAME)],
         )
         for line in body.split("\n"):
-            assert len(line) <= 40, f"Line too long ({len(line)}): {line!r}"
+            assert len(line) <= _TG_PROSE_WIDTH, f"Line too long ({len(line)}): {line!r}"
 
     def test_telegram_trend_heading_retained(self):
-        """AC-3: 'Nächste Etappen' heading must still appear."""
+        """AC-3: 'Ausblick' heading (Issue #1001, ehemals 'Nächste Etappen') must still appear."""
         body = _render_narrow(
             "telegram",
             trend=[_trend_stage(name=self.LONG_NAME)],
         )
-        assert "Nächste Etappen" in body
+        assert "Ausblick" in body
 
     def test_telegram_trend_thunder_token_retained(self):
         """AC-3: thunder_plain token (⚡–) must still appear."""

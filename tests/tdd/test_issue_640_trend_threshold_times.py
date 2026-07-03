@@ -67,10 +67,15 @@ def _render_html(trend, *, sent_at=None):
 
 
 def _render_narrow(channel, trend=None):
+    """Issue #1001: render_narrow() ersetzt durch render_telegram_bubbles()
+    (nur noch Telegram-exklusiv). ``channel`` bleibt Parameter fuer
+    Aufrufer-Kompatibilitaet, ist aber immer "telegram" (alle Call-Sites in
+    dieser Datei) — Bubbles werden verbunden zurueckgegeben, damit die
+    bestehenden Substring-Assertions unveraendert gelten."""
+    assert channel == "telegram", f"render_telegram_bubbles ist Telegram-exklusiv, bekam: {channel!r}"
     kw, _ = _common_render_kwargs()
-    from src.output.renderers.narrow import render_narrow
-    return render_narrow(
-        channel,
+    from src.output.renderers.narrow import render_telegram_bubbles
+    bubbles = render_telegram_bubbles(
         segments=kw["segments"],
         seg_tables=kw["seg_tables"],
         dc=kw["display_config"],
@@ -80,6 +85,7 @@ def _render_narrow(channel, trend=None):
         friendly_keys=kw["friendly_keys"],
         multi_day_trend=trend,
     )
+    return "\n".join(b.text for b in bubbles)
 
 
 # ---------------------------------------------------------------------------
@@ -343,10 +349,11 @@ class TestTelegramInlineTokens:
             hourly_wind=(_hv(12, 10.0),),   # below 30 threshold
         )]
         body = _render_narrow("telegram", trend=trend)
-        # Find the trend section (after "Nächste Etappen")
-        assert "Nächste Etappen" in body
+        # Issue #1001: Ausblick-Bubble-Ueberschrift heisst jetzt "Ausblick"
+        # statt "Nächste Etappen" (Spec Implementation Details Punkt 5).
+        assert "Ausblick" in body
         # No @ in threshold lines for this stage
-        trend_section = body.split("Nächste Etappen")[-1]
+        trend_section = body.split("Ausblick")[-1]
         # Compact form: no @ times for metrics below threshold
         assert "@" not in trend_section, (
             f"Unexpected @ in trend section:\n{trend_section}"
@@ -491,12 +498,17 @@ class TestUnchangedAreas:
         assert "Uhr" in html or "time" in html.lower() or "08" in html
 
     def test_telegram_befehle_hint_unchanged(self):
-        """AC-8: Telegram command hint line unchanged after adding @-tokens."""
+        """AC-8 (angepasst durch Issue #1001): Der Text-Befehls-Footer
+        ('Befehle: report morning, ...') wurde als Teil des Breaking Replace
+        entfernt — die Aktionen-Bubble (Inline-Keyboard) ersetzt ihn (Spec
+        Source-Abschnitt: 'der Text-Befehls-Foter-Block ... und die
+        cmd_hint-Zeile'). Aequivalenter Regressionsschutz: die Aktionen-Bubble
+        ist weiterhin vorhanden (letzte Bubble, Text 'Aktionen')."""
         trend = [_trend_stage_with_hourly(
             hourly_precip=(_hv(10, 2.0),),
         )]
         body = _render_narrow("telegram", trend=trend)
-        assert "Befehle" in body
+        assert "Aktionen" in body
 
     def test_backwards_compat_no_hourly_data(self):
         """AC-8: Stage without hourly_ keys (old format) still renders without crash."""

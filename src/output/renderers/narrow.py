@@ -1,16 +1,18 @@
-"""Narrow Monospace-Renderer fuer Telegram (Issue #360).
+"""Telegram Multi-Bubble-Renderer (Issue #1001).
 
-SPEC: docs/specs/modules/issue_360_signal_channel_renderer.md §5.
+SPEC: docs/specs/modules/feat_1001_telegram_redesign.md.
 
-Baut einen kompakten Monospace-Body: Header (Trip/Report/Datum), pro Segment
-eine schmale Tabelle (Zeit + ``table_columns``) und darunter — falls
-``detail_metrics`` nicht leer — eine ``·``-getrennte Detail-Zeile.
+Baut die Liste der Telegram-Bubbles (Kopf, Kurzuebersicht, Segment-/Ziel-
+Tabellen, optionaler Ausblick, Aktionen) via ``render_telegram_bubbles()``.
+Ersetzt die fruehere Prosa-Ausgabe ``render_narrow()`` (Issue #360/#635/
+#614/#887 — siehe Spec "Source"-Abschnitt) vollstaendig fuer Telegram.
 
 Pure function (keine I/O). Werte werden ueber das bestehende ``fmt_val`` und
 die Katalog-``compact_label`` gemappt.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
@@ -21,19 +23,24 @@ from app.metric_catalog import get_metric
 from app.models import SegmentWeatherData, SegmentWeatherSummary, StabilityResult, ThunderLevel, UnifiedWeatherDisplayConfig
 from utils.timezone import local_fmt
 
-from src.output.renderers.channel_layout import CHANNEL_LIMITS, render_for_channel
-from src.output.renderers.email.helpers import degrees_to_compass, fmt_val, format_trend_tokens
-from utils.timezone import local_fmt
+from src.output.renderers.alert.render import _esc
+from src.output.renderers.channel_layout import render_for_channel
+from src.output.renderers.email.helpers import fmt_val, format_trend_tokens
+from src.services.trip_command_processor import ACTIONS_BUBBLE_BUTTONS
 
-# Maximale Zeilenbreite pro Kanal (Bubble-Constraint).
-# Telegram-Blase: lesbares Mass ~40 Zeichen Monospace.
-_LINE_WIDTH = {"telegram": 40}
-
-# Großzügige Wrap-Breite für Telegram-Wetter-Prosa-Zeilen (#635).
-# Telegram sendet Klartext (proportional) und reflowt selbst — normale
-# Alpendaten (~46 Zeichen) sollen auf einer Zeile bleiben. Pathologisch
-# lange Zeilen werden bei 56 Zeichen als Sicherheitsnetz umbrochen.
+# Großzügige Wrap-Breite für Telegram-Prosa-Zeilen (Kopf-/Kurzuebersicht-
+# /Mini-Header-Bubbles, #635-Erbe). Telegram sendet Klartext (proportional)
+# und reflowt selbst — normale Alpendaten (~46 Zeichen) sollen auf einer
+# Zeile bleiben. Pathologisch lange Zeilen werden bei 56 Zeichen als
+# Sicherheitsnetz umbrochen.
 _TG_PROSE_WIDTH = 56
+
+# AC-9: harte Obergrenze fuer jede Segment-/Ziel-/Ausblick-Tabellenzeile
+# (<pre>-Block), damit auf einem iPhone-Standardbildschirm kein Umbruch
+# entsteht. Verifiziert gegen eine 8-Spalten-Tabelle (Zeit + 7 Metriken) mit
+# den breitest moeglichen Zellwerten — siehe
+# tests/tdd/test_issue_1001_telegram_bubbles.py::TestAC9TableWidthLimitStructural.
+_TG_TABLE_WIDTH = 32
 
 
 def _col_key(metric_id: str) -> Optional[str]:
@@ -168,142 +175,6 @@ def _thunder_severity(level: Optional[ThunderLevel]) -> int:
     return _sev.get(level, 0) if level is not None else 0
 
 
-def _tg_segment_line(
-    seg_data: SegmentWeatherData,
-    rows: list[dict],
-    tz: "ZoneInfo",
-) -> str:
-    """Baue EINE Telegram-Segment-Zeile: {Emoji} {HH}–{HH}h  {Temp} · Wind {Wind} {Richtung} · {Regen}."""
-    agg: SegmentWeatherSummary = seg_data.aggregated
-    seg = seg_data.segment
-
-    # --- Zeit-Range (F004: identische Stunden → nur eine ausgeben) ---
-    start_hh = local_fmt(seg.start_time, tz, "%H")
-    end_hh = local_fmt(seg.end_time, tz, "%H")
-
-    # --- Temperatur (AC-2) ---
-    if rows:
-        t_start = rows[0].get("temp")
-        t_end = rows[-1].get("temp")
-        if t_start is not None and t_end is not None:
-            ts = round(float(t_start))
-            te = round(float(t_end))
-            if abs(te - ts) < 1:
-                temp_str = f"{ts}°C"
-            else:
-                temp_str = f"{ts}→{te}°C"
-        else:
-            temp_str = _temp_fallback(agg)
-    else:
-        temp_str = _temp_fallback(agg)
-
-    # --- Wind (AC-3) ---
-    if rows:
-        winds = [r.get("wind") for r in rows if r.get("wind") is not None]
-        dirs = [r.get("wind_dir") for r in rows if r.get("wind_dir") is not None]
-    else:
-        winds = []
-        dirs = []
-
-    if winds:
-        w_min = round(min(float(w) for w in winds))
-        w_max = round(max(float(w) for w in winds))
-        wind_kmh = f"{w_min}–{w_max}" if w_min != w_max else str(w_min)
-    else:
-        w_val = agg.wind_max_kmh
-        wind_kmh = str(round(float(w_val))) if w_val is not None else "?"
-
-    dominant_dir: Optional[int] = None
-    if dirs:
-        dominant_dir = round(sum(float(d) for d in dirs) / len(dirs))
-    elif agg.wind_direction_avg_deg is not None:
-        dominant_dir = agg.wind_direction_avg_deg
-
-    compass = degrees_to_compass(dominant_dir) if dominant_dir is not None else ""
-    wind_str = f"{wind_kmh} {compass}".strip() if compass else wind_kmh
-
-    # --- Regen (AC-4) ---
-    thunder_lvl = agg.thunder_level_max
-    precip = agg.precip_sum_mm if agg.precip_sum_mm is not None else 0.0
-    if thunder_lvl is not None and _thunder_severity(thunder_lvl) >= 1:
-        precip_str = "Gewitter"
-    elif precip < 0.2:
-        precip_str = "trocken"
-    elif precip < 2.0:
-        precip_str = "etwas Regen"
-    else:
-        precip_str = "Regen"
-
-    # --- Emoji (AC-5): Regen >= 0.5 → 🌧️, sonst Wolken-Skala ---
-    cloud_val = agg.cloud_avg_pct
-    if rows and cloud_val is None:
-        clouds = [r.get("cloud") for r in rows if r.get("cloud") is not None]
-        if clouds:
-            cloud_val = round(sum(float(c) for c in clouds) / len(clouds))
-
-    if precip >= 0.5:
-        emoji = "🌧️"
-    else:
-        emoji = _cloud_emoji(cloud_val)
-
-    # F004: identische lokale Stunde → nur eine ausgeben (z.B. "10h" statt "10–10h").
-    time_str = f"{start_hh}h" if start_hh == end_hh else f"{start_hh}–{end_hh}h"
-    return f"{emoji} {time_str}  {temp_str} · Wind {wind_str} · {precip_str}"
-
-
-def _temp_fallback(agg: SegmentWeatherSummary) -> str:
-    """Fallback-Temp aus Summary wenn keine rows."""
-    lo = agg.temp_min_c
-    hi = agg.temp_max_c
-    if lo is not None and hi is not None:
-        if abs(round(float(hi)) - round(float(lo))) < 1:
-            return f"{round(float(lo))}°C"
-        return f"{round(float(lo))}→{round(float(hi))}°C"
-    if lo is not None:
-        return f"{round(float(lo))}°C"
-    if hi is not None:
-        return f"{round(float(hi))}°C"
-    return "?°C"
-
-
-def _col_label_str(metric_id: str) -> str:
-    try:
-        return get_metric(metric_id).col_label
-    except KeyError:
-        return metric_id[:4].upper()
-
-
-_TG_HEADER_METRIC_IDS = frozenset({"temperature", "wind", "wind_direction"})
-
-
-def _tg_extra_detail_line(
-    layout,
-    rows: list[dict],
-    fkeys: set[str],
-) -> Optional[str]:
-    """Config-gesteuerte Detail-Zeile für Telegram mit col_label."""
-    extra = [
-        mid for mid in layout.table_columns + layout.detail_metrics
-        if mid not in _TG_HEADER_METRIC_IDS
-    ]
-    if not extra or not rows:
-        return None
-    row = rows[0]
-    parts: list[str] = []
-    for mid in extra:
-        val = _cell(mid, row, fkeys)
-        if val and val != "–":
-            try:
-                unit = get_metric(mid).unit or ""
-            except KeyError:
-                unit = ""
-            sep = "" if unit == "%" else (" " if unit else "")
-            parts.append(f"{_col_label_str(mid)} {val}{sep}{unit}")
-    if not parts:
-        return None
-    return " · ".join(parts)
-
-
 def _tg_day_footer(segments: list[SegmentWeatherData]) -> Optional[str]:
     """Fußzeile mit Tageswerten (AC-6): ⚡ kein|MED|HIGH · Sicht gut|… · 0°C-Grenze N m."""
     max_thunder_sev = 0
@@ -399,8 +270,92 @@ def _tg_vortag_line(day_comparison: Optional["DayComparison"]) -> Optional[str]:
     return "Ggü. Vortag: " + ", ".join(parts)
 
 
-def render_narrow(
-    channel: str,
+@dataclass(frozen=True)
+class TelegramBubble:
+    """Eine einzelne Telegram-``sendMessage``-Nachricht (Issue #1001).
+
+    ``reply_markup`` ist nur bei der letzten (Aktionen-)Bubble gesetzt.
+    """
+    text: str
+    reply_markup: Optional[dict] = None
+
+
+def _overview_line(metric_id: str, seg_tables: list[list[dict]], fkeys: set[str]) -> str:
+    """Eine Kurzübersicht-Zeile ``{Kürzel} {Min}-{Max}@{Peak-Stunde}`` (oder
+    Einzelwert/kategorisch).
+
+    Sammelt alle Rohwerte der Metrik ueber alle Segmente/Stunden hinweg und
+    formatiert Minimum/Maximum ueber die bestehende ``fmt_val``-Formatierung.
+    Bei unterschiedlichem Min/Max wird zusaetzlich die Uhrzeit des Maximums
+    angehaengt (``@{Stunde}``, gleiche Konvention wie die Peak-Token in
+    ``format_trend_tokens()``/``render_threshold_peak_value()``) — die fuer
+    Entscheidungen relevantere Spitze (z.B. Windboeen-Spitze). Fuer die
+    Gewitter-Metrik (``thunder``) wird analog zu ``_tg_day_footer()`` der
+    Tages-Schlimmstwert ueber ``_thunder_severity()`` ermittelt (Issue #1001
+    Adversary-Finding F001: sonst widerspricht sich diese Zeile mit der
+    Fusszeile derselben Bubble). Andere nicht-numerische Metriken zeigen
+    weiterhin den zuletzt beobachteten Wert ohne Uhrzeit.
+    """
+    label = _compact_label(metric_id)
+    key = _col_key(metric_id)
+    if key is None:
+        return f"{label} –"
+
+    hits = [r for rows in seg_tables for r in rows if r.get(key) is not None]
+    if not hits:
+        return f"{label} –"
+
+    try:
+        nums = [float(h[key]) for h in hits]
+        lo_row = hits[nums.index(min(nums))]
+        hi_row = hits[nums.index(max(nums))]
+        lo = _cell(metric_id, lo_row, fkeys)
+        hi = _cell(metric_id, hi_row, fkeys)
+        if lo == hi:
+            value = lo
+        else:
+            peak_hour = hi_row.get("time", "")
+            value = f"{lo}-{hi}@{peak_hour}" if peak_hour else f"{lo}-{hi}"
+    except (TypeError, ValueError):
+        if metric_id == "thunder":
+            worst_row = max(hits, key=lambda h: _thunder_severity(h.get(key)))
+            value = _cell(metric_id, worst_row, fkeys)
+        else:
+            value = _cell(metric_id, hits[-1], fkeys)
+    return f"{label} {value}"
+
+
+def _segment_mini_header(seg_data: SegmentWeatherData) -> str:
+    """``"{Bezeichnung} · {km-Range} · {Höhen-Range}"`` (Spec Implementation Details)."""
+    seg = seg_data.segment
+    km_range = (
+        f"{seg.start_point.distance_from_start_km:.1f}"
+        f"–{seg.end_point.distance_from_start_km:.1f} km"
+    )
+    height_range = f"↑{seg.ascent_m:.0f} m ↓{seg.descent_m:.0f} m"
+    label = "Ziel" if str(seg.segment_id) == "Ziel" else f"Segment {seg.segment_id}"
+    return f"{label} · {km_range} · {height_range}"
+
+
+def _outlook_lines(multi_day_trend: list[dict]) -> list[str]:
+    """3-Tage-Trend-Zeilen (Issue #623/#640-Rechenlogik, jetzt Ausblick-Bubble)."""
+    lines: list[str] = ["Ausblick"]
+    for stage in multi_day_trend:
+        tok = format_trend_tokens(stage)
+        weekday = stage.get("weekday", "")
+        pt, wt, tt = tok["precip_token"], tok["wind_token"], tok["thunder_token"]
+        precip_part = f"R{pt}" if pt != "-" else (tok["precip_str"] if tok["precip_str"] != "–" else "R–")
+        wind_part = f"W{wt}" if wt != "-" else tok["wind_str"]
+        thunder_part = f"⚡{tt}" if tt != "-" else tok["thunder_plain"]
+        trend_line = f"{weekday}  {tok['temp_str']}  {precip_part}  {wind_part}  {thunder_part}"
+        lines.extend(_wrap(trend_line, _TG_PROSE_WIDTH))
+        note = stage.get("note")
+        if note:
+            lines.extend(_wrap(f"    ↳ {note}", _TG_PROSE_WIDTH))
+    return lines
+
+
+def render_telegram_bubbles(
     *,
     segments: list[SegmentWeatherData],
     seg_tables: list[list[dict]],
@@ -412,133 +367,68 @@ def render_narrow(
     stability_result: Optional[StabilityResult] = None,
     multi_day_trend: Optional[list[dict]] = None,
     day_comparison: Optional["DayComparison"] = None,
-) -> str:
-    """Render kompakten Telegram-Body. Pure function.
+) -> list[TelegramBubble]:
+    """Render die Telegram-Briefing-Bubble-Liste (Issue #1001). Pure function.
 
-    Args:
-        channel: "telegram".
-        segments: Segment-Wetterdaten (fuer Header/Datum).
-        seg_tables: pro Segment die Tabellen-Rows (col_key -> Wert), wie vom
-            Formatter berechnet.
-        dc: Display-Config mit bucket/order pro Metrik.
-        report_type: "morning"/"evening"/"alert".
-        tz: Zielzeitzone.
-        multi_day_trend: list of trend stage dicts (only rendered for telegram, AC-8).
+    Reihenfolge: Kopf, Kurzuebersicht (alle konfigurierten Metriken,
+    ``telegram_kurzform`` wirkungslos — AC-10), je Segment/Ziel eine Tabellen-
+    Bubble, optionaler Ausblick (nur wenn ``multi_day_trend`` gesetzt),
+    Aktionen (Inline-Keyboard).
     """
-    width = _LINE_WIDTH.get(channel, 40)
     fkeys = friendly_keys if friendly_keys is not None else set()
-    layout = render_for_channel(channel, dc, report_type)
+    layout = render_for_channel("telegram", dc, report_type)
+    bubbles: list[TelegramBubble] = []
 
-    lines: list[str] = []
-    # Header (kompakt). Trip-Name + Report-Typ + Datum, jeweils auf width.
+    # 1. Kopf-Bubble.
+    head_lines: list[str] = []
     if trip_name:
-        lines.extend(_wrap(trip_name, width))
+        head_lines.extend(_wrap(_esc(trip_name), _TG_PROSE_WIDTH))
     report_date = ""
     if segments:
         # Bug #397: Datums-Header in Ortszeit.
         report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")
     head2 = f"{report_type.title()} {report_date}".strip()
     if head2:
-        lines.extend(_wrap(head2, width))
-
-    # Issue #474: F12 Wetterlage-Label (WL) direkt nach Header.
+        head_lines.extend(_wrap(_esc(head2), _TG_PROSE_WIDTH))
     if stability_result is not None:
-        lines.extend(_wrap(f"WL: {stability_result.label}", width))
+        head_lines.extend(_wrap(_esc(f"WL: {stability_result.label}"), _TG_PROSE_WIDTH))
+    bubbles.append(TelegramBubble(text="\n".join(head_lines)))
 
+    # 2. Kurzuebersicht-Bubble — ALLE konfigurierten Metriken (AC-3), immer
+    # vorhanden, unabhaengig von telegram_kurzform (AC-10).
+    overview_lines: list[str] = ["Kurzübersicht"]
+    for mid in dc.get_enabled_metric_ids():
+        overview_lines.extend(_wrap(_esc(_overview_line(mid, seg_tables, fkeys)), _TG_PROSE_WIDTH))
+    footer = _tg_day_footer([sd for sd in segments if not sd.has_error])
+    if footer:
+        overview_lines.append("")
+        overview_lines.extend(_wrap(_esc(footer), _TG_PROSE_WIDTH))
+    vortag_line = _tg_vortag_line(day_comparison)
+    if vortag_line:
+        overview_lines.append("")
+        overview_lines.extend(_wrap(_esc(vortag_line), _TG_PROSE_WIDTH))
+    bubbles.append(TelegramBubble(text="\n".join(overview_lines)))
+
+    # 3./4. Segment-/Ziel-Bubbles: Mini-Header + echte Monospace-Tabelle.
     for seg_data, rows in zip(segments, seg_tables):
         seg = seg_data.segment
         if seg_data.has_error:
-            lines.extend(_wrap(f"Seg {seg.segment_id}: keine Daten", width))
+            bubbles.append(TelegramBubble(text=_esc(f"Seg {seg.segment_id}: keine Daten")))
             continue
 
-        if channel == "telegram":
-            # AC-1..AC-5: pro Segment EINE lesbare Zeile statt Stundentabelle.
-            # Prosa-Zeilen erhalten eine großzügigere Wrap-Breite (56) damit normale
-            # Alpendaten (~46 Zeichen) ungeteilt bleiben; pathologisch lange Zeilen
-            # werden trotzdem als Sicherheitsnetz umbrochen.
-            lines.extend(_wrap(_tg_segment_line(seg_data, rows, tz), _TG_PROSE_WIDTH))
-            detail = _tg_extra_detail_line(layout, rows, fkeys)
-            if detail:
-                lines.append(detail)
-        else:
-            start = local_fmt(seg.start_time, tz)
-            end = local_fmt(seg.end_time, tz)
-            if str(seg.segment_id) == "Ziel":
-                lines.extend(_wrap(f"Ziel {start}", width))
-            else:
-                lines.extend(_wrap(f"Seg {seg.segment_id} {start}-{end}", width))
+        text_lines = _wrap(_esc(_segment_mini_header(seg_data)), _TG_PROSE_WIDTH)
+        if layout.table_columns and rows:
+            table_lines = _narrow_table(layout.table_columns, rows, fkeys, _TG_TABLE_WIDTH)
+            escaped_table = "\n".join(_esc(ln) for ln in table_lines)
+            text_lines = text_lines + ["<pre>", escaped_table, "</pre>"]
+        bubbles.append(TelegramBubble(text="\n".join(text_lines)))
 
-            if layout.table_columns and rows:
-                lines.extend(_narrow_table(layout.table_columns, rows, fkeys, width))
+    # 5. Ausblick-Bubble (nur wenn multi_day_trend nicht leer).
+    if multi_day_trend:
+        outlook = [_esc(ln) for ln in _outlook_lines(multi_day_trend)]
+        bubbles.append(TelegramBubble(text="\n".join(outlook)))
 
-            if layout.detail_metrics and rows:
-                # Detail-Zeile aus dem ersten Row des Segments (kompakter Trailer).
-                lines.extend(
-                    _detail_lines(layout.detail_metrics, rows[0], fkeys, width)
-                )
+    # 6. Aktionen-Bubble — einzige Bubble mit reply_markup.
+    bubbles.append(TelegramBubble(text="Aktionen", reply_markup=ACTIONS_BUBBLE_BUTTONS))
 
-    # AC-6: Fußzeile (Tageswerte) nur für Telegram — ebenfalls großzügige Breite.
-    if channel == "telegram" and segments:
-        footer = _tg_day_footer([sd for sd in segments if not sd.has_error])
-        if footer:
-            lines.extend(_wrap(footer, _TG_PROSE_WIDTH))
-
-    # Issue #623/#640: Trend block — nur für Telegram (AC-8: Signal bekommt keinen Trend).
-    if channel == "telegram" and multi_day_trend:
-        lines.append("")
-        lines.extend(_wrap("Nächste Etappen", width))
-        for stage in multi_day_trend:
-            tok = format_trend_tokens(stage)
-            weekday = stage.get("weekday", "")
-            # Issue #640: Use @-time tokens inline when available (AC-3/AC-4).
-            # Fallback to compact form when threshold never crossed (token=='-').
-            pt = tok["precip_token"]
-            wt = tok["wind_token"]
-            tt = tok["thunder_token"]
-            # Precip inline: "R0.5@10(6@15)" if crossed else "R–"
-            if pt != "-":
-                precip_part = f"R{pt}"
-            else:
-                precip_part = tok["precip_str"] if tok["precip_str"] != "–" else "R–"
-            # Wind inline: "W17@16" if crossed else plain value
-            if wt != "-":
-                wind_part = f"W{wt}"
-            else:
-                wind_part = tok["wind_str"]
-            # Thunder inline: "⚡M@14(H@16)" if crossed else "⚡–"
-            if tt != "-":
-                thunder_part = f"⚡{tt}"
-            else:
-                thunder_part = tok["thunder_plain"]
-            # Issue #633: no stage name in Telegram. Keep weekday + values only.
-            # Build: Di  12–15°C  R0.5@10(6@15)  W17@16  ⚡M@14
-            trend_line = (
-                f"{weekday}  {tok['temp_str']}  "
-                f"{precip_part}  {wind_part}  {thunder_part}"
-            )
-            lines.extend(_wrap(trend_line, _TG_PROSE_WIDTH))
-            note = stage.get("note")
-            if note:
-                lines.extend(_wrap(f"    ↳ {note}", _TG_PROSE_WIDTH))
-
-    # F6 (#752): Vortag-Zeile nur für Telegram, max 3 Metriken nach |delta|.
-    if channel == "telegram":
-        vortag_line = _tg_vortag_line(day_comparison)
-        if vortag_line:
-            lines.append("")
-            lines.extend(_wrap(vortag_line, _TG_PROSE_WIDTH))
-
-    # Issue #612: Befehls-Hinweis nur für Telegram (nicht Signal).
-    # Pipe-Zeichen als Trenner vermieden: _wrap kann Zeilenanfang mit "|" erzeugen.
-    if channel == "telegram":
-        cmd_hint = "Befehle: report morning, report evening, status, hilfe"
-        lines.append("")
-        lines.extend(_wrap(cmd_hint, width))
-
-    body = "\n".join(lines)
-
-    # Ueberlaengen-Schutz auf max_chars.
-    max_chars = CHANNEL_LIMITS.get(channel, {}).get("max_chars")
-    if max_chars is not None and len(body) > max_chars:
-        body = body[: max_chars - 1] + "…"
-    return body
+    return bubbles

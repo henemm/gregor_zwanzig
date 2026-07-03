@@ -221,10 +221,12 @@ class PreviewService:
         report_type: str = "morning",
         target_date: str | None = None,
         demo: bool = False,
-    ) -> tuple[str, str]:
-        """Rendert die Telegram-Vorschau via #360-Narrow-Renderer (kein Versand).
+    ) -> tuple[str, str, list[str]]:
+        """Rendert die Telegram-Vorschau via #1001-Multi-Bubble-Renderer (kein Versand).
 
-        Returns: (email_subject, telegram_text).
+        Returns: (email_subject, body, bubbles). ``body`` ist die mit einem
+        Trennzeichen verbundene Kette aller Bubbles (Rueckwaertskompatibilitaet
+        fuer bestehende Konsumenten des einzelnen Body-Strings, AC-7).
         """
         if report_type not in VALID_REPORT_TYPES:
             raise ValueError(f"Ungültiger report_type '{report_type}'")
@@ -233,4 +235,6 @@ class PreviewService:
         report, _segments, _stage_name, _trip_tz = self._build_report(
             trip, target, report_type, demo=demo,
         )
-        return report.email_subject, (report.telegram_text or "")
+        bubbles = report.telegram_bubbles or []
+        body = "\n\n---\n\n".join(bubbles)
+        return report.email_subject, body, bubbles

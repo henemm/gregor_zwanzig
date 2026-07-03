@@ -674,7 +674,12 @@ class TripReport:
     email_html: str
     email_plain: str
     sms_text: Optional[str] = None  # Feature 3.2 will populate
-    telegram_text: Optional[str] = None
+    # Issue #1001: Multi-Bubble-Telegram-Format ersetzt das fruehere
+    # telegram_text (Einzelnachricht). telegram_actions_markup traegt das
+    # Inline-Keyboard der letzten (Aktionen-)Bubble getrennt von den reinen
+    # Text-Bubbles (transient, kein Persistenz-Impact).
+    telegram_bubbles: list[str] = field(default_factory=list)
+    telegram_actions_markup: Optional[dict] = None
 
     # Metadata
     triggered_by: Optional[str] = None  # "schedule" or "change_detection"

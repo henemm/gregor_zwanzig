@@ -227,9 +227,13 @@ class TestAC5PerUserSnapshot:
 # ===========================================================================
 
 def _narrow(day_comparison=...):
-    """render_narrow-Aufruf. day_comparison=... → kwarg weglassen."""
+    """render_telegram_bubbles-Aufruf (Issue #1001). day_comparison=... → kwarg weglassen.
+
+    Gibt alle Bubble-Texte verbunden zurueck (die Vortag-Zeile steckt in der
+    Kurzuebersicht-Bubble) — Substring-Assertions bleiben unveraendert gueltig.
+    """
     from app.metric_catalog import build_default_display_config
-    from output.renderers.narrow import render_narrow
+    from output.renderers.narrow import render_telegram_bubbles
 
     seg = _segment_with_weather(1, temp_min_c=8.0, temp_max_c=18.0,
                                 wind_max_kmh=20.0, precip_sum_mm=2.0)
@@ -241,7 +245,8 @@ def _narrow(day_comparison=...):
     )
     if day_comparison is not ...:
         kwargs["day_comparison"] = day_comparison
-    return render_narrow("telegram", **kwargs)
+    bubbles = render_telegram_bubbles(**kwargs)
+    return "\n".join(b.text for b in bubbles)
 
 
 class TestAC6TelegramTopThree:

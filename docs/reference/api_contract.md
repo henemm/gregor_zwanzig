@@ -402,7 +402,7 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | show_metrics_summary            | bool        | Optionaler Metriken-Überblick am Beginn (default: false, Issue #664/795) — wenn true: farbige Pillen pro konfigurierter Metrik mit SMS-identischen Erwähnungsschwellen. **Pill-Inhalts-Format (Issue #795):** Ereignis-Metriken (wind/gust/precip/pop/thunder/visibility/humidity) zeigen „<Label> ab HH:00 · Spitze <X> um HH:00" (oder ruhige Form unter Schwelle); Bereichs-Metriken (temp/wind_chill/cloud/freezing_level/dewpoint/uv/sunshine) zeigen „<Label> min–max <Einheit>" ohne Uhrzeit. **Pill-Farbe (Issue #759/#795):** EIN Ampel-System (🟢🟡🟠🔴) pro Spitzenwert via `display_thresholds` + `ampel_dot`-Logik; HTML = WCAG-AA-Vollfarb-Kapsel (weißer Text ≥4.5:1); Plain = dieselben 4 Emojis wie die Stundentabelle; Compact (7bit/ASCII) = ASCII-Schwerezeichen (grün→kein, gelb→`!`, orange→`!!`, rot→`!!!`). Ersetzt Quick-Take und blendet Tages-Summe aus. |
 | show_outlook                    | bool        | Ausblick-Block anzeigen? (default: true, Issue #721) — verschmilzt Großwetterlage (Kopf) + Tabelle der nächsten Etappen mit Uhrzeiten und Vorhersage-Sicherheit (`confidence_pct` pro Etappe). Gilt für HTML **und** Plain-Text. `false` blendet den gesamten Block aus (Großwetterlage zusätzlich an `show_stability` gekoppelt). |
 | email_format                    | str         | E-Mail-Format-Schalter (default: `"full"`): `"full"` = multipart-HTML mit Stundentabellen (unverändert); `"compact"` = reine text/plain-Mail, nur ASCII, ohne HTML, mit fix Kopf + Metriken-Überblick + Ausblick + Footer, ~95% kleiner. Baustein-Toggles greifen bei compact NICHT. Siehe Issue #722. |
-| show_yesterday_comparison       | bool        | Vortag-Vergleich-Sektion in E-Mail anzeigen? (default: true, Issues #750 #752) — wenn true und Vortag-Snapshot vorhanden: zeigt Delta-Tabelle in HTML und Plain; fehlender Snapshot führt zu sanftem Überspringen (kein Fehler). Der Toggle wirkt einheitlich auf beide Kanäle: `format_email` nullt `day_comparison` bei `false`, sodass auch die Telegram-"Vortag:"-Zeile (`render_narrow`) entfällt. |
+| show_yesterday_comparison       | bool        | Vortag-Vergleich-Sektion in E-Mail anzeigen? (default: true, Issues #750 #752) — wenn true und Vortag-Snapshot vorhanden: zeigt Delta-Tabelle in HTML und Plain; fehlender Snapshot führt zu sanftem Überspringen (kein Fehler). Der Toggle wirkt einheitlich auf beide Kanäle: `format_email` nullt `day_comparison` bei `false`, sodass auch die Vortag-Zeile in der Telegram-Kurzübersicht-Bubble (`render_telegram_bubbles()`, Issue #1001) entfällt. |
 | updated_at                      | datetime    | Zeitpunkt der letzten Config-Änderung                  |
 
 #### MetricConfig (Issue #435, erweitert Issue #624)
@@ -2154,16 +2154,30 @@ Content-Type: text/plain
 
 ### GET /api/preview/{trip_id}/telegram
 
-Render trip report preview for Telegram channel.
+Render trip report preview for Telegram channel. Seit Issue #1001 rendert das Backend
+das Briefing als mehrere einzelne Nachrichten ("Bubbles": Kopf, Kurzübersicht, je
+Segment, Ziel, optional Ausblick, Aktionen) statt einer einzelnen Prosa-Nachricht —
+siehe `docs/adr/0014-telegram-multi-bubble-format.md`.
 
 **Query Parameters:** Same as `/email` (type, date, demo)
 
 **Response 200:**
 
+```json
+{
+  "subject": "...",
+  "body": "<alle Bubbles, verbunden mit \"\\n\\n---\\n\\n\">",
+  "char_count": 0,
+  "max_line_width": 0,
+  "bubbles": ["<Bubble 1: Kopf>", "<Bubble 2: Kurzübersicht>", "..."]
+}
 ```
-Content-Type: text/plain
-<Telegram-formatted message (may include markdown or HTML)>
-```
+
+`bubbles` ist additiv seit #1001 (AC-7) — `body` bleibt aus Rückwärtskompatibilität
+erhalten und ist die mit `"\n\n---\n\n"` verbundene Kette aller Bubbles. Das dazugehörige
+`reply_markup` (Inline-Keyboard der Aktionen-Bubble) ist im Preview-JSON **nicht**
+enthalten; es wird ausschließlich beim tatsächlichen Versand über
+`TripReport.telegram_actions_markup` an die letzte Nachricht angehängt.
 
 **Error Responses:** Same as `/email`
 
@@ -2361,6 +2375,12 @@ export interface AlertRule {
 
 ## Changelog
 
+- 2026-07-03: Issue #1001 — Telegram-Ausgabe neu gebaut (Multi-Bubble-Format): `GET
+  /api/preview/{trip_id}/telegram` liefert zusätzlich `bubbles: list[str]` neben dem
+  bestehenden `body`-Feld (additiv, rückwärtskompatibel — `body` bleibt die mit
+  `"\n\n---\n\n"` verbundene Kette aller Bubbles). Betrifft nur den Telegram-Kanal;
+  E-Mail/SMS-Preview unverändert. Siehe `docs/adr/0014-telegram-multi-bubble-format.md`
+  und `docs/specs/modules/feat_1001_telegram_redesign.md`.
 - 2026-07-03: Issue #995 — E-Mail-Fehler-Bündel: (A) neues Python-internes Feld
   `Waypoint.time_window_origin` (`src/app/trip.py`, Werte `"imported"`/`None`≈"manual") —
   ein GPX-importiertes `time_window` verliert in `convert_trip_to_segments()` seinen Vorrang

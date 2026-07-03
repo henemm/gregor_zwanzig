@@ -113,10 +113,12 @@ def test_ac2_telegram_endpoint_body_equals_telegram_text(client, service):
     assert isinstance(body, str)
     assert body, "Telegram-Body darf nicht leer sein"
 
-    _subject, telegram_text = service.render_telegram_preview(
+    # Issue #1001: render_telegram_preview() liefert jetzt (subject, body,
+    # bubbles) — body bleibt die verbundene Bubble-Kette (Rueckwaertskompat.).
+    _subject, telegram_body, _bubbles = service.render_telegram_preview(
         TRIP_ID, user_id="default", report_type="evening",
     )
-    assert body == telegram_text, "Endpoint-body muss report.telegram_text entsprechen"
+    assert body == telegram_body, "Endpoint-body muss report.telegram_bubbles (verbunden) entsprechen"
 
 
 # ===========================================================================
@@ -254,16 +256,17 @@ def test_service_has_render_signal_preview(service):
 def test_service_has_render_telegram_preview(service):
     """GIVEN den PreviewService
     WHEN render_telegram_preview für einen echten Trip aufgerufen wird
-    THEN liefert er (subject, telegram_text) — Methode muss existieren
-         (RED: fehlt noch → AttributeError)."""
+    THEN liefert er (subject, body, bubbles) — Methode muss existieren
+         (Issue #1001: additiv um die Bubble-Liste erweitert)."""
     assert hasattr(type(service), "render_telegram_preview"), (
         "PreviewService.render_telegram_preview muss existieren"
     )
     try:
-        subject, body = service.render_telegram_preview(
+        subject, body, bubbles = service.render_telegram_preview(
             TRIP_ID, user_id="default", report_type="evening",
         )
     except RuntimeError:
         pytest.skip("Wetter-API nicht erreichbar")
     assert isinstance(subject, str)
     assert isinstance(body, str) and body
+    assert isinstance(bubbles, list) and bubbles

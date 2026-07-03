@@ -121,19 +121,21 @@ def test_channel_limits_retains_telegram():
 
 def test_narrow_renderer_line_width_has_no_signal():
     """
-    AC-3: _LINE_WIDTH in narrow.py enthält 'signal' nicht mehr.
-
-    RED-Zustand: narrow.py definiert `_LINE_WIDTH = {"signal": 26, "telegram": 40}`.
+    AC-3 (superseded durch Issue #1001): narrow.py ist seit dem Breaking Replace
+    (render_telegram_bubbles ersetzt render_narrow vollstaendig) ausschliesslich
+    Telegram-spezifisch — das per-Kanal-Dict `_LINE_WIDTH` existiert nicht mehr,
+    stattdessen feste Telegram-Konstanten `_TG_PROSE_WIDTH`/`_TG_TABLE_WIDTH`.
+    Der urspruengliche AC-3-Zweck (kein Signal-Ueberbleibsel im Renderer) ist
+    dadurch a-fortiori erfuellt: es gibt ueberhaupt keinen Kanal-Schluessel mehr.
     """
     import src.output.renderers.narrow as narrow_module
 
-    line_width = narrow_module._LINE_WIDTH
-    assert "signal" not in line_width, (
-        f"narrow._LINE_WIDTH enthält noch 'signal': {line_width} — "
-        "Signal-Zweig muss aus _LINE_WIDTH entfernt werden (AC-3)"
+    assert not hasattr(narrow_module, "_LINE_WIDTH"), (
+        "narrow._LINE_WIDTH sollte seit #1001 nicht mehr existieren "
+        "(Renderer ist Telegram-exklusiv)"
     )
-    assert "telegram" in line_width, (
-        "narrow._LINE_WIDTH hat 'telegram' verloren — Regression"
+    assert hasattr(narrow_module, "_TG_PROSE_WIDTH"), (
+        "narrow._TG_PROSE_WIDTH (Nachfolge-Konstante) fehlt — Regression"
     )
 
 
@@ -162,13 +164,22 @@ def test_trip_report_has_no_signal_text_field():
 
 def test_trip_report_retains_telegram_text_field():
     """
-    AC-4 (Regressionsschutz): TripReport behält telegram_text.
+    AC-4 (Regressionsschutz, angepasst durch Issue #1001): TripReport behält
+    ein Telegram-Feld. Issue #1001 hat `telegram_text: Optional[str]` bewusst
+    (Breaking Change des transienten DTOs, siehe Spec "Side effects") durch
+    `telegram_bubbles: list[str]` ersetzt — der urspruengliche Regressionsschutz
+    ("Telegram-Feld darf bei der Signal-Entfernung nicht mitverschwinden") gilt
+    jetzt fuer das neue Feld.
     """
     from app.models import TripReport
 
     field_names = {f.name for f in dataclasses.fields(TripReport)}
-    assert "telegram_text" in field_names, (
-        "TripReport hat 'telegram_text' verloren — Regression bei Signal-Entfernung"
+    assert "telegram_text" not in field_names, (
+        "TripReport hat noch 'telegram_text' — sollte seit #1001 durch "
+        "'telegram_bubbles' ersetzt sein"
+    )
+    assert "telegram_bubbles" in field_names, (
+        "TripReport hat 'telegram_bubbles' verloren — Regression (Issue #1001)"
     )
     assert "sms_text" in field_names, (
         "TripReport hat 'sms_text' verloren — Regression"

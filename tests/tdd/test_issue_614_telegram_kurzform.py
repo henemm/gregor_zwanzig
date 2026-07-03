@@ -23,6 +23,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
+import pytest
+
 
 # ---------------------------------------------------------------------------
 # Helpers (real domain objects, no mocks)
@@ -100,7 +102,13 @@ def _make_segment():
 
 
 def _render_telegram(telegram_kurzform: bool) -> str:
-    """Run the REAL email pipeline and return telegram_text."""
+    """Run the REAL email pipeline and return the joined telegram bubbles.
+
+    Issue #1001: report.telegram_text (Einzelnachricht) wurde durch
+    report.telegram_bubbles (list[str]) ersetzt — Rueckgabe hier bleibt ein
+    einzelner String (alle Bubbles verbunden) fuer Rueckwaertskompatibilitaet
+    der verbleibenden Substring-Assertions in dieser Datei.
+    """
     from src.formatters.trip_report import TripReportFormatter
 
     dc = _build_dc(_NINE_PRIMARY, telegram_kurzform=telegram_kurzform)
@@ -112,7 +120,7 @@ def _render_telegram(telegram_kurzform: bool) -> str:
         stage_name="KHW403",
         tz=ZoneInfo("Europe/Berlin"),
     )
-    return report.telegram_text or ""
+    return "\n".join(report.telegram_bubbles)
 
 
 # ---------------------------------------------------------------------------
@@ -153,39 +161,36 @@ def test_ac1_loader_roundtrip_preserves_flag_and_other_fields():
 # AC-2 — Kurzform wird angehängt und trägt ALLE Metriken (keine Truncation)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.skip(
+    reason=(
+        "OBSOLET (Issue #1001 AC-10): Der Text-Anhang-Mechanismus (SMS-Kurzform "
+        "als 'Tages-Max'-Block an telegram_text angehaengt) wurde durch #1001 "
+        "abgeloest — telegram_kurzform ist jetzt wirkungslos, die Kurzuebersicht-"
+        "Bubble mit ALLEN konfigurierten Metriken erscheint immer (kein Schalter). "
+        "Funktional aequivalenter Nachweis 'alle Metriken sichtbar, auch bei "
+        ">8 Spalten' liefert test_issue_1001_telegram_bubbles.py::"
+        "TestAC3KurzuebersichtAlleMetriken."
+    )
+)
 def test_ac2_kurzform_appended_with_all_metrics():
-    """GIVEN telegram_kurzform=True + 9 Metriken (>8-Spalten-Limit)
-    WHEN Telegram gerendert THEN Tages-Max-Block + vollständige SMS-Kurzform enthalten."""
-    from src.formatters.sms_trip import SMSTripFormatter
-
-    text = _render_telegram(telegram_kurzform=True)
-    assert "Tages-Max" in text, "Kurzform-Block fehlt im telegram_text"
-
-    # Die unbeschnittene SMS-Kurzform (hohes max_length) muss 1:1 enthalten sein.
-    expected = SMSTripFormatter().format_sms(
-        [_make_segment()],
-        stage_name="KHW403",
-        report_type="evening",
-        tz=ZoneInfo("Europe/Berlin"),
-        max_length=4000,
-    )
-    assert expected in text, (
-        "Vollständige SMS-Kurzform nicht im telegram_text gefunden "
-        f"(erwartet: {expected!r})"
-    )
-    # Überzählige Metrik (Böen = G-Token) muss in der Kurzform auftauchen.
-    kurz = text.split("Tages-Max", 1)[1]
-    assert " G" in kurz or "G2" in kurz, "Böen-Token (Überlauf) fehlt in der Kurzform"
+    """AC-2 (superseded): siehe skip-reason."""
 
 
 # ---------------------------------------------------------------------------
 # AC-3 — Flag aus (Default) = unverändert, KEIN Kurzform-Block
 # ---------------------------------------------------------------------------
 
+@pytest.mark.skip(
+    reason=(
+        "OBSOLET (Issue #1001 AC-10): telegram_kurzform ist wirkungslos — es "
+        "gibt keinen 'an/aus'-Zweig mehr zu testen (Kurzuebersicht-Bubble "
+        "erscheint IMMER, unabhaengig vom Flag). Aequivalenter Nachweis liefert "
+        "test_issue_1001_telegram_bubbles.py::TestAC10KurzformFlagWirkungslos "
+        "(Bubble-Listen fuer beide Flag-Werte identisch)."
+    )
+)
 def test_ac3_disabled_no_kurzform_block():
-    """GIVEN telegram_kurzform=False WHEN Telegram gerendert THEN kein Tages-Max-Block."""
-    text = _render_telegram(telegram_kurzform=False)
-    assert "Tages-Max" not in text
+    """AC-3 (superseded): siehe skip-reason."""
 
 
 # ---------------------------------------------------------------------------

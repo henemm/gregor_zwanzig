@@ -179,36 +179,24 @@ def test_render_plain_segment_header_local_time_cest():
 # AC-3: render_narrow Segment-Header zeigt lokale Zeit (Signal/Telegram)
 # ===========================================================================
 
+@pytest.mark.skip(
+    reason=(
+        "OBSOLET: render_narrow('signal', ...) getestet — Signal-Kanal wurde "
+        "in Bug #610 (Schritt 2/2) entfernt UND render_narrow() selbst wurde "
+        "in Issue #1001 (Multi-Bubble-Telegram-Redesign, Breaking Replace) "
+        "vollstaendig durch render_telegram_bubbles() ersetzt. Die neue "
+        "Segment-Mini-Header-Bubble zeigt bewusst KEINE Uhrzeit mehr (Spec: "
+        "'{Segment} · {km-Range} · {Höhen-Range}') — lokale Zeit steckt "
+        "stattdessen in der 'Zt'-Spalte der Segment-Tabelle, deren Werte "
+        "bereits vor dem Renderer via local_hour() gebaut werden (siehe "
+        "trip_report.py._extract_hourly_rows). Aequivalenter Nachweis fuer "
+        "Ortszeit-Korrektheit: test_render_plain_segment_header_local_time_cest "
+        "oben (E-Mail-Pfad, unveraendert)."
+    )
+)
 def test_render_narrow_segment_header_local_time_cest():
-    """AC-3: render_narrow muss lokale CEST-Zeit in der Segment-Kopfzeile
-    anzeigen, nicht UTC.
-
-    RED: Schlägt fehl, weil narrow.py aktuell seg.start_time.strftime('%H:%M')
-    aufruft UND local_fmt noch nicht importiert hat → '08:00' statt '10:00'.
-    """
-    from src.output.renderers.narrow import render_narrow
-
-    seg_data = _make_seg_data()
-    dc = _make_dc()
-
-    output = render_narrow(
-        "signal",
-        segments=[seg_data],
-        seg_tables=[[{"time": "10", "temp": 18.0}]],
-        dc=dc,
-        report_type="morning",
-        tz=_CEST,
-        trip_name="GR20",
-    )
-
-    assert _LOCAL_START in output, (
-        f"render_narrow-Output muss lokale Startzeit {_LOCAL_START!r} enthalten.\n"
-        f"Tatsächlicher Output:\n{output}"
-    )
-    assert _UTC_START not in output, (
-        f"render_narrow-Output darf UTC-Zeit {_UTC_START!r} NICHT enthalten.\n"
-        f"Tatsächlicher Output:\n{output}"
-    )
+    """AC-3 (superseded): siehe skip-reason — render_narrow()/Signal-Kanal
+    existieren nicht mehr."""
 
 
 # ===========================================================================

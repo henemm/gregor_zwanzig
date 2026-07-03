@@ -200,8 +200,20 @@ class TestAC3HtmlFooterCommands:
 # AC-4: render_narrow Telegram enthält Befehle; Signal nicht; Längenlimit
 # ---------------------------------------------------------------------------
 
+@pytest.mark.skip(
+    reason=(
+        "OBSOLET (Issue #1001): render_narrow() und der Text-Befehls-Footer/"
+        "cmd_hint-Block ('Befehle: report morning, ...') wurden als Teil des "
+        "Breaking Replace entfernt (Spec Source-Abschnitt: 'der Text-Befehls-"
+        "Foter-Block (Zeile 531-536) und die cmd_hint-Zeile'). Die Aktionen-"
+        "Bubble (Inline-Keyboard) ersetzt den Text-Hinweis; die Text-Befehle "
+        "selbst bleiben laut Spec funktionsfaehig (AC-6-Regression in #1001, "
+        "abgedeckt durch test_issue_1001_telegram_bubbles.py). Der Signal-Kanal "
+        "existiert zudem seit Issue #610 nicht mehr."
+    )
+)
 class TestAC4NarrowFooterCommands:
-    """AC-4: Telegram-Kanal enthält Befehls-Hinweis; Signal-Kanal nicht."""
+    """AC-4 (superseded): Telegram-Kanal enthält Befehls-Hinweis; Signal-Kanal nicht."""
 
     def test_telegram_contains_report_morning(self):
         body = _render_narrow_minimal("telegram")

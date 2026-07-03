@@ -2,6 +2,20 @@
 
 SPEC: docs/specs/modules/issue_635_telegram_weather_readable.md AC-1..AC-9.
 NO mocks, NO patch, NO MagicMock. Real function calls only.
+
+OBSOLET (Issue #1001, gesamtes Modul): #635 war die PO-Entscheidung "Prosa
+statt Tabelle" fuer den Telegram-Kanal (eine Zeile pro Segment,
+_tg_segment_line, Emoji-Skala, Wortkategorien fuer Regen/Wind). Issue #1001
+(Multi-Bubble-Telegram-Redesign) hebt diese Entscheidung explizit fachlich auf
+und kehrt zur echten Tabellen-Darstellung zurueck (siehe feat_1001-Spec,
+Dependencies-Tabelle: "issue_635_telegram_weather_readable.md | Spec
+(abgelöst)"). render_narrow()/_tg_segment_line()/_tg_extra_detail_line()
+wurden im Breaking Replace entfernt — die kompletten AC-1..AC-9-Assertions
+dieser Datei pruefen Prosa-Format-Details, die es nicht mehr gibt (Emoji-Wahl,
+Temp-Pfeil, Wind-Range-Wortlaut, Regen-Kategorien, Footer-Position im
+Gesamttext, Zeilenbreiten fuer Prosa-Segmentzeilen). Aequivalenter
+Struktur-Nachweis fuer die neue Tabellen-Darstellung + Zeilenbreiten-Grenze:
+tests/tdd/test_issue_1001_telegram_bubbles.py (AC-2, AC-9).
 """
 from __future__ import annotations
 
@@ -9,6 +23,14 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 import pytest
+
+pytestmark = pytest.mark.skip(
+    reason=(
+        "OBSOLET (Issue #1001): Prosa-Format (#635) fachlich durch #1001 "
+        "aufgehoben — render_narrow()/_tg_segment_line() existieren nicht "
+        "mehr. Siehe Modul-Docstring."
+    )
+)
 
 
 # ---------------------------------------------------------------------------

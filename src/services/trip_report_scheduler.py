@@ -597,8 +597,8 @@ class TripReportSchedulerService:
                 report.email_html = report.email_html.replace(
                     "<body>", f"<body><p>{hint}</p>", 1,
                 ) if "<body>" in report.email_html else f"<p>{hint}</p>{report.email_html}"
-            if getattr(report, "telegram_text", None):
-                report.telegram_text = f"{hint}\n\n{report.telegram_text}"
+            if report.telegram_bubbles:
+                report.telegram_bubbles[0] = f"{hint}\n\n{report.telegram_bubbles[0]}"
 
         # 7. Send via configured channels
         config = trip.report_config
@@ -635,16 +635,32 @@ class TripReportSchedulerService:
             except Exception as e:
                 logger.error(f"SMS send failed for {trip.name}: {e}")
 
-        # 7c. Send Telegram if configured (Issue #360: kanal-bewusster Body)
+        # 7c. Send Telegram if configured (Issue #1001: Multi-Bubble-Versand).
+        # Fehlerpolitik: Abbruch nach erstem Fehlschlag, ein Log-Eintrag,
+        # kein Teil-Retry (AC-5). Issue #1001 Adversary-Finding F003:
+        # telegram_fully_sent trackt ob die Schleife WIRKLICH vollstaendig
+        # durchlief — nur dann darf das Briefing-Log "telegram" als gesendet
+        # verzeichnen (sonst faelschlich "ok" bei nur teilweise zugestellten
+        # Bubbles, z.B. nur der Kopf-Bubble).
+        telegram_fully_sent = True
         if config and config.send_telegram and self._settings.can_send_telegram():
-            try:
-                from outputs.telegram import TelegramOutput
-                TelegramOutput(self._settings).send(
-                    subject=report.email_subject,
-                    body=report.telegram_text or report.email_plain,
-                )
-            except Exception as e:
-                logger.error(f"Telegram send failed for {trip.name}: {e}")
+            from outputs.base import OutputError
+            from outputs.telegram import TelegramOutput
+
+            bubbles = report.telegram_bubbles or [report.email_plain]
+            for i, bubble_text in enumerate(bubbles):
+                markup = report.telegram_actions_markup if i == len(bubbles) - 1 else None
+                try:
+                    TelegramOutput(self._settings).send(
+                        subject=report.email_subject, body=bubble_text,
+                        reply_markup=markup, parse_mode="HTML", suppress_subject_line=True,
+                    )
+                except OutputError as e:
+                    logger.error(
+                        f"Telegram bubble {i + 1}/{len(bubbles)} send failed for {trip.name}: {e}"
+                    )
+                    telegram_fully_sent = False
+                    break
 
         # Issue #393: Briefing-Log für Cockpit-Kachel "Was geht heute raus".
         # Nur nach erfolgreichem Versand (kein Exception oben) anhängen.
@@ -653,7 +669,7 @@ class TripReportSchedulerService:
             sent_channels.append("email")
         if config and config.send_sms and self._settings.can_send_sms():
             sent_channels.append("sms")
-        if config and config.send_telegram and self._settings.can_send_telegram():
+        if config and config.send_telegram and self._settings.can_send_telegram() and telegram_fully_sent:
             sent_channels.append("telegram")
         self._append_briefing_log(trip.id, report_type, sent_channels)
 

@@ -63,6 +63,18 @@ _CALLBACK_QUERY_MAP = {
     "heute": "### query: heute",
     "morgen": "### query: morgen",
     "now": "### now",
+    # Issue #1001: Aktionen-Bubble-Callbacks (act_*). "act_columns" hatte
+    # ursprünglich bewusst kein Mapping (Spalten-Aenderung ist ein Frontend-
+    # Trip-Editor-Flow, kein Text-Befehl-Aequivalent), was aber zu einem toten
+    # Button ohne jedes Feedback führte (Adversary-Finding F002). Fix: statt
+    # eines stillen No-Ops liefert der Klick jetzt einen informativen Hinweis
+    # über TripCommandProcessor._show_columns_info() (kein Trip-Zustand wird
+    # geändert).
+    "act_overview": "### query: glance",
+    "act_pause": "### pause",
+    "act_skip": "### skip",
+    "act_columns": "### columns",
+    "act_help": "### hilfe",
 }
 
 _CALLBACK_DRILLDOWN_PATTERN = re.compile(r"^dd_(thunder|wind|precip|hours)_(today|tomorrow)$")
