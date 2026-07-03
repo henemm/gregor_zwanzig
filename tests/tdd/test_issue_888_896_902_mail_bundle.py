@@ -34,10 +34,17 @@ _TD_CELL = re.compile(r'<td[^>]*data-label="([^"]*)"[^>]*>(.*?)</td>')
 
 
 def _cell_for_label(html: str, label: str) -> str:
-    """Extract the inner cell content for a given column label."""
-    for match_label, content in _TD_CELL.findall(html):
-        if match_label == label:
-            return content
+    """Extract the full <td ...>...</td> block for a given column label.
+
+    Issue #995 (Gruppe B): the cell tint (``background:``) now sits as an
+    inline style on the opening ``<td>`` tag itself (no inner ``<span>``
+    tint wrapper anymore). Returning the whole block — opening tag with its
+    attributes plus the inner content — keeps the existing background/emoji
+    assertions working regardless of where the tint lives.
+    """
+    for match in _TD_CELL.finditer(html):
+        if match.group(1) == label:
+            return match.group(0)
     raise AssertionError(f"No <td data-label={label!r}> cell found in: {html}")
 
 

@@ -83,8 +83,15 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
         wp1_calculated_str = wp1.arrival_calculated
         wp1_calculated = _parse_hhmm(wp1_calculated_str) if wp1_calculated_str else None
 
-        if wp1.time_window is not None:
-            wp1_start = wp1.time_window.start
+        # Issue #995: importierte time_window (GPX-Artefakt) ist nicht autoritativ
+        # und wird wie None behandelt → fällt auf stage.start_time / Naismith durch.
+        wp1_tw = (
+            wp1.time_window
+            if getattr(wp1, "time_window_origin", None) != "imported"
+            else None
+        )
+        if wp1_tw is not None:
+            wp1_start = wp1_tw.start
         elif wp1_override is not None:
             wp1_start = wp1_override
         elif i == 0 and stage.start_time:
@@ -106,8 +113,14 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
         )
         wp2_arrival = _parse_hhmm(wp2_arrival_str) if wp2_arrival_str else None
 
-        if wp2.time_window is not None:
-            wp2_start = wp2.time_window.start
+        # Issue #995: importierte time_window (GPX-Artefakt) wie None behandeln.
+        wp2_tw = (
+            wp2.time_window
+            if getattr(wp2, "time_window_origin", None) != "imported"
+            else None
+        )
+        if wp2_tw is not None:
+            wp2_start = wp2_tw.start
         elif wp2_arrival is not None:
             wp2_start = wp2_arrival
         else:

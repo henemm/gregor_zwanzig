@@ -356,7 +356,7 @@ Das `<h1>{trip.name}</h1>` aus Step 1 wird durch `<TripHeader {trip} ... />` ers
 
 ## Known Limitations
 
-- **Scheduler ignoriert pausierten Status:** Der Briefing-Scheduler sendet weiterhin Reports auch für pausierte Trips. Die Scheduler-Integration (pausierte Trips überspringen) ist bewusst out of scope für Issue #153 — wird als separates Folge-Issue angelegt.
+- ~~**Scheduler ignoriert pausierten Status:** Der Briefing-Scheduler sendet weiterhin Reports auch für pausierte Trips.~~ **Erledigt durch Issue #995 (2026-07-03):** `trip_report_scheduler.py::_get_active_trips()` prüft jetzt `trip.paused_at` und überspringt pausierte Trips beim automatischen Versand (Go↔Python-Roundtrip analog `archived_at`/#805). Manueller Test-Versand und Alert-Dispatch bleiben bewusst unberührt. Siehe `docs/specs/modules/issue_995_mail_bugs_bundle.md`.
 - **Trip-Liste filtert Archivierte nicht:** Die Trip-Übersicht (`/trips`) zeigt archivierte Trips weiterhin ohne Filter oder visuellen Unterschied. Ein Archiv-Filter oder eine Ausblend-Option kommt als separates Folge-Issue.
 - **Cockpit-Status-Funktion bleibt dupliziert:** `routes/+page.svelte` (Cockpit) enthält eine eigene `getTripStatus`-Funktion mit nur 3 Status. Konsolidierung mit `deriveTripStatus` aus diesem Issue ist in einem separaten Tech-Debt-Ticket geplant — kein Import-Konflikt, da unterschiedliche Dateipfade und unterschiedliche Funktionsnamen.
 - **`TODO(epic-135)` in `wizardState.svelte.ts`** bleibt bis zum letzten Sub-Issue von Epic #135 stehen — explizit nicht in Scope für #153.
@@ -365,4 +365,7 @@ Das `<h1>{trip.name}</h1>` aus Step 1 wird durch `<TripHeader {trip} ... />` ers
 
 ## Changelog
 
+- 2026-07-03: Known-Limitations-Eintrag „Scheduler ignoriert pausierten Status" als erledigt
+  markiert — geschlossen durch Issue #995 (`trip_report_scheduler.py::_get_active_trips()`
+  wertet jetzt `trip.paused_at` aus). Siehe `docs/specs/modules/issue_995_mail_bugs_bundle.md`.
 - 2026-05-12: Initial spec — Issue #153 (Epic #135 Sub-Spec: Trip-Detail Header). Backend-Schema (`paused_at`/`archived_at`), neuer `PATCH /api/trips/{id}/state`-Endpoint, Pure-Function `deriveTripStatus` mit 4-Status-Hierarchie, `TripStatusBadge` (Pill-Wrapper), `TripHeader` (Breadcrumb + Badge + Actions + Confirm-Dialog), Route-Edit, 20 Acceptance Criteria im AC-N-Format, TestID-Inventar (9 IDs), Datei-Liste (12 Dateien, ~360 LoC), LoC-Override-Dokumentation, Known Limitations (6 Einträge).

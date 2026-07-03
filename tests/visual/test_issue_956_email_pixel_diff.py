@@ -335,26 +335,48 @@ def test_cell_tint_fills_cell_to_gridlines():
     diff_pct = compute_diff(ist, soll, diff)
     print(f"[Teil E] cell-tint diff_pct={diff_pct:.2f}% (threshold {TINT_DIFF_THRESHOLD}%)")
 
-    # (2) RED/GREEN-Gate: Geometrie des getönten <span> vs. seiner <td>-Zelle.
+    # (2) RED/GREEN-Gate: Geometrie der getönten Zellen-Box vs. der <td>-Zelle.
+    # Issue #995 (Gruppe B): die Tönung sitzt jetzt als `background:` direkt am
+    # <td> selbst (kein innerer <span>-Wrapper mit Negativ-Margin mehr). Die
+    # Query prüft ZUERST den Altfall (span mit background — Kompatibilität, falls
+    # andere Pfade das noch nutzen) und fällt sonst auf den <td>-eigenen
+    # Hintergrund zurück. Bei <td>-eigenem Background ist die Tönung per
+    # Definition randlos (die getönte Box IST die Zelle → leftGap/rightGap = 0).
     geom = _dom_query(html, """() => {
-        // Getönte Zelle: <td> mit einem <span> das einen background hat.
         const tds = Array.from(document.querySelectorAll('td[data-label]'));
         for (const td of tds) {
+            const tdCS = getComputedStyle(td);
+            const tdBox = td.getBoundingClientRect();
+            // Altfall: innerer <span> trägt den Hintergrund.
             const span = td.querySelector('span');
-            if (!span) continue;
-            const cs = getComputedStyle(span);
-            const bg = cs.backgroundColor;
-            if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
-                const tdBox = td.getBoundingClientRect();
-                const spanBox = span.getBoundingClientRect();
-                const tdCS = getComputedStyle(td);
+            if (span) {
+                const cs = getComputedStyle(span);
+                const bg = cs.backgroundColor;
+                if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+                    const spanBox = span.getBoundingClientRect();
+                    return {
+                        found: true,
+                        tintSource: 'span',
+                        tdPaddingLeft: tdCS.paddingLeft,
+                        spanMarginLeft: cs.marginLeft,
+                        leftGap: spanBox.left - tdBox.left,
+                        rightGap: tdBox.right - spanBox.right,
+                        background: bg,
+                    };
+                }
+            }
+            // Neuer Fall (#995): der <td> selbst trägt den Hintergrund.
+            const tdBg = tdCS.backgroundColor;
+            if (tdBg && tdBg !== 'rgba(0, 0, 0, 0)' && tdBg !== 'transparent') {
                 return {
                     found: true,
+                    tintSource: 'td',
                     tdPaddingLeft: tdCS.paddingLeft,
-                    spanMarginLeft: cs.marginLeft,
-                    leftGap: spanBox.left - tdBox.left,
-                    rightGap: tdBox.right - spanBox.right,
-                    background: bg,
+                    spanMarginLeft: 'n/a',
+                    // Die getönte Box IST die Zelle → definitionsgemäß randlos.
+                    leftGap: 0,
+                    rightGap: 0,
+                    background: tdBg,
                 };
             }
         }
@@ -362,8 +384,8 @@ def test_cell_tint_fills_cell_to_gridlines():
     }""")
 
     assert geom["found"], (
-        "Getönte Zelle (span mit background in td[data-label]) im DOM nicht "
-        "gefunden — Test-Setup prüfen (precip-Wert über Warn-Schwelle?)."
+        "Getönte Zelle (background in td[data-label] oder innerem span) im DOM "
+        "nicht gefunden — Test-Setup prüfen (precip-Wert über Warn-Schwelle?)."
     )
     # Der getönte Bereich muss die Zelle randlos ausfüllen. Bug: ~2px Lücke
     # links/rechts, weil margin -4px das td-padding 6px nicht ausgleicht.

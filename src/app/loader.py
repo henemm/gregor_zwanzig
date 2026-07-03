@@ -425,6 +425,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         activity=data.get("activity", ""),  # Issue #802
         region=data.get("region", ""),  # Issue #805
         archived_at=data.get("archived_at"),  # Issue #805
+        paused_at=data.get("paused_at"),  # Issue #995: Go-Feld paused_at — roundtrip-erhalten
     )
     return trip
 
@@ -1060,6 +1061,9 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
 
     if trip.archived_at:
         data["archived_at"] = trip.archived_at
+
+    if trip.paused_at:  # Issue #995: Go-Feld paused_at — roundtrip-erhalten
+        data["paused_at"] = trip.paused_at
 
     # Serialize weather config (Feature 2.6 legacy, preserved for migration)
     if trip.weather_config:

@@ -280,6 +280,13 @@ class TripReportSchedulerService:
         for trip in all_trips:
             if trip.get_stage_for_date(target_date) is None:
                 continue
+            # Issue #995: Trip-Detail-Pause-Button (Go-Feld paused_at) unterdrückt
+            # den automatischen Versand. NUR hier — NICHT in load_all_trips(),
+            # sonst würde der Alert-Dispatch (trip_alert.py) fälschlich mit
+            # unterdrückt. Manueller Test-Versand (send_test_report) umgeht diese
+            # Funktion ohnehin und bleibt unberührt.
+            if trip.paused_at is not None:
+                continue
             rc = trip.report_config
             if rc is not None:
                 if rc.enabled is False:

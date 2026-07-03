@@ -581,15 +581,17 @@ def _render_html_table(
                 if 0 < vis_km < _VIS_THRESHOLD:
                     cell_bg = "#f6c5bf" if vis_km < 0.5 else ("#fad6b8" if vis_km < 1 else "#fbeeb8")
 
-            # AC-10 (#911): Zell-Hintergrund als äußerer Wrapper im Zell-Content
-            # (negative margins kompensieren das Zell-Padding aus dem <style>-Block).
-            if cell_bg:
-                cell = (
-                    f'<span style="display:block;background:{cell_bg};'
-                    f'margin:-6px -6px;padding:6px 6px;">{cell}</span>'
-                )
+            # Issue #995 (Gruppe B): Zell-Tönung + Padding direkt inline auf das
+            # <td> selbst (Vorbild _otd()-Muster), kein Span/Negativ-Margin-Trick
+            # mehr — füllt die Zelle auch in Clients ohne <style>-Block vollflächig.
             # Issue #902: Inline-Border (Outlook-fest), identisch zur Time-Zelle.
-            tds += f'<td style="{_td_grid}" data-label="{label}">{cell}</td>'
+            if cell_bg:
+                tds += (
+                    f'<td style="{_td_grid}background:{cell_bg};padding:6px;" '
+                    f'data-label="{label}">{cell}</td>'
+                )
+            else:
+                tds += f'<td style="{_td_grid}" data-label="{label}">{cell}</td>'
         # Issue #890 / AC-4: RiskDot-Spalte am Zeilenende (keine border-right — letzte Spalte).
         _dot_color = _RISK_DOT_COLORS[_row_risk(r)][0]
         tds += (

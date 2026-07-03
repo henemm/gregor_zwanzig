@@ -228,3 +228,79 @@ class TestAC3Monospace:
             f"Tabellen-Font ist NICHT monospace: Breite 'WWWW'={res['w']}px vs "
             f"'iiii'={res['i']}px. Bei echtem Monospace identisch."
         )
+
+
+# ===========================================================================
+# AC-4/AC-5 (#995 Gruppe B) — Zell-Hintergrund direkt auf <td>, kein Span-Trick
+# ===========================================================================
+class TestAC4AC5CellBackgroundInline:
+    """AC-4 (Geometrie td vs. Hintergrund-Element) lässt sich mit reinem
+    Chromium-Rendering NICHT zuverlässig als RED zeigen: Chromium löst den
+    aktuellen `margin:-6px -6px` / `padding:6px 6px`-Span-Trick gegen das
+    globale `td{padding:6px}` aus dem <style>-Block korrekt auf (html.py:1471),
+    die gemessene Lücke kann daher bereits jetzt ~0px sein. Das reale Problem
+    tritt nur in Mail-Clients auf, die den <style>-Block strippen/anders
+    auflösen (Outlook, teils Apple Mail) — die finale Bestätigung für AC-4 ist
+    deshalb NICHT dieser Test, sondern der echte Testversand via
+    briefing_mail_validator.py gegen das Staging-Testpostfach (AC-6, kein
+    pytest, siehe CLAUDE.md Mail-Validatoren).
+
+    AC-5 (strukturelle Abwesenheit des Span-Wrappers) ist dagegen JETZT
+    zuverlässig RED: der Span mit negativem Margin existiert im generierten
+    DOM für jede getönte Zelle.
+    """
+
+    def test_ac5_no_negative_margin_span_in_data_cells(self):
+        html = _render_full_html([_warn_row()])
+        count = _with_desktop_page(html, lambda page: page.evaluate(
+            """() => {
+                const tds = Array.from(document.querySelectorAll('tbody td[data-label]'));
+                return tds.filter(td => td.querySelector('span[style*="margin:-6"]') !== null).length;
+            }"""
+        ))
+        assert count == 0, (
+            f"{count} getönte Zelle(n) verwenden noch den Span/Negativ-Margin-"
+            "Wrapper (margin:-6px) statt Hintergrund+Padding direkt inline auf "
+            "<td> (Vorbild _otd()-Muster html.py:1106-1117). Nach dem Fix muss "
+            "die Zählung 0 sein."
+        )
+
+    def test_ac4_tinted_background_geometry_matches_td(self):
+        """Geometrie-Nachweis (best-effort, siehe Klassendocstring): das
+        Hintergrund-tragende Element (Span jetzt, <td> nach dem Fix) muss die
+        <td>-Fläche randlos abdecken (Lücke ≤ 1px)."""
+        html = _render_full_html([_warn_row()])
+        geom = _with_desktop_page(html, lambda page: page.evaluate(
+            """() => {
+                const tds = Array.from(document.querySelectorAll('tbody td[data-label]'));
+                for (const td of tds) {
+                    const tdBg = getComputedStyle(td).backgroundColor;
+                    let bgEl = null;
+                    if (tdBg && tdBg !== 'rgba(0, 0, 0, 0)' && tdBg !== 'transparent') {
+                        bgEl = td;
+                    } else {
+                        const span = td.querySelector('span');
+                        const spanBg = span ? getComputedStyle(span).backgroundColor : null;
+                        if (spanBg && spanBg !== 'rgba(0, 0, 0, 0)' && spanBg !== 'transparent') {
+                            bgEl = span;
+                        }
+                    }
+                    if (bgEl) {
+                        const tdBox = td.getBoundingClientRect();
+                        const bgBox = bgEl.getBoundingClientRect();
+                        return {
+                            found: true,
+                            leftGap: bgBox.left - tdBox.left,
+                            rightGap: tdBox.right - bgBox.right,
+                            topGap: bgBox.top - tdBox.top,
+                            bottomGap: tdBox.bottom - bgBox.bottom,
+                        };
+                    }
+                }
+                return {found: false};
+            }"""
+        ))
+        assert geom["found"], "Getönte Zelle mit Hintergrund-Element nicht gefunden"
+        max_gap = max(abs(geom["leftGap"]), abs(geom["rightGap"]),
+                      abs(geom["topGap"]), abs(geom["bottomGap"]))
+        assert max_gap <= 1.0, f"Geometrie-Lücke > 1px zwischen Hintergrund und <td>: {geom}"

@@ -666,6 +666,14 @@ type Waypoint struct {
 - Backend (Go): `ComputeStageArrivals(stage, ActivitySpeed(trip.activity))` → mutiert Waypoints mit berechneter Zeit
 - TypeScript: `function activityToSpeed(activity?: ActivityType): number` — 15/20/25 für Fahrrad, 4.0 default
 
+**Python-internes Feld `time_window_origin` (Issue #995):** Nicht Teil des Go/TypeScript-DTOs
+oben — existiert ausschließlich auf der Python-Seite (`src/app/trip.py::Waypoint`), Werte
+`"imported"` (von `segments_to_trip()` beim GPX-Import gesetzt) oder `None`/`"manual"` (bewusst
+gesetzt). Steuert in `convert_trip_to_segments()` (`trip_segments.py`), ob ein `time_window`
+Vorrang vor einer später geänderten `stage.start_time` hat: ein als `"imported"` markiertes
+`time_window` verliert diesen Vorrang. Kein Wire-Format-Feld, wird nicht an Go/Frontend
+serialisiert.
+
 **Beispiel (Fahrrad 20 km/h):**
 ```json
 {
@@ -2353,6 +2361,17 @@ export interface AlertRule {
 
 ## Changelog
 
+- 2026-07-03: Issue #995 — E-Mail-Fehler-Bündel: (A) neues Python-internes Feld
+  `Waypoint.time_window_origin` (`src/app/trip.py`, Werte `"imported"`/`None`≈"manual") —
+  ein GPX-importiertes `time_window` verliert in `convert_trip_to_segments()` seinen Vorrang
+  vor einer nachträglich geänderten `stage.start_time`; kein Wire-Format-Feld, kein Go/TS-DTO-
+  Impact (siehe Abschnitt „Waypoint DTO"); (B) HTML-Mail-Zellhintergrund jetzt direkt inline auf
+  `<td>` statt Span/Negativ-Margin-Trick (`html.py`), keine DTO-Änderung; (C) Python liest jetzt
+  auch `Trip.paused_at` (`src/app/loader.py`, Read-Modify-Write analog `archived_at`/#805) und
+  `trip_report_scheduler.py::_get_active_trips()` überspringt pausierte Trips beim automatischen
+  Versand — das Go-Feld `PausedAt` selbst war bereits seit Issue #153 Teil des Trip-DTOs (siehe
+  oben), neu ist nur die Python-seitige Auswertung. Manueller Test-Versand und Alert-Dispatch
+  bleiben unberührt. See `docs/specs/modules/issue_995_mail_bugs_bundle.md`.
 - 2026-06-11: Issue #733 — Briefing-Mail-Validator (Marker-Headers + Plausibilität-Gate): `build_mime_message()` erweitert um optionale Parameter `mail_type` / `mail_format` (setzen `X-GZ-Mail-Type` / `X-GZ-Format` Header additiv, rückwärts-kompatibel). Scheduler + CLI taggen ausgehende Mails deterministisch: `trip-briefing/full|compact` (Briefing) vs. `compare/full` (Orts-Vergleich). Neuer Validator `.claude/hooks/briefing_mail_validator.py`: dispatcht auf Header, prüft **Trip-Briefing-Mails format-spezifisch auf Plausibilität** (full: multipart/alternative, HTML+Plain, ≥1 Stundentabelle, Werte self-konsistent; compact: single text/plain, 7bit, isascii, <2 KB, keine Stundentabelle). Compare-Mails bekommen No-Op-Klassifikation (Exit 0). Marker-Header ermöglichen deterministische Routing zu kanonischen Validatoren: `email_spec_validator.py` (Orts-Vergleich, fest auf Winner-Box verdrahtet) / `briefing_mail_validator.py` (Briefing). CLAUDE.md Sektion „BRIEFING-MAIL-VALIDATOR" dokumentiert Pflicht-Gate + Scope-Trennung. Siehe `docs/reference/renderer_email_spec.md` Sektion „Marker Headers and Validation Routing" und `docs/specs/modules/briefing_mail_validator.md`.
 - 2026-06-11: Issue #722 [#709 Slice 2] — E-Mail-Format Kompakt (Nur-Text, minimal-Byte): Neuer Format-Schalter `TripReportConfig.email_format: 'full' | 'compact'` (default `'full'`). `'full'` = bestehende multipart-HTML-Mail mit stündlichen Werte-Tabellen (byte-identisch unverändert). `'compact'` = reine `text/plain`-Mail (single part, kein HTML, kein multipart), reines ASCII (7bit-CTE), mit fix nur Kopf + Metriken-Überblick + Ausblick + Footer (ohne Baustein-Toggles), ~95% kleiner (~1 KB für Wanderer mit schlechter Konnektivität). Backend: neuer isolierter `render_compact()`-Renderer (`src/output/renderers/email/compact.py`, ~50 LoC), `build_mime_message()` extrahiert (`html=False` → `us-ascii`/7bit), Scheduler leitet Email-Format durch. Frontend: Format-Schalter in `EditReportConfigSection.svelte`, Baustein-Gruppe bei compact deaktiviert (UI-Hinweis). Go-Modell `ReportConfig` Passthrough (no changes). Tests: Backend E2E gegen Staging (AC-1–5 Multipart-Strukturverifizierung + ASCII-Validierung + Baustein-Ignorance), Playwright E2E (AC-6 UI-Persistenz), Multi-User (AC-7). See `docs/specs/modules/issue_722_email_compact_format.md`.
 - 2026-06-10: Issue #702 — Alerts-Tab Mobile-Parität TM2 (Frontend CSS-only, Epic #700 Slice 2/2): `AlertsTab.svelte`, `AlertCard.svelte`, `AlertCooldownCard.svelte`, `AlertQuietHoursCard.svelte` mit `@media (max-width: 899px)` Breakpoint-spezifischen Touch-Target-Sizing: Channel-Chips ≥36px Höhe, Threshold-Input ≥120px breit, Cooldown/Time-Inputs ≥44px Höhe + 16px font-size (verhindert iOS-Auto-Zoom). Desktop Layout bleibt byte-identisch. `.actions`-Bar auf mobil ausgeblendet, Mobile-Footer-Button sichtbar (bestehend). Keine API/DTO-Änderungen. Tests: Playwright E2E gegen Staging @375px Viewport (AC-1/AC-2/AC-3/AC-5 Touch-Targets, AC-4 Desktop-Regression). See `docs/specs/modules/issue_702_alerts_mobile_parity.md`.

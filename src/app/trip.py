@@ -80,6 +80,7 @@ class Waypoint:
     confirmed: Optional[bool] = None          # True = bestätigt; False bleibt erhalten (≠ None)
     suggestion_reason: Optional[str] = None   # "detected_peak" | "detected_valley" | "detected_pass" | "legacy_suggested"
     arrival_override: Optional[str] = None    # User-Override "HH:MM"
+    time_window_origin: Optional[str] = None  # Issue #995 — "imported" (GPX-Artefakt) | "manual" | None(≈manual)
 
     def __str__(self) -> str:
         tw = f" ({self.time_window})" if self.time_window else ""
@@ -197,6 +198,7 @@ class Trip:
     activity: str = ""  # Issue #802: Aktivitätstyp (z.B. "fahrrad_20") für Segment-Tempo
     region: str = ""  # Issue #805: Go-Feld region (z.B. "GR20") — roundtrip-erhalten
     archived_at: Optional[str] = None  # Issue #805: Go-Feld archived_at (ISO-String) — roundtrip-erhalten
+    paused_at: Optional[str] = None  # Issue #995: Go-Feld paused_at (ISO-String) — Trip-Detail-Pause, roundtrip-erhalten
 
     @property
     def start_date(self) -> date:
