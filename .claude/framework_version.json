@@ -2,5 +2,6 @@
   "framework_version": "3.4.13",
   "last_updated": "2026-06-30T13:15:00.000000",
   "installed_modules": [],
-  "notes": "edit_gate: ORCHESTRATOR_FILES-Schutz (settings.json, settings.local.json, active_workflow) vor json$-Always-Allowed eingefuegt. developer-agent: Regel 6 (keine Framework-Dateien). Fix PR #20."
+  "notes": "edit_gate: ORCHESTRATOR_FILES-Schutz (settings.json, settings.local.json, active_workflow) vor json$-Always-Allowed eingefuegt. developer-agent: Regel 6 (keine Framework-Dateien). Fix PR #20.",
+  "plugin_mode": true
 }
