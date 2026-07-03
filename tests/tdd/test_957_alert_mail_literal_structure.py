@@ -29,12 +29,14 @@ def _single_event_msg(value_from=1230.0, value_to=620.0, threshold=800.0):
 
 
 def _multi_event_msg():
-    e1 = AlertEvent(metric_id="gust", value_from=35.0, value_to=52.0, threshold=50.0,
+    # Issue #958-Umstellung: `threshold` ist die Δ-Auslöseschwelle. Fixture Δ-realistisch
+    # kalibriert — e1/e2 über Schwelle (|Δ| >= threshold), e3 unter Schwelle (|Δ| < threshold).
+    e1 = AlertEvent(metric_id="gust", value_from=30.0, value_to=80.0, threshold=40.0,
                      cmp="über", occurred_at="11:00", km_from=0.0, km_to=4.0)
-    e2 = AlertEvent(metric_id="thunder", value_from=30.0, value_to=55.0, threshold=40.0,
+    e2 = AlertEvent(metric_id="thunder", value_from=30.0, value_to=90.0, threshold=40.0,
                      cmp="über", occurred_at="11:30", km_from=1.0, km_to=4.0)
     e3 = AlertEvent(metric_id="rain_probability", value_from=70.0, value_to=90.0,
-                     threshold=999.0, cmp="über", occurred_at=None, km_from=0.0, km_to=3.0)
+                     threshold=95.0, cmp="über", occurred_at=None, km_from=0.0, km_to=3.0)
     return AlertMessage(trip_short="TEST", stand_at="14:30", events=(e1, e2, e3), source=None)
 
 
@@ -79,7 +81,8 @@ class TestSingleEventVerdictAndDatablock:
         under = render_email(_single_event_msg(value_from=1230.0, value_to=620.0, threshold=800.0))[0]
         assert "✓" in under, f"✓-Marker fehlt bei unter-Schwelle-Event: {under!r}"
 
-        over = render_email(_single_event_msg(value_from=200.0, value_to=900.0, threshold=800.0))[0]
+        # Issue #958: über Schwelle = |Δ| >= threshold. |950-100|=850 >= 800 → ✗.
+        over = render_email(_single_event_msg(value_from=100.0, value_to=950.0, threshold=800.0))[0]
         assert "✗" in over, f"✗-Marker fehlt bei über-Schwelle-Event: {over!r}"
 
     def test_footer_has_no_km_single_event(self):
@@ -90,9 +93,11 @@ class TestSingleEventVerdictAndDatablock:
 
 class TestMultiEventVerdictAndDatablock:
     def test_verdict_says_n_ueber_schwelle(self):
+        # Issue #981: Zähler filtert auf über-Schwelle-Events. Fixture hat 2 über
+        # (e1/e2) + 1 unter (e3) → "2 über Schwelle" (nicht 3).
         html, plain = render_email(_multi_event_msg())
-        assert "3 über Schwelle" in html
-        assert "3 über Schwelle" in plain
+        assert "2 über Schwelle" in html
+        assert "2 über Schwelle" in plain
 
     def test_one_row_per_event(self):
         msg = _multi_event_msg()

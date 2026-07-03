@@ -200,17 +200,19 @@ def test_ac4_visibility_already_below_threshold_no_realert():
 # (war zuvor 13 Regeln inkl. humidity).
 
 
-def test_ac6_entspannt_has_exactly_13_rules():
-    """AC-6: `expand_preset("entspannt")` liefert exakt 13 Regeln.
+def test_ac6_entspannt_has_exactly_12_rules():
+    """AC-6: `expand_preset("entspannt")` liefert exakt 12 Regeln.
 
     Issue #889: humidity entfernt → 12.
     Issue #946: freezing_level ergänzt → 13.
+    Issue #959: snow_line + freezing_level zu EINER Nullgradgrenze-Zeile
+    konsolidiert (snow_line-Zeile entfernt) → 12.
     """
     from services.alert_preset import expand_preset
 
     rules = expand_preset("entspannt")
-    assert len(rules) == 13, (
-        f"Preset 'entspannt' muss exakt 13 Regeln liefern, erhielt: {len(rules)}"
+    assert len(rules) == 12, (
+        f"Preset 'entspannt' muss exakt 12 Regeln liefern, erhielt: {len(rules)}"
     )
 
 

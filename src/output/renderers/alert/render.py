@@ -22,9 +22,13 @@ from .model import (
 
 
 def _sorted(msg: AlertMessage) -> list[AlertEvent]:
-    # Über-Schwelle-Events zuerst (severity-absteigend), unter-Schwelle gedämpft zuletzt
-    # (ebenfalls severity-absteigend) — Spec-Nachtrag #978 (PO 2026-07-02).
-    return sorted(msg.events, key=lambda e: (not over_thr(e), -severity(e)))
+    # Über-Schwelle-Events zuerst (severity-absteigend), unter-Schwelle gedämpft zuletzt.
+    # Issue #982: Innerhalb der unter-Schwelle-Gruppe nach BETRAG (abs(severity))
+    # statt Vorzeichen — das am weitesten von der Schwelle entfernte Event zuerst.
+    return sorted(
+        msg.events,
+        key=lambda e: (not over_thr(e), -severity(e) if over_thr(e) else -abs(severity(e))),
+    )
 
 
 _HANDLED_UNITS = {"m", "km", "hPa", "%", "km/h", "°C", "mm"}
@@ -134,14 +138,10 @@ def _render_email_onset(msg: AlertMessage) -> tuple[str, str]:
         plain_parts.append(cooldown)
     plain = "\n".join(plain_parts)
 
-    rows = []
-    for label_, value in data_rows:
-        border = "border-top:1px solid #d8d5c9;" if rows else ""
-        rows.append(
-            f"<div style=\"{border}padding:8px 0;font-family:{FONT_DATA};\">"
-            f"<span style=\"color:{G_INK_MUTED};\">{_esc(label_)}</span> "
-            f"<span style=\"color:{G_INK};\">{_esc(value)}</span></div>"
-        )
+    rows = [
+        _datarow_html(label_, value, G_INK, i == 0)
+        for i, (label_, value) in enumerate(data_rows)
+    ]
 
     html = (
         "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
@@ -192,15 +192,20 @@ def render_subject(msg: AlertMessage) -> str:
             f"[{msg.trip_short}] {km} · {arrow(e)} {_label(e)}: "
             f"{_val(e, e.value_from)}→{_val(e, e.value_to)}"
         )
-    n = len(evs)
+    # Issue #981: Zähler UND Top-3-Auswahl nur aus über-Schwelle-Events; ohne
+    # solche wechselt die Formulierung auf "N Änderungen seit dem Briefing".
+    over_evs = [e for e in evs if over_thr(e)]
+    if not over_evs:
+        return f"[{msg.trip_short}] {km} · {len(evs)} Änderungen seit dem Briefing"
+    n = len(over_evs)
     # Issue #978 (PO-Nachtrag): Top-3-Auswahl UND Anzeige-Reihenfolge sind
     # severity-absteigend (kritischster zuerst), kanal-konsistent mit
     # render_email() und render_telegram().
     top3 = ", ".join(
         f"{_label(e)} {_num(e, e.value_to)}{'%' if _unit_display(e) == '%' else ''}"
-        for e in evs[:3]
+        for e in over_evs[:3]
     )
-    return f"[{msg.trip_short}] {km} · {arrow(evs[0])} {n} über Schwelle: {top3}"
+    return f"[{msg.trip_short}] {km} · {arrow(over_evs[0])} {n} über Schwelle: {top3}"
 
 
 def _h1(msg: AlertMessage) -> str:
@@ -217,7 +222,7 @@ def _email_line(e: AlertEvent) -> str:
     return (
         f"{_label(e)} · Schwelle {_val(e, e.threshold)} · "
         f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)} · "
-        f"{side_label(e)}"
+        f"Änderung {side_label(e)}"
     )
 
 
@@ -230,7 +235,10 @@ def _delta_text(e: AlertEvent) -> str:
 def _verdict_single(e: AlertEvent) -> str:
     d = _delta_text(e)
     tail = f"{d} · " if d else ""
-    return f"{arrow(e)} {tail}jetzt {side_label(e)} Schwelle {_val(e, e.threshold)}"
+    return (
+        f"{arrow(e)} {tail}Änderung {side_label(e)} deiner Alarm-Schwelle "
+        f"({_val(e, e.threshold)})"
+    )
 
 
 def _datablock_single(e: AlertEvent) -> list[tuple[str, str]]:
@@ -245,7 +253,7 @@ def _datablock_single(e: AlertEvent) -> list[tuple[str, str]]:
     mark = "✓" if not over_thr(e) else "✗"
     row2 = (
         f"Alarm-Schwelle {_val(e, e.threshold)}",
-        f"jetzt {side_label(e)} {mark}",
+        f"Änderung {side_label(e)} {mark}",
     )
     when = _km_str_events((e,))
     if e.occurred_at:
@@ -257,6 +265,23 @@ def _datablock_single(e: AlertEvent) -> list[tuple[str, str]]:
 def _km_str_events(events) -> str:
     a, b = km_span(events)
     return f"km {int(round(a))}–{int(round(b))}"
+
+
+def _datarow_html(label: str, value: str, value_color: str, first: bool) -> str:
+    """Issue #986: Outlook-kompatible 2-Spalten-Tabellen-Row (Label links,
+    Wert rechtsbündig in FONT_DATA). Outlook ignoriert Flexbox — daher eine
+    `<table role="presentation">`-Row statt zweier <span>s im selben <div>.
+    """
+    border = "" if first else "border-top:1px solid #d8d5c9;"
+    return (
+        f"<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" "
+        f"style=\"{border}\"><tr>"
+        f"<td align=\"left\" style=\"padding:8px 0;font-family:{FONT_UI};color:{G_INK_MUTED};\">"
+        f"{_esc(label)}</td>"
+        f"<td align=\"right\" style=\"padding:8px 0;font-family:{FONT_DATA};color:{value_color};\">"
+        f"{_esc(value)}</td>"
+        f"</tr></table>"
+    )
 
 
 def render_email(msg: AlertMessage) -> tuple[str, str]:
@@ -274,7 +299,13 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         any_over = over_thr(e)
         plain_data = [f"{k}: {v}" for k, v in data_rows]
     else:
-        verdict_text = f"{arrow(evs[0])} {len(evs)} über Schwelle"
+        # Issue #981: Zähler zählt nur über-Schwelle-Events; sind es null,
+        # wechselt die Formulierung auf "N Änderungen seit dem Briefing".
+        over_count = len([e for e in evs if over_thr(e)])
+        verdict_text = (
+            f"{arrow(evs[0])} {over_count} über Schwelle" if over_count
+            else f"{len(evs)} Änderungen seit dem Briefing"
+        )
         # Issue #978: Einheit genau einmal (am letzten Wert), Schwelle ohne
         # Einheit -- ausser bei "%", wo sie zur Unterscheidung mitgefuehrt
         # wird (exaktes Vorbild Design-Vorlage Zeilen 220-233).
@@ -282,15 +313,24 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         for e in evs:
             unit = _unit_display(e)
             unit_suffix = f" {unit}" if unit else ""
-            threshold_suffix = " %" if unit == "%" else ""
-            data_rows.append((
-                f"{_label(e)} · Schwelle {_num(e, e.threshold)}{threshold_suffix}",
-                f"{_num(e, e.value_from)} {arrow(e)} {_num(e, e.value_to)}"
-                f"{unit_suffix} {side_label(e)}",
-            ))
+            if over_thr(e):
+                threshold_suffix = " %" if unit == "%" else ""
+                data_rows.append((
+                    f"{_label(e)} · Schwelle {_num(e, e.threshold)}{threshold_suffix}",
+                    f"{_num(e, e.value_from)} {arrow(e)} {_num(e, e.value_to)}"
+                    f"{unit_suffix} {side_label(e)}",
+                ))
+            else:
+                # Issue #980: gedämpfte Unter-Schwelle-Zeile — Label OHNE
+                # Schwellen-Zahl, Wert mit neutralem Pfeil, kein über/unter-Suffix
+                # (Design-Vorlage Zeilen 231-234).
+                data_rows.append((
+                    f"{_label(e)} · unter Schwelle",
+                    f"{_num(e, e.value_from)} → {_num(e, e.value_to)}{unit_suffix}",
+                ))
         km = _km_str(msg)
         footer = f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing · {km}"
-        any_over = any(over_thr(e) for e in evs)
+        any_over = over_count > 0
         plain_data = [f"{k}: {v}" for k, v in data_rows]
 
     verdict_bg = G_DANGER if any_over else G_SUCCESS
@@ -301,20 +341,11 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         threshold_status_color = G_DANGER if over_thr(e) else G_SUCCESS
         for idx, (label, value) in enumerate(data_rows):
             value_color = G_INK if idx != 1 else threshold_status_color
-            border = "border-top:1px solid #d8d5c9;" if rows else ""
-            rows.append(
-                f"<div style=\"{border}padding:8px 0;font-family:{FONT_DATA};\">"
-                f"<span style=\"color:{G_INK_MUTED};\">{_esc(label)}</span> "
-                f"<span style=\"color:{value_color};\">{_esc(value)}</span></div>"
-            )
+            rows.append(_datarow_html(label, value, value_color, not rows))
     else:
         for e, (label, value) in zip(evs, data_rows):
-            color = G_DANGER if over_thr(e) else G_INK_MUTED
-            border = "border-top:1px solid #d8d5c9;" if rows else ""
-            rows.append(
-                f"<div style=\"{border}padding:8px 0;color:{color};font-family:{FONT_DATA};\">"
-                f"<span>{_esc(label)}</span> <span>{_esc(value)}</span></div>"
-            )
+            value_color = G_DANGER if over_thr(e) else G_INK_MUTED
+            rows.append(_datarow_html(label, value, value_color, not rows))
 
     html = (
         "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
@@ -339,7 +370,12 @@ def render_telegram(msg: AlertMessage) -> str:
         verdict = f"{msg.trip_short} · {km} · {arrow(e)} {_label(e)}"
         lines = [f"<b>{_esc(verdict)}</b>", _email_line(e)]
     else:
-        verdict = f"{msg.trip_short} · {km} · {len(evs)} über Schwelle"
+        # Issue #981: Kopfzeilen-Zähler nur über-Schwelle; null → Änderungs-Text.
+        over_count = len([e for e in evs if over_thr(e)])
+        verdict = (
+            f"{msg.trip_short} · {km} · {over_count} über Schwelle" if over_count
+            else f"{msg.trip_short} · {km} · {len(evs)} Änderungen seit dem Briefing"
+        )
         # Issue #978 (PO-Nachtrag): kein "Schwelle"-Text pro Zeile (steht
         # bereits in der fetten Kopfzeile), keine Einheiten ausser "%";
         # severity-absteigende Reihenfolge, kanal-konsistent mit Betreff/

@@ -58,7 +58,10 @@ export function thunderLevelLabel(threshold: number): string {
 const LEGACY_ALERT_METRIC_MAP: Record<string, AlertMetric> = {
 	precipitation: 'precipitation_sum',
 	thunder: 'thunder_level',
-	snowfall_limit: 'snow_line',
+	// Issue #959: Nullgradgrenze konsolidiert — snow_line/snowfall_limit lösen auf
+	// freezing_level auf, damit alt-persistierte Werte weiterhin normalisieren.
+	snowfall_limit: 'freezing_level',
+	snow_line: 'freezing_level',
 };
 
 export function normalizeAlertMetric(raw: string): AlertMetric | undefined {

@@ -44,6 +44,10 @@ _ALERT_METRIC_TO_SUMMARY_FIELD: dict[AlertMetric, str] = {
     AlertMetric.TEMPERATURE_MIN: "temp_min_c",
     AlertMetric.TEMPERATURE_MAX: "temp_max_c",
     AlertMetric.THUNDER_LEVEL: "thunder_level_max",
+    # Issue #959: Nullgradgrenze konsolidiert auf freezing_level. SNOW_LINE bleibt
+    # als Übergangs-Mapping auf denselben Summary-Field (Backward-Compat für
+    # alt-persistierte Regeln während des Deploys).
+    AlertMetric.FREEZING_LEVEL: "freezing_level_m",
     AlertMetric.SNOW_LINE: "freezing_level_m",
     # Issue #846: 4 neue Metriken
     AlertMetric.FRESH_SNOW: "snow_new_sum_cm",
@@ -85,6 +89,7 @@ _ALERT_METRIC_TO_CATALOG_ID: dict[AlertMetric, tuple[str, ...]] = {
     AlertMetric.TEMPERATURE_MAX: ("temperature",),        # cmp="über"
     AlertMetric.THUNDER_LEVEL: ("thunder",),
     AlertMetric.SNOW_LINE: ("snowfall_limit", "freezing_level"),  # Issue #961: OR-Policy; cmp aus "snowfall_limit" (unter)
+    AlertMetric.FREEZING_LEVEL: ("freezing_level",),  # Issue #959: cmp="unter" aus Katalog
     AlertMetric.FRESH_SNOW: ("fresh_snow",),
     AlertMetric.CAPE: ("cape",),
     # Issue #961: Delta-Change-Metriken + Sichtweite ergänzt (nur für Weather-Tab-

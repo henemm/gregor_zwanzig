@@ -60,7 +60,11 @@ def delta_pct(e: AlertEvent) -> int | None:
 
 
 def over_thr(e: AlertEvent) -> bool:
-    return e.value_to > e.threshold if e.cmp == "über" else e.value_to < e.threshold
+    # Issue #958: `threshold` ist IMMER die Δ-Auslöseschwelle (nie ein
+    # Absolutwert-Referenzwert). Ein Event liegt „über Schwelle", wenn der
+    # BETRAG der Änderung die Schwelle erreicht — unabhängig von `cmp` und
+    # von der Richtung (siehe WeatherChange.threshold-Docstring, ADR-0013).
+    return abs(e.value_to - e.value_from) >= e.threshold
 
 
 def side_label(e: AlertEvent) -> str:

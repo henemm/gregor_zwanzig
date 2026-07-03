@@ -160,9 +160,12 @@ class TestAC2Subject:
 
     def _make_msg_3events(self):
         from src.output.renderers.alert.project import to_alert_message
+        # Issue #958: `threshold` ist die Δ-Auslöseschwelle. Alle drei Events
+        # über Schwelle (|Δ| >= threshold): gust Δ=30>=20, temp Δ=7>=0,
+        # precip Δ=20>=10 — damit Top-3 alle drei Kürzel enthält.
         changes = [
             _make_change("gust_max_kmh", old=50.0, new=80.0, direction="increase",
-                          threshold=60.0, segment_id="1"),
+                          threshold=20.0, segment_id="1"),
             _make_change("temp_min_c", old=3.0, new=-4.0, direction="decrease",
                           threshold=0.0, segment_id="1"),
             _make_change("precip_sum_mm", old=5.0, new=25.0, direction="increase",

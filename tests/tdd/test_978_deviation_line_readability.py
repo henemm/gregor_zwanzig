@@ -41,20 +41,22 @@ from output.renderers.alert.render import render_email, render_subject, render_t
 
 
 def _multi_msg() -> AlertMessage:
-    """3-Event-Fixture 1:1 nach Design-Vorlage (Gregor 20 - Alert Mail
-    Vorschläge.html:220-233 Datenblock, :208 Betreff, :281 Telegram):
-    Böen 35→52 (Schwelle 50), Gewitter 30→55 (Schwelle 40),
-    Niedersch 6→14 (Schwelle 10), alle über Schwelle."""
+    """3-Event-Fixture nach Design-Vorlage (Gregor 20 - Alert Mail
+    Vorschläge.html:220-233 Datenblock, :208 Betreff, :281 Telegram), alle
+    ÜBER Schwelle. Issue #958: `threshold` ist die Δ-Auslöseschwelle — Werte
+    Δ-realistisch kalibriert (|Δ| >= threshold), severity-Ordnung unverändert
+    (Niedersch > Gewitter > Böen): Böen 20→80 (Schwelle 40, Δ=60),
+    Gewitter 20→90 (Schwelle 40, Δ=70), Niedersch 2→30 (Schwelle 10, Δ=28)."""
     e_gust = AlertEvent(
-        metric_id="gust", value_from=35.0, value_to=52.0, threshold=50.0,
+        metric_id="gust", value_from=20.0, value_to=80.0, threshold=40.0,
         cmp="über", occurred_at="11:00", km_from=0.0, km_to=4.0,
     )
     e_thunder = AlertEvent(
-        metric_id="thunder", value_from=30.0, value_to=55.0, threshold=40.0,
+        metric_id="thunder", value_from=20.0, value_to=90.0, threshold=40.0,
         cmp="über", occurred_at="11:30", km_from=1.0, km_to=4.0,
     )
     e_precip = AlertEvent(
-        metric_id="precipitation", value_from=6.0, value_to=14.0, threshold=10.0,
+        metric_id="precipitation", value_from=2.0, value_to=30.0, threshold=10.0,
         cmp="über", occurred_at="12:00", km_from=0.0, km_to=3.0,
     )
     return AlertMessage(
@@ -136,16 +138,16 @@ def _thousand_cape_msg() -> AlertMessage:
 class TestAC1EmailMultiLineUnitOnce:
     def test_email_datablock_line_unit_once_and_threshold_without_unit(self):
         html, plain = render_email(_multi_msg())
-        assert "Böen · Schwelle 50" in html, (
+        assert "Böen · Schwelle 40" in html, (
             f"Schwelle ohne Einheit fehlt (SOLL laut Design-Vorlage "
             f"Zeile 220): {html!r}"
         )
-        assert "Böen · Schwelle 50" in plain
-        assert "35 ↑ 52 km/h" in html, (
+        assert "Böen · Schwelle 40" in plain
+        assert "20 ↑ 80 km/h" in html, (
             f"Wertespanne mit Einheit genau einmal fehlt (SOLL laut Design-"
             f"Vorlage Zeile 221): {html!r}"
         )
-        assert "35 ↑ 52 km/h" in plain
+        assert "20 ↑ 80 km/h" in plain
         assert "über" in html and "über" in plain
         assert html.count("km/h") == 1, (
             f"Einheit 'km/h' soll in der Böen-Zeile genau 1x vorkommen "
@@ -213,7 +215,7 @@ class TestAC2RoundingNoiseAndThousandSeparator:
 class TestAC3SubjectTop3JustNumbers:
     def test_subject_top3_exact_literal(self):
         subject = render_subject(_multi_msg())
-        assert "Niedersch 14, Gewitter 55%, Böen 52" in subject, (
+        assert "Niedersch 30, Gewitter 90%, Böen 80" in subject, (
             f"Betreff-Top3 nicht im SOLL-Format (PO-Nachtrag 2026-07-02: "
             f"kritischster zuerst, severity-absteigend): {subject!r}"
         )
@@ -227,7 +229,7 @@ class TestAC3SubjectTop3JustNumbers:
 class TestAC4TelegramMultiLineNoUnitsExceptPercent:
     def test_telegram_multiline_exact_literal(self):
         tg = render_telegram(_multi_msg())
-        assert "Niedersch 6→14 · Gewitter 30→55% · Böen 35→52" in tg, (
+        assert "Niedersch 2→30 · Gewitter 20→90% · Böen 20→80" in tg, (
             f"Telegram-Multi-Zeile nicht im SOLL-Format (PO-Nachtrag "
             f"2026-07-02: kritischster zuerst, severity-absteigend): {tg!r}"
         )
@@ -290,22 +292,25 @@ class TestChannelOrderConsistency:
 
 def _mixed_over_under_msg() -> AlertMessage:
     """3 über-Schwelle-Events (unterschiedliche severity) + 1 unter-Schwelle-
-    Event mit der höchsten severity (0.8) — das unter-Schwelle-Event muss
-    trotzdem gedämpft zuletzt erscheinen (Adversary-Finding F001)."""
+    Event mit hoher abs(severity) — das unter-Schwelle-Event muss trotzdem
+    gedämpft zuletzt erscheinen (Adversary-Finding F001). Issue #958: Werte
+    Δ-realistisch — Böen 30→80/Δ=50, Gewitter 10→55/Δ=45, Regen% 10→55/Δ=45
+    (alle über Schwelle 40); Niedersch 20→2/Δ=18 < Schwelle 25 (unter,
+    abs(severity)=0.92)."""
     e_gust = AlertEvent(
-        metric_id="gust", value_from=35.0, value_to=80.0, threshold=50.0,
+        metric_id="gust", value_from=30.0, value_to=80.0, threshold=40.0,
         cmp="über", occurred_at="11:00", km_from=0.0, km_to=4.0,
     )
     e_thunder = AlertEvent(
-        metric_id="thunder", value_from=30.0, value_to=55.0, threshold=40.0,
+        metric_id="thunder", value_from=10.0, value_to=55.0, threshold=40.0,
         cmp="über", occurred_at="11:30", km_from=1.0, km_to=4.0,
     )
     e_rain = AlertEvent(
-        metric_id="rain_probability", value_from=20.0, value_to=55.0, threshold=40.0,
+        metric_id="rain_probability", value_from=10.0, value_to=55.0, threshold=40.0,
         cmp="über", occurred_at="12:00", km_from=0.0, km_to=3.0,
     )
     e_precip = AlertEvent(
-        metric_id="precipitation", value_from=20.0, value_to=2.0, threshold=10.0,
+        metric_id="precipitation", value_from=20.0, value_to=2.0, threshold=25.0,
         cmp="über", occurred_at="12:30", km_from=0.0, km_to=3.0,
     )
     return AlertMessage(
@@ -322,10 +327,12 @@ class TestMixedOverUnderOrdering:
         import re
 
         _, plain = render_email(_mixed_over_under_msg())
-        order = re.findall(r"(Niedersch|Gewitter|Regen%|Böen) · Schwelle", plain)
+        # Issue #980: unter-Schwelle-Zeilen tragen das Label "· unter Schwelle"
+        # (ohne Schwellen-Zahl), über-Schwelle "· Schwelle N" — beide erfassen.
+        order = re.findall(r"(Niedersch|Gewitter|Regen%|Böen) · (?:unter )?Schwelle", plain)
         assert order == ["Böen", "Gewitter", "Regen%", "Niedersch"], (
-            f"unter-Schwelle-Event (Niedersch, severity 0.8) muss trotz "
-            f"höchster severity zuletzt stehen: {order!r} — {plain!r}"
+            f"unter-Schwelle-Event (Niedersch) muss trotz hoher abs(severity) "
+            f"gedämpft zuletzt stehen: {order!r} — {plain!r}"
         )
 
     def test_telegram_order_under_threshold_last(self):
@@ -360,7 +367,7 @@ class TestMixedOverUnderOrdering:
 class TestAC6HtmlPlainStructuralParity:
     def test_html_and_plain_share_same_kuerzel_schwelle_content(self):
         html, plain = render_email(_multi_msg())
-        for literal in ("Böen · Schwelle 50", "35 ↑ 52 km/h"):
+        for literal in ("Böen · Schwelle 40", "20 ↑ 80 km/h"):
             assert literal in html, f"{literal!r} fehlt im HTML: {html!r}"
             assert literal in plain, f"{literal!r} fehlt im Plain-Text: {plain!r}"
 

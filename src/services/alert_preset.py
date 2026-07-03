@@ -13,7 +13,7 @@ Schwellwert-Tabelle:
     wind_gust               delta ↑              35         20        12
     precipitation_sum       delta ↑              20         10         5
     thunder_level           delta ↑               1          1         1
-    snow_line               delta ↓             600        400       200
+    freezing_level          delta ↓             600        400       200
     temperature_min         delta ↓               8          5         3
     temperature_max         delta ↑              10          6         4
     temperature_change      delta ↑              14         10         6
@@ -40,9 +40,11 @@ _PRESET_TABLE: Final[list[tuple]] = [
     (AlertMetric.WIND_GUST,            AlertRuleKind.DELTA,              35,    20,    12),
     (AlertMetric.PRECIPITATION_SUM,    AlertRuleKind.DELTA,              20,    10,     5),
     (AlertMetric.THUNDER_LEVEL,        AlertRuleKind.DELTA,               1,     1,     1),
-    (AlertMetric.SNOW_LINE,            AlertRuleKind.DELTA,             600,   400,   200),
-    # Issue #946: freezing_level (Nullgradgrenze) — Delta-Metrik, default_change_threshold 200.
-    (AlertMetric.FREEZING_LEVEL,       AlertRuleKind.DELTA,             400,   200,   100),
+    # Issue #959: Nullgradgrenze konsolidiert zu EINER Zeile (freezing_level) mit den
+    # bisher wirksamen snow_line-Schwellen 600/400/200 (PO-freigegeben). Die frühere
+    # separate SNOW_LINE-Zeile entfällt; alt-persistierte snow_line-Levels werden
+    # beim Trip-Laden auf freezing_level migriert (loader._migrate_metric_alert_levels).
+    (AlertMetric.FREEZING_LEVEL,       AlertRuleKind.DELTA,             600,   400,   200),
     (AlertMetric.TEMPERATURE_MIN,      AlertRuleKind.DELTA,               8,     5,     3),
     (AlertMetric.TEMPERATURE_MAX,      AlertRuleKind.DELTA,              10,     6,     4),
     (AlertMetric.TEMPERATURE_CHANGE,   AlertRuleKind.DELTA,              14,    10,     6),
@@ -120,6 +122,16 @@ def expand_per_metric_levels(
         _ALERT_METRIC_TO_SUMMARY_FIELD,
         is_alert_metric_active,
     )
+
+    # Issue #959: Legacy-Schlüssel snow_line auf die konsolidierte freezing_level-
+    # Metrik normalisieren, falls er der Loader-Migration entgangen ist (z. B.
+    # in-memory konstruierte Trips). `levels` (die Trip-JSON-Quelle) bleibt
+    # unangetastet — es wird nur eine lokale Kopie umbenannt. Ein bereits
+    # gesetzter freezing_level-Eintrag gewinnt.
+    if "snow_line" in levels:
+        _normalized = dict(levels)
+        _normalized.setdefault("freezing_level", _normalized.pop("snow_line"))
+        levels = _normalized
 
     # Aufbau: metric.value (str) → (kind, entspannt, standard, sensibel)
     metric_to_row: dict[str, tuple] = {

@@ -994,7 +994,7 @@ Returns catalog of all available weather metrics with format mode options and de
 | metrics[].selectable | bool | Whether this metric appears in the user-facing selector (Wizard/Editor). Backend internal metric (`confidence`) has `selectable=false` (Issue #710) — these are never returned by `/api/metrics` but used internally for aggregation/forecast-hints |
 | metrics[].sms_code | string | GSM-7-safe short token for the metric in SMS/Subject/Telegram alert tokens (e.g., `W`, `G`, `R`, `PR`, `TH`, `CP`, `SL`, `VS`, `HU`). Single source for alert renderers (Issue #914 Slice 1); the metric catalog is the only place these are defined |
 | metrics[].decimals | int \| null | Rounding precision for display (e.g., `precipitation: 1`, `visibility: 1`, most metrics `0`). `null` ⇒ fall back to the unit-based heuristic in `format_metric_value()` |
-| metrics[].cmp | string | Threshold-alarm side: `"über"` (alert when value exceeds threshold) or `"unter"` (alert when value falls below). Single source for the comparison direction used by deviation/absolute alert detection (Issue #914 Slice 1) — replaces the former hand-coded `_ALERT_METRIC_COMPARISON` dict |
+| metrics[].cmp | string | Comparison direction: `"über"` or `"unter"`. Single source for the direction/arrow used by deviation and absolute alert detection (Issue #914 Slice 1) — replaces the former hand-coded `_ALERT_METRIC_COMPARISON` dict. **Not** a threshold comparator for the deviation-alert (live) path: per ADR-0013, an event triggers there when `abs(value_to − value_from) ≥ threshold` regardless of `cmp`; `cmp` remains a literal exceeds/falls-below comparator only for `ABSOLUTE`-kind rules (`_detect_absolute_changes()`), which is unused in the send path (`include_absolute=False`) |
 
 **Format Mode Reference:**
 
@@ -2283,7 +2283,7 @@ export interface AlertRule {
 |------|-----|------------|
 | id | string | Eindeutige Alert-ID (z.B. `alert-gust-1`) |
 | kind | enum | `"absolute"` (Schwellenwert überschritten) oder `"delta"` (Änderung größer als Schwelle) |
-| metric | enum | Gemessene Metrik: WIND_GUST, PRECIPITATION_SUM, TEMPERATURE_MIN/MAX, THUNDER_LEVEL, SNOW_LINE, TEMPERATURE/WIND/PRECIPITATION_CHANGE |
+| metric | enum | Gemessene Metrik: WIND_GUST, PRECIPITATION_SUM, TEMPERATURE_MIN/MAX, THUNDER_LEVEL, FREEZING_LEVEL, TEMPERATURE/WIND/PRECIPITATION_CHANGE. `SNOW_LINE` bleibt als toter Enum-Wert nur für Backward-Compat-Deserialisierung alt-persistierter Regeln erhalten (ADR-0014) — nicht mehr wählbar. |
 | threshold | float | Schwellenwert (z.B. `50.0` für 50 km/h Wind-Böen) |
 | severity | enum | `"info"`, `"warning"`, `"critical"` — nur noch Label am Alert, **nicht mehr** für Versand-Filterung (behebt Severity-Falle: Info-Alerts werden nicht mehr still verschluckt) |
 | enabled | bool | Alert aktiv? (default: true) |

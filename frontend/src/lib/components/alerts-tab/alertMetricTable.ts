@@ -196,12 +196,13 @@ export function rowStateToAlertRules(
 
 export type { SensLevel }; // re-export from types.ts
 
-/** Alle 13 alertable Metriken in Anzeige-Reihenfolge. */
+/** Alertable Metriken in Anzeige-Reihenfolge.
+ * Issue #959: snow_line ist keine separat wählbare Alert-Metrik mehr — die
+ * Nullgradgrenze wird ausschließlich über freezing_level konfiguriert. */
 export const ALERTABLE_METRICS: readonly AlertMetric[] = [
 	'wind_gust',
 	'precipitation_sum',
 	'thunder_level',
-	'snow_line',
 	'temperature_min',
 	'temperature_max',
 	'temperature_change',
@@ -286,7 +287,7 @@ const CATALOG_TO_ALERT_METRICS: Record<string, readonly AlertMetric[]> = {
 	temperature_max:      ['temperature_max'],
 	temperature_change:   ['temperature_change'],
 	fresh_snow:           ['fresh_snow'],
-	snow_line:            ['snow_line'],
+	snow_line:            ['freezing_level'],  // Issue #959: konsolidiert
 	cape:                 ['cape'],
 	visibility:           ['visibility'],
 	humidity:             ['humidity'],
@@ -297,27 +298,29 @@ const CATALOG_TO_ALERT_METRICS: Record<string, readonly AlertMetric[]> = {
 	wind:          ['wind_change'],
 	precipitation: ['precipitation_sum', 'precipitation_change'],
 	thunder:       ['thunder_level'],
-	snowfall_limit: ['snow_line'],
+	// Issue #959: snow_line/snowfall_limit aktivieren die konsolidierte Metrik freezing_level.
+	snowfall_limit: ['freezing_level'],
 	temperature:   ['temperature_min', 'temperature_max', 'temperature_change'],
 };
 
 /**
  * Gibt die alertable AlertMetrics zurück, die dem aktiven Wetter-Metriken-Set entsprechen.
- * Fallback auf ALERTABLE_METRICS wenn keine Übereinstimmung.
+ * Issue #933: KEIN Alle-Metriken-Fallback mehr — eine leere/nicht-gemappte Auswahl
+ * liefert eine leere Liste, damit der Alerts-Tab nur Schwellen zu aktiv gewählten
+ * Wetter-Metriken zeigt (statt aller 14).
  */
 export function activeAlertableMetrics(
 	configMetrics: readonly WeatherConfigMetric[] | undefined | null,
 ): readonly AlertMetric[] {
-	if (!configMetrics || configMetrics.length === 0) return ALERTABLE_METRICS;
+	if (!configMetrics || configMetrics.length === 0) return [];
 	const enabled = configMetrics.filter((m) => m.enabled);
-	if (enabled.length === 0) return ALERTABLE_METRICS;
+	if (enabled.length === 0) return [];
 
 	const seen = new Set<AlertMetric>();
 	for (const m of enabled) {
 		const mapped = CATALOG_TO_ALERT_METRICS[m.metric_id];
 		if (mapped) mapped.forEach((a) => seen.add(a));
 	}
-	if (seen.size === 0) return ALERTABLE_METRICS;
 	// Reihenfolge aus ALERTABLE_METRICS beibehalten
 	return ALERTABLE_METRICS.filter((a) => seen.has(a));
 }

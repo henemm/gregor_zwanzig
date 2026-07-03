@@ -117,54 +117,11 @@ def test_ac1_trip_alert_uses_compact_renderer_not_format_email():
     )
 
 
-# --- AC-2: In-Process-Render mit Profil ------------------------------------
-
-def test_ac2_trip_alert_render_with_wintersport_profile():
-    """
-    AC-2 (Wintersport): TripReportFormatter.format_email mit report_type='alert'
-    und profile=WINTERSPORT → report.email_html enthält #4a7fb5 + 'Wintersport'.
-    """
-    from src.formatters.trip_report import TripReportFormatter
-    kwargs = _common_kwargs()
-    formatter = TripReportFormatter()
-    report = formatter.format_email(
-        segments=kwargs["segments"],
-        trip_name="GR20 Alert-Test",
-        report_type="alert",
-        display_config=kwargs["display_config"],
-        changes=[_alert_change()],
-        stage_name=kwargs["stage_name"],
-        tz=kwargs["tz"],
-        profile=ActivityProfile.WINTERSPORT,
-    )
-    assert "#4a7fb5" in report.email_html.lower(), (
-        "Wintersport-Accent #4a7fb5 fehlt in Alert-Mail HTML"
-    )
-    assert "WINTERSPORT" in report.email_html, (
-        "Eyebrow 'WINTERSPORT' (CAPS, Issue #255) fehlt in Alert-Mail HTML"
-    )
-
-
-def test_ac2_trip_alert_render_with_wandern_profile():
-    """
-    AC-2 (Wandern): Analog mit profile=WANDERN → HTML enthält #3a7d44 + 'Wandern'.
-    """
-    from src.formatters.trip_report import TripReportFormatter
-    kwargs = _common_kwargs()
-    formatter = TripReportFormatter()
-    report = formatter.format_email(
-        segments=kwargs["segments"],
-        trip_name="GR20 Alert-Test",
-        report_type="alert",
-        display_config=kwargs["display_config"],
-        changes=[_alert_change()],
-        stage_name=kwargs["stage_name"],
-        tz=kwargs["tz"],
-        profile=ActivityProfile.WANDERN,
-    )
-    assert "#3a7d44" in report.email_html.lower(), (
-        "Wandern-Accent #3a7d44 fehlt in Alert-Mail HTML"
-    )
-    assert "WANDERN" in report.email_html, (
-        "Eyebrow 'WANDERN' (CAPS, Issue #255) fehlt in Alert-Mail HTML"
-    )
+# --- AC-2: entfernt (Issue #921) -------------------------------------------
+# Die früheren AC-2-Tests prüften Profilfarben (#4a7fb5/#3a7d44) und den
+# Profil-Eyebrow im `format_email(report_type='alert')`-Pfad. PO-Entscheidung
+# (Issue-Kommentar 2026-06-30): Die Alarm-Mail wird bewusst OHNE Profilfarbe
+# gerendert, und der produktive Alert-Versand läuft über
+# output/renderers/alert/render.py (nicht über format_email). Damit prüften die
+# Tests einen toten Pfad ohne zusätzlichen Beweiswert — der reale kompakte
+# Alert-Render ist durch test_ac1_* oben abgedeckt. Entfernt statt neutralisiert.

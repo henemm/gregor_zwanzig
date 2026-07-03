@@ -91,6 +91,10 @@
 				Standard-Konfiguration übernehmen
 			</button>
 		</div>
+	{:else if displayMetrics.length === 0}
+		<p class="no-metrics-hint" data-testid="alerts-no-metrics">
+			Wähle oben Metriken aus, um Alarm-Schwellen zu konfigurieren.
+		</p>
 	{:else}
 		<AlertMetricLevelTable
 			activeMetrics={displayMetrics as AlertMetric[]}
@@ -138,6 +142,16 @@
 
 	.onboarding p {
 		margin: 0;
+		color: var(--g-ink);
+		font-size: 16px;
+	}
+
+	.no-metrics-hint {
+		margin: 0;
+		padding: 24px;
+		background: var(--g-card, #ffffff);
+		border: 1px solid var(--g-line, #e2ddd2);
+		border-radius: 12px;
 		color: var(--g-ink);
 		font-size: 16px;
 	}

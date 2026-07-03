@@ -444,6 +444,23 @@ def _normalize_legacy_mode(mc_data: Dict[str, Any]) -> tuple[Optional[str], bool
     return mode, mc_data.get("use_friendly_format", True)
 
 
+def _migrate_metric_alert_levels(levels: Any) -> Any:
+    """Issue #959: snow_line → freezing_level (Read-Modify-Write, kein Datenverlust).
+
+    Nullgradgrenze ist zu EINER Alert-Metrik (freezing_level) konsolidiert. Alt-
+    persistierte Trips mit `metric_alert_levels.snow_line` werden beim Laden
+    umbenannt — bestehendes Dict kopieren, nur diesen Key verschieben, alle
+    anderen Felder unangetastet lassen (BUG-DATALOSS-GR221-Lehre). Ein bereits
+    vorhandener freezing_level-Eintrag gewinnt (kein Überschreiben).
+    """
+    if not isinstance(levels, dict) or "snow_line" not in levels:
+        return levels
+    migrated = dict(levels)
+    value = migrated.pop("snow_line")
+    migrated.setdefault("freezing_level", value)
+    return migrated
+
+
 def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig":
     """Parse UnifiedWeatherDisplayConfig from dict."""
     from datetime import datetime as _dt
@@ -575,7 +592,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
         per_report_layouts=per_report_layouts,
         telegram_kurzform=data.get("telegram_kurzform", False),
         alert_preset=data.get("alert_preset"),  # Issue #846
-        metric_alert_levels=data.get("metric_alert_levels"),  # Issue #946 — einzige Alert-Quelle
+        metric_alert_levels=_migrate_metric_alert_levels(data.get("metric_alert_levels")),  # Issue #946/#959
         updated_at=_dt.fromisoformat(data["updated_at"]) if "updated_at" in data else _dt.now(),
     )
 

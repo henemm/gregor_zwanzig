@@ -145,7 +145,8 @@ Manuelle Verwaltung ist nur noch im Notfall nötig — siehe `docs/runbooks/tele
 
 3. **Symmetrische Δ-Erkennung**
    - `WeatherChangeDetectionService.detect_changes(cached, fresh, include_absolute=False)` — nur Δ, keine absoluten Regeln im Alert-Pfad
-   - Schwellen Slice 1 (MetricCatalog-Defaults): Temp ±5°C, Wind/Böen ±20 km/h, Regen ±10 mm, Schneefallgrenze ±20 m, Gewitter ±1
+   - Schwellen Slice 1 (MetricCatalog-Defaults): Temp ±5°C, Wind/Böen ±20 km/h, Regen ±10 mm, Nullgradgrenze ±200 m, Gewitter ±1 (Issue #959/ADR-0014: einzige Winter-Alert-Metrik ist `freezing_level`)
+   - `AlertEvent.threshold` ist immer die Δ-Auslöseschwelle, nie ein Absolut-Referenzwert — „über/unter Schwelle" heißt `abs(value_to − value_from) ≥ threshold` (ADR-0013)
 
 4. **Kanonischer Alert-Render-Pfad (Issue #917)**
    - Renderer: `src/output/renderers/alert/` (model.py, project.py, render.py) — ersetzt das gelöschte `alert_compact.py`
