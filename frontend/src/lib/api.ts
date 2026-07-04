@@ -11,6 +11,13 @@ async function request<T>(method: string, path: string, body?: unknown, extra?: 
 	}
 	const res = await fetch(path, opts);
 	if (!res.ok) {
+		// Issue #1006 — Sitzung abgelaufen (24h-TTL): zentral behandeln statt die
+		// rohe {"error":"unauthorized"}-Meldung an Aufrufer durchzureichen.
+		if (res.status === 401 && typeof window !== 'undefined') {
+			const redirectTarget = window.location.pathname + window.location.search;
+			window.location.href = `/login?expired=1&redirect=${encodeURIComponent(redirectTarget)}`;
+			throw new Error('Sitzung abgelaufen — bitte neu anmelden.');
+		}
 		const err: ApiError = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
 		throw err;
 	}

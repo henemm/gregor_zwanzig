@@ -151,6 +151,9 @@
 					: { ...s, start_time: newTime }
 				: s,
 		);
+		// Issue #1010 — fehlender Save-Trigger: ohne dies wird eine reine
+		// Startzeit-Änderung nie gespeichert (einziger Handler ohne Auto-Save).
+		if (saveController) scheduleSave(); else void save();
 	}
 
 	async function applyCascade(): Promise<void> {

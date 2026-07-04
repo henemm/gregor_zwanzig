@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { safeRedirectPath } from '$lib/utils/safeRedirect.js';
 import type { Actions, PageServerLoad } from './$types.js';
 
 const API = () => env.GZ_API_BASE ?? 'http://localhost:8090';
@@ -11,7 +12,7 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions = {
-	default: async ({ request, cookies }) => {
+	default: async ({ request, cookies, url }) => {
 		const data = await request.formData();
 		const username = data.get('username')?.toString() ?? '';
 		const password = data.get('password')?.toString() ?? '';
@@ -49,6 +50,7 @@ export const actions = {
 			}
 		}
 
-		redirect(302, '/');
+		// Issue #1006 — nach 401-Redirect zurück zur Ausgangsseite (nur relative Pfade).
+		redirect(302, safeRedirectPath(url.searchParams.get('redirect')));
 	},
 } satisfies Actions;

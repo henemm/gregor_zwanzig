@@ -5,6 +5,8 @@
 
 	let { form, data }: { form: ActionData; data: { googleEnabled: boolean } } = $props();
 	const registered = $derived($page.url.searchParams.get('registered') === '1');
+	// Issue #1006 — Sitzung abgelaufen (zentraler 401-Redirect aus api.ts).
+	const sessionExpired = $derived($page.url.searchParams.get('expired') === '1');
 
 	let username = $state(form?.username ?? '');
 </script>
@@ -19,6 +21,12 @@
 		{#if registered}
 			<div class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
 				Konto erfolgreich erstellt. Bitte melde dich an.
+			</div>
+		{/if}
+
+		{#if sessionExpired}
+			<div class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm" style="color: var(--g-bad);">
+				Sitzung abgelaufen — bitte neu anmelden.
 			</div>
 		{/if}
 
