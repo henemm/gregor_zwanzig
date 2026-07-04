@@ -27,10 +27,17 @@ export function stageProfile(stage: Stage | null | undefined): number[] {
 		.filter((e): e is number => Number.isFinite(e));
 }
 
-/** Zeitfenster "HH:MM – HH:MM" aus erstem/letztem Wegpunkt; leer wenn unbekannt. */
+/**
+ * Zeitfenster "HH:MM – HH:MM" aus erstem/letztem Wegpunkt; leer wenn unbekannt.
+ *
+ * Issue #1004: `waypoint.time_window` ist ein reines GPX-Import-Artefakt ohne
+ * jeden manuellen Schreibpfad und deshalb NIE massgeblich — die einzige
+ * Quelle fuer den Etappen-Start ist `stage.start_time`, ersatzweise die
+ * Naismith-Kaskade (`arrival_calculated` des ersten Wegpunkts).
+ */
 export function stageWindow(stage: Stage | null | undefined): string {
 	const wps = stage?.waypoints ?? [];
-	const first = wps[0]?.time_window ?? wps[0]?.arrival_calculated ?? stage?.start_time ?? '';
+	const first = stage?.start_time ?? wps[0]?.arrival_calculated ?? '';
 	const last = wps.length > 1 ? (wps[wps.length - 1]?.arrival_calculated ?? '') : '';
 	if (first && last) return `${first} – ${last}`;
 	return first || '';

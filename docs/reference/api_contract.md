@@ -666,13 +666,16 @@ type Waypoint struct {
 - Backend (Go): `ComputeStageArrivals(stage, ActivitySpeed(trip.activity))` → mutiert Waypoints mit berechneter Zeit
 - TypeScript: `function activityToSpeed(activity?: ActivityType): number` — 15/20/25 für Fahrrad, 4.0 default
 
-**Python-internes Feld `time_window_origin` (Issue #995):** Nicht Teil des Go/TypeScript-DTOs
-oben — existiert ausschließlich auf der Python-Seite (`src/app/trip.py::Waypoint`), Werte
-`"imported"` (von `segments_to_trip()` beim GPX-Import gesetzt) oder `None`/`"manual"` (bewusst
-gesetzt). Steuert in `convert_trip_to_segments()` (`trip_segments.py`), ob ein `time_window`
-Vorrang vor einer später geänderten `stage.start_time` hat: ein als `"imported"` markiertes
-`time_window` verliert diesen Vorrang. Kein Wire-Format-Feld, wird nicht an Go/Frontend
-serialisiert.
+**Segment-Startzeit-Prioritätskette (Issue #1004, SSoT):** `Waypoint.time_window` ist
+ausschließlich ein GPX-Import-Artefakt ohne jeden manuellen Schreibpfad im Produkt und hat
+in `convert_trip_to_segments()` (`trip_segments.py`) **keine** Autorität mehr — kein Flag,
+keine Migration, gilt sofort für alle Trips inkl. Bestand. Die einzige Kette:
+`arrival_override` (Issue #303, manuell) > `stage.start_time` (nur für Segment 1 einer Etappe)
+> `arrival_calculated` (Naismith-Kaskade, immer frisch ab `stage.start_time`) > Default 08:00
+> letzter bekannter Zeitpunkt (Folgesegmente). `time_window` selbst bleibt als
+Roundtrip-/Anzeige-Feld am DTO erhalten, wird aber nirgends mehr als Zeitquelle gelesen.
+Der zuvor eingeführte Python-interne Flag-Ansatz `Waypoint.time_window_origin` (Issue #995)
+wurde als wirkungslos entfernt (nie persistiert, Bestandstrips blieben ausgenommen).
 
 **Beispiel (Fahrrad 20 km/h):**
 ```json
@@ -2375,6 +2378,14 @@ export interface AlertRule {
 
 ## Changelog
 
+- 2026-07-03: Issue #1004 — SSoT-Fix Segment-Startzeit (Re-Fix von #995 Gruppe A, verworfener
+  Flag-Ansatz): das nie persistierte `Waypoint.time_window_origin` (siehe Eintrag #995 unten)
+  wird ersatzlos entfernt. Es gibt genau EINE massgebliche Startzeit pro Etappe —
+  `stage.start_time` — die neue Kette in `convert_trip_to_segments()` ist
+  `arrival_override` > `stage.start_time` (Segment 1) > `arrival_calculated` (Naismith) >
+  Default 08:00; `time_window` fliegt komplett aus dem Vergleich (bleibt nur Roundtrip-Feld),
+  gilt sofort für ALLE Trips inkl. Bestand ohne Migration. Kein Wire-Format-Impact. See
+  `docs/specs/modules/issue_1004_startzeit_ssot.md`.
 - 2026-07-03: Issue #1001 — Telegram-Ausgabe neu gebaut (Multi-Bubble-Format): `GET
   /api/preview/{trip_id}/telegram` liefert zusätzlich `bubbles: list[str]` neben dem
   bestehenden `body`-Feld (additiv, rückwärtskompatibel — `body` bleibt die mit

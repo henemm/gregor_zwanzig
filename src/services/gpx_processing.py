@@ -142,8 +142,7 @@ def segments_to_trip(
             lat=seg.start_point.lat,
             lon=seg.start_point.lon,
             elevation_m=int(seg.start_point.elevation_m),
-            time_window=tw,
-            time_window_origin="imported",  # Issue #995 — GPX-Import-Artefakt, nicht autoritativ
+            time_window=tw,  # Issue #1004: GPX-Import-Artefakt, nie autoritativ
         ))
 
     # Last waypoint: end of last segment
@@ -158,8 +157,7 @@ def segments_to_trip(
         lat=last.end_point.lat,
         lon=last.end_point.lon,
         elevation_m=int(last.end_point.elevation_m),
-        time_window=tw_end,
-        time_window_origin="imported",  # Issue #995 — GPX-Import-Artefakt, nicht autoritativ
+        time_window=tw_end,  # Issue #1004: GPX-Import-Artefakt, nie autoritativ
     ))
 
     stage = Stage(

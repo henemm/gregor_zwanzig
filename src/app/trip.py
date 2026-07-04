@@ -80,7 +80,6 @@ class Waypoint:
     confirmed: Optional[bool] = None          # True = bestätigt; False bleibt erhalten (≠ None)
     suggestion_reason: Optional[str] = None   # "detected_peak" | "detected_valley" | "detected_pass" | "legacy_suggested"
     arrival_override: Optional[str] = None    # User-Override "HH:MM"
-    time_window_origin: Optional[str] = None  # Issue #995 — "imported" (GPX-Artefakt) | "manual" | None(≈manual)
 
     def __str__(self) -> str:
         tw = f" ({self.time_window})" if self.time_window else ""
