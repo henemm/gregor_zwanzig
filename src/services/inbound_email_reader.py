@@ -145,8 +145,10 @@ class InboundEmailReader:
         processor = TripCommandProcessor()
         result = processor.process(inbound)
 
-        # 6. Reply on same channel — ALWAYS send (success and error)
-        if user_settings.can_send_email():
+        # 6. Reply on same channel — ALWAYS send (success and error), AUSSER
+        # das Kommando hat bereits das volle Briefing verschickt (Issue #1007:
+        # heute/morgen) — dann IST das Briefing die Antwort, keine Doppel-Mail.
+        if user_settings.can_send_email() and not result.suppress_email_reply:
             self._send_email_reply(result, user_settings)
 
         # 7. Mark as read

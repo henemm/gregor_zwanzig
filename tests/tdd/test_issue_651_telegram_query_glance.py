@@ -169,21 +169,31 @@ def test_ac2_query_does_not_mutate_trip(env):
 
 # ---------------------------------------------------------------------------
 # AC-3 — /h nur heute, /m nur morgen
+#
+# SUPERSEDED (Issue #1007, 2026-07-04): heute/morgen lösen seit #1007 nicht
+# mehr den Einzeiler-Aggregat-Text aus (dieser Test prüfte genau dieses alte
+# Verhalten), sondern das volle Tages-Briefing über den echten Versandpfad
+# (send_on_demand_report). Ein Nachweis dafür würde echten SMTP-/Wetter-API-
+# Versand in dieser tmp_path-isolierten Umgebung auslösen (kein Mock erlaubt,
+# aber hier auch keine Test-Postfach-/IMAP-Infrastruktur vorhanden) — die
+# tagesgenaue heute/morgen-Unterscheidung ist jetzt real (mit IMAP-Verifikation)
+# abgedeckt durch tests/tdd/test_issue_1007_heute_voll_briefing.py
+# (AC-1/AC-2). Kurzform-Unterscheidung bleibt weiterhin über `glance` (AC-1
+# oben) geprüft.
 # ---------------------------------------------------------------------------
 
 def test_ac3_heute_only_today(env):
-    _save_snapshot()
-    body = _process("### query: heute").confirmation_body
-    assert "23" in body, body            # heute-Max
-    assert "11" not in body, body         # morgen-Max darf NICHT auftauchen
-    assert "21.08" not in body, body      # morgen-Datum darf NICHT auftauchen
+    pytest.skip(
+        "Superseded by #1007: 'heute' löst jetzt das volle Briefing aus "
+        "(kein Einzeiler mehr) — Nachweis in test_issue_1007_heute_voll_briefing.py"
+    )
 
 
 def test_ac3_morgen_only_tomorrow(env):
-    _save_snapshot()
-    body = _process("### query: morgen").confirmation_body
-    assert "11" in body, body             # morgen-Max
-    assert "23" not in body, body          # heute-Max darf NICHT auftauchen
+    pytest.skip(
+        "Superseded by #1007: 'morgen' löst jetzt das volle Briefing aus "
+        "(kein Einzeiler mehr) — Nachweis in test_issue_1007_heute_voll_briefing.py"
+    )
 
 
 # ---------------------------------------------------------------------------

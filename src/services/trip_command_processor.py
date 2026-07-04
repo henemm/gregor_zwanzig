@@ -62,6 +62,9 @@ class CommandResult:
     trip_name: Optional[str] = None
     shifts: Optional[list[StageShift]] = None
     reply_markup: Optional[dict] = None
+    # Issue #1007: True bei erfolgreichem heute/morgen-On-Demand-Briefing —
+    # das Briefing selbst IST die Antwort, keine zusätzliche Bestätigung senden.
+    suppress_email_reply: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -180,6 +183,31 @@ _DRILLDOWN_METRICS: dict[str, tuple] = {
     "wind":    ("wind10m_kmh",   "💨 Wind",      _num_fmt("km/h")),
     "precip":  ("precip_1h_mm",  "🌧 Niederschlag", _num_fmt("mm")),
 }
+
+
+# ---------------------------------------------------------------------------
+# Issue #1007 Adversary-Fix F002: reine Mapping-Funktion Outcome → Antworttext
+# (mock-frei testbar, keine Seiteneffekte).
+# ---------------------------------------------------------------------------
+
+def _on_demand_failure_body(outcome: str, label: str, target_date: date) -> str:
+    """Formatiert den Antworttext für einen nicht-erfolgreichen On-Demand-Versand.
+
+    outcome: "no_stage" | "no_weather" | "no_channels" (alles außer "sent").
+    """
+    human_date = f"{target_date:%d.%m.%Y}"
+    if outcome == "no_weather":
+        return (
+            f"{label} ({human_date}): Wetterdaten aktuell nicht verfügbar — "
+            "bitte später erneut versuchen."
+        )
+    if outcome == "no_channels":
+        return (
+            "Keine Versandkanäle für diesen Trip aktiv — Briefing nicht "
+            "gesendet. Kanäle im Trip-Editor aktivieren."
+        )
+    # "no_stage" (Default/Fallback)
+    return f"{label} ({human_date}): Keine Etappe geplant"
 
 
 # ---------------------------------------------------------------------------
@@ -409,12 +437,21 @@ class TripCommandProcessor:
         self, trip: Trip, query_key: str, received_at: datetime, user_id: str,
     ) -> CommandResult:
         """Dispatch read-only query. Never mutates trip state."""
+        today = received_at.date()
+        tomorrow = today + timedelta(days=1)
+
+        # Issue #1007: heute/morgen lösen das volle Tages-Briefing aus (kein
+        # Einzeiler-Aggregat mehr) — eigener Zweig VOR dem Timeline-Setup, da
+        # der Scheduler die Wetterdaten selbst holt (keine WeatherExtractor-
+        # Timeline nötig).
+        if query_key == "heute":
+            return self._trigger_on_demand(trip, "morning", "Heute", today, user_id)
+        elif query_key == "morgen":
+            return self._trigger_on_demand(trip, "evening", "Morgen", tomorrow, user_id)
+
         from services.weather_extractor import WeatherExtractor
         extractor = WeatherExtractor(user_id=user_id)
         timeline = extractor.timeline(trip.id)
-
-        today = received_at.date()
-        tomorrow = today + timedelta(days=1)
 
         if not timeline.available:
             _fetch_and_save_snapshot(trip=trip, user_id=user_id, today=today, tomorrow=tomorrow)
@@ -428,24 +465,6 @@ class TripCommandProcessor:
                 confirmation_body=body,
                 trip_name=trip.name,
                 reply_markup=_GLANCE_BUTTONS,
-            )
-        elif query_key == "heute":
-            body = self._fmt_day(timeline, today, "Heute")
-            return CommandResult(
-                success=True, command="heute",
-                confirmation_subject=f"[{trip.name}] Heute",
-                confirmation_body=body,
-                trip_name=trip.name,
-                reply_markup=_HEUTE_BUTTONS,
-            )
-        elif query_key == "morgen":
-            body = self._fmt_day(timeline, tomorrow, "Morgen")
-            return CommandResult(
-                success=True, command="morgen",
-                confirmation_subject=f"[{trip.name}] Morgen",
-                confirmation_body=body,
-                trip_name=trip.name,
-                reply_markup=_MORGEN_BUTTONS,
             )
         elif query_key == "heute_gewitter":
             body = self._fmt_gewitter(timeline, today)
@@ -479,6 +498,38 @@ class TripCommandProcessor:
             confirmation_subject="Fehler",
             confirmation_body="Unbekannter Query-Key.",
             trip_name=trip.name,
+        )
+
+    def _trigger_on_demand(
+        self, trip: Trip, report_type: str, label: str, target_date: date, user_id: str,
+    ) -> CommandResult:
+        """Issue #1007: heute/morgen lösen das volle Tages-Briefing aus statt
+        des bisherigen Einzeiler-Aggregats. Wiederverwendung des On-Demand-
+        Versandpfads (#768-Test-Pfad-Semantik, aber ohne Etappen-Fallback und
+        ohne [TEST]-Präfix). Adversary-Fix F001/F002: `send_on_demand_report`
+        liefert ein Outcome ("sent"/"no_stage"/"no_weather"/"no_channels")
+        statt eines bloßen bool — nur "sent" unterdrückt die Bestätigung.
+        """
+        from services.trip_report_scheduler import TripReportSchedulerService
+        query_key = "heute" if report_type == "morning" else "morgen"
+        buttons = _HEUTE_BUTTONS if report_type == "morning" else _MORGEN_BUTTONS
+        service = TripReportSchedulerService(user_id=user_id)
+        outcome = service.send_on_demand_report(trip, report_type)
+        if outcome != "sent":
+            return CommandResult(
+                success=True, command=query_key,
+                confirmation_subject=f"[{trip.name}] {label}",
+                confirmation_body=_on_demand_failure_body(outcome, label, target_date),
+                trip_name=trip.name,
+                reply_markup=buttons,
+            )
+        return CommandResult(
+            success=True, command=query_key,
+            confirmation_subject=f"[{trip.name}] {label}",
+            confirmation_body=f"{label}-Briefing wird gesendet.",
+            trip_name=trip.name,
+            reply_markup=buttons,
+            suppress_email_reply=True,
         )
 
     # -----------------------------------------------------------------------
@@ -667,17 +718,6 @@ class TripCommandProcessor:
         else:
             lines.append(f"morgen ({tomorrow:%d.%m}): Keine Etappe geplant")
         return "\n".join(lines)
-
-    def _fmt_day(self, timeline, target_date, label: str) -> str:
-        if not timeline.available:
-            return (
-                "Kein Wetter-Snapshot verfügbar. "
-                "Bitte einen Report anfordern um aktuelle Daten zu laden."
-            )
-        agg = self._aggregate_day(timeline, target_date)
-        if not agg:
-            return f"{label} ({target_date:%d.%m}): Keine Etappe geplant"
-        return self._fmt_day_agg(agg, f"{label} ({target_date:%d.%m})")
 
     def _fmt_gewitter(self, timeline, today) -> str:
         if not timeline.available:

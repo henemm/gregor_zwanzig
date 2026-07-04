@@ -408,12 +408,61 @@ class TripReportSchedulerService:
             raise ValueError(f"Invalid report_type: {report_type}")
         return self._send_trip_report(trip, report_type, allow_test_fallback=True)
 
+    def send_on_demand_report(self, trip: "Trip", report_type: str) -> bool:
+        """
+        Send an on-demand full briefing triggered by an inbound heute/morgen command.
+
+        Issue #1007: Wiederverwendung des Test-Versand-Pfads (#768), aber OHNE
+        Etappen-Fallback (kein Ausweichen auf eine andere Etappe, wenn am
+        Zieltag keine Etappe liegt) und OHNE „[TEST]"-Präfix — stattdessen eine
+        dezente „auf Anfrage"-Kennzeichnung im Mail-Body.
+
+        Args:
+            trip: Trip object
+            report_type: "morning" (heute) or "evening" (morgen)
+
+        Returns:
+            Outcome string: "sent" | "no_stage" | "no_weather" | "no_channels"
+            (Issue #1007 Adversary-Fix F001/F002 — Outcome-Unterscheidung statt
+            eines bloßen bool, damit der Aufrufer "keine Etappe" von "keine
+            Wetterdaten" und von "kein Kanal aktiv" unterscheiden kann).
+        """
+        if report_type not in ("morning", "evening"):
+            raise ValueError(f"Invalid report_type: {report_type}")
+        return self._send_trip_report_outcome(trip, report_type, on_demand=True)
+
     def _send_trip_report(
         self,
         trip: "Trip",
         report_type: str,
         allow_test_fallback: bool = False,
+        on_demand: bool = False,
     ) -> bool:
+        """
+        Generate and send report for a single trip — legacy bool wrapper.
+
+        Issue #1007 Adversary-Fix F001: die öffentlichen Aufrufer
+        (send_test_report, send_reports, send_reports_for_hour) behalten ihre
+        EXAKTE bool-Semantik von vorher (True auch bei "no_channels" —
+        pre-existing Verhalten, nicht Teil dieses Issues). Die Outcome-
+        Unterscheidung steckt in _send_trip_report_outcome().
+
+        Returns:
+            True if report was sent (or generated but no channel was
+            configured), False if no matching stage/weather data found.
+        """
+        outcome = self._send_trip_report_outcome(
+            trip, report_type, allow_test_fallback=allow_test_fallback, on_demand=on_demand,
+        )
+        return outcome in ("sent", "no_channels")
+
+    def _send_trip_report_outcome(
+        self,
+        trip: "Trip",
+        report_type: str,
+        allow_test_fallback: bool = False,
+        on_demand: bool = False,
+    ) -> str:
         """
         Generate and send report for a single trip.
 
@@ -422,7 +471,9 @@ class TripReportSchedulerService:
             report_type: "morning" or "evening"
 
         Returns:
-            True if report was sent, False if no matching stage/weather data found
+            "no_stage" if no matching stage, "no_weather" if the weather
+            fetch failed, "no_channels" if stage+weather were fine but no
+            channel is configured for the trip, "sent" otherwise.
 
         Raises:
             Exception: If weather fetch or email send fails
@@ -445,7 +496,7 @@ class TripReportSchedulerService:
 
         if not segments:
             logger.warning(f"No segments for trip {trip.id} on {target_date}")
-            return False
+            return "no_stage"
 
         logger.debug(f"Created {len(segments)} segments for {trip.id}")
 
@@ -471,7 +522,7 @@ class TripReportSchedulerService:
 
         if not segment_weather:
             logger.warning(f"No weather data for trip {trip.id}")
-            return False
+            return "no_weather"
 
         # 2b. Ensemble-Anreicherung: 1 API-Call für letzten Waypoint der letzten Etappe
         self._enrich_ensemble_for_trip(trip, segment_weather)
@@ -599,9 +650,36 @@ class TripReportSchedulerService:
                 ) if "<body>" in report.email_html else f"<p>{hint}</p>{report.email_html}"
             if report.telegram_bubbles:
                 report.telegram_bubbles[0] = f"{hint}\n\n{report.telegram_bubbles[0]}"
+        elif on_demand:
+            # Issue #1007: On-Demand-Versand (heute/morgen-Kommando) — dezente
+            # Kennzeichnung "auf Anfrage" statt [TEST]-Präfix, kein Fallback
+            # (greift hier ohnehin nie, da on_demand nie allow_test_fallback setzt).
+            human_date = target_date.strftime("%d.%m.%Y")
+            hint = f"Briefing auf Anfrage für {stage_name or 'Etappe'} am {human_date}"
+            if report.email_plain:
+                report.email_plain = f"{hint}\n\n{report.email_plain}"
+            if report.email_html:
+                report.email_html = report.email_html.replace(
+                    "<body>", f"<body><p>{hint}</p>", 1,
+                ) if "<body>" in report.email_html else f"<p>{hint}</p>{report.email_html}"
+            if report.telegram_bubbles:
+                report.telegram_bubbles[0] = f"{hint}\n\n{report.telegram_bubbles[0]}"
 
         # 7. Send via configured channels
         config = trip.report_config
+
+        # Issue #1007 Adversary-Fix F001: "kein Kanal konfiguriert" wird VOR
+        # den Sendeversuchen anhand der Config ermittelt (nicht anhand des
+        # nachträglichen sent_channels-Ergebnisses) — sonst würde ein echter
+        # Sendefehlschlag bei einem konfigurierten Kanal (z.B. Telegram-Token
+        # ungültig, #1001 F003) fälschlich auch als "kein Kanal konfiguriert"
+        # gewertet und der Briefing-Log-Eintrag unterdrückt.
+        no_channel_configured = (
+            config is not None
+            and not config.send_email
+            and not config.send_sms
+            and not config.send_telegram
+        )
 
         # 7a. Email (bugfix: respect send_email flag)
         # Issue #722: compact format sends single text/plain (html="" → html=False path)
@@ -671,7 +749,12 @@ class TripReportSchedulerService:
             sent_channels.append("sms")
         if config and config.send_telegram and self._settings.can_send_telegram() and telegram_fully_sent:
             sent_channels.append("telegram")
-        self._append_briefing_log(trip.id, report_type, sent_channels)
+        # Issue #1007 Adversary-Fix F001: bei explizit konfiguriertem "kein
+        # Kanal aktiv" wird KEIN Log-Eintrag mit channels=[] geschrieben —
+        # der reguläre Sendefehlschlag-Fall (#1001 F003, Kanal konfiguriert
+        # aber Versand schlägt fehl) protokolliert weiterhin wie bisher.
+        if not no_channel_configured:
+            self._append_briefing_log(trip.id, report_type, sent_channels)
 
         logger.info(f"Trip report sent: {trip.name} ({report_type})")
 
@@ -697,7 +780,7 @@ class TripReportSchedulerService:
         # gegen das frische Briefing vergleicht.
         self._reset_alert_state_after_briefing(trip.id)
 
-        return True
+        return "no_channels" if no_channel_configured else "sent"
 
     def _reset_alert_state_after_briefing(self, trip_id: str) -> None:
         """Issue #816 (B): Alert-Melde-Gedächtnis nach Briefing-Versand löschen."""

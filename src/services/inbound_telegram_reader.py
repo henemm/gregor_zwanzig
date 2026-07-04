@@ -211,7 +211,13 @@ class InboundTelegramReader:
             out = TelegramOutput(user_settings)
             loading_mid = out.send("⏳", "⏳ Wetter wird geladen...")
             result: CommandResult = TripCommandProcessor().process(inbound)
-            if loading_mid is not None:
+            # Issue #1007: heute/morgen haben bereits das volle Briefing per
+            # Bubbles verschickt — die Lade-Nachricht braucht keine separate
+            # Bestätigung mehr, nur noch das Aufräumen.
+            if result.suppress_email_reply:
+                if loading_mid is not None:
+                    out.delete_message(chat_id, loading_mid)
+            elif loading_mid is not None:
                 out.edit_message_text(
                     chat_id,
                     loading_mid,
@@ -267,12 +273,16 @@ class InboundTelegramReader:
                         user_id=user_id,
                     )
                     result: CommandResult = TripCommandProcessor().process(inbound)
-                    out.edit_message_text(
-                        chat_id,
-                        message_id,
-                        f"[{result.confirmation_subject}]\n\n{result.confirmation_body}",
-                        reply_markup=result.reply_markup,
-                    )
+                    # Issue #1007: heute/morgen per Button haben bereits das
+                    # volle Briefing per Bubbles verschickt — keine separate
+                    # Bestätigung mehr in die alte Nachricht editieren.
+                    if not result.suppress_email_reply:
+                        out.edit_message_text(
+                            chat_id,
+                            message_id,
+                            f"[{result.confirmation_subject}]\n\n{result.confirmation_body}",
+                            reply_markup=result.reply_markup,
+                        )
         finally:
             if cq_id:
                 out.answer_callback_query(cq_id)
