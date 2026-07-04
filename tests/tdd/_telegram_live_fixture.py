@@ -62,7 +62,15 @@ def ensure_test_user_with_active_trip(
     tomorrow = today + timedelta(days=1)
     trip = active_trip_for(user_id=user_id, data_dir=data_dir)
     trip_stages = {getattr(s, "date", None) for s in trip.stages} if trip else set()
-    needs_refresh = not ({today, tomorrow} <= trip_stages)
+    # Issue #1007: heute/morgen lösen jetzt den On-Demand-Voll-Briefing-Versand
+    # über den Scheduler aus (channel-gated) — ohne send_telegram=True in der
+    # Trip-Konfiguration würde für diese beiden Befehle NICHTS an Telegram
+    # zugestellt (stiller Kanal-Ausschluss). Bestandstrips ohne dieses Feld
+    # müssen daher ebenfalls neu angelegt werden.
+    has_telegram_config = bool(
+        trip and trip.report_config and trip.report_config.send_telegram
+    )
+    needs_refresh = not ({today, tomorrow} <= trip_stages) or not has_telegram_config
     if needs_refresh:
         _delete_snapshot(user_id=user_id, trip_id="tg-live-e2e-trip", data_dir=data_dir)
         _create_active_trip(user_id=user_id, data_dir=data_dir)
@@ -163,6 +171,9 @@ def run_command_through_pipeline(
             _loader.get_data_dir = _orig_get_data_dir
 
 
+_ON_DEMAND_COMMANDS = ("heute", "morgen")
+
+
 def deliver_and_cleanup(
     command: str,
     chat_id: str,
@@ -173,7 +184,15 @@ def deliver_and_cleanup(
     Baut ein echtes Telegram-Update-dict und ruft den ECHTEN
     InboundTelegramReader._process_update auf. Dieser sendet an den Test-Chat
     (weil user.json telegram_chat_id=chat_id hat → with_user_profile → user_settings).
-    Danach reader.sent_message_ids auslesen und alle Nachrichten löschen.
+
+    Issue #1007: heute/morgen liefern beim Reader KEINE Bestätigungs-message_id
+    mehr (suppress_email_reply — das volle Briefing kommt als Bubble-Serie
+    direkt vom Scheduler). Nachweis für diese beiden Befehle über das
+    TelegramOutput-Klassenregister `recent_message_ids`: Stand vor dem Aufruf
+    merken, danach die neu hinzugekommenen IDs (= real zugestellte Briefing-
+    Bubbles) einsammeln, aufräumen und mindestens 2 (Kopf- + Segment-Bubble)
+    verlangen. Für alle anderen Befehle bleibt der bisherige Pfad über
+    reader.sent_message_ids unverändert.
 
     Keine Mocks — echter Webhook-Eintrittspunkt, echte Telegram-API.
 
@@ -199,17 +218,37 @@ def deliver_and_cleanup(
         },
     }
 
+    is_on_demand = command.lstrip("/") in _ON_DEMAND_COMMANDS
+    baseline_ids = list(TelegramOutput.recent_message_ids) if is_on_demand else None
+
     reader = InboundTelegramReader()
     try:
         reader._process_update(update, settings)
     except Exception:
         return (None, False)
 
+    out = TelegramOutput(settings.model_copy(update={"telegram_chat_id": str(chat_id)}))
+
+    if is_on_demand:
+        new_ids = [
+            mid for mid in TelegramOutput.recent_message_ids if mid not in baseline_ids
+        ]
+        if len(new_ids) < 2:
+            return (None, False)
+        all_deleted = True
+        for mid in new_ids:
+            try:
+                ok = out.delete_message(chat_id=chat_id, message_id=mid)
+                if not ok:
+                    all_deleted = False
+            except Exception:
+                all_deleted = False
+        return (new_ids[-1], all_deleted)
+
     if not reader.sent_message_ids:
         return (None, False)
 
     last_mid = reader.sent_message_ids[-1]
-    out = TelegramOutput(settings.model_copy(update={"telegram_chat_id": str(chat_id)}))
     all_deleted = True
     for mid in reader.sent_message_ids:
         try:
@@ -391,6 +430,9 @@ def _create_active_trip(user_id: str, data_dir: str) -> None:
         ],
         "alert_rules": [],
         "region": "Korsika",
+        # Issue #1007: send_telegram=True, damit der On-Demand-Versand
+        # (heute/morgen) den Fixture-Chat auch tatsächlich per Telegram beliefert.
+        "report_config": {"trip_id": trip_id, "send_telegram": True},
     }
 
     trip_file = trips_dir / f"{trip_id}.json"

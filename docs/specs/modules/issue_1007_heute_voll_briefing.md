@@ -72,6 +72,19 @@ jeweiligen Tag aus — über die konfigurierten Kanäle des Trips, im vollen Bri
    Bestätigungs-Bubble entfällt ebenfalls — die Briefing-Bubbles kommen ohnehin).
    Misserfolg (keine Etappe) → normale kurze Antwort über den bestehenden Reply-Weg.
 4. `glance` und alle übrigen Query-Keys bleiben byte-identisch.
+5. **On-Demand-Versand ist read-only gegenüber Snapshot-/Alert-Zustand:**
+   `_send_trip_report_outcome()` überspringt bei `on_demand=True` sowohl das
+   Speichern der Wetter-Momentaufnahme (`WeatherSnapshotService.save()`/
+   `save_dated()`) als auch den Alert-Melde-Gedächtnis-Reset
+   (`_reset_alert_state_after_briefing()`, Issue #816). Baseline für Alerts
+   und Vortag-Vergleich bleibt ausschließlich das letzte REGULÄRE
+   Scheduler-Briefing. Ohne diese Ausnahme würde ein `heute`-Abruf die
+   kombinierte heute+morgen-Momentaufnahme aus `glance`
+   (`_fetch_and_save_snapshot`) mit nur dem einen Zieltag überschreiben —
+   `glance`/`heute_gewitter`/`timeline_*` würden danach für den jeweils
+   anderen Tag fälschlich „Keine Etappe geplant" melden, bis der
+   Cache-Check in `_fetch_and_save_snapshot` (Vergleich `target_date`) am
+   Folgetag von selbst heilt.
 
 ## Expected Behavior
 
@@ -164,15 +177,17 @@ jeweiligen Tag aus — über die konfigurierten Kanäle des Trips, im vollen Bri
 
 ## Test Coverage
 
-- `tests/tdd/test_issue_1007_heute_voll_briefing.py` (NEU) — AC-1 bis AC-6, AC-8 +
+- `tests/tdd/test_issue_1007_heute_voll_briefing.py` (NEU) — deckt die
+  Akzeptanzkriterien Eins bis Sechs sowie Acht ab, plus den nachträglichen
   F001/F002-Adversary-Fix (kein separates `test_issue_1007_telegram_heute.py`
-  angelegt — AC-7 wird lokal per Code-/Processor-Beweis abgedeckt, der
-  Live-Beweis erfolgt auf Staging im E2E-Schritt).
-- `tests/tdd/test_issue_651_telegram_query_glance.py` — Glance-Tests (AC-1, AC-2,
-  AC-6) unverändert grün (Regression); die zwei AC-3-Tests (`heute`/`morgen`
+  angelegt — das siebte Kriterium wird lokal per Code-/Processor-Beweis
+  abgedeckt, der Live-Beweis erfolgt auf Staging im E2E-Schritt).
+- `tests/tdd/test_issue_651_telegram_query_glance.py` — die Glance-Tests
+  (Kriterien Eins, Zwei und Sechs dieser Nachbar-Spec) bleiben unverändert
+  grün (Regression); die zwei Tests zum dritten Kriterium (`heute`/`morgen`
   einzeiler-spezifisch) sind als „Superseded by #1007" markiert, da dieses
   Verhalten durch den Voll-Briefing-Versand ersetzt wurde — reale Abdeckung
-  jetzt in `test_issue_1007_heute_voll_briefing.py` (AC-1/AC-2).
+  jetzt in `test_issue_1007_heute_voll_briefing.py`.
 - `tests/tdd/test_issue_670_inbound_keywords.py` — brauchte keine Anpassung
   (enthält keine direkten heute/morgen-Assertions). Die zwei dort beobachteten
   Fehlschläge (`test_help_lists_current_keywords`, `test_block_lists_all_keywords`)
@@ -192,3 +207,12 @@ jeweiligen Tag aus — über die konfigurierten Kanäle des Trips, im vollen Bri
   über die reine Funktion `_on_demand_failure_body()` auf den Antworttext.
   Legacy-Aufrufer (`send_test_report`, `send_reports`, `send_reports_for_hour`)
   behalten ihre exakte bool-Semantik unangetastet.
+- 2026-07-04: Regressions-Fix (Runde 3) — `_send_trip_report_outcome()`
+  übersprang bei `on_demand=True` bisher NICHT das Speichern der
+  Wetter-Momentaufnahme und den Alert-Melde-Gedächtnis-Reset (Issue #816);
+  ein `heute`/`morgen`-Abruf überschrieb dadurch die kombinierte
+  heute+morgen-Momentaufnahme aus `glance` mit nur dem angefragten Zieltag.
+  Beide Schritte laufen jetzt nur noch im regulären (nicht On-Demand-)
+  Versandpfad. Neuer Regressionstest
+  `test_snapshot_bleibt_kombiniert_nach_heute` in
+  `test_issue_1007_heute_voll_briefing.py`.

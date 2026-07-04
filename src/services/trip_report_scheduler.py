@@ -767,18 +767,26 @@ class TripReportSchedulerService:
                 self._send_service_error_email(trip, errors, report_type)
 
         # 9. Save weather snapshot for alert comparison
-        try:
-            from services.weather_snapshot import WeatherSnapshotService
-            _snapshot_svc = WeatherSnapshotService(self._user_id)
-            _snapshot_svc.save(trip.id, segment_weather, target_date)
-            _snapshot_svc.save_dated(trip.id, target_date, segment_weather)
-        except Exception as e:
-            logger.warning(f"Failed to save weather snapshot for {trip.id}: {e}")
+        # Issue #1007: On-Demand-Abruf (heute/morgen-Kommando) ist read-only
+        # gegenüber Snapshot-/Alert-Zustand — Baseline bleibt das letzte
+        # reguläre Briefing. Ein On-Demand-Abruf für nur EINEN Zieltag würde
+        # sonst die kombinierte Momentaufnahme (heute+morgen) mit dem einen
+        # Zieltag überschreiben und Alerts/Vortag-Vergleich für den jeweils
+        # anderen Tag verfälschen.
+        if not on_demand:
+            try:
+                from services.weather_snapshot import WeatherSnapshotService
+                _snapshot_svc = WeatherSnapshotService(self._user_id)
+                _snapshot_svc.save(trip.id, segment_weather, target_date)
+                _snapshot_svc.save_dated(trip.id, target_date, segment_weather)
+            except Exception as e:
+                logger.warning(f"Failed to save weather snapshot for {trip.id}: {e}")
 
-        # 10. Issue #816 (B): Briefing = neue, stabile Alert-Referenz → das
-        # Melde-Gedächtnis des Trips zurücksetzen, damit der nächste Alert wieder
-        # gegen das frische Briefing vergleicht.
-        self._reset_alert_state_after_briefing(trip.id)
+            # 10. Issue #816 (B): Briefing = neue, stabile Alert-Referenz → das
+            # Melde-Gedächtnis des Trips zurücksetzen, damit der nächste Alert
+            # wieder gegen das frische Briefing vergleicht. Issue #1007: nicht
+            # bei On-Demand-Abruf (s.o.).
+            self._reset_alert_state_after_briefing(trip.id)
 
         return "no_channels" if no_channel_configured else "sent"
 

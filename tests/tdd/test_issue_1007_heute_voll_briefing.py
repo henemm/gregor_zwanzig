@@ -92,6 +92,35 @@ def _make_trip(
     return trip
 
 
+def _make_trip_two_stages(
+    user_id: str, trip_id: str, name: str, date_today: date, date_tomorrow: date,
+) -> Trip:
+    """Zwei-Etappen-Trip (heute + morgen) für Snapshot-Regressionstests."""
+    wps_today = [
+        Waypoint(id="G1", name="Start", lat=47.2692, lon=11.4041, elevation_m=600,
+                 time_window=TimeWindow(start=time(7, 0), end=time(7, 0))),
+        Waypoint(id="G2", name="Ziel", lat=47.2950, lon=11.4420, elevation_m=800,
+                 time_window=TimeWindow(start=time(11, 0), end=time(11, 0))),
+    ]
+    wps_tomorrow = [
+        Waypoint(id="G1", name="Start Tag2", lat=47.2950, lon=11.4420, elevation_m=800,
+                 time_window=TimeWindow(start=time(7, 0), end=time(7, 0))),
+        Waypoint(id="G2", name="Ziel Tag2", lat=47.3100, lon=11.4600, elevation_m=900,
+                 time_window=TimeWindow(start=time(11, 0), end=time(11, 0))),
+    ]
+    stage1 = Stage(id="T1", name=f"{name}-Etappe1", date=date_today,
+                   start_time=time(9, 0), waypoints=wps_today)
+    stage2 = Stage(id="T2", name=f"{name}-Etappe2", date=date_tomorrow,
+                   start_time=time(9, 0), waypoints=wps_tomorrow)
+    trip = Trip(id=trip_id, name=name, stages=[stage1, stage2])
+    save_trip(trip, user_id=user_id)
+    return trip
+
+
+def _snapshot_path(user_id: str, trip_id: str) -> Path:
+    return _DATA_USERS / user_id / "weather_snapshots" / f"{trip_id}.json"
+
+
 def _briefing_log(user_id: str) -> list:
     p = _DATA_USERS / user_id / "briefing_log.json"
     if not p.exists():
@@ -355,3 +384,63 @@ def test_f002_no_weather_body_nennt_wetterdaten_nicht_keine_etappe():
 def test_f002_no_stage_body_nennt_keine_etappe_geplant():
     body = _on_demand_failure_body("no_stage", "Heute", date(2026, 7, 10))
     assert "Keine Etappe geplant" in body, body
+
+
+# ---------------------------------------------------------------------------
+# Regressionstest (Runde 3) — On-Demand-'heute' darf die kombinierte
+# heute+morgen-Momentaufnahme NICHT mit nur dem Zieltag überschreiben.
+# ---------------------------------------------------------------------------
+
+def test_snapshot_bleibt_kombiniert_nach_heute():
+    """Regression: 'heute' darf die kombinierte Momentaufnahme (heute+morgen)
+    aus 'glance' nicht mit nur dem heutigen Tag überschreiben — sonst meldet
+    ein nachfolgendes 'glance' für 'morgen' fälschlich 'Keine Etappe geplant',
+    bis der Cache-Check in _fetch_and_save_snapshot am Folgetag von selbst
+    heilt."""
+    user_id = "tdd-1007-adv-verify"
+    trip_name = "TDD1007 SnapshotBleibtKombiniert"
+    today = date.today()
+    tomorrow = today + timedelta(days=1)
+    _make_user(user_id)
+    trip = _make_trip_two_stages(
+        user_id, "tdd-1007-adv-verify-trip", trip_name, today, tomorrow,
+    )
+
+    # 1. glance erzeugt real die kombinierte Momentaufnahme (heute+morgen).
+    result_glance = _process(user_id, trip_name, "glance")
+    assert result_glance.command == "glance"
+    assert "Keine Etappe geplant" not in result_glance.confirmation_body, (
+        f"Vorbedingung verletzt — glance sieht bereits keine Etappe: "
+        f"{result_glance.confirmation_body!r}"
+    )
+
+    snap_path = _snapshot_path(user_id, trip.id)
+    assert snap_path.exists(), "glance hat keine Momentaufnahme angelegt"
+    baseline_content = snap_path.read_text()
+
+    # 2. heute verarbeiten — echter Versand ans Test-Postfach.
+    baseline_uid = _max_uid()
+    result_heute = _process(user_id, trip_name, "heute")
+    assert result_heute.success, f"Kommando fehlgeschlagen: {result_heute.confirmation_body}"
+    assert len(_briefing_log(user_id)) == 1, "Kein Voll-Briefing-Versand für 'heute' ausgelöst"
+    mails = _find_mails(trip_name, baseline_uid)
+    assert len(mails) == 1, f"{len(mails)} Mails statt genau 1"
+
+    # 3a. Momentaufnahme unverändert (identischer Inhalt).
+    after_content = snap_path.read_text()
+    assert after_content == baseline_content, (
+        "Regression #1007: On-Demand-'heute' hat die kombinierte "
+        "Momentaufnahme überschrieben (nur noch heutiger Tag enthalten)"
+    )
+
+    # 3b. Ein erneutes glance nennt weiterhin Morgen-Daten.
+    result_glance2 = _process(user_id, trip_name, "glance")
+    assert "morgen" in result_glance2.confirmation_body.lower()
+    morgen_line = next(
+        (l for l in result_glance2.confirmation_body.splitlines() if "morgen" in l.lower()),
+        "",
+    )
+    assert "Keine Etappe geplant" not in morgen_line, (
+        f"Regression #1007: 'morgen' meldet nach 'heute' fälschlich keine "
+        f"Etappe: {morgen_line!r}"
+    )

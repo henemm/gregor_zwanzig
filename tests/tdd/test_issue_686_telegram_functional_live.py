@@ -145,32 +145,88 @@ def test_ac3_all_seven_commands_produce_meaningful_content():
     THEN: jede Antwort ist nicht leer, enthält weder 'Unbekannter Befehl' noch
           'Kein aktiver Trip'.
 
+    Issue #1007 (PO-Semantik ab 2026-07-04): heute/morgen lösen nicht mehr den
+    Einzeiler aus, sondern den vollen Voll-Briefing-Versand über den Scheduler
+    (kein Wetter-Marker mehr im Pipeline-Rückgabewert — die Bestätigung IST
+    „…-Briefing wird gesendet."). Der reale Beweis für diese beiden Befehle ist
+    ein frischer briefing_log-Eintrag mit Kanal telegram (echter Dispatch, siehe
+    docs/specs/modules/issue_1007_heute_voll_briefing.md). Die anderen fünf
+    Befehle bleiben streng auf echte Wetter-Marker geprüft.
+
     Läuft gegen das CWD-`data`-Verzeichnis (get_data_dir ist CWD-relativ) — in der
     Validierung im Staging-Tree mit echten Wetter-Providern.
     """
     from tests.tdd._telegram_live_fixture import (
+        TEST_USER_ID,
+        _delete_snapshot,
+        _ensure_weather_snapshot,
+        active_trip_for,
         ensure_test_user_with_active_trip,
         run_command_through_pipeline,
     )
     chat_id = os.environ["GZ_TELEGRAM_TEST_CHAT_ID"]
     ensure_test_user_with_active_trip(chat_id=chat_id)
 
+    # Issue #1007: heute/morgen fassen die "aktuelle" (heute+morgen kombinierte)
+    # Momentaufnahme seit dem Adversary-Fix nicht mehr an (trip_report_scheduler
+    # ._send_trip_report_outcome überspringt save()/save_dated() im On-Demand-
+    # Modus — siehe test_snapshot_bleibt_kombiniert_nach_heute). Trotzdem hier
+    # defensiv eine frische kombinierte Momentaufnahme erzwingen, damit die
+    # Lesebefehle unabhängig vom Zustand eines vorherigen Testlaufs prüfbar sind.
+    trip = active_trip_for(user_id=TEST_USER_ID)
+    assert trip is not None, "Fixture-Trip muss nach ensure_test_user... existieren"
+    _delete_snapshot(user_id=TEST_USER_ID, trip_id=trip.id, data_dir="data")
+    _ensure_weather_snapshot(trip, TEST_USER_ID)
+
     # Nur echte Wetterdaten-Marker — keine Formatierungs-/Header-Strings
     _WEATHER_MARKERS = ("°C", "km/h", "mm", "🌤", "⛈", "🌧", "🌨", "☀", "🌥", "⚡",
                         "%", "Temp", "Wind", "Regen", "Schnee", "Gewitter")
+    _ON_DEMAND_CMDS = ("heute", "morgen")
+    log_path = Path(f"data/users/{TEST_USER_ID}/briefing_log.json")
+
+    def _log_entry_count() -> int:
+        if not log_path.exists():
+            return 0
+        return len(json.loads(log_path.read_text()).get("entries", []))
+
+    # Ausführungsreihenfolge bewusst NICHT SEVEN_COMMANDS: heute/morgen fassen
+    # die kombinierte Momentaufnahme zwar seit dem Adversary-Fix nicht mehr an
+    # (s.o.), aber die Lesebefehle zuerst und heute/morgen zuletzt laufen zu
+    # lassen bleibt eine robuste, unschädliche Reihenfolge (kein Produktverhalten
+    # hängt an dieser Reihenfolge — reine Testrobustheit gegen Restzustand).
+    _run_order = [c for c in SEVEN_COMMANDS if c not in _ON_DEMAND_CMDS] + list(_ON_DEMAND_CMDS)
 
     failures = []
-    for cmd in SEVEN_COMMANDS:
+    for cmd in _run_order:
+        entries_before = _log_entry_count()
         body = run_command_through_pipeline(command=cmd, chat_id=chat_id)
+
         if not body or not body.strip():
             failures.append(f"{cmd}: leere Antwort")
-        elif "Unbekannter Befehl" in body:
+            continue
+        if "Unbekannter Befehl" in body:
             failures.append(f"{cmd}: 'Unbekannter Befehl'")
-        elif "Kein aktiver Trip" in body:
+            continue
+        if "Kein aktiver Trip" in body:
             failures.append(f"{cmd}: 'Kein aktiver Trip'")
-        elif "Keine Etappe geplant" in body:
-            failures.append(f"{cmd}: 'Keine Etappe geplant' — Fixture-Trip hat keine heutige Etappe")
-        elif "Kein Wetter-Snapshot" in body:
+            continue
+        if "Keine Etappe geplant" in body:
+            failures.append(f"{cmd}: 'Keine Etappe geplant' — Fixture-Trip hat keine heutige/morgige Etappe")
+            continue
+
+        if cmd in _ON_DEMAND_CMDS:
+            if "Briefing wird gesendet" not in body:
+                failures.append(f"{cmd}: kein Bestätigungstext für Voll-Briefing-Dispatch: {body[:80]!r}")
+                continue
+            if _log_entry_count() <= entries_before:
+                failures.append(f"{cmd}: kein neuer briefing_log-Eintrag (Dispatch nicht nachweisbar)")
+                continue
+            last = json.loads(log_path.read_text())["entries"][-1]
+            if "telegram" not in last.get("channels", []):
+                failures.append(f"{cmd}: briefing_log-Eintrag ohne Kanal telegram: {last!r}")
+            continue
+
+        if "Kein Wetter-Snapshot" in body:
             failures.append(f"{cmd}: 'Kein Wetter-Snapshot' — kein echter Wetter-Inhalt")
         elif cmd != "hilfe" and not any(m in body for m in _WEATHER_MARKERS):
             failures.append(f"{cmd}: kein Wetter-Marker in Antwort (Schein-Grün?): {body[:80]!r}")
@@ -191,6 +247,14 @@ def test_ac4_live_delivery_and_cleanup():
     WHEN: die Antwort jedes der 7 Befehle real an den Test-Chat gesendet wird
     THEN: jede Zustellung liefert eine message_id (≠ None) und wird danach per
           deleteMessage wieder entfernt (ok=True). Keine Mocks.
+
+    Issue #1007: heute/morgen liefern beim Reader by design KEINE Bestätigungs-
+    message_id mehr (suppress — das volle Briefing kommt als Bubble-Serie direkt
+    vom Scheduler). `deliver_and_cleanup()` weist das für diese beiden Befehle
+    über das TelegramOutput-Klassenregister nach (mindestens 2 neue IDs = Kopf-
+    + Segment-Bubble) und räumt sie ebenfalls auf — damit ist das siebte
+    Akzeptanzkriterium aus der 1007-Spec (volle Bubbles statt Einzeiler) hier
+    erstmals live bewiesen.
     """
     from tests.tdd._telegram_live_fixture import deliver_and_cleanup
 

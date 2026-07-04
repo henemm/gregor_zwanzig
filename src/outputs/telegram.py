@@ -39,9 +39,17 @@ class TelegramOutput:
     On failure, logs the error; the next scheduled run is the implicit retry.
     """
 
+    # Issue #1007 (Observability, "Kein Job ohne Observability"): der
+    # Scheduler-Versand (send_on_demand_report → Briefing-Bubbles) läuft ohne
+    # Reader-Instanz ab und ist sonst von außen nicht beobachtbar/aufräumbar.
+    # Klassen-Register über alle Instanzen, gedeckelt auf die letzten 50 IDs.
+    recent_message_ids: list[int] = []
+    _RECENT_MESSAGE_IDS_MAX = 50
+
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings if settings else Settings()
         self._timeout = 10
+        self.sent_message_ids: list[int] = []
 
     @property
     def name(self) -> str:
@@ -87,9 +95,13 @@ class TelegramOutput:
             if response.status_code == 200 and _api_ok(response):
                 logger.info("Telegram message sent (subject=%r)", subject)
                 try:
-                    return int(response.json()["result"]["message_id"])
+                    mid = int(response.json()["result"]["message_id"])
                 except (KeyError, TypeError, ValueError):
                     return None
+                self.sent_message_ids.append(mid)
+                TelegramOutput.recent_message_ids.append(mid)
+                del TelegramOutput.recent_message_ids[:-self._RECENT_MESSAGE_IDS_MAX]
+                return mid
             else:
                 logger.error(
                     "Telegram API returned status %d: %s",
@@ -125,6 +137,14 @@ class TelegramOutput:
             response = httpx.post(url, json=payload, timeout=self._timeout)
             if response.status_code == 200 and _api_ok(response):
                 logger.info("Telegram deleteMessage ok (message_id=%r)", message_id)
+                # Issue #1007: recent_message_ids trackt NUR noch existierende
+                # Nachrichten — sonst würde ein Aufräum-Durchlauf dieselbe ID
+                # ein zweites Mal löschen wollen (z.B. eine bereits vom Reader
+                # selbst geräumte Lade-Nachricht) und Telegram meldet 400.
+                try:
+                    TelegramOutput.recent_message_ids.remove(message_id)
+                except ValueError:
+                    pass
                 return True
             logger.warning(
                 "deleteMessage returned status %d: %s",
