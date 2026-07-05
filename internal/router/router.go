@@ -20,14 +20,15 @@ import (
 
 // Deps holds the dependencies required to build the application router.
 type Deps struct {
-	Config          *config.Config
-	Store           *store.Store
-	WeatherProvider provider.WeatherProvider
-	WebAuthn        *webauthn.WebAuthn
-	ChallengeStore  *handler.ChallengeStore
-	CompareEngine   *compare.Engine
-	Scheduler       *scheduler.Scheduler
-	GitCommit       string
+	Config           *config.Config
+	Store            *store.Store
+	WeatherProvider  provider.WeatherProvider
+	WebAuthn         *webauthn.WebAuthn
+	ChallengeStore   *handler.ChallengeStore
+	CompareEngine    *compare.Engine
+	Scheduler        *scheduler.Scheduler
+	TelegramTokenStore *handler.TelegramTokenStore
+	GitCommit        string
 }
 
 // New builds the chi router with all application routes.
@@ -61,9 +62,9 @@ func New(deps Deps) chi.Router {
 	r.Put("/api/auth/profile", handler.UpdateProfileHandler(deps.Store))
 	r.Put("/api/auth/password", handler.ChangePasswordHandler(deps.Store, bcrypt.DefaultCost))
 	// Bug #590: Telegram /start-Flow — link generation + status polling + internal connect
-	r.Get("/api/auth/telegram-link", handler.GetTelegramLinkHandler(deps.Store))
+	r.Get("/api/auth/telegram-link", handler.GetTelegramLinkHandler(deps.Store, deps.TelegramTokenStore))
 	r.Get("/api/auth/telegram-status", handler.GetTelegramStatusHandler(deps.Store))
-	r.Post("/api/internal/telegram-connect", handler.PostTelegramConnectHandler(deps.Store))
+	r.Post("/api/internal/telegram-connect", handler.PostTelegramConnectHandler(deps.Store, deps.TelegramTokenStore))
 	// Issue #637: Telegram Inbound Webhook (public, secret-header-protected)
 	r.Post("/api/webhooks/telegram/{secret}", handler.TelegramWebhookHandler(deps.Config.PythonCoreURL))
 	r.Get("/api/auth/google/init", handler.GoogleOAuthInitHandler(deps.Config))

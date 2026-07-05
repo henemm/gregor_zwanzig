@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"encoding/json"
-	"encoding/hex"
 	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,18 +20,27 @@ type pendingTelegramToken struct {
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
-var telegramTokensPath string
-
-func InitTelegramTokenStore(dataDir string) {
-	telegramTokensPath = filepath.Join(dataDir, "telegram_tokens.json")
-	loadTelegramTokens()
+// TelegramTokenStore holds pending deep-link tokens for Telegram account
+// connection. It replaces the previous package-level state and is created once
+// in main.go, then injected into the handlers that need it.
+type TelegramTokenStore struct {
+	path   string
+	tokens map[string]pendingTelegramToken
+	mu     sync.Mutex
 }
 
-func loadTelegramTokens() {
-	if telegramTokensPath == "" {
-		return
+// NewTelegramTokenStore creates a store backed by a JSON file under dataDir.
+func NewTelegramTokenStore(dataDir string) *TelegramTokenStore {
+	s := &TelegramTokenStore{
+		path:   filepath.Join(dataDir, "telegram_tokens.json"),
+		tokens: map[string]pendingTelegramToken{},
 	}
-	data, err := os.ReadFile(telegramTokensPath)
+	s.load()
+	return s
+}
+
+func (s *TelegramTokenStore) load() {
+	data, err := os.ReadFile(s.path)
 	if err != nil {
 		return // fail-soft: file not yet created
 	}
@@ -39,45 +48,63 @@ func loadTelegramTokens() {
 	if err := json.Unmarshal(data, &saved); err != nil {
 		return
 	}
-	telegramTokensMu.Lock()
-	defer telegramTokensMu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	now := time.Now()
 	for k, v := range saved {
 		if now.Before(v.ExpiresAt) {
-			telegramTokens[k] = v
+			s.tokens[k] = v
 		}
 	}
 }
 
-func saveTelegramTokens() {
-	if telegramTokensPath == "" {
-		return
-	}
-	telegramTokensMu.Lock()
-	data, err := json.Marshal(telegramTokens)
-	telegramTokensMu.Unlock()
+func (s *TelegramTokenStore) save() {
+	s.mu.Lock()
+	data, err := json.Marshal(s.tokens)
+	s.mu.Unlock()
 	if err != nil {
 		return
 	}
-	_ = os.WriteFile(telegramTokensPath, data, 0600)
+	_ = os.WriteFile(s.path, data, 0600)
 }
 
-var (
-	telegramTokens   = map[string]pendingTelegramToken{}
-	telegramTokensMu sync.Mutex
-)
-
-func newTelegramToken() string {
+// CreateToken generates a new one-time deep-link token for userID and returns
+// the raw token. Tokens expire after 24 hours.
+func (s *TelegramTokenStore) CreateToken(userID string) string {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
 		panic("crypto/rand unavailable: " + err.Error())
 	}
-	return hex.EncodeToString(b)
+	token := hex.EncodeToString(b)
+	s.mu.Lock()
+	s.tokens[token] = pendingTelegramToken{UserID: userID, ExpiresAt: time.Now().Add(24 * time.Hour)}
+	s.mu.Unlock()
+	s.save()
+	return token
+}
+
+// ResolveAndDelete looks up the token, deletes it if found, and returns the
+// pending token details. The second return value is false if the token does not
+// exist or is expired.
+func (s *TelegramTokenStore) ResolveAndDelete(token string) (pendingTelegramToken, bool) {
+	s.mu.Lock()
+	pt, ok := s.tokens[token]
+	if ok {
+		delete(s.tokens, token)
+	}
+	s.mu.Unlock()
+	if ok {
+		s.save()
+	}
+	if !ok || time.Now().After(pt.ExpiresAt) {
+		return pendingTelegramToken{}, false
+	}
+	return pt, true
 }
 
 // GetTelegramLinkHandler — GET /api/auth/telegram-link
 // Generates a one-time deep-link token (24h TTL) for the authenticated user.
-func GetTelegramLinkHandler(s *store.Store) http.HandlerFunc {
+func GetTelegramLinkHandler(s *store.Store, ts *TelegramTokenStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())
 		if userID == "" {
@@ -95,11 +122,7 @@ func GetTelegramLinkHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		token := newTelegramToken()
-		telegramTokensMu.Lock()
-		telegramTokens[token] = pendingTelegramToken{UserID: userID, ExpiresAt: time.Now().Add(24 * time.Hour)}
-		telegramTokensMu.Unlock()
-		saveTelegramTokens()
+		token := ts.CreateToken(userID)
 
 		connected := user.TelegramChatID != ""
 		suffix := ""
@@ -146,7 +169,7 @@ func GetTelegramStatusHandler(s *store.Store) http.HandlerFunc {
 // PostTelegramConnectHandler — POST /api/internal/telegram-connect
 // Called only by the Python InboundTelegramReader (localhost only).
 // Resolves the one-time token to a user_id and saves the chat_id.
-func PostTelegramConnectHandler(s *store.Store) http.HandlerFunc {
+func PostTelegramConnectHandler(s *store.Store, ts *TelegramTokenStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		remoteHost := r.RemoteAddr
 		if !strings.HasPrefix(remoteHost, "127.0.0.1:") && !strings.HasPrefix(remoteHost, "[::1]:") {
@@ -163,15 +186,8 @@ func PostTelegramConnectHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		telegramTokensMu.Lock()
-		pt, ok := telegramTokens[body.Token]
-		if ok {
-			delete(telegramTokens, body.Token)
-		}
-		telegramTokensMu.Unlock()
-		saveTelegramTokens()
-
-		if !ok || time.Now().After(pt.ExpiresAt) {
+		pt, ok := ts.ResolveAndDelete(body.Token)
+		if !ok {
 			http.Error(w, "token invalid or expired", http.StatusUnprocessableEntity)
 			return
 		}

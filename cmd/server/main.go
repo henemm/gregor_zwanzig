@@ -31,7 +31,7 @@ func main() {
 	}
 
 	s := store.New(cfg.DataDir, cfg.UserID)
-	handler.InitTelegramTokenStore(cfg.DataDir)
+	telegramTokenStore := handler.NewTelegramTokenStore(cfg.DataDir)
 
 	// Seed default user from ENV credentials on first run
 	if !s.UserExists(cfg.UserID) && cfg.AuthPass != "" {
@@ -83,14 +83,15 @@ func main() {
 	defer sched.Stop()
 
 	r := router.New(router.Deps{
-		Config:          cfg,
-		Store:           s,
-		WeatherProvider: weatherProvider,
-		WebAuthn:        webAuthn,
-		ChallengeStore:  challengeStore,
-		CompareEngine:   compareEngine,
-		Scheduler:       sched,
-		GitCommit:       gitCommit,
+		Config:             cfg,
+		Store:              s,
+		WeatherProvider:    weatherProvider,
+		WebAuthn:           webAuthn,
+		ChallengeStore:     challengeStore,
+		CompareEngine:      compareEngine,
+		Scheduler:          sched,
+		TelegramTokenStore: telegramTokenStore,
+		GitCommit:          gitCommit,
 	})
 
 	log.Printf("Go API listening on %s:%s, proxying to %s", cfg.Host, cfg.Port, cfg.PythonCoreURL)
