@@ -297,31 +297,10 @@ class TestSchedulerInterpolation:
         assert local_start.hour == 9, \
             f"First segment should start at 09:00 local, got {local_start}"
 
-    def test_scheduler_preserves_existing_time_windows(self):
-        """
-        GIVEN a Trip with waypoints that HAVE time_window,
-        WHEN _convert_trip_to_segments is called,
-        THEN original time_windows are used (no interpolation).
-        """
-        from services.trip_report_scheduler import TripReportSchedulerService
-
-        stage = _make_stage_with_time_windows()
-        trip = Trip(id="test", name="Test", stages=[stage])
-
-        service = TripReportSchedulerService()
-        segments = service._convert_trip_to_segments(trip, date(2026, 2, 15))
-
-        normal = [s for s in segments if s.segment_id != "Ziel"]
-        assert len(normal) == 3
-        # Bug #401: Zeiten sind jetzt korrekt UTC. lat=39.71/lon=2.622 = Mallorca
-        # (Europe/Madrid). Die konfigurierten time_windows (lokal 08–10, 10–12) zum
-        # Vergleich aus UTC auf Lokalzeit zurückrechnen.
-        from utils.timezone import tz_for_coords
-        tz = tz_for_coords(39.710, 2.622)
-        assert normal[0].start_time.astimezone(tz).hour == 8
-        assert normal[0].end_time.astimezone(tz).hour == 10
-        assert normal[1].start_time.astimezone(tz).hour == 10
-        assert normal[1].end_time.astimezone(tz).hour == 12
+    # test_scheduler_preserves_existing_time_windows entfernt (Issue #1004):
+    # time_window ist entmachtet — der Scheduler interpoliert IMMER aus der
+    # einen Etappen-Startzeit + Gehdauer, konfigurierte Fenster werden nicht
+    # mehr übernommen. Persistenz-Roundtrip-Tests oben bleiben gültig.
 
     def test_scheduler_interpolation_respects_elevation(self):
         """

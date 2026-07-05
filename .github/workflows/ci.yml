@@ -19,6 +19,8 @@ jobs:
         run: uv python install 3.12
       - name: Install dependencies
         run: uv sync --dev
+      - name: Install Playwright-Browser (tests/visual Pixel-Diff)
+        run: uv run playwright install --with-deps chromium
       - name: Run tests
         run: |
           uv run pytest \
