@@ -140,7 +140,9 @@ jobs:
       - name: Smoke-Test Staging
         run: |
           BASE="https://staging.gregor20.henemm.com"
-          ROOT=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/")
+          # Root liegt hinter Basic-Auth (#1030) — mit Creds prüfen, damit der
+          # Frontend-Service selbst getestet wird, nicht nur die Auth-Schicht.
+          ROOT=$(curl -s -o /dev/null -w "%{http_code}" -u "${{ secrets.STAGING_BASIC_AUTH }}" "$BASE/")
           HEALTH=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/health")
           echo "ROOT=$ROOT HEALTH=$HEALTH"
           { [ "$ROOT" = "200" ] || [ "$ROOT" = "302" ]; } || { echo "ROOT $ROOT != 200/302"; exit 1; }
