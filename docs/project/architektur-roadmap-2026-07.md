@@ -1,6 +1,8 @@
 # Architektur-Roadmap 2026-07
 
-**Status:** Entscheidungsvorlage für den PO
+**Status:** E-0 entschieden — PO „go" für Option B am 2026-07-05, festgeschrieben in
+[ADR-0015](../adr/0015-dual-stack-zielarchitektur.md). Phase 2 ist damit freigegeben
+(Issues siehe Abschnitt E-0). Phase 1.1 (Store-Split) bereits ✅ live (#1021, Kimi-Pilot).
 **Grundlage:** `docs/analysis/architektur-drift-2026-07-05.md` (Rev. 2, gegengecheckt)
 **Autor:** Claude (Tech Lead), 2026-07-05
 
@@ -40,7 +42,9 @@ das, worin der Bestand steckt (Wetter-Domäne, Rendering, Scheduling). ADR-0001 
 verworfen, sondern per Folge-ADR präzisiert: Die Migration von NiceGUI weg **ist abgeschlossen**
 (UI ist SvelteKit), die Backend-Ablösung wird **aufgehoben**.
 
-**PO-Aktion:** „go" für Option B (oder A/C mit Begründung). Danach schreibe ich die Folge-ADR.
+**PO-Aktion:** ~~„go" für Option B (oder A/C mit Begründung). Danach schreibe ich die Folge-ADR.~~
+**Entschieden 2026-07-05: Option B** → [ADR-0015](../adr/0015-dual-stack-zielarchitektur.md).
+Phase-2-Issues: siehe GitHub (Label `type:rework`, Referenz „Roadmap Phase 2").
 
 ---
 

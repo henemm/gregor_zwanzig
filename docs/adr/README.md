@@ -76,3 +76,5 @@ ADRs sind nicht nur Konvention, sondern werden erzwungen:
 | [0012](0012-telegram-parse-mode-html.md) | Telegram-Formatierung — parse_mode=HTML statt Markdown/MarkdownV2 | Akzeptiert |
 | [0013](0013-node-test-frontend-unit-runner.md) | node:test ist der kanonische Frontend-Unit-Test-Runner (kein vitest) | Akzeptiert |
 | [0014](0014-telegram-multi-bubble-format.md) | Telegram-Ausgabe: Multi-Bubble-Tabellenformat ersetzt Prosa | Akzeptiert |
+| [0014](0014-nullgradgrenze-eine-alert-metrik.md) | Nullgradgrenze als eine Alert-Metrik (Nummern-Kollision; war bisher nicht im Index) | Akzeptiert |
+| [0015](0015-dual-stack-zielarchitektur.md) | Dual-Stack (Go + Python) als dauerhafte Zielarchitektur — präzisiert 0001 | Akzeptiert |
