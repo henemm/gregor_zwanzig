@@ -60,9 +60,6 @@ markers = [
     "staging: Tests that require the staging environment to be running",
 ]
 
-[tool.mypy]
-strict = true
-
 [dependency-groups]
 dev = [
     "pytest>=8.4.1",

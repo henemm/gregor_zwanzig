@@ -67,8 +67,10 @@ test('normalizeAlertMetric: Legacy-ID "thunder" → "thunder_level" (AC-2)', () 
 	assert.equal(normalizeAlertMetric('thunder'), 'thunder_level');
 });
 
-test('normalizeAlertMetric: Legacy-ID "snowfall_limit" → "snow_line" (AC-3)', () => {
-	assert.equal(normalizeAlertMetric('snowfall_limit'), 'snow_line');
+// Issue #959: Nullgradgrenze konsolidiert — snowfall_limit löst seit b65f22a0
+// auf freezing_level auf (nicht mehr snow_line).
+test('normalizeAlertMetric: Legacy-ID "snowfall_limit" → "freezing_level" (AC-3)', () => {
+	assert.equal(normalizeAlertMetric('snowfall_limit'), 'freezing_level');
 });
 
 test('normalizeAlertMetric: vollständig unbekannte ID "foobar" → undefined (AC-4)', () => {
@@ -97,5 +99,5 @@ test('normalizeAlertMetric: Normalisierung aller 3 Legacy-IDs aus dem Validator-
 	}));
 	assert.equal(normalized[0].metric, 'precipitation_sum');
 	assert.equal(normalized[1].metric, 'thunder_level');
-	assert.equal(normalized[2].metric, 'snow_line');
+	assert.equal(normalized[2].metric, 'freezing_level');
 });
