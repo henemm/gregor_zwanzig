@@ -1,6 +1,9 @@
 # Konzept: Mitarbeit von Kimi (Kimi Code CLI) an Migration & Refactoring
 
-**Status:** Konzept, PO-Freigabe ausstehend
+**Status:** Aktiv. PO-Entscheidung 2026-07-05: **Kimi übernimmt möglichst viel** — Kimi ist
+Standard-Implementierer, Claude liefert Review, Gate-Nachweise und Integration (siehe 3.3).
+Pilot #1021 (Store-Split) erfolgreich abgeschlossen. Aktuelle Warteschlange:
+`docs/project/kimi-auftragsliste.md`.
 **Autor:** Claude (Tech Lead), 2026-07-05
 **Bezug:** `docs/project/architektur-roadmap-2026-07.md`, `docs/analysis/architektur-drift-2026-07-05.md`
 
@@ -53,33 +56,32 @@ Genau das Muster der Drift-Analyse — mit einer Pflicht-Ergänzung:
   Umbenennungs-/Vergessens-Fehler findet.
 - Findings sind Input, kein Gate: Claude entscheidet pro Finding (fix/ablehnen mit Begründung).
 
-### 3.3 Mechanische Refactorings (nach bewährtem Ablauf in 3.1/3.2)
+### 3.3 Implementierung (Standard-Arbeitsform seit PO-Entscheidung 2026-07-05)
 
-Nur Aufgaben, die **alle vier** Kriterien erfüllen:
+**Kimi implementiert standardmäßig alle Umsetzungsaufgaben** — auch solche, die Mail-/Kanal-
+oder Scheduler-Pfade berühren. Die Grenze verläuft nicht mehr bei der Implementierung, sondern
+bei **Nachweis und Integration**: Alles, was Staging-Creds, echte Kanäle oder Gates braucht,
+erbringt Claude im Integrationsschritt (Abschnitt 4). Kimi kompensiert das, indem es lokal
+alles Testbare beweist.
 
-1. **Verhaltensneutral** (reine Struktur: Dateien aufteilen, Duplikate zusammenführen,
-   Imports umhängen).
-2. **Testgesichert:** vorhandene Tests decken das Verhalten ab und laufen ohne Staging-Creds
-   (Go-Tests, Frontend-Unit-Tests, secrets-freie Python-Tests).
-3. **Gate-frei:** berührt keine Pfade mit Sondergates (kein `src/output/renderers/email/`,
-   `src/formatters/`, `src/outputs/email.py` → `renderer_mail_gate`; keine Schema-Dateien →
-   `data_schema_backup`; nichts unter `.claude/`).
-4. **Klein geschnitten:** ein Issue, ein Branch, Diff in einer Review-Sitzung erfassbar
-   (Richtwert ≤ 250 geänderte Zeilen, analog zum Workflow-LoC-Limit).
+Anforderungen an jedes Kimi-Paket:
 
-**Geeignete Pakete aus der Roadmap:**
+1. **Ein Issue, ein Branch, klein geschnitten** (Richtwert ≤ 250 geänderte Zeilen — Pflicht,
+   nicht Richtwert, wenn Mail-Pfade berührt sind).
+2. **Lokal beweisbar:** Kimi führt alle ohne Secrets lauffähigen Tests aus (Go-Tests,
+   Frontend-Unit-Tests, lokale Python-/Vertragstests wie
+   `tests/tdd/test_issue_811_mode_matrix.py`) und liefert das Protokoll mit ab.
+3. **Verhaltensneutralität begründen:** Bei Refactorings gehört zur Abgabe eine Aussage, WARUM
+   das Verhalten unverändert ist (z. B. „reine Verschiebung, Beweis: identisches
+   Funktions-Inventar"), nicht nur „Tests grün".
+4. **Staging-pflichtige Nachweise NICHT simulieren:** Kimi versucht nie, Mail-/Telegram-/
+   SMS-Zustellung selbst auszulösen oder Validator-Läufe zu faken — das ist explizit Claudes
+   Schritt.
 
-| Paket | Phase | Warum geeignet |
-|-------|-------|----------------|
-| `internal/store/store.go` in Entitäts-Dateien aufteilen | 1.1 | 51 Go-Testdateien als Netz, reine Dateiorganisation |
-| Router-Auszug aus `cmd/server/main.go` | 1.2 | mechanisch, Go-Tests |
-| Frontend-API-Base zentralisieren (20 Duplikate) | 3.1 | Unit-Tests + `svelte-check` als Netz |
-| `svelte-check`-Fehler abbauen (40 → 0) | 3.2 | objektiv messbar, kein Verhalten |
-| `haversine`/`degrees_to_compass` deduplizieren | 2.5 | klein, per Test abgedeckt — **Ausnahme prüfen:** berührt `formatters/` → dann Claude |
-
-**Ungeeignet für Kimi (bei Claude bleibend):** alles mit Staging-/Kanal-Nachweispflicht
-(Mail-Renderer, Telegram, SMS), Scheduler-/Alert-Logik, Auth/Mandantentrennung, Deploy,
-Gate-/Hook-Dateien, ADR-pflichtige Strukturentscheidungen.
+**Bei Claude verbleiben nur noch:** Gate-Nachweise + Staging-Validierung + Deploy + Issue-Close,
+Änderungen an Gate-/Hook-Dateien selbst (`.claude/`), ADR-/Architektur-**Entscheidungen**
+(Kimi setzt beschlossene ADRs um), und Sicherheitsthemen mit Live-Proben (z. B. #1019-Verifikation
+am echten Kanal — den Fix danach kann wieder Kimi bauen).
 
 ## 4. Technischer Ablauf für Implementierungs-Aufträge
 
@@ -116,9 +118,12 @@ Gate-/Hook-Dateien, ADR-pflichtige Strukturentscheidungen.
 - Kimi-Branch kollidiert mit parallel gelandeter Arbeit → Claude rebased; bei inhaltlichem
   Konflikt neuer Zuschnitt statt Force-Lösung.
 
-## 7. Einstiegspfad (Empfehlung)
+## 7. Stand & Warteschlange
 
-1. **Jetzt:** Arbeitsform 3.1 (Analysen) produktiv nutzen — sie hat sich bewiesen.
-2. **Nach Phase 0 der Roadmap:** ein Pilot-Paket aus 3.3 (Vorschlag: Store-Split, Phase 1.1),
-   eng geschnitten, mit vollem Review.
-3. **Danach:** Umfang je nach Pilot-Ergebnis erweitern oder auf Analyse/Review begrenzen.
+- **Pilot bestanden:** Store-Split #1021 (2026-07-05) — rein mechanisch bewiesen, live in Prod.
+  Briefing-Lehren daraus: „Push" = Branch `ws/kimi-<issue>` ins lokale Hauptrepo
+  (`origin` des Workspace), **kein** GitHub; Test-Protokolle als unversionierte Datei im
+  Workspace-Root (`TESTLOG.md`), nicht committen.
+- **PO-Entscheidung:** Kimi übernimmt möglichst viel (Standard-Implementierer, siehe 3.3).
+- **Aktuelle Aufträge:** `docs/project/kimi-auftragsliste.md` — der Reihe nach abarbeiten,
+  abhängige Aufträge erst nach Integration des Vorgängers durch Claude.
