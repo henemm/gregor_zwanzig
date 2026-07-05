@@ -142,6 +142,30 @@ func TestTriggerEndpoint_PythonError(t *testing.T) {
 	}
 }
 
+// --- Test: triggerEndpoint when Python returns HTTP 200 with failed>0 (Issue #1012 AC-5) ---
+
+func TestTriggerEndpoint_FailedBodyTreatedAsError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, `{"status":"partial","count":1,"failed":1}`)
+	}))
+	defer server.Close()
+
+	cfg := &config.Config{
+		PythonCoreURL:     server.URL,
+		SchedulerTimezone: "Europe/Vienna",
+	}
+	sched, err := New(cfg, testStore(t))
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	err = sched.triggerEndpointForUser("/api/scheduler/trip-reports", "default")
+	if err == nil {
+		t.Fatal("triggerEndpoint() should return error when body reports failed>0, even on HTTP 200")
+	}
+}
+
 // --- Test: Status returns job info ---
 
 func TestStatus(t *testing.T) {

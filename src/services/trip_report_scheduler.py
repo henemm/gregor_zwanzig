@@ -12,6 +12,7 @@ import dataclasses
 import json
 import logging
 import math
+import os
 import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
 
@@ -144,6 +145,31 @@ def build_service_error_email_html(trip_name: str, report_type: str, error_lines
     )
 
 
+def _load_pending_entries(path: Path) -> dict:
+    """Issue #1012 Adversary-Fix F001: liest pending_briefings.json robust.
+
+    Fehlende oder kaputte Datei (z.B. abgebrochener Schreibvorgang) liefert ein
+    leeres Schema statt eine ungefangene JSONDecodeError zu werfen, die sonst
+    den kompletten stündlichen Versandlauf VOR dem regulären Versand crasht
+    (HTTP 500, kein Trip bekommt sein Briefing).
+    """
+    if not path.exists():
+        return {"entries": []}
+    try:
+        return json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning(f"Corrupt pending_briefings.json at {path}, ignoring: {e}")
+        return {"entries": []}
+
+
+def _write_pending_data(path: Path, data: dict) -> None:
+    """Atomarer Schreibvorgang (tmp + os.replace) — verhindert eine halb
+    geschriebene Datei bei einem Absturz mitten im Schreibvorgang."""
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    tmp_path.write_text(json.dumps(data, indent=2))
+    os.replace(tmp_path, path)
+
+
 class TripReportSchedulerService:
     """
     Service for scheduled trip weather reports.
@@ -232,12 +258,26 @@ class TripReportSchedulerService:
             if self._get_evening_hour(trip) == current_hour:
                 due.append((trip, "evening"))
 
+        due_trip_ids_now = {trip.id for trip, _ in due}
+
         sent = 0
         failed = 0
+
+        # Issue #1012 (b2): Catch-up ZUERST — offene Nachliefer-Marker des
+        # Users abarbeiten, bevor die regulären fälligen Slots verarbeitet
+        # werden (AC-6/AC-7).
+        sent += self._process_pending_markers(current_hour, due_trip_ids_now)
+
         for i, (trip, rtype) in enumerate(due):
             try:
-                self._send_trip_report(trip, rtype)
-                sent += 1
+                outcome = self._send_trip_report_outcome(trip, rtype)
+                # Issue #1012 (c): "no_weather" (kompletter Ausfall) zählt als
+                # failed statt sent — alle anderen Outcomes (sent/no_channels/
+                # no_stage) bleiben unverändert sent.
+                if outcome == "no_weather":
+                    failed += 1
+                else:
+                    sent += 1
             except Exception as e:
                 failed += 1
                 logger.error(f"Failed {rtype} report for {trip.id}: {e}")
@@ -246,6 +286,157 @@ class TripReportSchedulerService:
                 time_module.sleep(INTER_MAIL_DELAY_SECONDS)
 
         return (sent, failed)
+
+    def _process_pending_markers(self, current_hour: int, due_trip_ids_now: set) -> int:
+        """Issue #1012 (b2): Verarbeitet offene Nachliefer-Marker VOR den
+        regulären Slots. Für jeden Marker:
+        - Trip regulär JETZT fällig (beliebiger report_type) -> Marker
+          verfällt ersatzlos (AC-7), kein Re-Send hier (der reguläre Slot
+          übernimmt).
+        - Zuvor fehlende Segmente liefern jetzt Daten -> vollständiges
+          Briefing mit Hinweis-Präfix nachliefern, Marker entfernen (AC-6).
+        - Weiterhin fehlende Daten -> kein Re-Send, attempts += 1 (Lärmschutz).
+
+        Returns:
+            Anzahl erfolgreich nachgelieferter Briefings (zählt als 'sent').
+        """
+        path = Path(f"data/users/{self._user_id}/pending_briefings.json")
+        entries = _load_pending_entries(path).get("entries", [])
+        if not entries:
+            return 0
+
+        all_trips = {t.id: t for t in load_all_trips(user_id=self._user_id)}
+        delivered = 0
+
+        for entry in entries:
+            trip_id = entry.get("trip_id")
+            trip = all_trips.get(trip_id)
+
+            if trip is None or trip_id in due_trip_ids_now:
+                self._remove_pending_marker(trip_id)
+                continue
+
+            target_date = date.fromisoformat(entry["date"])
+            report_type = entry["report_type"]
+            segments = self._convert_trip_to_segments(trip, target_date)
+            if not segments:
+                self._remove_pending_marker(trip_id)
+                continue
+
+            segment_weather = self._fetch_weather(segments)
+            failed_ids_now = {
+                str(s.segment.segment_id) for s in segment_weather if s.has_error
+            }
+            previously_failed = set(entry.get("failed_segment_ids") or [])
+            if previously_failed & failed_ids_now:
+                # Mindestens ein zuvor fehlendes Segment liefert weiterhin
+                # keine Daten -> kein Re-Send, nie zwei identische Briefings.
+                self._bump_pending_marker_attempts(trip_id)
+                continue
+
+            was_complete_failure = len(previously_failed) >= len(segments)
+            prefix = (
+                f"Nachgeliefert — der Wetterdienst war um "
+                f"{entry.get('slot_hour')}:00 nicht erreichbar"
+                if was_complete_failure
+                else "Aktualisiert — jetzt mit vollständigen Daten"
+            )
+            # Marker zuerst entfernen (RMW) — schlägt die Nachlieferung
+            # erneut (teilweise) fehl, schreibt der reguläre Sendepfad
+            # selbst einen frischen Marker (siehe _send_trip_report_outcome).
+            self._remove_pending_marker(trip_id)
+            outcome = self._send_trip_report_outcome(
+                trip, report_type, catchup_prefix=prefix,
+            )
+            if outcome == "sent":
+                delivered += 1
+
+        return delivered
+
+    def _send_no_data_hint(self, trip: "Trip", report_type: str) -> None:
+        """Issue #1012 (b): Kurze Hinweis-Nachricht statt leerem Briefing bei
+        komplettem Wetterdaten-Ausfall — über ALLE für den Trip konfigurierten
+        Kanäle (Muster analog dem regulären Kanal-Versand), ohne Wettertabellen.
+        """
+        subject = f"[{trip.name}] Wetterdaten nicht verfügbar"
+        text = (
+            "Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter "
+            "und liefern das Briefing nach, sobald Daten verfügbar sind."
+        )
+        config = trip.report_config
+
+        if not config or config.send_email:
+            try:
+                EmailOutput(self._settings).send(subject=subject, body=text, html=False)
+            except Exception as e:
+                logger.error(f"No-data hint email failed for {trip.name}: {e}")
+
+        if config and config.send_sms and self._settings.can_send_sms():
+            try:
+                from outputs.sms import SMSOutput
+                SMSOutput(self._settings).send(subject=subject, body=text)
+            except Exception as e:
+                logger.error(f"No-data hint SMS failed for {trip.name}: {e}")
+
+        if config and config.send_telegram and self._settings.can_send_telegram():
+            try:
+                from outputs.telegram import TelegramOutput
+                TelegramOutput(self._settings).send(subject=subject, body=text)
+            except Exception as e:
+                logger.error(f"No-data hint Telegram failed for {trip.name}: {e}")
+
+    def _write_pending_marker(
+        self,
+        trip: "Trip",
+        report_type: str,
+        target_date: date,
+        failed_segment_ids: List[str],
+    ) -> None:
+        """Issue #1012 (b2): Schreibt/ersetzt den Nachliefer-Marker eines Trips.
+
+        Read-Modify-Write auf data/users/<uid>/pending_briefings.json —
+        ersetzt einen ggf. bestehenden Marker desselben Trips (keine Duplikate).
+        """
+        path = Path(f"data/users/{self._user_id}/pending_briefings.json")
+        data = _load_pending_entries(path)
+        entries = [e for e in data.get("entries", []) if e.get("trip_id") != trip.id]
+        slot_hour = (
+            self._get_morning_hour(trip) if report_type == "morning"
+            else self._get_evening_hour(trip)
+        )
+        entries.append({
+            "trip_id": trip.id,
+            "report_type": report_type,
+            "date": target_date.isoformat(),
+            "slot_hour": slot_hour,
+            "failed_segment_ids": failed_segment_ids,
+            "attempts": 0,
+            "created_at": datetime.now(tz=timezone.utc).isoformat(),
+        })
+        data["entries"] = entries
+        _write_pending_data(path, data)
+
+    def _remove_pending_marker(self, trip_id: str) -> None:
+        """Issue #1012 (b2): Entfernt den Nachliefer-Marker eines Trips (RMW)."""
+        path = Path(f"data/users/{self._user_id}/pending_briefings.json")
+        if not path.exists():
+            return
+        data = _load_pending_entries(path)
+        data["entries"] = [
+            e for e in data.get("entries", []) if e.get("trip_id") != trip_id
+        ]
+        _write_pending_data(path, data)
+
+    def _bump_pending_marker_attempts(self, trip_id: str) -> None:
+        """Issue #1012 (b2, Lärmschutz): attempts += 1, Marker bleibt bestehen."""
+        path = Path(f"data/users/{self._user_id}/pending_briefings.json")
+        if not path.exists():
+            return
+        data = _load_pending_entries(path)
+        for e in data.get("entries", []):
+            if e.get("trip_id") == trip_id:
+                e["attempts"] = e.get("attempts", 0) + 1
+        _write_pending_data(path, data)
 
     def _get_morning_hour(self, trip: "Trip") -> int:
         """Get configured morning hour for trip (default: 7)."""
@@ -462,6 +653,7 @@ class TripReportSchedulerService:
         report_type: str,
         allow_test_fallback: bool = False,
         on_demand: bool = False,
+        catchup_prefix: str | None = None,
     ) -> str:
         """
         Generate and send report for a single trip.
@@ -469,6 +661,10 @@ class TripReportSchedulerService:
         Args:
             trip: Trip object
             report_type: "morning" or "evening"
+            catchup_prefix: Issue #1012 (b2) — Hinweiszeile für nachgelieferte
+                Briefings ("Nachgeliefert …" / "Aktualisiert …"), wird von
+                _process_pending_markers() bei erfolgreicher Nachlieferung
+                gesetzt.
 
         Returns:
             "no_stage" if no matching stage, "no_weather" if the weather
@@ -520,8 +716,20 @@ class TripReportSchedulerService:
         # 3. Fetch weather for each segment
         segment_weather = self._fetch_weather(segments)
 
-        if not segment_weather:
-            logger.warning(f"No weather data for trip {trip.id}")
+        # Issue #1012 (a): Guard auf VOLLSTÄNDIGEN Ausfall statt der nie
+        # greifenden `if not segment_weather`-Prüfung — _fetch_weather()
+        # liefert bei Provider-Fehlern pro Segment einen has_error=True-
+        # Platzhalter statt einer leeren Liste, die Liste ist also nie leer.
+        if not segment_weather or all(s.has_error for s in segment_weather):
+            logger.warning(f"All-failed weather data for trip {trip.id}")
+            if not on_demand:
+                # On-Demand (#1007) erzeugt weder Hinweis-Versand noch Marker —
+                # der Bot antwortet synchron mit eigenem Hinweistext.
+                self._send_no_data_hint(trip, report_type)
+                self._write_pending_marker(
+                    trip, report_type, target_date,
+                    failed_segment_ids=[str(s.segment.segment_id) for s in segment_weather],
+                )
             return "no_weather"
 
         # 2b. Ensemble-Anreicherung: 1 API-Call für letzten Waypoint der letzten Etappe
@@ -664,6 +872,17 @@ class TripReportSchedulerService:
                 ) if "<body>" in report.email_html else f"<p>{hint}</p>{report.email_html}"
             if report.telegram_bubbles:
                 report.telegram_bubbles[0] = f"{hint}\n\n{report.telegram_bubbles[0]}"
+        elif catchup_prefix:
+            # Issue #1012 (b2/AC-6): Nachlieferungs-Hinweis für ein zuvor
+            # zurückgehaltenes Briefing (Komplett- oder Teilausfall).
+            if report.email_plain:
+                report.email_plain = f"{catchup_prefix}\n\n{report.email_plain}"
+            if report.email_html:
+                report.email_html = report.email_html.replace(
+                    "<body>", f"<body><p>{catchup_prefix}</p>", 1,
+                ) if "<body>" in report.email_html else f"<p>{catchup_prefix}</p>{report.email_html}"
+            if report.telegram_bubbles:
+                report.telegram_bubbles[0] = f"{catchup_prefix}\n\n{report.telegram_bubbles[0]}"
 
         # 7. Send via configured channels
         config = trip.report_config
@@ -765,6 +984,14 @@ class TripReportSchedulerService:
             is_sms_only = config and config.send_sms and not config.send_email
             if is_sms_only:
                 self._send_service_error_email(trip, errors, report_type)
+            # Issue #1012 (AC-3/b2): Teilausfall — Nachliefer-Marker mit den
+            # betroffenen Segment-IDs schreiben (On-Demand erzeugt keinen
+            # Marker, der Nutzer fragt aktiv erneut).
+            if not on_demand:
+                self._write_pending_marker(
+                    trip, report_type, target_date,
+                    failed_segment_ids=[str(s.segment.segment_id) for s in errors],
+                )
 
         # 9. Save weather snapshot for alert comparison
         # Issue #1007: On-Demand-Abruf (heute/morgen-Kommando) ist read-only

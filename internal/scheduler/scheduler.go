@@ -7,6 +7,7 @@ package scheduler
 import (
 	_ "time/tzdata" // Embed timezone data for portability
 
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -199,6 +200,16 @@ func (s *Scheduler) recordRun(jobID string, fn func() error) {
 	}
 }
 
+// triggerResponseBody mirrors the JSON body returned by Python trigger
+// endpoints. Issue #1012 (AC-5): only /api/scheduler/trip-reports currently
+// populates "failed" (> 0 on partial send failures); other endpoints omit it
+// or leave it at 0, so they are unaffected by the check below.
+type triggerResponseBody struct {
+	Status string `json:"status"`
+	Count  int    `json:"count"`
+	Failed int    `json:"failed"`
+}
+
 // triggerEndpointForUser sends a POST to the Python trigger endpoint for a specific user.
 func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
 	url := s.pythonURL + path + "?user_id=" + userID
@@ -212,6 +223,19 @@ func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
 	}
+
+	// Issue #1012 (AC-5, d): HTTP 200 kann trotzdem einen fachlichen
+	// Fehlschlag verbergen (z.B. Wetterdaten-Komplettausfall) — der Body
+	// zählt das in "failed". Ohne diese Auswertung meldet recordRun() den
+	// Job fälschlich als "ok", obwohl kein Briefing zugestellt wurde.
+	var parsed triggerResponseBody
+	if jsonErr := json.Unmarshal(body, &parsed); jsonErr == nil && parsed.Failed > 0 {
+		return fmt.Errorf(
+			"%s?user_id=%s reported %d failed (status=%s, count=%d): %s",
+			path, userID, parsed.Failed, parsed.Status, parsed.Count, string(body),
+		)
+	}
+
 	log.Printf("[scheduler] %s?user_id=%s → %d", path, userID, resp.StatusCode)
 	return nil
 }
