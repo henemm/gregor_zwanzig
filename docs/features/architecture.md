@@ -8,7 +8,7 @@ Gregor Zwanzig ist ein verteiltes System mit separatem Frontend (SvelteKit) und 
 - **Go-API:** REST-API (Port 8090), Auth/Sessions, Mandantentrennung, Persistenz/Store, Proxy zum Python-Core
 - **Python-Core:** Wetter-Domäne (Provider, Risk Engine, Aggregation), alle Kanal-Renderer und -Transporte, Scheduler, Alerts, Inbound-Handler (FastAPI, Port 8000)
 - **Frontend:** SvelteKit Web-UI für Trip-Management, Konfiguration und Orts-Vergleiche
-- **Channels:** E-Mail (SMTP), Telegram, SMS (future)
+- **Channels:** E-Mail (SMTP), Telegram, SMS (seven.io)
 - **Subscriptions:** Trip-Reports (automatisch pro Etappe), Orts-Vergleiche (personalisierte Standort-Rankings)
 
 Siehe `docs/adr/0015-dual-stack-zielarchitektur.md` für die verbindliche Zuständigkeitsgrenze.
@@ -60,7 +60,7 @@ Die folgenden Komponenten leben im Python-Core:
 3. **Channels**
    - **SMTP-Mailer** (`src/outputs/email.py`) – E-Mail-Versand
    - **Telegram-Bot** (`src/outputs/telegram.py`) – Telegram-Versand
-   - **SMS** (`src/outputs/sms.py`) – SMS-Versand (geplant)
+   - **SMS** (`src/outputs/sms.py`) – SMS-Versand via seven.io
 
 ### Datenfluss (Produktiv)
 
@@ -556,7 +556,7 @@ The frontend includes two configurable wizard systems:
 | `/api/subscriptions` | GET/POST | Create/list subscriptions (compare) |
 | `/api/subscriptions/{id}` | GET/PUT/DELETE | Individual subscription |
 | `/api/subscriptions/{id}/preview` | POST | Preview comparison output |
-| `/api/preview/{id}/email\|sms\|signal\|telegram` | GET | Trip report preview rendering (demo mode optional) |
+| `/api/preview/{id}/email\|sms\|telegram` | GET | Trip report preview rendering (demo mode optional) |
 | `/api/account` | GET/PUT | User account |
 | `/api/scheduler/status` | GET | Job status monitoring |
 
