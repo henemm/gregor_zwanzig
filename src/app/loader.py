@@ -777,23 +777,31 @@ def get_snapshots_dir(user_id: str = "default") -> Path:
 
 
 def list_all_user_ids(data_dir: str = "data") -> list[str]:
-    """Return all user IDs found under data/users/, excluding test and internal users.
+    """Return all user IDs found under data/users/, real users first (Issue #1013).
 
     Args:
         data_dir: Root data directory (default: "data")
 
     Returns:
-        List of user_id strings (excludes entries starting with 'test' or '_')
+        Sorted list of user_id strings (excludes entries starting with 'test' or '_'),
+        with real users sorted before remaining test-classified users
+        (is_test_user_id, z.B. tg-live-e2e/tdd-*) — deterministischer Lookup-Vorrang
+        unabhängig von der Dateisystem-Iterationsreihenfolge.
     """
+    from app.config import is_test_user_id
+
     users_root = Path(data_dir) / "users"
     if not users_root.exists():
         return []
-    return [
+    names = sorted(
         d.name for d in users_root.iterdir()
         if d.is_dir()
         and not d.name.startswith("_")
         and not d.name.startswith("test")
-    ]
+    )
+    real = [n for n in names if not is_test_user_id(n, data_dir=data_dir)]
+    test = [n for n in names if is_test_user_id(n, data_dir=data_dir)]
+    return real + test
 
 
 def lookup_user_by_email(email: str, data_dir: str = "data") -> str | None:

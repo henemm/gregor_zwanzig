@@ -8,11 +8,36 @@ Centralized settings with support for:
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def is_test_user_id(user_id: str, data_dir: str = "data") -> bool:
+    """Zentrales Test-User-Prädikat (Issue #1013 — eine Quelle statt zwei Konventionen).
+
+    True bei "test"/"tdd"-Substring (case-insensitive), dem Fixture-User tg-live-e2e,
+    oder wenn das Profil (data_dir/users/<user_id>/user.json) is_test_user=True setzt
+    (Adversary-Finding F002 — Namens-Heuristik allein wird von neutral benannten
+    Test-Usern mit gesetztem Profil-Flag umgangen). Fail-soft: fehlt/kaputt die
+    Profildatei, entscheidet nur die Namens-Heuristik.
+    """
+    uid = user_id.lower()
+    if "test" in uid or "tdd" in uid or user_id == "tg-live-e2e":
+        return True
+    try:
+        profile_path = Path(data_dir) / "users" / user_id / "user.json"
+        if profile_path.exists():
+            profile = json.loads(profile_path.read_text(encoding="utf-8"))
+            if profile.get("is_test_user") is True:
+                return True
+    except Exception:
+        pass
+    return False
 
 
 @dataclass(frozen=True)
@@ -166,9 +191,8 @@ class Settings(BaseSettings):
 
     @staticmethod
     def _is_test_user(user_id: str) -> bool:
-        """Detect test user IDs by naming pattern."""
-        uid = user_id.lower()
-        return "test" in uid or "tdd" in uid
+        """Detect test user IDs. Thin wrapper — siehe is_test_user_id() (Issue #1013)."""
+        return is_test_user_id(user_id)
 
     def with_user_profile(self, user_id: str) -> "Settings":
         """Return a copy with recipient settings from user profile.

@@ -38,7 +38,21 @@ def ensure_test_user_with_active_trip(
 
     Returns:
         user_id (immer TEST_USER_ID)
+
+    Raises:
+        RuntimeError: bei data_dir="data" außerhalb Staging (Issue #1013 — Root-Cause-Fix
+            gegen Test-Artefakte in Produktionsdaten).
     """
+    is_prod_data_dir = Path(data_dir).resolve() == (Path.cwd() / "data").resolve()
+    if is_prod_data_dir:
+        from app.config import Settings
+        if (Settings().env or "").lower() != "staging":
+            raise RuntimeError(
+                "ensure_test_user_with_active_trip() darf nur in Staging (GZ_ENV=staging) "
+                "gegen den echten data-Ordner laufen — sonst Test-Artefakte in Produktion "
+                "(Issue #1013). Für Unit-Tests explizit data_dir=tmp_path übergeben."
+            )
+
     user_id = TEST_USER_ID
     user_dir = Path(data_dir) / "users" / user_id
     user_dir.mkdir(parents=True, exist_ok=True)
@@ -55,6 +69,7 @@ def ensure_test_user_with_active_trip(
             "mail_to": "",
         }
     profile["telegram_chat_id"] = str(chat_id)
+    profile["is_test_user"] = True
     user_file.write_text(json.dumps(profile, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # Trip immer neu anlegen damit heute + morgen immer eine Etappe haben
