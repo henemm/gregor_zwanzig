@@ -5,8 +5,8 @@
 **Gregor Zwanzig** – Wetter-Briefing-Plattform für Bergtouren.
 
 - **Frontend**: SvelteKit unter `frontend/src/`, produktive Oberfläche auf `gregor20.henemm.com`.
-- **Go-API**: `api/`, `internal/`, `cmd/`, produktive API auf Port `8090`.
-- **Python-Backend**: `src/services/`, `src/app/`, `src/providers/`, FastAPI-Core über `api.main:app`.
+- **Go-API**: `cmd/server/`, `internal/`, produktive API auf Port `8090`.
+- **Python-Core / Domain-Backend**: `api/`, `src/services/`, `src/app/`, `src/providers/`, FastAPI-Core über `api.main:app` (interner Port `8000`).
 - **Ausgabe-/Renderer-Schicht**: `src/output/renderers/` (E-Mail, HTML, Telegram).
 
 ## Wichtige Dateien
@@ -124,8 +124,8 @@ uv run pytest tests/golden
 Im Zweifel `grep` auf das betroffene Symbol ausführen:
 
 - **Frontend / User-UI** → `frontend/src/...` (SvelteKit)
-- **Go-API** → `api/`, `internal/`, `cmd/`
-- **Python-Backend** → `src/services/`, `src/app/`, `src/providers/`
+- **Go-API** → `cmd/server/`, `internal/` (Production-API auf Port 8090)
+- **Python-Core / Domain-Backend** → `api/`, `src/services/`, `src/app/`, `src/providers/` (FastAPI Core über `api.main:app`)
 
 Server-Code (Go vs. Python) und UI-Code (SvelteKit vs. Server-Templates) sind getrennt.
 

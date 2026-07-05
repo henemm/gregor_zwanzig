@@ -3,33 +3,43 @@
 **Updated:** 2026-07-03 (Issue #1001 — Telegram-Ausgabe neu gebaut: `render_telegram_bubbles()` ersetzt `render_narrow()` für den Telegram-Kanal, Multi-Bubble-Versand statt Prosa-Nachricht, echte Monospace-Segment-Tabellen, Inline-Keyboard-Aktionen-Bubble); 2026-06-30 (Issue #919 — Radar-Alert auf kanonischen Renderer migriert: `OnsetEvent`-Datenklasse + `cooldown_display` in `model.py`, Onset-Zweige in alle vier `render_*`-Funktionen, `check_radar_alerts` baut jetzt `AlertMessage(OnsetEvent(...))`, `src/outputs/radar_alert.py` gelöscht); 2026-06-26 (Issue #887 — SMS/Telegram Report-Konsistenz: SMS `pop_hourly` aus `agg.pop_max_pct`, Telegram Detail-Zeile mit config-gesteuerten Metriken; Issue #884 — HTML-Mail Fidelity: 8-Sektion-Layout mit zweispaltigem Header + Stats-Grid, Ziel-Sektion, Ausblick mit Risk-Dot, Kommandos-Sektion, zweigeteilt Footer); 2026-06-15 (Issue #822 — Radar-/Regen-Nowcast-Alert segmentbewusst: gemeinsamer Segment-Helfer, aktives/nächstes Segment nach Tageszeit, Ort-Label via build_segment_label, Tour-TZ via tz_for_coords, dynamischer Cooldown-Text); 2026-06-14 (Issue #816 — Alert-Abweichungs-Kern: read-only Snapshot, alert_state Melde-Gedächtnis, knapper Render-Pfad); 2026-06-12 (Issue #758 — Einheitlicher Speicher-Status-Indikator + Trip-Editor Auto-Save; #733 Briefing-Mail-Validator Marker-Header); 2026-06-11 (Issue #749 — Day Comparison Renderer: render_day_comparison_html/plain für Vortag-Vergleich-Sektion); 2026-06-09 (Issue #675 — Etappen-Startzeiten Editor-Widget; Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
 
 ## Überblick
-Gregor Zwanzig ist ein verteiltes System mit separaten Backend (Go) und Frontend (SvelteKit):
+Gregor Zwanzig ist ein verteiltes System mit separatem Frontend (SvelteKit) und einem Dual-Stack-Backend (Go + Python):
 
-- **Backend:** Go REST API mit Wetter-Pipeline + Subscription-Management
+- **Go-API:** REST-API (Port 8090), Auth/Sessions, Mandantentrennung, Persistenz/Store, Proxy zum Python-Core
+- **Python-Core:** Wetter-Domäne (Provider, Risk Engine, Aggregation), alle Kanal-Renderer und -Transporte, Scheduler, Alerts, Inbound-Handler (FastAPI, Port 8000)
 - **Frontend:** SvelteKit Web-UI für Trip-Management, Konfiguration und Orts-Vergleiche
-- **Channels:** E-Mail (SMTP), SMS (future), Signal (via Callmebot)
+- **Channels:** E-Mail (SMTP), Telegram, SMS (future)
 - **Subscriptions:** Trip-Reports (automatisch pro Etappe), Orts-Vergleiche (personalisierte Standort-Rankings)
+
+Siehe `docs/adr/0015-dual-stack-zielarchitektur.md` für die verbindliche Zuständigkeitsgrenze.
 
 ---
 
-## Backend Architecture (Go)
+## Backend Architecture (Dual-Stack)
 
-Kern-Geschäftslogik läuft im Go-API-Service (`gregor-api`), strukturiert in drei Ebenen:
+Das Backend besteht aus zwei klar getrennten Schichten (siehe `docs/adr/0015-dual-stack-zielarchitektur.md`):
 
-1. **CLI & Config**
-   - Einstiegspunkt: `src/app/cli.py`
-   - Optionen: `--report`, `--channel`, `--dry-run`, `--config`, `--debug`
-   - Priorität: CLI > ENV > config.ini
-   - Ausgabe: Console (immer) und optional Versand (E-Mail)
+- **Go-API (`gregor-api`, Port 8090):** REST-API, Auth/Sessions, Mandantentrennung,
+  Persistenz/Store (`internal/store/`) und Proxy zum Python-Core.
+- **Python-Core (`api/` + `src/`, interner Port 8000):** Wetter-Domäne
+  (Provider, Normalisierung, Risk Engine, Aggregation), alle Kanal-Renderer und -Transporte,
+  Scheduler, Alert-System, Inbound-Handler.
 
-2. **Business-Logik**
+Die Vertragsgrenze zwischen Go und Python ist HTTP mit den DTOs aus
+`docs/reference/api_contract.md`.
+
+### Python-Core: Wetter-Pipeline und Rendering
+
+Die folgenden Komponenten leben im Python-Core:
+
+1. **Business-Logik**
    - **Provider-Adapter**: holen Rohdaten von Wetter-APIs (z. B. MET Norway, DWD)
    - **Normalizer**: wandelt Daten in ein gemeinsames DTO ([api_contract.md](./api_contract.md))
    - **Risk Engine**: bewertet Forecasts anhand Schwellen (Regen, Gewitter, Wind, Hitze)
    - **Report Formatter**: erzeugt kurze Texte + Debug-Anhang
    - **DebugBuffer**: gemeinsame Quelle für Console + E-Mail-Debug
 
-3. **Render-Pipeline**
+2. **Render-Pipeline**
    - **Channel Renderers** (`src/output/renderers/`) – β3: Pure-Function Renderer für E-Mail + SMS
    - `render_email()` – HTML + Plain-Text Körper (aus Token-Zeilen)
    - `render_sms()` – Kompaktes Format ≤160 Zeichen (v2.0 Wire-Format)
@@ -47,29 +57,43 @@ Kern-Geschäftslogik läuft im Go-API-Service (`gregor-api`), strukturiert in dr
      - `render_day_comparison_plain(comparison)` – Plain-Text Variante mit Pfeilen
    - Schnittstelle: TokenLine (aus Report Formatter) → Channel-spezifischer Output
 
-4. **Channels**
-   - **SMTP-Mailer** (`src/app/core.py`) – einziger aktiver Kanal im MVP
-   - Weitere Kanäle (SMS, Push, Garmin-Mail) später möglich
+3. **Channels**
+   - **SMTP-Mailer** (`src/outputs/email.py`) – E-Mail-Versand
+   - **Telegram-Bot** (`src/outputs/telegram.py`) – Telegram-Versand
+   - **SMS** (`src/outputs/sms.py`) – SMS-Versand (geplant)
 
-## Datenfluss (MVP)
-CLI  
-  ↓  
-Config / ENV  
-  ↓  
-Provider-Adapter  
-  ↓  
-Normalisierung  
-  ↓  
-Risk Engine  
-  ↓  
-Formatter → TokenLine  
-  ↓  
-Channel Renderers  
-  ├─→ render_email() → (HTML, Plain)  
-  ├─→ render_sms() → Wire-Format ≤160 Zeichen  
-  └─→ DebugBuffer  
-  ↓  
-Channel (E-Mail / Console / SMS)
+### Datenfluss (Produktiv)
+
+Der Produktivpfad läuft über den Python-Core-Scheduler und wird von der Go-API getriggert
+oder über Cron-Jobs gesteuert:
+
+```
+Scheduler / API-Trigger
+  ↓
+Trip + DisplayConfig (aus Go-Store)
+  ↓
+Provider-Adapter
+  ↓
+Normalisierung
+  ↓
+Risk Engine
+  ↓
+Formatter → TokenLine
+  ↓
+Channel Renderers
+  ├─→ render_email() → (HTML, Plain)
+  ├─→ render_telegram_bubbles() → TelegramBubble-Liste
+  ├─→ render_sms() → Wire-Format ≤160 Zeichen
+  └─→ DebugBuffer
+  ↓
+Channel (E-Mail / Telegram / SMS / Console)
+```
+
+### Datenfluss (Legacy-CLI)
+
+Für lokale Entwicklung und Debugging existiert weiterhin die CLI in `src/app/cli.py`
+(`--report`, `--channel`, `--dry-run`, `--config`, `--debug`). Dieser Pfad ist nicht
+mehr der Produktivpfad.
 
 ## Debug-Prinzip
 - Alle Schritte schreiben standardisierte Debug-Zeilen in den DebugBuffer
