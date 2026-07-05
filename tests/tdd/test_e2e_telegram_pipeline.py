@@ -52,6 +52,8 @@ from app.models import (
 from app.trip import Stage, Trip, Waypoint
 from services.weather_snapshot import WeatherSnapshotService
 
+from tests.tdd._telegram_live_fixture import live_telegram_enabled
+
 WEBHOOK_PATH = "/api/internal/telegram-webhook"
 
 _TODAY = date.today()
@@ -398,8 +400,8 @@ def test_ac4_glance_buttons_callback_data_all_handled(env, capture, client):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.skipif(
-    not (os.environ.get("GZ_TELEGRAM_BOT_TOKEN") and os.environ.get("GZ_TELEGRAM_TEST_CHAT_ID")),
-    reason="GZ_TELEGRAM_BOT_TOKEN und GZ_TELEGRAM_TEST_CHAT_ID nicht gesetzt — Live-Smoke übersprungen",
+    not live_telegram_enabled(),
+    reason="GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)",
 )
 def test_ac5_live_staging_bot_smoke():
     """

@@ -19,6 +19,17 @@ if str(_HOOKS_DIR) not in sys.path:
 from validation import GroundTruthFetcher
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    """Skip-Gruende immer in der Kurzfassung zeigen (Issue #1014, AC-1/AC-3):
+
+    project-weites addopts="-q ..." haelt die Verbosity per -v/-q-Saldo auf 0,
+    wodurch pytest die skipif-reason nicht inline zeigt. 's' in reportchars
+    erzwingt den Eintrag in der "short test summary info" unabhaengig davon.
+    """
+    if "s" not in config.option.reportchars:
+        config.option.reportchars += "s"
+
+
 @pytest.fixture(scope="session")
 def ground_truth() -> GroundTruthFetcher:
     """Ground truth fetcher for TDD tests (cached per session)."""

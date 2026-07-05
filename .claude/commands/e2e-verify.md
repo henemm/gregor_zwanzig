@@ -104,11 +104,12 @@ uv run python3 .claude/hooks/email_spec_validator.py
 
 Wenn der Change den Telegram-Pfad berührt (geänderte Dateien mit `telegram` /
 `inbound_telegram` / `trip_command_processor` im Pfad), MUSS mit gesetzter
-`GZ_TELEGRAM_TEST_CHAT_ID` (+ `GZ_TELEGRAM_BOT_TOKEN`) der funktionale
-Live-Test laufen — AC-3/AC-4 dürfen NICHT skippen:
+`GZ_TELEGRAM_TEST_CHAT_ID` (+ `GZ_TELEGRAM_BOT_TOKEN`) UND explizitem
+`GZ_TELEGRAM_LIVE=1` (Opt-in-Gate, Issue #1014) der funktionale Live-Test
+laufen — AC-3/AC-4 dürfen NICHT skippen:
 
 ```bash
-GZ_TELEGRAM_TEST_CHAT_ID=<test-chat-id> GZ_TELEGRAM_BOT_TOKEN=<staging-bot-token> \
+GZ_TELEGRAM_LIVE=1 GZ_TELEGRAM_TEST_CHAT_ID=<test-chat-id> GZ_TELEGRAM_BOT_TOKEN=<staging-bot-token> \
   uv run pytest tests/tdd/test_issue_686_telegram_functional_live.py -v
 ```
 

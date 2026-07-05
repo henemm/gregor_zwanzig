@@ -249,12 +249,15 @@ def test_bot_commands_structure_is_telegram_valid():
 # (gated auf ENV; lokal übersprungen, läuft in der Acceptance-Stage)
 # =============================================================================
 
+from tests.tdd._telegram_live_fixture import live_telegram_enabled
+
+_LIVE_TELEGRAM = live_telegram_enabled()
 _REAL_TOKEN = os.environ.get("GZ_TELEGRAM_BOT_TOKEN", "")
 _REAL_CHAT = os.environ.get("GZ_TELEGRAM_TEST_CHAT_ID", "")
-_real_reason = "GZ_TELEGRAM_BOT_TOKEN + GZ_TELEGRAM_TEST_CHAT_ID erforderlich (Acceptance-Stage)"
+_real_reason = "GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)"
 
 
-@pytest.mark.skipif(not (_REAL_TOKEN and _REAL_CHAT), reason=_real_reason)
+@pytest.mark.skipif(not _LIVE_TELEGRAM, reason=_real_reason)
 def test_real_api_send_with_inline_keyboard_returns_buttons():
     """AC-1 gegen die echte Bot-API: 200 + Message trägt das Inline-Keyboard."""
     settings = Settings(telegram_bot_token=_REAL_TOKEN, telegram_chat_id=_REAL_CHAT)
@@ -278,7 +281,7 @@ def test_real_api_send_with_inline_keyboard_returns_buttons():
     assert kb[0][0]["text"] == "🌤️ Briefing"
 
 
-@pytest.mark.skipif(not _REAL_TOKEN, reason=_real_reason)
+@pytest.mark.skipif(not _LIVE_TELEGRAM, reason=_real_reason)
 def test_real_api_set_get_my_commands_roundtrip():
     """AC-2 gegen die echte Bot-API: setMyCommands → getMyCommands liefert dieselbe Liste."""
     settings = Settings(telegram_bot_token=_REAL_TOKEN, telegram_chat_id=_REAL_CHAT or "0")

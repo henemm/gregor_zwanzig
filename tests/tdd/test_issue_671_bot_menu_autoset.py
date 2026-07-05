@@ -39,6 +39,8 @@ from fastapi.testclient import TestClient
 from app.config import Settings
 from outputs.telegram import BOT_COMMANDS, TelegramOutput
 
+from tests.tdd._telegram_live_fixture import live_telegram_enabled, staging_live_settings
+
 EXPECTED_COMMANDS = [c["command"] for c in BOT_COMMANDS]
 
 
@@ -180,8 +182,8 @@ def test_ac2_token_without_chatid_still_sets_menu(monkeypatch):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.skipif(
-    not os.environ.get("GZ_TELEGRAM_BOT_TOKEN"),
-    reason="GZ_TELEGRAM_BOT_TOKEN nicht gesetzt — Live-Bot-E2E übersprungen",
+    not live_telegram_enabled(),
+    reason="GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)",
 )
 def test_ac3_live_set_then_get_matches_bot_commands():
     """
@@ -192,7 +194,7 @@ def test_ac3_live_set_then_get_matches_bot_commands():
     Das ist der echte End-to-End-Beweis gegen den Telegram-Dienst — getMyCommands
     braucht KEINEN gestarteten Chat, daher läuft dieser Test wirklich durch.
     """
-    out = TelegramOutput()  # echte Settings → Token aus GZ_TELEGRAM_BOT_TOKEN
+    out = TelegramOutput(staging_live_settings())  # AC-4: expliziter Token, kein CWD-.env-Fallback
     out.set_my_commands()
     live = out.get_my_commands()
 

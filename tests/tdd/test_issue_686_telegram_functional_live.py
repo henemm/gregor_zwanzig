@@ -28,6 +28,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.tdd._telegram_live_fixture import live_telegram_enabled
+
 # Die 7 Menü-Befehle (= BOT_COMMANDS in src/outputs/telegram.py)
 SEVEN_COMMANDS = [
     "glance", "heute", "morgen", "heute_gewitter",
@@ -135,8 +137,8 @@ def test_ac1_fixture_ensures_user_with_active_trip(tmp_path):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.skipif(
-    not os.environ.get("GZ_TELEGRAM_TEST_CHAT_ID"),
-    reason="GZ_TELEGRAM_TEST_CHAT_ID nicht gesetzt — Inhalts-Live-Test übersprungen",
+    not live_telegram_enabled(),
+    reason="GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)",
 )
 def test_ac3_all_seven_commands_produce_meaningful_content():
     """
@@ -238,8 +240,8 @@ def test_ac3_all_seven_commands_produce_meaningful_content():
 # ---------------------------------------------------------------------------
 
 @pytest.mark.skipif(
-    not (os.environ.get("GZ_TELEGRAM_BOT_TOKEN") and os.environ.get("GZ_TELEGRAM_TEST_CHAT_ID")),
-    reason="GZ_TELEGRAM_BOT_TOKEN + GZ_TELEGRAM_TEST_CHAT_ID nicht gesetzt — Live-Zustellung übersprungen",
+    not live_telegram_enabled(),
+    reason="GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)",
 )
 def test_ac4_live_delivery_and_cleanup():
     """

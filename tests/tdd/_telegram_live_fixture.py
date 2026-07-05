@@ -7,6 +7,7 @@ KEINE Mocks — echte Pipeline, echte API.
 from __future__ import annotations
 
 import json
+import os
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
@@ -16,6 +17,53 @@ from typing import Optional
 # ---------------------------------------------------------------------------
 
 TEST_USER_ID = "tg-live-e2e"
+
+_STAGING_ENV_PATH = Path("/home/hem/gregor_zwanzig_staging/.env")
+_WANTED_KEYS = {"GZ_TELEGRAM_BOT_TOKEN", "GZ_TELEGRAM_CHAT_ID", "GZ_TELEGRAM_TEST_CHAT_ID"}
+
+
+# ---------------------------------------------------------------------------
+# Zentrales Live-Opt-in-Gate (Issue #1014)
+# ---------------------------------------------------------------------------
+
+
+def load_staging_telegram_env() -> None:
+    """Sourct Staging-Telegram-Creds nach os.environ (nur fehlende Keys, nicht kopieren)."""
+    if not _STAGING_ENV_PATH.exists():
+        return
+    try:
+        lines = _STAGING_ENV_PATH.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if key in _WANTED_KEYS and key not in os.environ:
+            os.environ[key] = value.strip()
+
+
+def live_telegram_enabled() -> bool:
+    """True nur bei explizitem Opt-in (GZ_TELEGRAM_LIVE=1) UND vorhandenen Creds."""
+    if os.environ.get("GZ_TELEGRAM_LIVE") != "1":
+        return False
+    load_staging_telegram_env()
+    return bool(
+        os.environ.get("GZ_TELEGRAM_BOT_TOKEN")
+        and os.environ.get("GZ_TELEGRAM_TEST_CHAT_ID")
+    )
+
+
+def staging_live_settings():
+    """Baut Settings mit explizit gesourctem Staging-Bot-Token (kein CWD-.env-Fallback)."""
+    from app.config import Settings
+
+    return Settings(
+        telegram_bot_token=os.environ["GZ_TELEGRAM_BOT_TOKEN"],
+        telegram_chat_id=os.environ["GZ_TELEGRAM_TEST_CHAT_ID"],
+    )
 
 
 # ---------------------------------------------------------------------------

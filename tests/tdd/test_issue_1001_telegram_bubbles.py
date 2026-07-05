@@ -29,42 +29,17 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from tests.tdd._telegram_live_fixture import live_telegram_enabled
 
 # ---------------------------------------------------------------------------
-# Staging-Telegram-Creds sourcen (nicht kopieren) — nur falls noch nicht gesetzt.
+# Live-Opt-in-Gate (Issue #1014) — kein Import-Autoload mehr, Sourcing erfolgt
+# ausschließlich innerhalb von live_telegram_enabled() bei GZ_TELEGRAM_LIVE=1.
 # ---------------------------------------------------------------------------
 
-_STAGING_ENV_PATH = Path("/home/hem/gregor_zwanzig_staging/.env")
-_WANTED_KEYS = {"GZ_TELEGRAM_BOT_TOKEN", "GZ_TELEGRAM_CHAT_ID", "GZ_TELEGRAM_TEST_CHAT_ID"}
-
-
-def _load_staging_telegram_env() -> None:
-    if not _STAGING_ENV_PATH.exists():
-        return
-    try:
-        lines = _STAGING_ENV_PATH.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return
-    for line in lines:
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        key = key.strip()
-        if key in _WANTED_KEYS and key not in os.environ:
-            os.environ[key] = value.strip()
-
-
-_load_staging_telegram_env()
-
-_LIVE_CREDS_AVAILABLE = bool(
-    os.environ.get("GZ_TELEGRAM_BOT_TOKEN") and os.environ.get("GZ_TELEGRAM_TEST_CHAT_ID")
-)
+_LIVE_CREDS_AVAILABLE = live_telegram_enabled()
 _TEST_CHAT_ID = os.environ.get("GZ_TELEGRAM_TEST_CHAT_ID", "")
 _LIVE_SKIP_REASON = (
-    "GZ_TELEGRAM_BOT_TOKEN / GZ_TELEGRAM_TEST_CHAT_ID nicht verfügbar "
-    "(weder im Environment noch in gregor_zwanzig_staging/.env) — "
-    "Staging-Bot-Live-Test übersprungen"
+    "GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)"
 )
 
 _TZ = ZoneInfo("Europe/Vienna")

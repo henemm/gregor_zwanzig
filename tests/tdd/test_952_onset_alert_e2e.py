@@ -43,6 +43,7 @@ from app.config import Settings
 from app.models import TripReportConfig
 from services.radar_service import NowcastResult
 
+from tests.tdd._telegram_live_fixture import live_telegram_enabled
 from tests.tdd.test_952_onset_alert_fidelity import (
     _GuaranteedWetRadar, _trip_with_active_segment,
 )
@@ -202,9 +203,8 @@ def test_ac9_onset_alert_real_email_delivery_shows_template_structure(caplog):
 
 
 @pytest.mark.skipif(
-    not (os.environ.get("GZ_TELEGRAM_BOT_TOKEN") and os.environ.get("GZ_TELEGRAM_TEST_CHAT_ID")),
-    reason="GZ_TELEGRAM_BOT_TOKEN + GZ_TELEGRAM_TEST_CHAT_ID nicht gesetzt — "
-           "Telegram-Live-Zustellung übersprungen",
+    not live_telegram_enabled(),
+    reason="GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)",
 )
 def test_ac9_onset_alert_real_telegram_delivery_bold_no_subject_duplicate():
     """AC-9 (Telegram): kanonischer Onset-Renderer-Output real an den
