@@ -20,7 +20,7 @@ The exact golden strings are stored in tests/golden/sms/*.txt and will
 be frozen by the developer in Phase 6 from the real forecasts. RED stubs
 contain '# WILL BE FROZEN IN PHASE 6'.
 
-NO cross-check against legacy formatters.sms_trip — see spec §A1.
+NO cross-check against legacy output.renderers.sms_trip — see spec §A1.
 """
 from __future__ import annotations
 
@@ -346,7 +346,7 @@ def test_render_conforms_to_sms_format_v2():
     Structural conformance against sms_format.md v2.0 for all 5 goldens.
 
     Replaces the deleted byte-equal cross-check against legacy
-    src/formatters/sms_trip.py (see output_token_builder.md §A1).
+    src/output/renderers/sms_trip.py (see output_token_builder.md §A1).
 
     Checks per golden:
       a) Stage-prefix '{Name}:' at the start.

@@ -414,7 +414,7 @@ class TestTrendRendering:
 
     def test_trend_rendering_html_two_lines(self):
         """v3.0: HTML uses 2-line layout (stage name div + summary div)."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
         trend = self._make_trend_data()
@@ -437,7 +437,7 @@ class TestTrendRendering:
 
     def test_trend_rendering_plain_two_lines(self):
         """v3.0: Plain-text uses 2-line layout (weekday+name, then indented summary)."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
         trend = self._make_trend_data()
@@ -459,7 +459,7 @@ class TestTrendRendering:
 
     def test_trend_no_future_stages(self):
         """No trend block when multi_day_trend is None."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
         last_seg = self._make_last_segment()
@@ -476,7 +476,7 @@ class TestTrendRendering:
 
     def test_morning_report_with_trend_when_configured(self):
         """Morning report WITH trend data should contain trend block."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
         trend = self._make_trend_data()
@@ -495,7 +495,7 @@ class TestTrendRendering:
     def test_trend_disabled_in_config(self):
         """Trend should not appear when multi_day_trend_reports excludes report type."""
         from app.metric_catalog import build_default_display_config
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         dc = build_default_display_config()
         dc.multi_day_trend_reports = []

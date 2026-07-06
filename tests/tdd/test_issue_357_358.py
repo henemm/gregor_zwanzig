@@ -81,7 +81,7 @@ def test_ac1_sms_grat_wind_moderate():
     WHEN:  format_sms() mit exposed_sections aufgerufen wird
     THEN:  "GratWind" erscheint im SMS-String
     """
-    from formatters.sms_trip import SMSTripFormatter
+    from output.renderers.sms_trip import SMSTripFormatter
 
     seg = _seg(start_km=0.0, end_km=2.0, elev_m=2400.0, wind_max=35.0, gust_max=40.0)
     exposed = [ExposedSection(start_km=0.0, end_km=2.0, max_elevation_m=2400.0, exposition_type="GRAT")]
@@ -103,7 +103,7 @@ def test_ac2_sms_no_exposition_no_label():
     WHEN:  format_sms() aufgerufen wird
     THEN:  Weder "GratWind" noch "GratSturm" im SMS-String
     """
-    from formatters.sms_trip import SMSTripFormatter
+    from output.renderers.sms_trip import SMSTripFormatter
 
     seg = _seg(start_km=0.0, end_km=2.0, elev_m=1500.0, wind_max=35.0, gust_max=40.0)
 
@@ -127,7 +127,7 @@ def test_ac3_sms_grat_sturm_high():
     WHEN:  format_sms() mit exposed_sections aufgerufen wird
     THEN:  "GratSturm" erscheint im SMS-String
     """
-    from formatters.sms_trip import SMSTripFormatter
+    from output.renderers.sms_trip import SMSTripFormatter
 
     seg = _seg(start_km=0.0, end_km=2.0, elev_m=2400.0, wind_max=55.0, gust_max=65.0)
     exposed = [ExposedSection(start_km=0.0, end_km=2.0, max_elevation_m=2400.0, exposition_type="GRAT")]

@@ -153,7 +153,7 @@ def test_hourly_filter_selects_cest_correct_window():
         SegmentWeatherData, SegmentWeatherSummary,
         MetricConfig, UnifiedWeatherDisplayConfig,
     )
-    from formatters.trip_report import TripReportFormatter
+    from output.renderers.trip_report import TripReportFormatter
 
     svc = _make_svc()
     segments_dtos = svc._convert_trip_to_segments(_make_trip(), _TARGET_DATE)

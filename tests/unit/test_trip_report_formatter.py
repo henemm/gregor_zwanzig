@@ -89,7 +89,7 @@ def test_trip_report_formatter_exists():
     
     EXPECTED: FAIL - TripReportFormatter doesn't exist yet
     """
-    from formatters.trip_report import TripReportFormatter
+    from output.renderers.trip_report import TripReportFormatter
     
     assert TripReportFormatter is not None
 
@@ -102,7 +102,7 @@ def test_format_email_generates_html():
     WHEN: Calling format_email()
     THEN: Returns TripReport with HTML containing tables
     """
-    from formatters.trip_report import TripReportFormatter
+    from output.renderers.trip_report import TripReportFormatter
 
     segments = [create_test_segment()]
     formatter = TripReportFormatter()
@@ -117,7 +117,7 @@ class TestMetricsFiltering:
 
     def test_all_columns_when_no_config(self) -> None:
         """Default: all default-visible metric columns shown when no config."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
         segments = [create_test_segment()]
@@ -130,7 +130,7 @@ class TestMetricsFiltering:
 
     def test_only_temp_column_with_config(self) -> None:
         """Only Temp column when wind/precip disabled."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
         segments = [create_test_segment()]
@@ -146,7 +146,7 @@ class TestMetricsFiltering:
 
     def test_wind_and_precip_without_temp(self) -> None:
         """Wind + Precip visible, Temp hidden."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
         segments = [create_test_segment()]
@@ -161,7 +161,7 @@ class TestMetricsFiltering:
     def test_summary_matches_visible_columns(self) -> None:
         """Issue #790: Highlights/Zusammenfassung-Block entfernt; stattdessen
         der feste Metriken-Überblick-Block."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
         segments = [create_test_segment()]
@@ -173,7 +173,7 @@ class TestMetricsFiltering:
 
     def test_plain_text_respects_config(self) -> None:
         """Plain-text version should also filter metrics."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
         segments = [create_test_segment()]
@@ -187,7 +187,7 @@ class TestMetricsFiltering:
 
     def test_structural_columns_always_visible(self) -> None:
         """Zeit (time) column is always shown in v2 hourly tables."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
         segments = [create_test_segment()]

@@ -57,7 +57,7 @@ from app.models import (
     ThunderLevel,
     TripSegment,
 )
-from formatters.trip_report import TripReportFormatter
+from output.renderers.trip_report import TripReportFormatter
 
 # July 2026 → Europe/Berlin observes CEST (UTC+2).
 _CEST = ZoneInfo("Europe/Berlin")
@@ -483,7 +483,7 @@ class TestAC7SmsPreviewLocalTokens:
 
     def test_format_sms_cest_shifts_peak_hour_to_local(self):
         """Peak bei UTC 08:00 → CEST-Token muss @10 zeigen, nicht @8."""
-        from src.formatters.sms_trip import SMSTripFormatter
+        from src.output.renderers.sms_trip import SMSTripFormatter
 
         seg = self._rainy_segment()
         line = SMSTripFormatter().format_sms(
@@ -498,7 +498,7 @@ class TestAC7SmsPreviewLocalTokens:
 
     def test_format_sms_utc_keeps_utc_hour(self):
         """Regression: tz=UTC darf die Peak-Stunde nicht verschieben (@8 bleibt)."""
-        from src.formatters.sms_trip import SMSTripFormatter
+        from src.output.renderers.sms_trip import SMSTripFormatter
 
         seg = self._rainy_segment()
         line = SMSTripFormatter().format_sms(

@@ -228,7 +228,7 @@ class TestAC2NoWeatherCodesInSubject:
     """AC-2: Echter Betreff enthält keine D/W/G/TH:/HR:-Kürzel mehr."""
 
     def _subject(self) -> str:
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
         report = TripReportFormatter().format_email(
             [_build_seg_data()],
             trip_name="Graveltour im Münsterland",

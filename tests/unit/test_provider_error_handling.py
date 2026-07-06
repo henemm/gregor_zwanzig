@@ -136,7 +136,7 @@ class TestFormatterErrorRendering:
 
     def test_html_contains_error_warning(self) -> None:
         """HTML output must contain a visible warning for error segments."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         segments = [
             _make_weather_data(segment_id=1, has_error=False),
@@ -150,7 +150,7 @@ class TestFormatterErrorRendering:
 
     def test_plain_text_contains_error_warning(self) -> None:
         """Plain text output must contain a visible warning for error segments."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         segments = [
             _make_weather_data(segment_id=1, has_error=False),
@@ -163,7 +163,7 @@ class TestFormatterErrorRendering:
 
     def test_extract_hourly_rows_handles_none_timeseries(self) -> None:
         """_extract_hourly_rows must not crash when timeseries is None."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         error_data = _make_weather_data(has_error=True)
         formatter = TripReportFormatter()

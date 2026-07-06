@@ -126,7 +126,7 @@ class TestFormatterDestinationRendering:
         )
 
     def test_html_contains_ziel_label(self):
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         seg_weather = self._make_seg_weather("Ziel", "Soller")
         formatter = TripReportFormatter()
@@ -142,7 +142,7 @@ class TestFormatterDestinationRendering:
         )
 
     def test_destination_no_distance(self):
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         seg_weather = self._make_seg_weather("Ziel", "Soller")
         formatter = TripReportFormatter()

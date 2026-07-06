@@ -200,7 +200,7 @@ class TripReportFormatter:
             telegram_bubbles_result[-1].reply_markup if telegram_bubbles_result else None
         )
 
-        from src.formatters.sms_trip import SMSTripFormatter, SMS_SYMBOL_BY_METRIC
+        from src.output.renderers.sms_trip import SMSTripFormatter, SMS_SYMBOL_BY_METRIC
         # Issue #624: konfigurierte Schwellwerte aus MetricConfig ableiten.
         _sms_thr = {
             SMS_SYMBOL_BY_METRIC[m.metric_id]: m.sms_threshold
@@ -821,7 +821,7 @@ class TripReportFormatter:
         """Generate compact natural-language summary for the stage."""
         if not segments or not stage_name:
             return None
-        from formatters.compact_summary import CompactSummaryFormatter
+        from output.renderers.compact_summary import CompactSummaryFormatter
         formatter = CompactSummaryFormatter()
         return formatter.format_stage_summary(segments, stage_name, dc, tz=self._tz)
 

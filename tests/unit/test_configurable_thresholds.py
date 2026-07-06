@@ -129,7 +129,7 @@ class TestFmtValCatalogThresholds:
     """_fmt_val() must produce same output as before (thresholds from catalog now)."""
 
     def _get_formatter(self):
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
         return TripReportFormatter()
 
     def test_gust_yellow_background(self) -> None:

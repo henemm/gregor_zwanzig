@@ -78,7 +78,7 @@ def test_sms_formatter_exists():
     WHEN:  Importing SMSTripFormatter
     THEN:  Import succeeds (Adapter bleibt für Rückwärtskompatibilität).
     """
-    from formatters.sms_trip import SMSTripFormatter
+    from output.renderers.sms_trip import SMSTripFormatter
 
     assert SMSTripFormatter is not None
 
@@ -94,7 +94,7 @@ def test_format_sms_single_segment_v2():
 
     RED: Legacy-Adapter liefert noch 'E1:T12/18 W30 R5mm'.
     """
-    from formatters.sms_trip import SMSTripFormatter
+    from output.renderers.sms_trip import SMSTripFormatter
 
     segments = [create_test_segment(1, temp_min=12, temp_max=18, wind_max=30, precip_sum=5)]
     formatter = SMSTripFormatter()
@@ -116,7 +116,7 @@ def test_format_sms_validates_length():
     WHEN:  Calling format_sms().
     THEN:  len(sms) <= 160.
     """
-    from formatters.sms_trip import SMSTripFormatter
+    from output.renderers.sms_trip import SMSTripFormatter
 
     segments = [create_test_segment()]
     formatter = SMSTripFormatter()
@@ -135,7 +135,7 @@ def test_format_sms_v2_wire_format():
 
     RED: Legacy-Adapter ignoriert stage_name und liefert 'E1:...'.
     """
-    from formatters.sms_trip import SMSTripFormatter
+    from output.renderers.sms_trip import SMSTripFormatter
 
     segments = [create_test_segment(1, temp_min=12, temp_max=18, wind_max=30, precip_sum=5)]
     formatter = SMSTripFormatter()

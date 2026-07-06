@@ -211,7 +211,7 @@ class PreviewService:
             trip, target, report_type, demo=demo,
         )
 
-        from src.formatters.sms_trip import SMSTripFormatter, SMS_SYMBOL_BY_METRIC
+        from src.output.renderers.sms_trip import SMSTripFormatter, SMS_SYMBOL_BY_METRIC
         # Input-Hygiene: Bei "ID: Beschreibung"-Stage-Namen (z.B. "KHW_10:
         # von Egger Alm...") nur den Teil vor dem ersten ':' nehmen, damit
         # der Prefix-Separator ':' in sms_format.md §3.1 eindeutig bleibt

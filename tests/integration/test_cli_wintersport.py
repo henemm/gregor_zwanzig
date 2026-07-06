@@ -177,9 +177,9 @@ def test_cli_no_wintersport_formatter_import():
     import importlib
 
     with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("formatters.wintersport")
+        importlib.import_module("output.renderers.wintersport")
     with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("src.formatters.wintersport")
+        importlib.import_module("src.output.renderers.wintersport")
 
 
 def test_cli_long_report_subject_unchanged(

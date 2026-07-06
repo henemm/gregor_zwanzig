@@ -76,7 +76,7 @@ def _comparison(today_segs, yday_segs):
 def _format(day_comparison=..., segs=None, report_config=...):
     """format_email-Aufruf. day_comparison=...  / report_config=... → kwarg weglassen."""
     from app.metric_catalog import build_default_display_config
-    from formatters.trip_report import TripReportFormatter
+    from output.renderers.trip_report import TripReportFormatter
 
     segs = segs or [_segment_with_weather(1, temp_min_c=8.0, temp_max_c=18.0,
                                           wind_max_kmh=25.0, precip_sum_mm=2.0)]

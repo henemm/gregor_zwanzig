@@ -107,7 +107,7 @@ class TestHourlyTableLocalTime:
         """
         from app.models import ForecastDataPoint
         from app.metric_catalog import build_default_display_config
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         dp = ForecastDataPoint(
             ts=datetime(2026, 3, 3, 9, 0, tzinfo=timezone.utc),
@@ -137,7 +137,7 @@ class TestCompactSummaryLocalTime:
         THEN: Pattern start_hour shows 15 (not 14)
         """
         from app.models import ForecastDataPoint
-        from formatters.compact_summary import CompactSummaryFormatter
+        from output.renderers.compact_summary import CompactSummaryFormatter
 
         # Create data points: dry until 14:00 UTC, then rain
         hourly = []

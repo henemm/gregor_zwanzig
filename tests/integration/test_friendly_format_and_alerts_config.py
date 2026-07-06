@@ -11,7 +11,7 @@ NO MOCKS — uses real TripReportFormatter, MetricCatalog, and WeatherChangeDete
 
 from app.metric_catalog import build_default_display_config
 from app.models import MetricConfig, UnifiedWeatherDisplayConfig
-from formatters.trip_report import TripReportFormatter
+from output.renderers.trip_report import TripReportFormatter
 
 
 # =====================================================================

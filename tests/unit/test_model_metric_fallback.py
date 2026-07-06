@@ -214,7 +214,7 @@ class TestFooterFallbackInfo:
         )
 
     def test_html_footer_shows_fallback(self) -> None:
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         seg = self._make_segment_data(fallback_model="icon_eu", fallback_metrics=["cape", "visibility"])
         formatter = TripReportFormatter()
@@ -224,7 +224,7 @@ class TestFooterFallbackInfo:
         assert "icon_eu" in report.email_html
 
     def test_plain_footer_shows_fallback(self) -> None:
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         seg = self._make_segment_data(fallback_model="icon_eu", fallback_metrics=["cape", "visibility"])
         formatter = TripReportFormatter()

@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
 from app.config import Settings
-from formatters.trip_report import TripReportFormatter
+from output.renderers.trip_report import TripReportFormatter
 from output.renderers.alert.model import AlertMessage, OnsetEvent
 from output.renderers.alert.project import to_alert_message
 from output.renderers.alert.render import (

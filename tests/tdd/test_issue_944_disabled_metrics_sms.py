@@ -95,7 +95,7 @@ def test_disabled_snow_metrics_not_in_sms():
     RED: `format_sms()` akzeptiert den `disabled_specs`-Parameter (noch) nicht
     -> TypeError. Wenn der Parameter existiert, aber nicht filtert -> AssertionError.
     """
-    from formatters.sms_trip import SMSTripFormatter
+    from output.renderers.sms_trip import SMSTripFormatter
 
     segments = [_snow_segment()]
     formatter = SMSTripFormatter()

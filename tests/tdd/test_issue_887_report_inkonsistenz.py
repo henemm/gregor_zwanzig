@@ -103,7 +103,7 @@ def test_ac1_sms_shows_pr_token_when_pop_max_pct_set():
     When SMS formatiert wird
     Then erscheint PR40% (nicht PR–) im Ergebnis
     """
-    from formatters.sms_trip import SMSTripFormatter
+    from output.renderers.sms_trip import SMSTripFormatter
 
     seg = _make_segment(pop_max_pct=40, precip_sum_mm=0.5)
     result = SMSTripFormatter().format_sms(
@@ -125,7 +125,7 @@ def test_ac1_sms_pr_token_format_contains_percent():
     AC-1 (Format): PR-Token für rain_probability enthält %-Zeichen
     (weil _fmt_num für PR 'int(val)%' liefert).
     """
-    from formatters.sms_trip import SMSTripFormatter
+    from output.renderers.sms_trip import SMSTripFormatter
 
     seg = _make_segment(pop_max_pct=65, precip_sum_mm=1.0)
     result = SMSTripFormatter().format_sms(
@@ -193,7 +193,7 @@ def test_ac4_sms_no_crash_when_pop_max_pct_is_none():
     When SMS formatiert wird
     Then kein Absturz, PR– oder kein PR-Token (kein Fehlerwert)
     """
-    from formatters.sms_trip import SMSTripFormatter
+    from output.renderers.sms_trip import SMSTripFormatter
 
     seg = _make_segment(pop_max_pct=None, precip_sum_mm=2.0)
     result = SMSTripFormatter().format_sms(

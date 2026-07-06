@@ -24,7 +24,7 @@ import importlib.util
 import re
 from pathlib import Path
 
-from formatters.trip_report import TripReportFormatter
+from output.renderers.trip_report import TripReportFormatter
 
 # Reuse the real fixture builders from the bug_397 suite (module-level helpers).
 from tdd.test_bug_397_output_localtime import (  # type: ignore

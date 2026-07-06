@@ -305,7 +305,7 @@ def test_ac7_trip_report_uses_get_metrics_for_channel():
     nimmt, nicht den globalen. Ohne diesen Fix haben per_report_layouts-Overrides
     für Email null Wirkung.
     """
-    from src.formatters.trip_report import TripReportFormatter
+    from src.output.renderers.trip_report import TripReportFormatter
 
     source = inspect.getsource(TripReportFormatter.format_email)
 
@@ -318,7 +318,7 @@ def test_ac7_trip_report_uses_get_metrics_for_channel():
 
 def test_ac7_trip_report_does_not_bypass_channel_logic():
     """AC-7b: trip_report.py:73 darf get_metrics_for_report_type NICHT mehr direkt aufrufen."""
-    from src.formatters.trip_report import TripReportFormatter
+    from src.output.renderers.trip_report import TripReportFormatter
 
     source = inspect.getsource(TripReportFormatter.format_email)
 

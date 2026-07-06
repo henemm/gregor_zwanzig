@@ -621,14 +621,14 @@ class TestAC9RegressionGuard:
 
     def test_thunder_symbol_unchanged(self):
         """SMS_SYMBOL_BY_METRIC['thunder'] == 'TH:' — unveränderlich."""
-        from src.formatters.sms_trip import SMS_SYMBOL_BY_METRIC
+        from src.output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC
         assert SMS_SYMBOL_BY_METRIC["thunder"] == "TH:", (
             f"TH: wurde verändert! Aktuell: {SMS_SYMBOL_BY_METRIC['thunder']!r}"
         )
 
     def test_sfl_symbol_unchanged(self):
         """SMS_SYMBOL_BY_METRIC['snowfall_limit'] == 'SFL' — unveränderlich."""
-        from src.formatters.sms_trip import SMS_SYMBOL_BY_METRIC
+        from src.output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC
         assert SMS_SYMBOL_BY_METRIC["snowfall_limit"] == "SFL"
 
 

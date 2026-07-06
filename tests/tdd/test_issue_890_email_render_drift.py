@@ -102,7 +102,7 @@ def _render(
             _mc.enabled = True
     fk = build_friendly_keys(dc)
 
-    from formatters.trip_report import TripReportFormatter
+    from output.renderers.trip_report import TripReportFormatter
     fmt = TripReportFormatter()
     seg_tables = [fmt._extract_hourly_rows(s, dc) for s in segs]
 

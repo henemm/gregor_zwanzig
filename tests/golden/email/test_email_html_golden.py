@@ -28,7 +28,7 @@ from app.models import (
     ThunderLevel,
     TripSegment,
 )
-from formatters.trip_report import TripReportFormatter
+from output.renderers.trip_report import TripReportFormatter
 
 GOLDEN_DIR = Path(__file__).parent
 

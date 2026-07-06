@@ -398,7 +398,7 @@ class TestAC5RendererRawMode:
     def test_ac5_renderer_raw_mode_shows_numeric_cloud_percent(self):
         """AC-5: format_mode='raw' für cloud_total → Zahl statt Emoji."""
         from app.models import MetricConfig, UnifiedWeatherDisplayConfig
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         # MetricConfig mit format_mode='raw' (NEUES FELD, schlägt fehl wenn fehlt)
         mc = MetricConfig(
@@ -454,7 +454,7 @@ class TestAC6SimplifiedWindKuerzel:
     def test_ac6_simplified_wind_renders_kuerzel_in_html_table(self):
         """AC-6: format_mode='simplified' für wind → Adjektiv-Kürzel ohne km/h."""
         from app.models import MetricConfig, UnifiedWeatherDisplayConfig
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         mc_wind = MetricConfig(
             metric_id="wind",
@@ -512,7 +512,7 @@ class TestAC7WindDirectionMergeScale:
     def test_ac7_wind_direction_merge_triggered_by_scale_mode(self):
         """AC-7: scale → Merge; raw → eigene Spalte."""
         from app.models import MetricConfig, UnifiedWeatherDisplayConfig
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         def _build_html(wdir_mode: str) -> str:
             mc_wind = MetricConfig(metric_id="wind", enabled=True,
@@ -667,7 +667,7 @@ class TestAC10ConsolidatedFriendlyKeys:
         import ast
         import inspect
 
-        from formatters import trip_report
+        from output.renderers import trip_report
 
         src = inspect.getsource(trip_report)
         tree = ast.parse(src)

@@ -295,7 +295,7 @@ class TestFormatterPerTypeFiltering:
         """GIVEN freezing_level configured as evening-only
         WHEN calling format_email with report_type='morning'
         THEN freezing_level does NOT appear in email_plain output."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         dc = _build_dc([
             ("temperature", True, None, None),
@@ -319,7 +319,7 @@ class TestFormatterPerTypeFiltering:
         """GIVEN freezing_level configured as evening-only
         WHEN calling format_email with report_type='evening'
         THEN freezing_level DOES appear in email_plain output."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         dc = _build_dc([
             ("temperature", True, None, None),
@@ -340,7 +340,7 @@ class TestFormatterPerTypeFiltering:
     def test_morning_true_override_disabled_global_appears_in_output(self):
         """CRITICAL: enabled=False + morning_enabled=True must still render.
         This is the exact bug F001 caught — the formatter must not skip it."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         dc = _build_dc([
             ("temperature", True, None, None),

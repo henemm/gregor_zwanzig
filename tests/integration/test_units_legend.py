@@ -21,7 +21,7 @@ from app.models import (
     UnifiedWeatherDisplayConfig,
 )
 from app.metric_catalog import build_default_display_config, get_metric_by_col_key
-from formatters.trip_report import TripReportFormatter
+from output.renderers.trip_report import TripReportFormatter
 
 
 # --- Helper: Create a segment with visibility data ---

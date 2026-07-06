@@ -32,7 +32,7 @@ def _freeze_now(monkeypatch):
     'Generated: ...' plain-text footer and 'Generiert: ...' HTML footer.
     Both must use the same frozen clock for golden bit-equality.
     """
-    import formatters.trip_report as tr_mod
+    import output.renderers.trip_report as tr_mod
     from src.output.renderers.email import plain as plain_mod
     from src.output.renderers.email import html as html_mod
 

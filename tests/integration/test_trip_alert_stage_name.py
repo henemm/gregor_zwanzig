@@ -102,7 +102,7 @@ class TestAC1SubjectContainsStageName:
         und übergibt ihn an format_email(). Test simuliert diesen Pfad:
         Trip mit passender Stage → stage_name extrahiert → Betreff enthält ihn.
         """
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         today = date_type.today()
         stage_name = "Tag 3: Vizzavona → Capanelle"
@@ -149,7 +149,7 @@ class TestAC2FallbackToDate:
         When format_email mit stage_name=None aufgerufen wird
         Then enthält der Betreff ein Datumsformat, kein 'None'.
         """
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         today = date_type.today()
         weather = [_make_segment_weather(today)]

@@ -31,7 +31,7 @@ from src.app.models import (
     ThunderLevel,
     TripSegment,
 )
-from src.formatters.sms_trip import SMSTripFormatter
+from src.output.renderers.sms_trip import SMSTripFormatter
 
 # Festes Datum: 2026-07-15 UTC
 _YEAR, _MONTH, _DAY = 2026, 7, 15

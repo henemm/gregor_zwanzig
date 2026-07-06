@@ -82,7 +82,7 @@ def test_format_email_renders_after_dead_code_removal():
     Muss VOR und NACH der Loeschung gruen sein — beweist, dass der aktive
     render_email()-Pfad nicht von den toten Methoden abhaengt.
     """
-    from formatters.trip_report import TripReportFormatter
+    from output.renderers.trip_report import TripReportFormatter
 
     formatter = TripReportFormatter()
     report = formatter.format_email(

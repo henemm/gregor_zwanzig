@@ -31,7 +31,7 @@ from app.models import (
     ThunderLevel,
     TripSegment,
 )
-from formatters.trip_report import TripReportFormatter
+from output.renderers.trip_report import TripReportFormatter
 from output.renderers.email.compact import render_compact
 from output.renderers.email.helpers import visible_cols
 

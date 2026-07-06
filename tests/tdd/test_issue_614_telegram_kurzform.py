@@ -109,7 +109,7 @@ def _render_telegram(telegram_kurzform: bool) -> str:
     einzelner String (alle Bubbles verbunden) fuer Rueckwaertskompatibilitaet
     der verbleibenden Substring-Assertions in dieser Datei.
     """
-    from src.formatters.trip_report import TripReportFormatter
+    from src.output.renderers.trip_report import TripReportFormatter
 
     dc = _build_dc(_NINE_PRIMARY, telegram_kurzform=telegram_kurzform)
     report = TripReportFormatter().format_email(
@@ -200,7 +200,7 @@ def test_ac3_disabled_no_kurzform_block():
 def test_ac4_sms_format_unchanged():
     """GIVEN denselben Trip WHEN SMS gerendert THEN beginnt mit '{Stage}: ' und
     nutzt das bestehende N/D/W/G-Token-Schema (sms_format.md v2.0)."""
-    from src.formatters.sms_trip import SMSTripFormatter
+    from src.output.renderers.sms_trip import SMSTripFormatter
 
     sms = SMSTripFormatter().format_sms(
         [_make_segment()],

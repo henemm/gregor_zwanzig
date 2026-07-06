@@ -43,6 +43,8 @@ import hook_utils
 _MAIL_PATTERNS = [
     re.compile(r"src/output/renderers/email/.*\.py$"),
     re.compile(r"src/formatters/.*\.py$"),
+    # ADR-0017 Slice 2: die drei Formatter leben jetzt direkt unter renderers/
+    re.compile(r"src/output/renderers/(trip_report|sms_trip|compact_summary)\.py$"),
     re.compile(r"src/outputs/email\.py$"),
     re.compile(r"src/output/channels/email\.py$"),
     re.compile(r"src/outputs/radar_alert\.py$"),

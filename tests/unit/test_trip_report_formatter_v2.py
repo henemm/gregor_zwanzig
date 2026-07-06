@@ -19,7 +19,7 @@ from app.models import (
     TripSegment,
     UnifiedWeatherDisplayConfig,
 )
-from formatters.trip_report import TripReportFormatter
+from output.renderers.trip_report import TripReportFormatter
 
 
 def _config_with_disabled(*metric_ids: str) -> UnifiedWeatherDisplayConfig:

@@ -12,7 +12,7 @@ import sys
 def test_ac1_format_email_accepts_day_comparison():
     """AC-1: format_email() hat day_comparison als optionalen Parameter."""
     sys.path.insert(0, "src")
-    from formatters.trip_report import TripReportFormatter
+    from output.renderers.trip_report import TripReportFormatter
     sig = inspect.signature(TripReportFormatter.format_email)
     assert "day_comparison" in sig.parameters, (
         "format_email() hat keinen day_comparison-Parameter — "
@@ -28,7 +28,7 @@ def test_ac2_format_email_callable_with_day_comparison_none():
     """AC-2: format_email(day_comparison=None) wirft keinen TypeError."""
     sys.path.insert(0, "src")
     from unittest.mock import MagicMock
-    from formatters.trip_report import TripReportFormatter
+    from output.renderers.trip_report import TripReportFormatter
 
     formatter = TripReportFormatter()
     seg = MagicMock()

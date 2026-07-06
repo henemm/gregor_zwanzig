@@ -25,7 +25,7 @@ def test_ac6_sms_symbol_by_metric_contains_thunder():
     WHEN:  Direkter Import des Dicts
     THEN:  "thunder" ist als Key vorhanden mit Wert "TH:"
     """
-    from src.formatters.sms_trip import SMS_SYMBOL_BY_METRIC
+    from src.output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC
 
     assert "thunder" in SMS_SYMBOL_BY_METRIC, (
         f"SMS_SYMBOL_BY_METRIC enthält 'thunder' nicht. Aktuell: {list(SMS_SYMBOL_BY_METRIC.keys())}"

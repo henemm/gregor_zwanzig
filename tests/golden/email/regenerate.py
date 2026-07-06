@@ -43,7 +43,7 @@ from app.models import (
     ThunderLevel,
     TripSegment,
 )
-from formatters.trip_report import TripReportFormatter
+from output.renderers.trip_report import TripReportFormatter
 
 GOLDEN_DIR = Path(__file__).parent
 
@@ -65,7 +65,7 @@ def _freeze_datetime() -> None:
     Spiegelt conftest._freeze_now: trip_report setzt generated_at, die
     Channel-Renderer emittieren den Footer-Timestamp.
     """
-    import formatters.trip_report as tr_mod
+    import output.renderers.trip_report as tr_mod
     from src.output.renderers.email import plain as plain_mod
     from src.output.renderers.email import html as html_mod
 

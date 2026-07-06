@@ -77,7 +77,7 @@ def test_metricconfig_sms_threshold_default_none():
 def test_ac1_metric_id_to_sms_symbol_mapping():
     """GIVEN das Mapping WHEN nachgeschlagen THEN gibt es R/PR/W/G für die
     threshold-fähigen Metriken."""
-    from src.formatters.sms_trip import SMS_SYMBOL_BY_METRIC
+    from src.output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC
     assert SMS_SYMBOL_BY_METRIC["precipitation"] == "R"
     assert SMS_SYMBOL_BY_METRIC["rain_probability"] == "PR"
     assert SMS_SYMBOL_BY_METRIC["wind"] == "W"
@@ -88,7 +88,7 @@ def test_ac1_metric_id_to_sms_symbol_mapping():
 def test_ac1_configured_threshold_shifts_first_crossing():
     """GIVEN Wind-Schwellwert 25 km/h WHEN Kurzform gerendert (Wind 18@10, 28@14, 40@16)
     THEN erste-Überschreitung = 14 Uhr (W28@14...), NICHT der Default 10 Uhr (W18@10)."""
-    from src.formatters.sms_trip import SMSTripFormatter
+    from src.output.renderers.sms_trip import SMSTripFormatter
     out = SMSTripFormatter().format_sms(
         _segments(), stage_name="T", report_type="evening",
         tz=ZoneInfo("UTC"), max_length=4000, thresholds={"W": 25.0},
@@ -104,7 +104,7 @@ def test_ac1_configured_threshold_shifts_first_crossing():
 def test_ac2_default_baseline_unchanged():
     """GIVEN keine Schwellwert-Konfiguration WHEN Kurzform gerendert THEN bestehendes
     Default-Verhalten (W18@10(40@16)) — Guard, muss vor UND nach Fix grün sein."""
-    from src.formatters.sms_trip import SMSTripFormatter
+    from src.output.renderers.sms_trip import SMSTripFormatter
     out = SMSTripFormatter().format_sms(
         _segments(), stage_name="T", report_type="evening",
         tz=ZoneInfo("UTC"), max_length=4000,

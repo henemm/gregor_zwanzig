@@ -197,7 +197,7 @@ class TestEmailFriendlyVsRawFormatting:
     def _generate_report(self, dc: UnifiedWeatherDisplayConfig,
                          cloud: float = 50.0, cape: float = 800.0,
                          visibility: float = 5000.0):
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         seg = _make_segment_weather(
             dp_kwargs={"cloud": cloud, "cape": cape, "visibility": visibility},
@@ -328,7 +328,7 @@ class TestEmailFriendlyVsRawFormatting:
 
     def test_cloud_all_levels_friendly(self):
         """All cloud levels produce correct emoji."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
         f = TripReportFormatter()
         f._friendly_keys = {"cloud"}
 
@@ -340,7 +340,7 @@ class TestEmailFriendlyVsRawFormatting:
 
     def test_cape_all_levels_friendly(self):
         """All CAPE levels produce correct emoji."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
         f = TripReportFormatter()
         f._friendly_keys = {"cape"}
 
@@ -351,7 +351,7 @@ class TestEmailFriendlyVsRawFormatting:
 
     def test_visibility_all_levels_friendly(self):
         """All visibility levels produce correct text."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
         f = TripReportFormatter()
         f._friendly_keys = {"visibility"}
 

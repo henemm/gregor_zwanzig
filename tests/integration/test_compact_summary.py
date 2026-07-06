@@ -131,7 +131,7 @@ class TestBasicSummary:
 
     def test_basic_summary_contains_temp_range(self):
         """Summary should contain temperature range."""
-        from formatters.compact_summary import CompactSummaryFormatter
+        from output.renderers.compact_summary import CompactSummaryFormatter
 
         hourly = [_make_dp(h, t2m_c=8 + h, precip_1h_mm=0.5) for h in range(9, 17)]
         segments = [_make_segment_weather_with_timeseries(1, hourly)]
@@ -145,7 +145,7 @@ class TestBasicSummary:
 
     def test_dry_conditions(self):
         """When no precipitation, summary should contain 'trocken'."""
-        from formatters.compact_summary import CompactSummaryFormatter
+        from output.renderers.compact_summary import CompactSummaryFormatter
 
         hourly = [_make_dp(h, precip_1h_mm=0.0) for h in range(9, 17)]
         segments = [_make_segment_weather_with_timeseries(1, hourly, precip_sum=0.0, pop_max=5)]
@@ -167,7 +167,7 @@ class TestRainTemporal:
 
     def test_rain_with_peak_time(self):
         """Rain throughout with clear peak should mention peak hour."""
-        from formatters.compact_summary import CompactSummaryFormatter
+        from output.renderers.compact_summary import CompactSummaryFormatter
 
         # Rain in ALL hours, but peak at 11:00 → "peak" pattern
         hourly = []
@@ -185,7 +185,7 @@ class TestRainTemporal:
 
     def test_rain_starts_later(self):
         """Dry morning, rain starting later should indicate start time."""
-        from formatters.compact_summary import CompactSummaryFormatter
+        from output.renderers.compact_summary import CompactSummaryFormatter
 
         hourly = []
         for h in range(9, 17):
@@ -202,7 +202,7 @@ class TestRainTemporal:
 
     def test_rain_ends_early(self):
         """Rain in morning, dry afternoon should indicate when it stops."""
-        from formatters.compact_summary import CompactSummaryFormatter
+        from output.renderers.compact_summary import CompactSummaryFormatter
 
         hourly = []
         for h in range(9, 17):
@@ -228,7 +228,7 @@ class TestConfigAwareness:
 
     def test_disabled_wind_not_shown(self):
         """When wind is disabled in config, no wind info in summary."""
-        from formatters.compact_summary import CompactSummaryFormatter
+        from output.renderers.compact_summary import CompactSummaryFormatter
 
         hourly = [_make_dp(h) for h in range(9, 17)]
         segments = [_make_segment_weather_with_timeseries(1, hourly)]
@@ -245,7 +245,7 @@ class TestConfigAwareness:
 
     def test_friendly_vs_raw_clouds(self):
         """When cloud_total.use_friendly_format=False, show percentage not emoji."""
-        from formatters.compact_summary import CompactSummaryFormatter
+        from output.renderers.compact_summary import CompactSummaryFormatter
 
         hourly = [_make_dp(h, cloud_total_pct=65) for h in range(9, 17)]
         segments = [_make_segment_weather_with_timeseries(1, hourly, cloud_avg=65)]
@@ -269,7 +269,7 @@ class TestAdjectives:
 
     def test_heavy_rain_adjective(self):
         """precip_sum > 10mm should say 'starker Regen'."""
-        from formatters.compact_summary import CompactSummaryFormatter
+        from output.renderers.compact_summary import CompactSummaryFormatter
 
         hourly = [_make_dp(h, precip_1h_mm=2.5) for h in range(9, 17)]
         segments = [_make_segment_weather_with_timeseries(1, hourly, precip_sum=20.0, pop_max=90)]
@@ -282,7 +282,7 @@ class TestAdjectives:
 
     def test_storm_gusts(self):
         """wind_max > 60 should say 'Sturmboeen' or similar."""
-        from formatters.compact_summary import CompactSummaryFormatter
+        from output.renderers.compact_summary import CompactSummaryFormatter
 
         hourly = [_make_dp(h, wind10m_kmh=65.0, gust_kmh=80.0) for h in range(9, 17)]
         segments = [_make_segment_weather_with_timeseries(
@@ -306,7 +306,7 @@ class TestThunder:
 
     def test_thunder_with_time_window(self):
         """Thunder in specific hours should show time window."""
-        from formatters.compact_summary import CompactSummaryFormatter
+        from output.renderers.compact_summary import CompactSummaryFormatter
 
         hourly = []
         for h in range(9, 17):
@@ -334,7 +334,7 @@ class TestGraceful:
 
     def test_none_wind_no_crash(self):
         """Missing wind values should not crash, just omit wind part."""
-        from formatters.compact_summary import CompactSummaryFormatter
+        from output.renderers.compact_summary import CompactSummaryFormatter
 
         hourly = [_make_dp(h, wind10m_kmh=None, gust_kmh=None) for h in range(9, 17)]
         segments = [_make_segment_weather_with_timeseries(
@@ -349,7 +349,7 @@ class TestGraceful:
 
     def test_empty_timeseries_uses_summary(self):
         """With empty timeseries, fall back to aggregated summary."""
-        from formatters.compact_summary import CompactSummaryFormatter
+        from output.renderers.compact_summary import CompactSummaryFormatter
 
         segments = [_make_segment_weather_with_timeseries(1, [], precip_sum=3.0)]
         dc = _default_dc()
@@ -369,7 +369,7 @@ class TestStageName:
 
     def test_stage_name_shortened(self):
         """Long stage name should be shortened."""
-        from formatters.compact_summary import CompactSummaryFormatter
+        from output.renderers.compact_summary import CompactSummaryFormatter
 
         hourly = [_make_dp(h) for h in range(9, 17)]
         segments = [_make_segment_weather_with_timeseries(1, hourly)]

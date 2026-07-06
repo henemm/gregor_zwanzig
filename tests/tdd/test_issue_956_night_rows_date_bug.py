@@ -34,7 +34,7 @@ from app.models import (
     NormalizedTimeseries,
     Provider,
 )
-from formatters.trip_report import TripReportFormatter
+from output.renderers.trip_report import TripReportFormatter
 
 _UTC = ZoneInfo("UTC")
 

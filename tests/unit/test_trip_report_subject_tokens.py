@@ -22,7 +22,7 @@ from app.models import (
     ThunderLevel,
     TripSegment,
 )
-from formatters.trip_report import TripReportFormatter
+from output.renderers.trip_report import TripReportFormatter
 
 
 def _segment_weather_with_aggregated(

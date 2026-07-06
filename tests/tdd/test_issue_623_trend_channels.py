@@ -424,19 +424,19 @@ class TestDeadCodeRemoved:
 
     def test_render_html_method_gone(self):
         """Given TripReportFormatter, When _render_html accessed, Then AttributeError."""
-        from src.formatters.trip_report import TripReportFormatter
+        from src.output.renderers.trip_report import TripReportFormatter
         assert not hasattr(TripReportFormatter, "_render_html"), \
             "_render_html should have been removed"
 
     def test_render_plain_method_gone(self):
         """Given TripReportFormatter, When _render_plain accessed, Then AttributeError."""
-        from src.formatters.trip_report import TripReportFormatter
+        from src.output.renderers.trip_report import TripReportFormatter
         assert not hasattr(TripReportFormatter, "_render_plain"), \
             "_render_plain should have been removed"
 
     def test_render_html_table_still_present(self):
         """AC-6 guard: _render_html_table must NOT be removed (still used)."""
-        from src.formatters.trip_report import TripReportFormatter
+        from src.output.renderers.trip_report import TripReportFormatter
         assert hasattr(TripReportFormatter, "_render_html_table"), \
             "_render_html_table must still exist"
 
@@ -602,7 +602,7 @@ class TestTelegramTrendPipeline:
 
     def test_format_email_telegram_text_contains_trend_heading(self):
         """Given format_email with multi_day_trend, When called, Then report.telegram_bubbles has 'Ausblick'."""
-        from src.formatters.trip_report import TripReportFormatter
+        from src.output.renderers.trip_report import TripReportFormatter
         segs = self._make_segments()
         trend = [_trend_stage()]
         report = TripReportFormatter().format_email(
@@ -622,7 +622,7 @@ class TestTelegramTrendPipeline:
         Regression guard: trend is in telegram_bubbles but Signal no longer exists
         as a channel, so there is no surface for trend to leak into.
         """
-        from src.formatters.trip_report import TripReportFormatter
+        from src.output.renderers.trip_report import TripReportFormatter
         segs = self._make_segments()
         trend = [_trend_stage()]
         report = TripReportFormatter().format_email(
@@ -639,7 +639,7 @@ class TestTelegramTrendPipeline:
 
     def test_format_email_no_trend_no_heading_in_telegram(self):
         """AC-7: format_email without trend — telegram_bubbles has no 'Ausblick'-Bubble."""
-        from src.formatters.trip_report import TripReportFormatter
+        from src.output.renderers.trip_report import TripReportFormatter
         segs = self._make_segments()
         report = TripReportFormatter().format_email(
             segs,

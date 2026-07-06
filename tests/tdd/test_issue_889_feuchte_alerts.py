@@ -231,7 +231,7 @@ class TestAC4FeuchteStillRenders:
         WHEN format_email() eine Etappe rendert
         THEN erscheinen die Spaltenköpfe und numerische Werte im HTML.
         """
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         dp = ForecastDataPoint(
             ts=datetime(2026, 7, 1, 9, 0, tzinfo=timezone.utc),

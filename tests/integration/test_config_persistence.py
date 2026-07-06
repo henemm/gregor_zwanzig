@@ -21,7 +21,7 @@ from app.models import (
     UnifiedWeatherDisplayConfig,
 )
 from app.trip import Stage, Trip, Waypoint
-from formatters.trip_report import TripReportFormatter
+from output.renderers.trip_report import TripReportFormatter
 
 
 # =====================================================================

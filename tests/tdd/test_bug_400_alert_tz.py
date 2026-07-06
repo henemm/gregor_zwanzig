@@ -33,7 +33,7 @@ def _alert_change() -> WeatherChange:
 
 def _render_alert(tz_name: str) -> tuple[str, str]:
     """Rendert eine Alert-Mail (HTML + Plain) für die gegebene Zeitzone."""
-    from src.formatters.trip_report import TripReportFormatter
+    from src.output.renderers.trip_report import TripReportFormatter
 
     seg = _make_segment_weather()  # start 08:00 UTC, end 12:00 UTC
     report = TripReportFormatter().format_email(

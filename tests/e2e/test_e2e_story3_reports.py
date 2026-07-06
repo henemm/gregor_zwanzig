@@ -34,8 +34,8 @@ from app.config import Settings
 from app.loader import delete_trip, get_trips_dir, load_trip, save_trip
 from app.models import TripReportConfig
 from app.trip import Stage, TimeWindow, Trip, Waypoint
-from formatters.sms_trip import SMSTripFormatter
-from formatters.trip_report import TripReportFormatter
+from output.renderers.sms_trip import SMSTripFormatter
+from output.renderers.trip_report import TripReportFormatter
 
 pytestmark = pytest.mark.live
 

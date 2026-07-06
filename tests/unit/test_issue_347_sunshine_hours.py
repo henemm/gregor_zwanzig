@@ -22,7 +22,7 @@ from app.config import Settings
 from app.metric_catalog import get_metric
 
 import output.renderers.email.helpers as email_helpers
-from formatters.trip_report import TripReportFormatter
+from output.renderers.trip_report import TripReportFormatter
 
 
 def _dp(ts_hour, **kwargs):

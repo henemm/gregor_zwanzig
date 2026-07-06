@@ -94,7 +94,7 @@ def test_compact_summary_respects_segment_window():
     WHEN CompactSummaryFormatter.format_stage_summary aufgerufen wird.
     THEN darf das Summary den Peak von 95 km/h NICHT enthalten.
     """
-    from src.formatters.compact_summary import CompactSummaryFormatter
+    from src.output.renderers.compact_summary import CompactSummaryFormatter
     from app.metric_catalog import build_default_display_config
     
     # Peak 95 um 02:00 UTC, Segment ist 08:00-12:00
@@ -118,7 +118,7 @@ def test_compact_summary_peak_time_matches_window():
     WHEN das Compact Summary generiert wird.
     THEN muss die Uhrzeit des Peaks 13:00 sein (nicht 14:00 oder so).
     """
-    from src.formatters.compact_summary import CompactSummaryFormatter
+    from src.output.renderers.compact_summary import CompactSummaryFormatter
     from app.metric_catalog import build_default_display_config
     
     # Peak 84 um 11:00 UTC (13:00 CEST), Segment 08:00-14:00

@@ -132,7 +132,7 @@ def test_ac4_format_email_passes_profile_through():
     AC-4: TripReportFormatter.format_email(profile=SUMMER_TREKKING) →
     TripReport.html_body enthält #c45a2a + 'Sommer-Trekking'.
     """
-    from src.formatters.trip_report import TripReportFormatter
+    from src.output.renderers.trip_report import TripReportFormatter
     kwargs = _common_kwargs()
     formatter = TripReportFormatter()
     report = formatter.format_email(

@@ -234,7 +234,7 @@ def test_risk_engine_without_exposed_sections_unchanged():
 def test_trip_report_wind_exposition_labels():
     """TripReportFormatter must have WIND_EXPOSITION labels."""
     from app.models import RiskLevel, RiskType
-    from formatters.trip_report import TripReportFormatter
+    from output.renderers.trip_report import TripReportFormatter
 
     labels = TripReportFormatter._RISK_LABELS
     assert (RiskType.WIND_EXPOSITION, RiskLevel.HIGH) in labels
@@ -244,7 +244,7 @@ def test_trip_report_wind_exposition_labels():
 def test_sms_trip_wind_exposition_labels():
     """SMSTripFormatter must have WIND_EXPOSITION labels."""
     from app.models import RiskLevel, RiskType
-    from formatters.sms_trip import _SMS_RISK_LABELS
+    from output.renderers.sms_trip import _SMS_RISK_LABELS
 
     assert (RiskType.WIND_EXPOSITION, RiskLevel.HIGH) in _SMS_RISK_LABELS
     assert (RiskType.WIND_EXPOSITION, RiskLevel.MODERATE) in _SMS_RISK_LABELS

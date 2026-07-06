@@ -245,7 +245,7 @@ class TestFormatterIncludesStageNumber:
 
     def test_subject_contains_stage_number(self):
         """AC-2: Subject enthält 'Etappe 3' wenn Etappe an chronolog. Position 3."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         s1 = _stage("T1", "Erste", date(2026, 10, 1))
         s2 = _stage("T2", "Zweite", date(2026, 10, 2))
@@ -269,7 +269,7 @@ class TestFormatterIncludesStageNumber:
 
     def test_html_body_contains_stage_number(self):
         """AC-1: HTML-Body enthält 'Etappe 3: von Sóller nach Tossals Verds'."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         s1 = _stage("T1", "Erste", date(2026, 10, 1))
         s2 = _stage("T2", "Zweite", date(2026, 10, 2))
@@ -292,7 +292,7 @@ class TestFormatterIncludesStageNumber:
 
     def test_plain_body_contains_stage_number(self):
         """AC-1: Plain-Text-Body enthält 'Etappe 3'."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         s1 = _stage("T1", "Erste", date(2026, 10, 1))
         s2 = _stage("T2", "Zweite", date(2026, 10, 2))

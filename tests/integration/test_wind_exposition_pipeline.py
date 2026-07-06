@@ -208,7 +208,7 @@ class TestTripReportExposedSections:
 
     def test_exposed_sections_passed_to_engine(self):
         """Segment at 2400m + wind 35 km/h → _determine_risk returns WIND_EXPOSITION."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         seg = _make_segment(1, 0.0, 2.0, 2400.0, 2400.0, wind_max=35.0, gust_max=40.0)
         exposed = [ExposedSection(start_km=0.0, end_km=2.0, max_elevation_m=2400.0, exposition_type="GRAT")]
@@ -228,7 +228,7 @@ class TestTripReportExposedSections:
 
     def test_no_exposition_below_threshold(self):
         """All segments under 2000m → no WIND_EXPOSITION risk."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         seg = _make_segment(1, 0.0, 2.0, 1500.0, 1500.0, wind_max=35.0, gust_max=40.0)
 
@@ -245,7 +245,7 @@ class TestTripReportExposedSections:
 
     def test_low_wind_no_exposition_risk(self):
         """Segment at 2400m + wind 25 km/h → no WIND_EXPOSITION risk (under 30 threshold)."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         seg = _make_segment(1, 0.0, 2.0, 2400.0, 2400.0, wind_max=25.0, gust_max=28.0)
         exposed = [ExposedSection(start_km=0.0, end_km=2.0, max_elevation_m=2400.0, exposition_type="GRAT")]
@@ -263,7 +263,7 @@ class TestTripReportExposedSections:
 
     def test_exposition_moderate_risk(self):
         """Wind 35 km/h + exposed → MODERATE WIND_EXPOSITION via _determine_risk."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         seg = _make_segment(1, 0.0, 2.0, 2400.0, 2400.0, wind_max=35.0, gust_max=38.0)
         exposed = [ExposedSection(start_km=0.0, end_km=2.0, max_elevation_m=2400.0, exposition_type="GRAT")]
@@ -281,7 +281,7 @@ class TestTripReportExposedSections:
 
     def test_exposition_high_risk(self):
         """Wind 55 km/h + exposed → HIGH WIND_EXPOSITION via _determine_risk."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         seg = _make_segment(1, 0.0, 2.0, 2400.0, 2400.0, wind_max=55.0, gust_max=65.0)
         exposed = [ExposedSection(start_km=0.0, end_km=2.0, max_elevation_m=2400.0, exposition_type="GRAT")]
@@ -307,7 +307,7 @@ class TestSMSExposedSections:
 
     def test_sms_formatter_accepts_exposed_sections(self):
         """format_sms(segments, exposed_sections=...) should not raise TypeError."""
-        from formatters.sms_trip import SMSTripFormatter
+        from output.renderers.sms_trip import SMSTripFormatter
 
         seg = _make_segment(1, 0.0, 2.0, 1500.0, 1500.0, wind_max=20.0)
 
@@ -321,7 +321,7 @@ class TestSMSExposedSections:
 
     def test_sms_grat_wind_label(self):
         """Exposed segment + wind >= 30 → SMS label 'GratWind'."""
-        from formatters.sms_trip import SMSTripFormatter
+        from output.renderers.sms_trip import SMSTripFormatter
 
         seg = _make_segment(1, 0.0, 2.0, 2400.0, 2400.0, wind_max=35.0, gust_max=40.0)
         exposed = [ExposedSection(start_km=0.0, end_km=2.0, max_elevation_m=2400.0, exposition_type="GRAT")]
@@ -344,7 +344,7 @@ class TestExpositionExceptionHandling:
 
     def test_exposition_service_exception_handled(self):
         """If WindExpositionService raises, report is still generated (no WIND_EXPOSITION)."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
 
         seg = _make_segment(1, 0.0, 2.0, 2400.0, 2400.0, wind_max=35.0, gust_max=40.0)
 
@@ -384,7 +384,7 @@ class TestTripLevelElevationConfig:
         assert len(exposed) > 0, "1600m segment should be exposed with min_elevation_m=1500"
 
         # Now verify risk engine picks it up
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
         formatter = TripReportFormatter()
         formatter.format_email(
             segments=[seg_data],

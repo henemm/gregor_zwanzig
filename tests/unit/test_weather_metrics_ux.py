@@ -103,7 +103,7 @@ class TestCloudEmojiFormatting:
 
     @pytest.fixture()
     def formatter(self):
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
         return TripReportFormatter()
 
     # --- Plain text: emoji only ---
@@ -183,7 +183,7 @@ class TestCapeEmojiFormatting:
 
     @pytest.fixture()
     def formatter(self):
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
         return TripReportFormatter()
 
     # --- Plain text: emoji only ---
@@ -236,7 +236,7 @@ class TestVisibilityLevelFormatting:
 
     @pytest.fixture()
     def formatter(self):
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
         return TripReportFormatter()
 
     def test_visibility_good(self, formatter):
@@ -429,7 +429,7 @@ class TestFmtValFriendlyToggle:
     @pytest.fixture()
     def formatter_friendly(self):
         """Formatter with friendly format ON for cloud/cape/visibility."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
         f = TripReportFormatter()
         f._friendly_keys = {"cloud", "cloud_low", "cloud_mid", "cloud_high", "cape", "visibility"}
         return f
@@ -437,7 +437,7 @@ class TestFmtValFriendlyToggle:
     @pytest.fixture()
     def formatter_raw(self):
         """Formatter with friendly format OFF (empty set)."""
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
         f = TripReportFormatter()
         f._friendly_keys = set()
         return f
@@ -564,7 +564,7 @@ class TestFormatEmailStoresFriendlyKeys:
 
     def test_format_email_sets_friendly_keys(self):
         from datetime import datetime, timezone
-        from formatters.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
         from app.models import (
             MetricConfig, UnifiedWeatherDisplayConfig,
             ForecastDataPoint, ForecastMeta, NormalizedTimeseries,

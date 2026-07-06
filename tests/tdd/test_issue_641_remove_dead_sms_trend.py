@@ -6,8 +6,8 @@ danach GRÜN.
 """
 import inspect
 
-import src.formatters.sms_trip as sms_mod
-from src.formatters.sms_trip import SMSTripFormatter
+import src.output.renderers.sms_trip as sms_mod
+from src.output.renderers.sms_trip import SMSTripFormatter
 
 
 def test_format_sms_has_no_multi_day_trend_param():

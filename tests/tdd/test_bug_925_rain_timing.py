@@ -97,7 +97,7 @@ def _email_first_rain_hour(seg: SegmentWeatherData, threshold: float) -> int | N
 
 class TestAC1RainOnsetHour:
     def test_sms_rain_token_anchors_at_onset_not_segment_start(self):
-        from formatters.sms_trip import SMSTripFormatter
+        from output.renderers.sms_trip import SMSTripFormatter
         seg = _segment_rain_from_11()
         sms = SMSTripFormatter().format_sms([seg], tz=BERLIN, thresholds={"R": 0.2})
         onset = _sms_token_onset_hour(sms, "R")
@@ -113,7 +113,7 @@ class TestAC1RainOnsetHour:
 
 class TestAC2SmsEmailConsistent:
     def test_sms_onset_matches_email_first_rain_hour(self):
-        from formatters.sms_trip import SMSTripFormatter
+        from output.renderers.sms_trip import SMSTripFormatter
         seg = _segment_rain_from_11()
         sms = SMSTripFormatter().format_sms([seg], tz=BERLIN, thresholds={"R": 0.2})
         sms_onset = _sms_token_onset_hour(sms, "R")
@@ -131,7 +131,7 @@ class TestAC2SmsEmailConsistent:
 
 class TestAC3HourlyValueNotSegmentSum:
     def test_rain_token_uses_hourly_value_not_segment_sum(self):
-        from formatters.sms_trip import SMSTripFormatter
+        from output.renderers.sms_trip import SMSTripFormatter
         seg = _segment_rain_from_11()
         sms = SMSTripFormatter().format_sms([seg], tz=BERLIN, thresholds={"R": 0.2})
         m = re.search(r'R[-\d.]+@\d+(?:\(([-\d.]+)@\d+\))?', sms)
@@ -150,7 +150,7 @@ class TestAC3HourlyValueNotSegmentSum:
 
 class TestAC4WindGustHourly:
     def test_gust_peak_anchored_at_real_hour_not_segment_start(self):
-        from formatters.sms_trip import SMSTripFormatter
+        from output.renderers.sms_trip import SMSTripFormatter
         seg = _segment_rain_from_11()
         # Böen-Peak (33) liegt bei 11:00 Ortszeit. Alt: G33@10 (Etappenstart).
         # Neu (per-Stunde): Peak-Wert 33 an echter Stunde 11 → '33@11' im Token.
