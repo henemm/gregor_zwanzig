@@ -13,6 +13,10 @@ Auftragskern hier).
 3. Lokal beweisen: alle ohne Secrets lauffähigen Tests ausführen
    (`go test ./...`, Frontend-Unit-Tests, `uv run pytest <lokal lauffähige Tests>`).
    Protokoll als `TESTLOG.md` im Workspace-Root ablegen — **nicht committen**.
+3b. **PFLICHT bei Python-Änderungen (Lehre aus #1022 R3):** zusätzlich der
+   **CI-äquivalente Lauf** — muss Exit 0 sein, sonst blockt die CI den Deploy:
+   `uv run pytest --ignore=tests/tdd/ --ignore=tests/red/ --ignore=tests/refactor/ --ignore=tests/unit/test_elevation_analysis.py --ignore=tests/unit/test_etappen_config.py --ignore=tests/unit/test_gpx_parser.py --ignore=tests/unit/test_gpx_import_in_trip_dialog.py --ignore=tests/unit/test_gpx_upload_page.py --ignore=tests/unit/test_hybrid_segmentation.py --ignore=tests/unit/test_segment_builder.py -q`
+   Ebenso Pflicht seit #1032: `uv run ruff check src/ tests/` (Lint ist CI-Hard-Gate).
 4. Committen (aussagekräftige Message mit Issue-Nr.) und Branch pushen:
    `git push origin ws/kimi-<issuenr>` (origin = lokales Hauptrepo — das ist die Abgabe).
 5. Fertig melden (an den PO/Claude): Branch-Name + 3-Satz-Zusammenfassung + warum
