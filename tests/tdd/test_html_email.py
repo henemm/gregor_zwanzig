@@ -21,7 +21,7 @@ from datetime import datetime, date
 from email import message_from_string
 
 from app.user import SavedLocation, CompareSubscription, ComparisonResult, LocationResult
-from services.comparison_renderers import render_comparison_html
+from output.renderers.comparison import render_comparison_html
 from services.compare_subscription import run_comparison_for_subscription
 
 

@@ -123,7 +123,7 @@ def test_ac3_comparison_html_profile_eyebrow(minimal_comparison_result):
 
     ERWARTET ROT: render_comparison_html() akzeptiert kein 'profile'-Argument.
     """
-    from services.comparison_renderers import render_comparison_html  # noqa: PLC0415
+    from output.renderers.comparison import render_comparison_html  # noqa: PLC0415
 
     # Mit Profil → Profil-spezifische Signatur
     html_with_profile = render_comparison_html(
@@ -152,7 +152,7 @@ def test_ac4_comparison_html_no_material_colors(minimal_comparison_result):
 
     ERWARTET ROT: Material-Farben noch vorhanden + Design-Tokens noch nicht eingebunden.
     """
-    from services.comparison_renderers import render_comparison_html  # noqa: PLC0415
+    from output.renderers.comparison import render_comparison_html  # noqa: PLC0415
 
     html = render_comparison_html(minimal_comparison_result)
 
@@ -180,7 +180,7 @@ def test_ac5_comparison_text_profile_param_ignored(minimal_comparison_result):
 
     ERWARTET ROT: 'profile'-Keyword wird noch nicht akzeptiert.
     """
-    from services.comparison_renderers import render_comparison_text  # noqa: PLC0415
+    from output.renderers.comparison import render_comparison_text  # noqa: PLC0415
 
     text_with_profile = render_comparison_text(
         minimal_comparison_result,

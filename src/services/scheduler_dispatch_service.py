@@ -207,10 +207,9 @@ def send_one_compare_preset(
     Gemeinsame Versandlogik fuer Daily-Loop und Einzelversand (#627).
     Gibt (top_ort, empfaenger) zurueck. Wirft ValueError wenn kein Empfaenger konfiguriert.
     """
-    from output.renderers.email.compare_html import render_compare_html
+    from output.renderers.comparison import render_compare_email
     from outputs.email import EmailOutput
     from services.comparison_engine import ComparisonEngine
-    from services.comparison_renderers import render_comparison_text
 
     preset_id = preset.get("id", "")
     location_ids = preset.get("location_ids") or []
@@ -247,8 +246,7 @@ def send_one_compare_preset(
 
     name = preset.get("name", preset_id)
     subject = f"Wetter-Vergleich: {name} ({_datetime.now().strftime('%d.%m.%Y')})"
-    html_body = render_compare_html(result, profile=profile)
-    text_body = render_comparison_text(result, profile=profile)
+    html_body, text_body = render_compare_email(result, profile=profile)
     EmailOutput(settings).send(
         subject,
         html_body,

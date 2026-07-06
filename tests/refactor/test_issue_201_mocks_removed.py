@@ -47,6 +47,7 @@ def test_ac3_imports_point_to_services():
     assert (
         "from services.comparison_renderers" in content
         or "from services.compare_subscription" in content
+        or "from output.renderers.comparison" in content
     )
 
 

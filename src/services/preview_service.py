@@ -129,7 +129,31 @@ class PreviewService:
         except Exception:
             stability_result = None
 
-        report = scheduler._formatter.format_email(
+        report = self._render_email(
+            scheduler=scheduler,
+            segment_weather=segment_weather,
+            trip=trip,
+            report_type=report_type,
+            stage_name=stage_name,
+            stage_stats=stage_stats,
+            trip_tz=trip_tz,
+            stability_result=stability_result,
+        )
+        return report, segment_weather, stage_name, trip_tz
+
+    def _render_email(
+        self,
+        scheduler,
+        segment_weather,
+        trip: "Trip",
+        report_type: str,
+        stage_name: str | None,
+        stage_stats,
+        trip_tz,
+        stability_result,
+    ):
+        """Einzelstelle für den E-Mail-Render-Aufruf in der Vorschau."""
+        return scheduler._formatter.format_email(
             segments=segment_weather,
             trip_name=trip.name,
             report_type=report_type,
@@ -141,7 +165,6 @@ class PreviewService:
             stability_result=stability_result,
             report_config=trip.report_config,
         )
-        return report, segment_weather, stage_name, trip_tz
 
     def render_email_preview(
         self,

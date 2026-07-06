@@ -49,13 +49,10 @@ def run_comparison_for_subscription(
 
     # Imports from extracted service modules (Epic #129 Phase A.1)
     # Issue #253: HTML-Renderer kommt jetzt aus output.renderers.email.compare_html;
-    # Plain-Text-Renderer bleibt comparison_renderers.render_comparison_text.
-    from output.renderers.email.compare_html import (
-        _generate_winner_tags,
-        render_compare_html,
-    )
+    # Plain-Text-Renderer lebt in output.renderers.comparison.
+    from output.renderers.comparison import render_compare_email
+    from output.renderers.email.compare_html import _generate_winner_tags
     from services.comparison_engine import ComparisonEngine
-    from services.comparison_renderers import render_comparison_text
 
     # Load locations if not provided
     if all_locations is None:
@@ -138,19 +135,13 @@ def run_comparison_for_subscription(
         getattr(sub, 'activity_profile', None),
     )
 
-    html_body = render_compare_html(
+    html_body, text_body = render_compare_email(
         result,
         profile=getattr(sub, 'activity_profile', None),
+        top_n_details=sub.top_n,
+        enabled_metrics=enabled_metrics,
         warnings=collected_warnings,
-        top_n_details=sub.top_n,
-        enabled_metrics=enabled_metrics,
         winner_tags=winner_tags_dicts,
-    )
-    text_body = render_comparison_text(
-        result,
-        top_n_details=sub.top_n,
-        enabled_metrics=enabled_metrics,
-        profile=getattr(sub, 'activity_profile', None),
     )
 
     # Plain-Text-Warnung bleibt erhalten (Plain-Text-Renderer unveraendert).

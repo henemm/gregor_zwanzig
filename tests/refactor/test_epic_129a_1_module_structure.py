@@ -46,15 +46,15 @@ def test_comparison_engine():
 
 
 def test_comparison_renderers():
-    """AC-2 (renderers): services.comparison_renderers exportiert
+    """AC-2 (renderers): output.renderers.comparison exportiert
     render_comparison_html und render_comparison_text.
     """
-    mod = importlib.import_module("services.comparison_renderers")
+    mod = importlib.import_module("output.renderers.comparison")
     assert hasattr(mod, "render_comparison_html"), (
-        "services.comparison_renderers.render_comparison_html fehlt"
+        "output.renderers.comparison.render_comparison_html fehlt"
     )
     assert hasattr(mod, "render_comparison_text"), (
-        "services.comparison_renderers.render_comparison_text fehlt"
+        "output.renderers.comparison.render_comparison_text fehlt"
     )
 
 
