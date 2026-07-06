@@ -30,6 +30,11 @@ import uuid
 import httpx
 import pytest
 
+from tests.helpers.staging_auth import (  # Bündel H #987: Staging-Basic-Auth
+    httpx_auth,
+    playwright_http_credentials,
+)
+
 STAGING = os.environ.get("GZ_SVELTE_BASE", "https://staging.gregor20.henemm.com")
 API = STAGING  # Go-API läuft hinter SvelteKit-Proxy auf /api/
 
@@ -49,6 +54,7 @@ def _ensure_user(username: str, password: str) -> None:
     resp = httpx.post(
         f"{API}/api/auth/register",
         json={"username": username, "password": password},
+        auth=httpx_auth(),
         timeout=15,
     )
     assert resp.status_code in (201, 409, 429), (
@@ -58,7 +64,9 @@ def _ensure_user(username: str, password: str) -> None:
 
 def _login(username: str, password: str) -> httpx.Client:
     """Gibt einen authentifizierten httpx-Client zurück."""
-    client = httpx.Client(base_url=API, timeout=15, follow_redirects=True)
+    client = httpx.Client(
+        base_url=API, timeout=15, follow_redirects=True, auth=httpx_auth()
+    )
     resp = client.post("/api/auth/login", json={"username": username, "password": password})
     if resp.status_code != 200:
         pytest.skip(f"Login {username!r} fehlgeschlagen ({resp.status_code}) — Staging nicht erreichbar")
@@ -174,7 +182,10 @@ class TestAC1TelegramHintForUnconfiguredUser:
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            ctx = browser.new_context(viewport={"width": 1280, "height": 800})
+            ctx = browser.new_context(
+                viewport={"width": 1280, "height": 800},
+                http_credentials=playwright_http_credentials(),
+            )
             page = ctx.new_page()
             try:
                 _login_playwright(page, USER_NO_TG, TEST_PASS)
@@ -206,7 +217,10 @@ class TestAC1TelegramHintForUnconfiguredUser:
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            ctx = browser.new_context(viewport={"width": 1280, "height": 800})
+            ctx = browser.new_context(
+                viewport={"width": 1280, "height": 800},
+                http_credentials=playwright_http_credentials(),
+            )
             page = ctx.new_page()
             try:
                 _login_playwright(page, USER_NO_TG, TEST_PASS)
@@ -247,7 +261,10 @@ class TestAC2TelegramActiveForConfiguredUser:
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            ctx = browser.new_context(viewport={"width": 1280, "height": 800})
+            ctx = browser.new_context(
+                viewport={"width": 1280, "height": 800},
+                http_credentials=playwright_http_credentials(),
+            )
             page = ctx.new_page()
             try:
                 _login_playwright(page, USER_WITH_TG, TEST_PASS)
@@ -294,7 +311,10 @@ class TestAC4AllChannelsUnconfigured:
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            ctx = browser.new_context(viewport={"width": 1280, "height": 800})
+            ctx = browser.new_context(
+                viewport={"width": 1280, "height": 800},
+                http_credentials=playwright_http_credentials(),
+            )
             page = ctx.new_page()
             try:
                 _login_playwright(page, USER_NO_TG, TEST_PASS)
@@ -327,7 +347,10 @@ class TestAC4AllChannelsUnconfigured:
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            ctx = browser.new_context(viewport={"width": 1280, "height": 800})
+            ctx = browser.new_context(
+                viewport={"width": 1280, "height": 800},
+                http_credentials=playwright_http_credentials(),
+            )
             page = ctx.new_page()
             try:
                 _login_playwright(page, USER_NO_TG, TEST_PASS)

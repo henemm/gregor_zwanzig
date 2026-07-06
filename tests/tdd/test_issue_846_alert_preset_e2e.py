@@ -26,6 +26,10 @@ import uuid
 import pytest
 from playwright.sync_api import sync_playwright
 
+from tests.helpers.staging_auth import (  # Bündel H #987: Staging-Basic-Auth
+    playwright_http_credentials,
+)
+
 BASE = "https://staging.gregor20.henemm.com"
 
 # Bekannter, auf Staging verifizierter Test-Nutzer (mandantenisoliert).
@@ -52,7 +56,7 @@ def _ensure_session_state() -> dict:
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        ctx = browser.new_context()
+        ctx = browser.new_context(http_credentials=playwright_http_credentials())
         page = ctx.new_page()
         page.goto(BASE, wait_until="networkidle")
         result = page.evaluate(
@@ -149,7 +153,11 @@ def test_ac1_preset_dropdown_standard_no_number_inputs():
     state = _ensure_session_state()
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        ctx = browser.new_context(viewport={"width": 1280, "height": 900}, storage_state=state)
+        ctx = browser.new_context(
+            viewport={"width": 1280, "height": 900},
+            storage_state=state,
+            http_credentials=playwright_http_credentials(),
+        )
         page = ctx.new_page()
         try:
             trip_id = _create_legacy_trip(page)
@@ -199,7 +207,11 @@ def test_ac2_select_sensibel_persists_after_reload():
     state = _ensure_session_state()
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        ctx = browser.new_context(viewport={"width": 1280, "height": 900}, storage_state=state)
+        ctx = browser.new_context(
+            viewport={"width": 1280, "height": 900},
+            storage_state=state,
+            http_credentials=playwright_http_credentials(),
+        )
         page = ctx.new_page()
         try:
             trip_id = _create_legacy_trip(page)
@@ -255,7 +267,11 @@ def test_ac5_info_icon_toggles_threshold_popover():
     state = _ensure_session_state()
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        ctx = browser.new_context(viewport={"width": 1280, "height": 900}, storage_state=state)
+        ctx = browser.new_context(
+            viewport={"width": 1280, "height": 900},
+            storage_state=state,
+            http_credentials=playwright_http_credentials(),
+        )
         page = ctx.new_page()
         try:
             trip_id = _create_legacy_trip(page)

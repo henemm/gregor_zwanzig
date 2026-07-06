@@ -28,6 +28,8 @@ from pathlib import Path
 import httpx
 import pytest
 
+from tests.helpers.staging_auth import httpx_auth  # Bündel H #987: Staging-Basic-Auth
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HOOKS_DIR = REPO_ROOT / ".claude" / "hooks"
 VALIDATOR_PATH = HOOKS_DIR / "radar_alert_mail_validator.py"
@@ -54,6 +56,7 @@ def test_ac1_trigger_endpoint_exists_on_staging():
     resp = httpx.post(
         f"{STAGING_BASE}{TRIGGER_PATH}",
         params={"user_id": "default"},
+        auth=httpx_auth(),
         timeout=30.0,
     )
     assert resp.status_code == 200, (
@@ -77,6 +80,7 @@ def test_ac1_trigger_response_contains_trip_info():
     resp = httpx.post(
         f"{STAGING_BASE}{TRIGGER_PATH}",
         params={"user_id": "default"},
+        auth=httpx_auth(),
         timeout=30.0,
     )
     assert resp.status_code == 200, f"Status: {resp.status_code}"

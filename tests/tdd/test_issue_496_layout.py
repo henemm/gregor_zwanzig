@@ -8,6 +8,7 @@ AC-3: Email mit 5 Metriken: alle Spalten ohne Scrollen sichtbar (scrollWidth == 
 AC-4: data-testid="channel-preview-block" und "channel-fidelity-email" vorhanden
 """
 import json
+import os
 import re
 import time
 import uuid
@@ -15,9 +16,15 @@ import uuid
 import pytest
 from playwright.sync_api import sync_playwright
 
+from tests.helpers.staging_auth import (  # Bündel H #987: Staging-Basic-Auth
+    playwright_http_credentials,
+)
+
 BASE = "https://staging.gregor20.henemm.com"
-USER = "validator-issue110"
-PASS = "457442e8830f5ee3afe9afe2d5f0d923"
+# App-Login-Konto (GZ_AUTH_*) — unabhaengig von den rotierenden nginx-Basic-Auth-
+# Validator-Creds (GZ_VALIDATOR_*, siehe playwright_http_credentials()).
+USER = os.environ.get("GZ_AUTH_USER", "default")
+PASS = os.environ.get("GZ_AUTH_PASS", "")
 
 MANY_METRICS = [
     "temperature", "wind_chill", "wind", "gust", "rain_probability",
@@ -86,7 +93,10 @@ def _open_email_preview(page, trip_id):
 def browser_ctx():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        ctx = browser.new_context(viewport={"width": 1440, "height": 900})
+        ctx = browser.new_context(
+            viewport={"width": 1440, "height": 900},
+            http_credentials=playwright_http_credentials(),
+        )
         page = ctx.new_page()
         _login(page)
         yield page

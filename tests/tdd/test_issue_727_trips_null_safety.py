@@ -18,6 +18,11 @@ import httpx
 import pytest
 from playwright.sync_api import sync_playwright
 
+from tests.helpers.staging_auth import (  # Bündel H #987: Staging-Basic-Auth
+    httpx_auth,
+    playwright_http_credentials,
+)
+
 BASE = "https://staging.gregor20.henemm.com"
 USER = "tdd-727"
 PASS = "f2675a9ec77f2b94f58ba740"
@@ -39,7 +44,7 @@ def _ensure_session_state() -> dict:
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        ctx = browser.new_context()
+        ctx = browser.new_context(http_credentials=playwright_http_credentials())
         page = ctx.new_page()
         page.goto(BASE, wait_until="networkidle")
         result = page.evaluate(
@@ -75,7 +80,9 @@ def _http_cookies(cookies: dict) -> httpx.Cookies:
 
 def _ensure_null_stages_trip():
     cookies = _http_cookies(_get_session_cookies())
-    r = httpx.get(f"{BASE}/api/trips/{NULL_STAGES_TRIP_ID}", cookies=cookies)
+    r = httpx.get(
+        f"{BASE}/api/trips/{NULL_STAGES_TRIP_ID}", cookies=cookies, auth=httpx_auth()
+    )
     if r.status_code == 200:
         return
     r = httpx.post(
@@ -87,13 +94,16 @@ def _ensure_null_stages_trip():
             "activity_type": "wandern",
         },
         cookies=cookies,
+        auth=httpx_auth(),
     )
     assert r.status_code in (200, 201, 409), f"Trip anlegen fehlgeschlagen: {r.text}"
 
 
 def _ensure_real_stages_trip():
     cookies = _http_cookies(_get_session_cookies())
-    r = httpx.get(f"{BASE}/api/trips/{REAL_STAGES_TRIP_ID}", cookies=cookies)
+    r = httpx.get(
+        f"{BASE}/api/trips/{REAL_STAGES_TRIP_ID}", cookies=cookies, auth=httpx_auth()
+    )
     if r.status_code == 200:
         return
     r = httpx.post(
@@ -109,6 +119,7 @@ def _ensure_real_stages_trip():
             ],
         },
         cookies=cookies,
+        auth=httpx_auth(),
     )
     assert r.status_code in (200, 201, 409), f"Trip-mit-Etappen anlegen fehlgeschlagen: {r.text}"
 
@@ -126,7 +137,9 @@ def test_ac1_trips_page_no_500():
     _ensure_null_stages_trip()
     cookies = _http_cookies(_get_session_cookies())
 
-    r = httpx.get(f"{BASE}/trips", cookies=cookies, follow_redirects=True)
+    r = httpx.get(
+        f"{BASE}/trips", cookies=cookies, follow_redirects=True, auth=httpx_auth()
+    )
     assert r.status_code == 200, (
         f"FAIL: /trips gibt HTTP {r.status_code} statt 200 zurück. "
         f"Bug #727: stages:null crasht dateRange(). Body: {r.text[:300]}"
@@ -149,7 +162,9 @@ def test_ac2_date_range_dash_for_null_stages():
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        ctx = browser.new_context(storage_state=state)
+        ctx = browser.new_context(
+            storage_state=state, http_credentials=playwright_http_credentials()
+        )
         page = ctx.new_page()
 
         page.goto(f"{BASE}/trips", wait_until="networkidle")
@@ -186,6 +201,7 @@ def test_ac3_etappen_count_zero_for_null_stages():
         ctx = browser.new_context(
             storage_state=state,
             viewport={"width": 1280, "height": 800},
+            http_credentials=playwright_http_credentials(),
         )
         page = ctx.new_page()
         page.goto(f"{BASE}/trips", wait_until="networkidle")
@@ -218,6 +234,7 @@ def test_ac4_real_stages_still_rendered():
         ctx = browser.new_context(
             storage_state=state,
             viewport={"width": 1280, "height": 800},
+            http_credentials=playwright_http_credentials(),
         )
         page = ctx.new_page()
         page.goto(f"{BASE}/trips", wait_until="networkidle")

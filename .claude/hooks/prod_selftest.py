@@ -50,6 +50,27 @@ MAX_WORKERS = 5
 # kein False-FAIL/PARTIAL (Issue #788).
 _URL_SENTINELS = {"n/a", "na", "-", "none", "—", "interaktiv", ""}
 
+# Mail-Preview-Findings für synthetische Test-Trips (#908/#973/#987): Die Trip-ID
+# existiert nie in Produktion (nur auf Staging für den Test angelegt) — eine
+# Prod-Attestation würde zwangsläufig FAIL/PARTIAL erzeugen, obwohl das reale
+# Feature funktioniert. Erkennung: Pfad exakt /api/preview/<trip_id>/email und
+# <trip_id> endet auf ein bekanntes Test-Trip-Suffix (z.B. 'e2e-908-test').
+_PREVIEW_EMAIL_PATH = re.compile(r"^/api/preview/[^/]+/email$")
+_TEST_TRIP_SUFFIX = ("-test", "-tdd", "-adv-test")  # bekannte Staging-Test-Trip-Marker
+
+
+def _is_staging_test_trip_preview(raw_url: str) -> bool:
+    """True wenn `raw_url` ein Mail-Preview-Finding für einen synthetischen
+    Test-Trip ist (Pfad exakt /api/preview/{trip}/email, Trip-ID endet auf ein
+    bekanntes Test-Trip-Suffix). Solche Trips existieren nur auf Staging — die
+    Prod-Attestation wird für sie übersprungen statt False-FAIL/PARTIAL
+    auszulösen."""
+    parsed = urlparse(_strip_ac_suffix(raw_url))
+    if not _PREVIEW_EMAIL_PATH.match(parsed.path or ""):
+        return False
+    trip_id = parsed.path.split("/")[3]  # /api/preview/{trip}/email
+    return trip_id.endswith(_TEST_TRIP_SUFFIX)
+
 
 def _log(msg: str, stream=sys.stdout) -> None:
     print(f"[prod-selftest] {msg}", file=stream)
@@ -158,6 +179,16 @@ def _probe_ac(finding: dict) -> dict:
             "prod_url": "",
             "prod_http": "—",
             "prod_status": "SKIPPED_NO_URL",
+        }
+
+    # Mail-Preview-Test-Trip (#908/#973/#987): Trip existiert nie in Prod →
+    # überspringen statt False-FAIL/PARTIAL.
+    if _is_staging_test_trip_preview(raw_url):
+        return {
+            **finding,
+            "prod_url": "",
+            "prod_http": "—",
+            "prod_status": "SKIPPED_PREVIEW_TEST_TRIP",
         }
 
     prod_url = _staging_to_prod_url(raw_url)

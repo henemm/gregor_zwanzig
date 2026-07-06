@@ -8,6 +8,10 @@ from pathlib import Path
 
 import pytest
 
+from tests.helpers.staging_auth import (  # Bündel H #987: Staging-Basic-Auth
+    playwright_http_credentials,
+)
+
 VALIDATOR_ENV = Path(__file__).resolve().parents[2] / ".claude" / "validator.env"
 if VALIDATOR_ENV.exists():
     for line in VALIDATOR_ENV.read_text().splitlines():
@@ -16,8 +20,10 @@ if VALIDATOR_ENV.exists():
             os.environ.setdefault(k.strip(), v.strip())
 
 STAGING = os.environ.get("GZ_VALIDATION_URL", "https://staging.gregor20.henemm.com")
-USER = os.environ.get("GZ_VALIDATOR_USER", "")
-PASS = os.environ.get("GZ_VALIDATOR_PASS", "")
+# App-Login-Konto (GZ_AUTH_*) — unabhaengig von den rotierenden nginx-Basic-Auth-
+# Validator-Creds (GZ_VALIDATOR_*, siehe playwright_http_credentials()).
+USER = os.environ.get("GZ_AUTH_USER", "default")
+PASS = os.environ.get("GZ_AUTH_PASS", "")
 
 
 @pytest.fixture(scope="module")
@@ -26,11 +32,14 @@ def page():
     from playwright.sync_api import sync_playwright
 
     if not USER or not PASS:
-        pytest.skip("GZ_VALIDATOR_USER/PASS nicht gesetzt")
+        pytest.skip("GZ_AUTH_USER/PASS nicht gesetzt")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        ctx = browser.new_context(viewport={"width": 1024, "height": 680})
+        ctx = browser.new_context(
+            viewport={"width": 1024, "height": 680},
+            http_credentials=playwright_http_credentials(),
+        )
         pg = ctx.new_page()
         pg.goto(f"{STAGING}/login", timeout=20000)
         pg.fill("input[name='username']", USER)
