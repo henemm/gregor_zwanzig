@@ -156,7 +156,7 @@ class TestSaveSubscriptionTopOrtField:
         WHEN: _save_subscription() mit top_ort_letzter_versand='Ischgl' aufgerufen
         THEN: JSON enthält danach top_ort_letzter_versand == 'Ischgl'
         """
-        import api.routers.scheduler as sched_module
+        from services.scheduler_dispatch_service import save_subscription_status
         users_dir = os.path.join(str(tmp_path), "users", "testuser")
         os.makedirs(users_dir, exist_ok=True)
         json_path = os.path.join(users_dir, "compare_subscriptions.json")
@@ -171,7 +171,7 @@ class TestSaveSubscriptionTopOrtField:
             last_status="ok",
             top_ort_letzter_versand="Ischgl",
         )
-        sched_module._save_subscription("testuser", sub, data_root=str(tmp_path))
+        save_subscription_status("testuser", sub, data_root=str(tmp_path))
 
         with open(json_path) as f:
             updated = json.load(f)
@@ -189,7 +189,7 @@ class TestSaveSubscriptionTopOrtField:
         WHEN: _save_subscription() mit top_ort_letzter_versand=None aufgerufen
         THEN: Vorhandener Wert 'Stubai' bleibt erhalten (None überschreibt nicht)
         """
-        import api.routers.scheduler as sched_module
+        from services.scheduler_dispatch_service import save_subscription_status
         users_dir = os.path.join(str(tmp_path), "users", "testuser")
         os.makedirs(users_dir, exist_ok=True)
         json_path = os.path.join(users_dir, "compare_subscriptions.json")
@@ -209,7 +209,7 @@ class TestSaveSubscriptionTopOrtField:
             last_status="error",
             top_ort_letzter_versand=None,
         )
-        sched_module._save_subscription("testuser", sub, data_root=str(tmp_path))
+        save_subscription_status("testuser", sub, data_root=str(tmp_path))
 
         with open(json_path) as f:
             updated = json.load(f)

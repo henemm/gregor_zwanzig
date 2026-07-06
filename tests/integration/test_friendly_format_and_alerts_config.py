@@ -392,29 +392,36 @@ class TestShouldMergeWindDir:
 
 
 class TestDegreesToCompass:
-    """_degrees_to_compass() 8-point conversion."""
+    """degrees_to_compass() 8-point conversion."""
 
     def test_north(self) -> None:
-        assert TripReportFormatter._degrees_to_compass(0) == "N"
-        assert TripReportFormatter._degrees_to_compass(360) == "N"
+        from utils.geo import degrees_to_compass
+        assert degrees_to_compass(0) == "N"
+        assert degrees_to_compass(360) == "N"
 
     def test_east(self) -> None:
-        assert TripReportFormatter._degrees_to_compass(90) == "E"
+        from utils.geo import degrees_to_compass
+        assert degrees_to_compass(90) == "E"
 
     def test_south(self) -> None:
-        assert TripReportFormatter._degrees_to_compass(180) == "S"
+        from utils.geo import degrees_to_compass
+        assert degrees_to_compass(180) == "S"
 
     def test_west(self) -> None:
-        assert TripReportFormatter._degrees_to_compass(270) == "W"
+        from utils.geo import degrees_to_compass
+        assert degrees_to_compass(270) == "W"
 
     def test_northeast(self) -> None:
-        assert TripReportFormatter._degrees_to_compass(45) == "NE"
+        from utils.geo import degrees_to_compass
+        assert degrees_to_compass(45) == "NE"
 
     def test_southwest(self) -> None:
-        assert TripReportFormatter._degrees_to_compass(225) == "SW"
+        from utils.geo import degrees_to_compass
+        assert degrees_to_compass(225) == "SW"
 
     def test_none_returns_empty(self) -> None:
-        assert TripReportFormatter._degrees_to_compass(None) == ""
+        from utils.geo import degrees_to_compass
+        assert degrees_to_compass(None) == ""
 
 
 class TestWindDirMergedFormatting:

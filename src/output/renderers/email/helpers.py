@@ -26,6 +26,7 @@ from app.models import (
     ForecastDataPoint, ThunderLevel,
     UnifiedWeatherDisplayConfig,
 )
+from utils.geo import degrees_to_compass
 from utils.timezone import local_fmt, local_hour
 
 from src.output.renderers.email.design_tokens import FONT_DATA
@@ -76,15 +77,6 @@ def should_merge_wind_dir(dc: UnifiedWeatherDisplayConfig) -> bool:
                 and _effective_format_mode(mc) == "scale"):
             wdir_enabled_scale = True
     return wind_enabled and wdir_enabled_scale
-
-
-def degrees_to_compass(degrees: int | float | None) -> str:
-    """8-point compass for wind direction."""
-    if degrees is None:
-        return ""
-    degrees = int(degrees) % 360
-    directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-    return directions[round(degrees / 45) % 8]
 
 
 # ----------------------------------------------------------------------

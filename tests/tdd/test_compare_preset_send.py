@@ -49,7 +49,7 @@ class TestComparePresetSend:
         RED: api.routers.scheduler._send_compare_preset existiert noch nicht
         → ImportError beim Import.
         """
-        from api.routers.scheduler import _send_compare_preset  # RED: not yet implemented
+        from services.scheduler_dispatch_service import send_compare_preset as _send_compare_preset
 
         user_id = "u1"
         preset = {

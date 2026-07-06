@@ -16,8 +16,6 @@ import inspect
 import json
 import os
 
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # AC-6: CompareSubscription Dataclass hat neue Felder mit korrekten Defaults
@@ -142,13 +140,11 @@ class TestSchedulerWritesRunStatus:
     """Scheduler muss _save_subscription() haben und Status korrekt schreiben."""
 
     def test_save_subscription_function_exists(self):
-        import api.routers.scheduler as sched_module
-        assert hasattr(sched_module, "_save_subscription"), (
-            "api/routers/scheduler.py fehlt _save_subscription()-Funktion"
-        )
+        from services.scheduler_dispatch_service import save_subscription_status
+        assert callable(save_subscription_status)
 
     def test_save_subscription_writes_last_run_to_json(self, tmp_path):
-        import api.routers.scheduler as sched_module
+        from services.scheduler_dispatch_service import save_subscription_status
         users_dir = os.path.join(str(tmp_path), "users", "testuser")
         os.makedirs(users_dir, exist_ok=True)
         json_path = os.path.join(users_dir, "compare_subscriptions.json")
@@ -158,7 +154,7 @@ class TestSchedulerWritesRunStatus:
 
         from app.user import CompareSubscription
         sub = CompareSubscription(id="sub-abc", name="T", last_run=ts, last_status="ok")
-        sched_module._save_subscription("testuser", sub, data_root=str(tmp_path))
+        save_subscription_status("testuser", sub, data_root=str(tmp_path))
 
         with open(json_path) as f:
             updated = json.load(f)
@@ -167,7 +163,7 @@ class TestSchedulerWritesRunStatus:
         assert entry["last_status"] == "ok"
 
     def test_save_subscription_preserves_other_fields(self, tmp_path):
-        import api.routers.scheduler as sched_module
+        from services.scheduler_dispatch_service import save_subscription_status
         users_dir = os.path.join(str(tmp_path), "users", "testuser")
         os.makedirs(users_dir, exist_ok=True)
         json_path = os.path.join(users_dir, "compare_subscriptions.json")
@@ -178,7 +174,7 @@ class TestSchedulerWritesRunStatus:
             )
         from app.user import CompareSubscription
         sub = CompareSubscription(id="abc", name="Keep", last_status="error")
-        sched_module._save_subscription("testuser", sub, data_root=str(tmp_path))
+        save_subscription_status("testuser", sub, data_root=str(tmp_path))
 
         with open(json_path) as f:
             updated = json.load(f)

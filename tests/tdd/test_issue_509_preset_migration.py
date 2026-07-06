@@ -62,7 +62,7 @@ class TestEmpfaengerFallback:
 
         Soll GRÜN bleiben — bestehende Behavior beibehalten wenn kein mail_to.
         """
-        from api.routers.scheduler import _run_compare_presets_daily
+        from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         monkeypatch.setenv("GZ_MAIL_TO", "")  # ENV gewinnt über .env-Datei
         monkeypatch.setenv("GZ_SMTP_HOST", "")  # kein SMTP
@@ -71,7 +71,7 @@ class TestEmpfaengerFallback:
         preset["location_ids"] = ["loc-x"]
         _write_presets(tmp_path, "fallback-user", [preset])
 
-        with caplog.at_level(logging.WARNING, logger="scheduler.trigger"):
+        with caplog.at_level(logging.WARNING, logger="scheduler.dispatch"):
             _run_compare_presets_daily(user_id="fallback-user", data_root=str(tmp_path))
 
         skip_msgs = [r.message for r in caplog.records if "empfaenger" in r.message.lower()]
@@ -87,7 +87,7 @@ class TestEmpfaengerFallback:
         Nach Fix wird empfaenger-Check VOR location-Resolution ausgeführt und
         die Fallback-Meldung (Info-Level) geloggt.
         """
-        from api.routers.scheduler import _run_compare_presets_daily
+        from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         monkeypatch.setenv("GZ_MAIL_TO", "fallback@example.com")
 
@@ -95,7 +95,7 @@ class TestEmpfaengerFallback:
         preset["location_ids"] = ["loc-does-not-exist"]  # nicht leer, aber kein Match
         _write_presets(tmp_path, "fallback-user2", [preset])
 
-        with caplog.at_level(logging.INFO, logger="scheduler.trigger"):
+        with caplog.at_level(logging.INFO, logger="scheduler.dispatch"):
             _run_compare_presets_daily(user_id="fallback-user2", data_root=str(tmp_path))
 
         # Nach Fix: INFO-Meldung "nutze mail_to=..." erscheint (empfaenger-Check vor location-Resolution)

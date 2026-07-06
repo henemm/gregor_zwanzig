@@ -223,23 +223,11 @@ class WeatherMetricsService:
         Convert wind direction in degrees (0-360) to compass direction.
 
         Legacy static method for backward compatibility with compare.py.
-
-        Args:
-            degrees: Wind direction in degrees (0=N, 90=E, 180=S, 270=W)
-
-        Returns:
-            Compass direction string (N, NE, E, SE, S, SW, W, NW, or "-")
+        Delegates to utils.geo.degrees_to_compass (single source of truth).
         """
-        if degrees is None:
-            return "-"
+        from utils.geo import degrees_to_compass as _degrees_to_compass
 
-        # Normalize to 0-360
-        degrees = degrees % 360
-
-        # 8-point compass with 45° sectors
-        directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-        index = round(degrees / 45) % 8
-        return directions[index]
+        return _degrees_to_compass(degrees, none_label="-")
 
     # ============================================================================
     # Legacy Static Methods for compare.py Compatibility

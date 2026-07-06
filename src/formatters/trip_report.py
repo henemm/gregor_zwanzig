@@ -22,9 +22,10 @@ from zoneinfo import ZoneInfo
 if TYPE_CHECKING:
     from services.day_comparison import DayComparison
 
+from utils.geo import degrees_to_compass
 from utils.timezone import local_fmt, local_hour
 
-from app.metric_catalog import build_default_display_config, get_col_defs, get_label_for_field, get_metric, get_metric_by_col_key
+from app.metric_catalog import build_default_display_config, get_col_defs, get_metric, get_metric_by_col_key
 from app.models import (
     ExposedSection,
     ForecastDataPoint,
@@ -686,15 +687,6 @@ class TripReportFormatter:
         from src.output.renderers.email.helpers import should_merge_wind_dir
         return should_merge_wind_dir(dc)
 
-    @staticmethod
-    def _degrees_to_compass(degrees: int | float | None) -> str:
-        """Convert wind direction degrees to 8-point compass (N/NE/E/SE/S/SW/W/NW)."""
-        if degrees is None:
-            return ""
-        degrees = int(degrees) % 360
-        directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-        return directions[round(degrees / 45) % 8]
-
     def _fmt_val(self, key: str, val, html: bool = False, row: dict | None = None) -> str:
         """Format a single cell value. Respects per-metric friendly format toggle."""
         if val is None:
@@ -716,7 +708,7 @@ class TripReportFormatter:
             s = f"{val:.0f}"
             # Append compass direction to wind when merged
             if key == "wind" and row and "_wind_dir_deg" in row:
-                compass = self._degrees_to_compass(row["_wind_dir_deg"])
+                compass = degrees_to_compass(row["_wind_dir_deg"])
                 if compass:
                     s = f"{s} {compass}"
             if html and key == "gust":
@@ -813,7 +805,7 @@ class TripReportFormatter:
         if key == "freeze_lvl":
             return f"{val:.0f}"
         if key == "wind_dir":
-            return self._degrees_to_compass(val) or str(val)
+            return degrees_to_compass(val) or str(val)
         return str(val)
 
     # ------------------------------------------------------------------

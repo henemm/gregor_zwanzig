@@ -16,7 +16,6 @@ KEINE MOCKS — Projektkonvention (CLAUDE.md).
 from __future__ import annotations
 
 import json
-import os
 from datetime import datetime
 from pathlib import Path
 
@@ -80,7 +79,7 @@ class TestSavePresetStatus:
         WHEN: _save_preset_status(user_id, preset_id, top_ort) aufgerufen
         THEN: letzter_versand ist ein ISO-datetime-String, nicht mehr null
         """
-        from api.routers.scheduler import _save_preset_status
+        from services.scheduler_dispatch_service import save_compare_preset_status as _save_preset_status
 
         preset = _make_preset(preset_id="cp-001")
         preset_file = _write_presets(tmp_path, "default", [preset])
@@ -104,7 +103,7 @@ class TestSavePresetStatus:
         WHEN: _save_preset_status(..., top_ort="Schneepatrouille") aufgerufen
         THEN: top_ort_letzter_versand enthält "Schneepatrouille"
         """
-        from api.routers.scheduler import _save_preset_status
+        from services.scheduler_dispatch_service import save_compare_preset_status as _save_preset_status
 
         preset = _make_preset(preset_id="cp-002")
         preset_file = _write_presets(tmp_path, "default", [preset])
@@ -125,7 +124,7 @@ class TestSavePresetStatus:
         WHEN: _save_preset_status() aufgerufen
         THEN: Alle anderen Felder (name, schedule, location_ids, etc.) sind byte-identisch
         """
-        from api.routers.scheduler import _save_preset_status
+        from services.scheduler_dispatch_service import save_compare_preset_status as _save_preset_status
 
         preset = _make_preset(
             preset_id="cp-003",
@@ -161,7 +160,7 @@ class TestSavePresetStatus:
         WHEN: _save_preset_status(..., top_ort=None) aufgerufen (keine gültigen Locations)
         THEN: top_ort_letzter_versand ist None (nicht fehlender Schlüssel)
         """
-        from api.routers.scheduler import _save_preset_status
+        from services.scheduler_dispatch_service import save_compare_preset_status as _save_preset_status
 
         preset = _make_preset(preset_id="cp-004")
         preset_file = _write_presets(tmp_path, "default", [preset])
@@ -183,7 +182,7 @@ class TestSavePresetStatus:
         WHEN: _save_preset_status() für Preset A aufgerufen
         THEN: Preset B bleibt unverändert
         """
-        from api.routers.scheduler import _save_preset_status
+        from services.scheduler_dispatch_service import save_compare_preset_status as _save_preset_status
 
         preset_a = _make_preset(preset_id="cp-A", name="Preset A")
         preset_b = _make_preset(preset_id="cp-B", name="Preset B")
@@ -221,7 +220,7 @@ class TestComparePresetsFilterLogic:
         (Issue #511: weekly-Logik wird in test_issue_511_weekly_scheduler.py separat getestet.)
         """
         import logging
-        from api.routers.scheduler import _run_compare_presets_daily
+        from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         manual_preset = _make_preset(preset_id="cp-manual-skip", schedule="manual", location_ids=[])
         _write_presets(tmp_path, "default", [manual_preset])
@@ -241,7 +240,7 @@ class TestComparePresetsFilterLogic:
         WHEN: _run_compare_presets_daily() aufgerufen
         THEN: Läuft durch ohne Exception, error_count reflektiert das erste Preset
         """
-        from api.routers.scheduler import _run_compare_presets_daily
+        from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         # Preset mit leeren location_ids → sollte error_count erhöhen, nicht crashen
         bad_preset = _make_preset(preset_id="cp-bad", schedule="daily", location_ids=[])
@@ -257,7 +256,7 @@ class TestComparePresetsFilterLogic:
         WHEN: _run_compare_presets_daily() aufgerufen
         THEN: count=0 (keine Fehler, kein Versand)
         """
-        from api.routers.scheduler import _run_compare_presets_daily
+        from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         manual = _make_preset(preset_id="cp-m", schedule="manual")
         _write_presets(tmp_path, "default", [manual])
@@ -271,7 +270,7 @@ class TestComparePresetsFilterLogic:
         WHEN: _run_compare_presets_daily() aufgerufen
         THEN: count=0 (keine Exception, kein Crash)
         """
-        from api.routers.scheduler import _run_compare_presets_daily
+        from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         # Kein File anlegen → muss fail-soft sein
         result = _run_compare_presets_daily(user_id="default", data_root=str(tmp_path))

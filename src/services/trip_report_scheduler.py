@@ -11,7 +11,6 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
-import math
 import os
 import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
@@ -31,21 +30,13 @@ from output.renderers.email.design_tokens import (
     FONT_UI, G_ACCENT, G_DANGER, G_INK, G_PAPER, G_SURFACE_1, WEB_FONT_LINK,
 )
 from outputs.email import EmailOutput
+from utils.geo import degrees_to_compass, haversine_km
 from utils.timezone import tz_for_coords
 
 if TYPE_CHECKING:
     from app.trip import Stage, Trip
 
 logger = logging.getLogger("trip_report_scheduler")
-
-
-def _deg_to_compass(degrees) -> str:
-    """Converts wind degrees to 8-point compass direction."""
-    if degrees is None:
-        return ""
-    directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-    idx = round(float(degrees) / 45) % 8
-    return directions[idx]
 
 
 def _trend_note(thunder: str, precip_mm: float, wind_kmh: int) -> str | None:
@@ -58,20 +49,6 @@ def _trend_note(thunder: str, precip_mm: float, wind_kmh: int) -> str | None:
     if wind_kmh > 40:
         notes.append(f"Böen bis {wind_kmh} km/h")
     return " · ".join(notes) if notes else None
-
-
-def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Calculate great-circle distance between two points in km."""
-    R = 6371.0
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = (
-        math.sin(dlat / 2) ** 2
-        + math.cos(math.radians(lat1))
-        * math.cos(math.radians(lat2))
-        * math.sin(dlon / 2) ** 2
-    )
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 def _parse_hhmm(value: str) -> Optional[time]:
@@ -528,7 +505,7 @@ class TripReportSchedulerService:
         max_elev = max(wp.elevation_m for wp in wps)
 
         for i in range(len(wps) - 1):
-            total_dist += _haversine_km(
+            total_dist += haversine_km(
                 wps[i].lat, wps[i].lon, wps[i + 1].lat, wps[i + 1].lon,
             )
             diff = wps[i + 1].elevation_m - wps[i].elevation_m
@@ -1350,7 +1327,7 @@ class TripReportSchedulerService:
                 temp_hi = int(agg.temp_max_c) if agg.temp_max_c is not None else None
                 precip_mm = float(agg.precip_sum_mm or 0.0)
                 wind_kmh = int(agg.wind_max_kmh or 0)
-                wind_dir = _deg_to_compass(agg.wind_direction_avg_deg)
+                wind_dir = degrees_to_compass(agg.wind_direction_avg_deg)
                 thunder_level = agg.thunder_level_max
                 thunder = thunder_level.name if thunder_level is not None else "NONE"
                 note = _trend_note(thunder, precip_mm, wind_kmh)

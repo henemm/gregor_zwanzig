@@ -1,5 +1,4 @@
-"""
-Staging-only debug endpoints — Issue #830.
+"""Staging-only debug endpoints — Issue #830.
 
 Nur aktiv wenn GZ_ENV=staging. Erlaubt das manuelle Ausloesen des
 Radar-Alert-Pfads fuer IMAP-basierte Validator-Tests.
@@ -30,8 +29,8 @@ def trigger_radar_alert(user_id: str = "default"):
     6. Kein radar_alert_due()-Check, kein Throttle-Eintrag (Test-Seam).
     """
     import sys
+    from datetime import date as date_type, datetime, timedelta, timezone
     from pathlib import Path
-    from datetime import date as date_type, datetime, timezone
     from types import SimpleNamespace
 
     src_dir = Path(__file__).resolve().parents[2] / "src"
@@ -46,10 +45,9 @@ def trigger_radar_alert(user_id: str = "default"):
 
     # Lazy imports (Zirkularimport-Schutz beim Prod-Startup)
     from app.loader import load_all_trips
-    from services.trip_segments import convert_trip_to_segments
+    from services.radar_alert_service import build_onset_alert_message, send_radar_alert_email
     from services.radar_service import RadarNowcastService
-    from outputs.radar_alert import build_radar_alert_body, build_radar_alert_subject
-    from outputs.email import EmailOutput
+    from services.trip_segments import convert_trip_to_segments
     from utils.timezone import tz_for_coords
 
     trips = list(load_all_trips(user_id=user_id))
@@ -95,38 +93,29 @@ def trigger_radar_alert(user_id: str = "default"):
         intensity_label="Leichter Regen",
     )
 
-    # Cooldown-Anzeige (Fallback 2 Stunden)
-    cooldown_min = getattr(trip, "alert_cooldown_minutes", None) or 120
-    if cooldown_min % 60 == 0:
-        n = cooldown_min // 60
-        cooldown_display = f"{n} Stunde" if n == 1 else f"{n} Stunden"
-    else:
-        cooldown_display = f"{cooldown_min} Minuten"
-
-    # Segment-Label (einfach: Segment-ID oder Index)
-    seg_id = getattr(active, "segment_id", None)
-    segment_label = f"Etappe {seg_id}" if seg_id is not None else "Etappe 1"
-
-    onset_text = radar_svc.format_now_text(result, tz=tz, include_source=False)
     source_label = radar_svc.source_label(getattr(result, "source", "test"))
+    onset_local = datetime.now(tz) + timedelta(minutes=result.onset_minutes)
+    onset_time = onset_local.strftime("%H:%M")
+    segment_label = f"Etappe {getattr(active, 'segment_id', 1)}"
 
-    subject = build_radar_alert_subject(trip.name, result, segment_label)
-    body = build_radar_alert_body(
-        onset_text=onset_text,
-        segment_label=segment_label,
-        cooldown_display=cooldown_display,
-        source=source_label,
+    msg = build_onset_alert_message(
+        trip=trip,
+        active=active,
+        onset_minutes=result.onset_minutes,
+        onset_time=onset_time,
+        intensity_label=result.intensity_label,
+        source_label=source_label,
+        is_convective=result.is_convective,
     )
 
     # Empfaenger-Override: immer an gregor-test@henemm.com, SMTP immer über Stalwart.
     # for_testing() leitet smtp_host → mail.henemm.com weg von Resend (Issue #924).
-    test_settings = settings.for_testing().model_copy(update={"mail_to": "gregor-test@henemm.com"})
+    test_settings = settings.for_testing()
     try:
-        EmailOutput(test_settings).send(
-            subject=subject,
-            body=body,
-            plain_text_body=body,
-            mail_type="radar-alert",
+        send_radar_alert_email(
+            test_settings,
+            msg,
+            to="gregor-test@henemm.com",
         )
     except Exception as exc:
         logger.error("Trigger-Endpoint Mail-Versand fehlgeschlagen: %s", exc)

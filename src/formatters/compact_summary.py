@@ -12,6 +12,7 @@ import re
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+from utils.geo import degrees_to_compass
 from utils.timezone import local_hour
 
 from app.models import (
@@ -290,7 +291,7 @@ class CompactSummaryFormatter:
         # Direction
         compass = ""
         if wind_dir_enabled and summary.wind_direction_avg_deg is not None and friendly:
-            compass = f" {self._degrees_to_compass(summary.wind_direction_avg_deg)}"
+            compass = f" {degrees_to_compass(summary.wind_direction_avg_deg)}"
 
         # Speed
         speed_str = f" {int(round(speed))} km/h" if speed is not None else ""
@@ -364,10 +365,3 @@ class CompactSummaryFormatter:
     # Compass direction helper
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _degrees_to_compass(degrees: int | float | None) -> str:
-        if degrees is None:
-            return ""
-        degrees = int(degrees) % 360
-        directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-        return directions[round(degrees / 45) % 8]

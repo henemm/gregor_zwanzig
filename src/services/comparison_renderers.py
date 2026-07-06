@@ -19,15 +19,7 @@ from output.renderers.email.design_tokens import (
 )
 from output.renderers.email.profile_signature import profile_signature
 from services.weather_metrics import HourlyCell, WeatherMetricsService
-
-
-def _degrees_to_compass(degrees: int | None) -> str:
-    """Convert degrees (0-360) to compass direction."""
-    if degrees is None:
-        return "-"
-    directions = ["N", "NO", "O", "SO", "S", "SW", "W", "NW"]
-    idx = int((degrees + 22.5) / 45) % 8
-    return directions[idx]
+from utils.geo import degrees_to_compass
 
 
 def render_comparison_html(result: ComparisonResult, top_n_details: int = 3, enabled_metrics: set | None = None, profile: Optional[ActivityProfile] = None) -> str:
@@ -202,7 +194,7 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3, ena
     elif True:  # wind row
         html += "                <tr>\n                    <td class=\"label\">Wind/Böen</td>\n"
     for i, (wind, gust, direction) in enumerate(zip(winds, gusts, wind_directions)):
-        compass = _degrees_to_compass(direction)
+        compass = degrees_to_compass(direction, language="de", none_label="-")
         if wind is not None and gust is not None:
             text = f"{wind:.0f}/{gust:.0f} {compass}"
         elif wind is not None:
@@ -400,7 +392,7 @@ def render_comparison_text(result: ComparisonResult, top_n_details: int = 3, ena
         # Wind
         wind = loc_result.wind_max or 0
         gust = loc_result.gust_max or wind
-        wind_dir = WeatherMetricsService.degrees_to_compass(loc_result.wind_direction_avg)
+        wind_dir = degrees_to_compass(loc_result.wind_direction_avg, language="de", none_label="-")
         lines.append(f"   Wind: {wind:.0f}/{gust:.0f} {wind_dir}")
 
         # Temperature

@@ -11,10 +11,11 @@ import dataclasses
 import math
 from typing import TYPE_CHECKING, Tuple
 
+from utils.geo import haversine_km
+
 if TYPE_CHECKING:
     from app.trip import Stage
 
-_EARTH_KM = 6371.0088
 _DEFAULT_START = "08:00"
 
 
@@ -30,19 +31,6 @@ def activity_speeds(activity: str) -> Tuple[float, float, float]:
     if activity == "fahrrad_25":
         return (25.0, 600.0, 1000.0)
     return (4.0, 300.0, 500.0)
-
-
-def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Haversine-Distanz in km. R=6371.0088 — identisch Go earthRadiusKm."""
-    rad = math.pi / 180.0
-    d_lat = (lat2 - lat1) * rad
-    d_lon = (lon2 - lon1) * rad
-    a = (
-        math.sin(d_lat / 2) ** 2
-        + math.cos(lat1 * rad) * math.cos(lat2 * rad) * math.sin(d_lon / 2) ** 2
-    )
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return _EARTH_KM * c
 
 
 def _parse_start_minutes(start_time: "str | None") -> int:
@@ -115,7 +103,7 @@ def compute_stage_arrivals(stage: "Stage", activity: str) -> "Stage":
             new_waypoints.append(new_wp)
         else:
             prev = stage.waypoints[i - 1]
-            dist = _haversine_km(prev.lat, prev.lon, wp.lat, wp.lon)
+            dist = haversine_km(prev.lat, prev.lon, wp.lat, wp.lon)
             d_elev = float((wp.elevation_m or 0) - (prev.elevation_m or 0))
             asc = max(0.0, d_elev)
             desc = max(0.0, -d_elev)

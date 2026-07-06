@@ -68,9 +68,9 @@ class TestComparePresetsDailyDedup:
         Loop-Logs auf. Die Bindung an die echte Helper-Meldung (statt an einen
         hartcodierten String) macht den Test robust und beweist die Delegation.
         """
-        from api.routers.scheduler import (
-            _run_compare_presets_daily,
-            _send_one_compare_preset,
+        from services.scheduler_dispatch_service import (
+            run_compare_presets_daily as _run_compare_presets_daily,
+            send_one_compare_preset as _send_one_compare_preset,
         )
         from app.config import Settings
 
@@ -110,7 +110,7 @@ class TestComparePresetsDailyDedup:
         Zwei daily-Presets, beide mit nicht auflösbaren Orten → beide werden
         übersprungen, success_count == 0, KEINE Exception nach außen.
         """
-        from api.routers.scheduler import _run_compare_presets_daily
+        from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         user_id = _fresh_user()
         presets = [
@@ -129,7 +129,7 @@ class TestComparePresetsDailyDedup:
         Der Schedule-Filter lebt in der Loop, nicht im Helper — ein manual-Preset
         darf den Helper gar nicht erst erreichen und keinen Log-Eintrag erzeugen.
         """
-        from api.routers.scheduler import _run_compare_presets_daily
+        from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         user_id = _fresh_user()
         manual = _daily_preset(preset_id="cp-manual", schedule="manual")
@@ -149,7 +149,7 @@ class TestComparePresetsDailyDedup:
         Der Helper wirft hierfür ValueError; die Loop muss diese fangen und das
         Preset überspringen (success_count unverändert), nicht abbrechen.
         """
-        from api.routers.scheduler import _run_compare_presets_daily
+        from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         user_id = _fresh_user()
         preset = _daily_preset(preset_id="cp-no-rcpt")

@@ -14,9 +14,7 @@ Endpoints (tooling-API — nicht versionsstabil, nicht für Frontend):
 from __future__ import annotations
 
 import json
-from datetime import date as date_type
-from datetime import datetime, time, timezone
-from pathlib import Path
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
@@ -24,31 +22,13 @@ from pydantic import BaseModel, Field
 
 from src.app.loader import _parse_trip, get_trips_dir
 from src.app.metric_catalog import format_metric_value
-from src.app.models import (
-    ChangeSeverity,
-    ForecastMeta,
-    GPXPoint,
-    NormalizedTimeseries,
-    Provider,
-    SegmentWeatherData,
-    SegmentWeatherSummary,
-    TripSegment,
-    UnifiedWeatherDisplayConfig,
-    WeatherChange,
-)
-from src.app.profile import ActivityProfile
+from src.app.models import UnifiedWeatherDisplayConfig
 from src.app.trip import Trip
-from src.app.user import ComparisonResult, LocationResult, SavedLocation
-from src.output.renderers.alert.model import AlertMessage, OnsetEvent
-from src.output.renderers.alert.project import to_alert_message
-from src.output.renderers.alert.render import (
-    render_email,
-    render_sms,
-    render_subject,
-    render_telegram,
-)
-from src.output.renderers.email.compare_html import render_compare_html
 from src.services.trip_alert import TripAlertService
+from src.services.validator_render_service import (
+    render_alert_preview,
+    render_compare_email_preview,
+)
 
 router = APIRouter()
 
@@ -241,39 +221,6 @@ class AlertPreviewBody(BaseModel):
     onset: OnsetPayload | None = None
 
 
-def _stub_segment(seg_time: SegmentTimePayload) -> SegmentWeatherData:
-    """Minimal renderer stub. Pattern from tests/unit/test_issue_131_alert_klarheit.py."""
-    today = datetime.now(timezone.utc).date()
-    start_h, start_m = (int(p) for p in seg_time.start.split(":"))
-    end_h, end_m = (int(p) for p in seg_time.end.split(":"))
-    start_dt = datetime.combine(today, time(start_h, start_m), tzinfo=timezone.utc)
-    end_dt = datetime.combine(today, time(end_h, end_m), tzinfo=timezone.utc)
-    segment = TripSegment(
-        segment_id=seg_time.segment_id,
-        start_point=GPXPoint(lat=0.0, lon=0.0, elevation_m=0),
-        end_point=GPXPoint(lat=0.0, lon=0.0, elevation_m=0),
-        start_time=start_dt,
-        end_time=end_dt,
-        duration_hours=max(0.0, (end_dt - start_dt).total_seconds() / 3600.0),
-        distance_km=0.0,
-        ascent_m=0.0,
-        descent_m=0.0,
-    )
-    return SegmentWeatherData(
-        segment=segment,
-        timeseries=NormalizedTimeseries(
-            meta=ForecastMeta(
-                provider=Provider.OPENMETEO, model="validator-stub",
-                run=datetime.now(timezone.utc), grid_res_km=1.0, interp="stub",
-            ),
-            data=[],
-        ),
-        aggregated=SegmentWeatherSummary(),
-        fetched_at=datetime.now(timezone.utc),
-        provider="openmeteo",
-    )
-
-
 @router.post("/api/trips/{trip_id}/alert-preview")
 async def alert_preview(
     trip_id: str,
@@ -295,54 +242,7 @@ async def alert_preview(
             detail="Body muss genau einen von 'onset' ODER 'changes'+'segment_times' enthalten",
         )
 
-    stand_at = datetime.now(timezone.utc).strftime("%H:%M")
-    if has_onset:
-        onset_ev = OnsetEvent(
-            onset_minutes=body.onset.onset_minutes,
-            onset_time=body.onset.onset_time,
-            km_from=body.onset.km_from,
-            km_to=body.onset.km_to,
-            is_convective=body.onset.is_convective,
-            intensity_label=body.onset.intensity_label,
-            source_label=body.onset.source_label,
-        )
-        msg = AlertMessage(
-            trip_short=trip_obj.name[:16],
-            stand_at=stand_at,
-            events=(onset_ev,),
-            source=body.onset.source_label,
-            cooldown_display=body.onset.cooldown_display,
-        )
-    else:
-        changes = [
-            WeatherChange(
-                metric=c.metric,
-                old_value=c.old_value,
-                new_value=c.new_value,
-                delta=c.delta,
-                threshold=c.threshold,
-                severity=ChangeSeverity(c.severity),
-                direction=c.direction,
-                segment_id=c.segment_id,
-            )
-            for c in body.changes
-        ]
-        segments = [_stub_segment(st) for st in body.segment_times]
-        msg = to_alert_message(
-            changes, segments, trip_obj.name,
-            tz=timezone.utc, stand_at=stand_at,
-        )
-    subject = render_subject(msg)
-    email_html, email_plain = render_email(msg)
-    telegram = render_telegram(msg)
-    sms = render_sms(msg)
-    return {
-        "subject": subject,
-        "email_html": email_html,
-        "email_plain": email_plain,
-        "telegram": telegram,
-        "sms": sms,
-    }
+    return render_alert_preview(trip_obj, body)
 
 
 # ---------------------------------------------------------------------------
@@ -398,36 +298,7 @@ async def compare_email_preview(body: CompareEmailPreviewBody):
     Kein Wetterdaten-Fetch, kein SMTP. Pure Render-Funktion.
     """
     try:
-        profile_enum = ActivityProfile(body.profile)
-    except ValueError:
-        raise HTTPException(
-            status_code=422, detail=f"Unbekanntes Profil: {body.profile}"
-        )
-
-    try:
-        target_date = date_type.fromisoformat(body.target_date)
-    except ValueError:
-        raise HTTPException(
-            status_code=422, detail=f"Ungültiges Datum: {body.target_date}"
-        )
-
-    stub_location = SavedLocation(
-        id="preview-1",
-        name="Vorschau-Ort",
-        lat=47.0,
-        lon=11.0,
-        elevation_m=2000,
-    )
-    loc_result = LocationResult(
-        location=stub_location,
-        score=85,
-        error=None,   # KRITISCH: None → result.winner ist nicht None
-    )
-    result = ComparisonResult(
-        locations=[loc_result],
-        time_window=(body.time_window[0], body.time_window[1]),
-        target_date=target_date,
-    )
-    winner_tags_raw = [{"tone": t.tone, "label": t.label} for t in body.winner_tags]
-    html = render_compare_html(result, profile=profile_enum, winner_tags=winner_tags_raw)
+        html = render_compare_email_preview(body)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     return {"html": html}

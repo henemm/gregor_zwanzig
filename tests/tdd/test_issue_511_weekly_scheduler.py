@@ -87,7 +87,7 @@ class TestWeeklyPresetDispatch:
         RED: schlägt aktuell fehl, weil weekly still mit `continue` übersprungen wird
              (keine Log-Ausgabe mit der preset_id)
         """
-        from api.routers.scheduler import _run_compare_presets_daily
+        from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         today_weekday = date.today().weekday()
         preset = _make_preset(
@@ -118,7 +118,7 @@ class TestWeeklyPresetDispatch:
 
         Dieser Test ist von Anfang an grün (vor und nach Fix gleich).
         """
-        from api.routers.scheduler import _run_compare_presets_daily
+        from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         today_weekday = date.today().weekday()
         tomorrow_weekday = (today_weekday + 1) % 7
@@ -149,7 +149,7 @@ class TestWeeklyPresetDispatch:
 
         RED: schlägt aktuell fehl, weil weekly still übersprungen wird (kein Log für cp-weekly-both)
         """
-        from api.routers.scheduler import _run_compare_presets_daily
+        from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         today_weekday = date.today().weekday()
         daily = _make_preset(
@@ -191,7 +191,7 @@ class TestWeeklyPresetDispatch:
         WHEN: _run_compare_presets_daily(user_id) aufgerufen
         THEN: count=0, kein Crash
         """
-        from api.routers.scheduler import _run_compare_presets_daily
+        from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         today_weekday = date.today().weekday()
         tomorrow_weekday = (today_weekday + 1) % 7

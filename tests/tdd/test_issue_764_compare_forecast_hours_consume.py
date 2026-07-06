@@ -90,7 +90,7 @@ def _capture_forecast_hours(preset: dict, location, tmp_path) -> int:
     Location wird über all_locations_cache durchgereicht (kein data/-Seiteneffekt).
     """
     import services.comparison_engine as ce_mod
-    from api.routers.scheduler import _send_one_compare_preset
+    from services.scheduler_dispatch_service import send_one_compare_preset as _send_one_compare_preset
     from app.config import Settings
 
     user_id = preset["_user_id"]

@@ -15,26 +15,13 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, List, Optional
 
 from app.models import GPXPoint, TripSegment
+from utils.geo import haversine_km
 from utils.timezone import tz_for_coords
 
 if TYPE_CHECKING:
     from app.trip import Trip
 
 logger = logging.getLogger("trip_segments")
-
-
-def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Great-circle distance in km."""
-    R = 6371.0
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = (
-        math.sin(dlat / 2) ** 2
-        + math.cos(math.radians(lat1))
-        * math.cos(math.radians(lat2))
-        * math.sin(dlon / 2) ** 2
-    )
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 def _parse_hhmm(value: str) -> Optional[time]:
@@ -194,7 +181,7 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
         elev1 = wp1.elevation_m if wp1.elevation_m else 0
         elev2 = wp2.elevation_m if wp2.elevation_m else 0
         elev_diff = elev2 - elev1
-        dist_km = _haversine_km(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
+        dist_km = haversine_km(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
 
         segment = TripSegment(
             segment_id=i + 1,
