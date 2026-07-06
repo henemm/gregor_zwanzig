@@ -82,7 +82,7 @@ Es existiert **noch keine** dedizierte Modul-Spec für die Auth-Integration. →
 Begründung:
 - **Kein Code-Duplikat:** Frontend-E2E, Python-Tests und der Login-Handler nutzen alle den `POST /api/auth/login`-Pfad. Wenn der Validator denselben Pfad geht, gibt es nur **eine** Stelle, die das Cookie-Format kennt. Bei einer späteren Änderung am Cookie-Format (z.B. JWT statt HMAC) muss nur der Server ran — Validator zieht automatisch mit.
 - **Kein Repo-Secret:** Nur Test-User-Username/Password in `.claude/validator.env` (gitignored). Der `GZ_SESSION_SECRET` muss **nicht** ins Validator-Skript exportiert werden.
-- **Weniger Bash-Komplexität:** Keine HMAC-Bash-Implementierung mit `openssl dgst`-Boilerplate — ein `curl -c cookies.txt -d '{"username":...}' .../api/auth/login` reicht.
+- **Weniger Bash-Komplexität:** Keine HMAC-Bash-Implementierung mit `openssl dgst`-Boilerplate — ein `(umask 077; curl -c cookies.txt -d '{"username":...}' .../api/auth/login)` reicht (die `umask 077`-Subshell verhindert eine world-readable Cookie-Datei).
 - **Realistischere Validierung:** Wenn der Login-Pfad kaputt geht, soll der Validator das auch merken — direkt-HMAC würde diesen Bug verstecken.
 
 Der direkte HMAC-Pfad bleibt **nur** als Fallback denkbar, falls der Validator den Login-Endpoint selbst testet und ihn deshalb nicht voraussetzen kann. Das ist aktuell nicht der Fall.

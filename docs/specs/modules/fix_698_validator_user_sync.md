@@ -90,7 +90,7 @@ Beim Gregor-Login-Check den Cookie-Extrakt explizit auf leer prüfen und eine sp
 Fehlermeldung ausgeben:
 
 ```bash
-SESSION_COOKIE=$(curl -s -c /tmp/validator_cookies.txt ... | grep -o 'session=[^;]*' || true)
+SESSION_COOKIE=$(umask 077; curl -s -c /tmp/validator_cookies.txt ... | grep -o 'session=[^;]*' || true)
 if [ -z "$SESSION_COOKIE" ]; then
   echo "FEHLER: Gregor-Login fehlgeschlagen (kein Cookie) — setup-validator-user.sh ausführen"
   exit 1
