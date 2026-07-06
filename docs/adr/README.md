@@ -78,3 +78,5 @@ ADRs sind nicht nur Konvention, sondern werden erzwungen:
 | [0014](0014-telegram-multi-bubble-format.md) | Telegram-Ausgabe: Multi-Bubble-Tabellenformat ersetzt Prosa | Akzeptiert |
 | [0014](0014-nullgradgrenze-eine-alert-metrik.md) | Nullgradgrenze als eine Alert-Metrik (Nummern-Kollision; war bisher nicht im Index) | Akzeptiert |
 | [0015](0015-dual-stack-zielarchitektur.md) | Dual-Stack (Go + Python) als dauerhafte Zielarchitektur — präzisiert 0001 | Akzeptiert |
+| [0016](0016-amtliche-warnungen-additiver-typ.md) | Amtliche Warnungen als additiver externer Alert-Typ (Nachtrag im Index) | Akzeptiert |
+| [0017](0017-output-paket-konsolidierung.md) | Ein Output-Paket: `src/output/` mit `renderers/` + `channels/`; `formatters/`+`outputs/` aufgelöst | **Vorgeschlagen** (#1026) |
