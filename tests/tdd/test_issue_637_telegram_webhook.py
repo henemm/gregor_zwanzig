@@ -96,7 +96,7 @@ def test_webhook_processes_status_command(monkeypatch):
         fake_process,
     )
     monkeypatch.setattr(
-        "services.inbound_telegram_reader.TelegramOutput.send",
+        "services.notification_service.TelegramOutput.send",
         lambda self, subject, body: None,
     )
 
@@ -154,7 +154,7 @@ def test_webhook_multi_user_routing_no_cross_leak(monkeypatch):
             "services.inbound_telegram_reader.load_all_trips", capture_load
         )
         monkeypatch.setattr(
-            "services.inbound_telegram_reader.TelegramOutput.send",
+            "services.notification_service.TelegramOutput.send",
             lambda self, subject, body: None,
         )
 
@@ -221,7 +221,7 @@ def test_webhook_idempotent_duplicate_update(monkeypatch):
         fake_process,
     )
     monkeypatch.setattr(
-        "services.inbound_telegram_reader.TelegramOutput.send",
+        "services.notification_service.TelegramOutput.send",
         lambda self, subject, body: None,
     )
 

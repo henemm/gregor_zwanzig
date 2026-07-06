@@ -97,7 +97,7 @@ def test_process_start_command_sends_confirmation_on_success(monkeypatch):
         confirmation_calls.append((subject, body))
 
     monkeypatch.setattr(
-        'services.inbound_telegram_reader.TelegramOutput.send',
+        'services.notification_service.TelegramOutput.send',
         capture_send,
     )
 
@@ -137,7 +137,7 @@ def test_process_start_command_no_confirmation_on_failure(monkeypatch):
         confirmation_calls.append((subject, body))
 
     monkeypatch.setattr(
-        'services.inbound_telegram_reader.TelegramOutput.send',
+        'services.notification_service.TelegramOutput.send',
         capture_send,
     )
 

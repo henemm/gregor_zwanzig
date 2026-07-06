@@ -2,7 +2,7 @@
 Inbound Telegram Reader — Bot API long-polling for trip commands.
 
 Polls getUpdates for new messages, extracts commands (free-text, no ### prefix),
-delegates to TripCommandProcessor, and sends confirmation via TelegramOutput.
+delegates to TripCommandProcessor, and sends confirmations via NotificationService.
 
 SPEC: docs/specs/modules/inbound_telegram_reader.md v1.0
 """
@@ -17,7 +17,7 @@ import httpx
 from app.config import Settings
 from app.loader import load_all_trips
 from app.trip import Trip
-from outputs.telegram import TelegramOutput
+from services.notification_service import NotificationService
 from services.trip_command_processor import (
     CommandResult,
     InboundMessage,
@@ -86,6 +86,7 @@ class InboundTelegramReader:
     def __init__(self) -> None:
         self._offset: int = 0
         self.sent_message_ids: list[int] = []  # Issue #686: collected for observability + cleanup
+        self._notification_service = NotificationService()
 
     def poll_and_process(self, settings: Settings) -> int:
         """Long-polling: holt neue Updates, verarbeitet Befehle.
@@ -167,9 +168,11 @@ class InboundTelegramReader:
         # Aktiven Trip ermitteln (user-scoped)
         trip = self._find_active_trip(user_id)
         if not trip:
-            mid = TelegramOutput(user_settings).send(
-                "Fehler",
-                "Kein aktiver Trip gefunden. Erstelle oder aktiviere einen Trip auf gregor20.henemm.com",
+            mid = self._notification_service.send_telegram_message(
+                chat_id=chat_id,
+                subject="Fehler",
+                body="Kein aktiver Trip gefunden. Erstelle oder aktiviere einen Trip auf gregor20.henemm.com",
+                settings=user_settings,
             )
             if mid is not None:
                 self.sent_message_ids.append(mid)
@@ -178,9 +181,11 @@ class InboundTelegramReader:
         # Befehl parsen
         key, value = self._parse_command(text)
         if key is None:
-            mid = TelegramOutput(user_settings).send(
-                "Unbekannter Befehl",
-                "Bekannte Befehle: heute, morgen, jetzt, gewitter, ruhetag, status, stop, weiter, hilfe",
+            mid = self._notification_service.send_telegram_message(
+                chat_id=chat_id,
+                subject="Unbekannter Befehl",
+                body="Bekannte Befehle: heute, morgen, jetzt, gewitter, ruhetag, status, stop, weiter, hilfe",
+                settings=user_settings,
             )
             if mid is not None:
                 self.sent_message_ids.append(mid)
@@ -208,37 +213,46 @@ class InboundTelegramReader:
         if key in _QUERY_KEYS:
             # Loading-Message senden, dann Wetterdaten on-demand holen,
             # dann in-place ersetzen (AC-4)
-            out = TelegramOutput(user_settings)
-            loading_mid = out.send("⏳", "⏳ Wetter wird geladen...")
+            loading_mid = self._notification_service.send_telegram_message(
+                chat_id=chat_id,
+                subject="⏳",
+                body="⏳ Wetter wird geladen...",
+                settings=user_settings,
+            )
             result: CommandResult = TripCommandProcessor().process(inbound)
             # Issue #1007: heute/morgen haben bereits das volle Briefing per
             # Bubbles verschickt — die Lade-Nachricht braucht keine separate
             # Bestätigung mehr, nur noch das Aufräumen.
             if result.suppress_email_reply:
                 if loading_mid is not None:
-                    out.delete_message(chat_id, loading_mid)
+                    self._notification_service.delete_telegram_message(
+                        chat_id=chat_id,
+                        message_id=loading_mid,
+                        settings=user_settings,
+                    )
             elif loading_mid is not None:
-                out.edit_message_text(
-                    chat_id,
-                    loading_mid,
-                    f"[{result.confirmation_subject}]\n\n{result.confirmation_body}",
+                self._notification_service.edit_telegram_message_text(
+                    chat_id=chat_id,
+                    message_id=loading_mid,
+                    text=f"[{result.confirmation_subject}]\n\n{result.confirmation_body}",
+                    settings=user_settings,
                     reply_markup=result.reply_markup,
                 )
                 self.sent_message_ids.append(loading_mid)
             else:
-                mid = TelegramOutput(user_settings).send(
-                    result.confirmation_subject,
-                    result.confirmation_body,
-                    reply_markup=result.reply_markup,
+                mid = self._notification_service.send_command_reply_telegram(
+                    result=result,
+                    chat_id=chat_id,
+                    settings=user_settings,
                 )
                 if mid is not None:
                     self.sent_message_ids.append(mid)
         else:
             result = TripCommandProcessor().process(inbound)
-            mid = TelegramOutput(user_settings).send(
-                result.confirmation_subject,
-                result.confirmation_body,
-                reply_markup=result.reply_markup,
+            mid = self._notification_service.send_command_reply_telegram(
+                result=result,
+                chat_id=chat_id,
+                settings=user_settings,
             )
             if mid is not None:
                 self.sent_message_ids.append(mid)
@@ -258,7 +272,6 @@ class InboundTelegramReader:
         message_id = msg.get("message_id")
 
         user_id, user_settings = self._resolve_user_for_chat(chat_id, settings)
-        out = TelegramOutput(user_settings)
         try:
             body = self._callback_to_body(data)  # None bei unbekannt
             if body and message_id is not None and chat_id:
@@ -277,15 +290,19 @@ class InboundTelegramReader:
                     # volle Briefing per Bubbles verschickt — keine separate
                     # Bestätigung mehr in die alte Nachricht editieren.
                     if not result.suppress_email_reply:
-                        out.edit_message_text(
-                            chat_id,
-                            message_id,
-                            f"[{result.confirmation_subject}]\n\n{result.confirmation_body}",
+                        self._notification_service.edit_telegram_message_text(
+                            chat_id=chat_id,
+                            message_id=message_id,
+                            text=f"[{result.confirmation_subject}]\n\n{result.confirmation_body}",
+                            settings=user_settings,
                             reply_markup=result.reply_markup,
                         )
         finally:
             if cq_id:
-                out.answer_callback_query(cq_id)
+                self._notification_service.answer_telegram_callback_query(
+                    callback_query_id=cq_id,
+                    settings=user_settings,
+                )
         return True
 
     def _callback_to_body(self, data: str) -> str | None:
@@ -350,9 +367,11 @@ class InboundTelegramReader:
                 logger.info(f"Telegram chat_id {chat_id} via token registriert")
                 try:
                     confirm_settings = settings.model_copy(update={"telegram_chat_id": chat_id})
-                    TelegramOutput(confirm_settings).send(
-                        "Verbunden",
-                        "✓ Du bist jetzt mit Gregor verbunden! Sende 'hilfe' für verfügbare Befehle.",
+                    self._notification_service.send_telegram_message(
+                        chat_id=chat_id,
+                        subject="Verbunden",
+                        body="✓ Du bist jetzt mit Gregor verbunden! Sende 'hilfe' für verfügbare Befehle.",
+                        settings=confirm_settings,
                     )
                 except Exception as ce:
                     logger.warning(f"Bestätigungsnachricht fehlgeschlagen: {ce}")

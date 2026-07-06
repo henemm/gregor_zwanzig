@@ -26,7 +26,11 @@ from output.renderers.alert.render import (
 from output.renderers.email.design_tokens import (
     FONT_UI, G_ACCENT, G_DANGER, G_INK, G_PAPER, G_SURFACE_1, WEB_FONT_LINK,
 )
+from outputs.base import OutputError
 from outputs.email import EmailOutput
+from outputs.sms import SMSOutput
+from outputs.telegram import TelegramOutput
+from services.trip_command_processor import CommandResult
 from utils.timezone import local_fmt
 
 if TYPE_CHECKING:
@@ -220,7 +224,6 @@ class NotificationService:
         telegram_fully_sent = True
         if request.send_sms and self._settings.can_send_sms():
             try:
-                from outputs.sms import SMSOutput
                 SMSOutput(self._settings).send(
                     subject=report.email_subject,
                     body=report.sms_text or report.email_plain,
@@ -231,8 +234,6 @@ class NotificationService:
 
         # Telegram
         if request.send_telegram and self._settings.can_send_telegram():
-            from outputs.base import OutputError
-            from outputs.telegram import TelegramOutput
 
             bubbles = report.telegram_bubbles or [report.email_plain]
             for i, bubble_text in enumerate(bubbles):
@@ -291,7 +292,6 @@ class NotificationService:
 
         if send_sms and self._settings.can_send_sms():
             try:
-                from outputs.sms import SMSOutput
                 SMSOutput(self._settings).send(subject=subject, body=text)
                 sent_channels.append("sms")
             except Exception as e:
@@ -299,7 +299,6 @@ class NotificationService:
 
         if send_telegram and self._settings.can_send_telegram():
             try:
-                from outputs.telegram import TelegramOutput
                 TelegramOutput(self._settings).send(subject=subject, body=text)
                 sent_channels.append("telegram")
             except Exception as e:
@@ -420,7 +419,6 @@ class NotificationService:
         if "telegram" in effective_channels and self._settings.can_send_telegram():
             sent_channels.append("telegram")
             try:
-                from outputs.telegram import TelegramOutput
                 TelegramOutput(self._settings).send(
                     subject=subject,
                     body=telegram_body,
@@ -434,12 +432,121 @@ class NotificationService:
         if "sms" in effective_channels and self._settings.can_send_sms():
             sent_channels.append("sms")
             try:
-                from outputs.sms import SMSOutput
                 SMSOutput(self._settings).send(subject=subject, body=sms_body)
             except Exception as e:
                 _log_error("sms", e)
 
         return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
+
+    # ------------------------------------------------------------------
+    # Inbound command replies (Issue #1024)
+    # ------------------------------------------------------------------
+
+    def send_command_reply_email(
+        self, result: CommandResult, settings: Settings,
+    ) -> None:
+        """Sendet eine Command-Bestätigung per E-Mail."""
+        try:
+            EmailOutput(settings).send(
+                subject=result.confirmation_subject,
+                body=result.confirmation_body,
+                html=False,
+            )
+            logger.info(f"Confirmation sent: {result.confirmation_subject}")
+        except Exception as e:
+            logger.error(f"Failed to send confirmation: {e}")
+
+    def send_command_reply_telegram(
+        self,
+        result: CommandResult,
+        chat_id: str,
+        settings: Settings,
+    ) -> int | None:
+        """Sendet eine Command-Bestätigung als Telegram-Nachricht."""
+        try:
+            kwargs = {
+                "subject": result.confirmation_subject,
+                "body": result.confirmation_body,
+            }
+            if result.reply_markup is not None:
+                kwargs["reply_markup"] = result.reply_markup
+            return TelegramOutput(settings).send(**kwargs)
+        except Exception as e:
+            logger.error(f"Telegram command reply failed for {chat_id}: {e}")
+            return None
+
+    def send_telegram_message(
+        self,
+        *,
+        chat_id: str,
+        subject: str,
+        body: str,
+        settings: Settings,
+        reply_markup: dict | None = None,
+    ) -> int | None:
+        """Sendet eine einfache Telegram-Nachricht (z.B. Fehlerhinweis)."""
+        try:
+            kwargs = {"subject": subject, "body": body}
+            if reply_markup is not None:
+                kwargs["reply_markup"] = reply_markup
+            return TelegramOutput(settings).send(**kwargs)
+        except Exception as e:
+            logger.error(f"Telegram message failed for {chat_id}: {e}")
+            return None
+
+    def edit_telegram_message_text(
+        self,
+        *,
+        chat_id: str,
+        message_id: int,
+        text: str,
+        settings: Settings,
+        reply_markup: dict | None = None,
+    ) -> bool:
+        """Editiert eine vorhandene Telegram-Nachricht in-place."""
+        from outputs.telegram import TelegramOutput
+        try:
+            TelegramOutput(settings).edit_message_text(
+                chat_id,
+                message_id,
+                text,
+                reply_markup=reply_markup,
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Telegram edit_message_text failed for {chat_id}/{message_id}: {e}")
+            return False
+
+    def delete_telegram_message(
+        self,
+        *,
+        chat_id: str,
+        message_id: int,
+        settings: Settings,
+    ) -> bool:
+        """Löscht eine Telegram-Nachricht."""
+        from outputs.telegram import TelegramOutput
+        try:
+            TelegramOutput(settings).delete_message(chat_id, message_id)
+            return True
+        except Exception as e:
+            logger.error(f"Telegram delete_message failed for {chat_id}/{message_id}: {e}")
+            return False
+
+    def answer_telegram_callback_query(
+        self,
+        *,
+        callback_query_id: str,
+        settings: Settings,
+    ) -> bool:
+        """Beantwortet eine Telegram Callback Query (Spinner beenden)."""
+        from outputs.telegram import TelegramOutput
+        try:
+            TelegramOutput(settings).answer_callback_query(callback_query_id)
+            return True
+        except Exception as e:
+            logger.error(f"Telegram answer_callback_query failed for {callback_query_id}: {e}")
+            return False
 
     # ------------------------------------------------------------------
     # Internals

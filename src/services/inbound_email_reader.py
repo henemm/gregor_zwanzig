@@ -19,7 +19,7 @@ from email.header import decode_header, make_header
 
 from app.config import Settings
 from app.loader import load_all_trips
-from outputs.email import EmailOutput
+from services.notification_service import NotificationService
 from services.trip_command_processor import (
     CommandResult,
     InboundMessage,
@@ -43,6 +43,9 @@ class InboundEmailReader:
     _REPLY_PREFIXES = re.compile(
         r"^(Re|Fwd|AW|WG|Antwort|SV):\s*", re.IGNORECASE,
     )
+
+    def __init__(self) -> None:
+        self._notification_service = NotificationService()
 
     def poll_and_process(self, settings: Settings) -> int:
         """
@@ -126,7 +129,7 @@ class InboundEmailReader:
                 trip_name=trip_name,
             )
             if user_settings.can_send_email():
-                self._send_email_reply(result, user_settings)
+                self._notification_service.send_command_reply_email(result, user_settings)
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0
 
@@ -149,24 +152,11 @@ class InboundEmailReader:
         # das Kommando hat bereits das volle Briefing verschickt (Issue #1007:
         # heute/morgen) — dann IST das Briefing die Antwort, keine Doppel-Mail.
         if user_settings.can_send_email() and not result.suppress_email_reply:
-            self._send_email_reply(result, user_settings)
+            self._notification_service.send_command_reply_email(result, user_settings)
 
         # 7. Mark as read
         imap.store(uid, "+FLAGS", "\\Seen")
         return 1
-
-    def _send_email_reply(self, result: CommandResult, settings: Settings) -> None:
-        """Send confirmation email reply."""
-        try:
-            email_output = EmailOutput(settings)
-            email_output.send(
-                subject=result.confirmation_subject,
-                body=result.confirmation_body,
-                html=False,
-            )
-            logger.info(f"Confirmation sent: {result.confirmation_subject}")
-        except Exception as e:
-            logger.error(f"Failed to send confirmation: {e}")
 
     def _strip_reply_prefixes(self, subject: str) -> str:
         """Recursively remove Re:, AW:, Fwd:, WG: etc."""

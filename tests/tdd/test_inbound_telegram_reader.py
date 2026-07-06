@@ -249,7 +249,7 @@ def test_inbound_message_channel_is_telegram(monkeypatch):
         fake_process,
     )
     monkeypatch.setattr(
-        "services.inbound_telegram_reader.TelegramOutput.send",
+        "services.notification_service.TelegramOutput.send",
         lambda self, subject, body, **kwargs: None,
     )
 

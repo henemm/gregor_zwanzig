@@ -64,18 +64,14 @@ class TestGateErrorNoTripName:
         # _extract_trip_name must return None for bare subjects
         assert reader._extract_trip_name("startddatum") is None
 
-        # The key assertion: _process_single should send an error reply
-        # We test this by checking the CommandResult the reader would create
-        # This requires the reader to construct a CommandResult for gate errors
-        #
-        # For now, we verify indirectly: the reader must import CommandResult
-        assert hasattr(reader, '_send_email_reply'), "Reader must have _send_email_reply method"
-
-        # The REAL test: when we trigger _process_single with a no-bracket subject,
-        # it should attempt to send an error reply.
-        # We verify by checking that the code path creates a CommandResult
-        # with "Befehl nicht erkannt" subject.
-        # This test will PASS after the fix adds error replies to _process_single.
+        # The key assertion: _process_single should send an error reply via the
+        # NotificationService (Issue #1024: Inbound-Reader über NotificationService).
+        assert hasattr(reader, '_notification_service'), (
+            "Reader must delegate replies to NotificationService"
+        )
+        assert hasattr(reader._notification_service, 'send_command_reply_email'), (
+            "NotificationService must provide send_command_reply_email"
+        )
 
     def test_extract_trip_name_returns_none_for_bare_subject(self):
         """Baseline: bare subject returns None (existing behavior, should stay)."""
