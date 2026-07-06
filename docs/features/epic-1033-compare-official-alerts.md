@@ -1,17 +1,19 @@
 # Epic 1033: Amtliche Alerts im Orts-Vergleich
 
-**Status:** Geplant (Slices #1034–#1037 offen — 2026-07-06)
+**Status:** Geplant (Slices #1034–#1037, #1040 offen — 2026-07-06)
 **Epic Scope:** Compare-Mail (2 Tabellen + Winner-Box, ≥3 Orte) zeigt zusätzlich amtliche
-Behörden-Warnungen pro Ort, sofern eine Datenquelle für den Ort zuständig ist.
+Behörden-Warnungen pro Ort, sofern eine Datenquelle für den Ort zuständig ist; die Anzeige ist
+pro Orts-Vergleich ein-/ausschaltbar (Slice 5, #1040).
 **Related Specs:**
 - `docs/specs/modules/issue_1034_official_alerts_foundation.md` (Slice 1 — Fundament)
 - `docs/specs/modules/issue_1035_official_alerts_vigilance.md` (Slice 2 — Météo-France Vigilance)
+- `docs/specs/modules/issue_1040_official_alerts_config_toggle.md` (Slice 5 — Konfiguration/Checkbox)
 - `docs/specs/modules/issue_1036_official_alerts_meteo_forets.md` (Slice 3 — Météo des forêts)
 - `docs/specs/modules/issue_1037_official_alerts_massif_closure.md` (Slice 4 — Massiv-Sperrungen)
 
 **Related ADR:** `docs/adr/0016-amtliche-warnungen-additiver-typ.md`
 
-**Child Issues:** #1034, #1035, #1036, #1037 (alle Teil von Epic #1033)
+**Child Issues:** #1034, #1035, #1040, #1036, #1037 (alle Teil von Epic #1033)
 
 ---
 
@@ -36,10 +38,14 @@ Dieses Epic bringt drei amtliche französische Datenquellen additiv in die Compa
    Alpes-Maritimes, Bouches-du-Rhône, Korsika) — dritte Priorität, aber hoher konkreter
    Urlaubs-Mehrwert im Var; architektonisch der aufwendigste Slice
 
+Zusätzlich (PO-Anforderung 2026-07-06): Die amtlichen Warnungen müssen **pro Orts-Vergleich
+ein-/ausschaltbar** sein — eine Checkbox im Editor (Slice 5, Issue #1040).
+
 **Nutzerfall:** Ein Nutzer vergleicht vor einer Reise mehrere mögliche Orte. Neben der reinen
 Wetterprognose sieht er sofort, ob für einen Ort eine amtliche Wetterwarnung gilt, hohe
 Waldbrandgefahr herrscht oder ein zugehöriges Wander-Massiv aktuell gesperrt ist — ohne eine
-zweite Quelle konsultieren zu müssen.
+zweite Quelle konsultieren zu müssen. Wer die Warnungen nicht sehen möchte, schaltet sie im
+Editor mit einer Checkbox ab.
 
 ---
 
@@ -111,6 +117,29 @@ schlicht keine zusätzliche amtliche Warnung für den betroffenen Ort.
 | `src/output/renderers/email/compare_html.py` (`render_compare_html`) | Badge/Zeile pro Ort, farbcodiert nach Level |
 | `src/services/comparison_renderers.py` (`render_comparison_text`) | Plain-Text-Parität |
 
+### Konfigurierbarkeit (Slice 5, PO-Anforderung 2026-07-06)
+
+Amtliche Warnungen sind pro Orts-Vergleich ein-/ausschaltbar, Default an:
+
+- **Preset-Feld:** `internal/model/compare_preset.go` (`ComparePreset.OfficialAlertsEnabled *bool`,
+  Pointer-Muster analog dem bestehenden `Weekday *int` — `nil` = "im JSON nicht gesetzt", Default
+  `true` wird beim Lesen interpretiert, nie beim Schreiben erzwungen).
+- **Merge-Pflicht:** `internal/handler/compare_preset.go` (`UpdateComparePresetHandler`) muss das
+  Feld nach demselben Read-Modify-Write-Muster behandeln wie `ForecastHours`/`PreviousSchedule`
+  (bereits im Handler vorhanden) — sonst Datenverlust bei Clients, die das Feld nicht kennen.
+- **Python-Engine:** `ComparisonEngine.run()` bekommt `include_official_alerts: bool = True`; bei
+  `False` wird `get_official_alerts_for_location()` für keine Location aufgerufen — **kein
+  Fetch**, nicht nur ein ausgeblendeter Renderer-Block. `send_one_compare_preset()`
+  (`src/services/scheduler_dispatch_service.py`, gemeinsamer Pfad für täglichen Scheduler-Lauf
+  und manuellen "Senden"-Button) liest das Flag aus dem Preset-Dict und reicht es durch.
+- **Frontend:** Checkbox im Compare-Editor (`frontend/src/lib/components/compare/`), wiederverwendet
+  ein bestehendes Form-Atom (`atoms/Switch.svelte` oder `ui/checkbox`) — keine neue
+  UI-Architektur.
+- **Wichtige Abgrenzung:** Der Legacy-Pfad `CompareSubscription`/`compare_subscriptions.json`
+  (Issue #456, `/api/subscriptions/{id}/send`) ist außerhalb des produktiven Scheduler-/
+  Editor-Flusses und wird von Slice 5 nicht angefasst — die einzige Quelle der Wahrheit für den
+  Orts-Vergleich ist `compare_presets.json` (Go-Modell, editiert im Frontend).
+
 ### Aus Vorgängerprojekt wiederverwendbare Muster (nur als Referenz, nicht kopiert)
 
 Ein früheres, nicht in Produktion befindliches Projekt (`weather_email_autobot`) enthält bereits
@@ -159,6 +188,13 @@ sowohl das primäre Côte-d'Azur-Szenario als auch GR20/Korsika über denselben 
 Erweiterung auf weitere Départements oder echte Polygon-Geometrie ist inkrementell möglich, ohne
 den Mechanismus zu ändern.
 
+### Slice 5: Konfiguration — „Amtliche Warnungen anzeigen" (Issue #1040)
+
+Full-Stack-Slice (Go-Modell/Handler + Python-Engine + Svelte-Editor): bool-Feld am
+Compare-Preset, Default an, Checkbox im Editor, `ComparisonEngine.run()` überspringt bei
+ausgeschaltetem Flag den Fetch komplett (nicht nur die Anzeige). Baut nur auf #1034 auf, ist
+aber erst nach #1035 sinnvoll nutzbar (siehe Details oben unter "Konfigurierbarkeit").
+
 ---
 
 ## Risiken
@@ -174,6 +210,9 @@ den Mechanismus zu ändern.
 - **Neue Recherche-Unsicherheit (Slice 4):** Massiv-Zonen für Var/Alpes-Maritimes/
   Bouches-du-Rhône müssen erstmals kuratiert werden (anders als Korsika, wo bereits fachlich
   verifiziertes GR20-Material vorliegt).
+- **Slice 5 berührt drei Schichten parallel** (Go-Preset-Modell + Python-Engine +
+  Svelte-Editor) — Read-Modify-Write-Merge im Go-Handler ist Pflicht (Projektregel
+  Daten-Schema-Reworks), sonst Risiko eines Datenverlusts bei anderen Preset-Feldern.
 
 ## Out of Scope
 
@@ -183,6 +222,10 @@ den Mechanismus zu ändern.
   die tatsächliche Anbindung ist ein separater Folge-Ausbau.
 - Andere Länder (Österreich, Deutschland, Schweiz) — Geo-Scope bewusst auf Frankreich begrenzt.
 - Echte Polygon-basierte Massiv-Grenzen (FlatGeobuf) — siehe Slice 4.
+- **Nowcast-/Radar-Alerts für Trips** (`src/services/trip_alert.py`, ADR-0009/0011) haben bereits
+  eine eigene Alert-Konfiguration (Alert-Config-UI, Issue #586) und sind von diesem Epic
+  vollständig unberührt — die Slice-5-Checkbox betrifft ausschließlich amtliche Warnungen im
+  Orts-Vergleich, keine Trip-Δ-Alerts.
 
 ---
 
@@ -192,3 +235,4 @@ den Mechanismus zu ändern.
 |------|--------|
 | 2026-07-06 | Epic angelegt, 4 Slices gescoped, ADR-0016 geschrieben, Issues #1033–#1037 erstellt. |
 | 2026-07-06 | Scope-Korrektur (PO): Côte d'Azur wird Leitszenario statt GR20, zeitliche Priorität (~2 Wochen bis Urlaub) ergänzt, Slice 4 auf generischen département-basierten Mechanismus umgestellt (keine GR20-Hartkodierung). |
+| 2026-07-06 | Neue PO-Anforderung: Slice 5 (#1040) hinzugefügt — amtliche Warnungen pro Orts-Vergleich ein-/ausschaltbar (Full-Stack: Go-Preset-Modell, Python-Engine-Flag mit Fetch-Skip, Svelte-Checkbox), Out-of-Scope-Abgrenzung zu Trip-Alert-Config (#586) ergänzt. |
