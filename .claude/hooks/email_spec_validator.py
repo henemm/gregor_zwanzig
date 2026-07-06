@@ -116,16 +116,27 @@ def fetch_latest_email() -> str:
     return body
 
 
+# Issue #1046: Die Vergleichsmatrix wird eindeutig per class="matrix-table"
+# gefunden, unabhaengig von ihrer Position unter den realen <table>-Tags
+# (2 Header-Stats-Grids + Matrix + N Stunden-Tabellen).
+_MATRIX_TABLE_RE = re.compile(
+    r'<table[^>]*class="[^"]*\bmatrix-table\b[^"]*"[^>]*>(.*?)</table>',
+    re.DOTALL,
+)
+
+
+def _find_matrix_table_html(body: str) -> "str | None":
+    match = _MATRIX_TABLE_RE.search(body)
+    return match.group(1) if match else None
+
+
 def extract_table_rows(body: str) -> List[List[str]]:
-    """Extract all rows from first table (comparison table)."""
-    # Find first table
-    table_match = re.search(r'<table[^>]*>(.*?)</table>', body, re.DOTALL)
-    if not table_match:
+    """Extract all rows from the comparison matrix table (class="matrix-table")."""
+    table_html = _find_matrix_table_html(body)
+    if table_html is None:
         return []
 
-    table_html = table_match.group(1)
     rows = []
-
     for row_match in re.finditer(r'<tr[^>]*>(.*?)</tr>', table_html, re.DOTALL):
         row_html = row_match.group(1)
         cells = re.findall(r'<t[hd][^>]*>(.*?)</t[hd]>', row_html, re.DOTALL)
@@ -154,14 +165,48 @@ def extract_locations(body: str) -> List[str]:
     return locations
 
 
+# Issue #1046: Vertrag statt fester Gesamtzahl. Genau diese drei Klassen je
+# 1x, alle uebrigen Tabellen muessen unklassifiziert sein (Stunden-Tabellen,
+# Anzahl variabel ueber top_n_details, auch 0 zulaessig). Eine zusaetzliche
+# Tabelle mit einer unbekannten Klasse ist ein Fehler (Anti-Erosion).
+_KNOWN_TABLE_CLASSES = ("header-stats-desktop", "header-stats-mobile", "matrix-table")
+
+
 def validate_structure(body: str) -> List[str]:
     """Validate email structure against spec."""
     errors = []
 
-    # Check for 2 tables
-    tables = re.findall(r'<table', body)
-    if len(tables) != 2:
-        errors.append(f"STRUKTUR: {len(tables)} Tabellen gefunden, erwartet: 2")
+    # Check table class contract (Issue #1046): each known class exactly once,
+    # unclassified tables (hourly tables) allowed in any number, unknown
+    # classified tables are an error.
+    table_open_tags = re.findall(r'<table[^>]*>', body)
+    class_counts = {cls: 0 for cls in _KNOWN_TABLE_CLASSES}
+    unknown_classified: List[str] = []
+
+    for tag in table_open_tags:
+        cls_match = re.search(r'class="([^"]*)"', tag)
+        if not cls_match:
+            continue  # unklassifizierte Tabelle = erwartete Stunden-Tabelle
+        classes = cls_match.group(1).split()
+        matched = [c for c in classes if c in _KNOWN_TABLE_CLASSES]
+        if matched:
+            for c in matched:
+                class_counts[c] += 1
+        else:
+            unknown_classified.append(cls_match.group(1))
+
+    for cls, count in class_counts.items():
+        if count != 1:
+            errors.append(
+                f"STRUKTUR: Tabelle mit class=\"{cls}\" {count}x gefunden, "
+                f"erwartet: genau 1x"
+            )
+
+    if unknown_classified:
+        errors.append(
+            f"STRUKTUR: {len(unknown_classified)} Tabelle(n) mit unbekannter "
+            f"Klasse gefunden: {unknown_classified}"
+        )
 
     # Check comparison table has correct rows
     # SPEC: docs/specs/e2e_validator_english_update.md - English UI, 8 rows

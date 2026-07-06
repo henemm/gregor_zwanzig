@@ -149,7 +149,7 @@ Drei Mail-Pfade, drei Gates. **Den falschen Validator auf einen Pfad anzuwenden 
 
 | Mail-Pfad | Validator (PFLICHT vor „E2E bestanden") | Marker-Header |
 |---|---|---|
-| **Orts-Vergleich** (2 Tabellen, Winner-Box, ≥3 Orte) | `uv run python3 .claude/hooks/email_spec_validator.py` | `X-GZ-Mail-Type: compare` |
+| **Orts-Vergleich** (Vergleichsmatrix, Winner-Box, ≥3 Orte) | `uv run python3 .claude/hooks/email_spec_validator.py` | `X-GZ-Mail-Type: compare` |
 | **Trip-Briefing** (`full`/`compact`, Stundentabellen, keine Winner-Box) | `uv run python3 .claude/hooks/briefing_mail_validator.py` | `X-GZ-Mail-Type: trip-briefing` + `X-GZ-Format: full\|compact` |
 
 **Regeln (beide Validatoren):**
