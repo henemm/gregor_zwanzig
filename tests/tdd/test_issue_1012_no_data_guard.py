@@ -35,11 +35,10 @@ import json
 import os
 import shutil
 import time as time_mod
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, time, timedelta
 from email.header import decode_header
 from pathlib import Path
 
-import pytest
 
 from app.loader import save_trip
 from app.trip import Stage, TimeWindow, Trip, Waypoint

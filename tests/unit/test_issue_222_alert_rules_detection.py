@@ -13,7 +13,6 @@ SPEC: docs/specs/modules/issue_222_w1_alert_rules_service.md
 """
 from datetime import datetime, timezone
 
-import pytest
 
 from app.models import (
     AlertMetric,

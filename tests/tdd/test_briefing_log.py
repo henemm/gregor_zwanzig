@@ -13,9 +13,8 @@ Ausführung:
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 
-import pytest
 
 
 def _make_scheduler_service(user_id: str = "test-user"):

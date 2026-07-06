@@ -229,7 +229,7 @@ class TestAC3ColumnOrderFollowsDisplayConfig:
     def _dc_with_order(self, metric_ids: list[str]):
         """Baut ein DisplayConfig mit der angegebenen Metrik-Reihenfolge."""
         from app.metric_catalog import build_default_display_config
-        from app.models import UnifiedWeatherDisplayConfig, MetricConfig
+        from app.models import UnifiedWeatherDisplayConfig
         dc = build_default_display_config()
         # Nur die gewünschten Metriken in der neuen Reihenfolge
         new_metrics = []
@@ -299,7 +299,6 @@ class TestAC3ColumnOrderFollowsDisplayConfig:
         col_labels = [re.sub(r"<[^>]+>", "", t).strip() for t in th_texts]
 
         # Finde Gust und Wind Positionen
-        from app.metric_catalog import get_metric
         try:
             gust_label = get_metric("gust").col_label
             wind_label = get_metric("wind").col_label
@@ -642,11 +641,9 @@ class TestAC10CellBackgroundHighlighting:
 
     def _make_high_gust_rows(self):
         """Erzeugt Rows mit hohem Gust-Wert (>45 km/h → warn)."""
-        from tests.unit.test_renderers_email import _make_segment_weather, _make_dp
         from app.metric_catalog import build_default_display_config
         from src.output.renderers.email.helpers import dp_to_row
         from src.app.models import ForecastDataPoint, ThunderLevel
-        from datetime import datetime, timezone
 
         dc = build_default_display_config()
         # Erstelle dp mit hohem Gust
@@ -684,7 +681,6 @@ class TestAC10CellBackgroundHighlighting:
         from src.app.models import ForecastDataPoint, ThunderLevel
         from app.metric_catalog import build_default_display_config
         from src.output.renderers.email.helpers import dp_to_row
-        from datetime import datetime, timezone
 
         dc = build_default_display_config()
         dp = ForecastDataPoint(
@@ -720,7 +716,6 @@ class TestAC10CellBackgroundHighlighting:
         from src.app.models import ForecastDataPoint, ThunderLevel
         from app.metric_catalog import build_default_display_config
         from src.output.renderers.email.helpers import dp_to_row
-        from datetime import datetime, timezone
 
         dc = build_default_display_config()
         dp = ForecastDataPoint(
@@ -914,7 +909,6 @@ class TestAC13PipelineRainProbAndThunderPct:
 
     def _make_seg_weather_with_pop_and_thunder(self, pop_max_pct: int, thunder_pct: float):
         """Echtes SegmentWeatherData mit pop_max_pct und Thunder-Daten."""
-        from datetime import datetime, timezone
         from src.app.models import (
             GPXPoint, TripSegment, SegmentWeatherData, SegmentWeatherSummary,
             ThunderLevel, ForecastDataPoint, NormalizedTimeseries, ForecastMeta, Provider,
@@ -953,7 +947,6 @@ class TestAC13PipelineRainProbAndThunderPct:
         # Erstelle Timeseries mit thunder-Daten
         dps = []
         for h in range(8, 13):
-            from src.app.models import ForecastDataPoint
             dp = ForecastDataPoint(
                 ts=datetime(2026, 7, 12, h, 0, tzinfo=timezone.utc),
                 t2m_c=15.0 + h * 0.3,
@@ -1011,7 +1004,6 @@ class TestAC13PipelineRainProbAndThunderPct:
 
     def test_gew_column_shows_level_for_med_thunder(self):
         """F003: Gew-Spalte zeigt 'mittel' (nicht %) bei ThunderLevel.MED im Stage-dict."""
-        from src.app.models import ThunderLevel
         from src.output.tokens.dto import HourlyValue
         stage = _trend_stage(weekday="Mi", name="E-Gewitter", confidence_pct=70)
         stage["thunder"] = "MED"
@@ -1040,7 +1032,6 @@ class TestAC13PipelineRainProbAndThunderPct:
             GPXPoint, TripSegment, SegmentWeatherData, SegmentWeatherSummary,
             ThunderLevel,
         )
-        from datetime import datetime, timezone
         seg = TripSegment(
             segment_id=1,
             start_point=GPXPoint(lat=42.20, lon=9.05, elevation_m=400.0),

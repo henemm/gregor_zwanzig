@@ -82,7 +82,6 @@ def _save_trip_direct(trip, user_id: str) -> None:
     Used by AC-2/AC-3 to preserve arrival_calculated values for segment-selection tests.
     """
     import json
-    import dataclasses
 
     trips_dir = DATA_ROOT / user_id / "trips"
     trips_dir.mkdir(parents=True, exist_ok=True)
@@ -148,7 +147,7 @@ def test_ac1_segment_helper_roundtrip_bit_identical():
     start_time/end_time (UTC), lat/lon.
     """
     # RED: Dieses Modul existiert noch nicht → ImportError.
-    from services.trip_segments import convert_trip_to_segments  # noqa: ImportError erwartet
+    from services.trip_segments import convert_trip_to_segments  # RED: ImportError erwartet
 
     from services.trip_report_scheduler import TripReportSchedulerService
     from app.config import Settings

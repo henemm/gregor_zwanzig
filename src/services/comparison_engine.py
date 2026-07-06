@@ -24,6 +24,7 @@ from validation.ground_truth import BergfexScraper
 if TYPE_CHECKING:
     from datetime import date
     from app.profile import ActivityProfile
+    from app.config import Settings
 
 
 class ComparisonEngine:
@@ -54,7 +55,6 @@ class ComparisonEngine:
         Returns:
             ComparisonResult with all metrics for all locations
         """
-        from datetime import date, datetime
         from app.config import Settings
 
         # Issue #347: configurable sunny-hours DNI band (GZ_SUNNY_* env overrides)

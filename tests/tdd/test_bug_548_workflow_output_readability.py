@@ -8,7 +8,6 @@ zu weißem Text auf schwarzem Hintergrund mit weißen Leerzeichen führt.
 Zusätzlich: openspec.yaml muss "go" als approval_phrase enthalten.
 """
 
-import re
 from pathlib import Path
 
 COMMANDS_DIR = Path(__file__).parent.parent.parent / ".claude" / "commands"
@@ -53,7 +52,7 @@ class TestNoBlockquoteInPOSummaries:
             and any(kw in line for kw in ["Das Problem", "Warum das wichtig", "Was ich vorhabe", "Sage", "go"])
         ]
         assert blockquote_po_lines == [], (
-            f"PO-Zusammenfassung in 2-analyse.md enthält noch Blockquote-Zeilen:\n"
+            "PO-Zusammenfassung in 2-analyse.md enthält noch Blockquote-Zeilen:\n"
             + "\n".join(blockquote_po_lines)
         )
 
@@ -73,7 +72,7 @@ class TestNoBlockquoteInPOSummaries:
             and any(kw in line for kw in ["Was die Software", "AC-", "Sage", "go", "Spec gespeichert"])
         ]
         assert blockquote_po_lines == [], (
-            f"Akzeptanzkriterien-Ausgabe in 3-write-spec.md enthält noch Blockquote-Zeilen:\n"
+            "Akzeptanzkriterien-Ausgabe in 3-write-spec.md enthält noch Blockquote-Zeilen:\n"
             + "\n".join(blockquote_po_lines)
         )
 
@@ -93,7 +92,7 @@ class TestNoBlockquoteInPOSummaries:
             and any(kw in line for kw in ["Tests geschrieben", "AC-", "Fehlgeschlagen", "Das ist korrekt", "Ich starte"])
         ]
         assert blockquote_po_lines == [], (
-            f"PO-Zusammenfassung in 4-tdd-red.md enthält noch Blockquote-Zeilen:\n"
+            "PO-Zusammenfassung in 4-tdd-red.md enthält noch Blockquote-Zeilen:\n"
             + "\n".join(blockquote_po_lines)
         )
 
@@ -113,7 +112,7 @@ class TestNoBlockquoteInPOSummaries:
             and any(kw in line for kw in ["Was wurde gebaut", "Staging validiert", "Tests:", "Offene Punkte", "Risiko", "Empfehlung", "Sage", "go"])
         ]
         assert blockquote_brief_lines == [], (
-            f"Tech-Lead-Brief in 7-deploy.md enthält noch Blockquote-Zeilen:\n"
+            "Tech-Lead-Brief in 7-deploy.md enthält noch Blockquote-Zeilen:\n"
             + "\n".join(blockquote_brief_lines)
         )
 
@@ -134,7 +133,7 @@ class TestNoBlockquoteInPOSummaries:
             and any(kw in line for kw in ["Fertig und live", "abgeschlossen", "geliefert"])
         ]
         assert blockquote_lines == [], (
-            f"Abschluss-Ausgabe in 7-deploy.md enthält Blockquote-Zeilen:\n"
+            "Abschluss-Ausgabe in 7-deploy.md enthält Blockquote-Zeilen:\n"
             + "\n".join(blockquote_lines)
         )
 
@@ -157,7 +156,7 @@ class TestNoBlockquoteInPOSummaries:
             ])
         ]
         assert blockquote_lines == [], (
-            f"Validator-Ergebnis in 5-implement.md enthält Blockquote-Zeilen:\n"
+            "Validator-Ergebnis in 5-implement.md enthält Blockquote-Zeilen:\n"
             + "\n".join(blockquote_lines)
         )
 
@@ -166,7 +165,7 @@ class TestNoBlockquoteInPOSummaries:
         assert impl_lines, "Implementation complete Zeile nicht gefunden in 5-implement.md"
         impl_blockquote_lines = [l for l in impl_lines if l.strip().startswith(">")]
         assert impl_blockquote_lines == [], (
-            f"Abschluss-Zeile in 5-implement.md enthält Blockquote-Zeilen:\n"
+            "Abschluss-Zeile in 5-implement.md enthält Blockquote-Zeilen:\n"
             + "\n".join(impl_blockquote_lines)
         )
 

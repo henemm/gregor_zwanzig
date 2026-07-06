@@ -91,7 +91,7 @@ class TestThunderBadgeTimeWindow:
             f"Context around '15:00': "
             f"{html[max(0,html.find('15:00')-100):html.find('15:00')+200] if '15:00' in html else 'not found'!r}"
         )
-        assert "16:00" in html, f"Expected '16:00' in thunder badge, not found in HTML"
+        assert "16:00" in html, "Expected '16:00' in thunder badge, not found in HTML"
 
         # En-dash zwischen den Stunden
         assert "15:00" in html and "16:00" in html
@@ -156,7 +156,7 @@ class TestNoBadgeWithoutThunder:
 
         # Kein Gewitter-möglich-Badge
         assert "Gewitter möglich" not in html, (
-            f"No-thunder stage must NOT contain 'Gewitter möglich'. Found in HTML."
+            "No-thunder stage must NOT contain 'Gewitter möglich'. Found in HTML."
         )
 
         # Der neutrale Zustand (Quadrat-Icon + "kein") muss noch da sein

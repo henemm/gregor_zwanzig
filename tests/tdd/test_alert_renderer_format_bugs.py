@@ -5,14 +5,13 @@ Bug 1: _km_str() produziert "km 0 km-11 km" statt "km 0-11 km"
 Bug 2: SMS-Tripname <= 16 Zeichen schneidet mid-char (offene Klammer)
 Bug 3: Telegram-Zeilen haben mehrfache Leerzeichen als Trennzeichen
 """
-import sys, os
+import sys
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, ".")
 sys.path.insert(0, "src")
 
-import pytest
 
 from app.models import WeatherChange, ChangeSeverity, SegmentWeatherData, SegmentWeatherSummary, TripSegment, GPXPoint
 from output.renderers.alert.project import to_alert_message

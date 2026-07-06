@@ -15,7 +15,6 @@ import json
 import uuid
 from pathlib import Path
 
-import pytest
 
 
 # --- AC-1: AlertRule Dataclass + Enums ------------------------------------

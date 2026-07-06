@@ -21,7 +21,7 @@ import pytest
 
 from email.mime.text import MIMEText
 
-from app.loader import get_data_dir, load_all_trips, load_trip, save_trip
+from app.loader import get_data_dir, load_trip, save_trip
 from app.trip import Stage, Trip, Waypoint
 from services.inbound_email_reader import InboundEmailReader
 from services.trip_command_processor import InboundMessage, TripCommandProcessor

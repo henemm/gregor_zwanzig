@@ -10,7 +10,6 @@ from datetime import datetime, time, timezone
 from dataclasses import dataclass, field
 from typing import Optional
 
-import pytest
 
 
 from app.models import (

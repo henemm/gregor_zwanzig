@@ -65,14 +65,12 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3, ena
     sunny_hours_list = [loc.sunny_hours for loc in valid_locs]
     clouds = [loc.cloud_avg for loc in valid_locs]
     above_low_clouds_flags = [loc.above_low_clouds for loc in valid_locs]
-    elevations = [loc.location.elevation_m for loc in valid_locs]
 
     # Find bests
     best_score = find_best(scores, True)
     best_snow_depth = find_best(snow_depths, True)
     best_snow_new = find_best(snow_news, True)
     best_wind = find_best(winds, False)
-    best_gust = find_best(gusts, False)
     best_wc = find_best(wind_chills, True)
     best_sunny = find_best(sunny_hours_list, True)
     best_clouds = find_best(clouds, False)
@@ -348,7 +346,6 @@ def render_comparison_text(result: ComparisonResult, top_n_details: int = 3, ena
         Plain-text string for email
     """
     _ = profile  # accepted for API consistency, not yet used
-    from datetime import date
 
     time_window = result.time_window
     target_date = result.target_date

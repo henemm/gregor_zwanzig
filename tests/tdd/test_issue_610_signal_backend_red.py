@@ -313,7 +313,7 @@ def test_preview_telegram_endpoint_still_exists(preview_client):
     )
     # Route muss existieren — 405 wäre ein Zeichen dass sie verschwunden ist
     assert resp.status_code != 405, (
-        f"GET /api/preview/gr221-mallorca/telegram antwortete 405 — "
+        "GET /api/preview/gr221-mallorca/telegram antwortete 405 — "
         "Telegram-Route darf nicht entfernt worden sein"
     )
 

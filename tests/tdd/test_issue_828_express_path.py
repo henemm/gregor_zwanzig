@@ -19,7 +19,6 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-import pytest
 
 _THIS_FILE = Path(__file__).resolve()
 # tests/tdd/test_...py → parents[2] = Worktree-Root

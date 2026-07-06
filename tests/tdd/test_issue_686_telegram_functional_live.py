@@ -20,7 +20,6 @@ import importlib.util
 import json
 import os
 import socketserver
-import sys
 import threading
 from contextlib import contextmanager
 from datetime import date

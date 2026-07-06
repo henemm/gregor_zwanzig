@@ -14,7 +14,6 @@ from __future__ import annotations
 
 from app.models import ChangeSeverity, WeatherChange
 from app.profile import ActivityProfile
-from tests.unit.test_renderers_email import _common_kwargs
 
 
 def _alert_change() -> WeatherChange:
@@ -89,7 +88,6 @@ def test_ac1_trip_alert_uses_compact_renderer_not_format_email():
         )
     ]
 
-    from app.profile import ActivityProfile
     from datetime import date as date_type
     trip = Trip(
         id="ws-trip", name="Skitour",

@@ -1,6 +1,5 @@
 """Tests für #766: 452 temporäre SMTP-Fehler werden retried, 5xx nicht."""
 import smtplib
-import time
 
 import pytest
 from unittest.mock import MagicMock, patch

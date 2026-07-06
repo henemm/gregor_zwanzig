@@ -5,12 +5,9 @@ Regression-Tests: load → save → reload muss alle Felder erhalten.
 Kein Mock, echte File-I/O.
 """
 import json
-import tempfile
-from pathlib import Path
 
-import pytest
 
-from app.loader import _parse_trip, _trip_to_dict, save_trip
+from app.loader import _parse_trip, save_trip
 
 
 # ---------------------------------------------------------------------------

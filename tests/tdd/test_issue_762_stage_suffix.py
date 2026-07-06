@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from datetime import date
 
-import pytest
 
 from app.trip import Stage, Trip, Waypoint
 

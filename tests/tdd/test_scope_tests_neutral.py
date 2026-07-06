@@ -11,12 +11,10 @@ Mock-frei: pro Fall ein echtes `git init`-Repo, echte Dateien, echtes
 `git add`/`commit`, dann die echte Funktion gegen dieses Repo laufen lassen.
 """
 import importlib.util
-import os
 import sys
 import subprocess
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HOOKS_DIR = REPO_ROOT / ".claude" / "hooks"

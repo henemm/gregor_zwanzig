@@ -34,14 +34,12 @@ import os
 import re
 import time
 import uuid
-from datetime import date as date_type
 from pathlib import Path
 
 import pytest
 
 from app.config import Settings
 from app.models import TripReportConfig
-from services.radar_service import NowcastResult
 
 from tests.tdd._telegram_live_fixture import live_telegram_enabled
 from tests.tdd.test_952_onset_alert_fidelity import (

@@ -29,7 +29,6 @@ from datetime import date, datetime, time, timedelta, timezone
 from email.header import decode_header
 from pathlib import Path
 
-import pytest
 
 from app.loader import save_trip
 from app.models import TripReportConfig

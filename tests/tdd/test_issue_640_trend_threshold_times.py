@@ -8,7 +8,6 @@ IMPORTANT: NO mocks, NO patch, NO MagicMock. Real function calls only.
 """
 from __future__ import annotations
 
-import pytest
 from zoneinfo import ZoneInfo
 
 
@@ -423,7 +422,7 @@ class TestEmailCellsWithTokens:
         )]
         html = _render_html(trend)
         # Issue #669: badge format uses HH:00 time notation
-        assert "14:00" in html or "@14" in html, f"No thunder time token in HTML"
+        assert "14:00" in html or "@14" in html, "No thunder time token in HTML"
 
     def test_email_temp_cell_no_at(self):
         """AC-8: Temperature cell in email has no @ (temp has no threshold concept)."""

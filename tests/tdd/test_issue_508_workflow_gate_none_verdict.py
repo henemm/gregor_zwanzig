@@ -12,10 +12,8 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime
 from pathlib import Path
 
-import pytest
 
 HOOKS_DIR = Path("/home/hem/gregor_zwanzig/.claude/hooks")
 PRE_COMMIT_GATE_PY = HOOKS_DIR / "pre_commit_gate.py"

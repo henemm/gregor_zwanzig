@@ -52,7 +52,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 # Wiederverwendung der mock-freien Render-Helper aus #790.
 from tests.tdd.test_issue_790_briefing_simplify import (  # noqa: E402
-    _build_segments, _comparison, _empty_metrics_dc, _render_html,
+    _build_segments, _comparison, _render_html,
     _render_plain, _seg_for_compare,
 )
 

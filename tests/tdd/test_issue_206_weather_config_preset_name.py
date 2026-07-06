@@ -7,7 +7,6 @@ Tests MÜSSEN scheitern (RED), weil:
 - _parse_display_config() liest preset_name nicht
 - _trip_to_dict() serialisiert preset_name nicht
 """
-import pytest
 import sys
 import os
 
@@ -27,8 +26,7 @@ class TestModelPresetNameField:
         WHEN das Objekt ohne preset_name erstellt wird
         THEN hat es das Attribut preset_name mit Default None.
         Spec AC-1 Grundlage — RED: Feld existiert noch nicht."""
-        from app.models import UnifiedWeatherDisplayConfig, MetricConfig
-        from datetime import datetime, timezone
+        from app.models import UnifiedWeatherDisplayConfig
 
         cfg = UnifiedWeatherDisplayConfig(
             trip_id="t1",
@@ -116,7 +114,7 @@ class TestTripToDictPresetName:
         """Hilfsfunktion: Trip mit display_config und preset_name."""
         from app.models import UnifiedWeatherDisplayConfig
         from app.trip import Trip, Stage, Waypoint
-        from datetime import date, time
+        from datetime import date
 
         waypoint = Waypoint(id="W1", name="Start", lat=47.0, lon=10.0, elevation_m=1000)
         stage = Stage(id="T1", name="Etappe 1", date=date(2026, 8, 1), waypoints=[waypoint])

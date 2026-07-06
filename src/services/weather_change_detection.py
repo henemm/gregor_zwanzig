@@ -9,19 +9,8 @@ SPEC: docs/specs/modules/weather_change_detection.md v2.0
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Optional
-
-logger = logging.getLogger(__name__)
-
-if TYPE_CHECKING:
-    from app.models import (
-        AlertRule,
-        SegmentWeatherData,
-        TripReportConfig,
-        UnifiedWeatherDisplayConfig,
-    )
-
 from enum import Enum
+from typing import TYPE_CHECKING, Optional
 
 from app.models import (
     AlertMetric,
@@ -31,6 +20,16 @@ from app.models import (
     ThunderLevel,
     WeatherChange,
 )
+
+if TYPE_CHECKING:
+    from app.models import (
+        AlertRule,
+        SegmentWeatherData,
+        TripReportConfig,
+        UnifiedWeatherDisplayConfig,
+    )
+
+logger = logging.getLogger(__name__)
 
 # Ordinal mapping for enum-type metrics (used for delta calculation)
 _THUNDER_ORDINAL = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}

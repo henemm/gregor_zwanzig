@@ -5,10 +5,8 @@ Tests für .claude/hooks/edit_verify.py
 Alle Tests MÜSSEN fehlschlagen, weil die Datei noch nicht existiert.
 """
 import json
-import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 HOOK_PATH = Path(__file__).parents[2] / ".claude" / "hooks" / "edit_verify.py"

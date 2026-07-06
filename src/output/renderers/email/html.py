@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
-from app.metric_catalog import get_label_for_field, get_metric
+from app.metric_catalog import get_metric
 from app.models import (
     SegmentWeatherData, ThunderLevel, UnifiedWeatherDisplayConfig,
     WeatherChange,
@@ -25,7 +25,6 @@ from app.profile import ActivityProfile
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
-    AMPEL_LEGEND,
     ampel_level,
     build_confidence_hint, build_metrics_summary_pills,
     build_segment_label, build_units_legend,
@@ -34,12 +33,9 @@ from src.output.renderers.email.helpers import (
 )
 from src.output.renderers.email.design_tokens import (
     G_PAPER, G_SURFACE_1, G_INK, G_INK_MUTED, G_INK_FAINT,
-    G_ACCENT, G_WARNING, G_DANGER, G_WX_THUNDER,
-    G_BOX_WARNING_BG, G_BOX_DANGER_BG, G_BOX_INFO_BG,
-    G_HEADER_BG,
+    G_ACCENT, G_WARNING, G_DANGER, G_BOX_WARNING_BG, G_BOX_DANGER_BG, G_HEADER_BG,
     FONT_UI, FONT_DATA, WEB_FONT_LINK,
 )
-from src.output.renderers.email.profile_signature import profile_signature
 
 
 def render_stability_label_html(result: Optional["StabilityResult"]) -> str:
@@ -317,8 +313,8 @@ def _render_mobile_hour_list(
         )
 
     return (
-        f'<div class="mobile-hour-list" style="margin-top:12px;'
-        f'border:1px solid #e6e1d3;background:#fff;">'
+        '<div class="mobile-hour-list" style="margin-top:12px;'
+        'border:1px solid #e6e1d3;background:#fff;">'
         + "".join(items)
         + "</div>"
     )
@@ -352,7 +348,7 @@ def _render_kommandos_section() -> str:
         rows.append(f'<tr>{tds}</tr>')
 
     grid = (
-        f'<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:10px;">'
+        '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:10px;">'
         + "".join(rows)
         + "</table>"
     )
@@ -423,11 +419,11 @@ def _render_footer(
         _schedule = f'<span style="font-family:{FONT_DATA};color:#9a978d;">Briefing-Zeitplan</span>'
 
     link_row = (
-        f'<div style="margin-top:8px;padding-top:8px;border-top:1px solid #3a3835;'
-        f'display:flex;gap:16px;font-size:10px;flex-wrap:wrap;">'
+        '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #3a3835;'
+        'display:flex;gap:16px;font-size:10px;flex-wrap:wrap;">'
         + _overview
         + _schedule
-        + f'</div>'
+        + '</div>'
     )
 
     extras = ""
@@ -764,7 +760,6 @@ def render_html(
     show_highlights, daily_summary_metrics, show_metrics_summary) are absorbed
     by **_ignored for backward compatibility — they no longer affect output.
     """
-    sig = profile_signature(profile)
     # Bug #397: Datums-Header in Ortszeit (passt zu lokalen Segment-Zeiten).
     report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")
     # Issue #342: Tages-Basis für Pro-Metrik-Horizont-Filter.
@@ -845,14 +840,14 @@ def render_html(
 
     # Two-column header
     left_col = (
-        f'<td style="vertical-align:top;padding-bottom:14px;border-right:none;'
-        f'border-bottom:none;">'
+        '<td style="vertical-align:top;padding-bottom:14px;border-right:none;'
+        'border-bottom:none;">'
         + _eyebrow(f"{_rt_upper}-BRIEFING")
         + f'<div style="font-size:22px;font-weight:600;letter-spacing:-0.015em;'
         f'margin-top:4px;color:#1d1c1a;">{_route_title}</div>'
         + f'<div style="font-family:{FONT_DATA};font-size:13px;color:#6b6962;margin-top:4px;">'
         f'{_date_str}</div>'
-        + f'</td>'
+        + '</td>'
     )
 
     # Issue #890 / AC-3: Etappen-Zähler "Etappe N / total".
@@ -869,22 +864,22 @@ def render_html(
         )
 
     right_col = (
-        f'<td style="vertical-align:top;text-align:right;padding-bottom:14px;'
-        f'border-bottom:none;">'
+        '<td style="vertical-align:top;text-align:right;padding-bottom:14px;'
+        'border-bottom:none;">'
         + _eyebrow("GREGOR ZWANZIG")
         + (f'<div style="font-size:14px;font-weight:600;margin-top:4px;color:#1d1c1a;">'
            f'{trip_name}</div>')
         + _stage_counter_html
-        + f'</td>'
+        + '</td>'
     )
     header_html = (
         f'<div style="background:{G_HEADER_BG};'
         f'padding:22px 28px 0;">'
         f'<table width="100%" cellpadding="0" cellspacing="0"><tr>'
         + left_col + right_col
-        + f'</tr></table>'
+        + '</tr></table>'
         + stats_grid_html
-        + f'</div>'
+        + '</div>'
     )
 
     # Normalize seg_tables: allow both list[dict] and list[list[dict]] per entry.
@@ -922,7 +917,6 @@ def render_html(
 
         if seg.segment_id == "Ziel":
             # AC-6: Wetter am Ziel — eigene abgesetzte Sektion
-            ziel_name = sub_header or "Ziel"
             ziel_time = (
                 local_fmt(seg.start_time, tz)
                 + "–" + local_fmt(seg.end_time, tz)
@@ -990,7 +984,7 @@ def render_html(
                 f'</div>'
             )
             desktop_div = (
-                f'<div class="section desktop-only" style="padding:14px 28px 0;">'
+                '<div class="section desktop-only" style="padding:14px 28px 0;">'
                 + seg_header_desktop
                 + _render_html_table(
                     rows, friendly_keys=friendly_keys,
@@ -1016,7 +1010,7 @@ def render_html(
                 col_order=_col_order,
             )
             mobile_div = (
-                f'<div class="mobile-compact" style="padding:0 16px;">'
+                '<div class="mobile-compact" style="padding:0 16px;">'
                 + seg_header_mobile
                 + compact_rows
                 + "</div>"
@@ -1209,7 +1203,7 @@ def render_html(
             acc_bg = ""
 
             outlook_rows += (
-                f'<tr>'
+                '<tr>'
                 + _otd(weekday, bg=tag_bg)
                 + _otd(n_str, bg=n_bg)
                 + _otd(d_str, bg=d_bg)
@@ -1219,16 +1213,16 @@ def render_html(
                 + _otd(gust_str, bg=gust_bg)
                 + _otd(gew_str, bg=gew_bg)
                 + _otd(_acc_dot(conf_pct), bg=acc_bg)
-                + f'</tr>'
+                + '</tr>'
             )
 
         outlook_table = (
-            f'<table cellpadding="0" cellspacing="0" '
-            f'style="border-collapse:collapse;width:100%;'
-            f'border-top:2px solid #1d1c1a;">'
+            '<table cellpadding="0" cellspacing="0" '
+            'style="border-collapse:collapse;width:100%;'
+            'border-top:2px solid #1d1c1a;">'
             + outlook_thead
             + f'<tbody>{outlook_rows}</tbody>'
-            + f'</table>'
+            + '</table>'
         )
 
         # Code-Legende
@@ -1343,7 +1337,7 @@ def render_html(
             # AC-2 (#911): Glyph steht NACH der Headline (Reihenfolge: Text, dann Glyph)
             _vortag_eyebrow = _eyebrow(f"VORTAGESVERGLEICH {_trend_glyph}", accent=True)
             _vortag_div = (
-                f'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0ece1;">'
+                '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0ece1;">'
                 + _vortag_eyebrow
                 + f'<div style="font-size:16px;color:#3a3835;margin-top:4px;">'
                 f'{_html.escape(_day_comparison_line)}</div>'
@@ -1353,13 +1347,13 @@ def render_html(
         # AC-2 (#898): Outer padding-left reduced to 12px (kein Doppel-Einzug)
         # Inner: border-left:2px + padding-left:14px → total 12+2+14=28px
         tageslage_html = (
-            f'<div style="padding:18px 28px 16px 12px;">'
-            f'<div style="border-left:2px solid #c45a2a;padding-left:14px;">'
+            '<div style="padding:18px 28px 16px 12px;">'
+            '<div style="border-left:2px solid #c45a2a;padding-left:14px;">'
             + _eyebrow("TAGESLAGE", accent=True)
             + _summary_div
             + _vortag_div
-            + f'</div>'
-            f'</div>'
+            + '</div>'
+            '</div>'
         )
 
     # Issue #121 / AC-12 + AC-13: confidence hint
@@ -1423,7 +1417,7 @@ def render_html(
         f'letter-spacing:0.12em;color:#9a978d;text-transform:uppercase;'
         f'margin-right:12px;">RISK</span>'
         + _risk_dot_legend_items
-        + f'</div>'
+        + '</div>'
     )
 
     footer_html = _render_footer(

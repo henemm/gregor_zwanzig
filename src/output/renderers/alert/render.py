@@ -461,7 +461,7 @@ def render_deviation_alert(
     footer = f"Stand: heute {stamp} · verglichen mit dem letzten Briefing"
     lines = [_legacy_line(c, segments, tz=tz, stage_label=stage_label) for c in ordered]
     plain = "\n".join([_LEGACY_HEADER, "", *lines, "", footer])
-    rows = "".join(f"<tr><td style=\"padding:4px 0;\">{_esc(l)}</td></tr>" for l in lines)
+    rows = "".join(f"<tr><td style=\"padding:4px 0;\">{_esc(line)}</td></tr>" for line in lines)
     html = (
         "<html><body style=\"font-family:sans-serif;\">"
         f"<h2 style=\"margin:0 0 12px;\">{_esc(_LEGACY_HEADER)}</h2>"

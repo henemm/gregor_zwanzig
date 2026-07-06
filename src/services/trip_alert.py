@@ -23,6 +23,7 @@ from utils.timezone import local_fmt, tz_for_coords
 
 if TYPE_CHECKING:
     from app.trip import Trip
+    from app.models import UnifiedWeatherDisplayConfig
 
 logger = logging.getLogger("trip_alert")
 
@@ -773,7 +774,7 @@ class TripAlertService:
             # Ort-Label aus build_segment_label (braucht Wrapper-Objekte mit .segment)
             change_like = SimpleNamespace(segment_id=str(active.segment_id))
             seg_wrappers = [SimpleNamespace(segment=s) for s in segments]
-            segment_label = build_segment_label(change_like, seg_wrappers, tz=tz)
+            build_segment_label(change_like, seg_wrappers, tz=tz)
 
             # Cooldown-Anzeige
             if cooldown_min % 60 == 0:
@@ -944,10 +945,6 @@ class TripAlertService:
             Send errors on a configured channel are logged but do NOT suppress
             recording (best-effort, Anti-Pattern #656).
         """
-        alert_date = weather[0].segment.start_time.date()
-        matched_stage = trip.get_stage_for_date(alert_date)
-        stage_name = trip.numbered_stage_label(matched_stage) if matched_stage else None
-
         # Bug #400: ohne tz= würden Segment-Zeiten in UTC statt Lokalzeit erscheinen.
         # Zeitzone aus den Koordinaten des ersten Segments bestimmen.
         alert_tz = tz_for_coords(

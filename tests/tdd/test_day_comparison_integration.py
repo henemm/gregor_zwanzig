@@ -18,7 +18,6 @@ SPEC: docs/specs/modules/issue_750_752_vortag_vergleich_integration.md
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-import pytest
 
 TZ = ZoneInfo("Europe/Berlin")
 

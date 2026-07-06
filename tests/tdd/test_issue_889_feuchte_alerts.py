@@ -43,7 +43,6 @@ from app.models import (
     Provider,
     SegmentWeatherData,
     SegmentWeatherSummary,
-    ThunderLevel,
     TripSegment,
     UnifiedWeatherDisplayConfig,
 )

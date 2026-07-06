@@ -382,7 +382,7 @@ def test_visibility_roh_html_no_inline_style():
 
 def _render_thunder_full(*, raw: bool, thunder_level):
     """Rendert thunder+temperature, gibt (html, plain) zurueck."""
-    from app.models import ForecastDataPoint, ThunderLevel
+    from app.models import ForecastDataPoint
 
     dp = ForecastDataPoint(
         ts=datetime(2026, 7, 11, 10, 0, tzinfo=timezone.utc),
@@ -480,7 +480,7 @@ def test_thunder_roh_none_german_word_kein():
     html_ein, plain_ein = _render_thunder_full(raw=False, thunder_level=ThunderLevel.NONE)
     cells_ein = _data_cells(html_ein)
     assert "⚡" not in html_ein, (
-        f"AC-6: Einfach NONE darf kein Blitzsymbol zeigen"
+        "AC-6: Einfach NONE darf kein Blitzsymbol zeigen"
     )
     assert not any("kein" in c for c in cells_ein), (
         f"AC-6: Einfach NONE Datenzellen duerfen 'kein' nicht enthalten "

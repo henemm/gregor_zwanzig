@@ -12,7 +12,6 @@ import logging
 import os
 import time
 import uuid
-from datetime import datetime
 
 import pytest
 
@@ -153,7 +152,6 @@ class TestAC2NoFallbackOnAuthErrorBehavioral:
         THEN:  OutputError sofort geworfen, "[SMTP-FALLBACK]" NICHT im Log
         Beweis: Wenn Fallback trotzdem greift, kommt keine OutputError → Test scheitert
         """
-        import logging
 
         imap_host = os.environ.get("GZ_IMAP_HOST", "mail.henemm.com")
         imap_user = os.environ.get("GZ_TEST_IMAP_USER") or os.environ.get("GZ_IMAP_USER")

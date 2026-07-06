@@ -16,11 +16,9 @@ Getestete ACs:
 import json
 import os
 import subprocess
-import tempfile
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-import pytest
 
 STAGING_GATE = Path("/home/hem/gregor_zwanzig/.claude/hooks/staging_gate.py")
 REPO_DIR = Path("/home/hem/gregor_zwanzig")

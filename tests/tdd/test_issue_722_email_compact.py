@@ -14,7 +14,6 @@ Kein Dateiinhalt-Check — geprüft wird gerenderter Output / gebaute MIME-Messa
 """
 from __future__ import annotations
 
-from zoneinfo import ZoneInfo
 
 
 # ---------------------------------------------------------------------------
@@ -145,7 +144,6 @@ def _render_email_severity(email_format="compact"):
     Stunden 08 und 10 eingeschlossen sind (08 <= h < 13).
     """
     from datetime import datetime, timezone
-    from zoneinfo import ZoneInfo
     from app.models import (
         ForecastDataPoint, ForecastMeta, GPXPoint, NormalizedTimeseries,
         Provider, SegmentWeatherData, SegmentWeatherSummary, ThunderLevel,

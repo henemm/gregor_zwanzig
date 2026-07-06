@@ -5,7 +5,6 @@ Prüft ob alle Favicon-Artefakte vorhanden sind und die korrekte
 Brand-Geometrie (Bergkamm + Blitz) enthalten.
 """
 import json
-import re
 from pathlib import Path
 
 FRONTEND = Path(__file__).parents[2] / "frontend"

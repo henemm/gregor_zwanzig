@@ -27,6 +27,16 @@ from app.trip import (
     Trip,
     Waypoint,
 )
+from app.user import (
+    CompareSubscription,
+    LocationSubscription,
+    SavedLocation,
+    Schedule,
+    TriggerTiming,
+    TripSubscription,
+    User,
+    UserPreferences,
+)
 
 
 # Mapping Legacy report_config -> AlertMetric + Unit (Issue #205)
@@ -185,16 +195,6 @@ def _migrate_legacy_alert_rules(data: Dict[str, Any]) -> List[AlertRule]:
             enabled=enabled,
         ))
     return rules
-from app.user import (
-    CompareSubscription,
-    LocationSubscription,
-    SavedLocation,
-    Schedule,
-    TriggerTiming,
-    TripSubscription,
-    User,
-    UserPreferences,
-)
 
 
 class LoaderError(Exception):

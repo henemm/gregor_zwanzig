@@ -6,7 +6,6 @@ Tests fuer die detect_scope() Funktion in e2e_commit_gate.py.
 ALLE Tests muessen FEHLSCHLAGEN, weil:
 - detect_scope() existiert noch nicht
 """
-import pytest
 import sys
 import os
 

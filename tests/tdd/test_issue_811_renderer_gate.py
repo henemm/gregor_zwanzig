@@ -26,7 +26,6 @@ from pathlib import Path
 
 import importlib.util
 
-import pytest
 
 # Gate-Hook im (Worktree-)Repo. Existiert in RED-Phase NICHT → RED.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -254,7 +253,6 @@ def test_block_when_validator_log_older_than_mail_file(tmp_path):
     Dateisystemen, die nanosekunden-Präzision nicht garantieren).
     """
     import os
-    import time
     repo = _setup_repo(tmp_path)
 
     # T0: Log-Zeitstempel (validated_at = jetzt).

@@ -25,9 +25,7 @@ from __future__ import annotations
 import html as _htmllib
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
@@ -141,7 +139,7 @@ class TestMobileMonospaceGridAlignment:
         line_08 = next((l for l in lines if "08" in l), None)
         line_09 = next((l for l in lines if "09" in l), None)
         assert line_08 is not None and line_09 is not None, (
-            f"Zeilen für 08/09 nicht gefunden:\n" + "\n".join(map(repr, lines))
+            "Zeilen für 08/09 nicht gefunden:\n" + "\n".join(map(repr, lines))
         )
         assert len(line_08) == len(line_09), (
             "FEHLER: Zeile mit leerer Zelle (09) ist anders lang als volle Zeile (08) "

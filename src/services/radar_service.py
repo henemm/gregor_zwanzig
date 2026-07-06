@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
-from typing import Callable, List, Optional
+from typing import Callable, Optional
 from zoneinfo import ZoneInfo
 
 logger = logging.getLogger("radar_service")

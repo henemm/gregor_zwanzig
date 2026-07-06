@@ -10,7 +10,6 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 REPO = Path("/home/hem/gregor_zwanzig")

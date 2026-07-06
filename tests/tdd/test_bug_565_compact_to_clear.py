@@ -30,7 +30,7 @@ class TestAC1ImplementMd:
             if line.strip() == "/compact"
         ]
         assert lines_with_compact == [], (
-            f"5-implement.md enthält noch /compact in Zeilen: "
+            "5-implement.md enthält noch /compact in Zeilen: "
             + ", ".join(f"{ln}" for ln, _ in lines_with_compact)
         )
 

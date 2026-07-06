@@ -35,7 +35,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
-import pytest
 
 REPO_DIR = Path("/home/hem/gregor_zwanzig")
 _VALIDATOR_ENV = REPO_DIR / ".claude" / "validator.env"

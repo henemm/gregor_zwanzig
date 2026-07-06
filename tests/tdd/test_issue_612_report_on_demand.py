@@ -52,7 +52,6 @@ def _make_segment_data():
         grid_res_km=2.0,
         interp="point_grid",
     )
-    from app.models import NormalizedTimeseries
     ts = NormalizedTimeseries(meta=meta, data=points)
     seg = TripSegment(
         segment_id=1,

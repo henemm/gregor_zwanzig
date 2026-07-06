@@ -343,7 +343,7 @@ def test_ac3_every_bot_menu_command_is_supported(env, capture, client):
         capture.clear()
 
     assert not failures, (
-        f"Folgende Menü-Befehle liefern 'Unbekannter Befehl' (Bug #671):\n"
+        "Folgende Menü-Befehle liefern 'Unbekannter Befehl' (Bug #671):\n"
         + "\n".join(f"  - {f}" for f in failures)
     )
 
@@ -390,7 +390,7 @@ def test_ac4_glance_buttons_callback_data_all_handled(env, capture, client):
             dead_buttons.append(f"callback_data={cd!r}, text={b.get('text')!r}")
 
     assert not dead_buttons, (
-        f"Tote Buttons gefunden (_callback_to_body gibt None):\n"
+        "Tote Buttons gefunden (_callback_to_body gibt None):\n"
         + "\n".join(f"  - {d}" for d in dead_buttons)
     )
 

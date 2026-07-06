@@ -18,7 +18,11 @@ from __future__ import annotations
 
 import pytest
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
+
+if TYPE_CHECKING:
+    from app.models import WeatherChange
 
 
 # ---------------------------------------------------------------------------
@@ -34,8 +38,7 @@ def _make_gpx_point(dist_km: float):
 def _make_segment(segment_id, km_from: float, km_to: float):
     """Erzeugt ein SegmentWeatherData mit konkreten km-Werten."""
     from app.models import (
-        GPXPoint, TripSegment, SegmentWeatherData, SegmentWeatherSummary,
-        NormalizedTimeseries, ForecastMeta, Provider,
+        TripSegment, SegmentWeatherData, SegmentWeatherSummary,
     )
     start = _make_gpx_point(km_from)
     end = _make_gpx_point(km_to)
@@ -91,7 +94,6 @@ class TestAC1Projection:
     def test_temperature_cold_disambiguation(self):
         """temp_min_c + decrease → temperature_cold (cmp='unter'); source is None."""
         from src.output.renderers.alert.project import to_alert_message
-        from app.metric_catalog import get_cmp
 
         change = _make_change("temp_min_c", old=3.0, new=-2.0, direction="decrease",
                                threshold=0.0, segment_id="1", occurred_at="06:00")
@@ -255,7 +257,6 @@ class TestAC3Email:
     def test_severity_sort_order(self):
         """Datenblock ist nach severity absteigend sortiert (höchste Gefahr zuerst)."""
         from src.output.renderers.alert.render import render_email
-        from app.metric_catalog import get_sms_code
         msg = self._make_msg()
         html, plain = render_email(msg)
 
@@ -264,7 +265,7 @@ class TestAC3Email:
         label_temp_cold = get_metric("temperature_cold").label_de
 
         # gust hat höhere severity → erscheint zuerst im Body (Issue #940: label_de)
-        assert label_gust in html or label_gust in plain, f"Gust-Label fehlt"
+        assert label_gust in html or label_gust in plain, "Gust-Label fehlt"
         idx_gust_html = html.find(label_gust)
         idx_temp_html = html.find(label_temp_cold) if label_temp_cold else -1
         if idx_gust_html != -1 and idx_temp_html != -1:
@@ -673,18 +674,18 @@ class TestIssue940LabelInEmail:
         from src.output.renderers.alert.render import render_email
         msg = self._make_msg("visibility_min_m", "decrease", 2000.0, 400.0, 1000.0)
         html, plain = render_email(msg)
-        assert "Sicht" in html, f"'Sicht' fehlt im HTML-Body"
-        assert "Sicht" in plain, f"'Sicht' fehlt im Plaintext-Body"
+        assert "Sicht" in html, "'Sicht' fehlt im HTML-Body"
+        assert "Sicht" in plain, "'Sicht' fehlt im Plaintext-Body"
         assert "· VS ·" not in html and "· VS ·" not in plain, \
-            f"SMS-Token '· VS ·' im E-Mail-Body gefunden"
+            "SMS-Token '· VS ·' im E-Mail-Body gefunden"
 
     def test_freezing_level_email_body_shows_nullgradgrenze(self):
         """render_email: HTML-Body und Plaintext enthalten 'Nullgradgrenze', nicht 'NL'."""
         from src.output.renderers.alert.render import render_email
         msg = self._make_msg("freezing_level_m", "decrease", 3500.0, 2800.0, 200.0)
         html, plain = render_email(msg)
-        assert "Nullgradgrenze" in html, f"'Nullgradgrenze' fehlt im HTML-Body"
-        assert "Nullgradgrenze" in plain, f"'Nullgradgrenze' fehlt im Plaintext-Body"
+        assert "Nullgradgrenze" in html, "'Nullgradgrenze' fehlt im HTML-Body"
+        assert "Nullgradgrenze" in plain, "'Nullgradgrenze' fehlt im Plaintext-Body"
 
     def test_email_h1_shows_label_not_code(self):
         """render_email _h1: Überschrift zeigt 'Böen', nicht 'G'."""

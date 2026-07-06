@@ -11,9 +11,8 @@ KEINE MOCKS — echte Dataclasses, echte compute_confidence_pct(), kein Mock()/p
 from __future__ import annotations
 
 from datetime import date, datetime, timezone, timedelta
-from typing import Dict, Optional, Tuple
+from typing import Dict
 
-import pytest
 
 
 # ---------------------------------------------------------------------------

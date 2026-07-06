@@ -34,7 +34,6 @@ import pytest
 
 from tests.tdd._telegram_live_fixture import (
     live_telegram_enabled,
-    load_staging_telegram_env,
     staging_live_settings,
 )
 

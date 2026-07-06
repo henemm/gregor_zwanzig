@@ -18,7 +18,6 @@ In der RED-Phase schlagen die AROME-Tests fehl, weil:
 """
 from __future__ import annotations
 
-import pytest
 
 import services.radar_service as rs
 from services.radar_service import NowcastResult, RadarNowcastService

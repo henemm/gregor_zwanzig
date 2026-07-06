@@ -36,6 +36,7 @@ line-length = 88
     "E741",  # short variable names (l, I, O) acceptable in tests
     "F841",  # unused locals often intentional in fixtures/helpers
     "F402",  # loop-var shadowing imports — limited scope in tests
+    "E731",  # lambda assignments in test helpers/monkeypatch are idiomatic (Issue #1032)
 ]
 # Source: forward references in type hints (legitimate, evaluated as strings)
 "src/app/loader.py" = ["F821"]

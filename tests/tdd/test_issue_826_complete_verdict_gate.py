@@ -18,7 +18,6 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-import pytest
 
 # Verwende den Worktree-eigenen workflow.py — nicht den des Hauptrepos,
 # da Worktree-Writes nur im eigenen Tree erlaubt sind.

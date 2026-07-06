@@ -15,7 +15,7 @@ SPEC: docs/specs/modules/issue_790_briefing_mail_simplify.md AC-1..AC-9
 from __future__ import annotations
 
 import sys
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -271,7 +271,7 @@ def _comparison(today, yday):
 
 def _seg_for_compare(seg_id, **agg):
     from app.models import (
-        ForecastDataPoint, ForecastMeta, GPXPoint, NormalizedTimeseries,
+        ForecastMeta, GPXPoint, NormalizedTimeseries,
         Provider, SegmentWeatherData, SegmentWeatherSummary, TripSegment,
     )
     start = datetime(2026, 7, 11, 8, 0, tzinfo=timezone.utc)

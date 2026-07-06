@@ -14,17 +14,12 @@ import logging
 import os
 import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
-
-# Issue #766: Inter-Mail-Delay beim Sammelversand, um Rate-Limits (452) zu
-# vermeiden. Hinweis: `time` ist hier die datetime.time-Klasse — der echte
-# Zeit-Modul wird als `time_module` importiert.
-INTER_MAIL_DELAY_SECONDS = 2
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from app.config import Settings
 from app.loader import load_all_trips, save_trip
-from app.models import GPXPoint, NormalizedTimeseries, SegmentWeatherData, SegmentWeatherSummary, TripSegment
+from app.models import NormalizedTimeseries, SegmentWeatherData, SegmentWeatherSummary, TripSegment
 from formatters.trip_report import TripReportFormatter
 from output.renderers.email.design_tokens import (
     FONT_UI, G_ACCENT, G_DANGER, G_INK, G_PAPER, G_SURFACE_1, WEB_FONT_LINK,
@@ -35,6 +30,11 @@ from utils.timezone import tz_for_coords
 
 if TYPE_CHECKING:
     from app.trip import Stage, Trip
+
+# Issue #766: Inter-Mail-Delay beim Sammelversand, um Rate-Limits (452) zu
+# vermeiden. Hinweis: `time` ist hier die datetime.time-Klasse — der echte
+# Zeit-Modul wird als `time_module` importiert.
+INTER_MAIL_DELAY_SECONDS = 2
 
 logger = logging.getLogger("trip_report_scheduler")
 
@@ -1157,7 +1157,7 @@ class TripReportSchedulerService:
             weather_data: Segment-weather list to enrich in-place.
         """
         from providers.base import get_provider
-        from providers.openmeteo import OpenMeteoProvider, compute_confidence_pct
+        from providers.openmeteo import OpenMeteoProvider
         from app.config import Location
 
         if not weather_data or not trip.stages:
@@ -1284,7 +1284,6 @@ class TripReportSchedulerService:
 
         SPEC: docs/specs/modules/multi_day_trend.md v4.0
         """
-        from app.metric_catalog import build_default_display_config
         from providers.openmeteo import (
             OPENMETEO_MAX_FORECAST_DAYS,
             is_within_forecast_horizon,

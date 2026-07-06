@@ -13,7 +13,6 @@ SPEC: docs/specs/modules/issue_748_day_comparison_service.md
 """
 from datetime import datetime, timezone
 
-import pytest
 
 
 def _make_segment(segment_id: int, **summary_kwargs):

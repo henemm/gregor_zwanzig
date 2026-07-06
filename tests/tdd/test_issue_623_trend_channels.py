@@ -536,7 +536,6 @@ class TestEmailContextLabelPipeline:
     def test_format_email_html_contains_label_when_trend_present(self):
         """Given format_email called with trend, When executed, Then '3-Tage-Trend' in email_html."""
         from datetime import datetime, timezone
-        from src.formatters.trip_report import TripReportFormatter
         from src.output.renderers.email import render_email
         from src.output.tokens.dto import TokenLine
         from app.metric_catalog import build_default_display_config

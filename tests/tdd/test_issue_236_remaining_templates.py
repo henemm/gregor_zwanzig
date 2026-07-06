@@ -205,7 +205,6 @@ def test_ac6_warning_banner_tokens():
     THEN:  #fff3cd und #ffc107 fehlen; G_BOX_WARNING_BG ist referenziert
     """
     from output.renderers.email import compare_html  # noqa: PLC0415
-    from output.renderers.email.design_tokens import G_BOX_WARNING_BG  # noqa: PLC0415
 
     with open(compare_html.__file__) as f:
         source_code = f.read()

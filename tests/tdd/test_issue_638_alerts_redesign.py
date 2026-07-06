@@ -40,6 +40,7 @@ from app.models import (
     SegmentWeatherSummary,
     TripReportConfig,
     TripSegment,
+    UnifiedWeatherDisplayConfig,
 )
 from app.trip import Stage, Trip, Waypoint
 import outputs.telegram as telegram_mod

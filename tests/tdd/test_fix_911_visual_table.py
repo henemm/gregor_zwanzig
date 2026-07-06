@@ -161,7 +161,7 @@ class TestAC1LineColor:
         ]
         assert not wrong, (
             "Zell-Linien NICHT durchgängig #f0ece1 (rgb(240,236,225)).\n"
-            f"Abweichende Zellen (label, border-right, border-bottom):\n  "
+            "Abweichende Zellen (label, border-right, border-bottom):\n  "
             + "\n  ".join(str(w) for w in wrong)
         )
 

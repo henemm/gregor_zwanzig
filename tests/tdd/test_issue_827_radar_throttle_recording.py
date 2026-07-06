@@ -14,7 +14,6 @@ from datetime import date as date_type
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import pytest
 
 from app.config import Settings
 from app.models import TripReportConfig
@@ -142,14 +141,14 @@ def test_ac1_no_recording_when_all_channels_disabled():
         from services.alert_state import AlertStateService
         state = AlertStateService(uid).load(trip_id)
         assert "radar_throttle" not in state, (
-            f"AC-1: alert_state['radar_throttle'] wurde eingetragen, "
-            f"obwohl alle Kanäle deaktiviert (Issue #827)"
+            "AC-1: alert_state['radar_throttle'] wurde eingetragen, "
+            "obwohl alle Kanäle deaktiviert (Issue #827)"
         )
 
         alert_log_path = DATA_ROOT / uid / "alert_log.json"
         assert not alert_log_path.exists(), (
-            f"AC-1: alert_log.json wurde geschrieben, "
-            f"obwohl alle Kanäle deaktiviert (Issue #827)"
+            "AC-1: alert_log.json wurde geschrieben, "
+            "obwohl alle Kanäle deaktiviert (Issue #827)"
         )
 
     finally:

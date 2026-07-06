@@ -11,7 +11,6 @@ TDD RED — Issue #357 + #358
 """
 from datetime import datetime, timezone
 
-import pytest
 
 from app.models import (
     ExposedSection,

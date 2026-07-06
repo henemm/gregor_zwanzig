@@ -216,7 +216,7 @@ def _generate_winner_tags(
         result = good_tags + warn_tags
         result = result + info_tags
         result = result[:4]
-    return [{"tone": t, "label": l} for t, l in result]
+    return [{"tone": t, "label": label} for t, label in result]
 
 
 def _render_tag(tone: str, label: str) -> str:
@@ -503,7 +503,7 @@ def _render_hourly_section(
         return ""
     valid = sorted(
         result.valid_locations,
-        key=lambda l: l.score if l.score is not None else -1,
+        key=lambda loc: loc.score if loc.score is not None else -1,
         reverse=True,
     )[:top_n_details]
 

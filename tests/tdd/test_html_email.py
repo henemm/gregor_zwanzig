@@ -17,11 +17,8 @@ ihre Coverage steckt 1:1 in ``TestRealStalwartE2E::test_real_gmail_e2e_html_emai
 """
 import os
 import pytest
-from datetime import datetime, date
-from email import message_from_string
 
-from app.user import SavedLocation, CompareSubscription, ComparisonResult, LocationResult
-from output.renderers.comparison import render_comparison_html
+from app.user import SavedLocation, CompareSubscription
 from services.compare_subscription import run_comparison_for_subscription
 
 

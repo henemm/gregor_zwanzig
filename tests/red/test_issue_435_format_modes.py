@@ -21,7 +21,6 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-import pytest
 
 
 # ---------------------------------------------------------------------------
@@ -803,7 +802,6 @@ class TestAC446FormatModeValidation:
 
     def test_ac446_1_unknown_capitalized_falls_back_with_warning(self):
         """AC-1: format_mode='Symbol' (Großbuchstabe) für cloud_total → 'symbol' + WARNING."""
-        import logging
         from app import loader
 
         with self.assert_warning_logged("app.loader"):
@@ -830,7 +828,6 @@ class TestAC446FormatModeValidation:
 
     def test_ac446_3_valid_mode_returned_unchanged(self):
         """AC-3: format_mode='raw' (valide) für cloud_total → 'raw' unverändert, kein Log."""
-        import logging
         from app import loader
 
         with self.assert_no_warning_logged("app.loader"):

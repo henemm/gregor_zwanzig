@@ -20,7 +20,6 @@ vs "UNKNOWN", kaputter .json-Name, fehlender Import).
 
 import importlib.util
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest

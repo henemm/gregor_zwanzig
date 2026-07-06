@@ -25,7 +25,6 @@ import time
 import uuid
 from pathlib import Path
 
-import pytest
 from playwright.sync_api import expect, sync_playwright
 
 _VALIDATOR_ENV = Path("/home/hem/gregor_zwanzig/.claude/validator.env")

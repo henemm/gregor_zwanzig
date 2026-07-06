@@ -81,7 +81,7 @@ class TestProductionImports:
         THEN: keine Treffer
         """
         hits = self._grep("src/")
-        assert hits == [], f"Verbleibende Verwendungen in src/:\n" + "\n".join(hits)
+        assert hits == [], "Verbleibende Verwendungen in src/:\n" + "\n".join(hits)
 
     def test_no_references_in_api(self):
         """
@@ -90,7 +90,7 @@ class TestProductionImports:
         THEN: keine Treffer
         """
         hits = self._grep("api/")
-        assert hits == [], f"Verbleibende Verwendungen in api/:\n" + "\n".join(hits)
+        assert hits == [], "Verbleibende Verwendungen in api/:\n" + "\n".join(hits)
 
 
 # =============================================================================

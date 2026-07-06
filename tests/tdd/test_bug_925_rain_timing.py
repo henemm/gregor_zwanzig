@@ -16,7 +16,6 @@ import re
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-import pytest
 
 from app.models import (
     GPXPoint, SegmentWeatherData, SegmentWeatherSummary, ThunderLevel,

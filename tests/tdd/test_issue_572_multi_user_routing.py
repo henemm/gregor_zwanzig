@@ -16,7 +16,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
 
 
 # ---------------------------------------------------------------------------
@@ -286,7 +285,7 @@ class TestProductionPathUserIdPropagation:
         WHEN: _process_update() is called
         THEN: load_all_trips is called with user_id="henning" (not "default")
         """
-        from datetime import date, timedelta, datetime, timezone
+        from datetime import date, datetime, timezone
         from app.config import Settings
         from app.trip import Trip, Stage, Waypoint
         from services.inbound_telegram_reader import InboundTelegramReader

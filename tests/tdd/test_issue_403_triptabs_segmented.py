@@ -7,7 +7,6 @@ Spec: docs/specs/modules/issue_403_triptabs_segmented.md
 
 import os
 import re
-import pytest
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 

@@ -47,8 +47,7 @@ def _make_seg_table_with_values(wind=None, gust=None, precip=None, pop=None):
     from datetime import datetime, timezone
     from app.metric_catalog import build_default_display_config
     from app.models import (
-        ForecastDataPoint, ForecastMeta, GPXPoint, NormalizedTimeseries,
-        Provider, SegmentWeatherData, SegmentWeatherSummary, ThunderLevel, TripSegment,
+        ForecastDataPoint, ThunderLevel,
     )
     from src.output.renderers.email.helpers import dp_to_row
 

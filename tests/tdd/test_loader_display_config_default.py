@@ -13,7 +13,6 @@ from pathlib import Path
 import pytest
 
 from app.loader import load_trip_from_dict
-from app.profile import ActivityProfile
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 GR221_TRIP_FILE = PROJECT_ROOT / "data" / "users" / "default" / "trips" / "gr221-mallorca.json"

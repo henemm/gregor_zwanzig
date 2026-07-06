@@ -17,7 +17,6 @@ Spec: docs/specs/modules/issue_670_inbound_keywords.md (PAUSE/SKIP/CONFIG: #731)
 """
 from __future__ import annotations
 
-import dataclasses
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path

@@ -336,7 +336,6 @@ class TestAC4Precipitation:
     def test_rain_label(self):
         """AC-4: 'Regen' bei precip >= 2mm."""
         seg = _make_segment(start_hour=16, end_hour=18)
-        from app.models import SegmentWeatherSummary, ThunderLevel
         object.__setattr__(seg.aggregated, "precip_sum_mm", 3.5)
         rows = _make_rows_rain(16, 18)
         body = _render_telegram([seg], [rows])
@@ -500,7 +499,7 @@ class TestAC8OtherChannelsUnchanged:
         from src.output.renderers.email import render_email
         token_line = _make_token_line()
         html, plain = render_email(token_line, **_common_kwargs())
-        assert "<table" in html.lower(), f"E-Mail-HTML-Tabelle fehlt"
+        assert "<table" in html.lower(), "E-Mail-HTML-Tabelle fehlt"
 
     def test_multiple_segments_each_one_line(self):
         """AC-1+AC-8: Drei Segmente → drei Segment-Zeilen (nicht mehr)."""

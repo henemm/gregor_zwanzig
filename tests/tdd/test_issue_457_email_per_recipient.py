@@ -13,7 +13,6 @@ Keine Mocks erlaubt (CLAUDE.md). Tests nutzen:
 
 """
 import inspect
-import smtplib
 import pytest
 
 
@@ -95,7 +94,6 @@ class TestPerRecipientSend:
 
         SPEC AC-5: "Fehler beim Versand einzelner Empfänger blockieren nicht die anderen"
         """
-        import os
         from outputs.email import EmailOutput
         from app.config import Settings
 

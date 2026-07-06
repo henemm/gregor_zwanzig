@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from services.day_comparison import DayComparison
 
 from app.metric_catalog import get_metric
-from app.models import SegmentWeatherData, SegmentWeatherSummary, StabilityResult, ThunderLevel, UnifiedWeatherDisplayConfig
+from app.models import SegmentWeatherData, StabilityResult, ThunderLevel, UnifiedWeatherDisplayConfig
 from utils.timezone import local_fmt
 
 from src.output.renderers.alert.render import _esc

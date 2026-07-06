@@ -21,7 +21,6 @@ import shutil
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-import pytest
 
 
 def _make_active_trip():

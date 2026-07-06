@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
-from app.metric_catalog import get_label_for_field
 from app.models import (
     SegmentWeatherData, ThunderLevel, UnifiedWeatherDisplayConfig,
     WeatherChange,
@@ -27,7 +26,7 @@ from src.output.renderers.email.helpers import (
     build_confidence_hint, build_metrics_summary_pills,
     build_segment_label,
     build_units_legend, fmt_val, format_change_line, format_trend_tokens,
-    shorten_stage_name, tone_symbol, visible_cols,
+    tone_symbol, visible_cols,
 )
 from src.output.renderers.email.profile_signature import profile_signature
 

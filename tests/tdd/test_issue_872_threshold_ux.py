@@ -16,7 +16,6 @@ KEINE Mocks — echter Import von sms_trip, echter Scheduler-Pfad.
 
 from __future__ import annotations
 
-import pytest
 
 
 # ── AC-6: SMS_SYMBOL_BY_METRIC enthält "thunder" -> "TH:" ─────────────────

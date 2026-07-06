@@ -15,7 +15,6 @@ Vorbild-Pattern: tests/tdd/test_issue_258_hook_arch.py.
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path

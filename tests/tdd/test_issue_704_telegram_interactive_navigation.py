@@ -31,7 +31,7 @@ from app.trip import Stage, Trip, Waypoint
 from app.loader import save_trip
 from services.weather_snapshot import WeatherSnapshotService
 from services.trip_command_processor import (
-    CommandResult, InboundMessage, TripCommandProcessor,
+    InboundMessage, TripCommandProcessor,
 )
 
 TODAY = date(2026, 8, 20)

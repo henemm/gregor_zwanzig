@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import imaplib
 import json
-import os
 import time
 import uuid
 from datetime import date, timedelta

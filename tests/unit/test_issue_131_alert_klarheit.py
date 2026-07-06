@@ -11,7 +11,6 @@ NO MOCKS — uses real dataclasses and real functions.
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-import pytest
 
 from app.models import (
     ChangeSeverity,

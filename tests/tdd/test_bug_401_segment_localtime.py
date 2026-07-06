@@ -14,7 +14,6 @@ from __future__ import annotations
 from datetime import date, datetime, time, timezone
 from zoneinfo import ZoneInfo
 
-import pytest
 
 # Korsika = Europe/Paris (CEST = UTC+2 im Sommer)
 _CEST = ZoneInfo("Europe/Paris")

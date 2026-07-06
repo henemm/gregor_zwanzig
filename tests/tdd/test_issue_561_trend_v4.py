@@ -10,7 +10,6 @@ RED-Zustand (jetzt):
   - Plain-Text-Renderer: kein ⚡-Format
 """
 from __future__ import annotations
-import pytest
 from zoneinfo import ZoneInfo
 
 

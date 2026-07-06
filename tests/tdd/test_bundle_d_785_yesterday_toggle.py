@@ -15,8 +15,6 @@ Ausführung:
 """
 import json
 import os
-import re
-import time
 
 import httpx
 import pytest

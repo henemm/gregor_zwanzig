@@ -347,7 +347,7 @@ class TestAC4ThresholdCrossing:
         # Erste Überschreitung: h=7 UTC (gust=20) → 09:00 CEST, oder h=8 (gust=30) → 10:00
         # Mindestens eine Stunde mit "ab" oder ":00" enthalten
         assert any("ab" in t.lower() or ":00" in t for t in texts), (
-            f"'ab {hh}:00' muss im Crossing-Text stehen: {texts}"
+            f"'ab <hh>:00' muss im Crossing-Text stehen: {texts}"
         )
 
     def test_wind_no_crossing_tone_is_good(self):

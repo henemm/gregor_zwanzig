@@ -13,7 +13,6 @@ import re
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-import pytest
 
 _TZ = ZoneInfo("Europe/Berlin")
 

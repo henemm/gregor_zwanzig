@@ -191,7 +191,6 @@ def test_ac2_enrich_uses_last_waypoint_of_last_stage():
 
     RED: AttributeError weil Methode nicht existiert
     """
-    from services.trip_report_scheduler import TripReportSchedulerService
 
     trip = _make_trip(num_stages=2)
     last_wp = trip.stages[-1].last_waypoint
@@ -213,7 +212,6 @@ def test_ac2_single_stage_trip_no_index_error():
 
     RED: AttributeError weil Methode nicht existiert
     """
-    from services.trip_report_scheduler import TripReportSchedulerService
 
     trip = _make_trip(num_stages=1)
     assert len(trip.stages) == 1
@@ -238,7 +236,6 @@ def test_ac3_confidence_propagated_to_all_segments_after_enrichment():
     THEN:  weather_data[0].aggregated.confidence_pct_min ist nicht None
     """
     from app.models import SegmentWeatherData, SegmentWeatherSummary
-    from services.trip_report_scheduler import TripReportSchedulerService
 
     trip = _make_trip(num_stages=1)
     segment = _make_segment(lat=trip.stages[-1].last_waypoint.lat,
@@ -338,7 +335,6 @@ def test_ac5_single_stage_last_waypoint_resolves_correctly():
     RED: AttributeError weil Methode nicht existiert
     """
     from app.trip import Trip, Stage, Waypoint
-    from services.trip_report_scheduler import TripReportSchedulerService
 
     wp_start = Waypoint(id="g1", name="Start", lat=47.10, lon=9.20, elevation_m=500)
     wp_end = Waypoint(id="g2", name="Ziel", lat=47.30, lon=9.40, elevation_m=1200)

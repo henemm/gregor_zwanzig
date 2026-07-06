@@ -15,7 +15,6 @@ Spec: docs/specs/modules/issue_366_compare_score_recalibration.md
 """
 from datetime import date, timedelta
 
-import pytest
 import sys
 
 sys.path.insert(0, "src")

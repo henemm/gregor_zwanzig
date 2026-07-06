@@ -17,7 +17,6 @@ import importlib.util
 from email.message import EmailMessage
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 VALIDATOR_PATH = REPO_ROOT / ".claude" / "hooks" / "briefing_mail_validator.py"

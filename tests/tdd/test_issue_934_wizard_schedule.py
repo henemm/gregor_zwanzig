@@ -18,9 +18,6 @@ import os
 import re
 import json
 import uuid
-import time
-import imaplib
-import email as emaillib
 import pytest
 import httpx
 from playwright.sync_api import sync_playwright
@@ -235,7 +232,7 @@ class TestBug3ZeitplanConfigGespeichert:
             f"Gespeicherter report_config: {saved_config}"
         )
         assert saved_config.get("evening_enabled") is False, (
-            f"BUG 3: evening_enabled wurde NICHT korrekt gespeichert."
+            "BUG 3: evening_enabled wurde NICHT korrekt gespeichert."
         )
 
         # Cleanup

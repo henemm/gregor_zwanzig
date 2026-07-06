@@ -18,7 +18,6 @@ import json
 import os
 import time
 
-import pytest
 from playwright.sync_api import sync_playwright
 
 BASE = "https://staging.gregor20.henemm.com"

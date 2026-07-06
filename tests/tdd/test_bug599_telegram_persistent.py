@@ -5,7 +5,6 @@ Spec: docs/specs/modules/bug599_telegram_persistent.md
 """
 from __future__ import annotations
 
-import pytest
 
 
 # =============================================================================
@@ -19,7 +18,6 @@ def test_scheduler_has_module_level_telegram_reader():
     THEN: attribute exists at module level
     """
     import api.routers.scheduler as sched
-    from services.inbound_telegram_reader import InboundTelegramReader
 
     assert hasattr(sched, '_telegram_reader'), (
         "_telegram_reader muss auf Modulebene in scheduler.py existieren"

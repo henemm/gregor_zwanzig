@@ -15,12 +15,10 @@ ACs abgedeckt:
 import json
 import os
 import subprocess
-import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-import pytest
 
 PROD_SELFTEST = Path("/home/hem/gregor_zwanzig/.claude/hooks/prod_selftest.py")
 REPO_DIR = Path("/home/hem/gregor_zwanzig")

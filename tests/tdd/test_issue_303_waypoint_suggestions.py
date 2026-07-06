@@ -16,10 +16,9 @@ echte Service-Aufrufe.
 from __future__ import annotations
 
 import json
-from datetime import date, time, datetime, timezone
+from datetime import date, time
 from pathlib import Path
 
-import pytest
 
 
 # ---------------------------------------------------------------------------

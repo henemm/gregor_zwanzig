@@ -15,7 +15,6 @@ import json
 import os
 
 import httpx
-import pytest
 from playwright.sync_api import sync_playwright
 
 from tests.helpers.staging_auth import (  # Bündel H #987: Staging-Basic-Auth

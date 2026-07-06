@@ -12,9 +12,7 @@ AC-4 (Regression) ist bewusst GREEN — beweist dass Ampel-Funktionen unberührt
 """
 from __future__ import annotations
 
-from zoneinfo import ZoneInfo
 
-import pytest
 
 
 # ─── Helpers ────────────────────────────────────────────────────────────────

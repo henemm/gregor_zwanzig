@@ -306,8 +306,8 @@ class TestAC2HtmlKmRangeNormalSegmentOnly:
             friendly_keys=set(),
         )
         assert "km 0.0–4.2" in result, (
-            f"Erwartet 'km 0.0–4.2' im HTML-Segment-Header, "
-            f"aber nicht gefunden."
+            "Erwartet 'km 0.0–4.2' im HTML-Segment-Header, "
+            "aber nicht gefunden."
         )
 
     def test_html_destination_segment_has_no_km_range(self):

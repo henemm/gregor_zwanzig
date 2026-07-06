@@ -6,8 +6,6 @@ AC-1: for_testing() mit gesetzten GZ_TEST_SMTP_*-Vars → smtp_user + imap_user 
 AC-2: Settings-Objekt hat test_smtp_user-Feld (kein AttributeError)
 AC-3: for_testing()-Fallback ohne Creds → nur is_test_mode=True, kein Absturz
 """
-import os
-import pytest
 
 
 class TestForTestingStalwartRouting:

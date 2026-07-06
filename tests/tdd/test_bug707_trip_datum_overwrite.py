@@ -27,7 +27,6 @@ KEINE MOCKS — echte HTTP-Calls gegen lokalen Go-Server.
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import uuid
