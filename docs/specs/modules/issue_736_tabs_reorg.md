@@ -179,3 +179,7 @@ Beim Write-Back: `onTripUpdate` mit `display_config.channels` + `reportConfig`-b
 ## Changelog
 
 - 2026-06-11: Initial spec erstellt — Issue #736, Reiter-Reorganisation "Inhalt" vs. "Versand"
+- 2026-07-06: Fix #942 hat AC-2 (E-Mail-Inhalt-Karte im Inhalt-Reiter) versehentlich mit-entfernt
+  (siehe `docs/specs/fast/fix-942-inhalt-tab-doppel-ui.md`) — durch Fix #1047 wiederhergestellt
+  (`docs/specs/modules/fix_1047_mail_content_tab_restore.md`). AC-2 gilt seither wieder wie
+  ursprünglich spezifiziert.

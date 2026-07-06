@@ -26,10 +26,12 @@
 		showMailContent?: boolean;
 		/** Issue #736: Steuert ob die Kanal-Checkboxen gerendert werden (Default: true). */
 		showChannels?: boolean;
+		/** Issue #1047: Steuert ob die Morgen-/Abend-Report-Zeitplan-Karten gerendert werden (Default: true). */
+		showSchedule?: boolean;
 		/** Issue #736: Callback bei Kanal-Toggle — für Auto-Save von display_config.channels. */
 		onChannelChange?: (channel: 'email' | 'telegram' | 'sms', value: boolean) => void;
 	}
-	let { reportConfig = $bindable(), mode = 'create', weatherChannels, showMailContent = true, showChannels = true, onChannelChange }: Props = $props();
+	let { reportConfig = $bindable(), mode = 'create', weatherChannels, showMailContent = true, showChannels = true, showSchedule = true, onChannelChange }: Props = $props();
 
 	// --- Original-Blob fuer Read-Modify-Write -----------------------------------
 	// Alle nicht UI-gepflegten Felder (insb. change_threshold_*, custom_unknown_*)
@@ -226,6 +228,7 @@
 </script>
 
 <div class="space-y-6">
+	{#if showSchedule}
 	<!-- ====================================================================== -->
 	<!-- Morgen-Report                                                          -->
 	<!-- ====================================================================== -->
@@ -335,6 +338,7 @@
 			</span>
 		</div>
 	</Card.Root>
+	{/if}
 
 	<!-- ====================================================================== -->
 	<!-- Kanaele — Issue #736: nur wenn showChannels=true                      -->

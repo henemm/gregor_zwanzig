@@ -3,22 +3,22 @@
 // Spec: docs/specs/modules/issue_723_email_tab_eindampfen.md
 // Workflow: issue-723-email-tab-eindampfen
 //
-// Ziel-Oberfläche: Edit-Seite /trips/[id]/edit, Reports-Tab
-// (EditReportConfigSection.svelte). Der E-Mail-Inhalt-Bereich wird auf
-// Format-Schalter + GENAU 3 Inhalts-Bausteine reduziert.
+// Ziel-Oberfläche (migriert durch Fix #1047, docs/specs/modules/fix_1047_mail_content_tab_restore.md):
+// Trip-Detail-Seite /trips/[id]?tab=weather, Reiter "Wetter-Metriken" (= "Inhalt",
+// EditReportConfigSection.svelte eingebunden über WeatherMetricsTab.svelte).
 //
-// Verbleibende TestIDs:
+// Aktuelle TestIDs (nach #664/#722/#785 — "Metriken-Überblick"-Checkbox seit #971/#774
+// entfernt, `report-show-metrics-summary` existiert NICHT mehr im DOM):
 //   report-email-format-full / report-email-format-compact  — Format-Schalter (#722)
-//   report-show-metrics-summary                             — Baustein Metriken-Überblick
-//   report-show-outlook                                     — Baustein Ausblick (NEU, #721)
+//   report-show-outlook                                     — Baustein Ausblick (#721)
 //   report-show-stage-stats                                 — Baustein Etappen-Kennzahlen
+//   report-show-yesterday-comparison                        — Baustein Vortagesvergleich (#785)
 //
 // Entfernte TestIDs (dürfen NICHT mehr im DOM sein):
 //   report-show-quick-take, report-show-stability, report-show-highlights,
 //   daily-summary-metric-*, report-daily-summary-toggle, report-show-daylight,
-//   report-wind-exposition, report-compact-summary, report-show-advanced
-//
-// Diese Tests sind RED bis die UI eingedampft ist. Cleanup inline (DELETE).
+//   report-wind-exposition, report-compact-summary, report-show-advanced,
+//   report-show-metrics-summary (#971/#774)
 
 import { test, expect } from '@playwright/test';
 import { login } from './helpers.js';
@@ -65,7 +65,9 @@ async function deleteTrip(
 }
 
 async function openReportsSection(page: import('@playwright/test').Page, id: string) {
-	await page.goto(`/trips/${id}?tab=briefings`);
+	// Fix #1047: Reiter "Wetter-Metriken" (?tab=weather), nicht mehr "Briefing-Zeitplan".
+	await page.goto(`/trips/${id}?tab=weather`);
+	await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
 	await page.locator('[data-testid="report-mail-content"]').waitFor({ state: 'visible' });
 }
 
@@ -77,7 +79,8 @@ const REMOVED_TESTIDS = [
 	'report-show-daylight',
 	'report-wind-exposition',
 	'report-compact-summary',
-	'report-show-advanced'
+	'report-show-advanced',
+	'report-show-metrics-summary'
 ];
 
 test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
@@ -101,13 +104,13 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 
 			// Genau 3 Bausteine
 			await expect(
-				page.locator('[data-testid="report-show-metrics-summary"] input[type="checkbox"]')
-			).toBeVisible();
-			await expect(
 				page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]')
 			).toBeVisible();
 			await expect(
 				page.locator('[data-testid="report-show-stage-stats"] input[type="checkbox"]')
+			).toBeVisible();
+			await expect(
+				page.locator('[data-testid="report-show-yesterday-comparison"] input[type="checkbox"]')
 			).toBeVisible();
 
 			// Entfernte Optionen NICHT mehr im DOM
@@ -158,13 +161,13 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 			await page.locator('[data-testid="report-email-format-compact"]').check();
 
 			await expect(
-				page.locator('[data-testid="report-show-metrics-summary"] input[type="checkbox"]')
-			).toBeDisabled();
-			await expect(
 				page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]')
 			).toBeDisabled();
 			await expect(
 				page.locator('[data-testid="report-show-stage-stats"] input[type="checkbox"]')
+			).toBeDisabled();
+			await expect(
+				page.locator('[data-testid="report-show-yesterday-comparison"] input[type="checkbox"]')
 			).toBeDisabled();
 		} finally {
 			await deleteTrip(request, id);
@@ -186,16 +189,14 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 		try {
 			await openReportsSection(page, id);
 
-			// Ausblick abwählen
-			await page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]').click();
-
+			// Ausblick abwählen — Auto-Save (kein expliziter Button im Wetter-Metriken-Reiter)
 			const putRequestPromise = page.waitForRequest(
 				(req) => req.method() === 'PUT' && req.url().endsWith(`/api/trips/${id}`)
 			);
 			const putResponsePromise = page.waitForResponse(
 				(r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok()
 			);
-			await page.locator('[data-testid="briefings-save"]').click();
+			await page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]').click();
 			const putReq = await putRequestPromise;
 			const body = JSON.parse(putReq.postData() || '{}');
 			expect(body.report_config.show_outlook).toBe(false);
@@ -233,12 +234,11 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 		try {
 			await openReportsSection(page, id);
 
-			// Einen verbleibenden Baustein ändern, dann speichern
-			await page.locator('[data-testid="report-show-stage-stats"] input[type="checkbox"]').click();
+			// Einen verbleibenden Baustein ändern — Auto-Save
 			const putResponsePromise = page.waitForResponse(
 				(r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok()
 			);
-			await page.locator('[data-testid="briefings-save"]').click();
+			await page.locator('[data-testid="report-show-stage-stats"] input[type="checkbox"]').click();
 			await putResponsePromise;
 
 			const after = await request.get(`/api/trips/${id}`);

@@ -21,6 +21,7 @@
 	// WeatherV2Kanaele entfernt in Issue #736 (Kanal-Config → Versand-Reiter)
 	import WeatherV2MailPreview from './WeatherV2MailPreview.svelte';
 	import ThresholdMetricRow from './ThresholdMetricRow.svelte';
+	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
 	import {
 		autoAssign, bucketsToColumns, move, buildWeatherConfigMetrics,
 		diffHighlight,
@@ -636,6 +637,16 @@
 						</table>
 					</div>
 				</Card>
+
+				{#if !createMode}
+				<EditReportConfigSection
+					bind:reportConfig
+					mode="edit"
+					showMailContent={true}
+					showChannels={false}
+					showSchedule={false}
+				/>
+				{/if}
 
 			</div>
 
