@@ -1,79 +1,83 @@
-// E2E — Issue #776: E-Mail-Inhalts-Sektionen reagieren nicht auf Frontend-Toggles
+// E2E — Issue #776 / Fix #971: Metriken-Überblick ist fester Mail-Bestandteil (kein Opt-out).
 //
-// Spec: docs/specs/modules/issue_783_776_778_briefing_fixes.md (AC-3)
+// Spec: docs/specs/modules/fix_970_971_1011_e2e_ui_drift.md (Bündel I, AC-4)
 //
-// TDD RED — gegen Staging. MUSS fehlschlagen, solange WeatherMetricsTab.handleSave()
-// nur display_config persistiert und das gebundene reportConfig NIE per PUT
-// /api/trips/{id} sendet — und solange isDirty den Toggle nicht erkennt
-// (Speichern-Button bleibt disabled).
+// Der frühere Toggle-Test klickte den seit dem v2-Redesign entfernten
+// `report-content-modules-toggle` und die „Metriken-Überblick"-Checkbox. Seit #790
+// rendert der Mail-Renderer den Metriken-Überblick-Block unconditional
+// (build_metrics_summary_pills, src/output/renderers/email/html.py:1292/1500) —
+// die Opt-out-Checkbox war eine wirkungslose Karteileiche und wurde entfernt.
 //
-// Verhaltenstest aus Nutzerperspektive: echtes Login + echtes Klick-Verhalten gegen
-// den gerenderten Staging-Build, anschliessend echter GET /api/trips/{id}. Kein Mock.
+// Reale Ziel-Oberfläche der Checkbox: das Neuanlegen-Formular /trips/new,
+// Tab „Briefing-Zeitplan" (TripNewEditor → EditReportConfigSection, showMailContent
+// default true). Auf der Trip-Detail-Seite ist der Mail-Inhalt-Block via
+// showMailContent={false} ohnehin ausgeblendet (BriefingScheduleTab).
 //
-// Ausfuehrung: cd frontend && npx playwright test issue-776-metrics-toggle
+// DEPLOY-GATED: greift erst NACH dem Deploy der Checkbox-Entfernung — vorher zeigt
+// Staging die Checkbox noch (Prod-Code-Änderung). Der harte Surface-Check
+// (report-mail-content sichtbar) stellt sicher, dass wirklich der Zeitplan-Tab
+// geprüft wird und nicht still ein leerer DOM.
 
 import { test, expect } from '@playwright/test';
-import { login } from './helpers.js';
+import type { Page } from '@playwright/test';
+import * as path from 'node:path';
 
-const TRIP_ID = 'e2e-cockpit-test';
-const DESKTOP = { width: 1440, height: 900 };
+const MOBILE = { width: 390, height: 844 };
 
-test.describe('Issue #776 — Inhalts-Toggle persistiert in report_config', () => {
-	test('metrics summary toggle in weather tab persists to report_config', async ({
-		page,
-		request
-	}) => {
-		/**
-		 * GIVEN: Trip im "Wetter-Metriken"-Tab mit aktivem "Metriken-Ueberblick"
-		 * WHEN:  Der Nutzer den Toggle deaktiviert und auf Speichern klickt
-		 * THEN:  GET /api/trips/{id} liefert report_config.show_metrics_summary == false
-		 *
-		 * RED: handleSave sendet reportConfig nicht; isDirty ignoriert den Toggle, der
-		 *      Speichern-Button bleibt disabled -> der Wert bleibt unveraendert.
-		 */
-		await page.setViewportSize(DESKTOP);
-		await login(page);
+// /trips/new bis zum Zeitplan-Tab durchklicken (mobiler, verlässlicher Pfad):
+// Name+Datum → Etappen → je Etappe GPX laden (schaltet den Zeitplan frei) →
+// Wetter-Metriken besuchen → Briefing-Zeitplan öffnen. Kein Mock.
+async function openNewTripZeitplan(page: Page) {
+	await page.setViewportSize(MOBILE);
+	await page.goto('/trips/new');
+	await page.getByTestId('trip-new-name-input-mobile').fill('Fix #971 E2E');
+	await page.getByTestId('trip-new-date-input').fill(new Date().toISOString().slice(0, 10));
 
-		// Ausgangszustand: Metriken-Ueberblick aktivieren + speichern, damit der
-		// Test deterministisch von "true" nach "false" schaltet.
-		await page.goto(`/trips/${TRIP_ID}?tab=weather`);
-		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible({ timeout: 10000 });
+	const tabbar = page.getByTestId('tn-mobile-tabbar');
+	await tabbar.getByRole('tab', { name: /Etappen/ }).click({ force: true });
 
-		// Inhalts-Bausteine aufklappen
-		await page.getByTestId('report-content-modules-toggle').click();
+	const gpx = path.resolve('./e2e/fixtures/test-trip.gpx');
+	// GPX in jede Etappe laden. WICHTIG: TripNewEditor.svelte:644 (`{#if s.gpx}`)
+	// entfernt den Datei-Input einer Etappe komplett aus dem DOM, sobald deren GPX
+	// gesetzt ist — der nächste offene Input rutscht danach auf Index 0. Ein vorab
+	// fixierter `.nth(i)`-Zähler zeigt also ab der zweiten Iteration ins Leere.
+	// Daher IMMER den ERSTEN verbleibenden offenen Input frisch auflösen (kein
+	// Index-Zähler); `stageCount` dient nur als Obergrenze für die Loop-Länge.
+	const stageCount = await page.locator('.tn-mobile input[type="file"][accept=".gpx"]').count();
+	for (let i = 0; i < stageCount; i++) {
+		const input = page.locator('.tn-mobile input[type="file"][accept=".gpx"]').first();
+		await Promise.all([
+			page.waitForResponse((r) => r.url().includes('/api/gpx/parse'), { timeout: 30_000 }).catch(() => null),
+			input.setInputFiles(gpx),
+		]);
+		await page.waitForTimeout(600);
+	}
 
-		const metricsToggle = page
-			.getByTestId('report-show-metrics-summary')
-			.locator('input[type="checkbox"]');
-		await expect(metricsToggle).toBeVisible({ timeout: 8000 });
+	await tabbar.getByRole('tab', { name: /Wetter/ }).click({ force: true });
+	await tabbar.getByRole('tab', { name: /Zeitplan/ }).click({ force: true });
 
-		// Sicherstellen, dass er aktiv ist (sonst erst aktivieren + speichern)
-		if (!(await metricsToggle.isChecked())) {
-			await metricsToggle.check();
-			const saveBtn0 = page.getByTestId('weather-metrics-tab-save');
-			await expect(saveBtn0).toBeEnabled({ timeout: 8000 });
-			await saveBtn0.click();
-			await expect(page.getByTestId('weather-metrics-tab-success')).toBeVisible({
-				timeout: 8000
-			});
-		}
+	// Harter Surface-Check: die Mail-Inhalt-Karte MUSS sichtbar sein — sonst prüfen
+	// wir versehentlich einen leeren DOM und count()==0 wäre bedeutungslos.
+	// EditReportConfigSection wird sowohl im .tn-desktop- als auch im .tn-mobile-Baum
+	// gemountet (CSS-Media-Query-Toggle statt {#if}) — beide Instanzen stehen
+	// gleichzeitig im DOM, daher hier wie bei den GPX-Inputs auf .tn-mobile scopen.
+	await expect(page.locator('.tn-mobile').getByTestId('report-mail-content')).toBeVisible({ timeout: 15_000 });
+}
 
-		// --- Eigentlicher Test: deaktivieren ---
-		await metricsToggle.uncheck();
+test.describe('Issue #776 / Fix #971: Metriken-Überblick fest in der Mail, kein Opt-out', () => {
+	test('kein Metriken-Überblick-Opt-out; Kompakt-Hinweis bestätigt festen Block', async ({ page }) => {
+		await openNewTripZeitplan(page);
 
-		// AC-3 (isDirty-Teil): der Toggle MUSS den Tab als geaendert markieren,
-		// sonst bleibt Speichern disabled. RED: bleibt heute disabled.
-		const saveBtn = page.getByTestId('weather-metrics-tab-save');
-		await expect(saveBtn).toBeEnabled({ timeout: 8000 });
-		await saveBtn.click();
-		await expect(page.getByTestId('weather-metrics-tab-success')).toBeVisible({
-			timeout: 8000
-		});
+		// (a) Kein Opt-out-Schalter mehr für den Metriken-Überblick.
+		await expect(page.getByTestId('report-show-metrics-summary')).toHaveCount(0);
+		await expect(page.locator('[data-testid="report-content-modules-toggle"]')).toHaveCount(0);
 
-		// AC-3 (Persistenz-Teil): der gespeicherte Trip traegt den abgeschalteten Wert.
-		const resp = await request.get(`/api/trips/${TRIP_ID}`);
-		expect(resp.ok()).toBeTruthy();
-		const trip = await resp.json();
-		expect(trip.report_config?.show_metrics_summary).toBe(false);
+		// (b) Kompakt-Modus wählen → der Hinweis bestätigt, dass der Metriken-Überblick
+		//     FIX (immer) gezeigt wird — der Block ist kein optionaler Baustein.
+		// (auf .tn-mobile scopen — .tn-desktop-Baum enthält dieselben Testids doppelt)
+		await page.locator('.tn-mobile [data-testid="report-email-format-compact"]').check();
+		const hint = page.locator('.tn-mobile').getByTestId('report-compact-hint');
+		await expect(hint).toBeVisible();
+		await expect(hint).toContainText('Metriken-Überblick');
 	});
 });

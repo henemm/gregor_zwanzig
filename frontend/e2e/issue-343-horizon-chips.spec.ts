@@ -100,24 +100,10 @@ test.describe('Issue #343: HorizonChip-UI', () => {
 		await deleteTestTrip(request);
 	});
 
-	// AC-1 — SKIP: Chip-Toggle-UI existiert nicht mehr im DOM (siehe Befund oben).
-	test.skip('AC-1: Klick auf HorizonChip togglet data-active und zeigt dirty-Pill', async () => {});
-
-	// AC-2 — SKIP: dito (kein Chip mehr, auch keine `weather-metrics-tab-checkbox-*`-
-	// Checkbox mehr im v2-Layout — Aktivierung läuft über den Grundauswahl-Toggle).
-	test.skip('AC-2: HorizonChip togglebar AUCH wenn Metrik-Checkbox aus', async () => {});
-
-	// AC-3 — SKIP: Save+Reload-Persistenz von horizonsMap ist zwar weiterhin real
-	// (siehe AC-7 unten, das denselben Persistenzpfad indirekt mitprüft), aber ohne
-	// Chip gibt es keinen UI-Klick-Pfad, der den Toggle selbst auslöst.
-	test.skip('AC-3: Save + Reload persistiert Chip-State', async () => {});
-
-	// AC-5 — SKIP: TablePreview.svelte (table-preview-day-*) ist Dead Code, wird von
-	// WeatherMetricsTab.svelte nicht gerendert.
-	test.skip('AC-5: TablePreview rendert drei Tabellen heute/morgen/uebermorgen', async () => {});
-
-	// AC-6 — SKIP: Mobile-Zeilenumbruch der Chips ist ohne existierende Chips nicht prüfbar.
-	test.skip('AC-6: Mobile-Viewport bricht HorizonChips in Zeile 2 unter Metrik-Namen', async () => {});
+	// Fix #970: AC-1/2/3/5/6 (interaktive HorizonChip-/TablePreview-UI) wurden PO-seitig
+	// endgültig zurückgezogen — der Chip-Toggle-Pfad existiert im v2-DOM nicht mehr
+	// (Dead Code, keine Wiederherstellung). Nur die beiden weiter realen Tests AC-4 und
+	// AC-7 (SavePresetDialog-Anzeige/-Submit über echten Klickpfad) bleiben.
 
 	// AC-7: SavePresetDialog zeigt ZEITHORIZONTE-Box mit EXAKTEM Wording.
 	// Horizon-Zustand wird real via Backend-PUT gesetzt (kein Chip-Klick mehr möglich);

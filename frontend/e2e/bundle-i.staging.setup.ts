@@ -1,16 +1,21 @@
 import { test as setup, expect } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 
-// Staging-Auth für Issue #774 via API (Wegwerf-Testnutzer, keine echten Secrets).
-// Einmaliger Register+Login im setup-Projekt → storageState; Tests laufen
+// Staging-Auth für Bündel I (#970/#971) via API (Wegwerf-Testnutzer, keine echten
+// Secrets). Einmaliger Register+Login im setup-Projekt → storageState; Tests laufen
 // vorauthentifiziert (vermeidet Auth-Rate-Limit bei parallelen UI-Logins).
+//
+// ZWEI unabhängige Auth-Schichten (Bündel-H-Erfahrung):
+//   1. nginx-Basic-Auth vor Staging  → httpCredentials (GZ_VALIDATOR_USER/PASS)
+//   2. App-Login (gz_session-Cookie) → /api/auth/login mit Wegwerf-Nutzer
+// Beide MÜSSEN im request-Context gesetzt sein, sonst nginx-401 vor dem App-Login.
 //
 // Robust gegen Login-Rate-Limit (#703): bei HTTP 429 wird der Retry-After-Header
 // respektiert und mehrfach nachgefasst. Register nur bei echtem 401 (User fehlt),
 // nicht bei 429 — sonst verlängert jeder Auth-Hit das gleitende Limit-Fenster.
-const authFile = 'playwright/.auth/staging-774.json';
-const E2E_USER = 'e2e774user';
-const E2E_PASS = 'e2e774pass!';
+const authFile = 'playwright/.auth/staging-bundle-i.json';
+const E2E_USER = 'bundle-i-e2e-user';
+const E2E_PASS = 'bundleI-e2e-pass-2026!';
 
 function sleep(ms: number) {
 	return new Promise((r) => setTimeout(r, ms));
@@ -20,7 +25,7 @@ async function tryLogin(ctx: APIRequestContext) {
 	return ctx.post('/api/auth/login', { data: { username: E2E_USER, password: E2E_PASS } });
 }
 
-setup('register + authenticate via API (staging)', async ({ playwright }) => {
+setup('register + authenticate via API (staging) — Bündel I', async ({ playwright }) => {
 	setup.setTimeout(420_000);
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
 	const nginxUser = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
@@ -28,7 +33,7 @@ setup('register + authenticate via API (staging)', async ({ playwright }) => {
 	const ctx = await playwright.request.newContext({
 		baseURL: base,
 		ignoreHTTPSErrors: true,
-		httpCredentials: { username: nginxUser, password: nginxPass },
+		httpCredentials: { username: nginxUser, password: nginxPass }
 	});
 
 	let res = await tryLogin(ctx);

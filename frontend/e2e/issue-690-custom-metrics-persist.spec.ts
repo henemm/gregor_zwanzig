@@ -68,10 +68,14 @@ async function openWeatherTab(page: Page, tripId: string) {
 }
 
 // Eine Metrik umschalten → Tab wird „dirty" → der Speichern-Link erscheint.
+// Fix #971: der v2-Editor rendert keine `weather-metrics-tab-checkbox-*` mehr;
+// Aktivierung läuft über die Grundauswahl-Sektion (echter Klickpfad, kein Mock).
+// Die Live-Oberfläche läuft im Autosave-Modus (#758) — die „ungespeichert"-Affordanz
+// ist der Speichern-Link „als eigenes Profil speichern" (nur bei Dirty, vor dem
+// 700ms-Autosave). Deshalb sofort prüfen und im Anschluss zügig den Dialog öffnen.
 async function makeDirty(page: Page) {
-	const firstCheckbox = page.locator('[data-testid^="weather-metrics-tab-checkbox-"]').first();
-	await firstCheckbox.click();
-	await expect(page.locator('[data-testid="weather-metrics-dirty-pill"]')).toBeVisible();
+	await page.getByTestId('wm2-grundauswahl').getByRole('button', { name: 'Gefühlte Temperatur' }).click();
+	await expect(page.getByRole('button', { name: 'als eigenes Profil speichern' })).toBeVisible();
 }
 
 // Speichern-Dialog öffnen (Link „als eigenes Profil speichern" im Dirty-Hinweis).

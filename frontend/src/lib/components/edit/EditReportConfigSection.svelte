@@ -461,18 +461,11 @@
 		</div>
 
 		<!-- Gruppe A: Inhalts-Bausteine (Issue #723: genau 3, Issue #774: direkt ohne Einklapp-Toggle) -->
+		<!-- Fix #971/#774: "Metriken-Überblick"-Checkbox entfernt — der Block wird seit
+		     #790 im Mail-Renderer unconditional gerendert (build_metrics_summary_pills),
+		     die Checkbox war eine wirkungslose Karteileiche. -->
 		<div class="space-y-1" style={email_format === 'compact' ? 'opacity:0.45;pointer-events:none' : ''}>
 			<div data-testid="report-content-modules-body" class="space-y-2 pl-2">
-				<div class="text-sm">
-					<span data-testid="report-show-metrics-summary" class="inline-flex items-center gap-2">
-						<Checkbox
-							checked={show_metrics_summary}
-							disabled={email_format === 'compact'}
-							onchange={(e) => { show_metrics_summary = (e.target as HTMLInputElement).checked; }}
-						>{CONTENT_MODULE_DESCRIPTIONS.show_metrics_summary.label}</Checkbox>
-					</span>
-					<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_metrics_summary.description}</p>
-				</div>
 				<div class="text-sm">
 					<span data-testid="report-show-outlook" class="inline-flex items-center gap-2">
 						<Checkbox

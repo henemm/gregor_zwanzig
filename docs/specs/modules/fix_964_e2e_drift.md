@@ -73,6 +73,12 @@ Die aktuelle Struktur:
 | `table-preview-day-{day}` | **unverändert gültig**, keine Migration nötig | `TablePreview.svelte:84` |
 | `weather-metrics-tab`, `weather-metrics-tab-save`, `weather-metrics-dirty-pill`, `weather-metrics-tab-success`, `weather-metrics-tab-checkbox-{id}`, `preset-confirm-ok`/`-cancel` | **unverändert gültig**, keine Migration nötig | `WeatherMetricsTab.svelte:469,473,477,483`, `MetricCheckbox.svelte:64` |
 
+> **Überholt (2026-07-06):** Die beiden vorstehenden Zeilen zu `table-preview-day-{day}`
+> und `weather-metrics-tab-checkbox-{id}` stimmen nicht mehr — beide Selektoren sind
+> mittlerweile tot (Dead-Code-Testgruppen entfernt bzw. Selektor durch echten Klickpfad
+> ersetzt). Siehe `docs/specs/modules/fix_970_971_1011_e2e_ui_drift.md` (Bündel I,
+> #970/#971/#1011) für die aktuelle Migration.
+
 Save-Payload (`PUT /api/trips/{id}/weather-config`) hat weiterhin ein `bucket`-Feld pro Metrik
 (`buildWeatherPayload()` in `WeatherMetricsTab.svelte:374`) — Tests, die den PUT-Body auf
 `bucket`/`order`-Felder prüfen (ehem. AC-6), bleiben inhaltlich gültig, nur der UI-Interaktionspfad
