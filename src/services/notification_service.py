@@ -9,15 +9,25 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
 from app.config import Settings
 from formatters.trip_report import TripReportFormatter
+from output.renderers.alert.model import AlertMessage, OnsetEvent
+from output.renderers.alert.project import to_alert_message
+from output.renderers.alert.render import (
+    render_email as render_alert_email,
+    render_sms as render_alert_sms,
+    render_subject as render_alert_subject,
+    render_telegram as render_alert_telegram,
+)
 from output.renderers.email.design_tokens import (
     FONT_UI, G_ACCENT, G_DANGER, G_INK, G_PAPER, G_SURFACE_1, WEB_FONT_LINK,
 )
 from outputs.email import EmailOutput
+from utils.timezone import local_fmt
 
 if TYPE_CHECKING:
     from app.models import (
@@ -27,6 +37,7 @@ if TYPE_CHECKING:
         StabilityResult,
         TripReportConfig,
         UnifiedWeatherDisplayConfig,
+        WeatherChange,
     )
     from app.profile import ActivityProfile
     from app.trip import Trip
@@ -83,6 +94,20 @@ class NotificationResult:
     telegram_fully_sent: bool = True
     no_channel_configured: bool = False
     error: str | None = None
+
+
+@dataclass
+class RadarAlertRequest:
+    """DTO für Radar-Onset-Alerts vom TripAlertService an den NotificationService."""
+    onset_minutes: int
+    onset_time: str
+    km_from: float
+    km_to: float
+    is_convective: bool
+    intensity_label: str
+    source_label: str
+    briefing_context: str | None = None
+    tz: ZoneInfo | None = None
 
 
 def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
@@ -279,6 +304,140 @@ class NotificationService:
                 sent_channels.append("telegram")
             except Exception as e:
                 logger.error(f"No-data hint Telegram failed for {trip.name}: {e}")
+
+        return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
+
+    def send_deviation_alert(
+        self,
+        trip: "Trip",
+        weather: list["SegmentWeatherData"],
+        changes: list["WeatherChange"],
+        effective_channels: set[str],
+    ) -> NotificationResult:
+        """Wetter-Änderungs-Alert: rendern und über konfigurierte Kanäle versenden.
+
+        Issue #1023: Der AlertService kennt keine Renderer-/Transport-Details mehr.
+        """
+        from utils.timezone import tz_for_coords
+
+        alert_tz = tz_for_coords(
+            weather[0].segment.start_point.lat,
+            weather[0].segment.start_point.lon,
+        )
+        stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
+        alert_msg = to_alert_message(
+            changes, weather, trip.name, tz=alert_tz, stand_at=stand_at,
+        )
+        return self._dispatch_alert_message(
+            alert_msg=alert_msg,
+            effective_channels=effective_channels,
+            mail_type="deviation-alert",
+            target_name=trip.name,
+            radar_mode=False,
+        )
+
+    def send_radar_alert(
+        self,
+        trip: "Trip",
+        *,
+        request: RadarAlertRequest,
+        source: str,
+        cooldown_display: str,
+        effective_channels: set[str],
+        mail_sink: Optional[object] = None,
+    ) -> NotificationResult:
+        """Radar-Onset-Alert: rendern und über konfigurierte Kanäle versenden."""
+        onset_event = OnsetEvent(
+            onset_minutes=request.onset_minutes,
+            onset_time=request.onset_time,
+            km_from=request.km_from,
+            km_to=request.km_to,
+            is_convective=request.is_convective,
+            intensity_label=request.intensity_label,
+            source_label=request.source_label,
+            briefing_context=request.briefing_context,
+        )
+        alert_tz = request.tz or ZoneInfo("UTC")
+        alert_msg = AlertMessage(
+            trip_short=trip.name[:16],
+            stand_at=local_fmt(datetime.now(timezone.utc), alert_tz),
+            events=(onset_event,),
+            source=source,
+            cooldown_display=cooldown_display,
+        )
+        return self._dispatch_alert_message(
+            alert_msg=alert_msg,
+            effective_channels=effective_channels,
+            mail_type="radar-alert",
+            mail_sink=mail_sink,
+            target_name=trip.id,
+            radar_mode=True,
+        )
+
+    def _dispatch_alert_message(
+        self,
+        alert_msg: AlertMessage,
+        effective_channels: set[str],
+        *,
+        mail_type: str = "deviation-alert",
+        mail_sink: Optional[object] = None,
+        target_name: str = "",
+        radar_mode: bool = False,
+    ) -> NotificationResult:
+        """Versendet eine kanonische AlertMessage über die konfigurierten Kanäle."""
+        subject = render_alert_subject(alert_msg)
+        html, plain = render_alert_email(alert_msg)
+        telegram_body = render_alert_telegram(alert_msg)
+        sms_body = render_alert_sms(alert_msg)
+
+        sent_channels: list[str] = []
+
+        def _log_error(channel: str, e: Exception) -> None:
+            label = {"email": "Email", "telegram": "Telegram", "sms": "SMS"}[channel]
+            if radar_mode:
+                logger.error(f"Radar alert {channel} failed for {target_name}: {e}")
+            else:
+                logger.error(f"{label} alert failed for {target_name}: {e}")
+
+        # E-Mail: Kanal gilt als betreten, wenn er konfiguriert ist — auch wenn
+        # der Best-Effort-Versand fehlschlägt (Issue #684 AC-3, Anti-Pattern #656).
+        if "email" in effective_channels and self._settings.can_send_email():
+            sent_channels.append("email")
+            try:
+                if mail_sink is not None:
+                    mail_sink(subject=subject, body=plain)
+                else:
+                    EmailOutput(self._settings).send(
+                        subject=subject,
+                        body=html,
+                        plain_text_body=plain,
+                        mail_type=mail_type,
+                    )
+            except Exception as e:
+                _log_error("email", e)
+
+        # Telegram
+        if "telegram" in effective_channels and self._settings.can_send_telegram():
+            sent_channels.append("telegram")
+            try:
+                from outputs.telegram import TelegramOutput
+                TelegramOutput(self._settings).send(
+                    subject=subject,
+                    body=telegram_body,
+                    parse_mode="HTML",
+                    suppress_subject_line=True,
+                )
+            except Exception as e:
+                _log_error("telegram", e)
+
+        # SMS
+        if "sms" in effective_channels and self._settings.can_send_sms():
+            sent_channels.append("sms")
+            try:
+                from outputs.sms import SMSOutput
+                SMSOutput(self._settings).send(subject=subject, body=sms_body)
+            except Exception as e:
+                _log_error("sms", e)
 
         return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
 

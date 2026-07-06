@@ -16,10 +16,9 @@ from typing import TYPE_CHECKING, List, Optional
 
 from app.config import Settings
 from app.models import ChangeSeverity, SegmentWeatherData, WeatherChange
-from formatters.trip_report import TripReportFormatter
-from outputs.email import EmailOutput
+from services.notification_service import NotificationService, RadarAlertRequest
 from services.weather_change_detection import WeatherChangeDetectionService
-from utils.timezone import local_fmt, tz_for_coords
+from utils.timezone import tz_for_coords
 
 if TYPE_CHECKING:
     from app.trip import Trip
@@ -70,7 +69,7 @@ class TripAlertService:
                        (DI seam for AC-4/AC-6; replaces SMTP when set)
         """
         self._settings = settings if settings else Settings().with_user_profile(user_id)
-        self._formatter = TripReportFormatter()
+        self._notification_service = NotificationService(self._settings, user_id)
         self._change_detector = WeatherChangeDetectionService()
         self._throttle_hours = throttle_hours
         self._user_id = user_id
@@ -668,10 +667,8 @@ class TripAlertService:
         Returns the number of radar alerts triggered.
         """
         from datetime import date as date_type
-        from types import SimpleNamespace
         from app.loader import load_all_trips
         from services.trip_segments import convert_trip_to_segments
-        from output.renderers.email.helpers import build_segment_label
 
         today = date_type.today()
         now_utc = datetime.now(timezone.utc)
@@ -771,11 +768,6 @@ class TripAlertService:
                 logger.warning(f"No channel configured; skipping radar alert for {trip.id}")
                 continue
 
-            # Ort-Label aus build_segment_label (braucht Wrapper-Objekte mit .segment)
-            change_like = SimpleNamespace(segment_id=str(active.segment_id))
-            seg_wrappers = [SimpleNamespace(segment=s) for s in segments]
-            build_segment_label(change_like, seg_wrappers, tz=tz)
-
             # Cooldown-Anzeige
             if cooldown_min % 60 == 0:
                 n = cooldown_min // 60
@@ -783,15 +775,6 @@ class TripAlertService:
             else:
                 cooldown_display = f"{cooldown_min} Minuten"
 
-            # Mail-Body + Betreff via pure functions (Issue #830 -- Extraktion)
-            # include_source=False: format_now_text liefert nur den Onset-Satz
-            # ohne eigene Quelle-Zeile, damit genau EINE Quelle-Zeile im Body steht.
-            from output.renderers.alert.model import AlertMessage, OnsetEvent
-            from output.renderers.alert.render import (
-                render_email, render_sms, render_subject, render_telegram,
-            )
-
-            _onset_time_str = (now_utc + timedelta(minutes=result.onset_minutes)).astimezone(tz).strftime("%H:%M")
             # Issue #952 (reopened): kurzes Intensitäts-Label (kein format_now_text-Satz
             # mehr — der Renderer haengt selbst "ab {onset_time}" an). Briefing-Kontext
             # wandert in ein eigenes Feld (4. Datenblock-Zeile, nur E-Mail).
@@ -802,7 +785,8 @@ class TripAlertService:
             # Adjektiv, daher ist [:1].lower() hier immer korrekt.
             _label = result.intensity_label
             _label = _label[:1].lower() + _label[1:]
-            _onset_ev = OnsetEvent(
+            _onset_time_str = (now_utc + timedelta(minutes=result.onset_minutes)).astimezone(tz).strftime("%H:%M")
+            _radar_request = RadarAlertRequest(
                 onset_minutes=result.onset_minutes,
                 onset_time=_onset_time_str,
                 km_from=active.start_point.distance_from_start_km,
@@ -811,57 +795,37 @@ class TripAlertService:
                 intensity_label=_label,
                 source_label=radar_svc.source_label(result.source),
                 briefing_context=_briefing_context,
+                tz=tz,
             )
-            _alert_msg = AlertMessage(
-                trip_short=trip.name[:16],
-                stand_at=now_utc.astimezone(tz).strftime("%H:%M"),
-                events=(_onset_ev,),
-                source=radar_svc.source_label(result.source),
-                cooldown_display=cooldown_display,
-            )
-            subject = render_subject(_alert_msg)
-            _html, _plain = render_email(_alert_msg)
 
             config = trip.report_config
 
-            # Best-Effort-Zustellung; delivered=True wenn mindestens ein Kanal betreten (Issue #827)
-            delivered = False
+            # Issue #1023: Kanal-Set für NotificationService bauen; der Service prüft
+            # selbst can_send_*(). Trip-Ebene darf Kanäle explizit deaktivieren.
+            effective_channels: set[str] = set()
             if can_email and (not config or getattr(config, "send_email", True)):
-                delivered = True
-                try:
-                    if self._mail_sink is not None:
-                        self._mail_sink(subject=subject, body=_plain)
-                    else:
-                        EmailOutput(self._settings).send(
-                            subject=subject,
-                            body=_html,
-                            plain_text_body=_plain,
-                            mail_type="radar-alert",
-                        )
-                except Exception as e:
-                    logger.error(f"Radar alert email failed for {trip.id}: {e}")
-
+                effective_channels.add("email")
             if can_telegram and config and getattr(config, "send_telegram", False):
-                delivered = True
-                try:
-                    from outputs.telegram import TelegramOutput
-                    TelegramOutput(self._settings).send(
-                        subject=subject, body=render_telegram(_alert_msg),
-                        parse_mode="HTML", suppress_subject_line=True,
-                    )
-                except Exception as e:
-                    logger.error(f"Radar alert telegram failed for {trip.id}: {e}")
-
+                effective_channels.add("telegram")
             if can_sms and config and getattr(config, "send_sms", False):
-                delivered = True
-                try:
-                    from outputs.sms import SMSOutput
-                    SMSOutput(self._settings).send(subject=subject, body=render_sms(_alert_msg))
-                except Exception as e:
-                    logger.error(f"Radar alert SMS failed for {trip.id}: {e}")
+                effective_channels.add("sms")
 
-            if not delivered:
+            if not effective_channels:
                 logger.info(f"Radar alert: alle Kanäle auf Trip-Ebene deaktiviert, kein Recording für {trip.id}")
+                continue
+
+            # Best-Effort-Zustellung über NotificationService (Issue #1023)
+            result = self._notification_service.send_radar_alert(
+                trip=trip,
+                request=_radar_request,
+                source=radar_svc.source_label(result.source),
+                cooldown_display=cooldown_display,
+                effective_channels=effective_channels,
+                mail_sink=self._mail_sink,
+            )
+            delivered = result.sent
+            if not delivered:
+                logger.info(f"Radar alert: kein zustellbarer Kanal für {trip.id}")
                 continue
 
             # Recording nach Best-Effort-Zustellung (F001-Semantik)
@@ -939,93 +903,32 @@ class TripAlertService:
         """
         Format and send alert via all configured effective channels.
 
+        Issue #1023: Rendering und Versand werden an den NotificationService
+        delegiert; TripAlertService kennt keine Renderer-/Transport-Details mehr.
+
         Returns:
             True if at least one configured channel was reachable (deliverable),
             False if no effective channel has a working configuration.
             Send errors on a configured channel are logged but do NOT suppress
             recording (best-effort, Anti-Pattern #656).
         """
-        # Bug #400: ohne tz= würden Segment-Zeiten in UTC statt Lokalzeit erscheinen.
-        # Zeitzone aus den Koordinaten des ersten Segments bestimmen.
-        alert_tz = tz_for_coords(
-            weather[0].segment.start_point.lat,
-            weather[0].segment.start_point.lon,
-        )
-
-        # Issue #917 (Slice 2): kanonischer Alert-Renderer (dynamischer Betreff).
-        from output.renderers.alert.project import to_alert_message
-        from output.renderers.alert.render import (
-            render_email, render_subject, render_telegram, render_sms,
-        )
-
-        stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
-        msg = to_alert_message(
-            changes, weather, trip.name, tz=alert_tz, stand_at=stand_at,
-        )
-        subject = render_subject(msg)
-        html, plain = render_email(msg)
-        telegram_body = render_telegram(msg)
-        sms_body = render_sms(msg)
-
         # Issue #638: Effective channels — per-alert override beats briefing channels.
         effective_channels = self._effective_alert_channels(trip)
-        send_email = "email" in effective_channels
-        send_telegram = "telegram" in effective_channels
-        send_sms = "sms" in effective_channels
 
-        deliverable_any = False
+        result = self._notification_service.send_deviation_alert(
+            trip=trip,
+            weather=weather,
+            changes=changes,
+            effective_channels=effective_channels,
+        )
 
-        # Email: NEU mit can_send_email()-Guard (Symmetrie zu Telegram/Radar, Issue #684)
-        if send_email and self._settings.can_send_email():
-            deliverable_any = True
-            try:
-                EmailOutput(self._settings).send(
-                    subject=subject,
-                    body=html,
-                    plain_text_body=plain,
-                    mail_type="deviation-alert",
-                )
-            except Exception as e:
-                logger.error(f"Email alert failed for {trip.name}: {e}")
-
-        # Telegram (Issue #360: plain-Text, gleiche knappe Struktur)
-        if send_telegram and self._settings.can_send_telegram():
-            deliverable_any = True
-            try:
-                from outputs.telegram import TelegramOutput
-                TelegramOutput(self._settings).send(
-                    subject=subject,
-                    body=telegram_body,
-                    parse_mode="HTML",
-                    suppress_subject_line=True,
-                )
-            except Exception as e:
-                logger.error(f"Telegram alert failed for {trip.name}: {e}")
-
-        # SMS (Issue #914 Slice 4): kanonischer Alert-Renderer, seven.io-Versand.
-        if send_sms and self._settings.can_send_sms():
-            deliverable_any = True
-            try:
-                from outputs.sms import SMSOutput
-                SMSOutput(self._settings).send(subject=subject, body=sms_body)
-            except Exception as e:
-                logger.error(f"SMS alert failed for {trip.name}: {e}")
-
-        # F003: Nicht-zustellbare Kanäle (unbekannte) still protokollieren.
-        known_channels = {"email", "telegram", "sms"}
-        undeliverable = effective_channels - known_channels
-        if undeliverable:
-            logger.debug(
-                f"Alert channels not yet deliverable (out-of-scope): {sorted(undeliverable)}"
-            )
-
-        if deliverable_any:
+        if result.sent:
             logger.info(
                 f"Alert sent for trip {trip.name}: {len(changes)} changes detected "
-                f"via channels={sorted(effective_channels)}"
+                f"via channels={sorted(result.sent_channels)}"
             )
 
-        return deliverable_any
+        return result.sent
 
     def _effective_alert_channels(self, trip: "Trip") -> set[str]:
         """Issue #638: Compute effective alert channels for a trip.
