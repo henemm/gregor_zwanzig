@@ -41,9 +41,19 @@ Nachweise macht Claude) · kein `git stash`, kein `git add -A` · Schema-Dateien
 | 6 | #1022 | NotificationService + Scheduler-Pfad | — |
 | 7 | #1023 | trip_alert über NotificationService | #1022 integriert |
 | 8 | #1024 | Inbound-Reader über NotificationService | #1022 integriert |
+| 9 | #1050 | ADR-0017 Slice 1: outputs/ → output/channels/ | — (Aufträge 1–8 ✅) |
+| 10 | #1051 | ADR-0017 Slice 2: formatters/ → output/renderers/ | #1050 integriert |
+| 11 | #1052 | ADR-0017 Slice 3: Aufräumen + Doku-Pfade | #1051 integriert |
+
+**Stand 2026-07-06: Aufträge 1–8 sind ✅ integriert und live.** Es geht weiter mit Auftrag 9.
 
 ~~#1018 (CI-Ausbau)~~ — entfallen: bereits umgesetzt durch parallele Claude-Session
 (Commit a283a5ef, 2026-07-05). Nicht anfassen.
+
+**#1050–#1052 — gemeinsame Regeln (ADR-0017, im Issue verlinkt):** Reine Git-Renames +
+Import-Umstellungen, KEINE Logik-/Signatur-Änderungen, keine Shims. Die Gate-Pfadmuster
+(`renderer_mail_gate` u. a.) zieht Claude im Integrations-Commit nach — `.claude/` bleibt
+tabu. Grep-Nachweise aus dem jeweiligen Issue gehören ins TESTLOG.
 
 „Integriert" heißt: Claude hat den Vorgänger-Branch nach Review + Staging-Nachweis auf `main`
 gebracht — vorher NICHT auf dem alten Stand weiterbauen, sondern neuen Workspace von frischem

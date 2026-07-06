@@ -1,6 +1,6 @@
 # ADR-0017: Ein Output-Paket — `src/output/` mit `renderers/` und `channels/`, `formatters/` und `outputs/` aufgelöst
 
-- **Status:** Vorgeschlagen (Entwurf zur PO-Freigabe, Issue #1026)
+- **Status:** Akzeptiert (PO-„go" 2026-07-06)
 - **Datum:** 2026-07-06
 - **Bezug:** [ADR-0015](0015-dual-stack-zielarchitektur.md) (Python = Rendering-Owner),
   [ADR-0011](0011-alert-render-single-backend-renderer.md) (kanonischer Alert-Renderer),
