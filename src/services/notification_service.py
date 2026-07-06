@@ -14,6 +14,13 @@ from zoneinfo import ZoneInfo
 
 from app.config import Settings
 from formatters.trip_report import TripReportFormatter
+from output.renderers.alert.model import AlertMessage
+from output.renderers.alert.render import (
+    render_email as render_alert_email,
+    render_sms as render_alert_sms,
+    render_subject as render_alert_subject,
+    render_telegram as render_alert_telegram,
+)
 from output.renderers.email.design_tokens import (
     FONT_UI, G_ACCENT, G_DANGER, G_INK, G_PAPER, G_SURFACE_1, WEB_FONT_LINK,
 )
@@ -279,6 +286,68 @@ class NotificationService:
                 sent_channels.append("telegram")
             except Exception as e:
                 logger.error(f"No-data hint Telegram failed for {trip.name}: {e}")
+
+        return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
+
+    def send_alert_message(
+        self,
+        alert_msg: AlertMessage,
+        effective_channels: set[str],
+        *,
+        mail_type: str = "deviation-alert",
+        mail_sink: Optional[object] = None,
+    ) -> NotificationResult:
+        """Versendet eine kanonische AlertMessage über die konfigurierten Kanäle.
+
+        Issue #1023: TripAlertService kennt keine Transport-Implementierungen mehr.
+        Renderer-Auswahl (E-Mail, Telegram, SMS) und Versand liegen hier.
+        """
+        subject = render_alert_subject(alert_msg)
+        html, plain = render_alert_email(alert_msg)
+        telegram_body = render_alert_telegram(alert_msg)
+        sms_body = render_alert_sms(alert_msg)
+
+        sent_channels: list[str] = []
+
+        # E-Mail: Kanal gilt als betreten, wenn er konfiguriert ist — auch wenn
+        # der Best-Effort-Versand fehlschlägt (Issue #684 AC-3, Anti-Pattern #656).
+        if "email" in effective_channels and self._settings.can_send_email():
+            sent_channels.append("email")
+            try:
+                if mail_sink is not None:
+                    mail_sink(subject=subject, body=plain)
+                else:
+                    EmailOutput(self._settings).send(
+                        subject=subject,
+                        body=html,
+                        plain_text_body=plain,
+                        mail_type=mail_type,
+                    )
+            except Exception as e:
+                logger.error(f"Alert email failed: {e}")
+
+        # Telegram
+        if "telegram" in effective_channels and self._settings.can_send_telegram():
+            sent_channels.append("telegram")
+            try:
+                from outputs.telegram import TelegramOutput
+                TelegramOutput(self._settings).send(
+                    subject=subject,
+                    body=telegram_body,
+                    parse_mode="HTML",
+                    suppress_subject_line=True,
+                )
+            except Exception as e:
+                logger.error(f"Alert telegram failed: {e}")
+
+        # SMS
+        if "sms" in effective_channels and self._settings.can_send_sms():
+            sent_channels.append("sms")
+            try:
+                from outputs.sms import SMSOutput
+                SMSOutput(self._settings).send(subject=subject, body=sms_body)
+            except Exception as e:
+                logger.error(f"Alert SMS failed: {e}")
 
         return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
 
