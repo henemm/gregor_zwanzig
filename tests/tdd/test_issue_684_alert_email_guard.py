@@ -279,7 +279,7 @@ def test_ac3_configured_smtp_transient_failure_still_records():
 def test_ac4_telegram_only_unchanged():
     """AC-4: telegram-only effektiver Kanal + konfiguriertes Telegram → return True,
     Alert-Log + Throttle gesetzt (Verhalten unverändert)."""
-    from outputs import telegram as telegram_module
+    from output.channels import telegram as telegram_module
     from services.trip_alert import TripAlertService
 
     class _Handler(BaseHTTPRequestHandler):

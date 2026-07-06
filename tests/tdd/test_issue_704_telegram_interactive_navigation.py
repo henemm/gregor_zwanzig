@@ -164,7 +164,7 @@ def test_ac10_bot_commands_contains_now():
     WHEN:  geprüft wird ob 'now' enthalten ist
     THEN:  mindestens ein Eintrag hat command == 'now'
     """
-    from outputs.telegram import BOT_COMMANDS
+    from output.channels.telegram import BOT_COMMANDS
     commands = [c["command"] for c in BOT_COMMANDS]
     assert "now" in commands, \
         f"BOT_COMMANDS enthält kein 'now'. Aktuell: {commands}"

@@ -28,12 +28,12 @@ def send_test_message(channel: str, user_id: str) -> dict:
 
     try:
         if channel == "email":
-            from outputs.email import EmailOutput
+            from output.channels.email import EmailOutput
 
             output = EmailOutput(settings)
             output.send(subject, body, html=False)
         elif channel == "telegram":
-            from outputs.telegram import TelegramOutput
+            from output.channels.telegram import TelegramOutput
 
             output = TelegramOutput(settings)
             output.send(subject, body)

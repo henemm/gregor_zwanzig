@@ -193,7 +193,7 @@ class TestAC5RealRoundtrip:
     def test_full_roundtrip_jetzt_resolves_trip(self):
         from src.output.tokens.dto import TokenLine
         from src.output.subject import build_email_subject
-        from outputs.email import build_mime_message
+        from output.channels.email import build_mime_message
 
         trip = _make_trip("tr", _REAL_NAME, with_today_stage=True, shortcode="GZ#HERM")
         save_trip(trip, _USER_A)

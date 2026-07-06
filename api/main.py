@@ -5,13 +5,14 @@ Exposes the Python core as HTTP endpoints for the Go API to proxy.
 Runs on localhost:8000 (internal only).
 """
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
 from api.routers import config, compare, forecast, gpx, health, internal, notify, preview, scheduler, validator, webhook
 from app.config import Settings
-from outputs.telegram import TelegramOutput
+from output.channels.telegram import TelegramOutput
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,6 @@ app.include_router(preview.router)
 app.include_router(validator.router)
 app.include_router(webhook.router)
 
-import os
 if os.environ.get("GZ_ENV") == "staging":
     from api.routers import debug as _debug_router
     app.include_router(_debug_router.router)

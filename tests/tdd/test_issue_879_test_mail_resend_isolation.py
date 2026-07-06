@@ -179,8 +179,8 @@ class TestAC3ResendGuardRemains:
         Regression: dieser Wächter ist schon vorhanden und MUSS bestehen bleiben.
         """
         from app.config import Settings
-        from outputs.email import EmailOutput
-        from outputs.base import OutputConfigError
+        from output.channels.email import EmailOutput
+        from output.channels.base import OutputConfigError
 
         s = Settings(
             is_test_mode=True,
@@ -216,7 +216,7 @@ class TestAC1RealStalwartDelivery:
         """
         import imaplib
         from app.config import Settings
-        from outputs.email import EmailOutput
+        from output.channels.email import EmailOutput
 
         settings = Settings().for_testing()
         if not settings.test_smtp_user or not settings.test_smtp_pass:

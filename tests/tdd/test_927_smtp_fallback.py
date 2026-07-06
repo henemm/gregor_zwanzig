@@ -16,8 +16,8 @@ import uuid
 import pytest
 
 from app.config import Settings
-from outputs.base import OutputConfigError, OutputError
-from outputs.email import EmailOutput
+from output.channels.base import OutputConfigError, OutputError
+from output.channels.email import EmailOutput
 
 
 def _make_settings_with_imap_fallback() -> Settings:
@@ -175,7 +175,7 @@ class TestAC2NoFallbackOnAuthErrorBehavioral:
 
         output = EmailOutput(settings)
 
-        with caplog.at_level(logging.INFO, logger="outputs.email"):
+        with caplog.at_level(logging.INFO, logger="output.channels.email"):
             with pytest.raises(OutputError) as exc_info:
                 output.send(
                     "AC2-Auth-Fehler-Test",
@@ -255,7 +255,7 @@ class TestAC6FallbackLogFormat:
         """
         # Prüft dass die Implementierung eine benannte Konstante hat (nicht magic string)
         import inspect
-        import outputs.email as email_module
+        import output.channels.email as email_module
         source = inspect.getsource(email_module)
         assert self.EXPECTED_LOG_MARKER in source, (
             f"Log-Marker '{self.EXPECTED_LOG_MARKER}' muss in email.py als String-Literal vorkommen"

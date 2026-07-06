@@ -4,7 +4,7 @@ prod_selftest Bot-Menü-Wächter umgebungsunabhängig machen (Issue #685).
 Folge-Härtung aus #671: Der Post-Deploy-Menü-Check (`check_bot_menu`, AC-4 von
 #671) meldet in Produktion immer `SKIPPED — BOT_COMMANDS nicht ladbar`, weil der
 Deploy `prod_selftest.py` mit System-`python3` startet und `_load_bot_commands()`
-dort `from outputs.telegram import BOT_COMMANDS` macht → `outputs/__init__.py`
+dort `from output.channels.telegram import BOT_COMMANDS` macht → `outputs/__init__.py`
 zieht `sms → app.config → pydantic`, das fehlt → ModuleNotFoundError → None.
 
 Fix: BOT_COMMANDS dependency-frei per `ast.literal_eval` aus der Quelldatei lesen.

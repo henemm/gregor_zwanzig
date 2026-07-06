@@ -158,7 +158,7 @@ def test_ac5_real_gmail_briefing_tokens():
     import uuid
 
     from app.config import Settings
-    from outputs.email import EmailOutput
+    from output.channels.email import EmailOutput
 
     settings = Settings().for_testing()
     if not settings.can_send_email():

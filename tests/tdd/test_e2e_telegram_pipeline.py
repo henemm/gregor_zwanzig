@@ -182,7 +182,7 @@ def capture(monkeypatch):
     port = srv.server_address[1]
     thread = threading.Thread(target=srv.serve_forever, daemon=True)
     thread.start()
-    monkeypatch.setattr("outputs.telegram.TELEGRAM_API_BASE", f"http://127.0.0.1:{port}")
+    monkeypatch.setattr("output.channels.telegram.TELEGRAM_API_BASE", f"http://127.0.0.1:{port}")
     try:
         yield records
     finally:
@@ -322,7 +322,7 @@ def test_ac3_every_bot_menu_command_is_supported(env, capture, client):
     RED vor Fix (BOT_COMMANDS enthält /briefing /wetter die _SHORTCUT_MAP nicht kennt),
     GREEN nach Fix von BOT_COMMANDS + _SHORTCUT_MAP.
     """
-    from outputs.telegram import BOT_COMMANDS
+    from output.channels.telegram import BOT_COMMANDS
 
     failures = []
     for i, cmd_entry in enumerate(BOT_COMMANDS):

@@ -1,7 +1,7 @@
 """Radar alert service.
 
 Encapsulates radar/onset alert rendering and email sending so that API routers
-do not depend directly on output.renderers.alert.* or outputs.email.
+do not depend directly on output.renderers.alert.* or output.channels.email.
 """
 from __future__ import annotations
 
@@ -88,7 +88,7 @@ def send_radar_alert_email(
         msg: Canonical AlertMessage (expected to contain an OnsetEvent).
         to: Optional recipient override.
     """
-    from outputs.email import EmailOutput
+    from output.channels.email import EmailOutput
 
     subject = render_subject(msg)
     html, plain = render_email(msg)

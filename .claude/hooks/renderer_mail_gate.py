@@ -38,10 +38,13 @@ sys.path.insert(0, str(Path(__file__).parent))
 import hook_utils
 
 # Geschuetzte Mail-Inhalts-Pfade (Spec).
+# ADR-0017 Übergang (Slice 1-3): alte UND neue Pfade parallel, bis
+# src/outputs/ + src/formatters/ vollständig entfernt sind (Slice 3).
 _MAIL_PATTERNS = [
     re.compile(r"src/output/renderers/email/.*\.py$"),
     re.compile(r"src/formatters/.*\.py$"),
     re.compile(r"src/outputs/email\.py$"),
+    re.compile(r"src/output/channels/email\.py$"),
     re.compile(r"src/outputs/radar_alert\.py$"),
     re.compile(r"src/formatters/radar.*\.py$"),
 ]

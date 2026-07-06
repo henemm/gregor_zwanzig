@@ -168,7 +168,7 @@ def capture(monkeypatch):
     srv = socketserver.TCPServer(("127.0.0.1", 0), _Handler)
     port = srv.server_address[1]
     threading.Thread(target=srv.serve_forever, daemon=True).start()
-    monkeypatch.setattr("outputs.telegram.TELEGRAM_API_BASE", f"http://127.0.0.1:{port}")
+    monkeypatch.setattr("output.channels.telegram.TELEGRAM_API_BASE", f"http://127.0.0.1:{port}")
     try:
         yield records
     finally:

@@ -81,7 +81,7 @@ def run_compare_presets_daily(user_id: str = "default", data_root: str | None = 
 
 def send_subscription_email(sub, subject: str, html_body: str, text_body: str, settings: Settings) -> None:
     """Send a subscription result via email if configured."""
-    from outputs.email import EmailOutput
+    from output.channels.email import EmailOutput
 
     # Issue #252: per-Subscription recipients override settings.mail_to
     to_list = list(sub.recipients) if getattr(sub, "recipients", None) else None
@@ -96,7 +96,7 @@ def send_subscription_email(sub, subject: str, html_body: str, text_body: str, s
 
 def send_subscription_telegram(sub, subject: str, text_body: str, settings: Settings) -> None:
     """Send a subscription result via Telegram if configured."""
-    from outputs.telegram import TelegramOutput
+    from output.channels.telegram import TelegramOutput
 
     TelegramOutput(settings).send(subject, text_body)
     logger.info(f"Telegram sent for: {sub.name}")
@@ -208,7 +208,7 @@ def send_one_compare_preset(
     Gibt (top_ort, empfaenger) zurueck. Wirft ValueError wenn kein Empfaenger konfiguriert.
     """
     from output.renderers.comparison import render_compare_email
-    from outputs.email import EmailOutput
+    from output.channels.email import EmailOutput
     from services.comparison_engine import ComparisonEngine
 
     preset_id = preset.get("id", "")

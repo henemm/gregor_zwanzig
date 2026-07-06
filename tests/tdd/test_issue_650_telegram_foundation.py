@@ -33,9 +33,9 @@ import httpx
 import pytest
 
 from app.config import Settings
-from outputs.base import OutputChannel, OutputError
-from outputs import telegram as telegram_mod
-from outputs.telegram import TelegramOutput
+from output.channels.base import OutputChannel, OutputError
+from output.channels import telegram as telegram_mod
+from output.channels.telegram import TelegramOutput
 
 
 # =============================================================================

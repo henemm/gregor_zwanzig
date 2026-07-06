@@ -111,7 +111,7 @@ class TestRealStalwartE2E:
 
         from app.config import Settings
         from app.loader import load_all_locations, load_compare_subscriptions
-        from outputs.email import EmailOutput
+        from output.channels.email import EmailOutput
 
         # 1. Lade echte Daten (Stalwart fuer Tests, spart Resend-Quota)
         settings = Settings().for_testing()

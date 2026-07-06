@@ -4,15 +4,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.config import Settings
-from outputs.base import (
+from output.channels.base import (
     OutputChannel,
     OutputError,
     OutputConfigError,
     NullOutput,
     get_channel,
 )
-from outputs.console import ConsoleOutput
-from outputs.email import EmailOutput
+from output.channels.console import ConsoleOutput
+from output.channels.email import EmailOutput
 
 
 class TestOutputChannelProtocol:
@@ -97,7 +97,7 @@ class TestEmailOutput:
         output = EmailOutput(settings)
         assert output.name == "email"
 
-    @patch("outputs.email.smtplib.SMTP")
+    @patch("output.channels.email.smtplib.SMTP")
     def test_email_send(self, mock_smtp):
         """EmailOutput sends via SMTP."""
         settings = self._create_email_settings()

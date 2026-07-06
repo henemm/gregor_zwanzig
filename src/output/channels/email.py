@@ -13,7 +13,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import TYPE_CHECKING
 
-from outputs.base import OutputConfigError, OutputError
+from output.channels.base import OutputConfigError, OutputError
 
 if TYPE_CHECKING:
     from app.config import Settings

@@ -4,7 +4,7 @@ import logging
 import httpx
 
 from app.config import Settings
-from outputs.base import OutputError
+from output.channels.base import OutputError
 
 logger = logging.getLogger(__name__)
 

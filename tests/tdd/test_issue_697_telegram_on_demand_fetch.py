@@ -208,7 +208,7 @@ def test_ac4_loading_message_sent_before_weather(user_with_trip_no_snapshot, _re
     sys.path.insert(0, str(REPO / "src"))
     base_url, calls = _recording_server
 
-    import outputs.telegram as tg
+    import output.channels.telegram as tg
     monkeypatch.setattr(tg, "TELEGRAM_API_BASE", base_url)
 
     import app.loader as _loader

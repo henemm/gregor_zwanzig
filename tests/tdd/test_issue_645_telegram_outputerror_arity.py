@@ -18,8 +18,8 @@ import re
 import pytest
 
 from app.config import Settings
-from outputs.base import OutputError
-from outputs.telegram import TelegramOutput
+from output.channels.base import OutputError
+from output.channels.telegram import TelegramOutput
 
 _INVALID = Settings(
     telegram_bot_token="000000:INVALID-TOKEN-issue-645",
@@ -87,7 +87,7 @@ def test_http_error_path_raises_clean_outputerror(monkeypatch):
     von httpx.HTTPError) — kein Mock, kein patch der Sende-Logik. Deckt den
     dritten raise-Pfad (Z. 60) ab (AC-2/AC-3).
     """
-    import outputs.telegram as telegram_mod
+    import output.channels.telegram as telegram_mod
 
     monkeypatch.setattr(telegram_mod, "TELEGRAM_API_BASE", "http://127.0.0.1:1")
     output = TelegramOutput(_INVALID)

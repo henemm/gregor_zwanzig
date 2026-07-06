@@ -23,8 +23,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from app.config import Settings
-from outputs.base import OutputConfigError
-from outputs.email import EmailOutput
+from output.channels.base import OutputConfigError
+from output.channels.email import EmailOutput
 
 
 def _resend_settings(**overrides) -> Settings:

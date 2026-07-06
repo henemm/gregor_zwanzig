@@ -43,7 +43,7 @@ from app.models import (
     UnifiedWeatherDisplayConfig,
 )
 from app.trip import Stage, Trip, Waypoint
-import outputs.telegram as telegram_mod
+import output.channels.telegram as telegram_mod
 
 
 # ───────────────────────── echte Socket-Sinks (keine Mocks) ─────────────────

@@ -25,14 +25,14 @@ def test_get_channel_signal_raises_value_error_not_import_error():
     """
     AC-1: get_channel("signal") muss sauber ValueError werfen (kein dangling Import).
 
-    RED-Zustand: outputs/base.py hat noch `from outputs.signal import SignalOutput`
+    RED-Zustand: outputs/base.py hat noch `from output.channels.signal import SignalOutput`
     im elif-Zweig. Da outputs/signal.py nicht existiert, crasht der Aufruf mit
     ModuleNotFoundError (ImportError-Subklasse) statt einem sauberen ValueError.
 
     SOLL nach Fix: Signal-Zweig entfernt → get_channel("signal") erreicht
     den else-Zweig und wirft ValueError("Unknown output channel: signal").
     """
-    from outputs.base import get_channel
+    from output.channels.base import get_channel
     from app.config import Settings
 
     settings = Settings()
@@ -42,14 +42,14 @@ def test_get_channel_signal_raises_value_error_not_import_error():
 
 def test_get_channel_signal_does_not_raise_import_error():
     """
-    AC-1: Der dangling Import `from outputs.signal import SignalOutput` ist entfernt.
+    AC-1: Der dangling Import `from output.channels.signal import SignalOutput` ist entfernt.
 
     RED-Zustand: Aufruf von get_channel("signal") wirft aktuell ImportError/
     ModuleNotFoundError weil outputs/signal.py fehlt aber der Import noch drin ist.
 
     SOLL nach Fix: Kein ImportError mehr — nur ValueError.
     """
-    from outputs.base import get_channel
+    from output.channels.base import get_channel
     from app.config import Settings
 
     settings = Settings()
@@ -72,7 +72,7 @@ def test_get_channel_signal_branch_gone_from_source():
     Strukturell: get_channel() mit bekannten Kanälen funktioniert weiterhin,
     'signal' ist kein gültiger Kanal mehr.
     """
-    from outputs.base import get_channel
+    from output.channels.base import get_channel
     from app.config import Settings
 
     settings = Settings()

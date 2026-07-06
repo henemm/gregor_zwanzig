@@ -21,7 +21,7 @@ from app.config import Settings
 from output.renderers.sms import render_sms
 from output.tokens.builder import build_token_line
 from output.tokens.dto import DailyForecast, HourlyValue, NormalizedForecast
-from outputs.sms import SMSOutput
+from output.channels.sms import SMSOutput
 
 
 class _SMSStub:

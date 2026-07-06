@@ -18,7 +18,7 @@ from app.debug import DebugBuffer
 from app.loader import load_trip, LoaderError, load_compare_subscriptions, load_all_locations
 from app.user import Schedule
 from app.models import NormalizedTimeseries
-from outputs.base import get_channel, OutputError
+from output.channels.base import get_channel, OutputError
 from providers.base import get_provider, ProviderError
 from services.forecast import ForecastService
 from services.trip_forecast import TripForecastService
@@ -296,7 +296,7 @@ def _run_subscriptions(settings: Settings, debug: DebugBuffer) -> int:
     """Run scheduled compare subscriptions."""
     from datetime import datetime
     from services.compare_subscription import run_comparison_for_subscription
-    from outputs.email import EmailOutput
+    from output.channels.email import EmailOutput
 
     # Check if email is configured
     if not settings.can_send_email():

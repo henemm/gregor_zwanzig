@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 # Das ist kein Mock-Test im Sinne des Verbots — wir simulieren hier Netzwerk-
 # Antworten (SMTP-Codes), nicht Geschäftslogik.
 
-from outputs.base import OutputError
-from outputs.email import EmailOutput
+from output.channels.base import OutputError
+from output.channels.email import EmailOutput
 
 
 def _make_settings(host="mail.test", port=587, user="u", pw="p", to="t@t.com"):

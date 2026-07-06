@@ -340,8 +340,8 @@ class TestAC5LiveAbortAfterFirstFailure:
         schlägt bereits der Aufbau (ImportError) fehl."""
         from app.config import Settings
         from output.renderers.narrow import render_telegram_bubbles
-        from outputs.base import OutputError
-        from outputs.telegram import TelegramOutput
+        from output.channels.base import OutputError
+        from output.channels.telegram import TelegramOutput
 
         seg1 = _make_segment(seg_id=1, start_hour=8, end_hour=10, start_km=0.0, end_km=6.0)
         seg2 = _make_segment(seg_id=2, start_hour=10, end_hour=12, start_km=6.0, end_km=11.0)
@@ -531,7 +531,7 @@ class TestAC1LiveMultiBubbleDelivery:
     def test_real_send_produces_at_least_five_distinct_message_ids(self):
         from app.config import Settings
         from output.renderers.narrow import render_telegram_bubbles
-        from outputs.telegram import TelegramOutput
+        from output.channels.telegram import TelegramOutput
 
         seg1 = _make_segment(seg_id=1, start_hour=8, end_hour=10, start_km=0.0, end_km=6.0)
         seg2 = _make_segment(seg_id=2, start_hour=10, end_hour=12, start_km=6.0, end_km=11.0)
@@ -577,7 +577,7 @@ class TestAC8LiveHtmlEscaping:
     def test_special_chars_survive_real_html_send(self):
         from app.config import Settings
         from output.renderers.narrow import render_telegram_bubbles
-        from outputs.telegram import TelegramOutput
+        from output.channels.telegram import TelegramOutput
 
         seg = _make_segment(seg_id=1, start_hour=8, end_hour=10)
         rows = [dict(_SUNNY_ROW)]
@@ -617,7 +617,7 @@ class TestAC9LiveTableSend:
     def test_max_column_table_real_send_succeeds(self):
         from app.config import Settings
         from output.renderers.narrow import render_telegram_bubbles
-        from outputs.telegram import TelegramOutput
+        from output.channels.telegram import TelegramOutput
 
         seg = _make_segment(seg_id=1, start_hour=14, end_hour=16)
         row = {

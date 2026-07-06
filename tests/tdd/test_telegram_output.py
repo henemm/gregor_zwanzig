@@ -16,14 +16,14 @@ import json
 
 def test_telegram_output_import():
     """GIVEN outputs package WHEN importing TelegramOutput THEN class exists."""
-    from outputs.telegram import TelegramOutput
+    from output.channels.telegram import TelegramOutput
     assert TelegramOutput is not None
 
 
 def test_telegram_output_implements_protocol():
     """GIVEN TelegramOutput WHEN checking protocol THEN satisfies OutputChannel."""
-    from outputs.base import OutputChannel
-    from outputs.telegram import TelegramOutput
+    from output.channels.base import OutputChannel
+    from output.channels.telegram import TelegramOutput
     from app.config import Settings
     settings = Settings(telegram_bot_token="fake:token", telegram_chat_id="12345")
     output = TelegramOutput(settings)
@@ -32,7 +32,7 @@ def test_telegram_output_implements_protocol():
 
 def test_telegram_output_name():
     """GIVEN TelegramOutput WHEN accessing .name THEN returns telegram."""
-    from outputs.telegram import TelegramOutput
+    from output.channels.telegram import TelegramOutput
     from app.config import Settings
     settings = Settings(telegram_bot_token="fake:token", telegram_chat_id="12345")
     output = TelegramOutput(settings)
@@ -83,7 +83,7 @@ def test_telegram_can_send_false_no_chat_id():
 
 def test_telegram_output_factory():
     """GIVEN get_channel WHEN requesting telegram THEN returns TelegramOutput."""
-    from outputs.base import get_channel
+    from output.channels.base import get_channel
     from app.config import Settings
     settings = Settings(telegram_bot_token="123:ABC", telegram_chat_id="12345")
     channel = get_channel("telegram", settings)

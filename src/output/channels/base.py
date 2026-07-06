@@ -83,18 +83,18 @@ def get_channel(name: str, settings: "Settings") -> OutputChannel:
         >>> channel.send("Report", "Content here...")
     """
     # Import here to avoid circular imports
-    from outputs.console import ConsoleOutput
-    from outputs.email import EmailOutput
+    from output.channels.console import ConsoleOutput
+    from output.channels.email import EmailOutput
 
     if name == "console":
         return ConsoleOutput()
     elif name == "email":
         return EmailOutput(settings)
     elif name == "sms":
-        from outputs.sms import SMSOutput
+        from output.channels.sms import SMSOutput
         return SMSOutput(settings)
     elif name == "telegram":
-        from outputs.telegram import TelegramOutput
+        from output.channels.telegram import TelegramOutput
         return TelegramOutput(settings)
     elif name == "none":
         return NullOutput()

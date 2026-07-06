@@ -83,7 +83,7 @@ def test_ac2_send_returns_message_id(monkeypatch):
     WHEN: TelegramOutput.send() aufgerufen wird
     THEN: gibt es 4242 zurück (vorher None).
     """
-    import outputs.telegram as tg
+    import output.channels.telegram as tg
     from app.config import Settings
 
     resp = {"ok": True, "result": {"message_id": 4242, "date": 0,

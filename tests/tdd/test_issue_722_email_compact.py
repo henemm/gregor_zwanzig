@@ -343,7 +343,7 @@ class TestMimeMessageBuilder:
     def test_compact_message_is_text_plain_7bit(self):
         """Given html=False + reiner ASCII-Body / When MIME-Message gebaut /
         Then Top-Level ist text/plain (kein multipart), CTE 7bit, kein HTML-Part."""
-        from outputs.email import build_mime_message
+        from output.channels.email import build_mime_message
         body = ("Tag 3 - GR20\nEtappe 3 - Evening Report\n\n"
                 "== Metriken-Ueberblick ==\n  [OK] Wind max 25 km/h\n\n"
                 "Wetterlage: WECHSELHAFT\nNaechste Etappen\nMi  Etappe 4  12-18C\n")
@@ -364,7 +364,7 @@ class TestMimeMessageBuilder:
 
     def test_full_message_still_multipart(self):
         """Gegenprobe: html=True bleibt multipart/alternative (full-Pfad unberührt)."""
-        from outputs.email import build_mime_message
+        from output.channels.email import build_mime_message
         msg = build_mime_message(
             subject="GR20", body="<h1>Hi</h1>", from_addr="a@b.c",
             to_header="d@e.f", reply_to=None, html=True,

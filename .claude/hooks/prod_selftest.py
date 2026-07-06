@@ -549,7 +549,10 @@ def _load_bot_commands() -> list[dict] | None:
     bleibt telegram.py. Bei jedem Fehler (Datei fehlt, SyntaxError, kein
     literal-auswertbares BOT_COMMANDS) wird None zurückgegeben (fail-soft).
     """
-    telegram_py = REPO_DIR / "src" / "outputs" / "telegram.py"
+    # ADR-0017 Slice 1: neuer Pfad zuerst, alter als Übergangs-Fallback (bis Slice 3).
+    telegram_py = REPO_DIR / "src" / "output" / "channels" / "telegram.py"
+    if not telegram_py.exists():
+        telegram_py = REPO_DIR / "src" / "outputs" / "telegram.py"
     try:
         source = telegram_py.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(telegram_py))

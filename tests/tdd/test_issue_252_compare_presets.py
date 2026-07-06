@@ -117,14 +117,14 @@ class TestEmailOutputToParameter:
     """EmailOutput.send() muss optionalen 'to: list[str] | None'-Parameter haben."""
 
     def test_send_signature_has_to_parameter(self):
-        from outputs.email import EmailOutput
+        from output.channels.email import EmailOutput
         sig = inspect.signature(EmailOutput.send)
         assert "to" in sig.parameters, (
             f"EmailOutput.send() fehlt 'to'-Parameter. Aktuell: {list(sig.parameters.keys())}"
         )
 
     def test_send_to_parameter_has_none_default(self):
-        from outputs.email import EmailOutput
+        from output.channels.email import EmailOutput
         sig = inspect.signature(EmailOutput.send)
         to_param = sig.parameters.get("to")
         assert to_param is not None

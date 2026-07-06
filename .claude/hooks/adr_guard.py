@@ -13,6 +13,8 @@ import re
 
 DEFAULT_DECISION_SURFACE_PATTERNS: list[str] = [
     r"^src/outputs/",
+    # ADR-0017 Slice 1: Transporte liegen jetzt unter output/channels/
+    r"^src/output/channels/",
     r"^src/output/renderers/",
     r"^docs/reference/decision_matrix\.md$",
     r"^src/providers/",

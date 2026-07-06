@@ -297,7 +297,7 @@ class TestEmailDelivery:
         report = formatter.format_email(weather, TEST_TRIP_NAME, "morning")
 
         # 3. Send via SMTP
-        from outputs.email import EmailOutput
+        from output.channels.email import EmailOutput
         email_out = EmailOutput(settings)
         email_out.send(
             subject=report.email_subject,

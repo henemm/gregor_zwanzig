@@ -36,7 +36,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.config import Settings
-from outputs.telegram import BOT_COMMANDS, TelegramOutput
+from output.channels.telegram import BOT_COMMANDS, TelegramOutput
 
 from tests.tdd._telegram_live_fixture import live_telegram_enabled, staging_live_settings
 
@@ -123,7 +123,7 @@ def test_ac1_startup_sets_bot_menu_from_bot_commands(monkeypatch):
     THEN: genau ein setMyCommands-Call mit commands == BOT_COMMANDS.
     """
     with _bot_server() as (base, records):
-        monkeypatch.setattr("outputs.telegram.TELEGRAM_API_BASE", base)
+        monkeypatch.setattr("output.channels.telegram.TELEGRAM_API_BASE", base)
         monkeypatch.setenv("GZ_TELEGRAM_BOT_TOKEN", "test-671-token")
         from api.main import app
 
@@ -154,7 +154,7 @@ def test_ac2_no_token_no_call_no_crash(monkeypatch):
     from api.main import _init_telegram_bot_menu  # existiert erst nach GREEN
 
     with _bot_server() as (base, records):
-        monkeypatch.setattr("outputs.telegram.TELEGRAM_API_BASE", base)
+        monkeypatch.setattr("output.channels.telegram.TELEGRAM_API_BASE", base)
         # Leerer Token, aber chat_id gesetzt → fürs Menü zählt NUR der Token.
         settings = Settings(telegram_bot_token="", telegram_chat_id="12345")
         _init_telegram_bot_menu(settings)  # darf NICHT werfen
@@ -168,7 +168,7 @@ def test_ac2_token_without_chatid_still_sets_menu(monkeypatch):
     from api.main import _init_telegram_bot_menu
 
     with _bot_server() as (base, records):
-        monkeypatch.setattr("outputs.telegram.TELEGRAM_API_BASE", base)
+        monkeypatch.setattr("output.channels.telegram.TELEGRAM_API_BASE", base)
         settings = Settings(telegram_bot_token="tok-no-chat", telegram_chat_id="")
         _init_telegram_bot_menu(settings)
 

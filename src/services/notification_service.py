@@ -26,10 +26,10 @@ from output.renderers.alert.render import (
 from output.renderers.email.design_tokens import (
     FONT_UI, G_ACCENT, G_DANGER, G_INK, G_PAPER, G_SURFACE_1, WEB_FONT_LINK,
 )
-from outputs.base import OutputError
-from outputs.email import EmailOutput
-from outputs.sms import SMSOutput
-from outputs.telegram import TelegramOutput
+from output.channels.base import OutputError
+from output.channels.email import EmailOutput
+from output.channels.sms import SMSOutput
+from output.channels.telegram import TelegramOutput
 from services.trip_command_processor import CommandResult
 from utils.timezone import local_fmt
 
@@ -504,7 +504,7 @@ class NotificationService:
         reply_markup: dict | None = None,
     ) -> bool:
         """Editiert eine vorhandene Telegram-Nachricht in-place."""
-        from outputs.telegram import TelegramOutput
+        from output.channels.telegram import TelegramOutput
         try:
             TelegramOutput(settings).edit_message_text(
                 chat_id,
@@ -525,7 +525,7 @@ class NotificationService:
         settings: Settings,
     ) -> bool:
         """Löscht eine Telegram-Nachricht."""
-        from outputs.telegram import TelegramOutput
+        from output.channels.telegram import TelegramOutput
         try:
             TelegramOutput(settings).delete_message(chat_id, message_id)
             return True
@@ -540,7 +540,7 @@ class NotificationService:
         settings: Settings,
     ) -> bool:
         """Beantwortet eine Telegram Callback Query (Spinner beenden)."""
-        from outputs.telegram import TelegramOutput
+        from output.channels.telegram import TelegramOutput
         try:
             TelegramOutput(settings).answer_callback_query(callback_query_id)
             return True

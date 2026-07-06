@@ -264,7 +264,7 @@ class TestCompareEmailE2E:
 
         from app.config import Settings
         from app.loader import load_all_locations, load_compare_subscriptions
-        from outputs.email import EmailOutput
+        from output.channels.email import EmailOutput
         from services.compare_subscription import run_comparison_for_subscription
 
         settings = Settings().for_testing()

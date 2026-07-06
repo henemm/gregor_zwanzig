@@ -210,7 +210,7 @@ def test_ac9_onset_alert_real_telegram_delivery_bold_no_subject_duplicate():
     '[Betreff]'-Duplikat. Sofortiger Cleanup via delete_message()."""
     from output.renderers.alert.model import AlertMessage, OnsetEvent
     from output.renderers.alert.render import render_subject, render_telegram
-    from outputs.telegram import TelegramOutput
+    from output.channels.telegram import TelegramOutput
 
     onset = OnsetEvent(
         onset_minutes=12, onset_time="14:35", km_from=5.0, km_to=18.0,

@@ -162,7 +162,7 @@ def test_ac4_radar_alert_convective_marked_once_then_throttles():
     import json
     from pathlib import Path
 
-    from outputs.email import EmailOutput
+    from output.channels.email import EmailOutput
     from services.radar_service import RadarNowcastService
     from services.trip_alert import TripAlertService
 

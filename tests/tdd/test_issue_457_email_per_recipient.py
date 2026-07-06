@@ -30,7 +30,7 @@ class TestPerRecipientSend:
         SPEC §4: "Mehrere Empfänger: pro Empfänger individueller Call"
         Dies scheitert solange die Schleife nicht implementiert ist.
         """
-        from outputs.email import EmailOutput
+        from output.channels.email import EmailOutput
 
         src = inspect.getsource(EmailOutput.send)
 
@@ -51,7 +51,7 @@ class TestPerRecipientSend:
         SPEC §4: "SMTP-Fehler einzelner Empfänger werden per logger.error() protokolliert
         und unterbrechen die Schleife für diesen Empfänger nicht die restlichen Empfänger."
         """
-        from outputs.email import EmailOutput
+        from output.channels.email import EmailOutput
 
         src = inspect.getsource(EmailOutput.send)
 
@@ -70,7 +70,7 @@ class TestPerRecipientSend:
         Protocol-Konformität: send() gibt None zurück — kein Breaking Change.
         SPEC §4: "Return-Type bleibt None (Protocol-konform)"
         """
-        from outputs.email import EmailOutput
+        from output.channels.email import EmailOutput
         import inspect as ins
 
         sig = ins.signature(EmailOutput.send)
@@ -94,7 +94,7 @@ class TestPerRecipientSend:
 
         SPEC AC-5: "Fehler beim Versand einzelner Empfänger blockieren nicht die anderen"
         """
-        from outputs.email import EmailOutput
+        from output.channels.email import EmailOutput
         from app.config import Settings
 
         settings = Settings().for_testing()

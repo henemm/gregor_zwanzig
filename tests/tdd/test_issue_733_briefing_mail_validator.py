@@ -121,7 +121,7 @@ def _build_compare() -> email.message.Message:
 class TestMarkerHeaders:
     def test_ac1_full_briefing_carries_trip_briefing_full_markers(self):
         """AC-1: full-Briefing-Mail trägt X-GZ-Mail-Type:trip-briefing + X-GZ-Format:full."""
-        from outputs.email import build_mime_message
+        from output.channels.email import build_mime_message
         msg = build_mime_message(
             subject="GR20 - Evening Report", body="<h1>Wetter</h1>",
             from_addr="gregor_zwanzig@henemm.com", to_header="gregor-test@henemm.com",
@@ -133,7 +133,7 @@ class TestMarkerHeaders:
 
     def test_ac2_compact_briefing_carries_compact_markers_and_is_text_plain(self):
         """AC-2: compact-Briefing trägt trip-briefing/compact und ist single text/plain."""
-        from outputs.email import build_mime_message
+        from output.channels.email import build_mime_message
         msg = build_mime_message(
             subject="GR20 - Evening Report", body="GR20 plain compact",
             from_addr="gregor_zwanzig@henemm.com", to_header="gregor-test@henemm.com",
@@ -147,7 +147,7 @@ class TestMarkerHeaders:
 
     def test_ac3_compare_mail_carries_compare_marker(self):
         """AC-3: Orts-Vergleich-Mail trägt X-GZ-Mail-Type:compare (kein Briefing-Tag)."""
-        from outputs.email import build_mime_message
+        from output.channels.email import build_mime_message
         msg = build_mime_message(
             subject="Wetter-Vergleich: GR20", body="<table>x</table>",
             from_addr="gregor_zwanzig@henemm.com", to_header="gregor-test@henemm.com",
@@ -158,7 +158,7 @@ class TestMarkerHeaders:
 
     def test_marker_optional_backward_compat(self):
         """Ohne mail_type/mail_format bleibt die Mail unverändert (Service-Error-Mail etc.)."""
-        from outputs.email import build_mime_message
+        from output.channels.email import build_mime_message
         msg = build_mime_message(
             subject="x", body="x", from_addr="a@b.c", to_header="d@e.f",
             reply_to=None, html=False, plain_text_body=None,

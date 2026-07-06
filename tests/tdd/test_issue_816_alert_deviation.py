@@ -51,7 +51,7 @@ from app.models import (
     WeatherChange,
 )
 from app.trip import Stage, Trip, Waypoint
-import outputs.telegram as telegram_mod
+import output.channels.telegram as telegram_mod
 
 
 # ───────────────────────── echter Telegram-Socket-Sink (kein Mock) ──────────
@@ -431,7 +431,7 @@ def _build_alert_mime(changes, segments, trip_name):
     RED: alert_compact.render_deviation_alert existiert noch nicht.
     """
     from output.renderers.alert.render import render_deviation_alert
-    from outputs.email import build_mime_message
+    from output.channels.email import build_mime_message
 
     html, plain = render_deviation_alert(
         changes=changes,

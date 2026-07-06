@@ -12,7 +12,7 @@ Nach Implementierung:
 import pytest
 
 from app.config import Settings
-from outputs.base import OutputChannel, OutputConfigError, OutputError, get_channel
+from output.channels.base import OutputChannel, OutputConfigError, OutputError, get_channel
 
 
 def _settings_with_sms(**overrides) -> Settings:
@@ -59,7 +59,7 @@ class TestGetChannelSms:
 
     def test_sms_channel_name(self):
         """SMSOutput.name gibt 'sms' zurück."""
-        from outputs.sms import SMSOutput
+        from output.channels.sms import SMSOutput
         output = SMSOutput(_settings_with_sms())
         assert output.name == "sms"
 
@@ -76,7 +76,7 @@ class TestSmsConfigValidation:
         WHEN: SMSOutput(settings) instanziiert wird
         THEN: OutputConfigError geworfen, kein HTTP-Request
         """
-        from outputs.sms import SMSOutput
+        from output.channels.sms import SMSOutput
         settings = _settings_with_sms(seven_api_key=None)
         with pytest.raises(OutputConfigError):
             SMSOutput(settings)
@@ -87,7 +87,7 @@ class TestSmsConfigValidation:
         WHEN: SMSOutput(settings) instanziiert wird
         THEN: OutputConfigError geworfen, kein HTTP-Request
         """
-        from outputs.sms import SMSOutput
+        from output.channels.sms import SMSOutput
         settings = _settings_with_sms(sms_to=None)
         with pytest.raises(OutputConfigError):
             SMSOutput(settings)
@@ -107,7 +107,7 @@ class TestSmsErrorHandling:
 
         Kein Mock — seven.io liefert echten Fehler bei ungültigem Key.
         """
-        from outputs.sms import SMSOutput
+        from output.channels.sms import SMSOutput
         settings = _settings_with_sms(seven_api_key="invalid-fake-key-for-test")
         output = SMSOutput(settings)
         with pytest.raises(OutputError):
@@ -142,7 +142,7 @@ class TestSmsLiveDelivery:
         WHEN: send() mit gültigem ≤160-Zeichen-Text aufgerufen wird
         THEN: seven.io antwortet HTTP 200 + Body "100" (kein Exception)
         """
-        from outputs.sms import SMSOutput
+        from output.channels.sms import SMSOutput
         settings = self._require_live_credentials()
         output = SMSOutput(settings)
         # Kein Exception = Erfolg (seven.io hat "100" zurückgegeben)
@@ -156,7 +156,7 @@ class TestSmsLiveDelivery:
         WHEN: send() aufgerufen wird
         THEN: Kein Exception — seven.io wählt Standard-Absender
         """
-        from outputs.sms import SMSOutput
+        from output.channels.sms import SMSOutput
         settings = self._require_live_credentials()
         settings_no_from = settings.model_copy(update={"sms_from": None})
         output = SMSOutput(settings_no_from)

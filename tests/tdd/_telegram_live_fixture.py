@@ -263,7 +263,7 @@ def deliver_and_cleanup(
         (last_message_id: int | None, all_deleted_ok: bool)
     """
     from app.config import Settings
-    from outputs.telegram import TelegramOutput
+    from output.channels.telegram import TelegramOutput
     from services.inbound_telegram_reader import InboundTelegramReader
 
     settings = Settings()

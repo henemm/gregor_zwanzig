@@ -41,8 +41,8 @@ from output.renderers.alert.model import AlertEvent, AlertMessage, OnsetEvent
 from output.renderers.alert.render import (
     render_email, render_subject, render_sms, render_telegram,
 )
-from outputs import telegram as telegram_mod
-from outputs.telegram import TelegramOutput
+from output.channels import telegram as telegram_mod
+from output.channels.telegram import TelegramOutput
 from services.radar_service import NowcastResult, RadarNowcastService
 
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
