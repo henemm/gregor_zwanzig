@@ -20,11 +20,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 from app.config import Settings
 from app.loader import load_all_trips, save_trip
 from app.models import NormalizedTimeseries, SegmentWeatherData, SegmentWeatherSummary, TripSegment
-from formatters.trip_report import TripReportFormatter
-from output.renderers.email.design_tokens import (
-    FONT_UI, G_ACCENT, G_DANGER, G_INK, G_PAPER, G_SURFACE_1, WEB_FONT_LINK,
-)
-from outputs.email import EmailOutput
+from services.notification_service import NotificationService, TripReportRequest
 from utils.geo import degrees_to_compass, haversine_km
 from utils.timezone import tz_for_coords
 
@@ -60,66 +56,6 @@ def _parse_hhmm(value: str) -> Optional[time]:
         return time.fromisoformat(value)
     except (ValueError, TypeError):
         return None
-
-
-def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
-    """Build the Service-Error E-Mail-Body with Design-System tokens.
-
-    Used when an SMS-only trip cannot fetch weather data (provider error) and
-    the user still needs to be informed via E-Mail fallback.
-
-    Args:
-        trip_name: Name of the affected trip.
-        report_type: "morning" or "evening".
-        error_lines: Pre-formatted multi-line error block (one segment per line).
-
-    Returns:
-        Complete HTML document string.
-    """
-    return (
-        '<!DOCTYPE html>'
-        '<html>'
-        '<head>'
-        '<meta charset="utf-8">'
-        f'{WEB_FONT_LINK}'
-        '<style>'
-        f'body {{ margin:0; padding:0; background:{G_PAPER}; '
-        f'font-family:{FONT_UI}; color:{G_INK}; }}'
-        '.container { max-width:640px; margin:0 auto; padding:24px; }'
-        f'.heading {{ border-bottom:2px solid {G_ACCENT}; color:{G_ACCENT}; '
-        'padding-bottom:8px; margin:0 0 16px 0; font-size:20px; }'
-        f'.meta {{ background:{G_SURFACE_1}; padding:12px 16px; '
-        'border-radius:6px; margin-bottom:16px; font-size:14px; }'
-        f'.error-block {{ border-left:4px solid {G_DANGER}; '
-        f'background:{G_SURFACE_1}; padding:12px 16px; margin:16px 0; '
-        'font-family: ui-monospace, SFMono-Regular, Menlo, monospace; '
-        'font-size:13px; white-space:pre-wrap; }'
-        f'.footer {{ background:{G_INK}; color:#ffffff; padding:16px 24px; '
-        'text-align:center; font-size:12px; }'
-        '.footer a { color:#ffffff; text-decoration:underline; }'
-        '</style>'
-        '</head>'
-        '<body>'
-        '<div class="container">'
-        '<h2 class="heading">Service-Benachrichtigung</h2>'
-        '<div class="meta">'
-        f'<strong>Trip:</strong> {trip_name}<br>'
-        f'<strong>Report:</strong> {report_type.title()}<br>'
-        '<strong>Problem:</strong> Wetterdaten konnten nicht abgerufen werden.'
-        '</div>'
-        '<p><strong>Betroffene Segmente:</strong></p>'
-        f'<div class="error-block">{error_lines}</div>'
-        '<p style="font-size:13px; color:#5c5a52;">'
-        'Diese E-Mail wurde automatisch gesendet, weil Ihr Trip nur SMS aktiviert '
-        'hat und Anbieter-Fehler aufgetreten sind.'
-        '</p>'
-        '</div>'
-        f'<div class="footer" style="background:{G_INK}; color:#ffffff;">'
-        'Gregor Zwanzig &mdash; automatischer Wetter-Service'
-        '</div>'
-        '</body>'
-        '</html>'
-    )
 
 
 def _load_pending_entries(path: Path) -> dict:
@@ -168,7 +104,7 @@ class TripReportSchedulerService:
             user_id: User identifier for data scoping
         """
         self._settings = settings if settings else Settings().with_user_profile(user_id)
-        self._formatter = TripReportFormatter()
+        self._notification_service = NotificationService(self._settings, user_id)
         self._user_id = user_id
 
     def send_reports(self, report_type: str) -> int:
@@ -329,38 +265,6 @@ class TripReportSchedulerService:
                 delivered += 1
 
         return delivered
-
-    def _send_no_data_hint(self, trip: "Trip", report_type: str) -> None:
-        """Issue #1012 (b): Kurze Hinweis-Nachricht statt leerem Briefing bei
-        komplettem Wetterdaten-Ausfall — über ALLE für den Trip konfigurierten
-        Kanäle (Muster analog dem regulären Kanal-Versand), ohne Wettertabellen.
-        """
-        subject = f"[{trip.name}] Wetterdaten nicht verfügbar"
-        text = (
-            "Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter "
-            "und liefern das Briefing nach, sobald Daten verfügbar sind."
-        )
-        config = trip.report_config
-
-        if not config or config.send_email:
-            try:
-                EmailOutput(self._settings).send(subject=subject, body=text, html=False)
-            except Exception as e:
-                logger.error(f"No-data hint email failed for {trip.name}: {e}")
-
-        if config and config.send_sms and self._settings.can_send_sms():
-            try:
-                from outputs.sms import SMSOutput
-                SMSOutput(self._settings).send(subject=subject, body=text)
-            except Exception as e:
-                logger.error(f"No-data hint SMS failed for {trip.name}: {e}")
-
-        if config and config.send_telegram and self._settings.can_send_telegram():
-            try:
-                from outputs.telegram import TelegramOutput
-                TelegramOutput(self._settings).send(subject=subject, body=text)
-            except Exception as e:
-                logger.error(f"No-data hint Telegram failed for {trip.name}: {e}")
 
     def _write_pending_marker(
         self,
@@ -702,7 +606,14 @@ class TripReportSchedulerService:
             if not on_demand:
                 # On-Demand (#1007) erzeugt weder Hinweis-Versand noch Marker —
                 # der Bot antwortet synchron mit eigenem Hinweistext.
-                self._send_no_data_hint(trip, report_type)
+                config = trip.report_config
+                self._notification_service.send_no_data_hint(
+                    trip,
+                    report_type,
+                    send_email=not config or config.send_email,
+                    send_sms=config is not None and config.send_sms,
+                    send_telegram=config is not None and config.send_telegram,
+                )
                 self._write_pending_marker(
                     trip, report_type, target_date,
                     failed_segment_ids=[str(s.segment.segment_id) for s in segment_weather],
@@ -798,179 +709,60 @@ class TripReportSchedulerService:
                 logger.warning(f"Vortag-Vergleich übersprungen für {trip.id}: {e}")
                 day_comparison = None
 
-        # 8. Format report (uses unified display config from trip)
-        report = self._formatter.format_email(
-            segments=segment_weather,
-            trip_name=trip.name,
+        # 8. NotificationService: render + send (Issue #1022).
+        # Der Scheduler liefert nur noch ein DTO; Renderer-/Transport-Imports
+        # bleiben im NotificationService.
+        config = trip.report_config
+        errors = [s for s in segment_weather if s.has_error]
+        request = TripReportRequest(
+            trip=trip,
             report_type=report_type,
-            display_config=trip.display_config,
+            segment_weather=segment_weather,
+            trip_tz=trip_tz,
+            stage_name=stage_name,
+            stage_stats=stage_stats,
             night_weather=night_weather,
             thunder_forecast=thunder_forecast,
             multi_day_trend=multi_day_trend,
-            stage_name=stage_name,
-            stage_stats=stage_stats,
-            exposed_sections=exposed_sections,
-            daylight=daylight_window,
-            tz=trip_tz,
-            profile=trip.aggregation.profile,
             stability_result=stability_result,
-            report_config=trip.report_config,
+            daylight_window=daylight_window,
             day_comparison=day_comparison,
+            exposed_sections=exposed_sections,
+            report_config=config,
+            display_config=trip.display_config,
+            profile=trip.aggregation.profile,
             shortcode=getattr(trip, 'shortcode', None) or None,
             stage_total=len(trip.stages) if trip.stages else None,
             trip_url=f"https://gregor20.henemm.com/trips/{trip.id}",
+            send_email=not config or config.send_email,
+            send_sms=config is not None and config.send_sms,
+            send_telegram=config is not None and config.send_telegram,
+            test_prefix=allow_test_fallback,
+            on_demand_prefix=on_demand,
+            catchup_prefix=catchup_prefix,
+            failed_segments=errors,
+            on_demand=on_demand,
         )
-
-        # Issue #768 (AC-6): Test-Pfad kennzeichnen — [TEST]-Betreff + Hinweiszeile
-        # mit der tatsächlich verwendeten Etappe + deren Datum. Nur im Test-Pfad.
-        if allow_test_fallback:
-            human_date = target_date.strftime("%d.%m.%Y")
-            hint = f"Test-Vorschau für {stage_name or 'Etappe'} am {human_date}"
-            report.email_subject = f"[TEST] {report.email_subject}"
-            if report.email_plain:
-                report.email_plain = f"{hint}\n\n{report.email_plain}"
-            if report.email_html:
-                report.email_html = report.email_html.replace(
-                    "<body>", f"<body><p>{hint}</p>", 1,
-                ) if "<body>" in report.email_html else f"<p>{hint}</p>{report.email_html}"
-            if report.telegram_bubbles:
-                report.telegram_bubbles[0] = f"{hint}\n\n{report.telegram_bubbles[0]}"
-        elif on_demand:
-            # Issue #1007: On-Demand-Versand (heute/morgen-Kommando) — dezente
-            # Kennzeichnung "auf Anfrage" statt [TEST]-Präfix, kein Fallback
-            # (greift hier ohnehin nie, da on_demand nie allow_test_fallback setzt).
-            human_date = target_date.strftime("%d.%m.%Y")
-            hint = f"Briefing auf Anfrage für {stage_name or 'Etappe'} am {human_date}"
-            if report.email_plain:
-                report.email_plain = f"{hint}\n\n{report.email_plain}"
-            if report.email_html:
-                report.email_html = report.email_html.replace(
-                    "<body>", f"<body><p>{hint}</p>", 1,
-                ) if "<body>" in report.email_html else f"<p>{hint}</p>{report.email_html}"
-            if report.telegram_bubbles:
-                report.telegram_bubbles[0] = f"{hint}\n\n{report.telegram_bubbles[0]}"
-        elif catchup_prefix:
-            # Issue #1012 (b2/AC-6): Nachlieferungs-Hinweis für ein zuvor
-            # zurückgehaltenes Briefing (Komplett- oder Teilausfall).
-            if report.email_plain:
-                report.email_plain = f"{catchup_prefix}\n\n{report.email_plain}"
-            if report.email_html:
-                report.email_html = report.email_html.replace(
-                    "<body>", f"<body><p>{catchup_prefix}</p>", 1,
-                ) if "<body>" in report.email_html else f"<p>{catchup_prefix}</p>{report.email_html}"
-            if report.telegram_bubbles:
-                report.telegram_bubbles[0] = f"{catchup_prefix}\n\n{report.telegram_bubbles[0]}"
-
-        # 7. Send via configured channels
-        config = trip.report_config
-
-        # Issue #1007 Adversary-Fix F001: "kein Kanal konfiguriert" wird VOR
-        # den Sendeversuchen anhand der Config ermittelt (nicht anhand des
-        # nachträglichen sent_channels-Ergebnisses) — sonst würde ein echter
-        # Sendefehlschlag bei einem konfigurierten Kanal (z.B. Telegram-Token
-        # ungültig, #1001 F003) fälschlich auch als "kein Kanal konfiguriert"
-        # gewertet und der Briefing-Log-Eintrag unterdrückt.
-        no_channel_configured = (
-            config is not None
-            and not config.send_email
-            and not config.send_sms
-            and not config.send_telegram
-        )
-
-        # 7a. Email (bugfix: respect send_email flag)
-        # Issue #722: compact format sends single text/plain (html="" → html=False path)
-        if not config or config.send_email:
-            email_output = EmailOutput(self._settings)
-            if report.email_html:
-                email_output.send(
-                    subject=report.email_subject,
-                    body=report.email_html,
-                    plain_text_body=report.email_plain,
-                    mail_type="trip-briefing",
-                    mail_format="full",
-                )
-            else:
-                email_output.send(
-                    subject=report.email_subject,
-                    body=report.email_plain,
-                    html=False,
-                    mail_type="trip-briefing",
-                    mail_format="compact",
-                )
-
-        # 7b. Send SMS if configured (Issue #868: fehlender Versandblock)
-        if config and config.send_sms and self._settings.can_send_sms():
-            try:
-                from outputs.sms import SMSOutput
-                SMSOutput(self._settings).send(
-                    subject=report.email_subject,
-                    body=report.sms_text or report.email_plain,
-                )
-            except Exception as e:
-                logger.error(f"SMS send failed for {trip.name}: {e}")
-
-        # 7c. Send Telegram if configured (Issue #1001: Multi-Bubble-Versand).
-        # Fehlerpolitik: Abbruch nach erstem Fehlschlag, ein Log-Eintrag,
-        # kein Teil-Retry (AC-5). Issue #1001 Adversary-Finding F003:
-        # telegram_fully_sent trackt ob die Schleife WIRKLICH vollstaendig
-        # durchlief — nur dann darf das Briefing-Log "telegram" als gesendet
-        # verzeichnen (sonst faelschlich "ok" bei nur teilweise zugestellten
-        # Bubbles, z.B. nur der Kopf-Bubble).
-        telegram_fully_sent = True
-        if config and config.send_telegram and self._settings.can_send_telegram():
-            from outputs.base import OutputError
-            from outputs.telegram import TelegramOutput
-
-            bubbles = report.telegram_bubbles or [report.email_plain]
-            for i, bubble_text in enumerate(bubbles):
-                markup = report.telegram_actions_markup if i == len(bubbles) - 1 else None
-                try:
-                    TelegramOutput(self._settings).send(
-                        subject=report.email_subject, body=bubble_text,
-                        reply_markup=markup, parse_mode="HTML", suppress_subject_line=True,
-                    )
-                except OutputError as e:
-                    logger.error(
-                        f"Telegram bubble {i + 1}/{len(bubbles)} send failed for {trip.name}: {e}"
-                    )
-                    telegram_fully_sent = False
-                    break
+        result = self._notification_service.send_trip_report(request)
 
         # Issue #393: Briefing-Log für Cockpit-Kachel "Was geht heute raus".
-        # Nur nach erfolgreichem Versand (kein Exception oben) anhängen.
-        sent_channels: List[str] = []
-        if not config or config.send_email:
-            sent_channels.append("email")
-        if config and config.send_sms and self._settings.can_send_sms():
-            sent_channels.append("sms")
-        if config and config.send_telegram and self._settings.can_send_telegram() and telegram_fully_sent:
-            sent_channels.append("telegram")
         # Issue #1007 Adversary-Fix F001: bei explizit konfiguriertem "kein
-        # Kanal aktiv" wird KEIN Log-Eintrag mit channels=[] geschrieben —
-        # der reguläre Sendefehlschlag-Fall (#1001 F003, Kanal konfiguriert
-        # aber Versand schlägt fehl) protokolliert weiterhin wie bisher.
-        if not no_channel_configured:
-            self._append_briefing_log(trip.id, report_type, sent_channels)
+        # Kanal aktiv" wird KEIN Log-Eintrag mit channels=[] geschrieben.
+        if not result.no_channel_configured:
+            self._append_briefing_log(trip.id, report_type, result.sent_channels)
 
         logger.info(f"Trip report sent: {trip.name} ({report_type})")
 
-        # 8. WEATHER-04: Service-E-Mail bei SMS-only + Fehler
-        errors = [s for s in segment_weather if s.has_error]
-        if errors:
-            config = trip.report_config
-            is_sms_only = config and config.send_sms and not config.send_email
-            if is_sms_only:
-                self._send_service_error_email(trip, errors, report_type)
-            # Issue #1012 (AC-3/b2): Teilausfall — Nachliefer-Marker mit den
-            # betroffenen Segment-IDs schreiben (On-Demand erzeugt keinen
-            # Marker, der Nutzer fragt aktiv erneut).
-            if not on_demand:
-                self._write_pending_marker(
-                    trip, report_type, target_date,
-                    failed_segment_ids=[str(s.segment.segment_id) for s in errors],
-                )
+        # 9. Issue #1012: Teilausfall-Marker (Service-Error-Mail wurde bereits
+        # vom NotificationService verschickt, weil failed_segments im Request
+        # mitgeliefert wurden).
+        if errors and not on_demand:
+            self._write_pending_marker(
+                trip, report_type, target_date,
+                failed_segment_ids=[str(s.segment.segment_id) for s in errors],
+            )
 
-        # 9. Save weather snapshot for alert comparison
+        # 10. Save weather snapshot for alert comparison
         # Issue #1007: On-Demand-Abruf (heute/morgen-Kommando) ist read-only
         # gegenüber Snapshot-/Alert-Zustand — Baseline bleibt das letzte
         # reguläre Briefing. Ein On-Demand-Abruf für nur EINEN Zieltag würde
@@ -992,7 +784,7 @@ class TripReportSchedulerService:
             # bei On-Demand-Abruf (s.o.).
             self._reset_alert_state_after_briefing(trip.id)
 
-        return "no_channels" if no_channel_configured else "sent"
+        return "no_channels" if result.no_channel_configured else "sent"
 
     def _reset_alert_state_after_briefing(self, trip_id: str) -> None:
         """Issue #816 (B): Alert-Melde-Gedächtnis nach Briefing-Versand löschen."""
@@ -1464,27 +1256,3 @@ class TripReportSchedulerService:
                 }
 
         return forecast if forecast else None
-
-    # WEATHER-04: Service email for SMS-only trips with provider errors
-    def _send_service_error_email(
-        self,
-        trip: "Trip",
-        errors: list[SegmentWeatherData],
-        report_type: str,
-    ) -> None:
-        """Service-E-Mail bei Provider-Fehler fuer SMS-only Trips."""
-        error_lines = "\n".join(
-            f"  - Segment {e.segment.segment_id}: {e.error_message}"
-            for e in errors
-        )
-        subject = f"[{trip.name}] Wetterdaten nicht verfuegbar"
-        body = build_service_error_email_html(
-            trip_name=trip.name,
-            report_type=report_type,
-            error_lines=error_lines,
-        )
-        try:
-            EmailOutput(self._settings).send(subject=subject, body=body, html=True)
-            logger.info(f"Service error email sent for {trip.name}")
-        except Exception as e:
-            logger.error(f"Failed to send service error email: {e}")
