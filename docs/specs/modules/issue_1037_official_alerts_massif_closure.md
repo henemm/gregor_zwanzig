@@ -56,11 +56,18 @@ architektonisch der aufwendigste Slice.
 ## Architektur-Entscheidung 1: Keine FlatGeobuf-Abhängigkeit für den MVP
 
 Die Quelle liefert zusätzlich Polygon-Geometrien als FlatGeobuf
-(`static/{DEPT}/massifs_{DEPT}.fgb`) für exaktes Point-in-Polygon. Diese Geometrie-Auswertung ist
-für den MVP bewusst nicht Teil dieses Slices — eine neue Python-Abhängigkeit (FlatGeobuf-Parser +
-Geometrie-Bibliothek) ist laut Projektregel ("keine neuen Dependencies ohne Freigabe") kein
-Selbstläufer. Stattdessen: statische Zentrum+Radius-Zonentabelle je Massiv (Näherung statt
-exakter Grenze).
+(`static/{DEPT}/massifs_{DEPT}.fgb`) für exaktes Point-in-Polygon. Diese Geometrie-Auswertung zur
+**Laufzeit** ist für den MVP bewusst nicht Teil dieses Slices — ein FlatGeobuf-Parser +
+Geometrie-Bibliothek als neue Python-Abhängigkeit ist laut Projektregel ("keine neuen
+Dependencies ohne Freigabe") kein Selbstläufer. Stattdessen: statische Zentrum+Radius-Zonentabelle
+je Massiv (Näherung statt exakter Grenze).
+
+**Die `.fgb`-Datei wird trotzdem genutzt — aber einmalig, offline, während der Implementierung:**
+für Var (`static/83/massifs_83.fgb`) liest der Entwickler die Datei einmalig mit einem
+Wegwerf-Skript oder externen Tool (z. B. `ogr2ogr`/QGIS, außerhalb der Produktions-Codebasis) aus,
+um Massiv-Namen und grobe Zentrum-Koordinaten zu gewinnen, und trägt das Ergebnis von Hand als
+Konstanten in `massif_zones.py` ein. Zur Laufzeit liest die Anwendung nie ein `.fgb`-File und
+braucht dafür keine Bibliothek — nur die vorab kuratierte Tabelle.
 
 ## Architektur-Entscheidung 2 (Scope-Korrektur 2026-07-06): Département-generischer Mechanismus, KEINE GR20-Hartkodierung
 
@@ -138,9 +145,10 @@ nötig, spätere Anbindung an den Scheduler-Status-Endpoint ist ein Folge-Schrit
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein kartierter Ort im Var mit aktuell gesperrtem Massiv (Niveau 4 im
-  Live-JSON), When die Compare-Mail generiert wird, Then zeigt die Mail für diesen Ort einen
-  Badge "Zugang gesperrt — [Massiv-Name]".
+- **AC-1:** Given ein kartierter Ort im Var nahe dem Massif des Maures oder dem Massif de
+  l'Estérel mit aktuell gesperrtem Massiv (im Juli realistisch Niveau ≥2 im Live-JSON, da beide
+  Gebiete saisonal regelmäßig eingeschränkt/gesperrt werden), When die Compare-Mail generiert
+  wird, Then zeigt die Mail für diesen Ort einen Badge "Zugang gesperrt — [Massiv-Name]".
   - Test: echter Call gegen den Live-Endpoint für DEPT=83 mit einem zum Testzeitpunkt bekannten
     Massiv/Niveau, kein Mock; Compare-Mail-HTML auf Badge prüfen.
 
@@ -191,3 +199,6 @@ nötig, spätere Anbindung an den Scheduler-Status-Endpoint ist ein Folge-Schrit
   primäres Leitszenario, Mechanismus auf generischen Département-Lookup umgestellt
   (`MASSIF_ZONES` statt GR20-hartkodierter `massif_ids.py`), Korsika-Daten aus dem
   Vorgängerprojekt sind nur noch Dateninhalt, nicht Architektur.
+- 2026-07-06: Präzisierung: AC-1 mit konkretem Var-Beispiel (Massif des Maures/Estérel,
+  Juli-Plausibilität Niveau ≥2), FlatGeobuf-Nutzung als einmalige Offline-Ableitung (kein
+  Laufzeit-Parser) explizit dokumentiert.
