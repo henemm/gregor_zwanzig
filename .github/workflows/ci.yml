@@ -181,23 +181,23 @@ jobs:
           rm -f /tmp/deploy_key
           exit $EXIT
 
-      - name: Telegram — Deploy erfolgreich
+      - name: Telegram — Deploy erfolgreich (HENEMM Server)
         if: success()
         run: |
           SHA="${{ github.sha }}"
           MSG="deployed: ${SHA:0:7} ${{ github.event.head_commit.message }}"
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "{\"chat_id\":\"${{ secrets.TELEGRAM_CHAT_ID }}\",\"text\":\"gregor20 $MSG\"}" \
+            -d "{\"chat_id\":\"${{ secrets.HENEMM_DEPLOY_CHAT_ID }}\",\"text\":\"gregor20 $MSG\"}" \
             > /dev/null
 
-      - name: Telegram — Deploy fehlgeschlagen
+      - name: Telegram — Deploy fehlgeschlagen (HENEMM Server)
         if: failure()
         run: |
           SHA="${{ github.sha }}"
           RUN="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           MSG="FEHLGESCHLAGEN: ${SHA:0:7} ${{ github.event.head_commit.message }} | $RUN"
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "{\"chat_id\":\"${{ secrets.TELEGRAM_CHAT_ID }}\",\"text\":\"gregor20 $MSG\"}" \
+            -d "{\"chat_id\":\"${{ secrets.HENEMM_DEPLOY_CHAT_ID }}\",\"text\":\"gregor20 $MSG\"}" \
             > /dev/null
