@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
     from app.models import ForecastDataPoint, UnifiedWeatherDisplayConfig
+    from services.official_alerts.models import OfficialAlert
 
 
 from app.profile import ActivityProfile  # noqa: E402,F401
@@ -169,6 +170,8 @@ class LocationResult:
     sunny_hours: Optional[int] = None
     hourly_data: List["ForecastDataPoint"] = field(default_factory=list)
     error: Optional[str] = None  # Error message if fetch failed
+    # Issue #1034 — amtliche Warnungen (transient, keine Persistenz betroffen)
+    official_alerts: List["OfficialAlert"] = field(default_factory=list)
 
 
 @dataclass

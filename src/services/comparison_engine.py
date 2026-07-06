@@ -177,9 +177,14 @@ class ComparisonEngine:
                 effective_profile = profile or getattr(loc, 'activity_profile', None)
                 score = calculate_score(metrics, profile=effective_profile, window_hours=window_hours)
 
+                # Issue #1034 — amtliche Warnungen, additiv, nur im Erfolgszweig
+                from services.official_alerts import get_official_alerts_for_location
+                official_alerts = get_official_alerts_for_location(loc.lat, loc.lon)
+
                 results.append(LocationResult(
                     location=loc,
                     score=score,
+                    official_alerts=official_alerts,
                     snow_depth_cm=snow_depth,
                     snow_new_cm=snow_new,
                     temp_min=metrics.get("temp_min"),

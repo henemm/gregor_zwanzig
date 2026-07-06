@@ -1,6 +1,8 @@
 # Epic 1033: Amtliche Alerts im Orts-Vergleich
 
-**Status:** Geplant (Slices #1034–#1037, #1040 offen — 2026-07-06)
+**Status:** Slice 1 implementiert (#1034, 2026-07-06, Adversary VERIFIED) — Slices #1035–#1037,
+#1040 offen. Bei #1034 aufgedeckte Nebenbefunde: #1046 (Validator-Vertrag für Compare-Mail ist
+veraltet, betrifft die Tabellen-Zählannahme), #1048 (kleinere Politur F003/F005).
 **Epic Scope:** Compare-Mail (2 Tabellen + Winner-Box, ≥3 Orte) zeigt zusätzlich amtliche
 Behörden-Warnungen pro Ort, sofern eine Datenquelle für den Ort zuständig ist; die Anzeige ist
 pro Orts-Vergleich ein-/ausschaltbar (Slice 5, #1040).
@@ -152,13 +154,29 @@ dürfen nicht übernommen werden**, es braucht eine frische Météo-France-Porta
 
 ## Slices
 
-### Slice 1: Fundament (Issue #1034)
+### Slice 1: Fundament (Issue #1034) — implementiert (2026-07-06, Adversary VERIFIED)
 
 Datenmodell, Registry, Geo-Scope-Vorfilter, Verdrahtung in `ComparisonEngine`/`LocationResult`,
 Renderer-Block in der Compare-Mail. Noch keine echte Quelle registriert — Plumbing wird mit
 einer Test-Fake-Quelle bewiesen. **Abweichung vom ursprünglichen Vorschlag:** Fundament und
 Vigilance wurden getrennt (statt in einem Slice), weil beides zusammen das LoC-Budget von ±250
 gesprengt hätte.
+
+Neues Paket `src/services/official_alerts/` (`models.py`: `OfficialAlert`-Dataclass; `base.py`:
+`OfficialAlertSource`-Protocol, Registry, fail-soft `get_official_alerts_for_location()`).
+`LocationResult.official_alerts` (transient, keine Persistenz) wird im Erfolgszweig von
+`ComparisonEngine.run()` angereichert. `_render_official_alerts_block()` in `compare_html.py`
+rendert div/span-Badges (kein `<table>`) vor der Vergleichsmatrix, farbcodiert über die
+bestehenden `G_SUCCESS`/`G_WARNING`/`G_DANGER`-Tokens. Spec:
+`docs/specs/modules/issue_1034_official_alerts_foundation.md`.
+
+**Nebenbefunde bei der Adversary-Prüfung:**
+- **#1046:** Der bei der Analyse zugrunde gelegte Validator-Vertrag für die Compare-Mail
+  (`email_spec_validator.py`, „exakt 2 `<table>`-Tags") war bereits seit Issue #460 veraltet —
+  betrifft nur die Spec-Formulierung der ACs (korrigiert, siehe AC-2), nicht die Slice-1-Logik
+  selbst.
+- **#1048:** Kleinere Politur-Punkte F003/F005 aus dem Adversary-Dialog, ohne AC-Bezug — separat
+  nachgezogen.
 
 ### Slice 2: Météo-France Vigilance (Issue #1035)
 
@@ -236,3 +254,4 @@ aber erst nach #1035 sinnvoll nutzbar (siehe Details oben unter "Konfigurierbark
 | 2026-07-06 | Epic angelegt, 4 Slices gescoped, ADR-0016 geschrieben, Issues #1033–#1037 erstellt. |
 | 2026-07-06 | Scope-Korrektur (PO): Côte d'Azur wird Leitszenario statt GR20, zeitliche Priorität (~2 Wochen bis Urlaub) ergänzt, Slice 4 auf generischen département-basierten Mechanismus umgestellt (keine GR20-Hartkodierung). |
 | 2026-07-06 | Neue PO-Anforderung: Slice 5 (#1040) hinzugefügt — amtliche Warnungen pro Orts-Vergleich ein-/ausschaltbar (Full-Stack: Go-Preset-Modell, Python-Engine-Flag mit Fetch-Skip, Svelte-Checkbox), Out-of-Scope-Abgrenzung zu Trip-Alert-Config (#586) ergänzt. |
+| 2026-07-06 | Slice 1 (#1034) implementiert, Adversary VERIFIED. Nebenbefunde als Folge-Issues erfasst: #1046 (veralteter Validator-Vertrag, entdeckt bei der Analyse), #1048 (Politur F003/F005 aus dem Adversary-Dialog). |

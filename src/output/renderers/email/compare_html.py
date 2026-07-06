@@ -23,8 +23,9 @@ from typing import Optional
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
 from output.renderers.email.design_tokens import (
-    FONT_DATA, FONT_UI, G_ACCENT, G_BOX_WARNING_BG, G_INK, G_INK_FAINT,
-    G_INK_MUTED, G_PAPER, G_SUCCESS, G_SURFACE_1, G_WARNING, WEB_FONT_LINK,
+    FONT_DATA, FONT_UI, G_ACCENT, G_BOX_WARNING_BG, G_DANGER, G_INK,
+    G_INK_FAINT, G_INK_MUTED, G_PAPER, G_SUCCESS, G_SURFACE_1, G_WARNING,
+    WEB_FONT_LINK,
 )
 from output.renderers.email.profile_signature import profile_signature
 
@@ -138,6 +139,34 @@ def _render_warning_banner(warning_text: str) -> str:
         f'color:{G_INK};">'
         f'{safe}</div>'
     )
+
+
+def _render_official_alerts_block(locations: list[LocationResult]) -> str:
+    """Issue #1034 — Badges fuer amtliche Warnungen je Ort (div/span, kein <table>).
+
+    Level-Farbmapping (design_tokens.py, keine neuen Tokens): 1-2 -> G_SUCCESS,
+    3 -> G_WARNING, 4+ -> G_DANGER. Orte ohne Warnung liefern keinen Badge;
+    keine Warnungen insgesamt -> leerer String (analog `warnings_html`).
+    """
+    badges = []
+    for loc in locations:
+        for alert in loc.official_alerts:
+            if alert.level <= 2:
+                color = G_SUCCESS
+            elif alert.level == 3:
+                color = G_WARNING
+            else:
+                color = G_DANGER
+            name = _html.escape(loc.location.name)
+            label = _html.escape(alert.label)
+            badges.append(
+                f'<div style="background:{G_PAPER};border-left:4px solid {color};'
+                f'padding:8px 16px;margin:8px 20px;border-radius:4px;'
+                f'font-family:{FONT_UI};font-size:13px;color:{G_INK};">'
+                f'<span style="font-weight:600;">{name}:</span> '
+                f'<span>{label}</span></div>'
+            )
+    return "".join(badges)
 
 
 def _generate_winner_tags(
@@ -595,6 +624,7 @@ def render_compare_html(
         winner_tags_html = _render_winner_tags(winner_tags or [])
 
     warnings_html = "".join(_render_warning_banner(w) for w in warnings)
+    official_alerts_html = _render_official_alerts_block(result.locations)
 
     matrix_html = _render_matrix(result, profile, enabled_metrics)
     hourly_html = _render_hourly_section(result, top_n_details)
@@ -643,7 +673,7 @@ th, td {{ vertical-align: top; }}
 {header_html}
 {winner_html}
 {winner_tags_html}
-{warnings_html}
+{warnings_html}{official_alerts_html}
 {matrix_html}
 {hourly_html}
 {footer_html}

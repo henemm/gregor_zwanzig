@@ -619,6 +619,7 @@ See `~/.claude/CLAUDE.md` → Monitoring for details.
 
 - **Epic #438 (Compare Wizard):** `docs/features/epic-438-compare-wizard.md`
 - **Epic #134 (Trip Cockpit Dashboard):** `docs/features/epic-134-cockpit-dashboard.md`
+- **Epic #1033 (Amtliche Alerts im Orts-Vergleich):** `docs/features/epic-1033-compare-official-alerts.md` — additives `src/services/official_alerts/`-Modul (Slice 1 implementiert), Registry-Pattern analog Provider-Adapter, Fail-soft-Garantie
 - **Design System:** `docs/design-system/` (CHARTER, COMPONENTS, TOKENS, SCREENS)
 - **API Contract:** `docs/reference/api_contract.md`
 
