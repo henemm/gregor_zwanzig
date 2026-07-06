@@ -20,6 +20,8 @@ import time
 
 from playwright.sync_api import sync_playwright
 
+from tests.helpers.staging_auth import playwright_http_credentials
+
 BASE = "https://staging.gregor20.henemm.com"
 
 # Credentials: laden aus .claude/validator.env (gleiche Quelle wie design_fidelity_diff.py).
@@ -73,7 +75,7 @@ def _ensure_session_state() -> dict:
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        ctx = browser.new_context()
+        ctx = browser.new_context(http_credentials=playwright_http_credentials())
         page = ctx.new_page()
 
         try:
@@ -184,7 +186,7 @@ def test_ac1_mobile_metric_label_white_space_normal():
     state = _ensure_session_state()
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        ctx = browser.new_context(viewport=MOBILE_VIEWPORT, storage_state=state)
+        ctx = browser.new_context(viewport=MOBILE_VIEWPORT, storage_state=state, http_credentials=playwright_http_credentials())
         page = ctx.new_page()
         try:
             trip_id = _setup_trip_with_metrics(page)
@@ -222,7 +224,7 @@ def test_ac2_mobile_controls_flex_direction_column():
     state = _ensure_session_state()
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        ctx = browser.new_context(viewport=MOBILE_VIEWPORT, storage_state=state)
+        ctx = browser.new_context(viewport=MOBILE_VIEWPORT, storage_state=state, http_credentials=playwright_http_credentials())
         page = ctx.new_page()
         try:
             trip_id = _setup_trip_with_metrics(page)
@@ -258,7 +260,7 @@ def test_ac3_desktop_metric_label_white_space_nowrap():
     state = _ensure_session_state()
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        ctx = browser.new_context(viewport=DESKTOP_VIEWPORT, storage_state=state)
+        ctx = browser.new_context(viewport=DESKTOP_VIEWPORT, storage_state=state, http_credentials=playwright_http_credentials())
         page = ctx.new_page()
         try:
             trip_id = _setup_trip_with_metrics(page)

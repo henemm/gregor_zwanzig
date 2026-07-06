@@ -20,6 +20,11 @@ import httpx
 import pytest
 from playwright.sync_api import sync_playwright
 
+from tests.helpers.staging_auth import (  # Bündel H #987: Staging-Basic-Auth
+    httpx_auth,
+    playwright_http_credentials,
+)
+
 BASE = "https://staging.gregor20.henemm.com"
 USER = "tdd-785-ac"
 PASS = "tdd785testpass"
@@ -41,7 +46,7 @@ def _ensure_session_state() -> dict:
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        ctx = browser.new_context()
+        ctx = browser.new_context(http_credentials=playwright_http_credentials())
         page = ctx.new_page()
         page.goto(BASE, wait_until="networkidle")
         result = page.evaluate("""
@@ -107,12 +112,13 @@ class TestAC1CheckboxReflectsStoredFalse:
                 },
             },
             cookies={"gz_session": api_cookie},
+            auth=httpx_auth(),
         )
         assert resp.status_code == 200, f"Setup PUT fehlgeschlagen: {resp.text}"
 
         with sync_playwright() as pw:
             browser = pw.chromium.launch()
-            ctx = browser.new_context(storage_state=session_state)
+            ctx = browser.new_context(storage_state=session_state, http_credentials=playwright_http_credentials())
             page = ctx.new_page()
             page.goto(f"{BASE}/trips/{TRIP_ID_OFF}", wait_until="networkidle")
 
@@ -161,12 +167,13 @@ class TestAC2SavePersistsToAPI:
                 },
             },
             cookies={"gz_session": api_cookie},
+            auth=httpx_auth(),
         )
         assert resp.status_code == 200, f"Vorbereitung PUT fehlgeschlagen: {resp.text}"
 
         with sync_playwright() as pw:
             browser = pw.chromium.launch()
-            ctx = browser.new_context(storage_state=session_state)
+            ctx = browser.new_context(storage_state=session_state, http_credentials=playwright_http_credentials())
             page = ctx.new_page()
             page.goto(f"{BASE}/trips/{TRIP_ID_OFF}", wait_until="networkidle")
 
@@ -194,6 +201,7 @@ class TestAC2SavePersistsToAPI:
         get_resp = httpx.get(
             f"https://staging.gregor20.henemm.com/api/trips/{TRIP_ID_OFF}",
             cookies={"gz_session": api_cookie},
+            auth=httpx_auth(),
         )
         assert get_resp.status_code == 200
         rc = get_resp.json().get("report_config", {})
@@ -216,7 +224,7 @@ class TestAC4LegacyTripShowsChecked:
     def test_ac4_legacy_trip_checkbox_defaults_to_true(self, session_state):
         with sync_playwright() as pw:
             browser = pw.chromium.launch()
-            ctx = browser.new_context(storage_state=session_state)
+            ctx = browser.new_context(storage_state=session_state, http_credentials=playwright_http_credentials())
             page = ctx.new_page()
             page.goto(f"{BASE}/trips/{TRIP_ID_LEGACY}", wait_until="networkidle")
 
@@ -263,12 +271,13 @@ class TestAC5CompactFormatDisablesCheckbox:
                 },
             },
             cookies={"gz_session": api_cookie},
+            auth=httpx_auth(),
         )
         assert resp.status_code == 200
 
         with sync_playwright() as pw:
             browser = pw.chromium.launch()
-            ctx = browser.new_context(storage_state=session_state)
+            ctx = browser.new_context(storage_state=session_state, http_credentials=playwright_http_credentials())
             page = ctx.new_page()
             page.goto(f"{BASE}/trips/{TRIP_ID_OFF}", wait_until="networkidle")
 
