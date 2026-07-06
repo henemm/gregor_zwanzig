@@ -77,8 +77,7 @@ Specs verwenden `docs/specs/_template.md` und müssen enthalten:
 
 Folgende Änderungen erfordern einen ADR unter `docs/adr/NNNN-*.md` ODER den Marker `[no-adr]` in der Commit-Message:
 
-- `src/outputs/`
-- `src/output/renderers/`
+- `src/output/`
 - `docs/reference/decision_matrix.md`
 - `src/providers/`
 - `src/.*metric.*`

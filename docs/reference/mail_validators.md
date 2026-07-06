@@ -77,8 +77,9 @@ Gate. Der `email_spec_validator.py` ist für Trip-Briefing-Mails **nicht** zust�
 
 Commit-Hook (PreToolUse→Bash-Kette nach `pre_commit_gate.py`). Macht die
 Validator-„PFLICHT" technisch **un-überspringbar**: Sobald ein `git commit` eine
-Mail-Inhalts-Datei staged (`src/output/renderers/email/*.py`, `src/formatters/*.py`,
-`src/outputs/email.py`), **blockiert der Commit (Exit 2)**, bis im aktiven Workflow
+Mail-Inhalts-Datei staged (`src/output/renderers/email/*.py`,
+`src/output/renderers/{trip_report,sms_trip,compact_summary}.py`, `src/output/renderers/alert/*.py`,
+`src/output/channels/email.py`), **blockiert der Commit (Exit 2)**, bis im aktiven Workflow
 **beide** Nachweise vorliegen:
 
 1. der **Modus-Matrix-Vertragstest** (`tests/tdd/test_issue_811_mode_matrix.py`)

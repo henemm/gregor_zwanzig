@@ -58,9 +58,9 @@ Die folgenden Komponenten leben im Python-Core:
    - Schnittstelle: TokenLine (aus Report Formatter) → Channel-spezifischer Output
 
 3. **Channels**
-   - **SMTP-Mailer** (`src/outputs/email.py`) – E-Mail-Versand
-   - **Telegram-Bot** (`src/outputs/telegram.py`) – Telegram-Versand
-   - **SMS** (`src/outputs/sms.py`) – SMS-Versand via seven.io
+   - **SMTP-Mailer** (`src/output/channels/email.py`) – E-Mail-Versand
+   - **Telegram-Bot** (`src/output/channels/telegram.py`) – Telegram-Versand
+   - **SMS** (`src/output/channels/sms.py`) – SMS-Versand via seven.io
 
 ### Datenfluss (Produktiv)
 
@@ -144,7 +144,7 @@ mehr der Produktivpfad.
 aus `BOT_COMMANDS` gesetzt und verifiziert:
 
 - **Startup-Hook** (`api/main.py`, Lifespan): ruft `TelegramOutput.set_my_commands()` auf
-- **Quelle:** `BOT_COMMANDS` in `src/outputs/telegram.py` (7 Befehle: glance, hg, dd, now, status, config, help)
+- **Quelle:** `BOT_COMMANDS` in `src/output/channels/telegram.py` (7 Befehle: glance, hg, dd, now, status, config, help)
 - **Idempotent:** jeder Deploy/Restart stellt das Menü sicher
 - **Fail-soft:** fehlender Bot-Token blockt den Service-Start nicht
 - **Live-Verifikation (Post-Deploy):** Der Selftest prüft via `getMyCommands` gegen den Prod-Bot,

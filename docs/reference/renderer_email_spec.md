@@ -158,7 +158,7 @@ Im E-Mail-Body wird ein Klartext-Hinweis ausgegeben, wenn an mindestens einer St
 
 ## Marker Headers and Validation Routing (seit Issue #733)
 
-`build_mime_message()` in `src/outputs/email.py` setzt optionale Marker-Header zur deterministischen Klassifikation:
+`build_mime_message()` in `src/output/channels/email.py` setzt optionale Marker-Header zur deterministischen Klassifikation:
 
 ### Header-Format
 

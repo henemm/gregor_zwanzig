@@ -86,3 +86,17 @@ Kimi liefert den Umzug, Claude zieht die Gate-Muster im Integrations-Commit nach
 - **Folgepflichten:** `AGENTS.md`/`architecture.md`-Pfadangaben (Slice 3); Merge-Fenster
   koordinieren (breite Renames kollidieren mit parallelen Sessions — Slices zügig
   integrieren); `docs/reference/mail_validators.md` Pfadangaben aktualisieren.
+
+## Umsetzungsvermerk
+
+- **Slice 1 (#1050)** und **Slice 2 (#1051)**: umgesetzt (7e5afa63, dc8a55cb) — Übergangsphase
+  mit alten UND neuen Gate-Pfadmustern.
+- **Slice 3 (#1052)**: umgesetzt 2026-07-07. `src/outputs/` + `src/formatters/` restlos entfernt,
+  Doku-Pfade nachgezogen, Gate-Muster auf die neuen Pfade reduziert (`renderer_mail_gate.py`,
+  `adr_guard.py` → ein Präfix `^src/output/`, `prod_selftest.py` ohne Alt-Pfad-Fallback).
+- **Entscheidung im Zuge von Slice 3:** Die Radar-Muster des `renderer_mail_gate`
+  (`src/outputs/radar_alert.py`, `src/formatters/radar*.py`) zeigten seit #919 auf gelöschte
+  Dateien — der #830-Radar-Validator-Schutz war dadurch still außer Kraft. Neu:
+  `src/output/renderers/alert/*.py` (kanonischer Alert-Renderer, ADR-0011) ist das
+  Radar-/Alert-Mail-Inhalts-Muster; Commits daran verlangen wieder einen frischen
+  `radar_alert_mail_validator`-Lauf.

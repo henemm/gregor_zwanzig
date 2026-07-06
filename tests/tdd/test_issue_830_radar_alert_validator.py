@@ -4,8 +4,10 @@ RED-Treiber (was jetzt fehlschlägt):
 - AC-1: GET /api/debug/trigger-radar-alert → 404 (Endpoint existiert nicht).
 - AC-2: radar_alert_mail_validator.py existiert nicht → FileNotFoundError /
         Subprocess-Fehler (non-zero exit).
-- AC-3: renderer_mail_gate.py hat `src/outputs/radar_alert.py` NOCH NICHT in
+- AC-3: renderer_mail_gate.py hat den Radar-/Alert-Renderer-Pfad NOCH NICHT in
         _MAIL_PATTERNS → Gate lässt Commit durch (Exit 0) statt zu blockieren.
+        (ADR-0017 Slice 3: Pfad ist jetzt src/output/renderers/alert/*.py —
+        historisch src/outputs/radar_alert.py.)
 - AC-4: Production URL → 404 (schon jetzt true, Guard-Test).
 - Bonus: `src/outputs/radar_alert.py` fehlt → ImportError.
          `GZ_ENV`-Feld in Settings fehlt → AttributeError.
@@ -231,7 +233,7 @@ def test_ac2_validator_exit0_for_valid_radar_alert_mail():
 
 
 # ============================================================================
-# AC-3: renderer_mail_gate.py blockiert Commit bei src/outputs/radar_alert.py
+# AC-3: renderer_mail_gate.py blockiert Commit bei src/output/renderers/alert/*.py
 # ============================================================================
 
 def _run_gate(cwd: Path, workflow_name: str = "issue-830-test") -> int:
@@ -282,30 +284,31 @@ def _make_temp_git_repo_with_workflow(workflow_name: str = "issue-830-test") -> 
 
 def test_ac3_gate_blocks_radar_alert_py_without_nachweis():
     """
-    GIVEN src/outputs/radar_alert.py ist in git gestaged
+    GIVEN src/output/renderers/alert/render.py ist in git gestaged
     WHEN  renderer_mail_gate.py als Hook ausgeführt wird
     THEN  Exit-Code ist 2 (blockiert) — kein Nachweis vorhanden.
 
-    RED: Gate hat src/outputs/radar_alert.py NOCH NICHT in _MAIL_PATTERNS
-         → Gate lässt durch (Exit 0). Test schlägt fehl.
+    ADR-0017 Slice 3: Radar-/Alert-Mail-Inhalt lebt im kanonischen
+    Alert-Renderer (src/output/renderers/alert/), nicht mehr in
+    src/outputs/radar_alert.py.
     """
     import shutil
 
     tmpdir = _make_temp_git_repo_with_workflow()
     try:
-        radar_file = tmpdir / "src" / "outputs" / "radar_alert.py"
+        radar_file = tmpdir / "src" / "output" / "renderers" / "alert" / "render.py"
         radar_file.parent.mkdir(parents=True)
         radar_file.write_text("# radar alert body builder\n")
         subprocess.run(
-            ["git", "add", "src/outputs/radar_alert.py"],
+            ["git", "add", "src/output/renderers/alert/render.py"],
             cwd=str(tmpdir), check=True, capture_output=True,
         )
 
         exit_code = _run_gate(tmpdir)
         assert exit_code == 2, (
             f"Gate soll Commit blockieren (Exit 2), hat aber Exit {exit_code}. "
-            "src/outputs/radar_alert.py ist noch nicht in _MAIL_PATTERNS — "
-            "Gate-Erweiterung in renderer_mail_gate.py fehlt."
+            "src/output/renderers/alert/*.py ist nicht in _MAIL_PATTERNS — "
+            "Gate-Muster-Nachzug (ADR-0017 Slice 3) fehlt."
         )
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)

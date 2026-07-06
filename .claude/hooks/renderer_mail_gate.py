@@ -38,23 +38,18 @@ sys.path.insert(0, str(Path(__file__).parent))
 import hook_utils
 
 # Geschuetzte Mail-Inhalts-Pfade (Spec).
-# ADR-0017 Übergang (Slice 1-3): alte UND neue Pfade parallel, bis
-# src/outputs/ + src/formatters/ vollständig entfernt sind (Slice 3).
+# ADR-0017 Slice 3: nur noch neue Pfade (src/outputs/ + src/formatters/ entfernt).
 _MAIL_PATTERNS = [
     re.compile(r"src/output/renderers/email/.*\.py$"),
-    re.compile(r"src/formatters/.*\.py$"),
-    # ADR-0017 Slice 2: die drei Formatter leben jetzt direkt unter renderers/
     re.compile(r"src/output/renderers/(trip_report|sms_trip|compact_summary)\.py$"),
-    re.compile(r"src/outputs/email\.py$"),
     re.compile(r"src/output/channels/email\.py$"),
-    re.compile(r"src/outputs/radar_alert\.py$"),
-    re.compile(r"src/formatters/radar.*\.py$"),
+    # Radar-/Alert-Mail-Inhalt lebt seit #919 im kanonischen Alert-Renderer.
+    re.compile(r"src/output/renderers/alert/.*\.py$"),
 ]
 
 # Radar-Alert-spezifische Muster (Subset von _MAIL_PATTERNS)
 _RADAR_PATTERNS = [
-    re.compile(r"src/outputs/radar_alert\.py$"),
-    re.compile(r"src/formatters/radar.*\.py$"),
+    re.compile(r"src/output/renderers/alert/.*\.py$"),
 ]
 
 

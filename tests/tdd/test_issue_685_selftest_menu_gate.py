@@ -209,7 +209,7 @@ def test_ac4_load_bot_commands_unparseable_returns_none(tmp_path, monkeypatch):
     """
     ps = _load_prod_selftest()
 
-    # REPO_DIR auf ein leeres Verzeichnis umbiegen → src/outputs/telegram.py fehlt.
+    # REPO_DIR auf ein leeres Verzeichnis umbiegen → src/output/channels/telegram.py fehlt.
     monkeypatch.setattr(ps, "REPO_DIR", tmp_path)
     result = ps._load_bot_commands()
     assert result is None, f"erwartet None bei fehlender Quelle, war: {result!r}"

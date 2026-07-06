@@ -12,10 +12,8 @@ import re
 # ---------------------------------------------------------------------------
 
 DEFAULT_DECISION_SURFACE_PATTERNS: list[str] = [
-    r"^src/outputs/",
-    # ADR-0017 Slice 1: Transporte liegen jetzt unter output/channels/
-    r"^src/output/channels/",
-    r"^src/output/renderers/",
+    # ADR-0017 Slice 3: eine Wurzel fuer alles Ausgabe-Seitige
+    r"^src/output/",
     r"^docs/reference/decision_matrix\.md$",
     r"^src/providers/",
     # F005: Guard-Hooks (incl. adr_guard.py itself) are also decision surfaces

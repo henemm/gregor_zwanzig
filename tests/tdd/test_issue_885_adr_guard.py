@@ -145,14 +145,14 @@ class TestAC1BlockWhenDecisionSurfaceWithoutAdr:
     def test_check_blocks_when_decision_surface_no_adr(self):
         """check() blockiert bei Entscheidungsfläche ohne ADR: gibt Fehlermeldung zurück."""
         guard = _load_adr_guard()
-        staged = ["src/outputs/telegram.py"]
+        staged = ["src/output/channels/telegram.py"]
         msg = "fix: adjust formatting"
         result = guard.check(staged, msg, {})
         assert result is not None, (
             "check() muss eine Block-Meldung zurückgeben wenn Entscheidungsfläche "
             "ohne ADR gestaged und kein [no-adr] in Message"
         )
-        assert "src/outputs/telegram.py" in result, (
+        assert "src/output/channels/telegram.py" in result, (
             f"Block-Meldung muss die betroffene Datei nennen: {result!r}"
         )
         assert "docs/adr" in result.lower() or "no-adr" in result.lower(), (
@@ -162,7 +162,7 @@ class TestAC1BlockWhenDecisionSurfaceWithoutAdr:
     def test_integration_bash_gate_blocks_decision_surface(self, tmp_path):
         """Integration: bash_gate.py blockiert (Exit 2) bei Entscheidungsfläche ohne ADR."""
         repo = _setup_repo(tmp_path)
-        _stage_file(repo, "src/outputs/telegram.py")
+        _stage_file(repo, "src/output/channels/telegram.py")
 
         res = _run_bash_gate(repo, 'git commit -m "fix: adjust channel code"')
         assert res.returncode == 2, (
@@ -185,7 +185,7 @@ class TestAC2AllowWhenAdrStaged:
     def test_check_allows_when_adr_staged(self):
         """check() gibt None zurück wenn docs/adr/NNNN-*.md mitgestaged."""
         guard = _load_adr_guard()
-        staged = ["src/outputs/telegram.py", "docs/adr/0010-telegram-output.md"]
+        staged = ["src/output/channels/telegram.py", "docs/adr/0010-telegram-output.md"]
         msg = "feat: add telegram channel [relates to ADR-10]"
         result = guard.check(staged, msg, {})
         assert result is None, (
@@ -195,7 +195,7 @@ class TestAC2AllowWhenAdrStaged:
     def test_integration_bash_gate_allows_with_adr_staged(self, tmp_path):
         """Integration: bash_gate.py lässt durch (Exit 0) wenn ADR mitgestaged."""
         repo = _setup_repo(tmp_path)
-        _stage_file(repo, "src/outputs/telegram.py")
+        _stage_file(repo, "src/output/channels/telegram.py")
         _stage_file(repo, "docs/adr/0010-telegram-output.md",
                     content="# ADR-10: Telegram Output\n\n## Status: Accepted\n")
 
@@ -216,7 +216,7 @@ class TestAC3AllowWhenNoAdrMarker:
     def test_check_allows_when_no_adr_in_message(self):
         """check() gibt None zurück wenn [no-adr] in Commit-Message."""
         guard = _load_adr_guard()
-        staged = ["src/outputs/telegram.py"]
+        staged = ["src/output/channels/telegram.py"]
         msg = "fix: minor typo in telegram output [no-adr]"
         result = guard.check(staged, msg, {})
         assert result is None, (
@@ -226,7 +226,7 @@ class TestAC3AllowWhenNoAdrMarker:
     def test_integration_bash_gate_allows_with_no_adr_marker(self, tmp_path):
         """Integration: bash_gate.py lässt durch (Exit 0) mit [no-adr] in Message."""
         repo = _setup_repo(tmp_path)
-        _stage_file(repo, "src/outputs/telegram.py")
+        _stage_file(repo, "src/output/channels/telegram.py")
 
         res = _run_bash_gate(repo, 'git commit -m "fix: typo in telegram output [no-adr]"')
         assert res.returncode == 0, (
@@ -580,7 +580,7 @@ class TestF002CommitMessageParsing:
     def test_no_adr_with_equals_message_form(self, tmp_path):
         """Integration: git commit --message="… [no-adr]" muss durchgelassen werden (Exit 0)."""
         repo = _setup_repo(tmp_path)
-        _stage_file(repo, "src/outputs/telegram.py")
+        _stage_file(repo, "src/output/channels/telegram.py")
 
         res = _run_bash_gate(repo, 'git commit --message="fix: typo in output [no-adr]"')
         assert res.returncode == 0, (
@@ -591,7 +591,7 @@ class TestF002CommitMessageParsing:
     def test_no_adr_with_space_message_form(self, tmp_path):
         """Integration: git commit --message '… [no-adr]' (Space-Form) muss durchgelassen werden."""
         repo = _setup_repo(tmp_path)
-        _stage_file(repo, "src/outputs/telegram.py")
+        _stage_file(repo, "src/output/channels/telegram.py")
 
         res = _run_bash_gate(repo, "git commit --message 'fix: typo in output [no-adr]'")
         assert res.returncode == 0, (

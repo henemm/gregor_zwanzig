@@ -543,16 +543,13 @@ def _read_prod_bot_token() -> str:
 
 
 def _load_bot_commands() -> list[dict] | None:
-    """Liest BOT_COMMANDS dependency-frei per AST aus src/outputs/telegram.py.
+    """Liest BOT_COMMANDS dependency-frei per AST aus src/output/channels/telegram.py.
 
-    Kein Import der outputs-Pakete; kein pydantic nötig. Single Source of Truth
+    Kein Import der output-Pakete; kein pydantic nötig. Single Source of Truth
     bleibt telegram.py. Bei jedem Fehler (Datei fehlt, SyntaxError, kein
     literal-auswertbares BOT_COMMANDS) wird None zurückgegeben (fail-soft).
     """
-    # ADR-0017 Slice 1: neuer Pfad zuerst, alter als Übergangs-Fallback (bis Slice 3).
     telegram_py = REPO_DIR / "src" / "output" / "channels" / "telegram.py"
-    if not telegram_py.exists():
-        telegram_py = REPO_DIR / "src" / "outputs" / "telegram.py"
     try:
         source = telegram_py.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(telegram_py))

@@ -136,7 +136,7 @@ Zwei Mail-Pfade, zwei Gates. Falscher Validator auf einen Pfad → strukturell n
 
 **Regeln:** gegen **echt zugestellte Staging-Mail** aus Stalwart-Test-Postfach (`gregor-test@henemm.com`, Creds `GZ_IMAP_*`, nie im Klartext) — kein Mock, kein Gmail. Geprüft wird Plausibilität, nicht bloße String-Presence. **Nur bei Exit 0** darf „E2E bestanden" gesagt werden.
 
-**Renderer-Commit-Gate (#811, un-überspringbar):** `renderer_mail_gate.py` blockiert jeden Commit, der eine Mail-Inhalts-Datei staged (`src/output/renderers/email/*.py`, `src/formatters/*.py`, `src/outputs/email.py`), bis im aktiven Workflow **beide** frisch vorliegen: (1) `tests/tdd/test_issue_811_mode_matrix.py` grün, (2) erfolgreicher `briefing_mail_validator.py`-Lauf. Abhilfe bei Blockade: `uv run pytest tests/tdd/test_issue_811_mode_matrix.py` ausführen, dann Validator grün bekommen.
+**Renderer-Commit-Gate (#811, un-überspringbar):** `renderer_mail_gate.py` blockiert jeden Commit, der eine Mail-Inhalts-Datei staged (`src/output/renderers/email/*.py`, `src/output/renderers/{trip_report,sms_trip,compact_summary}.py`, `src/output/renderers/alert/*.py`, `src/output/channels/email.py`), bis im aktiven Workflow **beide** frisch vorliegen: (1) `tests/tdd/test_issue_811_mode_matrix.py` grün, (2) erfolgreicher `briefing_mail_validator.py`-Lauf. Abhilfe bei Blockade: `uv run pytest tests/tdd/test_issue_811_mode_matrix.py` ausführen, dann Validator grün bekommen.
 
 Details (Plausibilitäts-Schwellen, Anti-Stale-Mechanik, Historie): **`docs/reference/mail_validators.md`**.
 
