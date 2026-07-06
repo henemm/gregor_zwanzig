@@ -158,9 +158,14 @@ jobs:
           scp -i /tmp/deploy_key -o StrictHostKeyChecking=no \
             /tmp/ci_e2e_findings.json \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/ci_e2e_findings.json
+          # Issue #1031 Root Cause: staging_gate verlangt bei Telegram-berührenden
+          # Changes einen Live-Test (#686 AC-5) — dafür müssen die Staging-Bot-Creds
+          # (GZ_TELEGRAM_TEST_CHAT_ID etc.) aus der Server-seitigen Staging-.env
+          # gesourct sein, sonst verweigert das Gate das Verdict und der Deploy
+          # fällt auf eine veraltete Singleton-Attestation zurück.
           ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "cd /home/hem/gregor_zwanzig && git fetch origin 2>/dev/null && git reset --hard origin/main && python3 .claude/hooks/staging_gate.py --write-verdict 'VERIFIED: CI smoke test (ROOT+HEALTH) passed' --findings-json /tmp/ci_e2e_findings.json; rm -f /tmp/ci_e2e_findings.json"
+            "cd /home/hem/gregor_zwanzig && git fetch origin 2>/dev/null && git reset --hard origin/main && set -a && . /home/hem/gregor_zwanzig_staging/.env && set +a && GZ_TELEGRAM_LIVE=1 python3 .claude/hooks/staging_gate.py --write-verdict 'VERIFIED: CI smoke test (ROOT+HEALTH) passed' --findings-json /tmp/ci_e2e_findings.json; rm -f /tmp/ci_e2e_findings.json"
           rm -f /tmp/deploy_key /tmp/ci_e2e_findings.json
 
       - name: Deploy zu Produktion via SSH
