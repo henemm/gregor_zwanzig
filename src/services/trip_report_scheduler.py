@@ -16,10 +16,19 @@ import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from zoneinfo import ZoneInfo
 
 from app.config import Settings
 from app.loader import load_all_trips, save_trip
-from app.models import NormalizedTimeseries, SegmentWeatherData, SegmentWeatherSummary, TripSegment
+from app.models import (
+    NormalizedTimeseries,
+    SegmentWeatherData,
+    SegmentWeatherSummary,
+    StabilityResult,
+    TripSegment,
+)
+from services.day_comparison import DayComparison
+from services.daylight_service import DaylightWindow
 from services.notification_service import NotificationService, TripReportRequest
 from utils.geo import degrees_to_compass, haversine_km
 from utils.timezone import tz_for_coords
@@ -712,9 +721,7 @@ class TripReportSchedulerService:
         # 8. NotificationService: render + send (Issue #1022).
         # Der Scheduler liefert nur noch ein DTO; Renderer-/Transport-Imports
         # bleiben im NotificationService.
-        config = trip.report_config
-        errors = [s for s in segment_weather if s.has_error]
-        request = TripReportRequest(
+        request = self._build_trip_report_request(
             trip=trip,
             report_type=report_type,
             segment_weather=segment_weather,
@@ -728,22 +735,12 @@ class TripReportSchedulerService:
             daylight_window=daylight_window,
             day_comparison=day_comparison,
             exposed_sections=exposed_sections,
-            report_config=config,
-            display_config=trip.display_config,
-            profile=trip.aggregation.profile,
-            shortcode=getattr(trip, 'shortcode', None) or None,
-            stage_total=len(trip.stages) if trip.stages else None,
-            trip_url=f"https://gregor20.henemm.com/trips/{trip.id}",
-            send_email=not config or config.send_email,
-            send_sms=config is not None and config.send_sms,
-            send_telegram=config is not None and config.send_telegram,
-            test_prefix=allow_test_fallback,
-            on_demand_prefix=on_demand,
-            catchup_prefix=catchup_prefix,
-            failed_segments=errors,
+            allow_test_fallback=allow_test_fallback,
             on_demand=on_demand,
+            catchup_prefix=catchup_prefix,
         )
         result = self._notification_service.send_trip_report(request)
+        errors = request.failed_segments
 
         # Issue #393: Briefing-Log für Cockpit-Kachel "Was geht heute raus".
         # Issue #1007 Adversary-Fix F001: bei explizit konfiguriertem "kein
@@ -785,6 +782,64 @@ class TripReportSchedulerService:
             self._reset_alert_state_after_briefing(trip.id)
 
         return "no_channels" if result.no_channel_configured else "sent"
+
+    def _build_trip_report_request(
+        self,
+        *,
+        trip: "Trip",
+        report_type: str,
+        segment_weather: list[SegmentWeatherData],
+        trip_tz: ZoneInfo,
+        stage_name: str | None,
+        stage_stats: dict | None,
+        night_weather: Optional[NormalizedTimeseries],
+        thunder_forecast: Optional[dict],
+        multi_day_trend: Optional[list[dict]],
+        stability_result: Optional[StabilityResult],
+        daylight_window: Optional[DaylightWindow],
+        day_comparison: Optional[DayComparison],
+        exposed_sections: list,
+        allow_test_fallback: bool,
+        on_demand: bool,
+        catchup_prefix: str | None,
+    ) -> TripReportRequest:
+        """Baut das DTO, das an den NotificationService übergeben wird (Issue #1022).
+
+        WEATHER-04: Fehlerhafte Segmente werden explizit als `failed_segments`
+        übergeben, damit der NotificationService bei SMS-only-Trips eine
+        Service-E-Mail verschicken kann.
+        """
+        config = trip.report_config
+        errors = [s for s in segment_weather if s.has_error]
+        return TripReportRequest(
+            trip=trip,
+            report_type=report_type,
+            segment_weather=segment_weather,
+            trip_tz=trip_tz,
+            stage_name=stage_name,
+            stage_stats=stage_stats,
+            night_weather=night_weather,
+            thunder_forecast=thunder_forecast,
+            multi_day_trend=multi_day_trend,
+            stability_result=stability_result,
+            daylight_window=daylight_window,
+            day_comparison=day_comparison,
+            exposed_sections=exposed_sections,
+            report_config=config,
+            display_config=trip.display_config,
+            profile=trip.aggregation.profile,
+            shortcode=getattr(trip, 'shortcode', None) or None,
+            stage_total=len(trip.stages) if trip.stages else None,
+            trip_url=f"https://gregor20.henemm.com/trips/{trip.id}",
+            send_email=not config or config.send_email,
+            send_sms=config is not None and config.send_sms,
+            send_telegram=config is not None and config.send_telegram,
+            test_prefix=allow_test_fallback,
+            on_demand_prefix=on_demand,
+            catchup_prefix=catchup_prefix,
+            failed_segments=errors,
+            on_demand=on_demand,
+        )
 
     def _reset_alert_state_after_briefing(self, trip_id: str) -> None:
         """Issue #816 (B): Alert-Melde-Gedächtnis nach Briefing-Versand löschen."""

@@ -199,11 +199,98 @@ class TestSchedulerErrorTracking:
 # ---------------------------------------------------------------------------
 
 class TestServiceEmailMethod:
-    """Scheduler must have _send_service_error_email method."""
+    """WEATHER-04: Service-E-Mail bei Provider-Fehlern für SMS-only Trips.
 
-    def test_method_exists(self) -> None:
-        """TripReportSchedulerService must have _send_service_error_email."""
+    Issue #1022: Die Methode lebt jetzt im NotificationService; der Scheduler
+    muss fehlerhafte Segmente als `failed_segments` ins TripReportRequest
+    einspeisen, damit der NotificationService die Service-E-Mail verschickt.
+    """
+
+    def test_notification_service_has_service_error_email(self) -> None:
+        """NotificationService must have _send_service_error_email."""
+        from services.notification_service import NotificationService
+
+        assert hasattr(NotificationService, "_send_service_error_email")
+
+    def test_scheduler_does_not_have_service_error_email_anymore(self) -> None:
+        """TripReportSchedulerService must NOT have _send_service_error_email (Issue #1022)."""
         from services.trip_report_scheduler import TripReportSchedulerService
 
         service = TripReportSchedulerService()
-        assert hasattr(service, "_send_service_error_email")
+        assert not hasattr(service, "_send_service_error_email")
+
+    def test_scheduler_fills_failed_segments_into_request(self) -> None:
+        """Scheduler baut TripReportRequest mit failed_segments für NotificationService."""
+        from unittest.mock import MagicMock, patch
+
+        from app.models import SegmentWeatherData
+        from services.notification_service import NotificationService, TripReportRequest
+        from services.trip_report_scheduler import TripReportSchedulerService
+
+        service = TripReportSchedulerService()
+        captured: list[TripReportRequest] = []
+
+        def _capture_send(request: TripReportRequest) -> MagicMock:
+            captured.append(request)
+            result = MagicMock()
+            result.sent = True
+            result.sent_channels = ["sms"]
+            result.telegram_fully_sent = True
+            result.no_channel_configured = False
+            return result
+
+        service._notification_service = MagicMock(spec=NotificationService)
+        service._notification_service.send_trip_report = _capture_send
+
+        from datetime import datetime, timezone
+
+        bad = SegmentWeatherData(
+            segment=MagicMock(segment_id="seg-1"),
+            timeseries=None,
+            aggregated=MagicMock(),
+            fetched_at=datetime.now(tz=timezone.utc),
+            provider="openmeteo",
+            has_error=True,
+            error_message="provider timeout",
+        )
+        good = SegmentWeatherData(
+            segment=MagicMock(segment_id="seg-2"),
+            timeseries=MagicMock(),
+            aggregated=MagicMock(),
+            fetched_at=datetime.now(tz=timezone.utc),
+            provider="openmeteo",
+            has_error=False,
+        )
+
+        with patch.object(service, "_append_briefing_log"):
+            with patch.object(service, "_write_pending_marker"):
+                request = service._build_trip_report_request(
+                    trip=MagicMock(
+                        name="Test Trip",
+                        id="trip-1",
+                        report_config=None,
+                        display_config=None,
+                        aggregation=MagicMock(profile=None),
+                        stages=[],
+                        shortcode=None,
+                    ),
+                    report_type="morning",
+                    segment_weather=[bad, good],
+                    trip_tz="Europe/Berlin",  # type: ignore[arg-type]
+                    stage_name="Etappe 1",
+                    stage_stats=None,
+                    night_weather=None,
+                    thunder_forecast=None,
+                    multi_day_trend=None,
+                    stability_result=None,
+                    daylight_window=None,
+                    day_comparison=None,
+                    exposed_sections=[],
+                    allow_test_fallback=False,
+                    on_demand=False,
+                    catchup_prefix=None,
+                )
+
+        assert len(request.failed_segments) == 1
+        assert request.failed_segments[0] is bad
+        assert request.failed_segments[0].error_message == "provider timeout"
