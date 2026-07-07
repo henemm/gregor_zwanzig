@@ -53,7 +53,7 @@ def get_official_alerts_for_location(lat: float, lon: float) -> list[OfficialAle
         try:
             source_name = str(source.name)
         except Exception:
-            source_name = repr(source.__class__.__name__)
+            source_name = "unbekannte Quelle"
         try:
             if not source.covers(lat, lon):
                 continue
