@@ -2,6 +2,8 @@
 	// Issue #681 — Compare-Editor Slice 4: Kanal-spezifische Layout-Vorschau.
 	// Reine UI-Komponente, keine API-Calls, statische Dummy-Daten.
 
+	import { selectPreviewRows } from './layoutPreviewRows.js';
+
 	type ChannelId = 'email' | 'telegram' | 'sms';
 
 	interface Props {
@@ -17,11 +19,11 @@
 		{ id: 'loc-08', name: 'Zermatt',   score: 71, snow: 210, newSnow:  8, wind: 31, gust: 55, dir: 'SW', feels: -7, sun: 5.8 },
 	];
 
-	const rows = $derived(
-		pickedIds.length > 0
-			? DUMMY_LOCATIONS.filter(d => pickedIds.includes(d.id)).slice(0, 5)
-			: DUMMY_LOCATIONS
-	);
+	// Reine Illustration mit statischen Dummy-Daten — es wird NICHT nach
+	// pickedIds gefiltert (echte Location-UUIDs matchen die Fantasie-IDs
+	// der Dummys nie). Stattdessen: so viele Beispielzeilen wie Orte
+	// gewählt wurden, gedeckelt auf die Anzahl verfügbarer Dummys.
+	const rows = $derived(selectPreviewRows(pickedIds, DUMMY_LOCATIONS));
 
 	const cols = $derived(
 		channel === 'email'
