@@ -361,16 +361,16 @@ func LogoutHandler() http.HandlerFunc {
 // profileResponse is the public view of a User (no password_hash, no public_key).
 // Issue #450 adds the Passkey-summary fields.
 type profileResponse struct {
-	ID             string                 `json:"id"`
-	Email          string                 `json:"email,omitempty"`
-	DisplayName    string                 `json:"display_name,omitempty"`
-	MailTo         string                 `json:"mail_to,omitempty"`
-	SmsTo          string                 `json:"sms_to,omitempty"`
-	TelegramChatID string                 `json:"telegram_chat_id,omitempty"`
-	Tier           string                 `json:"tier"`
-	CreatedAt      string                 `json:"created_at"`
-	HasPasskey     bool                   `json:"has_passkey"`
-	Passkeys       []passkeyProfileEntry  `json:"passkeys,omitempty"`
+	ID             string                `json:"id"`
+	Email          string                `json:"email,omitempty"`
+	DisplayName    string                `json:"display_name,omitempty"`
+	MailTo         string                `json:"mail_to,omitempty"`
+	SmsTo          string                `json:"sms_to,omitempty"`
+	TelegramChatID string                `json:"telegram_chat_id,omitempty"`
+	Tier           string                `json:"tier"`
+	CreatedAt      string                `json:"created_at"`
+	HasPasskey     bool                  `json:"has_passkey"`
+	Passkeys       []passkeyProfileEntry `json:"passkeys,omitempty"`
 }
 
 // passkeyProfileEntry exposes a registered Passkey to the client WITHOUT the
@@ -399,8 +399,9 @@ func toProfileResponse(u *model.User) profileResponse {
 	}
 	// Default-Fallback nur am Lesezeitpunkt — kein Schreibpfad setzt "free"
 	// zurück in die user.json (Read-Modify-Write-Prinzip, Issue #1068).
+	// Issue #1074: auch ungültige Werte (Tippfehler, Legacy-Daten) normalisieren.
 	tier := u.Tier
-	if tier == "" {
+	if tier != "free" && tier != "standard" && tier != "premium" {
 		tier = "free"
 	}
 	return profileResponse{

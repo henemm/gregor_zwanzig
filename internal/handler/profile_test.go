@@ -396,3 +396,61 @@ func TestRegisterCreatesUserDirs(t *testing.T) {
 		}
 	}
 }
+
+// ============================================================================
+// Issue #1074 — Ungueltige tier-Werte werden auf "free" normalisiert.
+// ============================================================================
+
+func TestGetProfileNormalizesInvalidTierToFree(t *testing.T) {
+	s := newTestStore(t)
+	h := GetProfileHandler(s)
+
+	for _, invalidTier := range []string{"gremlin", "premiumx", "FREE", "Standard"} {
+		dir := filepath.Join(s.DataDir, "users", "tier-"+invalidTier)
+		os.MkdirAll(dir, 0755)
+		os.WriteFile(filepath.Join(dir, "user.json"),
+			[]byte(`{"id":"tier-`+invalidTier+`","tier":"`+invalidTier+`"}`), 0644)
+
+		req := httptest.NewRequest("GET", "/api/auth/profile", nil)
+		ctx := middleware.ContextWithUserID(req.Context(), "tier-"+invalidTier)
+		req = req.WithContext(ctx)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+
+		if w.Code != 200 {
+			t.Fatalf("tier=%q: expected 200, got %d: %s", invalidTier, w.Code, w.Body.String())
+		}
+		var resp map[string]interface{}
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		if resp["tier"] != "free" {
+			t.Errorf("tier=%q: expected normalized 'free', got '%v'", invalidTier, resp["tier"])
+		}
+	}
+}
+
+func TestGetProfilePreservesValidTiers(t *testing.T) {
+	s := newTestStore(t)
+	h := GetProfileHandler(s)
+
+	for _, validTier := range []string{"free", "standard", "premium"} {
+		dir := filepath.Join(s.DataDir, "users", "tier-"+validTier)
+		os.MkdirAll(dir, 0755)
+		os.WriteFile(filepath.Join(dir, "user.json"),
+			[]byte(`{"id":"tier-`+validTier+`","tier":"`+validTier+`"}`), 0644)
+
+		req := httptest.NewRequest("GET", "/api/auth/profile", nil)
+		ctx := middleware.ContextWithUserID(req.Context(), "tier-"+validTier)
+		req = req.WithContext(ctx)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+
+		if w.Code != 200 {
+			t.Fatalf("tier=%q: expected 200, got %d: %s", validTier, w.Code, w.Body.String())
+		}
+		var resp map[string]interface{}
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		if resp["tier"] != validTier {
+			t.Errorf("tier=%q: expected preserved %q, got '%v'", validTier, validTier, resp["tier"])
+		}
+	}
+}
