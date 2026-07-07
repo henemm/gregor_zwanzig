@@ -11,6 +11,7 @@ SPEC: docs/specs/epic_129a_1_compare_helpers.md
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from app.config import Location
@@ -25,6 +26,8 @@ if TYPE_CHECKING:
     from datetime import date
     from app.profile import ActivityProfile
     from app.config import Settings
+
+logger = logging.getLogger("comparison_engine")
 
 
 class ComparisonEngine:
@@ -184,8 +187,15 @@ class ComparisonEngine:
                 # Issue #1034 — amtliche Warnungen, additiv, nur im Erfolgszweig.
                 # Issue #1040: strukturell kein Fetch bei official_alerts_enabled=False.
                 if official_alerts_enabled:
-                    from services.official_alerts import get_official_alerts_for_location
-                    official_alerts = get_official_alerts_for_location(loc.lat, loc.lon)
+                    try:
+                        from services.official_alerts import get_official_alerts_for_location
+                        official_alerts = get_official_alerts_for_location(loc.lat, loc.lon)
+                    except Exception:
+                        logger.warning(
+                            "comparison_engine: official_alerts nicht ladbar — "
+                            "Alerts fuer diesen Ort deaktiviert", exc_info=True,
+                        )
+                        official_alerts = []
                 else:
                     official_alerts = []
 

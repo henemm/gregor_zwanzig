@@ -1,7 +1,7 @@
 # Epic 1033: Amtliche Alerts im Orts-Vergleich
 
-**Status:** Slice 1 (#1034), Slice 2 (#1035), Slice 3 (#1036) und Slice 5 (#1040) implementiert (alle Adversary
-VERIFIED) — Slice #1037 offen. Bei #1034 aufgedeckte Nebenbefunde: #1046 (Validator-Vertrag
+**Status:** Slice 1 (#1034), Slice 2 (#1035), Slice 3 (#1036), Slice 4 (#1037) und Slice 5 (#1040) implementiert (alle Adversary
+VERIFIED) — Epic vollständig. Bei #1034 aufgedeckte Nebenbefunde: #1046 (Validator-Vertrag
 für Compare-Mail ist veraltet, betrifft die Tabellen-Zählannahme), #1048 (kleinere Politur
 F003/F005). Bei #1035 aufgedeckter Nebenbefund: #1056 (Level-2/Gelb wird in `compare_html.py`
 fälschlich grün gerendert, kein Scope-Fix in #1035).
@@ -84,7 +84,8 @@ src/services/official_alerts/
 ├── department_mapper.py     # Lat/Lon → Département, landesweit, inkl. Korsika 2A/2B (Slice 2)
 ├── vigilance.py              # VigilanceSource (Slice 2, implementiert)
 ├── meteo_forets.py           # MeteoForetsSource (Slice 3)
-├── massif_zones.py            # generische Département → Massiv-Zonen-Tabelle (Slice 4)
+├── massif_zones.py            # amtliche Massiv-Polygone laden + Point-in-Polygon (Slice 4)
+├── data/massif_polygons.json  # gebündelte amtliche Massiv-Grenzen (offline erzeugt, Slice 4)
 └── massif_closure.py          # MassifClosureSource (Slice 4)
 ```
 
@@ -214,22 +215,29 @@ erscheint als Badge, anders als Vigilance ab Level ≥2). Baut auf #1034 (Regist
 #1035 (Département-Mapping) auf. Badge-Renderer aus Slice 1 verdrahtet, fail-soft bei fehlender
 API-Authentifizierung oder Netzwerkfehler. Spec: `docs/specs/modules/issue_1036_meteo_forets_source.md`.
 
-### Slice 4: Massiv-Betretungsverbote (Issue #1037)
+### Slice 4: Massiv-Betretungsverbote (Issue #1037) — implementiert (2026-07-07, Adversary VERIFIED)
 
-Präfektur-Zugangssperren einzelner Wander-Massive über einen inoffiziellen JSON-Endpoint.
-**Bewusst ohne neue FlatGeobuf/Geometrie-Abhängigkeit** — statt echter Point-in-Polygon-Prüfung
-wird eine statische Zentrum+Radius-Zonentabelle je Massiv verwendet.
+Präfektur-Zugangssperren einzelner Wander-Massive über einen inoffiziellen, auth-freien JSON-
+Endpoint (`risque-prevention-incendie.fr`). Abgedeckt: **Var (83), Bouches-du-Rhône (13), Korsika
+(kombiniert als „20")**. Alpes-Maritimes (06) liefert der Endpoint nicht (HTTP 404). Niveau→Badge
+faktisch korrekt abgestuft: 1–2 kein Badge (Zugang erlaubt), 3 „Zugang eingeschränkt", 4/5 „Zugang
+gesperrt".
 
-**Scope-Korrektur 2026-07-06:** Der ursprüngliche Entwurf hatte diese Tabelle GR20-spezifisch
-kodiert (reine Portierung von `gr20_zone_massif_ids.py`). Das ist korrigiert: der Mechanismus ist
-jetzt **département-generisch** (`MASSIF_ZONES: dict[str, list[MassifZone]]`, keyed by
-Département-Code über denselben `department_mapper.py` aus Slice 2). Die Korsika-Daten aus dem
-Vorgängerprojekt sind nur die Datenquelle für die 2A/2B-Einträge dieser generischen Tabelle; für
-Var (83), Alpes-Maritimes (06) und Bouches-du-Rhône (13) müssen die Massiv-Zonen in diesem Slice
-neu recherchiert werden (kein wiederverwendbares Vorarbeit-Material vorhanden). Deckt damit
-sowohl das primäre Côte-d'Azur-Szenario als auch GR20/Korsika über denselben Code-Pfad ab;
-Erweiterung auf weitere Départements oder echte Polygon-Geometrie ist inkrementell möglich, ohne
-den Mechanismus zu ändern.
+**Architektur-Entwicklung (nach 2 Adversary-BROKEN-Runden, PO-Entscheidung 2026-07-07):** Der
+ursprüngliche Zentrum+Radius-Näherungsansatz (bewusst ohne FlatGeobuf-Abhängigkeit) erwies sich als
+**aktiv fehlinformierend** — falsch geratene Massiv-IDs für 13/20 und Radius-Fehlzuordnung an
+Küsten (falsches Massiv im Badge). Umgestellt auf **exakte amtliche Massiv-Grenzen mit
+Point-in-Polygon** zur Laufzeit: die amtlichen `.fgb`-Polygone werden **offline** nach GeoJSON
+konvertiert, vereinfacht und als gebündelte Datendatei (`data/massif_polygons.json`) abgelegt; zur
+Laufzeit prüft **reines Python-Ray-Casting** die Zugehörigkeit — **keine neue Laufzeit-
+Abhängigkeit**. `massif_id`/`name` stammen direkt aus den Polygon-Properties (nicht geraten).
+Verifiziert per 15.120-Punkt-Gegenprobe gegen die amtliche Geometrie (0 Abweichungen). Bei
+Département-übergreifender Massiv-Dopplung (z. B. Sainte-Baume in 83+13) gewinnt die strengste
+Sperrstufe. Fail-soft, wenn die Polygon-Datei fehlt/kaputt ist. **Kein `department_mapper` mehr in
+dieser Quelle** (an Grenzen zu grob).
+
+**Bekannte Grenze (Quellen-Limitation):** Für Korsika/GR20 meldet die amtliche Quelle nur 11
+Massive; nicht gemeldete GR20-Kernorte (Vizzavona, Asco) erhalten keinen Badge.
 
 ### Slice 5: Konfiguration — „Amtliche Warnungen anzeigen" (Issue #1040) — implementiert (2026-07-07, Adversary VERIFIED)
 
@@ -286,3 +294,4 @@ sinnvoll nutzbar (siehe Details oben unter "Konfigurierbarkeit"). Spec:
 | 2026-07-06 | Slice 2 (#1035) implementiert, Adversary VERIFIED. Analyse-Korrektur: OAuth2-Client-Credentials-Verfahren verworfen zugunsten von einfachem `apikey`-Header (kein `meteo_token_provider.py`); Endpoint auf `cartevigilance/encours` (nationale Antwort statt Punkt-Bulletin) korrigiert. Nebenbefund #1056 (Level-2/Gelb-Farbmapping in `compare_html.py`) erfasst. |
 | 2026-07-07 | Slice 5 (#1040) implementiert, Adversary VERIFIED. Analyse-Korrektur ggü. Vor-Analyse-Entwurf: Engine-Parametername `official_alerts_enabled` (statt `include_official_alerts`), Checkbox in `Step5Versand.svelte` (statt `Step4Layout.svelte`). |
 | 2026-07-07 | Slice 3 (#1036) implementiert, Adversary VERIFIED. Analyse-Korrektur ggü. Vor-Analyse-Entwurf: kein OAuth2/CSV-Pfad, sondern gleicher `apikey`-Header wie Vigilance gegen den département-scoped JSON-Endpoint `carte/departement/encours`. MeteoForetsSource registriert in `__init__.py`, liefert Waldbrand-Gefahrenstufe 1–4 für französische Orte Juni–September (außerhalb Saison `covers()` = False), ohne Mindest-Schwellwert, fail-soft bei fehlender API oder Netzwerkfehler. Badge-Renderer bereits aus Slice 1 verdrahtet, keine neuen Renderer-Dateien nötig. |
+| 2026-07-07 | Slice 4 (#1037) implementiert, Adversary VERIFIED (4 Runden). Architektur-Pivot nach 2 BROKEN-Runden: Zentrum+Radius-Näherung verworfen (fehlinformierende Massiv-Zuordnung, F004/F005) → exakte amtliche Polygone mit Point-in-Polygon (reines Python-Ray-Casting, keine neue Dependency; `data/massif_polygons.json` offline aus `.fgb` erzeugt). Abdeckung Var/Bouches-du-Rhône/Korsika; Niveau≥3-abgestufter Badge. Korsika/GR20-Abdeckung als Quellen-Limitation dokumentiert (Quelle meldet nur 11 Massive). department_mapper aus dieser Quelle entfernt. |
