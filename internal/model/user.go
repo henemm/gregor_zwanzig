@@ -19,6 +19,7 @@ type User struct {
 	OAuthProvider      string               `json:"oauth_provider,omitempty"`
 	OAuthSub           string               `json:"oauth_sub,omitempty"`
 	DisplayName        string               `json:"display_name,omitempty"`
+	Tier               string               `json:"tier,omitempty"`
 }
 
 type PasswordResetToken struct {

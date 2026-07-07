@@ -367,6 +367,7 @@ type profileResponse struct {
 	MailTo         string                 `json:"mail_to,omitempty"`
 	SmsTo          string                 `json:"sms_to,omitempty"`
 	TelegramChatID string                 `json:"telegram_chat_id,omitempty"`
+	Tier           string                 `json:"tier"`
 	CreatedAt      string                 `json:"created_at"`
 	HasPasskey     bool                   `json:"has_passkey"`
 	Passkeys       []passkeyProfileEntry  `json:"passkeys,omitempty"`
@@ -396,6 +397,12 @@ func toProfileResponse(u *model.User) profileResponse {
 		}
 		passkeys = append(passkeys, entry)
 	}
+	// Default-Fallback nur am Lesezeitpunkt — kein Schreibpfad setzt "free"
+	// zurück in die user.json (Read-Modify-Write-Prinzip, Issue #1068).
+	tier := u.Tier
+	if tier == "" {
+		tier = "free"
+	}
 	return profileResponse{
 		ID:             u.ID,
 		Email:          u.Email,
@@ -403,6 +410,7 @@ func toProfileResponse(u *model.User) profileResponse {
 		MailTo:         u.MailTo,
 		SmsTo:          u.SmsTo,
 		TelegramChatID: u.TelegramChatID,
+		Tier:           tier,
 		CreatedAt:      u.CreatedAt.Format(time.RFC3339),
 		HasPasskey:     len(u.PasskeyCredentials) > 0,
 		Passkeys:       passkeys,

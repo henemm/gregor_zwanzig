@@ -264,6 +264,113 @@ func TestGetProfileWorksWithoutSmsToField(t *testing.T) {
 	}
 }
 
+// ============================================================================
+// Issue #1068 — Nutzerlevel-Datenmodell + Anzeige im Account (TDD, lokal)
+// Spiegelt die staging-basierten AC-Tests fuer schnelle lokale Gruen-Verifikation.
+// ============================================================================
+
+// AC-1: Nutzer ohne tier-Feld -> GET /api/auth/profile liefert "tier":"free".
+func TestGetProfileDefaultsTierToFree(t *testing.T) {
+	s := newTestStore(t)
+	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
+	dir := filepath.Join(s.DataDir, "users", "hilde")
+	os.MkdirAll(dir, 0755)
+	// Bestandsnutzer ohne tier-Feld
+	os.WriteFile(filepath.Join(dir, "user.json"),
+		[]byte(`{"id":"hilde","password_hash":"`+string(hash)+`"}`), 0644)
+
+	h := GetProfileHandler(s)
+	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
+	ctx := middleware.ContextWithUserID(req.Context(), "hilde")
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp["tier"] != "free" {
+		t.Errorf("expected tier 'free' for user without tier field, got '%v'", resp["tier"])
+	}
+}
+
+// AC-2: Zwei Nutzer — einer ohne tier (=> "free"), einer mit "standard" —
+// jeder bekommt exakt seinen eigenen Wert, kein Cross-User-Leak.
+func TestGetProfileTierTwoUsersNoCrossLeak(t *testing.T) {
+	s := newTestStore(t)
+	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
+
+	freeDir := filepath.Join(s.DataDir, "users", "ida")
+	os.MkdirAll(freeDir, 0755)
+	os.WriteFile(filepath.Join(freeDir, "user.json"),
+		[]byte(`{"id":"ida","password_hash":"`+string(hash)+`"}`), 0644)
+
+	stdDir := filepath.Join(s.DataDir, "users", "jonas")
+	os.MkdirAll(stdDir, 0755)
+	os.WriteFile(filepath.Join(stdDir, "user.json"),
+		[]byte(`{"id":"jonas","password_hash":"`+string(hash)+`","tier":"standard"}`), 0644)
+
+	h := GetProfileHandler(s)
+
+	getTier := func(userID string) interface{} {
+		req := httptest.NewRequest("GET", "/api/auth/profile", nil)
+		ctx := middleware.ContextWithUserID(req.Context(), userID)
+		req = req.WithContext(ctx)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code != 200 {
+			t.Fatalf("%s: expected 200, got %d: %s", userID, w.Code, w.Body.String())
+		}
+		var resp map[string]interface{}
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		return resp["tier"]
+	}
+
+	if got := getTier("ida"); got != "free" {
+		t.Errorf("ida (no tier field) expected 'free', got '%v'", got)
+	}
+	if got := getTier("jonas"); got != "standard" {
+		t.Errorf("jonas (tier=standard) expected 'standard', got '%v' (leak or missing field)", got)
+	}
+}
+
+// AC-4: GET auf einen Nutzer ohne tier-Feld darf dessen user.json NICHT
+// nachtraeglich umschreiben (Read-Modify-Write-Prinzip, byteidentisch).
+func TestGetProfileDoesNotRewriteUserJsonWhenTierMissing(t *testing.T) {
+	s := newTestStore(t)
+	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
+	dir := filepath.Join(s.DataDir, "users", "klara")
+	os.MkdirAll(dir, 0755)
+	path := filepath.Join(dir, "user.json")
+	os.WriteFile(path,
+		[]byte(`{"id":"klara","password_hash":"`+string(hash)+`"}`), 0644)
+
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("cannot read user.json before: %v", err)
+	}
+
+	h := GetProfileHandler(s)
+	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
+	ctx := middleware.ContextWithUserID(req.Context(), "klara")
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("cannot read user.json after: %v", err)
+	}
+	if string(before) != string(after) {
+		t.Errorf("GET /api/auth/profile must NOT rewrite user.json (no forced 'free' write).\nbefore=%s\nafter=%s", before, after)
+	}
+}
+
 func TestRegisterCreatesUserDirs(t *testing.T) {
 	s := newTestStore(t)
 	h := RegisterHandler(s, bcrypt.MinCost)

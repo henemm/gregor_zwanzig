@@ -494,3 +494,8 @@ export interface ComparePreset {
 	display_config?: Record<string, unknown>;  // ideal_ranges, channel_layouts, region
 	official_alerts_enabled?: boolean;  // Issue #1040 — amtliche Warnungen ein/aus
 }
+
+// Issue #1068 — Nutzerlevel (Slice 1 aus Epic #1067).
+// Spiegelt das serverseitige User.Tier-Feld (internal/model/user.go).
+// Default "free" wird am Lesezeitpunkt in toProfileResponse() gesetzt.
+export type UserTier = 'free' | 'standard' | 'premium';

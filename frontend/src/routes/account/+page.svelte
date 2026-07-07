@@ -8,7 +8,7 @@
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import XIcon from '@lucide/svelte/icons/x';
-	import type { MetricPreset } from '$lib/types';
+	import type { MetricPreset, UserTier } from '$lib/types';
 	import { metricCountLabel, showDefaultBadge, isValidRename, applyRename, removePreset, isEmpty } from '$lib/utils/presetCardHelpers';
 	let { data } = $props();
 
@@ -38,6 +38,17 @@
 	let presetError = $state<string | null>(null);
 	let deletePresetTarget: MetricPreset | null = $state(null);
 	let showDeleteAccountDialog = $state(false);
+
+	// Issue #1068 — Nutzerlevel-Badge (immer sichtbar). Der Wert kommt aus
+	// data.profile.tier (Response-Feld ist serverseitig immer gesetzt, Default "free").
+	const TIER_LABELS: Record<UserTier, string> = {
+		free: 'Free',
+		standard: 'Standard',
+		premium: 'Premium'
+	};
+	function tierLabel(tier: unknown): string {
+		return TIER_LABELS[(tier as UserTier)] ?? 'Free';
+	}
 
 	function startEdit(p: MetricPreset) {
 		editingId = p.id;
@@ -570,6 +581,12 @@
 				<Card.Title>Dein Account</Card.Title>
 			</Card.Header>
 			<Card.Content>
+				<!-- Nutzerlevel (Issue #1068) — immer sichtbar -->
+				<div data-testid="tier" class="mb-4">
+					<p class="text-sm font-medium mb-2">Level</p>
+					<Badge variant="secondary">{tierLabel(data.profile?.tier)}</Badge>
+				</div>
+
 				<!-- Zähler -->
 				<div class="space-y-2 mb-4">
 					<div class="flex items-center justify-between text-sm">
