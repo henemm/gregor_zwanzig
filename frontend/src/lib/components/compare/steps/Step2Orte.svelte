@@ -31,6 +31,21 @@
 	let adding = $state(false);
 	let fallbackLat = $state('');
 	let fallbackLon = $state('');
+	let nameDraft = $state('');
+
+	// Issue #1080: frisch angelegte Orte sind nicht im statischen `locations`-Prop
+	// enthalten. Lokal nachfuehren, damit sie sofort in Picked-Liste/Bibliothek sichtbar sind.
+	let createdLocations = $state<Location[]>([]);
+
+	const allLocations = $derived.by(() => {
+		const merged = [...locations];
+		for (const created of createdLocations) {
+			const idx = merged.findIndex((l) => l.id === created.id);
+			if (idx >= 0) merged[idx] = created;
+			else merged.push(created);
+		}
+		return merged;
+	});
 
 	// AC-2: Counter-Text nach CE_OrteTab-Fidelity
 	const counterText = $derived.by(() => {
@@ -46,13 +61,13 @@
 
 	// Picked-Orte aus der Locations-Liste aufgelöst
 	const pickedLocations = $derived(
-		ws.pickedIds.map((id) => locations.find((l) => l.id === id)).filter(Boolean) as Location[]
+		ws.pickedIds.map((id) => allLocations.find((l) => l.id === id)).filter(Boolean) as Location[]
 	);
 
 	// AC-3: Bibliotheks-Grid nach Region gruppiert
 	const libraryGroups = $derived.by(() => {
 		const groups: Record<string, Location[]> = {};
-		for (const loc of locations) {
+		for (const loc of allLocations) {
 			const groupKey = loc.region || 'Weitere';
 			if (!groups[groupKey]) groups[groupKey] = [];
 			groups[groupKey].push(loc);
@@ -75,6 +90,8 @@
 			preview = await api.post<ResolveResult>('/api/locations/resolve', {
 				input: importInput
 			});
+			// AC-2/AC-4: Namensfeld vorbelegen — erkannter Name, sonst Koordinaten, NIE die URL.
+			nameDraft = preview.suggested_name ?? `${preview.lat.toFixed(4)}, ${preview.lon.toFixed(4)}`;
 		} catch (e: unknown) {
 			resolveError = extractMsg(e) ?? 'Format nicht erkannt';
 		} finally {
@@ -86,16 +103,22 @@
 		if (!preview) return;
 		adding = true;
 		try {
+			const coordName = `${preview.lat.toFixed(4)}, ${preview.lon.toFixed(4)}`;
+			const name = nameDraft.trim() || preview.suggested_name || coordName;
 			const loc = await api.post<Location>('/api/locations', {
-				name: preview.suggested_name ?? importInput,
+				name,
 				lat: preview.lat,
 				lon: preview.lon,
 				elevation_m: preview.elevation_m,
 				timezone: preview.timezone,
 				region: preview.region
 			});
-			ws.pickedIds = [...ws.pickedIds, loc.id];
+			createdLocations = [...createdLocations, loc];
+			if (!ws.pickedIds.includes(loc.id)) {
+				ws.pickedIds = [...ws.pickedIds, loc.id];
+			}
 			importInput = '';
+			nameDraft = '';
 			preview = null;
 		} catch (e: unknown) {
 			resolveError = extractMsg(e) ?? 'Fehler beim Hinzufügen';
@@ -115,7 +138,10 @@
 				lat,
 				lon
 			});
-			ws.pickedIds = [...ws.pickedIds, loc.id];
+			createdLocations = [...createdLocations, loc];
+			if (!ws.pickedIds.includes(loc.id)) {
+				ws.pickedIds = [...ws.pickedIds, loc.id];
+			}
 			importInput = '';
 			resolveError = null;
 			fallbackLat = '';
@@ -210,8 +236,16 @@
 				{#if preview}
 					<div style="padding:10px 12px; background:var(--g-paper-deep); border-radius:var(--g-r-2); margin-bottom:10px; margin-top:8px;">
 						<div style="font-family:var(--g-font-mono); font-size:10px; color:var(--g-ink-4); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px;">Erkannt</div>
-						<div style="font-size:13px; font-weight:600; color:var(--g-ink);">{preview.suggested_name ?? '(kein Name)'}</div>
-						<div style="font-family:var(--g-font-mono); font-size:11px; color:var(--g-ink-3); margin-top:2px;">{preview.lat.toFixed(4)}, {preview.lon.toFixed(4)}{preview.elevation_m !== undefined ? ` · ${preview.elevation_m} m` : ''}</div>
+						<div style="font-family:var(--g-font-mono); font-size:11px; color:var(--g-ink-3); margin-top:2px; margin-bottom:8px;">{preview.lat.toFixed(4)}, {preview.lon.toFixed(4)}{preview.elevation_m !== undefined ? ` · ${preview.elevation_m} m` : ''}</div>
+						<label style="display:block; font-size:11px; color:var(--g-ink-4); margin-bottom:4px;" for="compare-step2-name-input">Name</label>
+						<input
+							id="compare-step2-name-input"
+							data-testid="compare-step2-name-input"
+							type="text"
+							placeholder="Name des Ortes"
+							bind:value={nameDraft}
+							style="width:100%; padding:7px 9px; font-size:13px; font-weight:600; border:1px solid var(--g-rule); border-radius:var(--g-r-2); background:var(--g-paper); font-family:var(--g-font-sans); color:var(--g-ink); box-sizing:border-box;"
+						/>
 					</div>
 					<button
 						type="button"
@@ -269,7 +303,7 @@
 	<div data-testid="compare-step2-library">
 	<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600; margin-bottom:12px;">… oder aus gespeicherten Orten wählen</div>
 
-	{#if locations.length === 0}
+	{#if allLocations.length === 0}
 		<p style="font-size:13px; color:var(--g-ink-4);">Noch keine Orte gespeichert.</p>
 	{:else}
 		<div
