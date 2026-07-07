@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from app.config import Settings
 from app.models import ChangeSeverity, SegmentWeatherData, WeatherChange
+from services import alert_daily_limit
 from services.notification_service import NotificationService, RadarAlertRequest
 from services.user_tier import sms_allowed
 from services.weather_change_detection import WeatherChangeDetectionService
@@ -146,6 +147,11 @@ class TripAlertService:
             logger.debug(f"Alert throttled for trip {trip.id}")
             return False
 
+        # 1c. Issue #1070: Tages-Obergrenze nach Nutzerlevel (Free/Standard/Premium)
+        if not alert_daily_limit.is_allowed(self._user_id, datetime.now(timezone.utc)):
+            logger.debug(f"Alert suppressed: daily limit reached for trip {trip.id}")
+            return False
+
         # 2. Fetch fresh weather if not provided
         if fresh_weather is None:
             fresh_weather = self._fetch_fresh_weather(cached_weather)
@@ -206,6 +212,8 @@ class TripAlertService:
         # 7. Update throttle (only on success) + persist
         self._last_alert_times[trip.id] = datetime.now(timezone.utc)
         self._save_throttle_times()
+        # Issue #1070: nur bei tatsaechlichem Versand zaehlen (F001-Symmetrie)
+        alert_daily_limit.increment(self._user_id, datetime.now(timezone.utc))
 
         # 8. Issue #393: Alert-Log für Cockpit-Kachel "Alarme · letzte 24 h".
         # Nur nach erfolgreichem Versand; höchste Severity der gemeldeten Changes.
@@ -712,6 +720,11 @@ class TripAlertService:
                 logger.debug(f"Radar alert throttled for trip {trip.id}")
                 continue
 
+            # Issue #1070: Tages-Obergrenze nach Nutzerlevel (Free/Standard/Premium)
+            if not alert_daily_limit.is_allowed(self._user_id, datetime.now(timezone.utc)):
+                logger.debug(f"Radar alert suppressed: daily limit reached for trip {trip.id}")
+                continue
+
             # Genau EIN get_nowcast-Call pro Trip an Segment-Startpunkt
             lat = active.start_point.lat
             lon = active.start_point.lon
@@ -831,6 +844,8 @@ class TripAlertService:
 
             # Recording nach Best-Effort-Zustellung (F001-Semantik)
             self._append_alert_log(trip.id, 1, "HIGH")
+            # Issue #1070: nur bei tatsaechlichem Versand zaehlen (F001-Symmetrie)
+            alert_daily_limit.increment(self._user_id, datetime.now(timezone.utc))
             _now = datetime.now(timezone.utc)
             from services.alert_state import AlertStateService
             _rec_svc = AlertStateService(self._user_id)

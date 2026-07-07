@@ -262,8 +262,11 @@ def _run_alert(trip: Trip, settings: Settings, user_id: str):
     from pathlib import Path
     from services.trip_alert import TripAlertService
 
-    # State-Bereinigung für Idempotenz
-    for fname in ("alert_state", "alert_throttle.json", "alert_log.json"):
+    # State-Bereinigung für Idempotenz. alert_daily_count.json zusaetzlich seit
+    # #1070 (Alert-Tages-Obergrenze): die fixe Test-User-ID ohne diese Bereinigung
+    # wuerde nach mehreren Testlaeufen am selben Vienna-Kalendertag das Free-Limit
+    # (2) erreichen und der Testfall wuerde faelschlich fehlschlagen.
+    for fname in ("alert_state", "alert_throttle.json", "alert_log.json", "alert_daily_count.json"):
         p = Path(f"data/users/{user_id}/{fname}")
         if p.is_dir():
             shutil.rmtree(p, ignore_errors=True)
@@ -458,8 +461,9 @@ def test_mixed_rules_union_both_channels(telegram_sink, smtp_refuse, tmp_path):
     from pathlib import Path
     from services.trip_alert import TripAlertService
 
-    # State-Bereinigung für Idempotenz (Issue #816: alert_state persistiert)
-    for fname in ("alert_state", "alert_throttle.json", "alert_log.json"):
+    # State-Bereinigung für Idempotenz (Issue #816: alert_state persistiert;
+    # alert_daily_count.json zusaetzlich seit #1070, siehe Kommentar oben).
+    for fname in ("alert_state", "alert_throttle.json", "alert_log.json", "alert_daily_count.json"):
         p = Path(f"data/users/tdd-638-mixed/{fname}")
         if p.is_dir():
             shutil.rmtree(p, ignore_errors=True)
@@ -520,8 +524,9 @@ def test_channel_inheritance_no_alert_rules_uses_report_config(
     from pathlib import Path
     from services.trip_alert import TripAlertService
 
-    # State-Bereinigung für Idempotenz (Issue #816: alert_state persistiert)
-    for fname in ("alert_state", "alert_throttle.json", "alert_log.json"):
+    # State-Bereinigung für Idempotenz (Issue #816: alert_state persistiert;
+    # alert_daily_count.json zusaetzlich seit #1070, siehe Kommentar oben).
+    for fname in ("alert_state", "alert_throttle.json", "alert_log.json", "alert_daily_count.json"):
         p = Path(f"data/users/tdd-638-legacy/{fname}")
         if p.is_dir():
             shutil.rmtree(p, ignore_errors=True)
@@ -569,8 +574,9 @@ def test_telegram_only_user_without_smtp_still_gets_alert(telegram_sink, tmp_pat
     rule = _wind_rule(AlertSeverity.WARNING, channels=["telegram"])
     trip = _trip(rule, report_config=None)
 
-    # State-Bereinigung für Idempotenz (Issue #816: alert_state persistiert)
-    for fname in ("alert_state", "alert_throttle.json", "alert_log.json"):
+    # State-Bereinigung für Idempotenz (Issue #816: alert_state persistiert;
+    # alert_daily_count.json zusaetzlich seit #1070, siehe Kommentar oben).
+    for fname in ("alert_state", "alert_throttle.json", "alert_log.json", "alert_daily_count.json"):
         p = Path(f"data/users/tdd-638-f001/{fname}")
         if p.is_dir():
             shutil.rmtree(p, ignore_errors=True)

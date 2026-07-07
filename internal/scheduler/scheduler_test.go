@@ -704,3 +704,49 @@ func TestComparePresetsDaily_FailedTrigger_SkipsHeartbeat(t *testing.T) {
 		t.Fatal("Heartbeat should NOT be pinged when trigger fails")
 	}
 }
+
+// --- Test: alertChecks cron runs every 15 min, not every 30 min (Issue #1070 AC-7) ---
+
+// cronSchedule is a minimal structural interface matching cron.Schedule,
+// avoiding an explicit import of github.com/robfig/cron/v3 in this test file.
+type cronSchedule interface {
+	Next(time.Time) time.Time
+}
+
+func TestAlertChecksCronEvery15Min(t *testing.T) {
+	cfg := &config.Config{
+		PythonCoreURL:     "http://localhost:8000",
+		SchedulerTimezone: "Europe/Vienna",
+	}
+	sched, err := New(cfg, testStore(t))
+	if err != nil {
+		t.Fatalf("New() returned error: %v", err)
+	}
+	sched.Start()
+	defer sched.Stop()
+
+	var schedule cronSchedule
+	for _, e := range sched.cron.Entries() {
+		meta, ok := sched.entryMap[e.ID]
+		if ok && meta.id == "alert_checks" {
+			schedule = e.Schedule
+			break
+		}
+	}
+	if schedule == nil {
+		t.Fatal("alert_checks job not found in entryMap")
+	}
+
+	base := time.Date(2026, 7, 7, 10, 0, 0, 0, time.UTC)
+	first := schedule.Next(base)
+	second := schedule.Next(first)
+	delta := second.Sub(first)
+
+	if delta != 15*time.Minute {
+		t.Fatalf(
+			"Issue #1070 AC-7: alert_checks cron fires every %v, want 15m "+
+				"(cron expr should be \"*/15 * * * *\" instead of \"0,30 * * * *\")",
+			delta,
+		)
+	}
+}

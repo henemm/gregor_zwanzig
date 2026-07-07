@@ -90,7 +90,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 	}
 	jobs := []jobDef{
 		{"0 * * * *", s.tripReports, "trip_reports_hourly", "Trip Reports (hourly check)"},
-		{"0,30 * * * *", s.alertChecks, "alert_checks", "Alert Checks (every 30 min)"},
+		{"*/15 * * * *", s.alertChecks, "alert_checks", "Alert Checks (every 15 min)"},
 		{"*/5 * * * *", s.inboundCommands, "inbound_command_poll", "Inbound Command Poll (every 5min)"},
 		// Issue #637: inbound_telegram_poll entfernt — Telegram-Eingang läuft jetzt
 		// push-basiert über den Webhook (POST /api/webhooks/telegram/{secret}).

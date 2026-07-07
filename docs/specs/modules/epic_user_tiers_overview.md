@@ -165,6 +165,9 @@ eigenes Folge-Issue nach F9-Fahrplan.
 
 ## Changelog
 
+- 2026-07-07: Slice 3 (#1070) implementiert und Adversary-verifiziert (Tages-Obergrenze
+  Free 2 / Standard 4 / Premium unbegrenzt, Vienna-Mitternachts-Reset, beide Alert-Pfade,
+  Cron alertChecks 30→15 Min). Folge-Issue #1081 (Test-Coverage AC-2/AC-3-Wiring + AC-6-Deviation).
 - 2026-07-07: Slice 2 (#1069) implementiert und verifiziert.
 - 2026-07-07: Slice 1 (#1068) implementiert und validiert.
 - 2026-07-07: Epic-Overview erstellt (Slice-Schnitt, Systemrecherche)
