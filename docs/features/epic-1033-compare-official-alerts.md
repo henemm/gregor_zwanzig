@@ -1,15 +1,21 @@
 # Epic 1033: Amtliche Alerts im Orts-Vergleich
 
-**Status:** Slice 1 implementiert (#1034, 2026-07-06, Adversary VERIFIED) — Slices #1035–#1037,
-#1040 offen. Bei #1034 aufgedeckte Nebenbefunde: #1046 (Validator-Vertrag für Compare-Mail ist
-veraltet, betrifft die Tabellen-Zählannahme), #1048 (kleinere Politur F003/F005).
+**Status:** Slice 1 (#1034), Slice 2 (#1035) und Slice 5 (#1040) implementiert (alle Adversary
+VERIFIED) — Slices #1036, #1037 offen. Bei #1034 aufgedeckte Nebenbefunde: #1046 (Validator-Vertrag
+für Compare-Mail ist veraltet, betrifft die Tabellen-Zählannahme), #1048 (kleinere Politur
+F003/F005). Bei #1035 aufgedeckter Nebenbefund: #1056 (Level-2/Gelb wird in `compare_html.py`
+fälschlich grün gerendert, kein Scope-Fix in #1035).
 **Epic Scope:** Compare-Mail (2 Tabellen + Winner-Box, ≥3 Orte) zeigt zusätzlich amtliche
 Behörden-Warnungen pro Ort, sofern eine Datenquelle für den Ort zuständig ist; die Anzeige ist
 pro Orts-Vergleich ein-/ausschaltbar (Slice 5, #1040).
 **Related Specs:**
 - `docs/specs/modules/issue_1034_official_alerts_foundation.md` (Slice 1 — Fundament)
-- `docs/specs/modules/issue_1035_official_alerts_vigilance.md` (Slice 2 — Météo-France Vigilance)
-- `docs/specs/modules/issue_1040_official_alerts_config_toggle.md` (Slice 5 — Konfiguration/Checkbox)
+- `docs/specs/modules/issue_1035_vigilance_source.md` (Slice 2 — Météo-France Vigilance,
+  implementiert; ersetzt den veralteten Vor-Analyse-Entwurf
+  `issue_1035_official_alerts_vigilance.md`, siehe dessen Superseded-Hinweis)
+- `docs/specs/modules/issue_1040_alerts_toggle.md` (Slice 5 — Konfiguration/Checkbox, implementiert;
+  ersetzt den veralteten Vor-Analyse-Entwurf `issue_1040_official_alerts_config_toggle.md`, siehe
+  dessen Superseded-Hinweis)
 - `docs/specs/modules/issue_1036_official_alerts_meteo_forets.md` (Slice 3 — Météo des forêts)
 - `docs/specs/modules/issue_1037_official_alerts_massif_closure.md` (Slice 4 — Massiv-Sperrungen)
 
@@ -73,9 +79,8 @@ src/services/official_alerts/
 ├── __init__.py
 ├── models.py              # OfficialAlert-Dataclass
 ├── base.py                # Protocol + Registry + get_official_alerts_for_location()
-├── meteo_token_provider.py  # OAuth2-Client-Credentials (Slice 2, Wiederverwendung Slice 3)
 ├── department_mapper.py     # Lat/Lon → Département, landesweit, inkl. Korsika 2A/2B (Slice 2)
-├── vigilance.py              # VigilanceSource (Slice 2)
+├── vigilance.py              # VigilanceSource (Slice 2, implementiert)
 ├── meteo_forets.py           # MeteoForetsSource (Slice 3)
 ├── massif_zones.py            # generische Département → Massiv-Zonen-Tabelle (Slice 4)
 └── massif_closure.py          # MassifClosureSource (Slice 4)
@@ -117,7 +122,7 @@ schlicht keine zusätzliche amtliche Warnung für den betroffenen Ort.
 | `src/app/user.py` (`LocationResult`) | additives Feld `official_alerts: list[OfficialAlert]` |
 | `src/services/comparison_engine.py` (`ComparisonEngine.run()`) | pro Location `get_official_alerts_for_location(loc.lat, loc.lon)` aufrufen |
 | `src/output/renderers/email/compare_html.py` (`render_compare_html`) | Badge/Zeile pro Ort, farbcodiert nach Level |
-| `src/services/comparison_renderers.py` (`render_comparison_text`) | Plain-Text-Parität |
+| `src/output/renderers/comparison.py` (`render_comparison_text`) | Plain-Text-Parität (Slice 2, implementiert) |
 
 ### Konfigurierbarkeit (Slice 5, PO-Anforderung 2026-07-06)
 
@@ -145,10 +150,13 @@ Amtliche Warnungen sind pro Orts-Vergleich ein-/ausschaltbar, Default an:
 ### Aus Vorgängerprojekt wiederverwendbare Muster (nur als Referenz, nicht kopiert)
 
 Ein früheres, nicht in Produktion befindliches Projekt (`weather_email_autobot`) enthält bereits
-funktionierende Bausteine für Vigilance-OAuth2 und Département-Mapping. Diese Muster fließen
-in Slice 2 als Vorlage ein — **committete Zugangsdaten aus diesem Projekt sind ungültig und
-dürfen nicht übernommen werden**, es braucht eine frische Météo-France-Portal-Registrierung
-(siehe Epic #1033, Abschnitt "Voraussetzung").
+funktionierende Bausteine für Vigilance-Zugriff und Département-Mapping. Diese Muster flossen
+als Vorlage in Slice 2 ein — **committete Zugangsdaten aus diesem Projekt sind ungültig und
+dürfen nicht übernommen werden**, es braucht eine frische Météo-France-Portal-Registrierung.
+**Korrektur (Analyse-Phase #1035):** Das ursprünglich angenommene OAuth2-Client-Credentials-
+Verfahren existiert für den tatsächlich genutzten Endpoint nicht — Vigilance authentifiziert
+über einen einfachen `apikey`-HTTP-Header (`GZ_METEOFRANCE_APIKEY`), kein
+`meteo_token_provider.py` nötig.
 
 ---
 
@@ -178,11 +186,20 @@ bestehenden `G_SUCCESS`/`G_WARNING`/`G_DANGER`-Tokens. Spec:
 - **#1048:** Kleinere Politur-Punkte F003/F005 aus dem Adversary-Dialog, ohne AC-Bezug — separat
   nachgezogen.
 
-### Slice 2: Météo-France Vigilance (Issue #1035)
+### Slice 2: Météo-France Vigilance (Issue #1035) — implementiert (2026-07-06, Adversary VERIFIED)
 
-Erste echte Quelle: Wetterwarnungen (Gewitter, Sturmböen, extreme Hitze) über OAuth2-Portal-API.
-Bringt OAuth2-Token-Provider und Département-Mapping (inkl. Korsika 2A/2B) mit, die Slice 3
-wiederverwendet.
+Erste echte Quelle: Wetterwarnungen (Gewitter, Sturmböen, extreme Hitze) über die amtliche
+Météo-France-Vigilance-API (`GET .../DPVigilance/v1/cartevigilance/encours`, `apikey`-Header,
+kein OAuth2 — siehe Korrektur oben). `VigilanceSource` liefert Alerts ab Level ≥2 (gelb) für
+Phänomene Sturmböen/Gewitter/Extreme Hitze. Bringt `department_mapper.py` (Nearest-Centroid,
+volle Metropole + Korsika 2A/2B) mit, das Slice 3 wiederverwendet. Text-Renderer-Parität in
+`render_comparison_text()` ergänzt (HTML-Badge war bereits aus Slice 1 verdrahtet). Spec:
+`docs/specs/modules/issue_1035_vigilance_source.md`.
+
+**Nebenbefund bei der Adversary-Prüfung:**
+- **#1056:** `compare_html.py` (`_render_official_alerts_block()`, aus Slice 1) mappt Level 1–2
+  fälschlich auf Grün, obwohl Level 2 (gelb) bereits ein Warnsignal ist — bewusst kein Scope-Fix
+  in #1035, separates Folge-Issue.
 
 ### Slice 3: Météo des forêts (Issue #1036)
 
@@ -206,12 +223,15 @@ sowohl das primäre Côte-d'Azur-Szenario als auch GR20/Korsika über denselben 
 Erweiterung auf weitere Départements oder echte Polygon-Geometrie ist inkrementell möglich, ohne
 den Mechanismus zu ändern.
 
-### Slice 5: Konfiguration — „Amtliche Warnungen anzeigen" (Issue #1040)
+### Slice 5: Konfiguration — „Amtliche Warnungen anzeigen" (Issue #1040) — implementiert (2026-07-07, Adversary VERIFIED)
 
-Full-Stack-Slice (Go-Modell/Handler + Python-Engine + Svelte-Editor): bool-Feld am
-Compare-Preset, Default an, Checkbox im Editor, `ComparisonEngine.run()` überspringt bei
-ausgeschaltetem Flag den Fetch komplett (nicht nur die Anzeige). Baut nur auf #1034 auf, ist
-aber erst nach #1035 sinnvoll nutzbar (siehe Details oben unter "Konfigurierbarkeit").
+Full-Stack-Slice (Go-Modell/Handler + Python-Engine + Svelte-Editor): bool-Feld
+`ComparePreset.OfficialAlertsEnabled *bool` (Pointer-Muster, Default `true`), Read-Modify-Write-
+Merge im `UpdateComparePresetHandler`, `ComparisonEngine.run(official_alerts_enabled=True)`
+überspringt bei ausgeschaltetem Flag den Fetch komplett (nicht nur die Anzeige), Checkbox in
+`Step5Versand.svelte` (Vorbild `ChannelToggle`). Baut nur auf #1034 auf, ist aber erst nach #1035
+sinnvoll nutzbar (siehe Details oben unter "Konfigurierbarkeit"). Spec:
+`docs/specs/modules/issue_1040_alerts_toggle.md`.
 
 ---
 
@@ -255,3 +275,5 @@ aber erst nach #1035 sinnvoll nutzbar (siehe Details oben unter "Konfigurierbark
 | 2026-07-06 | Scope-Korrektur (PO): Côte d'Azur wird Leitszenario statt GR20, zeitliche Priorität (~2 Wochen bis Urlaub) ergänzt, Slice 4 auf generischen département-basierten Mechanismus umgestellt (keine GR20-Hartkodierung). |
 | 2026-07-06 | Neue PO-Anforderung: Slice 5 (#1040) hinzugefügt — amtliche Warnungen pro Orts-Vergleich ein-/ausschaltbar (Full-Stack: Go-Preset-Modell, Python-Engine-Flag mit Fetch-Skip, Svelte-Checkbox), Out-of-Scope-Abgrenzung zu Trip-Alert-Config (#586) ergänzt. |
 | 2026-07-06 | Slice 1 (#1034) implementiert, Adversary VERIFIED. Nebenbefunde als Folge-Issues erfasst: #1046 (veralteter Validator-Vertrag, entdeckt bei der Analyse), #1048 (Politur F003/F005 aus dem Adversary-Dialog). |
+| 2026-07-06 | Slice 2 (#1035) implementiert, Adversary VERIFIED. Analyse-Korrektur: OAuth2-Client-Credentials-Verfahren verworfen zugunsten von einfachem `apikey`-Header (kein `meteo_token_provider.py`); Endpoint auf `cartevigilance/encours` (nationale Antwort statt Punkt-Bulletin) korrigiert. Nebenbefund #1056 (Level-2/Gelb-Farbmapping in `compare_html.py`) erfasst. |
+| 2026-07-07 | Slice 5 (#1040) implementiert, Adversary VERIFIED. Analyse-Korrektur ggü. Vor-Analyse-Entwurf: Engine-Parametername `official_alerts_enabled` (statt `include_official_alerts`), Checkbox in `Step5Versand.svelte` (statt `Step4Layout.svelte`). |

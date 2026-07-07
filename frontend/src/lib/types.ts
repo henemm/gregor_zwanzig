@@ -492,4 +492,5 @@ export interface ComparePreset {
 	created_at: string;
 	archived_at?: string;               // Issue #611 — gesetzt = archiviert
 	display_config?: Record<string, unknown>;  // ideal_ranges, channel_layouts, region
+	official_alerts_enabled?: boolean;  // Issue #1040 — amtliche Warnungen ein/aus
 }

@@ -42,6 +42,7 @@ class ComparisonEngine:
         target_date: "date",
         forecast_hours: int = 48,
         profile: Optional["ActivityProfile"] = None,
+        official_alerts_enabled: bool = True,
     ) -> ComparisonResult:
         """
         Run comparison for given locations and time window.
@@ -51,6 +52,9 @@ class ComparisonEngine:
             time_window: (start_hour, end_hour) tuple
             target_date: Date to forecast for
             forecast_hours: Hours ahead to fetch
+            official_alerts_enabled: Issue #1040 — bei False werden die
+                #1034-Official-Alert-Quellen fuer keinen der Orte abgefragt
+                (strukturell kein Fetch, nicht nur Ausblenden im Rendering).
 
         Returns:
             ComparisonResult with all metrics for all locations
@@ -177,9 +181,13 @@ class ComparisonEngine:
                 effective_profile = profile or getattr(loc, 'activity_profile', None)
                 score = calculate_score(metrics, profile=effective_profile, window_hours=window_hours)
 
-                # Issue #1034 — amtliche Warnungen, additiv, nur im Erfolgszweig
-                from services.official_alerts import get_official_alerts_for_location
-                official_alerts = get_official_alerts_for_location(loc.lat, loc.lon)
+                # Issue #1034 — amtliche Warnungen, additiv, nur im Erfolgszweig.
+                # Issue #1040: strukturell kein Fetch bei official_alerts_enabled=False.
+                if official_alerts_enabled:
+                    from services.official_alerts import get_official_alerts_for_location
+                    official_alerts = get_official_alerts_for_location(loc.lat, loc.lon)
+                else:
+                    official_alerts = []
 
                 results.append(LocationResult(
                     location=loc,

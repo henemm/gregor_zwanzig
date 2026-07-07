@@ -240,6 +240,7 @@ def send_one_compare_preset(
         target_date=date.today(),
         forecast_hours=preset.get("forecast_hours", 48),  # Issue #764: gespeicherten Horizont nutzen
         profile=profile,
+        official_alerts_enabled=preset.get("official_alerts_enabled", True),  # Issue #1040
     )
 
     top_ort = result.locations[0].location.name if result.locations else None

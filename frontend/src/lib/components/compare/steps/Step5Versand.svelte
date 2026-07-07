@@ -107,6 +107,14 @@
 					/>
 					<span class="mono" style:font-size="10.5px" style:color="var(--g-ink-4)">Layout · flach, ≤ 140 Z.</span>
 				</div>
+				<div>
+					<ChannelToggle
+						label="Amtliche Warnungen"
+						checked={state.officialAlertsEnabled}
+						onchange={(checked) => (state.officialAlertsEnabled = checked)}
+						testid="compare-step5-official-alerts-toggle"
+					/>
+				</div>
 			</div>
 			{#if allChannelsOff}
 				<p

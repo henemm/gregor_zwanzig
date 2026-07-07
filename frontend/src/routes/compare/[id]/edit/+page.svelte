@@ -33,6 +33,7 @@
 	state.timeWindowStart = data.preset.hour_from ?? 9;
 	state.timeWindowEnd = data.preset.hour_to ?? 16;
 	state.forecastHours = data.preset.forecast_hours ?? 48; // Issue #764
+	state.officialAlertsEnabled = data.preset.official_alerts_enabled ?? true; // Issue #1040
 
 	// Kanal-Layouts aus display_config
 	const savedLayouts = state.existingDisplayConfig.channel_layouts as

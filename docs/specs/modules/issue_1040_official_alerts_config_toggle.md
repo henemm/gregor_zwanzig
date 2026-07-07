@@ -2,13 +2,21 @@
 entity_id: official_alerts_config_toggle
 type: module
 created: 2026-07-06
-updated: 2026-07-06
-status: draft
+updated: 2026-07-07
+status: superseded
 version: "1.0"
 tags: [compare, alerts, official-alerts, config]
 ---
 
 # Official Alerts — Konfiguration: „Amtliche Warnungen anzeigen" pro Orts-Vergleich
+
+> **SUPERSEDED (2026-07-07):** Dies ist der Vor-Analyse-Entwurf für #1040, geschrieben vor der
+> Analyse-Phase. Er nennt u.a. `include_official_alerts` als Parametername und
+> `Step4Layout.svelte` als Ort der Checkbox — implementiert wurde stattdessen
+> `official_alerts_enabled` (Engine-Parameter) und die Checkbox in `Step5Versand.svelte`
+> (Vorbild `ChannelToggle`, nicht `Step4Layout.svelte`). Die verbindliche, implementierte Spec ist
+> **`docs/specs/modules/issue_1040_alerts_toggle.md`**. Diese Datei bleibt nur als
+> Analyse-Historie erhalten, nicht als aktuelle Referenz.
 
 ## Approval
 

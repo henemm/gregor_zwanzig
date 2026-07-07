@@ -21,6 +21,8 @@ export interface CompareEditorEdits {
 	activeMetricKeys?: string[];
 	// Issue #764: Vorhersage-Horizont. Optional → rückwärtskompatibel.
 	forecastHours?: number;
+	// Issue #1040: amtliche Warnungen ein/aus. Optional → rückwärtskompatibel.
+	officialAlertsEnabled?: boolean;
 }
 
 /**
@@ -65,7 +67,11 @@ export function buildComparePresetSavePayload(
 		display_config: displayConfig,
 		// Issue #764: Edit-Wert überschreibt den Spread-Wert aus original.
 		// undefined → Feld fehlt in edits → Spread-Wert bleibt erhalten (Round-Trip).
-		...(edits.forecastHours !== undefined ? { forecast_hours: edits.forecastHours } : {})
+		...(edits.forecastHours !== undefined ? { forecast_hours: edits.forecastHours } : {}),
+		// Issue #1040: analoges Round-Trip-Prinzip für official_alerts_enabled.
+		...(edits.officialAlertsEnabled !== undefined
+			? { official_alerts_enabled: edits.officialAlertsEnabled }
+			: {})
 	};
 
 	return { url, body };

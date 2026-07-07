@@ -31,4 +31,9 @@ type ComparePreset struct {
 	// Issue #582 — Frontend-Konfiguration (Region, channel_layouts, ideal_ranges u.a.).
 	// omitempty: Altdaten ohne Feld bleiben nil; kein Schema-Bruch.
 	DisplayConfig map[string]interface{} `json:"display_config,omitempty"`
+	// Issue #1040 — steuert ob die #1034-Official-Alert-Quellen fuer diesen
+	// Vergleich abgefragt werden. Pointer-Pattern (wie Weekday *int): fehlt das
+	// Feld im JSON (Altdaten), decodiert Go zu nil statt zum Zero-Value false.
+	// nil/true = Quellen werden abgefragt (Default), false = strukturell kein Fetch.
+	OfficialAlertsEnabled *bool `json:"official_alerts_enabled,omitempty"`
 }
