@@ -183,10 +183,11 @@ class TestAC4StatusHelp:
         result = TripCommandProcessor().process(_msg("HILFE", _USER_A))
         assert result.success is True
         body = result.confirmation_body.upper()
-        # Aktueller Befehlssatz (#731); PAUSE/SKIP/CONFIG dürfen NICHT mehr erscheinen
+        # Aktueller Befehlssatz (#882/#884); PAUSE/SKIP sind seit #882 wieder gültig
+        # und stehen bewusst im Hilfetext. CONFIG bleibt entfernt (#731).
         for kw in ("STATUS", "STOP", "HILFE"):
             assert kw in body, f"Hilfe muss {kw} nennen"
-        for gone in ("PAUSE", "SKIP", "CONFIG"):
+        for gone in ("CONFIG",):
             assert gone not in body, f"Hilfe darf {gone} nicht mehr nennen"
 
 
@@ -290,12 +291,14 @@ class TestAC7EmailBlock:
     def test_block_lists_all_keywords(self):
         html = self._render()
         assert "Antwort-Kommandos" in html
-        # Aktueller Befehlssatz (#731)
-        for kw in ("HEUTE", "MORGEN", "JETZT", "GEWITTER", "STATUS", "STOP",
-                   "WEITER", "HILFE"):
+        # Aktueller Befehlssatz — HEUTE/MORGEN/JETZT/WEITER sind reale, unterstützte
+        # Kommandos (siehe trip_command_processor._BARE_KEYWORD_MAP) und bleiben im
+        # Block; GEWITTER seit #1008b ergänzt (fehlte trotz echter Unterstützung).
+        for kw in ("HEUTE", "MORGEN", "JETZT", "PAUSE", "SKIP", "STOP", "WEITER",
+                   "STATUS", "CONFIG", "HELP", "GEWITTER"):
             assert kw in html, f"Mail-Block muss {kw} enthalten"
-        # Abgelöste Verwaltungsbefehle dürfen NICHT mehr im Block stehen
-        for gone in ("PAUSE", "SKIP", "CONFIG"):
+        # HILFE ist seit #884 zu HELP relabelt — der alte Text darf nicht mehr stehen
+        for gone in ("HILFE",):
             assert gone not in html, f"Mail-Block darf {gone} nicht mehr enthalten"
 
     def test_block_not_hidden_on_mobile(self):

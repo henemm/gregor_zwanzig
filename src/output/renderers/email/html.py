@@ -326,12 +326,13 @@ def _render_kommandos_section() -> str:
         ("HEUTE", "Wetter heutige Etappe"),
         ("MORGEN", "Wetter morgige Etappe"),
         ("JETZT / NOW", "Nowcast ~2h"),
+        ("GEWITTER", "Gewittergefahr heutige Etappe"),
         ("PAUSE 2d", "Briefings pausieren"),
         ("SKIP", "Nächstes überspringen"),
         ("STOP / WEITER", "Deaktivieren / reaktivieren"),
         ("STATUS", "Trip-Status abrufen"),
         ("CONFIG", "Spalten ändern"),
-        ("HILFE / HELP", "Alle Kommandos"),
+        ("HELP", "Alle Kommandos"),
     ]
     rows = []
     for i in range(0, len(cmds), 3):
