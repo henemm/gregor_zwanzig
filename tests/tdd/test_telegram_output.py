@@ -207,3 +207,115 @@ class TestLoaderTelegramRoundTrip:
         loaded = load_compare_subscriptions(user_id="__test_legacy_tg__")
         assert len(loaded) == 1
         assert loaded[0].send_telegram is False
+
+
+# =============================================================================
+# Issue #976 — HTML-Truncation darf Tags nicht mittig abschneiden.
+# =============================================================================
+
+
+class TestTelegramHTMLTruncation:
+    """Issue #976: MAX_MESSAGE_LENGTH-Truncation muss HTML-Tag-Balance bewahren."""
+
+    def test_truncate_html_closes_open_tags(self):
+        """GIVEN: HTML-Nachricht > MAX_MESSAGE_LENGTH mit offenem <b>
+        WHEN: _truncate_html angewendet wird
+        THEN: resultierender Text enthält kein ungeschlossenes <b>.
+        """
+        from output.channels.telegram import _truncate_html, MAX_MESSAGE_LENGTH
+
+        # Ein sehr langer Text mit führendem <b>, der definitiv abgeschnitten wird.
+        body = "<b>" + "word " * 3000 + "</b>"
+        assert len(body) > MAX_MESSAGE_LENGTH
+
+        truncated = _truncate_html(body, MAX_MESSAGE_LENGTH)
+        assert len(truncated) <= MAX_MESSAGE_LENGTH
+        # Es darf kein öffnendes <b> ohne schließendes </b> geben.
+        open_count = truncated.count("<b>")
+        close_count = truncated.count("</b>")
+        assert open_count == close_count, (
+            f"RED: unbalanced HTML tags after truncation (<b>={open_count}, "
+            f"</b>={close_count}): {truncated[-100:]!r}"
+        )
+
+    def test_truncate_html_does_not_break_non_html(self):
+        """GIVEN: Plaintext-Nachricht > MAX_MESSAGE_LENGTH
+        WHEN: _truncate_html angewendet wird
+        THEN: es wird wie bisher hart auf die Länge gekürzt.
+        """
+        from output.channels.telegram import _truncate_html, MAX_MESSAGE_LENGTH
+
+        body = "word " * 3000
+        truncated = _truncate_html(body, MAX_MESSAGE_LENGTH)
+        assert len(truncated) == MAX_MESSAGE_LENGTH
+
+    def test_truncate_html_preserves_small_html_message(self):
+        """GIVEN: Kurze HTML-Nachricht < MAX_MESSAGE_LENGTH
+        WHEN: _truncate_html angewendet wird
+        THEN: Nachricht bleibt unverändert.
+        """
+        from output.channels.telegram import _truncate_html, MAX_MESSAGE_LENGTH
+
+        body = "<b>short</b>"
+        assert len(body) < MAX_MESSAGE_LENGTH
+        assert _truncate_html(body, MAX_MESSAGE_LENGTH) == body
+
+    def test_truncate_html_never_exceeds_max_len_dense_tags(self):
+        """GIVEN: HTML-Nachrichten mit vielen kleinen, dicht gepackten Tags nahe der Grenze
+        WHEN: _truncate_html über eine Reihe von Fuellzeichen-Laengen angewendet wird
+        THEN: len(ergebnis) <= max_len gilt IMMER (AC-1) UND alle <b>-Tags bleiben
+              balanciert (AC-2) — unabhaengig davon, wie dicht die Tags liegen.
+        """
+        from output.channels.telegram import _truncate_html, MAX_MESSAGE_LENGTH
+
+        for filler in range(1, 41):
+            body = ("x" * filler + "<b>y</b>") * 2000
+            out = _truncate_html(body, MAX_MESSAGE_LENGTH)
+            assert len(out) <= MAX_MESSAGE_LENGTH, (
+                f"RED: filler={filler} produced len={len(out)} > {MAX_MESSAGE_LENGTH}"
+            )
+            assert out.count("<b>") == out.count("</b>"), (
+                f"RED: filler={filler} unbalanced <b> tags in {out[-100:]!r}"
+            )
+
+    def test_truncate_html_padded_closing_tag_respects_max_len(self):
+        """GIVEN: schließendes Tag mit Zusatz-Whitespace/Rauschen (</b  >), gefolgt
+        von weiterem Text, an einer Stelle die nahe an max_len liegt
+        WHEN: _truncate_html angewendet wird
+        THEN: len(ergebnis) <= max_len gilt IMMER (AC-1) — auch wenn der reale
+              schließende Tag laenger ist als das synthetische "</b>", mit dem
+              das Budget reserviert wurde (Adversary-Finding F001).
+        """
+        from output.channels.telegram import _truncate_html, MAX_MESSAGE_LENGTH
+
+        for fill_len in range(4000, 4096, 5):
+            for pad in range(0, 51, 5):
+                body = "<b>" + "A" * fill_len + "</b" + " " * pad + ">" + "Z" * 20
+                out = _truncate_html(body, MAX_MESSAGE_LENGTH)
+                assert len(out) <= MAX_MESSAGE_LENGTH, (
+                    f"RED: fill_len={fill_len} pad={pad} produced len={len(out)} "
+                    f"> {MAX_MESSAGE_LENGTH}"
+                )
+
+    def test_truncate_html_case_mismatched_closing_tag_balanced(self):
+        """GIVEN: öffnendes <b> und ein case-abweichendes schließendes </B>
+        WHEN: _truncate_html angewendet wird
+        THEN: die Tags bleiben case-insensitiv balanciert (AC-2) — kein
+              unbalanciertes </B></b>-Waisenpaar (Adversary-Finding F002).
+        """
+        from output.channels.telegram import _truncate_html, MAX_MESSAGE_LENGTH
+
+        body = "<b>" + "A" * 4085 + "</B>" + "Z" * 20
+        assert len(body) > MAX_MESSAGE_LENGTH
+
+        out = _truncate_html(body, MAX_MESSAGE_LENGTH)
+        assert len(out) <= MAX_MESSAGE_LENGTH
+        open_count = out.lower().count("<b>")
+        close_count = out.lower().count("</b>")
+        assert open_count == close_count, (
+            f"RED: case-insensitive unbalanced <b> tags "
+            f"(<b>={open_count}, </b>={close_count}): {out[-100:]!r}"
+        )
+        assert "</B></b>" not in out, (
+            f"RED: orphaned unbalanced </B></b> pair found: {out[-100:]!r}"
+        )

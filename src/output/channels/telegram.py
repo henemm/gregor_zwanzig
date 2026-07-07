@@ -1,5 +1,6 @@
 """Telegram output channel via Bot API."""
 import logging
+import re
 
 import httpx
 
@@ -10,6 +11,80 @@ logger = logging.getLogger(__name__)
 
 TELEGRAM_API_BASE = "https://api.telegram.org"
 MAX_MESSAGE_LENGTH = 4096
+
+# Telegram-Bot-API erlaubt in parse_mode=HTML eine begrenzte Menge an Tags.
+# Wir tracken nur Paare von öffnenden/schließenden Tags; self-closing Tags werden
+# ignoriert, weil sie keine Balance benötigen.
+_HTML_TAG_RE = re.compile(r"<(/?)([a-zA-Z][a-zA-Z0-9_]*)[^>]*>")
+
+
+def _truncate_html(message: str, max_len: int) -> str:
+    """Kürze message auf max_len Zeichen, ohne HTML-Tags mittig abzuschneiden.
+
+    Offene Tags am Ende werden automatisch geschlossen. Plaintext wird wie bisher
+    hart gekürzt.
+    """
+    if len(message) <= max_len:
+        return message
+
+    open_tags: list[str] = []
+    result_parts: list[str] = []
+    pos = 0
+
+    for match in _HTML_TAG_RE.finditer(message):
+        # Text vor dem Tag
+        text = message[pos:match.start()]
+        pos = match.end()
+
+        # So viel Text wie möglich unter Berücksichtigung der noch zu schließenden Tags
+        closing_overhead = sum(len(f"</{tag}>") for tag in open_tags)
+        available = max_len - sum(len(p) for p in result_parts) - closing_overhead
+        if available > 0:
+            result_parts.append(text[:available])
+
+        if sum(len(p) for p in result_parts) + closing_overhead >= max_len:
+            break
+
+        slash, tag = match.group(1), match.group(2)
+        tag_key = tag.lower()
+        current_len = sum(len(p) for p in result_parts)
+
+        if slash:
+            # Schließendes Tag: IMMER den kanonischen </tag> emittieren statt des
+            # rohen Match-Texts (Adversary-Finding F001) — dessen Länge ist die,
+            # mit der closing_overhead reserviert wurde, egal wie viel Rauschen
+            # (Whitespace/Attribute) im echten Tag steckt. Tag-Namen werden beim
+            # Vergleichen/Poppen case-insensitiv normalisiert (Finding F002),
+            # damit z.B. </B> das offene <b> schließt statt eine Waise zu bilden.
+            if open_tags and open_tags[-1].lower() == tag_key:
+                closing_tag = f"</{open_tags[-1]}>"
+                open_tags.pop()
+                result_parts.append(closing_tag)
+        else:
+            # Öffnendes Tag: nur anhängen, wenn danach noch Platz für das Tag
+            # SELBST plus alle (inkl. dieses neuen) noch offenen Schließ-Tags bleibt.
+            # Sonst Tag nicht öffnen und Schleife sauber beenden (Issue #976).
+            new_closing_overhead = closing_overhead + len(f"</{tag}>")
+            if current_len + len(match.group(0)) + new_closing_overhead > max_len:
+                break
+            result_parts.append(match.group(0))
+            open_tags.append(tag)
+
+        if sum(len(p) for p in result_parts) + sum(len(f"</{t}>") for t in open_tags) >= max_len:
+            break
+
+    else:
+        # Kein weiteres Tag mehr: Resttext ggf. anhängen.
+        closing_overhead = sum(len(f"</{tag}>") for tag in open_tags)
+        available = max_len - sum(len(p) for p in result_parts) - closing_overhead
+        if available > 0:
+            result_parts.append(message[pos:pos + available])
+
+    # Offene Tags in umgekehrter Reihenfolge schließen.
+    for tag in reversed(open_tags):
+        result_parts.append(f"</{tag}>")
+
+    return "".join(result_parts)
 
 BOT_COMMANDS = [
     {"command": "glance", "description": "🌤️ Wetter-Überblick (heute & morgen)"},
@@ -81,7 +156,8 @@ class TelegramOutput:
 
         message = body if suppress_subject_line else f"[{subject}]\n\n{body}"
         if len(message) > MAX_MESSAGE_LENGTH:
-            message = message[:MAX_MESSAGE_LENGTH]
+            is_html = parse_mode == "HTML"
+            message = _truncate_html(message, MAX_MESSAGE_LENGTH) if is_html else message[:MAX_MESSAGE_LENGTH]
             logger.warning("Telegram message truncated to %d chars", MAX_MESSAGE_LENGTH)
 
         payload: dict = {"chat_id": chat_id, "text": message}
@@ -169,7 +245,7 @@ class TelegramOutput:
 
         message = text
         if len(message) > MAX_MESSAGE_LENGTH:
-            message = message[:MAX_MESSAGE_LENGTH]
+            message = _truncate_html(message, MAX_MESSAGE_LENGTH)
             logger.warning("Telegram edit message truncated to %d chars", MAX_MESSAGE_LENGTH)
 
         payload: dict = {"chat_id": chat_id, "message_id": message_id, "text": message}
