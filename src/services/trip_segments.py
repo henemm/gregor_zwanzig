@@ -59,8 +59,13 @@ def _interpolate_missing_times(known_times: List[Optional[time]]) -> List[Option
     ``arrival_override``/``arrival_calculated`` zwischen zwei bekannten
     Zeitpunkten. Bei k aufeinanderfolgenden Unbekannten wird das Intervall
     gleichmaessig in k+1 Schritte geteilt (monotone Zeitfolge statt stiller
-    Duplikat-Startzeit). Fehlt ein bekannter Zeitpunkt danach, bleibt die
-    Luecke offen — der bestehende cumulative_time-Fallback greift dann."""
+    Duplikat-Startzeit).
+
+    Issue #1091: Rechnet mit vollen datetime-Objekten, damit fallende
+    Zeitangaben ueber die Tagesgrenze (z. B. 22:00 -> 00:30) korrekt als
+    naechster Tag interpretiert werden und die Zwischenzeiten monoton bleiben.
+    Fehlt ein bekannter Zeitpunkt danach, bleibt die Luecke offen — der
+    bestehende cumulative_time-Fallback greift dann."""
     result = list(known_times)
     n = len(result)
     i = 1
@@ -75,9 +80,13 @@ def _interpolate_missing_times(known_times: List[Optional[time]]) -> List[Option
         prev_time = result[gap_start - 1]
         if gap_end < n and prev_time is not None:
             next_time = result[gap_end]
-            prev_minutes = prev_time.hour * 60 + prev_time.minute
-            next_minutes = next_time.hour * 60 + next_time.minute
-            span = next_minutes - prev_minutes
+            # Issue #1091: Mit vollen datetime rechnen, damit eine fallende
+            # Uhrzeit ueber Mitternacht (next < prev) als naechster Tag gilt.
+            base = datetime(2000, 1, 1, prev_time.hour, prev_time.minute)
+            nxt = datetime(2000, 1, 1, next_time.hour, next_time.minute)
+            if nxt < base:
+                nxt += timedelta(days=1)
+            span_minutes = (nxt - base).total_seconds() / 60
             steps = gap_end - gap_start + 1
             # F002: kaufmaennische Rundung statt Python-Banker's-Rounding —
             # round(0.5) wuerde auf 0 abrunden und den interpolierten Punkt
@@ -87,8 +96,10 @@ def _interpolate_missing_times(known_times: List[Optional[time]]) -> List[Option
             # dann geloggt am end_dt<=start_dt-Guard (Grenzverhalten wie
             # die Mitternachts-Klemme in AC-5), nicht still.
             for offset, idx in enumerate(range(gap_start, gap_end), start=1):
-                minutes = prev_minutes + math.floor(span * offset / steps + 0.5)
-                result[idx] = time(minutes // 60, minutes % 60)
+                interpolated = base + timedelta(
+                    minutes=math.floor(span_minutes * offset / steps + 0.5)
+                )
+                result[idx] = interpolated.time()
     return result
 
 

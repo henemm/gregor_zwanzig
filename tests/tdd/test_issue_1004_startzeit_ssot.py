@@ -410,3 +410,55 @@ def test_f002_minuten_spanne_rundung_kollabiert_nicht_auf_vorgaenger(caplog):
         "F002: das unvermeidbar kollabierende Segment 2 (Minutenauflösung "
         "< Lückenzahl) wurde ohne Warnung still verworfen"
     )
+
+
+# ---------------------------------------------------------------------------
+# Issue #1091 — fallende arrival_override-Werte über Tagesgrenze bleiben
+# chronologisch monoton (volle datetime statt nackter time).
+# ---------------------------------------------------------------------------
+
+def _minutes(t: time) -> int:
+    return t.hour * 60 + t.minute
+
+
+def test_1091_falling_override_over_midnight_interpolates_monotonically():
+    """Adversary #1091: arrival_override 22:00 -> None -> 00:30 darf nicht
+    22:00 -> 11:15 -> 00:30 ergeben. Mit datetime-Rechnung liegt 00:30 am
+    naechsten Tag; die Interpolation muss monoton steigend sein."""
+    from services.trip_segments import _interpolate_missing_times
+
+    known = [time(22, 0), None, time(0, 30)]
+    result = _interpolate_missing_times(known)
+
+    assert result[0] == time(22, 0)
+    assert result[2] == time(0, 30)
+    # 22:00 -> 00:30 (naechster Tag) = 150 Minuten; eine Luecke -> Mitte bei 23:15
+    assert result[1] == time(23, 15), (
+        f"Interpolierter Zwischenwert ist {result[1]} statt 23:15"
+    )
+
+
+def test_1091_multiple_gaps_over_midnight():
+    """Adversary #1091: 22:00 -> None -> None -> 00:30 muss zwei monoton
+    steigende Zwischenzeiten liefern."""
+    from services.trip_segments import _interpolate_missing_times
+
+    known = [time(22, 0), None, None, time(0, 30)]
+    result = _interpolate_missing_times(known)
+
+    # 22:00 -> 00:30 = 150 Minuten, 3 Schritte -> 50 Minuten/Schritt
+    assert result[1] == time(22, 50), f"Erste Luecke unerwartet: {result[1]}"
+    assert result[2] == time(23, 40), f"Zweite Luecke unerwartet: {result[2]}"
+
+
+def test_1091_daytime_override_unchanged():
+    """Regression: normale steigende Overrides ohne Tagesgrenze bleiben
+    unveraendert (08:00 -> None -> 12:00 -> 10:00)."""
+    from services.trip_segments import _interpolate_missing_times
+
+    known = [time(8, 0), None, time(12, 0)]
+    result = _interpolate_missing_times(known)
+
+    assert result == [time(8, 0), time(10, 0), time(12, 0)], (
+        f"Tag-Override-Interpolation unerwartet: {result}"
+    )
