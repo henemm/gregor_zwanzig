@@ -54,6 +54,7 @@
 		const body: Record<string, boolean> = {};
 		if (paused !== undefined) body.paused = paused;
 		if (archived !== undefined) body.archived = archived;
+		errorMsg = null; // Issue #1059: alten Fehler beim Start eines neuen Versuchs zurücksetzen
 		isLoading = true;
 		try {
 			const res = await fetch(`/api/trips/${trip.id}/state`, {
@@ -61,7 +62,25 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(body)
 			});
-			if (!res.ok) throw new Error(`PATCH /state failed: ${res.status}`);
+			if (!res.ok) {
+				// Issue #1059: 4xx/5xx-Übersetzung analog handleTestBriefing — nutzerverständliche
+				// Meldung statt rohem Statuscode-String.
+				let detail: string | undefined;
+				try {
+					const errBody = await res.json();
+					detail = errBody?.detail;
+				} catch {
+					/* kein JSON-Body */
+				}
+				if (res.status >= 500) {
+					console.error(`Status-Update fehlgeschlagen: HTTP ${res.status}`, detail);
+					throw new Error('Aktion fehlgeschlagen — Serverfehler, bitte später erneut versuchen.');
+				} else if (detail) {
+					throw new Error(detail);
+				} else {
+					throw new Error('Aktion fehlgeschlagen, bitte später erneut versuchen.');
+				}
+			}
 			const updated: Trip = await res.json();
 			errorMsg = null;
 			trip = updated;
@@ -104,10 +123,28 @@
 	}
 
 	async function handleDeleteConfirm(): Promise<void> {
+		errorMsg = null; // Issue #1059: alten Fehler beim Start eines neuen Versuchs zurücksetzen
 		isLoading = true;
 		try {
 			const res = await fetch(`/api/trips/${trip.id}`, { method: 'DELETE' });
-			if (!res.ok) throw new Error(`DELETE failed: ${res.status}`);
+			if (!res.ok) {
+				// Issue #1059: 4xx/5xx-Übersetzung analog sendStateUpdate.
+				let detail: string | undefined;
+				try {
+					const errBody = await res.json();
+					detail = errBody?.detail;
+				} catch {
+					/* kein JSON-Body */
+				}
+				if (res.status >= 500) {
+					console.error(`Löschen fehlgeschlagen: HTTP ${res.status}`, detail);
+					throw new Error('Aktion fehlgeschlagen — Serverfehler, bitte später erneut versuchen.');
+				} else if (detail) {
+					throw new Error(detail);
+				} else {
+					throw new Error('Aktion fehlgeschlagen, bitte später erneut versuchen.');
+				}
+			}
 			void goto('/trips');
 		} catch (e) {
 			errorMsg = e instanceof Error ? e.message : String(e);
@@ -228,6 +265,9 @@
 				<span data-testid="test-briefing-success" style="font-size: 12px; color: var(--g-success, #2e7d32);">Test-Briefing gesendet!</span>
 			{:else if testBriefingStatus === 'error'}
 				<span data-testid="test-briefing-error" style="font-size: 12px; color: var(--g-error, #c62828);">{testBriefingMessage ?? 'Fehler beim Senden'}</span>
+			{/if}
+			{#if errorMsg}
+				<span data-testid="trip-detail-action-error" style="font-size: 12px; color: var(--g-error, #c62828);">{errorMsg}</span>
 			{/if}
 		</div>
 	</div>
