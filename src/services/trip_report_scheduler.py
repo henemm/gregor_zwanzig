@@ -30,6 +30,7 @@ from app.models import (
 from services.day_comparison import DayComparison
 from services.daylight_service import DaylightWindow
 from services.notification_service import NotificationService, TripReportRequest
+from services.user_tier import sms_allowed
 from utils.geo import degrees_to_compass, haversine_km
 from utils.timezone import tz_for_coords
 
@@ -620,7 +621,7 @@ class TripReportSchedulerService:
                     trip,
                     report_type,
                     send_email=not config or config.send_email,
-                    send_sms=config is not None and config.send_sms,
+                    send_sms=config is not None and config.send_sms and sms_allowed(self._user_id),
                     send_telegram=config is not None and config.send_telegram,
                 )
                 self._write_pending_marker(
@@ -832,7 +833,7 @@ class TripReportSchedulerService:
             stage_total=len(trip.stages) if trip.stages else None,
             trip_url=f"https://gregor20.henemm.com/trips/{trip.id}",
             send_email=not config or config.send_email,
-            send_sms=config is not None and config.send_sms,
+            send_sms=config is not None and config.send_sms and sms_allowed(self._user_id),
             send_telegram=config is not None and config.send_telegram,
             test_prefix=allow_test_fallback,
             on_demand_prefix=on_demand,

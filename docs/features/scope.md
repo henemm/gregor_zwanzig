@@ -36,9 +36,9 @@ Ein automatisiertes System, das Wetterdaten aus mehreren Quellen abruft, normali
 - Abstraktionsschicht: Provider-Adapter + Normalisierung.
 
 ## Kommunikationskanäle
-- E-Mail/SMTP (done, MVP)
-- SMS via Gateway (F1, geplant Q2 2026)
-- Garmin inReach Email-Bridge (F9, geplant Q2 2026, setzt Kompakt-Summary F2 voraus)
+- E-Mail/SMTP (done, MVP) — verfügbar auf allen Levels (Free, Standard, Premium)
+- SMS via Gateway (F1, geplant Q2 2026) — verfügbar ab Level Standard (Issue #1069, Slice 2 of Epic #1067)
+- Garmin inReach Email-Bridge (F9, geplant Q2 2026, setzt Kompakt-Summary F2 voraus) — Premium-only-Kanal
 
 ## Steuerung
 - Asynchrone Trip-Umplanung per SMS/Email-Reply (F6, geplant Q3 2026)

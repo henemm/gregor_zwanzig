@@ -532,6 +532,11 @@ class TestAC6SmsOnlyRadarDispatch:
         uid = "tdd-952-ac6"
         trip_id = "trip-952-ac6"
         _clean_user(uid)
+        # Issue #1069: SMS-Versand ist an Level standard/premium gebunden
+        # (sms_allowed() liefert bei fehlender user.json "free" = False). Dieser
+        # Test prueft den SMS-Dispatch-Mechanismus selbst, nicht das Tier-Gating.
+        (DATA_ROOT / uid).mkdir(parents=True, exist_ok=True)
+        (DATA_ROOT / uid / "user.json").write_text(json.dumps({"id": uid, "tier": "standard"}))
         stub = _SevenStub(body="100")
         try:
             config = TripReportConfig(

@@ -165,6 +165,7 @@ eigenes Folge-Issue nach F9-Fahrplan.
 
 ## Changelog
 
+- 2026-07-07: Slice 2 (#1069) implementiert und verifiziert.
 - 2026-07-07: Slice 1 (#1068) implementiert und validiert.
 - 2026-07-07: Epic-Overview erstellt (Slice-Schnitt, Systemrecherche)
 - 2026-07-07: PO-Antworten eingearbeitet — Alert-Frequenz Free/Standard auf harte

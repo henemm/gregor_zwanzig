@@ -454,3 +454,59 @@ func TestGetProfilePreservesValidTiers(t *testing.T) {
 		}
 	}
 }
+
+// TDD RED — Issue #1069 (Slice 2, Epic #1067): profileResponse muss ein
+// sms_allowed-Feld liefern, das aus dem Tier abgeleitet wird (free -> false,
+// standard/premium -> true). Feld existiert noch nicht in profileResponse —
+// RED bis internal/handler/auth.go entsprechend erweitert ist.
+func TestGetProfileHandlerSmsAllowedField(t *testing.T) {
+	s := newTestStore(t)
+
+	writeUser := func(id, tier string) {
+		dir := filepath.Join(s.DataDir, "users", id)
+		os.MkdirAll(dir, 0755)
+		tierJSON := ""
+		if tier != "" {
+			tierJSON = `,"tier":"` + tier + `"`
+		}
+		os.WriteFile(filepath.Join(dir, "user.json"),
+			[]byte(`{"id":"`+id+`"`+tierJSON+`}`), 0644)
+	}
+
+	getProfile := func(id string) map[string]interface{} {
+		h := GetProfileHandler(s)
+		req := httptest.NewRequest("GET", "/api/auth/profile", nil)
+		ctx := middleware.ContextWithUserID(req.Context(), id)
+		req = req.WithContext(ctx)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code != 200 {
+			t.Fatalf("GET profile for %s: expected 200, got %d: %s", id, w.Code, w.Body.String())
+		}
+		var resp map[string]interface{}
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		return resp
+	}
+
+	cases := []struct {
+		id   string
+		tier string
+		want bool
+	}{
+		{"carol-free", "", false}, // AC-7: fehlendes tier-Feld = free
+		{"carol-standard", "standard", true},
+		{"carol-premium", "premium", true},
+	}
+
+	for _, c := range cases {
+		writeUser(c.id, c.tier)
+		resp := getProfile(c.id)
+		got, ok := resp["sms_allowed"]
+		if !ok {
+			t.Fatalf("RED: %s (tier=%q) — 'sms_allowed' fehlt in der Profile-Antwort", c.id, c.tier)
+		}
+		if got != c.want {
+			t.Errorf("%s (tier=%q): sms_allowed = %v, want %v", c.id, c.tier, got, c.want)
+		}
+	}
+}

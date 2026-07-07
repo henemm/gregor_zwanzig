@@ -368,6 +368,7 @@ type profileResponse struct {
 	SmsTo          string                `json:"sms_to,omitempty"`
 	TelegramChatID string                `json:"telegram_chat_id,omitempty"`
 	Tier           string                `json:"tier"`
+	SmsAllowed     bool                  `json:"sms_allowed"`
 	CreatedAt      string                `json:"created_at"`
 	HasPasskey     bool                  `json:"has_passkey"`
 	Passkeys       []passkeyProfileEntry `json:"passkeys,omitempty"`
@@ -412,6 +413,7 @@ func toProfileResponse(u *model.User) profileResponse {
 		SmsTo:          u.SmsTo,
 		TelegramChatID: u.TelegramChatID,
 		Tier:           tier,
+		SmsAllowed:     model.SmsAllowed(tier),
 		CreatedAt:      u.CreatedAt.Format(time.RFC3339),
 		HasPasskey:     len(u.PasskeyCredentials) > 0,
 		Passkeys:       passkeys,

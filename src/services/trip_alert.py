@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, List, Optional
 from app.config import Settings
 from app.models import ChangeSeverity, SegmentWeatherData, WeatherChange
 from services.notification_service import NotificationService, RadarAlertRequest
+from services.user_tier import sms_allowed
 from services.weather_change_detection import WeatherChangeDetectionService
 from utils.timezone import tz_for_coords
 
@@ -807,7 +808,7 @@ class TripAlertService:
                 effective_channels.add("email")
             if can_telegram and config and getattr(config, "send_telegram", False):
                 effective_channels.add("telegram")
-            if can_sms and config and getattr(config, "send_sms", False):
+            if can_sms and config and getattr(config, "send_sms", False) and sms_allowed(self._user_id):
                 effective_channels.add("sms")
 
             if not effective_channels:
@@ -953,15 +954,18 @@ class TripAlertService:
         # Legacy-Pfad: keine aktiven alert_rules → erbe Briefing-Kanäle (oder E-Mail-Default)
         # E-Mail-Default gilt NUR wenn report_config None ist (kein explizites Ausschalten).
         if not active_rules:
-            return briefing if (briefing or trip.report_config is not None) else {"email"}
+            channels = briefing if (briefing or trip.report_config is not None) else {"email"}
+        else:
+            channels = set()
+            for rule in active_rules:
+                if rule.channels:
+                    channels.update(rule.channels)
+                else:
+                    channels.update(briefing)
 
-        result: set[str] = set()
-        for rule in active_rules:
-            if rule.channels:
-                result.update(rule.channels)
-            else:
-                result.update(briefing)
-        return result
+        if "sms" in channels and not sms_allowed(self._user_id):
+            channels = channels - {"sms"}
+        return channels
 
     @staticmethod
     def _briefing_channels(config) -> set[str]:

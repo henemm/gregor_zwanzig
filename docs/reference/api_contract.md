@@ -1972,6 +1972,7 @@ Returns authenticated user profile (requires valid session cookie).
   "mail_to": "alice@example.com",
   "sms_to": "+49151XXXXXXXX",
   "tier": "free",
+  "sms_allowed": false,
   "has_passkey": true,
   "passkeys": [
     {
@@ -2002,6 +2003,7 @@ Returns authenticated user profile (requires valid session cookie).
 | mail_to | string | Email recipient for trip reports (can differ from email) |
 | sms_to | string | SMS recipient phone number (international format, e.g. `+49151XXXXXXXX`); empty if not configured |
 | tier | string | User's level: `free`/`standard`/`premium` (Issue #1068, Slice 1 of Epic #1067); always present, defaults to `free` if unset on the underlying `user.json` (fallback happens only at read time, never written back); display-only in this slice, no channel or alert-frequency enforcement yet |
+| sms_allowed | bool | Whether SMS channel is available for this user (Issue #1069, Slice 2 of Epic #1067); `true` if `tier` is `standard` or `premium`, `false` for `free`; determines server-side channel-gating in report-dispatch and alert-dispatch |
 | has_passkey | bool | Whether user has registered any passkeys |
 | passkeys | array | List of registered WebAuthn credentials (empty if `has_passkey=false`) |
 

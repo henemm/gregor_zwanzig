@@ -83,13 +83,14 @@
 		mail_to?: string;
 		telegram_chat_id?: string;
 		sms_to?: string;
+		sms_allowed?: boolean;
 	}
 	let profile = $state<Profile | null>(null);
 
 	let availableChannels = $derived({
 		email: !!profile?.mail_to,
 		telegram: !!profile?.telegram_chat_id,
-		sms: !!profile?.sms_to
+		sms: !!profile?.sms_to && profile?.sms_allowed !== false
 	});
 
 	// Issue #617: Wetter-Kanal-Gating (nur wenn weatherChannels gesetzt)
@@ -413,11 +414,23 @@
 						>SMS{profile?.sms_to ? ` (${profile.sms_to})` : ''}</Checkbox>
 					</span>
 				</div>
-				{#if !availableChannels.sms}
+				{#if profile?.sms_allowed === false}
+					<div data-testid="channel-sms-hint" class="pl-6 text-xs text-muted-foreground">
+						SMS ab Level Standard verfügbar
+					</div>
+				{:else if !availableChannels.sms}
 					<div data-testid="channel-sms-hint" class="pl-6 text-xs text-muted-foreground">
 						Handynummer fehlt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">im Account einrichten</a>
 					</div>
 				{/if}
+
+				<!-- Premium-SMS (Garmin inReach) — informativer, dauerhaft deaktivierter Slot (Issue #1069) -->
+				<div class="text-sm">
+					<span data-testid="channel-premium-sms" class="inline-flex items-center gap-2">
+						<Checkbox checked={false} disabled={true}>Premium-SMS (Garmin inReach)</Checkbox>
+					</span>
+				</div>
+				<div class="pl-6 text-xs text-muted-foreground">bald verfügbar</div>
 			{/if}
 		{/if}
 	</Card.Root>

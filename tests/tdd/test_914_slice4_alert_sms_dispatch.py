@@ -128,6 +128,12 @@ def _clean_user_dir():
     if d.exists():
         shutil.rmtree(d)
     d.mkdir(parents=True, exist_ok=True)
+    # Issue #1069: SMS-Versand ist seit dem Tier-Gate an Level standard/premium
+    # gebunden (sms_allowed() liefert bei fehlender user.json "free" = False).
+    # Dieser Test prueft die SMS-Versandmechanik selbst, nicht das Tier-Gating
+    # (das hat eigene Tests in test_issue_1069_tier_channel_gating.py) — daher
+    # braucht der Testnutzer ein Level, das SMS ueberhaupt erlaubt.
+    (d / "user.json").write_text(json.dumps({"id": TEST_USER, "tier": "standard"}))
     yield
     if d.exists():
         shutil.rmtree(d)
