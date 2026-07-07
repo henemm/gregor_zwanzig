@@ -248,7 +248,7 @@ _METRICS: list[MetricDefinition] = [
         id="cape", label_de="Gewitterenergie (CAPE)", unit="J/kg",
         dp_field="cape_jkg", category="precipitation",
         default_aggregations=("max",),
-        compact_label="CE", col_key="cape", col_label="Thndr%",
+        compact_label="CE", col_key="cape", col_label="CAPE",
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
         friendly_label="\U0001f7e2\U0001f7e1\U0001f534",

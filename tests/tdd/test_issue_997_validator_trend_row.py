@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # Sibling-Test-Helfer
 # 2026-07-03). "Rain" liegt an Index 6.
 _HEADERS = [
     "Time", "Temp", "Feels", "Wind", "Gust", "WDir",
-    "Rain", "Rain%", "Thdr", "Thndr%", "Cloud", "Visib", "Risk", "Time",
+    "Rain", "Rain%", "Thdr", "CAPE", "Cloud", "Visib", "Risk", "Time",
 ]
 
 # Realistische Trend-/Stats-th-Reihe (9 Spalten) — 1:1 wie der echte Renderer

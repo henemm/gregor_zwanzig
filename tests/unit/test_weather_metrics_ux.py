@@ -63,7 +63,7 @@ class TestColLabelUpdates:
 
     def test_cape_label_thndr_pct(self):
         m = get_metric("cape")
-        assert m.col_label == "Thndr%", f"Expected 'Thndr%', got '{m.col_label}'"
+        assert m.col_label == "CAPE", f"Expected 'CAPE', got '{m.col_label}'"
 
     def test_freezing_level_label_zeroline(self):
         m = get_metric("freezing_level")
@@ -90,7 +90,7 @@ class TestColLabelUpdates:
         assert labels["thunder"] == "Thdr"
         assert labels["cloud"] == "Cloud"
         assert labels["pop"] == "Rain%"
-        assert labels["cape"] == "Thndr%"
+        assert labels["cape"] == "CAPE"
         assert labels["freeze_lvl"] == "0°Line"
 
 

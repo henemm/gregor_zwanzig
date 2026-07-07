@@ -190,7 +190,7 @@ def setup_cape_on():
 
 
 def check_cape_friendly(html):
-    vals = extract_column_values(html, "Thndr%")
+    vals = extract_column_values(html, "CAPE")
     emojis = ["\U0001f7e2", "\U0001f7e1", "\U0001f7e0", "\U0001f534"]
     has_emoji = any(any(e in v for e in emojis) for v in vals)
     has_numeric = any(re.match(r"^\d+$", v.strip()) for v in vals)
@@ -211,7 +211,7 @@ def setup_cape_off():
 
 
 def check_cape_numeric(html):
-    vals = extract_column_values(html, "Thndr%")
+    vals = extract_column_values(html, "CAPE")
     emojis = ["\U0001f7e2", "\U0001f7e1", "\U0001f7e0", "\U0001f534"]
     has_emoji = any(any(e in v for e in emojis) for v in vals)
     has_numeric = any(re.search(r"\d+", v) for v in vals)

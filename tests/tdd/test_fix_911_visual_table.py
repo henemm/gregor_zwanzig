@@ -39,7 +39,7 @@ WHITE_OR_TRANSPARENT = {"rgba(0, 0, 0, 0)", "rgb(255, 255, 255)", "transparent"}
 # ---------------------------------------------------------------------------
 def _numeric_dc():
     """Display-Config im reinen Zahlen-Modus mit ALLEN Metriken aktiviert —
-    spiegelt den Trip des Nutzers (Rain%, Visib, Thndr% etc. sichtbar)."""
+    spiegelt den Trip des Nutzers (Rain%, Visib, CAPE etc. sichtbar)."""
     from app.metric_catalog import build_default_display_config
     dc = build_default_display_config()
     for mc in dc.metrics:
@@ -78,7 +78,7 @@ def _warn_row():
     # dp-Felder für die zusätzlichen Spalten (dp_to_row liest getattr(dp, dp_field)):
     dp.pop_pct = 80           # > 70 → warn  (Rain%)
     dp.visibility_m = 800     # 0.8 km → < 1 → warn (Visib)
-    dp.cape_jkg = 1500        # CAPE (Thndr%)
+    dp.cape_jkg = 1500        # CAPE (CAPE)
     row = dp_to_row(dp, _numeric_dc(), tz=ZoneInfo("Europe/Berlin"))
     row["risk"] = "warn"
     return row
