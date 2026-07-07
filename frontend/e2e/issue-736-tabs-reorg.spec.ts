@@ -137,7 +137,9 @@ test.describe('Issue #736: Reiter-Reorganisation "Inhalt" vs. "Versand"', () => 
 		await createTrip(request, id, { channels: { email: true, telegram: true, sms: false } });
 		try {
 			await openTab(page, id, 'briefings');
-			await page.locator('[data-testid="briefings-save"]').waitFor({ state: 'visible' });
+			// Fix #1054: Save-Button existiert auf der Live-Route nie —
+			// Ready-Marker ist die sichtbare Kanal-Checkbox (Auto-Save).
+			await page.locator('[data-testid="channel-email"]').waitFor({ state: 'visible' });
 
 			// Kanal-Checkboxen genau einmal
 			await expect(page.locator('[data-testid="channel-email"]')).toHaveCount(1);
@@ -170,19 +172,19 @@ test.describe('Issue #736: Reiter-Reorganisation "Inhalt" vs. "Versand"', () => 
 		});
 		try {
 			await openTab(page, id, 'briefings');
-			await page.locator('[data-testid="briefings-save"]').waitFor({ state: 'visible' });
+			// Fix #1054: Save-Button existiert auf der Live-Route nie — Auto-Save
+			// nach Checkbox-Toggle, siehe issue-619-mail-elements-ui.spec.ts.
+			await page.locator('[data-testid="channel-email"]').waitFor({ state: 'visible' });
 
-			// E-Mail-Checkbox aktivieren
+			// E-Mail-Checkbox aktivieren → Auto-Save triggern
+			const putResponsePromise = page.waitForResponse(
+				(r) =>
+					r.url().endsWith(`/api/trips/${id}`) &&
+					r.request().method() === 'PUT' &&
+					r.ok()
+			);
 			await page.locator('[data-testid="channel-email"]').getByRole('checkbox').check();
-
-			// Speichern
-			await page.waitForResponse(
-				(r) => r.url().includes(`/api/trips/${id}`) && r.request().method() === 'PUT'
-			);
-			await page.locator('[data-testid="briefings-save"]').click();
-			await page.waitForResponse(
-				(r) => r.url().includes(`/api/trips/${id}`) && r.request().method() === 'PUT'
-			);
+			await putResponsePromise;
 
 			// Beide Felder prüfen
 			const tripRes = await request.get(`/api/trips/${id}`);
@@ -257,7 +259,9 @@ test.describe('Issue #736: Reiter-Reorganisation "Inhalt" vs. "Versand"', () => 
 		});
 		try {
 			await openTab(page, id, 'briefings');
-			await page.locator('[data-testid="briefings-save"]').waitFor({ state: 'visible' });
+			// Fix #1054: Save-Button existiert auf der Live-Route nie —
+			// Ready-Marker ist die sichtbare Kanal-Checkbox (Auto-Save).
+			await page.locator('[data-testid="channel-email"]').waitFor({ state: 'visible' });
 
 			// E-Mail-Checkbox muss ungehakt sein
 			await expect(
