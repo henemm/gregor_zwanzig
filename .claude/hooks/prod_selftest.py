@@ -36,7 +36,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
-import _e2e_paths
+import importlib.util as _importlib_util
+
+_e2e_paths_spec = _importlib_util.spec_from_file_location(
+    "_e2e_paths_prod_selftest",
+    str(Path(__file__).resolve().parent / "_e2e_paths.py"),
+)
+_e2e_paths = _importlib_util.module_from_spec(_e2e_paths_spec)
+_e2e_paths_spec.loader.exec_module(_e2e_paths)
 
 REPO_DIR = Path("/home/hem/gregor_zwanzig")
 CANONICAL_E2E_PATH = REPO_DIR / ".claude" / "e2e_verified.json"
@@ -383,8 +390,26 @@ def _derive_verdict(probes: list[dict]) -> str:
     return "PASS"
 
 
+def _scope_diff_base(repo_dir: Path = REPO_DIR) -> str:
+    """Diff-Basis für die Scope-Erkennung (Issue #916).
+
+    Liest den Gate-Marker (geschrieben von staging_gate.py, nie hier). Ist er
+    vorhanden UND im Repo auflösbar → Marker-SHA. Sonst Fallback 'HEAD~1'.
+    prod_selftest.py schreibt den Marker bewusst NICHT (nur Leser).
+    """
+    marker_sha = _e2e_paths.read_last_gate_scope(repo_dir)
+    if marker_sha:
+        resolvable = subprocess.run(
+            ["git", "cat-file", "-e", marker_sha],
+            capture_output=True, text=True, cwd=str(repo_dir),
+        )
+        if resolvable.returncode == 0:
+            return marker_sha
+    return "HEAD~1"
+
+
 def _detect_committed_scope(repo_dir: Path = REPO_DIR) -> str:
-    """Klassifiziert den letzten Commit (HEAD~1..HEAD) in einen Scope.
+    """Klassifiziert die Commits seit dem Gate-Marker (Fallback HEAD~1..HEAD).
 
     Gespiegelt aus staging_gate._detect_committed_scope (Issue #786) — eigene
     Scope-Erkennung, damit ein docs-only-/tooling-Deploy nicht an einer stale
@@ -392,8 +417,9 @@ def _detect_committed_scope(repo_dir: Path = REPO_DIR) -> str:
 
     Returns: docs-only | frontend-only | backend | full-stack
     """
+    base = _scope_diff_base(repo_dir)
     result = subprocess.run(
-        ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
+        ["git", "diff", "--name-only", base, "HEAD"],
         capture_output=True, text=True, cwd=str(repo_dir),
     )
     files = [f.strip() for f in result.stdout.splitlines() if f.strip()]

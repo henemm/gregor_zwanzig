@@ -313,14 +313,23 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
 
     golden_ok = True
     if briefing_staged:
-        try:
-            golden_result = subprocess.run(
-                ["uv", "run", "pytest", "tests/golden/email/", "-q", "--no-header", "--tb=no"],
-                cwd=repo, capture_output=True, text=True, timeout=60,
-            )
-            golden_ok = (golden_result.returncode == 0)
-        except Exception:
-            golden_ok = True  # fail-open bei uv/pytest-Infrastrukturproblem
+        if (repo / "tests" / "golden" / "email").exists():
+            try:
+                golden_result = subprocess.run(
+                    ["uv", "run", "pytest", "tests/golden/email/", "-q", "--no-header", "--tb=no"],
+                    cwd=repo, capture_output=True, text=True, timeout=60,
+                )
+                golden_ok = (golden_result.returncode == 0)
+            except Exception:
+                golden_ok = True  # fail-open bei uv/pytest-Infrastrukturproblem
+        elif (repo / "pyproject.toml").exists():
+            # Echtes gregor_zwanzig-Repo ohne tests/golden/email/ → echter
+            # Fehlerzustand (Issue #988), fail-closed statt implizit grün.
+            golden_ok = False
+        else:
+            # Fixture-/Tooling-Repo ohne eigenes uv-Projekt → Check ergibt
+            # keinen Sinn, wird übersprungen.
+            golden_ok = True
 
     if matrix_ok and validator_ok and radar_ok and golden_ok:
         sys.exit(0)

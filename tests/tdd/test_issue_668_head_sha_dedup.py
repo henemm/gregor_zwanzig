@@ -12,6 +12,7 @@ ACs:
   AC-3: mit Override → Datei am Override-Pfad, verified_commit korrekt
 """
 
+import importlib.util
 import json
 import os
 import shutil
@@ -21,11 +22,24 @@ from pathlib import Path
 
 import pytest
 
-HOOKS_DIR = Path("/home/hem/gregor_zwanzig/.claude/hooks")
-if str(HOOKS_DIR) not in sys.path:
-    sys.path.insert(0, str(HOOKS_DIR))
+REPO_ROOT = Path(__file__).resolve().parents[2]
+HOOKS_DIR = REPO_ROOT / ".claude" / "hooks"
 
-import staging_gate  # noqa: E402
+
+def _load_module(name: str, path: Path):
+    """Lädt ein Hook-Modul isoliert unter EINDEUTIGEM Namen. HOOKS_DIR muss auf
+    sys.path liegen, damit staging_gate's internes `import _e2e_paths` die
+    Worktree-Version trifft (nicht eine zuvor gecachte Hauptrepo-Version)."""
+    if str(HOOKS_DIR) not in sys.path:
+        sys.path.insert(0, str(HOOKS_DIR))
+    spec = importlib.util.spec_from_file_location(name, str(path))
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+staging_gate = _load_module("staging_gate_issue668", HOOKS_DIR / "staging_gate.py")
 
 
 def _init_git_repo(path: Path) -> str:

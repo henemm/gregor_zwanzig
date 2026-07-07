@@ -37,7 +37,14 @@ import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-import _e2e_paths
+import importlib.util as _importlib_util
+
+_e2e_paths_spec = _importlib_util.spec_from_file_location(
+    "_e2e_paths_staging_gate",
+    str(Path(__file__).resolve().parent / "_e2e_paths.py"),
+)
+_e2e_paths = _importlib_util.module_from_spec(_e2e_paths_spec)
+_e2e_paths_spec.loader.exec_module(_e2e_paths)
 
 _DEFAULT_REPO_DIR = Path("/home/hem/gregor_zwanzig")
 REPO_DIR = _DEFAULT_REPO_DIR
@@ -99,13 +106,32 @@ def _default_e2e_path() -> Path:
     return _e2e_paths.default_e2e_path(shared, canonical, _head_sha())
 
 
+def _scope_diff_base() -> str:
+    """Diff-Basis für die Scope-Erkennung (Issue #916).
+
+    Ist ein Gate-Marker vorhanden UND der SHA im Repo auflösbar → Marker-SHA
+    (deckt ALLE Commits seit dem letzten erfolgreichen Gate-Lauf ab). Sonst
+    (Erstlauf oder History-Rewrite) Fallback auf 'HEAD~1'.
+    """
+    marker_sha = _e2e_paths.read_last_gate_scope(_shared_repo_dir())
+    if marker_sha:
+        resolvable = subprocess.run(
+            ["git", "cat-file", "-e", marker_sha],
+            capture_output=True, text=True, cwd=str(_verified_repo_dir()),
+        )
+        if resolvable.returncode == 0:
+            return marker_sha
+    return "HEAD~1"
+
+
 def _detect_committed_scope() -> str:
-    """Klassifiziert den letzten Commit (HEAD~1..HEAD) in einen Scope.
+    """Klassifiziert die Commits seit dem Gate-Marker (Fallback HEAD~1..HEAD).
 
     Returns: frontend-only | backend | full-stack | docs-only
     """
+    base = _scope_diff_base()
     result = subprocess.run(
-        ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
+        ["git", "diff", "--name-only", base, "HEAD"],
         capture_output=True, text=True, cwd=str(_verified_repo_dir()),
     )
     files = [f.strip() for f in result.stdout.splitlines() if f.strip()]
@@ -256,6 +282,7 @@ def gate_check(e2e_path: Path | None, scope_override: str | None) -> int:
     scope = scope_override or _detect_committed_scope()
     if scope == "docs-only":
         _log(f"Scope '{scope}' — Staging-Gate übersprungen (kein UI/Backend-Change).")
+        _e2e_paths.write_last_gate_scope(_shared_repo_dir(), _head_sha())
         return 0
 
     if e2e_path is None:
@@ -313,6 +340,7 @@ def gate_check(e2e_path: Path | None, scope_override: str | None) -> int:
         return 1
 
     _log(f"OK: Staging-Gate bestanden (commit={head[:8]}, verdict={verdict!r}).")
+    _e2e_paths.write_last_gate_scope(_shared_repo_dir(), head)
     return 0
 
 

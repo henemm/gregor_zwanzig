@@ -5,8 +5,43 @@ Pure Funktionen — keine Modul-Konstanten. Wird von staging_gate.py und
 prod_selftest.py als dünner Shim-Layer verwendet.
 """
 
+import json
 import subprocess
 from pathlib import Path
+
+
+def last_gate_scope_path(repo_dir) -> Path:
+    """Marker-Pfad für die Gate-Scope-Basis (Issue #916):
+    <repo_dir>/.claude/last_gate_scope.json.
+    """
+    return Path(repo_dir) / ".claude" / "last_gate_scope.json"
+
+
+def write_last_gate_scope(repo_dir, sha) -> None:
+    """Schreibt {"gate_scope_sha": sha} in den Marker.
+
+    Schreibfehler (z.B. read-only Dateisystem) werden geschluckt — das
+    Gate-Ergebnis selbst darf davon nicht beeinflusst werden.
+    """
+    path = last_gate_scope_path(repo_dir)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"gate_scope_sha": sha}))
+    except OSError:
+        pass
+
+
+def read_last_gate_scope(repo_dir) -> "str | None":
+    """Liest gate_scope_sha aus dem Marker oder None bei fehlender/kaputter Datei."""
+    path = last_gate_scope_path(repo_dir)
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    sha = data.get("gate_scope_sha")
+    return sha if sha else None
 
 
 def head_sha(repo_dir) -> str:

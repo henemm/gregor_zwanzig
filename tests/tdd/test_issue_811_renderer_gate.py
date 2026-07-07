@@ -199,6 +199,41 @@ def test_pass_with_both_evidences(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# #988 AC-6: pyproject.toml vorhanden (echtes Repo), Golden-Verzeichnis fehlt
+# -> weiterhin blockieren (Gegenprobe zu test_pass_with_both_evidences)
+# ---------------------------------------------------------------------------
+
+def test_block_when_pyproject_present_but_golden_missing(tmp_path):
+    """Echtes Repo (pyproject.toml vorhanden) OHNE tests/golden/email/ muss
+    weiterhin blockieren (golden_ok=False) — im Unterschied zum Fixture-Repo
+    ohne pyproject.toml aus test_pass_with_both_evidences (Issue #988)."""
+    repo = _setup_repo(tmp_path)
+    (repo / "pyproject.toml").write_text('[project]\nname = "repo"\n')
+    mail_path = repo / _MAIL_FILE
+    mail_path.write_text("# changed\n")
+    _git(repo, "add", _MAIL_FILE, "pyproject.toml")
+
+    mail_mtime = mail_path.stat().st_mtime
+    fresh_vat = datetime.fromtimestamp(mail_mtime + 2.0, tz=timezone.utc)
+
+    mail_hash = _staged_mail_hash(repo)
+    _write_workflow_state(repo, gates={
+        "renderer_mail": {"matrix": {"passed": True, "mail_files_hash": mail_hash}},
+    })
+    _write_validation_log(repo, passed=True, validated_at=fresh_vat)
+
+    res = _run_gate(repo, stdin=_commit_stdin())
+    assert res.returncode != 0, (
+        f"Mit pyproject.toml aber ohne tests/golden/email/ muss der Gate "
+        f"weiterhin blockieren (echter Fehlerzustand, kein Fixture-Repo). "
+        f"rc={res.returncode}"
+    )
+    assert "Golden-Email-Tests" in res.stderr, (
+        f"Blockierung muss auf den Golden-Check zurueckzufuehren sein: {res.stderr!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # AC-2: No-op ohne Mail-Datei (kein False-Positive)
 # ---------------------------------------------------------------------------
 
