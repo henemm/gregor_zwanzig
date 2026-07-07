@@ -27,13 +27,13 @@ import (
 
 func validPresetBody() map[string]interface{} {
 	return map[string]interface{}{
-		"name":        "Zillertal vs. Stubai",
+		"name":         "Zillertal vs. Stubai",
 		"location_ids": []string{"loc-1", "loc-2"},
-		"schedule":    "daily",
-		"profil":      "SUMMER_TREKKING",
-		"hour_from":   6,
-		"hour_to":     18,
-		"empfaenger":  []string{"test@example.com"},
+		"schedule":     "daily",
+		"profil":       "SUMMER_TREKKING",
+		"hour_from":    6,
+		"hour_to":      18,
+		"empfaenger":   []string{"test@example.com"},
 	}
 }
 
@@ -637,5 +637,112 @@ func TestUpdateComparePreset_LowercaseWandern_RoundTrip(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("AC-1 FAIL: expected 200 for lowercase wandern, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// ============================================================================
+// Issue #781 — ComparePreset-Handler validiert forecast_hours (24/48/72).
+// ============================================================================
+
+func TestCreateComparePreset_ValidForecastHours_Accepted(t *testing.T) {
+	s := newTestStore(t)
+	r := chi.NewRouter()
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+
+	for _, hours := range []int{24, 48, 72} {
+		body := validPresetBody()
+		body["forecast_hours"] = hours
+
+		req := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, body))
+		req.Header.Set("Content-Type", "application/json")
+		req = addUserToContext(req, "user1")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusCreated {
+			t.Fatalf("forecast_hours=%d: expected 201, got %d: %s", hours, w.Code, w.Body.String())
+		}
+	}
+}
+
+func TestCreateComparePreset_InvalidForecastHours_Rejected(t *testing.T) {
+	s := newTestStore(t)
+	r := chi.NewRouter()
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+
+	for _, hours := range []int{-1, 99, 1, 23, 25, 71, 73} {
+		body := validPresetBody()
+		body["forecast_hours"] = hours
+
+		req := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, body))
+		req.Header.Set("Content-Type", "application/json")
+		req = addUserToContext(req, "user1")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("forecast_hours=%d: expected 400, got %d: %s", hours, w.Code, w.Body.String())
+		}
+	}
+}
+
+func TestCreateComparePreset_MissingForecastHours_DefaultsTo48(t *testing.T) {
+	s := newTestStore(t)
+	r := chi.NewRouter()
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+
+	body := validPresetBody()
+	// forecast_hours bewusst nicht gesetzt
+
+	req := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, body))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "user1")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+	var preset model.ComparePreset
+	if err := json.Unmarshal(w.Body.Bytes(), &preset); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if preset.ForecastHours != 48 {
+		t.Errorf("missing forecast_hours must default to 48, got %d", preset.ForecastHours)
+	}
+}
+
+func TestUpdateComparePreset_InvalidForecastHours_Rejected(t *testing.T) {
+	s := newTestStore(t).WithUser("user1")
+	seeded := model.ComparePreset{
+		ID:            "cp-seed-781",
+		UserID:        "user1",
+		Name:          "Test",
+		LocationIDs:   []string{"loc-a"},
+		Schedule:      "daily",
+		Profil:        "allgemein",
+		HourFrom:      9,
+		HourTo:        16,
+		ForecastHours: 48,
+		Empfaenger:    []string{"test@example.com"},
+		CreatedAt:     time.Now().UTC(),
+	}
+	if err := s.SaveComparePresets([]model.ComparePreset{seeded}); err != nil {
+		t.Fatalf("setup: SaveComparePresets: %v", err)
+	}
+
+	updateBody := validPresetBody()
+	updateBody["forecast_hours"] = 99
+
+	r := chi.NewRouter()
+	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
+	req := httptest.NewRequest("PUT", "/api/compare/presets/"+seeded.ID, jsonBody(t, updateBody))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "user1")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for forecast_hours=99, got %d: %s", w.Code, w.Body.String())
 	}
 }

@@ -238,7 +238,7 @@ def send_one_compare_preset(
         locations=locations,
         time_window=(hour_from, hour_to),
         target_date=date.today(),
-        forecast_hours=preset.get("forecast_hours", 48),  # Issue #764: gespeicherten Horizont nutzen
+        forecast_hours=preset.get("forecast_hours") or 48,  # Issue #764/#781: gespeicherten Horizont nutzen, 0 → 48
         profile=profile,
         official_alerts_enabled=preset.get("official_alerts_enabled", True),  # Issue #1040
     )

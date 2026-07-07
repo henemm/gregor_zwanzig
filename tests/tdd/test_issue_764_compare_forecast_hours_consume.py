@@ -172,3 +172,18 @@ class TestComparePresetForecastHoursPassthrough:
         assert captured == 48, (
             f"Legacy-Preset ohne forecast_hours: erwartet Default 48, durchgereicht wurde {captured}."
         )
+
+    def test_preset_explicit_zero_defaults_to_48(self, tmp_path):
+        """Issue #781 F001: GIVEN: Daily-Preset mit forecast_hours=0 (nur per Hand-Edit erreichbar)
+        THEN: Python-Versandpfad defaultt auf 48, weil 0 kein gueltiger Wert ist.
+        """
+        user_id = _fresh_user()
+        loc = _resolvable_location("loc-781-a")
+        preset = _preset("cp-781-zero", forecast_hours=0, loc_id="loc-781-a")
+        preset["_user_id"] = user_id
+
+        captured = _capture_forecast_hours(preset, loc, tmp_path)
+        assert captured == 48, (
+            f"Preset mit forecast_hours=0: erwartet Fallback 48, durchgereicht wurde {captured}. "
+            "preset.get('forecast_hours', 48) reicht 0 durch; Fix: preset.get('forecast_hours') or 48."
+        )

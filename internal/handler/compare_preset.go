@@ -43,9 +43,9 @@ var profileNormMap = map[string]string{
 	"wandern":         "ALPINE_TOURING",
 	"summer_trekking": "SUMMER_TREKKING",
 	// engine namespace passthrough
-	"ALLGEMEIN":      "ALLGEMEIN",
-	"WINTERSPORT":    "WINTERSPORT",
-	"ALPINE_TOURING": "ALPINE_TOURING",
+	"ALLGEMEIN":       "ALLGEMEIN",
+	"WINTERSPORT":     "WINTERSPORT",
+	"ALPINE_TOURING":  "ALPINE_TOURING",
 	"SUMMER_TREKKING": "SUMMER_TREKKING",
 }
 
@@ -65,6 +65,9 @@ func validateComparePreset(p model.ComparePreset) error {
 	}
 	if !compare.IsValidProfile(compare.ActivityProfile(normalizeProfile(p.Profil))) {
 		return fmt.Errorf("profil is not a valid activity profile")
+	}
+	if p.ForecastHours != 24 && p.ForecastHours != 48 && p.ForecastHours != 72 {
+		return fmt.Errorf("forecast_hours must be 24, 48, or 72")
 	}
 	if p.HourFrom < 0 || p.HourFrom > 23 {
 		return fmt.Errorf("hour_from must be 0..23")
@@ -133,6 +136,11 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		}
 		if preset.Empfaenger == nil {
 			preset.Empfaenger = []string{}
+		}
+		// Issue #781: forecast_hours fehlt oder ist 0 → Default 48 ( konsistent mit
+		// LoadComparePresets-Migration und dem Python-Versandpfad).
+		if preset.ForecastHours == 0 {
+			preset.ForecastHours = 48
 		}
 
 		// Issue #511 F001: Default weekday=4 (Freitag) für weekly-Presets ohne
@@ -212,6 +220,11 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// Issue #764: forecast_hours erhalten wenn Body es nicht trägt (0 = Feld fehlte im Body).
 		if updated.ForecastHours == 0 {
 			updated.ForecastHours = original.ForecastHours
+		}
+		// Issue #781: Sicherstellen dass ein gültiger Horizont vorliegt, auch wenn
+		// das Original noch keinen hatte (Legacy-Daten, die nie geladen wurden).
+		if updated.ForecastHours == 0 {
+			updated.ForecastHours = 48
 		}
 
 		if updated.LocationIDs == nil {
