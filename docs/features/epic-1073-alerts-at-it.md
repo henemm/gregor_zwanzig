@@ -12,9 +12,19 @@ Fail-soft pro Quelle. Frankreich ist über drei Quellen abgedeckt (Vigilance, M�
 Massiv-Sperren). Damit ist die **Architektur-Anforderung von #1073 Punkt 6 bereits erfüllt** — neue
 Länder = neue Quellen im selben Registry, kein Fundament-Umbau.
 
-**Aktueller Konsum:** Warnungen fließen bisher nur in den **Orts-Vergleich** (`comparison_engine`,
-Compare-Renderer) und den Scheduler-Versand. **Trip-Briefings und der Alert-Pfad konsumieren sie
-noch nicht** — das ist die zentrale Neuarbeit von #1073 (Verkabelung, nicht Fundament).
+**Aktueller Konsum (im Code verifiziert 2026-07-07):** Das Datenfundament ist konsum-neutral
+(`get_official_alerts_for_location(lat, lon)` = reine Funktion Koordinaten→Warnliste, ohne
+Aufrufer-Wissen). **Der tatsächliche Konsum + die Darstellung sind aber Compare-gekoppelt:** das
+Feld `official_alerts` hängt nur am Compare-DTO `LocationResult`, die Badge-Darstellung lebt nur in
+den Compare-Renderern (`compare_html.py`/`comparison.py`), der Trip-Briefing-Pfad ruft die
+Warnungen gar nicht ab. **Folge:** die bestehenden Météo-France-Quellen sind de facto nur im
+Orts-Vergleich verfügbar, nicht in Trips.
+
+**Architektur-Leitplanke für Slice 3 (#1087, #1073 Punkt 6 — kein Duplikat):** Die Trip-Verkabelung
+muss (a) das Alerts-Datenfeld auf eine allgemeinere Orts-/Etappen-Abstraktion heben und (b) eine
+**gemeinsame Warn-Render-Komponente** herauslösen, die Compare UND Trip-Briefing nutzen — nicht die
+Compare-Darstellung in den Trip-Renderer kopieren. Damit landen die bestehenden FR-Quellen
+automatisch auch in Trips (als verbindliches AC in #1087 verankert).
 
 ## API-Landschaft (verifiziert 2026-07-07)
 
