@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
-from datetime import date as date_type, datetime, timedelta, timezone
+from datetime import date as date_type, datetime, time, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -56,17 +56,25 @@ def _wet_frames(lat: float, lon: float) -> list:
 
 
 def _make_active_trip(trip_id: str) -> Trip:
-    """2-Waypoint-Trip mit aktivem Segment (now-1h … now+2h), UTC+0 Zone (Island)."""
-    now = datetime.now(timezone.utc)
+    """2-Waypoint-Trip mit ganztägig aktivem Segment (00:00-23:59 Ortszeit).
+
+    Das vorherige now-1h … now+2h-Fenster war tageszeitabhängig und führte
+    abends zu leeren Segmenten (#979). arrival_override fixiert die
+    Start-/Endzeit auf den ganzen Tag.
+    """
+    today = date_type.today()
     wp0 = Waypoint(
         id="WP0", name="Start", lat=LAT, lon=LON, elevation_m=100.0,
-        arrival_calculated=(now - timedelta(hours=1)).strftime("%H:%M"),
+        arrival_override="00:00",
     )
     wp1 = Waypoint(
         id="WP1", name="Ziel", lat=LAT + 0.05, lon=LON + 0.05, elevation_m=200.0,
-        arrival_calculated=(now + timedelta(hours=2)).strftime("%H:%M"),
+        arrival_override="23:59",
     )
-    stage = Stage(id="S1", name="Tag 1", date=now.date(), waypoints=[wp0, wp1])
+    stage = Stage(
+        id="S1", name="Tag 1", date=today, start_time=time(0, 0),
+        waypoints=[wp0, wp1],
+    )
     trip = Trip(id=trip_id, name=f"Test {trip_id}", stages=[stage])
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=True, send_telegram=False,
@@ -87,6 +95,8 @@ def _save_trip_direct(trip: Trip, user_id: str) -> None:
             d["elevation_m"] = wp.elevation_m
         if wp.arrival_calculated is not None:
             d["arrival_calculated"] = wp.arrival_calculated
+        if wp.arrival_override is not None:
+            d["arrival_override"] = wp.arrival_override
         wp_list.append(d)
     data = {
         "id": trip.id,
@@ -241,8 +251,8 @@ def test_ac2_unannounced_rain_triggers_radar_alert():
         )
         assert len(captured) >= 1, "AC-2: mail_sink muss aufgerufen werden."
         body = captured[0][1]
-        assert "im Briefing nicht angekündigt" in body, (
-            f"AC-2: Mail-Body muss 'im Briefing nicht angekündigt' enthalten.\n"
+        assert "Briefing: nicht angekündigt" in body, (
+            f"AC-2: Mail-Body muss 'Briefing: nicht angekündigt' enthalten.\n"
             f"RED: Dieser Text existiert noch nicht im Radar-Alert-Body.\n"
             f"Aktueller Body:\n{body}"
         )

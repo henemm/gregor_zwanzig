@@ -15,8 +15,8 @@ In der RED-Phase schlagen alle Tests fehl, weil die Module
 """
 from __future__ import annotations
 
-import time
-from datetime import date, datetime, timedelta, timezone
+import time as time_mod
+from datetime import date, datetime, time, timedelta, timezone
 
 import pytest
 
@@ -36,16 +36,27 @@ _TRIP_ID = "e2e-radar-nowcast"
 # ---------------------------------------------------------------------------
 
 def _make_today_trip() -> Trip:
-    """Trip mit einer Etappe HEUTE an einer DE-Koordinate."""
+    """Trip mit einer Etappe HEUTE an einer DE-Koordinate.
+
+    arrival_override sorgt dafür, dass das Segment 00:00-23:59 Uhr Ortszeit
+    aktiv ist — unabhängig von der Tageszeit, zu der der Test läuft (#979).
+    """
     today = date.today()
     stages = [
         Stage(
             id="T1",
             name="Heute-Etappe",
             date=today,
+            start_time=time(0, 0),
             waypoints=[
-                Waypoint(id="W1", name="Start", lat=_DE_LAT, lon=_DE_LON, elevation_m=520),
-                Waypoint(id="W2", name="Ziel", lat=_DE_LAT + 0.05, lon=_DE_LON + 0.05, elevation_m=700),
+                Waypoint(
+                    id="W1", name="Start", lat=_DE_LAT, lon=_DE_LON, elevation_m=520,
+                    arrival_override="00:00",
+                ),
+                Waypoint(
+                    id="W2", name="Ziel", lat=_DE_LAT + 0.05, lon=_DE_LON + 0.05,
+                    elevation_m=700, arrival_override="23:59",
+                ),
             ],
         ),
     ]
@@ -158,9 +169,9 @@ def test_ac3_now_command_returns_nowcast_under_10s():
     save_trip(trip)
     try:
         processor = TripCommandProcessor()
-        start = time.monotonic()
+        start = time_mod.monotonic()
         result = processor.process(_make_msg("### now"))
-        elapsed = time.monotonic() - start
+        elapsed = time_mod.monotonic() - start
 
         assert result.success is True
         assert result.command == "now"

@@ -28,6 +28,7 @@ import json
 import re
 import threading
 from datetime import date as date_type
+from datetime import datetime, timedelta
 from datetime import time as time_type
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
@@ -37,6 +38,7 @@ import pytest
 from app.config import Settings
 from app.models import TripReportConfig
 from app.trip import Stage, TimeWindow, Trip, Waypoint
+from utils.timezone import tz_for_coords
 from output.renderers.alert.model import AlertEvent, AlertMessage, OnsetEvent
 from output.renderers.alert.render import (
     render_email, render_subject, render_sms, render_telegram,
@@ -116,24 +118,56 @@ class _GuaranteedWetRadar(RadarNowcastService):
         return self._fixed
 
 
+def _active_window(lat: float, lon: float) -> tuple[str, str, time_type]:
+    """Lokales Zeitfenster, das jetzt aktiv ist und den UTC-Tag nicht verlässt.
+
+    Issue #1015: `time_window` wird von `convert_trip_to_segments` ignoriert;
+    ohne `arrival_override` entstand ein Segment, das zur Testlaufzeit oft nicht
+    aktiv war. Ein now()-basiertes Fenster (typisch 02:00–22:00 Ortszeit)
+    bleibt bei Korsika/UTC+2 vollständig im selben UTC-Tag.
+    """
+    tz = tz_for_coords(lat, lon)
+    now_local = datetime.now(tz)
+    start = now_local - timedelta(hours=1)
+    end = now_local + timedelta(hours=3)
+    day_start = now_local.replace(hour=2, minute=0, second=0, microsecond=0)
+    day_end = now_local.replace(hour=22, minute=0, second=0, microsecond=0)
+    if start < day_start:
+        start = day_start
+    if end > day_end:
+        end = day_end
+    if start > now_local:
+        start = now_local
+    if end <= now_local:
+        end = now_local + timedelta(hours=1)
+    return start.strftime("%H:%M"), end.strftime("%H:%M"), time_type(start.hour, start.minute)
+
+
 def _trip_with_active_segment(trip_id: str, config: TripReportConfig) -> Trip:
     """Trip mit garantiert aktivem Segment JETZT.
 
     `convert_trip_to_segments` (Issue #822) braucht MINDESTENS 2 Waypoints pro
     Stage (bei 1 Waypoint: "less than 2 waypoints" → leere Segmentliste, kein
-    Alert möglich). Segment 1 spannt 00:00–23:58 lokal (Korsika/GR20-Koordinate,
-    Vorbild test_827/test_822), damit es unabhängig von der Testlaufzeit aktiv
-    ist (`seg.start_time <= now_utc <= seg.end_time`).
+    Alert möglich). `arrival_override` auf erstem/letztem Waypoint plus
+    passende `stage.start_time` sorgt dafür, dass das Segment zur
+    Testlaufzeit aktiv ist (`seg.start_time <= now_utc <= seg.end_time`).
     """
+    lat, lon = 42.20, 9.10
+    start_str, end_str, start_time = _active_window(lat, lon)
     wp0 = Waypoint(
-        id="G1", name="Start", lat=42.20, lon=9.10, elevation_m=1000.0,
+        id="G1", name="Start", lat=lat, lon=lon, elevation_m=1000.0,
         time_window=TimeWindow(start=time_type(0, 0), end=time_type(23, 57)),
+        arrival_override=start_str,
     )
     wp1 = Waypoint(
         id="G2", name="Ziel", lat=42.25, lon=9.15, elevation_m=1200.0,
         time_window=TimeWindow(start=time_type(23, 58), end=time_type(23, 59)),
+        arrival_override=end_str,
     )
-    stage = Stage(id="T1", name="Tag 1", date=date_type.today(), waypoints=[wp0, wp1])
+    stage = Stage(
+        id="T1", name="Tag 1", date=date_type.today(),
+        start_time=start_time, waypoints=[wp0, wp1],
+    )
     trip = Trip(id=trip_id, name="Onset-Fidelity-Trip", stages=[stage])
     trip.report_config = config
     return trip

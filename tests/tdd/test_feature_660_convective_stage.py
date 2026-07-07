@@ -21,7 +21,7 @@ In der RED-Phase schlagen die Tests fehl, weil:
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 import pytest
 
@@ -43,17 +43,27 @@ _CONVECTIVE_WMO = (95, 96, 99)
 # ---------------------------------------------------------------------------
 
 def _make_today_trip() -> Trip:
-    """Trip mit 2 Waypoints — Issue #822 erfordert >= 2 WP für segment-aware alerts."""
+    """Trip mit 2 Waypoints — Issue #822 erfordert >= 2 WP für segment-aware alerts.
+
+    arrival_override sorgt dafür, dass das Segment 00:00-23:59 Uhr Ortszeit
+    aktiv ist — unabhängig von der Tageszeit, zu der der Test läuft (#979).
+    """
     today = date.today()
     stages = [
         Stage(
             id="T1",
             name="Heute-Etappe",
             date=today,
+            start_time=time(0, 0),
             waypoints=[
-                Waypoint(id="W1", name="Start", lat=_LAT, lon=_LON, elevation_m=520),
-                Waypoint(id="W2", name="Ziel", lat=_LAT + 0.05, lon=_LON + 0.05,
-                         elevation_m=600),
+                Waypoint(
+                    id="W1", name="Start", lat=_LAT, lon=_LON, elevation_m=520,
+                    arrival_override="00:00",
+                ),
+                Waypoint(
+                    id="W2", name="Ziel", lat=_LAT + 0.05, lon=_LON + 0.05,
+                    elevation_m=600, arrival_override="23:59",
+                ),
             ],
         ),
     ]
