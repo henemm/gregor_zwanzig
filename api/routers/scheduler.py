@@ -189,6 +189,14 @@ def send_test_trip_report(trip_id: str, user_id: str = "default", report_type: s
     if trip is None:
         raise HTTPException(status_code=404, detail=f"Trip {trip_id} not found")
 
+    # Issue #904: Trip ohne Etappen muss 422 liefern, bevor der SMTP-Check
+    # eine irreführende "SMTP not configured"-Meldung zurückgibt.
+    if not trip.stages:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Kein Briefing für {report_type} — keine Etappen",
+        )
+
     # AC-6: SMTP-Check nach Trip-Lookup
     settings = Settings().with_user_profile(user_id)
     if not settings.can_send_email():

@@ -61,20 +61,12 @@ def user_no_stages(tmp_path):
     user_profile = REPO_ROOT / "data" / "users" / user_id / "user.json"
     user_profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com"}))
 
-    # Trip mit Etappe in der fernen Vergangenheit (2026-01-01) → kein Match für heute/morgen
+    # Issue #904: Trip wirklich ohne Etappen → Endpoint muss 422 liefern.
     trip_path = trips_dir / f"{trip_id}.json"
     trip_path.write_text(json.dumps({
         "id": trip_id,
-        "name": "TDD-716 Vergangenheits-Trip",
-        "stages": [{
-            "id": "stage-past",
-            "name": "Vergangene Etappe",
-            "date": "2026-01-01",
-            "waypoints": [
-                {"id": "wp1", "name": "Start", "lat": 42.1, "lon": 9.0, "elevation_m": 500},
-                {"id": "wp2", "name": "Ziel", "lat": 42.2, "lon": 9.1, "elevation_m": 600},
-            ],
-        }],
+        "name": "TDD-716 Trip ohne Etappen",
+        "stages": [],
         "report_config": {
             "evening": "20:00",
             "evening_enabled": True,
