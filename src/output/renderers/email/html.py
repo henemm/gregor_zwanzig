@@ -331,7 +331,6 @@ def _render_kommandos_section() -> str:
         ("SKIP", "Nächstes überspringen"),
         ("STOP / WEITER", "Deaktivieren / reaktivieren"),
         ("STATUS", "Trip-Status abrufen"),
-        ("CONFIG", "Spalten ändern"),
         ("HELP", "Alle Kommandos"),
     ]
     rows = []

@@ -50,9 +50,10 @@ _NEW_KEYWORDS = ["HEUTE", "MORGEN", "JETZT", "GEWITTER", "WEITER"]
 _REMOVED_KEYWORDS = ["CONFIG"]
 
 # HTML-specific keywords added by #884 design (Antwort-Kommandos 3x2-grid)
-_HTML_NEW_KEYWORDS = ["PAUSE", "SKIP", "STOP", "STATUS", "CONFIG", "HELP"]
-# Keywords removed from the HTML kommandos block by #884
-_HTML_REMOVED_KEYWORDS = ["HILFE"]
+# Issue #1058: CONFIG removed from the HTML block (dead command, never dispatched).
+_HTML_NEW_KEYWORDS = ["PAUSE", "SKIP", "STOP", "STATUS", "HELP"]
+# Keywords removed from the HTML kommandos block by #884 / #1058
+_HTML_REMOVED_KEYWORDS = ["HILFE", "CONFIG"]
 
 
 # ---------------------------------------------------------------------------
