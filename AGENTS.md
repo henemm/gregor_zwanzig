@@ -9,6 +9,24 @@
 - **Python-Core / Domain-Backend**: `api/`, `src/services/`, `src/app/`, `src/providers/`, FastAPI-Core über `api.main:app` (interner Port `8000`).
 - **Ausgabe-/Renderer-Schicht**: `src/output/renderers/` (E-Mail, HTML, Telegram).
 
+## Arbeitsverzeichnis — NIE im Haupt-Repo schreiben
+
+**Alle Code-Änderungen gehören in eine isolierte Worktree-Kopie unter
+`/home/hem/gz-workspaces/<name>`, NIEMALS direkt in den Haupt-Checkout
+`/home/hem/gregor_zwanzig`.** Uncommittete Änderungen im Haupt-Repo werden von Deploys
+(`reset --hard origin/main`) ersatzlos gelöscht (Vorfall 2026-07-07: ein ganzes Arbeitspaket
+ging so verloren). Schreib-/Edit-Zugriff auf den Haupt-Checkout ist zusätzlich per
+Permission-Regel hart gesperrt — dort kommt „denied by permission rule".
+
+Vorgehen zu Beginn jeder Aufgabe:
+
+```bash
+cd /home/hem/gregor_zwanzig && bash .claude/tools/gz-workspace new <name>
+cd /home/hem/gz-workspaces/<name> && pwd && git branch --show-current   # muss gz-workspaces zeigen
+```
+
+Nach **jedem** Issue sofort committen (ein Commit pro Issue) — ein Commit überlebt jeden Deploy.
+
 ## Wichtige Dateien
 
 - `openspec.yaml` – OpenSpec-Framework-Konfiguration (Phasen, Gates, Scope).
