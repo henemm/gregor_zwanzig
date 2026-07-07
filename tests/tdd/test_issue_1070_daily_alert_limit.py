@@ -533,15 +533,12 @@ def test_ac5_cross_path_daily_limit_shared_between_radar_and_deviation(telegram_
 
 # ═══════════════════ F001-Symmetrie (AC-6) ═══════════════════════════════════
 
-def test_ac6_gate_passes_but_no_channel_delivered_leaves_counter_unchanged():
-    """AC-6/F001: Das Tageslimit-Gate wird passiert (count=1 < Free-Limit 2),
-    aber der Alert scheitert an einem anderen bestehenden Filter (alle Kanäle
-    auf Trip-Ebene deaktiviert, `delivered` bleibt falsy). Der Tageszähler darf
-    NICHT erhöht werden — nur tatsächlicher Versand zählt (F001-Symmetrie).
-
-    RED: importiert `services.alert_daily_limit.load` direkt (ImportError,
-    solange das Modul fehlt).
-    """
+def test_ac6_radar_gate_passes_but_no_channel_delivered_leaves_counter_unchanged():
+    """AC-6/F001 (Radar-Pfad): Das Tageslimit-Gate wird passiert (count=1 <
+    Free-Limit 2), aber der Alert scheitert an einem anderen bestehenden Filter
+    (alle Kanäle auf Trip-Ebene deaktiviert, `delivered` bleibt falsy). Der
+    Tageszähler darf NICHT erhöht werden — nur tatsächlicher Versand zählt
+    (F001-Symmetrie)."""
     from services.alert_daily_limit import load
     from services.radar_service import RadarNowcastService
     from services.trip_alert import TripAlertService
@@ -576,6 +573,137 @@ def test_ac6_gate_passes_but_no_channel_delivered_leaves_counter_unchanged():
         assert after_count == 1, (
             f"F001: Zähler darf bei delivered=False nicht erhöht werden, "
             f"erwartet 1 (unverändert), got {after_count}"
+        )
+    finally:
+        _clean_user(uid)
+
+
+# ═══════════════════ Issue #1081 Adversary-Follow-Up ══════════════════════════
+# AC-2/AC-3 müssen laut Spec auf Wiring-Level (mail_sink) getestet werden.
+# AC-6 muss zusätzlich für den Deviation-Pfad getestet werden.
+
+
+def test_ac2_wiring_standard_limit_allows_fourth_blocks_fifth():
+    """AC-2 (Wiring, Radar-Pfad): Standard-Nutzer (Limit 4) mit count=3 darf
+    den vierten Alert noch versenden; mit count=4 wird der fünfte unterdrückt.
+    """
+    from services.alert_daily_limit import load
+    from services.radar_service import RadarNowcastService
+    from services.trip_alert import TripAlertService
+
+    uid = f"tdd-1081-ac2-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    try:
+        _write_user_tier(uid, "standard")
+
+        # count=3 -> 4. Alert noch erlaubt
+        _seed_daily_counter(uid, 3)
+        trip_id_4th = f"trip-{uuid.uuid4().hex[:6]}"
+        trip_4th = _make_trip(trip_id_4th, send_email=True, send_telegram=False)
+        _save_trip(trip_4th, uid)
+
+        mail_calls: list = []
+        svc = TripAlertService(
+            settings=_make_settings_with_email(),
+            throttle_hours=0,
+            user_id=uid,
+            radar_service=RadarNowcastService(frame_source=_wet_frames),
+            mail_sink=lambda subject, body: mail_calls.append((subject, body)),
+        )
+        result = svc.check_radar_alerts()
+
+        assert result == 1, f"AC-2: 4. Alert für Standard muss noch erlaubt sein, got {result}"
+        assert len(mail_calls) == 1, "AC-2: 4. Alert muss per E-Mail versendet werden"
+        assert load(uid, datetime.now(timezone.utc)) == 4, "AC-2: Zähler muss auf 4 steigen"
+
+        # count=4 -> 5. Alert blockiert
+        trip_id_5th = f"trip-{uuid.uuid4().hex[:6]}"
+        trip_5th = _make_trip(trip_id_5th, send_email=True, send_telegram=False)
+        _save_trip(trip_5th, uid)
+
+        mail_calls_5th: list = []
+        svc_5th = TripAlertService(
+            settings=_make_settings_with_email(),
+            throttle_hours=0,
+            user_id=uid,
+            radar_service=RadarNowcastService(frame_source=_wet_frames),
+            mail_sink=lambda subject, body: mail_calls_5th.append((subject, body)),
+        )
+        result_5th = svc_5th.check_radar_alerts()
+
+        assert result_5th == 0, f"AC-2: 5. Alert für Standard muss blockiert sein, got {result_5th}"
+        assert not mail_calls_5th, "AC-2: 5. Alert darf keinen E-Mail-Versand auslösen"
+        assert load(uid, datetime.now(timezone.utc)) == 4, "AC-2: Zähler darf nicht steigen"
+    finally:
+        _clean_user(uid)
+
+
+def test_ac3_wiring_premium_no_limit():
+    """AC-3 (Wiring, Radar-Pfad): Premium-Nutzer hat kein Tageslimit —
+    count=6 wird bei erfolgreichem Alert auf 7 erhöht."""
+    from services.alert_daily_limit import load
+    from services.radar_service import RadarNowcastService
+    from services.trip_alert import TripAlertService
+
+    uid = f"tdd-1081-ac3-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    try:
+        _write_user_tier(uid, "premium")
+        _seed_daily_counter(uid, 6)
+
+        trip_id = f"trip-{uuid.uuid4().hex[:6]}"
+        trip = _make_trip(trip_id, send_email=True, send_telegram=False)
+        _save_trip(trip, uid)
+
+        mail_calls: list = []
+        svc = TripAlertService(
+            settings=_make_settings_with_email(),
+            throttle_hours=0,
+            user_id=uid,
+            radar_service=RadarNowcastService(frame_source=_wet_frames),
+            mail_sink=lambda subject, body: mail_calls.append((subject, body)),
+        )
+        result = svc.check_radar_alerts()
+
+        assert result == 1, f"AC-3: Premium-Alert trotz count=6 muss erlaubt sein, got {result}"
+        assert len(mail_calls) == 1, "AC-3: Premium-Alert muss versendet werden"
+        assert load(uid, datetime.now(timezone.utc)) == 7, "AC-3: Zähler muss weiter steigen"
+    finally:
+        _clean_user(uid)
+
+
+def test_ac6_deviation_gate_passes_but_no_channel_delivered_leaves_counter_unchanged():
+    """AC-6/F001 (Deviation-Pfad): Das Tageslimit-Gate wird passiert
+    (count=1 < Free-Limit 2), aber kein Kanal ist konfiguriert (`delivered`
+    bleibt falsy). Der Tageszähler darf NICHT erhöht werden."""
+    from services.alert_daily_limit import load
+    from services.trip_alert import TripAlertService
+
+    uid = f"tdd-1081-ac6-dev-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    try:
+        _write_user_tier(uid, "free")
+        _seed_daily_counter(uid, 1)
+
+        # Deviation-Trip mit aktiver Δ-Erkennung, aber KEINEM zustellbaren Kanal.
+        trip = _deviation_trip(f"trip-dev-{uid}")
+        trip.report_config.send_email = False
+        trip.report_config.send_telegram = False
+        trip.report_config.alert_on_changes = True
+
+        cached = [_weather_data(precip_sum_mm=2.0)]
+        fresh = [_weather_data(precip_sum_mm=18.0)]
+
+        svc = TripAlertService(
+            settings=_make_settings_with_email(),
+            throttle_hours=0,
+            user_id=uid,
+        )
+        result = svc.check_and_send_alerts(trip, cached, fresh_weather=fresh)
+
+        assert result is False, "Kein Kanal konfiguriert -> delivered=False"
+        assert load(uid, datetime.now(timezone.utc)) == 1, (
+            "F001 (Deviation): Zähler darf bei delivered=False nicht erhöht werden"
         )
     finally:
         _clean_user(uid)
