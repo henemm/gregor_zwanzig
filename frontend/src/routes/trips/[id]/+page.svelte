@@ -65,6 +65,8 @@
 			if (!res.ok) {
 				// Issue #1059: 4xx/5xx-Übersetzung analog handleTestBriefing — nutzerverständliche
 				// Meldung statt rohem Statuscode-String.
+				// Issue #1065: HTTP-Fehler direkt setzen und return, damit der catch-Block
+				// nur für echte Netzwerk-Ausnahmen (fetch wirft) erreicht wird.
 				let detail: string | undefined;
 				try {
 					const errBody = await res.json();
@@ -74,18 +76,21 @@
 				}
 				if (res.status >= 500) {
 					console.error(`Status-Update fehlgeschlagen: HTTP ${res.status}`, detail);
-					throw new Error('Aktion fehlgeschlagen — Serverfehler, bitte später erneut versuchen.');
+					errorMsg = 'Aktion fehlgeschlagen — Serverfehler, bitte später erneut versuchen.';
 				} else if (detail) {
-					throw new Error(detail);
+					errorMsg = detail;
 				} else {
-					throw new Error('Aktion fehlgeschlagen, bitte später erneut versuchen.');
+					errorMsg = 'Aktion fehlgeschlagen, bitte später erneut versuchen.';
 				}
+				return;
 			}
 			const updated: Trip = await res.json();
 			errorMsg = null;
 			trip = updated;
 		} catch (e) {
-			errorMsg = e instanceof Error ? e.message : String(e);
+			console.error(e);
+			// Issue #1065: echter Netzwerkfehler (kein HTTP-Response) → generische Meldung.
+			errorMsg = 'Aktion fehlgeschlagen — bitte Verbindung prüfen.';
 		} finally {
 			isLoading = false;
 		}
@@ -129,6 +134,8 @@
 			const res = await fetch(`/api/trips/${trip.id}`, { method: 'DELETE' });
 			if (!res.ok) {
 				// Issue #1059: 4xx/5xx-Übersetzung analog sendStateUpdate.
+				// Issue #1065: HTTP-Fehler direkt setzen und return; catch nur für
+				// echte Netzwerk-Ausnahmen.
 				let detail: string | undefined;
 				try {
 					const errBody = await res.json();
@@ -138,16 +145,19 @@
 				}
 				if (res.status >= 500) {
 					console.error(`Löschen fehlgeschlagen: HTTP ${res.status}`, detail);
-					throw new Error('Aktion fehlgeschlagen — Serverfehler, bitte später erneut versuchen.');
+					errorMsg = 'Aktion fehlgeschlagen — Serverfehler, bitte später erneut versuchen.';
 				} else if (detail) {
-					throw new Error(detail);
+					errorMsg = detail;
 				} else {
-					throw new Error('Aktion fehlgeschlagen, bitte später erneut versuchen.');
+					errorMsg = 'Aktion fehlgeschlagen, bitte später erneut versuchen.';
 				}
+				return;
 			}
 			void goto('/trips');
 		} catch (e) {
-			errorMsg = e instanceof Error ? e.message : String(e);
+			console.error(e);
+			// Issue #1065: echter Netzwerkfehler (kein HTTP-Response) → generische Meldung.
+			errorMsg = 'Aktion fehlgeschlagen — bitte Verbindung prüfen.';
 		} finally {
 			isLoading = false;
 			deleteDialogOpen = false;

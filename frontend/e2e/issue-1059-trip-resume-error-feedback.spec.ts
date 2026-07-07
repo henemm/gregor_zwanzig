@@ -109,4 +109,42 @@ test.describe('Issue #1059 — Fehler-Feedback bei Pause/Fortsetzen/Archivieren'
 
 		await expect(page.getByTestId('trip-detail-action-error')).not.toBeVisible({ timeout: 8000 });
 	});
+
+	test('AC-5 (Issue #1065): Echter Netzwerkfehler zeigt übersetzte Meldung statt roher Browser-Meldung', async ({
+		page,
+		request
+	}) => {
+		await request.patch(`/api/trips/${TRIP_ID}/state`, { data: { paused: true } });
+		await page.goto(`/trips/${TRIP_ID}`);
+
+		// route.abort() simuliert einen echten Netzwerkfehler (DNS/Verbindung);
+		// fetch() wirft, es gibt keinen HTTP-Response.
+		await page.route('**/api/trips/*/state', (route) => route.abort('failed'));
+
+		await page.getByRole('button', { name: 'Fortsetzen' }).click();
+
+		const errorEl = page.getByTestId('trip-detail-action-error');
+		await expect(errorEl).toBeVisible();
+		await expect(errorEl).not.toHaveText(/Failed to fetch/i);
+		await expect(errorEl).toHaveText(/Aktion fehlgeschlagen.*Verbindung/i);
+	});
+
+	test('AC-6 (Issue #1065): HTTP-4xx mit detail wird nicht von Netzwerkfehler-Übersetzung überschrieben', async ({
+		page,
+		request
+	}) => {
+		await request.patch(`/api/trips/${TRIP_ID}/state`, { data: { paused: true } });
+		await page.goto(`/trips/${TRIP_ID}`);
+
+		await page.route('**/api/trips/*/state', (route) =>
+			route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ detail: 'Pause not allowed now' }) })
+		);
+
+		await page.getByRole('button', { name: 'Fortsetzen' }).click();
+
+		const errorEl = page.getByTestId('trip-detail-action-error');
+		await expect(errorEl).toBeVisible();
+		await expect(errorEl).toHaveText('Pause not allowed now');
+		await expect(errorEl).not.toHaveText(/Verbindung/i);
+	});
 });
