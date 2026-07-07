@@ -165,6 +165,10 @@ eigenes Folge-Issue nach F9-Fahrplan.
 
 ## Changelog
 
+- 2026-07-07: Slice 4 (#1071) implementiert und Adversary-verifiziert (Endpoint
+  POST /api/auth/tier-change-request, RequestedTier/RequestedAt als Pointer-Typ, neues
+  Config-Feld PoEmail/GZ_PO_EMAIL, Formular in Account-Karte). Epic #1067 damit VOLLSTÄNDIG
+  (alle 4 Slices #1068-#1071 live).
 - 2026-07-07: Slice 3 (#1070) implementiert und Adversary-verifiziert (Tages-Obergrenze
   Free 2 / Standard 4 / Premium unbegrenzt, Vienna-Mitternachts-Reset, beide Alert-Pfade,
   Cron alertChecks 30→15 Min). Folge-Issue #1081 (Test-Coverage AC-2/AC-3-Wiring + AC-6-Deviation).

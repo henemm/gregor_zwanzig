@@ -4,6 +4,7 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Btn } from '$lib/components/atoms';
 	import { api } from '$lib/api.js';
+	import { invalidateAll } from '$app/navigation';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import CheckIcon from '@lucide/svelte/icons/check';
@@ -48,6 +49,41 @@
 	};
 	function tierLabel(tier: unknown): string {
 		return TIER_LABELS[(tier as UserTier)] ?? 'Free';
+	}
+
+	// Issue #1071 — Level-Wechsel beantragen. Der Pending-Hinweis wird
+	// ausschließlich aus dem Server-State abgeleitet (requested_tier vorhanden
+	// UND ungleich tier), damit er einen Reload übersteht.
+	const TIER_OPTIONS: UserTier[] = ['free', 'standard', 'premium'];
+	let requestedTierChoice = $state<UserTier>('standard');
+	let tierChangeStatus = $state<TestStatus>('idle');
+	let tierChangeError = $state<string | null>(null);
+	const pendingTier = $derived(
+		data.profile?.requested_tier && data.profile.requested_tier !== data.profile?.tier
+			? (data.profile.requested_tier as UserTier)
+			: null
+	);
+
+	async function requestTierChange() {
+		tierChangeStatus = 'loading';
+		tierChangeError = null;
+		try {
+			await api.post('/api/auth/tier-change-request', { requested_tier: requestedTierChoice });
+			// Profil neu laden, damit requested_tier sofort im UI erscheint.
+			await invalidateAll();
+			tierChangeStatus = 'ok';
+			setTimeout(() => (tierChangeStatus = 'idle'), 4000);
+		} catch (e: unknown) {
+			const body = e as { error?: string };
+			if (body?.error === 'already_current_tier') {
+				tierChangeError = 'Dieses Level ist bereits aktiv';
+			} else if (body?.error === 'invalid_tier') {
+				tierChangeError = 'Ungültiges Level';
+			} else {
+				tierChangeError = body?.error ?? 'Antrag fehlgeschlagen';
+			}
+			tierChangeStatus = 'error';
+		}
 	}
 
 	function startEdit(p: MetricPreset) {
@@ -585,6 +621,42 @@
 				<div data-testid="tier" class="mb-4">
 					<p class="text-sm font-medium mb-2">Level</p>
 					<Badge variant="secondary">{tierLabel(data.profile?.tier)}</Badge>
+				</div>
+
+				<!-- Level-Wechsel beantragen (Issue #1071) -->
+				<div data-testid="tier-change" class="mb-4">
+					<p class="text-sm font-medium mb-2">Level-Wechsel beantragen</p>
+					{#if pendingTier}
+						<p data-testid="tier-change-pending" class="text-sm text-muted-foreground mb-2">
+							Level-Wechsel zu <span class="font-medium">{tierLabel(pendingTier)}</span> beantragt — wird vom Betreiber geprüft.
+						</p>
+					{/if}
+					<div class="flex flex-wrap items-center gap-2">
+						<select
+							data-testid="tier-change-select"
+							bind:value={requestedTierChoice}
+							class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+						>
+							{#each TIER_OPTIONS as opt}
+								<option value={opt}>{tierLabel(opt)}</option>
+							{/each}
+						</select>
+						<Btn
+							data-testid="tier-change-submit"
+							variant="outline"
+							size="sm"
+							disabled={tierChangeStatus === 'loading'}
+							onclick={requestTierChange}
+						>
+							{tierChangeStatus === 'loading' ? 'Wird gesendet…' : 'Antrag stellen'}
+						</Btn>
+					</div>
+					{#if tierChangeStatus === 'ok'}
+						<p class="text-sm text-green-600 mt-2">Antrag gesendet</p>
+					{/if}
+					{#if tierChangeStatus === 'error' && tierChangeError}
+						<p class="text-sm text-destructive mt-2">{tierChangeError}</p>
+					{/if}
 				</div>
 
 				<!-- Zähler -->

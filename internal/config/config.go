@@ -34,6 +34,9 @@ type Config struct {
 	GoogleClientSecret string `envconfig:"GOOGLE_CLIENT_SECRET" default:""`
 	GoogleRedirectURL  string `envconfig:"GOOGLE_REDIRECT_URL" default:""`
 	PublicHost        string `envconfig:"PUBLIC_HOST" default:"https://gregor20.henemm.com"`
+	// Issue #1071 — PO-Benachrichtigung bei Level-Änderungs-Anträgen.
+	// Präfix "GZ" via envconfig.Process → Env-Var GZ_PO_EMAIL.
+	PoEmail           string `envconfig:"PO_EMAIL" default:"gregor_zwanzig@henemm.com"`
 	TestFixtureDir    string `envconfig:"TEST_FIXTURE_DIR" default:""`
 	// Issue #450 — Passkey/WebAuthn V1 Add-on
 	WebAuthnRPID          string `envconfig:"WEBAUTHN_RP_ID" default:"localhost"`

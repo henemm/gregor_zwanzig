@@ -20,6 +20,11 @@ type User struct {
 	OAuthSub           string               `json:"oauth_sub,omitempty"`
 	DisplayName        string               `json:"display_name,omitempty"`
 	Tier               string               `json:"tier,omitempty"`
+	// Issue #1071 — offener Level-Änderungs-Antrag. RequestedAt MUSS ein Pointer
+	// sein: Go's encoding/json omitempty greift bei time.Time-Structs nicht, ein
+	// Zero-Value würde als "0001-01-01T00:00:00Z" serialisiert statt weggelassen.
+	RequestedTier      string               `json:"requested_tier,omitempty"`
+	RequestedAt        *time.Time           `json:"requested_at,omitempty"`
 }
 
 type PasswordResetToken struct {

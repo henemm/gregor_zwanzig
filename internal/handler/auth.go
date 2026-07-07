@@ -369,6 +369,10 @@ type profileResponse struct {
 	TelegramChatID string                `json:"telegram_chat_id,omitempty"`
 	Tier           string                `json:"tier"`
 	SmsAllowed     bool                  `json:"sms_allowed"`
+	// Issue #1071 — offener Level-Änderungs-Antrag. Fehlt im JSON, solange kein
+	// Antrag vorliegt (omitempty bzw. nil-Pointer).
+	RequestedTier  string                `json:"requested_tier,omitempty"`
+	RequestedAt    *time.Time            `json:"requested_at,omitempty"`
 	CreatedAt      string                `json:"created_at"`
 	HasPasskey     bool                  `json:"has_passkey"`
 	Passkeys       []passkeyProfileEntry `json:"passkeys,omitempty"`
@@ -414,6 +418,8 @@ func toProfileResponse(u *model.User) profileResponse {
 		TelegramChatID: u.TelegramChatID,
 		Tier:           tier,
 		SmsAllowed:     model.SmsAllowed(tier),
+		RequestedTier:  u.RequestedTier,
+		RequestedAt:    u.RequestedAt,
 		CreatedAt:      u.CreatedAt.Format(time.RFC3339),
 		HasPasskey:     len(u.PasskeyCredentials) > 0,
 		Passkeys:       passkeys,
@@ -560,5 +566,101 @@ func ChangePasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 		}
 
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	}
+}
+
+// effectiveTier normalisiert den gespeicherten Tier-Wert am Lesezeitpunkt auf
+// free/standard/premium — identischer Fallback wie in toProfileResponse().
+func effectiveTier(tier string) string {
+	if tier != "free" && tier != "standard" && tier != "premium" {
+		return "free"
+	}
+	return tier
+}
+
+// RequestTierChangeHandler nimmt einen Level-Änderungs-Antrag entgegen (Issue
+// #1071). Der Antrag wird per Read-Modify-Write in der user.json vermerkt
+// (requested_tier/requested_at) und löst asynchron eine Benachrichtigungsmail
+// an den PO aus. Das effektive tier-Feld bleibt unverändert — die Freigabe
+// erfolgt weiterhin manuell durch den PO.
+func RequestTierChangeHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := middleware.UserIDFromContext(r.Context())
+		w.Header().Set("Content-Type", "application/json")
+
+		user, err := s.LoadUser(userId)
+		if err != nil || user == nil {
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not_found"}`))
+			return
+		}
+
+		var req struct {
+			RequestedTier string `json:"requested_tier"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"invalid request"}`))
+			return
+		}
+
+		if req.RequestedTier != "free" && req.RequestedTier != "standard" && req.RequestedTier != "premium" {
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"invalid_tier"}`))
+			return
+		}
+
+		currentTier := effectiveTier(user.Tier)
+		if req.RequestedTier == currentTier {
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"already_current_tier"}`))
+			return
+		}
+
+		now := time.Now()
+		user.RequestedTier = req.RequestedTier
+		user.RequestedAt = &now
+		if err := s.SaveUser(*user); err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+
+		// Erst nach erfolgreichem Save antworten — Mail beeinflusst die Response nie.
+		w.Write([]byte(`{"status":"ok"}`))
+
+		if cfg.PoEmail == "" {
+			log.Printf("tier-change: PO_EMAIL not configured — request stored for %s but no mail sent", userId)
+			return
+		}
+		if cfg.SMTPHost == "" {
+			log.Printf("tier-change: SMTP not configured — request stored for %s but no mail sent", userId)
+			return
+		}
+
+		mailCfg := mail.MailConfig{
+			Host: cfg.SMTPHost, Port: cfg.SMTPPort,
+			User: cfg.SMTPUser, Pass: cfg.SMTPPass,
+			From: cfg.SMTPFrom,
+		}
+		fallbackCfg := mail.MailConfig{
+			Host: cfg.FallbackSMTPHost, Port: 587,
+			User: cfg.FallbackSMTPUser, Pass: cfg.FallbackSMTPPass,
+		}
+		msg := mail.BuildTierChangeRequestMail(userId, currentTier, req.RequestedTier)
+
+		// Goroutine mit Timeout — der Endpoint darf nicht auf SMTP blockieren.
+		go func(to string, msg mail.Mail, c, fb mail.MailConfig, username string) {
+			done := make(chan error, 1)
+			go func() { done <- mail.SendWithFallback(c, fb, to, msg) }()
+			select {
+			case err := <-done:
+				if err != nil {
+					log.Printf("tier-change: mail send failed for %s: %v", username, err)
+				}
+			case <-time.After(20 * time.Second):
+				log.Printf("tier-change: mail send timeout (20s) for %s", username)
+			}
+		}(cfg.PoEmail, msg, mailCfg, fallbackCfg, userId)
 	}
 }

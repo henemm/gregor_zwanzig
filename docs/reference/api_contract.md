@@ -1973,6 +1973,8 @@ Returns authenticated user profile (requires valid session cookie).
   "sms_to": "+49151XXXXXXXX",
   "tier": "free",
   "sms_allowed": false,
+  "requested_tier": "standard",
+  "requested_at": "2026-07-07T14:00:00Z",
   "has_passkey": true,
   "passkeys": [
     {
@@ -2004,6 +2006,8 @@ Returns authenticated user profile (requires valid session cookie).
 | sms_to | string | SMS recipient phone number (international format, e.g. `+49151XXXXXXXX`); empty if not configured |
 | tier | string | User's level: `free`/`standard`/`premium` (Issue #1068, Slice 1 of Epic #1067); always present, defaults to `free` if unset on the underlying `user.json` (fallback happens only at read time, never written back); display-only in this slice, no channel or alert-frequency enforcement yet |
 | sms_allowed | bool | Whether SMS channel is available for this user (Issue #1069, Slice 2 of Epic #1067); `true` if `tier` is `standard` or `premium`, `false` for `free`; determines server-side channel-gating in report-dispatch and alert-dispatch |
+| requested_tier | string | Level change requested by the user via `POST /api/auth/tier-change-request` (Issue #1071, Slice 4 of Epic #1067); `omitempty` — absent/empty if no request is pending. Does not change `tier` itself; only the PO setting `tier` manually clears the pending state (once `requested_tier == tier`, the frontend Pending-hint disappears) |
+| requested_at | string (RFC3339) | Timestamp of the pending tier-change request set alongside `requested_tier`; pointer type server-side so it is omitted entirely (not a zero-value timestamp) when no request is pending |
 | has_passkey | bool | Whether user has registered any passkeys |
 | passkeys | array | List of registered WebAuthn credentials (empty if `has_passkey=false`) |
 
@@ -2042,6 +2046,45 @@ Returns updated profile object (same as `GET /api/auth/profile`).
 | 400 | `{"error":"bad_request"}` | JSON not decodable |
 | 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
 
+#### POST /api/auth/tier-change-request
+
+Requests a level change (Free/Standard/Premium) for the authenticated user (Issue #1071, Slice 4
+of Epic #1067). Vermerkt den Antrag per Read-Modify-Write in `user.json`
+(`requested_tier`/`requested_at`) und löst eine asynchrone Benachrichtigungsmail an den PO aus
+(`PO_EMAIL`/`cfg.PoEmail`). Das effektive `tier`-Feld wird durch diesen Endpoint **nicht**
+verändert — Freigabe erfolgt weiterhin manuell durch den PO.
+
+**Request Body:**
+```json
+{
+  "requested_tier": "standard"
+}
+```
+
+**Response 200:**
+```json
+{"status": "ok"}
+```
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"invalid request"}` | JSON not decodable |
+| 400 | `{"error":"invalid_tier"}` | `requested_tier` not one of `free`/`standard`/`premium` |
+| 400 | `{"error":"already_current_tier"}` | `requested_tier` equals the user's current effective `tier` |
+| 404 | `{"error":"not_found"}` | No user found for the authenticated `user_id` |
+| 500 | `{"error":"store_error"}` | `SaveUser` failed |
+| 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
+
+**Notes:**
+- Mail-Versand ist "fire and forget" (Goroutine + 20s-Timeout, analog `ForgotPasswordHandler`): ein
+  fehlschlagender/timeout-behafteter Mailversand oder ein leeres `PO_EMAIL`/`SMTP_HOST` blockiert
+  die bereits gesendete `200`-Antwort nicht — der Antrag ist unabhängig vom Mail-Ergebnis
+  persistiert.
+- Kein Dedup, kein Clear-Endpoint, kein Rate-Limiting über die Session-Auth hinaus — siehe
+  `docs/specs/modules/issue_1071_tier_change_request.md` (Known Limitations).
+
 ### User Model Extensions
 
 **File:** `internal/model/user.go`
@@ -2049,16 +2092,19 @@ Returns updated profile object (same as `GET /api/auth/profile`).
 ```go
 type User struct {
     ID                 string                 `json:"id"`
-    DisplayName        string                 `json:"display_name,omitempty"`  // NEW (Issue #642) — user's chosen display name; omitempty if not set
     Email              string                 `json:"email,omitempty"`
     PasswordHash       string                 `json:"password_hash,omitempty"`  // now optional (omitempty)
     PasskeyCredentials []WebAuthnCredential   `json:"passkey_credentials,omitempty"`  // NEW (Issue #450)
     CreatedAt          time.Time              `json:"created_at"`
     MailTo             string                 `json:"mail_to,omitempty"`
     SmsTo              string                 `json:"sms_to,omitempty"`  // NEW (Issue #609) — SMS recipient phone number
-    SignalPhone        string                 `json:"signal_phone,omitempty"`
-    SignalAPIKey       string                 `json:"signal_api_key,omitempty"`
     TelegramChatID     string                 `json:"telegram_chat_id,omitempty"`
+    OAuthProvider      string                 `json:"oauth_provider,omitempty"`
+    OAuthSub           string                 `json:"oauth_sub,omitempty"`
+    DisplayName        string                 `json:"display_name,omitempty"`  // NEW (Issue #642) — user's chosen display name; omitempty if not set
+    Tier               string                 `json:"tier,omitempty"`  // NEW (Issue #1068, Slice 1 of Epic #1067) — free/standard/premium; empty defaults to "free" at read time
+    RequestedTier      string                 `json:"requested_tier,omitempty"`  // NEW (Issue #1071, Slice 4 of Epic #1067) — pending level-change request
+    RequestedAt        *time.Time             `json:"requested_at,omitempty"`  // NEW (Issue #1071) — pointer type: plain time.Time's omitempty doesn't work, would serialize as zero-value "0001-01-01T00:00:00Z" instead of being omitted
 }
 
 type WebAuthnCredential struct {
@@ -2079,6 +2125,8 @@ type WebAuthnCredential struct {
 - `PasswordHash` field now optional; existing users retain their password hash
 - Profile endpoint includes `has_passkey` boolean and `passkeys[]` array (excludes `public_key` and raw crypto fields)
 - Passkey profile entry may include optional `authenticator_name` field (Issue #468 — resolved AAGUID mappings; missing if AAGUID unknown or zero)
+- Existing `user.json` files without `tier` deserialize with an empty string, treated as `free` at read time only (never written back, no forced rewrite of existing files)
+- Existing `user.json` files without `requested_tier`/`requested_at` deserialize cleanly (`omitempty`/`nil` pointer); both fields are absent from the `GET /api/auth/profile` response until the user submits a tier-change request
 
 ---
 
@@ -2382,6 +2430,13 @@ export interface AlertRule {
 
 ## Changelog
 
+- 2026-07-07: Issue #1071 (Slice 4 aus Epic #1067 Nutzerlevel Free/Standard/Premium, letztes
+  Slice — Epic damit VOLLSTÄNDIG) — neuer Endpoint `POST /api/auth/tier-change-request` für
+  Level-Änderungs-Anträge; `GET /api/auth/profile` liefert zusätzlich `requested_tier`/
+  `requested_at` (beide `omitempty`, `requested_at` serverseitig Pointer-Typ). Antrag wird per
+  Read-Modify-Write in `user.json` vermerkt und löst eine asynchrone Mail an `PO_EMAIL` aus; das
+  effektive `tier`-Feld ändert sich dadurch nicht. Siehe
+  `docs/specs/modules/issue_1071_tier_change_request.md`.
 - 2026-07-07: Issue #1068 (Slice 1 aus Epic #1067 Nutzerlevel Free/Standard/Premium) — `GET
   /api/auth/profile` liefert neu ein Feld `tier` (`free`/`standard`/`premium`, immer vorhanden,
   Default `free` falls im `user.json` nicht gesetzt, Fallback nur beim Lesen, kein Rückschreiben).
