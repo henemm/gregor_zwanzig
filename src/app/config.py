@@ -140,6 +140,7 @@ class Settings(BaseSettings):
     # Telegram settings (for telegram channel via Bot API)
     telegram_bot_token: str = Field(default="", description="Telegram Bot API token from @BotFather")
     telegram_chat_id: str = Field(default="", description="Telegram chat ID of recipient")
+    telegram_test_chat_id: str = Field(default="", description="Telegram test chat ID (staging/test users) — GZ_TELEGRAM_TEST_CHAT_ID")
 
     def get_location(self) -> Location:
         """Create Location object from settings."""
@@ -176,6 +177,7 @@ class Settings(BaseSettings):
                 "is_test_mode": True,
                 "smtp_host": test_host,
                 "smtp_port": self.test_smtp_port,
+                "telegram_chat_id": self.telegram_test_chat_id or self.telegram_chat_id,
             })
         return self.model_copy(update={
             "smtp_host": test_host,
@@ -187,6 +189,7 @@ class Settings(BaseSettings):
             "imap_user": self.test_imap_user or self.test_smtp_user,
             "imap_pass": self.test_imap_pass or self.test_smtp_pass,
             "is_test_mode": True,
+            "telegram_chat_id": self.telegram_test_chat_id or self.telegram_chat_id,
         })
 
     @staticmethod
@@ -222,7 +225,7 @@ class Settings(BaseSettings):
         overrides = {}
         if profile.get("mail_to"):
             overrides["mail_to"] = profile["mail_to"]
-        if profile.get("telegram_chat_id"):
+        if profile.get("telegram_chat_id") and not force_test:
             overrides["telegram_chat_id"] = profile["telegram_chat_id"]
         if profile.get("sms_to"):
             overrides["sms_to"] = profile["sms_to"]
