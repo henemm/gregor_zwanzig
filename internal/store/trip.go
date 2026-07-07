@@ -108,6 +108,11 @@ func (s *Store) SaveTrip(trip model.Trip) error {
 	activeIDs := model.ActiveAlertableMetricIDs(trip.DisplayConfig)
 	trip.AlertRules = model.SyncAlertRules(trip.AlertRules, activeIDs)
 
+	// Issue #1000: snow_line -> freezing_level im Go-Schreibpfad migrieren,
+	// symmetrisch zu AC-3 #959 im Python-Loader (kein Werte-Verlust bei
+	// Bestands-Clients, die den Legacy-Key schreiben).
+	migrateMetricAlertLevels(trip.DisplayConfig)
+
 	// Issue #802: Compute-on-Save — arrival_calculated für alle Stages setzen,
 	// zentral an einer Stelle (alle Go-Schreiber rufen SaveTrip).
 	speeds := model.ActivitySpeed(trip.Activity)
@@ -130,4 +135,28 @@ func (s *Store) DeleteTrip(id string) error {
 		return nil
 	}
 	return err
+}
+
+// migrateMetricAlertLevels verschiebt einen Legacy-Key
+// "display_config.metric_alert_levels.snow_line" nach "freezing_level",
+// falls letzterer noch nicht gesetzt ist. Siehe Python-_migrate_metric_alert_levels
+// (Issue #959) und Go-Pendant Issue #1000.
+func migrateMetricAlertLevels(displayConfig map[string]interface{}) {
+	if displayConfig == nil {
+		return
+	}
+	raw, ok := displayConfig["metric_alert_levels"]
+	if !ok {
+		return
+	}
+	levels, ok := raw.(map[string]interface{})
+	if !ok {
+		return
+	}
+	if v, ok := levels["snow_line"]; ok {
+		if _, exists := levels["freezing_level"]; !exists {
+			levels["freezing_level"] = v
+		}
+		delete(levels, "snow_line")
+	}
 }

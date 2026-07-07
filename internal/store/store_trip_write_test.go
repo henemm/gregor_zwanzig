@@ -127,3 +127,56 @@ func TestDeleteTripNotFound(t *testing.T) {
 		t.Errorf("expected no error for nonexistent trip, got %v", err)
 	}
 }
+
+// Issue #1000: SaveTrip muss display_config.metric_alert_levels.snow_line
+// nach freezing_level migrieren, symmetrisch zum Python-Loader (AC-3 #959).
+func TestSaveTrip_MigratesSnowLineToFreezingLevel(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := New(tmpDir, "test")
+
+	trip := model.Trip{
+		ID:     "snow-line-mig",
+		Name:   "Snow Line Migration",
+		Stages: []model.Stage{},
+		DisplayConfig: map[string]interface{}{
+			"metric_alert_levels": map[string]interface{}{
+				"snow_line": "sensibel",
+			},
+		},
+	}
+
+	if err := s.SaveTrip(trip); err != nil {
+		t.Fatalf("SaveTrip failed: %v", err)
+	}
+
+	written, err := os.ReadFile(filepath.Join(tmpDir, "users", "test", "trips", "snow-line-mig.json"))
+	if err != nil {
+		t.Fatalf("read written: %v", err)
+	}
+	s2 := string(written)
+	if !strings.Contains(s2, `"freezing_level": "sensibel"`) {
+		t.Fatalf("Erwartet freezing_level='sensibel' im File, war: %s", s2)
+	}
+	if strings.Contains(s2, `"snow_line"`) {
+		t.Fatalf("snow_line-Key hätte entfernt sein müssen, war: %s", s2)
+	}
+
+	// Reload: LoadTrip sieht freezing_level, nicht snow_line.
+	loaded, err := s.LoadTrip("snow-line-mig")
+	if err != nil {
+		t.Fatalf("LoadTrip failed: %v", err)
+	}
+	if loaded == nil {
+		t.Fatal("expected trip, got nil")
+	}
+	levels, ok := loaded.DisplayConfig["metric_alert_levels"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("metric_alert_levels nicht lesbar: %v", loaded.DisplayConfig["metric_alert_levels"])
+	}
+	if levels["freezing_level"] != "sensibel" {
+		t.Errorf("Erwartet freezing_level='sensibel' nach Reload, got %v", levels["freezing_level"])
+	}
+	if _, exists := levels["snow_line"]; exists {
+		t.Errorf("snow_line-Key sollte nach Reload nicht mehr existieren")
+	}
+}
