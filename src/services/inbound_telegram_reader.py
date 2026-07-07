@@ -165,6 +165,24 @@ class InboundTelegramReader:
         # Resolve user-scoped settings for this chat_id
         user_id, user_settings = self._resolve_user_for_chat(chat_id, settings)
 
+        # #1019: unbekannter Absender (kein User-Match) erhaelt Registrierungs-Hinweis,
+        # KEINE Trip-/Wetterdaten. Betreiber-Account faellt hier nie hinein, da
+        # `henning` regulaer per telegram_chat_id registriert ist.
+        if user_id == "default":
+            mid = self._notification_service.send_telegram_message(
+                chat_id=chat_id,
+                subject="Registrierung erforderlich",
+                body=(
+                    "Dieser Chat ist noch nicht mit einem Gregor-Zwanzig-Konto "
+                    "verknuepft. Sende /start gefolgt von deinem Token (zu finden "
+                    "im Account-Bereich auf gregor20.henemm.com)."
+                ),
+                settings=settings,
+            )
+            if mid is not None:
+                self.sent_message_ids.append(mid)
+            return True
+
         # Aktiven Trip ermitteln (user-scoped)
         trip = self._find_active_trip(user_id)
         if not trip:
@@ -273,6 +291,24 @@ class InboundTelegramReader:
 
         user_id, user_settings = self._resolve_user_for_chat(chat_id, settings)
         try:
+            # #1019: unbekannter Absender (kein User-Match) erhaelt auch beim
+            # Button-Klick nur den Registrierungs-Hinweis, KEINE Trip-/Wetter-
+            # daten. Die angeklickte Nachricht wird in-place ersetzt;
+            # answer_telegram_callback_query laeuft weiterhin im finally.
+            if user_id == "default":
+                if message_id is not None and chat_id:
+                    self._notification_service.edit_telegram_message_text(
+                        chat_id=chat_id,
+                        message_id=message_id,
+                        text=(
+                            "Dieser Chat ist noch nicht mit einem Gregor-Zwanzig-Konto "
+                            "verknuepft. Sende /start gefolgt von deinem Token (zu finden "
+                            "im Account-Bereich auf gregor20.henemm.com)."
+                        ),
+                        settings=settings,
+                    )
+                return True
+
             body = self._callback_to_body(data)  # None bei unbekannt
             if body and message_id is not None and chat_id:
                 trip = self._find_active_trip(user_id)

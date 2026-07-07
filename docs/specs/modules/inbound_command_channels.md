@@ -488,6 +488,8 @@ def test_imap_failure_does_not_crash_scheduler()
 
 Kein Fehler darf den APScheduler-Thread zum Absturz bringen.
 
+> **Hinweis (Issue #1009):** Eine unbehandelte Exception bei der Kommando-Verarbeitung oder beim Antwortversand würde eine Mail in einem undefinierten Zustand hinterlassen. Seit Issue #1009 werden Verarbeitung und Antwortversand unter einem gemeinsamen `try/except/finally` durchgeführt, mit `\Seen`-Markierung **im finally-Block** — damit wird die Mail in jedem Fall (auch bei Fehler) als gelesen markiert, was ein Reprocessing beim nächsten Poll-Zyklus verhindert.
+
 ## Changelog
 
 - 2026-04-12: v1.2 BUGFIX (BUG-IMAP-01): `inbound_email_reader.py` nutzt jetzt `imap_user`/`imap_pass` aus config statt `smtp_user`/`smtp_pass`. `config.py` und `scheduler.py` entsprechend angepasst. Siehe `docs/project/known_issues.md` → BUG-IMAP-01.

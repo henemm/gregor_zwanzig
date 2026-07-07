@@ -244,6 +244,12 @@ def test_inbound_message_channel_is_telegram(monkeypatch):
         "services.inbound_telegram_reader.load_all_trips",
         lambda user_id="default": [trip],
     )
+    # #1019: chat_id muss einem registrierten Nutzer zugeordnet sein, sonst
+    # greift das Registrierungs-Gate und der Processor wird nie erreicht.
+    monkeypatch.setattr(
+        "app.loader.lookup_user_by_telegram_chat_id",
+        lambda chat_id, data_dir="data": "gr20",
+    )
     monkeypatch.setattr(
         "services.trip_command_processor.TripCommandProcessor.process",
         fake_process,

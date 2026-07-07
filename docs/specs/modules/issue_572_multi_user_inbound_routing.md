@@ -139,6 +139,8 @@ def _resolve_user_for_chat(self, chat_id: str, base_settings: Settings) -> tuple
 
 **AC-4:** Given kein User-Profil mit passender Telegram-Chat-ID / When der Inbound-Telegram-Reader ein Update von unbekannter Chat-ID verarbeitet / Then wird `user_id = "default"` verwendet und kein Fehler geworfen.
 
+> **Hinweis (seit Issue #1019):** Der `"default"`-Fallback wird intern ermittelt (daher "kein Fehler"), aber bei der **Telegram-Kommando-Verarbeitung** wird zusätzlich ein Autorisierungs-Gate eingefügt: ein unbekannter Telegram-Absender erhält einen Registrierungs-Hinweis, statt Trip-/Wetterdaten zu laden. Die User-ID-Auflösung (diese Spec) und die Kommando-Verarbeitung (`issue_1009_1019_inbound_reader_robustness.md`) sind getrennte Schichten — AC-3/AC-4 bleiben gültig, beschreiben aber nur die Auflösungslogik, nicht die nachgelagerte Daten-Freigabe.
+
 **AC-5:** Given `list_all_user_ids()` wird aufgerufen / When `data/users/` Verzeichnisse enthält die mit `test_` oder `_` beginnen / Then werden diese aus der Rückgabe ausgeschlossen.
 
 **AC-6:** Given ein User-Profil mit `mail_to` / When `lookup_user_by_email` mit der gleichen Adresse in anderer Groß-/Kleinschreibung aufgerufen wird / Then wird der Vergleich case-insensitiv durchgeführt und der User gefunden.

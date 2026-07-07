@@ -136,7 +136,11 @@ class InboundEmailReader:
         # 4. Extract body
         body = self._extract_plain_body(msg)
 
-        # 5. Delegate to processor
+        # 5. Delegate to processor + 6. Reply — beide unter einem gemeinsamen
+        # try/except/finally, damit "Seen" in jedem Fall gesetzt wird (#1009).
+        # Antwort auf gleichem Kanal — ALWAYS send (success und error), AUSSER
+        # das Kommando hat bereits das volle Briefing verschickt (Issue #1007:
+        # heute/morgen) — dann IST das Briefing die Antwort, keine Doppel-Mail.
         inbound = InboundMessage(
             trip_name=trip_name,
             body=body,
@@ -145,18 +149,17 @@ class InboundEmailReader:
             received_at=datetime.now(tz=timezone.utc),
             user_id=_user_id,
         )
-        processor = TripCommandProcessor()
-        result = processor.process(inbound)
-
-        # 6. Reply on same channel — ALWAYS send (success and error), AUSSER
-        # das Kommando hat bereits das volle Briefing verschickt (Issue #1007:
-        # heute/morgen) — dann IST das Briefing die Antwort, keine Doppel-Mail.
-        if user_settings.can_send_email() and not result.suppress_email_reply:
-            self._notification_service.send_command_reply_email(result, user_settings)
-
-        # 7. Mark as read
-        imap.store(uid, "+FLAGS", "\\Seen")
-        return 1
+        try:
+            processor = TripCommandProcessor()
+            result = processor.process(inbound)
+            if user_settings.can_send_email() and not result.suppress_email_reply:
+                self._notification_service.send_command_reply_email(result, user_settings)
+            return 1
+        except Exception:
+            logger.exception(f"Fehler bei Verarbeitung/Versand fuer trip_id={trip_id!r}")
+            return 0
+        finally:
+            imap.store(uid, "+FLAGS", "\\Seen")
 
     def _strip_reply_prefixes(self, subject: str) -> str:
         """Recursively remove Re:, AW:, Fwd:, WG: etc."""
