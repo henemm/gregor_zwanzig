@@ -7,6 +7,7 @@ with validation and error handling.
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from datetime import date
 from pathlib import Path
@@ -38,6 +39,7 @@ from app.user import (
     UserPreferences,
 )
 
+logger = logging.getLogger(__name__)
 
 # Mapping Legacy report_config -> AlertMetric + Unit (Issue #205)
 _LEGACY_DELTA_MAPPING: list[tuple[str, AlertMetric, str]] = [
@@ -65,8 +67,7 @@ def _resolve_format_mode(mc_data: dict, metric_id: str) -> str:
             from app.metric_catalog import get_metric
             metric_def = get_metric(metric_id)
             if raw not in metric_def.format_modes:
-                import logging
-                logging.getLogger(__name__).warning(
+                logger.warning(
                     "Unknown format_mode %r for metric %r; "
                     "falling back to default %r",
                     raw, metric_id, metric_def.default_format_mode,
@@ -875,12 +876,19 @@ def load_all_locations(user_id: str = "default") -> List[SavedLocation]:
             activity_profile_str = data.get("activity_profile", "allgemein")
             display_config_data = data.get("display_config")
             display_config = _parse_display_config(display_config_data) if display_config_data else None
+            elevation_m = data.get("elevation_m")
+            if elevation_m is None:
+                logger.warning(
+                    "Location %s (%s) ohne elevation_m geladen — Go/Python-Vertragsbruch #1039",
+                    data.get("id", path.stem),
+                    path,
+                )
             locations.append(SavedLocation(
                 id=data.get("id", path.stem),
                 name=data["name"],
                 lat=data["lat"],
                 lon=data["lon"],
-                elevation_m=data["elevation_m"],
+                elevation_m=elevation_m,
                 region=data.get("region"),
                 bergfex_slug=data.get("bergfex_slug"),
                 activity_profile=ActivityProfile(activity_profile_str),
@@ -1000,10 +1008,7 @@ def load_all_trips(
             # blockieren. Frueher fing das `except LoaderError:` nur einen Teil
             # ab — generische Exceptions (z.B. ValueError aus
             # ActivityProfile(None)) propagierten als HTTP 500.
-            import logging
-            logging.getLogger(__name__).warning(
-                "Skipping corrupt trip %s: %s", path.name, e
-            )
+            logger.warning("Skipping corrupt trip %s: %s", path.name, e)
             continue
     return trips
 

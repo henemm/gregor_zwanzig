@@ -394,3 +394,28 @@ class TestLoaderRoundTrip:
         assert "display_config" in data
         assert "metrics" in data["display_config"]
         assert len(data["display_config"]["metrics"]) > 0
+
+    def test_load_location_without_elevation_m(self):
+        """
+        Issue #1039: Location JSON ohne elevation_m (Go-API persistiert sie
+        optional) darf beim Python-Laden nicht still verworfen werden.
+        """
+        from app.loader import load_all_locations, get_locations_dir
+
+        loc_dir = get_locations_dir("__test_no_elev__")
+        loc_dir.mkdir(parents=True, exist_ok=True)
+        legacy_data = {
+            "id": "no-elev-loc",
+            "name": "No Elevation",
+            "lat": 47.0,
+            "lon": 11.0,
+            "region": None,
+            "bergfex_slug": None,
+        }
+        with open(loc_dir / "no-elev-loc.json", "w") as f:
+            json.dump(legacy_data, f)
+
+        loaded = load_all_locations(user_id="__test_no_elev__")
+        found = [l for l in loaded if l.id == "no-elev-loc"]
+        assert len(found) == 1, "Location ohne elevation_m wurde still verworfen"
+        assert found[0].elevation_m is None
