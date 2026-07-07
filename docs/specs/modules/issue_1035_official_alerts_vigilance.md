@@ -3,12 +3,21 @@ entity_id: official_alerts_vigilance
 type: module
 created: 2026-07-06
 updated: 2026-07-06
-status: draft
+status: superseded
 version: "1.0"
 tags: [compare, alerts, official-alerts, meteofrance]
 ---
 
 # Official Alerts — Météo-France Vigilance (Wetterwarnungen)
+
+> **SUPERSEDED (2026-07-06):** Dies ist der Vor-Analyse-Entwurf für #1035, geschrieben bevor die
+> Analyse-Phase den tatsächlichen API-Zugang klärte. Er beschreibt ein OAuth2-Client-Credentials-
+> Verfahren (`meteo_token_provider.py`) und einen Punkt-Bulletin-Endpoint
+> (`/vigilance/public/bulletin?lat=&lon=`), die beide **nicht existieren** — real verifiziert
+> wurde stattdessen ein einfacher `apikey`-HTTP-Header gegen den nationalen Endpoint
+> `.../DPVigilance/v1/cartevigilance/encours`. Die verbindliche, implementierte Spec ist
+> **`docs/specs/modules/issue_1035_vigilance_source.md`**. Diese Datei bleibt nur als
+> Analyse-Historie erhalten, nicht als aktuelle Referenz.
 
 ## Approval
 

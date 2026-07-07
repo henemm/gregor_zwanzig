@@ -10,10 +10,15 @@ from services.official_alerts.base import (
     register_official_alert_source,
 )
 from services.official_alerts.models import OfficialAlert
+from services.official_alerts.vigilance import VigilanceSource
+
+# Lazy-Registration bei Modul-Import (analog Provider-Pattern), Issue #1035.
+register_official_alert_source(VigilanceSource())
 
 __all__ = [
     "OfficialAlert",
     "OfficialAlertSource",
     "register_official_alert_source",
     "get_official_alerts_for_location",
+    "VigilanceSource",
 ]

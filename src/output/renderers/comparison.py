@@ -414,6 +414,11 @@ def render_comparison_text(result: ComparisonResult, top_n_details: int = 3, ena
         text, _ = WeatherMetricsService.format_cloud_status(cloud_status)
         layer_str = f"{emoji} {text}".strip() if text else "-"
         lines.append(f"   Layer: {layer_str}")
+
+        # Issue #1035 — amtliche Warnungen, eine Zeile pro Warnung
+        for alert in loc_result.official_alerts:
+            lines.append(f"   ⚠️ Amtliche Warnung: {alert.label}")
+
         lines.append("")
 
     # Hourly details

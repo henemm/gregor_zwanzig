@@ -124,43 +124,56 @@ class TestIssue1034OfficialAlertsFoundation:
         dauerhaft im Adversary-Fix-Artefakt:
         docs/artifacts/issue-1034-official-alerts-foundation/ac1-byte-identity-proof.txt
         """
-        locations = _riviera_locations()
-        target = date.today() + timedelta(days=1)
+        import services.official_alerts.base as oa_base
 
-        result = ComparisonEngine.run(
-            locations,
-            time_window=(9, 16),
-            target_date=target,
-            profile=ActivityProfile.ALLGEMEIN,
-        )
+        # Registry isolieren (analog AC-3/F004/AC-2): seit Issue #1035 registriert
+        # `services.official_alerts` beim Import eine echte Default-Quelle
+        # (VigilanceSource). Der "leere Registry"-Vertrag dieses Tests muss die
+        # globale Registry daher explizit leeren, sonst laufen mit gesetztem
+        # GZ_METEOFRANCE_APIKEY echte Vigilance-Alerts in das Ergebnis ein.
+        backup = list(oa_base._REGISTERED_SOURCES)
+        oa_base._REGISTERED_SOURCES.clear()
+        try:
+            locations = _riviera_locations()
+            target = date.today() + timedelta(days=1)
 
-        # (a) Unit-Vertrag: leere Registry -> leerer Block, unabhaengig vom HTML.
-        assert _render_official_alerts_block([]) == "", (
-            "_render_official_alerts_block([]) muss exakt '' liefern"
-        )
-        assert _render_official_alerts_block(result.locations) == "", (
-            "Ohne registrierte Quellen darf keine Location einen Alert haben -> "
-            "_render_official_alerts_block() muss exakt '' liefern"
-        )
+            result = ComparisonEngine.run(
+                locations,
+                time_window=(9, 16),
+                target_date=target,
+                profile=ActivityProfile.ALLGEMEIN,
+            )
 
-        # (b) Einfuegestelle im vollen HTML: Warnungs-Banner direkt gefolgt von
-        # genau einem Newline vor der Vergleichsmatrix -- kein Doppel-Newline,
-        # keine Badge-Spur dazwischen.
-        html = render_compare_html(
-            result, profile=ActivityProfile.ALLGEMEIN, warnings=["Sturmwarnung Test"]
-        )
-        banner_end = html.index("Sturmwarnung Test</div>") + len("Sturmwarnung Test</div>")
-        matrix_start = html.index('<table class="matrix-table"', banner_end)
-        between = html[banner_end:matrix_start]
+            # (a) Unit-Vertrag: leere Registry -> leerer Block, unabhaengig vom HTML.
+            assert _render_official_alerts_block([]) == "", (
+                "_render_official_alerts_block([]) muss exakt '' liefern"
+            )
+            assert _render_official_alerts_block(result.locations) == "", (
+                "Ohne registrierte Quellen darf keine Location einen Alert haben -> "
+                "_render_official_alerts_block() muss exakt '' liefern"
+            )
 
-        assert between.count("\n") == 1, (
-            f"Zwischen Warnungs-Banner und Vergleichsmatrix darf bei leerer "
-            f"Official-Alert-Registry nur genau EIN Newline stehen (keine "
-            f"zusaetzliche Leerzeile durch den Platzhalter), gefunden: {between!r}"
-        )
-        assert "\n\n" not in between, (
-            f"Kein Doppel-Newline an der Einfuegestelle erlaubt, gefunden: {between!r}"
-        )
+            # (b) Einfuegestelle im vollen HTML: Warnungs-Banner direkt gefolgt von
+            # genau einem Newline vor der Vergleichsmatrix -- kein Doppel-Newline,
+            # keine Badge-Spur dazwischen.
+            html = render_compare_html(
+                result, profile=ActivityProfile.ALLGEMEIN, warnings=["Sturmwarnung Test"]
+            )
+            banner_end = html.index("Sturmwarnung Test</div>") + len("Sturmwarnung Test</div>")
+            matrix_start = html.index('<table class="matrix-table"', banner_end)
+            between = html[banner_end:matrix_start]
+
+            assert between.count("\n") == 1, (
+                f"Zwischen Warnungs-Banner und Vergleichsmatrix darf bei leerer "
+                f"Official-Alert-Registry nur genau EIN Newline stehen (keine "
+                f"zusaetzliche Leerzeile durch den Platzhalter), gefunden: {between!r}"
+            )
+            assert "\n\n" not in between, (
+                f"Kein Doppel-Newline an der Einfuegestelle erlaubt, gefunden: {between!r}"
+            )
+        finally:
+            oa_base._REGISTERED_SOURCES.clear()
+            oa_base._REGISTERED_SOURCES.extend(backup)
 
     def test_ac3_werfende_quelle_fail_soft(self):
         """AC-3: Given eine registrierte Test-Fake-Quelle wirft in fetch() eine
