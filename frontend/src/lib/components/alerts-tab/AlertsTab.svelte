@@ -6,6 +6,7 @@
 	import AlertQuietHoursCard from './AlertQuietHoursCard.svelte';
 	import AlertPreviewCard from './AlertPreviewCard.svelte';
 	import AlertMetricLevelTable from './AlertMetricLevelTable.svelte';
+	import ChannelToggle from '$lib/components/trip-wizard/steps/ChannelToggle.svelte';
 	import { Eyebrow } from '$lib/components/atoms';
 	import { api } from '$lib/api';
 	import type { Trip, AlertRule, AlertMetric, SensLevel } from '$lib/types';
@@ -44,6 +45,8 @@
 	let cooldownMinutes = $state<number | undefined>(trip.alert_cooldown_minutes ?? undefined);
 	let quietFrom = $state<string | undefined>(trip.alert_quiet_from ?? undefined);
 	let quietTo = $state<string | undefined>(trip.alert_quiet_to ?? undefined);
+	// Issue #1087: Trip-Toggle amtliche Warnungen, Default aktiv (Pointer-Muster analog #1040).
+	let officialAlertsEnabled = $state<boolean>(trip.official_alerts_enabled ?? true);
 
 	// Nur aktiv gewählte alertable Metriken anzeigen (AC-1)
 	let displayMetrics = $derived(activeAlertableMetrics(trip.display_config?.metrics));
@@ -78,6 +81,27 @@
 		isOnboarding = false;
 		saveController?.schedule(buildSaveFn());
 	}
+
+	// Issue #1087: Trip-Toggle amtliche Warnungen — eigener Auto-Save-Pfad
+	// (analog buildSaveFn), damit der Toggle unabhaengig von der Alert-Tabelle
+	// gespeichert wird.
+	function buildOfficialAlertsSaveFn() {
+		const enabled = officialAlertsEnabled;
+		return async () => {
+			const updated = await api.put<Trip>(`/api/trips/${trip.id}`, {
+				official_alerts_enabled: enabled,
+			});
+			onTripUpdate?.(updated);
+		};
+	}
+
+	// Factory-Pattern (Safari-Kompatibilitaet, CLAUDE.md) statt Inline-Closure.
+	function makeOfficialAlertsToggleHandler() {
+		return (checked: boolean) => {
+			officialAlertsEnabled = checked;
+			saveController?.schedule(buildOfficialAlertsSaveFn());
+		};
+	}
 </script>
 
 <div class="alerts-tab" data-testid="alerts-tab">
@@ -107,6 +131,13 @@
 		<AlertCooldownCard bind:cooldown_minutes={cooldownMinutes} />
 		<AlertQuietHoursCard bind:quiet_from={quietFrom} bind:quiet_to={quietTo} />
 	</div>
+
+	<ChannelToggle
+		label="Amtliche Warnungen"
+		checked={officialAlertsEnabled}
+		onchange={makeOfficialAlertsToggleHandler()}
+		testid="alerts-tab-official-alerts-toggle"
+	/>
 
 	<AlertPreviewCard {trip} {alertRules} />
 </div>

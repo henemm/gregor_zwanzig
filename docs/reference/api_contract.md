@@ -595,6 +595,7 @@ type Trip struct {
     Region                  string                 `json:"region,omitempty"`
     PausedAt                *time.Time             `json:"paused_at,omitempty"`
     ArchivedAt              *time.Time             `json:"archived_at,omitempty"`
+    OfficialAlertsEnabled   *bool                  `json:"official_alerts_enabled,omitempty"` // Issue #1087, Pointer-Muster analog ComparePreset (#1040): nil = Default true; false = kein Fetch amtlicher Warnungen für diesen Trip
 }
 ```
 

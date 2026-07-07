@@ -1,6 +1,7 @@
 # Epic 1073: Amtliche Warnungen für Österreich & Italien + querschnittliche Nutzung
 
-**Status:** Geplant (2026-07-07). Baut direkt auf Epic #1033 (amtliche Alerts Frankreich) auf.
+**Status:** Geplant (2026-07-07); Slice 3 (#1087) implementiert (2026-07-07, siehe Slice-Tabelle).
+Baut direkt auf Epic #1033 (amtliche Alerts Frankreich) auf.
 **Priorität:** hoch.
 
 ## Ausgangslage
@@ -46,7 +47,7 @@ vermeiden Betriebskomplexität.
 |---|---|---|---|---|
 | 1 | #1085 | **GeoSphere-Warn-Quelle (AT)** — neue `OfficialAlertSource`, auth-frei, koordinatenbasiert; erscheint sofort im Orts-Vergleich | 1, 4 (AT) | #1033 |
 | 2 | #1086 | **MeteoAlarm-Quelle (AT+IT)** — REST/GeoJSON via MeteoGate, deckt Italien + EU | 1, 4 (IT) | #1033 + MeteoGate-Reg. |
-| 3 | #1087 | **Warnungen in Trip-Briefings + Trip-Ein-/Ausschalter** (analog #1040 ComparePreset→Trip) — querschnittliche Nutzung | 2, 6 | Slice 1/2 |
+| 3 | #1087 | **Warnungen in Trip-Briefings + Trip-Ein-/Ausschalter** (analog #1040 ComparePreset→Trip) — querschnittliche Nutzung — **implementiert 2026-07-07** | 2, 6 | Slice 1/2 |
 | 4 | #1088 | **Warnungen im Alert-Pfad** (trip_alert / radar_alert) | 3 | Slice 3 |
 | 5 | #1089 | **Region-optimale Nowcasts** (AT=GeoSphere INCA, IT=Radar-DPC) für Gefahren/Regen/Gewitter | 5 | eigenes Subsystem |
 
@@ -54,6 +55,26 @@ vermeiden Betriebskomplexität.
 Erweiterung end-to-end), parallel MeteoGate-Registrierung für Slice 2. Slice 5 (Nowcast) ist ein
 anderes Subsystem (`radar_service`/Provider-Auswahl) — als eigenständiges Thema führen, ggf.
 eigenes Folge-Epic.
+
+### Slice 3: Warnungen in Trip-Briefings (Issue #1087) — implementiert 2026-07-07
+
+Amtliche Warnungen (bisher nur im Orts-Vergleich, Epic #1033) sind jetzt querschnittlich auch in
+Trip-Briefing-Mails verfügbar:
+
+- **Gemeinsamer Renderer:** `src/output/renderers/alert/official_alerts.py`
+  (`render_official_alerts_html()`, `render_official_alerts_plain()`,
+  `collect_trip_alert_entries()`) — von Compare (`compare_html.py`/`comparison.py`) UND Trip
+  (`email/html.py`, `email/plain.py`, `email/compact.py`) genutzt, kein Duplikat-Code (#1073
+  Punkt 6, Architektur-Leitplanke).
+- **Datenanbindung:** `src/services/trip_report_scheduler.py` ruft nach dem Wetter-Fetch pro
+  eindeutiger Etappen-Koordinate `get_official_alerts_for_location()` (#1033) ab und befüllt
+  `SegmentWeatherData.official_alerts`.
+- **Trip-Toggle:** `official_alerts_enabled` (Default `true`, Pointer-Muster analog
+  `ComparePreset.OfficialAlertsEnabled` aus #1040) — Checkbox „Amtliche Warnungen" im
+  Trip-Alerts-Tab (`AlertsTab.svelte`); bei `false` findet strukturell kein Fetch statt.
+- **Format-Parität:** `full` (HTML + Plain) und `compact` zeigen die Warnungen; `sms_trip.py`
+  bewusst ohne Warn-Block (160-Zeichen-Limit).
+- Spec: `docs/specs/modules/epic_1073_trip_official_alerts.md`.
 
 ## Betreiber-Voraussetzung (kein Code)
 
@@ -72,3 +93,4 @@ MeteoGate/MeteoAlarm-Account registrieren (für Slice 2) — analog zum Météo-
 | Datum | Änderung |
 |---|---|
 | 2026-07-07 | Epic geplant, API-Landschaft verifiziert (GeoSphere Warn auth-frei/koordinatenbasiert; MeteoAlarm REST via MeteoGate), 5 Slices geschnitten, Kein-MQTT-Leitentscheidung, Nowcast (Punkt 5) als eigenständiges Subsystem abgegrenzt. |
+| 2026-07-07 | Slice 3 (#1087) implementiert: gemeinsame Warn-Render-Komponente `src/output/renderers/alert/official_alerts.py` (Compare + Trip), Trip-Fetch in `trip_report_scheduler.py`, Toggle `official_alerts_enabled` (Pointer-Muster, Default `true`). |

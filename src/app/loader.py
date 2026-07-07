@@ -427,6 +427,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         region=data.get("region", ""),  # Issue #805
         archived_at=data.get("archived_at"),  # Issue #805
         paused_at=data.get("paused_at"),  # Issue #995: Go-Feld paused_at — roundtrip-erhalten
+        official_alerts_enabled=data.get("official_alerts_enabled"),  # Issue #1087
     )
     return trip
 
@@ -1077,6 +1078,11 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
 
     if trip.paused_at:  # Issue #995: Go-Feld paused_at — roundtrip-erhalten
         data["paused_at"] = trip.paused_at
+
+    # Issue #1087: nur schreiben wenn "is not None" — False muss persistieren
+    # (Read-Modify-Write, BUG-DATALOSS-GR221), nicht wie ein falsy-Wert wegfallen.
+    if trip.official_alerts_enabled is not None:
+        data["official_alerts_enabled"] = trip.official_alerts_enabled
 
     # Serialize weather config (Feature 2.6 legacy, preserved for migration)
     if trip.weather_config:

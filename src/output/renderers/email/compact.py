@@ -21,6 +21,9 @@ from src.output.renderers.email.helpers import (
     format_trend_tokens,
 )
 from src.output.renderers.email.profile_signature import profile_signature
+from src.output.renderers.alert.official_alerts import (
+    collect_trip_alert_entries, render_official_alerts_plain,
+)
 
 if TYPE_CHECKING:
     from app.models import StabilityResult
@@ -149,6 +152,15 @@ def render_compact(
         lead = f"{prefix} " if prefix else ""
         lines.append(f"  {lead}{label}")
     lines.append("")
+
+    # Issue #1087: amtliche Warnungen — kurze Textzeile je Eintrag
+    # (Sicherheitsrelevanz, gemeinsamer Renderer, Epic #1073 Punkt 6).
+    _alert_entries = collect_trip_alert_entries(segments)
+    if _alert_entries:
+        lines.append("== Warnungen ==")
+        for _line in render_official_alerts_plain(_alert_entries):
+            lines.append(_ascii(f"  ! {_line}"))
+        lines.append("")
 
     # --- Ausblick: Grosswetterlage + Naechste Etappen ---
     if stability_result is not None:

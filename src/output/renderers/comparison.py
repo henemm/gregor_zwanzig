@@ -18,6 +18,7 @@ from .email.design_tokens import (
     FONT_UI, G_ACCENT, G_INK, G_PAPER, G_SUCCESS, G_SURFACE_1, WEB_FONT_LINK,
 )
 from .email.profile_signature import profile_signature
+from src.output.renderers.alert.official_alerts import render_official_alerts_plain
 from services.weather_metrics import HourlyCell, WeatherMetricsService
 from utils.geo import degrees_to_compass
 
@@ -415,9 +416,10 @@ def render_comparison_text(result: ComparisonResult, top_n_details: int = 3, ena
         layer_str = f"{emoji} {text}".strip() if text else "-"
         lines.append(f"   Layer: {layer_str}")
 
-        # Issue #1035 — amtliche Warnungen, eine Zeile pro Warnung
-        for alert in loc_result.official_alerts:
-            lines.append(f"   ⚠️ Amtliche Warnung: {alert.label}")
+        # Issue #1035/#1087 — amtliche Warnungen, eine Zeile pro Warnung.
+        # Gemeinsamer Renderer (Epic #1073 Punkt 6, kein Copy-Paste).
+        for line in render_official_alerts_plain([(loc_result.location.name, loc_result.official_alerts)]):
+            lines.append(f"   ⚠️ {line}")
 
         lines.append("")
 

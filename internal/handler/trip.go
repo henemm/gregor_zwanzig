@@ -151,6 +151,7 @@ type tripUpdateRequest struct {
 	AlertQuietTo            *string                 `json:"alert_quiet_to,omitempty"`
 	Region                  *string                 `json:"region,omitempty"`
 	Activity                *string                 `json:"activity,omitempty"`
+	OfficialAlertsEnabled   *bool                   `json:"official_alerts_enabled,omitempty"`
 }
 
 func UpdateTripHandler(s *store.Store) http.HandlerFunc {
@@ -220,6 +221,11 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		// Issue #674 — Activity-Feld aus PUT-Body übernehmen (F001-Fix).
 		if req.Activity != nil {
 			existing.Activity = *req.Activity
+		}
+		// Issue #1087 — Read-Modify-Write-Merge: nil = Feld fehlte im Body,
+		// bestehender Wert (auch explizit false) bleibt erhalten.
+		if req.OfficialAlertsEnabled != nil {
+			existing.OfficialAlertsEnabled = req.OfficialAlertsEnabled
 		}
 		existing.ID = id
 

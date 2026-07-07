@@ -9,11 +9,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, time, timezone
 from enum import Enum
-from typing import Any, List, Literal, Optional
+from typing import TYPE_CHECKING, Any, List, Literal, Optional
 from zoneinfo import ZoneInfo
 
 # Re-export Location for convenience. Canonical definition lives in app.config.
 from app.config import Location  # noqa: F401
+
+if TYPE_CHECKING:
+    from services.official_alerts.models import OfficialAlert
 
 
 class Provider(str, Enum):
@@ -394,6 +397,9 @@ class SegmentWeatherData:
     # Error tracking (WEATHER-04)
     has_error: bool = False
     error_message: Optional[str] = None
+    # Issue #1087: amtliche Warnungen fuer den Segment-Startpunkt, additiv,
+    # symmetrisch zu LocationResult.official_alerts (Compare-Vorbild #1034).
+    official_alerts: List["OfficialAlert"] = field(default_factory=list)
 
 
 # --- Weather Change Detection DTOs (Feature 2.5) ---

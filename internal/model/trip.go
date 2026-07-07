@@ -103,6 +103,10 @@ type Trip struct {
 	Region               string                 `json:"region,omitempty"`
 	PausedAt             *time.Time             `json:"paused_at,omitempty"`
 	ArchivedAt           *time.Time             `json:"archived_at,omitempty"`
+	// OfficialAlertsEnabled — Issue #1087, Pointer-Muster analog #1040:
+	// nil = Feld fehlte (Altdaten/Default aktiv), false = strukturell kein
+	// Fetch amtlicher Warnungen fuer diesen Trip.
+	OfficialAlertsEnabled *bool `json:"official_alerts_enabled,omitempty"`
 }
 
 // AlertableMetrics are metrics that can receive an alert rule (delta-based since #817).

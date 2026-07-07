@@ -278,6 +278,7 @@ export interface Trip {
 	alert_quiet_to?: string;
 	paused_at?: string;
 	archived_at?: string;
+	official_alerts_enabled?: boolean; // Issue #1087 — Trip-Toggle amtliche Warnungen
 }
 
 export interface Subscription {

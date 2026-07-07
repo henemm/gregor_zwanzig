@@ -31,6 +31,9 @@ from src.output.renderers.email.helpers import (
     derive_horizon, fmt_val, format_change_line, format_trend_tokens, pill_html,
     shorten_stage_name, visible_cols,
 )
+from src.output.renderers.alert.official_alerts import (
+    collect_trip_alert_entries, render_official_alerts_html,
+)
 from src.output.renderers.email.design_tokens import (
     G_PAPER, G_SURFACE_1, G_INK, G_INK_MUTED, G_INK_FAINT,
     G_ACCENT, G_WARNING, G_DANGER, G_BOX_WARNING_BG, G_BOX_DANGER_BG, G_HEADER_BG,
@@ -1391,6 +1394,10 @@ def render_html(
                 <ul>{"".join(ch_items)}</ul>
             </div>"""
 
+    # Issue #1087: amtliche Warnungen, gemeinsamer Renderer (Epic #1073 Punkt 6).
+    _alert_entries = collect_trip_alert_entries(segments)
+    official_alerts_html = render_official_alerts_html(_alert_entries) if _alert_entries else ""
+
     all_rows = [r for tbl in seg_tables for r in tbl]
     legend_text = build_units_legend(all_rows) if all_rows else ""
 
@@ -1493,7 +1500,7 @@ def render_html(
         {tageslage_html}
         {metrics_summary_html}
         {confidence_hint_html}
-        {changes_html}
+        {changes_html}{official_alerts_html}
         {segments_html}
         {night_html}
         {thunder_html}

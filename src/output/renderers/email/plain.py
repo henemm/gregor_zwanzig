@@ -29,6 +29,9 @@ from src.output.renderers.email.helpers import (
     tone_symbol, visible_cols,
 )
 from src.output.renderers.email.profile_signature import profile_signature
+from src.output.renderers.alert.official_alerts import (
+    collect_trip_alert_entries, render_official_alerts_plain,
+)
 
 
 def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
@@ -191,6 +194,14 @@ def render_plain(
         for c in changes:
             label = build_segment_label(c, segments, tz=tz)
             lines.append(f"  {format_change_line(c, label)}")
+        lines.append("")
+
+    # Issue #1087: amtliche Warnungen, gemeinsamer Renderer (Epic #1073 Punkt 6).
+    _alert_entries = collect_trip_alert_entries(segments)
+    if _alert_entries:
+        lines.append("━━ Amtliche Warnungen ━━")
+        for _line in render_official_alerts_plain(_alert_entries):
+            lines.append(f"  ⚠️ {_line}")
         lines.append("")
 
     for seg_data, rows in zip(segments, seg_tables):

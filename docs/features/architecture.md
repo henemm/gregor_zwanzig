@@ -187,6 +187,9 @@ Manuelle Verwaltung ist nur noch im Notfall nötig — siehe `docs/runbooks/tele
    - Enthält NICHT: Stundentabellen, Ausblick, Gewitter-Vorschau, Pills, Vortag-Vergleich, Statistik
    - km-Erweiterung: `build_segment_label()` zeigt `"Etappe N, km X–Y, HH–HH"` wenn km vorhanden (Issue #801)
    - Mail-Header: `X-GZ-Mail-Type: deviation-alert` (unterscheidet von `trip-briefing` und `compare`)
+   - **Nicht zu verwechseln mit** `src/output/renderers/alert/official_alerts.py` (Issue #1087) —
+     eigenständiges Modul im selben Verzeichnis für **amtliche** Behörden-Warnungen (Epic #1033/#1073,
+     Compare UND Trip-Briefing), keine Δ-Abweichungslogik
 
 5. **Radar-/Regen-Nowcast-Alert segmentbewusst (Issue #822) — kanonischer Renderer seit Issue #919**
    - Gemeinsamer Segment-Helfer: `src/services/trip_segments.py:convert_trip_to_segments(trip, target_date) -> List[TripSegment]`
@@ -620,6 +623,7 @@ See `~/.claude/CLAUDE.md` → Monitoring for details.
 - **Epic #438 (Compare Wizard):** `docs/features/epic-438-compare-wizard.md`
 - **Epic #134 (Trip Cockpit Dashboard):** `docs/features/epic-134-cockpit-dashboard.md`
 - **Epic #1033 (Amtliche Alerts im Orts-Vergleich):** `docs/features/epic-1033-compare-official-alerts.md` — additives `src/services/official_alerts/`-Modul (Slices 1, 2, 5 implementiert), Registry-Pattern analog Provider-Adapter, Fail-soft-Garantie, pro Orts-Vergleich ein-/ausschaltbar (Slice 5)
+- **Epic #1073 (Amtliche Alerts AT/IT + querschnittliche Nutzung):** `docs/features/epic-1073-alerts-at-it.md` — Slice 3 (#1087, implementiert): amtliche Warnungen jetzt auch in Trip-Briefings, gemeinsame Renderer-Komponente `src/output/renderers/alert/official_alerts.py` (Compare + Trip, keine Kopie), Trip-Toggle `official_alerts_enabled`
 - **Design System:** `docs/design-system/` (CHARTER, COMPONENTS, TOKENS, SCREENS)
 - **API Contract:** `docs/reference/api_contract.md`
 

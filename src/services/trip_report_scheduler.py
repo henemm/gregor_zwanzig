@@ -607,6 +607,31 @@ class TripReportSchedulerService:
         # 3. Fetch weather for each segment
         segment_weather = self._fetch_weather(segments)
 
+        # Issue #1087: amtliche Warnungen pro eindeutigem Segment-Startpunkt,
+        # strukturell kein Fetch bei official_alerts_enabled=False (analog
+        # comparison_engine.py Fetch-Gating, #1040-Pointer-Muster).
+        if trip.official_alerts_enabled is not False:
+            seen_coords: set[tuple[float, float]] = set()
+            for sw in segment_weather:
+                if sw.has_error:
+                    continue
+                coord = (
+                    round(sw.segment.start_point.lat, 3),
+                    round(sw.segment.start_point.lon, 3),
+                )
+                if coord in seen_coords:
+                    continue
+                seen_coords.add(coord)
+                try:
+                    from services.official_alerts import get_official_alerts_for_location
+                    sw.official_alerts = get_official_alerts_for_location(*coord)
+                except Exception:
+                    logger.warning(
+                        "trip_report_scheduler: official_alerts nicht ladbar",
+                        exc_info=True,
+                    )
+                    sw.official_alerts = []
+
         # Issue #1012 (a): Guard auf VOLLSTÄNDIGEN Ausfall statt der nie
         # greifenden `if not segment_weather`-Prüfung — _fetch_weather()
         # liefert bei Provider-Fehlern pro Segment einen has_error=True-

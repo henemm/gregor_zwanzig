@@ -198,6 +198,7 @@ class Trip:
     region: str = ""  # Issue #805: Go-Feld region (z.B. "GR20") — roundtrip-erhalten
     archived_at: Optional[str] = None  # Issue #805: Go-Feld archived_at (ISO-String) — roundtrip-erhalten
     paused_at: Optional[str] = None  # Issue #995: Go-Feld paused_at (ISO-String) — Trip-Detail-Pause, roundtrip-erhalten
+    official_alerts_enabled: Optional[bool] = None  # Issue #1087: None/True=aktiv, False=strukturell kein Fetch
 
     @property
     def start_date(self) -> date:
