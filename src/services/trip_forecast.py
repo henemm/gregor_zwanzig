@@ -6,7 +6,7 @@ provides aggregated summaries.
 """
 from __future__ import annotations
 
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, List, Optional
 
 from app.config import Location
@@ -16,6 +16,10 @@ from services.aggregation import (
     AggregatedSummary,
     AggregationService,
     WaypointForecast,
+)
+from services.trip_segments import (
+    _interpolate_missing_times,
+    _known_time_for_index,
 )
 
 if TYPE_CHECKING:
@@ -131,8 +135,9 @@ class TripForecastService:
         """
         Fetch forecast for a single waypoint.
 
-        Uses the waypoint's time window if available, otherwise
-        fetches for the entire day.
+        Issue #1005: Uses the same SSoT time chain as convert_trip_to_segments
+        (arrival_override > stage.start_time > arrival_calculated > default)
+        instead of the obsolete waypoint.time_window.
         """
         location = Location(
             latitude=waypoint.lat,
@@ -141,22 +146,7 @@ class TripForecastService:
             elevation_m=waypoint.elevation_m,
         )
 
-        # Determine time range
-        if waypoint.time_window:
-            start = datetime.combine(
-                stage.date,
-                waypoint.time_window.start,
-                tzinfo=timezone.utc,
-            )
-            end = datetime.combine(
-                stage.date,
-                waypoint.time_window.end,
-                tzinfo=timezone.utc,
-            )
-        else:
-            # Default: entire day
-            start = datetime.combine(stage.date, time(0, 0), tzinfo=timezone.utc)
-            end = datetime.combine(stage.date, time(23, 59), tzinfo=timezone.utc)
+        start, end = self._waypoint_time_window(waypoint, stage)
 
         self._debug.add(
             f"  waypoint: {waypoint.id} {waypoint.name} "
@@ -164,6 +154,44 @@ class TripForecastService:
         )
 
         return self._provider.fetch_forecast(location, start=start, end=end)
+
+    def _waypoint_time_window(
+        self,
+        waypoint: "Waypoint",
+        stage: "Stage",
+    ) -> tuple[datetime, datetime]:
+        """Determine the forecast query window for a waypoint using the #1004 SSoT chain."""
+        default_start = stage.start_time if stage.start_time else time(8, 0)
+
+        # Compute effective arrival time for every waypoint in the stage.
+        known_times = [
+            _known_time_for_index(stage.waypoints, idx, stage, default_start)
+            for idx in range(len(stage.waypoints))
+        ]
+        wp_times = _interpolate_missing_times(known_times)
+
+        try:
+            idx = stage.waypoints.index(waypoint)
+        except ValueError:
+            idx = 0
+
+        wp_time = wp_times[idx]
+        if wp_time is None:
+            # No time information available: fall back to entire day.
+            start = datetime.combine(stage.date, time(0, 0), tzinfo=timezone.utc)
+            end = datetime.combine(stage.date, time(23, 59), tzinfo=timezone.utc)
+            return start, end
+
+        start = datetime.combine(stage.date, wp_time, tzinfo=timezone.utc)
+
+        # End time: next waypoint's arrival time, or +2h for the last waypoint.
+        if idx + 1 < len(wp_times) and wp_times[idx + 1] is not None:
+            end_time = wp_times[idx + 1]
+        else:
+            end_time = (datetime.combine(stage.date, wp_time) + timedelta(hours=2)).time()
+        end = datetime.combine(stage.date, end_time, tzinfo=timezone.utc)
+
+        return start, end
 
 
 class TripForecastResult:
