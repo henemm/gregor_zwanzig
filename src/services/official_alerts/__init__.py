@@ -9,11 +9,13 @@ from services.official_alerts.base import (
     get_official_alerts_for_location,
     register_official_alert_source,
 )
+from services.official_alerts.meteo_forets import MeteoForetsSource
 from services.official_alerts.models import OfficialAlert
 from services.official_alerts.vigilance import VigilanceSource
 
-# Lazy-Registration bei Modul-Import (analog Provider-Pattern), Issue #1035.
+# Lazy-Registration bei Modul-Import (analog Provider-Pattern), Issue #1035/#1036.
 register_official_alert_source(VigilanceSource())
+register_official_alert_source(MeteoForetsSource())
 
 __all__ = [
     "OfficialAlert",
@@ -21,4 +23,5 @@ __all__ = [
     "register_official_alert_source",
     "get_official_alerts_for_location",
     "VigilanceSource",
+    "MeteoForetsSource",
 ]

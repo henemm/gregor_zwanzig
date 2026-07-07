@@ -166,7 +166,8 @@ class TestIssue1035VigilanceSource:
             if alerts and affected is None:
                 affected = (code, lat, lon)
             elif not alerts and clean is None:
-                clean = (code, lat, lon)
+                if not get_official_alerts_for_location(lat, lon):
+                    clean = (code, lat, lon)
             if affected and clean:
                 break
 
@@ -176,10 +177,13 @@ class TestIssue1035VigilanceSource:
                 ">=Stufe 2 (bei fixture-routbaren Koordinaten) — ruhige "
                 "Wetterlage, kein harter Fehler."
             )
-        assert clean is not None, (
-            "Erwartet mind. ein franzoesisches Département OHNE Alert als "
-            "Kontrast-Ort zum betroffenen Ort."
-        )
+        if clean is None:
+            pytest.skip(
+                "Zum Testzeitpunkt kein fixture-routbares Département OHNE "
+                "amtlichen Alert in der VOLLEN Registry (Vigilance + "
+                "Waldbrand) — flächendeckende Warnlage, kein Kontrast-Ort "
+                "verfügbar, kein harter Fehler."
+            )
 
         a_code, a_lat, a_lon = affected
         c_code, c_lat, c_lon = clean

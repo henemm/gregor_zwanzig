@@ -1,7 +1,7 @@
 # Epic 1033: Amtliche Alerts im Orts-Vergleich
 
-**Status:** Slice 1 (#1034), Slice 2 (#1035) und Slice 5 (#1040) implementiert (alle Adversary
-VERIFIED) — Slices #1036, #1037 offen. Bei #1034 aufgedeckte Nebenbefunde: #1046 (Validator-Vertrag
+**Status:** Slice 1 (#1034), Slice 2 (#1035), Slice 3 (#1036) und Slice 5 (#1040) implementiert (alle Adversary
+VERIFIED) — Slice #1037 offen. Bei #1034 aufgedeckte Nebenbefunde: #1046 (Validator-Vertrag
 für Compare-Mail ist veraltet, betrifft die Tabellen-Zählannahme), #1048 (kleinere Politur
 F003/F005). Bei #1035 aufgedeckter Nebenbefund: #1056 (Level-2/Gelb wird in `compare_html.py`
 fälschlich grün gerendert, kein Scope-Fix in #1035).
@@ -16,7 +16,9 @@ pro Orts-Vergleich ein-/ausschaltbar (Slice 5, #1040).
 - `docs/specs/modules/issue_1040_alerts_toggle.md` (Slice 5 — Konfiguration/Checkbox, implementiert;
   ersetzt den veralteten Vor-Analyse-Entwurf `issue_1040_official_alerts_config_toggle.md`, siehe
   dessen Superseded-Hinweis)
-- `docs/specs/modules/issue_1036_official_alerts_meteo_forets.md` (Slice 3 — Météo des forêts)
+- `docs/specs/modules/issue_1036_meteo_forets_source.md` (Slice 3 — Météo des forêts,
+  implementiert; ersetzt den veralteten Vor-Analyse-Entwurf
+  `issue_1036_official_alerts_meteo_forets.md`, siehe dessen Superseded-Hinweis)
 - `docs/specs/modules/issue_1037_official_alerts_massif_closure.md` (Slice 4 — Massiv-Sperrungen)
 
 **Related ADR:** `docs/adr/0016-amtliche-warnungen-additiver-typ.md`
@@ -201,10 +203,16 @@ volle Metropole + Korsika 2A/2B) mit, das Slice 3 wiederverwendet. Text-Renderer
   fälschlich auf Grün, obwohl Level 2 (gelb) bereits ein Warnsignal ist — bewusst kein Scope-Fix
   in #1035, separates Folge-Issue.
 
-### Slice 3: Météo des forêts (Issue #1036)
+### Slice 3: Météo des forêts (Issue #1036) — implementiert (2026-07-07, Adversary VERIFIED)
 
-Waldbrand-Gefahrenstufe, nur Juni–September verfügbar. Baut auf #1034 und #1035
-(Département-Mapping, ggf. OAuth2-Client) auf.
+Dritte Quelle: Waldbrand-Gefahrenstufe (1–4) auf Département-Ebene, nur Juni–September verfügbar
+(außerhalb der Saison liefert `covers()` `False`, keine API-Calls). `MeteoForetsSource` ruft den
+département-scoped JSON-Endpoint `.../DPMeteoForets/v1/carte/departement/encours` ab (gleicher
+`apikey`-Header wie Vigilance, kein OAuth2, kein CSV-Fallback nötig) und liefert
+`OfficialAlert(hazard="wildfire_risk", level=1-4)` — ohne Mindest-Schwellwert (jede Stufe 1–4
+erscheint als Badge, anders als Vigilance ab Level ≥2). Baut auf #1034 (Registry-Plumbing) und
+#1035 (Département-Mapping) auf. Badge-Renderer aus Slice 1 verdrahtet, fail-soft bei fehlender
+API-Authentifizierung oder Netzwerkfehler. Spec: `docs/specs/modules/issue_1036_meteo_forets_source.md`.
 
 ### Slice 4: Massiv-Betretungsverbote (Issue #1037)
 
@@ -277,3 +285,4 @@ sinnvoll nutzbar (siehe Details oben unter "Konfigurierbarkeit"). Spec:
 | 2026-07-06 | Slice 1 (#1034) implementiert, Adversary VERIFIED. Nebenbefunde als Folge-Issues erfasst: #1046 (veralteter Validator-Vertrag, entdeckt bei der Analyse), #1048 (Politur F003/F005 aus dem Adversary-Dialog). |
 | 2026-07-06 | Slice 2 (#1035) implementiert, Adversary VERIFIED. Analyse-Korrektur: OAuth2-Client-Credentials-Verfahren verworfen zugunsten von einfachem `apikey`-Header (kein `meteo_token_provider.py`); Endpoint auf `cartevigilance/encours` (nationale Antwort statt Punkt-Bulletin) korrigiert. Nebenbefund #1056 (Level-2/Gelb-Farbmapping in `compare_html.py`) erfasst. |
 | 2026-07-07 | Slice 5 (#1040) implementiert, Adversary VERIFIED. Analyse-Korrektur ggü. Vor-Analyse-Entwurf: Engine-Parametername `official_alerts_enabled` (statt `include_official_alerts`), Checkbox in `Step5Versand.svelte` (statt `Step4Layout.svelte`). |
+| 2026-07-07 | Slice 3 (#1036) implementiert, Adversary VERIFIED. Analyse-Korrektur ggü. Vor-Analyse-Entwurf: kein OAuth2/CSV-Pfad, sondern gleicher `apikey`-Header wie Vigilance gegen den département-scoped JSON-Endpoint `carte/departement/encours`. MeteoForetsSource registriert in `__init__.py`, liefert Waldbrand-Gefahrenstufe 1–4 für französische Orte Juni–September (außerhalb Saison `covers()` = False), ohne Mindest-Schwellwert, fail-soft bei fehlender API oder Netzwerkfehler. Badge-Renderer bereits aus Slice 1 verdrahtet, keine neuen Renderer-Dateien nötig. |

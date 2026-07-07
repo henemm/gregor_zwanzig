@@ -2,17 +2,26 @@
 entity_id: official_alerts_meteo_forets
 type: module
 created: 2026-07-06
-updated: 2026-07-06
-status: draft
+updated: 2026-07-07
+status: superseded
 version: "1.0"
 tags: [compare, alerts, official-alerts, meteofrance]
 ---
 
 # Official Alerts — Météo des forêts (Waldbrand-Gefahrenstufe)
 
+> **SUPERSEDED (2026-07-07):** Dies ist der Vor-Analyse-Entwurf für #1036, geschrieben bevor die
+> Analyse-Phase den tatsächlichen API-Zugang klärte. Er beschreibt einen möglichen OAuth2-Pfad
+> (`meteo_token_provider.py`) und einen CSV-Fallback über meteo.data.gouv.fr, die beide **nicht
+> verwendet wurden** — real verifiziert wurde stattdessen ein einfacher `apikey`-HTTP-Header
+> (identisch zu Vigilance) gegen den département-scoped JSON-Endpoint
+> `.../DPMeteoForets/v1/carte/departement/encours`. Die verbindliche, implementierte Spec ist
+> **`docs/specs/modules/issue_1036_meteo_forets_source.md`**. Diese Datei bleibt nur als
+> Analyse-Historie erhalten, nicht als aktuelle Referenz.
+
 ## Approval
 
-- [ ] Approved
+- [x] Approved (Vor-Analyse-Entwurf, superseded — siehe Banner oben)
 
 ## Purpose
 
@@ -107,3 +116,6 @@ class MeteoForetsSource:
 ## Changelog
 
 - 2026-07-06: Initial spec created (Epic #1033, Issue #1036)
+- 2026-07-07: Superseded durch `issue_1036_meteo_forets_source.md` — Analyse-Phase klärte den
+  tatsächlichen API-Zugang (kein OAuth2, `apikey`-Header wie Vigilance) und die Implementierung
+  wurde gegen die vollständige Spec durchgeführt, Adversary VERIFIED.
