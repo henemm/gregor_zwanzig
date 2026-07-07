@@ -185,11 +185,17 @@ class TripForecastService:
         start = datetime.combine(stage.date, wp_time, tzinfo=timezone.utc)
 
         # End time: next waypoint's arrival time, or +2h for the last waypoint.
+        # Issue #1090: compute via full datetime arithmetic (no .time()-truncate)
+        # so a midnight rollover is preserved, analog to trip_segments.py.
         if idx + 1 < len(wp_times) and wp_times[idx + 1] is not None:
-            end_time = wp_times[idx + 1]
+            end = datetime.combine(stage.date, wp_times[idx + 1], tzinfo=timezone.utc)
         else:
-            end_time = (datetime.combine(stage.date, wp_time) + timedelta(hours=2)).time()
-        end = datetime.combine(stage.date, end_time, tzinfo=timezone.utc)
+            end = start + timedelta(hours=2)
+
+        # Safety net: never emit an inverted/zero-length window (e.g. a
+        # next-waypoint time that already rolled over midnight itself).
+        if end <= start:
+            end = start + timedelta(hours=2)
 
         return start, end
 
