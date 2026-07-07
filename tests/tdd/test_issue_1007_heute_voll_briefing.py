@@ -33,7 +33,6 @@ from pathlib import Path
 from app.loader import save_trip
 from app.models import TripReportConfig
 from app.trip import Stage, TimeWindow, Trip, Waypoint
-from utils.timezone import tz_for_coords
 from services.trip_command_processor import (
     InboundMessage, TripCommandProcessor, _on_demand_failure_body,
 )
@@ -61,32 +60,17 @@ _load_main_env()
 
 LAT, LON = 47.2692, 11.4041
 
-
-def _active_window(lat: float = LAT, lon: float = LON) -> tuple[str, str, time]:
-    """Lokales Zeitfenster, das jetzt aktiv ist und den UTC-Tag nicht verlässt.
-
-    Issue #1044: Feste 00:00-23:59-Override bei UTC+2 rutschten über Mitternacht
-    in den vorherigen UTC-Tag, sodass der Renderer für den Zieltag keine Zeilen
-    fand. Stattdessen wird ein now()-basiertes, mehrstündiges Fenster gewählt,
-    das in der Regel zwischen 02:00 und 22:00 Ortszeit liegt und daher vollständig
-    im selben UTC-Tag bleibt.
-    """
-    tz = tz_for_coords(lat, lon)
-    now_local = datetime.now(tz)
-    start = now_local - timedelta(hours=1)
-    end = now_local + timedelta(hours=3)
-    day_start = now_local.replace(hour=2, minute=0, second=0, microsecond=0)
-    day_end = now_local.replace(hour=22, minute=0, second=0, microsecond=0)
-    if start < day_start:
-        start = day_start
-    if end > day_end:
-        end = day_end
-    if start > now_local:
-        start = now_local
-    if end <= now_local:
-        end = now_local + timedelta(hours=1)
-    start_time = time(start.hour, start.minute)
-    return start.strftime("%H:%M"), end.strftime("%H:%M"), start_time
+# Issue #1044: FESTES Mittagsfenster, keine now()-Abhängigkeit. Das Voll-Briefing
+# filtert die Timeline nach `arrival_time.date() == target_date` (siehe
+# TripCommandProcessor._aggregate_day / _fmt_timeline) — NICHT nach "jetzt aktiv".
+# 08:00-18:00 Ortszeit entspricht bei den Alpen-/Korsika-Zeitzonen (UTC+1/+2)
+# 06:00-17:00 UTC und liegt damit zu JEDER Testlaufzeit vollständig im selben
+# UTC-Tag wie stage.date. Damit ist der Test uhrzeit-unabhängig. Der frühere
+# now()-basierte Ansatz rutschte 00:00-02:00 und 23:00-24:00 Ortszeit doch in
+# den Nachbar-UTC-Tag (24h-Simulation belegt).
+_WIN_START = "08:00"
+_WIN_END = "18:00"
+_STAGE_START = time(8, 0)
 
 
 def _make_user(user_id: str) -> None:
@@ -106,27 +90,20 @@ def _make_trip(
     user_id: str, trip_id: str, name: str, stage_date: date,
     report_config: TripReportConfig | None = None,
 ) -> Trip:
-    """Etappe mit einem jetzt aktiven Segment, das den UTC-Tag nicht verlässt.
-
-    Issue #1044: Feste 00:00-23:59-Override bei UTC+2 rutschten über Mitternacht
-    in den vorherigen UTC-Tag. `_active_window` wählt ein now()-basiertes
-    Fenster (typisch 02:00-22:00 Ortszeit), damit `convert_trip_to_segments`
-    und der Briefing-Renderer den Zieltag konsistent sehen.
-    """
-    start_str, end_str, start_time = _active_window()
+    """Etappe mit einem Segment im festen Mittagsfenster (uhrzeit-unabhängig, #1044)."""
     wps = [
         Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=600,
                  time_window=TimeWindow(start=time(0, 0), end=time(0, 0)),
-                 arrival_override=start_str),
+                 arrival_override=_WIN_START),
         Waypoint(id="G2", name="Seg 2 Start", lat=47.2820, lon=11.4230,
                  elevation_m=700,
                  time_window=TimeWindow(start=time(12, 0), end=time(12, 0))),
         Waypoint(id="G3", name="Ziel", lat=47.2950, lon=11.4420, elevation_m=800,
                  time_window=TimeWindow(start=time(23, 59), end=time(23, 59)),
-                 arrival_override=end_str),
+                 arrival_override=_WIN_END),
     ]
     stage = Stage(id="T1", name=f"{name}-Etappe", date=stage_date,
-                  start_time=start_time, waypoints=wps)
+                  start_time=_STAGE_START, waypoints=wps)
     trip = Trip(id=trip_id, name=name, stages=[stage], report_config=report_config)
     save_trip(trip, user_id=user_id)
     return trip
@@ -137,30 +114,29 @@ def _make_trip_two_stages(
 ) -> Trip:
     """Zwei-Etappen-Trip (heute + morgen) für Snapshot-Regressionstests.
 
-    Auch hier dynamisch aktive Segmente, damit der Regressionstest unabhängig
-    von der Uhrzeit läuft (#1044).
+    Beide Etappen im festen Mittagsfenster, damit der Test uhrzeit-unabhängig
+    läuft (#1044).
     """
-    start_str, end_str, start_time = _active_window()
     wps_today = [
         Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=600,
                  time_window=TimeWindow(start=time(0, 0), end=time(0, 0)),
-                 arrival_override=start_str),
+                 arrival_override=_WIN_START),
         Waypoint(id="G2", name="Ziel", lat=47.2950, lon=11.4420, elevation_m=800,
                  time_window=TimeWindow(start=time(23, 59), end=time(23, 59)),
-                 arrival_override=end_str),
+                 arrival_override=_WIN_END),
     ]
     wps_tomorrow = [
         Waypoint(id="G1", name="Start Tag2", lat=47.2950, lon=11.4420, elevation_m=800,
                  time_window=TimeWindow(start=time(0, 0), end=time(0, 0)),
-                 arrival_override=start_str),
+                 arrival_override=_WIN_START),
         Waypoint(id="G2", name="Ziel Tag2", lat=47.3100, lon=11.4600, elevation_m=900,
                  time_window=TimeWindow(start=time(23, 59), end=time(23, 59)),
-                 arrival_override=end_str),
+                 arrival_override=_WIN_END),
     ]
     stage1 = Stage(id="T1", name=f"{name}-Etappe1", date=date_today,
-                   start_time=start_time, waypoints=wps_today)
+                   start_time=_STAGE_START, waypoints=wps_today)
     stage2 = Stage(id="T2", name=f"{name}-Etappe2", date=date_tomorrow,
-                   start_time=start_time, waypoints=wps_tomorrow)
+                   start_time=_STAGE_START, waypoints=wps_tomorrow)
     trip = Trip(id=trip_id, name=name, stages=[stage1, stage2])
     save_trip(trip, user_id=user_id)
     return trip
