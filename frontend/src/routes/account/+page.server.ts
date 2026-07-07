@@ -1,7 +1,6 @@
-import { env } from '$env/dynamic/private';
 import type { PageServerLoad } from './$types.js';
+import { apiBase as API } from '$lib/server/apiBase.js';
 
-const API = () => env.GZ_API_BASE ?? 'http://localhost:8090';
 
 /** Fallback templates when /api/templates is not available (yet). */
 const FALLBACK_TEMPLATES = [

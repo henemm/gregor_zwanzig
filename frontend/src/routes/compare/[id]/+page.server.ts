@@ -1,10 +1,9 @@
 // Issue #491 — Compare-Preset Detail-Seite: SSR-Loader.
-import { env } from '$env/dynamic/private';
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types.js';
 import type { ComparePreset, Location } from '$lib/types.js';
+import { apiBase as API } from '$lib/server/apiBase.js';
 
-const API = () => env.GZ_API_BASE ?? 'http://localhost:8090';
 
 export const load: PageServerLoad = async ({ cookies, params }) => {
 	const session = cookies.get('gz_session');

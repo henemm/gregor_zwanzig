@@ -76,7 +76,7 @@ data/users/admin/
 # Go binaries
 gregor-api
 gregor_zwanzig
-server
+/server
 
 # Diagnostic logs (Go runtime, OpenMeteo API call traces)
 **/data/diagnostics/

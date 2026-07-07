@@ -1,8 +1,7 @@
-import { env } from '$env/dynamic/private';
 import type { PageServerLoad } from './$types.js';
 import type { Trip, ComparePreset } from '$lib/types.js';
+import { apiBase as API } from '$lib/server/apiBase.js';
 
-const API = () => env.GZ_API_BASE ?? 'http://localhost:8090';
 
 // Issue #611 — vereinheitlichter Archiv-Eintrag für Trips UND Orts-Vergleiche.
 export type ArchiveEntry = {

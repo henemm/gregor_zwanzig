@@ -1,8 +1,7 @@
-import { env } from '$env/dynamic/private';
 import type { PageServerLoad } from './$types.js';
 import type { Trip } from '$lib/types.js';
+import { apiBase as API } from '$lib/server/apiBase.js';
 
-const API = () => env.GZ_API_BASE ?? 'http://localhost:8090';
 
 // Issue #412 — Trip-Wizard Step 4 Kanal-Karte: Profil (mail_to/signal_phone/
 // telegram_chat_id) fail-soft laden, damit Step4 die Kontaktdaten je Kanal

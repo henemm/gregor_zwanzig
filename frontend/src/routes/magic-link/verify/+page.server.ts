@@ -1,8 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import type { Actions, PageServerLoad } from './$types.js';
+import { apiBase as API } from '$lib/server/apiBase.js';
 
-const API = () => env.GZ_API_BASE ?? 'http://localhost:8090';
 
 export const load: PageServerLoad = async ({ url }) => {
 	return { email: url.searchParams.get('email') ?? '' };
