@@ -160,10 +160,10 @@ def _dom_query(html: str, js: str):
 # Test 1 (Teil A): Header-Trennlinien + "· ETAPPE N"-Eyebrow-Text
 # ---------------------------------------------------------------------------
 
-# Startwert-Schwelle: der Header-Diff enthält viel Inhalts-Divergenz (anderer
-# Trip-Name/Datum/Zahlen), daher ist die absolute Prozent-Zahl nur als grober
-# Sanity-Indikator gedacht; das eigentliche Gate ist der DOM-Assert unten.
-HEADER_DIFF_THRESHOLD = 15.0  # %
+# Diagnose-Wert (kein Gate): der Header-Diff enthält viel Inhalts-Divergenz
+# (anderer Trip-Name/Datum/Zahlen), daher ist die absolute Prozent-Zahl nur als
+# grober Sanity-Indikator gedacht; das eigentliche Gate ist der DOM-Assert unten.
+HEADER_DIFF_DIAGNOSTIC = 15.0  # %
 
 
 def test_header_no_extra_lines_and_no_stage_eyebrow():
@@ -185,7 +185,7 @@ def test_header_no_extra_lines_and_no_stage_eyebrow():
     screenshot_html(html, ist, viewport=_VIEWPORT,
                     clip={"x": 15, "y": 30, "width": 670, "height": 195})
     diff_pct = compute_diff(ist, soll, diff)
-    print(f"[Teil A] header diff_pct={diff_pct:.2f}% (threshold {HEADER_DIFF_THRESHOLD}%)")
+    print(f"[Teil A] header diff_pct={diff_pct:.2f}% (diagnostic {HEADER_DIFF_DIAGNOSTIC}%)")
 
     # (2) RED/GREEN-Gate: gerendertes DOM prüfen.
     dom = _dom_query(html, """() => {
@@ -248,7 +248,8 @@ def test_header_container_has_no_bottom_border():
 # Test 2 (Teil B): Segment-Header zeigt km-/Höhen-Spanne statt Titel-Text
 # ---------------------------------------------------------------------------
 
-SEG_DIFF_THRESHOLD = 20.0  # %  (Inhalts-Divergenz zur Vorlage, siehe Kopf)
+# Diagnose-Wert (kein Gate): Inhalts-Divergenz zur Vorlage, siehe Kopf.
+SEG_DIFF_DIAGNOSTIC = 20.0  # %
 
 
 def test_segment_header_shows_km_and_elevation_span():
@@ -272,7 +273,7 @@ def test_segment_header_shows_km_and_elevation_span():
     screenshot_html(html, ist, viewport=_VIEWPORT,
                     clip={"x": 40, "y": 360, "width": 620, "height": 50})
     diff_pct = compute_diff(ist, soll, diff)
-    print(f"[Teil B] segment diff_pct={diff_pct:.2f}% (threshold {SEG_DIFF_THRESHOLD}%)")
+    print(f"[Teil B] segment diff_pct={diff_pct:.2f}% (diagnostic {SEG_DIFF_DIAGNOSTIC}%)")
 
     # (2) RED/GREEN-Gate: gerendertes DOM prüfen.
     dom = _dom_query(html, """() => {
@@ -305,11 +306,48 @@ def test_segment_header_shows_km_and_elevation_span():
     )
 
 
+def test_segment_header_accumulates_km_for_later_segments():
+    """Test 2b (AC-2, Teil B): kumulierte km-Spanne auch für SEG 2 (fromKm > 0).
+
+    RED-Gate (DOM): Der bisherige Test deckte nur SEG 1 (Trivialfall fromKm=0).
+    Die Spec verlangt die kumulative Laufsumme über *mehrere* vorangehende
+    Segmente. SEG 2 muss daher "4.6 km - 9.3 km" und die Höhen-Spanne
+    "1200 - 1500 m" zeigen, ohne den Etappen-Titel.
+    """
+    _require_playwright()
+    html = _render_sample_html()
+
+    dom = _dom_query(html, """() => {
+        // Den zweiten SEG-Header-Block finden (enthält den Text 'SEG 2').
+        const spans = Array.from(document.querySelectorAll('span'));
+        const segTag = spans.find(s => (s.innerText || '').trim() === 'SEG 2');
+        const block = segTag ? segTag.closest('div').parentElement : null;
+        const text = block ? block.innerText : '';
+        return {segHeaderText: text};
+    }""")
+
+    header_text = (dom["segHeaderText"] or "").replace("\n", " ")
+    assert "von Soller" not in header_text and "Tossals" not in header_text, (
+        "Teil B (SEG 2): SEG-Header zeigt noch den Etappen-Titel-Text "
+        f"({header_text!r}) — laut Vorlage muss der Titel entfallen."
+    )
+    assert "4.6 km - 9.3 km" in header_text, (
+        "Teil B (SEG 2): SEG-Header zeigt keine kumulierte Kilometer-Spanne "
+        f"'4.6 km - 9.3 km' ({header_text!r}). "
+        "Laut Vorlage muss fromKm der echten Laufsumme entsprechen."
+    )
+    assert "1200 - 1500 m" in header_text, (
+        "Teil B (SEG 2): SEG-Header zeigt keine Höhen-Spanne '1200 - 1500 m' "
+        f"({header_text!r})."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Test 3 (Teil E): Cell-Tint füllt die Zelle randlos (kein weißer Rand)
 # ---------------------------------------------------------------------------
 
-TINT_DIFF_THRESHOLD = 25.0  # %  (Inhalts-Divergenz zur Vorlage, siehe Kopf)
+# Diagnose-Wert (kein Gate): Inhalts-Divergenz zur Vorlage, siehe Kopf.
+TINT_DIFF_DIAGNOSTIC = 25.0  # %
 
 
 def test_cell_tint_fills_cell_to_gridlines():
@@ -333,7 +371,7 @@ def test_cell_tint_fills_cell_to_gridlines():
     screenshot_html(html, ist, viewport=_VIEWPORT,
                     clip={"x": 375, "y": 435, "width": 170, "height": 40})
     diff_pct = compute_diff(ist, soll, diff)
-    print(f"[Teil E] cell-tint diff_pct={diff_pct:.2f}% (threshold {TINT_DIFF_THRESHOLD}%)")
+    print(f"[Teil E] cell-tint diff_pct={diff_pct:.2f}% (diagnostic {TINT_DIFF_DIAGNOSTIC}%)")
 
     # (2) RED/GREEN-Gate: Geometrie der getönten Zellen-Box vs. der <td>-Zelle.
     # Issue #995 (Gruppe B): die Tönung sitzt jetzt als `background:` direkt am

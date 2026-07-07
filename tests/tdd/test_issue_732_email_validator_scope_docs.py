@@ -25,7 +25,7 @@ def _repo_root() -> Path:
 
 
 def _validator_section() -> str:
-    """Extrahiert die Sektion ``## E-MAIL SPEC VALIDATOR`` aus CLAUDE.md.
+    """Extrahiert die Sektion ``## Mail-Validatoren & Renderer-Gate`` aus CLAUDE.md.
 
     Liefert den Text von der Überschrift bis zur nächsten ``## ``-Überschrift.
     """
@@ -33,11 +33,11 @@ def _validator_section() -> str:
     text = claude_md.read_text(encoding="utf-8")
     # Sektion ab Überschrift bis zur nächsten H2-Überschrift (oder Dateiende).
     match = re.search(
-        r"^##\s+E-MAIL SPEC VALIDATOR.*?(?=^##\s+|\Z)",
+        r"^##\s+Mail-Validatoren\s+&\s+Renderer-Gate.*?(?=^##\s+|\Z)",
         text,
         flags=re.MULTILINE | re.DOTALL,
     )
-    assert match, "Sektion '## E-MAIL SPEC VALIDATOR' nicht in CLAUDE.md gefunden"
+    assert match, "Sektion '## Mail-Validatoren & Renderer-Gate' nicht in CLAUDE.md gefunden"
     return match.group(0)
 
 
@@ -56,16 +56,18 @@ class TestIssue732ValidatorScopeDocs:
             f"nennen (eines von {markers})"
         )
 
-    def test_section_points_trip_briefing_to_imap_mime_test(self):
-        """AC-2: Für Trip-Briefing-Mail verweist die Sektion auf IMAP-MIME-Test."""
+    def test_section_points_trip_briefing_to_own_validator(self):
+        """AC-2: Für Trip-Briefing-Mail verweist die Sektion auf den eigenen Validator."""
         section = _validator_section().lower()
         assert "trip-briefing" in section, (
-            "AC-2: Sektion muss den Trip-Briefing-Mail-Nachweisweg benennen"
+            "AC-2: Sektion muss den Trip-Briefing-Mail-Pfad benennen"
         )
-        mime_markers = ["multipart", "content-type", "isascii", "byte", "mime"]
-        assert any(m in section for m in mime_markers), (
-            "AC-2: Sektion muss den echten IMAP-MIME-Verhaltenstest als Nachweis "
-            f"für Trip-Briefing-Mail nennen (eines von {mime_markers})"
+        # Der neue Abschnitt nutzt für Trip-Briefing-Mails den eigenen
+        # briefing_mail_validator.py (kein IMAP-MIME-Test mehr).
+        briefing_markers = ["briefing_mail_validator", "briefing-mail-validator"]
+        assert any(m in section for m in briefing_markers), (
+            "AC-2: Sektion muss für Trip-Briefing-Mail den eigenen Validator "
+            f"`briefing_mail_validator.py` als Nachweis nennen (eines von {briefing_markers})"
         )
 
     def test_exit0_rule_is_scoped_not_universal(self):
