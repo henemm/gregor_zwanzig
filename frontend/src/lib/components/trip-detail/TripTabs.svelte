@@ -110,7 +110,11 @@
 		// statt einen irreführenden „Änderungen gehen verloren"-Dialog zu zeigen
 		// (die Änderung wird ohnehin gespeichert). onTripUpdate synchronisiert
 		// den Parent-State, damit der Wert beim Re-Mount erhalten bleibt.
-		if (activeTab === 'alerts' && value !== 'alerts' && saveController?.hasPending) {
+		// Issue #1117: Flush-Guard symmetrisch auf den Inhalt-Tab ('weather')
+		// erweitert — der neue „Amtliche Warnungen"-Schalter nutzt denselben
+		// debounce-Auto-Save; ohne Flush könnte ein sehr schneller Tab-Wechsel den
+		// frisch gemounteten Alerts-Tab kurzzeitig den alten Wert zeigen lassen.
+		if ((activeTab === 'alerts' || activeTab === 'weather') && value !== activeTab && saveController?.hasPending) {
 			await saveController.flush();
 		}
 		activeTab = value;

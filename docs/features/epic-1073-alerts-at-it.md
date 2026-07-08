@@ -82,7 +82,7 @@ Trip-Briefing-Mails verfügbar:
   `SegmentWeatherData.official_alerts`.
 - **Trip-Toggle:** `official_alerts_enabled` (Default `true`, Pointer-Muster analog
   `ComparePreset.OfficialAlertsEnabled` aus #1040) — Checkbox „Amtliche Warnungen" im
-  Trip-Alerts-Tab (`AlertsTab.svelte`); bei `false` findet strukturell kein Fetch statt.
+  Trip-Alerts-Tab (`AlertsTab.svelte`) und im Tab „Inhalt" (`WeatherMetricsTab.svelte`, Issue #1117); bei `false` findet strukturell kein Fetch statt.
 - **Format-Parität:** `full` (HTML + Plain) und `compact` zeigen die Warnungen; `sms_trip.py`
   bewusst ohne Warn-Block (160-Zeichen-Limit).
 - Spec: `docs/specs/modules/epic_1073_trip_official_alerts.md`.
@@ -106,3 +106,4 @@ MeteoGate/MeteoAlarm-Account registrieren (für Slice 2) — analog zum Météo-
 | 2026-07-07 | Epic geplant, API-Landschaft verifiziert (GeoSphere Warn auth-frei/koordinatenbasiert; MeteoAlarm REST via MeteoGate), 5 Slices geschnitten, Kein-MQTT-Leitentscheidung, Nowcast (Punkt 5) als eigenständiges Subsystem abgegrenzt. |
 | 2026-07-07 | Slice 3 (#1087) implementiert: gemeinsame Warn-Render-Komponente `src/output/renderers/alert/official_alerts.py` (Compare + Trip), Trip-Fetch in `trip_report_scheduler.py`, Toggle `official_alerts_enabled` (Pointer-Muster, Default `true`). |
 | 2026-07-08 | Slice 1 (#1085) implementiert: `GeoSphereWarnSource` (AT) — erste Nicht-FR-Quelle im Registry, auth-frei, koordinatenbasiert, `warnstufeid`→`level`-Mapping, Cache pro Koordinate. |
+| 2026-07-08 | Dokumentation aktualisiert: Trip-Toggle „Amtliche Warnungen" ist zusätzlich im Tab „Inhalt" konfigurierbar (Issue #1117), nicht nur im Alerts-Tab. |

@@ -22,6 +22,10 @@
 	import WeatherV2MailPreview from './WeatherV2MailPreview.svelte';
 	import ThresholdMetricRow from './ThresholdMetricRow.svelte';
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
+	// Issue #1117: „Amtliche Warnungen"-Checkbox auch im Inhalt-Tab (eigener Block,
+	// EditReportConfigSection bleibt unverändert).
+	import * as UiCard from '$lib/components/ui/card/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox';
 	import {
 		autoAssign, bucketsToColumns, move, buildWeatherConfigMetrics,
 		diffHighlight,
@@ -74,6 +78,9 @@
 	);
 	// Issue #614: Telegram Kurzform-Toggle (SMS-Tages-Max als Anhang).
 	let telegramKurzform = $state<boolean>(trip.display_config?.telegram_kurzform ?? false);
+	// Issue #1117: Amtliche Warnungen im E-Mail-Briefing (zweiter Einstiegspunkt neben
+	// Alerts-Tab). Default true matcht den Backend-Default.
+	let officialAlertsEnabled = $state<boolean>(trip.official_alerts_enabled ?? true);
 	// Issue #624: konfigurierbare Schwellwerte pro Metrik (nur threshold-fähige).
 	const SMS_THRESHOLD_METRIC_IDS = ['precipitation', 'rain_probability', 'wind', 'gust', 'thunder', 'snow_depth', 'snowfall_limit'];
 	let smsThresholds = $state<Record<string, string>>({});
@@ -139,14 +146,14 @@
 	// Issue #736: channels aus isDirty + snapshot entfernt (Kanal-Config lebt jetzt im Versand-Reiter).
 	// Issue #776/#774: reportConfig in isDirty einschliessen (Toggle-Persistenz, Checkbox-Änderung macht Tab dirty).
 	const isDirty = $derived(
-		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig }) !== savedSnapshot,
+		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled }) !== savedSnapshot,
 	);
 
 	function snapshot(
 		b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>,
-		tk: boolean, st: Record<string, string>, rc: ReportConfig | undefined
+		tk: boolean, st: Record<string, string>, rc: ReportConfig | undefined, oae: boolean
 	): string {
-		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, reportConfig: rc ?? {} });
+		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, reportConfig: rc ?? {}, officialAlertsEnabled: oae });
 	}
 
 	function allCatalogIds(): string[] {
@@ -216,7 +223,7 @@
 		// Issue #736: channels nicht mehr im snapshot (Conflict 2 entfällt).
 		// Issue #774: reportConfig in snapshot aufnehmen.
 		smsThresholds = thrMap;
-		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig);
+		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled);
 	}
 
 	async function load() {
@@ -329,6 +336,13 @@
 		scheduleAutoSave();
 	}
 
+	// Issue #1117: Amtliche-Warnungen-Checkbox — named handler (kein Loop-Closure,
+	// Safari-sicher), setzt State und triggert denselben debounce-Auto-Save.
+	function onToggleOfficialAlerts(e: Event) {
+		officialAlertsEnabled = (e.target as HTMLInputElement).checked;
+		scheduleAutoSave();
+	}
+
 	// Aus Abschnitt 3 entfernen (→ off).
 	function onRemove(id: string) {
 		const newBuckets = move(buckets, id, 'primary', 'off');
@@ -363,12 +377,15 @@
 			smsThresholds = snap.smsThresholds ?? {};
 			// Issue #774: reportConfig wiederherstellen (sonst bleibt Tab dirty nach Verwerfen).
 			reportConfig = snap.reportConfig ?? {};
+			// Issue #1117: officialAlertsEnabled wiederherstellen (Konsistenz-Vollständigkeit).
+			officialAlertsEnabled = snap.officialAlertsEnabled ?? true;
 		} catch (e) {
 			console.error(e);
 			initFromTrip();
 			telegramKurzform = trip.display_config?.telegram_kurzform ?? false;
 			smsThresholds = {};
 			reportConfig = trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {};
+			officialAlertsEnabled = trip.official_alerts_enabled ?? true;
 		}
 	}
 
@@ -402,12 +419,13 @@
 				await api.put(`/api/trips/${trip.id}/weather-config`, payload);
 				// Issue #776/#774: report_config separat persistieren (zweiter PUT, Read-Modify-Write im Backend).
 				// Issue #850: Server-Response enthält aktualisierte alert_rules (via SyncAlertRules) — nie manuell konstruieren.
-				const updated = await api.put<Trip>(`/api/trips/${trip.id}`, { report_config: reportConfig });
+				// Issue #1117: official_alerts_enabled im selben zweiten PUT persistieren.
+				const updated = await api.put<Trip>(`/api/trips/${trip.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabled });
 				onTripUpdate?.(updated);
 			}
 			saveSuccess = true;
 			// Issue #736: channels aus snapshot entfernt (Conflict 4 entfällt).
-			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig);
+			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled);
 			setTimeout(() => { saveSuccess = false; }, 3000);
 		} catch (e: unknown) {
 			console.error(e);
@@ -424,9 +442,9 @@
 		saveController.schedule(async () => {
 			await api.put(`/api/trips/${trip.id}/weather-config`, payload);
 			// Issue #850: Server-Response enthält aktualisierte alert_rules — nie manuell konstruieren.
-			const updated = await api.put<Trip>(`/api/trips/${trip.id}`, { report_config: reportConfig });
+			const updated = await api.put<Trip>(`/api/trips/${trip.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabled });
 			onTripUpdate?.(updated);
-			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig);
+			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled);
 		});
 	}
 
@@ -646,6 +664,20 @@
 					showChannels={false}
 					showSchedule={false}
 				/>
+
+				<!-- Issue #1117: Amtliche Warnungen — zweiter Einstiegspunkt neben dem -->
+				<!-- Alerts-Tab, gleiche Optik wie die Content-Bausteine oben.          -->
+				<UiCard.Root class="p-3 space-y-2 hover:translate-y-0 hover:shadow-none">
+					<div class="text-sm">
+						<span data-testid="report-show-official-alerts" class="inline-flex items-center gap-2">
+							<Checkbox
+								checked={officialAlertsEnabled}
+								onchange={onToggleOfficialAlerts}
+							>Amtliche Warnungen</Checkbox>
+						</span>
+						<p class="pl-6 text-xs text-muted-foreground mt-0.5">Amtliche Wetterwarnungen (z. B. Unwetterwarnung) im E-Mail-Briefing anzeigen.</p>
+					</div>
+				</UiCard.Root>
 				{/if}
 
 			</div>
