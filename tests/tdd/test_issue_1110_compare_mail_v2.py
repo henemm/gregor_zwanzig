@@ -565,7 +565,6 @@ class TestCompareMailV2Validator:
         spec.loader.exec_module(mod)
         return mod
 
-    @pytest.mark.skip(reason="AC-9 erfüllt durch #1108 — Validator-Vertrag ist eigener Workflow (PO-Umscoping 2026-07-08)")
     def test_ac9_validate_structure_akzeptiert_v2_html_fehlerfrei(self, validator_module):
         """AC-9: `validate_structure()` gegen echtes v2-HTML liefert eine leere
         Fehlerliste (Exit-Code-0-Aequivalent auf Funktionsebene)."""

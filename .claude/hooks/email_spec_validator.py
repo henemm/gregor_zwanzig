@@ -24,7 +24,7 @@ import imaplib
 import email
 import re
 from pathlib import Path
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple
 
 
 def _write_validation_log(
@@ -116,35 +116,59 @@ def fetch_latest_email() -> str:
     return body
 
 
-# Issue #1046: Die Vergleichsmatrix wird eindeutig per class="matrix-table"
-# gefunden, unabhaengig von ihrer Position unter den realen <table>-Tags
-# (2 Header-Stats-Grids + Matrix + N Stunden-Tabellen).
-_MATRIX_TABLE_RE = re.compile(
-    r'<table[^>]*class="[^"]*\bmatrix-table\b[^"]*"[^>]*>(.*?)</table>',
-    re.DOTALL,
+# Issue #1108: v2-Vertrag (render_compare_html, Issue #1110) hat kein
+# class="matrix-table" mehr -- die Uebersichtstabelle wird stattdessen ueber
+# ihre erste Datenzeile "Amtliche Warnungen" identifiziert (CV2_METRICS[0],
+# immer sichtbar, auch bei preset-gefilterten Metriken, #1104).
+_OVERVIEW_WARN_LABEL = "Amtliche Warnungen"
+_TABLE_RE = re.compile(r'<table[^>]*>(.*?)</table>', re.DOTALL)
+
+# v2-Stunden-Spaltenvertrag (compare_html.py:_HOUR_COLUMNS), exakte Reihenfolge.
+_HOUR_COLUMNS_V2 = ["Zeit", "Temp", "Gef.", "Wind", "Böen", "Regen", "Wolken", "UV"]
+
+# Negativ-Check: Score-/Winner-Sprache ist im v2-Vertrag ein Verstoss (kein
+# Ranking mehr, s. compare_html.py-Docstring "Kein Score/Ranking/Winner-Card").
+# Adversary F001: Wortgrenzen statt ungebundener Substring-Suche (sonst
+# false positives bei Ortsnamen wie "Scoresbysund"/"Gewinnerort"); "score"
+# zusaetzlich mit Zahlen-Kontext (Score-Werte sind immer "Score: N"/"Score N"),
+# damit ein isoliertes Wort "Score" (z. B. in einem Ortsnamen-Fragment mit
+# Wortgrenze) nicht faelschlich als Verstoss zaehlt.
+_SCORE_WINNER_RE = re.compile(
+    r"\bscore\b\s*[:=]?\s*\d+|\bwinner\b|\bempfehlung\b|\bbester\s+standort\b|🏆",
+    re.IGNORECASE,
 )
 
+# v2-Uebersichtstabellen-Metrikzeilen (CV2_METRICS-Label -> Format-Regex +
+# plausibler Wertebereich). "Amtliche Warnungen" (Warn-Zeile) hat kein
+# numerisches Format und wird hier bewusst ausgelassen.
+_OVERVIEW_METRIC_CHECKS = {
+    "Temp max": (re.compile(r'^-?\d+°C$'), (-40, 55)),
+    "Wind": (re.compile(r'^\d+ km/h$'), (0, 250)),
+    "Sonne": (re.compile(r'^\d+\.\d h$'), (0, 24)),
+    "Wolken": (re.compile(r'^\d+%$'), (0, 100)),
+    "UV max": (re.compile(r'^\d+$'), (0, 16)),
+}
 
-def _find_matrix_table_html(body: str) -> "str | None":
-    match = _MATRIX_TABLE_RE.search(body)
-    return match.group(1) if match else None
+
+def _extract_rows_from_table_html(table_inner: str) -> List[List[str]]:
+    rows = []
+    for row_match in re.finditer(r'<tr[^>]*>(.*?)</tr>', table_inner, re.DOTALL):
+        row_html = row_match.group(1)
+        cells = re.findall(r'<t[hd][^>]*>(.*?)</t[hd]>', row_html, re.DOTALL)
+        clean_cells = [re.sub(r'<[^>]+>', '', cell).strip() for cell in cells]
+        rows.append(clean_cells)
+    return rows
 
 
 def extract_table_rows(body: str) -> List[List[str]]:
-    """Extract all rows from the comparison matrix table (class="matrix-table")."""
-    table_html = _find_matrix_table_html(body)
-    if table_html is None:
-        return []
-
-    rows = []
-    for row_match in re.finditer(r'<tr[^>]*>(.*?)</tr>', table_html, re.DOTALL):
-        row_html = row_match.group(1)
-        cells = re.findall(r'<t[hd][^>]*>(.*?)</t[hd]>', row_html, re.DOTALL)
-        # Strip HTML tags from cells
-        clean_cells = [re.sub(r'<[^>]+>', '', cell).strip() for cell in cells]
-        rows.append(clean_cells)
-
-    return rows
+    """Findet die v2-Uebersichtstabelle ueber ihre erste Datenzeile
+    "Amtliche Warnungen" (Issue #1108) -- ersetzt die alte
+    class="matrix-table"-Erkennung, die im v2-Renderer nicht mehr existiert."""
+    for match in _TABLE_RE.finditer(body):
+        rows = _extract_rows_from_table_html(match.group(1))
+        if len(rows) >= 2 and rows[1] and rows[1][0].strip() == _OVERVIEW_WARN_LABEL:
+            return rows
+    return []
 
 
 def extract_locations(body: str) -> List[str]:
@@ -165,83 +189,76 @@ def extract_locations(body: str) -> List[str]:
     return locations
 
 
-# Issue #1046: Vertrag statt fester Gesamtzahl. Genau diese drei Klassen je
-# 1x, alle uebrigen Tabellen muessen unklassifiziert sein (Stunden-Tabellen,
-# Anzahl variabel ueber top_n_details, auch 0 zulaessig). Eine zusaetzliche
-# Tabelle mit einer unbekannten Klasse ist ein Fehler (Anti-Erosion).
-_KNOWN_TABLE_CLASSES = ("header-stats-desktop", "header-stats-mobile", "matrix-table")
+def _find_location_hour_table(body: str, location_name: str, occurrence: int = 0):
+    """Findet die Stundentabelle eines Ortes ueber den vorausgehenden
+    "ORT <Name>"-Kopf (_render_location_section, Issue #1108) -- ersetzt die
+    alte CSS-Klassen-Erkennung. `occurrence` waehlt bei gleichnamigen Orten
+    (Adversary F002) das N-te Vorkommen des Namens statt immer nur das erste.
+    Rueckgabe: (Spaltenkoepfe, Datenzeilen) oder None, wenn kein Ort-Kopf
+    dieses Vorkommens bzw. keine folgende Tabelle gefunden wird."""
+    marker = re.compile(r'>ORT</span>\s*<span[^>]*>' + re.escape(location_name) + r'</span>')
+    matches = list(marker.finditer(body))
+    if occurrence >= len(matches):
+        return None
+    match = matches[occurrence]
+    table_match = re.search(r'<table[^>]*>(.*?)</table>', body[match.end():], re.DOTALL)
+    if not table_match:
+        return None
+    rows = _extract_rows_from_table_html(table_match.group(1))
+    if not rows:
+        return None
+    return rows[0], rows[1:]
 
 
 def validate_structure(body: str) -> List[str]:
-    """Validate email structure against spec."""
-    errors = []
+    """Validate email structure against the v2-Vertrag (Issue #1108/#1110):
+    Uebersichtstabelle (Warn-Zeile + >=1 numerische Zeile), Stundentabellen
+    fuer alle gelisteten Orte mit dem exakten 8-Spalten-Vertrag, kein
+    Score-/Winner-Vertrag mehr."""
+    errors: List[str] = []
 
-    # Check table class contract (Issue #1046): each known class exactly once,
-    # unclassified tables (hourly tables) allowed in any number, unknown
-    # classified tables are an error.
-    table_open_tags = re.findall(r'<table[^>]*>', body)
-    class_counts = {cls: 0 for cls in _KNOWN_TABLE_CLASSES}
-    unknown_classified: List[str] = []
-
-    for tag in table_open_tags:
-        cls_match = re.search(r'class="([^"]*)"', tag)
-        if not cls_match:
-            continue  # unklassifizierte Tabelle = erwartete Stunden-Tabelle
-        classes = cls_match.group(1).split()
-        matched = [c for c in classes if c in _KNOWN_TABLE_CLASSES]
-        if matched:
-            for c in matched:
-                class_counts[c] += 1
-        else:
-            unknown_classified.append(cls_match.group(1))
-
-    for cls, count in class_counts.items():
-        if count != 1:
-            errors.append(
-                f"STRUKTUR: Tabelle mit class=\"{cls}\" {count}x gefunden, "
-                f"erwartet: genau 1x"
-            )
-
-    if unknown_classified:
+    rows = extract_table_rows(body)
+    if not rows:
         errors.append(
-            f"STRUKTUR: {len(unknown_classified)} Tabelle(n) mit unbekannter "
-            f"Klasse gefunden: {unknown_classified}"
+            f"STRUKTUR: Uebersichtstabelle nicht gefunden (erste Datenzeile "
+            f"'{_OVERVIEW_WARN_LABEL}' fehlt)"
+        )
+    elif len(rows) < 2:
+        errors.append(
+            f"STRUKTUR: Uebersichtstabelle hat nur {len(rows)} Zeile(n), "
+            f"erwartet: Warn-Zeile + mindestens 1 numerische Metrik-Zeile"
         )
 
-    # Check comparison table has correct rows
-    # SPEC: docs/specs/e2e_validator_english_update.md - English UI, 8 rows
-    rows = extract_table_rows(body)
-    expected_labels = [
-        "Metric",  # Header
-        "Score",
-        "Snow Depth",
-        "New Snow",
-        "Wind/Gusts",
-        "Temperature (felt)",
-        "Sunny Hours",
-        "Cloud Cover",
-        # Cloud Layer removed per cloud_cover_simplification.md
-    ]
+    locations = extract_locations(body)
+    if rows and not locations:
+        errors.append("STRUKTUR: Keine Orte in der Uebersichtstabelle-Kopfzeile gefunden")
 
-    if len(rows) != 8:
-        errors.append(f"STRUKTUR: {len(rows)} Zeilen in Vergleichstabelle, erwartet: 8")
+    # Adversary F002: gleichnamige Orte einzeln pruefen (N-tes Vorkommen statt
+    # immer nur das erste) -- sonst wird eine defekte Stundentabelle des
+    # zweiten (oder n-ten) gleichnamigen Ortes nie erkannt.
+    occurrence_counts: dict = {}
+    for name in locations:
+        occurrence = occurrence_counts.get(name, 0)
+        occurrence_counts[name] = occurrence + 1
+        table = _find_location_hour_table(body, name, occurrence)
+        if table is None:
+            errors.append(
+                f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) nicht gefunden"
+            )
+            continue
+        header_cols, _rows = table
+        if header_cols != _HOUR_COLUMNS_V2:
+            errors.append(
+                f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) hat "
+                f"Spalten {header_cols}, erwartet exakt {_HOUR_COLUMNS_V2}"
+            )
 
-    for i, expected in enumerate(expected_labels):
-        if i < len(rows):
-            actual = rows[i][0] if rows[i] else ""
-            if expected.lower() not in actual.lower():
-                errors.append(f"STRUKTUR: Zeile {i+1} ist '{actual}', erwartet: '{expected}'")
-
-    # Check for required sections (English/German UI)
-    required_sections = [
-        (["Time Window", "Zeitfenster"], "Header mit Zeitfenster"),
-        (["Hourly", "Stündliche"], "Hourly Overview"),
-        (["Recommendation", "Empfehlung"], "Winner-Box"),
-    ]
-
-    for keywords, name in required_sections:
-        if not any(kw in body for kw in keywords):
-            errors.append(f"STRUKTUR: {name} fehlt")
+    score_match = _SCORE_WINNER_RE.search(body)
+    if score_match:
+        errors.append(
+            f"STRUKTUR: Score-/Winner-Sprache im Mail-Body gefunden "
+            f"('{score_match.group(0)}') -- im v2-Vertrag unzulaessig"
+        )
 
     return errors
 
@@ -262,104 +279,90 @@ def validate_location_count(body: str, min_expected: int = 3) -> List[str]:
 
 
 def validate_plausibility(body: str) -> List[str]:
-    """Validate data plausibility - cross-check values."""
+    """v2 (Issue #1108): Wertebereichs-Pruefung der Uebersichtstabellen-
+    Metrikzeilen (Temp max/Wind/Sonne/Wolken/UV max, _OVERVIEW_METRIC_CHECKS)
+    statt String-Presence-Check der alten englischen Zeilen-Labels (Cloud
+    Cover/Sunny Hours). "—" bleibt als Fehlwert-Fallback zulaessig."""
     errors = []
     rows = extract_table_rows(body)
 
-    # Build a map of metric -> values
-    metrics: Dict[str, List[str]] = {}
-    for row in rows:
-        if row:
-            label = row[0].lower()
-            values = row[1:] if len(row) > 1 else []
-            metrics[label] = values
-
-    # Check Cloud Cover has valid values (with optional * marker for high elevations)
-    # SPEC: docs/specs/cloud_cover_simplification.md
-    cloud_cover = metrics.get("cloud cover", [])
-    for i, val in enumerate(cloud_cover):
-        val = val.strip()
-        if val == "-":
+    for row in rows[1:]:
+        if not row:
             continue
-        # Valid formats: "42%", "42%*" (with marker for lower clouds ignored)
-        if not re.match(r'^\d+%\*?$', val):
-            errors.append(
-                f"PLAUSIBILITÄT: Location {i+1} - Cloud Cover '{val}' hat "
-                f"ungültiges Format. Erwartet: 'N%' oder 'N%*'"
-            )
-
-    # Check Sunny Hours has valid values
-    sunny_hours = metrics.get("sunny hours", [])
-    for i, val in enumerate(sunny_hours):
-        val = val.strip()
-        if val == "-":
+        label = row[0].strip()
+        check = _OVERVIEW_METRIC_CHECKS.get(label)
+        if check is None:
             continue
-        # Valid formats: "0h", "~Nh"
-        if not re.match(r'^(0h|~\d+h)$', val):
-            errors.append(
-                f"PLAUSIBILITÄT: Location {i+1} - Sunny Hours '{val}' hat "
-                f"ungültiges Format. Erwartet: '0h' oder '~Nh'"
-            )
+        _, (lo, hi) = check
+        for i, val in enumerate(row[1:]):
+            val = val.strip()
+            if val == "—":
+                continue
+            num_match = re.search(r'-?\d+(\.\d+)?', val)
+            if not num_match:
+                continue
+            num = float(num_match.group(0))
+            if not (lo <= num <= hi):
+                errors.append(
+                    f"PLAUSIBILITÄT: '{label}' Ort {i+1} Wert '{val}' liegt "
+                    f"ausserhalb des plausiblen Wertebereichs [{lo}, {hi}]"
+                )
 
     return errors
 
 
 def validate_format(body: str) -> List[str]:
-    """Validate format of specific fields."""
+    """v2 (Issue #1108): Format-Check der Uebersichtstabellen-Metrikzeilen
+    (z. B. 'N°C', 'N km/h') statt der alten englischen Zeilen-Labels
+    (Wind/Gusts, Sunny Hours). "—" bleibt als Fehlwert-Fallback zulaessig."""
     errors = []
     rows = extract_table_rows(body)
 
-    # Find Wind/Gusts row (English UI)
-    for row in rows:
-        if row and "wind" in row[0].lower() and "gust" in row[0].lower():
-            for i, val in enumerate(row[1:]):
-                val = val.strip()
-                if val == "-":
-                    continue
-                # Expected format: "N/N [Direction]" e.g. "10/25 SW"
-                if not re.match(r'^\d+/\d+\s+[NESW]{1,2}$', val):
-                    errors.append(
-                        f"FORMAT: Wind/Gusts Location {i+1} ist '{val}', "
-                        f"erwartet: 'N/N [Direction]' z.B. '10/25 SW'"
-                    )
-                # Check no degree symbol
-                if "°" in val:
-                    errors.append(
-                        f"FORMAT: Wind/Gusts Location {i+1} enthält Gradzeichen. "
-                        f"Spec sagt: keine Gradangabe!"
-                    )
-
-    # Find Sunny Hours row (English UI)
-    for row in rows:
-        if row and "sunny" in row[0].lower() and "hour" in row[0].lower():
-            for i, val in enumerate(row[1:]):
-                val = val.strip()
-                if val == "-":
-                    continue
-                # Check format: "0h" for 0, "~Nh" for N>0
-                if val == "~0h":
-                    errors.append(
-                        f"FORMAT: Sunny Hours Location {i+1} ist '~0h', "
-                        f"Spec sagt: '0h' (ohne Tilde) bei Wert 0!"
-                    )
-                elif not re.match(r'^(0h|~\d+h)$', val):
-                    errors.append(
-                        f"FORMAT: Sunny Hours Location {i+1} ist '{val}', "
-                        f"erwartet: '0h' oder '~Nh'"
-                    )
+    for row in rows[1:]:
+        if not row:
+            continue
+        label = row[0].strip()
+        check = _OVERVIEW_METRIC_CHECKS.get(label)
+        if check is None:
+            continue
+        pattern, _ = check
+        for i, val in enumerate(row[1:]):
+            val = val.strip()
+            if val == "—":
+                continue
+            if not pattern.match(val):
+                errors.append(
+                    f"FORMAT: '{label}' Ort {i+1} ist '{val}', erwartet Format "
+                    f"gemaess '{label}'-Spalte (Muster: {pattern.pattern})"
+                )
 
     return errors
 
 
 def validate_hourly_table(body: str, time_start: int = 9, time_end: int = 16) -> List[str]:
-    """Validate hourly table completeness."""
+    """v2 (Issue #1108): Vollstaendigkeits-Check pro Ort (ueber die zugehoerige
+    Stundentabelle, _find_location_hour_table) statt globaler String-Presence
+    im gesamten Body -- ein fehlender Ort/eine fehlende Stunde ist damit
+    eindeutig benennbar."""
     errors = []
-
     expected_hours = [f"{h:02d}:00" for h in range(time_start, time_end + 1)]
 
-    for hour in expected_hours:
-        if hour not in body:
-            errors.append(f"STUNDEN-TABELLE: {hour} fehlt")
+    # Adversary F002: Vorkommens-Index statt immer nur das erste Vorkommen.
+    occurrence_counts: dict = {}
+    for name in extract_locations(body):
+        occurrence = occurrence_counts.get(name, 0)
+        occurrence_counts[name] = occurrence + 1
+        table = _find_location_hour_table(body, name, occurrence)
+        if table is None:
+            continue  # bereits von validate_structure() gemeldet
+        _header, data_rows = table
+        present_hours = {row[0].strip() for row in data_rows if row}
+        missing = [h for h in expected_hours if h not in present_hours]
+        if missing:
+            errors.append(
+                f"STUNDEN-TABELLE: Ort '{name}' (Vorkommen {occurrence + 1}) fehlende "
+                f"Stunden: {', '.join(missing)}"
+            )
 
     return errors
 

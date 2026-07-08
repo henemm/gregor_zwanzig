@@ -12,11 +12,24 @@ Gate-Erosion.
 
 ## 1. `email_spec_validator.py` — Orts-Vergleich-Mail (ZWINGEND)
 
-**Geltungsbereich:** prüft **ausschließlich** den **Orts-Vergleich-Mail**-Pfad.
-Fest auf dessen Struktur verdrahtet: zwei Tabellen, die **Vergleichstabelle**, die
-**Winner-Box** (Empfehlung) und mindestens `--min-locations` Orte (Default 3).
+**Geltungsbereich:** prüft **ausschließlich** den **Orts-Vergleich-Mail**-Pfad, seit
+Issue #1108 auf den **v2-Vertrag** (`render_compare_html()`, Issue #1110) umgestellt.
+Fest auf dessen Struktur verdrahtet: eine **Übersichtstabelle** (Metriken × Orte)
+mit der Warn-Zeile „Amtliche Warnungen" als **erster Datenzeile** (identifiziert
+die Tabelle, ersetzt die alte `class="matrix-table"`-Erkennung) sowie eine
+**Stundentabelle je gelistetem Ort** mit exakt 8 Spalten in der Reihenfolge
+Zeit/Temp/Gef./Wind/Böen/Regen/Wolken/UV. Es gibt **keine feste Metrik-
+Zeilenanzahl** mehr — die Übersichtstabelle darf preset-bedingt auf Warn-Zeile +
+einzelne Metriken gefiltert sein (#1104); Mindestanforderung ist Warn-Zeile +
+≥1 numerische Zeile. **Score-/Winner-Sprache ist ein Fehler, keine Pflicht** —
+es gibt keine Winner-Box/„Empfehlung"-Sektion mehr; ein Treffer auf „Score"
+(mit Zahlen-Kontext), „Winner", „Empfehlung", „Bester Standort" oder „🏆" im
+Mail-Body wird als Vertragsverletzung gemeldet (Wortgrenzen-Regex, keine
+ungebundene Substring-Suche — Ortsnamen wie „Scoresbysund" lösen keinen
+False-Positive aus).
 Eine **Trip-Briefing-Mail** (anderer Versandpfad, n Stundentabellen pro Etappe,
-keine Winner-Box) kann diesen Validator **strukturell nie** bestehen → Dauer-Exit-1.
+kein Übersichtstabellen-Vertrag) kann diesen Validator **strukturell nie**
+bestehen → Dauer-Exit-1.
 
 ```bash
 uv run python3 .claude/hooks/email_spec_validator.py
@@ -32,6 +45,11 @@ niemals im Klartext. Kein Gmail.
 
 **Nur bei Exit 0** darfst du „E2E Test bestanden" sagen. Einfache String-Checks
 beweisen NICHTS — sie prüfen nicht, ob Daten SINNVOLL sind.
+
+**Bekannte Grenze (Folge-Scope #1107):** Der Validator prüft nur den statischen
+v2-Struktur-Vertrag (Warn-Zeile + ≥1 numerische Zeile genügt). Ob die im Preset
+tatsächlich aktivierten Metriken korrekt angezeigt werden, ist nicht Teil dieses
+Gates.
 
 ## 2. `briefing_mail_validator.py` — Trip-Briefing-Mail (seit #733)
 
