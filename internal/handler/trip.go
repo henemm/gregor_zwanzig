@@ -201,7 +201,14 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			existing.DisplayConfig = *req.DisplayConfig
 		}
 		if req.ReportConfig != nil {
-			existing.ReportConfig = *req.ReportConfig
+			// Issue #1103: Feld-Level-Merge statt Blind-Replace — Teil-Updates
+			// duerfen bestehende report_config-Keys nicht loeschen.
+			if existing.ReportConfig == nil {
+				existing.ReportConfig = map[string]interface{}{}
+			}
+			for k, v := range *req.ReportConfig {
+				existing.ReportConfig[k] = v
+			}
 		}
 		if req.AlertRules != nil {
 			existing.AlertRules = *req.AlertRules

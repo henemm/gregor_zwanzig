@@ -78,6 +78,26 @@ func CreateLocationHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		// Issue #1082: bestehende Location unter derselben (Auto-)ID nicht
+		// still überschreiben. Existenzprüfung ist user-scoped (s bereits
+		// per WithUser gebunden) — keine Cross-User-Kollision.
+		existing, err := s.LoadLocation(loc.ID)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+		if existing != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(409)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error":  "conflict",
+				"detail": "Ort mit dieser ID existiert bereits",
+			})
+			return
+		}
+
 		now := time.Now().UTC()
 		loc.CreatedAt = &now
 
