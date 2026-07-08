@@ -15,6 +15,7 @@
 	import CompareIdealRow from '$lib/components/molecules/CompareIdealRow.svelte';
 	import CompareLayoutRow from '$lib/components/molecules/CompareLayoutRow.svelte';
 	import DetailRow from '$lib/components/molecules/DetailRow.svelte';
+	import { channelChipCount } from './channelChipCount.js';
 	import {
 		deriveStatusFromPreset,
 		presetScheduleLabel,
@@ -342,7 +343,7 @@
 	{#if activeTab === 'layout'}
 		<div class="tab-panel" data-testid="compare-detail-panel-layout">
 			{#each channels as ch}
-				<CompareLayoutRow channel={ch} cols={CHANNEL_COLS[ch]} />
+				<CompareLayoutRow channel={ch} cols={channelChipCount(CHANNEL_COLS[ch], preset.location_ids.length)} />
 			{/each}
 		</div>
 	{/if}
