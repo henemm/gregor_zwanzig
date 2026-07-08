@@ -207,6 +207,16 @@ ergänzt:
   selben Repo-Zustand), bleibt der Marker ggf. auf einem älteren Commit stehen
   und die Diff-Basis ist entsprechend älter (kein Fehlerzustand, nur ein
   breiterer Diff-Scan als nötig).
+  - **Update (2026-07-07, Issue #1084):** Der ursprünglich hier beschriebene
+    Grenzfall — `prod_selftest.py` läuft unmittelbar nach einem erfolgreichen
+    `staging_gate.py --check`-Lauf im selben Repo-Zustand, der Marker steht
+    bereits auf HEAD, `git diff HEAD..HEAD` ist leer und liefert fälschlich
+    `docs-only` — wurde konkret beobachtet (#1080-Deploy-Pipeline) und über
+    einen Scope-Cache im Marker selbst behoben: `write_last_gate_scope()`
+    speichert zusätzlich den bereits berechneten Scope (`gate_last_scope`),
+    `prod_selftest.py::_detect_committed_scope()` nutzt diesen Cache-Wert bei
+    exakter Commit-Übereinstimmung, statt ihn selbstreferenziell neu
+    herzuleiten. Details: `docs/specs/modules/issue_1084_gate_scope_cache.md`.
 - Fix 2 (#988) unterscheidet ausschließlich über die Existenz von
   `pyproject.toml` — ein Repo, das `pyproject.toml`, aber absichtlich (aus
   legitimen Gründen) keine Golden-Tests führt, würde weiterhin fälschlich

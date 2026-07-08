@@ -231,7 +231,8 @@ def _telegram_live_gate() -> int:
     return 0
 
 
-def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = None) -> int:
+def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = None,
+                  scope_override: str | None = None) -> int:
     """Mode A: Verdict in e2e_verified.json schreiben."""
     sha = _head_sha()
     if e2e_path is None:
@@ -251,7 +252,7 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
         _log(f"Findings-Datei nicht lesbar: {exc}", stream=sys.stderr)
         return 1
 
-    scope = _detect_committed_scope()
+    scope = scope_override or _detect_committed_scope()
     payload = {
         "verified_commit": sha,
         "staging_verdict": verdict,
@@ -282,7 +283,7 @@ def gate_check(e2e_path: Path | None, scope_override: str | None) -> int:
     scope = scope_override or _detect_committed_scope()
     if scope == "docs-only":
         _log(f"Scope '{scope}' — Staging-Gate übersprungen (kein UI/Backend-Change).")
-        _e2e_paths.write_last_gate_scope(_shared_repo_dir(), _head_sha())
+        _e2e_paths.write_last_gate_scope(_shared_repo_dir(), _head_sha(), scope)
         return 0
 
     if e2e_path is None:
@@ -340,7 +341,7 @@ def gate_check(e2e_path: Path | None, scope_override: str | None) -> int:
         return 1
 
     _log(f"OK: Staging-Gate bestanden (commit={head[:8]}, verdict={verdict!r}).")
-    _e2e_paths.write_last_gate_scope(_shared_repo_dir(), head)
+    _e2e_paths.write_last_gate_scope(_shared_repo_dir(), head, scope)
     return 0
 
 
@@ -362,7 +363,7 @@ def main() -> int:
 
     if args.write_verdict:
         findings_path = Path(args.findings_json) if args.findings_json else Path("/dev/null")
-        return write_verdict(args.write_verdict, findings_path, e2e_path)
+        return write_verdict(args.write_verdict, findings_path, e2e_path, args.scope)
 
     if args.check:
         return gate_check(e2e_path, args.scope)

@@ -99,6 +99,33 @@ if not _is_probeable_url(prod_url):
 
 ---
 
+## BUG-1084-STALE-MARKER: prod_selftest.py übersprang sich still bei stale Gate-Marker
+
+**Status:** RESOLVED (2026-07-07) | **Severity:** Medium | **GitHub Issue:** #1084 | **Spec:** `docs/specs/modules/issue_1084_gate_scope_cache.md`
+
+### Symptom
+
+Lief `prod_selftest.py` (Post-Deploy-Schritt 4b) unmittelbar nach einem erfolgreichen `staging_gate.py --check`-Lauf (Schritt 4) im selben Repo-Zustand, überprang sich die Post-Deploy-Verifikation still, obwohl echter Code deployt wurde (beobachtet bei der #1080-Deploy-Pipeline).
+
+### Root Cause
+
+Beide Skripte spiegeln ihre Scope-Erkennung über denselben Marker (`.claude/last_gate_scope.json`, eingeführt durch #916). `staging_gate.py` hatte den Marker gerade selbst auf HEAD gesetzt; `prod_selftest.py`s eigene `_detect_committed_scope()` diffte daraufhin `git diff HEAD..HEAD` (leer) gegen denselben, jetzt bereits aktuellen Marker und leitete fälschlich `docs-only` her.
+
+### Fix (Committed 2026-07-07)
+
+Scope-Cache im Marker selbst: `write_last_gate_scope()` speichert zusätzlich den bereits berechneten Scope-Wert (`gate_last_scope`); `prod_selftest.py::_detect_committed_scope()` nutzt diesen gecachten Wert bei exakter Commit-Übereinstimmung mit dem Marker, statt ihn selbstreferenziell neu herzuleiten. Ein naiver `HEAD~1`-Fallback wurde bewusst verworfen — er hätte den ursprünglichen Multi-Commit-Bug #916 wieder eingeschleppt.
+
+### Files Changed
+
+- `.claude/hooks/_e2e_paths.py`, `.claude/hooks/staging_gate.py`, `.claude/hooks/prod_selftest.py`, `tests/tdd/test_issue_1084_gate_scope_cache.py`
+
+### Lessons Learned
+
+1. **Gespiegelte Scope-Erkennung über zwei Prozesse ist selbstreferenz-anfällig**, wenn ein Prozess den Marker gerade erst auf den aktuellen Zustand geschrieben hat, den der zweite Prozess dann als "Diff-Basis" liest.
+2. **Cache statt Neuberechnung** ist hier robuster als ein naiver Zeit-/Commit-Fallback, der bereits gefixte Bugs (#916) wieder einschleppen würde.
+
+---
+
 ## BUG-DATALOSS-GR221: 4 → 1 Stage Konsolidierung (GR221 Mallorca)
 
 **Status:** RESOLVED — Recovery (2026-04-29) | **Severity:** High | **GitHub Issue:** #102

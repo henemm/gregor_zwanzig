@@ -417,6 +417,18 @@ def _detect_committed_scope(repo_dir: Path = REPO_DIR) -> str:
 
     Returns: docs-only | frontend-only | backend | full-stack
     """
+    # Issue #1084: Scope-Cache. Lief staging_gate.py gerade erfolgreich für exakt
+    # denselben HEAD, hat es den tatsächlich verwendeten Scope im Marker
+    # hinterlegt. Ein selbstreferenzieller HEAD..HEAD-Diff wäre hier leer und
+    # würde fälschlich 'docs-only' liefern — daher den gecachten Wert direkt
+    # zurückgeben. Nur bei exakter Commit-Übereinstimmung UND vorhandenem
+    # gate_last_scope-Feld; jeder andere Fall fällt auf die Diff-Logik zurück.
+    entry = _e2e_paths.read_last_gate_scope_entry(repo_dir)
+    if entry is not None:
+        cached_scope = entry.get("gate_last_scope")
+        if cached_scope is not None and entry.get("gate_scope_sha") == _e2e_paths.head_sha(repo_dir):
+            return cached_scope
+
     base = _scope_diff_base(repo_dir)
     result = subprocess.run(
         ["git", "diff", "--name-only", base, "HEAD"],

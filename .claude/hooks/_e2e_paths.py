@@ -17,16 +17,24 @@ def last_gate_scope_path(repo_dir) -> Path:
     return Path(repo_dir) / ".claude" / "last_gate_scope.json"
 
 
-def write_last_gate_scope(repo_dir, sha) -> None:
+def write_last_gate_scope(repo_dir, sha, scope=None) -> None:
     """Schreibt {"gate_scope_sha": sha} in den Marker.
+
+    Ist ``scope`` gesetzt, wird zusätzlich {"gate_last_scope": scope}
+    mitgeschrieben (Scope-Cache für prod_selftest.py, Issue #1084). Ohne
+    ``scope`` (Default None) bleibt das alte Format {"gate_scope_sha": sha}
+    erhalten — bestehende Aufrufer bleiben unverändert kompatibel.
 
     Schreibfehler (z.B. read-only Dateisystem) werden geschluckt — das
     Gate-Ergebnis selbst darf davon nicht beeinflusst werden.
     """
     path = last_gate_scope_path(repo_dir)
+    payload = {"gate_scope_sha": sha}
+    if scope is not None:
+        payload["gate_last_scope"] = scope
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"gate_scope_sha": sha}))
+        path.write_text(json.dumps(payload))
     except OSError:
         pass
 
@@ -42,6 +50,23 @@ def read_last_gate_scope(repo_dir) -> "str | None":
         return None
     sha = data.get("gate_scope_sha")
     return sha if sha else None
+
+
+def read_last_gate_scope_entry(repo_dir) -> "dict | None":
+    """Liest den vollen Marker-Eintrag (dict) oder None bei fehlender/kaputter Datei.
+
+    Pendant zu read_last_gate_scope(), das ausschließlich den SHA-String
+    liefert. Wird für den Scope-Cache in prod_selftest.py benötigt (Issue
+    #1084), der zusätzlich das Feld gate_last_scope auswertet.
+    """
+    path = last_gate_scope_path(repo_dir)
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    return data
 
 
 def head_sha(repo_dir) -> str:
