@@ -156,3 +156,19 @@ def test_ac4_modeled_field_wins_no_duplicate():
     # aber wir beweisen explizit, dass es der modellierte (korrekte) Wert ist
     # und kein aus extra überschriebener/kollidierender Wert.
     assert list(rt.keys()).count("region") == 1
+
+
+# --- AC-5: start_time bleibt kanonisches HH:MM (kein Sekunden-Drift) -------
+
+def test_ac5_start_time_roundtrip_stable():
+    """AC-5: Stage-start_time im kanonischen Format "HH:MM" bleibt nach
+    _trip_to_dict(load_trip_from_dict(d)) byte-identisch "HH:MM" —
+    nicht ".isoformat()" mit Sekunden ("08:00:00").
+    """
+    d = _minimal_trip_dict()
+    d["stages"][0]["start_time"] = "08:00"
+
+    trip = load_trip_from_dict(d)
+    rt = _trip_to_dict(trip)
+
+    assert rt["stages"][0]["start_time"] == "08:00"

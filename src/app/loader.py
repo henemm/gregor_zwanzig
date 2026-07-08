@@ -1062,7 +1062,9 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "waypoints": waypoints_data,
         }
         if stage.start_time is not None:
-            stage_dict["start_time"] = stage.start_time.isoformat()
+            # #991 AC-5: kanonisches HH:MM (Go naismith.go:24, Frontend
+            # DEFAULT_START_TIME) statt .isoformat() mit Sekunden.
+            stage_dict["start_time"] = stage.start_time.strftime("%H:%M")
         stages_data.append(stage_dict)
 
     data = {

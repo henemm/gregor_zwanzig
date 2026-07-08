@@ -100,12 +100,26 @@ for k, v in trip.extra.items():
   Then stammt der Wert aus dem Modell (nicht aus `extra`), und es entsteht **kein** doppelter/kollidierender Eintrag — modellierte Felder haben Vorrang.
   - Test: Roundtrip eines Trips mit gesetztem `region`; genau ein `region`-Eintrag mit korrektem Wert.
 
+- **AC-5:** Given ein Trip mit Stage-`start_time` /
+  When Roundtrip `_trip_to_dict(load_trip(...))` ausgeführt wird /
+  Then emittiert Python das systemweit kanonische `"HH:MM"` (Go `naismith.go:24 defaultStartTime="08:00"`, Frontend `DEFAULT_START_TIME`), nicht `.isoformat()` mit Sekunden. `"08:00"` bleibt `"08:00"`.
+  - Test: Roundtrip mit `start_time="08:00"` → exakt `"08:00"`.
+  - **Wichtig (Adversary-Befund):** Da persistierte Trips gemischt `"HH:MM"`/`"HH:MM:SS"` sind (Go reicht `start_time` als opaquen String durch), macht die Serialisierungsänderung ALLEIN `test_ac9` NICHT grün — die auf Platte als `"HH:MM:SS"` liegenden Dateien driften dann andersherum. Deshalb zwingend zusammen mit AC-6.
+
+- **AC-6:** Given persistierte Trip-JSONs mit gemischtem `start_time`-Format auf Platte /
+  When die einmalige Migration `scripts/migrate_start_time_canonical.py` läuft /
+  Then sind ALLE `start_time`-Werte in `data/users/*/trips/*.json` auf `"HH:MM"` normalisiert, **ausschließlich** die start_time-Strings geändert (kein anderes Feld/Byte), die Migration ist **idempotent** (zweiter Lauf = keine Änderung) und legt vorher ein **Backup** an. Danach ist `test_ac9` auf dem vollen Datensatz grün.
+  - Test: Fixture-Trip mit `start_time="14:00:00"` + Zusatzfelder → Migration → `start_time=="14:00"`, alle anderen Felder byte-identisch; zweiter Lauf idempotent; `test_ac9` grün nach Migration.
+
 ## Was NICHT Teil dieses Workflows ist
 
 - **Nested-Feldverlust** (innerhalb `display_config`/`report_config`/`aggregation` etc.) —
-  der Test toleriert diese bewusst (`drift_tolerant_keys`). Nur Top-Level ist Scope.
+  der Test toleriert diese bewusst (`drift_tolerant_keys`). Nur Top-Level + der oben
+  behandelte `start_time`-Format-Drift sind Scope.
 - Der `save_trip`-File-Merge (#805) bleibt unverändert; die generische Modell-Erhaltung
   ergänzt ihn (Roundtrip verliert nichts mehr, unabhängig vom Zielpfad).
+- **Staging-Testdaten-Verschmutzung** (`data/users/tdd-692-*` u.a. pytest-Residuen) —
+  separates Aufräum-Thema, eigenes Issue.
 
 ## Test-Plan
 
