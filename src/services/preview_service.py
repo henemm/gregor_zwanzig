@@ -153,7 +153,8 @@ class PreviewService:
         stability_result,
     ):
         """Einzelstelle für den E-Mail-Render-Aufruf in der Vorschau."""
-        return scheduler._formatter.format_email(
+        from src.output.renderers.trip_report import TripReportFormatter
+        return TripReportFormatter().format_email(
             segments=segment_weather,
             trip_name=trip.name,
             report_type=report_type,

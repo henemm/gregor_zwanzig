@@ -47,7 +47,7 @@ tags: [backend, preview, sms, epic-140, wiring]
 ```python
 def _build_report(self, trip, target, report_type):
     # ... bestehender Pipeline-Code ...
-    report = scheduler._formatter.format_email(...)
+    report = TripReportFormatter().format_email(...)  # seit #1136, vorher scheduler._formatter
     return report, segment_weather, stage_name  # statt nur report
 ```
 
