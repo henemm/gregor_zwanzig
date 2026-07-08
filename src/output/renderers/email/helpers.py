@@ -1185,6 +1185,9 @@ def _pill_for_metric(
             first_hh, _pv, _pk_hh = fp
             total_str = f"{total:.1f}".rstrip("0").rstrip(".")
             return (f"Regen ab {first_hh:02d}:00 · {total_str} mm", tone)
+        if round(total, 1) > 0:
+            total_str = f"{total:.1f}".rstrip("0").rstrip(".")
+            return (f"Regen ges. {total_str} mm", tone)
         return ("kein Regen", tone)
 
     if metric_id == "rain_probability":
