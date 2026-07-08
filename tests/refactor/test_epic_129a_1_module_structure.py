@@ -47,11 +47,17 @@ def test_comparison_engine():
 
 def test_comparison_renderers():
     """AC-2 (renderers): output.renderers.comparison exportiert
-    render_comparison_html und render_comparison_text.
+    render_comparison_text.
+
+    Issue #1110: render_comparison_html() war ein bestaetigter toter
+    Alt-Renderer (Score/Winner-Vertrag, nie vom echten Versandpfad
+    aufgerufen) und wurde ENTFERNT (koordiniert mit #1108) -- der echte
+    HTML-Renderer lebt in output.renderers.email.compare_html.
     """
     mod = importlib.import_module("output.renderers.comparison")
-    assert hasattr(mod, "render_comparison_html"), (
-        "output.renderers.comparison.render_comparison_html fehlt"
+    assert not hasattr(mod, "render_comparison_html"), (
+        "output.renderers.comparison.render_comparison_html haette mit "
+        "Issue #1110 entfernt werden muessen (toter Alt-Renderer)"
     )
     assert hasattr(mod, "render_comparison_text"), (
         "output.renderers.comparison.render_comparison_text fehlt"

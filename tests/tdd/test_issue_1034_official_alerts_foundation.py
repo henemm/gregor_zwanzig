@@ -154,19 +154,22 @@ class TestIssue1034OfficialAlertsFoundation:
             )
 
             # (b) Einfuegestelle im vollen HTML: Warnungs-Banner direkt gefolgt von
-            # genau einem Newline vor der Vergleichsmatrix -- kein Doppel-Newline,
-            # keine Badge-Spur dazwischen.
+            # genau einem Newline vor der Uebersichtstabelle -- kein Doppel-
+            # Newline, keine Badge-Spur dazwischen (Issue #1110: v2 hat keine
+            # class="matrix-table" mehr -- die Uebersichtstabelle mit der
+            # Warn-Zeile "Amtliche Warnungen" ist ihr strukturelles Aequivalent).
             html = render_compare_html(
                 result, profile=ActivityProfile.ALLGEMEIN, warnings=["Sturmwarnung Test"]
             )
             banner_end = html.index("Sturmwarnung Test</div>") + len("Sturmwarnung Test</div>")
-            matrix_start = html.index('<table class="matrix-table"', banner_end)
-            between = html[banner_end:matrix_start]
+            overview_start = html.index("Amtliche Warnungen", banner_end)
+            between = html[banner_end:overview_start]
 
-            assert between.count("\n") == 1, (
-                f"Zwischen Warnungs-Banner und Vergleichsmatrix darf bei leerer "
-                f"Official-Alert-Registry nur genau EIN Newline stehen (keine "
-                f"zusaetzliche Leerzeile durch den Platzhalter), gefunden: {between!r}"
+            assert between.count("\n") <= 1, (
+                f"Zwischen Warnungs-Banner und Uebersichtstabelle darf bei leerer "
+                f"Official-Alert-Registry hoechstens EIN Newline stehen (keine "
+                f"zusaetzliche Leerzeile durch den leeren Warn-Lead-Platzhalter), "
+                f"gefunden: {between!r}"
             )
             assert "\n\n" not in between, (
                 f"Kein Doppel-Newline an der Einfuegestelle erlaubt, gefunden: {between!r}"
@@ -273,9 +276,16 @@ class TestIssue1034OfficialAlertsFoundation:
         When die Compare-Mail gerendert wird, Then erscheint der Badge/Label fuer
         diesen Ort und NICHT fuer die anderen, die <table>-Anzahl bleibt identisch
         zur Baseline ohne registrierte Quellen (der Badge fuegt keine Tabelle
-        hinzu), Badge-Block liegt vor der Vergleichsmatrix (`matrix-table`).
+        hinzu).
 
-        TDD RED: `services.official_alerts` existiert noch nicht -> ImportError.
+        Issue #1110 (v2): kein "matrix-table" mehr -- die Uebersichtstabelle
+        (Warn-Zeile "Amtliche Warnungen") ist das strukturelle Aequivalent.
+        "thunderstorm" ist kein bekannter Kuerzel-hazard (extreme_heat/
+        wildfire_risk/access_ban) -> Fallback-Regel zeigt `alert.label`
+        ungekuerzt SOWOHL als Warn-Zeilen-Chip (Uebersicht) ALS AUCH im
+        Langform-Warnstreifen ueber der betroffenen Stundentabelle -> zwei
+        Treffer statt einem (Spec Known Limitations), beide beim betroffenen
+        Ort Nizza.
         """
         import services.official_alerts.base as oa_base
         from services.official_alerts import OfficialAlert, register_official_alert_source
@@ -321,19 +331,19 @@ class TestIssue1034OfficialAlertsFoundation:
                 f"Baseline={len(tables_baseline)}, mit Badge={len(tables_mit_badge)}"
             )
 
-            matrix_pos = html.find('<table class="matrix-table"')
-            assert matrix_pos != -1, "Vergleichsmatrix (matrix-table) muss im HTML vorhanden sein"
+            overview_pos = html.find("Amtliche Warnungen")
+            assert overview_pos != -1, "Uebersichtstabelle mit Warn-Zeile muss im HTML vorhanden sein"
 
             label_positions = [m.start() for m in re.finditer(re.escape(alert.label), html)]
-            assert len(label_positions) == 1, (
-                f"Badge-Label '{alert.label}' muss genau einmal im HTML erscheinen "
-                f"(nur beim betroffenen Ort Nizza, nicht bei Cannes/Marseille), "
+            assert len(label_positions) == 2, (
+                f"Badge-Label '{alert.label}' muss in v2 an genau 2 Stellen erscheinen "
+                f"(Fallback-Chip in der Uebersichts-Warn-Zeile + Langform-Warnstreifen "
+                f"ueber der Stundentabelle des betroffenen Ortes Nizza), "
                 f"gefunden {len(label_positions)}x"
             )
-            assert label_positions[0] < matrix_pos, (
-                "Der Official-Alert-Badge muss im Dokumentfluss VOR der "
-                "Vergleichsmatrix (matrix-table) stehen (Slot hinter warnings_html, "
-                "vor matrix_html)"
+            assert label_positions[0] > overview_pos, (
+                "Der erste Badge-Treffer (Fallback-Chip) muss innerhalb/nach der "
+                "Uebersichtstabelle liegen"
             )
         finally:
             oa_base._REGISTERED_SOURCES.clear()

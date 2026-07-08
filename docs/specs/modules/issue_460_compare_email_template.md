@@ -2,8 +2,9 @@
 entity_id: issue_460_compare_email_template
 type: module
 created: 2026-05-30
-updated: 2026-05-30
-status: implemented
+updated: 2026-07-08
+status: superseded
+superseded_by: issue_1110_compare_mail_v2.md (2026-07-08)
 version: "1.0"
 issue: 460
 tags: [compare, email, renderer, html, python, winner-tags, header]
@@ -195,3 +196,4 @@ Die übrigen bestehenden `@media`-Regeln (`secondary-col`, Karten-Layout) bleibe
 ## Changelog
 
 - 2026-05-30: Initial spec — Issue #460. Erweiterung von `compare_html.py` um `_render_winner_tags()` und `_render_header()`; Signatur-Erweiterung `render_compare_html()` mit `winner_tags`-Parameter; `@media`-Ausbau für Header-Stats. ~180 LoC netto, 4 neue Testfälle.
+- 2026-07-08: **Superseded** durch `docs/specs/modules/issue_1110_compare_mail_v2.md` (Issue #1110). Die hier eingeführten Winner-Tags (`_render_winner_tags`) und das Stats-Grid wurden mit der Score/Winner-Entfernung in v2 entfernt bzw. abgelöst; das Header-Konzept (Eyebrow, Datum/Zeitfenster, Stats-Grid) lebt inhaltlich in v2 weiter. Inhalt dieser Spec unverändert als historische Referenz belassen.

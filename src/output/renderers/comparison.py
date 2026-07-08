@@ -4,459 +4,107 @@ Comparison Renderers — extracted from the former NiceGUI compare page (Epic #1
 Pure-function renderers that turn ComparisonResult into HTML / Plain-Text for
 email delivery. No NiceGUI dependency.
 
+``render_comparison_html()`` war seit Issue #253 ein bestaetigter toter
+Alt-Renderer (Score/Winner-Vertrag, nie vom echten Versandpfad aufgerufen --
+``render_compare_email()`` nutzt ausschliesslich ``output.renderers.email.
+compare_html.render_compare_html()``) und wurde mit Issue #1110 ENTFERNT
+(koordiniert mit #1108). ``render_comparison_text()`` wurde im selben Zug auf
+den v2-Vertrag umgestellt: kein Score/🏆 mehr, stattdessen Uebersicht +
+amtliche Warnungen je Ort, Stundentabellen fuer alle Orte.
+
 SPEC: docs/specs/epic_129a_1_compare_helpers.md
-SPEC (HTML/Text): docs/specs/compare_email.md v4.2
+SPEC (v2): docs/specs/modules/issue_1110_compare_mail_v2.md
 """
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Optional
 
 from app.profile import ActivityProfile
 from app.user import ComparisonResult
-from .email.design_tokens import (
-    FONT_UI, G_ACCENT, G_INK, G_PAPER, G_SUCCESS, G_SURFACE_1, WEB_FONT_LINK,
-)
-from .email.profile_signature import profile_signature
+from output.renderers.email.compare_html import sort_locations_alphabetically
 from src.output.renderers.alert.official_alerts import render_official_alerts_plain
-from services.weather_metrics import HourlyCell, WeatherMetricsService
-from utils.geo import degrees_to_compass
 
 
-def render_comparison_html(result: ComparisonResult, top_n_details: int = 3, enabled_metrics: set | None = None, profile: Optional[ActivityProfile] = None) -> str:
+def render_comparison_text(result: ComparisonResult, profile: Optional[ActivityProfile] = None) -> str:
     """
-    Render ComparisonResult as HTML for email.
+    Render ComparisonResult als Klartext (v2, Issue #1110).
 
-    This is the single HTML renderer - used by both direct email and subscriptions.
-    If enabled_metrics is provided, only rows for those metric_ids are rendered.
-    Guarantees identical output for identical ComparisonResult.
+    Kein Score/🏆 mehr. Je Ort: Uebersichtswerte + amtliche Warnungen (via
+    ``render_official_alerts_plain()``, kein Copy-Paste, ADR-0011). Danach
+    kompakte Stundentabellen fuer ALLE Orte (kein Rang-Praefix, keine
+    Top-N-Beschraenkung mehr).
 
     Args:
-        result: ComparisonResult from ComparisonEngine
-        top_n_details: Number of locations to show hourly details for
-        enabled_metrics: Optional set of metric_ids that should be rendered.
-        profile: Optional ActivityProfile for header eyebrow signature.
+        result: ComparisonResult aus ComparisonEngine.
+        profile: Optional ActivityProfile (aktuell ohne Einfluss auf den
+            Klartext-Inhalt, akzeptiert fuer API-Konsistenz mit
+            ``render_compare_html``).
 
     Returns:
-        HTML string for email
+        Klartext-String fuer die E-Mail.
     """
-    now = datetime.now()
-    time_window = result.time_window
-    target_date = result.target_date
-    valid_locs = result.valid_locations
-
-    # Helper to find best index
-    def find_best(values: List, higher_is_better: bool = True) -> int:
-        valid = [(i, v) for i, v in enumerate(values) if v is not None]
-        if not valid:
-            return -1
-        if higher_is_better:
-            return max(valid, key=lambda x: x[1])[0]
-        return min(valid, key=lambda x: x[1])[0]
-
-    # Extract data from LocationResult objects
-    location_names = [loc.location.name for loc in valid_locs]
-    scores = [loc.score for loc in valid_locs]
-    snow_depths = [loc.snow_depth_cm for loc in valid_locs]
-    snow_news = [loc.snow_new_cm for loc in valid_locs]
-    winds = [loc.wind_max for loc in valid_locs]
-    wind_directions = [loc.wind_direction_avg for loc in valid_locs]
-    gusts = [loc.gust_max for loc in valid_locs]
-    wind_chills = [loc.wind_chill_min for loc in valid_locs]
-    sunny_hours_list = [loc.sunny_hours for loc in valid_locs]
-    clouds = [loc.cloud_avg for loc in valid_locs]
-    above_low_clouds_flags = [loc.above_low_clouds for loc in valid_locs]
-
-    # Find bests
-    best_score = find_best(scores, True)
-    best_snow_depth = find_best(snow_depths, True)
-    best_snow_new = find_best(snow_news, True)
-    best_wind = find_best(winds, False)
-    best_wc = find_best(wind_chills, True)
-    best_sunny = find_best(sunny_hours_list, True)
-    best_clouds = find_best(clouds, False)
-
-    # Profile signature (Eyebrow header)
-    sig = profile_signature(profile)
-    eyebrow_html = (
-        f'<div style="background:{sig.accent_hex};color:#ffffff;'
-        f'font-family:{FONT_UI};font-size:11px;letter-spacing:0.08em;'
-        f'padding:6px 24px;text-transform:uppercase;">'
-        f'{sig.icon_html} {sig.eyebrow}</div>'
-    )
-
-    # CSS Styles
-    html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    {WEB_FONT_LINK}
-    <style>
-        body {{ font-family: {FONT_UI}; margin: 0; padding: 20px; background: {G_PAPER}; }}
-        .container {{ max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
-        .header {{ background: {G_PAPER}; color: {G_INK}; padding: 24px; }}
-        .header h1 {{ margin: 0 0 8px 0; font-size: 24px; }}
-        .header p {{ margin: 4px 0; opacity: 0.9; font-size: 14px; }}
-        .winner {{ background: {G_SURFACE_1}; padding: 20px; border-left: 4px solid {G_SUCCESS}; margin: 20px; border-radius: 8px; }}
-        .winner h2 {{ margin: 0 0 8px 0; color: {G_INK}; font-size: 18px; }}
-        .winner p {{ margin: 0; color: {G_INK}; }}
-        table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-        th {{ background: {G_SURFACE_1}; padding: 12px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #ddd; }}
-        th.label {{ text-align: left; width: 140px; }}
-        td {{ padding: 10px 8px; text-align: center; border-bottom: 1px solid #eee; }}
-        td.label {{ text-align: left; font-weight: 500; color: {G_INK}; }}
-        td.best {{ background: {G_SURFACE_1}; font-weight: 600; color: {G_SUCCESS}; }}
-        .section {{ padding: 0 20px; }}
-        .section h3 {{ color: {G_INK}; border-bottom: 2px solid {G_ACCENT}; padding-bottom: 8px; }}
-        .footer {{ background: {G_INK}; padding: 16px; text-align: center; color: #ffffff; font-size: 12px; }}
-        .rank {{ background: {G_ACCENT}; color: white; border-radius: 4px; padding: 2px 6px; font-size: 11px; margin-right: 4px; }}
-        .weather {{ font-size: 16px; }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        {eyebrow_html}
-        <div class="header">
-            <h1>⛷️ Skigebiete-Vergleich</h1>
-            <p>📅 Forecast for: <strong>{target_date.strftime('%A, %d.%m.%Y')}</strong></p>
-            <p>🕐 Time Window: {time_window[0]:02d}:00 - {time_window[1]:02d}:00</p>
-            <p>📝 Created: {now.strftime('%d.%m.%Y %H:%M')}</p>
-        </div>
-"""
-
-    # Winner recommendation
-    winner = result.winner
-    if winner:
-        details = []
-        if winner.snow_depth_cm:
-            details.append(f"❄️ {winner.snow_depth_cm:.0f}cm Schnee")
-        if winner.snow_new_cm:
-            details.append(f"🆕 +{winner.snow_new_cm:.0f}cm Neuschnee")
-        if winner.sunny_hours:
-            details.append(f"☀️ ~{winner.sunny_hours}h Sonne")
-
-        html += f"""
-        <div class="winner">
-            <h2>🏆 Empfehlung: {winner.location.name}</h2>
-            <p>Score: <strong>{winner.score}</strong> | {' | '.join(details) if details else '-'}</p>
-        </div>
-"""
-
-    # Helper to create cell
-    def cell(val, formatter, is_best):
-        formatted = formatter(val)
-        cls = ' class="best"' if is_best else ''
-        return f'<td{cls}>{formatted}</td>'
-
-    # Comparison table
-    html += """
-        <div class="section">
-            <h3>📊 Vergleich</h3>
-            <table>
-                <tr>
-                    <th class="label">Metrik</th>
-"""
-    for i, name in enumerate(location_names):
-        html += f'                    <th><span class="rank">#{i+1}</span> {name}</th>\n'
-    html += "                </tr>\n"
-
-    # Helper: check if metric should be rendered based on display_config
-    def show(metric_id: str) -> bool:
-        if enabled_metrics is None:
-            return True
-        return metric_id in enabled_metrics
-
-    # Score row (always shown)
-    html += "                <tr>\n                    <td class=\"label\">Score</td>\n"
-    for i, v in enumerate(scores):
-        html += f"                    {cell(v, lambda x: str(x) if x else '-', i == best_score)}\n"
-    html += "                </tr>\n"
-
-    # Snow depth row
-    if show("snow_depth"):
-        html += "                <tr>\n                    <td class=\"label\">Schneehöhe</td>\n"
-        for i, v in enumerate(snow_depths):
-            html += f"                    {cell(v, lambda x: f'{x:.0f}cm' if x else '-', i == best_snow_depth)}\n"
-        html += "                </tr>\n"
-
-    # New snow row
-    if show("fresh_snow"):
-        html += "                <tr>\n                    <td class=\"label\">Neuschnee</td>\n"
-        for i, v in enumerate(snow_news):
-            is_best = i == best_snow_new and v and v > 0
-            html += f"                    {cell(v, lambda x: f'+{x:.0f}cm' if x else '-', is_best)}\n"
-        html += "                </tr>\n"
-
-    # Wind/Böen combined row: "10/41 SW"
-    if not show("wind") and not show("gust"):
-        pass  # skip entire row if both wind and gust disabled
-    elif True:  # wind row
-        html += "                <tr>\n                    <td class=\"label\">Wind/Böen</td>\n"
-    for i, (wind, gust, direction) in enumerate(zip(winds, gusts, wind_directions)):
-        compass = degrees_to_compass(direction, language="de", none_label="-")
-        if wind is not None and gust is not None:
-            text = f"{wind:.0f}/{gust:.0f} {compass}"
-        elif wind is not None:
-            text = f"{wind:.0f}/- {compass}"
-        else:
-            text = "-"
-        is_best = i == best_wind
-        cls = ' class="best"' if is_best else ''
-        html += f'                    <td{cls}>{text}</td>\n'
-    html += "                </tr>\n"
-
-    # Wind chill row
-    if show("wind_chill"):
-        html += "                <tr>\n                    <td class=\"label\">Temperatur (gefühlt)</td>\n"
-        for i, v in enumerate(wind_chills):
-            html += f"                    {cell(v, lambda x: f'{x:.0f}°C' if x is not None else '-', i == best_wc)}\n"
-        html += "                </tr>\n"
-
-    # Sunny hours row (0 shows "0h", not "~0h" per spec)
-    if show("sunshine"):
-        html += "                <tr>\n                    <td class=\"label\">Sonnenstunden</td>\n"
-        for i, v in enumerate(sunny_hours_list):
-            is_best = i == best_sunny and v is not None and v > 0
-            # Spec: "~[N]h" for N>0, "0h" for N=0, "-" for None
-            html += f"                    {cell(v, lambda x: '0h' if x == 0 else f'~{x:.1f}h' if x is not None else '-', is_best)}\n"
-        html += "                </tr>\n"
-
-    # Clouds row - SPEC: docs/specs/cloud_cover_simplification.md
-    if show("cloud_total"):
-        html += "                <tr>\n                    <td class=\"label\">Bewölkung</td>\n"
-        for i, (v, above_low) in enumerate(zip(clouds, above_low_clouds_flags)):
-            marker = "*" if above_low else ""
-            html += f"                    {cell(v, lambda x, m=marker: f'{x}%{m}' if x is not None else '-', i == best_clouds)}\n"
-        html += "                </tr>\n"
-
-    # Wolkenlage row - SPEC: docs/specs/compare_email.md Zeile 366-372
-    if show("cloud_low"):
-        html += "                <tr>\n                    <td class=\"label\">Wolkenlage</td>\n"
-    for loc in valid_locs:
-        elev = loc.location.elevation_m or 0
-        cl = loc.cloud_low_avg
-        if elev >= 2500 and cl is not None and cl > 30:
-            wl = '☀️ über Wolken'
-            cls = ' class="best"'
-        elif cl is not None and cl > 50:
-            wl = '☁️ in Wolken'
-            cls = ''
-        elif cl is not None and cl < 20:
-            wl = '✨ klar'
-            cls = ' class="best"'
-        else:
-            wl = '🌤️ leicht'
-            cls = ''
-        html += f'                    <td{cls}>{wl}</td>\n'
-    html += "                </tr>\n"
-
-    html += """            </table>
-            <p style="font-size: 12px; color: #888;">🟢 Grün = bester Wert | Temperatur = gefühlt (Wind Chill) | * tiefe Wolken ignoriert</p>
-        </div>
-"""
-
-    # Hourly details for top N locations
-    # SPEC: docs/specs/compare_email.md v4.2 - HourlyCell Single Source of Truth
-    top_locs = valid_locs[:top_n_details]
-    if top_locs and any(loc.hourly_data for loc in top_locs):
-        hours = list(range(time_window[0], time_window[1] + 1))
-
-        # Build data structure: hour -> location_idx -> HourlyCell
-        hour_data_map: Dict[int, Dict[int, HourlyCell]] = {h: {} for h in hours}
-
-        for idx, loc_result in enumerate(top_locs):
-            elevation_m = loc_result.location.elevation_m
-            for dp in loc_result.hourly_data:
-                if dp.ts.date() != target_date:
-                    continue
-                h = dp.ts.hour
-                if h not in hours:
-                    continue
-
-                # Use Single Source of Truth formatter
-                cell = WeatherMetricsService.format_hourly_cell(dp, elevation_m)
-                hour_data_map[h][idx] = cell
-
-        html += f"""
-        <div class="section">
-            <h3>🕐 Stunden-Übersicht</h3>
-            <p style="color: #666; margin-bottom: 12px;">📅 {target_date.strftime('%A, %d.%m.%Y')}</p>
-            <table>
-                <tr>
-                    <th class="label">Time</th>
-"""
-        for i, loc_result in enumerate(top_locs):
-            html += f'                    <th><span class="rank">#{i+1}</span> {loc_result.location.name}</th>\n'
-        html += "                </tr>\n"
-
-        for h in hours:
-            html += f"                <tr>\n                    <td class=\"label\">{h:02d}:00</td>\n"
-            for idx in range(len(top_locs)):
-                cell = hour_data_map[h].get(idx)
-                if cell:
-                    # Use compact format from Single Source of Truth
-                    compact = WeatherMetricsService.hourly_cell_to_compact(cell)
-                    html += f'                    <td style="white-space: nowrap;">{compact}</td>\n'
-                else:
-                    html += "                    <td>-</td>\n"
-            html += "                </tr>\n"
-
-        html += """            </table>
-            <p style="font-size: 11px; color: #888; margin-top: 8px;">
-                <strong>Legend:</strong>
-                ☀️ &lt;20% clouds |
-                🌤️ 20-50% |
-                ⛅ 50-80% |
-                ☁️ &gt;80% |
-                🌧️ rain |
-                ❄️ snow
-            </p>
-        </div>
-"""
-
-    # Footer
-    html += """
-        <div class="footer">
-            <p>Generated by <strong>Gregor Zwanzig</strong> ⛷️</p>
-        </div>
-    </div>
-</body>
-</html>
-"""
-
-    return html
-
-
-def render_comparison_text(result: ComparisonResult, top_n_details: int = 3, enabled_metrics: set | None = None, profile: Optional[ActivityProfile] = None) -> str:
-    """
-    Render ComparisonResult as Plain-Text for email fallback.
-    If enabled_metrics is provided, only metrics in the set are rendered.
-
-    SPEC: docs/specs/compare_email.md v4.2 Zeile 274-327
-
-    Uses HourlyCell Single Source of Truth for consistent formatting.
-
-    Args:
-        result: ComparisonResult from ComparisonEngine
-        top_n_details: Number of locations to show hourly details for
-        enabled_metrics: Optional set of metric_ids that should be rendered.
-        profile: Optional ActivityProfile (currently ignored, accepted for API consistency
-            with ``render_comparison_html``).
-
-    Returns:
-        Plain-text string for email
-    """
-    _ = profile  # accepted for API consistency, not yet used
+    _ = profile  # akzeptiert fuer API-Konsistenz, aktuell ohne Wirkung
 
     time_window = result.time_window
     target_date = result.target_date
     created_at = result.created_at
+    # Zentraler Sortier-Helfer (PO-Update 2026-07-08): alphabetisch, case-
+    # insensitiv, identisch zu render_compare_html() -- keine Doppel-Logik.
+    locations = sort_locations_alphabetically(result.locations)
+    if not locations:
+        return "Keine Vergleichsdaten verfügbar."
 
-    # Filter valid locations
-    valid_locs = [loc for loc in result.locations if loc.score is not None]
-    if not valid_locs:
-        return "No comparison data available."
-
-    lines = []
-
-    # Header
-    lines.append("⛷️ SKIGEBIETE-VERGLEICH")
+    lines: list[str] = []
+    lines.append("ORTS-VERGLEICH")
     lines.append("=" * 24)
-    lines.append(f"📅 Forecast: {target_date.strftime('%A, %d.%m.%Y')}")
-    lines.append(f"🕐 Time Window: {time_window[0]:02d}:00 - {time_window[1]:02d}:00")
-    lines.append(f"📝 Created: {created_at.strftime('%d.%m.%Y %H:%M')}")
+    lines.append(f"Datum: {target_date.strftime('%A, %d.%m.%Y')}")
+    lines.append(f"Zeitfenster: {time_window[0]:02d}:00 - {time_window[1]:02d}:00")
+    lines.append(f"Erstellt: {created_at.strftime('%d.%m.%Y %H:%M')}")
     lines.append("")
-
-    # Winner
-    winner = valid_locs[0]
-    lines.append(f"🏆 EMPFEHLUNG: {winner.location.name}")
-    snow = f"❄️ {winner.snow_depth_cm:.0f}cm" if winner.snow_depth_cm else "❄️ -"
-    sunny = f"☀️ ~{winner.sunny_hours}h" if winner.sunny_hours is not None else "☀️ -"
-    lines.append(f"   Score: {winner.score} | {snow} | {sunny}")
-    lines.append("")
-
-    # Comparison table (side by side, max 2 locations per row for readability)
     lines.append("-" * 50)
-    for i, loc_result in enumerate(valid_locs):
+
+    for loc_result in locations:
         loc = loc_result.location
-        lines.append(f"#{i+1} {loc.name}")
-        lines.append(f"   Score: {loc_result.score}")
-        lines.append(f"   Snow: {loc_result.snow_depth_cm:.0f}cm" if loc_result.snow_depth_cm else "   Snow: -")
-        if loc_result.snow_new_cm and loc_result.snow_new_cm > 0:
-            lines.append(f"   New Snow: +{loc_result.snow_new_cm:.0f}cm")
-        else:
-            lines.append("   New Snow: -")
+        lines.append(loc.name)
+        if loc_result.error is not None:
+            lines.append(f"   Fehler: {loc_result.error}")
+            lines.append("")
+            continue
 
-        # Wind
-        wind = loc_result.wind_max or 0
-        gust = loc_result.gust_max or wind
-        wind_dir = degrees_to_compass(loc_result.wind_direction_avg, language="de", none_label="-")
-        lines.append(f"   Wind: {wind:.0f}/{gust:.0f} {wind_dir}")
-
-        # Temperature
-        temp = loc_result.wind_chill_min if loc_result.wind_chill_min is not None else loc_result.temp_min
-        lines.append(f"   Temp: {temp:.0f}°C" if temp is not None else "   Temp: -")
-
-        # Sunny hours
+        temp_max = loc_result.temp_max
+        lines.append(f"   Temp max: {temp_max:.0f}°C" if temp_max is not None else "   Temp max: -")
+        wind_max = loc_result.wind_max
+        lines.append(f"   Wind: {wind_max:.0f} km/h" if wind_max is not None else "   Wind: -")
         sunny_h = loc_result.sunny_hours
-        lines.append(f"   Sun: ~{sunny_h}h" if sunny_h is not None else "   Sun: -")
-
-        # Cloud
+        lines.append(f"   Sonne: {sunny_h}h" if sunny_h is not None else "   Sonne: -")
         cloud = loc_result.cloud_avg
-        lines.append(f"   Clouds: {cloud}%" if cloud is not None else "   Clouds: -")
+        lines.append(f"   Wolken: {cloud}%" if cloud is not None else "   Wolken: -")
 
-        # Cloud layer status (elevation + mid clouds)
-        cloud_status = WeatherMetricsService.calculate_cloud_status(
-            elevation_m=loc.elevation_m,
-            cloud_low_pct=loc_result.cloud_low_avg,
-            cloud_mid_pct=loc_result.cloud_mid_avg,
-        )
-        emoji = WeatherMetricsService.get_cloud_status_emoji(cloud_status)
-        text, _ = WeatherMetricsService.format_cloud_status(cloud_status)
-        layer_str = f"{emoji} {text}".strip() if text else "-"
-        lines.append(f"   Layer: {layer_str}")
-
-        # Issue #1035/#1087 — amtliche Warnungen, eine Zeile pro Warnung.
-        # Gemeinsamer Renderer (Epic #1073 Punkt 6, kein Copy-Paste).
-        for line in render_official_alerts_plain([(loc_result.location.name, loc_result.official_alerts)]):
+        # Amtliche Warnungen, eine Zeile pro Warnung (Epic #1073 Punkt 6,
+        # gemeinsamer Renderer statt Copy-Paste).
+        for line in render_official_alerts_plain([(loc.name, loc_result.official_alerts)]):
             lines.append(f"   ⚠️ {line}")
 
         lines.append("")
 
-    # Hourly details
-    top_locs = valid_locs[:top_n_details]
-    if top_locs and any(loc.hourly_data for loc in top_locs):
-        lines.append("HOURLY DETAILS")
+    # Stundentabellen fuer ALLE Orte (kompakt, kein Rang-Praefix)
+    valid = [loc for loc in locations if loc.error is None and loc.hourly_data]
+    if valid:
+        lines.append("STUNDENVERLAUF")
         lines.append("-" * 15)
+        for loc_result in valid:
+            lines.append(loc_result.location.name)
+            for dp in loc_result.hourly_data:
+                ts = dp.ts.strftime("%H:%M") if hasattr(dp.ts, "strftime") else str(dp.ts)
+                temp = f"{dp.t2m_c:.0f}°" if dp.t2m_c is not None else "-"
+                gef = f"{dp.wind_chill_c:.0f}°" if dp.wind_chill_c is not None else "-"
+                wind = f"{dp.wind10m_kmh:.0f}" if dp.wind10m_kmh is not None else "-"
+                cloud_pct = f"{dp.cloud_total_pct}%" if dp.cloud_total_pct is not None else "-"
+                lines.append(f"   {ts}  Temp {temp}  Gef. {gef}  Wind {wind}  Wolken {cloud_pct}")
+            lines.append("")
 
-        hours = list(range(time_window[0], time_window[1] + 1))
-
-        # Header row
-        header = "Time  |"
-        for i, loc_result in enumerate(top_locs):
-            name = loc_result.location.name[:14]
-            header += f" #{i+1} {name:14} |"
-        lines.append(header)
-
-        # Data rows
-        for h in hours:
-            row = f"{h:02d}:00 |"
-            for loc_result in top_locs:
-                cell_text = "-"
-                elevation_m = loc_result.location.elevation_m
-                for dp in loc_result.hourly_data:
-                    if dp.ts.date() == target_date and dp.ts.hour == h:
-                        cell = WeatherMetricsService.format_hourly_cell(dp, elevation_m)
-                        cell_text = WeatherMetricsService.hourly_cell_to_compact(cell)
-                        break
-                row += f" {cell_text:16} |"
-            lines.append(row)
-
-        lines.append("")
-
-    # Footer
     lines.append("---")
-    lines.append("Generated by Gregor Zwanzig ⛷️")
+    lines.append("Gregor Zwanzig")
 
     return "\n".join(lines)
 
@@ -465,16 +113,22 @@ def render_compare_email(
     result: ComparisonResult,
     *,
     profile: Optional[ActivityProfile] = None,
-    top_n_details: int = 3,
-    enabled_metrics: set | None = None,
     warnings: list[str] | None = None,
-    winner_tags: list[dict] | None = None,
+    top_n_details: Optional[int] = None,
+    enabled_metrics: set | None = None,
+    preset_name: Optional[str] = None,
+    preset_schedule: Optional[str] = None,
+    preset_weekday: Optional[int] = None,
 ) -> tuple[str, str]:
-    """Render both HTML and plain-text parts for a compare email.
+    """Render both HTML and plain-text parts for a compare email (v2, #1110).
 
     Single entry point for all compare-email render callers. Keeps the HTML
     renderer (output.renderers.email.compare_html) and the plain-text renderer
-    (this module) in one place.
+    (this module) in one place. Kein Score/Winner mehr -- ``winner_tags``
+    entfaellt vollstaendig. ``top_n_details`` (Issue #1104) wird angenommen,
+    hat aber AKTUELL KEINE Wirkung: PO 2026-07-08 -- Mail zeigt immer alle
+    Orte; die Semantik wird in #1105-#1107 neu definiert. ``enabled_metrics``
+    filtert die numerischen Uebersichts-Zeilen (s. ``render_compare_html``).
 
     Returns:
         Tuple of (html_body, text_body).
@@ -487,12 +141,9 @@ def render_compare_email(
         warnings=warnings,
         top_n_details=top_n_details,
         enabled_metrics=enabled_metrics,
-        winner_tags=winner_tags,
+        preset_name=preset_name,
+        preset_schedule=preset_schedule,
+        preset_weekday=preset_weekday,
     )
-    text_body = render_comparison_text(
-        result,
-        top_n_details=top_n_details,
-        enabled_metrics=enabled_metrics,
-        profile=profile,
-    )
+    text_body = render_comparison_text(result, profile=profile)
     return html_body, text_body

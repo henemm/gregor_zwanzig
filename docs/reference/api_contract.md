@@ -2431,6 +2431,21 @@ export interface AlertRule {
 
 ## Changelog
 
+- 2026-07-08: Issue #1110 — Ortsvergleich-Mail v2: Die HTML-/Klartext-Darstellung der
+  Compare-E-Mail (`compare_html.py::render_compare_html()`) zeigt keinen Score/Winner mehr —
+  Winner-Box, Score-Badge und Winner-Tags (eingeführt in #253/#460) entfallen vollständig,
+  ersetzt durch eine Übersichtstabelle (Metriken × Orte, inkl. Zeile „Amtliche Warnungen") und
+  Stundentabellen für alle Orte (alphabetisch sortiert). Betrifft ausschließlich die
+  Mail-Darstellung: `ComparisonResult`/`LocationResult`-DTOs selbst sind unverändert
+  (`.winner`/`.score` bleiben im Modell und in der App-Anzeige erhalten, siehe Section 18
+  oben — der `winner`-Response-Wert bei `POST /api/scheduler/compare-presets/{id}/send` ist
+  von diesem Issue nicht betroffen). Der Observability-Endpoint aus Issue #464
+  (`POST /api/_validator/compare-email-preview`) nimmt das Request-Feld `winner_tags`
+  weiterhin an, ignoriert es aber (Parameter im Renderer entfernt; Body-Schema
+  unverändert für Abwärtskompatibilität). Siehe `docs/specs/modules/issue_1110_compare_mail_v2.md`
+  (löst `docs/specs/modules/issue_253_compare_email.md` und
+  `docs/specs/modules/issue_460_compare_email_template.md` ab, beide als `status: superseded`
+  markiert).
 - 2026-07-07: Issue #1071 (Slice 4 aus Epic #1067 Nutzerlevel Free/Standard/Premium, letztes
   Slice — Epic damit VOLLSTÄNDIG) — neuer Endpoint `POST /api/auth/tier-change-request` für
   Level-Änderungs-Anträge; `GET /api/auth/profile` liefert zusätzlich `requested_tier`/

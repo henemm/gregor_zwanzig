@@ -329,11 +329,13 @@ class TestAC2SharedRendererNoDuplicate:
     def test_compare_html_official_alerts_fragment_byte_identical(self):
         """AC-2(b): Golden-Byte-Regression — der Alert-Badge-Fragment-Output
         von `render_compare_html()` bleibt nach der Extraktion byte-identisch
-        zum Zustand davor. Golden-String eingefroren am AKTUELLEN Output von
-        `_render_official_alerts_block()` (vor der Extraktion erzeugt).
+        zu dem, was der Shared-Renderer fuer denselben Input liefert.
 
-        RED: `render_official_alerts_html()` (Shared-Modul) existiert noch
-        nicht -> ImportError bereits beim Modul-Import.
+        F002 (Adversary Fix-Runde, Issue #1110): der Compare-Aufruf uebergibt
+        seit F002 ein leeres Gruppen-Label (kein Ortsnamen-Praefix mehr im
+        Langform-Streifen -- der Ort-Kopf nennt den Namen bereits) -- das
+        Golden-Fragment ist entsprechend OHNE 'Nizza:'-Praefix eingefroren.
+        Der Shared-Renderer selbst (ADR-0011, Trip-Pfad) ist davon unberuehrt.
         """
         from output.renderers.alert.official_alerts import render_official_alerts_html
         from app.profile import ActivityProfile
@@ -341,14 +343,13 @@ class TestAC2SharedRendererNoDuplicate:
         from output.renderers.email.compare_html import render_compare_html
         from services.official_alerts.models import OfficialAlert
 
-        # Eingefroren am aktuellen Output von compare_html._render_official_alerts_block()
-        # fuer exakt diesen (loc, alert)-Input (siehe Kommentar unten fuer Reproduktion).
+        # Eingefroren am aktuellen Output von compare_html._render_location_section()
+        # fuer exakt diesen (loc, alert)-Input, OHNE Ortsnamen-Praefix (F002).
         golden_fragment = (
             '<div style="background:#f6f4ee;border-left:4px solid #c8882a;'
             'padding:8px 16px;margin:8px 20px;border-radius:4px;'
             'font-family:\'Inter Tight\', -apple-system, BlinkMacSystemFont, '
             '\'Segoe UI\', Roboto, sans-serif;font-size:13px;color:#1a1a18;">'
-            '<span style="font-weight:600;">Nizza:</span> '
             '<span>Gewitterwarnung Stufe Orange</span></div>'
         )
 
@@ -357,7 +358,15 @@ class TestAC2SharedRendererNoDuplicate:
             source="test-golden", hazard="thunderstorm", level=3,
             label="Gewitterwarnung Stufe Orange",
         )
-        lr = LocationResult(location=loc, score=80, official_alerts=[alert])
+        # Issue #1110 (v2): der Langform-Warnstreifen (der den Shared-Renderer
+        # aufruft) erscheint nur ueber der Stundentabelle eines Ortes -- ohne
+        # hourly_data entfaellt der ganze Ort-Abschnitt (Spec §4). Minimaler
+        # Stundenpunkt noetig, damit der Golden-Fragment-Code-Pfad ueberhaupt
+        # erreicht wird.
+        from app.models import ForecastDataPoint
+        from datetime import datetime as _dt
+        dp = ForecastDataPoint(ts=_dt(2026, 7, 8, 9, 0), t2m_c=25.0)
+        lr = LocationResult(location=loc, score=80, official_alerts=[alert], hourly_data=[dp])
         result = ComparisonResult(locations=[lr], time_window=(9, 16), target_date=date.today())
 
         html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
@@ -366,11 +375,12 @@ class TestAC2SharedRendererNoDuplicate:
             "(Regression durch die Renderer-Extraktion)."
         )
 
-        # Beweis: derselbe Code-Pfad wie das Shared-Modul (kein Duplikat).
-        shared_output = render_official_alerts_html([(loc.name, [alert])])
+        # Beweis: derselbe Code-Pfad wie das Shared-Modul (kein Duplikat) --
+        # F002: der Compare-Aufruf uebergibt ein leeres Gruppen-Label.
+        shared_output = render_official_alerts_html([("", [alert])])
         assert shared_output == golden_fragment, (
             "render_official_alerts_html() muss exakt dieselben Bytes liefern wie "
-            "der fruehere Compare-only-Code."
+            "der Compare-HTML-Aufruf (leeres Gruppen-Label, F002)."
         )
 
     def test_massif_closure_style_alert_renders_label_once(self):

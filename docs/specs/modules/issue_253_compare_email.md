@@ -2,8 +2,9 @@
 entity_id: issue_253_compare_email
 type: module
 created: 2026-05-20
-updated: 2026-05-20
-status: draft
+updated: 2026-07-08
+status: superseded
+superseded_by: issue_1110_compare_mail_v2.md (2026-07-08)
 version: "1.0"
 issue: 253
 tags: [compare, email, renderer, html, python, heartbeat, scheduler]
@@ -219,3 +220,4 @@ LoC-Limit-Override vor Implementierungsstart setzen: `workflow.py set-field loc_
 ## Changelog
 
 - 2026-05-20: Initial spec — Issue #253. Neuer HTML-Renderer `compare_html.py` als Pure Function, Umkopplung in `compare_subscription.py`, fail-soft Heartbeat in `scheduler.py`, Unit + E2E Tests ohne Mocks. ~425 LoC, LoC-Override auf 450 erforderlich.
+- 2026-07-08: **Superseded** durch `docs/specs/modules/issue_1110_compare_mail_v2.md` (Issue #1110). Der hier spezifizierte Score/Winner-basierte Renderer wurde vollständig durch das v2-Layout (Übersichtstabelle Metriken×Orte ohne Score/Winner, Stundentabellen für alle Orte) abgelöst. Inhalt dieser Spec unverändert als historische Referenz belassen.

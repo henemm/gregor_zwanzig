@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<title>Gregor Zwanzig — Ortsvergleich-Mail v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  html, body { background: var(--g-paper); margin: 0; }
+  a { color: var(--g-accent); }
+  a:hover { color: #a4471f; }
+  .ov-section { padding: 48px 40px 0; max-width: 1680px; }
+  .ov-eyebrow { font-family: var(--g-font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--g-accent); font-weight: 600; margin-bottom: 6px; }
+  .ov-title { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 4px; }
+  .ov-sub { font-size: 13px; color: var(--g-ink-3); line-height: 1.5; margin: 0 0 22px; max-width: 720px; }
+  .ov-grid { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; }
+  .ov-label { font-family: var(--g-font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-4); font-weight: 600; margin-bottom: 10px; }
+  .ov-frame { background: #e9e6dc; padding: 20px; border-radius: var(--g-r-3); display: inline-block; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="screen-compare-email-v2.jsx"></script>
+<script type="text/babel">
+function App() {
+  return (
+    <div style={{ paddingBottom: 80 }}>
+      <div className="ov-section">
+        <div className="ov-eyebrow">Orts-Vergleich · Mail v2</div>
+        <h2 className="ov-title">Neu ausgerichtet · orientiert an den Trip-Briefings</h2>
+        <p className="ov-sub">
+          Kein Score mehr — der User beurteilt die Kriterien selbst. Eine Übersichtstabelle mit den
+          gewählten Metriken (amtliche Warnungen als eigene Zeile), darunter die Stundenverläufe für
+          alle Orte mit voller Risk-Färbung. Links Desktop-Client (680 px), rechts iPhone Mail (380 px).
+        </p>
+        <div className="ov-grid">
+          <div>
+            <div className="ov-label">Email · Desktop-Client · 680 px</div>
+            <div style={{ border: "1px solid var(--g-rule)", borderRadius: "var(--g-r-3)", overflow: "hidden", display: "inline-block" }}>
+              <CompareEmailV2 mobile={false}/>
+            </div>
+          </div>
+          <div>
+            <div className="ov-label">Email · Mobile-Client · 380 px</div>
+            <div className="ov-frame">
+              <div style={{ width: 380, height: 760, overflowY: "auto", background: "#fff", borderRadius: 8, boxShadow: "0 8px 32px rgba(0,0,0,0.12)" }}>
+                <CompareEmailV2 mobile={true}/>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

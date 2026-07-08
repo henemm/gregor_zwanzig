@@ -24,7 +24,6 @@ from output.renderers.email.design_tokens import (
     G_DANGER,
     G_INK,
     G_PAPER,
-    G_SUCCESS,
     WEB_FONT_LINK,
 )
 from output.renderers.email.profile_signature import profile_signature
@@ -116,26 +115,28 @@ def test_ac2_service_error_mail_no_hardcoded_colors():
 
 def test_ac3_comparison_html_profile_eyebrow(minimal_comparison_result):
     """
-    GIVEN: render_comparison_html() mit profile=ActivityProfile.WANDERN
+    GIVEN: render_compare_html() mit profile=ActivityProfile.WANDERN
     WHEN:  Header-Block des zurückgegebenen HTML analysiert
-    THEN:  Eyebrow-Zeile mit eyebrow-Text und accent_hex aus profile_signature();
+    THEN:  Eyebrow-Zeile mit eyebrow-Text aus profile_signature();
            ohne profile wird ALLGEMEIN-Eyebrow als Fallback gezeigt
 
-    ERWARTET ROT: render_comparison_html() akzeptiert kein 'profile'-Argument.
+    Issue #1110: retargeted auf den echten v2-HTML-Renderer
+    (output.renderers.email.compare_html.render_compare_html) --
+    output.renderers.comparison.render_comparison_html war ein nie vom
+    Versandpfad genutzter toter Alt-Renderer und wurde entfernt (#1108).
     """
-    from output.renderers.comparison import render_comparison_html  # noqa: PLC0415
+    from output.renderers.email.compare_html import render_compare_html  # noqa: PLC0415
 
     # Mit Profil → Profil-spezifische Signatur
-    html_with_profile = render_comparison_html(
+    html_with_profile = render_compare_html(
         minimal_comparison_result,
         profile=ActivityProfile.WANDERN,
     )
     sig = profile_signature(ActivityProfile.WANDERN)
     assert sig.eyebrow in html_with_profile, f"Eyebrow-Text '{sig.eyebrow}' fehlt im Header"
-    assert sig.accent_hex in html_with_profile, f"Profil-Akzentfarbe '{sig.accent_hex}' fehlt"
 
     # Ohne Profil → ALLGEMEIN-Fallback
-    html_no_profile = render_comparison_html(minimal_comparison_result, profile=None)
+    html_no_profile = render_compare_html(minimal_comparison_result, profile=None)
     fallback = profile_signature(None)
     assert fallback.eyebrow in html_no_profile, f"ALLGEMEIN-Eyebrow '{fallback.eyebrow}' fehlt"
 
@@ -146,15 +147,17 @@ def test_ac3_comparison_html_profile_eyebrow(minimal_comparison_result):
 
 def test_ac4_comparison_html_no_material_colors(minimal_comparison_result):
     """
-    GIVEN: render_comparison_html() aufgerufen
+    GIVEN: render_compare_html() aufgerufen
     WHEN:  HTML auf Material-Farben und Design-Token-Werte geprüft
-    THEN:  Keine Material-Farben; G_PAPER, G_ACCENT, G_SUCCESS, WEB_FONT_LINK vorhanden
+    THEN:  Keine Material-Farben; G_PAPER, G_ACCENT, WEB_FONT_LINK vorhanden
 
-    ERWARTET ROT: Material-Farben noch vorhanden + Design-Tokens noch nicht eingebunden.
+    Issue #1110: retargeted auf render_compare_html() (v2). G_SUCCESS wird im
+    v2-Layout nicht mehr referenziert (Winner-Card entfernt, Risk-Skala nutzt
+    eigene, 1:1 aus der Design-Vorlage uebernommene Hex-Werte).
     """
-    from output.renderers.comparison import render_comparison_html  # noqa: PLC0415
+    from output.renderers.email.compare_html import render_compare_html  # noqa: PLC0415
 
-    html = render_comparison_html(minimal_comparison_result)
+    html = render_compare_html(minimal_comparison_result)
 
     # Material-Farben verboten
     material_colors = ["#1976d2", "#42a5f5", "#4caf50", "#e8f5e9", "#2e7d32"]
@@ -164,7 +167,6 @@ def test_ac4_comparison_html_no_material_colors(minimal_comparison_result):
     # Design-Tokens müssen vorhanden sein
     assert G_PAPER in html, f"G_PAPER ({G_PAPER}) fehlt im Comparison-HTML"
     assert G_ACCENT in html, f"G_ACCENT ({G_ACCENT}) fehlt im Comparison-HTML"
-    assert G_SUCCESS in html, f"G_SUCCESS ({G_SUCCESS}) fehlt im Comparison-HTML"
     assert WEB_FONT_LINK in html, "WEB_FONT_LINK im <head> fehlt"
 
 

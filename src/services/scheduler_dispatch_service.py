@@ -268,11 +268,16 @@ def send_one_compare_preset(
         )
         top_n_details = max(1, min(10, top_n_details))
     enabled_metrics = resolve_enabled_metrics(display_config.get("active_metrics"))
+    # Issue #1110: Abo-Footer-Metadaten (Preset-Name/Schedule/Weekday) zusaetzlich
+    # zu den #1104-Parametern durchreichen (Merge beider Feature-Branches).
     html_body, text_body = render_compare_email(
         result,
         profile=profile,
         top_n_details=top_n_details,
         enabled_metrics=enabled_metrics,
+        preset_name=name,
+        preset_schedule=preset.get("schedule"),
+        preset_weekday=preset.get("weekday"),
     )
     EmailOutput(settings).send(
         subject,

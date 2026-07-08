@@ -166,5 +166,4 @@ def render_compare_email_preview(body: Any) -> str:
         time_window=(body.time_window[0], body.time_window[1]),
         target_date=target_date,
     )
-    winner_tags_raw = [{"tone": t.tone, "label": t.label} for t in body.winner_tags]
-    return render_compare_html(result, profile=profile_enum, winner_tags=winner_tags_raw)
+    return render_compare_html(result, profile=profile_enum)

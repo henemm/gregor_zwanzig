@@ -50,8 +50,8 @@ def run_comparison_for_subscription(
     # Imports from extracted service modules (Epic #129 Phase A.1)
     # Issue #253: HTML-Renderer kommt jetzt aus output.renderers.email.compare_html;
     # Plain-Text-Renderer lebt in output.renderers.comparison.
+    # Issue #1110: v2-Layout, kein Score/Winner mehr -- _generate_winner_tags entfaellt.
     from output.renderers.comparison import render_compare_email
-    from output.renderers.email.compare_html import _generate_winner_tags
     from services.comparison_engine import ComparisonEngine
 
     # Load locations if not provided
@@ -99,22 +99,11 @@ def run_comparison_for_subscription(
     successful_loc_ids = {r.location.id for r in result.locations if r.score is not None}
     failed_locations = [loc for loc in selected_locs if loc.id not in successful_loc_ids]
 
-    # Extract enabled metrics from display_config (if configured)
-    enabled_metrics = None
-    if hasattr(sub, 'display_config') and sub.display_config:
-        dc = sub.display_config
-        # display_config can be a dict with "metrics" list or a UnifiedWeatherDisplayConfig
-        metrics_list = None
-        if isinstance(dc, dict) and "metrics" in dc:
-            metrics_list = dc["metrics"]
-        elif hasattr(dc, 'metrics'):
-            metrics_list = dc.metrics
-        if metrics_list:
-            enabled_metrics = {
-                m["metric_id"] if isinstance(m, dict) else m.metric_id
-                for m in metrics_list
-                if (m.get("enabled", True) if isinstance(m, dict) else getattr(m, 'enabled', True))
-            }
+    # Issue #1104/#1110: render_compare_email() akzeptiert enabled_metrics
+    # (filtert die Uebersichts-Zeilen), dieser Subscription-Pfad verdrahtet
+    # sub.display_config aktuell NICHT hinein -- der reale Versandpfad ist
+    # send_one_compare_preset() (scheduler_dispatch_service.py), das die
+    # #1104-Parsing-Logik traegt. Kein Duplikat hier anlegen.
 
     # Warnungen sammeln (aus failed_locations) — werden direkt an den
     # Renderer durchgereicht, kein String-Replace mehr.
@@ -127,21 +116,13 @@ def run_comparison_for_subscription(
             f"⚠️ {len(failed_locations)} Standort(e) nicht verfügbar: {failed_names}"
         )
 
-    # Issue #457 / Bug #545: Auto-generierte Begründungs-Tags für Winner-Card.
-    # _generate_winner_tags liefert direkt list[dict] im Issue #460 Format
-    # ({"tone", "label"}) — keine Konvertierung mehr nötig.
-    winner_tags_dicts = _generate_winner_tags(
-        result.winner,
-        getattr(sub, 'activity_profile', None),
-    )
-
     html_body, text_body = render_compare_email(
         result,
         profile=getattr(sub, 'activity_profile', None),
-        top_n_details=sub.top_n,
-        enabled_metrics=enabled_metrics,
         warnings=collected_warnings,
-        winner_tags=winner_tags_dicts,
+        preset_name=sub.name,
+        preset_schedule=getattr(sub, 'schedule', None),
+        preset_weekday=getattr(sub, 'weekday', None),
     )
 
     # Plain-Text-Warnung bleibt erhalten (Plain-Text-Renderer unveraendert).

@@ -16,7 +16,7 @@
 
 ## Overview
 
-Epic #438 implementiert ein **5-Schritt-Wizard-System** zur Konfiguration von **Orts-Vergleichen** (Compare Subscriptions). Ein Orts-Vergleich ist eine automatisierte Briefing-Serie, die täglich mehrere geografische Standorte anhand personalisierter Idealwerte bewertet und einen Ranking-Report (E-Mail/SMS) versendet.
+Epic #438 implementiert ein **5-Schritt-Wizard-System** zur Konfiguration von **Orts-Vergleichen** (Compare Subscriptions). Ein Orts-Vergleich ist eine automatisierte Briefing-Serie, die täglich mehrere geografische Standorte anhand personalisierter Idealwerte bewertet und einen Vergleichsreport (E-Mail/SMS) versendet. *(Update 2026-07-08: Die E-Mail-Darstellung zeigt seit Issue #1110 keinen Score/Winner mehr — Orte erscheinen alphabetisch in einer Übersichtstabelle statt als Ranking; Score/Bewertung bleiben Teil der App-Anzeige. Siehe `docs/specs/modules/issue_1110_compare_mail_v2.md`.)*
 
 **Nutzerfall:** Ein Weitwanderer entscheidet sich VOR dem Urlaub für 3–5 Hütten/Skiorte und konfiguriert im Frontend, welche Wetterbedingungen "ideal" sind. Der Scheduler versendet dann täglich einen Report: "Hütte A: ☀ 18°C, perfekt | Hütte B: ☁ 8°C, zu kalt | …"
 

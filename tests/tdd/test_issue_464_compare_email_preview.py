@@ -1,13 +1,11 @@
-"""TDD RED: POST /api/_validator/compare-email-preview Endpoint.
+"""TDD: POST /api/_validator/compare-email-preview Endpoint.
 
 Issue #464. Spec: docs/specs/modules/issue_464_compare_email_preview_validator.md
-
-Tests MÜSSEN aktuell scheitern — der Endpoint existiert noch nicht in
-api/routers/validator.py. Tests nutzen FastAPI TestClient gegen eine isolierte
-Test-App (kein Mock).
+An v2 angepasst (Issue #1110): winner_tags/Score-Farbtests entfallen, da das
+Winner-Tags-Feature komplett aus render_compare_html() entfernt wurde. Tests
+nutzen FastAPI TestClient gegen eine isolierte Test-App (kein Mock).
 
 AC-1: 200 + {"html": "<!DOCTYPE html>..."} bei valider Anfrage
-AC-2: HTML enthält #dcf2e1 wenn winner_tags mit tone="good" übergeben wird
 AC-3: Endpoint nur unter /_validator/ erreichbar — anderer Pfad → 404
 """
 import pytest
@@ -19,17 +17,6 @@ VALID_BODY = {
     "profile": "wintersport",
     "time_window": [9, 16],
     "target_date": "2026-05-31",
-    "winner_tags": [],
-}
-
-BODY_WITH_GOOD_TAG = {
-    "profile": "wintersport",
-    "time_window": [9, 16],
-    "target_date": "2026-05-31",
-    "winner_tags": [
-        {"tone": "good", "label": "1 Ort über Wolken"},
-        {"tone": "warn", "label": "Böen 26 km/h"},
-    ],
 }
 
 
@@ -79,30 +66,11 @@ class TestCompareEmailPreviewEndpoint:
             "HTML muss mit <!DOCTYPE html> beginnen — render_compare_html liefert immer ein vollständiges Dokument"
         )
 
-    def test_ac2_good_tag_produces_dcf2e1_color(self, client):
+    def test_v2_html_enthaelt_keine_score_winner_referenz(self, client):
         """
-        GIVEN winner_tags mit mindestens einem {"tone": "good", "label": "..."}
-        WHEN POST /api/_validator/compare-email-preview aufgerufen wird
-        THEN enthält das HTML die Farbe #dcf2e1 (good-Ton Hintergrundfarbe)
-        """
-        resp = client.post(
-            "/api/_validator/compare-email-preview",
-            json=BODY_WITH_GOOD_TAG,
-        )
-        assert resp.status_code == 200, (
-            f"Erwarte 200, bekam {resp.status_code}: {resp.text}"
-        )
-        html = resp.json()["html"]
-        assert "#dcf2e1" in html, (
-            "HTML muss #dcf2e1 enthalten wenn tone='good' übergeben wird — "
-            "_TAG_COLORS['good']['bg'] = '#dcf2e1' (Issue #460)"
-        )
-
-    def test_ac2_no_tags_no_dcf2e1(self, client):
-        """
-        GIVEN winner_tags ist leer
-        WHEN POST /api/_validator/compare-email-preview aufgerufen wird
-        THEN enthält das HTML NICHT #dcf2e1 (kein good-Tag → keine Farbe)
+        Issue #1110: Given eine valide Anfrage /
+        WHEN POST /api/_validator/compare-email-preview aufgerufen wird /
+        THEN enthält das HTML keine Score-/Winner-Referenz mehr (v2-Layout).
         """
         resp = client.post(
             "/api/_validator/compare-email-preview",
@@ -110,9 +78,8 @@ class TestCompareEmailPreviewEndpoint:
         )
         assert resp.status_code == 200
         html = resp.json()["html"]
-        assert "#dcf2e1" not in html, (
-            "Ohne winner_tags darf #dcf2e1 nicht im HTML erscheinen"
-        )
+        for forbidden in ("Score", "Bester Standort", "🏆"):
+            assert forbidden not in html, f"'{forbidden}' darf im v2-HTML nicht vorkommen"
 
     def test_ac3_wrong_path_returns_404(self, client):
         """
