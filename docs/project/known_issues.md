@@ -43,6 +43,51 @@ Neuer Helper `internal/store/write.go::writeFileLogged()` loggt jeden Schreibfeh
 
 ---
 
+## FOLLOWUP-1120: Aktiver Schreib-Selftest für data/ (Gegenmaßnahme zu #1066)
+
+**Status:** RESOLVED (2026-07-08) | **Severity:** Medium | **GitHub Issue:** #1120 | **Spec:** `docs/specs/modules/fix_1120_write_selftest.md`
+
+### Kontext
+
+#1066 blieb tagelang unbemerkt, weil es keinen aktiven Schreib-Check für `data/` gab — nur
+Lesezugriff (`/api/health`). Dieser Fix schließt die Monitoring-Lücke direkt an der Quelle: dem
+Go-Scheduler-Prozess (`gregor-api`, User `claude-gregor`), der bei #1066 tatsächlich versagte.
+
+### Fix
+
+Neuer periodischer Job `data_write_selftest` (`*/15 * * * *`) in `internal/scheduler/scheduler.go`.
+`probeDataWritable()` (neu, `internal/scheduler/selftest.go`) traversiert error-geprüft per
+`os.ReadDir` (`users/` → `users/<id>/trips/` → `*.json`) die vorhandenen Trip-Dateien und öffnet
+jede mit `os.OpenFile(path, os.O_WRONLY, 0)` gefolgt von sofortigem `Close()` — non-destruktiv
+(kein `O_TRUNC`/`O_CREATE`), aber kernelseitig dieselbe Schreibberechtigung wie der reale
+`os.WriteFile`-Pfad, reproduziert damit das #1066-EACCES identisch. **Bewusst kein
+`filepath.Glob`** (F001, im Adversary-Review gefunden): Glob verschluckt Verzeichnis-Lesefehler
+still → ein nicht mehr traversierbares `trips/`-Verzeichnis (Variante des `setfacl -R`-Sweeps)
+ergäbe fälschlich `ok`. Die Traversierung wertet jeden Lesefehler ≠ `fs.ErrNotExist` als Fehler. Status landet automatisch unter `/api/scheduler/status` (`recordRun`-Muster). Edge-
+getriggertes Alerting (kein `sync.Once`, damit ein späterer Re-Onset nicht verschluckt wird):
+Übergang `ok→error` löst genau eine MQ-Nachricht an `infra` (Priorität `high`) aus, `error→ok`
+optional eine Recovery-Notiz (Priorität `normal`). Kein neuer BetterStack-Heartbeat (Quota
+erschöpft).
+
+### Files Changed
+
+- `internal/scheduler/selftest.go` (NEU) — `probeDataWritable(dataDir string) error`
+- `internal/scheduler/scheduler.go` — neuer Job-Eintrag + `dataWriteSelftest()`
+- Tests (NEU): `internal/scheduler/selftest_test.go`, `internal/scheduler/data_write_selftest_test.go`
+
+### Lessons Learned
+
+1. Reine Lesezugriffs-Health-Checks (`/api/health`) decken Schreib-Regressionen strukturell nicht ab
+2. Non-destruktive `O_WRONLY`-Probes reichen aus, um dieselbe Kernel-Permission-Prüfung wie der
+   reale Schreibpfad auszulösen, ohne Daten zu verändern
+3. Edge-getriggertes Alerting (Statuswechsel statt `sync.Once`) verhindert sowohl Alert-Flapping
+   als auch verschluckte Re-Onsets bei langlebigen Prozessen
+4. `filepath.Glob` verschluckt Verzeichnis-Lesefehler still (Go-Doku: nur `ErrBadPattern`) — für
+   Berechtigungs-Wächter ungeeignet; error-geprüfte `os.ReadDir`-Traversierung nötig (Adversary-
+   Finding F001)
+
+---
+
 ## BUG-774: Metriken-Überblick-Checkbox persistiert nicht
 
 **Status:** RESOLVED (2026-06-12) | **Severity:** Medium | **GitHub Issue:** #774 | **Spec:** `docs/specs/bugfix/issue_774_metrics_summary_persist.md`
