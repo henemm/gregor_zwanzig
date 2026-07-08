@@ -409,6 +409,16 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
     # Issue #205: Alert Rules — either directly from JSON or migrated from legacy.
     alert_rules = _migrate_legacy_alert_rules(data)
 
+    # Issue #991: unbekannte Top-Level-Keys generisch auffangen (roundtrip-erhalten),
+    # statt pro Feld ein weiteres Einzelattribut anzubauen.
+    KNOWN_TOP_LEVEL = {
+        "id", "name", "stages", "avalanche_regions", "aggregation", "shortcode", "activity",
+        "region", "archived_at", "paused_at", "official_alerts_enabled", "weather_config",
+        "display_config", "report_config", "alert_rules", "alert_cooldown_minutes",
+        "alert_quiet_from", "alert_quiet_to", "trip",
+    }
+    extra = {k: v for k, v in data.items() if k not in KNOWN_TOP_LEVEL}
+
     trip = Trip(
         id=data["id"],
         name=data["name"],
@@ -428,6 +438,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         archived_at=data.get("archived_at"),  # Issue #805
         paused_at=data.get("paused_at"),  # Issue #995: Go-Feld paused_at — roundtrip-erhalten
         official_alerts_enabled=data.get("official_alerts_enabled"),  # Issue #1087
+        extra=extra,  # Issue #991: unmodellierte Top-Level-Keys
     )
     return trip
 
@@ -1183,6 +1194,11 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "skip_next": trip.report_config.skip_next,
             "updated_at": trip.report_config.updated_at.isoformat(),
         }
+
+    # Issue #991: unmodellierte Top-Level-Keys re-emittieren — modellierte
+    # Felder haben Vorrang, extra füllt nur Lücken (setdefault).
+    for k, v in trip.extra.items():
+        data.setdefault(k, v)
 
     return data
 

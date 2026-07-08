@@ -12,7 +12,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import date, time
 from enum import Enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class AggregationFunc(str, Enum):
@@ -199,6 +199,7 @@ class Trip:
     archived_at: Optional[str] = None  # Issue #805: Go-Feld archived_at (ISO-String) — roundtrip-erhalten
     paused_at: Optional[str] = None  # Issue #995: Go-Feld paused_at (ISO-String) — Trip-Detail-Pause, roundtrip-erhalten
     official_alerts_enabled: Optional[bool] = None  # Issue #1087: None/True=aktiv, False=strukturell kein Fetch
+    extra: Dict[str, Any] = field(default_factory=dict)  # #991: unmodellierte Top-Level-Keys, roundtrip-erhalten
 
     @property
     def start_date(self) -> date:
