@@ -409,6 +409,31 @@ class OpenMeteoProvider:
             f"ECMWF global fallback failed - check REGIONAL_MODELS configuration!"
         )
 
+    def _candidate_models(
+        self, lat: float, lon: float
+    ) -> List[Tuple[str, float, str]]:
+        """All models covering (lat, lon), sorted by priority (finest first).
+
+        Issue #1115: candidate chain for the intra-Open-Meteo model fallback.
+        The first entry is exactly what ``select_model`` would return (same
+        bounds-filter logic, Z.393-398); further entries are the next-best
+        covering models down to the mandatory global ECMWF fallback.
+
+        Returns:
+            List of (model_id, grid_res_km, endpoint_path) ordered by priority.
+        """
+        candidates: List[Tuple[str, float, str]] = []
+        for model in sorted(REGIONAL_MODELS, key=lambda m: m["priority"]):
+            bounds = model["bounds"]
+            if (
+                bounds["min_lat"] <= lat <= bounds["max_lat"]
+                and bounds["min_lon"] <= lon <= bounds["max_lon"]
+            ):
+                candidates.append(
+                    (model["id"], model["grid_res_km"], model["endpoint"])
+                )
+        return candidates
+
     # Issue #338: Mapping Aufrufer-Funktionsname (im Stack) -> Diagnose-Quelle.
     # Konsolidiert nach providers.call_log (DRY). Klassen-Attribut bleibt als
     # Alias für Rückwärtskompatibilität bestehender Referenzen.
@@ -479,7 +504,8 @@ class OpenMeteoProvider:
         except httpx.HTTPStatusError as e:
             raise ProviderRequestError(
                 "openmeteo",
-                f"API error: {e.response.status_code} - {e.response.text}"
+                f"API error: {e.response.status_code} - {e.response.text}",
+                status_code=e.response.status_code,
             ) from e
         except httpx.RequestError as e:
             # Issue #338: kein Response → eigener Log-Eintrag mit Fehlertext.
@@ -746,8 +772,16 @@ class OpenMeteoProvider:
             ProviderError: If model selection fails or response invalid
             ProviderRequestError: If API request fails
         """
-        # Select best model for location (includes dedicated API endpoint)
-        model_id, grid_res_km, endpoint = self.select_model(location.latitude, location.longitude)
+        # Issue #1115: candidate chain (finest resolution first, down to global
+        # ECMWF) for the intra-Open-Meteo model fallback on 5xx/timeout of a
+        # single model endpoint. candidates[0] is exactly what select_model
+        # would have returned (the primary model).
+        candidates = self._candidate_models(location.latitude, location.longitude)
+        if not candidates:
+            # Failsafe: should never happen (ECMWF is global). Preserve the
+            # original select_model semantics (raises ProviderError).
+            candidates = [self.select_model(location.latitude, location.longitude)]
+        primary_id = candidates[0][0]
 
         # Build request parameters (no "model" param needed — endpoint determines model)
         params = {
@@ -791,17 +825,54 @@ class OpenMeteoProvider:
             # If only start specified, fetch from start onwards (API default range)
             params["start_date"] = start.strftime("%Y-%m-%d")
 
-        logger.info(
-            f"Fetching Open-Meteo forecast for {location.name or 'location'} "
-            f"({location.latitude}, {location.longitude}) "
-            f"using model '{model_id}' via endpoint '{endpoint}'"
-        )
+        # Issue #1115: try each covering model in priority order. params are
+        # model-independent and identical across all attempts. On a 5xx/timeout
+        # we advance to the next endpoint; on a 4xx content error we re-raise
+        # immediately (no source roulette, AC-2).
+        response_data: Optional[Dict[str, Any]] = None
+        model_id = grid_res_km = None
+        seen_endpoints: set = set()
+        last_error: Optional[ProviderRequestError] = None
+        for cand_id, cand_res, cand_endpoint in candidates:
+            if cand_endpoint in seen_endpoints:
+                continue  # icon_d2 & icon_eu share /v1/dwd-icon → dedup
+            seen_endpoints.add(cand_endpoint)
+            logger.info(
+                f"Fetching Open-Meteo forecast for {location.name or 'location'} "
+                f"({location.latitude}, {location.longitude}) "
+                f"using model '{cand_id}' via endpoint '{cand_endpoint}'"
+            )
+            try:
+                response_data = self._request(cand_endpoint, params)
+            except ProviderRequestError as e:
+                status = e.status_code
+                if status is not None and 400 <= status < 500:
+                    raise  # 4xx content error → no fallback (AC-2)
+                # 5xx server error OR transient request error (timeout/connect,
+                # status_code None) → advance to next covering model (AC-1).
+                logger.warning(
+                    "Model fallback: '%s' (%s) unavailable → next endpoint",
+                    cand_id, status if status is not None else "transient",
+                )
+                last_error = e
+                continue
+            # Success: this candidate's model_id/grid_res are authoritative and
+            # must be used by _parse_response AND the WEATHER-05b block below.
+            model_id, grid_res_km = cand_id, cand_res
+            break
 
-        # Make request with retry logic (dedicated endpoint per model)
-        response_data = self._request(endpoint, params)
+        if response_data is None:
+            # All covering models failed with 5xx/timeout → surface the last
+            # error so the segment is marked has_error (unchanged behavior).
+            raise last_error
 
-        # Parse primary result
+        # Parse result from the model that actually succeeded.
         timeseries = self._parse_response(response_data, model_id, grid_res_km)
+
+        # Non-concealment (AC-3): record the model that stepped in on 5xx.
+        if model_id != primary_id:
+            timeseries.meta.fallback_model = model_id
+            timeseries.meta.fallback_reason = "model_5xx"
 
         # WEATHER-06: Fetch UV from Air Quality API (no weather model provides UV)
         if start and end:
@@ -886,7 +957,12 @@ class OpenMeteoProvider:
                             fb_ts = self._parse_response(fb_data, fb_id, fb_res)
                             filled = self._merge_fallback(timeseries, fb_ts, missing)
                             if filled:
-                                timeseries.meta.fallback_model = fb_id
+                                # Issue #1115: don't clobber an endpoint-level
+                                # 5xx fallback marker — keep that model_id, only
+                                # record which metrics this gap-fill supplied.
+                                if timeseries.meta.fallback_reason != "model_5xx":
+                                    timeseries.meta.fallback_model = fb_id
+                                    timeseries.meta.fallback_reason = "metric_gap"
                                 timeseries.meta.fallback_metrics = filled
                                 logger.info("Fallback %s filled: %s", fb_id, ", ".join(filled))
                         except Exception as e:

@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -252,6 +253,233 @@ func TestBriefingHealthCountsMarkersWithoutUserJson(t *testing.T) {
 	}
 	if got := bh["degraded_segments_total"]; got != float64(2) {
 		t.Errorf("degraded_segments_total: want 2, got %v", got)
+	}
+}
+
+// writeDiagnosticsLog writes a real data/diagnostics/openmeteo_calls.jsonl with
+// the given raw JSONL lines (already-formatted JSON objects, one per line).
+func writeDiagnosticsLog(t *testing.T, tmpDir string, lines ...string) {
+	t.Helper()
+	dir := filepath.Join(tmpDir, "diagnostics")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("mkdir diagnostics: %v", err)
+	}
+	body := strings.Join(lines, "\n") + "\n"
+	path := filepath.Join(dir, "openmeteo_calls.jsonl")
+	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
+		t.Fatalf("write openmeteo_calls.jsonl: %v", err)
+	}
+}
+
+// Issue #1115 AC-4: a persistently failing model channel must stay visible even
+// while briefings keep going out via the intra-Open-Meteo fallback. The health
+// signal must grow with outage duration: provider_error_streak_since points at
+// the earliest error of the current contiguous streak, and
+// provider_errors_recent_count counts briefing errors in the last 24h. A single
+// old error outside 24h must NOT inflate recent_count nor extend the streak.
+//
+// KEINE Mocks: a real openmeteo_calls.jsonl in t.TempDir(), real BriefingHealth().
+func TestBriefingHealthProviderErrorStreakGrowsWithDuration(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newBriefingHealthTestScheduler(t, tmpDir, "tdd-1115-usera")
+
+	now := time.Now().UTC()
+	streakStart := now.Add(-3 * time.Hour)
+	// REAL production format: the writer (src/providers/call_log.py) records an
+	// HTTP outage as {"status":503,"error":null} — error is NEVER a string for a
+	// status failure. A 503 with error:null IS the outage signal; a 200 is a
+	// success. See the confirmed real line in data/diagnostics/openmeteo_calls.jsonl.
+	line := func(ts time.Time, source string, status int) string {
+		return `{"ts":"` + ts.Format(time.RFC3339) + `","endpoint":"/v1/dwd-icon",` +
+			`"status":` + strconv.Itoa(status) + `,"source":"` + source + `","error":null}`
+	}
+	// Pure network failure: no HTTP response, so status is null and error is set.
+	netErrLine := func(ts time.Time, source string) string {
+		return `{"ts":"` + ts.Format(time.RFC3339) + `","endpoint":"/v1/dwd-icon",` +
+			`"status":null,"source":"` + source + `","error":"read tcp: connection timeout"}`
+	}
+
+	writeDiagnosticsLog(t, tmpDir,
+		// Old, isolated 503 outage 48h ago: outside 24h AND separated from the
+		// current streak by a >2h gap — must NOT count.
+		line(now.Add(-48*time.Hour), "briefing", 503),
+		// A successful briefing call (status 200, error null) must be ignored.
+		line(now.Add(-90*time.Minute), "briefing", 200),
+		// A 4xx content error (e.g. #353 date-out-of-range) must NOT count as an
+		// outage — otherwise every bad request would raise a false alarm.
+		line(now.Add(-80*time.Minute), "briefing", 400),
+		// Current contiguous streak: two 503/null outages + one pure network
+		// failure, ~1h apart (gaps <= 2h). All three are real outage forms.
+		line(streakStart, "briefing", 503),
+		netErrLine(now.Add(-2*time.Hour), "briefing"),
+		line(now.Add(-1*time.Hour), "briefing", 503),
+		// A non-briefing outage (e.g. alert probe) must be ignored (source filter).
+		line(now.Add(-30*time.Minute), "alert", 503),
+	)
+
+	code, body, _ := callStatusEndpoint(t, sched)
+	if code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", code)
+	}
+	bh := body["briefing_health"].(map[string]any)
+
+	// recent_count: the three streak errors within 24h — the 48h-old one and
+	// the non-briefing/successful entries must be excluded.
+	if got := bh["provider_errors_recent_count"]; got != float64(3) {
+		t.Errorf("provider_errors_recent_count: want 3, got %v", got)
+	}
+
+	sinceRaw, ok := bh["provider_error_streak_since"].(string)
+	if !ok {
+		t.Fatalf("provider_error_streak_since missing or wrong type: %v", bh["provider_error_streak_since"])
+	}
+	since, err := time.Parse(time.RFC3339, sinceRaw)
+	if err != nil {
+		t.Fatalf("provider_error_streak_since not RFC3339: %v", err)
+	}
+	// Streak start is the earliest error of the current streak (~3h ago), NOT
+	// the isolated 48h-old error.
+	if diff := since.Sub(streakStart); diff < -2*time.Second || diff > 2*time.Second {
+		t.Errorf("provider_error_streak_since: want ~%v (start of current streak), got %v",
+			streakStart.Format(time.RFC3339), sinceRaw)
+	}
+
+	// The duration signal must grow with the outage: now - streak_since ~ 3h,
+	// which is strictly larger than a fresh (just-started) outage would yield.
+	age := now.Sub(since)
+	if age < 2*time.Hour+55*time.Minute || age > 3*time.Hour+5*time.Minute {
+		t.Errorf("outage duration (now - streak_since): want ~3h, got %v", age)
+	}
+}
+
+// Issue #1115 AC-4: a single old briefing error outside the 24h window must not
+// register as a recent outage (no false-positive escalation), and a missing log
+// yields the null signal (fail-soft).
+func TestBriefingHealthProviderErrorStreakSilentWhenOnlyOld(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newBriefingHealthTestScheduler(t, tmpDir, "tdd-1115-usera")
+
+	old := time.Now().UTC().Add(-48 * time.Hour).Format(time.RFC3339)
+	// REAL production format: 503 outage carries error:null.
+	writeDiagnosticsLog(t, tmpDir,
+		`{"ts":"`+old+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`)
+
+	_, body, _ := callStatusEndpoint(t, sched)
+	bh := body["briefing_health"].(map[string]any)
+
+	if got := bh["provider_errors_recent_count"]; got != float64(0) {
+		t.Errorf("provider_errors_recent_count: want 0 for only-old error, got %v", got)
+	}
+	if got := bh["provider_error_streak_since"]; got != nil {
+		t.Errorf("provider_error_streak_since: want nil for only-old error, got %v", got)
+	}
+}
+
+// Issue #1115 AC-4 (false-alarm guard): a 4xx briefing line (content error such
+// as #353 date-out-of-range, written as status:400/error:null) must NOT register
+// as a provider outage — otherwise a routine bad request would falsely escalate.
+func TestBriefingHealthFourxxIsNotProviderOutage(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newBriefingHealthTestScheduler(t, tmpDir, "tdd-1115-usera")
+
+	now := time.Now().UTC().Add(-1 * time.Hour).Format(time.RFC3339)
+	writeDiagnosticsLog(t, tmpDir,
+		`{"ts":"`+now+`","endpoint":"/v1/dwd-icon","status":400,"source":"briefing","error":null}`)
+
+	_, body, _ := callStatusEndpoint(t, sched)
+	bh := body["briefing_health"].(map[string]any)
+
+	if got := bh["provider_errors_recent_count"]; got != float64(0) {
+		t.Errorf("provider_errors_recent_count: want 0 for 4xx content error, got %v", got)
+	}
+	if got := bh["provider_error_streak_since"]; got != nil {
+		t.Errorf("provider_error_streak_since: want nil for 4xx content error, got %v", got)
+	}
+	if got := bh["last_provider_error_at"]; got != nil {
+		t.Errorf("last_provider_error_at: want nil for 4xx content error, got %v", got)
+	}
+}
+
+// Issue #1115 AC-4: a pure network failure (no HTTP response, so status:null and
+// error populated) must still count as a provider outage — this is the only case
+// the inherited #1114 error!=nil check covered, and it must keep working.
+func TestBriefingHealthNetworkErrorCountsAsOutage(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newBriefingHealthTestScheduler(t, tmpDir, "tdd-1115-usera")
+
+	ts := time.Now().UTC().Add(-30 * time.Minute).Format(time.RFC3339)
+	writeDiagnosticsLog(t, tmpDir,
+		`{"ts":"`+ts+`","endpoint":"/v1/dwd-icon","status":null,"source":"briefing","error":"read tcp: connection timeout"}`)
+
+	_, body, _ := callStatusEndpoint(t, sched)
+	bh := body["briefing_health"].(map[string]any)
+
+	if got := bh["provider_errors_recent_count"]; got != float64(1) {
+		t.Errorf("provider_errors_recent_count: want 1 for network error, got %v", got)
+	}
+	if _, ok := bh["provider_error_streak_since"].(string); !ok {
+		t.Errorf("provider_error_streak_since: want RFC3339 string for network error, got %v", bh["provider_error_streak_since"])
+	}
+	if got := bh["last_provider_error_at"]; got != ts {
+		t.Errorf("last_provider_error_at: want %q for network error, got %v", ts, got)
+	}
+}
+
+// Issue #1115 F002: the night briefing weather fetch is written with source
+// "briefing_nacht" (src/providers/call_log.py's _fetch_night_weather). It is a
+// CORE briefing fetch, so a 503 outage on that source MUST count — otherwise a
+// persistent night-only outage would stay invisible to the AC-4 escalation
+// signal (the exact "silently degraded persistent state" AC-4 rules out).
+//
+// KEINE Mocks: a real openmeteo_calls.jsonl in t.TempDir(), real BriefingHealth().
+func TestBriefingHealthNightBriefingCountsAsOutage(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newBriefingHealthTestScheduler(t, tmpDir, "tdd-1115-usera")
+
+	ts := time.Now().UTC().Add(-30 * time.Minute).Format(time.RFC3339)
+	// REAL production form of a night-briefing outage: 503 with error:null.
+	writeDiagnosticsLog(t, tmpDir,
+		`{"ts":"`+ts+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing_nacht","error":null}`)
+
+	_, body, _ := callStatusEndpoint(t, sched)
+	bh := body["briefing_health"].(map[string]any)
+
+	if got := bh["provider_errors_recent_count"]; got != float64(1) {
+		t.Errorf("provider_errors_recent_count: want 1 for briefing_nacht outage, got %v", got)
+	}
+	if _, ok := bh["provider_error_streak_since"].(string); !ok {
+		t.Errorf("provider_error_streak_since: want RFC3339 string for briefing_nacht outage, got %v", bh["provider_error_streak_since"])
+	}
+	if got := bh["last_provider_error_at"]; got != ts {
+		t.Errorf("last_provider_error_at: want %q for briefing_nacht outage, got %v", ts, got)
+	}
+}
+
+// Issue #1115 F002 (false-alarm guard): an enrichment source (e.g. "ensemble"
+// or "vergleich") is NOT a core briefing fetch. A 503 there is not a briefing
+// outage and must NOT register — otherwise an enrichment hiccup would falsely
+// escalate the briefing-health signal.
+func TestBriefingHealthEnrichmentSourceIsNotBriefingOutage(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newBriefingHealthTestScheduler(t, tmpDir, "tdd-1115-usera")
+
+	e1 := time.Now().UTC().Add(-30 * time.Minute).Format(time.RFC3339)
+	e2 := time.Now().UTC().Add(-20 * time.Minute).Format(time.RFC3339)
+	writeDiagnosticsLog(t, tmpDir,
+		`{"ts":"`+e1+`","endpoint":"/v1/dwd-icon","status":503,"source":"ensemble","error":null}`,
+		`{"ts":"`+e2+`","endpoint":"/v1/dwd-icon","status":503,"source":"vergleich","error":null}`)
+
+	_, body, _ := callStatusEndpoint(t, sched)
+	bh := body["briefing_health"].(map[string]any)
+
+	if got := bh["provider_errors_recent_count"]; got != float64(0) {
+		t.Errorf("provider_errors_recent_count: want 0 for enrichment outage, got %v", got)
+	}
+	if got := bh["provider_error_streak_since"]; got != nil {
+		t.Errorf("provider_error_streak_since: want nil for enrichment outage, got %v", got)
+	}
+	if got := bh["last_provider_error_at"]; got != nil {
+		t.Errorf("last_provider_error_at: want nil for enrichment outage, got %v", got)
 	}
 }
 

@@ -82,6 +82,10 @@ class ForecastMeta:
     # WEATHER-05b: Fallback tracking
     fallback_model: Optional[str] = None
     fallback_metrics: List[str] = field(default_factory=list)
+    # Issue #1115: distinguishes the endpoint-level model fallback on 5xx/timeout
+    # ("model_5xx") from the WEATHER-05b per-metric gap fill ("metric_gap"), so
+    # the two mechanisms don't silently overwrite each other's fallback_model.
+    fallback_reason: Optional[str] = None
 
 
 @dataclass

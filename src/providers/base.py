@@ -80,9 +80,18 @@ class ProviderNotFoundError(ProviderError):
 
 
 class ProviderRequestError(ProviderError):
-    """Raised when a provider request fails."""
+    """Raised when a provider request fails.
 
-    pass
+    Carries an optional HTTP ``status_code`` so callers can distinguish
+    transient server errors (5xx) from content errors (4xx) — the basis for
+    the intra-Open-Meteo model fallback decision (Issue #1115).
+    """
+
+    def __init__(
+        self, provider: str, message: str, status_code: Optional[int] = None
+    ) -> None:
+        self.status_code = status_code
+        super().__init__(provider, message)
 
 
 # Provider registry - lazy loading to avoid circular imports
