@@ -141,6 +141,22 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
     ]
     wp_times = _interpolate_missing_times(known_times)
 
+    # Issue #1098: Tages-Offset-Vektor parallel zu wp_times. _interpolate_missing_times
+    # loest ueber Mitternacht laufende Zeiten intern zwar monoton auf (#1091), gibt aber
+    # nackte time zurueck — der Tages-Rollover ginge sonst beim Kombinieren mit einem
+    # einzigen target_date verloren. Der Tag wird NUR bei STRIKT fallender Uhrzeit (< prev)
+    # erhoeht = echte Tagesgrenze; gleiche (==) Zeiten rollen NICHT und laufen weiter in
+    # den end_dt<=start_dt-Klemm-Guard (AC-5 Mitternachts-Klemme, #1004).
+    day = 0
+    prev = None
+    wp_days: List[int] = []
+    for t in wp_times:
+        if t is not None and prev is not None and t < prev:  # strikt fallend = Tagesgrenze
+            day += 1
+        wp_days.append(day)
+        if t is not None:
+            prev = t
+
     cumulative_time = default_start
     cumulative_dist_km = 0.0
 
@@ -164,12 +180,12 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
 
         seg_tz = tz_for_coords(wp1.lat, wp1.lon)
         start_dt = (
-            datetime.combine(target_date, wp1_start)
+            datetime.combine(target_date + timedelta(days=wp_days[i]), wp1_start)
             .replace(tzinfo=seg_tz)
             .astimezone(timezone.utc)
         )
         end_dt = (
-            datetime.combine(target_date, wp2_start)
+            datetime.combine(target_date + timedelta(days=wp_days[i + 1]), wp2_start)
             .replace(tzinfo=seg_tz)
             .astimezone(timezone.utc)
         )

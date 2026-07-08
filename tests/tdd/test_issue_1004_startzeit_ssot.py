@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -462,3 +462,104 @@ def test_1091_daytime_override_unchanged():
     assert result == [time(8, 0), time(10, 0), time(12, 0)], (
         f"Tag-Override-Interpolation unerwartet: {result}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Issue #1098 — convert_trip_to_segments reicht den Tages-Rollover durch:
+# eine echt ueber Mitternacht laufende Etappe (22:00 -> 00:30) ueberlebt
+# end-to-end mit KORREKTER Ziel-Ankunftszeit am Folgetag, statt still in den
+# end_dt<=start_dt-Klemm-Guard zu laufen (Adversary-Folge #1091).
+# ---------------------------------------------------------------------------
+
+def test_1098_over_midnight_destination_arrival_next_day():
+    """AC-1: Etappe mit arrival_override 22:00 -> 00:30 laeuft echt ueber
+    Mitternacht. Nach Speichern+Neuladen (Overrides bleiben massgeblich) muss
+    convert_trip_to_segments ein gueltiges Ueber-Nacht-Segment liefern, dessen
+    Endzeit lokal am FOLGETAG um 00:30 liegt — und das Ziel-Segment startet zu
+    genau dieser 00:30. RED: aktuell wird das Segment am Klemm-Guard verworfen
+    (00:30 mit target_date kombiniert < 22:00 -> end_dt<=start_dt)."""
+    trip_date = date(2026, 8, 10)
+    wp0 = Waypoint(id="G1", name="Start", lat=47.0, lon=11.0,
+                   elevation_m=500, arrival_override="22:00")
+    wp1 = Waypoint(id="G2", name="Ziel", lat=47.05, lon=11.05,
+                   elevation_m=600, arrival_override="00:30")
+    stage = Stage(id="T1", name="Nachtueberquerung", date=trip_date,
+                  start_time=time(22, 0), waypoints=[wp0, wp1])
+    trip = Trip(id="tdd-1098-mid", name="Mitternacht", stages=[stage])
+
+    saved_path = save_trip(trip, user_id="tdd-1098-mid")
+    reloaded = load_trip(saved_path)
+    assert reloaded is not None
+
+    segments = convert_trip_to_segments(reloaded, trip_date)
+    assert segments, (
+        "Ueber-Mitternacht-Etappe liefert leere Segmentliste — Segment wurde "
+        "still am Klemm-Guard verworfen (Tages-Rollover verloren)"
+    )
+
+    next_day = trip_date + timedelta(days=1)
+
+    # Es muss ein regulaeres Segment geben, dessen Ende lokal am Folgetag 00:30 liegt.
+    over_midnight = [
+        s for s in segments
+        if s.segment_id != "Ziel"
+        and s.end_time.astimezone(tz_for_coords(s.end_point.lat, s.end_point.lon)).date() == next_day
+    ]
+    assert over_midnight, (
+        "Kein regulaeres Segment endet am Folgetag — der Ueber-Nacht-Abschnitt "
+        "22:00->00:30 fehlt (Ziel-Ankunft bleibt am Vortag stehen)"
+    )
+    end_local = over_midnight[-1].end_time.astimezone(
+        tz_for_coords(over_midnight[-1].end_point.lat, over_midnight[-1].end_point.lon)
+    )
+    assert end_local.strftime("%H:%M") == "00:30", (
+        f"Ueber-Nacht-Segment endet {end_local:%H:%M} statt 00:30"
+    )
+
+    # Das Ziel-Segment erbt die korrekte Ankunftszeit: Folgetag 00:30.
+    ziel = [s for s in segments if s.segment_id == "Ziel"]
+    assert ziel, "Ziel-Segment fehlt trotz gueltiger Ueber-Nacht-Etappe"
+    ziel_local = ziel[0].start_time.astimezone(
+        tz_for_coords(ziel[0].start_point.lat, ziel[0].start_point.lon)
+    )
+    assert ziel_local.date() == next_day and ziel_local.strftime("%H:%M") == "00:30", (
+        f"Ziel-Segment startet {ziel_local:%Y-%m-%d %H:%M} statt {next_day} 00:30 "
+        "(falsche Ziel-Ankunftszeit — Kern von #1098)"
+    )
+
+
+def test_1098_normal_daytime_stays_same_day():
+    """AC-3: Regression — gewoehnliche Etappe mit steigenden Zeiten (08:00 ->
+    12:00) bleibt vollstaendig am Ausgangstag; KEIN Tages-Offset wird faelschlich
+    angewandt."""
+    trip_date = date(2026, 8, 10)
+    wp0 = Waypoint(id="G1", name="Start", lat=47.0, lon=11.0,
+                   elevation_m=500, arrival_override="08:00")
+    wp1 = Waypoint(id="G2", name="Ziel", lat=47.05, lon=11.05,
+                   elevation_m=600, arrival_override="12:00")
+    stage = Stage(id="T1", name="Tagesetappe", date=trip_date,
+                  start_time=time(8, 0), waypoints=[wp0, wp1])
+    trip = Trip(id="tdd-1098-day", name="Tag", stages=[stage])
+
+    saved_path = save_trip(trip, user_id="tdd-1098-day")
+    reloaded = load_trip(saved_path)
+    assert reloaded is not None
+
+    segments = convert_trip_to_segments(reloaded, trip_date)
+    assert segments, "Tagesetappe liefert unerwartet leere Segmentliste"
+
+    for s in segments:
+        start_local = s.start_time.astimezone(
+            tz_for_coords(s.start_point.lat, s.start_point.lon)
+        )
+        end_local = s.end_time.astimezone(
+            tz_for_coords(s.end_point.lat, s.end_point.lon)
+        )
+        assert start_local.date() == trip_date, (
+            f"Segment {s.segment_id} startet {start_local.date()} statt {trip_date} "
+            "— faelschlicher Tages-Offset bei gewoehnlicher Etappe"
+        )
+        # Ziel-Segment endet 2h nach Ankunft (12:00 -> 14:00), bleibt am Tag.
+        assert end_local.date() == trip_date, (
+            f"Segment {s.segment_id} endet {end_local.date()} statt {trip_date}"
+        )
