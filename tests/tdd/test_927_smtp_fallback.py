@@ -204,33 +204,36 @@ class TestAC5StagingGuardUnchanged:
         GIVEN: GZ_ENV=staging, smtp_host=smtp.resend.com
         WHEN:  EmailOutput(settings) instanziiert wird
         THEN:  OutputConfigError sofort — vor jedem Fallback-Pfad
+
+        Seit #1122 (Default-Deny) hält __init__ nie mehr einen Resend-Host —
+        der Staging-Guard wird über den model_copy-Bypass erreicht.
         """
         settings = Settings(
-            smtp_host="smtp.resend.com",
+            smtp_host="mail.henemm.com",
             smtp_port=587,
             smtp_user="resend",
             smtp_pass="re_key",
             mail_to="test@example.com",
             env="staging",
-        )
+        ).model_copy(update={"smtp_host": "smtp.resend.com"})
         with pytest.raises(OutputConfigError) as exc_info:
             EmailOutput(settings)
         assert "Staging" in str(exc_info.value) or "resend" in str(exc_info.value).lower()
 
     def test_staging_guard_error_message_unchanged(self):
         """
-        GIVEN: Staging-Konfiguration mit Resend-Host
+        GIVEN: Staging-Konfiguration mit Resend-Host (model_copy-Bypass, s.o. #1122)
         WHEN:  EmailOutput() initialisiert
         THEN:  Fehlermeldung enthält Issue-#924-Kennzeichner
         """
         settings = Settings(
-            smtp_host="smtp.resend.com",
+            smtp_host="mail.henemm.com",
             smtp_port=587,
             smtp_user="resend",
             smtp_pass="re_key",
             mail_to="test@example.com",
             env="staging",
-        )
+        ).model_copy(update={"smtp_host": "smtp.resend.com"})
         with pytest.raises(OutputConfigError) as exc_info:
             EmailOutput(settings)
         error_str = str(exc_info.value)

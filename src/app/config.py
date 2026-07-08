@@ -9,12 +9,22 @@ Centralized settings with support for:
 from __future__ import annotations
 
 import json
+import logging
+import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
+
+
+def _in_pytest() -> bool:
+    """True, wenn der aktuelle Prozess ein pytest-Lauf ist (Issue #1122)."""
+    return "PYTEST_CURRENT_TEST" in os.environ or "pytest" in sys.modules
 
 
 def is_test_user_id(user_id: str, data_dir: str = "data") -> bool:
@@ -128,6 +138,14 @@ class Settings(BaseSettings):
     # Wenn True, blockiert EmailOutput jeden Versand über Resend (Production-Versanddienst).
     is_test_mode: bool = Field(default=False, description="Test-Modus: blockiert Resend-Versand")
 
+    # Issue #1122 — Resend Default-Deny: Resend-Versand ist grundsätzlich gesperrt.
+    # Nur die Prod-Systemd-Units setzen GZ_RESEND_ALLOWED=1. Ohne Token lenkt der
+    # Validator _resend_default_deny jeden Resend-Host auf den Stalwart-Test-Host um.
+    resend_allowed: bool = Field(
+        default=False,
+        description="Explizite Resend-Freigabe (GZ_RESEND_ALLOWED=1) — nur Prod-Units (#1122)",
+    )
+
     # Deployment environment (GZ_ENV)
     env: str = Field(default="production", description="Deployment environment (GZ_ENV)")
 
@@ -141,6 +159,31 @@ class Settings(BaseSettings):
     telegram_bot_token: str = Field(default="", description="Telegram Bot API token from @BotFather")
     telegram_chat_id: str = Field(default="", description="Telegram chat ID of recipient")
     telegram_test_chat_id: str = Field(default="", description="Telegram test chat ID (staging/test users) — GZ_TELEGRAM_TEST_CHAT_ID")
+
+    @model_validator(mode="after")
+    def _resend_default_deny(self) -> "Settings":
+        """Issue #1122 — Default-Deny: kein Prozess ohne Token hält einen Resend-Host.
+
+        Umlenkung (statt Raise): ein Raise würde ganze Apps beim Settings-Konstrukt
+        crashen. Credentials werden bewusst NICHT mitgeswappt — Resend-Creds gegen
+        Stalwart ergeben einen lauten 535-Auth-Fehler statt eines stillen Reroutes.
+        Der sanktionierte Testpfad bleibt for_testing(). pytest-Prozesse sind auch
+        MIT Token gesperrt. model_copy() umgeht Validatoren — dafür bleiben die
+        Guards in EmailOutput (#879/#924) als zweite Linie.
+        """
+        if "resend" not in (self.smtp_host or "").lower():
+            return self
+        if self.resend_allowed and not _in_pytest():
+            return self
+        reason = "pytest-Lauf" if _in_pytest() else "GZ_RESEND_ALLOWED fehlt"
+        logger.error(
+            "Resend Default-Deny (#1122): smtp_host %r wird auf %r umgelenkt (%s). "
+            "Produktiver Resend-Versand erfordert GZ_RESEND_ALLOWED=1 in der Prod-Unit.",
+            self.smtp_host, self.test_smtp_host, reason,
+        )
+        self.smtp_host = self.test_smtp_host or "mail.henemm.com"
+        self.smtp_port = self.test_smtp_port
+        return self
 
     def get_location(self) -> Location:
         """Create Location object from settings."""

@@ -8,7 +8,9 @@ import (
 	"log"
 	"mime"
 	"net/smtp"
+	"os"
 	"strings"
+	"testing"
 	"time"
 )
 
@@ -44,10 +46,33 @@ func IsTestUser(userID string) bool {
 	return strings.Contains(id, "test") || strings.Contains(id, "tdd")
 }
 
+// resendBlocked enforces the Resend default-deny (Issue #1122): Resend is
+// gesperrt, außer der Prozess trägt das explizite Token GZ_RESEND_ALLOWED=1
+// (nur Prod-Systemd-Units). Testprozesse (go test) sind AUCH MIT Token gesperrt.
+func resendBlocked(host string) error {
+	if !strings.Contains(strings.ToLower(host), "resend") {
+		return nil
+	}
+	if testing.Testing() {
+		return fmt.Errorf(
+			"mail.Send: Resend-Host %q unter go test gesperrt (#1122) — "+
+				"Test-Mails gehen über Stalwart; GZ_RESEND_ALLOWED gilt hier nicht", host)
+	}
+	if os.Getenv("GZ_RESEND_ALLOWED") != "1" {
+		return fmt.Errorf(
+			"mail.Send: Resend-Host %q ohne GZ_RESEND_ALLOWED=1 gesperrt (#1122) — "+
+				"Token setzen nur die Prod-Units (henemm-infra)", host)
+	}
+	return nil
+}
+
 // Send dispatches an e-mail over SMTP+STARTTLS using stdlib net/smtp.
 // Blocks until completion or timeout (caller is responsible for goroutine
 // and context cancellation). Returns nil on successful 250 OK from the relay.
 func Send(cfg MailConfig, to string, msg Mail) error {
+	if err := resendBlocked(cfg.Host); err != nil {
+		return err
+	}
 	if cfg.Host == "" || cfg.User == "" || cfg.Pass == "" {
 		return fmt.Errorf("mail.Send: incomplete SMTP config (host/user/pass)")
 	}
