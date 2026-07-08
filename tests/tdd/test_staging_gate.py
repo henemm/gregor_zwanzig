@@ -445,3 +445,137 @@ class TestE2EVerifiedPersistence:
         assert "abc123" in content, (
             f"Dateiinhalt wurde veraendert — erwartet 'abc123', bekam: {content!r}"
         )
+
+
+def _setup_repo_with_target(tmp_path, target_change="code"):
+    """Repo mit HEAD auf altem Commit (C1) und einem separaten Ziel-Commit EXP (C2).
+
+    Simuliert den Preflight-Zustand von deploy-gregor-prod.sh: der Arbeits-Checkout
+    steht noch auf dem alten Prod-Commit (HEAD=C1), waehrend origin/main bereits auf
+    EXP=C2 zeigt und noch NICHT ausgecheckt/resettet wurde.
+
+    target_change: 'code' → EXP aendert src/-Datei (backend-Scope);
+                   'docs'  → EXP aendert docs/-Datei (docs-only-Scope).
+    Rueckgabe: (repo, c1, exp)
+    """
+    repo = _setup_repo(tmp_path)  # baseline C1, HEAD=C1
+    c1 = _repo_head_sha(repo)
+    if target_change == "docs":
+        (repo / "docs").mkdir(exist_ok=True)
+        (repo / "docs" / "note.md").write_text("# doc change\n")
+    else:
+        (repo / "src").mkdir(exist_ok=True)
+        (repo / "src" / "mod.py").write_text("x = 1\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "target change (EXP)")
+    exp = _repo_head_sha(repo)
+    # HEAD zurueck auf C1 — Prod-Checkout noch nicht auf origin/main resettet.
+    # C2 bleibt als erreichbares Commit-Objekt per SHA referenzierbar.
+    _git(repo, "reset", "--hard", c1)
+    return repo, c1, exp
+
+
+class TestGateCheckExpectedCommit:
+    """Issue #1130: --expected-commit <sha> prueft gegen einen uebergebenen
+    Ziel-Commit statt gegen HEAD — Voraussetzung fuer den Deploy-Preflight
+    VOR git reset --hard / systemctl stop (henemm-infra#107).
+    """
+
+    def test_ac1_passes_when_target_attested_though_head_is_old(self, tmp_path):
+        """AC-1: verified_commit == EXP, VERIFIED, frisch, HEAD != EXP → Exit 0."""
+        repo, c1, exp = _setup_repo_with_target(tmp_path, "code")
+        assert _repo_head_sha(repo) == c1, "Setup: HEAD muss auf altem C1 stehen"
+        json_file = _write_e2e_json_in(repo, tmp_path, verified_commit=exp)
+        rc, out, err = _run_gate_in(
+            repo,
+            ["--check", f"--expected-commit={exp}", f"--e2e-path={json_file}", "--scope=backend"],
+        )
+        assert rc == 0, (
+            f"Erwartet Exit 0 (Ziel-Commit attestiert), bekam {rc}.\n"
+            f"HEAD={c1[:8]} EXP={exp[:8]}\nstdout: {out}\nstderr: {err}"
+        )
+
+    def test_ac2_blocks_when_attestation_is_for_head_not_target(self, tmp_path):
+        """AC-2: verified_commit == alter HEAD (!= EXP) → Exit 1, Meldung nennt EXP."""
+        repo, c1, exp = _setup_repo_with_target(tmp_path, "code")
+        json_file = _write_e2e_json_in(repo, tmp_path, verified_commit=c1)
+        rc, out, err = _run_gate_in(
+            repo,
+            ["--check", f"--expected-commit={exp}", f"--e2e-path={json_file}", "--scope=backend"],
+        )
+        assert rc == 1, f"Erwartet Exit 1 (Ziel-Commit nicht attestiert), bekam {rc}"
+        combined = (out + err).lower()
+        assert exp[:8] in (out + err) or any(w in combined for w in ["expected", "ziel", "target"]), (
+            f"Meldung soll den Ziel-Commit {exp[:8]} nennen, bekam: {out + err}"
+        )
+
+    def test_ac3_docs_only_target_skips_without_attestation(self, tmp_path):
+        """AC-3: Diff HEAD..EXP nur docs → Exit 0 ohne e2e_verified.json."""
+        repo, c1, exp = _setup_repo_with_target(tmp_path, "docs")
+        nonexistent = str(tmp_path / "does_not_exist.json")
+        rc, out, err = _run_gate_in(
+            repo,
+            ["--check", f"--expected-commit={exp}", f"--e2e-path={nonexistent}"],
+        )
+        assert rc == 0, (
+            f"Erwartet Exit 0 (docs-only Ziel-Commit), bekam {rc}.\n"
+            f"stdout: {out}\nstderr: {err}"
+        )
+
+    def test_ac4_no_flag_uses_head_and_writes_marker(self, tmp_path):
+        """AC-4: ohne --expected-commit exakt altes Verhalten (HEAD, Marker geschrieben)."""
+        repo = _setup_repo(tmp_path)
+        json_file = _write_e2e_json_in(repo, tmp_path)  # verified_commit == HEAD
+        rc, out, err = _run_gate_in(
+            repo, ["--check", f"--e2e-path={json_file}", "--scope=backend"]
+        )
+        assert rc == 0, f"Erwartet Exit 0 (Bestandsverhalten), bekam {rc}\n{out}\n{err}"
+        marker = json.loads((repo / ".claude" / "last_gate_scope.json").read_text())
+        assert marker.get("gate_scope_sha") == _repo_head_sha(repo), (
+            "Ohne Flag muss der Scope-Marker weiterhin mit HEAD geschrieben werden."
+        )
+
+    def test_ac5_preflight_does_not_poison_head_marker(self, tmp_path):
+        """AC-5: --expected-commit-Lauf mit HEAD != EXP schreibt keinen HEAD-Marker."""
+        repo, c1, exp = _setup_repo_with_target(tmp_path, "code")
+        json_file = _write_e2e_json_in(repo, tmp_path, verified_commit=exp)
+        rc, out, err = _run_gate_in(
+            repo,
+            ["--check", f"--expected-commit={exp}", f"--e2e-path={json_file}", "--scope=backend"],
+        )
+        assert rc == 0, f"Setup erwartet Exit 0, bekam {rc}\n{out}\n{err}"
+        marker_path = repo / ".claude" / "last_gate_scope.json"
+        if marker_path.exists():
+            marker = json.loads(marker_path.read_text())
+            assert marker.get("gate_scope_sha") != c1, (
+                "Preflight darf den noch-nicht-ausgerollten HEAD nicht als "
+                "Scope-Marker cachen (Cache-Poisoning)."
+            )
+
+    def test_f001_unresolvable_expected_commit_fails_closed(self, tmp_path):
+        """F001 (Adversary): ein nicht auflösbarer EXP (Tippfehler / nicht gefetcht)
+        darf NIE fail-open. `git diff HEAD <EXP>` scheitert → frueher faelschlich
+        'docs-only' → Exit 0 OHNE Attestations-Pruefung. Muss fail-closed Exit 1 sein."""
+        repo, c1, exp = _setup_repo_with_target(tmp_path, "code")
+        nonexistent = str(tmp_path / "nope.json")
+        bogus = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+        rc, out, err = _run_gate_in(
+            repo, ["--check", f"--expected-commit={bogus}", f"--e2e-path={nonexistent}"]
+        )
+        assert rc == 1, (
+            f"Unaufloesbarer EXP muss fail-closed (Exit 1) sein, bekam {rc}.\n"
+            f"stdout: {out}\nstderr: {err}"
+        )
+
+    def test_f001_empty_expected_commit_fails_closed(self, tmp_path):
+        """F001 (Adversary): leerer --expected-commit (leere Shell-Variable im
+        Deploy-Script) → fail-closed Exit 1, nicht stiller docs-only-Skip."""
+        repo, c1, exp = _setup_repo_with_target(tmp_path, "code")
+        nonexistent = str(tmp_path / "nope.json")
+        rc, out, err = _run_gate_in(
+            repo, ["--check", "--expected-commit=", f"--e2e-path={nonexistent}"]
+        )
+        assert rc == 1, (
+            f"Leerer EXP muss fail-closed (Exit 1) sein, bekam {rc}.\n"
+            f"stdout: {out}\nstderr: {err}"
+        )

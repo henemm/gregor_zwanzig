@@ -93,17 +93,20 @@ def _commit_e2e_path(sha: str | None = None) -> Path:
     return _e2e_paths.commit_e2e_path(_shared_repo_dir(), sha or _head_sha())
 
 
-def _default_e2e_path() -> Path:
+def _default_e2e_path(expected_commit: str | None = None) -> Path:
     """Default-Pfad-Auflösung: commit-getaggt (Vorrang), sonst Singleton-Fallback.
 
-    Existiert die commit-getaggte Datei für HEAD → diese (auch wenn ihr Inhalt
-    veraltet ist; das prüft gate_check). Sonst, wenn das alte Singleton existiert
-    → Fallback (Migration). Sonst die (nicht existente) getaggte Datei → wird von
-    gate_check als 'fehlt' behandelt.
+    Existiert die commit-getaggte Datei für den Referenz-Commit → diese (auch wenn
+    ihr Inhalt veraltet ist; das prüft gate_check). Sonst, wenn das alte Singleton
+    existiert → Fallback (Migration). Sonst die (nicht existente) getaggte Datei →
+    wird von gate_check als 'fehlt' behandelt.
+
+    Issue #1130: Im Preflight (``expected_commit`` gesetzt) wird die Attestation für
+    den ZIEL-Commit gesucht, nicht für den (noch alten) HEAD.
     """
     shared = _shared_repo_dir()
     canonical = CANONICAL_E2E_PATH if REPO_DIR != _DEFAULT_REPO_DIR else shared / ".claude" / "e2e_verified.json"
-    return _e2e_paths.default_e2e_path(shared, canonical, _head_sha())
+    return _e2e_paths.default_e2e_path(shared, canonical, expected_commit or _head_sha())
 
 
 def _scope_diff_base() -> str:
@@ -130,7 +133,7 @@ def _scope_diff_base() -> str:
     return "HEAD~1"
 
 
-def _detect_committed_scope() -> str:
+def _detect_committed_scope(expected_commit: str | None = None) -> str:
     """Klassifiziert die Commits seit dem Gate-Marker (Fallback HEAD~1..HEAD).
 
     Issue #1096: läuft ein zweiter --check-Lauf auf demselben HEAD (z.B.
@@ -140,15 +143,23 @@ def _detect_committed_scope() -> str:
     Shared-Helper wie prod_selftest.py) — Treffer liefert den beim ersten
     Lauf tatsaechlich ermittelten Scope zurueck, ohne Selbstvergiftung.
 
+    Issue #1130: Im Preflight (``expected_commit`` gesetzt) ist HEAD noch der
+    alte Prod-Commit. Massgeblich ist dann, was der Deploy AUSROLLT — also der
+    Diff HEAD..EXP. Der HEAD-basierte Scope-Cache wird bewusst uebergangen (sein
+    Key passt nicht zum noch nicht ausgecheckten Ziel-Commit).
+
     Returns: frontend-only | backend | full-stack | docs-only
     """
-    cached = _e2e_paths.cached_scope_for_sha(_shared_repo_dir(), _head_sha())
-    if cached is not None:
-        return cached
+    if expected_commit is None:
+        cached = _e2e_paths.cached_scope_for_sha(_shared_repo_dir(), _head_sha())
+        if cached is not None:
+            return cached
+        base, target = _scope_diff_base(), "HEAD"
+    else:
+        base, target = "HEAD", expected_commit
 
-    base = _scope_diff_base()
     result = subprocess.run(
-        ["git", "diff", "--name-only", base, "HEAD"],
+        ["git", "diff", "--name-only", base, target],
         capture_output=True, text=True, cwd=str(_verified_repo_dir()),
     )
     files = [f.strip() for f in result.stdout.splitlines() if f.strip()]
@@ -291,26 +302,56 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
     return 0
 
 
-def gate_check(e2e_path: Path | None, scope_override: str | None) -> int:
-    """Mode B: Gate-Check für deploy-gregor-prod.sh."""
+def gate_check(e2e_path: Path | None, scope_override: str | None,
+               expected_commit: str | None = None) -> int:
+    """Mode B: Gate-Check für deploy-gregor-prod.sh.
+
+    Issue #1130: Ist ``expected_commit`` gesetzt (Deploy-Preflight VOR
+    ``git reset --hard``), wird gegen diesen Ziel-Commit geprüft statt gegen
+    HEAD — Attestations-Vergleich, Scope-Diff und Attestations-Pfad beziehen
+    sich dann auf EXP. Der HEAD-basierte Scope-Marker wird im Preflight NICHT
+    geschrieben (kein Cache-Poisoning eines noch nicht ausgerollten Zustands).
+    Ohne das Flag ist das Verhalten unverändert.
+    """
     if os.environ.get("GZ_SKIP_E2E_GATE") == "1":
         _log("WARN: GZ_SKIP_E2E_GATE=1 — Staging-Gate übersprungen (Notfall-Override).", stream=sys.stderr)
         return 0
 
-    scope = scope_override or _detect_committed_scope()
+    preflight = expected_commit is not None
+    # Issue #1130 / Adversary F001: Der Ziel-Commit ist im Preflight ungeprüfter
+    # externer Input (Deploy-Script-Variable). Ist er leer oder nicht auflösbar
+    # (Tippfehler, noch nicht gefetcht), scheitert der Scope-Diff still → früher
+    # fälschlich "docs-only" → fail-open Exit 0 OHNE Attestations-Prüfung. Genau
+    # das darf dieser Preflight nie: fail-closed VOR jeder Scope-/Skip-Logik.
+    if preflight:
+        resolved = subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", f"{expected_commit}^{{commit}}"],
+            capture_output=True, text=True, cwd=str(_verified_repo_dir()),
+        )
+        if resolved.returncode != 0 or not resolved.stdout.strip():
+            _log(
+                f"FEHLER: --expected-commit ({expected_commit!r}) ist kein auflösbarer "
+                "Commit (leer, Tippfehler oder nicht gefetcht). Gate verweigert "
+                "(fail-closed) — vor dem Preflight 'git fetch' sicherstellen.",
+                stream=sys.stderr,
+            )
+            return 1
+    scope = scope_override or _detect_committed_scope(expected_commit)
     if scope == "docs-only":
         _log(f"Scope '{scope}' — Staging-Gate übersprungen (kein UI/Backend-Change).")
         # Issue #1096 (Fix 2): ein expliziter --scope-Override behält Vorrang
         # fürs Gate-Verhalten (Exit 0 bleibt), aber der Cache darf dabei nicht
         # auf docs-only heruntergestuft werden, wenn für exakt diesen HEAD
         # bereits ein besserer (Nicht-docs-only-)Wert im Marker steht.
-        existing = _e2e_paths.cached_scope_for_sha(_shared_repo_dir(), _head_sha())
-        if existing is None or existing == "docs-only":
-            _e2e_paths.write_last_gate_scope(_shared_repo_dir(), _head_sha(), scope)
+        # Issue #1130: Im Preflight gar keinen HEAD-Marker schreiben.
+        if not preflight:
+            existing = _e2e_paths.cached_scope_for_sha(_shared_repo_dir(), _head_sha())
+            if existing is None or existing == "docs-only":
+                _e2e_paths.write_last_gate_scope(_shared_repo_dir(), _head_sha(), scope)
         return 0
 
     if e2e_path is None:
-        e2e_path = _default_e2e_path()
+        e2e_path = _default_e2e_path(expected_commit)
 
     if not e2e_path.exists():
         _log(
@@ -326,11 +367,12 @@ def gate_check(e2e_path: Path | None, scope_override: str | None) -> int:
         _log(f"FEHLER: e2e_verified.json nicht lesbar: {exc}", stream=sys.stderr)
         return 1
 
-    head = _head_sha()
+    ref = expected_commit or _head_sha()
+    ref_label = "expected-commit" if preflight else "HEAD-SHA"
     verified_commit = data.get("verified_commit", "")
-    if verified_commit != head:
+    if verified_commit != ref:
         _log(
-            f"FEHLER: verified_commit ({verified_commit[:8]}) != HEAD-SHA ({head[:8]}). "
+            f"FEHLER: verified_commit ({verified_commit[:8]}) != {ref_label} ({ref[:8]}). "
             "Veraltete Verifikation — /e2e-verify erneut ausführen.",
             stream=sys.stderr,
         )
@@ -363,8 +405,11 @@ def gate_check(e2e_path: Path | None, scope_override: str | None) -> int:
         )
         return 1
 
-    _log(f"OK: Staging-Gate bestanden (commit={head[:8]}, verdict={verdict!r}).")
-    _e2e_paths.write_last_gate_scope(_shared_repo_dir(), head, scope)
+    _log(f"OK: Staging-Gate bestanden (commit={ref[:8]}, verdict={verdict!r}).")
+    # Issue #1130: Preflight schreibt keinen Marker — HEAD ist noch der alte
+    # Prod-Commit, der reguläre --check nach dem Reset cached korrekt.
+    if not preflight:
+        _e2e_paths.write_last_gate_scope(_shared_repo_dir(), _head_sha(), scope)
     return 0
 
 
@@ -375,6 +420,7 @@ def main() -> int:
     parser.add_argument("--findings-json", help="Pfad zur Findings-JSON (Mode A)")
     parser.add_argument("--e2e-path", help="Pfad zur e2e_verified.json (Override)")
     parser.add_argument("--scope", help="Scope-Override (frontend-only|backend|full-stack|docs-only)")
+    parser.add_argument("--expected-commit", help="Ziel-Commit für Preflight-Check (Issue #1130): prüft gegen diesen SHA statt HEAD")
     parser.add_argument("--detect-scope", action="store_true", help="Mode C: Scope ausgeben")
     args = parser.parse_args()
 
@@ -389,7 +435,7 @@ def main() -> int:
         return write_verdict(args.write_verdict, findings_path, e2e_path, args.scope)
 
     if args.check:
-        return gate_check(e2e_path, args.scope)
+        return gate_check(e2e_path, args.scope, expected_commit=args.expected_commit)
 
     parser.print_help()
     return 1
