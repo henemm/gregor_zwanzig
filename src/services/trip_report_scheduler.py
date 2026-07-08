@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
+import httpx
+
 from app.config import Settings
 from app.loader import load_all_trips, save_trip
 from app.models import (
@@ -41,6 +43,35 @@ if TYPE_CHECKING:
 # vermeiden. Hinweis: `time` ist hier die datetime.time-Klasse — der echte
 # Zeit-Modul wird als `time_module` importiert.
 INTER_MAIL_DELAY_SECONDS = 2
+
+# Issue #1113: >75 % fehlende Segmente -> Guard wie Totalausfall (#1012);
+# Retry-Budget pro Segment bei transienten Fetch-Fehlern (1s/2s Backoff).
+OUTAGE_WITHHOLD_RATIO = 0.75
+FETCH_RETRY_ATTEMPTS = 2
+FETCH_RETRY_BACKOFF_SECONDS = 1
+
+# Adversary Finding F002: nur HTTP 5xx/Timeout/Overloaded gelten als
+# transient und rechtfertigen einen Retry — alles andere (z. B. ungültige
+# Koordinaten) wird sofort als has_error markiert, kein Sleep.
+# Adversary Finding F005: Text-Marker "timeout" matcht nicht den echten
+# httpx-Fehlertext ("timed out") — daher zuerst über den Exception-TYP
+# pruefen (deckt auch die vom Provider gewrappte Fehlerkette via __cause__
+# ab), Text-Marker nur als Fallback fuer nicht-httpx-Fehlerquellen.
+_TRANSIENT_FETCH_ERROR_MARKERS = (
+    "502", "503", "504", "timeout", "timed out", "overloaded",
+)
+
+
+def _is_transient_fetch_error(exc: Exception) -> bool:
+    status_code = getattr(exc, "status_code", None)
+    if status_code is not None:
+        return status_code in (502, 503, 504)
+    if isinstance(exc, httpx.TimeoutException) or isinstance(
+        getattr(exc, "__cause__", None), httpx.TimeoutException
+    ):
+        return True
+    message = str(exc).lower()
+    return any(marker in message for marker in _TRANSIENT_FETCH_ERROR_MARKERS)
 
 logger = logging.getLogger("trip_report_scheduler")
 
@@ -258,12 +289,20 @@ class TripReportSchedulerService:
                 continue
 
             was_complete_failure = len(previously_failed) >= len(segments)
-            prefix = (
-                f"Nachgeliefert — der Wetterdienst war um "
-                f"{entry.get('slot_hour')}:00 nicht erreichbar"
-                if was_complete_failure
-                else "Aktualisiert — jetzt mit vollständigen Daten"
-            )
+            if was_complete_failure:
+                prefix = (
+                    f"Nachgeliefert — der Wetterdienst war um "
+                    f"{entry.get('slot_hour')}:00 nicht erreichbar"
+                )
+            elif failed_ids_now:
+                # Adversary Finding F003: ein (neues) Segment schlägt beim
+                # Nachliefer-Versuch fehl, obwohl kein zuvor bekanntes
+                # Segment mehr betroffen ist — "vollständig" wäre hier
+                # widersprüchlich zum gleichzeitig gesetzten
+                # partial_outage_hint (siehe _send_trip_report_outcome).
+                prefix = "Aktualisiert — weiterhin unvollständig, Details im Hinweis"
+            else:
+                prefix = "Aktualisiert — jetzt mit vollständigen Daten"
             # Marker zuerst entfernen (RMW) — schlägt die Nachlieferung
             # erneut (teilweise) fehl, schreibt der reguläre Sendepfad
             # selbst einen frischen Marker (siehe _send_trip_report_outcome).
@@ -632,11 +671,15 @@ class TripReportSchedulerService:
                     )
                     sw.official_alerts = []
 
-        # Issue #1012 (a): Guard auf VOLLSTÄNDIGEN Ausfall statt der nie
-        # greifenden `if not segment_weather`-Prüfung — _fetch_weather()
-        # liefert bei Provider-Fehlern pro Segment einen has_error=True-
-        # Platzhalter statt einer leeren Liste, die Liste ist also nie leer.
-        if not segment_weather or all(s.has_error for s in segment_weather):
+        # Issue #1113: Schwelle statt binärem Totalausfall (#1012) —
+        # _fetch_weather() liefert bei Provider-Fehlern pro Segment einen
+        # has_error=True-Platzhalter statt einer leeren Liste, die Liste ist
+        # also nie leer.
+        error_segments = [s for s in segment_weather if s.has_error]
+        error_ratio = len(error_segments) / len(segment_weather) if segment_weather else 1.0
+        partial_outage_hint = None
+
+        if not segment_weather or error_ratio > OUTAGE_WITHHOLD_RATIO:
             logger.warning(f"All-failed weather data for trip {trip.id}")
             if not on_demand:
                 # On-Demand (#1007) erzeugt weder Hinweis-Versand noch Marker —
@@ -651,9 +694,16 @@ class TripReportSchedulerService:
                 )
                 self._write_pending_marker(
                     trip, report_type, target_date,
-                    failed_segment_ids=[str(s.segment.segment_id) for s in segment_weather],
+                    failed_segment_ids=[str(s.segment.segment_id) for s in error_segments],
                 )
             return "no_weather"
+        elif error_segments:
+            # Teilausfall unterhalb der Schwelle: Hinweis statt Rückhalten.
+            missing = ", ".join(f"Segment {s.segment.segment_id}" for s in error_segments)
+            partial_outage_hint = (
+                f"Hinweis: Für folgende Abschnitte liegen aktuell keine Wetterdaten vor "
+                f"({missing}) — eine Aktualisierung wird nachgeliefert."
+            )
 
         # 2b. Ensemble-Anreicherung: 1 API-Call für letzten Waypoint der letzten Etappe
         self._enrich_ensemble_for_trip(trip, segment_weather)
@@ -764,6 +814,7 @@ class TripReportSchedulerService:
             allow_test_fallback=allow_test_fallback,
             on_demand=on_demand,
             catchup_prefix=catchup_prefix,
+            partial_outage_hint=partial_outage_hint,
         )
         result = self._notification_service.send_trip_report(request)
         errors = request.failed_segments
@@ -828,6 +879,7 @@ class TripReportSchedulerService:
         allow_test_fallback: bool,
         on_demand: bool,
         catchup_prefix: str | None,
+        partial_outage_hint: str | None = None,
     ) -> TripReportRequest:
         """Baut das DTO, das an den NotificationService übergeben wird (Issue #1022).
 
@@ -863,6 +915,7 @@ class TripReportSchedulerService:
             test_prefix=allow_test_fallback,
             on_demand_prefix=on_demand,
             catchup_prefix=catchup_prefix,
+            partial_outage_hint=partial_outage_hint,
             failed_segments=errors,
             on_demand=on_demand,
         )
@@ -934,27 +987,87 @@ class TripReportSchedulerService:
         service = SegmentWeatherService(provider)
 
         weather_data = []
+        # Adversary Finding F002: sobald EIN Segment trotz aller Retries
+        # endgültig gescheitert ist, deutet das auf einen andauernden
+        # Provider-Ausfall hin (nicht auf einen einzelnen Ausreißer) — die
+        # restlichen Segmente desselben Aufrufs bekommen dann nur noch 1
+        # Versuch (kein Sleep), damit der >75 %-Guard einen Totalausfall in
+        # Sekunden statt Minuten erkennt (~150 User im sequenziellen
+        # Scheduler-Loop).
+        fail_fast = False
         for segment in segments:
-            try:
-                # Bug #288: Skip ensemble per-segment; will be added once via
-                # _enrich_ensemble_for_trip() to keep API-Calls at 1/Report.
-                data = service.fetch_segment_weather(segment, enrich_ensemble=False)
+            last_error: Exception | None = None
+            returned_error_data: SegmentWeatherData | None = None
+            attempts = 1 if fail_fast else FETCH_RETRY_ATTEMPTS + 1
+            for attempt in range(attempts):
+                try:
+                    # Bug #288: Skip ensemble per-segment; will be added once via
+                    # _enrich_ensemble_for_trip() to keep API-Calls at 1/Report.
+                    data = service.fetch_segment_weather(segment, enrich_ensemble=False)
+                except Exception as e:
+                    last_error = e
+                    returned_error_data = None
+                    has_more_attempts = attempt < attempts - 1
+                    if has_more_attempts and _is_transient_fetch_error(e):
+                        # Issue #1113: kurzer Backoff gegen transiente 503er,
+                        # bevor der Fehler-Platzhalter erzeugt wird.
+                        time_module.sleep(FETCH_RETRY_BACKOFF_SECONDS * (attempt + 1))
+                        continue
+                    logger.error(
+                        f"Weather fetch failed for segment {segment.segment_id} "
+                        f"after {attempt + 1} attempt(s): {e}"
+                    )
+                    break
+                if data.has_error:
+                    # Adversary F005-Folgefund: SegmentWeatherService faengt
+                    # ProviderRequestError bereits intern ab (WEATHER-04) und
+                    # liefert statt eines Raise ein has_error-Objekt zurueck.
+                    # Der echte Provider (openmeteo.py) wirft IMMER diese
+                    # Exception-Klasse, daher muss die Retry-Pruefung auch
+                    # den Rueckgabewert inspizieren — nicht nur geworfene
+                    # Exceptions —, sonst greift der Retry gegen den echten
+                    # Produktionscode-Pfad nie.
+                    last_error = RuntimeError(data.error_message)
+                    returned_error_data = data
+                    has_more_attempts = attempt < attempts - 1
+                    if has_more_attempts and _is_transient_fetch_error(last_error):
+                        time_module.sleep(FETCH_RETRY_BACKOFF_SECONDS * (attempt + 1))
+                        continue
+                    logger.error(
+                        f"Weather fetch failed for segment {segment.segment_id} "
+                        f"after {attempt + 1} attempt(s): {data.error_message}"
+                    )
+                    break
                 weather_data.append(data)
-            except Exception as e:
-                logger.error(
-                    f"Weather fetch failed for segment {segment.segment_id}: {e}"
-                )
-                # WEATHER-04: Error-Placeholder statt auslassen
-                error_data = SegmentWeatherData(
-                    segment=segment,
-                    timeseries=None,
-                    aggregated=SegmentWeatherSummary(),
-                    fetched_at=datetime.now(timezone.utc),
-                    provider="unknown",
-                    has_error=True,
-                    error_message=str(e),
-                )
-                weather_data.append(error_data)
+                last_error = None
+                returned_error_data = None
+                break
+            if last_error is not None:
+                # Adversary Finding F004: Fail-Fast nur, wenn dieses Segment
+                # sein volles Retry-Budget durchlaufen hat UND der letzte
+                # Fehler transient war — das ist das "Provider ist wirklich
+                # down"-Signal. Ein sofortiger nicht-transienter Fehler
+                # (z. B. ungueltige Koordinaten, 0 Retries verbraucht) darf
+                # den Retry-Anspruch der Folgesegmente nicht zerstoeren.
+                if attempt == attempts - 1 and _is_transient_fetch_error(last_error):
+                    fail_fast = True
+                if returned_error_data is not None:
+                    # SegmentWeatherService lieferte bereits ein vollstaendiges
+                    # has_error-Objekt (korrekter provider-Name) — kein neuer
+                    # Platzhalter noetig.
+                    weather_data.append(returned_error_data)
+                else:
+                    # WEATHER-04: Error-Placeholder statt auslassen
+                    error_data = SegmentWeatherData(
+                        segment=segment,
+                        timeseries=None,
+                        aggregated=SegmentWeatherSummary(),
+                        fetched_at=datetime.now(timezone.utc),
+                        provider="unknown",
+                        has_error=True,
+                        error_message=str(last_error),
+                    )
+                    weather_data.append(error_data)
 
         return weather_data
 

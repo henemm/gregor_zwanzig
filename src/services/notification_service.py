@@ -84,6 +84,8 @@ class TripReportRequest:
     test_prefix: bool = False
     on_demand_prefix: bool = False
     catchup_prefix: str | None = None
+    # Issue #1113: Hinweis auf Abschnitte ohne Wetterdaten (0 % < Fehlerquote <= 75 %)
+    partial_outage_hint: str | None = None
     # Service-Fehler-Hinweis für SMS-only + Teilausfall
     failed_segments: list["SegmentWeatherData"] = field(default_factory=list)
     # On-Demand unterdrückt Marker/Snapshot-Seiteneffekte (wird vom Scheduler gesteuert)
@@ -553,7 +555,7 @@ class NotificationService:
     # ------------------------------------------------------------------
 
     def _apply_prefixes(self, report, request: TripReportRequest) -> None:
-        """Test-/On-Demand-/Catchup-Präfixe auf Betreff und Body anwenden."""
+        """Test-/On-Demand-/Catchup-/Teilausfall-Präfixe auf Betreff und Body anwenden."""
         stage_name = request.stage_name or "Etappe"
         target_date = self._target_date_from_report(report, request)
         human_date = target_date.strftime("%d.%m.%Y")
@@ -561,29 +563,25 @@ class NotificationService:
         if request.test_prefix:
             hint = f"Test-Vorschau für {stage_name} am {human_date}"
             report.email_subject = f"[TEST] {report.email_subject}"
-            if report.email_plain:
-                report.email_plain = f"{hint}\n\n{report.email_plain}"
-            if report.email_html:
-                report.email_html = self._inject_html_hint(report.email_html, hint)
-            if report.telegram_bubbles:
-                report.telegram_bubbles[0] = f"{hint}\n\n{report.telegram_bubbles[0]}"
+            self._prepend_hint(report, hint)
         elif request.on_demand_prefix:
             hint = f"Briefing auf Anfrage für {stage_name} am {human_date}"
-            if report.email_plain:
-                report.email_plain = f"{hint}\n\n{report.email_plain}"
-            if report.email_html:
-                report.email_html = self._inject_html_hint(report.email_html, hint)
-            if report.telegram_bubbles:
-                report.telegram_bubbles[0] = f"{hint}\n\n{report.telegram_bubbles[0]}"
-        elif request.catchup_prefix:
-            if report.email_plain:
-                report.email_plain = f"{request.catchup_prefix}\n\n{report.email_plain}"
-            if report.email_html:
-                report.email_html = self._inject_html_hint(report.email_html, request.catchup_prefix)
-            if report.telegram_bubbles:
-                report.telegram_bubbles[0] = (
-                    f"{request.catchup_prefix}\n\n{report.telegram_bubbles[0]}"
-                )
+            self._prepend_hint(report, hint)
+        else:
+            # Issue #1113: catchup_prefix (Nachlieferung) und
+            # partial_outage_hint (Rest-Teilausfall) dürfen gleichzeitig
+            # gesetzt sein und verdrängen sich nicht — catchup zuerst.
+            hints = [h for h in (request.catchup_prefix, request.partial_outage_hint) if h]
+            if hints:
+                self._prepend_hint(report, "\n\n".join(hints))
+
+    def _prepend_hint(self, report, hint: str) -> None:
+        if report.email_plain:
+            report.email_plain = f"{hint}\n\n{report.email_plain}"
+        if report.email_html:
+            report.email_html = self._inject_html_hint(report.email_html, hint)
+        if report.telegram_bubbles:
+            report.telegram_bubbles[0] = f"{hint}\n\n{report.telegram_bubbles[0]}"
 
     @staticmethod
     def _inject_html_hint(html: str, hint: str) -> str:
