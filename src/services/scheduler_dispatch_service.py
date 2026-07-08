@@ -209,6 +209,7 @@ def send_one_compare_preset(
     """
     from output.renderers.comparison import render_compare_email
     from output.renderers.compare_metric_ids import resolve_enabled_metrics
+    from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
     from output.channels.email import EmailOutput
     from services.comparison_engine import ComparisonEngine
 
@@ -268,6 +269,8 @@ def send_one_compare_preset(
         )
         top_n_details = max(1, min(10, top_n_details))
     enabled_metrics = resolve_enabled_metrics(display_config.get("active_metrics"))
+    # Issue #1106: Stundenverlauf-Spaltenauswahl je Ort-Sektion, analog active_metrics.
+    hourly_metrics = resolve_hourly_metrics(display_config.get("hourly_metrics"))
     # Issue #1110: Abo-Footer-Metadaten (Preset-Name/Schedule/Weekday) zusaetzlich
     # zu den #1104-Parametern durchreichen (Merge beider Feature-Branches).
     html_body, text_body = render_compare_email(
@@ -275,6 +278,7 @@ def send_one_compare_preset(
         profile=profile,
         top_n_details=top_n_details,
         enabled_metrics=enabled_metrics,
+        hourly_metrics=hourly_metrics,
         preset_name=name,
         preset_schedule=preset.get("schedule"),
         preset_weekday=preset.get("weekday"),

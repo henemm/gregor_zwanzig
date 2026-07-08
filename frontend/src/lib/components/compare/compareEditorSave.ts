@@ -19,6 +19,8 @@ export interface CompareEditorEdits {
 	channelLayouts: ChannelLayouts | null;
 	// Issue #680: Slice 3 — aktive Metriken (AC-10). Optional → rückwärtskompatibel.
 	activeMetricKeys?: string[];
+	// Issue #1106: Slice C — Stundenverlauf-Metriken. Optional → rückwärtskompatibel.
+	hourlyMetricKeys?: string[];
 	// Issue #764: Vorhersage-Horizont. Optional → rückwärtskompatibel.
 	forecastHours?: number;
 	// Issue #1040: amtliche Warnungen ein/aus. Optional → rückwärtskompatibel.
@@ -62,6 +64,15 @@ export function buildComparePresetSavePayload(
 		} else {
 			// Leere Auswahl: active_metrics aus dem Spread entfernen, damit kein Datenschrott bleibt
 			delete displayConfig.active_metrics;
+		}
+	}
+
+	if (edits.hourlyMetricKeys !== undefined) {
+		if (edits.hourlyMetricKeys.length > 0) {
+			displayConfig.hourly_metrics = edits.hourlyMetricKeys;
+		} else {
+			// Leere Auswahl: hourly_metrics aus dem Spread entfernen (Default = alle sichtbar)
+			delete displayConfig.hourly_metrics;
 		}
 	}
 

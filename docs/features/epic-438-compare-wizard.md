@@ -238,6 +238,8 @@ Kanal-Tabs (E-Mail/SMS) + Spalten-Switches: OutputLayoutEditor-Komponente, Metri
 
 Zeitplan (vordefinierte Zeiten), Kanal-Auswahl (E-Mail/SMS), Empfänger-Konfiguration. Aktivierungs-Toggle für die Subscription. Implementiert 2026-05-29.
 
+**Stundenverlauf-Metriken konfigurierbar (Issue #1106 ✓, 2026-07-08):** Neue Checkbox-Sektion unterhalb der „Anzahl Orte"-Sektion — der Nutzer wählt, welche der 9 Spalten (Temp, Gef., Wind, Böen, Regen, UV, Gewitter, Regenwahrscheinlichkeit, Sicht) im Stundenverlauf jeder Ort-Sektion der Compare-Mail erscheinen. „Zeit" ist immer erste Spalte und nicht abwählbar. Default = alle 9 aktiv; die dekorative Wolken-Spalte wurde ersatzlos entfernt. Persistenz über `display_config.hourly_metrics` (Resolver `resolve_hourly_metrics()` in `src/output/renderers/compare_hourly_metric_ids.py`, Frontend-Katalog `compareHourlyMetricDefs.ts`). Details: `docs/specs/modules/issue_1106_hourly_metrics_config.md`.
+
 ---
 
 ## Data Model
@@ -475,6 +477,7 @@ None—pure frontend changes for Steps 1–3. Backend endpoints are opaque (no s
 
 | Date | Change |
 |------|--------|
+| 2026-07-08 | Step 5 (Versand): Stundenverlauf-Metriken im Compare-Editor konfigurierbar gemacht — Checkbox-Auswahl aus 9 Metriken (Wolken entfernt, Gewitter/Regenwahrscheinlichkeit/Sicht neu), Default = alle. `email_spec_validator.py` von Exakt- auf Teilmenge-mit-Reihenfolge-Prüfung umgebaut. Issue #1106 ✓ |
 | 2026-06-09 | **Slice 3 of #677 complete:** Issue #680 ✓ — Fidelity Tabs „Orte" + „Idealwerte" implementiert. Nummerierte Picked-Liste, Region-Gruppierung, Dual-Handle-Slider, Add/Remove-Metrik, display_config.active_metrics-Persistenz. RangeSlider.svelte neu, ALL_METRICS Katalog. Step-Komponenten jetzt auch im Tab-Editor voll funktional. |
 | 2026-06-09 | **Migration in progress:** Epic #677 (Compare-Editor Tab-UI). Issues #678 ✓, #679 ✓, #680 ✓. Wizard remains available until Slice 6 completion. |
 | 2026-06-02 | Auto-Profil-Vorauswahl im Wizard implemented (AC-6–9 aus #132): CompareWizard.svelte (`profileManuallyOverridden`, `dominantProfile`, 2 $effects), Step1Vergleich.svelte (`onManualProfileChange` callback), 18 Unit-Tests. Issue #547 ✓ |

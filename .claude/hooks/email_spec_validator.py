@@ -123,8 +123,13 @@ def fetch_latest_email() -> str:
 _OVERVIEW_WARN_LABEL = "Amtliche Warnungen"
 _TABLE_RE = re.compile(r'<table[^>]*>(.*?)</table>', re.DOTALL)
 
-# v2-Stunden-Spaltenvertrag (compare_html.py:_HOUR_COLUMNS), exakte Reihenfolge.
-_HOUR_COLUMNS_V2 = ["Zeit", "Temp", "Gef.", "Wind", "Böen", "Regen", "Wolken", "UV"]
+# v2-Stunden-Spaltenvertrag (compare_html.py:HOUR_METRICS), Issue #1106:
+# kanonische 10-Spalten-Superset-Liste ("Zeit" + 9 konfigurierbare Wert-
+# Spalten). Konfigurierbare Teilmengen sind zulaessig (Teilmengen-mit-
+# Reihenfolge-Pruefung statt Exakt-Vergleich), s. validate_structure().
+_HOUR_COLUMNS_V2 = [
+    "Zeit", "Temp", "Gef.", "Wind", "Böen", "Regen", "UV", "Gew.", "Regen-W.", "Sicht",
+]
 
 # Negativ-Check: Score-/Winner-Sprache ist im v2-Vertrag ein Verstoss (kein
 # Ranking mehr, s. compare_html.py-Docstring "Kein Score/Ranking/Winner-Card").
@@ -211,10 +216,11 @@ def _find_location_hour_table(body: str, location_name: str, occurrence: int = 0
 
 
 def validate_structure(body: str) -> List[str]:
-    """Validate email structure against the v2-Vertrag (Issue #1108/#1110):
-    Uebersichtstabelle (Warn-Zeile + >=1 numerische Zeile), Stundentabellen
-    fuer alle gelisteten Orte mit dem exakten 8-Spalten-Vertrag, kein
-    Score-/Winner-Vertrag mehr."""
+    """Validate email structure against the v2-Vertrag (Issue #1108/#1110,
+    Spalten-Konfigurierbarkeit #1106): Uebersichtstabelle (Warn-Zeile + >=1
+    numerische Zeile), Stundentabellen fuer alle gelisteten Orte mit einer
+    gueltigen Teilmenge-mit-Reihenfolge von ``_HOUR_COLUMNS_V2`` (Mindestens
+    "Zeit" + 1 Wert-Spalte), kein Score-/Winner-Vertrag mehr."""
     errors: List[str] = []
 
     rows = extract_table_rows(body)
@@ -237,6 +243,15 @@ def validate_structure(body: str) -> List[str]:
     # immer nur das erste) -- sonst wird eine defekte Stundentabelle des
     # zweiten (oder n-ten) gleichnamigen Ortes nie erkannt.
     occurrence_counts: dict = {}
+    # Adversary F001 (Fix-Runde 2, Issue #1106): eine Config gilt mail-weit
+    # fuer ALLE Orte (render_compare_html hat genau EIN hourly_metrics-Set
+    # fuer den gesamten Aufruf). Eine einzelne Stundentabelle, die fuer sich
+    # genommen eine gueltige Teilmenge-mit-Reihenfolge ist, aber von den
+    # Spalten der uebrigen Orte abweicht, ist trotzdem ein Fehler --
+    # Referenz-Spalten = die erste Stundentabelle ohne eigene Struktur-
+    # Verletzung.
+    reference_cols: list | None = None
+    reference_name: str | None = None
     for name in locations:
         occurrence = occurrence_counts.get(name, 0)
         occurrence_counts[name] = occurrence + 1
@@ -247,10 +262,33 @@ def validate_structure(body: str) -> List[str]:
             )
             continue
         header_cols, _rows = table
-        if header_cols != _HOUR_COLUMNS_V2:
+        # Issue #1106: Teilmengen-mit-Reihenfolge-Pruefung statt Exakt-Vergleich.
+        # Mindestspalten-Regel: "Zeit" muss erste Spalte sein UND es muss
+        # mindestens eine Wert-Spalte daneben existieren (sonst sinnlose Config).
+        if not header_cols or header_cols[0] != "Zeit" or len(header_cols) < 2:
+            errors.append(
+                f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) "
+                f"verletzt die Mindestspalten-Regel (Zeit + mind. 1 Wert-Spalte), "
+                f"Spalten {header_cols}"
+            )
+            continue
+        if [c for c in _HOUR_COLUMNS_V2 if c in header_cols] != header_cols:
             errors.append(
                 f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) hat "
-                f"Spalten {header_cols}, erwartet exakt {_HOUR_COLUMNS_V2}"
+                f"Spalten {header_cols}, erwartet eine gueltige Teilmenge (in Reihenfolge) von "
+                f"{_HOUR_COLUMNS_V2}"
+            )
+            continue
+        # Cross-Location-Konsistenz: erst hier pruefen, da nur individuell
+        # gueltige Spaltenlisten als Referenz bzw. Vergleichswert taugen.
+        if reference_cols is None:
+            reference_cols = header_cols
+            reference_name = name
+        elif header_cols != reference_cols:
+            errors.append(
+                f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) hat "
+                f"Spalten {header_cols}, weicht von der mail-weiten Spalten-Konfiguration "
+                f"{reference_cols} (Referenz-Ort '{reference_name}') ab"
             )
 
     score_match = _SCORE_WINNER_RE.search(body)

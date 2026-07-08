@@ -462,14 +462,19 @@ class TestCompareMailV2HTML:
 
     def test_ac6_stundentabelle_spaltenreihenfolge_alle_orte(self):
         """AC-6: Jede Stundentabelle (auch die des letzten Ortes) hat exakt die
-        8 Spalten Zeit/Temp/Gef./Wind/Böen/Regen/Wolken/UV in dieser Reihenfolge."""
+        10 Spalten Zeit/Temp/Gef./Wind/Böen/Regen/UV/Gew./Regen-W./Sicht in
+        dieser Reihenfolge (Default seit Issue #1106 -- "Wolken" wurde
+        entfernt, drei neue Metriken ergaenzt, s. AC-1/AC-5 der
+        1106-Spec)."""
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
         html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
         n = len(result.locations)
 
-        expected = ["Zeit", "Temp", "Gef.", "Wind", "Böen", "Regen", "Wolken", "UV"]
+        expected = [
+            "Zeit", "Temp", "Gef.", "Wind", "Böen", "Regen", "UV", "Gew.", "Regen-W.", "Sicht",
+        ]
         for idx in range(n):
             table = _location_hour_table(html, idx, n)
             header = _rows(table)[0]

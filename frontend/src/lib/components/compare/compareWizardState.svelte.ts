@@ -24,6 +24,8 @@ export class CompareWizardState {
 	idealRanges = $state<Record<string, IdealRange>>({});
 	// Issue #680: Slice 3 — aktive Metriken-Auswahl (aus display_config.active_metrics)
 	activeMetricKeys = $state<string[]>([]);
+	// Issue #1106: Slice C — Stundenverlauf-Metriken-Auswahl (aus display_config.hourly_metrics)
+	hourlyMetricKeys = $state<string[]>([]);
 	metricsManuallyEdited = $state(false);
 	// Issue #442: Pro-Kanal-Layouts. null = Step 4 nicht besucht / nichts konfiguriert.
 	channelLayouts = $state<ChannelLayouts | null>(null);
@@ -170,6 +172,7 @@ export class CompareWizardState {
 				...(Object.keys(this.idealRanges).length > 0 ? { ideal_ranges: this.idealRanges } : {}),
 				...(this.channelLayouts !== null ? { channel_layouts: this.channelLayouts } : {}),
 				...(this.activeMetricKeys.length > 0 ? { active_metrics: this.activeMetricKeys } : {}),
+				...(this.hourlyMetricKeys.length > 0 ? { hourly_metrics: this.hourlyMetricKeys } : {}),
 				...(this.topN !== undefined ? { top_n: this.topN } : {})
 			}
 		};
@@ -202,6 +205,7 @@ export class CompareWizardState {
 			idealRanges: this.idealRanges,
 			channelLayouts: this.channelLayouts,
 			activeMetricKeys: this.activeMetricKeys,
+			hourlyMetricKeys: this.hourlyMetricKeys, // Issue #1106
 			forecastHours: this.forecastHours, // Issue #764
 			officialAlertsEnabled: this.officialAlertsEnabled, // Issue #1040
 			topN: this.topN // Issue #1104

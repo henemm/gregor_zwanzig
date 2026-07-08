@@ -49,6 +49,12 @@
 		state.metricsManuallyEdited = true;
 	}
 
+	// Issue #1106: Slice C — hourly_metrics aus display_config wiederherstellen
+	const savedHourlyMetrics = state.existingDisplayConfig.hourly_metrics as string[] | undefined;
+	if (savedHourlyMetrics && savedHourlyMetrics.length > 0) {
+		state.hourlyMetricKeys = savedHourlyMetrics;
+	}
+
 	setContext('compare-wizard-state', state);
 	setContext('compare-wizard-profile', data.profile ?? null);
 </script>

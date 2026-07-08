@@ -8,6 +8,7 @@
 	import ChannelToggle from '$lib/components/trip-wizard/steps/ChannelToggle.svelte';
 	import { maskPhone } from '$lib/components/trip-wizard/wizardHelpers';
 	import type { CompareWizardState } from '../compareWizardState.svelte';
+	import { ALL_HOURLY_METRICS } from '../compareHourlyMetricDefs';
 
 	const state = getContext<CompareWizardState>('compare-wizard-state');
 
@@ -28,6 +29,30 @@
 	function makeChannelHandler(field: 'sendEmail' | 'sendTelegram' | 'sendSms') {
 		return function handleChannel(checked: boolean): void {
 			state[field] = checked;
+		};
+	}
+
+	// Issue #1106: leere hourlyMetricKeys = Default "alle sichtbar" (noch nicht
+	// materialisiert). Checkbox zeigt in diesem Fall trotzdem "angehakt".
+	function isHourlyMetricActive(key: string): boolean {
+		return state.hourlyMetricKeys.length === 0 || state.hourlyMetricKeys.includes(key);
+	}
+
+	// Factory-Handler (Safari-Pattern): materialisiert beim ersten Abwaehlen
+	// die volle Liste, damit "alle minus eine" korrekt entsteht.
+	function makeHourlyMetricHandler(key: string) {
+		return function handleHourlyMetric(checked: boolean): void {
+			const current =
+				state.hourlyMetricKeys.length === 0
+					? ALL_HOURLY_METRICS.map((m) => m.key)
+					: [...state.hourlyMetricKeys];
+			if (checked) {
+				if (!current.includes(key)) current.push(key);
+			} else {
+				const idx = current.indexOf(key);
+				if (idx >= 0) current.splice(idx, 1);
+			}
+			state.hourlyMetricKeys = current;
 		};
 	}
 </script>
@@ -194,6 +219,23 @@
 				bind:value={state.topN}
 				class="w-20 border rounded px-2 py-1 text-base bg-[var(--g-paper)] border-[var(--g-ink-faint)]"
 			/>
+		</GCard>
+	</section>
+
+	<!-- Metriken im Stundenverlauf (Issue #1106) -->
+	<section class="space-y-2">
+		<Eyebrow>Metriken im Stundenverlauf</Eyebrow>
+		<GCard class="rounded-md border border-[var(--g-ink-faint)]/20 p-4">
+			<div class="space-y-2" data-testid="compare-step5-hourly-metrics">
+				{#each ALL_HOURLY_METRICS as metric (metric.key)}
+					<ChannelToggle
+						label={metric.label}
+						checked={isHourlyMetricActive(metric.key)}
+						onchange={makeHourlyMetricHandler(metric.key)}
+						testid={`compare-step5-hourly-metric-${metric.key}`}
+					/>
+				{/each}
+			</div>
 		</GCard>
 	</section>
 

@@ -154,7 +154,8 @@
 			region: wiz.region,
 			idealRanges: wiz.idealRanges,
 			channelLayouts: wiz.channelLayouts,
-			activeMetricKeys: wiz.activeMetricKeys
+			activeMetricKeys: wiz.activeMetricKeys,
+			hourlyMetricKeys: wiz.hourlyMetricKeys
 		});
 		api.put(url, body)
 			.then(() => {

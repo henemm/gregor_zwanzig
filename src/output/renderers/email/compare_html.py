@@ -67,6 +67,15 @@ def _sev_uv(v: float) -> str:
     return "danger" if v >= 8 else "warn" if v >= 6 else "caution" if v >= 3 else "ok"
 
 
+def _sev_pop(v: float) -> str:
+    return "danger" if v >= 80 else "warn" if v >= 60 else "caution" if v >= 40 else "ok"
+
+
+def _sev_visibility(v: float) -> str:
+    """v in Metern -- niedrige Sicht ist kritischer."""
+    return "danger" if v < 1000 else "warn" if v < 3000 else "caution" if v < 5000 else "ok"
+
+
 CV2_METRICS = [
     {"key": "warn", "label": "Amtliche Warnungen", "kind": "warn"},
     {"key": "temp_max", "label": "Temp max", "unit": "°C", "sev": _sev_temp},
@@ -78,8 +87,70 @@ CV2_METRICS = [
     {"key": "snow_new_cm", "label": "Neuschnee", "unit": "cm"},
 ]
 
-_HOUR_COLUMNS = ["Zeit", "Temp", "Gef.", "Wind", "Böen", "Regen", "Wolken", "UV"]
 _WEEKDAY_ABBR = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+
+# Format-Vorbild html.py:1160-1161 -- lokale Kopie statt Import (eigenstaendiges
+# Compare-Vokabular, s. Spec-Modul-Docstring), NONE rendert als "—" (kein Wert).
+_THUNDER_LEVEL_LABEL = {"NONE": "—", "MED": "mittel", "HIGH": "hoch"}
+_THUNDER_SEV = {"MED": "warn", "HIGH": "danger"}
+
+
+def _fmt_deg(v) -> str:
+    return f"{v:.0f}°" if v is not None else "—"
+
+
+def _fmt_kmh(v) -> str:
+    return f"{v:.0f}" if v is not None else "—"
+
+
+def _fmt_rain(v) -> str:
+    return f"{v:.1f}" if v else "·"
+
+
+def _fmt_uv(v) -> str:
+    return f"{v:.0f}" if v is not None else "—"
+
+
+def _fmt_pop(v) -> str:
+    return f"{v:.0f}%" if v is not None else "—"
+
+
+def _fmt_visibility(v) -> str:
+    return f"{v / 1000:.1f} km" if v is not None else "—"
+
+
+def _fmt_thunder(v) -> str:
+    if v is None:
+        return "—"
+    key = v.value if hasattr(v, "value") else str(v)
+    return _THUNDER_LEVEL_LABEL.get(key, "—")
+
+
+def _sev_thunder(v):
+    if v is None:
+        return None
+    key = v.value if hasattr(v, "value") else str(v)
+    return _THUNDER_SEV.get(key)
+
+
+def _sev_rain_safe(v) -> str:
+    return _sev_rain(v or 0.0)
+
+
+# Issue #1106: ersetzt _HOUR_COLUMNS -- 9 konfigurierbare Wert-Spalten,
+# kanonische Reihenfolge (AC-8). "Zeit" ist keine Metrik hier, sondern fest
+# verdrahtete erste Spalte in _render_hour_row/_render_hour_table.
+HOUR_METRICS = [
+    {"key": "t2m_c", "label": "Temp", "fmt": _fmt_deg, "sev": _sev_temp},
+    {"key": "wind_chill_c", "label": "Gef.", "fmt": _fmt_deg},
+    {"key": "wind10m_kmh", "label": "Wind", "fmt": _fmt_kmh, "sev": _sev_wind},
+    {"key": "gust_kmh", "label": "Böen", "fmt": _fmt_kmh, "sev": _sev_gust},
+    {"key": "precip_1h_mm", "label": "Regen", "fmt": _fmt_rain, "sev": _sev_rain_safe},
+    {"key": "uv_index", "label": "UV", "fmt": _fmt_uv, "sev": _sev_uv},
+    {"key": "thunder_level", "label": "Gew.", "fmt": _fmt_thunder, "sev": _sev_thunder},
+    {"key": "pop_pct", "label": "Regen-W.", "fmt": _fmt_pop, "sev": _sev_pop},
+    {"key": "visibility_m", "label": "Sicht", "fmt": _fmt_visibility, "sev": _sev_visibility},
+]
 
 
 # ---------------------------------------------------------------------------
@@ -283,45 +354,40 @@ def _hour_td(text: str, bg: str = "transparent", fg: str = G_INK, weight: str = 
     )
 
 
-def _render_hour_row(dp) -> str:
+def _visible_hour_metrics(hourly_metrics: set | None) -> list[dict]:
+    """Issue #1106: filtert ``HOUR_METRICS`` auf ``hourly_metrics`` (Set von
+    Renderer-Metrik-IDs wie "t2m_c"). ``None`` = kein Filter (alle 9 Spalten,
+    Default). Kanonische Reihenfolge (Reihenfolge von HOUR_METRICS) bleibt
+    unabhaengig von der Set-Konstruktions-Reihenfolge erhalten (AC-8)."""
+    if hourly_metrics is None:
+        return HOUR_METRICS
+    return [m for m in HOUR_METRICS if m["key"] in hourly_metrics]
+
+
+def _render_hour_row(dp, visible: list[dict]) -> str:
     hh = dp.ts.strftime("%H:%M") if hasattr(dp.ts, "strftime") else str(dp.ts)
-    temp_style = _sev_cell_style(_sev_temp(dp.t2m_c) if dp.t2m_c is not None else None)
-    wind_style = _sev_cell_style(_sev_wind(dp.wind10m_kmh) if dp.wind10m_kmh is not None else None)
-    gust_style = _sev_cell_style(_sev_gust(dp.gust_kmh) if dp.gust_kmh is not None else None)
-    rain_val = dp.precip_1h_mm or 0.0
-    rain_style = _sev_cell_style(_sev_rain(rain_val))
-    uv_style = _sev_cell_style(_sev_uv(dp.uv_index) if dp.uv_index is not None else None)
-
-    temp_text = f"{dp.t2m_c:.0f}°" if dp.t2m_c is not None else "—"
-    gef_text = f"{dp.wind_chill_c:.0f}°" if dp.wind_chill_c is not None else "—"
-    wind_text = f"{dp.wind10m_kmh:.0f}" if dp.wind10m_kmh is not None else "—"
-    gust_text = f"{dp.gust_kmh:.0f}" if dp.gust_kmh is not None else "—"
-    rain_text = f"{dp.precip_1h_mm:.1f}" if dp.precip_1h_mm else "·"
-    cloud_text = f"{dp.cloud_total_pct}%" if dp.cloud_total_pct is not None else "—"
-    uv_text = f"{dp.uv_index:.0f}" if dp.uv_index is not None else "—"
-
-    cells = (
-        _hour_td(hh, fg=G_INK_MUTED, align="left")
-        + _hour_td(temp_text, *temp_style)
-        + _hour_td(gef_text)
-        + _hour_td(wind_text, *wind_style)
-        + _hour_td(gust_text, *gust_style)
-        + _hour_td(rain_text, *rain_style)
-        + _hour_td(cloud_text)
-        + _hour_td(uv_text, *uv_style)
-    )
+    cells = _hour_td(hh, fg=G_INK_MUTED, align="left")
+    for m in visible:
+        value = getattr(dp, m["key"], None)
+        text = m["fmt"](value)
+        sev_fn = m.get("sev")
+        sev_level = sev_fn(value) if (sev_fn and value is not None) else None
+        style = _sev_cell_style(sev_level)
+        cells += _hour_td(text, *style)
     return f'<tr style="border-bottom:1px solid #f0ece1;">{cells}</tr>'
 
 
-def _render_hour_table(loc: LocationResult) -> str:
+def _render_hour_table(loc: LocationResult, hourly_metrics: set | None = None) -> str:
+    visible = _visible_hour_metrics(hourly_metrics)
+    columns = ["Zeit"] + [m["label"] for m in visible]
     ths = "".join(
         f'<th style="text-align:{"left" if col == "Zeit" else "center"};padding:6px 4px;'
         f'font-size:11px;color:{G_INK};font-weight:600;border-right:1px solid #f0ece1;">'
         f'{col}</th>'
-        for col in _HOUR_COLUMNS
+        for col in columns
     )
     header = f'<tr style="background:{G_PAPER};border-bottom:1px solid #e6e1d3;">{ths}</tr>'
-    rows = "".join(_render_hour_row(dp) for dp in loc.hourly_data)
+    rows = "".join(_render_hour_row(dp, visible) for dp in loc.hourly_data)
     table = (
         f'<table cellspacing="0" cellpadding="0" style="width:100%;'
         f'border-collapse:collapse;margin-top:12px;font-family:{FONT_DATA};'
@@ -334,7 +400,7 @@ def _render_hour_table(loc: LocationResult) -> str:
     )
 
 
-def _render_location_section(loc: LocationResult, index: int) -> str:
+def _render_location_section(loc: LocationResult, index: int, hourly_metrics: set | None = None) -> str:
     """Ort-Kopf + Langform-Warn-Streifen + Stundentabelle. Entfaellt bei Fehler
     bzw. fehlenden Stundendaten (SPEC §4)."""
     if loc.error is not None or not loc.hourly_data:
@@ -356,7 +422,7 @@ def _render_location_section(loc: LocationResult, index: int) -> str:
         strip = render_official_alerts_html([("", loc.official_alerts)])
     return (
         f'<div style="padding:{20 if index else 14}px 24px 0;">'
-        f'{header}{strip}{_render_hour_table(loc)}</div>'
+        f'{header}{strip}{_render_hour_table(loc, hourly_metrics)}</div>'
     )
 
 
@@ -564,6 +630,7 @@ def render_compare_html(
     warnings: list[str] | None = None,
     top_n_details: Optional[int] = None,
     enabled_metrics: set | None = None,
+    hourly_metrics: set | None = None,
     preset_name: Optional[str] = None,
     preset_schedule: Optional[str] = None,
     preset_weekday: Optional[int] = None,
@@ -583,6 +650,10 @@ def render_compare_html(
             "wind_max"/"cloud_avg"), filtert die numerischen Uebersichts-
             Zeilen. Die Warn-Zeile "Amtliche Warnungen" ist immer sichtbar.
             ``None`` = alle Metriken (Default, rueckwaertskompatibel).
+        hourly_metrics: Optionales Set von Renderer-Metrik-IDs (Issue #1106,
+            z.B. "t2m_c"/"thunder_level"), filtert die Wert-Spalten je
+            Stundentabelle. "Zeit" bleibt immer erste Spalte. ``None`` = alle
+            9 Spalten (Default).
         preset_name: Name des Compare-Presets fuer den Abo-Footer.
         preset_schedule: Schedule-Wert (z.B. "daily"/"weekly") fuer "Naechster Versand".
         preset_weekday: Wochentag-Index (0=Mo) fuer weekly-Schedules.
@@ -609,7 +680,7 @@ def render_compare_html(
         f'{_render_section_head("STUNDEN", "Stundenverlauf · alle Orte", "09–16 Uhr")}</div>'
     )
     hourly_sections_html = "".join(
-        _render_location_section(loc, i) for i, loc in enumerate(locations)
+        _render_location_section(loc, i, hourly_metrics) for i, loc in enumerate(locations)
     )
 
     legend_html = _render_legend()
@@ -660,5 +731,6 @@ th, td {{ vertical-align:top; }}
 __all__ = [
     "render_compare_html",
     "CV2_METRICS",
+    "HOUR_METRICS",
     "sort_locations_alphabetically",
 ]

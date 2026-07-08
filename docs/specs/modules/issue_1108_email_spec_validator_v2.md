@@ -67,6 +67,14 @@ Betroffene Kernfunktionen im heutigen (Alt-)Validator und was sich ändert:
   Stundentabelle existieren (identifiziert über den Spaltenkopf „Zeit", nicht über
   CSS-Klasse) mit exakt den 8 Spalten Zeit/Temp/Gef./Wind/Böen/Regen/Wolken/UV in dieser
   Reihenfolge.
+
+  > **Update (Issue #1106, 2026-07-08):** Der hier beschriebene 8-Spalten-Exakt-Vertrag
+  > wurde von #1106 abgelöst. Seither ist die Stundenverlauf-Spaltenauswahl
+  > konfigurierbar (9 Wert-Spalten statt 7, Wolken entfernt, Gewitter/Regen-W./Sicht
+  > neu), und der Validator prüft eine **Teilmenge-mit-Reihenfolge** gegen eine
+  > kanonische 10-Spalten-Superset-Liste (`_HOUR_COLUMNS_V2`) statt Exakt-Gleichheit,
+  > plus eine Cross-Location-Konsistenzregel (Config gilt mail-weit für alle Orte).
+  > Aktueller Stand: `docs/reference/mail_validators.md` §1.
 - Pflicht-Sektionen (Z. 236–244): der Eintrag `(["Recommendation", "Empfehlung"], "Winner-Box")`
   entfällt ersatzlos — stattdessen wird das Vorhandensein von Score-/Winner-Sprache
   („Score", „Empfehlung", „Bester Standort", „🏆") als **Fehler** gewertet (Negativ-Check,
@@ -169,3 +177,8 @@ Betroffene Kernfunktionen im heutigen (Alt-)Validator und was sich ändert:
 ## Changelog
 
 - 2026-07-08: Initial spec erstellt — Issue #1108, folgt aus PO-Umscoping von #1110 §8.
+- 2026-07-08: Der hier beschriebene feste 8-Spalten-Vertrag der Stundentabelle wurde
+  durch Issue #1106 (konfigurierbare Stundenverlauf-Metriken) auf eine
+  Teilmenge-mit-Reihenfolge-Prüfung gegen eine 10-Spalten-Superset-Liste
+  umgestellt, siehe `docs/specs/modules/issue_1106_hourly_metrics_config.md`
+  und `docs/reference/mail_validators.md` §1.
