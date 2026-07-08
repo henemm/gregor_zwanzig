@@ -125,7 +125,7 @@ func (s *Store) SaveTrip(trip model.Trip) error {
 		return err
 	}
 
-	return os.WriteFile(filepath.Join(dir, trip.ID+".json"), data, 0644)
+	return writeFileLogged(filepath.Join(dir, trip.ID+".json"), data)
 }
 
 func (s *Store) DeleteTrip(id string) error {

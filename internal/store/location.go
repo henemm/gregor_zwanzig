@@ -88,7 +88,7 @@ func (s *Store) SaveLocation(loc model.Location) error {
 		return err
 	}
 
-	return os.WriteFile(filepath.Join(dir, loc.ID+".json"), data, 0644)
+	return writeFileLogged(filepath.Join(dir, loc.ID+".json"), data)
 }
 
 func (s *Store) DeleteLocation(id string) error {

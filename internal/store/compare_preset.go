@@ -56,5 +56,5 @@ func (s *Store) SaveComparePresets(presets []model.ComparePreset) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.comparePresetsFile(), data, 0644)
+	return writeFileLogged(s.comparePresetsFile(), data)
 }

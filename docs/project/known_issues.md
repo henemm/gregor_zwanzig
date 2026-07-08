@@ -5,6 +5,44 @@
 >
 > Diese Datei bleibt als Detail-Referenz fuer Root-Cause-Analysen bestehen.
 
+## BUG-1066-STORE-WRITE: Trip-Speichern schlägt still fehl bei Group-ACL-Entzug
+
+**Status:** RESOLVED (2026-07-08) | **Severity:** High | **GitHub Issue:** #1066 | **Spec:** `docs/specs/modules/fix_1066_store_write_logging.md`
+
+### Symptom
+
+Trip-Speichern (HTTP PATCH/POST auf `/api/trips/{id}`) antwortete mit HTTP 500 `{"error":"store_error"}` ohne weitere Details. Der Store-Layer loggte **nichts**, sodass der Root Cause mehrere Tage unentdeckt blieb.
+
+### Root Cause
+
+Ein Security-Audit-Skript (`henemm-security`, externe Instanz) restriktivierte ACLs auf `data/`: `group::r-x` (kein Write). Der API-Prozess (`gregor-api`, Systemuser `claude-gregor`) griff über die Gruppe auf Dateien zu. `os.WriteFile()` auf bereits existierende Dateien schlug mit Permission Denied fehl — dieser echte OS-Fehler verschwand stumm in generische `store_error`-Message.
+
+### Sofort-Fix (Live 2026-07-07)
+
+Berechtigungen wiederhergestellt:
+```bash
+setfacl -R -m g::rwX,m::rwx /home/hem/gregor_zwanzig/data/
+setfacl -R -dm g::rwX,m::rwx /home/hem/gregor_zwanzig/data/
+```
+
+### Diagnostik-Fix (Workflow fix-1066-store-write-logging, Committed 2026-07-08)
+
+Neuer Helper `internal/store/write.go::writeFileLogged()` loggt jeden Schreibfehler mit Pfad + Ursache via `log.Printf()`. Alle 8 `os.WriteFile()`-Aufrufe im Store laufen darüber. HTTP-Response bleibt `store_error` (keine Pfad-Exposition), aber Logs enthüllen echte Fehlerursachen (Permissions, Disk, i/o).
+
+### Files Changed
+
+- `internal/store/write.go` (NEU, +19 LoC, zentraler Write-Helper mit Logging)
+- 8× `os.WriteFile` → `writeFileLogged` in 7 Store-Dateien: `trip.go`, `user.go` (2×), `group.go`, `subscription.go`, `compare_preset.go`, `location.go`, `metric_preset.go`
+- Tests (NEU): `internal/store/store_write_logging_test.go` (AC-1..3), `internal/handler/trip_state_write_error_test.go` (AC-4)
+
+### Lessons Learned
+
+1. **Generic Error-Wrapping versteckt Diagnostik** — `store_error` ohne Context ist unbenutzbar für Betrieb
+2. **OS-Fehler bei Datei-Ops brauchen strukturiertes Logging** — erst dann offenbaren sich ACL-/Permission-Probleme
+3. **Externe Security-Audits können ACLs ändern** — Store-Schreib-Selftest (#1120, Follow-up) muss Überwachung übernehmen
+
+---
+
 ## BUG-774: Metriken-Überblick-Checkbox persistiert nicht
 
 **Status:** RESOLVED (2026-06-12) | **Severity:** Medium | **GitHub Issue:** #774 | **Spec:** `docs/specs/bugfix/issue_774_metrics_summary_persist.md`

@@ -139,5 +139,5 @@ func (s *Store) SaveMetricPresets(presets []model.MetricPreset) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.PresetsFile(), data, 0644)
+	return writeFileLogged(s.PresetsFile(), data)
 }

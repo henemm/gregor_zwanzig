@@ -117,5 +117,5 @@ func (s *Store) saveSubscriptions(subs []model.CompareSubscription) error {
 		return err
 	}
 
-	return os.WriteFile(s.subscriptionsFile(), data, 0644)
+	return writeFileLogged(s.subscriptionsFile(), data)
 }

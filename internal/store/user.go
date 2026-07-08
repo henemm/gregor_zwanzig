@@ -75,7 +75,7 @@ func (s *Store) SaveUser(user model.User) error {
 		return err
 	}
 
-	return os.WriteFile(filepath.Join(dir, "user.json"), data, 0644)
+	return writeFileLogged(filepath.Join(dir, "user.json"), data)
 }
 
 // ProvisionUserDirs creates the standard subdirectories for a new user.
@@ -98,7 +98,7 @@ func (s *Store) SaveResetToken(userId string, token model.PasswordResetToken) er
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(dir, "password_reset.json"), data, 0644)
+	return writeFileLogged(filepath.Join(dir, "password_reset.json"), data)
 }
 
 func (s *Store) LoadResetToken(userId string) (*model.PasswordResetToken, error) {

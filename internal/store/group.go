@@ -149,7 +149,7 @@ func (s *Store) saveGroups(gs []model.Group) error {
 		return err
 	}
 
-	return os.WriteFile(s.groupsFile(), data, 0644)
+	return writeFileLogged(s.groupsFile(), data)
 }
 
 // SaveGroup upserts a group by ID.
