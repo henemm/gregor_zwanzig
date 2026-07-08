@@ -169,7 +169,8 @@ export class CompareWizardState {
 				region: this.region,
 				...(Object.keys(this.idealRanges).length > 0 ? { ideal_ranges: this.idealRanges } : {}),
 				...(this.channelLayouts !== null ? { channel_layouts: this.channelLayouts } : {}),
-				...(this.activeMetricKeys.length > 0 ? { active_metrics: this.activeMetricKeys } : {})
+				...(this.activeMetricKeys.length > 0 ? { active_metrics: this.activeMetricKeys } : {}),
+				...(this.topN !== undefined ? { top_n: this.topN } : {})
 			}
 		};
 		try {
@@ -202,7 +203,8 @@ export class CompareWizardState {
 			channelLayouts: this.channelLayouts,
 			activeMetricKeys: this.activeMetricKeys,
 			forecastHours: this.forecastHours, // Issue #764
-			officialAlertsEnabled: this.officialAlertsEnabled // Issue #1040
+			officialAlertsEnabled: this.officialAlertsEnabled, // Issue #1040
+			topN: this.topN // Issue #1104
 		});
 		try {
 			const { api } = await import('$lib/api');

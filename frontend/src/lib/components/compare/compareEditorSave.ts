@@ -23,6 +23,8 @@ export interface CompareEditorEdits {
 	forecastHours?: number;
 	// Issue #1040: amtliche Warnungen ein/aus. Optional → rückwärtskompatibel.
 	officialAlertsEnabled?: boolean;
+	// Issue #1104: Anzahl Orte mit stündlichem Detail. Optional → rückwärtskompatibel.
+	topN?: number;
 }
 
 /**
@@ -48,6 +50,10 @@ export function buildComparePresetSavePayload(
 
 	if (edits.channelLayouts !== null) {
 		displayConfig.channel_layouts = edits.channelLayouts;
+	}
+
+	if (edits.topN !== undefined) {
+		displayConfig.top_n = edits.topN;
 	}
 
 	if (edits.activeMetricKeys !== undefined) {

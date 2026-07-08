@@ -208,6 +208,7 @@ def send_one_compare_preset(
     Gibt (top_ort, empfaenger) zurueck. Wirft ValueError wenn kein Empfaenger konfiguriert.
     """
     from output.renderers.comparison import render_compare_email
+    from output.renderers.compare_metric_ids import resolve_enabled_metrics
     from output.channels.email import EmailOutput
     from services.comparison_engine import ComparisonEngine
 
@@ -247,7 +248,32 @@ def send_one_compare_preset(
 
     name = preset.get("name", preset_id)
     subject = f"Wetter-Vergleich: {name} ({_datetime.now().strftime('%d.%m.%Y')})"
-    html_body, text_body = render_compare_email(result, profile=profile)
+    # Issue #1104: display_config.top_n / active_metrics in den Versandpfad verdrahten
+    display_config = preset.get("display_config") or {}
+    top_n_raw = display_config.get("top_n")
+    try:
+        top_n_details = int(top_n_raw) if top_n_raw is not None else 3  # Default 3 (AC-2)
+    except (TypeError, ValueError):
+        logger.warning(
+            "Compare-Preset %s: ungueltiger top_n-Wert %r — nutze Default 3",
+            preset_id,
+            top_n_raw,
+        )
+        top_n_details = 3
+    if top_n_details < 1 or top_n_details > 10:
+        logger.warning(
+            "Compare-Preset %s: top_n %r ausserhalb 1..10 — geclamped",
+            preset_id,
+            top_n_details,
+        )
+        top_n_details = max(1, min(10, top_n_details))
+    enabled_metrics = resolve_enabled_metrics(display_config.get("active_metrics"))
+    html_body, text_body = render_compare_email(
+        result,
+        profile=profile,
+        top_n_details=top_n_details,
+        enabled_metrics=enabled_metrics,
+    )
     EmailOutput(settings).send(
         subject,
         html_body,

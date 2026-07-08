@@ -178,6 +178,25 @@
 		</GCard>
 	</section>
 
+	<!-- Stundenverlauf: Anzahl Orte mit Detail (Issue #1104) -->
+	<section class="space-y-2">
+		<Eyebrow>Stundenverlauf</Eyebrow>
+		<GCard class="rounded-md border border-[var(--g-ink-faint)]/20 p-4">
+			<label for="compare-step5-topn" class="text-sm text-[var(--g-ink-muted)]">
+				Anzahl Orte mit stündlichem Detail
+			</label>
+			<input
+				id="compare-step5-topn"
+				type="number"
+				min="1"
+				max="10"
+				data-testid="compare-step5-topn"
+				bind:value={state.topN}
+				class="w-20 border rounded px-2 py-1 text-base bg-[var(--g-paper)] border-[var(--g-ink-faint)]"
+			/>
+		</GCard>
+	</section>
+
 	<!-- Versandzeit -->
 	<section class="space-y-2">
 		<Eyebrow>Versandzeit</Eyebrow>
