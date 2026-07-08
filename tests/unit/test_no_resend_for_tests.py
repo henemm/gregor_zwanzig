@@ -12,6 +12,10 @@ Hintergrund:
 Mechanik:
     - Settings.for_testing() setzt is_test_mode=True
     - EmailOutput.__init__ verweigert Construct, wenn is_test_mode=True UND smtp_host "resend" enthält
+    - Seit #1122 (Default-Deny) lenkt Settings JEDEN Resend-Host ohne GZ_RESEND_ALLOWED
+      schon bei Konstruktion um; unter pytest auch mit Token. Die EmailOutput-Guards
+      bleiben zweite Linie und werden hier über den model_copy-Bypass getestet
+      (model_copy läuft ohne Validator).
 """
 from __future__ import annotations
 
@@ -79,8 +83,14 @@ def test_for_testing_ohne_gmail_credentials_setzt_trotzdem_flag():
 
 
 def test_email_output_blockiert_resend_im_test_modus():
-    """EmailOutput MUSS Construct verweigern, wenn is_test_mode=True und Host = Resend."""
-    s = _resend_settings().model_copy(update={"is_test_mode": True})
+    """EmailOutput MUSS Construct verweigern, wenn is_test_mode=True und Host = Resend.
+
+    Seit #1122 hält eine via __init__ konstruierte Settings nie mehr einen
+    Resend-Host — der Second-Line-Guard wird deshalb über den model_copy-Bypass
+    erreicht (Validator läuft bei model_copy nicht, genau dafür existiert er)."""
+    s = _resend_settings().model_copy(
+        update={"smtp_host": "smtp.resend.com", "is_test_mode": True}
+    )
     with pytest.raises(OutputConfigError) as exc_info:
         EmailOutput(s)
     msg = str(exc_info.value).lower()
@@ -96,7 +106,11 @@ def test_email_output_erlaubt_gmail_im_test_modus():
 
 
 def test_email_output_erlaubt_resend_in_production():
-    """EmailOutput MUSS Resend erlauben, wenn is_test_mode=False (echter User-Versand)."""
+    """Produktions-Settings (is_test_mode=False) müssen EmailOutput konstruieren können.
+
+    Seit #1122 lenkt der Default-Deny-Validator den Resend-Host unter pytest um —
+    der Beweis „Prod MIT Token behält Resend" läuft als echter Subprocess-Test in
+    tests/tdd/test_issue_1122_resend_default_deny.py (AC-3)."""
     s = _resend_settings()
     assert s.is_test_mode is False
     output = EmailOutput(s)

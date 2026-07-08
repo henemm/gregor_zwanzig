@@ -177,6 +177,9 @@ class TestAC3ResendGuardRemains:
         THEN: OutputConfigError
 
         Regression: dieser Wächter ist schon vorhanden und MUSS bestehen bleiben.
+        Seit #1122 lenkt der Settings-Validator __init__-Konstruktionen mit
+        Resend-Host um — der Second-Line-Guard wird deshalb über den
+        model_copy-Bypass erreicht (Validator läuft bei model_copy nicht).
         """
         from app.config import Settings
         from output.channels.email import EmailOutput
@@ -184,11 +187,11 @@ class TestAC3ResendGuardRemains:
 
         s = Settings(
             is_test_mode=True,
-            smtp_host="smtp.resend.com",
+            smtp_host="mail.henemm.com",
             smtp_user="resend",
             smtp_pass="key",
             mail_to="gregor-test@henemm.com",
-        )
+        ).model_copy(update={"smtp_host": "smtp.resend.com"})
         with pytest.raises(OutputConfigError):
             EmailOutput(s)
 
