@@ -112,9 +112,15 @@ def _scope_diff_base() -> str:
     Ist ein Gate-Marker vorhanden UND der SHA im Repo auflösbar → Marker-SHA
     (deckt ALLE Commits seit dem letzten erfolgreichen Gate-Lauf ab). Sonst
     (Erstlauf oder History-Rewrite) Fallback auf 'HEAD~1'.
+
+    Adversary-Finding F002: zeigt der Marker exakt auf HEAD, wäre der Diff
+    HEAD..HEAD und immer leer (fälschlich "docs-only") — z.B. bei einem
+    Marker im alten #916-Format ohne gate_last_scope, der dadurch keinen
+    Cache-Treffer liefert. In diesem Fall bewusst auf HEAD~1 ausweichen statt
+    den Marker (Selbstreferenz vermeiden).
     """
     marker_sha = _e2e_paths.read_last_gate_scope(_shared_repo_dir())
-    if marker_sha:
+    if marker_sha and marker_sha != _head_sha():
         resolvable = subprocess.run(
             ["git", "cat-file", "-e", marker_sha],
             capture_output=True, text=True, cwd=str(_verified_repo_dir()),
@@ -127,8 +133,19 @@ def _scope_diff_base() -> str:
 def _detect_committed_scope() -> str:
     """Klassifiziert die Commits seit dem Gate-Marker (Fallback HEAD~1..HEAD).
 
+    Issue #1096: läuft ein zweiter --check-Lauf auf demselben HEAD (z.B.
+    Doppel-Lauf beim Deploy), liefert der HEAD..HEAD-Diff faelschlich
+    docs-only. Bevor die Diff-Logik ueberhaupt laeuft, wird daher zuerst der
+    im Marker gecachte Scope fuer exakt diesen HEAD geprueft (derselbe
+    Shared-Helper wie prod_selftest.py) — Treffer liefert den beim ersten
+    Lauf tatsaechlich ermittelten Scope zurueck, ohne Selbstvergiftung.
+
     Returns: frontend-only | backend | full-stack | docs-only
     """
+    cached = _e2e_paths.cached_scope_for_sha(_shared_repo_dir(), _head_sha())
+    if cached is not None:
+        return cached
+
     base = _scope_diff_base()
     result = subprocess.run(
         ["git", "diff", "--name-only", base, "HEAD"],
@@ -283,7 +300,13 @@ def gate_check(e2e_path: Path | None, scope_override: str | None) -> int:
     scope = scope_override or _detect_committed_scope()
     if scope == "docs-only":
         _log(f"Scope '{scope}' — Staging-Gate übersprungen (kein UI/Backend-Change).")
-        _e2e_paths.write_last_gate_scope(_shared_repo_dir(), _head_sha(), scope)
+        # Issue #1096 (Fix 2): ein expliziter --scope-Override behält Vorrang
+        # fürs Gate-Verhalten (Exit 0 bleibt), aber der Cache darf dabei nicht
+        # auf docs-only heruntergestuft werden, wenn für exakt diesen HEAD
+        # bereits ein besserer (Nicht-docs-only-)Wert im Marker steht.
+        existing = _e2e_paths.cached_scope_for_sha(_shared_repo_dir(), _head_sha())
+        if existing is None or existing == "docs-only":
+            _e2e_paths.write_last_gate_scope(_shared_repo_dir(), _head_sha(), scope)
         return 0
 
     if e2e_path is None:

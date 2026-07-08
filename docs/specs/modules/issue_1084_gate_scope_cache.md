@@ -258,3 +258,10 @@ geschriebene Verhalten (Scope-String, Exit-Code, geparstes JSON-Feld).
 ## Changelog
 
 - 2026-07-07: Initial spec created
+- 2026-07-08: Der hier eingeführte Cache-Zugriff war ursprünglich nur in
+  `prod_selftest.py` (Leseseite) abgesichert — `staging_gate.py` (Schreibseite)
+  blieb selbstreferenz-anfällig, siehe #1096. Die Cache-Logik ist durch #1096 in
+  den Shared-Helper `_e2e_paths.cached_scope_for_sha()` konsolidiert und wird
+  jetzt von beiden Gate-Skripten symmetrisch genutzt; docs-only-Werte gelten
+  außerdem nicht mehr als Cache-Treffer für den Skip-Zweig. Details:
+  `docs/specs/modules/issue_1096_gate_scope_selfpoison.md`.

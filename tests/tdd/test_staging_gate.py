@@ -15,13 +15,21 @@ Getestete ACs:
 
 import json
 import os
+import shutil
 import subprocess
+import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 
 STAGING_GATE = Path("/home/hem/gregor_zwanzig/.claude/hooks/staging_gate.py")
 REPO_DIR = Path("/home/hem/gregor_zwanzig")
+
+# Issue #1096: hermetisches Temp-Repo fuer TestGateCheckModeB (AC-5/AC-6) —
+# Hook-Kopien kommen aus dem AKTUELLEN Arbeitsverzeichnis (Worktree), nicht
+# aus dem Hauptrepo hartkodiert (Muster test_issue_916_gate_scope_marker.py).
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_HOOKS_SRC = _REPO_ROOT / ".claude" / "hooks"
 
 
 def _head_sha() -> str:
@@ -63,6 +71,69 @@ def _write_e2e_json(tmp_path: Path, **overrides) -> Path:
     return json_file
 
 
+def _git(repo: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *args], cwd=repo, check=True,
+                           capture_output=True, text=True)
+
+
+def _setup_repo(tmp_path: Path) -> Path:
+    """Standalone Git-Repo mit eigener .claude/hooks-Kopie (Worktree-sicher,
+    Muster test_issue_916_gate_scope_marker.py::_setup_repo). Isoliert
+    TestGateCheckModeB vom echten, beweglichen Hauptrepo (AC-5/AC-6)."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "t@t.de")
+    _git(repo, "config", "user.name", "Test")
+
+    hooks = repo / ".claude" / "hooks"
+    hooks.mkdir(parents=True)
+    for name in ("staging_gate.py", "prod_selftest.py", "_e2e_paths.py"):
+        shutil.copy(_HOOKS_SRC / name, hooks / name)
+
+    (repo / "README.md").write_text("# baseline\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "baseline")
+    return repo
+
+
+def _repo_head_sha(repo: Path) -> str:
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=repo,
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+
+
+def _run_gate_in(repo: Path, args: list[str], env_extra: dict | None = None) -> tuple[int, str, str]:
+    env = os.environ.copy()
+    env["GZ_ACTIVE_WORKFLOW"] = "issue-521-staging-validator"
+    if env_extra:
+        env.update(env_extra)
+    result = subprocess.run(
+        [sys.executable, str(repo / ".claude" / "hooks" / "staging_gate.py")] + args,
+        capture_output=True, text=True, cwd=str(repo), env=env,
+    )
+    return result.returncode, result.stdout, result.stderr
+
+
+def _write_e2e_json_in(repo: Path, tmp_path: Path, **overrides) -> Path:
+    """Analog zu _write_e2e_json(), aber gegen den HEAD des Temp-Repos."""
+    data = {
+        "verified_commit": _repo_head_sha(repo),
+        "staging_verdict": "VERIFIED: alle ACs grün",
+        "verified_at": datetime.now(timezone.utc).isoformat(),
+        "environment": "staging",
+        "scope": "frontend-only",
+        "checks": ["playwright_login", "ac_checks"],
+        "feature_checks": ["AC-1: PASS", "AC-2: PASS"],
+        "findings": [],
+    }
+    data.update(overrides)
+    json_file = tmp_path / "e2e_verified.json"
+    json_file.write_text(json.dumps(data, indent=2))
+    return json_file
+
+
 class TestStagingGateScriptExists:
     """Das Script muss existieren, sonst schlagen alle anderen Tests aus dem falschen Grund fehl."""
 
@@ -83,13 +154,23 @@ class TestStagingGateScriptExists:
 
 
 class TestGateCheckModeB:
-    """Mode B: --check — aufgerufen von deploy-gregor-prod.sh (AC-3, AC-4, AC-5, AC-7)."""
+    """Mode B: --check — aufgerufen von deploy-gregor-prod.sh (AC-3, AC-4, AC-5, AC-7).
+
+    Issue #1096 (AC-5/AC-6): laeuft ausschliesslich gegen ein hermetisches
+    Temp-Git-Repo (_setup_repo) statt gegen das echte, bewegliche Hauptrepo —
+    sonst mutiert der Testlauf die echte .claude/last_gate_scope.json und wird
+    instabil, sobald der Scope des Hauptrepos zufaellig auf docs-only steht.
+    Tests ohne Scope-Erkennungs-Bezug erhalten einen expliziten
+    --scope=backend, damit der docs-only-Skip-Zweig ihre eigentliche
+    Pruefung nicht vor der Zeit greift.
+    """
 
     def test_gate_blocks_when_file_missing(self, tmp_path, monkeypatch):
         """AC-3/AC-4: Fehlende e2e_verified.json → Exit 1."""
+        repo = _setup_repo(tmp_path)
         nonexistent = str(tmp_path / "does_not_exist.json")
-        rc, out, err = _run_gate(
-            ["--check", f"--e2e-path={nonexistent}"]
+        rc, out, err = _run_gate_in(
+            repo, ["--check", f"--e2e-path={nonexistent}", "--scope=backend"]
         )
         assert rc == 1, f"Erwartet Exit 1 bei fehlender Datei, bekam {rc}"
         combined = out + err
@@ -99,11 +180,12 @@ class TestGateCheckModeB:
 
     def test_gate_blocks_when_commit_mismatch(self, tmp_path):
         """AC-3: verified_commit != HEAD → Exit 1."""
-        json_file = _write_e2e_json(
-            tmp_path,
+        repo = _setup_repo(tmp_path)
+        json_file = _write_e2e_json_in(
+            repo, tmp_path,
             verified_commit="0000000000000000000000000000000000000000"
         )
-        rc, out, err = _run_gate(["--check", f"--e2e-path={json_file}"])
+        rc, out, err = _run_gate_in(repo, ["--check", f"--e2e-path={json_file}", "--scope=backend"])
         assert rc == 1, f"Erwartet Exit 1 bei falschem Commit, bekam {rc}"
         combined = out + err
         assert any(w in combined.lower() for w in ["commit", "sha", "mismatch", "verifizier"]), (
@@ -112,42 +194,46 @@ class TestGateCheckModeB:
 
     def test_gate_blocks_when_verdict_broken(self, tmp_path):
         """AC-4: staging_verdict = BROKEN → Exit 1."""
-        json_file = _write_e2e_json(
-            tmp_path,
+        repo = _setup_repo(tmp_path)
+        json_file = _write_e2e_json_in(
+            repo, tmp_path,
             staging_verdict="BROKEN: AC-2 fehlgeschlagen"
         )
-        rc, out, err = _run_gate(["--check", f"--e2e-path={json_file}"])
+        rc, out, err = _run_gate_in(repo, ["--check", f"--e2e-path={json_file}", "--scope=backend"])
         assert rc == 1, f"Erwartet Exit 1 bei BROKEN, bekam {rc}"
 
     def test_gate_blocks_when_verdict_ambiguous(self, tmp_path):
         """AC-4: staging_verdict = AMBIGUOUS → Exit 1 (kein stilles Durchlaufen)."""
-        json_file = _write_e2e_json(
-            tmp_path,
+        repo = _setup_repo(tmp_path)
+        json_file = _write_e2e_json_in(
+            repo, tmp_path,
             staging_verdict="AMBIGUOUS: Screenshot nicht auswertbar"
         )
-        rc, out, err = _run_gate(["--check", f"--e2e-path={json_file}"])
+        rc, out, err = _run_gate_in(repo, ["--check", f"--e2e-path={json_file}", "--scope=backend"])
         assert rc == 1, f"Erwartet Exit 1 bei AMBIGUOUS, bekam {rc}"
 
     def test_gate_blocks_when_verdict_missing(self, tmp_path):
         """AC-4: staging_verdict fehlt komplett → Exit 1."""
+        repo = _setup_repo(tmp_path)
         data = {
-            "verified_commit": _head_sha(),
+            "verified_commit": _repo_head_sha(repo),
             "verified_at": datetime.now(timezone.utc).isoformat(),
             "environment": "staging",
         }
         json_file = tmp_path / "e2e_verified.json"
         json_file.write_text(json.dumps(data))
-        rc, out, err = _run_gate(["--check", f"--e2e-path={json_file}"])
+        rc, out, err = _run_gate_in(repo, ["--check", f"--e2e-path={json_file}", "--scope=backend"])
         assert rc == 1, f"Erwartet Exit 1 bei fehlendem staging_verdict, bekam {rc}"
 
     def test_gate_blocks_when_stale(self, tmp_path):
         """AC-4/TTL: verified_at älter als 24h → Exit 1."""
+        repo = _setup_repo(tmp_path)
         stale_time = datetime.now(timezone.utc) - timedelta(hours=25)
-        json_file = _write_e2e_json(
-            tmp_path,
+        json_file = _write_e2e_json_in(
+            repo, tmp_path,
             verified_at=stale_time.isoformat()
         )
-        rc, out, err = _run_gate(["--check", f"--e2e-path={json_file}"])
+        rc, out, err = _run_gate_in(repo, ["--check", f"--e2e-path={json_file}", "--scope=backend"])
         assert rc == 1, f"Erwartet Exit 1 bei abgelaufenem Artefakt, bekam {rc}"
         combined = out + err
         assert any(w in combined.lower() for w in ["alt", "stale", "abgelaufen", "24"]), (
@@ -156,8 +242,9 @@ class TestGateCheckModeB:
 
     def test_gate_passes_when_verified_and_matching_commit(self, tmp_path):
         """AC-2/AC-3: Korrekter Commit + VERIFIED → Exit 0."""
-        json_file = _write_e2e_json(tmp_path)
-        rc, out, err = _run_gate(["--check", f"--e2e-path={json_file}"])
+        repo = _setup_repo(tmp_path)
+        json_file = _write_e2e_json_in(repo, tmp_path)
+        rc, out, err = _run_gate_in(repo, ["--check", f"--e2e-path={json_file}", "--scope=backend"])
         assert rc == 0, (
             f"Erwartet Exit 0 bei korrektem Commit + VERIFIED, bekam {rc}.\n"
             f"stdout: {out}\nstderr: {err}"
@@ -165,12 +252,13 @@ class TestGateCheckModeB:
 
     def test_gate_skip_env_allows_deploy_with_warning(self, tmp_path):
         """AC-5: GZ_SKIP_E2E_GATE=1 → Exit 0, aber Warn-Nachricht in Ausgabe."""
-        json_file = _write_e2e_json(
-            tmp_path,
+        repo = _setup_repo(tmp_path)
+        json_file = _write_e2e_json_in(
+            repo, tmp_path,
             verified_commit="0000000000000000000000000000000000000000"
         )
-        rc, out, err = _run_gate(
-            ["--check", f"--e2e-path={json_file}"],
+        rc, out, err = _run_gate_in(
+            repo, ["--check", f"--e2e-path={json_file}", "--scope=backend"],
             env_extra={"GZ_SKIP_E2E_GATE": "1"}
         )
         assert rc == 0, f"Erwartet Exit 0 bei GZ_SKIP_E2E_GATE=1, bekam {rc}"
@@ -181,9 +269,10 @@ class TestGateCheckModeB:
 
     def test_gate_docs_only_scope_skips_check(self, tmp_path):
         """AC-7: scope=docs-only → Exit 0 ohne Gate-Block (auch wenn kein VERIFIED-Artefakt)."""
+        repo = _setup_repo(tmp_path)
         nonexistent = str(tmp_path / "does_not_exist.json")
-        rc, out, err = _run_gate(
-            ["--check", f"--e2e-path={nonexistent}", "--scope=docs-only"]
+        rc, out, err = _run_gate_in(
+            repo, ["--check", f"--e2e-path={nonexistent}", "--scope=docs-only"]
         )
         assert rc == 0, (
             f"Erwartet Exit 0 bei docs-only Scope, bekam {rc}.\n"

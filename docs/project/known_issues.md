@@ -164,6 +164,38 @@ Scope-Cache im Marker selbst: `write_last_gate_scope()` speichert zusätzlich de
 
 ---
 
+## BUG-1096-SELFPOISON: staging_gate.py vergiftete eigenen Scope-Marker bei Doppel-Lauf
+
+**Status:** RESOLVED (2026-07-08) | **Severity:** High | **GitHub Issue:** #1096 | **Spec:** `docs/specs/modules/issue_1096_gate_scope_selfpoison.md`
+
+### Symptom
+
+Lief `staging_gate.py --check` ein zweites Mal auf demselben, bereits geprüften HEAD, stufte es echte Code-Deploys fälschlich auf `docs-only` herab — beobachtet bei den Deploys #1097 (Commit `3f5d3cfa`) und #1104 (Commit `b4620e97`). Der falsche Marker-Wert wurde dann von `prod_selftest.py`s eigenem Cache-Guard (#1084) als korrekt übernommen, wodurch der Post-Deploy-Selftest den echten Code-Deploy stillschweigend übersprang.
+
+### Root Cause
+
+#1084 hatte den Scope-Cache im Marker (`.claude/last_gate_scope.json`) nur auf der Leseseite (`prod_selftest.py`) eingeführt — die Schreibseite (`staging_gate.py::_detect_committed_scope()`) blieb ungeschützt. Ein zweiter `gate_check()`-Lauf auf demselben HEAD berechnete den Scope selbstreferenziell über `git diff HEAD..HEAD` (leer) neu, statt den beim ersten Lauf bereits korrekt ermittelten Wert zu nutzen — leitete daraus fälschlich `docs-only` her und überschrieb damit den vorher richtigen Marker-Eintrag. Asymmetrischer Cache-Guard aus #1084: nur die Leseseite war abgesichert, die Schreibseite nicht.
+
+### Fix (Committed 2026-07-08)
+
+Shared-Cache-Helper `_e2e_paths.cached_scope_for_sha(repo_dir, sha)` wird jetzt von **beiden** Gate-Skripten symmetrisch genutzt (`staging_gate.py` UND `prod_selftest.py`, vorher nur letzteres). Der docs-only-Skip-Zweig in `gate_check()` überschreibt keinen bestehenden Nicht-docs-only-Cache-Eintrag für dieselbe SHA mehr. Zusätzlich `TestGateCheckModeB` (`tests/tdd/test_staging_gate.py`) auf hermetische Temp-Git-Repos umgestellt — die Tests liefen vorher gegen das echte, bewegliche Hauptrepo und wurden instabil, sobald dessen Scope zufällig `docs-only` stand.
+
+### Files Changed
+
+- `.claude/hooks/_e2e_paths.py` (neu: `cached_scope_for_sha`)
+- `.claude/hooks/staging_gate.py` (Cache-Guard in `_detect_committed_scope`, Härtung docs-only-Skip)
+- `.claude/hooks/prod_selftest.py` (Duplikat-Logik durch Shared-Helper ersetzt, HEAD~1-Fallback)
+- `tests/tdd/test_staging_gate.py` (`TestGateCheckModeB` hermetisiert)
+- `tests/tdd/test_issue_1096_gate_scope_selfpoison.py` (neu)
+
+### Lessons Learned
+
+1. **Cache-Mechanismen brauchen symmetrische Guards auf Schreib- UND Leseseite** — ein Fix, der nur eine Seite absichert (#1084 nur `prod_selftest.py`), verlagert die Selbstreferenz-Anfälligkeit lediglich auf die andere Seite.
+2. **Tests gegen das echte, bewegliche Hauptrepo sind nicht hermetisch** — `TestGateCheckModeB` lief ohne `--scope`-Override gegen den tatsächlichen Repo-Zustand und wurde flaky, sobald dessen Scope zufällig auf `docs-only` stand.
+3. **Follow-ups:** Doppel-Lauf-Ursache (warum `gate_check()` beim #1097-Deploy überhaupt zweimal auf demselben Commit lief) → Issue #1119. Verbleibender Adversary-Finding F003 → Issue #1121.
+
+---
+
 ## BUG-DATALOSS-GR221: 4 → 1 Stage Konsolidierung (GR221 Mallorca)
 
 **Status:** RESOLVED — Recovery (2026-04-29) | **Severity:** High | **GitHub Issue:** #102

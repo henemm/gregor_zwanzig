@@ -69,6 +69,32 @@ def read_last_gate_scope_entry(repo_dir) -> "dict | None":
     return data
 
 
+def cached_scope_for_sha(repo_dir, sha) -> "str | None":
+    """Gibt den im Marker gecachten Scope zurück, aber NUR wenn der Marker
+    exakt auf `sha` zeigt UND ein gate_last_scope-Feld vorhanden ist. Sonst
+    None (Aufrufer fällt auf die bestehende Diff-Logik zurück).
+
+    Extrahiert aus prod_selftest.py (#1084), damit staging_gate.py und
+    prod_selftest.py denselben Cache-Zugriff verwenden — Schreibseite und
+    Leseseite dürfen nicht mehr auseinanderlaufen (Issue #1096).
+
+    Adversary-Finding F001: ein gecachter Wert von "docs-only" wird NIE
+    blind übernommen (gilt als Cache-Miss). Ein docs-only-Cache hat keinen
+    Schutzwert — der Diff-Fallback liefert bei einem echten Doku-Commit
+    ohnehin dasselbe Ergebnis, deckt bei einem VOR diesem Fix bereits
+    vergifteten Marker (gate_last_scope fälschlich "docs-only" für einen
+    echten Code-Commit) aber den tatsächlichen Scope auf statt den
+    Altlast-Wert zu wiederholen.
+    """
+    entry = read_last_gate_scope_entry(repo_dir)
+    if entry is None:
+        return None
+    cached = entry.get("gate_last_scope")
+    if cached is not None and cached != "docs-only" and entry.get("gate_scope_sha") == sha:
+        return cached
+    return None
+
+
 def head_sha(repo_dir) -> str:
     """Gibt den aktuellen Git-HEAD-SHA zurück oder 'UNKNOWN' bei Fehler."""
     result = subprocess.run(

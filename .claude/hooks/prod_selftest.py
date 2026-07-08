@@ -396,9 +396,13 @@ def _scope_diff_base(repo_dir: Path = REPO_DIR) -> str:
     Liest den Gate-Marker (geschrieben von staging_gate.py, nie hier). Ist er
     vorhanden UND im Repo auflösbar → Marker-SHA. Sonst Fallback 'HEAD~1'.
     prod_selftest.py schreibt den Marker bewusst NICHT (nur Leser).
+
+    Adversary-Finding F002: zeigt der Marker exakt auf HEAD, wäre der Diff
+    HEAD..HEAD und immer leer (fälschlich "docs-only") — in diesem Fall
+    bewusst auf HEAD~1 ausweichen statt den Marker (Selbstreferenz vermeiden).
     """
     marker_sha = _e2e_paths.read_last_gate_scope(repo_dir)
-    if marker_sha:
+    if marker_sha and marker_sha != _e2e_paths.head_sha(repo_dir):
         resolvable = subprocess.run(
             ["git", "cat-file", "-e", marker_sha],
             capture_output=True, text=True, cwd=str(repo_dir),
@@ -417,17 +421,14 @@ def _detect_committed_scope(repo_dir: Path = REPO_DIR) -> str:
 
     Returns: docs-only | frontend-only | backend | full-stack
     """
-    # Issue #1084: Scope-Cache. Lief staging_gate.py gerade erfolgreich für exakt
-    # denselben HEAD, hat es den tatsächlich verwendeten Scope im Marker
-    # hinterlegt. Ein selbstreferenzieller HEAD..HEAD-Diff wäre hier leer und
-    # würde fälschlich 'docs-only' liefern — daher den gecachten Wert direkt
-    # zurückgeben. Nur bei exakter Commit-Übereinstimmung UND vorhandenem
-    # gate_last_scope-Feld; jeder andere Fall fällt auf die Diff-Logik zurück.
-    entry = _e2e_paths.read_last_gate_scope_entry(repo_dir)
-    if entry is not None:
-        cached_scope = entry.get("gate_last_scope")
-        if cached_scope is not None and entry.get("gate_scope_sha") == _e2e_paths.head_sha(repo_dir):
-            return cached_scope
+    # Issue #1084/#1096: Scope-Cache über den gemeinsamen Shared-Helper (auch
+    # von staging_gate.py genutzt — eine Quelle statt Duplikat-Logik). Lief
+    # staging_gate.py gerade erfolgreich für exakt denselben HEAD, liefert
+    # der Helper den damals ermittelten Scope zurück statt eines
+    # selbstreferenziellen, faelschlich 'docs-only' liefernden HEAD..HEAD-Diffs.
+    cached_scope = _e2e_paths.cached_scope_for_sha(repo_dir, _e2e_paths.head_sha(repo_dir))
+    if cached_scope is not None:
+        return cached_scope
 
     base = _scope_diff_base(repo_dir)
     result = subprocess.run(
