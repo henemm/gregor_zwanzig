@@ -79,6 +79,10 @@ def render_comparison_text(result: ComparisonResult, profile: Optional[ActivityP
         lines.append(f"   Sonne: {sunny_h}h" if sunny_h is not None else "   Sonne: -")
         cloud = loc_result.cloud_avg
         lines.append(f"   Wolken: {cloud}%" if cloud is not None else "   Wolken: -")
+        snow_depth = loc_result.snow_depth_cm
+        lines.append(f"   Schneehöhe: {snow_depth:.0f} cm" if snow_depth is not None else "   Schneehöhe: -")
+        snow_new = loc_result.snow_new_cm
+        lines.append(f"   Neuschnee: {snow_new:.0f} cm" if snow_new is not None else "   Neuschnee: -")
 
         # Amtliche Warnungen, eine Zeile pro Warnung (Epic #1073 Punkt 6,
         # gemeinsamer Renderer statt Copy-Paste).

@@ -74,6 +74,8 @@ CV2_METRICS = [
     {"key": "sunny_hours", "label": "Sonne", "unit": "h", "decimals": 1},
     {"key": "cloud_avg", "label": "Wolken", "unit": "%"},
     {"key": "uv_max", "label": "UV max", "unit": "", "sev": _sev_uv},
+    {"key": "snow_depth_cm", "label": "Schneehöhe", "unit": "cm"},
+    {"key": "snow_new_cm", "label": "Neuschnee", "unit": "cm"},
 ]
 
 _HOUR_COLUMNS = ["Zeit", "Temp", "Gef.", "Wind", "Böen", "Regen", "Wolken", "UV"]
