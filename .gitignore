@@ -105,3 +105,13 @@ data/users/__*/
 # Session-spezifische Workflow-Zuordnung (ephemer, nicht versionieren)
 .claude/session_workflows.json
 data/diagnostics/
+
+# Test-Residuen: pytest-Läufe erzeugen Wegwerf-User (is_test_user_id, #1013).
+# Nie committen — echte Nutzerdaten liegen unter data/users/<user_id>/ auf dem Server.
+data/users/tdd-*/
+data/users/test*/
+data/users/tg-live-e2e/
+data/users/userA/
+data/users/userB/
+data/users/bug*/
+data/users/issue*/
