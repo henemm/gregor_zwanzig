@@ -9,15 +9,17 @@ from services.official_alerts.base import (
     get_official_alerts_for_location,
     register_official_alert_source,
 )
+from services.official_alerts.geosphere_warn import GeoSphereWarnSource
 from services.official_alerts.massif_closure import MassifClosureSource
 from services.official_alerts.meteo_forets import MeteoForetsSource
 from services.official_alerts.models import OfficialAlert
 from services.official_alerts.vigilance import VigilanceSource
 
-# Lazy-Registration bei Modul-Import (analog Provider-Pattern), Issue #1035/#1036/#1037.
+# Lazy-Registration bei Modul-Import (analog Provider-Pattern), Issue #1035/#1036/#1037/#1085.
 register_official_alert_source(VigilanceSource())
 register_official_alert_source(MeteoForetsSource())
 register_official_alert_source(MassifClosureSource())
+register_official_alert_source(GeoSphereWarnSource())
 
 __all__ = [
     "OfficialAlert",
@@ -27,4 +29,5 @@ __all__ = [
     "VigilanceSource",
     "MeteoForetsSource",
     "MassifClosureSource",
+    "GeoSphereWarnSource",
 ]

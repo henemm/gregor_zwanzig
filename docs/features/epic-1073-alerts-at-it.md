@@ -1,6 +1,6 @@
 # Epic 1073: Amtliche Warnungen für Österreich & Italien + querschnittliche Nutzung
 
-**Status:** Geplant (2026-07-07); Slice 3 (#1087) implementiert (2026-07-07, siehe Slice-Tabelle).
+**Status:** Geplant (2026-07-07); Slice 1 (#1085) und Slice 3 (#1087) implementiert (siehe Slice-Tabelle).
 Baut direkt auf Epic #1033 (amtliche Alerts Frankreich) auf.
 **Priorität:** hoch.
 
@@ -45,7 +45,7 @@ vermeiden Betriebskomplexität.
 
 | Slice | Issue | Inhalt | #1073-Punkte | Abhängigkeit |
 |---|---|---|---|---|
-| 1 | #1085 | **GeoSphere-Warn-Quelle (AT)** — neue `OfficialAlertSource`, auth-frei, koordinatenbasiert; erscheint sofort im Orts-Vergleich | 1, 4 (AT) | #1033 |
+| 1 | #1085 | **GeoSphere-Warn-Quelle (AT)** — neue `OfficialAlertSource`, auth-frei, koordinatenbasiert; erscheint sofort im Orts-Vergleich — **implementiert 2026-07-08** | 1, 4 (AT) | #1033 |
 | 2 | #1086 | **MeteoAlarm-Quelle (AT+IT)** — REST/GeoJSON via MeteoGate, deckt Italien + EU | 1, 4 (IT) | #1033 + MeteoGate-Reg. |
 | 3 | #1087 | **Warnungen in Trip-Briefings + Trip-Ein-/Ausschalter** (analog #1040 ComparePreset→Trip) — querschnittliche Nutzung — **implementiert 2026-07-07** | 2, 6 | Slice 1/2 |
 | 4 | #1088 | **Warnungen im Alert-Pfad** (trip_alert / radar_alert) | 3 | Slice 3 |
@@ -55,6 +55,17 @@ vermeiden Betriebskomplexität.
 Erweiterung end-to-end), parallel MeteoGate-Registrierung für Slice 2. Slice 5 (Nowcast) ist ein
 anderes Subsystem (`radar_service`/Provider-Auswahl) — als eigenständiges Thema führen, ggf.
 eigenes Folge-Epic.
+
+### Slice 1: GeoSphere-Warn-Quelle für Österreich (Issue #1085) — implementiert 2026-07-08
+
+Erste Nicht-Frankreich-Quelle im Registry-Muster von Epic #1033: `GeoSphereWarnSource`
+(`src/services/official_alerts/geosphere_warn.py`, registriert in
+`src/services/official_alerts/__init__.py`). Ruft die GeoSphere-`wsapp`-API
+`getWarningsForCoords` **auth-frei und koordinatenbasiert** ab (kein Département-/Zonen-Mapping
+wie bei den FR-Quellen nötig). Mappt `warnstufeid` (1–3) auf die gemeinsame `OfficialAlert.level`-
+Skala (2–4) und deckt 7 Warn-Typen ab. Cache pro Koordinate (300s Normalfall / 60s bei aktiver
+Warnung), fail-soft wie alle Quellen des Registries. Spec:
+`docs/specs/modules/issue_1085_geosphere_warn_source.md`.
 
 ### Slice 3: Warnungen in Trip-Briefings (Issue #1087) — implementiert 2026-07-07
 
@@ -94,3 +105,4 @@ MeteoGate/MeteoAlarm-Account registrieren (für Slice 2) — analog zum Météo-
 |---|---|
 | 2026-07-07 | Epic geplant, API-Landschaft verifiziert (GeoSphere Warn auth-frei/koordinatenbasiert; MeteoAlarm REST via MeteoGate), 5 Slices geschnitten, Kein-MQTT-Leitentscheidung, Nowcast (Punkt 5) als eigenständiges Subsystem abgegrenzt. |
 | 2026-07-07 | Slice 3 (#1087) implementiert: gemeinsame Warn-Render-Komponente `src/output/renderers/alert/official_alerts.py` (Compare + Trip), Trip-Fetch in `trip_report_scheduler.py`, Toggle `official_alerts_enabled` (Pointer-Muster, Default `true`). |
+| 2026-07-08 | Slice 1 (#1085) implementiert: `GeoSphereWarnSource` (AT) — erste Nicht-FR-Quelle im Registry, auth-frei, koordinatenbasiert, `warnstufeid`→`level`-Mapping, Cache pro Koordinate. |

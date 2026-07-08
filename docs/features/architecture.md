@@ -623,7 +623,7 @@ See `~/.claude/CLAUDE.md` → Monitoring for details.
 - **Epic #438 (Compare Wizard):** `docs/features/epic-438-compare-wizard.md`
 - **Epic #134 (Trip Cockpit Dashboard):** `docs/features/epic-134-cockpit-dashboard.md`
 - **Epic #1033 (Amtliche Alerts im Orts-Vergleich):** `docs/features/epic-1033-compare-official-alerts.md` — additives `src/services/official_alerts/`-Modul (Slices 1, 2, 5 implementiert), Registry-Pattern analog Provider-Adapter, Fail-soft-Garantie, pro Orts-Vergleich ein-/ausschaltbar (Slice 5)
-- **Epic #1073 (Amtliche Alerts AT/IT + querschnittliche Nutzung):** `docs/features/epic-1073-alerts-at-it.md` — Slice 3 (#1087, implementiert): amtliche Warnungen jetzt auch in Trip-Briefings, gemeinsame Renderer-Komponente `src/output/renderers/alert/official_alerts.py` (Compare + Trip, keine Kopie), Trip-Toggle `official_alerts_enabled`
+- **Epic #1073 (Amtliche Alerts AT/IT + querschnittliche Nutzung):** `docs/features/epic-1073-alerts-at-it.md` — Slice 1 (#1085, implementiert): `GeoSphereWarnSource` (AT), erste Nicht-FR-Quelle im Registry, auth-frei, koordinatenbasiert, `warnstufeid`→`level`-Mapping; Slice 3 (#1087, implementiert): amtliche Warnungen jetzt auch in Trip-Briefings, gemeinsame Renderer-Komponente `src/output/renderers/alert/official_alerts.py` (Compare + Trip, keine Kopie), Trip-Toggle `official_alerts_enabled`
 - **Design System:** `docs/design-system/` (CHARTER, COMPONENTS, TOKENS, SCREENS)
 - **API Contract:** `docs/reference/api_contract.md`
 
