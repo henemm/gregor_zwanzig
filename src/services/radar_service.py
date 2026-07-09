@@ -63,6 +63,7 @@ class NowcastResult:
     source: str                     # "radar", "INCA", "AROME-FR", "minutely_15"
     frames: list = field(default_factory=list)
     is_convective: bool = False     # True when nowcast indicates thunderstorm/hail
+    convective_checked: bool = True  # False when INCA sidecar convective-check failed
 
 
 class RadarNowcastService:
@@ -78,6 +79,7 @@ class RadarNowcastService:
         frame_source: Optional[Callable[[float, float], list]] = None,
     ) -> None:
         self._frame_source = frame_source
+        self._convective_checked = True
 
     # ------------------------------------------------------------------
     # Public API
@@ -113,6 +115,7 @@ class RadarNowcastService:
         If frame_source is injected, uses it (test DI seam).
         Otherwise uses coordinate-based source chain.
         """
+        self._convective_checked = True
         if self._frame_source is not None:
             frames = self._frame_source(lat, lon)
             source = "radar"
@@ -174,6 +177,9 @@ class RadarNowcastService:
                 f" (in ~{result.onset_minutes} Min)."
             )
 
+        if result.convective_checked is False:
+            lines.append("Gewitter-Check nicht verfügbar.")
+
         if include_source:
             lines.append(f"Quelle: {self.source_label(result.source)}.")
 
@@ -234,10 +240,28 @@ class RadarNowcastService:
                 mm_h = float(raw) * 4.0 if raw is not None else 0.0
                 ts_val = dp.ts if dp.ts.tzinfo else dp.ts.replace(tzinfo=timezone.utc)
                 frames.append(RadarFrame(timestamp=ts_val, precip_mm_h=mm_h))
+            # Convective sidecar: INCA carries no thunderstorm/hail field, so reuse the
+            # global Open-Meteo best_match nowcast solely for the is_convective flag.
+            sidecar = self._fetch_openmeteo_15(lat, lon)
+            if sidecar:
+                self._merge_convective(frames, sidecar)
+            else:
+                # ADR-0018: do not silently pass a failed check off as "no thunderstorm".
+                self._convective_checked = False
             return frames
         except Exception as e:
             logger.warning(f"GeoSphere INCA failed, falling back: {e}")
             return []
+
+    def _merge_convective(self, inca_frames: list, sidecar_frames: list) -> None:
+        """Merge is_convective from nearest sidecar frame (<=5 min) into INCA frames."""
+        tolerance = timedelta(minutes=5)
+        for frame in inca_frames:
+            nearest = min(
+                sidecar_frames, key=lambda s: abs(s.timestamp - frame.timestamp)
+            )
+            if abs(nearest.timestamp - frame.timestamp) <= tolerance:
+                frame.is_convective = nearest.is_convective
 
     def _fetch_openmeteo_minutely15(self, lat: float, lon: float) -> list:
         return self._fetch_openmeteo_15(lat, lon)
@@ -333,6 +357,7 @@ class RadarNowcastService:
             source=source,
             frames=frames,
             is_convective=is_convective,
+            convective_checked=self._convective_checked,
         )
 
 

@@ -91,7 +91,7 @@ Testdatei: `tests/tdd/test_feature_660_convective_stage.py` (mock-frei).
 
 ## Known Limitations
 
-- Konvektions-Indikator nur über Open-Meteo-`weather_code` (global). BrightSky/GeoSphere-Pfade kennzeichnen keine Konvektion (kein passendes Quellfeld) → in DE/AT-Abdeckung kann eine Gewitter-Lage unbemerkt bleiben, solange der Radar/INCA-Pfad greift. Bewusster Scope: globale Abdeckung der Zielgruppe zuerst.
+- ~~Konvektions-Indikator nur über Open-Meteo-`weather_code` (global). BrightSky/GeoSphere-Pfade kennzeichnen keine Konvektion (kein passendes Quellfeld) → in DE/AT-Abdeckung kann eine Gewitter-Lage unbemerkt bleiben, solange der Radar/INCA-Pfad greift.~~ **Für den GeoSphere-INCA-Pfad (Österreich) geschlossen durch Issue #1161** (`docs/specs/modules/issue_1161_inca_convective.md`): ein Open-Meteo-Sidecar-Call liefert das Konvektions-Flag zusätzlich zur INCA-Regenrate (Timestamp-Merge, Toleranz ±5 Min). Schlägt der Sidecar-Call fehl, wird das über `NowcastResult.convective_checked=False` sichtbar gemacht statt kaschiert (ADR-0018) — kein stiller Rückfall auf "kein Gewitter". BrightSky (DE) bleibt weiterhin ohne Konvektions-Indikator (kein Scope von #1161).
 - WMO-Codes sind eine Modell-Klassifikation, kein Live-Blitz-Detektor; Genauigkeit hängt vom Open-Meteo-Modell ab.
 - Keine Unterscheidung Hagel vs. reines Gewitter im Label (95/96/99 → eine gemeinsame Stufe).
 
@@ -99,3 +99,4 @@ Testdatei: `tests/tdd/test_feature_660_convective_stage.py` (mock-frei).
 
 - 2026-06-07: Initial spec created (Issue #660)
 - 2026-06-08: Implementation complete; WMO-weather_code (95/96/99) integration in Open-Meteo `minutely_15`, `RadarFrame.is_convective` flag added, `intensity_to_text` escalation implemented, alert kennzeichnung (⚠️ Gewitter) aktiv
+- 2026-07-09: Known Limitation für GeoSphere-INCA (AT) geschlossen durch Issue #1161 (Open-Meteo-Sidecar für Konvektions-Flag im INCA-Pfad)
