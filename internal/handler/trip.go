@@ -192,13 +192,29 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			existing.AvalancheRegions = *req.AvalancheRegions
 		}
 		if req.Aggregation != nil {
-			existing.Aggregation = *req.Aggregation
+			// Issue #1129: Feld-Level-Merge statt Blind-Replace, analog #1103.
+			if existing.Aggregation == nil {
+				existing.Aggregation = map[string]interface{}{}
+			}
+			for k, v := range *req.Aggregation {
+				existing.Aggregation[k] = v
+			}
 		}
 		if req.WeatherConfig != nil {
-			existing.WeatherConfig = *req.WeatherConfig
+			if existing.WeatherConfig == nil {
+				existing.WeatherConfig = map[string]interface{}{}
+			}
+			for k, v := range *req.WeatherConfig {
+				existing.WeatherConfig[k] = v
+			}
 		}
 		if req.DisplayConfig != nil {
-			existing.DisplayConfig = *req.DisplayConfig
+			if existing.DisplayConfig == nil {
+				existing.DisplayConfig = map[string]interface{}{}
+			}
+			for k, v := range *req.DisplayConfig {
+				existing.DisplayConfig[k] = v
+			}
 		}
 		if req.ReportConfig != nil {
 			// Issue #1103: Feld-Level-Merge statt Blind-Replace — Teil-Updates

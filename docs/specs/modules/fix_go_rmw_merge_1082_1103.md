@@ -121,6 +121,10 @@ als ganze Maps (gleiche Blind-Replace-Mechanik wie report_config). Diese sind
 (Replace-Semantik dieser Clients unbekannt → Regressionsrisiko). Bei Bestätigung
 in der Validierung → separates Folge-Issue, nicht in diesem Scope fixen.
 
+**Nachtrag (2026-07-09):** Die drei verbliebenen Blind-Replace-Zweige wurden
+durch Issue #1129 (`fix_1129_config_map_merge.md`) auf das Merge-Pattern
+übertragen und sind damit abgelöst.
+
 ## Test-Plan
 
 4 automatisierte Go-Handler-Tests gegen echten Store (Tempdir, keine Mocks) —

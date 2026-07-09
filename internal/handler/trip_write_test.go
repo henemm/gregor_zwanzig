@@ -183,9 +183,9 @@ func seedTripWithConfigs(t *testing.T, s *store.Store, id string) {
 			Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 47.0, Lon: 11.0, ElevationM: 500}},
 		}},
 		AvalancheRegions: []string{"AT-07-15"},
-		Aggregation:      map[string]interface{}{"strategy": "max_per_stage"},
-		WeatherConfig:    map[string]interface{}{"profile": "skitouren"},
-		DisplayConfig:    map[string]interface{}{"theme": "compact"},
+		Aggregation:      map[string]interface{}{"strategy": "max_per_stage", "window_days": float64(3)},
+		WeatherConfig:    map[string]interface{}{"profile": "skitouren", "provider": "geosphere"},
+		DisplayConfig:    map[string]interface{}{"theme": "compact", "channels": []interface{}{"email"}},
 		ReportConfig:     map[string]interface{}{"channels": []interface{}{"email"}},
 	}
 	if err := s.SaveTrip(trip); err != nil {
@@ -303,7 +303,7 @@ func TestUpdateTripHandlerPreservesAvalancheRegions(t *testing.T) {
 	}
 }
 
-func TestUpdateTripHandlerReplacesAggregationWhenSent(t *testing.T) {
+func TestUpdateTripHandlerMergesAggregationWhenSent(t *testing.T) {
 	s := newTestStore(t)
 	seedTripWithConfigs(t, s, "merge-replace")
 
@@ -314,11 +314,52 @@ func TestUpdateTripHandlerReplacesAggregationWhenSent(t *testing.T) {
 
 	got := loadTripOrFail(t, s, "merge-replace")
 	if got.Aggregation["strategy"] != "min_per_stage" {
-		t.Errorf("aggregation.strategy: expected min_per_stage (replaced), got %v", got.Aggregation["strategy"])
+		t.Errorf("aggregation.strategy: expected min_per_stage (merged), got %v", got.Aggregation["strategy"])
+	}
+	// window_days was not sent → must be preserved (field-level merge, not blind replace)
+	if got.Aggregation["window_days"] != float64(3) {
+		t.Errorf("aggregation.window_days: expected to be preserved (3), got %v", got.Aggregation["window_days"])
 	}
 	// report_config must still be preserved (not sent → not touched)
 	if got.ReportConfig == nil {
 		t.Errorf("report_config lost when only aggregation was sent")
+	}
+}
+
+func TestUpdateTripHandlerMergesWeatherConfig(t *testing.T) {
+	s := newTestStore(t)
+	seedTripWithConfigs(t, s, "merge-wc-partial")
+
+	body := `{"id":"merge-wc-partial","name":"Renamed","stages":[{"id":"S1","name":"D1","date":"2026-05-01","waypoints":[{"id":"W1","name":"P","lat":47.0,"lon":11.0,"elevation_m":500}]}],"weather_config":{"profile":"wandern"}}`
+	if code := putUpdate(t, s, "merge-wc-partial", body); code != 200 {
+		t.Fatalf("expected 200, got %d", code)
+	}
+
+	got := loadTripOrFail(t, s, "merge-wc-partial")
+	if got.WeatherConfig["profile"] != "wandern" {
+		t.Errorf("weather_config.profile: expected wandern (merged), got %v", got.WeatherConfig["profile"])
+	}
+	if got.WeatherConfig["provider"] != "geosphere" {
+		t.Errorf("weather_config.provider: expected to be preserved (geosphere), got %v", got.WeatherConfig["provider"])
+	}
+}
+
+func TestUpdateTripHandlerMergesDisplayConfig(t *testing.T) {
+	s := newTestStore(t)
+	seedTripWithConfigs(t, s, "merge-dc-partial")
+
+	body := `{"id":"merge-dc-partial","name":"Renamed","stages":[{"id":"S1","name":"D1","date":"2026-05-01","waypoints":[{"id":"W1","name":"P","lat":47.0,"lon":11.0,"elevation_m":500}]}],"display_config":{"theme":"full"}}`
+	if code := putUpdate(t, s, "merge-dc-partial", body); code != 200 {
+		t.Fatalf("expected 200, got %d", code)
+	}
+
+	got := loadTripOrFail(t, s, "merge-dc-partial")
+	if got.DisplayConfig["theme"] != "full" {
+		t.Errorf("display_config.theme: expected full (merged), got %v", got.DisplayConfig["theme"])
+	}
+	channels, ok := got.DisplayConfig["channels"].([]interface{})
+	if !ok || len(channels) == 0 {
+		t.Errorf("display_config.channels: expected to be preserved ([email]), got %v", got.DisplayConfig["channels"])
 	}
 }
 
