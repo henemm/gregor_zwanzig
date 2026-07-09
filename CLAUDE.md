@@ -112,7 +112,7 @@ Ersetzt die alte Absolutform von „KEINE MOCKED TESTS". Unverändert verboten b
 
 Bug-Nachweis unverändert: mindestens ein Test reproduziert den Bug aus Nutzersicht (rot vor Fix, grün nach Fix) — in der Live-Schicht, wenn er Staging braucht, sonst im Kern.
 
-**Namensregel (neu):** Testdateien nach Verhalten benennen (`test_alert_throttle.py`), NICHT nach Issue-Nummer (`test_issue_1234.py`). Nach dem Fix wird der Repro-Test in die passende Modul-Suite überführt oder gelöscht — der Issue-Nummern-Korpus (Bestand: 262 Dateien) wächst nicht weiter. Bestandssanierung: #1196.
+**Namensregel (neu):** Testdateien nach Verhalten benennen (`test_alert_throttle.py`), NICHT nach Issue-Nummer (`test_issue_1234.py`). Nach dem Fix wird der Repro-Test in die passende Modul-Suite überführt oder gelöscht — der Issue-Nummern-Korpus (Bestand: 262 Dateien) wächst nicht weiter. Bestandssanierung: #1196. **Hart durchgesetzt** via `test_naming_gate.py` (blockt neue issue-nummerierte Testdateien; Prüfdatum 2026-10-09).
 
 ## Nebenbefund-Triage (PO-go 2026-07-09, ersetzt „immer Folge-Issue")
 
