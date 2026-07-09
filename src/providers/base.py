@@ -79,6 +79,16 @@ class ProviderNotFoundError(ProviderError):
         super().__init__(name, f"Provider not found: {name}")
 
 
+class ProviderNotImplementedError(ProviderError):
+    """Raised by stub direct providers (Issue #1141) that are registered but
+    not yet technically wired up. NOT a `ProviderRequestError` — this lets
+    callers distinguish "stub not implemented" from "direct provider failed".
+    """
+
+    def __init__(self, provider: str, message: str) -> None:
+        super().__init__(provider, message)
+
+
 class ProviderRequestError(ProviderError):
     """Raised when a provider request fails.
 
@@ -164,6 +174,14 @@ def _load_providers() -> None:
     try:
         from providers.brightsky import BrightSkyProvider
         register_provider("brightsky", BrightSkyProvider)
+    except ImportError:
+        pass
+
+    try:
+        from providers.regional_stubs import make_at_direct, make_de_direct, make_fr_direct
+        register_provider("at_direct", make_at_direct)
+        register_provider("de_direct", make_de_direct)
+        register_provider("fr_direct", make_fr_direct)
     except ImportError:
         pass
 

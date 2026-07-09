@@ -285,5 +285,8 @@ def render_plain(
     lines.append(f"Data: {segments[0].provider} ({model_name})")
     if segments[0].timeseries and segments[0].timeseries.meta.fallback_model:
         fb = segments[0].timeseries.meta
-        lines.append(f"Fallback {', '.join(fb.fallback_metrics)}: {fb.fallback_model}")
+        if fb.fallback_metrics:
+            lines.append(f"Fallback {', '.join(fb.fallback_metrics)}: {fb.fallback_model}")
+        else:
+            lines.append(f"Fallback: {fb.fallback_model}")
     return "\n".join(lines)

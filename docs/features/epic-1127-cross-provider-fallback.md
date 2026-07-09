@@ -1,6 +1,7 @@
 # Epic 1127: Infrastruktur-unabhängiger Provider-Fallback (Original-Dienste direkt)
 
-**Status:** Geplant (2026-07-08) — Epic-Schnitt zur Freigabe, noch keine Sub-Issues angelegt.
+**Status:** Slice 0 (#1141, Routing-Unterbau) implementiert (2026-07-09). AT/FR/DE (#1142-#1144)
+noch offen, s. Sub-Issues-Tabelle unten.
 **Baut auf:** #1115 (Intra-Open-Meteo-Modell-Fallback, live, ADR-0018). #1127 ist die **zweite
 Redundanz-Stufe**: greift nur, wenn Open-Meteo als Verteiler **komplett** ausfällt (nicht nur ein
 einzelner Modell-Kanal — das fängt #1115 bereits ab).
@@ -241,10 +242,25 @@ GeoSphere heimlich von Open-Meteo abhängig — das würde das Epic-Ziel unterla
 
 ## Sub-Issues (angelegt 2026-07-08, PO-freigegeben)
 
-| # | Slice | Reihenfolge |
-|---|---|---|
-| #1141 | Routing-Unterbau + Total-Ausfall-Erkennung (Slice 0) | 1 (Fundament) |
-| #1142 | GeoSphere-Direktfallback vervollständigen (Slice AT) | 2 |
-| #1143 | Météo-France direkt (Slice FR) — Portal-Zugang zuerst klären | 3 |
-| #1144 | DWD direkt (Slice DE) — Quellenentscheidung MOSMIX vs. ICON-D2 vorab | 4 |
-| #1145 | (Follow-up, unabhängig) Footer-Doppelpunkt-Artefakt aus #1115 | — |
+| # | Slice | Reihenfolge | Status |
+|---|---|---|---|
+| #1141 | Routing-Unterbau + Total-Ausfall-Erkennung (Slice 0) | 1 (Fundament) | ✅ implementiert (2026-07-09) |
+| #1142 | GeoSphere-Direktfallback vervollständigen (Slice AT) | 2 | offen |
+| #1143 | Météo-France direkt (Slice FR) — Portal-Zugang zuerst klären | 3 | offen |
+| #1144 | DWD direkt (Slice DE) — Quellenentscheidung MOSMIX vs. ICON-D2 vorab | 4 | offen |
+| #1145 | (Follow-up, unabhängig) Footer-Doppelpunkt-Artefakt aus #1115 | — | offen |
+
+### Slice 0 (#1141) — Implementierungsstand (2026-07-09)
+
+Liefert **nur den Unterbau** — echte Provider-Anbindungen folgen in #1142 (AT)/#1143 (FR)/#1144 (DE):
+
+- **NEU `src/providers/region_routing.py`:** `direct_provider_for(lat, lon)` — bewusst gewählte
+  Land/Alpen-Rechtecke für AT/DE/FR (Prüfreihenfolge AT→DE→FR), s. Offene Frage 3 oben.
+- **NEU `src/providers/regional_stubs.py`:** `RegionalStubProvider`, registriert als
+  `at_direct`/`de_direct`/`fr_direct`, wirft `ProviderNotImplementedError` (AC-5) — kein Crash,
+  solange die echten Provider aus #1142-#1144 fehlen.
+- **`src/providers/base.py`:** neue Exception `ProviderNotImplementedError`.
+- **`src/providers/openmeteo.py:864`:** Einhängepunkt im Total-Ausfall-Fall (alle Modelle inkl.
+  ECMWF erschöpft) — bestimmt die Region und ruft den Direkt-Provider auf; neuer
+  `fallback_reason="cross_provider_total_outage"` (AC-3), s. auch Offene Frage 3.
+- **`src/output/renderers/email/plain.py`:** Footer-Fix für leere `fallback_metrics` (AC-4).

@@ -867,6 +867,22 @@ class OpenMeteoProvider:
             break
 
         if response_data is None:
+            # Issue #1141: Open-Meteo als Verteiler komplett ausgefallen (alle
+            # Modelle inkl. ECMWF mit 5xx/Timeout). Cross-Provider-Weiche
+            # NACH dem #1115-Fallback (kein frueherer Eingriff moeglich).
+            from providers.region_routing import direct_provider_for
+            from providers.base import ProviderNotImplementedError, get_provider
+            direct_name = direct_provider_for(location.latitude, location.longitude)
+            if direct_name is not None:
+                try:
+                    ts = get_provider(direct_name).fetch_forecast(
+                        location, start, end, enrich_ensemble
+                    )
+                    ts.meta.fallback_reason = "cross_provider_total_outage"
+                    ts.meta.fallback_model = direct_name
+                    return ts
+                except ProviderNotImplementedError:
+                    pass  # Stub noch nicht angebunden → Original-Fehler (AC-5)
             # All covering models failed with 5xx/timeout → surface the last
             # error so the segment is marked has_error (unchanged behavior).
             raise last_error
