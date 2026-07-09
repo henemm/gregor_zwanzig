@@ -232,3 +232,28 @@ class TestFooterFallbackInfo:
 
         assert "fallback" in report.email_plain.lower()
         assert "icon_eu" in report.email_plain
+
+    def test_footer_empty_metrics_no_colon_artifact(self) -> None:
+        """#1145: empty fallback_metrics must not produce a ' : ' artifact."""
+        from output.renderers.trip_report import TripReportFormatter
+
+        seg = self._make_segment_data(fallback_model="icon_eu", fallback_metrics=[])
+        formatter = TripReportFormatter()
+        report = formatter.format_email([seg], "Test Trip", "morning")
+
+        for body in (report.email_html, report.email_plain):
+            assert "fallback" in body.lower()
+            assert "icon_eu" in body
+            assert " : " not in body
+            assert "Fallback :" not in body
+
+    def test_no_fallback_no_hint(self) -> None:
+        """Regelfall: without fallback_model no 'fallback' hint appears anywhere."""
+        from output.renderers.trip_report import TripReportFormatter
+
+        seg = self._make_segment_data(fallback_model=None)
+        formatter = TripReportFormatter()
+        report = formatter.format_email([seg], "Test Trip", "morning")
+
+        assert "fallback" not in report.email_html.lower()
+        assert "fallback" not in report.email_plain.lower()

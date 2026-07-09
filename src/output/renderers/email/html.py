@@ -429,6 +429,19 @@ def _render_footer(
         + '</div>'
     )
 
+    # #1153: Provider-Fallback-Hinweis spiegelt plain.py (ADR-0018 Nicht-Kaschieren).
+    fallback_row = ""
+    _meta = segments[0].timeseries.meta if segments[0].timeseries else None
+    if _meta and _meta.fallback_model:
+        if _meta.fallback_metrics:
+            _fb_text = f"Fallback {', '.join(_meta.fallback_metrics)}: {_meta.fallback_model}"
+        else:
+            _fb_text = f"Fallback: {_meta.fallback_model}"
+        fallback_row = (
+            f'<div style="font-family:{FONT_DATA};font-size:10px;color:#9a978d;'
+            f'margin-top:6px;">{_fb_text}</div>'
+        )
+
     extras = ""
     if legend_text:
         extras += (
@@ -442,6 +455,7 @@ def _render_footer(
         f'<div style="background:#1d1c1a;color:#9a978d;font-size:11px;'
         f'font-family:{FONT_DATA};padding:16px 28px 20px;">'
         + brand_row
+        + fallback_row
         + link_row
         + extras
         + "</div>"
