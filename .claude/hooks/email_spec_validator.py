@@ -77,8 +77,9 @@ def _write_validation_log(
         pass  # fail-soft — darf Validator nie abbrechen
 
 
-def fetch_latest_email() -> str:
-    """Fetch latest sent email HTML body."""
+def _fetch_latest_message():
+    """Gemeinsamer IMAP-Fetch: laedt die neueste Mail als geparstes
+    email.message.Message (Body UND Header aus derselben IMAP-Runde)."""
     sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
     from app.config import Settings
     settings = Settings()
@@ -104,16 +105,22 @@ def fetch_latest_email() -> str:
     _, msg_data = imap.fetch(all_ids[-1], '(RFC822)')
     msg = email.message_from_bytes(msg_data[0][1])
 
-    body = ''
-    for part in msg.walk():
-        if part.get_content_type() == 'text/html':
-            body = part.get_payload(decode=True).decode('utf-8')
-            break
-
     imap.close()
     imap.logout()
 
-    return body
+    return msg
+
+
+def _extract_html_body(msg) -> str:
+    for part in msg.walk():
+        if part.get_content_type() == 'text/html':
+            return part.get_payload(decode=True).decode('utf-8')
+    return ''
+
+
+def fetch_latest_email() -> str:
+    """Fetch latest sent email HTML body. Unveraenderter oeffentlicher Vertrag."""
+    return _extract_html_body(_fetch_latest_message())
 
 
 # Issue #1108: v2-Vertrag (render_compare_html, Issue #1110) hat kein
@@ -206,16 +213,30 @@ def _find_location_hour_table(body: str, location_name: str, occurrence: int = 0
     if occurrence >= len(matches):
         return None
     match = matches[occurrence]
-    table_match = re.search(r'<table[^>]*>(.*?)</table>', body[match.end():], re.DOTALL)
-    if not table_match:
-        return None
-    rows = _extract_rows_from_table_html(table_match.group(1))
-    if not rows:
-        return None
-    return rows[0], rows[1:]
+    # Issue #1150: Suche auf die aktuelle ORT-Sektion begrenzen. Die
+    # Stundentabelle eines Ortes steht VOR dem naechsten "ORT <Name>"-Kopf.
+    # Ohne diese Grenze wuerde eine fehlende Tabelle faelschlich die Tabelle
+    # des naechsten Ortes einsammeln -- ein fehlendes Vorkommen bliebe unerkannt
+    # (Erosion der Stundentabellen-Pflicht).
+    next_ort = re.search(r'>ORT</span>\s*<span[^>]*>', body[match.end():], re.DOTALL)
+    section_end = match.end() + next_ort.start() if next_ort else len(body)
+    # Issue #1150 (Fix-Runde 2, Adversary F001): Die Stundentabelle ueber ihr
+    # STABILES Merkmal identifizieren -- erste Zelle der Kopfzeile == "Zeit"
+    # (Renderer-Vertrag _render_hour_table, "Zeit" ist fest verdrahtete erste
+    # Spalte). "Erste <table> nach dem ORT-Kopf" ist unsicher: beim LETZTEN Ort
+    # fehlt der Vorwaerts-Bound (kein Folge-ORT-Kopf), section_end == len(body),
+    # und bei FEHLENDER Stundentabelle wuerde faelschlich die naechstbeste
+    # Tabelle (Legende/Abo-/App-Footer) eingesammelt -> falsche Fehlermeldung
+    # statt "nicht gefunden". Legende/Footer haben nie "Zeit" als erste Spalte.
+    section = body[match.end():section_end]
+    for table_match in re.finditer(r'<table[^>]*>(.*?)</table>', section, re.DOTALL):
+        rows = _extract_rows_from_table_html(table_match.group(1))
+        if rows and rows[0] and rows[0][0].strip() == "Zeit":
+            return rows[0], rows[1:]
+    return None
 
 
-def validate_structure(body: str) -> List[str]:
+def validate_structure(body: str, hourly_enabled: bool = True) -> List[str]:
     """Validate email structure against the v2-Vertrag (Issue #1108/#1110,
     Spalten-Konfigurierbarkeit #1106): Uebersichtstabelle (Warn-Zeile + >=1
     numerische Zeile), Stundentabellen fuer alle gelisteten Orte mit einer
@@ -239,57 +260,62 @@ def validate_structure(body: str) -> List[str]:
     if rows and not locations:
         errors.append("STRUKTUR: Keine Orte in der Uebersichtstabelle-Kopfzeile gefunden")
 
-    # Adversary F002: gleichnamige Orte einzeln pruefen (N-tes Vorkommen statt
-    # immer nur das erste) -- sonst wird eine defekte Stundentabelle des
-    # zweiten (oder n-ten) gleichnamigen Ortes nie erkannt.
-    occurrence_counts: dict = {}
-    # Adversary F001 (Fix-Runde 2, Issue #1106): eine Config gilt mail-weit
-    # fuer ALLE Orte (render_compare_html hat genau EIN hourly_metrics-Set
-    # fuer den gesamten Aufruf). Eine einzelne Stundentabelle, die fuer sich
-    # genommen eine gueltige Teilmenge-mit-Reihenfolge ist, aber von den
-    # Spalten der uebrigen Orte abweicht, ist trotzdem ein Fehler --
-    # Referenz-Spalten = die erste Stundentabelle ohne eigene Struktur-
-    # Verletzung.
-    reference_cols: list | None = None
-    reference_name: str | None = None
-    for name in locations:
-        occurrence = occurrence_counts.get(name, 0)
-        occurrence_counts[name] = occurrence + 1
-        table = _find_location_hour_table(body, name, occurrence)
-        if table is None:
-            errors.append(
-                f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) nicht gefunden"
-            )
-            continue
-        header_cols, _rows = table
-        # Issue #1106: Teilmengen-mit-Reihenfolge-Pruefung statt Exakt-Vergleich.
-        # Mindestspalten-Regel: "Zeit" muss erste Spalte sein UND es muss
-        # mindestens eine Wert-Spalte daneben existieren (sonst sinnlose Config).
-        if not header_cols or header_cols[0] != "Zeit" or len(header_cols) < 2:
-            errors.append(
-                f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) "
-                f"verletzt die Mindestspalten-Regel (Zeit + mind. 1 Wert-Spalte), "
-                f"Spalten {header_cols}"
-            )
-            continue
-        if [c for c in _HOUR_COLUMNS_V2 if c in header_cols] != header_cols:
-            errors.append(
-                f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) hat "
-                f"Spalten {header_cols}, erwartet eine gueltige Teilmenge (in Reihenfolge) von "
-                f"{_HOUR_COLUMNS_V2}"
-            )
-            continue
-        # Cross-Location-Konsistenz: erst hier pruefen, da nur individuell
-        # gueltige Spaltenlisten als Referenz bzw. Vergleichswert taugen.
-        if reference_cols is None:
-            reference_cols = header_cols
-            reference_name = name
-        elif header_cols != reference_cols:
-            errors.append(
-                f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) hat "
-                f"Spalten {header_cols}, weicht von der mail-weiten Spalten-Konfiguration "
-                f"{reference_cols} (Referenz-Ort '{reference_name}') ab"
-            )
+    # Issue #1107/#1150: bei abgeschalteter Stundenverlauf-Sektion entfaellt
+    # die gesamte Pflicht-Pruefung -- eine bewusst abgeschaltete Sektion darf
+    # weder Tabellen enthalten noch ist ihr Fehlen ein Fehler. Bei fehlendem
+    # Header (Default True) bleibt die Pruefung exakt so streng wie bisher.
+    if hourly_enabled:
+        # Adversary F002: gleichnamige Orte einzeln pruefen (N-tes Vorkommen statt
+        # immer nur das erste) -- sonst wird eine defekte Stundentabelle des
+        # zweiten (oder n-ten) gleichnamigen Ortes nie erkannt.
+        occurrence_counts: dict = {}
+        # Adversary F001 (Fix-Runde 2, Issue #1106): eine Config gilt mail-weit
+        # fuer ALLE Orte (render_compare_html hat genau EIN hourly_metrics-Set
+        # fuer den gesamten Aufruf). Eine einzelne Stundentabelle, die fuer sich
+        # genommen eine gueltige Teilmenge-mit-Reihenfolge ist, aber von den
+        # Spalten der uebrigen Orte abweicht, ist trotzdem ein Fehler --
+        # Referenz-Spalten = die erste Stundentabelle ohne eigene Struktur-
+        # Verletzung.
+        reference_cols: list | None = None
+        reference_name: str | None = None
+        for name in locations:
+            occurrence = occurrence_counts.get(name, 0)
+            occurrence_counts[name] = occurrence + 1
+            table = _find_location_hour_table(body, name, occurrence)
+            if table is None:
+                errors.append(
+                    f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) nicht gefunden"
+                )
+                continue
+            header_cols, _rows = table
+            # Issue #1106: Teilmengen-mit-Reihenfolge-Pruefung statt Exakt-Vergleich.
+            # Mindestspalten-Regel: "Zeit" muss erste Spalte sein UND es muss
+            # mindestens eine Wert-Spalte daneben existieren (sonst sinnlose Config).
+            if not header_cols or header_cols[0] != "Zeit" or len(header_cols) < 2:
+                errors.append(
+                    f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) "
+                    f"verletzt die Mindestspalten-Regel (Zeit + mind. 1 Wert-Spalte), "
+                    f"Spalten {header_cols}"
+                )
+                continue
+            if [c for c in _HOUR_COLUMNS_V2 if c in header_cols] != header_cols:
+                errors.append(
+                    f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) hat "
+                    f"Spalten {header_cols}, erwartet eine gueltige Teilmenge (in Reihenfolge) von "
+                    f"{_HOUR_COLUMNS_V2}"
+                )
+                continue
+            # Cross-Location-Konsistenz: erst hier pruefen, da nur individuell
+            # gueltige Spaltenlisten als Referenz bzw. Vergleichswert taugen.
+            if reference_cols is None:
+                reference_cols = header_cols
+                reference_name = name
+            elif header_cols != reference_cols:
+                errors.append(
+                    f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) hat "
+                    f"Spalten {header_cols}, weicht von der mail-weiten Spalten-Konfiguration "
+                    f"{reference_cols} (Referenz-Ort '{reference_name}') ab"
+                )
 
     score_match = _SCORE_WINNER_RE.search(body)
     if score_match:
@@ -408,14 +434,19 @@ def validate_hourly_table(body: str, time_start: int = 9, time_end: int = 16) ->
 def run_validation(min_locations: int = 3) -> Tuple[bool, List[str]]:
     """Run all validations and return (success, errors)."""
     try:
-        body = fetch_latest_email()
+        msg = _fetch_latest_message()
     except Exception as e:
         return False, [f"FEHLER: E-Mail konnte nicht geladen werden: {e}"]
+
+    body = _extract_html_body(msg)
+    # Fehlender Header (Alt-Mails vor diesem Feature) oder Wert != "false"
+    # => True (bisheriges strenges Verhalten bleibt der sichere Default).
+    hourly_enabled = msg.get("X-GZ-Compare-Hourly-Enabled") != "false"
 
     all_errors = []
 
     # Run all validators
-    all_errors.extend(validate_structure(body))
+    all_errors.extend(validate_structure(body, hourly_enabled=hourly_enabled))
     all_errors.extend(validate_location_count(body, min_locations))
     all_errors.extend(validate_plausibility(body))
     all_errors.extend(validate_format(body))
