@@ -25,7 +25,11 @@ from output.renderers.email.compare_html import sort_locations_alphabetically
 from src.output.renderers.alert.official_alerts import render_official_alerts_plain
 
 
-def render_comparison_text(result: ComparisonResult, profile: Optional[ActivityProfile] = None) -> str:
+def render_comparison_text(
+    result: ComparisonResult,
+    profile: Optional[ActivityProfile] = None,
+    enabled_metrics: set | None = None,
+) -> str:
     """
     Render ComparisonResult als Klartext (v2, Issue #1110).
 
@@ -39,6 +43,13 @@ def render_comparison_text(result: ComparisonResult, profile: Optional[ActivityP
         profile: Optional ActivityProfile (aktuell ohne Einfluss auf den
             Klartext-Inhalt, akzeptiert fuer API-Konsistenz mit
             ``render_compare_html``).
+        enabled_metrics: Issue #1125. Filtert die sechs Uebersichts-Zeilen
+            je Ort auf die enthaltenen Renderer-Metrik-IDs (z.B.
+            "temp_max", "wind_max"). ``None`` = kein Filter (alle Zeilen,
+            Rueckwaertskompatibilitaet). Spiegelt exakt die Semantik von
+            ``_visible_metrics()`` im HTML-Pfad
+            (``output.renderers.email.compare_html``). Amtliche Warnungen
+            bleiben davon unabhaengig immer sichtbar.
 
     Returns:
         Klartext-String fuer die E-Mail.
@@ -71,18 +82,27 @@ def render_comparison_text(result: ComparisonResult, profile: Optional[ActivityP
             lines.append("")
             continue
 
-        temp_max = loc_result.temp_max
-        lines.append(f"   Temp max: {temp_max:.0f}°C" if temp_max is not None else "   Temp max: -")
-        wind_max = loc_result.wind_max
-        lines.append(f"   Wind: {wind_max:.0f} km/h" if wind_max is not None else "   Wind: -")
-        sunny_h = loc_result.sunny_hours
-        lines.append(f"   Sonne: {sunny_h}h" if sunny_h is not None else "   Sonne: -")
-        cloud = loc_result.cloud_avg
-        lines.append(f"   Wolken: {cloud}%" if cloud is not None else "   Wolken: -")
-        snow_depth = loc_result.snow_depth_cm
-        lines.append(f"   Schneehöhe: {snow_depth:.0f} cm" if snow_depth is not None else "   Schneehöhe: -")
-        snow_new = loc_result.snow_new_cm
-        lines.append(f"   Neuschnee: {snow_new:.0f} cm" if snow_new is not None else "   Neuschnee: -")
+        def _metric_visible(metric_id: str) -> bool:
+            return enabled_metrics is None or metric_id in enabled_metrics
+
+        if _metric_visible("temp_max"):
+            temp_max = loc_result.temp_max
+            lines.append(f"   Temp max: {temp_max:.0f}°C" if temp_max is not None else "   Temp max: -")
+        if _metric_visible("wind_max"):
+            wind_max = loc_result.wind_max
+            lines.append(f"   Wind: {wind_max:.0f} km/h" if wind_max is not None else "   Wind: -")
+        if _metric_visible("sunny_hours"):
+            sunny_h = loc_result.sunny_hours
+            lines.append(f"   Sonne: {sunny_h}h" if sunny_h is not None else "   Sonne: -")
+        if _metric_visible("cloud_avg"):
+            cloud = loc_result.cloud_avg
+            lines.append(f"   Wolken: {cloud}%" if cloud is not None else "   Wolken: -")
+        if _metric_visible("snow_depth_cm"):
+            snow_depth = loc_result.snow_depth_cm
+            lines.append(f"   Schneehöhe: {snow_depth:.0f} cm" if snow_depth is not None else "   Schneehöhe: -")
+        if _metric_visible("snow_new_cm"):
+            snow_new = loc_result.snow_new_cm
+            lines.append(f"   Neuschnee: {snow_new:.0f} cm" if snow_new is not None else "   Neuschnee: -")
 
         # Amtliche Warnungen, eine Zeile pro Warnung (Epic #1073 Punkt 6,
         # gemeinsamer Renderer statt Copy-Paste).
@@ -156,5 +176,5 @@ def render_compare_email(
         preset_schedule=preset_schedule,
         preset_weekday=preset_weekday,
     )
-    text_body = render_comparison_text(result, profile=profile)
+    text_body = render_comparison_text(result, profile=profile, enabled_metrics=enabled_metrics)
     return html_body, text_body
