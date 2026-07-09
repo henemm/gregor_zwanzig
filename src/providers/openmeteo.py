@@ -871,7 +871,9 @@ class OpenMeteoProvider:
             # Modelle inkl. ECMWF mit 5xx/Timeout). Cross-Provider-Weiche
             # NACH dem #1115-Fallback (kein frueherer Eingriff moeglich).
             from providers.region_routing import direct_provider_for
-            from providers.base import ProviderNotImplementedError, get_provider
+            from providers.base import (
+                ProviderNotFoundError, ProviderNotImplementedError, get_provider,
+            )
             direct_name = direct_provider_for(location.latitude, location.longitude)
             if direct_name is not None:
                 try:
@@ -881,8 +883,9 @@ class OpenMeteoProvider:
                     ts.meta.fallback_reason = "cross_provider_total_outage"
                     ts.meta.fallback_model = direct_name
                     return ts
-                except ProviderNotImplementedError:
-                    pass  # Stub noch nicht angebunden → Original-Fehler (AC-5)
+                except (ProviderNotImplementedError, ProviderRequestError, ProviderNotFoundError):
+                    pass  # Stub noch nicht angebunden ODER Direktprovider
+                          # selbst fehlgeschlagen -> Original-Fehler (#1142 AC-4/F001)
             # All covering models failed with 5xx/timeout → surface the last
             # error so the segment is marked has_error (unchanged behavior).
             raise last_error

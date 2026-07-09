@@ -109,9 +109,11 @@ GeoSphere heimlich von Open-Meteo abhängig — das würde das Epic-Ziel unterla
 | DE | „DWD direkt für Deutschland-Totalausfall" | Neue DWD-Forecast-Quelle (MOSMIX oder ICON-D2 Open Data), Parser für Rohformat, Coverage-Bounds DE, Anschluss an Slice-0-Registry | Slice 0; Quellenentscheidung MOSMIX vs. ICON-D2-OpenData (siehe Offene Fragen) | größte Unbekannte — ggf. eigener Mini-Spike vor Spec |
 | AT | „GeoSphere-Direktfallback vervollständigen (AT/Alpen)" | Coverage-Bounds für GeoSphere ergänzen, `include_cloud_layers=False` im Fallback-Modus (keine versteckte Open-Meteo-Abhängigkeit), Anschluss an Slice-0-Registry | Slice 0 | kleinster Slice — Anbindung existiert bereits |
 
-**Reihenfolge-Empfehlung:** 0 → AT → FR → DE.
-- **AT vor FR/DE**, weil die Direktanbindung dort bereits existiert (kleinstes Risiko, beweist die
-  Slice-0-Registry end-to-end mit echten Daten, keine Blocker durch API-Zugriffsfragen).
+**Reihenfolge-Empfehlung:** 0 → AT ✅ → FR → DE.
+- **AT vor FR/DE** ✅ **erledigt (2026-07-09)**, weil die Direktanbindung dort bereits existiert (kleinstes Risiko,
+  beweist die Slice-0-Registry end-to-end mit echten Daten, keine Blocker durch API-Zugriffsfragen).
+  **Empirischer Befund:** GeoSphere-Coverage umschließt die AT-Router-Box vollständig
+  — Box-Schärfung (ursprüngliches AC-2) war nicht nötig.
 - **FR vor DE**, weil der Météo-France-Schlüssel bereits existiert (kein neuer Registrierungs-Weg
   nötig) — auch wenn das NWP-Produkt-Scope noch zu klären ist, ist der Startpunkt (Account
   vorhanden) besser als DE, wo noch nicht einmal die Quellenart (MOSMIX vs. ICON-D2 Open Data)
@@ -245,22 +247,39 @@ GeoSphere heimlich von Open-Meteo abhängig — das würde das Epic-Ziel unterla
 | # | Slice | Reihenfolge | Status |
 |---|---|---|---|
 | #1141 | Routing-Unterbau + Total-Ausfall-Erkennung (Slice 0) | 1 (Fundament) | ✅ implementiert (2026-07-09) |
-| #1142 | GeoSphere-Direktfallback vervollständigen (Slice AT) | 2 | offen |
+| #1142 | GeoSphere-Direktfallback vervollständigen (Slice AT) | 2 | ✅ implementiert (2026-07-09) |
 | #1143 | Météo-France direkt (Slice FR) — Portal-Zugang zuerst klären | 3 | offen |
 | #1144 | DWD direkt (Slice DE) — Quellenentscheidung MOSMIX vs. ICON-D2 vorab | 4 | offen |
 | #1145 | (Follow-up, unabhängig) Footer-Doppelpunkt-Artefakt aus #1115 | — | offen |
 
 ### Slice 0 (#1141) — Implementierungsstand (2026-07-09)
 
-Liefert **nur den Unterbau** — echte Provider-Anbindungen folgen in #1142 (AT)/#1143 (FR)/#1144 (DE):
+Liefert **nur den Unterbau** — echte Provider-Anbindungen folgen in #1142 (AT) ✅/#1143 (FR)/#1144 (DE):
 
 - **NEU `src/providers/region_routing.py`:** `direct_provider_for(lat, lon)` — bewusst gewählte
   Land/Alpen-Rechtecke für AT/DE/FR (Prüfreihenfolge AT→DE→FR), s. Offene Frage 3 oben.
 - **NEU `src/providers/regional_stubs.py`:** `RegionalStubProvider`, registriert als
-  `at_direct`/`de_direct`/`fr_direct`, wirft `ProviderNotImplementedError` (AC-5) — kein Crash,
-  solange die echten Provider aus #1142-#1144 fehlen.
+  `de_direct`/`fr_direct`, wirft `ProviderNotImplementedError` (AC-5) — `at_direct` durch
+  `GeoSphereDirectProvider` ersetzt (siehe #1142).
 - **`src/providers/base.py`:** neue Exception `ProviderNotImplementedError`.
 - **`src/providers/openmeteo.py:864`:** Einhängepunkt im Total-Ausfall-Fall (alle Modelle inkl.
   ECMWF erschöpft) — bestimmt die Region und ruft den Direkt-Provider auf; neuer
   `fallback_reason="cross_provider_total_outage"` (AC-3), s. auch Offene Frage 3.
 - **`src/output/renderers/email/plain.py`:** Footer-Fix für leere `fallback_metrics` (AC-4).
+
+### Slice AT (#1142) — Implementierungsstand (2026-07-09)
+
+**Status: ✅ Implementiert**
+
+- **`src/providers/regional_stubs.py`:** `GeoSphereDirectProvider` (alias `at_direct`) — dünner
+  Adapter, delegiert an `GeoSphereProvider.fetch_combined(include_cloud_layers=False)` zur
+  Elimination der versteckten Open-Meteo-Abhängigkeit im Ausfallmodus (AC-4).
+- **`src/providers/base.py`:** Registry-Umhängung `at_direct` → `GeoSphereDirectProvider`.
+- **`src/providers/openmeteo.py`:** Seam erweitert — fängt jetzt zusätzlich
+  `ProviderRequestError`/`ProviderNotFoundError` zum eleganten Auslösen des Fallback-Pfads
+  (F001-Fix aus #1141).
+- **`de_direct`/`fr_direct`:** bleiben Stubs, Folge-Slices #1143/#1144 implementieren echte
+  Direktprovider.
+- **Empirischer Coverage-Befund:** GeoSphere-AROME-Domäne deckt AT-Router-Box vollständig ab
+  — ursprüngliches AC-2 (Box-Schärfung bei Außenkoordinaten) entfiel, `direct_provider_for()`
+  Prüfreihenfolge AT→DE→FR genügt.
