@@ -40,13 +40,16 @@ def hooks_on_path():
             del sys.modules[mod_name]
 
 
-def test_get_active_workflow_name_returns_env_value(monkeypatch):
+def test_get_active_workflow_name_returns_env_value(monkeypatch, tmp_path):
     """(a-1) OPENSPEC_ACTIVE_WORKFLOW gesetzt → hook_utils liefert genau diesen Namen."""
     monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "fix-894-orphan-session-registry")
     # GZ_ACTIVE_WORKFLOW darf nicht stoeren
     monkeypatch.delenv("GZ_ACTIVE_WORKFLOW", raising=False)
     # CLAUDE_PROJECT_DIR wegleeren damit find_project_root kein echtes Repo findet
     monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+    # In leeres Verzeichnis wechseln, damit kein echter Worktree-Pointer/settings.local.json
+    # aus einer aktiven Session vor der Env-Var greift (Worktree-Env-Isolation, Issue #1061 AC-2)
+    monkeypatch.chdir(tmp_path)
 
     import hook_utils
     name = hook_utils.get_active_workflow_name()
@@ -62,6 +65,9 @@ def test_get_active_workflow_name_returns_empty_without_env(monkeypatch, tmp_pat
     monkeypatch.delenv("GZ_ACTIVE_WORKFLOW", raising=False)
     # CLAUDE_PROJECT_DIR auf leeres tmp_path setzen damit kein echtes Repo gefunden wird
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
+    # In leeres Verzeichnis wechseln, damit kein echter Worktree-Pointer/settings.local.json
+    # aus einer aktiven Session vor der Env-Var greift (Worktree-Env-Isolation, Issue #1061 AC-2)
+    monkeypatch.chdir(tmp_path)
 
     import hook_utils
     name = hook_utils.get_active_workflow_name()
@@ -71,7 +77,7 @@ def test_get_active_workflow_name_returns_empty_without_env(monkeypatch, tmp_pat
     )
 
 
-def test_renderer_mail_gate_uses_hook_utils_resolver(monkeypatch):
+def test_renderer_mail_gate_uses_hook_utils_resolver(monkeypatch, tmp_path):
     """(a-3) renderer_mail_gate delegiert die Namens-Aufloesung an hook_utils.
 
     Das Gate liest OPENSPEC_ACTIVE_WORKFLOW direkt ueber hook_utils.
@@ -81,6 +87,9 @@ def test_renderer_mail_gate_uses_hook_utils_resolver(monkeypatch):
     """
     monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "wf-test-894")
     monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+    # In leeres Verzeichnis wechseln, damit kein echter Worktree-Pointer/settings.local.json
+    # aus einer aktiven Session vor der Env-Var greift (Worktree-Env-Isolation, Issue #1061 AC-2)
+    monkeypatch.chdir(tmp_path)
 
     import hook_utils
     name = hook_utils.get_active_workflow_name()

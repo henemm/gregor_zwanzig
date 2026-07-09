@@ -144,7 +144,7 @@ mehr der Produktivpfad.
 aus `BOT_COMMANDS` gesetzt und verifiziert:
 
 - **Startup-Hook** (`api/main.py`, Lifespan): ruft `TelegramOutput.set_my_commands()` auf
-- **Quelle:** `BOT_COMMANDS` in `src/output/channels/telegram.py` (7 Befehle: glance, hg, dd, now, status, config, help)
+- **Quelle:** `BOT_COMMANDS` in `src/output/channels/telegram.py` (8 Befehle: glance, heute, morgen, now, heute_gewitter, timeline_heute, timeline_morgen, hilfe)
 - **Idempotent:** jeder Deploy/Restart stellt das Menü sicher
 - **Fail-soft:** fehlender Bot-Token blockt den Service-Start nicht
 - **Live-Verifikation (Post-Deploy):** Der Selftest prüft via `getMyCommands` gegen den Prod-Bot,

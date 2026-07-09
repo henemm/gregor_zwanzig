@@ -507,11 +507,14 @@ class TestAC6NoTrendLabels:
 
 
 # ===========================================================================
-# AC-7 (#899): Trend-Tage als Chips (pill_html), keine <tr>-Tabelle
+# AC-7 (#911): Trend-Tage als Tabelle (<table>/<tr> je Trend-Tag), Zellhintergrund
+# nach Warnlevel — PO hat das in #899 eingeführte Chip/Pill-Format wieder verworfen
+# und das Tabellenformat aus #911 final freigegeben.
 # ===========================================================================
 
-class TestAC7TrendAsChips:
-    """AC-7: Trend-Abschnitt enthält keine <tr>-Tabellenzeilen, sondern Chip-Spans."""
+class TestAC7TrendAsTable:
+    """AC-7: Ausblick-Trend rendert eine <table> mit einer <tr>-Zeile je Trend-Tag,
+    Zellhintergrund entspricht dem jeweiligen Warnlevel (_outlook_cell_bg/_THUNDER_LEVEL_BG)."""
 
     def _get_trend_section(self, html: str, trend_days: list[str]) -> str:
         """Extract the trend section by finding the last occurrence of a trend weekday.
@@ -520,12 +523,6 @@ class TestAC7TrendAsChips:
         We find the last occurrence of a weekday that's unique to the trend block
         (after all segment tables are rendered).
         """
-        # The trend section label (currently "Ausblick · nächste 4 Tage") precedes it
-        # Use the eyebrow that wraps the trend div
-        # Search for the outermost trend container
-        # After rendering, the trend block is: <div style="background:#fbfaf6;padding:24px 28px 16px;">
-        # followed by the eyebrow then the trend rows
-        # Find it by the unique trend container background+padding combo
         # Die Trend-Sektion endet, wo die nächste Sektion ("Antwort-Kommandos")
         # beginnt — sonst fängt das Fenster deren <tr>-Tabelle mit ein.
         def _clip(start: int, fallback_len: int) -> str:
@@ -534,7 +531,8 @@ class TestAC7TrendAsChips:
                 end = start + fallback_len
             return html[start:end]
 
-        pos = html.rfind('padding:24px 28px 16px')
+        # Aktueller Trend-Container-Header (fix #911): 'padding:24px 28px 20px;'
+        pos = html.rfind('padding:24px 28px 20px')
         if pos == -1:
             # Fallback: find the last weekday occurrence (trend section is near end)
             for day in trend_days:
@@ -544,40 +542,38 @@ class TestAC7TrendAsChips:
             return ""
         return _clip(pos, 4000)
 
-    def test_no_trend_table_rows(self):
-        """Trend-Abschnitt darf keine <tr>-Zeilen enthalten (alte Tabellen-Darstellung)."""
+    def test_trend_row_count_matches_stage_count(self):
+        """AC-7: Anzahl <tr>-Datenzeilen im Ausblick-Tabellenkörper entspricht der Anzahl Trend-Tage."""
         segs = _build_segments()
         trend = [
             _trend_stage("Mo", "Etappe A", conf=80),
             _trend_stage("Di", "Etappe B", conf=65),
+            _trend_stage("Mi", "Etappe C", conf=45),
         ]
         html = _render_html(segs, multi_day_trend=trend)
-        trend_section = self._get_trend_section(html, ["Mo", "Di"])
+        trend_section = self._get_trend_section(html, ["Mo", "Di", "Mi"])
         assert trend_section, "Trend-Abschnitt nicht im HTML gefunden"
-        # Current implementation uses <tr> in a table for each trend day
-        tr_count = trend_section.count("<tr>")
-        assert tr_count == 0, (
-            f"AC-7: Trend-Abschnitt enthält noch {tr_count} <tr>-Zeilen — "
-            f"kein Chip-Format implementiert"
+        tbody_match = re.search(r"<tbody>(.*?)</tbody>", trend_section, re.DOTALL)
+        assert tbody_match, "Kein <tbody> im Ausblick-Tabellenmarkup gefunden"
+        tr_count = tbody_match.group(1).count("<tr>")
+        assert tr_count == len(trend), (
+            f"AC-7: Erwartete {len(trend)} <tr>-Zeilen im Ausblick-Tabellenkörper, "
+            f"gefunden: {tr_count}"
         )
 
-    def test_trend_has_pill_spans(self):
-        """Trend-Zeilen als Chip-Spans (border:1px solid), keine Tabelle."""
+    def test_trend_cell_has_warnlevel_background(self):
+        """AC-7: Zelle mit gesetztem Gewitter-Warnlevel (HIGH) trägt den definierten Zellhintergrund."""
         segs = _build_segments()
-        trend = [
-            _trend_stage("Mo", "Etappe A", conf=80),
-            _trend_stage("Di", "Etappe B", conf=65),
-        ]
+        trend = [_trend_stage("Mo", "Etappe A", conf=80)]
+        trend[0]["thunder"] = "HIGH"
         html = _render_html(segs, multi_day_trend=trend)
-        trend_section = self._get_trend_section(html, ["Mo", "Di"])
+        trend_section = self._get_trend_section(html, ["Mo"])
         assert trend_section, "Trend-Abschnitt nicht gefunden"
-        # pill_html produces spans with border:1px solid
-        # Currently no chips → test FAILS (RED)
-        # After fix: chip spans with weekday labels appear
-        has_chip_span = bool(re.search(r'<span[^>]*border:1px solid[^>]*>', trend_section))
-        assert has_chip_span, (
-            "AC-7: Kein Chip-Span (border:1px solid) im Trend-Abschnitt — "
-            "pill_html-Format nicht implementiert"
+        tbody_match = re.search(r"<tbody>(.*?)</tbody>", trend_section, re.DOTALL)
+        assert tbody_match, "Kein <tbody> im Ausblick-Tabellenmarkup gefunden"
+        assert "background:#f6c5bf;" in tbody_match.group(1), (
+            "AC-7: Zelle mit Gewitter-Warnlevel HIGH muss den definierten "
+            "Zellhintergrund (_THUNDER_LEVEL_BG['HIGH']) tragen"
         )
 
 
