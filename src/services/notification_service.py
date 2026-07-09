@@ -314,10 +314,14 @@ class NotificationService:
         weather: list["SegmentWeatherData"],
         changes: list["WeatherChange"],
         effective_channels: set[str],
+        official_notices: Optional[list] = None,
+        mail_sink: Optional[object] = None,
     ) -> NotificationResult:
         """Wetter-Änderungs-Alert: rendern und über konfigurierte Kanäle versenden.
 
         Issue #1023: Der AlertService kennt keine Renderer-/Transport-Details mehr.
+        Issue #1088: optionale amtliche Warnungen werden in dieselbe Nachricht
+        gebündelt (kein zweiter Versand).
         """
         from utils.timezone import tz_for_coords
 
@@ -333,9 +337,55 @@ class NotificationService:
             alert_msg=alert_msg,
             effective_channels=effective_channels,
             mail_type="deviation-alert",
+            mail_sink=mail_sink,
             target_name=trip.name,
             radar_mode=False,
+            official_notices=official_notices,
         )
+
+    def send_official_alert(
+        self,
+        trip: "Trip",
+        notices: list,
+        effective_channels: set[str],
+        mail_sink: Optional[object] = None,
+    ) -> NotificationResult:
+        """Standalone amtlicher Alert ohne Wetter-Delta (Issue #1088).
+
+        Kein AlertEvent/AlertMessage — baut Subject/Body direkt aus
+        render_official_alerts_plain(). SMS bewusst ohne Zusatztext
+        (Nicht-Parität, analog Slice-3-AC-6).
+        """
+        from output.renderers.alert.official_alerts import render_official_alerts_plain
+
+        entries = [(a.region_label, [a]) for a in notices]
+        plain = "\n".join(render_official_alerts_plain(entries))
+        subject = f"[{trip.name}] Amtliche Warnung"
+
+        sent_channels: list[str] = []
+
+        if "email" in effective_channels and self._settings.can_send_email():
+            sent_channels.append("email")
+            try:
+                if mail_sink is not None:
+                    mail_sink(subject=subject, body=plain)
+                else:
+                    EmailOutput(self._settings).send(
+                        subject=subject, body=plain, html=False, mail_type="official-alert",
+                    )
+            except Exception as e:
+                logger.error(f"Official alert email failed for {trip.name}: {e}")
+
+        if "telegram" in effective_channels and self._settings.can_send_telegram():
+            sent_channels.append("telegram")
+            try:
+                TelegramOutput(self._settings).send(
+                    subject=subject, body=plain, suppress_subject_line=True,
+                )
+            except Exception as e:
+                logger.error(f"Official alert telegram failed for {trip.name}: {e}")
+
+        return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
 
     def send_radar_alert(
         self,
@@ -384,12 +434,32 @@ class NotificationService:
         mail_sink: Optional[object] = None,
         target_name: str = "",
         radar_mode: bool = False,
+        official_notices: Optional[list] = None,
     ) -> NotificationResult:
-        """Versendet eine kanonische AlertMessage über die konfigurierten Kanäle."""
+        """Versendet eine kanonische AlertMessage über die konfigurierten Kanäle.
+
+        Issue #1088: liegen `official_notices` vor, wird ein Text-Block an
+        html/plain/telegram_body angehängt — SMS bewusst OHNE Zusatz
+        (Nicht-Parität, analog Slice-3-AC-6).
+        """
         subject = render_alert_subject(alert_msg)
         html, plain = render_alert_email(alert_msg)
         telegram_body = render_alert_telegram(alert_msg)
         sms_body = render_alert_sms(alert_msg)
+
+        if official_notices:
+            import html as _html_mod
+
+            from output.renderers.alert.official_alerts import render_official_alerts_plain
+
+            entries = [(a.region_label, [a]) for a in official_notices]
+            extra_lines = render_official_alerts_plain(entries)
+            extra_text = "\n".join(f"⚠️ {line}" for line in extra_lines)
+            plain += "\n\n" + extra_text
+            html = html.replace(
+                "</body></html>", f"<p>{_html_mod.escape(extra_text)}</p></body></html>",
+            )
+            telegram_body += "\n\n" + extra_text
 
         sent_channels: list[str] = []
 

@@ -1,7 +1,7 @@
 # Epic 1073: Amtliche Warnungen für Österreich & Italien + querschnittliche Nutzung
 
-**Status:** Geplant (2026-07-07); Slice 1 (#1085) und Slice 3 (#1087) implementiert (siehe Slice-Tabelle).
-Baut direkt auf Epic #1033 (amtliche Alerts Frankreich) auf.
+**Status:** Geplant (2026-07-07); Slice 1 (#1085), Slice 3 (#1087) und Slice 4 (#1088)
+implementiert (siehe Slice-Tabelle). Baut direkt auf Epic #1033 (amtliche Alerts Frankreich) auf.
 **Priorität:** hoch.
 
 ## Ausgangslage
@@ -48,7 +48,7 @@ vermeiden Betriebskomplexität.
 | 1 | #1085 | **GeoSphere-Warn-Quelle (AT)** — neue `OfficialAlertSource`, auth-frei, koordinatenbasiert; erscheint sofort im Orts-Vergleich — **implementiert 2026-07-08** | 1, 4 (AT) | #1033 |
 | 2 | #1086 | **MeteoAlarm-Quelle (AT+IT)** — REST/GeoJSON via MeteoGate, deckt Italien + EU | 1, 4 (IT) | #1033 + MeteoGate-Reg. |
 | 3 | #1087 | **Warnungen in Trip-Briefings + Trip-Ein-/Ausschalter** (analog #1040 ComparePreset→Trip) — querschnittliche Nutzung — **implementiert 2026-07-07** | 2, 6 | Slice 1/2 |
-| 4 | #1088 | **Warnungen im Alert-Pfad** (trip_alert / radar_alert) | 3 | Slice 3 |
+| 4 | #1088 | **Warnungen im Alert-Pfad** (trip_alert; radar_alert bewusst ausgeklammert, s. Known Limitations) — **implementiert 2026-07-08** | 3 | Slice 3 |
 | 5 | #1089 | **Region-optimale Nowcasts** (AT=GeoSphere INCA, IT=Radar-DPC) für Gefahren/Regen/Gewitter | 5 | eigenes Subsystem |
 
 **Reihenfolge-Empfehlung:** Slice 1 zuerst (auth-frei, schneller AT-Nutzen, beweist Länder-
@@ -87,6 +87,28 @@ Trip-Briefing-Mails verfügbar:
   bewusst ohne Warn-Block (160-Zeichen-Limit).
 - Spec: `docs/specs/modules/epic_1073_trip_official_alerts.md`.
 
+### Slice 4: Amtliche Warnungen als eigenständiger Alert-Trigger (Issue #1088) — implementiert 2026-07-08
+
+Amtliche Warnungen (Slice 3, #1087) lösen jetzt zusätzlich einen eigenständigen Sofort-Alert
+aus — unabhängig davon, ob das Wetter selbst stabil ist bzw. ob überhaupt aktive
+Wetter-Delta-Alert-Regeln konfiguriert sind:
+
+- **Detektion:** `TripAlertService.check_official_alert_triggers()`
+  (`src/services/trip_alert.py`) vergleicht die aktuellen Warnungen pro Trip gegen den
+  zuletzt gemeldeten Stand in `alert_state.py` (Key `official_alert:<region_label>:<hazard>`,
+  `level`-Vergleich) — neu oder gestiegen = Trigger, fail-soft pro Quelle.
+- **Eigener Toggle:** `Trip.official_alert_triggers_enabled` — strukturell getrennt von der
+  Slice-3-Briefing-Anzeige-Checkbox `official_alerts_enabled`. Zwei unabhängige Checkboxen im
+  Alerts-Tab (`AlertsTab.svelte`).
+- **Bündelung:** Feuert im selben Zyklus zusätzlich ein Wetter-Delta-Alert, wird die amtliche
+  Warnung in derselben Nachricht angehängt (kein Doppel-Versand); ohne Wetter-Delta erfolgt ein
+  eigenständiger Versand über `NotificationService.send_official_alert()`.
+- **Kanal-Parität:** E-Mail und Telegram erhalten den Zusatztext, SMS bewusst nicht
+  (Zeichenlimit, analog Slice-3-AC-6-Präzedenzfall).
+- **Full-Stack-Toggle:** Go-Pendant `internal/model/trip.go::OfficialAlertTriggersEnabled` +
+  RMW-Merge in `internal/handler/trip.go`, analog `OfficialAlertsEnabled` (#1087).
+- Spec: `docs/specs/modules/issue_1088_alert_official_warnings.md`.
+
 ## Betreiber-Voraussetzung (kein Code)
 
 MeteoGate/MeteoAlarm-Account registrieren (für Slice 2) — analog zum Météo-France-Portal-Account
@@ -107,3 +129,4 @@ MeteoGate/MeteoAlarm-Account registrieren (für Slice 2) — analog zum Météo-
 | 2026-07-07 | Slice 3 (#1087) implementiert: gemeinsame Warn-Render-Komponente `src/output/renderers/alert/official_alerts.py` (Compare + Trip), Trip-Fetch in `trip_report_scheduler.py`, Toggle `official_alerts_enabled` (Pointer-Muster, Default `true`). |
 | 2026-07-08 | Slice 1 (#1085) implementiert: `GeoSphereWarnSource` (AT) — erste Nicht-FR-Quelle im Registry, auth-frei, koordinatenbasiert, `warnstufeid`→`level`-Mapping, Cache pro Koordinate. |
 | 2026-07-08 | Dokumentation aktualisiert: Trip-Toggle „Amtliche Warnungen" ist zusätzlich im Tab „Inhalt" konfigurierbar (Issue #1117), nicht nur im Alerts-Tab. |
+| 2026-07-08 | Slice 4 (#1088) implementiert: amtliche Warnungen als eigenständiger Alert-Trigger, additiv zur Wetter-Delta-Logik, eigener Toggle `official_alert_triggers_enabled`, Bündelung bei gleichzeitigem Wetter-Delta-Alert; radar_alert-Anbindung bewusst zurückgestellt. |

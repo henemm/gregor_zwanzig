@@ -138,20 +138,21 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 // so optional configs are merged into the existing trip instead of being silently
 // dropped. See docs/specs/bugfix/update_trip_handler_merge.md (Issue #99).
 type tripUpdateRequest struct {
-	Name             *string                 `json:"name"`
-	Stages           *[]model.Stage          `json:"stages"`
-	AvalancheRegions *[]string               `json:"avalanche_regions,omitempty"`
-	Aggregation      *map[string]interface{} `json:"aggregation,omitempty"`
-	WeatherConfig    *map[string]interface{} `json:"weather_config,omitempty"`
-	DisplayConfig    *map[string]interface{} `json:"display_config,omitempty"`
-	ReportConfig     *map[string]interface{} `json:"report_config,omitempty"`
-	AlertRules              *[]model.AlertRule      `json:"alert_rules,omitempty"`
-	AlertCooldownMinutes    *int                    `json:"alert_cooldown_minutes,omitempty"`
-	AlertQuietFrom          *string                 `json:"alert_quiet_from,omitempty"`
-	AlertQuietTo            *string                 `json:"alert_quiet_to,omitempty"`
-	Region                  *string                 `json:"region,omitempty"`
-	Activity                *string                 `json:"activity,omitempty"`
-	OfficialAlertsEnabled   *bool                   `json:"official_alerts_enabled,omitempty"`
+	Name                         *string                 `json:"name"`
+	Stages                       *[]model.Stage          `json:"stages"`
+	AvalancheRegions             *[]string               `json:"avalanche_regions,omitempty"`
+	Aggregation                  *map[string]interface{} `json:"aggregation,omitempty"`
+	WeatherConfig                *map[string]interface{} `json:"weather_config,omitempty"`
+	DisplayConfig                *map[string]interface{} `json:"display_config,omitempty"`
+	ReportConfig                 *map[string]interface{} `json:"report_config,omitempty"`
+	AlertRules                   *[]model.AlertRule      `json:"alert_rules,omitempty"`
+	AlertCooldownMinutes         *int                    `json:"alert_cooldown_minutes,omitempty"`
+	AlertQuietFrom               *string                 `json:"alert_quiet_from,omitempty"`
+	AlertQuietTo                 *string                 `json:"alert_quiet_to,omitempty"`
+	Region                       *string                 `json:"region,omitempty"`
+	Activity                     *string                 `json:"activity,omitempty"`
+	OfficialAlertsEnabled        *bool                   `json:"official_alerts_enabled,omitempty"`
+	OfficialAlertTriggersEnabled *bool                   `json:"official_alert_triggers_enabled,omitempty"`
 }
 
 func UpdateTripHandler(s *store.Store) http.HandlerFunc {
@@ -249,6 +250,10 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		// bestehender Wert (auch explizit false) bleibt erhalten.
 		if req.OfficialAlertsEnabled != nil {
 			existing.OfficialAlertsEnabled = req.OfficialAlertsEnabled
+		}
+		// Issue #1088 — gleiches RMW-Merge-Muster wie OfficialAlertsEnabled.
+		if req.OfficialAlertTriggersEnabled != nil {
+			existing.OfficialAlertTriggersEnabled = req.OfficialAlertTriggersEnabled
 		}
 		existing.ID = id
 

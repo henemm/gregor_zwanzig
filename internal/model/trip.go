@@ -107,6 +107,10 @@ type Trip struct {
 	// nil = Feld fehlte (Altdaten/Default aktiv), false = strukturell kein
 	// Fetch amtlicher Warnungen fuer diesen Trip.
 	OfficialAlertsEnabled *bool `json:"official_alerts_enabled,omitempty"`
+	// OfficialAlertTriggersEnabled — Issue #1088, gleiches Pointer-Muster wie
+	// OfficialAlertsEnabled: nil/true = eigenstaendiger Sofort-Alert-Trigger
+	// bei amtlichen Warnungen aktiv, false = kein Sofort-Alert-Trigger.
+	OfficialAlertTriggersEnabled *bool `json:"official_alert_triggers_enabled,omitempty"`
 }
 
 // AlertableMetrics are metrics that can receive an alert rule (delta-based since #817).

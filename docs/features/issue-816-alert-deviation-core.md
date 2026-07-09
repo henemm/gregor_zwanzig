@@ -174,6 +174,16 @@ _send_briefing_report(trip, ...)
   AlertStateService.reset(trip_id)  ← NEU
 ```
 
+**Additiver amtlicher Trigger (Issue #1088, Epic #1073 Slice 4):** `check_all_trips()` ruft pro
+Trip zusätzlich `check_official_alert_triggers()` auf (neue/gestiegene amtliche Warnungen,
+Toggle `Trip.official_alert_triggers_enabled`, strukturell getrennt von diesem
+Wetter-Delta-Mechanismus). Feuert im selben Zyklus ein Wetter-Delta-Alert, wird die amtliche
+Warnung als Text-Zusatz in dieselbe Nachricht gebündelt (`_send_alert(..., official_notices=...)`);
+ohne Wetter-Delta erfolgt ein eigenständiger Versand über
+`NotificationService.send_official_alert()`. SMS bleibt ohne Zusatztext (Zeichenlimit). Details:
+`docs/features/epic-1073-alerts-at-it.md` (Slice 4), Spec
+`docs/specs/modules/issue_1088_alert_official_warnings.md`.
+
 ---
 
 ## Mandantentrennung
@@ -202,3 +212,4 @@ _send_briefing_report(trip, ...)
 ## Changelog
 
 - **2026-06-14:** v1.0 Release — Alert-Deviation-Kern LIVE. Snapshot read-only, alert_state Melde-Gedächtnis, knapper Render-Pfad.
+- **2026-07-08:** `check_all_trips()` um additiven amtlichen Alert-Trigger erweitert (Issue #1088, Epic #1073 Slice 4) — siehe Datenfluss-Abschnitt.

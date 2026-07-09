@@ -596,6 +596,7 @@ type Trip struct {
     PausedAt                *time.Time             `json:"paused_at,omitempty"`
     ArchivedAt              *time.Time             `json:"archived_at,omitempty"`
     OfficialAlertsEnabled   *bool                  `json:"official_alerts_enabled,omitempty"` // Issue #1087, Pointer-Muster analog ComparePreset (#1040): nil = Default true; false = kein Fetch amtlicher Warnungen für diesen Trip
+    OfficialAlertTriggersEnabled *bool             `json:"official_alert_triggers_enabled,omitempty"` // Issue #1088, strukturell getrennt von OfficialAlertsEnabled: nil = Default true; false = amtliche Warnungen lösen keinen eigenständigen Sofort-Alert aus (Briefing-Anzeige bleibt unberührt)
 }
 ```
 

@@ -199,6 +199,7 @@ class Trip:
     archived_at: Optional[str] = None  # Issue #805: Go-Feld archived_at (ISO-String) — roundtrip-erhalten
     paused_at: Optional[str] = None  # Issue #995: Go-Feld paused_at (ISO-String) — Trip-Detail-Pause, roundtrip-erhalten
     official_alerts_enabled: Optional[bool] = None  # Issue #1087: None/True=aktiv, False=strukturell kein Fetch
+    official_alert_triggers_enabled: Optional[bool] = None  # Issue #1088: None/True=aktiv, False=kein Sofort-Alert-Trigger
     extra: Dict[str, Any] = field(default_factory=dict)  # #991: unmodellierte Top-Level-Keys, roundtrip-erhalten
 
     @property

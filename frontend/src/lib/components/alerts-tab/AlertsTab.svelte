@@ -47,6 +47,10 @@
 	let quietTo = $state<string | undefined>(trip.alert_quiet_to ?? undefined);
 	// Issue #1087: Trip-Toggle amtliche Warnungen, Default aktiv (Pointer-Muster analog #1040).
 	let officialAlertsEnabled = $state<boolean>(trip.official_alerts_enabled ?? true);
+	// Issue #1088: strukturell getrennter Toggle fuer den amtlichen Sofort-Alert-Trigger.
+	let officialAlertTriggersEnabled = $state<boolean>(
+		trip.official_alert_triggers_enabled ?? true,
+	);
 
 	// Nur aktiv gewählte alertable Metriken anzeigen (AC-1)
 	let displayMetrics = $derived(activeAlertableMetrics(trip.display_config?.metrics));
@@ -102,6 +106,25 @@
 			saveController?.schedule(buildOfficialAlertsSaveFn());
 		};
 	}
+
+	// Issue #1088: eigener, strukturell getrennter Auto-Save-Pfad — unabhaengig
+	// von officialAlertsEnabled (Briefing-Anzeige, Slice 3) speicherbar.
+	function buildOfficialAlertTriggersSaveFn() {
+		const enabled = officialAlertTriggersEnabled;
+		return async () => {
+			const updated = await api.put<Trip>(`/api/trips/${trip.id}`, {
+				official_alert_triggers_enabled: enabled,
+			});
+			onTripUpdate?.(updated);
+		};
+	}
+
+	function makeOfficialAlertTriggersToggleHandler() {
+		return (checked: boolean) => {
+			officialAlertTriggersEnabled = checked;
+			saveController?.schedule(buildOfficialAlertTriggersSaveFn());
+		};
+	}
 </script>
 
 <div class="alerts-tab" data-testid="alerts-tab">
@@ -137,6 +160,13 @@
 		checked={officialAlertsEnabled}
 		onchange={makeOfficialAlertsToggleHandler()}
 		testid="alerts-tab-official-alerts-toggle"
+	/>
+
+	<ChannelToggle
+		label="Amtliche Warnungen lösen Alert aus"
+		checked={officialAlertTriggersEnabled}
+		onchange={makeOfficialAlertTriggersToggleHandler()}
+		testid="alerts-tab-official-alert-triggers-toggle"
 	/>
 
 	<AlertPreviewCard {trip} {alertRules} />

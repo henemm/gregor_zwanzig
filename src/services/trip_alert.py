@@ -87,6 +87,7 @@ class TripAlertService:
         trip: "Trip",
         cached_weather: List[SegmentWeatherData],
         fresh_weather: Optional[List[SegmentWeatherData]] = None,
+        official_notices: Optional[list] = None,
     ) -> bool:
         """
         Check for weather changes and send alert if significant.
@@ -95,6 +96,9 @@ class TripAlertService:
             trip: Trip to check
             cached_weather: Previously fetched weather data
             fresh_weather: Optional fresh weather (fetched if not provided)
+            official_notices: Issue #1088 — bereits ermittelte neue/gestiegene
+                amtliche Warnungen, die bei tatsächlichem Versand in dieselbe
+                Nachricht gebündelt werden (kein zweiter Versand).
 
         Returns:
             True if alert was sent, False otherwise
@@ -190,7 +194,7 @@ class TripAlertService:
 
         # 5. Send alert; guard: only record throttle/log when at least one
         # configured channel was reachable (AC-1 symmetry with Telegram/Radar).
-        delivered = self._send_alert(trip, fresh_weather, to_report)
+        delivered = self._send_alert(trip, fresh_weather, to_report, official_notices=official_notices)
         if not delivered:
             logger.warning(
                 f"Alert not deliverable on any effective channel for trip "
@@ -339,8 +343,16 @@ class TripAlertService:
                 or has_metric_levels
                 or any(r.enabled for r in (trip.alert_rules or []))
             )
-            if not has_active_rules and (
-                not trip.report_config or not trip.report_config.alert_on_changes
+            # Issue #1088 F001: der amtliche Alert-Trigger ist ein eigenständiger,
+            # vom Wetter-Delta-Alert unabhängiger Auslöser (Default aktiv). Ein Trip
+            # ohne aktive Wetter-Delta-Regel darf NICHT komplett übersprungen werden,
+            # solange der amtliche Trigger nicht explizit deaktiviert ist — sonst
+            # wird check_official_alert_triggers() unten nie erreicht.
+            official_trigger_possible = trip.official_alert_triggers_enabled is not False
+            if (
+                not has_active_rules
+                and (not trip.report_config or not trip.report_config.alert_on_changes)
+                and not official_trigger_possible
             ):
                 continue
 
@@ -354,9 +366,25 @@ class TripAlertService:
             if not cached:
                 continue
 
+            # Issue #1088: amtliche Warnungen zusätzlich zum Wetter-Delta prüfen —
+            # fail-soft, darf den Zyklus für andere Trips nicht abbrechen.
+            official_notices: list = []
             try:
-                if self.check_and_send_alerts(trip, cached):
+                official_notices = self.check_official_alert_triggers(trip)
+            except Exception as e:
+                logger.error(f"Official alert trigger check failed for trip {trip.id}: {e}")
+
+            try:
+                weather_sent = self.check_and_send_alerts(
+                    trip, cached, official_notices=official_notices,
+                )
+                if weather_sent:
                     alerts_sent += 1
+                elif official_notices:
+                    # Kein Wetter-Delta-Alert gefeuert, aber neue/gestiegene amtliche
+                    # Warnung(en) — eigenständiger Versand (PO-Entscheidung).
+                    if self._send_official_alert_only(trip, official_notices):
+                        alerts_sent += 1
             except Exception as e:
                 logger.error(f"Alert check failed for trip {trip.id}: {e}")
 
@@ -915,12 +943,15 @@ class TripAlertService:
         trip: "Trip",
         weather: List[SegmentWeatherData],
         changes: List[WeatherChange],
+        official_notices: Optional[list] = None,
     ) -> bool:
         """
         Format and send alert via all configured effective channels.
 
         Issue #1023: Rendering und Versand werden an den NotificationService
         delegiert; TripAlertService kennt keine Renderer-/Transport-Details mehr.
+        Issue #1088: liegen `official_notices` vor, werden sie in dieselbe
+        Nachricht gebündelt (kein zweiter Versand).
 
         Returns:
             True if at least one configured channel was reachable (deliverable),
@@ -936,6 +967,8 @@ class TripAlertService:
             weather=weather,
             changes=changes,
             effective_channels=effective_channels,
+            official_notices=official_notices or [],
+            mail_sink=self._mail_sink,
         )
 
         if result.sent:
@@ -943,7 +976,96 @@ class TripAlertService:
                 f"Alert sent for trip {trip.name}: {len(changes)} changes detected "
                 f"via channels={sorted(result.sent_channels)}"
             )
+            self._record_official_alert_state(trip.id, official_notices or [])
 
+        return result.sent
+
+    def check_official_alert_triggers(self, trip: "Trip") -> list:
+        """Issue #1088: liefert amtliche Warnungen, die NEU sind oder deren
+
+        Level gestiegen ist ggü. dem letzten gemeldeten Stand (alert_state).
+        Fail-soft: Toggle-Gate zuerst, Quellenfehler werden bereits von
+        get_official_alerts_for_location() pro Quelle abgefangen. Schreibt
+        KEINEN alert_state — das übernimmt der Aufrufer erst nach
+        erfolgreichem Versand (Konsistenz mit dem Wetter-Delta-Pfad).
+        """
+        if trip.official_alert_triggers_enabled is False:
+            return []
+        from services.alert_state import AlertStateService
+        from services.official_alerts import get_official_alerts_for_location
+
+        cached = self._get_cached_weather(trip)
+        if not cached:
+            return []
+
+        seen: set[tuple[float, float]] = set()
+        all_alerts = []
+        for sw in cached:
+            if sw.has_error:
+                continue
+            coord = (round(sw.segment.start_point.lat, 3), round(sw.segment.start_point.lon, 3))
+            if coord in seen:
+                continue
+            seen.add(coord)
+            try:
+                all_alerts.extend(get_official_alerts_for_location(*coord))
+            except Exception as e:
+                logger.warning(f"official_alert_triggers: Quelle fehlgeschlagen fuer {trip.id}: {e}")
+
+        state = AlertStateService(user_id=self._user_id).load(trip.id)
+        new_or_escalated = []
+        for a in all_alerts:
+            key = f"official_alert:{a.region_label}:{a.hazard}"
+            prev = state.get(key)
+            if prev is None or a.level > prev.get("last_reported_value", 0):
+                new_or_escalated.append(a)
+        return new_or_escalated
+
+    def _record_official_alert_state(self, trip_id: str, official_notices: list) -> None:
+        """Issue #1088: alert_state nach erfolgreichem Versand fortschreiben (Dedupe)."""
+        if not official_notices:
+            return
+        from services.alert_state import AlertStateService
+
+        state_svc = AlertStateService(user_id=self._user_id)
+        state = state_svc.load(trip_id)
+        now_iso = datetime.now(timezone.utc).isoformat()
+        for a in official_notices:
+            key = f"official_alert:{a.region_label}:{a.hazard}"
+            state[key] = {"last_reported_value": float(a.level), "reported_at": now_iso}
+        state_svc.save(trip_id, state)
+
+    def _send_official_alert_only(self, trip: "Trip", official_notices: list) -> bool:
+        """Issue #1088: Standalone-Versand einer amtlichen Warnung ohne Wetter-Delta.
+
+        Reproduziert nur die generischen Sicherheits-Gates (QuietHours, Throttle/
+        Cooldown, Tageslimit) — NICHT die weather-delta-spezifischen Gates
+        (has_active_rules, _filter_significant_changes), da ein eigenständiger
+        amtlicher Trigger laut PO-Entscheidung unabhängig vom Wetter-Delta feuern soll.
+        """
+        if self._is_quiet_hours(trip, datetime.now(timezone.utc)):
+            logger.debug(f"Official alert suppressed: quiet hours active for trip {trip.id}")
+            return False
+        if self._is_throttled_with_cooldown(trip):
+            logger.debug(f"Official alert throttled for trip {trip.id}")
+            return False
+        if not alert_daily_limit.is_allowed(self._user_id, datetime.now(timezone.utc)):
+            logger.debug(f"Official alert suppressed: daily limit reached for trip {trip.id}")
+            return False
+
+        effective_channels = self._effective_alert_channels(trip)
+        result = self._notification_service.send_official_alert(
+            trip=trip,
+            notices=official_notices,
+            effective_channels=effective_channels,
+            mail_sink=self._mail_sink,
+        )
+        if result.sent:
+            self._record_official_alert_state(trip.id, official_notices)
+            self._last_alert_times[trip.id] = datetime.now(timezone.utc)
+            self._save_throttle_times()
+            alert_daily_limit.increment(self._user_id, datetime.now(timezone.utc))
+            self._append_alert_log(trip.id, len(official_notices), "MODERATE")
         return result.sent
 
     def _effective_alert_channels(self, trip: "Trip") -> set[str]:
