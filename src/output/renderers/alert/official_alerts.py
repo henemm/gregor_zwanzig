@@ -15,10 +15,19 @@ from __future__ import annotations
 
 import html as _html
 from typing import TYPE_CHECKING
+from zoneinfo import ZoneInfo
 
 if TYPE_CHECKING:
     from app.models import SegmentWeatherData
     from services.official_alerts.models import OfficialAlert
+
+# Level -> (Emoji, Schwere-Wort) fuer den Standalone-Alert-Text (Issue #1172).
+_LEVEL_WORDS: dict[int, tuple[str, str]] = {
+    1: ("🟢", "GRÜN"),
+    2: ("🟡", "GELB"),
+    3: ("🟠", "ORANGE"),
+    4: ("🔴", "ROT"),
+}
 
 
 def render_official_alerts_html(entries: list[tuple[str, list["OfficialAlert"]]]) -> str:
@@ -73,6 +82,53 @@ def render_official_alerts_plain(entries: list[tuple[str, list["OfficialAlert"]]
     for _label, alerts in entries:
         for alert in alerts:
             lines.append(f"Amtliche Warnung: {alert.label}")
+    return lines
+
+
+def dedupe_official_alerts(alerts: list["OfficialAlert"]) -> list["OfficialAlert"]:
+    """Issue #1172: kollabiert Warnungen nach `(region_label, hazard)` und
+    behaelt je Gruppe den Repraesentanten mit dem HOECHSTEN `level` (bei
+    Gleichstand: erstes Vorkommen). Reihenfolge = erstes Auftreten je Gruppe
+    (analog `collect_trip_alert_entries`)."""
+    best: dict[tuple, "OfficialAlert"] = {}
+    order: list[tuple] = []
+    for a in alerts:
+        key = (a.region_label, a.hazard)
+        if key not in best:
+            best[key] = a
+            order.append(key)
+        elif a.level > best[key].level:
+            best[key] = a
+    return [best[key] for key in order]
+
+
+def render_official_alert_notice_plain(
+    alerts: list["OfficialAlert"], tz: "ZoneInfo | None" = None,
+) -> list[str]:
+    """Standalone-Alert-Format (Issue #1172): dedupliziert die Warnungen
+    (dedupe_official_alerts) und rendert pro echter Warnung einen Block mit
+    Schwere-Wort, Region und lokalem Gueltigkeitszeitraum. NICHT identisch mit
+    render_official_alerts_plain() (Compare/Briefing bleiben unveraendert)."""
+    from utils.timezone import local_fmt
+
+    if tz is None:
+        tz = ZoneInfo("UTC")
+    fmt = "%a %d.%m. %H:%M"
+
+    lines: list[str] = []
+    for a in dedupe_official_alerts(alerts):
+        if lines:
+            lines.append("")
+        emoji, word = _LEVEL_WORDS.get(a.level, ("🔴", "ROT"))
+        lines.append(f"{emoji} {word} — {a.label}")
+        lines.append(f"Region: {a.region_label or 'unbekannt'}")
+        if a.valid_from and a.valid_to:
+            lines.append(
+                f"Gültig: {local_fmt(a.valid_from, tz, fmt)} – "
+                f"{local_fmt(a.valid_to, tz, fmt)}"
+            )
+        else:
+            lines.append("Gültig: unbekannt")
     return lines
 
 

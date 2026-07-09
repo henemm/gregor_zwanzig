@@ -341,6 +341,7 @@ class NotificationService:
             target_name=trip.name,
             radar_mode=False,
             official_notices=official_notices,
+            alert_tz=alert_tz,
         )
 
     def send_location_deviation_alert(
@@ -373,6 +374,7 @@ class NotificationService:
             mail_sink=mail_sink,
             target_name=entity_name,
             radar_mode=False,
+            alert_tz=alert_tz,
         )
 
     def send_official_alert(
@@ -388,10 +390,18 @@ class NotificationService:
         render_official_alerts_plain(). SMS bewusst ohne Zusatztext
         (Nicht-Parität, analog Slice-3-AC-6).
         """
-        from output.renderers.alert.official_alerts import render_official_alerts_plain
+        from output.renderers.alert.official_alerts import (
+            render_official_alert_notice_plain,
+        )
+        from utils.timezone import tz_for_coords
 
-        entries = [(a.region_label, [a]) for a in notices]
-        plain = "\n".join(render_official_alerts_plain(entries))
+        first_wp = next(iter(trip.all_waypoints), None)
+        alert_tz = (
+            tz_for_coords(first_wp.lat, first_wp.lon)
+            if first_wp is not None
+            else ZoneInfo("UTC")
+        )
+        plain = "\n".join(render_official_alert_notice_plain(notices, tz=alert_tz))
         subject = f"[{trip.name}] Amtliche Warnung"
 
         sent_channels: list[str] = []
@@ -455,6 +465,7 @@ class NotificationService:
             mail_sink=mail_sink,
             target_name=trip.id,
             radar_mode=True,
+            alert_tz=alert_tz,
         )
 
     def _dispatch_alert_message(
@@ -467,6 +478,7 @@ class NotificationService:
         target_name: str = "",
         radar_mode: bool = False,
         official_notices: Optional[list] = None,
+        alert_tz: Optional[ZoneInfo] = None,
     ) -> NotificationResult:
         """Versendet eine kanonische AlertMessage über die konfigurierten Kanäle.
 
@@ -482,11 +494,14 @@ class NotificationService:
         if official_notices:
             import html as _html_mod
 
-            from output.renderers.alert.official_alerts import render_official_alerts_plain
+            from output.renderers.alert.official_alerts import (
+                render_official_alert_notice_plain,
+            )
 
-            entries = [(a.region_label, [a]) for a in official_notices]
-            extra_lines = render_official_alerts_plain(entries)
-            extra_text = "\n".join(f"⚠️ {line}" for line in extra_lines)
+            extra_lines = render_official_alert_notice_plain(
+                official_notices, tz=alert_tz,
+            )
+            extra_text = "\n".join(extra_lines)
             plain += "\n\n" + extra_text
             html = html.replace(
                 "</body></html>", f"<p>{_html_mod.escape(extra_text)}</p></body></html>",

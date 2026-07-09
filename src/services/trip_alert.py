@@ -949,6 +949,9 @@ class TripAlertService:
             except Exception as e:
                 logger.warning(f"official_alert_triggers: Quelle fehlgeschlagen fuer {trip.id}: {e}")
 
+        from output.renderers.alert.official_alerts import dedupe_official_alerts
+        all_alerts = dedupe_official_alerts(all_alerts)
+
         state = AlertStateService(user_id=self._user_id).load(trip.id)
         new_or_escalated = []
         for a in all_alerts:
