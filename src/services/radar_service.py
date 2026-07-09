@@ -7,7 +7,8 @@ Provides short-term precipitation forecasts ("fängt es in den nächsten
 Sources (coordinate-based, automatic):
 - BrightSky (RADOLAN) for Germany
 - GeoSphere INCA for Austria
-- Météo-France AROME-HD (via Open-Meteo) for France/Corsica/Benelux/NW-Italy
+- Radar-DPC (Protezione Civile) for Italy (incl. Corsica coverage)
+- Météo-France AROME-HD (via Open-Meteo) for France/Benelux
 - Open-Meteo minutely_15 for global/fallback
 
 Feature: Issue #656
@@ -40,6 +41,12 @@ _AROME_FR_LAT_MIN = 41.0
 _AROME_FR_LAT_MAX = 51.5
 _AROME_FR_LON_MIN = -5.5
 _AROME_FR_LON_MAX = 10.0
+
+# Radar-DPC bounding box (IT — Protezione Civile national radar, Issue #1162)
+_DPC_LAT_MIN = 36.0
+_DPC_LAT_MAX = 47.5
+_DPC_LON_MIN = 6.5
+_DPC_LON_MAX = 19.0
 
 # ICON-D2 bounding box (Central Europe / Alps — DWD ICON-D2 ~2 km, Issue #761)
 # Conservative rectangle; exact (rotated) grid fidelity comes from the all-None guard.
@@ -129,6 +136,7 @@ class RadarNowcastService:
     _SOURCE_LABELS: dict[str, str] = {
         "radar": "Radar (DWD)",
         "INCA": "INCA (GeoSphere AT)",
+        "DPC": "Radar-DPC (Protezione Civile IT)",
         "AROME-FR": "Météo-France AROME (1,5 km)",
         "ICON-D2": "DWD ICON-D2 (2 km)",
         "minutely_15": "Open-Meteo (global)",
@@ -203,6 +211,11 @@ class RadarNowcastService:
             if frames:
                 return frames, "INCA"
 
+        if _within_dpc(lat, lon):
+            frames = self._fetch_radar_dpc(lat, lon)
+            if frames:
+                return frames, "DPC"
+
         if _within_arome_france(lat, lon):
             frames = self._fetch_arome_france_hd(lat, lon)
             if frames:
@@ -262,6 +275,25 @@ class RadarNowcastService:
             )
             if abs(nearest.timestamp - frame.timestamp) <= tolerance:
                 frame.is_convective = nearest.is_convective
+
+    def _fetch_radar_dpc(self, lat: float, lon: float) -> list:
+        try:
+            from providers.radar_dpc import RadarDPCProvider
+            frames = RadarDPCProvider().fetch_nowcast(lat, lon)
+            if not frames:
+                return []
+            # Convective sidecar: SRI carries no thunderstorm/hail field, so reuse the
+            # global Open-Meteo best_match nowcast solely for the is_convective flag.
+            sidecar = self._fetch_openmeteo_15(lat, lon)
+            if sidecar:
+                self._merge_convective(frames, sidecar)
+            else:
+                # ADR-0018: do not silently pass a failed check off as "no thunderstorm".
+                self._convective_checked = False
+            return frames
+        except Exception as e:
+            logger.warning(f"Radar-DPC failed, falling back: {e}")
+            return []
 
     def _fetch_openmeteo_minutely15(self, lat: float, lon: float) -> list:
         return self._fetch_openmeteo_15(lat, lon)
@@ -372,6 +404,13 @@ def _within_inca(lat: float, lon: float) -> bool:
     return (
         _INCA_LAT_MIN <= lat <= _INCA_LAT_MAX
         and _INCA_LON_MIN <= lon <= _INCA_LON_MAX
+    )
+
+
+def _within_dpc(lat: float, lon: float) -> bool:
+    return (
+        _DPC_LAT_MIN <= lat <= _DPC_LAT_MAX
+        and _DPC_LON_MIN <= lon <= _DPC_LON_MAX
     )
 
 

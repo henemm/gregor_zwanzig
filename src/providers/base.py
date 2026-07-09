@@ -187,6 +187,12 @@ def _load_providers() -> None:
     except ImportError:
         pass
 
+    try:
+        from providers.radar_dpc import RadarDPCProvider
+        register_provider("radar_dpc", RadarDPCProvider)
+    except ImportError:
+        pass
+
     # Future providers:
     # from providers.met import METProvider
     # register_provider("met", METProvider)

@@ -36,17 +36,19 @@ _ATLANTIC_LAT, _ATLANTIC_LON = 35.0, -40.0   # keine explizite Box → globaler 
 # ---------------------------------------------------------------------------
 
 def test_ac1_arome_france_real_fetch_returns_arome_source():
-    """GIVEN reale Korsika-Koordinate (AROME-Box, außerhalb DE/AT)
+    """GIVEN reale Korsika-Koordinate (GR20-Region, DPC-Box, außerhalb DE/AT)
     WHEN get_nowcast aufgerufen wird
-    THEN source == 'AROME-FR' und ≥1 reale Frame mit mm/h ≥ 0 — NICHT der globale Fallback.
+    THEN source == 'DPC' (Issue #1162: reale Radarbeobachtung schlägt AROME-Modell-
+    Downscaling) und ≥1 reale Frame mit mm/h ≥ 0 — NICHT der globale Fallback.
     """
     svc = RadarNowcastService()
     result = svc.get_nowcast(_CORSICA_LAT, _CORSICA_LON)
 
-    assert result.source == "AROME-FR", (
-        f"Korsika sollte explizit AROME nutzen, nicht den Fallback (war: {result.source})"
+    assert result.source == "DPC", (
+        f"Korsika sollte Radar-DPC nutzen (echte Radarbeobachtung vor AROME-"
+        f"Downscaling, Issue #1162), nicht den Fallback (war: {result.source})"
     )
-    assert result.frames, "AROME-Fetch sollte reale Frames liefern"
+    assert result.frames, "DPC-Fetch sollte reale Frames liefern"
     for f in result.frames:
         assert isinstance(f.precip_mm_h, (int, float))
         assert f.precip_mm_h >= 0.0
@@ -73,13 +75,13 @@ def test_ac2_within_arome_france_bbox():
 def test_ac2_chain_routing_berlin_radar_atlantic_global():
     """GIVEN die Quellen-Kette mit korrekter Reihenfolge
     WHEN get_nowcast für verschiedene Regionen läuft
-    THEN Korsika→'AROME-FR', Berlin→'radar' (RADOLAN-Vorrang), Atlantik→'minutely_15'.
+    THEN Korsika→'DPC', Berlin→'radar' (RADOLAN-Vorrang), Atlantik→'minutely_15'.
     (echte API-Calls, kein Mock)
     """
     svc = RadarNowcastService()
 
-    # Korsika: explizit AROME (neu) — schlägt in RED fehl
-    assert svc.get_nowcast(_CORSICA_LAT, _CORSICA_LON).source == "AROME-FR"
+    # Korsika: Radar-DPC vor AROME-FR (Issue #1162 — reale Radarbeobachtung)
+    assert svc.get_nowcast(_CORSICA_LAT, _CORSICA_LON).source == "DPC"
 
     # Berlin: RADOLAN wird VOR AROME geprüft → echtes Radar
     assert svc.get_nowcast(_BERLIN_LAT, _BERLIN_LON).source == "radar"

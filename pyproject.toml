@@ -21,6 +21,7 @@ dependencies = [
     # uvicorn 0.47+ nicht mehr enthalten — daher direkt gepflegt.
     "pyyaml>=6.0",
     "pillow>=10.0.0",
+    "rasterio>=1.4.4",
 ]
 
 [tool.uv]

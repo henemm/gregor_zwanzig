@@ -109,7 +109,7 @@ Testdatei: `tests/tdd/test_feature_656_radar_nowcast.py` (mock-frei).
 
 - "Aktuelle Position" = repräsentativer Punkt der heutigen Etappe, kein Live-GPS.
 - "Kollisionskurs" im MVP = Onset-/Annäherungs-Trend im Punkt-Nowcast, kein voll-physikalisches Zell-Tracking mit Bewegungsvektor.
-- RADOLAN deckt nur DE + Grenzregionen, INCA nur AT; außerhalb (z. B. GR20/Korsika) liefert ausschließlich `minutely_15` — geringere räumliche Auflösung. Konvektions-Indikator (WMO-weather_code) ist in Open-Meteo verfügbar, BrightSky/GeoSphere-Pfade haben kein Konvektions-Feld.
+- RADOLAN deckt nur DE + Grenzregionen, INCA nur AT. Für Italien (inkl. Korsika, PO-Entscheidung 2026-07-09) liefert seit Issue #1162 Radar-DPC (Protezione Civile) reale Radarbeobachtung statt Modell-Downscaling. Außerhalb aller regionalen Quellen (weiterhin AROME-FR/ICON-D2 vorgelagert, siehe `radar_nowcast_france.md`/`radar_nowcast_icon_d2.md`) fällt die Kette auf `minutely_15` zurück — geringere räumliche Auflösung. Konvektions-Indikator (WMO-weather_code) ist in Open-Meteo verfügbar; BrightSky/GeoSphere/DPC-Pfade haben kein natives Konvektions-Feld und nutzen einen Open-Meteo-Sidecar (ADR-0018).
 - Latenz-AC (< 10 s) abhängig von Fremd-API-Verfügbarkeit; Fallback-Kette bei Timeout/Leerantwort.
 - WMO-Codes sind eine Modell-Klassifikation, kein Live-Blitz-Detektor; Genauigkeit hängt vom Open-Meteo-Modell ab.
 
@@ -117,3 +117,4 @@ Testdatei: `tests/tdd/test_feature_656_radar_nowcast.py` (mock-frei).
 
 - 2026-06-07: Initial spec created (Issue #656)
 - 2026-06-08: Known Limitation "Gewitter/Hagel-Stufe" aufgelöst durch Issue #660 (WMO-weather_code Konvektions-Indikator integriert); AC-2 angepasst
+- 2026-07-09: Known Limitation zur regionalen Abdeckung korrigiert — Italien (inkl. Korsika) fällt seit Issue #1162 (Radar-DPC/Protezione Civile) nicht mehr auf den globalen `minutely_15`-Fallback zurück, siehe `docs/specs/modules/issue_1162_radar_dpc.md`

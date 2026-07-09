@@ -1,7 +1,9 @@
 # Epic 1073: Amtliche Warnungen für Österreich & Italien + querschnittliche Nutzung
 
 **Status:** Geplant (2026-07-07); Slice 1 (#1085), Slice 3 (#1087) und Slice 4 (#1088)
-implementiert (siehe Slice-Tabelle). Baut direkt auf Epic #1033 (amtliche Alerts Frankreich) auf.
+implementiert; Slice 5 (#1089) über die Kind-Issues #1161 (AT) und #1162 (IT) inhaltlich
+umgesetzt, Epic-Issue #1089 selbst zum Zeitpunkt dieser Doku noch offen (siehe Slice-Tabelle).
+Baut direkt auf Epic #1033 (amtliche Alerts Frankreich) auf.
 **Priorität:** hoch.
 
 ## Ausgangslage
@@ -49,7 +51,7 @@ vermeiden Betriebskomplexität.
 | 2 | #1086 | **MeteoAlarm-Quelle (AT+IT)** — REST/GeoJSON via MeteoGate, deckt Italien + EU | 1, 4 (IT) | #1033 + MeteoGate-Reg. |
 | 3 | #1087 | **Warnungen in Trip-Briefings + Trip-Ein-/Ausschalter** (analog #1040 ComparePreset→Trip) — querschnittliche Nutzung — **implementiert 2026-07-07** | 2, 6 | Slice 1/2 |
 | 4 | #1088 | **Warnungen im Alert-Pfad** (trip_alert; radar_alert bewusst ausgeklammert, s. Known Limitations) — **implementiert 2026-07-08** | 3 | Slice 3 |
-| 5 | #1089 | **Region-optimale Nowcasts** (AT=GeoSphere INCA, IT=Radar-DPC) für Gefahren/Regen/Gewitter | 5 | eigenes Subsystem |
+| 5 | #1089 | **Region-optimale Nowcasts** (AT=GeoSphere INCA, IT=Radar-DPC) für Gefahren/Regen/Gewitter — AT-Teil via #1161 implementiert 2026-07-08, IT-Teil via #1162 implementiert 2026-07-09 | 5 | eigenes Subsystem |
 
 **Reihenfolge-Empfehlung:** Slice 1 zuerst (auth-frei, schneller AT-Nutzen, beweist Länder-
 Erweiterung end-to-end), parallel MeteoGate-Registrierung für Slice 2. Slice 5 (Nowcast) ist ein
@@ -109,6 +111,24 @@ Wetter-Delta-Alert-Regeln konfiguriert sind:
   RMW-Merge in `internal/handler/trip.go`, analog `OfficialAlertsEnabled` (#1087).
 - Spec: `docs/specs/modules/issue_1088_alert_official_warnings.md`.
 
+### Slice 5: Region-optimale Nowcasts (Issue #1089) — AT-Teil (#1161) implementiert 2026-07-08, IT-Teil (#1162) implementiert 2026-07-09
+
+Eigenständiges Subsystem (Nowcast-/Radar-Provider-Auswahl, kein Bezug zum
+`official_alerts`-Warnquellen-System der Slices 1–4). Beide Kind-Issues von #1089 sind
+umgesetzt; das Epic-Issue #1089 selbst war zum Zeitpunkt dieser Doku noch offen:
+
+- **AT (Issue #1161):** österreichische Orte nutzen für die Gewitter-/Hagel-Erkennung den
+  GeoSphere-**INCA**-Nowcast statt der generischen Provider-Kette, inkl. Open-Meteo-Sidecar für
+  das Konvektionsfeld (`convective_checked`-Flag, ADR-0018-konform bei Sidecar-Ausfall).
+  Spec: `docs/specs/modules/issue_1161_inca_convective.md`.
+- **IT (Issue #1162):** italienische Orte (inkl. Korsika, PO-Entscheidung — siehe unten) nutzen
+  **Radar-DPC** (Protezione Civile) als reale Radarbeobachtung statt Modell-Downscaling
+  (AROME-FR) bzw. globalem `minutely_15`-Fallback, ebenfalls mit Open-Meteo-Sidecar für die
+  Konvektionserkennung. **PO-Entscheidung 2026-07-09:** Korsika wechselt von AROME-FR auf DPC,
+  da die beiden BBoxen sich überlappen und geografisch nicht per Rechteck von Sardinien getrennt
+  werden können — reale Radarbeobachtung hat Vorrang. Spec:
+  `docs/specs/modules/issue_1162_radar_dpc.md`.
+
 ## Betreiber-Voraussetzung (kein Code)
 
 MeteoGate/MeteoAlarm-Account registrieren (für Slice 2) — analog zum Météo-France-Portal-Account
@@ -130,3 +150,5 @@ MeteoGate/MeteoAlarm-Account registrieren (für Slice 2) — analog zum Météo-
 | 2026-07-08 | Slice 1 (#1085) implementiert: `GeoSphereWarnSource` (AT) — erste Nicht-FR-Quelle im Registry, auth-frei, koordinatenbasiert, `warnstufeid`→`level`-Mapping, Cache pro Koordinate. |
 | 2026-07-08 | Dokumentation aktualisiert: Trip-Toggle „Amtliche Warnungen" ist zusätzlich im Tab „Inhalt" konfigurierbar (Issue #1117), nicht nur im Alerts-Tab. |
 | 2026-07-08 | Slice 4 (#1088) implementiert: amtliche Warnungen als eigenständiger Alert-Trigger, additiv zur Wetter-Delta-Logik, eigener Toggle `official_alert_triggers_enabled`, Bündelung bei gleichzeitigem Wetter-Delta-Alert; radar_alert-Anbindung bewusst zurückgestellt. |
+| 2026-07-08 | Slice 5 (#1089) AT-Teil implementiert: Issue #1161 (GeoSphere-INCA-Nowcast für Gewitter/Hagel in Österreich). |
+| 2026-07-09 | Slice 5 (#1089) IT-Teil implementiert: Issue #1162 (Radar-DPC für Italien inkl. Korsika, PO-Entscheidung Korsika-Umstellung von AROME-FR). |
