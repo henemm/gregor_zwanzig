@@ -60,8 +60,13 @@ class CompareAlertService:
     def check_all_compare_presets(self) -> int:
         """Prüft alle Compare-Presets dieses Nutzers und versendet Alarme.
 
+        Issue #1170 (Adversary F001): ALLE gleichzeitig betroffenen Orte
+        EINES Presets werden in EINER gebündelten Mail zusammengefasst statt
+        je Ort einzeln versendet.
+
         Returns:
-            Anzahl der tatsächlich versendeten Deviation-Alert-Mails.
+            Anzahl der tatsächlich versendeten (gebündelten) Deviation-
+            Alert-Mails — EINE je Preset-Lauf mit ≥1 Treffer, nicht eine je Ort.
         """
         presets = self._load_presets()
         if not presets:
@@ -76,7 +81,7 @@ class CompareAlertService:
             if not preset_id or not location_ids:
                 continue
 
-            cooldown_minutes = preset.get("cooldown_minutes", _DEFAULT_COOLDOWN_MINUTES)
+            cooldown_minutes = preset.get("alert_cooldown_minutes", _DEFAULT_COOLDOWN_MINUTES)
             last_alert = self._last_alert_times.get(preset_id)
             if DeviationAlertEngine.is_cooldown_active(
                 datetime.now(timezone.utc), last_alert, cooldown_minutes
@@ -87,73 +92,104 @@ class CompareAlertService:
             config = self._build_eval_config(preset, cooldown_minutes)
             notification_service = self._notification_service_for(preset)
 
-            preset_sent = 0
-            for location_id in location_ids:
-                loc = all_locations.get(location_id)
-                if loc is None:
-                    logger.warning(
-                        f"Compare-Alert: Ort {location_id} nicht aufloesbar fuer Preset {preset_id}"
-                    )
-                    continue
-                try:
-                    if self._check_one_location(
-                        preset, location_id, loc, notification_service, config
-                    ):
-                        preset_sent += 1
-                except Exception as e:
-                    logger.error(
-                        f"Compare-Alert check failed for {preset_id}/{location_id}: {e}"
-                    )
+            triggered = self._detect_triggered_locations(
+                preset_id, location_ids, all_locations, config
+            )
+            if not triggered:
+                continue
 
-            if preset_sent:
-                self._last_alert_times[preset_id] = datetime.now(timezone.utc)
-                self._save_throttle_times()
-                sent += preset_sent
+            entities = [(t["loc"].name, [t["fresh_point"]], t["changes"]) for t in triggered]
+            notif_result = notification_service.send_multi_location_deviation_alert(
+                entities=entities,
+                effective_channels=config.channels,
+                mail_sink=self._mail_sink,
+            )
+            if not notif_result.sent:
+                continue
+
+            self._finalize_triggered_state(triggered)
+            self._last_alert_times[preset_id] = datetime.now(timezone.utc)
+            self._save_throttle_times()
+            sent += 1
 
         return sent
 
-    def _check_one_location(
-        self, preset: dict, location_id: str, loc, notification_service, config
-    ) -> bool:
-        preset_id = preset.get("id", "")
+    def _detect_triggered_locations(
+        self, preset_id: str, location_ids: list[str], all_locations: dict, config
+    ) -> list[dict]:
+        """Wertet jeden Ort des Presets gegen den Δ-Anker aus (Detect-Phase,
+        kein Versand). Sammelt alle Treffer für den nachfolgenden gebündelten
+        Versand (Issue #1170)."""
+        triggered: list[dict] = []
+        for location_id in location_ids:
+            loc = all_locations.get(location_id)
+            if loc is None:
+                logger.warning(
+                    f"Compare-Alert: Ort {location_id} nicht aufloesbar fuer Preset {preset_id}"
+                )
+                continue
+            try:
+                entry = self._evaluate_one_location(preset_id, location_id, loc, config)
+            except Exception as e:
+                logger.error(f"Compare-Alert check failed for {preset_id}/{location_id}: {e}")
+                continue
+            if entry is not None:
+                triggered.append(entry)
+        return triggered
+
+    def _evaluate_one_location(
+        self, preset_id: str, location_id: str, loc, config
+    ) -> Optional[dict]:
+        """Δ-Auswertung für EINEN Ort — reine Detect-Logik ohne Versand/
+        State-Update (das übernimmt `_finalize_triggered_state()` NUR für
+        tatsächlich versendete Treffer, Issue #1170)."""
         cached = self._snapshot_service.load(preset_id, location_id)
         fresh_point = self._weather_source.fetch(location_id, loc.lat, loc.lon)
-        fresh = [fresh_point]
 
         entity_id = f"{preset_id}:{location_id}"
         state_svc = AlertStateService(user_id=self._user_id)
         alert_state = state_svc.load(entity_id)
 
         engine = DeviationAlertEngine()
-        result = engine.evaluate(cached=cached, fresh=fresh, config=config, alert_state=alert_state)
-        if not result.triggered:
-            return False
-
-        notif_result = notification_service.send_location_deviation_alert(
-            entity_name=loc.name,
-            points=fresh,
-            changes=result.changes,
-            effective_channels=result.channels,
-            mail_sink=self._mail_sink,
+        result = engine.evaluate(
+            cached=cached, fresh=[fresh_point], config=config, alert_state=alert_state
         )
-        if not notif_result.sent:
-            return False
+        if not result.triggered:
+            return None
 
+        return {
+            "loc": loc,
+            "fresh_point": fresh_point,
+            "changes": result.changes,
+            "entity_id": entity_id,
+            "state_svc": state_svc,
+            "alert_state": alert_state,
+        }
+
+    def _finalize_triggered_state(self, triggered: list[dict]) -> None:
+        """Alert-State-Update nach ERFOLGREICHEM gebündeltem Versand — pro
+        Ort (Cooldown bleibt preset-weit, s. Aufrufer)."""
         now_iso = datetime.now(timezone.utc).isoformat()
-        for change in result.changes:
-            key = f"{change.metric}:{change.segment_id}"
-            alert_state[key] = {"last_reported_value": float(change.new_value), "reported_at": now_iso}
-        state_svc.save(entity_id, alert_state)
-        return True
+        for entry in triggered:
+            alert_state = entry["alert_state"]
+            for change in entry["changes"]:
+                key = f"{change.metric}:{change.segment_id}"
+                alert_state[key] = {
+                    "last_reported_value": float(change.new_value), "reported_at": now_iso,
+                }
+            entry["state_svc"].save(entry["entity_id"], alert_state)
 
     def _build_eval_config(self, preset: dict, cooldown_minutes) -> AlertEvaluationConfig:
         """B2-Defaults, vorwärtskompatible Overrides via `preset.get(feld, DEFAULT)`.
         Kanal ist IMMER `{"email"}` — Compare-Versand ist heute E-Mail-only."""
         return AlertEvaluationConfig(
             cooldown_minutes=cooldown_minutes,
-            quiet_from=preset.get("quiet_from"),
-            quiet_to=preset.get("quiet_to"),
-            metric_alert_levels=preset.get("metric_alert_levels") or _STANDARD_METRIC_LEVELS,
+            quiet_from=preset.get("alert_quiet_from"),
+            quiet_to=preset.get("alert_quiet_to"),
+            metric_alert_levels=(
+                (preset.get("display_config") or {}).get("metric_alert_levels")
+                or _STANDARD_METRIC_LEVELS
+            ),
             channels={"email"},
             display_config=None,
         )

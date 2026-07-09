@@ -352,27 +352,54 @@ class NotificationService:
         effective_channels: set[str],
         mail_sink: Optional[object] = None,
     ) -> NotificationResult:
-        """Trip-freier Deviation-Alert-Versand für generische Orte (Compare, Issue #1169).
+        """Trip-freier Deviation-Alert-Versand für EINEN generischen Ort
+        (Compare, Issue #1169).
 
-        Analog zu `send_deviation_alert()`, aber ohne `Trip`-Abhängigkeit —
-        baut die AlertMessage über `to_point_alert_message()` (Ortsname statt
-        km-Spanne) und delegiert unverändert an `_dispatch_alert_message()`
-        (ADR-0021: Rendering/Versand bleiben geteilt).
+        Issue #1170: Ein-Ort-Sonderfall von
+        `send_multi_location_deviation_alert()` — Delegation statt
+        Duplikation garantiert Byte-Identität zur bisherigen Ausgabe
+        (Regressions-Invariante, AC-7).
         """
-        from output.renderers.alert.project import to_point_alert_message
+        return self.send_multi_location_deviation_alert(
+            entities=[(entity_name, points, changes)],
+            effective_channels=effective_channels,
+            mail_sink=mail_sink,
+        )
+
+    def send_multi_location_deviation_alert(
+        self,
+        entities: list[tuple[str, list, list["WeatherChange"]]],
+        effective_channels: set[str],
+        mail_sink: Optional[object] = None,
+    ) -> NotificationResult:
+        """Gebündelter Deviation-Alert-Versand für MEHRERE gleichzeitig
+        betroffene Orte EINES Compare-Presets (Issue #1170, Adversary F001).
+
+        Baut über `to_multi_point_alert_message()` EINE `AlertMessage` für
+        alle übergebenen Orte (statt eines Einzel-Versands je Ort) und
+        delegiert unverändert an `_dispatch_alert_message()` (ADR-0021:
+        Rendering/Versand bleiben geteilt).
+
+        `entities`: `list[(location_name, points, changes)]`.
+        """
+        from output.renderers.alert.project import to_multi_point_alert_message
         from utils.timezone import tz_for_coords
 
-        alert_tz = tz_for_coords(points[0].lat, points[0].lon)
+        first_points = entities[0][1]
+        alert_tz = tz_for_coords(first_points[0].lat, first_points[0].lon)
         stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
-        alert_msg = to_point_alert_message(
-            changes, points, entity_name, tz=alert_tz, stand_at=stand_at,
-        )
+        groups = [
+            (name, changes, points[0] if points else None)
+            for name, points, changes in entities
+        ]
+        alert_msg = to_multi_point_alert_message(groups, tz=alert_tz, stand_at=stand_at)
+        target_name = ", ".join(name for name, _points, _changes in entities)
         return self._dispatch_alert_message(
             alert_msg=alert_msg,
             effective_channels=effective_channels,
             mail_type="deviation-alert",
             mail_sink=mail_sink,
-            target_name=entity_name,
+            target_name=target_name,
             radar_mode=False,
             alert_tz=alert_tz,
         )

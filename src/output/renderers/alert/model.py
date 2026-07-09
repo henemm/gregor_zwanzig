@@ -19,6 +19,12 @@ class AlertEvent:
     occurred_at: str | None  # "HH:MM"
     km_from: float
     km_to: float
+    # Issue #1170: additiv, optional. Gesetzt nur bei gebündelten Mehr-Orte-
+    # Alarmen (to_multi_point_alert_message) — trägt den Ortsnamen DIESES
+    # Events, damit der Renderer je Datenblock den richtigen Ort zeigt statt
+    # nur den kollektiven `AlertMessage.location_label`. Trip-Pfad und
+    # Einzel-Ort-Pfad setzen es nie (Regressions-Invariante, AC-7).
+    location_label: str | None = None
 
 
 @dataclass(frozen=True)

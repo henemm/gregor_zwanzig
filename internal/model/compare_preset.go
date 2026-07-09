@@ -42,4 +42,12 @@ type ComparePreset struct {
 	// Go zu nil statt zum Zero-Value false. nil/true = Sektion sichtbar
 	// (Default), false = komplett weggelassen.
 	HourlyEnabled *bool `json:"hourly_enabled,omitempty"`
+	// Issue #1170 — Alarm-Konfiguration (Epic #1095 Scheibe 3/3). Trip-identische
+	// Pointer-Felder (vgl. internal/model/trip.go:98-100): nil = Feld fehlte
+	// (Default in compare_alert.py greift), gesetzter Wert = bewusste Wahl.
+	// metric_alert_levels lebt bewusst NICHT hier, sondern als Sub-Key in
+	// DisplayConfig (analog Trip UnifiedWeatherDisplayConfig).
+	AlertCooldownMinutes *int    `json:"alert_cooldown_minutes,omitempty"`
+	AlertQuietFrom       *string `json:"alert_quiet_from,omitempty"`
+	AlertQuietTo         *string `json:"alert_quiet_to,omitempty"`
 }

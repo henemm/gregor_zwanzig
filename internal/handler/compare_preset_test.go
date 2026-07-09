@@ -746,3 +746,180 @@ func TestUpdateComparePreset_InvalidForecastHours_Rejected(t *testing.T) {
 		t.Fatalf("expected 400 for forecast_hours=99, got %d: %s", w.Code, w.Body.String())
 	}
 }
+
+// ============================================================================
+// Issue #1170 — Alarm-Konfiguration: Round-Trip + RMW-nil-Merge (Adversary F004).
+// ============================================================================
+
+// TestUpdateComparePreset_AlertFields_RoundtripAndRMW deckt zwei Verhaltensweisen ab:
+//  1. Ein PUT, das alle Alarm-Felder setzt (alert_cooldown_minutes, alert_quiet_from,
+//     alert_quiet_to, display_config.metric_alert_levels), liefert diese Werte
+//     unverändert in der Response zurück (Round-Trip).
+//  2. Ein FOLGE-PUT, das NUR ein anderes Feld ändert (name) und die Alarm-Felder
+//     im Body NICHT mitschickt, darf die zuvor gesetzten Alarm-Felder nicht
+//     verlieren (Read-Modify-Write-nil-Merge, analog official_alerts_enabled).
+func TestUpdateComparePreset_AlertFields_RoundtripAndRMW(t *testing.T) {
+	s := newTestStore(t)
+
+	// Preset anlegen (noch ohne Alarm-Felder).
+	createRouter := chi.NewRouter()
+	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	createReq := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, validPresetBody()))
+	createReq.Header.Set("Content-Type", "application/json")
+	createReq = addUserToContext(createReq, "user1")
+	createW := httptest.NewRecorder()
+	createRouter.ServeHTTP(createW, createReq)
+	if createW.Code != http.StatusCreated {
+		t.Fatalf("setup: create failed with %d: %s", createW.Code, createW.Body.String())
+	}
+	var original model.ComparePreset
+	json.Unmarshal(createW.Body.Bytes(), &original)
+
+	// Schritt 1: PUT setzt alle Alarm-Felder.
+	firstBody := validPresetBody()
+	firstBody["alert_cooldown_minutes"] = 45
+	firstBody["alert_quiet_from"] = "22:00"
+	firstBody["alert_quiet_to"] = "07:00"
+	firstBody["display_config"] = map[string]interface{}{
+		"metric_alert_levels": map[string]interface{}{
+			"temperature": "sensitive",
+			"wind":        "normal",
+		},
+	}
+
+	r := chi.NewRouter()
+	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
+	req := httptest.NewRequest("PUT", "/api/compare/presets/"+original.ID, jsonBody(t, firstBody))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "user1")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("first PUT: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var afterFirst model.ComparePreset
+	json.Unmarshal(w.Body.Bytes(), &afterFirst)
+
+	if afterFirst.AlertCooldownMinutes == nil || *afterFirst.AlertCooldownMinutes != 45 {
+		t.Fatalf("round-trip FAIL: expected alert_cooldown_minutes=45, got %v", afterFirst.AlertCooldownMinutes)
+	}
+	if afterFirst.AlertQuietFrom == nil || *afterFirst.AlertQuietFrom != "22:00" {
+		t.Fatalf("round-trip FAIL: expected alert_quiet_from=22:00, got %v", afterFirst.AlertQuietFrom)
+	}
+	if afterFirst.AlertQuietTo == nil || *afterFirst.AlertQuietTo != "07:00" {
+		t.Fatalf("round-trip FAIL: expected alert_quiet_to=07:00, got %v", afterFirst.AlertQuietTo)
+	}
+	levels, ok := afterFirst.DisplayConfig["metric_alert_levels"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("round-trip FAIL: expected display_config.metric_alert_levels to be a map, got %T", afterFirst.DisplayConfig["metric_alert_levels"])
+	}
+	if levels["temperature"] != "sensitive" || levels["wind"] != "normal" {
+		t.Fatalf("round-trip FAIL: metric_alert_levels not preserved, got %v", levels)
+	}
+
+	// Schritt 2: Folge-PUT ändert NUR name, Alarm-Felder + display_config fehlen im Body.
+	secondBody := validPresetBody()
+	secondBody["name"] = "Anderer Name"
+	// Bewusst KEINE alert_* / display_config Felder im Body.
+
+	req2 := httptest.NewRequest("PUT", "/api/compare/presets/"+original.ID, jsonBody(t, secondBody))
+	req2.Header.Set("Content-Type", "application/json")
+	req2 = addUserToContext(req2, "user1")
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+
+	if w2.Code != http.StatusOK {
+		t.Fatalf("second PUT: expected 200, got %d: %s", w2.Code, w2.Body.String())
+	}
+	var afterSecond model.ComparePreset
+	json.Unmarshal(w2.Body.Bytes(), &afterSecond)
+
+	if afterSecond.Name != "Anderer Name" {
+		t.Errorf("expected name to be updated, got %q", afterSecond.Name)
+	}
+	if afterSecond.AlertCooldownMinutes == nil || *afterSecond.AlertCooldownMinutes != 45 {
+		t.Errorf("RMW FAIL: alert_cooldown_minutes must survive an unrelated update, got %v", afterSecond.AlertCooldownMinutes)
+	}
+	if afterSecond.AlertQuietFrom == nil || *afterSecond.AlertQuietFrom != "22:00" {
+		t.Errorf("RMW FAIL: alert_quiet_from must survive an unrelated update, got %v", afterSecond.AlertQuietFrom)
+	}
+	if afterSecond.AlertQuietTo == nil || *afterSecond.AlertQuietTo != "07:00" {
+		t.Errorf("RMW FAIL: alert_quiet_to must survive an unrelated update, got %v", afterSecond.AlertQuietTo)
+	}
+	levels2, ok := afterSecond.DisplayConfig["metric_alert_levels"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("RMW FAIL: expected display_config.metric_alert_levels to survive, got %T", afterSecond.DisplayConfig["metric_alert_levels"])
+	}
+	if levels2["temperature"] != "sensitive" || levels2["wind"] != "normal" {
+		t.Errorf("RMW FAIL: metric_alert_levels not preserved after unrelated update, got %v", levels2)
+	}
+}
+
+// TestUpdateComparePreset_AlertFields_UserIsolation prüft, dass ein Update der
+// Alarm-Felder durch User A ein gleichnamig-strukturiertes Preset von User B
+// nicht berührt (Multi-User-Isolation, analog TestComparePreset_UserIsolation).
+func TestUpdateComparePreset_AlertFields_UserIsolation(t *testing.T) {
+	s := newTestStore(t)
+
+	// User A legt Preset an.
+	createRouterA := chi.NewRouter()
+	createRouterA.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	createReqA := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, validPresetBody()))
+	createReqA.Header.Set("Content-Type", "application/json")
+	createReqA = addUserToContext(createReqA, "userA")
+	createWA := httptest.NewRecorder()
+	createRouterA.ServeHTTP(createWA, createReqA)
+	if createWA.Code != http.StatusCreated {
+		t.Fatalf("setup: userA create failed with %d", createWA.Code)
+	}
+	var presetA model.ComparePreset
+	json.Unmarshal(createWA.Body.Bytes(), &presetA)
+
+	// User B legt eigenes Preset an.
+	createReqB := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, validPresetBody()))
+	createReqB.Header.Set("Content-Type", "application/json")
+	createReqB = addUserToContext(createReqB, "userB")
+	createWB := httptest.NewRecorder()
+	createRouterA.ServeHTTP(createWB, createReqB)
+	if createWB.Code != http.StatusCreated {
+		t.Fatalf("setup: userB create failed with %d", createWB.Code)
+	}
+	var presetB model.ComparePreset
+	json.Unmarshal(createWB.Body.Bytes(), &presetB)
+
+	// User A setzt Alarm-Felder auf sein eigenes Preset.
+	bodyA := validPresetBody()
+	bodyA["alert_cooldown_minutes"] = 30
+
+	updateRouter := chi.NewRouter()
+	updateRouter.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
+	reqA := httptest.NewRequest("PUT", "/api/compare/presets/"+presetA.ID, jsonBody(t, bodyA))
+	reqA.Header.Set("Content-Type", "application/json")
+	reqA = addUserToContext(reqA, "userA")
+	wA := httptest.NewRecorder()
+	updateRouter.ServeHTTP(wA, reqA)
+	if wA.Code != http.StatusOK {
+		t.Fatalf("userA update failed with %d: %s", wA.Code, wA.Body.String())
+	}
+
+	// User B ruft SEIN Preset ab — muss unberührt sein (kein alert_cooldown_minutes).
+	getRouter := chi.NewRouter()
+	getRouter.Get("/api/compare/presets", ListComparePresetsHandler(s))
+	getReqB := httptest.NewRequest("GET", "/api/compare/presets", nil)
+	getReqB = addUserToContext(getReqB, "userB")
+	getWB := httptest.NewRecorder()
+	getRouter.ServeHTTP(getWB, getReqB)
+
+	var presetsB []model.ComparePreset
+	json.Unmarshal(getWB.Body.Bytes(), &presetsB)
+	if len(presetsB) != 1 {
+		t.Fatalf("expected userB to see exactly 1 preset, got %d", len(presetsB))
+	}
+	if presetsB[0].ID != presetB.ID {
+		t.Fatalf("user isolation broken: userB sees preset %q, expected own %q", presetsB[0].ID, presetB.ID)
+	}
+	if presetsB[0].AlertCooldownMinutes != nil {
+		t.Errorf("user isolation broken: userB's preset gained alert_cooldown_minutes=%v from userA's update", *presetsB[0].AlertCooldownMinutes)
+	}
+}

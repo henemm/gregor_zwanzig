@@ -221,6 +221,17 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if updated.HourlyEnabled == nil {
 			updated.HourlyEnabled = original.HourlyEnabled
 		}
+		// Issue #1170: Alarm-Konfiguration erhalten wenn Body sie nicht trägt
+		// (nil nach Decode = Feld fehlte im Request), analog official_alerts_enabled.
+		if updated.AlertCooldownMinutes == nil {
+			updated.AlertCooldownMinutes = original.AlertCooldownMinutes
+		}
+		if updated.AlertQuietFrom == nil {
+			updated.AlertQuietFrom = original.AlertQuietFrom
+		}
+		if updated.AlertQuietTo == nil {
+			updated.AlertQuietTo = original.AlertQuietTo
+		}
 		// Issue #764: forecast_hours erhalten wenn Body es nicht trägt (0 = Feld fehlte im Body).
 		if updated.ForecastHours == 0 {
 			updated.ForecastHours = original.ForecastHours

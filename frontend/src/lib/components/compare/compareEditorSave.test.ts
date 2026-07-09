@@ -131,3 +131,59 @@ describe('buildComparePresetSavePayload — Datenverlust-Schutz (AC-3)', () => {
 		assert.equal(body.id, 'preset-abc-123');
 	});
 });
+
+// ─── Issue #1170 (Epic #1095 Scheibe 3/3): Alarm-Konfiguration im Save-Payload ──
+describe('buildComparePresetSavePayload — Alarm-Konfiguration (Issue #1170)', () => {
+	test('gesetzte Alarm-Felder landen im Payload (display_config.metric_alert_levels + top-level cooldown/quiet), Rest round-trippt', () => {
+		const original = makePreset();
+		const { body } = buildComparePresetSavePayload(original, {
+			name: original.name,
+			activityProfile: 'skitour',
+			pickedIds: ['loc-1', 'loc-2'],
+			region: 'Salzburger Land',
+			idealRanges: {},
+			channelLayouts: null,
+			metricAlertLevels: { wind_gust: 'sensibel', temperature_min: 'standard' },
+			alertCooldownMinutes: 90,
+			alertQuietFrom: '22:00',
+			alertQuietTo: '07:00'
+		});
+
+		const dc = body.display_config as Record<string, unknown>;
+		assert.deepEqual(dc.metric_alert_levels, { wind_gust: 'sensibel', temperature_min: 'standard' });
+		assert.equal(body.alert_cooldown_minutes, 90);
+		assert.equal(body.alert_quiet_from, '22:00');
+		assert.equal(body.alert_quiet_to, '07:00');
+
+		// Datenverlust-Schutz: nicht editierte Felder bleiben unveraendert.
+		assert.deepEqual(body.empfaenger, ['a@example.com', 'b@example.com']);
+		assert.equal(body.schedule, 'daily');
+	});
+
+	test('fehlende Alarm-Felder in edits lassen bereits gesetzte Werte aus original unangetastet (Round-Trip)', () => {
+		const original: ComparePreset = {
+			...makePreset(),
+			alert_cooldown_minutes: 60,
+			alert_quiet_from: '21:00',
+			alert_quiet_to: '06:00',
+			display_config: {
+				region: 'Salzburger Land',
+				metric_alert_levels: { wind_gust: 'entspannt' }
+			}
+		};
+		const { body } = buildComparePresetSavePayload(original, {
+			name: 'Nur der Name ändert sich',
+			activityProfile: 'skitour',
+			pickedIds: ['loc-1', 'loc-2'],
+			region: 'Salzburger Land',
+			idealRanges: {},
+			channelLayouts: null
+		});
+
+		const dc = body.display_config as Record<string, unknown>;
+		assert.deepEqual(dc.metric_alert_levels, { wind_gust: 'entspannt' });
+		assert.equal(body.alert_cooldown_minutes, 60);
+		assert.equal(body.alert_quiet_from, '21:00');
+		assert.equal(body.alert_quiet_to, '06:00');
+	});
+});

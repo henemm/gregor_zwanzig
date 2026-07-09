@@ -40,6 +40,11 @@ export class CompareWizardState {
 	officialAlertsEnabled = $state(true);
 	// Issue #1107: Stundenverlauf-Sektion ein/aus (Default true).
 	hourlyEnabled = $state(true);
+	// Issue #1170 — Alarm-Konfiguration (Epic #1095 Scheibe 3/3), Trip-identische Keys.
+	metricAlertLevels = $state<Record<string, string>>({});
+	alertCooldownMinutes = $state<number | undefined>(undefined);
+	alertQuietFrom = $state<string | undefined>(undefined);
+	alertQuietTo = $state<string | undefined>(undefined);
 	schedule = $state<'daily_morning' | 'daily_evening' | 'weekly'>('daily_morning');
 	weekday = $state(0);
 	includeHourly = $state(false);
@@ -169,6 +174,12 @@ export class CompareWizardState {
 			forecast_hours: this.forecastHours, // Issue #764: Horizont persistieren
 			official_alerts_enabled: this.officialAlertsEnabled, // Issue #1040
 			hourly_enabled: this.hourlyEnabled, // Issue #1107
+			// Issue #1170: Alarm-Konfiguration — cooldown/quiet Top-Level (Trip-identisch).
+			...(this.alertCooldownMinutes !== undefined
+				? { alert_cooldown_minutes: this.alertCooldownMinutes }
+				: {}),
+			...(this.alertQuietFrom !== undefined ? { alert_quiet_from: this.alertQuietFrom } : {}),
+			...(this.alertQuietTo !== undefined ? { alert_quiet_to: this.alertQuietTo } : {}),
 			empfaenger: [],
 			display_config: {
 				region: this.region,
@@ -176,7 +187,10 @@ export class CompareWizardState {
 				...(this.channelLayouts !== null ? { channel_layouts: this.channelLayouts } : {}),
 				...(this.activeMetricKeys.length > 0 ? { active_metrics: this.activeMetricKeys } : {}),
 				...(this.hourlyMetricKeys.length > 0 ? { hourly_metrics: this.hourlyMetricKeys } : {}),
-				...(this.topN !== undefined ? { top_n: this.topN } : {})
+				...(this.topN !== undefined ? { top_n: this.topN } : {}),
+				...(Object.keys(this.metricAlertLevels).length > 0
+					? { metric_alert_levels: this.metricAlertLevels }
+					: {})
 			}
 		};
 		try {
@@ -212,7 +226,11 @@ export class CompareWizardState {
 			forecastHours: this.forecastHours, // Issue #764
 			officialAlertsEnabled: this.officialAlertsEnabled, // Issue #1040
 			hourlyEnabled: this.hourlyEnabled, // Issue #1107
-			topN: this.topN // Issue #1104
+			topN: this.topN, // Issue #1104
+			metricAlertLevels: this.metricAlertLevels, // Issue #1170
+			alertCooldownMinutes: this.alertCooldownMinutes,
+			alertQuietFrom: this.alertQuietFrom,
+			alertQuietTo: this.alertQuietTo
 		});
 		try {
 			const { api } = await import('$lib/api');

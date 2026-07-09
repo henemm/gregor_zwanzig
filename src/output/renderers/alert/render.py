@@ -303,7 +303,10 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
     if single:
         e = evs[0]
         verdict_text = _verdict_single(e)
-        data_rows = _datablock_single(e, msg.location_label)
+        # Issue #1170: per-Event `location_label` (gebündelter Mehr-Orte-Alarm)
+        # geht dem kollektiven `msg.location_label` vor; für Trip/Einzel-Ort
+        # sind beide identisch bzw. beide None (bit-identisch, AC-7).
+        data_rows = _datablock_single(e, e.location_label or msg.location_label)
         footer = f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing"
         any_over = over_thr(e)
         plain_data = [f"{k}: {v}" for k, v in data_rows]
@@ -322,10 +325,16 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         for e in evs:
             unit = _unit_display(e)
             unit_suffix = f" {unit}" if unit else ""
+            # Issue #1170: bei gebündelten Mehr-Orte-Alarmen trägt jedes Event
+            # sein eigenes `location_label` — Label bekommt den Ortsnamen
+            # vorangestellt, damit jeder Datenblock den richtigen Ort zeigt.
+            # Trip-Fall (location_label immer None) bleibt unverändert (leerer
+            # Prefix, AC-7-Invariante).
+            loc_prefix = f"{e.location_label} · " if e.location_label else ""
             if over_thr(e):
                 threshold_suffix = " %" if unit == "%" else ""
                 data_rows.append((
-                    f"{_label(e)} · Schwelle {_num(e, e.threshold)}{threshold_suffix}",
+                    f"{loc_prefix}{_label(e)} · Schwelle {_num(e, e.threshold)}{threshold_suffix}",
                     f"{_num(e, e.value_from)} {arrow(e)} {_num(e, e.value_to)}"
                     f"{unit_suffix} {side_label(e)}",
                 ))
@@ -334,7 +343,7 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
                 # Schwellen-Zahl, Wert mit neutralem Pfeil, kein über/unter-Suffix
                 # (Design-Vorlage Zeilen 231-234).
                 data_rows.append((
-                    f"{_label(e)} · unter Schwelle",
+                    f"{loc_prefix}{_label(e)} · unter Schwelle",
                     f"{_num(e, e.value_from)} → {_num(e, e.value_to)}{unit_suffix}",
                 ))
         km = _km_str(msg)

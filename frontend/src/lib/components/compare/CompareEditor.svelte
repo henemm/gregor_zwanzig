@@ -25,6 +25,7 @@
 	import Step3Idealwerte from './steps/Step3Idealwerte.svelte';
 	import Step4Layout from './steps/Step4Layout.svelte';
 	import Step5Versand from './steps/Step5Versand.svelte';
+	import CompareAlarmSection from './CompareAlarmSection.svelte';
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
 	import Sheet from '$lib/components/mobile/Sheet.svelte';
@@ -41,13 +42,20 @@
 	// Issue #758: eigene SaveStatus-Instanz pro CompareEditor (AC-6: kein geteilter Singleton).
 	const compareSaveCtl = createSaveStatus();
 
-	const TAB_DEFS: { id: CompareTabId; label: string; lockHint: string | null }[] = [
+	// Issue #1170: „Alarme"-Tab nur im Edit-Modus (Playwright-ACs decken nur Edit
+	// ab; Create-Pfad wird über wiz.saveNewPreset() direkt getestet). Erweitert
+	// CompareTabId additiv um 'alarme', ohne die Create-Wizard-Progression
+	// (TAB_ORDER/unlockedTabs/doneTabs) anzufassen.
+	export type EditorTabId = CompareTabId | 'alarme';
+
+	const TAB_DEFS = $derived<{ id: EditorTabId; label: string; lockHint: string | null }[]>([
 		{ id: 'vergleich', label: 'Vergleich', lockHint: null },
 		{ id: 'orte', label: 'Orte', lockHint: 'erst Vergleich benennen' },
 		{ id: 'idealwerte', label: 'Idealwerte', lockHint: 'erst mind. 2 Orte auswählen' },
 		{ id: 'layout', label: 'Layout', lockHint: 'erst Idealwerte öffnen' },
-		{ id: 'versand', label: 'Versand', lockHint: 'erst Layout öffnen' }
-	];
+		{ id: 'versand', label: 'Versand', lockHint: 'erst Layout öffnen' },
+		...(mode === 'edit' ? [{ id: 'alarme' as const, label: 'Alarme', lockHint: null }] : [])
+	]);
 
 	const isEdit = $derived(mode === 'edit');
 
@@ -59,7 +67,7 @@
 	// Issue #718: Validierungs-Status der Idealwerte — reaktiv, keine Seiteneffekte.
 	const idealsValid = $derived(validateIdealRanges(wiz.idealRanges, wiz.activeMetricKeys).valid);
 
-	let activeTab = $state<CompareTabId>('vergleich');
+	let activeTab = $state<EditorTabId>('vergleich');
 
 	// Dirty-Tracking (AC-2): Snapshot der editierbaren Felder beim Mount erfassen.
 	// $derived statt manueller markDirty-Wrapper — deckt alle Tabs ab und markiert
@@ -72,7 +80,12 @@
 		profile: wiz.activityProfile,
 		picked: [...wiz.pickedIds].join(','),
 		ideals: JSON.stringify(wiz.idealRanges),
-		layouts: JSON.stringify(wiz.channelLayouts)
+		layouts: JSON.stringify(wiz.channelLayouts),
+		// Issue #1170: Alarm-Konfiguration im Dirty-Tracking.
+		metricAlertLevels: JSON.stringify(wiz.metricAlertLevels),
+		alertCooldownMinutes: wiz.alertCooldownMinutes,
+		alertQuietFrom: wiz.alertQuietFrom,
+		alertQuietTo: wiz.alertQuietTo
 	});
 	const dirty = $derived(
 		isEdit &&
@@ -81,7 +94,11 @@
 				wiz.activityProfile !== initial.profile ||
 				[...wiz.pickedIds].join(',') !== initial.picked ||
 				JSON.stringify(wiz.idealRanges) !== initial.ideals ||
-				JSON.stringify(wiz.channelLayouts) !== initial.layouts)
+				JSON.stringify(wiz.channelLayouts) !== initial.layouts ||
+				JSON.stringify(wiz.metricAlertLevels) !== initial.metricAlertLevels ||
+				wiz.alertCooldownMinutes !== initial.alertCooldownMinutes ||
+				wiz.alertQuietFrom !== initial.alertQuietFrom ||
+				wiz.alertQuietTo !== initial.alertQuietTo)
 	);
 
 	// Issue #758: sync dirty state → compareSaveCtl (nur wenn nicht schon saving/error).
@@ -119,8 +136,8 @@
 	);
 	const doneCount = $derived(TAB_ORDER.filter((t) => done.has(t)).length);
 
-	function switchTab(id: CompareTabId) {
-		if (!isEdit && !unlocked.has(id)) return;
+	function switchTab(id: EditorTabId) {
+		if (!isEdit && id !== 'alarme' && !unlocked.has(id)) return;
 		activeTab = id;
 		if (id === 'idealwerte') idealsVisited = true;
 		if (id === 'layout') layoutVisited = true;
@@ -147,6 +164,11 @@
 		const savedPicked = [...wiz.pickedIds].join(',');
 		const savedIdeals = JSON.stringify(wiz.idealRanges);
 		const savedLayouts = JSON.stringify(wiz.channelLayouts);
+		// Issue #1170: Alarm-Konfiguration ebenfalls snapshotten.
+		const savedMetricAlertLevels = JSON.stringify(wiz.metricAlertLevels);
+		const savedCooldown = wiz.alertCooldownMinutes;
+		const savedQuietFrom = wiz.alertQuietFrom;
+		const savedQuietTo = wiz.alertQuietTo;
 		const { url, body } = buildComparePresetSavePayload(preset, {
 			name: wiz.name,
 			activityProfile: wiz.activityProfile,
@@ -155,7 +177,11 @@
 			idealRanges: wiz.idealRanges,
 			channelLayouts: wiz.channelLayouts,
 			activeMetricKeys: wiz.activeMetricKeys,
-			hourlyMetricKeys: wiz.hourlyMetricKeys
+			hourlyMetricKeys: wiz.hourlyMetricKeys,
+			metricAlertLevels: wiz.metricAlertLevels,
+			alertCooldownMinutes: wiz.alertCooldownMinutes,
+			alertQuietFrom: wiz.alertQuietFrom,
+			alertQuietTo: wiz.alertQuietTo
 		});
 		api.put(url, body)
 			.then(() => {
@@ -166,6 +192,10 @@
 				initial.picked = savedPicked;
 				initial.ideals = savedIdeals;
 				initial.layouts = savedLayouts;
+				initial.metricAlertLevels = savedMetricAlertLevels;
+				initial.alertCooldownMinutes = savedCooldown;
+				initial.alertQuietFrom = savedQuietFrom;
+				initial.alertQuietTo = savedQuietTo;
 				compareSaveCtl.setSaved();
 			})
 			.catch((e: unknown) => {
@@ -213,8 +243,8 @@
 	}
 
 	// Mobile Tab-Navigation
-	function handleMobileTabClick(id: CompareTabId) {
-		const open = isEdit || unlocked.has(id);
+	function handleMobileTabClick(id: EditorTabId) {
+		const open = isEdit || (id !== 'alarme' && unlocked.has(id));
 		if (!open) {
 			const hint = TAB_DEFS.find(t => t.id === id)?.lockHint ?? 'Tab gesperrt';
 			showLockToast(hint);
@@ -224,7 +254,7 @@
 	}
 
 	function handleMobileNext() {
-		const idx = TAB_ORDER.indexOf(activeTab);
+		const idx = TAB_ORDER.indexOf(activeTab as CompareTabId);
 		if (activeTab === 'versand') {
 			handleActivate();
 		} else if (idx >= 0 && idx < TAB_ORDER.length - 1) {
@@ -378,13 +408,13 @@
 		>
 			{#each TAB_DEFS as t (t.id)}
 				{@const on = t.id === activeTab}
-				{@const open = isEdit || unlocked.has(t.id)}
-				{@const isDone = !isEdit && done.has(t.id) && !on}
+				{@const open = isEdit || (t.id !== 'alarme' && unlocked.has(t.id))}
+				{@const isDone = !isEdit && t.id !== 'alarme' && done.has(t.id) && !on}
 				<button
 					data-testid={`compare-editor-tab-${t.id}`}
 					data-active={on ? 'true' : 'false'}
 					data-locked={open ? 'false' : 'true'}
-					data-done={done.has(t.id) ? 'true' : 'false'}
+					data-done={t.id !== 'alarme' && done.has(t.id) ? 'true' : 'false'}
 					type="button"
 					onclick={() => switchTab(t.id)}
 					title={!open && t.lockHint ? `Gesperrt — ${t.lockHint}` : undefined}
@@ -537,6 +567,8 @@
 		<Step4Layout />
 	{:else if activeTab === 'versand'}
 		<Step5Versand {versandVisited} />
+	{:else if activeTab === 'alarme'}
+		<CompareAlarmSection {wiz} />
 	{/if}
 
 	<!-- DOM-Anker für AC-5 isAttached()-Test (display:none, kein sichtbarer Inhalt).
@@ -617,7 +649,7 @@
 		style="gap: 0; overflow-x: auto; border-bottom: 1px solid var(--g-rule-soft); -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0;">
 		{#each TAB_DEFS as t (t.id)}
 			{@const on = t.id === activeTab}
-			{@const open = isEdit || unlocked.has(t.id)}
+			{@const open = isEdit || (t.id !== 'alarme' && unlocked.has(t.id))}
 			<button type="button"
 				data-testid="cm-mobile-tab-{t.id}"
 				data-active={on ? 'true' : 'false'}
@@ -691,6 +723,8 @@
 			<Step4Layout />
 		{:else if activeTab === 'versand'}
 			<Step5Versand {versandVisited} />
+		{:else if activeTab === 'alarme'}
+			<CompareAlarmSection {wiz} />
 		{/if}
 	</div>
 

@@ -29,6 +29,11 @@ export interface CompareEditorEdits {
 	topN?: number;
 	// Issue #1107: Stundenverlauf-Sektion ein/aus. Optional → rückwärtskompatibel.
 	hourlyEnabled?: boolean;
+	// Issue #1170: Alarm-Konfiguration (Epic #1095 Scheibe 3/3). Optional → rückwärtskompatibel.
+	metricAlertLevels?: Record<string, string>;
+	alertCooldownMinutes?: number;
+	alertQuietFrom?: string;
+	alertQuietTo?: string;
 }
 
 /**
@@ -78,6 +83,11 @@ export function buildComparePresetSavePayload(
 		}
 	}
 
+	// Issue #1170: metric_alert_levels lebt in display_config (analog Trip).
+	if (edits.metricAlertLevels !== undefined) {
+		displayConfig.metric_alert_levels = edits.metricAlertLevels;
+	}
+
 	const body: ComparePreset = {
 		...original,
 		name: edits.name,
@@ -92,7 +102,13 @@ export function buildComparePresetSavePayload(
 			? { official_alerts_enabled: edits.officialAlertsEnabled }
 			: {}),
 		// Issue #1107: analoges Round-Trip-Prinzip für hourly_enabled.
-		...(edits.hourlyEnabled !== undefined ? { hourly_enabled: edits.hourlyEnabled } : {})
+		...(edits.hourlyEnabled !== undefined ? { hourly_enabled: edits.hourlyEnabled } : {}),
+		// Issue #1170: analoges Round-Trip-Prinzip für die Alarm-Konfiguration.
+		...(edits.alertCooldownMinutes !== undefined
+			? { alert_cooldown_minutes: edits.alertCooldownMinutes }
+			: {}),
+		...(edits.alertQuietFrom !== undefined ? { alert_quiet_from: edits.alertQuietFrom } : {}),
+		...(edits.alertQuietTo !== undefined ? { alert_quiet_to: edits.alertQuietTo } : {})
 	};
 
 	return { url, body };

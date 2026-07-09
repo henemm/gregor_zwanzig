@@ -37,6 +37,13 @@
 	state.hourlyEnabled = data.preset.hourly_enabled ?? true; // Issue #1107
 	state.topN = (state.existingDisplayConfig.top_n as number) ?? 3; // Issue #1104
 
+	// Issue #1170 — Alarm-Konfiguration (Epic #1095 Scheibe 3/3).
+	state.metricAlertLevels =
+		(state.existingDisplayConfig.metric_alert_levels as Record<string, string>) ?? {};
+	state.alertCooldownMinutes = data.preset.alert_cooldown_minutes ?? undefined;
+	state.alertQuietFrom = data.preset.alert_quiet_from ?? undefined;
+	state.alertQuietTo = data.preset.alert_quiet_to ?? undefined;
+
 	// Kanal-Layouts aus display_config
 	const savedLayouts = state.existingDisplayConfig.channel_layouts as
 		| ChannelLayouts
