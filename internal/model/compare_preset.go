@@ -36,4 +36,10 @@ type ComparePreset struct {
 	// Feld im JSON (Altdaten), decodiert Go zu nil statt zum Zero-Value false.
 	// nil/true = Quellen werden abgefragt (Default), false = strukturell kein Fetch.
 	OfficialAlertsEnabled *bool `json:"official_alerts_enabled,omitempty"`
+	// Issue #1107 — steuert ob die Stundenverlauf-Sektion (Kopf + alle
+	// Orts-Stundentabellen) der Compare-Mail gerendert wird. Pointer-Pattern
+	// (wie OfficialAlertsEnabled): fehlt das Feld im JSON (Altdaten), decodiert
+	// Go zu nil statt zum Zero-Value false. nil/true = Sektion sichtbar
+	// (Default), false = komplett weggelassen.
+	HourlyEnabled *bool `json:"hourly_enabled,omitempty"`
 }

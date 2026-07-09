@@ -137,6 +137,7 @@ def build_mime_message(
     plain_text_body: str | None,
     mail_type: str | None = None,
     mail_format: str | None = None,
+    compare_hourly_enabled: bool | None = None,
 ):
     """Issue #722: Build a MIME message. Pure function, no SMTP side-effects.
 
@@ -146,6 +147,9 @@ def build_mime_message(
     Issue #733: Optionale Marker-Header X-GZ-Mail-Type / X-GZ-Format für den
     kanonischen Briefing-Mail-Validator. Backward-Compat: ohne die Params bleibt
     die Message header-frei.
+
+    Issue #1107: Optionaler Marker-Header X-GZ-Compare-Hourly-Enabled für den
+    Compare-Mail-Validator (email_spec_validator.py).
     """
     if html:
         msg = MIMEMultipart("alternative")
@@ -158,6 +162,8 @@ def build_mime_message(
             msg["X-GZ-Mail-Type"] = mail_type
         if mail_format is not None:
             msg["X-GZ-Format"] = mail_format
+        if compare_hourly_enabled is not None:
+            msg["X-GZ-Compare-Hourly-Enabled"] = "true" if compare_hourly_enabled else "false"
         if plain_text_body:
             plain_text = plain_text_body
         else:
@@ -181,6 +187,8 @@ def build_mime_message(
             msg["X-GZ-Mail-Type"] = mail_type
         if mail_format is not None:
             msg["X-GZ-Format"] = mail_format
+        if compare_hourly_enabled is not None:
+            msg["X-GZ-Compare-Hourly-Enabled"] = "true" if compare_hourly_enabled else "false"
     return msg
 
 
@@ -256,6 +264,7 @@ class EmailOutput:
         to: list[str] | str | None = None,
         mail_type: str | None = None,
         mail_format: str | None = None,
+        compare_hourly_enabled: bool | None = None,
     ) -> None:
         """
         Send email via SMTP with automatic retry on network errors.
@@ -327,6 +336,7 @@ class EmailOutput:
             plain_text_body=plain_text_body,
             mail_type=mail_type,
             mail_format=mail_format,
+            compare_hourly_enabled=compare_hourly_enabled,
         )
 
         # Retry logic with exponential backoff

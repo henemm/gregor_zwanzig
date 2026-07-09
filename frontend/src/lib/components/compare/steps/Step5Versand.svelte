@@ -140,6 +140,14 @@
 						testid="compare-step5-official-alerts-toggle"
 					/>
 				</div>
+				<div>
+					<ChannelToggle
+						label="Stundenverlauf"
+						checked={state.hourlyEnabled}
+						onchange={(checked) => (state.hourlyEnabled = checked)}
+						testid="compare-step5-hourly-enabled-toggle"
+					/>
+				</div>
 			</div>
 			{#if allChannelsOff}
 				<p

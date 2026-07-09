@@ -240,6 +240,8 @@ Zeitplan (vordefinierte Zeiten), Kanal-Auswahl (E-Mail/SMS), Empfänger-Konfigur
 
 **Stundenverlauf-Metriken konfigurierbar (Issue #1106 ✓, 2026-07-08):** Neue Checkbox-Sektion unterhalb der „Anzahl Orte"-Sektion — der Nutzer wählt, welche der 9 Spalten (Temp, Gef., Wind, Böen, Regen, UV, Gewitter, Regenwahrscheinlichkeit, Sicht) im Stundenverlauf jeder Ort-Sektion der Compare-Mail erscheinen. „Zeit" ist immer erste Spalte und nicht abwählbar. Default = alle 9 aktiv; die dekorative Wolken-Spalte wurde ersatzlos entfernt. Persistenz über `display_config.hourly_metrics` (Resolver `resolve_hourly_metrics()` in `src/output/renderers/compare_hourly_metric_ids.py`, Frontend-Katalog `compareHourlyMetricDefs.ts`). Details: `docs/specs/modules/issue_1106_hourly_metrics_config.md`.
 
+**Stundenverlauf-Sektion komplett abschaltbar (Issue #1107 ✓, 2026-07-08):** Neuer Toggle „Stundenverlauf" in Step 5 („Kanäle"), direkt neben „Amtliche Warnungen" — schaltet die gesamte Stundenverlauf-Sektion (Kopf „STUNDEN" + alle Orts-Stundentabellen) der Compare-Mail ein/aus, nicht nur einzelne Spalten (das leistet weiterhin #1106). Top-Level-Preset-Feld `hourly_enabled` (`*bool`, Default `true`/fehlend = sichtbar), analoges Pointer-Pattern zu `official_alerts_enabled` (#1040). Marker-Header `X-GZ-Compare-Hourly-Enabled` am Versand. **Bekannte Lücke:** `email_spec_validator.py` (Orts-Vergleich-Gate) kennt das Feld noch nicht und würde eine `hourly_enabled=false`-Mail fälschlich als strukturell unvollständig melden — ausgelagert nach Folge-Issue #1150 (siehe `docs/reference/mail_validators.md`). Details: `docs/specs/modules/issue_1107_compare_hourly_toggle.md`.
+
 ---
 
 ## Data Model
@@ -477,6 +479,7 @@ None—pure frontend changes for Steps 1–3. Backend endpoints are opaque (no s
 
 | Date | Change |
 |------|--------|
+| 2026-07-08 | Step 5 (Versand): neuer Toggle „Stundenverlauf" schaltet die komplette Stundenverlauf-Sektion der Compare-Mail ein/aus (Top-Level-Feld `hourly_enabled`, Pointer-Pattern analog `official_alerts_enabled`). Marker-Header `X-GZ-Compare-Hourly-Enabled`. `email_spec_validator.py` bewusst unverändert (ausgelagert nach Folge-Issue #1150). Issue #1107 ✓ |
 | 2026-07-08 | Step 5 (Versand): Stundenverlauf-Metriken im Compare-Editor konfigurierbar gemacht — Checkbox-Auswahl aus 9 Metriken (Wolken entfernt, Gewitter/Regenwahrscheinlichkeit/Sicht neu), Default = alle. `email_spec_validator.py` von Exakt- auf Teilmenge-mit-Reihenfolge-Prüfung umgebaut. Issue #1106 ✓ |
 | 2026-06-09 | **Slice 3 of #677 complete:** Issue #680 ✓ — Fidelity Tabs „Orte" + „Idealwerte" implementiert. Nummerierte Picked-Liste, Region-Gruppierung, Dual-Handle-Slider, Add/Remove-Metrik, display_config.active_metrics-Persistenz. RangeSlider.svelte neu, ALL_METRICS Katalog. Step-Komponenten jetzt auch im Tab-Editor voll funktional. |
 | 2026-06-09 | **Migration in progress:** Epic #677 (Compare-Editor Tab-UI). Issues #678 ✓, #679 ✓, #680 ✓. Wizard remains available until Slice 6 completion. |

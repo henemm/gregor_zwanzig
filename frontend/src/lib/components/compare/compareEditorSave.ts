@@ -27,6 +27,8 @@ export interface CompareEditorEdits {
 	officialAlertsEnabled?: boolean;
 	// Issue #1104: Anzahl Orte mit stündlichem Detail. Optional → rückwärtskompatibel.
 	topN?: number;
+	// Issue #1107: Stundenverlauf-Sektion ein/aus. Optional → rückwärtskompatibel.
+	hourlyEnabled?: boolean;
 }
 
 /**
@@ -88,7 +90,9 @@ export function buildComparePresetSavePayload(
 		// Issue #1040: analoges Round-Trip-Prinzip für official_alerts_enabled.
 		...(edits.officialAlertsEnabled !== undefined
 			? { official_alerts_enabled: edits.officialAlertsEnabled }
-			: {})
+			: {}),
+		// Issue #1107: analoges Round-Trip-Prinzip für hourly_enabled.
+		...(edits.hourlyEnabled !== undefined ? { hourly_enabled: edits.hourlyEnabled } : {})
 	};
 
 	return { url, body };

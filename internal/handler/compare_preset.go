@@ -217,6 +217,10 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if updated.OfficialAlertsEnabled == nil {
 			updated.OfficialAlertsEnabled = original.OfficialAlertsEnabled
 		}
+		// Issue #1107: hourly_enabled erhalten wenn Body es nicht trägt.
+		if updated.HourlyEnabled == nil {
+			updated.HourlyEnabled = original.HourlyEnabled
+		}
 		// Issue #764: forecast_hours erhalten wenn Body es nicht trägt (0 = Feld fehlte im Body).
 		if updated.ForecastHours == 0 {
 			updated.ForecastHours = original.ForecastHours

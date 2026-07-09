@@ -288,6 +288,7 @@ class CompareEmailPreviewBody(BaseModel):
     time_window: list[int] = Field(..., min_length=2, max_length=2)
     target_date: str                          # ISO-8601, z. B. "2026-05-31"
     winner_tags: list[WinnerTag] = []
+    hourly_enabled: bool = True                # Issue #1107
 
 
 @router.post("/api/_validator/compare-email-preview")

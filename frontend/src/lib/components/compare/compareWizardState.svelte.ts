@@ -38,6 +38,8 @@ export class CompareWizardState {
 	forecastHours = $state(48);
 	// Issue #1040: amtliche Warnungen ein/aus (Default true).
 	officialAlertsEnabled = $state(true);
+	// Issue #1107: Stundenverlauf-Sektion ein/aus (Default true).
+	hourlyEnabled = $state(true);
 	schedule = $state<'daily_morning' | 'daily_evening' | 'weekly'>('daily_morning');
 	weekday = $state(0);
 	includeHourly = $state(false);
@@ -166,6 +168,7 @@ export class CompareWizardState {
 			hour_to: this.timeWindowEnd,
 			forecast_hours: this.forecastHours, // Issue #764: Horizont persistieren
 			official_alerts_enabled: this.officialAlertsEnabled, // Issue #1040
+			hourly_enabled: this.hourlyEnabled, // Issue #1107
 			empfaenger: [],
 			display_config: {
 				region: this.region,
@@ -208,6 +211,7 @@ export class CompareWizardState {
 			hourlyMetricKeys: this.hourlyMetricKeys, // Issue #1106
 			forecastHours: this.forecastHours, // Issue #764
 			officialAlertsEnabled: this.officialAlertsEnabled, // Issue #1040
+			hourlyEnabled: this.hourlyEnabled, // Issue #1107
 			topN: this.topN // Issue #1104
 		});
 		try {

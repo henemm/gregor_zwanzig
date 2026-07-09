@@ -166,4 +166,8 @@ def render_compare_email_preview(body: Any) -> str:
         time_window=(body.time_window[0], body.time_window[1]),
         target_date=target_date,
     )
-    return render_compare_html(result, profile=profile_enum)
+    return render_compare_html(
+        result,
+        profile=profile_enum,
+        hourly_enabled=body.hourly_enabled,
+    )

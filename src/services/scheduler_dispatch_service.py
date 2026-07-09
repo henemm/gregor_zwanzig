@@ -271,6 +271,9 @@ def send_one_compare_preset(
     enabled_metrics = resolve_enabled_metrics(display_config.get("active_metrics"))
     # Issue #1106: Stundenverlauf-Spaltenauswahl je Ort-Sektion, analog active_metrics.
     hourly_metrics = resolve_hourly_metrics(display_config.get("hourly_metrics"))
+    # Issue #1107: hourly_enabled ist ein TOP-LEVEL Preset-Feld (wie
+    # official_alerts_enabled), NICHT im display_config-Blob.
+    hourly_enabled = preset.get("hourly_enabled", True)
     # Issue #1110: Abo-Footer-Metadaten (Preset-Name/Schedule/Weekday) zusaetzlich
     # zu den #1104-Parametern durchreichen (Merge beider Feature-Branches).
     html_body, text_body = render_compare_email(
@@ -279,6 +282,7 @@ def send_one_compare_preset(
         top_n_details=top_n_details,
         enabled_metrics=enabled_metrics,
         hourly_metrics=hourly_metrics,
+        hourly_enabled=hourly_enabled,
         preset_name=name,
         preset_schedule=preset.get("schedule"),
         preset_weekday=preset.get("weekday"),
@@ -288,6 +292,7 @@ def send_one_compare_preset(
         html_body,
         plain_text_body=text_body,
         to=empfaenger,
+        compare_hourly_enabled=hourly_enabled,
     )
 
     save_compare_preset_status(user_id, preset_id, top_ort, data_root=data_root)

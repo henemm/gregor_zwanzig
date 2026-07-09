@@ -495,6 +495,7 @@ export interface ComparePreset {
 	archived_at?: string;               // Issue #611 — gesetzt = archiviert
 	display_config?: Record<string, unknown>;  // ideal_ranges, channel_layouts, region, active_metrics (#680), top_n (#1104)
 	official_alerts_enabled?: boolean;  // Issue #1040 — amtliche Warnungen ein/aus
+	hourly_enabled?: boolean;  // Issue #1107 — Stundenverlauf-Sektion ein/aus
 }
 
 // Issue #1068 — Nutzerlevel (Slice 1 aus Epic #1067).

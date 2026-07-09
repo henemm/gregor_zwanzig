@@ -121,6 +121,7 @@ def render_compare_email(
     top_n_details: Optional[int] = None,
     enabled_metrics: set | None = None,
     hourly_metrics: set | None = None,
+    hourly_enabled: bool = True,
     preset_name: Optional[str] = None,
     preset_schedule: Optional[str] = None,
     preset_weekday: Optional[int] = None,
@@ -135,7 +136,8 @@ def render_compare_email(
     Orte; die Semantik wird in #1105-#1107 neu definiert. ``enabled_metrics``
     filtert die numerischen Uebersichts-Zeilen (s. ``render_compare_html``).
     ``hourly_metrics`` (Issue #1106) filtert die Wert-Spalten je
-    Stundentabelle-Ort-Sektion, analog ``enabled_metrics``.
+    Stundentabelle-Ort-Sektion, analog ``enabled_metrics``. ``hourly_enabled``
+    (Issue #1107) schaltet die komplette Stundenverlauf-Sektion ein/aus.
 
     Returns:
         Tuple of (html_body, text_body).
@@ -149,6 +151,7 @@ def render_compare_email(
         top_n_details=top_n_details,
         enabled_metrics=enabled_metrics,
         hourly_metrics=hourly_metrics,
+        hourly_enabled=hourly_enabled,
         preset_name=preset_name,
         preset_schedule=preset_schedule,
         preset_weekday=preset_weekday,

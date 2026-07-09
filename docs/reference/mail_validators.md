@@ -58,10 +58,22 @@ niemals im Klartext. Kein Gmail.
 **Nur bei Exit 0** darfst du „E2E Test bestanden" sagen. Einfache String-Checks
 beweisen NICHTS — sie prüfen nicht, ob Daten SINNVOLL sind.
 
-**Bekannte Grenze (Folge-Scope #1107):** Der Validator prüft nur den statischen
+**Bekannte Grenze:** Der Validator prüft nur den statischen
 v2-Struktur-Vertrag (Warn-Zeile + ≥1 numerische Zeile genügt). Ob die im Preset
 tatsächlich aktivierten Metriken korrekt angezeigt werden, ist nicht Teil dieses
 Gates.
+
+**Bekannte Grenze (Folge-Issue #1150):** Seit Issue #1107 kann die komplette
+Stundenverlauf-Sektion je Compare-Preset abgeschaltet werden
+(`ComparePreset.hourly_enabled=false`, Marker-Header
+`X-GZ-Compare-Hourly-Enabled: false`). Der Validator liest diesen Header
+noch nicht und fordert weiterhin für jeden gelisteten Ort eine Stundentabelle
+— eine bewusst so konfigurierte Mail wird daher fälschlich als strukturell
+unvollständig gemeldet (Dauer-Exit-1 für diesen Fall). Grund: Validator-Dateien
+(`.claude/hooks/*`) dürfen nicht im selben Workflow geändert werden, dessen
+Ergebnis sie prüfen sollen (`feedback_validator_changes_own_workflow`). Die
+Erweiterung (`validate_structure(hourly_enabled=...)`, Header-Auswertung in
+`run_validation()`) ist als eigener Workflow unter Issue #1150 ausgelagert.
 
 ## 2. `briefing_mail_validator.py` — Trip-Briefing-Mail (seit #733)
 

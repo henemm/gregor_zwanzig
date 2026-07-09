@@ -1251,9 +1251,15 @@ type ComparePreset struct {
     LetzterVersand       *time.Time             `json:"letzter_versand,omitempty"`             // last send timestamp (server-managed)
     TopOrtLetzterVersand *string                `json:"top_ort_letzter_versand,omitempty"`     // highest-ranked location from last send (server-managed)
     DisplayConfig        map[string]interface{} `json:"display_config,omitempty"`              // opaque config (Issue #680: active_metrics, ideal_ranges, etc.)
+    HourlyEnabled        *bool                  `json:"hourly_enabled,omitempty"`              // Issue #1107, Pointer-Muster analog OfficialAlertsEnabled (#1040): nil/true = Stundenverlauf-Sektion sichtbar (Default), false = komplett weggelassen (Mail behält Übersichtstabelle)
     CreatedAt            time.Time              `json:"created_at"`
 }
 ```
+
+**Hinweis zur Vollständigkeit:** Diese Struct-Auflistung wird nicht bei jeder additiven
+Preset-Erweiterung nachgezogen (z.B. `OfficialAlertsEnabled` #1040, `TopNDetails`/`EnabledMetrics`
+#1104, `HourlyMetrics` #1106 fehlen hier aktuell noch) — `HourlyEnabled` (#1107) wurde ergänzt, da
+es der unmittelbare Anlass dieser Doku-Aktualisierung war.
 
 **DisplayConfig Keys (Issue #680 onwards):**
 - `active_metrics`: `[]string` — Ausgewählte Metrik-Keys für Vergleich (z.B. `["temp_max_c", "wind_max_kmh", "precip_sum_mm"]`). Default: Profil-spezifische Metriken aus `PROFILE_METRICS_WITH_SCALES`.

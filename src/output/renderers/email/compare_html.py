@@ -631,6 +631,7 @@ def render_compare_html(
     top_n_details: Optional[int] = None,
     enabled_metrics: set | None = None,
     hourly_metrics: set | None = None,
+    hourly_enabled: bool = True,
     preset_name: Optional[str] = None,
     preset_schedule: Optional[str] = None,
     preset_weekday: Optional[int] = None,
@@ -654,6 +655,12 @@ def render_compare_html(
             z.B. "t2m_c"/"thunder_level"), filtert die Wert-Spalten je
             Stundentabelle. "Zeit" bleibt immer erste Spalte. ``None`` = alle
             9 Spalten (Default).
+        hourly_enabled: Issue #1107 -- ``False`` laesst die komplette
+            Stundenverlauf-Sektion (Kopf "STUNDEN" + alle Orts-
+            Stundentabellen) weg. ``hourly_metrics`` (Spalten-Filter,
+            #1106) hat dann keine Wirkung mehr, da die Sektion gar nicht
+            gerendert wird. Default ``True`` (rueckwaertskompatibel,
+            identisch zum Verhalten vor diesem Slice).
         preset_name: Name des Compare-Presets fuer den Abo-Footer.
         preset_schedule: Schedule-Wert (z.B. "daily"/"weekly") fuer "Naechster Versand".
         preset_weekday: Wochentag-Index (0=Mo) fuer weekly-Schedules.
@@ -678,9 +685,10 @@ def render_compare_html(
     hourly_head_html = (
         f'<div style="padding:26px 24px 0;">'
         f'{_render_section_head("STUNDEN", "Stundenverlauf · alle Orte", "09–16 Uhr")}</div>'
-    )
-    hourly_sections_html = "".join(
-        _render_location_section(loc, i, hourly_metrics) for i, loc in enumerate(locations)
+    ) if hourly_enabled else ""
+    hourly_sections_html = (
+        "".join(_render_location_section(loc, i, hourly_metrics) for i, loc in enumerate(locations))
+        if hourly_enabled else ""
     )
 
     legend_html = _render_legend()
