@@ -247,7 +247,7 @@ kein `package-lock.json`-Diff nötig (keine neue Dependency).
 ## Architektur-Entscheidung (ADR)
 
 - **ADR-Nr.:** Teil A/B: keine (isolierte Bugfixes ohne Richtungsentscheidung). Teil C:
-  neues ADR `docs/adr/0013-node-test-frontend-unit-runner.md` wird in der
+  neues ADR `docs/adr/0020-node-test-frontend-unit-runner.md` wird in der
   Implementierungsphase angelegt (nicht Teil dieser Spec-Phase).
 - **Rationale:** Teil C legt fest, dass `node --experimental-strip-types --test` der
   kanonische Frontend-Unit-Test-Runner ist und **kein** vitest verwendet wird — eine

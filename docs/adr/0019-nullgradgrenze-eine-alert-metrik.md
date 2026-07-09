@@ -1,4 +1,4 @@
-# ADR-0014: Nullgradgrenze — `snow_line` und `freezing_level` konsolidiert zu einer Alert-Metrik
+# ADR-0019: Nullgradgrenze — `snow_line` und `freezing_level` konsolidiert zu einer Alert-Metrik
 
 - **Status:** Akzeptiert
 - **Datum:** 2026-07-02

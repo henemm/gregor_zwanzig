@@ -74,9 +74,11 @@ ADRs sind nicht nur Konvention, sondern werden erzwungen:
 | [0010](0010-vorboten-metriken-kein-alert-ausloeser.md) | Vorboten-Metriken sind keine Alert-Auslöser | Akzeptiert |
 | [0011](0011-alert-render-single-backend-renderer.md) | Alert-Render-System — ein Backend-Renderer, Registry als Single Source | Akzeptiert |
 | [0012](0012-telegram-parse-mode-html.md) | Telegram-Formatierung — parse_mode=HTML statt Markdown/MarkdownV2 | Akzeptiert |
-| [0013](0013-node-test-frontend-unit-runner.md) | node:test ist der kanonische Frontend-Unit-Test-Runner (kein vitest) | Akzeptiert |
+| [0013](0013-alert-threshold-ist-delta-sensitivitaet.md) | Alert-Renderer: `threshold` ist immer Δ-Sensitivitätsschwelle, nie Absolutwert-Referenz | Akzeptiert |
 | [0014](0014-telegram-multi-bubble-format.md) | Telegram-Ausgabe: Multi-Bubble-Tabellenformat ersetzt Prosa | Akzeptiert |
-| [0014](0014-nullgradgrenze-eine-alert-metrik.md) | Nullgradgrenze als eine Alert-Metrik (Nummern-Kollision; war bisher nicht im Index) | Akzeptiert |
 | [0015](0015-dual-stack-zielarchitektur.md) | Dual-Stack (Go + Python) als dauerhafte Zielarchitektur — präzisiert 0001 | Akzeptiert |
 | [0016](0016-amtliche-warnungen-additiver-typ.md) | Amtliche Warnungen als additiver externer Alert-Typ (Nachtrag im Index) | Akzeptiert |
 | [0017](0017-output-paket-konsolidierung.md) | Ein Output-Paket: `src/output/` mit `renderers/` + `channels/`; `formatters/`+`outputs/` aufgelöst | Akzeptiert |
+| [0018](0018-provider-fallback-ohne-kaschieren.md) | Modell-Fallback bei Wetter-Quell-Ausfall — mit Ausweichen, aber ohne Kaschieren | Akzeptiert |
+| [0019](0019-nullgradgrenze-eine-alert-metrik.md) | Nullgradgrenze als eine Alert-Metrik | Akzeptiert |
+| [0020](0020-node-test-frontend-unit-runner.md) | node:test ist der kanonische Frontend-Unit-Test-Runner (kein vitest) | Akzeptiert |

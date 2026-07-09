@@ -92,7 +92,7 @@ def detect_changes(self, cached, fresh, include_absolute=True):
 - Temperatur: ±5.0 °C
 - Wind / Böen: ±20.0 km/h
 - Regen: ±10.0 mm
-- Nullgradgrenze (`freezing_level`): ±200.0 m — einzige Winter-Alert-Metrik seit Issue #959/ADR-0014 (`snow_line` konsolidiert)
+- Nullgradgrenze (`freezing_level`): ±200.0 m — einzige Winter-Alert-Metrik seit Issue #959/ADR-0019 (`snow_line` konsolidiert)
 - Gewitter (Wahrscheinlichkeit): ±1.0 (nur bei Level-Änderung)
 
 ### 5. Knapper Alert-Render-Pfad

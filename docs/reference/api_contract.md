@@ -2368,7 +2368,7 @@ export interface AlertRule {
 |------|-----|------------|
 | id | string | Eindeutige Alert-ID (z.B. `alert-gust-1`) |
 | kind | enum | `"absolute"` (Schwellenwert überschritten) oder `"delta"` (Änderung größer als Schwelle) |
-| metric | enum | Gemessene Metrik: WIND_GUST, PRECIPITATION_SUM, TEMPERATURE_MIN/MAX, THUNDER_LEVEL, FREEZING_LEVEL, TEMPERATURE/WIND/PRECIPITATION_CHANGE. `SNOW_LINE` bleibt als toter Enum-Wert nur für Backward-Compat-Deserialisierung alt-persistierter Regeln erhalten (ADR-0014) — nicht mehr wählbar. |
+| metric | enum | Gemessene Metrik: WIND_GUST, PRECIPITATION_SUM, TEMPERATURE_MIN/MAX, THUNDER_LEVEL, FREEZING_LEVEL, TEMPERATURE/WIND/PRECIPITATION_CHANGE. `SNOW_LINE` bleibt als toter Enum-Wert nur für Backward-Compat-Deserialisierung alt-persistierter Regeln erhalten (ADR-0019) — nicht mehr wählbar. |
 | threshold | float | Schwellenwert (z.B. `50.0` für 50 km/h Wind-Böen) |
 | severity | enum | `"info"`, `"warning"`, `"critical"` — nur noch Label am Alert, **nicht mehr** für Versand-Filterung (behebt Severity-Falle: Info-Alerts werden nicht mehr still verschluckt) |
 | enabled | bool | Alert aktiv? (default: true) |

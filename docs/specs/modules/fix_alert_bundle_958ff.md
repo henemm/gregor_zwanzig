@@ -491,7 +491,7 @@ vollständige Liste — die TDD-RED-Phase muss weitere Fälle aufdecken:
 
 - **ADR-Nr.:** Vorschlag `ADR-0013` — „Alert-Renderer: `threshold` ist immer
   Δ-Sensitivitätsschwelle, nie Absolutwert-Referenz" (deckt #958). Und
-  Vorschlag `ADR-0014` — „Nullgradgrenze: `snow_line` und `freezing_level`
+  Vorschlag `ADR-0019` — „Nullgradgrenze: `snow_line` und `freezing_level`
   konsolidiert zu einer Alert-Metrik" (deckt #959). Beide sind
   Richtungsentscheidungen mit Tragweite über dieses Bündel hinaus (jede
   künftige Alert-Metrik/jeder künftige Renderer-Aufrufer muss sich an die
