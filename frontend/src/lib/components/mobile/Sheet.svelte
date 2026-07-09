@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	export type SheetSnap = 'full' | 'half' | 'peek';
+	export type SheetSnap = 'full' | 'half' | 'peek' | 'collapsed';
 </script>
 
 <script lang="ts">
@@ -23,6 +23,7 @@
 		variant?: 'modal' | 'embedded';
 		footer?: Snippet;
 		children?: Snippet;
+		onHandleToggle?: () => void;
 	}
 
 	let {
@@ -33,10 +34,14 @@
 		snap = 'full',
 		variant = 'modal',
 		footer,
-		children
+		children,
+		onHandleToggle
 	}: Props = $props();
 
-	const heights = { full: '84%', half: '55%', peek: '32%' } as const;
+	// Issue #1158 — collapsed ist eine feste Pixel-Hoehe (nicht prozentual wie
+	// die anderen drei Stufen), sonst waere "eingeklappt" auf grossen Displays
+	// immer noch zu hoch.
+	const heights = { full: '84%', half: '55%', peek: '32%', collapsed: '56px' } as const;
 	const height = $derived(heights[snap] ?? heights.full);
 
 	$effect(() => {
@@ -64,10 +69,10 @@
 	{/if}
 	<div
 		data-snap={snap}
-		style:position="fixed"
+		style:position={variant === 'embedded' ? 'absolute' : 'fixed'}
 		style:left="0"
 		style:right="0"
-		style:bottom={variant === 'embedded' ? '64px' : '0'}
+		style:bottom="0"
 		style:height={height}
 		style:background="var(--g-card)"
 		style:z-index="61"
@@ -79,11 +84,14 @@
 		style:overflow="hidden"
 	>
 		<div
+			data-testid="sheet-handle"
+			onclick={onHandleToggle}
 			style:display="flex"
 			style:justify-content="center"
 			style:padding-top="8px"
 			style:padding-bottom="4px"
 			style:flex-shrink="0"
+			style:cursor={onHandleToggle ? 'pointer' : 'default'}
 		>
 			<span
 				style:width="36px"

@@ -48,7 +48,7 @@
 	let addModeHint = $state(false);
 	// Bug #708 — Etappen-Löschen mit Bestätigungs-Dialog (kein sofortiges Löschen)
 	let pendingRemoveStageId = $state<string | null>(null);
-	let mobileSnap = $state<'peek' | 'half' | 'full'>('half');
+	let mobileSnap = $state<'collapsed' | 'peek' | 'half' | 'full'>('half');
 	let mobileSizeKey = $state(0);
 	let stageSheetOpen = $state(false);
 
@@ -379,7 +379,7 @@
 
 			<!-- Issue #542: Mobile-Editor (@media max-width: 899px) -->
 			<div class="mobile-editor" data-testid="mobile-editor">
-				<div class="mobile-map-wrap" style="position:relative;width:100%;height:calc(100dvh - 56px)">
+				<div class="mobile-map-wrap" style="position:relative;width:100%;height:calc(100dvh - 56px);z-index:0">
 					{#key activeStageId}
 						<MapCanvas
 							stage={activeStage}
@@ -627,6 +627,7 @@
 	/* Issue #542: Mobile-Editor — Vollbild-Karte + Bottom-Sheet */
 	.mobile-editor {
 		display: none;
+		position: relative;
 	}
 
 	.stage-switcher-pill {

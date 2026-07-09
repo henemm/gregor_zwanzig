@@ -2,8 +2,8 @@
 	// ProfileSheetEmbedded — Bottom-Sheet mit Profil + Wegpunktliste (Mobile-Editor).
 	// Spec: docs/specs/modules/wegpunkt_editor_handoff.md (AC-5)
 	//
-	// Drei Snap-Stufen (von Sheet.svelte vererbt):
-	//   peek (~92px sichtbar) / half (~320px) / full (~540px)
+	// Vier Snap-Stufen (von Sheet.svelte vererbt):
+	//   collapsed (56px fest) / peek (32%) / half (55%) / full (84%)
 	//
 	// Inhalt:
 	//   - EditorProfileSVG (343x70px)
@@ -17,7 +17,7 @@
 	import WaypointCard from '$lib/components/trip-detail/waypoints/WaypointCard.svelte';
 	import type { Stage, Waypoint } from '$lib/types';
 
-	type Snap = 'peek' | 'half' | 'full';
+	type Snap = 'collapsed' | 'peek' | 'half' | 'full';
 
 	interface Props {
 		stage: Stage;
@@ -60,53 +60,72 @@
 	}
 
 	function cycleSnap() {
-		const order: Snap[] = ['peek', 'half', 'full'];
+		const order: Snap[] = ['collapsed', 'peek', 'half', 'full'];
 		const idx = order.indexOf(snapPosition);
 		const next = order[(idx + 1) % order.length];
 		onSnapChange?.(next);
 	}
+
+	// Issue #1158 — merkt sich die zuletzt aktive Nicht-collapsed-Stufe, damit
+	// die Griffleiste beim Ausklappen dorthin zurueckkehrt statt immer auf 'half'.
+	let lastActiveSnap = $state<Snap>(snapPosition === 'collapsed' ? 'half' : snapPosition);
+	$effect(() => {
+		if (snapPosition !== 'collapsed') lastActiveSnap = snapPosition;
+	});
+
+	function toggleCollapse() {
+		onSnapChange?.(snapPosition === 'collapsed' ? lastActiveSnap : 'collapsed');
+	}
 </script>
 
 <div class="profile-sheet-host" data-testid="profile-sheet-host">
-	<Sheet variant="embedded" snap={snapPosition} title="Wegpunkte" eyebrow="Etappe · {stage.name}">
+	<Sheet
+		variant="embedded"
+		snap={snapPosition}
+		title={snapPosition === 'collapsed' ? undefined : 'Wegpunkte'}
+		eyebrow={snapPosition === 'collapsed' ? undefined : `Etappe · ${stage.name}`}
+		onHandleToggle={toggleCollapse}
+	>
 		<div class="profile-sheet-body">
 			<button
 				type="button"
 				class="snap-cycle-btn"
 				data-testid="snap-cycle"
 				onclick={cycleSnap}
-				aria-label="Sheet-Höhe wechseln (peek/half/full)"
+				aria-label="Sheet-Höhe wechseln (collapsed/peek/half/full)"
 			>
 				Höhe: {snapPosition}
 			</button>
 
-			<div class="profile-row" data-testid="profile-row">
-				<EditorProfileSVG {stage} {onProfileAdd} {selectedIndex} />
-			</div>
+			{#if snapPosition !== 'collapsed'}
+				<div class="profile-row" data-testid="profile-row">
+					<EditorProfileSVG {stage} {onProfileAdd} {selectedIndex} />
+				</div>
 
-			<div class="waypoint-list" data-testid="waypoint-list">
-				{#each list as wp, i (wp.id)}
-					<WaypointCard
-						waypoint={wp}
-						index={i}
-						active={wp.id === activeWaypointId}
-						onActivate={makeActivate(wp.id)}
-						onRename={makeRename(wp.id)}
-						onDelete={makeDelete(wp.id)}
-					/>
-				{/each}
-				{#if list.length === 0}
-					<p class="empty">Keine Wegpunkte. Tippe auf die Karte, um einen zu setzen.</p>
-				{/if}
-			</div>
+				<div class="waypoint-list" data-testid="waypoint-list">
+					{#each list as wp, i (wp.id)}
+						<WaypointCard
+							waypoint={wp}
+							index={i}
+							active={wp.id === activeWaypointId}
+							onActivate={makeActivate(wp.id)}
+							onRename={makeRename(wp.id)}
+							onDelete={makeDelete(wp.id)}
+						/>
+					{/each}
+					{#if list.length === 0}
+						<p class="empty">Keine Wegpunkte. Tippe auf die Karte, um einen zu setzen.</p>
+					{/if}
+				</div>
+			{/if}
 		</div>
 	</Sheet>
 </div>
 
 <style>
 	.profile-sheet-host {
-		position: relative;
-		height: calc(100dvh - 56px);
+		position: absolute;
+		inset: 0;
 		pointer-events: none;
 	}
 	.profile-sheet-host :global([data-snap]) {

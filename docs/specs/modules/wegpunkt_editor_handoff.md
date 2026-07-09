@@ -43,7 +43,9 @@ Der Wegpunkt-Editor (Tab „Etappen & Wegpunkte" in `TripEditView`) ist auf dem 
 
 **AC-4:** Given `StageSelectSheet.svelte`, When der User auf die EtappenSwitcher-Pill klickt, Then öffnet sich ein Bottom-Sheet (snap: half) mit der scrollbaren Etappen-Liste; Klick auf eine Etappe wählt sie aus und schließt das Sheet.
 
-**AC-5:** Given `ProfileSheetEmbedded.svelte` bei Viewport ≤ 899px, When die Mobile-Ansicht aktiv ist, Then erscheint ein Bottom-Sheet mit drei Snap-Positionen (peek ≈ 92px / half ≈ 320px / full ≈ 540px), das `EditorProfileSVG` (343×70px) und die scrollbare `WaypointCard`-Liste enthält.
+**AC-5:** Given `ProfileSheetEmbedded.svelte` bei Viewport ≤ 899px, When die Mobile-Ansicht aktiv ist, Then erscheint ein Bottom-Sheet mit vier Snap-Positionen (collapsed ≤64px feste Höhe / peek ≈ 92px / half ≈ 320px / full ≈ 540px), das `EditorProfileSVG` (343×70px) und die scrollbare `WaypointCard`-Liste enthält.
+
+> **Update (Issue #1158, 2026-07-09):** `collapsed` wurde als vierte Snap-Stufe ergänzt, um die Schublade auf Mobile schließbar zu machen. Details: `docs/specs/modules/issue_1158_mobile_sheet_close.md`.
 
 **AC-6:** Given `EditorProfileSVG.svelte`, When ein `stage`-Objekt übergeben wird, Then rendert es eine SVG (343×70px) mit Polyline, Wegpunkt-Pins und einer klickbaren Fläche, die `onProfileAdd(fraction)` aufruft — identische Signatur wie `ProfileEditor.svelte`.
 
@@ -56,7 +58,7 @@ Der Wegpunkt-Editor (Tab „Etappen & Wegpunkte" in `TripEditView`) ist auf dem 
 ## Technische Entscheidungen
 
 ### Sheet-Höhen (px vs. %)
-`Sheet.svelte` arbeitet mit %-Werten (`full: 84%`, `half: 55%`, `peek: 32%`). `ProfileSheetEmbedded` umschließt `Sheet` in einem Container mit `position: relative; height: calc(100dvh - 56px)`. Die %-Werte von Sheet werden relativ zu diesem Container berechnet und ergeben so annähernd die Design-Zielwerte (peek≈92px, half≈320px). `Sheet.svelte` bleibt unverändert.
+`Sheet.svelte` arbeitet mit %-Werten (`full: 84%`, `half: 55%`, `peek: 32%`) sowie seit Issue #1158 einer festen Pixel-Höhe für `collapsed` (`56px`) — bewusst kein %-Wert, sonst wäre "eingeklappt" auf großen Displays immer noch zu hoch. `ProfileSheetEmbedded` umschließt `Sheet` in einem Container mit `position: relative; height: calc(100dvh - 56px)`. Die %-Werte von Sheet werden relativ zu diesem Container berechnet und ergeben so annähernd die Design-Zielwerte (peek≈92px, half≈320px). `Sheet.svelte` bleibt in seiner Grundstruktur unverändert (siehe `docs/specs/modules/issue_1158_mobile_sheet_close.md` für den Collapsed-Zusatz und die Anker-Korrektur `fixed`→`absolute`).
 
 ### MapCanvas-Größenänderung bei Sheet-Snap
 Nach jedem Sheet-Snap-Wechsel muss Leaflet `map.invalidateSize()` aufgerufen werden. `MapCanvas` bekommt ein optionales `sizeKey`-Prop; sobald es sich ändert, triggert ein `$effect` die Invalidierung. (+3 LOC)

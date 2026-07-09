@@ -214,11 +214,15 @@ describe('AC-5: ProfileSheetEmbedded.svelte existiert mit 3 Snap-Stufen', () => 
 		);
 	});
 
-	test('ProfileSheetEmbedded unterstützt alle drei Snap-Stufen', () => {
+	test('ProfileSheetEmbedded unterstützt alle vier Snap-Stufen (Issue #1158: + collapsed)', () => {
 		const src = readFileSync(PROFILE_SHEET, 'utf-8');
 		assert.ok(
 			src.includes('peek') && src.includes('half') && src.includes('full'),
 			'ProfileSheetEmbedded muss peek, half und full als Snap-Werte unterstützen'
+		);
+		assert.ok(
+			src.includes('collapsed'),
+			'ProfileSheetEmbedded muss collapsed als vierte Snap-Stufe unterstützen (Issue #1158)'
 		);
 	});
 

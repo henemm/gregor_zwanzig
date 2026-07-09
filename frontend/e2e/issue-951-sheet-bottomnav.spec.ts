@@ -64,11 +64,12 @@ test.describe('Issue #951 — Sheet-Panel darf BottomNav nicht blockieren', () =
 	}) => {
 		await openMobileStagesEditor(page);
 
-		// Default-Snap ist 'half'; Zyklus half -> full -> peek (2 Klicks).
+		// Default-Snap ist 'half'; Zyklus half -> full -> collapsed (2 Klicks).
+		// Issue #1158 fuegt 'collapsed' als neue kleinste Stufe hinzu (vorher 'peek').
 		const snapCycle = page.getByTestId('snap-cycle');
 		await snapCycle.click();
 		await snapCycle.click();
-		await expect(snapCycle).toContainText('peek');
+		await expect(snapCycle).toContainText('collapsed');
 
 		const tripsItem = page.getByTestId('bottom-nav-item-trips');
 		await expect(tripsItem).toBeVisible();
