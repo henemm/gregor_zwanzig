@@ -70,10 +70,15 @@ def two_trip_env(tmp_path, monkeypatch):
     load_all_trips: gibt beide zurück (kein Filter).
     Nach Fix: gibt nur active zurück.
     """
+    from app.loader import get_trips_dir
+
     today = date.today().isoformat()
     tomorrow = (date.today() + timedelta(days=1)).isoformat()
-    trips_dir = tmp_path / "data" / "users" / "tdd-824" / "trips"
-    trips_dir.mkdir(parents=True)
+    # Issue #1133: get_trips_dir() folgt dem autouse-isolierten Daten-Root —
+    # der hartkodierte tmp_path-relative Pfad landete nicht mehr dort, wo
+    # load_all_trips() liest, seit der Override-Mechanismus Vorrang vor cwd hat.
+    trips_dir = get_trips_dir("tdd-824")
+    trips_dir.mkdir(parents=True, exist_ok=True)
 
     active = _make_trip_json("active-824", stage_date=tomorrow, archived_at=None)
     archived = _make_trip_json("archived-824", stage_date=today, archived_at="2026-01-15T10:00:00Z")
@@ -91,9 +96,11 @@ def two_trip_env_today(tmp_path, monkeypatch):
 
     Ohne archived_at-Filter gibt load_all_trips beide zurück.
     """
+    from app.loader import get_trips_dir
+
     today = date.today().isoformat()
-    trips_dir = tmp_path / "data" / "users" / "tdd-824-sched" / "trips"
-    trips_dir.mkdir(parents=True)
+    trips_dir = get_trips_dir("tdd-824-sched")
+    trips_dir.mkdir(parents=True, exist_ok=True)
 
     active = _make_trip_json("active-sched-824", stage_date=today, archived_at=None)
     archived = _make_trip_json("archived-sched-824", stage_date=today, archived_at="2026-01-15T10:00:00Z")
@@ -264,9 +271,11 @@ class TestAC5StageIdRoundtrip:
     def test_stage_ids_preserved_after_roundtrip(self, tmp_path, monkeypatch):
         """GIVEN: Trip mit Stage-IDs gespeichert / WHEN: laden, speichern, wieder laden
         / THEN: Stage-IDs identisch — kein neues ensureStageIDs-Vergeben."""
+        from app.loader import get_trips_dir
+
         monkeypatch.chdir(tmp_path)
-        trips_dir = tmp_path / "data" / "users" / "tdd-824-rt" / "trips"
-        trips_dir.mkdir(parents=True)
+        trips_dir = get_trips_dir("tdd-824-rt")
+        trips_dir.mkdir(parents=True, exist_ok=True)
 
         original_stage_ids = ["stage-rt-1", "stage-rt-2"]
         today = date.today().isoformat()

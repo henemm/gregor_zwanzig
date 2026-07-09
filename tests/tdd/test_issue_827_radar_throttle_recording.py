@@ -55,7 +55,11 @@ def _make_trip(trip_id: str, send_email: bool, send_telegram: bool) -> Trip:
 
 
 def _save_trip(trip: Trip, user_id: str) -> None:
-    trips_dir = DATA_ROOT / user_id / "trips"
+    # Issue #1133: get_trips_dir() folgt dem autouse-isolierten Daten-Root,
+    # denselben Pfad, unter dem TripAlertService via app.loader.load_all_trips()
+    # liest — statt der modulweiten DATA_ROOT-Konstante (echter Baum).
+    from app.loader import get_trips_dir
+    trips_dir = get_trips_dir(user_id)
     trips_dir.mkdir(parents=True, exist_ok=True)
     data = {
         "id": trip.id,
@@ -93,6 +97,16 @@ def _clean_user(uid: str) -> None:
         shutil.rmtree(d)
 
 
+def _ensure_real_user_dir(uid: str) -> None:
+    """Issue #1133: trip_alert.py/alert_state.py schreiben alert_log/
+    radar_alert_throttle weiterhin über die relative "data/users/..."-
+    Konstruktion (bewusst nicht migriert, Known Limitations) und setzen die
+    Existenz des Nutzerverzeichnisses voraus. Vor der #1133-Isolation legte
+    _save_trip diese Verzeichnis als Nebeneffekt im echten Baum an.
+    """
+    (DATA_ROOT / uid).mkdir(parents=True, exist_ok=True)
+
+
 def _make_settings_with_email() -> Settings:
     """Echte Settings-Instanz, bei der can_send_email()=True gilt."""
     return Settings(
@@ -111,6 +125,7 @@ def test_ac1_no_recording_when_all_channels_disabled():
     uid = f"tdd-827-ac1-{uuid.uuid4().hex[:6]}"
     trip_id = f"trip-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         trip = _make_trip(trip_id, send_email=False, send_telegram=False)
         _save_trip(trip, uid)
@@ -163,6 +178,7 @@ def test_ac2_recording_when_email_enabled():
     uid = f"tdd-827-ac2-{uuid.uuid4().hex[:6]}"
     trip_id = f"trip-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         trip = _make_trip(trip_id, send_email=True, send_telegram=False)
         _save_trip(trip, uid)

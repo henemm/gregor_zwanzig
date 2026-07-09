@@ -772,7 +772,19 @@ def _parse_user(data: Dict[str, Any]) -> User:
 # =============================================================================
 
 def get_data_dir(user_id: str = "default") -> Path:
-    """Get the data directory for a user."""
+    """Get the data directory for a user.
+
+    Honors the module-level ``_DATA_ROOT`` override (used in tests) and,
+    as a fallback, the ``GZ_DATA_DIR`` environment variable (Issue #1133).
+    Priority: ``_DATA_ROOT`` > ``GZ_DATA_DIR`` > default ``data/users``.
+    """
+    import os as _os
+    import sys as _sys
+    _root = getattr(_sys.modules[__name__], "_DATA_ROOT", None) or _os.environ.get(
+        "GZ_DATA_DIR"
+    )
+    if _root:
+        return Path(_root) / "users" / user_id
     return Path("data/users") / user_id
 
 

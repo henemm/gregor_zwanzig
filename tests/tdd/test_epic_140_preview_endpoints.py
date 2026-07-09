@@ -13,6 +13,13 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+# Issue #1133: die gesamte Datei liest das echte, committete Trip-Fixture
+# data/users/default/trips/gr221-mallorca.json über PreviewService (echter
+# get_trips_dir()-Pfad) — bewusstes Opt-out aus der autouse-Isolation für
+# das gesamte Modul statt pro Test (Datei-Docstring: "Echte Trip-Fixtures aus
+# data/users/default").
+pytestmark = pytest.mark.real_data_root
+
 
 @pytest.fixture
 def client():

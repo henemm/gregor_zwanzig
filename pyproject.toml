@@ -60,6 +60,7 @@ markers = [
     "email: Tests that send real emails via SMTP (run with: pytest -m email)",
     "live: Tests that hit the real external weather API (excluded from default offline fixture mode)",
     "staging: Tests that require the staging environment to be running",
+    "real_data_root: Tests that deliberately read/write the real data/users/ tree (opt out of the #1133 data-root isolation fixture)",
 ]
 
 [dependency-groups]

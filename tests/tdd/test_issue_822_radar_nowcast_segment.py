@@ -83,7 +83,11 @@ def _save_trip_direct(trip, user_id: str) -> None:
     """
     import json
 
-    trips_dir = DATA_ROOT / user_id / "trips"
+    # Issue #1133: get_trips_dir() folgt dem autouse-isolierten Daten-Root,
+    # denselben Pfad, unter dem TripAlertService via app.loader.load_all_trips()
+    # liest — statt der modulweiten DATA_ROOT-Konstante (echter Baum).
+    from app.loader import get_trips_dir
+    trips_dir = get_trips_dir(user_id)
     trips_dir.mkdir(parents=True, exist_ok=True)
 
     def _wp_dict(wp) -> dict:
@@ -129,6 +133,16 @@ def _clean_user(uid: str) -> None:
     d = DATA_ROOT / uid
     if d.exists():
         shutil.rmtree(d)
+
+
+def _ensure_real_user_dir(uid: str) -> None:
+    """Issue #1133: trip_alert.py/alert_state.py schreiben alert_log/
+    radar_alert_throttle weiterhin über die relative "data/users/..."-
+    Konstruktion (bewusst nicht migriert, Known Limitations) und setzen die
+    Existenz des Nutzerverzeichnisses voraus. Vor der #1133-Isolation legte
+    _save_trip_direct dieses Verzeichnis als Nebeneffekt im echten Baum an.
+    """
+    (DATA_ROOT / uid).mkdir(parents=True, exist_ok=True)
 
 
 # --------------------------------------------------------------------------
@@ -253,6 +267,7 @@ def test_ac2_segment_selection_by_time():
 
     uid = f"tdd-822-ac2-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         _save_trip_direct(trip, uid)
 
@@ -351,6 +366,7 @@ def test_ac3_nowcast_called_at_segment_coordinates():
 
     uid = f"tdd-822-ac3-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         now = datetime.now(timezone.utc)
         today = now.date()
@@ -438,6 +454,7 @@ def test_ac4_mail_body_contains_segment_label_and_cooldown():
 
     uid = f"tdd-822-ac4-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         now = datetime.now(timezone.utc)
         today = now.date()
@@ -605,6 +622,7 @@ def test_ac6_cooldown_display_reflects_trip_setting():
     # Fall (a): alert_cooldown_minutes=90 → „90 Minuten"
     uid_90 = f"tdd-822-ac6a-{uuid.uuid4().hex[:6]}"
     _clean_user(uid_90)
+    _ensure_real_user_dir(uid_90)
     try:
         trip_id_90 = f"tdd-822-ac6-90-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id_90, cooldown=90), uid_90)
@@ -633,6 +651,7 @@ def test_ac6_cooldown_display_reflects_trip_setting():
     # Fall (b): alert_cooldown_minutes=None, throttle_hours=2 → „2 Stunden"
     uid_2h = f"tdd-822-ac6b-{uuid.uuid4().hex[:6]}"
     _clean_user(uid_2h)
+    _ensure_real_user_dir(uid_2h)
     try:
         trip_id_2h = f"tdd-822-ac6-2h-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id_2h, cooldown=None), uid_2h)
@@ -680,6 +699,7 @@ def test_ac7_throttle_recording_unchanged():
 
     uid = f"tdd-822-ac7-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         now = datetime.now(timezone.utc)
         today = now.date()
@@ -765,7 +785,9 @@ def test_ac8_mandantentrennung_isolated():
     uid_a = f"tdd-822-ac8a-{uuid.uuid4().hex[:6]}"
     uid_b = f"tdd-822-ac8b-{uuid.uuid4().hex[:6]}"
     _clean_user(uid_a)
+    _ensure_real_user_dir(uid_a)
     _clean_user(uid_b)
+    _ensure_real_user_dir(uid_b)
     try:
         now = datetime.now(timezone.utc)
         today = now.date()

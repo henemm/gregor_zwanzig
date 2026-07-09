@@ -32,3 +32,27 @@ def _use_fixture_provider(request):
         os.environ["GZ_TEST_FIXTURE_DIR"] = os.path.abspath(_FIXTURE_DIR)
         yield
         os.environ.pop("GZ_TEST_FIXTURE_DIR", None)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_data_root(request, tmp_path_factory):
+    """Redirect ``app.loader._DATA_ROOT`` to an isolated temp root for every
+    test (Issue #1133), so pytest runs never write into the real
+    ``data/users/`` tree.
+
+    Tests marked ``@pytest.mark.real_data_root`` or ``@pytest.mark.live``
+    opt out — they deliberately read/write the real tree (contract tests).
+    """
+    if request.node.get_closest_marker(
+        "real_data_root"
+    ) or request.node.get_closest_marker("live"):
+        yield
+        return
+
+    from app import loader
+
+    before = getattr(loader, "_DATA_ROOT", None)
+    isolated_root = tmp_path_factory.mktemp("data_root")
+    loader._DATA_ROOT = str(isolated_root)
+    yield
+    loader._DATA_ROOT = before

@@ -161,6 +161,14 @@ def _load_trip(user_id: str) -> Trip:
     return next(t for t in load_all_trips(user_id) if t.id == _TRIP_ID)
 
 
+def _ensure_real_user_dir(user_id: str) -> None:
+    """Issue #1133: trip_report_scheduler.py schreibt briefing_log.json
+    weiterhin über die relative "data/users/..."-Konstruktion (bewusst nicht
+    migriert, Known Limitations) und setzt die Existenz des Nutzerverzeichnisses
+    voraus."""
+    (Path("data/users") / user_id).mkdir(parents=True, exist_ok=True)
+
+
 def _yesterday_name() -> str:
     return "Tag 1"  # Etappe von gestern
 
@@ -237,12 +245,14 @@ class TestAC2PlainCommandBlock:
 class TestAC3HeuteMorgen:
     def test_heute_routes_to_query(self):
         save_trip(_make_trip(), user_id=_USER_A)
+        _ensure_real_user_dir(_USER_A)
         result = TripCommandProcessor().process(_msg("heute", _USER_A))
         assert not _is_unknown(result), "‚heute' darf nicht ‚Unbekannter Befehl' sein (AC-3)"
         assert result.command == "heute", f"command sollte 'heute' sein, war {result.command!r}"
 
     def test_morgen_routes_to_query(self):
         save_trip(_make_trip(), user_id=_USER_A)
+        _ensure_real_user_dir(_USER_A)
         result = TripCommandProcessor().process(_msg("morgen", _USER_A))
         assert not _is_unknown(result), "‚morgen' darf nicht ‚Unbekannter Befehl' sein (AC-3)"
         assert result.command == "morgen", f"command sollte 'morgen' sein, war {result.command!r}"

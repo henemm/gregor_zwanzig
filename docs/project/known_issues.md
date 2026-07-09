@@ -5,6 +5,30 @@
 >
 > Diese Datei bleibt als Detail-Referenz fuer Root-Cause-Analysen bestehen.
 
+## BUG-1133-TESTDATA: Python-Tests verschmutzten den echten `data/users/`-Baum
+
+**Status:** RESOLVED (2026-07-09) | **Severity:** High | **GitHub Issue:** #1133 | **Spec:** `docs/specs/modules/issue_1133_testdata_cleanup.md`
+
+### Symptom
+
+Auf Prod lagen 124 von 139 `data/users/`-Verzeichnissen, auf Staging ~152 von 153, als Test-Residuen vor (`e2e-*`, `tdd-*`, `validator-*`, etc.) — kein bewusst angelegter Nutzer.
+
+### Root Cause
+
+`app.loader.get_data_dir()` konstruierte den Daten-Root hart auf `Path("data/users")`, ohne den bereits existierenden `_DATA_ROOT`-Modul-Override (Vorbild: `get_compare_subscriptions_file`) zu respektieren. Jeder pytest-Lauf, der `save_trip()`/`get_trips_dir()` ohne explizites `data_dir=` aufrief, schrieb daher in den echten Baum.
+
+### Fix (Committed 2026-07-09, Workflow `fix-1133-testdata-cleanup`)
+
+`get_data_dir()` respektiert jetzt `_DATA_ROOT` und (als zweite Quelle) `GZ_DATA_DIR`. Neue autouse-Fixture `tests/conftest.py::_isolate_data_root` lenkt `loader._DATA_ROOT` für jeden Test auf ein `tmp_path_factory`-Verzeichnis um (Opt-out via `@pytest.mark.real_data_root`/`@pytest.mark.live`). `scripts/cleanup_1133_testdata.py` räumt bestehende Residuen einmalig auf (Backup + Positivliste + Dry-Run-Default).
+
+### Known Limitations
+
+Mehrere Services konstruieren `Path("data/users/...")` weiterhin relativ statt über `get_data_dir()` (`src/services/trip_alert.py`, `trip_report_scheduler.py`, `user_tier.py`, `alert_daily_limit.py`, `gpx_processing.py`, `src/app/config.py`) — bewusst nicht migriert (LoC-Budget), bleiben strukturell anfällig für dieselbe Fallen-Klasse. Folge-Issue empfohlen, um diese Hardcodes ebenfalls auf `get_data_dir()` umzustellen.
+
+### Adversary-Nachtrag (Fix-Loop, Committed 2026-07-09)
+
+Die erste Implementierung brach 55 zuvor grüne TDD-Tests: Testdateien, die parallel zur `save_trip()`/`get_trips_dir()`-Isolation weiterhin über eine hartkodierte `DATA_ROOT`-Modul-Konstante oder `tmp_path`-relative Pfade lasen/schrieben, liefen an der isolierten Produktions-Auflösung vorbei (Diskrepanz zwischen Test-Schreibpfad und Service-Lesepfad). Root Cause: dieselbe Klasse Fehler wie oben, nur in den TESTS selbst statt in Produktionscode. Betroffene Testdateien wurden auf dynamische `get_trips_dir()`/`get_snapshots_dir()`/`get_data_dir()`-Auflösung zur Laufzeit migriert statt die Isolation aufzuweichen; Tests, die bewusst committete Fixture-Daten aus `data/users/default/` lesen, erhielten `@pytest.mark.real_data_root`.
+
 ## BUG-1066-STORE-WRITE: Trip-Speichern schlägt still fehl bei Group-ACL-Entzug
 
 **Status:** RESOLVED (2026-07-08) | **Severity:** High | **GitHub Issue:** #1066 | **Spec:** `docs/specs/modules/fix_1066_store_write_logging.md`

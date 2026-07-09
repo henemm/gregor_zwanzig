@@ -46,7 +46,12 @@ from app.models import (
 )
 from app.trip import Stage, TimeWindow, Trip, Waypoint
 
-DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
+def _data_root() -> Path:
+    """Issue #1133: resolve at call time via get_data_dir(), not frozen at
+    module import — follows the per-test data root the autouse-Fixture
+    (tests/conftest.py::_isolate_data_root) redirects each test to."""
+    from app.loader import get_data_dir
+    return get_data_dir("_probe").parent
 
 # Echte Alpen-Koordinate (reale API liefert hier echte Werte).
 LAT, LON = 47.05, 11.40
@@ -116,7 +121,7 @@ def _trip(token: str, trip_id: str) -> Trip:
 
 
 def _clean_user(uid: str) -> None:
-    d = DATA_ROOT / uid
+    d = _data_root() / uid
     if d.exists():
         shutil.rmtree(d)
 
@@ -199,7 +204,7 @@ def test_ac2_radar_endpoint_mandantentrennung():
         assert isinstance(rb.json().get("count"), int)
 
         # Mandantentrennung: ua-Trip-Daten dürfen NICHT unter ub auftauchen.
-        ub_trips = list((DATA_ROOT / ub / "trips").glob("*.json"))
+        ub_trips = list((_data_root() / ub / "trips").glob("*.json"))
         assert ub_trips, "ub-Trip muss persistiert sein"
         for p in ub_trips:
             assert "trip-773-ua" not in p.read_text(), "Cross-User-Datenleck ua→ub"

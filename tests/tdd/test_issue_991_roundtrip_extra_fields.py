@@ -16,6 +16,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from app.loader import _trip_to_dict, load_trip, load_trip_from_dict
 
 
@@ -78,6 +80,7 @@ def test_ac1_four_metadata_fields_survive_roundtrip():
 
 # --- AC-2: Produktiv-Trips verlieren die vier Metadaten-Keys nicht ---------
 
+@pytest.mark.real_data_root
 def test_ac2_production_trips_roundtrip_contract():
     """AC-2: Über alle data/users/*/trips/*.json — sofern eines der vier
     Metadaten-Felder im Original vorhanden ist, muss es den Roundtrip

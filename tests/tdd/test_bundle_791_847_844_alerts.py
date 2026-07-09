@@ -65,9 +65,15 @@ def _make_waypoint(name: str, lat: float, lon: float, arrival_hhmm: str) -> Wayp
 
 
 def _save_trip_direct(trip: Trip, user_id: str) -> None:
-    """Schreibt Trip-JSON direkt — umgeht Naismith-Compute-on-Save."""
+    """Schreibt Trip-JSON direkt — umgeht Naismith-Compute-on-Save.
+
+    Issue #1133: get_trips_dir() folgt dem autouse-isolierten Daten-Root,
+    denselben Pfad, unter dem TripAlertService via app.loader.load_all_trips()
+    liest — statt des modulweiten DATA_ROOT-Konstante (echter Baum).
+    """
     import json
-    trips_dir = DATA_ROOT / user_id / "trips"
+    from app.loader import get_trips_dir
+    trips_dir = get_trips_dir(user_id)
     trips_dir.mkdir(parents=True, exist_ok=True)
 
     def _wp_dict(wp: Waypoint) -> dict:
@@ -103,6 +109,16 @@ def _clean_user(uid: str) -> None:
     d = DATA_ROOT / uid
     if d.exists():
         shutil.rmtree(d)
+
+
+def _ensure_real_user_dir(uid: str) -> None:
+    """Issue #1133: trip_alert.py schreibt alert_log/radar-throttle weiterhin
+    über die relative "data/users/..."-Konstruktion (bewusst nicht migriert,
+    Known Limitations) und setzt die Existenz des Nutzerverzeichnisses voraus.
+    Vor der #1133-Isolation legte _save_trip_direct dieses Verzeichnis als
+    Nebeneffekt im echten Baum an — jetzt muss die Fixture es explizit anlegen.
+    """
+    (DATA_ROOT / uid).mkdir(parents=True, exist_ok=True)
 
 
 def _make_segment(
@@ -173,6 +189,7 @@ def test_ac1_radar_alert_onset_in_local_time():
 
     uid = f"tdd-791-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         today = now_utc.date()
         wp0 = _make_waypoint("WP0", lat, lon,

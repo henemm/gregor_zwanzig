@@ -51,14 +51,20 @@ def user_no_stages(tmp_path):
     Erstellt tdd-716-ac1 User mit mail_to + Trip ohne Etappen.
     Teardown: löscht die erstellten Dateien.
     """
+    from app.loader import get_data_dir
+
     user_id = "tdd-716-ac1"
     trip_id = "tdd-716-no-stages-trip"
 
-    trips_dir = REPO_ROOT / "data" / "users" / user_id / "trips"
+    # Issue #1133: get_data_dir() folgt dem autouse-isolierten Daten-Root
+    # (statt eines hartkodierten REPO_ROOT-Pfads), damit dieselbe Datei
+    # existiert, die der TestClient (echter API-Prozess) unter der aktiven
+    # Fixture-Isolation liest.
+    trips_dir = get_data_dir(user_id) / "trips"
     trips_dir.mkdir(parents=True, exist_ok=True)
 
     # User-Profil: mail_to auf gregor-test setzen → with_user_profile übernimmt
-    user_profile = REPO_ROOT / "data" / "users" / user_id / "user.json"
+    user_profile = get_data_dir(user_id) / "user.json"
     user_profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com"}))
 
     # Issue #904: Trip wirklich ohne Etappen → Endpoint muss 422 liefern.
@@ -88,14 +94,17 @@ def user_with_tomorrow_stage(tmp_path):
     Erstellt tdd-716-ac3 User mit mail_to + Trip mit Etappe für morgen.
     Wird für den IMAP-E2E-Test (AC-3) verwendet.
     """
+    from app.loader import get_data_dir
+
     user_id = "tdd-716-ac3"
     trip_id = "tdd-716-imap-test-trip"
     tomorrow = (date.today() + timedelta(days=1)).isoformat()
 
-    trips_dir = REPO_ROOT / "data" / "users" / user_id / "trips"
+    # Issue #1133: get_data_dir() folgt dem autouse-isolierten Daten-Root.
+    trips_dir = get_data_dir(user_id) / "trips"
     trips_dir.mkdir(parents=True, exist_ok=True)
 
-    user_profile = REPO_ROOT / "data" / "users" / user_id / "user.json"
+    user_profile = get_data_dir(user_id) / "user.json"
     user_profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com"}))
 
     # Trip mit echter GR20-Etappe (Korsika) für morgen

@@ -187,6 +187,35 @@ einem Stash überlebt haben.
 
 ---
 
+## Testdaten-Cleanup (`data/users`) — Detailablauf (#1133)
+
+Einmaliges Ops-Script gegen Test-Residuen, die vor dem Fix in #1133
+(`get_data_dir()` respektierte `_DATA_ROOT`/`GZ_DATA_DIR` nicht) in den echten
+`data/users/`-Baum geschrieben wurden. Läuft **pro Host** (Prod, Staging),
+als User `claude-gregor`:
+
+```bash
+uv run python3 scripts/cleanup_1133_testdata.py            # Dry-Run (Default): nur Löschplan
+uv run python3 scripts/cleanup_1133_testdata.py --execute   # führt Backup + Löschung aus
+```
+
+**Immer zuerst den Dry-Run lesen**, bevor `--execute` läuft. Das Script ist
+idempotent (bereits gelöschte Pfade werden übersprungen, kein Fehler bei
+wiederholtem Lauf).
+
+**Positivliste (bleibt unangetastet):**
+- Prod: `admin`, `default`, `henning`, `steffi`
+- Staging: `default`
+
+**Backup:** tar.gz des kompletten Vor-Zustands unter `.backups/` vor jeder
+Löschung, ohne Retention-Limit (dauerhaft aufbewahrt).
+
+Details (In-User-Musterbereinigung, Root-Cause-Fix, Adversary-Verlauf):
+Spec `docs/specs/modules/issue_1133_testdata_cleanup.md`, Root-Cause-Eintrag
+`docs/project/known_issues.md` → `BUG-1133-TESTDATA`.
+
+---
+
 ## Prod-Mail-Pfad-Nachweis: nur passiv (#1147)
 
 **VERBOT: synthetische Sends oder Kunst-User auf Prod zur Pfad-Verifikation.**

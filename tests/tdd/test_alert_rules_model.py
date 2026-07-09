@@ -15,6 +15,8 @@ import json
 import uuid
 from pathlib import Path
 
+import pytest
+
 
 
 # --- AC-1: AlertRule Dataclass + Enums ------------------------------------
@@ -272,6 +274,7 @@ def test_ac8_typescript_types_export():
 
 # --- AC-9: Alle Produktiv-Trips laden additiv ohne Datenverlust -----------
 
+@pytest.mark.real_data_root
 def test_ac9_all_production_trips_load_with_additive_migration():
     """AC-9: Alle data/users/*/trips/*.json laden + Roundtrip-Differenz prüfen.
 

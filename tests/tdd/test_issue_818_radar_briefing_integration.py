@@ -84,8 +84,14 @@ def _make_active_trip(trip_id: str) -> Trip:
 
 
 def _save_trip_direct(trip: Trip, user_id: str) -> None:
-    """Schreibt Trip-JSON direkt — umgeht Naismith Compute-on-Save."""
-    trips_dir = DATA_ROOT / user_id / "trips"
+    """Schreibt Trip-JSON direkt — umgeht Naismith Compute-on-Save.
+
+    Issue #1133: get_trips_dir() folgt dem autouse-isolierten Daten-Root,
+    denselben Pfad, unter dem TripAlertService via app.loader.load_all_trips()
+    liest.
+    """
+    from app.loader import get_trips_dir
+    trips_dir = get_trips_dir(user_id)
     trips_dir.mkdir(parents=True, exist_ok=True)
     stage = trip.stages[0]
     wp_list = []
@@ -121,8 +127,12 @@ def _write_snapshot(user_id: str, trip_id: str, segment_id, hourly_precip: dict)
 
     hourly_precip: {stunde_utc: precip_mm} — fehlende Stunden bekommen 0.0.
     """
+    # Issue #1133: WeatherSnapshotService liest via get_snapshots_dir() ->
+    # get_data_dir() (isoliert) — Schreibpfad muss identisch aufgelöst werden.
+    from app.loader import get_snapshots_dir
+
     today = date_type.today()
-    snapshots_dir = DATA_ROOT / user_id / "weather_snapshots"
+    snapshots_dir = get_snapshots_dir(user_id)
     snapshots_dir.mkdir(parents=True, exist_ok=True)
     now_utc = datetime.now(timezone.utc)
 
@@ -170,6 +180,16 @@ def _clean_user(uid: str) -> None:
         shutil.rmtree(d)
 
 
+def _ensure_real_user_dir(uid: str) -> None:
+    """Issue #1133: trip_alert.py/alert_state.py schreiben alert_log/
+    radar_alert_throttle weiterhin über die relative "data/users/..."-
+    Konstruktion (bewusst nicht migriert, Known Limitations) und setzen die
+    Existenz des Nutzerverzeichnisses voraus. Vor der #1133-Isolation legte
+    _save_trip_direct dieses Verzeichnis als Nebeneffekt im echten Baum an.
+    """
+    (DATA_ROOT / uid).mkdir(parents=True, exist_ok=True)
+
+
 # --------------------------------------------------------------------------
 # AC-1: Briefing hatte Regen (>= 0.5 mm) → kein Radar-Alert
 # --------------------------------------------------------------------------
@@ -185,6 +205,7 @@ def test_ac1_briefing_announced_rain_suppresses_radar_alert():
 
     uid = f"tdd-818-ac1-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         trip_id = f"tdd-818-ac1-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id), uid)
@@ -230,6 +251,7 @@ def test_ac2_unannounced_rain_triggers_radar_alert():
 
     uid = f"tdd-818-ac2-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         trip_id = f"tdd-818-ac2-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id), uid)
@@ -275,6 +297,7 @@ def test_ac3_missing_snapshot_fallback_sends_alert():
 
     uid = f"tdd-818-ac3-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         trip_id = f"tdd-818-ac3-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id), uid)
@@ -314,6 +337,7 @@ def test_ac4_double_alert_guard_suppresses_radar_when_forecast_recent():
 
     uid = f"tdd-818-ac4-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         trip_id = f"tdd-818-ac4-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id), uid)
@@ -372,6 +396,7 @@ def test_ac5_past_segment_no_alert_guard_test():
 
     uid = f"tdd-818-ac5-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         # wp1 = now-2h → alle Segmente zeitlich vorbei (Destination-End ≈ now)
         # Analog zu test_issue_822 AC-2(c) — dort getestet und grün.
@@ -425,6 +450,7 @@ def test_ac6_radar_throttle_via_alert_state_cooldown():
 
     uid = f"tdd-818-ac6-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         trip_id = f"tdd-818-ac6-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id), uid)
@@ -485,6 +511,8 @@ def test_ac7_mandantentrennung_isolated():
     uid_b = f"tdd-818-ac7b-{uuid.uuid4().hex[:6]}"
     _clean_user(uid_a)
     _clean_user(uid_b)
+    _ensure_real_user_dir(uid_a)
+    _ensure_real_user_dir(uid_b)
     try:
         trip_id_a = f"tdd-818-ac7-a-{uuid.uuid4().hex[:6]}"
         trip_id_b = f"tdd-818-ac7-b-{uuid.uuid4().hex[:6]}"

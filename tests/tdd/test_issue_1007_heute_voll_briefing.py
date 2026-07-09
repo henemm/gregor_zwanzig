@@ -143,7 +143,14 @@ def _make_trip_two_stages(
 
 
 def _snapshot_path(user_id: str, trip_id: str) -> Path:
-    return _DATA_USERS / user_id / "weather_snapshots" / f"{trip_id}.json"
+    # Issue #1133: WeatherSnapshotService liest/schreibt via get_snapshots_dir()
+    # -> get_data_dir() (isoliert durch die autouse-Fixture) — der Prüfpfad
+    # muss identisch aufgelöst werden statt der hartkodierten _DATA_USERS-
+    # Konstante (echter Baum). briefing_log.json/user.json bleiben real-tree-
+    # basiert, da trip_report_scheduler.py diese Pfade bewusst nicht migriert
+    # (Known Limitations #1133).
+    from app.loader import get_snapshots_dir
+    return get_snapshots_dir(user_id) / f"{trip_id}.json"
 
 
 def _briefing_log(user_id: str) -> list:

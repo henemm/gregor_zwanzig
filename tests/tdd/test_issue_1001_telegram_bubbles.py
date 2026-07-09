@@ -475,7 +475,12 @@ def _ac7_client():
     return TestClient(app)
 
 
+@pytest.mark.real_data_root
 class TestAC7PreviewEndpointBubbles:
+    """Issue #1133: liest das echte, committete Trip-Fixture data/users/default/
+    trips/gr221-mallorca.json über PreviewService (echter get_trips_dir()-Pfad,
+    kein Test-User) — bewusstes Opt-out aus der autouse-Isolation."""
+
     def test_telegram_preview_endpoint_returns_bubbles_alongside_body(self, _ac7_client):
         resp = _ac7_client.get(
             f"/api/preview/{_AC7_TRIP_ID}/telegram",

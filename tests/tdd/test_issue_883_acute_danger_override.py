@@ -96,8 +96,14 @@ def _make_active_trip(trip_id: str, quiet_from: str | None = None, quiet_to: str
 
 
 def _save_trip_direct(trip: Trip, user_id: str) -> None:
-    """Schreibt Trip-JSON direkt — umgeht Naismith Compute-on-Save."""
-    trips_dir = DATA_ROOT / user_id / "trips"
+    """Schreibt Trip-JSON direkt — umgeht Naismith Compute-on-Save.
+
+    Issue #1133: get_trips_dir() folgt dem autouse-isolierten Daten-Root,
+    denselben Pfad, unter dem TripAlertService via app.loader.load_all_trips()
+    liest.
+    """
+    from app.loader import get_trips_dir
+    trips_dir = get_trips_dir(user_id)
     trips_dir.mkdir(parents=True, exist_ok=True)
     stage = trip.stages[0]
     wp_list = []
@@ -127,9 +133,15 @@ def _save_trip_direct(trip: Trip, user_id: str) -> None:
 
 
 def _write_snapshot(user_id: str, trip_id: str, segment_id, hourly_precip: dict) -> None:
-    """Minimaler Briefing-Snapshot mit stündlicher precip_1h_mm (naive UTC-Zeitstempel)."""
+    """Minimaler Briefing-Snapshot mit stündlicher precip_1h_mm (naive UTC-Zeitstempel).
+
+    Issue #1133: WeatherSnapshotService liest via get_snapshots_dir() ->
+    get_data_dir() (isoliert) — Schreibpfad muss identisch aufgelöst werden.
+    """
+    from app.loader import get_snapshots_dir
+
     today = date_type.today()
-    snapshots_dir = DATA_ROOT / user_id / "weather_snapshots"
+    snapshots_dir = get_snapshots_dir(user_id)
     snapshots_dir.mkdir(parents=True, exist_ok=True)
     now_utc = datetime.now(timezone.utc)
 
@@ -174,6 +186,14 @@ def _clean_user(uid: str) -> None:
         shutil.rmtree(d)
 
 
+def _ensure_real_user_dir(uid: str) -> None:
+    """Issue #1133: trip_alert.py/alert_state.py schreiben alert_log/
+    radar_alert_throttle weiterhin über die relative "data/users/..."-
+    Konstruktion (bewusst nicht migriert, Known Limitations) und setzen die
+    Existenz des Nutzerverzeichnisses voraus."""
+    (DATA_ROOT / uid).mkdir(parents=True, exist_ok=True)
+
+
 def _new_service(uid: str, frames, captured: list):
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
@@ -198,6 +218,7 @@ def test_ac1_convective_override_fires_despite_briefing():
 
     uid = f"tdd-883-ac1-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         trip_id = f"tdd-883-ac1-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id), uid)
@@ -268,6 +289,7 @@ def test_ac3_override_respects_cooldown():
     """
     uid = f"tdd-883-ac3-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         trip_id = f"tdd-883-ac3-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id), uid)
@@ -301,6 +323,7 @@ def test_ac4_override_mail_wording_not_unannounced():
     """
     uid = f"tdd-883-ac4-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _ensure_real_user_dir(uid)
     try:
         trip_id = f"tdd-883-ac4-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id), uid)
@@ -372,6 +395,8 @@ def test_ac6_mandantentrennung_isolated():
     uid_b = f"tdd-883-ac6b-{uuid.uuid4().hex[:6]}"
     _clean_user(uid_a)
     _clean_user(uid_b)
+    _ensure_real_user_dir(uid_a)
+    _ensure_real_user_dir(uid_b)
     try:
         trip_id_a = f"tdd-883-ac6-a-{uuid.uuid4().hex[:6]}"
         trip_id_b = f"tdd-883-ac6-b-{uuid.uuid4().hex[:6]}"

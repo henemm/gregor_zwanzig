@@ -17,6 +17,7 @@ import json
 import shutil
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 
@@ -31,6 +32,12 @@ _USER_B = "tdd-995-userb"
 _USER_AC8 = "tdd-995-ac8"
 _USER_AC9 = "tdd-995-ac9"
 _ALL_USERS = (_USER_A, _USER_B, _USER_AC8, _USER_AC9)
+
+# Issue #1133: AC-9 legt für trip_alert.py bewusst einen Echt-Baum-Pfad an
+# (Known-Limitation-Workaround, s. Kommentar bei der Test-Nutzung unten).
+# get_data_dir(_USER_AC9) zeigt seit der #1133-Isolation auf einen Temp-Root
+# und räumt diesen Echt-Pfad NICHT mit auf — daher zusätzliches Cleanup hier.
+_REAL_DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 
 def _make_trip(trip_id: str, report_config: TripReportConfig | None = None) -> Trip:
@@ -67,6 +74,9 @@ def cleanup():
         d = get_data_dir(uid)
         if d.exists():
             shutil.rmtree(d)
+    real_ac9 = _REAL_DATA_ROOT / _USER_AC9
+    if real_ac9.exists():
+        shutil.rmtree(real_ac9)
 
 
 # ---------------------------------------------------------------------------
@@ -191,6 +201,13 @@ class TestAC9AlertDispatchUnaffected:
             "paused_at": now.isoformat(),
         }
         (trips_dir / f"{trip_id}.json").write_text(json.dumps(data), encoding="utf-8")
+
+        # Issue #1133: trip_alert.py schreibt alert_log.json weiterhin über die
+        # relative "data/users/..."-Konstruktion (bewusst nicht migriert, Known
+        # Limitations) und setzt die Existenz des Nutzerverzeichnisses voraus.
+        # Cleanup dieses Echt-Baum-Pfads erfolgt in der autouse-cleanup()-Fixture
+        # über _REAL_DATA_ROOT (F007-Fix, Fix-Loop 2).
+        (_REAL_DATA_ROOT / _USER_AC9).mkdir(parents=True, exist_ok=True)
 
         def _wet_frames(lat, lon):
             return [

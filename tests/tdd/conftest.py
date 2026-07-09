@@ -47,10 +47,16 @@ _TDD_638_USERS = ["tdd-638-ac1", "tdd-638-ac2", "tdd-638-ac3", "tdd-638-ac4",
 
 @pytest.fixture(autouse=True)
 def _clear_tdd_638_throttle():
-    """Auto-reset alert throttle for synthetic #638 test users (runs before each test)."""
-    data_root = Path(__file__).resolve().parents[2] / "data" / "users"
+    """Auto-reset alert throttle for synthetic #638 test users (runs before each test).
+
+    Issue #1133: resolves the root via ``loader.get_data_dir(uid).parent``
+    instead of a hardcoded ``data/users`` path, so the cleanup follows the
+    (possibly overridden) data root the tests themselves are isolated to.
+    """
+    from app import loader
+
     for uid in _TDD_638_USERS:
-        throttle = data_root / uid / "alert_throttle.json"
+        throttle = loader.get_data_dir(uid).parent / uid / "alert_throttle.json"
         if throttle.exists():
             throttle.unlink(missing_ok=True)
     yield
