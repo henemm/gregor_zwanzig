@@ -697,7 +697,7 @@ Bei `start_time = "08:00"` und `activity = "fahrrad_20"`: 20 km ÷ 20 km/h = 1 h
 
 ## 11) Weather Config Endpoints (M5c)
 
-Convenience-Layer ueber die bestehenden CRUD-Handler. Erlaubt gezieltes Lesen und Ersetzen des `display_config`-Subfelds auf Trip-, Location- und Subscription-Entitaeten ohne Uebertragung des gesamten Objekts.
+Convenience-Layer ueber die bestehenden CRUD-Handler. Erlaubt gezieltes Lesen und Schreiben des `display_config`-Subfelds auf Trip-, Location- und Subscription-Entitaeten ohne Uebertragung des gesamten Objekts. PUT auf den Trip-Endpoint mergt seit #1151 feldweise (Teil-Updates loeschen keine anderen Keys mehr, analog #1129); Location- und Subscription-Endpoint ersetzen `display_config` weiterhin blind (Folge-Issue #1159).
 
 **Handler:** `internal/handler/weather_config.go` (NEU) | **Routing:** `cmd/server/main.go`
 

@@ -58,7 +58,15 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 			w.Write([]byte(`{"error":"bad_request"}`))
 			return
 		}
-		trip.DisplayConfig = cfg
+		// Issue #1151: Feld-Level-Merge statt Blind-Replace, analog #1129/#1103.
+		// Teil-Updates (nur `metrics` gesendet) duerfen andere zuvor gespeicherte
+		// display_config-Keys (z.B. `theme`) nicht loeschen.
+		if trip.DisplayConfig == nil {
+			trip.DisplayConfig = map[string]interface{}{}
+		}
+		for k, v := range cfg {
+			trip.DisplayConfig[k] = v
+		}
 		// Sync alert_rules with active weather metrics (Issue #701)
 		activeIDs := extractActiveMetricIDs(cfg)
 		trip.AlertRules = model.SyncAlertRules(trip.AlertRules, activeIDs)
