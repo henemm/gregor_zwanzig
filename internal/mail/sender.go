@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"log"
 	"mime"
+	"net/mail"
 	"net/smtp"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -66,10 +68,133 @@ func resendBlocked(host string) error {
 	return nil
 }
 
+// testMailboxes lists GZ test mailboxes that must never receive mail via
+// Resend, regardless of any process-level signal (Issue #1147).
+var testMailboxes = map[string]bool{
+	"gregor-test@henemm.com":    true,
+	"gregor-staging@henemm.com": true,
+}
+
+// Fix-Loop 4 (F005): rohes, PARSER-UNABHÄNGIGES Fangnetz (Symmetrie zu
+// src/output/channels/email.py::_raw_contains_test_mailbox). Statt jeden
+// Zerlege-/Normalisierungs-Trick einzeln zu stopfen, scannt dieser Layer
+// den rohen, UNGEPARSTEN `to`-String direkt nach den Test-Postfach-
+// Literalen (plus-tolerant) — immun gegen jede künftige Zerlege-Umgehung,
+// weil er nichts zerlegt.
+var (
+	controlCharsRe   = regexp.MustCompile(`[\r\n\v\f\x00]`)
+	testMailboxRawRe = regexp.MustCompile(`(?i)(?:gregor-test|gregor-staging)(?:\+[^@]*)?@henemm\.com`)
+)
+
+// rawContainsTestMailbox strippt zuerst Steuerzeichen (\r \n \v \f \x00) aus
+// dem rohen `to`-String — Steuerzeichen in einer Adresse sind nie legitim,
+// werden aber genutzt, um Trennzeichen-/Quote-Parser zu verwirren (F005: ein
+// eingebetteter CRLF im Anzeigenamen). Nach dem Strippen wird der rohe
+// (NICHT zerlegte) String direkt gegen die Test-Postfach-Literale gescannt.
+// Diese Reihenfolge — erst strippen, dann scannen — ist bewusst gewählt: ein
+// legitimer Empfänger mit kaputtem Anzeigenamen (z.B.
+// `"Weird\r\nName" <real@example.com>`) enthält nach dem Strippen kein
+// Test-Postfach-Literal und bleibt unblockiert (AC-4-Regressionsschutz).
+func rawContainsTestMailbox(raw string) bool {
+	stripped := controlCharsRe.ReplaceAllString(raw, "")
+	return testMailboxRawRe.MatchString(stripped)
+}
+
+// normalizedAddrForGuard strips the "Name <addr>" form and, for
+// Issue #1147 Fix-Loop 1 (F001), cuts the local part at the first "+" so
+// plus-addressed variants (gregor-test+foo@henemm.com) still match
+// testMailboxes.
+func normalizedAddrForGuard(addr string) string {
+	lower := strings.ToLower(strings.TrimSpace(addr))
+	if parsed, err := mail.ParseAddress(addr); err == nil {
+		lower = strings.ToLower(parsed.Address)
+	}
+	local, domain, found := strings.Cut(lower, "@")
+	if found {
+		if plusIdx := strings.Index(local, "+"); plusIdx >= 0 {
+			local = local[:plusIdx]
+		}
+		lower = local + "@" + domain
+	}
+	return lower
+}
+
+// splitRecipientField zerlegt ein Empfänger-Feld an der TRENNZEICHEN-KLASSE
+// Komma UND Semikolon (Fix-Loop 2, Issue #1147, Finding F003) — ein
+// Frontend-Freitextfeld splittet selbst nur an Komma, ein Element mit
+// eingebettetem Semikolon würde also unverändert bei Send() ankommen.
+//
+// Scheitert mail.ParseAddress an einem Teil (z.B. zwei nur durch Leerzeichen
+// statt Komma/Semikolon getrennte Adressen in einem Fragment), wird
+// zusätzlich an Whitespace roh gesplittet — aber NUR für Teil-Fragmente, die
+// selbst ein "@" enthalten, damit `"Name" <addr>`-Formen (die
+// mail.ParseAddress weiterhin korrekt auflöst) nicht zerrissen werden.
+func splitRecipientField(to string) []string {
+	var out []string
+	for _, part := range strings.FieldsFunc(to, func(r rune) bool { return r == ',' || r == ';' }) {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if _, err := mail.ParseAddress(part); err == nil {
+			out = append(out, part)
+			continue
+		}
+		var withAt []string
+		for _, field := range strings.Fields(part) {
+			if strings.Contains(field, "@") {
+				withAt = append(withAt, field)
+			}
+		}
+		if len(withAt) > 0 {
+			out = append(out, withAt...)
+		} else {
+			out = append(out, part)
+		}
+	}
+	return out
+}
+
+// recipientBlocked enforces the recipient-side Resend invariant (Issue
+// #1147): a Resend host must never deliver to a GZ test mailbox, regardless
+// of user/env/token signals. Third guard line, complements resendBlocked
+// (#1122) — checked BEFORE resendBlocked so it fires even under go test,
+// where resendBlocked already blocks every Resend host unconditionally.
+// Fix-Loop 1 (F002a) + Fix-Loop 2 (F003): `to` is split on the comma/
+// semicolon separator CLASS (with a whitespace fallback for fragments
+// mail.ParseAddress can't parse) so neither an embedded-comma nor an
+// embedded-semicolon string (e.g. from a mail_to config field or a
+// frontend free-text field that only splits on commas) can smuggle a test
+// mailbox past the guard.
+func recipientBlocked(host, to string) error {
+	if !strings.Contains(strings.ToLower(host), "resend") {
+		return nil
+	}
+	// Fix-Loop 4 (F005): roher Substring-Scan zuerst — greift zusätzlich zur
+	// Parser-Union unten, unabhängig davon, ob splitRecipientField den
+	// Empfänger korrekt zerlegt.
+	if rawContainsTestMailbox(to) {
+		return fmt.Errorf(
+			"mail.Send: Test-Postfach in Empfänger-Rohstring %q bei Resend-Host %q blockiert (#1147) — "+
+				"Test-Postfächer dürfen nie über Resend versendet werden", to, host)
+	}
+	for _, part := range splitRecipientField(to) {
+		if testMailboxes[normalizedAddrForGuard(part)] {
+			return fmt.Errorf(
+				"mail.Send: Test-Postfach %q bei Resend-Host %q blockiert (#1147) — "+
+					"Test-Postfächer dürfen nie über Resend versendet werden", to, host)
+		}
+	}
+	return nil
+}
+
 // Send dispatches an e-mail over SMTP+STARTTLS using stdlib net/smtp.
 // Blocks until completion or timeout (caller is responsible for goroutine
 // and context cancellation). Returns nil on successful 250 OK from the relay.
 func Send(cfg MailConfig, to string, msg Mail) error {
+	if err := recipientBlocked(cfg.Host, to); err != nil {
+		return err
+	}
 	if err := resendBlocked(cfg.Host); err != nil {
 		return err
 	}

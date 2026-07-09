@@ -11,6 +11,7 @@ import smtplib
 import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import getaddresses, parseaddr
 from typing import TYPE_CHECKING
 
 from output.channels.base import OutputConfigError, OutputError
@@ -19,6 +20,111 @@ if TYPE_CHECKING:
     from app.config import Settings
 
 logger = logging.getLogger(__name__)
+
+# Issue #1147: dritte, empfängerseitige Guard-Linie. Ein Resend-Host darf
+# NIEMALS an ein GZ-Test-Postfach zustellen — unabhängig von jedem
+# absender-/prozessseitigen Signal (is_test_mode, env, GZ_RESEND_ALLOWED).
+TEST_MAILBOXES = frozenset({"gregor-test@henemm.com", "gregor-staging@henemm.com"})
+
+# Fix-Loop 4 (F005): rohes, PARSER-UNABHÄNGIGES Fangnetz. Statt jeden
+# Zerlege-/Normalisierungs-Trick einzeln zu stopfen (Semikolon→F003,
+# gequoteter Name→F004, Steuerzeichen→F005), scannt dieser Layer den
+# rohen, UNGEPARSTEN Empfänger-String direkt nach den Test-Postfach-
+# Literalen (plus-tolerant) — er ist dadurch immun gegen jede künftige
+# Zerlege-Umgehung, weil er nichts zerlegt.
+_CONTROL_CHARS_RE = re.compile(r"[\r\n\x0b\x0c\x00]")
+_TEST_MAILBOX_RAW_PATTERN = re.compile(
+    r"(?:gregor-test|gregor-staging)(?:\+[^@]*)?@henemm\.com", re.IGNORECASE
+)
+
+
+def _extract_addr(recipient: str) -> str:
+    """Reduziert eine ggf. `"Name" <addr>`-Form auf die reine Adresse."""
+    _, addr = parseaddr(recipient)
+    return addr or recipient
+
+
+def _normalize_addr_for_guard(raw: str) -> str:
+    """Reduziert `raw` auf eine lowercased, plus-adressierungs-gekappte
+    Adresse (`gregor-test+foo@…` -> `gregor-test@…`), fuer den Vergleich
+    gegen TEST_MAILBOXES."""
+    addr = _extract_addr(raw).lower()
+    local, sep, domain = addr.partition("@")
+    if sep:
+        addr = local.split("+", 1)[0] + sep + domain
+    return addr
+
+
+def _normalized_addrs_for_guard(recipient: str) -> list[str]:
+    """Issue #1147 Fix-Loop 1 (F001/F002a) + Fix-Loop 2 (F003): zerlegt einen
+    Empfänger-Eintrag an der TRENNZEICHEN-KLASSE Komma UND Semikolon (nicht
+    nur Komma — ein Frontend-Freitextfeld splittet selbst nur an Komma, ein
+    Element mit eingebettetem Semikolon würde also unverändert bei `send()`
+    ankommen) und kappt pro Teil den lokalen Adressteil am ersten `+`
+    (Plus-Addressing), bevor gegen TEST_MAILBOXES verglichen wird.
+
+    F003-Zusatz: scheitert `parseaddr()` an einem Teil (z.B. zwei nur durch
+    Leerzeichen statt Komma/Semikolon getrennte Adressen in einem Element),
+    wird zusätzlich an Whitespace roh gesplittet — aber NUR für Fragmente,
+    die selbst ein `@` enthalten, damit `"Name" <addr>`-Formen (die
+    parseaddr() weiterhin korrekt auflöst) nicht zerrissen werden.
+
+    F004-Zusatz (Fix-Loop 3): der reine Trennzeichen-Split oben zerreißt eine
+    gequotete Anzeigename-Form MIT eingebettetem Komma/Semikolon (z.B.
+    `'"Foo; Bar" <addr>'`) VOR dem Parsen — das Semikolon im Anzeigenamen
+    zählt dann fälschlich als Empfänger-Trenner und die eigentliche Adresse
+    verschwindet aus dem Ergebnis. Deshalb wird zusätzlich
+    `email.utils.getaddresses()` als quote-bewusste Strategie herangezogen
+    (RFC5322-konform, respektiert Quotes) und mit der bestehenden
+    Separator-Pipeline VEREINIGT (Union, nicht Entweder-Oder). Der Guard ist
+    bewusst deny-orientiert: mehr extrahierte Kandidaten sind unkritisch —
+    ein Treffer setzt voraus, dass der Test-Postfach-String tatsächlich im
+    Empfängerfeld steckt; Junk-Fragmente aus zerrissenen Anzeigenamen (z.B.
+    'foo', 'bar') matchen TEST_MAILBOXES nie.
+
+    Reine Guard-Normalisierung — der tatsächliche Versand bleibt
+    unverändert."""
+    normalized: list[str] = []
+
+    # Strategie 1 (quote-bewusst, F004): RFC5322-konformes Parsen der
+    # gesamten Empfänger-Zeichenkette respektiert Quotes und zerlegt
+    # Komma-Listen korrekt, auch mit Semikolon im Anzeigenamen.
+    for _, addr in getaddresses([recipient]):
+        if addr:
+            normalized.append(_normalize_addr_for_guard(addr))
+
+    for part in re.split(r"[,;]", recipient):
+        part = part.strip()
+        if not part:
+            continue
+        _, addr = parseaddr(part)
+        if addr:
+            normalized.append(_normalize_addr_for_guard(part))
+            continue
+        whitespace_parts = [p for p in part.split() if "@" in p]
+        if whitespace_parts:
+            normalized.extend(_normalize_addr_for_guard(p) for p in whitespace_parts)
+        else:
+            normalized.append(_normalize_addr_for_guard(part))
+    return normalized
+
+
+def _raw_contains_test_mailbox(raw: str) -> bool:
+    """Fix-Loop 4 (F005): parser-unabhängiges Fangnetz. Entfernt zuerst
+    Steuerzeichen (`\\r \\n \\x0b \\x0c \\x00`) aus dem rohen Empfänger-
+    String — Steuerzeichen in einer Adresse sind nie legitim, werden aber
+    genutzt, um Trennzeichen-/Quote-Parser zu verwirren (F005: ein
+    eingebetteter CRLF im Anzeigenamen). Nach dem Strippen wird der
+    rohe (NICHT zerlegte) String direkt gegen die Test-Postfach-Literale
+    gescannt (plus-tolerant). Diese Reihenfolge — erst strippen, dann
+    scannen — ist bewusst gewählt: ein legitimer Empfänger mit kaputtem
+    Anzeigenamen (z.B. `'"Weird\\r\\nName" <real@example.com>'`) enthält
+    nach dem Strippen kein Test-Postfach-Literal und bleibt unblockiert
+    (AC-4-Regressionsschutz) — nur wenn nach dem Strippen tatsächlich
+    `gregor-test@henemm.com`/`gregor-staging@henemm.com` (ggf. plus-
+    adressiert) im String auftaucht, greift der Guard."""
+    stripped = _CONTROL_CHARS_RE.sub("", raw)
+    return bool(_TEST_MAILBOX_RAW_PATTERN.search(stripped))
 
 
 def build_mime_message(
@@ -147,7 +253,7 @@ class EmailOutput:
         body: str,
         html: bool = True,
         plain_text_body: str | None = None,
-        to: list[str] | None = None,
+        to: list[str] | str | None = None,
         mail_type: str | None = None,
         mail_format: str | None = None,
     ) -> None:
@@ -177,8 +283,39 @@ class EmailOutput:
 
         # Issue #252: per-call recipient override.
         # `to` may be a list of addresses; falsy/empty falls back to settings.mail_to.
-        recipients: list[str] = list(to) if to else [self._to]
+        # Issue #1147 Fix-Loop 1 (F002b): `to` als roher String (statt Liste)
+        # darf NICHT zeichenweise iteriert werden — als Ein-Element-Liste
+        # interpretieren.
+        if isinstance(to, str):
+            recipients: list[str] = [to] if to else [self._to]
+        else:
+            recipients = list(to) if to else [self._to]
         to_header = ", ".join(recipients)
+
+        # Issue #1147: dritte Guard-Linie — empfängerseitig, direkt nach der
+        # finalen Empfänger-Auflösung, VOR MIME-Bau/Dial. Greift auch bei
+        # per-Aufruf-Override (to=...), der die Init-Guards umgeht.
+        # Fix-Loop 1 (F001/F002a): jeder Empfänger-Eintrag wird an Kommas
+        # gesplittet und pro Teil Plus-adressierung normalisiert, bevor
+        # gegen TEST_MAILBOXES verglichen wird.
+        # Fix-Loop 4 (F005): der rohe Substring-Scan (Fangnetz, s.o.) wird per
+        # OR mit der Parser-Union verknüpft — er greift zusätzlich, unabhängig
+        # davon, ob die Parser-Pipeline den Empfänger korrekt zerlegt.
+        if "resend" in (self._host or "").lower():
+            hit = [
+                r
+                for r in recipients
+                if any(a in TEST_MAILBOXES for a in _normalized_addrs_for_guard(r))
+                or _raw_contains_test_mailbox(r)
+            ]
+            if hit:
+                raise OutputConfigError(
+                    "email",
+                    f"Test-Postfach {hit!r} in Empfängerliste bei Resend-Host "
+                    f"{self._host!r} — Versand blockiert (Issue #1147). "
+                    "Test-Postfächer dürfen NIEMALS über Resend erreicht werden, "
+                    "auch nicht als Teil einer gemischten Empfängerliste.",
+                )
 
         msg = build_mime_message(
             subject=subject,

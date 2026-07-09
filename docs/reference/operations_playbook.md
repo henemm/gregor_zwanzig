@@ -184,3 +184,47 @@ einem Stash überlebt haben.
    Stage-/Waypoint-Counts gegen Pre-Snapshot vergleichen
 4. **Bei Datenverlust:** Sofortiges Rollback aus `.backups/`, Root-Cause in
    `docs/project/known_issues.md` dokumentieren
+
+---
+
+## Prod-Mail-Pfad-Nachweis: nur passiv (#1147)
+
+**VERBOT: synthetische Sends oder Kunst-User auf Prod zur Pfad-Verifikation.**
+Genau das war der 11. Vorfall (Issue #1147) — ein Kunst-User + interner
+Prod-Port hat eine Test-Mail über den echten Resend-Produktivpfad an ein
+Test-Postfach ausgelöst. Kunst-User wandern zudem in den Prod-Scheduler-
+Fan-out und erzeugen dort Folgeschäden (Reports, Statistiken, Alert-Läufe).
+Der Resend- vs. Stalwart-Pfad auf Prod darf **ausschließlich passiv**
+nachgewiesen werden, nie durch einen zusätzlichen, eigens dafür ausgelösten
+Versand.
+
+**Passives Prüfrezept — drei Bausteine, alle ohne eigenen Send:**
+
+1. **Header-Forensik an einer echten, ohnehin versendeten User-Mail:**
+   Eine Mail, die durch normalen Produktivbetrieb entstanden ist (Trip-
+   Briefing, Alert, Report), im Postfach des Empfängers öffnen und die
+   Header prüfen:
+   - `Authentication-Results: ... DKIM dkim=pass header.d=henemm.com header.s=resend`
+   - `Received: from ... amazonses.com ...`
+
+   Beide zusammen belegen zweifelsfrei die Resend-Route (Resend liefert
+   über AWS SES aus). Fehlen sie, lief die Mail über Stalwart.
+
+2. **Unit-Env-Attestation (ohne Send):**
+   ```bash
+   systemctl cat gregor-python gregor-api | grep GZ_RESEND_ALLOWED
+   ```
+   Zeigt `GZ_RESEND_ALLOWED=1` in den Prod-Units. Ergänzend die
+   Settings-Auflösung prüfen (welcher `smtp_host` tatsächlich konfiguriert
+   ist) — ohne einen Send auszulösen.
+
+3. **Guard-Log-Grep:**
+   ```bash
+   journalctl -u gregor-python | grep "Resend Default-Deny"
+   ```
+   Kein Treffer im relevanten Zeitfenster bestätigt, dass der #1122-Guard
+   nicht eingegriffen hat (bzw. ein Treffer zeigt einen geblockten Versuch).
+
+Diese drei Bausteine zusammen liefern denselben Erkenntnisgewinn wie ein
+synthetischer Testversand — ohne dessen Risiko (Kunst-User im Scheduler,
+Test-Postfach über Resend, Kontingent-Verbrauch).
