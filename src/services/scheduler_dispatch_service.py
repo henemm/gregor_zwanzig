@@ -295,6 +295,11 @@ def send_one_compare_preset(
         compare_hourly_enabled=hourly_enabled,
     )
 
+    # Issue #1169: Δ-Anker je Ort schreiben (ADR-0009 — Abweichung vom zuletzt
+    # gemeldeten Stand). Best-effort: ein fehlgeschlagener Snapshot-Write darf
+    # den bereits erfolgten Report-Versand nicht rückwirkend als Fehler zaehlen.
+    _write_compare_alert_snapshots(preset_id, locations, user_id)
+
     save_compare_preset_status(user_id, preset_id, top_ort, data_root=data_root)
     logger.info("Compare preset %s sent to %s (top_ort=%s)", preset_id, empfaenger, top_ort)
     return top_ort, empfaenger
@@ -329,3 +334,26 @@ def send_compare_preset(
     settings = Settings().with_user_profile(user_id)
     top_ort, actual_empfaenger = send_one_compare_preset(preset, settings, user_id, data_root)
     return {"status": "ok", "winner": top_ort or "", "empfaenger_count": len(actual_empfaenger)}
+
+
+def _write_compare_alert_snapshots(preset_id: str, locations: list, user_id: str) -> None:
+    """Issue #1169 (A1/B1): schreibt je Ort den Δ-Anker-Snapshot über denselben
+    `CompareLocationWeatherSource`-Impl, der auch der 15-Min-Alert-Check fuer
+    das fresh-Wetter nutzt (Form-/Provider-Mismatch strukturell ausgeschlossen).
+    Fail-soft je Ort — ein einzelner Fetch-Fehler darf die anderen Orte nicht
+    verhindern und den bereits erfolgten Report-Versand nicht beeintraechtigen.
+    """
+    from services.compare_location_weather_source import CompareLocationWeatherSource
+    from services.compare_weather_snapshot import CompareWeatherSnapshotService
+
+    source = CompareLocationWeatherSource()
+    snapshot_service = CompareWeatherSnapshotService(user_id=user_id)
+    for loc in locations:
+        try:
+            point = source.fetch(loc.id, loc.lat, loc.lon)
+            snapshot_service.save(preset_id, loc.id, point)
+        except Exception as e:
+            logger.warning(
+                "Compare-Alert-Snapshot fuer Preset %s / Ort %s fehlgeschlagen: %s",
+                preset_id, loc.id, e,
+            )

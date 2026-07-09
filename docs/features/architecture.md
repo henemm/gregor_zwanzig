@@ -154,7 +154,7 @@ Manuelle Verwaltung ist nur noch im Notfall nötig — siehe `docs/runbooks/tele
 
 ### Alert-System (Deviation-Kern, Issue #816)
 
-**Komponenten:** `src/services/alert_state.py`, `src/services/trip_alert.py`, `src/services/deviation_alert_engine.py`, `src/services/point_weather.py`, `src/services/weather_change_detection.py`, `src/output/renderers/alert/` (kanonischer Renderer seit #917)
+**Komponenten:** `src/services/alert_state.py`, `src/services/trip_alert.py`, `src/services/deviation_alert_engine.py`, `src/services/point_weather.py`, `src/services/weather_change_detection.py`, `src/output/renderers/alert/` (kanonischer Renderer seit #917); zweiter Consumer seit #1169: `src/services/compare_alert.py`, `src/services/compare_location_weather_source.py`, `src/services/compare_weather_snapshot.py`
 
 **Zweck:** Meldet **Abweichungen gegenüber dem letzten Briefing-Snapshot** statt absoluter Schwellwerte.
 
@@ -165,9 +165,24 @@ Severity-Bestimmung, Quiet-Hours, Cooldown, Kanalwahl, Detektor-Wahl) lebt seit 
 generischen DTOs (`PointWeatherData`, `AlertEvaluationConfig`, `src/services/point_weather.py`)
 statt auf `Trip`-Strukturen. `TripAlertService` ist nur noch ein dünner Adapter (baut
 `AlertEvaluationConfig` aus Trip-Feldern via `TripSegmentWeatherAdapter`, ruft die Engine auf,
-delegiert Rendering/Versand unverändert weiter). Trip ist der erste Consumer; ein
-Compare-Adapter folgt in Epic #1095 Scheibe 2 (#1169) und ruft dieselbe Engine, ohne die
-Auswertungslogik zu duplizieren. Details/Alternativen: `docs/adr/0021-shared-deviation-alert-engine.md`.
+delegiert Rendering/Versand unverändert weiter). Trip ist der erste Consumer. Details/Alternativen:
+`docs/adr/0021-shared-deviation-alert-engine.md`.
+
+**Zweiter Consumer — Orts-Vergleich (Issue #1169, Epic #1095 Scheibe 2, live seit 2026-07-09):**
+`CompareAlertService` (`src/services/compare_alert.py`) ruft dieselbe `DeviationAlertEngine`
+für `ComparePreset`-Orte auf, ohne die Auswertungslogik zu duplizieren. Wetter-Beschaffung
+über `compare_location_weather_source.py` (synthetisches Ein-Punkt-`TripSegment` +
+`SegmentWeatherService`, damit Anker-Snapshot und Fresh-Wetter formidentisch sind). Der
+Δ-Anker (ADR-0009: Abweichung vom zuletzt **gemeldeten** Stand) wird pro Ort in
+`compare_weather_snapshot.py` persistiert (`data/users/<user_id>/compare_weather_snapshots/`)
+und beim Report-Versand (`send_one_compare_preset()`) aktualisiert; der 15-Minuten-Check liest
+nur. Versand ohne Trip-Bindung über `NotificationService.send_location_deviation_alert()`; der
+geteilte Alert-Renderer zeigt bei gesetztem `AlertMessage.location_label` den Ortsnamen statt
+der (bei einem Punkt sinnlosen) km-Spanne. Alarmkonfiguration ist in Scheibe 2 hartkodiert
+(Default-Sensitivität „standard", 120 Min Cooldown, nur E-Mail) — editierbare UI folgt in
+Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cron-Job
+`compare_alert_checks` (`*/15 * * * *`, 7. registrierter Job). Details:
+`docs/specs/modules/issue_1169_compare_alert_consumer.md`.
 
 **Architektur:**
 
@@ -251,6 +266,16 @@ check_radar_alerts(user_id)  [Issue #822 + #919]
 _send_briefing_report() [trip_report_scheduler.py]
   ↓ WeatherSnapshotService.save(snapshot)
   ↓ AlertStateService.reset(trip_id)
+
+check_all_compare_presets(user_id)  [CompareAlertService, Issue #1169]
+  ↓ pro Preset × Ort: compare_weather_snapshot.load(preset_id, location_id)  (Anker, ggf. leer)
+  ↓ compare_location_weather_source.fetch(location) → fresh PointWeatherData
+  ↓ DeviationAlertEngine.evaluate(cached, fresh, AlertEvaluationConfig(defaults), alert_state)
+  ↓ Cooldown-Check (preset_id-Store, 120 Min) + AlertStateService-Dedup ("preset_id:location_id")
+  ↓ to_point_alert_message() → NotificationService.send_location_deviation_alert()
+
+send_one_compare_preset() [scheduler_dispatch_service.py, nach Report-Versand]
+  ↓ compare_weather_snapshot.save(preset_id, location_id, fresh)  je Ort im Preset (Δ-Anker-Update)
 ```
 
 **Mandantentrennung:** `AlertStateService(user_id=...)`, `TripAlertService(user_id=...)` laden/speichern strikt unter `data/users/{user_id}/alert_state/` resp. `data/users/{user_id}/radar_alert_throttle.json`.

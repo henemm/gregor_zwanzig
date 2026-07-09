@@ -42,6 +42,10 @@ class AlertMessage:
     events: tuple[AlertEvent | OnsetEvent, ...]  # ≥1
     source: str | None = None                  # Radar (#919): source != None → Onset-Zweig; Deviation → None
     cooldown_display: str | None = None        # Radar (#919): Pflichttext Cooldown-Hinweis
+    # Issue #1169: additiv, optional. Gesetzt nur vom Compare-Punkt-Pfad
+    # (to_point_alert_message) — zeigt Ortsname statt km-Spanne. Trip-Pfad
+    # (to_alert_message) setzt dieses Feld NIE (Regressions-Invariante, AC-7).
+    location_label: str | None = None
 
 
 def direction(e: AlertEvent) -> str:

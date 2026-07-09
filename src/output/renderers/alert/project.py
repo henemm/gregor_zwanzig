@@ -63,3 +63,27 @@ def to_alert_message(changes, segments, trip_name, *, tz, stand_at) -> AlertMess
     return AlertMessage(
         trip_short=trip_name, stand_at=stand_at, events=tuple(events), source=None,
     )
+
+
+def to_point_alert_message(changes, points, entity_name, *, tz, stand_at) -> AlertMessage:
+    """WeatherChange-Events (Punkt-Kontext, Issue #1169) → kanonische
+    AlertMessage — OHNE `_segment_km()`-Lookup (ein Vergleichs-Ort ist ein
+    Punkt ohne km-Spanne, `km_from=km_to=0.0` als neutraler Platzhalter).
+    Setzt zusätzlich `location_label`, damit der geteilte Renderer den
+    Ortsnamen statt "km 0–0" zeigt (`render.py`).
+    """
+    events: list[AlertEvent] = []
+    for ch in changes:
+        metric_id = _resolve_metric_id(ch.metric, ch.direction)
+        cmp = get_cmp(metric_id)
+        if not cmp:
+            raise ValueError(f"Leeres cmp für metric_id={metric_id!r}")
+        events.append(AlertEvent(
+            metric_id=metric_id, value_from=ch.old_value, value_to=ch.new_value,
+            threshold=ch.threshold, cmp=cmp, occurred_at=ch.occurred_at,
+            km_from=0.0, km_to=0.0,
+        ))
+    return AlertMessage(
+        trip_short=entity_name, stand_at=stand_at, events=tuple(events), source=None,
+        location_label=entity_name,
+    )

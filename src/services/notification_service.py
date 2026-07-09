@@ -343,6 +343,38 @@ class NotificationService:
             official_notices=official_notices,
         )
 
+    def send_location_deviation_alert(
+        self,
+        entity_name: str,
+        points: list,
+        changes: list["WeatherChange"],
+        effective_channels: set[str],
+        mail_sink: Optional[object] = None,
+    ) -> NotificationResult:
+        """Trip-freier Deviation-Alert-Versand für generische Orte (Compare, Issue #1169).
+
+        Analog zu `send_deviation_alert()`, aber ohne `Trip`-Abhängigkeit —
+        baut die AlertMessage über `to_point_alert_message()` (Ortsname statt
+        km-Spanne) und delegiert unverändert an `_dispatch_alert_message()`
+        (ADR-0021: Rendering/Versand bleiben geteilt).
+        """
+        from output.renderers.alert.project import to_point_alert_message
+        from utils.timezone import tz_for_coords
+
+        alert_tz = tz_for_coords(points[0].lat, points[0].lon)
+        stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
+        alert_msg = to_point_alert_message(
+            changes, points, entity_name, tz=alert_tz, stand_at=stand_at,
+        )
+        return self._dispatch_alert_message(
+            alert_msg=alert_msg,
+            effective_channels=effective_channels,
+            mail_type="deviation-alert",
+            mail_sink=mail_sink,
+            target_name=entity_name,
+            radar_mode=False,
+        )
+
     def send_official_alert(
         self,
         trip: "Trip",

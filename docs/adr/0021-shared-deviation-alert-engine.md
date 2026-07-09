@@ -8,7 +8,7 @@
   Trip ↔ Compare"); verwandt [ADR-0011](0011-alert-render-single-backend-renderer.md)
   (kanonischer Alert-Renderer), [ADR-0017](0017-output-paket-konsolidierung.md)
   (`NotificationService` als einziger Versand-Orchestrierer); Folge-Issues #1169
-  (Scheibe 2 — Compare-Anbindung), #1170 (Scheibe 3 — Config-UI)
+  (Scheibe 2 — Compare-Anbindung, live seit 2026-07-09), #1170 (Scheibe 3 — Config-UI, offen)
 
 ## Kontext
 
@@ -82,10 +82,13 @@ dieser Scheibe (Scheibe 2, #1169).
   Detektor-Wahl (`_select_change_detector`, abhängig von `trip.display_config`) bleibt
   bewusst im Adapter — die Engine erhält den fertigen Detektor als Override-Parameter,
   statt die Weather-Tab-Aktivierungs-Nuancen selbst nachzubilden.
-- **Folgepflichten:** Scheibe 2 (#1169) baut den Compare-Adapter (eigener
-  `AlertEvaluationConfig`-Builder aus `ComparePreset`, eigene
-  `LocationWeatherSource`-Implementierung); Scheibe 3 (#1170) ergänzt die
-  Config-UI. Tageslimit (`alert_daily_limit`), Alert-Log und Radar-Onset-Pfad
+- **Folgepflichten:** Scheibe 2 (#1169, live seit 2026-07-09) hat den Compare-Adapter gebaut
+  (`CompareAlertService`/`compare_alert.py`, eigener `AlertEvaluationConfig`-Builder mit
+  hartkodierten Defaults, `compare_location_weather_source.py` als
+  `LocationWeatherSource`-Implementierung) und den Orts-Vergleich als **zweiten, realisierten
+  Consumer** an dieselbe Engine angeschlossen — siehe
+  `docs/specs/modules/issue_1169_compare_alert_consumer.md`. Scheibe 3 (#1170, offen) ergänzt
+  die Config-UI. Tageslimit (`alert_daily_limit`), Alert-Log und Radar-Onset-Pfad
   bleiben vorerst Trip-spezifisch im Adapter (siehe „Known Limitations" der Spec) —
   eine Verallgemeinerung dieser Bausteine ist separat zu betrachten, falls Compare
   sie ebenfalls benötigt.

@@ -57,6 +57,16 @@ def trigger_alert_checks(user_id: str = "default"):
     return {"status": "ok", "count": count}
 
 
+@router.post("/compare-alert-checks")
+def trigger_compare_alert_checks(user_id: str = "default"):
+    """Trigger Compare-Preset Deviation-Alert-Checks (Issue #1169, Epic #1095)."""
+    from services.compare_alert import CompareAlertService
+
+    service = CompareAlertService(user_id=user_id)
+    count = service.check_all_compare_presets()
+    return {"status": "ok", "count": count}
+
+
 @router.post("/radar-alert-checks")
 def trigger_radar_alert_checks(user_id: str):
     """Trigger radar/thunderstorm nowcast alert checks (proaktiv)."""

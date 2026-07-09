@@ -95,6 +95,11 @@ def _label(e: AlertEvent) -> str:
 
 
 def _km_str(msg: AlertMessage) -> str:
+    # Issue #1169: gesetztes location_label (Compare-Punkt-Alert) ersetzt die
+    # sinnlose km-Spanne eines Punktes ohne km-Kontext; Trip-Pfad setzt das
+    # Feld nie (bit-identische Ausgabe, AC-7).
+    if msg.location_label:
+        return msg.location_label
     a, b = km_span(msg.events)
     return f"km {int(round(a))}–{int(round(b))}"
 
@@ -241,8 +246,12 @@ def _verdict_single(e: AlertEvent) -> str:
     )
 
 
-def _datablock_single(e: AlertEvent) -> list[tuple[str, str]]:
-    """3 (label, value)-Zeilen: Wert-Vergleich / Schwellwert-Status / Wo & wann."""
+def _datablock_single(e: AlertEvent, location_label: str | None = None) -> list[tuple[str, str]]:
+    """3 (label, value)-Zeilen: Wert-Vergleich / Schwellwert-Status / Wo & wann.
+
+    Issue #1169: gesetztes `location_label` (Compare-Punkt-Alert) ersetzt die
+    km-Spanne; Trip-Pfad übergibt es nie (bit-identisch, AC-7).
+    """
     unit = get_metric(e.metric_id).unit
     d = _delta_text(e)
     d_suffix = f" {d}" if d else ""
@@ -255,7 +264,7 @@ def _datablock_single(e: AlertEvent) -> list[tuple[str, str]]:
         f"Alarm-Schwelle {_val(e, e.threshold)}",
         f"Änderung {side_label(e)} {mark}",
     )
-    when = _km_str_events((e,))
+    when = location_label if location_label else _km_str_events((e,))
     if e.occurred_at:
         when += f" · {e.occurred_at}"
     row3 = ("Wo & wann", when)
@@ -294,7 +303,7 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
     if single:
         e = evs[0]
         verdict_text = _verdict_single(e)
-        data_rows = _datablock_single(e)
+        data_rows = _datablock_single(e, msg.location_label)
         footer = f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing"
         any_over = over_thr(e)
         plain_data = [f"{k}: {v}" for k, v in data_rows]
@@ -402,8 +411,11 @@ def render_sms(msg: AlertMessage, limit: int = 140) -> str:
         return _render_sms_onset(msg, limit)
     evs = _sorted(msg)
     trip = _ascii(msg.trip_short)[:16].rstrip(" (-_")
-    a, b = km_span(msg.events)
-    head = f"{trip} km{int(round(a))}-{int(round(b))}: "
+    if msg.location_label:
+        head = f"{trip} {_ascii(msg.location_label)[:24]}: "
+    else:
+        a, b = km_span(msg.events)
+        head = f"{trip} km{int(round(a))}-{int(round(b))}: "
     tokens = [_sms_token(e) for e in evs]
 
     kept: list[str] = []
