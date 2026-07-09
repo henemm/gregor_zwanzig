@@ -95,6 +95,74 @@ def cached_scope_for_sha(repo_dir, sha) -> "str | None":
     return None
 
 
+def _git_diff_names(base, target, repo_dir) -> "list[str] | None":
+    """git diff --name-only <base> <target> in repo_dir.
+
+    Rückgabe: Liste der geänderten Pfade bei Erfolg, None bei git-Fehler
+    (returncode != 0, z.B. nicht auflösbare Basis). None ist bewusst von einer
+    leeren Liste (echter Leer-Diff) unterscheidbar, damit Aufrufer fail-closed
+    reagieren können statt einen Fehler wie einen Leer-Diff zu behandeln
+    (Issue #1121).
+    """
+    result = subprocess.run(
+        ["git", "diff", "--name-only", base, target],
+        capture_output=True, text=True, cwd=str(repo_dir),
+    )
+    if result.returncode != 0:
+        return None
+    return [f.strip() for f in result.stdout.splitlines() if f.strip()]
+
+
+def _detect_scope_from_git_diff(base, target, repo_dir) -> str:
+    """Scope-Klassifikation des Diffs base..target (Issue #1121).
+
+    Konsolidiert die zuvor in staging_gate.py und prod_selftest.py doppelt
+    vorliegende Präfix-Klassifikation. Schlägt der git diff fehl (returncode
+    != 0, z.B. nicht auflösbare Basis), wird NICHT "docs-only" geliefert (das
+    war der #1121-Bug: leerer stdout eines gescheiterten Aufrufs sah aus wie
+    ein echter Leer-Diff), sondern konservativ "backend" (fail-closed).
+
+    Returns: frontend-only | backend | full-stack | docs-only
+    """
+    changed = _git_diff_names(base, target, repo_dir)
+    if changed is None:
+        return "backend"
+    if not changed:
+        return "docs-only"
+
+    has_frontend = False
+    has_backend = False
+    for path in changed:
+        if path.startswith("frontend/"):
+            has_frontend = True
+        elif (
+            path.startswith("src/")
+            or path.startswith("api/")
+            or path.startswith("internal/")
+            or path.startswith("cmd/")
+        ):
+            has_backend = True
+        elif (
+            path.startswith("docs/")
+            or path.startswith(".claude/")
+            or path.endswith(".md")
+            or path.startswith("README")
+            or path == ".gitignore"
+            or path.startswith("tests/")
+        ):
+            pass
+        else:
+            has_backend = True
+
+    if has_frontend and has_backend:
+        return "full-stack"
+    if has_frontend:
+        return "frontend-only"
+    if has_backend:
+        return "backend"
+    return "docs-only"
+
+
 def head_sha(repo_dir) -> str:
     """Gibt den aktuellen Git-HEAD-SHA zurück oder 'UNKNOWN' bei Fehler."""
     result = subprocess.run(

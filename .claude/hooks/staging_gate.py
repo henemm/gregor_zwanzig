@@ -158,45 +158,7 @@ def _detect_committed_scope(expected_commit: str | None = None) -> str:
     else:
         base, target = "HEAD", expected_commit
 
-    result = subprocess.run(
-        ["git", "diff", "--name-only", base, target],
-        capture_output=True, text=True, cwd=str(_verified_repo_dir()),
-    )
-    files = [f.strip() for f in result.stdout.splitlines() if f.strip()]
-    if not files:
-        return "docs-only"
-
-    has_frontend = False
-    has_backend = False
-    for path in files:
-        if path.startswith("frontend/"):
-            has_frontend = True
-        elif (
-            path.startswith("src/")
-            or path.startswith("api/")
-            or path.startswith("internal/")
-            or path.startswith("cmd/")
-        ):
-            has_backend = True
-        elif (
-            path.startswith("docs/")
-            or path.startswith(".claude/")
-            or path.endswith(".md")
-            or path.startswith("README")
-            or path == ".gitignore"
-            or path.startswith("tests/")
-        ):
-            pass
-        else:
-            has_backend = True
-
-    if has_frontend and has_backend:
-        return "full-stack"
-    if has_frontend:
-        return "frontend-only"
-    if has_backend:
-        return "backend"
-    return "docs-only"
+    return _e2e_paths._detect_scope_from_git_diff(base, target, _verified_repo_dir())
 
 
 def prune_old_attestations(tagged_dir: Path, retention: int = ATTESTATION_RETENTION) -> None:
@@ -245,8 +207,13 @@ def _telegram_live_gate() -> int:
         ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
         capture_output=True, text=True, cwd=str(_verified_repo_dir()),
     )
-    changed = [f.strip() for f in result.stdout.splitlines() if f.strip()]
-    if not mod._scope_touches_telegram(changed):
+    if result.returncode != 0:
+        # Fehlgeschlagener Diff (z.B. kein HEAD~1) -> konservativ als
+        # potenziell Telegram-relevant behandeln (Issue #1121, AC-5).
+        changed = None
+    else:
+        changed = [f.strip() for f in result.stdout.splitlines() if f.strip()]
+    if changed is not None and not mod._scope_touches_telegram(changed):
         return 0
     if mod.gate(scope_touches_telegram=True, env=dict(os.environ)) != 0:
         _log(

@@ -115,3 +115,15 @@ Gleiches Muster bereits bei `b4620e97` (#1104, Attestation ebenfalls `docs-only`
 - **`.claude/`-Änderungen klassifizieren selbst als docs-only** → das Fix-Deploy dieses Workflows wird den Selftest regulär skippen; Verifikation muss anders erfolgen (hermetische Tests + gezielter Staging-Nachweis).
 - **Tests laufen gegen die Hauptrepo-Kopie der Hooks:** Bei Umstellung auf Temp-Repo-Kopien testet man die Worktree-Kopie — Quelle beim Kopieren bewusst wählen (Muster von #916 nutzen).
 - **Kein Fix von `deploy-gregor-prod.sh` in diesem Repo** — falls nötig, MQ-Nachricht an `infra`.
+
+## Nachtrag: Folge-Workflows #1116 / #1121 / #1109 (2026-07-09)
+
+Diese Kontextdatei dokumentiert die Regressionsursache und den Schutzmechanismus-Fix (#1096, `fab61d76`). Drei nachfolgende Workflows bauen darauf auf und verstärken die Scope-Erkennung weiter:
+
+| Issue | Beschreibung | Status |
+|-------|---|---|
+| **#1116** | Reproduktionsbeweis: Die vier Schutzlagen aus #1096 verhindern tatsächlich das beschriebene Vergiftungsszenario (wiederholter Gate-Lauf auf demselben HEAD) | Spec `issue_1109_1116_1121_gate_scope.md` Teil A, hermetischer Reproduktionstest |
+| **#1121** | `git diff --name-only`-Aufrufe prüfen Returncode nicht → fehlgeschlagener Aufruf wird wie "leerer Diff" behandelt → fälschlich `docs-only`. Fix: neuer Shared-Helper `_detect_scope_from_git_diff()` mit Returncode-Guard, konservativer Fallback auf `backend` | Spec Teil B, Duplikat-Eliminierung in 3 Aufrufstellen |
+| **#1109** | `prod_selftest.py` leitet Scope-Diff-Basis vom letzten Gate-**Check**-Lauf ab, nicht vom tatsächlich **deployten** Commit. Fix: neuer Marker `.claude/last_prod_deploy.json` (von `deploy-gregor-prod.sh` geschrieben, henemm-infra-Koordination) | Spec Teil C, noch abhängig von henemm-infra-Umsetzung |
+
+Alle drei Fixes halten an der #1096-Philosophie fest: **im Zweifel prüfen statt überspringen** (fail-closed über fail-open).

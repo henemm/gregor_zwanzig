@@ -400,9 +400,34 @@ def _scope_diff_base(repo_dir: Path = REPO_DIR) -> str:
     Adversary-Finding F002: zeigt der Marker exakt auf HEAD, wäre der Diff
     HEAD..HEAD und immer leer (fälschlich "docs-only") — in diesem Fall
     bewusst auf HEAD~1 ausweichen statt den Marker (Selbstreferenz vermeiden).
+    Schlägt der HEAD~1-Diff in einem Ein-Commit-Repo fehl, liefert der neue
+    Shared-Helper konservativ "backend" (fail-closed, #1121) statt fälschlich
+    "docs-only".
+
+    Issue #1109: Zeigt last_prod_deploy.json auf einen (auflösbaren) Commit
+    ungleich HEAD, hat dieser Vorrang als Diff-Basis — der Selftest muss den
+    gesamten seit dem letzten Prod-Deploy ausgerollten Bereich abdecken, nicht
+    nur den (evtl. späteren) Gate-Marker-Punkt.
     """
+    head = _e2e_paths.head_sha(repo_dir)
+
+    prod_deploy_path = Path(repo_dir) / ".claude" / "last_prod_deploy.json"
+    if prod_deploy_path.exists():
+        try:
+            prod_deploy_data = json.loads(prod_deploy_path.read_text())
+            deployed_commit = prod_deploy_data.get("deployed_commit")
+        except (OSError, json.JSONDecodeError, ValueError):
+            deployed_commit = None
+        if deployed_commit and deployed_commit != head:
+            resolvable = subprocess.run(
+                ["git", "cat-file", "-e", deployed_commit],
+                capture_output=True, text=True, cwd=str(repo_dir),
+            )
+            if resolvable.returncode == 0:
+                return deployed_commit
+
     marker_sha = _e2e_paths.read_last_gate_scope(repo_dir)
-    if marker_sha and marker_sha != _e2e_paths.head_sha(repo_dir):
+    if marker_sha and marker_sha != head:
         resolvable = subprocess.run(
             ["git", "cat-file", "-e", marker_sha],
             capture_output=True, text=True, cwd=str(repo_dir),
@@ -431,45 +456,7 @@ def _detect_committed_scope(repo_dir: Path = REPO_DIR) -> str:
         return cached_scope
 
     base = _scope_diff_base(repo_dir)
-    result = subprocess.run(
-        ["git", "diff", "--name-only", base, "HEAD"],
-        capture_output=True, text=True, cwd=str(repo_dir),
-    )
-    files = [f.strip() for f in result.stdout.splitlines() if f.strip()]
-    if not files:
-        return "docs-only"
-
-    has_frontend = False
-    has_backend = False
-    for path in files:
-        if path.startswith("frontend/"):
-            has_frontend = True
-        elif (
-            path.startswith("src/")
-            or path.startswith("api/")
-            or path.startswith("internal/")
-            or path.startswith("cmd/")
-        ):
-            has_backend = True
-        elif (
-            path.startswith("docs/")
-            or path.startswith(".claude/")
-            or path.endswith(".md")
-            or path.startswith("README")
-            or path == ".gitignore"
-            or path.startswith("tests/")
-        ):
-            pass
-        else:
-            has_backend = True
-
-    if has_frontend and has_backend:
-        return "full-stack"
-    if has_frontend:
-        return "frontend-only"
-    if has_backend:
-        return "backend"
-    return "docs-only"
+    return _e2e_paths._detect_scope_from_git_diff(base, "HEAD", repo_dir)
 
 
 def run_selftest(e2e_path: Path, workflow: str, scope: str | None = None) -> int:

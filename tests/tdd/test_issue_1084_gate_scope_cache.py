@@ -178,7 +178,12 @@ def test_ac2_cache_hit_overrides_empty_self_diff(tmp_path):
 def test_ac3_old_marker_format_falls_back_without_crash(tmp_path):
     """Ein Marker im alten Format (nur gate_scope_sha, kein gate_last_scope)
     mit SHA == HEAD darf nicht abstuerzen und muss auf die bestehende
-    Diff-Logik zurueckfallen (Vor-Fix-Ergebnis: docs-only, da Diff leer)."""
+    Diff-Logik zurueckfallen. Ein-Commit-Repo: der F002-Fallback landet bei
+    HEAD~1, das hier nicht existiert -> git diff schlaegt fehl. Seit #1121
+    liefert der Shared-Helper in diesem Fall konservativ 'backend' (fail-closed),
+    nicht mehr 'docs-only' (das war die alte, fehlerhafte Gleichsetzung von
+    fehlgeschlagenem Diff mit leerem Diff -- genau der #1121-Bug). Der Test
+    prueft jetzt das korrigierte Verhalten."""
     repo = _setup_repo(tmp_path)
     sha = _head_sha(repo)
     _write_marker(repo, sha, scope=None)  # altes Format: nur gate_scope_sha
@@ -188,10 +193,10 @@ def test_ac3_old_marker_format_falls_back_without_crash(tmp_path):
 
     selftest = _load_prod_selftest(repo, "ac3_prod_selftest")
     scope = selftest._detect_committed_scope(repo)
-    assert scope == "docs-only", (
-        f"Altes Marker-Format ohne gate_last_scope muss auf die bestehende "
-        f"Diff-Logik zurueckfallen (HEAD..HEAD leer -> docs-only), nicht "
-        f"abstuerzen. scope={scope!r}"
+    assert scope == "backend", (
+        f"Altes Marker-Format ohne gate_last_scope (Ein-Commit-Repo, HEAD~1 "
+        f"nicht aufloesbar -> git diff schlaegt fehl) muss seit #1121 konservativ "
+        f"'backend' liefern (fail-closed), nicht abstuerzen. scope={scope!r}"
     )
 
 
