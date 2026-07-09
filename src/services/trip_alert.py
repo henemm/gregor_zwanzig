@@ -10,21 +10,22 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, datetime, time as time_type, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional
 
 from app.config import Settings
-from app.models import ChangeSeverity, SegmentWeatherData, WeatherChange
+from app.models import SegmentWeatherData, WeatherChange
 from services import alert_daily_limit
+from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService, RadarAlertRequest
+from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
 from services.user_tier import sms_allowed
 from services.weather_change_detection import WeatherChangeDetectionService
 from utils.timezone import tz_for_coords
 
 if TYPE_CHECKING:
     from app.trip import Trip
-    from app.models import UnifiedWeatherDisplayConfig
 
 logger = logging.getLogger("trip_alert")
 
@@ -164,33 +165,47 @@ class TripAlertService:
             logger.warning(f"No fresh weather data for trip {trip.id}")
             return False
 
-        # 3. Detect changes across all segments
-        all_changes = self._detect_all_changes(cached_weather, fresh_weather)
-
-        # 4. Issue #638: alle Changes durchreichen (kein Severity-Filter mehr)
-        significant = self._filter_significant_changes(all_changes)
-
-        if not significant:
-            logger.debug(f"No significant changes for trip {trip.id}")
-            return False
-
-        logger.info(
-            f"Detected {len(significant)} significant changes for trip {trip.id}"
-        )
-
-        # 4b. Issue #816 (B): Melde-Gedächtnis — Wiederholungs-Spam unterdrücken.
-        # Durchlassen nur bei neuem metric:segment-Key ODER Eskalation
-        # (|new_value − last_reported_value| ≥ threshold). Werden alle Changes
-        # unterdrückt → kein Alert (kein Throttle/Log).
+        # 3./4./4b. Issue #1168 (F001-Fix): Detektor-Wahl (inkl. #961-
+        # „Aktivieren-Lücke"-Backfill), Change-Detection, Filter significant und
+        # Filter-gegen-Melde-Gedächtnis laufen jetzt VOLLSTÄNDIG über die
+        # location-generische DeviationAlertEngine — kein `detector=`-Override
+        # mehr, die Engine wählt den Detektor selbst aus `eval_config.display_config`
+        # + `eval_config.metric_alert_levels` (identisch zu `_select_change_detector()`,
+        # jetzt eine gemeinsame Quelle).
         from services.alert_state import AlertStateService
         state_svc = AlertStateService(user_id=self._user_id)
         alert_state = state_svc.load(trip.id)
-        to_report = self._filter_against_alert_state(significant, alert_state)
-        if not to_report:
+        cached_points = TripSegmentWeatherAdapter.to_points(cached_weather)
+        fresh_points = TripSegmentWeatherAdapter.to_points(fresh_weather)
+        eval_config = AlertEvaluationConfig(
+            cooldown_minutes=trip.alert_cooldown_minutes,
+            quiet_from=trip.alert_quiet_from,
+            quiet_to=trip.alert_quiet_to,
+            metric_alert_levels=(
+                getattr(trip.display_config, "metric_alert_levels", None)
+                if trip.display_config else None
+            ),
+            channels=self._effective_alert_channels(trip),
+            display_config=trip.display_config,
+        )
+        engine = DeviationAlertEngine()
+        eval_result = engine.evaluate(
+            cached=cached_points,
+            fresh=fresh_points,
+            config=eval_config,
+            alert_state=alert_state,
+        )
+        if not eval_result.triggered:
             logger.debug(
-                f"All changes suppressed by alert_state for trip {trip.id}"
+                f"Engine suppressed alert for trip {trip.id}: "
+                f"{eval_result.suppressed_reason}"
             )
             return False
+
+        to_report = eval_result.changes
+        logger.info(
+            f"Detected {len(to_report)} significant changes for trip {trip.id}"
+        )
 
         # 5. Send alert; guard: only record throttle/log when at least one
         # configured channel was reachable (AC-1 symmetry with Telegram/Radar).
@@ -220,89 +235,28 @@ class TripAlertService:
         alert_daily_limit.increment(self._user_id, datetime.now(timezone.utc))
 
         # 8. Issue #393: Alert-Log für Cockpit-Kachel "Alarme · letzte 24 h".
-        # Nur nach erfolgreichem Versand; höchste Severity der gemeldeten Changes.
-        severity = self._highest_severity(to_report)
-        self._append_alert_log(trip.id, len(to_report), severity)
+        # Nur nach erfolgreichem Versand; höchste Severity der gemeldeten Changes
+        # (bereits von der Engine bestimmt, Issue #1168).
+        self._append_alert_log(trip.id, len(to_report), eval_result.severity)
 
         return True
 
-    @staticmethod
-    def _filter_against_alert_state(
-        changes: List[WeatherChange],
-        alert_state: dict,
-    ) -> List[WeatherChange]:
-        """Issue #816 (B): Behalte nur Changes, die neu sind oder eskalieren.
-
-        Durchlassen bei (a) kein Eintrag für `<metric>:<segment_id>` ODER
-        (b) |new_value − last_reported_value| ≥ threshold der Metrik.
-        """
-        result: List[WeatherChange] = []
-        for change in changes:
-            key = f"{change.metric}:{change.segment_id}"
-            prev = alert_state.get(key)
-            if prev is None:
-                result.append(change)
-                continue
-            last = prev.get("last_reported_value")
-            if last is None or abs(change.new_value - last) >= change.threshold:
-                result.append(change)
-        return result
-
     def _select_change_detector(self, trip: "Trip") -> WeatherChangeDetectionService:
-        """Return detector — metric_alert_levels is the SINGLE source of truth (Issue #946).
-
-        Issue #946: metric_alert_levels ist die EINZIGE Alert-Datenquelle. Null oder leer
-        = keine Alerts (NoOp-Detektor). Kein Fallback mehr auf alert_preset,
-        from_display_config() oder from_trip_config() — ein unkonfigurierter Trip darf
-        niemals Alerts für bloße Anzeige-Metriken feuern. Pure helper — direkt testbar.
+        """Dünner Wrapper — Detektor-Wahl inkl. #961-„Aktivieren-Lücke"-Backfill
+        lebt jetzt in `DeviationAlertEngine._select_detector()` (Issue #1168
+        F001-Fix, eine Quelle statt Duplikat). metric_alert_levels bleibt SINGLE
+        source of truth (Issue #946); `trip.display_config` liefert den
+        Backfill-Auszug. Weiterhin direkt testbar (Trip-Argument, siehe
+        `test_issue_946_alert_architecture.py`/`test_bug_alert_metric_lifecycle_matrix.py`).
         """
-        # Issue #946 / #961: Detektor bauen, sobald der Trip explizite
-        # metric_alert_levels HAT ODER mindestens eine Weather-Tab-aktive Alarm-
-        # Metrik trägt. metric_alert_levels bleibt Single Source für explizite Stufen;
-        # die Weather-Tab-Aktivierung (display_config.metrics[]) ergänzt implizit
-        # 'standard' für aktive, aber nie konfigurierte Metriken (Aktivieren-Lücke,
-        # Issue #961). Ohne beides bleibt der NoOp-Pfad (Issue #946).
-        if trip.display_config and (
-            getattr(trip.display_config, "metric_alert_levels", None)
-            or self._has_active_alert_metric(trip.display_config)
-        ):
-            from services.alert_preset import expand_per_metric_levels
-            # Issue #961: display_config durchreichen → Weather-Tab-Aktivierungsstatus
-            # wird berücksichtigt (Deaktivieren-/Aktivieren-Lücke geschlossen).
-            rules = expand_per_metric_levels(
-                trip.display_config.metric_alert_levels or {},
-                display_config=trip.display_config,
-            )
-            return WeatherChangeDetectionService.from_alert_rules(rules)
-        # Issue #946: kein Fallback — nicht konfiguriert = kein Alert (NoOp-Detektor
-        # ohne MetricCatalog-Defaults, erzwungen über leere Regelliste).
-        return WeatherChangeDetectionService.from_alert_rules([])
-
-    @staticmethod
-    def _has_active_alert_metric(display_config: "UnifiedWeatherDisplayConfig") -> bool:
-        """Issue #961: True, wenn mindestens eine auf dem Weather-Tab GENUIN aktive
-        Metrik (echter `enabled=True`-Eintrag in `metrics[]`) auf einen bekannten
-        AlertMetric gemappt ist (dann lohnt der Aktivieren-Lücke-Backfill in
-        expand_per_metric_levels — auch ohne jeden `metric_alert_levels`-Eintrag).
-
-        Finding F002: Hier wird bewusst NICHT `is_alert_metric_active()` verwendet.
-        Dessen konservative "leeres metrics[] = aktiv"-Regel ist Backward-Compat für
-        das FILTERN bereits gesetzter Level-Einträge — sie darf aber keinen Backfill
-        auf einem komplett unkonfigurierten Trip (metric_alert_levels=None UND leeres
-        metrics[]) auslösen (Issue #946 AC-1: nicht konfiguriert = NoOp). Deshalb
-        prüfen wir hier strikt einen tatsächlich vorhandenen enabled=True-Eintrag.
-        """
-        from services.weather_change_detection import _ALERT_METRIC_TO_CATALOG_ID
-
-        if not getattr(display_config, "metrics", None):
-            return False
-        alert_catalog_ids: set[str] = set()
-        for catalog_ids in _ALERT_METRIC_TO_CATALOG_ID.values():
-            alert_catalog_ids.update(catalog_ids)
-        return any(
-            mc.enabled and mc.metric_id in alert_catalog_ids
-            for mc in display_config.metrics
+        config = AlertEvaluationConfig(
+            metric_alert_levels=(
+                getattr(trip.display_config, "metric_alert_levels", None)
+                if trip.display_config else None
+            ),
+            display_config=trip.display_config,
         )
+        return DeviationAlertEngine._select_detector(config)
 
     def check_all_trips(self) -> int:
         """
@@ -425,6 +379,9 @@ class TripAlertService:
 
         Issue #181: Supports midnight-wrap (e.g. 22:00–07:00).
         Returns False when quiet hours are not configured (either field is missing).
+        Issue #1168: pure Zeitfenster-Logik lebt jetzt in
+        `DeviationAlertEngine.is_quiet_hours()` (location-generisch, 1:1
+        übernommen); diese Methode bleibt als Trip-Adapter-Signatur bestehen.
 
         Args:
             trip: Trip with optional alert_quiet_from / alert_quiet_to fields
@@ -433,23 +390,18 @@ class TripAlertService:
         Returns:
             True if alerts should be suppressed (quiet hours active)
         """
-        if not trip.alert_quiet_from or not trip.alert_quiet_to:
-            return False
-        from_time = time_type.fromisoformat(trip.alert_quiet_from)
-        to_time = time_type.fromisoformat(trip.alert_quiet_to)
-        current = now.time()
-        if from_time > to_time:
-            # Midnight-wrap: e.g. 22:00 → 07:00
-            return current >= from_time or current < to_time
-        else:
-            # Normal window: e.g. 08:00 → 22:00
-            return from_time <= current < to_time
+        return DeviationAlertEngine.is_quiet_hours(
+            now, trip.alert_quiet_from, trip.alert_quiet_to
+        )
 
     def _is_throttled_with_cooldown(self, trip: "Trip") -> bool:
         """Check if alert is throttled using per-trip cooldown override.
 
         Issue #181: alert_cooldown_minutes=0 means no limit (always returns False).
         If None, falls back to global throttle_hours default.
+        Issue #1168: pure Cooldown-Logik lebt jetzt in
+        `DeviationAlertEngine.is_cooldown_active()`; diese Methode bleibt der
+        Trip-Adapter, der weiterhin den datei-/dict-basierten Throttle-State hält.
 
         Args:
             trip: Trip with optional alert_cooldown_minutes field
@@ -457,16 +409,15 @@ class TripAlertService:
         Returns:
             True if throttled (too soon since last alert)
         """
-        if trip.alert_cooldown_minutes == 0:
-            return False
-        if trip.alert_cooldown_minutes is not None:
-            cooldown_td = timedelta(minutes=trip.alert_cooldown_minutes)
-        else:
-            cooldown_td = timedelta(hours=self._throttle_hours)
+        cooldown_minutes = (
+            trip.alert_cooldown_minutes
+            if trip.alert_cooldown_minutes is not None
+            else self._throttle_hours * 60
+        )
         last_alert = self._last_alert_times.get(trip.id)
-        if last_alert is None:
-            return False
-        return datetime.now(timezone.utc) - last_alert < cooldown_td
+        return DeviationAlertEngine.is_cooldown_active(
+            datetime.now(timezone.utc), last_alert, cooldown_minutes
+        )
 
     def _is_throttled(self, trip_id: str) -> bool:
         """
@@ -593,20 +544,6 @@ class TripAlertService:
             All detected changes (severity is label only, not filter criterion)
         """
         return list(changes)
-
-    @staticmethod
-    def _highest_severity(changes: List[WeatherChange]) -> str:
-        """Issue #393: Höchste Severity der Changes als Cockpit-Token (LOW/MODERATE/HIGH).
-
-        ChangeSeverity (minor<moderate<major) wird auf das Frontend-Token-Set gemappt:
-        MINOR→LOW, MODERATE→MODERATE, MAJOR→HIGH. Leere Liste → "LOW".
-        """
-        rank = {ChangeSeverity.MINOR: 0, ChangeSeverity.MODERATE: 1, ChangeSeverity.MAJOR: 2}
-        token = {ChangeSeverity.MINOR: "LOW", ChangeSeverity.MODERATE: "MODERATE", ChangeSeverity.MAJOR: "HIGH"}
-        if not changes:
-            return "LOW"
-        top = max(changes, key=lambda c: rank.get(c.severity, 0)).severity
-        return token.get(top, "LOW")
 
     def _append_alert_log(self, trip_id: str, changes_count: int, severity: str) -> None:
         """Issue #393: Hängt einen Alert-Versand-Eintrag an alert_log.json an.

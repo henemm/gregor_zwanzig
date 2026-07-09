@@ -82,3 +82,4 @@ ADRs sind nicht nur Konvention, sondern werden erzwungen:
 | [0018](0018-provider-fallback-ohne-kaschieren.md) | Modell-Fallback bei Wetter-Quell-Ausfall — mit Ausweichen, aber ohne Kaschieren | Akzeptiert |
 | [0019](0019-nullgradgrenze-eine-alert-metrik.md) | Nullgradgrenze als eine Alert-Metrik | Akzeptiert |
 | [0020](0020-node-test-frontend-unit-runner.md) | node:test ist der kanonische Frontend-Unit-Test-Runner (kein vitest) | Akzeptiert |
+| [0021](0021-shared-deviation-alert-engine.md) | Gemeinsame `DeviationAlertEngine` für Trip- und künftige Compare-Alarme | Akzeptiert |

@@ -213,3 +213,4 @@ ohne Wetter-Delta erfolgt ein eigenständiger Versand über
 
 - **2026-06-14:** v1.0 Release — Alert-Deviation-Kern LIVE. Snapshot read-only, alert_state Melde-Gedächtnis, knapper Render-Pfad.
 - **2026-07-08:** `check_all_trips()` um additiven amtlichen Alert-Trigger erweitert (Issue #1088, Epic #1073 Slice 4) — siehe Datenfluss-Abschnitt.
+- **2026-07-09:** Auswertungskern (Change-Detection-Aufruf, Filter, Severity, Quiet-Hours, Cooldown, Kanal-/Detektorwahl) aus `trip_alert.py` in den location-generischen Shared-Service `DeviationAlertEngine` (`src/services/deviation_alert_engine.py`) extrahiert; `TripAlertService` ist seither dünner Adapter (Issue #1168, Epic #1095 Scheibe 1, reiner Umbau, Trip-Verhalten bit-identisch). Siehe `docs/adr/0021-shared-deviation-alert-engine.md` und `docs/features/architecture.md` (Abschnitt „Alert-System").

@@ -154,9 +154,20 @@ Manuelle Verwaltung ist nur noch im Notfall nötig — siehe `docs/runbooks/tele
 
 ### Alert-System (Deviation-Kern, Issue #816)
 
-**Komponenten:** `src/services/alert_state.py`, `src/services/trip_alert.py`, `src/services/weather_change_detection.py`, `src/output/renderers/alert/` (kanonischer Renderer seit #917)
+**Komponenten:** `src/services/alert_state.py`, `src/services/trip_alert.py`, `src/services/deviation_alert_engine.py`, `src/services/point_weather.py`, `src/services/weather_change_detection.py`, `src/output/renderers/alert/` (kanonischer Renderer seit #917)
 
 **Zweck:** Meldet **Abweichungen gegenüber dem letzten Briefing-Snapshot** statt absoluter Schwellwerte.
+
+**Location-generischer Auswertungskern (Issue #1168, Epic #1095 Scheibe 1):** Die eigentliche
+Auswertungslogik (Change-Detection-Aufruf, Filter significant, Filter gegen Melde-Gedächtnis,
+Severity-Bestimmung, Quiet-Hours, Cooldown, Kanalwahl, Detektor-Wahl) lebt seit Issue #1168 in
+`DeviationAlertEngine.evaluate()` (`src/services/deviation_alert_engine.py`) und operiert auf
+generischen DTOs (`PointWeatherData`, `AlertEvaluationConfig`, `src/services/point_weather.py`)
+statt auf `Trip`-Strukturen. `TripAlertService` ist nur noch ein dünner Adapter (baut
+`AlertEvaluationConfig` aus Trip-Feldern via `TripSegmentWeatherAdapter`, ruft die Engine auf,
+delegiert Rendering/Versand unverändert weiter). Trip ist der erste Consumer; ein
+Compare-Adapter folgt in Epic #1095 Scheibe 2 (#1169) und ruft dieselbe Engine, ohne die
+Auswertungslogik zu duplizieren. Details/Alternativen: `docs/adr/0021-shared-deviation-alert-engine.md`.
 
 **Architektur:**
 
