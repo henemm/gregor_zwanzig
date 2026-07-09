@@ -108,7 +108,7 @@ class ProviderRequestError:
 ## Out of Scope (Folge-Issues)
 
 - **#1127** — Infrastruktur-unabhängiger Cross-Provider-Fallback (Météo-France/DWD/GeoSphere direkt) für Open-Meteo-Totalausfall.
-- **#1128** — `_request` retryt 5xx faktisch nie (tenacity-Wrap-Reihenfolge).
+- **#1128** — ✅ behoben: `_request` retryte 5xx/Connect-Error/Read-Timeout faktisch nie (tenacity-Wrap-Reihenfolge); siehe `docs/specs/modules/issue_1128_openmeteo_retry_fix.md`. Folge: Retry läuft jetzt vor diesem Fallback und verzögert ihn bei andauerndem 5xx messbar (#1155).
 - BetterStack-Eskalationsleiter (Infra-Repo; Koordination per MQ an `infra`, sobald AC-4-Signal steht).
 
 ## Known Limitations

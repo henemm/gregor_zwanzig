@@ -193,6 +193,11 @@ def _is_retryable_error(exception: Exception) -> bool:
         return exception.response.status_code in RETRY_STATUS_CODES
     if isinstance(exception, (httpx.ConnectError, httpx.ReadTimeout)):
         return True
+    if isinstance(exception, ProviderRequestError):
+        if exception.status_code in RETRY_STATUS_CODES:
+            return True
+        if isinstance(exception.__cause__, (httpx.ConnectError, httpx.ReadTimeout)):
+            return True
     return False
 
 
