@@ -30,6 +30,7 @@ from tenacity import (
     retry,
     stop_after_attempt,
     wait_exponential,
+    wait_none,
     retry_if_exception,
     before_sleep_log,
 )
@@ -96,6 +97,9 @@ RETRY_ATTEMPTS = 5
 RETRY_WAIT_MIN = 2  # seconds
 RETRY_WAIT_MAX = 60  # seconds
 RETRY_STATUS_CODES = {502, 503, 504}
+# Issue #1155: follow-up model-fallback candidates get a single, no-backoff
+# attempt so total failover time doesn't cascade (~30s x N candidates).
+FALLBACK_RETRY_ATTEMPTS = 1
 
 
 # Regional Models Configuration
@@ -838,6 +842,10 @@ class OpenMeteoProvider:
         model_id = grid_res_km = None
         seen_endpoints: set = set()
         last_error: Optional[ProviderRequestError] = None
+        # Issue #1155: only the first *actually attempted* candidate keeps the
+        # full retry; every follow-up candidate uses FALLBACK_RETRY_ATTEMPTS
+        # (no backoff). The dedup-`continue` above must not consume this flag.
+        first_request = True
         for cand_id, cand_res, cand_endpoint in candidates:
             if cand_endpoint in seen_endpoints:
                 continue  # icon_d2 & icon_eu share /v1/dwd-icon → dedup
@@ -848,7 +856,17 @@ class OpenMeteoProvider:
                 f"using model '{cand_id}' via endpoint '{cand_endpoint}'"
             )
             try:
-                response_data = self._request(cand_endpoint, params)
+                if first_request:
+                    first_request = False
+                    response_data = self._request(cand_endpoint, params)
+                else:
+                    # `retry_with()` on a bound method proxies to the
+                    # underlying (unbound) decorated function, so `self`
+                    # must be passed explicitly here.
+                    response_data = self._request.retry_with(
+                        stop=stop_after_attempt(FALLBACK_RETRY_ATTEMPTS),
+                        wait=wait_none(),
+                    )(self, cand_endpoint, params)
             except ProviderRequestError as e:
                 status = e.status_code
                 if status is not None and 400 <= status < 500:

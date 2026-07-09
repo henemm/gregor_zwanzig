@@ -71,7 +71,7 @@ Kein struktureller Umbau von `_request()`: Der Alternativ-Ansatz aus dem Issue (
 
 ## Expected Behavior
 
-- **Input:** Exception, die von `_request()` intern geworfen wird (immer eine `ProviderRequestError`, da `_request()` alle `httpx`-Exceptions vor dem Reraise wrapped)
+- **Input:** Exception, die von `_request()` intern geworfen wird. `_request()` wrapped alle `httpx`-Exceptions vor dem Reraise in eine `ProviderRequestError` — das ist der ueberwiegende Fall. Ein `json.JSONDecodeError` aus `response.json()` wird dagegen von keinem der beiden `except`-Zweige (`httpx.HTTPStatusError`, `httpx.RequestError`) abgefangen und erreicht `_is_retryable_error()` roh und ungewrappt; die Funktion behandelt das sicher (kein `isinstance`-Match, kein Crash) und liefert dafuer `False` (#1154 F001).
 - **Output:** `True`, wenn die Exception einen transienten Fehler repraesentiert (5xx-Status, Connect-Error oder Read-Timeout als Ursache); `False` bei 4xx-Client-Fehlern oder sonstigen Fehlern
 - **Side effects:** Bei `True` fuehrt `tenacity` einen weiteren Request-Versuch mit exponentiellem Backoff durch (bis zu 5 Versuche, 2-60s Wartezeit); bei `False` propagiert `_request()` die `ProviderRequestError` sofort an den Aufrufer (u.a. die #1115-Modell-Fallback-Logik)
 

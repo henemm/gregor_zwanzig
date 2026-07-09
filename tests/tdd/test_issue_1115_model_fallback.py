@@ -45,6 +45,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import pytest
+import tenacity
 
 _SRC = Path(__file__).resolve().parents[2] / "src"
 if str(_SRC) not in sys.path:
@@ -190,6 +191,16 @@ def _provider_seam(monkeypatch, tmp_path: Path, status_map: dict):
     monkeypatch.setattr("providers.openmeteo.AVAILABILITY_CACHE_PATH", cache_path)
     monkeypatch.setattr(
         "providers.openmeteo.DIAGNOSTICS_PATH", tmp_path / "openmeteo_calls.jsonl"
+    )
+    # Issue #1160: neutralisiert das tenacity-Retry-Backoff auf `_request`
+    # (analog zu `_total_outage_seam` aus test_issue_1141_cross_provider_
+    # fallback.py) — sonst laeuft jeder dauerhaft fehlschlagende Endpoint
+    # real durch das volle Backoff (~30s), was Testlaufzeiten unnoetig
+    # aufblaeht. Nur das Timing aendert sich, die fachliche Fallback-Logik
+    # bleibt unveraendert.
+    monkeypatch.setattr(OpenMeteoProvider._request.retry, "wait", tenacity.wait_none())
+    monkeypatch.setattr(
+        OpenMeteoProvider._request.retry, "stop", tenacity.stop_after_attempt(1)
     )
     with _fault_server(status_map) as (url, server):
         monkeypatch.setattr("providers.openmeteo.BASE_HOST", url)

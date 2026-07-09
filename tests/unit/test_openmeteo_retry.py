@@ -21,6 +21,7 @@ from typing import List
 
 import httpx
 import pytest
+import tenacity
 
 sys.path.insert(0, "src")
 
@@ -181,3 +182,57 @@ class TestIsRetryableErrorPredicate:
                 raise ProviderRequestError("openmeteo", "Request failed") from cause
             except ProviderRequestError as wrapped:
                 assert _is_retryable_error(wrapped) is True
+
+    def test_wrapped_read_timeout_cause_is_retryable(self):
+        """
+        AC-6 (#1154 F002): GIVEN a ProviderRequestError raised 'from' a real
+        httpx.ReadTimeout WHEN _is_retryable_error() is applied to it THEN it
+        returns True, because the original cause is transient. Backfill for
+        a predicate branch (_is_retryable_error, providers/openmeteo.py:194)
+        that was previously untested (only httpx.ConnectError was covered).
+        """
+        try:
+            raise httpx.ReadTimeout("Read timed out")
+        except httpx.ReadTimeout as cause:
+            try:
+                raise ProviderRequestError("openmeteo", "Request failed") from cause
+            except ProviderRequestError as wrapped:
+                assert _is_retryable_error(wrapped) is True
+
+
+class TestFullRetryUnaffectedOutsideFallbackLoop:
+    """AC-5 (#1155): `_request()` aufgerufen AUSSERHALB der #1115-Fallback-
+    Schleife (z.B. Availability-Check, Air-Quality, Ensemble) behaelt
+    weiterhin den vollen Retry (bis zu RETRY_ATTEMPTS=5 Versuche mit
+    exponentiellem Backoff) — die #1155-Reduktion betrifft ausschliesslich
+    den Aufruf INNERHALB der Fallback-Schleife in `fetch_forecast()`."""
+
+    def test_direct_request_call_keeps_full_retry_on_repeated_5xx(self, monkeypatch):
+        """
+        GIVEN a real local server returning 503, 503, 200 in sequence
+        WHEN OpenMeteoProvider._request() is called DIRECTLY (not via
+             fetch_forecast's fallback loop)
+        THEN it survives via the unchanged full retry and returns the
+             successful data; server saw >=2 requests (consistent with
+             RETRY_ATTEMPTS=5). Only the backoff `wait` is neutralized here
+             (tempo) — `stop` (RETRY_ATTEMPTS) is left untouched.
+        """
+        monkeypatch.setattr(
+            OpenMeteoProvider._request.retry, "wait", tenacity.wait_none()
+        )
+        port = _free_port()
+        server, thread, handler_cls = _start_server([503, 503, 200], port)
+        try:
+            provider = OpenMeteoProvider()
+            data = provider._request(
+                "/v1/test", {}, base_host=f"http://127.0.0.1:{port}"
+            )
+            assert data == {"hourly": {}}
+            assert handler_cls.call_count >= 2, (
+                f"AC-5: erwartet >=2 Requests (voller Retry unveraendert), "
+                f"Server sah {handler_cls.call_count} — Retry-Reduktion aus "
+                f"#1155 haette hier NICHT greifen duerfen."
+            )
+        finally:
+            server.shutdown()
+            thread.join(timeout=5)
