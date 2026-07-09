@@ -101,19 +101,26 @@ Konfigurations-Prioritaet: CLI > ENV > config.ini
 uv run pytest
 ```
 
-## KEINE MOCKED TESTS! (KRITISCH!)
+## Test-Politik: Zwei Schichten (PO-go 2026-07-09)
 
-**Mocked Tests sind VERBOTEN** — sie beweisen nicht das echte Verhalten.
+Ersetzt die alte Absolutform von „KEINE MOCKED TESTS". Unverändert verboten bleibt **Mock-Theater**: `Mock()`/`patch()`/`MagicMock`, die nur die eigene Annahme zurückspiegeln, beweisen nichts. Ebenso verboten bleiben Dateiinhalt-Checks (`assert 'xyz' in file.read_text()`) als Verhaltensnachweis (Ausnahme: `# doc-compliance-test`).
 
-- **E-Mail-Tests:** echte E-Mail via Gmail SMTP senden, via IMAP abrufen, Inhalt prüfen (Referenz: `tests/tdd/test_html_email.py::TestRealGmailE2E`)
-- **API-Tests:** echte API-Calls (Geosphere etc.)
-- **NIEMALS** `Mock()`, `patch()`, `MagicMock` für E-Mail/API-Tests
+| Schicht | Was | Wann | Regel bei Rot |
+|---|---|---|---|
+| **Kern (deterministisch)** | ohne Netz/Live-Dienste/echte Postfächer; echte **aufgezeichnete** API-/Mail-Daten als versionierte Fixtures erwünscht | jeder Testlauf; Commit-Gate | MUSS 100 % grün sein: sofort fixen ODER löschen (wenn er veraltetes Verhalten prüft) — nie als „vorbestehend rot" liegenlassen |
+| **Live-E2E** | echte API-Calls, echte Staging-Mails via IMAP, Playwright gegen Staging (Marker `live`/`email`/`staging`) | nur `/e2e-verify` bzw. Deploy | Flake → Retry; erst reproduzierbares Scheitern ist ein Befund (→ #1199 bzw. #1196) |
 
-**Dateiinhalt-Checks sind ebenfalls VERBOTEN:** `assert 'xyz' in file.read_text()` ist Code-Analyse, kein Verhaltensnachweis. TDD-Tests MÜSSEN echtes Verhalten beweisen:
-- Frontend-Bug: Playwright-E2E gegen Staging als eingeloggter Nutzer
-- Backend-Bug: echter HTTP-Call, echter DB-Zustand
-- Mindestens ein Test reproduziert den Bug aus Nutzersicht (rot vor Fix, grün nach Fix)
-- **Ausnahme:** Doku-Compliance-Tests (prüfen Workflow-Dateien selbst als Artefakt), markiert mit `# doc-compliance-test`
+Bug-Nachweis unverändert: mindestens ein Test reproduziert den Bug aus Nutzersicht (rot vor Fix, grün nach Fix) — in der Live-Schicht, wenn er Staging braucht, sonst im Kern.
+
+**Namensregel (neu):** Testdateien nach Verhalten benennen (`test_alert_throttle.py`), NICHT nach Issue-Nummer (`test_issue_1234.py`). Nach dem Fix wird der Repro-Test in die passende Modul-Suite überführt oder gelöscht — der Issue-Nummern-Korpus (Bestand: 262 Dateien) wächst nicht weiter. Bestandssanierung: #1196.
+
+## Nebenbefund-Triage (PO-go 2026-07-09, ersetzt „immer Folge-Issue")
+
+Nebenbefunde aus Workflows/Adversary-Läufen werden NICHT mehr automatisch eigene Issues. **Eigenes Issue nur bei:** (a) nutzersichtbarem Fehlverhalten, (b) Datenverlust-/Sicherheitsrisiko, (c) fälschlich blockierendem Gate. **Alles andere** → eine Checkbox-Zeile im rollierenden Sammel-Issue **#1199** (Format dort beschrieben). Test-/Gate-Befunde gehören in #1196/#1197, solange diese offen sind. Einträge ohne PO-Bestätigung verfallen nach 30 Tagen. Adversary-Findings der Stufe LOW/kosmetisch sind per Default Sammel-Einträge, keine Issues.
+
+## Regel-Budget (Ratsche-Gegengewicht, PO-go 2026-07-09)
+
+Jede neue Pflicht-Regel, jedes neue Gate, jeder neue Pflicht-Validator muss beim Einführen entweder **eine bestehende Regel ersetzen** oder ein **Prüfdatum (+90 Tage)** tragen. Am Prüfdatum gilt: kein nachweisbarer Fang (verhinderter echter Fehler) → Rückbau. Gate-Befunde, die keine Arbeit blockieren, sind Sammel-Einträge (#1199), keine Issues. Bestandsaudit aller Gates: #1197. Hintergrund und Wirkmodell: `docs/analysis/backlog-spirale-2026-07.md`.
 
 ## E2E-Verifikation (Post-Push auf Staging)
 
