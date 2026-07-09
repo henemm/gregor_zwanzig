@@ -118,7 +118,10 @@ def test_ac3_dpc_failure_falls_back_to_next_source():
         assert frames == [], "_fetch_radar_dpc muss bei realem Endpoint-Fehler [] liefern, nicht crashen"
 
         result = svc.get_nowcast(_ROME_LAT, _ROME_LON)
-        assert result.source in ("AROME-FR", "ICON-D2", "minutely_15"), (
+        # Issue #1186: nach Einfuehrung des ARPAE-ICON-2I-Rueckfalls ist "ARPAE-2I"
+        # der korrekte naechste Schritt fuer Rom bei DPC-Ausfall (bewusste,
+        # spec-gedeckte Erweiterung der erlaubten Ergebnismenge, keine Verwaesserung).
+        assert result.source in ("ARPAE-2I", "AROME-FR", "ICON-D2", "minutely_15"), (
             f"Bei DPC-Ausfall muss die Fallback-Kette greifen (war: {result.source})"
         )
     finally:

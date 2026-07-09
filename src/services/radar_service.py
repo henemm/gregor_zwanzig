@@ -139,6 +139,7 @@ class RadarNowcastService:
         "DPC": "Radar-DPC (Protezione Civile IT)",
         "AROME-FR": "Météo-France AROME (1,5 km)",
         "ICON-D2": "DWD ICON-D2 (2 km)",
+        "ARPAE-2I": "ARPAE ICON-2I (2 km, Italien)",
         "minutely_15": "Open-Meteo (global)",
     }
 
@@ -215,6 +216,9 @@ class RadarNowcastService:
             frames = self._fetch_radar_dpc(lat, lon)
             if frames:
                 return frames, "DPC"
+            frames = self._fetch_italy_arpae(lat, lon)
+            if frames:
+                return frames, "ARPAE-2I"
 
         if _within_arome_france(lat, lon):
             frames = self._fetch_arome_france_hd(lat, lon)
@@ -305,6 +309,10 @@ class RadarNowcastService:
     def _fetch_icon_d2(self, lat: float, lon: float) -> list:
         """Fetch DWD ICON-D2 (~2 km) minutely_15 nowcast via Open-Meteo. Fail-soft -> []."""
         return self._fetch_openmeteo_15(lat, lon, models="icon_d2")
+
+    def _fetch_italy_arpae(self, lat: float, lon: float) -> list:
+        """Fetch ARPAE ICON-2I (2 km) minutely_15 nowcast via Open-Meteo. Fail-soft -> []."""
+        return self._fetch_openmeteo_15(lat, lon, models="italia_meteo_arpae_icon_2i")
 
     def _fetch_openmeteo_15(
         self, lat: float, lon: float, models: Optional[str] = None

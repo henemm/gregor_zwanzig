@@ -109,7 +109,7 @@ Testdatei: `tests/tdd/test_feature_656_radar_nowcast.py` (mock-frei).
 
 - "Aktuelle Position" = repräsentativer Punkt der heutigen Etappe, kein Live-GPS.
 - "Kollisionskurs" im MVP = Onset-/Annäherungs-Trend im Punkt-Nowcast, kein voll-physikalisches Zell-Tracking mit Bewegungsvektor.
-- RADOLAN deckt nur DE + Grenzregionen, INCA nur AT. Für Italien (inkl. Korsika, PO-Entscheidung 2026-07-09) liefert seit Issue #1162 Radar-DPC (Protezione Civile) reale Radarbeobachtung statt Modell-Downscaling. Außerhalb aller regionalen Quellen (weiterhin AROME-FR/ICON-D2 vorgelagert, siehe `radar_nowcast_france.md`/`radar_nowcast_icon_d2.md`) fällt die Kette auf `minutely_15` zurück — geringere räumliche Auflösung. Konvektions-Indikator (WMO-weather_code) ist in Open-Meteo verfügbar; BrightSky/GeoSphere/DPC-Pfade haben kein natives Konvektions-Feld und nutzen einen Open-Meteo-Sidecar (ADR-0018).
+- RADOLAN deckt nur DE + Grenzregionen, INCA nur AT. Für Italien (inkl. Korsika, PO-Entscheidung 2026-07-09) liefert seit Issue #1162 Radar-DPC (Protezione Civile) reale Radarbeobachtung statt Modell-Downscaling. Fällt Radar-DPC aus, greift seit Issue #1186 als Modell-Rückfall ARPAE ICON-2I (2 km, Open-Meteo) — noch innerhalb derselben Italien-Domäne, bevor die Kette weiter auf AROME-FR/ICON-D2 (siehe `radar_nowcast_france.md`/`radar_nowcast_icon_d2.md`) bzw. zuletzt `minutely_15` zurückfällt. Konvektions-Indikator (WMO-weather_code) ist in Open-Meteo verfügbar; BrightSky/GeoSphere/DPC-Pfade haben kein natives Konvektions-Feld und nutzen einen Open-Meteo-Sidecar (ADR-0018) — ARPAE führt weather_code bereits mit, kein Sidecar nötig.
 - Latenz-AC (< 10 s) abhängig von Fremd-API-Verfügbarkeit; Fallback-Kette bei Timeout/Leerantwort.
 - WMO-Codes sind eine Modell-Klassifikation, kein Live-Blitz-Detektor; Genauigkeit hängt vom Open-Meteo-Modell ab.
 
@@ -118,3 +118,4 @@ Testdatei: `tests/tdd/test_feature_656_radar_nowcast.py` (mock-frei).
 - 2026-06-07: Initial spec created (Issue #656)
 - 2026-06-08: Known Limitation "Gewitter/Hagel-Stufe" aufgelöst durch Issue #660 (WMO-weather_code Konvektions-Indikator integriert); AC-2 angepasst
 - 2026-07-09: Known Limitation zur regionalen Abdeckung korrigiert — Italien (inkl. Korsika) fällt seit Issue #1162 (Radar-DPC/Protezione Civile) nicht mehr auf den globalen `minutely_15`-Fallback zurück, siehe `docs/specs/modules/issue_1162_radar_dpc.md`
+- 2026-07-09: ARPAE-ICON-2I-Modell-Rückfall unter Radar-DPC ergänzt (Issue #1186) — vervollständigt die Zwei-Ebenen-Absicherung für Italien (echtes Radar primär, regionales Modell als Netz), siehe `docs/specs/modules/radar_nowcast_italy_arpae_fallback.md`
