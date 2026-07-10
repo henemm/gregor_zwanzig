@@ -36,6 +36,13 @@ type ComparePreset struct {
 	// Feld im JSON (Altdaten), decodiert Go zu nil statt zum Zero-Value false.
 	// nil/true = Quellen werden abgefragt (Default), false = strukturell kein Fetch.
 	OfficialAlertsEnabled *bool `json:"official_alerts_enabled,omitempty"`
+	// Issue #1041 Slice 1b — steuert ob der Radar-Onset-Alarm (Epic #1095) fuer
+	// diesen Vergleich alle 15 Min geprueft wird. Gleiches Pointer-Pattern wie
+	// OfficialAlertsEnabled, aber UMGEKEHRTER Default: nil/fehlend = AUS (nicht
+	// an!). Grund: get_nowcast() ruft je Ort die volle Provider-Kette auf —
+	// Netzwerkkosten skalieren mit der Ortszahl des Presets, daher bewusst
+	// opt-in statt opt-out.
+	RadarAlertEnabled *bool `json:"radar_alert_enabled,omitempty"`
 	// Issue #1107 — steuert ob die Stundenverlauf-Sektion (Kopf + alle
 	// Orts-Stundentabellen) der Compare-Mail gerendert wird. Pointer-Pattern
 	// (wie OfficialAlertsEnabled): fehlt das Feld im JSON (Altdaten), decodiert

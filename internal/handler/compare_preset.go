@@ -217,6 +217,12 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if updated.OfficialAlertsEnabled == nil {
 			updated.OfficialAlertsEnabled = original.OfficialAlertsEnabled
 		}
+		// Issue #1041 Slice 1b: radar_alert_enabled erhalten wenn Body es nicht
+		// trägt (nil nach Decode = Feld fehlte im Request), analog
+		// official_alerts_enabled — Datenverlust-Schutz (CLAUDE.md).
+		if updated.RadarAlertEnabled == nil {
+			updated.RadarAlertEnabled = original.RadarAlertEnabled
+		}
 		// Issue #1107: hourly_enabled erhalten wenn Body es nicht trägt.
 		if updated.HourlyEnabled == nil {
 			updated.HourlyEnabled = original.HourlyEnabled

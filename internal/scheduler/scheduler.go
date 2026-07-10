@@ -98,6 +98,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		{"*/15 * * * *", s.radarAlertChecks, "radar_alert_checks", "Radar Alert Checks (every 15 min)"},
 		{"*/15 * * * *", s.dataWriteSelftest, "data_write_selftest", "Data Write Selftest (every 15 min)"},
 		{"*/15 * * * *", s.compareAlertChecks, "compare_alert_checks", "Compare Alert Checks (every 15 min)"},
+		{"*/15 * * * *", s.compareRadarAlertChecks, "compare_radar_alert_checks", "Compare Radar Alert Checks (every 15 min)"},
 	}
 	for _, j := range jobs {
 		eid, _ := s.cron.AddFunc(j.expr, j.fn)
@@ -110,7 +111,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 // Start begins cron scheduling.
 func (s *Scheduler) Start() {
 	s.cron.Start()
-	log.Printf("[scheduler] Started: 7 jobs, timezone %s", s.cron.Location())
+	log.Printf("[scheduler] Started: 8 jobs, timezone %s", s.cron.Location())
 }
 
 // Stop gracefully shuts down the scheduler and waits for running jobs.
@@ -167,6 +168,14 @@ func (s *Scheduler) radarAlertChecks() {
 func (s *Scheduler) compareAlertChecks() {
 	s.recordRun("compare_alert_checks", func() error {
 		return s.runForAllUsers("compare_alert_checks", "/api/scheduler/compare-alert-checks")
+	})
+}
+
+// compareRadarAlertChecks triggers Compare-Preset Radar-Onset-Alert-Checks
+// (Issue #1041 Slice 1b, Epic #1095).
+func (s *Scheduler) compareRadarAlertChecks() {
+	s.recordRun("compare_radar_alert_checks", func() error {
+		return s.runForAllUsers("compare_radar_alert_checks", "/api/scheduler/compare-radar-alert-checks")
 	})
 }
 
