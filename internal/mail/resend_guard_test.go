@@ -21,12 +21,16 @@ func resendTestMail() Mail {
 }
 
 // allowlistedDataDir registriert jede Adresse in addresses als mail_to eines
-// eigenen Fixture-Nutzerprofils in einem isolierten t.TempDir() (Issue
-// #1219) und setzt GZ_DATA_DIR per t.Setenv darauf (automatisch
-// zurückgesetzt am Testende). Damit besteht recipientBlocked() die neue
-// Allowlist-Prüfung für genau diese Adressen, ohne die ECHTEN data/users/
-// anzufassen — nötig für Tests, die eigentlich resendBlocked() (#1122)
-// prüfen wollen, nicht die Allowlist-Mitgliedschaft selbst.
+// eigenen, VERIFIZIERTEN Fixture-Nutzerprofils (Issue #1219 Scheibe 1:
+// email_verified_at gesetzt) in einem isolierten t.TempDir() und setzt
+// GZ_DATA_DIR per t.Setenv darauf (automatisch zurückgesetzt am Testende).
+// Damit besteht recipientBlocked() die Allowlist-Prüfung für genau diese
+// Adressen, ohne die ECHTEN data/users/ anzufassen — nötig für Tests, die
+// eigentlich resendBlocked() (#1122) prüfen wollen, nicht die
+// Allowlist-Mitgliedschaft selbst. Adressen MÜSSEN eine nicht-reservierte
+// Domain tragen (kein example.com/.net/.org, kein .test/.invalid/
+// .localhost/.example) — reservierte Domains werden seit Scheibe 1 IMMER
+// geblockt, unabhängig von email_verified_at.
 func allowlistedDataDir(t *testing.T, addresses ...string) string {
 	t.Helper()
 	dataDir := t.TempDir()
@@ -35,7 +39,10 @@ func allowlistedDataDir(t *testing.T, addresses ...string) string {
 		if err := os.MkdirAll(userDir, 0755); err != nil {
 			t.Fatalf("allowlistedDataDir: Fixture-Setup fehlgeschlagen: %v", err)
 		}
-		data, err := json.Marshal(map[string]string{"mail_to": addr})
+		data, err := json.Marshal(map[string]string{
+			"mail_to":           addr,
+			"email_verified_at": "2026-07-10T12:00:00Z",
+		})
 		if err != nil {
 			t.Fatalf("allowlistedDataDir: JSON-Marshal fehlgeschlagen: %v", err)
 		}
@@ -53,9 +60,9 @@ func allowlistedDataDir(t *testing.T, addresses ...string) string {
 // Allowlist-Prüfung) NICHT zuerst greift und dieser Test weiterhin gezielt
 // resendBlocked() (#1122) prüft — genau das ursprüngliche Testziel.
 func TestSend_ResendHostBlockedUnderGoTest(t *testing.T) {
-	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "user@example.com"))
+	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "user@gmail.com"))
 	cfg := MailConfig{Host: "smtp.resend.com", Port: 587, User: "resend", Pass: "re_x"}
-	err := Send(cfg, "user@example.com", resendTestMail())
+	err := Send(cfg, "user@gmail.com", resendTestMail())
 	if err == nil {
 		t.Fatal("AC-4: Send() mit Resend-Host muss unter go test einen Fehler liefern — Mail wäre über Resend gegangen!")
 	}
@@ -66,10 +73,10 @@ func TestSend_ResendHostBlockedUnderGoTest(t *testing.T) {
 
 // AC-4 (Token-Leak): Auch MIT GZ_RESEND_ALLOWED=1 bleibt Resend unter go test gesperrt.
 func TestSend_ResendHostBlockedEvenWithTokenUnderGoTest(t *testing.T) {
-	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "user@example.com"))
+	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "user@gmail.com"))
 	t.Setenv("GZ_RESEND_ALLOWED", "1")
 	cfg := MailConfig{Host: "smtp.resend.com", Port: 587, User: "resend", Pass: "re_x"}
-	err := Send(cfg, "user@example.com", resendTestMail())
+	err := Send(cfg, "user@gmail.com", resendTestMail())
 	if err == nil {
 		t.Fatal("AC-4: Ein in die Test-Umgebung geleaktes Token darf go test NICHT zum Resend-Versand befähigen")
 	}
@@ -80,9 +87,9 @@ func TestSend_ResendHostBlockedEvenWithTokenUnderGoTest(t *testing.T) {
 
 // Case-Insensitivity: SMTP.RESEND.COM ist derselbe Dienst.
 func TestSend_ResendHostBlockedCaseInsensitive(t *testing.T) {
-	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "user@example.com"))
+	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "user@gmail.com"))
 	cfg := MailConfig{Host: "SMTP.RESEND.COM", Port: 587, User: "resend", Pass: "re_x"}
-	err := Send(cfg, "user@example.com", resendTestMail())
+	err := Send(cfg, "user@gmail.com", resendTestMail())
 	if err == nil || !strings.Contains(err.Error(), "GZ_RESEND_ALLOWED") {
 		t.Errorf("Guard muss Host case-insensitive prüfen, Fehler war: %v", err)
 	}
@@ -104,10 +111,10 @@ func TestSend_NonResendHostNotBlockedByGuard(t *testing.T) {
 // AC-5: SendWithFallback ist über Send() für BEIDE Configs abgedeckt — ein
 // Resend-Fallback wird ebenso verweigert (kein Schlupfloch über den Fallback-Pfad).
 func TestSendWithFallback_ResendFallbackAlsoBlocked(t *testing.T) {
-	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "user@example.com"))
+	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "user@gmail.com"))
 	primary := MailConfig{Host: "127.0.0.1", Port: 1, User: "u", Pass: "p"}
 	fallback := MailConfig{Host: "smtp.resend.com", Port: 587, User: "resend", Pass: "re_x"}
-	err := SendWithFallback(primary, fallback, "user@example.com", resendTestMail())
+	err := SendWithFallback(primary, fallback, "user@gmail.com", resendTestMail())
 	if err == nil {
 		t.Fatal("SendWithFallback mit Resend-Fallback muss fehlschlagen — sonst leakt der Fallback-Pfad über Resend")
 	}

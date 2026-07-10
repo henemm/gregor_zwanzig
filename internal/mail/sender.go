@@ -82,38 +82,59 @@ var testMailboxes = map[string]bool{
 
 // resendAllowlistProfile ist eine minimale Projektion eines user.json-
 // Profils — nur die für die Resend-Empfänger-Allowlist relevanten Felder
-// (Issue #1219). IsTestUser (Feld "is_test_user") ist Teil der Adversary-
-// Nachbesserung F001 — Symmetrie zu Python is_test_user_id().
+// (Issue #1219). EmailVerifiedAt (Issue #1219 Scheibe 1) ist das
+// Eignungskriterium: nur Profile mit gesetztem Zeitstempel sind
+// allowlist-fähig.
 type resendAllowlistProfile struct {
-	MailTo     string `json:"mail_to"`
-	Email      string `json:"email"`
-	IsTestUser bool   `json:"is_test_user"`
+	MailTo          string `json:"mail_to"`
+	Email           string `json:"email"`
+	EmailVerifiedAt string `json:"email_verified_at"`
 }
 
-// isResendAllowlistTestUser wendet die VOLLEN #1013-Test-User-Ausschluss-
-// Kriterien an (Issue #1219 Adversary F001 — CRITICAL): Symmetrie zu Python
-// is_test_user_id() (src/app/config.py:30-50), das (a) die Namens-Substring-
-// Heuristik, (b) die feste Fixture-ID "tg-live-e2e" UND (c) das
-// Profil-Flag "is_test_user":true prüft. Go's IsTestUser() deckt bewusst
-// NUR (a) ab, damit bestehende Aufrufer (z.B. handler/auth.go:224, die
-// keinen dataDir-/Profil-Kontext haben) unverändert bleiben — die
-// zusätzlichen Kriterien (b)/(c) werden hier, im Allowlist-Loader, ergänzt,
-// wo das Profil ohnehin gelesen werden muss. Fail-soft: fehlt/kaputt die
-// user.json, entscheidet nur die Namens-/ID-Heuristik (a)+(b) — exakt wie
-// Python.
-func isResendAllowlistTestUser(dataDir, userID string) bool {
-	if IsTestUser(userID) || userID == "tg-live-e2e" {
+var (
+	reservedTestDomains = map[string]bool{
+		"example.com": true,
+		"example.net": true,
+		"example.org": true,
+	}
+	reservedTestTLDs = []string{".test", ".invalid", ".localhost", ".example"}
+	reservedBareTLDs = map[string]bool{
+		"test":      true,
+		"invalid":   true,
+		"localhost": true,
+		"example":   true,
+	}
+)
+
+// isReservedTestDomain prüft, ob die Domain einer Adresse RFC-2606-reserviert
+// ist (Issue #1219 Scheibe 1, AC-4) — Symmetrie zu Python
+// _is_reserved_test_domain(). Reservierte Domains werden IMMER geblockt,
+// unabhängig vom Verifikationsstatus des Profils.
+//
+// Adversary F002/F003: ein Trailing-Dot-FQDN (example.com., example.com..)
+// wird vor dem Vergleich gekürzt — TrimRight statt TrimSuffix, damit ALLE
+// trailing Dots entfernt werden (1:1-Parität zu Python rstrip(".")), sonst
+// rutscht der Suffix-Check bei mehrfachem Trailing-Dot fälschlich durch.
+// Eine BARE-TLD ohne Subdomain-Label (user@localhost, user@test) wird
+// zusätzlich per EXAKTEM Vergleich erkannt — NICHT als Substring/Suffix,
+// damit legitime Domains wie mytest.de/example.company nicht fälschlich
+// gesperrt werden.
+func isReservedTestDomain(addr string) bool {
+	normalized := normalizedAddrForGuard(addr)
+	_, domain, found := strings.Cut(normalized, "@")
+	domain = strings.TrimRight(domain, ".")
+	if !found || domain == "" {
+		return false
+	}
+	if reservedTestDomains[domain] || reservedBareTLDs[domain] {
 		return true
 	}
-	data, err := os.ReadFile(filepath.Join(dataDir, "users", userID, "user.json"))
-	if err != nil {
-		return false
+	for _, tld := range reservedTestTLDs {
+		if strings.HasSuffix(domain, tld) {
+			return true
+		}
 	}
-	var profile resendAllowlistProfile
-	if err := json.Unmarshal(data, &profile); err != nil {
-		return false
-	}
-	return profile.IsTestUser
+	return false
 }
 
 // resendAllowlistDataDir löst das Datenverzeichnis für loadResendAllowlist
@@ -127,12 +148,16 @@ func resendAllowlistDataDir() string {
 }
 
 // loadResendAllowlist sammelt normalisierte mail_to-/email-Adressen aller
-// Nicht-Test-Nutzerprofile unter dataDir/users/<id>/user.json (Issue #1219).
-// Symmetrisches Pendant zu src/output/channels/email.py::_load_resend_allowlist.
-// Test-Nutzer (IsTestUser) werden konservativ ausgeschlossen — im Zweifel
-// als Test behandeln, nicht in die Allowlist aufnehmen. Plus-Adressierung
-// wird auf Allowlist-Einträgen NICHT gekappt (echte Nutzeradressen werden
-// 1:1 verglichen, nur lowercase/trim via mail.ParseAddress).
+// VERIFIZIERTEN Nutzerprofile unter dataDir/users/<id>/user.json (Issue
+// #1219 Scheibe 1). Symmetrisches Pendant zu
+// src/output/channels/email.py::_load_resend_allowlist. Eignungskriterium
+// ist das gesetzte Profilfeld EmailVerifiedAt — Profile ohne (leeres/
+// fehlendes) email_verified_at werden konservativ ausgeschlossen, im
+// Zweifel NICHT in die Allowlist aufnehmen. Reservierte Test-Domains (siehe
+// isReservedTestDomain) werden zusätzlich ausgeschlossen, auch bei
+// gesetztem EmailVerifiedAt (AC-4). Plus-Adressierung wird auf
+// Allowlist-Einträgen NICHT gekappt (echte Nutzeradressen werden 1:1
+// verglichen, nur lowercase/trim via mail.ParseAddress).
 //
 // Fail-soft: ein fehlendes dataDir/users-Verzeichnis liefert eine leere
 // Allowlist; eine fehlende/kaputte user.json überspringt nur das betroffene
@@ -149,15 +174,15 @@ func loadResendAllowlist(dataDir string) map[string]bool {
 			continue
 		}
 		userID := e.Name()
-		if isResendAllowlistTestUser(dataDir, userID) {
-			continue
-		}
 		data, err := os.ReadFile(filepath.Join(usersRoot, userID, "user.json"))
 		if err != nil {
 			continue
 		}
 		var profile resendAllowlistProfile
 		if err := json.Unmarshal(data, &profile); err != nil {
+			continue
+		}
+		if profile.EmailVerifiedAt == "" {
 			continue
 		}
 		for _, raw := range []string{profile.MailTo, profile.Email} {
@@ -168,7 +193,11 @@ func loadResendAllowlist(dataDir string) map[string]bool {
 			if parsed, perr := mail.ParseAddress(raw); perr == nil {
 				addr = parsed.Address
 			}
-			allowed[strings.ToLower(strings.TrimSpace(addr))] = true
+			addr = strings.ToLower(strings.TrimSpace(addr))
+			if addr == "" || isReservedTestDomain(addr) {
+				continue
+			}
+			allowed[addr] = true
 		}
 	}
 	return allowed
@@ -300,7 +329,8 @@ func recipientBlocked(host, to string) error {
 	parts := splitRecipientField(to)
 	var blocked []string
 	for _, part := range parts {
-		if !allowlist[normalizedAddrForGuard(part)] {
+		normalized := normalizedAddrForGuard(part)
+		if !allowlist[normalized] || isReservedTestDomain(normalized) {
 			blocked = append(blocked, maskAddrForLog(part))
 		}
 	}

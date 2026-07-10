@@ -23,8 +23,13 @@ type User struct {
 	// Issue #1071 — offener Level-Änderungs-Antrag. RequestedAt MUSS ein Pointer
 	// sein: Go's encoding/json omitempty greift bei time.Time-Structs nicht, ein
 	// Zero-Value würde als "0001-01-01T00:00:00Z" serialisiert statt weggelassen.
-	RequestedTier      string               `json:"requested_tier,omitempty"`
-	RequestedAt        *time.Time           `json:"requested_at,omitempty"`
+	RequestedTier string     `json:"requested_tier,omitempty"`
+	RequestedAt   *time.Time `json:"requested_at,omitempty"`
+	// Issue #1219 Scheibe 1 — Resend-Allowlist-Eignungskriterium. Pointer aus
+	// demselben Grund wie RequestedAt: omitempty greift bei time.Time-Structs
+	// nicht, ein Zero-Value würde als "0001-01-01T00:00:00Z" serialisiert
+	// statt als "fehlt" (unverifiziert).
+	EmailVerifiedAt *time.Time `json:"email_verified_at,omitempty"`
 }
 
 type PasswordResetToken struct {

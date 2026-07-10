@@ -83,9 +83,9 @@ func TestSend_NameFormAddressStillBlockedWith1147(t *testing.T) {
 // selbst nicht greift und weiterhin gezielt resendBlocked() (#1122) geprüft
 // wird — genau das ursprüngliche Testziel.
 func TestSend_ResendHostNormalRecipientNot1147Guard(t *testing.T) {
-	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "someone@example.com"))
+	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "someone@gmail.com"))
 	cfg := MailConfig{Host: "smtp.resend.com", Port: 587, User: "resend", Pass: "re_x"}
-	err := Send(cfg, "someone@example.com", resendTestMail())
+	err := Send(cfg, "someone@gmail.com", resendTestMail())
 	if err == nil {
 		t.Fatal("Send() mit Resend-Host muss unter go test einen Fehler liefern (#1122)")
 	}
@@ -174,9 +174,9 @@ func TestSend_WhitespaceEmbeddedRecipientBlockedWith1147(t *testing.T) {
 // Fixture-Nutzerprofile registriert, damit die neue Allowlist-Prüfung selbst
 // nicht greift und nur die Trennzeichen-Logik geprüft wird.
 func TestSend_TwoRealRecipientsSemicolonSeparatedNot1147Guard(t *testing.T) {
-	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "real-a@example.com", "real-b@example.com"))
+	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "real-a@gmail.com", "real-b@gmail.com"))
 	cfg := MailConfig{Host: "smtp.resend.com", Port: 587, User: "resend", Pass: "re_x"}
-	err := Send(cfg, "real-a@example.com; real-b@example.com", resendTestMail())
+	err := Send(cfg, "real-a@gmail.com; real-b@gmail.com", resendTestMail())
 	if err == nil {
 		t.Fatal("Send() mit Resend-Host muss unter go test einen Fehler liefern (#1122)")
 	}
@@ -250,9 +250,9 @@ func TestSend_PlusAddressedControlCharDisplayNameBlockedWith1147(t *testing.T) {
 // registriert, damit die neue Allowlist-Prüfung selbst nicht greift und nur
 // die Plus-Tag-Normalisierung geprüft wird.
 func TestSend_RealRecipientPlusTagNot1147Guard(t *testing.T) {
-	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "real@example.com"))
+	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "real@gmail.com"))
 	cfg := MailConfig{Host: "smtp.resend.com", Port: 587, User: "resend", Pass: "re_x"}
-	err := Send(cfg, "real+tag@example.com", resendTestMail())
+	err := Send(cfg, "real+tag@gmail.com", resendTestMail())
 	if err != nil && strings.Contains(err.Error(), "1147") {
 		t.Errorf("F005e: #1147-Guard darf bei echtem Plus-Tag-Empfänger nicht greifen, Fehler war: %v", err)
 	}
@@ -266,9 +266,9 @@ func TestSend_RealRecipientPlusTagNot1147Guard(t *testing.T) {
 // registriert, damit die neue Allowlist-Prüfung selbst nicht greift und nur
 // die Steuerzeichen-Behandlung geprüft wird.
 func TestSend_ControlCharRealRecipientNot1147Guard(t *testing.T) {
-	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "real@example.com"))
+	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "real@gmail.com"))
 	cfg := MailConfig{Host: "smtp.resend.com", Port: 587, User: "resend", Pass: "re_x"}
-	err := Send(cfg, "\"Weird\r\nName\" <real@example.com>", resendTestMail())
+	err := Send(cfg, "\"Weird\r\nName\" <real@gmail.com>", resendTestMail())
 	if err != nil && strings.Contains(err.Error(), "1147") {
 		t.Errorf("F005f: #1147-Guard darf bei echtem Empfänger mit Steuerzeichen-Anzeigenamen nicht greifen, Fehler war: %v", err)
 	}

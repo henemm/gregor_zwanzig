@@ -133,23 +133,51 @@ def _raw_contains_test_mailbox(raw: str) -> bool:
     return bool(_TEST_MAILBOX_RAW_PATTERN.search(stripped))
 
 
-def _load_resend_allowlist(data_dir: str = "data") -> frozenset[str]:
-    """Issue #1219: positive Empfänger-Allowlist statt der abgelösten
-    2-Adressen-Denylist.
+_RESERVED_TEST_DOMAINS = frozenset({"example.com", "example.net", "example.org"})
+_RESERVED_TEST_TLDS = (".test", ".invalid", ".localhost", ".example")
+_RESERVED_BARE_TLDS = frozenset({"test", "invalid", "localhost", "example"})
 
-    Sammelt normalisierte `mail_to`-/`email`-Adressen aller Nicht-Test-
-    Nutzerprofile unter `<data_dir>/users/<id>/user.json`. Test-Nutzer
-    (`is_test_user_id()`) werden konservativ ausgeschlossen — im Zweifel als
-    Test behandeln, nicht in die Allowlist aufnehmen. Plus-Adressierung wird
-    auf Allowlist-Einträgen NICHT gekappt (echte Nutzeradressen werden 1:1
+
+def _is_reserved_test_domain(addr: str) -> bool:
+    """Issue #1219 Scheibe 1 (AC-4): RFC-2606-reservierte Test-Domains werden
+    IMMER geblockt, unabhängig vom Verifikationsstatus des Profils. Exakte
+    Domains `example.com/.net/.org` ODER Domain endet auf `.test`/`.invalid`/
+    `.localhost`/`.example` (case-insensitive, nach Normalisierung).
+
+    Adversary F002: ein Trailing-Dot-FQDN (`example.com.`) wird vor dem
+    Vergleich gekürzt, sonst würde der Suffix-Check fälschlich durchrutschen.
+    Eine BARE-TLD ohne Subdomain-Label (`user@localhost`, `user@test`) wird
+    zusätzlich per EXAKTEM Vergleich erkannt — NICHT als Substring/Suffix,
+    damit legitime Domains wie `mytest.de`/`example.company` nicht
+    fälschlich gesperrt werden."""
+    domain = _extract_addr(addr).strip().lower().rpartition("@")[2]
+    domain = domain.rstrip(".")
+    if not domain:
+        return False
+    if domain in _RESERVED_TEST_DOMAINS or domain in _RESERVED_BARE_TLDS:
+        return True
+    return domain.endswith(_RESERVED_TEST_TLDS)
+
+
+def _load_resend_allowlist(data_dir: str = "data") -> frozenset[str]:
+    """Issue #1219 Scheibe 1: positive Empfänger-Allowlist, Eignungskriterium
+    umgestellt von der Namens-Heuristik (`is_test_user_id`) auf das explizite
+    Profilfeld `email_verified_at`.
+
+    Sammelt normalisierte `mail_to`-/`email`-Adressen aller Nutzerprofile
+    unter `<data_dir>/users/<id>/user.json`, die ein GESETZTES
+    `email_verified_at` haben. Profile ohne (leeres/fehlendes)
+    `email_verified_at` werden konservativ ausgeschlossen — im Zweifel nicht
+    in die Allowlist aufnehmen. Reservierte Test-Domains (siehe
+    `_is_reserved_test_domain()`) werden hier zusätzlich ausgeschlossen, auch
+    bei gesetztem `email_verified_at` (AC-4). Plus-Adressierung wird auf
+    Allowlist-Einträgen NICHT gekappt (echte Nutzeradressen werden 1:1
     verglichen, nur lowercase/trim via `parseaddr`).
 
     Fail-soft: ein fehlendes `<data_dir>/users`-Verzeichnis liefert eine
     leere Allowlist; eine fehlende/kaputte `user.json` überspringt nur das
     betroffene Profil — nie ein Crash des Sendepfads.
     """
-    from app.config import is_test_user_id
-
     allowed: set[str] = set()
     users_root = Path(data_dir) / "users"
     try:
@@ -158,17 +186,25 @@ def _load_resend_allowlist(data_dir: str = "data") -> frozenset[str]:
         return frozenset()
 
     for user_id in user_ids:
-        if is_test_user_id(user_id, data_dir=data_dir):
-            continue
         profile_path = users_root / user_id / "user.json"
         try:
             profile = json.loads(profile_path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue
+        # Adversary F001: gültiges JSON, das aber kein Objekt ist (z.B. `[]`
+        # oder `null`), darf NICHT crashen — .get() existiert nur auf dict.
+        # Fail-soft: dieses eine Profil überspringen, alle anderen normal
+        # weiterladen (kein einzelnes kaputtes Profil legt den Sendepfad lahm).
+        if not isinstance(profile, dict):
+            continue
+        if not profile.get("email_verified_at"):
+            continue
         for field in ("mail_to", "email"):
             raw = profile.get(field)
             if raw:
-                allowed.add(_extract_addr(raw).strip().lower())
+                addr = _extract_addr(raw).strip().lower()
+                if addr and not _is_reserved_test_domain(addr):
+                    allowed.add(addr)
     return frozenset(allowed)
 
 
@@ -395,6 +431,7 @@ class EmailOutput:
                 if (
                     not candidates
                     or any(a not in allowlist for a in candidates)
+                    or any(_is_reserved_test_domain(a) for a in candidates)
                     or _raw_contains_test_mailbox(r)
                 ):
                     blocked.append(r)

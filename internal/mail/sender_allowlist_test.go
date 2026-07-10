@@ -19,8 +19,8 @@ import (
 // isoliert. Kein Netz nötig, kein echter Dial. Fixtures ausschließlich in
 // t.TempDir() — die echten data/users/ werden nie angefasst.
 
-// writeUserProfileFixture legt ein Fixture-user.json unter
-// dataDir/users/<userID>/user.json an.
+// writeUserProfileFixture legt ein Fixture-user.json OHNE email_verified_at
+// unter dataDir/users/<userID>/user.json an (unverifiziertes Profil).
 func writeUserProfileFixture(t *testing.T, dataDir, userID, mailTo string) {
 	t.Helper()
 	userDir := filepath.Join(dataDir, "users", userID)
@@ -33,6 +33,26 @@ func writeUserProfileFixture(t *testing.T, dataDir, userID, mailTo string) {
 	}
 	if err := os.WriteFile(filepath.Join(userDir, "user.json"), data, 0644); err != nil {
 		t.Fatalf("writeUserProfileFixture: %v", err)
+	}
+}
+
+// writeVerifiedUserProfileFixture legt ein Fixture-user.json MIT gesetztem
+// email_verified_at an (Issue #1219 Scheibe 1 — verifiziertes Profil).
+func writeVerifiedUserProfileFixture(t *testing.T, dataDir, userID, mailTo string) {
+	t.Helper()
+	userDir := filepath.Join(dataDir, "users", userID)
+	if err := os.MkdirAll(userDir, 0755); err != nil {
+		t.Fatalf("writeVerifiedUserProfileFixture: %v", err)
+	}
+	data, err := json.Marshal(map[string]string{
+		"mail_to":           mailTo,
+		"email_verified_at": "2026-07-10T12:00:00Z",
+	})
+	if err != nil {
+		t.Fatalf("writeVerifiedUserProfileFixture: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(userDir, "user.json"), data, 0644); err != nil {
+		t.Fatalf("writeVerifiedUserProfileFixture: %v", err)
 	}
 }
 
@@ -50,10 +70,12 @@ func TestRecipientBlocked_UnknownAddressBlocked(t *testing.T) {
 	}
 }
 
-// AC-2: echter mail_to eines angelegten (Nicht-Test-)Nutzerprofils → erlaubt.
+// AC-2 (Issue #1219 Scheibe 1): echter mail_to eines VERIFIZIERTEN
+// Nutzerprofils → erlaubt. Eignungskriterium ist email_verified_at, nicht
+// mehr die Namens-Heuristik.
 func TestLoadResendAllowlist_ContainsRealUserMailTo(t *testing.T) {
 	dataDir := t.TempDir()
-	writeUserProfileFixture(t, dataDir, "henning", "henning@henemm.com")
+	writeVerifiedUserProfileFixture(t, dataDir, "henning", "henning@henemm.com")
 
 	allowlist := loadResendAllowlist(dataDir)
 	if !allowlist["henning@henemm.com"] {
@@ -61,16 +83,30 @@ func TestLoadResendAllowlist_ContainsRealUserMailTo(t *testing.T) {
 	}
 }
 
-// AC-2 (voller Guard-Pfad): recipientBlocked() lässt die registrierte
-// Adresse durch (kein Fehler).
+// AC-1 (Issue #1219 Scheibe 1): ein UNVERIFIZIERTES Profil mit neutralem
+// Namen (kein "test"/"tdd") wird trotzdem ausgeschlossen — der ursprüngliche
+// Bug-Fall (e2e-758@example.com), hier symmetrisch mit einer nicht
+// reservierten Domain.
+func TestLoadResendAllowlist_ExcludesUnverifiedNeutralProfile(t *testing.T) {
+	dataDir := t.TempDir()
+	writeUserProfileFixture(t, dataDir, "e2e-758", "e2e-758@gmail.com")
+
+	allowlist := loadResendAllowlist(dataDir)
+	if allowlist["e2e-758@gmail.com"] {
+		t.Errorf("AC-1: unverifiziertes Profil darf NICHT in der Allowlist landen, war: %v", allowlist)
+	}
+}
+
+// AC-2 (voller Guard-Pfad): recipientBlocked() lässt die registrierte,
+// verifizierte Adresse durch (kein Fehler).
 func TestRecipientBlocked_RealUserMailToAllowed(t *testing.T) {
 	dataDir := t.TempDir()
-	writeUserProfileFixture(t, dataDir, "henning", "henning@henemm.com")
+	writeVerifiedUserProfileFixture(t, dataDir, "henning", "henning@henemm.com")
 	t.Setenv("GZ_DATA_DIR", dataDir)
 
 	err := recipientBlocked("smtp.resend.com", "henning@henemm.com")
 	if err != nil {
-		t.Errorf("AC-2: recipientBlocked() darf einen echten Nutzer nicht blockieren, Fehler war: %v", err)
+		t.Errorf("AC-2: recipientBlocked() darf einen echten, verifizierten Nutzer nicht blockieren, Fehler war: %v", err)
 	}
 }
 
@@ -116,7 +152,7 @@ func TestRecipientBlocked_StalwartHostGuardInactive(t *testing.T) {
 // geprüftem Empfänger — Symmetrie zu Python (_normalize_addr_for_guard).
 func TestLoadResendAllowlist_NormalizesStoredValue(t *testing.T) {
 	dataDir := t.TempDir()
-	writeUserProfileFixture(t, dataDir, "henning", " Henning@HENEMM.com ")
+	writeVerifiedUserProfileFixture(t, dataDir, "henning", " Henning@HENEMM.com ")
 
 	allowlist := loadResendAllowlist(dataDir)
 	if !allowlist["henning@henemm.com"] {
@@ -126,7 +162,7 @@ func TestLoadResendAllowlist_NormalizesStoredValue(t *testing.T) {
 
 func TestRecipientBlocked_NormalizedRecipientMatchesCleanAllowlistEntry(t *testing.T) {
 	dataDir := t.TempDir()
-	writeUserProfileFixture(t, dataDir, "henning", "henning@henemm.com")
+	writeVerifiedUserProfileFixture(t, dataDir, "henning", "henning@henemm.com")
 	t.Setenv("GZ_DATA_DIR", dataDir)
 
 	err := recipientBlocked("smtp.resend.com", " Henning@HENEMM.com ")

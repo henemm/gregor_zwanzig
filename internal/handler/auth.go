@@ -481,11 +481,18 @@ func UpdateProfileHandler(s *store.Store) http.HandlerFunc {
 			}
 		}
 
-		if update.Email != nil {
+		// Issue #1219 Scheibe 1 (AC-5/AC-6): eine tatsächliche Änderung von
+		// email/mail_to setzt die Resend-Verifikation zurück — ein einmal
+		// verifiziertes Konto darf nicht nachträglich auf eine ungeprüfte
+		// Adresse umgebogen werden. No-Op-Updates (identischer Wert) lösen
+		// KEINEN Reset aus.
+		if update.Email != nil && *update.Email != user.Email {
 			user.Email = *update.Email
+			user.EmailVerifiedAt = nil
 		}
-		if update.MailTo != nil {
+		if update.MailTo != nil && *update.MailTo != user.MailTo {
 			user.MailTo = *update.MailTo
+			user.EmailVerifiedAt = nil
 		}
 		if update.SmsTo != nil {
 			user.SmsTo = *update.SmsTo

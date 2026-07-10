@@ -152,11 +152,17 @@ class TestAC2RealUserMailToAllowed:
         THEN enthaelt die zurueckgegebene Allowlist die `mail_to`-Adresse --
         die Guard-Entscheidung selbst wird geprueft, kein echter
         Resend-Connect noetig."""
-        _write_user_profile(tmp_path / "users", "henning", mail_to="henning@henemm.com")
+        _write_user_profile(
+            tmp_path / "users",
+            "henning",
+            mail_to="henning@henemm.com",
+            email_verified_at="2026-07-10T12:00:00Z",
+        )
         allowlist = email_module._load_resend_allowlist(data_dir=str(tmp_path))
         assert "henning@henemm.com" in allowlist, (
-            "AC-2 (RED erwartet): _load_resend_allowlist() existiert noch "
-            "nicht bzw. liefert das echte mail_to eines Nutzerprofils nicht."
+            "AC-2: _load_resend_allowlist() liefert das echte mail_to eines "
+            "verifizierten Nutzerprofils nicht (Issue #1219 Scheibe 1: "
+            "Eignungskriterium ist jetzt email_verified_at)."
         )
 
 
@@ -285,11 +291,16 @@ class TestAC5NormalizationMatchesAllowlist:
         Whitespace/Grossschreibung enthaelt (" Henning@HENEMM.com ") / WHEN
         `_load_resend_allowlist()` aufgerufen wird / THEN enthaelt die
         Allowlist die normalisierte Form `henning@henemm.com`."""
-        _write_user_profile(tmp_path / "users", "henning", mail_to=" Henning@HENEMM.com ")
+        _write_user_profile(
+            tmp_path / "users",
+            "henning",
+            mail_to=" Henning@HENEMM.com ",
+            email_verified_at="2026-07-10T12:00:00Z",
+        )
         allowlist = email_module._load_resend_allowlist(data_dir=str(tmp_path))
         assert "henning@henemm.com" in allowlist, (
-            "AC-5a (RED erwartet): _load_resend_allowlist() existiert noch "
-            "nicht bzw. normalisiert gespeicherte mail_to-Werte nicht."
+            "AC-5a: _load_resend_allowlist() normalisiert gespeicherte "
+            "mail_to-Werte eines verifizierten Profils nicht."
         )
 
     def test_normalized_recipient_matches_clean_allowlist_entry(self, tmp_path):
@@ -300,13 +311,17 @@ class TestAC5NormalizationMatchesAllowlist:
         Allowlist geprueft wird / THEN matcht die normalisierte Form den
         Allowlist-Eintrag -- identische Normalisierungspipeline auf beiden
         Seiten."""
-        _write_user_profile(tmp_path / "users", "henning", mail_to="henning@henemm.com")
+        _write_user_profile(
+            tmp_path / "users",
+            "henning",
+            mail_to="henning@henemm.com",
+            email_verified_at="2026-07-10T12:00:00Z",
+        )
         allowlist = email_module._load_resend_allowlist(data_dir=str(tmp_path))
         normalized_recipient = email_module._normalize_addr_for_guard(" Henning@HENEMM.com ")
         assert normalized_recipient in allowlist, (
-            "AC-5b (RED erwartet): _load_resend_allowlist() existiert noch "
-            "nicht -- der normalisierte Empfaenger kann daher nicht gegen "
-            "die (fehlende) Allowlist gematcht werden."
+            "AC-5b: der normalisierte Empfaenger matcht nicht gegen die "
+            "Allowlist eines verifizierten Profils."
         )
 
 
