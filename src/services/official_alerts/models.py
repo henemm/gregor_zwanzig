@@ -25,3 +25,9 @@ class OfficialAlert:
     valid_to: Optional[datetime] = None
     url: Optional[str] = None
     region_label: Optional[str] = None
+    # Issue #1217/#1218 (F001): stabile, stufen-unabhängige Dedup-Identität.
+    # Quellen, deren Label den Schweregrad codiert (z.B. Massiv-Sperren:
+    # "Zugang eingeschränkt" vs. "gesperrt" fürs GLEICHE Massiv), setzen hier
+    # eine über Stufen konstante Kennung, damit Eskalationen nicht als zwei
+    # verschiedene Warnungen erscheinen. None -> Fallback auf region_label/label.
+    dedup_id: Optional[str] = None

@@ -32,6 +32,8 @@ _LEVEL_WORDS: dict[int, tuple[str, str]] = {
 
 def render_official_alerts_html(
     entries: list[tuple[str, list["OfficialAlert"]]],
+    *,
+    segment_refs: dict | None = None,
 ) -> str:
     """Badges fuer amtliche Warnungen (div/span, kein <table>).
 
@@ -50,6 +52,12 @@ def render_official_alerts_html(
     Lazy import (statt Modul-Top): bricht einen Import-Zirkel mit dem
     `email`-Paket-`__init__.py`, das seinerseits `official_alerts` importiert
     (Issue #1087 F001).
+
+    `segment_refs` (Issue #1217, optional, keyword-only): `id(alert) ->
+    formatierter Segment-Bezug`-Mapping. Wird ein Alert-Objekt darin
+    gefunden, haengt der Badge `" — {ref}"` an das Label an. Ohne
+    `segment_refs` (Default, Compare-Pfad) bleibt das erzeugte HTML
+    byte-identisch zum bisherigen Verhalten (AC-Byte-Gleichheit #1087).
     """
     from src.output.renderers.email.design_tokens import (
         FONT_UI, G_ALERT_L2, G_ALERT_L3, G_ALERT_L4, G_INK, G_PAPER, G_SUCCESS,
@@ -66,12 +74,17 @@ def render_official_alerts_html(
             if label and label != alert.label:
                 name = _html.escape(label)
                 prefix_html = f'<span style="font-weight:600;">{name}:</span> '
+            seg_suffix = ""
+            if segment_refs:
+                ref = segment_refs.get(id(alert))
+                if ref:
+                    seg_suffix = f' — {_html.escape(ref)}'
             badges.append(
                 f'<div style="background:{G_PAPER};border-left:4px solid {color};'
                 f'padding:8px 16px;margin:8px 20px;border-radius:4px;'
                 f'font-family:{FONT_UI};font-size:13px;color:{G_INK};">'
                 f'{prefix_html}'
-                f'<span>{alert_label}</span></div>'
+                f'<span>{alert_label}{seg_suffix}</span></div>'
             )
     return "".join(badges)
 
@@ -120,17 +133,30 @@ def format_segment_reference(segment_ids: list[str]) -> str:
 def dedupe_official_alerts(
     tagged_alerts: list[tuple["OfficialAlert", list[str]]],
 ) -> list[tuple["OfficialAlert", list[str]]]:
-    """Issue #1172/#1200: kollabiert Warnungen nach `(region_label, hazard)` und
-    behaelt je Gruppe den Repraesentanten mit dem HOECHSTEN `level` (bei
-    Gleichstand: erstes Vorkommen). Reihenfolge = erstes Auftreten je Gruppe
-    (analog `collect_trip_alert_entries`). Vereinigt zusaetzlich die
-    Segment-ID-Mengen aller zur Gruppe gehoerenden Rohalerts (Set-Union,
-    dedupliziert, Reihenfolge nicht garantiert)."""
+    """Issue #1172/#1200/#1217/#1218: kollabiert Warnungen nach einer
+    NAMESPACED Identitaet + `hazard`. Identitaets-Praezedenz: (1) `dedup_id`
+    (stabile, stufen-unabhaengige Kennung, z.B. Massiv-ID -- Massiv-Sperren
+    setzen dies ueber alle Eskalationsstufen konstant, F001), (2)
+    `region_label`, (3) `label` (volles Label, unveraendert -- keine
+    Textzerlegung). Die drei Faelle sind per Namespace-Tag
+    ("id"/"region"/"label") strikt getrennt -- ein zufaellig gleicher String
+    zwischen `region_label` einer Warnung und `label` einer anderen kann
+    NICHT kollabieren (F002). Behaelt je Gruppe den Repraesentanten mit dem
+    HOECHSTEN `level` (bei Gleichstand: erstes Vorkommen). Reihenfolge =
+    erstes Auftreten je Gruppe (analog `collect_trip_alert_entries`).
+    Vereinigt zusaetzlich die Segment-ID-Mengen aller zur Gruppe gehoerenden
+    Rohalerts (Set-Union, dedupliziert, Reihenfolge nicht garantiert)."""
     best: dict[tuple, "OfficialAlert"] = {}
     segment_ids_by_key: dict[tuple, set[str]] = {}
     order: list[tuple] = []
     for a, segment_ids in tagged_alerts:
-        key = (a.region_label, a.hazard)
+        if a.dedup_id:
+            ident = ("id", a.dedup_id)
+        elif a.region_label:
+            ident = ("region", a.region_label)
+        else:
+            ident = ("label", a.label)
+        key = (ident, a.hazard)
         if key not in best:
             best[key] = a
             segment_ids_by_key[key] = set()
@@ -178,18 +204,22 @@ def render_official_alert_notice_plain(
 def collect_trip_alert_entries(
     segments: list["SegmentWeatherData"],
 ) -> list[tuple[str, list["OfficialAlert"]]]:
-    """Dedupe-Helper NUR fuer den Trip-Pfad: gruppiert alle
-    `seg.official_alerts` nach `OfficialAlert.region_label`, liefert EIN
-    (region_label, alerts)-Paar je eindeutigem Label -> EIN Block pro
-    Briefing statt Wiederholung pro Etappe."""
-    grouped: dict[str, list["OfficialAlert"]] = {}
-    order: list[str] = []
-    for seg in segments:
-        for alert in getattr(seg, "official_alerts", None) or []:
-            key = alert.region_label or alert.label
-            if key not in grouped:
-                grouped[key] = []
-                order.append(key)
-            if alert not in grouped[key]:
-                grouped[key].append(alert)
-    return [(key, grouped[key]) for key in order]
+    """Dedupe-Helper fuer die Text-Trip-Renderer (plain/compact): sammelt alle
+    seg.official_alerts, dedupliziert sie ueber die kanonische Quelle
+    `dedupe_official_alerts` ((dedup_id|region_label|label, hazard), hoechste
+    Stufe je Gruppe) und liefert EIN (label, [alert])-Paar je entdoppelter
+    Warnung. Ersetzt die fruehere Objekt-Gleichheits-Gruppierung, die
+    stufen-eskalierende Duplikate (#1217/#1218) durchliess. Segment-IDs werden
+    hier bewusst NICHT durchgereicht ([] statt echter IDs) — der Segment-Bezug
+    ist dem HTML-Renderer vorbehalten (html.py baut seinen eigenen dedupe-Pfad
+    mit segment_refs) und `dedupe_official_alerts` nutzt die Segment-ID-Liste
+    ausschliesslich fuer den zweiten Rueckgabewert, den wir hier verwerfen. So
+    bleibt die Funktion mit reinen `official_alerts`-Objekten ohne `.segment`
+    (z.B. Test-Doubles in test_official_alert_badge_color.py) kompatibel."""
+    tagged = [
+        (alert, [])
+        for seg in segments
+        for alert in (getattr(seg, "official_alerts", None) or [])
+    ]
+    deduped = dedupe_official_alerts(tagged)
+    return [(a.region_label or a.label, [a]) for a, _ in deduped]

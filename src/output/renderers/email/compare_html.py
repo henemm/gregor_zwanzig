@@ -180,17 +180,12 @@ def _warn_short(alert) -> tuple[str, str]:
 
 
 def _dedup_alerts(alerts: list) -> list:
-    """Reduziert auf eindeutige `(hazard, level, label)`-Tupel (Reihenfolge
-    erhalten, erstes Vorkommen gewinnt, Issue #1134). Zwei Warnungen mit
-    gleichem hazard aber unterschiedlichem `label` bleiben beide erhalten."""
-    seen = set()
-    out = []
-    for a in alerts:
-        key = (a.hazard, a.level, a.label)
-        if key not in seen:
-            seen.add(key)
-            out.append(a)
-    return out
+    """Duenner Wrapper um die kanonische Dedup-Quelle `dedupe_official_alerts`
+    (Issue #1217/#1218): Uebersichts-Chip und Pro-Ort-Streifen nutzen dieselbe
+    Gruppierung `(region_label or label, hazard)` + hoechste Stufe."""
+    from src.output.renderers.alert.official_alerts import dedupe_official_alerts
+
+    return [a for a, _ in dedupe_official_alerts([(a, []) for a in alerts])]
 
 
 def _render_warn_cell(alerts: list) -> str:
@@ -241,7 +236,7 @@ def _render_overview_row(m: dict, locations: list[LocationResult]) -> str:
     cells = [label_cell]
     for loc in locations:
         if m["key"] == "warn":
-            content = "—" if loc.error is not None else _render_warn_cell(loc.official_alerts)
+            content = "—" if loc.error is not None else _render_warn_cell(_dedup_alerts(loc.official_alerts))
             cells.append(
                 f'<td style="text-align:center;padding:7px 5px;vertical-align:middle;'
                 f'border-right:1px solid #f0ece1;">{content}</td>'

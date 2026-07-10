@@ -32,7 +32,7 @@ from src.output.renderers.email.helpers import (
     shorten_stage_name, visible_cols,
 )
 from src.output.renderers.alert.official_alerts import (
-    collect_trip_alert_entries, render_official_alerts_html,
+    dedupe_official_alerts, format_segment_reference, render_official_alerts_html,
 )
 from src.output.renderers.email.design_tokens import (
     G_PAPER, G_SURFACE_1, G_INK, G_INK_MUTED, G_INK_FAINT,
@@ -1409,8 +1409,22 @@ def render_html(
             </div>"""
 
     # Issue #1087: amtliche Warnungen, gemeinsamer Renderer (Epic #1073 Punkt 6).
-    _alert_entries = collect_trip_alert_entries(segments)
-    official_alerts_html = render_official_alerts_html(_alert_entries) if _alert_entries else ""
+    # Issue #1217/#1218: kanonischer Dedup (dedupe_official_alerts) statt
+    # collect_trip_alert_entries (Objekt-Gleichheit liess Fast-Duplikate
+    # gleicher region_label+hazard, anderer Stufe, durch) + Segment-Bezug
+    # (#1200-Baustein, analog services/trip_alert.py).
+    _tagged = [
+        (alert, [str(seg.segment.segment_id)])
+        for seg in segments
+        for alert in (getattr(seg, "official_alerts", None) or [])
+    ]
+    _deduped = dedupe_official_alerts(_tagged)
+    _alert_entries = [(a.region_label or a.label, [a]) for a, _ in _deduped]
+    _segment_refs = {id(a): format_segment_reference(sids) for a, sids in _deduped if sids}
+    official_alerts_html = (
+        render_official_alerts_html(_alert_entries, segment_refs=_segment_refs)
+        if _alert_entries else ""
+    )
 
     all_rows = [r for tbl in seg_tables for r in tbl]
     legend_text = build_units_legend(all_rows) if all_rows else ""

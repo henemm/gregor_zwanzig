@@ -43,11 +43,17 @@ _cache: dict = {}
 _STATUS: dict = {"last_run": None, "last_error": None, "error_count": 0}
 
 
-def _niveau_to_alert(niveau: int, name: str) -> Optional[OfficialAlert]:
+def _niveau_to_alert(niveau: int, name: str, dedup_id: str) -> Optional[OfficialAlert]:
     """Bildet ein Massiv-Niveau (1-5) auf einen Zugangsverbot-Alert ab.
 
     Niveau < 3 -> None (Zugang amtlich erlaubt). Niveau 3 -> "eingeschraenkt",
     Niveau 4 -> "gesperrt", Niveau >=5 -> "gesperrt (total)".
+
+    `dedup_id` (Issue #1217/#1218 F001): die Massiv-ID, stufen-unabhaengig
+    stabil ueber alle Niveaus desselben Massivs -- verhindert, dass eine
+    Eskalation (z.B. 3 -> 4) als zwei verschiedene Warnungen im Mail-Dedup
+    erscheint (der Label-Text codiert die Stufe und ist daher KEIN stabiler
+    Dedup-Schluessel).
     """
     if niveau < 3:
         return None
@@ -57,7 +63,10 @@ def _niveau_to_alert(niveau: int, name: str) -> Optional[OfficialAlert]:
         label = f"Zugang gesperrt — {name}"
     else:
         label = f"Zugang gesperrt (total) — {name}"
-    return OfficialAlert(source="massif_closure", hazard="access_ban", level=niveau, label=label)
+    return OfficialAlert(
+        source="massif_closure", hazard="access_ban", level=niveau, label=label,
+        dedup_id=dedup_id,
+    )
 
 
 def _extract_alert(data, hit: Massif) -> list[OfficialAlert]:
@@ -79,7 +88,7 @@ def _extract_alert(data, hit: Massif) -> list[OfficialAlert]:
         logger.warning("massif_closure: unerwartete Niveau-Struktur fuer massiv=%s", hit.massif_id)
         return []
     niveau = raw[0]  # J1 (Index 0)
-    alert = _niveau_to_alert(niveau, hit.name.title())
+    alert = _niveau_to_alert(niveau, hit.name.title(), hit.massif_id)
     return [alert] if alert is not None else []
 
 
