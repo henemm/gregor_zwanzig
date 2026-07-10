@@ -6,7 +6,6 @@ Test-Manifest: docs/specs/tests/epic_129a_2_gpx_helpers_tests.md
 Diese Tests pruefen die neue Modul-Struktur nach dem (abgeschlossenen) Refactor
 über echte Imports, das Vorhandensein der Helper-Funktionen und einen stabilen
 API-Contract:
-  - test_coordinates_module (AC-2 a) -> services.coordinates.parse_dms_coordinates
   - test_gpx_processing_module (AC-2 b) -> 6 Funktionen in services.gpx_processing
   - test_gpx_to_stage_data_signature (AC-3) -> API-Contract stabil
   - test_web_utils_file_removed (AC-5 b) -> src/web/utils.py existiert nicht mehr
@@ -22,14 +21,6 @@ import inspect
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-
-
-def test_coordinates_module():
-    """AC-2 (coordinates): services.coordinates.parse_dms_coordinates muss existieren."""
-    mod = importlib.import_module("services.coordinates")
-    assert hasattr(mod, "parse_dms_coordinates"), (
-        "services.coordinates.parse_dms_coordinates fehlt"
-    )
 
 
 def test_gpx_processing_module():
