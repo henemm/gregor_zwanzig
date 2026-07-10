@@ -14,11 +14,14 @@ AC-2) — nur der Input ist generalisiert auf `(label, alerts)`-Paare statt
 from __future__ import annotations
 
 import html as _html
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 if TYPE_CHECKING:
     from app.models import SegmentWeatherData
+    from app.trip import Trip
     from services.official_alerts.models import OfficialAlert
 
 # Level -> (Emoji, Schwere-Wort) fuer den Standalone-Alert-Text (Issue #1172).
@@ -28,6 +31,35 @@ _LEVEL_WORDS: dict[int, tuple[str, str]] = {
     3: ("🟠", "ORANGE"),
     4: ("🔴", "ROT"),
 }
+
+# Position "N/3" auf der Warnstufen-Leiter GELB->ORANGE->ROT (Issue #1216).
+_LEVEL_POSITION: dict[int, int] = {2: 1, 3: 2, 4: 3}
+
+# hazard -> (Anzeige, SMS-Kuerzel), Issue #1216 Spec-Tabelle.
+_HAZARD_DISPLAY: dict[str, tuple[str, str]] = {
+    "extreme_heat": ("Hitze", "HZ"),
+    "thunderstorm": ("Gewitter", "TH"),
+    "extreme_cold": ("Kälte", "KL"),
+    "wind_gust": ("Sturm", "ST"),
+    "rain": ("Starkregen", "RR"),
+    "snow": ("Schneefall", "SN"),
+    "black_ice": ("Glatteis", "GL"),
+    "access_ban": ("Zugang gesperrt", "ZG"),
+}
+
+_DE_WEEKDAYS = ("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
+
+
+@dataclass(frozen=True)
+class OfficialAlertNotice:
+    """Kontext-agnostisches Praesentations-DTO (Issue #1216): Trip UND
+    Ortsvergleich fuellen dasselbe DTO, die vier Renderer unten kennen weder
+    Trip- noch Compare-Spezifika."""
+    alert: "OfficialAlert"
+    scope_label: str
+    sms_scope: str
+    affected_chips: list[str]
+    free_chips: list[str]
 
 
 def render_official_alerts_html(
@@ -223,3 +255,299 @@ def collect_trip_alert_entries(
     ]
     deduped = dedupe_official_alerts(tagged)
     return [(a.region_label or a.label, [a]) for a, _ in deduped]
+
+
+# ---------------------------------------------------------------------------
+# Issue #1216: Format-Fidelity zur Design-Vorlage — vier kontext-agnostische
+# Praesentations-Renderer + Aufbau-Helfer fuer den Trip-Standalone-Alarm.
+# ---------------------------------------------------------------------------
+
+def _hazard_display(alert: "OfficialAlert") -> tuple[str, str]:
+    """hazard -> (Anzeige, SMS-Kuerzel); unbekannt -> (label, erste 2 ASCII-
+    Grossbuchstaben aus hazard)."""
+    mapped = _HAZARD_DISPLAY.get(alert.hazard)
+    if mapped:
+        return mapped
+    letters = "".join(ch for ch in alert.hazard.upper() if ch.isascii() and ch.isalpha())
+    return alert.label, (letters[:2] or "XX")
+
+
+def _de_weekday_short(dt: datetime) -> str:
+    """DE-Wochentagskuerzel {Mo..So} statt locale-abhaengigem '%a' ('Fri')."""
+    return _DE_WEEKDAYS[dt.weekday()]
+
+
+def _format_validity(alert: "OfficialAlert", tz: "ZoneInfo | None" = None) -> str:
+    """'Fr 10.07. · ganztägig' bzw. 'Sa 11.07. · 15:00–21:00'; fehlende Zeiten
+    -> 'unbekannt'. Tagesübergang (F006): 'Fr 10.07. · 22:00 – Sa 11.07. 03:00'
+    -- beide Daten erscheinen, damit das Ende nicht vor dem Beginn scheint."""
+    if not alert.valid_from or not alert.valid_to:
+        return "unbekannt"
+    vf = alert.valid_from.astimezone(tz) if tz else alert.valid_from
+    vt = alert.valid_to.astimezone(tz) if tz else alert.valid_to
+    tag, date_str = _de_weekday_short(vf), vf.strftime("%d.%m.")
+    if vf.date() != vt.date():
+        tag_to, date_str_to = _de_weekday_short(vt), vt.strftime("%d.%m.")
+        return (
+            f"{tag} {date_str} · {vf.strftime('%H:%M')} – "
+            f"{tag_to} {date_str_to} {vt.strftime('%H:%M')}"
+        )
+    allday = (vf.hour, vf.minute, vt.hour, vt.minute) == (0, 0, 23, 59)
+    if allday:
+        return f"{tag} {date_str} · ganztägig"
+    return f"{tag} {date_str} · {vf.strftime('%H:%M')}–{vt.strftime('%H:%M')}"
+
+
+def _sort_notices(notices: list["OfficialAlertNotice"]) -> list["OfficialAlertNotice"]:
+    """Hoechste Stufe zuerst (level absteigend), bei Gleichstand valid_from aufsteigend."""
+    fallback = datetime.min.replace(tzinfo=timezone.utc)
+    return sorted(
+        notices,
+        key=lambda n: (-n.alert.level, n.alert.valid_from or fallback),
+    )
+
+
+def _typ_tag(notice: "OfficialAlertNotice") -> str:
+    typ, _sms = _hazard_display(notice.alert)
+    if notice.alert.valid_from is None:
+        return typ
+    return f"{typ} ({_de_weekday_short(notice.alert.valid_from)})"
+
+
+def render_official_alert_subject(notices: list["OfficialAlertNotice"], *, prefix: str) -> str:
+    """'[{prefix}] {reichweite} · {Stufe(n)} {Typ (Tag)} + …' — reichweite und
+    Stufen-Reihenfolge folgen der fuehrenden (hoechsten) Warnung."""
+    ordered = _sort_notices(notices)
+    leading = ordered[0]
+    uniform = len({n.alert.level for n in ordered}) == 1
+    if uniform:
+        _emoji, word = _LEVEL_WORDS.get(leading.alert.level, ("🔴", "ROT"))
+        body = f"{word} " + " + ".join(_typ_tag(n) for n in ordered)
+    else:
+        body = " + ".join(
+            f"{_LEVEL_WORDS.get(n.alert.level, ('🔴', 'ROT'))[1]} {_typ_tag(n)}" for n in ordered
+        )
+    return f"[{prefix}] {leading.scope_label} · {body}"
+
+
+def _chip_html(label: str, *, active: bool) -> str:
+    style = "" if active else "text-decoration:line-through;"
+    return f'<span style="{style}">{_html.escape(label)}</span> '
+
+
+def _ladder_html(active_level: int) -> str:
+    spans = "".join(
+        f'<span class="{"on" if lvl == active_level else ""}">{word}</span>'
+        for lvl, word in ((2, "GELB"), (3, "ORANGE"), (4, "ROT"))
+    )
+    return f'<div class="stufe-line">{spans}</div>'
+
+
+def _meter_html(level: int) -> str:
+    _emoji, word = _LEVEL_WORDS.get(level, ("🔴", "ROT"))
+    pos = _LEVEL_POSITION.get(level, 0)
+    return f'<span class="meter"><span class="lvl">{word} · {pos}/3</span></span>'
+
+
+def render_official_alert_html(
+    notices: list["OfficialAlertNotice"], *, source_label: str, stand_at: str, tz: "ZoneInfo",
+) -> str:
+    """E-Mail-HTML auf Design-Tokens: Verdict-Badge, Warnstufen-Leiter
+    (einheitlich) bzw. Eskalations-Meter je Warnung (gemischt), Warnungs-Block
+    mit Segment-Chips (frei = durchgestrichen), Quelle, Footer."""
+    from output.renderers.email.design_tokens import (
+        FONT_UI, G_ALERT_L2, G_ALERT_L3, G_ALERT_L4, G_INK,
+    )
+
+    level_colors = {2: G_ALERT_L2, 3: G_ALERT_L3, 4: G_ALERT_L4}
+    ordered = _sort_notices(notices)
+    uniform = len({n.alert.level for n in ordered}) == 1
+    leading_level = ordered[0].alert.level
+    _emoji, leading_word = _LEVEL_WORDS.get(leading_level, ("🔴", "ROT"))
+    extra = "" if uniform else f" · höchste Stufe {leading_word}"
+
+    warning_word = "amtliche Warnung" if len(ordered) == 1 else "amtliche Warnungen"
+    badge = (
+        f'<div style="color:{level_colors.get(leading_level, G_ALERT_L4)};">'
+        f'{len(ordered)} {warning_word}{extra}</div>'
+    )
+    ladder = _ladder_html(leading_level) if uniform else ""
+
+    warns = []
+    for n in ordered:
+        typ, _sms = _hazard_display(n.alert)
+        # Ist das Quell-Label (z.B. eine vollstaendige Behoerdenmeldung) NICHT
+        # bereits das normalisierte Typ-Wort, wird es zusaetzlich gezeigt statt
+        # verworfen (Issue #1088 F001 Bestandsschutz).
+        label_suffix = "" if n.alert.label == typ else f" — {_html.escape(n.alert.label)}"
+        meter = "" if uniform else _meter_html(n.alert.level)
+        chips = "".join(_chip_html(c, active=True) for c in n.affected_chips)
+        chips += "".join(_chip_html(c, active=False) for c in n.free_chips)
+        warns.append(
+            f'<div class="warn">{meter}<span class="type">{_html.escape(typ)}{label_suffix}</span>'
+            f'<div>Gültig: {_format_validity(n.alert, tz)}</div>'
+            f'<div>Route: {chips}</div></div>'
+        )
+
+    regions = []
+    for n in ordered:
+        rl = n.alert.region_label
+        if rl and rl not in regions:
+            regions.append(rl)
+    region_suffix = f" — {_html.escape(', '.join(regions))}" if regions else ""
+    src = (
+        f'<div class="src"><b>Quelle:</b> {_html.escape(source_label)}'
+        f'{region_suffix}</div>'
+    )
+    footer = (
+        f'<p class="body-foot">Stand: heute {_html.escape(stand_at)} · '
+        f'abgerufen bei {_html.escape(source_label)}</p>'
+    )
+    return (
+        f'<html><body style="font-family:{FONT_UI};color:{G_INK};">'
+        f'{badge}{ladder}{"".join(warns)}{src}{footer}</body></html>'
+    )
+
+
+def render_official_alert_telegram(
+    notices: list["OfficialAlertNotice"], *, prefix: str, source_label: str,
+    tz: "ZoneInfo | None" = None,
+) -> str:
+    """Fette erste Zeile + je Warnung eine Zeile, hoechste Stufe zuerst.
+
+    `tz` (Issue #1216 F001, optional): lokalisiert `valid_from/valid_to` wie
+    `render_official_alert_html` es bereits tut. Ohne `tz` (Default None)
+    bleibt das rohe (i.d.R. UTC-)Verhalten bestehender Aufrufer unveraendert."""
+    ordered = _sort_notices(notices)
+    uniform = len({n.alert.level for n in ordered}) == 1
+    leading = ordered[0]
+    _emoji, leading_word = _LEVEL_WORDS.get(leading.alert.level, ("🔴", "ROT"))
+    pos = _LEVEL_POSITION.get(leading.alert.level, 0)
+    kind = "Warnstufe" if uniform else "höchste Stufe"
+    head = f"{prefix} · {leading.scope_label} · {kind} {leading_word} ({pos}/3)"
+    lines = [f"<b>{_html.escape(head)}</b>"]
+    for n in ordered:
+        typ, _sms = _hazard_display(n.alert)
+        emoji, _word = _LEVEL_WORDS.get(n.alert.level, ("🔴", "ROT"))
+        lines.append(f"{emoji} {typ} — {_format_validity(n.alert, tz)}")
+    lines.append(source_label)
+    return "\n".join(lines)
+
+
+def _tag_time(alert: "OfficialAlert", tz: "ZoneInfo | None" = None) -> str:
+    """Kompakte SMS-Zeitangabe: 'Fr' (ganztaegig) bzw. 'Sa15-21'. Tagesuebergang
+    (F006): zweites Wochentagskuerzel statt nur der zweiten Stunde, z.B.
+    'Fr22-Sa03' statt des irrefuehrenden 'Fr22-03'.
+
+    `tz` (Issue #1216 F001, optional): lokalisiert wie `_format_validity`."""
+    if not alert.valid_from or not alert.valid_to:
+        return "?"
+    vf = alert.valid_from.astimezone(tz) if tz else alert.valid_from
+    vt = alert.valid_to.astimezone(tz) if tz else alert.valid_to
+    tag = _de_weekday_short(vf)
+    if vf.date() != vt.date():
+        return f"{tag}{vf.strftime('%H')}-{_de_weekday_short(vt)}{vt.strftime('%H')}"
+    if (vf.hour, vf.minute, vt.hour, vt.minute) == (0, 0, 23, 59):
+        return tag
+    return f"{tag}{vf.strftime('%H')}-{vt.strftime('%H')}"
+
+
+def _sms_truncate(head: str, tokens: list[str], limit: int, suffix: str = "") -> str:
+    """Budget-Kuerzung analog `render_sms` (Issue #1216 F002): Kopf immer,
+    Tokens werden solange behalten wie Kopf + behaltene Tokens + evtl.
+    ' +K'-Auslassungsmarker + `suffix` (z.B. die Reichweite) <=limit bleiben.
+    Ganze Tokens werden gedroppt, nie mitten im Token abgeschnitten."""
+    kept: list[str] = []
+    for tok in tokens:
+        omitted = len(tokens) - len(kept) - 1
+        marker = f" +{omitted}" if omitted > 0 else ""
+        candidate = head + " + ".join(kept + [tok]) + marker + suffix
+        if len(candidate) <= limit:
+            kept.append(tok)
+        else:
+            break
+    omitted = len(tokens) - len(kept)
+    marker = f" +{omitted}" if omitted > 0 else ""
+    body = head + " + ".join(kept) + marker + suffix
+    return body if len(body) <= limit else body[:limit]
+
+
+def render_official_alert_sms(
+    notices: list["OfficialAlertNotice"], *, sms_prefix: str, limit: int = 140,
+    tz: "ZoneInfo | None" = None,
+) -> str:
+    """GSM-7/ASCII, <=limit. Einheitliche Stufe: gemeinsamer Kopf + Reichweite
+    am Ende. Gemischte Stufen: jede Warnung mit eigenem Stufen-Wort + Segment.
+    Bei Ueberlauf werden ganze Tokens gedroppt statt mitten im Token
+    abzuschneiden (`_sms_truncate`, F002).
+
+    `tz` (F001, optional): lokalisiert `_tag_time` wie die anderen Kanaele."""
+    from .render import _ascii
+
+    ordered = _sort_notices(notices)
+    uniform = len({n.alert.level for n in ordered}) == 1
+    leading = ordered[0]
+    if uniform:
+        _emoji, word = _LEVEL_WORDS.get(leading.alert.level, ("🔴", "ROT"))
+        pos = _LEVEL_POSITION.get(leading.alert.level, 0)
+        tokens = [f"{_hazard_display(n.alert)[1]} {_tag_time(n.alert, tz)}" for n in ordered]
+        head = f"{sms_prefix} AMT {word}{pos}/3: "
+        suffix = f", {leading.sms_scope}"
+    else:
+        tokens = [
+            f"{_hazard_display(n.alert)[1]} {_LEVEL_WORDS.get(n.alert.level, ('🔴', 'ROT'))[1]} "
+            f"{_tag_time(n.alert, tz)} {n.sms_scope}"
+            for n in ordered
+        ]
+        head = f"{sms_prefix} AMT: "
+        suffix = ""
+    # ASCII-Konvertierung VOR der Kuerzung (nicht danach), damit die
+    # Laengen-Buchhaltung in `_sms_truncate` mit der finalen Laenge uebereinstimmt.
+    head, tokens, suffix = _ascii(head), [_ascii(t) for t in tokens], _ascii(suffix)
+    return _sms_truncate(head, tokens, limit, suffix)
+
+
+def _trip_total_segment_ids(trip: "Trip") -> list[str]:
+    """Segment-IDs '1'..'N' + 'Ziel' fuer die 'gesamte Route'-Erkennung
+    (N = Anzahl Wegpunkte - 1, minimal 0)."""
+    n = max(len(trip.all_waypoints) - 1, 0)
+    return [str(i) for i in range(1, n + 1)] + ["Ziel"]
+
+
+def build_official_alert_notices(
+    trip: "Trip", tagged_alerts: list[tuple["OfficialAlert", list[str]]],
+) -> list["OfficialAlertNotice"]:
+    """Baut die `OfficialAlertNotice`-DTOs fuer den Trip-Standalone-Alarm
+    (Issue #1216): dedupliziert via `dedupe_official_alerts`, leitet
+    scope_label/sms_scope/Chips aus der Trip-Segmentzahl ab."""
+    all_ids = _trip_total_segment_ids(trip)
+    deduped = dedupe_official_alerts(tagged_alerts)
+    notices = []
+    for alert, segment_ids in deduped:
+        is_full = bool(all_ids) and set(segment_ids) >= set(all_ids)
+        if is_full:
+            scope_label, sms_scope = "gesamte Route", "ges.Route"
+        else:
+            scope_label = format_segment_reference(segment_ids) or "unbekannt"
+            sms_scope = (
+                scope_label.replace("Segment ", "S")
+                .replace("–", "-")
+                .replace("🏁 Ziel", "Ziel")
+            )
+            if len(deduped) == 1:
+                sms_scope = f"nur {sms_scope}"
+        free_ids = [i for i in all_ids if i not in segment_ids]
+        if is_full:
+            # Volle Route -> ein sauberer Chip statt format_segment_reference()s
+            # "N Segmente"-Verdichtung ab >4 Segmenten (Issue #1216 F005).
+            affected = ["gesamte Route"]
+        elif segment_ids:
+            affected = [format_segment_reference(segment_ids)]
+        else:
+            affected = []
+        free = ["🏁 Ziel" if i == "Ziel" else f"Segment {i}" for i in free_ids]
+        notices.append(OfficialAlertNotice(
+            alert=alert, scope_label=scope_label, sms_scope=sms_scope,
+            affected_chips=affected, free_chips=free,
+        ))
+    return notices

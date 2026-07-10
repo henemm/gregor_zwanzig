@@ -449,15 +449,19 @@ class NotificationService:
         notices: list,
         effective_channels: set[str],
         mail_sink: Optional[object] = None,
+        sms_sink: Optional[object] = None,
     ) -> NotificationResult:
-        """Standalone amtlicher Alert ohne Wetter-Delta (Issue #1088).
+        """Standalone amtlicher Alert ohne Wetter-Delta (Issue #1088; Format-
+        Fidelity zur Design-Vorlage in Issue #1216).
 
-        Kein AlertEvent/AlertMessage — baut Subject/Body direkt aus
-        render_official_alerts_plain(). SMS bewusst ohne Zusatztext
-        (Nicht-Parität, analog Slice-3-AC-6).
+        Baut aus den rohen `(OfficialAlert, segment_ids)`-Paaren die
+        kontext-agnostischen `OfficialAlertNotice`-DTOs und rendert Betreff,
+        HTML-Body, Telegram- und SMS-Text ueber die vier Vorlagen-Renderer.
         """
         from output.renderers.alert.official_alerts import (
-            render_official_alert_notice_plain,
+            build_official_alert_notices, render_official_alert_html,
+            render_official_alert_sms, render_official_alert_subject,
+            render_official_alert_telegram,
         )
         from utils.timezone import tz_for_coords
 
@@ -467,8 +471,16 @@ class NotificationService:
             if first_wp is not None
             else ZoneInfo("UTC")
         )
-        plain = "\n".join(render_official_alert_notice_plain(notices, tz=alert_tz))
-        subject = f"[{trip.name}] Amtliche Warnung"
+        dto_notices = build_official_alert_notices(trip, notices)
+        source_label = "GeoSphere Austria"
+        subject = render_official_alert_subject(dto_notices, prefix=trip.name)
+        stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
+        html = render_official_alert_html(
+            dto_notices, source_label=source_label, stand_at=stand_at, tz=alert_tz,
+        )
+        telegram_text = render_official_alert_telegram(
+            dto_notices, prefix=trip.name, source_label=source_label, tz=alert_tz,
+        )
 
         sent_channels: list[str] = []
 
@@ -476,10 +488,10 @@ class NotificationService:
             sent_channels.append("email")
             try:
                 if mail_sink is not None:
-                    mail_sink(subject=subject, body=plain)
+                    mail_sink(subject=subject, body=html)
                 else:
                     EmailOutput(self._settings).send(
-                        subject=subject, body=plain, html=False, mail_type="official-alert",
+                        subject=subject, body=html, html=True, mail_type="official-alert",
                     )
             except Exception as e:
                 logger.error(f"Official alert email failed for {trip.name}: {e}")
@@ -488,10 +500,24 @@ class NotificationService:
             sent_channels.append("telegram")
             try:
                 TelegramOutput(self._settings).send(
-                    subject=subject, body=plain, suppress_subject_line=True,
+                    subject=subject, body=telegram_text, suppress_subject_line=True,
                 )
             except Exception as e:
                 logger.error(f"Official alert telegram failed for {trip.name}: {e}")
+
+        if "sms" in effective_channels and self._settings.can_send_sms():
+            sent_channels.append("sms")
+            try:
+                sms_prefix = trip.name.replace(" ", "")
+                sms_text = render_official_alert_sms(
+                    dto_notices, sms_prefix=sms_prefix, tz=alert_tz,
+                )
+                if sms_sink is not None:
+                    sms_sink(sms_text)
+                else:
+                    SMSOutput(self._settings).send(subject="", body=sms_text)
+            except Exception as e:
+                logger.error(f"Official alert sms failed for {trip.name}: {e}")
 
         return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
 

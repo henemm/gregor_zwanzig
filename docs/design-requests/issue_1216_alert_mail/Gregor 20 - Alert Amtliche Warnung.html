@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<title>Gregor 20 — Alert · Amtliche Warnung (Email · Telegram · SMS)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { background: var(--g-paper); }
+  a { color: var(--g-accent); }
+  a:hover { color: var(--g-accent-deep); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 56px 40px 100px; }
+  .eyebrow { font-family: var(--g-font-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--g-accent); font-weight: 600; }
+  h1.page { font-size: 34px; font-weight: 600; letter-spacing: -.02em; margin: 8px 0 10px; }
+  p.lede { font-size: 16px; color: var(--g-ink-2); line-height: 1.55; max-width: 780px; margin: 0 0 8px; }
+
+  .sec-label { font-family: var(--g-font-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; color: var(--g-ink-3); margin: 0 0 18px; display: flex; align-items: center; gap: 10px; }
+  .sec-label .num { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; font-size: 12px; }
+  .tag-bad  { background: rgba(168,50,50,.12);  color: var(--g-bad); }
+  .tag-good { background: rgba(61,107,58,.14);   color: var(--g-good); }
+
+  hr.r { border: none; border-top: 1px solid var(--g-rule-soft); margin: 64px 0; }
+
+  /* ── Mail-Client-Mockup ── */
+  .mail { background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-4); overflow: hidden; box-shadow: var(--g-shadow-2); }
+  .mail-head { padding: 22px 26px 18px; display: flex; gap: 14px; }
+  .ava { width: 40px; height: 40px; border-radius: 999px; flex: none; background: linear-gradient(160deg,#8b9bd4,#6f7fc0); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 17px; }
+  .from { font-weight: 700; font-size: 17px; color: var(--g-ink); margin-bottom: 3px; }
+  .subj { font-size: 15.5px; color: var(--g-ink); line-height: 1.35; }
+  .subj .brk { color: var(--g-ink-4); }
+  .meta { font-size: 13.5px; color: var(--g-ink-4); margin-top: 5px; }
+  .meta b { color: var(--g-ink-3); font-weight: 500; }
+  .mail-rule { border: none; border-top: 1px solid var(--g-rule-soft); margin: 0; }
+  .mail-body { padding: 26px 26px 30px; }
+  .body-h1 { font-size: 26px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 18px; line-height: 1.2; color: var(--g-ink); }
+  .body-foot { font-size: 13.5px; color: var(--g-ink-4); margin: 18px 0 0; }
+
+  .verdict { display: inline-flex; align-items: center; gap: 8px; font-family: var(--g-font-mono); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 5px 11px; border-radius: 999px; margin-bottom: 16px; }
+
+  /* Severity-Dot + Chip */
+  .sev { display: inline-flex; align-items: center; gap: 7px; }
+  .dot { width: 12px; height: 12px; border-radius: 999px; flex: none; box-shadow: inset 0 0 0 1px rgba(26,26,24,.18); }
+  .dot.gelb   { background: #e8b81f; }
+  .dot.orange { background: #e07a1e; }
+  .dot.rot    { background: #c43030; }
+  .sev-word { font-family: var(--g-font-mono); font-size: 12px; font-weight: 600; letter-spacing: .04em; }
+  .sev-word.gelb   { color: #8a6a05; }
+  .sev-word.orange { color: var(--g-accent-deep); }
+  .sev-word.rot    { color: var(--g-bad); }
+
+  /* Warnstufen-Leiter — zeigt Position + Anzahl + benennt die Stufe */
+  .stufe-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 18px; }
+  .stufe-cap { font-family: var(--g-font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--g-ink-3); font-weight: 600; }
+  .stufe { display: inline-flex; align-items: stretch; border: 1px solid var(--g-rule); border-radius: 999px; overflow: hidden; }
+  .stufe span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; font-family: var(--g-font-mono); font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--g-ink-4); background: var(--g-card); }
+  .stufe span + span { border-left: 1px solid var(--g-rule-soft); }
+  .stufe span .p { width: 8px; height: 8px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(26,26,24,.18); opacity: .35; }
+  .stufe span.on .p { opacity: 1; }
+  .stufe span.on.gelb   { background: rgba(232,184,31,.20); color: #8a6a05; }
+  .stufe span.on.orange { background: rgba(224,122,30,.16); color: var(--g-accent-deep); }
+  .stufe span.on.rot    { background: rgba(196,48,48,.14);  color: var(--g-bad); }
+  .stufe-hint { font-size: 13px; color: var(--g-ink-3); }
+
+  /* Segment-Status: betroffen vs. frei */
+  .seg.off { color: var(--g-ink-4); background: transparent; border-style: dashed; text-decoration: line-through; text-decoration-color: var(--g-rule); }
+  .route-note { font-size: 12.5px; color: var(--g-ink-4); margin-top: 7px; }
+
+  /* Eskalations-Meter (pro Warnung, wenn Stufen sich unterscheiden) */
+  .meter { display: inline-flex; align-items: center; gap: 8px; }
+  .meter .bars { display: inline-flex; gap: 3px; align-items: center; }
+  .meter .bars i { width: 8px; height: 8px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(26,26,24,.20); background: transparent; }
+  .meter .lvl { font-family: var(--g-font-mono); font-size: 11.5px; font-weight: 600; letter-spacing: .04em; }
+  .meter.gelb .lvl { color: #8a6a05; }
+  .meter.orange .lvl { color: var(--g-accent-deep); }
+  .meter.rot .lvl { color: var(--g-bad); }
+
+  /* Warnung mit eigener Stufe (gemischt) — gestapeltes Layout */
+  .warn.stacked { display: block; }
+  .warn.stacked .whead { display: flex; align-items: center; gap: 14px; margin-bottom: 9px; }
+
+  /* Warnungs-Block */
+  .warns { border: 1px solid var(--g-rule); border-radius: var(--g-r-3); overflow: hidden; margin: 4px 0 16px; }
+  .warn { display: grid; grid-template-columns: 130px minmax(0,1fr); gap: 14px; padding: 14px 16px; align-items: start; }
+  .warn + .warn { border-top: 1px solid var(--g-rule-soft); }
+  .warn .lead { display: flex; flex-direction: column; gap: 6px; }
+  .warn .type { font-size: 15px; font-weight: 600; color: var(--g-ink); }
+  .warn .facts { font-size: 14px; color: var(--g-ink-2); line-height: 1.5; }
+  .warn .facts .k { color: var(--g-ink-4); }
+  .warn .facts .mono { font-family: var(--g-font-mono); font-weight: 500; color: var(--g-ink); }
+  .warn .facts .seg { display: inline-block; font-family: var(--g-font-mono); font-size: 12px; background: var(--g-card-alt); border: 1px solid var(--g-rule-soft); border-radius: 3px; padding: 1px 6px; color: var(--g-ink-2); }
+
+  .src { font-size: 14px; color: var(--g-ink-2); line-height: 1.5; background: var(--g-card-alt); border-left: 3px solid var(--g-info); padding: 12px 16px; border-radius: 0 var(--g-r-2) var(--g-r-2) 0; margin: 0; }
+  .src b { color: var(--g-ink); font-weight: 600; }
+
+  .two { display: grid; grid-template-columns: minmax(0,1fr) 360px; gap: 40px; align-items: start; }
+  @media (max-width: 980px){ .two { grid-template-columns: 1fr; } .chan-grid { grid-template-columns: 1fr !important; } }
+
+  .aside { border: 1px solid var(--g-rule); border-radius: var(--g-r-4); background: var(--g-card); padding: 18px 22px; }
+  .aside h3 { font-size: 15.5px; font-weight: 600; margin: 0 0 8px; }
+  .aside p { font-size: 13.5px; color: var(--g-ink-2); line-height: 1.55; margin: 0 0 10px; }
+  .aside p:last-child { margin-bottom: 0; }
+  .aside code, code.i { font-family: var(--g-font-mono); font-size: 12.5px; background: var(--g-card-alt); border: 1px solid var(--g-rule-soft); border-radius: 3px; padding: 1px 5px; color: var(--g-ink); }
+
+  /* Kanal-Karten */
+  .chan { display: flex; flex-direction: column; gap: 14px; }
+  .chan-row { border: 1px solid var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card); padding: 16px 18px; }
+  .chan-row .ch-name { font-family: var(--g-font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--g-ink-3); font-weight: 600; margin-bottom: 9px; display: flex; gap: 8px; align-items: center; }
+  .chan-row .ch-name .lim { color: var(--g-ink-4); font-weight: 500; letter-spacing: 0; text-transform: none; }
+  .chan-row .ch-text { font-family: var(--g-font-mono); font-size: 13.5px; color: var(--g-ink); line-height: 1.55; }
+  .chan-row .ch-text .brk { color: var(--g-ink-4); }
+  .chan-row .ch-text b { color: var(--g-ink); font-weight: 700; }
+  .note { font-size: 13px; color: var(--g-ink-3); margin-top: 8px; line-height: 1.5; }
+  .note code { font-family: var(--g-font-mono); font-size: 12px; background: var(--g-card-alt); border: 1px solid var(--g-rule-soft); border-radius: 3px; padding: 1px 5px; }
+
+  /* Vorher-Referenz kompakt */
+  .before { border: 1px solid var(--g-rule); border-radius: var(--g-r-4); background: var(--g-card); overflow: hidden; }
+  .before .bh { padding: 16px 20px; border-bottom: 1px solid var(--g-rule-soft); }
+  .before .bsub { font-size: 14.5px; color: var(--g-ink); }
+  .before .bsub .brk { color: var(--g-ink-4); }
+  .before .bl { padding: 14px 20px; font-size: 14px; color: var(--g-ink-2); line-height: 1.5; }
+  .before .bl + .bl { border-top: 1px solid var(--g-rule-soft); }
+  .before .bl .t { color: var(--g-ink); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Alert · Amtliche Warnung</div>
+  <h1 class="page">Amtliche Warnung — in allen drei Kanälen</h1>
+  <p class="lede">Amtliche Warnungen (GeoSphere Austria / DWD) sind ein eigener Alert-Typ: <b>kategorisch</b>, nicht schwellwert-basiert. Kein Δ, kein Pfeil — nur <b>Stufe · Typ · wo · gültig · Quelle</b>. Dieselben Renderer wie beim Deviation- und Onset-Alert, dieselbe Betreff-Konvention <span class="mono" style="font-family:var(--g-font-mono);font-size:13px">Trip · Ort · Info</span>.</p>
+
+  <hr class="r"/>
+
+  <!-- ── VORHER ── -->
+  <div class="sec-label"><span class="num tag-bad">✕</span> Vorher · aktueller Stand</div>
+  <div class="two">
+    <div class="before">
+      <div class="bh">
+        <div class="bsub"><span class="brk">[KHW 403]</span> Amtliche Warnung</div>
+      </div>
+      <div class="bl"><span class="sev"><span class="dot gelb"></span></span> <span class="t">GELB — Hitze</span> · Hermagor-Pressegger See — Segment 1 · Fr 10.07. 00:00–23:59</div>
+      <div class="bl"><span class="sev"><span class="dot gelb"></span></span> <span class="t">GELB — Gewitter</span> · Hermagor-Pressegger See — Segment 1 · Sa 11.07. 15:00–21:00</div>
+      <div class="bl"><span class="sev"><span class="dot gelb"></span></span> <span class="t">GELB — Hitze</span> · St. Stefan im Gailtal — Segment 2–4, Ziel · Fr 10.07. 00:00–23:59</div>
+      <div class="bl"><span class="sev"><span class="dot gelb"></span></span> <span class="t">GELB — Gewitter</span> · St. Stefan im Gailtal — Segment 2–4, Ziel · Sa 11.07. 15:00–21:00</div>
+    </div>
+
+    <div class="aside">
+      <h3>Woran es hakt</h3>
+      <p><b>Betreff sagt nichts.</b> „Amtliche Warnung" — welche Stufe, welcher Typ, betrifft es meine Route? Im Postfach nicht unterscheidbar.</p>
+      <p><b>Vier Zeilen, zwei Warnungen.</b> Hitze (Fr) und Gewitter (Sa) sind identisch für beide Segmente — die Liste wiederholt sich statt zu bündeln.</p>
+      <p><b>Keine Quelle, keine Route-Verortung.</b> Von wem stammt die Warnung, und wo auf dem Trip liegt sie?</p>
+    </div>
+  </div>
+
+  <hr class="r"/>
+
+  <!-- ── NACHHER · EMAIL ── -->
+  <div class="sec-label"><span class="num tag-good">✓</span> Nachher · Email</div>
+  <div class="two">
+    <div class="mail">
+      <div class="mail-head">
+        <div class="ava">G</div>
+        <div>
+          <div class="from">gregor_zwanzig@henemm.com</div>
+          <div class="subj"><span class="brk">[KHW 403]</span> gesamte Route · GELB Hitze (Fr) + Gewitter (Sa)</div>
+          <div class="meta"><b>An:</b> Henning Emmrich</div>
+          <div class="meta"><b>Antwort an:</b> gregor_zwanzig@henemm.com</div>
+        </div>
+      </div>
+      <hr class="mail-rule"/>
+      <div class="mail-body">
+        <div class="verdict" style="background:rgba(232,184,31,.16);color:#8a6a05"><span class="dot gelb"></span> 2 amtliche Warnungen</div>
+        <div class="body-h1">Hitze und Gewitter für deine Route gemeldet.</div>
+
+        <div class="stufe-line">
+          <span class="stufe-cap">Warnstufe</span>
+          <span class="stufe">
+            <span class="on gelb"><span class="p" style="background:#e8b81f"></span>GELB</span>
+            <span class="orange"><span class="p" style="background:#e07a1e"></span>ORANGE</span>
+            <span class="rot"><span class="p" style="background:#c43030"></span>ROT</span>
+          </span>
+          <span class="stufe-hint">niedrigste von drei</span>
+        </div>
+
+        <div class="warns">
+          <div class="warn">
+            <div class="lead">
+              <span class="type">Hitze</span>
+            </div>
+            <div class="facts">
+              <span class="k">Gültig:</span> <span class="mono">Fr 10.07. · ganztägig</span><br>
+              <span class="k">Route:</span> <span class="seg">Segment 1</span> <span class="seg">Segment 2–4</span> <span class="seg">Ziel</span>
+            </div>
+          </div>
+          <div class="warn">
+            <div class="lead">
+              <span class="type">Gewitter</span>
+            </div>
+            <div class="facts">
+              <span class="k">Gültig:</span> <span class="mono">Sa 11.07. · 15:00–21:00</span><br>
+              <span class="k">Route:</span> <span class="seg">Segment 1</span> <span class="seg">Segment 2–4</span> <span class="seg">Ziel</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="src"><b>Quelle:</b> GeoSphere Austria — amtliche Unwetterwarnung. Beide Warnungen decken die <b>gesamte Route</b> ab (Hermagor-Pressegger See + St. Stefan im Gailtal).</div>
+
+        <div class="body-foot">Stand: heute 09:30 · abgerufen bei GeoSphere Austria</div>
+      </div>
+    </div>
+
+    <div class="aside">
+      <h3>Warum das trägt</h3>
+      <p>Der Betreff nennt <b>Reichweite, Stufe, Typen und Tage</b> — im Postfach sofort einzuordnen. Weil beide Warnungen die ganze Route betreffen, steht das <b>zusammengefasst</b> statt viermal wiederholt.</p>
+      <p>Kein <code class="i">→</code>, kein <code class="i">−50 %</code> wie beim Deviation-Alert: eine Warnung ist ein <b>Ereignis mit Gültigkeit</b>, kein Wert an einer Schwelle. Steigt die Stufe auf <span class="sev"><span class="dot orange"></span><span class="sev-word orange">ORANGE</span></span> oder <span class="sev"><span class="dot rot"></span><span class="sev-word rot">ROT</span></span>, führt die höchste Stufe Betreff und Reihenfolge.</p>
+    </div>
+  </div>
+
+  <hr class="r"/>
+
+  <!-- ── PRO KANAL ── -->
+  <div class="sec-label">Dieselbe Warnung · Telegram &amp; SMS</div>
+  <p class="lede" style="margin-bottom:24px">Gleiches Prinzip, kürzere Form. Telegram trägt die fette erste Zeile; SMS bleibt ASCII/GSM-7 und token-basiert, damit das 140-Zeichen-Limit hält.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:980px;" class="chan-grid">
+    <div class="chan">
+      <div class="chan-row">
+        <div class="ch-name">Telegram <span class="lim">· fette erste Zeile</span></div>
+        <div class="ch-text"><b>KHW 403 · gesamte Route · Warnstufe GELB (1/3)</b><br>🟡 Hitze — Fr 10.07. ganztägig<br>🟡 Gewitter — Sa 11.07. 15:00–21:00<br>Segment 1 + 2–4 + Ziel · GeoSphere Austria</div>
+        <div class="note"><code>(1/3)</code> verortet die Stufe auf der Skala GELB → ORANGE → ROT. Emoji-Punkt nur in Telegram (Client rendert Unicode zuverlässig); in SMS entfällt er.</div>
+      </div>
+      <div class="chan-row">
+        <div class="ch-name">SMS <span class="lim">· GSM-7 · 49 / 140 Z.</span></div>
+        <div class="ch-text">KHW403 AMT GELB1/3: HZ Fr + TH Sa15-21, ges.Route</div>
+        <div class="note">Token: <code>AMT</code> = amtliche Warnung · <code>GELB1/3</code> = Stufe + Position auf der Skala (GELB→ORANGE→ROT) · <code>HZ</code> Hitze · <code>TH</code> Gewitter (wie im Deviation-Schema). Kein Δ, kein Pfeil. Bei mehreren Stufen führt die höchste; Rest nach Stufe.</div>
+      </div>
+    </div>
+
+    <div class="chan">
+      <div class="aside" style="height:100%;">
+        <h3>Regeln über alle Kanäle</h3>
+        <p><b>Reihenfolge = Stufe.</b> ROT vor ORANGE vor GELB. Innerhalb einer Stufe: nach Startzeit.</p>
+        <p><b>Route-Bündelung.</b> Deckt eine Warnung mehrere Segmente ab, wird sie einmal genannt mit Segment-Liste — nicht pro Segment wiederholt.</p>
+        <p><b>Quelle immer sichtbar</b> (Email/Telegram: ausgeschrieben; SMS: entfällt aus Platzgründen, steht im Trip-Setup).</p>
+        <p><b>Kein Δ/Pfeil</b> — amtliche Warnung ist kategorisch. Das unterscheidet sie vom Deviation-Alert (<code class="i">↑/↓</code>) und teilt sich die „reines Ereignis"-Logik mit dem Onset-Alert.</p>
+      </div>
+    </div>
+  </div>
+
+  <hr class="r"/>
+
+  <!-- ── BEISPIEL B · TEILSTRECKE ── -->
+  <div class="sec-label"><span class="num tag-good">✓</span> Variante · nur eine Teilstrecke betroffen</div>
+  <p class="lede" style="margin-bottom:24px">Deckt eine Warnung nicht die ganze Route ab, nennt der Betreff das betroffene Segment — nicht „gesamte Route“. Im Body zeigen durchgestrichene Segmente, was <b>frei</b> ist.</p>
+  <div class="two">
+    <div class="mail">
+      <div class="mail-head">
+        <div class="ava">G</div>
+        <div>
+          <div class="from">gregor_zwanzig@henemm.com</div>
+          <div class="subj"><span class="brk">[KHW 403]</span> Segment 2–4 · GELB Gewitter (Sa)</div>
+          <div class="meta"><b>An:</b> Henning Emmrich</div>
+          <div class="meta"><b>Antwort an:</b> gregor_zwanzig@henemm.com</div>
+        </div>
+      </div>
+      <hr class="mail-rule"/>
+      <div class="mail-body">
+        <div class="verdict" style="background:rgba(232,184,31,.16);color:#8a6a05"><span class="dot gelb"></span> 1 amtliche Warnung</div>
+        <div class="body-h1">Gewitter für die Mitte deiner Route gemeldet.</div>
+
+        <div class="stufe-line">
+          <span class="stufe-cap">Warnstufe</span>
+          <span class="stufe">
+            <span class="on gelb"><span class="p" style="background:#e8b81f"></span>GELB</span>
+            <span class="orange"><span class="p" style="background:#e07a1e"></span>ORANGE</span>
+            <span class="rot"><span class="p" style="background:#c43030"></span>ROT</span>
+          </span>
+          <span class="stufe-hint">niedrigste von drei</span>
+        </div>
+
+        <div class="warns">
+          <div class="warn">
+            <div class="lead">
+              <span class="type">Gewitter</span>
+            </div>
+            <div class="facts">
+              <span class="k">Gültig:</span> <span class="mono">Sa 11.07. · 15:00–21:00</span><br>
+              <span class="k">Route:</span> <span class="seg off">Segment 1</span> <span class="seg">Segment 2–4</span> <span class="seg off">Ziel</span>
+              <div class="route-note">übrige Strecke frei — keine amtliche Warnung für Segment 1 und Ziel</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="src"><b>Quelle:</b> GeoSphere Austria — amtliche Unwetterwarnung. Betrifft nur <b>St. Stefan im Gailtal</b> (Segment 2–4), nicht die gesamte Route.</div>
+
+        <div class="body-foot">Stand: heute 09:30 · abgerufen bei GeoSphere Austria</div>
+      </div>
+    </div>
+
+    <div class="aside">
+      <h3>Was sich ändert</h3>
+      <p>Der Betreff führt mit dem <b>betroffenen Segment</b> statt „gesamte Route“ — so weißt du sofort, ob dein aktueller Abschnitt gemeint ist.</p>
+      <p>Nicht betroffene Segmente stehen <b>durchgestrichen</b> im Block. Sie verschwinden nicht, damit klar bleibt: der Rest wurde geprüft und ist frei — nicht bloss vergessen.</p>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:980px;margin-top:28px" class="chan-grid">
+    <div class="chan">
+      <div class="chan-row">
+        <div class="ch-name">Telegram <span class="lim">· fette erste Zeile</span></div>
+        <div class="ch-text"><b>KHW 403 · Segment 2–4 · Warnstufe GELB (1/3)</b><br>🟡 Gewitter — Sa 11.07. 15:00–21:00<br>nur Segment 2–4 · übrige Strecke frei · GeoSphere Austria</div>
+      </div>
+    </div>
+    <div class="chan">
+      <div class="chan-row">
+        <div class="ch-name">SMS <span class="lim">· GSM-7 · 40 / 140 Z.</span></div>
+        <div class="ch-text">KHW403 AMT GELB1/3: TH Sa15-21, nur S2-4</div>
+        <div class="note">Segment-Bezug <code>nur S2-4</code> statt <code>ges.Route</code>. Freie Segmente werden in SMS nicht aufgezählt — nur das betroffene.</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="r"/>
+
+  <!-- ── BEISPIEL C · GEMISCHTE STUFEN ── -->
+  <div class="sec-label"><span class="num tag-good">✓</span> Variante · unterschiedliche Warnstufen</div>
+  <p class="lede" style="margin-bottom:24px">Haben die Warnungen <b>verschiedene Stufen</b>, führt die höchste den Betreff und die Reihenfolge. Jede Warnung trägt dann ihr <b>eigenes Eskalations-Meter</b> (gefüllte Punkte = Stufe) statt einer gemeinsamen Leiter.</p>
+  <div class="two">
+    <div class="mail">
+      <div class="mail-head">
+        <div class="ava">G</div>
+        <div>
+          <div class="from">gregor_zwanzig@henemm.com</div>
+          <div class="subj"><span class="brk">[KHW 403]</span> Segment 3 · ORANGE Gewitter (Sa) + GELB Hitze (Fr)</div>
+          <div class="meta"><b>An:</b> Henning Emmrich</div>
+          <div class="meta"><b>Antwort an:</b> gregor_zwanzig@henemm.com</div>
+        </div>
+      </div>
+      <hr class="mail-rule"/>
+      <div class="mail-body">
+        <div class="verdict" style="background:rgba(224,122,30,.16);color:var(--g-accent-deep)"><span class="dot orange"></span> 2 amtliche Warnungen · höchste Stufe ORANGE</div>
+        <div class="body-h1">Gewitter (ORANGE) und Hitze (GELB) für deine Route gemeldet.</div>
+
+        <div class="warns">
+          <div class="warn stacked">
+            <div class="whead">
+              <span class="meter orange">
+                <span class="bars"><i style="background:#e07a1e"></i><i style="background:#e07a1e"></i><i></i></span>
+                <span class="lvl">ORANGE · 2/3</span>
+              </span>
+              <span class="type">Gewitter</span>
+            </div>
+            <div class="facts">
+              <span class="k">Gültig:</span> <span class="mono">Sa 11.07. · 16:00–20:00</span><br>
+              <span class="k">Route:</span> <span class="seg off">Segment 1</span> <span class="seg off">Segment 2</span> <span class="seg">Segment 3</span> <span class="seg off">Ziel</span>
+            </div>
+          </div>
+          <div class="warn stacked">
+            <div class="whead">
+              <span class="meter gelb">
+                <span class="bars"><i style="background:#e8b81f"></i><i></i><i></i></span>
+                <span class="lvl">GELB · 1/3</span>
+              </span>
+              <span class="type">Hitze</span>
+            </div>
+            <div class="facts">
+              <span class="k">Gültig:</span> <span class="mono">Fr 10.07. · ganztägig</span><br>
+              <span class="k">Route:</span> <span class="seg">Segment 1</span> <span class="seg off">Segment 2</span> <span class="seg off">Segment 3</span> <span class="seg off">Ziel</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="src"><b>Quelle:</b> GeoSphere Austria — amtliche Unwetterwarnung. Das <b>Gewitter (ORANGE)</b> ist die kritischere Warnung und steht deshalb oben.</div>
+
+        <div class="body-foot">Stand: heute 09:30 · abgerufen bei GeoSphere Austria</div>
+      </div>
+    </div>
+
+    <div class="aside">
+      <h3>Reihenfolge = Stufe</h3>
+      <p>ORANGE steht über GELB — im Betreff, in der Überschrift und im Block. So fällt der Blick zuerst auf die Warnung, die die Entscheidung trägt.</p>
+      <p>Das <b>Meter</b> ersetzt hier die gemeinsame Leiter: zwei gefüllte Punkte = ORANGE (2/3), einer = GELB (1/3). Mehr gefüllt = höhere Stufe, ablesbar ohne Farb-Erkennung.</p>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:980px;margin-top:28px" class="chan-grid">
+    <div class="chan">
+      <div class="chan-row">
+        <div class="ch-name">Telegram <span class="lim">· fette erste Zeile</span></div>
+        <div class="ch-text"><b>KHW 403 · Segment 3 · höchste Stufe ORANGE (2/3)</b><br>🟠 Gewitter — Sa 11.07. 16:00–20:00 · Segment 3<br>🟡 Hitze — Fr 10.07. ganztägig · Segment 1<br>GeoSphere Austria</div>
+        <div class="note">Höchste Stufe in der ersten Zeile; darunter beide Warnungen nach Stufe geordnet, jede mit eigener Farbe.</div>
+      </div>
+    </div>
+    <div class="chan">
+      <div class="chan-row">
+        <div class="ch-name">SMS <span class="lim">· GSM-7 · 48 / 140 Z.</span></div>
+        <div class="ch-text">KHW403 AMT: TH ORANGE Sa16-20 S3 + HZ GELB Fr S1</div>
+        <div class="note">Kein gemeinsames <code>x/3</code> mehr — jede Warnung trägt ihre Stufe als Wort. Höchste zuerst: <code>ORANGE</code> vor <code>GELB</code>. Segment je Warnung angehängt (<code>S3</code>, <code>S1</code>).</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

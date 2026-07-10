@@ -1,0 +1,98 @@
+/* Gregor 20 — Design Tokens v2
+ * Alpine-modern. CSS-Variables, übergabefähig nach app.css (SvelteKit).
+ * Drop-in: kopiere :root + .dark in src/app.css, ersetze tailwind-Defaults via Theme-Plugin.
+ */
+
+:root {
+  /* Surface (Paper-Palette) */
+  --g-paper:        #f6f4ee;   /* App-Hintergrund — leicht warmes Off-White */
+  --g-paper-deep:   #ecead9;   /* gedämpfter Akzent für Sektionen */
+  --g-card:         #ffffff;   /* Karten, Tabellen */
+  --g-card-alt:     #faf8f1;   /* Zebra, sekundäre Karten */
+  --g-rule:         #d8d3c2;   /* Standard-Linien */
+  --g-rule-soft:    #e7e2d3;   /* sanfte Trennlinien */
+
+  /* Ink (Typografie) */
+  --g-ink:          #1a1a18;   /* Primärtext */
+  --g-ink-2:        #45433d;   /* Sekundärtext, Body */
+  --g-ink-3:        #6b675c;   /* Tertiär, Labels */
+  --g-ink-4:        #9a958a;   /* Hint, Placeholder */
+
+  /* Accent — burnt orange (alpin/markant) */
+  --g-accent:       #c45a2a;
+  --g-accent-deep:  #8c3e1a;
+  --g-accent-soft:  #f3d9c8;
+  --g-accent-tint:  rgba(196, 90, 42, 0.08);
+
+  /* Semantic */
+  --g-good:         #3d6b3a;   /* Wetter ok, low risk */
+  --g-warn:         #c08a1a;   /* Achtung, Schwellwert nahe */
+  --g-bad:          #a83232;   /* Alarm, kritisch */
+  --g-info:         #2c5a8c;   /* neutrale Daten-Highlight */
+
+  /* Wetter-Farben (aus echtem Email-Report abgeleitet) */
+  --g-weather-rain:    #4a7ab8;
+  --g-weather-snow:    #8aa4c0;
+  --g-weather-thunder: #c43a2a;
+  --g-weather-sun:     #d99a2a;
+  --g-weather-cloud:   #9a958a;
+
+  /* Typography */
+  --g-font-sans: "Inter Tight", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --g-font-mono: "JetBrains Mono", "SF Mono", ui-monospace, "Cascadia Mono", monospace;
+
+  /* Type Scale (1.200 minor third) */
+  --g-text-xs:  11px;
+  --g-text-sm:  13px;
+  --g-text-md:  15px;
+  --g-text-lg:  17px;
+  --g-text-xl:  20px;
+  --g-text-2xl: 24px;
+  --g-text-3xl: 32px;
+  --g-text-4xl: 44px;
+  --g-text-5xl: 60px;
+
+  /* Tracking — bewusst eng für Display, neutral für Body */
+  --g-track-tight: -0.02em;
+  --g-track-normal: 0;
+  --g-track-wide: 0.06em;
+  --g-track-caps: 0.12em;
+
+  /* Spacing — 4px-Grid */
+  --g-s-1:  4px;
+  --g-s-2:  8px;
+  --g-s-3:  12px;
+  --g-s-4:  16px;
+  --g-s-5:  20px;
+  --g-s-6:  24px;
+  --g-s-8:  32px;
+  --g-s-10: 40px;
+  --g-s-12: 48px;
+  --g-s-16: 64px;
+  --g-s-20: 80px;
+
+  /* Radii — bewusst zurückhaltend */
+  --g-r-1: 2px;
+  --g-r-2: 4px;
+  --g-r-3: 6px;
+  --g-r-4: 10px;
+  --g-r-pill: 999px;
+
+  /* Elevation — sehr dezent */
+  --g-shadow-1: 0 1px 0 rgba(26, 26, 24, 0.04), 0 1px 2px rgba(26, 26, 24, 0.04);
+  --g-shadow-2: 0 1px 0 rgba(26, 26, 24, 0.04), 0 4px 14px rgba(26, 26, 24, 0.06);
+  --g-shadow-3: 0 2px 0 rgba(26, 26, 24, 0.04), 0 12px 32px rgba(26, 26, 24, 0.08);
+}
+
+/* Reset für Demos */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--g-font-sans);
+  color: var(--g-ink);
+  background: var(--g-paper);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01", "cv11";
+}
+.mono { font-family: var(--g-font-mono); font-feature-settings: "tnum", "zero"; }
+.tnum { font-variant-numeric: tabular-nums; }
