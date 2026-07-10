@@ -6,8 +6,11 @@ Disambiguierung mehrdeutiger Felder (`temp_min_c` → `temperature` *und*
 """
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from app.metric_catalog import _METRICS, get_cmp
-from .model import AlertEvent, AlertMessage
+from utils.timezone import local_fmt
+from .model import AlertEvent, AlertMessage, OnsetEvent
 
 
 def _resolve_metric_id(field: str, direction: str) -> str:
@@ -102,6 +105,57 @@ def to_multi_point_alert_message(groups, *, tz, stand_at) -> AlertMessage:
     return AlertMessage(
         trip_short=collective_label, stand_at=stand_at, events=tuple(events), source=None,
         location_label=collective_label,
+    )
+
+
+def to_multi_location_onset_alert_message(groups, *, tz, stand_at) -> AlertMessage:
+    """Radar-Onset-Ergebnisse MEHRERER gleichzeitig auslösender Vergleichs-Orte
+    (Issue #1041 Slice 1a) → EINE kanonische AlertMessage.
+
+    `groups`: `list[(location_name: str, NowcastResult)]`. Je Gruppe ein
+    `OnsetEvent` (`km_from=km_to=0.0`, kein Etappen-km, Muster
+    `to_multi_point_alert_message:98`). Bei MEHR ALS EINER Gruppe trägt jedes
+    Event das `location_label` SEINER Gruppe (Renderer-Multi-Zweig).
+
+    INVARIANTE: bei GENAU einer Gruppe bleibt `location_label=None` — fällt
+    damit auf den unveränderten Single-Onset-Renderpfad zurück (AC-5).
+    `source` trägt den festen Marker "compare-radar", damit die Renderer
+    weiterhin über den Onset-Zweig (`msg.source is not None`) routen.
+
+    Härtung (#1041 Fix-Loop, Findings F001/F002): eine leere `groups`-Liste
+    ist ein Aufrufer-Fehler → definierter `ValueError` statt `IndexError`.
+    Orte ohne Onset (`NowcastResult.onset_minutes is None`) gehören nicht in
+    einen Radar-Alarm-Bündel und werden VOR dem `OnsetEvent`/`timedelta`-Bau
+    defensiv herausgefiltert; bleibt danach kein Ort übrig, ebenfalls
+    `ValueError` (verhindert einen Absturz in Slice 1b).
+    """
+    if not groups:
+        raise ValueError(
+            "to_multi_location_onset_alert_message benötigt mindestens einen Ort"
+        )
+    valid_groups = [(name, nc) for name, nc in groups if nc.onset_minutes is not None]
+    if not valid_groups:
+        raise ValueError(
+            "to_multi_location_onset_alert_message benötigt mindestens einen Ort "
+            "mit gesetztem onset_minutes"
+        )
+    multi = len(valid_groups) > 1
+    now = datetime.now(timezone.utc)
+    events: list[OnsetEvent] = []
+    for location_name, nc in valid_groups:
+        onset_time = local_fmt(now + timedelta(minutes=nc.onset_minutes), tz)
+        events.append(OnsetEvent(
+            onset_minutes=nc.onset_minutes, onset_time=onset_time,
+            km_from=0.0, km_to=0.0, is_convective=nc.is_convective,
+            intensity_label=nc.intensity_label, source_label=nc.source,
+            location_label=location_name if multi else None,
+        ))
+    trip_short = (
+        ", ".join(name for name, _nc in valid_groups) if multi else valid_groups[0][0]
+    )
+    return AlertMessage(
+        trip_short=trip_short, stand_at=stand_at, events=tuple(events),
+        source="compare-radar",
     )
 
 

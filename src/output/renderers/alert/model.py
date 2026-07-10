@@ -38,6 +38,11 @@ class OnsetEvent:
     intensity_label: str
     source_label: str
     briefing_context: str | None = None  # Issue #952: 4. Datenblock-Zeile (E-Mail only)
+    # Issue #1041 Slice 1a: additiv, optional, analog AlertEvent.location_label
+    # (Zeile 27). Gesetzt nur bei gebündelten Mehr-Orte-Onset-Alarmen
+    # (to_multi_location_onset_alert_message) — trägt den Ortsnamen DIESES
+    # Events. Trip-Radar-Pfad setzt es nie (Regressions-Invariante, AC-2/AC-3).
+    location_label: str | None = None
 
 
 @dataclass(frozen=True)

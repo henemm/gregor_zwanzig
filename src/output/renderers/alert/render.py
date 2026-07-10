@@ -109,15 +109,72 @@ def _km_str_onset(e: OnsetEvent) -> str:
 
 
 def _render_subject_onset(msg: AlertMessage) -> str:
+    # Issue #1041 Slice 1a: Sammel-Betreff nur bei MEHR ALS EINEM Event
+    # (Bündel-Alarm); Ein-Ort-Fall bleibt byte-identisch (AC-2/AC-5).
+    if len(msg.events) > 1:
+        return f"[{msg.trip_short}] Regen-Alarm: {len(msg.events)} Orte"
     e = msg.events[0]
     label = "Gewitter" if e.is_convective else "Regen"
     km = _km_str_onset(e)
     return f"[{msg.trip_short}] {km} · {label} in {e.onset_minutes} Min"
 
 
+def _distinct_source_labels(msg: AlertMessage) -> str:
+    """Distinct `source_label`-Werte der Bündel-Events, dedupliziert in
+    stabiler (erster-Vorkommen-)Reihenfolge, ", "-verbunden (Issue #1041
+    Fix-Loop, Finding F003). Analog zum Single-Pfad-Zugriff `e.source_label`
+    (render.py `_render_email_onset`)."""
+    seen: list[str] = []
+    for e in msg.events:
+        if e.source_label not in seen:
+            seen.append(e.source_label)
+    return ", ".join(seen)
+
+
+def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
+    """Bündel-Zweig (Issue #1041 Slice 1a): je Ort eine Zeile mit Onset-Zeit
+    und Intensität (Muster `loc_prefix`, render_email:328-333)."""
+    h1 = f"Regen-Alarm: {len(msg.events)} Orte"
+    badge_text = "Radar-Nowcast"
+    data_rows = [
+        (
+            f"{e.location_label} · {'Gewitter/Hagel' if e.is_convective else 'Regen'} "
+            f"in {e.onset_minutes} Min",
+            f"ab {e.onset_time} · {e.intensity_label}",
+        )
+        for e in msg.events
+    ]
+    # Finding F003: feste "Quelle: Radar (DWD)"-Fußzeile war falsch, sobald
+    # gebündelte Orte unterschiedliche Quellen haben (z.B. AROME-FR, INCA) —
+    # jetzt die tatsächlich beteiligten, distinct Quell-Labels der Events.
+    footer = f"Stand: heute {msg.stand_at} · Quelle: {_distinct_source_labels(msg)}"
+    plain_parts = [h1, "", badge_text, ""] + [f"{k}: {v}" for k, v in data_rows] + ["", footer]
+    plain = "\n".join(plain_parts)
+
+    rows = [
+        _datarow_html(label_, value, G_INK, i == 0)
+        for i, (label_, value) in enumerate(data_rows)
+    ]
+    html = (
+        "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
+        f"<div style=\"display:inline-block;padding:4px 12px;border-radius:12px;"
+        f"background:{G_ACCENT}1f;color:{G_ACCENT};font-family:{FONT_UI};margin-bottom:12px;\">"
+        f"{_esc(badge_text)}</div>"
+        f"<h1 style=\"margin:0 0 12px;font-family:{FONT_UI};color:{G_INK};\">{_esc(h1)}</h1>"
+        f"<div style=\"border-bottom:1px solid #d8d5c9;\">{''.join(rows)}</div>"
+        f"<p style=\"color:{G_INK_MUTED};margin-top:16px;font-family:{FONT_UI};\">{_esc(footer)}</p>"
+        "</body></html>"
+    )
+    return html, plain
+
+
 def _render_email_onset(msg: AlertMessage) -> tuple[str, str]:
     """Vorbild `render_email`s Deviation-Zweig (Z.185-244) — Badge/H1/Datenblock/
     Cooldown-Box/Fußzeile auf Design-Tokens (Issue #952 reopened)."""
+    # Issue #1041 Slice 1a: Bündel-Zweig nur bei MEHR ALS EINEM Event; der
+    # Ein-Ort-Fall unten bleibt unverändert byte-identisch (AC-2/AC-5).
+    if len(msg.events) > 1:
+        return _render_email_onset_multi(msg)
     e = msg.events[0]
     label = "Gewitter" if e.is_convective else "Regen"
     badge_text = "Radar-Nowcast"
