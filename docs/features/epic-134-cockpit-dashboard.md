@@ -253,7 +253,7 @@ Test order: Safari (strictest) → Firefox → Chrome.
 ## Known Limitations
 
 1. **Alert Feed:** Placeholder only—no backend endpoint exists yet
-2. **Risk-Based Stage Colors:** All stages show `tone="default"` until Risk Engine integration (future)
+2. **Risk-Based Stage Colors:** All stages show `tone="default"` until Risk Engine integration (future). Backend piece landed: `GET /api/_internal/trips/{trip_id}/stages-weather` (Issue #1212, Slice R1) now exposes a per-stage risk traffic light computed by the Python RiskEngine (see `docs/reference/api_contract.md` Section 23). Not yet wired to `StagePill`/`riskTone` — that's Slice R2 (Go proxy + frontend consumption).
 3. **Multiple Trips Same Day:** Uses first match (acceptable edge case)
 4. **Weather Location:** Based on first waypoint only, not live GPS position
 5. **Greeting:** Static "Guten Tag"—no time-of-day logic in Phase 1
@@ -322,7 +322,7 @@ None—pure frontend changes, no backend schema modifications.
 ## Future Enhancements
 
 1. **Alert Feed Backend** — New endpoint `GET /api/alerts?hours=24`
-2. **Risk-Based Colors** — Integration with Risk Engine for stage tone mapping
+2. **Risk-Based Colors** — Integration with Risk Engine for stage tone mapping (backend endpoint available since #1212 Slice R1; frontend wiring + Go proxy still open, Slice R2)
 3. **Live Position Tracking** — Use device GPS for weather location
 4. **Time-Aware Greeting** — "Guten Morgen" (5–11h), "Guten Tag" (11–17h), etc.
 5. **Stage Details Modal** — Click stage card to show detailed forecast + waypoints
@@ -332,4 +332,5 @@ None—pure frontend changes, no backend schema modifications.
 
 | Date | Change |
 |------|--------|
+| 2026-07-10 | Issue #1212 (Slice R1): new internal Python endpoint `GET /api/_internal/trips/{trip_id}/stages-weather` computes per-stage risk traffic light via RiskEngine — future SSoT for `riskTone` (see api_contract.md Section 23). Not yet consumed by frontend/Go; R2 pending. |
 | 2026-05-09 | Complete dashboard redesign: ActiveTripCard, StageStrip, BriefingsTimeline, AlertFeed, BottomRow. 24 E2E tests. Epic #134 (Issues #147–#152) ✓ |

@@ -2436,8 +2436,74 @@ export interface AlertRule {
 
 ---
 
+## 23) Stage-Weather Internal Endpoint (Issue #1212, Slice R1)
+
+Interner, nicht versionsstabiler Endpoint (Python FastAPI, Port 8000, **kein** Go-Proxy in
+diesem Slice). Liefert pro Etappe eine Wetter-Zusammenfassung + Risiko-Ampel, berechnet über
+die Python-`RiskEngine` — künftige Single Source of Truth der Cockpit-Risiko-Kacheln
+(ADR-0015). Ersetzt die eigene Go-Risk-Logik erst in Slice R2 (dann Proxy).
+
+**Handler:** `api/routers/internal.py` | **Service:** `src/services/stage_weather.py::compute_stage_weather()`
+
+### GET /api/_internal/trips/{trip_id}/stages-weather
+
+**Query-Parameter:** `user_id: str` (Pflicht — kein Fallback auf `"default"`)
+
+**Response 200:**
+
+```json
+{
+  "results": {
+    "<stage_id>": {
+      "weather_summary": {
+        "temp_min_c": 8.5,
+        "temp_max_c": 16.0,
+        "wind_max_kmh": 42.0,
+        "precip_mm": 3.2,
+        "wmo_code": 61,
+        "is_day": 1
+      },
+      "risk": "yellow"
+    }
+  }
+}
+```
+
+- Nullbare Felder werden **explizit als `null`** serialisiert (nicht weggelassen).
+- Ein Stage-Result ist entweder komplett `null` (Fail-soft, s.u.) oder trägt sowohl
+  `weather_summary` (non-null) als auch `risk` (non-null).
+- `risk` ∈ `"green"` \| `"yellow"` \| `"red"` — Maximum über alle Segmente der Etappe
+  (identisch zur Briefing-Bewertung derselben Segmente, inkl. Wind-Exposition Regel 9).
+- Etappen ohne ID (`stage.id == ""`) erscheinen **nicht** als Schlüssel in `results`.
+- Etappen ohne Datum/Waypoints oder mit fehlgeschlagenem Wetter-Fetch liefern `null` statt
+  eines 5xx (Fail-soft pro Etappe).
+
+### Error Responses
+
+| Status | Body | Szenario |
+|--------|------|----------|
+| 404 | `{"error":"not_found"}` | `trip_id` für den gegebenen `user_id` nicht gefunden |
+| 500 | `{"error":"store_error"}` | Interner Lade-/Store-Fehler |
+
+### Known Limitations
+
+- Ensemble/Confidence (Regel 10) wird bewusst **nicht** gefetcht — farbneutral, siehe
+  `docs/specs/modules/stage_weather_python_endpoint.md` Sektion „Known Limitations".
+- Latenz-Parität zum alten Go-Handler wird erst in Slice R2 (Proxy live) verifiziert.
+
+**Spec:** `docs/specs/modules/stage_weather_python_endpoint.md`
+
+---
+
 ## Changelog
 
+- 2026-07-10: Issue #1212 (Slice R1) — neuer interner Endpoint `GET
+  /api/_internal/trips/{trip_id}/stages-weather` (`api/routers/internal.py`,
+  `src/services/stage_weather.py::compute_stage_weather()`): liefert pro Etappe
+  Wetter-Zusammenfassung + Risiko-Ampel (green/yellow/red) über die Python-`RiskEngine`,
+  künftige SSoT der Cockpit-Risiko-Kacheln (ADR-0015). Ersetzt die Go-Risk-Logik erst in
+  Slice R2 (dann Proxy); R1 ist rein additiv, kein Go/Frontend-Impact. Siehe Section 23 und
+  `docs/specs/modules/stage_weather_python_endpoint.md`.
 - 2026-07-08: Issue #1110 — Ortsvergleich-Mail v2: Die HTML-/Klartext-Darstellung der
   Compare-E-Mail (`compare_html.py::render_compare_html()`) zeigt keinen Score/Winner mehr —
   Winner-Box, Score-Badge und Winner-Tags (eingeführt in #253/#460) entfallen vollständig,
