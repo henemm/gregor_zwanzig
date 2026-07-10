@@ -10,6 +10,7 @@
 	import AlertQuietHoursCard from '$lib/components/alerts-tab/AlertQuietHoursCard.svelte';
 	import { ALERTABLE_METRICS } from '$lib/components/alerts-tab/alertMetricTable';
 	import { Eyebrow } from '$lib/components/atoms';
+	import ChannelToggle from '$lib/components/trip-wizard/steps/ChannelToggle.svelte';
 	import type { CompareWizardState } from './compareWizardState.svelte';
 	import type { AlertMetric, SensLevel } from '$lib/types';
 
@@ -47,6 +48,13 @@
 
 <div class="compare-alarm-section" data-testid="compare-alarm-section">
 	<Eyebrow>Alarme · Sofort-Meldung</Eyebrow>
+
+	<ChannelToggle
+		label="Radar-Alarm"
+		checked={wiz.radarAlertEnabled}
+		onchange={(checked) => (wiz.radarAlertEnabled = checked)}
+		testid="compare-alarm-radar-toggle"
+	/>
 
 	{#if activeMetrics.length === 0}
 		<p class="no-metrics-hint" data-testid="compare-alarm-no-metrics">

@@ -495,6 +495,7 @@ export interface ComparePreset {
 	archived_at?: string;               // Issue #611 — gesetzt = archiviert
 	display_config?: Record<string, unknown>;  // ideal_ranges, channel_layouts, region, active_metrics (#680), top_n (#1104)
 	official_alerts_enabled?: boolean;  // Issue #1040 — amtliche Warnungen ein/aus
+	radar_alert_enabled?: boolean;  // Issue #1041 — Radar-Alarm ein/aus (Default AUS)
 	hourly_enabled?: boolean;  // Issue #1107 — Stundenverlauf-Sektion ein/aus
 	// Issue #1170 — Alarm-Konfiguration (Epic #1095 Scheibe 3/3), Trip-identische Keys.
 	// metric_alert_levels lebt bewusst in display_config, nicht hier.

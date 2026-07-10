@@ -34,6 +34,7 @@
 	state.timeWindowEnd = data.preset.hour_to ?? 16;
 	state.forecastHours = data.preset.forecast_hours ?? 48; // Issue #764
 	state.officialAlertsEnabled = data.preset.official_alerts_enabled ?? true; // Issue #1040
+	state.radarAlertEnabled = data.preset.radar_alert_enabled ?? false; // Issue #1041 Slice 2 (Default AUS)
 	state.hourlyEnabled = data.preset.hourly_enabled ?? true; // Issue #1107
 	state.topN = (state.existingDisplayConfig.top_n as number) ?? 3; // Issue #1104
 

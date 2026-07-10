@@ -38,6 +38,8 @@ export class CompareWizardState {
 	forecastHours = $state(48);
 	// Issue #1040: amtliche Warnungen ein/aus (Default true).
 	officialAlertsEnabled = $state(true);
+	// Issue #1041 Slice 2: Radar-Alarm ein/aus (Default AUS — opt-in).
+	radarAlertEnabled = $state(false);
 	// Issue #1107: Stundenverlauf-Sektion ein/aus (Default true).
 	hourlyEnabled = $state(true);
 	// Issue #1170 — Alarm-Konfiguration (Epic #1095 Scheibe 3/3), Trip-identische Keys.
@@ -173,6 +175,7 @@ export class CompareWizardState {
 			hour_to: this.timeWindowEnd,
 			forecast_hours: this.forecastHours, // Issue #764: Horizont persistieren
 			official_alerts_enabled: this.officialAlertsEnabled, // Issue #1040
+			radar_alert_enabled: this.radarAlertEnabled, // Issue #1041 Slice 2
 			hourly_enabled: this.hourlyEnabled, // Issue #1107
 			// Issue #1170: Alarm-Konfiguration — cooldown/quiet Top-Level (Trip-identisch).
 			...(this.alertCooldownMinutes !== undefined
@@ -225,6 +228,7 @@ export class CompareWizardState {
 			hourlyMetricKeys: this.hourlyMetricKeys, // Issue #1106
 			forecastHours: this.forecastHours, // Issue #764
 			officialAlertsEnabled: this.officialAlertsEnabled, // Issue #1040
+			radarAlertEnabled: this.radarAlertEnabled, // Issue #1041 Slice 2
 			hourlyEnabled: this.hourlyEnabled, // Issue #1107
 			topN: this.topN, // Issue #1104
 			metricAlertLevels: this.metricAlertLevels, // Issue #1170

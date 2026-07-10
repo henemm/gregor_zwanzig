@@ -85,7 +85,11 @@
 		metricAlertLevels: JSON.stringify(wiz.metricAlertLevels),
 		alertCooldownMinutes: wiz.alertCooldownMinutes,
 		alertQuietFrom: wiz.alertQuietFrom,
-		alertQuietTo: wiz.alertQuietTo
+		alertQuietTo: wiz.alertQuietTo,
+		// Issue #1041 Slice 2 / #1040: Alarm-Toggles im Dirty-Tracking, damit sie
+		// beim Speichern erkannt und persistiert werden (siehe handleSave).
+		radarAlertEnabled: wiz.radarAlertEnabled,
+		officialAlertsEnabled: wiz.officialAlertsEnabled
 	});
 	const dirty = $derived(
 		isEdit &&
@@ -98,7 +102,9 @@
 				JSON.stringify(wiz.metricAlertLevels) !== initial.metricAlertLevels ||
 				wiz.alertCooldownMinutes !== initial.alertCooldownMinutes ||
 				wiz.alertQuietFrom !== initial.alertQuietFrom ||
-				wiz.alertQuietTo !== initial.alertQuietTo)
+				wiz.alertQuietTo !== initial.alertQuietTo ||
+				wiz.radarAlertEnabled !== initial.radarAlertEnabled ||
+				wiz.officialAlertsEnabled !== initial.officialAlertsEnabled)
 	);
 
 	// Issue #758: sync dirty state → compareSaveCtl (nur wenn nicht schon saving/error).
@@ -169,6 +175,9 @@
 		const savedCooldown = wiz.alertCooldownMinutes;
 		const savedQuietFrom = wiz.alertQuietFrom;
 		const savedQuietTo = wiz.alertQuietTo;
+		// Issue #1041 Slice 2 / #1040: Alarm-Toggles ebenfalls snapshotten.
+		const savedRadarAlertEnabled = wiz.radarAlertEnabled;
+		const savedOfficialAlertsEnabled = wiz.officialAlertsEnabled;
 		const { url, body } = buildComparePresetSavePayload(preset, {
 			name: wiz.name,
 			activityProfile: wiz.activityProfile,
@@ -184,7 +193,11 @@
 			alertQuietTo: wiz.alertQuietTo,
 			// Issue #1134: Zeitfenster (Step 5) tatsächlich in den PUT-Body geben.
 			hourFrom: wiz.timeWindowStart,
-			hourTo: wiz.timeWindowEnd
+			hourTo: wiz.timeWindowEnd,
+			// Issue #1041 Slice 2 (Pflicht) / #1040 (gebündelter Edit-Bug):
+			// beide Toggles fehlten bisher im edits-Objekt → PUT persistierte sie nie.
+			radarAlertEnabled: wiz.radarAlertEnabled,
+			officialAlertsEnabled: wiz.officialAlertsEnabled
 		});
 		api.put(url, body)
 			.then(() => {
@@ -199,6 +212,8 @@
 				initial.alertCooldownMinutes = savedCooldown;
 				initial.alertQuietFrom = savedQuietFrom;
 				initial.alertQuietTo = savedQuietTo;
+				initial.radarAlertEnabled = savedRadarAlertEnabled;
+				initial.officialAlertsEnabled = savedOfficialAlertsEnabled;
 				compareSaveCtl.setSaved();
 			})
 			.catch((e: unknown) => {

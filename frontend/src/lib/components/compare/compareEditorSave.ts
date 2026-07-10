@@ -25,6 +25,8 @@ export interface CompareEditorEdits {
 	forecastHours?: number;
 	// Issue #1040: amtliche Warnungen ein/aus. Optional → rückwärtskompatibel.
 	officialAlertsEnabled?: boolean;
+	// Issue #1041 Slice 2: Radar-Alarm ein/aus (Default AUS). Optional → rückwärtskompatibel.
+	radarAlertEnabled?: boolean;
 	// Issue #1104: Anzahl Orte mit stündlichem Detail. Optional → rückwärtskompatibel.
 	topN?: number;
 	// Issue #1107: Stundenverlauf-Sektion ein/aus. Optional → rückwärtskompatibel.
@@ -104,6 +106,10 @@ export function buildComparePresetSavePayload(
 		// Issue #1040: analoges Round-Trip-Prinzip für official_alerts_enabled.
 		...(edits.officialAlertsEnabled !== undefined
 			? { official_alerts_enabled: edits.officialAlertsEnabled }
+			: {}),
+		// Issue #1041 Slice 2: analoges Round-Trip-Prinzip für radar_alert_enabled.
+		...(edits.radarAlertEnabled !== undefined
+			? { radar_alert_enabled: edits.radarAlertEnabled }
 			: {}),
 		// Issue #1107: analoges Round-Trip-Prinzip für hourly_enabled.
 		...(edits.hourlyEnabled !== undefined ? { hourly_enabled: edits.hourlyEnabled } : {}),
