@@ -214,7 +214,7 @@ def test_ac1_convective_override_fires_despite_briefing():
     RED-Treiber: Override nicht implementiert; Briefing-Unterdrückung greift
     unabhängig von Konvektion → count=0, erwartet >=1.
     """
-    from services.alert_state import AlertStateService
+    from services.throttle_store import ThrottleStore
 
     uid = f"tdd-883-ac1-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
@@ -234,10 +234,10 @@ def test_ac1_convective_override_fires_despite_briefing():
             f"senden. Erwartet >=1, war {count}. RED: Override noch nicht implementiert."
         )
         assert len(captured) >= 1, "AC-1: mail_sink muss aufgerufen werden (Override-Alert)."
-        state = AlertStateService(uid).load(trip_id)
-        assert "radar_throttle" in state, (
-            f"AC-1: alert_state muss 'radar_throttle' nach Override-Alert enthalten. "
-            f"State: {json.dumps(state, indent=2)}"
+        # Issue #1213: Radar-Throttle-Quelle ist jetzt der ThrottleStore statt
+        # alert_state['radar_throttle'].
+        assert ThrottleStore(uid).last_sent("radar", trip_id) is not None, (
+            "AC-1: ThrottleStore muss nach Override-Alert einen Radar-Timestamp enthalten."
         )
     finally:
         _clean_user(uid)

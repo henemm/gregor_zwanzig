@@ -437,16 +437,18 @@ def test_ac5_past_segment_no_alert_guard_test():
 # --------------------------------------------------------------------------
 
 def test_ac6_radar_throttle_via_alert_state_cooldown():
-    """AC-6: Nach erstem Alert ist Throttle in alert_state['radar_throttle'] gesetzt.
+    """AC-6: Nach erstem Alert ist der Radar-Throttle im ThrottleStore gesetzt.
 
-    Teil 1 (RED): alert_state['radar_throttle']['reported_at'] fehlt nach Alert.
-    Aktuell landet der Throttle in radar_alert_throttle.json → AssertionError.
+    Issue #1213: der alleinige Radar-Throttle-Speicher ist jetzt der
+    gemeinsame `ThrottleStore` (Scope "radar") — der alert_state-Key
+    `radar_throttle` wird nicht mehr geschrieben (nur noch als
+    Migrationsquelle gelesen, docs/specs/modules/throttle_store.md).
 
-    Teil 2: Zweiter Lauf innerhalb Cooldown → kein Alert (mit alter oder neuer Logik).
+    Teil 2: Zweiter Lauf innerhalb Cooldown → kein Alert (unverändert).
     """
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
-    from services.alert_state import AlertStateService
+    from services.throttle_store import ThrottleStore
 
     uid = f"tdd-818-ac6-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
@@ -469,16 +471,11 @@ def test_ac6_radar_throttle_via_alert_state_cooldown():
             f"Prüfe Trip-Setup und DI-Seam."
         )
 
-        # Nach erstem Alert: alert_state['radar_throttle']['reported_at'] muss gesetzt sein
-        state = AlertStateService(uid).load(trip_id)
-        assert "radar_throttle" in state, (
-            f"AC-6: alert_state muss 'radar_throttle'-Key enthalten nach erstem Alert.\n"
-            f"RED: Throttle landet noch in radar_alert_throttle.json statt alert_state.\n"
-            f"Aktueller alert_state: {json.dumps(state, indent=2)}"
-        )
-        assert "reported_at" in state.get("radar_throttle", {}), (
-            f"AC-6: state['radar_throttle'] muss 'reported_at' enthalten.\n"
-            f"Wert: {state.get('radar_throttle')}"
+        # Nach erstem Alert: ThrottleStore muss einen Radar-Timestamp haben
+        last_sent = ThrottleStore(uid).last_sent("radar", trip_id)
+        assert last_sent is not None, (
+            "AC-6: ThrottleStore muss nach erstem Alert einen Radar-Timestamp "
+            "für den Trip enthalten (Issue #1213 — alleinige Radar-Throttle-Quelle)."
         )
 
         # Zweiter Lauf sofort → kein Alert (Cooldown = 120 Min)

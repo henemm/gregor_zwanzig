@@ -191,7 +191,7 @@ def test_ac1_email_only_unconfigured_smtp_no_false_positive():
     assert _alert_log_count(trip.id) == 0, (
         "Alert-Log darf bei nicht-zustellbarem Kanal NICHT geschrieben werden."
     )
-    assert trip.id not in service._last_alert_times, (
+    assert service._throttle_store.last_sent("trip", trip.id) is None, (
         "Throttle-Sperrzeit darf bei nicht-zustellbarem Kanal NICHT gesetzt werden."
     )
 
@@ -219,7 +219,7 @@ def test_ac2_email_configured_sends_and_records():
 
     assert result is True
     assert _alert_log_count(trip.id) == 1
-    assert trip.id in service._last_alert_times
+    assert service._throttle_store.last_sent("trip", trip.id) is not None
 
 
 # --- AC-3: transienter Send-Fehler → best-effort recording (kein #656-Anti-Pattern) ---
@@ -268,7 +268,7 @@ def test_ac3_configured_smtp_transient_failure_still_records():
             "erhalten bleiben (sonst Alarm-Spam alle 30 Min, #656-Anti-Pattern)."
         )
         assert _alert_log_count(trip.id) == 1
-        assert trip.id in service._last_alert_times
+        assert service._throttle_store.last_sent("trip", trip.id) is not None
     finally:
         srv.close()
 
@@ -316,7 +316,7 @@ def test_ac4_telegram_only_unchanged():
 
         assert result is True
         assert _alert_log_count(trip.id) == 1
-        assert trip.id in service._last_alert_times
+        assert service._throttle_store.last_sent("trip", trip.id) is not None
     finally:
         telegram_module.TELEGRAM_API_BASE = original_base
         httpd.shutdown()

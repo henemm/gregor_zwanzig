@@ -229,7 +229,7 @@ def test_ac1_sms_configured_sends_via_seven():
         payload = stub.received[0].decode()
         assert "text=" in payload, "SMS-Body fehlt im seven.io-POST"
         assert _alert_log_count(trip.id) == 1
-        assert trip.id in service._last_alert_times
+        assert service._throttle_store.last_sent("trip", trip.id) is not None
     finally:
         stub.close()
 
@@ -264,7 +264,7 @@ def test_ac2_sms_channel_without_config_no_send():
         )
         assert len(stub.received) == 0, "Es darf KEIN seven.io-POST abgesetzt werden."
         assert _alert_log_count(trip.id) == 0
-        assert trip.id not in service._last_alert_times
+        assert service._throttle_store.last_sent("trip", trip.id) is None
     finally:
         stub.close()
 
@@ -310,6 +310,6 @@ def test_ac3_sms_http_error_logged_email_still_delivers(caplog):
             "deliverable_any muss True bleiben (E-Mail-Kanal zustellbar)."
         )
         assert _alert_log_count(trip.id) == 1
-        assert trip.id in service._last_alert_times
+        assert service._throttle_store.last_sent("trip", trip.id) is not None
     finally:
         stub.close()

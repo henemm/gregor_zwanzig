@@ -80,7 +80,12 @@ def _write_user_tier(uid: str, tier: str) -> None:
 
 
 def _counter_path(uid: str) -> Path:
-    return DATA_ROOT / uid / "alert_daily_count.json"
+    # Issue #1213: alert_daily_limit._counter_path() nutzt jetzt get_data_dir()
+    # (isolierter `_DATA_ROOT`-Pfad, #1133) statt der hartkodierten
+    # "data/users/..."-Konstruktion — dieser Test-Helper muss demselben Pfad
+    # folgen, sonst schreibt/liest er am produktiven Modul vorbei.
+    from app.loader import get_data_dir
+    return get_data_dir(uid) / "alert_daily_count.json"
 
 
 def _today_vienna_date_str() -> str:
@@ -88,11 +93,9 @@ def _today_vienna_date_str() -> str:
 
 
 def _seed_daily_counter(uid: str, count: int) -> None:
-    d = DATA_ROOT / uid
-    d.mkdir(parents=True, exist_ok=True)
-    _counter_path(uid).write_text(
-        json.dumps({"date": _today_vienna_date_str(), "count": count})
-    )
+    path = _counter_path(uid)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"date": _today_vienna_date_str(), "count": count}))
 
 
 # ═══════════════════ Modul-Ebene: services.alert_daily_limit ════════════════
@@ -191,9 +194,8 @@ class TestModuleLoadResetSemantics:
         uid = f"tdd-1070-load-{uuid.uuid4().hex[:6]}"
         _clean_user(uid)
         try:
-            d = DATA_ROOT / uid
-            d.mkdir(parents=True, exist_ok=True)
             counter_path = _counter_path(uid)
+            counter_path.parent.mkdir(parents=True, exist_ok=True)
             counter_path.write_text(json.dumps({"date": "2020-01-01", "count": 5}))
             before_mtime = counter_path.stat().st_mtime_ns
 

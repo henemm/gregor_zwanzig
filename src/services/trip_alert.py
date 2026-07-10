@@ -20,6 +20,7 @@ from services import alert_daily_limit
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService, RadarAlertRequest
 from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
+from services.throttle_store import ThrottleStore
 from services.user_tier import sms_allowed
 from services.weather_change_detection import WeatherChangeDetectionService
 from utils.timezone import tz_for_coords
@@ -76,8 +77,9 @@ class TripAlertService:
         self._change_detector = WeatherChangeDetectionService()
         self._throttle_hours = throttle_hours
         self._user_id = user_id
-        self.THROTTLE_FILE = Path(f"data/users/{user_id}/alert_throttle.json")
-        self._last_alert_times: dict[str, datetime] = self._load_throttle_times()
+        # Issue #1213: gemeinsamer ThrottleStore ersetzt das In-Memory-Dict
+        # + die dateibasierte `alert_throttle.json`-Persistenz.
+        self._throttle_store = ThrottleStore(user_id)
         # Radar nowcast service (DI seam)
         self._radar_service = radar_service
         # Mail-body capture seam for AC-4/AC-6 testing (replaces SMTP when set)
@@ -229,8 +231,7 @@ class TripAlertService:
         state_svc.save(trip.id, alert_state)
 
         # 7. Update throttle (only on success) + persist
-        self._last_alert_times[trip.id] = datetime.now(timezone.utc)
-        self._save_throttle_times()
+        self._throttle_store.record("trip", trip.id, datetime.now(timezone.utc))
         # Issue #1070: nur bei tatsaechlichem Versand zaehlen (F001-Symmetrie)
         alert_daily_limit.increment(self._user_id, datetime.now(timezone.utc))
 
@@ -414,44 +415,37 @@ class TripAlertService:
             if trip.alert_cooldown_minutes is not None
             else self._throttle_hours * 60
         )
-        last_alert = self._last_alert_times.get(trip.id)
-        return DeviationAlertEngine.is_cooldown_active(
-            datetime.now(timezone.utc), last_alert, cooldown_minutes
+        return self._throttle_store.is_throttled(
+            "trip", trip.id, cooldown_minutes, datetime.now(timezone.utc)
         )
 
-    def _is_throttled(self, trip_id: str) -> bool:
-        """
-        Check if alert is throttled for this trip.
-
-        Args:
-            trip_id: Trip identifier
-
-        Returns:
-            True if throttled (too soon since last alert)
-        """
-        last_alert = self._last_alert_times.get(trip_id)
-        if last_alert is None:
-            return False
-
-        elapsed = datetime.now(timezone.utc) - last_alert
-        return elapsed < timedelta(hours=self._throttle_hours)
-
-    def get_time_until_next_alert(self, trip_id: str) -> Optional[timedelta]:
+    def get_time_until_next_alert(self, trip: "Trip") -> Optional[timedelta]:
         """
         Get remaining throttle time for a trip.
 
+        Issue #1213 (AC-7): nutzt jetzt den per-Trip-Cooldown (identisch zu
+        `_is_throttled_with_cooldown`) statt der globalen `throttle_hours`-
+        Einstellung — die Anzeige widersprach zuvor dem tatsächlichen
+        Drossel-Verhalten. Signatur wechselt entsprechend von `trip_id: str`
+        auf `trip: "Trip"`.
+
         Args:
-            trip_id: Trip identifier
+            trip: Trip with optional alert_cooldown_minutes field
 
         Returns:
             Time remaining until next alert allowed, or None if not throttled
         """
-        last_alert = self._last_alert_times.get(trip_id)
+        cooldown_minutes = (
+            trip.alert_cooldown_minutes
+            if trip.alert_cooldown_minutes is not None
+            else self._throttle_hours * 60
+        )
+        last_alert = self._throttle_store.last_sent("trip", trip.id)
         if last_alert is None:
             return None
 
         elapsed = datetime.now(timezone.utc) - last_alert
-        remaining = timedelta(hours=self._throttle_hours) - elapsed
+        remaining = timedelta(minutes=cooldown_minutes) - elapsed
 
         if remaining.total_seconds() <= 0:
             return None
@@ -465,32 +459,8 @@ class TripAlertService:
         Args:
             trip_id: Trip identifier
         """
-        if trip_id in self._last_alert_times:
-            del self._last_alert_times[trip_id]
-            self._save_throttle_times()
-            logger.debug(f"Throttle cleared for trip {trip_id}")
-
-    # --- Throttle Persistence ---
-
-    def _load_throttle_times(self) -> dict[str, datetime]:
-        """Load throttle times from JSON file."""
-        if not self.THROTTLE_FILE.exists():
-            return {}
-        try:
-            data = json.loads(self.THROTTLE_FILE.read_text())
-            return {k: datetime.fromisoformat(v) for k, v in data.items()}
-        except (json.JSONDecodeError, ValueError, OSError) as e:
-            logger.warning(f"Failed to load throttle file: {e}")
-            return {}
-
-    def _save_throttle_times(self) -> None:
-        """Save throttle times to JSON file."""
-        try:
-            self.THROTTLE_FILE.parent.mkdir(parents=True, exist_ok=True)
-            data = {k: v.isoformat() for k, v in self._last_alert_times.items()}
-            self.THROTTLE_FILE.write_text(json.dumps(data, indent=2))
-        except OSError as e:
-            logger.error(f"Failed to save throttle file: {e}")
+        self._throttle_store.clear("trip", trip_id)
+        logger.debug(f"Throttle cleared for trip {trip_id}")
 
     # --- Change Detection ---
 
@@ -573,28 +543,18 @@ class TripAlertService:
         return self._radar_service
 
     def _is_radar_throttled(self, trip_id: str, cooldown_min: int = 120) -> bool:
-        """Return True if radar alert was sent within cooldown window (Issue #818 AC-6)."""
-        from services.alert_state import AlertStateService
-        state = AlertStateService(self._user_id).load(trip_id)
-        radar_entry = state.get("radar_throttle")
-        if radar_entry:
-            try:
-                last = datetime.fromisoformat(radar_entry["reported_at"])
-                if last.tzinfo is None:
-                    last = last.replace(tzinfo=timezone.utc)
-                return datetime.now(timezone.utc) - last < timedelta(minutes=cooldown_min)
-            except (KeyError, ValueError):
-                pass
-        return False
+        """Return True if radar alert was sent within cooldown window (Issue #818 AC-6).
+
+        Issue #1213: liest jetzt aus dem gemeinsamen ThrottleStore statt aus
+        dem alert_state-Key `radar_throttle` (nur noch Migrationsquelle).
+        """
+        return self._throttle_store.is_throttled(
+            "radar", trip_id, cooldown_min, datetime.now(timezone.utc)
+        )
 
     def clear_radar_throttle(self, trip_id: str) -> None:
         """Clear radar throttle for a trip (test helper)."""
-        from services.alert_state import AlertStateService
-        svc = AlertStateService(self._user_id)
-        state = svc.load(trip_id)
-        if "radar_throttle" in state:
-            state.pop("radar_throttle")
-            svc.save(trip_id, state)
+        self._throttle_store.clear("radar", trip_id)
 
     def _briefing_precip_for_onset(
         self,
@@ -811,21 +771,11 @@ class TripAlertService:
             self._append_alert_log(trip.id, 1, "HIGH")
             # Issue #1070: nur bei tatsaechlichem Versand zaehlen (F001-Symmetrie)
             alert_daily_limit.increment(self._user_id, datetime.now(timezone.utc))
-            _now = datetime.now(timezone.utc)
-            from services.alert_state import AlertStateService
-            _rec_svc = AlertStateService(self._user_id)
-            _rec_state = _rec_svc.load(trip.id)
-            _rec_state["radar_throttle"] = {"reported_at": _now.isoformat()}
-            _rec_svc.save(trip.id, _rec_state)
-            # Legacy-Datei für Regressions-Guard (test_827 AC-2): radar_alert_throttle.json
-            _throttle_file = Path(f"data/users/{self._user_id}/radar_alert_throttle.json")
-            try:
-                _throttle_file.parent.mkdir(parents=True, exist_ok=True)
-                _throttle_data = json.loads(_throttle_file.read_text()) if _throttle_file.exists() else {}
-                _throttle_data[trip.id] = _now.isoformat()
-                _throttle_file.write_text(json.dumps(_throttle_data, indent=2))
-            except OSError as _e:
-                logger.warning(f"Failed to write legacy radar throttle file: {_e}")
+            # Issue #1213: alleinige Radar-Throttle-Quelle ist jetzt der Store —
+            # der alert_state-Key `radar_throttle` und die Legacy-Datei
+            # `radar_alert_throttle.json` werden nicht mehr geschrieben (nur
+            # noch als Migrationsquellen gelesen).
+            self._throttle_store.record("radar", trip.id, datetime.now(timezone.utc))
             sent += 1
 
         return sent
@@ -1018,8 +968,7 @@ class TripAlertService:
         )
         if result.sent:
             self._record_official_alert_state(trip.id, official_notices)
-            self._last_alert_times[trip.id] = datetime.now(timezone.utc)
-            self._save_throttle_times()
+            self._throttle_store.record("trip", trip.id, datetime.now(timezone.utc))
             alert_daily_limit.increment(self._user_id, datetime.now(timezone.utc))
             self._append_alert_log(trip.id, len(official_notices), "MODERATE")
         return result.sent

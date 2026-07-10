@@ -200,9 +200,12 @@ def test_ac2_recording_when_email_enabled():
         )
         assert mail_calls, "AC-2: mail_sink wurde nicht aufgerufen, obwohl send_email=True"
 
-        throttle_path = DATA_ROOT / uid / "radar_alert_throttle.json"
-        assert throttle_path.exists(), (
-            "AC-2: radar_alert_throttle.json wurde NICHT geschrieben — Regression! "
+        # Issue #1213: Radar-Throttle wird nicht mehr in der Legacy-Datei
+        # `radar_alert_throttle.json` geschrieben, sondern im gemeinsamen
+        # ThrottleStore (isolierter `get_data_dir(uid)`-Pfad, #1133).
+        from services.throttle_store import ThrottleStore
+        assert ThrottleStore(uid).last_sent("radar", trip_id) is not None, (
+            "AC-2: Radar-Throttle wurde NICHT im ThrottleStore aufgezeichnet — Regression! "
             "(F001-Semantik: Recording muss bei tatsächlicher Zustellung erfolgen)"
         )
 

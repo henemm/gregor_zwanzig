@@ -41,13 +41,18 @@ def _make_trip(
     return t
 
 
-def _make_service(throttle_hours: int = 2):
-    """Baut einen minimalen TripAlertService ohne SMTP-Abhängigkeiten."""
+def _make_service(throttle_hours: int = 2, user_id: str = "default"):
+    """Baut einen minimalen TripAlertService ohne SMTP-Abhängigkeiten.
+
+    Issue #1213: der Cooldown-Zustand lebt jetzt im gemeinsamen
+    `ThrottleStore` statt im In-Memory-Dict `_last_alert_times`.
+    """
+    from services.throttle_store import ThrottleStore
     from services.trip_alert import TripAlertService
     svc = TripAlertService.__new__(TripAlertService)
     svc._throttle_hours = throttle_hours
-    svc._last_alert_times = {}
-    svc._user_id = "default"
+    svc._user_id = user_id
+    svc._throttle_store = ThrottleStore(user_id)
     return svc
 
 
@@ -73,7 +78,7 @@ def test_ac2_cooldown_60_throttles_after_30_min():
     from datetime import timedelta
     trip = _make_trip(trip_id="t-ac2", alert_cooldown_minutes=60)
     svc = _make_service(throttle_hours=2)
-    svc._last_alert_times["t-ac2"] = datetime.now(timezone.utc) - timedelta(minutes=30)
+    svc._throttle_store.record("trip", "t-ac2", datetime.now(timezone.utc) - timedelta(minutes=30))
     assert svc._is_throttled_with_cooldown(trip) is True
 
 
@@ -86,7 +91,7 @@ def test_ac3_cooldown_zero_skips_throttle():
     from datetime import timedelta
     trip = _make_trip(trip_id="t-ac3", alert_cooldown_minutes=0)
     svc = _make_service(throttle_hours=2)
-    svc._last_alert_times["t-ac3"] = datetime.now(timezone.utc) - timedelta(minutes=5)
+    svc._throttle_store.record("trip", "t-ac3", datetime.now(timezone.utc) - timedelta(minutes=5))
     assert svc._is_throttled_with_cooldown(trip) is False
 
 

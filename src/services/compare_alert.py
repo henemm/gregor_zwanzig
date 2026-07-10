@@ -22,6 +22,7 @@ from typing import Optional
 
 from app.config import Settings
 from app.loader import load_all_locations
+from services import alert_daily_limit
 from services.alert_preset import _PRESET_TABLE
 from services.alert_state import AlertStateService
 from services.compare_location_weather_source import CompareLocationWeatherSource
@@ -29,6 +30,7 @@ from services.compare_weather_snapshot import CompareWeatherSnapshotService
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
 from services.point_weather import AlertEvaluationConfig
+from services.throttle_store import ThrottleStore
 
 logger = logging.getLogger("compare_alert")
 
@@ -54,8 +56,9 @@ class CompareAlertService:
         self._weather_source = weather_source or CompareLocationWeatherSource()
         self._mail_sink = mail_sink
         self._snapshot_service = CompareWeatherSnapshotService(user_id=user_id)
-        self._throttle_file = Path(f"data/users/{user_id}/compare_alert_throttle.json")
-        self._last_alert_times: dict[str, datetime] = self._load_throttle_times()
+        # Issue #1213: gemeinsamer ThrottleStore ersetzt das In-Memory-Dict
+        # + die dateibasierte `compare_alert_throttle.json`-Persistenz.
+        self._throttle_store = ThrottleStore(user_id)
 
     def check_all_compare_presets(self) -> int:
         """Prüft alle Compare-Presets dieses Nutzers und versendet Alarme.
@@ -81,12 +84,22 @@ class CompareAlertService:
             if not preset_id or not location_ids:
                 continue
 
-            cooldown_minutes = preset.get("alert_cooldown_minutes", _DEFAULT_COOLDOWN_MINUTES)
-            last_alert = self._last_alert_times.get(preset_id)
-            if DeviationAlertEngine.is_cooldown_active(
-                datetime.now(timezone.utc), last_alert, cooldown_minutes
-            ):
+            # Issue #1213 (AC-4): `None`/fehlend muss VOR dem Store-Aufruf auf
+            # denselben Default wie der Trip-Pfad aufgelöst werden — `.get(key,
+            # default)` griff nur, wenn der Key ganz fehlte, nicht bei explizitem
+            # `None` (heutiger Bug: Compare lief dadurch ungedrosselt).
+            cooldown_minutes = preset.get("alert_cooldown_minutes")
+            if cooldown_minutes is None:
+                cooldown_minutes = _DEFAULT_COOLDOWN_MINUTES
+            now = datetime.now(timezone.utc)
+            if self._throttle_store.is_throttled("compare_preset", preset_id, cooldown_minutes, now):
                 logger.debug(f"Compare-Alert cooldown active for preset {preset_id}")
+                continue
+
+            # Issue #1213 (AC-6): Compare an dieselbe Tageslimit-Prüfung
+            # anbinden wie der Trip-Pfad (Epic #1067 Slice 3, #1070).
+            if not alert_daily_limit.is_allowed(self._user_id, now):
+                logger.debug(f"Compare-Alert suppressed: daily limit reached for preset {preset_id}")
                 continue
 
             config = self._build_eval_config(preset, cooldown_minutes)
@@ -108,8 +121,8 @@ class CompareAlertService:
                 continue
 
             self._finalize_triggered_state(triggered)
-            self._last_alert_times[preset_id] = datetime.now(timezone.utc)
-            self._save_throttle_times()
+            self._throttle_store.record("compare_preset", preset_id, now)
+            alert_daily_limit.increment(self._user_id, now)
             sent += 1
 
         return sent
@@ -216,20 +229,3 @@ class CompareAlertService:
             logger.warning(f"Corrupt compare_presets.json for {self._user_id}: {e}")
             return []
 
-    def _load_throttle_times(self) -> dict[str, datetime]:
-        if not self._throttle_file.exists():
-            return {}
-        try:
-            data = json.loads(self._throttle_file.read_text())
-            return {k: datetime.fromisoformat(v) for k, v in data.items()}
-        except (json.JSONDecodeError, ValueError, OSError) as e:
-            logger.warning(f"Failed to load compare alert throttle file: {e}")
-            return {}
-
-    def _save_throttle_times(self) -> None:
-        try:
-            self._throttle_file.parent.mkdir(parents=True, exist_ok=True)
-            data = {k: v.isoformat() for k, v in self._last_alert_times.items()}
-            self._throttle_file.write_text(json.dumps(data, indent=2))
-        except OSError as e:
-            logger.error(f"Failed to save compare alert throttle file: {e}")

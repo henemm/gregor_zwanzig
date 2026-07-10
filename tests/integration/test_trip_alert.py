@@ -75,62 +75,81 @@ class TestFilterSignificantChanges:
 
 
 class TestThrottling:
-    """Test alert throttling."""
+    """Test alert throttling.
+
+    Issue #1213: der tote `_is_throttled(trip_id: str)` wurde entfernt —
+    diese Tests wurden auf `_is_throttled_with_cooldown(trip)` bzw. den
+    gemeinsamen `ThrottleStore` migriert (kein Coverage-Verlust,
+    docs/specs/modules/throttle_store.md). `get_time_until_next_alert`
+    nimmt jetzt ein `Trip`-Objekt statt einer `trip_id` entgegen (AC-7).
+    """
+
+    @staticmethod
+    def _trip(trip_id: str = "trip-1"):
+        from app.trip import Stage, Trip, Waypoint
+
+        wp = Waypoint(id="wp-1", name="Start", lat=42.0, lon=9.0, elevation_m=500)
+        stage = Stage(id="s-1", name="Etappe 1", date="2026-06-15", waypoints=[wp])
+        return Trip(id=trip_id, name="Throttle Test Trip", stages=[stage])
 
     def test_first_alert_not_throttled(self) -> None:
         """First alert should not be throttled."""
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService(throttle_hours=2)
+        service = TripAlertService(throttle_hours=2, user_id="tdd-throttling-1")
 
-        assert service._is_throttled("trip-1") is False
+        assert service._is_throttled_with_cooldown(self._trip()) is False
 
     def test_second_alert_within_window_is_throttled(self) -> None:
         """Alert within throttle window should be blocked."""
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService(throttle_hours=2)
+        service = TripAlertService(throttle_hours=2, user_id="tdd-throttling-2")
 
         # Simulate first alert
-        service._last_alert_times["trip-1"] = datetime.now(timezone.utc)
+        service._throttle_store.record("trip", "trip-1", datetime.now(timezone.utc))
 
-        assert service._is_throttled("trip-1") is True
+        assert service._is_throttled_with_cooldown(self._trip()) is True
 
     def test_alert_after_window_not_throttled(self) -> None:
         """Alert after throttle window should be allowed."""
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService(throttle_hours=2)
+        service = TripAlertService(throttle_hours=2, user_id="tdd-throttling-3")
 
         # Simulate alert 3 hours ago
-        service._last_alert_times["trip-1"] = datetime.now(timezone.utc) - timedelta(hours=3)
+        service._throttle_store.record(
+            "trip", "trip-1", datetime.now(timezone.utc) - timedelta(hours=3)
+        )
 
-        assert service._is_throttled("trip-1") is False
+        assert service._is_throttled_with_cooldown(self._trip()) is False
 
     def test_clear_throttle(self) -> None:
         """Clear throttle should allow immediate alert."""
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService(throttle_hours=2)
+        service = TripAlertService(throttle_hours=2, user_id="tdd-throttling-4")
 
         # Simulate recent alert
-        service._last_alert_times["trip-1"] = datetime.now(timezone.utc)
-        assert service._is_throttled("trip-1") is True
+        service._throttle_store.record("trip", "trip-1", datetime.now(timezone.utc))
+        assert service._is_throttled_with_cooldown(self._trip()) is True
 
         # Clear throttle
         service.clear_throttle("trip-1")
-        assert service._is_throttled("trip-1") is False
+        assert service._is_throttled_with_cooldown(self._trip()) is False
 
     def test_get_time_until_next_alert(self) -> None:
         """Should return remaining throttle time."""
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService(throttle_hours=2)
+        service = TripAlertService(throttle_hours=2, user_id="tdd-throttling-5")
 
         # Simulate alert 1 hour ago
-        service._last_alert_times["trip-1"] = datetime.now(timezone.utc) - timedelta(hours=1)
+        service._throttle_store.record(
+            "trip", "trip-1", datetime.now(timezone.utc) - timedelta(hours=1)
+        )
 
-        remaining = service.get_time_until_next_alert("trip-1")
+        remaining = service.get_time_until_next_alert(self._trip())
         assert remaining is not None
         assert 50 * 60 < remaining.total_seconds() < 70 * 60  # ~1 hour remaining
 
@@ -138,9 +157,9 @@ class TestThrottling:
         """Should return None if not throttled."""
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService(throttle_hours=2)
+        service = TripAlertService(throttle_hours=2, user_id="tdd-throttling-6")
 
-        remaining = service.get_time_until_next_alert("trip-1")
+        remaining = service.get_time_until_next_alert(self._trip())
         assert remaining is None
 
 

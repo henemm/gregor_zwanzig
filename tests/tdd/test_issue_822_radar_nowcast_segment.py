@@ -742,14 +742,17 @@ def test_ac7_throttle_recording_unchanged():
 
         # Erster Lauf
         count1 = svc.check_radar_alerts()
-        throttle_file = DATA_ROOT / uid / "radar_alert_throttle.json"
 
         assert count1 >= 1, (
             "AC-7: Erster Lauf muss mindestens einen Alert auslösen "
             "(aktives Segment + nasse Frames + send_email=True)"
         )
-        assert throttle_file.exists(), (
-            "AC-7: radar_alert_throttle.json muss nach erstem Alert existieren"
+        # Issue #1213: Radar-Throttle-Quelle ist jetzt der gemeinsame
+        # ThrottleStore (isolierter `get_data_dir(uid)`-Pfad, #1133) statt
+        # der Legacy-Datei `radar_alert_throttle.json`.
+        from services.throttle_store import ThrottleStore
+        assert ThrottleStore(uid).last_sent("radar", trip_id) is not None, (
+            "AC-7: ThrottleStore muss nach erstem Alert einen Radar-Timestamp haben"
         )
 
         # Zweiter Lauf innerhalb Throttle-Fenster (KEIN clear_radar_throttle)

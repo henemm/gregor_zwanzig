@@ -3,13 +3,17 @@
 SPEC: docs/specs/modules/alert_daily_limit.md
 
 Persistiert einen pro-Nutzer-Tageszähler proaktiver Alerts (Deviation +
-Radar/Onset) unter ``data/users/<user_id>/alert_daily_count.json``. Reset
-erfolgt bei Kalendertag-Wechsel in Europe/Vienna (nicht UTC). ``now`` ist
-durchgehend Funktionsparameter — kein ``datetime.now()`` in diesem Modul.
+Radar/Onset + Compare, Issue #1213) unter
+``<get_data_dir(user_id)>/alert_daily_count.json`` (respektiert
+`GZ_DATA_DIR`/`_DATA_ROOT`, #1133). Reset erfolgt bei Kalendertag-Wechsel in
+Europe/Vienna (nicht UTC). ``now`` ist durchgehend Funktionsparameter — kein
+``datetime.now()`` in diesem Modul.
 """
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -20,7 +24,8 @@ VIENNA = ZoneInfo("Europe/Vienna")
 
 
 def _counter_path(user_id: str) -> Path:
-    return Path(f"data/users/{user_id}/alert_daily_count.json")
+    from app.loader import get_data_dir
+    return get_data_dir(user_id) / "alert_daily_count.json"
 
 
 def _vienna_date_str(now: datetime) -> str:
@@ -54,7 +59,12 @@ def is_allowed(user_id: str, now: datetime) -> bool:
 
 
 def increment(user_id: str, now: datetime) -> None:
-    """Read-modify-write the daily counter, resetting on a new Vienna day."""
+    """Read-modify-write the daily counter, resetting on a new Vienna day.
+
+    Issue #1213: atomarer Write (tmp-Datei + `os.replace`) statt direktem
+    `write_text` — verhindert einen halb geschriebenen/korrupten Zähler bei
+    gleichzeitigem Zugriff (Scheduler + API).
+    """
     path = _counter_path(user_id)
     today = _vienna_date_str(now)
     count = 0
@@ -66,4 +76,12 @@ def increment(user_id: str, now: datetime) -> None:
         except (json.JSONDecodeError, OSError):
             count = 0
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"date": today, "count": count + 1}))
+    fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=".alert_daily_count_", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(json.dumps({"date": today, "count": count + 1}))
+        os.replace(tmp_name, path)
+    except OSError:
+        if os.path.exists(tmp_name):
+            os.unlink(tmp_name)
+        raise
