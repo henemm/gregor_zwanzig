@@ -181,7 +181,10 @@
 			metricAlertLevels: wiz.metricAlertLevels,
 			alertCooldownMinutes: wiz.alertCooldownMinutes,
 			alertQuietFrom: wiz.alertQuietFrom,
-			alertQuietTo: wiz.alertQuietTo
+			alertQuietTo: wiz.alertQuietTo,
+			// Issue #1134: Zeitfenster (Step 5) tatsächlich in den PUT-Body geben.
+			hourFrom: wiz.timeWindowStart,
+			hourTo: wiz.timeWindowEnd
 		});
 		api.put(url, body)
 			.then(() => {

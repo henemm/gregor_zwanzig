@@ -34,6 +34,10 @@ export interface CompareEditorEdits {
 	alertCooldownMinutes?: number;
 	alertQuietFrom?: string;
 	alertQuietTo?: string;
+	// Issue #1134: Zeitfenster (Step 5). Optional → rückwärtskompatibel; ohne
+	// Angabe bleibt der Round-Trip-Spread aus `original` erhalten.
+	hourFrom?: number;
+	hourTo?: number;
 }
 
 /**
@@ -108,7 +112,11 @@ export function buildComparePresetSavePayload(
 			? { alert_cooldown_minutes: edits.alertCooldownMinutes }
 			: {}),
 		...(edits.alertQuietFrom !== undefined ? { alert_quiet_from: edits.alertQuietFrom } : {}),
-		...(edits.alertQuietTo !== undefined ? { alert_quiet_to: edits.alertQuietTo } : {})
+		...(edits.alertQuietTo !== undefined ? { alert_quiet_to: edits.alertQuietTo } : {}),
+		// Issue #1134: Zeitfenster überschreibt den Spread-Wert aus original.
+		// undefined → Feld fehlt in edits → Spread-Wert bleibt erhalten (Round-Trip).
+		...(edits.hourFrom !== undefined ? { hour_from: edits.hourFrom } : {}),
+		...(edits.hourTo !== undefined ? { hour_to: edits.hourTo } : {})
 	};
 
 	return { url, body };

@@ -169,6 +169,29 @@ def _warn_short(alert) -> tuple[str, str]:
     return alert.label, "info"
 
 
+def _compare_alert_severity(alert) -> str:
+    """Hazard-aware Severity-Resolver fuer den Pro-Ort-Streifen (Issue #1134).
+
+    Nutzt `_warn_short()` als alleinige Quelle fuer "welche Stufe je hazard
+    bedeutet welche Warnstufe" -> Badge-Farbe deckt sich mit der Zellfarbe des
+    Kuerzel-Chips in der Uebersichtstabelle."""
+    return _warn_short(alert)[1]
+
+
+def _dedup_alerts(alerts: list) -> list:
+    """Reduziert auf eindeutige `(hazard, level, label)`-Tupel (Reihenfolge
+    erhalten, erstes Vorkommen gewinnt, Issue #1134). Zwei Warnungen mit
+    gleichem hazard aber unterschiedlichem `label` bleiben beide erhalten."""
+    seen = set()
+    out = []
+    for a in alerts:
+        key = (a.hazard, a.level, a.label)
+        if key not in seen:
+            seen.add(key)
+            out.append(a)
+    return out
+
+
 def _render_warn_cell(alerts: list) -> str:
     """Warn-Zellen-Inhalt: gestapelte Kuerzel-Chips oder '—' bei keiner Warnung.
 
@@ -419,7 +442,12 @@ def _render_location_section(loc: LocationResult, index: int, hourly_metrics: se
         # (der Ort-Kopf direkt darueber nennt den Namen bereits) -- geloest per
         # leerem Gruppen-Label am Compare-Aufruf, das Shared-Modul selbst
         # (ADR-0011, Trip-Pfad) bleibt unveraendert.
-        strip = render_official_alerts_html([("", loc.official_alerts)])
+        # Issue #1134: Dedup identischer Warnungen + hazard-aware Badge-Farbe
+        # (severity_fn) fuer Konsistenz mit der Uebersichtstabelle.
+        strip = render_official_alerts_html(
+            [("", _dedup_alerts(loc.official_alerts))],
+            severity_fn=_compare_alert_severity,
+        )
     return (
         f'<div style="padding:{20 if index else 14}px 24px 0;">'
         f'{header}{strip}{_render_hour_table(loc, hourly_metrics)}</div>'
