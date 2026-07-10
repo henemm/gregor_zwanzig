@@ -132,7 +132,7 @@ def _render_email_onset(msg: AlertMessage) -> tuple[str, str]:
     if e.briefing_context:
         data_rows.append(("Briefing", e.briefing_context))
 
-    footer = f"Stand: heute {msg.stand_at} · Quelle: {e.source_label}"
+    footer = f"Stand: heute {msg.stand_at}"
     cooldown = (
         f"Cooldown: Du erhältst diese Warnung höchstens einmal in {msg.cooldown_display}."
         if msg.cooldown_display else ""
