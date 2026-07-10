@@ -6,14 +6,14 @@ GR20 E3
 GR20 E3: trocken, ⚡ möglich
 
 ━━ Metriken-Überblick ━━
-  18–20°C · Max 15:00
+  18–20°C · Max 16:00
   gef. min 11.8°C · 09:00
-  🟢 Wind >10 km/h ab 09:00 · max 19 (15:00)
-  🟢 Böen >20 km/h ab 09:00 · max 45 (15:00)
+  🟢 Wind >10 km/h ab 09:00 · max 20 (16:00)
+  🟢 Böen >20 km/h ab 09:00 · max 46 (16:00)
   🟡 Regen ab 09:00 · 2.5 mm
   🟢 kein Gewitter
   50% bewölkt · Max 09:00
-  Sonne 210 min
+  Sonne 240 min
 
 ━━ Segment 1: km 0.0–0.0 | 09:00–12:00 | ↑400m → 1200m ━━
   Time   Temp   TmpMin   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun 

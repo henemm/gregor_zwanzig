@@ -6,14 +6,14 @@ Corsica E5
 Corsica E5: 18–32°C, 🌥️, mäßiger Regen bis 10:00, trocken ab 11:00, mäßiger Wind 30 km/h, Böen bis 85 km/h ab 10:00, ⚡ möglich 10:00–15:00
 
 ━━ Metriken-Überblick ━━
-  18–19°C · Max 14:00
+  18–20°C · Max 15:00
   gef. min 12.0°C · 10:00
-  🟢 Wind >10 km/h ab 10:00 · max 19 (14:00)
+  🟢 Wind >10 km/h ab 10:00 · max 19 (15:00)
   🔴 Böen >20 km/h ab 10:00 · max 85 (10:00)
   🟠 Regen ab 10:00 · 8 mm
   🔴 Gewitter ab 10:00 · stärkste 10:00
   50% bewölkt · Max 10:00
-  Sonne 150 min
+  Sonne 180 min
 
 ━━ Segment 1: km 0.0–0.0 | 10:00–15:00 | ↑400m → 1200m ━━
   Time   Temp   TmpMin   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun 

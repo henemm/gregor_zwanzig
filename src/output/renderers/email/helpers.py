@@ -1296,17 +1296,24 @@ def build_metrics_summary_pills(
     """
     # Collect all data-points from all segments
     all_dps = []
-    for seg_data in segments:
+    last_idx = len(segments) - 1
+    for idx, seg_data in enumerate(segments):
         ts = getattr(seg_data, "timeseries", None)
         if ts is not None:
             # Bug #807: Filter data points to segment window.
             # Mirror Bug #806 logic (inclusive start, exclusive end).
+            # Bug #1146: last segment's window end is inclusive, matching
+            # the hourly table's arrival-hour handling.
             s = seg_data.segment
             s_h = s.start_time.hour
             e_h = s.end_time.hour
+            is_last = idx == last_idx
             for dp in ts.data:
                 h = dp.ts.hour
-                include = (s_h <= h < e_h) if s_h <= e_h else (h >= s_h or h < e_h)
+                if s_h <= e_h:
+                    include = (s_h <= h <= e_h) if is_last else (s_h <= h < e_h)
+                else:
+                    include = (h >= s_h or h <= e_h) if is_last else (h >= s_h or h < e_h)
                 if include:
                     all_dps.append(dp)
 
