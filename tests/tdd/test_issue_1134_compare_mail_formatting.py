@@ -1,5 +1,5 @@
 """
-TDD RED — Issue #1134: Compare-Mail Formatierungs-Fixes.
+Issue #1134: Compare-Mail Formatierungs-Fixes.
 
 SPEC: docs/specs/modules/issue_1134_compare_mail_formatting.md
 AC-1 / AC-1a / AC-2 / AC-2a (Backend-Teil; AC-3/AC-3a sind Frontend-E2E).
@@ -12,21 +12,16 @@ ECHTEN Renderfunktionen `render_official_alerts_html()` (Shared-Renderer) sowie
 kontrollierten Eingabedaten ausgefuehrt. Geprueft wird die reale HTML-Ausgabe
 (Hex-Farbwerte, Vorkommens-Anzahl eines Label-Texts), nicht der Quellcode.
 
-Warum diese Tests jetzt (RED) fehlschlagen:
-- AC-1:  Der Pro-Ort-Stundenverlauf-Badge faerbt heute rein `alert.level`-basiert
-         (hazard-unabhaengig). Fuer eine `extreme_heat`-Warnung Stufe 4 liefert
-         das G_DANGER (rot), obwohl die hazard-aware Uebersichtstabelle sie als
-         "warn" (orange) klassifiziert -> Farb-Inkonsistenz. Fix: `severity_fn`.
-- AC-1a: `render_official_alerts_html()` kennt den `severity_fn`-Parameter noch
-         nicht -> der Aufruf mit `severity_fn=None` wirft TypeError (RED). Nach
-         dem Fix bleibt der Default-Pfad (Trip-Briefing) byte-gleich.
-- AC-2:  Der Compare-Pfad dedupliziert `loc.official_alerts` nicht -> zwei
-         identische Warnungen erscheinen zweimal im Pro-Ort-Streifen.
-
-Warum AC-1a-Anmerkung zur Waldbrand-Stufe-3 aus der Spec: Waldbrand-Stufe 3
-diskriminiert NICHT (alte Level-3-Farbe == hazard-aware "warn" == G_WARNING),
-ist als RED-Treiber also ungeeignet. `extreme_heat` (immer "warn", unabhaengig
-vom Level) macht die hazard-aware Korrektur bei Level 4 sichtbar messbar.
+HINWEIS (Issue #1056 v2.0, 2026-07-10): #1134 fuehrte eine hazard-aware
+Severity-Faerbung (`severity_fn`) fuer den Compare-Badge/-Chip ein, die von
+der Trip-Briefing-Level-Faerbung abwich. #1056 v2.0 macht diese Divergenz
+rueckgaengig und vereinheitlicht BEIDE Pfade auf die amtliche 4-Stufen-Skala
+(`OfficialAlert.level`). `TestAC1HazardAwareBadgeColor` und
+`TestAC1aTripPathUnchanged` unten wurden entsprechend auf Level-Farben
+umgestellt (PO-entschieden, Supersede — nicht rueckgaengig machen). AC-1/AC-1a
+heissen historisch weiter so, pruefen aber jetzt die vereinheitlichte
+Level-Faerbung statt der urspruenglichen Hazard-Divergenz. AC-2/AC-2a
+(Dedup) sind von #1056 UNBERUEHRT und bleiben unveraendert gruen.
 """
 from __future__ import annotations
 
@@ -38,14 +33,9 @@ from app.models import ForecastDataPoint
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.email.compare_html import render_compare_html
-from output.renderers.email.design_tokens import G_DANGER, G_WARNING
+from output.renderers.email.design_tokens import G_ALERT_L3, G_ALERT_L4, G_WARNING
 from services.official_alerts.models import OfficialAlert
 from src.output.renderers.alert.official_alerts import render_official_alerts_html
-
-# _RISK_CELL["warn"]-Hintergrund der Uebersichtstabellen-Zelle (kanonische
-# hazard-aware Quelle, compare_html.py:44). Nur zum Nachweis, dass die
-# Uebersichtstabelle die Hitzewarnung als "warn" fuehrt.
-WARN_CELL_BG = "#fad6b8"
 
 
 def _loc_with_alerts(loc_id: str, name: str, alerts: list[OfficialAlert]) -> LocationResult:
@@ -63,19 +53,18 @@ def _loc_with_alerts(loc_id: str, name: str, alerts: list[OfficialAlert]) -> Loc
 # ---------------------------------------------------------------------------
 
 class TestAC1HazardAwareBadgeColor:
-    def test_extreme_heat_badge_uses_warn_color_not_generic_danger(self):
-        """
+    def test_extreme_heat_badge_uses_level_color_not_hazard_severity(self):
+        """#1056 v2.0 supersedes #1134 severity coloring.
+
         GIVEN: Ein Ort mit einer `extreme_heat`-Warnung Stufe 4.
         WHEN:  `render_compare_html()` rendert die Mail (Pro-Ort-Streifen ruft
                `render_official_alerts_html` auf).
-        THEN:  Der Badge im Pro-Ort-Streifen verwendet die hazard-aware
-               "warn"-Farbe (G_WARNING, wie die Uebersichtstabellen-Zelle sie
-               klassifiziert), NICHT die generische Level-4-Farbe G_DANGER.
-
-        RED: heute faerbt `render_official_alerts_html` Level>=4 -> G_DANGER,
-        der Badge traegt also `border-left:4px solid #b33a2a`. Die Assertion auf
-        die "warn"-Farbe schlaegt fehl, die Assertion gegen die Danger-Farbe
-        ebenso.
+        THEN:  Der Badge im Pro-Ort-Streifen verwendet die amtstreue
+               Level-4-Farbe (G_ALERT_L4, Violett) — NICHT mehr die
+               hazard-aware "warn"-Farbe (G_WARNING) aus #1134. Issue #1056
+               v2.0 ersetzt die hazard-severity-basierte Faerbung amtlicher
+               Warnungen durch die amtliche Stufen-Skala (PO-Entscheidung
+               2026-07-10).
         """
         alert = OfficialAlert(
             source="test-1134-heat", hazard="extreme_heat", level=4,
@@ -88,22 +77,17 @@ class TestAC1HazardAwareBadgeColor:
 
         html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
 
+        level4_badge = f"border-left:4px solid {G_ALERT_L4}"
         warn_badge = f"border-left:4px solid {G_WARNING}"
-        danger_badge = f"border-left:4px solid {G_DANGER}"
 
-        # Uebersichtstabelle klassifiziert die Hitzewarnung als "warn" (Beleg,
-        # dass "gleiche Farbe wie Uebersichtszelle" == warn ist).
-        assert WARN_CELL_BG in html, (
-            "Uebersichtstabelle muss die extreme_heat-Warnung als 'warn' fuehren "
-            f"(erwartet Zell-BG {WARN_CELL_BG})."
+        assert level4_badge in html, (
+            "Pro-Ort-Badge muss die amtliche Level-4-Farbe (G_ALERT_L4, "
+            f"Violett) verwenden, gefunden: {level4_badge!r} nicht im HTML."
         )
-        assert warn_badge in html, (
-            "Pro-Ort-Badge muss die hazard-aware 'warn'-Farbe (G_WARNING) "
-            f"verwenden, gefunden: {warn_badge!r} nicht im HTML."
-        )
-        assert danger_badge not in html, (
-            "Pro-Ort-Badge darf NICHT die generische Level-4-Farbe G_DANGER "
-            "tragen — extreme_heat ist hazard-aware 'warn', nicht 'danger'."
+        assert warn_badge not in html, (
+            "Pro-Ort-Badge darf NICHT mehr die hazard-aware 'warn'-Farbe "
+            "(G_WARNING, #1134) tragen — #1056 v2.0 faerbt strikt nach "
+            "amtlicher Stufe."
         )
 
 
@@ -112,19 +96,17 @@ class TestAC1HazardAwareBadgeColor:
 # ---------------------------------------------------------------------------
 
 class TestAC1aTripPathUnchanged:
-    def test_render_without_severity_fn_is_byte_identical_and_level_based(self):
-        """
-        GIVEN: Eine `extreme_heat`-Warnung Stufe 3.
-        WHEN:  `render_official_alerts_html()` wird EINMAL ohne und EINMAL mit
-               `severity_fn=None` aufgerufen (Trip-Briefing-Pfad uebergibt
-               nie einen Resolver).
-        THEN:  Beide Ausgaben sind byte-identisch und verwenden weiterhin die
-               level-basierte Farbe (Level 3 -> G_WARNING) — keine Regression.
+    def test_render_is_byte_identical_across_calls_and_level_based(self):
+        """#1056 v2.0 supersedes #1134 severity coloring.
 
-        RED: `render_official_alerts_html()` kennt den `severity_fn`-Parameter
-        noch nicht -> der zweite Aufruf wirft TypeError (unexpected keyword
-        argument). Nach dem Fix existiert der Parameter mit Default None und der
-        Default-Pfad bleibt byte-gleich.
+        GIVEN: Eine `extreme_heat`-Warnung Stufe 3.
+        WHEN:  `render_official_alerts_html()` wird zweimal mit identischen
+               Argumenten aufgerufen (der `severity_fn`-Parameter aus #1134
+               entfaellt mit #1056 v2.0 komplett — es gibt nur noch den
+               amtstreuen Level-Pfad).
+        THEN:  Beide Ausgaben sind byte-identisch und verwenden die
+               level-basierte Farbe (Level 3 -> G_ALERT_L3, #c8482a) —
+               dieselbe Farbe wie der (ehemals separate) Compare-Pfad.
         """
         alert = OfficialAlert(
             source="test-1134-trip", hazard="extreme_heat", level=3,
@@ -132,18 +114,16 @@ class TestAC1aTripPathUnchanged:
         )
         entries = [("", [alert])]
 
-        default_output = render_official_alerts_html(entries)
+        first = render_official_alerts_html(entries)
+        second = render_official_alerts_html(entries)
 
-        # RED: severity_fn existiert noch nicht -> TypeError.
-        explicit_none = render_official_alerts_html(entries, severity_fn=None)
-
-        assert explicit_none == default_output, (
-            "render_official_alerts_html(..., severity_fn=None) muss byte-gleich "
-            "zum parameterlosen Aufruf sein (Trip-Pfad unveraendert)."
+        assert second == first, (
+            "render_official_alerts_html() muss deterministisch byte-gleich "
+            "rendern (keine versteckte Zustandsabhaengigkeit)."
         )
-        assert f"border-left:4px solid {G_WARNING}" in default_output, (
-            "Trip-Pfad (ohne severity_fn) muss Level 3 weiterhin level-basiert "
-            "als G_WARNING faerben (Bestandsverhalten)."
+        assert f"border-left:4px solid {G_ALERT_L3}" in first, (
+            "Level 3 muss die amtliche G_ALERT_L3-Farbe (#c8482a) tragen "
+            "(#1056 v2.0, ersetzt die vormalige G_WARNING-Faerbung)."
         )
 
 

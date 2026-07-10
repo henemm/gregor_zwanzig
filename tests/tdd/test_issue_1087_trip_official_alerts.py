@@ -335,21 +335,17 @@ class TestAC2SharedRendererNoDuplicate:
         ein leeres Gruppen-Label (kein Ortsnamen-Praefix mehr im Langform-
         Streifen -- der Ort-Kopf nennt den Namen bereits).
 
-        Issue #1134 (F002 Adversary-Runde): Compare- und Trip-Pfad divergieren
-        jetzt BEWUSST fuer hazard-aware Faerbung. `render_compare_html` uebergibt
-        `severity_fn=_compare_alert_severity` -> ein `thunderstorm` faellt in
-        `_warn_short` auf die Kategorie "info" -> Badge-Farbe **G_INFO (#2a6cb3,
-        Blau)**, gleiche Familie wie die `_INFO_CELL`-Zelle der Uebersichts-
-        tabelle (AC-1 Konsistenz). Der Trip-Pfad (`render_official_alerts_html`
-        OHNE `severity_fn`) bleibt level-basiert -> Level 3 = **G_WARNING
-        (#c8882a, Orange)**, byte-gleich zum bisherigen Verhalten (AC-1a).
-        Deshalb je ein eigenes Golden-Fragment pro Pfad.
+        Issue #1056 v2.0 (supersedet #1134s hazard-aware Faerbung): Compare-
+        und Trip-Pfad sind jetzt WIEDER vereinheitlicht -- beide faerben
+        ausschliesslich nach der amtlichen `alert.level`. Ein Level-3-Alert
+        rendert in BEIDEN Pfaden **G_ALERT_L3 (#c8482a, Orange-Rot)**, ein
+        gemeinsames Golden-Fragment genuegt.
         """
         from output.renderers.alert.official_alerts import render_official_alerts_html
         from app.profile import ActivityProfile
         from app.user import ComparisonResult, LocationResult, SavedLocation
         from output.renderers.email.compare_html import (
-            _compare_alert_severity, _dedup_alerts, render_compare_html,
+            _dedup_alerts, render_compare_html,
         )
         from services.official_alerts.models import OfficialAlert
 
@@ -362,10 +358,8 @@ class TestAC2SharedRendererNoDuplicate:
                 '<span>Gewitterwarnung Stufe Orange</span></div>'
             )
 
-        # Compare-Pfad: hazard-aware "info" -> Blau (#1134). Trip-Pfad:
-        # level-basiert Level 3 -> Orange (unveraendert).
-        compare_golden = _fragment("#2a6cb3")
-        trip_golden = _fragment("#c8882a")
+        # Level-basiert (Issue #1056 v2.0): beide Pfade Level 3 -> #c8482a.
+        golden = _fragment("#c8482a")
 
         loc = SavedLocation(id="riviera-nice", name="Nizza", lat=NICE_LAT, lon=NICE_LON, elevation_m=10)
         alert = OfficialAlert(
@@ -384,27 +378,27 @@ class TestAC2SharedRendererNoDuplicate:
         result = ComparisonResult(locations=[lr], time_window=(9, 16), target_date=date.today())
 
         html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
-        assert compare_golden in html, (
-            "Compare-HTML Alert-Badge weicht vom eingefrorenen Compare-Golden "
-            "(hazard-aware Blau, #1134) ab."
+        assert golden in html, (
+            "Compare-HTML Alert-Badge weicht vom eingefrorenen Level-Golden "
+            "(#1056 v2.0) ab."
         )
 
         # Beweis: der Compare-Pfad nutzt den Shared-Renderer (kein Duplikat),
-        # nur mit seinen eigenen Argumenten (dedup + severity_fn). Byte-Gleich
-        # zum Fragment im gerenderten HTML.
+        # nur mit seinen eigenen Argumenten (dedup). Byte-Gleich zum Fragment
+        # im gerenderten HTML.
         compare_shared = render_official_alerts_html(
-            [("", _dedup_alerts([alert]))], severity_fn=_compare_alert_severity,
+            [("", _dedup_alerts([alert]))],
         )
-        assert compare_shared == compare_golden, (
-            "Compare-Badge muss byte-gleich aus dem Shared-Renderer (mit "
-            "severity_fn) stammen -- kein dupliziertes Compare-Badge-Markup."
+        assert compare_shared == golden, (
+            "Compare-Badge muss byte-gleich aus dem Shared-Renderer stammen "
+            "-- kein dupliziertes Compare-Badge-Markup."
         )
 
-        # Trip-Pfad (ohne severity_fn) bleibt level-basiert Orange (AC-1a).
+        # Trip-Pfad ist jetzt byte-gleich zum Compare-Pfad (beide level-basiert).
         trip_shared = render_official_alerts_html([("", [alert])])
-        assert trip_shared == trip_golden, (
-            "Trip-Pfad (render_official_alerts_html ohne severity_fn) muss "
-            "byte-gleich zum bisherigen level-basierten Orange bleiben (AC-1a)."
+        assert trip_shared == golden, (
+            "Trip-Pfad (render_official_alerts_html) muss byte-gleich zum "
+            "level-basierten Golden bleiben."
         )
 
     def test_massif_closure_style_alert_renders_label_once(self):

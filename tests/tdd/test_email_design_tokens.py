@@ -50,6 +50,17 @@ def test_ac1_design_tokens_brand_semantic():
     assert G_INFO == "#2a6cb3"
 
 
+def test_ac4_alert_level_tokens_present_issue_1056():
+    """AC-4 (Issue #1056 v2.0): amtliche-Warnung-Stufenskala-Tokens additiv,
+    G_WARNING/G_DANGER unveraendert (geprueft oben)."""
+    from src.output.renderers.email.design_tokens import (
+        G_ALERT_L2, G_ALERT_L3, G_ALERT_L4,
+    )
+    assert G_ALERT_L2 == "#9a6f00"
+    assert G_ALERT_L3 == "#c8482a"
+    assert G_ALERT_L4 == "#6d28d9"
+
+
 def test_ac1_design_tokens_box_tints():
     """AC-1: Mail-spezifische Box-Tints (Outlook-tauglich, kein Alpha)."""
     from src.output.renderers.email.design_tokens import (

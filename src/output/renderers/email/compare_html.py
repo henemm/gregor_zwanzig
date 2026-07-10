@@ -26,9 +26,9 @@ from typing import Optional
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
 from output.renderers.email.design_tokens import (
-    FONT_DATA, FONT_UI, G_ACCENT, G_BOX_WARNING_BG, G_INK,
-    G_INK_FAINT, G_INK_MUTED, G_PAPER, G_WARNING,
-    WEB_FONT_LINK,
+    FONT_DATA, FONT_UI, G_ACCENT, G_ALERT_L2, G_ALERT_L3, G_ALERT_L4,
+    G_BOX_WARNING_BG, G_INK, G_INK_FAINT, G_INK_MUTED, G_PAPER, G_SUCCESS,
+    G_WARNING, WEB_FONT_LINK,
 )
 from output.renderers.email.profile_signature import profile_signature
 from src.output.renderers.alert.official_alerts import render_official_alerts_html
@@ -45,6 +45,16 @@ _RISK_CELL = {
     "danger": ("#f6c5bf", "#8a1009"),
 }
 _INFO_CELL = ("#dde8f3", "#1e3a5f")
+
+# Issue #1056 v2.0: Warn-Chip-Zellfarbe je amtlicher Warnstufe (bg-Tint, fg) --
+# eigene Map, harmonisch zu den Badge-Rand-Farben, NICHT die Metrik-Palette
+# _RISK_CELL (die bleibt fuer Temp/Wind/etc. unveraendert).
+_ALERT_LEVEL_CELL = {
+    1: ("#dbeadd", G_SUCCESS),
+    2: ("#f2e4b0", G_ALERT_L2),
+    3: ("#f4d3c6", G_ALERT_L3),
+    4: ("#e4d7f5", G_ALERT_L4),
+}
 
 
 def _sev_temp(v: float) -> str:
@@ -169,15 +179,6 @@ def _warn_short(alert) -> tuple[str, str]:
     return alert.label, "info"
 
 
-def _compare_alert_severity(alert) -> str:
-    """Hazard-aware Severity-Resolver fuer den Pro-Ort-Streifen (Issue #1134).
-
-    Nutzt `_warn_short()` als alleinige Quelle fuer "welche Stufe je hazard
-    bedeutet welche Warnstufe" -> Badge-Farbe deckt sich mit der Zellfarbe des
-    Kuerzel-Chips in der Uebersichtstabelle."""
-    return _warn_short(alert)[1]
-
-
 def _dedup_alerts(alerts: list) -> list:
     """Reduziert auf eindeutige `(hazard, level, label)`-Tupel (Reihenfolge
     erhalten, erstes Vorkommen gewinnt, Issue #1134). Zwei Warnungen mit
@@ -201,8 +202,8 @@ def _render_warn_cell(alerts: list) -> str:
         return '<span style="color:#b8b4a8;font-size:12px;">—</span>'
     chips = []
     for alert in alerts:
-        short, sev = _warn_short(alert)
-        bg, fg = _RISK_CELL.get(sev, _INFO_CELL)
+        short, _sev = _warn_short(alert)
+        bg, fg = _ALERT_LEVEL_CELL.get(alert.level, _ALERT_LEVEL_CELL[4])
         chips.append(
             f'<div style="display:inline-block;font-size:9.5px;font-weight:700;'
             f'letter-spacing:0.01em;padding:2px 6px;margin:1px auto;white-space:nowrap;'
@@ -442,11 +443,10 @@ def _render_location_section(loc: LocationResult, index: int, hourly_metrics: se
         # (der Ort-Kopf direkt darueber nennt den Namen bereits) -- geloest per
         # leerem Gruppen-Label am Compare-Aufruf, das Shared-Modul selbst
         # (ADR-0011, Trip-Pfad) bleibt unveraendert.
-        # Issue #1134: Dedup identischer Warnungen + hazard-aware Badge-Farbe
-        # (severity_fn) fuer Konsistenz mit der Uebersichtstabelle.
+        # Issue #1134: Dedup identischer Warnungen. Issue #1056 v2.0: Badge-
+        # Farbe ist amtstreu level-basiert (kein severity_fn mehr).
         strip = render_official_alerts_html(
             [("", _dedup_alerts(loc.official_alerts))],
-            severity_fn=_compare_alert_severity,
         )
     return (
         f'<div style="padding:{20 if index else 14}px 24px 0;">'

@@ -14,7 +14,7 @@ AC-2) — nur der Input ist generalisiert auf `(label, alerts)`-Paare statt
 from __future__ import annotations
 
 import html as _html
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 if TYPE_CHECKING:
@@ -32,19 +32,15 @@ _LEVEL_WORDS: dict[int, tuple[str, str]] = {
 
 def render_official_alerts_html(
     entries: list[tuple[str, list["OfficialAlert"]]],
-    severity_fn: Optional[Callable[["OfficialAlert"], str]] = None,
 ) -> str:
     """Badges fuer amtliche Warnungen (div/span, kein <table>).
 
-    Level-Farbmapping (design_tokens.py, keine neuen Tokens): 1-2 ->
-    G_SUCCESS, 3 -> G_WARNING, 4+ -> G_DANGER. Entries ohne Warnung liefern
-    keinen Badge; insgesamt keine Warnungen -> leerer String.
-
-    `severity_fn` (Issue #1134): optionaler hazard-aware Resolver, der je
-    Alert eine Severity-Kategorie ("caution"/"warn"/"danger"/"info") liefert.
-    Ist er gesetzt (Compare-Pfad), bestimmt er die Badge-Farbe statt der rohen
-    Level-Schwelle -> Konsistenz mit der Uebersichtstabelle. Ohne ihn
-    (Trip-Briefing-Pfad) bleibt das level-basierte Verhalten byte-gleich.
+    Amtstreue 4-Stufen-Skala (Issue #1056 v2.0): die Rand-Farbe folgt
+    ausschliesslich `alert.level` (1=G_SUCCESS, 2=G_ALERT_L2, 3=G_ALERT_L3,
+    4+=G_ALERT_L4). Gilt gleichermassen fuer Trip-Briefing- UND Compare-Pfad
+    (ersetzt die vormals hazard-severity-basierte Compare-Faerbung aus
+    Issue #1134). Entries ohne Warnung liefern keinen Badge; insgesamt keine
+    Warnungen -> leerer String.
 
     Ist der Praefix (`label`) identisch mit `alert.label` (z.B. Massiv-Sperren,
     die kein eigenstaendiges `region_label` setzen und daher ueber
@@ -56,33 +52,15 @@ def render_official_alerts_html(
     (Issue #1087 F001).
     """
     from src.output.renderers.email.design_tokens import (
-        FONT_UI, G_DANGER, G_INFO, G_INK, G_PAPER, G_SUCCESS, G_WARNING,
+        FONT_UI, G_ALERT_L2, G_ALERT_L3, G_ALERT_L4, G_INK, G_PAPER, G_SUCCESS,
     )
+
+    _level_colors = {1: G_SUCCESS, 2: G_ALERT_L2, 3: G_ALERT_L3, 4: G_ALERT_L4}
 
     badges = []
     for label, alerts in entries:
         for alert in alerts:
-            if severity_fn is None:
-                if alert.level <= 2:
-                    color = G_SUCCESS
-                elif alert.level == 3:
-                    color = G_WARNING
-                else:
-                    color = G_DANGER
-            else:
-                # Severity-Kategorie (_warn_short) -> Rohfarbe, konsistent mit
-                # der Uebersichtstabelle (Issue #1134 AC-1): "danger" -> G_DANGER,
-                # "warn" -> G_WARNING, "caution" -> G_SUCCESS (Rangordnung, Spec).
-                # "info"/unbekannte Hazards -> G_INFO (neutrales Blau, gleiche
-                # Familie wie _INFO_CELL der Uebersichtszelle) — nicht G_WARNING,
-                # sonst Badge orange vs. Zelle blau (AC-1-Bruch, Adversary F002).
-                sev = severity_fn(alert)
-                color = (
-                    G_DANGER if sev == "danger"
-                    else G_WARNING if sev == "warn"
-                    else G_SUCCESS if sev == "caution"
-                    else G_INFO
-                )
+            color = _level_colors.get(alert.level, G_ALERT_L4)
             alert_label = _html.escape(alert.label)
             prefix_html = ""
             if label and label != alert.label:
