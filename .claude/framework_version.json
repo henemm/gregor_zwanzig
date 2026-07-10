@@ -2,6 +2,6 @@
   "framework_version": "3.4.13",
   "last_updated": "2026-06-30T13:15:00.000000",
   "installed_modules": [],
-  "notes": "edit_gate: ORCHESTRATOR_FILES-Schutz (settings.json, settings.local.json, active_workflow) vor json$-Always-Allowed eingefuegt. developer-agent: Regel 6 (keine Framework-Dateien). Fix PR #20.",
+  "notes": "edit_gate: ORCHESTRATOR_FILES-Schutz (settings.json, settings.local.json, active_workflow) vor json$-Always-Allowed eingefuegt. developer-agent: Regel 6 (keine Framework-Dateien). Fix PR #20. Manueller Backport 2026-07-10: .claude/agents/{bug-intake,bug-investigator,feature-planner}.md 1:1 aus agent-os-openspec@022e79f (Plugin 3.9.1) uebernommen, [triage:x]-Marker fuer gh issue create (agent-os-openspec#67). Kein voller Framework-Sync, weiterhin ~350 Zeilen Hook-Drift gegenueber Plugin-Stand.",
   "plugin_mode": true
 }
