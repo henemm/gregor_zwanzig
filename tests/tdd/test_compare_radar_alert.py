@@ -193,6 +193,9 @@ def test_single_location_onset_triggers_bundled_alert():
         subject, body = mail_calls[0]
         assert "Zermatt-Alarm" in subject, f"Ortsname fehlt im Betreff: {subject!r}"
         assert "8" in subject, f"Onset-Zeitangabe fehlt im Betreff: {subject!r}"
+        assert "höchstens einmal in" in body, (
+            f"Cooldown-Hinweis fehlt in der Compare-Radar-Alarm-Mail: {body!r}"
+        )
     finally:
         _clean_user(uid)
 
@@ -285,6 +288,9 @@ def test_two_simultaneous_locations_bundled_into_one_mail():
         _subject, body = mail_calls[0]
         assert "Zermatt-Bündel" in body, f"Ort A fehlt in der Bündel-Mail: {body!r}"
         assert "Chamonix-Bündel" in body, f"Ort B fehlt in der Bündel-Mail: {body!r}"
+        assert "höchstens einmal in" in body, (
+            f"Cooldown-Hinweis fehlt in der gebündelten Compare-Radar-Alarm-Mail: {body!r}"
+        )
     finally:
         _clean_user(uid)
 

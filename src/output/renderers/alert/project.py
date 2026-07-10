@@ -108,7 +108,9 @@ def to_multi_point_alert_message(groups, *, tz, stand_at) -> AlertMessage:
     )
 
 
-def to_multi_location_onset_alert_message(groups, *, tz, stand_at) -> AlertMessage:
+def to_multi_location_onset_alert_message(
+    groups, *, tz, stand_at, cooldown_display: str | None = None
+) -> AlertMessage:
     """Radar-Onset-Ergebnisse MEHRERER gleichzeitig auslösender Vergleichs-Orte
     (Issue #1041 Slice 1a) → EINE kanonische AlertMessage.
 
@@ -121,6 +123,10 @@ def to_multi_location_onset_alert_message(groups, *, tz, stand_at) -> AlertMessa
     damit auf den unveränderten Single-Onset-Renderpfad zurück (AC-5).
     `source` trägt den festen Marker "compare-radar", damit die Renderer
     weiterhin über den Onset-Zweig (`msg.source is not None`) routen.
+
+    `cooldown_display`: optionaler, bereits formatierter Cooldown-Hinweis-Text
+    (Issue Pflicht-Fix, analog `send_radar_alert()`s `cooldown_display`) —
+    wird unverändert auf die gebaute `AlertMessage` durchgereicht.
 
     Härtung (#1041 Fix-Loop, Findings F001/F002): eine leere `groups`-Liste
     ist ein Aufrufer-Fehler → definierter `ValueError` statt `IndexError`.
@@ -155,7 +161,7 @@ def to_multi_location_onset_alert_message(groups, *, tz, stand_at) -> AlertMessa
     )
     return AlertMessage(
         trip_short=trip_short, stand_at=stand_at, events=tuple(events),
-        source="compare-radar",
+        source="compare-radar", cooldown_display=cooldown_display,
     )
 
 

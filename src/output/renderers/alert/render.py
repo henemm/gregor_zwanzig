@@ -133,7 +133,11 @@ def _distinct_source_labels(msg: AlertMessage) -> str:
 
 def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
     """Bündel-Zweig (Issue #1041 Slice 1a): je Ort eine Zeile mit Onset-Zeit
-    und Intensität (Muster `loc_prefix`, render_email:328-333)."""
+    und Intensität (Muster `loc_prefix`, render_email:328-333).
+
+    Pflicht-Fix (Staging-Befund): additive Cooldown-Zeile analog zum
+    Einzel-Onset-Zweig (`_render_email_onset`), nur wenn `msg.cooldown_display`
+    gesetzt ist — sonst unverändert (keine leere Zeile/Box)."""
     h1 = f"Regen-Alarm: {len(msg.events)} Orte"
     badge_text = "Radar-Nowcast"
     data_rows = [
@@ -148,7 +152,13 @@ def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
     # gebündelte Orte unterschiedliche Quellen haben (z.B. AROME-FR, INCA) —
     # jetzt die tatsächlich beteiligten, distinct Quell-Labels der Events.
     footer = f"Stand: heute {msg.stand_at} · Quelle: {_distinct_source_labels(msg)}"
+    cooldown = (
+        f"Cooldown: Du erhältst diese Warnung höchstens einmal in {msg.cooldown_display}."
+        if msg.cooldown_display else ""
+    )
     plain_parts = [h1, "", badge_text, ""] + [f"{k}: {v}" for k, v in data_rows] + ["", footer]
+    if cooldown:
+        plain_parts.append(cooldown)
     plain = "\n".join(plain_parts)
 
     rows = [
@@ -162,6 +172,13 @@ def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
         f"{_esc(badge_text)}</div>"
         f"<h1 style=\"margin:0 0 12px;font-family:{FONT_UI};color:{G_INK};\">{_esc(h1)}</h1>"
         f"<div style=\"border-bottom:1px solid #d8d5c9;\">{''.join(rows)}</div>"
+    )
+    if cooldown:
+        html += (
+            f"<div style=\"border-left:4px solid {G_ACCENT};padding:8px 12px;margin-top:12px;"
+            f"font-family:{FONT_UI};color:{G_INK_MUTED};\">{_esc(cooldown)}</div>"
+        )
+    html += (
         f"<p style=\"color:{G_INK_MUTED};margin-top:16px;font-family:{FONT_UI};\">{_esc(footer)}</p>"
         "</body></html>"
     )

@@ -33,6 +33,18 @@ _RADAR_ONSET_THRESHOLD_MIN = 20
 _DEFAULT_COOLDOWN_MINUTES = 120
 
 
+def _format_cooldown_display(cooldown_minutes: int) -> str:
+    """Menschenlesbarer Cooldown-Hinweis-Text — Muster
+    `radar_alert_service.py::_cooldown_display` (Trip-Radar-Pfad), hier auf
+    dem bereits aufgelösten `cooldown_minutes`-Wert des Presets statt eines
+    Trip-Objekts (Pflicht-Fix, Staging-Befund: fehlender Cooldown-Hinweis in
+    Compare-Radar-Alarm-Mails)."""
+    if cooldown_minutes % 60 == 0:
+        n = cooldown_minutes // 60
+        return f"{n} Stunde" if n == 1 else f"{n} Stunden"
+    return f"{cooldown_minutes} Minuten"
+
+
 class CompareRadarAlertService:
     """Prüft je Compare-Preset/Ort den Radar-Nowcast und versendet gebündelte
     Onset-Alarm-Mails an die Preset-Empfänger (Parallelpfad zu
@@ -101,6 +113,7 @@ class CompareRadarAlertService:
         entities = [(name, result) for name, _loc, result in triggered]
         notif_result = notification_service.send_multi_location_radar_alert(
             entities=entities, effective_channels={"email"}, mail_sink=self._mail_sink,
+            cooldown_display=_format_cooldown_display(cooldown_minutes),
         )
         if not notif_result.sent:
             return False

@@ -412,6 +412,7 @@ class NotificationService:
         tz: Optional[ZoneInfo] = None,
         stand_at: Optional[str] = None,
         mail_sink: Optional[object] = None,
+        cooldown_display: Optional[str] = None,
     ) -> NotificationResult:
         """Gebündelter Onset-Alert-Versand für MEHRERE gleichzeitig auslösende
         Vergleichs-Orte EINES Compare-Presets (Issue #1041 Slice 1a).
@@ -419,8 +420,9 @@ class NotificationService:
         Baut über `to_multi_location_onset_alert_message()` EINE `AlertMessage`
         für alle übergebenen Orte und delegiert unverändert an
         `_dispatch_alert_message()` (ADR-0021: Rendering/Versand bleiben
-        geteilt). `entities`: `list[(location_name, NowcastResult)]`. Kein
-        produktiver Aufrufer in dieser Scheibe (folgt in Slice 1b).
+        geteilt). `entities`: `list[(location_name, NowcastResult)]`.
+        `cooldown_display`: optionaler, bereits formatierter Cooldown-Hinweis
+        (Pflicht-Fix, analog `send_radar_alert()`s gleichnamigem Parameter).
         """
         from output.renderers.alert.project import to_multi_location_onset_alert_message
 
@@ -428,6 +430,7 @@ class NotificationService:
         resolved_stand_at = stand_at or local_fmt(datetime.now(timezone.utc), alert_tz)
         alert_msg = to_multi_location_onset_alert_message(
             entities, tz=alert_tz, stand_at=resolved_stand_at,
+            cooldown_display=cooldown_display,
         )
         target_name = ", ".join(name for name, _nc in entities)
         return self._dispatch_alert_message(
