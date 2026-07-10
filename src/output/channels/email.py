@@ -5,6 +5,7 @@ Sends weather reports via SMTP email (HTML or plain text).
 """
 from __future__ import annotations
 
+import json
 import logging
 import re
 import smtplib
@@ -12,6 +13,7 @@ import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import getaddresses, parseaddr
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from output.channels.base import OutputConfigError, OutputError
@@ -21,9 +23,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Issue #1147: dritte, empfängerseitige Guard-Linie. Ein Resend-Host darf
-# NIEMALS an ein GZ-Test-Postfach zustellen — unabhängig von jedem
-# absender-/prozessseitigen Signal (is_test_mode, env, GZ_RESEND_ALLOWED).
+# Issue #1147 (historisch): dritte, empfängerseitige Guard-Linie. Seit Issue
+# #1219 funktional durch eine positive Allowlist (_load_resend_allowlist)
+# ABGELÖST: gregor-test@/gregor-staging@henemm.com gehören zu keinem echten
+# Nutzerprofil und werden daher automatisch NICHT in die Allowlist
+# aufgenommen — der Guard @send() referenziert TEST_MAILBOXES nicht mehr
+# direkt. Konstante bleibt zu Dokumentationszwecken/für ältere Kommentare
+# erhalten.
 TEST_MAILBOXES = frozenset({"gregor-test@henemm.com", "gregor-staging@henemm.com"})
 
 # Fix-Loop 4 (F005): rohes, PARSER-UNABHÄNGIGES Fangnetz. Statt jeden
@@ -125,6 +131,54 @@ def _raw_contains_test_mailbox(raw: str) -> bool:
     adressiert) im String auftaucht, greift der Guard."""
     stripped = _CONTROL_CHARS_RE.sub("", raw)
     return bool(_TEST_MAILBOX_RAW_PATTERN.search(stripped))
+
+
+def _load_resend_allowlist(data_dir: str = "data") -> frozenset[str]:
+    """Issue #1219: positive Empfänger-Allowlist statt der abgelösten
+    2-Adressen-Denylist.
+
+    Sammelt normalisierte `mail_to`-/`email`-Adressen aller Nicht-Test-
+    Nutzerprofile unter `<data_dir>/users/<id>/user.json`. Test-Nutzer
+    (`is_test_user_id()`) werden konservativ ausgeschlossen — im Zweifel als
+    Test behandeln, nicht in die Allowlist aufnehmen. Plus-Adressierung wird
+    auf Allowlist-Einträgen NICHT gekappt (echte Nutzeradressen werden 1:1
+    verglichen, nur lowercase/trim via `parseaddr`).
+
+    Fail-soft: ein fehlendes `<data_dir>/users`-Verzeichnis liefert eine
+    leere Allowlist; eine fehlende/kaputte `user.json` überspringt nur das
+    betroffene Profil — nie ein Crash des Sendepfads.
+    """
+    from app.config import is_test_user_id
+
+    allowed: set[str] = set()
+    users_root = Path(data_dir) / "users"
+    try:
+        user_ids = [d.name for d in users_root.iterdir() if d.is_dir()]
+    except OSError:
+        return frozenset()
+
+    for user_id in user_ids:
+        if is_test_user_id(user_id, data_dir=data_dir):
+            continue
+        profile_path = users_root / user_id / "user.json"
+        try:
+            profile = json.loads(profile_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for field in ("mail_to", "email"):
+            raw = profile.get(field)
+            if raw:
+                allowed.add(_extract_addr(raw).strip().lower())
+    return frozenset(allowed)
+
+
+def _mask_addr_for_log(raw: str) -> str:
+    """Issue #1219 AC-6: reduziert eine Adresse auf die Domain für Log-/
+    Fehlermeldungen — verhindert, dass eine volle Empfängeradresse im
+    Klartext geloggt bzw. in einer Exception-Message ausgegeben wird."""
+    addr = _extract_addr(raw)
+    _, sep, domain = addr.partition("@")
+    return f"***@{domain.lower()}" if sep else "***"
 
 
 def build_mime_message(
@@ -301,29 +355,65 @@ class EmailOutput:
             recipients = list(to) if to else [self._to]
         to_header = ", ".join(recipients)
 
-        # Issue #1147: dritte Guard-Linie — empfängerseitig, direkt nach der
-        # finalen Empfänger-Auflösung, VOR MIME-Bau/Dial. Greift auch bei
-        # per-Aufruf-Override (to=...), der die Init-Guards umgeht.
-        # Fix-Loop 1 (F001/F002a): jeder Empfänger-Eintrag wird an Kommas
-        # gesplittet und pro Teil Plus-adressierung normalisiert, bevor
-        # gegen TEST_MAILBOXES verglichen wird.
-        # Fix-Loop 4 (F005): der rohe Substring-Scan (Fangnetz, s.o.) wird per
-        # OR mit der Parser-Union verknüpft — er greift zusätzlich, unabhängig
-        # davon, ob die Parser-Pipeline den Empfänger korrekt zerlegt.
+        # Issue #1219 (löst die #1147-Denylist ab): dritte Guard-Linie —
+        # empfängerseitig, direkt nach der finalen Empfänger-Auflösung, VOR
+        # MIME-Bau/Dial. Greift auch bei per-Aufruf-Override (to=...), der
+        # die Init-Guards umgeht. Statt einer 2-Adressen-Denylist wird jeder
+        # Empfänger jetzt gegen eine POSITIVE Allowlist geprüft (echte
+        # mail_to/email-Adressen angelegter, nicht als Test erkannter
+        # Nutzerprofile). gregor-test@/gregor-staging@henemm.com gehören zu
+        # keinem echten Profil und bleiben so automatisch blockiert
+        # (Regressionsschutz für die abgelöste Denylist).
+        # Fix-Loop 4 (F005): der rohe Substring-Scan (Fangnetz, s.o.) bleibt
+        # ZUSÄTZLICH aktiv (kein Ersatz für die Allowlist-Prüfung) — er
+        # greift unabhängig davon, ob die Parser-Pipeline den Empfänger
+        # korrekt zerlegt.
         if "resend" in (self._host or "").lower():
-            hit = [
-                r
-                for r in recipients
-                if any(a in TEST_MAILBOXES for a in _normalized_addrs_for_guard(r))
-                or _raw_contains_test_mailbox(r)
-            ]
-            if hit:
+            # Adversary F002 (Issue #1219): NICHT direkt GZ_DATA_DIR lesen —
+            # das umgeht app.loader._DATA_ROOT, die autouse-Test-Isolation
+            # aus tests/conftest.py (Issue #1133). get_data_root() honoriert
+            # _DATA_ROOT zuerst, dann GZ_DATA_DIR, dann den Default "data" —
+            # im echten Betrieb unverändert, in Tests korrekt isoliert.
+            from app.loader import get_data_root
+
+            allowlist = _load_resend_allowlist(data_dir=str(get_data_root()))
+            blocked = []
+            for r in recipients:
+                # Nur candidates, die tatsaechlich wie eine Adresse aussehen
+                # (enthalten "@"), gehen in die Allowlist-Pruefung ein --
+                # die bewusst permissive Multi-Strategie-Extraktion von
+                # _normalized_addrs_for_guard (Union aus getaddresses() +
+                # Trennzeichen-Split, urspruenglich fuer die #1147-DENYLIST
+                # gebaut) liefert bei kaputt gequoteten Anzeigenamen auch
+                # reine Text-Fragmente ohne "@" (z.B. "foo"/"bar"), die nie
+                # eine echte Adresse sein koennen und sonst die ALLOWLIST-
+                # Pruefung (Allow-Logik: ALLE candidates muessen matchen)
+                # faelschlich zum Blockieren echter Empfaenger bringen wuerden.
+                candidates = [
+                    a for a in _normalized_addrs_for_guard(r) if "@" in a
+                ]
+                if (
+                    not candidates
+                    or any(a not in allowlist for a in candidates)
+                    or _raw_contains_test_mailbox(r)
+                ):
+                    blocked.append(r)
+            if blocked:
+                masked = [_mask_addr_for_log(r) for r in blocked]
+                logger.warning(
+                    "Resend-Allowlist-Guard blockiert %d Empfänger, die "
+                    "keinem echten Nutzerprofil zugeordnet werden konnten "
+                    "(Issue #1147/#1219): %s",
+                    len(blocked),
+                    masked,
+                )
                 raise OutputConfigError(
                     "email",
-                    f"Test-Postfach {hit!r} in Empfängerliste bei Resend-Host "
-                    f"{self._host!r} — Versand blockiert (Issue #1147). "
-                    "Test-Postfächer dürfen NIEMALS über Resend erreicht werden, "
-                    "auch nicht als Teil einer gemischten Empfängerliste.",
+                    f"{len(blocked)} Empfänger nicht in der Resend-Allowlist "
+                    f"bei Host {self._host!r} — Versand blockiert (Issue "
+                    "#1147/#1219). Nur mail_to/email echter, angelegter "
+                    f"(Nicht-Test-)Nutzerprofile dürfen über Resend erreicht "
+                    f"werden. Betroffene Domains: {masked}",
                 )
 
         msg = build_mime_message(

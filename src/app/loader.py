@@ -771,6 +771,28 @@ def _parse_user(data: Dict[str, Any]) -> User:
 # Data Directory Helpers
 # =============================================================================
 
+def get_data_root() -> Path:
+    """Resolve the data ROOT directory (parent of ``users/``).
+
+    Honors the module-level ``_DATA_ROOT`` override (used in tests, Issue
+    #1133) and, as a fallback, the ``GZ_DATA_DIR`` environment variable.
+    Priority: ``_DATA_ROOT`` > ``GZ_DATA_DIR`` > default ``data``.
+
+    Any code that needs the data directory WITHOUT going through
+    ``get_data_dir()``'s per-user ``users/<id>`` join (e.g. Issue #1219's
+    Resend-Allowlist-Loader, which scans ALL user directories) MUST use this
+    function rather than reading ``GZ_DATA_DIR`` directly — otherwise the
+    autouse test-isolation fixture (``tests/conftest.py``, Issue #1133) is
+    silently bypassed and the real ``data/users/`` tree could be read.
+    """
+    import os as _os
+    import sys as _sys
+    _root = getattr(_sys.modules[__name__], "_DATA_ROOT", None) or _os.environ.get(
+        "GZ_DATA_DIR"
+    )
+    return Path(_root) if _root else Path("data")
+
+
 def get_data_dir(user_id: str = "default") -> Path:
     """Get the data directory for a user.
 
@@ -778,14 +800,7 @@ def get_data_dir(user_id: str = "default") -> Path:
     as a fallback, the ``GZ_DATA_DIR`` environment variable (Issue #1133).
     Priority: ``_DATA_ROOT`` > ``GZ_DATA_DIR`` > default ``data/users``.
     """
-    import os as _os
-    import sys as _sys
-    _root = getattr(_sys.modules[__name__], "_DATA_ROOT", None) or _os.environ.get(
-        "GZ_DATA_DIR"
-    )
-    if _root:
-        return Path(_root) / "users" / user_id
-    return Path("data/users") / user_id
+    return get_data_root() / "users" / user_id
 
 
 def get_locations_dir(user_id: str = "default") -> Path:

@@ -16,6 +16,11 @@ import (
 // greifen vor dem Dial, die Tests prüfen den Fehler direkt.
 
 // AC-5: Resend-Host + gregor-test@ → Fehler mit "1147", kein Dial.
+//
+// Nachtrag Issue #1219 (AC-6): die Fehlermeldung darf die volle
+// Empfängeradresse NICHT mehr im Klartext enthalten (Log-/Fehlertext-
+// Maskierung) — die ursprüngliche Erwartung "Fehler muss das Test-Postfach
+// nennen" ist damit bewusst durch die neue AC-6-Anforderung ersetzt.
 func TestSend_ResendHostToGregorTestBlockedWith1147(t *testing.T) {
 	cfg := MailConfig{Host: "smtp.resend.com", Port: 587, User: "resend", Pass: "re_x"}
 	err := Send(cfg, "gregor-test@henemm.com", resendTestMail())
@@ -25,8 +30,8 @@ func TestSend_ResendHostToGregorTestBlockedWith1147(t *testing.T) {
 	if !strings.Contains(err.Error(), "1147") {
 		t.Errorf("AC-5: Fehler muss Issue #1147 nennen, war: %v", err)
 	}
-	if !strings.Contains(err.Error(), "gregor-test@henemm.com") {
-		t.Errorf("AC-5: Fehler muss das Test-Postfach nennen, war: %v", err)
+	if strings.Contains(err.Error(), "gregor-test@henemm.com") {
+		t.Errorf("AC-6 (#1219): Fehler darf die volle Empfängeradresse NICHT im Klartext enthalten, war: %v", err)
 	}
 }
 
@@ -72,7 +77,13 @@ func TestSend_NameFormAddressStillBlockedWith1147(t *testing.T) {
 // AC-4/Regressionsschutz: Resend-Host + normaler Empfänger → NICHT der
 // #1147-Guard. Unter go test greift stattdessen der bestehende
 // resendBlocked (#1122) — dessen Fehlertext wird geprüft, nicht "1147".
+//
+// Nachtrag Issue #1219: "someone@example.com" wird per allowlistedDataDir
+// als Fixture-Nutzerprofil registriert, damit die neue Allowlist-Prüfung
+// selbst nicht greift und weiterhin gezielt resendBlocked() (#1122) geprüft
+// wird — genau das ursprüngliche Testziel.
 func TestSend_ResendHostNormalRecipientNot1147Guard(t *testing.T) {
+	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "someone@example.com"))
 	cfg := MailConfig{Host: "smtp.resend.com", Port: 587, User: "resend", Pass: "re_x"}
 	err := Send(cfg, "someone@example.com", resendTestMail())
 	if err == nil {
@@ -158,7 +169,12 @@ func TestSend_WhitespaceEmbeddedRecipientBlockedWith1147(t *testing.T) {
 // den #1147-Guard NICHT auslösen — der Trennzeichen-Fix darf keine
 // False-Positives für normale Empfänger erzeugen. Unter go test greift
 // stattdessen der bestehende resendBlocked (#1122).
+//
+// Nachtrag Issue #1219: beide Adressen werden per allowlistedDataDir als
+// Fixture-Nutzerprofile registriert, damit die neue Allowlist-Prüfung selbst
+// nicht greift und nur die Trennzeichen-Logik geprüft wird.
 func TestSend_TwoRealRecipientsSemicolonSeparatedNot1147Guard(t *testing.T) {
+	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "real-a@example.com", "real-b@example.com"))
 	cfg := MailConfig{Host: "smtp.resend.com", Port: 587, User: "resend", Pass: "re_x"}
 	err := Send(cfg, "real-a@example.com; real-b@example.com", resendTestMail())
 	if err == nil {
@@ -227,7 +243,14 @@ func TestSend_PlusAddressedControlCharDisplayNameBlockedWith1147(t *testing.T) {
 
 // F005e (AC-4-Negativfall 1): echter Plus-Tag-Empfänger ohne Steuerzeichen
 // darf den #1147-Guard NICHT auslösen.
+//
+// Nachtrag Issue #1219: die BASIS-Adresse "real@example.com" (ohne Plus-Tag
+// -- Allowlist-Einträge werden nicht plus-gekappt, der Empfänger-Query aber
+// schon, siehe normalizedAddrForGuard) wird per allowlistedDataDir
+// registriert, damit die neue Allowlist-Prüfung selbst nicht greift und nur
+// die Plus-Tag-Normalisierung geprüft wird.
 func TestSend_RealRecipientPlusTagNot1147Guard(t *testing.T) {
+	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "real@example.com"))
 	cfg := MailConfig{Host: "smtp.resend.com", Port: 587, User: "resend", Pass: "re_x"}
 	err := Send(cfg, "real+tag@example.com", resendTestMail())
 	if err != nil && strings.Contains(err.Error(), "1147") {
@@ -238,7 +261,12 @@ func TestSend_RealRecipientPlusTagNot1147Guard(t *testing.T) {
 // F005f (AC-4-Negativfall 2): Anzeigename mit CRLF, dessen Adresse KEIN
 // Test-Postfach ist, darf den #1147-Guard NICHT auslösen — sonst würde ein
 // legitimer Empfänger mit kaputtem Namen den eigenen Versand blockieren.
+//
+// Nachtrag Issue #1219: "real@example.com" wird per allowlistedDataDir
+// registriert, damit die neue Allowlist-Prüfung selbst nicht greift und nur
+// die Steuerzeichen-Behandlung geprüft wird.
 func TestSend_ControlCharRealRecipientNot1147Guard(t *testing.T) {
+	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "real@example.com"))
 	cfg := MailConfig{Host: "smtp.resend.com", Port: 587, User: "resend", Pass: "re_x"}
 	err := Send(cfg, "\"Weird\r\nName\" <real@example.com>", resendTestMail())
 	if err != nil && strings.Contains(err.Error(), "1147") {

@@ -31,6 +31,7 @@ scheitert der echte Dial-Versuch anders.
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -92,6 +93,31 @@ def _make_output(*, host: str = "smtp.resend.com") -> EmailOutput:
         "Testaufbau defekt: env darf nicht 'staging' sein"
     )
     return EmailOutput(s)
+
+
+def _write_allowlist_fixture(*addresses: str) -> None:
+    """Issue #1219 Nachtrag (Adversary F002): registriert jede Adresse in
+    `addresses` als `mail_to` eines eigenen Fixture-Nutzerprofils UNTER DEM
+    von der autouse-Isolation (Issue #1133, `tests/conftest.py`) bereits
+    gesetzten `app.loader._DATA_ROOT`. Der Produktions-Guard loest sein
+    `data_dir` seit der F002-Nachbesserung ueber `app.loader.get_data_root()`
+    auf (Prioritaet `_DATA_ROOT` > `GZ_DATA_DIR` > Default) -- ein eigener
+    `tmp_path`/`GZ_DATA_DIR`-Override wuerde vom bereits gesetzten
+    `_DATA_ROOT` ignoriert. Ohne diese Registrierung wuerden diese
+    "kein Guard-Block"-Tests seit der Allowlist-Umstellung (#1219)
+    fehlschlagen, weil eine rein fiktive @example.com-Adresse zu keinem
+    echten Profil gehoert -- die Tests wollen aber gezielt False-Positives
+    der PARSING-/Normalisierungs-Pipeline pruefen, nicht die
+    Allowlist-Mitgliedschaft selbst."""
+    from app import loader as app_loader
+
+    data_root = app_loader.get_data_root()
+    for i, addr in enumerate(addresses):
+        user_dir = data_root / "users" / f"fixture-{i}"
+        user_dir.mkdir(parents=True, exist_ok=True)
+        (user_dir / "user.json").write_text(
+            json.dumps({"mail_to": addr}), encoding="utf-8"
+        )
 
 
 def _assert_1147_guard_fired(exc: Exception | None, ac_label: str) -> None:
@@ -194,7 +220,16 @@ class TestAC4NonTestRecipientUnaffected:
         Nicht-Test-Empfaenger enthaelt / THEN greift die neue #1147-Invariante
         NICHT -- andere Fehler (z.B. Auth-Fehler gegen den echten
         Resend-Dial) sind hier unschaedlich und werden nur auf Abwesenheit
-        des #1147-Textes geprueft."""
+        des #1147-Textes geprueft.
+
+        Nachtrag Issue #1219: seit der Allowlist-Umstellung muss die
+        Empfaengeradresse zu einem echten (Fixture-)Nutzerprofil gehoeren,
+        sonst wuerde sie unabhaengig von dieser Pruefung blockiert -- das
+        waere ein legitimer NEUER Guard-Grund, kein #1147-Parsing-Fehler.
+        Das Fixture-Profil landet im autouse-isolierten `_DATA_ROOT` (Issue
+        #1133/#1219 Adversary F002), nicht in einem eigenen `GZ_DATA_DIR`.
+        """
+        _write_allowlist_fixture("someone@example.com")
         output = _make_output()
         exc = _send_and_capture(output, to=["someone@example.com"])
         if isinstance(exc, OutputConfigError):
@@ -300,7 +335,13 @@ class TestF003SemicolonSeparatorBypass:
         nicht-Test-Adressen enthaelt ("real-a@example.com;
         real-b@example.com") / THEN greift der #1147-Guard NICHT -- der
         Trennzeichen-Fix darf keine False-Positives fuer normale Empfaenger
-        erzeugen."""
+        erzeugen.
+
+        Nachtrag Issue #1219: beide Adressen werden als Fixture-Nutzerprofile
+        im autouse-isolierten `_DATA_ROOT` registriert (Issue #1133/#1219
+        Adversary F002), damit die Allowlist-Pruefung selbst nicht greift
+        und nur die Parsing-/Trennzeichen-Logik geprueft wird."""
+        _write_allowlist_fixture("real-a@example.com", "real-b@example.com")
         output = _make_output()
         exc = _send_and_capture(
             output, to=["real-a@example.com; real-b@example.com"]
@@ -356,7 +397,13 @@ class TestF004QuotedDisplayNameBypass:
         """F004c (False-Positive-Schutz): GIVEN Resend-EmailOutput / WHEN
         send() einen gequoteten Anzeigenamen mit Semikolon erhaelt, dessen
         Adresse KEIN Test-Postfach ist ('"Foo; Bar" <real@example.com>') /
-        THEN greift der #1147-Guard NICHT."""
+        THEN greift der #1147-Guard NICHT.
+
+        Nachtrag Issue #1219: "real@example.com" wird als Fixture-
+        Nutzerprofil im autouse-isolierten `_DATA_ROOT` registriert (Issue
+        #1133/#1219 Adversary F002), damit die Allowlist-Pruefung selbst
+        nicht greift und nur die Quote-/Trennzeichen-Logik geprueft wird."""
+        _write_allowlist_fixture("real@example.com")
         output = _make_output()
         exc = _send_and_capture(
             output, to=['"Foo; Bar" <real@example.com>']
@@ -439,7 +486,16 @@ class TestF005ControlCharBypass:
     def test_control_char_real_recipient_plus_tag_no_1147(self):
         """F005e (AC-4-Negativfall 1): GIVEN Resend-EmailOutput / WHEN send()
         einen echten Empfaenger mit Plus-Tag ohne Steuerzeichen erhaelt
-        ('real+tag@example.com') / THEN greift der #1147-Guard NICHT."""
+        ('real+tag@example.com') / THEN greift der #1147-Guard NICHT.
+
+        Nachtrag Issue #1219: die BASIS-Adresse "real@example.com" (ohne
+        Plus-Tag -- Allowlist-Eintraege werden nicht plus-gekappt, der
+        Empfaenger-Query aber schon, siehe _normalize_addr_for_guard) wird
+        als Fixture-Nutzerprofil im autouse-isolierten `_DATA_ROOT`
+        registriert (Issue #1133/#1219 Adversary F002), damit die
+        Allowlist-Pruefung selbst nicht greift und nur die
+        Plus-Tag-Normalisierung geprueft wird."""
+        _write_allowlist_fixture("real@example.com")
         output = _make_output()
         exc = _send_and_capture(output, to=["real+tag@example.com"])
         if isinstance(exc, OutputConfigError):
@@ -449,20 +505,35 @@ class TestF005ControlCharBypass:
             )
 
     def test_control_char_real_recipient_no_1147(self):
-        """F005f (AC-4-Negativfall 2): GIVEN Resend-EmailOutput / WHEN send()
-        einen Anzeigenamen mit CRLF erhaelt, dessen Adresse KEIN Test-Postfach
-        ist ('"Weird\\r\\nName" <real@example.com>') / THEN greift der
-        #1147-Guard NICHT -- ein legitimer Empfaenger mit kaputtem Namen darf
-        den eigenen Versand nicht blockieren."""
+        """F005f -- VERSCHAERFT durch Issue #1219 (2026-07-10): der
+        eingebettete CRLF im Anzeigenamen bringt bereits Pythons
+        `email.utils.parseaddr()`/`getaddresses()` dazu, "real@example.com"
+        GAR NICHT mehr als Adresse zu erkennen (beide liefern faelschlich
+        `('', 'Weird')` zurueck -- empirisch verifiziert, ein bestehender
+        Parser-Bug, nicht durch #1219 verursacht). Fuer die alte #1147-
+        DENYLIST war das folgenlos (ein Fehlschlag der Adress-Extraktion
+        matcht nie TEST_MAILBOXES). Fuer die neue ALLOWLIST ist es das nicht:
+        ohne eine positiv erkannte Adresse kann der Guard nicht mehr
+        VERIFIZIEREN, dass der Empfaenger zu einem echten Profil gehoert --
+        selbst mit "real@example.com" als Fixture registriert (s.u.) bleibt
+        der Empfaenger blockiert, weil keine Kandidaten-Adresse mit "@"
+        extrahiert werden kann. Das ist eine BEABSICHTIGTE Verschaerfung
+        (fail-closed bei nicht positiv verifizierbarem Empfaenger), keine
+        Regression -- der Test dokumentiert das jetzt."""
+        _write_allowlist_fixture("real@example.com")
         output = _make_output()
         exc = _send_and_capture(
             output, to=['"Weird\r\nName" <real@example.com>']
         )
-        if isinstance(exc, OutputConfigError):
-            assert "1147" not in str(exc), (
-                f"F005f: #1147-Guard darf bei echtem Empfaenger mit "
-                f"Steuerzeichen-Anzeigenamen nicht greifen: {exc}"
-            )
+        assert isinstance(exc, OutputConfigError), (
+            "F005f (post-#1219): ein Empfaenger, dessen Adresse wegen des "
+            f"CRLF-Parser-Bugs nicht extrahiert werden kann, muss jetzt "
+            f"fail-closed blockiert werden, statt: {exc}"
+        )
+        assert "1219" in str(exc), (
+            f"F005f (post-#1219): Blockade muss auf die neue Allowlist-"
+            f"Pruefung (#1219) zurueckgehen: {exc}"
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -4,12 +4,14 @@
 package mail
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"mime"
 	"net/mail"
 	"net/smtp"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -69,10 +71,122 @@ func resendBlocked(host string) error {
 }
 
 // testMailboxes lists GZ test mailboxes that must never receive mail via
-// Resend, regardless of any process-level signal (Issue #1147).
+// Resend. Historisch (Issue #1147) als Denylist genutzt; seit Issue #1219
+// funktional durch loadResendAllowlist() ABGELÖST — beide Adressen gehören
+// zu keinem echten Nutzerprofil und werden daher automatisch NICHT in die
+// Allowlist aufgenommen. Konstante bleibt zu Dokumentationszwecken erhalten.
 var testMailboxes = map[string]bool{
 	"gregor-test@henemm.com":    true,
 	"gregor-staging@henemm.com": true,
+}
+
+// resendAllowlistProfile ist eine minimale Projektion eines user.json-
+// Profils — nur die für die Resend-Empfänger-Allowlist relevanten Felder
+// (Issue #1219). IsTestUser (Feld "is_test_user") ist Teil der Adversary-
+// Nachbesserung F001 — Symmetrie zu Python is_test_user_id().
+type resendAllowlistProfile struct {
+	MailTo     string `json:"mail_to"`
+	Email      string `json:"email"`
+	IsTestUser bool   `json:"is_test_user"`
+}
+
+// isResendAllowlistTestUser wendet die VOLLEN #1013-Test-User-Ausschluss-
+// Kriterien an (Issue #1219 Adversary F001 — CRITICAL): Symmetrie zu Python
+// is_test_user_id() (src/app/config.py:30-50), das (a) die Namens-Substring-
+// Heuristik, (b) die feste Fixture-ID "tg-live-e2e" UND (c) das
+// Profil-Flag "is_test_user":true prüft. Go's IsTestUser() deckt bewusst
+// NUR (a) ab, damit bestehende Aufrufer (z.B. handler/auth.go:224, die
+// keinen dataDir-/Profil-Kontext haben) unverändert bleiben — die
+// zusätzlichen Kriterien (b)/(c) werden hier, im Allowlist-Loader, ergänzt,
+// wo das Profil ohnehin gelesen werden muss. Fail-soft: fehlt/kaputt die
+// user.json, entscheidet nur die Namens-/ID-Heuristik (a)+(b) — exakt wie
+// Python.
+func isResendAllowlistTestUser(dataDir, userID string) bool {
+	if IsTestUser(userID) || userID == "tg-live-e2e" {
+		return true
+	}
+	data, err := os.ReadFile(filepath.Join(dataDir, "users", userID, "user.json"))
+	if err != nil {
+		return false
+	}
+	var profile resendAllowlistProfile
+	if err := json.Unmarshal(data, &profile); err != nil {
+		return false
+	}
+	return profile.IsTestUser
+}
+
+// resendAllowlistDataDir löst das Datenverzeichnis für loadResendAllowlist
+// auf und respektiert dabei die bestehende GZ_DATA_DIR-Konvention (Issue
+// #1219) — fällt sonst auf den Projekt-Default "data" zurück.
+func resendAllowlistDataDir() string {
+	if v := os.Getenv("GZ_DATA_DIR"); v != "" {
+		return v
+	}
+	return "data"
+}
+
+// loadResendAllowlist sammelt normalisierte mail_to-/email-Adressen aller
+// Nicht-Test-Nutzerprofile unter dataDir/users/<id>/user.json (Issue #1219).
+// Symmetrisches Pendant zu src/output/channels/email.py::_load_resend_allowlist.
+// Test-Nutzer (IsTestUser) werden konservativ ausgeschlossen — im Zweifel
+// als Test behandeln, nicht in die Allowlist aufnehmen. Plus-Adressierung
+// wird auf Allowlist-Einträgen NICHT gekappt (echte Nutzeradressen werden
+// 1:1 verglichen, nur lowercase/trim via mail.ParseAddress).
+//
+// Fail-soft: ein fehlendes dataDir/users-Verzeichnis liefert eine leere
+// Allowlist; eine fehlende/kaputte user.json überspringt nur das betroffene
+// Profil — nie ein Crash des Sendepfads.
+func loadResendAllowlist(dataDir string) map[string]bool {
+	allowed := make(map[string]bool)
+	usersRoot := filepath.Join(dataDir, "users")
+	entries, err := os.ReadDir(usersRoot)
+	if err != nil {
+		return allowed
+	}
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		userID := e.Name()
+		if isResendAllowlistTestUser(dataDir, userID) {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(usersRoot, userID, "user.json"))
+		if err != nil {
+			continue
+		}
+		var profile resendAllowlistProfile
+		if err := json.Unmarshal(data, &profile); err != nil {
+			continue
+		}
+		for _, raw := range []string{profile.MailTo, profile.Email} {
+			if raw == "" {
+				continue
+			}
+			addr := raw
+			if parsed, perr := mail.ParseAddress(raw); perr == nil {
+				addr = parsed.Address
+			}
+			allowed[strings.ToLower(strings.TrimSpace(addr))] = true
+		}
+	}
+	return allowed
+}
+
+// maskAddrForLog reduziert eine Adresse auf die Domain für Log-/
+// Fehlermeldungen (Issue #1219 AC-6) — verhindert, dass eine volle
+// Empfängeradresse im Klartext geloggt bzw. in einer Fehlermeldung
+// ausgegeben wird.
+func maskAddrForLog(raw string) string {
+	addr := raw
+	if parsed, err := mail.ParseAddress(raw); err == nil {
+		addr = parsed.Address
+	}
+	if idx := strings.Index(addr, "@"); idx >= 0 {
+		return "***@" + strings.ToLower(addr[idx+1:])
+	}
+	return "***"
 }
 
 // Fix-Loop 4 (F005): rohes, PARSER-UNABHÄNGIGES Fangnetz (Symmetrie zu
@@ -155,35 +269,50 @@ func splitRecipientField(to string) []string {
 	return out
 }
 
-// recipientBlocked enforces the recipient-side Resend invariant (Issue
-// #1147): a Resend host must never deliver to a GZ test mailbox, regardless
-// of user/env/token signals. Third guard line, complements resendBlocked
-// (#1122) — checked BEFORE resendBlocked so it fires even under go test,
-// where resendBlocked already blocks every Resend host unconditionally.
-// Fix-Loop 1 (F002a) + Fix-Loop 2 (F003): `to` is split on the comma/
-// semicolon separator CLASS (with a whitespace fallback for fragments
-// mail.ParseAddress can't parse) so neither an embedded-comma nor an
-// embedded-semicolon string (e.g. from a mail_to config field or a
-// frontend free-text field that only splits on commas) can smuggle a test
-// mailbox past the guard.
+// recipientBlocked enforces the recipient-side Resend invariant. Seit Issue
+// #1219 eine POSITIVE Allowlist statt der #1147-Denylist: ein Resend-Host
+// darf nur an echte, angelegte (Nicht-Test-)Nutzerprofile zustellen. Dritte
+// Guard-Linie, ergänzt resendBlocked (#1122) — wird VOR resendBlocked
+// geprüft, damit sie auch unter go test greift, wo resendBlocked ohnehin
+// jeden Resend-Host blockiert. gregor-test@/gregor-staging@henemm.com
+// gehören zu keinem echten Profil und bleiben so automatisch blockiert
+// (Regressionsschutz für die abgelöste #1147-Denylist).
+// Fix-Loop 1 (F002a) + Fix-Loop 2 (F003): `to` wird an der Trennzeichen-
+// KLASSE Komma/Semikolon gesplittet (mit Whitespace-Fallback für Fragmente,
+// die mail.ParseAddress nicht parsen kann).
 func recipientBlocked(host, to string) error {
 	if !strings.Contains(strings.ToLower(host), "resend") {
 		return nil
 	}
-	// Fix-Loop 4 (F005): roher Substring-Scan zuerst — greift zusätzlich zur
-	// Parser-Union unten, unabhängig davon, ob splitRecipientField den
-	// Empfänger korrekt zerlegt.
+	// Fix-Loop 4 (F005): roher Substring-Scan bleibt ZUSÄTZLICH aktiv (kein
+	// Ersatz für die Allowlist-Prüfung) — greift unabhängig davon, ob
+	// splitRecipientField den Empfänger korrekt zerlegt.
 	if rawContainsTestMailbox(to) {
+		log.Printf(
+			"mail.Send: Resend-Allowlist-Guard (Fangnetz) blockiert Empfänger bei Host %q (#1147/#1219)",
+			host)
 		return fmt.Errorf(
-			"mail.Send: Test-Postfach in Empfänger-Rohstring %q bei Resend-Host %q blockiert (#1147) — "+
-				"Test-Postfächer dürfen nie über Resend versendet werden", to, host)
+			"mail.Send: Test-Postfach in Empfänger-Rohstring bei Resend-Host %q blockiert (#1147/#1219) — "+
+				"Test-Postfächer dürfen nie über Resend versendet werden", host)
 	}
-	for _, part := range splitRecipientField(to) {
-		if testMailboxes[normalizedAddrForGuard(part)] {
-			return fmt.Errorf(
-				"mail.Send: Test-Postfach %q bei Resend-Host %q blockiert (#1147) — "+
-					"Test-Postfächer dürfen nie über Resend versendet werden", to, host)
+
+	allowlist := loadResendAllowlist(resendAllowlistDataDir())
+	parts := splitRecipientField(to)
+	var blocked []string
+	for _, part := range parts {
+		if !allowlist[normalizedAddrForGuard(part)] {
+			blocked = append(blocked, maskAddrForLog(part))
 		}
+	}
+	if len(parts) == 0 || len(blocked) > 0 {
+		log.Printf(
+			"mail.Send: Resend-Allowlist-Guard blockiert %d Empfänger bei Host %q, "+
+				"kein echtes Nutzerprofil gefunden (#1147/#1219): %v",
+			len(blocked), host, blocked)
+		return fmt.Errorf(
+			"mail.Send: Empfänger nicht in der Resend-Allowlist bei Host %q blockiert (#1147/#1219) — "+
+				"nur mail_to/email echter, angelegter (Nicht-Test-)Nutzerprofile dürfen über Resend erreicht werden",
+			host)
 	}
 	return nil
 }

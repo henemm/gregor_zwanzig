@@ -31,9 +31,17 @@ func TestIsTestUser(t *testing.T) {
 
 // TestIsTestUser_Boundary documents the KNOWN false-positive behaviour of
 // IsTestUser: any string containing "test" or "tdd" as a substring matches.
-// This mirrors src/app/config.py::_is_test_user (intentional). If a prod-user
-// registers with such a name, their reset mail goes through Gmail instead of
-// Resend — acceptable risk, easy to avoid in setup. See spec Known Limitations.
+// NOTE (Issue #1219 Adversary F001): IsTestUser() covers ONLY the name-
+// substring heuristic. Since Issue #1013, Python's is_test_user_id()
+// (src/app/config.py:30) ALSO excludes the fixed ID "tg-live-e2e" and any
+// profile with the "is_test_user": true flag — IsTestUser() alone is no
+// longer a full mirror of that function. The Resend-Allowlist-Loader
+// (loadResendAllowlist/isResendAllowlistTestUser, sender.go) applies all
+// three criteria for symmetry with Python; IsTestUser() itself stays
+// name-heuristic-only so existing callers (e.g. handler/auth.go:224) are
+// unaffected. If a prod-user registers with such a name, their reset mail
+// goes through Gmail instead of Resend — acceptable risk, easy to avoid in
+// setup. See spec Known Limitations.
 func TestIsTestUser_Boundary(t *testing.T) {
 	if !IsTestUser("contest") {
 		t.Errorf("IsTestUser('contest') = false; expected true (known false positive — see spec)")
