@@ -257,6 +257,9 @@
 			s.id !== stage.id ? s : { ...s, waypoints: [...s.waypoints, newWp] }
 		);
 		activeWaypointId = newWp.id;
+		// Bug #1194 — fehlender Save-Trigger: ohne dies wird ein per Kartentipp
+		// angelegter Wegpunkt nie gespeichert und geht bei Reload verloren.
+		if (saveController) scheduleSave(); else void save();
 	}
 
 	// Waypoint-Mutations (Factory-Pattern fuer WaypointCard-Callbacks).
