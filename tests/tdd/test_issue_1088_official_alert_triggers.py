@@ -232,7 +232,8 @@ class TestAC1StandaloneTrigger:
             assert len(result) == 1, (
                 f"Erwartet genau 1 neue amtliche Warnung, erhalten: {result!r}"
             )
-            assert result[0].label == alert.label
+            # Issue #1200: Rückgabe sind (OfficialAlert, segment_ids)-Tupel.
+            assert result[0][0].label == alert.label
             assert counting_source.fetch_calls >= 1
         finally:
             oa_base._REGISTERED_SOURCES.clear()
@@ -368,7 +369,8 @@ class TestAC4FailSoft:
                 f"Unbetroffener Trip muss weiterhin normal geprüft werden, erhalten: "
                 f"{result_unaffected!r}"
             )
-            assert result_unaffected[0].label == good_alert.label
+            # Issue #1200: Rückgabe sind (OfficialAlert, segment_ids)-Tupel.
+            assert result_unaffected[0][0].label == good_alert.label
         finally:
             oa_base._REGISTERED_SOURCES.clear()
             oa_base._REGISTERED_SOURCES.extend(backup)
@@ -464,9 +466,10 @@ class TestAC6Dedupe:
             assert len(round1) == 1, f"Runde 1 (Level 2, neu) muss feuern, erhalten: {round1!r}"
 
             # Simuliert erfolgreichen Versand: alert_state fortschreiben.
+            # Issue #1200: round1[0] ist ein (OfficialAlert, segment_ids)-Tupel.
             state = state_svc.load(trip.id)
             state[f"official_alert:{region_label}:{hazard}"] = {
-                "last_reported_value": float(round1[0].level),
+                "last_reported_value": float(round1[0][0].level),
                 "reported_at": datetime.now(timezone.utc).isoformat(),
             }
             state_svc.save(trip.id, state)
@@ -479,7 +482,8 @@ class TestAC6Dedupe:
             level_source.level = 3
             round3 = svc.check_official_alert_triggers(trip)
             assert len(round3) == 1, f"Runde 3 (Eskalation auf Level 3) muss erneut feuern, erhalten: {round3!r}"
-            assert round3[0].level == 3
+            # Issue #1200: Rückgabe sind (OfficialAlert, segment_ids)-Tupel.
+            assert round3[0][0].level == 3
         finally:
             oa_base._REGISTERED_SOURCES.clear()
             oa_base._REGISTERED_SOURCES.extend(backup)
@@ -593,11 +597,12 @@ class TestAC7SmsWithoutParity:
             notification_service = NotificationService(settings, user_id)
 
             mail_calls: list = []
+            # Issue #1200: official_notices sind (OfficialAlert, segment_ids)-Tupel.
             notification_service._dispatch_alert_message(
                 alert_msg=alert_msg,
                 effective_channels={"email"},
                 mail_sink=lambda subject, body: mail_calls.append((subject, body)),
-                official_notices=[alert],
+                official_notices=[(alert, [])],
             )
 
             assert len(mail_calls) == 1

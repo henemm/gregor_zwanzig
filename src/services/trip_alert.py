@@ -918,9 +918,12 @@ class TripAlertService:
         return result.sent
 
     def check_official_alert_triggers(self, trip: "Trip") -> list:
-        """Issue #1088: liefert amtliche Warnungen, die NEU sind oder deren
+        """Issue #1088/#1200: liefert amtliche Warnungen, die NEU sind oder deren
 
-        Level gestiegen ist ggü. dem letzten gemeldeten Stand (alert_state).
+        Level gestiegen ist ggü. dem letzten gemeldeten Stand (alert_state),
+        getaggt mit den betroffenen Segment-IDs als
+        `list[tuple[OfficialAlert, list[str]]]` (Issue #1200 — Segment-Bezug
+        in der Standalone-Alert-Mail).
         Fail-soft: Toggle-Gate zuerst, Quellenfehler werden bereits von
         get_official_alerts_for_location() pro Quelle abgefangen. Schreibt
         KEINEN alert_state — das übernimmt der Aufrufer erst nach
@@ -935,8 +938,18 @@ class TripAlertService:
         if not cached:
             return []
 
+        # Issue #1200: Coord->Segment-Mapping VOR dem Coord-Dedup aufbauen,
+        # sonst geht die Segment-Info verloren, wenn zwei Segmente dieselbe
+        # Koordinate teilen.
+        coord_to_segments: dict[tuple[float, float], list[str]] = {}
+        for sw in cached:
+            if sw.has_error:
+                continue
+            coord = (round(sw.segment.start_point.lat, 3), round(sw.segment.start_point.lon, 3))
+            coord_to_segments.setdefault(coord, []).append(str(sw.segment.segment_id))
+
         seen: set[tuple[float, float]] = set()
-        all_alerts = []
+        tagged_alerts: list[tuple] = []
         for sw in cached:
             if sw.has_error:
                 continue
@@ -944,25 +957,28 @@ class TripAlertService:
             if coord in seen:
                 continue
             seen.add(coord)
+            segment_ids = coord_to_segments.get(coord, [])
             try:
-                all_alerts.extend(get_official_alerts_for_location(*coord))
+                for alert in get_official_alerts_for_location(*coord):
+                    tagged_alerts.append((alert, segment_ids))
             except Exception as e:
                 logger.warning(f"official_alert_triggers: Quelle fehlgeschlagen fuer {trip.id}: {e}")
 
         from output.renderers.alert.official_alerts import dedupe_official_alerts
-        all_alerts = dedupe_official_alerts(all_alerts)
+        tagged_alerts = dedupe_official_alerts(tagged_alerts)
 
         state = AlertStateService(user_id=self._user_id).load(trip.id)
         new_or_escalated = []
-        for a in all_alerts:
+        for a, segment_ids in tagged_alerts:
             key = f"official_alert:{a.region_label}:{a.hazard}"
             prev = state.get(key)
             if prev is None or a.level > prev.get("last_reported_value", 0):
-                new_or_escalated.append(a)
+                new_or_escalated.append((a, segment_ids))
         return new_or_escalated
 
     def _record_official_alert_state(self, trip_id: str, official_notices: list) -> None:
-        """Issue #1088: alert_state nach erfolgreichem Versand fortschreiben (Dedupe)."""
+        """Issue #1088/#1200: alert_state nach erfolgreichem Versand fortschreiben
+        (Dedupe). `official_notices` sind `(OfficialAlert, segment_ids)`-Tupel."""
         if not official_notices:
             return
         from services.alert_state import AlertStateService
@@ -970,7 +986,7 @@ class TripAlertService:
         state_svc = AlertStateService(user_id=self._user_id)
         state = state_svc.load(trip_id)
         now_iso = datetime.now(timezone.utc).isoformat()
-        for a in official_notices:
+        for a, _segment_ids in official_notices:
             key = f"official_alert:{a.region_label}:{a.hazard}"
             state[key] = {"last_reported_value": float(a.level), "reported_at": now_iso}
         state_svc.save(trip_id, state)

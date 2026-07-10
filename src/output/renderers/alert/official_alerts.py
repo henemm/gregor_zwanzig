@@ -109,30 +109,68 @@ def render_official_alerts_plain(entries: list[tuple[str, list["OfficialAlert"]]
     return lines
 
 
-def dedupe_official_alerts(alerts: list["OfficialAlert"]) -> list["OfficialAlert"]:
-    """Issue #1172: kollabiert Warnungen nach `(region_label, hazard)` und
+def format_segment_reference(segment_ids: list[str]) -> str:
+    """Issue #1200: kompakter Segment-/Etappen-Bezug fuer die Standalone-
+    Alert-Mail. Numerische IDs werden sortiert, zusammenhaengende Laeufe als
+    Range ('Segment 3–5'), sonst als Aufzaehlung ('Segment 3, 5'). `"Ziel"`
+    wird NIE in die numerische Range/Aufzaehlung gemischt, sondern immer als
+    eigenes Element '🏁 Ziel' angehaengt. Mehr als 4 betroffene Segmente
+    insgesamt -> Verdichtung 'N Segmente' (Begriff bewusst 'Segmente', nicht
+    'Etappen')."""
+    has_ziel = "Ziel" in segment_ids
+    numeric = sorted({int(s) for s in segment_ids if s != "Ziel"})
+
+    total = len(numeric) + (1 if has_ziel else 0)
+    if total > 4:
+        return f"{total} Segmente"
+
+    numeric_part = ""
+    if numeric:
+        is_consecutive = numeric == list(range(numeric[0], numeric[-1] + 1))
+        if is_consecutive and len(numeric) > 1:
+            numeric_part = f"Segment {numeric[0]}–{numeric[-1]}"
+        else:
+            numeric_part = "Segment " + ", ".join(str(n) for n in numeric)
+
+    if numeric_part and has_ziel:
+        return f"{numeric_part}, 🏁 Ziel"
+    if has_ziel:
+        return "🏁 Ziel"
+    return numeric_part
+
+
+def dedupe_official_alerts(
+    tagged_alerts: list[tuple["OfficialAlert", list[str]]],
+) -> list[tuple["OfficialAlert", list[str]]]:
+    """Issue #1172/#1200: kollabiert Warnungen nach `(region_label, hazard)` und
     behaelt je Gruppe den Repraesentanten mit dem HOECHSTEN `level` (bei
     Gleichstand: erstes Vorkommen). Reihenfolge = erstes Auftreten je Gruppe
-    (analog `collect_trip_alert_entries`)."""
+    (analog `collect_trip_alert_entries`). Vereinigt zusaetzlich die
+    Segment-ID-Mengen aller zur Gruppe gehoerenden Rohalerts (Set-Union,
+    dedupliziert, Reihenfolge nicht garantiert)."""
     best: dict[tuple, "OfficialAlert"] = {}
+    segment_ids_by_key: dict[tuple, set[str]] = {}
     order: list[tuple] = []
-    for a in alerts:
+    for a, segment_ids in tagged_alerts:
         key = (a.region_label, a.hazard)
         if key not in best:
             best[key] = a
+            segment_ids_by_key[key] = set()
             order.append(key)
         elif a.level > best[key].level:
             best[key] = a
-    return [best[key] for key in order]
+        segment_ids_by_key[key].update(segment_ids)
+    return [(best[key], sorted(segment_ids_by_key[key])) for key in order]
 
 
 def render_official_alert_notice_plain(
-    alerts: list["OfficialAlert"], tz: "ZoneInfo | None" = None,
+    alerts: list[tuple["OfficialAlert", list[str]]], tz: "ZoneInfo | None" = None,
 ) -> list[str]:
-    """Standalone-Alert-Format (Issue #1172): dedupliziert die Warnungen
+    """Standalone-Alert-Format (Issue #1172/#1200): dedupliziert die Warnungen
     (dedupe_official_alerts) und rendert pro echter Warnung einen Block mit
-    Schwere-Wort, Region und lokalem Gueltigkeitszeitraum. NICHT identisch mit
-    render_official_alerts_plain() (Compare/Briefing bleiben unveraendert)."""
+    Schwere-Wort, Region (inkl. Segment-Bezug, falls vorhanden) und lokalem
+    Gueltigkeitszeitraum. NICHT identisch mit render_official_alerts_plain()
+    (Compare/Briefing bleiben unveraendert)."""
     from utils.timezone import local_fmt
 
     if tz is None:
@@ -140,12 +178,15 @@ def render_official_alert_notice_plain(
     fmt = "%a %d.%m. %H:%M"
 
     lines: list[str] = []
-    for a in dedupe_official_alerts(alerts):
+    for a, segment_ids in dedupe_official_alerts(alerts):
         if lines:
             lines.append("")
         emoji, word = _LEVEL_WORDS.get(a.level, ("🔴", "ROT"))
         lines.append(f"{emoji} {word} — {a.label}")
-        lines.append(f"Region: {a.region_label or 'unbekannt'}")
+        region_line = f"Region: {a.region_label or 'unbekannt'}"
+        if segment_ids:
+            region_line += f" — {format_segment_reference(segment_ids)}"
+        lines.append(region_line)
         if a.valid_from and a.valid_to:
             lines.append(
                 f"Gültig: {local_fmt(a.valid_from, tz, fmt)} – "

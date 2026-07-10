@@ -47,21 +47,23 @@ def _alert(level: int, *, hazard: str = "heat", region: str = "Haute-Corse",
 def test_dedupe_keeps_max_level_and_separates_hazards():
     """Given mehrere Warnungen gleicher (region_label, hazard) mit Levels [2,4,3]
     plus eine mit anderem hazard / When dedupe_official_alerts läuft / Then
-    Länge 2, und die kollabierte Gruppe trägt level == 4 (Maximum)."""
+    Länge 2, und die kollabierte Gruppe trägt level == 4 (Maximum).
+
+    Issue #1200: Eingabe/Ausgabe sind (OfficialAlert, segment_ids)-Tupel."""
     from output.renderers.alert.official_alerts import dedupe_official_alerts
 
-    alerts = [
-        _alert(2, hazard="heat"),
-        _alert(4, hazard="heat"),
-        _alert(3, hazard="heat"),
-        _alert(3, hazard="thunderstorm", label="Gewitter"),
+    tagged = [
+        (_alert(2, hazard="heat"), ["1"]),
+        (_alert(4, hazard="heat"), ["2"]),
+        (_alert(3, hazard="heat"), ["3"]),
+        (_alert(3, hazard="thunderstorm", label="Gewitter"), ["1"]),
     ]
-    result = dedupe_official_alerts(alerts)
+    result = dedupe_official_alerts(tagged)
 
     assert len(result) == 2, f"erwartet 2 Gruppen (heat kollabiert, thunder eigen), bekommen {len(result)}"
-    heat = [a for a in result if a.hazard == "heat"]
+    heat = [entry for entry in result if entry[0].hazard == "heat"]
     assert len(heat) == 1, "heat muss zu genau EINER Warnung kollabieren"
-    assert heat[0].level == 4, f"höchstes Level muss behalten werden, bekommen {heat[0].level}"
+    assert heat[0][0].level == 4, f"höchstes Level muss behalten werden, bekommen {heat[0][0].level}"
 
 
 # ---------------------------------------------------------------------------
@@ -72,11 +74,13 @@ def test_dedupe_keeps_max_level_and_separates_hazards():
 def test_render_notice_plain_dedups_identical_warnings():
     """Given 12 identische Warnungen (gleiche region_label+hazard) / When
     render_official_alert_notice_plain läuft / Then die Ausgabe enthält GENAU
-    EINEN Warnblock (eine Region-Zeile), nicht 12."""
+    EINEN Warnblock (eine Region-Zeile), nicht 12.
+
+    Issue #1200: Eingabe sind (OfficialAlert, segment_ids)-Tupel."""
     from output.renderers.alert.official_alerts import render_official_alert_notice_plain
 
-    alerts = [_alert(3) for _ in range(12)]
-    out = "\n".join(render_official_alert_notice_plain(alerts, tz=ZoneInfo("UTC")))
+    tagged = [(_alert(3), ["1"]) for _ in range(12)]
+    out = "\n".join(render_official_alert_notice_plain(tagged, tz=ZoneInfo("UTC")))
 
     assert out.count("Haute-Corse") == 1, (
         f"erwartet genau EINE Region-Zeile (ein Warnblock), bekommen "
@@ -92,13 +96,15 @@ def test_render_notice_plain_dedups_identical_warnings():
 def test_render_notice_plain_contains_core_info():
     """Given eine Warnung level=3 (ORANGE) mit region_label und valid_from/to /
     When render_official_alert_notice_plain läuft / Then enthält der Block das
-    Schwere-Wort, den Regionsnamen und beide Zeitpunkte (lokal formatiert)."""
+    Schwere-Wort, den Regionsnamen und beide Zeitpunkte (lokal formatiert).
+
+    Issue #1200: Eingabe ist ein (OfficialAlert, segment_ids)-Tupel."""
     from output.renderers.alert.official_alerts import render_official_alert_notice_plain
 
     vf = datetime(2026, 7, 11, 12, 0, tzinfo=timezone.utc)
     vt = datetime(2026, 7, 12, 20, 0, tzinfo=timezone.utc)
     out = "\n".join(render_official_alert_notice_plain(
-        [_alert(3, vf=vf, vt=vt)], tz=ZoneInfo("UTC")
+        [(_alert(3, vf=vf, vt=vt), ["1"])], tz=ZoneInfo("UTC")
     ))
 
     assert "ORANGE" in out, f"Schwere-Wort 'ORANGE' (level 3) fehlt:\n{out}"
@@ -109,10 +115,12 @@ def test_render_notice_plain_contains_core_info():
 
 def test_render_notice_plain_handles_missing_validity():
     """Given eine Warnung ohne valid_from/valid_to / When gerendert / Then kein
-    Crash, und der Block markiert die Gültigkeit als unbekannt statt None."""
+    Crash, und der Block markiert die Gültigkeit als unbekannt statt None.
+
+    Issue #1200: Eingabe ist ein (OfficialAlert, segment_ids)-Tupel."""
     from output.renderers.alert.official_alerts import render_official_alert_notice_plain
 
-    out = "\n".join(render_official_alert_notice_plain([_alert(4)], tz=ZoneInfo("UTC")))
+    out = "\n".join(render_official_alert_notice_plain([(_alert(4), ["1"])], tz=ZoneInfo("UTC")))
     assert "ROT" in out, f"level 4 muss 'ROT' ergeben:\n{out}"
     assert "None" not in out, f"None darf nicht im Body erscheinen:\n{out}"
 
@@ -261,11 +269,15 @@ def test_ac1_e2e_dedup_one_block():
 
         vf = datetime(2026, 7, 11, 12, 0, tzinfo=timezone.utc)
         vt = datetime(2026, 7, 12, 20, 0, tzinfo=timezone.utc)
+        # Issue #1200: notices sind (OfficialAlert, segment_ids)-Tupel.
         notices = [
-            OfficialAlert(
-                source="meteo-france", hazard="heat", level=3, label="Hitze",
-                valid_from=vf, valid_to=vt, region_label="Haute-Corse",
-                url="https://example.invalid/vigilance",
+            (
+                OfficialAlert(
+                    source="meteo-france", hazard="heat", level=3, label="Hitze",
+                    valid_from=vf, valid_to=vt, region_label="Haute-Corse",
+                    url="https://example.invalid/vigilance",
+                ),
+                ["1"],
             )
             for _ in range(5)
         ]
@@ -311,11 +323,12 @@ def test_ac2_e2e_core_info():
 
         vf = datetime(2026, 7, 11, 12, 0, tzinfo=timezone.utc)
         vt = datetime(2026, 7, 12, 20, 0, tzinfo=timezone.utc)
-        notices = [OfficialAlert(
+        # Issue #1200: notices sind (OfficialAlert, segment_ids)-Tupel.
+        notices = [(OfficialAlert(
             source="meteo-france", hazard="heat", level=3, label="Hitze",
             valid_from=vf, valid_to=vt, region_label="Haute-Corse",
             url="https://example.invalid/vigilance",
-        )]
+        ), ["1"])]
 
         # Erwartete lokale Zeitpunkte exakt wie der Sendepfad: tz aus den
         # Wegpunkt-Koordinaten (send_official_alert -> tz_for_coords(first_wp)).
