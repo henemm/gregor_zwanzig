@@ -312,10 +312,20 @@ def _sort_notices(notices: list["OfficialAlertNotice"]) -> list["OfficialAlertNo
 
 
 def _typ_tag(notice: "OfficialAlertNotice") -> str:
-    typ, _sms = _hazard_display(notice.alert)
+    # F004 (#1216): reicheres `alert.label` bevorzugen, wenn es das Typ-Wort `w`
+    # erweitert. Zwei detailtreue Faelle: (a) `w` steckt im Label (Vigilance
+    # "Extreme Hitze" enthaelt "Hitze", access_ban "Zugang gesperrt — {Massiv}"
+    # beginnt mit "Zugang gesperrt"); (b) das Label traegt den Detail-Separator
+    # "—" (Massiv-Name), auch wenn die Sperr-Formulierung von `w` abweicht
+    # (z.B. "Zugang eingeschraenkt — {Massiv}"). Standardfall (label == w,
+    # z.B. GeoSphere "Gewitter"/"Hitze", ohne "—") bleibt exakt `w` (AC-4).
+    w, _sms = _hazard_display(notice.alert)
+    label = notice.alert.label
+    richer = bool(label) and label != w and (w in label or "—" in label)
+    display = label if richer else w
     if notice.alert.valid_from is None:
-        return typ
-    return f"{typ} ({_de_weekday_short(notice.alert.valid_from)})"
+        return display
+    return f"{display} ({_de_weekday_short(notice.alert.valid_from)})"
 
 
 def render_official_alert_subject(notices: list["OfficialAlertNotice"], *, prefix: str) -> str:
