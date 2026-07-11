@@ -137,7 +137,7 @@ func New(deps Deps) chi.Router {
 	r.Patch("/api/trips/{id}/state", handler.UpdateTripStateHandler(deps.Store))
 	r.Patch("/api/trips/{id}/waypoints/{waypointId}/confirm", handler.ConfirmWaypointHandler(deps.Store))
 	r.Delete("/api/trips/{id}", handler.DeleteTripHandler(deps.Store))
-	r.Get("/api/trips/{id}/stages/weather", handler.StagesWeatherHandler(deps.Store, deps.WeatherProvider))
+	r.Get("/api/trips/{id}/stages/weather", handler.StagesWeatherProxyHandler(deps.Config.PythonCoreURL))
 	r.Get("/api/trips/{id}/briefing-history", handler.BriefingHistoryHandler(deps.Store))
 	r.Get("/api/subscriptions", handler.SubscriptionsHandler(deps.Store))
 	r.Get("/api/subscriptions/{id}", handler.SubscriptionHandler(deps.Store))

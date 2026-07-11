@@ -188,6 +188,38 @@ func LoadedTripProxyHandler(pythonURL string) http.HandlerFunc {
 	}
 }
 
+// StagesWeatherProxyHandler proxies GET /api/trips/{id}/stages/weather to the
+// Python core's /api/_internal/trips/{id}/stages-weather endpoint. The trip
+// ID is extracted via chi.URLParam; the client-supplied user_id is discarded
+// and the authenticated user_id from the auth context is injected instead
+// (anti-spoofing). Timeout 60s — the weather fetch spans multiple stages.
+// Spec: docs/specs/modules/stage_weather_go_proxy.md (Issue #1212, Slice R2).
+func StagesWeatherProxyHandler(pythonURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		query := appendUserID("", middleware.UserIDFromContext(r.Context()))
+		url := pythonURL + "/api/_internal/trips/" + id + "/stages-weather?" + query
+
+		client := &http.Client{Timeout: 60 * time.Second}
+		resp, err := client.Get(url)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadGateway)
+			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			return
+		}
+		defer resp.Body.Close()
+
+		ct := resp.Header.Get("Content-Type")
+		if ct == "" {
+			ct = "application/json"
+		}
+		w.Header().Set("Content-Type", ct)
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	}
+}
+
 // ValidatorFormatMetricProxyHandler proxies GET /api/_validator/format-metric.
 // Pure-function endpoint — no user_id injection needed, query string is passed
 // through verbatim. Cookie-auth via global AuthMiddleware remains required.
