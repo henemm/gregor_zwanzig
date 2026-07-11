@@ -79,7 +79,9 @@ Zielformat ist vom PO festgelegt (Memory `feedback_radar_tab_plan_format`). Kurz
   Bezeichnungen ("TDD RED" etc.), Kollisionsmatrizen, "Blast-Radius"/"SOLO"-Jargon,
   mehrsätzige Begründungen. Höchstens ein kurzer Halbsatz Warum, in Geschäftssprache
   (Auswirkung fürs Produkt, nicht Code-Ursache).
-- Abschluss-Abschnitt "Wartet, bis ein Tab frei wird" für Großes/Blockiertes.
+- Abschluss-Abschnitt **"Noch nicht gestartet"** (NICHT "Wartet, bis ein Tab frei wird" — trifft
+  nicht auf jeden Eintrag zu, manche könnten sofort in einem neuen Tab starten; PO-Korrektur
+  2026-07-11) für Großes/Blockiertes. Jede Zeile trägt ihren eigenen Halbsatz-Grund.
 - Ein Schlusssatz, dass die Tabs sich nicht gegenseitig blockieren (nur wenn durch
   Schritt 3 auch tatsächlich geprüft — sonst weglassen statt zu behaupten).
 
