@@ -527,6 +527,120 @@ class NotificationService:
 
         return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
 
+    def send_multi_location_official_alert(
+        self,
+        preset_name: str,
+        locations: list,
+        tagged_alerts: list,
+        effective_channels: set[str],
+        *,
+        mail_sink: Optional[object] = None,
+        sms_sink: Optional[object] = None,
+        telegram_sink: Optional[object] = None,
+    ) -> NotificationResult:
+        """Gebündelter Standalone-Alarm für amtliche Warnungen im Ortsvergleich
+        (Issue #1216 Slice 2a) — Orts-Scope-Pendant zu `send_official_alert()`
+        (Trip, Segment-Scope). Nutzt dieselben vier Vorlagen-Renderer, EIN
+        Versand je Kanal fuer ALLE betroffenen Orte gebuendelt.
+
+        `locations`: Orts-Objekte (`.id`/`.name`/`.lat`/`.lon`) — die Zeitzone
+        der Gueltigkeits-Zeiten (F001) wird vom ersten Ort abgeleitet, analog
+        zu `send_official_alert()`.
+        `tagged_alerts`: rohe `(OfficialAlert, betroffene_orts_ids)`-Paare
+        (bereits vorgefiltert auf neu/eskaliert durch den Aufrufer, IDs statt
+        Namen -- F006: gleichnamige Orte duerfen nicht kollabieren; Namen
+        werden hier NUR zur Anzeige aufgeloest).
+        """
+        from output.renderers.alert.official_alerts import (
+            build_compare_official_alert_notices, render_official_alert_html,
+            render_official_alert_subject,
+        )
+        from utils.timezone import tz_for_coords
+
+        all_location_ids = [loc.id for loc in locations]
+        id_to_name = {loc.id: loc.name for loc in locations}
+        dto_notices = build_compare_official_alert_notices(
+            all_location_ids, id_to_name, tagged_alerts,
+        )
+        if not dto_notices:
+            return NotificationResult(sent=False, sent_channels=[])
+
+        first_loc = locations[0] if locations else None
+        alert_tz = (
+            tz_for_coords(first_loc.lat, first_loc.lon)
+            if first_loc is not None and first_loc.lat is not None and first_loc.lon is not None
+            else ZoneInfo("UTC")
+        )
+        source_label = "GeoSphere Austria"
+        subject = render_official_alert_subject(dto_notices, prefix=preset_name)
+        stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
+        html = render_official_alert_html(
+            dto_notices, source_label=source_label, stand_at=stand_at, tz=alert_tz,
+        )
+
+        sent_channels: list[str] = []
+        if "email" in effective_channels and self._settings.can_send_email():
+            self._dispatch_compare_official_email(preset_name, subject, html, mail_sink)
+            sent_channels.append("email")
+        if "telegram" in effective_channels and self._settings.can_send_telegram():
+            self._dispatch_compare_official_telegram(
+                preset_name, subject, dto_notices, source_label, alert_tz, telegram_sink,
+            )
+            sent_channels.append("telegram")
+        if "sms" in effective_channels and self._settings.can_send_sms():
+            self._dispatch_compare_official_sms(preset_name, dto_notices, alert_tz, sms_sink)
+            sent_channels.append("sms")
+
+        return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
+
+    def _dispatch_compare_official_email(
+        self, preset_name: str, subject: str, html: str, mail_sink: Optional[object],
+    ) -> None:
+        try:
+            if mail_sink is not None:
+                mail_sink(subject=subject, body=html)
+            else:
+                EmailOutput(self._settings).send(
+                    subject=subject, body=html, html=True, mail_type="official-alert",
+                )
+        except Exception as e:
+            logger.error(f"Compare official alert email failed for {preset_name}: {e}")
+
+    def _dispatch_compare_official_telegram(
+        self, preset_name: str, subject: str, dto_notices: list, source_label: str,
+        alert_tz: ZoneInfo, telegram_sink: Optional[object],
+    ) -> None:
+        from output.renderers.alert.official_alerts import render_official_alert_telegram
+
+        try:
+            telegram_text = render_official_alert_telegram(
+                dto_notices, prefix=preset_name, source_label=source_label, tz=alert_tz,
+            )
+            if telegram_sink is not None:
+                telegram_sink(telegram_text)
+            else:
+                TelegramOutput(self._settings).send(
+                    subject=subject, body=telegram_text, suppress_subject_line=True,
+                )
+        except Exception as e:
+            logger.error(f"Compare official alert telegram failed for {preset_name}: {e}")
+
+    def _dispatch_compare_official_sms(
+        self, preset_name: str, dto_notices: list, alert_tz: ZoneInfo,
+        sms_sink: Optional[object],
+    ) -> None:
+        from output.renderers.alert.official_alerts import render_official_alert_sms
+
+        try:
+            sms_prefix = preset_name.replace(" ", "")
+            sms_text = render_official_alert_sms(dto_notices, sms_prefix=sms_prefix, tz=alert_tz)
+            if sms_sink is not None:
+                sms_sink(sms_text)
+            else:
+                SMSOutput(self._settings).send(subject="", body=sms_text)
+        except Exception as e:
+            logger.error(f"Compare official alert sms failed for {preset_name}: {e}")
+
     def send_radar_alert(
         self,
         trip: "Trip",

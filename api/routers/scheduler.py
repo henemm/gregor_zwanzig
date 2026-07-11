@@ -87,6 +87,16 @@ def trigger_compare_radar_alert_checks(user_id: str):
     return {"status": "ok", "count": count}
 
 
+@router.post("/compare-official-alert-checks")
+def trigger_compare_official_alert_checks(user_id: str = Query(...)):
+    """Trigger Compare-Preset Official-Alert-Standalone-Checks (Issue #1216 Slice 2a)."""
+    from services.compare_official_alert import CompareOfficialAlertService
+
+    service = CompareOfficialAlertService(user_id=user_id)
+    count = service.check_all_compare_presets()
+    return {"status": "ok", "count": count}
+
+
 @router.post("/inbound-commands")
 def trigger_inbound():
     """Trigger inbound email command polling."""

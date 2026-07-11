@@ -555,3 +555,42 @@ def build_official_alert_notices(
             affected_chips=affected, free_chips=free,
         ))
     return notices
+
+
+def build_compare_official_alert_notices(
+    all_location_ids: list[str], id_to_name: dict[str, str],
+    tagged_alerts: list[tuple["OfficialAlert", list[str]]],
+) -> list["OfficialAlertNotice"]:
+    """Baut die `OfficialAlertNotice`-DTOs fuer den Compare-Standalone-Alarm
+    (Issue #1216 Slice 2a): dedupliziert via `dedupe_official_alerts`, leitet
+    scope_label/sms_scope/Chips aus den betroffenen ORTEN ab (statt
+    Segment-IDs wie beim Trip-Pendant `build_official_alert_notices`).
+    Die Scope-Rechnung (`is_full`/`affected`/`free`) laeuft durchgaengig ueber
+    Orts-**IDs** (F006 -- gleichnamige Orte duerfen nicht als "derselbe Ort"
+    kollabieren); `id_to_name` loest IDs erst fuer die Anzeige (Chips/Label)
+    in Namen auf, mit stabiler Dedup NUR des Anzeige-Strings.
+    `all_location_ids` = alle Orte des Presets; die zweite Komponente jedes
+    `tagged_alerts`-Tupels traegt die betroffenen Orts-IDs dieser Warnung."""
+    all_set = set(all_location_ids)
+    deduped = dedupe_official_alerts(tagged_alerts)
+    notices = []
+    for alert, affected_ids in deduped:
+        affected_set = set(affected_ids)
+        affected_ordered_ids = [i for i in all_location_ids if i in affected_set]
+        affected = list(dict.fromkeys(id_to_name.get(i, i) for i in affected_ordered_ids))
+        is_full = bool(all_set) and affected_set >= all_set
+        if is_full:
+            scope_label, sms_scope = "alle Orte", "alleOrte"
+        elif len(affected) == 1:
+            scope_label = f"nur {affected[0]}"
+            sms_scope = f"nur {affected[0].replace(' ', '')}"
+        else:
+            scope_label = ", ".join(affected) if affected else "unbekannt"
+            sms_scope = scope_label.replace(" ", "").replace(",", "+") or "unbekannt"
+        free_ordered_ids = [i for i in all_location_ids if i not in affected_set]
+        free = list(dict.fromkeys(id_to_name.get(i, i) for i in free_ordered_ids))
+        notices.append(OfficialAlertNotice(
+            alert=alert, scope_label=scope_label, sms_scope=sms_scope,
+            affected_chips=affected, free_chips=free,
+        ))
+    return notices
