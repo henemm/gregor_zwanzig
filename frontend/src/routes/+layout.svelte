@@ -56,7 +56,7 @@
 		localStorage.setItem('gz-dark', darkMode ? '1' : '0');
 	}
 
-	const publicPages = ['/login', '/register', '/forgot-password', '/reset-password'];
+	const publicPages = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
 	const isLogin = $derived(publicPages.includes(page.url.pathname));
 	const isWizard = $derived(page.url.pathname.startsWith('/trips/new'));
 	// Showcase-Route (#370): ohne App-Chrome (TopAppBar/Sidebar/BottomNav), damit
