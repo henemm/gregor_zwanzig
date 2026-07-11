@@ -208,10 +208,9 @@ def send_one_compare_preset(
     Gibt (top_ort, empfaenger) zurueck. Wirft ValueError wenn kein Empfaenger konfiguriert.
     """
     from output.renderers.comparison import render_compare_email
-    from output.renderers.compare_metric_ids import resolve_enabled_metrics
-    from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
     from output.channels.email import EmailOutput
     from services.comparison_engine import ComparisonEngine
+    from services.report_config_resolver import resolve_compare_render_options
 
     preset_id = preset.get("id", "")
     location_ids = preset.get("location_ids") or []
@@ -249,40 +248,18 @@ def send_one_compare_preset(
 
     name = preset.get("name", preset_id)
     subject = f"Wetter-Vergleich: {name} ({_datetime.now().strftime('%d.%m.%Y')})"
-    # Issue #1104: display_config.top_n / active_metrics in den Versandpfad verdrahten
-    display_config = preset.get("display_config") or {}
-    top_n_raw = display_config.get("top_n")
-    try:
-        top_n_details = int(top_n_raw) if top_n_raw is not None else 3  # Default 3 (AC-2)
-    except (TypeError, ValueError):
-        logger.warning(
-            "Compare-Preset %s: ungueltiger top_n-Wert %r — nutze Default 3",
-            preset_id,
-            top_n_raw,
-        )
-        top_n_details = 3
-    if top_n_details < 1 or top_n_details > 10:
-        logger.warning(
-            "Compare-Preset %s: top_n %r ausserhalb 1..10 — geclamped",
-            preset_id,
-            top_n_details,
-        )
-        top_n_details = max(1, min(10, top_n_details))
-    enabled_metrics = resolve_enabled_metrics(display_config.get("active_metrics"))
-    # Issue #1106: Stundenverlauf-Spaltenauswahl je Ort-Sektion, analog active_metrics.
-    hourly_metrics = resolve_hourly_metrics(display_config.get("hourly_metrics"))
-    # Issue #1107: hourly_enabled ist ein TOP-LEVEL Preset-Feld (wie
-    # official_alerts_enabled), NICHT im display_config-Blob.
-    hourly_enabled = preset.get("hourly_enabled", True)
+    # Issue #1209 (Scheibe B): Render-Optionen ausschliesslich ueber den
+    # Resolver aufloesen, statt inline aus dem rohen Preset-Dict zu lesen.
+    opts = resolve_compare_render_options(preset)
     # Issue #1110: Abo-Footer-Metadaten (Preset-Name/Schedule/Weekday) zusaetzlich
     # zu den #1104-Parametern durchreichen (Merge beider Feature-Branches).
     html_body, text_body = render_compare_email(
         result,
         profile=profile,
-        top_n_details=top_n_details,
-        enabled_metrics=enabled_metrics,
-        hourly_metrics=hourly_metrics,
-        hourly_enabled=hourly_enabled,
+        top_n_details=opts.top_n_details,
+        enabled_metrics=opts.enabled_metrics,
+        hourly_metrics=opts.hourly_metrics,
+        hourly_enabled=opts.hourly_enabled,
         preset_name=name,
         preset_schedule=preset.get("schedule"),
         preset_weekday=preset.get("weekday"),
@@ -292,7 +269,7 @@ def send_one_compare_preset(
         html_body,
         plain_text_body=text_body,
         to=empfaenger,
-        compare_hourly_enabled=hourly_enabled,
+        compare_hourly_enabled=opts.hourly_enabled,
     )
 
     # Issue #1169: Δ-Anker je Ort schreiben (ADR-0009 — Abweichung vom zuletzt

@@ -12,11 +12,14 @@ Keine I/O, keine Mutation der Eingaben — reine Aufloesungsfunktion.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from app.models import TripReportConfig, UnifiedWeatherDisplayConfig
+
+logger = logging.getLogger(__name__)
 
 # Die 7 render-wirksamen TripReportConfig-Felder (Spec v1.1 §Implementation
 # Details). PO-Entscheidung 2026-07-10 (GREEN-Review): show_daylight wurde
@@ -141,4 +144,65 @@ def resolve_report_render_options(
         show_multi_day_trend=report_type in trend_reports,
         show_yesterday_comparison=report_config.show_yesterday_comparison,
         display_config=dc,
+    )
+
+
+@dataclass(frozen=True)
+class CompareRenderOptions:
+    """Aufgeloeste Render-Optionen fuer den Compare-Versandpfad (Scheibe B, #1209).
+
+    Buendelt die bisher inline in `scheduler_dispatch_service.py:252-276`
+    verstreute Default-/Clamp-/Metrik-Aufloesungslogik zu einer expliziten,
+    unveraenderlichen Struktur — analog `ReportRenderOptions`.
+    """
+
+    top_n_details: int
+    enabled_metrics: Optional[set]
+    hourly_metrics: Optional[set]
+    hourly_enabled: bool
+
+
+def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
+    """Loest ein rohes Compare-Preset-Dict VOLLSTAENDIG in `CompareRenderOptions` auf.
+
+    Reproduziert 1:1 das Bestandsverhalten aus
+    `scheduler_dispatch_service.py:252-276` (Issue #1104/#1106/#1107):
+    - `top_n_details`: Default 3, geclampt auf 1..10, ungueltige Werte
+      (nicht int-konvertierbar) fallen auf 3 zurueck (jeweils mit
+      `logger.warning`).
+    - `enabled_metrics`/`hourly_metrics`: ueber `resolve_enabled_metrics()`/
+      `resolve_hourly_metrics()` aus `display_config`.
+    - `hourly_enabled`: TOP-LEVEL Preset-Feld (nicht im display_config-Blob),
+      Default True.
+
+    Reine Funktion — kein I/O, keine Mutation von `preset`.
+    """
+    from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
+    from output.renderers.compare_metric_ids import resolve_enabled_metrics
+
+    preset_id = preset.get("id", "")
+    display_config = preset.get("display_config") or {}
+    top_n_raw = display_config.get("top_n")
+    try:
+        top_n_details = int(top_n_raw) if top_n_raw is not None else 3
+    except (TypeError, ValueError):
+        logger.warning(
+            "Compare-Preset %s: ungueltiger top_n-Wert %r — nutze Default 3",
+            preset_id,
+            top_n_raw,
+        )
+        top_n_details = 3
+    if top_n_details < 1 or top_n_details > 10:
+        logger.warning(
+            "Compare-Preset %s: top_n %r ausserhalb 1..10 — geclamped",
+            preset_id,
+            top_n_details,
+        )
+        top_n_details = max(1, min(10, top_n_details))
+
+    return CompareRenderOptions(
+        top_n_details=top_n_details,
+        enabled_metrics=resolve_enabled_metrics(display_config.get("active_metrics")),
+        hourly_metrics=resolve_hourly_metrics(display_config.get("hourly_metrics")),
+        hourly_enabled=preset.get("hourly_enabled", True),
     )

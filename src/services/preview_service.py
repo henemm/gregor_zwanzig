@@ -117,8 +117,13 @@ class PreviewService:
         stage_name = trip.numbered_stage_label(stage) if stage else None
         stage_stats = scheduler._compute_stage_stats(stage) if stage else None
 
-        if trip.display_config and trip.report_config:
-            trip.display_config.show_compact_summary = trip.report_config.show_compact_summary
+        # Issue #1209 (Scheibe B): EINZIGER Ableitungspfad report_config ->
+        # render-wirksame Optionen, ersetzt den Patch-Hack (F002), der
+        # trip.display_config mutiert hat.
+        from services.report_config_resolver import resolve_report_render_options
+        render_options = resolve_report_render_options(
+            trip.report_config, trip.display_config, report_type,
+        )
 
         # Issue #474: F12 Wetterlage-Label vor format_email berechnen.
         try:
@@ -138,6 +143,7 @@ class PreviewService:
             stage_stats=stage_stats,
             trip_tz=trip_tz,
             stability_result=stability_result,
+            render_options=render_options,
         )
         return report, segment_weather, stage_name, trip_tz
 
@@ -151,6 +157,7 @@ class PreviewService:
         stage_stats,
         trip_tz,
         stability_result,
+        render_options=None,
     ):
         """Einzelstelle für den E-Mail-Render-Aufruf in der Vorschau."""
         from src.output.renderers.trip_report import TripReportFormatter
@@ -165,6 +172,7 @@ class PreviewService:
             profile=trip.aggregation.profile,
             stability_result=stability_result,
             report_config=trip.report_config,
+            render_options=render_options,
         )
 
     def render_email_preview(

@@ -168,3 +168,4 @@ sonst schlaegt der Test mit dem Feldnamen rot.
 
 - 2026-07-10: Initial spec erstellt -- Issue #1208 (Scheibe A von #1203), erledigt Bug #1102 mit
 - 2026-07-10: v1.1 -- `show_daylight` von render-wirksam nach RENDER_NEUTRAL umklassifiziert (Befund des Vertragstests: Tageslicht-Block seit #790 aus den Renderern entfernt, Toggle wirkungslos; PO-Entscheidung im GREEN-Review). 7 render-wirksame / 20 neutrale Felder.
+- 2026-07-11: Scheibe B implementiert (Issue #1209) -- Preview-/Compare-Pfad auf `CompareRenderOptions`-Resolver umgestellt, Struktur-Gate gegen Direktzugriffe auf render-wirksame Felder. Spezifikation: `docs/specs/modules/report_config_resolver_slice_b.md`.

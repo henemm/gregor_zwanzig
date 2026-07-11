@@ -89,7 +89,7 @@ Channel Renderers
 Channel (E-Mail / Telegram / SMS / Console)
 ```
 
-**Report-Config-Resolver (Issue #1208):** Für Trip-Briefings löst
+**Report-Config-Resolver (Issue #1208, Scheibe A):** Für Trip-Briefings löst
 `resolve_report_render_options()` (`src/services/report_config_resolver.py`)
 vor dem `Formatter`-Schritt `TripReportConfig`/`UnifiedWeatherDisplayConfig`
 eines Trips zentral und an EINER Stelle in ein frozen `ReportRenderOptions`-Objekt
@@ -98,7 +98,10 @@ Scheduler-Versandpfad (`trip_report_scheduler.py` → `notification_service.py` 
 `TripReportFormatter.format_email()`) reicht nur noch dieses Objekt durch statt
 einzelner Config-Felder; `format_email()` hat bei `render_options=None` einen
 internen Resolver-Fallback für Bestandsverhalten. Details:
-`docs/specs/modules/report_config_resolver.md`.
+`docs/specs/modules/report_config_resolver.md`. Scheibe B (Issue #1209) 
+stellt zusätzlich Preview- und Compare-Pfad auf einen parallelen 
+`CompareRenderOptions`-Resolver um und ergänzt ein src-weites Struktur-Gate gegen 
+Direktzugriffe auf render-wirksame Felder.
 
 ### Datenfluss (Legacy-CLI)
 
