@@ -25,6 +25,13 @@ pro Orts-Vergleich ein-/ausschaltbar (Slice 5, #1040).
 
 **Child Issues:** #1034, #1035, #1040, #1036, #1037 (alle Teil von Epic #1033)
 
+**Related Feature (separates Issue):** Issue #1216 baut auf denselben amtlichen
+Datenquellen einen eigenständigen **Alarm** (statt der reinen Anzeige hier) —
+E-Mail/Telegram/SMS bei Statuswechsel einer amtlichen Warnung. Slice 2a (Backend,
+live) + Slice 2b (Editor-Toggle „Amtliche-Warnungen-Alarm" + Go-Scheduler-Job
+`compare_official_alert_checks`, alle 15 Min, live 2026-07-11) sind getrennt vom
+hier dokumentierten Anzeige-Toggle `official_alerts_enabled` (Slice 5, #1040).
+
 ---
 
 ## Overview
@@ -300,3 +307,4 @@ sinnvoll nutzbar (siehe Details oben unter "Konfigurierbarkeit"). Spec:
 | 2026-07-07 | Slice 3 (#1036) implementiert, Adversary VERIFIED. Analyse-Korrektur ggü. Vor-Analyse-Entwurf: kein OAuth2/CSV-Pfad, sondern gleicher `apikey`-Header wie Vigilance gegen den département-scoped JSON-Endpoint `carte/departement/encours`. MeteoForetsSource registriert in `__init__.py`, liefert Waldbrand-Gefahrenstufe 1–4 für französische Orte Juni–September (außerhalb Saison `covers()` = False), ohne Mindest-Schwellwert, fail-soft bei fehlender API oder Netzwerkfehler. Badge-Renderer bereits aus Slice 1 verdrahtet, keine neuen Renderer-Dateien nötig. |
 | 2026-07-07 | Slice 4 (#1037) implementiert, Adversary VERIFIED (4 Runden). Architektur-Pivot nach 2 BROKEN-Runden: Zentrum+Radius-Näherung verworfen (fehlinformierende Massiv-Zuordnung, F004/F005) → exakte amtliche Polygone mit Point-in-Polygon (reines Python-Ray-Casting, keine neue Dependency; `data/massif_polygons.json` offline aus `.fgb` erzeugt). Abdeckung Var/Bouches-du-Rhône/Korsika; Niveau≥3-abgestufter Badge. Korsika/GR20-Abdeckung als Quellen-Limitation dokumentiert (Quelle meldet nur 11 Massive). department_mapper aus dieser Quelle entfernt. |
 | 2026-07-07 | Ehemaliges Out-of-Scope „Trip-Briefing-Integration" umgesetzt in Epic #1073 Slice 3 (Issue #1087): gemeinsame Renderer-Komponente `src/output/renderers/alert/official_alerts.py` (Compare + Trip nutzen denselben Code), Trip-Feld `Trip.OfficialAlertsEnabled *bool` (Pointer-Muster analog #1040). Details: `docs/features/epic-1073-alerts-at-it.md`. |
+| 2026-07-11 | Related-Feature-Hinweis ergänzt: Issue #1216 (separates Issue) bringt einen eigenständigen Standalone-Alarm auf denselben Datenquellen (statt reiner Anzeige) — Slice 2a Backend live, Slice 2b Editor-Toggle „Amtliche-Warnungen-Alarm" + Go-Scheduler-Job `compare_official_alert_checks` (alle 15 Min) live. |

@@ -196,8 +196,8 @@ func TestStatus(t *testing.T) {
 	if !ok {
 		t.Fatalf("Status jobs should be a slice, got %T", status["jobs"])
 	}
-	if len(jobs) != 8 {
-		t.Fatalf("Expected 8 jobs, got %d", len(jobs))
+	if len(jobs) != 9 {
+		t.Fatalf("Expected 9 jobs, got %d", len(jobs))
 	}
 
 	// Each job should have id, name, next_run, last_run
@@ -638,6 +638,68 @@ func TestStatus_IncludesLastRun(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("compare_presets_daily job not found in status")
+	}
+}
+
+// --- Test: Issue #1216 Slice 2b — compare_official_alert_checks job (AC-4) ---
+
+// Der neue Scheduler-Job compare_official_alert_checks ist mit Cron */15 * * * *
+// registriert, erscheint im Status-Endpoint und traegt last_run nach einem Lauf.
+func TestCompareOfficialAlertChecks_RegisteredAndRuns(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	cfg := &config.Config{
+		PythonCoreURL:     server.URL,
+		SchedulerTimezone: "Europe/Vienna",
+	}
+	sched, err := New(cfg, testStore(t))
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+	sched.Start()
+	defer sched.Stop()
+
+	// Job manuell ausloesen → last_run muss gesetzt werden.
+	sched.compareOfficialAlertChecks()
+
+	status := sched.Status()
+	jobs := status["jobs"].([]map[string]any)
+
+	var found bool
+	for _, job := range jobs {
+		if job["id"] == "compare_official_alert_checks" {
+			found = true
+			lr, ok := job["last_run"].(map[string]any)
+			if !ok || lr == nil {
+				t.Fatal("compare_official_alert_checks should have last_run after execution")
+			}
+			if lr["status"] != "ok" {
+				t.Fatalf("Expected last_run status ok, got %v", lr["status"])
+			}
+		}
+	}
+	if !found {
+		t.Fatal("compare_official_alert_checks job not found in status")
+	}
+
+	// Cron-Expression muss */15 (15 Minuten) sein.
+	var schedule cronSchedule
+	for _, e := range sched.cron.Entries() {
+		meta := sched.entryMap[e.ID]
+		if meta.id == "compare_official_alert_checks" {
+			schedule = e.Schedule
+		}
+	}
+	if schedule == nil {
+		t.Fatal("compare_official_alert_checks not found in cron entries")
+	}
+	base := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	delta := schedule.Next(base).Sub(base)
+	if delta != 15*time.Minute {
+		t.Fatalf("compare_official_alert_checks cron fires every %v, want 15m", delta)
 	}
 }
 

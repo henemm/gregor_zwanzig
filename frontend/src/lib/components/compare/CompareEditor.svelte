@@ -89,7 +89,11 @@
 		// Issue #1041 Slice 2 / #1040: Alarm-Toggles im Dirty-Tracking, damit sie
 		// beim Speichern erkannt und persistiert werden (siehe handleSave).
 		radarAlertEnabled: wiz.radarAlertEnabled,
-		officialAlertsEnabled: wiz.officialAlertsEnabled
+		officialAlertsEnabled: wiz.officialAlertsEnabled,
+		// Issue #1216 Slice 2b: Trigger + Kanal-Toggles im Dirty-Tracking.
+		officialAlertTriggersEnabled: wiz.officialAlertTriggersEnabled,
+		sendTelegram: wiz.sendTelegram,
+		sendSms: wiz.sendSms
 	});
 	const dirty = $derived(
 		isEdit &&
@@ -104,7 +108,10 @@
 				wiz.alertQuietFrom !== initial.alertQuietFrom ||
 				wiz.alertQuietTo !== initial.alertQuietTo ||
 				wiz.radarAlertEnabled !== initial.radarAlertEnabled ||
-				wiz.officialAlertsEnabled !== initial.officialAlertsEnabled)
+				wiz.officialAlertsEnabled !== initial.officialAlertsEnabled ||
+				wiz.officialAlertTriggersEnabled !== initial.officialAlertTriggersEnabled ||
+				wiz.sendTelegram !== initial.sendTelegram ||
+				wiz.sendSms !== initial.sendSms)
 	);
 
 	// Issue #758: sync dirty state → compareSaveCtl (nur wenn nicht schon saving/error).
@@ -178,6 +185,10 @@
 		// Issue #1041 Slice 2 / #1040: Alarm-Toggles ebenfalls snapshotten.
 		const savedRadarAlertEnabled = wiz.radarAlertEnabled;
 		const savedOfficialAlertsEnabled = wiz.officialAlertsEnabled;
+		// Issue #1216 Slice 2b: Trigger + Kanal-Toggles ebenfalls snapshotten.
+		const savedOfficialAlertTriggersEnabled = wiz.officialAlertTriggersEnabled;
+		const savedSendTelegram = wiz.sendTelegram;
+		const savedSendSms = wiz.sendSms;
 		const { url, body } = buildComparePresetSavePayload(preset, {
 			name: wiz.name,
 			activityProfile: wiz.activityProfile,
@@ -197,7 +208,11 @@
 			// Issue #1041 Slice 2 (Pflicht) / #1040 (gebündelter Edit-Bug):
 			// beide Toggles fehlten bisher im edits-Objekt → PUT persistierte sie nie.
 			radarAlertEnabled: wiz.radarAlertEnabled,
-			officialAlertsEnabled: wiz.officialAlertsEnabled
+			officialAlertsEnabled: wiz.officialAlertsEnabled,
+			// Issue #1216 Slice 2b: Trigger + Kanäle in den PUT-Body geben.
+			officialAlertTriggersEnabled: wiz.officialAlertTriggersEnabled,
+			sendTelegram: wiz.sendTelegram,
+			sendSms: wiz.sendSms
 		});
 		api.put(url, body)
 			.then(() => {
@@ -214,6 +229,9 @@
 				initial.alertQuietTo = savedQuietTo;
 				initial.radarAlertEnabled = savedRadarAlertEnabled;
 				initial.officialAlertsEnabled = savedOfficialAlertsEnabled;
+				initial.officialAlertTriggersEnabled = savedOfficialAlertTriggersEnabled;
+				initial.sendTelegram = savedSendTelegram;
+				initial.sendSms = savedSendSms;
 				compareSaveCtl.setSaved();
 			})
 			.catch((e: unknown) => {

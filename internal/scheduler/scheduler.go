@@ -99,6 +99,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		{"*/15 * * * *", s.dataWriteSelftest, "data_write_selftest", "Data Write Selftest (every 15 min)"},
 		{"*/15 * * * *", s.compareAlertChecks, "compare_alert_checks", "Compare Alert Checks (every 15 min)"},
 		{"*/15 * * * *", s.compareRadarAlertChecks, "compare_radar_alert_checks", "Compare Radar Alert Checks (every 15 min)"},
+		{"*/15 * * * *", s.compareOfficialAlertChecks, "compare_official_alert_checks", "Compare Official Alert Checks (every 15 min)"},
 	}
 	for _, j := range jobs {
 		eid, _ := s.cron.AddFunc(j.expr, j.fn)
@@ -111,7 +112,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 // Start begins cron scheduling.
 func (s *Scheduler) Start() {
 	s.cron.Start()
-	log.Printf("[scheduler] Started: 8 jobs, timezone %s", s.cron.Location())
+	log.Printf("[scheduler] Started: 9 jobs, timezone %s", s.cron.Location())
 }
 
 // Stop gracefully shuts down the scheduler and waits for running jobs.
@@ -176,6 +177,15 @@ func (s *Scheduler) compareAlertChecks() {
 func (s *Scheduler) compareRadarAlertChecks() {
 	s.recordRun("compare_radar_alert_checks", func() error {
 		return s.runForAllUsers("compare_radar_alert_checks", "/api/scheduler/compare-radar-alert-checks")
+	})
+}
+
+// compareOfficialAlertChecks triggers Compare-Preset Official-Alert-Checks
+// (Issue #1216 Slice 2b) — ruft den bestehenden Slice-2a-Endpoint alle 15 Min
+// fuer alle registrierten Nutzer auf.
+func (s *Scheduler) compareOfficialAlertChecks() {
+	s.recordRun("compare_official_alert_checks", func() error {
+		return s.runForAllUsers("compare_official_alert_checks", "/api/scheduler/compare-official-alert-checks")
 	})
 }
 

@@ -502,6 +502,10 @@ export interface ComparePreset {
 	alert_cooldown_minutes?: number;
 	alert_quiet_from?: string;
 	alert_quiet_to?: string;
+	// Issue #1216 Slice 2b — Amtliche-Warnungen-Alarm-Trigger + Kanal-Opt-in.
+	official_alert_triggers_enabled?: boolean;
+	send_telegram?: boolean;
+	send_sms?: boolean;
 }
 
 // Issue #1068 — Nutzerlevel (Slice 1 aus Epic #1067).

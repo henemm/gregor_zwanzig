@@ -42,6 +42,10 @@ export class CompareWizardState {
 	radarAlertEnabled = $state(false);
 	// Issue #1107: Stundenverlauf-Sektion ein/aus (Default true).
 	hourlyEnabled = $state(true);
+	// Issue #1216 Slice 2b: Amtliche-Warnungen-Alarm-Trigger (Default AN —
+	// sicherheitsrelevant, analog officialAlertsEnabled). Kanal-Opt-in nutzt die
+	// bestehenden Runen sendTelegram/sendSms (Versand-Tab), keine neue Kanal-Rune.
+	officialAlertTriggersEnabled = $state(true);
 	// Issue #1170 — Alarm-Konfiguration (Epic #1095 Scheibe 3/3), Trip-identische Keys.
 	metricAlertLevels = $state<Record<string, string>>({});
 	alertCooldownMinutes = $state<number | undefined>(undefined);
@@ -177,6 +181,10 @@ export class CompareWizardState {
 			official_alerts_enabled: this.officialAlertsEnabled, // Issue #1040
 			radar_alert_enabled: this.radarAlertEnabled, // Issue #1041 Slice 2
 			hourly_enabled: this.hourlyEnabled, // Issue #1107
+			// Issue #1216 Slice 2b: Amtliche-Warnungen-Alarm-Trigger + Kanal-Opt-in.
+			official_alert_triggers_enabled: this.officialAlertTriggersEnabled,
+			send_telegram: this.sendTelegram,
+			send_sms: this.sendSms,
 			// Issue #1170: Alarm-Konfiguration — cooldown/quiet Top-Level (Trip-identisch).
 			...(this.alertCooldownMinutes !== undefined
 				? { alert_cooldown_minutes: this.alertCooldownMinutes }

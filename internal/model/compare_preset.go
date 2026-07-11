@@ -58,4 +58,13 @@ type ComparePreset struct {
 	AlertCooldownMinutes *int    `json:"alert_cooldown_minutes,omitempty"`
 	AlertQuietFrom       *string `json:"alert_quiet_from,omitempty"`
 	AlertQuietTo         *string `json:"alert_quiet_to,omitempty"`
+	// Issue #1216 Slice 2b — steuert ob der amtliche Standalone-Alarm (Slice 2a)
+	// fuer diesen Vergleich feuert. Pointer-Pattern wie OfficialAlertsEnabled:
+	// fehlt das Feld im JSON (Altdaten), decodiert Go zu nil statt false; der
+	// Python-Default (True = an) greift dann beim Lesen. Ein gesetzter Wert ist
+	// eine bewusste Nutzer-Entscheidung. SendTelegram/SendSms sind das Kanal-
+	// Opt-in (Default falsy = E-Mail-only), analog zum Trip-Alarm.
+	OfficialAlertTriggersEnabled *bool `json:"official_alert_triggers_enabled,omitempty"`
+	SendTelegram                 *bool `json:"send_telegram,omitempty"`
+	SendSms                      *bool `json:"send_sms,omitempty"`
 }

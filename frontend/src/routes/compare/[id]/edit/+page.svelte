@@ -36,6 +36,10 @@
 	state.officialAlertsEnabled = data.preset.official_alerts_enabled ?? true; // Issue #1040
 	state.radarAlertEnabled = data.preset.radar_alert_enabled ?? false; // Issue #1041 Slice 2 (Default AUS)
 	state.hourlyEnabled = data.preset.hourly_enabled ?? true; // Issue #1107
+	// Issue #1216 Slice 2b: Trigger Default AN, Kanäle Default AUS.
+	state.officialAlertTriggersEnabled = data.preset.official_alert_triggers_enabled ?? true;
+	state.sendTelegram = data.preset.send_telegram ?? false;
+	state.sendSms = data.preset.send_sms ?? false;
 	state.topN = (state.existingDisplayConfig.top_n as number) ?? 3; // Issue #1104
 
 	// Issue #1170 — Alarm-Konfiguration (Epic #1095 Scheibe 3/3).

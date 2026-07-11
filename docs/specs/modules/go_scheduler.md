@@ -402,6 +402,14 @@ r.Get("/api/scheduler/status", func(w http.ResponseWriter, r *http.Request) {
 | Alert Checks | `0,30 * * * *` | Europe/Vienna | Alle 30 Minuten |
 | Inbound Commands | `*/5 * * * *` | Europe/Vienna | Alle 5 Minuten |
 
+**Hinweis (2026-07-11):** Obige Tabelle spiegelt den ursprünglichen v1.0-Stand (5 Jobs,
+M4a). `internal/scheduler/scheduler.go` wurde seither um mehrere Jobs erweitert (u.a.
+`radar_alert_checks`, `compare_alert_checks`, `compare_radar_alert_checks`,
+`compare_presets_daily`, `data_write_selftest` und zuletzt `compare_official_alert_checks`,
+Issue #1216 Slice 2b) und zählt aktuell **9 Jobs** (`log.Printf("[scheduler] Started: 9
+jobs...")`, `scheduler.go:115`). Die vollständige, aktuelle Job-Liste steht direkt im Code
+(`scheduler.go`, `jobs := []jobDef{...}`), nicht in dieser historischen Tabelle.
+
 ## Expected Behavior
 
 ### Normaler Betrieb
@@ -467,3 +475,7 @@ Go-Scheduler stoppen und Python APScheduler wieder aktivieren:
 ## Changelog
 
 - 2026-04-14: v1.0 Initial spec (M4a — Go Cron-Scheduler)
+- 2026-07-11: Hinweis ergänzt — Scheduler zählt aktuell 9 Jobs statt der ursprünglich
+  gescopten 5 (zuletzt `compare_official_alert_checks`, Issue #1216 Slice 2b); die
+  Cron-Expressions-Tabelle oben ist der historische v1.0-Stand und wird nicht
+  nachgepflegt, aktuelle Job-Liste siehe `scheduler.go`.

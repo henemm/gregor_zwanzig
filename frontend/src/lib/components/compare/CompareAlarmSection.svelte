@@ -56,6 +56,13 @@
 		testid="compare-alarm-radar-toggle"
 	/>
 
+	<ChannelToggle
+		label="Amtliche-Warnungen-Alarm"
+		checked={wiz.officialAlertTriggersEnabled}
+		onchange={(checked) => (wiz.officialAlertTriggersEnabled = checked)}
+		testid="compare-alarm-official-toggle"
+	/>
+
 	{#if activeMetrics.length === 0}
 		<p class="no-metrics-hint" data-testid="compare-alarm-no-metrics">
 			Wähle im Tab „Idealwerte" Metriken aus, um Alarm-Schwellen zu konfigurieren.

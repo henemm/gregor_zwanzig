@@ -187,3 +187,53 @@ describe('buildComparePresetSavePayload — Alarm-Konfiguration (Issue #1170)', 
 		assert.equal(body.alert_quiet_to, '06:00');
 	});
 });
+
+// ─── Issue #1216 Slice 2b: Amtliche-Warnungen-Alarm-Trigger + Kanal-Felder ──
+describe('buildComparePresetSavePayload — Alarm-Trigger + Kanäle (#1216)', () => {
+	test('gesetzte Trigger-/Kanal-Felder landen als JSON-Keys im PUT-Body', () => {
+		const original = makePreset();
+		const { body } = buildComparePresetSavePayload(original, {
+			name: original.name,
+			activityProfile: 'skitour',
+			pickedIds: ['loc-1', 'loc-2'],
+			region: 'Salzburger Land',
+			idealRanges: {},
+			channelLayouts: null,
+			officialAlertTriggersEnabled: false,
+			sendTelegram: true,
+			sendSms: true
+		});
+
+		assert.equal(body.official_alert_triggers_enabled, false);
+		assert.equal(body.send_telegram, true);
+		assert.equal(body.send_sms, true);
+
+		// Datenverlust-Schutz: nicht editierte Felder round-trippen.
+		assert.deepEqual(body.empfaenger, ['a@example.com', 'b@example.com']);
+	});
+
+	test('fehlende Trigger-/Kanal-Felder in edits ändern den Round-Trip nicht (Keys fehlen)', () => {
+		const original = makePreset();
+		const { body } = buildComparePresetSavePayload(original, {
+			name: 'Nur Name',
+			activityProfile: 'skitour',
+			pickedIds: ['loc-1', 'loc-2'],
+			region: 'Salzburger Land',
+			idealRanges: {},
+			channelLayouts: null
+		});
+
+		assert.ok(
+			!Object.prototype.hasOwnProperty.call(body, 'official_alert_triggers_enabled'),
+			'official_alert_triggers_enabled darf ohne edits nicht im Body erscheinen'
+		);
+		assert.ok(
+			!Object.prototype.hasOwnProperty.call(body, 'send_telegram'),
+			'send_telegram darf ohne edits nicht im Body erscheinen'
+		);
+		assert.ok(
+			!Object.prototype.hasOwnProperty.call(body, 'send_sms'),
+			'send_sms darf ohne edits nicht im Body erscheinen'
+		);
+	});
+});

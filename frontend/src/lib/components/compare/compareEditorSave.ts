@@ -36,6 +36,11 @@ export interface CompareEditorEdits {
 	alertCooldownMinutes?: number;
 	alertQuietFrom?: string;
 	alertQuietTo?: string;
+	// Issue #1216 Slice 2b: Amtliche-Warnungen-Alarm-Trigger + Kanal-Opt-in.
+	// Optional → rückwärtskompatibel (undefined = Feld nicht editiert → Round-Trip).
+	officialAlertTriggersEnabled?: boolean;
+	sendTelegram?: boolean;
+	sendSms?: boolean;
 	// Issue #1134: Zeitfenster (Step 5). Optional → rückwärtskompatibel; ohne
 	// Angabe bleibt der Round-Trip-Spread aus `original` erhalten.
 	hourFrom?: number;
@@ -119,6 +124,12 @@ export function buildComparePresetSavePayload(
 			: {}),
 		...(edits.alertQuietFrom !== undefined ? { alert_quiet_from: edits.alertQuietFrom } : {}),
 		...(edits.alertQuietTo !== undefined ? { alert_quiet_to: edits.alertQuietTo } : {}),
+		// Issue #1216 Slice 2b: analoges Round-Trip-Prinzip für Trigger + Kanäle.
+		...(edits.officialAlertTriggersEnabled !== undefined
+			? { official_alert_triggers_enabled: edits.officialAlertTriggersEnabled }
+			: {}),
+		...(edits.sendTelegram !== undefined ? { send_telegram: edits.sendTelegram } : {}),
+		...(edits.sendSms !== undefined ? { send_sms: edits.sendSms } : {}),
 		// Issue #1134: Zeitfenster überschreibt den Spread-Wert aus original.
 		// undefined → Feld fehlt in edits → Spread-Wert bleibt erhalten (Round-Trip).
 		...(edits.hourFrom !== undefined ? { hour_from: edits.hourFrom } : {}),

@@ -280,3 +280,301 @@ func TestUpdateComparePreset_OfficialAlertsEnabledCrossUserIsolation(t *testing.
 		t.Errorf("cross-user leak: userb's OfficialAlertsEnabled changed, expected true, got %v", loadedB[0].OfficialAlertsEnabled)
 	}
 }
+
+// ─── Issue #1216 Slice 2b: Alarm-Trigger + Kanal-Felder ──────────────────────
+//
+// Drei neue additive Pointer-Felder auf ComparePreset:
+//   official_alert_triggers_enabled — steuert ob der amtliche Standalone-Alarm
+//   feuert (Default AN); send_telegram / send_sms — Kanal-Opt-in (Default AUS).
+// Diese Tests fahren echten Handler + Store (kein Mock).
+
+// AC-1/AC-3 (T1): official_alert_triggers_enabled=false landet unveraendert im
+// gespeicherten Preset und wird per GET/Load zurueckgelesen.
+func TestUpdateComparePreset_OfficialAlertTriggerRoundtrip(t *testing.T) {
+	s := newTestStore(t)
+
+	trueVal := true
+	original := model.ComparePreset{
+		ID:                    "cp-trigger-1",
+		Name:                  "Trigger-Test",
+		UserID:                "user1",
+		LocationIDs:           []string{"loc-a"},
+		Schedule:              "manual",
+		OfficialAlertsEnabled: &trueVal,
+		Profil:                "SUMMER_TREKKING",
+		HourFrom:              8,
+		HourTo:                17,
+		Empfaenger:            []string{"a@example.com"},
+		CreatedAt:             time.Now().UTC(),
+	}
+	if err := s.WithUser("user1").SaveComparePresets([]model.ComparePreset{original}); err != nil {
+		t.Fatalf("SaveComparePresets: %v", err)
+	}
+
+	body := map[string]interface{}{
+		"name":                           "Trigger-Test",
+		"schedule":                       "manual",
+		"profil":                         "SUMMER_TREKKING",
+		"hour_from":                      8,
+		"hour_to":                        17,
+		"location_ids":                   []string{"loc-a"},
+		"empfaenger":                     []string{"a@example.com"},
+		"official_alert_triggers_enabled": false,
+	}
+	buf, _ := json.Marshal(body)
+
+	r := chi.NewRouter()
+	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
+	req := httptest.NewRequest(http.MethodPut, "/api/compare/presets/cp-trigger-1", bytes.NewReader(buf))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "user1")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	loaded, err := s.WithUser("user1").LoadComparePresets()
+	if err != nil {
+		t.Fatalf("LoadComparePresets: %v", err)
+	}
+	if len(loaded) != 1 {
+		t.Fatalf("expected 1 preset, got %d", len(loaded))
+	}
+	if loaded[0].OfficialAlertTriggersEnabled == nil || *loaded[0].OfficialAlertTriggersEnabled != false {
+		t.Errorf("expected official_alert_triggers_enabled=false to survive roundtrip, got %v", loaded[0].OfficialAlertTriggersEnabled)
+	}
+}
+
+// AC-2 (T2): send_telegram/send_sms=true persistieren im Preset-JSON.
+func TestUpdateComparePreset_ChannelTogglesRoundtrip(t *testing.T) {
+	s := newTestStore(t)
+
+	original := model.ComparePreset{
+		ID:          "cp-channels-1",
+		Name:        "Channel-Test",
+		UserID:      "user1",
+		LocationIDs: []string{"loc-a"},
+		Schedule:    "manual",
+		Profil:      "SUMMER_TREKKING",
+		HourFrom:    8,
+		HourTo:      17,
+		Empfaenger:  []string{"a@example.com"},
+		CreatedAt:   time.Now().UTC(),
+	}
+	if err := s.WithUser("user1").SaveComparePresets([]model.ComparePreset{original}); err != nil {
+		t.Fatalf("SaveComparePresets: %v", err)
+	}
+
+	body := map[string]interface{}{
+		"name":          "Channel-Test",
+		"schedule":      "manual",
+		"profil":        "SUMMER_TREKKING",
+		"hour_from":     8,
+		"hour_to":       17,
+		"location_ids":  []string{"loc-a"},
+		"empfaenger":    []string{"a@example.com"},
+		"send_telegram": true,
+		"send_sms":      true,
+	}
+	buf, _ := json.Marshal(body)
+
+	r := chi.NewRouter()
+	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
+	req := httptest.NewRequest(http.MethodPut, "/api/compare/presets/cp-channels-1", bytes.NewReader(buf))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "user1")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	loaded, err := s.WithUser("user1").LoadComparePresets()
+	if err != nil {
+		t.Fatalf("LoadComparePresets: %v", err)
+	}
+	if loaded[0].SendTelegram == nil || *loaded[0].SendTelegram != true {
+		t.Errorf("expected send_telegram=true persisted, got %v", loaded[0].SendTelegram)
+	}
+	if loaded[0].SendSms == nil || *loaded[0].SendSms != true {
+		t.Errorf("expected send_sms=true persisted, got %v", loaded[0].SendSms)
+	}
+
+	// Beweis der echten JSON-Persistenz: rohe Datei lesen und Keys pruefen.
+	raw, err := os.ReadFile(filepath.Join(s.DataDir, "users", "user1", "compare_presets.json"))
+	if err != nil {
+		t.Fatalf("ReadFile compare_presets.json: %v", err)
+	}
+	var rawPresets []map[string]interface{}
+	if err := json.Unmarshal(raw, &rawPresets); err != nil {
+		t.Fatalf("Unmarshal raw JSON: %v", err)
+	}
+	if rawPresets[0]["send_telegram"] != true {
+		t.Errorf("expected send_telegram:true in raw JSON, got %v", rawPresets[0]["send_telegram"])
+	}
+	if rawPresets[0]["send_sms"] != true {
+		t.Errorf("expected send_sms:true in raw JSON, got %v", rawPresets[0]["send_sms"])
+	}
+}
+
+// AC-5 (T3): Partieller PUT (nur official_alert_triggers_enabled) erhaelt
+// alert_cooldown_minutes UND die beiden anderen neuen Felder (RMW-Merge).
+func TestUpdateComparePreset_PartialPutPreservesTriggerAndChannelsAndCooldown(t *testing.T) {
+	s := newTestStore(t)
+
+	cooldown := 90
+	trueVal := true
+	falseVal := false
+	original := model.ComparePreset{
+		ID:                           "cp-rmw-2b",
+		Name:                         "RMW-Test",
+		UserID:                       "user1",
+		LocationIDs:                  []string{"loc-a"},
+		Schedule:                     "manual",
+		Profil:                       "SUMMER_TREKKING",
+		HourFrom:                     8,
+		HourTo:                       17,
+		Empfaenger:                   []string{"a@example.com"},
+		AlertCooldownMinutes:         &cooldown,
+		OfficialAlertTriggersEnabled: &trueVal,
+		SendTelegram:                 &trueVal,
+		SendSms:                      &falseVal,
+		CreatedAt:                    time.Now().UTC(),
+	}
+	if err := s.WithUser("user1").SaveComparePresets([]model.ComparePreset{original}); err != nil {
+		t.Fatalf("SaveComparePresets: %v", err)
+	}
+
+	// PUT aendert NUR official_alert_triggers_enabled; die anderen neuen Felder
+	// und alert_cooldown_minutes fehlen im Body → muessen erhalten bleiben.
+	body := map[string]interface{}{
+		"name":                           "RMW-Test",
+		"schedule":                       "manual",
+		"profil":                         "SUMMER_TREKKING",
+		"hour_from":                      8,
+		"hour_to":                        17,
+		"location_ids":                   []string{"loc-a"},
+		"empfaenger":                     []string{"a@example.com"},
+		"official_alert_triggers_enabled": false,
+	}
+	buf, _ := json.Marshal(body)
+
+	r := chi.NewRouter()
+	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
+	req := httptest.NewRequest(http.MethodPut, "/api/compare/presets/cp-rmw-2b", bytes.NewReader(buf))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "user1")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	loaded, err := s.WithUser("user1").LoadComparePresets()
+	if err != nil {
+		t.Fatalf("LoadComparePresets: %v", err)
+	}
+	p := loaded[0]
+	if p.OfficialAlertTriggersEnabled == nil || *p.OfficialAlertTriggersEnabled != false {
+		t.Errorf("expected trigger=false after PUT, got %v", p.OfficialAlertTriggersEnabled)
+	}
+	if p.AlertCooldownMinutes == nil || *p.AlertCooldownMinutes != 90 {
+		t.Errorf("RMW leak: alert_cooldown_minutes erased, expected 90, got %v", p.AlertCooldownMinutes)
+	}
+	if p.SendTelegram == nil || *p.SendTelegram != true {
+		t.Errorf("RMW leak: send_telegram erased, expected true, got %v", p.SendTelegram)
+	}
+	if p.SendSms == nil || *p.SendSms != false {
+		t.Errorf("RMW leak: send_sms erased, expected false, got %v", p.SendSms)
+	}
+}
+
+// AC-6 (T4): Zwei verschiedene user_ids, isolierte Store-Pfade — Nutzer A's
+// Aenderung beeinflusst Nutzer B's Preset nicht. Nie "default".
+func TestUpdateComparePreset_TriggerCrossUserIsolation(t *testing.T) {
+	s := newTestStore(t)
+
+	trueVal := true
+	presetA := model.ComparePreset{
+		ID:                           "cp-2b-usera",
+		Name:                         "Nutzer A",
+		UserID:                       "usera",
+		LocationIDs:                  []string{"loc-a"},
+		Schedule:                     "manual",
+		OfficialAlertTriggersEnabled: &trueVal,
+		Profil:                       "SUMMER_TREKKING",
+		HourFrom:                     8,
+		HourTo:                       17,
+		Empfaenger:                   []string{"a@example.com"},
+		CreatedAt:                    time.Now().UTC(),
+	}
+	presetB := model.ComparePreset{
+		ID:                           "cp-2b-userb",
+		Name:                         "Nutzer B",
+		UserID:                       "userb",
+		LocationIDs:                  []string{"loc-b"},
+		Schedule:                     "manual",
+		OfficialAlertTriggersEnabled: &trueVal,
+		Profil:                       "SUMMER_TREKKING",
+		HourFrom:                     9,
+		HourTo:                       16,
+		Empfaenger:                   []string{"b@example.com"},
+		CreatedAt:                    time.Now().UTC(),
+	}
+	if err := s.WithUser("usera").SaveComparePresets([]model.ComparePreset{presetA}); err != nil {
+		t.Fatalf("SaveComparePresets usera: %v", err)
+	}
+	if err := s.WithUser("userb").SaveComparePresets([]model.ComparePreset{presetB}); err != nil {
+		t.Fatalf("SaveComparePresets userb: %v", err)
+	}
+
+	// Nutzer A schaltet Trigger aus + Telegram an.
+	body := map[string]interface{}{
+		"name":                           "Nutzer A",
+		"schedule":                       "manual",
+		"profil":                         "SUMMER_TREKKING",
+		"hour_from":                      8,
+		"hour_to":                        17,
+		"location_ids":                   []string{"loc-a"},
+		"empfaenger":                     []string{"a@example.com"},
+		"official_alert_triggers_enabled": false,
+		"send_telegram":                  true,
+	}
+	buf, _ := json.Marshal(body)
+
+	r := chi.NewRouter()
+	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
+	req := httptest.NewRequest(http.MethodPut, "/api/compare/presets/cp-2b-usera", bytes.NewReader(buf))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "usera")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	loadedB, err := s.WithUser("userb").LoadComparePresets()
+	if err != nil {
+		t.Fatalf("LoadComparePresets userb: %v", err)
+	}
+	if len(loadedB) != 1 {
+		t.Fatalf("expected 1 preset for userb, got %d", len(loadedB))
+	}
+	// Nutzer B unberuehrt: Trigger bleibt true, keine Kanal-Felder gesetzt.
+	if loadedB[0].OfficialAlertTriggersEnabled == nil || *loadedB[0].OfficialAlertTriggersEnabled != true {
+		t.Errorf("cross-user leak: userb trigger changed, expected true, got %v", loadedB[0].OfficialAlertTriggersEnabled)
+	}
+	if loadedB[0].SendTelegram != nil {
+		t.Errorf("cross-user leak: userb send_telegram set, expected nil, got %v", *loadedB[0].SendTelegram)
+	}
+
+	// Es darf KEIN "default"-Store-Pfad entstanden sein.
+	if _, err := os.Stat(filepath.Join(s.DataDir, "users", "default", "compare_presets.json")); err == nil {
+		t.Errorf("cross-user leak: unexpected default store path created")
+	}
+}

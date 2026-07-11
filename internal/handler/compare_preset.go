@@ -237,6 +237,18 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if updated.AlertQuietTo == nil {
 			updated.AlertQuietTo = original.AlertQuietTo
 		}
+		// Issue #1216 Slice 2b: Alarm-Trigger + Kanal-Felder erhalten wenn Body sie
+		// nicht traegt (nil nach Decode = Feld fehlte im Request), analog
+		// official_alerts_enabled — Datenverlust-Schutz (CLAUDE.md).
+		if updated.OfficialAlertTriggersEnabled == nil {
+			updated.OfficialAlertTriggersEnabled = original.OfficialAlertTriggersEnabled
+		}
+		if updated.SendTelegram == nil {
+			updated.SendTelegram = original.SendTelegram
+		}
+		if updated.SendSms == nil {
+			updated.SendSms = original.SendSms
+		}
 		// Issue #764: forecast_hours erhalten wenn Body es nicht trägt (0 = Feld fehlte im Body).
 		if updated.ForecastHours == 0 {
 			updated.ForecastHours = original.ForecastHours
