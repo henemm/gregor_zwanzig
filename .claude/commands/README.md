@@ -37,6 +37,7 @@ High-level planning before workflow:
 |---------|---------|
 | `/workflow` | Manage parallel workflows |
 | `/add-artifact` | Add test artifact |
+| `/radar` | PO-Dashboard "Werkstatt-Radar" aktualisieren (Backlog + echte Tab-Belegung → einfache Tab-Liste) |
 | `/diary` | Custom diary command |
 
 ## Usage Patterns
