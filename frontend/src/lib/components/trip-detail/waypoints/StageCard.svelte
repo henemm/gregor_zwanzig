@@ -3,7 +3,7 @@
 	// Issue #585: Design-Fidelity 1:1 nach screen-waypoint-editor.jsx
 	// Inline SVG-Polyline (MiniSpark), width 200px, border statt outline für aktiven Zustand.
 
-	import { isPauseStage, formatStageNumber } from '$lib/components/trip-wizard/wizardHelpers';
+	import { isPauseStage, formatStageNumber } from '$lib/components/shared/wizardHelpers';
 	import type { Stage } from '$lib/types';
 
 	interface Props {

@@ -31,7 +31,6 @@ const MIGRATED_FILES: Array<{ path: string; components: string[] }> = [
 	{ path: join(COMPARE_DIR, 'HourlyMatrix.svelte'),      components: ['Pill'] },
 	{ path: join(COMPARE_DIR, 'LocationPreviewMap.svelte'), components: ['TopoBg'] },
 	{ path: join(COMPARE_DIR, 'LocationsRail.svelte'),     components: ['Btn', 'Pill'] },
-	{ path: join(COMPARE_DIR, 'NewLocationWizard.svelte'), components: ['Btn', 'Input'] },
 	{ path: join(COMPARE_DIR, 'PresetHeader.svelte'),      components: ['Btn'] },
 	{ path: join(COMPARE_DIR, 'RecommendationBanner.svelte'), components: ['Pill'] },
 	{ path: join(COMPARE_DIR, 'SavePresetDialog.svelte'),  components: ['Btn'] },

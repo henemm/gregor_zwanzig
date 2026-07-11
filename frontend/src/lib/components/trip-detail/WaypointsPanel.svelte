@@ -9,7 +9,7 @@
 	import ProfileEditor from './waypoints/ProfileEditor.svelte';
 	import WaypointCard from './waypoints/WaypointCard.svelte';
 	import PauseStageView from './waypoints/PauseStageView.svelte';
-	import { isPauseStage } from '$lib/components/trip-wizard/wizardHelpers';
+	import { isPauseStage } from '$lib/components/shared/wizardHelpers';
 	import type { Trip, Stage } from '$lib/types';
 
 	interface Props {

@@ -5,8 +5,8 @@
 	import { Eyebrow } from '$lib/components/atoms';
 	import { GCard } from '$lib/components/ui/g-card';
 	import { Select } from '$lib/components/ui/select';
-	import ChannelToggle from '$lib/components/trip-wizard/steps/ChannelToggle.svelte';
-	import { maskPhone } from '$lib/components/trip-wizard/wizardHelpers';
+	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
+	import { maskPhone } from '$lib/components/shared/wizardHelpers';
 	import type { CompareWizardState } from '../compareWizardState.svelte';
 	import { ALL_HOURLY_METRICS } from '../compareHourlyMetricDefs';
 

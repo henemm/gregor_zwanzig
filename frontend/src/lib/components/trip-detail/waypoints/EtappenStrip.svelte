@@ -6,7 +6,7 @@
 	// im normalen DOM-Flow bleiben (svelte-dnd-action entfernt Nicht-Item-Kinder).
 
 	import StageCard from './StageCard.svelte';
-	import { isPauseStage } from '$lib/components/trip-wizard/wizardHelpers';
+	import { isPauseStage } from '$lib/components/shared/wizardHelpers';
 	import type { Stage } from '$lib/types';
 
 	interface Props {

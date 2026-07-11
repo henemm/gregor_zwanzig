@@ -6,7 +6,7 @@
 	import AlertQuietHoursCard from './AlertQuietHoursCard.svelte';
 	import AlertPreviewCard from './AlertPreviewCard.svelte';
 	import AlertMetricLevelTable from './AlertMetricLevelTable.svelte';
-	import ChannelToggle from '$lib/components/trip-wizard/steps/ChannelToggle.svelte';
+	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
 	import { Eyebrow } from '$lib/components/atoms';
 	import { api } from '$lib/api';
 	import type { Trip, AlertRule, AlertMetric, SensLevel } from '$lib/types';

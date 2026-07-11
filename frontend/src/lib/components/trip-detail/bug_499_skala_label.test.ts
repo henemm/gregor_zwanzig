@@ -17,7 +17,6 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 const ACTIVE_METRIC_ROW  = join(here, 'ActiveMetricRow.svelte');
 const WEATHER_CONFIG_DLG = join(here, '..', 'WeatherConfigDialog.svelte');
-const STEP3_WEATHER      = join(here, '..', 'trip-wizard', 'steps', 'Step3Weather.svelte');
 const SAVE_PRESET_DLG    = join(here, 'SavePresetDialog.svelte');
 const TABLE_PREVIEW      = join(here, 'TablePreview.svelte');
 
@@ -64,19 +63,6 @@ test('AC-2 (#629): WeatherConfigDialog bietet Roh/Einfach-Toggle', () => {
 	const src = readFileSync(WEATHER_CONFIG_DLG, 'utf-8');
 	assert.ok(src.includes('Einfach'), 'WeatherConfigDialog muss Toggle-Label "Einfach" enthalten');
 	assert.ok(src.includes('Roh'), 'WeatherConfigDialog muss Toggle-Label "Roh" enthalten');
-});
-
-test('AC-2 (#629): Step3Weather bietet kein scale/symbol-Label mehr', () => {
-	const src = readFileSync(STEP3_WEATHER, 'utf-8');
-	assert.ok(!src.includes("scale: '"), 'Step3Weather darf kein scale-Label mehr haben');
-	assert.ok(!src.includes("symbol: '"), 'Step3Weather darf kein symbol-Label mehr haben');
-	assert.ok(!src.includes("scale: 'Skala'"), "Step3Weather darf scale: 'Skala' nicht enthalten");
-});
-
-test('AC-2 (#629): Step3Weather bietet Roh/Einfach-Toggle', () => {
-	const src = readFileSync(STEP3_WEATHER, 'utf-8');
-	assert.ok(src.includes('Einfach'), 'Step3Weather muss Toggle-Label "Einfach" enthalten');
-	assert.ok(src.includes('Roh'), 'Step3Weather muss Toggle-Label "Roh" enthalten');
 });
 
 // --- AC-3: Preset-Zusammenfassung SavePresetDialog ---
