@@ -38,6 +38,7 @@ from utils.timezone import tz_for_coords
 
 if TYPE_CHECKING:
     from app.trip import Stage, Trip
+    from services.report_config_resolver import ReportRenderOptions
 
 # Issue #766: Inter-Mail-Delay beim Sammelversand, um Rate-Limits (452) zu
 # vermeiden. Hinweis: `time` ist hier die datetime.time-Klasse — der echte
@@ -630,6 +631,13 @@ class TripReportSchedulerService:
         # (tz_for_coords now imported top-level — Bug #401)
         trip_tz = tz_for_coords(segments[0].start_point.lat, segments[0].start_point.lon)
 
+        # Issue #1208: EINZIGER Ableitungspfad report_config → render-wirksame
+        # Optionen; ersetzt 5 Direktzugriffe + den Patch-Hack (779) weiter unten.
+        from services.report_config_resolver import resolve_report_render_options
+        render_options = resolve_report_render_options(
+            trip.report_config, trip.display_config, report_type,
+        )
+
         # 2. Wind exposition detection (before weather fetch, needs TripSegments)
         from services.wind_exposition import WindExpositionService
         try:
@@ -736,23 +744,14 @@ class TripReportSchedulerService:
             segment_weather[-1], target_date, tz=trip_tz,
         )
 
-        # 6. Multi-day trend (configurable per report type — read from report_config with fallback)
+        # 6. Multi-day trend (configurable per report type — via Resolver, Issue #1208)
         multi_day_trend = None
-        if segment_weather:
-            rc = trip.report_config
-            dc = trip.display_config
-            trend_reports = (
-                rc.multi_day_trend_reports
-                if rc is not None
-                else (dc.multi_day_trend_reports if dc else ["evening"])
-            )
-            if report_type in trend_reports:
-                multi_day_trend = self._build_stage_trend(trip, target_date, tz=trip_tz)
+        if segment_weather and render_options.show_multi_day_trend:
+            multi_day_trend = self._build_stage_trend(trip, target_date, tz=trip_tz)
 
-        # 7. Usable daylight (F11) — respects report_config toggle
+        # 7. Usable daylight (F11) — via Resolver (Issue #1208)
         daylight_window = None
-        show_daylight = trip.report_config.show_daylight if trip.report_config else True
-        if show_daylight:
+        if render_options.show_daylight:
             try:
                 from services.daylight_service import compute_usable_daylight
                 first_seg = segments[0]
@@ -774,15 +773,14 @@ class TripReportSchedulerService:
             except Exception as e:
                 logger.warning(f"Daylight computation failed for {trip.id}: {e}")
 
-        # Option A: patch display_config.show_compact_summary from report_config
-        if trip.display_config and trip.report_config:
-            trip.display_config.show_compact_summary = trip.report_config.show_compact_summary
-
         # 7b. Vortag-Vergleich (Issue #750): gestrigen Snapshot laden + Deltas
         # berechnen. Fail-soft — fehlt der Vortag, bleibt day_comparison None.
+        # Issue #1208: Patch-Hack (`trip.display_config.show_compact_summary =
+        # trip.report_config.show_compact_summary`) entfaellt ersatzlos — der
+        # Resolver liest show_compact_summary bereits aus report_config,
+        # keine Mutation von trip.display_config mehr noetig.
         day_comparison = None
-        show_yc = trip.report_config.show_yesterday_comparison if trip.report_config else True
-        if show_yc:
+        if render_options.show_yesterday_comparison:
             try:
                 from services.weather_snapshot import WeatherSnapshotService
                 from services.day_comparison import DayComparisonService
@@ -815,6 +813,7 @@ class TripReportSchedulerService:
             on_demand=on_demand,
             catchup_prefix=catchup_prefix,
             partial_outage_hint=partial_outage_hint,
+            render_options=render_options,
         )
         result = self._notification_service.send_trip_report(request)
         errors = request.failed_segments
@@ -880,6 +879,7 @@ class TripReportSchedulerService:
         on_demand: bool,
         catchup_prefix: str | None,
         partial_outage_hint: str | None = None,
+        render_options: Optional["ReportRenderOptions"] = None,
     ) -> TripReportRequest:
         """Baut das DTO, das an den NotificationService übergeben wird (Issue #1022).
 
@@ -918,6 +918,7 @@ class TripReportSchedulerService:
             partial_outage_hint=partial_outage_hint,
             failed_segments=errors,
             on_demand=on_demand,
+            render_options=render_options,
         )
 
     def _reset_alert_state_after_briefing(self, trip_id: str) -> None:

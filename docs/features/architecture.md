@@ -89,6 +89,17 @@ Channel Renderers
 Channel (E-Mail / Telegram / SMS / Console)
 ```
 
+**Report-Config-Resolver (Issue #1208):** Für Trip-Briefings löst
+`resolve_report_render_options()` (`src/services/report_config_resolver.py`)
+vor dem `Formatter`-Schritt `TripReportConfig`/`UnifiedWeatherDisplayConfig`
+eines Trips zentral und an EINER Stelle in ein frozen `ReportRenderOptions`-Objekt
+(7 render-wirksame Felder, z. B. `email_format`, `show_outlook`) auf. Der
+Scheduler-Versandpfad (`trip_report_scheduler.py` → `notification_service.py` →
+`TripReportFormatter.format_email()`) reicht nur noch dieses Objekt durch statt
+einzelner Config-Felder; `format_email()` hat bei `render_options=None` einen
+internen Resolver-Fallback für Bestandsverhalten. Details:
+`docs/specs/modules/report_config_resolver.md`.
+
 ### Datenfluss (Legacy-CLI)
 
 Für lokale Entwicklung und Debugging existiert weiterhin die CLI in `src/app/cli.py`

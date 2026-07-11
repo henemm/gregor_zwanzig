@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     from app.profile import ActivityProfile
     from app.trip import Trip
     from services.daylight_service import DaylightWindow
+    from services.report_config_resolver import ReportRenderOptions
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +91,9 @@ class TripReportRequest:
     failed_segments: list["SegmentWeatherData"] = field(default_factory=list)
     # On-Demand unterdrückt Marker/Snapshot-Seiteneffekte (wird vom Scheduler gesteuert)
     on_demand: bool = False
+    # Issue #1208: aufgeloeste render-wirksame Optionen (einziger Ableitungsweg
+    # von report_config zu format_email); None → interner Resolver-Fallback.
+    render_options: Optional["ReportRenderOptions"] = None
 
 
 @dataclass
@@ -205,6 +209,7 @@ class NotificationService:
             shortcode=request.shortcode,
             stage_total=request.stage_total,
             trip_url=request.trip_url,
+            render_options=request.render_options,
         )
 
         self._apply_prefixes(report, request)

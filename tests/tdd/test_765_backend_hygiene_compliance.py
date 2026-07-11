@@ -46,6 +46,11 @@ _PRODUCT_SUFFIXES = (".py", ".go")
 _SELF_EXEMPT = {
     "test_765_backend_hygiene_compliance.py",
     "test_754_755_test_hygiene_compliance.py",
+    # #1208 AC-3 (PO-Freigabe 2026-07-11): Struktur-Gate liest Produkt-Quelltext
+    # als DATEN fuer eine AST-Strukturregel (kein Verhaltensnachweis) — gleiche
+    # Werkzeug-Klasse wie die beiden Gates oben. Spec:
+    # docs/specs/modules/report_config_resolver.md
+    "test_report_config_scheduler_structure.py",
 }
 
 

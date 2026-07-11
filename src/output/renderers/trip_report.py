@@ -42,6 +42,7 @@ from app.models import (
 )
 from app.profile import ActivityProfile
 from services.daylight_service import DaylightWindow
+from services.report_config_resolver import ReportRenderOptions, resolve_report_render_options
 from services.risk_engine import RiskEngine
 from src.output.renderers.email import render_email
 from src.output.renderers.email.helpers import ampel_dot, build_friendly_keys
@@ -75,10 +76,18 @@ class TripReportFormatter:
         shortcode: Optional[str] = None,
         stage_total: Optional[int] = None,
         trip_url: Optional[str] = None,
+        render_options: Optional[ReportRenderOptions] = None,
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email."""
         if not segments:
             raise ValueError("Cannot format email with no segments")
+
+        # Issue #1208: Resolver ist der EINZIGE Ableitungsweg report_config →
+        # render-wirksame Optionen. render_options=None (Default) reproduziert
+        # das Bestandsverhalten via internem Fallback (AC-4).
+        options = render_options or resolve_report_render_options(
+            report_config, display_config, report_type,
+        )
 
         dc = display_config or build_default_display_config()
         if report_type in ("morning", "evening"):
@@ -114,7 +123,7 @@ class TripReportFormatter:
 
         # F2: Compact summary (natural-language per stage)
         compact_summary = None
-        if dc.show_compact_summary:
+        if options.show_compact_summary:
             compact_summary = self._generate_compact_summary(segments, stage_name, dc)
 
         # β3 Adapter (§A2/§A6): RENDER an pure renderer delegieren.
@@ -125,17 +134,15 @@ class TripReportFormatter:
             report_type=report_type,  # type: ignore[arg-type]
             trip_name=trip_name,
         )
-        # Issue #621: Toggles aus report_config ableiten (None → Defaults = alles an)
-        _show_stage_stats = report_config.show_stage_stats if report_config else True
-        _show_quick_take_tags = report_config.show_quick_take_tags if report_config else True
-        _show_stability = report_config.show_stability if report_config else True
-        _show_highlights = report_config.show_highlights if report_config else True
-        _daily_summary_metrics = report_config.daily_summary_metrics if report_config else None
-        # Issue #664: Metriken-Überblick
-        _show_metrics_summary = report_config.show_metrics_summary if report_config else False
+        # Issue #1208: die 4 toten #790-Toggles (show_quick_take_tags,
+        # show_highlights, daily_summary_metrics, show_metrics_summary) werden
+        # NICHT mehr aus report_config gelesen (RENDER_NEUTRAL, strukturell
+        # wirkungslos seit #790 — render_email() absorbiert sie in
+        # **_ignored). Bestandsverhalten bleibt identisch, weil diese Werte
+        # dort ohnehin nie in den Output einfliessen.
         # F001/F002 (#750/#752): Defense-in-Depth für den Vortag-Vergleich-Toggle.
         # AC-3: show_yesterday_comparison=False → Sektion erscheint NICHT.
-        if report_config is not None and not report_config.show_yesterday_comparison:
+        if not options.show_yesterday_comparison:
             day_comparison = None
         # Issue #623 AC-5: Sendezeit für das Kontext-Label im HTML-Trend-Block.
         _sent_at = datetime.now(timezone.utc)
@@ -158,16 +165,14 @@ class TripReportFormatter:
             friendly_keys=self._friendly_keys,
             profile=profile,
             stability_result=stability_result,
-            show_stage_stats=_show_stage_stats,
-            show_quick_take_tags=_show_quick_take_tags,
-            show_stability=_show_stability,
-            show_highlights=_show_highlights,
-            daily_summary_metrics=_daily_summary_metrics,
+            show_stage_stats=options.show_stage_stats,
+            show_stability=options.show_stability,
             sent_at=_sent_at,
-            show_metrics_summary=_show_metrics_summary,
             day_comparison=day_comparison,
             stage_total=stage_total,
             trip_url=trip_url,
+            email_format=options.email_format,
+            show_outlook=options.show_outlook,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(
