@@ -55,6 +55,11 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/auth/reset-password",
 		resetLimiter.Middleware(handler.ResetPasswordHandler(deps.Store, bcrypt.DefaultCost)).ServeHTTP,
 	)
+	// Issue #1219 Scheibe 2a-ii — Einlösung des E-Mail-Bestätigungs-Tokens (public).
+	verifyLimiter := authmw.NewIPRateLimiter(10, time.Hour)
+	r.Post("/api/auth/verify-email",
+		verifyLimiter.Middleware(handler.VerifyEmailHandler(deps.Store)).ServeHTTP,
+	)
 	r.Delete("/api/auth/account", handler.DeleteAccountHandler(deps.Store))
 	r.Get("/api/auth/profile", handler.GetProfileHandler(deps.Store))
 	r.Put("/api/auth/profile", handler.UpdateProfileHandler(deps.Store, *deps.Config))

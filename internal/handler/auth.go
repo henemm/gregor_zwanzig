@@ -338,6 +338,60 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 	}
 }
 
+// VerifyEmailHandler — Issue #1219 Scheibe 2a-ii: Einlösung des in Scheibe
+// 2a-i erzeugten E-Mail-Bestätigungs-Tokens. Struktureller Zwilling von
+// ResetPasswordHandler auf model.EmailVerificationToken. Public (kein
+// Auth-Kontext) — Nutzer klickt den Link unangemeldet aus der Mail heraus.
+// Der Token wird NUR bei erfolgreicher Verifikation gelöscht.
+func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			User  string `json:"user"`
+			Token string `json:"token"`
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.User == "" || req.Token == "" {
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"invalid request"}`))
+			return
+		}
+
+		vt, err := s.LoadVerificationToken(req.User)
+		if err != nil || vt == nil {
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"invalid token"}`))
+			return
+		}
+		if time.Now().After(vt.ExpiresAt) {
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"token expired"}`))
+			return
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(vt.TokenHash), []byte(req.Token)); err != nil {
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"invalid token"}`))
+			return
+		}
+
+		user, err := s.LoadUser(req.User) // RMW: vollständiges Objekt laden
+		if err != nil || user == nil {
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"invalid token"}`))
+			return
+		}
+		now := time.Now().UTC()
+		user.EmailVerifiedAt = &now
+		if err := s.SaveUser(*user); err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+		s.DeleteVerificationToken(req.User)
+
+		w.Write([]byte(`{"status":"ok"}`))
+	}
+}
+
 func LogoutHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("gz_session")
