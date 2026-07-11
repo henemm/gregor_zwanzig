@@ -12,8 +12,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/mail"
+	"github.com/henemm/gregor-api/internal/model"
 )
 
 // AC-6: Wenn GZ_GOOGLE_CLIENT_ID leer ist → HTTP 501.
@@ -223,5 +226,160 @@ func TestGoogleOAuthCallbackHandler_EmailNotVerified(t *testing.T) {
 	ids, _ := s.ListUserIDs()
 	if len(ids) != 0 {
 		t.Errorf("expected no users created, got %d", len(ids))
+	}
+}
+
+// -----------------------------------------------------------------------------
+// Issue #1226 — Verifikations-Dispatch bei Google-OAuth-Kontoerstellung
+// -----------------------------------------------------------------------------
+
+// oauthFakeServers baut Fake-Userinfo- und Token-Server für einen gegebenen sub
+// mit email_verified=true. Kein Mock — echte HTTP-Roundtrips gegen httptest.
+func oauthFakeServers(t *testing.T, sub, email string) (userinfoURL, tokenURL string) {
+	t.Helper()
+	fakeUserinfo := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"sub":            sub,
+			"email":          email,
+			"email_verified": true,
+		})
+	}))
+	t.Cleanup(fakeUserinfo.Close)
+
+	fakeToken := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"access_token": "fake-access-token",
+			"token_type":   "Bearer",
+			"expires_in":   3600,
+		})
+	}))
+	t.Cleanup(fakeToken.Close)
+
+	return fakeUserinfo.URL, fakeToken.URL
+}
+
+// AC-4: neuer (unbekannter) sub → neues Konto UND genau ein Verifikations-Dispatch
+// mit der Google-Adresse.
+func TestGoogleOAuthCallback_NewUserTriggersDispatch_AC4(t *testing.T) {
+	userinfoURL, tokenURL := oauthFakeServers(t, "sub-new-1226", "neu-oauth@beispiel.de")
+
+	// SMTPHost gesetzt → der (nicht-Test-User-)Resend-Zweig in
+	// dispatchVerificationMail betritt den beobachtbaren sendVerificationMailFn.
+	cfg := &config.Config{
+		GoogleClientID:     "test-client-id",
+		GoogleClientSecret: "test-secret",
+		GoogleRedirectURL:  "https://example.com/callback",
+		SessionSecret:      "test-session-secret",
+		PublicHost:         "https://gregor20.henemm.com",
+		SMTPHost:           "smtp.resend.com", SMTPPort: 587, SMTPUser: "resend", SMTPPass: "re_x",
+	}
+	s := newTestStore(t)
+
+	type observedCall struct{ to string }
+	calls := make(chan observedCall, 4)
+	origSend := sendVerificationMailFn
+	sendVerificationMailFn = func(cfg mail.MailConfig, to string, msg mail.Mail) error {
+		calls <- observedCall{to: to}
+		return nil
+	}
+	defer func() { sendVerificationMailFn = origSend }()
+
+	h := GoogleOAuthCallbackHandlerWithEndpoints(cfg, s, userinfoURL, tokenURL)
+	const state = "test-state-value"
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/google/callback?code=test-code&state="+state, nil)
+	req.AddCookie(&http.Cookie{Name: "gz_oauth_state", Value: state})
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("AC-4: expected 302, got %d: %s", w.Code, w.Body.String())
+	}
+	// Neues Konto wurde via createOAuthUser angelegt.
+	newUser, err := s.FindUserByOAuthSub("google", "sub-new-1226")
+	if err != nil || newUser == nil {
+		t.Fatalf("AC-4: new account for unknown sub must exist: %v", err)
+	}
+
+	select {
+	case c := <-calls:
+		if c.to != "neu-oauth@beispiel.de" {
+			t.Errorf("AC-4: expected dispatch to 'neu-oauth@beispiel.de', got %q", c.to)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("AC-4: expected exactly one dispatch call within 2s, none observed")
+	}
+	select {
+	case extra := <-calls:
+		t.Errorf("AC-4: expected exactly ONE dispatch call, extra observed: %+v", extra)
+	default:
+	}
+}
+
+// AC-5: bekannter sub (Login, keine Neuanlage) → KEIN Dispatch (Regressionsschutz
+// gegen Mail-Spam bei jedem Login), Session-Cookie wird trotzdem gesetzt.
+func TestGoogleOAuthCallback_ExistingUserNoDispatch_AC5(t *testing.T) {
+	userinfoURL, tokenURL := oauthFakeServers(t, "sub-known-1226", "bekannt-oauth@beispiel.de")
+
+	cfg := &config.Config{
+		GoogleClientID:     "test-client-id",
+		GoogleClientSecret: "test-secret",
+		GoogleRedirectURL:  "https://example.com/callback",
+		SessionSecret:      "test-session-secret",
+		PublicHost:         "https://gregor20.henemm.com",
+		SMTPHost:           "smtp.resend.com", SMTPPort: 587, SMTPUser: "resend", SMTPPass: "re_x",
+	}
+	s := newTestStore(t)
+
+	// Bestehendes OAuth-Konto für denselben sub vorab anlegen.
+	if err := s.SaveUser(model.User{
+		ID: "g-existing", OAuthProvider: "google", OAuthSub: "sub-known-1226",
+		Email: "bekannt-oauth@beispiel.de", CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("AC-5: seed existing oauth user: %v", err)
+	}
+	_ = s.ProvisionUserDirs("g-existing")
+
+	calls := make(chan struct{}, 4)
+	origSend := sendVerificationMailFn
+	sendVerificationMailFn = func(cfg mail.MailConfig, to string, msg mail.Mail) error {
+		calls <- struct{}{}
+		return nil
+	}
+	defer func() { sendVerificationMailFn = origSend }()
+
+	h := GoogleOAuthCallbackHandlerWithEndpoints(cfg, s, userinfoURL, tokenURL)
+	const state = "test-state-value"
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/google/callback?code=test-code&state="+state, nil)
+	req.AddCookie(&http.Cookie{Name: "gz_oauth_state", Value: state})
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("AC-5: expected 302, got %d: %s", w.Code, w.Body.String())
+	}
+	// Session-Cookie muss gesetzt sein (Login funktioniert normal).
+	var sess *http.Cookie
+	for _, c := range w.Result().Cookies() {
+		if c.Name == "gz_session" {
+			sess = c
+			break
+		}
+	}
+	if sess == nil {
+		t.Fatalf("AC-5: expected gz_session cookie on login of existing user")
+	}
+	// Kein neues Konto angelegt (nur der eine geseedete User).
+	ids, _ := s.ListUserIDs()
+	if len(ids) != 1 {
+		t.Errorf("AC-5: expected no new account, got %d users", len(ids))
+	}
+	// Kein Dispatch — 200ms Fenster reicht, da bei Login gar keine Goroutine startet.
+	select {
+	case <-calls:
+		t.Error("AC-5: no verification dispatch must happen on login of an existing OAuth user")
+	case <-time.After(300 * time.Millisecond):
+		// erwartetes Verhalten — kein Aufruf
 	}
 }

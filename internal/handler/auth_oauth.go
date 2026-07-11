@@ -172,6 +172,11 @@ func googleOAuthCallbackHandlerInternal(cfg *config.Config, s *store.Store, user
 				return
 			}
 			userId = newUser.ID
+			// Issue #1226: neu angelegte OAuth-Konten durchlaufen denselben
+			// #1219-Double-Opt-In wie die klassische Registrierung. NUR bei
+			// tatsächlicher Neuanlage — beim Login eines bestehenden sub darf
+			// KEIN Dispatch laufen (sonst Mail-Spam bei jedem Login, AC-5).
+			dispatchVerificationMail(s, *cfg, newUser.ID, newUser)
 		}
 
 		sessionToken := middleware.SignSession(userId, cfg.SessionSecret)

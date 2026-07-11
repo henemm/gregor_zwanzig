@@ -40,7 +40,7 @@ func New(deps Deps) chi.Router {
 	// Rate-limit register: 5 attempts per IP per hour (Issue #117).
 	registerLimiter := authmw.NewIPRateLimiter(5, time.Hour)
 	r.Post("/api/auth/register",
-		registerLimiter.Middleware(handler.RegisterHandler(deps.Store, bcrypt.DefaultCost)).ServeHTTP,
+		registerLimiter.Middleware(handler.RegisterHandler(deps.Store, bcrypt.DefaultCost, *deps.Config)).ServeHTTP,
 	)
 	loginLimiter := authmw.NewIPRateLimiter(30, time.Hour)
 	r.Post("/api/auth/login",
@@ -114,7 +114,7 @@ func New(deps Deps) chi.Router {
 		passkeyRegPubLimiter.Middleware(handler.PasskeyRegisterPublicBeginHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore)).ServeHTTP,
 	)
 	r.Post("/api/auth/passkey/register/public/finish",
-		passkeyRegPubLimiter.Middleware(handler.PasskeyRegisterPublicFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore, deps.Config.SessionSecret)).ServeHTTP,
+		passkeyRegPubLimiter.Middleware(handler.PasskeyRegisterPublicFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore, deps.Config.SessionSecret, *deps.Config)).ServeHTTP,
 	)
 
 	r.Get("/api/health", handler.HealthHandler(deps.Config.PythonCoreURL, deps.GitCommit))

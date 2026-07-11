@@ -31,7 +31,19 @@
 			</div>
 
 			<div class="space-y-2">
-				<label for="password" class="text-sm font-medium">Passwort</label>
+				<label for="email" class="text-sm font-medium">E-Mail</label>
+					<input
+						id="email"
+						name="email"
+						type="email"
+						required
+						value={form?.email ?? ''}
+						class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					/>
+				</div>
+
+				<div class="space-y-2">
+					<label for="password" class="text-sm font-medium">Passwort</label>
 				<input
 					id="password"
 					name="password"

@@ -374,9 +374,11 @@ func TestGetProfileDoesNotRewriteUserJsonWhenTierMissing(t *testing.T) {
 
 func TestRegisterCreatesUserDirs(t *testing.T) {
 	s := newTestStore(t)
-	h := RegisterHandler(s, bcrypt.MinCost)
+	// Leere Config → dispatchVerificationMail bricht mangels SMTPHost sofort ab
+	// (kein Netz-Zugriff); dieser Test prüft nur die Verzeichnis-Anlage.
+	h := RegisterHandler(s, bcrypt.MinCost, config.Config{})
 
-	body := `{"username":"newuser","password":"geheim123"}`
+	body := `{"username":"newuser","password":"geheim123","email":"newuser@beispiel.de"}`
 	req := httptest.NewRequest("POST", "/api/auth/register", strings.NewReader(body))
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)

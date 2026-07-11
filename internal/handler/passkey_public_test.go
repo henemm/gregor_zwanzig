@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/mail"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -196,7 +198,7 @@ func TestPasskeyRegisterPublicRoundtrip_Success(t *testing.T) {
 	// Step 3: Finish
 	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish", bytes.NewReader(finishBody))
 	finishW := httptest.NewRecorder()
-	PasskeyRegisterPublicFinishHandler(s, wa, cs, secret).ServeHTTP(finishW, finishReq)
+	PasskeyRegisterPublicFinishHandler(s, wa, cs, secret, config.Config{}).ServeHTTP(finishW, finishReq)
 
 	if finishW.Code != http.StatusCreated {
 		t.Fatalf("AC-5 finish: expected 201, got %d: %s", finishW.Code, finishW.Body.String())
@@ -243,6 +245,79 @@ func TestPasskeyRegisterPublicRoundtrip_Success(t *testing.T) {
 }
 
 // -----------------------------------------------------------------------------
+// Issue #1226 AC-6: Public-Passkey-Finish löst genau einen Verifikations-Dispatch
+// mit der im Begin-Schritt übermittelten Adresse aus.
+// -----------------------------------------------------------------------------
+
+func TestPasskeyRegisterPublicFinish_TriggersDispatch_1226_AC6(t *testing.T) {
+	rpID, origin := "localhost", "http://localhost"
+	s := newTestStore(t)
+	wa := newTestWebAuthn(t, rpID, origin)
+	cs := NewChallengeStore()
+	secret := "test-secret-32-chars-long-enough"
+
+	// SMTPHost gesetzt → nicht-Test-User-Zweig ruft beobachtbaren Seam.
+	cfg := config.Config{
+		PublicHost: "https://gregor20.henemm.com",
+		SMTPHost:   "smtp.resend.com", SMTPPort: 587, SMTPUser: "resend", SMTPPass: "re_x",
+	}
+
+	type observedCall struct{ to string }
+	calls := make(chan observedCall, 4)
+	origSend := sendVerificationMailFn
+	sendVerificationMailFn = func(cfg mail.MailConfig, to string, msg mail.Mail) error {
+		calls <- observedCall{to: to}
+		return nil
+	}
+	defer func() { sendVerificationMailFn = origSend }()
+
+	// Begin — übermittelt username + email.
+	beginBody := []byte(`{"username":"pwverify","email":"pwverify@beispiel.de"}`)
+	beginReq := httptest.NewRequest("POST", "/api/auth/passkey/register/public/begin", bytes.NewReader(beginBody))
+	beginW := httptest.NewRecorder()
+	PasskeyRegisterPublicBeginHandler(s, wa, cs).ServeHTTP(beginW, beginReq)
+	if beginW.Code != http.StatusOK {
+		t.Fatalf("AC-6 begin: expected 200, got %d: %s", beginW.Code, beginW.Body.String())
+	}
+	var beginResp struct {
+		PublicKey struct {
+			Challenge string `json:"challenge"`
+		} `json:"publicKey"`
+	}
+	if err := json.Unmarshal(beginW.Body.Bytes(), &beginResp); err != nil {
+		t.Fatalf("AC-6 begin decode: %v", err)
+	}
+
+	// Finish — echte Attestation über testAuthenticator.
+	auth := newTestAuthenticator(t, rpID, origin)
+	finishBody := auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge)
+	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish", bytes.NewReader(finishBody))
+	finishW := httptest.NewRecorder()
+	PasskeyRegisterPublicFinishHandler(s, wa, cs, secret, cfg).ServeHTTP(finishW, finishReq)
+
+	if finishW.Code != http.StatusCreated {
+		t.Fatalf("AC-6 finish: expected 201, got %d: %s", finishW.Code, finishW.Body.String())
+	}
+	if !s.UserExists("pwverify") {
+		t.Errorf("AC-6: passwordless account must exist after finish")
+	}
+
+	select {
+	case c := <-calls:
+		if c.to != "pwverify@beispiel.de" {
+			t.Errorf("AC-6: expected dispatch to 'pwverify@beispiel.de', got %q", c.to)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("AC-6: expected exactly one dispatch call within 2s, none observed")
+	}
+	select {
+	case extra := <-calls:
+		t.Errorf("AC-6: expected exactly ONE dispatch call, extra observed: %+v", extra)
+	default:
+	}
+}
+
+// -----------------------------------------------------------------------------
 // AC-6: Finish with expired/unknown challenge → 400
 // -----------------------------------------------------------------------------
 
@@ -259,7 +334,7 @@ func TestPasskeyRegisterPublicFinish_ChallengeExpired(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish", bytes.NewReader(body))
 	w := httptest.NewRecorder()
-	PasskeyRegisterPublicFinishHandler(s, wa, cs, secret).ServeHTTP(w, req)
+	PasskeyRegisterPublicFinishHandler(s, wa, cs, secret, config.Config{}).ServeHTTP(w, req)
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("AC-6: expected 400, got %d: %s", w.Code, w.Body.String())
@@ -308,7 +383,7 @@ func TestPasskeyRegisterPublicFinish_UsernameRace(t *testing.T) {
 	finishBody := auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge)
 	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish", bytes.NewReader(finishBody))
 	finishW := httptest.NewRecorder()
-	PasskeyRegisterPublicFinishHandler(s, wa, cs, secret).ServeHTTP(finishW, finishReq)
+	PasskeyRegisterPublicFinishHandler(s, wa, cs, secret, config.Config{}).ServeHTTP(finishW, finishReq)
 
 	if finishW.Code != http.StatusConflict {
 		t.Fatalf("AC-7: expected 409, got %d: %s", finishW.Code, finishW.Body.String())
@@ -351,7 +426,7 @@ func TestPasskeyRegisterPublicFinish_CookieSecureFlag(t *testing.T) {
 		finishReq := httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish", bytes.NewReader(finishBody))
 		// No X-Forwarded-Proto header → Secure must be false
 		finishW := httptest.NewRecorder()
-		PasskeyRegisterPublicFinishHandler(s, wa, cs, secret).ServeHTTP(finishW, finishReq)
+		PasskeyRegisterPublicFinishHandler(s, wa, cs, secret, config.Config{}).ServeHTTP(finishW, finishReq)
 		if finishW.Code != http.StatusCreated {
 			t.Fatalf("finish: got %d: %s", finishW.Code, finishW.Body.String())
 		}
@@ -388,7 +463,7 @@ func TestPasskeyRegisterPublicFinish_CookieSecureFlag(t *testing.T) {
 		finishReq := httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish", bytes.NewReader(finishBody))
 		finishReq.Header.Set("X-Forwarded-Proto", "https") // → Secure must be true
 		finishW := httptest.NewRecorder()
-		PasskeyRegisterPublicFinishHandler(s, wa, cs, secret).ServeHTTP(finishW, finishReq)
+		PasskeyRegisterPublicFinishHandler(s, wa, cs, secret, config.Config{}).ServeHTTP(finishW, finishReq)
 		if finishW.Code != http.StatusCreated {
 			t.Fatalf("finish: got %d: %s", finishW.Code, finishW.Body.String())
 		}

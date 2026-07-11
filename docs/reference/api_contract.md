@@ -1663,11 +1663,11 @@ Executes comparison and sends report for a single preset immediately (regardless
 
 #### POST /api/auth/register
 
-User registration with username + password (HTTP 201 on success, 409 if user exists).
+User registration with username + password + email (HTTP 201 on success, 409 if user exists).
 
 **Request Body:**
 ```json
-{"username": "alice", "password": "geheim123"}
+{"username": "alice", "password": "geheim123", "email": "alice@example.com"}
 ```
 
 **Response 201:**
@@ -1678,13 +1678,18 @@ User registration with username + password (HTTP 201 on success, 409 if user exi
 **Validation:**
 - `username`: 3–50 characters, alphanumeric + underscore
 - `password`: ≥8 characters
+- `email`: required (Issue #1226), minimal format check (`strings.Contains(email, "@")` — no `net/mail` parsing, no uniqueness check)
 
 **Error Responses:**
 
 | Status | Body | Scenario |
 |--------|------|----------|
 | 400 | `{"error":"validation_error","detail":"..."}` | username/password missing or too short |
+| 400 | `{"error":"validation failed"}` | `email` missing/empty |
+| 400 | `{"error":"invalid_email"}` | `email` present but without `@` |
 | 409 | `{"error":"user_already_exists"}` | User with this ID already registered |
+
+Since Issue #1226, a valid `email` also triggers the existing `dispatchVerificationMail` helper (from #1219) after account creation — same Double-Opt-In flow as profile email changes. Google-OAuth account creation (`createOAuthUser`) and passkey-public account creation (`PasskeyRegisterPublicFinishHandler`) trigger the same dispatch on first-time account creation (not on existing-user login).
 
 #### POST /api/auth/login
 
@@ -2497,6 +2502,15 @@ die Python-`RiskEngine` — künftige Single Source of Truth der Cockpit-Risiko-
 
 ## Changelog
 
+- 2026-07-11: Issue #1226 — `POST /api/auth/register` bekommt neues Pflichtfeld `email`
+  (minimale `strings.Contains(email, "@")`-Prüfung, kein Uniqueness-Check); neue
+  Fehlerantworten `validation failed` (fehlend) und `invalid_email` (kein `@`). Bei
+  gültiger Adresse wird nach Kontoanlage der bestehende Verifikations-Dispatch
+  `dispatchVerificationMail` (aus #1219) ausgelöst — analog dazu jetzt auch bei
+  Google-OAuth-Erstanmeldung (`createOAuthUser`) und Passkey-Public-Registrierung
+  (`PasskeyRegisterPublicFinishHandler`), nicht mehr nur bei Profil-E-Mail-Änderungen.
+  Kein Dispatch bei OAuth-Login eines bestehenden Nutzers. Siehe
+  `docs/specs/modules/fix_1226_register_verify.md`.
 - 2026-07-10: Issue #1212 (Slice R1) — neuer interner Endpoint `GET
   /api/_internal/trips/{trip_id}/stages-weather` (`api/routers/internal.py`,
   `src/services/stage_weather.py::compute_stage_weather()`): liefert pro Etappe

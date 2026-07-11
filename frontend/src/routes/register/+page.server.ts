@@ -14,18 +14,19 @@ export const actions = {
 	default: async ({ request }) => {
 		const data = await request.formData();
 		const username = data.get('username')?.toString() ?? '';
+		const email = data.get('email')?.toString() ?? '';
 		const password = data.get('password')?.toString() ?? '';
 		const confirmPassword = data.get('confirmPassword')?.toString() ?? '';
 
 		if (password !== confirmPassword) {
-			return fail(400, { error: 'Passwörter stimmen nicht überein', username });
+			return fail(400, { error: 'Passwörter stimmen nicht überein', username, email });
 		}
 
 		const clientIP = request.headers.get('x-real-ip') ?? '';
 		const resp = await fetch(`${API()}/api/auth/register`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json', ...(clientIP && { 'X-Real-IP': clientIP }) },
-			body: JSON.stringify({ username, password }),
+			body: JSON.stringify({ username, password, email }),
 		});
 
 		if (resp.ok) {
@@ -33,17 +34,25 @@ export const actions = {
 		}
 
 		if (resp.status === 429) {
-			return fail(429, { error: 'Zu viele Versuche — bitte in einigen Minuten erneut versuchen.', username });
+			return fail(429, { error: 'Zu viele Versuche — bitte in einigen Minuten erneut versuchen.', username, email });
 		}
 		if (resp.status === 409) {
-			return fail(409, { error: 'Benutzername bereits vergeben', username });
+			return fail(409, { error: 'Benutzername bereits vergeben', username, email });
 		}
 		if (resp.status === 400) {
+			// Issue #1226: Backend liefert bei ungültiger E-Mail den eigenen
+			// Fehlercode "invalid_email" — gezielt auf eine verständliche Meldung
+			// mappen, sonst generische Pflichtfeld-Meldung.
+			const body = await resp.json().catch(() => ({}) as { error?: string });
+			if (body?.error === 'invalid_email') {
+				return fail(400, { error: 'Bitte eine gültige E-Mail-Adresse angeben', username, email });
+			}
 			return fail(400, {
-				error: 'Benutzername (3–50 Zeichen) und Passwort (mind. 8 Zeichen) erforderlich',
+				error: 'Benutzername (3–50 Zeichen), E-Mail und Passwort (mind. 8 Zeichen) erforderlich',
 				username,
+				email,
 			});
 		}
-		return fail(500, { error: 'Registrierung fehlgeschlagen', username });
+		return fail(500, { error: 'Registrierung fehlgeschlagen', username, email });
 	},
 } satisfies Actions;

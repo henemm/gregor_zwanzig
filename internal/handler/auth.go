@@ -24,9 +24,10 @@ import (
 type authRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Email    string `json:"email"`
 }
 
-func RegisterHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
+func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req authRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -54,6 +55,24 @@ func RegisterHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 			w.Write([]byte(`{"error":"validation failed"}`))
 			return
 		}
+		// Issue #1226: E-Mail ist ab jetzt Pflichtfeld — nur mit gesetzter,
+		// formal gültiger Adresse kann der Verifikations-Dispatch (Double-Opt-In)
+		// überhaupt greifen. Leeres Feld → generischer "validation failed"; Feld
+		// ohne "@" → eigener Fehlercode "invalid_email", damit das Frontend gezielt
+		// mappen kann. Formatprüfung minimal (strings.Contains) — Precedent aus
+		// PasskeyRegisterPublicBeginHandler, keine Uniqueness-Prüfung (Spec).
+		if req.Email == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"validation failed"}`))
+			return
+		}
+		if !strings.Contains(req.Email, "@") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"invalid_email"}`))
+			return
+		}
 
 		if s.UserExists(req.Username) {
 			w.Header().Set("Content-Type", "application/json")
@@ -73,6 +92,7 @@ func RegisterHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 		user := model.User{
 			ID:           req.Username,
 			PasswordHash: string(hash),
+			Email:        req.Email,
 			CreatedAt:    time.Now(),
 		}
 		if err := s.SaveUser(user); err != nil {
@@ -83,6 +103,11 @@ func RegisterHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 		}
 
 		s.ProvisionUserDirs(req.Username)
+
+		// Issue #1226: nach erfolgreicher Persistenz denselben #1219-Verifikations-
+		// Trigger auslösen wie UpdateProfileHandler — sonst bliebe EmailVerifiedAt
+		// für immer nil und die Adresse dauerhaft von Resend-Versand ausgeschlossen.
+		dispatchVerificationMail(s, cfg, req.Username, &user)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(201)

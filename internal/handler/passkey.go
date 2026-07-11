@@ -14,6 +14,7 @@ import (
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 
+	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
@@ -509,7 +510,7 @@ func PasskeyRegisterPublicBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs
 // PasskeyRegisterPublicFinishHandler completes a public WebAuthn registration.
 // Verifies attestation, creates a passwordless user, and sets gz_session cookie.
 // Issue #466 — V2 Add-on.
-func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, secret string) http.HandlerFunc {
+func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, secret string, cfg config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, maxWebAuthnBodyBytes)
 
@@ -565,6 +566,11 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 			return
 		}
 		s.ProvisionUserDirs(entry.UserID)
+
+		// Issue #1226: passwortloses Konto durchläuft denselben #1219-Double-Opt-In
+		// wie die anderen beiden Kontoerstellungspfade — sonst bliebe die im
+		// Begin-Schritt übermittelte Adresse dauerhaft unverifiziert.
+		dispatchVerificationMail(s, cfg, entry.UserID, &newUser)
 
 		token := middleware.SignSession(entry.UserID, secret)
 		secure := r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil
