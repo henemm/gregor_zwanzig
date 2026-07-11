@@ -126,6 +126,47 @@ func (s *Store) DeleteResetToken(userId string) error {
 	return err
 }
 
+// SaveVerificationToken persists an EmailVerificationToken (Issue #1219
+// Scheibe 2a-i) under data/users/<id>/email_verification.json. Mirrors
+// SaveResetToken. Overwrites an existing file without warning — a second
+// address change intentionally invalidates the first token (AC-7).
+func (s *Store) SaveVerificationToken(userId string, token model.EmailVerificationToken) error {
+	dir := s.UserDir(userId)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(token, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writeFileLogged(filepath.Join(dir, "email_verification.json"), data)
+}
+
+func (s *Store) LoadVerificationToken(userId string) (*model.EmailVerificationToken, error) {
+	path := filepath.Join(s.UserDir(userId), "email_verification.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var token model.EmailVerificationToken
+	if err := json.Unmarshal(data, &token); err != nil {
+		return nil, err
+	}
+	return &token, nil
+}
+
+func (s *Store) DeleteVerificationToken(userId string) error {
+	path := filepath.Join(s.UserDir(userId), "email_verification.json")
+	err := os.Remove(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}
+
 func (s *Store) DeleteUser(id string) error {
 	dir := s.UserDir(id)
 	return os.RemoveAll(dir)

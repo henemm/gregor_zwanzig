@@ -16,6 +16,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode"
 )
 
 // encodeMailHeader serialisiert einen Header-Wert RFC-2047-konform als
@@ -97,8 +98,14 @@ var (
 		"example.net": true,
 		"example.org": true,
 	}
-	reservedTestTLDs = []string{".test", ".invalid", ".localhost", ".example"}
-	reservedBareTLDs = map[string]bool{
+	// reservedTestDomainSuffixes fängt Subdomains der reservierten
+	// Second-Level-Domains ab (Adversary F002, #1219 Scheibe 2a-i):
+	// sub.example.com ist ebenso reserviert wie example.com selbst. Führender
+	// Punkt ist Absicht — "myexample.com" endet NICHT auf ".example.com" und
+	// bleibt daher unblockiert.
+	reservedTestDomainSuffixes = []string{".example.com", ".example.net", ".example.org"}
+	reservedTestTLDs           = []string{".test", ".invalid", ".localhost", ".example"}
+	reservedBareTLDs           = map[string]bool{
 		"test":      true,
 		"invalid":   true,
 		"localhost": true,
@@ -128,6 +135,11 @@ func isReservedTestDomain(addr string) bool {
 	}
 	if reservedTestDomains[domain] || reservedBareTLDs[domain] {
 		return true
+	}
+	for _, suffix := range reservedTestDomainSuffixes {
+		if strings.HasSuffix(domain, suffix) {
+			return true
+		}
 	}
 	for _, tld := range reservedTestTLDs {
 		if strings.HasSuffix(domain, tld) {
@@ -347,16 +359,12 @@ func recipientBlocked(host, to string) error {
 	return nil
 }
 
-// Send dispatches an e-mail over SMTP+STARTTLS using stdlib net/smtp.
-// Blocks until completion or timeout (caller is responsible for goroutine
-// and context cancellation). Returns nil on successful 250 OK from the relay.
-func Send(cfg MailConfig, to string, msg Mail) error {
-	if err := recipientBlocked(cfg.Host, to); err != nil {
-		return err
-	}
-	if err := resendBlocked(cfg.Host); err != nil {
-		return err
-	}
+// dialAndSend enthält den reinen Low-Level-SMTP-Teil (MIME-Aufbau + STARTTLS
+// + smtp.SendMail), OHNE die Guard-Aufrufe (recipientBlocked/resendBlocked).
+// Ausgelagert aus Send() (Issue #1219 Scheibe 2a-i), damit SendVerificationMail
+// dieselbe Sende-Logik mit einem eigenen Guard-Satz nutzen kann — kein
+// Duplikat der MIME-/Boundary-/STARTTLS-Logik zwischen den beiden Pfaden.
+func dialAndSend(cfg MailConfig, to string, msg Mail) error {
 	if cfg.Host == "" || cfg.User == "" || cfg.Pass == "" {
 		return fmt.Errorf("mail.Send: incomplete SMTP config (host/user/pass)")
 	}
@@ -400,6 +408,105 @@ func Send(cfg MailConfig, to string, msg Mail) error {
 		return fmt.Errorf("mail.Send: %w", err)
 	}
 	return nil
+}
+
+// Send dispatches an e-mail over SMTP+STARTTLS using stdlib net/smtp.
+// Blocks until completion or timeout (caller is responsible for goroutine
+// and context cancellation). Returns nil on successful 250 OK from the relay.
+func Send(cfg MailConfig, to string, msg Mail) error {
+	if err := recipientBlocked(cfg.Host, to); err != nil {
+		return err
+	}
+	if err := resendBlocked(cfg.Host); err != nil {
+		return err
+	}
+	return dialAndSend(cfg, to, msg)
+}
+
+// recipientBlockedForVerification ist der engere Sicherheits-Sonderpfad für
+// den Versand von Bestätigungsmails (Issue #1219 Scheibe 2a-i) — struktureller
+// Zwilling von recipientBlocked, aber OHNE loadResendAllowlist-Aufruf: die
+// Zieladresse ist per Definition noch NICHT verifiziert, ein Allowlist-Check
+// würde jede Bestätigungsmail blockieren. Prüft stattdessen ausschließlich
+// das Test-Postfach-Fangnetz, genau-EIN-Empfänger (per ECHTEM Parsen) und
+// reservierte RFC-2606-Domains.
+//
+// Adversary Fix-Loop F001 (#1219), zweite Runde: der erste Fix (Steuerzeichen-
+// Blacklist + splitRecipientField-basierter len==1-Vergleich) war
+// Symptom-Ebene — splitRecipientField() ist für den TOLERANTEN Hauptpfad
+// gebaut (Fallback über strings.Fields bei ParseAddress-Fehlschlag) und
+// dafür bewusst NICHT angefasst worden (Regressionsrisiko Scheibe 1). Der
+// enge Sonderpfad braucht keine Toleranz — er verlangt jetzt ECHTES Parsen:
+// (1) kein Steuer- ODER Unicode-Whitespace-Zeichen in der außen getrimmten
+// Adresse (fängt auch NBSP/Zeilentrenner, die mail.ParseAddress selbst nicht
+// zuverlässig ablehnt), (2) mail.ParseAddress muss erfolgreich eine
+// addr-spec liefern, (3) addr.Address muss dem getrimmten Rohstring EXAKT
+// entsprechen — das lehnt Anzeigenamen/Klammern-Formen ("X" <a@b>, <a@b>)
+// ab, die ParseAddress zwar akzeptiert, die aber KEINE nackte Einzeladresse
+// sind. Eine einzelne, syntaktisch gültige Adresse mit ungewöhnlichem, aber
+// zulässigem Local-Part (z.B. garbage-prefix-a@x.de) ist genau EIN
+// Empfänger und bleibt erlaubt — das ist kein Leck.
+func recipientBlockedForVerification(host, to string) error {
+	if rawContainsTestMailbox(to) {
+		log.Printf(
+			"mail.SendVerificationMail: Test-Postfach-Fangnetz blockiert Empfänger bei Host %q (#1219)",
+			host)
+		return fmt.Errorf(
+			"mail.SendVerificationMail: Test-Postfach in Empfänger-Rohstring bei Host %q blockiert (#1219) — "+
+				"Test-Postfächer dürfen nie Bestätigungsmails empfangen", host)
+	}
+
+	trimmed := strings.TrimSpace(to)
+	for _, r := range trimmed {
+		// Fix-Loop F001b (#1219): unicode.Cf ("Format") erfasst unsichtbare
+		// Zeichen wie ZWSP U+200B, ZWNJ/ZWJ U+200C/U+200D, BOM U+FEFF,
+		// Word-Joiner U+2060, Soft-Hyphen U+00AD — mail.ParseAddress
+		// akzeptiert diese klaglos als atext, ohne den Kontroll-/Whitespace-
+		// Scan wären sie ein unsichtbarer Garbage-Injection-Weg.
+		if unicode.IsControl(r) || unicode.IsSpace(r) || unicode.Is(unicode.Cf, r) {
+			return fmt.Errorf(
+				"mail.SendVerificationMail: Steuer-/Whitespace-/Format-Zeichen im Empfänger blockiert bei Host %q (#1219 F001b)",
+				host)
+		}
+	}
+
+	addr, err := mail.ParseAddress(trimmed)
+	if err != nil {
+		return fmt.Errorf(
+			"mail.SendVerificationMail: Empfänger ist keine gültige Einzeladresse bei Host %q (#1219 F001): %w",
+			host, err)
+	}
+	if !strings.EqualFold(addr.Address, trimmed) {
+		return fmt.Errorf(
+			"mail.SendVerificationMail: Empfänger muss eine nackte Adresse ohne Anzeigename/Klammern sein "+
+				"bei Host %q (#1219 F001)", host)
+	}
+
+	normalized := normalizedAddrForGuard(addr.Address)
+	if isReservedTestDomain(normalized) {
+		return fmt.Errorf(
+			"mail.SendVerificationMail: reservierte Test-Domain bei Host %q blockiert (#1219): %s",
+			host, maskAddrForLog(addr.Address))
+	}
+	return nil
+}
+
+// SendVerificationMail versendet eine Bestätigungsmail über den engeren
+// Verifikations-Sonderpfad (Issue #1219 Scheibe 2a-i): Fangnetz/Ein-Empfänger/
+// Reserved-Domain-Guard statt der Resend-Allowlist, danach unverändert
+// resendBlocked (#1122). Genau EIN vorgesehener Aufrufer im Codebase: der
+// Versand-Zweig in UpdateProfileHandler. Defense-in-Depth (Adversary F001):
+// dialAndSend bekommt die per TrimSpace bereinigte Adresse statt des
+// Roh-Strings — recipientBlockedForVerification garantiert an dieser Stelle
+// bereits, dass es sich um exakt eine saubere addr-spec handelt.
+func SendVerificationMail(cfg MailConfig, to string, msg Mail) error {
+	if err := recipientBlockedForVerification(cfg.Host, to); err != nil {
+		return err
+	}
+	if err := resendBlocked(cfg.Host); err != nil {
+		return err
+	}
+	return dialAndSend(cfg, strings.TrimSpace(to), msg)
 }
 
 // SendWithFallback versucht zuerst primaryCfg, dann bei Netzwerk-/Temp-Fehlern

@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/middleware"
 )
 
@@ -78,7 +79,7 @@ func TestUpdateProfileHandler(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"bob","password_hash":"`+string(hash)+`"}`), 0644)
 
-	h := UpdateProfileHandler(s)
+	h := UpdateProfileHandler(s, config.Config{})
 
 	// WHEN: Bob updates his channel settings
 	body := `{"mail_to":"bob@example.com","telegram_chat_id":"42"}`
@@ -117,7 +118,7 @@ func TestUpdateProfilePreservesPasswordHash(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"charlie","password_hash":"`+originalHash+`"}`), 0644)
 
-	h := UpdateProfileHandler(s)
+	h := UpdateProfileHandler(s, config.Config{})
 
 	// WHEN: Charlie updates profile (even trying to set password_hash)
 	body := `{"mail_to":"c@example.com","password_hash":"HACKED"}`
@@ -154,7 +155,7 @@ func TestUpdateProfileSetsSmsTo(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"dora","password_hash":"`+string(hash)+`"}`), 0644)
 
-	h := UpdateProfileHandler(s)
+	h := UpdateProfileHandler(s, config.Config{})
 
 	body := `{"sms_to":"+49151TESTXXXX"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
@@ -214,7 +215,7 @@ func TestUpdateProfileAcceptsEmptySmsTo(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"frida","password_hash":"`+string(hash)+`","sms_to":"+49151OLDNUM"}`), 0644)
 
-	h := UpdateProfileHandler(s)
+	h := UpdateProfileHandler(s, config.Config{})
 	body := `{"sms_to":""}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	ctx := middleware.ContextWithUserID(req.Context(), "frida")

@@ -59,7 +59,7 @@ func New(deps Deps) chi.Router {
 	)
 	r.Delete("/api/auth/account", handler.DeleteAccountHandler(deps.Store))
 	r.Get("/api/auth/profile", handler.GetProfileHandler(deps.Store))
-	r.Put("/api/auth/profile", handler.UpdateProfileHandler(deps.Store))
+	r.Put("/api/auth/profile", handler.UpdateProfileHandler(deps.Store, *deps.Config))
 	r.Put("/api/auth/password", handler.ChangePasswordHandler(deps.Store, bcrypt.DefaultCost))
 	// Issue #1071 — Level-Änderungs-Antrag (authentifiziert, NICHT in Public-Allowlist)
 	r.Post("/api/auth/tier-change-request", handler.RequestTierChangeHandler(deps.Store, *deps.Config))

@@ -37,6 +37,13 @@ type PasswordResetToken struct {
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
+// EmailVerificationToken — Issue #1219 Scheibe 2a-i. Struktureller Klon von
+// PasswordResetToken: Hash statt Klartext-Token persistiert, mit Ablauf.
+type EmailVerificationToken struct {
+	TokenHash string    `json:"token_hash"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
 // WebAuthnCredential is the persisted form of a registered Passkey/FIDO2 credential.
 // Issue #450 — V1 Add-on.
 type WebAuthnCredential struct {

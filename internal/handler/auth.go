@@ -442,7 +442,7 @@ func GetProfileHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
-func UpdateProfileHandler(s *store.Store) http.HandlerFunc {
+func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
 		user, err := s.LoadUser(userId)
@@ -486,13 +486,16 @@ func UpdateProfileHandler(s *store.Store) http.HandlerFunc {
 		// verifiziertes Konto darf nicht nachträglich auf eine ungeprüfte
 		// Adresse umgebogen werden. No-Op-Updates (identischer Wert) lösen
 		// KEINEN Reset aus.
+		addressChanged := false
 		if update.Email != nil && *update.Email != user.Email {
 			user.Email = *update.Email
 			user.EmailVerifiedAt = nil
+			addressChanged = true
 		}
 		if update.MailTo != nil && *update.MailTo != user.MailTo {
 			user.MailTo = *update.MailTo
 			user.EmailVerifiedAt = nil
+			addressChanged = true
 		}
 		if update.SmsTo != nil {
 			user.SmsTo = *update.SmsTo
@@ -508,9 +511,109 @@ func UpdateProfileHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		if addressChanged {
+			dispatchVerificationMail(s, cfg, userId, user)
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(toProfileResponse(user))
 	}
+}
+
+// sendVerificationMailFn ist ein Test-Seam (Issue #1219 F001, PO-Wunsch):
+// package-private Funktionsvariable statt eines direkten
+// mail.SendVerificationMail-Aufrufs, damit Tests den Resend-Sonderpfad-
+// Aufruf (Empfänger, Anzahl) beobachten können, ohne einen echten SMTP-Dial
+// zu benötigen. Produktionsverhalten unverändert — Default ist
+// mail.SendVerificationMail selbst.
+var sendVerificationMailFn = mail.SendVerificationMail
+
+// dispatchVerificationMail erzeugt einen 24h-Verifikations-Token für userId
+// und verschickt eine Bestätigungsmail an die neue Empfänger-Adresse (Issue
+// #1219 Scheibe 2a-i) — Muster identisch zu ForgotPasswordHandler
+// (Token-Erzeugung, Goroutine mit 20s-Timeout, Test-User→Gmail-Weiche). Die
+// effektive Adresse ist mail_to, Rückfall email; ist beides leer, passiert
+// nichts (kein Token, keine Mail).
+func dispatchVerificationMail(s *store.Store, cfg config.Config, userId string, user *model.User) {
+	recipient := user.MailTo
+	if recipient == "" {
+		recipient = user.Email
+	}
+	if recipient == "" {
+		log.Printf("email verification: no address for user %s — no token generated", userId)
+		return
+	}
+
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		log.Printf("email verification: token generation failed for %s: %v", userId, err)
+		return
+	}
+	token := hex.EncodeToString(tokenBytes)
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(token), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("email verification: token hash failed for %s: %v", userId, err)
+		return
+	}
+
+	verificationToken := model.EmailVerificationToken{
+		TokenHash: string(hash),
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}
+	if err := s.SaveVerificationToken(userId, verificationToken); err != nil {
+		log.Printf("email verification: SaveVerificationToken failed for %s: %v", userId, err)
+		return
+	}
+
+	msg := mail.BuildVerificationMail(cfg.PublicHost, userId, token)
+
+	// Select SMTP config synchronously (identisches Muster zu
+	// ForgotPasswordHandler): Test-User (IsTestUser) → Gmail-Config; echte
+	// User → Resend-Sonderpfad SendVerificationMail (NICHT SendWithFallback/
+	// Send — die Allowlist-Prüfung darf hier nicht greifen, die Adresse ist
+	// per Definition unverifiziert). Nur der eigentliche Sendevorgang läuft
+	// in der Goroutine mit 20s-Timeout, der Endpoint blockiert nicht.
+	isTestUser := mail.IsTestUser(userId)
+	if isTestUser && cfg.GoogleSMTPHost == "" {
+		log.Printf("email verification: Google SMTP not configured, mail not sent for test user %s", userId)
+		return
+	}
+	if !isTestUser && cfg.SMTPHost == "" {
+		log.Printf("email verification: SMTP not configured, mail not sent for user %s", userId)
+		return
+	}
+
+	go func(to string, msg mail.Mail, username string) {
+		done := make(chan error, 1)
+		if isTestUser {
+			mailCfg := mail.MailConfig{
+				Host: cfg.GoogleSMTPHost, Port: cfg.GoogleSMTPPort,
+				User: cfg.GoogleSMTPUser, Pass: cfg.GoogleSMTPPass,
+				From: cfg.GoogleSMTPUser,
+			}
+			fallbackCfg := mail.MailConfig{
+				Host: cfg.FallbackSMTPHost, Port: 587,
+				User: cfg.FallbackSMTPUser, Pass: cfg.FallbackSMTPPass,
+			}
+			go func() { done <- mail.SendWithFallback(mailCfg, fallbackCfg, to, msg) }()
+		} else {
+			mailCfg := mail.MailConfig{
+				Host: cfg.SMTPHost, Port: cfg.SMTPPort,
+				User: cfg.SMTPUser, Pass: cfg.SMTPPass,
+				From: cfg.SMTPFrom,
+			}
+			go func() { done <- sendVerificationMailFn(mailCfg, to, msg) }()
+		}
+		select {
+		case err := <-done:
+			if err != nil {
+				log.Printf("email verification: mail send failed for %s: %v", username, err)
+			}
+		case <-time.After(20 * time.Second):
+			log.Printf("email verification: mail send timeout (20s) for %s", username)
+		}
+	}(recipient, msg, userId)
 }
 
 // hasControlChars reports whether s contains any Unicode control character

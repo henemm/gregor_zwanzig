@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/middleware"
 )
 
@@ -22,7 +23,7 @@ func TestUpdateProfileHandler_ResetsVerificationOnMailToChange_AC5(t *testing.T)
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"ivy","mail_to":"ivy-old@henemm.com","email_verified_at":"2026-07-01T00:00:00Z"}`), 0644)
 
-	h := UpdateProfileHandler(s)
+	h := UpdateProfileHandler(s, config.Config{})
 	body := `{"mail_to":"ivy-new@henemm.com"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "ivy"))
@@ -49,7 +50,7 @@ func TestUpdateProfileHandler_ResetsVerificationOnEmailChange_AC5(t *testing.T) 
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"jack","email":"jack-old@henemm.com","email_verified_at":"2026-07-01T00:00:00Z"}`), 0644)
 
-	h := UpdateProfileHandler(s)
+	h := UpdateProfileHandler(s, config.Config{})
 	body := `{"email":"jack-new@henemm.com"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "jack"))
@@ -73,7 +74,7 @@ func TestUpdateProfileHandler_NoOpUpdateKeepsVerification_AC6(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"kim","mail_to":"kim@henemm.com","email_verified_at":"2026-07-01T00:00:00Z"}`), 0644)
 
-	h := UpdateProfileHandler(s)
+	h := UpdateProfileHandler(s, config.Config{})
 	body := `{"mail_to":"kim@henemm.com"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "kim"))
