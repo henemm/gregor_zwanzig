@@ -1,0 +1,229 @@
+───── PROMPT FÜR CLAUDE CODE ─────
+
+Lies die Datei `claude-code-handoff/INSTRUCTIONS.md` in diesem Repo und führe
+den dort beschriebenen Plan aus:
+
+WICHTIG zuerst — Regression-Fix 2026-06-05 (Trips + Archiv): Der eigentliche
+Fix steckt im korrigierten kanonischen Snapshot (current/jsx/screen-trips.jsx
++ screen-archive.jsx) und den SOLL-Bildern (E-trips-list-variant.png,
+H-archive.png). Sicherstellen, dass das Repo diesen Stand trägt (current/jsx
+ist ein Symlink → echtes Ziel unter handoff-2026-06-04-v3/…). Epic #575 baut
+beide Screens 1:1 daraus. #04 (Trips) Body wurde aktualisiert; #22 (Archiv)
+ist neu.
+
+WICHTIG #2 — Kanal-Korrektur 2026-06-05 (PO Henning): SIGNAL IST ENTFERNT.
+Kanäle sind nur noch Email · Telegram · SMS (Telegram max 8 = engster Tabellen-
+Kanal). Issue #23 setzt das um.
+
+WICHTIG #3 — Modell-Entscheidung 2026-06-06 (PO Henning): Body #14 wurde
+bereinigt. Kanonisches Modell für das Output-Layout-System: zwei Buckets
+(spalte / aus), zwei Modi (raw / indicator). KEIN Detail-Bucket, KEINE Formate
+Skala oder Symbol. Signal entfernt. Body #496 nennt noch „Detail-Zeile" — als
+Folge-Aufgabe bereinigen, aber nicht blocken.
+
+WICHTIG #4 — Modell-Entscheidung 2026-07-11 (PO Henning): Der Orts-Vergleich
+ist ein STEHENDER MONITOR — kein Proto-Trip, keine Konversion. Rollierendes
+Zeitfenster (timeWindow statt horizon), Briefing neutral: kein Score, kein
+Rang, keine Empfehlung (konsistent mit CompareEmailV2 vom 2026-07-08).
+Issue #28 zieht die App-Screens nach. Zweite Runde am selben Tag: Epic #29
+(briefing-abo-chassis) — EIN Datenmodell für Trip + Vergleich, Korridor-
+Konzept (notify/mark) vereint Alerts + Idealwerte, endDate nullable;
+#28 = Phase 2 des Epics.
+
+1. Manifest prüfen — `bash claude-code-handoff/check-manifest.sh`. Bei
+   Mismatch sofort stoppen und fresh zip anfordern.
+2. `gh auth status` verifizieren.
+3. Fehlende Labels anlegen (Liste in INSTRUCTIONS.md, inkl. `area:output`
+   und neu: `accessibility`).
+4. Screenshots aus `claude-code-handoff/screenshots/` nach
+   `.github/issue-assets/` committen und nach `main` pushen.
+5. **Dedupe vor Anlegen** — für jeden Eintrag aus `issues.json`:
+     - GitHub durchsuchen nach
+       `in:body gregor-zwanzig-handoff: stable_id=<id>`
+     - Closed-Match → SKIP (nichts tun)
+     - Open-Match → UPDATE body + ggf. fehlende Labels (Titel unverändert)
+     - Kein Match + status="new" → CREATE
+     - Kein Match + status="existing-or-update" → FRAG vor Anlegen (kann
+       absichtlich gelöscht worden sein)
+6. Am Ende pro-Issue-Zusammenfassung drucken:
+   CREATED / UPDATED / SKIPPED-CLOSED / ASKED, jeweils mit URL.
+
+Issues mit `"status": "new"` in `issues.json` sind die einzigen garantiert
+neuen Einträge dieses Handoffs:
+- #10 Orts-Vergleich · Startseite-Kacheln + Übersicht (Kachel-Grid) +
+  Detail-Seite + Wizard (Create/Edit) — **inkl. Mobile**. **breaking-change**,
+  ersetzt das vorher geplante Master-Detail-Layout durch *Liste (Kacheln) →
+  Detail → 5-Schritt-Wizard* + Kachel-Einstieg auf der Startseite. Desktop +
+  Mobile teilen die Atomic-Bauteile (CompareTile etc.) über `dense`/`compact`.
+  Charter §3 v1.1 (2026-05-31). PO-Reviews 2026-05-28 + 2026-05-31.
+  (`stable_id=ortsvergleich-wizard`)
+- #17 Surface-Stack-Migration (Foundation — weiße Cards auf warmer Off-White)
+- #18 Etappen-Datum bearbeiten — editierbares Datum in Etappen-Detail (normale
+  Etappe + Pausentag) statt eingefrorenem GPX-Datum, inkl. inline Kaskaden-
+  Vorschlag beim Verschieben der ersten Etappe. (`stable_id=stage-date-edit`)
+  Hinweis: nicht per `gh` verifiziert — Marker-Dedupe ist maßgeblich.
+- #20 Kanonische Navigations-Architektur (Foundation/IA) — löst die Tab-Set-
+  Drift auf und legt fest: Erstellen (Wizard) · Ansehen (Trip-Detail, Tab
+  Übersicht) · Bearbeiten (übrige Tabs). Verbindliches 6-Tab-Set:
+  Übersicht · Etappen & Wegpunkte · Wetter-Metriken · Briefing-Zeitplan ·
+  Alerts · Vorschau. **Ersetzt die Tab-Benennung in #11**, verwirft den
+  separaten Edit-Host. (`stable_id=canonical-ia-navigation`)
+  Hinweis: nicht per `gh` verifiziert — Marker-Dedupe ist maßgeblich; bei
+  Nähe zu #11 cross-referenzieren statt duplizieren.
+- #21 Startseite — prioritätsbasiertes Einzel-Hero-Cockpit (Trip ODER Orts-
+  Vergleich) + Planungs-/Leerzustand + Molecules (QuickAction, SetupResumeCard,
+  empfohlen CompareStatusRow). Startseite vom Briefing-Reader zum Status-/Steuer-
+  Cockpit (Tag-X/Y statt Etappen-Pillstreifen, Schnellaktionen → Editor-Tabs).
+  Modell-Schärfung 2026-06-03: Trip- und Vergleichs-Modus sind exklusiv → EIN
+  Hero nach Priorität (Trip, sonst aktiver Vergleich); „Was geht raus" ehrlich
+  auf den aktiven Kontext gescopet (Name im Titel); Überlappungsfall als
+  schlanke „Außerdem beobachtet"-Zeile mit nächstem Versand; Streck-Artefakt der
+  Hero-Karte behoben. Plus fehlender Leerzustand („Setup fortsetzen").
+  (`stable_id=home-cockpit-planning`)
+- #22 Archiv entrümpeln — reines Archiv für Trips UND Vergleiche, genau zwei
+  Aktionen pro Eintrag (Wieder aktivieren · Löschen). Entfernt die nie
+  spezifizierte Forecast-/Genauigkeits-Analytik (AccuracyBar, „Was passiert
+  ist", Treffer-Ø-Stats, Genauigkeits-Sort). PO Henning 2026-06-05.
+  (`stable_id=archive-pure-no-analytics`) Hinweis: vor Anlegen prüfen, ob
+  unter Epic #575 schon ein Archiv-Sub-Issue existiert → cross-linken statt
+  duplizieren.
+  Hinweis (CLAUDE.md Regel 6): an Epic #368 (die Molecules) und #10
+  (Startseiten-Vergleichs-Darstellung, jetzt Hero/„Außerdem beobachtet" statt
+  Kachel-Grid) cross-linken statt duplizieren; nicht per `gh` verifiziert —
+  Marker-Dedupe ist maßgeblich.
+- #23 Wetter-Briefing ändern — sauberer Änderungs-Flow mit Live-Mail-Vorschau
+  (Desktop + Mobile). Behebt den PO-Verlust im Wetter-Metriken-Editor
+  (2026-06-05): Optionen ohne sichtbare Wirkung + read-only-Doppel-Hop. Editor
+  links, echte fokussierte Briefing-Mail rechts, Diff-Highlight pro Änderung,
+  Kanal-Umschalter (Email · Telegram · SMS) mit sichtbarem Telegram-Schnitt nach
+  Spalte 8, Reiter „Einstieg & Prinzip" (klärt „Segmente" + Doppel-Hop) und
+  „Änderungs-Katalog" (7 Änderungen je als Vorher→Nachher). **Enthält die
+  Kanal-Korrektur: Signal entfernt.** Baut auf #14 + #496 + #20.
+  (`stable_id=config-change-flow`) Hinweis: Nähe zu Epic #575-Editor-Sub-Issue
+  prüfen → cross-linken statt duplizieren.
+- #24 Neue Tour anlegen · Progressive Tab Editor (kein separater Wizard).
+  Gleiche Tab-Struktur wie Trip-Edit, sequenziell freigeschaltet: Route →
+  Etappen & GPX → Wegpunkte prüfen (optional) → Wetter-Metriken → Zeitplan →
+  Alerts. GPX je Etappe (kein Gesamt-Trip-GPX). Startdatum im Route-Tab,
+  Etappen-Daten auto-berechnet. Wegpunkte-Tab optional mit
+  ScreenWaypointEditor embedded=true. screen-trip-wizard.jsx deprecated.
+  breaking-change — ersetzt #407/#422-Wizard-Flow. Nach Anlegen #407/#422 als
+  „Superseded by #24" kommentieren + schließen falls noch nicht umgesetzt.
+  (`stable_id=trip-new-progressive-editor`) Design: screen-trip-new-v2.jsx.
+- #26 Briefing-Email · Render-Drift gegen Design beheben + Tageslage-Lead /
+  Vortag-Vergleich integrieren. Die ausgelieferte Email ist von
+  `screen-output-preview.jsx` (EmailPreview/EmailDataTable) abgedriftet:
+  Header fehlt fast komplett (nur nacktes Datum), die gruppierte 2-stufige
+  Tabelle (TEMP/WIND/NIEDERSCHLAG/SICHT·UV/HÖHE) ist zu einer flachen
+  15-Spalten-Tabelle mit englischen Kürzeln degeneriert, Risiko-Ampel-Spalte
+  + Tausender-Trennzeichen fehlen, Header in englischer statt User-Sprache.
+  Zusätzlich: die zwei Build-Boxen (blauer Summary-Banner + „Vergleich zum
+  Vortag") zu EINEM Akzent-Bar-Lead bündeln (`Tageslage` + dezente
+  `vs. Gestern`-Mono-Zeile via `EmailVortag`, kein Wetter-Emoji) — löst auch
+  den Einrückungs-Versatz. Stirnlampe-Sektion bleibt entfernt. Renderer-only
+  (`trip_report.py` + Live-Vorschau). (`stable_id=briefing-email-render-drift`)
+  Hinweis (Regel 6): nicht per `gh` verifiziert — Nähe zu #664 (Metriken-Pills)
+  und #561 (Mehrtages-Trend); bei Überschneidung cross-linken statt duplizieren.
+- #27 Alert-Nachricht · generisches Render-System (Betreff + Email · Telegram ·
+  SMS). Baut das Format der ausgelösten Alert-Mail aus — abgegrenzt von #687,
+  das die Konfiguration baut, nicht die Nachricht. Vier reine Renderer
+  projizieren AlertEvent[] in alle Kanäle: Betreff führt mit Trip · km ·
+  Richtung · Metrik; Werte als Tabellen-Kürzel (CAPE statt „Gewitterenergie");
+  Richtung als Pfeil (Email/Telegram) bzw. Vorzeichen +/− (SMS). NEUE SMS-Codes
+  für bisher code-lose Metriken: CP (CAPE), SN (Neuschnee), SL (0°-Grenze),
+  VS (Sicht), HU (Feuchte) — jede alert-fähige Metrik MUSS einen Code haben.
+  Mehrere Metriken nach Schwere (normierter Schwellwert-Abstand) sortiert; SMS
+  bleibt ASCII/GSM-7 ≤140 Zeichen mit +k-Überlauf. STRIKT: keine Interpretation
+  der Wetterdaten, keine Handlungsempfehlung (CLAUDE.md-Leitprinzip) — nur
+  Richtung/Delta/Schwellwert-Bezug, rein rechnerisch. Renderer backend- +
+  frontend-identisch (Versand + Live-Vorschau). Design: Gregor 20 - Alert Mail
+  Vorschläge.html. (`stable_id=alert-message-render`) Hinweis: nicht per `gh`
+  verifiziert — Nähe zu #687 + #14; Marker-Dedupe maßgeblich, cross-linken.
+- #28 Orts-Vergleich = stehender Monitor — Neutralisierung (kein Score/Rang/
+  Empfehlung) + rollierendes Zeitfenster (timeWindow statt horizon) in den
+  App-Screens (Liste · Hub · Editor). Übersicht nach V2: Orte = Spalten,
+  Metriken = Zeilen; Telegram-Cap = Ort-Spalten (Label + N Orte ≤ 8, Rechnung
+  live im Editor); Idealwerte = Markierung (grün im Korridor), keine Bewertung;
+  Versand = Rhythmus + Zeitfenster + Tageszeit, kein Enddatum.
+  (`stable_id=compare-standing-monitor`) Hinweis: nicht per `gh` verifiziert —
+  Nähe zu #10 + #25; Marker-Dedupe maßgeblich, cross-linken statt duplizieren.
+- #29 Epic: Briefing-Abo-Chassis — gemeinsames Datenmodell Trip + Vergleich
+  (kind: route | vergleich); Korridor-Konzept vereint Alert-Schwellwerte +
+  Idealwerte (range + notify/mark); endDate nullable. 4 Phasen als Sub-Issues,
+  #28 = Phase 2. Getrennt bleiben: Templates, Navigation, Editor-Eintritte.
+  (`stable_id=briefing-abo-chassis`) Hinweis: berührt #14 + #687 — cross-linken,
+  nicht duplizieren; neues Label „epic" ggf. anlegen (Step 3).
+- #29a Phase 1 des Epics #29 — Korridore vereinen. Gemeinsamer Korridor-Editor-
+  Organism ersetzt Trip-Alerts-Tab (#687) + Compare-Idealwerte-Tab (#25): eine
+  Geometrie range [min?, max?], zwei Wirkungen notify (außerhalb warnen) / mark
+  (innerhalb markieren), Defaults route→notify · vergleich→mark. Body enthält
+  Komponenten-API (CorridorEditor Desktop / CorridorEditorMobile Mobile), die
+  C5-Single-Source corridorInside() für Editor-Vorschau + Renderer + Alert-
+  Trigger, und das verlustfreie Migrations-Mapping (alertRule→notify, ideal→
+  mark, Dry-Run + Report). Cooldown/Stille Stunden/Beispiel-Warnung bleiben.
+  Design geliefert Desktop + Mobile. (`stable_id=korridor-editor-phase1`)
+  Hinweis: Sub-Issue von #29, ersetzt/cross-linkt #687 + Idealwerte-Teil von
+  #25 — nicht duplizieren; nicht per `gh` verifiziert, Marker-Dedupe maßgeblich.
+- #29b Phase 4 des Epics #29 — Editor-Konsolidierung. Layout- + Versand-Tab
+  werden je EIN geteilter Organism (LayoutTab in layout-tab.jsx, VersandTab in
+  versand-tab.jsx), den Trip- UND Vergleich-Editor über context (route |
+  vergleich) nutzen — Muster wie Korridor-Editor (#29a), Export auf window,
+  Desktop + dense-Mobile, kein Fork. LayoutTab = Reihenfolge + Kanal-Kappung
+  (Email ∞ · Telegram 8 · SMS flach) + Live-Vorschau (zwei Templates über
+  gemeinsame Primitiva, Briefing-Templates bleiben getrennt). VersandTab =
+  Briefing-Kanäle + Briefing-Zeitplan mit EDITIERBARER Uhrzeit (route +
+  vergleich identisch: Morgen-Briefing = heutiger Tag, Abend-Briefing = morgen)
+  + (vergleich) editierbare Laufzeit (CompareEndDateControl) + die gesamte
+  notify-Zustellung (AlertChannelPicker + Cooldown + Stille Stunden + Beispiel).
+  Wertebereiche-Tab beider Editoren = rein CorridorEditor. Metrik-Auswahl bleibt
+  Trip-eigen. WICHTIG (PO 2026-07-11): KEIN rollierendes Zeitfenster, KEIN
+  Versandrhythmus, KEINE „Tageszeit bewertet" — verworfen, waren erfundene
+  Features; Vergleich-Versand = wie Trip. Migrationsarm: kein neues Datenmodell
+  (layout{}/channels[]/alertChannels[]), data-testid erhalten. Design Desktop +
+  Mobile, Showcase „Gregor 20 - Geteilte Editor-Tabs(.html/ Mobile.html)".
+  (`stable_id=editor-konsolidierung-phase4`) Hinweis: nicht per `gh` verifiziert
+  — Marker-Dedupe maßgeblich. Mobile-Editor-Konsolidierung = eigenes Folge-Issue
+  nach Phase 4.
+
+Existierende GitHub-Issues, deren Body in diesem Handoff aktualisiert wird:
+- #04 — Trips-Liste (Regression-Fix 2026-06-05): Overflow-`⋯`-Menü statt
+  6-Icon-Geschwader, ganze Zeile klickbar → Detail, inline „Briefing senden"
+  nur beim aktiven Trip. Body via Marker `screen-trips-list` angleichen.
+- #16 (GitHub #377) — Ink-Contrast-Audit
+- #503 — Wegpunkt-Editor: Karte in Tab „Etappen & Wegpunkte" (Option B, PO
+  2026-06-01); `WaypointEditorPage` löschen; keine Auto/Manuell-Unterscheidung
+  mehr. Existiert auf GitHub OHNE Marker (wie #407) → Body per Nummer an #503
+  anhängen, Titel halten, #506 cross-linken (nicht schließen).
+  (`stable_id=wegpunkt-editor-tab-503`)
+- #407 + #422 — Trip-Wizard auf 5 Schritte umbauen (`stable_id=
+  wizard-screens-update-407-422`, Body **ersetzt** die ursprüngliche
+  4-Step-Spec durch die 5-Step-Re-Strukturierung vom 27. Mai 2026)
+- #496 — „Pro Kanal"-Vorschau neu denken: 4-Mini-Kachel-Strip →
+  Konsequenz-Leiste (klickbar) + ehrliche Ein-Kanal-Vorschau (Email
+  Desktop+iPhone, Signal/Telegram-Bubble, SMS striktes Token-Format).
+  (`stable_id=issue-496-channel-preview`, Body via Marker an #496 anhängen)
+- #561 — F3: Multi-Day Trend, 3-Tage-Vorschau im Abendbericht (E-Mail):
+  „Nächste Etappen"-Block am Ende der Abend-Mail. Spalten-Layout (2-zeilig),
+  leicht abgesetzt, Heading „Nächste Etappen". KEINE Wetter-Emoji in den
+  Spalten (Mono-Bruch) — Ampel = Farb-Quadrat + Wort. Bestehende `UpcomingRow`
+  auf `variant="metrics"` vereinheitlichen statt neu erfinden. Renderer-only
+  (`trip_report.py`). (`stable_id=issue-561-multiday-trend`, Body via Marker
+  an #561 anhängen)
+
+**Sonderfall #407/#422:** Beide Issues existieren ohne Marker.
+Konkret: Body in **#407 ersetzen** (mit dem Stable-ID-Marker drin),
+**#422 schließen** als Duplikat-Hinweis auf #407 (der neue Body deckt
+Schritte 4-5 mit ab). Details + Commands in INSTRUCTIONS.md Step 3.
+
+**Sonderfall #24 vs. #407/#422:** Issue #24 (`trip-new-progressive-editor`)
+ersetzt den Wizard-Flow konzeptionell — kein separater Wizard mehr. Nach
+Anlegen von #24 prüfen ob #407/#422 noch offen sind und als
+„Superseded by #24 — Progressive Tab Editor“ kommentieren + schließen
+falls noch nicht umgesetzt.
+
+Keine "Start with X"-Empfehlung am Ende — Repo-State ist gemischt und der
+User priorisiert selbst.
+
+Frag mich nur, wenn etwas mehrdeutig ist oder ein Push abgelehnt würde.
+
+───── ENDE PROMPT ─────

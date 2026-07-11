@@ -221,14 +221,18 @@ def should_alert(rule, current_value, change_value, cooldown_state, config):
 
 ## Acceptance Criteria
 
-- [ ] **AC-1:** Given ein Trip mit aktiven Wetter-Metriken, When der Nutzer den Alerts-Tab öffnet, Then sieht er exakt die im Wetter-Metriken-Tab aktiven Metriken — keine eigene Verwaltung
-- [ ] **AC-2:** Given die Metrik-Liste, When der Nutzer eine Metrik ansieht, Then gibt es pro Metrik ein Segmented-Control mit `Aus · Entspannt · Standard · Sensibel` (Default `Standard`) — **kein Zahlen-Input**
-- [ ] **AC-3:** Given Stufe `off`, When die Zeile gerendert wird, Then ist die Zeile gedimmt (`opacity .6`) und die Schwellwert-Spalte zeigt „kein Alert"
-- [ ] **AC-4:** Given mehrere Metriken auf verschiedenen Stufen, When der Globale Quickset angezeigt wird, Then zeigt der Zähler „N von 13 aktiv · gemischt" und kein Segment ist aktiv
-- [ ] **AC-5:** Given Cooldown und Stille Stunden, When der Tab gerendert wird, Then sind beide direkt sichtbar (kein Accordion); dunkeln ab wenn alle Metriken `off`
-- [ ] **AC-6:** Given eine Änderung der Alert-Config, When `PUT /api/trips/{id}/alerts` aufgerufen wird, Then persistiert die Config mit Stufen statt Zahlen
-- [ ] **AC-7:** Given eine neue Metrik im Wetter-Metriken-Tab, When der Nutzer sie aktiviert, Then synchronisiert das Backend eine neue `AlertRule { level: "standard" }`
-- [ ] **AC-8:** Given Mobile-Ansicht, When der Tab gerendert wird, Then sind Touch-Targets ≥ 44px, Inputs `font-size: 16px`, Stufen-Labels gekürzt „Aus/Entsp./Std./Sens."
+- [ ] Alerts-Tab zeigt exakt die im Wetter-Metriken-Tab aktiven Metriken — keine eigene Verwaltung
+- [ ] Pro Metrik ein Segmented-Control mit `Aus · Entspannt · Standard · Sensibel` (Default `Standard`)
+- [ ] **Kein Zahlen-Input** irgendwo in der Metrik-Liste
+- [ ] Schwellwert-Spalte read-only, aus `level` abgeleitet; `off` → „kein Alert", Zeile gedimmt
+- [ ] Globaler „Alle Metriken auf …"-Quickset; Zähler „N von 13 aktiv (· gemischt)"
+- [ ] Keine Modus-Karten, kein Signal-Kanal, keine Severity-Felder
+- [ ] Cooldown (Minuten) + Stille Stunden (zwei Zeitfelder) direkt sichtbar
+- [ ] Beispiel-Alert-Vorschau: Metrik · Vorher · Nachher · Etappe·Zeitfenster
+- [ ] `PUT /api/trips/{id}/alerts` persistiert die Config (Stufen statt Zahlen)
+- [ ] Metrik hinzufügen/entfernen synchronisiert `rules` (neue → `standard`)
+- [ ] Mobile: Touch-Targets ≥ 44px, Inputs `font-size: 16px`, gekürzte Stufen-Labels
+- [ ] Cooldown: gestaute Alerts gehen mit dem Morgen-Briefing mit
 
 ---
 

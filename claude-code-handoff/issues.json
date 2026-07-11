@@ -1,156 +1,32 @@
 [
   {
-    "index": 0,
-    "stable_id": "foundation-css-tokens",
-    "status": "existing-or-update",
-    "source": "00-foundation-css-tokens.md",
-    "title": "Fix dangling CSS variable fallbacks (--g-primary, --g-border → real tokens)",
-    "labels": [
-      "design-compliance",
-      "foundation",
-      "priority:high",
-      "area:tokens"
-    ],
-    "body_file": "issue-bodies/body-00.md"
-  },
-  {
-    "index": 1,
-    "stable_id": "foundation-form-controls",
-    "status": "existing-or-update",
-    "source": "01-foundation-form-controls.md",
-    "title": "Replace native checkboxes & selects with branded UI components",
-    "labels": [
-      "design-compliance",
-      "foundation",
-      "priority:high",
-      "area:components"
-    ],
-    "body_file": "issue-bodies/body-01.md"
-  },
-  {
-    "index": 2,
-    "stable_id": "sidebar-logo-and-rebrand",
-    "status": "existing-or-update",
-    "source": "02-sidebar-logo-and-rebrand.md",
-    "title": "Sidebar — wordmark \"gregor.zwanzig\" mit Mono-Akzent",
-    "labels": [
-      "design-compliance",
-      "area:sidebar",
-      "priority:medium"
-    ],
-    "body_file": "issue-bodies/body-02.md"
-  },
-  {
-    "index": 3,
-    "stable_id": "screen-home-cockpit",
-    "status": "existing-or-update",
-    "source": "03-screen-home-cockpit.md",
-    "title": "Home — replace \"Active-Trip-Cockpit\" with Kachel-Übersicht (spec-aligned)",
-    "labels": [
-      "design-compliance",
-      "area:home",
-      "priority:high",
-      "breaking-change"
-    ],
-    "body_file": "issue-bodies/body-03.md"
-  },
-  {
     "index": 4,
     "stable_id": "screen-trips-list",
     "status": "existing-or-update",
     "source": "05-screen-trips-list.md",
-    "title": "Trips-Liste — Icon-Soup raus, EINE Primäraktion + Kebab, Klick-auf-Name = Detail",
+    "title": "Refresh Trips-Listenseite mit aktuellen Trip-Cards",
     "labels": [
       "design-compliance",
+      "feature",
       "area:trips",
-      "priority:high",
-      "ux"
+      "priority:medium"
     ],
     "body_file": "issue-bodies/body-04.md"
   },
   {
-    "index": 5,
-    "stable_id": "trip-editor-stages-table",
-    "status": "existing-or-update",
-    "source": "06-trip-editor-stages-table.md",
-    "title": "Trip-Editor — Wegpunkte visuell auf Karte (KEIN Lat/Lon-Input), Naismith-Ankunftszeiten",
-    "labels": [
-      "design-compliance",
-      "area:editor",
-      "priority:high",
-      "breaking-change",
-      "ux"
-    ],
-    "body_file": "issue-bodies/body-05.md"
-  },
-  {
-    "index": 6,
-    "stable_id": "alert-rules-editor-restyle",
-    "status": "existing-or-update",
-    "source": "07-alert-rules-editor-restyle.md",
-    "title": "AlertRulesEditor — \"Beides\"-Modus mit ZWEI Threshold-Feldern (Wert-Ambiguität fix)",
-    "labels": [
-      "design-compliance",
-      "area:alerts",
-      "priority:high",
-      "bug",
-      "ux"
-    ],
-    "body_file": "issue-bodies/body-06.md"
-  },
-  {
-    "index": 7,
-    "stable_id": "edit-weather-section-controls",
-    "status": "existing-or-update",
-    "source": "08-edit-weather-section-controls.md",
-    "title": "EditWeatherSection — brand checkboxes + segmented \"Roh/Indikator\" control",
-    "labels": [
-      "design-compliance",
-      "area:editor",
-      "priority:medium"
-    ],
-    "body_file": "issue-bodies/body-07.md"
-  },
-  {
-    "index": 8,
-    "stable_id": "edit-report-config-controls",
-    "status": "existing-or-update",
-    "source": "09-edit-report-config-controls.md",
-    "title": "EditReportConfigSection — time inputs, quick-chips, channel rows polish",
-    "labels": [
-      "design-compliance",
-      "area:editor",
-      "area:reports",
-      "priority:medium"
-    ],
-    "body_file": "issue-bodies/body-08.md"
-  },
-  {
-    "index": 9,
-    "stable_id": "trip-wizard-4-steps",
-    "status": "existing-or-update",
-    "source": "11-trip-wizard-4-steps.md",
-    "title": "New Trip — 4-Schritt-Wizard ersetzt den flachen Anlege-Dialog",
-    "labels": [
-      "feature",
-      "area:trips",
-      "area:editor",
-      "priority:high",
-      "ux"
-    ],
-    "body_file": "issue-bodies/body-09.md"
-  },
-  {
     "index": 10,
-    "stable_id": "locations-with-groups",
-    "status": "existing-or-update",
-    "source": "12-locations-with-groups.md",
-    "title": "Compare — Master-Detail Sidebar mit Gruppen (Orte organisieren)",
+    "stable_id": "ortsvergleich-wizard",
+    "status": "new",
+    "source": "body-10.md",
+    "title": "Orts-Vergleich · Startseite-Kacheln + Übersicht (Kachel-Grid) + Detail-Seite + Wizard + Mobile — Charter §3 v1.1",
     "labels": [
+      "design-compliance",
       "feature",
+      "breaking-change",
       "area:compare",
-      "priority:high",
-      "ux"
+      "area:home",
+      "area:mobile",
+      "priority:high"
     ],
     "body_file": "issue-bodies/body-10.md"
   },
@@ -158,55 +34,364 @@
     "index": 11,
     "stable_id": "trip-detail-page",
     "status": "existing-or-update",
-    "source": "13-trip-detail-page.md",
-    "title": "Trip-Detail-Seite — alle Aktionen prominent, Übersicht in Cards",
+    "source": "12-trip-detail-page.md",
+    "title": "Trip-Detail-Seite – Layout, Tabs & Briefing-Ansicht",
     "labels": [
+      "design-compliance",
       "feature",
       "area:trips",
-      "priority:high",
-      "ux"
+      "priority:high"
     ],
     "body_file": "issue-bodies/body-11.md"
   },
   {
-    "index": 12,
-    "stable_id": "backend-naismith-and-waypoint-suggestions",
-    "status": "existing-or-update",
-    "source": "14-backend-naismith-and-waypoint-suggestions.md",
-    "title": "Backend coordination — Naismith arrival-time calculation + algorithmic waypoint suggestions",
-    "labels": [
-      "backend-coordination",
-      "area:trips",
-      "priority:medium"
-    ],
-    "body_file": "issue-bodies/body-12.md"
-  },
-  {
-    "index": 13,
-    "stable_id": "pro-metric-horizon-and-template-save",
-    "status": "existing-or-update",
-    "source": "15-pro-metric-horizon-and-template-save.md",
-    "title": "Wetter-Templates — Pro-Metrik-Zeithorizont + \"Im Profil speichern\"",
-    "labels": [
-      "feature",
-      "area:weather",
-      "priority:medium"
-    ],
-    "body_file": "issue-bodies/body-13.md"
-  },
-  {
     "index": 14,
     "stable_id": "output-layout-system",
-    "status": "new",
+    "status": "existing-or-update",
     "source": "body-14-output-layout-system.md",
-    "title": "Output-Layout-System — Spalten/Detail/Aus + Kanal-Constraints (Email/Telegram/Signal/SMS)",
+    "title": "Output-Layout-System (Spalten / Aus) + Kanal-Constraints",
     "labels": [
       "feature",
-      "area:weather",
-      "area:output",
+      "design-compliance",
       "backend-coordination",
+      "area:output",
       "priority:high"
     ],
     "body_file": "issue-bodies/body-14-output-layout-system.md"
+  },
+  {
+    "index": 16,
+    "stable_id": "ink-contrast-audit",
+    "status": "existing-or-update",
+    "source": "body-16-contrast-audit-ink-scale.md",
+    "title": "Contrast-Audit der Ink-Skala — WCAG-AA-Konformität auf weißer Card",
+    "labels": [
+      "accessibility",
+      "design-compliance",
+      "area:tokens",
+      "area:components",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-16-contrast-audit-ink-scale.md"
+  },
+  {
+    "index": 17,
+    "stable_id": "surface-stack-migration",
+    "status": "new",
+    "source": "body-17-surface-stack-migration.md",
+    "title": "Surface-Stack-Migration — weiße Cards auf warmer Off-White-Page",
+    "labels": [
+      "foundation",
+      "design-compliance",
+      "area:tokens",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-17-surface-stack-migration.md"
+  },
+  {
+    "index": 407,
+    "stable_id": "wizard-screens-update-407-422",
+    "status": "existing-or-update",
+    "source": "issue_407_422_wizard_screens_update.md",
+    "title": "Trip-Wizard auf aktuelle Spec aktualisieren (5-stufig, Layout-Step neu)",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:trips",
+      "area:output",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-407-422-wizard-update.md"
+  },
+  {
+    "index": 18,
+    "stable_id": "stage-date-edit",
+    "status": "new",
+    "source": "docs/design-requests/stage_date_edit.md",
+    "title": "Etappen-Datum bearbeiten — editierbares Datum in Etappen-Detail (normal + Pausentag) + Kaskaden-Vorschlag",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:editor",
+      "area:trips",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-18-stage-date-edit.md"
+  },
+  {
+    "index": 496,
+    "stable_id": "issue-496-channel-preview",
+    "status": "existing-or-update",
+    "source": "docs/design-requests/issue_496_channel_preview_redesign.md",
+    "title": "„Pro Kanal\"-Vorschau neu denken — Konsequenz-Leiste + ehrliche Ein-Kanal-Vorschau (Desktop + Mobile, SMS-Token-Format)",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:output",
+      "area:mobile",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-496-channel-preview.md"
+  },
+  {
+    "index": 20,
+    "stable_id": "canonical-ia-navigation",
+    "status": "new",
+    "source": "nav-map.jsx",
+    "title": "Kanonische Navigations-Architektur — ein Trip-Detail-Tab-Set + Erstellen/Ansehen/Bearbeiten-Modell (Desktop + Mobile)",
+    "labels": [
+      "design-compliance",
+      "foundation",
+      "area:trips",
+      "area:compare",
+      "area:mobile",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-20-canonical-ia-navigation.md"
+  },
+  {
+    "index": 503,
+    "stable_id": "wegpunkt-editor-tab-503",
+    "status": "existing-or-update",
+    "source": "docs/design-requests/issue_503_ANTWORT.md",
+    "title": "Wegpunkt-Editor: Karte in Tab „Etappen & Wegpunkte\" (Option B) — Editoren zusammenführen, WaypointEditorPage entfernen",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:editor",
+      "area:trips",
+      "area:mobile",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-503-wegpunkt-editor-tab.md"
+  },
+  {
+    "index": 561,
+    "stable_id": "issue-561-multiday-trend",
+    "status": "existing-or-update",
+    "source": "docs/design-requests/issue_561_multiday_trend_email.md",
+    "title": "F3: Multi-Day Trend — 3-Tage-Vorschau im Abendbericht (E-Mail)",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:output",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-561-multiday-trend-email.md"
+  },
+  {
+    "index": 21,
+    "stable_id": "home-cockpit-planning",
+    "status": "new",
+    "source": "screen-home.jsx (mode trip|compare) + screen-home-planning.jsx",
+    "title": "Startseite — prioritätsbasiertes Einzel-Hero-Cockpit (Trip ODER Orts-Vergleich) + Planungs-/Leerzustand + QuickAction/SetupResumeCard",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:home",
+      "area:components",
+      "area:compare",
+      "area:mobile",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-21-home-cockpit-planning.md"
+  },
+  {
+    "index": 22,
+    "stable_id": "archive-pure-no-analytics",
+    "status": "new",
+    "source": "screen-archive.jsx (PO Henning 2026-06-05)",
+    "title": "Archiv entrümpeln — reines Archiv für Trips + Vergleiche, nur „Wieder aktivieren\" + „Löschen\" (erfundene Forecast-Analytik entfernen)",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:archive",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-22-archive-pure.md"
+  },
+  {
+    "index": 23,
+    "stable_id": "config-change-flow",
+    "status": "new",
+    "source": "Gregor 20 - Trip bearbeiten.html + screen-trip-edit-v2-weather.jsx + screen-trip-edit-v2-main.jsx + screen-trip-edit-v2-mobile.jsx (PO Henning 2026-06-05)",
+    "title": "Wetter-Metriken-Tab — 4-Abschnitte-Layout + Live-Mail + Kanal-Verbindung (Desktop + Mobile)",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:output",
+      "area:editor",
+      "area:mobile",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-23-config-change-flow.md"
+  },
+  {
+    "index": 664,
+    "stable_id": "email-metrics-summary",
+    "status": "new",
+    "source": "screen-output-preview.jsx (2026-06-08)",
+    "title": "Email: Optionaler Metriken-Überblick (Pill-Format) + Antwort-Kommandos + Ausblick-Gewitter-Badge",
+    "labels": [
+      "feature",
+      "design-compliance",
+      "area:output",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-664-email-metrics-summary.md"
+  },
+  {
+    "index": 24,
+    "stable_id": "trip-new-progressive-editor",
+    "status": "new",
+    "source": "Gregor 20 - Trip anlegen.html + screen-trip-new-v2.jsx (PO Henning 2026-06-06)",
+    "title": "Neue Tour anlegen — Progressive Tab Editor (kein separater Wizard)",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "breaking-change",
+      "area:trips",
+      "area:editor",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-24-trip-new-progressive-editor.md"
+  },
+  {
+    "index": 687,
+    "stable_id": "alerts-tab-687",
+    "status": "new",
+    "source": "screen-trip-edit-v2-main.jsx (TE2_AlertsTab) + screen-trip-edit-v2-mobile.jsx (TM2_AlertsTab) — issue_846_alert_preset (approved), PO Henning 2026-06-23",
+    "title": "Alerts-Tab — Empfindlichkeits-Presets pro Metrik (Desktop + Mobile)",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:alerts",
+      "area:editor",
+      "area:mobile",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-687-alerts-tab.md"
+  },
+  {
+    "index": 25,
+    "stable_id": "compare-editor-progressive",
+    "status": "new",
+    "source": "screen-compare-editor.jsx + screen-compare-editor-mobile.jsx (PO Henning 2026-06-09)",
+    "title": "Orts-Vergleich — Progressive Tab Editor (Anlegen + Bearbeiten, Desktop + Mobile)",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "breaking-change",
+      "area:compare",
+      "area:editor",
+      "area:mobile",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-25-compare-editor.md"
+  },
+  {
+    "index": 26,
+    "stable_id": "briefing-email-render-drift",
+    "status": "new",
+    "source": "screen-output-preview.jsx (EmailPreview/EmailDataTable/EmailVortag) — PO Henning 2026-06-26",
+    "title": "Briefing-Email · Render-Drift gegen Design beheben + Tageslage-Lead / Vortag-Vergleich integrieren",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:output",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-26-briefing-email-render-drift.md"
+  },
+  {
+    "index": 27,
+    "stable_id": "alert-message-render",
+    "status": "new",
+    "source": "Gregor 20 - Alert Mail Vorschläge.html (PO Henning 2026-06-29)",
+    "title": "Alert-Nachricht — generisches Render-System (Betreff + Email · Telegram · SMS)",
+    "labels": [
+      "feature",
+      "design-compliance",
+      "backend-coordination",
+      "area:alerts",
+      "area:output",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-27-alert-message-render.md"
+  },
+  {
+    "index": 28,
+    "stable_id": "compare-standing-monitor",
+    "status": "new",
+    "source": "screen-compare-editor.jsx + screen-compare-detail.jsx + screen-compare-list.jsx + mock-locations.jsx + docs/konzept-vergleich-stehender-monitor.md (PO Henning 2026-07-11)",
+    "title": "Orts-Vergleich = stehender Monitor — Neutralisierung (kein Score/Ranking) + rollierendes Zeitfenster in den App-Screens",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "backend-coordination",
+      "area:compare",
+      "area:editor",
+      "area:output",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-28-compare-standing-monitor.md"
+  },
+  {
+    "index": 29,
+    "stable_id": "briefing-abo-chassis",
+    "status": "new",
+    "source": "docs/konzept-vergleich-stehender-monitor.md §7 (PO Henning 2026-07-11, zweite Runde)",
+    "title": "Epic: Briefing-Abo-Chassis — gemeinsames Datenmodell für Trip + Orts-Vergleich (Korridore, Lifecycle, Entität, Editor-Organismen)",
+    "labels": [
+      "epic",
+      "feature",
+      "foundation",
+      "backend-coordination",
+      "breaking-change",
+      "area:trips",
+      "area:compare",
+      "area:alerts",
+      "area:editor",
+      "area:output",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-29-briefing-abo-chassis.md"
+  },
+  {
+    "index": "29a",
+    "stable_id": "korridor-editor-phase1",
+    "status": "new",
+    "source": "corridor-editor.jsx + corridor-editor-mobile.jsx + screen-trip-edit-v2-main.jsx (TE2_AlertsTab) + screen-compare-editor.jsx (CE_IdealwerteTab) + Desktop/Mobile-Screens (PO Henning 2026-07-11, zweite Runde)",
+    "title": "Phase 1 — Korridore: Alerts + Idealwerte vereinen (Sub-Issue von Epic #29)",
+    "labels": [
+      "feature",
+      "design-compliance",
+      "backend-coordination",
+      "breaking-change",
+      "area:alerts",
+      "area:compare",
+      "area:editor",
+      "area:mobile",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-29a-korridor-editor.md"
+  },
+  {
+    "index": "29b",
+    "stable_id": "editor-konsolidierung-phase4",
+    "status": "new",
+    "source": "layout-tab.jsx + versand-tab.jsx + screen-compare-editor(.jsx/-mobile.jsx) + screen-trip-edit-v2-(weather/main/mobile).jsx + Gregor 20 - Geteilte Editor-Tabs(.html/ Mobile.html) (PO Henning 2026-07-11, Phase 4)",
+    "title": "Phase 4 — Editor-Konsolidierung: Layout- + Versand-Tab als geteilte Organismen (Sub-Issue von Epic #29)",
+    "labels": [
+      "feature",
+      "design-compliance",
+      "breaking-change",
+      "area:editor",
+      "area:compare",
+      "area:output",
+      "area:mobile",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-29b-editor-konsolidierung.md"
   }
 ]

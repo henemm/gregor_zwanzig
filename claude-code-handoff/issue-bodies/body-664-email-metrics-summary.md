@@ -2,10 +2,6 @@
 
 # Email: Optionaler Metriken-Überblick (Issue #664)
 
-**Type:** Backend + Frontend (Email-Renderer)
-**Priority:** Medium
-**Design-Quelle:** `screen-output-preview.jsx`
-
 ## Was wurde designed (Mockup: `screen-output-preview.jsx`)
 
 Neuer optionaler Block direkt nach dem Email-Header-Bereich. Wenn aktiv,
@@ -14,8 +10,6 @@ Neuer optionaler Block direkt nach dem Email-Header-Bereich. Wenn aktiv,
 ---
 
 ## Visuelles Konzept
-
-![Email Metriken-Überblick](https://raw.githubusercontent.com/henemm/gregor_zwanzig/main/.github/issue-assets/soll-664-email-metrics-summary.png)
 
 Gleiche Pill/Tag-Optik wie der bisherige Quick-Take — aber **datengesteuert**
 für alle konfigurierten Metriken des Nutzers. Eine Pill pro Metrik.
@@ -138,11 +132,12 @@ Alternativ als Teil der bestehenden Channel-Konfiguration.
 
 ## Acceptance Criteria
 
-- [ ] **AC-1:** Given `show_metrics_summary = true`, When die Briefing-Email gerendert wird, Then wird der Quick-Take-Block durch den Metriken-Überblick ersetzt
-- [ ] **AC-2:** Given aktive Metriken des Nutzers, When der Überblick gerendert wird, Then erscheinen alle konfigurierten Metriken als Pills
-- [ ] **AC-3:** Given eine Metrik mit Schwellwert-Crossing, When die Pill gerendert wird, Then wird `warn` (orange) oder `risk` (rot) korrekt gesetzt
-- [ ] **AC-4:** Given eine Etappenzeile im Ausblick, When Gewitterrisiko > Schwellwert, Then zeigt die Zeile einen ⚡-Badge
-- [ ] **AC-5:** Given die Email, When `show_metrics_summary = true`, Then ist der Tages-Summe-Block nicht mehr vorhanden
-- [ ] **AC-6:** Given die Email-Footer-Sektion, When die Email gerendert wird, Then enthält sie eine Antwort-Kommandos-Sektion mit PAUSE/SKIP/STOP/STATUS/CONFIG/HELP
-- [ ] **AC-7:** Given eine eingehende Email-Antwort mit Keyword, When der Reply-Handler sie verarbeitet, Then führt er die entsprechende Aktion auf dem Trip/Subscription aus
-- [ ] **AC-8:** Given `show_metrics_summary = false` (Default), When die Email gerendert wird, Then bleibt das alte Quick-Take-Verhalten erhalten
+- [ ] `show_metrics_summary`-Flag in Trip-Konfiguration speicherbar
+- [ ] Wenn aktiv: Quick-Take-Block durch Metriken-Überblick ersetzt
+- [ ] Alle konfigurierten Metriken des Nutzers als Pills dargestellt
+- [ ] Schwellwert-Crossings korrekt als `warn`/`risk` markiert
+- [ ] Zeit des Maximums in jedem Pill enthalten
+- [ ] Ausblick-Zeilen zeigen ⚡-Badge wenn Gewitter im Tages-Forecast
+- [ ] Tages-Summe-Block aus Email entfernt
+- [ ] Antwort-Kommandos-Sektion im Email-Footer
+- [ ] Reply-Handler verarbeitet PAUSE/SKIP/STOP/STATUS/CONFIG/HELP

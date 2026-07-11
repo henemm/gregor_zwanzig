@@ -1,8 +1,8 @@
 <!-- gregor-zwanzig-handoff: stable_id=trip-new-progressive-editor -->
 # Issue #24 · Neue Tour anlegen — Progressive Tab Editor (kein separater Wizard)
 
-**Type:** Design-Compliance · Frontend · UX-Re-Strukturierung
-**Priority:** High — ersetzt den bisherigen Wizard (`screen-trip-wizard.jsx`) als Onboarding-Pfad
+**Type:** Design-Compliance · Frontend · UX-Re-Strukturierung  
+**Priority:** High — ersetzt den bisherigen Wizard (`screen-trip-wizard.jsx`) als Onboarding-Pfad  
 **Baut auf:** #20 (Kanonische Navigations-Architektur), #407/#422 (Wizard-Spec), #503 (Etappen & Wegpunkte)
 
 **Design Reference:**
@@ -108,13 +108,15 @@ Datum ist nicht editierbar in diesem Tab (Änderung → Tab Etappen & Wegpunkte 
 Rendert `<ScreenWaypointEditor embedded={true}/>` aus `screen-waypoint-editor.jsx`.
 
 Wrapper-Aufbau:
-1. **Info-Banner** (oben, card-bg): Text + Buttons „Überspringen →" (ghost) + „Wegpunkte übernehmen →" (accent)
+1. **Info-Banner** (oben, card-bg):
+   - Text: „Wegpunkte aus GPX berechnet — optional prüfen. Wegpunkte sind Wetterscheiden …"
+   - Buttons: „Überspringen →" (ghost) + „Wegpunkte übernehmen →" (accent)
 2. **Embedded Waypoint Editor** (volle Breite, alle Features des bestehenden Editors)
 3. **Footer** (unten, card-bg): erneut „Überspringen" + „Wegpunkte übernehmen →"
 
 Tab-Label: „Wegpunkte prüfen" + `OPTIONAL`-Pill (accent-tint, Mono, uppercase, 9px)
 
-Beide Buttons führen zu Tab 4 (Wetter-Metriken).
+Beide Buttons führen zu Tab 4 (Wetter-Metriken) — kein Unterschied im Ergebnis für diesen Sprint.
 
 ---
 
@@ -132,9 +134,9 @@ Diese Tabs sind im Edit-Flow bereits implementiert — im Create-Flow werden **d
 
 ## Hero + Breadcrumb
 
-**Breadcrumb:** `Trips / Neue Tour`
-**Hero-Titel:** live aktualisiert aus Tour-Name-Feld (grau = „Noch kein Name" bis Eingabe)
-**Fortschrittsbalken:** 4 Segmente (Route · Etappen · Wetter · Zeitplan) — Wegpunkte zählt als optional nicht mit
+**Breadcrumb:** `Trips / Neue Tour`  
+**Hero-Titel:** live aktualisiert aus Tour-Name-Feld (grau = „Noch kein Name" bis Eingabe)  
+**Fortschrittsbalken:** 4 Segmente (Route · Etappen · Wetter · Zeitplan) — Wegpunkte zählt als optional nicht mit  
 **„Tour speichern"-Button:** disabled bis Zeitplan-Tab besucht
 
 ---
@@ -165,6 +167,15 @@ Zustand E (Zeitplan-Tab besucht):
 
 ---
 
+## Kanal-Weitergabe
+
+`WetterMetrikenTabV2` gibt aktive Kanäle via `onChannelsChange` zurück.  
+`TE2_ZeitplanTab` empfängt `channels`-Prop.  
+`TE2_AlertsTab` empfängt `defaultChannels`-Prop.  
+→ Identisch zum Edit-Flow.
+
+---
+
 ## Constraints
 
 | ID | Constraint |
@@ -182,23 +193,23 @@ Zustand E (Zeitplan-Tab besucht):
 
 ## Acceptance Criteria
 
-- [ ] **AC-1:** Given Leer-Zustand, When der Nutzer die Route-Seite öffnet, Then sind Etappen/Wetter/Zeitplan/Alerts gesperrt
-- [ ] **AC-2:** Given Name + Startdatum ausgefüllt, When der Nutzer den Route-Tab verlässt, Then wird der Etappen-Tab freigeschaltet
-- [ ] **AC-3:** Given alle GPX geladen, When der Nutzer im Etappen-Tab ist, Then werden Wegpunkte-Tab und Wetter-Tab gleichzeitig freigeschaltet
-- [ ] **AC-4:** Given alle GPX geladen, When Footer angezeigt wird, Then gibt es zwei Buttons: „Wetter direkt →" und „Wegpunkte prüfen →"
-- [ ] **AC-5:** Given Wegpunkte-Tab, When er geöffnet wird, Then zeigt er Info-Banner + `ScreenWaypointEditor embedded` + Footer mit Überspringen-Button
-- [ ] **AC-6:** Given Wegpunkte-Tab-Label, When er gerendert wird, Then trägt er eine `OPTIONAL`-Pill (9px Mono, uppercase, accent-tint)
-- [ ] **AC-7:** Given Wetter-Tab besucht, When Zeitplan-Tab gerendert wird, Then ist er freigeschaltet; Alerts-Tab folgt nach Zeitplan-Besuch
-- [ ] **AC-8:** Given Fortschrittsbalken, When gerendert, Then zeigt er 4 Segmente (Wegpunkte zählt nicht mit)
-- [ ] **AC-9:** Given Zeitplan-Tab besucht, When „Tour speichern" gerendert wird, Then ist der Button aktiv
-- [ ] **AC-10:** Given Tabs 4–6, When gerendert, Then sind es **dieselben** Svelte-Komponenten wie im Edit-Flow (keine Kopien)
+- [ ] Route-Tab: Name (Pflicht), Region (optional), Startdatum (Pflicht, `<input type="date">`)
+- [ ] Etappen-Tab: Zeile pro Etappe mit editierbarem Namen, auto-berechnetem Datum, GPX-Slot
+- [ ] Etappen-Tab: alle GPX geladen → Bestätigungshinweis + zwei Footer-Buttons
+- [ ] Wegpunkte-Tab: Info-Banner + `ScreenWaypointEditor embedded` + Footer
+- [ ] Wegpunkte-Tab hat `OPTIONAL`-Pill im Tab-Label
+- [ ] Wegpunkte + Wetter schalten gleichzeitig frei (nach allen GPX)
+- [ ] Fortschrittsbalken: 4 Segmente (kein Wegpunkte-Segment)
+- [ ] Wetter/Zeitplan/Alerts: selbe Svelte-Komponenten wie im Edit-Flow
+- [ ] „Tour speichern" erst aktiv nach Zeitplan-Tab-Besuch
+- [ ] `screen-trip-wizard.jsx` gelöscht oder als deprecated markiert
 
 ---
 
 ## Migration / Abgrenzung
 
 - **`screen-trip-wizard.jsx`** → deprecated, nach Go-live löschen
-- **#407 / #422** (5-Step-Wizard-Spec) → überholt durch dieses Issue; als „Won't implement as separate wizard" markieren
+- **#407 / #422** (5-Step-Wizard-Spec) → überholt durch dieses Issue; Close oder als „Won't implement as separate wizard" markieren
 - Die 5-Schritt-Logik aus #407/#422 lebt weiter — aber **als Tab-Editor**, nicht als modaler Wizard-Flow
 
 ---

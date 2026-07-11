@@ -14,7 +14,7 @@
 # What it does:
 #   1. Creates missing labels
 #   2. Commits screenshots to .github/issue-assets/ and pushes
-#   3. Creates the 11 issues from issues.json
+#   3. Creates the issues from issues.json (count read dynamically via jq)
 
 set -euo pipefail
 
@@ -39,6 +39,9 @@ declare -A LABELS=(
   ["area:alerts"]="9a958a:"
   ["area:reports"]="9a958a:"
   ["area:compare"]="9a958a:"
+  ["area:mobile"]="9a958a:"
+  ["area:output"]="9a958a:Briefing-Output · Spalten/Detail/Aus-Layout"
+  ["accessibility"]="2a6cb3:WCAG-Konformität, Kontrast, Tastatur, Screenreader"
   ["area:sidebar"]="9a958a:"
   ["area:weather"]="9a958a:"
   ["area:components"]="9a958a:"

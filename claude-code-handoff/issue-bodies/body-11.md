@@ -13,7 +13,7 @@ Aktuell führt `/trips/[id]` zu einer fast leeren Seite (161 Bytes). Alle Trip-A
 
 ```
 ┌──────────────────────────────────────────────────┐
-│ Meine Touren › KHW 403                           │
+│ Meine Trips › KHW 403                            │
 │                                                  │
 │ # KHW 403 · Karnischer Höhenweg                  │
 │  ● aktiv · Tag 1 von 13   20.05 — 01.06 · …      │
@@ -45,7 +45,7 @@ Aktuell führt `/trips/[id]` zu einer fast leeren Seite (161 Bytes). Alle Trip-A
 
 ```svelte
 <header class="trip-detail-header">
-  <Breadcrumb>Meine Touren › {trip.name}</Breadcrumb>
+  <Breadcrumb>Meine Trips › {trip.name}</Breadcrumb>
   <div class="trip-detail-header__row">
     <div>
       <h1>{trip.name}</h1>
