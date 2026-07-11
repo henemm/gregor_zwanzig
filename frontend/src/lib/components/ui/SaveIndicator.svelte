@@ -46,11 +46,17 @@
 
 <style>
 	/* Issue #880: fixes Overlay unten rechts statt inline in Statuszeile. */
+	/* Issue #963 (Fix-Loop 3, Nebenbefund): z-index von 40 auf 62 angehoben —
+	   die BottomNav-bewusste Höhenkorrektur von `.mobile-editor` (F004) verschiebt
+	   das eingeklappte Wegpunkte-Sheet (Sheet.svelte, z-index:61) exakt in den
+	   Bereich direkt über der BottomNav, wo auch dieser Indikator sitzt. Als
+	   persistenter Speicher-Status darf er nie von App-Inhalten verdeckt werden
+	   (unter Dialogen/Modalen mit z-index:100 bleibend). */
 	.save-indicator {
 		position: fixed;
 		bottom: 16px;
 		right: 16px;
-		z-index: 40;
+		z-index: 62;
 		display: inline-flex;
 		align-items: center;
 		gap: 5px;

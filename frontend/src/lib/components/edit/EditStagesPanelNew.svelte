@@ -30,6 +30,7 @@
 	import { api } from '$lib/api.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	import { browser } from '$app/environment';
 
 	interface Props {
 		stages: Stage[];
@@ -51,6 +52,62 @@
 	let mobileSnap = $state<'collapsed' | 'peek' | 'half' | 'full'>('half');
 	let mobileSizeKey = $state(0);
 	let stageSheetOpen = $state(false);
+
+	// Issue #963 — Map-First-Reorder: `.mobile-editor` sitzt jetzt (per CSS `order`,
+	// s. Style-Block) direkt unter der Tab-Leiste. Seine Höhe wird zur Laufzeit
+	// berechnet (Mount + resize/orientationchange) aus der gemessenen Oberkante
+	// (Breadcrumb/TripHeader/Tab-Leiste davor) UND der reservierten BottomNav-Zone
+	// (64px + Safe-Area) darunter.
+	//
+	// Adversary-Fund F004 (Fix-Loop 3, CRITICAL): ein simples CSS
+	// `max(FLOOR, calc(100dvh - offset - BottomNav))` schießt über die BottomNav-
+	// Zone hinaus, sobald `calc(...)` positiv, aber kleiner als FLOOR ist — das
+	// passiert bereits im STANDARD-Viewport 390×844 bei langen Trip-Namen (kein
+	// Rand-Fall!), weil ein längerer TripHeader-Titel die Oberkante weiter nach
+	// unten schiebt. Deshalb wird die Höhe hier bewusst in JS bedingt berechnet
+	// statt blind zu clampen:
+	//   - Ist genug Platz da (available > 0): exakt diesen Wert nutzen — er endet
+	//     per Definition an der BottomNav-Oberkante, kann sie also nie überdecken.
+	//   - Ist gar kein Platz da (available ≤ 0, z.B. Querformat auf schmalen
+	//     Handys/sehr kurzer Portrait-Viewport, F001/F002): Fallback auf
+	//     MOBILE_EDITOR_MIN_HEIGHT_PX — dort ist die BottomNav wegen des riesigen
+	//     Chrome-Offsets ohnehin schon nicht ohne Scrollen erreichbar (Known
+	//     Limitations in der Spec), ein Floor macht das nicht schlimmer.
+	let mobileEditorEl = $state<HTMLDivElement | null>(null);
+	let mobileEditorHeightPx = $state(400);
+	// F002: 45% Freiraum oberhalb des 'half'-Sheets (Default-Snap) = 90px bei
+	// 200px Floor, komfortabel über der `add-waypoint`-Unterkante (56px, +34px Marge).
+	const MOBILE_EDITOR_MIN_HEIGHT_PX = 200;
+	const BOTTOM_NAV_HEIGHT_PX = 64; // app.css `.mobile-scroll-pad` padding-bottom (ohne Safe-Area)
+
+	// Liest `env(safe-area-inset-bottom)` als px-Zahl aus (Notch-Geräte) — CSS
+	// `env()` ist in JS nicht direkt abfragbar, daher kurzzeitige Mess-Sonde.
+	function getSafeAreaBottomPx(): number {
+		const probe = document.createElement('div');
+		probe.style.cssText =
+			'position:fixed;bottom:0;left:0;height:env(safe-area-inset-bottom);width:0;visibility:hidden;pointer-events:none;';
+		document.body.appendChild(probe);
+		const h = probe.getBoundingClientRect().height;
+		probe.remove();
+		return h;
+	}
+
+	$effect(() => {
+		if (!browser || !mobileEditorEl) return;
+		const el = mobileEditorEl;
+		function measure(): void {
+			const offset = el.getBoundingClientRect().top;
+			const available = window.innerHeight - offset - BOTTOM_NAV_HEIGHT_PX - getSafeAreaBottomPx();
+			mobileEditorHeightPx = available > 0 ? available : MOBILE_EDITOR_MIN_HEIGHT_PX;
+		}
+		measure();
+		window.addEventListener('resize', measure);
+		window.addEventListener('orientationchange', measure);
+		return () => {
+			window.removeEventListener('resize', measure);
+			window.removeEventListener('orientationchange', measure);
+		};
+	});
 
 	async function save(): Promise<Trip | null> {
 		if (!tripId) return null;
@@ -311,6 +368,60 @@
 		onAddStage={handleAddStage}
 	/>
 
+	{#if activeStage && !activeIsPause}
+		<!-- Issue #963: Map-First-Reorder — auf Mobil per CSS `order` (Style-Block)
+		     direkt unter die Tab-Leiste vorgezogen, vor EtappenStrip/Etappen-Header/
+		     Cascade-Strip. Höhe = JS-berechnet aus gemessener Oberkante + BottomNav-
+		     Reservierung, siehe $effect + MOBILE_EDITOR_MIN_HEIGHT_PX/BOTTOM_NAV_HEIGHT_PX
+		     (F001/F002/F004). -->
+		<div
+			class="mobile-editor"
+			data-testid="mobile-editor"
+			bind:this={mobileEditorEl}
+			style="height: {mobileEditorHeightPx}px"
+		>
+			<div class="mobile-map-wrap" style="position:relative;width:100%;height:100%;z-index:0">
+				{#key activeStageId}
+					<MapCanvas
+						stage={activeStage}
+						{activeWaypointId}
+						onWaypointActivate={handleWaypointActivate}
+						onMapClick={handleMapClick}
+						sizeKey={mobileSizeKey}
+						fillHeight={true}
+					/>
+				{/key}
+				<!-- EtappenSwitcher-Pill oben links (AC-3/AC-4) -->
+				<button
+					type="button"
+					class="stage-switcher-pill"
+					data-testid="stage-switcher-pill"
+					onclick={() => { stageSheetOpen = true; }}
+				>
+					{activeStageIndex + 1} / {stages.length} · {activeStage.name}
+				</button>
+				<MapControl onAddWaypoint={() => { addModeHint = true; }} />
+			</div>
+			<ProfileSheetEmbedded
+				stage={activeStage}
+				{activeWaypointId}
+				snapPosition={mobileSnap}
+				onWaypointActivate={handleWaypointActivate}
+				onProfileAdd={handleProfileAdd}
+				onSnapChange={(snap) => { mobileSnap = snap; mobileSizeKey++; }}
+			/>
+			{#if stageSheetOpen}
+				<StageSelectSheet
+					{stages}
+					activeIndex={activeStageIndex}
+					open={true}
+					onSelect={(i) => { handleStageActivate(stages[i].id); stageSheetOpen = false; }}
+					onClose={() => { stageSheetOpen = false; }}
+				/>
+			{/if}
+		</div>
+	{/if}
+
 	{#if activeStage}
 		{#if activeIsPause}
 			<PauseStageView
@@ -379,50 +490,6 @@
 					</div>
 				{/if}
 			{/if}
-
-			<!-- Issue #542: Mobile-Editor (@media max-width: 899px) -->
-			<div class="mobile-editor" data-testid="mobile-editor">
-				<div class="mobile-map-wrap" style="position:relative;width:100%;height:calc(100dvh - 56px);z-index:0">
-					{#key activeStageId}
-						<MapCanvas
-							stage={activeStage}
-							{activeWaypointId}
-							onWaypointActivate={handleWaypointActivate}
-							onMapClick={handleMapClick}
-							sizeKey={mobileSizeKey}
-						/>
-					{/key}
-					<!-- EtappenSwitcher-Pill oben links (AC-3/AC-4) -->
-					<button
-						type="button"
-						class="stage-switcher-pill"
-						data-testid="stage-switcher-pill"
-						onclick={() => { stageSheetOpen = true; }}
-					>
-						{activeStageIndex + 1} / {stages.length} · {activeStage.name}
-					</button>
-					{#if !activeIsPause}
-						<MapControl onAddWaypoint={() => { addModeHint = true; }} />
-					{/if}
-				</div>
-				<ProfileSheetEmbedded
-					stage={activeStage}
-					{activeWaypointId}
-					snapPosition={mobileSnap}
-					onWaypointActivate={handleWaypointActivate}
-					onProfileAdd={handleProfileAdd}
-					onSnapChange={(snap) => { mobileSnap = snap; mobileSizeKey++; }}
-				/>
-				{#if stageSheetOpen}
-					<StageSelectSheet
-						{stages}
-						activeIndex={activeStageIndex}
-						open={true}
-						onSelect={(i) => { handleStageActivate(stages[i].id); stageSheetOpen = false; }}
-						onClose={() => { stageSheetOpen = false; }}
-					/>
-				{/if}
-			</div>
 
 			<!-- Issue #503: Grid 1fr / 360px — Karte+Profil links, Wegpunkte rechts -->
 			<div class="editor-grid" data-testid="editor-grid">
@@ -651,10 +718,15 @@
 		font-family: var(--g-font-mono, 'JetBrains Mono', monospace);
 	}
 
-	/* Mobile: zeige Mobile-Editor, verstecke Desktop-Grid */
+	/* Mobile: zeige Mobile-Editor, verstecke Desktop-Grid.
+	   Issue #963 — Map-First-Reorder: `order:-1` zieht `.mobile-editor` innerhalb
+	   des flex-col-Containers (`edit-stages-panel`) vor EtappenStrip/Etappen-Header/
+	   Cascade-Strip, ohne die DOM-Reihenfolge (und damit die Desktop-Darstellung)
+	   zu verändern — auf Desktop bleibt `.mobile-editor` ohnehin `display:none`. */
 	@media (max-width: 899px) {
 		.mobile-editor {
 			display: block;
+			order: -1;
 		}
 		.editor-grid {
 			display: none;

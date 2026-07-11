@@ -53,6 +53,14 @@ function sheetRoot(page: Page) {
 async function sheetHeight(page: Page): Promise<number> {
 	return sheetRoot(page).evaluate((el) => el.getBoundingClientRect().height);
 }
+// Issue #963 — Map-First-Reorder korrigiert `.mobile-editor` auf die tatsächlich
+// verfügbare Höhe (statt vorher fälschlich ~voller Viewport-Höhe). Sheet-%-Werte
+// (full/half/peek) sind relativ zu `.mobile-editor`, NICHT zum Viewport — die
+// Snap-Höhen-Assertions müssen daher gegen die echte Container-Höhe verifizieren,
+// nicht gegen `vh` (Bug docs: docs/artifacts/fix-963-mobile-editor-controls/).
+async function containerHeight(page: Page): Promise<number> {
+	return page.getByTestId('mobile-editor').evaluate((el) => el.getBoundingClientRect().height);
+}
 
 test.describe('Issue #1158 — Wegpunkte-Schublade einklappbar (Mobile)', () => {
 	test.beforeEach(async ({ page }) => {
@@ -73,10 +81,20 @@ test.describe('Issue #1158 — Wegpunkte-Schublade einklappbar (Mobile)', () => 
 		const height = await sheetHeight(page);
 		expect(height, `Schublade ist ${height}px hoch statt ≤64px`).toBeLessThanOrEqual(64);
 
+		// Issue #963 (Fix-Loop 3, F004-Folgekorrektur): `.mobile-editor` ist jetzt
+		// BottomNav-bewusst dimensioniert (siehe EditStagesPanelNew.svelte) und dadurch
+		// bei manchen Trip-Namen deutlich niedriger als vorher (hier real ≈135px statt
+		// vormals ~788px). Die ursprüngliche Klick-Position (5%,50%) lag im geschrumpften
+		// Layout innerhalb des Leaflet-Zoom-Controls (oben links) statt auf der Karte —
+		// (25%,50%) trifft zuverlässig den Karten-Hintergrund (fern von Zoom-Control
+		// oben-links, MapControl-Cluster oben-rechts und der Marker-Spalte in der Mitte).
+		// Kurze Wartezeit lässt Leaflets `fitBounds`-Übergang abschließen, bevor geklickt
+		// wird (vermeidet Flakiness durch noch verschiebende Marker-Positionen).
+		await page.waitForTimeout(300);
 		const map = page.getByTestId('mobile-editor').getByTestId('map-canvas');
 		const box = await map.boundingBox();
 		if (!box) throw new Error('map-canvas nicht gefunden');
-		await map.click({ position: { x: box.width * 0.05, y: box.height * 0.5 } });
+		await map.click({ position: { x: box.width * 0.25, y: box.height * 0.5 } });
 
 		// Persistenz ans Backend ist ein separates, vorbestehendes Thema
 		// (handleMapClick ruft aktuell kein scheduleSave/save auf — Folge-Issue).
@@ -94,7 +112,11 @@ test.describe('Issue #1158 — Wegpunkte-Schublade einklappbar (Mobile)', () => 
 
 		await handle(page).click(); // expand
 		const height = await sheetHeight(page);
-		expect(height, `Schublade ist nach Re-Expand nur ${height}px hoch`).toBeGreaterThan(200);
+		// Issue #963: Schwelle war 200px (fixer Wert, implizit gegen die vorher
+		// fälschlich fast-viewport-hohe Karte kalibriert) — jetzt gegen die echte
+		// (kleinere, aber stabile) `.mobile-editor`-Höhe geprüft: 'half' ≈ 55%.
+		const ch = await containerHeight(page);
+		expect(height, `Schublade ist nach Re-Expand nur ${height}px hoch (Container ${ch}px)`).toBeGreaterThan(ch * 0.4);
 		await expect(page.getByTestId('waypoint-list').getByTestId('waypoint-card-0')).toBeVisible();
 	});
 
@@ -197,12 +219,16 @@ test.describe('Issue #1158 — Wegpunkte-Schublade einklappbar (Mobile)', () => 
 	test('AC-7: Höhe-wechseln-Button durchläuft alle vier Stufen', async ({ page }) => {
 		await openMobileStagesEditor(page);
 		const cycle = page.getByTestId('snap-cycle');
-		const vh = MOBILE.height;
+		// Issue #963: Sheet-%-Werte sind relativ zu `.mobile-editor`, nicht zum
+		// Viewport — vorher zufällig fast identisch, weil `.mobile-editor` fälschlich
+		// fast die volle `dvh`-Höhe hatte. Jetzt korrekt gegen die echte (kleinere)
+		// Container-Höhe geprüft.
+		const ch = await containerHeight(page);
 
 		await cycle.click(); // half -> full
 		await expect(cycle).toContainText('full');
 		let h = await sheetHeight(page);
-		expect(h, `full: ${h}px`).toBeGreaterThan(vh * 0.7);
+		expect(h, `full: ${h}px (Container ${ch}px)`).toBeGreaterThan(ch * 0.7);
 
 		await cycle.click(); // full -> collapsed
 		await expect(cycle).toContainText('collapsed');
@@ -212,13 +238,13 @@ test.describe('Issue #1158 — Wegpunkte-Schublade einklappbar (Mobile)', () => 
 		await cycle.click(); // collapsed -> peek
 		await expect(cycle).toContainText('peek');
 		h = await sheetHeight(page);
-		expect(h, `peek: ${h}px`).toBeGreaterThan(vh * 0.15);
-		expect(h, `peek: ${h}px`).toBeLessThan(vh * 0.45);
+		expect(h, `peek: ${h}px (Container ${ch}px)`).toBeGreaterThan(ch * 0.15);
+		expect(h, `peek: ${h}px (Container ${ch}px)`).toBeLessThan(ch * 0.45);
 
 		await cycle.click(); // peek -> half
 		await expect(cycle).toContainText('half');
 		h = await sheetHeight(page);
-		expect(h, `half: ${h}px`).toBeGreaterThan(vh * 0.4);
-		expect(h, `half: ${h}px`).toBeLessThan(vh * 0.65);
+		expect(h, `half: ${h}px (Container ${ch}px)`).toBeGreaterThan(ch * 0.4);
+		expect(h, `half: ${h}px (Container ${ch}px)`).toBeLessThan(ch * 0.65);
 	});
 });
