@@ -9,7 +9,6 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/henemm/gregor-api/internal/compare"
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/handler"
 	"github.com/henemm/gregor-api/internal/model"
@@ -73,8 +72,6 @@ func main() {
 	}
 	challengeStore := handler.NewChallengeStore()
 
-	compareEngine := compare.New(s, weatherProvider)
-
 	sched, err := scheduler.New(cfg, s)
 	if err != nil {
 		log.Fatalf("scheduler error: %v", err)
@@ -88,7 +85,6 @@ func main() {
 		WeatherProvider:    weatherProvider,
 		WebAuthn:           webAuthn,
 		ChallengeStore:     challengeStore,
-		CompareEngine:      compareEngine,
 		Scheduler:          sched,
 		TelegramTokenStore: telegramTokenStore,
 		GitCommit:          gitCommit,

@@ -4,9 +4,10 @@ package model
 // automatischen Orts-Vergleichs-Report. Spec:
 // docs/specs/modules/issue_458_compare_preset_backend.md
 //
-// Profil wird als string gespeichert (kein Import von internal/compare), um
-// einen Import-Zyklus zu vermeiden — internal/compare importiert internal/model.
-// Validierung via compare.IsValidProfile() findet im Handler statt.
+// Profil wird als string persistiert (Persistenzformat unverändert, für
+// Rückwärtskompatibilität). Der ActivityProfile-Typ lebt seit Issue #1215
+// (Scheibe 3) in model (activity_profile.go); Validierung via
+// model.IsValidProfile() findet im Handler statt.
 
 import "time"
 

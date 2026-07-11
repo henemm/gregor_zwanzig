@@ -39,25 +39,6 @@ test.skip('AC-1b: compare/+page.svelte hat aria-pressed auf dem Mobile-Chip-Butt
 	);
 });
 
-test('AC-2a: PresetHeader.svelte importiert Field aus molecules', () => {
-	const src = read('lib/components/compare/PresetHeader.svelte');
-	assert.ok(
-		src.includes('Field') &&
-			(src.includes("from '$lib/components/molecules") ||
-				src.includes("from '$lib/components/molecules/index.js'")),
-		'Field-Import fehlt in PresetHeader.svelte'
-	);
-});
-
-test('AC-2b: PresetHeader.svelte verwendet <Field label=…> für die Einstellungsfelder', () => {
-	const src = read('lib/components/compare/PresetHeader.svelte');
-	const count = (src.match(/<Field\s+label=/g) ?? []).length;
-	assert.ok(
-		count >= 3,
-		`PresetHeader.svelte enthält nur ${count} <Field label=…>-Vorkommen, erwartet >= 3`
-	);
-});
-
 test('AC-3: GroupSection.svelte enthält profileSignature(loc.activity_profile) für Location-Items', () => {
 	const src = read('lib/components/compare/GroupSection.svelte');
 	assert.ok(
@@ -71,14 +52,5 @@ test('AC-5a: compare/+page.svelte enthält keine rohen Chip-Klassen mehr (rounde
 	assert.ok(
 		!src.includes('rounded-full border border-border bg-muted'),
 		'Inline-Chip-Klasse "rounded-full border border-border bg-muted" noch in +page.svelte vorhanden — bitte entfernen'
-	);
-});
-
-test('AC-5b: PresetHeader.svelte enthält keine rohen Label-Klassen mehr (text-sm font-medium auf <label>)', () => {
-	const src = read('lib/components/compare/PresetHeader.svelte');
-	const hasRawLabel = /<label[^>]*class="text-sm font-medium"/.test(src);
-	assert.ok(
-		!hasRawLabel,
-		'Raw-Label-Klasse <label class="text-sm font-medium"> noch in PresetHeader.svelte — bitte durch Field ersetzen'
 	);
 });

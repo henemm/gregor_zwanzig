@@ -125,10 +125,10 @@ test('AC-7: bug_499_skala_label.test.ts referenziert trip-wizard nicht mehr', ()
 	assert.ok(!read(p).includes('trip-wizard'), 'bug_499-Test liest noch trip-wizard/Step3Weather (AC-7)');
 });
 
-test('AC-8: issue_462.test.ts ohne NewLocationWizard-Eintrag, PresetHeader bleibt (Scheibe 3)', () => {
+test('AC-8: issue_462.test.ts ohne NewLocationWizard- und PresetHeader-Eintrag (Scheibe 3 entfernt)', () => {
 	const src = read(join(COMPONENTS, 'compare', 'issue_462.test.ts'));
 	assert.ok(!src.includes('NewLocationWizard'), 'MIGRATED_FILES enthält noch NewLocationWizard (AC-8)');
-	assert.ok(src.includes('PresetHeader'), 'PresetHeader-Eintrag entfernt — der gehört zu Scheibe 3!');
+	assert.ok(!src.includes('PresetHeader'), 'PresetHeader-Eintrag wurde mit Scheibe 3 entfernt (#1215)');
 });
 
 // ── AC-10: lebende Route unangetastet ───────────────────────────────────────

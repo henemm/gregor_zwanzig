@@ -9,7 +9,6 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/henemm/gregor-api/internal/compare"
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/handler"
 	authmw "github.com/henemm/gregor-api/internal/middleware"
@@ -25,7 +24,6 @@ type Deps struct {
 	WeatherProvider  provider.WeatherProvider
 	WebAuthn         *webauthn.WebAuthn
 	ChallengeStore   *handler.ChallengeStore
-	CompareEngine    *compare.Engine
 	Scheduler        *scheduler.Scheduler
 	TelegramTokenStore *handler.TelegramTokenStore
 	GitCommit        string
@@ -156,7 +154,6 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/gpx/parse", handler.GpxProxyHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/notify/test", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/notify/test"))
 	r.Get("/api/compare", handler.CompareProxyHandler(deps.Config.PythonCoreURL))
-	r.Post("/api/compare/run", handler.CompareRunHandler(deps.CompareEngine))
 	r.Get("/api/_internal/trip/{id}/loaded", handler.LoadedTripProxyHandler(deps.Config.PythonCoreURL))
 	// Issue #221: External Validator observability endpoints (cookie-auth via global middleware).
 	r.Get("/api/_validator/format-metric", handler.ValidatorFormatMetricProxyHandler(deps.Config.PythonCoreURL))

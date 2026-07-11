@@ -5,7 +5,7 @@ package handler
 //
 // Persistenz: data/users/{userId}/compare_presets.json (JSON-Array).
 // User-Isolation: UserID stammt ausschließlich aus dem Auth-Kontext, nie aus
-// dem Request-Body. Profil-Validierung via compare.IsValidProfile().
+// dem Request-Body. Profil-Validierung via model.IsValidProfile().
 //
 // /send ist ein Stub (Issue #461 implementiert die echte Versandlogik).
 
@@ -21,7 +21,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/henemm/gregor-api/internal/compare"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
@@ -63,7 +62,7 @@ func validateComparePreset(p model.ComparePreset) error {
 	if p.Schedule != "daily" && p.Schedule != "weekly" && p.Schedule != "manual" {
 		return fmt.Errorf("schedule must be daily, weekly, or manual")
 	}
-	if !compare.IsValidProfile(compare.ActivityProfile(normalizeProfile(p.Profil))) {
+	if !model.IsValidProfile(model.ActivityProfile(normalizeProfile(p.Profil))) {
 		return fmt.Errorf("profil is not a valid activity profile")
 	}
 	if p.ForecastHours != 24 && p.ForecastHours != 48 && p.ForecastHours != 72 {

@@ -23,7 +23,6 @@ import { join } from 'node:path';
 const ROOT = fileURLToPath(new URL('../../../../../', import.meta.url)); // -> frontend/
 
 const PAGE = join(ROOT, 'src/routes/compare/+page.svelte');
-const PRESET_HEADER = join(ROOT, 'src/lib/components/compare/PresetHeader.svelte');
 const GROUP_SECTION = join(ROOT, 'src/lib/components/compare/GroupSection.svelte');
 
 // ── AC-1 + AC-5: +page.svelte — ChipBtn → Pill ────────────────────────────
@@ -74,53 +73,10 @@ test.skip('AC-1: Mobile Chip-Buttons haben aria-pressed (obsolet durch #439)', (
 	assert.match(chipRowBlock, /aria-pressed/, 'Chip-Buttons muessen aria-pressed haben');
 });
 
-// ── AC-2 + AC-5: PresetHeader.svelte — CompareField → Field ───────────────
-
-test('AC-2: PresetHeader.svelte importiert Field aus molecules', () => {
-	const src = readFileSync(PRESET_HEADER, 'utf-8');
-	assert.match(
-		src,
-		/import\s*\{[^}]*\bField\b[^}]*\}\s*from\s*['"][^'"]*molecules[^'"]*['"]/,
-		'PresetHeader.svelte muss Field aus $lib/components/molecules importieren'
-	);
-});
-
-test('AC-2: PresetHeader.svelte nutzt <Field>-Wrapper', () => {
-	const src = readFileSync(PRESET_HEADER, 'utf-8');
-	const fieldMatches = [...src.matchAll(/<Field\b/g)];
-	assert.ok(
-		fieldMatches.length >= 5,
-		`PresetHeader muss mindestens 5 <Field>-Elemente enthalten, gefunden: ${fieldMatches.length}`
-	);
-});
-
-test('AC-5: Alte label-Klasse "text-sm font-medium" aus PresetHeader entfernt', () => {
-	const src = readFileSync(PRESET_HEADER, 'utf-8');
-	// Die alten <label class="text-sm font-medium">-Tags duerften weg sein
-	assert.doesNotMatch(
-		src,
-		/<label[^>]*class="text-sm font-medium"/,
-		'Alte <label class="text-sm font-medium"> muessen entfernt sein (ersetzt durch Field)'
-	);
-});
-
-test('AC-2: data-testid="compare-preset-date-input" bleibt erhalten', () => {
-	const src = readFileSync(PRESET_HEADER, 'utf-8');
-	assert.match(
-		src,
-		/data-testid="compare-preset-date-input"/,
-		'data-testid="compare-preset-date-input" muss im PresetHeader erhalten bleiben'
-	);
-});
-
-test('AC-2: data-testid="compare-preset-profile-select" bleibt erhalten', () => {
-	const src = readFileSync(PRESET_HEADER, 'utf-8');
-	assert.match(
-		src,
-		/data-testid="compare-preset-profile-select"/,
-		'data-testid="compare-preset-profile-select" muss im PresetHeader erhalten bleiben'
-	);
-});
+// ── AC-2 + AC-5: PresetHeader.svelte-Tests entfernt ───────────────────────
+// PresetHeader.svelte wurde mit Issue #1215 (Dead-Code Scheibe 3) gelöscht —
+// die zugehörigen Migrations-Tests (Field-Import, <Field>-Wrapper, Label-
+// Klasse, beide data-testids) entfallen mit der Komponente.
 
 // ── AC-3: GroupSection.svelte — FocusBadge → data-slot="dot" ─────────────
 
