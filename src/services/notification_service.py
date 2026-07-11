@@ -23,6 +23,7 @@ from output.renderers.alert.render import (
     render_subject as render_alert_subject,
     render_telegram as render_alert_telegram,
 )
+from output.renderers.email.compact import _ascii as _ascii_hint
 from output.renderers.email.design_tokens import (
     FONT_UI, G_ACCENT, G_DANGER, G_INK, G_PAPER, G_SURFACE_1, WEB_FONT_LINK,
 )
@@ -791,7 +792,12 @@ class NotificationService:
 
     def _prepend_hint(self, report, hint: str) -> None:
         if report.email_plain:
-            report.email_plain = f"{hint}\n\n{report.email_plain}"
+            # Issue #1208-Folgebefund: Compact-Mails (kein HTML-Teil) sind per
+            # Vertrag reines ASCII (7bit) — der Plain-Hinweis wird NUR dann
+            # transliteriert, wenn der Report compact ist. Full-Mails (HTML
+            # gesetzt) behalten den Umlaut unveraendert.
+            plain_hint = hint if report.email_html else _ascii_hint(hint)
+            report.email_plain = f"{plain_hint}\n\n{report.email_plain}"
         if report.email_html:
             report.email_html = self._inject_html_hint(report.email_html, hint)
         if report.telegram_bubbles:
