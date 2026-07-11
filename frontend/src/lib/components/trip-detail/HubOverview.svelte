@@ -5,6 +5,7 @@
 	import ReportLine from './ReportLine.svelte';
 	import ChannelDot from './ChannelDot.svelte';
 	import type { Trip } from '$lib/types';
+	import { fetchStageRisk, type StageRisk } from '$lib/utils/stageRisk';
 
 	interface Props {
 		trip: Trip;
@@ -13,6 +14,18 @@
 	let { trip, onJump }: Props = $props();
 
 	let selectedStageId = $state<string | null>(trip.stages?.[0]?.id ?? null);
+
+	// Issue #1223 — Risiko-Ampel je Etappe, clientseitig/lazy im Cockpit-Tab.
+	// Niemals im SSR-Home-Loader (Regel #386/#395).
+	let stageRisk: Record<string, StageRisk> = $state({});
+
+	$effect(() => {
+		if (!trip?.id) return;
+		const id = trip.id;
+		fetchStageRisk(id).then((m) => {
+			if (id === trip.id) stageRisk = m; // Stale-Guard (F003): spät auflösender Fetch für alten Trip nicht übernehmen
+		});
+	});
 
 	function makeJumpHandler(tab: string) {
 		return function doJump() {
@@ -46,6 +59,7 @@
 				index={i}
 				active={stage.id === selectedStageId}
 				onclick={makeStageSelectHandler(stage.id)}
+				risk={stageRisk[stage.id] ?? null}
 			/>
 		{/each}
 	</div>

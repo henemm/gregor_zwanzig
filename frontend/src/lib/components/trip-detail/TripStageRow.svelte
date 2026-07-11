@@ -1,23 +1,18 @@
 <script lang="ts">
 	import { Pill } from '$lib/components/atoms';
 	import type { Stage } from '$lib/types';
+	import { riskToPill } from '$lib/utils/stageRisk';
 
 	interface Props {
 		stage: Stage;
 		index: number;
 		active?: boolean;
 		onclick?: () => void;
+		risk?: 'green' | 'yellow' | 'red' | null;
 	}
-	let { stage, index, active = false, onclick }: Props = $props();
+	let { stage, index, active = false, onclick, risk }: Props = $props();
 
-	const risk = $derived((stage as Stage & { risk?: string }).risk ?? '');
-
-	const pillTone = $derived(
-		risk === 'high' ? 'bad' : risk === 'med' ? 'warn' : 'good'
-	);
-	const pillLabel = $derived(
-		risk === 'high' ? 'Risiko' : risk === 'med' ? 'Achten' : 'OK'
-	);
+	const pill = $derived(riskToPill(risk));
 
 	const wpCount = $derived(stage.waypoints?.length ?? 0);
 	const kmVal = $derived((stage as Stage & { distance_km?: number }).distance_km ?? 0);
@@ -92,7 +87,7 @@
 
 	<!-- Col 4: Risk pill -->
 	<div style="align-self: center; display: flex; justify-content: flex-end;">
-		<Pill tone={pillTone} label={pillLabel} />
+		<Pill tone={pill.tone}>{pill.label}</Pill>
 	</div>
 </div>
 
