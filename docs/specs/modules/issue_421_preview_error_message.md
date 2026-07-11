@@ -120,6 +120,7 @@ Import in beiden Komponenten um `friendlyPreviewError, PREVIEW_ERROR_GENERIC` er
 - Die Erkennung „leere Wegpunkte" schlüsselt auf das Substring `waypoint` (case-insensitive) im `detail`-Feld — bewusst inhaltlich statt auf Statuscode 422, um robust gegen Backend-Status-Drift zu sein. Ändert das Backend den englischen Wortlaut grundlegend (kein „waypoint" mehr), fällt die Meldung auf den generischen Text zurück (kein Crash, nur weniger spezifisch).
 - FastAPI-Request-Validierungsfehler (z. B. fehlende Query-Parameter) liefern `detail` als Array statt String → wird als generischer Fehler behandelt (kein „waypoint"-Match). Aus dem UI-Pfad nicht auslösbar, da `type` kontrolliert ist.
 - Signal-/Telegram-Vorschau laufen nicht über diese beiden Frames (nur E-Mail + SMS im Tab) und sind nicht im Scope.
+- Nachtrag 2026-07-11 (Issue #990): Zum Zeitpunkt dieser Spec (2026-05-27) lieferte das Backend bei wegpunktlosen Etappen, die per Auto-Resolve ausgewählt wurden, nie einen `detail`-Text mit „waypoint" — die hier gebaute Frontend-Erkennung griff also faktisch nie für den Auto-Resolve-Fall. Issue #990 hat diese Backend-Lücke in `PreviewService` geschlossen (`docs/specs/modules/fix_990_preview_empty_waypoints.md`); die spezifische Wegpunkt-Meldung wird seitdem tatsächlich erreicht.
 
 ## Changelog
 

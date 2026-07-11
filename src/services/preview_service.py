@@ -24,6 +24,21 @@ logger = logging.getLogger(__name__)
 
 VALID_REPORT_TYPES = ("morning", "evening")
 
+# Issue #990: Waypoint-Mindestschwelle für eine renderbare Etappe. SSoT ist
+# der Vergleichsausdruck in src/services/trip_segments.py:120
+# (`len(stage.waypoints) < 2` → []). Hier nur referenziert, nicht neu
+# kodifiziert — bleibt konsistent mit dem geteilten Alert-/Briefing-Pfad.
+_MIN_WAYPOINTS_FOR_RENDER = 2
+
+
+def _stage_is_renderable(stage) -> bool:
+    """True, wenn die Etappe genug Wegpunkte für eine Vorschau hat.
+
+    Spiegelt die Schwelle aus trip_segments.convert_trip_to_segments
+    (`len(stage.waypoints) < 2` → leere Segments).
+    """
+    return len(stage.waypoints) >= _MIN_WAYPOINTS_FOR_RENDER
+
 # Issue #483: Demo-Mode-Fixtures liegen in <repo>/fixtures/openmeteo/.
 # parents[2] = src/services/preview_service.py → src/services → src → <repo>.
 _FIXTURE_DIR = Path(__file__).resolve().parents[2] / "fixtures" / "openmeteo"
@@ -60,15 +75,30 @@ class PreviewService:
             except ValueError as e:
                 raise ValueError(f"Ungültiges Datum '{given_date}', ISO erwartet") from e
         today = date.today()
-        stages = sorted(trip.stages, key=lambda s: s.date) if trip.stages else []
-        for stage in stages:
-            stage_d = stage.date if isinstance(stage.date, date) else date.fromisoformat(str(stage.date))
-            if stage_d >= today:
-                return stage_d
-        if stages:
-            s = stages[0]
+        # Issue #990 / Adversary F001: Trip komplett ohne Etappen ist ein
+        # anderer Fall als "Etappen ohne genug Wegpunkte". Ein wegpunktloser
+        # Trip hat keine im Wegpunkt-Editor bearbeitbare Etappe — daher hier
+        # ValueError (→ HTTP 422, generisch), NICHT den waypoint-LookupError
+        # (→ 404), der das Frontend fälschlich zum Wegpunkt-Editor schickt.
+        if not trip.stages:
+            raise ValueError(f"Trip '{trip.id}' hat keine Stages")
+        stages = sorted(trip.stages, key=lambda s: s.date)
+
+        def _stage_d(s) -> date:
             return s.date if isinstance(s.date, date) else date.fromisoformat(str(s.date))
-        raise ValueError(f"Trip '{trip.id}' hat keine Stages")
+
+        # Issue #990: Auto-Resolve überspringt nicht-renderbare Etappen (< 2
+        # Wegpunkte), damit die Vorschau nicht an einer wegpunktlosen Etappe
+        # scheitert, obwohl eine spätere renderbar ist.
+        for stage in stages:
+            if _stage_is_renderable(stage) and _stage_d(stage) >= today:
+                return _stage_d(stage)
+        for stage in stages:  # Fallback: erste renderbare Etappe überhaupt
+            if _stage_is_renderable(stage):
+                return _stage_d(stage)
+        raise LookupError(
+            f"Trip '{trip.id}' hat keine Etappe mit genug waypoints für eine Vorschau"
+        )
 
     def _build_report(
         self,
@@ -95,8 +125,17 @@ class PreviewService:
         scheduler = TripReportSchedulerService(self.settings)
         segments = scheduler._convert_trip_to_segments(trip, target)
         if not segments:
+            # Issue #990: Zwei Ursachen unterscheiden, damit die Frontend-
+            # Erkennung aus #421 (matcht "waypoint" case-insensitive) nur beim
+            # echten Wegpunkt-Fall greift, nicht beim "Datum falsch"-Fall.
+            stage = trip.get_stage_for_date(target)
+            if stage is None:
+                raise LookupError(
+                    f"Keine Stage am {target.isoformat()} im Trip '{trip.id}'"
+                )
             raise LookupError(
-                f"Keine Stage am {target.isoformat()} im Trip '{trip.id}'"
+                f"Stage am {target.isoformat()} im Trip '{trip.id}' hat zu wenige "
+                "waypoints für eine Vorschau"
             )
 
         if demo:

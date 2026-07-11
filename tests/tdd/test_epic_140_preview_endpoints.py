@@ -385,3 +385,125 @@ class TestT6DemoMode:
         data = resp.json()
         assert "token_line" in data
         assert "char_count" in data
+
+
+# ---------- T5: Issue #990 — Vorschau bei wegpunktlosen Etappen -----
+
+
+def _make_waypoint990(id_: str, lat: float = 47.10, lon: float = 9.20):
+    from app.trip import Waypoint
+    return Waypoint(id=id_, name=f"Punkt {id_}", lat=lat, lon=lon, elevation_m=800)
+
+
+def _make_stage990(stage_id: str, stage_date, num_waypoints: int):
+    from app.trip import Stage
+    waypoints = [
+        _make_waypoint990(f"{stage_id}-wp{i}", 47.10 + i * 0.01, 9.20 + i * 0.01)
+        for i in range(num_waypoints)
+    ]
+    return Stage(id=stage_id, name=f"Etappe {stage_id}", date=stage_date, waypoints=waypoints)
+
+
+def _make_trip990(stages, trip_id: str = "test-990"):
+    from app.trip import Trip
+    return Trip(id=trip_id, name="Test Trip #990", stages=stages)
+
+
+class TestIssue990WaypointSkip:
+    """AC-1 bis AC-5 aus docs/specs/modules/fix_990_preview_empty_waypoints.md.
+
+    Keine Mocks, keine Wetter-API-Calls: bei leeren Segments wirft
+    _build_report bereits vor dem Wetter-Fetch (siehe preview_service.py:96-100).
+    """
+
+    def test_ac1_auto_resolve_skips_stage_without_waypoints(self, service):
+        """AC-1: Auto-Resolve überspringt die wegpunktlose frühere Etappe
+        zugunsten der nächsten renderbaren Etappe."""
+        from datetime import date, timedelta
+        today = date.today()
+        stage_empty = _make_stage990("empty", today, num_waypoints=0)
+        stage_ok = _make_stage990("ok", today + timedelta(days=1), num_waypoints=2)
+        trip = _make_trip990([stage_empty, stage_ok])
+
+        target = service._resolve_target_date(trip, given_date=None)
+
+        assert target == stage_ok.date, (
+            f"Erwartet: nächste renderbare Etappe ({stage_ok.date}), "
+            f"war: {target} (wegpunktlose Etappe wurde gewählt)"
+        )
+
+    def test_ac2_explicit_date_on_empty_stage_error_contains_waypoint(self, service):
+        """AC-2: Explizites target_date auf eine wegpunktlose Etappe liefert
+        einen Fehlertext mit dem Wort 'waypoint' (matcht Frontend-Regex #421)."""
+        from datetime import date
+        stage_empty = _make_stage990("empty", date(2026, 8, 1), num_waypoints=1)
+        trip = _make_trip990([stage_empty])
+
+        with pytest.raises(LookupError) as exc_info:
+            service._build_report(trip, stage_empty.date, "morning", demo=True)
+
+        assert "waypoint" in str(exc_info.value).lower(), (
+            f"Fehlertext muss 'waypoint' enthalten, war: {exc_info.value!r}"
+        )
+
+    def test_ac3_explicit_date_without_any_stage_stays_generic(self, service):
+        """AC-3: Explizites target_date ohne jede Etappe bleibt generisch
+        (kein 'waypoint' im Text) — Regressionsschutz gegen Fehlklassifikation."""
+        from datetime import date
+        stage_ok = _make_stage990("ok", date(2026, 8, 1), num_waypoints=2)
+        trip = _make_trip990([stage_ok])
+        no_stage_date = date(2026, 9, 15)
+
+        with pytest.raises(LookupError) as exc_info:
+            service._build_report(trip, no_stage_date, "morning", demo=True)
+
+        assert "waypoint" not in str(exc_info.value).lower(), (
+            f"Generischer 'keine Stage'-Fall darf 'waypoint' nicht enthalten, "
+            f"war: {exc_info.value!r}"
+        )
+
+    def test_ac4_all_stages_without_waypoints_error_contains_waypoint(self, service):
+        """AC-4: Kein Stage im Trip ist renderbar (weder Zukunft noch
+        Fallback) — Fehlertext muss trotzdem 'waypoint' enthalten."""
+        from datetime import date, timedelta
+        today = date.today()
+        stage_past = _make_stage990("past", today - timedelta(days=10), num_waypoints=1)
+        stage_future = _make_stage990("future", today + timedelta(days=5), num_waypoints=0)
+        trip = _make_trip990([stage_past, stage_future])
+
+        with pytest.raises((LookupError, ValueError)) as exc_info:
+            service._resolve_target_date(trip, given_date=None)
+
+        assert "waypoint" in str(exc_info.value).lower(), (
+            f"Fehlertext bei komplett wegpunktlosem Trip muss 'waypoint' "
+            f"enthalten, war: {exc_info.value!r}"
+        )
+
+    def test_ac5_fully_renderable_trip_selection_unchanged(self, service):
+        """AC-5: Regressionsschutz — Trip mit ausschließlich renderbaren
+        Etappen liefert weiterhin die erste (chronologisch früheste) Etappe."""
+        from datetime import date
+        stage_first = _make_stage990("first", date(2026, 8, 1), num_waypoints=3)
+        stage_second = _make_stage990("second", date(2026, 8, 2), num_waypoints=4)
+        trip = _make_trip990([stage_second, stage_first])  # bewusst unsortiert
+
+        target = service._resolve_target_date(trip, given_date=None)
+
+        assert target == stage_first.date, (
+            f"Erwartet: früheste renderbare Etappe ({stage_first.date}), war: {target}"
+        )
+
+    def test_ac4b_trip_with_zero_stages_raises_value_error_not_waypoint_text(self, service):
+        """F001 (Adversary-Fund): Trip ganz ohne Etappen ist ein anderer Fall
+        als 'Etappen ohne genug Wegpunkte' — muss weiterhin ValueError (422)
+        liefern, NICHT LookupError mit 'waypoint' im Text (Frontend würde sonst
+        fälschlich zum Wegpunkt-Editor verweisen, obwohl keine Etappe existiert)."""
+        trip = _make_trip990([])
+
+        with pytest.raises(ValueError) as exc_info:
+            service._resolve_target_date(trip, given_date=None)
+
+        assert not isinstance(exc_info.value, LookupError), (
+            "Trip ohne jede Etappe darf NICHT als LookupError/waypoint-Fall behandelt werden"
+        )
+        assert "waypoint" not in str(exc_info.value).lower()
