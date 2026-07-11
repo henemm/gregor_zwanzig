@@ -14,12 +14,15 @@ IMPORTANT: NO mocks, NO patch, NO MagicMock. Real fmt_val calls only.
 """
 from __future__ import annotations
 
-from src.output.renderers.email.helpers import _AMPEL_EMOJIS, fmt_val
+from src.output.renderers.email.helpers import fmt_val
+
+# Issue #1222: Ampelpunkte sind jetzt gestylte CSS-Dots (kein Kreis-Emoji mehr).
+_CIRCLE_EMOJIS = ("🟢", "🟡", "🟠", "🔴")
 
 
 def _has_ampel(s: str) -> bool:
-    """True wenn s eines der vier Ampel-Emojis enthaelt."""
-    return any(e in s for e in _AMPEL_EMOJIS)
+    """True wenn s einen CSS-Ampel-Dot ODER (Regress) ein Kreis-Emoji enthaelt."""
+    return "border-radius:50%" in s or any(e in s for e in _CIRCLE_EMOJIS)
 
 
 # ---------------------------------------------------------------------------
@@ -87,25 +90,25 @@ class TestSimplifiedFormatStillAmpel:
 
     def test_issue810_wind_simplified_still_ampel(self):
         result = fmt_val("wind", 33, html=True, format_modes={"wind": "simplified"})
-        assert result in _AMPEL_EMOJIS, (
+        assert _has_ampel(result), (
             f"Wind simplified/html must BE one ampel emoji: {result!r}"
         )
 
     def test_issue810_gust_simplified_still_ampel(self):
         result = fmt_val("gust", 55, html=True, format_modes={"gust": "simplified"})
-        assert result in _AMPEL_EMOJIS, (
+        assert _has_ampel(result), (
             f"Gust simplified/html must BE one ampel emoji: {result!r}"
         )
 
     def test_issue810_precip_simplified_still_ampel(self):
         result = fmt_val("precip", 2.4, html=True, format_modes={"precip": "simplified"})
-        assert result in _AMPEL_EMOJIS, (
+        assert _has_ampel(result), (
             f"Precip simplified/html must BE one ampel emoji: {result!r}"
         )
 
     def test_issue810_pop_simplified_still_ampel(self):
         result = fmt_val("pop", 60, html=True, format_modes={"pop": "simplified"})
-        assert result in _AMPEL_EMOJIS, (
+        assert _has_ampel(result), (
             f"Pop simplified/html must BE one ampel emoji: {result!r}"
         )
 
@@ -119,19 +122,19 @@ class TestIndicatorFormatStillAmpel:
 
     def test_issue810_wind_indicator_still_ampel(self):
         result = fmt_val("wind", 33, html=True, format_modes={"wind": "indicator"})
-        assert result in _AMPEL_EMOJIS, (
+        assert _has_ampel(result), (
             f"Wind indicator must BE one ampel emoji: {result!r}"
         )
 
     def test_issue810_precip_indicator_still_ampel(self):
         result = fmt_val("precip", 2.4, html=True, format_modes={"precip": "indicator"})
-        assert result in _AMPEL_EMOJIS, (
+        assert _has_ampel(result), (
             f"Precip indicator must BE one ampel emoji: {result!r}"
         )
 
     def test_issue810_pop_indicator_still_ampel(self):
         result = fmt_val("pop", 60, html=True, format_modes={"pop": "indicator"})
-        assert result in _AMPEL_EMOJIS, (
+        assert _has_ampel(result), (
             f"Pop indicator must BE one ampel emoji: {result!r}"
         )
 

@@ -356,16 +356,25 @@ def build_units_legend(rows: list[dict]) -> str:
 
 
 # Issue #759: 4-stufiger Ampelpunkt fuer Wind/Boen/Regen/Regenwahrscheinlichkeit.
-# Ampel-Legende fuer HTML-Mail-Footer.
-AMPEL_LEGEND = "🟢 unkritisch · 🟡 Achtung · 🟠 Warnung · 🔴 Gefahr"
-
-
-_AMPEL_LEVEL_TO_EMOJI = {
-    "green": "🟢",
-    "yellow": "🟡",
-    "orange": "🟠",
-    "red": "🔴",
+# Issue #1222: Kreis-Emojis 🟢🟡🟠🔴 durch gestylte CSS-Dots ersetzt (kein
+# Emoji mehr in E-Mails). Palette (fill, ring) je Level, Ring an _risk_dot
+# (html.py) angelehnt, um Gelb/Amber erweitert.
+_AMPEL_DOT_COLORS = {
+    "green":  ("#15803d", "rgba(21,128,61,0.18)"),
+    "yellow": ("#ca8a04", "rgba(202,138,4,0.20)"),
+    "orange": ("#c2410c", "rgba(194,65,12,0.20)"),
+    "red":    ("#b91c1c", "rgba(185,28,28,0.22)"),
 }
+
+
+def _ampel_dot_css(level: str) -> str:
+    """CSS-Dot (Ring-Optik) fuer eine Ampelstufe — Vorbild `_risk_dot` (html.py)."""
+    fill, ring = _AMPEL_DOT_COLORS[level]
+    return (
+        f'<span style="display:inline-block;width:10px;height:10px;'
+        f'border-radius:50%;background:{fill};'
+        f'box-shadow:0 0 0 3px {ring};"></span>'
+    )
 
 
 def _level_from_thresholds(value, thresholds: dict) -> "Optional[str]":
@@ -389,23 +398,25 @@ def _level_from_thresholds(value, thresholds: dict) -> "Optional[str]":
 
 
 def ampel_dot(value, thresholds: dict) -> str:
-    """Return 4-level traffic-light emoji for a metric value.
+    """Return 4-level traffic-light CSS-dot (HTML span) for a metric value.
 
     Issue #759: SSoT fuer die Ampel-Logik (wind/gust/precip/pop).
     Issue #888: teilt die Level-Ermittlung mit ampel_level (dieselbe Quelle
-    faerbt Emoji UND Zell-Toenung — kein Widerspruch mehr moeglich).
+    faerbt Dot UND Zell-Toenung — kein Widerspruch mehr moeglich).
+    Issue #1222: liefert einen gestylten CSS-Dot statt Kreis-Emoji.
 
     Args:
         value:      Numeric value or None.
         thresholds: Dict with keys 'yellow', 'orange', 'red' (floats).
 
     Returns:
-        '–' for None; one of 🟢🟡🟠🔴 based on thresholds.
+        '–' for None; otherwise a CSS-Dot `<span>` (border-radius:50%) based
+        on thresholds.
     """
     level = _level_from_thresholds(value, thresholds)
     if level is None:
         return "–"
-    return _AMPEL_LEVEL_TO_EMOJI[level]
+    return _ampel_dot_css(level)
 
 
 def ampel_level(metric_id: str, value) -> "Optional[str]":
@@ -864,11 +875,13 @@ def build_html_indicator_keys(dc: UnifiedWeatherDisplayConfig) -> set[str]:
 
 
 # Issue #795 (RC5/AC-7/AC-9): EIN Ampel-System fuer die ganze Mail.
-# Die vier Ampelstufen 🟢🟡🟠🔴 der #759-Stundentabelle sind die SSoT fuer die
-# Pill-Faerbung. Hier ihre WCAG-AA-gedunkelten Vollfarben (weisser Text ≥ 4.5:1;
-# Gelb wird ein dunkles Gold/Ocker, weil helles Gelb + weiss nie AA erreicht).
-# Stufenindex 0..3 == derselbe Index wie _AMPEL_EMOJIS.
-_AMPEL_EMOJIS = ("🟢", "🟡", "🟠", "🔴")
+# Die vier Ampelstufen (SSoT: green/yellow/orange/red) der #759-Stundentabelle
+# sind die SSoT fuer die Pill-Faerbung. Hier ihre WCAG-AA-gedunkelten
+# Vollfarben (weisser Text ≥ 4.5:1; Gelb wird ein dunkles Gold/Ocker, weil
+# helles Gelb + weiss nie AA erreicht).
+# Stufenindex 0..3 == derselbe Index wie _AMPEL_STAGE_ORDER.
+# Issue #1222: kein Emoji mehr — Level-Reihenfolge ersetzt _AMPEL_EMOJIS.index().
+_AMPEL_STAGE_ORDER = ("green", "yellow", "orange", "red")
 
 # tone-Name je Stufe (SSoT-Tabelle, von pill_html + tone_symbol konsumiert).
 _AMPEL_STAGE_TONES = ("ampel_green", "ampel_yellow", "ampel_orange", "ampel_red")
@@ -888,12 +901,14 @@ _PILL_NEUTRAL_COLORS = ("#edeae1", "#1a1a18")
 
 
 def ampel_stage_index(value, thresholds: dict) -> int:
-    """Stufenindex 0..3 aus ampel_dot — EINE SSoT-Logik mit der Stundentabelle.
+    """Stufenindex 0..3 — EINE SSoT-Logik mit der Stundentabelle.
 
     Issue #795/AC-9: Pill und Tabelle teilen sich diese Funktion, damit
     derselbe Spitzenwert garantiert dieselbe Stufe/Farbe ergibt.
+    Issue #1222: entkoppelt von ampel_dot()/Emoji-Lookup — nutzt direkt
+    _level_from_thresholds() ueber die feste Level-Reihenfolge.
     """
-    return _AMPEL_EMOJIS.index(ampel_dot(value, thresholds))
+    return _AMPEL_STAGE_ORDER.index(_level_from_thresholds(value, thresholds))
 
 
 def ampel_stage_tone(value, thresholds: dict) -> str:
@@ -904,12 +919,10 @@ def ampel_stage_tone(value, thresholds: dict) -> str:
 def tone_symbol(tone: str) -> str:
     """Issue #795/RC1/AC-2: Plain-Marker je tone — KEINE [TONE]-Strings.
 
-    Ereignis-Pills (Klasse 1) tragen die vier Ampel-Emojis der #759-Tabelle
-    (ampel_green→🟢 … ampel_red→🔴). Bereichs-Pills (Klasse 2, neutral) tragen
-    kein Symbol. Unbekannte tones → kein Symbol (fail-soft).
+    Issue #1222: liefert IMMER "" — Kreis-Emojis wurden aus dem Plain-Text
+    ersatzlos entfernt. Plain-Pills tragen seither nur noch das Label,
+    kein visuelles Stufen-Symbol mehr.
     """
-    if tone in _AMPEL_STAGE_TONES:
-        return _AMPEL_EMOJIS[_AMPEL_STAGE_TONES.index(tone)]
     return ""
 
 

@@ -211,20 +211,23 @@ class TestAC4RegressionAmpelFunctions:
     """
     AC-4: _AMPEL_STAGE_COLORS und Hilfsfunktionen bleiben nach dem Rewrite unverändert.
     Diese Tests sind bewusst GREEN (Regression-Schutz, kein Implementierungs-Bedarf).
+
+    Issue #1222: tone_symbol() liefert seither IMMER "" — Kreis-Emojis wurden
+    aus dem Plain-Text ersatzlos entfernt (AC-4 der #1222-Spec).
     """
 
     def test_tone_symbol_green(self):
         from src.output.renderers.email.helpers import tone_symbol
-        assert tone_symbol("ampel_green") == "🟢"
+        assert tone_symbol("ampel_green") == ""
 
     def test_tone_symbol_yellow(self):
         from src.output.renderers.email.helpers import tone_symbol
-        assert tone_symbol("ampel_yellow") == "🟡"
+        assert tone_symbol("ampel_yellow") == ""
 
     def test_tone_symbol_orange(self):
         from src.output.renderers.email.helpers import tone_symbol
-        assert tone_symbol("ampel_orange") == "🟠"
+        assert tone_symbol("ampel_orange") == ""
 
     def test_tone_symbol_red(self):
         from src.output.renderers.email.helpers import tone_symbol
-        assert tone_symbol("ampel_red") == "🔴"
+        assert tone_symbol("ampel_red") == ""

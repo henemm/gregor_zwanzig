@@ -158,18 +158,24 @@ _DRILLDOWN_PATTERN = re.compile(r"^dd_(thunder|wind|precip)_(today|tomorrow)$")
 _HOURS_PATTERN = re.compile(r"^dd_hours_(today|tomorrow)$")
 
 
-def _thunder_fmt(value) -> str:
-    """Formatiert ThunderLevel (Enum oder String nach Roundtrip) als deutsches Label."""
-    _MAP = {"NONE": "⚪ keins", "MED": "🟡 mäßig", "HIGH": "🔴 hoch"}
+def _thunder_fmt(value, *, with_emoji: bool = True) -> str:
+    """Formatiert ThunderLevel (Enum oder String nach Roundtrip) als deutsches Label.
+
+    Issue #1222 AC-6: E-Mail/SMS bekommen KEIN Kreis-Emoji (nur das Wort),
+    Telegram bleibt byte-identisch mit Emoji.
+    """
+    _MAP_EMOJI = {"NONE": "⚪ keins", "MED": "🟡 mäßig", "HIGH": "🔴 hoch"}
+    _MAP_PLAIN = {"NONE": "keins", "MED": "mäßig", "HIGH": "hoch"}
     if value is None:
         return "· keine Daten"
     key = value.value if hasattr(value, "value") else str(value)
-    return _MAP.get(key, "· keine Daten")
+    _map = _MAP_EMOJI if with_emoji else _MAP_PLAIN
+    return _map.get(key, "· keine Daten")
 
 
 def _num_fmt(unit: str):
     """Gibt einen Formatter zurück der numerische Werte mit Einheit formatiert."""
-    def _fmt(value) -> str:
+    def _fmt(value, *, with_emoji: bool = True) -> str:
         if value is None:
             return "· keine Daten"
         if unit == "km/h":
@@ -290,7 +296,9 @@ class TripCommandProcessor:
                     confirmation_body=f"Kein Trip mit Name '{msg.trip_name}' gefunden.",
                     trip_name=msg.trip_name,
                 )
-            return self._handle_hours_drilldown(trip, day_token, msg.received_at, msg.user_id)
+            return self._handle_hours_drilldown(
+                trip, day_token, msg.received_at, msg.user_id, msg.channel
+            )
 
         # Drilldown-Tokens: dd_<metric>_<day> — via "### query: dd_..." ODER direkt
         actual_drilldown_token = None
@@ -311,7 +319,7 @@ class TripCommandProcessor:
                     trip_name=msg.trip_name,
                 )
             return self._handle_drilldown(
-                trip, metric, day_token, msg.received_at, msg.user_id
+                trip, metric, day_token, msg.received_at, msg.user_id, msg.channel
             )
 
         # Query-Keys: key=="query" mit value als Query-Key ODER direkter Query-Key
@@ -543,8 +551,14 @@ class TripCommandProcessor:
         day_token: str,
         received_at: datetime,
         user_id: str,
+        channel: str = "telegram",
     ) -> CommandResult:
-        """Stündliche Drilldown-Liste für eine Metrik (thunder/wind/precip)."""
+        """Stündliche Drilldown-Liste für eine Metrik (thunder/wind/precip).
+
+        Issue #1222 AC-6: `channel` steuert Emoji-Darstellung — Telegram
+        behält Kreis-Emojis, E-Mail/SMS bekommen nur das Wort.
+        """
+        with_emoji = channel == "telegram"
         from services.weather_extractor import WeatherExtractor
         field, header, fmt = _DRILLDOWN_METRICS[metric]
 
@@ -575,7 +589,7 @@ class TripCommandProcessor:
                 trip_name=trip.name,
             )
 
-        body = self._format_drilldown(res, header, fmt)
+        body = self._format_drilldown(res, header, fmt, with_emoji=with_emoji)
         back = "tl_today" if day_token == "today" else "tl_tomorrow"
         markup = {"inline_keyboard": [[{"text": "⬅️ Zurück", "callback_data": back}]]}
         return CommandResult(
@@ -593,8 +607,14 @@ class TripCommandProcessor:
         day_token: str,
         received_at: datetime,
         user_id: str,
+        channel: str = "telegram",
     ) -> CommandResult:
-        """Stündliche Kompakttabelle: Zeit | Temp | Wind | Regen | Gewitter."""
+        """Stündliche Kompakttabelle: Zeit | Temp | Wind | Regen | Gewitter.
+
+        Issue #1222 AC-6: `channel` steuert die Gewitter-Symbol-Spalte —
+        Telegram behält Kreis-Emojis, E-Mail/SMS bekommen nur das Wort.
+        """
+        with_emoji = channel == "telegram"
         from services.weather_extractor import WeatherExtractor
 
         if day_token == "today":
@@ -648,9 +668,9 @@ class TripCommandProcessor:
             if thund_val is None or str(thund_val) in ("NONE", "ThunderLevel.NONE"):
                 t_sym = "—"
             elif str(thund_val) in ("MED", "ThunderLevel.MED"):
-                t_sym = "🟡"
+                t_sym = "🟡" if with_emoji else "mäßig"
             else:
-                t_sym = "🔴"
+                t_sym = "🔴" if with_emoji else "hoch"
             lines.append(f"{h}  {temp:<7} {wind:<8} {rain:<6} {t_sym}")
 
         markup = {"inline_keyboard": [[{"text": back_btn, "callback_data": back_cb}]]}
@@ -663,12 +683,12 @@ class TripCommandProcessor:
             trip_name=trip.name,
         )
 
-    def _format_drilldown(self, res, header: str, fmt) -> str:
+    def _format_drilldown(self, res, header: str, fmt, with_emoji: bool = True) -> str:
         """Formatiert DrilldownResult als stündliche Liste."""
         lines = [f"{header} — stündlich"]
         for pt in res.points:
             time_str = pt.ts.astimezone().strftime("%H:%M")
-            lines.append(f"{time_str}  {fmt(pt.value)}")
+            lines.append(f"{time_str}  {fmt(pt.value, with_emoji=with_emoji)}")
         return "\n".join(lines)
 
     def _aggregate_day(self, timeline, target_date) -> Optional[dict]:

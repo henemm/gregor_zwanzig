@@ -223,15 +223,17 @@ class TestEmailFriendlyVsRawFormatting:
         # (but may appear in highlights, so just check emoji exists)
 
     def test_all_friendly_cape_emoji_in_html(self):
-        """CAPE 1200 J/kg → 🟡 when friendly ON (≥ yellow-Schwelle 1000, < orange 2500).
+        """CAPE 1200 J/kg → gelber CSS-Dot when friendly ON (≥ yellow-Schwelle 1000, < orange 2500).
 
         #911 AC-11: Emoji-Ampel-Legende im Footer entfernt → dieser Test prüft jetzt
-        echt die Datenzelle. Vorheriger Wert 800 lag unter der gelben Schwelle (→ 🟢)
-        und bestand nur durch das 🟡 in der alten Legende (Falsch-Positiv).
+        echt die Datenzelle. Vorheriger Wert 800 lag unter der gelben Schwelle (→ green)
+        und bestand nur durch das gelbe Symbol in der alten Legende (Falsch-Positiv).
+        Issue #1222: Kreis-Emoji durch gestylten CSS-Dot ersetzt.
         """
         dc = self._make_config(True, True, True)
         report = self._generate_report(dc, cape=1200.0)
-        assert "🟡" in report.email_html
+        assert "border-radius:50%" in report.email_html
+        assert "#ca8a04" in report.email_html  # yellow fill (Issue #1222 SSoT)
 
     def test_all_friendly_visibility_level_in_html(self):
         """Visibility 5000m → km-Zahl auch im Einfach-Modus (Issue #814 AC-5: kein Wort/Ampel)."""
@@ -301,15 +303,17 @@ class TestEmailFriendlyVsRawFormatting:
         assert "background" in html  # Has highlighting span
 
     def test_cape_extreme_friendly_shows_orange(self):
-        """CAPE 2600 → 🟠 when friendly ON (≥ orange-Schwelle 2500, < red 3500).
+        """CAPE 2600 → orangefarbener CSS-Dot when friendly ON (≥ orange-Schwelle 2500, < red 3500).
 
         #911 AC-11: Emoji-Ampel-Legende im Footer entfernt → dieser Test prüft jetzt
-        echt die Datenzelle. Vorheriger Wert 1500 lag unter der orangen Schwelle (→ 🟡)
-        und bestand nur durch das 🟠 in der alten Legende (Falsch-Positiv).
+        echt die Datenzelle. Vorheriger Wert 1500 lag unter der orangen Schwelle (→ yellow)
+        und bestand nur durch das orange Symbol in der alten Legende (Falsch-Positiv).
+        Issue #1222: Kreis-Emoji durch gestylten CSS-Dot ersetzt.
         """
         dc = self._make_config(False, True, False)
         report = self._generate_report(dc, cape=2600.0)
-        assert "🟠" in report.email_html
+        assert "border-radius:50%" in report.email_html
+        assert "#c2410c" in report.email_html  # orange fill (Issue #1222 SSoT)
 
     def test_visibility_fog_raw_html_highlighted(self):
         """Visibility < 500m gets HTML highlighting when raw (now in km)."""
@@ -339,15 +343,20 @@ class TestEmailFriendlyVsRawFormatting:
         assert f._fmt_val("cloud", 95) == "☁️"    # > 90
 
     def test_cape_all_levels_friendly(self):
-        """All CAPE levels produce correct emoji."""
+        """All CAPE levels produce the correct CSS-Dot colour (Issue #1222: kein Emoji mehr).
+
+        Issue #1222: _fmt_val('cape', ...) delegiert jetzt an ampel_dot() mit den
+        Katalog-Schwellen (get_metric('cape').display_thresholds: yellow 1000,
+        orange 2500, red 3500) statt den frueheren lokalen Schwellen (300/1000/2000).
+        """
         from output.renderers.trip_report import TripReportFormatter
         f = TripReportFormatter()
         f._friendly_keys = {"cape"}
 
-        assert f._fmt_val("cape", 100) == "🟢"    # <= 300
-        assert f._fmt_val("cape", 500) == "🟡"    # <= 1000
-        assert f._fmt_val("cape", 1500) == "🟠"   # <= 2000
-        assert f._fmt_val("cape", 3000) == "🔴"   # > 2000
+        assert "#15803d" in f._fmt_val("cape", 100)     # green, < 1000
+        assert "#ca8a04" in f._fmt_val("cape", 1200)    # yellow, < 2500
+        assert "#c2410c" in f._fmt_val("cape", 2600)    # orange, < 3500
+        assert "#b91c1c" in f._fmt_val("cape", 4000)    # red, >= 3500
 
     def test_visibility_all_levels_friendly(self):
         """All visibility levels produce correct text."""

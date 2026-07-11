@@ -17,6 +17,8 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+# Issue #1222: Kreis-Emojis wurden durch gestylte CSS-Dots ersetzt. Der
+# Emoji-Satz bleibt als Regress-Set fuer Abwesenheits-Checks erhalten.
 _AMPEL_EMOJIS = ("🟢", "🟡", "🟠", "🔴")
 
 
@@ -141,7 +143,23 @@ def _mobile_compact_inner(html: str) -> list[str]:
 
 
 def _has_ampel(text: str) -> bool:
-    return any(e in text for e in _AMPEL_EMOJIS)
+    """Issue #1222: 'hat Ampel' heisst jetzt CSS-Dot (border-radius:50%),
+    kein Kreis-Emoji mehr. Emoji-Check bleibt als Regress-Absicherung."""
+    return "border-radius:50%" in text or any(e in text for e in _AMPEL_EMOJIS)
+
+
+def _ampel_present(html_fragment: str) -> bool:
+    """Issue #1222: Ampel-Praesenz robust gegen die stets vorhandene
+    RiskDot-Endspalte (Issue #890, `<td>` OHNE data-label), die JEDE
+    Tabellenzeile (Roh UND Einfach) abschliesst und denselben CSS-Dot-Stil
+    traegt. In `<table>`-Fragmenten wird deshalb nur innerhalb der
+    Metrik-Datenzellen (`data-label`) gesucht; reine `<pre>`-Fragmente
+    (Roh-Modus mobil) werden unveraendert direkt geprueft.
+    """
+    cells = re.findall(r'<td[^>]*data-label="[^"]*"[^>]*>(.*?)</td>', html_fragment, re.S)
+    if cells:
+        return any(_has_ampel(c) for c in cells)
+    return _has_ampel(html_fragment)
 
 
 def _has_pre_block(html: str) -> bool:
@@ -174,7 +192,7 @@ def test_mobile_compact_einfach_shows_ampel(metric_id):
     assert inner_blocks, "AC-1: Kein Daten-Block in .mobile-compact-Div gefunden"
 
     combined = "\n".join(inner_blocks)
-    assert _has_ampel(combined), (
+    assert _ampel_present(combined), (
         f"AC-1 RED: Mobile Einfach-Modus muss Ampel-Emoji fuer '{metric_id}' zeigen. "
         f"Gefunden: kein Ampel in mobile-compact-Divs. "
         f"Bug: _render_mobile_compact_rows gibt html=False → fmt_val → Zahl statt Ampel. "
@@ -202,7 +220,7 @@ def test_mobile_compact_roh_keeps_pre_block(metric_id):
     assert inner_blocks, "AC-2: Kein Daten-Block in .mobile-compact-Div gefunden"
 
     combined = "\n".join(inner_blocks)
-    assert not _has_ampel(combined), (
+    assert not _ampel_present(combined), (
         f"AC-2: Roh-Modus darf KEIN Ampel-Emoji im <pre>-Block zeigen fuer '{metric_id}'. "
         f"Gefunden: {[e for e in _AMPEL_EMOJIS if e in combined]}"
     )
@@ -227,12 +245,12 @@ def test_no_viewport_mismatch_einfach(metric_id):
     # .desktop-only Divs; .mobile-compact benutzt bis zum Fix <pre>-Bloecke)
     desktop_tables = re.findall(r'<table[^>]*data-table="resp"[^>]*>.*?</table>', html, re.S)
     desktop_combined = "\n".join(desktop_tables)
-    desktop_has_ampel = _has_ampel(desktop_combined)
+    desktop_has_ampel = _ampel_present(desktop_combined)
 
     # Mobile: nur pre/table-Inhalte aus .mobile-compact (kein Footer-Spillover)
     mobile_inner = _mobile_compact_inner(html)
     mobile_combined = "\n".join(mobile_inner)
-    mobile_has_ampel = _has_ampel(mobile_combined)
+    mobile_has_ampel = _ampel_present(mobile_combined)
 
     assert desktop_has_ampel, (
         f"AC-3: Desktop-Tabelle (class=resp) muss Ampel zeigen fuer '{metric_id}' im Einfach-Modus. "
@@ -258,9 +276,9 @@ def test_no_viewport_mismatch_roh():
     mobile_inner = _mobile_compact_inner(html)
     mobile_combined = "\n".join(mobile_inner)
 
-    assert not _has_ampel(desktop_combined), (
+    assert not _ampel_present(desktop_combined), (
         "AC-3 Roh: Desktop-Tabelle darf KEIN Ampel zeigen im Roh-Modus."
     )
-    assert not _has_ampel(mobile_combined), (
+    assert not _ampel_present(mobile_combined), (
         "AC-3 Roh: Mobile-Daten-Block darf KEIN Ampel zeigen im Roh-Modus."
     )

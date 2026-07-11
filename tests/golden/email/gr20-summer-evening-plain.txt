@@ -8,10 +8,10 @@ GR20 E3: trocken, ⚡ möglich
 ━━ Metriken-Überblick ━━
   18–20°C · Max 16:00
   gef. min 11.8°C · 09:00
-  🟢 Wind >10 km/h ab 09:00 · max 20 (16:00)
-  🟢 Böen >20 km/h ab 09:00 · max 46 (16:00)
-  🟡 Regen ab 09:00 · 2.5 mm
-  🟢 kein Gewitter
+  Wind >10 km/h ab 09:00 · max 20 (16:00)
+  Böen >20 km/h ab 09:00 · max 46 (16:00)
+  Regen ab 09:00 · 2.5 mm
+  kein Gewitter
   50% bewölkt · Max 09:00
   Sonne 240 min
 

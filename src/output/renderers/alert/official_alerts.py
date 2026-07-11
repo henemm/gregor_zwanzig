@@ -25,6 +25,9 @@ if TYPE_CHECKING:
     from services.official_alerts.models import OfficialAlert
 
 # Level -> (Emoji, Schwere-Wort) fuer den Standalone-Alert-Text (Issue #1172).
+# Das Emoji wird ausschliesslich vom Telegram-Renderer emittiert
+# (render_official_alert_telegram); alle E-Mail-/SMS-/Subject-Pfade nutzen nur
+# das Wort ([1]). Issue #1222: der Plain-Notice-Pfad laesst das Emoji weg.
 _LEVEL_WORDS: dict[int, tuple[str, str]] = {
     1: ("🟢", "GRÜN"),
     2: ("🟡", "GELB"),
@@ -217,8 +220,9 @@ def render_official_alert_notice_plain(
     for a, segment_ids in dedupe_official_alerts(alerts):
         if lines:
             lines.append("")
-        emoji, word = _LEVEL_WORDS.get(a.level, ("🔴", "ROT"))
-        lines.append(f"{emoji} {word} — {a.label}")
+        # Issue #1222: E-Mail/SMS-Plain-Notice ohne Kreis-Emoji — nur das Wort ([1]).
+        word = _LEVEL_WORDS.get(a.level, ("🔴", "ROT"))[1]
+        lines.append(f"{word} — {a.label}")
         region_line = f"Region: {a.region_label or 'unbekannt'}"
         if segment_ids:
             region_line += f" — {format_segment_reference(segment_ids)}"

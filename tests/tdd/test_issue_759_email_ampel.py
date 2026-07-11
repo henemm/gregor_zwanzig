@@ -9,6 +9,29 @@ from __future__ import annotations
 
 from zoneinfo import ZoneInfo
 
+# Issue #1222: Kreis-Emojis wurden durch gestylte CSS-Dots ersetzt. Diese
+# Fill-Farben sind die SSoT (helpers._AMPEL_DOT_COLORS) — Assertions unten
+# pruefen die Band-Farbe im CSS-Dot statt auf Emoji-Gleichheit.
+_AMPEL_DOT_FILL = {
+    "green": "#15803d",
+    "yellow": "#ca8a04",
+    "orange": "#c2410c",
+    "red": "#b91c1c",
+}
+_CIRCLE_EMOJIS = ("🟢", "🟡", "🟠", "🔴")
+
+
+def _assert_css_dot_band(result: str, level: str) -> None:
+    """CSS-Dot-Assertion (Issue #1222): border-radius:50%, richtige Fill-Farbe,
+    kein Kreis-Emoji."""
+    assert "border-radius:50%" in result, f"Kein CSS-Dot: {result!r}"
+    assert _AMPEL_DOT_FILL[level] in result, (
+        f"Erwartete Fill-Farbe {_AMPEL_DOT_FILL[level]!r} ({level}) nicht in: {result!r}"
+    )
+    assert not any(e in result for e in _CIRCLE_EMOJIS), (
+        f"Kreis-Emoji verblieben: {result!r}"
+    )
+
 
 # ---------------------------------------------------------------------------
 # Shared test helpers (adapted from test_issue_640_trend_threshold_times.py)
@@ -75,14 +98,14 @@ class TestWindAmpelDotFourLevels:
     """AC-1: fmt_val('wind', ..., html=True) liefert Ampelpunkt statt km/h-Zahl."""
 
     def test_issue759_wind_ampel_dot_four_levels(self):
-        """AC-1: Wind-Werte 20/40/60/75 km/h → Zellen zeigen 🟢/🟡/🟠/🔴."""
+        """AC-1: Wind-Werte 20/40/60/75 km/h → CSS-Dot in Band-Farbe green/yellow/orange/red."""
         from src.output.renderers.email.helpers import fmt_val
 
-        # html=True muss Ampelpunkt liefern
-        assert fmt_val("wind", 20, html=True) == "🟢", f"Got: {fmt_val('wind', 20, html=True)!r}"
-        assert fmt_val("wind", 40, html=True) == "🟡", f"Got: {fmt_val('wind', 40, html=True)!r}"
-        assert fmt_val("wind", 60, html=True) == "🟠", f"Got: {fmt_val('wind', 60, html=True)!r}"
-        assert fmt_val("wind", 75, html=True) == "🔴", f"Got: {fmt_val('wind', 75, html=True)!r}"
+        # html=True muss CSS-Dot in der richtigen Band-Farbe liefern (#1222).
+        _assert_css_dot_band(fmt_val("wind", 20, html=True), "green")
+        _assert_css_dot_band(fmt_val("wind", 40, html=True), "yellow")
+        _assert_css_dot_band(fmt_val("wind", 60, html=True), "orange")
+        _assert_css_dot_band(fmt_val("wind", 75, html=True), "red")
 
         # html=True darf KEINE km/h-Zahl enthalten
         result_20 = fmt_val("wind", 20, html=True)
@@ -99,20 +122,20 @@ class TestGustAmpelRedBoundary80:
     """AC-2: Boen-Zellen zeigen Ampelpunkt; rote Stufe beginnt bei ≥80 km/h."""
 
     def test_issue759_gust_ampel_red_boundary_80(self):
-        """AC-2: fmt_val('gust', 79, html=True) → 🟠; ('gust', 80, html=True) → 🔴."""
+        """AC-2: fmt_val('gust', 79, html=True) → orange-Dot; (80, html=True) → red-Dot."""
         from src.output.renderers.email.helpers import fmt_val
 
         result_79 = fmt_val("gust", 79, html=True)
         result_80 = fmt_val("gust", 80, html=True)
 
-        assert result_79 == "🟠", f"79 km/h should be 🟠, got: {result_79!r}"
-        assert result_80 == "🔴", f"80 km/h should be 🔴, got: {result_80!r}"
+        _assert_css_dot_band(result_79, "orange")
+        _assert_css_dot_band(result_80, "red")
 
-        # Vier Stufen: 40→🟢, 55→🟡, 70→🟠, 85→🔴
-        assert fmt_val("gust", 40, html=True) == "🟢"
-        assert fmt_val("gust", 55, html=True) == "🟡"
-        assert fmt_val("gust", 70, html=True) == "🟠"
-        assert fmt_val("gust", 85, html=True) == "🔴"
+        # Vier Stufen: 40→green, 55→yellow, 70→orange, 85→red
+        _assert_css_dot_band(fmt_val("gust", 40, html=True), "green")
+        _assert_css_dot_band(fmt_val("gust", 55, html=True), "yellow")
+        _assert_css_dot_band(fmt_val("gust", 70, html=True), "orange")
+        _assert_css_dot_band(fmt_val("gust", 85, html=True), "red")
 
 
 # ---------------------------------------------------------------------------
@@ -123,19 +146,19 @@ class TestPrecipAmpelDotFourLevels:
     """AC-3: fmt_val('precip', ..., html=True) liefert 4-stufigen Ampelpunkt."""
 
     def test_issue759_precip_ampel_dot_four_levels(self):
-        """AC-3: Regen-Werte 0/2/6/12 mm → Zellen zeigen 🟢/🟡/🟠/🔴."""
+        """AC-3: Regen-Werte 0/2/6/12 mm → CSS-Dot in Band-Farbe green/yellow/orange/red."""
         from src.output.renderers.email.helpers import fmt_val
 
-        assert fmt_val("precip", 0.5, html=True) == "🟢", f"Got: {fmt_val('precip', 0.5, html=True)!r}"
-        assert fmt_val("precip", 2, html=True) == "🟡", f"Got: {fmt_val('precip', 2, html=True)!r}"
-        assert fmt_val("precip", 6, html=True) == "🟠", f"Got: {fmt_val('precip', 6, html=True)!r}"
-        assert fmt_val("precip", 12, html=True) == "🔴", f"Got: {fmt_val('precip', 12, html=True)!r}"
+        _assert_css_dot_band(fmt_val("precip", 0.5, html=True), "green")
+        _assert_css_dot_band(fmt_val("precip", 2, html=True), "yellow")
+        _assert_css_dot_band(fmt_val("precip", 6, html=True), "orange")
+        _assert_css_dot_band(fmt_val("precip", 12, html=True), "red")
 
-        # Grenzen: <1 → 🟢, ≥1 → 🟡, ≥5 → 🟠, ≥10 → 🔴
-        assert fmt_val("precip", 0, html=True) == "🟢"
-        assert fmt_val("precip", 1, html=True) == "🟡"
-        assert fmt_val("precip", 5, html=True) == "🟠"
-        assert fmt_val("precip", 10, html=True) == "🔴"
+        # Grenzen: <1 → green, ≥1 → yellow, ≥5 → orange, ≥10 → red
+        _assert_css_dot_band(fmt_val("precip", 0, html=True), "green")
+        _assert_css_dot_band(fmt_val("precip", 1, html=True), "yellow")
+        _assert_css_dot_band(fmt_val("precip", 5, html=True), "orange")
+        _assert_css_dot_band(fmt_val("precip", 10, html=True), "red")
 
 
 # ---------------------------------------------------------------------------
@@ -146,19 +169,19 @@ class TestPopAmpelDotFourLevels:
     """AC-4: fmt_val('pop', ..., html=True) liefert 4-stufigen Ampelpunkt."""
 
     def test_issue759_pop_ampel_dot_four_levels(self):
-        """AC-4: pop-Werte 10/40/65/85 % → Zellen zeigen 🟢/🟡/🟠/🔴."""
+        """AC-4: pop-Werte 10/40/65/85 % → CSS-Dot in Band-Farbe green/yellow/orange/red."""
         from src.output.renderers.email.helpers import fmt_val
 
-        assert fmt_val("pop", 10, html=True) == "🟢", f"Got: {fmt_val('pop', 10, html=True)!r}"
-        assert fmt_val("pop", 40, html=True) == "🟡", f"Got: {fmt_val('pop', 40, html=True)!r}"
-        assert fmt_val("pop", 65, html=True) == "🟠", f"Got: {fmt_val('pop', 65, html=True)!r}"
-        assert fmt_val("pop", 85, html=True) == "🔴", f"Got: {fmt_val('pop', 85, html=True)!r}"
+        _assert_css_dot_band(fmt_val("pop", 10, html=True), "green")
+        _assert_css_dot_band(fmt_val("pop", 40, html=True), "yellow")
+        _assert_css_dot_band(fmt_val("pop", 65, html=True), "orange")
+        _assert_css_dot_band(fmt_val("pop", 85, html=True), "red")
 
-        # Grenzen: <30 → 🟢, ≥30 → 🟡, ≥60 → 🟠, ≥80 → 🔴
-        assert fmt_val("pop", 0, html=True) == "🟢"
-        assert fmt_val("pop", 30, html=True) == "🟡"
-        assert fmt_val("pop", 60, html=True) == "🟠"
-        assert fmt_val("pop", 80, html=True) == "🔴"
+        # Grenzen: <30 → green, ≥30 → yellow, ≥60 → orange, ≥80 → red
+        _assert_css_dot_band(fmt_val("pop", 0, html=True), "green")
+        _assert_css_dot_band(fmt_val("pop", 30, html=True), "yellow")
+        _assert_css_dot_band(fmt_val("pop", 60, html=True), "orange")
+        _assert_css_dot_band(fmt_val("pop", 80, html=True), "red")
 
 
 # ---------------------------------------------------------------------------
@@ -293,7 +316,12 @@ def _data_cells_759(html: str) -> list[str]:
     return re.findall(r'<td[^>]*data-label="[^"]*"[^>]*>(.*?)</td>', m.group(0), re.S)
 
 
-_AMPEL_EMOJIS_759 = ("🟢", "🟡", "🟠", "🔴")
+# Issue #1222: Ampel-Erkennung ueber den CSS-Dot-Marker statt Emoji-Set.
+_AMPEL_EMOJIS_759 = _CIRCLE_EMOJIS
+
+
+def _has_css_dot(text: str) -> bool:
+    return "border-radius:50%" in text
 
 
 class TestIssue759WindAmpelNeuQuelle:
@@ -314,9 +342,9 @@ class TestIssue759WindAmpelNeuQuelle:
         html, _plain = _render_wind_via_render_email(use_friendly=False)
         cells = _data_cells_759(html)
         assert cells, "HTML muss Wind-Zellen haben"
-        ampel_cells = [c for c in cells if any(e in c for e in _AMPEL_EMOJIS_759)]
+        ampel_cells = [c for c in cells if _has_css_dot(c)]
         assert not ampel_cells, (
-            f"AC-10: Wind Roh muss Zahl liefern, kein Ampel-Emoji. "
+            f"AC-10: Wind Roh muss Zahl liefern, kein Ampel-CSS-Dot. "
             f"Daten-Zellen: {cells!r}"
         )
         # Muss numerisch sein (55 km/h)
@@ -326,17 +354,17 @@ class TestIssue759WindAmpelNeuQuelle:
         )
 
     def test_issue759_wind_ampel_einfach_html_is_emoji(self):
-        """AC-10 RED: Wind Einfach (use_friendly=True) = Ampel-Emoji in HTML.
+        """AC-10: Wind Einfach (use_friendly=True) = CSS-Dot in HTML (Issue #1222: kein Emoji mehr).
 
-        Schlaegt HEUTE fehl: build_format_modes gibt 'raw' fuer wind auch bei
-        use_friendly=True → kein Ampel → Zahl statt Ampel.
+        Schlaegt bei Regress fehl: build_format_modes gibt 'raw' fuer wind auch bei
+        use_friendly=True → kein Ampel → Zahl statt CSS-Dot.
         """
         html, _plain = _render_wind_via_render_email(use_friendly=True)
         cells = _data_cells_759(html)
         assert cells, "HTML muss Wind-Zellen haben"
-        ampel_cells = [c for c in cells if any(e in c for e in _AMPEL_EMOJIS_759)]
+        ampel_cells = [c for c in cells if _has_css_dot(c)]
         assert ampel_cells, (
-            f"AC-10 RED: Wind Einfach (use_friendly=True) muss Ampel-Emoji zeigen. "
+            f"AC-10: Wind Einfach (use_friendly=True) muss CSS-Dot zeigen. "
             f"Daten-Zellen: {cells!r}. "
             f"(Bug: build_format_modes gibt 'raw' statt Ampel-Modus)"
         )

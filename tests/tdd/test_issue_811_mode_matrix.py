@@ -24,6 +24,8 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+# Issue #1222: Kreis-Emojis wurden durch gestylte CSS-Dots ersetzt. Der
+# Emoji-Satz bleibt als Regress-Set fuer Abwesenheits-Checks erhalten.
 _AMPEL_EMOJIS = ("🟢", "🟡", "🟠", "🔴")
 
 # Volle aktivierte Metrik-Liste, damit jede fmt_val-Verzweigung greift.
@@ -145,7 +147,9 @@ def _data_cells(html: str) -> list[str]:
 
 
 def _has_ampel(text: str) -> bool:
-    return any(e in text for e in _AMPEL_EMOJIS)
+    """Issue #1222: 'hat Ampel' heisst jetzt CSS-Dot (border-radius:50%),
+    kein Kreis-Emoji mehr. Emoji-Check bleibt als Regress-Absicherung."""
+    return "border-radius:50%" in text or any(e in text for e in _AMPEL_EMOJIS)
 
 
 # ---------------------------------------------------------------------------

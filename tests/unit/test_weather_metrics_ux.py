@@ -179,52 +179,63 @@ class TestCloudEmojiFormatting:
 
 
 class TestCapeEmojiFormatting:
-    """CAPE should show level emoji based on J/kg value."""
+    """CAPE should show the correct Ampel-CSS-Dot colour based on J/kg value.
+
+    Issue #1222: Kreis-Emojis wurden durch gestylte CSS-Dots ersetzt.
+    _fmt_val('cape', ...) delegiert jetzt an ampel_dot() mit den
+    Katalog-Schwellen (get_metric('cape').display_thresholds: yellow 1000,
+    orange 2500, red 3500) statt den frueheren lokalen Schwellen
+    (300/1000/2000) — Werte/Grenzen unten sind entsprechend angepasst.
+    """
 
     @pytest.fixture()
     def formatter(self):
         from output.renderers.trip_report import TripReportFormatter
         return TripReportFormatter()
 
-    # --- Plain text: emoji only ---
+    # --- Plain text: CSS-Dot only ---
 
     def test_cape_low_plain(self, formatter):
-        """0-300 J/kg → 🟢"""
+        """< 1000 J/kg → green"""
         result = formatter._fmt_val("cape", 200, html=False)
-        assert "🟢" in result
+        assert "#15803d" in result
 
     def test_cape_moderate_plain(self, formatter):
-        """301-1000 J/kg → 🟡"""
-        result = formatter._fmt_val("cape", 800, html=False)
-        assert "🟡" in result
+        """1000–2499 J/kg → yellow"""
+        result = formatter._fmt_val("cape", 1200, html=False)
+        assert "#ca8a04" in result
 
     def test_cape_high_plain(self, formatter):
-        """1001-2000 J/kg → 🟠"""
-        result = formatter._fmt_val("cape", 1500, html=False)
-        assert "🟠" in result
+        """2500–3499 J/kg → orange"""
+        result = formatter._fmt_val("cape", 2800, html=False)
+        assert "#c2410c" in result
 
     def test_cape_extreme_plain(self, formatter):
-        """>2000 J/kg → 🔴"""
-        result = formatter._fmt_val("cape", 2500, html=False)
-        assert "🔴" in result
+        """>= 3500 J/kg → red"""
+        result = formatter._fmt_val("cape", 4000, html=False)
+        assert "#b91c1c" in result
 
-    # --- HTML: emoji + value ---
+    # --- HTML: CSS-Dot only, kein Rohwert ---
 
     def test_cape_html_shows_emoji_only(self, formatter):
-        result = formatter._fmt_val("cape", 800, html=True)
-        assert "🟡" in result
-        assert "800" not in result
+        result = formatter._fmt_val("cape", 1200, html=True)
+        assert "#ca8a04" in result
+        assert "1200" not in result
 
     # --- Boundary values ---
 
     def test_cape_boundary_300_is_low(self, formatter):
-        """Exactly 300 → 🟢 (spec says 0-300)"""
+        """300 (weit unter der neuen Gelb-Schwelle 1000) → green"""
         result = formatter._fmt_val("cape", 300, html=False)
-        assert "🟢" in result
+        assert "#15803d" in result
 
-    def test_cape_boundary_301_is_moderate(self, formatter):
-        result = formatter._fmt_val("cape", 301, html=False)
-        assert "🟡" in result
+    def test_cape_boundary_999_is_still_low(self, formatter):
+        result = formatter._fmt_val("cape", 999, html=False)
+        assert "#15803d" in result
+
+    def test_cape_boundary_1000_is_moderate(self, formatter):
+        result = formatter._fmt_val("cape", 1000, html=False)
+        assert "#ca8a04" in result
 
     def test_cape_none_returns_dash(self, formatter):
         result = formatter._fmt_val("cape", None, html=False)
@@ -467,11 +478,11 @@ class TestFmtValFriendlyToggle:
         result = formatter_raw._fmt_val("cloud_low", 75, html=False)
         assert result == "75"
 
-    # --- CAPE: friendly ON → emoji (unchanged) ---
+    # --- CAPE: friendly ON → CSS-Dot (Issue #1222: kein Emoji mehr) ---
 
     def test_cape_friendly_on_shows_emoji(self, formatter_friendly):
-        result = formatter_friendly._fmt_val("cape", 800, html=False)
-        assert "🟡" in result
+        result = formatter_friendly._fmt_val("cape", 1200, html=False)
+        assert "#ca8a04" in result  # yellow (Katalog-Schwelle 1000, Issue #1222)
 
     # --- CAPE: friendly OFF → raw value ---
 

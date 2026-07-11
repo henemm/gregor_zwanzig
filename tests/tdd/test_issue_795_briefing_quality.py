@@ -122,19 +122,21 @@ def _seg_with_hours(rows_spec):
                               provider="demo")
 
 
-# Die vier Ampel-Emojis der #759-Stundentabelle (SSoT) → Stufenindex 0..3.
-_AMPEL_EMOJIS = ["🟢", "🟡", "🟠", "🔴"]
-_AMPEL_LEVEL = {e: i for i, e in enumerate(_AMPEL_EMOJIS)}
+# Issue #1222: Kreis-Emojis wurden aus Plain UND HTML durch CSS-Dots ersetzt
+# (HTML) bzw. ersatzlos entfernt (Plain). Der Emoji-Satz bleibt als
+# Regress-Set fuer Abwesenheits-Checks im Plain-Text erhalten.
+_CIRCLE_EMOJIS = ("🟢", "🟡", "🟠", "🔴")
 
 
 def _ampel_level(value, thresholds: dict) -> int:
-    """Stufenindex 0..3 aus ampel_dot — die EINE SSoT-Logik der Tabelle.
+    """Stufenindex 0..3 — die EINE SSoT-Logik der Tabelle.
 
     Nutzt die echte Produktivfunktion (kein nachgebauter Schwellenvergleich),
     damit der Test bricht, falls die Pill eine ABWEICHENDE Logik benutzt.
+    Issue #1222: ampel_stage_index() ersetzt den Emoji-Index-Lookup.
     """
-    from output.renderers.email.helpers import ampel_dot
-    return _AMPEL_LEVEL[ampel_dot(value, thresholds)]
+    from src.output.renderers.email.helpers import ampel_stage_index
+    return ampel_stage_index(value, thresholds)
 
 
 def _metrics_block_plain(plain: str) -> str:
@@ -191,8 +193,11 @@ class TestAC1Hierarchy:
 
 
 # ===========================================================================
-# AC-2 (v3): Keine rohen [TONE]-Marker — Ereignis-Pills tragen die GLEICHEN
-# vier Ampel-Emojis 🟢🟡🟠🔴 wie die #759-Stundentabelle (Bereichs-Pills ohne).
+# AC-2 (v3, ueberschrieben durch Issue #1222 AC-4): Keine rohen [TONE]-Marker
+# UND kein Kreis-Emoji mehr im Plain — Ereignis-Pills tragen die Stufe seit
+# #1222 NICHT mehr sichtbar (tone_symbol()==""), sondern nur ueber den
+# internen tone-String (SSoT mit der #759-Stundentabelle, geprueft via
+# build_metrics_summary_pills statt Text-Parsing).
 # ===========================================================================
 
 class TestAC2AmpelEmojis:
@@ -203,7 +208,11 @@ class TestAC2AmpelEmojis:
             assert marker not in plain, f"roher Marker {marker} im Plain"
 
     def test_calm_event_pill_is_green_plain(self):
-        # Ruhige Lage (unter Erwähnungsschwelle): Ereignis-Pill = grün 🟢.
+        # Ruhige Lage (unter Erwähnungsschwelle): Ereignis-Pill-tone = ampel_green.
+        # Issue #1222: Plain traegt keinen sichtbaren Marker mehr — die Stufe
+        # kommt direkt aus der Pill-Pipeline (SSoT mit der Stundentabelle).
+        from src.output.renderers.email.helpers import build_metrics_summary_pills
+
         segs = [_seg_with_hours([
             {"hour": 6, "temp": 12, "wind": 3, "gust": 5, "precip": 0, "pop": 0},
             {"hour": 7, "temp": 14, "wind": 4, "gust": 6, "precip": 0, "pop": 0},
@@ -211,21 +220,39 @@ class TestAC2AmpelEmojis:
         ])]
         plain = _render_plain(segs)
         block = _metrics_block_plain(plain)
-        assert "🟢" in block, f"kein 🟢 (ruhige Ereignis-Stufe) im Plain:\n{block}"
+        assert not any(e in block for e in _CIRCLE_EMOJIS), (
+            f"Kreis-Emoji im Plain verblieben (Issue #1222 AC-4):\n{block}"
+        )
+        pills = build_metrics_summary_pills(segs, ["wind"], {}, tz=TZ)
+        assert pills, "keine Wind-Pill fuer ruhige Lage"
+        _text, tone = pills[0]
+        assert tone == "ampel_green", (
+            f"ruhige Ereignis-Stufe muss ampel_green sein, war {tone!r}"
+        )
 
     def test_thunder_pill_is_red_plain(self):
-        # Gewitter → höchste Ampelstufe 🔴.
-        plain = _render_plain(_build_segments(thunder=True))
+        # Gewitter → höchste Ampelstufe ampel_red (tone), kein Kreis-Emoji im Plain.
+        from src.output.renderers.email.helpers import build_metrics_summary_pills
+
+        segs = _build_segments(thunder=True)
+        plain = _render_plain(segs)
         block = _metrics_block_plain(plain)
-        assert "🔴" in block, f"kein 🔴 (Gewitter-Stufe) im Plain:\n{block}"
+        assert not any(e in block for e in _CIRCLE_EMOJIS), (
+            f"Kreis-Emoji im Plain verblieben (Issue #1222 AC-4):\n{block}"
+        )
+        pills = build_metrics_summary_pills(segs, ["thunder"], {}, tz=TZ)
+        assert pills, "keine Gewitter-Pill"
+        _text, tone = pills[0]
+        assert tone == "ampel_red", f"Gewitter-Stufe muss ampel_red sein, war {tone!r}"
 
     def test_event_pill_only_uses_ampel_emoji_set(self):
-        """Ereignis-Pills tragen NUR Emojis aus dem 4er-Ampelsatz 🟢🟡🟠🔴.
+        """Ereignis-Pills tragen im Plain KEIN Emoji mehr (Issue #1222 AC-4).
 
-        RED gegen Prod: Prod schreibt '[GOOD]/[WARN]/[BAD]/[INFO]'-Marker —
-        keines der vier Ampel-Emojis erscheint im Überblick.
+        Vormals (#795): Ereignis-Pills tragen genau eines der vier
+        Ampel-Emojis. Seit #1222 tragen sie GAR KEIN Symbol mehr — weder
+        die rohen '[GOOD]/[WARN]/[BAD]/[INFO]'-Marker noch ein Kreis-Emoji.
         """
-        # Wind-Spitze 60 km/h → über orange (50) → 🟠-Stufe in der Tabelle.
+        # Wind-Spitze 60 km/h → über orange (50) → orange-Stufe in der Tabelle.
         segs = [_seg_with_hours([
             {"hour": 6, "temp": 12, "wind": 10, "gust": 15},
             {"hour": 7, "temp": 14, "wind": 35, "gust": 45},
@@ -233,8 +260,8 @@ class TestAC2AmpelEmojis:
         ])]
         plain = _render_plain(segs)
         block = _metrics_block_plain(plain)
-        assert any(e in block for e in _AMPEL_EMOJIS), (
-            f"kein Ampel-Emoji im Ereignis-Pill-Block:\n{block}"
+        assert not any(e in block for e in _CIRCLE_EMOJIS), (
+            f"Kein Ampel-Emoji mehr erlaubt im Ereignis-Pill-Block (#1222 AC-4):\n{block}"
         )
 
 
@@ -306,37 +333,42 @@ class TestAC3EventPills:
 
         Wind-Spitze 18 km/h: über der SMS-Erwähnungsschwelle (10) → erscheint
         als Ereignis 'Wind ab HH:00', ABER unter der Ampel-Gelbschwelle (30)
-        → Stufe muss GRÜN 🟢 sein (wie in der Stundentabelle für 18 km/h).
+        → Stufe muss GRÜN sein (wie in der Stundentabelle für 18 km/h).
 
-        RED gegen Prod: Prod färbt nach Erwähnungsschwelle (warn, weil
-        18 > 20-Default bzw. > Erwähnung) → keine grüne Ampelstufe.
+        Issue #1222: Plain trägt keinen Ampel-Marker mehr — die Stufe wird
+        direkt über den Pill-tone (build_metrics_summary_pills, SSoT mit der
+        Stundentabelle) geprüft statt über einen Emoji im Plain-Text.
         """
-        from output.renderers.email.helpers import ampel_dot
+        from src.output.renderers.email.helpers import (
+            ampel_stage_tone, build_metrics_summary_pills,
+        )
         from app.metric_catalog import get_metric
         wind_thr = get_metric("wind").display_thresholds
-        assert ampel_dot(18.0, wind_thr) == "🟢", "Sanity: 18 km/h ist grün"
+        assert ampel_stage_tone(18.0, wind_thr) == "ampel_green", (
+            "Sanity: 18 km/h ist gruen"
+        )
 
         segs = [_seg_with_hours([
             {"hour": 6, "temp": 12, "wind": 6, "gust": 8},
             {"hour": 7, "temp": 14, "wind": 12, "gust": 18},
             {"hour": 8, "temp": 16, "wind": 18, "gust": 25},
         ])]
+        # Ereignis-Zeile im Plain existiert weiterhin (Erwähnungsschwelle).
         plain = _render_plain(segs)
         block = _metrics_block_plain(plain)
-        # Wind-Zeile isolieren und ihre Ampelstufe prüfen.
         wind_line = next(
             (ln for ln in block.splitlines() if "Wind" in ln), None
         )
         assert wind_line is not None, f"keine Wind-Pill-Zeile:\n{block}"
-        assert "🟢" in wind_line, (
+
+        # Stufe kommt aus derselben Pill-Pipeline wie das Plain-Rendering.
+        pills = build_metrics_summary_pills(segs, ["wind"], {}, tz=TZ)
+        assert pills, f"keine Wind-Pill fuer Spitze 18 km/h: {wind_line!r}"
+        _text, tone = pills[0]
+        assert tone == "ampel_green", (
             "Wind-Spitze 18 km/h liegt unter der Ampel-Gelbschwelle (30) → "
-            f"Pill-Stufe muss grün 🟢 sein (Gefahrenschwelle), war:\n{wind_line}"
+            f"Pill-Stufe muss ampel_green sein (Gefahrenschwelle), war: {tone!r}"
         )
-        for hotter in ("🟡", "🟠", "🔴"):
-            assert hotter not in wind_line, (
-                f"Wind-Pill 18 km/h darf nicht {hotter} (Erwähnungsschwelle "
-                f"als Farbquelle?) sein:\n{wind_line}"
-            )
 
 
 # ===========================================================================
@@ -532,26 +564,19 @@ class TestAC7WcagFullColorFourStages:
 
 # ===========================================================================
 # AC-9 (NEU, Kern): Ampel-Konsistenz Pill ↔ #759-Stundentabelle.
-# Derselbe Spitzenwert ergibt dieselbe Stufe/Farbe in Tabelle UND Pill,
-# weil beide ampel_dot(value, display_thresholds) nutzen (EIN Ampel-System).
+# Derselbe Spitzenwert ergibt dieselbe Stufe/Farbe in Tabelle UND Pill, weil
+# beide _level_from_thresholds(value, display_thresholds) nutzen (EIN
+# Ampel-System). Issue #1222: Plain traegt keinen sichtbaren Marker mehr —
+# die Stufe wird ueber den (text, tone)-Rueckgabewert von
+# build_metrics_summary_pills geprueft statt per Emoji-Parsing.
 # ===========================================================================
 
-def _wind_pill_line_plain(plain: str) -> str:
-    """Isoliere die Wind-Pill-Zeile aus dem Plain-Metriken-Block."""
-    block = _metrics_block_plain(plain)
-    for ln in block.splitlines():
-        if "Wind" in ln and "Böe" not in ln and "Böen" not in ln:
-            return ln
-    raise AssertionError(f"keine Wind-Pill-Zeile im Plain-Block:\n{block}")
-
-
-def _emoji_level_in(text: str) -> int:
-    """Stufenindex 0..3 des im Text vorkommenden Ampel-Emojis (genau eins)."""
-    found = [e for e in _AMPEL_EMOJIS if e in text]
-    assert len(found) == 1, (
-        f"genau EIN Ampel-Emoji erwartet, gefunden {found} in {text!r}"
-    )
-    return _AMPEL_LEVEL[found[0]]
+def _pill_tone_for(segments, metric_id: str) -> str:
+    """Ruft die echte Pill-Pipeline auf und liefert den tone-String."""
+    from src.output.renderers.email.helpers import build_metrics_summary_pills
+    pills = build_metrics_summary_pills(segments, [metric_id], {}, tz=TZ)
+    assert pills, f"keine Pill fuer {metric_id}"
+    return pills[0][1]
 
 
 class TestAC9AmpelConsistency:
@@ -570,73 +595,40 @@ class TestAC9AmpelConsistency:
         ])]
 
     def test_wind_pill_stage_equals_table_ampel_at_boundaries(self):
-        """Für Grenzwerte der Wind-Ampel (29/30/50/70) muss die Pill-Stufe
-        == ampel_dot(peak, display_thresholds) sein — exakt die Tabellenstufe.
+        """Für Grenzwerte der Wind-Ampel (29/30/50/70) muss der Pill-tone
+        == ampel_stage_tone(peak, display_thresholds) sein — exakt die
+        Tabellenstufe.
 
         Wind-display_thresholds: yellow 30, orange 50, red 70.
-        Erwartung: 29→🟢(0), 30→🟡(1), 50→🟠(2), 70→🔴(3).
-
-        RED gegen Prod: Prod färbt den Wind-Pill nach der Erwähnungsschwelle
-        (warn ab Wind > 20) und schreibt '[WARN]'/'[GOOD]' statt der
-        Ampel-Emojis → die Pill-Stufe entspricht NICHT ampel_dot(peak, …).
+        Erwartung: 29→green(0), 30→yellow(1), 50→orange(2), 70→red(3).
         """
         from app.metric_catalog import get_metric
+        from src.output.renderers.email.helpers import ampel_stage_tone
         wind_thr = get_metric("wind").display_thresholds
         for peak in (29.0, 30.0, 50.0, 70.0):
-            expected = _ampel_level(peak, wind_thr)
-            plain = _render_plain(self._segs_with_wind_peak(peak))
-            line = _wind_pill_line_plain(plain)
-            actual = _emoji_level_in(line)
-            assert actual == expected, (
+            expected_tone = ampel_stage_tone(peak, wind_thr)
+            actual_tone = _pill_tone_for(self._segs_with_wind_peak(peak), "wind")
+            assert actual_tone == expected_tone, (
                 f"Wind-Spitze {peak} km/h: Tabellen-Ampelstufe ist "
-                f"{_AMPEL_EMOJIS[expected]} (Stufe {expected}), Pill zeigt "
-                f"{_AMPEL_EMOJIS[actual]} (Stufe {actual}) — Pill ≠ Tabelle:\n{line}"
+                f"{expected_tone!r}, Pill zeigt {actual_tone!r} — Pill ≠ Tabelle."
             )
 
     def test_rain_probability_pill_stage_equals_table_ampel(self):
         """Analog für Regenwahrscheinlichkeit (Schwellen 30/60/80)."""
-        import dataclasses
-        from app.metric_catalog import build_default_display_config, get_metric
-        from app.models import MetricConfig
+        from app.metric_catalog import get_metric
+        from src.output.renderers.email.helpers import ampel_stage_tone
         pop_thr = get_metric("rain_probability").display_thresholds
 
-        dc = build_default_display_config()
-        metrics, seen = [], False
-        for mc in dc.metrics:
-            if mc.metric_id == "rain_probability":
-                seen = True
-                metrics.append(dataclasses.replace(
-                    mc, enabled=True, alert_enabled=True, alert_threshold=20.0))
-            else:
-                metrics.append(mc)
-        if not seen:
-            metrics.append(MetricConfig(
-                metric_id="rain_probability", enabled=True,
-                alert_enabled=True, alert_threshold=20.0))
-        dc = dataclasses.replace(dc, metrics=metrics)
-
-        # 29→🟢, 30→🟡, 60→🟠, 80→🔴 (display_thresholds 30/60/80).
+        # 29→green, 30→yellow, 60→orange, 80→red (display_thresholds 30/60/80).
         for peak in (29, 30, 60, 80):
-            expected = _ampel_level(float(peak), pop_thr)
+            expected_tone = ampel_stage_tone(float(peak), pop_thr)
             segs = [_seg_with_hours([
                 {"hour": 6, "temp": 12, "wind": 3, "gust": 5, "pop": max(0, peak - 5)},
                 {"hour": 7, "temp": 14, "wind": 4, "gust": 6, "pop": peak},
                 {"hour": 8, "temp": 16, "wind": 4, "gust": 6, "pop": max(0, peak - 5)},
             ])]
-            plain = _render_plain(segs, dc=dc)
-            block = _metrics_block_plain(plain)
-            pop_line = next(
-                (ln for ln in block.splitlines()
-                 if ("Regen-W" in ln or "Regenrisiko" in ln
-                     or "Regenwahrsch" in ln)),
-                None,
-            )
-            assert pop_line is not None, (
-                f"keine Regenwahrsch.-Pill-Zeile (peak={peak}):\n{block}"
-            )
-            actual = _emoji_level_in(pop_line)
-            assert actual == expected, (
-                f"Regenwahrsch. {peak}%: Tabellen-Ampelstufe "
-                f"{_AMPEL_EMOJIS[expected]}, Pill {_AMPEL_EMOJIS[actual]} — "
-                f"Pill ≠ Tabelle:\n{pop_line}"
+            actual_tone = _pill_tone_for(segs, "rain_probability")
+            assert actual_tone == expected_tone, (
+                f"Regenwahrsch. {peak}%: Tabellen-Ampelstufe {expected_tone!r}, "
+                f"Pill {actual_tone!r} — Pill ≠ Tabelle."
             )

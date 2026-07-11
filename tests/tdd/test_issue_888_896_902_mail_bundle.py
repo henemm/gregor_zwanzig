@@ -69,15 +69,15 @@ def _neutral_entry(**overrides) -> DayComparisonEntry:
 def test_ac1_wind_25_green_no_tint():
     """AC-1: GIVEN Wind=25.0 km/h im Einfach-Modus (Ampel aktiv),
     WHEN die HTML-Tabelle gerendert wird,
-    THEN zeigt die Zelle das gruene Ampel-Emoji OHNE Warn-Toenung
-    (25 < yellow-Schwelle 30 aus dem Katalog).
+    THEN zeigt die Zelle den gruenen Ampel-CSS-Dot (Issue #1222) OHNE
+    Warn-Toenung (25 < yellow-Schwelle 30 aus dem Katalog).
     """
     rows = [{"time": "08:00", "wind": 25.0}]
     html = _render_html_table(
         rows, friendly_keys=set(), indicator_keys={"wind"}
     )
     cell = _cell_for_label(html, "Wind")
-    assert "🟢" in cell, f"Expected green ampel emoji, got: {cell}"
+    assert "#15803d" in cell, f"Expected green ampel CSS-Dot, got: {cell}"
     assert "background:#fbeeb8" not in cell, (
         f"AC-1: wind=25 (< yellow=30) must NOT carry warn tint, got: {cell}"
     )
@@ -85,14 +85,15 @@ def test_ac1_wind_25_green_no_tint():
 
 def test_ac1_wind_35_yellow_tint():
     """AC-1: GIVEN Wind=35.0 km/h im Einfach-Modus,
-    THEN zeigt die Zelle 🟡 MIT background:#fbeeb8 (35 >= yellow=30, < orange=50).
+    THEN zeigt die Zelle den gelben Ampel-CSS-Dot MIT background:#fbeeb8
+    (35 >= yellow=30, < orange=50).
     """
     rows = [{"time": "08:00", "wind": 35.0}]
     html = _render_html_table(
         rows, friendly_keys=set(), indicator_keys={"wind"}
     )
     cell = _cell_for_label(html, "Wind")
-    assert "🟡" in cell, f"Expected yellow ampel emoji, got: {cell}"
+    assert "#ca8a04" in cell, f"Expected yellow ampel CSS-Dot, got: {cell}"
     assert "background:#fbeeb8" in cell, (
         f"AC-1: wind=35 (yellow level) must carry #fbeeb8 tint, got: {cell}"
     )
@@ -100,14 +101,15 @@ def test_ac1_wind_35_yellow_tint():
 
 def test_ac1_wind_55_orange_tint():
     """AC-1: GIVEN Wind=55.0 km/h im Einfach-Modus,
-    THEN zeigt die Zelle 🟠 MIT background:#fad6b8 (55 >= orange=50, < red=70).
+    THEN zeigt die Zelle den orangen Ampel-CSS-Dot MIT background:#fad6b8
+    (55 >= orange=50, < red=70).
     """
     rows = [{"time": "08:00", "wind": 55.0}]
     html = _render_html_table(
         rows, friendly_keys=set(), indicator_keys={"wind"}
     )
     cell = _cell_for_label(html, "Wind")
-    assert "🟠" in cell, f"Expected orange ampel emoji, got: {cell}"
+    assert "#c2410c" in cell, f"Expected orange ampel CSS-Dot, got: {cell}"
     assert "background:#fad6b8" in cell, (
         f"AC-1: wind=55 (orange level) must carry #fad6b8 tint, got: {cell}"
     )
@@ -115,14 +117,15 @@ def test_ac1_wind_55_orange_tint():
 
 def test_ac1_wind_75_red_tint():
     """AC-1: GIVEN Wind=75.0 km/h im Einfach-Modus,
-    THEN zeigt die Zelle 🔴 MIT background:#f6c5bf (75 >= red=70).
+    THEN zeigt die Zelle den roten Ampel-CSS-Dot MIT background:#f6c5bf
+    (75 >= red=70).
     """
     rows = [{"time": "08:00", "wind": 75.0}]
     html = _render_html_table(
         rows, friendly_keys=set(), indicator_keys={"wind"}
     )
     cell = _cell_for_label(html, "Wind")
-    assert "🔴" in cell, f"Expected red ampel emoji, got: {cell}"
+    assert "#b91c1c" in cell, f"Expected red ampel CSS-Dot, got: {cell}"
     assert "background:#f6c5bf" in cell, (
         f"AC-1: wind=75 (red level) must carry #f6c5bf tint, got: {cell}"
     )

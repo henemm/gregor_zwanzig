@@ -44,7 +44,7 @@ from app.profile import ActivityProfile
 from services.daylight_service import DaylightWindow
 from services.risk_engine import RiskEngine
 from src.output.renderers.email import render_email
-from src.output.renderers.email.helpers import build_friendly_keys
+from src.output.renderers.email.helpers import ampel_dot, build_friendly_keys
 from src.output.tokens.dto import MetricSpec, TokenLine
 
 
@@ -773,15 +773,11 @@ class TripReportFormatter:
                 if html and val is not None and dt.get("yellow") and val >= dt["yellow"]:
                     return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
                 return s
-            if val <= 300:
-                emoji = "🟢"
-            elif val <= 1000:
-                emoji = "🟡"
-            elif val <= 2000:
-                emoji = "🟠"
-            else:
-                emoji = "🔴"
-            return emoji
+            # Issue #1222: toter Pfad (kein Aufrufer, s. test_issue_778_dead_code.py)
+            # — Kreis-Emoji durch die SSoT-Ampel (CSS-Dot) ersetzt statt entfernt,
+            # da _render_html_table()/_fmt_val() als Methoden erhalten bleiben
+            # (test_issue_623_trend_channels.py::test_render_html_table_still_present).
+            return ampel_dot(val, get_metric("cape").display_thresholds)
         if key == "visibility":
             if not use_friendly:
                 if val >= 10000:
