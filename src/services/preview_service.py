@@ -216,34 +216,12 @@ class PreviewService:
             raise ValueError(f"Ungültiger report_type '{report_type}'")
         trip = self._load_trip(trip_id, user_id)
         target = self._resolve_target_date(trip, target_date)
-        report, segment_weather, stage_name, trip_tz = self._build_report(
+        report, _segment_weather, _stage_name, _trip_tz = self._build_report(
             trip, target, report_type, demo=demo,
         )
-
-        from src.output.renderers.sms_trip import SMSTripFormatter, SMS_SYMBOL_BY_METRIC
-        # Input-Hygiene: Bei "ID: Beschreibung"-Stage-Namen (z.B. "KHW_10:
-        # von Egger Alm...") nur den Teil vor dem ersten ':' nehmen, damit
-        # der Prefix-Separator ':' in sms_format.md §3.1 eindeutig bleibt
-        # und das nachgelagerte [:10]-Slice (_sanitize_stage_name) nicht
-        # bereits gekürzte Beschreibungen produziert. Issue #497.
-        clean_stage = (stage_name or "Etappe").split(":", 1)[0].strip()
-        # Issue #624 (F001): konfigurierte Schwellwerte aus DisplayConfig übergeben.
-        dc = trip.display_config
-        _thr = {
-            SMS_SYMBOL_BY_METRIC[m.metric_id]: m.sms_threshold
-            for m in (dc.metrics if dc else [])
-            if m.metric_id in SMS_SYMBOL_BY_METRIC and m.sms_threshold is not None
-        }
-        # Bug #397 (F001): tz durchreichen, sonst rendern die Stunden-Token UTC
-        # statt Ortszeit (z.B. R5.0@8 statt @10 für CEST).
-        token_line = SMSTripFormatter().format_sms(
-            segment_weather,
-            stage_name=clean_stage,
-            report_type=report_type,
-            tz=trip_tz,
-            thresholds=_thr or None,
-        )
-        return report.email_subject, token_line
+        # Issue #954: kein eigener Renderpfad mehr — report.sms_text ist bereits
+        # der #944-korrekte Versandtext (inkl. disabled_specs-Filterung).
+        return report.email_subject, report.sms_text
 
     def render_telegram_preview(
         self,

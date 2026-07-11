@@ -507,28 +507,34 @@ class TestAC7SmsPreviewLocalTokens:
         assert "@8" in line, f"UTC-Fall: Peak-Stunde @8 fehlt: {line!r}"
         assert "@10" not in line, f"UTC-Fall: Stunde fälschlich verschoben: {line!r}"
 
-    def test_preview_service_passes_tz_to_format_sms(self):
-        """Quell-Check: render_sms_preview reicht trip_tz an format_sms durch.
+    def test_preview_service_delegates_sms_to_sent_text(self):
+        """Quell-Check: render_sms_preview liefert den mit trip_tz gerenderten
+        Versandtext (report.sms_text) statt eines eigenen format_sms-Aufrufs.
 
-        Wir patchen NICHTS — wir lesen den Quelltext und stellen sicher, dass
-        der format_sms-Aufruf in render_sms_preview ein tz=-Argument trägt und
-        _build_report das trip_tz zurückgibt. (Verhindert Re-Regression, ohne
-        einen Live-Wetter-Call vorauszusetzen.)
+        Issue #954 (Bug B): der frühere, redundante ``format_sms(..., tz=trip_tz)``
+        -Pfad in render_sms_preview ist entfallen; die Vorschau gibt jetzt exakt
+        ``report.sms_text`` zurück. Die Ortszeit-Garantie (Bug #397/F001) bleibt
+        erhalten, weil ``_build_report`` das trip_tz berechnet und über
+        ``format_email(tz=trip_tz)`` in ``report.sms_text`` einrendert — belegt
+        behavioral durch ``test_format_sms_cest_shifts_peak_hour_to_local``. Wir
+        patchen NICHTS.
         """
-        import inspect
+        import inspect  # doc-compliance-test
 
         from src.services import preview_service
 
         src = inspect.getsource(preview_service.PreviewService.render_sms_preview)
-        assert "tz=trip_tz" in src, (
-            "render_sms_preview ruft format_sms ohne tz=trip_tz auf (Bug #397/F001)"
+        assert "report.sms_text" in src, (  # doc-compliance-test
+            "render_sms_preview gibt nicht mehr report.sms_text zurück — die "
+            "Vorschau würde vom echten Versand (mit trip_tz) divergieren (#954/#397)"
         )
 
         build_src = inspect.getsource(preview_service.PreviewService._build_report)
-        # _build_report muss trip_tz im Rückgabe-Tupel liefern.
-        assert "return report, segment_weather, stage_name, trip_tz" in build_src, (
-            "_build_report gibt trip_tz nicht zurück — render_sms_preview kann es "
-            "nicht durchreichen (Bug #397/F001)"
+        # _build_report muss trip_tz berechnen und an format_email durchreichen —
+        # nur so trägt report.sms_text die Ortszeit (Bug #397/F001).
+        assert "trip_tz" in build_src, (
+            "_build_report berechnet kein trip_tz mehr — report.sms_text kann die "
+            "Ortszeit nicht garantieren (Bug #397/F001)"
         )
 
 

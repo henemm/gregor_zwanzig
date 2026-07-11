@@ -683,7 +683,16 @@ class TestF001OverviewThunderMatchesFooterWorstValue:
         )
         rows_morning = [{**_SUNNY_ROW, "time": "08", "thunder": "HIGH"}]
         rows_afternoon = [{**_SUNNY_ROW, "time": "14", "thunder": "NONE"}]
-        dc = _make_dc([("temperature", "primary"), ("thunder", "primary")])
+        # Issue #954: Fußzeilen-Teile sind jetzt an aktivierte Metriken gekoppelt
+        # (Metriken-Gating) — visibility/freezing_level hier mit aufnehmen, damit
+        # die Fußzeile (wie vor #954, AC-4 "vollständig aktivierte Konfiguration")
+        # weiterhin den Sicht-Teil trägt, an dem dieser Test die Fußzeile von der
+        # Kurzübersicht-Zeile unterscheidet. Test-Intent (Thunder-Aggregation)
+        # bleibt unverändert.
+        dc = _make_dc([
+            ("temperature", "primary"), ("thunder", "primary"),
+            ("visibility", "primary"), ("freezing_level", "primary"),
+        ])
 
         bubbles = render_telegram_bubbles(
             segments=[seg_morning, seg_afternoon],

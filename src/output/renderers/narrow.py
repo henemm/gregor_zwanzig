@@ -175,8 +175,15 @@ def _thunder_severity(level: Optional[ThunderLevel]) -> int:
     return _sev.get(level, 0) if level is not None else 0
 
 
-def _tg_day_footer(segments: list[SegmentWeatherData]) -> Optional[str]:
-    """Fußzeile mit Tageswerten (AC-6): ⚡ kein|MED|HIGH · Sicht gut|… · 0°C-Grenze N m."""
+def _tg_day_footer(
+    segments: list[SegmentWeatherData], enabled_metric_ids: set[str] | list[str]
+) -> Optional[str]:
+    """Fußzeile mit Tageswerten (AC-6): ⚡ kein|MED|HIGH · Sicht gut|… · 0°C-Grenze N m.
+
+    Issue #954: jeder Teil erscheint nur, wenn die zugehörige Metrik in
+    ``enabled_metric_ids`` aktiviert ist.
+    """
+    enabled = set(enabled_metric_ids)
     max_thunder_sev = 0
     min_vis: Optional[int] = None
     rep_freeze: Optional[int] = None
@@ -195,16 +202,17 @@ def _tg_day_footer(segments: list[SegmentWeatherData]) -> Optional[str]:
     parts: list[str] = []
 
     # Gewitter
-    if max_thunder_sev == 0:
-        thunder_word = "kein"
-    elif max_thunder_sev == 1:
-        thunder_word = "MED"
-    else:
-        thunder_word = "HIGH"
-    parts.append(f"⚡ {thunder_word}")
+    if "thunder" in enabled:
+        if max_thunder_sev == 0:
+            thunder_word = "kein"
+        elif max_thunder_sev == 1:
+            thunder_word = "MED"
+        else:
+            thunder_word = "HIGH"
+        parts.append(f"⚡ {thunder_word}")
 
     # Sicht
-    if min_vis is not None:
+    if "visibility" in enabled and min_vis is not None:
         if min_vis >= 10000:
             vis_word = "gut"
         elif min_vis >= 4000:
@@ -214,7 +222,7 @@ def _tg_day_footer(segments: list[SegmentWeatherData]) -> Optional[str]:
         parts.append(f"Sicht {vis_word}")
 
     # 0°C-Grenze
-    if rep_freeze is not None:
+    if "freezing_level" in enabled and rep_freeze is not None:
         parts.append(f"0°C-Grenze {rep_freeze} m")
 
     if not parts:
@@ -399,7 +407,9 @@ def render_telegram_bubbles(
     overview_lines: list[str] = ["Kurzübersicht"]
     for mid in dc.get_enabled_metric_ids():
         overview_lines.extend(_wrap(_esc(_overview_line(mid, seg_tables, fkeys)), _TG_PROSE_WIDTH))
-    footer = _tg_day_footer([sd for sd in segments if not sd.has_error])
+    footer = _tg_day_footer(
+        [sd for sd in segments if not sd.has_error], dc.get_enabled_metric_ids()
+    )
     if footer:
         overview_lines.append("")
         overview_lines.extend(_wrap(_esc(footer), _TG_PROSE_WIDTH))
