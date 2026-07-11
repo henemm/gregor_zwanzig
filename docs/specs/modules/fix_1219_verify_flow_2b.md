@@ -60,9 +60,20 @@ end-to-end nutzbar und **Issue #1219 abgeschlossen**.
     Knopf).
   (Frontend, SvelteKit-Route).
 
+- **File:** `frontend/src/hooks.server.ts` (@6) — die neue Route
+  `/verify-email` MUSS in die `publicPaths`-Allowlist des SvelteKit-Auth-Guards
+  aufgenommen werden (neben `/reset-password`, `/magic-link/verify`). Ohne
+  diesen Eintrag redirected der Guard jeden nicht-eingeloggten Aufruf auf
+  `/login`, bevor die Route lädt — der Mail-Klicker (typischerweise
+  unangemeldet) käme nie an. **Zwei getrennte Auth-Schichten:** der Go-Guard
+  (`internal/middleware/auth.go`, Scheibe 2a-ii) schützt den API-Endpoint,
+  dieser SvelteKit-Guard schützt die Seiten-Route — beide brauchen den Eintrag.
+  (Frontend, `hooks.server.ts`).
+
 > **Schicht-Hinweis:** Reines Frontend (SvelteKit unter
-> `frontend/src/routes/verify-email/`). Kein Go, kein Python. Konsumiert nur
-> den bereits live-deployten Endpoint `POST /api/auth/verify-email`.
+> `frontend/src/routes/verify-email/` + `frontend/src/hooks.server.ts`). Kein
+> Go, kein Python. Konsumiert nur den bereits live-deployten Endpoint
+> `POST /api/auth/verify-email`.
 
 ## Estimated Scope
 
@@ -229,3 +240,4 @@ statt des Formulars der Unvollständig-Hinweis gezeigt.
 ## Changelog
 
 - 2026-07-11: Initial spec erstellt — Issue #1219 Scheibe 2b, schließt die Feature-Kette
+- 2026-07-11: Fix-Loop nach staging-validator BROKEN — `frontend/src/hooks.server.ts` als Source ergänzt (SvelteKit-Auth-Guard `publicPaths` musste `/verify-email` freischalten; im ersten Wurf übersehen, Route redirectete auf `/login`). Regressionssicherung: Source-Sentinel-Test auf `publicPaths`.
