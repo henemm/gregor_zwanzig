@@ -25,6 +25,13 @@ from app.models import (
 from services.weather_metrics import aggregate_stage
 
 
+# Klassifikation Issue #1214 Scheibe 5, Kategorie c: KEINE Migration auf
+# metric_format.format_value. Die _format_*-Methoden erzeugen narrative
+# Zusammenfassungssaetze (Temp-Spanne mit En-Dash, Regen-/Wind-Adjektive
+# mit Zeitfenster-Mustern, Gewitter-Woerter) statt katalog-ableitbarer
+# Zahl+Einheit-Formatierung. Die eigene Wolken-Emoji-Skala (<20/40/60/80)
+# weicht bewusst von der Katalog-/helpers.py-Skala (<=10/30/70/90) ab —
+# Angleichung ist PO-pflichtige Entscheidung, Gegenstand von Scheibe 6.
 class CompactSummaryFormatter:
     """Generates natural-language weather summary per stage with temporal analysis."""
 

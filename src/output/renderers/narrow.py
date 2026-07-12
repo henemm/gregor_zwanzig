@@ -242,6 +242,13 @@ def _tg_vortag_line(day_comparison: Optional["DayComparison"]) -> Optional[str]:
     if day_comparison is None or not day_comparison.entries:
         return None
 
+    # Klassifikation Issue #1214 Scheibe 5, Kategorie b: KEINE Migration auf
+    # metric_format.format_value. _LABELS ist ein bewusst kurzes Telegram-
+    # Delta-Vokabular fuer die "Ggue. Vortag"-Zeile — Labels weichen echt vom
+    # Katalog ab ("Regen" != "Niederschlag", "Temp max"/"Temp min" teilen
+    # sich einen Katalog-Eintrag "Temperatur"). Zudem werden Delta-Werte roh
+    # und ungerundet ausgegeben (f"{delta}{unit}", Einheit ohne Leerzeichen);
+    # format_value wuerde runden und ein Leerzeichen einfuegen.
     # (Label, MetricDelta) pro Metrik je Segment einsammeln.
     _LABELS = [
         ("precip_sum", "Regen", "mm"),

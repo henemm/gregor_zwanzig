@@ -22,6 +22,7 @@ from typing import Optional
 from app.profile import ActivityProfile
 from app.user import ComparisonResult
 from output.renderers.email.compare_html import sort_locations_alphabetically
+from src.output.metric_format import format_value
 from src.output.renderers.alert.official_alerts import render_official_alerts_plain
 
 
@@ -87,19 +88,24 @@ def render_comparison_text(
 
         if _metric_visible("temp_max"):
             temp_max = loc_result.temp_max
-            lines.append(f"   Temp max: {temp_max:.0f}°C" if temp_max is not None else "   Temp max: -")
+            lines.append(f"   Temp max: {format_value('temperature', temp_max, style='plain')}" if temp_max is not None else "   Temp max: -")
         if _metric_visible("wind_max"):
             wind_max = loc_result.wind_max
-            lines.append(f"   Wind: {wind_max:.0f} km/h" if wind_max is not None else "   Wind: -")
+            lines.append(f"   Wind: {format_value('wind', wind_max, style='plain')}" if wind_max is not None else "   Wind: -")
         if _metric_visible("sunny_hours"):
+            # F001 (Fix-Loop, Adversary): sunny_hours ist zur Laufzeit float
+            # mit 1 Dezimale (calculate_sunny_hours, weather_metrics.py:298;
+            # comparison_engine.py:153/466 ohne Cast) -- die bare-Formatierung
+            # aus metric_format.py wuerde runden ("4.7h" -> "5h"), daher
+            # KEINE Migration auf den Katalog.
             sunny_h = loc_result.sunny_hours
             lines.append(f"   Sonne: {sunny_h}h" if sunny_h is not None else "   Sonne: -")
         if _metric_visible("cloud_avg"):
             cloud = loc_result.cloud_avg
-            lines.append(f"   Wolken: {cloud}%" if cloud is not None else "   Wolken: -")
+            lines.append(f"   Wolken: {format_value('cloud_total', cloud, style='plain')}" if cloud is not None else "   Wolken: -")
         if _metric_visible("snow_depth_cm"):
             snow_depth = loc_result.snow_depth_cm
-            lines.append(f"   Schneehöhe: {snow_depth:.0f} cm" if snow_depth is not None else "   Schneehöhe: -")
+            lines.append(f"   Schneehöhe: {format_value('snow_depth', snow_depth, style='plain')}" if snow_depth is not None else "   Schneehöhe: -")
         if _metric_visible("snow_new_cm"):
             snow_new = loc_result.snow_new_cm
             lines.append(f"   Neuschnee: {snow_new:.0f} cm" if snow_new is not None else "   Neuschnee: -")
