@@ -213,6 +213,9 @@ class SMSTripFormatter:
 
         # Bug #874: TH+: immer als days[1] einbauen — TH+:- wenn kein Gewitter (Spec-Pflicht).
         # Level-Mapping: NONE=0, MED=2, HIGH=3 (Builder-System: 1=L, 2=M, 3=H).
+        # Issue #1214: eigene SMS-Builder-Kodierung, KEIN Abweichler von
+        # metric_format.thunder_ordinal (andere Wertebedeutung, s. dortiger
+        # Docstring) — bewusst nicht auf die kanonische Ordnungsquelle umgestellt.
         from app.models import ThunderLevel
         _TH_VAL = {ThunderLevel.NONE: 0, ThunderLevel.MED: 2, ThunderLevel.HIGH: 3}
         tomorrow_thunder: tuple = ()

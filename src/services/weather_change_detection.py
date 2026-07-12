@@ -17,7 +17,6 @@ from app.models import (
     AlertRuleKind,
     AlertSeverity,
     ChangeSeverity,
-    ThunderLevel,
     WeatherChange,
 )
 
@@ -30,9 +29,6 @@ if TYPE_CHECKING:
     )
 
 logger = logging.getLogger(__name__)
-
-# Ordinal mapping for enum-type metrics (used for delta calculation)
-_THUNDER_ORDINAL = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
 
 # --- Issue #222 Workflow 1: AlertRule → SegmentWeatherSummary field mappings ---
 
@@ -539,10 +535,12 @@ class WeatherChangeDetectionService:
             if old_value is None or new_value is None:
                 continue
 
-            # Convert enum values to ordinals for delta calculation
+            # Convert enum values to ordinals for delta calculation.
+            # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
             if isinstance(old_value, Enum):
-                old_value = _THUNDER_ORDINAL.get(old_value, 0)
-                new_value = _THUNDER_ORDINAL.get(new_value, 0)
+                from src.output.metric_format import thunder_ordinal
+                old_value = thunder_ordinal(old_value)
+                new_value = thunder_ordinal(new_value)
 
             # Calculate delta
             delta = new_value - old_value
@@ -604,9 +602,11 @@ class WeatherChangeDetectionService:
             new_value = getattr(new_summary, field_name, None)
             if new_value is None:
                 continue
-            # Convert enum values (e.g., ThunderLevel) to ordinals
+            # Convert enum values (e.g., ThunderLevel) to ordinals.
+            # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
             if isinstance(new_value, Enum):
-                new_value = _THUNDER_ORDINAL.get(new_value, 0)
+                from src.output.metric_format import thunder_ordinal
+                new_value = thunder_ordinal(new_value)
             comparison = _ALERT_METRIC_COMPARISON[rule.metric]
             # Issue #222 F003: THUNDER_LEVEL uses >= for above (user intent
             # "ab Stufe MED alarmieren" — threshold=1.0 must match MED=1).

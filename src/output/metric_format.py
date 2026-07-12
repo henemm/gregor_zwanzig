@@ -23,15 +23,24 @@ Neuimplementierung derselben Band-Logik wie ``helpers._level_from_thresholds``
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Iterable, Optional
 
 from app.metric_catalog import get_metric
+from app.models import ThunderLevel
 
 # tone_css lebt in design_tokens (naeher an den uebrigen Mail-Farbkonstanten),
 # wird hier nur re-exportiert, damit Konsumenten ein einziges Modul brauchen.
 from src.output.renderers.email.design_tokens import tone_css
 
-__all__ = ["format_value", "severity_for", "tone_css", "label"]
+__all__ = [
+    "format_value",
+    "severity_for",
+    "tone_css",
+    "label",
+    "cloud_emoji",
+    "thunder_ordinal",
+    "max_thunder",
+]
 
 _NO_VALUE = "–"  # U+2013 EN DASH — Platzhalter bei fehlendem Wert
 
@@ -157,3 +166,53 @@ def label(metric_id: str, style: str = "label_de") -> str:
     if style == "col_label":
         return metric.col_label
     raise ValueError(f"Unbekannter label-style: {style!r}")
+
+
+def cloud_emoji(pct: Optional[float]) -> str:
+    """Kanonisches Wolken-Emoji (Issue #1214 Scheibe 6, PO-Entscheidung 2026-07-12).
+
+    Skala ``<=10 ☀️ / <=30 🌤️ / <=70 ⛅ / <=90 🌥️ / >90 ☁️`` — vormals die
+    Mail-Skala aus ``email/helpers.py::fmt_val``; wird mit dieser Scheibe zur
+    produktweiten Wahrheit fuer alle Konsumenten (Mail, Kompakt-Zusammenfassung,
+    Sonnen-Emoji-Fallback). ``None`` -> ``_NO_VALUE`` ("–"), konsistent mit
+    ``format_value``. Aufrufer mit abweichender Alt-Semantik fuer ``None``
+    (z.B. ``weather_metrics._cloud_pct_emoji`` -> "?") behalten ihren eigenen
+    Guard VOR dem Aufruf dieser Funktion.
+    """
+    if pct is None:
+        return _NO_VALUE
+    if pct <= 10:
+        return "☀️"
+    if pct <= 30:
+        return "🌤️"
+    if pct <= 70:
+        return "⛅"
+    if pct <= 90:
+        return "🌥️"
+    return "☁️"
+
+
+# Kanonische Ordnungsquelle fuer ThunderLevel (str-Enum ohne eigene Ordnung,
+# app/models.py:33-37). ThunderLevel(str, Enum) hasht/vergleicht identisch zu
+# seinem rohen String-Wert, daher funktioniert dieses Dict transparent auch
+# mit rohen "NONE"/"MED"/"HIGH"-Strings als Key (day_comparison.py).
+_THUNDER_ORDER = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
+
+
+def thunder_ordinal(level: Optional[ThunderLevel]) -> int:
+    """Kanonisches Sortier-Ordinal fuer ``ThunderLevel`` (NONE=0 < MED=1 < HIGH=2).
+
+    ``None`` sowie unbekannte Werte liefern 0. Nimmt sowohl ``ThunderLevel``-
+    Instanzen als auch rohe Strings entgegen (str-Enum-Hash-Aequivalenz).
+    """
+    if level is None:
+        return 0
+    return _THUNDER_ORDER.get(level, 0)
+
+
+def max_thunder(levels: Iterable[ThunderLevel]) -> ThunderLevel:
+    """Liefert das hoechste ``ThunderLevel`` aus ``levels`` (kanonische Ordnung).
+
+    Nacktes ``max()`` waere alphabetisch falsch (``"NONE" > "MED" > "HIGH"``).
+    """
+    return max(levels, key=thunder_ordinal)

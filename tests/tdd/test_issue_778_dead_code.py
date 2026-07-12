@@ -16,7 +16,6 @@ funktionieren (kein Mock).
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
-from pathlib import Path
 from zoneinfo import ZoneInfo
 
 _DEAD_METHODS = [
@@ -27,10 +26,13 @@ _DEAD_METHODS = [
     "_format_daylight_plain",
 ]
 
-_TRIP_REPORT = (
-    Path(__file__).resolve().parents[2]
-    / "src" / "output" / "renderers" / "trip_report.py"
-)
+# Lebende Nachbarn — positiver Gegenbeweis, dass die Introspektion nicht
+# versehentlich die ganze Klasse als "leer" durchwinkt (Issue #1214 Scheibe 6).
+_LIVE_METHODS = [
+    "format_email",
+    "_generate_compact_summary",
+    "_should_merge_wind_dir",
+]
 
 
 def _make_segment():
@@ -97,20 +99,29 @@ def test_format_email_renders_after_dead_code_removal():
 
 
 # ===========================================================================
-# AC-5: tote Methoden sind entfernt (# doc-compliance-test)
+# AC-5: tote Methoden sind entfernt (Modul-Introspektion statt Quelltext-Read)
 # ===========================================================================
 
-def test_dead_formatter_methods_removed():  # doc-compliance-test
-    """AC-5: GIVEN trip_report.py nach dem Aufraeumen / WHEN die Datei gelesen wird /
-    THEN definieren keine der fuenf toten Methoden mehr ein `def`.
+def test_dead_formatter_methods_removed():
+    """AC-5: GIVEN TripReportFormatter nach dem Aufraeumen / WHEN das Modul
+    importiert wird / THEN existiert keine der fuenf toten Methoden mehr als
+    Attribut, waehrend die lebenden Nachbarn (format_email,
+    _generate_compact_summary, _should_merge_wind_dir) weiterhin vorhanden
+    sind (Gegenbeweis gegen eine leere/kaputte Klasse).
 
-    RED: aktuell sind alle fuenf vorhanden. Markiert als doc-compliance-test, da
-    #778 ein reiner Tote-Code-Entfernungs-Bug ist (Struktur-Artefakt, kein Verhalten).
+    Issue #1214 Scheibe 6: von read_text() auf hasattr()-Introspektion
+    umgestellt (#765-Hygiene-Gate verbietet Produkt-Quelltext-Reads in Tests).
     """
-    src = _TRIP_REPORT.read_text(encoding="utf-8")
-    still_present = [m for m in _DEAD_METHODS if f"def {m}(" in src]
+    from output.renderers.trip_report import TripReportFormatter
+
+    still_present = [m for m in _DEAD_METHODS if hasattr(TripReportFormatter, m)]
     assert not still_present, (
         f"Tote Methoden noch in trip_report.py vorhanden: {still_present} — "
         f"#778 verlangt ersatzlose Loeschung (kanonische Logik in "
         f"src/output/renderers/email/)"
+    )
+    missing_live = [m for m in _LIVE_METHODS if not hasattr(TripReportFormatter, m)]
+    assert not missing_live, (
+        f"Erwartete lebende Methoden fehlen: {missing_live} — Introspektion "
+        f"greift moeglicherweise auf die falsche Klasse zu"
     )

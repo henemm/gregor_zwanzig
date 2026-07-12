@@ -356,8 +356,9 @@ class TripReportFormatter:
 
             # Special handling for enum types
             if metric_def.dp_field == "thunder_level":
-                severity = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
-                row[metric_def.col_key] = max(values, key=lambda v: severity.get(v, 0))
+                # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
+                from src.output.metric_format import max_thunder
+                row[metric_def.col_key] = max_thunder(values)
                 continue
             if metric_def.dp_field == "precip_type":
                 row[metric_def.col_key] = values[-1]

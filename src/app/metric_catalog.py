@@ -362,6 +362,7 @@ _METRICS: list[MetricDefinition] = [
         summary_fields={"sum": "sunny_hours"},
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
+        decimals=1,
     ),
     MetricDefinition(
         id="uv_index", label_de="UV-Index", unit="",

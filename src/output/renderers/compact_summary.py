@@ -152,16 +152,10 @@ class CompactSummaryFormatter:
             return None
         pct = summary.cloud_avg_pct
         if friendly:
-            if pct < 20:
-                return "☀️"
-            elif pct < 40:
-                return "🌤️"
-            elif pct < 60:
-                return "⛅"
-            elif pct < 80:
-                return "🌥️"
-            else:
-                return "☁️"
+            # Issue #1214 Scheibe 6: kanonische Skala (PO-Entscheidung
+            # 2026-07-12, statt der bisherigen lokalen <20/40/60/80-Stufen).
+            from src.output.metric_format import cloud_emoji
+            return cloud_emoji(pct)
         return f"Wolken {pct}%"
 
     # ------------------------------------------------------------------

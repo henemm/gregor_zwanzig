@@ -155,24 +155,10 @@ def _narrow_table(
     return out
 
 
-def _cloud_emoji(cloud_pct: Optional[int]) -> str:
-    """Wolken-Emoji nach gleicher Skala wie email/helpers.py fmt_val(cloud)."""
-    if cloud_pct is None:
-        return "⛅"
-    if cloud_pct <= 10:
-        return "☀️"
-    if cloud_pct <= 30:
-        return "🌤️"
-    if cloud_pct <= 70:
-        return "⛅"
-    if cloud_pct <= 90:
-        return "🌥️"
-    return "☁️"
-
-
 def _thunder_severity(level: Optional[ThunderLevel]) -> int:
-    _sev = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
-    return _sev.get(level, 0) if level is not None else 0
+    """Issue #1214 Scheibe 6: Wrapper, delegiert an die kanonische Ordinal-Quelle."""
+    from src.output.metric_format import thunder_ordinal
+    return thunder_ordinal(level)
 
 
 def _tg_day_footer(

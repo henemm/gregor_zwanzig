@@ -93,13 +93,15 @@ def render_comparison_text(
             wind_max = loc_result.wind_max
             lines.append(f"   Wind: {format_value('wind', wind_max, style='plain')}" if wind_max is not None else "   Wind: -")
         if _metric_visible("sunny_hours"):
-            # F001 (Fix-Loop, Adversary): sunny_hours ist zur Laufzeit float
-            # mit 1 Dezimale (calculate_sunny_hours, weather_metrics.py:298;
-            # comparison_engine.py:153/466 ohne Cast) -- die bare-Formatierung
-            # aus metric_format.py wuerde runden ("4.7h" -> "5h"), daher
-            # KEINE Migration auf den Katalog.
+            # Issue #1214 Scheibe 6: sunshine.decimals=1 im Katalog (vormals
+            # F001-Ausnahme in Scheibe 5, s. Spec) macht die Migration jetzt
+            # beweisbar verhaltensneutral: calculate_sunny_hours liefert immer
+            # round(x, 1) als float, also str(4.7) == "4.7" == f"{4.7:.1f}".
             sunny_h = loc_result.sunny_hours
-            lines.append(f"   Sonne: {sunny_h}h" if sunny_h is not None else "   Sonne: -")
+            lines.append(
+                f"   Sonne: {format_value('sunshine', sunny_h, style='bare')}h"
+                if sunny_h is not None else "   Sonne: -"
+            )
         if _metric_visible("cloud_avg"):
             cloud = loc_result.cloud_avg
             lines.append(f"   Wolken: {format_value('cloud_total', cloud, style='plain')}" if cloud is not None else "   Wolken: -")

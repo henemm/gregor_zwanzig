@@ -26,12 +26,6 @@ _DNI_FULL_SUN = 600
 _DNI_MOSTLY_SUNNY = 300
 _DNI_PARTLY_SUNNY = 120
 
-# Cloud% thresholds (unified for all fallback sites)
-_CLOUD_CLEAR = 20
-_CLOUD_MOSTLY_CLEAR = 40
-_CLOUD_PARTLY_CLOUDY = 70
-_CLOUD_MOSTLY_CLOUDY = 90
-
 # WMO precipitation/fog/thunder codes → emoji (priority 1)
 _WMO_PRECIP_EMOJI: dict[int, str] = {
     45: "🌫️", 48: "🌫️",                       # Fog
@@ -109,18 +103,11 @@ def _dni_emoji(dni_wm2: float) -> str:
 
 
 def _cloud_pct_emoji(cloud_pct: Optional[int]) -> str:
-    """Fallback emoji from cloud% (unified thresholds)."""
+    """Fallback emoji from cloud% (kanonische Skala, Issue #1214 Scheibe 6)."""
     if cloud_pct is None:
         return "?"
-    if cloud_pct < _CLOUD_CLEAR:
-        return "☀️"
-    if cloud_pct < _CLOUD_MOSTLY_CLEAR:
-        return "🌤️"
-    if cloud_pct < _CLOUD_PARTLY_CLOUDY:
-        return "⛅"
-    if cloud_pct < _CLOUD_MOSTLY_CLOUDY:
-        return "🌥️"
-    return "☁️"
+    from src.output.metric_format import cloud_emoji
+    return cloud_emoji(cloud_pct)
 
 
 # =============================================================================
@@ -325,7 +312,7 @@ class WeatherMetricsService:
             Number of sunny hours (float, rounded to 1 decimal place)
         """
         if not data:
-            return 0
+            return 0.0
 
         if settings is None:
             from app.config import Settings
@@ -613,9 +600,9 @@ class WeatherMetricsService:
         if not levels:
             return None
 
-        # Order: NONE < MED < HIGH
-        ordering = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
-        return max(levels, key=lambda x: ordering[x])
+        # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
+        from src.output.metric_format import max_thunder
+        return max_thunder(levels)
 
     def _compute_visibility(
         self,
@@ -1031,9 +1018,13 @@ def aggregate_stage(
 
         if agg_rule == "max":
             if hasattr(values[0], "value"):
-                # Enum severity ordering (e.g. NONE=0, MED=1, HIGH=2)
+                # Issue #1214 Scheibe 6: Hybrid-Dict fuer generische Enum-Max-
+                # Aggregation (ThunderLevel UND PrecipType) — nur der Thunder-
+                # Anteil bezieht sich kanonisch aus thunder_ordinal, der
+                # PrecipType-Anteil bleibt lokal (kein Duplikat, eigenes Konzept).
+                from src.output.metric_format import thunder_ordinal
                 _ENUM_ORDER = {
-                    ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2,
+                    **{lvl: thunder_ordinal(lvl) for lvl in ThunderLevel},
                     PrecipType.RAIN: 0, PrecipType.SNOW: 1, PrecipType.MIXED: 2,
                 }
                 result_fields[field_name] = max(values, key=lambda v: _ENUM_ORDER.get(v, 0))

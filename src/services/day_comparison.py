@@ -15,9 +15,6 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 if TYPE_CHECKING:
     from app.models import SegmentWeatherData, ThunderLevel
 
-# Ordinal-Mapping ThunderLevel (NONE < MED < HIGH)
-_THUNDER_ORDINAL: Dict[str, int] = {"NONE": 0, "MED": 1, "HIGH": 2}
-
 # Metriken bei denen weniger = BETTER
 _LOWER_IS_BETTER = frozenset({"wind_max_kmh", "gust_max_kmh", "precip_sum_mm", "thunder"})
 
@@ -342,8 +339,12 @@ def _thunder_delta(
 ) -> MetricDelta:
     if today_level is None or yday_level is None:
         return MetricDelta(delta=None, direction=ComparisonDirection.MISSING)
-    today_ord = _THUNDER_ORDINAL.get(today_level.value if hasattr(today_level, "value") else today_level, 0)
-    yday_ord = _THUNDER_ORDINAL.get(yday_level.value if hasattr(yday_level, "value") else yday_level, 0)
+    # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
+    # Der .value-Normalisierungs-Ausdruck bleibt (str-Enum-Hash-Aequivalenz
+    # macht ihn technisch redundant, aber verhaltensneutral in beide Richtungen).
+    from src.output.metric_format import thunder_ordinal
+    today_ord = thunder_ordinal(today_level.value if hasattr(today_level, "value") else today_level)
+    yday_ord = thunder_ordinal(yday_level.value if hasattr(yday_level, "value") else yday_level)
     delta = today_ord - yday_ord
     return MetricDelta(delta=float(delta), direction=_direction(float(delta), "thunder"))
 

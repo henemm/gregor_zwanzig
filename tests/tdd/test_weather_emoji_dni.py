@@ -128,24 +128,28 @@ class TestNightEmoji:
 
 
 class TestCloudPctEmoji:
+    """Issue #1214 Scheibe 6: kanonische Skala (<=10/30/70/90) statt der
+    vormals eigenen weather_metrics-Skala (20/40/70/90) \u2014 vier von fuenf
+    Boundary-Werten aendern sich (Spec-Korrektur, s. Changelog Punkt 3)."""
+
     def test_clear(self):
         assert _cloud_pct_emoji(0) == "\u2600\ufe0f"
-        assert _cloud_pct_emoji(19) == "\u2600\ufe0f"
+        assert _cloud_pct_emoji(19) == "\U0001f324\ufe0f"  # NEU: >10 -> \ud83c\udf24\ufe0f
 
     def test_mostly_clear(self):
         assert _cloud_pct_emoji(20) == "\U0001f324\ufe0f"
-        assert _cloud_pct_emoji(39) == "\U0001f324\ufe0f"
+        assert _cloud_pct_emoji(39) == "\u26c5"  # NEU: >30 -> \u26c5
 
     def test_partly_cloudy(self):
         assert _cloud_pct_emoji(40) == "\u26c5"
         assert _cloud_pct_emoji(69) == "\u26c5"
 
     def test_mostly_cloudy(self):
-        assert _cloud_pct_emoji(70) == "\U0001f325\ufe0f"
+        assert _cloud_pct_emoji(70) == "\u26c5"  # NEU: <=70 -> \u26c5
         assert _cloud_pct_emoji(89) == "\U0001f325\ufe0f"
 
     def test_overcast(self):
-        assert _cloud_pct_emoji(90) == "\u2601\ufe0f"
+        assert _cloud_pct_emoji(90) == "\U0001f325\ufe0f"  # NEU: <=90 -> \ud83c\udf25\ufe0f
         assert _cloud_pct_emoji(100) == "\u2601\ufe0f"
 
     def test_none(self):

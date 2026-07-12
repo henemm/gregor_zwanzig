@@ -161,8 +161,9 @@ def aggregate_night_block(dps: list[ForecastDataPoint],
             row[metric_def.col_key] = None
             continue
         if metric_def.dp_field == "thunder_level":
-            severity = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
-            row[metric_def.col_key] = max(values, key=lambda v: severity.get(v, 0))
+            # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
+            from src.output.metric_format import max_thunder
+            row[metric_def.col_key] = max_thunder(values)
             continue
         if metric_def.dp_field == "precip_type":
             row[metric_def.col_key] = values[-1]
@@ -486,9 +487,9 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
     if val is None:
         return "–"
 
-    # Issue #1214 Scheibe 3: konsolidierte Zahlen-Formatierung. Lokaler Import
-    # vermeidet den Zirkelbezug metric_format -> renderers -> helpers.
-    from src.output.metric_format import format_value
+    # Issue #1214 Scheibe 3/6: konsolidierte Zahlen-/Wolken-Formatierung.
+    # Lokaler Import vermeidet den Zirkelbezug metric_format -> renderers -> helpers.
+    from src.output.metric_format import cloud_emoji, format_value
 
     # Resolve effective mode per column (Issue #435).
     if format_modes is not None:
@@ -558,17 +559,9 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
     if key in ("cloud", "cloud_low", "cloud_mid", "cloud_high"):
         if not use_friendly:
             return f"{val:.0f}"
-        if val <= 10:
-            emoji = "☀️"
-        elif val <= 30:
-            emoji = "🌤️"
-        elif val <= 70:
-            emoji = "⛅"
-        elif val <= 90:
-            emoji = "🌥️"
-        else:
-            emoji = "☁️"
-        return emoji
+        # Issue #1214 Scheibe 6: kanonische Skala statt lokaler if/elif-Kette;
+        # val ist hier nie None (frueher Return bei val is None, s.o.).
+        return cloud_emoji(val)
     if key == "sunshine":
         # Issue #347: numerisch Sonnenstunden (h) statt roher DNI-Summe (W/m²);
         # DNI bleibt interne Hilfsgröße für den Emoji-Pfad.
@@ -1088,7 +1081,8 @@ def _pill_for_metric(
     der Erwaehnungsschwelle. Klasse 2 (Bereich): „min–max Einheit", neutral.
     """
     from app.models import ThunderLevel
-    severity = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
+    # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
+    from src.output.metric_format import thunder_ordinal
 
     # ---- Klasse 2 — Bereichs-/Kontext-Metriken (mit Uhrzeit, neutral) ----
     if metric_id == "temperature":
@@ -1257,9 +1251,9 @@ def _pill_for_metric(
             lvl = dp.thunder_level
             if lvl is None:
                 continue
-            if severity.get(lvl, 0) >= 1 and first_thunder_ts is None:
+            if thunder_ordinal(lvl) >= 1 and first_thunder_ts is None:
                 first_thunder_ts = dp.ts
-            if severity.get(lvl, 0) > severity.get(max_lvl, 0):
+            if thunder_ordinal(lvl) > thunder_ordinal(max_lvl):
                 max_lvl = lvl
                 peak_ts = dp.ts
         if first_thunder_ts is not None:
