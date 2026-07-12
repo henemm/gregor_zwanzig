@@ -31,6 +31,9 @@ import { deriveIdealText } from './compareMetricDefs.ts';
 import { buildComparePresetSavePayload } from './compareEditorSave.ts';
 import type { ComparePreset } from '../../types.ts';
 
+// ── Import 4: Lade-Pfad-Rehydrierung (Issue #1191) ──────────────────────────
+import { rehydrateActiveMetrics } from './compareEditorLoad.ts';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Fixture
 // ─────────────────────────────────────────────────────────────────────────────
@@ -192,6 +195,34 @@ describe('buildComparePresetSavePayload — active_metrics (AC-10)', () => {
 				// activeMetricKeys absichtlich weggelassen
 			});
 		});
+	});
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Issue #1191: Lade-Pfad — leeres active_metrics[] ist bewusste Nutzerwahl
+// ─────────────────────────────────────────────────────────────────────────────
+describe('rehydrateActiveMetrics — Lade-Pfad-Rehydrierung (#1191)', () => {
+	test('vorhandenes leeres [] → activeMetricKeys=[] UND metricsManuallyEdited=true (keine Default-Auffüllung)', () => {
+		// Bug-Repro: "alles abgewählt" persistiert als [] und muss beim Reload
+		// erhalten bleiben — NICHT auf Profil-Defaults zurückspringen.
+		const result = rehydrateActiveMetrics([]);
+		assert.notEqual(result, null, 'leeres [] darf nicht als "nie gesetzt" behandelt werden');
+		assert.deepEqual(result?.activeMetricKeys, [], 'activeMetricKeys muss leer bleiben');
+		assert.equal(result?.metricsManuallyEdited, true, 'metricsManuallyEdited muss true sein');
+	});
+
+	test('vorhandenes befülltes Array → 1:1 übernommen + metricsManuallyEdited=true', () => {
+		const result = rehydrateActiveMetrics(['snow_depth_cm', 'wind_max_kmh']);
+		assert.deepEqual(result?.activeMetricKeys, ['snow_depth_cm', 'wind_max_kmh']);
+		assert.equal(result?.metricsManuallyEdited, true);
+	});
+
+	test('fehlendes Array (undefined) → null (Legacy → Profil-Defaults greifen)', () => {
+		assert.equal(rehydrateActiveMetrics(undefined), null);
+	});
+
+	test('fehlendes Array (null) → null (Legacy → Profil-Defaults greifen)', () => {
+		assert.equal(rehydrateActiveMetrics(null), null);
 	});
 });
 

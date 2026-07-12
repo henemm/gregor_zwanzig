@@ -10,6 +10,7 @@
 	import { setContext } from 'svelte';
 	import { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import CompareEditor from '$lib/components/compare/CompareEditor.svelte';
+	import { rehydrateActiveMetrics } from '$lib/components/compare/compareEditorLoad';
 	import type { IdealRange } from '$lib/components/compare/compareMetricDefs';
 	import type { ActivityProfile, ChannelLayouts } from '$lib/types';
 
@@ -64,10 +65,13 @@
 	if (savedLayouts) state.channelLayouts = savedLayouts;
 
 	// Issue #680: Slice 3 — active_metrics aus display_config wiederherstellen (AC-10)
+	// Issue #1191: Ein vorhandenes leeres [] ("alles abgewählt") ist bewusste
+	// Nutzerwahl und muss erhalten bleiben — NICHT auf Profil-Defaults zurückspringen.
 	const savedActiveMetrics = state.existingDisplayConfig.active_metrics as string[] | undefined;
-	if (savedActiveMetrics && savedActiveMetrics.length > 0) {
-		state.activeMetricKeys = savedActiveMetrics;
-		state.metricsManuallyEdited = true;
+	const rehydrated = rehydrateActiveMetrics(savedActiveMetrics);
+	if (rehydrated) {
+		state.activeMetricKeys = rehydrated.activeMetricKeys;
+		state.metricsManuallyEdited = rehydrated.metricsManuallyEdited;
 	}
 
 	// Issue #1106: Slice C — hourly_metrics aus display_config wiederherstellen
