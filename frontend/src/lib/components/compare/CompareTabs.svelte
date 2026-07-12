@@ -21,6 +21,7 @@
 		deriveStatusFromPreset,
 		presetScheduleLabel,
 		formatLastSent,
+		channelCountLabel,
 		STATUS_MAP
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import type { ComparePreset, Location } from '$lib/types.js';
@@ -245,7 +246,7 @@
 								{:else}
 									<span style="display: inline-flex; align-items: center; gap: 7px">
 										<Dot tone="good" size={7}/>
-										{preset.empfaenger.length} {preset.empfaenger.length === 1 ? 'Kanal' : 'Kanäle'}
+										{channelCountLabel(preset.empfaenger.length)}
 									</span>
 								{/if}
 							</div>

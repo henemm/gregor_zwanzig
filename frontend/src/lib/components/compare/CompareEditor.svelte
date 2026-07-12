@@ -8,7 +8,7 @@
 	import { getContext } from 'svelte';
 	import { Btn, Eyebrow, TopoBg } from '$lib/components/atoms';
 	import { Field, ConfirmDialog } from '$lib/components/molecules';
-	import { ACTIVITY_PROFILE_OPTIONS, type ActivityProfile, type Location, type ComparePreset } from '$lib/types';
+	import { ACTIVITY_PROFILE_OPTIONS, toCompareProfile, type ActivityProfile, type Location, type ComparePreset } from '$lib/types';
 	import type { CompareWizardState } from './compareWizardState.svelte';
 	import { createSaveStatus, extractMessage } from '$lib/stores/saveStatusStore.svelte';
 	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
@@ -18,7 +18,7 @@
 		doneTabs,
 		type CompareTabId
 	} from './compareEditorLogic';
-	import { validateIdealRanges } from './compareMetricDefs';
+	import { validateIdealRanges, PROFILE_METRICS_WITH_SCALES, type ProfileKey } from './compareMetricDefs';
 	import { buildComparePresetSavePayload } from './compareEditorSave';
 	import { api } from '$lib/api.js';
 	import Step2Orte from './steps/Step2Orte.svelte';
@@ -181,6 +181,13 @@
 
 	function selectProfile(value: ActivityProfile) {
 		wiz.activityProfile = value;
+	}
+
+	// Fix 6 (Design-Fidelity 2026-07) — Mono-Unterzeile mit den echten
+	// Profil→Metriken-Labels aus PROFILE_METRICS_WITH_SCALES, nicht hardcoden.
+	function profileMetricsLabel(value: ActivityProfile): string {
+		const key = toCompareProfile(value) as ProfileKey;
+		return PROFILE_METRICS_WITH_SCALES[key].map((m) => m.label).join(' · ');
 	}
 
 	function handleDiscard() {
@@ -632,8 +639,17 @@
 									style:font-size="14px"
 									style:font-weight="600"
 									style:color={sel ? 'var(--g-accent-deep)' : 'var(--g-ink)'}
+									style:margin-bottom="4px"
 								>
 									{opt.label}
+								</div>
+								<div
+									class="mono"
+									style:font-size="11px"
+									style:color="var(--g-ink-3)"
+									style:margin-top="4px"
+								>
+									{profileMetricsLabel(opt.value)}
 								</div>
 							</button>
 						{/each}
@@ -653,12 +669,13 @@
 								⊘ Name fehlt
 							</span>
 						{/if}
-						{#if canContinue && !isEdit}
+						{#if !isEdit}
 							<Btn
 								data-testid="compare-editor-continue-orte"
-								variant="accent"
+								variant={canContinue ? 'accent' : 'quiet'}
 								size="md"
-								onclick={() => switchTab('orte')}
+								disabled={!canContinue}
+								onclick={() => canContinue && switchTab('orte')}
 							>
 								Orte hinzufügen →
 							</Btn>
@@ -811,7 +828,10 @@
 						{@const sel = wiz.activityProfile === opt.value}
 						<button type="button" onclick={() => selectProfile(opt.value)}
 							style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 12px 14px; background: {sel ? 'var(--g-accent-tint)' : 'var(--g-card)'}; border: {sel ? '1.5px solid var(--g-accent)' : '1px solid var(--g-rule)'}; border-radius: var(--g-r-3); cursor: pointer; text-align: left; font-family: var(--g-font-sans);">
-							<div style="font-size: 14px; font-weight: 600; color: {sel ? 'var(--g-accent-deep)' : 'var(--g-ink)'};">{opt.label}</div>
+							<div style="display: flex; flex-direction: column;">
+								<div style="font-size: 14px; font-weight: 600; color: {sel ? 'var(--g-accent-deep)' : 'var(--g-ink)'};">{opt.label}</div>
+								<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 4px;">{profileMetricsLabel(opt.value)}</div>
+							</div>
 						</button>
 					{/each}
 				</div>

@@ -49,9 +49,10 @@
 				<Eyebrow>Workspace · Orts-Vergleiche</Eyebrow>
 				<div style="font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px">Orts-Vergleiche</div>
 				<div style="font-size: 14px; color: var(--g-ink-3); margin-top: 6px; max-width: 620px">
-					Tägliche Briefings, die mehrere Orte gegeneinander stellen und eine
-					Empfehlung mitliefern („heute ist Ort X am besten — weil …").
-					Einmalig eingerichtet, läuft pro Vergleich automatisch.
+					Stehende Monitore: dieselben Orte im Blick. Briefings wie beim Trip —
+					Morgen-Briefing für heute, Abend-Briefing für morgen, zur gewählten
+					Uhrzeit. Werte nebeneinander, ohne Ranking. Einmal eingerichtet, läuft
+					jeder Vergleich, bis du ihn stoppst.
 				</div>
 			</div>
 			<Btn variant="primary" href="/compare/new">+ Neuer Vergleich</Btn>

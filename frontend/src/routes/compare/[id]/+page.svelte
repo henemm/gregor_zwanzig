@@ -11,8 +11,10 @@
 		deriveStatusFromPreset,
 		STATUS_MAP,
 		presetScheduleLabel,
+		presetProfileLabel,
 		formatLastSent,
-		computePauseToggle
+		computePauseToggle,
+		channelCountLabel
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { page } from '$app/state';
 	import { invalidateAll } from '$app/navigation';
@@ -23,6 +25,9 @@
 	let { data } = $props();
 	let status = $derived(deriveStatusFromPreset(data.preset));
 	let statusInfo = $derived(STATUS_MAP[status]);
+	// Adversary-Finding F001: geguardetes Profil-Label für die mobile Kontext-
+	// Unterzeile (Muster CompareTile.svelte:62) — leer bei unbekanntem/fehlendem profil.
+	let profileLabel = $derived(presetProfileLabel(data.preset.profil));
 
 	// Issue #517 — ?tab=-Query-Parameter lesen und an CompareDetail/CompareTabs weitergeben.
 	const initialTab = $derived(page.url.searchParams.get('tab') ?? 'uebersicht');
@@ -164,7 +169,10 @@
 		>
 			<ArrowLeftIcon size={20} />
 		</a>
-		<span class="flex-1 font-semibold truncate">{data.preset.name}</span>
+		<span class="flex-1 flex items-center gap-3 min-w-0">
+			<span class="font-semibold truncate">{data.preset.name}</span>
+			<span class="flex-shrink-0"><CompareStatusPill {status} /></span>
+		</span>
 		<a
 			href="/compare/{data.preset.id}/edit"
 			class="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md"
@@ -182,8 +190,12 @@
 		</button>
 	</div>
 
-	<!-- Status -->
-	<CompareStatusPill {status} />
+	<!-- Kontext-Unterzeile (Fix 4, Design-Fidelity 2026-07) -->
+	<!-- Adversary-Finding F001: profileLabel geguardet (Muster CompareTile.svelte:174) —
+	     kein führender/doppelter " · " bei leerem/unbekanntem profil. -->
+	<div class="text-sm text-[var(--g-ink-3)]">
+		{#if data.preset.display_config?.region}{data.preset.display_config.region} · {/if}{#if profileLabel}{profileLabel} · {/if}{data.locations.length} {data.locations.length === 1 ? 'Ort' : 'Orte'}
+	</div>
 
 	<!-- Monitoring 2×2-Grid -->
 	<div class="grid grid-cols-2 gap-3">
@@ -201,7 +213,7 @@
 		</Card>
 		<Card padding={14}>
 			<div class="text-xs font-mono uppercase tracking-widest text-[var(--g-ink-3)]">Kanäle</div>
-			<div class="text-sm mt-1 truncate">{(data.preset.empfaenger ?? []).length} Kanäle</div>
+			<div class="text-sm mt-1 truncate">{channelCountLabel((data.preset.empfaenger ?? []).length)}</div>
 		</Card>
 	</div>
 

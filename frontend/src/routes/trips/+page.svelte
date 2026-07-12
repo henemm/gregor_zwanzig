@@ -342,7 +342,7 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 		<div>
 			<Eyebrow>WORKSPACE · TRIPS</Eyebrow>
 			<h1 style="font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px;">Trips</h1>
-			<p class="text-sm text-muted-foreground mt-1">Alle Trips auf einen Blick — Status, Zeitraum und Aktionen.</p>
+			<p class="text-sm text-muted-foreground mt-1">Alle aktiven, geplanten und abgeschlossenen Mehrtages-Trips. Pro Trip kannst du Alerts justieren, ein Briefing direkt schicken oder die Email-Vorschau öffnen.</p>
 		</div>
 		<Btn variant="accent" onclick={() => goto('/trips/new')}>+ Neuer Trip</Btn>
 	</div>
