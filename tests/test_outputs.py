@@ -68,13 +68,19 @@ class TestEmailOutput:
     """Tests for EmailOutput."""
 
     def _create_email_settings(self):
-        """Create settings with complete email config."""
+        """Create settings with complete email config.
+
+        Issue #1235: mail_to muss ein lokales @henemm.com-Postfach sein,
+        sonst blockt der neue Nicht-Resend-Empfänger-Guard (smtp.example.com
+        ist kein Resend-Host) diesen mit Mocks arbeitenden Testfall VOR dem
+        gemockten SMTP-Aufruf.
+        """
         return Settings(
             smtp_host="smtp.example.com",
             smtp_port=587,
             smtp_user="user@example.com",
             smtp_pass="secret",
-            mail_to="recipient@example.com",
+            mail_to="recipient@henemm.com",
         )
 
     def test_email_requires_config(self):

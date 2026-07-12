@@ -256,12 +256,32 @@ class TestAC3TestUserAddressBlocked:
 # ---------------------------------------------------------------------------
 
 
-class TestAC4StalwartHostGuardInactive:
-    def test_stalwart_host_not_subject_to_allowlist_guard(self):
-        """AC-4: GIVEN ein Stalwart-Host (`mail.henemm.com`) mit einer
-        Adresse ausserhalb jeder Allowlist / WHEN send() aufgerufen wird /
-        THEN greift der Allowlist-Guard NICHT -- ein etwaiger Fehler darf
-        nicht auf die neue Allowlist-Pruefung zurueckgehen."""
+class TestAC4StalwartHostGuardBlocksExternal:
+    """Issue #1235 (dokumentierte, begründete Verhaltensänderung):
+
+    Dieser Test hieß bis Issue #1235 `TestAC4StalwartHostGuardInactive` und
+    behauptete, der Allowlist-Guard duerfe bei einem Stalwart-Host NICHT
+    greifen -- das war eine bewusste #1219-Design-Entscheidung, weil damals
+    angenommen wurde, ein Stalwart-Versand bleibe lokal und sei damit
+    ungefaehrlich. Diese Annahme ist durch henemm-infra#114 widerlegt:
+    Stalwart relayt tatsaechlich extern an Resend, wodurch externe
+    Fake-Empfaenger (u.a. genau die hier verwendete
+    `unbekannt@example.com`-Fixture) an die Aussenwelt geleakt wurden
+    (86 Mails/48h, MQ 48151). Issue #1235 fuehrt dafuer einen eigenen,
+    strengeren Nicht-Resend-Guard ein (nur lokale @henemm.com-Empfaenger
+    erlaubt, kein Allowlist-Bypass) -- der bisherige AC-4-Test wird daher
+    invertiert: derselbe externe Empfaenger, der frueher unblockiert durch-
+    laufen musste, MUSS jetzt geblockt werden. Spec:
+    docs/specs/modules/issue_1235_stalwart_recipient_guard.md AC-5.
+    """
+
+    def test_stalwart_host_blocks_external_recipient(self):
+        """AC-4 (invertiert, s. Issue #1235): GIVEN ein Stalwart-Host
+        (`mail.henemm.com`) mit einer externen, nicht-lokalen Adresse
+        ausserhalb jeder Allowlist / WHEN send() aufgerufen wird / THEN
+        blockt der NEUE #1235-Lokal-Guard mit OutputConfigError -- der
+        Resend-spezifische #1219-Allowlist-Guard bleibt dabei unbeteiligt
+        (Fehlermeldung referenziert #1235, nicht 'allowlist')."""
         s = Settings(
             smtp_host="mail.henemm.com",
             smtp_port=587,
@@ -273,11 +293,16 @@ class TestAC4StalwartHostGuardInactive:
         )
         output = EmailOutput(s)
         exc = _send_and_capture(output, to=["unbekannt@example.com"])
-        if isinstance(exc, OutputConfigError):
-            assert "allowlist" not in str(exc).lower(), (
-                "AC-4: der Allowlist-Guard darf bei einem Stalwart-Host "
-                f"nicht greifen, wurde aber ausgeloest: {exc}"
-            )
+        assert isinstance(exc, OutputConfigError), (
+            "AC-4 (invertiert, #1235): der neue Lokal-Guard muss bei einem "
+            f"Stalwart-Host einen externen Empfänger blocken, bekam: "
+            f"{type(exc).__name__}: {exc}"
+        )
+        assert "allowlist" not in str(exc).lower(), (
+            "AC-4 (invertiert, #1235): der Block muss vom neuen "
+            "#1235-Lokal-Guard kommen, nicht vom #1219-Resend-Allowlist-"
+            f"Guard: {exc}"
+        )
 
 
 # ---------------------------------------------------------------------------

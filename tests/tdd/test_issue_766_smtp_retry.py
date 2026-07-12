@@ -13,7 +13,10 @@ from output.channels.base import OutputError
 from output.channels.email import EmailOutput
 
 
-def _make_settings(host="mail.test", port=587, user="u", pw="p", to="t@t.com"):
+def _make_settings(host="mail.test", port=587, user="u", pw="p", to="t@henemm.com"):
+    # Issue #1235: "to" muss lokal (@henemm.com) sein, sonst blockt der neue
+    # Nicht-Resend-Empfänger-Guard VOR dem gemockten SMTP-Retry-Verhalten,
+    # das dieser Testfall eigentlich prüft.
     s = MagicMock()
     s.can_send_email.return_value = True
     s.is_test_mode = False
@@ -24,6 +27,11 @@ def _make_settings(host="mail.test", port=587, user="u", pw="p", to="t@t.com"):
     s.mail_to = to
     s.mail_from = "from@t.com"
     s.get_inbound_address.return_value = None
+    # Issue #1235 (vorbestehender Fixture-Bug, HEAD-verifiziert): MagicMock()
+    # macht s.imap_host truthy -> EmailOutput wertet den IMAP-Fallback-Host
+    # als konfiguriert und haengt nach erschoepften Retries einen 5. Fallback-
+    # sendmail-Call an (call_count 5 statt 4). Explizit None = kein Fallback.
+    s.imap_host = None
     return s
 
 

@@ -115,8 +115,17 @@ def _write_allowlist_fixture(*addresses: str) -> None:
     for i, addr in enumerate(addresses):
         user_dir = data_root / "users" / f"fixture-{i}"
         user_dir.mkdir(parents=True, exist_ok=True)
+        # Nachtrag Issue #1235: seit der #1219-Verified-Scheibe nimmt
+        # _load_resend_allowlist() nur Profile MIT gesetztem
+        # email_verified_at auf -- ohne das Feld war diese Fixture wirkungslos
+        # und die "kein Guard-Block"-Negativfaelle strukturell unerfuellbar
+        # (vorbestehend rot, unabhaengig vom #1235-Stalwart-Guard).
         (user_dir / "user.json").write_text(
-            json.dumps({"mail_to": addr}), encoding="utf-8"
+            json.dumps({
+                "mail_to": addr,
+                "email_verified_at": "2026-07-10T12:00:00Z",
+            }),
+            encoding="utf-8",
         )
 
 
@@ -228,10 +237,14 @@ class TestAC4NonTestRecipientUnaffected:
         waere ein legitimer NEUER Guard-Grund, kein #1147-Parsing-Fehler.
         Das Fixture-Profil landet im autouse-isolierten `_DATA_ROOT` (Issue
         #1133/#1219 Adversary F002), nicht in einem eigenen `GZ_DATA_DIR`.
+
+        Nachtrag Issue #1235: Fixture-Domain von example.com (RFC-2606, seit
+        #1219 immer geblockt -> Negativfall unerfuellbar) auf nicht-
+        reservierte Domain umgestellt.
         """
-        _write_allowlist_fixture("someone@example.com")
+        _write_allowlist_fixture("someone@kunde-real.de")
         output = _make_output()
-        exc = _send_and_capture(output, to=["someone@example.com"])
+        exc = _send_and_capture(output, to=["someone@kunde-real.de"])
         if isinstance(exc, OutputConfigError):
             assert "1147" not in str(exc), (
                 f"AC-4: #1147-Guard darf bei reinem Nicht-Test-Empfaenger "
@@ -332,19 +345,25 @@ class TestF003SemicolonSeparatorBypass:
     def test_resend_send_two_real_recipients_semicolon_separated_no_1147(self):
         """F003d (AC-4-Negativfall): GIVEN Resend-EmailOutput / WHEN ein
         Semikolon-getrenntes Element ausschliesslich zwei echte,
-        nicht-Test-Adressen enthaelt ("real-a@example.com;
-        real-b@example.com") / THEN greift der #1147-Guard NICHT -- der
+        nicht-Test-Adressen enthaelt ("real-a@kunde-real.de;
+        real-b@kunde-real.de") / THEN greift der #1147-Guard NICHT -- der
         Trennzeichen-Fix darf keine False-Positives fuer normale Empfaenger
         erzeugen.
 
         Nachtrag Issue #1219: beide Adressen werden als Fixture-Nutzerprofile
         im autouse-isolierten `_DATA_ROOT` registriert (Issue #1133/#1219
         Adversary F002), damit die Allowlist-Pruefung selbst nicht greift
-        und nur die Parsing-/Trennzeichen-Logik geprueft wird."""
-        _write_allowlist_fixture("real-a@example.com", "real-b@example.com")
+        und nur die Parsing-/Trennzeichen-Logik geprueft wird.
+
+        Nachtrag Issue #1235: Fixture-Domain von example.com auf eine nicht-
+        reservierte Domain umgestellt -- example.com ist RFC-2606-reserviert
+        und wird vom Resend-Zweig seit #1219 IMMER geblockt; der Negativfall
+        war damit konzeptionell unerfuellbar (vorbestehend rot, unabhaengig
+        vom #1235-Stalwart-Guard)."""
+        _write_allowlist_fixture("real-a@kunde-real.de", "real-b@kunde-real.de")
         output = _make_output()
         exc = _send_and_capture(
-            output, to=["real-a@example.com; real-b@example.com"]
+            output, to=["real-a@kunde-real.de; real-b@kunde-real.de"]
         )
         if isinstance(exc, OutputConfigError):
             assert "1147" not in str(exc), (
@@ -396,17 +415,21 @@ class TestF004QuotedDisplayNameBypass:
     def test_quoted_display_name_with_semicolon_real_address_no_1147(self):
         """F004c (False-Positive-Schutz): GIVEN Resend-EmailOutput / WHEN
         send() einen gequoteten Anzeigenamen mit Semikolon erhaelt, dessen
-        Adresse KEIN Test-Postfach ist ('"Foo; Bar" <real@example.com>') /
+        Adresse KEIN Test-Postfach ist ('"Foo; Bar" <real@kunde-real.de>') /
         THEN greift der #1147-Guard NICHT.
 
-        Nachtrag Issue #1219: "real@example.com" wird als Fixture-
+        Nachtrag Issue #1219: "real@kunde-real.de" wird als Fixture-
         Nutzerprofil im autouse-isolierten `_DATA_ROOT` registriert (Issue
         #1133/#1219 Adversary F002), damit die Allowlist-Pruefung selbst
-        nicht greift und nur die Quote-/Trennzeichen-Logik geprueft wird."""
-        _write_allowlist_fixture("real@example.com")
+        nicht greift und nur die Quote-/Trennzeichen-Logik geprueft wird.
+
+        Nachtrag Issue #1235: Fixture-Domain von example.com (RFC-2606, seit
+        #1219 immer geblockt -> Negativfall unerfuellbar, vorbestehend rot)
+        auf nicht-reservierte Domain umgestellt."""
+        _write_allowlist_fixture("real@kunde-real.de")
         output = _make_output()
         exc = _send_and_capture(
-            output, to=['"Foo; Bar" <real@example.com>']
+            output, to=['"Foo; Bar" <real@kunde-real.de>']
         )
         if isinstance(exc, OutputConfigError):
             assert "1147" not in str(exc), (
@@ -486,18 +509,22 @@ class TestF005ControlCharBypass:
     def test_control_char_real_recipient_plus_tag_no_1147(self):
         """F005e (AC-4-Negativfall 1): GIVEN Resend-EmailOutput / WHEN send()
         einen echten Empfaenger mit Plus-Tag ohne Steuerzeichen erhaelt
-        ('real+tag@example.com') / THEN greift der #1147-Guard NICHT.
+        ('real+tag@kunde-real.de') / THEN greift der #1147-Guard NICHT.
 
-        Nachtrag Issue #1219: die BASIS-Adresse "real@example.com" (ohne
+        Nachtrag Issue #1219: die BASIS-Adresse "real@kunde-real.de" (ohne
         Plus-Tag -- Allowlist-Eintraege werden nicht plus-gekappt, der
         Empfaenger-Query aber schon, siehe _normalize_addr_for_guard) wird
         als Fixture-Nutzerprofil im autouse-isolierten `_DATA_ROOT`
         registriert (Issue #1133/#1219 Adversary F002), damit die
         Allowlist-Pruefung selbst nicht greift und nur die
-        Plus-Tag-Normalisierung geprueft wird."""
-        _write_allowlist_fixture("real@example.com")
+        Plus-Tag-Normalisierung geprueft wird.
+
+        Nachtrag Issue #1235: Fixture-Domain von example.com (RFC-2606, seit
+        #1219 immer geblockt -> Negativfall unerfuellbar, vorbestehend rot)
+        auf nicht-reservierte Domain umgestellt."""
+        _write_allowlist_fixture("real@kunde-real.de")
         output = _make_output()
-        exc = _send_and_capture(output, to=["real+tag@example.com"])
+        exc = _send_and_capture(output, to=["real+tag@kunde-real.de"])
         if isinstance(exc, OutputConfigError):
             assert "1147" not in str(exc), (
                 f"F005e: #1147-Guard darf bei echtem Plus-Tag-Empfaenger "

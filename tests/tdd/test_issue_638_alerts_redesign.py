@@ -165,7 +165,10 @@ def _settings(smtp_port: int) -> Settings:
         smtp_port=smtp_port,
         smtp_user="sink-user",
         smtp_pass="sink-pass",
-        mail_to="sink@example.com",
+        # Issue #1235: Empfaenger muss lokal (@henemm.com) sein, sonst blockt
+        # der neue Nicht-Resend-Empfaenger-Guard VOR dem Sink-Zustellversuch,
+        # den dieser Test eigentlich prueft (example.com ist RFC-2606-reserviert).
+        mail_to="sink@henemm.com",
         mail_from="alerts@example.com",
         telegram_bot_token="test-token",
         telegram_chat_id="test-chat",

@@ -32,6 +32,13 @@ logger = logging.getLogger(__name__)
 # erhalten.
 TEST_MAILBOXES = frozenset({"gregor-test@henemm.com", "gregor-staging@henemm.com"})
 
+# Issue #1235: Domains, die Stalwart LOKAL zustellt (kein Relay an Resend).
+# henemm.com ist die einzige von Stalwart bediente Domain -- Empfaenger
+# dieser Domain (inkl. gregor-test@/gregor-staging@ und Plus-Adressen)
+# sind auf dem Nicht-Resend-Pfad ausdruecklich erlaubt, weil die Zustellung
+# lokal bleibt und nicht extern relayt wird (vgl. infra#114).
+LOCAL_MAIL_DOMAINS = frozenset({"henemm.com"})
+
 # Fix-Loop 4 (F005): rohes, PARSER-UNABHÄNGIGES Fangnetz. Statt jeden
 # Zerlege-/Normalisierungs-Trick einzeln zu stopfen (Semikolon→F003,
 # gequoteter Name→F004, Steuerzeichen→F005), scannt dieser Layer den
@@ -157,6 +164,16 @@ def _is_reserved_test_domain(addr: str) -> bool:
     if domain in _RESERVED_TEST_DOMAINS or domain in _RESERVED_BARE_TLDS:
         return True
     return domain.endswith(_RESERVED_TEST_TLDS)
+
+
+def _is_local_mail_domain(addr: str) -> bool:
+    """Issue #1235: True, wenn die Domain von `addr` (nach Normalisierung:
+    Trailing-Dot gestrippt, lowercase) exakt in LOCAL_MAIL_DOMAINS liegt.
+    Exakter Vergleich, kein Suffix-/Substring-Match (Bypass-Haertung
+    analog _is_reserved_test_domain)."""
+    domain = _extract_addr(addr).strip().lower().rpartition("@")[2]
+    domain = domain.rstrip(".")
+    return domain in LOCAL_MAIL_DOMAINS
 
 
 def _load_resend_allowlist(data_dir: str = "data") -> frozenset[str]:
@@ -451,6 +468,45 @@ class EmailOutput:
                     "#1147/#1219). Nur mail_to/email echter, angelegter "
                     f"(Nicht-Test-)Nutzerprofile dürfen über Resend erreicht "
                     f"werden. Betroffene Domains: {masked}",
+                )
+        else:
+            # Issue #1235: Nicht-Resend-Pfad (praktisch immer Stalwart, s.
+            # #1122-Default-Deny) hatte bisher KEINEN Empfänger-Guard --
+            # Stalwart relayt extern an Resend (infra#114), wodurch externe
+            # Fake-Empfänger aus Alt-Presets/Tests durchgeleakt wurden.
+            # Strenger als der Resend-Pfad (kein Allowlist-Bypass): nur
+            # lokale @henemm.com-Empfänger (inkl. gregor-test@/
+            # gregor-staging@ und Plus-Adressen) sind erlaubt, reservierte
+            # Test-Domains blocken immer. Bewusst OHNE
+            # _raw_contains_test_mailbox() -- der wuerde gerade die hier
+            # gewollte lokale Zustellung an gregor-test@/gregor-staging@
+            # blockieren.
+            blocked = []
+            for r in recipients:
+                candidates = [
+                    a for a in _normalized_addrs_for_guard(r) if "@" in a
+                ]
+                if (
+                    not candidates
+                    or any(_is_reserved_test_domain(a) for a in candidates)
+                    or any(not _is_local_mail_domain(a) for a in candidates)
+                ):
+                    blocked.append(r)
+            if blocked:
+                masked = [_mask_addr_for_log(r) for r in blocked]
+                logger.warning(
+                    "Lokal-Guard blockiert %d Empfaenger ausserhalb von "
+                    "LOCAL_MAIL_DOMAINS bzw. mit reservierter Test-Domain "
+                    "(Issue #1235) bei Host %r: %s",
+                    len(blocked), self._host, masked,
+                )
+                raise OutputConfigError(
+                    "email",
+                    f"{len(blocked)} Empfänger nicht lokal zustellbar "
+                    f"bei Host {self._host!r} — Versand blockiert (Issue "
+                    "#1235). Auf dem Nicht-Resend-Pfad sind ausschließlich "
+                    f"lokale @henemm.com-Empfänger erlaubt. Betroffene "
+                    f"Domains: {masked}",
                 )
 
         msg = build_mime_message(
