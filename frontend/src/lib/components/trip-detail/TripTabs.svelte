@@ -1,10 +1,14 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Segmented } from '$lib/components/atoms';
 	import HubOverview from './HubOverview.svelte';
 	import BriefingScheduleTab from './BriefingScheduleTab.svelte';
 	import WeatherMetricsTab from './WeatherMetricsTab.svelte';
 	import AlertsTab from '$lib/components/alerts-tab/AlertsTab.svelte';
+	// Issue #1231, Slice 3: CorridorEditor ersetzt AlertsTab auf Desktop.
+	// Mobile bleibt uebergangsweise bei AlertsTab (CorridorEditorMobile = Slice 5).
+	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
 	import BriefingsTab from '$lib/components/briefings-tab/BriefingsTab.svelte';
 	import {
 		EmailIframe,
@@ -105,6 +109,17 @@
 		activeTab = resolve(initialTab);
 	});
 
+	// Issue #1231, Slice 3: Desktop/Mobile-Weiche fuer den Wertebereiche-Tab,
+	// analog TripNewEditor.svelte (899px-Breakpoint, Issue #932).
+	let isMobileViewport = $state(false);
+	onMount(() => {
+		const mq = window.matchMedia('(max-width: 899px)');
+		isMobileViewport = mq.matches;
+		const onChange = (e: MediaQueryListEvent) => { isMobileViewport = e.matches; };
+		mq.addEventListener('change', onChange);
+		return () => mq.removeEventListener('change', onChange);
+	});
+
 	async function handleValueChange(value: string): Promise<void> {
 		// Issue #953: Ausstehenden Alerts-Auto-Save vor dem Tab-Wechsel flushen,
 		// statt einen irreführenden „Änderungen gehen verloren"-Dialog zu zeigen
@@ -177,7 +192,11 @@
 				{:else if tab.value === 'weather' && trip}
 					<WeatherMetricsTab {trip} {onTripUpdate} {saveController} />
 				{:else if tab.value === 'alerts' && trip}
-					<AlertsTab {trip} {onTripUpdate} {saveController} />
+					{#if isMobileViewport}
+						<AlertsTab {trip} {onTripUpdate} {saveController} />
+					{:else}
+						<CorridorEditor {trip} {onTripUpdate} {saveController} />
+					{/if}
 				{:else if tab.value === 'briefings' && trip}
 					<BriefingScheduleTab {trip} {onTripUpdate} {saveController} onJump={handleValueChange} />
 				{:else if tab.value === 'preview' && trip}

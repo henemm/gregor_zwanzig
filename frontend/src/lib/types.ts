@@ -103,6 +103,18 @@ export interface AlertRule {
 	channels?: string[];
 }
 
+// Issue #1231 — Korridor: vereinheitlichte Wertebereich-Struktur, die Trip-
+// Alert-Schwellwerte (notify) und Compare-Idealbereiche (mark) auf einer
+// Datenstruktur zusammenfuehrt. `metric` ist bewusst string (kontextabhaengiger
+// Namensraum: route -> AlertMetric-Werte, vergleich -> Compare-Summary-Keys).
+export interface Corridor {
+	metric: string;
+	range: [number | null, number | null];
+	notify: boolean;
+	mark: boolean;
+	prio?: 'hoch' | 'mittel' | 'niedrig';
+}
+
 // Issue #207 — Strukturiertes Typing fuer drei Trip-Konfigurationsfelder.
 // Spec: docs/specs/modules/issue_207_strukturiertes_typing.md
 // Nur Felder, die im Code aktuell gelesen/geschrieben werden — keine Toten-Felder.
@@ -273,6 +285,7 @@ export interface Trip {
 	display_config?: DisplayConfig;
 	report_config?: ReportConfig;
 	alert_rules?: AlertRule[];
+	corridors?: Corridor[]; // Issue #1231 — additiv neben alert_rules
 	alert_cooldown_minutes?: number;
 	alert_quiet_from?: string;
 	alert_quiet_to?: string;

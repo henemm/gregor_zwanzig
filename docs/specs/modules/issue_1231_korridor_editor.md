@@ -386,7 +386,7 @@ hier die Strategie-Zusammenfassung:
 - **AC-17:** Given den Compare-Editor / When `TAB_DEFS` gerendert wird / Then
   heißt der `idealwerte`-Tab „Wertebereiche"; `data-testid="compare-editor-tab-idealwerte"`
   bleibt unverändert.
-  - Test: DOM-Test analog AC-16 für den Compare-Editor.
+  - Test: DOM-Test für den Compare-Editor, analog zu AC-16.
 
 - **AC-18:** Given die 7 identifizierten Playwright-E2E-Specs mit alten
   Tab-Label-Referenzen / When sie nach dem Rename laufen / Then sind alle 7
