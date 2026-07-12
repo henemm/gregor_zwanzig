@@ -20,6 +20,7 @@ import {
 	valueAtPointer,
 	clampDragValue,
 	clampBoundInput,
+	saveGateDecision,
 } from './corridorEditorState.ts';
 
 // --- AC-3: confidence_pct darf im route-Metrikpool nie auftauchen ---
@@ -239,5 +240,27 @@ describe('clampDragValue — min darf max nicht kreuzen und umgekehrt', () => {
 	test('Gegenseite offen (null) -> kein Clamping', () => {
 		assert.equal(clampDragValue('min', 999, null, null), 999);
 		assert.equal(clampDragValue('max', -999, null, null), -999);
+	});
+});
+
+// F005 (Staging-Adversary, HIGH, AC-12-Rest): bei Invaliditaet darf der
+// Save-Indikator nicht das "Gespeichert ✓" des letzten erfolgreichen Saves
+// stehen lassen — widerspruechliches Feedback neben dem Fehlerbanner.
+// saveGateDecision() ist die reine Entscheidung, welche Aktion die duenne
+// DOM-Verdrahtung auf dem BESTEHENDEN saveController ausloest
+// (schedule() vs. setDirty() — Store selbst bleibt unveraendert).
+describe('saveGateDecision — F005', () => {
+	test('gueltige Zeilen -> "schedule"', () => {
+		const { rows } = buildRoutePool([
+			{ metric: 'wind_gust', range: [null, 55], notify: true, mark: false },
+		]);
+		assert.equal(saveGateDecision(rows), 'schedule');
+	});
+
+	test('beidseitig offene Zeile (AC-12) -> "dirty" statt Save', () => {
+		const { rows } = buildRoutePool([
+			{ metric: 'wind_gust', range: [null, null], notify: true, mark: false },
+		]);
+		assert.equal(saveGateDecision(rows), 'dirty');
 	});
 });

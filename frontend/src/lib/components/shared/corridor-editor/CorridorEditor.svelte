@@ -14,7 +14,7 @@
 	import {
 		buildRoutePool, addRow, removeRow, patchRow, validateCorridorRows,
 		buildCorridorSavePayload, ROUTE_CTX_DEFAULTS, valueAtPointer, clampDragValue, clampBoundInput,
-		type CorridorRowState,
+		saveGateDecision, type CorridorRowState,
 	} from './corridorEditorState.ts';
 
 	interface Props {
@@ -51,11 +51,16 @@
 		};
 	}
 
-	// F001-Fix (Adversary HIGH): bei AC-12-Verletzung gar nicht schedulen —
-	// saveController.doSave() ruft nach jedem Save unbedingt setSaved() auf,
-	// ein No-op-Save haette faelschlich "Gespeichert ✓" gezeigt.
+	// F001/F005-Fix (Adversary HIGH): bei AC-12-Verletzung gar nicht schedulen
+	// (saveController.doSave() wuerde sonst faelschlich "Gespeichert ✓" zeigen)
+	// UND den Indikator aktiv auf "dirty" ("Nicht gespeichert") setzen, sonst
+	// bleibt das "Gespeichert ✓" des letzten erfolgreichen Saves stehen —
+	// widerspruechlich neben dem Fehlerbanner. setDirty() ist eine bestehende
+	// oeffentliche Methode von SaveStatus (saveStatusStore.svelte.ts), der
+	// Store selbst wird nicht angefasst.
 	function maybeSchedule() {
-		if (validateCorridorRows(rows).valid) saveController?.schedule(buildSaveFn());
+		if (saveGateDecision(rows) === 'schedule') saveController?.schedule(buildSaveFn());
+		else saveController?.setDirty();
 	}
 
 	function patch(metric: string, p: Partial<Pick<CorridorRowState, 'min' | 'max' | 'notify' | 'mark'>>) {

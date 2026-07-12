@@ -192,3 +192,15 @@ export function clampBoundInput(
 	if (value == null) return null;
 	return clampDragValue(side, value, row.min, row.max);
 }
+
+/**
+ * F005 (Staging-Adversary, HIGH, AC-12-Rest): reine Entscheidung, welche
+ * Aktion die duenne DOM-Verdrahtung auf dem BESTEHENDEN saveController
+ * ausloesen muss — "schedule" bei gueltigem Zustand, "dirty" bei AC-12-
+ * Verletzung (verhindert, dass der Save-Indikator faelschlich "Gespeichert ✓"
+ * vom letzten erfolgreichen Save zeigt, waehrend gleichzeitig der
+ * Fehlerbanner sichtbar ist).
+ */
+export function saveGateDecision(rows: CorridorRowState[]): 'schedule' | 'dirty' {
+	return validateCorridorRows(rows).valid ? 'schedule' : 'dirty';
+}
