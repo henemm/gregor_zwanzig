@@ -122,3 +122,57 @@ describe('buildComparePresetSavePayload — End-Datum-Lösch-Sentinel (AC-3)', (
 		assert.equal(body.end_date, '2026-08-01', 'Round-Trip: kein Sentinel ohne explizite edits.endDate');
 	});
 });
+
+// ─── Staging-F001 (AC-5): Horizont/Top-N/Stundenverlauf-Toggle NEBEN den 5
+// Slot-Feldern — CompareEditor.svelte muss forecastHours/topN/hourlyEnabled
+// zusätzlich zu morningEnabled/morningTime/eveningEnabled/eveningTime/endDate
+// in denselben handleSave()-Aufruf reichen. Dieser Test treibt den
+// Payload-Builder direkt (kein Browser) und beweist, dass alle 8 Felder
+// gemeinsam übernommen werden UND sich nicht gegenseitig überschreiben. ───────
+describe('buildComparePresetSavePayload — Horizont/Top-N/Stundenverlauf NEBEN Slot-Feldern (Staging-F001, AC-5)', () => {
+	test('forecastHours/topN/hourlyEnabled werden gemeinsam mit den 5 Slot-Feldern übernommen, Rest round-trippt', () => {
+		const original = makePreset({
+			forecast_hours: 48,
+			display_config: { region: 'Salzburger Land', top_n: 3 },
+			hourly_enabled: true
+		});
+		const { body } = buildComparePresetSavePayload(original, {
+			...baseEdits,
+			morningTime: '08:15',
+			endDate: '2026-11-01',
+			forecastHours: 24,
+			topN: 7,
+			hourlyEnabled: false
+		});
+
+		// Neu gesetzte Content-Felder (Layout-Tab / CompareInhaltSection)
+		assert.equal(body.forecast_hours, 24);
+		assert.equal((body.display_config as Record<string, unknown>).top_n, 7);
+		assert.equal(body.hourly_enabled, false);
+
+		// Gleichzeitig geänderte Slot-Felder (Versand-Tab) bleiben unabhängig korrekt
+		assert.equal(body.morning_time, '08:15:00');
+		assert.equal(body.end_date, '2026-11-01');
+		// Unberührte Slot-Felder round-trippen unverändert
+		assert.equal(body.morning_enabled, true);
+		assert.equal(body.evening_enabled, false);
+		assert.equal(body.evening_time, '18:00:00');
+	});
+
+	test('ohne edits.forecastHours/topN/hourlyEnabled bleiben die Original-Werte erhalten (Round-Trip)', () => {
+		const original = makePreset({
+			forecast_hours: 72,
+			display_config: { region: 'Salzburger Land', top_n: 5 },
+			hourly_enabled: false
+		});
+		const { body } = buildComparePresetSavePayload(original, { ...baseEdits });
+
+		assert.equal(body.forecast_hours, 72, 'forecast_hours round-trippt ohne edits.forecastHours');
+		assert.equal(
+			(body.display_config as Record<string, unknown>).top_n,
+			5,
+			'display_config.top_n round-trippt ohne edits.topN'
+		);
+		assert.equal(body.hourly_enabled, false, 'hourly_enabled round-trippt ohne edits.hourlyEnabled');
+	});
+});

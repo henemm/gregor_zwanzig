@@ -263,4 +263,57 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 			'true'
 		);
 	});
+
+	// ── Staging-F001 (AC-5): Horizont/Top-N/Stundenverlauf persistieren ──────
+	// Bug: CompareEditor.svelte trackte forecastHours/topN/hourlyEnabled weder
+	// im Dirty-Snapshot noch im handleSave()-Aufruf — UI änderte sich, der
+	// PUT-Body enthielt aber weiterhin die alten Werte (Round-Trip-Spread aus
+	// original statt aus wiz.*). Layout-Tab (CompareInhaltSection) ist analog
+	// zu CompareInhaltSection ebenfalls Doppel-Mount (Desktop+Mobile) — `:visible`.
+	test('Staging-F001: Horizont/Top-N/Stundenverlauf-Toggle persistieren über den zentralen Speichern-Button', async ({
+		page
+	}) => {
+		const { id } = await createPreset(page); // Default: forecast_hours=48 (Go-Fallback), topN=3, hourly_enabled=true
+		await page.goto(`/compare/${id}/edit`);
+		await page.waitForLoadState('networkidle');
+		await page.locator('[data-testid="compare-editor-tab-layout"]:visible').first().click();
+
+		const horizon = page.locator('[data-testid="compare-step5-forecast-hours"]:visible').first();
+		const topN = page.locator('[data-testid="compare-step5-topn"]:visible').first();
+		const hourlyToggle = page
+			.locator('[data-testid="compare-step5-hourly-enabled-toggle"]:visible')
+			.first()
+			.locator('input[type="checkbox"]');
+
+		await expect(horizon).toBeVisible({ timeout: 10_000 });
+		await expect(hourlyToggle).toBeChecked();
+
+		await horizon.selectOption('24');
+		await topN.fill('7');
+		await hourlyToggle.uncheck();
+
+		await page.locator('[data-testid="compare-editor-save"]').click();
+		await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', {
+			timeout: 10_000
+		});
+
+		const res = await page.request.get(`/api/compare/presets/${id}`);
+		expect(res.ok()).toBeTruthy();
+		const preset = await res.json();
+		expect(preset.forecast_hours, 'Horizont muss auf 24 persistieren').toBe(24);
+		expect(
+			(preset.display_config ?? {}).top_n,
+			'Top-N muss auf 7 persistieren'
+		).toBe(7);
+		expect(preset.hourly_enabled, 'Stundenverlauf-Toggle muss auf false persistieren').toBe(false);
+
+		// Testdaten sauber: Ausgangswerte wiederherstellen und speichern.
+		await horizon.selectOption('48');
+		await topN.fill('3');
+		await hourlyToggle.check();
+		await page.locator('[data-testid="compare-editor-save"]').click();
+		await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', {
+			timeout: 10_000
+		});
+	});
 });
