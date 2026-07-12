@@ -6,6 +6,8 @@
 	// Signal: backdrop=#0b0b0d, bubble=#26252b, accent=#2c6bed
 	// Telegram: backdrop=#17212b, bubble=#1e2c3a, accent=#5ea9dd
 
+	import { CHANNEL_COL_BUDGET } from '$lib/components/trip-detail/metricsEditor';
+
 	interface Col {
 		key: string;
 		label: string;
@@ -40,11 +42,12 @@
 
 	let { channel = 'telegram', profile, data, subscriptionName, class: className = '' }: Props = $props();
 
-	// Kanal-Constraints: Telegram max 8 (minus 2 für Rang+Ort). Signal entfernt (#610).
-	const MAXCOLS: Record<string, number> = { telegram: 8 };
+	// Kanal-Constraints: Telegram-Budget minus 2 (Rang+Ort). Signal entfernt (#610).
+	// Issue #1232 Scheibe 3a: einzige Kappungs-Quelle CHANNEL_COL_BUDGET (metricsEditor.ts).
+	const MAXCOLS: Record<string, number> = { telegram: CHANNEL_COL_BUDGET.telegram };
 
 	function compareShownCols(prof: Profile, ch: string): Col[] {
-		const max = MAXCOLS[ch] ?? 8;
+		const max = MAXCOLS[ch] ?? CHANNEL_COL_BUDGET.telegram;
 		const metrics = prof.cols.filter((c) => c.key !== 'score');
 		const ordered = [...metrics.filter((c) => c.primary), ...metrics.filter((c) => !c.primary)];
 		return ordered.slice(0, Math.max(1, max - 2));
@@ -56,7 +59,7 @@
 	const backdrop = '#17212b';
 	const bubbleBg = '#1e2c3a';
 	const accent = '#5ea9dd';
-	const maxLabel = 'Telegram · max 8 Spalten';
+	const maxLabel = `Telegram · max ${CHANNEL_COL_BUDGET.telegram} Spalten`;
 
 	function fmt(col: Col, row: Row): string {
 		return String(row[col.key] ?? '—');

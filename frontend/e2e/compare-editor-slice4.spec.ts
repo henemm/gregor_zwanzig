@@ -11,6 +11,13 @@
 //   AC-4: FAIL — compare-editor-activate fehlt (kein Header-Button im Create-Modus)
 //   AC-5: FAIL — channel_layouts pro Kanal nicht im Save-Payload verifizierbar ohne Layout-Rework
 //
+// Issue #1232 Scheibe 3a: AC-1/AC-3 auf die neutrale Spalten-Vorschau
+// (LTComparePreview) angepasst — Orte als Spaltenköpfe statt Zeilen, kein
+// Rang-Badge/Empfehlungs-Banner, Text "Kein Ranking". createPreset() legt
+// standardmäßig 2 echte Orte an (statt location_ids: []), damit die
+// SMS-/Tabellen-Vorschau nicht in den Empty-State fällt (KL-3/Empty-State
+// greift erst bei 0 gewählten Orten).
+//
 // Ausführen:
 //   cd frontend && E2E_USER=admin E2E_PASS=test1234 \
 //     npx playwright test e2e/compare-editor-slice4.spec.ts --config playwright.config.ts
@@ -23,16 +30,27 @@ async function createPreset(
 	page: Page,
 	overrides: Record<string, unknown> = {}
 ): Promise<{ id: string }> {
+	let locationIds = overrides.location_ids as string[] | undefined;
+	if (locationIds === undefined) {
+		const resA = await page.request.post('/api/locations', {
+			data: { name: 'Slice4-Ort-A ' + Date.now(), lat: 47.2, lon: 12.3 }
+		});
+		const resB = await page.request.post('/api/locations', {
+			data: { name: 'Slice4-Ort-B ' + Date.now(), lat: 47.3, lon: 12.4 }
+		});
+		expect(resA.ok() && resB.ok(), 'Location-Anlage fehlgeschlagen').toBeTruthy();
+		locationIds = [(await resA.json()).id, (await resB.json()).id];
+	}
 	const res = await page.request.post('/api/compare/presets', {
 		data: {
 			name: 'Slice4 E2E ' + Date.now(),
-			location_ids: [],
 			schedule: 'daily',
 			profil: 'wintersport',
 			hour_from: 7,
 			hour_to: 16,
 			empfaenger: ['slice4-test@example.com'],
-			...overrides
+			...overrides,
+			location_ids: locationIds
 		}
 	});
 	expect(res.ok(), 'Preset-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();
@@ -66,6 +84,14 @@ test.describe('Issue #681: Compare-Editor Slice 4 — Layout + Versand Fidelity'
 		const emailBtn = page.locator('[data-testid="channel-tab-email"]');
 		await emailBtn.click();
 		await expect(emailBtn).toContainText('∞');
+
+		// Issue #1232 Scheibe 3a (C1): Vorschau ist neutral — kein Rang, kein
+		// Empfehlungs-Banner, dafür der Hinweis "Kein Ranking".
+		await expect(preview.locator('.rank-badge')).toHaveCount(0);
+		await expect(preview.locator('.recommendation-banner')).toHaveCount(0);
+		const previewText = (await preview.textContent()) ?? '';
+		expect(previewText).not.toContain('Empfehlung');
+		expect(previewText).toContain('Kein Ranking');
 
 		// Telegram-Kanal: Badge muss "8" zeigen
 		const telegramBtn = page.locator('[data-testid="channel-tab-telegram"]');

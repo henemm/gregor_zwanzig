@@ -1,10 +1,13 @@
-// TDD — Issue #1097: Layout-Tab EMAIL zeigt 99 Spalten-Chips statt Orts-Anzahl.
+// TDD — Issue #1097 (angepasst #1232 Scheibe 3a): Layout-Tab EMAIL zeigt
+// Orts-Anzahl statt Budget-Zahl.
 //
 // Reine Verhaltenstests auf `channelChipCount` (KEIN Mock, KEINE
-// Dateiinhalt-Prüfung). CHANNEL_COLS.email=99 ist ein Kanal-BUDGET
-// ("quasi unbegrenzt"), wurde vor dem Fix aber unverändert als `cols`-Prop an
-// CompareLayoutRow durchgereicht → 99 Chips statt der tatsächlichen
-// Orts-Anzahl. Der Fix deckelt das Budget auf preset.location_ids.length.
+// Dateiinhalt-Prüfung). CHANNEL_COL_BUDGET.email ist seit #1232 Scheibe 3a
+// als `Infinity` modelliert (statt des Literal-Werts `99` — Kappungs-
+// Konsolidierung auf die einzige Quelle CHANNEL_COL_BUDGET in
+// metricsEditor.ts). Verhalten identisch: channelChipCount(Infinity, N) === N
+// === channelChipCount(99, N) für jede praktisch vorkommende Orts-Anzahl
+// N < 99. Der Fix (#1097) deckelt das Budget auf preset.location_ids.length.
 //
 // Ausführung:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test \
@@ -15,9 +18,9 @@ import assert from 'node:assert/strict';
 
 import { channelChipCount } from './channelChipCount.ts';
 
-describe('channelChipCount — Bug-Reproduktion #1097', () => {
-	test('EMAIL-Budget 99 bei 8 Orten → 8 Chips (nicht 99)', () => {
-		assert.equal(channelChipCount(99, 8), 8);
+describe('channelChipCount — Bug-Reproduktion #1097 (EMAIL-Budget = Infinity seit #1232)', () => {
+	test('EMAIL-Budget Infinity bei 8 Orten → 8 Chips (nicht "unendlich viele")', () => {
+		assert.equal(channelChipCount(Infinity, 8), 8);
 	});
 
 	test('TELEGRAM-Budget 8 bei 8 Orten → 8 Chips (Zufallstreffer im Bug, bleibt korrekt)', () => {
@@ -26,8 +29,8 @@ describe('channelChipCount — Bug-Reproduktion #1097', () => {
 });
 
 describe('channelChipCount — Budget-Deckelung bei weniger Orten (N=3)', () => {
-	test('EMAIL-Budget 99 bei 3 Orten → 3 Chips', () => {
-		assert.equal(channelChipCount(99, 3), 3);
+	test('EMAIL-Budget Infinity bei 3 Orten → 3 Chips', () => {
+		assert.equal(channelChipCount(Infinity, 3), 3);
 	});
 
 	test('TELEGRAM-Budget 8 bei 3 Orten → 3 Chips (vor dem Fix fälschlich 8)', () => {

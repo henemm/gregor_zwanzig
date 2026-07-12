@@ -13,6 +13,7 @@
 	import { onMount } from 'svelte';
 	import { Eyebrow, Card } from '$lib/components/atoms';
 	import { Checkbox } from '$lib/components/ui/checkbox';
+	import { CHANNEL_COL_BUDGET } from '$lib/components/trip-detail/metricsEditor';
 
 	interface Channels {
 		email: boolean;
@@ -69,15 +70,15 @@
 			});
 	});
 
+	// Issue #1232 Scheibe 3a: einzige Kappungs-Quelle CHANNEL_COL_BUDGET (metricsEditor.ts).
 	const CTX_LEAD: Record<string, string> = {
-		route:
-			'Das Trip-Briefing ist eine Etappen-Tabelle — E-Mail trägt alle Spalten, Telegram die ersten 8, SMS läuft flach.',
-		vergleich:
-			'Der Orts-Vergleich ist eine breite Tabelle — realistisch läuft er per E-Mail. Telegram trägt nur ≤ 8 Spalten, SMS wird flach.'
+		route: `Das Trip-Briefing ist eine Etappen-Tabelle — E-Mail trägt alle Spalten, Telegram die ersten ${CHANNEL_COL_BUDGET.telegram}, SMS läuft flach.`,
+		vergleich: `Der Orts-Vergleich ist eine breite Tabelle — realistisch läuft er per E-Mail. Telegram trägt nur ≤ ${CHANNEL_COL_BUDGET.telegram} Spalten, SMS wird flach.`
 	};
+	// Issue #1232 Scheibe 3a: einzige Kappungs-Quelle CHANNEL_COL_BUDGET (metricsEditor.ts).
 	const SUB = {
 		email: 'Layout · volle Tabelle',
-		telegram: 'Layout · 8 Spalten',
+		telegram: `Layout · ${CHANNEL_COL_BUDGET.telegram} Spalten`,
 		sms: 'Layout · flach, ≤ 140 Z.'
 	} as const;
 </script>

@@ -16,6 +16,7 @@
 	import CompareLayoutRow from '$lib/components/molecules/CompareLayoutRow.svelte';
 	import DetailRow from '$lib/components/molecules/DetailRow.svelte';
 	import { channelChipCount } from './channelChipCount.js';
+	import { CHANNEL_COL_BUDGET } from '$lib/components/trip-detail/metricsEditor';
 	import {
 		deriveStatusFromPreset,
 		presetScheduleLabel,
@@ -99,11 +100,11 @@
 			| undefined
 	);
 
-	const CHANNEL_COLS: Record<string, number> = {
-		email: 99,
-		telegram: 8,
-		sms: 0
-	};
+	// Issue #1232 Scheibe 3a: einzige Kappungs-Quelle CHANNEL_COL_BUDGET
+	// (metricsEditor.ts) statt eigenem Literal (bisher email:99 statt Infinity —
+	// Ergebnis identisch, da Math.min(Infinity, N) === N === Math.min(99, N)
+	// für jede praktisch vorkommende Orts-Anzahl N < 99).
+	const CHANNEL_COLS: Record<string, number> = CHANNEL_COL_BUDGET;
 	const channels = ['email', 'telegram', 'sms'];
 
 	// ── Vorschau-Tab (Issue #514, #582) ─────────────────────────────────────────

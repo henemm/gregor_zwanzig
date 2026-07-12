@@ -16,7 +16,9 @@
 	import { api } from '$lib/api';
 	import { Eyebrow } from '$lib/components/atoms';
 	import { OutputLayoutEditor } from '$lib/components/organisms';
-	import LayoutPreview from '../LayoutPreview.svelte';
+	import LayoutTab from '$lib/components/shared/layout-tab/LayoutTab.svelte';
+	import LTComparePreview from '$lib/components/shared/layout-tab/LTComparePreview.svelte';
+	import { LT_CHANNELS, LT_CH_BY_ID, type ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
 	import {
 		autoAssign,
 		buildWeatherConfigMetrics,
@@ -36,7 +38,8 @@
 	import type { CompareWizardState } from '../compareWizardState.svelte';
 	import CompareInhaltSection from '../CompareInhaltSection.svelte';
 
-	type ChannelId = 'email' | 'telegram' | 'sms';
+	// Issue #1232 Scheibe 3a Fix-Runde (Adversary F004): ChannelId kommt aus
+	// ltChannels.ts (einzige Kappungs-Quelle) statt eines lokalen Duplikats.
 	interface Template {
 		id: string;
 		label: string;
@@ -45,12 +48,9 @@
 
 	const wizard = getContext<CompareWizardState>('compare-wizard-state');
 
-	// CE_CHANNELS: Kanaldefinitionen mit maxCols (Issue #681).
-	const CE_CHANNELS: { id: ChannelId; label: string; maxCols: number | typeof Infinity; hint: string }[] = [
-		{ id: 'email',    label: 'Email',    maxCols: Infinity, hint: 'alles · Empfehlung + Tabelle + Detail' },
-		{ id: 'telegram', label: 'Telegram', maxCols: 8,        hint: 'max 8 Spalten' },
-		{ id: 'sms',      label: 'SMS',      maxCols: 0,        hint: 'flach · ≤ 140 Zeichen' },
-	];
+	// Issue #1232 Scheibe 3a: CE_CHANNELS entfaellt — LT_CHANNELS aus
+	// shared/layout-tab/ltChannels.ts ist jetzt die einzige Kappungs-Quelle
+	// (abgeleitet aus CHANNEL_COL_BUDGET).
 
 	let catalog: MetricCatalog = $state({});
 	let templates: Template[] = $state([]);
@@ -153,7 +153,7 @@
 		const next: Record<ChannelId, Buckets> = { ...channelBuckets };
 		const nextFriendly: Record<ChannelId, Record<string, boolean>> = { ...channelFriendly };
 		const nextHorizons: Record<ChannelId, Record<string, Horizons>> = { ...channelHorizons };
-		for (const c of CE_CHANNELS) {
+		for (const c of LT_CHANNELS) {
 			next[c.id] = bucketsForChannel(c.id);
 			nextFriendly[c.id] = friendlyMapForChannel(c.id);
 			nextHorizons[c.id] = horizonsMapForChannel(c.id);
@@ -188,7 +188,7 @@
 	$effect(() => {
 		if (loading || Object.keys(catalog).length === 0) return;
 		const layouts: ChannelLayouts = {};
-		for (const c of CE_CHANNELS) {
+		for (const c of LT_CHANNELS) {
 			const metrics: WeatherConfigMetric[] = buildWeatherConfigMetrics(
 				channelBuckets[c.id],
 				channelFriendly[c.id],
@@ -212,20 +212,10 @@
 		return [...channelBuckets.sms.primary, ...channelBuckets.sms.secondary];
 	});
 
-	// Hinweis-Text unter der Spalten-Liste
-	const activeChHint = $derived.by(() => {
-		const ch = CE_CHANNELS.find(c => c.id === activeChannel);
-		if (!ch) return '';
-		if (ch.maxCols === Infinity) return 'Email zeigt alles · keine Begrenzung';
-		if (ch.maxCols === 0) return 'SMS hat keine Tabelle — nur Empfehlung + Fließtext';
-		return `Max ${ch.maxCols} Spalten für ${ch.label}`;
-	});
+	// Issue #1232 Scheibe 3a: activeChHint entfaellt — der Kappungs-Hinweis
+	// wird jetzt von LTCapNote (innerhalb von LayoutTab) gerendert.
 
 	// --- Benannte Handler (Safari/Factory-Pattern) ---------------------------
-
-	function handleSelectChannel(ch: ChannelId) {
-		activeChannel = ch;
-	}
 
 	function handleMove(id: string, target: 'primary' | 'secondary' | 'off') {
 		const b = channelBuckets[activeChannel];
@@ -298,82 +288,54 @@
 	{:else if loadError}
 		<p class="error" data-testid="step4-error">{loadError}</p>
 	{:else}
-		<div
-			class="channel-tabs"
-			role="tablist"
-			aria-label="Kanal-Auswahl"
-			data-testid="channel-tabs"
+		<!-- Issue #1232 Scheibe 3a: geteilter LayoutTab-Organism ersetzt die
+		     bisherigen eigenen Kanal-Tabs + LayoutPreview. -->
+		<LayoutTab
+			context="vergleich"
+			bind:channel={activeChannel}
+			colCount={wizard.pickedIds.length + 1}
+			subjectLabel={`${wizard.pickedIds.length} Orte`}
 		>
-			{#each CE_CHANNELS as ch (ch.id)}
-				<button
-					type="button"
-					role="tab"
-					aria-selected={activeChannel === ch.id}
-					aria-pressed={activeChannel === ch.id}
-					data-channel={ch.id}
-					data-testid={`channel-tab-${ch.id}`}
-					class="channel-tab"
-					class:active={activeChannel === ch.id}
-					onclick={() => handleSelectChannel(ch.id)}
-				>
-					<div class="ch-tab-inner">
-						<span class="ch-label">{ch.label}</span>
-						<span
-							class="ch-badge mono"
-							style:color={activeChannel === ch.id ? 'var(--g-accent-deep)' : 'var(--g-ink-4)'}
-							style:font-size="11px"
-							style:font-weight="600"
-						>{ch.maxCols === Infinity ? '∞' : ch.maxCols === 0 ? '—' : ch.maxCols}</span>
-					</div>
-					<span class="ch-hint mono">{ch.hint}</span>
-				</button>
-			{/each}
-		</div>
+			{#snippet editor({ channel })}
+				<div data-testid="layout-editor">
+					<OutputLayoutEditor
+						{catalog}
+						bind:buckets={channelBuckets[channel]}
+						bind:friendlyMap={channelFriendly[channel]}
+						bind:selectedTemplate={channelSelectedPreset[channel]}
+						{channel}
+						{templates}
+						{userPresets}
+						onReorder={handleReorder}
+						onMove={handleMove}
+						onMode={handleMode}
+						onSelectPreset={handleSelectPreset}
+						onDndReorder={handleDndReorder}
+					/>
 
-		<div class="editor-row">
-			<div class="editor-col" data-testid="layout-editor">
-				<OutputLayoutEditor
-					{catalog}
-					bind:buckets={channelBuckets[activeChannel]}
-					bind:friendlyMap={channelFriendly[activeChannel]}
-					bind:selectedTemplate={channelSelectedPreset[activeChannel]}
-					channel={activeChannel}
-					{templates}
-					{userPresets}
-					onReorder={handleReorder}
-					onMove={handleMove}
-					onMode={handleMode}
-					onSelectPreset={handleSelectPreset}
-					onDndReorder={handleDndReorder}
+					<!-- ↳ Detail-Pills für Telegram-Überlauf (AC-2) -->
+					{#if LT_CH_BY_ID[channel].max !== Infinity && LT_CH_BY_ID[channel].max !== 0 && activeAllCols.length > LT_CH_BY_ID[channel].max}
+						{@const _maxCols = LT_CH_BY_ID[channel].max}
+						<div class="detail-pills">
+							{#each activeAllCols as _id, _i}
+								{#if _i >= _maxCols}
+									<span data-testid="compare-step4-detail-pill-{_i}" class="mono detail-pill">
+										↳ Detail
+									</span>
+								{/if}
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{/snippet}
+			{#snippet preview({ channel })}
+				<LTComparePreview
+					{channel}
+					pickedIds={[...wizard.pickedIds]}
+					idealRanges={wizard.idealRanges}
 				/>
-
-				<!-- ↳ Detail-Pills für Telegram-Überlauf (AC-2) -->
-				{#if (CE_CHANNELS.find(c => c.id === activeChannel)?.maxCols ?? Infinity) !== Infinity && (CE_CHANNELS.find(c => c.id === activeChannel)?.maxCols ?? 0) !== 0 && activeAllCols.length > (CE_CHANNELS.find(c => c.id === activeChannel)?.maxCols ?? Infinity)}
-					{@const _maxCols = CE_CHANNELS.find(c => c.id === activeChannel)!.maxCols as number}
-					<div class="detail-pills">
-						{#each activeAllCols as _id, _i}
-							{#if _i >= _maxCols}
-								<span
-									data-testid="compare-step4-detail-pill-{_i}"
-									class="mono detail-pill"
-									style:font-size="9.5px"
-									style:color="var(--g-warn)"
-									style:font-weight="600"
-									style:letter-spacing="0.06em"
-									style:text-transform="uppercase"
-								>↳ Detail</span>
-							{/if}
-						{/each}
-					</div>
-				{/if}
-
-				<!-- Hinweis-Text unter der Spalten-Liste -->
-				<div class="mono ch-hint-text">{activeChHint}</div>
-			</div>
-			<aside class="preview-col" data-testid="layout-preview-col">
-				<LayoutPreview channel={activeChannel} pickedIds={[...wizard.pickedIds]} />
-			</aside>
-		</div>
+			{/snippet}
+		</LayoutTab>
 	{/if}
 
 	<!-- Issue #1232 Scheibe 2b: Rest-Felder aus dem bisherigen Step5Versand
@@ -406,55 +368,6 @@
 	.error {
 		color: var(--g-danger);
 	}
-	.channel-tabs {
-		display: flex;
-		gap: var(--g-s-2);
-		overflow-x: auto;
-		padding-bottom: var(--g-s-1);
-	}
-	.channel-tab {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		min-width: 160px;
-		padding: var(--g-s-3) var(--g-s-4);
-		border: 1px solid var(--g-ink-faint);
-		border-radius: var(--g-radius-md);
-		background: var(--g-paper);
-		cursor: pointer;
-		text-align: left;
-		font-family: inherit;
-		min-height: 44px;
-		transition:
-			border-color 0.15s,
-			background 0.15s;
-	}
-	.channel-tab:hover {
-		border-color: var(--g-ink-muted);
-	}
-	.channel-tab.active {
-		border-color: var(--g-accent);
-		background: color-mix(in srgb, var(--g-accent) 8%, transparent);
-	}
-	.ch-tab-inner {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		width: 100%;
-	}
-	.ch-label {
-		font-size: var(--g-text-base);
-		font-weight: 600;
-		color: var(--g-ink);
-	}
-	.ch-badge {
-		flex-shrink: 0;
-	}
-	.ch-hint {
-		font-size: 10.5px;
-		color: var(--g-ink-3);
-		margin-top: 2px;
-	}
 	.detail-pills {
 		display: flex;
 		flex-wrap: wrap;
@@ -462,41 +375,13 @@
 		margin-top: 6px;
 	}
 	.detail-pill {
-		background: rgba(192,138,26,0.08);
+		background: rgba(192, 138, 26, 0.08);
 		border-radius: 3px;
 		padding: 2px 6px;
-	}
-	.ch-hint-text {
-		margin-top: 8px;
-		font-size: 11px;
-		color: var(--g-ink-4);
-		letter-spacing: 0.04em;
-	}
-	.editor-row {
-		display: grid;
-		grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-		gap: var(--g-s-5);
-		align-items: start;
-	}
-	.editor-col,
-	.preview-col {
-		display: flex;
-		flex-direction: column;
-		gap: var(--g-s-4);
-		min-width: 0;
-	}
-	@media (max-width: 899px) {
-		.editor-row {
-			grid-template-columns: 1fr;
-		}
-		.preview-col {
-			order: -1;
-		}
-		.channel-tabs {
-			margin-left: calc(var(--g-s-4) * -1);
-			margin-right: calc(var(--g-s-4) * -1);
-			padding-left: var(--g-s-4);
-			padding-right: var(--g-s-4);
-		}
+		font-size: 9.5px;
+		color: var(--g-warn);
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
 	}
 </style>
