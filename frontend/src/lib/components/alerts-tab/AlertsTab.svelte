@@ -1,15 +1,19 @@
 <script lang="ts">
 	// Issue #864/#859 — AlertsTab: Per-Metrik-Stufen + Auto-Save.
 	// Spec: docs/specs/modules/feat_864_859_alert_presets.md
+	//
+	// Issue #1232 Scheibe 1: Zustell-Controls (ChannelToggle x2, Cooldown,
+	// Stille Stunden, Beispiel-Warnung) sind in den Versand-Tab (VersandTab.svelte,
+	// context="route") umgezogen. AlertsTab bleibt reine Empfindlichkeits-/
+	// Level-Konfiguration (Heading, Onboarding, Metrik-Level-Tabelle).
+	// ChannelToggle-Import bleibt hier NICHT bestehen — siehe VersandTab.svelte
+	// (Re-Import aus shared/ChannelToggle.svelte), Nachweis in
+	// shared/__tests__/legacy_wizard_removed.test.ts (Importer-Liste aktualisiert).
 
-	import AlertCooldownCard from './AlertCooldownCard.svelte';
-	import AlertQuietHoursCard from './AlertQuietHoursCard.svelte';
-	import AlertPreviewCard from './AlertPreviewCard.svelte';
 	import AlertMetricLevelTable from './AlertMetricLevelTable.svelte';
-	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
 	import { Eyebrow } from '$lib/components/atoms';
 	import { api } from '$lib/api';
-	import type { Trip, AlertRule, AlertMetric, SensLevel } from '$lib/types';
+	import type { Trip, AlertMetric, SensLevel } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { migrateAlertPreset, ALERTABLE_METRICS, activeAlertableMetrics } from './alertMetricTable.ts';
 
@@ -41,21 +45,14 @@
 				: ({} as Record<AlertMetric, SensLevel>),
 	);
 
-	let alertRules = $state<AlertRule[]>(trip.alert_rules ?? []);
-	let cooldownMinutes = $state<number | undefined>(trip.alert_cooldown_minutes ?? undefined);
-	let quietFrom = $state<string | undefined>(trip.alert_quiet_from ?? undefined);
-	let quietTo = $state<string | undefined>(trip.alert_quiet_to ?? undefined);
-	// Issue #1087: Trip-Toggle amtliche Warnungen, Default aktiv (Pointer-Muster analog #1040).
-	let officialAlertsEnabled = $state<boolean>(trip.official_alerts_enabled ?? true);
-	// Issue #1088: strukturell getrennter Toggle fuer den amtlichen Sofort-Alert-Trigger.
-	let officialAlertTriggersEnabled = $state<boolean>(
-		trip.official_alert_triggers_enabled ?? true,
-	);
-
 	// Nur aktiv gewählte alertable Metriken anzeigen (AC-1)
 	let displayMetrics = $derived(activeAlertableMetrics(trip.display_config?.metrics));
-	let allOff = $derived(displayMetrics.length > 0 && displayMetrics.every((m) => currentLevels[m] === 'off'));
 
+	// Issue #1232 Scheibe 1: Cooldown/Stille-Stunden/amtliche-Toggle werden NICHT
+	// mehr mitgeschrieben — diese Felder gehören jetzt VersandTab (Versand-Tab).
+	// Der Trip-PUT-Handler aktualisiert nur Felder, die im Payload gesetzt sind
+	// (internal/handler/trip.go: `if req.X != nil`), Weglassen erhält den
+	// zuletzt von VersandTab gespeicherten Wert unangetastet.
 	function buildSaveFn() {
 		const levels = { ...currentLevels };
 		return async () => {
@@ -66,9 +63,6 @@
 					...trip.display_config,
 					metric_alert_levels: levels,
 				},
-				alert_cooldown_minutes: cooldownMinutes ?? null,
-				alert_quiet_from: quietFrom || null,
-				alert_quiet_to: quietTo || null,
 			});
 			onTripUpdate?.(updated);
 		};
@@ -84,46 +78,6 @@
 		currentLevels = migrateAlertPreset('standard', displayMetrics as AlertMetric[]);
 		isOnboarding = false;
 		saveController?.schedule(buildSaveFn());
-	}
-
-	// Issue #1087: Trip-Toggle amtliche Warnungen — eigener Auto-Save-Pfad
-	// (analog buildSaveFn), damit der Toggle unabhaengig von der Alert-Tabelle
-	// gespeichert wird.
-	function buildOfficialAlertsSaveFn() {
-		const enabled = officialAlertsEnabled;
-		return async () => {
-			const updated = await api.put<Trip>(`/api/trips/${trip.id}`, {
-				official_alerts_enabled: enabled,
-			});
-			onTripUpdate?.(updated);
-		};
-	}
-
-	// Factory-Pattern (Safari-Kompatibilitaet, CLAUDE.md) statt Inline-Closure.
-	function makeOfficialAlertsToggleHandler() {
-		return (checked: boolean) => {
-			officialAlertsEnabled = checked;
-			saveController?.schedule(buildOfficialAlertsSaveFn());
-		};
-	}
-
-	// Issue #1088: eigener, strukturell getrennter Auto-Save-Pfad — unabhaengig
-	// von officialAlertsEnabled (Briefing-Anzeige, Slice 3) speicherbar.
-	function buildOfficialAlertTriggersSaveFn() {
-		const enabled = officialAlertTriggersEnabled;
-		return async () => {
-			const updated = await api.put<Trip>(`/api/trips/${trip.id}`, {
-				official_alert_triggers_enabled: enabled,
-			});
-			onTripUpdate?.(updated);
-		};
-	}
-
-	function makeOfficialAlertTriggersToggleHandler() {
-		return (checked: boolean) => {
-			officialAlertTriggersEnabled = checked;
-			saveController?.schedule(buildOfficialAlertTriggersSaveFn());
-		};
 	}
 </script>
 
@@ -149,27 +103,6 @@
 			{onLevelChange}
 		/>
 	{/if}
-
-	<div class="extra-cards" class:subdued={allOff}>
-		<AlertCooldownCard bind:cooldown_minutes={cooldownMinutes} />
-		<AlertQuietHoursCard bind:quiet_from={quietFrom} bind:quiet_to={quietTo} />
-	</div>
-
-	<ChannelToggle
-		label="Amtliche Warnungen"
-		checked={officialAlertsEnabled}
-		onchange={makeOfficialAlertsToggleHandler()}
-		testid="alerts-tab-official-alerts-toggle"
-	/>
-
-	<ChannelToggle
-		label="Amtliche Warnungen lösen Alert aus"
-		checked={officialAlertTriggersEnabled}
-		onchange={makeOfficialAlertTriggersToggleHandler()}
-		testid="alerts-tab-official-alert-triggers-toggle"
-	/>
-
-	<AlertPreviewCard {trip} {alertRules} />
 </div>
 
 <style>
@@ -229,26 +162,10 @@
 		cursor: pointer;
 	}
 
-	.extra-cards {
-		display: grid;
-		gap: 1rem;
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-		transition: opacity 0.2s;
-	}
-
-	.extra-cards.subdued {
-		opacity: 0.5;
-		pointer-events: none;
-	}
-
 	@media (max-width: 899px) {
 		.alerts-tab {
 			padding: 1rem;
 			max-width: 100%;
-		}
-
-		.extra-cards {
-			grid-template-columns: 1fr;
 		}
 	}
 </style>

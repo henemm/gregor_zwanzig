@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { api } from '$lib/api.js';
 	import { Btn } from '$lib/components/atoms';
-	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
+	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	import type { Trip, ReportConfig } from '$lib/types';
 	import type { ChannelConfig } from './briefingChannelGating.ts';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
@@ -11,8 +11,10 @@
 		onTripUpdate?: (updated: Trip) => void;
 		/** Issue #758: SaveStatus controller — wenn gesetzt, entfällt der Briefing-Zeitplan-Button. */
 		saveController?: SaveStatus;
+		/** Issue #1232: Tab-Wechsel (Versand-Tab → "Etappen öffnen →"). */
+		onJump?: (tab: string) => void;
 	}
-	let { trip, onTripUpdate, saveController }: Props = $props();
+	let { trip, onTripUpdate, saveController, onJump }: Props = $props();
 
 	let reportConfig = $state<ReportConfig>(
 		trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {}
@@ -99,14 +101,23 @@
 	}
 </script>
 
-<div class="briefing-schedule-tab" style="padding: 32px 40px 60px; max-width: 720px;">
-	<!-- Issue #736: weatherChannels NICHT übergeben (kein Gating mehr im Versand-Reiter).
-	     Alle 3 Kanäle sind immer sichtbar; Initialisierung über reportConfig.send_*. -->
-	<EditReportConfigSection bind:reportConfig mode="edit" showMailContent={false} onChannelChange={handleChannelChange} />
+<div class="briefing-schedule-tab">
+	<!-- Issue #1232 Scheibe 1: VersandTab (context="route") ersetzt EditReportConfigSection
+	     für Kanäle/Zeitplan/Laufzeit/Alert-Zustellung. Mail-Inhalt bleibt unangetastet im
+	     Inhalt-Tab (WeatherMetricsTab, Issue #736 AC-10-Korrektur). -->
+	<VersandTab
+		context="route"
+		{trip}
+		{onTripUpdate}
+		{saveController}
+		bind:reportConfig
+		onChannelChange={handleChannelChange}
+		{onJump}
+	/>
 
 	<!-- Issue #758: Expliziter Speichern-Button nur ohne saveController (Backward-Compat). -->
 	{#if !saveController}
-		<div style="margin-top: 24px; display: flex; align-items: center; gap: 12px;">
+		<div style="margin-top: 24px; padding: 0 40px; display: flex; align-items: center; gap: 12px;">
 			<Btn
 				variant="primary"
 				data-testid="briefings-save"

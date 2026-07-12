@@ -114,7 +114,18 @@
 		// erweitert — der neue „Amtliche Warnungen"-Schalter nutzt denselben
 		// debounce-Auto-Save; ohne Flush könnte ein sehr schneller Tab-Wechsel den
 		// frisch gemounteten Alerts-Tab kurzzeitig den alten Wert zeigen lassen.
-		if ((activeTab === 'alerts' || activeTab === 'weather') && value !== activeTab && saveController?.hasPending) {
+		// Issue #1232 Scheibe 1 (Adversary-Fund F001): 'briefings' ergänzt — die
+		// komplette Alert-Zustellung (official_alerts_enabled/-triggers, Cooldown,
+		// Stille Stunden) lebt jetzt im Versand-Tab (VersandTab.svelte). Ohne
+		// diesen Flush würde ein schneller Wechsel weg vom Versand-Tab den
+		// debounced Save verwerfen, und WeatherMetricsTab (Issue #1117, eigener
+		// Schalter für dasselbe Feld) könnte beim nächsten dortigen Save den
+		// veralteten Snapshot zurückschreiben (Regression).
+		if (
+			(activeTab === 'alerts' || activeTab === 'weather' || activeTab === 'briefings') &&
+			value !== activeTab &&
+			saveController?.hasPending
+		) {
 			await saveController.flush();
 		}
 		activeTab = value;
@@ -168,7 +179,7 @@
 				{:else if tab.value === 'alerts' && trip}
 					<AlertsTab {trip} {onTripUpdate} {saveController} />
 				{:else if tab.value === 'briefings' && trip}
-					<BriefingScheduleTab {trip} {onTripUpdate} {saveController} />
+					<BriefingScheduleTab {trip} {onTripUpdate} {saveController} onJump={handleValueChange} />
 				{:else if tab.value === 'preview' && trip}
 					<div class="preview-shell">
 						{#if demoMode}

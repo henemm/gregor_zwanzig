@@ -84,7 +84,8 @@ Trip-Briefing-Mails verfügbar:
   `SegmentWeatherData.official_alerts`.
 - **Trip-Toggle:** `official_alerts_enabled` (Default `true`, Pointer-Muster analog
   `ComparePreset.OfficialAlertsEnabled` aus #1040) — Checkbox „Amtliche Warnungen" im
-  Trip-Alerts-Tab (`AlertsTab.svelte`) und im Tab „Inhalt" (`WeatherMetricsTab.svelte`, Issue #1117); bei `false` findet strukturell kein Fetch statt.
+  Versand-Tab (`VersandTab.svelte`, seit Issue #1232 Scheibe 1; zuvor `AlertsTab.svelte`) und im
+  Tab „Inhalt" (`WeatherMetricsTab.svelte`, Issue #1117); bei `false` findet strukturell kein Fetch statt.
 - **Format-Parität:** `full` (HTML + Plain) und `compact` zeigen die Warnungen; `sms_trip.py`
   bewusst ohne Warn-Block (160-Zeichen-Limit).
 - Spec: `docs/specs/modules/epic_1073_trip_official_alerts.md`.
@@ -101,7 +102,7 @@ Wetter-Delta-Alert-Regeln konfiguriert sind:
   `level`-Vergleich) — neu oder gestiegen = Trigger, fail-soft pro Quelle.
 - **Eigener Toggle:** `Trip.official_alert_triggers_enabled` — strukturell getrennt von der
   Slice-3-Briefing-Anzeige-Checkbox `official_alerts_enabled`. Zwei unabhängige Checkboxen im
-  Alerts-Tab (`AlertsTab.svelte`).
+  Versand-Tab (`VersandTab.svelte`, seit Issue #1232 Scheibe 1; zuvor `AlertsTab.svelte`).
 - **Bündelung:** Feuert im selben Zyklus zusätzlich ein Wetter-Delta-Alert, wird die amtliche
   Warnung in derselben Nachricht angehängt (kein Doppel-Versand); ohne Wetter-Delta erfolgt ein
   eigenständiger Versand über `NotificationService.send_official_alert()`.
@@ -152,3 +153,4 @@ MeteoGate/MeteoAlarm-Account registrieren (für Slice 2) — analog zum Météo-
 | 2026-07-08 | Slice 4 (#1088) implementiert: amtliche Warnungen als eigenständiger Alert-Trigger, additiv zur Wetter-Delta-Logik, eigener Toggle `official_alert_triggers_enabled`, Bündelung bei gleichzeitigem Wetter-Delta-Alert; radar_alert-Anbindung bewusst zurückgestellt. |
 | 2026-07-08 | Slice 5 (#1089) AT-Teil implementiert: Issue #1161 (GeoSphere-INCA-Nowcast für Gewitter/Hagel in Österreich). |
 | 2026-07-09 | Slice 5 (#1089) IT-Teil implementiert: Issue #1162 (Radar-DPC für Italien inkl. Korsika, PO-Entscheidung Korsika-Umstellung von AROME-FR). |
+| 2026-07-12 | Dokumentation aktualisiert (Issue #1232 Scheibe 1): die beiden Checkboxen „Amtliche Warnungen" und „Amtliche Warnungen lösen Alert aus" sind aus dem Alerts-Tab in den neuen Versand-Tab (`VersandTab.svelte`, context="route") umgezogen — Speicherpfad/Feldnamen unverändert. |

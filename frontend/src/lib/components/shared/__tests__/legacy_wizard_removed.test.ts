@@ -37,10 +37,14 @@ test('AC-1: ChannelToggle.svelte + wizardHelpers.ts (+Test) liegen in shared/', 
 	);
 });
 
+// Issue #1232 Scheibe 1: ChannelToggle-Nutzung (Amtliche-Warnungen-Toggles) ist
+// von alerts-tab/AlertsTab.svelte in shared/VersandTab.svelte umgezogen —
+// AlertsTab bleibt reine Metrik-Level-Konfiguration. Importer-Liste angepasst,
+// Kernaussage (3 Verbraucher importieren aus shared/) bleibt bestehen.
 test('AC-1: alle 3 Importer nutzen den neuen shared/-Pfad, kein trip-wizard-Import mehr', () => {
 	const importers = [
 		join(COMPONENTS, 'compare', 'steps', 'Step5Versand.svelte'),
-		join(COMPONENTS, 'alerts-tab', 'AlertsTab.svelte'),
+		join(COMPONENTS, 'shared', 'VersandTab.svelte'),
 		join(COMPONENTS, 'compare', 'CompareAlarmSection.svelte'),
 	];
 	for (const p of importers) {

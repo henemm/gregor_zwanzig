@@ -47,7 +47,11 @@ Wiederverwendet (kein Neubau, testids unverändert): `ChannelToggle`,
 
 **AC-9:** Given der mobile Viewport (bestehender Mobile-Zugang des Trip-Editors) / When ich den Briefings-Tab nutze / Then sind alle vier Sektionen einspaltig bedienbar (dense-Layout analog `soll-29b-mobile.png`), ohne horizontales Scrollen.
 
-**AC-10:** Given der Briefings-Tab ist offen / When ich unterhalb der Versand-Sektionen scrolle / Then ist die bisherige Mail-Inhalt-Sektion (`report-mail-content`: E-Mail-Format full/compact + Inhalts-Module) unverändert vorhanden und funktionsfähig.
+**AC-10:** Given der Trip-Editor ist geöffnet / When ich den Tab „Inhalt" öffne / Then ist die bisherige Mail-Inhalt-Sektion (`report-mail-content`: E-Mail-Format full/compact + Inhalts-Module) an ihrem bestehenden Ort unverändert vorhanden und funktionsfähig — diese Scheibe fasst sie nicht an.
+
+## Changelog (Fakten-Korrekturen nach Freigabe)
+
+- **2026-07-11 · AC-10 Ortsangabe korrigiert (TDD-RED-Befund):** Die Mail-Inhalt-Sektion liegt seit Issue #736 im Tab „Inhalt" (`WeatherMetricsTab`, `showMailContent={true}`), NICHT im Briefings-Tab (`BriefingScheduleTab` mountet mit `showMailContent={false}`). Die freigegebene Fassung setzte fälschlich „Briefings-Tab" voraus. Intention laut Kontext-Doku unverändert: Sektion bleibt unangetastet, kein Umzug (ggf. Scheibe 3/LayoutTab). Analog gilt die Dateiliste-Zeile „Mail-Inhalt-Sektion bleibt darunter" als „bleibt wo sie ist (Inhalt-Tab)". Verhaltensumfang der Scheibe ändert sich dadurch nicht.
 
 ## Known Limitations (Teil der Freigabe)
 

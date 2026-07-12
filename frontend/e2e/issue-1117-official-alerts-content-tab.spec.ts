@@ -4,17 +4,20 @@
 // Workflow: fix-1117-official-alerts-content-tab
 //
 // Ziel-Oberfläche: Trip-Detail-Seite /trips/[id]?tab=weather, Tab „Inhalt"
-// (WeatherMetricsTab.svelte, neue Checkbox neben der "E-Mail-Inhalt"-Card) sowie
-// /trips/[id]?tab=alerts (AlertsTab.svelte, bestehender Schalter als Referenz für
-// AC-2/AC-4). Beide UI-Einstiegspunkte schreiben/lesen dasselbe Feld
-// `trip.official_alerts_enabled`.
+// (WeatherMetricsTab.svelte, Checkbox neben der "E-Mail-Inhalt"-Card) sowie
+// der Tab „Versand" (value=briefings). Beide UI-Einstiegspunkte
+// schreiben/lesen dasselbe Feld `trip.official_alerts_enabled`.
 //
-// Aktuell (RED): `report-show-official-alerts` existiert NICHT im DOM des
-// Inhalt-Tabs — der Schalter ist ausschließlich im Alerts-Tab vorhanden
-// (`alerts-tab-official-alerts-toggle`). AC-1/AC-2/AC-3 müssen daher fehlschlagen.
-// AC-4 ist ein Regressions-Test für den bereits bestehenden Alerts-Tab-Schalter und
-// ist bewusst schon vor der Implementierung GRÜN (kein Widerspruch zu TDD — er
-// bewacht, dass die Erweiterung den bestehenden Pfad nicht beschädigt).
+// Issue #1232 Scheibe 1 (Nachzügler-Fix): der „Amtliche Warnungen"-Schalter
+// (`alerts-tab-official-alerts-toggle`) ist aus dem Alerts-Tab in den neuen
+// Versand-Tab (VersandTab.svelte, context="route") umgezogen — testid
+// unverändert, nur der Tab darüber hat sich geändert (AC-6/AC-7 der Spec
+// versand_tab_route.md). AC-2/AC-3/AC-4 zielen deshalb jetzt auf den
+// Tab-Trigger „Versand" statt „Alerts"; die Kern-Aussage (Cross-Tab-
+// Konsistenz mit dem Inhalt-Tab-Toggle `report-show-official-alerts`) bleibt
+// unverändert erhalten. `:visible` an den Tab-Trigger-/Toggle-Selektoren,
+// weil Segmented-Tab-Trigger im Mobile+Desktop-Layout doppelt im DOM stehen
+// können.
 
 import { test, expect } from '@playwright/test';
 import type { APIRequestContext, Page } from '@playwright/test';
@@ -62,9 +65,13 @@ async function openInhalt(page: Page, id: string): Promise<void> {
 	await page.locator('[data-testid="report-mail-content"]').waitFor({ state: 'visible' });
 }
 
-async function openAlerts(page: Page, id: string): Promise<void> {
-	await page.goto(`/trips/${id}?tab=alerts`);
-	await page.locator('[data-testid="alerts-tab"]').waitFor({ state: 'visible' });
+// Issue #1232 Scheibe 1: echter Klick-Pfad auf den Tab-Trigger „Versand"
+// (statt direktem goto `?tab=alerts` auf den alten Standort). `:visible`
+// wegen möglicher Doppel-Renderings des Segmented-Tab-Triggers.
+async function openVersand(page: Page, id: string): Promise<void> {
+	await page.goto(`/trips/${id}`);
+	await page.locator('[data-testid="trip-detail-tab-briefings"]:visible').first().click();
+	await page.locator('[data-testid="alerts-tab-official-alerts-toggle"]:visible').first().waitFor({ state: 'visible' });
 }
 
 // Exakter Pfad-Match (nicht `.includes()`) — sonst matcht auch die
@@ -108,11 +115,11 @@ test.describe('Issue #1117: Amtliche Warnungen im Inhalt-Tab', () => {
 		}
 	});
 
-	test('AC-2: Zustand synchron zwischen Inhalt-Tab und Alerts-Tab (beide Richtungen)', async ({ page, request }) => {
+	test('AC-2: Zustand synchron zwischen Inhalt-Tab und Versand-Tab (beide Richtungen)', async ({ page, request }) => {
 		const id = tripId('ac2');
 		await createTrip(request, id, true);
 		try {
-			// Richtung A: Inhalt -> Alerts
+			// Richtung A: Inhalt -> Versand
 			await openInhalt(page, id);
 			const inhaltToggle = page.locator('[data-testid="report-show-official-alerts"] input[type="checkbox"]');
 			await expect(inhaltToggle).toBeChecked();
@@ -121,17 +128,16 @@ test.describe('Issue #1117: Amtliche Warnungen im Inhalt-Tab', () => {
 			await inhaltToggle.click();
 			await putA;
 
-			await page.getByRole('tab', { name: 'Alerts' }).click();
-			await page.locator('[data-testid="alerts-tab"]').waitFor({ state: 'visible' });
-			const alertsToggle = page.locator('[data-testid="alerts-tab-official-alerts-toggle"] input[type="checkbox"]');
-			await expect(alertsToggle).not.toBeChecked();
+			await page.locator('[data-testid="trip-detail-tab-briefings"]:visible').first().click();
+			const versandToggle = page.locator('[data-testid="alerts-tab-official-alerts-toggle"]:visible input[type="checkbox"]');
+			await expect(versandToggle).not.toBeChecked();
 
-			// Richtung B: Alerts -> Inhalt
+			// Richtung B: Versand -> Inhalt
 			const putB = page.waitForResponse((r) => isTripPut(r.url(), id) && r.request().method() === 'PUT');
-			await alertsToggle.click();
+			await versandToggle.click();
 			await putB;
 
-			await page.getByRole('tab', { name: 'Inhalt' }).click();
+			await page.locator('[data-testid="trip-detail-tab-weather"]:visible').first().click();
 			await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
 			await expect(
 				page.locator('[data-testid="report-show-official-alerts"] input[type="checkbox"]')
@@ -154,13 +160,13 @@ test.describe('Issue #1117: Amtliche Warnungen im Inhalt-Tab', () => {
 
 			// Bewusst KEIN Warten auf die PUT-Antwort — echter schneller Nutzer-Pfad,
 			// prüft den Flush-Guard in TripTabs.svelte::handleValueChange beim
-			// Verlassen des Inhalt-Tabs.
+			// Verlassen des Inhalt-Tabs (Issue #1232: Guard umfasst jetzt auch
+			// 'briefings', da der Ziel-Tab „Versand" den analogen Schalter trägt).
 			await inhaltToggle.click();
-			await page.getByRole('tab', { name: 'Alerts' }).click();
+			await page.locator('[data-testid="trip-detail-tab-briefings"]:visible').first().click();
 
-			await page.locator('[data-testid="alerts-tab"]').waitFor({ state: 'visible' });
-			const alertsToggle = page.locator('[data-testid="alerts-tab-official-alerts-toggle"] input[type="checkbox"]');
-			await expect(alertsToggle).not.toBeChecked();
+			const versandToggle = page.locator('[data-testid="alerts-tab-official-alerts-toggle"]:visible input[type="checkbox"]');
+			await expect(versandToggle).not.toBeChecked();
 
 			// Zusätzlicher Backend-Beweis: kein Datenverlust unabhängig vom Render-Timing.
 			const check = await request.get(`/api/trips/${id}`);
@@ -172,26 +178,26 @@ test.describe('Issue #1117: Amtliche Warnungen im Inhalt-Tab', () => {
 		}
 	});
 
-	test('AC-4 (Regression): bestehender Schalter im Alerts-Tab bleibt unverändert funktionsfähig', async ({
+	test('AC-4 (Regression): bestehender Schalter im Versand-Tab bleibt unverändert funktionsfähig', async ({
 		page,
 		request
 	}) => {
 		const id = tripId('ac4');
 		await createTrip(request, id, true);
 		try {
-			await openAlerts(page, id);
-			const alertsToggle = page.locator('[data-testid="alerts-tab-official-alerts-toggle"] input[type="checkbox"]');
-			await expect(alertsToggle).toBeVisible();
-			await expect(alertsToggle).toBeChecked();
+			await openVersand(page, id);
+			const versandToggle = page.locator('[data-testid="alerts-tab-official-alerts-toggle"]:visible input[type="checkbox"]');
+			await expect(versandToggle).toBeVisible();
+			await expect(versandToggle).toBeChecked();
 
 			const putDone = page.waitForResponse((r) => isTripPut(r.url(), id) && r.request().method() === 'PUT');
-			await alertsToggle.click();
+			await versandToggle.click();
 			await putDone;
 
 			await page.reload();
-			await page.locator('[data-testid="alerts-tab"]').waitFor({ state: 'visible' });
+			await page.locator('[data-testid="trip-detail-panel-briefings"]').waitFor({ state: 'visible' });
 			await expect(
-				page.locator('[data-testid="alerts-tab-official-alerts-toggle"] input[type="checkbox"]')
+				page.locator('[data-testid="alerts-tab-official-alerts-toggle"]:visible input[type="checkbox"]')
 			).not.toBeChecked();
 		} finally {
 			await deleteTrip(request, id);
