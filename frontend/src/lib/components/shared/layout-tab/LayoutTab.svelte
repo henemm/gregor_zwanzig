@@ -45,7 +45,10 @@
 		<div class="lt-eyebrow mono">Kanal · Vorschau &amp; Kappung</div>
 		<LTChannelPicker bind:channel {overflow} {dense} />
 		{@render editor({ channel })}
-		<LTCapNote {channel} {colCount} subject={subjectLabel} {dense} />
+		<!-- Fresh-Eyes-Fund #1232-3b: hasLabelColumn=true nur im vergleich-Kontext
+		     (Orte-als-Spalten-Vorschau zählt eine Label-Spalte mit); route zählt
+		     reine Metriken (siehe LTCapNote-Prop-Kommentar). -->
+		<LTCapNote {channel} {colCount} subject={subjectLabel} {dense} hasLabelColumn={context === 'vergleich'} />
 	</div>
 	<div class="lt-col lt-col-preview">
 		<div class="lt-eyebrow mono">So kommt es an · {LT_CH_BY_ID[channel].label}</div>

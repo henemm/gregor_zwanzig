@@ -543,10 +543,17 @@
 				</Card>
 			</div>
 
+			<!-- Fresh-Eyes-Fund #1232-3b: colCount zählt reine Metriken (ohne "+1"
+			     Label-Spalte, die aus dem vergleich-Kontext stammt und dort
+			     Orte-als-Spalten korrekt mitzählt) — die Trip-Kappung
+			     (WeatherV2Reihenfolge/WeatherV2MailPreview: tgBudget = Anzahl
+			     Metriken, Zeitspalte zählt nicht mit) erwartet dieselbe reine
+			     Metriken-Zählung, sonst weicht der Overflow-Chip von Cut-Line
+			     und Vorschau-Hinweis ab. -->
 			<LayoutTab
 				context="route"
 				bind:channel={activeChannel}
-				colCount={buckets.primary.length + 1}
+				colCount={buckets.primary.length}
 				subjectLabel="Metriken"
 			>
 				{#snippet editor({ channel })}

@@ -283,6 +283,10 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 		});
 
 		// ── AC-4: >8 aktive Metriken → Cut-Line + Overflow-Chip am Telegram-Button ──
+		// Fresh-Eyes-Fund #1232-3b: `colCount` im route-Kontext zählt reine
+		// Metriken (kein „+1" Label-Spalte wie im vergleich-Kontext) — Badge-
+		// Overflow-Zahl, Cut-Line-Position und Vorschau-Hinweis-Zahl MÜSSEN
+		// dieselbe Zahl zeigen (hier: 9 Metriken − 8 Budget = 1 Überlauf).
 		test('AC-4: >8 aktive Metriken zeigen Cut-Line im Kanal Telegram + Overflow-Chip am Picker', async ({
 			page
 		}) => {
@@ -293,7 +297,10 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 			if (await confirmOk.isVisible()) await confirmOk.click();
 
 			const rows = tab.locator('[data-testid="wm2-reihenfolge-row"]');
-			await expect(rows).toHaveCount(9);
+			const totalMetrics = await rows.count();
+			expect(totalMetrics).toBe(9);
+			const tgBudget = 8;
+			const expectedOverflow = totalMetrics - tgBudget; // 1
 
 			// Cut-Line erscheint NICHT im Kanal Email (kein Limit).
 			await tab.getByTestId('channel-tab-email').click();
@@ -305,10 +312,25 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 			const cutLine = tab.locator('[data-testid="wm2-cut-line"]');
 			await expect(cutLine).toBeVisible();
 			await expect(cutLine).toContainText('Telegram');
-			await expect(cutLine).toContainText('8');
+			await expect(cutLine).toContainText(String(tgBudget));
 
-			// Overflow-Chip am Telegram-Button: colCount = 9 Metriken + 1 = 10 > 8 → "−2".
-			await expect(telegramBtn).toContainText('−2');
+			// Overflow-Chip am Telegram-Button: 9 Metriken > 8 Budget → "−1"
+			// (NICHT "−2" — das wäre die vergleich-Konvention mit Label-Spalte).
+			await expect(telegramBtn).toContainText(`−${expectedOverflow}`);
+
+			// Zahlen-Konsistenz: Badge-Overflow == Vorschau-Hinweis-Zahl.
+			// Die Vorschau zeigt bei Kanal Telegram denselben Überlauf-Wert wie
+			// Cut-Line/Badge (kein zweiter, abweichender Zähler im UI).
+			const bubble = tab.getByTestId('wm2-mail-preview').getByTestId('wm2-telegram-bubble');
+			await expect(bubble).toBeVisible();
+			const overflowWord = expectedOverflow === 1 ? 'Metrik passt' : 'Metriken passen';
+			await expect(bubble).toContainText(`${expectedOverflow} ${overflowWord} nicht in die Tabelle`);
+
+			// LTCapNote spiegelt dieselbe Metriken-Zählung (kein "Label +"-Zusatz
+			// im route-Kontext, siehe LTCapNote.svelte hasLabelColumn-Prop).
+			const capNote = page.locator('[data-testid="lt-cap-note"]:visible').first();
+			await expect(capNote).toContainText(`${totalMetrics} Metriken`);
+			await expect(capNote).not.toContainText('Label +');
 		});
 	});
 });

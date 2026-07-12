@@ -12,8 +12,17 @@
 		colCount: number;
 		subject: string;
 		dense?: boolean;
+		/**
+		 * Fresh-Eyes-Fund #1232-3b: `colCount` zählt im vergleich-Kontext Orte
+		 * PLUS eine Label-Spalte (Orte-als-Spalten-Vorschau) — im route-Kontext
+		 * zählt `colCount` dagegen reine Metriken (die Trip-Kappung in
+		 * `WeatherV2Reihenfolge`/`WeatherV2MailPreview` zählt ausschließlich
+		 * Metriken, keine Label-Spalte). Default `true` erhält den bisherigen
+		 * vergleich-Wortlaut unverändert; route übergibt `false`.
+		 */
+		hasLabelColumn?: boolean;
 	}
-	let { channel, colCount, subject, dense = false }: Props = $props();
+	let { channel, colCount, subject, dense = false, hasLabelColumn = true }: Props = $props();
 
 	const ch = $derived(LT_CH_BY_ID[channel]);
 	const warn = $derived(ch.max !== Infinity && ch.max !== 0 && colCount > ch.max);
@@ -22,7 +31,8 @@
 		if (ch.max === 0) return 'SMS hat keine Tabelle — nur Fließtext, entscheidungskritische Werte';
 		const fits = colCount <= ch.max;
 		const fitText = fits ? `passt (max ${ch.max})` : `zu breit — max ${ch.max}, weiter vorne = sicherer`;
-		return `${ch.label}: ${colCount} Spalten (Label + ${subject}) · ${fitText}`;
+		const countLabel = hasLabelColumn ? `${colCount} Spalten (Label + ${subject})` : `${colCount} ${subject}`;
+		return `${ch.label}: ${countLabel} · ${fitText}`;
 	});
 </script>
 
