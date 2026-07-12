@@ -126,10 +126,15 @@ test('AC-2: Step4Layout.svelte ist noch vorhanden', () => {
 	);
 });
 
-test('AC-2: Step5Versand.svelte ist noch vorhanden', () => {
-	assert.ok(
+// Issue #1232 Scheibe 2b (2026-07-12): Step5Versand.svelte wurde durch den
+// geteilten VersandTab-Organism (context="vergleich") + CompareInhaltSection
+// ersetzt — die #683-Garantie "muss erhalten bleiben" gilt für diese Datei
+// nicht mehr fort. Test aktualisiert statt stillgelegt (Test-Politik CLAUDE.md).
+test('AC-2 (aktualisiert #1232 Scheibe 2b): Step5Versand.svelte wurde gelöscht', () => {
+	assert.strictEqual(
 		existsSync(STEP5_FILE),
-		`Step5Versand.svelte fehlt — darf nicht gelöscht werden: ${STEP5_FILE}`
+		false,
+		`Step5Versand.svelte muss gelöscht sein (ersetzt durch VersandTab/CompareInhaltSection), existiert aber noch: ${STEP5_FILE}`
 	);
 });
 

@@ -7,6 +7,7 @@
 import type { ActivityProfile, ChannelLayouts, ComparePreset } from '$lib/types';
 import type { IdealRange } from './compareMetricDefs';
 import { buildComparePresetSavePayload } from './compareEditorSave';
+import { toHHMMSS } from '$lib/utils/time';
 
 export type SaveStatus = 'idle' | 'saving' | 'ok' | 'error';
 
@@ -53,6 +54,14 @@ export class CompareWizardState {
 	alertQuietTo = $state<string | undefined>(undefined);
 	schedule = $state<'daily_morning' | 'daily_evening' | 'weekly'>('daily_morning');
 	weekday = $state(0);
+	// Issue #1232 Scheibe 2b — Zwei-Slot-Zeitplan + editierbare Laufzeit
+	// (VersandTab context="vergleich"). Defaults identisch zur Go-Create-Default-
+	// Tabelle (Scheibe 2a): morning an/07:00, evening aus/18:00, kein Enddatum.
+	morningEnabled = $state(true);
+	morningTime = $state('07:00');
+	eveningEnabled = $state(false);
+	eveningTime = $state('18:00');
+	endDate = $state<string | null>(null);
 	includeHourly = $state(false);
 	topN = $state(3);
 	saveStatus = $state<SaveStatus>('idle');
@@ -185,6 +194,14 @@ export class CompareWizardState {
 			official_alert_triggers_enabled: this.officialAlertTriggersEnabled,
 			send_telegram: this.sendTelegram,
 			send_sms: this.sendSms,
+			// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan (Neu-Preset-Defaults
+			// identisch zur Go-Create-Default-Tabelle aus Scheibe 2a). end_date
+			// wird nur gesendet, wenn gesetzt — kein Sentinel nötig beim Create.
+			morning_enabled: this.morningEnabled,
+			morning_time: toHHMMSS(this.morningTime),
+			evening_enabled: this.eveningEnabled,
+			evening_time: toHHMMSS(this.eveningTime),
+			...(this.endDate ? { end_date: this.endDate } : {}),
 			// Issue #1170: Alarm-Konfiguration — cooldown/quiet Top-Level (Trip-identisch).
 			...(this.alertCooldownMinutes !== undefined
 				? { alert_cooldown_minutes: this.alertCooldownMinutes }

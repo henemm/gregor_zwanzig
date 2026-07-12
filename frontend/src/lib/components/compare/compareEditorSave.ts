@@ -9,6 +9,7 @@
 
 import type { ComparePreset, ActivityProfile, ChannelLayouts } from '../../types.ts';
 import type { IdealRange } from './compareMetricDefs.ts';
+import { toHHMMSS } from '../../utils/time.ts';
 
 export interface CompareEditorEdits {
 	name: string;
@@ -45,6 +46,15 @@ export interface CompareEditorEdits {
 	// Angabe bleibt der Round-Trip-Spread aus `original` erhalten.
 	hourFrom?: number;
 	hourTo?: number;
+	// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + editierbare Laufzeit
+	// (VersandTab context="vergleich"). Optional → rückwärtskompatibel.
+	// endDate: undefined = unangetastet (Round-Trip), null = "bis auf Weiteres"
+	// (Lösch-Sentinel → sendet ""), string = "YYYY-MM-DD".
+	morningEnabled?: boolean;
+	morningTime?: string;
+	eveningEnabled?: boolean;
+	eveningTime?: string;
+	endDate?: string | null;
 }
 
 /**
@@ -133,7 +143,13 @@ export function buildComparePresetSavePayload(
 		// Issue #1134: Zeitfenster überschreibt den Spread-Wert aus original.
 		// undefined → Feld fehlt in edits → Spread-Wert bleibt erhalten (Round-Trip).
 		...(edits.hourFrom !== undefined ? { hour_from: edits.hourFrom } : {}),
-		...(edits.hourTo !== undefined ? { hour_to: edits.hourTo } : {})
+		...(edits.hourTo !== undefined ? { hour_to: edits.hourTo } : {}),
+		// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + End-Datum-Lösch-Sentinel.
+		...(edits.morningEnabled !== undefined ? { morning_enabled: edits.morningEnabled } : {}),
+		...(edits.morningTime !== undefined ? { morning_time: toHHMMSS(edits.morningTime) } : {}),
+		...(edits.eveningEnabled !== undefined ? { evening_enabled: edits.eveningEnabled } : {}),
+		...(edits.eveningTime !== undefined ? { evening_time: toHHMMSS(edits.eveningTime) } : {}),
+		...(edits.endDate !== undefined ? { end_date: edits.endDate === null ? '' : edits.endDate } : {})
 	};
 
 	return { url, body };

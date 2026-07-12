@@ -24,7 +24,7 @@
 	import Step2Orte from './steps/Step2Orte.svelte';
 	import Step3Idealwerte from './steps/Step3Idealwerte.svelte';
 	import Step4Layout from './steps/Step4Layout.svelte';
-	import Step5Versand from './steps/Step5Versand.svelte';
+	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	import CompareAlarmSection from './CompareAlarmSection.svelte';
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
@@ -93,7 +93,14 @@
 		// Issue #1216 Slice 2b: Trigger + Kanal-Toggles im Dirty-Tracking.
 		officialAlertTriggersEnabled: wiz.officialAlertTriggersEnabled,
 		sendTelegram: wiz.sendTelegram,
-		sendSms: wiz.sendSms
+		sendSms: wiz.sendSms,
+		// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + Laufzeit im Dirty-Tracking
+		// (VersandTab context="vergleich" bindet direkt an diese wiz-Felder).
+		morningEnabled: wiz.morningEnabled,
+		morningTime: wiz.morningTime,
+		eveningEnabled: wiz.eveningEnabled,
+		eveningTime: wiz.eveningTime,
+		endDate: wiz.endDate
 	});
 	const dirty = $derived(
 		isEdit &&
@@ -111,7 +118,12 @@
 				wiz.officialAlertsEnabled !== initial.officialAlertsEnabled ||
 				wiz.officialAlertTriggersEnabled !== initial.officialAlertTriggersEnabled ||
 				wiz.sendTelegram !== initial.sendTelegram ||
-				wiz.sendSms !== initial.sendSms)
+				wiz.sendSms !== initial.sendSms ||
+				wiz.morningEnabled !== initial.morningEnabled ||
+				wiz.morningTime !== initial.morningTime ||
+				wiz.eveningEnabled !== initial.eveningEnabled ||
+				wiz.eveningTime !== initial.eveningTime ||
+				wiz.endDate !== initial.endDate)
 	);
 
 	// Issue #758: sync dirty state → compareSaveCtl (nur wenn nicht schon saving/error).
@@ -189,6 +201,12 @@
 		const savedOfficialAlertTriggersEnabled = wiz.officialAlertTriggersEnabled;
 		const savedSendTelegram = wiz.sendTelegram;
 		const savedSendSms = wiz.sendSms;
+		// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + Laufzeit ebenfalls snapshotten.
+		const savedMorningEnabled = wiz.morningEnabled;
+		const savedMorningTime = wiz.morningTime;
+		const savedEveningEnabled = wiz.eveningEnabled;
+		const savedEveningTime = wiz.eveningTime;
+		const savedEndDate = wiz.endDate;
 		const { url, body } = buildComparePresetSavePayload(preset, {
 			name: wiz.name,
 			activityProfile: wiz.activityProfile,
@@ -212,7 +230,14 @@
 			// Issue #1216 Slice 2b: Trigger + Kanäle in den PUT-Body geben.
 			officialAlertTriggersEnabled: wiz.officialAlertTriggersEnabled,
 			sendTelegram: wiz.sendTelegram,
-			sendSms: wiz.sendSms
+			sendSms: wiz.sendSms,
+			// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + Laufzeit (endDate=null →
+			// Lösch-Sentinel end_date:"" via buildComparePresetSavePayload).
+			morningEnabled: wiz.morningEnabled,
+			morningTime: wiz.morningTime,
+			eveningEnabled: wiz.eveningEnabled,
+			eveningTime: wiz.eveningTime,
+			endDate: wiz.endDate
 		});
 		api.put(url, body)
 			.then(() => {
@@ -232,6 +257,11 @@
 				initial.officialAlertTriggersEnabled = savedOfficialAlertTriggersEnabled;
 				initial.sendTelegram = savedSendTelegram;
 				initial.sendSms = savedSendSms;
+				initial.morningEnabled = savedMorningEnabled;
+				initial.morningTime = savedMorningTime;
+				initial.eveningEnabled = savedEveningEnabled;
+				initial.eveningTime = savedEveningTime;
+				initial.endDate = savedEndDate;
 				compareSaveCtl.setSaved();
 			})
 			.catch((e: unknown) => {
@@ -298,6 +328,26 @@
 		}
 	}
 </script>
+
+<!-- Issue #1232 Scheibe 2b: Create-Aktivierungs-Banner als Snippet-Prop für
+     VersandTab (1:1 JSX-`activation`-Slot). Nur im Create-Modus sichtbar —
+     im Edit-Modus rendert VersandTab nichts, da activation dann nicht
+     übergeben wird (s. Mounts unten). Inhalt/Verhalten unverändert zu
+     Step5Versand.svelte (Issue #681 AC-5), nur der Mount-Ort wechselt. -->
+{#snippet versandActivationBanner()}
+	<div
+		data-testid="compare-step5-activation-banner"
+		data-ready={versandVisited ? 'true' : 'false'}
+		class="rounded-md p-4 text-white text-sm"
+		style:background={versandVisited ? 'var(--g-good)' : 'var(--g-ink)'}
+	>
+		<div class="mono" style:font-size="10px" style:letter-spacing="0.12em" style:text-transform="uppercase" style:color="rgba(255,255,255,0.55)" style:margin-bottom="4px">Bereit zum Aktivieren</div>
+		<div style:font-size="15px" style:font-weight="600">„{wiz.name || 'Neuer Vergleich'}" · {wiz.pickedIds?.length ?? 0} Orte</div>
+		<div style:font-size="12.5px" style:color="rgba(255,255,255,0.75)" style:margin-top="4px" style:line-height="1.5">
+			{#if versandVisited}Versand konfiguriert — klicke „Briefing aktivieren".{:else}Versand einrichten zum Aktivieren.{/if}
+		</div>
+	</div>
+{/snippet}
 
 <div
 	data-testid="compare-editor"
@@ -602,13 +652,18 @@
 	{:else if activeTab === 'layout'}
 		<Step4Layout />
 	{:else if activeTab === 'versand'}
-		<Step5Versand {versandVisited} />
+		{#if isEdit}
+			<VersandTab context="vergleich" {wiz} />
+		{:else}
+			<VersandTab context="vergleich" {wiz} activation={versandActivationBanner} />
+		{/if}
 	{:else if activeTab === 'alarme'}
 		<CompareAlarmSection {wiz} />
 	{/if}
 
 	<!-- DOM-Anker für AC-5 isAttached()-Test (display:none, kein sichtbarer Inhalt).
-	     Die sichtbare Banner-Version rendert Step5Versand. -->
+	     Die sichtbare Banner-Version rendert VersandTab (Issue #1232 Scheibe 2b,
+	     zuvor Step5Versand). -->
 	{#if !isEdit}
 		<div
 			data-testid="compare-step5-activation-banner"
@@ -758,7 +813,11 @@
 		{:else if activeTab === 'layout'}
 			<Step4Layout />
 		{:else if activeTab === 'versand'}
-			<Step5Versand {versandVisited} />
+			{#if isEdit}
+				<VersandTab context="vergleich" {wiz} />
+			{:else}
+				<VersandTab context="vergleich" {wiz} activation={versandActivationBanner} />
+			{/if}
 		{:else if activeTab === 'alarme'}
 			<CompareAlarmSection {wiz} />
 		{/if}

@@ -506,6 +506,14 @@ export interface ComparePreset {
 	official_alert_triggers_enabled?: boolean;
 	send_telegram?: boolean;
 	send_sms?: boolean;
+	// Issue #1232 Scheibe 2a/2b — Zwei-Slot-Zeitplan + editierbare Laufzeit
+	// (docs/specs/modules/compare_preset_zeitplan.md, versand_tab_vergleich.md).
+	// morning_time/evening_time im Format "HH:MM:SS", end_date "YYYY-MM-DD".
+	morning_enabled?: boolean;
+	morning_time?: string;
+	evening_enabled?: boolean;
+	evening_time?: string;
+	end_date?: string;
 }
 
 // Issue #1068 — Nutzerlevel (Slice 1 aus Epic #1067).

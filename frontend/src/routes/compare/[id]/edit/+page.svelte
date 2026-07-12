@@ -42,6 +42,14 @@
 	state.sendSms = data.preset.send_sms ?? false;
 	state.topN = (state.existingDisplayConfig.top_n as number) ?? 3; // Issue #1104
 
+	// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + editierbare Laufzeit.
+	// Defaults identisch zur Go-Load-Migration (Scheibe 2a).
+	state.morningEnabled = data.preset.morning_enabled ?? true;
+	state.morningTime = (data.preset.morning_time ?? '06:00').slice(0, 5);
+	state.eveningEnabled = data.preset.evening_enabled ?? false;
+	state.eveningTime = (data.preset.evening_time ?? '18:00').slice(0, 5);
+	state.endDate = data.preset.end_date ?? null;
+
 	// Issue #1170 — Alarm-Konfiguration (Epic #1095 Scheibe 3/3).
 	state.metricAlertLevels =
 		(state.existingDisplayConfig.metric_alert_levels as Record<string, string>) ?? {};

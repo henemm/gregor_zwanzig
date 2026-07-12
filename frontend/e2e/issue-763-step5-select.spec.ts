@@ -89,10 +89,10 @@ test.describe('Issue #763: Step5 Horizont-Select → Design-System Select', () =
 		await d.locator('[data-testid="compare-step2-library"]').getByText(nameA, { exact: true }).click();
 		await d.locator('[data-testid="compare-step2-library"]').getByText(nameB, { exact: true }).click();
 
-		// Idealwerte besuchen (schaltet Layout frei), Layout besuchen (schaltet Versand frei)
+		// Idealwerte besuchen (schaltet Layout frei) — Horizont-Feld liegt jetzt im
+		// Layout-Tab (CompareReportContentSection, Issue #1232 Scheibe 2b).
 		await d.locator('[data-testid="compare-editor-tab-idealwerte"]').click();
 		await d.locator('[data-testid="compare-editor-tab-layout"]').click();
-		await d.locator('[data-testid="compare-editor-tab-versand"]').click();
 
 		// Horizont-Feld liegt INNERHALB eines .gz-select-Wrappers (RED: nacktes <select>)
 		const wrapped = d.locator(`.gz-select [data-testid="${FORECAST_HOURS_TESTID}"]`);
@@ -120,7 +120,7 @@ test.describe('Issue #763: Step5 Horizont-Select → Design-System Select', () =
 		await page.waitForLoadState('networkidle');
 		const d = desktop(page);
 
-		await d.locator('[data-testid="compare-editor-tab-versand"]').click();
+		await d.locator('[data-testid="compare-editor-tab-layout"]').click();
 
 		const select = d.locator(`[data-testid="${FORECAST_HOURS_TESTID}"]`);
 		await expect(select).toBeVisible({ timeout: 8_000 });
@@ -145,9 +145,9 @@ test.describe('Issue #763: Step5 Horizont-Select → Design-System Select', () =
 		await page.waitForLoadState('networkidle');
 		const d = desktop(page);
 
-		await d.locator('[data-testid="compare-editor-tab-versand"]').click();
+		await d.locator('[data-testid="compare-editor-tab-layout"]').click();
 		await expect(
-			d.locator('[data-testid="compare-editor-tab-versand"]')
+			d.locator('[data-testid="compare-editor-tab-layout"]')
 		).toHaveAttribute('data-active', 'true');
 
 		// Feld liegt in einem .gz-select-Wrapper (RED: nacktes <select> → 0 Treffer)
@@ -168,7 +168,7 @@ test.describe('Issue #763: Step5 Horizont-Select → Design-System Select', () =
 		await page.waitForLoadState('networkidle');
 		const d = desktop(page);
 
-		await d.locator('[data-testid="compare-editor-tab-versand"]').click();
+		await d.locator('[data-testid="compare-editor-tab-layout"]').click();
 
 		const select = d.locator(`[data-testid="${FORECAST_HOURS_TESTID}"]`);
 		await expect(select).toBeVisible({ timeout: 8_000 });

@@ -362,6 +362,14 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if updated.EndDate == nil {
 			updated.EndDate = original.EndDate
 		}
+		// Issue #1232 Scheibe 2b: End-Datum-Loesch-Sentinel — ein explizit
+		// gesendeter Leerstring end_date:"" loescht ein gesetztes EndDate
+		// (statt es wie oben zu erhalten). Muss NACH dem Nil-Preserve-Block
+		// stehen, damit ein fehlendes Feld (nil) weiterhin den Original-Wert
+		// uebernimmt, waehrend ein bewusst gesendeter Leerstring loescht.
+		if updated.EndDate != nil && *updated.EndDate == "" {
+			updated.EndDate = nil
+		}
 
 		if err := validateComparePreset(updated); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation_error", "detail": err.Error()})

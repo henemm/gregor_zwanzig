@@ -1,13 +1,16 @@
 <script lang="ts">
 	// Issue #1170 — Compare-Editor: Tab „Alarme" (Epic #1095 Scheibe 3/3).
-	// Verdrahtet die bestehenden Trip-Alarm-Controls (AlertMetricLevelTable,
-	// AlertCooldownCard, AlertQuietHoursCard — unveraendert wiederverwendet)
-	// gegen wiz.*-State. Kein Kanal-Selektor: Compare-Alarme bleiben
-	// E-Mail-only (Festlegung Scheibe 2, #1169).
-	// Spec: docs/specs/modules/issue_1170_compare_alert_config.md
+	// Verdrahtet die bestehenden Trip-Alarm-Controls (AlertMetricLevelTable —
+	// unveraendert wiederverwendet) gegen wiz.*-State. Kein Kanal-Selektor:
+	// Compare-Alarme bleiben E-Mail-only (Festlegung Scheibe 2, #1169).
+	//
+	// Issue #1232 Scheibe 2b: AlertCooldownCard/AlertQuietHoursCard zogen aus
+	// diesem Tab in den geteilten VersandTab (Alert-Zustellung) um. Heading,
+	// Radar-/Official-Trigger-Toggle und die Metrik-Level-Tabelle bleiben hier
+	// (Korridor-Vorstufe #1231).
+	// Spec: docs/specs/modules/issue_1170_compare_alert_config.md,
+	//       docs/specs/modules/versand_tab_vergleich.md (Implementation Details Punkt 4)
 	import AlertMetricLevelTable from '$lib/components/alerts-tab/AlertMetricLevelTable.svelte';
-	import AlertCooldownCard from '$lib/components/alerts-tab/AlertCooldownCard.svelte';
-	import AlertQuietHoursCard from '$lib/components/alerts-tab/AlertQuietHoursCard.svelte';
 	import { ALERTABLE_METRICS } from '$lib/components/alerts-tab/alertMetricTable';
 	import { Eyebrow } from '$lib/components/atoms';
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
@@ -74,11 +77,6 @@
 			{onLevelChange}
 		/>
 	{/if}
-
-	<div class="extra-cards">
-		<AlertCooldownCard bind:cooldown_minutes={wiz.alertCooldownMinutes} />
-		<AlertQuietHoursCard bind:quiet_from={wiz.alertQuietFrom} bind:quiet_to={wiz.alertQuietTo} />
-	</div>
 </div>
 
 <style>
@@ -101,20 +99,10 @@
 		font-size: 16px;
 	}
 
-	.extra-cards {
-		display: grid;
-		gap: 1rem;
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-	}
-
 	@media (max-width: 899px) {
 		.compare-alarm-section {
 			padding: 1rem;
 			max-width: 100%;
-		}
-
-		.extra-cards {
-			grid-template-columns: 1fr;
 		}
 	}
 </style>

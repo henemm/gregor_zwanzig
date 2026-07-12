@@ -15,28 +15,33 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 
 	interface Props {
+		/** Issue #1232 Scheibe 2b: context-Diskriminierung — vergleich zeigt
+		 * keine Mehrtages-Trend-Karte (KL-2: kein multi_day_trend-Feld am
+		 * ComparePreset) und eine eigene Intro-Copy-Zeile. */
+		context?: 'route' | 'vergleich';
 		hasActiveChannel: boolean;
 		morning_enabled: boolean;
 		morning_time: string;
 		evening_enabled: boolean;
 		evening_time: string;
-		multi_day_trend_morning: boolean;
-		multi_day_trend_evening: boolean;
+		multi_day_trend_morning?: boolean;
+		multi_day_trend_evening?: boolean;
 		onMorningToggle: (e: Event) => void;
 		onEveningToggle: (e: Event) => void;
 		onMorningTime: (e: Event) => void;
 		onEveningTime: (e: Event) => void;
-		onTrendMorningToggle: (e: Event) => void;
-		onTrendEveningToggle: (e: Event) => void;
+		onTrendMorningToggle?: (e: Event) => void;
+		onTrendEveningToggle?: (e: Event) => void;
 	}
 	let {
+		context = 'route',
 		hasActiveChannel,
 		morning_enabled,
 		morning_time,
 		evening_enabled,
 		evening_time,
-		multi_day_trend_morning,
-		multi_day_trend_evening,
+		multi_day_trend_morning = false,
+		multi_day_trend_evening = false,
 		onMorningToggle,
 		onEveningToggle,
 		onMorningTime,
@@ -44,6 +49,8 @@
 		onTrendMorningToggle,
 		onTrendEveningToggle
 	}: Props = $props();
+
+	const isRoute = $derived(context === 'route');
 </script>
 
 <div>
@@ -55,6 +62,12 @@
 			damit hier Zeitplan-Optionen erscheinen.
 		</div>
 	{:else}
+		{#if context === 'vergleich'}
+			<div class="vt-vergleich-intro">
+				Wie beim Trip: das <strong>Morgen-Briefing</strong> zeigt den heutigen Tag, das
+				<strong>Abend-Briefing</strong> den morgigen. Du wählst nur die Uhrzeit.
+			</div>
+		{/if}
 		<div class="vt-schedule-grid">
 			<Card padding={18}>
 				<div class="vt-card-head">
@@ -106,26 +119,28 @@
 				</div>
 			</Card>
 
-			<Card padding={18}>
-				<div class="vt-card-head">
-					<div>
-						<div class="vt-card-title">Mehrtages-Trend</div>
-						<div class="vt-card-sub">Sonntags · 3–7-Tage-Ausblick (optional)</div>
+			{#if isRoute}
+				<Card padding={18}>
+					<div class="vt-card-head">
+						<div>
+							<div class="vt-card-title">Mehrtages-Trend</div>
+							<div class="vt-card-sub">Sonntags · 3–7-Tage-Ausblick (optional)</div>
+						</div>
 					</div>
-				</div>
-				<div class="vt-card-body vt-trend-body">
-					<span data-testid="report-morning-trend">
-						<Checkbox checked={multi_day_trend_morning} disabled={!morning_enabled} onchange={onTrendMorningToggle}
-							>im Morgen-Briefing</Checkbox
-						>
-					</span>
-					<span data-testid="report-evening-trend">
-						<Checkbox checked={multi_day_trend_evening} disabled={!evening_enabled} onchange={onTrendEveningToggle}
-							>im Abend-Briefing</Checkbox
-						>
-					</span>
-				</div>
-			</Card>
+					<div class="vt-card-body vt-trend-body">
+						<span data-testid="report-morning-trend">
+							<Checkbox checked={multi_day_trend_morning} disabled={!morning_enabled} onchange={onTrendMorningToggle}
+								>im Morgen-Briefing</Checkbox
+							>
+						</span>
+						<span data-testid="report-evening-trend">
+							<Checkbox checked={multi_day_trend_evening} disabled={!evening_enabled} onchange={onTrendEveningToggle}
+								>im Abend-Briefing</Checkbox
+							>
+						</span>
+					</div>
+				</Card>
+			{/if}
 		</div>
 	{/if}
 </div>
@@ -142,6 +157,16 @@
 	}
 	.vt-empty-strong {
 		color: #8a6210;
+	}
+	.vt-vergleich-intro {
+		font-size: 12.5px;
+		color: var(--g-ink-3);
+		line-height: 1.5;
+		margin: 0 0 12px;
+		max-width: 620px;
+	}
+	.vt-vergleich-intro strong {
+		color: var(--g-ink-2);
 	}
 	.vt-schedule-grid {
 		display: grid;

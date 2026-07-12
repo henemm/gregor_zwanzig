@@ -186,18 +186,20 @@ test.describe('Issue #681: Compare-Editor Slice 4 — Layout + Versand Fidelity'
 		).toBeVisible({ timeout: 8_000 });
 	});
 
-	// ── AC-5: Versand-Tab zeigt Kacheln + Aktivierungs-Banner ────────────────
-	test('AC-5: Versand-Tab zeigt 3 Kacheln und Aktivierungs-Banner', async ({ page }) => {
+	// ── AC-5: Layout-Tab zeigt Kacheln, Versand-Tab den Aktivierungs-Banner ──
+	// Issue #1232 Scheibe 2b: die 3 Info-Kacheln zogen aus Step5Versand in die
+	// neue CompareReportContentSection (Layout-Tab) um — Testids unveraendert.
+	test('AC-5: Layout-Tab zeigt 3 Kacheln, Versand-Tab den Aktivierungs-Banner', async ({ page }) => {
 		const { id } = await createPreset(page);
 		await page.goto(`/compare/${id}/edit`);
 		await page.waitForLoadState('networkidle');
 
-		await page.locator('[data-testid="compare-editor-tab-versand"]').click();
+		await page.locator('[data-testid="compare-editor-tab-layout"]').click();
 		await expect(
-			page.locator('[data-testid="compare-editor-tab-versand"]')
+			page.locator('[data-testid="compare-editor-tab-layout"]')
 		).toHaveAttribute('data-active', 'true');
 
-		// 3 Versandzeit-Kacheln (RED: fehlen)
+		// 3 Info-Kacheln (RED: fehlen)
 		await expect(
 			page.locator('[data-testid="compare-step5-schedule-tile"]')
 		).toBeVisible({ timeout: 5_000 });

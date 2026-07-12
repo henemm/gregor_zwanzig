@@ -10,12 +10,13 @@
 	// Design-Quelle (1:1): claude-code-handoff/current/jsx/versand-tab.jsx
 	// Spec: docs/specs/modules/versand_tab_route.md
 
-	import { onMount } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import { api } from '$lib/api.js';
 	import { toHHMMSS } from '$lib/utils/time';
 	import { Eyebrow } from '$lib/components/atoms';
 	import type { Trip, ReportConfig, AlertRule } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
 	import AlertCooldownCard from '$lib/components/alerts-tab/AlertCooldownCard.svelte';
 	import AlertQuietHoursCard from '$lib/components/alerts-tab/AlertQuietHoursCard.svelte';
@@ -23,22 +24,40 @@
 	import VTBriefingChannels from './versand-tab/VTBriefingChannels.svelte';
 	import VTSchedulePlan from './versand-tab/VTSchedulePlan.svelte';
 	import VTLaufzeitRoute from './versand-tab/VTLaufzeitRoute.svelte';
+	import VTLaufzeitVergleich from './versand-tab/VTLaufzeitVergleich.svelte';
+	import VTAlertSample from './versand-tab/VTAlertSample.svelte';
 	import { buildAlertDeliveryPayload } from './versand-tab/alertDeliveryPayload.ts';
 
 	interface Props {
 		context?: 'route' | 'vergleich';
-		trip: Trip;
+		trip?: Trip;
 		onTripUpdate?: (updated: Trip) => void;
 		saveController?: SaveStatus;
-		/** report_config-Blob — bind:reportConfig durchgereicht an den Parent (BriefingScheduleTab). */
-		reportConfig: ReportConfig;
-		/** Issue #736: display_config.channels-Sync bei Kanal-Toggle (Parent-Callback). */
+		/** report_config-Blob — bind:reportConfig durchgereicht an den Parent (BriefingScheduleTab). Nur route. */
+		reportConfig?: ReportConfig;
+		/** Issue #736: display_config.channels-Sync bei Kanal-Toggle (Parent-Callback). Nur route. */
 		onChannelChange?: (channel: 'email' | 'telegram' | 'sms', value: boolean) => void;
-		/** Tab-Wechsel (analog HubOverview onJump) — "Etappen öffnen →" springt in 'stages'. */
+		/** Tab-Wechsel (analog HubOverview onJump) — "Etappen öffnen →" springt in 'stages'. Nur route. */
 		onJump?: (tab: string) => void;
+		/** Issue #1232 Scheibe 2b: geteilter Compare-Wizard-State (context="vergleich").
+		 * KEIN Self-Save — alle Controls binden direkt an wiz.*, Persistenz bleibt
+		 * zentral in CompareEditor.handleSave()/wiz.saveNewPreset() (Doppel-Mount
+		 * Desktop+Mobile, Create ohne Preset-ID). */
+		wiz?: CompareWizardState;
+		/** Issue #1232 Scheibe 2b: Create-Aktivierungs-Banner (1:1 JSX-Slot), nur vergleich. */
+		activation?: Snippet;
 	}
-	let { context = 'route', trip, onTripUpdate, saveController, reportConfig = $bindable(), onChannelChange, onJump }: Props =
-		$props();
+	let {
+		context = 'route',
+		trip,
+		onTripUpdate,
+		saveController,
+		reportConfig = $bindable(),
+		onChannelChange,
+		onJump,
+		wiz,
+		activation
+	}: Props = $props();
 
 	// ── Sektion 1+2: Briefing-Kanäle + Zeitplan (report_config) ────────────────
 	let originalReportConfig: ReportConfig = {};
@@ -108,6 +127,12 @@
 		[send_email, send_telegram, send_sms].filter(Boolean).length
 	);
 
+	// Issue #1232 Scheibe 2b: vergleich-Zweig — Kanal-Zähler direkt aus wiz.*
+	// (kein lokaler $state, kein Self-Save).
+	const vergleichActiveChannelCount = $derived(
+		wiz ? [wiz.sendEmail, wiz.sendTelegram, wiz.sendSms].filter(Boolean).length : 0
+	);
+
 	// Factory-Pattern (Safari-Closure-Schutz, CLAUDE.md).
 	function makeChannelChangeHandler(channel: 'email' | 'telegram' | 'sms') {
 		return function doChange(e: Event) {
@@ -116,6 +141,14 @@
 			else if (channel === 'telegram') send_telegram = v;
 			else send_sms = v;
 			onChannelChange?.(channel, v);
+		};
+	}
+	// Issue #1232 Scheibe 2b: vergleich-Zweig — schreibt direkt in wiz.* statt
+	// in lokale $state-Variablen (kein Self-Save, siehe Modul-Kommentar oben).
+	function makeWizChannelHandler(field: 'sendEmail' | 'sendTelegram' | 'sendSms') {
+		return function doChange(e: Event) {
+			if (!wiz) return;
+			wiz[field] = (e.target as HTMLInputElement).checked;
 		};
 	}
 	function makeToggleHandler(setter: (v: boolean) => void) {
@@ -130,7 +163,11 @@
 	}
 
 	// ── Sektion 3: Laufzeit (route = read-only aus Etappen) ────────────────────
-	function computeTripEnd(t: Trip): string | null {
+	// t optional: im vergleich-Zweig wird trip nie gesetzt (Laufzeit-Sektion
+	// dort ist VTLaufzeitVergleich, nicht VTLaufzeitRoute) — computeTripEnd
+	// wird nur fuer den route-Zweig ausgewertet, defensiv trotzdem null-sicher.
+	function computeTripEnd(t: Trip | undefined): string | null {
+		if (!t) return null;
 		const dates = (t.stages ?? [])
 			.map((s) => s.date)
 			.filter((d): d is string => !!d)
@@ -149,13 +186,16 @@
 	}
 
 	// ── Sektion 4: Alert-Zustellung — Speicherpfad funktionsgleich zu AlertsTab
-	// (Issue #864/#859/#1087/#1088), nur der Tab hat sich geändert. ────────────
-	let officialAlertsEnabled = $state<boolean>(trip.official_alerts_enabled ?? true);
-	let officialAlertTriggersEnabled = $state<boolean>(trip.official_alert_triggers_enabled ?? true);
-	let cooldownMinutes = $state<number | undefined>(trip.alert_cooldown_minutes ?? undefined);
-	let quietFrom = $state<string | undefined>(trip.alert_quiet_from ?? undefined);
-	let quietTo = $state<string | undefined>(trip.alert_quiet_to ?? undefined);
-	let alertRules = $state<AlertRule[]>(trip.alert_rules ?? []);
+	// (Issue #864/#859/#1087/#1088), nur der Tab hat sich geändert. Nur route:
+	// im vergleich-Zweig binden AlertCooldownCard/AlertQuietHoursCard direkt an
+	// wiz.* (kein trip-Objekt vorhanden) — trip? defensiv, damit die Initialisierung
+	// im vergleich-Zweig (trip=undefined) nicht wirft. ─────────────────────────
+	let officialAlertsEnabled = $state<boolean>(trip?.official_alerts_enabled ?? true);
+	let officialAlertTriggersEnabled = $state<boolean>(trip?.official_alert_triggers_enabled ?? true);
+	let cooldownMinutes = $state<number | undefined>(trip?.alert_cooldown_minutes ?? undefined);
+	let quietFrom = $state<string | undefined>(trip?.alert_quiet_from ?? undefined);
+	let quietTo = $state<string | undefined>(trip?.alert_quiet_to ?? undefined);
+	let alertRules = $state<AlertRule[]>(trip?.alert_rules ?? []);
 
 	// Adversary-Fund F002 (Issue #1232 Scheibe 1): EIN gemeinsamer Debounce-Slot
 	// für die gesamte Alert-Zustellung. `saveController.schedule()` kennt nur
@@ -175,7 +215,9 @@
 			quietTo
 		});
 		return async () => {
-			const updated = await api.put<Trip>(`/api/trips/${trip.id}`, payload);
+			// Nur im route-Zweig erreichbar (die vergleich-Handler mutieren
+			// officialAlertsEnabled/cooldownMinutes/etc. nie, siehe Kommentar oben).
+			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, payload);
 			onTripUpdate?.(updated);
 		};
 	}
@@ -267,8 +309,66 @@
 				<AlertQuietHoursCard bind:quiet_from={quietFrom} bind:quiet_to={quietTo} />
 			</div>
 			<Eyebrow style="margin: 4px 0 10px;">Beispiel-Warnung</Eyebrow>
-			<AlertPreviewCard {trip} {alertRules} />
+			<AlertPreviewCard trip={trip!} {alertRules} />
 		</div>
+	</div>
+{:else if context === 'vergleich'}
+	<div class="versand-tab" data-testid="versand-tab">
+		<VTBriefingChannels
+			{context}
+			channels={{
+				email: wiz?.sendEmail ?? false,
+				telegram: wiz?.sendTelegram ?? false,
+				sms: wiz?.sendSms ?? false
+			}}
+			onEmailChange={makeWizChannelHandler('sendEmail')}
+			onTelegramChange={makeWizChannelHandler('sendTelegram')}
+			onSmsChange={makeWizChannelHandler('sendSms')}
+			emailTestid="compare-step5-channel-email"
+			telegramTestid="compare-step5-channel-telegram"
+			smsTestid="compare-step5-channel-sms"
+		/>
+
+		<VTSchedulePlan
+			context="vergleich"
+			hasActiveChannel={vergleichActiveChannelCount > 0}
+			morning_enabled={wiz?.morningEnabled ?? true}
+			morning_time={wiz?.morningTime ?? '07:00'}
+			evening_enabled={wiz?.eveningEnabled ?? false}
+			evening_time={wiz?.eveningTime ?? '18:00'}
+			onMorningToggle={makeToggleHandler((v) => {
+				if (wiz) wiz.morningEnabled = v;
+			})}
+			onEveningToggle={makeToggleHandler((v) => {
+				if (wiz) wiz.eveningEnabled = v;
+			})}
+			onMorningTime={makeTimeHandler((v) => {
+				if (wiz) wiz.morningTime = v;
+			})}
+			onEveningTime={makeTimeHandler((v) => {
+				if (wiz) wiz.eveningTime = v;
+			})}
+		/>
+
+		<VTLaufzeitVergleich
+			value={wiz?.endDate ?? null}
+			onChange={(v) => {
+				if (wiz) wiz.endDate = v;
+			}}
+		/>
+
+		<div class="vt-alert-delivery">
+			<Eyebrow style="margin-bottom: 10px;">Wann Warnungen rausgehen</Eyebrow>
+			<div class="vt-alert-cards">
+				<AlertCooldownCard bind:cooldown_minutes={wiz!.alertCooldownMinutes} />
+				<AlertQuietHoursCard bind:quiet_from={wiz!.alertQuietFrom} bind:quiet_to={wiz!.alertQuietTo} />
+			</div>
+			<VTAlertSample context="vergleich" />
+		</div>
+
+		{#if activation}
+			<div class="vt-activation-slot">{@render activation()}</div>
+		{/if}
 	</div>
 {/if}
 

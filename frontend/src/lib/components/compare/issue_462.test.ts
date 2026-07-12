@@ -35,7 +35,10 @@ const MIGRATED_FILES: Array<{ path: string; components: string[] }> = [
 	{ path: join(COMPARE_DIR, 'SavePresetDialog.svelte'),  components: ['Btn'] },
 	{ path: join(STEPS_DIR, 'Step3Idealwerte.svelte'),     components: ['Eyebrow'] },
 	{ path: join(STEPS_DIR, 'Step4Layout.svelte'),         components: ['Eyebrow'] },
-	{ path: join(STEPS_DIR, 'Step5Versand.svelte'),        components: ['Eyebrow'] },
+	// Issue #1232 Scheibe 2b: Step5Versand.svelte wurde gelöscht (ersetzt durch
+	// VersandTab context="vergleich" + CompareInhaltSection.svelte) — Eintrag
+	// zeigt jetzt auf den Nachfolger, der denselben Eyebrow-Atom-Import trägt.
+	{ path: join(COMPARE_DIR, 'CompareInhaltSection.svelte'), components: ['Eyebrow'] },
 ];
 
 // ui/-Pfade die nach der Migration NICHT mehr für Atom-Komponenten genutzt werden dürfen

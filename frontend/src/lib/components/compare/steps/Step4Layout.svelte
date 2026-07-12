@@ -34,6 +34,7 @@
 	} from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
 	import type { CompareWizardState } from '../compareWizardState.svelte';
+	import CompareInhaltSection from '../CompareInhaltSection.svelte';
 
 	type ChannelId = 'email' | 'telegram' | 'sms';
 	interface Template {
@@ -374,6 +375,11 @@
 			</aside>
 		</div>
 	{/if}
+
+	<!-- Issue #1232 Scheibe 2b: Rest-Felder aus dem bisherigen Step5Versand
+	     (Zeitfenster, Horizont, Top-N, Stundenverlauf) — Zwischenlösung bis
+	     Scheibe 3 den echten LayoutTab-Organism baut. -->
+	<CompareInhaltSection />
 </div>
 
 <style>

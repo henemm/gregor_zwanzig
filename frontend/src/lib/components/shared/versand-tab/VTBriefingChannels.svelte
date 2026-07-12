@@ -25,8 +25,24 @@
 		onEmailChange: (e: Event) => void;
 		onTelegramChange: (e: Event) => void;
 		onSmsChange: (e: Event) => void;
+		/** Issue #1232 Scheibe 2b: Testid-Präfix-Parametrisierung — der
+		 * vergleich-Zweig muss die bestehenden `compare-step5-channel-*`-Testids
+		 * behalten (bestehende Playwright-Specs), Default bleibt `channel-*`
+		 * (route-Zweig, Scheibe 1, unverändert). */
+		emailTestid?: string;
+		telegramTestid?: string;
+		smsTestid?: string;
 	}
-	let { context = 'route', channels, onEmailChange, onTelegramChange, onSmsChange }: Props = $props();
+	let {
+		context = 'route',
+		channels,
+		onEmailChange,
+		onTelegramChange,
+		onSmsChange,
+		emailTestid = 'channel-email',
+		telegramTestid = 'channel-telegram',
+		smsTestid = 'channel-sms'
+	}: Props = $props();
 
 	interface Profile {
 		mail_to?: string;
@@ -72,7 +88,7 @@
 	<Card padding={0}>
 		<div class="vt-channels-body">
 			<div class="text-sm">
-				<span data-testid="channel-email" class="inline-flex items-center gap-2">
+				<span data-testid={emailTestid} class="inline-flex items-center gap-2">
 					<Checkbox checked={channels.email} disabled={!availableChannels.email} onchange={onEmailChange}
 						>E-Mail{profile?.mail_to ? ` (${profile.mail_to})` : ''}</Checkbox
 					>
@@ -86,7 +102,7 @@
 			</div>
 
 			<div class="text-sm">
-				<span data-testid="channel-telegram" class="inline-flex items-center gap-2">
+				<span data-testid={telegramTestid} class="inline-flex items-center gap-2">
 					<Checkbox
 						checked={channels.telegram}
 						disabled={!availableChannels.telegram}
@@ -103,7 +119,7 @@
 			</div>
 
 			<div class="text-sm">
-				<span data-testid="channel-sms" class="inline-flex items-center gap-2">
+				<span data-testid={smsTestid} class="inline-flex items-center gap-2">
 					<Checkbox checked={channels.sms} disabled={!availableChannels.sms} onchange={onSmsChange}
 						>SMS{profile?.sms_to ? ` (${profile.sms_to})` : ''}</Checkbox
 					>

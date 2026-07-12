@@ -41,9 +41,15 @@ test('AC-1: ChannelToggle.svelte + wizardHelpers.ts (+Test) liegen in shared/', 
 // von alerts-tab/AlertsTab.svelte in shared/VersandTab.svelte umgezogen —
 // AlertsTab bleibt reine Metrik-Level-Konfiguration. Importer-Liste angepasst,
 // Kernaussage (3 Verbraucher importieren aus shared/) bleibt bestehen.
+//
+// Issue #1232 Scheibe 2b (2026-07-12): Step5Versand.svelte wurde gelöscht
+// (ersetzt durch VersandTab context="vergleich" + die neue
+// CompareInhaltSection.svelte, die den ChannelToggle-Konsum übernimmt).
+// Der frühere maskPhone-Check auf Step5Versand prüfte einen bereits toten,
+// nie aufgerufenen Import — entfällt ersatzlos mit der Datei.
 test('AC-1: alle 3 Importer nutzen den neuen shared/-Pfad, kein trip-wizard-Import mehr', () => {
 	const importers = [
-		join(COMPONENTS, 'compare', 'steps', 'Step5Versand.svelte'),
+		join(COMPONENTS, 'compare', 'CompareInhaltSection.svelte'),
 		join(COMPONENTS, 'shared', 'VersandTab.svelte'),
 		join(COMPONENTS, 'compare', 'CompareAlarmSection.svelte'),
 	];
@@ -58,10 +64,6 @@ test('AC-1: alle 3 Importer nutzen den neuen shared/-Pfad, kein trip-wizard-Impo
 			`${p} referenziert noch trip-wizard (AC-1/AC-2)`
 		);
 	}
-	assert.ok(
-		read(importers[0]).includes('$lib/components/shared/wizardHelpers'),
-		'Step5Versand.svelte importiert maskPhone nicht aus shared/wizardHelpers (AC-1)'
-	);
 });
 
 // ── AC-2/AC-3: Löschungen ───────────────────────────────────────────────────

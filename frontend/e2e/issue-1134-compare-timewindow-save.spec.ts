@@ -63,12 +63,14 @@ const twStart = (page: Page): Locator =>
 const twEnd = (page: Page): Locator =>
 	page.getByTestId('compare-step5-time-window-end').first();
 
-// ── Oeffnet die Versand-Sektion (Step 5) im Edit-Modus ────────────────────────
+// ── Oeffnet das Zeitfenster-Feld im Edit-Modus. Issue #1232 Scheibe 2b: das
+// Zeitfenster zog vom Versand-Tab in den Layout-Tab um (CompareReportContentSection);
+// die Testids compare-step5-time-window-* selbst bleiben unveraendert. ────────
 async function openVersandTab(page: Page, id: string): Promise<void> {
 	await page.goto(`/compare/${id}/edit`);
 	await page.waitForLoadState('networkidle');
-	await page.locator('[data-testid="compare-editor-tab-versand"]').click();
-	await expect(page.locator('[data-testid="compare-editor-tab-versand"]')).toHaveAttribute(
+	await page.locator('[data-testid="compare-editor-tab-layout"]').click();
+	await expect(page.locator('[data-testid="compare-editor-tab-layout"]')).toHaveAttribute(
 		'data-active',
 		'true'
 	);

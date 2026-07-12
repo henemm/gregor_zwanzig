@@ -923,3 +923,112 @@ func TestUpdateComparePreset_AlertFields_UserIsolation(t *testing.T) {
 		t.Errorf("user isolation broken: userB's preset gained alert_cooldown_minutes=%v from userA's update", *presetsB[0].AlertCooldownMinutes)
 	}
 }
+
+// ============================================================================
+// Issue #1232 Scheibe 2b — End-Datum-Loesch-Sentinel (Laufzeit "Bis auf Weiteres").
+// ============================================================================
+
+// TestUpdateComparePreset_EndDateSentinel_DeletesSetDate: GIVEN ein Preset mit
+// gesetztem end_date WHEN PUT mit Body {"end_date": ""} (restliche Felder
+// unveraendert) THEN ist EndDate danach nil (nicht der alte Wert, kein Fehler).
+func TestUpdateComparePreset_EndDateSentinel_DeletesSetDate(t *testing.T) {
+	s := newTestStore(t)
+
+	createRouter := chi.NewRouter()
+	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	createBody := validPresetBody()
+	createBody["end_date"] = "2026-08-01"
+	createReq := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, createBody))
+	createReq.Header.Set("Content-Type", "application/json")
+	createReq = addUserToContext(createReq, "user1")
+	createW := httptest.NewRecorder()
+	createRouter.ServeHTTP(createW, createReq)
+	if createW.Code != http.StatusCreated {
+		t.Fatalf("setup: create failed with %d: %s", createW.Code, createW.Body.String())
+	}
+	var original model.ComparePreset
+	json.Unmarshal(createW.Body.Bytes(), &original)
+	if original.EndDate == nil || *original.EndDate != "2026-08-01" {
+		t.Fatalf("setup: expected end_date=2026-08-01 after create, got %v", original.EndDate)
+	}
+
+	// PUT mit explizitem Leerstring loescht das Enddatum.
+	updateBody := validPresetBody()
+	updateBody["end_date"] = ""
+
+	r := chi.NewRouter()
+	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
+	req := httptest.NewRequest("PUT", "/api/compare/presets/"+original.ID, jsonBody(t, updateBody))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "user1")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var updated model.ComparePreset
+	json.Unmarshal(w.Body.Bytes(), &updated)
+	if updated.EndDate != nil {
+		t.Fatalf("sentinel FAIL: expected EndDate=nil after end_date=\"\", got %q", *updated.EndDate)
+	}
+
+	// Auch nach erneutem Laden aus dem Store (Datei) muss end_date verschwunden sein
+	// (omitempty — kein end_date-Key mehr im JSON).
+	reloaded, err := s.WithUser("user1").LoadComparePresets()
+	if err != nil {
+		t.Fatalf("reload failed: %v", err)
+	}
+	idx := findComparePresetIdx(reloaded, original.ID)
+	if idx < 0 {
+		t.Fatalf("preset not found after reload")
+	}
+	if reloaded[idx].EndDate != nil {
+		t.Fatalf("sentinel FAIL after reload: expected EndDate=nil, got %q", *reloaded[idx].EndDate)
+	}
+}
+
+// TestUpdateComparePreset_EndDateOmitted_PreservesOriginal: GIVEN ein Preset
+// mit gesetztem end_date WHEN PUT ohne end_date-Feld im Body THEN bleibt
+// EndDate unveraendert (Nil-Preserve weiterhin intakt, keine Regression durch
+// den Sentinel).
+func TestUpdateComparePreset_EndDateOmitted_PreservesOriginal(t *testing.T) {
+	s := newTestStore(t)
+
+	createRouter := chi.NewRouter()
+	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	createBody := validPresetBody()
+	createBody["end_date"] = "2026-09-15"
+	createReq := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, createBody))
+	createReq.Header.Set("Content-Type", "application/json")
+	createReq = addUserToContext(createReq, "user1")
+	createW := httptest.NewRecorder()
+	createRouter.ServeHTTP(createW, createReq)
+	if createW.Code != http.StatusCreated {
+		t.Fatalf("setup: create failed with %d: %s", createW.Code, createW.Body.String())
+	}
+	var original model.ComparePreset
+	json.Unmarshal(createW.Body.Bytes(), &original)
+
+	// PUT OHNE end_date-Feld im Body (bewusst nicht gesetzt) — nur der Name aendert sich.
+	updateBody := validPresetBody()
+	updateBody["name"] = "Nur Name geaendert"
+	delete(updateBody, "end_date")
+
+	r := chi.NewRouter()
+	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
+	req := httptest.NewRequest("PUT", "/api/compare/presets/"+original.ID, jsonBody(t, updateBody))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "user1")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var updated model.ComparePreset
+	json.Unmarshal(w.Body.Bytes(), &updated)
+	if updated.EndDate == nil || *updated.EndDate != "2026-09-15" {
+		t.Fatalf("nil-preserve FAIL: expected EndDate=2026-09-15 to survive an unrelated update, got %v", updated.EndDate)
+	}
+}
