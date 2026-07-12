@@ -183,6 +183,10 @@ Alle Module benoetigen Specs vor Implementierung:
 
 Migration + Roundtrip-Test, Rollback, Anti-Pattern-Beispiele: **`docs/reference/operations_playbook.md`**.
 
+## Session-Artefakte mit Tokens: NIE weltlesbar nach /tmp (Security #199)
+
+Cookiejars, `storageState`, Auth-Responses u.ä. enthalten Session-Tokens (`gz_session`). **Verboten:** `curl -c /tmp/xyz.txt` o.ä. mit Default-Rechten. **Stattdessen:** ins Session-Scratchpad-Verzeichnis schreiben (ist privat) ODER vorher Datei mit `install -m 600 /dev/null <pfad>` anlegen bzw. `umask 077` setzen. Playwright-`storageState` gehört nach `frontend/e2e/playwright/.auth/` (gitignored), nie nach `/tmp`. Hintergrund: henemm-security #199 — world-readable Tokens in /tmp; infra-Monitor härtet nur kompensierend nach. (Prüfdatum-Regelbudget: Konvention statt neuem Gate; Gate nur bei Wiederauftreten.)
+
 ## Parallele Sessions
 
 **Ein Projektordner = höchstens eine Claude-Session gleichzeitig** (kollidierende Dateien/WIP/Workflow-Buchführung). Der Session-Wächter erzwingt bei einer zweiten Sitzung `EnterWorktree`:
