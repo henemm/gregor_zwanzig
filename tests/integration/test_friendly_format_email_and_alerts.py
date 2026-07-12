@@ -330,44 +330,15 @@ class TestEmailFriendlyVsRawFormatting:
         assert "0.3" in report.email_html
         assert "fog" not in report.email_html
 
-    def test_cloud_all_levels_friendly(self):
-        """All cloud levels produce correct emoji."""
-        from output.renderers.trip_report import TripReportFormatter
-        f = TripReportFormatter()
-        f._friendly_keys = {"cloud"}
-
-        assert f._fmt_val("cloud", 5) == "☀️"     # <= 10
-        assert f._fmt_val("cloud", 20) == "🌤️"   # <= 30
-        assert f._fmt_val("cloud", 50) == "⛅"     # <= 70
-        assert f._fmt_val("cloud", 85) == "🌥️"   # <= 90
-        assert f._fmt_val("cloud", 95) == "☁️"    # > 90
-
-    def test_cape_all_levels_friendly(self):
-        """All CAPE levels produce the correct CSS-Dot colour (Issue #1222: kein Emoji mehr).
-
-        Issue #1222: _fmt_val('cape', ...) delegiert jetzt an ampel_dot() mit den
-        Katalog-Schwellen (get_metric('cape').display_thresholds: yellow 1000,
-        orange 2500, red 3500) statt den frueheren lokalen Schwellen (300/1000/2000).
-        """
-        from output.renderers.trip_report import TripReportFormatter
-        f = TripReportFormatter()
-        f._friendly_keys = {"cape"}
-
-        assert "#15803d" in f._fmt_val("cape", 100)     # green, < 1000
-        assert "#ca8a04" in f._fmt_val("cape", 1200)    # yellow, < 2500
-        assert "#c2410c" in f._fmt_val("cape", 2600)    # orange, < 3500
-        assert "#b91c1c" in f._fmt_val("cape", 4000)    # red, >= 3500
-
-    def test_visibility_all_levels_friendly(self):
-        """All visibility levels produce correct text."""
-        from output.renderers.trip_report import TripReportFormatter
-        f = TripReportFormatter()
-        f._friendly_keys = {"visibility"}
-
-        assert f._fmt_val("visibility", 15000) == "good"   # >= 10000
-        assert f._fmt_val("visibility", 5000) == "fair"    # >= 4000
-        assert f._fmt_val("visibility", 2000) == "poor"    # >= 1000
-        assert "fog" in f._fmt_val("visibility", 500)       # < 1000
+    # Issue #1214 Scheibe 4 (#778): test_cloud_all_levels_friendly /
+    # test_cape_all_levels_friendly / test_visibility_all_levels_friendly
+    # testeten ausschliesslich TripReportFormatter._fmt_val (tot). Cloud ist
+    # Duplikat der bereits gegen helpers.fmt_val portierten Coverage in
+    # tests/unit/test_weather_metrics_ux.py::TestCloudEmojiFormatting; CAPE
+    # (CSS-Dot auch im Plain-Modus) und Visibility (englische Woerter
+    # good/fair/poor/fog) testeten Alt-Verhalten, das ausschliesslich die
+    # tote Kopie hatte (#814 AC-5 / #811-Mode-Matrix widerlegen beides im
+    # lebendigen Pfad) — ersatzlos geloescht, kein Aequivalent zu portieren.
 
 
 # ===========================================================================

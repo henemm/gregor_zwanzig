@@ -47,18 +47,6 @@ def _make_display_config(friendly_overrides: dict[str, bool]) -> UnifiedWeatherD
     )
 
 
-def _make_formatter(dc: UnifiedWeatherDisplayConfig) -> TripReportFormatter:
-    """Create a formatter with _friendly_keys built from the given config.
-
-    Issue #435 / AC-10: build_friendly_keys() lebt jetzt in
-    src.output.renderers.email.helpers (Konsolidierung der Duplikate).
-    """
-    from src.output.renderers.email.helpers import build_friendly_keys
-    fmt = TripReportFormatter()
-    fmt._friendly_keys = build_friendly_keys(dc)
-    return fmt
-
-
 # =====================================================================
 # Part 1: _build_friendly_keys() correctness
 # =====================================================================
@@ -112,100 +100,21 @@ class TestBuildFriendlyKeys:
 
 
 # =====================================================================
-# Part 2: _fmt_val() respects friendly format per metric
+# Part 2: fmt_val() respects friendly format per metric
+#
+# Issue #1214 Scheibe 4 (#778): TestFmtValFriendlyVisibility/-Cape/-Cloud
+# testeten ausschliesslich TripReportFormatter._fmt_val (tot). Triage:
+# - Visibility: bereits vollstaendig als numerische km-Formatierung gegen
+#   helpers.fmt_val portiert in tests/unit/test_weather_metrics_ux.py
+#   (TestFmtValFriendlyToggle) — Duplikat, geloescht. Der HTML-Orange-
+#   Highlight-Test war ohnehin dead-only (#814 AC-5 verbietet Markierung
+#   im lebendigen Pfad).
+# - Cape: nutzte bereits VOR #1222 veraltete Kreis-Emoji-Werte (🟢🟡🟠🔴),
+#   die nicht einmal mehr zur toten Kopie passten (die seit #1222 CSS-Dots
+#   liefert) — dead-only, ersatzlos geloescht.
+# - Cloud: identische Emoji-Werte bereits in test_weather_metrics_ux.py
+#   gegen helpers.fmt_val portiert — Duplikat, geloescht.
 # =====================================================================
-
-
-class TestFmtValFriendlyVisibility:
-    """Visibility: friendly='good/fair/poor/fog', numeric='Xk' or 'X'."""
-
-    def test_friendly_enabled_good(self) -> None:
-        fmt = _make_formatter(_make_display_config({"visibility": True}))
-        assert fmt._fmt_val("visibility", 15000) == "15"
-
-    def test_friendly_enabled_fair(self) -> None:
-        fmt = _make_formatter(_make_display_config({"visibility": True}))
-        assert fmt._fmt_val("visibility", 5000) == "5.0"
-
-    def test_friendly_enabled_poor(self) -> None:
-        fmt = _make_formatter(_make_display_config({"visibility": True}))
-        assert fmt._fmt_val("visibility", 2000) == "2.0"
-
-    def test_friendly_enabled_fog(self) -> None:
-        fmt = _make_formatter(_make_display_config({"visibility": True}))
-        result = fmt._fmt_val("visibility", 500)
-        assert "fog" not in result
-        assert "0.5" in result
-
-    def test_friendly_disabled_large(self) -> None:
-        fmt = _make_formatter(_make_display_config({"visibility": False}))
-        assert fmt._fmt_val("visibility", 15000) == "15"
-
-    def test_friendly_disabled_medium(self) -> None:
-        fmt = _make_formatter(_make_display_config({"visibility": False}))
-        assert fmt._fmt_val("visibility", 5000) == "5.0"
-
-    def test_friendly_disabled_small(self) -> None:
-        fmt = _make_formatter(_make_display_config({"visibility": False}))
-        assert fmt._fmt_val("visibility", 800) == "0.8"
-
-    def test_friendly_disabled_small_html_orange(self) -> None:
-        fmt = _make_formatter(_make_display_config({"visibility": False}))
-        result = fmt._fmt_val("visibility", 300, html=True)
-        assert "background:#fff3e0" in result
-
-
-class TestFmtValFriendlyCape:
-    """Cape: friendly=emoji, numeric=number."""
-
-    def test_friendly_enabled_green(self) -> None:
-        fmt = _make_formatter(_make_display_config({"cape": True}))
-        assert fmt._fmt_val("cape", 200) == "\U0001f7e2"
-
-    def test_friendly_enabled_yellow(self) -> None:
-        fmt = _make_formatter(_make_display_config({"cape": True}))
-        assert fmt._fmt_val("cape", 800) == "\U0001f7e1"
-
-    def test_friendly_enabled_orange(self) -> None:
-        fmt = _make_formatter(_make_display_config({"cape": True}))
-        assert fmt._fmt_val("cape", 1500) == "\U0001f7e0"
-
-    def test_friendly_enabled_red(self) -> None:
-        fmt = _make_formatter(_make_display_config({"cape": True}))
-        assert fmt._fmt_val("cape", 2500) == "\U0001f534"
-
-    def test_friendly_disabled_numeric(self) -> None:
-        fmt = _make_formatter(_make_display_config({"cape": False}))
-        assert fmt._fmt_val("cape", 1500) == "1500"
-
-    def test_friendly_disabled_html_yellow(self) -> None:
-        fmt = _make_formatter(_make_display_config({"cape": False}))
-        result = fmt._fmt_val("cape", 1500, html=True)
-        assert "background:#fff9c4" in result
-
-
-class TestFmtValFriendlyCloud:
-    """Cloud: friendly=emoji, numeric=number."""
-
-    def test_friendly_enabled_sun(self) -> None:
-        fmt = _make_formatter(_make_display_config({"cloud_total": True}))
-        assert "☀" in fmt._fmt_val("cloud", 5)
-
-    def test_friendly_enabled_partly(self) -> None:
-        fmt = _make_formatter(_make_display_config({"cloud_total": True}))
-        assert fmt._fmt_val("cloud", 50) == "⛅"
-
-    def test_friendly_enabled_overcast(self) -> None:
-        fmt = _make_formatter(_make_display_config({"cloud_total": True}))
-        assert "☁" in fmt._fmt_val("cloud", 95)
-
-    def test_friendly_disabled_numeric(self) -> None:
-        fmt = _make_formatter(_make_display_config({"cloud_total": False}))
-        assert fmt._fmt_val("cloud", 50) == "50"
-
-    def test_friendly_disabled_numeric_low(self) -> None:
-        fmt = _make_formatter(_make_display_config({"cloud_total": False}))
-        assert fmt._fmt_val("cloud", 5) == "5"
 
 
 # =====================================================================
@@ -425,34 +334,34 @@ class TestDegreesToCompass:
 
 
 class TestWindDirMergedFormatting:
-    """When merged, wind value gets compass appended (e.g. '20 NW')."""
+    """When merged, wind value gets compass appended (e.g. '20 NW').
+
+    Issue #1214 Scheibe 4: portiert von TripReportFormatter._fmt_val (tot,
+    #778) auf helpers.fmt_val — identische Compass-Merge-Logik.
+    """
 
     def test_wind_with_compass_merged(self) -> None:
-        dc = _make_wind_config(wind_dir_enabled=True, wind_dir_friendly=True)
-        fmt = _make_formatter(dc)
+        from src.output.renderers.email.helpers import fmt_val
         row = {"wind": 20, "_wind_dir_deg": 315}
-        result = fmt._fmt_val("wind", 20, row=row)
+        result = fmt_val("wind", 20, row=row)
         assert result == "20 NW"
 
     def test_wind_without_merge(self) -> None:
-        dc = _make_wind_config(wind_dir_enabled=True, wind_dir_friendly=False)
-        fmt = _make_formatter(dc)
+        from src.output.renderers.email.helpers import fmt_val
         row = {"wind": 20}
-        result = fmt._fmt_val("wind", 20, row=row)
+        result = fmt_val("wind", 20, row=row)
         assert result == "20"
 
     def test_wind_dir_none_no_compass(self) -> None:
-        dc = _make_wind_config(wind_dir_enabled=True, wind_dir_friendly=True)
-        fmt = _make_formatter(dc)
+        from src.output.renderers.email.helpers import fmt_val
         row = {"wind": 20, "_wind_dir_deg": None}
-        result = fmt._fmt_val("wind", 20, row=row)
+        result = fmt_val("wind", 20, row=row)
         assert result == "20"
 
     def test_separate_wind_dir_column(self) -> None:
         """When wind_dir is separate (friendly=False), it shows compass."""
-        dc = _make_wind_config(wind_dir_enabled=True, wind_dir_friendly=False)
-        fmt = _make_formatter(dc)
-        result = fmt._fmt_val("wind_dir", 225)
+        from src.output.renderers.email.helpers import fmt_val
+        result = fmt_val("wind_dir", 225)
         assert result == "SW"
 
     def test_dp_to_row_merged_skips_wind_dir_col(self) -> None:

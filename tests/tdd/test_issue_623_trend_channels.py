@@ -434,12 +434,6 @@ class TestDeadCodeRemoved:
         assert not hasattr(TripReportFormatter, "_render_plain"), \
             "_render_plain should have been removed"
 
-    def test_render_html_table_still_present(self):
-        """AC-6 guard: _render_html_table must NOT be removed (still used)."""
-        from src.output.renderers.trip_report import TripReportFormatter
-        assert hasattr(TripReportFormatter, "_render_html_table"), \
-            "_render_html_table must still exist"
-
 
 # ---------------------------------------------------------------------------
 # AC-7: Empty / None trend → no block

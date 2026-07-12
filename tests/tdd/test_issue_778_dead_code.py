@@ -3,7 +3,7 @@
 SPEC: docs/specs/modules/issue_783_776_778_briefing_fixes.md (AC-5)
 
 `format_email` delegiert seit beta3 an `render_email()`. Fuenf Methoden in
-`src/formatters/trip_report.py` sind toter Code und lesen u.a. den seit #759
+`src/output/renderers/trip_report.py` sind toter Code und lesen u.a. den seit #759
 nicht mehr existierenden `display_thresholds`-Key `blue`:
   _fmt_val, _render_html_table, _render_text_table,
   _format_daylight_html, _format_daylight_plain
@@ -28,7 +28,8 @@ _DEAD_METHODS = [
 ]
 
 _TRIP_REPORT = (
-    Path(__file__).resolve().parents[2] / "src" / "formatters" / "trip_report.py"
+    Path(__file__).resolve().parents[2]
+    / "src" / "output" / "renderers" / "trip_report.py"
 )
 
 

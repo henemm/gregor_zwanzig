@@ -22,7 +22,6 @@ from app.config import Settings
 from app.metric_catalog import get_metric
 
 import output.renderers.email.helpers as email_helpers
-from output.renderers.trip_report import TripReportFormatter
 
 
 def _dp(ts_hour, **kwargs):
@@ -234,50 +233,11 @@ class TestAC9ComparePathConsistency:
 # tatsaechliche Ausgabe der beiden Renderer.
 # ----------------------------------------------------------------------
 
-class TestAC8TripSummaryRendersHours:
-    """AC-8: Der Trip-Report-Renderer gibt den Stundenwert MIT ' h'-Suffix aus.
-
-    Regression-Guard fuer F001: vorher wurde dni_to_sunny_fraction(avg_dni)
-    gerendert -> Pro-Stunde-Bruchwert (0..1) ohne Einheit, NICHT die Tagessumme.
-    """
-
-    def _build_row(self):
-        """Block aus 8 Stunden DNI=120 (= je 0.5 h) -> erwartet 4.0 h Summe."""
-        fmt = TripReportFormatter.__new__(TripReportFormatter)
-        from zoneinfo import ZoneInfo
-        fmt._tz = ZoneInfo("UTC")
-        fmt._friendly_keys = set()  # sunshine NICHT friendly -> numerischer Pfad
-        dps = [_dp(h, dni_wm2=120) for h in range(8, 16)]
-        # _dp_to_row braucht eine dc; wir bauen die Block-Felder direkt.
-        # Die 'sunshine'-Spalte traegt real die (summierte) DNI -> non-None.
-        from services.weather_metrics import WeatherMetricsService as _WMS
-        row = {
-            "time": "08",
-            "sunshine": sum(d.dni_wm2 for d in dps),  # rohe DNI-Summe = 960
-            "_dni_wm2": sum(d.dni_wm2 for d in dps) / len(dps),
-            "_sunny_hours": _WMS.calculate_sunny_hours(dps),
-        }
-        return fmt, row, dps
-
-    def test_trip_summary_renders_hours_with_suffix(self):
-        fmt, row, dps = self._build_row()
-        out = fmt._fmt_val("sunshine", row.get("sunshine"), row=row)
-        # 8 h * 0.5 = 4.0 h
-        assert out == "4.0 h", (
-            f"AC-8/F001: Trip-Summary muss '4.0 h' rendern (Tagessumme mit "
-            f"Einheit), war '{out}'"
-        )
-
-    def test_trip_summary_not_fraction_not_wm2(self):
-        fmt, row, dps = self._build_row()
-        out = fmt._fmt_val("sunshine", row.get("sunshine"), row=row)
-        assert "h" in out, f"F001: Einheiten-Suffix ' h' fehlt: '{out}'"
-        # Darf NICHT der Bruchwert dni_to_sunny_fraction(avg=120)=0.5 sein
-        assert not out.startswith("0.5"), (
-            f"F001: Bruchwert statt Tagessumme gerendert: '{out}'"
-        )
-        # Darf NICHT die rohe DNI-Summe (960 W/m²) sein
-        assert "960" not in out, f"F001: rohe DNI-Summe gerendert: '{out}'"
+# Issue #1214 Scheibe 4 (#778): TestAC8TripSummaryRendersHours testete
+# TripReportFormatter._fmt_val (tot) fuer 'sunshine'. Duplikat — dieselben
+# Assertions ("4.0 h", kein Bruchwert, keine rohe DNI-Summe) deckt
+# TestAC8EmailRendererRendersHours (unten) bereits gegen den lebendigen
+# email_helpers.fmt_val-Pfad ab — ersatzlos geloescht.
 
 
 class TestAC8EmailRendererRendersHours:
@@ -315,38 +275,32 @@ class TestAC8EmailRendererRendersHours:
 
 
 class TestAC9RenderConsistency:
-    """AC-9: Derselbe Segment-Input ergibt im Trip-Pfad denselben Stundenwert
-    wie calculate_sunny_hours() direkt — dieselbe Funktion, dieselbe Groesse."""
+    """AC-9: Derselbe Segment-Input ergibt im E-Mail-Renderer denselben
+    Stundenwert wie calculate_sunny_hours() direkt — dieselbe Funktion,
+    dieselbe Groesse.
 
-    def test_same_input_same_hours_across_paths(self):
+    Issue #1214 Scheibe 4 (#778): der urspruengliche Trip-Pfad-vs-E-Mail-Pfad-
+    Vergleich prüfte Konsistenz zwischen TripReportFormatter._fmt_val (tot)
+    und helpers.fmt_val — seit format_email() vollstaendig an render_email()
+    delegiert, gibt es nur noch EINEN Pfad. Der Vergleich gegen den toten
+    Zwilling entfaellt; die verbleibende Assertion (lebendiger Pfad ==
+    calculate_sunny_hours() direkt) bleibt der wertvolle Teil.
+    """
+
+    def test_email_path_matches_direct_calculation(self):
         dps = [_dp(h, dni_wm2=v) for h, v in zip(range(8, 13), [80, 120, 180, 60, 150])]
         direct = WeatherMetricsService.calculate_sunny_hours(dps)
         # 'sunshine'-Spalte traegt real die DNI-Summe (non-None)
         col_val = sum(d.dni_wm2 for d in dps)
 
-        # Trip-Renderer-Pfad
-        fmt = TripReportFormatter.__new__(TripReportFormatter)
-        from zoneinfo import ZoneInfo
-        fmt._tz = ZoneInfo("UTC")
-        fmt._friendly_keys = set()
-        trip_row = {"time": "08", "sunshine": col_val, "_sunny_hours": direct}
-        trip_out = fmt._fmt_val("sunshine", trip_row["sunshine"], row=trip_row)
-
-        # E-Mail-Renderer-Pfad
         email_row = {"time": "08", "sunshine": col_val, "_sunny_hours": direct}
         email_out = email_helpers.fmt_val(
             "sunshine", email_row["sunshine"], friendly_keys=set(), row=email_row
         )
 
         expected = f"{direct:.1f} h"
-        assert trip_out == expected, (
-            f"AC-9: Trip-Pfad '{trip_out}' != direkt '{expected}'"
-        )
         assert email_out == expected, (
             f"AC-9: E-Mail-Pfad '{email_out}' != direkt '{expected}'"
-        )
-        assert trip_out == email_out, (
-            f"AC-9: Trip '{trip_out}' und E-Mail '{email_out}' inkongruent"
         )
 
 

@@ -73,31 +73,11 @@ def _dc_with_visibility() -> UnifiedWeatherDisplayConfig:
     return dc
 
 
-class TestVisibilityFormatKm:
-    """Visibility values should be in km without 'k' suffix."""
-
-    def test_visibility_no_k_suffix(self):
-        """Visibility >= 10km should be plain number without 'k'."""
-        f = TripReportFormatter()
-        f._friendly_keys = set()  # disable friendly format
-        result = f._fmt_val("visibility", 15000)
-        assert result == "15", f"Expected '15', got '{result}'"
-        assert "k" not in result, f"Should not contain 'k' suffix: {result}"
-
-    def test_visibility_mid_range_km(self):
-        """Visibility 1-10km should be decimal without 'k'."""
-        f = TripReportFormatter()
-        f._friendly_keys = set()  # disable friendly format
-        result = f._fmt_val("visibility", 5000)
-        assert result == "5.0", f"Expected '5.0', got '{result}'"
-        assert "k" not in result
-
-    def test_visibility_sub_1km(self):
-        """Visibility < 1km should be decimal km (e.g. 0.8)."""
-        f = TripReportFormatter()
-        f._friendly_keys = set()  # disable friendly format
-        result = f._fmt_val("visibility", 800)
-        assert result == "0.8", f"Expected '0.8', got '{result}'"
+# Issue #1214 Scheibe 4 (#778): TestVisibilityFormatKm testete ausschliesslich
+# TripReportFormatter._fmt_val (tot). Duplikat — dieselben Faelle (15000→"15",
+# 5000→"5.0", 800→"0.8") sind bereits gegen helpers.fmt_val portiert in
+# tests/unit/test_weather_metrics_ux.py::TestFmtValFriendlyToggle —
+# ersatzlos geloescht, kein Aequivalent zu portieren.
 
 
 class TestUnitsLegend:

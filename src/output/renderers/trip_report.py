@@ -22,7 +22,6 @@ from zoneinfo import ZoneInfo
 if TYPE_CHECKING:
     from services.day_comparison import DayComparison
 
-from utils.geo import degrees_to_compass
 from utils.timezone import local_fmt, local_hour
 
 from app.metric_catalog import build_default_display_config, get_col_defs, get_metric, get_metric_by_col_key
@@ -45,7 +44,7 @@ from services.daylight_service import DaylightWindow
 from services.report_config_resolver import ReportRenderOptions, resolve_report_render_options
 from services.risk_engine import RiskEngine
 from src.output.renderers.email import render_email
-from src.output.renderers.email.helpers import ampel_dot, build_friendly_keys
+from src.output.renderers.email.helpers import build_friendly_keys
 from src.output.tokens.dto import MetricSpec, TokenLine
 
 
@@ -692,123 +691,6 @@ class TripReportFormatter:
         from src.output.renderers.email.helpers import should_merge_wind_dir
         return should_merge_wind_dir(dc)
 
-    def _fmt_val(self, key: str, val, html: bool = False, row: dict | None = None) -> str:
-        """Format a single cell value. Respects per-metric friendly format toggle."""
-        if val is None:
-            return "–"
-
-        friendly_keys = getattr(self, '_friendly_keys', None)
-        use_friendly = friendly_keys is None or key in friendly_keys
-        if key == "thunder":
-            if val == ThunderLevel.HIGH:
-                t = "⚡⚡"
-                return f'<span style="color:#c62828;font-weight:600">{t}</span>' if html else t
-            if val == ThunderLevel.MED:
-                t = "⚡ mögl."
-                return f'<span style="color:#f57f17">{t}</span>' if html else t
-            return "–"
-        if key in ("temp", "felt", "dewpoint"):
-            return f"{val:.1f}"
-        if key in ("wind", "gust"):
-            s = f"{val:.0f}"
-            # Append compass direction to wind when merged
-            if key == "wind" and row and "_wind_dir_deg" in row:
-                compass = degrees_to_compass(row["_wind_dir_deg"])
-                if compass:
-                    s = f"{s} {compass}"
-            if html and key == "gust":
-                dt = get_metric("gust").display_thresholds
-                if val and dt.get("red") and val >= dt["red"]:
-                    return f'<span style="background:#ffebee;color:#c62828;padding:2px 4px;border-radius:3px;font-weight:600">{s}</span>'
-                if val and dt.get("yellow") and val >= dt["yellow"]:
-                    return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
-            return s
-        if key == "precip":
-            s = f"{val:.1f}"
-            dt = get_metric("precipitation").display_thresholds
-            if html and val and dt.get("orange") and val >= dt["orange"]:
-                return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
-            return s
-        if key in ("snow_limit", "snow_depth"):
-            return f"{val}" if val else "–"
-        if key in ("cloud", "cloud_low", "cloud_mid", "cloud_high"):
-            if not use_friendly:
-                return f"{val:.0f}"
-            if val <= 10:
-                emoji = "☀️"
-            elif val <= 30:
-                emoji = "🌤️"
-            elif val <= 70:
-                emoji = "⛅"
-            elif val <= 90:
-                emoji = "🌥️"
-            else:
-                emoji = "☁️"
-            return emoji
-        if key == "sunshine":
-            # Issue #347: DNI bleibt interne Hilfsgröße (Emoji); numerisch wird
-            # die Sonnenstunde (h) angezeigt, konsistent mit dem Ortsvergleich.
-            dni = row.get("_dni_wm2") if row else val
-            if not use_friendly:
-                hours = row.get("_sunny_hours") if row else None
-                if hours is None:
-                    return "–"
-                return f"{hours:.1f} h"
-            from services.weather_metrics import get_weather_emoji
-            return get_weather_emoji(
-                is_day=row.get("_is_day") if row else None,
-                dni_wm2=dni,
-                wmo_code=row.get("_wmo_code") if row else None,
-                cloud_pct=round(row.get("cloud")) if row and row.get("cloud") is not None else None,
-            )
-        if key == "humidity":
-            return f"{val}" if val is not None else "–"
-        if key == "pressure":
-            return f"{val:.1f}" if val is not None else "–"
-        if key == "pop":
-            s = f"{val:.0f}"
-            dt = get_metric("rain_probability").display_thresholds
-            if html and val is not None and dt.get("red") and val >= dt["red"]:
-                return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
-            return s
-        if key == "cape":
-            if not use_friendly:
-                s = f"{val:.0f}"
-                dt = get_metric("cape").display_thresholds
-                if html and val is not None and dt.get("yellow") and val >= dt["yellow"]:
-                    return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
-                return s
-            # Issue #1222: toter Pfad (kein Aufrufer, s. test_issue_778_dead_code.py)
-            # — Kreis-Emoji durch die SSoT-Ampel (CSS-Dot) ersetzt statt entfernt,
-            # da _render_html_table()/_fmt_val() als Methoden erhalten bleiben
-            # (test_issue_623_trend_channels.py::test_render_html_table_still_present).
-            return ampel_dot(val, get_metric("cape").display_thresholds)
-        if key == "visibility":
-            if not use_friendly:
-                if val >= 10000:
-                    s = f"{val / 1000:.0f}"
-                elif val >= 1000:
-                    s = f"{val / 1000:.1f}"
-                else:
-                    s = f"{val / 1000:.1f}"
-                dt = get_metric("visibility").display_thresholds
-                if html and dt.get("orange_lt") and val < dt["orange_lt"]:
-                    return f'<span style="background:#fff3e0;color:#e65100;padding:2px 4px;border-radius:3px">{s}</span>'
-                return s
-            if val >= 10000:
-                return "good"
-            elif val >= 4000:
-                return "fair"
-            elif val >= 1000:
-                return "poor"
-            else:
-                return "⚠️ fog"
-        if key == "freeze_lvl":
-            return f"{val:.0f}"
-        if key == "wind_dir":
-            return degrees_to_compass(val) or str(val)
-        return str(val)
-
     # ------------------------------------------------------------------
     # F2: Compact summary generation
     # ------------------------------------------------------------------
@@ -826,120 +708,6 @@ class TripReportFormatter:
         formatter = CompactSummaryFormatter()
         return formatter.format_stage_summary(segments, stage_name, dc, tz=self._tz)
 
-    # ------------------------------------------------------------------
-    # HTML rendering
-    # ------------------------------------------------------------------
-
-    def _format_daylight_html(self, dl: DaylightWindow) -> str:
-        """Render daylight banner as HTML."""
-        tz = self._tz
-        hours = dl.duration_minutes // 60
-        mins = dl.duration_minutes % 60
-        headline = (
-            f"\U0001f304 Ohne Stirnlampe: {local_fmt(dl.usable_start, tz)} "
-            f"– {local_fmt(dl.usable_end, tz)} ({hours}h {mins:02d}m)"
-        )
-        has_corrections = (
-            dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min
-            or dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min
-        )
-        explanation_parts = []
-        if has_corrections:
-            # Morning with corrections
-            if dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min:
-                parts = [f"Dämmerung {local_fmt(dl.civil_dawn, tz)}"]
-                if dl.terrain_dawn_penalty_min:
-                    parts.append(f"+ {dl.terrain_dawn_penalty_min}min (Tal)")
-                if dl.weather_dawn_penalty_min:
-                    parts.append(f"+ {dl.weather_dawn_penalty_min}min (Wolken)")
-                parts.append(f"= {local_fmt(dl.usable_start, tz)}")
-                explanation_parts.append(" ".join(parts))
-            # Evening with corrections
-            if dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min:
-                parts = [f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"]
-                if dl.terrain_dusk_penalty_min:
-                    parts.append(f"– {dl.terrain_dusk_penalty_min}min (Tal)")
-                if dl.weather_dusk_penalty_min:
-                    parts.append(f"– {dl.weather_dusk_penalty_min}min (Wolken)")
-                parts.append(f"= {local_fmt(dl.usable_end, tz)}")
-                explanation_parts.append(" ".join(parts))
-        else:
-            # No corrections — show base times for transparency
-            explanation_parts.append(
-                f"Dämmerung {local_fmt(dl.civil_dawn, tz)} · "
-                f"Sonnenaufgang {local_fmt(dl.sunrise, tz)} · "
-                f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"
-            )
-
-        lines = "<br>".join(
-            f'<span style="font-size:12px;color:#666">{p}</span>'
-            for p in explanation_parts
-        )
-        explanation_html = f"<div style=\"margin-top:4px\">{lines}</div>"
-
-        return (
-            f'<div style="background:#fffde7;border-left:4px solid #f9a825;'
-            f'padding:12px;margin:8px 0;">'
-            f'<strong style="font-size:14px">{headline}</strong>'
-            f'{explanation_html}'
-            f'</div>'
-        )
-
-    def _format_daylight_plain(self, dl: DaylightWindow) -> str:
-        """Render daylight block as plain text."""
-        tz = self._tz
-        hours = dl.duration_minutes // 60
-        mins = dl.duration_minutes % 60
-        lines = [
-            f"\U0001f304 Ohne Stirnlampe: {local_fmt(dl.usable_start, tz)} "
-            f"– {local_fmt(dl.usable_end, tz)} ({hours}h {mins:02d}m)"
-        ]
-        has_corrections = (
-            dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min
-            or dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min
-        )
-        if has_corrections:
-            # Morning with corrections
-            if dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min:
-                parts = [f"Dämmerung {local_fmt(dl.civil_dawn, tz)}"]
-                if dl.terrain_dawn_penalty_min:
-                    parts.append(f"+ {dl.terrain_dawn_penalty_min}min (Tal)")
-                if dl.weather_dawn_penalty_min:
-                    parts.append(f"+ {dl.weather_dawn_penalty_min}min (Wolken)")
-                parts.append(f"= {local_fmt(dl.usable_start, tz)}")
-                lines.append(f"   {' '.join(parts)}")
-            # Evening with corrections
-            if dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min:
-                parts = [f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"]
-                if dl.terrain_dusk_penalty_min:
-                    parts.append(f"– {dl.terrain_dusk_penalty_min}min (Tal)")
-                if dl.weather_dusk_penalty_min:
-                    parts.append(f"– {dl.weather_dusk_penalty_min}min (Wolken)")
-                parts.append(f"= {local_fmt(dl.usable_end, tz)}")
-                lines.append(f"   {' '.join(parts)}")
-        else:
-            # No corrections — show base times for transparency
-            lines.append(
-                f"   Dämmerung {local_fmt(dl.civil_dawn, tz)} · "
-                f"Sonnenaufgang {local_fmt(dl.sunrise, tz)} · "
-                f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"
-            )
-        return "\n".join(lines)
-    def _render_html_table(self, rows: list[dict]) -> str:
-        """Render an HTML table from row dicts."""
-        if not rows:
-            return "<p>Keine Daten</p>"
-        cols = self._visible_cols(rows)
-        # Header
-        ths = "<th>Time</th>" + "".join(f"<th>{label}</th>" for _, label in cols)
-        # Rows
-        trs = []
-        for r in rows:
-            tds = f"<td>{r['time']}</td>"
-            for key, _ in cols:
-                tds += f"<td>{self._fmt_val(key, r.get(key), html=True, row=r)}</td>"
-            trs.append(f"<tr>{tds}</tr>")
-        return f"<table><tr>{ths}</tr>{''.join(trs)}</table>"
     @staticmethod
     def _shorten_stage_name(name: str, max_len: int = 25) -> str:
         """Shorten stage name like 'Tag 3: von Sóller nach Tossals Verds' → 'Sóller → Tossals Verds'."""
@@ -949,33 +717,3 @@ class TripReportFormatter:
             short = f"{m.group(1)} → {m.group(2)}"
             return short[:max_len] if len(short) > max_len else short
         return name[:max_len] if len(name) > max_len else name
-
-    def _render_text_table(self, rows: list[dict]) -> str:
-        """Render a plain-text table from row dicts."""
-        if not rows:
-            return "  (keine Daten)"
-        cols = self._visible_cols(rows)
-        # Compute column widths
-        headers = [("Time", "time")] + [(label, key) for key, label in cols]
-        widths = []
-        for label, key in headers:
-            w = len(label)
-            for r in rows:
-                val_str = self._fmt_val(key, r.get(key), row=r) if key != "time" else r["time"]
-                w = max(w, len(val_str))
-            widths.append(w + 1)
-
-        # Header line
-        hdr = "  ".join(h[0].ljust(w) for h, w in zip(headers, widths))
-        sep = "  ".join("-" * w for w in widths)
-        lines = [f"  {hdr}", f"  {sep}"]
-
-        # Data rows
-        for r in rows:
-            parts = []
-            for (label, key), w in zip(headers, widths):
-                val_str = r["time"] if key == "time" else self._fmt_val(key, r.get(key), row=r)
-                parts.append(val_str.ljust(w))
-            lines.append(f"  {'  '.join(parts)}")
-
-        return "\n".join(lines)

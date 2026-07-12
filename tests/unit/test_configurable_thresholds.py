@@ -121,72 +121,22 @@ class TestCatalogPopulation:
 
 
 # =====================================================================
-# Part 3: _fmt_val() backward compatibility (same output as before)
+# Part 3: fmt_val() backward compatibility (same output as before)
+#
+# Issue #1214 Scheibe 4 (#778): TestFmtValCatalogThresholds testete
+# ausschliesslich TripReportFormatter._fmt_val (tot). Triage:
+# - Gust/Precip/Pop-Highlight aus Katalog-Schwellen: Duplikat \u2014 bereits
+#   vollstaendig gegen den lebendigen 4-stufigen CSS-Dot-Pfad getestet in
+#   tests/tdd/test_issue_759_email_ampel.py (u.a. gust 40/55/70/85 \u2192
+#   green/yellow/orange/red, precip 0/1/5/10, pop 0/30/60/80).
+# - CAPE-/Visibility-Roh-HTML-Hintergrund: dead-only 2-Stufen-Highlight,
+#   vom lebendigen Pfad widerlegt (tests/tdd/test_issue_811_mode_matrix.py
+#   ::test_cape_roh_html_no_yellow_span / ::test_visibility_roh_html_no_inline_style
+#   zeigen explizit KEIN Highlight im Roh-Modus, #814 AC-5).
+# - CAPE-Friendly-Emoji "\U0001f7e0": bereits VOR #1222 veraltet (die tote
+#   Kopie liefert seit #1222 einen CSS-Dot, keinen Kreis-Emoji mehr) \u2014
+#   dead-only und schon vor dieser Scheibe strukturell falsch.
+# - Cloud-Friendly-Emoji: Duplikat \u2014 bereits gegen helpers.fmt_val portiert
+#   in tests/unit/test_weather_metrics_ux.py::TestCloudEmojiFormatting.
+# Kein Aequivalent zu portieren.
 # =====================================================================
-
-
-class TestFmtValCatalogThresholds:
-    """_fmt_val() must produce same output as before (thresholds from catalog now)."""
-
-    def _get_formatter(self):
-        from output.renderers.trip_report import TripReportFormatter
-        return TripReportFormatter()
-
-    def test_gust_yellow_background(self) -> None:
-        """Gust 55 km/h -> yellow background in HTML."""
-        fmt = self._get_formatter()
-        result = fmt._fmt_val("gust", 55.0, html=True)
-        assert "background:#fff9c4" in result
-
-    def test_gust_red_background(self) -> None:
-        """Gust 85 km/h -> red background in HTML."""
-        fmt = self._get_formatter()
-        result = fmt._fmt_val("gust", 85.0, html=True)
-        assert "background:#ffebee" in result
-
-    def test_gust_no_highlight_below_threshold(self) -> None:
-        """Gust 40 km/h -> no background color."""
-        fmt = self._get_formatter()
-        result = fmt._fmt_val("gust", 40.0, html=True)
-        assert "background" not in result
-        assert result == "40"
-
-    def test_precip_blue_background(self) -> None:
-        """Precip 6 mm -> blue background."""
-        fmt = self._get_formatter()
-        result = fmt._fmt_val("precip", 6.0, html=True)
-        assert "background:#e3f2fd" in result
-
-    def test_pop_blue_background(self) -> None:
-        """POP 85% -> blue background."""
-        fmt = self._get_formatter()
-        result = fmt._fmt_val("pop", 85.0, html=True)
-        assert "background:#e3f2fd" in result
-
-    def test_cape_yellow_background_numeric(self) -> None:
-        """CAPE 1500 J/kg numeric -> yellow background."""
-        fmt = self._get_formatter()
-        fmt._friendly_keys = set()
-        result = fmt._fmt_val("cape", 1500.0, html=True)
-        assert "background:#fff9c4" in result
-
-    def test_visibility_orange_background(self) -> None:
-        """Visibility 450m -> orange background."""
-        fmt = self._get_formatter()
-        fmt._friendly_keys = set()
-        result = fmt._fmt_val("visibility", 450.0, html=True)
-        assert "background:#fff3e0" in result
-
-    def test_cape_emoji_hardcoded(self) -> None:
-        """CAPE 1500 friendly -> orange emoji (stays hardcoded)."""
-        fmt = self._get_formatter()
-        fmt._friendly_keys = {"cape"}
-        result = fmt._fmt_val("cape", 1500.0, html=False)
-        assert result == "\U0001f7e0"
-
-    def test_cloud_emoji_hardcoded(self) -> None:
-        """Cloud 35% friendly -> partly cloudy emoji (stays hardcoded)."""
-        fmt = self._get_formatter()
-        fmt._friendly_keys = {"cloud"}
-        result = fmt._fmt_val("cloud", 35.0, html=False)
-        assert result == "\u26c5"

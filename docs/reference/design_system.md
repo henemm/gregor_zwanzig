@@ -334,7 +334,7 @@ Status-Bewertung der sechs Bausteine, die EPIC 9 (Issue #236) adressiert:
 | Baustein | Status | Details |
 |---|---|---|
 | Dunkel-Footer (`#1a1a18`) | **FEHLT** | Footer nutzt `G_PAPER` (`#f6f4ee`), kein dunkles `#1a1a18` |
-| Daylight-Bar (SVG) | **FEHLT** | `_format_daylight_html()` rendert `<div>` mit Border-Left-Box, kein SVG |
+| Daylight-Bar (SVG) | **FEHLT** | Kein SVG-Daylight-Rendering im lebendigen Mail-Pfad (`email/html.py`); die frühere `_format_daylight_html()`-Border-Left-Box wurde mit #1214 Scheibe 4 als toter Code entfernt |
 | Tag-System ok/warn/risk/info | **FEHLT** | Box-Tints (`G_BOX_WARNING_BG`, `G_BOX_DANGER_BG`, `G_BOX_INFO_BG`) vorhanden, kein Pill/Tag-System |
 | ActivityProfile-Parameter | **VORHANDEN** | `profile: Optional[ActivityProfile]`, `profile_signature()`, `sig.accent_hex` im Header |
 | Inline-CSS-Only | **VORHANDEN** | `<style>`-Block + Inline-Styles, Google Fonts rein dekorativ |

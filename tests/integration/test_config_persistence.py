@@ -327,78 +327,13 @@ class TestDisabledMetricsExcluded:
 # =====================================================================
 
 
-class TestFriendlyFormatRespectsConfig:
-    """use_friendly_format=False → numeric output, True → emoji/label."""
-
-    def test_visibility_friendly_off_shows_numeric(self) -> None:
-        """visibility.use_friendly_format=False → '15' not 'good'."""
-        dc = build_default_display_config()
-        new_metrics = [
-            MetricConfig(
-                metric_id=mc.metric_id, enabled=True,
-                aggregations=mc.aggregations,
-                use_friendly_format=False if mc.metric_id == "visibility" else mc.use_friendly_format,
-            )
-            for mc in dc.metrics
-        ]
-        dc = UnifiedWeatherDisplayConfig(
-            trip_id="test", metrics=new_metrics,
-            show_night_block=dc.show_night_block,
-            night_interval_hours=dc.night_interval_hours,
-            thunder_forecast_days=dc.thunder_forecast_days,
-        )
-        fmt = TripReportFormatter()
-        from src.output.renderers.email.helpers import build_friendly_keys
-        fmt._friendly_keys = build_friendly_keys(dc)
-        result = fmt._fmt_val("visibility", 15000)
-        assert result == "15"
-        assert result != "good"
-
-    def test_visibility_friendly_on_shows_label(self) -> None:
-        """visibility.has_friendly_format=False seit #819 → roher Zahlenwert, kein 'good'."""
-        dc = build_default_display_config()
-        new_metrics = [
-            MetricConfig(
-                metric_id=mc.metric_id, enabled=True,
-                aggregations=mc.aggregations,
-                use_friendly_format=True if mc.metric_id == "visibility" else mc.use_friendly_format,
-            )
-            for mc in dc.metrics
-        ]
-        dc = UnifiedWeatherDisplayConfig(
-            trip_id="test", metrics=new_metrics,
-            show_night_block=dc.show_night_block,
-            night_interval_hours=dc.night_interval_hours,
-            thunder_forecast_days=dc.thunder_forecast_days,
-        )
-        fmt = TripReportFormatter()
-        from src.output.renderers.email.helpers import build_friendly_keys
-        fmt._friendly_keys = build_friendly_keys(dc)
-        result = fmt._fmt_val("visibility", 15000)
-        assert result in ("15", "15 km")
-
-    def test_cloud_friendly_off_shows_numeric(self) -> None:
-        """cloud_total.use_friendly_format=False → '50' not emoji."""
-        dc = build_default_display_config()
-        new_metrics = [
-            MetricConfig(
-                metric_id=mc.metric_id, enabled=True,
-                aggregations=mc.aggregations,
-                use_friendly_format=False if mc.metric_id == "cloud_total" else mc.use_friendly_format,
-            )
-            for mc in dc.metrics
-        ]
-        dc = UnifiedWeatherDisplayConfig(
-            trip_id="test", metrics=new_metrics,
-            show_night_block=dc.show_night_block,
-            night_interval_hours=dc.night_interval_hours,
-            thunder_forecast_days=dc.thunder_forecast_days,
-        )
-        fmt = TripReportFormatter()
-        from src.output.renderers.email.helpers import build_friendly_keys
-        fmt._friendly_keys = build_friendly_keys(dc)
-        result = fmt._fmt_val("cloud", 50)
-        assert result == "50"
+# Issue #1214 Scheibe 4 (#778): TestFriendlyFormatRespectsConfig testete
+# ausschliesslich TripReportFormatter._fmt_val (tot). Duplikat — dieselben
+# Faelle (visibility numerisch statt "good"/"fair"; cloud numerisch statt
+# Emoji) sind bereits gegen den lebendigen helpers.fmt_val-Pfad portiert in
+# tests/unit/test_weather_metrics_ux.py (TestFmtValFriendlyToggle,
+# TestCloudEmojiFormatting) — ersatzlos geloescht, kein Aequivalent zu
+# portieren.
 
 
 # =====================================================================

@@ -99,200 +99,100 @@ class TestColLabelUpdates:
 # ============================================================
 
 class TestCloudEmojiFormatting:
-    """Cloud metrics should show emoji based on percentage."""
+    """Cloud metrics should show emoji based on percentage.
+
+    Issue #1214 Scheibe 4: portiert von TripReportFormatter._fmt_val (tot,
+    #778) auf den lebendigen Pfad helpers.fmt_val — identische Emoji-Skala,
+    nur friendly_keys statt formatter._friendly_keys als Toggle-Quelle.
+    """
+
+    _FRIENDLY = {"cloud", "cloud_low", "cloud_mid", "cloud_high"}
 
     @pytest.fixture()
-    def formatter(self):
-        from output.renderers.trip_report import TripReportFormatter
-        return TripReportFormatter()
+    def fmt(self):
+        from src.output.renderers.email.helpers import fmt_val
+        return fmt_val
 
     # --- Plain text: emoji only ---
 
-    def test_cloud_clear_plain(self, formatter):
+    def test_cloud_clear_plain(self, fmt):
         """0-10% → ☀️"""
-        result = formatter._fmt_val("cloud", 5, html=False)
+        result = fmt("cloud", 5, friendly_keys=self._FRIENDLY, html=False)
         assert "☀️" in result
 
-    def test_cloud_partly_plain(self, formatter):
+    def test_cloud_partly_plain(self, fmt):
         """11-30% → 🌤️"""
-        result = formatter._fmt_val("cloud", 25, html=False)
+        result = fmt("cloud", 25, friendly_keys=self._FRIENDLY, html=False)
         assert "🌤️" in result
 
-    def test_cloud_half_plain(self, formatter):
+    def test_cloud_half_plain(self, fmt):
         """31-70% → ⛅"""
-        result = formatter._fmt_val("cloud", 50, html=False)
+        result = fmt("cloud", 50, friendly_keys=self._FRIENDLY, html=False)
         assert "⛅" in result
 
-    def test_cloud_mostly_plain(self, formatter):
+    def test_cloud_mostly_plain(self, fmt):
         """71-90% → 🌥️"""
-        result = formatter._fmt_val("cloud", 85, html=False)
+        result = fmt("cloud", 85, friendly_keys=self._FRIENDLY, html=False)
         assert "🌥️" in result
 
-    def test_cloud_overcast_plain(self, formatter):
+    def test_cloud_overcast_plain(self, fmt):
         """91-100% → ☁️"""
-        result = formatter._fmt_val("cloud", 95, html=False)
+        result = fmt("cloud", 95, friendly_keys=self._FRIENDLY, html=False)
         assert "☁️" in result
 
     # --- HTML: emoji + percentage ---
 
-    def test_cloud_html_shows_emoji_only(self, formatter):
+    def test_cloud_html_shows_emoji_only(self, fmt):
         """HTML should show emoji only (no numeric value)."""
-        result = formatter._fmt_val("cloud", 25, html=True)
+        result = fmt("cloud", 25, friendly_keys=self._FRIENDLY, html=True)
         assert "🌤️" in result
         assert "25" not in result
 
     # --- Boundary values ---
 
-    def test_cloud_boundary_10_is_clear(self, formatter):
-        result = formatter._fmt_val("cloud", 10, html=False)
+    def test_cloud_boundary_10_is_clear(self, fmt):
+        result = fmt("cloud", 10, friendly_keys=self._FRIENDLY, html=False)
         assert "☀️" in result
 
-    def test_cloud_boundary_11_is_partly(self, formatter):
-        result = formatter._fmt_val("cloud", 11, html=False)
+    def test_cloud_boundary_11_is_partly(self, fmt):
+        result = fmt("cloud", 11, friendly_keys=self._FRIENDLY, html=False)
         assert "🌤️" in result
 
-    def test_cloud_boundary_70_is_half(self, formatter):
-        result = formatter._fmt_val("cloud", 70, html=False)
+    def test_cloud_boundary_70_is_half(self, fmt):
+        result = fmt("cloud", 70, friendly_keys=self._FRIENDLY, html=False)
         assert "⛅" in result
 
-    def test_cloud_boundary_91_is_overcast(self, formatter):
-        result = formatter._fmt_val("cloud", 91, html=False)
+    def test_cloud_boundary_91_is_overcast(self, fmt):
+        result = fmt("cloud", 91, friendly_keys=self._FRIENDLY, html=False)
         assert "☁️" in result
 
     # --- Cloud sub-types also work ---
 
-    def test_cloud_low_emoji(self, formatter):
-        result = formatter._fmt_val("cloud_low", 50, html=False)
+    def test_cloud_low_emoji(self, fmt):
+        result = fmt("cloud_low", 50, friendly_keys=self._FRIENDLY, html=False)
         assert "⛅" in result
 
-    def test_cloud_mid_emoji(self, formatter):
-        result = formatter._fmt_val("cloud_mid", 5, html=False)
+    def test_cloud_mid_emoji(self, fmt):
+        result = fmt("cloud_mid", 5, friendly_keys=self._FRIENDLY, html=False)
         assert "☀️" in result
 
-    def test_cloud_high_emoji(self, formatter):
-        result = formatter._fmt_val("cloud_high", 95, html=False)
+    def test_cloud_high_emoji(self, fmt):
+        result = fmt("cloud_high", 95, friendly_keys=self._FRIENDLY, html=False)
         assert "☁️" in result
 
-    def test_cloud_none_returns_dash(self, formatter):
-        result = formatter._fmt_val("cloud", None, html=False)
+    def test_cloud_none_returns_dash(self, fmt):
+        result = fmt("cloud", None, friendly_keys=self._FRIENDLY, html=False)
         assert result == "–"
 
 
-class TestCapeEmojiFormatting:
-    """CAPE should show the correct Ampel-CSS-Dot colour based on J/kg value.
-
-    Issue #1222: Kreis-Emojis wurden durch gestylte CSS-Dots ersetzt.
-    _fmt_val('cape', ...) delegiert jetzt an ampel_dot() mit den
-    Katalog-Schwellen (get_metric('cape').display_thresholds: yellow 1000,
-    orange 2500, red 3500) statt den frueheren lokalen Schwellen
-    (300/1000/2000) — Werte/Grenzen unten sind entsprechend angepasst.
-    """
-
-    @pytest.fixture()
-    def formatter(self):
-        from output.renderers.trip_report import TripReportFormatter
-        return TripReportFormatter()
-
-    # --- Plain text: CSS-Dot only ---
-
-    def test_cape_low_plain(self, formatter):
-        """< 1000 J/kg → green"""
-        result = formatter._fmt_val("cape", 200, html=False)
-        assert "#15803d" in result
-
-    def test_cape_moderate_plain(self, formatter):
-        """1000–2499 J/kg → yellow"""
-        result = formatter._fmt_val("cape", 1200, html=False)
-        assert "#ca8a04" in result
-
-    def test_cape_high_plain(self, formatter):
-        """2500–3499 J/kg → orange"""
-        result = formatter._fmt_val("cape", 2800, html=False)
-        assert "#c2410c" in result
-
-    def test_cape_extreme_plain(self, formatter):
-        """>= 3500 J/kg → red"""
-        result = formatter._fmt_val("cape", 4000, html=False)
-        assert "#b91c1c" in result
-
-    # --- HTML: CSS-Dot only, kein Rohwert ---
-
-    def test_cape_html_shows_emoji_only(self, formatter):
-        result = formatter._fmt_val("cape", 1200, html=True)
-        assert "#ca8a04" in result
-        assert "1200" not in result
-
-    # --- Boundary values ---
-
-    def test_cape_boundary_300_is_low(self, formatter):
-        """300 (weit unter der neuen Gelb-Schwelle 1000) → green"""
-        result = formatter._fmt_val("cape", 300, html=False)
-        assert "#15803d" in result
-
-    def test_cape_boundary_999_is_still_low(self, formatter):
-        result = formatter._fmt_val("cape", 999, html=False)
-        assert "#15803d" in result
-
-    def test_cape_boundary_1000_is_moderate(self, formatter):
-        result = formatter._fmt_val("cape", 1000, html=False)
-        assert "#ca8a04" in result
-
-    def test_cape_none_returns_dash(self, formatter):
-        result = formatter._fmt_val("cape", None, html=False)
-        assert result == "–"
-
-
-class TestVisibilityLevelFormatting:
-    """Visibility should show text levels instead of raw values."""
-
-    @pytest.fixture()
-    def formatter(self):
-        from output.renderers.trip_report import TripReportFormatter
-        return TripReportFormatter()
-
-    def test_visibility_good(self, formatter):
-        """>10km → good"""
-        result = formatter._fmt_val("visibility", 12000, html=False)
-        assert result == "good"
-
-    def test_visibility_fair(self, formatter):
-        """4-10km → fair"""
-        result = formatter._fmt_val("visibility", 5000, html=False)
-        assert result == "fair"
-
-    def test_visibility_poor(self, formatter):
-        """1-4km → poor"""
-        result = formatter._fmt_val("visibility", 2000, html=False)
-        assert result == "poor"
-
-    def test_visibility_fog(self, formatter):
-        """<1km → ⚠️ fog"""
-        result = formatter._fmt_val("visibility", 500, html=False)
-        assert "fog" in result
-
-    def test_visibility_html_same_as_plain(self, formatter):
-        """HTML and plain-text should be the same for visibility levels."""
-        plain = formatter._fmt_val("visibility", 5000, html=False)
-        html = formatter._fmt_val("visibility", 5000, html=True)
-        assert plain == html
-
-    # --- Boundary values ---
-
-    def test_visibility_boundary_10000_is_good(self, formatter):
-        result = formatter._fmt_val("visibility", 10000, html=False)
-        assert result == "good"
-
-    def test_visibility_boundary_4000_is_fair(self, formatter):
-        result = formatter._fmt_val("visibility", 4000, html=False)
-        assert result == "fair"
-
-    def test_visibility_boundary_1000_is_poor(self, formatter):
-        result = formatter._fmt_val("visibility", 1000, html=False)
-        assert result == "poor"
-
-    def test_visibility_none_returns_dash(self, formatter):
-        result = formatter._fmt_val("visibility", None, html=False)
-        assert result == "–"
+# Issue #1214 Scheibe 4: TestCapeEmojiFormatting und TestVisibilityLevelFormatting
+# ersatzlos entfernt (#778) — beide testeten ausschliesslich Verhalten, das nur
+# die tote _fmt_val-Kopie hatte: CAPE lieferte im friendly-Zweig IMMER (auch
+# plain=html=False) einen CSS-Dot statt einer Zahl (widerlegt durch die
+# lebendigen #811-Mode-Matrix-Tests test_cape_plain_einfach_is_number_not_emoji
+# etc.); Visibility zeigte englische Woerter good/fair/poor/"⚠️ fog", was
+# #814 AC-5 explizit verbietet (lebendiger Pfad zeigt immer die km-Zahl, nie
+# ein Wort). Kein Aequivalent im lebendigen Pfad zu portieren.
 
 
 # ============================================================
@@ -435,104 +335,77 @@ class TestLoaderUseFriendlyFormat:
 
 
 class TestFmtValFriendlyToggle:
-    """4d) _fmt_val() respects per-metric friendly format toggle."""
+    """4d) fmt_val() respects per-metric friendly format toggle.
+
+    Issue #1214 Scheibe 4: portiert von TripReportFormatter._fmt_val (tot,
+    #778) auf helpers.fmt_val. CAPE-Faelle ersatzlos entfernt — die tote
+    Kopie lieferte im friendly-Zweig IMMER (auch plain) einen CSS-Dot und im
+    Roh-Zweig eine 2-stufige Highlight-Span; beides widerlegt der lebendige
+    Pfad (#811-Mode-Matrix: plain=Zahl, Ampel nur ueber indicator_keys+html).
+    Visibility "friendly ON" (englisches Wort) ebenso entfernt (#814 AC-5) —
+    der lebendige Pfad kennt fuer visibility keinen friendly/raw-Unterschied
+    und zeigt immer die km-Zahl ohne Highlight; die verbleibenden Tests
+    pruefen genau das (Rundung + kein Highlight, auch bei html=True).
+    """
+
+    _FRIENDLY = {"cloud", "cloud_low", "cloud_mid", "cloud_high"}
 
     @pytest.fixture()
-    def formatter_friendly(self):
-        """Formatter with friendly format ON for cloud/cape/visibility."""
-        from output.renderers.trip_report import TripReportFormatter
-        f = TripReportFormatter()
-        f._friendly_keys = {"cloud", "cloud_low", "cloud_mid", "cloud_high", "cape", "visibility"}
-        return f
-
-    @pytest.fixture()
-    def formatter_raw(self):
-        """Formatter with friendly format OFF (empty set)."""
-        from output.renderers.trip_report import TripReportFormatter
-        f = TripReportFormatter()
-        f._friendly_keys = set()
-        return f
+    def fmt(self):
+        from src.output.renderers.email.helpers import fmt_val
+        return fmt_val
 
     # --- Cloud: friendly ON → emoji (unchanged from v1.0) ---
 
-    def test_cloud_friendly_on_shows_emoji(self, formatter_friendly):
-        result = formatter_friendly._fmt_val("cloud", 50, html=False)
+    def test_cloud_friendly_on_shows_emoji(self, fmt):
+        result = fmt("cloud", 50, friendly_keys=self._FRIENDLY, html=False)
         assert "⛅" in result
 
-    def test_cloud_friendly_on_html_shows_emoji_only(self, formatter_friendly):
-        result = formatter_friendly._fmt_val("cloud", 50, html=True)
+    def test_cloud_friendly_on_html_shows_emoji_only(self, fmt):
+        result = fmt("cloud", 50, friendly_keys=self._FRIENDLY, html=True)
         assert "⛅" in result
         assert "50" not in result
 
     # --- Cloud: friendly OFF → raw percentage ---
 
-    def test_cloud_friendly_off_shows_raw(self, formatter_raw):
-        result = formatter_raw._fmt_val("cloud", 50, html=False)
+    def test_cloud_friendly_off_shows_raw(self, fmt):
+        result = fmt("cloud", 50, friendly_keys=set(), html=False)
         assert result == "50"
 
-    def test_cloud_friendly_off_html_shows_raw(self, formatter_raw):
-        result = formatter_raw._fmt_val("cloud", 50, html=True)
+    def test_cloud_friendly_off_html_shows_raw(self, fmt):
+        result = fmt("cloud", 50, friendly_keys=set(), html=True)
         assert result == "50"
 
-    def test_cloud_low_friendly_off_shows_raw(self, formatter_raw):
-        result = formatter_raw._fmt_val("cloud_low", 75, html=False)
+    def test_cloud_low_friendly_off_shows_raw(self, fmt):
+        result = fmt("cloud_low", 75, friendly_keys=set(), html=False)
         assert result == "75"
 
-    # --- CAPE: friendly ON → CSS-Dot (Issue #1222: kein Emoji mehr) ---
+    # --- Visibility: immer km-Zahl, kein friendly/raw-Unterschied (#814 AC-5) ---
 
-    def test_cape_friendly_on_shows_emoji(self, formatter_friendly):
-        result = formatter_friendly._fmt_val("cape", 1200, html=False)
-        assert "#ca8a04" in result  # yellow (Katalog-Schwelle 1000, Issue #1222)
-
-    # --- CAPE: friendly OFF → raw value ---
-
-    def test_cape_friendly_off_shows_raw(self, formatter_raw):
-        result = formatter_raw._fmt_val("cape", 800, html=False)
-        assert result == "800"
-
-    def test_cape_friendly_off_html_high_value_highlighted(self, formatter_raw):
-        """CAPE >= 1000 should get HTML highlighting when raw."""
-        result = formatter_raw._fmt_val("cape", 1200, html=True)
-        assert "1200" in result
-        assert "background" in result
-
-    def test_cape_friendly_off_html_low_value_plain(self, formatter_raw):
-        """CAPE < 1000 should be plain number when raw."""
-        result = formatter_raw._fmt_val("cape", 800, html=True)
-        assert result == "800"
-
-    # --- Visibility: friendly ON → level text (unchanged) ---
-
-    def test_visibility_friendly_on_shows_level(self, formatter_friendly):
-        result = formatter_friendly._fmt_val("visibility", 5000, html=False)
-        assert result == "fair"
-
-    # --- Visibility: friendly OFF → raw formatted value ---
-
-    def test_visibility_friendly_off_high_shows_km(self, formatter_raw):
+    def test_visibility_high_shows_km(self, fmt):
         """>=10000m → '15' (km, no suffix)"""
-        result = formatter_raw._fmt_val("visibility", 15000, html=False)
+        result = fmt("visibility", 15000, html=False)
         assert result == "15"
 
-    def test_visibility_friendly_off_mid_shows_km(self, formatter_raw):
+    def test_visibility_mid_shows_km(self, fmt):
         """>=1000m, <10000m → '5.0' (km, no suffix)"""
-        result = formatter_raw._fmt_val("visibility", 5000, html=False)
+        result = fmt("visibility", 5000, html=False)
         assert result == "5.0"
 
-    def test_visibility_friendly_off_low_shows_km_decimal(self, formatter_raw):
+    def test_visibility_low_shows_km_decimal(self, fmt):
         """<1000m → '0.8' (km decimal)"""
-        result = formatter_raw._fmt_val("visibility", 800, html=False)
+        result = fmt("visibility", 800, html=False)
         assert result == "0.8"
 
-    def test_visibility_friendly_off_html_fog_highlighted(self, formatter_raw):
-        """<500m should get HTML highlighting when raw (km format)."""
-        result = formatter_raw._fmt_val("visibility", 300, html=True)
-        assert "0.3" in result
-        assert "background" in result
+    def test_visibility_html_no_highlight_low_value(self, fmt):
+        """#814 AC-5: kein Highlight mehr, auch bei kleinen Werten und html=True."""
+        result = fmt("visibility", 300, html=True)
+        assert result == "0.3"
+        assert "background" not in result
 
-    def test_visibility_friendly_off_html_normal_plain(self, formatter_raw):
-        """>=500m should be plain number when raw (km format)."""
-        result = formatter_raw._fmt_val("visibility", 5000, html=True)
+    def test_visibility_html_same_as_plain(self, fmt):
+        """>=500m: html und plain identisch (keine Markierung)."""
+        result = fmt("visibility", 5000, html=True)
         assert result == "5.0"
 
 
