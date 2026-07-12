@@ -419,6 +419,27 @@ def ampel_dot(value, thresholds: dict) -> str:
     return _ampel_dot_css(level)
 
 
+def _ampel_dot_severity(metric_id: str, value) -> str:
+    """Issue #1214 Scheibe 3: Ampel-CSS-Dot mit ``severity_for`` als Levelquelle.
+
+    Ersetzt in ``fmt_val`` fuer die 5 Ampel-Metriken (wind/gust/precip/pop/cape)
+    den bisherigen ``ampel_dot(val, thresholds)``-Aufruf. Das CSS-Dot-Markup
+    (``_ampel_dot_css``) bleibt lokal und unveraendert; nur die Level-BERECHNUNG
+    kommt jetzt aus dem konsolidierten ``severity_for`` (identisches Vokabular
+    green/yellow/orange/red aus derselben Katalog-Schwellen-Quelle).
+
+    Defensiv: liefert ``severity_for`` ``None`` (kein Wert oder keine Standard-
+    Schwellen), wird ``"–"`` zurueckgegeben — analog ``ampel_dot`` (kein Crash).
+    """
+    # Lokaler Import vermeidet einen Zirkelbezug: metric_format importiert
+    # (ueber design_tokens) das renderers-Paket, das wiederum helpers laedt.
+    from src.output.metric_format import severity_for
+    level = severity_for(metric_id, value)
+    if level is None:
+        return "–"
+    return _ampel_dot_css(level)
+
+
 def ampel_level(metric_id: str, value) -> "Optional[str]":
     """Issue #888: Ampel-Band-Level ('green'|'yellow'|'orange'|'red') fuer eine
     Katalog-Metrik, aus denselben display_thresholds wie ampel_dot.
@@ -464,6 +485,10 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
     """
     if val is None:
         return "–"
+
+    # Issue #1214 Scheibe 3: konsolidierte Zahlen-Formatierung. Lokaler Import
+    # vermeidet den Zirkelbezug metric_format -> renderers -> helpers.
+    from src.output.metric_format import format_value
 
     # Resolve effective mode per column (Issue #435).
     if format_modes is not None:
@@ -513,8 +538,8 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
         # nicht durch mode (build_format_modes liefert immer 'raw' für diese Metriken).
         if html and _use_ampel:
             metric_id = _AMPEL_KEY_TO_METRIC_ID[key]
-            return ampel_dot(val, get_metric(metric_id).display_thresholds)
-        s = f"{val:.0f}"
+            return _ampel_dot_severity(metric_id, val)
+        s = format_value(key, val, style="bare")
         if key == "wind" and row and "_wind_dir_deg" in row:
             compass = degrees_to_compass(row["_wind_dir_deg"])
             if compass:
@@ -526,8 +551,8 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
             return format_precip_intensity(val)
         # Issue #814: HTML-Ampel durch indicator_keys (use_friendly_format).
         if html and _use_ampel:
-            return ampel_dot(val, get_metric("precipitation").display_thresholds)
-        return f"{val:.1f}"
+            return _ampel_dot_severity("precipitation", val)
+        return format_value("precipitation", val, style="bare")
     if key in ("snow_limit", "snow_depth"):
         return f"{val}" if val else "–"
     if key in ("cloud", "cloud_low", "cloud_mid", "cloud_high"):
@@ -566,15 +591,15 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
     if key == "pop":
         # Issue #814: HTML-Ampel durch indicator_keys (use_friendly_format).
         if html and _use_ampel:
-            return ampel_dot(val, get_metric("rain_probability").display_thresholds)
-        return f"{val:.0f}"
+            return _ampel_dot_severity("rain_probability", val)
+        return format_value("rain_probability", val, style="bare")
     if key == "cape":
         # Issue #814 AC-4: Einfach-HTML → Ampel via indicator_keys; Plain immer Zahl;
         # Roh-HTML → nackte Zahl ohne Highlight-Span.
         if html and _use_ampel:
-            return ampel_dot(val, get_metric("cape").display_thresholds)
+            return _ampel_dot_severity("cape", val)
         # Plain (html=False) oder Roh-HTML: nackte Zahl, kein Span.
-        return f"{val:.0f}"
+        return format_value("cape", val, style="bare")
     if key == "visibility":
         # Issue #814 AC-5: Sicht zeigt immer km-Zahl — kein englisches Wort,
         # keine Markierung (Ampel wäre dauergrün, AC-5 Spec-Begründung).
@@ -582,7 +607,7 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
             return f"{val / 1000:.0f}"
         return f"{val / 1000:.1f}"
     if key == "freeze_lvl":
-        return f"{val:.0f}"
+        return format_value("freezing_level", val, style="bare")
     if key == "wind_dir":
         # Issue #435: raw mode -> degree value; scale mode -> compass label
         # (default friendly behaviour for pre-#435 data).

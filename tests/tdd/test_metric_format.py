@@ -36,6 +36,40 @@ class TestFormatValue:
         assert format_value("temperature", None, style="plain") == "–"
 
 
+class TestFormatValueBareStyle:
+    """AC-1 (Scheibe 3): style="bare" liefert die reine Zahl OHNE
+    Einheiten-Suffix -- fuer helpers.fmt_val, wo die Einheit in der
+    Spalten-Ueberschrift der Trip-Briefing-Tabelle steht, nicht in der Zelle.
+    style="plain" (Scheibe 1) bleibt davon unberuehrt (Koexistenz)."""
+
+    def test_wind_bare_has_no_unit_suffix(self):
+        # Katalog: wind.decimals=0. Bare-Stil: "45", nicht "45 km/h".
+        assert format_value("wind", 45.0, style="bare") == "45"
+
+    def test_gust_bare_has_no_unit_suffix(self):
+        assert format_value("gust", 62.0, style="bare") == "62"
+
+    def test_precipitation_bare_respects_one_decimal(self):
+        # Katalog: precipitation.decimals=1.
+        assert format_value("precipitation", 1.0, style="bare") == "1.0"
+
+    def test_rain_probability_bare_has_no_unit_suffix(self):
+        assert format_value("rain_probability", 45.0, style="bare") == "45"
+
+    def test_cape_bare_has_no_unit_suffix(self):
+        assert format_value("cape", 1200.0, style="bare") == "1200"
+
+    def test_freezing_level_bare_has_no_unit_suffix(self):
+        assert format_value("freezing_level", 2400.0, style="bare") == "2400"
+
+    def test_bare_none_value_returns_dash(self):
+        assert format_value("wind", None, style="bare") == "–"
+
+    def test_plain_style_unaffected_by_bare_introduction(self):
+        # Regressionsschutz: style="plain" bleibt exakt wie in Scheibe 1.
+        assert format_value("wind", 45.0, style="plain") == "45 km/h"
+
+
 class TestSeverityFor:
     """AC-3 (Vorbereitung): severity_for liefert kanonisches Ampel-Vokabular."""
 

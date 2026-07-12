@@ -50,23 +50,29 @@ def format_value(metric_id: str, value: Optional[float], style: str = "plain") -
 
     Regeln (gegen den Katalog verifiziert, s. Spec AC-1):
     - ``value is None`` -> ``"–"``.
-    - Sonst: auf ``metric.decimals`` (Default 0) gerundet; ``°C``/``%`` werden
-      ohne Leerzeichen angehaengt, alle anderen Einheiten mit Leerzeichen.
-    - Ist ``metric.display_unit`` gesetzt und != ``metric.unit`` (aktuell nur
-      ``visibility``: m -> km), wird der Wert erst konvertiert, DANN gerundet,
-      und ``display_unit`` als Suffix genutzt.
+    - Sonst: auf ``metric.decimals`` (Default 0) gerundet; ``display_unit``-
+      Konvertierung (aktuell nur ``visibility``: m -> km) wird VOR dem Runden
+      angewandt.
+    - ``style="plain"``: Einheiten-Suffix wird angehaengt (``°C``/``%`` ohne
+      Leerzeichen, alle anderen mit Leerzeichen).
+    - ``style="bare"`` (Scheibe 3): reine, gerundete Zahl OHNE Einheiten-Suffix
+      — fuer ``helpers.fmt_val``, wo die Einheit in der Spalten-Ueberschrift der
+      Trip-Briefing-Tabelle steht, nicht in der Zelle. Rundungs-/Konvertierungs-
+      Logik ist identisch zu ``style="plain"``, nur das Suffix entfaellt.
 
     Args:
         metric_id: Katalog-ID (z.B. "temperature", "wind", "visibility").
         value: Numerischer Wert oder None.
-        style: Darstellungsstil. Aktuell nur "plain" (einziger unterstuetzter
-            Wert in Scheibe 1); der Parameter existiert fuer spaetere
-            Erweiterung (z.B. "sms").
+        style: Darstellungsstil. ``"plain"`` (mit Einheit) oder ``"bare"``
+            (reine Zahl). Unbekannte Werte loesen ``ValueError`` aus (analog
+            ``label()``).
 
     Returns:
-        Formatierter String inkl. Einheiten-Suffix.
+        Formatierter String — mit Einheiten-Suffix bei ``"plain"``, ohne bei
+        ``"bare"``.
     """
-    _ = style  # aktuell nur "plain" — Parameter reserviert fuer spaetere Modi
+    if style not in ("plain", "bare"):
+        raise ValueError(f"Unbekannter format-style: {style!r}")
     if value is None:
         return _NO_VALUE
 
@@ -83,6 +89,8 @@ def format_value(metric_id: str, value: Optional[float], style: str = "plain") -
         unit = display_unit
 
     text = f"{v:.{decimals}f}"
+    if style == "bare":
+        return text
     if not unit:
         return text
     if unit in _NO_SPACE_UNITS:
