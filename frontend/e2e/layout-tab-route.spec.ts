@@ -229,13 +229,11 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 
 			await tab.locator('[data-testid="channel-tab-telegram"]:visible').first().click();
 
-			// dispatchEvent statt click(): der globale `bottom-nav` (z-50, #618-
-			// unabhängig, bereits vor dieser Scheibe bestehend) überlappt den FAB
-			// (z-index 20) auf Mobile-Viewports optisch — ein echter Maus-Klick an
-			// dieser Bildschirmposition träfe das Nav statt den FAB. Kein Bezug zu
-			// Scheibe 3b (FAB-Markup/CSS unverändert übernommen); der Handler-Aufruf
-			// selbst bleibt der reale Klick-Pfad-Nachweis (onclick-Listener).
-			await page.locator('[data-testid="mobile-mail-fab"]:visible').first().dispatchEvent('click');
+			// F001-Fix (Staging-Adversary #1232-3b): FAB lag vor dem CSS-Fix hinter
+			// der globalen BottomNav (z-index:50) — echter Klick jetzt möglich,
+			// da der FAB per bottom-Offset (64px Nav-Höhe + safe-area + 16px) und
+			// z-index:55 über die Nav gehoben wurde (WeatherMetricsTab.svelte).
+			await page.locator('[data-testid="mobile-mail-fab"]:visible').first().click();
 			const sheet = page.locator('[data-testid="mobile-mail-sheet"]:visible').first();
 			await expect(sheet).toBeVisible();
 			await expect(sheet.getByTestId('wm2-telegram-bubble')).toBeVisible();

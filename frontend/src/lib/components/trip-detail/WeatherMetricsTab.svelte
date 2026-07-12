@@ -856,13 +856,20 @@
 		:global(.layout-tab[data-context='route'] .lt-col-preview) {
 			display: none;
 		}
-		/* Issue #618: Floating FAB mobil */
+		/* Issue #618: Floating FAB mobil.
+		   F001 (Staging-Adversary #1232-3b): z-index:20/bottom:16px lag HINTER
+		   der globalen BottomNav (z-index:50, 64px + safe-area, BottomNav.svelte
+		   Z.27/28) — echte Klicks trafen den Nav-Link statt den FAB. Fix nach
+		   etabliertem Muster (SaveIndicator.svelte Z.74-78: „Mobile: über
+		   BottomNav (64px Höhe + safe-area)"): bottom-Offset über die Nav-Höhe
+		   heben, z-index über 50 (unter Sheet.svelte 60/61, damit der FAB beim
+		   offenen Bottom-Sheet dahinter bleibt). */
 		.mobile-mail-fab {
 			position: fixed;
-			bottom: 16px;
+			bottom: calc(64px + env(safe-area-inset-bottom) + 16px);
 			left: 14px;
 			right: 14px;
-			z-index: 20;
+			z-index: 55;
 			display: flex;
 			align-items: center;
 			justify-content: center;
