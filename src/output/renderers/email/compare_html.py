@@ -28,9 +28,10 @@ from app.user import ComparisonResult, LocationResult
 from output.renderers.email.design_tokens import (
     FONT_DATA, FONT_UI, G_ACCENT, G_ALERT_L2, G_ALERT_L3, G_ALERT_L4,
     G_BOX_WARNING_BG, G_INK, G_INK_FAINT, G_INK_MUTED, G_PAPER, G_SUCCESS,
-    G_WARNING, WEB_FONT_LINK,
+    G_WARNING, WEB_FONT_LINK, tone_css,
 )
 from output.renderers.email.profile_signature import profile_signature
+from src.output.metric_format import severity_for
 from src.output.renderers.alert.official_alerts import render_official_alerts_html
 
 
@@ -39,10 +40,22 @@ from src.output.renderers.alert.official_alerts import render_official_alerts_ht
 # screen-compare-email-v2.jsx uebernommen)
 # ---------------------------------------------------------------------------
 
+# Issue #1214 Scheibe 2: Compare-lokales Ampel-Vokabular (ok/caution/warn/danger)
+# ist 1:1 kompatibel zum kanonischen (green/yellow/orange/red). severity_for()
+# liefert kanonisch; die Uebersetzung erfolgt hier an der Aufrufstelle (Compare-
+# Vokabular bleibt lokal, wird nicht global umbenannt).
+_CANONICAL_TO_COMPARE = {"green": "ok", "yellow": "caution", "orange": "warn", "red": "danger"}
+_COMPARE_TO_CANONICAL = {v: k for k, v in _CANONICAL_TO_COMPARE.items()}
+
+# Issue #1214 Scheibe 2: Zell-Toenung stammt aus der zentralen tone_css-Palette
+# (design_tokens), nicht mehr aus einem lokal duplizierten Mapping. _RISK_CELL
+# bleibt als abgeleiteter Kompat-Alias erhalten (registrierte Konsumenten +
+# Regressionstest test_official_alert_badge_color.py locken diese Werte); es ist
+# ab jetzt nur noch eine Ableitung von tone_css, keine eigene Farbquelle mehr.
 _RISK_CELL = {
-    "caution": ("#fbeeb8", "#5e4a00"),
-    "warn": ("#fad6b8", "#8a3506"),
-    "danger": ("#f6c5bf", "#8a1009"),
+    "caution": tone_css("yellow"),
+    "warn": tone_css("orange"),
+    "danger": tone_css("red"),
 }
 _INFO_CELL = ("#dde8f3", "#1e3a5f")
 
@@ -62,7 +75,12 @@ def _sev_temp(v: float) -> str:
 
 
 def _sev_wind(v: float) -> str:
-    return "danger" if v > 40 else "warn" if v > 30 else "caution" if v > 20 else "ok"
+    # Issue #1214 Scheibe 2 (Wind-Schwellen-Angleichung, AC-3): nutzt die
+    # Katalog-Schwellen (wind.display_thresholds={yellow:30,orange:50,red:70})
+    # via severity_for statt der bislang hartcodierten >40/>30/>20. Sichtbare,
+    # bewusst gewollte Folge: 45 km/h zeigt jetzt gelb (caution) statt rot
+    # (danger) — identisch zum Trip-Briefing (helpers.ampel_level).
+    return _CANONICAL_TO_COMPARE.get(severity_for("wind", v), "ok")
 
 
 def _sev_gust(v: float) -> str:
@@ -86,15 +104,22 @@ def _sev_visibility(v: float) -> str:
     return "danger" if v < 1000 else "warn" if v < 3000 else "caution" if v < 5000 else "ok"
 
 
+# Issue #1214 Scheibe 2: "metric_id" verweist auf den Katalog-Eintrag
+# (metric_catalog._METRICS) und ist die dokumentierte Verbindung fuer die
+# Konsolidierung. In dieser Scheibe wird nur wind ueber severity_for/Katalog
+# gefahren (Wind-45-Fix); die uebrigen Severity-/Format-Helfer bleiben lokal,
+# weil der Katalog fuer sie KEINE aequivalenten display_thresholds/decimals
+# bereitstellt (s. Report-Auffaelligkeit) und ein Umstellen sonst still das
+# Rendering aendern wuerde. Die metric_id-Felder bereiten Scheibe 3+ vor.
 CV2_METRICS = [
     {"key": "warn", "label": "Amtliche Warnungen", "kind": "warn"},
-    {"key": "temp_max", "label": "Temp max", "unit": "°C", "sev": _sev_temp},
-    {"key": "wind_max", "label": "Wind", "unit": "km/h", "sev": _sev_wind},
-    {"key": "sunny_hours", "label": "Sonne", "unit": "h", "decimals": 1},
-    {"key": "cloud_avg", "label": "Wolken", "unit": "%"},
-    {"key": "uv_max", "label": "UV max", "unit": "", "sev": _sev_uv},
-    {"key": "snow_depth_cm", "label": "Schneehöhe", "unit": "cm"},
-    {"key": "snow_new_cm", "label": "Neuschnee", "unit": "cm"},
+    {"key": "temp_max", "metric_id": "temperature", "label": "Temp max", "unit": "°C", "sev": _sev_temp},
+    {"key": "wind_max", "metric_id": "wind", "label": "Wind", "unit": "km/h", "sev": _sev_wind},
+    {"key": "sunny_hours", "metric_id": "sunshine", "label": "Sonne", "unit": "h", "decimals": 1},
+    {"key": "cloud_avg", "metric_id": "cloud_total", "label": "Wolken", "unit": "%"},
+    {"key": "uv_max", "metric_id": "uv_index", "label": "UV max", "unit": "", "sev": _sev_uv},
+    {"key": "snow_depth_cm", "metric_id": "snow_depth", "label": "Schneehöhe", "unit": "cm"},
+    {"key": "snow_new_cm", "metric_id": "fresh_snow", "label": "Neuschnee", "unit": "cm"},
 ]
 
 _WEEKDAY_ABBR = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
@@ -151,15 +176,15 @@ def _sev_rain_safe(v) -> str:
 # kanonische Reihenfolge (AC-8). "Zeit" ist keine Metrik hier, sondern fest
 # verdrahtete erste Spalte in _render_hour_row/_render_hour_table.
 HOUR_METRICS = [
-    {"key": "t2m_c", "label": "Temp", "fmt": _fmt_deg, "sev": _sev_temp},
-    {"key": "wind_chill_c", "label": "Gef.", "fmt": _fmt_deg},
-    {"key": "wind10m_kmh", "label": "Wind", "fmt": _fmt_kmh, "sev": _sev_wind},
-    {"key": "gust_kmh", "label": "Böen", "fmt": _fmt_kmh, "sev": _sev_gust},
-    {"key": "precip_1h_mm", "label": "Regen", "fmt": _fmt_rain, "sev": _sev_rain_safe},
-    {"key": "uv_index", "label": "UV", "fmt": _fmt_uv, "sev": _sev_uv},
-    {"key": "thunder_level", "label": "Gew.", "fmt": _fmt_thunder, "sev": _sev_thunder},
-    {"key": "pop_pct", "label": "Regen-W.", "fmt": _fmt_pop, "sev": _sev_pop},
-    {"key": "visibility_m", "label": "Sicht", "fmt": _fmt_visibility, "sev": _sev_visibility},
+    {"key": "t2m_c", "metric_id": "temperature", "label": "Temp", "fmt": _fmt_deg, "sev": _sev_temp},
+    {"key": "wind_chill_c", "metric_id": "wind_chill", "label": "Gef.", "fmt": _fmt_deg},
+    {"key": "wind10m_kmh", "metric_id": "wind", "label": "Wind", "fmt": _fmt_kmh, "sev": _sev_wind},
+    {"key": "gust_kmh", "metric_id": "gust", "label": "Böen", "fmt": _fmt_kmh, "sev": _sev_gust},
+    {"key": "precip_1h_mm", "metric_id": "precipitation", "label": "Regen", "fmt": _fmt_rain, "sev": _sev_rain_safe},
+    {"key": "uv_index", "metric_id": "uv_index", "label": "UV", "fmt": _fmt_uv, "sev": _sev_uv},
+    {"key": "thunder_level", "metric_id": "thunder", "label": "Gew.", "fmt": _fmt_thunder, "sev": _sev_thunder},
+    {"key": "pop_pct", "metric_id": "rain_probability", "label": "Regen-W.", "fmt": _fmt_pop, "sev": _sev_pop},
+    {"key": "visibility_m", "metric_id": "visibility", "label": "Sicht", "fmt": _fmt_visibility, "sev": _sev_visibility},
 ]
 
 
@@ -247,7 +272,9 @@ def _render_overview_row(m: dict, locations: list[LocationResult]) -> str:
         sev_level = sev_fn(value) if (sev_fn and value is not None) else None
         bg, fg, weight = "transparent", G_INK, "500"
         if sev_level and sev_level != "ok":
-            bg, fg = _RISK_CELL[sev_level]
+            # Issue #1214 Scheibe 2: Zell-Toenung ueber die zentrale tone_css-
+            # Palette (kanonisches Vokabular), Compare-lokal -> kanonisch.
+            bg, fg = tone_css(_COMPARE_TO_CANONICAL[sev_level])
             weight = "700"
         text = _fmt_metric(value, m.get("decimals"), m.get("unit", ""))
         cells.append(
@@ -361,7 +388,8 @@ def _render_warn_lead(locations: list[LocationResult]) -> str:
 def _sev_cell_style(level: Optional[str]) -> tuple[str, str, str]:
     if level is None or level == "ok":
         return "transparent", G_INK, "500"
-    bg, fg = _RISK_CELL[level]
+    # Issue #1214 Scheibe 2: zentrale tone_css-Palette, Compare-lokal -> kanonisch.
+    bg, fg = tone_css(_COMPARE_TO_CANONICAL[level])
     return bg, fg, "700"
 
 

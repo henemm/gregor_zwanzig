@@ -120,7 +120,12 @@ CV2_METRICS = [
   Keine Warnungen an einem Ort → Zelle zeigt `—` (grauer Platzhalter, kein leeres `<td>`).
 - Severity-Schwellen (`_sev_temp`, `_sev_wind`, `_sev_gust`, `_sev_rain`, `_sev_uv`) 1:1 aus der
   Vorlage übernommen: Temp ≥34/31/28 °C, Wind >40/30/20 km/h, Böen >60/45/30 km/h, Regen
-  >8/4/1 mm, UV ≥8/6/3 → danger/warn/caution, sonst ok.
+  >8/4/1 mm, UV ≥8/6/3 → danger/warn/caution, sonst ok. **Überholt seit Issue #1214
+  Scheibe 2 (2026-07-12):** `_sev_wind` ist auf `severity_for()`/Katalog-Schwellen
+  umgestellt (`yellow:30, orange:50, red:70` statt der hartcodierten `>40/30/20`) — behebt
+  eine Diskrepanz zur Trip-Briefing-Ampel bei 45 km/h (siehe
+  `docs/specs/modules/issue_1214_metric_format_slice1_2.md`). Die übrigen Schwellen
+  (`_sev_temp`, `_sev_gust`, `_sev_rain`, `_sev_uv`) sind von dieser Migration nicht betroffen.
 
 ### 3. Warn-Lead-Block (oben) + Langform-Warn-Streifen (je Ort)
 
@@ -335,3 +340,4 @@ sondern dieselbe strukturelle Gliederung (Übersicht je Ort + amtliche Warnungen
 ## Changelog
 
 - 2026-07-08: Initial spec erstellt — Issue #1110, superseded `docs/specs/modules/issue_253_compare_email.md`.
+- 2026-07-12 (Issue #1214, Scheibe 2): Wind-Severity-Schwelle in Section 2 als überholt markiert — `_sev_wind` nutzt jetzt `severity_for()`/Katalog-Schwellen statt der hier ursprünglich dokumentierten hartcodierten `>40/30/20 km/h`. Sichtbare Folge: Wind 45 km/h zeigt in Compare-Mails jetzt gelb statt rot (Angleichung an Trip-Briefing). Siehe `docs/specs/modules/issue_1214_metric_format_slice1_2.md`.

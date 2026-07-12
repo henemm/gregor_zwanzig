@@ -50,3 +50,40 @@ WEB_FONT_LINK = (
     'href="https://fonts.googleapis.com/css2?'
     'family=Inter+Tight:wght@400;600&family=JetBrains+Mono:wght@400&display=swap">'
 )
+
+# --- Ampel-Zell-Toenung (Issue #1214 Scheibe 1) ---
+# Kanonisches Ampel-Vokabular green/yellow/orange/red -> (bg, fg)-Hex-Tupel fuer
+# Metrik-Zellfaerbung. Single Source of Truth, aus der u.a. compare_html._RISK_CELL
+# abgeleitet wird (ersetzt dessen bislang lokal dupliziertes Mapping).
+#
+# WICHTIG: Operiert AUSSCHLIESSLICH auf dem kanonischen Metrik-Ampel-Vokabular.
+# Strikt getrennt vom System der 4 amtlichen Warnstufen (compare_html._ALERT_LEVEL_CELL,
+# G_ALERT_L2/L3/L4) — die beiden Paletten duerfen niemals vermischt werden.
+#
+# yellow/orange/red spiegeln die etablierte Compare-Risk-Palette (bislang
+# _RISK_CELL: caution/warn/danger) 1:1, damit die Migration output-identisch
+# bleibt. green nutzt den bestehenden gruenen Tint (identisch zu
+# _ALERT_LEVEL_CELL[1]: Tint + G_SUCCESS).
+_TONE_CSS: dict[str, tuple[str, str]] = {
+    "green": ('#dbeadd', G_SUCCESS),   # gruener Tint + Erfolgs-Ink (bestehende Palette)
+    "yellow": ('#fbeeb8', '#5e4a00'),  # == frueheres _RISK_CELL["caution"]
+    "orange": ('#fad6b8', '#8a3506'),  # == frueheres _RISK_CELL["warn"]
+    "red": ('#f6c5bf', '#8a1009'),     # == frueheres _RISK_CELL["danger"]
+}
+
+
+def tone_css(level: str) -> tuple[str, str]:
+    """(bg, fg)-Hex-Tupel fuer eine kanonische Ampel-Stufe.
+
+    Args:
+        level: "green" | "yellow" | "orange" | "red".
+
+    Returns:
+        Tupel (background-Hex, foreground-Hex).
+
+    Raises:
+        KeyError: bei unbekanntem Level (z.B. Compare-lokalem "caution" —
+            dieses muss der Aufrufer vorher auf das kanonische Vokabular
+            uebersetzen).
+    """
+    return _TONE_CSS[level]
