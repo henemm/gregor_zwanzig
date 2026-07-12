@@ -47,14 +47,29 @@ _MAIL_PATTERNS = [
     re.compile(r"src/output/renderers/alert/.*\.py$"),
 ]
 
-# Radar-Alert-spezifische Muster (Subset von _MAIL_PATTERNS)
+# Radar-/Deviation-Alert-Muster (Subset von _MAIL_PATTERNS) -- ALLE
+# alert/*.py AUSSER official_alerts.py (das hat einen eigenen Validator,
+# #1197). render.py/project.py/model.py erzeugen ausschliesslich
+# radar-alert/deviation-alert (notification_service.py:468/712 bzw.
+# _dispatch_alert_message ueber .render/.project).
 _RADAR_PATTERNS = [
-    re.compile(r"src/output/renderers/alert/.*\.py$"),
+    re.compile(r"src/output/renderers/alert/(?!official_alerts\.py$)[^/]+\.py$"),
+]
+
+# Official-Alert-Muster (Subset von _MAIL_PATTERNS, #1197): der geteilte
+# Standalone-Renderer fuer die amtliche Warnung (Trip UND Compare,
+# notification_service.py:530/640) -- Typ X-GZ-Mail-Type: official-alert.
+_OFFICIAL_PATTERNS = [
+    re.compile(r"src/output/renderers/alert/official_alerts\.py$"),
 ]
 
 
 def _is_radar_file(name: str) -> bool:
     return any(p.search(name) for p in _RADAR_PATTERNS)
+
+
+def _is_official_file(name: str) -> bool:
+    return any(p.search(name) for p in _OFFICIAL_PATTERNS)
 
 
 def _repo_root() -> Path:
@@ -231,6 +246,50 @@ def _radar_validator_log_ok(shared: Path, name: str, repo: Path, staged: list[st
     return False
 
 
+def _official_validator_log_ok(shared: Path, name: str, repo: Path, staged: list[str]) -> bool:
+    """Juengstes official_alert_validation.yaml mit workflow_id == name, passed: true
+    UND validated_at FRISCHER als die letzte official_alerts.py-mtime (Freshness
+    analog Briefing/Radar, #1197).
+    """
+    log_dir = shared / ".claude" / "workflows" / "_log"
+    if not log_dir.exists():
+        return False
+    logs = sorted(
+        log_dir.glob("*_official_alert_validation.yaml"),
+        key=lambda p: p.stat().st_mtime, reverse=True,
+    )
+    official_mtime = max(
+        ((repo / n).stat().st_mtime for n in staged if _is_official_file(n)),
+        default=0.0,
+    )
+    for log in logs:
+        try:
+            text = log.read_text()
+        except OSError:
+            continue
+        wid = re.search(r"^workflow_id:\s*(\S+)", text, re.M)
+        if not wid or wid.group(1).strip().strip("'\"") != name:
+            continue
+        passed = re.search(r"^passed:\s*(\w+)", text, re.M)
+        if not (passed and passed.group(1).strip().lower() == "true"):
+            return False
+        vat = re.search(r"^validated_at:\s*'?([^'\n]+)'?", text, re.M)
+        if not vat:
+            return False
+        try:
+            vat_str = vat.group(1).strip().strip("'\"")
+            vat_dt = datetime.fromisoformat(vat_str)
+            if vat_dt.tzinfo is None:
+                vat_dt = vat_dt.replace(tzinfo=timezone.utc)
+            vat_ts = vat_dt.timestamp()
+        except (ValueError, TypeError):
+            return False
+        if vat_ts < official_mtime:
+            return False
+        return True
+    return False
+
+
 def _block(msg: str) -> None:
     print("=" * 70, file=sys.stderr)
     print("BLOCKED - Renderer-Mail-Gate (#811)", file=sys.stderr)
@@ -286,8 +345,12 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
         _block(f"Workflow-State unlesbar: {path}")
 
     radar_staged = [f for f in mail_staged if _is_radar_file(f)]
-    # Briefing-Mail-Dateien sind alle Mail-Inhalts-Dateien, die KEINE Radar-Dateien sind.
-    briefing_staged = [f for f in mail_staged if not _is_radar_file(f)]
+    official_staged = [f for f in mail_staged if _is_official_file(f)]
+    # Briefing-Mail-Dateien sind alle Mail-Inhalts-Dateien, die weder Radar-
+    # noch Official-Alert-Dateien sind.
+    briefing_staged = [
+        f for f in mail_staged if not _is_radar_file(f) and not _is_official_file(f)
+    ]
 
     # Matrix-Test + Briefing-Validator nur erforderlich wenn Briefing-Mail-Dateien staged.
     # Radar-only-Aenderungen brauchen keinen Briefing-Nachweis (kein Risiko fuer Briefing-Format).
@@ -311,6 +374,12 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
         if radar_staged else True
     )
 
+    # Official-Alert-Validator nur erforderlich wenn official_alerts.py staged.
+    official_ok = (
+        _official_validator_log_ok(shared, name, repo, staged)
+        if official_staged else True
+    )
+
     golden_ok = True
     if briefing_staged:
         if (repo / "tests" / "golden" / "email").exists():
@@ -331,7 +400,7 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
             # keinen Sinn, wird übersprungen.
             golden_ok = True
 
-    if matrix_ok and validator_ok and radar_ok and golden_ok:
+    if matrix_ok and validator_ok and radar_ok and official_ok and golden_ok:
         sys.exit(0)
 
     missing = []
@@ -353,6 +422,12 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
             "  - radar_alert_mail_validator.py-Erfolgsnachweis fehlt.\n"
             "    Abhilfe: uv run python3 .claude/hooks/radar_alert_mail_validator.py "
             "gegen die echt zugestellte Radar-Alert-Mail (Exit 0)."
+        )
+    if not official_ok:
+        missing.append(
+            "  - official_alert_mail_validator.py-Erfolgsnachweis fehlt.\n"
+            "    Abhilfe: uv run python3 .claude/hooks/official_alert_mail_validator.py "
+            "gegen die echt zugestellte Standalone-Amtliche-Warnung-Mail (Exit 0)."
         )
     if not golden_ok:
         missing.append(
