@@ -192,9 +192,11 @@
 
 	<!-- Kontext-Unterzeile (Fix 4, Design-Fidelity 2026-07) -->
 	<!-- Adversary-Finding F001: profileLabel geguardet (Muster CompareTile.svelte:174) —
-	     kein führender/doppelter " · " bei leerem/unbekanntem profil. -->
+	     kein führender/doppelter " · " bei leerem/unbekanntem profil.
+	     Staging-Befund: {' · '} statt " · " im Markup — Svelte trimmt sonst das
+	     Leerzeichen vor {/if} weg ("Wandern ·0 Orte" statt "Wandern · 0 Orte"). -->
 	<div class="text-sm text-[var(--g-ink-3)]">
-		{#if data.preset.display_config?.region}{data.preset.display_config.region} · {/if}{#if profileLabel}{profileLabel} · {/if}{data.locations.length} {data.locations.length === 1 ? 'Ort' : 'Orte'}
+		{#if data.preset.display_config?.region}{data.preset.display_config.region}{' · '}{/if}{#if profileLabel}{profileLabel}{' · '}{/if}{data.locations.length} {data.locations.length === 1 ? 'Ort' : 'Orte'}
 	</div>
 
 	<!-- Monitoring 2×2-Grid -->
