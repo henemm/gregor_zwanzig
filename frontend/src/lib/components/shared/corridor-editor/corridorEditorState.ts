@@ -101,9 +101,13 @@ export function patchRow(
 	return rows.map((r) => (r.metric === metric ? { ...r, ...patch } : r));
 }
 
-/** AC-12: mind. eine Grenze ist Pflicht — beidseitig offen blockt das Speichern. */
+/**
+ * AC-12: mind. eine Grenze ist Pflicht — beidseitig offen blockt das
+ * Speichern. Fehlermeldungen nennen das deutsche Anzeige-Label (row.label,
+ * z.B. "Böen"), nicht den internen Bezeichner (Fresh-Eyes-Fund: Lokalisierung).
+ */
 export function validateCorridorRows(rows: CorridorRowState[]): { valid: boolean; errors: string[] } {
-	const errors = rows.filter((r) => r.min == null && r.max == null).map((r) => r.metric);
+	const errors = rows.filter((r) => r.min == null && r.max == null).map((r) => r.label);
 	return { valid: errors.length === 0, errors };
 }
 

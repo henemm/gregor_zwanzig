@@ -105,6 +105,17 @@ describe('validateCorridorRows — AC-12', () => {
 		assert.equal(result.errors.length, 1);
 	});
 
+	// Fresh-Eyes-Fund (Lokalisierung): Fehlermeldung muss das deutsche
+	// Metrik-Label zeigen ("Böen"), nicht den internen Bezeichner ("wind_gust").
+	test('Fehlermeldung nennt das deutsche Label, nicht den internen Bezeichner', () => {
+		const { rows } = buildRoutePool([
+			{ metric: 'wind_gust', range: [null, null], notify: true, mark: false },
+		]);
+		const result = validateCorridorRows(rows);
+		assert.deepEqual(result.errors, ['Böen']);
+		assert.equal(result.errors.includes('wind_gust'), false);
+	});
+
 	test('gueltig, wenn jede Zeile mind. eine Grenze hat', () => {
 		const { rows } = buildRoutePool([
 			{ metric: 'wind_gust', range: [null, 55], notify: true, mark: false },
