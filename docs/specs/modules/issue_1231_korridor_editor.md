@@ -472,6 +472,24 @@ hier die Strategie-Zusammenfassung:
 
 ## Changelog
 
+- 2026-07-12: Slice 2 implementiert + Adversary VERIFIED (3 Runden, 1 Fix-Loop,
+  5 Findings an echten Datenkopien). Transparente Präzisierungen der
+  Migrations-Semantik gegenüber dem ursprünglichen Spec-Text (keine
+  AC-Änderung, AC-6 gilt weiter für strukturell Malformtes):
+  (1) **Kategoriale/nicht-numerische Idealwert-Grenzen** (real: thunder_level_max
+  Enum „NONE") werden NICHT migriert, sondern mit SKIP-Report-Zeile übersprungen
+  und bleiben in `ideal_ranges` erhalten — verhaltenstreu, da die alte
+  isIdealGood-Logik nicht-numerische Grenzen bereits ignoriert und das Design
+  Gewitter im Korridor-Pool als %-Skala führt; Editor-Behandlung kategorialer
+  Compare-Metriken ist Slice-4-Thema.
+  (2) **Invertierte Bereiche (min>max, reale Bestandsdaten)** werden AS-IS
+  migriert (verhaltenstreu „nie im Bereich") + WARNUNG-Report-Zeile.
+  (3) **Level-Synthese:** Da der Go-Self-Heal von `alert_rules` nicht
+  persistiert (Bestand: leere `alert_rules[]` trotz konfigurierter
+  `metric_alert_levels`), synthetisiert die Migration Corridors direkt aus
+  `metric_alert_levels`-Einträgen ohne AlertRule-Pendant, range aus
+  DefaultDeltaThreshold (Go-gespiegelt), Report-Kennzeichnung
+  „(synthetisiert aus Level)". range bleibt per PO-A Anzeige-Geometrie.
 - 2026-07-12: Fakten-Korrektur nach Slice-1-Implementierung (transparent, keine
   AC-Änderung): (1) FE-Util-Pfad `frontend/src/lib/shared/…` →
   `frontend/src/lib/components/shared/…` (Ordner `lib/shared/` existiert nicht,
