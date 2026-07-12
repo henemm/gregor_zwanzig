@@ -4,10 +4,13 @@
 	// Kein „→ Detail"-Knopf, keine Detail-Zeile (PO-Entscheidung 2026-06-06).
 	// Orange gestrichelte Schnittlinie nach Position 8 NUR wenn activeChannel=telegram.
 	// Issue #848 — Drag & Drop ersetzt Pfeiltasten.
+	// Issue #1232 Scheibe 3b: Cut-Line-Markup durch geteiltes Primitiv
+	// `LTCutLine` ersetzt (KL-1 aus Scheibe 3a wird hiermit aufgelöst).
 	import type { MetricEntry } from './metricsEditor.ts';
 	import { indicatorCapable, CHANNEL_COL_BUDGET } from './metricsEditor.ts';
 	import type { Highlight } from './metricsEditor.ts';
 	import { Segmented } from '$lib/components/atoms';
+	import LTCutLine from '$lib/components/shared/layout-tab/LTCutLine.svelte';
 
 	interface Props {
 		primaryColumns: string[];
@@ -42,9 +45,8 @@
 			{@const hasInd = indicatorCapable(id)}
 			{@const useIndicator = friendlyMap[id] === true}
 			{#if showCutLine && i === tgBudget}
-				<div class="cut-line" data-testid="wm2-cut-line">
-					<span class="cut-scissors" aria-hidden="true">✂</span>
-					<span class="mono">ab hier Telegram-Limit — weiter vorne = sicherer in der Tabelle (max {tgBudget} Spalten)</span>
+				<div data-testid="wm2-cut-line">
+					<LTCutLine label="Telegram" max={tgBudget} />
 				</div>
 			{/if}
 			<div
@@ -226,20 +228,6 @@
 	}
 	.btn-aus:hover {
 		background: rgba(168, 50, 50, 0.06);
-	}
-	.cut-line {
-		padding: 6px 16px;
-		font-size: 10.5px;
-		color: #8a6210;
-		background: rgba(192, 138, 26, 0.07);
-		border-top: 1.5px dashed var(--g-warn);
-		border-bottom: 1.5px dashed var(--g-warn);
-		display: flex;
-		align-items: center;
-		gap: 7px;
-	}
-	.cut-scissors {
-		flex-shrink: 0;
 	}
 	@media (max-width: 899px) {
 		.metric-label {

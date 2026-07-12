@@ -20,6 +20,10 @@
 	import WeatherV2Reihenfolge from './WeatherV2Reihenfolge.svelte';
 	// WeatherV2Kanaele entfernt in Issue #736 (Kanal-Config → Versand-Reiter)
 	import WeatherV2MailPreview from './WeatherV2MailPreview.svelte';
+	// Issue #1232 Scheibe 3b: geteilter Layout-Organism (Scheibe 3a) ersetzt das
+	// bisherige `.v2-layout`-Grid für den Ausgabe-Teil (Reihenfolge + Vorschau).
+	import LayoutTab from '$lib/components/shared/layout-tab/LayoutTab.svelte';
+	import type { ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
 	import ThresholdMetricRow from './ThresholdMetricRow.svelte';
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
 	// Issue #1117: „Amtliche Warnungen"-Checkbox auch im Inhalt-Tab (eigener Block,
@@ -95,6 +99,10 @@
 	);
 
 	// availableChannels entfernt in Issue #736 (WeatherV2Kanaele nicht mehr im Inhalt-Reiter)
+
+	// Issue #1232 Scheibe 3b: Kanal des geteilten LayoutTab-Organism — reiner
+	// View-State (analog Scheibe 3a im Compare-Editor), NIE in snapshot()/isDirty.
+	let activeChannel = $state<ChannelId>('email');
 
 	// AC-2 Diff-Highlight: 2,5s Aufleuchten nach jeder Änderung.
 	let highlight: Highlight | null = $state(null);
@@ -505,11 +513,11 @@
 			{/if}
 		</div>
 
-		<!-- Desktop 2-Spalten-Layout -->
-		<!-- Conflict 5 resolved: v2-Struktur erhalten, SMS-Schwellwerte als neue Card nach 04. -->
-		<div class="v2-layout">
-			<!-- LINKS: Abschnitte -->
-			<div class="editor-col">
+		<!-- Issue #1232 Scheibe 3b: 01/02 oben unverändert; darunter der geteilte -->
+		<!-- LayoutTab-Organism (Reihenfolge + Vorschau); darunter 04/Mail-Inhalt/ -->
+		<!-- Official-Toggle unverändert einspaltig (KL-4). -->
+		<div class="route-editor-body">
+			<div class="top-section">
 				<!-- 01 Profil -->
 				<Card padding={18}>
 					<Eyebrow style="margin-bottom:10px">01 — Profil</Eyebrow>
@@ -533,25 +541,41 @@
 						onToggle={(id, wasOn) => onToggleMetric(id, wasOn)}
 					/>
 				</Card>
+			</div>
 
-				<!-- 03 Reihenfolge & Darstellung -->
-				<Card padding={0}>
-					<div class="card-head">
-						<Eyebrow>03 — Reihenfolge & Darstellung</Eyebrow>
-						<div class="card-subhead">Reihenfolge · Roh/Einfach</div>
-					</div>
-					<WeatherV2Reihenfolge
+			<LayoutTab
+				context="route"
+				bind:channel={activeChannel}
+				colCount={buckets.primary.length + 1}
+				subjectLabel="Metriken"
+			>
+				{#snippet editor({ channel })}
+					<Card padding={0}>
+						<WeatherV2Reihenfolge
+							primaryColumns={buckets.primary}
+							{metricById}
+							{friendlyMap}
+							activeChannel={channel}
+							{highlight}
+							onRemove={onRemove}
+							onDndReorder={onDndReorder}
+							{onMode}
+						/>
+					</Card>
+				{/snippet}
+				{#snippet preview({ channel })}
+					<WeatherV2MailPreview
 						primaryColumns={buckets.primary}
 						{metricById}
 						{friendlyMap}
-						activeChannel="telegram"
+						{telegramKurzform}
 						{highlight}
-						onRemove={onRemove}
-						onDndReorder={onDndReorder}
-						{onMode}
+						{channel}
 					/>
-				</Card>
+				{/snippet}
+			</LayoutTab>
 
+			<div class="bottom-section">
 				<!-- 04 Schwellwerte (Issue #624, umbenannt in #736) -->
 				<Card padding={18}>
 					<Eyebrow style="margin-bottom:8px">04 — Schwellwerte</Eyebrow>
@@ -679,18 +703,6 @@
 					</div>
 				</UiCard.Root>
 				{/if}
-
-			</div>
-
-			<!-- RECHTS: Live-Mail-Vorschau (sticky) -->
-			<div class="preview-col">
-				<WeatherV2MailPreview
-					primaryColumns={buckets.primary}
-					{metricById}
-					{friendlyMap}
-					{telegramKurzform}
-					{highlight}
-				/>
 			</div>
 		</div>
 
@@ -707,6 +719,7 @@
 					{friendlyMap}
 					{telegramKurzform}
 					{highlight}
+					channel={activeChannel}
 				/>
 			</div>
 		</Sheet>
@@ -765,35 +778,22 @@
 		font-size: var(--g-text-sm);
 		color: var(--g-danger);
 	}
-	/* Desktop 2-Spalten-Layout (1:1 nach JSX WetterMetrikenTabV2) */
-	.v2-layout {
-		display: grid;
-		grid-template-columns: minmax(460px, 1fr) minmax(420px, 1fr);
-		gap: 36px;
-		padding: 28px 40px 60px;
-		max-width: 1480px;
-		align-items: start;
-	}
-	.editor-col {
+	/* Issue #1232 Scheibe 3b: .v2-layout-Grid entfällt für den Ausgabe-Teil —
+	   die Zwei-Spalten-Shell kommt jetzt aus dem geteilten LayoutTab-Organism.
+	   01/02 (top-section) und 04/Mail-Inhalt/Official (bottom-section) bleiben
+	   einspaltig, analog dem bisherigen .editor-col. */
+	.route-editor-body {
 		display: flex;
 		flex-direction: column;
 		gap: 20px;
+		padding: 28px 40px 60px;
+		max-width: 1480px;
 	}
-	.card-head {
-		padding: 14px 16px 10px;
-		border-bottom: 1px solid var(--g-rule-soft);
-	}
-	.card-subhead {
-		font-size: 15px;
-		font-weight: 600;
-		margin-top: 2px;
-		color: var(--g-ink);
-	}
-	.kanaele-subhead {
-		font-size: 15px;
-		font-weight: 600;
-		margin-bottom: 14px;
-		color: var(--g-ink);
+	.top-section,
+	.bottom-section {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
 	}
 	.confirm-overlay {
 		position: fixed;
@@ -842,8 +842,7 @@
 		border-collapse: collapse;
 	}
 	@media (max-width: 899px) {
-		.v2-layout {
-			grid-template-columns: 1fr;
+		.route-editor-body {
 			gap: var(--g-s-6);
 			padding: var(--g-s-4);
 			padding-bottom: 88px;
@@ -851,8 +850,10 @@
 		.save-bar {
 			padding: var(--g-s-3) var(--g-s-4);
 		}
-		/* Inline-Vorschau auf Mobil verstecken (kommt stattdessen als Sheet) */
-		.preview-col {
+		/* Inline-Vorschau auf Mobil verstecken (kommt stattdessen als Sheet, #618).
+		   Ersetzt das bisherige .preview-col{display:none} — jetzt die
+		   LayoutTab-eigene Vorschau-Spalte (KL-1). */
+		:global(.layout-tab[data-context='route'] .lt-col-preview) {
 			display: none;
 		}
 		/* Issue #618: Floating FAB mobil */

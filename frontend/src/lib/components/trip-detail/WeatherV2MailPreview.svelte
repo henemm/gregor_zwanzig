@@ -3,10 +3,14 @@
 	// 1:1 nach WM2_MailPreview/WM2_ChannelTabs/WM2_DiffBanner/WM2_EmailTable/
 	// WM2_TelegramBubble/WM2_SMSLine aus screen-trip-edit-v2-weather.jsx.
 	// Highlight-Prop beleuchtet die betroffene Spalte/Zelle 2,5 s auf.
+	// Issue #1232 Scheibe 3b: interner Kanal-State + .ch-tabs entfallen — der
+	// geteilte `LTChannelPicker` (LayoutTab) steuert den Kanal jetzt controlled
+	// über die neue `channel`-Prop.
 	import type { MetricEntry } from './metricsEditor.ts';
 	import { CHANNEL_COL_BUDGET } from './metricsEditor.ts';
 	import type { Highlight } from './metricsEditor.ts';
 	import { Eyebrow } from '$lib/components/atoms';
+	import type { ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
 
 	interface Props {
 		primaryColumns: string[];
@@ -14,11 +18,10 @@
 		friendlyMap: Record<string, boolean>;
 		telegramKurzform: boolean;
 		highlight: Highlight | null;
+		channel: ChannelId;
 	}
 
-	let { primaryColumns, metricById, friendlyMap, telegramKurzform, highlight }: Props = $props();
-
-	let activeChannel = $state('email');
+	let { primaryColumns, metricById, friendlyMap, telegramKurzform, highlight, channel }: Props = $props();
 
 	const tgBudget = CHANNEL_COL_BUDGET.telegram;
 
@@ -146,30 +149,6 @@
 		<span class="sample-badge" data-testid="wm2-sample-badge">Beispieldaten</span>
 	</div>
 
-	<!-- Channel Tabs -->
-	<div class="ch-tabs">
-		{#each [
-			{ id: 'email', label: 'Email' },
-			{ id: 'telegram', label: 'Telegram' },
-			{ id: 'sms', label: 'SMS' },
-		] as ch}
-			{@const on = ch.id === activeChannel}
-			{@const over = ch.id === 'telegram' && primaryColumns.length > tgBudget}
-			<button
-				type="button"
-				class="ch-tab"
-				class:on
-				onclick={() => { activeChannel = ch.id; }}
-				data-channel={ch.id}
-			>
-				{ch.label}
-				{#if over}
-					<span class="overflow-badge mono">−{primaryColumns.length - tgBudget}</span>
-				{/if}
-			</button>
-		{/each}
-	</div>
-
 	<div class="preview-body">
 		<!-- Diff Banner -->
 		{#if highlight}
@@ -189,7 +168,7 @@
 		{/if}
 
 		<!-- Email Preview -->
-		{#if activeChannel === 'email'}
+		{#if channel === 'email'}
 			<div class="email-frame" data-testid="wm2-email-table">
 				<div class="email-chrome">
 					<span class="mono chrome-l">✉ ABEND-BRIEFING</span>
@@ -239,7 +218,7 @@
 			</div>
 
 		<!-- Telegram Preview -->
-		{:else if activeChannel === 'telegram'}
+		{:else if channel === 'telegram'}
 			<div data-testid="wm2-telegram-bubble">
 				<div class="tg-chat">
 					<div class="tg-bubble">
@@ -316,43 +295,6 @@
 		color: #8a6210;
 		letter-spacing: 0.03em;
 		white-space: nowrap;
-	}
-	.ch-tabs {
-		display: flex;
-		gap: 4px;
-		margin-bottom: 12px;
-	}
-	.ch-tab {
-		padding: 7px 12px;
-		cursor: pointer;
-		font-size: 13px;
-		font-weight: 500;
-		font-family: inherit;
-		border: 1px solid var(--g-rule);
-		border-bottom: 1px solid var(--g-rule);
-		border-radius: var(--g-r-2);
-		background: transparent;
-		color: var(--g-ink-3);
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		transition: background 120ms, color 120ms, border-color 120ms;
-	}
-	.ch-tab.on {
-		font-weight: 600;
-		border-color: var(--g-ink);
-		border-bottom-color: var(--g-accent);
-		border-bottom-width: 2px;
-		background: var(--g-card);
-		color: var(--g-ink);
-	}
-	.overflow-badge {
-		font-size: 9.5px;
-		padding: 1px 5px;
-		border-radius: 999px;
-		background: rgba(192, 138, 26, 0.15);
-		color: #8a6210;
-		font-weight: 600;
 	}
 	.preview-body {
 		display: flex;
