@@ -1241,7 +1241,7 @@ type ComparePreset struct {
     Name                 string                 `json:"name"`
     UserID               string                 `json:"user_id"`                               // set from Auth-Context, server-managed
     LocationIDs          []string               `json:"location_ids"`                          // 2+ locations to compare
-    Schedule             string                 `json:"schedule"`                              // "daily" | "weekly" | "manual"
+    Schedule             string                 `json:"schedule"`                              // DEPRECATED für Zeitplan-Zwecke (Issue #1232 Scheibe 2a): trägt nur noch Pause-Semantik — "manual" = pausiert, jeder andere Wert ("daily"|"weekly"|Altdaten wie "daily_morning"/"daily_evening") = aktiv. Der tatsächliche Rhythmus kommt aus den Slot-Feldern unten.
     PreviousSchedule     string                 `json:"previous_schedule,omitempty"`           // schedule saved before pause (Issue #631, server-managed)
     Profil               string                 `json:"profil"`                                // ActivityProfile: WINTERSPORT|ALPINE_TOURING|SUMMER_TREKKING|ALLGEMEIN
     HourFrom             int                    `json:"hour_from"`                             // 0..23
@@ -1252,6 +1252,11 @@ type ComparePreset struct {
     TopOrtLetzterVersand *string                `json:"top_ort_letzter_versand,omitempty"`     // highest-ranked location from last send (server-managed)
     DisplayConfig        map[string]interface{} `json:"display_config,omitempty"`              // opaque config (Issue #680: active_metrics, ideal_ranges, etc.)
     HourlyEnabled        *bool                  `json:"hourly_enabled,omitempty"`              // Issue #1107, Pointer-Muster analog OfficialAlertsEnabled (#1040): nil/true = Stundenverlauf-Sektion sichtbar (Default), false = komplett weggelassen (Mail behält Übersichtstabelle)
+    MorningEnabled       *bool                  `json:"morning_enabled,omitempty"`             // Issue #1232 Scheibe 2a: Zwei-Slot-Zeitplan analog Trip. nil = Altdaten vor Migration (Load-Migration setzt echten Wert), sonst true/false
+    MorningTime          *string                `json:"morning_time,omitempty"`                // "HH:MM:SS", Fälligkeits-Check nur auf volle Stunde (Minuten ignoriert, KL-2)
+    EveningEnabled       *bool                  `json:"evening_enabled,omitempty"`             // wie MorningEnabled, für den Abend-Slot
+    EveningTime          *string                `json:"evening_time,omitempty"`                // "HH:MM:SS"; Abend-Versand zielt auf target_date = morgen (Ankündigungs-Charakter, wie Trip-Abendbriefing)
+    EndDate              *string                `json:"end_date,omitempty"`                    // "YYYY-MM-DD", nil = unbegrenzte Laufzeit; gesetzt+<heute (Europe/Vienna) = Versand-Guard greift. Bekannte Lücke: kann per PUT nicht auf nil zurückgesetzt werden (KL-7, Sammel-Issue #1199)
     CreatedAt            time.Time              `json:"created_at"`
 }
 ```
@@ -1259,7 +1264,25 @@ type ComparePreset struct {
 **Hinweis zur Vollständigkeit:** Diese Struct-Auflistung wird nicht bei jeder additiven
 Preset-Erweiterung nachgezogen (z.B. `OfficialAlertsEnabled` #1040, `TopNDetails`/`EnabledMetrics`
 #1104, `HourlyMetrics` #1106 fehlen hier aktuell noch) — `HourlyEnabled` (#1107) wurde ergänzt, da
-es der unmittelbare Anlass dieser Doku-Aktualisierung war.
+es der unmittelbare Anlass dieser Doku-Aktualisierung war; die fünf Slot-Felder (#1232 Scheibe 2a)
+wurden anlässlich des Zeitplan-Reshapes nachgezogen.
+
+**Zwei-Slot-Zeitplan (Issue #1232 Scheibe 2a, additiv zu `schedule`):** Analog zum Trip-Briefing
+(Morgen/Abend) trägt `ComparePreset` jetzt einen eigenen Zeitplan statt eines groben
+`daily`/`weekly`-Rhythmus. `schedule` bleibt als reines Pause-Flag bestehen (`manual` = pausiert,
+via `previous_schedule` reversibel — Issue #631, unverändert). Neue Presets erhalten per Default
+`morning_enabled=true, morning_time="07:00:00", evening_enabled=false, evening_time="18:00:00",
+end_date=nil`. Bestandspresets ohne diese Felder werden beim ersten Go-`LoadComparePresets`-Lauf
+idempotent migriert (Default `morning_enabled=true, morning_time="06:00:00",
+evening_enabled=false` — verhaltensidentisch zum vormaligen 06:00-Uhr-Cron; Presets mit dem
+Alt-Wert `schedule="daily_evening"` migrieren stattdessen auf einen aktiven Abend-Slot, siehe
+Details in `docs/specs/modules/compare_preset_zeitplan.md`). `weekday` gilt als deprecated
+(Altdaten-Lesbarkeit, kein neuer Schreibpfad, kein Wochenrhythmus mehr — Presets mit
+`schedule="weekly"` versenden seither täglich). Der stündliche Go-Cron `compare_presets_daily`
+("Compare Presets Slot-Check (hourly)", vormals einmal täglich 06:00 UTC) prüft pro Preset, ob
+die aktuelle Stunde (Europe/Vienna) mit `morning_time`/`evening_time` übereinstimmt; Morgen-Slot
+versendet für `target_date=heute`, Abend-Slot für `target_date=morgen`. Guards vor jedem Versand:
+`schedule=="manual"` (pausiert), `archived_at` gesetzt, `end_date` gesetzt und `< heute`.
 
 **DisplayConfig Keys (Issue #680 onwards):**
 - `active_metrics`: `[]string` — Ausgewählte Metrik-Keys für Vergleich (z.B. `["temp_max_c", "wind_max_kmh", "precip_sum_mm"]`). Default: Profil-spezifische Metriken aus `PROFILE_METRICS_WITH_SCALES`.
@@ -1517,21 +1540,32 @@ Alle Endpoints filtern nach dem eingeloggten User (via `middleware.UserIDFromCon
 
 ---
 
-## 17) Compare-Presets Daily Dispatch Endpoint (Issue #461)
+## 17) Compare-Presets Daily Dispatch Endpoint (Issue #461, Slot-Zeitplan seit #1232 Scheibe 2a)
 
-Automatically dispatches daily Compare-Presets at 06:00 UTC (Vienna time). Triggered by Go scheduler; Python endpoint filters presets by `schedule='daily'`, runs Compare Engine, sends emails, and updates preset status fields.
+**Veraltet (bis #1232 Scheibe 2a):** Dispatch lief einmal täglich um 06:00 UTC und filterte grob
+auf `schedule='daily'`. **Aktuell:** Der Go-Cron `compare_presets_daily` läuft **stündlich**
+(`0 * * * *`, Job-Beschreibung „Compare Presets Slot-Check (hourly)"); der Python-Endpoint prüft
+pro Preset die Zwei-Slot-Felder (`morning_time`/`evening_time`, s. Abschnitt 16) gegen die aktuelle
+Stunde (Europe/Vienna) statt eines einzigen festen Filters. `schedule` wirkt nur noch als
+Pause-Flag (`manual` = pausiert). Details: `docs/specs/modules/compare_preset_zeitplan.md`.
 
-**Handler:** `api/routers/scheduler.py` | **Routing:** `cmd/server/main.go`
+**Handler:** `api/routers/scheduler.py` (`run_compare_presets_daily`) | **Routing:** `cmd/server/main.go`
 
 ### POST /api/scheduler/compare-presets-daily
 
-Processes all daily Compare-Presets for a user: filters by `schedule='daily'`, runs Compare Engine, renders/sends emails, updates `letzter_versand` and `top_ort_letzter_versand`.
+Prüft für jeden Nutzer alle Compare-Presets auf Slot-Fälligkeit zur aktuellen Stunde
+(optionaler Query-Parameter `hour`, Default: aktuelle Stunde Europe/Vienna — Muster
+`trigger_trip_reports`). Fällige Presets: Morgen-Slot → Compare Engine mit `target_date=heute`,
+Abend-Slot → `target_date=morgen`. Guards vor Versand: `schedule=="manual"` (pausiert),
+`archived_at` gesetzt, `end_date` gesetzt und in der Vergangenheit. Rendert/sendet E-Mails,
+aktualisiert `letzter_versand` und `top_ort_letzter_versand`.
 
 **Query Parameters:**
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
 | user_id | string | no | User identifier (default: "default" for V1) |
+| hour | int | no | Stunde [0..23] gegen die Slot-Fälligkeit geprüft wird (Issue #1232 Scheibe 2a, Muster `trigger_trip_reports`). Default: aktuelle Stunde Europe/Vienna. |
 
 **Response 200:**
 
@@ -1547,21 +1581,22 @@ Processes all daily Compare-Presets for a user: filters by `schedule='daily'`, r
 | Field | Type | Description |
 |-------|------|-------------|
 | status | enum | Always `"ok"` (endpoint succeeds even if individual presets fail) |
-| count | int | Number of `schedule='daily'` presets processed (not error count) |
+| count | int | Number of Presets processed, die zur geprüften Stunde in einem Morgen- oder Abend-Slot fällig waren (nicht error count) |
 
-**Internal Behavior:**
+**Internal Behavior (seit Issue #1232 Scheibe 2a):**
 
 1. Load `data/users/{user_id}/compare_presets.json` as direct JSON array `[...]`
-2. Filter: only `preset["schedule"] == "daily"`
-3. For each matching preset:
+2. Für jedes Preset: Guards prüfen — `schedule == "manual"` → skip (pausiert); `archived_at` gesetzt → skip; `end_date` gesetzt und `< heute` (Europe/Vienna) → skip
+3. Slot-Werte lesen (Preset ohne Slot-Felder — z. B. weil die Go-Migration die Datei noch nicht neu geschrieben hat — bekommt dieselben Fallback-Defaults wie `LoadComparePresets`); Morgen-Slot fällig wenn `morning_enabled` und `morning_time.hour == hour` (`target_date=heute`), Abend-Slot fällig wenn `evening_enabled` und `evening_time.hour == hour` (`target_date=morgen`)
+4. Für jedes fällige Preset:
    - Validate `location_ids` (warn if empty, increment `error_count`)
    - Convert `preset["profil"]` (Uppercase Go string → lowercase Python enum, fallback ALLGEMEIN)
-   - Call Compare Engine with `target_date=today`, `forecast_hours=preset["forecast_hours"]` (gespeicherter Horizont, Default 48 — Issue #764), `hour_from`, `hour_to`, `activity_profile`
+   - Call Compare Engine with `target_date` (s. o.), `forecast_hours=preset["forecast_hours"]` (gespeicherter Horizont, Default 48 — Issue #764), `hour_from`, `hour_to`, `activity_profile`
    - Render Compare-Email template
    - Send via Resend to all `preset["empfaenger"]`
    - Call `_save_preset_status(user_id, preset_id, top_ort)` to update JSON
    - On any error: log warning, increment `error_count`, continue (no job abort)
-4. Go scheduler pings BetterStack Heartbeat (`GZ_HEARTBEAT_COMPARE_PRESETS`) only if `error_count == 0` (operator-visible success indicator)
+5. Go scheduler (Cron `0 * * * *`, stündlich statt vormals einmal täglich 06:00 UTC) pingt BetterStack Heartbeat (`GZ_HEARTBEAT_COMPARE_PRESETS`) nur wenn `error_count == 0` (operator-visible success indicator)
 
 **Error Responses:**
 

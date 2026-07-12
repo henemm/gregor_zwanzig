@@ -41,14 +41,14 @@ type jobMeta struct {
 
 // Scheduler wraps robfig/cron and triggers Python services via HTTP.
 type Scheduler struct {
-	cron             *cron.Cron
-	pythonURL        string
+	cron                    *cron.Cron
+	pythonURL               string
 	heartbeatComparePresets string
-	client           *http.Client
-	store            *store.Store
-	mu               sync.RWMutex
-	lastRuns         map[string]*jobResult
-	entryMap         map[cron.EntryID]jobMeta // maps cron EntryID → job identity
+	client                  *http.Client
+	store                   *store.Store
+	mu                      sync.RWMutex
+	lastRuns                map[string]*jobResult
+	entryMap                map[cron.EntryID]jobMeta // maps cron EntryID → job identity
 
 	// notifier delivers MQ messages (e.g. heartbeat-URL missing). Defaults to
 	// notify.SendMQ; tests inject their own.
@@ -68,13 +68,13 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 	}
 
 	s := &Scheduler{
-		cron:             cron.New(cron.WithLocation(loc)),
-		pythonURL:        cfg.PythonCoreURL,
+		cron:                    cron.New(cron.WithLocation(loc)),
+		pythonURL:               cfg.PythonCoreURL,
 		heartbeatComparePresets: cfg.HeartbeatComparePresets,
-		client:           &http.Client{Timeout: 120 * time.Second},
-		store:            st,
-		lastRuns:         make(map[string]*jobResult),
-		entryMap:         make(map[cron.EntryID]jobMeta),
+		client:                  &http.Client{Timeout: 120 * time.Second},
+		store:                   st,
+		lastRuns:                make(map[string]*jobResult),
+		entryMap:                make(map[cron.EntryID]jobMeta),
 		notifier: func(sender, recipient, priority, subject, body string) error {
 			return notify.SendMQ(sender, recipient, priority, subject, body)
 		},
@@ -94,7 +94,11 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		{"*/5 * * * *", s.inboundCommands, "inbound_command_poll", "Inbound Command Poll (every 5min)"},
 		// Issue #637: inbound_telegram_poll entfernt — Telegram-Eingang läuft jetzt
 		// push-basiert über den Webhook (POST /api/webhooks/telegram/{secret}).
-		{"0 6 * * *", s.comparePresetsDaily, "compare_presets_daily", "Compare Presets Daily (06:00)"},
+		// Issue #1232 Scheibe 2a: 06:00-Cron -> stuendlicher Slot-Check (Morgen-/
+		// Abend-Zeitplan pro Preset). Job-ID bleibt unveraendert (Observability/
+		// Heartbeat-Kontinuitaet); nur die Anzeige-Beschreibung wird angepasst,
+		// da "(06:00)" nach der Cron-Umstellung irrefuehrend waere (Adversary F004).
+		{"0 * * * *", s.comparePresetsDaily, "compare_presets_daily", "Compare Presets Slot-Check (hourly)"},
 		{"*/15 * * * *", s.radarAlertChecks, "radar_alert_checks", "Radar Alert Checks (every 15 min)"},
 		{"*/15 * * * *", s.dataWriteSelftest, "data_write_selftest", "Data Write Selftest (every 15 min)"},
 		{"*/15 * * * *", s.compareAlertChecks, "compare_alert_checks", "Compare Alert Checks (every 15 min)"},

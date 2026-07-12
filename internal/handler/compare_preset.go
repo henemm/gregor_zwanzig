@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -25,6 +26,52 @@ import (
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
+
+// Issue #1232 Scheibe 2a: Validierungs-Pattern fuer die Slot-Zeitfelder.
+// timePattern erlaubt sowohl "HH:MM" als auch "HH:MM:SS" (Spec: intern wird
+// bei fehlenden Sekunden ":00" ergaenzt); datePattern verlangt ISO-Datum.
+var (
+	comparePresetTimePattern = regexp.MustCompile(`^\d{2}:\d{2}(:\d{2})?$`)
+	comparePresetDatePattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
+)
+
+// validateComparePresetSlotTime prueft Format UND Wertebereich (Stunde 0..23,
+// Minute 0..59) einer Slot-Uhrzeit; ergaenzt fehlende Sekunden zu ":00".
+func validateComparePresetSlotTime(fieldName string, value *string) error {
+	if value == nil {
+		return nil
+	}
+	if !comparePresetTimePattern.MatchString(*value) {
+		return fmt.Errorf("%s must match HH:MM or HH:MM:SS", fieldName)
+	}
+	t, err := time.Parse("15:04:05", normalizeComparePresetTime(*value))
+	if err != nil {
+		return fmt.Errorf("%s is not a valid time: %v", fieldName, err)
+	}
+	*value = t.Format("15:04:05")
+	return nil
+}
+
+// normalizeComparePresetTime ergaenzt fehlende Sekunden (":00") an "HH:MM".
+func normalizeComparePresetTime(value string) string {
+	if len(value) == 5 {
+		return value + ":00"
+	}
+	return value
+}
+
+func validateComparePresetEndDate(value *string) error {
+	if value == nil {
+		return nil
+	}
+	if !comparePresetDatePattern.MatchString(*value) {
+		return fmt.Errorf("end_date must match YYYY-MM-DD")
+	}
+	if _, err := time.Parse("2006-01-02", *value); err != nil {
+		return fmt.Errorf("end_date is not a valid date: %v", err)
+	}
+	return nil
+}
 
 func newComparePresetID() string {
 	b := make([]byte, 8)
@@ -84,6 +131,16 @@ func validateComparePreset(p model.ComparePreset) error {
 		if !strings.Contains(e, "@") {
 			return fmt.Errorf("empfaenger entry %q is not a valid email address", e)
 		}
+	}
+	// Issue #1232 Scheibe 2a: Slot-Zeitfelder + Laufzeit-Ende validieren.
+	if err := validateComparePresetSlotTime("morning_time", p.MorningTime); err != nil {
+		return err
+	}
+	if err := validateComparePresetSlotTime("evening_time", p.EveningTime); err != nil {
+		return err
+	}
+	if err := validateComparePresetEndDate(p.EndDate); err != nil {
+		return err
 	}
 	return nil
 }
@@ -148,6 +205,19 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if preset.Schedule == "weekly" && preset.Weekday == nil {
 			four := 4
 			preset.Weekday = &four
+		}
+
+		// Issue #1232 Scheibe 2a: Neu-Preset-Defaults fuer die 5 Slot-Felder,
+		// wenn der Client sie nicht mitschickt (Marker: MorningTime==nil).
+		// Andere Defaults als die Load-Migration (07:00 statt 06:00) — ein
+		// frisch angelegtes Preset ist keine Altdaten-Migration.
+		if preset.MorningTime == nil {
+			trueVal, falseVal := true, false
+			morningTime, eveningTime := "07:00:00", "18:00:00"
+			preset.MorningEnabled = &trueVal
+			preset.MorningTime = &morningTime
+			preset.EveningEnabled = &falseVal
+			preset.EveningTime = &eveningTime
 		}
 
 		if err := validateComparePreset(preset); err != nil {
@@ -271,6 +341,26 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if updated.Schedule == "weekly" && updated.Weekday == nil {
 			four := 4
 			updated.Weekday = &four
+		}
+
+		// Issue #1232 Scheibe 2a: nil-Preserve fuer die 5 Slot-Felder — fehlt
+		// ein Feld im Request-Body (nil nach Decode), wird der Original-Wert
+		// uebernommen. Ein explizit gesendetes false/"" ist ein gueltiger,
+		// bewusst gesetzter Wert (analog official_alerts_enabled).
+		if updated.MorningEnabled == nil {
+			updated.MorningEnabled = original.MorningEnabled
+		}
+		if updated.MorningTime == nil {
+			updated.MorningTime = original.MorningTime
+		}
+		if updated.EveningEnabled == nil {
+			updated.EveningEnabled = original.EveningEnabled
+		}
+		if updated.EveningTime == nil {
+			updated.EveningTime = original.EveningTime
+		}
+		if updated.EndDate == nil {
+			updated.EndDate = original.EndDate
 		}
 
 		if err := validateComparePreset(updated); err != nil {

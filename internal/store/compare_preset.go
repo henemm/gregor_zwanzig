@@ -40,8 +40,36 @@ func (s *Store) LoadComparePresets() ([]model.ComparePreset, error) {
 		if presets[i].ForecastHours == 0 {
 			presets[i].ForecastHours = 48
 		}
+		migrateComparePresetSlots(&presets[i])
 	}
 	return presets, nil
+}
+
+// migrateComparePresetSlots (Issue #1232 Scheibe 2a): idempotente
+// Zeitplan-Migration. Marker "nie migriert" ist MorningTime == nil (Pointer-
+// Feld fehlte im JSON). Der Alt-Wert von Schedule entscheidet ueber die
+// Nutzer-Intention (KL-6): "daily_evening" → Abend-Slot aktiv, alle anderen
+// Alt-Werte ("daily", "weekly", "manual", leer/unbekannt, "daily_morning")
+// → Morgen-Slot aktiv (verhaltensidentisch zum bisherigen 06:00-Cron).
+// Bereits migrierte Presets (MorningTime gesetzt) werden NICHT erneut
+// angefasst — auch ein explizites morning_enabled=false bleibt erhalten.
+func migrateComparePresetSlots(p *model.ComparePreset) {
+	if p.MorningTime != nil {
+		return
+	}
+	falseVal := false
+	trueVal := true
+	morningTime := "06:00:00"
+	eveningTime := "18:00:00"
+	p.MorningTime = &morningTime
+	p.EveningTime = &eveningTime
+	if p.Schedule == "daily_evening" {
+		p.MorningEnabled = &falseVal
+		p.EveningEnabled = &trueVal
+	} else {
+		p.MorningEnabled = &trueVal
+		p.EveningEnabled = &falseVal
+	}
 }
 
 func (s *Store) SaveComparePresets(presets []model.ComparePreset) error {

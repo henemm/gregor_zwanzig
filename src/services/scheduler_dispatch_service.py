@@ -13,17 +13,24 @@ from pathlib import Path
 
 from app.config import Settings
 from app.loader import _parse_activity_profile, load_all_locations
+from services.compare_slot_scheduler import presets_due_for_hour
 
 logger = logging.getLogger("scheduler.dispatch")
 
 
-def run_compare_presets_daily(user_id: str = "default", data_root: str | None = None) -> int:
-    """Verarbeitet alle Compare-Presets mit schedule='daily' fuer den gegebenen User.
+def run_compare_presets_daily(
+    user_id: str = "default",
+    data_root: str | None = None,
+    hour: int | None = None,
+) -> int:
+    """Verarbeitet alle faelligen Compare-Presets fuer den gegebenen User.
 
-    Laedt compare_presets.json (direktes Array), filtert auf schedule='daily'
-    bzw. 'weekly' wenn heute der konfigurierte Wochentag ist, fuehrt
-    ComparisonEngine aus, sendet E-Mail, persistiert Lauf-Status.
-    Gibt Anzahl erfolgreich versendeter Presets zurueck.
+    #1232 Scheibe 2a: Laedt compare_presets.json (direktes Array), ermittelt
+    ueber `presets_due_for_hour` (Morgen-/Abend-Slot, Pause-/Archiv-/Laufzeit-
+    Guards, Migrations-Fallback fuer Altdaten) die zur gegebenen Stunde
+    faelligen Presets samt Zieldatum, fuehrt ComparisonEngine aus, sendet
+    E-Mail, persistiert Lauf-Status. Gibt Anzahl erfolgreich versendeter
+    Presets zurueck.
     """
     if data_root is None:
         data_root = "data"
@@ -39,22 +46,18 @@ def run_compare_presets_daily(user_id: str = "default", data_root: str | None = 
         logger.error("Failed to load compare_presets.json for %s: %s", user_id, e)
         return 0
 
+    if hour is None:
+        from zoneinfo import ZoneInfo
+
+        hour = _datetime.now(ZoneInfo("Europe/Vienna")).hour
+
+    due = presets_due_for_hour(presets, hour, date.today())
+
     settings = Settings().with_user_profile(user_id)
     success_count = 0
-    all_locations = None  # lazy: only load when a daily preset with location_ids is found
+    all_locations = None  # lazy: only load when a faellige preset with location_ids is found
 
-    for preset in presets:
-        schedule = preset.get("schedule", "")
-        if schedule == "daily":
-            pass  # wie bisher
-        elif schedule == "weekly":
-            today_weekday = date.today().weekday()  # 0=Montag … 6=Sonntag
-            preset_weekday = preset.get("weekday", 4)
-            if preset_weekday != today_weekday:
-                continue  # nicht fällig heute
-        else:
-            continue  # manual und unbekannte Typen überspringen
-
+    for preset, target_date in due:
         preset_id = preset.get("id", "")
 
         # Lazy: erst laden, wenn ein faelliges Preset zu verarbeiten ist (#649).
@@ -68,6 +71,7 @@ def run_compare_presets_daily(user_id: str = "default", data_root: str | None = 
                 user_id,
                 data_root,
                 all_locations_cache=all_locations,
+                target_date=target_date,
             )
             success_count += 1
         except ValueError as e:
@@ -195,18 +199,37 @@ def save_compare_preset_status(
         logger.error("Failed to write compare_presets.json %s: %s", path, e)
 
 
+def build_compare_preset_subject(name: str, target_date: date) -> str:
+    """Baut den Mail-Betreff fuer einen Compare-Preset-Versand (pure Funktion).
+
+    Adversary-Fund F001 (#1232 Scheibe 2a): Das Betreff-Datum MUSS
+    `target_date` widerspiegeln, nicht den Sende-Zeitpunkt — sonst
+    widerspricht der Betreff beim Abend-Slot (target=morgen) dem Mail-Body
+    ("Datum: morgen"). Als eigene pure Funktion extrahiert, damit sie ohne
+    Netz/Mail-Versand deterministisch testbar ist.
+    """
+    return f"Wetter-Vergleich: {name} ({target_date.strftime('%d.%m.%Y')})"
+
+
 def send_one_compare_preset(
     preset: dict,
     settings: Settings,
     user_id: str,
     data_root: str,
     all_locations_cache=None,
+    target_date: date | None = None,
 ) -> tuple:
     """Fuehrt den Versand fuer ein einzelnes Compare-Preset durch.
 
     Gemeinsame Versandlogik fuer Daily-Loop und Einzelversand (#627).
+    `target_date` (#1232 Scheibe 2a): Default `date.today()` fuer
+    Rueckwaertskompatibilitaet mit dem Einzelversand-Pfad
+    (`send_compare_preset`, ignoriert `schedule`); der Abend-Slot des
+    Daily-Loops uebergibt heute+1.
     Gibt (top_ort, empfaenger) zurueck. Wirft ValueError wenn kein Empfaenger konfiguriert.
     """
+    if target_date is None:
+        target_date = date.today()
     from output.renderers.comparison import render_compare_email
     from output.channels.email import EmailOutput
     from services.comparison_engine import ComparisonEngine
@@ -238,7 +261,7 @@ def send_one_compare_preset(
     result = ComparisonEngine.run(
         locations=locations,
         time_window=(hour_from, hour_to),
-        target_date=date.today(),
+        target_date=target_date,
         forecast_hours=preset.get("forecast_hours") or 48,  # Issue #764/#781: gespeicherten Horizont nutzen, 0 → 48
         profile=profile,
         official_alerts_enabled=preset.get("official_alerts_enabled", True),  # Issue #1040
@@ -247,7 +270,7 @@ def send_one_compare_preset(
     top_ort = result.locations[0].location.name if result.locations else None
 
     name = preset.get("name", preset_id)
-    subject = f"Wetter-Vergleich: {name} ({_datetime.now().strftime('%d.%m.%Y')})"
+    subject = build_compare_preset_subject(name, target_date)
     # Issue #1209 (Scheibe B): Render-Optionen ausschliesslich ueber den
     # Resolver aufloesen, statt inline aus dem rohen Preset-Dict zu lesen.
     opts = resolve_compare_render_options(preset)

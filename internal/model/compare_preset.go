@@ -12,17 +12,25 @@ package model
 import "time"
 
 type ComparePreset struct {
-	ID                   string     `json:"id"`
-	Name                 string     `json:"name"`
-	UserID               string     `json:"user_id"`
-	LocationIDs          []string   `json:"location_ids"`
-	Schedule             string     `json:"schedule"`                     // "daily"|"weekly"|"manual"
-	PreviousSchedule     string     `json:"previous_schedule,omitempty"`  // #631: konserviert Rhythmus über Pause hinweg
-	Profil               string     `json:"profil"`                       // ActivityProfile als string
-	HourFrom             int        `json:"hour_from"`
-	HourTo               int        `json:"hour_to"`
-	ForecastHours        int        `json:"forecast_hours"` // 24|48|72 — Vorhersage-Horizont; Issue #764
-	Weekday              *int       `json:"weekday,omitempty"` // 0=Montag … 6=Sonntag; nur relevant wenn Schedule="weekly"; nil=kein Wert gesetzt (Default 4=Freitag wird in Store/Handler gesetzt)
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	UserID      string   `json:"user_id"`
+	LocationIDs []string `json:"location_ids"`
+	// Issue #1232 Scheibe 2a: Schedule/PreviousSchedule tragen seit dem
+	// Zeitplan-Reshape AUSSCHLIESSLICH noch die Pause-Semantik (#611:
+	// schedule=="manual" = pausiert; PreviousSchedule konserviert den
+	// Rhythmus über die Pause hinweg). Die tatsaechliche Versandzeit lebt
+	// in den 5 Slot-Feldern weiter unten (MorningTime/EveningTime/EndDate).
+	Schedule         string `json:"schedule"`                    // "daily"|"weekly"|"manual" — nur noch Pause-Flag
+	PreviousSchedule string `json:"previous_schedule,omitempty"` // #631: konserviert Rhythmus über Pause hinweg
+	Profil           string `json:"profil"`                      // ActivityProfile als string
+	HourFrom         int    `json:"hour_from"`
+	HourTo           int    `json:"hour_to"`
+	ForecastHours    int    `json:"forecast_hours"` // 24|48|72 — Vorhersage-Horizont; Issue #764
+	// Deprecated seit Issue #1232 Scheibe 2a (KL-1: Wochenrhythmus entfaellt,
+	// Presets versenden taeglich). Kein neuer Schreibpfad mehr — nur noch als
+	// Altdaten-Traeger fuer bereits gespeicherte "weekly"-Presets lesbar.
+	Weekday              *int       `json:"weekday,omitempty"` // 0=Montag … 6=Sonntag; DEPRECATED, siehe oben
 	Empfaenger           []string   `json:"empfaenger"`
 	LetzterVersand       *time.Time `json:"letzter_versand,omitempty"`
 	TopOrtLetzterVersand *string    `json:"top_ort_letzter_versand,omitempty"`
@@ -67,4 +75,15 @@ type ComparePreset struct {
 	OfficialAlertTriggersEnabled *bool `json:"official_alert_triggers_enabled,omitempty"`
 	SendTelegram                 *bool `json:"send_telegram,omitempty"`
 	SendSms                      *bool `json:"send_sms,omitempty"`
+	// Issue #1232 Scheibe 2a — Zwei-Slot-Zeitplan (additiv auf das Trip-
+	// Briefing-Modell uebertragen, docs/specs/modules/compare_preset_zeitplan.md).
+	// Pointer-Pattern wie OfficialAlertsEnabled: fehlt ein Feld im JSON
+	// (Altdaten), decodiert Go zu nil — das ist der Migrations-Marker fuer
+	// LoadComparePresets (nil-Check auf MorningTime). MorningTime/EveningTime
+	// im Format "HH:MM:SS", EndDate im Format "YYYY-MM-DD" (nil = unbegrenzt).
+	MorningEnabled *bool   `json:"morning_enabled,omitempty"`
+	MorningTime    *string `json:"morning_time,omitempty"`
+	EveningEnabled *bool   `json:"evening_enabled,omitempty"`
+	EveningTime    *string `json:"evening_time,omitempty"`
+	EndDate        *string `json:"end_date,omitempty"`
 }

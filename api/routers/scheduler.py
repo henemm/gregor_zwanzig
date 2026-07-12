@@ -130,9 +130,14 @@ def trigger_inbound_telegram():
 
 
 @router.post("/compare-presets-daily")
-def trigger_compare_presets_daily(user_id: str = "default"):
-    """Trigger daily compare preset dispatch (called by Go scheduler at 06:00)."""
-    count = run_compare_presets_daily(user_id)
+def trigger_compare_presets_daily(hour: Optional[int] = None, user_id: str = "default"):
+    """Trigger compare preset dispatch for the current or specified hour.
+
+    #1232 Scheibe 2a: Go-Cron ruft diesen Endpoint stuendlich auf (statt
+    einmal taeglich um 06:00); Slot-Faelligkeit wird in
+    `run_compare_presets_daily` gegen die Stunde geprueft.
+    """
+    count = run_compare_presets_daily(user_id, hour=hour)
     return {"status": "ok", "count": count}
 
 

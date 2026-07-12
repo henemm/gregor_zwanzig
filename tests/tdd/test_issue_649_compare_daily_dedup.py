@@ -20,6 +20,13 @@ RED-Erwartung (vor Refactor):
     NICHT die Fehlermeldung des geteilten Helpers. Die Assertion, dass die
     vom Helper geworfene ValueError-Meldung in den Loop-Logs auftaucht, schlägt
     fehl → RED. Nach dem Refactor (Loop ruft Helper, fängt ValueError) → GREEN.
+
+Update #1232 Scheibe 2a: `run_compare_presets_daily` prueft seit dem
+Zeitplan-Reshape stuendliche Slot-Faelligkeit statt "schedule=='daily' immer
+faellig". `_daily_preset()` hat keine Slot-Felder → Migrations-Fallback
+(Morgen-Slot aktiv @06:00, siehe `compare_slot_scheduler.resolve_preset_slots`).
+Alle Aufrufe hier uebergeben deshalb explizit `hour=6`, damit die Tests
+deterministisch bleiben (statt von der aktuellen Wanduhrzeit abzuhaengen).
 """
 import json
 import logging
@@ -93,7 +100,7 @@ class TestComparePresetsDailyDedup:
 
         # 2) Daily-Loop dasselbe Preset verarbeiten lassen.
         with caplog.at_level(logging.WARNING):
-            count = _run_compare_presets_daily(user_id=user_id, data_root=str(tmp_path))
+            count = _run_compare_presets_daily(user_id=user_id, data_root=str(tmp_path), hour=6)
 
         assert count == 0, "Unresolvable Preset darf success_count nicht erhöhen"
 
@@ -120,7 +127,7 @@ class TestComparePresetsDailyDedup:
         _write_presets(tmp_path, user_id, presets)
 
         # Kein pytest.raises — Fehler müssen intern abgefangen werden.
-        count = _run_compare_presets_daily(user_id=user_id, data_root=str(tmp_path))
+        count = _run_compare_presets_daily(user_id=user_id, data_root=str(tmp_path), hour=6)
         assert count == 0
 
     def test_manual_preset_silently_skipped(self, tmp_path, caplog):
@@ -136,7 +143,7 @@ class TestComparePresetsDailyDedup:
         _write_presets(tmp_path, user_id, [manual])
 
         with caplog.at_level(logging.WARNING):
-            count = _run_compare_presets_daily(user_id=user_id, data_root=str(tmp_path))
+            count = _run_compare_presets_daily(user_id=user_id, data_root=str(tmp_path), hour=6)
 
         assert count == 0
         assert not any("cp-manual" in r.message for r in caplog.records), (
@@ -156,5 +163,5 @@ class TestComparePresetsDailyDedup:
         preset["empfaenger"] = []  # kein Empfänger; frischer User hat kein mail_to
         _write_presets(tmp_path, user_id, [preset])
 
-        count = _run_compare_presets_daily(user_id=user_id, data_root=str(tmp_path))
+        count = _run_compare_presets_daily(user_id=user_id, data_root=str(tmp_path), hour=6)
         assert count == 0
