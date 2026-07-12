@@ -32,8 +32,14 @@ from src.output.renderers.email.helpers import (
     shorten_stage_name, visible_cols,
 )
 from src.output.renderers.alert.official_alerts import (
-    dedupe_official_alerts, format_segment_reference, render_official_alerts_html,
+    OfficialAlertNotice, dedupe_official_alerts, format_segment_reference,
+    official_alert_source_label, render_official_alerts_html, render_warn_block,
 )
+
+# `render_official_alerts_html` bleibt hier gebunden, auch wenn der Trip-Pfad
+# ab Issue #1216 den embedded WarnBlock nutzt: test_issue_1087 beweist per
+# `is`-Identitaet, dass html.py DASSELBE Shared-Funktionsobjekt referenziert.
+_ = render_official_alerts_html
 from src.output.renderers.email.design_tokens import (
     G_PAPER, G_SURFACE_1, G_INK, G_INK_MUTED, G_INK_FAINT,
     G_ACCENT, G_WARNING, G_DANGER, G_BOX_WARNING_BG, G_BOX_DANGER_BG, G_HEADER_BG,
@@ -1419,12 +1425,25 @@ def render_html(
         for alert in (getattr(seg, "official_alerts", None) or [])
     ]
     _deduped = dedupe_official_alerts(_tagged)
-    _alert_entries = [(a.region_label or a.label, [a]) for a, _ in _deduped]
-    _segment_refs = {id(a): format_segment_reference(sids) for a, sids in _deduped if sids}
-    official_alerts_html = (
-        render_official_alerts_html(_alert_entries, segment_refs=_segment_refs)
-        if _alert_entries else ""
-    )
+    # Issue #1216: geteilter embedded WarnBlock (`.wb`-Struktur) statt des flachen
+    # Badge-Streifens; wird ganz oben im Body (nach Header, VOR Tageslage)
+    # platziert. Segment-Bezug -> Route-Chip je Warnung.
+    _warn_notices = []
+    for _a, _sids in _deduped:
+        _chip = format_segment_reference(_sids) if _sids else ""
+        _warn_notices.append(OfficialAlertNotice(
+            alert=_a, scope_label=_chip, sms_scope="",
+            affected_chips=[_chip] if _chip else [], free_chips=[],
+        ))
+    if _warn_notices:
+        _leading = max((a for a, _ in _deduped), key=lambda a: a.level)
+        warn_block_html = render_warn_block(
+            _warn_notices, variant="embedded",
+            source_label=official_alert_source_label(_leading.source),
+            source_url=getattr(_leading, "url", None), tz=tz,
+        )
+    else:
+        warn_block_html = ""
 
     all_rows = [r for tbl in seg_tables for r in tbl]
     legend_text = build_units_legend(all_rows) if all_rows else ""
@@ -1523,12 +1542,12 @@ def render_html(
 <body>
     <div class="container">
         {header_html}
-
+{warn_block_html}
         {stability_html}
         {tageslage_html}
         {metrics_summary_html}
         {confidence_hint_html}
-        {changes_html}{official_alerts_html}
+        {changes_html}
         {segments_html}
         {night_html}
         {thunder_html}

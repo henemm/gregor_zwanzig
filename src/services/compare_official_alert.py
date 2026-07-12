@@ -31,6 +31,7 @@ from app.loader import load_all_locations
 from output.renderers.alert.official_alerts import dedupe_official_alerts
 from services import alert_daily_limit
 from services.alert_state import AlertStateService
+from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
 from services.official_alerts import get_official_alerts_for_location
 from services.user_tier import sms_allowed
@@ -68,7 +69,22 @@ class CompareOfficialAlertService:
         location_ids = preset.get("location_ids") or []
         if not preset_id or not location_ids:
             return False
+        # #1233: schedule=="manual" == deaktivierter Ortsvergleich -> nicht senden.
+        if preset.get("schedule") == "manual":
+            return False
+        # #1233: archivierte Vergleiche sind kein aktiver Alarm-Empfaenger mehr.
+        if preset.get("archived_at"):
+            return False
         if not preset.get("official_alert_triggers_enabled", True):
+            return False
+        # #1233: Ruhezeit unterdrueckt frueh -> kein State-Verbrauch der Warnung,
+        # damit sie nach Ende der Ruhezeit noch als "neu" zugestellt wird (AC-2).
+        if DeviationAlertEngine.is_quiet_hours(
+            datetime.now(timezone.utc),
+            preset.get("alert_quiet_from"),
+            preset.get("alert_quiet_to"),
+        ):
+            logger.debug(f"Compare official alert quiet hours active for preset {preset_id}")
             return False
 
         locs = [all_locations[lid] for lid in location_ids if lid in all_locations]

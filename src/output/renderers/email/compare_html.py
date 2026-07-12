@@ -32,7 +32,10 @@ from output.renderers.email.design_tokens import (
 )
 from output.renderers.email.profile_signature import profile_signature
 from src.output.metric_format import severity_for
-from src.output.renderers.alert.official_alerts import render_official_alerts_html
+from src.output.renderers.alert.official_alerts import (
+    _LEVEL_WORDS, OfficialAlertNotice, official_alert_source_label,
+    render_official_alerts_html, render_warn_block,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -324,60 +327,50 @@ def _render_overview_table(locations: list[LocationResult], enabled_metrics: set
     )
 
 
-# ---------------------------------------------------------------------------
-# Warn-Lead-Block (Akzent-Bar, nur bei >=1 Warnung ueber alle Orte)
-# ---------------------------------------------------------------------------
-
-def _lead_tag(bg: str, fg: str, border: str, label: str) -> str:
-    return (
-        f'<span style="display:inline-block;padding:4px 10px;margin:0 6px 6px 0;'
-        f'background:{bg};color:{fg};border:1px solid {border};font-size:11px;'
-        f'font-weight:600;font-family:{FONT_DATA};letter-spacing:0.02em;">'
-        f'{_html.escape(label)}</span>'
-    )
-
-
-def _render_warn_lead(locations: list[LocationResult]) -> str:
-    """Aggregat-Lead ueber alle Orte -- KEINE Ortsnamen (haelt AC-1 alphabetische
-    Sortierung ein, da sonst ein spaeterer Ort vor einem frueheren im HTML
-    auftauchen koennte)."""
+def _render_warn_banner(locations: list[LocationResult]) -> str:
+    """Aggregat-WarnBlock-Banner (Issue #1216): geteilter embedded WarnBlock mit
+    Orts-Scope. Nennt die höchste amtliche Stufe + den führenden Ort („höchste
+    Stufe ROT · Marseille") und zählt die betroffenen Orte je Gefahr („6 von 7
+    Orten"). ADDITIV zum Bestands-Warn-Lead, zur Matrix-Warn-Zeile und zum
+    Pro-Ort-Streifen (PO-Entscheidung Frage D, additiver Umbau)."""
     valid = [loc for loc in locations if loc.error is None]
-    if not any(loc.official_alerts for loc in valid):
+    alerted = [loc for loc in valid if loc.official_alerts]
+    if not alerted:
         return ""
 
     total = len(valid)
-    heat_count = sum(1 for loc in valid if any(a.hazard == "extreme_heat" for a in loc.official_alerts))
-    wildfire_levels = [a.level for loc in valid for a in loc.official_alerts if a.hazard == "wildfire_risk"]
-    access_count = sum(1 for loc in valid if any(a.hazard == "access_ban" for a in loc.official_alerts))
-    max_level = max(wildfire_levels, default=0)
+    leading_loc = None
+    leading_alert = None
+    for loc in alerted:
+        for a in loc.official_alerts:
+            if leading_alert is None or a.level > leading_alert.level:
+                leading_alert, leading_loc = a, loc
+    word = _LEVEL_WORDS.get(leading_alert.level, ("🔴", "ROT"))[1]
+    count_line = f"höchste Stufe {word} · {leading_loc.location.name}"
 
-    parts = []
-    if heat_count:
-        parts.append(f"Für {heat_count} von {total} Orten liegt eine Hitzewarnung vor")
-    if access_count:
-        parts.append(f"für {access_count} Gebiet(e) gilt ein Zugangsverbot")
-    if max_level:
-        parts.append(f"höchste Waldbrandstufe {max_level}")
-    sentence = ("; ".join(parts) + ".") if parts else "Es liegen amtliche Warnungen vor."
+    # Je Gefahr die höchststufige Warnung, Meter nach Stufe absteigend.
+    by_hazard: dict = {}
+    for loc in alerted:
+        for a in loc.official_alerts:
+            cur = by_hazard.get(a.hazard)
+            if cur is None or a.level > cur.level:
+                by_hazard[a.hazard] = a
+    notices = []
+    for a in sorted(by_hazard.values(), key=lambda x: -x.level):
+        hz_locs = [loc for loc in alerted if any(x.hazard == a.hazard for x in loc.official_alerts)]
+        if len(hz_locs) > 1:
+            chip = f"{len(hz_locs)} von {total} Orten"
+        else:
+            chip = hz_locs[0].location.name if hz_locs else ""
+        notices.append(OfficialAlertNotice(
+            alert=a, scope_label="", sms_scope="",
+            affected_chips=[chip] if chip else [], free_chips=[],
+        ))
 
-    tags = []
-    if heat_count:
-        tags.append(_lead_tag("#fde6cc", "#7c2d12", "#f0a060", f"Extreme Hitze · {heat_count} Orte"))
-    if max_level:
-        tags.append(_lead_tag("#fadcd6", "#7f1d1d", "#e88472", f"Waldbrand Stufe {max_level}"))
-    if access_count:
-        tags.append(_lead_tag("#fde6cc", "#7c2d12", "#f0a060", f"Zugang gesperrt · {access_count} Gebiete"))
-
-    return (
-        f'<div style="padding:18px 24px 16px;">'
-        f'<div style="border-left:2px solid {G_ACCENT};padding-left:14px;">'
-        f'<span style="font-family:{FONT_DATA};font-size:10px;letter-spacing:0.12em;'
-        f'color:{G_ACCENT};font-weight:600;text-transform:uppercase;">'
-        f'Amtliche Warnungen · aktiv</span>'
-        f'<div style="font-size:16px;line-height:1.5;font-weight:500;margin-top:6px;'
-        f'color:{G_INK};">{sentence}</div>'
-        f'<div style="margin-top:12px;">{"".join(tags)}</div>'
-        f'</div></div>'
+    return render_warn_block(
+        notices, variant="embedded",
+        source_label=official_alert_source_label(leading_alert.source),
+        source_url=getattr(leading_alert, "url", None), count_line=count_line,
     )
 
 
@@ -726,7 +719,7 @@ def render_compare_html(
 
     header_html = _render_header(result, sig)
     warnings_html = "".join(_render_warning_banner(w) for w in warnings)
-    warn_lead_html = _render_warn_lead(locations)
+    warn_banner_html = _render_warn_banner(locations)
 
     overview_html = (
         f'<div style="padding:6px 24px 0;">'
@@ -750,7 +743,7 @@ def render_compare_html(
     # Warn-Lead/keine Warnungen, analog zur Anti-Erosion-Regel aus #1034).
     body_html = "\n".join(
         part for part in (
-            header_html, warnings_html, warn_lead_html, overview_html,
+            header_html, warnings_html, warn_banner_html, overview_html,
             hourly_head_html, hourly_sections_html, legend_html, abo_html,
             app_footer_html,
         ) if part

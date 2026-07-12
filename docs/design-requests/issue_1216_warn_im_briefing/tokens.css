@@ -1,0 +1,56 @@
+/* Gregor 20 — Design Tokens v2
+ * Alpine-modern. CSS-Variables, übergabefähig nach app.css (SvelteKit).
+ * Drop-in: kopiere :root + .dark in src/app.css, ersetze tailwind-Defaults via Theme-Plugin.
+ */
+
+:root {
+  /* Surface (Paper-Palette) */
+  --g-paper:        #f6f4ee;   /* App-Hintergrund — leicht warmes Off-White */
+  --g-paper-deep:   #ecead9;   /* gedämpfter Akzent für Sektionen */
+  --g-card:         #ffffff;   /* Karten, Tabellen */
+  --g-card-alt:     #faf8f1;   /* Zebra, sekundäre Karten */
+  --g-rule:         #d8d3c2;   /* Standard-Linien */
+  --g-rule-soft:    #e7e2d3;   /* sanfte Trennlinien */
+
+  /* Ink (Typografie) */
+  --g-ink:          #1a1a18;   /* Primärtext */
+  --g-ink-2:        #45433d;   /* Sekundärtext, Body */
+  --g-ink-3:        #6b675c;   /* Tertiär, Labels */
+  --g-ink-4:        #9a958a;   /* Hint, Placeholder */
+
+  /* Accent — burnt orange (alpin/markant) */
+  --g-accent:       #c45a2a;
+  --g-accent-deep:  #8c3e1a;
+  --g-accent-soft:  #f3d9c8;
+  --g-accent-tint:  rgba(196, 90, 42, 0.08);
+
+  /* Semantic */
+  --g-good:         #3d6b3a;   /* Wetter ok, low risk */
+  --g-warn:         #c08a1a;   /* Achtung, Schwellwert nahe */
+  --g-bad:          #a83232;   /* Alarm, kritisch */
+  --g-info:         #2c5a8c;   /* neutrale Daten-Highlight */
+
+  /* Wetter-Farben (aus echtem Email-Report abgeleitet) */
+  --g-weather-rain:    #4a7ab8;
+  --g-weather-snow:    #8aa4c0;
+  --g-weather-thunder: #c43a2a;
+  --g-weather-sun:     #d99a2a;
+  --g-weather-cloud:   #9a958a;
+
+  /* Typography */
+  --g-font-sans: "Inter Tight", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --g-font-mono: "JetBrains Mono", "SF Mono", ui-monospace, "Cascadia Mono", monospace;
+
+  /* Radii — bewusst zurückhaltend */
+  --g-r-1: 2px;
+  --g-r-2: 4px;
+  --g-r-3: 6px;
+  --g-r-4: 10px;
+  --g-r-pill: 999px;
+}
+/* Severity-Farben des Warn-Blocks (aus der Vorlage, nicht in :root):
+ * GELB   dot #e8b81f · text #8a6a05 · border rgba(232,184,31,.55) · bg rgba(232,184,31,.10)
+ * ORANGE dot #e07a1e · text var(--g-accent-deep)=#8c3e1a · border rgba(224,122,30,.50) · bg rgba(224,122,30,.09)
+ * ROT    dot #c43030 · text var(--g-bad)=#a83232 · border rgba(196,48,48,.45) · bg rgba(196,48,48,.08)
+ * Tabellen-Chips: warn #fad6b8/#8a3506 · danger #f6c5bf/#8a1009 · caution #fbeeb8/#5e4a00
+ */

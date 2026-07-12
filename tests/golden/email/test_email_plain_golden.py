@@ -39,6 +39,7 @@ from app.models import (
     TripSegment,
 )
 from output.renderers.trip_report import TripReportFormatter
+from services.official_alerts.models import OfficialAlert
 
 GOLDEN_DIR = Path(__file__).parent
 
@@ -255,13 +256,25 @@ def test_email_plain_golden_arlberg_winter_morning():
 
 
 def test_email_plain_golden_corsica_vigilance():
-    """Korsika Vigilance Update: MétéoFrance-Vigilance high + Update-Report."""
+    """Korsika Vigilance Update: MétéoFrance-Vigilance high + Update-Report.
+
+    Issue #1216 AC-9: trägt eine amtliche Warnung (Météo-France Vigilance Hitze
+    ORANGE) — im Plain-Pfad erscheint dadurch die „Amtliche Warnung"-Zeile."""
     seg = _build_seg_weather(
         1, 10, 15, day=11, temp_min=18.0, temp_max=32.0,
         wind_max=30.0, gust_max=85.0, precip_total=8.0,
         thunder=ThunderLevel.HIGH,
         lat=42.20, lon=9.05,
     )
+    seg.official_alerts = [
+        OfficialAlert(
+            source="meteofrance_vigilance", hazard="extreme_heat", level=3,
+            label="Extreme Hitze",
+            valid_from=datetime(2026, 7, 11, 12, 0, tzinfo=timezone.utc),
+            valid_to=datetime(2026, 7, 11, 20, 0, tzinfo=timezone.utc),
+            region_label="Haute-Corse",
+        )
+    ]
     formatter = TripReportFormatter()
     report = formatter.format_email(
         [seg], "Korsika Trail", "update",

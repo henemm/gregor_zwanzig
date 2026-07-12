@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<title>Gregor 20 — Amtliche Warnung im Briefing (Trip · Ortsvergleich)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { background: var(--g-paper); }
+  a { color: var(--g-accent); }
+  a:hover { color: var(--g-accent-deep); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 56px 40px 100px; }
+  .eyebrow { font-family: var(--g-font-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--g-accent); font-weight: 600; }
+  h1.page { font-size: 34px; font-weight: 600; letter-spacing: -.02em; margin: 8px 0 10px; }
+  p.lede { font-size: 16px; color: var(--g-ink-2); line-height: 1.55; max-width: 820px; margin: 0 0 8px; }
+  p.lede b { color: var(--g-ink); font-weight: 600; }
+  code.i { font-family: var(--g-font-mono); font-size: 12.5px; background: var(--g-card-alt); border: 1px solid var(--g-rule-soft); border-radius: 3px; padding: 1px 5px; color: var(--g-ink); }
+
+  .sec-label { font-family: var(--g-font-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; color: var(--g-ink-3); margin: 0 0 6px; display: flex; align-items: center; gap: 10px; }
+  .sec-label .num { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 8px; border-radius: 999px; font-size: 11px; background: var(--g-accent-tint); color: var(--g-accent-deep); }
+  .sec-q { font-size: 21px; font-weight: 600; letter-spacing: -.01em; margin: 0 0 22px; }
+
+  hr.r { border: none; border-top: 1px solid var(--g-rule-soft); margin: 60px 0; }
+
+  .two { display: grid; grid-template-columns: minmax(0,1fr) 350px; gap: 40px; align-items: start; }
+  @media (max-width: 1000px){ .two { grid-template-columns: 1fr; } }
+
+  .aside { border: 1px solid var(--g-rule); border-radius: var(--g-r-4); background: var(--g-card); padding: 18px 22px; }
+  .aside h3 { font-size: 15.5px; font-weight: 600; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+  .aside h3 .rec { font-family: var(--g-font-mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--g-good); background: rgba(61,107,58,.12); border-radius: 999px; padding: 2px 8px; }
+  .aside p { font-size: 13.5px; color: var(--g-ink-2); line-height: 1.55; margin: 0 0 10px; }
+  .aside p:last-child { margin-bottom: 0; }
+  .aside b { color: var(--g-ink); font-weight: 600; }
+  .aside code { font-family: var(--g-font-mono); font-size: 12px; background: var(--g-card-alt); border: 1px solid var(--g-rule-soft); border-radius: 3px; padding: 1px 5px; color: var(--g-ink); }
+
+  /* ── Severity-Grammatik (identisch zur Alarm-Mail) ── */
+  .dot { display: inline-block; width: 11px; height: 11px; border-radius: 999px; flex: none; box-shadow: inset 0 0 0 1px rgba(26,26,24,.18); }
+  .dot.gelb   { background: #e8b81f; }
+  .dot.orange { background: #e07a1e; }
+  .dot.rot    { background: #c43030; }
+
+  .seg { display: inline-block; font-family: var(--g-font-mono); font-size: 11.5px; background: #fff; border: 1px solid var(--g-rule-soft); border-radius: 3px; padding: 1px 6px; color: var(--g-ink-2); }
+  .seg.off { color: var(--g-ink-4); border-style: dashed; text-decoration: line-through; text-decoration-color: var(--g-rule); }
+
+  .meter { display: inline-flex; align-items: center; gap: 3px; }
+  .meter i { width: 7px; height: 7px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(26,26,24,.20); background: transparent; }
+
+  /* ══ Der geteilte Baustein: eingebetteter Warn-Block ══
+   * Gleiche Grammatik wie die Alarm-Mail, kompakte Form:
+   * Dot · Stufe-Wort · Typ · Gültig · Route/Umfang · Quelle. */
+  .wb { display: grid; grid-template-columns: 4px 1fr; border: 1px solid; border-radius: var(--g-r-3); overflow: hidden; }
+  .wb-bar { width: 4px; }
+  .wb-body { padding: 12px 16px 13px; }
+  .wb-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 10px; }
+  .wb-ey { font-family: var(--g-font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; }
+  .wb-count { font-family: var(--g-font-mono); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+  .wb-src { margin-left: auto; font-family: var(--g-font-mono); font-size: 10.5px; color: var(--g-ink-4); text-decoration: none; }
+  .wb-src:hover { color: var(--g-ink-3); }
+  .wb-list { display: flex; flex-direction: column; gap: 7px; }
+  .wb-item { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .wb-type { font-size: 14px; font-weight: 600; color: var(--g-ink); min-width: 74px; }
+  .wb-when { font-family: var(--g-font-mono); font-size: 12px; color: var(--g-ink-3); }
+  .wb-route { display: inline-flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  .wb-route .lbl { font-size: 12px; color: var(--g-ink-4); margin-right: 2px; }
+  .wb-lvl { font-family: var(--g-font-mono); font-size: 11px; font-weight: 600; letter-spacing: .03em; }
+
+  .wb-gelb   { border-color: rgba(232,184,31,.55); background: rgba(232,184,31,.10); }
+  .wb-gelb   .wb-bar { background: #e8b81f; } .wb-gelb   .wb-ey, .wb-gelb   .wb-count, .wb-gelb .wb-lvl { color: #8a6a05; }
+  .wb-orange { border-color: rgba(224,122,30,.50); background: rgba(224,122,30,.09); }
+  .wb-orange .wb-bar { background: #e07a1e; } .wb-orange .wb-ey, .wb-orange .wb-count, .wb-orange .wb-lvl { color: var(--g-accent-deep); }
+  .wb-rot    { border-color: rgba(196,48,48,.45); background: rgba(196,48,48,.08); }
+  .wb-rot    .wb-bar { background: #c43030; } .wb-rot    .wb-ey, .wb-rot    .wb-count, .wb-rot .wb-lvl { color: var(--g-bad); }
+
+  /* ── Briefing-Slice (originalgetreu zu EmailPreview) ── */
+  .brief { width: 680px; max-width: 100%; background: #fff; border: 1px solid #d8d3c7; border-radius: var(--g-r-3); overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.06); font-family: var(--g-font-sans); color: #1d1c1a; }
+  .bf-head { padding: 20px 28px 14px; background: #fbfaf6; border-bottom: 1px solid #e6e1d3; }
+  .bf-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .bf-ey { font-family: var(--g-font-mono); font-size: 10px; letter-spacing: .12em; color: #c45a2a; font-weight: 600; }
+  .bf-ey.mute { color: #9a978d; }
+  .bf-title { font-size: 21px; font-weight: 600; letter-spacing: -.015em; margin-top: 4px; color: #1d1c1a; }
+  .bf-meta { font-size: 12.5px; color: #6b6962; margin-top: 4px; font-family: var(--g-font-mono); }
+  .bf-right { text-align: right; }
+  .bf-right .n { font-size: 13.5px; font-weight: 600; margin-top: 4px; color: #1d1c1a; }
+  .bf-right .e { font-size: 11.5px; color: #6b6962; margin-top: 2px; font-family: var(--g-font-mono); }
+
+  .bf-pad { padding: 16px 28px; }
+  .bf-lead { border-left: 2px solid #c45a2a; padding-left: 14px; }
+  .bf-lead .lb { font-family: var(--g-font-mono); font-size: 10px; letter-spacing: .12em; color: #c45a2a; font-weight: 600; text-transform: uppercase; }
+  .bf-lead .tx { font-size: 15px; line-height: 1.5; color: #1d1c1a; font-weight: 500; margin-top: 6px; }
+  .bf-sec-ey { font-family: var(--g-font-mono); font-size: 10px; letter-spacing: .12em; color: #9a978d; font-weight: 600; text-transform: uppercase; }
+
+  /* Mini-Wettertabelle nur als Kontext */
+  .wtab { width: 100%; border-collapse: collapse; margin-top: 10px; font-family: var(--g-font-mono); font-size: 11.5px; }
+  .wtab th { font-size: 9px; letter-spacing: .06em; color: #9a978d; font-weight: 600; text-transform: uppercase; text-align: right; padding: 4px 8px; border-bottom: 1px solid #e6e1d3; }
+  .wtab th:first-child, .wtab td:first-child { text-align: left; }
+  .wtab td { text-align: right; padding: 6px 8px; border-bottom: 1px solid #f0ece1; color: #1d1c1a; font-variant-numeric: tabular-nums; }
+  .wtab .cell-warn { background: #fad6b8; color: #8a3506; border-radius: 2px; }
+  .wtab .cell-danger { background: #f6c5bf; color: #8a1009; border-radius: 2px; }
+  .fade { padding: 10px 28px 20px; text-align: center; color: #b8b4a8; font-family: var(--g-font-mono); font-size: 14px; letter-spacing: .3em; background: #fff; }
+
+  /* Verworfene Variante — kompakter Kontrast */
+  .rej { border: 1px dashed var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card-alt); padding: 16px 18px; position: relative; }
+  .rej-tag { position: absolute; top: -10px; left: 14px; font-family: var(--g-font-mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--g-bad); background: #fff; border: 1px solid rgba(168,50,50,.35); border-radius: 999px; padding: 2px 9px; }
+  .rej .stub { height: 26px; border-radius: 3px; background: repeating-linear-gradient(135deg, #ece8dd, #ece8dd 6px, #f4f1e8 6px, #f4f1e8 12px); margin: 0 0 8px; }
+
+  /* Ortsvergleich-Übersichtstabelle */
+  .cmp { width: 100%; border-collapse: collapse; font-family: var(--g-font-sans); font-size: 12px; margin-top: 10px; }
+  .cmp th { font-family: var(--g-font-mono); font-size: 9.5px; letter-spacing: .05em; text-transform: uppercase; color: #6b6962; font-weight: 600; padding: 8px 8px; border-bottom: 1px solid #d8d3c7; text-align: center; }
+  .cmp th:first-child { text-align: left; }
+  .cmp td { padding: 8px 8px; border-bottom: 1px solid #f0ece1; text-align: center; font-variant-numeric: tabular-nums; color: #1d1c1a; }
+  .cmp td:first-child { text-align: left; color: #3a3835; font-weight: 500; }
+  .cmp .rowlabel { font-family: var(--g-font-mono); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: #6b6962; }
+  .cmp .warnrow td { padding: 7px 5px; vertical-align: middle; }
+  .cmp .warnrow td:first-child { color: #8a3506; }
+  .wchip-stack { display: inline-flex; flex-direction: column; gap: 3px; align-items: center; }
+  .wchip { display: inline-block; font-family: var(--g-font-mono); font-size: 9.5px; font-weight: 600; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+  .wchip.warn   { background: #fad6b8; color: #8a3506; }
+  .wchip.danger { background: #f6c5bf; color: #8a1009; }
+  .wchip.caution{ background: #fbeeb8; color: #5e4a00; }
+  .cmp .none { color: #b8b4a8; }
+
+  .legend { font-family: var(--g-font-mono); font-size: 10.5px; color: var(--g-ink-4); margin-top: 12px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  .legend b { color: var(--g-ink-3); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+
+  /* Konsistenz-Reihe */
+  .cons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  @media (max-width: 1000px){ .cons { grid-template-columns: 1fr; } }
+  .cons-col .cap { font-family: var(--g-font-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--g-ink-3); font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .cons-col .cap .k { color: var(--g-ink-4); font-weight: 500; letter-spacing: 0; text-transform: none; }
+
+  /* Standalone-Referenz (verkleinerte Alarm-Mail-Zelle) */
+  .ref { border: 1px solid var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card); overflow: hidden; }
+  .ref-sub { padding: 12px 16px 10px; border-bottom: 1px solid var(--g-rule-soft); }
+  .ref-sub .s { font-size: 13.5px; color: var(--g-ink); } .ref-sub .s .brk { color: var(--g-ink-4); }
+  .ref-body { padding: 14px 16px 16px; }
+  .verdict { display: inline-flex; align-items: center; gap: 8px; font-family: var(--g-font-mono); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; margin-bottom: 12px; background: rgba(232,184,31,.16); color: #8a6a05; }
+  .ref-h { font-size: 17px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 14px; line-height: 1.25; color: var(--g-ink); }
+  .stufe { display: inline-flex; align-items: stretch; border: 1px solid var(--g-rule); border-radius: 999px; overflow: hidden; margin-bottom: 14px; }
+  .stufe span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; font-family: var(--g-font-mono); font-size: 10.5px; font-weight: 600; letter-spacing: .03em; color: var(--g-ink-4); }
+  .stufe span + span { border-left: 1px solid var(--g-rule-soft); }
+  .stufe span .p { width: 8px; height: 8px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(26,26,24,.18); opacity: .35; }
+  .stufe span.on.gelb { background: rgba(232,184,31,.20); color: #8a6a05; } .stufe span.on.gelb .p { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Alert · Amtliche Warnung im Briefing</div>
+  <h1 class="page">Dieselbe Warnung, drei Orte — ein Baustein.</h1>
+  <p class="lede">Die <b>eigenständige Alarm-Mail</b> ist durchgestaltet (Warnstufen-Leiter GELB→ORANGE→ROT, Segment-Chips, Quelle). Was fehlt: eine <b>abgesegnete Form für dieselbe Warnung, wenn sie <em>in</em> einer vollen Mail sitzt</b> — im Tour-Briefing zwischen den Wettertabellen, im Ortsvergleich über der Vergleichstabelle. Bisher jeweils im Code improvisiert. Vorschlag: <b>ein geteilter Warn-Block</b> in kompakter Variante, gleiche Grammatik wie der Alarm — nur ohne die große Headline. Damit ist die Konsistenz strukturell erzwungen, nicht per Auge.</p>
+
+  <hr class="r"/>
+
+  <!-- ══ FRAGE 1 · PLATZIERUNG ══ -->
+  <div class="sec-label"><span class="num">Frage 1</span> Wo und wie auffällig?</div>
+  <div class="sec-q">Ganz oben im Body, eigener Block — nicht zwischen den Tabellen.</div>
+  <div class="two">
+    <div>
+      <div class="brief">
+        <div class="bf-head">
+          <div class="bf-top">
+            <div>
+              <div class="bf-ey">MORGEN-BRIEFING · SEG_02</div>
+              <div class="bf-title">Sillian → Sillianer Hütte</div>
+              <div class="bf-meta">Fr · 10.07.2026 · 06:01 MESZ</div>
+            </div>
+            <div class="bf-right">
+              <div class="bf-ey mute">GREGOR ZWANZIG</div>
+              <div class="n">KHW 403</div>
+              <div class="e">Etappe 2 / 12</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Warn-Block: erste Position im Body · gemischte Stufen, höchste führt -->
+        <div class="bf-pad">
+          <div class="wb wb-orange">
+            <div class="wb-bar"></div>
+            <div class="wb-body">
+              <div class="wb-head">
+                <span class="dot orange"></span>
+                <span class="wb-ey">Amtliche Warnung</span>
+                <span class="wb-count">2 aktiv · höchste Stufe ORANGE</span>
+                <a class="wb-src" href="#">GeoSphere Austria →</a>
+              </div>
+              <div class="wb-list">
+                <div class="wb-item">
+                  <span class="meter"><i style="background:#e07a1e"></i><i style="background:#e07a1e"></i><i></i></span>
+                  <span class="wb-lvl">ORANGE 2/3</span>
+                  <span class="wb-type">Gewitter</span>
+                  <span class="wb-when">Sa 11.07. · 15:00–21:00</span>
+                  <span class="wb-route"><span class="seg">Segment 2</span></span>
+                </div>
+                <div class="wb-item">
+                  <span class="meter"><i style="background:#e8b81f"></i><i></i><i></i></span>
+                  <span class="wb-lvl" style="color:#8a6a05">GELB 1/3</span>
+                  <span class="wb-type">Hitze</span>
+                  <span class="wb-when">Fr 10.07. · ganztägig</span>
+                  <span class="wb-route"><span class="seg">gesamte Route</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- danach erst Tageslage + Wetter -->
+        <div class="bf-pad" style="padding-top:2px">
+          <div class="bf-lead">
+            <div class="lb">Tageslage</div>
+            <div class="tx">Kühler, nasser Aufstieg. Ab Mittag kräftiger Regen, Böen bis 48 km/h am Übergang.</div>
+          </div>
+        </div>
+
+        <div class="bf-pad" style="padding-top:2px">
+          <div class="bf-sec-ey">Etappen-Verlauf · Segment 2</div>
+          <table class="wtab">
+            <thead><tr><th>Zeit</th><th>Temp</th><th>Wind</th><th>Böen</th><th>Regen</th><th>Gew</th></tr></thead>
+            <tbody>
+              <tr><td>11:00</td><td>11.0°</td><td>12</td><td>24</td><td>0.1</td><td>8%</td></tr>
+              <tr><td>12:00</td><td>9.2°</td><td>6</td><td class="cell-warn">48</td><td class="cell-danger">5.5</td><td>20%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="fade">· · ·</div>
+      </div>
+
+      <div class="rej" style="margin-top:28px">
+        <span class="rej-tag">✕ Verworfen · zwischen den Tabellen</span>
+        <div class="stub"></div>
+        <div style="display:flex;gap:6px;margin:10px 0"><span class="seg">Segment 1 · Wetter</span></div>
+        <div class="wb wb-gelb" style="opacity:.9"><div class="wb-bar"></div><div class="wb-body"><div class="wb-head"><span class="dot gelb"></span><span class="wb-ey">Amtliche Warnung</span><span class="wb-count">Hitze · Gewitter</span></div></div></div>
+        <div style="display:flex;gap:6px;margin:10px 0"><span class="seg">Segment 2 · Wetter</span></div>
+        <p style="font-size:12.5px;color:var(--g-ink-3);margin:8px 0 0;line-height:1.5">Eingeklemmt zwischen Segment-Tabellen konkurriert die Warnung mit den Wetterdaten, wird beim Scrollen leicht übersehen und müsste pro Segment wiederholt werden.</p>
+      </div>
+    </div>
+
+    <div class="aside">
+      <h3>Empfehlung <span class="rec">gewählt</span></h3>
+      <p><b>Erste Position im Body</b>, direkt unter dem Header, <b>vor der Tageslage</b>. Amtliche Warnungen sind kategorisch und zeitkritisch — sie gehören zuerst gelesen, nicht zwischen die Segment-Tabellen gestreut.</p>
+      <p><b>Eigener, getönter Block</b> mit Severity-Akzentbalken links: deutlich präsenter als der Tageslage-Hairline-Bar, aber <b>ohne große Headline</b> — fällt auf, ohne das Briefing zu erschlagen.</p>
+      <p>Liegt <b>keine</b> Warnung vor, entfällt der Block ersatzlos — kein „alles ruhig"-Platzhalter.</p>
+    </div>
+  </div>
+
+  <hr class="r"/>
+
+  <!-- ══ FRAGE 2 · OPTIK ══ -->
+  <div class="sec-label"><span class="num">Frage 2</span> Gleiche Optik wie die Alarm-Mail — oder eigene?</div>
+  <div class="sec-q">Gleiche Grammatik, kompakte Form. Ein Baustein mit <code class="i">variant</code>.</div>
+  <div class="two">
+    <div>
+      <div style="display:flex;flex-direction:column;gap:16px;max-width:620px">
+        <div>
+          <div class="cons-col"><div class="cap">Standard · gleiche Stufe <span class="k">(GELB, ganze Route)</span></div></div>
+          <div class="wb wb-gelb">
+            <div class="wb-bar"></div>
+            <div class="wb-body">
+              <div class="wb-head">
+                <span class="dot gelb"></span><span class="wb-ey">Amtliche Warnung</span>
+                <span class="wb-count">2 aktiv · Stufe GELB (1/3)</span>
+                <a class="wb-src" href="#">GeoSphere Austria →</a>
+              </div>
+              <div class="wb-list">
+                <div class="wb-item"><span class="wb-type">Hitze</span><span class="wb-when">Fr 10.07. · ganztägig</span><span class="wb-route"><span class="seg">gesamte Route</span></span></div>
+                <div class="wb-item"><span class="wb-type">Gewitter</span><span class="wb-when">Sa 11.07. · 15–21 Uhr</span><span class="wb-route"><span class="seg">gesamte Route</span></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="cons-col"><div class="cap">Gemischte Stufen <span class="k">(ORANGE führt, Meter statt Leiter)</span></div></div>
+          <div class="wb wb-orange">
+            <div class="wb-bar"></div>
+            <div class="wb-body">
+              <div class="wb-head">
+                <span class="dot orange"></span><span class="wb-ey">Amtliche Warnung</span>
+                <span class="wb-count">2 aktiv · höchste Stufe ORANGE</span>
+                <a class="wb-src" href="#">GeoSphere Austria →</a>
+              </div>
+              <div class="wb-list">
+                <div class="wb-item">
+                  <span class="meter"><i style="background:#e07a1e"></i><i style="background:#e07a1e"></i><i></i></span>
+                  <span class="wb-lvl">ORANGE 2/3</span>
+                  <span class="wb-type">Gewitter</span>
+                  <span class="wb-when">Sa 11.07. · 16–20 Uhr</span>
+                  <span class="wb-route"><span class="seg">Segment 3</span></span>
+                </div>
+                <div class="wb-item">
+                  <span class="meter"><i style="background:#e8b81f"></i><i></i><i></i></span>
+                  <span class="wb-lvl" style="color:#8a6a05">GELB 1/3</span>
+                  <span class="wb-type">Hitze</span>
+                  <span class="wb-when">Fr 10.07. · ganztägig</span>
+                  <span class="wb-route"><span class="seg">Segment 1</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="aside">
+      <h3>Empfehlung <span class="rec">gewählt</span></h3>
+      <p><b>Dieselbe Bildsprache, kleiner.</b> Erhalten bleiben: Severity-<b>Dot</b>, das Stufen-Wort <code>GELB/ORANGE/ROT</code> mit Skalen-Position <code>(1/3)</code>, die <b>Segment-Chips</b> und die <b>Quelle</b>.</p>
+      <p><b>Weg fällt</b>, was nur in die eigenständige Mail gehört: die große <code>H1</code>-Headline und der große Verdict-Chip. In einer vollen Mail würden sie mit dem Briefing-Titel konkurrieren.</p>
+      <p>Bei <b>gemischten Stufen</b> ersetzt das <b>Meter</b> pro Warnung die gemeinsame Leiter — höchste Stufe führt, exakt wie im Alarm.</p>
+      <p>Technisch: <b>ein</b> Baustein, <code>variant="standalone" | "embedded"</code>. Keine zweite Implementierung.</p>
+    </div>
+  </div>
+
+  <hr class="r"/>
+
+  <!-- ══ FRAGE 3 · ORTSVERGLEICH ══ -->
+  <div class="sec-label"><span class="num">Frage 3</span> Ortsvergleich · Überblick oder Details?</div>
+  <div class="sec-q">Aggregat-Banner oben + Warn-Zeile in der Tabelle. Kein dritter Detailblock.</div>
+  <div class="two">
+    <div>
+      <div class="brief">
+        <div class="bf-head">
+          <div class="bf-top">
+            <div>
+              <div class="bf-ey">ORTS-VERGLEICH</div>
+              <div class="bf-title">Le Var · wo ist es erträglichsten?</div>
+              <div class="bf-meta">Mi · 08.07.2026 · 07:00 · 7 Orte</div>
+            </div>
+            <div class="bf-right">
+              <div class="bf-ey mute">GREGOR ZWANZIG</div>
+              <div class="n">Le Var</div>
+              <div class="e">Hitzewelle</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Aggregat-Banner: höchste Stufe der Region -->
+        <div class="bf-pad">
+          <div class="wb wb-rot">
+            <div class="wb-bar"></div>
+            <div class="wb-body">
+              <div class="wb-head">
+                <span class="dot rot"></span><span class="wb-ey">Amtliche Warnung</span>
+                <span class="wb-count">höchste Stufe ROT · Marseille</span>
+                <a class="wb-src" href="#">Météo-France →</a>
+              </div>
+              <div class="wb-list">
+                <div class="wb-item"><span class="meter"><i style="background:#c43030"></i><i style="background:#c43030"></i><i style="background:#c43030"></i></span><span class="wb-lvl">ROT 3/3</span><span class="wb-type">Extreme Hitze</span><span class="wb-when">seit 08.07.</span><span class="wb-route"><span class="lbl">für</span><span class="seg">6 von 7 Orten</span></span></div>
+                <div class="wb-item"><span class="meter"><i style="background:#e07a1e"></i><i style="background:#e07a1e"></i><i></i></span><span class="wb-lvl" style="color:var(--g-accent-deep)">ORANGE 2/3</span><span class="wb-type">Waldbrand</span><span class="wb-when">Stufe 4 · max</span><span class="wb-route"><span class="seg">Marseille</span></span></div>
+                <div class="wb-item"><span class="meter"><i style="background:#e8b81f"></i><i></i><i></i></span><span class="wb-lvl" style="color:#8a6a05">GELB 1/3</span><span class="wb-type">Zugang</span><span class="wb-when">gesperrt</span><span class="wb-route"><span class="seg">2 Gebiete</span></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Übersichtstabelle mit Warn-Zeile -->
+        <div class="bf-pad" style="padding-top:2px">
+          <div class="bf-sec-ey">Übersicht · gewählte Metriken</div>
+          <table class="cmp">
+            <thead><tr><th></th><th>Toulon</th><th>Giens</th><th>Fréjus</th><th>Marseille</th></tr></thead>
+            <tbody>
+              <tr class="warnrow">
+                <td class="rowlabel">Amtl.&nbsp;Warnung</td>
+                <td><span class="wchip-stack"><span class="wchip warn">Hitze</span><span class="wchip warn">Brand·3</span></span></td>
+                <td><span class="wchip-stack"><span class="wchip warn">Hitze</span><span class="wchip warn">Brand·3</span></span></td>
+                <td><span class="wchip-stack"><span class="wchip caution">Brand·2</span></span></td>
+                <td><span class="wchip-stack"><span class="wchip warn">Hitze</span><span class="wchip danger">Brand·4</span></span></td>
+              </tr>
+              <tr><td>Temp max</td><td>32°</td><td>28°</td><td>31°</td><td>32°</td></tr>
+              <tr><td>Wind</td><td>13</td><td>14</td><td>23</td><td>35</td></tr>
+              <tr><td>UV max</td><td>8</td><td>7</td><td>8</td><td>7</td></tr>
+            </tbody>
+          </table>
+          <div class="legend"><b>Warn</b> <span>Hitze · Brand·Stufe · Zugang</span></div>
+        </div>
+        <div class="fade">· · ·</div>
+      </div>
+    </div>
+
+    <div class="aside">
+      <h3>Empfehlung <span class="rec">gewählt</span></h3>
+      <p><b>Zwei Darstellungen, klar getrennte Aufgaben — kein dritter Block:</b></p>
+      <p><b>Banner oben</b> beantwortet „<b>wie viele · wo · höchste Stufe</b>": das Regions-Aggregat, gleiche Grammatik wie im Trip-Briefing. Statt Segment-Chips zählt es Orte (<code>6 von 7</code>, <code>Marseille</code>).</p>
+      <p><b>Warn-Zeile in der Tabelle</b> beantwortet „<b>welcher Ort hat was</b>" — eine Zelle pro Ort, konsistent mit den übrigen Metrik-Zeilen.</p>
+      <p>Ein <b>Detailblock pro Ort</b> würde die Tabellenzeile nur verdoppeln. Volle Einzel-Details bleiben der eigenständigen Alarm-Mail vorbehalten.</p>
+    </div>
+  </div>
+
+  <hr class="r"/>
+
+  <!-- ══ FRAGE 4 · KONSISTENZ ══ -->
+  <div class="sec-label"><span class="num">Frage 4</span> Konsistenz zur Alarm-Mail</div>
+  <div class="sec-q">Dieselbe Warnung, drei Surfaces — visuell identisch, weil ein Baustein.</div>
+  <div class="two" style="grid-template-columns:minmax(0,1fr) 350px">
+    <div>
+      <div class="cons">
+        <div class="cons-col">
+          <div class="cap">Eigenständige Alarm-Mail <span class="k">· standalone</span></div>
+          <div class="ref">
+            <div class="ref-sub"><div class="s"><span class="brk">[KHW 403]</span> gesamte Route · GELB Hitze + Gewitter</div></div>
+            <div class="ref-body">
+              <div class="verdict"><span class="dot gelb"></span> 2 amtliche Warnungen</div>
+              <div class="ref-h">Hitze und Gewitter für deine Route gemeldet.</div>
+              <div class="stufe">
+                <span class="on gelb"><span class="p" style="background:#e8b81f"></span>GELB</span>
+                <span><span class="p" style="background:#e07a1e"></span>ORANGE</span>
+                <span><span class="p" style="background:#c43030"></span>ROT</span>
+              </div>
+              <div class="wb-list">
+                <div class="wb-item"><span class="wb-type">Hitze</span><span class="wb-when">Fr · ganztägig</span></div>
+                <div class="wb-item"><span class="wb-type">Gewitter</span><span class="wb-when">Sa · 15–21 Uhr</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cons-col">
+          <div class="cap">Trip-Briefing <span class="k">· embedded</span></div>
+          <div class="wb wb-gelb" style="margin-top:0">
+            <div class="wb-bar"></div>
+            <div class="wb-body">
+              <div class="wb-head"><span class="dot gelb"></span><span class="wb-ey">Amtliche Warnung</span><span class="wb-count">GELB (1/3)</span></div>
+              <div class="wb-list">
+                <div class="wb-item"><span class="wb-type">Hitze</span><span class="wb-when">Fr · ganztägig</span></div>
+                <div class="wb-item"><span class="wb-type">Gewitter</span><span class="wb-when">Sa · 15–21 Uhr</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cons-col">
+          <div class="cap">Ortsvergleich <span class="k">· embedded</span></div>
+          <div class="wb wb-gelb" style="margin-top:0">
+            <div class="wb-bar"></div>
+            <div class="wb-body">
+              <div class="wb-head"><span class="dot gelb"></span><span class="wb-ey">Amtliche Warnung</span><span class="wb-count">GELB · 3 Orte</span></div>
+              <div class="wb-list">
+                <div class="wb-item"><span class="wb-type">Hitze</span><span class="wb-when">seit 08.07.</span><span class="wb-route"><span class="seg">3 Orte</span></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="aside">
+      <h3>Empfehlung <span class="rec">gewählt</span></h3>
+      <p><b>Konsistenz strukturell, nicht per Auge.</b> Alle drei rendern denselben Baustein mit denselben <b>Severity-Tokens</b> (Dot-Farben, Stufen-Wörter, Chips, Quelle-Zeile).</p>
+      <p>Einziger Unterschied ist die <code>variant</code>: <b>standalone</b> trägt Headline + Leiter, <b>embedded</b> ist die kompakte Bannerform. Dieselbe Warnung kann so in Alarm <em>und</em> Briefing auftauchen und wirkt garantiert gleich.</p>
+      <p><b>Umsetzung:</b> Severity-Tokens in <code>atoms.jsx</code>, Baustein als Organism <code>WarnBlock</code> — verwendet von Alarm-Mail, <code>EmailPreview</code> und <code>CompareEmailV2</code>. Nächster Schritt als Handoff-Issue.</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

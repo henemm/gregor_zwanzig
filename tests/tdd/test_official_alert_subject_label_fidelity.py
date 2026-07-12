@@ -173,28 +173,35 @@ def _ab_and_vigilance_notices():
 
 
 def test_ac6_html_notice_unchanged():
+    """AC-6-Invariante NACH #1233 Slice B: `render_official_alert_html` wurde
+    auf das SOLL-Design gehoben (Issue #1233, Redesign explizit spec-
+    mandatiert) -- das alte byte-exakte Markup ist daher bewusst NICHT mehr
+    identisch (Klassen `.verdict`/`.warns`/`.warn.stacked`/`.facts`/`.src`
+    statt der alten Struktur). Die eigentliche Invariante DIESES Tests -- die
+    Detail-Fidelity aus `_typ_tag` (voller Label statt gekuerztem Typ-Wort)
+    fliesst unveraendert in den `.type`-Text, Region-Dedup in `.src` bleibt --
+    wird strukturell weitergeprueft (BeautifulSoup statt Byte-Vergleich)."""
+    from bs4 import BeautifulSoup
+
     from output.renderers.alert.official_alerts import render_official_alert_html
     _ab, _vig, n_ab, n_vig = _ab_and_vigilance_notices()
     html = render_official_alert_html(
         [n_ab, n_vig], source_label="GeoSphere Austria", stand_at="09:30", tz=UTC,
     )
-    expected = (
-        '<html><body style="font-family:\'Inter Tight\', -apple-system, '
-        "BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\">"
-        '<div style="color:#c8482a;">2 amtliche Warnungen · höchste Stufe ORANGE</div>'
-        '<div class="warn"><span class="meter"><span class="lvl">ORANGE · 2/3</span>'
-        '</span><span class="type">Hitze — Extreme Hitze</span>'
-        '<div>Gültig: Fr 10.07. · ganztägig</div>'
-        '<div>Route: <span style="">Segment 1</span> </div></div>'
-        '<div class="warn"><span class="meter"><span class="lvl">GELB · 1/3</span>'
-        '</span><span class="type">Zugang gesperrt — Zugang gesperrt — Rotwand-Massiv</span>'
-        '<div>Gültig: Sa 11.07. · 15:00–21:00</div>'
-        '<div>Route: <span style="">Segment 1</span> </div></div>'
-        '<div class="src"><b>Quelle:</b> GeoSphere Austria — Haute-Corse, Rotwand-Massiv</div>'
-        '<p class="body-foot">Stand: heute 09:30 · abgerufen bei GeoSphere Austria</p>'
-        "</body></html>"
-    )
-    assert html == expected, f"HTML-Notice hat sich veraendert:\n{html!r}"
+    soup = BeautifulSoup(html, "html.parser")
+    types = [t.get_text(strip=True) for t in soup.select(".type")]
+    assert types == [
+        "Hitze — Extreme Hitze",
+        "Zugang gesperrt — Zugang gesperrt — Rotwand-Massiv",
+    ], f"Detail-Fidelity aus _typ_tag hat sich veraendert: {types!r}"
+    body_text = soup.get_text(" ", strip=True)
+    assert "Fr 10.07. · ganztägig" in body_text
+    assert "Sa 11.07. · 15:00–21:00" in body_text
+    src = soup.select_one(".src")
+    assert src is not None, ".src-Box fehlt"
+    src_text = src.get_text()
+    assert "Haute-Corse" in src_text and "Rotwand-Massiv" in src_text
+    assert "GeoSphere Austria" in src_text
 
 
 def test_ac6_plain_notice_unchanged():

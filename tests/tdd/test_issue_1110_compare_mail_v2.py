@@ -253,7 +253,13 @@ class TestCompareMailV2HTML:
             "Marseille, Fréjus), sonst beweist der Test die Sortierung nicht"
         )
 
-        positions = [html.index(name) for name in expected_order]
+        # Der Aggregat-WarnBlock-Banner (#1216, AC-4) nennt bewusst den
+        # fuehrenden Ort ganz oben ("höchste Stufe ROT · Marseille"). Die
+        # alphabetische Sortierung ist eine Eigenschaft der Uebersichtstabelle
+        # (Spaltenreihenfolge) — dort wird sie geprueft, nicht am gesamten HTML
+        # inkl. des neuen Banners.
+        table = _find_overview_table(html)
+        positions = [table.index(name) for name in expected_order]
         assert positions == sorted(positions), (
             f"Orte muessen alphabetisch sortiert {expected_order} erscheinen, "
             f"gefundene Positionen: {positions}"
@@ -386,27 +392,28 @@ class TestCompareMailV2HTML:
         )
 
     def test_ac4a_warn_lead_block_vorhanden_wenn_warnungen(self):
-        """AC-4 (Gegenprobe): Sind Warnungen vorhanden, MUSS der Warn-Lead-Block
-        (Akzent-Bar direkt unter dem Header) erscheinen."""
+        """AC-4 (Gegenprobe): Sind Warnungen vorhanden, MUSS der Aggregat-Banner
+        (embedded WarnBlock direkt unter dem Header, #1216) erscheinen — mit
+        Eyebrow „Amtliche Warnung" und der Orts-Scope-Count-Zeile „höchste Stufe
+        {WORT} · {Ort}" (hier: höchste Stufe ROT bei Marseille, Waldbrand Stufe 4)."""
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
         html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
 
-        assert "Amtliche Warnungen · aktiv" in html, (
-            "Warn-Lead-Block-Marker ('Amtliche Warnungen · aktiv') muss erscheinen, "
+        assert 'class="wb ' in html, (
+            "Aggregat-WarnBlock-Banner ('class=\"wb ...') muss erscheinen, "
             "wenn mind. ein Ort eine amtliche Warnung hat"
+        )
+        assert "höchste Stufe ROT · Marseille" in html, (
+            "Banner-Count-Zeile ('höchste Stufe ROT · Marseille') muss die "
+            "höchste amtliche Stufe + den führenden Ort nennen"
         )
 
     def test_ac4b_kein_warn_lead_block_ohne_warnungen(self):
         """AC-4: Ohne jede Warnung ueber alle Orte hinweg entfaellt der
-        Warn-Lead-Block komplett (kein leerer Rahmen).
-
-        Hinweis: dieser Teilaspekt ist gegen den heutigen Renderer (noch ohne
-        Lead-Block-Konzept) trivial erfuellt, da der Marker-String ueberhaupt
-        noch nicht existiert -- siehe test_ac4a fuer die echte RED-Gegenprobe
-        (Marker MUSS bei vorhandenen Warnungen erscheinen, was heute fehlschlaegt).
-        Bleibt als Regressionsschutz fuer die Implementierung bestehen.
+        Aggregat-Banner komplett (kein leerer Rahmen, kein `.wb`-Block, keine
+        Count-Zeile). Regressionsschutz gegen einen leer gerenderten Banner.
         """
         from output.renderers.email.compare_html import render_compare_html
 
@@ -415,8 +422,11 @@ class TestCompareMailV2HTML:
             loc.official_alerts = []
         html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
 
-        assert "Amtliche Warnungen · aktiv" not in html, (
-            "Lead-Block-Marker darf bei 0 Warnungen ueber alle Orte nicht erscheinen"
+        assert 'class="wb ' not in html, (
+            "Aggregat-WarnBlock-Banner darf bei 0 Warnungen ueber alle Orte fehlen"
+        )
+        assert "höchste Stufe" not in html, (
+            "Banner-Count-Zeile darf bei 0 Warnungen nicht erscheinen"
         )
 
     def test_ac5_langform_warnstreifen_direkt_vor_stundentabelle(self):

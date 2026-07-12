@@ -173,6 +173,29 @@ def build_service_error_email_html(trip_name: str, report_type: str, error_lines
     )
 
 
+def _official_source_label_for(dto_notices: list) -> str:
+    """Anzeigename der amtlichen Quelle (Issue #1216 AC-7): abgeleitet aus der
+    führenden (höchststufigen) Warnung statt des früher hartkodierten
+    „GeoSphere Austria" für ALLE Quellen. Bei mehreren Quellen unter denselben
+    Notices gewinnt die Quelle der höchststufigen Warnung."""
+    from output.renderers.alert.official_alerts import official_alert_source_label
+
+    if not dto_notices:
+        return "Amtliche Quelle"
+    leading = max(dto_notices, key=lambda n: n.alert.level)
+    return official_alert_source_label(leading.alert.source)
+
+
+def _official_source_url_for(dto_notices: list) -> str | None:
+    """Quelle-Link der führenden (höchststufigen) Warnung (Issue #1216 F002).
+    Für variant="standalone" derzeit ungenutzt (der Thin-Wrapper reicht 1:1 an
+    render_official_alert_html durch), aber spec-konform mitgereicht."""
+    if not dto_notices:
+        return None
+    leading = max(dto_notices, key=lambda n: n.alert.level)
+    return getattr(leading.alert, "url", None)
+
+
 class NotificationService:
     """Wählt Renderer und Transporte für Trip-Briefings und Service-Hinweise."""
 
@@ -465,9 +488,9 @@ class NotificationService:
         HTML-Body, Telegram- und SMS-Text ueber die vier Vorlagen-Renderer.
         """
         from output.renderers.alert.official_alerts import (
-            build_official_alert_notices, render_official_alert_html,
-            render_official_alert_sms, render_official_alert_subject,
-            render_official_alert_telegram,
+            build_official_alert_notices, render_official_alert_sms,
+            render_official_alert_subject, render_official_alert_telegram,
+            render_warn_block,
         )
         from utils.timezone import tz_for_coords
 
@@ -478,11 +501,18 @@ class NotificationService:
             else ZoneInfo("UTC")
         )
         dto_notices = build_official_alert_notices(trip, notices)
-        source_label = "GeoSphere Austria"
-        subject = render_official_alert_subject(dto_notices, prefix=trip.name)
+        source_label = _official_source_label_for(dto_notices)
+        source_url = _official_source_url_for(dto_notices)
+        # #1233 Nebenbefund AC-12: Betreff und Body MUESSEN dieselbe tz-aware
+        # Quelle nutzen (sonst Wochentags-Divergenz Betreff vs. Body).
+        subject = render_official_alert_subject(dto_notices, prefix=trip.name, tz=alert_tz)
         stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
-        html = render_official_alert_html(
-            dto_notices, source_label=source_label, stand_at=stand_at, tz=alert_tz,
+        # Issue #1216 F002: geteilter Baustein statt Direktaufruf. variant=
+        # "standalone" reicht 1:1 an render_official_alert_html durch (byte-
+        # identischer Output, Fidelity-Bestandsschutz #952/#957).
+        html = render_warn_block(
+            dto_notices, variant="standalone", source_label=source_label,
+            source_url=source_url, stand_at=stand_at, tz=alert_tz,
         )
         telegram_text = render_official_alert_telegram(
             dto_notices, prefix=trip.name, source_label=source_label, tz=alert_tz,
@@ -552,8 +582,8 @@ class NotificationService:
         werden hier NUR zur Anzeige aufgeloest).
         """
         from output.renderers.alert.official_alerts import (
-            build_compare_official_alert_notices, render_official_alert_html,
-            render_official_alert_subject,
+            build_compare_official_alert_notices, render_official_alert_subject,
+            render_warn_block,
         )
         from utils.timezone import tz_for_coords
 
@@ -571,11 +601,17 @@ class NotificationService:
             if first_loc is not None and first_loc.lat is not None and first_loc.lon is not None
             else ZoneInfo("UTC")
         )
-        source_label = "GeoSphere Austria"
-        subject = render_official_alert_subject(dto_notices, prefix=preset_name)
+        source_label = _official_source_label_for(dto_notices)
+        source_url = _official_source_url_for(dto_notices)
+        # #1233 Nebenbefund AC-12: Betreff und Body MUESSEN dieselbe tz-aware
+        # Quelle nutzen (sonst Wochentags-Divergenz Betreff vs. Body).
+        subject = render_official_alert_subject(dto_notices, prefix=preset_name, tz=alert_tz)
         stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
-        html = render_official_alert_html(
-            dto_notices, source_label=source_label, stand_at=stand_at, tz=alert_tz,
+        # Issue #1216 F002: geteilter Baustein (variant="standalone") statt
+        # Direktaufruf; Thin-Wrapper -> byte-identischer HTML-Output.
+        html = render_warn_block(
+            dto_notices, variant="standalone", source_label=source_label,
+            source_url=source_url, stand_at=stand_at, tz=alert_tz,
         )
 
         sent_channels: list[str] = []

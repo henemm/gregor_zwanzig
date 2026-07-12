@@ -64,10 +64,17 @@ def _location(loc_id: str, name: str, lat: float, lon: float) -> SavedLocation:
 
 
 def _preset(preset_id, location_ids, empfaenger, *, triggers_enabled=None,
-            send_telegram=None, send_sms=None, name=None) -> dict:
+            send_telegram=None, send_sms=None, name=None, schedule="daily",
+            archived_at=None, alert_quiet_from=None, alert_quiet_to=None) -> dict:
+    # Issue #1233: der Default war frueher "manual" (beliebig gewaehlt, bevor
+    # "manual" eine Gating-Bedeutung hatte). Seit #1233 heisst schedule=="manual"
+    # "Ortsvergleich deaktiviert" -> Default hier auf "daily" (aktiv) umgestellt,
+    # damit die bestehenden (nicht schedule-bezogenen) Tests dieser Datei nach
+    # dem Fix weiterhin einen aktiven Versand erwarten duerfen. Tests, die den
+    # Deaktivierungs-Pfad pruefen, setzen `schedule="manual"` explizit.
     p: dict = {
         "id": preset_id, "name": name or preset_id, "user_id": "default",
-        "location_ids": location_ids, "schedule": "manual", "weekday": 4,
+        "location_ids": location_ids, "schedule": schedule, "weekday": 4,
         "profil": "ALLGEMEIN", "hour_from": 9, "hour_to": 16,
         "empfaenger": empfaenger, "created_at": "2026-07-11T00:00:00Z",
     }
@@ -77,6 +84,12 @@ def _preset(preset_id, location_ids, empfaenger, *, triggers_enabled=None,
         p["send_telegram"] = send_telegram
     if send_sms is not None:
         p["send_sms"] = send_sms
+    if archived_at is not None:
+        p["archived_at"] = archived_at
+    if alert_quiet_from is not None:
+        p["alert_quiet_from"] = alert_quiet_from
+    if alert_quiet_to is not None:
+        p["alert_quiet_to"] = alert_quiet_to
     return p
 
 
@@ -512,6 +525,229 @@ def test_ac8_scheduler_endpoint_delegates():
         # Delegation an den Service → numerische Alarm-Anzahl (hier 1).
         count = data if isinstance(data, int) else data.get("sent", data.get("count"))
         assert count == 1, f"Erwartet 1 versendeter Alarm über Endpoint, erhalten: {data!r}"
+    finally:
+        b._REGISTERED_SOURCES.clear()
+        b._REGISTERED_SOURCES.extend(backup)
+        _clean_user(uid)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# #1233 AC-1..AC-5 — Versand-Gating: Ruhezeiten + Deaktivierung (Bug-Repro)
+#
+# Symptom (docs/context/fix-1233-compare-official-alert.md): ein deaktivierter
+# Ortsvergleich (schedule="manual") sandte um 00:00 Uhr (Ruhezeit) trotzdem
+# eine amtliche-Warnung-Mail. `_check_one_preset` prueft heute weder Ruhezeiten
+# noch schedule/archived_at -> alle Tests unten sind RED bis zur Implementierung.
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _freeze_compare_official_alert_now(monkeypatch, frozen: datetime) -> None:
+    """Friert `datetime.now()` im Gating-Pfad ein (Muster: `_FrozenDatetime` aus
+    `tests/golden/email/conftest.py`). `_check_one_preset` importiert `datetime`
+    modul-lokal (`from datetime import datetime, timezone`) und ruft
+    `datetime.now(timezone.utc)` fuer Quiet-Hours-Pruefung + Tageslimit +
+    State-Zeitstempel auf -- fuer AC-1/AC-2 muss dieser Zeitpunkt deterministisch
+    steuerbar sein. Kein Mock des zu pruefenden Verhaltens selbst (der Service
+    bleibt echt), nur ein Uhrzeit-Seam."""
+    import services.compare_official_alert as coa_mod
+
+    class _Frozen(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return frozen.replace(tzinfo=None)
+            return frozen.astimezone(tz)
+
+    monkeypatch.setattr(coa_mod, "datetime", _Frozen)
+
+
+def test_ac1_quiet_hours_suppresses_send_state_and_limit(monkeypatch):
+    """AC-1 (#1233 Bug-Repro): Ruhezeit 22:00–06:00 (Mitternachts-Wrap) umschliesst
+    now=00:00 UTC -> KEINE Mail, KEIN AlertState-Eintrag, KEIN Tageslimit-Increment.
+    RED: `_check_one_preset` prueft aktuell KEINE Ruhezeiten -> sendet trotzdem
+    (genau der 00:00-Uhr-Bug aus der Symptom-Beschreibung)."""
+    from services import alert_daily_limit
+    from services.alert_state import AlertStateService
+    from services.compare_official_alert import CompareOfficialAlertService
+    from services.official_alerts import register_official_alert_source
+
+    uid = _uid("1233ac1")
+    _clean_user(uid)
+    b, backup = _sources_backup()
+    b._REGISTERED_SOURCES.clear()
+    try:
+        save_location(_location("loc-a", "Hermagor", LAT_A, LON_A), user_id=uid)
+        _write_presets(uid, [_preset(
+            "p1", ["loc-a"], ["e@x.invalid"],
+            alert_quiet_from="22:00", alert_quiet_to="06:00",
+        )])
+        register_official_alert_source(_FakeOfficialAlertSource(LAT_A, LON_A, [_alert()]))
+        frozen_midnight = datetime(2026, 7, 12, 0, 0, tzinfo=timezone.utc)
+        _freeze_compare_official_alert_now(monkeypatch, frozen_midnight)
+
+        mail_calls: list = []
+        sent = CompareOfficialAlertService(
+            settings=_settings_all_channels(), user_id=uid,
+            mail_sink=lambda subject, body: mail_calls.append(body),
+        ).check_all_compare_presets()
+
+        assert sent == 0, f"Ruhezeit 22–06 umschliesst 00:00 -> darf nicht senden: sent={sent}"
+        assert mail_calls == [], f"mail_sink darf bei Ruhezeit leer bleiben: {mail_calls!r}"
+        state = AlertStateService(user_id=uid).load("p1:loc-a")
+        assert not any(k.startswith("official_alert:") for k in state), (
+            f"Waehrend Ruhezeit unterdrueckte Warnung darf KEINEN State schreiben "
+            f"(sonst wird sie nach Ende der Ruhezeit als 'schon gemeldet' verschluckt): {state!r}"
+        )
+        assert alert_daily_limit.load(uid, frozen_midnight) == 0, (
+            "Tageslimit darf bei unterdruecktem Versand NICHT erhoeht werden"
+        )
+    finally:
+        b._REGISTERED_SOURCES.clear()
+        b._REGISTERED_SOURCES.extend(backup)
+        _clean_user(uid)
+
+
+def test_ac2_quiet_hour_suppression_does_not_permanently_swallow_warning(monkeypatch):
+    """AC-2: Runde 1 (now=00:00, Ruhezeit) unterdrueckt -> Runde 2 (now=09:00,
+    dieselbe noch-neue Warnung) MUSS zustellen. Belegt end-to-end, dass die
+    Nacht-Unterdrueckung die Warnung nicht dauerhaft verschluckt (setzt voraus,
+    dass Runde 1 keinen State schreibt, s. AC-1)."""
+    from services.compare_official_alert import CompareOfficialAlertService
+    from services.official_alerts import register_official_alert_source
+
+    uid = _uid("1233ac2")
+    _clean_user(uid)
+    b, backup = _sources_backup()
+    b._REGISTERED_SOURCES.clear()
+    try:
+        save_location(_location("loc-a", "Hermagor", LAT_A, LON_A), user_id=uid)
+        _write_presets(uid, [_preset(
+            "p1", ["loc-a"], ["e@x.invalid"],
+            alert_quiet_from="22:00", alert_quiet_to="06:00",
+        )])
+        register_official_alert_source(_FakeOfficialAlertSource(LAT_A, LON_A, [_alert()]))
+
+        def _svc(mail_calls):
+            return CompareOfficialAlertService(
+                settings=_settings_all_channels(), user_id=uid,
+                mail_sink=lambda subject, body: mail_calls.append(body),
+            )
+
+        night_calls: list = []
+        _freeze_compare_official_alert_now(
+            monkeypatch, datetime(2026, 7, 12, 0, 0, tzinfo=timezone.utc)
+        )
+        sent_night = _svc(night_calls).check_all_compare_presets()
+        assert sent_night == 0 and night_calls == [], (
+            f"Runde 1 (00:00, Ruhezeit) darf nicht senden: sent={sent_night}, calls={night_calls!r}"
+        )
+
+        morning_calls: list = []
+        _freeze_compare_official_alert_now(
+            monkeypatch, datetime(2026, 7, 12, 9, 0, tzinfo=timezone.utc)
+        )
+        sent_morning = _svc(morning_calls).check_all_compare_presets()
+        assert sent_morning == 1, (
+            f"Runde 2 (09:00, ausserhalb Ruhezeit) muss die weiterhin neue Warnung "
+            f"zustellen: sent={sent_morning}"
+        )
+        assert len(morning_calls) == 1
+    finally:
+        b._REGISTERED_SOURCES.clear()
+        b._REGISTERED_SOURCES.extend(backup)
+        _clean_user(uid)
+
+
+def test_ac3_manual_schedule_disabled_compare_suppresses_send():
+    """AC-3 (#1233 Bug-Repro): Preset `schedule=="manual"` (= deaktivierter
+    Ortsvergleich, PO-Entscheidung) + neue amtliche Warnung, ausserhalb jeder
+    Ruhezeit -> KEINE Mail. RED: `_check_one_preset` prueft `schedule` bisher
+    gar nicht -> sendet trotz Deaktivierung (Symptom: Preset 'zillertal' mit
+    schedule='manual' sandte trotzdem)."""
+    from services.compare_official_alert import CompareOfficialAlertService
+    from services.official_alerts import register_official_alert_source
+
+    uid = _uid("1233ac3")
+    _clean_user(uid)
+    b, backup = _sources_backup()
+    b._REGISTERED_SOURCES.clear()
+    try:
+        save_location(_location("loc-a", "Hermagor", LAT_A, LON_A), user_id=uid)
+        _write_presets(uid, [_preset(
+            "p1", ["loc-a"], ["e@x.invalid"], schedule="manual",
+        )])
+        register_official_alert_source(_FakeOfficialAlertSource(LAT_A, LON_A, [_alert()]))
+
+        mail_calls: list = []
+        sent = CompareOfficialAlertService(
+            settings=_settings_all_channels(), user_id=uid,
+            mail_sink=lambda subject, body: mail_calls.append(body),
+        ).check_all_compare_presets()
+
+        assert sent == 0, f"Deaktiviertes Preset (schedule=manual) darf nicht senden: sent={sent}"
+        assert mail_calls == []
+    finally:
+        b._REGISTERED_SOURCES.clear()
+        b._REGISTERED_SOURCES.extend(backup)
+        _clean_user(uid)
+
+
+def test_ac4_archived_preset_suppresses_send():
+    """AC-4 (#1233): ein archivierter Ortsvergleich (`archived_at` gesetzt)
+    sendet keine amtliche-Warnung-Mail mehr. RED: `_check_one_preset` prueft
+    `archived_at` bisher gar nicht."""
+    from services.compare_official_alert import CompareOfficialAlertService
+    from services.official_alerts import register_official_alert_source
+
+    uid = _uid("1233ac4")
+    _clean_user(uid)
+    b, backup = _sources_backup()
+    b._REGISTERED_SOURCES.clear()
+    try:
+        save_location(_location("loc-a", "Hermagor", LAT_A, LON_A), user_id=uid)
+        _write_presets(uid, [_preset(
+            "p1", ["loc-a"], ["e@x.invalid"], archived_at="2026-07-01T00:00:00Z",
+        )])
+        register_official_alert_source(_FakeOfficialAlertSource(LAT_A, LON_A, [_alert()]))
+
+        mail_calls: list = []
+        sent = CompareOfficialAlertService(
+            settings=_settings_all_channels(), user_id=uid,
+            mail_sink=lambda subject, body: mail_calls.append(body),
+        ).check_all_compare_presets()
+
+        assert sent == 0, f"Archiviertes Preset darf nicht senden: sent={sent}"
+        assert mail_calls == []
+    finally:
+        b._REGISTERED_SOURCES.clear()
+        b._REGISTERED_SOURCES.extend(backup)
+        _clean_user(uid)
+
+
+def test_ac5_active_daily_preset_still_sends_no_regression():
+    """AC-5 (Regressionsschutz #1233): aktives Preset (`schedule='daily'`),
+    ausserhalb jeder Ruhezeit, neue Warnung -> Mail wird weiterhin versendet.
+    Dieser Test sollte bereits GRUEN sein (kein neues Gate greift hier) -- er
+    belegt, dass #1/#2 aktive Presets nicht kollateral blockieren."""
+    from services.compare_official_alert import CompareOfficialAlertService
+    from services.official_alerts import register_official_alert_source
+
+    uid = _uid("1233ac5")
+    _clean_user(uid)
+    b, backup = _sources_backup()
+    b._REGISTERED_SOURCES.clear()
+    try:
+        save_location(_location("loc-a", "Hermagor", LAT_A, LON_A), user_id=uid)
+        _write_presets(uid, [_preset("p1", ["loc-a"], ["e@x.invalid"], schedule="daily")])
+        register_official_alert_source(_FakeOfficialAlertSource(LAT_A, LON_A, [_alert()]))
+
+        mail_calls: list = []
+        sent = CompareOfficialAlertService(
+            settings=_settings_all_channels(), user_id=uid,
+            mail_sink=lambda subject, body: mail_calls.append(body),
+        ).check_all_compare_presets()
+
+        assert sent == 1, f"Aktives Preset ausserhalb der Ruhezeit muss senden: sent={sent}"
+        assert len(mail_calls) == 1
     finally:
         b._REGISTERED_SOURCES.clear()
         b._REGISTERED_SOURCES.extend(backup)

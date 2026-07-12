@@ -44,6 +44,7 @@ from app.models import (
     TripSegment,
 )
 from output.renderers.trip_report import TripReportFormatter
+from services.official_alerts.models import OfficialAlert
 
 GOLDEN_DIR = Path(__file__).parent
 
@@ -238,13 +239,24 @@ def _scenarios():
         display_config=cfg(), stage_name="Arlberg",
     )
 
-    # 5. Korsika Vigilance Update
+    # 5. Korsika Vigilance Update — mit amtlicher Warnung (Issue #1216 AC-9):
+    # Météo-France Vigilance Hitze ORANGE, damit das Golden den embedded
+    # WarnBlock (`.wb`-Struktur, VOR der Tageslage) tatsächlich durchläuft.
     seg = _build_seg_weather(
         1, 10, 15, day=11, temp_min=18.0, temp_max=32.0,
         wind_max=30.0, gust_max=85.0, precip_total=8.0,
         thunder=ThunderLevel.HIGH,
         lat=42.20, lon=9.05,
     )
+    seg.official_alerts = [
+        OfficialAlert(
+            source="meteofrance_vigilance", hazard="extreme_heat", level=3,
+            label="Extreme Hitze",
+            valid_from=datetime(2026, 7, 11, 12, 0, tzinfo=timezone.utc),
+            valid_to=datetime(2026, 7, 11, 20, 0, tzinfo=timezone.utc),
+            region_label="Haute-Corse",
+        )
+    ]
     yield "corsica-vigilance", formatter.format_email(
         [seg], "Korsika Trail", "update",
         display_config=cfg(), stage_name="Corsica E5", changes=[],
