@@ -597,6 +597,7 @@ type Trip struct {
     ArchivedAt              *time.Time             `json:"archived_at,omitempty"`
     OfficialAlertsEnabled   *bool                  `json:"official_alerts_enabled,omitempty"` // Issue #1087, Pointer-Muster analog ComparePreset (#1040): nil = Default true; false = kein Fetch amtlicher Warnungen für diesen Trip
     OfficialAlertTriggersEnabled *bool             `json:"official_alert_triggers_enabled,omitempty"` // Issue #1088, strukturell getrennt von OfficialAlertsEnabled: nil = Default true; false = amtliche Warnungen lösen keinen eigenständigen Sofort-Alert aus (Briefing-Anzeige bleibt unberührt)
+    Corridors               []Corridor             `json:"corridors"`                         // Issue #1231 Slice 1, additiv neben AlertRules — s. Section 24
 }
 ```
 
@@ -1257,6 +1258,7 @@ type ComparePreset struct {
     EveningEnabled       *bool                  `json:"evening_enabled,omitempty"`             // wie MorningEnabled, für den Abend-Slot
     EveningTime          *string                `json:"evening_time,omitempty"`                // "HH:MM:SS"; Abend-Versand zielt auf target_date = morgen (Ankündigungs-Charakter, wie Trip-Abendbriefing)
     EndDate              *string                `json:"end_date,omitempty"`                    // "YYYY-MM-DD", nil = unbegrenzte Laufzeit; gesetzt+<heute (Europe/Vienna) = Versand-Guard greift. Bekannte Lücke: kann per PUT nicht auf nil zurückgesetzt werden (KL-7, Sammel-Issue #1199)
+    Corridors            []Corridor             `json:"corridors"`                             // Issue #1231 Slice 1, additiv neben display_config["ideal_ranges"] — s. Section 24
     CreatedAt            time.Time              `json:"created_at"`
 }
 ```
@@ -2535,8 +2537,107 @@ die Python-`RiskEngine` — künftige Single Source of Truth der Cockpit-Risiko-
 
 ---
 
+## 24) Corridor DTO (Issue #1231, Slice 1)
+
+**Wertebereiche-Editor:** vereinheitlicht bisherige Trip-Alert-Schwellwerte (`AlertRule`,
+Section 22) und Compare-Idealbereiche (`display_config["ideal_ranges"]`, Section 16) auf **einer**
+gemeinsamen, rein additiven Datenstruktur. User-facing Label: „Wertebereich(e)"; Code-/Datenterm
+bleibt `corridor`. Ein `Corridor` trägt zwei unabhängig kombinierbare Wirkungen: `notify` (warnen,
+wenn ein Wert den Bereich verlässt — steuert weiterhin ausschließlich den bestehenden
+Δ-Wächter-Mechanismus, `AlertRule`/`metric_alert_levels` bleiben technische Wahrheit) und `mark`
+(im Briefing markieren, solange ein Wert im Bereich liegt).
+
+```go
+// internal/model/trip.go + internal/model/compare_preset.go (Go)
+type Corridor struct {
+    Metric string     `json:"metric"`           // kontextabhängige Metrik-ID (route: AlertableMetrics; vergleich: Compare-Summary-Keys)
+    Range  [2]*float64 `json:"range"`            // [min, max]; nil-Seite = offen (einseitig erlaubt)
+    Notify bool       `json:"notify"`
+    Mark   bool       `json:"mark"`
+    Prio   string     `json:"prio,omitempty"`    // "hoch" | "mittel" | "niedrig" — nur Anzeige-Reihenfolge, kein Rang/Score
+}
+```
+
+```python
+# src/app/models.py (Python)
+@dataclass
+class Corridor:
+    metric: str
+    range: tuple[float | None, float | None]
+    notify: bool
+    mark: bool
+    prio: str | None = None
+```
+
+```typescript
+// frontend/src/lib/components/shared/corridor-editor/corridorMatch.ts
+export interface Corridor {
+  metric: string;
+  range: [number | null, number | null];
+  notify: boolean;
+  mark: boolean;
+  prio?: "hoch" | "mittel" | "niedrig";
+}
+```
+
+### Feldliste
+
+| Feld | Typ | Beschreibung |
+|------|-----|------------|
+| metric | string | Metrik-ID, kontextabhängig: `route` nutzt die 6 `AlertableMetrics` (`wind_gust`, `precipitation_sum`, `temperature_min`, `temperature_max`, `thunder_level`, `snow_line`), `vergleich` nutzt die 10 Compare-Summary-Keys (`temp_max_c`, `temp_min_c`, `wind_max_kmh`, `gust_max_kmh`, `precip_sum_mm`, `thunder_level_max`, `visibility_min_m`, `snow_new_sum_cm`, `cape_max_jkg`, `freezing_level_m`). Beide Räume bleiben in Phase 1 getrennt, keine Vereinheitlichung. `confidence_pct` (`selectable=false`, #710) darf in keinem der beiden Pools erscheinen. |
+| range | `[min\|null, max\|null]` | Wertebereich; jede Seite unabhängig auf `null` (offen) setzbar, mind. eine Seite muss gesetzt sein (Editor-Validierung, UI-seitig — Slice 3+). `corridorInside(v, min, max)`: `v==null → null`; `v<min → false`; `v>max → false`; sonst `true` (`<`/`>` exklusiv geprüft, Grenzwert exakt gilt als „innen"). |
+| notify | bool | Reiner an/aus-Schalter auf den bestehenden Δ-Wächter — **keine neue Trigger-Schwelle**. `true` → `display_config.metric_alert_levels[metric]` wird auf die zuletzt bekannte Stufe zurückgesetzt (Default `"standard"`); `false` → auf `"off"`. Die Stufen-Feinwahl (entspannt/standard/sensibel) ist im CorridorEditor nicht einzeln wählbar (Known Limitation, gespeicherter Wert bleibt erhalten). |
+| mark | bool | Markiert im Compare-Mail-Renderer (`compare_html.py`) die Zelle grün, solange `corridorInside(value)===true` — additiv zur bestehenden Severity-Färbung, ohne Einfluss auf `comparison_scoring.py::calculate_score()`. |
+| prio | enum \| optional | `"hoch"` \| `"mittel"` \| `"niedrig"` — **nur** Anzeige-Reihenfolge im Editor, kein Rang-/Score-Einfluss. |
+
+### Single-Source-Matchlogik `corridorInside()`
+
+Wortgleich an drei Stellen implementiert (keine Duplikate zulässig):
+
+| Ort | Datei | Zweck |
+|---|---|---|
+| Frontend-Util | `frontend/src/lib/components/shared/corridor-editor/corridorMatch.ts` | ersetzt `shared/layout-tab/ltIdealRange.ts::isIdealGood()`, Basis für Editor-Live-Vorschau |
+| Python-Port | `src/services/corridor_match.py::corridor_inside()` | Compare-Mail-Renderer (`compare_html.py`) |
+
+```js
+function corridorInside(value, min, max) {
+  if (value == null) return null;               // kein Messwert → neutral
+  if (min != null && value < min) return false; // unter dem Korridor
+  if (max != null && value > max) return false; // über dem Korridor
+  return true;                                  // im Korridor
+}
+```
+
+### Additivität & Datenerhalt
+
+- **Trip (`internal/model/trip.go`) und ComparePreset (`internal/model/compare_preset.go`):**
+  `corridors` steht **additiv neben** `AlertRules` bzw.
+  `display_config["ideal_ranges"]` — beide bestehenden Mechanismen bleiben bis zu einem
+  späteren, hier nicht enthaltenen Cutover die technische Wahrheit für den Δ-Wächter. Bestandsdaten
+  ohne `corridors` laden mit leerem Slice, kein Feldverlust (Read-Modify-Write beim Speichern).
+- **Loader-Normalisierung (`src/app/loader.py`):** ein malformed `range` macht nie den Trip
+  unladbar — defensiver Float-Cast, `isfinite`-Prüfung, Skalar/`null`/Kurz-Array-Eingaben werden
+  still auf `[None, None]` normalisiert statt einer Exception.
+- **Migration (`scripts/migrate_1231_corridors.py`, Slice 2):** überführt Bestands-`AlertRule`s
+  nach `corridors[notify]` und Compare-`ideal_ranges` nach `corridors[mark]`, verlustfrei
+  (Report `alt → neu` je Eintrag), respektiert #1191-Erhalt (`active_metrics: []` bleibt leer).
+
+**Spec:** `docs/specs/modules/issue_1231_korridor_editor.md`
+
+---
+
 ## Changelog
 
+- 2026-07-12: Issue #1231 (Slice 1 von Epic #29 „Briefing-Abo-Chassis") — neues additives
+  Datenmodell `Corridor{metric, range:[min|null,max|null], notify, mark, prio?}` an
+  `Trip.Corridors` (Go) und `ComparePreset.Corridors` (Go), Python-Pendant in
+  `src/app/models.py`. Vereinheitlicht künftig Trip-Alert-Schwellwerte und Compare-Idealbereiche
+  hinter einem gemeinsamen Editor (Slices 3–7, folgen), ohne den bestehenden Δ-Wächter
+  (`AlertRule`/`metric_alert_levels`) zu verändern — rein additiv. Single-Source-Matchlogik
+  `corridorInside()` in Python (`src/services/corridor_match.py`) und TS
+  (`frontend/src/lib/components/shared/corridor-editor/corridorMatch.ts`). Loader normalisiert malformed
+  `range` defensiv (nie trip-unladbar). Siehe Section 24 und
+  `docs/specs/modules/issue_1231_korridor_editor.md`.
 - 2026-07-11: Issue #1226 — `POST /api/auth/register` bekommt neues Pflichtfeld `email`
   (minimale `strings.Contains(email, "@")`-Prüfung, kein Uniqueness-Check); neue
   Fehlerantworten `validation failed` (fehlend) und `invalid_email` (kein `@`). Bei

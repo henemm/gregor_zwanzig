@@ -86,4 +86,7 @@ type ComparePreset struct {
 	EveningEnabled *bool   `json:"evening_enabled,omitempty"`
 	EveningTime    *string `json:"evening_time,omitempty"`
 	EndDate        *string `json:"end_date,omitempty"`
+	// Corridors — Issue #1231, Slice 1: additiv neben DisplayConfig["ideal_ranges"].
+	// Kein omitempty (analog Trip.Corridors), konsistent zum Python-Verhalten.
+	Corridors []Corridor `json:"corridors"`
 }

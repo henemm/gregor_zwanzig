@@ -827,6 +827,23 @@ class AlertRule:
     suppressed_fields: set[str] = field(default_factory=set)
 
 
+@dataclass
+class Corridor:
+    """Wertebereich je Metrik — vereint Trip-Alert-Schwellwerte (notify) und
+    Compare-Idealbereiche (mark) in einer Datenstruktur (Issue #1231, C5).
+
+    See docs/specs/modules/issue_1231_korridor_editor.md.
+    `metric` ist bewusst `str` statt Enum: der Metrik-Namensraum ist
+    kontextabhängig (route: AlertMetric-Werte, vergleich: Compare-Summary-
+    Keys) und wird in Phase 1 nicht vereinheitlicht.
+    """
+    metric: str
+    range: list[float | None]  # [min, max]; C2: einseitig offen via None
+    notify: bool = False
+    mark: bool = False
+    prio: Optional[str] = None  # "hoch" | "mittel" | "niedrig" — nur Anzeige-Reihenfolge (C1)
+
+
 # --- F12: Großwetterlage / Stabilitäts-Label (Issue #122, refactored #479) --
 
 @dataclass(frozen=True)

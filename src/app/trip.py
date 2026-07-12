@@ -190,6 +190,7 @@ class Trip:
     display_config: Optional["UnifiedWeatherDisplayConfig"] = None  # Feature 2.6 v2
     report_config: Optional["TripReportConfig"] = None  # Feature 3.5
     alert_rules: List["AlertRule"] = field(default_factory=list)  # Issue #205
+    corridors: List["Corridor"] = field(default_factory=list)  # Issue #1231: additiv, s. Corridor
     alert_cooldown_minutes: Optional[int] = None  # Issue #181: per-trip cooldown (0=no limit)
     alert_quiet_from: Optional[str] = None  # Issue #181: quiet hours start "HH:MM"
     alert_quiet_to: Optional[str] = None  # Issue #181: quiet hours end "HH:MM"

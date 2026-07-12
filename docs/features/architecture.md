@@ -259,6 +259,16 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
    - **Mail-Wording fallabhängig:** `"jetzt akut"` (Override, Regen war angekündigt) vs. `"im Briefing nicht angekündigt"` (normaler Nicht-Ankündigungsfall).
    - **Scope:** Eingriff ausschließlich in `check_radar_alerts()` (~2 Zeilen); `check_and_send_alerts` (Δ-Pfad) bleibt strikt unverändert.
 
+7. **Wertebereiche-Editor Single-Source `corridorInside()` (Issue #1231 Slice 1, C5)**
+   - Vereint Trip-Alert-Schwellwerte (`AlertRule`) und Compare-Idealbereiche
+     (`display_config["ideal_ranges"]`) auf einer gemeinsamen `Corridor`-Datenstruktur; `notify`
+     bleibt reiner an/aus-Schalter auf `metric_alert_levels`, greift nicht in den
+     Δ-Wächter-Mechanismus selbst ein.
+   - Match-Logik `corridorInside(value, min, max)` wortgleich an zwei Stellen: TS
+     `frontend/src/lib/shared/corridor-editor/corridorMatch.ts` und Python
+     `src/services/corridor_match.py::corridor_inside()` (Consumer:
+     `src/output/renderers/email/compare_html.py`, Slice 7) — darf nur einmal implementiert sein.
+
 **Datenfluss:**
 ```
 check_and_send_alerts(trip, cached_weather)

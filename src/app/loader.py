@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import uuid
 from datetime import date
 from pathlib import Path
@@ -18,6 +19,7 @@ from app.models import (
     AlertRule,
     AlertRuleKind,
     AlertSeverity,
+    Corridor,
 )
 from app.trip import (
     ActivityProfile,
@@ -162,6 +164,45 @@ def _alert_rule_from_dict(d: Dict[str, Any]) -> AlertRule:
         severity=AlertSeverity(d.get("severity", "warning")),
         enabled=bool(d["enabled"]),
         channels=list(d.get("channels", [])),
+    )
+
+
+def _corridor_range_side(v: Any) -> Optional[float]:
+    """Eine range-Seite defensiv zu float|None normalisieren (Adversary F001):
+    nicht-castbare Werte (z.B. nicht-numerische Strings) degradieren zu None
+    statt einen spaeteren TypeError in corridor_inside() zu erzeugen.
+    NaN/Infinity (json.load laesst beide durch) wuerden die Grenze sonst
+    stillschweigend unwirksam machen -> nur endliche Werte werden akzeptiert."""
+    if v is None:
+        return None
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if math.isfinite(f) else None
+
+
+def _corridor_from_dict(d: Dict[str, Any]) -> Corridor:
+    """Parse a single Corridor from a JSON dict (Issue #1231, Slice 1).
+
+    `range` kommt als 2er-Liste [min, max] mit optional null-Seiten (C2).
+    Adversary F002: `range` selbst kann fehlen/null/zu kurz/zu lang sein —
+    normalisiert defensiv auf genau 2 Elemente statt per Index zu crashen
+    (BUG-DATALOSS-GR221-Muster: ein malformter Corridor darf den gesamten
+    Trip nie unladbar machen, analog zum fehlerfreien Go-Verhalten).
+    Adversary F003: `range` als Skalar (kein list/tuple) ist ebenso
+    nicht-iterierbar -> degradiert vor dem list()-Aufruf zu [None, None].
+    """
+    raw_range = d.get("range") or [None, None]
+    if not isinstance(raw_range, (list, tuple)):
+        raw_range = [None, None]
+    padded = (list(raw_range) + [None, None])[:2]
+    return Corridor(
+        metric=d["metric"],
+        range=[_corridor_range_side(padded[0]), _corridor_range_side(padded[1])],
+        notify=bool(d.get("notify", False)),
+        mark=bool(d.get("mark", False)),
+        prio=d.get("prio"),
     )
 
 
@@ -409,13 +450,17 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
     # Issue #205: Alert Rules — either directly from JSON or migrated from legacy.
     alert_rules = _migrate_legacy_alert_rules(data)
 
+    # Issue #1231 (Slice 1): Corridors — additiv neben alert_rules, kein
+    # Legacy-Migrationspfad in Slice 1 (s. scripts/migrate_1231_corridors.py, Slice 2).
+    corridors = [_corridor_from_dict(c) for c in data.get("corridors", [])]
+
     # Issue #991: unbekannte Top-Level-Keys generisch auffangen (roundtrip-erhalten),
     # statt pro Feld ein weiteres Einzelattribut anzubauen.
     KNOWN_TOP_LEVEL = {
         "id", "name", "stages", "avalanche_regions", "aggregation", "shortcode", "activity",
         "region", "archived_at", "paused_at", "official_alerts_enabled",
         "official_alert_triggers_enabled", "weather_config",
-        "display_config", "report_config", "alert_rules", "alert_cooldown_minutes",
+        "display_config", "report_config", "alert_rules", "corridors", "alert_cooldown_minutes",
         "alert_quiet_from", "alert_quiet_to", "trip",
     }
     extra = {k: v for k, v in data.items() if k not in KNOWN_TOP_LEVEL}
@@ -430,6 +475,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         display_config=display_config,
         report_config=report_config,
         alert_rules=alert_rules,
+        corridors=corridors,  # Issue #1231, Slice 1
         alert_cooldown_minutes=data.get("alert_cooldown_minutes"),
         alert_quiet_from=data.get("alert_quiet_from"),
         alert_quiet_to=data.get("alert_quiet_to"),
@@ -1196,6 +1242,19 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "channels": list(r.channels),
         }
         for r in trip.alert_rules
+    ]
+
+    # Serialize corridors (Issue #1231, Slice 1) — always emit, even if empty
+    # (analog alert_rules), damit additiv immer sichtbar ist.
+    data["corridors"] = [
+        {
+            "metric": c.metric,
+            "range": list(c.range),
+            "notify": c.notify,
+            "mark": c.mark,
+            **({"prio": c.prio} if c.prio is not None else {}),
+        }
+        for c in trip.corridors
     ]
 
     # Serialize report config (Feature 3.5)

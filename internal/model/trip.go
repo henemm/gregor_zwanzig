@@ -63,6 +63,19 @@ type AlertRule struct {
 	Channels    []string      `json:"channels,omitempty"`
 }
 
+// Corridor is a value range for a metric that unifies Trip alert thresholds
+// (Notify) and Compare ideal ranges (Mark) into one structure (Issue #1231).
+// Additiv neben AlertRules/DisplayConfig["ideal_ranges"], die bis zu einem
+// spaeteren Cutover die technische Wahrheit fuer den Delta-Waechter bleiben.
+// Range ist ein 2er-Array [min, max]; jede Seite kann nil sein (offen, C2).
+type Corridor struct {
+	Metric string      `json:"metric"`
+	Range  [2]*float64 `json:"range"`
+	Notify bool        `json:"notify"`
+	Mark   bool        `json:"mark"`
+	Prio   string      `json:"prio,omitempty"` // "hoch"|"mittel"|"niedrig" — nur Anzeige-Reihenfolge (C1)
+}
+
 type Waypoint struct {
 	ID                string  `json:"id"`
 	Name              string  `json:"name"`
@@ -86,23 +99,27 @@ type Stage struct {
 }
 
 type Trip struct {
-	ID                   string                 `json:"id"`
-	Name                 string                 `json:"name"`
-	Stages               []Stage                `json:"stages"`
-	AvalancheRegions     []string               `json:"avalanche_regions,omitempty"`
-	Aggregation          map[string]interface{} `json:"aggregation,omitempty"`
-	WeatherConfig        map[string]interface{} `json:"weather_config,omitempty"`
-	DisplayConfig        map[string]interface{} `json:"display_config,omitempty"`
-	ReportConfig         map[string]interface{} `json:"report_config,omitempty"`
-	AlertRules           []AlertRule            `json:"alert_rules"`
-	AlertCooldownMinutes *int                   `json:"alert_cooldown_minutes,omitempty"`
-	AlertQuietFrom       *string                `json:"alert_quiet_from,omitempty"`
-	AlertQuietTo         *string                `json:"alert_quiet_to,omitempty"`
-	Shortcode            string                 `json:"shortcode,omitempty"`
-	Activity             string                 `json:"activity,omitempty"`
-	Region               string                 `json:"region,omitempty"`
-	PausedAt             *time.Time             `json:"paused_at,omitempty"`
-	ArchivedAt           *time.Time             `json:"archived_at,omitempty"`
+	ID               string                 `json:"id"`
+	Name             string                 `json:"name"`
+	Stages           []Stage                `json:"stages"`
+	AvalancheRegions []string               `json:"avalanche_regions,omitempty"`
+	Aggregation      map[string]interface{} `json:"aggregation,omitempty"`
+	WeatherConfig    map[string]interface{} `json:"weather_config,omitempty"`
+	DisplayConfig    map[string]interface{} `json:"display_config,omitempty"`
+	ReportConfig     map[string]interface{} `json:"report_config,omitempty"`
+	AlertRules       []AlertRule            `json:"alert_rules"`
+	// Corridors — Issue #1231, Slice 1: additiv, kein omitempty (analog
+	// AlertRules), damit Go konsistent zum Python-Verhalten (app.loader
+	// emittiert corridors immer, auch leer) bleibt.
+	Corridors            []Corridor `json:"corridors"`
+	AlertCooldownMinutes *int       `json:"alert_cooldown_minutes,omitempty"`
+	AlertQuietFrom       *string    `json:"alert_quiet_from,omitempty"`
+	AlertQuietTo         *string    `json:"alert_quiet_to,omitempty"`
+	Shortcode            string     `json:"shortcode,omitempty"`
+	Activity             string     `json:"activity,omitempty"`
+	Region               string     `json:"region,omitempty"`
+	PausedAt             *time.Time `json:"paused_at,omitempty"`
+	ArchivedAt           *time.Time `json:"archived_at,omitempty"`
 	// OfficialAlertsEnabled — Issue #1087, Pointer-Muster analog #1040:
 	// nil = Feld fehlte (Altdaten/Default aktiv), false = strukturell kein
 	// Fetch amtlicher Warnungen fuer diesen Trip.
