@@ -337,6 +337,7 @@ No special migration needed — pure frontend + endpoint routing fix. Legacy `Co
 
 | Date | Slice | Change |
 |------|-------|--------|
+| 2026-07-12 | Fix #1191 | Idealwerte-Tab um 4 bislang schalter-lose alarmfähige Metriken erweitert: Böen (`gust_max_kmh`), Gewitter-Energie/CAPE (`cape_max_jkg`), Frostgrenze (`freezing_level_m`), Min-Temperatur (`temp_min_c`) — `ALL_METRICS` in `compareMetricDefs.ts` jetzt 14 Metriken. Behebt zugleich, dass eine hier deaktivierte Metrik im Compare-Δ-Alarm trotzdem feuerte (`compare_alert.py` reicht `display_config` jetzt durch, analog Trip-Pfad). Details: `docs/reference/api_contract.md` (DisplayConfig Keys), `docs/specs/modules/issue_1191_compare_alert_deactivated_metric.md`. |
 | 2026-06-10 | 4 | Validierungsmeldungen für Idealwerte: `validateIdealRanges()` prüft min > max, inline rote Fehlermeldung unter Slider, Tab-Completion gated auf `idealsValid`, `canAdvanceStep3` Getter blockiert Weiter-Button bei Fehlern. Issue #718 ✓ |
 | 2026-06-10 | 5 | Mobile-Parität ≤899px mit progressiven Tab-Editor. Issue #682 ✓ |
 | 2026-06-09 | 3 | Fidelity Tabs „Orte" + „Idealwerte": nummerierte Picked-Liste + Region-Gruppierung, Dual-Handle-Slider, Segmented-Control, Add/Remove-Metrik, Persistenz display_config.active_metrics. RangeSlider.svelte neu. ALL_METRICS Katalog. Issue #680 ✓ |

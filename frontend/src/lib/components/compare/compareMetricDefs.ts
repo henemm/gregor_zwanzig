@@ -37,11 +37,19 @@ const PRECIP_SUM:    MetricDef = { label: 'Niederschlag',   key: 'precip_sum_mm'
 const UV_INDEX:      MetricDef = { label: 'UV-Index max',   key: 'uv_index_max',      unit: '',    decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0,     rangeMax: 12,    step: 1   };
 const TEMP_MAX:      MetricDef = { label: 'Temperatur max', key: 'temp_max_c',        unit: '°C',  decimals: 0, higherIsBetter: true,  kind: 'range', rangeMin: -20,   rangeMax: 45,    step: 1   };
 const THUNDER:       MetricDef = { label: 'Gewitter',       key: 'thunder_level_max', unit: '',    decimals: 0, higherIsBetter: false, kind: 'enum',  enumValues: ['NONE', 'MED', 'HIGH'] };
+// Issue #1191: die 4 bislang schalter-losen alarmfähigen Metriken bekommen
+// Idealwerte-Schalter. Keys sind deckungsgleich mit dem Backend-Mapper
+// (compare_alert._SUMMARY_KEY_TO_CATALOG_ID) und der Migration.
+const TEMP_MIN:      MetricDef = { label: 'Temperatur min', key: 'temp_min_c',        unit: '°C',  decimals: 0, higherIsBetter: true,  kind: 'range', rangeMin: -30,   rangeMax: 30,    step: 1   };
+const GUST_MAX:      MetricDef = { label: 'Böen',           key: 'gust_max_kmh',      unit: 'km/h',decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0,     rangeMax: 150,   step: 5   };
+const CAPE:          MetricDef = { label: 'Gewitter-Energie (CAPE)', key: 'cape_max_jkg', unit: 'J/kg', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 3000, step: 100 };
+const FREEZING_LVL:  MetricDef = { label: 'Frostgrenze',    key: 'freezing_level_m',  unit: 'm',   decimals: 0, higherIsBetter: true,  kind: 'range', rangeMin: 0,     rangeMax: 5000,  step: 100 };
 
 // Issue #680: Slice 3 — flaches Array aller anwählbaren Metriken (AC-8/AC-9)
 export const ALL_METRICS: MetricDef[] = [
 	SNOW_DEPTH, SNOW_NEW, SUNNY_HOURS, WIND_MAX,
-	CLOUD_AVG, VISIBILITY, PRECIP_SUM, UV_INDEX, TEMP_MAX, THUNDER
+	CLOUD_AVG, VISIBILITY, PRECIP_SUM, UV_INDEX, TEMP_MAX, THUNDER,
+	TEMP_MIN, GUST_MAX, CAPE, FREEZING_LVL
 ];
 
 /**

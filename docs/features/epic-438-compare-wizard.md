@@ -116,6 +116,8 @@ frontend/src/lib/components/compare/
 **Status:** ✓ Implemented  
 **Completion Date:** 2026-05-29
 
+*(Update 2026-07-12, Fix #1191: Der Metrik-Katalog wuchs um 4 bislang schalter-lose alarmfähige Metriken — Böen `gust_max_kmh`, Gewitter-Energie/CAPE `cape_max_jkg`, Frostgrenze `freezing_level_m`, Min-Temperatur `temp_min_c`. Diese Erweiterung fand im inzwischen produktiven Tab-Editor statt (`ALL_METRICS` in `compareMetricDefs.ts`, ansteuerbar über den Idealwerte-Tab, s. `docs/features/epic-677-compare-editor.md`), nicht mehr in diesem abgeschlossenen Wizard-Epic.)*
+
 ### Purpose
 
 Der Nutzer definiert pro Metrik (abhängig vom Aktivitätsprofil in Step 1), welche Wertebereiche als "ideal" gelten. Diese Idealwerte werden vom Backend-Vergleichsalgorithmus verwendet, um Standorte zu bewerten.

@@ -264,8 +264,12 @@ des gemischten Zustands:
   Weather-Tab-Filterung (fehlender Einzel-Eintrag = inaktiv).
 - **`expand_per_metric_levels()` ohne `display_config`-Argument:** Bleibt
   abwärtskompatibel nutzbar (Default `None`), verhält sich dann wie vor dem Fix
-  (keine Filterung/kein Backfill) — betrifft ggf. andere, noch unbekannte
-  Aufrufer außerhalb von `trip_alert.py` (laut Analyse aktuell keine vorhanden).
+  (keine Filterung/kein Backfill). **Update (Fix #1191, 2026-07-12):** Ein zweiter
+  Aufrufer wurde ergänzt — `CompareAlertService._build_eval_config`
+  (`src/services/compare_alert.py`) reicht seither ebenfalls ein echtes
+  `display_config` durch (vorher immer `None`, wodurch der #961-Deaktivierungs-
+  Filter für Compare-Presets folgenlos blieb). Details: `docs/specs/modules/
+  issue_1191_compare_alert_deactivated_metric.md`.
 - **Keine Bereinigung der Trip-JSON:** Verwaiste `metric_alert_levels`-Einträge
   für deaktivierte Metriken werden NICHT aus der persistierten Trip-Datei
   gelöscht — nur zur Auswertungszeit gefiltert. Reaktiviert der Nutzer die

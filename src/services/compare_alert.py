@@ -39,6 +39,25 @@ logger = logging.getLogger("compare_alert")
 _STANDARD_METRIC_LEVELS: dict[str, str] = {row[0].value: "standard" for row in _PRESET_TABLE}
 _DEFAULT_COOLDOWN_MINUTES = 120
 
+# Bug #1191: Summary-Key (Compare-Editor `display_config.active_metrics`) →
+# Alarm-Katalog-ID (`display_config.metrics[].metric_id`, wie #961-Filter sie prüft).
+# Nur alarmfähige Metriken sind gelistet; reine Vergleichs-Keys (cloud_avg_pct,
+# sunny_hours_h, uv_index_max, snow_depth_cm) haben bewusst KEIN Mapping und
+# beeinflussen den Deaktivieren-Filter nicht. IDs korrespondieren zu
+# `weather_change_detection._ALERT_METRIC_TO_CATALOG_ID`.
+_SUMMARY_KEY_TO_CATALOG_ID: dict[str, str] = {
+    "temp_max_c": "temperature",
+    "temp_min_c": "temperature_cold",
+    "wind_max_kmh": "wind",
+    "gust_max_kmh": "gust",
+    "precip_sum_mm": "precipitation",
+    "thunder_level_max": "thunder",
+    "visibility_min_m": "visibility",
+    "snow_new_sum_cm": "fresh_snow",
+    "cape_max_jkg": "cape",
+    "freezing_level_m": "freezing_level",
+}
+
 
 class CompareAlertService:
     """Wertet frisches Wetter je Compare-Preset/Ort gegen den Δ-Anker aus und
@@ -194,7 +213,13 @@ class CompareAlertService:
 
     def _build_eval_config(self, preset: dict, cooldown_minutes) -> AlertEvaluationConfig:
         """B2-Defaults, vorwärtskompatible Overrides via `preset.get(feld, DEFAULT)`.
-        Kanal ist IMMER `{"email"}` — Compare-Versand ist heute E-Mail-only."""
+        Kanal ist IMMER `{"email"}` — Compare-Versand ist heute E-Mail-only.
+
+        Bug #1191: `display_config` wird jetzt IMMER durchgereicht (analog
+        Trip-Pfad `trip_alert.py:191`) — aus `active_metrics` (Summary-Keys)
+        via Mapper in ein `UnifiedWeatherDisplayConfig` mit Katalog-IDs
+        übersetzt. Der #961-Filter (`expand_per_metric_levels`) unterdrückt so
+        im Compare-Editor DEAKTIVIERTE Metriken."""
         return AlertEvaluationConfig(
             cooldown_minutes=cooldown_minutes,
             quiet_from=preset.get("alert_quiet_from"),
@@ -204,7 +229,52 @@ class CompareAlertService:
                 or _STANDARD_METRIC_LEVELS
             ),
             channels={"email"},
-            display_config=None,
+            display_config=self._display_config_from_active_metrics(preset),
+        )
+
+    def _display_config_from_active_metrics(self, preset: dict):
+        """Baut ein `UnifiedWeatherDisplayConfig`, das den im Compare-Editor
+        gesetzten Aktivierungsstatus je alarmfähiger Metrik EXPLIZIT abbildet.
+
+        Bug #1191 (Adversary F001) — kritische Unterscheidung:
+          - `active_metrics` FEHLT ganz (Key absent / `None`) = Legacy-Preset vor
+            der Migration → `display_config=None` → der #961-Filter greift NICHT →
+            konservatives Alt-Verhalten (alle Metriken feuern). Die Migration setzt
+            `active_metrics` ohnehin, sodass dieser Pfad nur echte Alt-Presets trifft.
+          - `active_metrics` VORHANDEN (eine Liste, auch leer `[]`) = der Nutzer hat
+            im Editor bewusst (evtl. alles) ab-/ausgewählt → JEDE alarmfähige
+            Katalog-ID wird EXPLIZIT gelistet mit `enabled=(id in aktive_ids)`.
+            Deaktivierte Metriken stehen als `enabled=False` drin → die `metrics`-
+            Liste ist NIE leer → `is_alert_metric_active` triggert die „nie
+            konfiguriert = alles aktiv"-Heuristik (leeres `metrics[]`) NICHT mehr →
+            „deaktiviert = stumm" statt „alles feuert" (Adversary F001)."""
+        from app.models import MetricConfig, UnifiedWeatherDisplayConfig
+        from services.weather_change_detection import _ALERT_METRIC_TO_CATALOG_ID
+
+        active = (preset.get("display_config") or {}).get("active_metrics")
+        if active is None:
+            return None  # Legacy: nie migriert → konservativer None-Fallback
+
+        active_catalog_ids: set[str] = set()
+        for key in active:
+            cid = _SUMMARY_KEY_TO_CATALOG_ID.get(key)
+            if cid:
+                active_catalog_ids.add(cid)
+
+        # Union aller alarmrelevanten Katalog-IDs — jede EXPLIZIT mit ihrem
+        # Aktivierungsstatus, damit der OR-Check je AlertMetric deterministisch
+        # gegen echte Einträge läuft (fehlende ID ⇒ False; hier gibt es keine
+        # fehlenden mehr).
+        all_catalog_ids: list[str] = []
+        for catalog_ids in _ALERT_METRIC_TO_CATALOG_ID.values():
+            for cid in catalog_ids:
+                if cid not in all_catalog_ids:
+                    all_catalog_ids.append(cid)
+        return UnifiedWeatherDisplayConfig(
+            metrics=[
+                MetricConfig(metric_id=cid, enabled=(cid in active_catalog_ids))
+                for cid in all_catalog_ids
+            ]
         )
 
     def _notification_service_for(self, preset: dict) -> NotificationService:

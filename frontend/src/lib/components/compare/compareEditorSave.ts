@@ -87,12 +87,11 @@ export function buildComparePresetSavePayload(
 	}
 
 	if (edits.activeMetricKeys !== undefined) {
-		if (edits.activeMetricKeys.length > 0) {
-			displayConfig.active_metrics = edits.activeMetricKeys;
-		} else {
-			// Leere Auswahl: active_metrics aus dem Spread entfernen, damit kein Datenschrott bleibt
-			delete displayConfig.active_metrics;
-		}
+		// Bug #1191 (Adversary F001): Leere Auswahl EXPLIZIT als [] persistieren —
+		// NICHT loeschen. Sonst ist "Nutzer hat alles abgewaehlt" (nichts feuert)
+		// nicht von "nie konfiguriert/migriert" (Legacy-Fallback: alles feuert)
+		// unterscheidbar. Read-Modify-Write-Merge bleibt gewahrt (Spread + Ueberschreiben).
+		displayConfig.active_metrics = edits.activeMetricKeys;
 	}
 
 	if (edits.hourlyMetricKeys !== undefined) {

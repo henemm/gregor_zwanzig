@@ -172,6 +172,52 @@ def expand_per_metric_levels(
             enabled=True,
         )
 
+    # Bug #1191 (Adversary F002): explizit ab-gewählte Direction-Felder.
+    # Eine SYNTHETISCHE, richtungs-spezifische Katalog-Metrik (selectable=False —
+    # aktuell nur "temperature_cold" für die Kälte-/Min-Richtung, Feld temp_min_c),
+    # die im display_config EXPLIZIT mit enabled=False vorliegt, ist ein
+    # verbindliches Opt-out für ihr(e) Summary-Feld(er) — SELBST wenn die
+    # Umbrella-Metrik "temperature" (spannt min+max+avg) aktiv ist. Diese Felder
+    # werden aus JEDER Regel unterdrückt (auch aus temperature_change, das
+    # temp_min_c mit-belegt). So bleibt bei aktivem temp_max_c die Min-Temp stumm.
+    #
+    # Für den Trip-Pfad ist diese Feld-Unterdrückung heute ein No-op — aber per
+    # KONVENTION, nicht backendseitig erzwungen: der einzige aktuelle Schreiber
+    # von Trip-display_configs (das Trip-Editor-Frontend) speist seine Auswahl aus
+    # GET /api/metrics (nur selectable=True) und emittiert daher NIE einen
+    # selectable=False-Eintrag → diese Menge bleibt für Trips leer → der Umbrella-
+    # „temperature"-Toggle armt Min UND Max wie bisher. Der Go-Handler
+    # PutTripWeatherConfigHandler validiert die Metrik-IDs beim Schreiben NICHT;
+    # eine backendseitige Erzwingung wird separat als Nebenbefund (#1199) verfolgt.
+    explicitly_disabled_fields: set[str] = set()
+    if display_config is not None:
+        from app.metric_catalog import get_metric as _get_metric
+        for mc in getattr(display_config, "metrics", None) or []:
+            if mc.enabled:
+                continue
+            try:
+                _md = _get_metric(mc.metric_id)
+            except KeyError:
+                continue
+            if getattr(_md, "selectable", True):
+                continue  # nur synthetische Richtungs-IDs opten Felder verbindlich aus
+            explicitly_disabled_fields.update(_md.summary_fields.values())
+
+    def _apply_field_optout(rule: "AlertRule", metric_str: str) -> "AlertRule | None":
+        """Unterdrückt explizit ab-gewählte Direction-Felder in `rule`. Gibt None
+        zurück, wenn dadurch KEIN scharfes Feld übrig bleibt (Regel komplett fallen
+        lassen). No-op, wenn nichts ab-gewählt ist (Trip-Pfad)."""
+        if not explicitly_disabled_fields:
+            return rule
+        rfields = _fields_for(metric_str)
+        colliding = rfields & explicitly_disabled_fields
+        if rfields and colliding == rfields:
+            return None  # jedes Feld ab-gewählt → Regel entfällt
+        if colliding:
+            existing = set(getattr(rule, "suppressed_fields", None) or set())
+            rule.suppressed_fields = existing | colliding
+        return rule
+
     rules: list[AlertRule] = []
     for metric_str, level in levels.items():
         if level == "off":
@@ -185,6 +231,8 @@ def expand_per_metric_levels(
             if alert_metric is None or not is_alert_metric_active(alert_metric, display_config):
                 continue
         rule = _make_rule(metric_str, level)
+        if rule is not None:
+            rule = _apply_field_optout(rule, metric_str)
         if rule is not None:
             rules.append(rule)
 
@@ -234,10 +282,13 @@ def expand_per_metric_levels(
             # kollidierenden Felder als suppressed_fields markieren, sodass sie NICHT
             # scharf gestellt werden (from_alert_rules zieht sie beim Threshold-Aufbau ab).
             metric_fields = _fields_for(metric_str)
-            colliding = metric_fields & claimed_fields
-            remaining = metric_fields - claimed_fields
+            # Bug #1191 F002: explizit ab-gewählte Direction-Felder wirken wie
+            # belegte Felder — sie werden ebenfalls unterdrückt.
+            blocked = claimed_fields | explicitly_disabled_fields
+            colliding = metric_fields & blocked
+            remaining = metric_fields - blocked
             if metric_fields and not remaining:
-                continue  # alle Felder belegt → Regel komplett unterdrücken (AC-6)
+                continue  # alle Felder belegt/ab-gewählt → Regel komplett unterdrücken (AC-6)
             rule = _make_rule(metric_str, "standard")
             if rule is not None:
                 if colliding:
