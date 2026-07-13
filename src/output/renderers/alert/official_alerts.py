@@ -129,6 +129,16 @@ class OfficialAlertNotice:
     # `_trip_total_segment_ids`). `None` (Default) -> Bestandsaufrufer/Tests ohne
     # dieses Feld fallen auf die reine Anzahl zurueck.
     scope_total: int | None = None
+    # Adversary F009 (#1239 Nachzug Runde 5): identitaets-basierter Umfang --
+    # die sortierte ID-Menge der betroffenen Orte (Compare) bzw. Segmente
+    # (Trip), NICHT die Anzeige-Namen. `_uniform_scope` vergleicht damit statt
+    # mit `scope_label`: zwei VERSCHIEDENE Orte mit GLEICHEM Anzeigenamen (zwei
+    # "Hütte") duerfen nicht faelschlich als "derselbe Umfang" durchgehen --
+    # exakt die Kollisions-Regel, die schon `build_compare_official_alert_
+    # notices` fuer die Scope-Berechnung selbst ueber Orts-IDs statt Namen
+    # durchsetzt (#1216 Slice 2a F006). Leeres Tuple (Default) -> Bestands-
+    # aufrufer/Tests ohne dieses Feld fallen auf den Namensvergleich zurueck.
+    scope_ids: tuple[str, ...] = ()
 
 
 def render_official_alerts_html(
@@ -540,7 +550,28 @@ def render_official_alert_subject(
     Default, analog `alert_daily_limit.py`), NICHT mehr auf rohes UTC -- das
     war die Bug-Ursache. Die Versand-Pfade (`notification_service.py`) reichen
     die tatsaechliche, aus den Trip-/Ort-Koordinaten abgeleitete `alert_tz`
-    durch, die auch der Body erhaelt."""
+    durch, die auch der Body erhaelt.
+
+    Adversary F006 (HIGH, Staging-Fund, proaktiv auch hier gefixt): dieselbe
+    Fehlerklasse wie in Quelle-Box/Headline -- im ORTSVERGLEICH
+    (`scope_kind="locations"`) ist die Reichweite nur dann die der FUEHRENDEN
+    Warnung (`_scope_display(leading)`), wenn ALLE Warnungen denselben Umfang
+    haben (`_uniform_scope`). Sonst wuerde der Betreff den Umfang eines
+    einzelnen Hazards faelschlich auf alle aufgezaehlten Gefahren-Typen
+    verallgemeinern (Staging-Beispiel: "Toulon, Hyères" im Betreff, obwohl eine
+    Warnung ausschliesslich Draguignan betraf) -- ein neutraler Platzhalter
+    ("mehrere Orte") steht dann an dessen Stelle.
+
+    BEWUSST NICHT fuer den Trip-Pfad (`scope_kind="route"`): dort ist "Segment
+    N der fuehrenden Warnung" ein etabliertes, separat getestetes Verhalten
+    (`test_official_alert_template_render.py::test_ac3_mixed_levels_highest_
+    leads_all_channels`) -- Segment-Angaben sind eine schwaechere Behauptung
+    als Ortsnamen (dieselbe Route, kein falscher-Ort-Vorwurf) und werden hier
+    bewusst nicht angetastet, um dieses etablierte Verhalten nicht zu brechen.
+
+    AC-16 (Bit-Identitaet bei <=2 Orten/Warnungen) bleibt gewahrt: alle
+    bisherigen Testfaelle haben einheitlichen Umfang je Notice-Liste, der neue
+    Zweig greift dort nie."""
     if tz is None:
         tz = ZoneInfo("Europe/Vienna")
     ordered = _sort_notices(notices)
@@ -560,7 +591,11 @@ def render_official_alert_subject(
             f"{_LEVEL_WORDS.get(n.alert.level, ('🔴', 'ROT'))[1]} {_typ_tag(n, tz)}"
             for n in shown
         )
-    return f"[{prefix}] {_scope_display(leading)} · {body}{more}"
+    if leading.scope_kind == "locations" and not _uniform_scope(ordered):
+        scope_text = "mehrere Orte"
+    else:
+        scope_text = _scope_display(leading)
+    return f"[{prefix}] {scope_text} · {body}{more}"
 
 
 def _hex_to_rgba(hex_color: str, alpha: float) -> str:
@@ -639,23 +674,41 @@ def _standalone_headline_html(ordered: list["OfficialAlertNotice"], uniform: boo
     Issue #1239 (AC-17): die Reichweite kommt aus `_scope_display` -- bei vielen
     betroffenen Orten nennt die Ueberschrift die Gefahren-Typen und eine
     Mengenangabe, statt die vollstaendige Ortsliste aus dem Betreff zu
-    wiederholen (die Namen stehen ohnehin in den Chips darunter)."""
+    wiederholen (die Namen stehen ohnehin in den Chips darunter).
+
+    Adversary F006 (HIGH, Staging-Fund): die Reichweite darf nur genannt
+    werden, wenn ALLE Warnungen denselben Umfang haben (`_uniform_scope`,
+    dieselbe Bedingung wie in der Quelle-Box `_standalone_src_sentence`, AC-9)
+    -- sonst verallgemeinert die Headline faelschlich den Umfang der ERSTEN
+    Warnung auf alle aufgezaehlten Gefahren-Typen (Staging-Beispiel: eine
+    GELBE Waldbrand-Warnung betraf ausschliesslich Draguignan, die Headline
+    nannte trotzdem nur Toulon/Hyeres). Bei unterschiedlichem Umfang nennt die
+    Headline nur die Gefahren-Typen ohne Ortsangabe -- der Umfang steht ohnehin
+    bei jeder Warnung in der Karte darunter.
+
+    Adversary F007 (MEDIUM, Staging-Fund): der Typ-Text kommt jetzt aus dem
+    geteilten `_display_label` statt aus dem rohen `_hazard_display`-Typwort --
+    sonst widerspricht sich die Headline mit dem Warn-Titel/Betreff derselben
+    Warnung (Staging-Beispiel: Headline "Zugang gesperrt", Warn-Titel/Betreff
+    "Zugang eingeschränkt — Monts Toulonnais")."""
     from output.renderers.email.design_tokens import G_INK
 
     types = []
     for n in ordered:
-        typ, _sms = _hazard_display(n.alert)
-        typ = _html.escape(typ)
+        typ = _html.escape(_display_label(n.alert))
         if not uniform:
             _e, lw = _LEVEL_WORDS.get(n.alert.level, ("🔴", "ROT"))
             typ = f"{typ} ({lw})"
         types.append(typ)
-    scope = _html.escape(_scope_display(ordered[0]))
     style = (
         f"font-size:26px;font-weight:700;letter-spacing:-.01em;"
         f"margin:0 0 18px;line-height:1.2;color:{G_INK};"
     )
-    return f'<div class="body-h1" style="{style}">{_join_de(types)} für {scope} gemeldet.</div>'
+    types_html = _join_de(types)
+    if _uniform_scope(ordered):
+        scope = _html.escape(_scope_display(ordered[0]))
+        return f'<div class="body-h1" style="{style}">{types_html} für {scope} gemeldet.</div>'
+    return f'<div class="body-h1" style="{style}">{types_html} gemeldet.</div>'
 
 
 def _standalone_ladder_html(active_level: int, level_colors: dict[int, str]) -> str:
@@ -854,6 +907,28 @@ def _standalone_warn_stacked_html(
     )
 
 
+def _uniform_scope(notices: list["OfficialAlertNotice"]) -> bool:
+    """Ob ALLE Warnungen denselben betroffenen Umfang haben -- geteilte
+    Bedingung fuer die Quelle-Box (`_standalone_src_sentence`, AC-9), die
+    Headline (`_standalone_headline_html`, Adversary F006) UND den Betreff
+    (`render_official_alert_subject`, Adversary F006). Konsolidiert an EINER
+    Stelle, damit die Scope-Einheitlichkeits-Pruefung nicht ein drittes Mal
+    auseinanderlaeuft.
+
+    Adversary F009 (#1239 Nachzug Runde 5, HIGH): vergleicht `scope_ids`
+    (IDENTITAET -- Orts-/Segment-IDs), NICHT `scope_label` (den Anzeige-
+    String). Zwei verschiedene Orte mit gleichem Anzeigenamen (zwei "Hütte")
+    haetten ueber `scope_label` faelschlich als "einheitlicher Umfang"
+    gegolten -- exakt der Bug, den F006 fuer die Quelle-Box/Headline/Betreff
+    beheben sollte, hier nur ueber die Anzeige-Namen statt der IDs. Faellt auf
+    den Namensvergleich zurueck, wenn (mindestens) eine Notice kein
+    `scope_ids` traegt (Alt-Aufrufer/handgebaute Test-Notices ohne dieses
+    Feld) -- Bestandsverhalten fuer diese Faelle bleibt unveraendert."""
+    if all(n.scope_ids for n in notices):
+        return len({n.scope_ids for n in notices}) <= 1
+    return len({n.scope_label for n in notices}) <= 1
+
+
 def _standalone_src_sentence(ordered: list["OfficialAlertNotice"], uniform: bool) -> str:
     """Prosaischer Scope-Satz der `.src`-Box (Spec Slice B Punkt 6) --
     deterministisches Template, keine freie Prosa (bereits HTML-escaped).
@@ -862,14 +937,19 @@ def _standalone_src_sentence(ordered: list["OfficialAlertNotice"], uniform: bool
     ueber alle Warnungen verallgemeinern. Haben die Warnungen unterschiedliche
     Umfaenge, verweist ein neutraler Satz auf die Einzelangaben oben. AC-10:
     bei einheitlichem Umfang bleibt der Satz unveraendert."""
-    if len({n.scope_label for n in ordered}) > 1:
+    if not _uniform_scope(ordered):
         return (
             "Die Warnungen betreffen unterschiedliche Bereiche — der jeweils "
             "betroffene Umfang steht bei jeder Warnung oben."
         )
     if not uniform:
         leading = ordered[0]
-        typ, _sms = _hazard_display(leading.alert)
+        # Adversary-Nachzug (gleiche Fehlerklasse wie F007, proaktiv mitgefixt):
+        # `_display_label` statt des rohen `_hazard_display`-Typwortes, sonst
+        # widerspricht dieser Satz demselben Massiv-Titel, der direkt darueber
+        # im Warn-Titel steht ("Zugang gesperrt" hier vs. "Zugang eingeschränkt
+        # — Monts Toulonnais" im Titel).
+        typ = _display_label(leading.alert)
         _e, word = _LEVEL_WORDS.get(leading.alert.level, ("🔴", "ROT"))
         return (
             f"Das {_html.escape(typ)} ({word}) ist die kritischere Warnung "
@@ -1342,6 +1422,9 @@ def build_official_alert_notices(
             # Wirkung (`_scope_display` nutzt es nur bei scope_kind="locations"),
             # aber konsistent mitgesetzt -- der Builder kennt `all_ids` bereits.
             scope_total=len(all_ids) or None,
+            # scope_ids (Adversary F009 Nachzug #1239): identitaets-basierter
+            # Umfang -- sortierte Segment-IDs (bzw. alle IDs bei voller Route).
+            scope_ids=tuple(sorted(all_ids)) if is_full else tuple(sorted(segment_ids)),
         ))
     return notices
 
@@ -1392,5 +1475,11 @@ def build_compare_official_alert_notices(
             # verglichenen Orte -- traegt die Mengenangabe im Betreff/H1 als
             # "N von M Orten" statt der reinen Anzahl "N Orte".
             scope_total=len(all_location_ids) or None,
+            # scope_ids (Adversary F009 Nachzug #1239, HIGH): identitaets-
+            # basierter Umfang -- sortierte Orts-IDs (bzw. ALLE Orts-IDs bei
+            # vollem Umfang), NICHT die (evtl. kollidierenden) Anzeige-Namen.
+            # Exakt dieselbe ID-vs-Name-Regel, die diese Funktion bereits fuer
+            # `is_full`/`affected`/`free` durchsetzt (#1216 Slice 2a F006).
+            scope_ids=tuple(sorted(all_location_ids)) if is_full else tuple(sorted(affected_ordered_ids)),
         ))
     return notices

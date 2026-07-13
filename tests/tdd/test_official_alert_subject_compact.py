@@ -171,6 +171,96 @@ def test_ac16_compare_subject_all_locations_unchanged():
 
 
 # ---------------------------------------------------------------------------
+# F008 (Adversary Runde 5, PO-go 2026-07-13) — AC-16 gilt nur bei
+# EINHEITLICHEM Umfang; bei uneinheitlichem Umfang gewinnt die korrekte
+# Aussage ("mehrere Orte") auch bei <=2 Orten/Warnungen. Siehe Spec-Changelog
+# `docs/specs/modules/fix_1237_1238_1239_mail_darstellung.md`.
+# ---------------------------------------------------------------------------
+
+def test_f008_ac16_does_not_apply_when_scope_differs_even_with_two_locations():
+    """F008: Given eine Ortsvergleich-Alarmmail mit genau ZWEI betroffenen
+    Orten und ZWEI Warnungen, die aber UNTERSCHIEDLICHE Orte betreffen (Hitze
+    nur Alpha, Gewitter nur Beta) / When der Betreff gerendert wird / Then
+    nennt er NICHT den Umfang der fuehrenden Warnung (das waere die falsche
+    Aussage "nur Toulon", obwohl das Gewitter nur Hyères betrifft), sondern den
+    neutralen, korrekten Platzhalter 'mehrere Orte'. AC-16s Bit-Identitaet gilt
+    hier bewusst NICHT (PO-Entscheidung F008) -- sie war nie fuer diesen
+    (vorher ungetesteten) uneinheitlichen Fall gedacht."""
+    all_ids = ["toulon", "hyeres"]
+    id_to_name = {"toulon": "Toulon", "hyeres": "Hyères"}
+    from output.renderers.alert.official_alerts import build_compare_official_alert_notices
+
+    notices = build_compare_official_alert_notices(all_ids, id_to_name, [
+        (_alert(3, "extreme_heat", "Hitze"), ["toulon"]),
+        (_alert(2, "thunderstorm", "Gewitter", SA_FROM, SA_TO), ["hyeres"]),
+    ])
+    subject = _subject(notices)
+    assert "mehrere Orte" in subject, (
+        f"Betreff nennt bei uneinheitlichem Umfang keinen neutralen Platzhalter: {subject!r}"
+    )
+    assert "nur Toulon" not in subject, (
+        f"Betreff verallgemeinert weiterhin faelschlich auf den Umfang der "
+        f"fuehrenden Warnung: {subject!r}"
+    )
+
+
+def test_f008_ac16_bit_identical_when_scope_uniform_with_two_warnings():
+    """F008 (Non-Regression, Gegenstueck): Given zwei Warnungen, die BEIDE
+    denselben Umfang haben (Toulon+Hyères) / When der Betreff gerendert wird /
+    Then bleibt AC-16s Bit-Identitaet gewahrt -- der Umfang der fuehrenden
+    Warnung ist hier korrekt, weil ALLE Warnungen ihn teilen."""
+    notices = _compare_notices([
+        (_alert(3, "extreme_heat", "Hitze"), ["toulon", "hyeres"]),
+        (_alert(3, "thunderstorm", "Gewitter", SA_FROM, SA_TO), ["toulon", "hyeres"]),
+    ])
+    subject = _subject(notices)
+    assert subject == "[Le Var] Toulon, Hyères · ORANGE Hitze (Fr) + Gewitter (Sa)", (
+        f"Betreff bei einheitlichem Umfang veraendert: {subject!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# F009 (Adversary Runde 5, HIGH) — `_uniform_scope` vergleicht Identitaeten
+# (Orts-IDs), NICHT Anzeige-Namen. Zwei VERSCHIEDENE Orte mit GLEICHEM Namen
+# duerfen nicht faelschlich als "einheitlicher Umfang" durchgehen.
+# ---------------------------------------------------------------------------
+
+def test_f009_same_name_different_location_ids_not_treated_as_uniform_scope():
+    """F009 (HIGH): Given zwei VERSCHIEDENE Orte mit demselben Anzeigenamen
+    ("Hütte"), die von je einer eigenen Warnung betroffen sind / When der
+    Betreff gerendert wird / Then gilt der Umfang NICHT als einheitlich (beide
+    Orte heissen zwar gleich, sind aber unterschiedliche IDs) -- der Betreff
+    darf nicht faelschlich 'nur Hütte' zeigen, als waere nur EIN Ort betroffen.
+
+    Root Cause: `scope_label` waere fuer beide Warnungen identisch ('nur
+    Hütte'), weil `id_to_name` keine Eindeutigkeit der Namen erzwingt. Die
+    Compare-Notices rechnen deshalb durchgaengig ueber Orts-**IDs** (#1216
+    Slice 2a F006) -- `_uniform_scope` muss dieselbe Regel befolgen."""
+    from output.renderers.alert.official_alerts import build_compare_official_alert_notices
+
+    all_ids = ["hutte-a", "hutte-b"]
+    id_to_name = {"hutte-a": "Hütte", "hutte-b": "Hütte"}
+    notices = build_compare_official_alert_notices(all_ids, id_to_name, [
+        (_alert(3, "extreme_heat", "Hitze"), ["hutte-a"]),
+        (_alert(2, "thunderstorm", "Gewitter", SA_FROM, SA_TO), ["hutte-b"]),
+    ])
+    # Testaufbau-Nachweis: der Anzeige-Name-Vergleich WAERE hier "einheitlich"
+    # gewesen (beide "nur Hütte") -- genau die Faessung, die F009 verhindert.
+    assert {n.scope_label for n in notices} == {"nur Hütte"}, (
+        "Testaufbau greift nicht: scope_label muesste fuer beide Orte "
+        f"identisch sein: {[n.scope_label for n in notices]!r}"
+    )
+    subject = _subject(notices)
+    assert "mehrere Orte" in subject, (
+        f"Betreff behandelt zwei verschiedene gleichnamige Orte faelschlich "
+        f"als einheitlichen Umfang: {subject!r}"
+    )
+    assert subject.count("nur Hütte") == 0, (
+        f"Betreff zeigt 'nur Hütte', als waere nur EIN Ort betroffen: {subject!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # AC-17 — Ueberschrift wiederholt die Ortsliste nicht mehr
 # ---------------------------------------------------------------------------
 
@@ -184,3 +274,97 @@ def test_ac17_headline_drops_full_location_list():
     named = [n for n in (LOC_NAMES[i] for i in AFFECTED_7) if n in headline]
     assert not named, f"Ueberschrift wiederholt die Ortsnamen ({named!r}): {headline!r}"
     assert "Hitze" in headline, f"Ueberschrift nennt die Gefahren-Typen nicht: {headline!r}"
+
+
+# ---------------------------------------------------------------------------
+# F006/F007 (Adversary, Staging-Fund) — Headline verallgemeinert den Umfang
+# der fuehrenden Warnung auf alle UND nutzt das generische Typ-Wort statt des
+# reicheren Quell-Labels. Reproduktion der echten Staging-Mail (#1238/#1239):
+# eine GELBE Waldbrand-Warnung betraf ausschliesslich Draguignan, waehrend die
+# Headline nur Toulon/Hyeres nannte; die Zugangssperre hiess in der Headline
+# "Zugang gesperrt", im Warn-Titel/Betreff aber "Zugang eingeschraenkt —
+# Monts Toulonnais".
+# ---------------------------------------------------------------------------
+
+def _mixed_scope_locations():
+    """Vier Warnungen (Staging-Nachbau): zwei ORANGE ueber Toulon+Hyères
+    (Waldbrand + Zugangssperre), eine GELBE Waldbrand-Warnung NUR ueber
+    Draguignan, eine GELBE Hitze-Warnung ueber Toulon+Hyères -- also
+    UNTERSCHIEDLICHER Umfang je Warnung (kein einheitlicher Scope)."""
+    all_ids = ["toulon", "hyeres", "draguignan"]
+    id_to_name = {"toulon": "Toulon", "hyeres": "Hyères", "draguignan": "Draguignan"}
+    tagged = [
+        (_alert(3, "wildfire_risk", "Waldbrand-Gefahr — Stufe 3",
+                source="meteo_forets", region="Zone Ouest"), ["toulon", "hyeres"]),
+        (_alert(3, "access_ban", "Zugang eingeschränkt — Monts Toulonnais",
+                source="massif_closure", region="Monts Toulonnais",
+                dedup_id="monts-toulonnais"), ["toulon", "hyeres"]),
+        (_alert(2, "wildfire_risk", "Waldbrand-Gefahr — Stufe 2", SA_FROM, SA_TO,
+                source="meteo_forets", region="Zone Draguignan"), ["draguignan"]),
+        (_alert(2, "extreme_heat", "Hitze", SA_FROM, SA_TO), ["toulon", "hyeres"]),
+    ]
+    from output.renderers.alert.official_alerts import build_compare_official_alert_notices
+    return build_compare_official_alert_notices(all_ids, id_to_name, tagged)
+
+
+def test_f006_headline_drops_scope_when_warnings_have_different_scope():
+    """F006 (HIGH, Staging-Fund): Given Warnungen mit UNTERSCHIEDLICHEM Umfang
+    (eine betrifft nur Draguignan, drei betreffen Toulon+Hyères) / When die
+    Ueberschrift gerendert wird / Then nennt sie KEINEN gemeinsamen Umfang mehr
+    (kein "für ... gemeldet") -- vorher verallgemeinerte sie faelschlich den
+    Umfang der fuehrenden Warnung ("für Toulon, Hyères gemeldet", obwohl eine
+    Warnung ausschliesslich Draguignan betraf)."""
+    headline = _headline_text(_mixed_scope_locations())
+
+    assert "für" not in headline, (
+        f"Ueberschrift nennt trotz unterschiedlichem Umfang einen gemeinsamen "
+        f"Ort/Scope: {headline!r}"
+    )
+    # Wortgrenzen-Regex statt Substring: "Toulon" ist Teil von "Monts
+    # Toulonnais" (Zugangssperre-Label), das als reicherer Warn-Titel bewusst
+    # weiter im Text steht (F007) -- nur der ORTSNAME "Toulon" (Scope-Angabe)
+    # darf verschwunden sein, nicht die Massiv-Bezeichnung.
+    assert not re.search(r"\bToulon\b", headline) and "Draguignan" not in headline, (
+        f"Ueberschrift nennt weiterhin Ortsnamen trotz unterschiedlichem Umfang: {headline!r}"
+    )
+    assert "Waldbrand-Gefahr" in headline and "Hitze" in headline, (
+        f"Ueberschrift nennt nicht mehr alle Gefahren-Typen: {headline!r}"
+    )
+
+
+def test_f007_headline_uses_richer_label_not_generic_hazard_word():
+    """F007 (MEDIUM, Staging-Fund): Given eine Zugangssperre mit reicherem
+    Quell-Label ("Zugang eingeschränkt — Monts Toulonnais") / When die
+    Ueberschrift gerendert wird / Then nennt sie denselben reicheren Label wie
+    Warn-Titel/Betreff, NICHT das generische Typ-Wort "Zugang gesperrt" --
+    sonst widerspricht sich die Mail an zwei Stellen ueber dieselbe Warnung."""
+    headline = _headline_text(_mixed_scope_locations())
+
+    assert "Zugang eingeschränkt — Monts Toulonnais" in headline, (
+        f"Ueberschrift nutzt nicht den reicheren Quell-Label: {headline!r}"
+    )
+    assert "Zugang gesperrt" not in headline, (
+        f"Ueberschrift nennt weiterhin das generische, widerspruechliche "
+        f"Typ-Wort 'Zugang gesperrt': {headline!r}"
+    )
+
+
+def test_f006_subject_drops_leading_scope_when_warnings_have_different_scope():
+    """F006 (HIGH, Staging-Fund, proaktiv auch im Betreff behoben): derselbe
+    Umfang-Verallgemeinerungsfehler im Betreff (`render_official_alert_subject`
+    nutzt ebenfalls `_scope_display(ordered[0])`) -- bei unterschiedlichem
+    Umfang der Warnungen nennt der Betreff einen neutralen Platzhalter statt
+    des Umfangs der fuehrenden Warnung."""
+    subject = _subject(_mixed_scope_locations(), prefix="E2E1238")
+
+    # Wortgrenzen-Regex (wie bei der Headline): "Toulon" als Teil von "Monts
+    # Toulonnais" (Warn-Titel der Zugangssperre) bleibt zulaessig, nur die
+    # SCOPE-Angabe (Ortsname als Reichweite) darf nicht mehr die Warnung eines
+    # einzelnen Hazards als Gesamtaussage zeigen.
+    assert not re.search(r"\bToulon\b", subject) and "Draguignan" not in subject, (
+        f"Betreff nennt weiterhin den Umfang einer einzelnen Warnung als "
+        f"Gesamtaussage: {subject!r}"
+    )
+    assert "mehrere Orte" in subject, (
+        f"Betreff nennt keinen neutralen Platzhalter bei unterschiedlichem Umfang: {subject!r}"
+    )
