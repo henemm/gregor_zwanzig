@@ -409,7 +409,14 @@ def validate_hourly_table(body: str, time_start: int = 9, time_end: int = 16) ->
     im gesamten Body -- ein fehlender Ort/eine fehlende Stunde ist damit
     eindeutig benennbar."""
     errors = []
-    expected_hours = [f"{h:02d}:00" for h in range(time_start, time_end + 1)]
+    # Issue #1242: Die Zeit-Zelle der Ortsvergleichs-Stundentabelle traegt seit
+    # #1237 (PO-Freigabe) nur noch die STUNDE ("09"), nicht mehr "09:00" -- die
+    # Spalte wird dadurch schmaler, die Uhrzeit ist aus dem Kontext eindeutig.
+    # Der Pruefer muss dasselbe Format erwarten, das der Renderer erzeugt, sonst
+    # weist er eine korrekte Mail zurueck. Die Vollstaendigkeits-Semantik bleibt
+    # unveraendert: geprueft wird weiterhin PRO ORT, ob jede erwartete Stunde
+    # vorkommt (Issue #1108).
+    expected_hours = [f"{h:02d}" for h in range(time_start, time_end + 1)]
 
     # Adversary F002: Vorkommens-Index statt immer nur das erste Vorkommen.
     occurrence_counts: dict = {}
@@ -463,7 +470,28 @@ def main():
         default=3,
         help="Mindestanzahl erwarteter Locations (default: 3)"
     )
+    # Issue #1242: Die Projekt-Konvention (CLAUDE.md, "Mail-Validatoren &
+    # Renderer-Gate") verlangt den Aufruf JEDES Mail-Validators mit
+    # --mail-type. Die beiden anderen Validatoren kennen das Flag; dieser
+    # brach bislang mit Exit 2 ab. Ein falscher Typ wird laut abgelehnt statt
+    # still durchgewunken -- ein Validator, der den falschen Mail-Pfad prueft,
+    # ist strukturell nie bestehbar und erodiert das Gate.
+    parser.add_argument(
+        "--mail-type",
+        default="compare",
+        help="Erwarteter Mail-Typ (nur 'compare' -- dies ist der "
+             "Ortsvergleichs-Validator)",
+    )
     args = parser.parse_args()
+
+    if args.mail_type != "compare":
+        print(
+            f"FEHLER: --mail-type={args.mail_type!r} -- dies ist der "
+            "Ortsvergleichs-Validator (X-GZ-Mail-Type: compare). Fuer "
+            "Trip-Briefings: briefing_mail_validator.py, fuer amtliche "
+            "Warnungen: official_alert_mail_validator.py."
+        )
+        sys.exit(2)
 
     print("=" * 70)
     print("E-MAIL SPEC v4.0 COMPLIANCE VALIDATOR")
