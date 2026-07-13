@@ -52,6 +52,15 @@ _VERDICT_RE = re.compile(r"(\d+)\s+amtliche Warnung(?:en)?")
 # Warnstufe strukturell vorhanden ist (zusaetzlich ueber S-2 abgesichert).
 _LEVEL_WORD_RE = re.compile(r"(GELB|ORANGE|ROT)")
 
+# Gueltigkeits-Zeile (P-3, Issue #1240): jedes Vorkommen mitsamt seinem Wert bis
+# zum Zeilen- bzw. Element-Ende. Der Plain-Text-Part ist tag-gestrippt, der
+# HTML-Part nicht -- deshalb endet der Wert am Umbruch ODER am naechsten Tag.
+_VALIDITY_RE = re.compile(r"Gültig:\s*([^\n<]*)")
+# Plausibler Zeitraum: DE-Wochentag + Datum, so wie `_format_validity` emittiert
+# ("Sa 12.07. - ganztaegig" bzw. "Sa 12.07. - 15:00-21:00"). Alles andere --
+# insbesondere "unbekannt" oder ein leerer Wert -- ist KEINE Zeitangabe.
+_VALIDITY_VALUE_RE = re.compile(r"\b(Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{2}\.\d{2}\.")
+
 # CSS-Klassen, die die SOLL-Vorlage (#1233 Slice B) fuer die Standalone-
 # Amtliche-Warnung-Mail zwingend emittiert.
 _REQUIRED_CLASSES = {"verdict", "warn", "src", "body-foot"}
@@ -169,8 +178,20 @@ def validate_message(msg: Message) -> tuple[bool, list[str]]:
             "P-2: Keine Warnstufe (GELB/ORANGE/ROT) im Text erkennbar."
         )
 
-    if "Gültig:" not in text:
-        errors.append("P-3: Keine 'Gültig:'-Zeitangabe im Body gefunden.")
+    # P-3 (Issue #1240): Die ANWESENHEIT der Gueltigkeits-Zeile ist kein taugliches
+    # Kriterium -- Praefektur-Zugangssperren und Waldbrand-Tagesstufen liefern keine
+    # valid_from/valid_to, ihre Warnungen tragen zu Recht keine Zeile (PO-Entscheidung
+    # #1238). Geprueft wird stattdessen der INHALT: steht eine Zeile da, MUSS sie
+    # einen echten Zeitraum tragen. Damit faellt "Gueltig: unbekannt" -- der von
+    # #1238 beanstandete Zustand -- kuenftig durch, statt durchgewinkt zu werden.
+    for raw_value in _VALIDITY_RE.findall(text):
+        value = raw_value.strip()
+        if not _VALIDITY_VALUE_RE.search(value):
+            errors.append(
+                "P-3: 'Gültig:'-Zeile ohne plausible Zeitangabe "
+                f"(Wochentag + Datum erwartet, gefunden: {value!r}). Warnungen ohne "
+                "bekannten Zeitraum tragen gar keine Gültig-Zeile."
+            )
 
     if "Quelle:" not in text or "abgerufen bei" not in text:
         errors.append(

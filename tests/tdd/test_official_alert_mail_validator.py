@@ -182,6 +182,79 @@ def test_empty_body_fails():
 
 
 # ---------------------------------------------------------------------------
+# P-3 (Issue #1240): Gueltigkeit wird auf INHALT geprueft, nicht auf Anwesenheit
+# ---------------------------------------------------------------------------
+
+def _render_untimed_official_alert_html() -> str:
+    """Echt gerenderter Standalone-Body fuer eine Warnung OHNE Zeitangabe --
+    genau das, was `massif_closure`/`meteo_forets` liefern (kein valid_from/
+    valid_to). Der Bestands-Renderer schreibt hier heute 'Gueltig: unbekannt'."""
+    from output.renderers.alert.official_alerts import render_warn_block
+    from services.official_alerts.models import OfficialAlert
+
+    sperre = _notice(
+        OfficialAlert(
+            source="massif_closure", hazard="access_ban", level=4,
+            label="Zugang gesperrt — Maures", dedup_id="maures",
+        ),
+        scope_label="nur Collobrières", sms_scope="nurCollobrieres",
+        affected_chips=["Collobrières"], free_chips=[],
+    )
+    return render_warn_block(
+        [sperre], variant="standalone", source_label="Präfektur (Zugangssperre)",
+        stand_at="02:00", tz=UTC,
+    )
+
+
+def test_validity_unknown_is_rejected():
+    """'Gueltig: unbekannt' ist keine Zeitangabe -- der Pruefer muss die Mail
+    zurueckweisen, statt sie (wie bisher) durchzuwinken."""
+    mod = _load_validator_module()
+    msg = _build_real_official_alert_message(_render_untimed_official_alert_html())
+
+    ok, errors = mod.validate_message(msg)
+    assert ok is False, (
+        "Mail mit 'Gültig: unbekannt' muss an P-3 scheitern (leere Zeitangabe), "
+        f"wurde aber akzeptiert. errors={errors}"
+    )
+    assert any("P-3" in e for e in errors), f"Erwartet P-3-Befund, bekam: {errors}"
+
+
+def test_missing_validity_line_is_accepted():
+    """Warnungen ohne Zeitangabe tragen kuenftig GAR KEINE 'Gueltig:'-Zeile
+    (PO-Entscheidung #1238). Der Pruefer darf so eine Mail nicht blockieren --
+    die Anwesenheit der Zeile ist kein taugliches Kriterium (der Pruefer sieht
+    nur den Text und kann 'Renderer hat's vergessen' nicht von 'Quelle liefert
+    keine Zeiten' unterscheiden)."""
+    import re as _re
+
+    mod = _load_validator_module()
+    html_body = _render_untimed_official_alert_html()
+    # Vorwegnahme des kuenftigen Renderer-Verhaltens (#1238 E4): Gueltig-Zeile faellt weg.
+    without_validity = _re.sub(
+        r'<span class="k"[^>]*>Gültig:</span>.*?<br>', "", html_body, flags=_re.S,
+    )
+    assert "Gültig:" not in without_validity, "Testaufbau: Gültig-Zeile nicht entfernt"
+
+    msg = _build_real_official_alert_message(without_validity)
+    ok, errors = mod.validate_message(msg)
+    assert ok is True, (
+        "Mail ohne 'Gültig:'-Zeile ist bei zeitlosen Warnungen korrekt und darf "
+        f"nicht blockiert werden. errors={errors}"
+    )
+
+
+def test_valid_timed_validity_still_passes():
+    """Non-Regression: eine Warnung MIT Zeitraum behaelt ihre 'Gueltig:'-Zeile
+    und besteht weiterhin."""
+    mod = _load_validator_module()
+    msg = _build_real_official_alert_message(_render_official_alert_html())
+
+    ok, errors = mod.validate_message(msg)
+    assert ok is True, f"Mail mit echtem Zeitraum muss bestehen, errors={errors}"
+
+
+# ---------------------------------------------------------------------------
 # Gate-Routing: official_alerts.py -> official-Validator (nicht radar);
 # render.py (Radar-Renderer) -> radar-Validator (nicht official).
 # ---------------------------------------------------------------------------
