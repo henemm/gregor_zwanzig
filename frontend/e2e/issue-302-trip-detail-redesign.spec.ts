@@ -44,9 +44,12 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 		await expect(meta).toContainText('km');
 	});
 
-	test('AC-7: Test-Briefing-Button vorhanden (data-testid="trip-detail-action-test-briefing")', async ({ page }) => {
+	// Fix-Loop 2026-07-13 (F002): Test-Briefing ist heute ein Dropdown-Toggle
+	// (Morgen/Abend-Auswahl) statt eines Direkt-Buttons — Testid entsprechend
+	// aktualisiert (routes/trips/[id]/+page.svelte:244).
+	test('AC-7: Test-Briefing-Menü vorhanden (data-testid="test-briefing-menu-toggle")', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		const btn = page.getByTestId('trip-detail-action-test-briefing');
+		const btn = page.getByTestId('test-briefing-menu-toggle');
 		await expect(btn).toBeVisible();
 		await expect(btn).toContainText('Test-Briefing');
 	});
@@ -62,12 +65,14 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 	// -------------------------------------------------------------------------
 	// Tab-Leiste: Neue Labels + Badges
 
-	test('AC-3a: Tab "stages" heißt "Etappen" (nicht "Etappen & Wegpunkte")', async ({ page }) => {
+	// Fix-Loop 2026-07-13 (F003): Label ist seit langem "Etappen & Wegpunkte"
+	// (Konsistenz mit CANONICAL_TABS in issue-616-trip-one-surface.spec.ts) —
+	// die alte "Etappen"-Kurzform existiert nicht mehr.
+	test('AC-3a: Tab "stages" heißt "Etappen & Wegpunkte"', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		const stagesTab = page.getByTestId('trip-detail-tab-stages');
 		await expect(stagesTab).toBeVisible();
-		const text = await stagesTab.textContent();
-		expect(text).not.toContain('& Wegpunkte');
+		await expect(stagesTab).toContainText('Etappen & Wegpunkte');
 	});
 
 	// Issue #529 — Kanonische Tab-Namen (nav-map.jsx Drift aufgelöst).
@@ -78,10 +83,12 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 		await expect(weatherTab).not.toContainText('Wetter-Briefing');
 	});
 
-	test('AC-3c: Tab "briefings" heißt "Briefing-Zeitplan" (nicht "Reports & Kanäle")', async ({ page }) => {
+	// Fix-Loop 2026-07-13 (F004): Label seit #736/Slice 6 "Versand" (nicht mehr
+	// "Briefing-Zeitplan" — das war der Zwischenstand vor #736).
+	test('AC-3c: Tab "briefings" heißt "Versand" (nicht "Reports & Kanäle")', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		const briefingsTab = page.getByTestId('trip-detail-tab-briefings');
-		await expect(briefingsTab).toContainText('Briefing-Zeitplan');
+		await expect(briefingsTab).toContainText('Versand');
 		await expect(briefingsTab).not.toContainText('Reports & Kanäle');
 	});
 
@@ -131,32 +138,10 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 	});
 
 	// -------------------------------------------------------------------------
-	// Danger-Zone
-
-	test('AC-8a: Danger-Zone vorhanden (data-testid="danger-zone")', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		const dz = page.getByTestId('danger-zone');
-		await expect(dz).toBeVisible();
-	});
-
-	test('AC-8b: Pause-Button in Danger-Zone (trip-detail-action-pause)', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		const dz = page.getByTestId('danger-zone');
-		const pauseBtn = dz.getByTestId('trip-detail-action-pause');
-		await expect(pauseBtn).toBeVisible();
-	});
-
-	test('AC-8c: Archiv-Button in Danger-Zone (trip-detail-action-archive)', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		const dz = page.getByTestId('danger-zone');
-		const archiveBtn = dz.getByTestId('trip-detail-action-archive');
-		await expect(archiveBtn).toBeVisible();
-	});
-
-	test('AC-8d: Löschen-Button in Danger-Zone (trip-detail-action-delete)', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		const deleteBtn = page.getByTestId('trip-detail-action-delete');
-		await expect(deleteBtn).toBeVisible();
-		await expect(deleteBtn).toContainText('löschen');
-	});
+	// Danger-Zone — entfernt 2026-07-13: danger-zone-Konzept abgebaut, s.
+	// #1231-Slice-6-Lauf (F005–F008). Pausieren/Archivieren leben heute in der
+	// Breadcrumb-Actions-Leiste (routes/trips/[id]/+page.svelte), ohne eigene
+	// Testids; Löschen ist auf die /trips-Listenansicht (Zeilen-Menü)
+	// verlagert und aus der Trip-Detail-Seite entfernt (kein Ersatz-Testid,
+	// daher keine 1:1-Migration — AC-8a–d ersatzlos gestrichen).
 });

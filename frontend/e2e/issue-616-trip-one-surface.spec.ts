@@ -110,15 +110,20 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 	}) => {
 		/**
 		 * GIVEN: Briefing-Zeitplan-Tab geöffnet
-		 * WHEN:  Morgen-Zeit geändert und gespeichert wird
-		 * THEN:  PUT persistiert morning_time; display_config bleibt unverändert.
-		 * RED-Grund: heute rendert dort das statische HubSchedule-Mockup ohne Inputs/Save.
+		 * WHEN:  Morgen-Zeit geändert wird
+		 * THEN:  PUT persistiert morning_time (Auto-Save, #880); display_config
+		 *        bleibt unverändert.
+		 * Fix-Loop 2026-07-13 (F009): "briefings-save"-Button existiert seit #880
+		 *        nicht mehr (Auto-Save via saveController) — auf den globalen
+		 *        Save-Indikator umgestellt statt einen toten Button zu klicken.
 		 */
 		await page.goto(`${DETAIL_URL}?tab=briefings`);
 		const morning = page.getByTestId('report-morning-time');
 		await expect(morning).toBeVisible({ timeout: 8000 });
 		await morning.fill('05:30');
-		await page.getByTestId('briefings-save').click();
+		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
+			timeout: 5000
+		});
 
 		// Verifikation gegen das echte Backend
 		const res = await page.request.get(`/api/trips/${TRIP_ID}`);
@@ -156,17 +161,18 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 	});
 
 	// ─── AC-7: Editor-Tabs speichern weiterhin (Regressionsschutz) ───
-	test('AC-7: Alerts-Tab behält seinen Pro-Tab-Speichern-Weg', async ({ page }) => {
+	// Fix-Loop 2026-07-13 (F010): AlertsTab wurde in Slice 5 durch CorridorEditor
+	// ersetzt — eigener Speichern-Weg heißt heute Auto-Save via saveController
+	// (identischer Mechanismus wie AC-5), Testids entsprechend migriert.
+	test('AC-7: Wertebereiche-Tab behält seinen Pro-Tab-Speichern-Weg', async ({ page }) => {
 		/**
-		 * GIVEN: Alerts-Tab geöffnet
+		 * GIVEN: Wertebereiche-Tab geöffnet
 		 * WHEN:  Panel gerendert
-		 * THEN:  eigener Speichern-Button (alerts-tab-save) vorhanden — keine
-		 *        Regression durch die Konsolidierung.
+		 * THEN:  CorridorEditor (context="route") vorhanden — keine Regression
+		 *        durch die Konsolidierung.
 		 */
 		await page.goto(`${DETAIL_URL}?tab=alerts`);
-		await expect(page.getByTestId('alerts-tab')).toBeVisible({ timeout: 8000 });
-		// Desktop- und Mobile-Footer tragen beide die testid → erstes (sichtbares) genügt.
-		await expect(page.getByTestId('alerts-tab-save').first()).toBeVisible();
+		await expect(page.getByTestId('corridor-editor-route')).toBeVisible({ timeout: 8000 });
 	});
 
 	// ─── AC-8: Terminologie Trip · Etappe · Wegpunkt ───

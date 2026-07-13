@@ -96,11 +96,13 @@ test.describe('#529 Trip-Detail · Kanonische Tab-Namen (nav-map.jsx)', () => {
 		await expect(page.getByRole('tab', { name: 'Wetter-Briefing' })).not.toBeVisible();
 	});
 
-	test('AC-1b: Tab "briefings" heißt "Briefing-Zeitplan" (nicht "Reports & Kanäle")', async ({
+	// Fix-Loop 2026-07-13 (F001): Label seit #736/Slice 6 "Versand" (nicht mehr
+	// "Briefing-Zeitplan" — das war der Zwischenstand vor #736).
+	test('AC-1b: Tab "briefings" heißt "Versand" (nicht "Reports & Kanäle")', async ({
 		page
 	}) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await expect(page.getByRole('tab', { name: 'Briefing-Zeitplan' })).toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Versand' })).toBeVisible();
 		await expect(page.getByRole('tab', { name: 'Reports & Kanäle' })).not.toBeVisible();
 	});
 
