@@ -61,3 +61,18 @@ Idealbereich-Treffer (grün), ohne einen „besten" Ort hervorzuheben.
 
 **Bitte:** bestätigen, dass Best-Value-/Top-N-Hervorhebungen entfallen und die
 neutrale Markierungs-Logik die einzige Auszeichnung ist (C1/C3-Konsequenz).
+
+## 7. Widerspruch: Fluss-Prototyp vs. `mode="edit"` im Editor-JSX
+
+`Gregor 20 - Ortsvergleich Fluss.html` (verdrahteter Klick-Prototyp, Z.70-77)
+legt fest: **„Kein separater Anzeige-/Edit-Screen"** — Detail-Tabs = Ansehen +
+Inline-Editieren, der Editor wird ausschließlich mit `mode="create"`
+instanziiert. `screen-compare-editor.jsx` dokumentiert und implementiert aber
+weiterhin einen vollwertigen `mode="edit"` (alle Tabs frei,
+Speichern/Verwerfen), den der Fluss nie aufruft.
+
+**Bitte:** klarstellen, ob `mode="edit"` (a) Alt-Bestand ist und entfernt werden
+kann (Fluss = Wahrheit, Bearbeiten nur inline im Hub) oder (b) ein bewusster
+zweiter Bearbeiten-Weg bleiben soll (wofür? welcher Einstieg?). Unsere
+Arbeits-Annahme bis zur Antwort: Fluss gewinnt — App-Umsetzung staffelt den
+separaten `/edit`-Screen aus, sobald die Hub-Tabs Inline-Edit-Parität haben.
