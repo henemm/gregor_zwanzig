@@ -42,14 +42,19 @@ Versand-Versprechen sind (PO 2026-07-11): bewusst weggelassen oder Platzgrund?
 
 **Bitte:** bestätigen oder 5. Kachel/alternative Platzierung vorgeben.
 
-## 5. Editor-Tab „Alarme" fehlt im Soll
+## 5. Editor-Tab „Alarme" — Zielbild laut 29a/29b: KEIN eigener Tab (Rest-Config?)
 
-App-Editor hat im Edit-Modus einen 6. Tab „Alarme" (#1170, PO-Muster „Alerts
-eigener Tab"). `screen-compare-editor.jsx` kennt nur 5 Abschnitte.
+Nachgesichtet: Im neuesten Modell (body-29a/29b) existiert für den Vergleich
+kein eigener „Alarme"-Tab — `notify` läuft über den geteilten
+Wertebereiche-Tab (Korridore) + `AlertChannelPicker` im **Versand**-Tab. Die
+App hat aber heute einen 6. Editor-Tab „Alarme" (#1170) mit Zusatz-Config, die
+in Wertebereiche/Versand kein Zuhause hat: Cooldown-Minuten, Ruhezeiten
+(quiet hours), Radar-Alert-Toggle, amtliche-Warnungen-Toggle.
 
-**Bitte:** Editor-Vorlage um den Alarme-Tab (Edit-Modus) ergänzen ODER bestätigen,
-dass der App-Stand (#1170-Layout) als Design-Referenz für diesen Tab gilt.
-(PO-Frage dazu läuft parallel in gregor_zwanzig#1256.)
+**Bitte:** bestätigen, dass der Alarme-Tab im Zielbild entfällt, und festlegen,
+wo die Rest-Config (Cooldown/Ruhezeiten/Radar/amtliche Warnungen) landen soll
+(Versand-Tab-Sektion? eigene Karte im Hub?). (PO-Frage parallel in
+gregor_zwanzig#1256.)
 
 ## 6. Neutralitäts-Grauzone in der Live-Vergleichsansicht
 
@@ -76,3 +81,17 @@ kann (Fluss = Wahrheit, Bearbeiten nur inline im Hub) oder (b) ein bewusster
 zweiter Bearbeiten-Weg bleiben soll (wofür? welcher Einstieg?). Unsere
 Arbeits-Annahme bis zur Antwort: Fluss gewinnt — App-Umsetzung staffelt den
 separaten `/edit`-Screen aus, sobald die Hub-Tabs Inline-Edit-Parität haben.
+
+Nachgesichtet (stützt die Annahme): body-20 „Kanonische IA" sagt in der
+Reconciliation-Note wörtlich, „derselbe Wizard im Edit-Modus" sei VERWORFEN —
+Bearbeiten läuft über die Hub-Tabs, `/vergleich/[id]/bearbeiten` leitet auf
+`?tab=…` um. Einzige Quelle, die den Wizard-Edit-Modus noch behauptet, ist
+`nav-map.jsx` (Z.266/283/288) — offenbar nach der Reconciliation nicht
+nachgezogen. **Bitte nav-map.jsx entsprechend bereinigen.**
+
+## 8. SOLL-COVERAGE.md ist für Compare veraltet
+
+Stand 2026-06-04: referenziert das gelöschte `screen-compare-wizard.jsx`, kennt
+weder `screen-compare-editor(-mobile).jsx` noch `corridor-editor`/`layout-tab`/
+`versand-tab` und nicht die Neutralisierung. **Bitte** beim Neu-Rendern der
+Soll-Bilder (Frage 1) auch das Coverage-Mapping nachziehen.
