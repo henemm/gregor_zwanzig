@@ -27,6 +27,8 @@
 	state.region = (state.existingDisplayConfig.region as string) ?? '';
 	state.idealRanges =
 		(state.existingDisplayConfig.ideal_ranges as Record<string, IdealRange>) ?? {};
+	// Issue #1231 Slice 4: Korridore (Top-Level-Feld auf ComparePreset).
+	state.corridors = data.preset.corridors ?? [];
 
 	// Versand-Felder aus preset mappen
 	state.schedule = data.preset.schedule ?? 'daily';

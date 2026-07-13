@@ -21,7 +21,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { buildComparePresetSavePayload } from './compareEditorSave.ts';
-import type { ComparePreset } from '../../types.ts';
+import type { ComparePreset, Corridor } from '../../types.ts';
 
 // ─── Fixture: echtes, vollständiges ComparePreset (keine Mocks) ──────────────
 function makePreset(): ComparePreset {
@@ -235,5 +235,47 @@ describe('buildComparePresetSavePayload — Alarm-Trigger + Kanäle (#1216)', ()
 			!Object.prototype.hasOwnProperty.call(body, 'send_sms'),
 			'send_sms darf ohne edits nicht im Body erscheinen'
 		);
+	});
+});
+
+// ─── Issue #1231 Slice 4: corridors — TOP-LEVEL Feld (nicht in display_config,
+// analog Go-Model ComparePreset.Corridors `json:"corridors"`) ──
+describe('buildComparePresetSavePayload — corridors (#1231 Slice 4)', () => {
+	test('gesetztes corridors-Array landet als Top-Level-Feld im PUT-Body', () => {
+		const original = makePreset();
+		const edits: Corridor[] = [
+			{ metric: 'temp_max_c', range: [null, 30], notify: false, mark: true },
+		];
+		const { body } = buildComparePresetSavePayload(original, {
+			name: original.name,
+			activityProfile: 'wandern',
+			pickedIds: ['loc-1', 'loc-2'],
+			region: 'Salzburger Land',
+			idealRanges: {},
+			channelLayouts: null,
+			corridors: edits
+		});
+		assert.deepEqual(body.corridors, edits);
+		// Nicht in display_config verschachtelt (Go-Model erwartet Top-Level).
+		const dc = body.display_config as Record<string, unknown>;
+		assert.equal('corridors' in dc, false);
+	});
+
+	test('fehlendes corridors in edits laesst den Key im Body komplett weg (Round-Trip via Original)', () => {
+		const original: ComparePreset = {
+			...makePreset(),
+			corridors: [{ metric: 'wind_max_kmh', range: [0, 50], notify: true, mark: false }]
+		};
+		const { body } = buildComparePresetSavePayload(original, {
+			name: 'Nur Name',
+			activityProfile: 'wandern',
+			pickedIds: ['loc-1', 'loc-2'],
+			region: 'Salzburger Land',
+			idealRanges: {},
+			channelLayouts: null
+		});
+		// Round-Trip-Spread (`...original`) traegt original.corridors weiter —
+		// kein expliziter edits-Key noetig, da der Spread es bereits enthaelt.
+		assert.deepEqual(body.corridors, original.corridors);
 	});
 });

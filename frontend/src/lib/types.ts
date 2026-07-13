@@ -527,6 +527,8 @@ export interface ComparePreset {
 	evening_enabled?: boolean;
 	evening_time?: string;
 	end_date?: string;
+	// Issue #1231 Slice 4 — additiv neben display_config.ideal_ranges (Dual-Write).
+	corridors?: Corridor[];
 }
 
 // Issue #1068 — Nutzerlevel (Slice 1 aus Epic #1067).

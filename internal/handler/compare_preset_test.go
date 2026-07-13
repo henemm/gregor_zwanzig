@@ -992,6 +992,58 @@ func TestUpdateComparePreset_EndDateSentinel_DeletesSetDate(t *testing.T) {
 // mit gesetztem end_date WHEN PUT ohne end_date-Feld im Body THEN bleibt
 // EndDate unveraendert (Nil-Preserve weiterhin intakt, keine Regression durch
 // den Sentinel).
+// =============================================================================
+// Issue #1231 Slice 4: corridors — Nil-Preserve (Datenverlust-Schutz)
+// =============================================================================
+
+func TestUpdateComparePreset_Corridors_PreservedWhenOmitted(t *testing.T) {
+	s := newTestStore(t)
+
+	createRouter := chi.NewRouter()
+	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	createBody := validPresetBody()
+	createBody["corridors"] = []map[string]interface{}{
+		{"metric": "temp_max_c", "range": [2]interface{}{nil, 30}, "notify": false, "mark": true},
+	}
+	createReq := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, createBody))
+	createReq.Header.Set("Content-Type", "application/json")
+	createReq = addUserToContext(createReq, "user1")
+	createW := httptest.NewRecorder()
+	createRouter.ServeHTTP(createW, createReq)
+	if createW.Code != http.StatusCreated {
+		t.Fatalf("setup: create failed with %d: %s", createW.Code, createW.Body.String())
+	}
+	var original model.ComparePreset
+	json.Unmarshal(createW.Body.Bytes(), &original)
+	if len(original.Corridors) != 1 {
+		t.Fatalf("setup: expected 1 corridor after create, got %d", len(original.Corridors))
+	}
+
+	// PUT OHNE corridors-Feld im Body (z.B. ein Editor-Tab, der corridors nicht
+	// kennt) — der Bestand darf NICHT geloescht werden (Datenverlust-Schutz,
+	// analog display_config).
+	updateBody := validPresetBody()
+	updateBody["name"] = "Nur Name geaendert"
+	delete(updateBody, "corridors")
+
+	r := chi.NewRouter()
+	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
+	req := httptest.NewRequest("PUT", "/api/compare/presets/"+original.ID, jsonBody(t, updateBody))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "user1")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var updated model.ComparePreset
+	json.Unmarshal(w.Body.Bytes(), &updated)
+	if len(updated.Corridors) != 1 || updated.Corridors[0].Metric != "temp_max_c" {
+		t.Fatalf("nil-preserve FAIL: expected 1 corridor (temp_max_c) to survive an unrelated update, got %+v", updated.Corridors)
+	}
+}
+
 func TestUpdateComparePreset_EndDateOmitted_PreservesOriginal(t *testing.T) {
 	s := newTestStore(t)
 

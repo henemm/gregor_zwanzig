@@ -7,7 +7,7 @@
 //
 // Kein Browser-/SvelteKit-Import — lauffaehig unter node --experimental-strip-types.
 
-import type { ComparePreset, ActivityProfile, ChannelLayouts } from '../../types.ts';
+import type { ComparePreset, ActivityProfile, ChannelLayouts, Corridor } from '../../types.ts';
 import type { IdealRange } from './compareMetricDefs.ts';
 import { toHHMMSS } from '../../utils/time.ts';
 
@@ -55,6 +55,11 @@ export interface CompareEditorEdits {
 	eveningEnabled?: boolean;
 	eveningTime?: string;
 	endDate?: string | null;
+	// Issue #1231 Slice 4: Korridore (TOP-LEVEL Feld, analog Go-Model
+	// ComparePreset.Corridors `json:"corridors"` — NICHT in display_config
+	// verschachtelt). Optional → rückwärtskompatibel (undefined = Round-Trip
+	// via `...original`, wie alle anderen Felder hier).
+	corridors?: Corridor[];
 }
 
 /**
@@ -148,7 +153,9 @@ export function buildComparePresetSavePayload(
 		...(edits.morningTime !== undefined ? { morning_time: toHHMMSS(edits.morningTime) } : {}),
 		...(edits.eveningEnabled !== undefined ? { evening_enabled: edits.eveningEnabled } : {}),
 		...(edits.eveningTime !== undefined ? { evening_time: toHHMMSS(edits.eveningTime) } : {}),
-		...(edits.endDate !== undefined ? { end_date: edits.endDate === null ? '' : edits.endDate } : {})
+		...(edits.endDate !== undefined ? { end_date: edits.endDate === null ? '' : edits.endDate } : {}),
+		// Issue #1231 Slice 4: analoges Round-Trip-Prinzip für corridors.
+		...(edits.corridors !== undefined ? { corridors: edits.corridors } : {})
 	};
 
 	return { url, body };

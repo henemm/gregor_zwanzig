@@ -12,6 +12,7 @@
 // erfuellt, da ROUTE_METRIC_DEFS eine fest verdrahtete 6er-Liste ist.
 
 import type { Corridor, SensLevel } from '$lib/types';
+import { ALL_METRICS, PROFILE_METRICS_WITH_SCALES, IDEAL_DEFAULTS, type IdealRange, type ProfileKey } from '../../compare/compareMetricDefs.ts';
 
 export interface RouteMetricDef {
 	metric: string;
@@ -49,6 +50,16 @@ export interface CorridorRowState {
 	max: number | null;
 	notify: boolean;
 	mark: boolean;
+	// Slice 4 (vergleich): 'ordinal' = 3-Stufen-Band (Gewitter) statt Zahlen-Slider.
+	// Fehlt (route-Zeilen) -> wird wie 'range' behandelt.
+	kind?: 'range' | 'ordinal';
+	ordinalLabels?: string[];
+	// Slice 4 Fakten-Korrektur (Team-Lead): nur die 10 Compare-Alarm-Keys haben
+	// eine notify-Bruecke zum Δ-Wächter (compare_alert.py). Die uebrigen 4
+	// reinen Vergleichs-Metriken (snow_depth_cm, sunny_hours_h, cloud_avg_pct,
+	// uv_index_max) sind "nur Markieren" — notify bleibt fuer sie wirkungslos.
+	// Fehlt (route-Zeilen) -> als capable (true) behandelt.
+	alarmCapable?: boolean;
 }
 
 /** Baut Zeilen aus trip.corridors[] (route-Namensraum) + verbleibenden Pool fuer "+ Metrik". */
@@ -151,6 +162,285 @@ export function buildCorridorSavePayload(
 	return {
 		corridors: rows.map((r) => ({ metric: r.metric, range: [r.min, r.max], notify: r.notify, mark: r.mark })),
 		metric_alert_levels: merged,
+	};
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// Issue #1231, Slice 4: CorridorEditor context="vergleich" (Compare-Editor ·
+// Idealwerte-Tab-Ersatz, ersetzt Step3Idealwerte.svelte).
+//
+// Fakten-Korrektur (Team-Lead, nach Erstlieferung): Metrik-Pool vergleich =
+// ALLE 14 ALL_METRICS, NICHT nur die 10 alarmfaehigen Compare-Summary-Keys.
+// Grund: Die Slice-2-Migration hat ideal_ranges JEDER Metrik zu Corridors
+// migriert (nicht nach Alarm-Faehigkeit gefiltert) — ein 10er-Katalog wuerde
+// bestehende Corridor-Eintraege (z.B. sunny_hours_h) beim Laden aus rows UND
+// poolLeft verlieren und sie beim naechsten Speichern endgueltig loeschen
+// (BUG-DATALOSS-Klasse, CLAUDE.md). Nur die notify-Bruecke zum Δ-Wächter
+// (compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID) bleibt auf 10 Metriken
+// beschraenkt — die uebrigen 4 sind reine "mark"-Metriken (alarmCapable=false).
+// AC-3: confidence_pct ist in ALL_METRICS nie enthalten — trivial erfuellt.
+// ════════════════════════════════════════════════════════════════════════
+
+export interface CompareMetricDef {
+	metric: string;
+	label: string;
+	unit: string;
+	scale: [number, number];
+	step: number;
+	kind: 'range' | 'ordinal';
+	ordinalLabels?: string[];
+	defaultMin: number | null;
+	defaultMax: number | null;
+	// notify-Bruecke zum Δ-Wächter existiert nur fuer diese 10 Metriken
+	// (compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID) — die uebrigen 4 sind
+	// reine Vergleichs-/Anzeige-Metriken ohne Alarm-Anbindung.
+	alarmCapable: boolean;
+}
+
+const _COMPARE_ALARM_KEYS = [
+	'temp_max_c', 'temp_min_c', 'wind_max_kmh', 'gust_max_kmh', 'precip_sum_mm',
+	'thunder_level_max', 'visibility_min_m', 'snow_new_sum_cm', 'cape_max_jkg', 'freezing_level_m',
+] as const;
+
+// Gewitter (PO-entschieden 2026-07-12, Empfehlung a): 3-Stufen-Ordinal-Band
+// statt %-Slider — kein numerisches Backing im Compare (docs/context/feat-1231-s4-prep.md §3).
+const THUNDER_ORDINAL_LABELS = ['kein', 'mittel', 'hoch'];
+export const ORDINAL_ENUM = ['NONE', 'MED', 'HIGH'] as const;
+
+/** Inverse von ORDINAL_ENUM — fuer den Wizard-Prefill (IDEAL_DEFAULTS.thunder_level_max ist ein Enum-String). */
+function enumToOrdinal(s: string): number | null {
+	const idx = (ORDINAL_ENUM as readonly string[]).indexOf(s);
+	return idx >= 0 ? idx : null;
+}
+
+// Default-Von/Bis je Metrik beim "+ Metrik hinzufuegen": aus IDEAL_DEFAULTS
+// uebernommen, wo vorhanden; Metriken ohne Profil-Default (die 4 seit #1191
+// alarmfaehigen temp_min_c/gust_max_kmh/cape_max_jkg/freezing_level_m sowie
+// sunny_hours_h, das in KEINEM der 4 Profile einen Default hat) bekommen
+// einen literalen, an route/JSX angelehnten Sinnwert.
+const _COMPARE_DEFAULTS: Record<string, { defaultMin: number | null; defaultMax: number | null }> = {
+	temp_max_c: { defaultMin: 15, defaultMax: 35 },
+	temp_min_c: { defaultMin: -5, defaultMax: null },
+	wind_max_kmh: { defaultMin: 0, defaultMax: 50 },
+	gust_max_kmh: { defaultMin: null, defaultMax: 70 },
+	precip_sum_mm: { defaultMin: 0, defaultMax: 5 },
+	thunder_level_max: { defaultMin: null, defaultMax: 0 }, // NONE
+	visibility_min_m: { defaultMin: 2000, defaultMax: 10000 },
+	snow_new_sum_cm: { defaultMin: 5, defaultMax: 50 },
+	cape_max_jkg: { defaultMin: null, defaultMax: 500 },
+	freezing_level_m: { defaultMin: 1500, defaultMax: null },
+	snow_depth_cm: { defaultMin: 30, defaultMax: 200 }, // WINTERSPORT-Default
+	cloud_avg_pct: { defaultMin: 0, defaultMax: 60 }, // WINTERSPORT-Default
+	uv_index_max: { defaultMin: 0, defaultMax: 8 }, // SUMMER_TREKKING-Default
+	sunny_hours_h: { defaultMin: 4, defaultMax: null }, // kein Profil-Default vorhanden — Sinnwert
+};
+
+export const COMPARE_METRIC_DEFS: CompareMetricDef[] = ALL_METRICS.map((src) => {
+	const key = src.key;
+	const defaults = _COMPARE_DEFAULTS[key] ?? { defaultMin: null, defaultMax: null };
+	const alarmCapable = (_COMPARE_ALARM_KEYS as readonly string[]).includes(key);
+	if (key === 'thunder_level_max') {
+		return {
+			metric: key, label: src.label, unit: '', scale: [0, 2], step: 1,
+			kind: 'ordinal', ordinalLabels: THUNDER_ORDINAL_LABELS,
+			defaultMin: defaults.defaultMin, defaultMax: defaults.defaultMax, alarmCapable,
+		};
+	}
+	return {
+		metric: key, label: src.label, unit: src.unit ?? '',
+		scale: [src.rangeMin ?? 0, src.rangeMax ?? 100], step: src.step ?? 1,
+		kind: 'range', defaultMin: defaults.defaultMin, defaultMax: defaults.defaultMax, alarmCapable,
+	};
+});
+
+const COMPARE_METRIC_DEF_BY_ID = new Map(COMPARE_METRIC_DEFS.map((m) => [m.metric, m]));
+
+export const VERGLEICH_CTX_DEFAULTS = { notify: false, mark: true };
+
+/**
+ * Baut Zeilen aus preset.corridors[] (vergleich-Namensraum) + Rest als Pool.
+ * Analog buildRoutePool.
+ *
+ * F003-Fix (Adversary CRITICAL): Corridor-Eintraege mit einer Metrik-ID
+ * AUSSERHALB von COMPARE_METRIC_DEFS (z.B. ein zukuenftig entferntes Feld,
+ * ein Tippfehler-Import o.ae.) werden NICHT verworfen, sondern in
+ * `unknownCorridors` gesammelt — reiner Pass-Through, keine UI-Zeile, aber
+ * `buildCompareCorridorSavePayload` haengt sie unveraendert an `corridors[]`
+ * an (kein stiller Datenverlust beim naechsten Speichern).
+ */
+export function buildComparePool(corridors: Corridor[]): {
+	rows: CorridorRowState[];
+	poolLeft: CompareMetricDef[];
+	unknownCorridors: Corridor[];
+} {
+	const remaining = new Map(corridors.map((c) => [c.metric, c]));
+	const rows: CorridorRowState[] = [];
+	const poolLeft: CompareMetricDef[] = [];
+	for (const def of COMPARE_METRIC_DEFS) {
+		const c = remaining.get(def.metric);
+		if (c) {
+			rows.push({
+				metric: def.metric, label: def.label, unit: def.unit, scale: def.scale, step: def.step,
+				min: c.range[0], max: c.range[1], notify: c.notify, mark: c.mark,
+				kind: def.kind, ordinalLabels: def.ordinalLabels, alarmCapable: def.alarmCapable,
+			});
+			remaining.delete(def.metric);
+		} else {
+			poolLeft.push(def);
+		}
+	}
+	return { rows, poolLeft, unknownCorridors: [...remaining.values()] };
+}
+
+/**
+ * Fuegt eine Zeile aus dem vergleich-Pool hinzu. Analog addRow, andere Def-Quelle.
+ *
+ * F002-Fix (Adversary CRITICAL): `wasActive` = war die Metrik beim Mount
+ * bereits in `active_metrics` aktiv (Bestand ohne Corridor-Eintrag, z.B.
+ * Legacy-Preset vor der Migration). Ein "+ Metrik hinzufuegen"-Klick darf
+ * einen laufenden Alarm NICHT stillschweigend deaktivieren — die Metrik war
+ * ja bereits alarm-aktiv, der Klick fuegt nur die Corridor-Zeile (Anzeige/
+ * mark) hinzu. Nur eine wirklich NEUE (bisher inaktive) Metrik bekommt den
+ * Kontext-Default (VERGLEICH_CTX_DEFAULTS.notify=false).
+ */
+export function addCompareRow(
+	rows: CorridorRowState[],
+	poolLeft: CompareMetricDef[],
+	metric: string,
+	ctxDefaults: { notify: boolean; mark: boolean } = VERGLEICH_CTX_DEFAULTS,
+	wasActive: boolean = false
+): { rows: CorridorRowState[]; poolLeft: CompareMetricDef[] } {
+	const def = COMPARE_METRIC_DEF_BY_ID.get(metric);
+	if (!def) return { rows, poolLeft };
+	// Nicht-alarmfaehige Metriken koennen nie "Warnen" — notify bleibt fest false,
+	// unabhaengig von wasActive (defensiv, s. alarmCapable-Invariante oben).
+	const notify = def.alarmCapable ? (wasActive || ctxDefaults.notify) : false;
+	const newRow: CorridorRowState = {
+		metric: def.metric, label: def.label, unit: def.unit, scale: def.scale, step: def.step,
+		min: def.defaultMin, max: def.defaultMax,
+		notify, mark: ctxDefaults.mark,
+		kind: def.kind, ordinalLabels: def.ordinalLabels, alarmCapable: def.alarmCapable,
+	};
+	return { rows: [...rows, newRow], poolLeft: poolLeft.filter((m) => m.metric !== metric) };
+}
+
+/**
+ * Wizard-Create-Prefill (Team-Lead-Korrektur, PO-Linie „nichts Neues erfinden
+ * — wie heute"): Step3Idealwerte befuellte im Create-Wizard automatisch aus
+ * dem Aktivitaetsprofil (PROFILE_METRICS_WITH_SCALES + IDEAL_DEFAULTS,
+ * activeMetricKeys = alle Profil-Metriken). Nur fuer den leeren Create-Fall
+ * aufgerufen (CorridorEditor.svelte: !ws.isEditMode && corridors.length===0).
+ *
+ * notify=alarmCapable (spiegelt das heutige Verhalten: ein frisch erzeugtes
+ * Preset setzt `active_metrics` = Profil-Metriken, das war frueher die
+ * einzige Alarm-Filter-Quelle fuer die 10 Alarm-Keys — die 4 reinen
+ * Vergleichs-Metriken konnten nie alarmieren). mark=true fuer alle (jede
+ * Profil-Metrik hatte im alten Editor einen Idealwert-Slider).
+ */
+export function buildComparePrefillRows(profileKey: ProfileKey): CorridorRowState[] {
+	const profileMetrics = PROFILE_METRICS_WITH_SCALES[profileKey] ?? PROFILE_METRICS_WITH_SCALES.ALLGEMEIN;
+	const defaults = IDEAL_DEFAULTS[profileKey] ?? {};
+	const rows: CorridorRowState[] = [];
+	for (const m of profileMetrics) {
+		const def = COMPARE_METRIC_DEF_BY_ID.get(m.key);
+		if (!def) continue;
+		const idealDefault = defaults[m.key];
+		let min = def.defaultMin;
+		let max = def.defaultMax;
+		if (idealDefault) {
+			if (def.kind === 'ordinal') {
+				if (typeof idealDefault.max === 'string') max = enumToOrdinal(idealDefault.max) ?? max;
+			} else {
+				if (typeof idealDefault.min === 'number') min = idealDefault.min;
+				if (typeof idealDefault.max === 'number') max = idealDefault.max;
+			}
+		}
+		rows.push({
+			metric: def.metric, label: def.label, unit: def.unit, scale: def.scale, step: def.step,
+			min, max, notify: def.alarmCapable, mark: true,
+			kind: def.kind, ordinalLabels: def.ordinalLabels, alarmCapable: def.alarmCapable,
+		});
+	}
+	return rows;
+}
+
+/**
+ * Dual-Write-Save-Payload (Kern von Slice 4): `mark` spiegelt in
+ * `display_config.ideal_ranges` (heutiges Format je Metrik-Kind unveraendert:
+ * {min?,max?} fuer Zahlen, {max:'NONE'|'MED'|'HIGH'} fuer Gewitter — offene
+ * Seite wird weggelassen wie heute). `notify` spiegelt in
+ * `display_config.active_metrics`/`metric_alert_levels` (Sync-Bruecke analog
+ * `buildCorridorSavePayload` oben, wiederverwendet via `deriveMetricAlertLevel`).
+ *
+ * #1191 HART: `activeMetricKeys` ist die pure Ableitung aus `rows.notify` —
+ * wenn ALLE Zeilen notify=false sind, bleibt das Ergebnis `[]` (bewusst leer,
+ * keine Heuristik reaktiviert etwas). Eintraege ohne Zeile in DIESER Session
+ * (z.B. noch nicht geladen) bleiben per RMW erhalten — nur Metriken mit einer
+ * `rows`-Zeile werden ueberschrieben/entfernt, und `notify` wirkt sich NUR bei
+ * `alarmCapable!==false` auf active_metrics/metric_alert_levels aus (die 4
+ * reinen Vergleichs-Metriken kennt die Δ-Wächter-Bruecke nicht).
+ *
+ * F003-Fix (Adversary CRITICAL): `unknownCorridors` (aus `buildComparePool`)
+ * werden unveraendert an `corridors[]` angehaengt — Pass-Through fuer
+ * Metrik-IDs ausserhalb von COMPARE_METRIC_DEFS, kein stiller Datenverlust.
+ */
+export function buildCompareCorridorSavePayload(
+	rows: CorridorRowState[],
+	removedMetrics: string[],
+	original: {
+		idealRanges: Record<string, IdealRange>;
+		activeMetricKeys: string[];
+		metricAlertLevels: Record<string, SensLevel | undefined> | undefined;
+	},
+	unknownCorridors: Corridor[] = []
+): {
+	corridors: Corridor[];
+	idealRanges: Record<string, IdealRange>;
+	activeMetricKeys: string[];
+	metricAlertLevels: Record<string, SensLevel>;
+} {
+	const idealRanges: Record<string, IdealRange> = { ...original.idealRanges };
+	const activeSet = new Set(original.activeMetricKeys);
+	const metricAlertLevels: Record<string, SensLevel> = {
+		...(original.metricAlertLevels as Record<string, SensLevel>),
+	};
+
+	for (const m of removedMetrics) {
+		if (rows.some((r) => r.metric === m)) continue; // erneut hinzugefuegt -> normale Ableitung gewinnt
+		delete idealRanges[m];
+		activeSet.delete(m);
+		metricAlertLevels[m] = 'off';
+	}
+
+	for (const r of rows) {
+		// mark -> ideal_ranges
+		if (!r.mark) {
+			delete idealRanges[r.metric];
+		} else if (r.kind === 'ordinal') {
+			if (r.max != null) idealRanges[r.metric] = { max: ORDINAL_ENUM[r.max] };
+			else delete idealRanges[r.metric]; // keine Legacy-Repraesentation fuer min-only
+		} else {
+			const range: IdealRange = {};
+			if (r.min != null) range.min = r.min;
+			if (r.max != null) range.max = r.max;
+			idealRanges[r.metric] = range;
+		}
+		// notify -> active_metrics + metric_alert_levels — NUR fuer die 10
+		// alarmfaehigen Metriken (defensiv: r.alarmCapable===false ignoriert
+		// notify komplett, die Alarm-Bruecke kennt diese Metriken nicht).
+		if (r.alarmCapable === false) continue;
+		if (r.notify) activeSet.add(r.metric); else activeSet.delete(r.metric);
+		metricAlertLevels[r.metric] = deriveMetricAlertLevel(r.notify, r.metric, original.metricAlertLevels ?? {});
+	}
+
+	return {
+		corridors: [
+			...rows.map((r): Corridor => ({ metric: r.metric, range: [r.min, r.max], notify: r.notify, mark: r.mark })),
+			...unknownCorridors,
+		],
+		idealRanges,
+		activeMetricKeys: [...activeSet],
+		metricAlertLevels,
 	};
 }
 

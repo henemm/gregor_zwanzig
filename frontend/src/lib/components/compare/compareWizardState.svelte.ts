@@ -4,7 +4,7 @@
 // Factory-Pattern: Instanziierung im +page.svelte mount (Safari-Reaktivitaets-Fix).
 // Lazy imports von goto/api damit Unit-Tests die Klasse ohne Browser-APIs testen.
 
-import type { ActivityProfile, ChannelLayouts, ComparePreset } from '$lib/types';
+import type { ActivityProfile, ChannelLayouts, ComparePreset, Corridor } from '$lib/types';
 import type { IdealRange } from './compareMetricDefs';
 import { buildComparePresetSavePayload } from './compareEditorSave';
 import { toHHMMSS } from '$lib/utils/time';
@@ -25,6 +25,10 @@ export class CompareWizardState {
 	idealRanges = $state<Record<string, IdealRange>>({});
 	// Issue #680: Slice 3 — aktive Metriken-Auswahl (aus display_config.active_metrics)
 	activeMetricKeys = $state<string[]>([]);
+	// Issue #1231 Slice 4 — Korridore (CorridorEditor context="vergleich"),
+	// TOP-LEVEL Feld (Dual-Write spiegelt zusaetzlich in idealRanges/activeMetricKeys/
+	// metricAlertLevels, s. corridorEditorState.ts::buildCompareCorridorSavePayload).
+	corridors = $state<Corridor[]>([]);
 	// Issue #1106: Slice C — Stundenverlauf-Metriken-Auswahl (aus display_config.hourly_metrics)
 	hourlyMetricKeys = $state<string[]>([]);
 	metricsManuallyEdited = $state(false);
@@ -209,6 +213,8 @@ export class CompareWizardState {
 			...(this.alertQuietFrom !== undefined ? { alert_quiet_from: this.alertQuietFrom } : {}),
 			...(this.alertQuietTo !== undefined ? { alert_quiet_to: this.alertQuietTo } : {}),
 			empfaenger: [],
+			// Issue #1231 Slice 4: Top-Level-Feld (analog Go-Model ComparePreset.Corridors).
+			corridors: this.corridors,
 			display_config: {
 				region: this.region,
 				...(Object.keys(this.idealRanges).length > 0 ? { ideal_ranges: this.idealRanges } : {}),
@@ -259,7 +265,8 @@ export class CompareWizardState {
 			metricAlertLevels: this.metricAlertLevels, // Issue #1170
 			alertCooldownMinutes: this.alertCooldownMinutes,
 			alertQuietFrom: this.alertQuietFrom,
-			alertQuietTo: this.alertQuietTo
+			alertQuietTo: this.alertQuietTo,
+			corridors: this.corridors // Issue #1231 Slice 4
 		});
 		try {
 			const { api } = await import('$lib/api');

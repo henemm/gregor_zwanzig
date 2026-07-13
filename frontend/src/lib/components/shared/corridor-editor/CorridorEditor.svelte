@@ -1,38 +1,82 @@
 <script lang="ts">
-	// CorridorEditor.svelte — Issue #1231, Slice 3: Port aus
+	// CorridorEditor.svelte — Issue #1231: Port aus
 	// claude-code-handoff/current/jsx/corridor-editor.jsx (CorridorEditor +
-	// CorridorRow/CorridorBand/CorridorBound/CorridorEffect), context="route".
-	// Ersetzt AlertsTab.svelte + AlertMetricLevelTable.svelte im Trip-Editor.
+	// CorridorRow/CorridorBand/CorridorBound/CorridorEffect).
+	// Slice 3 (context="route"): ersetzt AlertsTab.svelte + AlertMetricLevelTable.svelte
+	// im Trip-Editor — sofortiges PUT je Aenderung ueber saveController.
+	// Slice 4 (context="vergleich"): ersetzt Step3Idealwerte.svelte im
+	// Compare-Editor (Wizard Step 3 UND Editor-Tab, PO-B) — schreibt REAKTIV in
+	// die compare-wizard-state-Runen (ws.corridors/idealRanges/activeMetricKeys/
+	// metricAlertLevels); die eigentliche Persistenz uebernimmt der bestehende
+	// "Speichern"-Button/Dirty-Flow von CompareEditor.svelte (kein eigenes PUT).
 	//
 	// Band-Drag (Pointer-Capture, Port aus JSX-Zeilen 107-179): testbarer Kern
 	// (Pointer->Wert, Clamping) liegt in corridorEditorState.ts, hier nur die
-	// duenne DOM-Event-Verdrahtung (PO-Vorgabe: Geste muss funktionieren).
+	// duenne DOM-Event-Verdrahtung (PO-Vorgabe: Geste muss funktionieren) —
+	// funktioniert unveraendert auch fuer den Ordinal-Modus (scale=[0,2], step=1).
+	import { getContext } from 'svelte';
 	import { Eyebrow } from '$lib/components/atoms';
 	import { api } from '$lib/api';
-	import type { Trip, SensLevel } from '$lib/types';
+	import { toCompareProfile, type Trip, type SensLevel, type Corridor } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
+	import type { ProfileKey } from '$lib/components/compare/compareMetricDefs';
 	import {
 		buildRoutePool, addRow, removeRow, patchRow, validateCorridorRows,
 		buildCorridorSavePayload, ROUTE_CTX_DEFAULTS, valueAtPointer, clampDragValue, clampBoundInput,
 		saveGateDecision, type CorridorRowState,
+		COMPARE_METRIC_DEFS, buildComparePool, addCompareRow, VERGLEICH_CTX_DEFAULTS,
+		buildCompareCorridorSavePayload, buildComparePrefillRows,
+		type RouteMetricDef, type CompareMetricDef,
 	} from './corridorEditorState.ts';
 
 	interface Props {
-		trip: Trip;
+		context?: 'route' | 'vergleich';
+		trip?: Trip;
 		onTripUpdate?: (t: Trip) => void;
 		saveController?: SaveStatus;
 	}
-	let { trip, onTripUpdate, saveController }: Props = $props();
+	let { context = 'route', trip, onTripUpdate, saveController }: Props = $props();
+
+	const ws = context === 'vergleich' ? getContext<CompareWizardState>('compare-wizard-state') : undefined;
 
 	// AC-10: "zuletzt bekannte Stufe" bezieht sich auf den beim Mount geladenen
-	// Stand, nicht auf einen laufenden Zwischenstand dieser Session.
-	const originalLevels = (trip.display_config?.metric_alert_levels ?? {}) as Record<string, SensLevel>;
+	// Stand, nicht auf einen laufenden Zwischenstand dieser Session — gilt fuer
+	// beide Kontexte (sonst zombie-Level nach mehrfachem notify-Toggle, F002/Slice4).
+	const originalLevels = (
+		context === 'vergleich'
+			? (ws?.metricAlertLevels as Record<string, SensLevel> | undefined)
+			: trip?.display_config?.metric_alert_levels
+	) ?? {} as Record<string, SensLevel>;
 
-	const initial = buildRoutePool(trip.corridors ?? []);
+	// F002-Fix (Adversary CRITICAL, Slice 4): frozen Mount-Snapshot von
+	// active_metrics — Bestandserhalt beim "+ Metrik hinzufuegen" (s. add()).
+	// Analog originalLevels: NICHT der laufende Zwischenstand, sonst wuerde ein
+	// zweiter Hinzufuegen-Klick faelschlich wieder "neu" wirken.
+	const originalActiveMetricKeys: string[] = context === 'vergleich' ? [...(ws?.activeMetricKeys ?? [])] : [];
+
+	// Team-Lead-Korrektur (PO-Linie „nichts Neues erfinden — wie heute"):
+	// Wizard-Create (kein Edit, noch keine Corridors) prefillt wie das alte
+	// Step3Idealwerte aus dem Aktivitaetsprofil — sonst startet der Editor im
+	// Create-Fluss leer (UX-Verschlechterung ggü. heute).
+	const isFreshCompareCreate = context === 'vergleich' && !ws?.isEditMode && (ws?.corridors ?? []).length === 0;
+	function computeInitialCompare(): { rows: CorridorRowState[]; poolLeft: CompareMetricDef[]; unknownCorridors: Corridor[] } {
+		if (!isFreshCompareCreate) return buildComparePool(ws?.corridors ?? []);
+		const profileKey = ws?.activityProfile ? (toCompareProfile(ws.activityProfile) as ProfileKey) : 'ALLGEMEIN';
+		const prefillRows = buildComparePrefillRows(profileKey);
+		const poolLeft = COMPARE_METRIC_DEFS.filter((d) => !prefillRows.some((r) => r.metric === d.metric));
+		return { rows: prefillRows, poolLeft, unknownCorridors: [] };
+	}
+	const initial = context === 'vergleich' ? computeInitialCompare() : { ...buildRoutePool(trip?.corridors ?? []), unknownCorridors: [] };
 	let rows = $state<CorridorRowState[]>(initial.rows);
-	let poolLeft = $state(initial.poolLeft);
-	// F002-Fix (Adversary HIGH): Metriken, die per "✕ entfernen" aus rows
-	// verschwunden sind — buildCorridorSavePayload setzt deren Level explizit
+	let poolLeft = $state<(RouteMetricDef | CompareMetricDef)[]>(initial.poolLeft);
+	// F003-Fix (Adversary CRITICAL, Slice 4): Corridor-Eintraege ausserhalb des
+	// bekannten 14er-Katalogs (unbekannte/zukuenftige Metrik-IDs) — reiner
+	// Pass-Through, keine UI-Zeile, aber beim Speichern unveraendert erhalten
+	// (buildCompareCorridorSavePayload haengt sie an corridors[] an).
+	const unknownCorridors: Corridor[] = initial.unknownCorridors;
+	// F002-Fix (Adversary HIGH, Slice 3): Metriken, die per "✕ entfernen" aus rows
+	// verschwunden sind — die Save-Payload-Funktionen setzen deren Level explizit
 	// auf "off", sonst warnt der Δ-Wächter unsichtbar mit der alten Stufe weiter.
 	let removedMetrics = $state<string[]>([]);
 
@@ -43,22 +87,46 @@
 	function buildSaveFn() {
 		const payload = buildCorridorSavePayload(rows, originalLevels, removedMetrics);
 		return async () => {
-			const updated = await api.put<Trip>(`/api/trips/${trip.id}`, {
+			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, {
 				corridors: payload.corridors,
-				display_config: { ...trip.display_config, metric_alert_levels: payload.metric_alert_levels },
+				display_config: { ...trip!.display_config, metric_alert_levels: payload.metric_alert_levels },
 			});
 			onTripUpdate?.(updated);
 		};
 	}
 
-	// F001/F005-Fix (Adversary HIGH): bei AC-12-Verletzung gar nicht schedulen
-	// (saveController.doSave() wuerde sonst faelschlich "Gespeichert ✓" zeigen)
-	// UND den Indikator aktiv auf "dirty" ("Nicht gespeichert") setzen, sonst
-	// bleibt das "Gespeichert ✓" des letzten erfolgreichen Saves stehen —
-	// widerspruechlich neben dem Fehlerbanner. setDirty() ist eine bestehende
-	// oeffentliche Methode von SaveStatus (saveStatusStore.svelte.ts), der
-	// Store selbst wird nicht angefasst.
+	// Slice 4: kein eigenes PUT — schreibt das Dual-Write-Ergebnis reaktiv in
+	// die wiz-Runen. CompareEditor.svelte's bestehender dirty-Vergleich
+	// (JSON.stringify(wiz.corridors) u.a.) erkennt die Aenderung, der
+	// "Speichern"-Button persistiert sie wie jedes andere Feld.
+	function syncToWizard() {
+		if (!ws) return;
+		const payload = buildCompareCorridorSavePayload(rows, removedMetrics, {
+			idealRanges: ws.idealRanges,
+			activeMetricKeys: ws.activeMetricKeys,
+			metricAlertLevels: ws.metricAlertLevels as Record<string, SensLevel | undefined>,
+		}, unknownCorridors);
+		ws.corridors = payload.corridors;
+		ws.idealRanges = payload.idealRanges;
+		ws.activeMetricKeys = payload.activeMetricKeys;
+		ws.metricAlertLevels = payload.metricAlertLevels;
+	}
+
+	// Prefill sofort in die wiz-Runen spiegeln — analog Step3Idealwertes altem
+	// Mount-Effekt: auch ohne weitere User-Interaktion muss "Briefing
+	// aktivieren" bereits die Profil-Defaults mitschicken.
+	if (isFreshCompareCreate && rows.length > 0) syncToWizard();
+
+	// F001/F005-Fix (Adversary HIGH, Slice 3): bei AC-12-Verletzung gar nicht
+	// schedulen/synchronisieren (der Save-Indikator wuerde sonst faelschlich
+	// "Gespeichert ✓" zeigen bzw. der externe Speichern-Button wuerde den
+	// ungueltigen Zwischenstand persistieren) UND (route) den Indikator aktiv
+	// auf "dirty" setzen — widerspruechlich neben dem Fehlerbanner sonst.
 	function maybeSchedule() {
+		if (context === 'vergleich') {
+			if (saveGateDecision(rows) === 'schedule') syncToWizard();
+			return;
+		}
 		if (saveGateDecision(rows) === 'schedule') saveController?.schedule(buildSaveFn());
 		else saveController?.setDirty();
 	}
@@ -73,7 +141,12 @@
 		maybeSchedule();
 	}
 	function add(metric: string) {
-		const next = addRow(rows, poolLeft, metric, ROUTE_CTX_DEFAULTS);
+		// F002-Fix: war die Metrik beim Mount schon in active_metrics aktiv
+		// (Legacy-Bestand ohne Corridor-Eintrag) -> notify=true erhalten statt
+		// stillschweigend auf den Kontext-Default (false) zu fallen.
+		const next = context === 'vergleich'
+			? addCompareRow(rows, poolLeft as CompareMetricDef[], metric, VERGLEICH_CTX_DEFAULTS, originalActiveMetricKeys.includes(metric))
+			: addRow(rows, poolLeft as RouteMetricDef[], metric, ROUTE_CTX_DEFAULTS);
 		rows = next.rows;
 		poolLeft = next.poolLeft;
 		maybeSchedule();
@@ -104,13 +177,22 @@
 
 <svelte:window onpointermove={onWindowPointerMove} onpointerup={onWindowPointerUp} />
 
-<div class="corridor-editor" data-testid="corridor-editor-route">
-	<Eyebrow>Wertebereiche · Warn-Schwellen</Eyebrow>
-	<h2 class="ce-h2">Sag mir, wenn das Wetter aus dem Rahmen läuft</h2>
-	<p class="ce-lead">
-		Ein Wertebereich je Metrik legt fest, welche Werte du auf der Tour noch akzeptierst. Verlässt
-		ein Wert den Bereich, bekommst du zwischen den Briefings eine Sofort-Meldung.
-	</p>
+<div class="corridor-editor" data-testid="corridor-editor-{context}">
+	{#if context === 'vergleich'}
+		<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
+		<h2 class="ce-h2">Sag mir, welche Werte dir ideal sind</h2>
+		<p class="ce-lead">
+			Ein Wertebereich je Metrik legt deinen Idealbereich fest. Werte im Bereich werden im
+			Briefing pro Ort grün markiert — kein Score, kein Ranking, nur eine Lese-Hilfe.
+		</p>
+	{:else}
+		<Eyebrow>Wertebereiche · Warn-Schwellen</Eyebrow>
+		<h2 class="ce-h2">Sag mir, wenn das Wetter aus dem Rahmen läuft</h2>
+		<p class="ce-lead">
+			Ein Wertebereich je Metrik legt fest, welche Werte du auf der Tour noch akzeptierst. Verlässt
+			ein Wert den Bereich, bekommst du zwischen den Briefings eine Sofort-Meldung.
+		</p>
+	{/if}
 
 	<div class="ce-legend">
 		<span class="ce-legend-title">So liest sich ein Wertebereich</span>
@@ -149,26 +231,61 @@
 						{/if}
 					</div>
 					<div class="ce-bounds">
-						<label class="ce-bound">Von
-							{#if row.min == null}
-								<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { min: row.scale[0] })}>offen · + Grenze</button>
-							{:else}
-								<input type="number" step={row.step} value={row.min} oninput={(e) => patch(row.metric, { min: clampBoundInput(numOrNull(e.currentTarget.value), 'min', row) })} />
-								<button type="button" class="ce-clear-btn" title="Grenze öffnen" onclick={() => patch(row.metric, { min: null })}>×</button>
-							{/if}
-						</label>
-						<label class="ce-bound">Bis
-							{#if row.max == null}
-								<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { max: row.scale[1] })}>offen · + Grenze</button>
-							{:else}
-								<input type="number" step={row.step} value={row.max} oninput={(e) => patch(row.metric, { max: clampBoundInput(numOrNull(e.currentTarget.value), 'max', row) })} />
-								<button type="button" class="ce-clear-btn" title="Grenze öffnen" onclick={() => patch(row.metric, { max: null })}>×</button>
-							{/if}
-						</label>
+						{#if row.kind === 'ordinal'}
+							<!-- Gewitter-Ordinal (PO-entschieden 2026-07-12): 3-Stufen-Band statt
+							     Zahlen-Eingabe — "Beschriftung der Stufen statt Zahlen". -->
+							<label class="ce-bound">Von
+								{#if row.min == null}
+									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { min: row.scale[0] })}>offen · + Grenze</button>
+								{:else}
+									<span class="ce-ordinal-group" data-testid="corridor-ordinal-min-{row.metric}">
+										{#each row.ordinalLabels ?? [] as lbl, idx (lbl)}
+											<button type="button" class="ce-ordinal-btn" class:on={row.min === idx} onclick={() => patch(row.metric, { min: clampBoundInput(idx, 'min', row) })}>{lbl}</button>
+										{/each}
+									</span>
+									<button type="button" class="ce-clear-btn" title="Grenze öffnen" onclick={() => patch(row.metric, { min: null })}>×</button>
+								{/if}
+							</label>
+							<label class="ce-bound">Bis
+								{#if row.max == null}
+									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { max: row.scale[1] })}>offen · + Grenze</button>
+								{:else}
+									<span class="ce-ordinal-group" data-testid="corridor-ordinal-max-{row.metric}">
+										{#each row.ordinalLabels ?? [] as lbl, idx (lbl)}
+											<button type="button" class="ce-ordinal-btn" class:on={row.max === idx} onclick={() => patch(row.metric, { max: clampBoundInput(idx, 'max', row) })}>{lbl}</button>
+										{/each}
+									</span>
+									<button type="button" class="ce-clear-btn" title="Grenze öffnen" onclick={() => patch(row.metric, { max: null })}>×</button>
+								{/if}
+							</label>
+						{:else}
+							<label class="ce-bound">Von
+								{#if row.min == null}
+									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { min: row.scale[0] })}>offen · + Grenze</button>
+								{:else}
+									<input type="number" step={row.step} value={row.min} oninput={(e) => patch(row.metric, { min: clampBoundInput(numOrNull(e.currentTarget.value), 'min', row) })} />
+									<button type="button" class="ce-clear-btn" title="Grenze öffnen" onclick={() => patch(row.metric, { min: null })}>×</button>
+								{/if}
+							</label>
+							<label class="ce-bound">Bis
+								{#if row.max == null}
+									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { max: row.scale[1] })}>offen · + Grenze</button>
+								{:else}
+									<input type="number" step={row.step} value={row.max} oninput={(e) => patch(row.metric, { max: clampBoundInput(numOrNull(e.currentTarget.value), 'max', row) })} />
+									<button type="button" class="ce-clear-btn" title="Grenze öffnen" onclick={() => patch(row.metric, { max: null })}>×</button>
+								{/if}
+							</label>
+						{/if}
 					</div>
 				</div>
 				<div class="ce-effects">
-					<button type="button" class="ce-effect notify" class:on={row.notify} aria-pressed={row.notify} onclick={() => patch(row.metric, { notify: !row.notify })}>Warnen</button>
+					<!-- Team-Lead-Korrektur: nicht-alarmfaehige Metriken (alarmCapable===false)
+					     haben keine Δ-Wächter-Bruecke — "Warnen" deaktiviert statt vorzutaeuschen. -->
+					{#if row.alarmCapable === false}
+						<button type="button" class="ce-effect notify disabled" disabled title="nur Markieren – für diese Metrik gibt es keinen Alarm-Abgleich">Warnen</button>
+					{:else}
+						<button type="button" class="ce-effect notify" class:on={row.notify} aria-pressed={row.notify} onclick={() => patch(row.metric, { notify: !row.notify })}>Warnen</button>
+					{/if}
 					<button type="button" class="ce-effect mark" class:on={row.mark} aria-pressed={row.mark} onclick={() => patch(row.metric, { mark: !row.mark })}>Markieren</button>
 					<button type="button" class="ce-remove" onclick={() => remove(row.metric)}>✕ entfernen</button>
 				</div>
@@ -187,6 +304,18 @@
 	<div class="ce-summary">
 		<span>{notifyN} × Warnen</span>
 		<span>{markN} × Markieren</span>
+		{#if context === 'vergleich'}
+			<!-- AC-13: Neutralitäts-Hinweis — keine Sortierung/Rang anhand der Wertebereiche (C1). -->
+			<span class="ce-neutral" data-testid="corridor-editor-neutral-hint">
+				· kein Score · kein Rang · Wertebereiche markieren nur, sie sortieren nicht
+			</span>
+			{#if unknownCorridors.length > 0}
+				<!-- F003-Fix: Transparenz-Hinweis fuer nicht editierbare, aber erhaltene Pass-Through-Eintraege. -->
+				<span class="ce-neutral" data-testid="corridor-editor-unknown-hint">
+					· {unknownCorridors.length} weitere{unknownCorridors.length === 1 ? 'r Eintrag bleibt' : ' Einträge bleiben'} erhalten
+				</span>
+			{/if}
+		{/if}
 	</div>
 </div>
 
@@ -225,11 +354,16 @@
 	.ce-effect { padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: transparent; color: var(--g-ink-4); border: 1px solid var(--g-rule); cursor: pointer; }
 	.ce-effect.notify.on { color: var(--g-warn); border-color: var(--g-warn); background: rgba(192, 138, 26, 0.12); }
 	.ce-effect.mark.on { color: var(--g-good); border-color: var(--g-good); background: rgba(61, 107, 58, 0.12); }
+	.ce-effect.disabled { opacity: 0.4; cursor: not-allowed; }
 	.ce-remove { background: transparent; border: none; color: var(--g-ink-4); font-size: 11px; cursor: pointer; padding: 0; }
 	.ce-pool { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 14px 20px; border-top: 1px dashed var(--g-rule-soft); }
 	.ce-pool-label { font-size: 10.5px; color: var(--g-ink-4); }
 	.ce-pool-btn { border: 1px solid var(--g-rule); background: transparent; border-radius: 999px; padding: 4px 10px; cursor: pointer; font-size: 12px; }
-	.ce-summary { display: flex; gap: 16px; margin-top: 16px; font-size: 12.5px; color: var(--g-ink-2); }
+	.ce-summary { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; font-size: 12.5px; color: var(--g-ink-2); }
+	.ce-neutral { font-family: var(--g-font-mono, monospace); font-size: 10.5px; color: var(--g-ink-4); letter-spacing: 0.03em; }
+	.ce-ordinal-group { display: inline-flex; gap: 4px; }
+	.ce-ordinal-btn { padding: 3px 8px; font-size: 11px; border-radius: var(--g-r-2, 4px); border: 1px solid var(--g-rule); background: transparent; color: var(--g-ink-3); cursor: pointer; }
+	.ce-ordinal-btn.on { border-color: var(--g-accent); color: var(--g-accent-deep); background: var(--g-accent-tint); }
 	@media (max-width: 899px) {
 		.corridor-editor { padding: 1rem; max-width: 100%; }
 	}

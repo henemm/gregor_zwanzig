@@ -5,7 +5,7 @@
 	// Spec: docs/specs/modules/issue_679_compare_editor_edit.md
 	// Design-Quelle: claude-code-handoff/current/jsx/screen-compare-editor.jsx Z. 640-700.
 
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { Btn, Eyebrow, TopoBg } from '$lib/components/atoms';
 	import { Field, ConfirmDialog } from '$lib/components/molecules';
 	import { ACTIVITY_PROFILE_OPTIONS, toCompareProfile, type ActivityProfile, type Location, type ComparePreset } from '$lib/types';
@@ -23,6 +23,7 @@
 	import { api } from '$lib/api.js';
 	import Step2Orte from './steps/Step2Orte.svelte';
 	import Step3Idealwerte from './steps/Step3Idealwerte.svelte';
+	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
 	import Step4Layout from './steps/Step4Layout.svelte';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	import CompareAlarmSection from './CompareAlarmSection.svelte';
@@ -41,6 +42,23 @@
 
 	// Issue #758: eigene SaveStatus-Instanz pro CompareEditor (AC-6: kein geteilter Singleton).
 	const compareSaveCtl = createSaveStatus();
+
+	// Issue #1231 Slice 4 (Adversary F001, CRITICAL): echte Viewport-Erkennung
+	// NUR für den idealwerte-Tab-Inhalt — das bestehende CSS-only-Switch-Muster
+	// (.cm-desktop/.cm-mobile, Style-Block unten) mountet SONST beide Zweige
+	// gleichzeitig. CorridorEditor UND Step3Idealwerte würden parallel gemountet
+	// und konkurrierend in `wiz` schreiben (Step3Idealwerte's $effects). Exakt
+	// das Slice-3-Precedent (TripTabs.svelte:112-121, Issue #932-Muster) — NUR
+	// dieser eine Tab-Inhalt wechselt auf echten {#if}-Switch, alle anderen
+	// Tabs bleiben beim CSS-only-Muster unangetastet.
+	let isMobileViewport = $state(false);
+	onMount(() => {
+		const mq = window.matchMedia('(max-width: 899px)');
+		isMobileViewport = mq.matches;
+		const onChange = (e: MediaQueryListEvent) => { isMobileViewport = e.matches; };
+		mq.addEventListener('change', onChange);
+		return () => mq.removeEventListener('change', onChange);
+	});
 
 	// Issue #1170: „Alarme"-Tab nur im Edit-Modus (Playwright-ACs decken nur Edit
 	// ab; Create-Pfad wird über wiz.saveNewPreset() direkt getestet). Erweitert
@@ -80,6 +98,10 @@
 		profile: wiz.activityProfile,
 		picked: [...wiz.pickedIds].join(','),
 		ideals: JSON.stringify(wiz.idealRanges),
+		// Issue #1231 Slice 4: CorridorEditor(vergleich) schreibt corridors +
+		// idealRanges/activeMetricKeys/metricAlertLevels gemeinsam (Dual-Write) —
+		// corridors-Tracking genuegt als Dirty-Signal fuer diese Interaktion.
+		corridors: JSON.stringify(wiz.corridors),
 		layouts: JSON.stringify(wiz.channelLayouts),
 		// Issue #1170: Alarm-Konfiguration im Dirty-Tracking.
 		metricAlertLevels: JSON.stringify(wiz.metricAlertLevels),
@@ -116,6 +138,7 @@
 				wiz.activityProfile !== initial.profile ||
 				[...wiz.pickedIds].join(',') !== initial.picked ||
 				JSON.stringify(wiz.idealRanges) !== initial.ideals ||
+				JSON.stringify(wiz.corridors) !== initial.corridors ||
 				JSON.stringify(wiz.channelLayouts) !== initial.layouts ||
 				JSON.stringify(wiz.metricAlertLevels) !== initial.metricAlertLevels ||
 				wiz.alertCooldownMinutes !== initial.alertCooldownMinutes ||
@@ -205,6 +228,7 @@
 		const savedProfile = wiz.activityProfile;
 		const savedPicked = [...wiz.pickedIds].join(',');
 		const savedIdeals = JSON.stringify(wiz.idealRanges);
+		const savedCorridors = JSON.stringify(wiz.corridors); // Issue #1231 Slice 4
 		const savedLayouts = JSON.stringify(wiz.channelLayouts);
 		// Issue #1170: Alarm-Konfiguration ebenfalls snapshotten.
 		const savedMetricAlertLevels = JSON.stringify(wiz.metricAlertLevels);
@@ -236,6 +260,7 @@
 			idealRanges: wiz.idealRanges,
 			channelLayouts: wiz.channelLayouts,
 			activeMetricKeys: wiz.activeMetricKeys,
+			corridors: wiz.corridors, // Issue #1231 Slice 4 — Top-Level-Feld
 			hourlyMetricKeys: wiz.hourlyMetricKeys,
 			metricAlertLevels: wiz.metricAlertLevels,
 			alertCooldownMinutes: wiz.alertCooldownMinutes,
@@ -273,6 +298,7 @@
 				initial.profile = savedProfile;
 				initial.picked = savedPicked;
 				initial.ideals = savedIdeals;
+				initial.corridors = savedCorridors;
 				initial.layouts = savedLayouts;
 				initial.metricAlertLevels = savedMetricAlertLevels;
 				initial.alertCooldownMinutes = savedCooldown;
@@ -687,7 +713,14 @@
 	{:else if activeTab === 'orte'}
 		<Step2Orte {locations} />
 	{:else if activeTab === 'idealwerte'}
-		<Step3Idealwerte />
+		<!-- Issue #1231 Slice 4: ersetzt Step3Idealwerte auf Desktop (Wizard-Step-3
+		     UND Editor-Tab, PO-B — dieselbe Stelle bedient beide Modi via isEdit).
+		     F001-Fix: nur mounten wenn NICHT Mobile-Viewport — sonst waere
+		     CorridorEditor parallel zum Step3Idealwerte-Mobile-Zweig aktiv
+		     (.cm-desktop bleibt technisch immer im DOM, s. Style-Block unten). -->
+		{#if !isMobileViewport}
+			<CorridorEditor context="vergleich" />
+		{/if}
 	{:else if activeTab === 'layout'}
 		<Step4Layout />
 	{:else if activeTab === 'versand'}
@@ -851,7 +884,13 @@
 				</button>
 			</div>
 		{:else if activeTab === 'idealwerte'}
-			<Step3Idealwerte />
+			<!-- F001-Fix: Gegenstueck zum Desktop-Zweig — nur mounten wenn
+			     tatsaechlich Mobile-Viewport (sonst waeren CorridorEditor UND
+			     Step3Idealwerte gleichzeitig aktiv und schreiben konkurrierend
+			     in wiz, s. Desktop-Zweig oben). Uebergangsweise bis Slice 5. -->
+			{#if isMobileViewport}
+				<Step3Idealwerte />
+			{/if}
 		{:else if activeTab === 'layout'}
 			<Step4Layout />
 		{:else if activeTab === 'versand'}

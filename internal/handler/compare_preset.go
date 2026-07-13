@@ -362,6 +362,14 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if updated.EndDate == nil {
 			updated.EndDate = original.EndDate
 		}
+		// Issue #1231 Slice 4: corridors erhalten wenn Body sie nicht traegt (nil
+		// nach Decode = Feld fehlte im Request), analog display_config oben —
+		// Datenverlust-Schutz (CLAUDE.md). Ein explizit gesendetes leeres []
+		// ist eine bewusste Nutzer-Aenderung (alle Korridore entfernt) und bleibt
+		// als solches erhalten (nur echtes nil wird ersetzt).
+		if updated.Corridors == nil {
+			updated.Corridors = original.Corridors
+		}
 		// Issue #1232 Scheibe 2b: End-Datum-Loesch-Sentinel — ein explizit
 		// gesendeter Leerstring end_date:"" loescht ein gesetztes EndDate
 		// (statt es wie oben zu erhalten). Muss NACH dem Nil-Preserve-Block

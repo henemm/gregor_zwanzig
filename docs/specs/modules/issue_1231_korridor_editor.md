@@ -472,6 +472,15 @@ hier die Strategie-Zusammenfassung:
 
 ## Changelog
 
+- 2026-07-13: Fakten-Korrektur Slice 4 (transparent, keine AC-Änderung): Der
+  vergleich-Metrik-Namensraum umfasst für `mark`-Korridore ALLE 14
+  Compare-Metriken aus `compareMetricDefs.ts::ALL_METRICS` (nicht nur die 10
+  Alarm-Keys aus `migrate_1191::FULL_METRIC_SET` — die Slice-2-Migration hat
+  ideal_ranges ALLER Metriken migriert, reale Bestände wie `sunny_hours_h`
+  existieren als Corridors). `notify` wird nur für die 10 Alarm-Keys
+  angeboten (Δ-Alarm-Brücke kennt nur diese). PO-Entscheidung 2026-07-12
+  („Go"): `thunder_level_max` als 3-Stufen-Ordinal-Band (kein/mittel/hoch),
+  kein %-Slider (Design-JSX-%-Skala hat kein Daten-Backing).
 - 2026-07-12: Slice 2 implementiert + Adversary VERIFIED (3 Runden, 1 Fix-Loop,
   5 Findings an echten Datenkopien). Transparente Präzisierungen der
   Migrations-Semantik gegenüber dem ursprünglichen Spec-Text (keine
