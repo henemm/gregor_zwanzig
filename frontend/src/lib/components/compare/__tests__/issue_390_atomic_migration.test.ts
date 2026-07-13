@@ -110,11 +110,13 @@ test('AC-3: GroupSection Profil-Dot hat title-Attribut mit eyebrow-Label', () =>
 });
 
 // ── AC-6: Page-lokale Komposita unveraendert ───────────────────────────────
+// Issue #1256 Scheibe 1 (2026-07-13): AutoReportsOverview.svelte wurde als
+// verifizierter Totcode gelöscht (kein produktiver Import, Spec Zeilen 303-305)
+// — Eintrag entfernt.
 
 const PAGE_LOCAL_COMPOSITES = [
 	'src/lib/components/compare/CompareMatrix.svelte',
 	'src/lib/components/compare/HourlyMatrix.svelte',
-	'src/lib/components/compare/AutoReportsOverview.svelte',
 ];
 
 for (const relPath of PAGE_LOCAL_COMPOSITES) {

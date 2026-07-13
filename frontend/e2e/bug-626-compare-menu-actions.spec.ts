@@ -2,6 +2,13 @@
 //
 // Spec: docs/specs/bugfix/bug_626_compare_menu_actions.md
 //
+// Issue #1256 Scheibe 1 (2026-07-13): AC-6 und AC-7 wurden auf den neuen
+// Listen-Kebab-Vertrag korrigiert (Soll molecules.jsx:1018-1027) —
+// "Archivieren" ist kein Bestandteil des Listen-Kebabs mehr (wandert in die
+// Hub-Header-Lifecycle-Liste, Scheibe 3); "Briefing jetzt senden" ist seit
+// #627 fester Bestandteil (die ursprüngliche AC-6-Annahme "kein send" war
+// bereits vor dieser Scheibe stale). Siehe docs/specs/modules/issue_1256_compare_ui_rewire.md AC-1/AC-2.
+//
 // Verifikation der 7 ACs als eingeloggter Nutzer gegen Staging.
 // Voraussetzung: mindestens ein aktiver Compare-Preset und ein pausierter
 // Compare-Preset existieren im Test-Account.
@@ -187,9 +194,14 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		await expect(page).toHaveURL(/\/compare\/[^/]+\/edit/, { timeout: 10_000 });
 	});
 
-	// ── AC-6: Kein "Briefing jetzt senden" im Menü ───────────────────────────
+	// ── AC-6 (korrigiert #1256 S1): "Briefing jetzt senden" IST Teil des Menüs ──
+	//
+	// #1256 S1: Korrigiert — die ursprüngliche bug-626-Annahme "kein 'Briefing
+	// jetzt senden'" wurde bereits durch #627 (Einzel-Sofortversand) überholt;
+	// "send" ist seit #627 fester Bestandteil des 5er-Vertrags (Soll
+	// molecules.jsx:1018-1027). Assertion auf den aktuellen Vertrag umgestellt.
 
-	test('AC-6: Menü enthält kein "Briefing jetzt senden"', async ({ page }) => {
+	test('AC-6 (korrigiert #1256 S1): Menü enthält "Briefing jetzt senden"', async ({ page }) => {
 		const tile = page.locator('[data-testid="compare-tile"]').first();
 		await expect(tile).toBeVisible({ timeout: 10_000 });
 
@@ -197,14 +209,22 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		await kebab.click();
 		await page.waitForTimeout(500);
 
-		// Prüfe: kein "Briefing jetzt senden" vorhanden
+		// Prüfe: "Briefing jetzt senden" ist vorhanden (#627, seit #1256 S1 fester Bestandteil der 5 Aktionen)
 		const sendItem = page.getByRole('menuitem', { name: 'Briefing jetzt senden' });
-		await expect(sendItem).not.toBeVisible();
+		await expect(sendItem).toBeVisible();
+
+		await page.keyboard.press('Escape');
 	});
 
-	// ── AC-7: Archivieren + Löschen funktionieren weiterhin (Regression) ─────
+	// ── AC-7 (korrigiert #1256 S1): Listen-Kebab = genau 5 Aktionen, KEIN Archivieren ──
+	//
+	// #1256 S1: Archivieren aus Listen-Kebab entfernt (Soll molecules.jsx:1018-1027);
+	// Hub-Lifecycle folgt in S3. Listen-Kebab active/paused = genau
+	// [Pausieren|Aktivieren, Briefing jetzt senden, Vorschau öffnen, Bearbeiten, Löschen].
 
-	test('AC-7 Regression: "Archivieren" und "Löschen" sind im Menü sichtbar', async ({ page }) => {
+	test('AC-7 (korrigiert #1256 S1): Listen-Kebab zeigt genau 5 Aktionen ohne Archivieren', async ({
+		page
+	}) => {
 		const tile = page.locator('[data-testid="compare-tile"]').first();
 		await expect(tile).toBeVisible({ timeout: 10_000 });
 
@@ -212,9 +232,21 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		await kebab.click();
 		await page.waitForTimeout(500);
 
-		// Beide Aktionen müssen im Menü vorhanden sein
-		await expect(page.getByRole('menuitem', { name: 'Archivieren' })).toBeVisible();
+		// Pflicht-Aktionen: Löschen und Bearbeiten müssen weiterhin vorhanden sein.
 		await expect(page.getByRole('menuitem', { name: 'Löschen' })).toBeVisible();
+		await expect(page.getByRole('menuitem', { name: 'Bearbeiten' })).toBeVisible();
+		await expect(page.getByRole('menuitem', { name: 'Vorschau öffnen' })).toBeVisible();
+		await expect(page.getByRole('menuitem', { name: 'Briefing jetzt senden' })).toBeVisible();
+		// Genau eine der beiden Toggle-Varianten (status-abhängig) muss vorhanden sein.
+		const pauseOrActivate = page.getByRole('menuitem', { name: /^(Pausieren|Aktivieren)$/ });
+		await expect(pauseOrActivate).toHaveCount(1);
+
+		// #1256 S1: "Archivieren" darf im Listen-Kebab NICHT mehr vorkommen.
+		await expect(page.getByRole('menuitem', { name: 'Archivieren' })).not.toBeVisible();
+
+		// Exakt 5 Menüeinträge insgesamt (kein Archivieren, kein sechster Eintrag).
+		const menuItems = page.getByRole('menuitem');
+		await expect(menuItems).toHaveCount(5);
 
 		// Schließe Menü per Escape
 		await page.keyboard.press('Escape');

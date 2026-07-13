@@ -2,11 +2,16 @@
 //
 // Spec: docs/specs/bugfix/bug_626_compare_menu_actions.md
 //
+// Issue #1256 Scheibe 1 (2026-07-13): 'archive' aus dem Listen-Kebab entfernt
+// (Soll molecules.jsx:1018-1027) — Archivieren ist ab Scheibe 3 exklusiv Teil
+// der Hub-Header-Lifecycle-Liste. Erwartungen hier auf 5 statt 6 Einträge
+// nachgezogen (Spec Scheibe-1-Dateiliste).
+//
 // Prüft das aktuelle Soll-Verhalten:
 //   - compareActions('active') → Label 'Pausieren' für id='pause'
 //   - compareActions('paused') → Label 'Aktivieren' für id='pause'
 //   - compareActions('active'/'paused') enthält 'send'-Item (#627, Einzel-Sofortversand)
-//   - compareActions('active') enthält weiterhin: edit, preview, archive, delete
+//   - compareActions('active') enthält weiterhin: edit, preview, delete — NICHT mehr archive
 //   - compareActions('draft') bleibt unverändert (setup + delete, 2 Einträge)
 //
 // Ausführen:
@@ -100,34 +105,36 @@ describe('Bug #626 AC-7 Regression: Pflicht-Aktionen bleiben erhalten', () => {
 		assert.ok(ids.includes('preview'), 'compareActions("active") muss "preview" enthalten');
 	});
 
-	test('compareActions("active") enthält "archive"', () => {
-		const actions = compareActions('active');
-		const ids = actions.map((a: { id: string }) => a.id);
-		assert.ok(ids.includes('archive'), 'compareActions("active") muss "archive" enthalten');
-	});
-
 	test('compareActions("active") enthält "delete"', () => {
 		const actions = compareActions('active');
 		const ids = actions.map((a: { id: string }) => a.id);
 		assert.ok(ids.includes('delete'), 'compareActions("active") muss "delete" enthalten');
 	});
 
-	// #627: "send" wieder aufgenommen -> 6 statt 5 Einträge (pause, send, preview, edit, archive, delete)
-	test('compareActions("active") liefert genau 6 Einträge', () => {
+	// Issue #1256 Scheibe 1: 'archive' entfernt (wandert in Hub-Lifecycle-Kebab, Scheibe 3)
+	test('compareActions("active") enthält KEIN "archive" mehr', () => {
+		const actions = compareActions('active');
+		const ids = actions.map((a: { id: string }) => a.id);
+		assert.ok(!ids.includes('archive'), 'compareActions("active") darf "archive" nicht mehr enthalten (#1256 Scheibe 1)');
+	});
+
+	// #627: "send" wieder aufgenommen; #1256 Scheibe 1: 'archive' entfernt
+	// -> 5 statt 6 Einträge (pause, send, preview, edit, delete)
+	test('compareActions("active") liefert genau 5 Einträge', () => {
 		const actions = compareActions('active');
 		assert.equal(
 			actions.length,
-			6,
-			`compareActions("active") muss genau 6 Aktionen liefern (pause, send, preview, edit, archive, delete), hat aber ${actions.length}`
+			5,
+			`compareActions("active") muss genau 5 Aktionen liefern (pause, send, preview, edit, delete), hat aber ${actions.length}`
 		);
 	});
 
-	test('compareActions("paused") liefert genau 6 Einträge', () => {
+	test('compareActions("paused") liefert genau 5 Einträge', () => {
 		const actions = compareActions('paused');
 		assert.equal(
 			actions.length,
-			6,
-			`compareActions("paused") muss genau 6 Aktionen liefern, hat aber ${actions.length}`
+			5,
+			`compareActions("paused") muss genau 5 Aktionen liefern, hat aber ${actions.length}`
 		);
 	});
 });

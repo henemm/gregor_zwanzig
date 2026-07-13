@@ -189,13 +189,15 @@ export function compareActions(status: CompareStatus): CompareAction[] {
 		];
 	}
 	// Issue #626: Toggle-Label kontextabhängig; Issue #627: 'send' wieder aufgenommen.
+	// Issue #1256 Scheibe 1: 'archive' entfernt (Soll molecules.jsx:1018-1027) —
+	// Archivieren ist ab Scheibe 3 exklusiv Teil der Hub-Header-Lifecycle-Liste
+	// (compareLifecycleActions()), nicht mehr Teil des Listen-Kebabs.
 	const pauseLabel = status === 'paused' ? 'Aktivieren' : 'Pausieren';
 	return [
 		{ id: 'pause', label: pauseLabel },
 		{ id: 'send', label: 'Briefing jetzt senden' },
 		{ id: 'preview', label: 'Vorschau öffnen' },
 		{ id: 'edit', label: 'Bearbeiten' },
-		{ id: 'archive', label: 'Archivieren' },
 		{ id: 'delete', label: 'Löschen', danger: true }
 	];
 }

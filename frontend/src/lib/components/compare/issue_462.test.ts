@@ -22,15 +22,15 @@ import { join, dirname } from 'node:path';
 const COMPARE_DIR = dirname(fileURLToPath(import.meta.url));
 const STEPS_DIR = join(COMPARE_DIR, 'steps');
 
-// ── Zu prüfende Dateien (14 laut Spec) ────────────────────────────────────────
+// ── Zu prüfende Dateien ────────────────────────────────────────────────────────
+// Issue #1256 Scheibe 1 (2026-07-13): AutoReportCard.svelte, AutoReportsOverview.svelte
+// und LocationsRail.svelte wurden als verifizierter Totcode gelöscht (kein
+// produktiver Import mehr, Spec Zeilen 303-305) — Einträge entfernt.
 
 const MIGRATED_FILES: Array<{ path: string; components: string[] }> = [
-	{ path: join(COMPARE_DIR, 'AutoReportCard.svelte'),    components: ['Btn'] },
-	{ path: join(COMPARE_DIR, 'AutoReportsOverview.svelte'), components: ['Eyebrow'] },
 	{ path: join(COMPARE_DIR, 'CreateGroupDialog.svelte'), components: ['Btn'] },
 	{ path: join(COMPARE_DIR, 'HourlyMatrix.svelte'),      components: ['Pill'] },
 	{ path: join(COMPARE_DIR, 'LocationPreviewMap.svelte'), components: ['TopoBg'] },
-	{ path: join(COMPARE_DIR, 'LocationsRail.svelte'),     components: ['Btn', 'Pill'] },
 	{ path: join(COMPARE_DIR, 'SavePresetDialog.svelte'),  components: ['Btn'] },
 	{ path: join(STEPS_DIR, 'Step3Idealwerte.svelte'),     components: ['Eyebrow'] },
 	{ path: join(STEPS_DIR, 'Step4Layout.svelte'),         components: ['Eyebrow'] },
