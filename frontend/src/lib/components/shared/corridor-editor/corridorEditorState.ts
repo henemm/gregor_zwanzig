@@ -488,6 +488,25 @@ export function clampBoundInput(
 }
 
 /**
+ * F001-Fix (Adversary HIGH, Slice 5, CorridorEditorMobile.openBound): Zielwert
+ * beim Oeffnen einer Grenze (Stepper "offen · + Grenze") — 25%/75%-Fallback
+ * auf der Skala, auf `step` gerundet, DANACH durch denselben Crossing-Clamp
+ * wie der Stepper-/Manuell-Eingabepfad (clampDragValue) — sonst kann der
+ * Fallback die bereits gesetzte Gegenseite ueberholen (Repro: scale=[0,20],
+ * max=1 bereits gesetzt, min oeffnen -> ungeclampt waere min=5 > max=1,
+ * "mark" zeigt danach lautlos nie mehr gruen).
+ */
+export function openBoundValue(
+	row: Pick<CorridorRowState, 'scale' | 'step' | 'min' | 'max'>,
+	side: 'min' | 'max'
+): number {
+	const [lo, hi] = row.scale;
+	const fallback = side === 'min' ? lo + (hi - lo) * 0.25 : lo + (hi - lo) * 0.75;
+	const rounded = Math.round(fallback / row.step) * row.step;
+	return clampDragValue(side, rounded, row.min, row.max);
+}
+
+/**
  * F005 (Staging-Adversary, HIGH, AC-12-Rest): reine Entscheidung, welche
  * Aktion die duenne DOM-Verdrahtung auf dem BESTEHENDEN saveController
  * ausloesen muss — "schedule" bei gueltigem Zustand, "dirty" bei AC-12-

@@ -22,8 +22,11 @@
 	import { buildComparePresetSavePayload } from './compareEditorSave';
 	import { api } from '$lib/api.js';
 	import Step2Orte from './steps/Step2Orte.svelte';
-	import Step3Idealwerte from './steps/Step3Idealwerte.svelte';
+	// Issue #1231, Slice 5: CorridorEditorMobile ersetzt Step3Idealwerte auch im
+	// Mobile-Zweig. Import von Step3Idealwerte entfernt — Datei bleibt vorerst
+	// bestehen (Aufraeumen ist Slice-6-Thema, s. Spec).
 	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
+	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
 	import Step4Layout from './steps/Step4Layout.svelte';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	import CompareAlarmSection from './CompareAlarmSection.svelte';
@@ -884,12 +887,12 @@
 				</button>
 			</div>
 		{:else if activeTab === 'idealwerte'}
-			<!-- F001-Fix: Gegenstueck zum Desktop-Zweig — nur mounten wenn
-			     tatsaechlich Mobile-Viewport (sonst waeren CorridorEditor UND
-			     Step3Idealwerte gleichzeitig aktiv und schreiben konkurrierend
-			     in wiz, s. Desktop-Zweig oben). Uebergangsweise bis Slice 5. -->
+			<!-- Issue #1231, Slice 5: CorridorEditorMobile ersetzt Step3Idealwerte.
+			     F001-Praezedenz (Slice 4): nur mounten wenn tatsaechlich
+			     Mobile-Viewport (sonst waeren Desktop- und Mobile-Editor
+			     gleichzeitig aktiv und schreiben konkurrierend in wiz). -->
 			{#if isMobileViewport}
-				<Step3Idealwerte />
+				<CorridorEditorMobile context="vergleich" />
 			{/if}
 		{:else if activeTab === 'layout'}
 			<Step4Layout />

@@ -5,10 +5,11 @@
 	import HubOverview from './HubOverview.svelte';
 	import BriefingScheduleTab from './BriefingScheduleTab.svelte';
 	import WeatherMetricsTab from './WeatherMetricsTab.svelte';
-	import AlertsTab from '$lib/components/alerts-tab/AlertsTab.svelte';
-	// Issue #1231, Slice 3: CorridorEditor ersetzt AlertsTab auf Desktop.
-	// Mobile bleibt uebergangsweise bei AlertsTab (CorridorEditorMobile = Slice 5).
+	// Issue #1231: CorridorEditor(Mobile) ersetzt AlertsTab auf Desktop + Mobile.
+	// Import von AlertsTab entfernt (Slice 5) — Datei bleibt vorerst bestehen
+	// (Aufraeumen inkl. AlertMetricLevelTable/-Row ist Slice-6-Thema, s. Spec).
 	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
+	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
 	import BriefingsTab from '$lib/components/briefings-tab/BriefingsTab.svelte';
 	import {
 		EmailIframe,
@@ -193,7 +194,7 @@
 					<WeatherMetricsTab {trip} {onTripUpdate} {saveController} />
 				{:else if tab.value === 'alerts' && trip}
 					{#if isMobileViewport}
-						<AlertsTab {trip} {onTripUpdate} {saveController} />
+						<CorridorEditorMobile context="route" {trip} {onTripUpdate} {saveController} />
 					{:else}
 						<CorridorEditor {trip} {onTripUpdate} {saveController} />
 					{/if}
