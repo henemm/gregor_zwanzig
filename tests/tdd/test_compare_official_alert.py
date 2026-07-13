@@ -188,7 +188,10 @@ def test_ac2_location_scope_dedup_and_free_chip():
     subj = render_official_alert_subject(notices, prefix="Vergleich")
     assert "alle Orte" in subj, f"Erwartet 'alle Orte' im Betreff: {subj!r}"
 
-    # Fall 2: nur Ort B betroffen -> "nur St. Stefan", Ort A freier Chip (durchgestrichen).
+    # Fall 2: nur Ort B betroffen -> "nur St. Stefan"; seit #1238 (AC-12) zeigt der
+    # Ortsvergleich AUSSCHLIESSLICH die betroffenen Orte als Chips — der unbetroffene
+    # Ort erscheint NICHT mehr als durchgestrichener freier Chip (das Chip-Muster
+    # "übrige Strecke frei" gehoert zur Trip-Route, nicht zu einer Ortsliste).
     tagged_b = [(_alert(region="Gailtal"), ["St. Stefan"])]
     notices_b = build_compare_official_alert_notices(
         ["Hermagor", "St. Stefan"], id_to_name, tagged_b,
@@ -198,7 +201,9 @@ def test_ac2_location_scope_dedup_and_free_chip():
     html_b = render_official_alert_html(
         notices_b, source_label="GeoSphere Austria", stand_at="09:30", tz=timezone.utc,
     )
-    assert "line-through" in html_b and "Hermagor" in html_b
+    assert "St. Stefan" in html_b, "Betroffener Ort fehlt als Chip"
+    assert "line-through" not in html_b, "Durchgestrichener freier Orts-Chip (AC-12)"
+    assert "Hermagor" not in html_b, "Unbetroffener Ort erscheint weiterhin als Chip"
 
 
 # ═══════════════ AC-3 — alle drei Kanäle gebündelt bei Opt-in ═════════════════
@@ -240,9 +245,16 @@ def test_ac3_all_three_channels_dispatched_when_opted_in():
 # ═════════ F006 — gleichnamige Orte: Scope/Betreff NICHT fälschlich "alle Orte" ═
 def test_f006_duplicate_names_partial_scope_not_all_locations():
     """F006 (HIGH, Adversary): Zwei gleichnamige Orte, Warnung nur am ersten →
-    der Betreff darf NICHT „alle Orte" behaupten (nur einer ist betroffen), und
-    der unbetroffene Ort muss als freier (durchgestrichener) Chip erscheinen.
-    Die Scope-Rechnung muss über Orts-IDs laufen, nicht über Namen."""
+    der Betreff darf NICHT „alle Orte" behaupten (nur einer ist betroffen).
+    Die Scope-Rechnung muss über Orts-IDs laufen, nicht über Namen.
+
+    #1238 AC-12 (angepasst): der unbetroffene Ort erscheint NICHT mehr als
+    durchgestrichener freier Chip — der Ortsvergleich zeigt nur die betroffenen
+    Orte. Die F006-Invariante selbst (ID-basierter Scope statt Namens-Scope)
+    wird jetzt an der Chip-ANZAHL geprüft: genau ein betroffener Ort, obwohl
+    beide Orte denselben Namen tragen."""
+    from bs4 import BeautifulSoup
+
     from services.compare_official_alert import CompareOfficialAlertService
     from services.official_alerts import register_official_alert_source
 
@@ -268,8 +280,13 @@ def test_f006_duplicate_names_partial_scope_not_all_locations():
         assert "alle Orte" not in subjects[0], (
             f"Nur ein Ort betroffen — Betreff darf nicht 'alle Orte' sagen: {subjects[0]!r}"
         )
-        assert "line-through" in mail_calls[0], (
-            "Der unbetroffene gleichnamige Ort muss als durchgestrichener Chip erscheinen"
+        assert "line-through" not in mail_calls[0], (
+            "Durchgestrichener freier Orts-Chip im Ortsvergleich (AC-12)"
+        )
+        chips = BeautifulSoup(mail_calls[0], "html.parser").select("div.warn span.seg")
+        assert [c.get_text(strip=True) for c in chips] == ["Hütte"], (
+            "Genau EIN betroffener Ort erwartet (ID-basierter Scope trotz gleicher "
+            f"Namen): {[c.get_text(strip=True) for c in chips]!r}"
         )
     finally:
         b._REGISTERED_SOURCES.clear()

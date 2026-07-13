@@ -478,10 +478,16 @@ class TestHourMetricsE2E:
             "RED: Regenwahrscheinlichkeits-Prozentwert (Fixture pop_pct=20) fehlt in der "
             "zugestellten Mail -- Regen-W.-Spalte existiert im Renderer noch nicht"
         )
-        assert re.search(r"\b8[.,]0\s*km\b", html), (
-            "RED: Sicht-Distanzwert (8.0 km aus zillertal.json visibility_m=8000, "
+        # #1237 AC-2 (angepasst): die Sicht-ZELLE traegt die Einheit nicht mehr
+        # (nur noch den Zahlenwert), die Einheit steht in der Einheiten-Legende
+        # unter der Tabelle. Geprueft wird beides — Wert UND Einheiten-Nachweis.
+        assert re.search(r"\b8[.,]0\b", html), (
+            "RED: Sicht-Distanzwert (8.0 aus zillertal.json visibility_m=8000, "
             "nearest-fixture fuer lon=25.0) fehlt in der zugestellten Mail -- "
             "Sicht-Spalte existiert im Renderer noch nicht"
+        )
+        assert re.search(r"Einheiten:[^<]*Sicht[^<·]*km", html), (
+            "Einheiten-Legende benennt die Sicht-Einheit 'km' nicht (#1237 AC-2)"
         )
 
 

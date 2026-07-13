@@ -188,7 +188,8 @@ def test_empty_body_fails():
 def _render_untimed_official_alert_html() -> str:
     """Echt gerenderter Standalone-Body fuer eine Warnung OHNE Zeitangabe --
     genau das, was `massif_closure`/`meteo_forets` liefern (kein valid_from/
-    valid_to). Der Bestands-Renderer schreibt hier heute 'Gueltig: unbekannt'."""
+    valid_to). Seit #1238 (E4/AC-7) laesst der Renderer die 'Gueltig:'-Zeile
+    hier komplett weg, statt 'unbekannt' zu schreiben."""
     from output.renderers.alert.official_alerts import render_warn_block
     from services.official_alerts.models import OfficialAlert
 
@@ -206,11 +207,30 @@ def _render_untimed_official_alert_html() -> str:
     )
 
 
+def _html_with_unknown_validity() -> str:
+    """Body einer zeitlosen Warnung MIT wieder eingesetzter Platzhalter-Zeile
+    'Gültig: unbekannt' — also genau der Renderer-Regress, den P-3 abfangen
+    soll. Seit #1238 erzeugt der echte Renderer diesen Zustand nicht mehr
+    (AC-7), die VALIDATOR-Regel muss ihn aber weiter zurueckweisen: der Pruefer
+    sieht nur den Mail-Text und darf einen Platzhalter nie als Zeitangabe
+    durchwinken."""
+    html_body = _render_untimed_official_alert_html()
+    assert "Gültig:" not in html_body, (
+        "Renderer schreibt wieder eine 'Gültig:'-Zeile bei fehlenden Zeiten (AC-7)"
+    )
+    placeholder = (
+        '<span class="k">Gültig:</span> <span class="mono">unbekannt</span><br>'
+    )
+    injected = html_body.replace('<div class="facts"', placeholder + '<div class="facts"', 1)
+    assert placeholder in injected, "Testaufbau: Platzhalter-Zeile nicht eingesetzt"
+    return injected
+
+
 def test_validity_unknown_is_rejected():
     """'Gueltig: unbekannt' ist keine Zeitangabe -- der Pruefer muss die Mail
     zurueckweisen, statt sie (wie bisher) durchzuwinken."""
     mod = _load_validator_module()
-    msg = _build_real_official_alert_message(_render_untimed_official_alert_html())
+    msg = _build_real_official_alert_message(_html_with_unknown_validity())
 
     ok, errors = mod.validate_message(msg)
     assert ok is False, (

@@ -14,6 +14,7 @@ AC-2) — nur der Input ist generalisiert auf `(label, alerts)`-Paare statt
 from __future__ import annotations
 
 import html as _html
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -56,6 +57,14 @@ _HAZARD_DISPLAY: dict[str, tuple[str, str]] = {
     "snow": ("Schneefall", "SN"),
     "black_ice": ("Glatteis", "GL"),
     "access_ban": ("Zugang gesperrt", "ZG"),
+    # Adversary F004 (HIGH, #1239 Nachzug Runde 2): "wildfire_risk" (Quelle
+    # meteo_forets.py, Label "Waldbrand-Gefahr — Stufe N") fehlte hier -- ohne
+    # Mapping fiel `_hazard_display` auf den ROHEN Quell-Label zurueck,
+    # INKLUSIVE "— Stufe N". Das war die Wurzelursache aller vier
+    # Doppel-Stufe-Symptome (Standalone-Titel, Betreff, embedded Detail-Banner,
+    # Compare-Aggregat-Banner) -- die vier Anzeige-Stellen waren nur Symptome
+    # dieser einen fehlenden Zeile.
+    "wildfire_risk": ("Waldbrand-Gefahr", "WB"),
 }
 
 _DE_WEEKDAYS = ("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
@@ -107,6 +116,19 @@ class OfficialAlertNotice:
     sms_scope: str
     affected_chips: list[str]
     free_chips: list[str]
+    # Issue #1238/#1239 (AC-12/AC-15/AC-17): explizite Kontext-Kennung statt
+    # Raten am Chip-Text. "route" = Trip-Segmente (Chips = Streckenabschnitte,
+    # Feld-Label "Route:"), "locations" = Ortsvergleich (Chips = Ortsnamen,
+    # Feld-Label "Orte:"). Default "route" -> Bestandsaufrufer unveraendert.
+    scope_kind: str = "route"
+    # Issue #1239 (AC-15 Nachzug, PO-Entscheidung): Gesamtzahl der verglichenen
+    # Orte bzw. Trip-Segmente -- traegt die Information "fast alle betroffen"
+    # ("7 von 8 Orten"), die eine reine Anzahl ("7 Orte") nicht hat. Von den
+    # Buildern gesetzt (`build_compare_official_alert_notices` kennt
+    # `all_location_ids`, `build_official_alert_notices` kennt
+    # `_trip_total_segment_ids`). `None` (Default) -> Bestandsaufrufer/Tests ohne
+    # dieses Feld fallen auf die reine Anzahl zurueck.
+    scope_total: int | None = None
 
 
 def render_official_alerts_html(
@@ -224,7 +246,17 @@ def dedupe_official_alerts(
     HOECHSTEN `level` (bei Gleichstand: erstes Vorkommen). Reihenfolge =
     erstes Auftreten je Gruppe (analog `collect_trip_alert_entries`).
     Vereinigt zusaetzlich die Segment-ID-Mengen aller zur Gruppe gehoerenden
-    Rohalerts (Set-Union, dedupliziert, Reihenfolge nicht garantiert)."""
+    Rohalerts (Set-Union, dedupliziert, Reihenfolge nicht garantiert).
+
+    BEWUSST NICHT Teil dieser Funktion (Issue #1239 AC-13): die Buendelung
+    gleichartiger Warnungen (gleicher hazard + gleiche Stufe, verschiedene Zonen)
+    -- die gehoert ausschliesslich in die WARN-SEKTION und laeuft dort als
+    zweite Stufe in den Notice-Buildern (`_bundle_by_hazard_level`). Hier waere
+    sie falsch: `dedupe_official_alerts` speist auch die Badge-/Streifen-Pfade
+    (`collect_trip_alert_entries`, Compare-Pro-Ort-Streifen), und dort MUESSEN
+    zwei gleichartige Warnungen mit unterschiedlichem Label sichtbar bleiben
+    (#1134 AC-2a: "Massiv Alpha" und "Massiv Beta" sind zwei echte Warnungen,
+    keine Dubletten)."""
     best: dict[tuple, "OfficialAlert"] = {}
     segment_ids_by_key: dict[tuple, set[str]] = {}
     order: list[tuple] = []
@@ -246,6 +278,51 @@ def dedupe_official_alerts(
     return [(best[key], sorted(segment_ids_by_key[key])) for key in order]
 
 
+def _bundle_by_hazard_level(
+    deduped: list[tuple["OfficialAlert", list[str]]],
+) -> list[tuple["OfficialAlert", list[str]]]:
+    """Zweite Verdichtungs-Stufe der WARN-SEKTION (Issue #1239 AC-13), NACH der
+    Identitaets-Dedup (`dedupe_official_alerts`): buendelt Warnungen mit gleichem
+    `hazard` UND gleicher Stufe zu EINER Warnung mit vereinigter Segment-/Orts-
+    Liste (zwei Waldbrand-Stufe-3-Warnungen in Zone Ouest und Zone Est werden zu
+    einer Warnung "Waldbrand-Gefahr" mit beiden Orten).
+
+    Adversary F003 (HIGH, Datenverlust): der Buendelungs-Schluessel traegt
+    ZUSAETZLICH `(valid_from, valid_to)` -- sonst wirft die Buendelung den
+    Gueltigkeitszeitraum aller NICHT-repraesentativen Alerts weg (zwei
+    Waldbrand-Stufe-3-Warnungen mit unterschiedlichen Zeitraeumen waeren
+    faelschlich zu einer Warnung mit nur EINEM Zeitraum kollabiert -- eine
+    falsche Aussage in einer Sicherheitswarnung). Unterschiedliche Zeitraeume
+    sind fachlich zwei verschiedene Warnungen und bleiben getrennt. Der
+    beanstandete AC-13-Fall (zeitlose Zugangssperren/Waldbrandstufen) hat bei
+    beiden Warnungen `None`/`None` -- das zaehlt als uebereinstimmend und
+    buendelt weiterhin.
+
+    Laeuft NUR in den Notice-Buildern des Standalone-Alarms, nicht in der
+    geteilten Dedup: die Badge-/Streifen-Pfade muessen gleichartige Warnungen mit
+    unterschiedlichem Label weiter einzeln zeigen (#1134 AC-2a).
+
+    Repraesentant ist das erste Vorkommen (Reihenfolge = erstes Auftreten je
+    Buendel). Warnungen desselben Typs mit UNTERSCHIEDLICHER Stufe bleiben
+    getrennt (Known Limitation der Spec) und folgen weiter dem Mixed-Level-Pfad
+    mit eigenem Eskalations-Meter je Warnung (AC-14 bleibt unberuehrt: die
+    Massiv-Eskalation kollabiert bereits in der Identitaets-Dedup davor)."""
+    rep: dict[tuple, "OfficialAlert"] = {}
+    ids_by_key: dict[tuple, list[str]] = {}
+    order: list[tuple] = []
+    for a, segment_ids in deduped:
+        key = (a.hazard, a.level, a.valid_from, a.valid_to)
+        if key not in rep:
+            rep[key] = a
+            ids_by_key[key] = []
+            order.append(key)
+        ids_by_key[key].extend(segment_ids)
+    return [
+        (rep[key], list(dict.fromkeys(ids_by_key[key])))
+        for key in order
+    ]
+
+
 def render_official_alert_notice_plain(
     alerts: list[tuple["OfficialAlert", list[str]]], tz: "ZoneInfo | None" = None,
 ) -> list[str]:
@@ -253,7 +330,13 @@ def render_official_alert_notice_plain(
     (dedupe_official_alerts) und rendert pro echter Warnung einen Block mit
     Schwere-Wort, Region (inkl. Segment-Bezug, falls vorhanden) und lokalem
     Gueltigkeitszeitraum. NICHT identisch mit render_official_alerts_plain()
-    (Compare/Briefing bleiben unveraendert)."""
+    (Compare/Briefing bleiben unveraendert).
+
+    Issue #1238 AC-7 (Nachzug): ohne bekannten Gueltigkeitszeitraum entfaellt
+    die "Gültig:"-Zeile GANZ, statt "Gültig: unbekannt" zu schreiben -- gilt
+    fuer die ganze Mail, nicht nur den HTML-Teil (jede Mail geht multipart
+    raus, der Klartext-Teil wird von manchen Clients angezeigt und von den
+    eigenen Pruef-Werkzeugen ausgewertet)."""
     from utils.timezone import local_fmt
 
     if tz is None:
@@ -276,8 +359,7 @@ def render_official_alert_notice_plain(
                 f"Gültig: {local_fmt(a.valid_from, tz, fmt)} – "
                 f"{local_fmt(a.valid_to, tz, fmt)}"
             )
-        else:
-            lines.append("Gültig: unbekannt")
+        # sonst: keine "Gültig:"-Zeile (AC-7) -- kein Platzhalter "unbekannt".
     return lines
 
 
@@ -320,6 +402,51 @@ def _hazard_display(alert: "OfficialAlert") -> tuple[str, str]:
     return alert.label, (letters[:2] or "XX")
 
 
+# Issue #1238 AC-6: numerische Quell-Stufe am Label-Ende ("Waldbrand-Gefahr —
+# Stufe 3"). Wird NUR an der Anzeige-Stelle entfernt (Warn-Titel), nie in der
+# Quelle (meteo_forets.py) -- die Quell-Labels speisen auch Dedup/SMS.
+_SOURCE_LEVEL_SUFFIX = re.compile(r"\s*[—–-]\s*Stufe\s*\d+\s*$")
+
+
+def _display_label(alert: "OfficialAlert") -> str:
+    """Anzeige-Titel einer Warnung (Issue #1238 AC-4, geteilte Quelle fuer
+    Betreff `_typ_tag`, Standalone-Warn-Titel `_standalone_warn_type_html` und
+    embedded WarnBlock): der reichere Quell-Label ERSETZT das normalisierte
+    Typ-Wort, wenn er es erweitert -- er wird ihm nie vorangestellt.
+
+    Drei Faelle:
+    (a)/(b) Detailtreue Ersetzung (F004 #1216): das Typ-Wort steckt im Label
+    (Vigilance "Extreme Hitze" enthaelt "Hitze"; access_ban "Zugang gesperrt —
+    {Massiv}" beginnt mit "Zugang gesperrt"), ODER das Label traegt den
+    Detail-Separator "—" (Massiv-Name), auch wenn die Formulierung vom Typ-Wort
+    abweicht ("Zugang eingeschraenkt — {Massiv}") -> Label ERSETZT das Typ-Wort.
+    (c) Standardfall (label == Typ-Wort, z.B. GeoSphere "Gewitter"/"Hitze")
+    -> exakt das Typ-Wort (AC-5).
+    (d) Adversary F001 (HIGH, Regression): greift KEINE der beiden
+    Ersetz-Heuristiken UND das Label ist trotzdem ungleich dem Typ-Wort (ein
+    voellig eigenstaendiges Label ohne Bezug zum normalisierten Typ, z.B. ein
+    externer Trigger-Text) -> das Label darf NICHT verlorengehen. Es wird -
+    wie im Bestand vor #1238 - an das Typ-Wort ANGEHAENGT statt verworfen.
+
+    Adversary F002 (MEDIUM, AC-6): die numerische Quell-Stufe am Label-Ende
+    ("— Stufe 3") wird IMMER am Ende entfernt -- an ALLEN drei Anzeige-Orten
+    (Standalone-Titel, Betreff via `_typ_tag`, embedded WarnBlock rufen alle
+    diese Funktion auf), weil die Stufe dort bereits als Eskalations-Meter/
+    Stufenwort in derselben Nachricht steht. NUR hier, am Anzeige-Ort -- nie am
+    Roh-Label der Quelle oder am Dedup-Schluessel (Regress-Schutz gegen
+    #1172/#1200/#1217/#1218, die beide ausschliesslich `alert.label`
+    unveraendert nutzen)."""
+    typ, _sms = _hazard_display(alert)
+    label = alert.label
+    if label == typ or not label:
+        display = typ
+    elif typ in label or "—" in label:
+        display = label
+    else:
+        display = f"{typ} — {label}"
+    return _SOURCE_LEVEL_SUFFIX.sub("", display)
+
+
 def _de_weekday_short(dt: datetime) -> str:
     """DE-Wochentagskuerzel {Mo..So} statt locale-abhaengigem '%a' ('Fri')."""
     return _DE_WEEKDAYS[dt.weekday()]
@@ -356,26 +483,49 @@ def _sort_notices(notices: list["OfficialAlertNotice"]) -> list["OfficialAlertNo
 
 
 def _typ_tag(notice: "OfficialAlertNotice", tz: "ZoneInfo | None" = None) -> str:
-    # F004 (#1216): reicheres `alert.label` bevorzugen, wenn es das Typ-Wort `w`
-    # erweitert. Zwei detailtreue Faelle: (a) `w` steckt im Label (Vigilance
-    # "Extreme Hitze" enthaelt "Hitze", access_ban "Zugang gesperrt — {Massiv}"
-    # beginnt mit "Zugang gesperrt"); (b) das Label traegt den Detail-Separator
-    # "—" (Massiv-Name), auch wenn die Sperr-Formulierung von `w` abweicht
-    # (z.B. "Zugang eingeschraenkt — {Massiv}"). Standardfall (label == w,
-    # z.B. GeoSphere "Gewitter"/"Hitze", ohne "—") bleibt exakt `w` (AC-4).
+    # Titel-Logik: `_display_label` (geteilte Quelle, #1238 AC-4).
     #
     # `tz` (#1233 Nebenbefund AC-12): der Wochentag MUSS dieselbe tz-aware
     # Quelle nutzen wie `_format_validity` im Body -- sonst zeigt der Betreff
     # bei einem Gueltigkeitsbeginn kurz vor Mitternacht einen anderen Wochentag
     # als der Body (Bug: Betreff "(Sa)" roh-UTC vs. Body "So" lokalisiert).
-    w, _sms = _hazard_display(notice.alert)
-    label = notice.alert.label
-    richer = bool(label) and label != w and (w in label or "—" in label)
-    display = label if richer else w
+    display = _display_label(notice.alert)
     if notice.alert.valid_from is None:
         return display
     vf = notice.alert.valid_from.astimezone(tz) if tz else notice.alert.valid_from
     return f"{display} ({_de_weekday_short(vf)})"
+
+
+# Issue #1239 (AC-15/AC-17): ab wie vielen betroffenen Orten die Reichweite als
+# Mengenangabe statt als Namensliste erscheint, und wie viele Warnungen Betreff
+# und Ueberschrift hoechstens ausschreiben.
+_SCOPE_MAX_NAMES = 2
+_SUBJECT_MAX_WARNINGS = 2
+
+
+def _scope_display(notice: "OfficialAlertNotice") -> str:
+    """Reichweite fuer Betreff/Ueberschrift (Issue #1239 AC-15/AC-16/AC-17):
+    ab drei betroffenen Orten eine Mengenangabe statt der vollstaendigen
+    Namensliste, die den Betreff unlesbar lang macht. Bei 1-2 Orten bleiben die
+    Namen; die Sonderfaelle "alle Orte"/"gesamte Route" und der komplette
+    Trip-/Segment-Pfad (`scope_kind="route"`) bleiben bit-identisch zum Stand
+    vor diesem Fix.
+
+    PO-Entscheidung (Nachzug #1239): mit bekannter Gesamtzahl (`scope_total`,
+    von den Buildern gesetzt) lautet die Mengenangabe "N von M Orten" -- das
+    traegt die Information "fast alle betroffen", die eine reine Anzahl
+    ("N Orte") nicht hat. Ohne `scope_total` (Alt-Aufrufer/Tests ohne dieses
+    Feld) faellt sie auf die reine Anzahl zurueck."""
+    if notice.scope_kind != "locations":
+        return notice.scope_label
+    if notice.scope_label in ("alle Orte", "gesamte Route"):
+        return notice.scope_label
+    count = len(notice.affected_chips)
+    if count > _SCOPE_MAX_NAMES:
+        if notice.scope_total:
+            return f"{count} von {notice.scope_total} Orten"
+        return f"{count} Orte"
+    return notice.scope_label
 
 
 def render_official_alert_subject(
@@ -396,15 +546,21 @@ def render_official_alert_subject(
     ordered = _sort_notices(notices)
     leading = ordered[0]
     uniform = len({n.alert.level for n in ordered}) == 1
+    # AC-15: hoechstens zwei Warnungen ausgeschrieben (schwerste zuerst), der
+    # Rest als "+N weitere". AC-16: bei <=2 Warnungen bleibt der Betreff
+    # bit-identisch (kein Suffix, gleiche Trennzeichen).
+    shown = ordered[:_SUBJECT_MAX_WARNINGS]
+    omitted = len(ordered) - len(shown)
+    more = f" +{omitted} weitere" if omitted > 0 else ""
     if uniform:
         _emoji, word = _LEVEL_WORDS.get(leading.alert.level, ("🔴", "ROT"))
-        body = f"{word} " + " + ".join(_typ_tag(n, tz) for n in ordered)
+        body = f"{word} " + " + ".join(_typ_tag(n, tz) for n in shown)
     else:
         body = " + ".join(
             f"{_LEVEL_WORDS.get(n.alert.level, ('🔴', 'ROT'))[1]} {_typ_tag(n, tz)}"
-            for n in ordered
+            for n in shown
         )
-    return f"[{prefix}] {leading.scope_label} · {body}"
+    return f"[{prefix}] {_scope_display(leading)} · {body}{more}"
 
 
 def _hex_to_rgba(hex_color: str, alpha: float) -> str:
@@ -478,7 +634,12 @@ def _standalone_headline_html(ordered: list["OfficialAlertNotice"], uniform: boo
     """`.body-h1` (AC-7): deterministische Template-Headline '{Typen} für
     {scope} gemeldet.'. Bei gemischten Stufen traegt jeder Typ zusaetzlich
     sein Stufen-Wort in Klammern (Design-Vorlage Beispiel C). Inline-CSS 1:1
-    aus der Vorlage (F002)."""
+    aus der Vorlage (F002).
+
+    Issue #1239 (AC-17): die Reichweite kommt aus `_scope_display` -- bei vielen
+    betroffenen Orten nennt die Ueberschrift die Gefahren-Typen und eine
+    Mengenangabe, statt die vollstaendige Ortsliste aus dem Betreff zu
+    wiederholen (die Namen stehen ohnehin in den Chips darunter)."""
     from output.renderers.email.design_tokens import G_INK
 
     types = []
@@ -489,7 +650,7 @@ def _standalone_headline_html(ordered: list["OfficialAlertNotice"], uniform: boo
             _e, lw = _LEVEL_WORDS.get(n.alert.level, ("🔴", "ROT"))
             typ = f"{typ} ({lw})"
         types.append(typ)
-    scope = _html.escape(ordered[0].scope_label)
+    scope = _html.escape(_scope_display(ordered[0]))
     style = (
         f"font-size:26px;font-weight:700;letter-spacing:-.01em;"
         f"margin:0 0 18px;line-height:1.2;color:{G_INK};"
@@ -571,20 +732,54 @@ def _standalone_bars_meter_html(level: int, color: str) -> str:
         f'align-items:center;gap:8px;">'
         f'<span class="bars" style="display:inline-flex;gap:3px;align-items:center;">'
         f'{bars}</span>'
+        # AC-18: `white-space:nowrap` -- das Stufen-Wort ("ORANGE") darf nie
+        # mitten im Wort umbrechen, auch nicht in schmalen Spalten.
         f'<span class="lvl" style="font-family:{FONT_DATA};font-size:11.5px;'
-        f'font-weight:600;letter-spacing:.04em;color:{color};">{word} · {pos}/3</span></span>'
+        f'font-weight:600;letter-spacing:.04em;white-space:nowrap;'
+        f'color:{color};">{word} · {pos}/3</span></span>'
     )
 
 
-def _standalone_warn_type_html(notice: "OfficialAlertNotice") -> tuple[str, str]:
-    """Typ-Wort + optionaler Detail-Suffix (voller Quell-Label, wenn er ueber
-    das normalisierte Typ-Wort hinausgeht -- Issue #1088 F001 Bestandsschutz),
-    beide bereits HTML-escaped."""
-    typ, _sms = _hazard_display(notice.alert)
-    label_suffix = (
-        "" if notice.alert.label == typ else f" — {_html.escape(notice.alert.label)}"
+def _standalone_warn_type_html(notice: "OfficialAlertNotice") -> str:
+    """Warn-Titel der Standalone-Zeile, bereits HTML-escaped (Issue #1238):
+
+    - AC-4: der reichere Quell-Label ERSETZT das Typ-Wort (geteilte Quelle
+      `_display_label`), statt es zu wiederholen ("Zugang gesperrt — Zugang
+      eingeschraenkt — Maures" war der Bug).
+    - AC-6: die numerische Quell-Stufe am Label-Ende ("— Stufe 3") entfaellt,
+      weil dieselbe Stufe in derselben Zeile bereits als Eskalations-Meter bzw.
+      Stufen-Wort steht ("ORANGE · 2/3"). Adversary F002: die Suffix-Bereinigung
+      sitzt in `_display_label` selbst (geteilt fuer alle drei Anzeige-Orte),
+      hier also implizit."""
+    return _html.escape(_display_label(notice.alert))
+
+
+def _standalone_facts_html(
+    notice: "OfficialAlertNotice", tz: "ZoneInfo | None", chips: str, note: str,
+    font_data: str, ink: str, ink_faint: str, ink_muted: str,
+) -> str:
+    """`.facts`-Block der Standalone-Warn-Zeile (Grid UND Stacked):
+
+    - AC-7/AC-8: die "Gültig:"-Zeile entfaellt VOLLSTAENDIG, wenn die Warnung
+      keinen Gueltigkeitszeitraum hat (tagesbezogene Zugangssperren, Waldbrand-
+      Tagesstufen) -- kein Platzhalter "unbekannt" mehr. Mit Zeiten bleibt sie
+      unveraendert.
+    - AC-12: Feld-Label "Orte:" im Ortsvergleich (`scope_kind="locations"`),
+      "Route:" im Trip-Pfad (unveraendert)."""
+    validity = ""
+    if notice.alert.valid_from and notice.alert.valid_to:
+        validity = (
+            f'<span class="k" style="color:{ink_faint};">Gültig:</span> '
+            f'<span class="mono" style="font-family:{font_data};font-weight:500;'
+            f'color:{ink};">{_format_validity(notice.alert, tz)}</span><br>'
+        )
+    scope_key = "Orte:" if notice.scope_kind == "locations" else "Route:"
+    return (
+        f'<div class="facts" style="font-size:14px;color:{ink_muted};line-height:1.5;">'
+        f'{validity}'
+        f'<span class="k" style="color:{ink_faint};">{scope_key}</span> {chips}{note}'
+        f'</div>'
     )
-    return _html.escape(typ), label_suffix
 
 
 def _standalone_row_border_style(first: bool) -> str:
@@ -605,7 +800,7 @@ def _standalone_warn_grid_html(
     traegt `border-top` als Inline-Ersatz fuer `.warn + .warn`."""
     from output.renderers.email.design_tokens import FONT_DATA, G_INK, G_INK_FAINT, G_INK_MUTED
 
-    typ, label_suffix = _standalone_warn_type_html(notice)
+    typ = _standalone_warn_type_html(notice)
     chips = "".join(_standalone_chip_html(c, active=True) for c in notice.affected_chips)
     chips += "".join(_standalone_chip_html(c, active=False) for c in notice.free_chips)
     note = ""
@@ -616,19 +811,19 @@ def _standalone_warn_grid_html(
             f'margin-top:7px;">übrige Strecke frei — keine amtliche '
             f'Warnung für {free_text}</div>'
         )
+    facts = _standalone_facts_html(
+        notice, tz, chips, note, FONT_DATA, G_INK, G_INK_FAINT, G_INK_MUTED,
+    )
     return (
-        f'<div class="warn" style="display:grid;grid-template-columns:130px '
+        # AC-18: Titel-Spalte von 130px auf 150px verbreitert -- 130px zwang
+        # lange Stufen-/Typ-Woerter ("ORANGE") in den Wortumbruch.
+        f'<div class="warn" style="display:grid;grid-template-columns:150px '
         f'minmax(0,1fr);gap:14px;padding:14px 16px;align-items:start;'
         f'{_standalone_row_border_style(first)}">'
         f'<div class="lead" style="display:flex;flex-direction:column;gap:6px;">'
         f'<span class="type" style="font-size:15px;font-weight:600;color:{G_INK};">'
-        f'{typ}{label_suffix}</span></div>'
-        f'<div class="facts" style="font-size:14px;color:{G_INK_MUTED};line-height:1.5;">'
-        f'<span class="k" style="color:{G_INK_FAINT};">Gültig:</span> '
-        f'<span class="mono" style="font-family:{FONT_DATA};font-weight:500;'
-        f'color:{G_INK};">{_format_validity(notice.alert, tz)}</span><br>'
-        f'<span class="k" style="color:{G_INK_FAINT};">Route:</span> {chips}{note}'
-        f'</div></div>'
+        f'{typ}</span></div>'
+        f'{facts}</div>'
     )
 
 
@@ -641,28 +836,37 @@ def _standalone_warn_stacked_html(
     `_standalone_warn_grid_html`."""
     from output.renderers.email.design_tokens import FONT_DATA, G_INK, G_INK_FAINT, G_INK_MUTED
 
-    typ, label_suffix = _standalone_warn_type_html(notice)
+    typ = _standalone_warn_type_html(notice)
     chips = "".join(_standalone_chip_html(c, active=True) for c in notice.affected_chips)
     chips += "".join(_standalone_chip_html(c, active=False) for c in notice.free_chips)
     meter = _standalone_bars_meter_html(notice.alert.level, color)
+    facts = _standalone_facts_html(
+        notice, tz, chips, "", FONT_DATA, G_INK, G_INK_FAINT, G_INK_MUTED,
+    )
     return (
         f'<div class="warn stacked" style="display:block;padding:14px 16px;'
         f'{_standalone_row_border_style(first)}">'
         f'<div class="whead" style="display:flex;align-items:center;gap:14px;'
         f'margin-bottom:9px;">{meter}'
         f'<span class="type" style="font-size:15px;font-weight:600;color:{G_INK};">'
-        f'{typ}{label_suffix}</span></div>'
-        f'<div class="facts" style="font-size:14px;color:{G_INK_MUTED};line-height:1.5;">'
-        f'<span class="k" style="color:{G_INK_FAINT};">Gültig:</span> '
-        f'<span class="mono" style="font-family:{FONT_DATA};font-weight:500;'
-        f'color:{G_INK};">{_format_validity(notice.alert, tz)}</span><br>'
-        f'<span class="k" style="color:{G_INK_FAINT};">Route:</span> {chips}</div></div>'
+        f'{typ}</span></div>'
+        f'{facts}</div>'
     )
 
 
 def _standalone_src_sentence(ordered: list["OfficialAlertNotice"], uniform: bool) -> str:
     """Prosaischer Scope-Satz der `.src`-Box (Spec Slice B Punkt 6) --
-    deterministisches Template, keine freie Prosa (bereits HTML-escaped)."""
+    deterministisches Template, keine freie Prosa (bereits HTML-escaped).
+
+    AC-9 (#1238): der Satz darf den Umfang der FUEHRENDEN Warnung nicht mehr
+    ueber alle Warnungen verallgemeinern. Haben die Warnungen unterschiedliche
+    Umfaenge, verweist ein neutraler Satz auf die Einzelangaben oben. AC-10:
+    bei einheitlichem Umfang bleibt der Satz unveraendert."""
+    if len({n.scope_label for n in ordered}) > 1:
+        return (
+            "Die Warnungen betreffen unterschiedliche Bereiche — der jeweils "
+            "betroffene Umfang steht bei jeder Warnung oben."
+        )
     if not uniform:
         leading = ordered[0]
         typ, _sms = _hazard_display(leading.alert)
@@ -671,12 +875,18 @@ def _standalone_src_sentence(ordered: list["OfficialAlertNotice"], uniform: bool
             f"Das {_html.escape(typ)} ({word}) ist die kritischere Warnung "
             "und steht deshalb oben."
         )
-    scope = ordered[0].scope_label
+    leading = ordered[0]
+    scope = leading.scope_label
     scope_html = _html.escape(scope)
     if scope in ("gesamte Route", "alle Orte"):
         subject = "Die Warnung deckt" if len(ordered) == 1 else "Alle Warnungen decken"
         return f"{subject} die {scope_html} ab."
-    return f"Betrifft nur {scope_html}, nicht die gesamte Route."
+    # Nebenbefund (#1238): der Compare-`scope_label` traegt bei einem einzelnen
+    # Ort bereits "nur X" -> ohne diese Bereinigung entstand "Betrifft nur nur
+    # Toulon". Das "nur" gehoert genau einmal in den Satz.
+    core = scope_html[4:] if scope_html.startswith("nur ") else scope_html
+    rest = "nicht alle Orte" if leading.scope_kind == "locations" else "nicht die gesamte Route"
+    return f"Betrifft nur {core}, {rest}."
 
 
 def _standalone_src_html(
@@ -847,16 +1057,30 @@ def _render_warn_block_embedded(
     items = []
     for nt in ordered:
         typ, _sms = _hazard_display(nt.alert)
-        label = nt.alert.label
         # F001 (#1216): Typ-Wort vs. voller Roh-Label haengt am Banner-KONTEXT.
         if count_line is not None:
-            # Aggregat-/Summary-Banner (Ortsvergleich, Orts-Scope): zeigt das
-            # saubere Typ-Wort. Der volle Roh-Label ("Gewitterwarnung Stufe
+            # Aggregat-/Summary-Banner (Ortsvergleich, Orts-Scope): zeigt
+            # ausschliesslich das kurze Typ-Wort `typ` -- NICHT
+            # `_display_label`. Der volle Roh-Label ("Gewitterwarnung Stufe
             # Orange", "Zugang gesperrt — Massiv Alpha", "Hitzewarnung ...")
             # steht bereits im Matrix-Chip + Pro-Ort-Streifen (additiv, PO-
             # Entscheidung Frage D). Eine dritte Kopie hier braeche die
             # Occurrence-Invarianten #1034/#1134. Die Stufe steht im Stufen-
             # Wort/Meter -> "Stufe Orange" waere ohnehin redundant.
+            #
+            # Adversary F004 (HIGH, #1239 Nachzug Runde 2): dieser Kommentar
+            # behauptete frueher faelschlich, `typ` sei hier immer "das
+            # saubere Typ-Wort" -- das stimmte NICHT fuer ungemappte hazards
+            # (z.B. "wildfire_risk" vor dem `_HAZARD_DISPLAY`-Fix): dort lief
+            # `_hazard_display` in den Fallback und lieferte den ROHEN
+            # Quell-Label inkl. "— Stufe N" zurueck ("Waldbrand-Gefahr —
+            # Stufe 3" direkt neben "höchste Stufe ORANGE" im Banner-Kopf).
+            # Der Fix sitzt bewusst NICHT hier (kein `_display_label`-Aufruf,
+            # sonst braeche die Occurrence-Invariante oben), sondern an der
+            # Wurzel: `_HAZARD_DISPLAY` deckt jetzt ALLE produktiven
+            # hazard-Werte ab, sodass `_hazard_display` nie mehr auf den
+            # Roh-Label zurueckfaellt und `typ` hier GARANTIERT das kurze,
+            # stufenfreie Typ-Wort ist.
             type_display = typ
         else:
             # Detail-Banner (Trip-Briefing): der Banner ist die EINZIGE
@@ -864,8 +1088,14 @@ def _render_warn_block_embedded(
             # (Region "Hitzewarnung Haute-Corse" #1217, Massiv "Zugang gesperrt —
             # ...", Vigilance "Extreme Hitze"), sonst faende #1217 den Label-Text
             # nicht. Standardfall label == typ -> unveraendert typ.
-            richer = bool(label) and label != typ and (typ in label or "—" in label)
-            type_display = label if richer else typ
+            # #1238 AC-4: dieselbe geteilte Ersetz-Logik wie Betreff und
+            # Standalone-Titel (`_display_label`) -- keine dritte Kopie mehr.
+            # Adversary F002: `_display_label` entfernt die numerische
+            # Quell-Stufe ("— Stufe 3") auch hier, weil der Meter/das
+            # Stufenwort bei gemischten Stufen bereits im `lvl`-Span links
+            # daneben steht (bei uniformer Stufe steht sie im `count_line`-Kopf
+            # des ganzen Blocks).
+            type_display = _display_label(nt.alert)
         if uniform:
             meter, lvl = "", ""
         else:
@@ -880,14 +1110,21 @@ def _render_warn_block_embedded(
             )
         chips = "".join(_embedded_chip(c, active=True) for c in nt.affected_chips)
         chips += "".join(_embedded_chip(c, active=False) for c in nt.free_chips)
+        # AC-7: ohne bekannten Gueltigkeitszeitraum entfaellt die Zeitangabe
+        # ganz (kein Platzhalter "unbekannt"); mit Zeiten unveraendert (AC-8).
+        when = ""
+        if nt.alert.valid_from and nt.alert.valid_to:
+            when = (
+                f'<span class="wb-when" style="font-family:\'JetBrains Mono\','
+                f'monospace;font-size:12px;color:#6b6962;margin-right:8px;">'
+                f'{_format_validity(nt.alert, tz)}</span>'
+            )
         items.append(
             f'<div class="wb-item" style="margin:0 0 7px;line-height:1.5;">'
             f'{meter}{lvl}'
             f'<span class="wb-type" style="font-size:14px;font-weight:600;'
             f'color:{G_INK};margin-right:8px;">{_html.escape(type_display)}</span>'
-            f'<span class="wb-when" style="font-family:\'JetBrains Mono\','
-            f'monospace;font-size:12px;color:#6b6962;margin-right:8px;">'
-            f'{_format_validity(nt.alert, tz)}</span>'
+            f'{when}'
             f'<span class="wb-route">{chips}</span>'
             f'</div>'
         )
@@ -1058,9 +1295,13 @@ def build_official_alert_notices(
 ) -> list["OfficialAlertNotice"]:
     """Baut die `OfficialAlertNotice`-DTOs fuer den Trip-Standalone-Alarm
     (Issue #1216): dedupliziert via `dedupe_official_alerts`, leitet
-    scope_label/sms_scope/Chips aus der Trip-Segmentzahl ab."""
+    scope_label/sms_scope/Chips aus der Trip-Segmentzahl ab.
+
+    Issue #1239 (AC-13): nach der Identitaets-Dedup buendelt `_bundle_by_hazard_
+    level` gleichartige Warnungen (gleicher Typ + gleiche Stufe) zu einer Warnung
+    mit vereinigter Segmentliste."""
     all_ids = _trip_total_segment_ids(trip)
-    deduped = dedupe_official_alerts(tagged_alerts)
+    deduped = _bundle_by_hazard_level(dedupe_official_alerts(tagged_alerts))
     notices = []
     for alert, segment_ids in deduped:
         # #1233 AC-11: ein Trip mit genau einem Wegpunkt hat keine echten
@@ -1097,6 +1338,10 @@ def build_official_alert_notices(
         notices.append(OfficialAlertNotice(
             alert=alert, scope_label=scope_label, sms_scope=sms_scope,
             affected_chips=affected, free_chips=free,
+            # scope_total (Nachzug #1239 AC-15): fuer den Trip-Pfad aktuell ohne
+            # Wirkung (`_scope_display` nutzt es nur bei scope_kind="locations"),
+            # aber konsistent mitgesetzt -- der Builder kennt `all_ids` bereits.
+            scope_total=len(all_ids) or None,
         ))
     return notices
 
@@ -1114,9 +1359,13 @@ def build_compare_official_alert_notices(
     kollabieren); `id_to_name` loest IDs erst fuer die Anzeige (Chips/Label)
     in Namen auf, mit stabiler Dedup NUR des Anzeige-Strings.
     `all_location_ids` = alle Orte des Presets; die zweite Komponente jedes
-    `tagged_alerts`-Tupels traegt die betroffenen Orts-IDs dieser Warnung."""
+    `tagged_alerts`-Tupels traegt die betroffenen Orts-IDs dieser Warnung.
+
+    Issue #1239 (AC-13): nach der Identitaets-Dedup buendelt `_bundle_by_hazard_
+    level` gleichartige Warnungen (gleicher Typ + gleiche Stufe, verschiedene
+    Zonen) zu einer Warnung mit vereinigter Ortsliste."""
     all_set = set(all_location_ids)
-    deduped = dedupe_official_alerts(tagged_alerts)
+    deduped = _bundle_by_hazard_level(dedupe_official_alerts(tagged_alerts))
     notices = []
     for alert, affected_ids in deduped:
         affected_set = set(affected_ids)
@@ -1131,10 +1380,17 @@ def build_compare_official_alert_notices(
         else:
             scope_label = ", ".join(affected) if affected else "unbekannt"
             sms_scope = scope_label.replace(" ", "").replace(",", "+") or "unbekannt"
-        free_ordered_ids = [i for i in all_location_ids if i not in affected_set]
-        free = list(dict.fromkeys(id_to_name.get(i, i) for i in free_ordered_ids))
+        # Issue #1238 AC-12: der Ortsvergleich zeigt NUR die betroffenen Orte
+        # als Chips -- keine durchgestrichenen freien Orte und kein "übrige
+        # Strecke frei"-Hinweistext (der gehoert zur Trip-Route, nicht zu einer
+        # Ortsliste). `scope_kind="locations"` laesst den Renderer das Feld mit
+        # "Orte:" statt "Route:" beschriften.
         notices.append(OfficialAlertNotice(
             alert=alert, scope_label=scope_label, sms_scope=sms_scope,
-            affected_chips=affected, free_chips=free,
+            affected_chips=affected, free_chips=[], scope_kind="locations",
+            # scope_total (Nachzug #1239 AC-15, PO-Entscheidung): Gesamtzahl der
+            # verglichenen Orte -- traegt die Mengenangabe im Betreff/H1 als
+            # "N von M Orten" statt der reinen Anzahl "N Orte".
+            scope_total=len(all_location_ids) or None,
         ))
     return notices

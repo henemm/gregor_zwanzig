@@ -154,7 +154,9 @@ def _fmt_pop(v) -> str:
 
 
 def _fmt_visibility(v) -> str:
-    return f"{v / 1000:.1f} km" if v is not None else "—"
+    # Issue #1237 (AC-2): nur der Zahlenwert -- die Einheit steht in der
+    # Einheiten-Legende unter den Stundentabellen (analog Trip-Briefing).
+    return f"{v / 1000:.1f}" if v is not None else "—"
 
 
 def _fmt_thunder(v) -> str:
@@ -405,7 +407,9 @@ def _visible_hour_metrics(hourly_metrics: set | None) -> list[dict]:
 
 
 def _render_hour_row(dp, visible: list[dict]) -> str:
-    hh = dp.ts.strftime("%H:%M") if hasattr(dp.ts, "strftime") else str(dp.ts)
+    # Issue #1237 (AC-1): nur die Stunde ("07"), kein Minutenanteil -- identisch
+    # zur bereits korrekten Trip-Briefing-Formatierung (helpers.dp_to_row).
+    hh = dp.ts.strftime("%H") if hasattr(dp.ts, "strftime") else str(dp.ts)
     cells = _hour_td(hh, fg=G_INK_MUTED, align="left")
     for m in visible:
         value = getattr(dp, m["key"], None)
@@ -578,7 +582,36 @@ def _render_section_head(accent: str, title: str, hint: str) -> str:
     )
 
 
-def _render_legend() -> str:
+def _units_legend_text(visible: list[dict]) -> str:
+    """Issue #1237 (AC-2): Einheiten-Zeile fuer die sichtbaren Stunden-Spalten.
+    Einheit je Spalte kommt aus dem Metrik-Katalog (`display_unit`, sonst
+    `unit`), formatiert vom geteilten Helfer `helpers.format_units_legend` --
+    dieselbe Quelle wie die Trip-Briefing-Legende (keine Kopie)."""
+    from app.metric_catalog import _METRICS_BY_ID
+    from output.renderers.email.helpers import format_units_legend
+
+    pairs: list[tuple[str, str]] = []
+    for m in visible:
+        mdef = _METRICS_BY_ID.get(m.get("metric_id", ""))
+        if mdef is None:
+            continue
+        pairs.append((m["label"], mdef.display_unit if mdef.display_unit else mdef.unit))
+    return format_units_legend(pairs)
+
+
+def _render_units_legend(hourly_metrics: set | None) -> str:
+    """Einheiten-Legende UNTER der Stundentabelle (nicht im Spaltenkopf) --
+    die Spaltenkoepfe bleiben 'Zeit'/'Sicht' (AC-2)."""
+    text = _units_legend_text(_visible_hour_metrics(hourly_metrics))
+    if not text:
+        return ""
+    return (
+        f'<div style="margin-top:8px;font-family:{FONT_DATA};font-size:10px;'
+        f'color:{G_INK_MUTED};">{_html.escape(text)}</div>'
+    )
+
+
+def _render_legend(hourly_metrics: set | None = None, hourly_enabled: bool = True) -> str:
     items = [("#2f8a3e", "unkritisch"), ("#e3b008", "Achtung"), ("#e07b1a", "Warnung"), ("#c52a22", "Gefahr")]
     dots = "".join(
         f'<span style="display:inline-block;margin-right:16px;font-family:{FONT_DATA};'
@@ -587,12 +620,14 @@ def _render_legend() -> str:
         f'background:{color};margin-right:6px;vertical-align:middle;"></span>{label}</span>'
         for color, label in items
     )
+    units = _render_units_legend(hourly_metrics) if hourly_enabled else ""
     return (
         f'<div style="background:{G_PAPER};border-top:1px solid #e6e1d3;padding:18px 24px;'
         f'margin-top:22px;font-family:{FONT_DATA};font-size:10px;color:{G_INK_MUTED};">'
         f'<span style="font-weight:600;color:{G_INK_FAINT};letter-spacing:0.08em;'
         f'text-transform:uppercase;margin-right:16px;">Risk</span>{dots}'
         f'<span style="color:{G_INK_FAINT};">Warn-Kürzel: Hitze · Brand·Stufe · Zugang</span>'
+        f'{units}'
         f'</div>'
     )
 
@@ -735,7 +770,7 @@ def render_compare_html(
         if hourly_enabled else ""
     )
 
-    legend_html = _render_legend()
+    legend_html = _render_legend(hourly_metrics, hourly_enabled)
     abo_html = _render_abo_footer(preset_name, preset_schedule, preset_weekday, len(locations), sig)
     app_footer_html = _render_app_footer()
 

@@ -335,25 +335,33 @@ def build_confidence_hint(
     return f"Ab {weekday} ist die Vorhersage weniger verlässlich."
 
 
-def build_units_legend(rows: list[dict]) -> str:
-    """Grouped units legend: 'Temp, Feels °C · Wind, Gust km/h'."""
-    cols = visible_cols(rows)
-    if not cols:
-        return ""
+def format_units_legend(label_units: list[tuple[str, str]]) -> str:
+    """Gemeinsamer Legenden-Formatierer (#1237): gruppiert (Spalten-Label,
+    Einheit)-Paare zu 'Einheiten: Temp, Feels °C · Wind, Gust km/h'. Einzige
+    Quelle fuer die Legenden-Zeile — Trip-Briefing (`build_units_legend`) UND
+    Ortsvergleichs-Stundentabelle (`compare_html._render_units_legend`) rufen
+    sie auf, damit beide Legenden nicht auseinanderlaufen."""
     groups: OrderedDict[str, list[str]] = OrderedDict()
-    for col_key, col_label in cols:
-        try:
-            m = get_metric_by_col_key(col_key)
-        except KeyError:
-            continue
-        unit = m.display_unit if m.display_unit else m.unit
+    for label, unit in label_units:
         if not unit:
             continue
-        groups.setdefault(unit, []).append(col_label)
+        groups.setdefault(unit, []).append(label)
     if not groups:
         return ""
     parts = [f"{', '.join(labels)} {unit}" for unit, labels in groups.items()]
     return "Einheiten: " + " · ".join(parts)
+
+
+def build_units_legend(rows: list[dict]) -> str:
+    """Grouped units legend: 'Temp, Feels °C · Wind, Gust km/h'."""
+    pairs: list[tuple[str, str]] = []
+    for col_key, col_label in visible_cols(rows):
+        try:
+            m = get_metric_by_col_key(col_key)
+        except KeyError:
+            continue
+        pairs.append((col_label, m.display_unit if m.display_unit else m.unit))
+    return format_units_legend(pairs)
 
 
 # Issue #759: 4-stufiger Ampelpunkt fuer Wind/Boen/Regen/Regenwahrscheinlichkeit.

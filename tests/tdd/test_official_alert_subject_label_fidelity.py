@@ -180,7 +180,13 @@ def test_ac6_html_notice_unchanged():
     statt der alten Struktur). Die eigentliche Invariante DIESES Tests -- die
     Detail-Fidelity aus `_typ_tag` (voller Label statt gekuerztem Typ-Wort)
     fliesst unveraendert in den `.type`-Text, Region-Dedup in `.src` bleibt --
-    wird strukturell weitergeprueft (BeautifulSoup statt Byte-Vergleich)."""
+    wird strukturell weitergeprueft (BeautifulSoup statt Byte-Vergleich).
+
+    #1238 AC-4 (angepasst): der reichere Quell-Label ERSETZT das Typ-Wort, statt
+    ihm nachgestellt zu werden. Die frueher hier eingefrorenen Titel ("Hitze —
+    Extreme Hitze", "Zugang gesperrt — Zugang gesperrt — Rotwand-Massiv") waren
+    genau der doppelte Warn-Titel aus Issue #1238 — die Detail-Fidelity (voller
+    Label statt gekuerztem Typ-Wort) bleibt erhalten, die Dopplung faellt weg."""
     from bs4 import BeautifulSoup
 
     from output.renderers.alert.official_alerts import render_official_alert_html
@@ -191,8 +197,8 @@ def test_ac6_html_notice_unchanged():
     soup = BeautifulSoup(html, "html.parser")
     types = [t.get_text(strip=True) for t in soup.select(".type")]
     assert types == [
-        "Hitze — Extreme Hitze",
-        "Zugang gesperrt — Zugang gesperrt — Rotwand-Massiv",
+        "Extreme Hitze",
+        "Zugang gesperrt — Rotwand-Massiv",
     ], f"Detail-Fidelity aus _typ_tag hat sich veraendert: {types!r}"
     body_text = soup.get_text(" ", strip=True)
     assert "Fr 10.07. · ganztägig" in body_text

@@ -502,11 +502,14 @@ class TestCompareMailV2HTML:
 
         table = _location_hour_table(html, 0, len(result.locations))
         rows_raw = _rows_raw(table)
+        # #1237 AC-1 (angepasst): die Zeit-Zelle zeigt nur noch die Stunde ("12"),
+        # keinen Minutenanteil ("12:00") — reine Zeilen-Auswahl, die geprüfte
+        # AC-6-Invariante (Danger-Faerbung) bleibt unveraendert.
         hour_row = next(
-            (r for r in rows_raw if r and "12:00" in re.sub(r"<[^>]+>", "", r[0])),
+            (r for r in rows_raw if r and re.sub(r"<[^>]+>", "", r[0]).strip() == "12"),
             None,
         )
-        assert hour_row is not None, "12:00-Zeile in Collobrières' Stundentabelle nicht gefunden"
+        assert hour_row is not None, "12-Uhr-Zeile in Collobrières' Stundentabelle nicht gefunden"
         temp_cell = hour_row[1]  # Temp ist die 2. Spalte
         assert "34" in re.sub(r"<[^>]+>", "", temp_cell), (
             f"Temp-Zelle um 12:00 Uhr muss '34' zeigen, war: {temp_cell}"
@@ -525,8 +528,10 @@ class TestCompareMailV2HTML:
 
         table = _location_hour_table(html, 0, len(result.locations))
         rows = _rows(table)
-        hour_row = next((r for r in rows if r and "09:00" in r[0]), None)
-        assert hour_row is not None, "09:00-Zeile in Collobrières' Stundentabelle nicht gefunden"
+        # #1237 AC-1 (angepasst): Zeit-Zelle ohne Minutenanteil — reine
+        # Zeilen-Auswahl, die geprüfte AC-7-Invariante ('—') bleibt unveraendert.
+        hour_row = next((r for r in rows if r and r[0].strip() == "09"), None)
+        assert hour_row is not None, "09-Uhr-Zeile in Collobrières' Stundentabelle nicht gefunden"
         assert hour_row[2] == "—", (
             f"Gef.-Spalte muss bei wind_chill_c=None exakt '—' zeigen, war: {hour_row[2]!r}"
         )
