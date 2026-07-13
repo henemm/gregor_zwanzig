@@ -111,6 +111,23 @@ describe('AC-14: Effekt-Buttons erfuellen 44px-Touch-Mindestmass (Struktur)', ()
 		assert.match(src, /\.cem-open-btn\s*\{[^}]*min-height:\s*44px/, '.cem-open-btn muss min-height 44px setzen');
 	});
 
+	// Staging-Fund F001 (Adversary BROKEN): .cem-ordinal-btn hatte min-height
+	// aber kein min-width — 3 Ordinal-Buttons + Clear-Button teilten sich eine
+	// ~175px-Spalte (Von/Bis nebeneinander), real gemessen 34-41px Breite.
+	// Fix: Ordinal-Gruppe bekommt eine eigene volle Zeile (cem-bound-full),
+	// dort erfuellt min-width:44px die 44x44-Flaeche real.
+	test('.cem-ordinal-btn hat min-width: 44px (Staging-Fund F001)', () => {
+		const src = readFileSync(MOBILE, 'utf-8');
+		assert.match(src, /\.cem-ordinal-btn\s*\{[^}]*min-width:\s*44px/, '.cem-ordinal-btn muss min-width 44px setzen');
+	});
+
+	test('Ordinal-Zeile bekommt eine eigene volle Breite statt der Von/Bis-Spaltenteilung', () => {
+		const src = readFileSync(MOBILE, 'utf-8');
+		assert.ok(src.includes('cem-bound-full'), 'Ordinal-Bound braucht eine Vollbreiten-Modifier-Klasse');
+		assert.match(src, /\.cem-bound-full\s*\{[^}]*flex:\s*1\s+1\s+100%/, '.cem-bound-full muss flex-basis 100% setzen (eigene Zeile)');
+		assert.match(src, /\.cem-bounds\s*\{[^}]*flex-wrap:\s*wrap/, '.cem-bounds muss flex-wrap:wrap erlauben, damit Vollbreiten-Zeilen umbrechen');
+	});
+
 	test('.cem-handle hat eine 44x44 ::before-Trefffläche (Touch-Zone um den 24px-Punkt)', () => {
 		const src = readFileSync(MOBILE, 'utf-8');
 		assert.match(src, /\.cem-handle::before\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/, '.cem-handle::before muss 44x44 Trefffläche haben');

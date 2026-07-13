@@ -240,7 +240,11 @@
 				<div class="cem-bounds">
 					{#each ['min', 'max'] as const as side}
 						{@const value = side === 'min' ? row.min : row.max}
-						<div class="cem-bound">
+						<!-- Staging-Fund F001 (Adversary BROKEN): Ordinal-Bound bekommt eine
+						     eigene volle Zeile (cem-bound-full) statt der Von/Bis-Spaltenteilung
+						     — sonst teilen sich 3 Ordinal-Buttons + Clear-Button eine ~175px-
+						     Spalte und unterschreiten real die 44px-Mindestbreite. -->
+						<div class="cem-bound" class:cem-bound-full={row.kind === 'ordinal'}>
 							<div class="cem-bound-label">{side === 'min' ? 'Von' : 'Bis'}</div>
 							{#if value == null}
 								<button type="button" class="cem-open-btn" onclick={() => openBound(row, side)}>offen · + Grenze</button>
@@ -338,8 +342,12 @@
 	.cem-open-left { left: 2px; }
 	.cem-open-right { right: 2px; }
 	.cem-band-scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--g-ink-4); }
-	.cem-bounds { display: flex; gap: 12px; margin-top: 12px; }
-	.cem-bound { flex: 1; min-width: 0; }
+	.cem-bounds { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+	.cem-bound { flex: 1 1 0; min-width: 0; }
+	/* Staging-Fund F001: Ordinal-Bound erzwingt eine eigene volle Zeile (flex-wrap
+	   auf .cem-bounds bricht davor/danach um), damit .cem-ordinal-btn real 44px
+	   Breite bekommt statt sich eine ~175px-Von/Bis-Spalte zu teilen. */
+	.cem-bound-full { flex: 1 1 100%; }
 	.cem-bound-label { font-size: 9.5px; color: var(--g-ink-4); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; }
 	.cem-open-btn { width: 100%; min-height: 44px; border: 1px dashed var(--g-rule); background: transparent; border-radius: var(--g-r-2, 6px); cursor: pointer; color: var(--g-ink-4); font-size: 12px; }
 	.cem-stepper, .cem-ordinal-group { display: flex; align-items: center; gap: 6px; }
@@ -349,7 +357,7 @@
 	.cem-step-value { flex: 1; min-width: 0; text-align: center; padding: 0 2px; }
 	.cem-step-num { font-size: 16px; font-weight: 600; color: var(--g-ink); font-variant-numeric: tabular-nums; line-height: 1.1; }
 	.cem-step-unit { font-size: 9px; color: var(--g-ink-4); }
-	.cem-ordinal-btn { flex: 1; min-height: 44px; padding: 4px 6px; font-size: 11.5px; border-radius: var(--g-r-2, 6px); border: 1px solid var(--g-rule); background: transparent; color: var(--g-ink-3); cursor: pointer; }
+	.cem-ordinal-btn { flex: 1; min-width: 44px; min-height: 44px; padding: 4px 6px; font-size: 11.5px; border-radius: var(--g-r-2, 6px); border: 1px solid var(--g-rule); background: transparent; color: var(--g-ink-3); cursor: pointer; }
 	.cem-ordinal-btn.on { border-color: var(--g-accent); color: var(--g-accent-deep); background: var(--g-accent-tint); }
 	.cem-clear-btn { width: 30px; height: 40px; flex-shrink: 0; border: none; background: transparent; cursor: pointer; color: var(--g-ink-4); font-size: 15px; }
 	.cem-effects { display: flex; gap: 8px; margin-top: 12px; }
