@@ -125,10 +125,13 @@ Europe/Vienna). Pro Preset:
 2. `archived_at` gesetzt → skip (heute fehlender Guard, Altlast).
 3. `end_date` vorhanden und `< heute` (Europe/Vienna) → skip.
 4. Slot-Werte lesen: Preset-Dict hat evtl. keine Slot-Felder (Python liest
-   `compare_presets.json` roh — die Go-Migration materialisiert erst beim
-   nächsten Go-Save). Slot-Fallback-Helper liefert bei fehlenden Feldern
-   dieselben Defaults wie die Go-Migration (`morning_enabled=true,
-   morning_time="06:00:00", evening_enabled=false, evening_time="18:00:00"`).
+   `compare_presets.json` seit Issue #1250 Scheibe 1 über den zentralen Loader
+   `load_compare_presets()`/`compare_preset_to_dict()` — `compare_preset_to_dict()`
+   liefert weiterhin den unveränderten Roh-Dict, keine Normalisierung; die
+   Go-Migration materialisiert die Slot-Felder erst beim nächsten Go-Save).
+   Slot-Fallback-Helper liefert bei fehlenden Feldern dieselben Defaults wie
+   die Go-Migration (`morning_enabled=true, morning_time="06:00:00",
+   evening_enabled=false, evening_time="18:00:00"`).
 5. `morning_enabled` und `morning_time.hour == hour` → Versand mit
    `target_date = heute`.
 6. `evening_enabled` und `evening_time.hour == hour` → Versand mit
@@ -238,6 +241,11 @@ Punkt 6 aus dem Auftrag entfällt ersatzlos, keine Änderung nötig.
 
 ## Changelog
 
+- 2026-07-13 (Doku-Nachzug, Issue #1250 Scheibe 1): Implementation Details Punkt 5.4
+  präzisiert — Python liest `compare_presets.json` nicht mehr direkt roh, sondern über
+  den zentralen Loader `load_compare_presets()`/`compare_preset_to_dict()`
+  (`src/app/loader.py`). Verhalten/Fallback-Defaults unverändert, reine
+  Mechanismus-Korrektur, kein neuer AC.
 - 2026-07-12: Initial spec created
 - 2026-07-12 (vor Freigabe): Migrations-Tabelle um `daily_morning`/`daily_evening` erweitert + KL-6 (vorbestehender Nie-Versand-Bug wird behoben); AC-3 entsprechend präzisiert. PO-„go" erfolgte auf diesem Stand.
 - 2026-07-12 (nach Freigabe, Adversary-Runde): KL-7 ergänzt — `end_date` per API nicht auf „unbegrenzt" rückstellbar (F003, bestehendes Pointer-Merge-Muster, Auflösung in 2b). Reine Dokumentation eines Ist-Verhaltens, kein AC geändert.

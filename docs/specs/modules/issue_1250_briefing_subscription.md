@@ -104,13 +104,25 @@ Renderer-Templates selbst bleiben getrennt (E9, KL-1).
 - Abhängigkeiten: keine — erste Scheibe.
 
 **Scheibe 1 — Python-Preset-Kontrakt**
-- Inhalt: `ComparePreset`-Dataclass + EIN zentraler Loader ersetzt 4 rohe
-  Dict-Loads.
-- Dateien: `src/app/models.py` (CREATE Dataclass, analog `Trip` :168-266),
-  `src/app/loader.py` (CREATE Loader-Funktion), `src/services/compare_alert.py:292`,
-  `src/services/compare_radar_alert.py:180`, `src/services/compare_official_alert.py:185`,
-  `src/services/scheduler_dispatch_service.py:38` (alle auf Loader umstellen).
-- ~LoC: ~200.
+- Inhalt: `ComparePreset`-Dataclass + EIN zentraler Loader ersetzt 5 rohe
+  Lese-Dict-Loads (von insgesamt 6 Stellen, die die Datei roh anfassen). Der
+  RMW-Schreibpfad (`_update_preset_status`) bleibt bewusst Dict-basiert —
+  Scheibe 1 ist ein reiner Lese-Kontrakt; eine Dataclass-Roundtrip-Serialisierung
+  würde dort unbekannte/Go-seitige Felder verlieren (siehe BUG-DATALOSS-GR221,
+  Analogie KL-3).
+- Dateien: `src/app/models.py` (CREATE Dataclass, analog `Trip` in
+  `src/app/trip.py:169`), `src/app/loader.py` (CREATE Loader-Funktion, analog
+  `load_trip`/`LoaderError`/`_corridor_from_dict`), `src/services/compare_alert.py:291`
+  (`_load_presets()`), `src/services/compare_radar_alert.py:179`
+  (`_load_presets()`), `src/services/compare_official_alert.py:184`
+  (`_load_presets()`), `src/services/scheduler_dispatch_service.py:38`
+  (Daily-Lauf) und `src/services/scheduler_dispatch_service.py:242`
+  (Einzelversand `POST /api/scheduler/compare-presets/{id}/send`, #627) — alle
+  fünf Lese-Stellen werden auf Dataclass + zentralen Loader umgestellt.
+  `src/services/scheduler_dispatch_service.py:99` (`_update_preset_status`)
+  bleibt unverändert Dict-basiert (Read-Modify-Write-Schreibpfad), ist NICHT
+  Teil der Umstellung.
+- ~LoC: ~220.
 - Abhängigkeiten: nach Scheibe 0.
 
 **Scheibe 2 — Pause-Konvergenz**
@@ -189,8 +201,9 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
 **Kern-Schicht (deterministisch, kein Netz — Commit-Gate je Scheibe):**
 - Scheibe 0: Go-/Python-Test prüft 404 auf entfernten Routen, Account-Zähler-
   Test gegen neue Quelle (AC-1–AC-4).
-- Scheibe 1: Golden-Vergleich — Verhalten der 4 umgestellten Call-Sites vor/nach
-  Umstellung auf Dataclass/Loader identisch (AC-5, AC-6).
+- Scheibe 1: Golden-Vergleich — Verhalten der 5 umgestellten Lese-Call-Sites
+  vor/nach Umstellung auf Dataclass/Loader identisch; Roundtrip-Test auf dem
+  unveränderten Dict-basierten RMW-Schreibpfad (AC-5, AC-6).
 - Scheibe 2: Parametrisierter Test Dual-Write (`paused_at` ↔ `schedule`),
   Status-Ableitung mit/ohne `paused_at` (AC-7–AC-9).
 - Scheibe 3: Fixture-Test Auto-Pause-Trigger, Idempotenz (zweiter Lauf setzt
@@ -244,22 +257,26 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
 
 <!-- Scheibe 1 — Python-Preset-Kontrakt -->
 
-- **AC-5:** Given die 4 Call-Sites, die bisher rohe Dicts lasen
-  (`compare_alert.py`, `compare_radar_alert.py`, `compare_official_alert.py`,
-  `scheduler_dispatch_service.py`) / When sie nach Scheibe 1 auf die
-  `ComparePreset`-Dataclass + den zentralen Loader umgestellt sind / Then
-  liefern alle vier für denselben Bestandsdatensatz identisches Verhalten wie
-  vor der Umstellung (Golden-Vergleich).
+- **AC-5:** Given die 5 Lese-Call-Sites, die bisher rohe Dicts lasen
+  (`compare_alert.py:291`, `compare_radar_alert.py:179`,
+  `compare_official_alert.py:184`, `scheduler_dispatch_service.py:38`
+  Daily-Lauf, `scheduler_dispatch_service.py:242` Einzelversand #627) / When
+  sie nach Scheibe 1 auf die `ComparePreset`-Dataclass + den zentralen Loader
+  umgestellt sind / Then liefern alle fünf für denselben Bestandsdatensatz
+  identisches Verhalten wie vor der Umstellung (Golden-Vergleich).
   - Test: Golden-Vergleich — gleicher Fixture-Preset durch alte und neue
-    Implementierung, Ausgabe (Alert-Entscheidung, Radar-Ergebnis)
-    bytegleich.
+    Implementierung an allen fünf Call-Sites, Ausgabe (Alert-Entscheidung,
+    Radar-Ergebnis, Einzelversand-Ergebnis) bytegleich.
 
 - **AC-6:** Given ein Preset mit unbekanntem/zusätzlichem Feld im JSON / When
-  es durch den neuen zentralen Loader (Scheibe 1) geladen und wieder
-  gespeichert wird / Then geht das unbekannte Feld nicht verloren
-  (Read-Modify-Write, kein Replace).
-  - Test: Fixture mit künstlichem Zusatzfeld laden/speichern, Feld nach
-    Roundtrip noch vorhanden.
+  es einen Status-Update-Zyklus über den unverändert Dict-basierten
+  RMW-Schreibpfad (`_update_preset_status`,
+  `scheduler_dispatch_service.py:99`) durchläuft / Then geht das unbekannte
+  Feld nicht verloren (Read-Modify-Write, kein Replace) — der neue Loader aus
+  Scheibe 1 ist reiner Lese-Kontrakt und schreibt selbst nichts zurück.
+  - Test: Fixture mit künstlichem Zusatzfeld einen Status-Update-Zyklus
+    (Laden, Feldänderung, Speichern) über `_update_preset_status` durchlaufen
+    lassen, Zusatzfeld nach dem Roundtrip noch vorhanden.
 
 <!-- Scheibe 2 — Pause-Konvergenz -->
 
@@ -453,3 +470,7 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
   Programm-Spec über 8 Scheiben nach Muster #1231, basierend auf
   `docs/context/feat-1250-briefing-subscription.md` (Ist-Vermessung +
   Analyse 2026-07-13).
+- 2026-07-13 (feat-1250-s1-preset-kontrakt-v2): Scheibe-1-Präzisierung nach
+  Context-Phase — 6 statt 4 Stellen (davon 1 RMW-Schreibpfad, bleibt
+  Dict-basiert), Trip-Vorbild trip.py:169 statt models.py. Keine inhaltliche
+  Richtungsänderung.

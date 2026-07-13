@@ -1603,7 +1603,7 @@ aktualisiert `letzter_versand` und `top_ort_letzter_versand`.
 
 **Internal Behavior (seit Issue #1232 Scheibe 2a):**
 
-1. Load `data/users/{user_id}/compare_presets.json` as direct JSON array `[...]`
+1. Load `data/users/{user_id}/compare_presets.json` über den zentralen Loader `load_compare_presets()`/`compare_preset_to_dict()` (`src/app/loader.py`, Issue #1250 Scheibe 1, `strict=True`) statt eines direkten rohen `json.loads` — Rückgabe bleibt dieselbe Dict-Liste wie zuvor (`compare_preset_to_dict()` liefert den unveränderten Roh-Dict je Preset)
 2. Für jedes Preset: Guards prüfen — `schedule == "manual"` → skip (pausiert); `archived_at` gesetzt → skip; `end_date` gesetzt und `< heute` (Europe/Vienna) → skip
 3. Slot-Werte lesen (Preset ohne Slot-Felder — z. B. weil die Go-Migration die Datei noch nicht neu geschrieben hat — bekommt dieselben Fallback-Defaults wie `LoadComparePresets`); Morgen-Slot fällig wenn `morning_enabled` und `morning_time.hour == hour` (`target_date=heute`), Abend-Slot fällig wenn `evening_enabled` und `evening_time.hour == hour` (`target_date=morgen`)
 4. Für jedes fällige Preset:
@@ -1676,7 +1676,7 @@ Executes comparison and sends report for a single preset immediately (regardless
 1. Go proxy (`SendComparePresetHandler`) extracts `{id}` from URL, appends `user_id` from Auth-Context to query string
 2. Proxy forwards POST to Python endpoint: `/api/scheduler/compare-presets/{id}/send?user_id=...`
 3. Python endpoint:
-   - Loads `data/users/{user_id}/compare_presets.json`
+   - Loads `data/users/{user_id}/compare_presets.json` über `load_compare_presets(strict=True)` (Issue #1250 Scheibe 1) statt eines direkten rohen `json.loads`
    - Finds preset by `id` (404 if not found)
    - Validates `empfaenger[]` exists and is non-empty; falls back to `mail_to` from user profile (400 if neither)
    - Calls Compare Engine with `target_date=today`, `forecast_hours=preset["forecast_hours"]` (gespeicherter Horizont, Default 48 — Issue #764; uses preset's `hour_from`, `hour_to`, `profil`)
@@ -2646,6 +2646,14 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-07-13: Issue #1250 (Scheibe 1) — die 5 rohen `json.loads`-Lese-Call-Sites für
+  `compare_presets.json` (3 Compare-Alert-Services, Scheduler-Dispatch Daily und
+  Einzelversand) laufen jetzt über den zentralen Loader `load_compare_presets()` /
+  `compare_preset_from_dict()` / `compare_preset_to_dict()` (`src/app/loader.py`, neue
+  `ComparePreset`-Dataclass in `src/app/models.py`). Reiner Lese-Kontrakt ohne
+  Normalisierung; Rückgabe (Dict-Liste) bleibt für bestehende Konsumenten unverändert.
+  Der Schreibpfad (`save_compare_preset_status`) bleibt unverändert Dict-basiert. Kein
+  API-/Schema-/Verhaltens-Change. Siehe Abschnitte 17 und 18.
 - 2026-07-13: Issue #1244 — Null-Listenfelder brechen den Trip-Loader: `Trip.Stages`,
   `Stage.Waypoints`, `Trip.AlertRules`, `Trip.Corridors` sowie `ComparePreset.Corridors`/
   `LocationIDs`/`Empfaenger` sind jetzt **immer** `[]`, nie `null` — durchgesetzt in beide

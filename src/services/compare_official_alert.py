@@ -20,14 +20,12 @@ Features (rechtzeitige Warnung vor Verschaerfung). Das Tageslimit
 """
 from __future__ import annotations
 
-import json
 import logging
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Optional
 
 from app.config import Settings
-from app.loader import load_all_locations
+from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
 from output.renderers.alert.official_alerts import dedupe_official_alerts
 from services import alert_daily_limit
 from services.alert_state import AlertStateService
@@ -182,12 +180,5 @@ class CompareOfficialAlertService:
         return NotificationService(preset_settings, self._user_id)
 
     def _load_presets(self) -> list[dict]:
-        path = Path(f"data/users/{self._user_id}/compare_presets.json")
-        if not path.exists():
-            return []
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            return data if isinstance(data, list) else []
-        except (json.JSONDecodeError, OSError) as e:
-            logger.warning(f"Corrupt compare_presets.json for {self._user_id}: {e}")
-            return []
+        # Issue #1250 Scheibe 1: zentraler Loader statt rohem json.loads.
+        return [compare_preset_to_dict(p) for p in load_compare_presets(user_id=self._user_id)]

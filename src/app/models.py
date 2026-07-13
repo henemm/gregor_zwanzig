@@ -844,6 +844,57 @@ class Corridor:
     prio: Optional[str] = None  # "hoch" | "mittel" | "niedrig" — nur Anzeige-Reihenfolge (C1)
 
 
+@dataclass
+class ComparePreset:
+    """Persistiertes Orts-Vergleichs-Preset (Issue #1250, Scheibe 1).
+
+    Feldliste 1:1 aus `internal/model/compare_preset.go` (Go-SSoT, Persistenz-
+    Owner bleibt Go bis Scheibe 5). Deprecated Felder (`schedule`,
+    `previous_schedule`, `weekday`, `hour_from/to`, `forecast_hours`) werden
+    unnormalisiert getragen — `schedule=="manual"` ist lebende Pause-Semantik
+    (KL-3), keine Migration in dieser Scheibe.
+
+    `raw` traegt den unveraenderten Eingabe-Dict fuer bestehende Dict-
+    Konsumenten (siehe `app.loader.compare_preset_to_dict`): ein Roundtrip
+    ueber `dataclasses.asdict()` wuerde fehlende Pointer-Felder durch
+    explizites `None` ersetzen und `.get(key, default)`-Aufrufe an den
+    Call-Sites verhaltensfremd machen (Default griffe nicht mehr).
+    """
+    id: str = ""
+    name: str = ""
+    user_id: str = ""
+    location_ids: List[str] = field(default_factory=list)
+    schedule: str = ""
+    previous_schedule: str = ""
+    profil: str = ""
+    hour_from: int = 0
+    hour_to: int = 0
+    forecast_hours: int = 0
+    weekday: Optional[int] = None
+    empfaenger: List[str] = field(default_factory=list)
+    letzter_versand: Optional[str] = None
+    top_ort_letzter_versand: Optional[str] = None
+    created_at: str = ""
+    archived_at: Optional[str] = None
+    display_config: Optional[dict[str, Any]] = None
+    official_alerts_enabled: Optional[bool] = None
+    radar_alert_enabled: Optional[bool] = None
+    hourly_enabled: Optional[bool] = None
+    alert_cooldown_minutes: Optional[int] = None
+    alert_quiet_from: Optional[str] = None
+    alert_quiet_to: Optional[str] = None
+    official_alert_triggers_enabled: Optional[bool] = None
+    send_telegram: Optional[bool] = None
+    send_sms: Optional[bool] = None
+    morning_enabled: Optional[bool] = None
+    morning_time: Optional[str] = None
+    evening_enabled: Optional[bool] = None
+    evening_time: Optional[str] = None
+    end_date: Optional[str] = None
+    corridors: List["Corridor"] = field(default_factory=list)
+    raw: dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
+
+
 # --- F12: Großwetterlage / Stabilitäts-Label (Issue #122, refactored #479) --
 
 @dataclass(frozen=True)

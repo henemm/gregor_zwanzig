@@ -19,6 +19,7 @@ from app.models import (
     AlertRule,
     AlertRuleKind,
     AlertSeverity,
+    ComparePreset,
     Corridor,
 )
 from app.trip import (
@@ -205,6 +206,98 @@ def _corridor_from_dict(d: Dict[str, Any]) -> Corridor:
         mark=bool(d.get("mark", False)),
         prio=d.get("prio"),
     )
+
+
+def compare_preset_from_dict(data: Dict[str, Any]) -> ComparePreset:
+    """Parse ein einzelnes ComparePreset aus einem rohen JSON-Dict (Issue
+    #1250, Scheibe 1). Reiner Lese-Kontrakt: keine Normalisierung von
+    Deprecated-Feldern (KL-3). `raw` traegt den unveraenderten Eingabe-Dict
+    fuer bestehende Dict-Konsumenten, siehe `compare_preset_to_dict`.
+    """
+    corridors = [_corridor_from_dict(c) for c in (data.get("corridors") or [])]
+    return ComparePreset(
+        id=data.get("id", ""),
+        name=data.get("name", ""),
+        user_id=data.get("user_id", ""),
+        location_ids=list(data.get("location_ids") or []),
+        schedule=data.get("schedule", ""),
+        previous_schedule=data.get("previous_schedule", ""),
+        profil=data.get("profil", ""),
+        hour_from=data.get("hour_from", 0),
+        hour_to=data.get("hour_to", 0),
+        forecast_hours=data.get("forecast_hours", 0),
+        weekday=data.get("weekday"),
+        empfaenger=list(data.get("empfaenger") or []),
+        letzter_versand=data.get("letzter_versand"),
+        top_ort_letzter_versand=data.get("top_ort_letzter_versand"),
+        created_at=data.get("created_at", ""),
+        archived_at=data.get("archived_at"),
+        display_config=data.get("display_config"),
+        official_alerts_enabled=data.get("official_alerts_enabled"),
+        radar_alert_enabled=data.get("radar_alert_enabled"),
+        hourly_enabled=data.get("hourly_enabled"),
+        alert_cooldown_minutes=data.get("alert_cooldown_minutes"),
+        alert_quiet_from=data.get("alert_quiet_from"),
+        alert_quiet_to=data.get("alert_quiet_to"),
+        official_alert_triggers_enabled=data.get("official_alert_triggers_enabled"),
+        send_telegram=data.get("send_telegram"),
+        send_sms=data.get("send_sms"),
+        morning_enabled=data.get("morning_enabled"),
+        morning_time=data.get("morning_time"),
+        evening_enabled=data.get("evening_enabled"),
+        evening_time=data.get("evening_time"),
+        end_date=data.get("end_date"),
+        corridors=corridors,
+        raw=dict(data),
+    )
+
+
+def load_compare_presets(
+    user_id: str,
+    data_root: Union[str, Path] = "data",
+    strict: bool = False,
+) -> List[ComparePreset]:
+    """Zentraler Lade-Pfad fuer `compare_presets.json` (Issue #1250, Scheibe 1).
+
+    Ersetzt die bisher 4-fach duplizierten rohen `json.loads`-Reads an den
+    5 Lese-Call-Sites (AC-5). Default (`strict=False`) fail-soft identisch
+    zum bisherigen Verhalten: fehlende Datei, korruptes JSON/OSError oder
+    Nicht-Liste-JSON liefern `[]` (Korruption zusaetzlich mit Warning).
+    Reiner Lese-Kontrakt — schreibt beim Laden nichts zurueck (AC-6); der
+    RMW-Schreibpfad (`save_compare_preset_status`) bleibt unveraendert
+    Dict-basiert.
+
+    `strict=True` (Adversary-Fix F001/F002): korrupte Dateien werfen
+    `LoaderError` mit der Original-Parse-Fehlermeldung statt fail-soft `[]`
+    zu liefern. Noetig fuer `send_compare_preset` (Einzelversand, #627) und
+    `run_compare_presets_daily`, die die urspruengliche Fehlerdiagnose
+    (HTTP-404-Detail bzw. ERROR-Log) bewahren muessen; die 3 Alert-Services
+    bleiben beim fail-soft-Default.
+    """
+    path = Path(data_root) / "users" / user_id / "compare_presets.json"
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as e:
+        if strict:
+            raise LoaderError(str(e)) from e
+        logger.warning("Corrupt compare_presets.json for %s: %s", user_id, e)
+        return []
+    if not isinstance(data, list):
+        return []
+    return [compare_preset_from_dict(d) for d in data]
+
+
+def compare_preset_to_dict(preset: ComparePreset) -> Dict[str, Any]:
+    """Rueckkonvertierung fuer bestehende Dict-Konsumenten (Issue #1250,
+    Scheibe 1). Liefert den unveraenderten Roh-Dict (`preset.raw`) statt
+    `dataclasses.asdict()`: ein asdict()-Roundtrip wuerde fehlende
+    Pointer-Felder (z.B. `radar_alert_enabled`) durch explizites `None`
+    ersetzen und `.get(key, default)`-Aufrufe an den Call-Sites
+    verhaltensfremd machen (der Default griffe nicht mehr).
+    """
+    return preset.raw
 
 
 def _migrate_legacy_alert_rules(data: Dict[str, Any]) -> List[AlertRule]:

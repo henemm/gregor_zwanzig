@@ -12,7 +12,13 @@ from datetime import date, datetime as _datetime
 from pathlib import Path
 
 from app.config import Settings
-from app.loader import _parse_activity_profile, load_all_locations
+from app.loader import (
+    LoaderError,
+    _parse_activity_profile,
+    compare_preset_to_dict,
+    load_all_locations,
+    load_compare_presets,
+)
 from services.compare_slot_scheduler import presets_due_for_hour
 
 logger = logging.getLogger("scheduler.dispatch")
@@ -35,14 +41,20 @@ def run_compare_presets_daily(
     if data_root is None:
         data_root = "data"
 
+    # Issue #1250 Scheibe 1 (Adversary-Fix F002): Existenz-Check bleibt
+    # separat, strict=True bewahrt die alte ERROR-Diagnose bei Korruption
+    # statt sie unter dem Skip-INFO-Log zu verstecken.
     preset_path = Path(data_root) / "users" / user_id / "compare_presets.json"
     if not preset_path.exists():
         logger.info("No compare_presets.json for user %s — skipping", user_id)
         return 0
 
     try:
-        presets = _json.loads(preset_path.read_text(encoding="utf-8"))
-    except Exception as e:
+        presets = [
+            compare_preset_to_dict(p)
+            for p in load_compare_presets(user_id=user_id, data_root=data_root, strict=True)
+        ]
+    except LoaderError as e:
         logger.error("Failed to load compare_presets.json for %s: %s", user_id, e)
         return 0
 
@@ -239,18 +251,17 @@ def send_compare_preset(
     if data_root is None:
         data_root = "data"
 
-    preset_path = Path(data_root) / "users" / user_id / "compare_presets.json"
-    if not preset_path.exists():
-        raise KeyError(f"Compare-Preset {preset_id} nicht gefunden")
-
+    # Issue #1250 Scheibe 1 (Adversary-Fix F001): strict=True, damit korrupte
+    # Dateien wie vor der Umstellung als KeyError mit Original-Parse-Fehler
+    # durchschlagen (API-404-Detail), statt fail-soft als "nicht gefunden".
     try:
-        presets = _json.loads(preset_path.read_text(encoding="utf-8"))
-    except Exception as e:
+        presets = load_compare_presets(user_id=user_id, data_root=data_root, strict=True)
+    except LoaderError as e:
         raise KeyError(f"Compare-Preset {preset_id} nicht ladbar: {e}") from e
-
-    preset = next((p for p in presets if p.get("id") == preset_id), None)
-    if preset is None:
+    preset_obj = next((p for p in presets if p.id == preset_id), None)
+    if preset_obj is None:
         raise KeyError(f"Compare-Preset {preset_id} nicht gefunden")
+    preset = compare_preset_to_dict(preset_obj)
 
     settings = Settings().with_user_profile(user_id)
     top_ort, actual_empfaenger = send_one_compare_preset(preset, settings, user_id, data_root)

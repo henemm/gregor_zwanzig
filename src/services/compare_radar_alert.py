@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Optional
 
 from app.config import Settings
-from app.loader import load_all_locations
+from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
 from services.alert_state import AlertStateService
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
@@ -177,15 +177,8 @@ class CompareRadarAlertService:
         return self._radar_service
 
     def _load_presets(self) -> list[dict]:
-        path = Path(f"data/users/{self._user_id}/compare_presets.json")
-        if not path.exists():
-            return []
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            return data if isinstance(data, list) else []
-        except (json.JSONDecodeError, OSError) as e:
-            logger.warning(f"Corrupt compare_presets.json for {self._user_id}: {e}")
-            return []
+        # Issue #1250 Scheibe 1: zentraler Loader statt rohem json.loads.
+        return [compare_preset_to_dict(p) for p in load_compare_presets(user_id=self._user_id)]
 
     def _load_throttle_times(self) -> dict[str, datetime]:
         if not self._throttle_file.exists():
