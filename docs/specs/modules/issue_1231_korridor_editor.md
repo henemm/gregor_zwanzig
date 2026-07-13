@@ -472,6 +472,18 @@ hier die Strategie-Zusammenfassung:
 
 ## Changelog
 
+- 2026-07-13: Slice 7 implementiert + Adversary VERIFIED (2 Runden, 1 Fix-Loop
+  mit 4 Findings: unsichtbare Markierung/tautologischer Test, gebrochene
+  Bestands-Signatur, Aggregat-vs-Stundenwert-Vermischung, Versandpfad-Crash
+  bei malformten Corridors). Known Limitations ergänzt: (1) mark-Markierung
+  wirkt in Übersichts-Zeilen (via FRONTEND_TO_RENDERER_METRIC_ID) und nur für
+  echte 1:1-Stundenmetriken auch in Stundentabellen
+  (CORRIDOR_METRIC_TO_HOUR_KEY: temp_max_c/wind_max_kmh/gust_max_kmh/
+  thunder_level_max) — Tages-Aggregat-Korridore (precip_sum_mm, uv_index_max,
+  visibility_min_m) werden NICHT gegen Einzelstunden geprüft; precip_sum_mm
+  hat zudem keine Übersichts-Zeile und bleibt daher vorerst unmarkiert
+  (Ausbau-Kandidat, #1199). (2) range=[None,None]+mark markiert defensiv
+  alles (im Editor per AC-12 nicht speicherbar).
 - 2026-07-13: Fakten-Korrektur Slice 4 (transparent, keine AC-Änderung): Der
   vergleich-Metrik-Namensraum umfasst für `mark`-Korridore ALLE 14
   Compare-Metriken aus `compareMetricDefs.ts::ALL_METRICS` (nicht nur die 10

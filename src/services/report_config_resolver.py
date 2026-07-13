@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from app.models import TripReportConfig, UnifiedWeatherDisplayConfig
+    from app.models import Corridor, TripReportConfig, UnifiedWeatherDisplayConfig
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +160,7 @@ class CompareRenderOptions:
     enabled_metrics: Optional[set]
     hourly_metrics: Optional[set]
     hourly_enabled: bool
+    corridors: "Optional[list[Corridor]]" = None
 
 
 def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
@@ -174,9 +175,14 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
       `resolve_hourly_metrics()` aus `display_config`.
     - `hourly_enabled`: TOP-LEVEL Preset-Feld (nicht im display_config-Blob),
       Default True.
+    - `corridors`: Issue #1231, Slice 7 — TOP-LEVEL Preset-Feld `corridors`
+      (Dual-Write seit Slice 1/2), geparst ueber denselben defensiven
+      Trip-Parser `_corridor_from_dict` (malformte Eintraege fallen still
+      raus statt den Versand zu crashen, analog Trip-Ladepfad).
 
     Reine Funktion — kein I/O, keine Mutation von `preset`.
     """
+    from app.loader import _corridor_from_dict
     from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
     from output.renderers.compare_metric_ids import resolve_enabled_metrics
 
@@ -200,9 +206,26 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         )
         top_n_details = max(1, min(10, top_n_details))
 
+    # Adversary F004 (Fix-Loop): Nicht-Dict-Eintraege (str/int/None/...) crashen
+    # sonst den gesamten Versand -- `_corridor_from_dict` ruft `d.get(...)`
+    # auf, was bei Nicht-Dicts AttributeError statt der bisher gefangenen
+    # (KeyError, TypeError, ValueError) wirft. isinstance-Check UND breiteres
+    # except (Belt-and-Suspenders) -- ein malformter Korridor darf nie den
+    # kompletten Preset-Versand verhindern (BUG-DATALOSS-GR221-Muster).
+    corridors = []
+    for raw in preset.get("corridors") or []:
+        if not isinstance(raw, dict):
+            logger.warning("Compare-Preset %s: ungueltiger Korridor %r uebersprungen", preset_id, raw)
+            continue
+        try:
+            corridors.append(_corridor_from_dict(raw))
+        except (KeyError, TypeError, ValueError, AttributeError):
+            logger.warning("Compare-Preset %s: ungueltiger Korridor %r uebersprungen", preset_id, raw)
+
     return CompareRenderOptions(
         top_n_details=top_n_details,
         enabled_metrics=resolve_enabled_metrics(display_config.get("active_metrics")),
         hourly_metrics=resolve_hourly_metrics(display_config.get("hourly_metrics")),
         hourly_enabled=preset.get("hourly_enabled", True),
+        corridors=corridors or None,
     )

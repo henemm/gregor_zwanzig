@@ -151,6 +151,56 @@ def test_no_hourly_metrics_means_no_filter():
 
 
 # ---------------------------------------------------------------------------
+# corridors — Issue #1231 Slice 7. Adversary F004 (Fix-Loop): Nicht-Dict-
+# Eintraege duerfen den Versandpfad NIEMALS crashen (malformte Korridore
+# fallen still raus, analog dem defensiven Trip-Ladepfad, s.
+# app/loader.py::_corridor_from_dict / BUG-DATALOSS-GR221-Muster).
+# ---------------------------------------------------------------------------
+
+
+def test_no_corridors_field_means_none():
+    options = resolve_compare_render_options({"id": "p14"})
+    assert options.corridors is None
+
+
+def test_valid_corridors_parsed():
+    preset = {
+        "id": "p15",
+        "corridors": [{"metric": "temp_max_c", "range": [15, 35], "mark": True}],
+    }
+    options = resolve_compare_render_options(preset)
+    assert options.corridors is not None
+    assert len(options.corridors) == 1
+    assert options.corridors[0].metric == "temp_max_c"
+    assert options.corridors[0].mark is True
+
+
+def test_non_dict_corridor_entries_skipped_without_crash():
+    """F004: 'not-a-dict' (str), 42 (int), None -- keiner davon darf
+    resolve_compare_render_options() zum Absturz bringen (AttributeError bei
+    `d.get(...)` auf Nicht-Dicts, vor dem Fix ungefangen)."""
+    for bad_corridors in (["not-a-dict"], [42], [None]):
+        options = resolve_compare_render_options({"id": "p16", "corridors": bad_corridors})
+        assert options.corridors is None, f"Malformte Korridore {bad_corridors!r} muessen leer/None ergeben"
+
+
+def test_mix_of_valid_and_malformed_corridors_keeps_only_valid():
+    preset = {
+        "id": "p17",
+        "corridors": [
+            {"metric": "temp_max_c", "range": [15, 35], "mark": True},
+            "not-a-dict",
+            None,
+            {"metric": "wind_max_kmh", "range": [0, 40], "mark": True},
+        ],
+    }
+    options = resolve_compare_render_options(preset)
+    assert options.corridors is not None
+    assert len(options.corridors) == 2
+    assert {c.metric for c in options.corridors} == {"temp_max_c", "wind_max_kmh"}
+
+
+# ---------------------------------------------------------------------------
 # AC-2 Hauptfall: deaktivierte Metrik fehlt in der ECHT gerenderten Mail
 # (HTML + Plain) — kein Mock, direkte render_compare_email()-Aufrufe mit den
 # resolvten Optionen.

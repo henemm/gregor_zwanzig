@@ -23,15 +23,20 @@ import html as _html
 from datetime import date, datetime, timedelta
 from typing import Optional
 
+from app.models import Corridor, ThunderLevel
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
+from output.renderers.compare_metric_ids import (
+    CORRIDOR_METRIC_TO_HOUR_KEY, FRONTEND_TO_RENDERER_METRIC_ID,
+)
 from output.renderers.email.design_tokens import (
     FONT_DATA, FONT_UI, G_ACCENT, G_ALERT_L2, G_ALERT_L3, G_ALERT_L4,
     G_BOX_WARNING_BG, G_INK, G_INK_FAINT, G_INK_MUTED, G_PAPER, G_SUCCESS,
     G_WARNING, WEB_FONT_LINK, tone_css,
 )
 from output.renderers.email.profile_signature import profile_signature
-from src.output.metric_format import severity_for
+from services.corridor_match import corridor_inside
+from src.output.metric_format import severity_for, thunder_ordinal
 from src.output.renderers.alert.official_alerts import (
     _LEVEL_WORDS, OfficialAlertNotice, official_alert_source_label,
     render_official_alerts_html, render_warn_block,
@@ -194,6 +199,51 @@ HOUR_METRICS = [
 
 
 # ---------------------------------------------------------------------------
+# Korridor-mark-Markierung (Issue #1231, Slice 7, AC-19) — rein additive
+# Anzeige-Signatur neben der bestehenden Severity-Faerbung. AC-20: wirkt
+# ausschliesslich hier im Renderer, calculate_score() bleibt unberuehrt.
+# ---------------------------------------------------------------------------
+
+def _mark_lookup(corridors: list[Corridor] | None, id_map: dict[str, str]) -> dict[str, Corridor]:
+    """`corridors` (nur mark=True) ueber `id_map` (vergleich-Namensraum ->
+    Renderer-Zeilen-Key) aufgeloest. notify-only-Corridors (mark=False) und
+    nicht mappbare Metriken fallen raus."""
+    if not corridors:
+        return {}
+    return {id_map[c.metric]: c for c in corridors if c.mark and c.metric in id_map}
+
+
+def _is_marked(corridor: Optional[Corridor], value) -> bool:
+    """corridor_inside() (C5, src/services/corridor_match.py) ist die
+    einzige Match-Quelle. Gewitter-Werte (ThunderLevel-Enum) werden vorab per
+    thunder_ordinal() in ihr Ordinal uebersetzt -- Corridor.range traegt fuer
+    diese Metrik Ordinalwerte, keine Enum-Instanzen."""
+    if corridor is None:
+        return False
+    v = thunder_ordinal(value) if isinstance(value, ThunderLevel) else value
+    return bool(corridor_inside(v, corridor.range[0], corridor.range[1]))
+
+
+# Adversary F001 (Fix-Loop): class="corridor-mark" allein ist unsichtbar (keine
+# <style>-Regel referenziert sie) -- die eigentliche Sichtbarkeits-Signatur ist
+# ein additiver gruener Border-Balken (Inline-Style, E-Mail-tauglich). Der
+# gruene Hintergrund-Tint (tone_css("green")) wird NUR gesetzt, wenn die Zelle
+# noch keinen eigenen Severity-Hintergrund traegt -- sonst wuerde er die
+# Severity-Farbe verdecken (Design-Prinzip Lesbarkeit, CLAUDE.md).
+_MARK_BORDER = f"border-left:3px solid {G_SUCCESS};"
+
+
+def _mark_cell_style(bg: str, marked: bool) -> tuple[str, str]:
+    """(bg, extra_style) fuer eine Zelle -- `extra_style` wird VOR `background:`
+    in den style-String eingefuegt, `bg` ist ggf. auf den gruenen Tint
+    umgeschrieben (nur wenn zuvor transparent, s.o.)."""
+    if not marked:
+        return bg, ""
+    mark_bg = tone_css("green")[0] if bg == "transparent" else bg
+    return mark_bg, _MARK_BORDER
+
+
+# ---------------------------------------------------------------------------
 # Warn-Kürzel-Mapping (dünner Anzeige-Layer über OfficialAlert.hazard)
 # ---------------------------------------------------------------------------
 
@@ -257,7 +307,8 @@ def _fmt_metric(value, decimals, unit: str) -> str:
     return f"{text}{unit}" if unit in ("°C", "%") else f"{text} {unit}"
 
 
-def _render_overview_row(m: dict, locations: list[LocationResult]) -> str:
+def _render_overview_row(m: dict, locations: list[LocationResult], marks: dict | None = None) -> str:
+    marks = marks or {}
     label_cell = (
         f'<td style="text-align:left;padding:8px 5px;font-family:{FONT_UI};'
         f'color:{G_INK_MUTED};font-weight:500;font-size:12px;'
@@ -282,9 +333,12 @@ def _render_overview_row(m: dict, locations: list[LocationResult]) -> str:
             bg, fg = tone_css(_COMPARE_TO_CANONICAL[sev_level])
             weight = "700"
         text = _fmt_metric(value, m.get("decimals"), m.get("unit", ""))
+        marked = _is_marked(marks.get(m["key"]), value)
+        cls = ' class="corridor-mark"' if marked else ""
+        bg, extra_style = _mark_cell_style(bg, marked)
         cells.append(
-            f'<td style="text-align:center;padding:8px 5px;font-family:{FONT_DATA};'
-            f'font-size:12.5px;background:{bg};color:{fg};font-weight:{weight};'
+            f'<td{cls} style="text-align:center;padding:8px 5px;font-family:{FONT_DATA};'
+            f'font-size:12.5px;{extra_style}background:{bg};color:{fg};font-weight:{weight};'
             f'border-right:1px solid #f0ece1;">{text}</td>'
         )
     return f'<tr style="border-bottom:1px solid #f0ece1;">{"".join(cells)}</tr>'
@@ -300,7 +354,11 @@ def _visible_metrics(enabled_metrics: set | None) -> list[dict]:
     return [m for m in CV2_METRICS if m["key"] == "warn" or m["key"] in enabled_metrics]
 
 
-def _render_overview_table(locations: list[LocationResult], enabled_metrics: set | None = None) -> str:
+def _render_overview_table(
+    locations: list[LocationResult],
+    enabled_metrics: set | None = None,
+    corridors: list[Corridor] | None = None,
+) -> str:
     header_cells = [
         f'<th style="text-align:left;padding:9px 5px;font-size:10px;'
         f'color:{G_INK_FAINT};border-right:1px solid #f0ece1;">Metrik</th>'
@@ -316,7 +374,8 @@ def _render_overview_table(locations: list[LocationResult], enabled_metrics: set
         f'<tr style="background:{G_PAPER};border-bottom:1px solid #e6e1d3;">'
         f'{"".join(header_cells)}</tr>'
     )
-    rows = "".join(_render_overview_row(m, locations) for m in _visible_metrics(enabled_metrics))
+    marks = _mark_lookup(corridors, FRONTEND_TO_RENDERER_METRIC_ID)
+    rows = "".join(_render_overview_row(m, locations, marks) for m in _visible_metrics(enabled_metrics))
     table = (
         f'<table cellspacing="0" cellpadding="0" style="width:100%;min-width:760px;'
         f'border-collapse:collapse;font-family:{FONT_DATA};'
@@ -388,10 +447,15 @@ def _sev_cell_style(level: Optional[str]) -> tuple[str, str, str]:
     return bg, fg, "700"
 
 
-def _hour_td(text: str, bg: str = "transparent", fg: str = G_INK, weight: str = "500", align: str = "center") -> str:
+def _hour_td(
+    text: str, bg: str = "transparent", fg: str = G_INK, weight: str = "500",
+    align: str = "center", marked: bool = False,
+) -> str:
+    cls = ' class="corridor-mark"' if marked else ""
+    bg, extra_style = _mark_cell_style(bg, marked)
     return (
-        f'<td style="text-align:{align};padding:8px 4px;font-size:13px;'
-        f'background:{bg};color:{fg};font-weight:{weight};'
+        f'<td{cls} style="text-align:{align};padding:8px 4px;font-size:13px;'
+        f'{extra_style}background:{bg};color:{fg};font-weight:{weight};'
         f'border-right:1px solid #f0ece1;">{text}</td>'
     )
 
@@ -406,7 +470,7 @@ def _visible_hour_metrics(hourly_metrics: set | None) -> list[dict]:
     return [m for m in HOUR_METRICS if m["key"] in hourly_metrics]
 
 
-def _render_hour_row(dp, visible: list[dict]) -> str:
+def _render_hour_row(dp, visible: list[dict], marks: dict) -> str:
     # Issue #1237 (AC-1): nur die Stunde ("07"), kein Minutenanteil -- identisch
     # zur bereits korrekten Trip-Briefing-Formatierung (helpers.dp_to_row).
     hh = dp.ts.strftime("%H") if hasattr(dp.ts, "strftime") else str(dp.ts)
@@ -417,12 +481,16 @@ def _render_hour_row(dp, visible: list[dict]) -> str:
         sev_fn = m.get("sev")
         sev_level = sev_fn(value) if (sev_fn and value is not None) else None
         style = _sev_cell_style(sev_level)
-        cells += _hour_td(text, *style)
+        marked = _is_marked(marks.get(m["key"]), value)
+        cells += _hour_td(text, *style, marked=marked)
     return f'<tr style="border-bottom:1px solid #f0ece1;">{cells}</tr>'
 
 
-def _render_hour_table(loc: LocationResult, hourly_metrics: set | None = None) -> str:
+def _render_hour_table(
+    loc: LocationResult, hourly_metrics: set | None = None, corridors: list[Corridor] | None = None,
+) -> str:
     visible = _visible_hour_metrics(hourly_metrics)
+    marks = _mark_lookup(corridors, CORRIDOR_METRIC_TO_HOUR_KEY)
     columns = ["Zeit"] + [m["label"] for m in visible]
     ths = "".join(
         f'<th style="text-align:{"left" if col == "Zeit" else "center"};padding:6px 4px;'
@@ -431,7 +499,7 @@ def _render_hour_table(loc: LocationResult, hourly_metrics: set | None = None) -
         for col in columns
     )
     header = f'<tr style="background:{G_PAPER};border-bottom:1px solid #e6e1d3;">{ths}</tr>'
-    rows = "".join(_render_hour_row(dp, visible) for dp in loc.hourly_data)
+    rows = "".join(_render_hour_row(dp, visible, marks) for dp in loc.hourly_data)
     table = (
         f'<table cellspacing="0" cellpadding="0" style="width:100%;'
         f'border-collapse:collapse;margin-top:12px;font-family:{FONT_DATA};'
@@ -444,7 +512,10 @@ def _render_hour_table(loc: LocationResult, hourly_metrics: set | None = None) -
     )
 
 
-def _render_location_section(loc: LocationResult, index: int, hourly_metrics: set | None = None) -> str:
+def _render_location_section(
+    loc: LocationResult, index: int, hourly_metrics: set | None = None,
+    corridors: list[Corridor] | None = None,
+) -> str:
     """Ort-Kopf + Langform-Warn-Streifen + Stundentabelle. Entfaellt bei Fehler
     bzw. fehlenden Stundendaten (SPEC §4)."""
     if loc.error is not None or not loc.hourly_data:
@@ -470,7 +541,7 @@ def _render_location_section(loc: LocationResult, index: int, hourly_metrics: se
         )
     return (
         f'<div style="padding:{20 if index else 14}px 24px 0;">'
-        f'{header}{strip}{_render_hour_table(loc, hourly_metrics)}</div>'
+        f'{header}{strip}{_render_hour_table(loc, hourly_metrics, corridors)}</div>'
     )
 
 
@@ -714,6 +785,7 @@ def render_compare_html(
     preset_name: Optional[str] = None,
     preset_schedule: Optional[str] = None,
     preset_weekday: Optional[int] = None,
+    corridors: list[Corridor] | None = None,
 ) -> str:
     """Rendert ComparisonResult als HTML-Mail (v2-Layout, Issue #1110).
 
@@ -743,6 +815,11 @@ def render_compare_html(
         preset_name: Name des Compare-Presets fuer den Abo-Footer.
         preset_schedule: Schedule-Wert (z.B. "daily"/"weekly") fuer "Naechster Versand".
         preset_weekday: Wochentag-Index (0=Mo) fuer weekly-Schedules.
+        corridors: Issue #1231, Slice 7 -- Corridor-Liste des Presets. Zellen,
+            deren Wert bei einem `mark=True`-Corridor innerhalb dessen `range`
+            liegt (`corridor_inside()`, C5), erhalten zusaetzlich
+            `class="corridor-mark"` (additiv zur Severity-Faerbung, AC-19).
+            `None`/`[]` = kein Korridor konfiguriert, HTML unveraendert.
 
     Returns:
         HTML-String (DOCTYPE bis </html>).
@@ -759,14 +836,14 @@ def render_compare_html(
     overview_html = (
         f'<div style="padding:6px 24px 0;">'
         f'{_render_section_head("ÜBERSICHT", "Alle Orte · gewählte Metriken", "← scrollen")}'
-        f'{_render_overview_table(locations, enabled_metrics)}</div>'
+        f'{_render_overview_table(locations, enabled_metrics, corridors)}</div>'
     )
     hourly_head_html = (
         f'<div style="padding:26px 24px 0;">'
         f'{_render_section_head("STUNDEN", "Stundenverlauf · alle Orte", "09–16 Uhr")}</div>'
     ) if hourly_enabled else ""
     hourly_sections_html = (
-        "".join(_render_location_section(loc, i, hourly_metrics) for i, loc in enumerate(locations))
+        "".join(_render_location_section(loc, i, hourly_metrics, corridors) for i, loc in enumerate(locations))
         if hourly_enabled else ""
     )
 
@@ -784,12 +861,18 @@ def render_compare_html(
         ) if part
     )
 
+    # Adversary F001(b): zusaetzliche <style>-Regel als Backup fuer Clients,
+    # die Klassen respektieren -- nur bei tatsaechlich konfigurierten
+    # Korridoren, damit corridors=None/[] das HTML byte-identisch laesst
+    # (Baseline-Schutz, s. test_kein_corridor_rendert_wie_bisher).
+    mark_css = f".corridor-mark {{ border-left:3px solid {G_SUCCESS} !important; }}\n" if corridors else ""
+
     style_block = f"""<style>
 body {{ margin:0;padding:0;background:{G_PAPER};font-family:{FONT_UI};color:{G_INK}; }}
 .container {{ max-width:680px;margin:0 auto;background:#ffffff; }}
 table {{ border-collapse:collapse; }}
 th, td {{ vertical-align:top; }}
-@media (max-width: 480px) {{
+{mark_css}@media (max-width: 480px) {{
     .container {{ max-width:100% !important; }}
     .header-stats-desktop {{ display:none !important; }}
     .header-stats-mobile {{ display:table !important; }}

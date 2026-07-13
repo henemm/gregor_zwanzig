@@ -286,6 +286,7 @@ def send_one_compare_preset(
         preset_name=name,
         preset_schedule=preset.get("schedule"),
         preset_weekday=preset.get("weekday"),
+        corridors=opts.corridors,
     )
     EmailOutput(settings).send(
         subject,

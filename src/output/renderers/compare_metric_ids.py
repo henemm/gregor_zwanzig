@@ -20,6 +20,30 @@ FRONTEND_TO_RENDERER_METRIC_ID: dict[str, str] = {
 }
 
 
+# Issue #1231, Slice 7: gleicher vergleich-Namensraum wie oben, aber Ziel
+# sind die Stundentabellen-Spalten (HOUR_METRICS-Keys in compare_html.py)
+# statt der Uebersichtszeilen -- eigene Zielmenge, weil nicht jede
+# Uebersichts-Metrik eine Stundenspalte hat (und umgekehrt). Nur die
+# Schnittmenge ist gemappt; gebraucht von der Korridor-mark-Markierung
+# (render_compare_html(corridors=...)), NICHT von resolve_enabled_metrics.
+#
+# Adversary F003 (Fix-Loop): NUR echte 1:1-Stundenmetriken -- ein Korridor
+# auf ein TAGES-Aggregat (z.B. `precip_sum_mm`, `uv_index_max`,
+# `visibility_min_m`) gegen einen EINZELNEN Stundenwert zu matchen waere
+# fachlich falsch (28mm Tagessumme != 3,5mm Stundenwert). Diese drei Metriken
+# werden bewusst NICHT hier gemappt -- ihre Markierung passiert korrekt in
+# der UEBERSICHTS-Zeile (dort steht das Tages-Aggregat, s.
+# FRONTEND_TO_RENDERER_METRIC_ID). Nur Metriken, deren Stundenwert UND
+# Tages-Kennzahl dieselbe physikalische Groesse sind (Momentanwert bzw.
+# Extremum), bleiben hier: Temperatur, Wind, Boeen, Gewitter-Ordinal.
+CORRIDOR_METRIC_TO_HOUR_KEY: dict[str, str] = {
+    "temp_max_c": "t2m_c",
+    "wind_max_kmh": "wind10m_kmh",
+    "gust_max_kmh": "gust_kmh",
+    "thunder_level_max": "thunder_level",
+}
+
+
 def resolve_enabled_metrics(active_metrics: list[str] | None) -> set[str] | None:
     """Rueckgabe None (= kein Filter, alle Metriken sichtbar) wenn active_metrics
     leer/None ist -- rueckwaertskompatibler Default (AC-2/AC-4). Nicht mappbare

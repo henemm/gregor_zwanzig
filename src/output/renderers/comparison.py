@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+from app.models import Corridor
 from app.profile import ActivityProfile
 from app.user import ComparisonResult
 from output.renderers.email.compare_html import sort_locations_alphabetically
@@ -153,6 +154,7 @@ def render_compare_email(
     preset_name: Optional[str] = None,
     preset_schedule: Optional[str] = None,
     preset_weekday: Optional[int] = None,
+    corridors: list[Corridor] | None = None,
 ) -> tuple[str, str]:
     """Render both HTML and plain-text parts for a compare email (v2, #1110).
 
@@ -166,6 +168,9 @@ def render_compare_email(
     ``hourly_metrics`` (Issue #1106) filtert die Wert-Spalten je
     Stundentabelle-Ort-Sektion, analog ``enabled_metrics``. ``hourly_enabled``
     (Issue #1107) schaltet die komplette Stundenverlauf-Sektion ein/aus.
+    ``corridors`` (Issue #1231, Slice 7) reicht die Preset-Korridore fuer die
+    mark-Markierung durch (s. ``render_compare_html``), wirkt nur auf die
+    HTML-Zellfaerbung, der Klartext-Pfad bleibt unberuehrt.
 
     Returns:
         Tuple of (html_body, text_body).
@@ -183,6 +188,7 @@ def render_compare_email(
         preset_name=preset_name,
         preset_schedule=preset_schedule,
         preset_weekday=preset_weekday,
+        corridors=corridors,
     )
     text_body = render_comparison_text(result, profile=profile, enabled_metrics=enabled_metrics)
     return html_body, text_body
