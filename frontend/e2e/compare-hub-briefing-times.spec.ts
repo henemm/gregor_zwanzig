@@ -25,7 +25,7 @@ async function createPreset(
 	const res = await page.request.post('/api/compare/presets', {
 		data: {
 			name: 'CompareHub-Briefing-E2E ' + Date.now(),
-			location_ids: [],
+			location_ids: ['e2e-loc-innsbruck'],
 			schedule: 'daily',
 			profil: 'wandern',
 			hour_from: 7,
@@ -49,6 +49,12 @@ async function deletePreset(page: Page, id: string): Promise<void> {
 }
 
 test.describe('Issue #1229: Compare-Hub Briefing-Zeiten + Neutralisierung', () => {
+	// login() ist mit vorhandenem storageState (Staging-Setup-Projekt,
+	// playwright.1229-hub.staging.config.ts) ein No-Op: goto('/') landet nicht
+	// auf /login, der Form-Login-Zweig (POST /api/auth/login) wird also NICHT
+	// pro Test erneut ausgefuehrt — genau das vermeidet das Staging-Rate-Limit.
+	// Ohne Setup-Projekt (z.B. lokaler Lauf gegen playwright.config.ts) bleibt
+	// login() weiterhin funktionsfaehig als echter Fallback-Login.
 	test.beforeEach(async ({ page }) => {
 		await login(page);
 	});
