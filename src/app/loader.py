@@ -162,7 +162,9 @@ def _alert_rule_from_dict(d: Dict[str, Any]) -> AlertRule:
         unit=d.get("unit", ""),
         severity=AlertSeverity(d.get("severity", "warning")),
         enabled=bool(d["enabled"]),
-        channels=list(d.get("channels", [])),
+        # Issue #1244: "channels": null (explizites JSON-null) faellt bei
+        # .get(default) NICHT auf den Default zurueck -> or []
+        channels=list(d.get("channels") or []),
     )
 
 
@@ -304,9 +306,11 @@ def load_trip_from_dict(data: Dict[str, Any]) -> Trip:
 def _parse_trip(data: Dict[str, Any]) -> Trip:
     """Parse trip data from dictionary."""
     stages = []
-    for stage_data in data.get("stages", []):
+    # Issue #1244: explizites JSON-null bei "stages"/"waypoints" faellt bei
+    # .get(default) NICHT auf den Default zurueck -> or []
+    for stage_data in data.get("stages") or []:
         waypoints = []
-        for wp_data in stage_data.get("waypoints", []):
+        for wp_data in stage_data.get("waypoints") or []:
             time_window = None
             if "time_window" in wp_data:
                 time_window = TimeWindow.from_string(wp_data["time_window"])
@@ -387,7 +391,10 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
     # Parse unified display config (Feature 2.6 v2) or migrate from old weather_config
     display_config = None
     if "display_config" in data:
-        display_config = _parse_display_config(data["display_config"])
+        # Issue #1244: "display_config": null (explizites JSON-null) darf
+        # nicht crashen -- fail-soft heisst hier: valider Default statt
+        # AttributeError in _parse_display_config.
+        display_config = _parse_display_config(data["display_config"] or {})
     elif weather_config is not None:
         display_config = _migrate_weather_config(weather_config)
     else:
@@ -406,7 +413,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         from app.models import TripReportConfig
         from datetime import datetime, time
         rc_data = data["report_config"]
-        dc_data = data.get("display_config", {})
+        dc_data = data.get("display_config") or {}
         report_config = TripReportConfig(
             trip_id=rc_data.get("trip_id", data["id"]),
             enabled=rc_data.get("enabled", True),
@@ -451,7 +458,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
 
     # Issue #1231 (Slice 1): Corridors — additiv neben alert_rules, kein
     # Legacy-Migrationspfad in Slice 1 (s. scripts/migrate_1231_corridors.py, Slice 2).
-    corridors = [_corridor_from_dict(c) for c in data.get("corridors", [])]
+    corridors = [_corridor_from_dict(c) for c in (data.get("corridors") or [])]
 
     # Issue #991: unbekannte Top-Level-Keys generisch auffangen (roundtrip-erhalten),
     # statt pro Feld ein weiteres Einzelattribut anzubauen.
@@ -468,7 +475,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         id=data["id"],
         name=data["name"],
         stages=stages,
-        avalanche_regions=data.get("avalanche_regions", []),
+        avalanche_regions=data.get("avalanche_regions") or [],
         aggregation=aggregation,
         weather_config=weather_config,
         display_config=display_config,
@@ -527,7 +534,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
     from datetime import datetime as _dt
     from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 
-    raw_metrics = data.get("metrics", [])
+    raw_metrics = data.get("metrics") or []
     # Issue #360 (F002): bucket/order pro Metrik aufloesen. auto_distribute wird
     # IMMER auf die aktiven Metrik-IDs angewandt, damit auch teil-migrierte
     # Configs (eine Metrik hat bucket/order, andere nicht) korrekt sind:
@@ -648,7 +655,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
         night_interval_hours=data.get("night_interval_hours", 2),
         thunder_forecast_days=data.get("thunder_forecast_days", 2),
         multi_day_trend_reports=data.get("multi_day_trend_reports", ["evening"] if data.get("show_multi_day_trend", True) else []),
-        sms_metrics=data.get("sms_metrics", []),
+        sms_metrics=data.get("sms_metrics") or [],
         per_channel_layouts=per_channel_layouts,
         per_report_layouts=per_report_layouts,
         telegram_kurzform=data.get("telegram_kurzform", False),
@@ -1094,7 +1101,10 @@ def load_all_trips(
             # blockieren. Frueher fing das `except LoaderError:` nur einen Teil
             # ab — generische Exceptions (z.B. ValueError aus
             # ActivityProfile(None)) propagierten als HTTP 500.
-            logger.warning("Skipping corrupt trip %s: %s", path.name, e)
+            # Issue #1244 (AC-6): ein unladbarer Trip ist ein Datenintegritaets-
+            # problem, kein erwartbarer Nebeneffekt -- warning-Level hat
+            # kaputte Trips monatelang unsichtbar gemacht.
+            logger.error("Skipping corrupt trip %s: %s", path.name, e)
             continue
     return trips
 

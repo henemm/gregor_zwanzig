@@ -120,7 +120,7 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		if err := s.SaveTrip(trip); err != nil {
+		if err := s.SaveTrip(&trip); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error":"store_error"}`))
@@ -277,7 +277,7 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		if err := s.SaveTrip(*existing); err != nil {
+		if err := s.SaveTrip(existing); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error":"store_error"}`))
@@ -347,7 +347,7 @@ func UpdateTripStateHandler(s *store.Store) http.HandlerFunc {
 		}
 		existing.ID = id
 
-		if err := s.SaveTrip(*existing); err != nil {
+		if err := s.SaveTrip(existing); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error":"store_error"}`))
@@ -415,7 +415,7 @@ func ConfirmWaypointHandler(s *store.Store) http.HandlerFunc {
 		// Issue #802: ComputeStageArrivals wird jetzt zentral in store.SaveTrip
 		// gerufen — hier nicht mehr nötig (Doppelberechnung vermeiden).
 
-		if err := s.SaveTrip(*trip); err != nil {
+		if err := s.SaveTrip(trip); err != nil {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}

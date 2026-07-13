@@ -12,6 +12,25 @@ func (s *Store) comparePresetsFile() string {
 	return filepath.Join(s.DataDir, "users", s.UserID, "compare_presets.json")
 }
 
+// NormalizeComparePreset coerces nil slice fields (Corridors, LocationIDs,
+// Empfaenger) to empty slices in place. Single source of truth for the read
+// path (LoadComparePresets), the write path (SaveComparePresets), AND the
+// handler package, which needs to normalize a preset before echoing it back
+// in an HTTP response — a slice element mutated inside SaveComparePresets
+// does not retroactively fix a separate local `preset` variable the handler
+// already holds (Issue #1244 F001).
+func NormalizeComparePreset(p *model.ComparePreset) {
+	if p.Corridors == nil {
+		p.Corridors = []model.Corridor{}
+	}
+	if p.LocationIDs == nil {
+		p.LocationIDs = []string{}
+	}
+	if p.Empfaenger == nil {
+		p.Empfaenger = []string{}
+	}
+}
+
 func (s *Store) LoadComparePresets() ([]model.ComparePreset, error) {
 	data, err := os.ReadFile(s.comparePresetsFile())
 	if os.IsNotExist(err) {
@@ -41,6 +60,10 @@ func (s *Store) LoadComparePresets() ([]model.ComparePreset, error) {
 			presets[i].ForecastHours = 48
 		}
 		migrateComparePresetSlots(&presets[i])
+		// Issue #1244 F002: Read-Path-Coercion symmetrisch zu
+		// SaveComparePresets — sonst liefert GET auf eine unmigrierte
+		// Legacy-Datei weiterhin "corridors":null.
+		NormalizeComparePreset(&presets[i])
 	}
 	return presets, nil
 }
@@ -79,6 +102,12 @@ func (s *Store) SaveComparePresets(presets []model.ComparePreset) error {
 	}
 	if presets == nil {
 		presets = []model.ComparePreset{}
+	}
+	// Issue #1244 F001: einzige Normalisierungsquelle (analog normalizeTrip
+	// in SaveTrip) — Corridors/LocationIDs/Empfaenger dürfen pro Preset nie
+	// als "null" persistiert werden.
+	for i := range presets {
+		NormalizeComparePreset(&presets[i])
 	}
 	data, err := json.MarshalIndent(presets, "", "  ")
 	if err != nil {

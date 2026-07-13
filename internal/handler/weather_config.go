@@ -70,7 +70,7 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 		// Sync alert_rules with active weather metrics (Issue #701)
 		activeIDs := extractActiveMetricIDs(cfg)
 		trip.AlertRules = model.SyncAlertRules(trip.AlertRules, activeIDs)
-		if err := s.SaveTrip(*trip); err != nil {
+		if err := s.SaveTrip(trip); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error":"store_error"}`))

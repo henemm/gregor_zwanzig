@@ -26,7 +26,7 @@ func TestPutTripWeatherConfig_SyncsAlertRules(t *testing.T) {
 			Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 47.0, Lon: 11.0, ElevationM: 500}},
 		}},
 	}
-	s.SaveTrip(trip)
+	s.SaveTrip(&trip)
 
 	r := chi.NewRouter()
 	r.Put("/api/trips/{id}/weather-config", PutTripWeatherConfigHandler(s))
@@ -96,7 +96,7 @@ func TestPutTripWeatherConfig_PreservesExistingThreshold(t *testing.T) {
 			{ID: "existing-rule", Kind: model.AlertRuleKindAbsolute, Metric: model.AlertMetricWindGust, Threshold: 70, Unit: "km/h", Enabled: true},
 		},
 	}
-	s.SaveTrip(trip)
+	s.SaveTrip(&trip)
 
 	r := chi.NewRouter()
 	r.Put("/api/trips/{id}/weather-config", PutTripWeatherConfigHandler(s))
@@ -154,7 +154,7 @@ func TestPutTripWeatherConfig_TenantIsolation(t *testing.T) {
 			Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 47.0, Lon: 11.0, ElevationM: 500}},
 		}},
 	}
-	sA.SaveTrip(tripA)
+	sA.SaveTrip(&tripA)
 
 	// User B: Trip ohne Metriken
 	tripB := model.Trip{
@@ -165,7 +165,7 @@ func TestPutTripWeatherConfig_TenantIsolation(t *testing.T) {
 			Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 48.0, Lon: 12.0, ElevationM: 300}},
 		}},
 	}
-	sB.SaveTrip(tripB)
+	sB.SaveTrip(&tripB)
 
 	rA := chi.NewRouter()
 	rA.Put("/api/trips/{id}/weather-config", PutTripWeatherConfigHandler(sA))

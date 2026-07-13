@@ -187,12 +187,11 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		preset.LetzterVersand = nil
 		preset.TopOrtLetzterVersand = nil
 
-		if preset.LocationIDs == nil {
-			preset.LocationIDs = []string{}
-		}
-		if preset.Empfaenger == nil {
-			preset.Empfaenger = []string{}
-		}
+		// Issue #1244 F001: einzige Normalisierungsquelle (Corridors/
+		// LocationIDs/Empfaenger) — writeJSON unten schreibt diese lokale
+		// `preset`-Kopie, nicht die von SaveComparePresets normalisierte
+		// Slice-Kopie, daher muss `preset` selbst normalisiert sein.
+		store.NormalizeComparePreset(&preset)
 		// Issue #781: forecast_hours fehlt oder ist 0 → Default 48 ( konsistent mit
 		// LoadComparePresets-Migration und dem Python-Versandpfad).
 		if preset.ForecastHours == 0 {
@@ -329,13 +328,6 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			updated.ForecastHours = 48
 		}
 
-		if updated.LocationIDs == nil {
-			updated.LocationIDs = []string{}
-		}
-		if updated.Empfaenger == nil {
-			updated.Empfaenger = []string{}
-		}
-
 		// Issue #511 F001: Default weekday=4 (Freitag) für weekly-Presets ohne
 		// explizit gesetztes weekday-Feld (analog Create).
 		if updated.Schedule == "weekly" && updated.Weekday == nil {
@@ -378,6 +370,12 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if updated.EndDate != nil && *updated.EndDate == "" {
 			updated.EndDate = nil
 		}
+
+		// Issue #1244 F001: einzige Normalisierungsquelle (Corridors/
+		// LocationIDs/Empfaenger) — muss NACH dem Corridors-Preserve-Block
+		// oben laufen, sonst bleibt "corridors":null in der Response, wenn
+		// bereits das Original (Legacy-Datei) null hatte.
+		store.NormalizeComparePreset(&updated)
 
 		if err := validateComparePreset(updated); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation_error", "detail": err.Error()})

@@ -57,7 +57,7 @@ func TestTripRoundTrip_PreservesFieldsWithoutArrival(t *testing.T) {
 	}
 
 	// Roundtrip: speichern und neu laden.
-	if err := s.SaveTrip(*loaded); err != nil {
+	if err := s.SaveTrip(loaded); err != nil {
 		t.Fatalf("SaveTrip: %v", err)
 	}
 	reloaded, err := s.LoadTrip("legacy-arrival")
@@ -170,7 +170,7 @@ func TestTripRoundTrip_WithConfirmationFields(t *testing.T) {
 	if err != nil || loaded == nil {
 		t.Fatalf("LoadTrip: %v", err)
 	}
-	if err := s.SaveTrip(*loaded); err != nil {
+	if err := s.SaveTrip(loaded); err != nil {
 		t.Fatalf("SaveTrip: %v", err)
 	}
 	reloaded, err := s.LoadTrip("conf-trip")

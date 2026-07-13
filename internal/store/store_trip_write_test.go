@@ -41,7 +41,7 @@ func TestSaveTrip_LegacyAlertRulesCoercedToEmptyArray(t *testing.T) {
 		t.Fatalf("Erwartet len==0, got %d", len(loaded.AlertRules))
 	}
 
-	if err := s.SaveTrip(*loaded); err != nil {
+	if err := s.SaveTrip(loaded); err != nil {
 		t.Fatalf("SaveTrip: %v", err)
 	}
 
@@ -75,7 +75,7 @@ func TestSaveTripAndLoad(t *testing.T) {
 		},
 	}
 
-	if err := s.SaveTrip(trip); err != nil {
+	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("SaveTrip failed: %v", err)
 	}
 
@@ -104,7 +104,7 @@ func TestDeleteTrip(t *testing.T) {
 			Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 47.0, Lon: 11.0, ElevationM: 500}},
 		}},
 	}
-	s.SaveTrip(trip)
+	s.SaveTrip(&trip)
 
 	if err := s.DeleteTrip("del-test"); err != nil {
 		t.Fatalf("DeleteTrip failed: %v", err)
@@ -145,7 +145,7 @@ func TestSaveTrip_MigratesSnowLineToFreezingLevel(t *testing.T) {
 		},
 	}
 
-	if err := s.SaveTrip(trip); err != nil {
+	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("SaveTrip failed: %v", err)
 	}
 

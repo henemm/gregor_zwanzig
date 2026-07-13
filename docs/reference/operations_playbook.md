@@ -216,6 +216,36 @@ Spec `docs/specs/modules/issue_1133_testdata_cleanup.md`, Root-Cause-Eintrag
 
 ---
 
+## Null-Listenfelder in Trip-/Compare-Preset-Dateien heilen (#1244)
+
+Bestandsdateien, die vor dem Fix in Issue #1244 angelegt wurden, können für `corridors`,
+`stages`, `stage[].waypoints` bzw. `corridors`, `location_ids`, `empfaenger` noch `null` statt
+`[]` auf der Platte tragen (der Loader heilt das seit dem Fix zwar fail-soft beim Lesen, die
+Datei selbst bleibt aber kaputt, bis sie einmal neu geschrieben wird). Läuft **pro Host** (Prod,
+Staging), als User `claude-gregor`, gegen `data/users`:
+
+```bash
+uv run python3 scripts/migrate_1244_null_lists.py --root data/users              # Dry-Run (Default)
+uv run python3 scripts/migrate_1244_null_lists.py --root data/users --execute    # Backup + Schreiben
+```
+
+**Immer zuerst den Dry-Run lesen.** Das Script ist idempotent — ein zweiter Lauf über bereits
+migrierte Daten erzeugt einen leeren Plan und schreibt nichts. Backup: tar.gz nach
+`.backups/migrate-1244-<timestamp>.tar.gz` vor jedem `--execute`-Lauf.
+
+**Exit-Codes:**
+
+| Code | Bedeutung |
+|------|-----------|
+| 0 | Erfolg — inkl. leerem Plan beim idempotenten Wiederholungslauf |
+| 1 | `--root` existiert nicht/kein Verzeichnis, oder Backup fehlgeschlagen |
+| 2 | Teilerfolg — mindestens eine Datei nicht lesbar/parsebar und/oder nicht schreibbar (Details in den `ERROR`-Zeilen der Ausgabe) |
+
+Details (Read-Modify-Write-Prinzip, Feldliste, Adversary-Findings): Spec
+`docs/specs/modules/fix_1244_null_list_fields.md`.
+
+---
+
 ## Prod-Mail-Pfad-Nachweis: nur passiv (#1147)
 
 **VERBOT: synthetische Sends oder Kunst-User auf Prod zur Pfad-Verifikation.**

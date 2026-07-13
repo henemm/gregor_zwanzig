@@ -88,7 +88,7 @@ func TestUpdateTrip_PartialReportConfig_MergesFields(t *testing.T) {
 			"send_email":   true,
 		},
 	}
-	if err := s.SaveTrip(trip); err != nil {
+	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("seed failed: %v", err)
 	}
 

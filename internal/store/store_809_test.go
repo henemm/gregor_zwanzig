@@ -173,7 +173,7 @@ func TestSaveTrip_SyncsAlertRules(t *testing.T) {
 	}
 
 	s := New(dataDir, "user1")
-	if err := s.SaveTrip(trip); err != nil {
+	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("SaveTrip error: %v", err)
 	}
 

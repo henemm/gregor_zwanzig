@@ -24,7 +24,7 @@ func TestSaveTrip_WriteFailureLogsPathAndCause(t *testing.T) {
 
 	trip := model.Trip{ID: "log-trip"}
 
-	if err := s.SaveTrip(trip); err != nil {
+	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("initial SaveTrip should succeed, got error: %v", err)
 	}
 
@@ -40,7 +40,7 @@ func TestSaveTrip_WriteFailureLogsPathAndCause(t *testing.T) {
 	log.SetOutput(&buf)
 	defer log.SetOutput(os.Stderr)
 
-	err := s.SaveTrip(trip)
+	err := s.SaveTrip(&trip)
 	if err == nil {
 		t.Fatalf("expected SaveTrip to fail against a read-only file, got nil error")
 	}
@@ -110,7 +110,7 @@ func TestSaveTrip_SuccessRoundtripNoLog(t *testing.T) {
 	log.SetOutput(&buf)
 	defer log.SetOutput(os.Stderr)
 
-	if err := s.SaveTrip(trip); err != nil {
+	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("SaveTrip should succeed on a writable temp dir, got error: %v", err)
 	}
 

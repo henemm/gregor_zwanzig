@@ -29,7 +29,7 @@ func dispatchConfirm(t *testing.T, tripID, waypointID, body string) *httptest.Re
 			},
 		}},
 	}
-	if err := s.SaveTrip(trip); err != nil {
+	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("seedTrip: %v", err)
 	}
 
@@ -100,7 +100,7 @@ func TestConfirmWaypoint_UnconfirmClearsOverride(t *testing.T) {
 			},
 		}},
 	}
-	if err := s.SaveTrip(trip); err != nil {
+	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("seed: %v", err)
 	}
 
@@ -165,7 +165,7 @@ func TestConfirmWaypoint_NotFound(t *testing.T) {
 			Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 47.0, Lon: 11.0, ElevationM: 500}},
 		}},
 	}
-	s2.SaveTrip(trip2)
+	s2.SaveTrip(&trip2)
 
 	r2 := chi.NewRouter()
 	r2.Patch("/api/trips/{id}/waypoints/{waypointId}/confirm", ConfirmWaypointHandler(s2))

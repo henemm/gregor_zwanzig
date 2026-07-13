@@ -15,6 +15,34 @@ func (s *Store) TripsDir() string {
 	return filepath.Join(s.DataDir, "users", s.UserID, "trips")
 }
 
+// normalizeTrip coerces nil slice fields (Corridors, Stages, per-stage
+// Waypoints, AlertRules) to empty slices in place. Single source of truth
+// for both the read path (LoadTrip/LoadTrips) and the write path (SaveTrip).
+//
+// Issue #1244 Fix-Loop F001/F002: SaveTrip used to take a value receiver, so
+// its nil-coercion only mutated the local copy — the HTTP response still
+// carried "corridors":null/"stages":null even though the file on disk was
+// already fixed. And the read path only healed AlertRules (Issue #205
+// Follow-Up), so GET on a not-yet-migrated legacy file still returned
+// "stages":null, crashing the frontend (alertPreviewHelpers.ts
+// stages[0]?.id). normalizeTrip closes both gaps from one place.
+func normalizeTrip(trip *model.Trip) {
+	if trip.Corridors == nil {
+		trip.Corridors = []model.Corridor{}
+	}
+	if trip.Stages == nil {
+		trip.Stages = []model.Stage{}
+	}
+	for i := range trip.Stages {
+		if trip.Stages[i].Waypoints == nil {
+			trip.Stages[i].Waypoints = []model.Waypoint{}
+		}
+	}
+	if trip.AlertRules == nil {
+		trip.AlertRules = []model.AlertRule{}
+	}
+}
+
 func (s *Store) LoadTrips() ([]model.Trip, error) {
 	dir := s.TripsDir()
 
@@ -41,11 +69,11 @@ func (s *Store) LoadTrips() ([]model.Trip, error) {
 			continue
 		}
 
-		// Issue #205 Follow-Up: Read-Path-Coercion symmetrisch zu SaveTrip,
-		// damit API niemals "alert_rules":null zurückgibt.
-		if trip.AlertRules == nil {
-			trip.AlertRules = []model.AlertRule{}
-		}
+		// Issue #1244 F002: Read-Path-Coercion symmetrisch zu SaveTrip, für
+		// ALLE Slice-Felder (nicht nur AlertRules wie zuvor, Issue #205
+		// Follow-Up) — sonst liefert GET/LoadTrips auf eine unmigrierte
+		// Legacy-Datei weiterhin "stages":null/"corridors":null.
+		normalizeTrip(&trip)
 
 		trips = append(trips, trip)
 	}
@@ -77,11 +105,9 @@ func (s *Store) LoadTrip(id string) (*model.Trip, error) {
 		return nil, err
 	}
 
-	// Issue #205 Follow-Up: Read-Path-Coercion symmetrisch zu SaveTrip,
-	// damit API niemals "alert_rules":null zurückgibt.
-	if trip.AlertRules == nil {
-		trip.AlertRules = []model.AlertRule{}
-	}
+	// Issue #1244 F002: Read-Path-Coercion symmetrisch zu SaveTrip, für ALLE
+	// Slice-Felder (nicht nur AlertRules wie zuvor, Issue #205 Follow-Up).
+	normalizeTrip(&trip)
 
 	// Issue #809: Self-Heal — alert_rules mit aktiven Metriken synchronisieren.
 	// In-Memory only, kein Write-Back (analog nil-Coercion Issue #205).
@@ -91,17 +117,23 @@ func (s *Store) LoadTrip(id string) (*model.Trip, error) {
 	return &trip, nil
 }
 
-func (s *Store) SaveTrip(trip model.Trip) error {
+// SaveTrip persists trip to disk. It takes a pointer (Issue #1244 F001):
+// a previous value-receiver signature meant the nil-coercion below only
+// mutated SaveTrip's local copy — callers that encoded their own variable
+// into the HTTP response (e.g. CreateTripHandler) kept seeing
+// "corridors":null even though the file on disk was already fixed. A
+// pointer parameter makes the normalization visible to every caller that
+// holds the same trip afterwards.
+func (s *Store) SaveTrip(trip *model.Trip) error {
 	dir := s.TripsDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 
-	// Issue #205 F002: Nil-Coercion verhindert "alert_rules":null im JSON,
-	// das beim nächsten Python-Load die Legacy-Migration erneut triggern würde.
-	if trip.AlertRules == nil {
-		trip.AlertRules = []model.AlertRule{}
-	}
+	// Issue #1244 F001: einzige Normalisierungsquelle für Corridors/Stages/
+	// Waypoints/AlertRules — zieht die vormals separate AlertRules-Coercion
+	// (Issue #205 F002) mit ein, statt sie zu duplizieren.
+	normalizeTrip(trip)
 
 	// Issue #809: Compute-on-Save — alert_rules zentral synchronisieren,
 	// analog zu ComputeStageArrivals (Issue #802).

@@ -32,7 +32,7 @@ func TestPutTripWeatherConfigMergesDisplayConfig(t *testing.T) {
 			"metrics": []interface{}{map[string]interface{}{"metric_id": "temperature", "enabled": true}},
 		},
 	}
-	if err := s.SaveTrip(trip); err != nil {
+	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("seed SaveTrip failed: %v", err)
 	}
 

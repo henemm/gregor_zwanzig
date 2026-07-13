@@ -135,7 +135,7 @@ func TestSaveTrip_817_WritesDeltaRulesToDisk(t *testing.T) {
 	}
 
 	s := New(dataDir, "user-817-save")
-	if err := s.SaveTrip(trip); err != nil {
+	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("AC-8b: SaveTrip error: %v", err)
 	}
 
@@ -165,7 +165,7 @@ func TestSaveTrip_817_WritesDeltaRulesToDisk(t *testing.T) {
 // die Store-Isolation existiert bereits seit #809. Er verhindert Regression
 // durch zukünftige Änderungen.
 //
-// Beweis: Zwei Nutzer mit je eigenem Trip; SaveTrip(user_a) verändert
+// Beweis: Zwei Nutzer mit je eigenem Trip; SaveTrip(&user_a) verändert
 // user_b-alert_rules nicht.
 func TestLoadTrip_817_MandantentrennungRegression(t *testing.T) {
 	// REGRESSION-GUARD: AC-7 — Mandantentrennung bleibt nach #817 erhalten.
@@ -196,8 +196,8 @@ func TestLoadTrip_817_MandantentrennungRegression(t *testing.T) {
 
 	base := New(dataDir, "default")
 
-	if err := base.WithUser("user-a-817").SaveTrip(tripA); err != nil {
-		t.Fatalf("AC-7/guard: SaveTrip(user_a) failed: %v", err)
+	if err := base.WithUser("user-a-817").SaveTrip(&tripA); err != nil {
+		t.Fatalf("AC-7/guard: SaveTrip(&user_a) failed: %v", err)
 	}
 
 	loadedB, err := base.WithUser("user-b-817").LoadTrip("trip-b")

@@ -38,7 +38,7 @@ func TestSaveTrip_802_ComputeOnSave_Fahrrad20(t *testing.T) {
 		},
 	}
 
-	if err := s.SaveTrip(trip); err != nil {
+	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("SaveTrip: %v", err)
 	}
 
@@ -99,7 +99,7 @@ func TestSaveTrip_802_EmptyStage_NoArrival(t *testing.T) {
 	}
 
 	// Muss ohne Panic speichern
-	if err := s.SaveTrip(trip); err != nil {
+	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("SaveTrip mit 0-WP-Stage: %v", err)
 	}
 }

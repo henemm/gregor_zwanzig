@@ -601,6 +601,15 @@ type Trip struct {
 }
 ```
 
+**Invariante — nie `null` (Issue #205, gehärtet Issue #1244):** `Stages`, jedes
+`Stage.Waypoints`, `AlertRules` und `Corridors` sind immer als `[]` serialisiert, niemals als
+`null` — sowohl in der Datei auf Platte als auch in jeder HTTP-Response. Durchgesetzt von
+`normalizeTrip()` (`internal/store/trip.go`), das sowohl im Schreibpfad (`SaveTrip`, nimmt seit
+#1244 einen Pointer statt eines Value-Receivers) als auch im Lesepfad (`LoadTrip`, `LoadTrips`)
+läuft. Der Python-Loader (`src/app/loader.py`) heilt zusätzlich `null` beim Lesen fail-soft
+(`data.get("x") or []`) für Bestandsdateien, die noch nicht über `SaveTrip` neu geschrieben
+wurden. Bestandsdaten: `scripts/migrate_1244_null_lists.py`, s. `operations_playbook.md`.
+
 ### Activity Types (Issue #674)
 
 Das Feld `activity` definiert die Art der Fortbewegung und damit die Geschwindigkeitsannahmen für Ankunftszeit-Berechnungen (Naismith-Formel).
@@ -1262,6 +1271,13 @@ type ComparePreset struct {
     CreatedAt            time.Time              `json:"created_at"`
 }
 ```
+
+**Invariante — nie `null` (Issue #1244):** `Corridors`, `LocationIDs` und `Empfaenger` sind
+immer als `[]` serialisiert, niemals als `null` — Datei und HTTP-Response gleichermaßen.
+Durchgesetzt von `NormalizeComparePreset()` (`internal/store/compare_preset.go`), aufgerufen
+sowohl aus dem Schreibpfad (`SaveComparePresets`) als auch aus dem Lesepfad
+(`LoadComparePresets`) sowie direkt aus dem Handler, wenn ein frisch erstelltes/aktualisiertes
+Preset in der HTTP-Response gespiegelt wird. Bestandsdaten: `scripts/migrate_1244_null_lists.py`.
 
 **Hinweis zur Vollständigkeit:** Diese Struct-Auflistung wird nicht bei jeder additiven
 Preset-Erweiterung nachgezogen (z.B. `OfficialAlertsEnabled` #1040, `TopNDetails`/`EnabledMetrics`
@@ -2615,6 +2631,8 @@ function corridorInside(value, min, max) {
   `display_config["ideal_ranges"]` — beide bestehenden Mechanismen bleiben bis zu einem
   späteren, hier nicht enthaltenen Cutover die technische Wahrheit für den Δ-Wächter. Bestandsdaten
   ohne `corridors` laden mit leerem Slice, kein Feldverlust (Read-Modify-Write beim Speichern).
+  Seit Issue #1244 gilt das nicht mehr nur beim Speichern, sondern symmetrisch auch beim Laden
+  (`LoadTrip`/`LoadTrips`/`LoadComparePresets`) — s. Invarianten-Hinweis in Section 10.5 und 16.
 - **Loader-Normalisierung (`src/app/loader.py`):** ein malformed `range` macht nie den Trip
   unladbar — defensiver Float-Cast, `isfinite`-Prüfung, Skalar/`null`/Kurz-Array-Eingaben werden
   still auf `[None, None]` normalisiert statt einer Exception.
@@ -2628,6 +2646,18 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-07-13: Issue #1244 — Null-Listenfelder brechen den Trip-Loader: `Trip.Stages`,
+  `Stage.Waypoints`, `Trip.AlertRules`, `Trip.Corridors` sowie `ComparePreset.Corridors`/
+  `LocationIDs`/`Empfaenger` sind jetzt **immer** `[]`, nie `null` — durchgesetzt in beide
+  Richtungen (Schreiben UND Lesen, inkl. HTTP-Response) via `normalizeTrip()`
+  (`internal/store/trip.go`) und `NormalizeComparePreset()` (`internal/store/compare_preset.go`).
+  `SaveTrip` nimmt seit diesem Fix einen Pointer statt eines Value-Receivers, damit der Aufrufer
+  die normalisierten Werte sieht. Python-Loader (`src/app/loader.py`) heilt `null` zusätzlich
+  fail-soft beim Lesen (`data.get("x") or []`); `load_all_trips()` loggt einen nicht ladbaren
+  Trip jetzt als `ERROR` statt `warning`. Bestandsdaten-Migration:
+  `scripts/migrate_1244_null_lists.py` (Dry-Run-Default, `--execute`, tar.gz-Backup, idempotent).
+  Erweitert die bisherige AlertRules-only-Coercion aus Issue #205. Siehe
+  `docs/specs/modules/fix_1244_null_list_fields.md`.
 - 2026-07-12: Issue #1231 (Slice 1 von Epic #29 „Briefing-Abo-Chassis") — neues additives
   Datenmodell `Corridor{metric, range:[min|null,max|null], notify, mark, prio?}` an
   `Trip.Corridors` (Go) und `ComparePreset.Corridors` (Go), Python-Pendant in

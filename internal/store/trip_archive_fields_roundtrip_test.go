@@ -49,7 +49,7 @@ func TestTripRoundTrip_LegacyAnalyticsFieldsDropped(t *testing.T) {
 		t.Fatalf("real field lost: name=%q", loaded.Name)
 	}
 
-	if err := s.SaveTrip(*loaded); err != nil {
+	if err := s.SaveTrip(loaded); err != nil {
 		t.Fatalf("SaveTrip: %v", err)
 	}
 

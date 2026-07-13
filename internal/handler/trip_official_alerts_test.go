@@ -35,7 +35,7 @@ func seedTripWithOfficialAlerts(t *testing.T, s *store.Store, id, name string, e
 		}},
 		OfficialAlertsEnabled: enabled,
 	}
-	if err := s.SaveTrip(trip); err != nil {
+	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("SaveTrip: %v", err)
 	}
 }

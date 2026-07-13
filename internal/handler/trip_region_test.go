@@ -75,7 +75,7 @@ func TestTripRegion_PreservedOnUpdate(t *testing.T) {
 			Waypoints: []model.Waypoint{{ID: "W1", Name: "Start", Lat: 42.0, Lon: 9.0, ElevationM: 100}},
 		}},
 	}
-	if err := s.SaveTrip(seed); err != nil {
+	if err := s.SaveTrip(&seed); err != nil {
 		t.Fatalf("seed failed: %v", err)
 	}
 
@@ -119,7 +119,7 @@ func TestTripRegion_UpdateReplacesWhenSent(t *testing.T) {
 			Waypoints: []model.Waypoint{{ID: "W1", Name: "Start", Lat: 42.0, Lon: 9.0, ElevationM: 100}},
 		}},
 	}
-	if err := s.SaveTrip(seed); err != nil {
+	if err := s.SaveTrip(&seed); err != nil {
 		t.Fatalf("seed failed: %v", err)
 	}
 

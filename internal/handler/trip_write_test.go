@@ -23,7 +23,7 @@ func seedTrip(t *testing.T, s *store.Store, id, name string) {
 			Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 47.0, Lon: 11.0, ElevationM: 500}},
 		}},
 	}
-	s.SaveTrip(trip)
+	s.SaveTrip(&trip)
 }
 
 func TestCreateTripHandler(t *testing.T) {
@@ -188,7 +188,7 @@ func seedTripWithConfigs(t *testing.T, s *store.Store, id string) {
 		DisplayConfig:    map[string]interface{}{"theme": "compact", "channels": []interface{}{"email"}},
 		ReportConfig:     map[string]interface{}{"channels": []interface{}{"email"}},
 	}
-	if err := s.SaveTrip(trip); err != nil {
+	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("seed failed: %v", err)
 	}
 }

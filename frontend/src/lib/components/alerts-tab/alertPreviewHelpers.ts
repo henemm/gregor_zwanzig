@@ -57,7 +57,10 @@ export function buildAlertPreviewPayload(
 	rules: AlertRule[],
 	stages: Stage[],
 ): AlertPreviewPayload {
-	const segmentId = stages[0]?.id ?? '1';
+	// Issue #1244 F002: zweite Verteidigungslinie — falls ein Legacy-Trip auf
+	// Platte trotz Backend-Coercion noch mit "stages": null ankommt, darf der
+	// Zugriff hier nicht crashen (TypeError beim Versand-Tab).
+	const segmentId = (stages ?? [])[0]?.id ?? '1';
 	const enabled = rules.filter((r) => r.enabled);
 	const changes: ChangePayload[] = enabled.map((rule) => {
 		const mapped = METRIC_MAP[rule.metric];
