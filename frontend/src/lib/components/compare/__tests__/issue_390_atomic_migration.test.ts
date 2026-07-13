@@ -114,7 +114,6 @@ test('AC-3: GroupSection Profil-Dot hat title-Attribut mit eyebrow-Label', () =>
 const PAGE_LOCAL_COMPOSITES = [
 	'src/lib/components/compare/CompareMatrix.svelte',
 	'src/lib/components/compare/HourlyMatrix.svelte',
-	'src/lib/components/compare/RecommendationBanner.svelte',
 	'src/lib/components/compare/AutoReportsOverview.svelte',
 ];
 

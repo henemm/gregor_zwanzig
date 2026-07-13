@@ -18,15 +18,18 @@
 	import CompareIdealRow from '$lib/components/molecules/CompareIdealRow.svelte';
 	import CompareLayoutRow from '$lib/components/molecules/CompareLayoutRow.svelte';
 	import DetailRow from '$lib/components/molecules/DetailRow.svelte';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import { channelChipCount } from './channelChipCount.js';
 	import { CHANNEL_COL_BUDGET } from '$lib/components/trip-detail/metricsEditor';
 	import {
 		deriveStatusFromPreset,
-		presetScheduleLabel,
+		presetBriefingTimesLabel,
 		formatLastSent,
+		formatNextSend,
 		channelCountLabel,
 		STATUS_MAP
 	} from '$lib/components/compare/subscriptionHelpers.js';
+	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
 	import type { ComparePreset, Location } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { onMount } from 'svelte';
@@ -89,6 +92,16 @@
 
 	const status = $derived(deriveStatusFromPreset({ ...preset, schedule: localSchedule as ComparePreset['schedule'] }));
 	const statusInfo = $derived(STATUS_MAP[status]);
+
+	// Issue #1229 Fix-Loop 1 (F001/F002): "Nächster Versand" aus dem berechneten
+	// Zeitstempel ableiten statt aus dem Rhythmus-Label (presetScheduleLabel enthält
+	// einen rohen hour_from–hour_to-Bereich, den AC-4 im Versand-Tab verbietet).
+	// Muster identisch zu CompareStatusRow.svelte.
+	const now = new Date();
+	const nextSend = $derived(deriveNextSend(preset, now));
+	const versandSummaryText = $derived(
+		`Briefings ${presetBriefingTimesLabel(preset)} · nächster Versand ${formatNextSend(nextSend)}.`
+	);
 
 	// Orts-Auflösung: location_ids → locations[] (mit elevation_m für CompareLocationRow).
 	const resolvedLocations = $derived(
@@ -188,6 +201,14 @@
 			console.error('[CompareTabs] toggleActive failed:', e);
 		}
 	}
+
+	// Issue #1229 — Versand-Tab-Edit-Stift: kein Inline-Edit, echter Absprung in
+	// den Editor (CHub_EditIcon, JSX Z.428-434 hat bewusst keinen In-Hub-Handler).
+	function goToEditVersand(): void {
+		if (typeof window !== 'undefined') {
+			window.location.href = `/compare/${preset.id}/edit?tab=versand`;
+		}
+	}
 </script>
 
 <div class="compare-tabs" data-testid="compare-detail-tab-list">
@@ -233,7 +254,12 @@
 						<!-- Nächster Versand -->
 						<div>
 							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Nächster Versand</div>
-							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">{presetScheduleLabel(preset)}</div>
+							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">{formatNextSend(nextSend)}</div>
+						</div>
+						<!-- Briefings -->
+						<div>
+							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Briefings</div>
+							<div data-testid="compare-detail-stat-briefings" style="font-size: 14px; color: var(--g-ink); font-weight: 500">{presetBriefingTimesLabel(preset)}</div>
 						</div>
 						<!-- Zuletzt raus -->
 						<div>
@@ -274,7 +300,7 @@
 							<button onclick={() => handleValueChange('idealwerte')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
 						</div>
 						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{preset.profil}</div>
-						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{Object.keys(idealRanges ?? {}).length} Metriken bestimmen das Ranking</div>
+						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{Object.keys(idealRanges ?? {}).length} Metriken mit Idealbereich — im Briefing pro Wert markiert. Kein Score, kein Ranking.</div>
 					</Card>
 
 					<Card padding={20} style="display: flex; flex-direction: column">
@@ -291,8 +317,8 @@
 							<Eyebrow>Versand</Eyebrow>
 							<button onclick={() => handleValueChange('versand')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
 						</div>
-						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{presetScheduleLabel(preset)}</div>
-						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{preset.hour_from}–{preset.hour_to} Uhr</div>
+						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{presetBriefingTimesLabel(preset)}</div>
+						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{versandSummaryText}</div>
 					</Card>
 				</div>
 
@@ -358,12 +384,23 @@
 			<div class="versand-grid">
 				<!-- Linke Spalte -->
 				<div class="versand-left">
-					<!-- Rhythmus & Vorausschau -->
+					<!-- Briefing-Zeiten (Issue #1229: ersetzt "Rhythmus & Vorausschau") -->
 					<Card padding={20}>
-						<Eyebrow>Rhythmus & Vorausschau</Eyebrow>
-						<DetailRow label="Zeitplan" value={presetScheduleLabel(preset)} />
-						<DetailRow label="Zeitfenster" value="{preset.hour_from}–{preset.hour_to} Uhr" />
-						<DetailRow label="Nächster Versand" value={presetScheduleLabel(preset)} divider="none" />
+						<Eyebrow>Briefing-Zeiten</Eyebrow>
+						<DetailRow label="Briefings" value={presetBriefingTimesLabel(preset)}>
+							{#snippet right()}
+								<button
+									type="button"
+									title="Bearbeiten"
+									data-testid="compare-versand-edit-briefings"
+									onclick={goToEditVersand}
+									style="width: 30px; height: 30px; border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-2); background: transparent; color: var(--g-ink-3); cursor: pointer; display: inline-flex; align-items: center; justify-content: center"
+								>
+									<PencilIcon size={13} />
+								</button>
+							{/snippet}
+						</DetailRow>
+						<DetailRow label="Nächster Versand" value={formatNextSend(nextSend)} divider="none" />
 					</Card>
 
 					<!-- Kanäle -->

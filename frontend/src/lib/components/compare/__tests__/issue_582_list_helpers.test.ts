@@ -176,3 +176,76 @@ test('presetChannels: channel_layouts signal-Key → NIE "Signal" als Kanal (F00
 	);
 	assert.ok(channels.includes('SMS'), `SMS muss erkannt werden, erhielt: ${JSON.stringify(channels)}`);
 });
+
+// ─── TDD RED für Spec issue_1229_monitor_hub, AC-3 ───────────────────────────
+//
+// presetBriefingTimesLabel existiert in ../subscriptionHelpers.ts noch nicht —
+// der Import darunter schlägt fehl, bis der GREEN-Schritt die Funktion
+// ergänzt. Dadurch fällt die gesamte Datei rot aus (dokumentiertes RED-Muster
+// dieser Datei, siehe Kopfkommentar).
+//
+// Spec: docs/specs/modules/issue_1229_monitor_hub.md (AC-3 + Edge Cases)
+
+import { presetBriefingTimesLabel } from '../subscriptionHelpers.ts';
+
+test('presetBriefingTimesLabel: beide Slots aktiv → "Morgen 06:30 · Abend 18:00"', () => {
+	const label = presetBriefingTimesLabel(
+		makePreset({
+			morning_enabled: true,
+			morning_time: '06:30:00',
+			evening_enabled: true,
+			evening_time: '18:00:00'
+		})
+	);
+	assert.equal(label, 'Morgen 06:30 · Abend 18:00');
+});
+
+test('presetBriefingTimesLabel: nur morning aktiv → "Morgen 06:30" (kein "·")', () => {
+	const label = presetBriefingTimesLabel(
+		makePreset({
+			morning_enabled: true,
+			morning_time: '06:30:00',
+			evening_enabled: false,
+			evening_time: undefined
+		})
+	);
+	assert.equal(label, 'Morgen 06:30');
+	assert.ok(!label.includes('·'), 'kein Trennpunkt bei nur einem aktiven Slot');
+});
+
+test('presetBriefingTimesLabel: nur evening aktiv → "Abend 18:00" (kein "·")', () => {
+	const label = presetBriefingTimesLabel(
+		makePreset({
+			morning_enabled: false,
+			morning_time: undefined,
+			evening_enabled: true,
+			evening_time: '18:00:00'
+		})
+	);
+	assert.equal(label, 'Abend 18:00');
+	assert.ok(!label.includes('·'), 'kein Trennpunkt bei nur einem aktiven Slot');
+});
+
+test('presetBriefingTimesLabel: beide Slots disabled → "—"', () => {
+	const label = presetBriefingTimesLabel(
+		makePreset({
+			morning_enabled: false,
+			morning_time: '06:30:00',
+			evening_enabled: false,
+			evening_time: '18:00:00'
+		})
+	);
+	assert.equal(label, '—');
+});
+
+test('presetBriefingTimesLabel: Alt-Preset ohne Slot-Felder (undefined) → "—", kein Crash', () => {
+	const label = presetBriefingTimesLabel(
+		makePreset({
+			morning_enabled: undefined,
+			morning_time: undefined,
+			evening_enabled: undefined,
+			evening_time: undefined
+		})
+	);
+	assert.equal(label, '—');
+});

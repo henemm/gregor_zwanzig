@@ -235,6 +235,24 @@ export function compareActions(status: CompareStatus): CompareAction[] {
 	];
 }
 
+// Issue #1229 — Compare-Hub Briefing-Zeiten (Slot-basiert statt Rhythmus-Sprache).
+// Spec: docs/specs/modules/issue_1229_monitor_hub.md (AC-3, Edge Cases)
+
+/**
+ * ComparePreset → lesbares Briefing-Zeiten-Label ("Morgen 06:30 · Abend 18:00").
+ *
+ * Format-Vorbild: mock-locations.jsx:123/148/173/197. Backend liefert
+ * `HH:MM:SS` — wird auf `HH:MM` gekürzt. Kein aktiver Slot bzw. Alt-Preset
+ * ohne die Slot-Felder (undefined) → "—", nie ein verwaister Trennpunkt.
+ */
+export function presetBriefingTimesLabel(preset: ComparePreset): string {
+	const toHHMM = (t?: string) => (t ?? '').slice(0, 5);
+	const parts: string[] = [];
+	if (preset.morning_enabled) parts.push(`Morgen ${toHHMM(preset.morning_time)}`);
+	if (preset.evening_enabled) parts.push(`Abend ${toHHMM(preset.evening_time)}`);
+	return parts.length > 0 ? parts.join(' · ') : '—';
+}
+
 /**
  * Berechnet den naechsten { schedule, previous_schedule }-Zustand beim Pause-Toggle.
  *

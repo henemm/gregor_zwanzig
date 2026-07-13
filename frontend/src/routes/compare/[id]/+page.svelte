@@ -10,12 +10,14 @@
 	import {
 		deriveStatusFromPreset,
 		STATUS_MAP,
-		presetScheduleLabel,
+		presetBriefingTimesLabel,
 		presetProfileLabel,
 		formatLastSent,
+		formatNextSend,
 		computePauseToggle,
 		channelCountLabel
 	} from '$lib/components/compare/subscriptionHelpers.js';
+	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
 	import { page } from '$app/state';
 	import { invalidateAll } from '$app/navigation';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
@@ -28,6 +30,11 @@
 	// Adversary-Finding F001: geguardetes Profil-Label für die mobile Kontext-
 	// Unterzeile (Muster CompareTile.svelte:62) — leer bei unbekanntem/fehlendem profil.
 	let profileLabel = $derived(presetProfileLabel(data.preset.profil));
+
+	// Issue #1229 Fix-Loop 1 (F001/F002): identisches Muster wie CompareTabs.svelte —
+	// "Nächster" aus dem berechneten Zeitstempel statt aus presetScheduleLabel.
+	const now = new Date();
+	const nextSend = $derived(deriveNextSend(data.preset, now));
 
 	// Issue #517 — ?tab=-Query-Parameter lesen und an CompareDetail/CompareTabs weitergeben.
 	const initialTab = $derived(page.url.searchParams.get('tab') ?? 'uebersicht');
@@ -207,13 +214,17 @@
 		</Card>
 		<Card padding={14}>
 			<div class="text-xs font-mono uppercase tracking-widest text-[var(--g-ink-3)]">Nächster</div>
-			<div class="text-sm mt-1">{presetScheduleLabel(data.preset)}</div>
+			<div class="text-sm mt-1">{formatNextSend(nextSend)}</div>
+		</Card>
+		<Card padding={14}>
+			<div class="text-xs font-mono uppercase tracking-widest text-[var(--g-ink-3)]">Briefings</div>
+			<div class="text-sm mt-1" data-testid="compare-detail-stat-briefings">{presetBriefingTimesLabel(data.preset)}</div>
 		</Card>
 		<Card padding={14}>
 			<div class="text-xs font-mono uppercase tracking-widest text-[var(--g-ink-3)]">Zuletzt</div>
 			<div class="text-sm mt-1">{formatLastSent(data.preset.letzter_versand)}</div>
 		</Card>
-		<Card padding={14}>
+		<Card padding={14} class="col-span-2">
 			<div class="text-xs font-mono uppercase tracking-widest text-[var(--g-ink-3)]">Kanäle</div>
 			<div class="text-sm mt-1 truncate">{channelCountLabel((data.preset.empfaenger ?? []).length)}</div>
 		</Card>

@@ -6,6 +6,7 @@
 	// Design-Quelle: claude-code-handoff/current/jsx/screen-compare-editor.jsx Z. 640-700.
 
 	import { getContext, onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { Btn, Eyebrow, TopoBg } from '$lib/components/atoms';
 	import { Field, ConfirmDialog } from '$lib/components/molecules';
 	import { ACTIVITY_PROFILE_OPTIONS, toCompareProfile, type ActivityProfile, type Location, type ComparePreset } from '$lib/types';
@@ -69,6 +70,17 @@
 	// (TAB_ORDER/unlockedTabs/doneTabs) anzufassen.
 	export type EditorTabId = CompareTabId | 'alarme';
 
+	// Issue #1229 — Deep-Link `?tab=` für den Edit-Modus (Compare-Hub-Edit-Stift
+	// springt auf `/compare/{id}/edit?tab=versand`). Exakter String-Vergleich
+	// gegen bekannte EditorTabId-Werte; unbekannt/fehlend/nur-Create-Modus →
+	// bisheriger Default 'vergleich' (AC-6, kein Crash).
+	const EDITOR_TAB_IDS: readonly EditorTabId[] = ['vergleich', 'orte', 'idealwerte', 'layout', 'versand', 'alarme'];
+	function initialTabFromQuery(): EditorTabId {
+		if (mode !== 'edit') return 'vergleich';
+		const raw = page.url.searchParams.get('tab');
+		return (EDITOR_TAB_IDS as readonly string[]).includes(raw ?? '') ? (raw as EditorTabId) : 'vergleich';
+	}
+
 	// Issue #1231, Slice 6 (AC-17) — CorridorEditor vereint Idealwerte + Alerts:
 	// `idealwerte`-Label "Wertebereiche" (war: "Idealwerte"), `id` + Testid unverändert.
 	const TAB_DEFS = $derived<{ id: EditorTabId; label: string; lockHint: string | null }[]>([
@@ -90,7 +102,7 @@
 	// Issue #718: Validierungs-Status der Idealwerte — reaktiv, keine Seiteneffekte.
 	const idealsValid = $derived(validateIdealRanges(wiz.idealRanges, wiz.activeMetricKeys).valid);
 
-	let activeTab = $state<EditorTabId>('vergleich');
+	let activeTab = $state<EditorTabId>(initialTabFromQuery());
 
 	// Dirty-Tracking (AC-2): Snapshot der editierbaren Felder beim Mount erfassen.
 	// $derived statt manueller markDirty-Wrapper — deckt alle Tabs ab und markiert

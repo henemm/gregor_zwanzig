@@ -384,13 +384,6 @@ export interface CompareTag {
 	label: string;
 }
 
-export interface RankingEntry {
-	location_id: string;
-	name: string;
-	score: number;
-	tags: CompareTag[];
-}
-
 export interface MatrixEntry {
 	location_id: string;
 	metrics: Record<string, unknown>;
@@ -407,7 +400,6 @@ export interface StundenVerlaufEntry {
 }
 
 export interface CompareResult {
-	ranking: RankingEntry[];
 	matrix: MatrixEntry[];
 	stunden_verlauf: StundenVerlaufEntry[];
 }

@@ -3,9 +3,10 @@
 	// Kanonische Quelle: molecules.jsx::CompareBriefingPreview
 	//
 	// Delegiert je nach Kanal an die passende Vorschau-Komponente.
+	// Hinweis (#1229 S2): telegram/sms sind im Hub nie mit profile/data
+	// gemountet und routen daher (wie email) auf ComparePreviewMissing.
+	// CompareChatBubble/CompareSmsPreview bleiben als Dateien bestehen (KL-3).
 
-	import CompareChatBubble from './CompareChatBubble.svelte';
-	import CompareSmsPreview from './CompareSmsPreview.svelte';
 	import ComparePreviewMissing from './ComparePreviewMissing.svelte';
 
 	interface Props {
@@ -24,10 +25,6 @@
 	<ComparePreviewMissing class={className} />
 {:else if channel === 'email'}
 	<ComparePreviewMissing class={className} note="E-Mail-Vorschau wird separat gerendert." />
-{:else if channel === 'telegram'}
-	<CompareChatBubble class={className} {channel} profile={profile as any} data={data as any} {subscriptionName} />
-{:else if channel === 'sms'}
-	<CompareSmsPreview class={className} profile={profile as any} data={data as any} />
 {:else}
 	<ComparePreviewMissing class={className} />
 {/if}
