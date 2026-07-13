@@ -483,7 +483,8 @@ hier die Strategie-Zusammenfassung:
   visibility_min_m) werden NICHT gegen Einzelstunden geprüft; precip_sum_mm
   hat zudem keine Übersichts-Zeile und bleibt daher vorerst unmarkiert
   (Ausbau-Kandidat, #1199). (2) range=[None,None]+mark markiert defensiv
-  alles (im Editor per AC-12 nicht speicherbar).
+  alles; dieser Grenzfall ist laut AC-12 im Editor aktuell nicht speicherbar,
+  bleibt aber ein bewusst dokumentiertes Renderer-Verhalten.
 - 2026-07-13: Fakten-Korrektur Slice 4 (transparent, keine AC-Änderung): Der
   vergleich-Metrik-Namensraum umfasst für `mark`-Korridore ALLE 14
   Compare-Metriken aus `compareMetricDefs.ts::ALL_METRICS` (nicht nur die 10
