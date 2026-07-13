@@ -139,6 +139,14 @@ class OfficialAlertNotice:
     # durchsetzt (#1216 Slice 2a F006). Leeres Tuple (Default) -> Bestands-
     # aufrufer/Tests ohne dieses Feld fallen auf den Namensvergleich zurueck.
     scope_ids: tuple[str, ...] = ()
+    # Adversary F013 (#1239 Nachzug Runde 7, HIGH): AGGREGIERTE Regionen aller
+    # gebuendelten Mitglieder (dedupliziert, Reihenfolge = erstes Auftreten),
+    # NICHT nur `alert.region_label` des Repraesentanten. Von den Buildern aus
+    # dem dritten `_bundle_by_hazard_level`-Rueckgabewert gesetzt. Leeres Tuple
+    # (Default) -> `_standalone_src_html` faellt auf `alert.region_label`
+    # zurueck (Alt-Aufrufer/handgebaute Test-Notices ohne dieses Feld,
+    # Bestandsverhalten unveraendert).
+    regions: tuple[str, ...] = ()
 
 
 def render_official_alerts_html(
@@ -290,23 +298,52 @@ def dedupe_official_alerts(
 
 def _bundle_by_hazard_level(
     deduped: list[tuple["OfficialAlert", list[str]]],
-) -> list[tuple["OfficialAlert", list[str]]]:
+) -> list[tuple["OfficialAlert", list[str], tuple[str, ...]]]:
     """Zweite Verdichtungs-Stufe der WARN-SEKTION (Issue #1239 AC-13), NACH der
     Identitaets-Dedup (`dedupe_official_alerts`): buendelt Warnungen mit gleichem
     `hazard` UND gleicher Stufe zu EINER Warnung mit vereinigter Segment-/Orts-
     Liste (zwei Waldbrand-Stufe-3-Warnungen in Zone Ouest und Zone Est werden zu
     einer Warnung "Waldbrand-Gefahr" mit beiden Orten).
 
-    Adversary F003 (HIGH, Datenverlust): der Buendelungs-Schluessel traegt
-    ZUSAETZLICH `(valid_from, valid_to)` -- sonst wirft die Buendelung den
-    Gueltigkeitszeitraum aller NICHT-repraesentativen Alerts weg (zwei
-    Waldbrand-Stufe-3-Warnungen mit unterschiedlichen Zeitraeumen waeren
-    faelschlich zu einer Warnung mit nur EINEM Zeitraum kollabiert -- eine
-    falsche Aussage in einer Sicherheitswarnung). Unterschiedliche Zeitraeume
-    sind fachlich zwei verschiedene Warnungen und bleiben getrennt. Der
-    beanstandete AC-13-Fall (zeitlose Zugangssperren/Waldbrandstufen) hat bei
-    beiden Warnungen `None`/`None` -- das zaehlt als uebereinstimmend und
-    buendelt weiterhin.
+    GRUNDSATZ (Adversary, dritte Formulierung, F003/F012/F013): ein Buendel-
+    Repraesentant darf KEIN angezeigtes Feld allein bestimmen, das sich
+    zwischen den Mitgliedern unterscheiden kann. Fuer jedes vom Renderer aus
+    dem Repraesentanten gelesene Feld gilt GENAU eine von zwei Kategorien:
+    (A) SCHLUESSEL -- das Feld ist Teil des Buendel-Schluessels, folglich bei
+    allen Mitgliedern eines Buendels gleich, ODER (B) AGGREGAT -- das Feld darf
+    zwischen Mitgliedern variieren und wird ueber ALLE Mitglieder gesammelt
+    (dedupliziert, stabile Erstauftritts-Reihenfolge) statt nur vom
+    Repraesentanten gelesen. Vollstaendige Einordnung:
+
+    - `hazard` -- (A) SCHLUESSEL (Bündelungskriterium selbst).
+    - `level` -- (A) SCHLUESSEL (Bündelungskriterium selbst).
+    - `label` -- (A) SCHLUESSEL (Adversary F012, HIGH, Staging-Regression):
+      ohne das kollabierten drei verschiedene Massiv-Sperren (Toulon: "Zugang
+      eingeschraenkt — Monts Toulonnais", Hyères: "— Corniche Des Maures",
+      Draguignan: "— Centre Var"; alle access_ban, Stufe 3, ohne Zeitraum) zu
+      EINER Karte unter dem Titel des ERSTEN Massivs -- wer in Hyères steht,
+      laese eine Sperre fuer "Monts Toulonnais" und erfuehre nichts von der ihn
+      tatsaechlich betreffenden Corniche-des-Maures-Sperre. Der #1239-Fall
+      (zwei Waldbrand-Warnungen "Waldbrand-Gefahr — Stufe 3" aus zwei Zonen)
+      hat bei beiden Warnungen DASSELBE Label -- buendelt weiterhin (AC-13).
+    - `valid_from`/`valid_to` -- (A) SCHLUESSEL (Adversary F003, HIGH,
+      Datenverlust): sonst wirft die Buendelung den Gueltigkeitszeitraum aller
+      NICHT-repraesentativen Alerts weg. Der AC-13-Fall hat `None`/`None` bei
+      beiden -- buendelt weiterhin.
+    - `region_label` -- (B) AGGREGAT (Adversary F013, HIGH, Staging-Regression
+      Runde 7): region_label DARF variieren -- Region in den Schluessel zu
+      nehmen wuerde exakt den #1239-Bündelungsfall (zwei Waldbrand-Zonen -> EINE
+      Karte) wieder aufloesen. Stattdessen sammelt `_bundle_by_hazard_level`
+      jetzt die Regionen ALLER Mitglieder (dedupliziert, Reihenfolge = erstes
+      Auftreten) als dritten Rueckgabewert; die `.src`-Box nennt ueber
+      `OfficialAlertNotice.regions` ALLE gesammelten Regionen statt nur der des
+      Repraesentanten ("Météo-France — Var, Bouches-du-Rhône." statt nur "—
+      Var." fuer eine Warnung, die tatsaechlich beide Départements abdeckt).
+    - `source`/`url` -- werden NICHT pro Warnung gerendert (nur global als
+      Mail-Parameter `source_label`/`source_url` an `render_warn_block`) --
+      unberuehrt von der Buendelung, keine der beiden Kategorien noetig.
+    - `dedup_id` -- speist ausschliesslich die VORGELAGERTE Identitaets-Dedup
+      (`dedupe_official_alerts`), wird nirgends direkt gerendert.
 
     Laeuft NUR in den Notice-Buildern des Standalone-Alarms, nicht in der
     geteilten Dedup: die Badge-/Streifen-Pfade muessen gleichartige Warnungen mit
@@ -319,16 +356,20 @@ def _bundle_by_hazard_level(
     Massiv-Eskalation kollabiert bereits in der Identitaets-Dedup davor)."""
     rep: dict[tuple, "OfficialAlert"] = {}
     ids_by_key: dict[tuple, list[str]] = {}
+    regions_by_key: dict[tuple, list[str]] = {}
     order: list[tuple] = []
     for a, segment_ids in deduped:
-        key = (a.hazard, a.level, a.valid_from, a.valid_to)
+        key = (a.hazard, a.level, a.label, a.valid_from, a.valid_to)
         if key not in rep:
             rep[key] = a
             ids_by_key[key] = []
+            regions_by_key[key] = []
             order.append(key)
         ids_by_key[key].extend(segment_ids)
+        if a.region_label and a.region_label not in regions_by_key[key]:
+            regions_by_key[key].append(a.region_label)
     return [
-        (rep[key], list(dict.fromkeys(ids_by_key[key])))
+        (rep[key], list(dict.fromkeys(ids_by_key[key])), tuple(regions_by_key[key]))
         for key in order
     ]
 
@@ -974,12 +1015,23 @@ def _standalone_src_html(
     box_bg: str, info_color: str, ink_muted: str, ink: str,
 ) -> str:
     """`.src`-Box (Spec Slice B Punkt 6): 'Quelle: {Quelle} — {Regionen}.
-    {Scope-Satz}'. Regionen dedupliziert (F007-Bestandsschutz)."""
+    {Scope-Satz}'. Regionen dedupliziert (F007-Bestandsschutz).
+
+    Adversary F013 (#1239 Nachzug Runde 7, HIGH): pro Notice werden ALLE
+    Regionen ihres Buendels genannt (`n.regions`, von den Buildern aus
+    `_bundle_by_hazard_level` gesetzt), nicht nur `n.alert.region_label` des
+    Buendel-Repraesentanten -- sonst nennt die Quelle-Box bei einer aus zwei
+    Départements gebuendelten Warnung nur EINES ("— Var." statt "— Var,
+    Bouches-du-Rhône." fuer eine Warnung, die beide abdeckt: eine falsche
+    Zustaendigkeits-Zuordnung, kein blosses Auslassen). Fallback auf
+    `alert.region_label`, wenn `n.regions` leer ist (Alt-Aufrufer/handgebaute
+    Test-Notices ohne dieses Feld)."""
     regions = []
     for n in ordered:
-        rl = n.alert.region_label
-        if rl and rl not in regions:
-            regions.append(rl)
+        rls = n.regions or ((n.alert.region_label,) if n.alert.region_label else ())
+        for rl in rls:
+            if rl and rl not in regions:
+                regions.append(rl)
     region_suffix = f" — {_html.escape(', '.join(regions))}" if regions else ""
     sentence = _standalone_src_sentence(ordered, uniform)
     return (
@@ -1383,7 +1435,7 @@ def build_official_alert_notices(
     all_ids = _trip_total_segment_ids(trip)
     deduped = _bundle_by_hazard_level(dedupe_official_alerts(tagged_alerts))
     notices = []
-    for alert, segment_ids in deduped:
+    for alert, segment_ids, regions in deduped:
         # #1233 AC-11: ein Trip mit genau einem Wegpunkt hat keine echten
         # Zwischen-Segmente (`all_ids` kollabiert auf das blosse "Ziel") — jede
         # nicht-leere Warnung deckt dann zwangslaeufig die (triviale) gesamte
@@ -1425,6 +1477,9 @@ def build_official_alert_notices(
             # scope_ids (Adversary F009 Nachzug #1239): identitaets-basierter
             # Umfang -- sortierte Segment-IDs (bzw. alle IDs bei voller Route).
             scope_ids=tuple(sorted(all_ids)) if is_full else tuple(sorted(segment_ids)),
+            # regions (Adversary F013 Nachzug #1239 Runde 7): alle Regionen des
+            # Buendels (`_bundle_by_hazard_level`s dritter Rueckgabewert).
+            regions=regions,
         ))
     return notices
 
@@ -1450,7 +1505,7 @@ def build_compare_official_alert_notices(
     all_set = set(all_location_ids)
     deduped = _bundle_by_hazard_level(dedupe_official_alerts(tagged_alerts))
     notices = []
-    for alert, affected_ids in deduped:
+    for alert, affected_ids, regions in deduped:
         affected_set = set(affected_ids)
         affected_ordered_ids = [i for i in all_location_ids if i in affected_set]
         affected = list(dict.fromkeys(id_to_name.get(i, i) for i in affected_ordered_ids))
@@ -1481,5 +1536,8 @@ def build_compare_official_alert_notices(
             # Exakt dieselbe ID-vs-Name-Regel, die diese Funktion bereits fuer
             # `is_full`/`affected`/`free` durchsetzt (#1216 Slice 2a F006).
             scope_ids=tuple(sorted(all_location_ids)) if is_full else tuple(sorted(affected_ordered_ids)),
+            # regions (Adversary F013 Nachzug #1239 Runde 7): alle Regionen des
+            # Buendels (`_bundle_by_hazard_level`s dritter Rueckgabewert).
+            regions=regions,
         ))
     return notices

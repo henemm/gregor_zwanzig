@@ -444,6 +444,116 @@ def test_ac13_different_validity_periods_not_bundled():
     assert "Sa 11.07. · 15:00–21:00" in text, "Zeitraum der zweiten Warnung (Fréjus) fehlt"
 
 
+def test_ac13_different_massif_labels_not_bundled():
+    """AC-13 (Adversary F012, HIGH, Staging-Regression): Given drei amtliche
+    Zugangssperren-Warnungen mit demselben Gefahren-Typ, derselben Stufe und
+    OHNE Gueltigkeitszeitraum (wie die F003-Buendelungsbedingung es erlaubt),
+    aber DREI VERSCHIEDENEN Massiv-Bezeichnungen ("Monts Toulonnais",
+    "Corniche Des Maures", "Centre Var") / When die Warn-Sektion gerendert
+    wird / Then buendeln sie NICHT zu einer Warnung -- jede behaelt ihren
+    eigenen Massiv-Namen und ihre eigenen Orte.
+
+    Reproduziert die echte Staging-Regression: vorher zeigte die gebuendelte
+    Karte nur "Zugang eingeschränkt — Monts Toulonnais" (das Label des ERSTEN
+    Massivs) fuer alle drei Orte -- wer in Hyères stand, laes eine Sperre fuer
+    ein falsches Massiv und erfuhr nichts von der ihn tatsaechlich
+    betreffenden Corniche-des-Maures-Sperre."""
+    toulonnais = _alert(3, "access_ban", "Zugang eingeschränkt — Monts Toulonnais",
+                        vf=None, vt=None, source="massif_closure",
+                        region="Monts Toulonnais", dedup_id="monts-toulonnais")
+    maures = _alert(3, "access_ban", "Zugang eingeschränkt — Corniche Des Maures",
+                     vf=None, vt=None, source="massif_closure",
+                     region="Corniche Des Maures", dedup_id="corniche-maures")
+    centre_var = _alert(3, "access_ban", "Zugang eingeschränkt — Centre Var",
+                         vf=None, vt=None, source="massif_closure",
+                         region="Centre Var", dedup_id="centre-var")
+    notices = _compare_notices([
+        (toulonnais, ["toulon"]), (maures, ["hyeres"]), (centre_var, ["frejus"]),
+    ])
+    assert len(notices) == 3, (
+        f"Verschiedene Massiv-Sperren faelschlich gebuendelt: {len(notices)} Eintraege "
+        f"(Labels: {[n.alert.label for n in notices]!r})"
+    )
+    html = _render_standalone(notices)
+    assert len(_warn_rows(html)) == 3, "Drei Warn-Zeilen erwartet (drei verschiedene Massive)"
+    titles = _type_texts(html)
+    assert titles == [
+        "Zugang eingeschränkt — Monts Toulonnais",
+        "Zugang eingeschränkt — Corniche Des Maures",
+        "Zugang eingeschränkt — Centre Var",
+    ], f"Massiv-Titel vermischt/verloren: {titles!r}"
+    text = _text(html)
+    assert "Hyères" in text and "Fréjus" in text and "Toulon" in text, (
+        f"Nicht alle drei Orte erscheinen als eigene Chips: {text!r}"
+    )
+
+
+def test_ac13_same_label_wildfire_still_bundled_across_zones():
+    """AC-13 (Non-Regression fuer den urspruenglichen #1239-Fall, nach dem
+    F012-Fix): Given zwei Waldbrand-Warnungen mit IDENTISCHEM Label
+    ("Waldbrand-Gefahr — Stufe 3") aus zwei verschiedenen Zonen / When die
+    Warn-Sektion gerendert wird / Then buendeln sie WEITERHIN zu einer
+    Warnung -- das Label-Kriterium aus F012 verhindert nur die Buendelung
+    fachlich VERSCHIEDENER Warnungen (F012), nicht den urspruenglichen
+    AC-13-Bündelungsfall (identisches Label, unterschiedliche Zonen)."""
+    west = _alert(3, "wildfire_risk", "Waldbrand-Gefahr — Stufe 3",
+                  vf=None, vt=None, source="meteo_forets", region="Zone Ouest")
+    est = _alert(3, "wildfire_risk", "Waldbrand-Gefahr — Stufe 3",
+                 vf=None, vt=None, source="meteo_forets", region="Zone Est")
+    notices = _compare_notices([(west, ["toulon"]), (est, ["frejus"])])
+    assert len(notices) == 1, (
+        f"Identisches Label aus zwei Zonen nicht mehr gebuendelt: {len(notices)} Eintraege"
+    )
+    assert notices[0].affected_chips == ["Toulon", "Fréjus"], (
+        f"Orts-Liste nicht vereinigt: {notices[0].affected_chips!r}"
+    )
+    html = _render_standalone(notices)
+    assert len(_warn_rows(html)) == 1, "Eine Warn-Zeile erwartet (identisches Label)"
+
+
+def test_ac13_bundled_warning_names_all_member_regions_in_source_box():
+    """AC-13 (Adversary F013, HIGH, Staging-Regression Runde 7): Given zwei
+    Waldbrand-Warnungen mit identischem Label und identischer Stufe, aber
+    VERSCHIEDENEN Départements ("Var"/"Bouches-du-Rhône"), ohne dedup_id / When
+    die Warn-Sektion gerendert wird / Then buendeln sie korrekt zu EINER
+    Warnung mit Chips fuer BEIDE Orte -- aber die Quelle-Box nennt NICHT nur
+    die Region des Buendel-Repraesentanten, sondern ALLE Regionen des Buendels.
+
+    Vorher: 'Quelle: Météo-France — Var.' fuer eine Warnung, die tatsaechlich
+    Var UND Bouches-du-Rhône abdeckt -- eine falsche Zustaendigkeits-Zuordnung
+    fuer Marseille (Bouches-du-Rhône), keine blosse Auslassung."""
+    var = _alert(3, "wildfire_risk", "Waldbrand-Gefahr — Stufe 3",
+                 vf=None, vt=None, source="meteo_forets", region="Var")
+    bdr = _alert(3, "wildfire_risk", "Waldbrand-Gefahr — Stufe 3",
+                  vf=None, vt=None, source="meteo_forets", region="Bouches-du-Rhône")
+    notices = _compare_notices([(var, ["toulon"]), (bdr, ["marseille"])])
+    assert len(notices) == 1, f"Faelschlich nicht gebuendelt: {len(notices)} Eintraege"
+    assert notices[0].affected_chips == ["Toulon", "Marseille"], (
+        f"Orts-Liste nicht vereinigt: {notices[0].affected_chips!r}"
+    )
+    html = _render_standalone(notices)
+    assert len(_warn_rows(html)) == 1, "Eine Warn-Zeile erwartet (gebuendelt)"
+    src = _src_text(html)
+    assert "Var" in src and "Bouches-du-Rhône" in src, (
+        f"Quelle-Box nennt nicht beide Regionen des Buendels: {src!r}"
+    )
+
+
+def test_ac13_single_region_source_box_unchanged():
+    """AC-13 (Non-Regression, F013-Gegenstueck): Given eine einzelne
+    ungebuendelte Warnung mit genau EINER Region / When die Warn-Sektion
+    gerendert wird / Then bleibt die Quelle-Box-Regionsangabe wortgleich zum
+    Stand vor dem F013-Fix (keine Aenderung fuer den unproblematischen Fall)."""
+    notice = _notice(
+        _alert(3, "extreme_heat", "Hitze", region="Var"),
+        scope_label="nur Toulon", sms_scope="nurToulon",
+        affected_chips=["Toulon"], free_chips=[],
+    )
+    src = _src_text(_render_standalone([notice]))
+    assert "Var" in src, f"Region fehlt in der Quelle-Box: {src!r}"
+    assert src.count("Var") == 1, f"Region wird unerwartet vervielfacht: {src!r}"
+
+
 # ---------------------------------------------------------------------------
 # AC-14 — Non-Regression: Massiv-Eskalation kollabiert auf hoechste Stufe
 # ---------------------------------------------------------------------------
