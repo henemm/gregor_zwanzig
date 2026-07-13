@@ -105,7 +105,7 @@ def render_alert_preview(
             source_label=body.onset.source_label,
         )
         msg = AlertMessage(
-            trip_short=trip_obj.name[:16],
+            trip_short=trip_obj.name,
             stand_at=stand_at,
             events=(onset_ev,),
             source=body.onset.source_label,

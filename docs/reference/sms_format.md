@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.3"
+version: "2.7"
 status: active
 created: 2025-12-27
-updated: 2026-05-31
+updated: 2026-07-13
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -13,7 +13,7 @@ tags: [sms, compact, tokens, single-source-of-truth]
 - [x] Approved (v2.0 am 2026-04-25)
 - [x] Implementiert in SMS-Adapter via `src/output/renderers/sms/` (β3, 2026-04-28)
 
-# SMS / Kompakt-Format Specification (v2.3)
+# SMS / Kompakt-Format Specification (v2.7)
 
 **Single Source of Truth** für die kompakte Token-Zeile, die in allen Channels (SMS, Satellit, E-Mail-Header, Push) identisch verwendet wird. Alle anderen Repräsentationen (E-Mail-Body, Tabellen, Push-Titel) leiten sich aus dieser Token-Zeile ab.
 
@@ -24,7 +24,12 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 ## 1. Prinzipien
 
 - **Maximale Länge:** ≤160 Zeichen (GSM-7 normalisiert).
-- **Zeichensatz:** ASCII / GSM-7. Umlaute werden ersetzt (ä→ae, ö→oe, ü→ue, ß→ss).
+- **Zeichensatz:** ASCII / GSM-7. Umlaute werden ersetzt (ä→ae, ö→oe, ü→ue, ß→ss);
+  darüber hinaus wird **jede** andere Schrift (Griechisch, Kyrillisch, Arabisch, …)
+  auf ASCII transliteriert. Umsetzung einzig über `fold_ascii()` in
+  `src/utils/ascii_fold.py` (ADR-0022) — Umlaut-Digraph-Map zuerst, danach
+  `anyascii` zeichenweise. Buchstaben, die auch `anyascii` nicht falten kann,
+  erscheinen als sichtbarer Platzhalter `?` statt lautlos zu verschwinden.
 - **Zeitformat:** Lokale Zeit (CEST), nur Stunde (0–23, **ohne** führende Null). Beispiel: `@7`, nicht `@07`.
 - **Tokens:** Kurze, möglichst englische/internationale Identifier.
 - **Trennzeichen:** Einzelnes Leerzeichen zwischen Tokens. Ausnahmen siehe Risks-Block (3.3).
@@ -63,7 +68,11 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | `{Name}:` | Etappen-/Location-Name (max 10 Zeichen, ASCII) oder mit km-Bereich | `Ballone:` oder `GR221 km0-11:` |
 
 **Name-Truncation & km-Bereichs-Bewahrung (Issue #936):**
-1. Umlaute ersetzen (ä→ae, ö→oe, ü→ue, ß→ss) **zuerst**.
+1. Falten **zuerst** — Umlaute ersetzen (ä→ae, ö→oe, ü→ue, ß→ss) und alle sonstigen
+   Nicht-ASCII-Buchstaben transliterieren, siehe §1 und ADR-0022
+   (`docs/adr/0022-ascii-faltung-via-anyascii.md`). Nicht faltbare Buchstaben werden
+   zu `?`, nicht gelöscht. Erst danach kürzen (Issue #1253: „erst falten, dann
+   kürzen" gilt durchgängig für alle Kanäle, nicht nur den Header).
 2. Auf "km" prüfen im Namen. Wenn gefunden:
    - Prefix vor "km" auf **max. 10 Zeichen** kürzen.
    - **Kompletten km-Bereich** (z.B. `km0-11`) bewahren und anhängen.
@@ -361,6 +370,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.4 | 2026-06-06 | Konfigurierbare Threshold pro Metrik (Issue #624) — `MetricConfig.sms_threshold` optional per Metrik in `display_config` (Trip-Editor), Fallback auf `DEFAULTS`; E-Mail-Tabelle bleibt separate Logik |
 | 2.5 | 2026-06-26 | SMS PR-Token-Befüllung (Issue #887) — `_segments_to_normalized_forecast()` in `sms_trip.py` erzeugt synthetisches `pop_hourly` aus `agg.pop_max_pct`, damit SMS-Token `PR{p}%` nicht mehr leer bleibt |
 | 2.6 | 2026-07-01 | km-Bereichs-Bewahrung in Header (Issue #936) — `_sanitize_stage_name()` erkennt `km`-Marker und bewahrt vollständigen km-Bereich (z.B. `km0-11`) statt ihn nach 10 Zeichen abzuschneiden; Prefix gekürzt, km-Teil vollständig |
+| 2.7 | 2026-07-13 | Faltungs-Konvention auf alle Schriften erweitert (Issue #1253) — bisher nur Umlaute; einzige Quelle jetzt `fold_ascii()` in `src/utils/ascii_fold.py` (ADR-0022: `anyascii` + deutsche Digraph-Map + zeichenweiser `?`-Guard gegen stille Buchstaben-Löschung), gilt jetzt durchgängig „erst falten, dann kürzen" auch im SMS-Titelzeilen-Pfad (`_sms_stage_prefix`) |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

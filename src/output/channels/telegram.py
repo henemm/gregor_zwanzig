@@ -1,4 +1,5 @@
 """Telegram output channel via Bot API."""
+import html
 import logging
 import re
 
@@ -178,6 +179,18 @@ class TelegramOutput:
                 TelegramOutput.recent_message_ids.append(mid)
                 del TelegramOutput.recent_message_ids[:-self._RECENT_MESSAGE_IDS_MAX]
                 return mid
+            elif parse_mode is not None and response.status_code == 400:
+                # Additive Haertung (Issue #1252): ein uebersehenes/nicht
+                # escaptes Sonderzeichen darf eine Warnung nie stillschweigend
+                # verschlucken. Einmal ohne parse_mode nachsenden, Tags
+                # gestrippt UND html.unescape()-t (sonst "&amp;" statt "&").
+                logger.warning(
+                    "Telegram API rejected HTML payload (status 400), "
+                    "retrying without parse_mode (subject=%r)", subject,
+                )
+                return self._send_fallback_without_parse_mode(
+                    chat_id, message, reply_markup, subject,
+                )
             else:
                 logger.error(
                     "Telegram API returned status %d: %s",
@@ -191,6 +204,43 @@ class TelegramOutput:
         except httpx.HTTPError as exc:
             logger.error("Telegram send failed: %s", exc)
             raise OutputError("telegram", f"Telegram send failed: {exc}") from exc
+
+    def _send_fallback_without_parse_mode(
+        self, chat_id, message: str, reply_markup: dict | None, subject: str,
+    ) -> int | None:
+        """400-Fallback (Issue #1252, additive Haertung, kein ADR-0012-Konflikt):
+        greift ausschliesslich, wenn der Aufrufer `parse_mode` gesetzt hatte UND
+        der erste Sendeversuch mit Status 400 abgelehnt wurde. Sendet den Text
+        OHNE `parse_mode`, mit gestrippten HTML-Tags UND `html.unescape()`ten
+        Entities — sonst wuerde der Fallback "&amp;" statt "&" zeigen, ein
+        kosmetischer Fehler gegen einen anderen getauscht."""
+        token = self._settings.telegram_bot_token
+        url = f"{TELEGRAM_API_BASE}/bot{token}/sendMessage"
+        fallback_text = html.unescape(_HTML_TAG_RE.sub("", message))
+        payload: dict = {"chat_id": chat_id, "text": fallback_text}
+        if reply_markup is not None:
+            payload["reply_markup"] = reply_markup
+
+        response = httpx.post(url, json=payload, timeout=self._timeout)
+        if response.status_code == 200 and _api_ok(response):
+            logger.warning(
+                "Telegram 400-fallback (no parse_mode) delivered (subject=%r)", subject,
+            )
+            try:
+                mid = int(response.json()["result"]["message_id"])
+            except (KeyError, TypeError, ValueError):
+                return None
+            self.sent_message_ids.append(mid)
+            TelegramOutput.recent_message_ids.append(mid)
+            del TelegramOutput.recent_message_ids[:-self._RECENT_MESSAGE_IDS_MAX]
+            return mid
+        logger.error(
+            "Telegram 400-fallback also failed: status %d: %s",
+            response.status_code, response.text[:200],
+        )
+        raise OutputError(
+            "telegram", f"Telegram API returned status {response.status_code} (fallback)",
+        )
 
     def delete_message(self, chat_id, message_id) -> bool:
         """Delete a message via deleteMessage.

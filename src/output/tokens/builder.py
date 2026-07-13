@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Iterable, Optional
 
+from utils.ascii_fold import fold_ascii
+
 from src.output.tokens.dto import (
     DailyForecast, MetricSpec, NormalizedForecast, Profile, ReportType,
     Token, TokenLine,
@@ -16,16 +18,13 @@ FORECAST_THP = "TH+:"
 VIGI_TH = "TH:"
 VIGI_HR = "HR:"
 
-# sms_format.md §1/§3.1: stage_name max 10 chars, Umlaut-Ersatz vor Truncation.
-_UMLAUT = str.maketrans({
-    "ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss",
-    "Ä": "Ae", "Ö": "Oe", "Ü": "Ue",
-})
+# sms_format.md §1/§3.1: stage_name max 10 chars, Umlaut-/Akzent-Faltung vor
+# Truncation, via die geteilte Quelle fold_ascii() (#1253).
 
 
 def _sanitize_stage_name(name: str) -> str:
-    """Replace Umlauts FIRST, then truncate prefix to 10 chars; preserve km range."""
-    name = name.translate(_UMLAUT)
+    """Fold umlauts/accents FIRST, then truncate prefix to 10 chars; preserve km range."""
+    name = fold_ascii(name)
     idx = name.find("km")
     if idx != -1:
         prefix = name[:idx].strip()[:10].rstrip()

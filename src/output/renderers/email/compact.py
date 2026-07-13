@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
 from app.models import SegmentWeatherData, UnifiedWeatherDisplayConfig
+from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
@@ -33,9 +34,6 @@ from app.profile import ActivityProfile
 # ASCII transliteration map
 # ---------------------------------------------------------------------------
 _ASCII_MAP = str.maketrans({
-    "ä": "ae", "ö": "oe", "ü": "ue",
-    "Ä": "Ae", "Ö": "Oe", "Ü": "Ue",
-    "ß": "ss",
     "·": "-", "—": "-", "–": "-",
     "↑": "+", "↓": "-",
     "°": "",
@@ -44,9 +42,10 @@ _ASCII_MAP = str.maketrans({
 
 
 def _ascii(text: str) -> str:
-    """Transliterate to pure ASCII: umlauts + common special chars, drop rest."""
+    """Transliterate to pure ASCII: typographic symbols locally, umlauts/
+    accents via the shared fold_ascii() (single source of truth, #1253)."""
     text = text.translate(_ASCII_MAP)
-    return text.encode("ascii", errors="ignore").decode("ascii")
+    return fold_ascii(text)
 
 
 # Issue #795/AC-10: ASCII-Schwerezeichen je Ampelstufe (compact, 7bit/ASCII).

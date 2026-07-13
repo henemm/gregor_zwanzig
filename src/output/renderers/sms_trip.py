@@ -20,6 +20,7 @@ from zoneinfo import ZoneInfo
 
 from app.models import ExposedSection, RiskLevel, RiskType, SegmentWeatherData
 from services.risk_engine import RiskEngine
+from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt, local_hour
 from src.output.renderers.sms import render_sms
 from src.output.tokens.builder import build_token_line
@@ -35,7 +36,7 @@ def _sms_stage_prefix(name: str) -> str:
     m = _ETAPPE_RE.match(name or "")
     if m:
         return f"E{m.group(1)}"
-    return (name or "Etappe")[:10].rstrip(":")
+    return fold_ascii(name or "Etappe")[:10].rstrip(":")
 
 if TYPE_CHECKING:
     from app.models import WeatherChange

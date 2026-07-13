@@ -536,7 +536,8 @@ class NotificationService:
             sent_channels.append("telegram")
             try:
                 TelegramOutput(self._settings).send(
-                    subject=subject, body=telegram_text, suppress_subject_line=True,
+                    subject=subject, body=telegram_text,
+                    parse_mode="HTML", suppress_subject_line=True,
                 )
             except Exception as e:
                 logger.error(f"Official alert telegram failed for {trip.name}: {e}")
@@ -656,7 +657,8 @@ class NotificationService:
                 telegram_sink(telegram_text)
             else:
                 TelegramOutput(self._settings).send(
-                    subject=subject, body=telegram_text, suppress_subject_line=True,
+                    subject=subject, body=telegram_text,
+                    parse_mode="HTML", suppress_subject_line=True,
                 )
         except Exception as e:
             logger.error(f"Compare official alert telegram failed for {preset_name}: {e}")
@@ -700,7 +702,7 @@ class NotificationService:
         )
         alert_tz = request.tz or ZoneInfo("UTC")
         alert_msg = AlertMessage(
-            trip_short=trip.name[:16],
+            trip_short=trip.name,
             stand_at=local_fmt(datetime.now(timezone.utc), alert_tz),
             events=(onset_event,),
             source=source,

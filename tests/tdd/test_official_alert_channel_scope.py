@@ -726,3 +726,39 @@ def test_ac11_compare_path_sms_and_telegram_show_own_scope():
             f"Compare-Telegram-Zeile zur Warnung {n.alert.label!r} nennt ihren "
             f"Ort {n.scope_label!r} nicht: {line!r}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Fixture-Ergaenzung (#1253, PO-go 2026-07-13): `LOC_NAMES` oben nutzt
+# bewusst den bereits vorgefalteten Namen `"Hyeres"` (kein Test speist je den
+# ROHEN Eingabewert `Hyères` ein -- genau die Luecke, die den Verstuemmelungs-
+# Bug jahrelang durchgelassen hat, s. fix_1252_1253_kanal_text.md Test-Plan).
+# Diese Ergaenzung ersetzt `LOC_NAMES` NICHT (das wuerde die AC-2/AC-7/AC-9-
+# Golden-Strings dieser Datei zerstoeren, die bewusst bit-identisches
+# Telegram-Verhalten pruefen), sondern fuegt einen eigenstaendigen Fall mit
+# einem rohen Akzent-Namen hinzu, der den echten Falt-Pfad durchlaeuft.
+# ---------------------------------------------------------------------------
+
+
+def test_ac1_sms_folds_raw_accented_location_name():
+    """Fixture-Ergaenzung zu AC-1: Given eine Warnung fuer den ROH eingegebenen
+    Ortsnamen `Hyères` (nicht den vorgefalteten `Hyeres`) / When die SMS
+    gerendert wird / Then enthaelt sie das gefaltete `Hyeres`, NICHT die
+    verstuemmelte Form `Hyres` -- ohne diese Ergaenzung testet keine der
+    Golden-Assertions in dieser Datei den echten Falt-Pfad, weil `LOC_NAMES`
+    bereits vorgefaltete Namen nutzt."""
+    tagged = [
+        (_alert(3, "access_ban", "Zugang eingeschränkt — Monts Toulonnais",
+                source="massif_closure", dedup_id="monts_toulonnais"), ["hyeres_raw"]),
+    ]
+    notices = _compare_notices(
+        tagged,
+        all_ids=["hyeres_raw", "toulon"],
+        names={"hyeres_raw": "Hyères", "toulon": "Toulon"},
+    )
+    sms = _sms(notices)
+    assert "Hyeres" in sms, f"Gefaltetes 'Hyeres' fehlt in der SMS: {sms!r}"
+    assert "Hyres" not in sms, (
+        f"SMS enthaelt weiterhin die verstuemmelte Form 'Hyres': {sms!r}"
+    )
+    assert sms.isascii() and len(sms) <= SMS_LIMIT

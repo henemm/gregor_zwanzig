@@ -44,3 +44,14 @@ Intensitäts-Texte), die beliebige Sonderzeichen tragen können.
 - Offene Härtung: Die 4096-Zeichen-Truncation in `TelegramOutput.send()` kann
   HTML-Tags mittig abschneiden (theoretisch, Issue #976) — bei Umstellung weiterer
   Caller mit langen Texten (Briefings) vorher lösen.
+- **Nachgezogen (Issue #1252, 2026-07-13):** Die Official-Alert-Pfade waren zwei
+  Lücken in dieser Entscheidung geblieben — `notification_service.py:538` (Standalone-
+  Alert) und `:658` (Compare-Alert) setzten `parse_mode` nie, obwohl sie formatierte
+  Nachrichten senden; zusätzlich escapte `official_alerts.py` nur die Kopfzeile, nicht
+  Ortsnamen/Behörden-Label/Gültigkeit. Beides jetzt behoben. Zusätzlich besitzt
+  `TelegramOutput.send()` jetzt einen **400-Fallback**: Lehnt die Bot-API eine
+  Nachricht mit gesetztem `parse_mode` ab (Status 400, z.B. durch ein unescaptes
+  Sonderzeichen im Upstream-Feed), wird sie einmal ohne `parse_mode` nachgesendet
+  (Tags gestrippt, `html.unescape()`), statt komplett zu verschwinden. Der Default
+  `parse_mode=None` (Punkt 2) bleibt dabei unverändert — der Fallback greift nur,
+  wenn der Aufrufer bereits `parse_mode` gesetzt hatte.

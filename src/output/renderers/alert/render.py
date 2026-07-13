@@ -15,6 +15,8 @@ from app.metric_catalog import (
 from output.renderers.email.design_tokens import (
     FONT_DATA, FONT_UI, G_ACCENT, G_DANGER, G_INK, G_INK_MUTED, G_SUCCESS,
 )
+from utils.ascii_fold import fold_ascii
+
 from .model import (
     AlertEvent, AlertMessage, OnsetEvent, arrow, delta_pct, km_span, over_thr,
     severity, side_label,
@@ -519,10 +521,11 @@ def render_sms(msg: AlertMessage, limit: int = 140) -> str:
 
 
 def _ascii(text: str) -> str:
-    return (
+    text = (
         text.replace("–", "-").replace("−", "-").replace("°", "")
-        .replace("↑", "+").replace("↓", "-").encode("ascii", "ignore").decode("ascii")
+        .replace("↑", "+").replace("↓", "-")
     )
+    return fold_ascii(text)
 
 
 def _esc(text: str) -> str:

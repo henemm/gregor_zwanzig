@@ -68,7 +68,7 @@ def build_onset_alert_message(
     )
 
     return AlertMessage(
-        trip_short=trip.name[:16],
+        trip_short=trip.name,
         stand_at=stand_at,
         events=(onset_ev,),
         source=source_label,

@@ -1361,12 +1361,12 @@ def render_official_alert_telegram(
     lines = [f"<b>{_html.escape(head)}</b>"]
     for n in ordered:
         emoji, _word = _LEVEL_WORDS.get(n.alert.level, ("🔴", "ROT"))
-        scope = "" if uniform_scope else f" · {n.scope_label}"
-        body = _display_label(n.alert)
+        scope = "" if uniform_scope else f" · {_html.escape(n.scope_label)}"
+        body = _html.escape(_display_label(n.alert))
         if n.alert.valid_from and n.alert.valid_to:
-            body = f"{body} · {_format_validity(n.alert, tz)}"
+            body = f"{body} · {_html.escape(_format_validity(n.alert, tz))}"
         lines.append(f"{emoji} {body}{scope}")
-    lines.append(source_label)
+    lines.append(_html.escape(source_label))
     return "\n".join(lines)
 
 

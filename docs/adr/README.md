@@ -83,3 +83,4 @@ ADRs sind nicht nur Konvention, sondern werden erzwungen:
 | [0019](0019-nullgradgrenze-eine-alert-metrik.md) | Nullgradgrenze als eine Alert-Metrik | Akzeptiert |
 | [0020](0020-node-test-frontend-unit-runner.md) | node:test ist der kanonische Frontend-Unit-Test-Runner (kein vitest) | Akzeptiert |
 | [0021](0021-shared-deviation-alert-engine.md) | Gemeinsame `DeviationAlertEngine` für Trip- und künftige Compare-Alarme | Akzeptiert |
+| [0022](0022-ascii-faltung-via-anyascii.md) | ASCII-Faltung via `anyascii` statt handgepflegter Transliterations-Tabellen | Akzeptiert |
