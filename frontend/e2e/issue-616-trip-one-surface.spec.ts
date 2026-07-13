@@ -20,12 +20,13 @@ const DETAIL_URL = `/trips/${TRIP_ID}`;
 const OLD_EDIT_URL = `/trips/${TRIP_ID}/edit`;
 const DESKTOP = { width: 1440, height: 900 };
 
+// Issue #1231 Slice 6: alerts-Label erneut umbenannt ("Alerts" -> "Wertebereiche").
 const CANONICAL_TABS: ReadonlyArray<[string, string]> = [
 	['overview', 'Übersicht'],
 	['stages', 'Etappen & Wegpunkte'],
 	['weather', 'Wetter-Metriken'],
-	['briefings', 'Briefing-Zeitplan'],
-	['alerts', 'Alerts'],
+	['briefings', 'Versand'],
+	['alerts', 'Wertebereiche'],
 	['preview', 'Vorschau']
 ];
 
@@ -78,7 +79,7 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		 * GIVEN: die kanonische Trip-Oberfläche
 		 * WHEN:  die Tab-Leiste gerendert ist
 		 * THEN:  genau 6 Tabs: Übersicht · Etappen & Wegpunkte · Wetter-Metriken ·
-		 *        Briefing-Zeitplan · Alerts · Vorschau (in dieser Reihenfolge).
+		 *        Versand · Wertebereiche · Vorschau (in dieser Reihenfolge).
 		 */
 		await page.goto(DETAIL_URL);
 		for (const [value, label] of CANONICAL_TABS) {

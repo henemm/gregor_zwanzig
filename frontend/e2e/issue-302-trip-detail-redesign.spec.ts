@@ -85,10 +85,11 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 		await expect(briefingsTab).not.toContainText('Reports & Kanäle');
 	});
 
-	test('AC-3d: Tab "alerts" heißt "Alerts" (nicht "Alarmregeln")', async ({ page }) => {
+	// Issue #1231 Slice 6: alerts-Label erneut umbenannt ("Alerts" -> "Wertebereiche").
+	test('AC-3d: Tab "alerts" heißt "Wertebereiche" (nicht "Alarmregeln")', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		const alertsTab = page.getByTestId('trip-detail-tab-alerts');
-		await expect(alertsTab).toContainText('Alerts');
+		await expect(alertsTab).toContainText('Wertebereiche');
 		await expect(alertsTab).not.toContainText('Alarmregeln');
 	});
 

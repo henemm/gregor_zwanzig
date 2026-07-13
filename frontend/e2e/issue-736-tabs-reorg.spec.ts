@@ -84,8 +84,9 @@ test.describe('Issue #736: Reiter-Reorganisation "Inhalt" vs. "Versand"', () => 
 			await page.goto(`/trips/${id}`);
 			await page.locator('[data-testid="trip-detail-tab-list"]').waitFor({ state: 'visible' });
 
-			// Labels prüfen
-			await expect(page.locator('[data-testid="trip-detail-tab-weather"]')).toContainText('Inhalt');
+			// Labels prüfen. Issue #1231 Slice 6: weather-Label erneut umbenannt
+			// ("Inhalt" -> "Wetter-Metriken"), Testid/value unverändert.
+			await expect(page.locator('[data-testid="trip-detail-tab-weather"]')).toContainText('Wetter-Metriken');
 			await expect(page.locator('[data-testid="trip-detail-tab-briefings"]')).toContainText('Versand');
 
 			// URL-Parameter aktivieren richtigen Reiter

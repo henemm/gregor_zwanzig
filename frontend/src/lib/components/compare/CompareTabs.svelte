@@ -1,7 +1,10 @@
 <script lang="ts">
 	// Issue #517 — CompareTabs: 6-Tab-Orchestrator für /compare/[id] Detail-Seite.
 	//
-	// Tabs: Übersicht · Orte · Idealwerte · Layout · Versand · Vorschau
+	// Tabs: Übersicht · Orte · Wertebereiche · Layout · Versand · Vorschau
+	// Issue #1231, Slice 6 (Begriffs-Konsistenz): Label „Idealwerte" -> „Wertebereiche",
+	// `value`-Schlüssel unverändert (`idealwerte`). Reine Lesenansicht, keine
+	// funktionale CorridorEditor-Migration hier (bleibt späterer Scope).
 	//
 	// URL-Sync via history.replaceState (?tab=VALUE), kein Hash wie TripTabs.
 	// Mobile (<900px): scrollbare Pill-Tabs analog TripTabs.svelte.
@@ -57,7 +60,7 @@
 	const TABS = [
 		{ value: 'uebersicht', label: 'Übersicht' },
 		{ value: 'orte', label: 'Orte' },
-		{ value: 'idealwerte', label: 'Idealwerte' },
+		{ value: 'idealwerte', label: 'Wertebereiche' },
 		{ value: 'layout', label: 'Layout' },
 		{ value: 'versand', label: 'Versand' },
 		{ value: 'vorschau', label: 'Vorschau' }
@@ -267,7 +270,7 @@
 
 					<Card padding={20} style="display: flex; flex-direction: column">
 						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
-							<Eyebrow>Idealwerte</Eyebrow>
+							<Eyebrow>Wertebereiche</Eyebrow>
 							<button onclick={() => handleValueChange('idealwerte')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
 						</div>
 						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{preset.profil}</div>
@@ -334,7 +337,7 @@
 					/>
 				{/each}
 			{:else}
-				<p class="empty-state">Keine Idealwerte konfiguriert.</p>
+				<p class="empty-state">Keine Wertebereiche konfiguriert.</p>
 			{/if}
 			<div class="footer-link">
 				<Btn variant="ghost" size="sm">Metrik hinzufügen</Btn>

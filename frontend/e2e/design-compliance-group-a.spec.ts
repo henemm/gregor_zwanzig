@@ -104,9 +104,10 @@ test.describe('#529 Trip-Detail · Kanonische Tab-Namen (nav-map.jsx)', () => {
 		await expect(page.getByRole('tab', { name: 'Reports & Kanäle' })).not.toBeVisible();
 	});
 
-	test('AC-1c: Tab "alerts" heißt "Alerts" (nicht "Alarmregeln")', async ({ page }) => {
+	// Issue #1231 Slice 6: alerts-Label erneut umbenannt ("Alerts" -> "Wertebereiche").
+	test('AC-1c: Tab "alerts" heißt "Wertebereiche" (nicht "Alarmregeln")', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await expect(page.getByRole('tab', { name: 'Alerts' })).toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Wertebereiche' })).toBeVisible();
 		await expect(page.getByRole('tab', { name: 'Alarmregeln' })).not.toBeVisible();
 	});
 });

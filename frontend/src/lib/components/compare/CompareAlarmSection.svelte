@@ -68,7 +68,7 @@
 
 	{#if activeMetrics.length === 0}
 		<p class="no-metrics-hint" data-testid="compare-alarm-no-metrics">
-			Wähle im Tab „Idealwerte" Metriken aus, um Alarm-Schwellen zu konfigurieren.
+			Wähle im Tab „Wertebereiche" Metriken aus, um Alarm-Schwellen zu konfigurieren.
 		</p>
 	{:else}
 		<AlertMetricLevelTable

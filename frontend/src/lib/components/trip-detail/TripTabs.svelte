@@ -64,13 +64,15 @@
 	//   briefings -> "Versand" (war: "Briefing-Zeitplan")
 	//   alerts    -> "Alerts" (war: "Alarmregeln")
 	// Issue #736 — Reiter-Reorganisation: Labels umbenannt, value-Schlüssel unverändert.
+	// Issue #1231, Slice 6 (AC-16) — CorridorEditor vereint Alerts + Idealwerte:
+	//   weather -> "Wetter-Metriken" (war: "Inhalt"), alerts -> "Wertebereiche" (war: "Alerts").
 	// `value`-Schlüssel bleiben unverändert — URL-Parameter und Test-IDs nicht betroffen.
 	const TABS = [
 		{ value: 'overview', label: 'Übersicht' },
 		{ value: 'stages', label: 'Etappen & Wegpunkte' },
-		{ value: 'weather', label: 'Inhalt' },
+		{ value: 'weather', label: 'Wetter-Metriken' },
 		{ value: 'briefings', label: 'Versand' },
-		{ value: 'alerts', label: 'Alerts' },
+		{ value: 'alerts', label: 'Wertebereiche' },
 		{ value: 'preview', label: 'Vorschau' }
 	] as const;
 
@@ -326,13 +328,18 @@
 		}
 	}
 	@media (max-width: 899px) {
-		/* Scrollbares Tab-Band */
+		/* Scrollbares Tab-Band. Issue #1231 Slice 6 (Fresh-Eyes-Fund): Rand-Fade
+		   statt hartem Abschnitt — signalisiert, dass links/rechts weitere Tabs
+		   folgen, ohne Scroll-Indikator-Widget. */
 		.trip-tabs :global([data-slot="segmented"]) {
 			overflow-x: auto;
 			white-space: nowrap;
 			scrollbar-width: none;
 			-ms-overflow-style: none;
 			scroll-snap-type: x mandatory;
+			scroll-padding-inline: 12px;
+			mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+			-webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
 		}
 		.trip-tabs :global([data-slot="segmented"])::-webkit-scrollbar {
 			display: none;

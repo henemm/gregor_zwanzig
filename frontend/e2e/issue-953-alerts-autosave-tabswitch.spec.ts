@@ -1,7 +1,10 @@
 // Issue #953 — Alerts-Tab: Empfindlichkeits-Änderung geht nach Tab-Klick optisch verloren.
-// Reproduktion des Bugs gegen den LIVE-Code auf Staging (kein Mock; der Dialog-Handler
+// Reproduktion des Bugs gegen den LIVE-Code auf Staging (kein Mock; der Tab-Klick
 // ist echte Nutzer-Interaktion, keine Verhaltens-Simulation).
-// Logik-Vorlage: verifiziertes Repro-Skript (Selektoren/Seed/Ablauf bewiesen).
+// Issue #1231 Slice 6 (Adversary F001): AlertsTab/AlertMetricLevelTable wurden in
+// Slice 5 durch CorridorEditor(Mobile) ersetzt — Selektoren/Datenmodell auf den
+// neuen Warnen-Toggle (Corridor.notify) migriert, fachlicher Kern (Autosave
+// überlebt echten Tab-Klick) unverändert gegenüber der Original-Reproduktion.
 // Ausführen: cd frontend && npx playwright test e2e/issue-953-alerts-autosave-tabswitch.spec.ts \
 //   --config=playwright.953.staging.config.ts --reporter=list
 
@@ -12,8 +15,7 @@ const TRIP_NAME = 'E2E #953 Alerts Autosave';
 
 const wp = (id: string, lat: number) => ({ id, name: id, lat, lon: 9.0, elevation_m: 800 });
 
-// Metriken + Alert-Stufen bereits gesetzt (wie in einem real konfigurierten Trip) →
-// die Gewitter-Zeile erscheint direkt, kein "Keine Alerts konfiguriert"-Empty-State.
+// Metriken + Alert-Stufen bereits gesetzt (wie in einem real konfigurierten Trip).
 const seedBody = {
 	id: TRIP_ID,
 	name: TRIP_NAME,
@@ -39,14 +41,20 @@ const seedBody = {
 			wind_gust: 'standard',
 			precipitation_sum: 'standard'
 		}
-	}
+	},
+	// Issue #1231: Corridor bereits gesetzt (wie in einem real konfigurierten Trip)
+	// → die Gewitter-Zeile erscheint direkt im CorridorEditor, kein Pool-Zustand.
+	corridors: [{ metric: 'thunder_level', range: [null, 40], notify: true, mark: false }]
 };
 
 function thunderRow(page: Page) {
-	return page.getByTestId('alert-metric-row-thunder_level');
+	return page.getByTestId('corridor-row-thunder_level');
+}
+function notifyToggle(page: Page) {
+	return thunderRow(page).getByRole('button', { name: 'Warnen' });
 }
 
-test.describe('issue_953 — Alerts-Empfindlichkeit überlebt Tab-Klick', () => {
+test.describe('issue_953 — Wertebereiche-Empfindlichkeit überlebt Tab-Klick', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
 		const res = await page.request.post('/api/trips', { data: seedBody });
@@ -57,34 +65,34 @@ test.describe('issue_953 — Alerts-Empfindlichkeit überlebt Tab-Klick', () => 
 		await page.request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
 	});
 
-	// KERN (aktuell rot): Empfindlichkeit 'sensibel' bleibt nach echtem Tab-Klick sichtbar.
-	test('KERN: Empfindlichkeit überlebt Tab-Wechsel in der Anzeige', async ({ page }) => {
-		// Ein möglicher confirm-Dialog wird wie vom Nutzer bestätigt (echte Interaktion).
-		page.on('dialog', (d) => d.accept());
-
+	// KERN: Warnen-Toggle bleibt nach echtem Tab-Klick sichtbar (Issue #953-Regression,
+	// migriert auf CorridorEditor, da AlertsTab in Slice 5 entfernt wurde).
+	test('KERN: Warnen-Toggle überlebt Tab-Wechsel in der Anzeige', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}?tab=alerts`);
-		await expect(page.getByTestId('alerts-tab')).toBeVisible();
+		await expect(page.getByTestId('corridor-editor-route')).toBeVisible();
 
-		// Ausgangszustand: 'standard'.
-		await expect(thunderRow(page)).toHaveAttribute('data-level', 'standard');
+		// Ausgangszustand: Warnen aktiv (aus dem Seed-Corridor).
+		await expect(notifyToggle(page)).toHaveAttribute('aria-pressed', 'true');
 
-		// Auf 'sensibel' klicken → lokal sofort sichtbar.
-		await page.getByTestId('alert-level-thunder_level-sensibel').click();
-		await expect(thunderRow(page)).toHaveAttribute('data-level', 'sensibel');
+		// Auf "aus" klicken → lokal sofort sichtbar.
+		await notifyToggle(page).click();
+		await expect(notifyToggle(page)).toHaveAttribute('aria-pressed', 'false');
 
 		// Echter Nutzer-Pfad: Tab-BUTTON klicken (nicht goto/Reload — der Bug tritt
 		// nur beim Klick-Pfad auf).
-		await page.getByRole('tab', { name: 'Vorschau' }).click();
-		await page.getByRole('tab', { name: 'Alerts' }).click();
+		await page.getByTestId('trip-detail-tab-preview').click();
+		await page.getByTestId('trip-detail-tab-alerts').click();
 
-		// HAUPT-ASSERTION: Die Zeile zeigt weiterhin 'sensibel'. Aktuell rot, weil die
-		// UI beim Zurück-Klick den Altwert 'standard' rendert.
-		await expect(thunderRow(page)).toHaveAttribute('data-level', 'sensibel');
+		// HAUPT-ASSERTION: Der Toggle zeigt weiterhin "aus".
+		await expect(notifyToggle(page)).toHaveAttribute('aria-pressed', 'false');
 
-		// Trennt UI-Bug von Save-Bug: die DB ist korrekt (Wert wurde gespeichert).
+		// Trennt UI-Bug von Save-Bug: die DB ist korrekt (Wert wurde gespeichert,
+		// Δ-Wächter-Level entsprechend "off", Bereich unverändert — analog AC-10).
 		const check = await page.request.get(`/api/trips/${TRIP_ID}`);
 		expect(check.ok(), `GET trip HTTP ${check.status()}`).toBeTruthy();
 		const trip = await check.json();
-		expect(trip.display_config?.metric_alert_levels?.thunder_level).toBe('sensibel');
+		const corridor = (trip.corridors ?? []).find((c: { metric: string }) => c.metric === 'thunder_level');
+		expect(corridor?.notify).toBe(false);
+		expect(trip.display_config?.metric_alert_levels?.thunder_level).toBe('off');
 	});
 });

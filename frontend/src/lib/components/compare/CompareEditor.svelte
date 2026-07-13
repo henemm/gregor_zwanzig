@@ -69,11 +69,13 @@
 	// (TAB_ORDER/unlockedTabs/doneTabs) anzufassen.
 	export type EditorTabId = CompareTabId | 'alarme';
 
+	// Issue #1231, Slice 6 (AC-17) — CorridorEditor vereint Idealwerte + Alerts:
+	// `idealwerte`-Label "Wertebereiche" (war: "Idealwerte"), `id` + Testid unverändert.
 	const TAB_DEFS = $derived<{ id: EditorTabId; label: string; lockHint: string | null }[]>([
 		{ id: 'vergleich', label: 'Vergleich', lockHint: null },
 		{ id: 'orte', label: 'Orte', lockHint: 'erst Vergleich benennen' },
-		{ id: 'idealwerte', label: 'Idealwerte', lockHint: 'erst mind. 2 Orte auswählen' },
-		{ id: 'layout', label: 'Layout', lockHint: 'erst Idealwerte öffnen' },
+		{ id: 'idealwerte', label: 'Wertebereiche', lockHint: 'erst mind. 2 Orte auswählen' },
+		{ id: 'layout', label: 'Layout', lockHint: 'erst Wertebereiche öffnen' },
 		{ id: 'versand', label: 'Versand', lockHint: 'erst Layout öffnen' },
 		...(mode === 'edit' ? [{ id: 'alarme' as const, label: 'Alarme', lockHint: null }] : [])
 	]);
@@ -639,7 +641,7 @@
 
 					<Eyebrow style="margin-bottom: 12px; margin-top: 28px">Aktivitätsprofil</Eyebrow>
 					<div style:font-size="13px" style:color="var(--g-ink-3)" style:margin-bottom="14px">
-						Bestimmt, welche Wetter-Metriken verglichen werden. Die Idealwerte legst du im
+						Bestimmt, welche Wetter-Metriken verglichen werden. Die Wertebereiche legst du im
 						nächsten Tab fest.
 					</div>
 					<div
@@ -810,9 +812,10 @@
 		</div>
 	{/if}
 
-	<!-- 3. Scrollbare Tab-Bar -->
+	<!-- 3. Scrollbare Tab-Bar. Issue #1231 Slice 6 (Fresh-Eyes-Fund): Rand-Fade
+	     statt hartem Abschnitt, analog TripTabs.svelte-Mobile-Zweig. -->
 	<div class="cm-mobile-flex" data-testid="cm-mobile-tabbar"
-		style="gap: 0; overflow-x: auto; border-bottom: 1px solid var(--g-rule-soft); -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0;">
+		style="gap: 0; overflow-x: auto; border-bottom: 1px solid var(--g-rule-soft); -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);">
 		{#each TAB_DEFS as t (t.id)}
 			{@const on = t.id === activeTab}
 			{@const open = isEdit || (t.id !== 'alarme' && unlocked.has(t.id))}

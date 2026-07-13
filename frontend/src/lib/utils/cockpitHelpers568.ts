@@ -77,7 +77,8 @@ export function setupStepTrip(trip: Trip): SetupStep[] {
  * Setup-Schritte für einen ComparePreset (in fester Reihenfolge):
  *   1. Vergleich  — immer done (Entwurf existiert)
  *   2. Orte       — done wenn location_ids.length >= 2
- *   3. Idealwerte — done wenn display_config.ideal_ranges nicht leer
+ *   3. Wertebereiche — done wenn display_config.ideal_ranges nicht leer
+ *      (Issue #1231 Slice 6: Label „Idealwerte" -> „Wertebereiche", Datenfeld unverändert)
  *   4. Layout     — done wenn display_config.channel_layouts gesetzt
  *   5. Versand    — done wenn report_config.morning_enabled || evening_enabled
  *
@@ -107,7 +108,7 @@ export function setupStepCompare(preset: ComparePreset): SetupStep[] {
 	return [
 		{ label: 'Vergleich', done: true },
 		{ label: 'Orte', done: locCount >= 2 },
-		{ label: 'Idealwerte', done: hasIdealValues },
+		{ label: 'Wertebereiche', done: hasIdealValues },
 		{ label: 'Layout', done: hasLayout },
 		{ label: 'Versand', done: hasActiveSend }
 	];
