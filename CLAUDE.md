@@ -245,6 +245,15 @@ Konsequenzen (Quelle: `docs/design-requests/issue_15_atomic_design/RESPONSE-FROM
 
 Folge-Arbeit: Surface-Stack-Migration (vor Atom-Migration) → Token-Rename → Atom-Migration (Epic #368). Kontrast-Audit (#16) parallel möglich.
 
+## Trip/Ortsvergleich-Code-Teilung (PO-Vorgabe, mehrfach bekräftigt, zuletzt 2026-07-13)
+
+**Möglichst viel Code zwischen Trip und Ortsvergleich teilen; der Compare-Editor funktioniert wie der Trip-Editor.** Als prüfbare Invariante:
+
+- **Geteilt (EIN Code, Parameter `context="route"|"vergleich"`):** Editor-Rahmen (Progressive Tabs, Lock-Engine, Speichern/Verwerfen), Tab-Organismen Wertebereiche/Layout/Versand (`frontend/src/lib/components/shared/`), Muster Liste → Detail-Hub → Anlegen, Datenmodell-Konvergenz (Epic #1230).
+- **Compare-eigen dürfen NUR sein:** Orte-Tab (statt Etappen), transponierte Übersicht (Orte = Spalten), Compare-Mail-Template (E9).
+- **Default-Fehler:** Eine neue Compare-Komponente, zu der ein Trip-Pendant existiert (oder umgekehrt), ist ein Verstoß — Ausnahme nur mit dokumentierter Begründung in der Spec. Anti-Pattern-Referenz: #1170 (CompareAlarmSection „analog Trip" nachgebaut statt geteilt).
+- **Prüfung:** Bei jeder Editor-/Detail-Arbeit ist „hätte das ein geteilter Baustein sein müssen?" expliziter Adversary-/Review-Punkt.
+
 ## Signal als Channel — ENTFERNT (2026-06-06, Issue #610)
 
 Kanäle sind nur noch **E-Mail · Telegram · SMS**. Frontend + Backend bereinigt: keine Kanal-Auswahl, keine `SignalOutput`, kein `signal_text`/`send_signal`, kein `/api/preview/{trip}/signal`. Callmebot-Infrastruktur existiert weiter serverseitig für andere Dienste, aber nicht mehr für Gregor Zwanzig. Wiedereinführung müsste neu spezifiziert werden.
