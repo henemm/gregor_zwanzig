@@ -31,7 +31,6 @@ from app.trip import (
     Waypoint,
 )
 from app.user import (
-    CompareSubscription,
     LocationSubscription,
     SavedLocation,
     Schedule,
@@ -1369,21 +1368,11 @@ def delete_trip(trip_id: str, user_id: str = "default") -> None:
 
 
 # =============================================================================
-# Compare Subscription CRUD
+# Activity Profile Parsing (bleibt — genutzt von scheduler_dispatch_service.py)
 # =============================================================================
-
-def get_compare_subscriptions_file(user_id: str = "default") -> Path:
-    """Get the compare subscriptions file path for a user.
-
-    Honors module-level _DATA_ROOT override (used in tests). When set, the
-    path becomes `{_DATA_ROOT}/users/{user_id}/compare_subscriptions.json`.
-    """
-    import sys as _sys
-    _root = getattr(_sys.modules[__name__], "_DATA_ROOT", None)
-    if _root:
-        return Path(_root) / "users" / user_id / "compare_subscriptions.json"
-    return get_data_dir(user_id) / "compare_subscriptions.json"
-
+# Issue #1250 Scheibe 0: Compare-Subscription-CRUD (get/load/save/delete) hier
+# entfernt — Legacy-Drittstack CompareSubscription stillgelegt (#1131).
+# _parse_activity_profile bleibt: aktiver Import in scheduler_dispatch_service.py.
 
 def _parse_activity_profile(value: str | None):
     """Parse activity_profile string to enum, returns None if missing/invalid."""
@@ -1394,181 +1383,6 @@ def _parse_activity_profile(value: str | None):
         return ActivityProfile(value)
     except ValueError:
         return None
-
-
-def load_compare_subscriptions(user_id: str = "default") -> List[CompareSubscription]:
-    """
-    Load all compare subscriptions for a user.
-
-    Args:
-        user_id: User identifier (default: "default")
-
-    Returns:
-        List of CompareSubscription objects
-    """
-    path = get_compare_subscriptions_file(user_id)
-    if not path.exists():
-        return []
-
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except json.JSONDecodeError:
-        return []
-
-    subscriptions = []
-    for sub_data in data.get("subscriptions", []):
-        # Handle legacy "weekly_friday" -> "weekly" with weekday=4
-        schedule_str = sub_data.get("schedule", "weekly")
-        if schedule_str == "weekly_friday":
-            schedule_str = "weekly"
-            weekday = 4
-        else:
-            weekday = sub_data.get("weekday", 4)
-
-        subscriptions.append(CompareSubscription(
-            id=sub_data["id"],
-            name=sub_data["name"],
-            enabled=sub_data.get("enabled", True),
-            locations=sub_data.get("locations", []),
-            forecast_hours=sub_data.get("forecast_hours", 48),
-            time_window_start=sub_data.get("time_window_start", 9),
-            time_window_end=sub_data.get("time_window_end", 16),
-            schedule=Schedule(schedule_str),
-            weekday=weekday,
-            include_hourly=sub_data.get("include_hourly", True),
-            top_n=sub_data.get("top_n", 3),
-            send_email=sub_data.get("send_email", True),
-            send_telegram=sub_data.get("send_telegram", False),
-            display_config=_parse_display_config(sub_data["display_config"]) if sub_data.get("display_config") else None,
-            activity_profile=_parse_activity_profile(sub_data.get("activity_profile")),
-            recipients=sub_data.get("recipients", []),
-            last_run=sub_data.get("last_run"),
-            last_status=sub_data.get("last_status"),
-            top_ort_letzter_versand=sub_data.get("top_ort_letzter_versand"),
-        ))
-    return subscriptions
-
-
-def save_compare_subscriptions(
-    subscriptions: List[CompareSubscription],
-    user_id: str = "default"
-) -> Path:
-    """
-    Save all compare subscriptions for a user.
-
-    Args:
-        subscriptions: List of CompareSubscription objects
-        user_id: User identifier (default: "default")
-
-    Returns:
-        Path to the saved file
-    """
-    path = get_compare_subscriptions_file(user_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    sub_list = []
-    for sub in subscriptions:
-        sub_dict = {
-            "id": sub.id,
-            "name": sub.name,
-            "enabled": sub.enabled,
-            "locations": sub.locations,
-            "forecast_hours": sub.forecast_hours,
-            "time_window_start": sub.time_window_start,
-            "time_window_end": sub.time_window_end,
-            "schedule": sub.schedule.value,
-            "weekday": sub.weekday,
-            "include_hourly": sub.include_hourly,
-            "top_n": sub.top_n,
-            "send_email": sub.send_email,
-            "send_telegram": sub.send_telegram,
-        }
-        if sub.activity_profile is not None:
-            sub_dict["activity_profile"] = sub.activity_profile.value
-        # Issue #252 — Empfaenger und Lauf-Status (omitempty-Semantik)
-        if sub.recipients:
-            sub_dict["recipients"] = list(sub.recipients)
-        if sub.last_run is not None:
-            sub_dict["last_run"] = sub.last_run
-        if sub.last_status is not None:
-            sub_dict["last_status"] = sub.last_status
-        # Issue #456 — Top-Ort des letzten Versands (omitempty)
-        if sub.top_ort_letzter_versand is not None:
-            sub_dict["top_ort_letzter_versand"] = sub.top_ort_letzter_versand
-        if sub.display_config is not None:
-            dc = sub.display_config
-            sub_dict["display_config"] = {
-                "trip_id": dc.trip_id,
-                "metrics": [_metric_to_dict(mc) for mc in dc.metrics],
-                "updated_at": dc.updated_at.isoformat(),
-            }
-            # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
-            if dc.per_channel_layouts is not None:
-                sub_dict["display_config"]["channel_layouts"] = {
-                    ch: [_metric_to_dict(mc) for mc in metrics]
-                    for ch, metrics in dc.per_channel_layouts.items()
-                }
-            # Issue #434: per_report_layouts serialisieren
-            if dc.per_report_layouts is not None:
-                sub_dict["display_config"]["channel_layouts_per_report"] = {
-                    report_type: {
-                        ch: [_metric_to_dict(mc) for mc in metrics]
-                        for ch, metrics in channels_dict.items()
-                    }
-                    for report_type, channels_dict in dc.per_report_layouts.items()
-                }
-        sub_list.append(sub_dict)
-
-    data = {"subscriptions": sub_list}
-
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-    return path
-
-
-def save_compare_subscription(
-    subscription: CompareSubscription,
-    user_id: str = "default"
-) -> Path:
-    """
-    Save or update a single compare subscription.
-
-    Args:
-        subscription: CompareSubscription object to save
-        user_id: User identifier (default: "default")
-
-    Returns:
-        Path to the saved file
-    """
-    subs = load_compare_subscriptions(user_id)
-
-    # Update existing or add new
-    updated = False
-    for i, sub in enumerate(subs):
-        if sub.id == subscription.id:
-            subs[i] = subscription
-            updated = True
-            break
-
-    if not updated:
-        subs.append(subscription)
-
-    return save_compare_subscriptions(subs, user_id)
-
-
-def delete_compare_subscription(sub_id: str, user_id: str = "default") -> None:
-    """
-    Delete a compare subscription.
-
-    Args:
-        sub_id: ID of the subscription to delete
-        user_id: User identifier (default: "default")
-    """
-    subs = load_compare_subscriptions(user_id)
-    subs = [s for s in subs if s.id != sub_id]
-    save_compare_subscriptions(subs, user_id)
 
 # Public alias for _trip_to_dict (Issue #664 — tests import this name)
 dump_trip_to_dict = _trip_to_dict

@@ -488,7 +488,6 @@ func GetComparePresetHandler(s *store.Store) http.HandlerFunc {
 }
 
 // POST /api/compare/presets/{id}/send — Proxy to Python Core. Issue #627.
-// Vorbild: SendSubscriptionProxyHandler in proxy.go.
 func SendComparePresetHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	authmw "github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/scheduler"
 )
 
@@ -16,15 +15,6 @@ func SchedulerStatusHandler(sched *scheduler.Scheduler) http.HandlerFunc {
 	}
 }
 
-// SchedulerSubscriptionsStatusHandler returns subscription status scoped to the
-// authenticated user. Issue #252: subscription names must not leak via the
-// public /api/scheduler/status endpoint.
-func SchedulerSubscriptionsStatusHandler(sched *scheduler.Scheduler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		userID := authmw.UserIDFromContext(r.Context())
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
-			"compare_subscriptions": sched.BuildCompareSubscriptionsStatus(userID),
-		})
-	}
-}
+// Issue #1250 Scheibe 0: SchedulerSubscriptionsStatusHandler entfernt —
+// Legacy-Drittstack CompareSubscription stillgelegt (#1131), zugehoerige
+// Route /api/scheduler/subscriptions-status existiert nicht mehr.

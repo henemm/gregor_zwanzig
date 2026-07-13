@@ -72,112 +72,15 @@ export class CompareWizardState {
 	saveError = $state<string | null>(null);
 
 	// --- API-Aktionen --------------------------------------------------------
-
-	/**
-	 * Edit-Modus Header-Aktion: enabled-Flag sofort flippen.
-	 * Sendet PUT /api/subscriptions/{id} mit Voll-Payload (Backend macht Full-Replace).
-	 */
-	async toggleEnabled(): Promise<void> {
-		if (!this.subscriptionId) return;
-		const newEnabled = !this.subscriptionEnabled;
-		try {
-			const { api } = await import('$lib/api');
-			await api.put(`/api/subscriptions/${this.subscriptionId}`, {
-				enabled: newEnabled,
-				name: this.name,
-				activity_profile: this.activityProfile ?? undefined,
-				locations: this.pickedIds,
-				display_config: {
-					...this.existingDisplayConfig,
-					...(this.region ? { region: this.region } : {}),
-					...(Object.keys(this.idealRanges).length > 0
-						? { ideal_ranges: this.idealRanges }
-						: {}),
-					...(this.channelLayouts !== null
-						? { channel_layouts: this.channelLayouts }
-						: {})
-				},
-				forecast_hours: this.forecastHours,
-				time_window_start: this.timeWindowStart,
-				time_window_end: this.timeWindowEnd,
-				schedule: this.schedule,
-				weekday: this.weekday,
-				include_hourly: this.includeHourly,
-				top_n: this.topN,
-				send_email: this.sendEmail,
-				send_telegram: this.sendTelegram,
-				send_sms: this.sendSms
-			});
-			this.subscriptionEnabled = newEnabled;
-		} catch (e) {
-			console.error(e);
-			// Fehler still — kein saveError hier (Sofort-Aktion ohne sichtbares Feedback)
-		}
-	}
-
-	/**
-	 * Speichern: Create -> POST, Edit -> PUT. Anschliessend Redirect nach /compare.
-	 *
-	 * F001: Backend (internal/handler/subscription.go validateSubscription)
-	 * verlangt sub.ID != "". Beim Create generieren wir clientseitig eine UUID,
-	 * sonst antwortet das Backend mit HTTP 400 "id required".
-	 */
-	async save(): Promise<void> {
-		this.saveStatus = 'saving';
-		this.saveError = null;
-		const payload: Record<string, unknown> = {
-			name: this.name,
-			activity_profile: this.activityProfile ?? undefined,
-			locations: this.pickedIds,
-			display_config: {
-				...this.existingDisplayConfig,
-				...(this.region ? { region: this.region } : {}),
-				...(Object.keys(this.idealRanges).length > 0
-					? { ideal_ranges: this.idealRanges }
-					: {}),
-				...(this.channelLayouts !== null
-					? { channel_layouts: this.channelLayouts }
-					: {})
-			},
-			enabled: this.subscriptionEnabled,
-			forecast_hours: this.forecastHours,
-			time_window_start: this.timeWindowStart,
-			time_window_end: this.timeWindowEnd,
-			schedule: this.schedule,
-			weekday: this.weekday,
-			include_hourly: this.includeHourly,
-			top_n: this.topN,
-			send_email: this.sendEmail,
-			send_telegram: this.sendTelegram,
-			send_sms: this.sendSms
-		};
-		if (!this.isEditMode) {
-			payload.id = crypto.randomUUID();
-		}
-		try {
-			const { api } = await import('$lib/api');
-			const { goto } = await import('$app/navigation');
-			if (this.isEditMode && this.subscriptionId) {
-				await api.put(`/api/subscriptions/${this.subscriptionId}`, payload);
-			} else {
-				await api.post('/api/subscriptions', payload);
-			}
-			this.saveStatus = 'ok';
-			// Issue #492 — Im Edit-Modus zurück zur Detail-Seite des Vergleichs.
-			await goto(
-				this.isEditMode && this.subscriptionId
-					? '/compare/' + this.subscriptionId
-					: '/compare'
-			);
-		} catch (e: unknown) {
-			this.saveStatus = 'error';
-			this.saveError = extractErrorMessage(e);
-		}
-	}
+	// Issue #1250 Scheibe 0: die beiden Legacy-Save-Methoden (enabled-Toggle +
+	// Voll-Payload-Save) wurden entfernt — Totcode, schrieb in den stillgelegten
+	// Legacy-Drittstack /api/subscriptions (#1131). Aktive Speicherpfade:
+	// saveNewPreset() (Create) / saveComparePreset() (Edit), beide gegen
+	// /api/compare/presets*.
 
 	/**
 	 * Issue #681: Create-Modus — legt neues Preset via POST /api/compare/presets an.
-	 * Wird von "Briefing aktivieren" im Header aufgerufen (nicht wiz.save() = subscriptions!).
+	 * Wird von "Briefing aktivieren" im Header aufgerufen.
 	 */
 	async saveNewPreset(): Promise<void> {
 		this.saveStatus = 'saving';

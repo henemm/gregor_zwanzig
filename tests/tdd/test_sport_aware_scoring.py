@@ -228,42 +228,9 @@ class TestMetricExtraction:
         assert "profile" in params, f"ComparisonEngine.run must accept 'profile' parameter, has: {params}"
 
 
-class TestDataModel:
-    """Test subscription activity_profile field."""
-
-    def test_subscription_has_activity_profile(self):
-        """
-        GIVEN: CompareSubscription dataclass
-        WHEN: Instantiated with activity_profile
-        THEN: Field is accessible
-        """
-        from app.profile import ActivityProfile
-        from app.user import CompareSubscription, Schedule
-
-        sub = CompareSubscription(
-            id="test",
-            name="Test",
-            locations=["*"],
-            schedule=Schedule.DAILY_MORNING,
-            activity_profile=ActivityProfile.WANDERN,
-        )
-        assert sub.activity_profile == ActivityProfile.WANDERN
-
-    def test_subscription_default_none(self):
-        """
-        GIVEN: CompareSubscription without activity_profile
-        WHEN: Instantiated
-        THEN: activity_profile is None
-        """
-        from app.user import CompareSubscription, Schedule
-
-        sub = CompareSubscription(
-            id="test",
-            name="Test",
-            locations=["*"],
-            schedule=Schedule.DAILY_MORNING,
-        )
-        assert sub.activity_profile is None
+# Issue #1250 Scheibe 0: TestDataModel entfernt — Legacy-Drittstack
+# CompareSubscription stillgelegt (#1131), die Klasse existiert nicht mehr.
+# activity_profile lebt fortan ausschliesslich am ComparePreset-Modell.
 
 
 class TestCompareAPI:
@@ -288,19 +255,25 @@ class TestCompareAPI:
 
 
 class TestEmailSubject:
-    """Test email subject rename."""
+    """Test email subject rename.
+
+    Issue #1250 Scheibe 0: auf build_compare_preset_subject() umgestellt
+    (services.scheduler_dispatch_service) statt des stillgelegten
+    services.compare_subscription.build_compare_subject (#1131) — identisches
+    Format/Verhalten, aktiver ComparePreset-Versandpfad.
+    """
 
     def test_subject_is_wetter_vergleich(self):
         """
-        GIVEN: build_compare_subject pure function
+        GIVEN: build_compare_preset_subject pure function
         WHEN: Called with a name and a fixed date
         THEN: Subject contains 'Wetter-Vergleich' and does not contain 'Ski'
         No network, no locations, no ValueError.
         """
         from datetime import date
-        from services.compare_subscription import build_compare_subject
+        from services.scheduler_dispatch_service import build_compare_preset_subject
 
-        subject = build_compare_subject("Alpen Tour", date(2026, 6, 6))
+        subject = build_compare_preset_subject("Alpen Tour", date(2026, 6, 6))
         assert "Wetter-Vergleich" in subject, f"Subject should contain 'Wetter-Vergleich', got: {subject}"
         assert "Ski" not in subject, f"Subject should not contain 'Ski', got: {subject}"
         # AC-3: verify the exact format matches the old inline f-string

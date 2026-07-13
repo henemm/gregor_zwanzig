@@ -114,37 +114,6 @@ class TripSubscription:
 
 
 @dataclass
-class CompareSubscription:
-    """
-    Subscription for scheduled ski resort comparisons.
-
-    Sends email with ranking of configured locations
-    filtered by a time window (e.g., 9:00-16:00).
-    """
-    id: str
-    name: str
-    enabled: bool = True
-    locations: List[str] = field(default_factory=list)  # Location IDs, ["*"] = all
-    forecast_hours: int = 48  # 24, 48, or 72
-    time_window_start: int = 9   # Hour (0-23)
-    time_window_end: int = 16    # Hour (0-23)
-    schedule: Schedule = Schedule.WEEKLY
-    weekday: int = 4  # 0=Monday, 6=Sunday (default: Friday)
-    include_hourly: bool = True  # Include hourly details in email
-    top_n: int = 3  # Number of locations to show hourly details for
-    send_email: bool = True
-    send_telegram: bool = False
-    display_config: Optional["UnifiedWeatherDisplayConfig"] = None
-    activity_profile: Optional[ActivityProfile] = None
-    # Issue #252 — per-Subscription Empfaenger & Lauf-Status
-    recipients: List[str] = field(default_factory=list)
-    last_run: Optional[str] = None    # ISO-8601 string, None wenn noch nie gelaufen
-    last_status: Optional[str] = None  # "ok" | "error" | None
-    # Issue #456 — Gewinner-Ort des letzten Versands (additiv)
-    top_ort_letzter_versand: Optional[str] = None
-
-
-@dataclass
 class LocationResult:
     """
     Result for a single location in a comparison.

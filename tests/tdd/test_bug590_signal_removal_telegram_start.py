@@ -61,15 +61,10 @@ def test_trip_report_config_has_no_send_signal():
     )
 
 
-def test_trip_subscription_has_no_send_signal():
-    """AC-7: CompareSubscription darf kein send_signal mehr haben."""
-    import inspect
-    from app.user import CompareSubscription
-
-    fields = inspect.signature(CompareSubscription.__init__).parameters
-    assert "send_signal" not in fields, (
-        "CompareSubscription hat noch send_signal — muss entfernt werden"
-    )
+# Issue #1250 Scheibe 0: test_trip_subscription_has_no_send_signal entfernt —
+# Legacy-Drittstack CompareSubscription stillgelegt (#1131), die Klasse
+# existiert nicht mehr (die urspruengliche AC-7-Sorge "kein send_signal mehr"
+# ist damit gegenstandslos erfuellt).
 
 
 def test_scheduler_imports_no_signal_output():

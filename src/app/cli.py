@@ -15,8 +15,7 @@ from typing import Optional
 
 from app.config import Settings
 from app.debug import DebugBuffer
-from app.loader import load_trip, LoaderError, load_compare_subscriptions, load_all_locations
-from app.user import Schedule
+from app.loader import load_trip, LoaderError
 from app.models import NormalizedTimeseries
 from output.channels.base import get_channel, OutputError
 from providers.base import get_provider, ProviderError
@@ -90,11 +89,6 @@ def create_parser() -> argparse.ArgumentParser:
         "--compact",
         action="store_true",
         help="Use compact SMS-style output for trip reports",
-    )
-    parser.add_argument(
-        "--run-subscriptions",
-        action="store_true",
-        help="Run scheduled compare subscriptions and send emails",
     )
     parser.add_argument(
         "--probe-models",
@@ -186,10 +180,6 @@ def main(argv: Optional[list[str]] = None) -> int:
                 print(f"  {model_id}: {len(info['available'])} available, {len(info['unavailable'])} unavailable")
             print(f"Cache saved: {result['probe_date']}")
             return 0
-
-        # Subscription runner mode?
-        if args.run_subscriptions:
-            return _run_subscriptions(settings, debug)
 
         # Create provider
         provider = get_provider(settings.provider)
@@ -289,79 +279,6 @@ def _run_location_report(args, settings: Settings, provider, debug: DebugBuffer)
         channel = get_channel(settings.channel, settings)
 
     channel.send(subject, body)
-    return 0
-
-
-def _run_subscriptions(settings: Settings, debug: DebugBuffer) -> int:
-    """Run scheduled compare subscriptions."""
-    from datetime import datetime
-    from services.compare_subscription import run_comparison_for_subscription
-    from output.channels.email import EmailOutput
-
-    # Check if email is configured
-    if not settings.can_send_email():
-        print("SMTP not configured. Please configure email settings.", file=sys.stderr)
-        return 1
-
-    # Get current time for schedule matching
-    now = datetime.now()
-    is_morning = now.hour < 12
-    current_weekday = now.weekday()  # 0=Monday, 6=Sunday
-
-    debug.add(f"Current time: {now}")
-    debug.add(f"Is morning: {is_morning}, Current weekday: {current_weekday}")
-
-    # Load subscriptions
-    subscriptions = load_compare_subscriptions()
-    if not subscriptions:
-        print("No compare subscriptions configured.")
-        return 0
-
-    # Load locations once
-    all_locations = load_all_locations()
-
-    # Process matching subscriptions
-    processed = 0
-    for sub in subscriptions:
-        if not sub.enabled:
-            debug.add(f"Skipping disabled subscription: {sub.name}")
-            continue
-
-        # Check if schedule matches
-        should_run = False
-        if sub.schedule == Schedule.DAILY_MORNING and is_morning:
-            should_run = True
-        elif sub.schedule == Schedule.DAILY_EVENING and not is_morning:
-            should_run = True
-        elif sub.schedule == Schedule.WEEKLY and current_weekday == sub.weekday:
-            should_run = True
-
-        if not should_run:
-            debug.add(f"Skipping subscription (schedule mismatch): {sub.name}")
-            continue
-
-        # Run comparison
-        print(f"Running subscription: {sub.name}")
-        try:
-            # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
-            subject, html_body, text_body, _winner_name = run_comparison_for_subscription(sub, all_locations)
-
-            if settings.dry_run:
-                print(f"\n=== DRY RUN: {subject} ===")
-                print(html_body)
-                print("=== END DRY RUN ===\n")
-            else:
-                email_output = EmailOutput(settings)
-                email_output.send(subject, html_body, plain_text_body=text_body,
-                                   mail_type="compare", mail_format="full")
-                print(f"Sent email for: {sub.name}")
-
-            processed += 1
-
-        except Exception as e:
-            print(f"Error processing subscription {sub.name}: {e}", file=sys.stderr)
-
-    print(f"Processed {processed} subscription(s)")
     return 0
 
 

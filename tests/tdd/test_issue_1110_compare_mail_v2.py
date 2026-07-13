@@ -649,33 +649,35 @@ class TestCompareMailV2Text:
 
 
 # ---------------------------------------------------------------------------
-# F003 -- Abo-Footer bekommt preset_weekday ueber den Subscription-Pfad
+# F003 -- Abo-Footer bekommt preset_weekday durchgereicht
 # ---------------------------------------------------------------------------
+# Issue #1250 Scheibe 0: Test direkt auf render_compare_email() umgestellt
+# (preset_schedule/preset_weekday-Parameter) statt ueber den stillgelegten
+# Legacy-Drittstack CompareSubscription (#1131) -- der eigentliche
+# Regressionsschutz (weekday muss bis zum Abo-Footer durchgereicht werden)
+# bleibt unveraendert, nur der Aufrufpfad aendert sich.
 
 class TestF003PresetWeekdayForwarding:
-    """F003 (Adversary Fix-Runde): `CompareSubscription.weekday` muss bis zum
-    Abo-Footer durchgereicht werden (compare_subscription.py -> render_compare_email
-    -> render_compare_html). Echter `ComparisonEngine.run()` gegen den Offline-
-    FixtureProvider (Riviera-Koordinaten ausserhalb der GeoSphere-Bounding-Box,
-    tests/conftest.py autouse) -- kein Mock, kein echter Netzwerkruf."""
+    """F003 (Adversary Fix-Runde): `weekday` muss bis zum Abo-Footer
+    durchgereicht werden (render_compare_email -> render_compare_html)."""
 
     def test_f003_weekday_kommt_im_abo_footer_an(self):
-        from app.user import CompareSubscription, Schedule
-        from services.compare_subscription import run_comparison_for_subscription
+        from app.user import Schedule
+        from output.renderers.comparison import render_compare_email
 
-        loc = SavedLocation(id="riviera-nice-f003", name="Nizza", lat=43.7102, lon=7.2620, elevation_m=10)
-        sub = CompareSubscription(
-            id="f003-test", name="F003-Test", locations=["riviera-nice-f003"],
-            schedule=Schedule.WEEKLY, weekday=2, forecast_hours=48,
-            time_window_start=9, time_window_end=16,
+        result = _make_v2_result()
+        html_body, _text_body = render_compare_email(
+            result,
+            profile=ActivityProfile.ALLGEMEIN,
+            preset_schedule=Schedule.WEEKLY,
+            preset_weekday=2,
         )
-        _subject, html_body, _text_body, _winner = run_comparison_for_subscription(sub, [loc])
 
         assert "Nächster Versand" in html_body, "Abo-Footer-Sektion 'Nächster Versand' fehlt"
         idx = html_body.index("Nächster Versand")
         window = html_body[idx: idx + 400]
         assert "—</div>" not in window, (
             "Bei schedule=WEEKLY + gesetztem weekday darf der Abo-Footer NICHT auf "
-            "den '—'-Platzhalter zurueckfallen (F003: weekday muss von "
-            "compare_subscription.py bis render_compare_html() durchgereicht werden)"
+            "den '—'-Platzhalter zurueckfallen (F003: weekday muss bis "
+            "render_compare_html() durchgereicht werden)"
         )

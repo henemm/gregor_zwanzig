@@ -46,13 +46,17 @@ test('AC-2: account/+page.svelte hat keinen Link mehr auf /subscriptions', () =>
 	);
 });
 
-test('AC-2b: account/+page.svelte zeigt "Aktive Abos"-Link auf /compare', () => {
+// Issue #1250 Scheibe 0 (AC-2): Zähler zählt jetzt die echten ComparePresets
+// (data.comparePresets) statt des stillgelegten Legacy-Drittstacks
+// /api/subscriptions (data.subscriptions, #1131) — Regex entsprechend
+// aktualisiert (Test-Politik CLAUDE.md).
+test('AC-2b (aktualisiert #1250 Scheibe 0): account/+page.svelte zeigt "Aktive Vergleiche"-Link auf /compare', () => {
 	const src = readFileSync(ACCOUNT_PAGE, 'utf-8');
-	// Prüft ob irgendwo in der Nähe von data.subscriptions.filter ein /compare-Link existiert
+	// Prüft ob irgendwo in der Nähe von data.comparePresets.filter ein /compare-Link existiert
 	assert.match(
 		src,
-		/href=["']\/compare["'][^>]*>[\s\S]{0,200}data\.subscriptions|data\.subscriptions[\s\S]{0,200}href=["']\/compare["']/,
-		'account/+page.svelte muss den Abo-Zähler mit href="/compare" verknüpfen'
+		/href=["']\/compare["'][^>]*>[\s\S]{0,200}data\.comparePresets|data\.comparePresets[\s\S]{0,200}href=["']\/compare["']/,
+		'account/+page.svelte muss den Vergleichs-Zähler mit href="/compare" verknüpfen'
 	);
 });
 

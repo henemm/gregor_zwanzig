@@ -261,91 +261,9 @@ class TestHeartbeatIntegration:
                 os.environ["GZ_HEARTBEAT_COMPARE"] = env_backup
 
 
-# ---------------------------------------------------------------------------
-# AC-8 -- Echter E2E-Test (SMTP + IMAP)
-# ---------------------------------------------------------------------------
-
-@pytest.mark.email
-class TestCompareEmailE2E:
-    """
-    ECHTER E2E-Test: Sendet via SMTP, ruft via IMAP ab.
-    Kein Mocking.
-    SPEC: docs/specs/modules/issue_253_compare_email.md §4 Test 2
-    """
-
-    def test_ac8_echter_versand_imap_verifikation(self):
-        """
-        AC-8: Given Compare-Mail generiert / When echter SMTP-Send an gregor-test@henemm.com /
-        Then Mail ist im IMAP-Postfach, Subject enthaelt 'Compare',
-        HTML-Body enthaelt @media-Block (neuer Renderer).
-        """
-        import imaplib
-        import time
-        import email
-        import uuid
-
-        from app.config import Settings
-        from app.loader import load_all_locations, load_compare_subscriptions
-        from output.channels.email import EmailOutput
-        from services.compare_subscription import run_comparison_for_subscription
-
-        settings = Settings().for_testing()
-        if not settings.can_send_email():
-            pytest.skip("SMTP nicht konfiguriert")
-
-        subs = load_compare_subscriptions()
-        locations = load_all_locations()
-
-        if not subs:
-            pytest.skip("Keine Compare-Subscriptions konfiguriert")
-        if not locations:
-            pytest.skip("Keine Locations konfiguriert")
-
-        sub = subs[0]
-        subject, html_body, text_body, _winner_name = run_comparison_for_subscription(sub, locations)
-
-        unique_id = str(uuid.uuid4())[:8]
-        test_subject = f"[TEST-Compare-{unique_id}] {subject}"
-
-        # Neuer Renderer muss @media enthalten
-        assert "<!DOCTYPE html>" in html_body, \
-            "HTML-Body muss mit DOCTYPE beginnen"
-        assert "@media" in html_body, \
-            "HTML-Body muss @media-Block enthalten (neuer Renderer aktiv?)"
-
-        EmailOutput(settings).send(test_subject, html_body, plain_text_body=text_body)
-        print(f"\n>>> Compare-E-Mail gesendet: {test_subject}")
-
-        time.sleep(5)
-
-        imap_host = settings.imap_host or settings.smtp_host
-        imap_user = settings.imap_user or settings.smtp_user
-        imap_pass = settings.imap_pass or settings.smtp_pass
-        imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
-        imap.login(imap_user, imap_pass)
-        imap.select("INBOX")
-
-        _, data = imap.search(None, f'SUBJECT "{unique_id}"')
-        msg_ids = data[0].split()
-        assert len(msg_ids) > 0, \
-            f"Compare-E-Mail mit ID {unique_id} nicht in INBOX gefunden!"
-
-        _, msg_data = imap.fetch(msg_ids[-1], "(RFC822)")
-        raw_email = msg_data[0][1]
-        msg = email.message_from_bytes(raw_email)
-
-        assert msg.get_content_type() == "multipart/alternative", \
-            "Compare-Mail muss multipart/alternative sein"
-
-        html_part = None
-        for part in msg.walk():
-            if part.get_content_type() == "text/html":
-                html_part = part.get_payload(decode=True).decode("utf-8")
-                break
-
-        assert html_part is not None, "Kein text/html Teil in Compare-Mail"
-        assert "@media" in html_part, \
-            "HTML-Part muss @media-Block enthalten (neuer Renderer)"
-
-        imap.logout()
-        print(">>> Compare-E2E-Test bestanden: Mail empfangen und verifiziert")
+# Issue #1250 Scheibe 0: TestCompareEmailE2E (AC-8) entfernt — basierte auf dem
+# stillgelegten Legacy-Drittstack CompareSubscription (#1131),
+# services.compare_subscription/load_compare_subscriptions existieren nicht
+# mehr. Live-E2E-Abdeckung fuer den Compare-Mail-Versand laeuft ueber den
+# aktiven ComparePreset-Pfad (briefing_mail_validator.py / email_spec_validator.py,
+# CLAUDE.md "Mail-Validatoren & Renderer-Gate").

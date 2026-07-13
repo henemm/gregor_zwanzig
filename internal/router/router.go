@@ -142,20 +142,10 @@ func New(deps Deps) chi.Router {
 	r.Delete("/api/trips/{id}", handler.DeleteTripHandler(deps.Store))
 	r.Get("/api/trips/{id}/stages/weather", handler.StagesWeatherProxyHandler(deps.Config.PythonCoreURL))
 	r.Get("/api/trips/{id}/briefing-history", handler.BriefingHistoryHandler(deps.Store))
-	r.Get("/api/subscriptions", handler.SubscriptionsHandler(deps.Store))
-	r.Get("/api/subscriptions/{id}", handler.SubscriptionHandler(deps.Store))
-	r.Post("/api/subscriptions", handler.CreateSubscriptionHandler(deps.Store))
-	r.Put("/api/subscriptions/{id}", handler.UpdateSubscriptionHandler(deps.Store))
-	r.Patch("/api/subscriptions/{id}/run-status", handler.PatchSubscriptionRunStatusHandler(deps.Store))
-	r.Delete("/api/subscriptions/{id}", handler.DeleteSubscriptionHandler(deps.Store))
-	// Issue #456 — Manueller Versand-Trigger fuer eine einzelne Subscription
-	r.Post("/api/subscriptions/{id}/send", handler.SendSubscriptionProxyHandler(deps.Config.PythonCoreURL))
 	r.Get("/api/trips/{id}/weather-config", handler.GetTripWeatherConfigHandler(deps.Store))
 	r.Put("/api/trips/{id}/weather-config", handler.PutTripWeatherConfigHandler(deps.Store))
 	r.Get("/api/locations/{id}/weather-config", handler.GetLocationWeatherConfigHandler(deps.Store))
 	r.Put("/api/locations/{id}/weather-config", handler.PutLocationWeatherConfigHandler(deps.Store))
-	r.Get("/api/subscriptions/{id}/weather-config", handler.GetSubscriptionWeatherConfigHandler(deps.Store))
-	r.Put("/api/subscriptions/{id}/weather-config", handler.PutSubscriptionWeatherConfigHandler(deps.Store))
 	r.Post("/api/gpx/parse", handler.GpxProxyHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/notify/test", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/notify/test"))
 	r.Get("/api/compare", handler.CompareProxyHandler(deps.Config.PythonCoreURL))
@@ -193,7 +183,6 @@ func New(deps Deps) chi.Router {
 
 	// Scheduler status endpoints
 	r.Get("/api/scheduler/status", handler.SchedulerStatusHandler(deps.Scheduler))
-	r.Get("/api/scheduler/subscriptions-status", handler.SchedulerSubscriptionsStatusHandler(deps.Scheduler))
 
 	// Issue #830 — Staging-only: Debug-Trigger-Endpoint fuer Radar-Alert-Mail-Tests
 	if os.Getenv("GZ_ENV") == "staging" {
@@ -202,8 +191,6 @@ func New(deps Deps) chi.Router {
 
 	// Scheduler trigger proxies (frontend → Go → Python)
 	r.Post("/api/scheduler/trip-reports", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/trip-reports"))
-	r.Post("/api/scheduler/morning-subscriptions", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/morning-subscriptions"))
-	r.Post("/api/scheduler/evening-subscriptions", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/evening-subscriptions"))
 	r.Post("/api/scheduler/alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/alert-checks"))
 	r.Post("/api/scheduler/inbound-commands", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/inbound-commands"))
 

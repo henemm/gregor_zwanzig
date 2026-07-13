@@ -17,14 +17,16 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	const session = cookies.get('gz_session');
 	const h = { headers: { Cookie: `gz_session=${session}` } };
 
-	const [profile, scheduler, health, apiTemplates, trips, subscriptions, locations, presets] =
+	const [profile, scheduler, health, apiTemplates, trips, comparePresets, locations, presets] =
 		await Promise.all([
 			fetch(`${API()}/api/auth/profile`, h).then(r => r.ok ? r.json() : null).catch(() => null),
 			fetch(`${API()}/api/scheduler/status`, h).then(r => r.ok ? r.json() : null).catch(() => null),
 			fetch(`${API()}/api/health`, h).then(r => r.ok ? r.json() : null).catch(() => null),
 			fetch(`${API()}/api/templates`, h).then(r => r.ok ? r.json() : null).catch(() => null),
 			fetch(`${API()}/api/trips`, h).then(r => r.ok ? r.json() : []).catch(() => []),
-			fetch(`${API()}/api/subscriptions`, h).then(r => r.ok ? r.json() : []).catch(() => []),
+			// Issue #1250 Scheibe 0 (AC-2): Zähler zählt die echten ComparePresets
+			// statt des stillgelegten Legacy-Drittstacks /api/subscriptions (#1131).
+			fetch(`${API()}/api/compare/presets`, h).then(r => r.ok ? r.json() : []).catch(() => []),
 			fetch(`${API()}/api/locations`, h).then(r => r.ok ? r.json() : []).catch(() => []),
 			fetch(`${API()}/api/metric-presets`, h).then(r => r.ok ? r.json() : []).catch(() => []),
 		]);
@@ -32,5 +34,5 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	const templates = Array.isArray(apiTemplates) ? apiTemplates : FALLBACK_TEMPLATES;
 	const metricPresets = Array.isArray(presets) ? presets : [];
 
-	return { profile, scheduler, health, templates, trips, subscriptions, locations, metricPresets };
+	return { profile, scheduler, health, templates, trips, comparePresets, locations, metricPresets };
 };

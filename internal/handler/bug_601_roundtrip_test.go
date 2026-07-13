@@ -4,10 +4,12 @@ package handler
 //
 // Spec: docs/specs/modules/bug_601_round_trip_catchblocks.md
 //
-// AC-2: Subscription POST→GET→PUT → 200
 // AC-3: Location POST→GET→PUT    → 200
 // AC-4: Trip POST→GET→PUT        → 200
-// AC-5: validateSubscription akzeptiert lowercase activity_profile ("allgemein")
+//
+// Issue #1250 Scheibe 0: AC-2/AC-5 (Subscription Round-Trip) entfernt —
+// Legacy-Drittstack CompareSubscription stillgelegt (#1131), CreateSubscriptionHandler
+// existiert nicht mehr.
 
 import (
 	"bytes"
@@ -18,114 +20,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 )
-
-// =============================================================================
-// AC-2: Subscription Round-Trip (POST → GET → PUT → 200)
-// =============================================================================
-
-func TestSubscription_RoundTrip_Basic(t *testing.T) {
-	s := newTestStore(t)
-	r := chi.NewRouter()
-	r.Post("/api/subscriptions", CreateSubscriptionHandler(s))
-	r.Get("/api/subscriptions/{id}", SubscriptionHandler(s))
-	r.Put("/api/subscriptions/{id}", UpdateSubscriptionHandler(s))
-
-	// 1. POST — valide Subscription anlegen
-	createBody := map[string]interface{}{
-		"id":                "sub-rt-001",
-		"name":              "Round-Trip-Test Subscription",
-		"enabled":           true,
-		"locations":         []string{"ort-1", "ort-2"},
-		"forecast_hours":    24,
-		"schedule":          "daily_morning",
-		"time_window_start": 6,
-		"time_window_end":   18,
-		"top_n":             3,
-		"weekday":           1,
-		"send_email":        true,
-		"send_telegram":     false,
-	}
-	b, _ := json.Marshal(createBody)
-	req := httptest.NewRequest("POST", "/api/subscriptions", bytes.NewReader(b))
-	req = addUserToContext(req, "user-rt")
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	if w.Code != http.StatusCreated {
-		t.Fatalf("AC-2 POST: expected 201, got %d: %s", w.Code, w.Body.String())
-	}
-
-	// 2. GET — Subscription abrufen
-	req = httptest.NewRequest("GET", "/api/subscriptions/sub-rt-001", nil)
-	req = addUserToContext(req, "user-rt")
-	w = httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("AC-2 GET: expected 200, got %d: %s", w.Code, w.Body.String())
-	}
-	gotBody := w.Body.Bytes()
-
-	// 3. PUT — exakt dasselbe was GET zurückgab, zurückschicken
-	req = httptest.NewRequest("PUT", "/api/subscriptions/sub-rt-001", bytes.NewReader(gotBody))
-	req = addUserToContext(req, "user-rt")
-	req.Header.Set("Content-Type", "application/json")
-	w = httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("AC-2 PUT (round-trip): expected 200, got %d: %s", w.Code, w.Body.String())
-	}
-}
-
-// AC-5: validateSubscription akzeptiert lowercase activity_profile
-func TestSubscription_RoundTrip_LowercaseActivityProfile(t *testing.T) {
-	s := newTestStore(t)
-	r := chi.NewRouter()
-	r.Post("/api/subscriptions", CreateSubscriptionHandler(s))
-	r.Get("/api/subscriptions/{id}", SubscriptionHandler(s))
-	r.Put("/api/subscriptions/{id}", UpdateSubscriptionHandler(s))
-
-	profile := "allgemein"
-	createBody := map[string]interface{}{
-		"id":                "sub-rt-profile",
-		"name":              "Profil Round-Trip",
-		"enabled":           false,
-		"locations":         []string{"ort-a"},
-		"forecast_hours":    48,
-		"schedule":          "daily_evening",
-		"time_window_start": 5,
-		"time_window_end":   9,
-		"top_n":             5,
-		"weekday":           0,
-		"send_email":        false,
-		"send_telegram":     false,
-		"activity_profile":  profile,
-	}
-	b, _ := json.Marshal(createBody)
-	req := httptest.NewRequest("POST", "/api/subscriptions", bytes.NewReader(b))
-	req = addUserToContext(req, "user-rt")
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	if w.Code != http.StatusCreated {
-		t.Fatalf("AC-5 POST mit activity_profile=%q: expected 201, got %d: %s", profile, w.Code, w.Body.String())
-	}
-
-	// GET → PUT round-trip
-	req = httptest.NewRequest("GET", "/api/subscriptions/sub-rt-profile", nil)
-	req = addUserToContext(req, "user-rt")
-	w = httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	gotBody := w.Body.Bytes()
-
-	req = httptest.NewRequest("PUT", "/api/subscriptions/sub-rt-profile", bytes.NewReader(gotBody))
-	req = addUserToContext(req, "user-rt")
-	req.Header.Set("Content-Type", "application/json")
-	w = httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("AC-5 PUT round-trip mit activity_profile=%q: expected 200, got %d: %s", profile, w.Code, w.Body.String())
-	}
-}
 
 // =============================================================================
 // AC-3: Location Round-Trip (POST → GET → PUT → 200)

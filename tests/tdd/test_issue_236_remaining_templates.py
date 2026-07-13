@@ -216,17 +216,9 @@ def test_ac6_warning_banner_tokens():
     assert "G_BOX_WARNING_BG" in source_code, "G_BOX_WARNING_BG fehlt in compare_html.py"
 
 
-def test_ac6_compare_subscription_profile_forwarding():
-    """
-    GIVEN: compare_subscription.py Source-Code
-    WHEN:  Aufruf von render_comparison_html() auf profile-Weitergabe geprüft
-    THEN:  'profile=' beim render_comparison_html()-Aufruf vorhanden
-
-    ERWARTET ROT: Aktuell kein profile-Argument übergeben.
-    """
-    import inspect  # noqa: PLC0415
-    from services import compare_subscription  # noqa: PLC0415
-
-    source = inspect.getsource(compare_subscription)
-
-    assert "profile=" in source, "profile=-Argument fehlt in compare_subscription.py"
+# Issue #1250 Scheibe 0: test_ac6_compare_subscription_profile_forwarding
+# entfernt — Legacy-Drittstack CompareSubscription stillgelegt (#1131),
+# services.compare_subscription existiert nicht mehr. Die Profil-Weitergabe
+# an render_compare_html() bleibt behavioral abgedeckt durch
+# test_compare_html_email.py::TestCompareHTMLRenderer::test_profil_eyebrow_in_header
+# (echter Renderer-Aufruf, kein Quelltext-Grep).

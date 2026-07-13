@@ -143,51 +143,10 @@ func TestPutLocationWeatherConfig(t *testing.T) {
 	}
 }
 
-// ============================================================================
-// Subscription Weather Config
-// ============================================================================
-
-func TestGetSubscriptionWeatherConfigNotFound(t *testing.T) {
-	s := newTestStore(t)
-
-	r := chi.NewRouter()
-	r.Get("/api/subscriptions/{id}/weather-config", GetSubscriptionWeatherConfigHandler(s))
-
-	req := httptest.NewRequest("GET", "/api/subscriptions/nonexistent/weather-config", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != 404 {
-		t.Fatalf("expected 404, got %d", w.Code)
-	}
-}
-
-func TestPutSubscriptionWeatherConfig(t *testing.T) {
-	s := newTestStore(t)
-	// Seed a subscription via CreateSubscriptionHandler
-	createBody := `{"id":"cfg-sub","name":"Config Sub","enabled":true,"locations":[],"forecast_hours":48,"time_window_start":9,"time_window_end":16,"schedule":"weekly","weekday":4,"include_hourly":true,"top_n":3,"send_email":true,"send_signal":false}`
-	ch := CreateSubscriptionHandler(s)
-	creq := httptest.NewRequest("POST", "/api/subscriptions", strings.NewReader(createBody))
-	cw := httptest.NewRecorder()
-	ch.ServeHTTP(cw, creq)
-
-	r := chi.NewRouter()
-	r.Put("/api/subscriptions/{id}/weather-config", PutSubscriptionWeatherConfigHandler(s))
-
-	body := `{"metrics":[{"metric_id":"precipitation","enabled":true}]}`
-	req := httptest.NewRequest("PUT", "/api/subscriptions/cfg-sub/weather-config", strings.NewReader(body))
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != 200 {
-		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
-	}
-
-	sub, _ := s.LoadSubscription("cfg-sub")
-	if sub.DisplayConfig == nil {
-		t.Fatal("expected display_config to be set after PUT")
-	}
-}
+// Issue #1250 Scheibe 0: Subscription Weather Config Tests entfernt —
+// Legacy-Drittstack CompareSubscription stillgelegt (#1131),
+// GetSubscriptionWeatherConfigHandler/PutSubscriptionWeatherConfigHandler
+// existieren nicht mehr.
 
 // Suppress unused import warning
 var _ = json.Unmarshal

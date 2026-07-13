@@ -80,58 +80,6 @@ class TestSchedulerTriggerEndpoints:
         # If configured, should return ok — both are acceptable
 
 
-class TestCompareSubscriptionExtraction:
-    """Test that run_comparison_for_subscription is importable from services."""
-
-    def test_import_from_services(self):
-        """
-        GIVEN: compare_subscription module exists in services
-        WHEN: Import run_comparison_for_subscription
-        THEN: Import succeeds, function is callable
-        """
-        from services.compare_subscription import run_comparison_for_subscription
-        assert callable(run_comparison_for_subscription)
-
-    def test_function_signature(self):
-        """
-        GIVEN: run_comparison_for_subscription imported from services
-        WHEN: Check function signature
-        THEN: Accepts (sub, all_locations) parameters
-        """
-        import inspect
-        from services.compare_subscription import run_comparison_for_subscription
-        sig = inspect.signature(run_comparison_for_subscription)
-        params = list(sig.parameters.keys())
-        assert "sub" in params
-        assert "all_locations" in params
-
-    def test_returns_tuple(self):
-        """
-        GIVEN: A valid CompareSubscription
-        WHEN: run_comparison_for_subscription(sub, locations)
-        THEN: Returns (subject, html_body, text_body, winner_name) tuple (Issue #456)
-        """
-        from services.compare_subscription import run_comparison_for_subscription
-        from app.user import CompareSubscription, Schedule
-        from app.loader import load_all_locations
-
-        # Use a minimal test subscription
-        sub = CompareSubscription(
-            id="test-scheduler-tdd",
-            name="TDD Test",
-            locations=[],
-            schedule=Schedule.DAILY_MORNING,
-            enabled=True,
-        )
-        locations = load_all_locations()
-        if not locations:
-            pytest.skip("Keine Locations konfiguriert")
-        result = run_comparison_for_subscription(sub, locations)
-
-        assert isinstance(result, tuple)
-        assert len(result) == 4
-        subject, html_body, text_body, winner_name = result
-        assert isinstance(subject, str)
-        assert isinstance(html_body, str)
-        assert isinstance(text_body, str)
-        assert winner_name is None or isinstance(winner_name, str)
+# Issue #1250 Scheibe 0: TestCompareSubscriptionExtraction entfernt — Legacy-
+# Drittstack CompareSubscription stillgelegt (#1131), services.compare_subscription
+# existiert nicht mehr.

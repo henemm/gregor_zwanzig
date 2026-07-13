@@ -16,10 +16,7 @@ from fastapi import APIRouter, HTTPException, Query
 from app.config import Settings
 from services.scheduler_dispatch_service import (
     run_compare_presets_daily,
-    save_subscription_status,
     send_compare_preset,
-    send_subscription_email,
-    send_subscription_telegram,
 )
 
 router = APIRouter(prefix="/api/scheduler", tags=["scheduler"])
@@ -140,53 +137,6 @@ def trigger_compare_presets_daily(hour: Optional[int] = None, user_id: str = "de
     count = run_compare_presets_daily(user_id, hour=hour)
     return {"status": "ok", "count": count}
 
-
-@router.post("/subscriptions/{subscription_id}/send")
-def manual_send_subscription(subscription_id: str, user_id: str = Query("default")):
-    """Manueller Versand-Trigger fuer eine einzelne Subscription. Issue #456."""
-    from datetime import datetime
-
-    from app.config import Settings
-    from app.loader import load_all_locations, load_compare_subscriptions
-    from services.compare_subscription import run_comparison_for_subscription
-
-    all_subs = load_compare_subscriptions(user_id=user_id)
-    sub = next((s for s in all_subs if s.id == subscription_id), None)
-    if sub is None:
-        raise HTTPException(status_code=404, detail="Subscription not found")
-
-    all_locations = load_all_locations(user_id=user_id)
-    settings = Settings().with_user_profile(user_id)
-    try:
-        subject, html_body, text_body, winner_name = run_comparison_for_subscription(
-            sub, all_locations
-        )
-        if sub.send_email and settings.can_send_email():
-            send_subscription_email(sub, subject, html_body, text_body, settings)
-        elif sub.send_email:
-            logger.error(f"Email requested but SMTP not configured: {sub.name}")
-        if sub.send_telegram and settings.can_send_telegram():
-            try:
-                send_subscription_telegram(sub, subject, text_body, settings)
-            except Exception as e:
-                logger.error(f"Telegram failed for {sub.name}: {e}")
-        elif sub.send_telegram:
-            logger.warning(f"Telegram requested but not configured: {sub.name}")
-        sub.last_run = datetime.utcnow().isoformat() + "Z"
-        sub.last_status = "ok"
-        sub.top_ort_letzter_versand = winner_name
-        save_subscription_status(user_id, sub)
-        return {"status": "ok", "winner": winner_name or ""}
-    except HTTPException:
-        raise
-    except Exception as e:
-        sub.last_run = datetime.utcnow().isoformat() + "Z"
-        sub.last_status = "error"
-        try:
-            save_subscription_status(user_id, sub)
-        except Exception as save_err:
-            logger.error(f"Failed to persist error-status for {sub.name}: {save_err}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 def _ping_heartbeat_compare() -> None:
     """Fail-soft: Heartbeat-Ping wenn GZ_HEARTBEAT_COMPARE gesetzt.

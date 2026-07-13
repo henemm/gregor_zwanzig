@@ -169,62 +169,6 @@ func extractActiveMetricIDs(cfg map[string]interface{}) []string {
 	return ids
 }
 
-// --- Subscription Weather Config ---
-
-func GetSubscriptionWeatherConfigHandler(s *store.Store) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
-		id := chi.URLParam(r, "id")
-		sub, err := s.LoadSubscription(id)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
-			return
-		}
-		if sub == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(sub.DisplayConfig)
-	}
-}
-
-func PutSubscriptionWeatherConfigHandler(s *store.Store) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
-		id := chi.URLParam(r, "id")
-		sub, err := s.LoadSubscription(id)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
-			return
-		}
-		if sub == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
-			return
-		}
-		var cfg map[string]interface{}
-		if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"bad_request"}`))
-			return
-		}
-		sub.DisplayConfig = cfg
-		if err := s.SaveSubscription(*sub); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(sub.DisplayConfig)
-	}
-}
+// Issue #1250 Scheibe 0: Subscription Weather Config (GetSubscriptionWeatherConfigHandler,
+// PutSubscriptionWeatherConfigHandler) entfernt — Legacy-Drittstack CompareSubscription
+// stillgelegt (#1131), store.LoadSubscription/SaveSubscription existieren nicht mehr.

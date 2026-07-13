@@ -5,7 +5,7 @@ package handler
 // Spec: docs/specs/modules/issue_627_631_compare_send_rhythm.md (AC-1/AC-2/AC-3)
 //
 // Vorbild: internal/handler/loaded_trip_proxy_test.go (httptest-Fake-Upstream,
-// KEIN Mock — ein echter HTTP-Server) + SendSubscriptionProxyHandler in proxy.go.
+// KEIN Mock — ein echter HTTP-Server).
 //
 // SOLL-Verhalten nach Fix:
 //   - SendComparePresetHandler bekommt eine NEUE Signatur (pythonURL string) und

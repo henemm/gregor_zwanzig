@@ -666,8 +666,8 @@
 						<a href="/trips" class="font-medium hover:underline">{data.trips.length}</a>
 					</div>
 					<div class="flex items-center justify-between text-sm">
-						<span>Aktive Abos</span>
-						<a href="/compare" class="font-medium hover:underline">{data.subscriptions.filter((s: any) => s.enabled).length}</a>
+						<span>Aktive Vergleiche</span>
+						<a href="/compare" class="font-medium hover:underline">{data.comparePresets.filter((p: any) => !p.archived_at).length}</a>
 					</div>
 					<div class="flex items-center justify-between text-sm">
 						<span>Locations</span>

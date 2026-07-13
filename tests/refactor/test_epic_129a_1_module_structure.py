@@ -8,7 +8,9 @@ Diese Tests pruefen die neue Modul-Struktur nach dem (abgeschlossenen) Refactor
   - test_comparison_scoring (AC-2 a) -> services.comparison_scoring.calculate_score
   - test_comparison_engine  (AC-2 b) -> ComparisonEngine + Helper
   - test_comparison_renderers (AC-2 c) -> render_comparison_{html,text}
-  - test_compare_subscription (AC-3) -> Funktion importierbar + callable
+
+Issue #1250 Scheibe 0: test_compare_subscription (AC-3) entfernt — Legacy-
+Drittstack CompareSubscription stillgelegt (#1131).
 
 #765-Hinweis: Die früheren Quelltext-Greps (Datei-Inhalt-Asserts auf
 api/routers/compare.py, src/services/compare_subscription.py via read_text /
@@ -64,11 +66,6 @@ def test_comparison_renderers():
     )
 
 
-def test_compare_subscription():
-    """AC-3: services/compare_subscription.run_comparison_for_subscription ist
-    importierbar und callable (Modul nutzt die neuen Pfade — andernfalls würde
-    der Import an einem nicht mehr existierenden web.pages.compare scheitern).
-    """
-    from services.compare_subscription import run_comparison_for_subscription
-
-    assert callable(run_comparison_for_subscription)
+# Issue #1250 Scheibe 0: test_compare_subscription (AC-3) entfernt — Legacy-
+# Drittstack CompareSubscription stillgelegt (#1131),
+# services.compare_subscription existiert nicht mehr.

@@ -295,30 +295,6 @@ export interface Trip {
 	official_alert_triggers_enabled?: boolean; // Issue #1088 — Trip-Toggle amtlicher Sofort-Alert-Trigger
 }
 
-export interface Subscription {
-	id: string;
-	name: string;
-	enabled: boolean;
-	locations: string[];
-	forecast_hours: number;
-	time_window_start: number;
-	time_window_end: number;
-	schedule: 'daily_morning' | 'daily_evening' | 'weekly';
-	weekday: number;
-	include_hourly: boolean;
-	top_n: number;
-	send_email: boolean;
-	send_telegram: boolean;
-	display_config?: Record<string, unknown>;
-	activity_profile?: ActivityProfile;
-	// Issue #252 — per-Subscription Empfaenger + Lauf-Status (additiv)
-	recipients?: string[];
-	last_run?: string;     // ISO-8601
-	last_status?: string;  // "ok" | "error"
-	// Issue #456 — Top-Ort des letzten Versands (additiv)
-	top_ort_letzter_versand?: string;
-}
-
 export interface HealthResponse {
 	status: 'ok' | 'degraded';
 	version: string;

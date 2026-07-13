@@ -204,11 +204,18 @@ test('AC-3: compareWizardState.svelte.ts enthält noch "saveNewPreset" (Datenfel
 	);
 });
 
-test('AC-3: compareWizardState.svelte.ts enthält noch "toggleEnabled" (Datenfeld bleibt)', () => {
+// Issue #1250 Scheibe 0 (2026-07-13): toggleEnabled() war Legacy-Totcode
+// (schrieb in den stillgelegten Legacy-Drittstack /api/subscriptions, #1131)
+// und wurde entfernt -- die #683-Garantie "muss erhalten bleiben" gilt fuer
+// diese Methode nicht mehr fort. Test aktualisiert statt stillgelegt
+// (Test-Politik CLAUDE.md), Regressionsschutz jetzt in
+// wizard_state_no_legacy_save.test.ts.
+test('AC-3 (aktualisiert #1250 Scheibe 0): compareWizardState.svelte.ts enthält NICHT mehr "toggleEnabled"', () => {
 	const src = readState();
-	assert.ok(
+	assert.strictEqual(
 		/toggleEnabled/.test(src),
-		'toggleEnabled() muss in compareWizardState.svelte.ts erhalten bleiben'
+		false,
+		'toggleEnabled() muss aus compareWizardState.svelte.ts entfernt sein (Legacy-Totcode, Issue #1250 Scheibe 0)'
 	);
 });
 

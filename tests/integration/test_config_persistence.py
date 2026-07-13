@@ -455,93 +455,9 @@ class TestLocationConfigRoundtrip:
             assert vis_mc.use_friendly_format is False
 
 
-# =====================================================================
-# Part 6: Subscription-Roundtrip — Bug #89 Regressionsanker
-# =====================================================================
-
-
-class TestSubscriptionConfigRoundtrip:
-    """Save/Load von CompareSubscription muss alle MetricConfig-Felder erhalten.
-
-    Spec: docs/specs/modules/weather_metrics_dialog_unification.md v1.0
-    """
-
-    def _build_test_subscription(self, sub_id: str, customizer):
-        """Helper: CompareSubscription mit generischer Default-Config + Customizer."""
-        from app.user import CompareSubscription
-
-        dc = build_default_display_config(sub_id)
-        new_metrics = [customizer(mc) for mc in dc.metrics]
-        dc = UnifiedWeatherDisplayConfig(
-            trip_id=sub_id,
-            metrics=new_metrics,
-            show_night_block=dc.show_night_block,
-            night_interval_hours=dc.night_interval_hours,
-            thunder_forecast_days=dc.thunder_forecast_days,
-        )
-        return CompareSubscription(
-            id=sub_id,
-            name="Bug89 Sub Test",
-            enabled=True,
-            locations=["loc-a", "loc-b"],
-            display_config=dc,
-        )
-
-    def test_subscription_roundtrip_alert_enabled(self) -> None:
-        """alert_enabled=True mit alert_threshold ueberlebt save/load fuer Subscription."""
-        from app.loader import save_compare_subscription, load_compare_subscriptions
-
-        def set_temp_alert(mc):
-            if mc.metric_id == "temp_max":
-                return MetricConfig(
-                    metric_id="temp_max",
-                    enabled=True,
-                    aggregations=mc.aggregations,
-                    alert_enabled=True,
-                    alert_threshold=2.5,
-                )
-            return mc
-
-        sub = self._build_test_subscription("__bug89_sub_alert__", set_temp_alert)
-        save_compare_subscription(sub, user_id="__bug89_sub_alert_user__")
-
-        loaded = load_compare_subscriptions(user_id="__bug89_sub_alert_user__")
-        target = next((s for s in loaded if s.id == "__bug89_sub_alert__"), None)
-        assert target is not None
-        assert target.display_config is not None
-
-        temp_mc = next(
-            (mc for mc in target.display_config.metrics if mc.metric_id == "temp_max"),
-            None,
-        )
-        if temp_mc is not None:
-            assert temp_mc.alert_enabled is True
-            assert temp_mc.alert_threshold == 2.5
-
-    def test_subscription_roundtrip_use_friendly_format(self) -> None:
-        """use_friendly_format=False ueberlebt save/load fuer Subscription."""
-        from app.loader import save_compare_subscription, load_compare_subscriptions
-
-        def disable_friendly_for_cape(mc):
-            if mc.metric_id == "cape":
-                return MetricConfig(
-                    metric_id="cape",
-                    enabled=True,
-                    aggregations=mc.aggregations,
-                    use_friendly_format=False,
-                )
-            return mc
-
-        sub = self._build_test_subscription("__bug89_sub_friendly__", disable_friendly_for_cape)
-        save_compare_subscription(sub, user_id="__bug89_sub_friendly_user__")
-
-        loaded = load_compare_subscriptions(user_id="__bug89_sub_friendly_user__")
-        target = next((s for s in loaded if s.id == "__bug89_sub_friendly__"), None)
-        assert target is not None
-
-        cape_mc = next(
-            (mc for mc in target.display_config.metrics if mc.metric_id == "cape"),
-            None,
-        )
-        if cape_mc is not None:
-            assert cape_mc.use_friendly_format is False
+# Issue #1250 Scheibe 0: Part 6 (TestSubscriptionConfigRoundtrip) entfernt —
+# Legacy-Drittstack CompareSubscription stillgelegt (#1131),
+# save_compare_subscription/load_compare_subscriptions existieren nicht mehr.
+# Der Bug-#89-Regressionsanker (MetricConfig-Felder ueberleben save/load)
+# bleibt fuer die aktiven Persistenzpfade durch TestConfigRoundtrip (Trip) und
+# TestLocationConfigRoundtrip (Location) oben in dieser Datei abgedeckt.
