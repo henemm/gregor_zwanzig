@@ -1,16 +1,20 @@
 <script lang="ts">
 	// Issue #493 — MCompareActionSheet (Block E, Epic #485).
+	// Issue #1256 Scheibe 8 (AC-23) — Aktionsliste kommt jetzt aus
+	// compareLifecycleActions() statt dem vollen Umfang: das mobile Bottom-Sheet
+	// zeigt nur noch Lifecycle-Aktionen (Toggle/Archivieren/Löschen), deckungs-
+	// gleich mit dem Desktop-Hub-Header-Kebab (Scheibe 3). „Briefing jetzt
+	// senden"/„Vorschau"/„Bearbeiten" gehören mobil nicht mehr ins Sheet.
 	//
 	// Bottom-Sheet (snap="half") für statusabhängige Compare-Aktionen.
-	// Aktionsliste kommt aus compareActions() — keine eigene Logik.
 	// Aktions-Dispatch via onAction(id), danach onClose() — Eltern-Seite
 	// ist für API-Calls und Confirm-Dialoge zuständig.
 	//
-	// Spec: docs/specs/modules/issue_493_compare_mobile.md §4
+	// Spec: docs/specs/modules/issue_1256_compare_ui_rewire.md AC-23
 
 	import Sheet from './Sheet.svelte';
 	import {
-		compareActions,
+		compareLifecycleActions,
 		type CompareStatus
 	} from '$lib/components/compare/subscriptionHelpers.js';
 
@@ -24,7 +28,7 @@
 
 	let { open, onClose, status, onAction, presetName }: Props = $props();
 
-	const actions = $derived(compareActions(status));
+	const actions = $derived(compareLifecycleActions(status));
 </script>
 
 <Sheet {open} {onClose} snap="half" title={presetName} eyebrow="AKTIONEN">

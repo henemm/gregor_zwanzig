@@ -1,23 +1,21 @@
 <script lang="ts">
 	// Issue #491 — Compare-Preset Detail-Seite.
-	// Issue #493 — Mobile-Responsive: TopBar + 2×2-Grid + MCompareActionSheet.
-	import { Btn, Card, KV, Dot } from '$lib/components/atoms';
+	// Issue #493 — Mobile-Responsive: TopBar + MCompareActionSheet.
+	// Issue #1256 Scheibe 8 (AC-22, Ein-Mount-Strategie): der mobile Bespoke-
+	// Block (2×2-5-Karten-Grid + flache Standort-Liste) entfaellt — CompareDetail
+	// wird jetzt GENAU EINMAL gemountet und versorgt Desktop UND Mobile; die
+	// Viewport-Umschaltung (4-Stat-2×2 statt 5-Stat-Leiste, CorridorEditorMobile
+	// im Idealwerte-Tab) passiert INNERHALB von CompareTabs (matchMedia).
+	import { Btn } from '$lib/components/atoms';
 	import CompareDetail from '$lib/components/compare/CompareDetail.svelte';
 	import CompareStatusPill from '$lib/components/compare/CompareStatusPill.svelte';
 	import CompareKebab from '$lib/components/compare/CompareKebab.svelte';
-	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
 	import { MCompareActionSheet } from '$lib/components/mobile';
 	import {
 		deriveStatusWithScheduleOverride,
-		STATUS_MAP,
-		presetBriefingTimesLabel,
 		presetProfileLabel,
-		formatLastSent,
-		formatNextSend,
-		channelCountLabel,
 		compareLifecycleActions
 	} from '$lib/components/compare/subscriptionHelpers.js';
-	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
 	import { page } from '$app/state';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
@@ -45,15 +43,9 @@
 	}
 
 	let status = $derived(deriveStatusWithScheduleOverride(data.preset, scheduleOverride));
-	let statusInfo = $derived(STATUS_MAP[status]);
 	// Adversary-Finding F001: geguardetes Profil-Label für die mobile Kontext-
 	// Unterzeile (Muster CompareTile.svelte:62) — leer bei unbekanntem/fehlendem profil.
 	let profileLabel = $derived(presetProfileLabel(data.preset.profil));
-
-	// Issue #1229 Fix-Loop 1 (F001/F002): identisches Muster wie CompareTabs.svelte —
-	// "Nächster" aus dem berechneten Zeitstempel statt aus presetScheduleLabel.
-	const now = new Date();
-	const nextSend = $derived(deriveNextSend(data.preset, now));
 
 	// Issue #517 — ?tab=-Query-Parameter lesen und an CompareDetail/CompareTabs weitergeben.
 	const initialTab = $derived(page.url.searchParams.get('tab') ?? 'uebersicht');
@@ -186,19 +178,10 @@
 	{#if pauseError}
 		<div style="font-size: 14px; color: var(--g-bad); margin-bottom: 8px">{pauseError}</div>
 	{/if}
-
-	<CompareDetail
-		preset={data.preset}
-		locations={data.locations}
-		{initialTab}
-		onScheduleChange={handleScheduleChange}
-		bind:this={compareDetailRef}
-	/>
 </div>
 
-<!-- Mobile-Layout (#493) -->
+<!-- Mobile-TopBar (#493) — bleibt bespoke Seiten-Chrome, s. Modulkommentar oben -->
 <div class="desktop:hidden flex flex-col gap-4 p-4">
-	<!-- TopBar -->
 	<div class="flex items-center gap-2 min-h-[44px]">
 		<a
 			href="/compare"
@@ -236,40 +219,21 @@
 	<div class="text-sm text-[var(--g-ink-3)]">
 		{#if data.preset.display_config?.region}{data.preset.display_config.region}{' · '}{/if}{#if profileLabel}{profileLabel}{' · '}{/if}{data.locations.length} {data.locations.length === 1 ? 'Ort' : 'Orte'}
 	</div>
-
-	<!-- Monitoring 2×2-Grid -->
-	<div class="grid grid-cols-2 gap-3">
-		<Card padding={14}>
-			<div class="text-xs font-mono uppercase tracking-widest text-[var(--g-ink-3)]">Status</div>
-			<div class="text-sm mt-1">{statusInfo.label}</div>
-		</Card>
-		<Card padding={14}>
-			<div class="text-xs font-mono uppercase tracking-widest text-[var(--g-ink-3)]">Nächster</div>
-			<div class="text-sm mt-1">{formatNextSend(nextSend)}</div>
-		</Card>
-		<Card padding={14}>
-			<div class="text-xs font-mono uppercase tracking-widest text-[var(--g-ink-3)]">Briefings</div>
-			<div class="text-sm mt-1" data-testid="compare-detail-stat-briefings">{presetBriefingTimesLabel(data.preset)}</div>
-		</Card>
-		<Card padding={14}>
-			<div class="text-xs font-mono uppercase tracking-widest text-[var(--g-ink-3)]">Zuletzt</div>
-			<div class="text-sm mt-1">{formatLastSent(data.preset.letzter_versand)}</div>
-		</Card>
-		<Card padding={14} class="col-span-2">
-			<div class="text-xs font-mono uppercase tracking-widest text-[var(--g-ink-3)]">Kanäle</div>
-			<div class="text-sm mt-1 truncate">{channelCountLabel((data.preset.empfaenger ?? []).length)}</div>
-		</Card>
-	</div>
-
-	<!-- Standort-Liste -->
-	{#if data.locations && data.locations.length > 0}
-		{#each data.locations as loc, i (loc.id)}
-			<CompareLocationRow {loc} index={i + 1} dense={true} />
-		{/each}
-	{:else}
-		<p class="text-sm text-[var(--g-ink-3)]">Noch keine Orte ausgewählt.</p>
-	{/if}
 </div>
+
+<!-- Issue #1256 Scheibe 8 (AC-22, Ein-Mount-Strategie): CompareDetail wird
+     GENAU EINMAL gemountet (weder im Desktop- noch im Mobile-Block oben) —
+     versorgt beide Viewports, vermeidet Doppel-Fetches/doppelte
+     hubPutQueue-Instanzen/doppelte testids (S4-F001-/S7-F004-Fehlerklasse).
+     CompareTabs schaltet Monitoring-Streifen + Idealwerte-Tab intern via
+     isMobileViewport (matchMedia) um. -->
+<CompareDetail
+	preset={data.preset}
+	locations={data.locations}
+	{initialTab}
+	onScheduleChange={handleScheduleChange}
+	bind:this={compareDetailRef}
+/>
 
 <!-- Bottom-Sheet für mobile Aktionen (#493) -->
 <MCompareActionSheet

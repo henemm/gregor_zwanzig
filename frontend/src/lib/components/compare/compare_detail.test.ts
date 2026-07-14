@@ -63,9 +63,12 @@ test('#491 AC-1: +page.svelte hat StatusPill-Stub', () => {
 	const pagePath = '../../../routes/compare/[id]/+page.svelte';
 	assert.ok(has(pagePath), 'frontend/src/routes/compare/[id]/+page.svelte fehlt');
 	const src = read(pagePath);
+	// Issue #1256 Scheibe 8: `statusInfo` gehörte zum entfernten mobilen
+	// Bespoke-Block; die Status-Herleitung selbst (deriveStatusWithScheduleOverride)
+	// samt CompareStatusPill-Render bleibt unverändert bestehen.
 	assert.ok(
-		src.includes('statusInfo') || src.includes('deriveStatusFromPreset'),
-		'+page.svelte hat keinen StatusPill-Stub (statusInfo oder deriveStatusFromPreset fehlt)'
+		src.includes('deriveStatusWithScheduleOverride') || src.includes('CompareStatusPill'),
+		'+page.svelte hat keinen StatusPill-Stub (deriveStatusWithScheduleOverride/CompareStatusPill fehlt)'
 	);
 });
 

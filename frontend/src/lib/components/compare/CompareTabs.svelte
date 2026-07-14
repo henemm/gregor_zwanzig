@@ -30,11 +30,14 @@
 	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
 	import type { ComparePreset, Location, Group } from '$lib/types.js';
 	import { api } from '$lib/api.js';
-	import { setContext } from 'svelte';
+	import { setContext, onMount } from 'svelte';
 	// Issue #1256 Scheibe 6 (AC-14/15/16/31/32/33/34): Orte-Tab-Drag +
 	// eingebetteter CorridorEditor im Idealwerte-Tab.
 	import { dndzone, type DndEvent } from 'svelte-dnd-action';
 	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
+	// Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung der Idealwerte-Inline-
+	// Edit-Parität, Muster TripTabs.svelte:198-202.
+	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
 	import { CompareWizardState } from './compareWizardState.svelte';
 	import {
 		hydrateWizardStateFromPreset,
@@ -84,6 +87,19 @@
 	let activeTab = $state<string>('uebersicht');
 	$effect(() => {
 		activeTab = resolve(initialTab);
+	});
+
+	// Issue #1256 Scheibe 8 (AC-22): Viewport-Weiche fuer den Monitoring-
+	// Streifen (Desktop-5-Stat-Leiste vs. mobiles 4-Stat-2×2) und den
+	// Idealwerte-Tab (CorridorEditor vs. CorridorEditorMobile) — Muster
+	// TripTabs.svelte:117-124.
+	let isMobileViewport = $state(false);
+	onMount(() => {
+		const mq = window.matchMedia('(max-width: 899px)');
+		isMobileViewport = mq.matches;
+		const onChange = (e: MediaQueryListEvent) => { isMobileViewport = e.matches; };
+		mq.addEventListener('change', onChange);
+		return () => mq.removeEventListener('change', onChange);
 	});
 
 	function handleValueChange(value: string): void {
@@ -610,12 +626,47 @@
 	</div>
 
 	<!-- Tab-Inhalte — Wrapper mit Padding nach JSX-Vorlage (Issue #582) -->
-	<div style="position: relative; padding: 28px 40px 80px; max-width: 1320px">
+	<div class="compare-tabs-content" style="position: relative; max-width: 1320px">
 
 	{#if activeTab === 'uebersicht'}
 		<div data-testid="compare-detail-panel-uebersicht">
 			<div style="display: flex; flex-direction: column; gap: 22px">
-				<!-- Monitoring-Streifen -->
+				<!-- Monitoring-Streifen — Issue #1256 Scheibe 8 (AC-22): mobil 4-Stat-2×2
+				     statt 5-Stat-Desktop-Leiste (Soll: screen-compare-detail-mobile.jsx:79-85) -->
+				{#if isMobileViewport}
+					<div data-testid="compare-detail-monitoring-mobile" class="hub-mobile-grid">
+						<Card padding={14}>
+							<div class="hub-mobile-stat-label">Status</div>
+							<div class="hub-mobile-stat-value">
+								{#if status === 'active'}
+									<span class="hub-mobile-stat-inline"><Dot tone="good" size={7}/>Läuft automatisch</span>
+								{:else if status === 'draft'}
+									<span class="hub-mobile-stat-inline"><Dot tone="neutral" size={7}/>Entwurf · nicht aktiv</span>
+								{:else}
+									<span class="hub-mobile-stat-inline"><Dot tone="neutral" size={7}/>Pausiert</span>
+								{/if}
+							</div>
+						</Card>
+						<Card padding={14}>
+							<div class="hub-mobile-stat-label">Nächster Versand</div>
+							<div class="hub-mobile-stat-value">{formatNextSend(nextSend)}</div>
+						</Card>
+						<Card padding={14}>
+							<div class="hub-mobile-stat-label">Zuletzt raus</div>
+							<div class="hub-mobile-stat-value">{formatLastSent(preset.letzter_versand)}</div>
+						</Card>
+						<Card padding={14}>
+							<div class="hub-mobile-stat-label">Kanäle</div>
+							<div class="hub-mobile-stat-value" data-testid="compare-detail-stat-kanaele-mobile">
+								{#if channelsLabel === '—'}
+									—
+								{:else}
+									<span class="hub-mobile-stat-inline"><Dot tone="good" size={7}/>{channelsLabel}</span>
+								{/if}
+							</div>
+						</Card>
+					</div>
+				{:else}
 				<Card padding={0} style="overflow: hidden">
 					<div style="padding: 18px 24px; display: flex; align-items: center; gap: 40px; flex-wrap: wrap">
 						<!-- Status -->
@@ -662,6 +713,7 @@
 						</div>
 					</div>
 				</Card>
+				{/if}
 
 				<!-- 2×2 SummaryCard-Grid -->
 				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
@@ -773,7 +825,13 @@
 					onfocusout={handleCorridorCommit}
 					onclick={handleCorridorCommit}
 				>
-					<CorridorEditor context="vergleich" />
+					<!-- Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung der Idealwerte-
+					     Inline-Edit-Paritaet, Muster TripTabs.svelte:198-202. -->
+					{#if isMobileViewport}
+						<CorridorEditorMobile context="vergleich" />
+					{:else}
+						<CorridorEditor context="vergleich" />
+					{/if}
 				</div>
 			{/if}
 		</div>
@@ -994,8 +1052,19 @@
 		margin: 0 0 1rem 0;
 	}
 
+	.compare-tabs-content {
+		padding: 28px 40px 80px;
+	}
+
 	@media (max-width: 899px) {
 		/* Mobile: Tab-Leiste horizontal scrollbar */
+
+		/* Issue #1256 Scheibe 8 (AC-22): CompareTabs wird jetzt ueber die
+		   Ein-Mount-Strategie auch mobil gerendert — schmaleres Padding statt
+		   des Desktop-Werts (Ist-Befund Analyse). */
+		.compare-tabs-content {
+			padding: 16px 16px 60px;
+		}
 	}
 
 	/* ── Vorschau-Tab (Issue #514) — Design nach HubPreview ─────────────────── */
@@ -1212,5 +1281,30 @@
 	}
 	.hub-add-item:hover {
 		background: var(--g-accent-tint);
+	}
+
+	/* Issue #1256 Scheibe 8 (AC-22) — mobiler 4-Stat-2×2-Monitoring-Block */
+	.hub-mobile-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 12px;
+	}
+	.hub-mobile-stat-label {
+		font-size: 10px;
+		color: var(--g-ink-4);
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		margin-bottom: 5px;
+		font-family: var(--g-font-mono);
+	}
+	.hub-mobile-stat-value {
+		font-size: 14px;
+		color: var(--g-ink);
+		font-weight: 500;
+	}
+	.hub-mobile-stat-inline {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
 	}
 </style>

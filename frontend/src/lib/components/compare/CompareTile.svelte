@@ -26,6 +26,10 @@
 		presetChannels
 	} from './subscriptionHelpers.js';
 	import CompareKebab from './CompareKebab.svelte';
+	// Issue #1256 Scheibe 8 (AC-21): dense-Kacheln (mobile Liste) zeigen einen
+	// Chevron statt des Kebabs — reine Navigations-Affordance, Aktionen leben
+	// mobil im Detail-Hub (Soll: screen-compare-list-mobile.jsx:54).
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 
 	// Status-Labels analog molecules.jsx COMPARE_STATUS_LABEL
 	const STATUS_LABEL: Record<string, string> = {
@@ -152,16 +156,23 @@
 			</div>
 		</div>
 
-		<!-- Kebab — stopPropagation am Wrapper + im CompareKebab selbst (#486/#626) -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<div
-			style:flex-shrink="0"
-			style:margin-top="2px"
-			onclick={(e) => e.stopPropagation()}
-		>
-			<CompareKebab {status} onSelect={(id) => onAction?.(id)} />
-		</div>
+		{#if !dense}
+			<!-- Kebab — stopPropagation am Wrapper + im CompareKebab selbst (#486/#626) -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<div
+				style:flex-shrink="0"
+				style:margin-top="2px"
+				onclick={(e) => e.stopPropagation()}
+			>
+				<CompareKebab {status} onSelect={(id) => onAction?.(id)} />
+			</div>
+		{:else}
+			<!-- dense = mobile Liste: Chevron statt Kebab (Issue #1256 Scheibe 8, AC-21) -->
+			<span style:flex-shrink="0" style:margin-top="2px" style:display="flex">
+				<ChevronRightIcon size={16} color="var(--g-ink-4)" />
+			</span>
+		{/if}
 	</div>
 
 	<!-- Meta mono: "N Orte · Profil-Label" -->

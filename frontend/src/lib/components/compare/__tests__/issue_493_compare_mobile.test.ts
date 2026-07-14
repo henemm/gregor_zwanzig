@@ -60,13 +60,16 @@ describe('AC-1: MCompareActionSheet.svelte existiert und wird exportiert', () =>
 		);
 	});
 
-	test('MCompareActionSheet.svelte nutzt compareActions()', () => {
+	// Issue #1256 Scheibe 8 (AC-23): Sheet nutzt jetzt compareLifecycleActions()
+	// statt des vollen compareActions()-Umfangs (präzise Assertion s.
+	// compare_mobile_shared_hub.test.ts, AC-23-Beschreibung dort).
+	test('MCompareActionSheet.svelte nutzt compareLifecycleActions()', () => {
 		assert.ok(existsSync(ACTION_SHEET), 'MCompareActionSheet.svelte fehlt');
 		const src = readFileSync(ACTION_SHEET, 'utf-8');
 		assert.match(
 			src,
-			/compareActions/,
-			'MCompareActionSheet.svelte verwendet compareActions() nicht — Aktionsliste fehlt'
+			/compareLifecycleActions/,
+			'MCompareActionSheet.svelte verwendet compareLifecycleActions() nicht — Aktionsliste fehlt'
 		);
 	});
 
@@ -160,13 +163,17 @@ describe('AC-4: /compare/[id]/+page.svelte hat mobilen Render-Pfad', () => {
 		);
 	});
 
-	test('/compare/[id]/+page.svelte hat 2x2-Grid für Monitoring (grid-cols-2)', () => {
+	// Issue #1256 Scheibe 8 (AC-22, Ein-Mount-Strategie): der Bespoke-2×2-Grid
+	// entfällt — die Seite rendert stattdessen den geteilten Hub (CompareDetail),
+	// der intern (CompareTabs) auf das mobile 4-Stat-2×2 umschaltet
+	// (s. compare_mobile_shared_hub.test.ts, AC-22).
+	test('/compare/[id]/+page.svelte rendert den geteilten Hub (CompareDetail) statt eines Bespoke-Grids', () => {
 		assert.ok(existsSync(DETAIL_PAGE), '/compare/[id]/+page.svelte fehlt');
 		const src = readFileSync(DETAIL_PAGE, 'utf-8');
 		assert.match(
 			src,
-			/grid-cols-2/,
-			'/compare/[id]/+page.svelte hat kein grid-cols-2 für 2×2-Monitoring-Grid'
+			/<CompareDetail/,
+			'/compare/[id]/+page.svelte rendert CompareDetail nicht — geteilter Hub fehlt'
 		);
 	});
 

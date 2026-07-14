@@ -83,25 +83,31 @@ describe('AC-1: Preset-Name, Status, Schedule, Empfänger angezeigt', () => {
 });
 
 // ── AC-2: Standort-Kacheln via CompareLocationRow ────────────────────────────
+// Issue #1256 Scheibe 8 (AC-22, Ein-Mount-Strategie): die nummerierte
+// Standort-Liste lebt nicht mehr bespoke in +page.svelte, sondern im geteilten
+// Orte-Tab von CompareTabs.svelte (über CompareDetail gemountet) — dort für
+// Desktop UND Mobile gemeinsam.
 
-describe('AC-2: Nummerierte Standort-Kacheln vorhanden', () => {
-	test('+page.svelte importiert CompareLocationRow', () => {
-		assert.ok(existsSync(PAGE_SVELTE), '+page.svelte fehlt');
-		const src = readFileSync(PAGE_SVELTE, 'utf-8');
+describe('AC-2: Nummerierte Standort-Kacheln vorhanden (geteilter Orte-Tab)', () => {
+	const TABS = join(COMPARE_DIR, 'CompareTabs.svelte');
+
+	test('CompareTabs.svelte importiert CompareLocationRow', () => {
+		assert.ok(existsSync(TABS), 'CompareTabs.svelte fehlt');
+		const src = readFileSync(TABS, 'utf-8');
 		assert.match(
 			src,
 			/CompareLocationRow/,
-			'CompareLocationRow wird in +page.svelte nicht importiert — Standortliste fehlt'
+			'CompareLocationRow wird in CompareTabs.svelte nicht importiert — Standortliste fehlt'
 		);
 	});
 
-	test('+page.svelte iteriert über locations (each-Block)', () => {
-		assert.ok(existsSync(PAGE_SVELTE), '+page.svelte fehlt');
-		const src = readFileSync(PAGE_SVELTE, 'utf-8');
+	test('CompareTabs.svelte iteriert über die Orte-Liste (each-Block)', () => {
+		assert.ok(existsSync(TABS), 'CompareTabs.svelte fehlt');
+		const src = readFileSync(TABS, 'utf-8');
 		assert.match(
 			src,
-			/#each.*locations/,
-			'+page.svelte hat keinen {#each locations}-Block für Standortliste'
+			/#each\s+orteItems/,
+			'CompareTabs.svelte hat keinen {#each orteItems}-Block für die Standortliste'
 		);
 	});
 });
