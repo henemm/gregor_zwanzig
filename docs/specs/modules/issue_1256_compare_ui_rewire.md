@@ -553,7 +553,7 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
   (AC-1–AC-3).
 - Scheibe 2: keine neuen Unit-Tests (reine Klickpfad-Verifikation, siehe
   Live-E2E) — bestehende Unit-Suiten für `compareWizardState.svelte.ts`
-  und `CompareEditor.svelte` bleiben grün (AC-25–AC-29 Regressionsbasis).
+  und `CompareEditor.svelte` bleiben grün (Regressionsbasis für die Akzeptanzkriterien 25 bis 29).
 - Scheibe 3: Unit-Test `compareLifecycleActions()` liefert 3 Einträge
   (Toggle/Archivieren/Löschen) bzw. 1 bei `draft`; Snapshot/DOM-Test
   Kanäle-Stat zeigt Kanal-Namen; DOM-Test SummaryCard-Sprung wechselt nur
@@ -615,7 +615,7 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
 <!-- Hinweis zur Nummerierung: Die ursprünglichen ACs (1-24) behalten ihre
      Nummern unverändert (PO-Vorgabe „Nummerierung fortführen" bei der
      Fluss-Korrektur 2026-07-13) und wurden nur den neu benannten Scheiben
-     zugeordnet. Neue ACs sind fortlaufend ab AC-25 angehängt und stehen an
+     zugeordnet. Neue Akzeptanzkriterien sind fortlaufend ab Nummer 25 angehängt und stehen an
      der inhaltlich passenden Stelle im Dokument — die Nummern sind daher
      nicht durchgehend chronologisch zur Lesereihenfolge, aber stabil. -->
 
