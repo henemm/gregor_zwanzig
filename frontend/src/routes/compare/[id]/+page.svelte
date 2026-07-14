@@ -8,25 +8,43 @@
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
 	import { MCompareActionSheet } from '$lib/components/mobile';
 	import {
-		deriveStatusFromPreset,
+		deriveStatusWithScheduleOverride,
 		STATUS_MAP,
 		presetBriefingTimesLabel,
 		presetProfileLabel,
 		formatLastSent,
 		formatNextSend,
-		computePauseToggle,
 		channelCountLabel,
 		compareLifecycleActions
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
 	import { page } from '$app/state';
-	import { invalidateAll } from '$app/navigation';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
 
 	let { data } = $props();
-	let status = $derived(deriveStatusFromPreset(data.preset));
+
+	// Staging-Fund SF-2 (CRITICAL, AC-37): der Hub (CompareTabs) haelt fuer die
+	// Aktivierungs-Karte einen eigenen `localSchedule`-Zustand und PUT-Pfad
+	// (ohne invalidateAll() — das wuerde die dortige eingefrorene-Prop-Baseline
+	// mit frisch geladenen `data` kollidieren lassen). Diese Header-Status-Pille
+	// las bislang AUSSCHLIESSLICH `data.preset`, das nur der Kebab-Pfad
+	// (togglePause -> invalidateAll()) aktualisiert — nach einem Pausieren/
+	// Aktivieren aus der Karte blieb die Pille auf dem alten Status stehen.
+	// `scheduleOverride` wird vom CompareTabs-Callback gesetzt und verwirft
+	// sich selbst, sobald `data` durch einen echten Reload (invalidateAll)
+	// neu ankommt — die dann gelieferten Server-Daten sind wieder autoritativ.
+	let scheduleOverride = $state<string | null>(null);
+	$effect(() => {
+		void data;
+		scheduleOverride = null;
+	});
+	function handleScheduleChange(schedule: string): void {
+		scheduleOverride = schedule;
+	}
+
+	let status = $derived(deriveStatusWithScheduleOverride(data.preset, scheduleOverride));
 	let statusInfo = $derived(STATUS_MAP[status]);
 	// Adversary-Finding F001: geguardetes Profil-Label für die mobile Kontext-
 	// Unterzeile (Muster CompareTile.svelte:62) — leer bei unbekanntem/fehlendem profil.
@@ -62,23 +80,25 @@
 	let isPausing = $state(false);
 	let pauseError = $state<string | null>(null);
 
+	// Staging-Fund F004 (CRITICAL): kein eigenstaendiger fetch-Pfad mit vollem
+	// Objekt-Spread aus `data.preset` mehr (Datenverlust-Risiko in BEIDE
+	// Richtungen gegenueber Hub-internen Edits, s. Adversary-Proben
+	// probe_kebab_vs_hub_stale_data.mjs / probe_kebab_vs_hub_reverse.mjs) —
+	// delegiert stattdessen an denselben `handleToggleActive`-Pfad, den auch
+	// die Aktivierungs-Karte im Versand-Tab nutzt (hubPutQueue + currentPreset-
+	// Baseline). Kein invalidateAll() mehr noetig: die Pille zieht ueber
+	// `onScheduleChange`/`scheduleOverride` mit (s. SF-2-Kommentar oben).
+	let compareDetailRef: ReturnType<typeof CompareDetail> | undefined = $state();
+
 	async function togglePause() {
 		isPausing = true;
 		pauseError = null;
-		const next = computePauseToggle(data.preset);
-		try {
-			const res = await fetch(`/api/compare/presets/${data.preset.id}`, {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ ...data.preset, ...next })
-			});
-			if (!res.ok) throw new Error(`PUT failed: ${res.status}`);
-			await invalidateAll();
-		} catch {
-			pauseError = 'Status-Änderung fehlgeschlagen. Bitte versuche es erneut.';
-		} finally {
-			isPausing = false;
-		}
+		// Adversary Runde 6 (LOW): Ref-Fallback analog CompareDetail.svelte:24 —
+		// ein (noch) undefined `compareDetailRef` faellt jetzt auf denselben
+		// Fehlerpfad zurueck statt still (ohne pauseError) zu enden.
+		const ok = (await compareDetailRef?.toggleActiveFromParent()) ?? false;
+		if (!ok) pauseError = 'Status-Änderung fehlgeschlagen. Bitte versuche es erneut.';
+		isPausing = false;
 	}
 
 	function handleAction(id: string) {
@@ -167,7 +187,13 @@
 		<div style="font-size: 14px; color: var(--g-bad); margin-bottom: 8px">{pauseError}</div>
 	{/if}
 
-	<CompareDetail preset={data.preset} locations={data.locations} {initialTab} />
+	<CompareDetail
+		preset={data.preset}
+		locations={data.locations}
+		{initialTab}
+		onScheduleChange={handleScheduleChange}
+		bind:this={compareDetailRef}
+	/>
 </div>
 
 <!-- Mobile-Layout (#493) -->

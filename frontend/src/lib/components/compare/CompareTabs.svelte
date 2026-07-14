@@ -55,9 +55,17 @@
 		preset: ComparePreset;
 		locations: Location[];
 		initialTab?: string;
+		/** Staging-Fund SF-2 (CRITICAL, AC-37): der Hub haelt seinen eigenen
+		 * `localSchedule`-Zustand (Aktivierungs-Karte), waehrend die Header-
+		 * Status-Pille in `compare/[id]/+page.svelte` weiterhin `data.preset`
+		 * liest (nur via `invalidateAll()` im Kebab-Pfad aktualisiert) — ohne
+		 * diesen Callback bleibt die Pille nach einem Pausieren/Aktivieren aus
+		 * der Aktivierungs-Karte auf dem alten Status stehen, bis ein Reload
+		 * erfolgt. Wird nach erfolgreichem PUT mit dem neuen `schedule` aufgerufen. */
+		onScheduleChange?: (schedule: string) => void;
 	}
 
-	let { preset, locations, initialTab = 'uebersicht' }: Props = $props();
+	let { preset, locations, initialTab = 'uebersicht', onScheduleChange }: Props = $props();
 
 	const TABS = [
 		{ value: 'uebersicht', label: 'Übersicht' },
@@ -383,8 +391,9 @@
 	});
 
 	// Event-diskretisierte Persistenz (KEIN Debounce/#1234): change an
-	// Toggles/Zeit-/Datumsfeldern (onchangecapture), focusout an Cooldown-/
-	// Stille-Stunden-Zahlenfeldern (onfocusout bubbelt, blur nicht — S6-Kommentar).
+	// Toggles/Zeit-/Datumsfeldern (Bubble-Phase, s. Staging-Fund SF-1 unten am
+	// Wrapper-Markup), focusout an Cooldown-/Stille-Stunden-Zahlenfeldern
+	// (onfocusout bubbelt, blur nicht — S6-Kommentar).
 	//
 	// Fix-Loop 1 (F001, Adversary HIGH): zusaetzlich onclick am Wrapper —
 	// `VTLaufzeitVergleich` (Laufzeit-Control) mutiert `wiz.endDate` bei
@@ -505,7 +514,11 @@
 	);
 	let localSchedule = $state<string>(preset.schedule ?? 'manual');
 
-	async function handleToggleActive() {
+	// Liefert true/false statt zu werfen — der Hub-eigene CTA-Klick ignoriert
+	// den Rueckgabewert (fire-and-forget wie bisher), der Kebab-Delegations-
+	// pfad (toggleActiveFromParent, s.u.) braucht ihn dagegen, um seine eigene
+	// `pauseError`-Anzeige in compare/[id]/+page.svelte zu steuern.
+	async function handleToggleActive(): Promise<boolean> {
 		const isPausing = localSchedule !== 'manual';
 		if (isPausing) previousSchedule = localSchedule;
 		const next = isPausing ? 'manual' : previousSchedule;
@@ -523,10 +536,57 @@
 				return api.put<ComparePreset>(url, body);
 			});
 			localSchedule = next;
+			// Staging-Fund SF-2: Elternkomponente ueber den neuen Schedule
+			// informieren, damit die Header-Status-Pille (andere Status-Quelle,
+			// s. Props-Kommentar) mitzieht, ohne dass wir hier invalidateAll()
+			// aufrufen (wuerde die eingefrorene-Prop-/currentPreset-Baseline-
+			// Architektur mit frisch geladenen `data` kollidieren lassen).
+			onScheduleChange?.(next);
+			return true;
 		} catch (e) {
 			console.error('[CompareTabs] toggleActive failed:', e);
+			return false;
 		}
 	}
+
+	/**
+	 * Staging-Fund F004 (CRITICAL): Delegations-Einstiegspunkt fuer den
+	 * Hub-Header-Kebab (compare/[id]/+page.svelte togglePause) — der Kebab
+	 * rief bislang einen EIGENSTAENDIGEN fetch-Pfad mit vollem Objekt-Spread
+	 * aus dem (potenziell veralteten) `data.preset` auf, komplett AUSSERHALB
+	 * der `hubPutQueue`/`currentPreset`-Baseline dieser Komponente. Je nach
+	 * Reihenfolge fuehrte das zu zwei Datenverlust-Varianten (Adversary-Proben
+	 * probe_kebab_vs_hub_stale_data.mjs / probe_kebab_vs_hub_reverse.mjs):
+	 * ein Hub-Edit (Orte/Idealwerte/Versand) konnte vom Kebab-Toggle
+	 * ueberschrieben werden ODER umgekehrt. Der Kebab ruft jetzt (per
+	 * `bind:this` durch CompareDetail durchgereicht) exakt denselben
+	 * `handleToggleActive`-Pfad auf wie die Aktivierungs-Karte im
+	 * Versand-Tab — EIN Schreibweg fuer Pausieren/Aktivieren, unabhaengig
+	 * davon, von wo er ausgeloest wird.
+	 */
+	export function toggleActiveFromParent(): Promise<boolean> {
+		return handleToggleActive();
+	}
+
+	// Staging-Fund F004 Robustheits-Zusatz (defensiv, KEIN aktuell
+	// reproduzierbarer Bug): falls `preset` durch einen ECHTEN Prop-
+	// Referenzwechsel aktualisiert wird (z. B. ein kuenftig wieder
+	// eingefuehrter invalidateAll()-Pfad ausserhalb dieser Komponente — nach
+	// F004 gibt es im Compare-Hub aktuell KEINEN solchen Pfad mehr, dieser
+	// Effekt ist Verteidigung gegen zukuenftige Regressionen), synchronisiert
+	// dieser Effekt `currentPreset` und setzt die Lazy-Hydration-Flags
+	// zurueck. Alle Hub-Edits sind event-diskretisiert UND ueber `hubPutQueue`
+	// serialisiert persistiert — ein frischer Prop-Stand traegt daher immer
+	// den Server-Superset (nie einen Stand, der einen bereits bestaetigten
+	// Hub-Edit rueckgaengig macht). Reagiert NUR auf `preset` (die Prop),
+	// NICHT auf `currentPreset` selbst — interne PUT-Updates von
+	// `currentPreset` aendern `preset` nicht und loesen diesen Effekt daher
+	// nicht aus.
+	$effect(() => {
+		currentPreset = snapshotForRollback(preset);
+		idealwerteHydrated = false;
+		versandHydrated = false;
+	});
 </script>
 
 <svelte:window onpointerup={handleWindowPointerUp} />
@@ -730,9 +790,17 @@
 	{#if activeTab === 'versand'}
 		<div class="tab-panel" data-testid="compare-detail-panel-versand">
 			{#if versandHydrated}
+				<!-- Staging-Fund SF-1 (CRITICAL, AC-35): `onchange` MUSS in der Bubble-
+				     Phase laufen, nicht `onchangecapture` — Capture liefe VOR dem
+				     Checkbox-eigenen `onchange`, das `wiz.sendTelegram` (o.ä.) erst
+				     setzt. Mit Capture sah `handleVersandCommit` daher noch den
+				     ALTEN Wert, der Diff-Waechter erkannte keine Aenderung und der
+				     PUT blieb aus, bis zufaellig ein anderes Event (focusout/click)
+				     feuerte. In der Bubble-Phase ist die Ziel-Mutation garantiert
+				     abgeschlossen, bevor der Wrapper-Handler laeuft. -->
 				<div
 					class="hub-versand-wrap"
-					onchangecapture={handleVersandCommit}
+					onchange={handleVersandCommit}
 					onfocusout={handleVersandCommit}
 					onclick={handleVersandCommit}
 				>

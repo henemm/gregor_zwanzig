@@ -157,11 +157,14 @@ describe('F003-Regression: Rollback-Baseline muss bei Queue-AUSFUEHRUNG erfasst 
 		// beschriebenen Ablauf (probe_rollback_stale.mjs): zwei GANZ NORMALE,
 		// aufeinanderfolgende Versand-Edits, beide angestossen BEVOR Edit A
 		// abgeschlossen ist.
-		let resolveAStarted: () => void;
+		// Definite-Assignment (`!`): beide werden synchron im Promise-Executor
+		// zugewiesen, bevor sie verwendet werden — TS kann das ueber die
+		// Executor-Callback-Grenze hinweg nicht selbst ableiten.
+		let resolveAStarted!: () => void;
 		const aStarted = new Promise<void>((r) => {
 			resolveAStarted = r;
 		});
-		let releaseA: () => void;
+		let releaseA!: () => void;
 		const aGate = new Promise<void>((r) => {
 			releaseA = r;
 		});

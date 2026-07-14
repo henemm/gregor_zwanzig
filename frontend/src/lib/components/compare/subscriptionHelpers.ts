@@ -68,6 +68,29 @@ export function deriveStatusFromPreset(p: ComparePreset): CompareStatus {
 	return 'active';
 }
 
+/**
+ * Issue #1256 Scheibe 7 Staging-Fund SF-2 (CRITICAL, AC-37): Statuspille-
+ * Ableitung mit optionalem lokalen Schedule-Override. Der Compare-Hub
+ * (CompareTabs) haelt fuer seine Aktivierungs-Karte einen eigenen
+ * `localSchedule`-PUT-Pfad OHNE `invalidateAll()` (das wuerde die dort
+ * eingefrorene `currentPreset`-Baseline mit frisch geladenen Routendaten
+ * kollidieren lassen) — die Header-Statuspille auf `/compare/[id]` liest
+ * aber weiterhin `data.preset`, das nur der Kebab-Pfad aktualisiert. Ohne
+ * Override bliebe die Pille nach einem Pausieren/Aktivieren aus der Karte
+ * auf dem alten Status stehen, bis ein echter Reload eintrifft.
+ * `scheduleOverride === null` (kein Override gesetzt bzw. durch einen echten
+ * Reload verworfen) laesst `p.schedule` unveraendert durch.
+ */
+export function deriveStatusWithScheduleOverride(
+	p: ComparePreset,
+	scheduleOverride: string | null
+): CompareStatus {
+	return deriveStatusFromPreset({
+		...p,
+		schedule: (scheduleOverride ?? p.schedule) as ComparePreset['schedule']
+	});
+}
+
 /** ComparePreset → "N Orte" */
 export function presetLocationsLabel(p: ComparePreset): string {
 	return `${p.location_ids.length} ${p.location_ids.length === 1 ? 'Ort' : 'Orte'}`;
