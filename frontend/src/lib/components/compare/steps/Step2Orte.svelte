@@ -1,16 +1,24 @@
 <script lang="ts">
 	// Issue #440 — Step 2: Smart-Import + Library + Auswahl-Counter.
-	// Issue #680 — Slice 3: CE_OrteTab-Fidelity (nummerierte Picked-Liste, Region-Gruppen, Counter).
-	// Spec: docs/specs/modules/issue_680_compare_editor_slice3.md
+	// Issue #680 — Slice 3: CE_OrteTab-Fidelity (nummerierte Picked-Liste, Gruppen, Counter).
+	// Issue #1256 Scheibe 5 (GREEN): Bibliotheks-Gruppierung auf die App-eigene
+	// Group-Entity (group_id, Issue #301) umgestellt — vorher gruppierte diese
+	// Datei nach `loc.region` (Lawinenwarnregion, vom Smart-Import-Resolver nie
+	// befüllt, s. step2_orte_library_grouping.test.ts). Wiederverwendet den
+	// bereits getesteten groupLocations()-Helper statt einer eigenen Reduce-Logik.
+	// Spec: docs/specs/modules/issue_680_compare_editor_slice3.md,
+	//       docs/specs/modules/issue_1256_compare_ui_rewire.md § Scheibe 5 (AC-13)
 	import { getContext } from 'svelte';
 	import { api } from '$lib/api';
 	import type { CompareWizardState } from '../compareWizardState.svelte';
-	import type { Location } from '$lib/types';
+	import type { Location, Group } from '$lib/types';
+	import { groupLocations } from '../locationHelpers';
 
 	interface Props {
 		locations: Location[];
+		groups?: Group[];
 	}
-	let { locations }: Props = $props();
+	let { locations, groups = [] }: Props = $props();
 
 	const ws = getContext<CompareWizardState>('compare-wizard-state');
 
@@ -64,21 +72,29 @@
 		ws.pickedIds.map((id) => allLocations.find((l) => l.id === id)).filter(Boolean) as Location[]
 	);
 
-	// AC-3: Bibliotheks-Grid nach Region gruppiert
+	// AC-13 (#1256 Scheibe 5): Bibliotheks-Grid nach der App-Group-Entity
+	// gruppiert (group_id), via bestehendem groupLocations()-Helper
+	// (locationHelpers.ts, Issue #301) statt einer eigenen Region-Reduce-Logik.
+	// "Weitere" bleibt die Sammelgruppe für Orte ohne (bekannte) group_id und
+	// steht — wie zuvor — immer am Ende; leere Gruppen (0 Orte) werden für den
+	// Picker ausgeblendet (groupLocations() selbst liefert sie laut Vertrag mit,
+	// s. locationHelpers.groups.test.ts — hier gefiltert, da eine leere Spalte
+	// im Orte-Picker keinen Mehrwert hat).
 	const libraryGroups = $derived.by(() => {
-		const groups: Record<string, Location[]> = {};
-		for (const loc of allLocations) {
-			const groupKey = loc.region || 'Weitere';
-			if (!groups[groupKey]) groups[groupKey] = [];
-			groups[groupKey].push(loc);
+		const { sections, ungrouped } = groupLocations(allLocations, groups);
+		const result: [string, Location[]][] = [];
+		for (const s of sections) {
+			if (s.locations.length > 0) result.push([s.group.name, s.locations]);
 		}
-		// Sortierung: "Weitere" immer ans Ende
-		const sorted: [string, Location[]][] = [];
-		for (const [key, locs] of Object.entries(groups)) {
-			if (key !== 'Weitere') sorted.push([key, locs]);
-		}
-		if (groups['Weitere']) sorted.push(['Weitere', groups['Weitere']]);
-		return sorted;
+		if (ungrouped.length > 0) result.push(['Weitere', ungrouped]);
+		return result;
+	});
+
+	// Gruppenname je group_id, für die Picked-Item-Meta-Zeile (AC-13-Nebenbefund).
+	const groupNameById = $derived.by(() => {
+		const map = new Map<string, string>();
+		for (const g of groups) map.set(g.id, g.name);
+		return map;
 	});
 
 	async function resolve() {
@@ -283,7 +299,7 @@
 								<span style="width:22px; height:22px; border-radius:4px; background:var(--g-ink); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; font-family:var(--g-font-mono);">{i + 1}</span>
 								<div style="flex:1; min-width:0;">
 									<div style="font-size:13px; font-weight:600; color:var(--g-ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{loc.name}</div>
-									<div style="font-family:var(--g-font-mono); font-size:10.5px; color:var(--g-ink-4); margin-top:1px;">{loc.region ?? '—'} · {loc.elevation_m ?? '–'} m</div>
+									<div style="font-family:var(--g-font-mono); font-size:10.5px; color:var(--g-ink-4); margin-top:1px;">{groupNameById.get(loc.group_id ?? '') ?? '—'} · {loc.elevation_m ?? '–'} m</div>
 								</div>
 								<button
 									data-testid={`compare-step2-picked-remove-${loc.id}`}
@@ -299,7 +315,7 @@
 		</div>
 	</div>
 
-	<!-- Bibliothek: Region-Gruppiert (AC-3) -->
+	<!-- Bibliothek: Group-Entity-gruppiert (group_id, AC-13) -->
 	<div data-testid="compare-step2-library">
 	<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600; margin-bottom:12px;">… oder aus gespeicherten Orten wählen</div>
 

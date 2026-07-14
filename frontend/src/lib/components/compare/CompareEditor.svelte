@@ -9,7 +9,7 @@
 	import { page } from '$app/state';
 	import { Btn, Eyebrow, TopoBg } from '$lib/components/atoms';
 	import { Field, ConfirmDialog } from '$lib/components/molecules';
-	import { ACTIVITY_PROFILE_OPTIONS, toCompareProfile, type ActivityProfile, type Location, type ComparePreset } from '$lib/types';
+	import { ACTIVITY_PROFILE_OPTIONS, toCompareProfile, type ActivityProfile, type Location, type ComparePreset, type Group } from '$lib/types';
 	import type { ChannelLayouts, Horizons, MetricPreset, WeatherConfigMetric } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
 	import type { CompareWizardState } from './compareWizardState.svelte';
@@ -25,6 +25,7 @@
 	import { buildComparePresetSavePayload } from './compareEditorSave';
 	import { api } from '$lib/api.js';
 	import Step2Orte from './steps/Step2Orte.svelte';
+	import { groupLocations } from './locationHelpers';
 	// Issue #1231, Slice 5: CorridorEditorMobile ersetzt Step3Idealwerte auch im
 	// Mobile-Zweig. Import von Step3Idealwerte entfernt — Datei bleibt vorerst
 	// bestehen (Aufraeumen ist Slice-6-Thema, s. Spec).
@@ -374,20 +375,43 @@
 	// ── Mobile-only State (Issue #682) ────────────────────────────────────────
 	let mobileLibraryOpen = $state(false);
 
-	// Bibliotheks-Gruppen für den mobilen Sheet (nach Region gruppiert)
+	// Issue #1256 Scheibe 5 (GREEN, AC-13): Gruppen der App-Group-Entity
+	// (GET /api/groups, Issue #301) — lazy erst beim ERSTEN Besuch des Orte-Tabs
+	// geladen, NICHT unbedingt bei jedem Editor-Mount (Lehre aus Scheibe-4-
+	// Fix-Loop F001, s. ltCatalogLoadStarted/ltLoadCatalog weiter unten: ein
+	// unbedingter Fetch würde bei jedem Öffnen eines Vergleichs unabhängig vom
+	// besuchten Tab feuern). Gruppen sind rein additive Anzeige-Information —
+	// bleibt der Fetch aus (Fehler/leer), fällt die Bibliothek auf "Weitere"
+	// zurück (bestehendes groupLocations()-Verhalten).
+	let ceGroups = $state<Group[]>([]);
+	let ceGroupsLoadStarted = false;
+
+	async function ceLoadGroups(): Promise<void> {
+		try {
+			ceGroups = await api.get<Group[]>('/api/groups');
+		} catch {
+			/* Gruppen sind optional — Bibliothek faellt auf "Weitere" zurueck */
+		}
+	}
+
+	$effect(() => {
+		if (activeTab === 'orte' && !ceGroupsLoadStarted) {
+			ceGroupsLoadStarted = true;
+			void ceLoadGroups();
+		}
+	});
+
+	// Bibliotheks-Gruppen für den mobilen Sheet — dieselbe Group-Entity-Quelle
+	// wie Step2Orte.svelte (groupLocations()), statt einer eigenen,
+	// region-basierten Duplikat-Logik (Konsolidierung, AC-13-Nebenbefund).
 	const mobileLibraryGroups = $derived.by(() => {
-		const groups: Record<string, Location[]> = {};
-		for (const loc of locations) {
-			const key = loc.region || 'Weitere';
-			if (!groups[key]) groups[key] = [];
-			groups[key].push(loc);
+		const { sections, ungrouped } = groupLocations(locations, ceGroups);
+		const result: [string, Location[]][] = [];
+		for (const s of sections) {
+			if (s.locations.length > 0) result.push([s.group.name, s.locations]);
 		}
-		const sorted: [string, Location[]][] = [];
-		for (const [k, v] of Object.entries(groups)) {
-			if (k !== 'Weitere') sorted.push([k, v]);
-		}
-		if (groups['Weitere']) sorted.push(['Weitere', groups['Weitere']]);
-		return sorted;
+		if (ungrouped.length > 0) result.push(['Weitere', ungrouped]);
+		return result;
 	});
 	let lockToastMsg = $state('');
 	let lockToastVisible = $state(false);
@@ -1048,7 +1072,7 @@
 			</TopoBg>
 		</div>
 	{:else if activeTab === 'orte'}
-		<Step2Orte {locations} />
+		<Step2Orte {locations} groups={ceGroups} />
 	{:else if activeTab === 'idealwerte'}
 		<!-- Issue #1231 Slice 4: ersetzt Step3Idealwerte auf Desktop (Wizard-Step-3
 		     UND Editor-Tab, PO-B — dieselbe Stelle bedient beide Modi via isEdit).
@@ -1208,7 +1232,7 @@
 				</div>
 			</div>
 		{:else if activeTab === 'orte'}
-			<Step2Orte {locations} />
+			<Step2Orte {locations} groups={ceGroups} />
 			<!-- Mobiler Bibliotheks-Button (Issue #682) -->
 			<div style="margin-top: 16px;">
 				<button
