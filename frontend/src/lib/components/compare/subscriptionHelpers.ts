@@ -179,6 +179,18 @@ export function presetChannels(preset: ComparePreset): string[] {
 	return result;
 }
 
+/**
+ * ComparePreset → Kanal-NAMEN statt Kanal-Anzahl ("Email · Telegram"),
+ * Soll `screen-compare-detail.jsx:147-150`. Dünner Wrapper um presetChannels()
+ * (Code-Teilungs-Invariante — keine neue Datenherleitung, nur Formatierung
+ * für die Hub-Übersicht "Kanäle"-Stat, Issue #1256 Scheibe 3 AC-6).
+ * 0 Kanäle → "—" (JSX-Leerfall), nie eine leere Zeichenkette.
+ */
+export function channelNamesLabel(preset: ComparePreset): string {
+	const channels = presetChannels(preset);
+	return channels.length === 0 ? '—' : channels.join(' · ');
+}
+
 export type CompareAction = { id: string; label: string; danger?: boolean };
 
 export function compareActions(status: CompareStatus): CompareAction[] {
@@ -200,6 +212,20 @@ export function compareActions(status: CompareStatus): CompareAction[] {
 		{ id: 'edit', label: 'Bearbeiten' },
 		{ id: 'delete', label: 'Löschen', danger: true }
 	];
+}
+
+// Issue #1256 Scheibe 3 — Hub-Header-Kebab: NUR Lebenszyklus-Aktionen
+// (Pausieren/Aktivieren, Archivieren, Löschen), analog `CHub_lifecycleActions`
+// (`screen-compare-detail.jsx:27-33`). Bearbeiten/Vorschau/Senden bleiben
+// exklusiv über Tabs bzw. die Primäraktion erreichbar (AC-5). Löst KL-7 auf:
+// "Archivieren" wandert komplett hierher, weg vom Listen-Kebab (Scheibe 1).
+export function compareLifecycleActions(status: CompareStatus): CompareAction[] {
+	if (status === 'draft') {
+		return [{ id: 'trash', label: 'Entwurf löschen', danger: true }];
+	}
+	const toggle =
+		status === 'active' ? { id: 'pause', label: 'Pausieren' } : { id: 'resume', label: 'Aktivieren' };
+	return [toggle, { id: 'archive', label: 'Archivieren' }, { id: 'trash', label: 'Löschen', danger: true }];
 }
 
 // Issue #1229 — Compare-Hub Briefing-Zeiten (Slot-basiert statt Rhythmus-Sprache).

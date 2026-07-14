@@ -14,17 +14,22 @@
 	import { DropdownMenu } from 'bits-ui';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import { compareActions } from './subscriptionHelpers.js';
-	import type { CompareStatus } from './subscriptionHelpers.js';
+	import type { CompareAction, CompareStatus } from './subscriptionHelpers.js';
 
 	interface Props {
 		status: CompareStatus;
 		onSelect?: (id: string) => void;
 		class?: string;
+		// Issue #1256 Scheibe 3 — optionale Aktionsliste injizierbar statt hart
+		// auf compareActions() verdrahtet (Header-Kebab braucht die Lifecycle-
+		// Variante, compareLifecycleActions()). Default bleibt der bisherige
+		// Listen-Vertrag — kein Bruch für bestehende Aufrufer/Testids.
+		actions?: CompareAction[];
 	}
 
-	let { status, onSelect, class: className = '' }: Props = $props();
+	let { status, onSelect, class: className = '', actions: actionsProp }: Props = $props();
 
-	const actions = $derived(compareActions(status));
+	const actions = $derived(actionsProp ?? compareActions(status));
 </script>
 
 <DropdownMenu.Root>

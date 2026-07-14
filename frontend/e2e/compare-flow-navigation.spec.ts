@@ -1,7 +1,12 @@
 // E2E (Staging) — Issue #1256 Scheibe 2: Fluss-Verdrahtung Create→Detail-Redirect,
 // Back-Nav, Abbrechen (AC-25–AC-29).
+// Issue #1256 Scheibe 3 (ergänzt): Hub-Header-Kebab auf Lifecycle
+// (AC-5/KL-7) + Übersicht-Tab bleibt reiner Ansehen-Tab (AC-30). Ergänzt
+// statt neuer Datei, damit der bestehende testMatch der
+// playwright.1256-s2.staging.config.ts (matcht exakt diesen Dateinamen)
+// unverändert bleibt.
 //
-// Spec: docs/specs/modules/issue_1256_compare_ui_rewire.md § Scheibe 2
+// Spec: docs/specs/modules/issue_1256_compare_ui_rewire.md § Scheibe 2 + 3
 //
 // Ist-Analyse (Spec-Phase + diese Scheibe): alle vier Übergänge sind BEREITS
 // implementiert (reine Regressionsabsicherung, kein Neubau) — s. Abschnitt
@@ -9,6 +14,13 @@
 // ECHTEN Klickpfaden ab (kein goto() wo ein Klick gefordert ist), Desktop UND
 // Mobile (AC-25 „Desktop oder Mobile", AC-28 Zurück-Pfeil, Testplan „plus
 // Mobile-Äquivalent").
+//
+// Scheibe 3 RED-Erwartung (aktueller Stand, vor Phase 6): der Hub-Header-
+// Kebab speist sich noch aus `compareActions()` (Listen-Vertrag, KEIN
+// "Archivieren" mehr seit Scheibe 1 — s. KL-7) statt der neuen
+// `compareLifecycleActions()`. Die AC-5/KL-7-Tests unten schlagen daher heute
+// fehl: "Archivieren" ist im Hub-Kebab nicht auffindbar (KL-7-Zwischenzustand,
+// PO-abgesegnet), und das Menü zeigt 5 statt 3 Einträge.
 //
 // Ausführen (gegen Staging, aus frontend/):
 //   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
@@ -52,6 +64,42 @@ async function createPreset(page: Page, name: string): Promise<string> {
 			hour_from: 7,
 			hour_to: 16,
 			empfaenger: []
+		}
+	});
+	expect(res.ok(), 'Preset-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();
+	const body = await res.json();
+	const id = body.id as string;
+	createdIds.push(id);
+	return id;
+}
+
+// ── Scheibe 3 Fixtures (AC-5/KL-7/AC-30): Preset MIT Ort, damit
+//    deriveStatusFromPreset() nicht auf "draft" fällt (location_ids darf
+//    für den Lifecycle-Status nicht leer sein). ────────────────────────────
+async function createLocation(page: Page, name: string, lat: number, lon: number): Promise<string> {
+	const res = await page.request.post('/api/locations', { data: { name, lat, lon } });
+	expect(res.ok(), 'Location-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();
+	const body = await res.json();
+	const id = body.id as string;
+	createdLocationIds.push(id);
+	return id;
+}
+
+async function createPresetWithLocation(
+	page: Page,
+	name: string,
+	schedule: 'daily' | 'manual',
+	locationId: string
+): Promise<string> {
+	const res = await page.request.post('/api/compare/presets', {
+		data: {
+			name,
+			location_ids: [locationId],
+			schedule,
+			profil: 'wandern',
+			hour_from: 7,
+			hour_to: 16,
+			empfaenger: ['urlauber@example.com']
 		}
 	});
 	expect(res.ok(), 'Preset-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();
@@ -291,5 +339,125 @@ test.describe('Issue #1256 Scheibe 2: Compare-Fluss Klickpfade Mobile (AC-25, AC
 		await backArrow.click();
 
 		await expect(page).toHaveURL(/\/compare$/, { timeout: 10_000 });
+	});
+});
+
+// ── Scheibe 3 (AC-5, KL-7, AC-30): Hub-Header-Kebab auf Lifecycle ───────────
+//
+// Ist (vor Phase 6): CompareKebab.svelte:27 speist sich für JEDEN Aufrufer
+// (Liste UND Hub-Header) ausschließlich aus compareActions(status) — seit
+// Scheibe 1 ohne "archive". Der Hub-Header zeigt daher heute den 5er-
+// Listen-Vertrag (Pausieren/Aktivieren, Briefing jetzt senden, Vorschau
+// öffnen, Bearbeiten, Löschen) statt der 3er-Lifecycle-Liste
+// (Pausieren/Aktivieren, Archivieren, Löschen). "Archivieren" ist dadurch
+// app-weit unerreichbar (KL-7, PO-abgesegneter Zwischenzustand) — die Tests
+// unten reproduzieren genau diese Lücke und werden erst nach Phase 6 (neue
+// CompareKebab-Variante/injizierte Aktionsliste) grün.
+test.describe('Issue #1256 Scheibe 3: Hub-Header-Kebab Lifecycle (AC-5, KL-7, AC-30)', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.setViewportSize({ width: 1280, height: 900 });
+	});
+
+	// ── AC-5: Hub-Kebab bei pausiertem Vergleich = genau [Aktivieren, Archivieren, Löschen] ──
+	test('AC-5: Hub-Header-Kebab (pausierter Vergleich) zeigt genau Aktivieren/Archivieren/Löschen', async ({
+		page
+	}) => {
+		const suffix = Date.now();
+		const locId = await createLocation(page, `E2E S3 Ort ${suffix}`, 47.05, 11.32);
+		const name = `E2E S3 Paused ${suffix}`;
+		const id = await createPresetWithLocation(page, name, 'manual', locId);
+
+		await page.goto(`/compare/${id}`);
+		await page.waitForLoadState('networkidle');
+
+		const kebabTrigger = page.locator('button[aria-label="Weitere Aktionen"]:visible').first();
+		await expect(kebabTrigger).toBeVisible({ timeout: 10_000 });
+		await kebabTrigger.click();
+
+		// Lifecycle-Vertrag: genau 3 Einträge, "Archivieren" jetzt erreichbar.
+		await expect(page.getByRole('menuitem', { name: 'Aktivieren' })).toBeVisible({ timeout: 5_000 });
+		await expect(page.getByRole('menuitem', { name: 'Archivieren' })).toBeVisible({ timeout: 5_000 });
+		await expect(page.getByRole('menuitem', { name: 'Löschen' })).toBeVisible({ timeout: 5_000 });
+
+		// Listen-exklusive Aktionen dürfen im Hub-Header NICHT mehr auftauchen.
+		await expect(page.getByRole('menuitem', { name: 'Bearbeiten' })).not.toBeVisible();
+		await expect(page.getByRole('menuitem', { name: 'Vorschau öffnen' })).not.toBeVisible();
+		await expect(page.getByRole('menuitem', { name: 'Briefing jetzt senden' })).not.toBeVisible();
+
+		await expect(page.getByRole('menuitem')).toHaveCount(3);
+
+		await page.keyboard.press('Escape');
+	});
+
+	// ── AC-5/KL-7: "Archivieren" im Hub-Kebab entfernt den Vergleich aus der aktiven Liste ──
+	test('KL-7-Auflösung: "Archivieren" im Hub-Header-Kebab archiviert per PATCH /state und verlässt die aktive Liste', async ({
+		page
+	}) => {
+		const suffix = Date.now();
+		const locId = await createLocation(page, `E2E S3 Ort-Archiv ${suffix}`, 46.98, 11.1);
+		const name = `E2E S3 Archivieren ${suffix}`;
+		const id = await createPresetWithLocation(page, name, 'daily', locId);
+
+		await page.goto(`/compare/${id}`);
+		await page.waitForLoadState('networkidle');
+
+		const kebabTrigger = page.locator('button[aria-label="Weitere Aktionen"]:visible').first();
+		await expect(kebabTrigger).toBeVisible({ timeout: 10_000 });
+		await kebabTrigger.click();
+
+		const archiveItem = page.getByRole('menuitem', { name: 'Archivieren' });
+		await expect(archiveItem).toBeVisible({ timeout: 5_000 });
+
+		const patchPromise = page.waitForResponse(
+			(res) => res.url().includes(`/api/compare/presets/${id}/state`) && res.request().method() === 'PATCH'
+		);
+		await archiveItem.click();
+		const patchRes = await patchPromise;
+		expect(patchRes.ok(), 'PATCH .../state (archive) fehlgeschlagen: ' + patchRes.status()).toBeTruthy();
+
+		// Archivieren navigiert zurück auf die Liste (analog archivePreset(),
+		// +page.svelte:99-111) — der archivierte Vergleich darf dort NICHT
+		// mehr als aktive Kachel auftauchen.
+		await expect(page).toHaveURL(/\/compare$/, { timeout: 10_000 });
+		await page.waitForLoadState('networkidle');
+		await expect(page.locator(`[data-testid="compare-tile-${id}"]`)).toHaveCount(0, { timeout: 10_000 });
+	});
+
+	// ── AC-30: Übersicht-Tab bleibt reiner Ansehen-Tab (SummaryCard-Sprung wechselt nur den Tab) ──
+	test('AC-30: SummaryCard "Bearbeiten →" (Orte) wechselt den Tab inline, keine volle Seiten-Navigation', async ({
+		page
+	}) => {
+		const suffix = Date.now();
+		const locId = await createLocation(page, `E2E S3 Ort-Uebersicht ${suffix}`, 47.4, 10.9);
+		const name = `E2E S3 Uebersicht ${suffix}`;
+		const id = await createPresetWithLocation(page, name, 'daily', locId);
+
+		await page.goto(`/compare/${id}`);
+		await page.waitForLoadState('networkidle');
+
+		const uebersichtTab = page.locator('[data-testid="compare-detail-tab-uebersicht"]:visible');
+		await expect(uebersichtTab).toBeVisible({ timeout: 10_000 });
+
+		// "Bearbeiten →" auf der Orte-SummaryCard im Übersicht-Tab.
+		const editJump = page
+			.locator('button:has-text("Bearbeiten →")')
+			.filter({ visible: true })
+			.first();
+		await expect(editJump).toBeVisible({ timeout: 10_000 });
+
+		// Kein voller Reload: eine SPA-Navigation über history.replaceState()
+		// löst KEIN 'framenavigated' mit Haupt-Dokument-Neuladen aus — als
+		// Nachweis prüfen wir, dass die Übersicht-Tab-Leiste (identisches
+		// DOM-Element) den Klick unverändert überlebt (kein Full-Page-Reload).
+		await editJump.click();
+
+		const orteTab = page.locator('[data-testid="compare-detail-tab-orte"]:visible');
+		await expect(orteTab).toHaveAttribute('data-testid', 'compare-detail-tab-orte');
+		await expect(page).toHaveURL(/\?tab=orte/, { timeout: 5_000 });
+
+		// Der Übersicht-Tab bleibt im DOM erreichbar (kein Redirect zu
+		// /compare/{id}/edit) — Klick zurück auf "Übersicht" muss funktionieren,
+		// ohne dass die Seite zwischenzeitlich neu geladen wurde.
+		await expect(page).not.toHaveURL(/\/edit/);
 	});
 });

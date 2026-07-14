@@ -15,7 +15,8 @@
 		formatLastSent,
 		formatNextSend,
 		computePauseToggle,
-		channelCountLabel
+		channelCountLabel,
+		compareLifecycleActions
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
 	import { page } from '$app/state';
@@ -83,7 +84,9 @@
 	function handleAction(id: string) {
 		if (id === 'edit' || id === 'setup') {
 			window.location.href = `/compare/${data.preset.id}/edit`;
-		} else if (id === 'pause') {
+		} else if (id === 'pause' || id === 'resume') {
+			// 'resume' kommt aus compareLifecycleActions() (Hub-Header, #1256 S3) —
+			// selbe Toggle-Aktion wie 'pause' aus compareActions() (Listen-Kebab).
 			void togglePause();
 		} else if (id === 'send') {
 			void handleTestSend();
@@ -91,7 +94,9 @@
 			window.location.href = '/compare/' + data.preset.id + '?tab=vorschau';
 		} else if (id === 'archive') {
 			void archivePreset();
-		} else if (id === 'delete') {
+		} else if (id === 'delete' || id === 'trash') {
+			// 'trash' kommt aus compareLifecycleActions() (Hub-Header, #1256 S3) —
+			// selbe Lösch-Aktion wie 'delete' aus compareActions() (Listen-Kebab).
 			void deletePreset();
 		}
 	}
@@ -151,7 +156,7 @@
 					{isSending ? 'Wird gesendet…' : 'Test senden'}
 				</Btn>
 			{/if}
-			<CompareKebab {status} onSelect={handleAction} />
+			<CompareKebab {status} actions={compareLifecycleActions(status)} onSelect={handleAction} />
 		</div>
 	</div>
 

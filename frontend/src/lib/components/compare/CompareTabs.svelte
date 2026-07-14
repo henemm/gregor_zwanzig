@@ -26,7 +26,7 @@
 		presetBriefingTimesLabel,
 		formatLastSent,
 		formatNextSend,
-		channelCountLabel,
+		channelNamesLabel,
 		STATUS_MAP
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
@@ -102,6 +102,10 @@
 	const versandSummaryText = $derived(
 		`Briefings ${presetBriefingTimesLabel(preset)} · nächster Versand ${formatNextSend(nextSend)}.`
 	);
+
+	// Issue #1256 Scheibe 3 AC-6: Kanal-Namen statt Kanal-Anzahl in der
+	// Übersicht-"Kanäle"-Stat (Soll: screen-compare-detail.jsx:147-150).
+	const channelsLabel = $derived(channelNamesLabel(preset));
 
 	// Orts-Auflösung: location_ids → locations[] (mit elevation_m für CompareLocationRow).
 	const resolvedLocations = $derived(
@@ -266,16 +270,16 @@
 							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Zuletzt raus</div>
 							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">{formatLastSent(preset.letzter_versand)}</div>
 						</div>
-						<!-- Kanäle -->
+						<!-- Kanäle — Issue #1256 Scheibe 3 AC-6: Namen statt Anzahl (Soll: screen-compare-detail.jsx:147-150) -->
 						<div>
 							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Kanäle</div>
-							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">
-								{#if preset.empfaenger.length === 0}
+							<div data-testid="compare-detail-stat-kanaele" style="font-size: 14px; color: var(--g-ink); font-weight: 500">
+								{#if channelsLabel === '—'}
 									—
 								{:else}
 									<span style="display: inline-flex; align-items: center; gap: 7px">
 										<Dot tone="good" size={7}/>
-										{channelCountLabel(preset.empfaenger.length)}
+										{channelsLabel}
 									</span>
 								{/if}
 							</div>
