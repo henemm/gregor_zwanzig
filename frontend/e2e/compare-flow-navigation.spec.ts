@@ -19,6 +19,9 @@ import { test, expect, type Page } from '@playwright/test';
 // Staging-Hygiene (Fix-Loop F003): jeder in einem Test angelegte Preset wird
 // hier gesammelt und im file-weiten afterEach wieder gelöscht.
 let createdIds: string[] = [];
+// Fix-Loop 2 (F004-Nachfund): der AC-26/29-Test legt zusätzlich Locations per
+// Smart-Import an — auch die werden getrackt und aufgeräumt (Root Cause s. u.).
+let createdLocationIds: string[] = [];
 
 test.afterEach(async ({ page }) => {
 	for (const id of createdIds) {
@@ -29,6 +32,14 @@ test.afterEach(async ({ page }) => {
 		}
 	}
 	createdIds = [];
+	for (const id of createdLocationIds) {
+		try {
+			await page.request.delete(`/api/locations/${id}`);
+		} catch {
+			/* Staging-Hygiene: Cleanup-Fehler ist nicht test-kritisch */
+		}
+	}
+	createdLocationIds = [];
 });
 
 async function createPreset(page: Page, name: string): Promise<string> {
@@ -127,24 +138,72 @@ test.describe('Issue #1256 Scheibe 2: Compare-Fluss Klickpfade Desktop (AC-25–
 
 		// Zwei Orte per Smart-Import/Koordinaten hinzufügen (deterministisch, kein
 		// externer Google/Nominatim-Aufruf nötig — analog issue-1080-compare-new-url.spec.ts).
-		const coords: Array<[string, string]> = [
-			['47.2692', '11.4041'],
-			['47.1015', '11.2958']
+		//
+		// Fix-Loop 2 Root Cause (Trace-Beleg, s. Bericht): mit reinen
+		// Koordinaten-Defaultnamen kollidiert die serverseitige ID
+		// (toKebab(Name), internal/handler/location.go:19+91-99) bei jedem
+		// Wiederholungslauf mit denselben Koordinaten → HTTP 409 "Ort mit dieser
+		// ID existiert bereits", addLocation() bricht in den catch-Zweig ab, ohne
+		// die ID zu pickedIds hinzuzufügen. Reproduziert per --trace on: beide
+		// POST /api/locations dieses Testlaufs kamen mit Status 409 zurück.
+		// Fix: expliziter, pro Lauf eindeutiger Name im "Erkannt"-Namensfeld
+		// (compare-step2-name-input) statt des Koordinaten-Defaultnamens.
+		const uniqueSuffix = Date.now();
+		const coords: Array<[string, string, string]> = [
+			['47.2692', '11.4041', `E2E Fluss-Ort-A ${uniqueSuffix}`],
+			['47.1015', '11.2958', `E2E Fluss-Ort-B ${uniqueSuffix}`]
 		];
-		for (const [lat, lon] of coords) {
+		for (let i = 0; i < coords.length; i++) {
+			const [lat, lon, locName] = coords[i];
 			const importInput = page.locator('[data-testid="compare-step2-smart-import-input"]:visible');
 			await importInput.fill(`${lat}, ${lon}`);
 			await page.locator('[data-testid="compare-step2-resolve-btn"]:visible').click();
+
+			const nameInput = page.locator('[data-testid="compare-step2-name-input"]:visible');
+			await expect(nameInput).toBeVisible({ timeout: 15_000 });
+			await nameInput.fill(locName);
+
 			const addBtn = page.locator('button:has-text("Zum Vergleich hinzufügen"):visible');
 			await expect(addBtn).toBeVisible({ timeout: 15_000 });
 			await addBtn.click();
+
+			// Härtung (Fix-Loop 2, Coordinator-Punkt 3): auf den tatsächlich
+			// erhöhten Picked-Zähler warten statt sofort in die nächste
+			// Iteration zu springen — verhindert stille Fehlschläge (z. B. den
+			// obigen 409) unbemerkt bis zum viel späteren Aktivieren-Timeout.
+			await expect(
+				page
+					.locator('[data-testid="compare-step2-picked-list"]')
+					.locator('[data-testid^="compare-step2-picked-item-"]')
+			).toHaveCount(i + 1, { timeout: 10_000 });
+		}
+
+		// Staging-Hygiene: IDs der per UI angelegten Orte aus den
+		// Picked-Item-Testids extrahieren, damit afterEach sie löschen kann.
+		const pickedItemTestIds = await page
+			.locator('[data-testid="compare-step2-picked-list"]')
+			.locator('[data-testid^="compare-step2-picked-item-"]')
+			.evaluateAll((els) => els.map((el) => el.getAttribute('data-testid')));
+		for (const tid of pickedItemTestIds) {
+			const locId = tid?.replace('compare-step2-picked-item-', '');
+			if (locId) createdLocationIds.push(locId);
 		}
 
 		// Tab-Fortschritt: Idealwerte → Layout → Versand (echte Klicks, schaltet
-		// versandVisited frei — Voraussetzung für "Briefing aktivieren").
-		await page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible').click();
-		await page.locator('[data-testid="compare-editor-tab-layout"]:visible').click();
-		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').click();
+		// versandVisited frei — Voraussetzung für "Briefing aktivieren"). Nach
+		// jedem Klick wird geprüft, dass der Tab wirklich aktiv wurde (Härtung
+		// Coordinator-Punkt 3), statt blind weiterzuspringen.
+		const idealwerteTab = page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible');
+		await idealwerteTab.click();
+		await expect(idealwerteTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
+
+		const layoutTab = page.locator('[data-testid="compare-editor-tab-layout"]:visible');
+		await layoutTab.click();
+		await expect(layoutTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
+
+		const versandTab = page.locator('[data-testid="compare-editor-tab-versand"]:visible');
+		await versandTab.click();
+		await expect(versandTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
 
 		const activateBtn = page.locator('[data-testid="compare-editor-activate"]:visible');
 		await expect(activateBtn).toBeEnabled({ timeout: 10_000 });
@@ -160,16 +219,27 @@ test.describe('Issue #1256 Scheibe 2: Compare-Fluss Klickpfade Desktop (AC-25–
 		// Fluss selbst — die finale URL landet direkt im Hub.
 		await expect(page).not.toHaveURL(/\/edit$/);
 
-		// Gegenprobe: der neu angelegte Vergleich ist tatsächlich im Detail-Hub sichtbar.
-		await expect(
-			page.locator(`text=${uniqueName}`).locator(':visible').first()
-		).toBeVisible({ timeout: 10_000 });
-
 		// F003: Staging-Hygiene — die per UI (nicht per createPreset()) angelegte
-		// ID aus der finalen Detail-URL extrahieren und zum Cleanup vormerken.
+		// ID aus der finalen Detail-URL extrahieren und SOFORT zum Cleanup
+		// vormerken (Fix-Loop 2 Nachfund: vorher stand dieser Block NACH der
+		// Gegenprobe unten — schlug die Gegenprobe fehl, wurde die ID nie
+		// getrackt und der Preset blieb als Orphan auf Staging liegen, obwohl
+		// er längst real angelegt war. Jetzt direkt nach der URL-Bestätigung).
 		const finalUrl = page.url();
 		const newId = finalUrl.replace(/\/$/, '').split('/').pop();
 		if (newId) createdIds.push(newId);
+
+		// Gegenprobe: der neu angelegte Vergleich ist tatsächlich im Detail-Hub sichtbar.
+		//
+		// Fix-Loop 2 Nachfund: `.locator(':visible')` VOM Text-Match aus sucht nur
+		// unter dessen NACHFAHREN (hier: die h1-Überschrift hat keine Kind-Elemente
+		// -> "element(s) not found", obwohl die Überschrift selbst sichtbar im DOM
+		// stand — s. Trace-Beleg im Bericht). `.filter({ visible: true })` prüft
+		// dagegen die getroffenen Elemente selbst (Desktop-Hub UND Mobile-Hub
+		// rendern denselben Namen gleichzeitig im DOM, CSS blendet einen aus).
+		await expect(
+			page.getByText(uniqueName).filter({ visible: true }).first()
+		).toBeVisible({ timeout: 10_000 });
 	});
 });
 
