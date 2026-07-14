@@ -309,6 +309,66 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 		await expect(reloadedCta).toHaveText('Aktivieren', { timeout: 10_000 });
 	});
 
+	// ── F004: Kebab-Pausieren (Header) delegiert an denselben Schreibweg wie
+	// die Hub-Aktivierungs-Karte — ein Feld-Edit VOR dem Kebab-Toggle darf
+	// nicht verloren gehen (Fix f89b89af, Adversary R5 CRITICAL). ───────────
+	test('F004: Uhrzeit-Änderung + Kebab-Pausieren (Header) persistieren BEIDE, kein Datenverlust', async ({
+		page
+	}) => {
+		const suffix = Date.now();
+		const locA = await createLocation(page, `E2E-S7 F004-Ort-A ${suffix}`, 46.6, 10.2);
+		const locB = await createLocation(page, `E2E-S7 F004-Ort-B ${suffix}`, 46.65, 10.25);
+		const id = await createPresetWithLocations(page, `E2E-S7 F004 ${suffix}`, [locA, locB]);
+
+		await page.goto(`/compare/${id}?tab=versand`);
+		await page.waitForLoadState('networkidle');
+		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
+
+		const timeInput = page.locator('[data-testid="report-morning-time"]:visible');
+		await expect(timeInput).toBeVisible({ timeout: 10_000 });
+
+		// Feld-Änderung im Hub-Versand-Tab, PUT abwarten (eigener Commit-Pfad).
+		const fieldPutPromise = page.waitForResponse(
+			(res) => res.url().includes(`/api/compare/presets/${id}`) && res.request().method() === 'PUT'
+		);
+		await timeInput.fill('11:20');
+		await timeInput.blur();
+		const fieldPutRes = await fieldPutPromise;
+		expect(fieldPutRes.ok(), 'PUT nach Uhrzeit-Änderung fehlgeschlagen: ' + fieldPutRes.status()).toBeTruthy();
+
+		// Header-Kebab öffnen und "Pausieren" wählen (F004: delegiert jetzt an
+		// CompareTabs.toggleActiveFromParent() → dieselbe hubPutQueue/
+		// currentPreset-Baseline wie die Aktivierungs-Karte).
+		const kebabPutPromise = page.waitForResponse(
+			(res) => res.url().includes(`/api/compare/presets/${id}`) && res.request().method() === 'PUT'
+		);
+		await page.locator('button[aria-label="Weitere Aktionen"]:visible').click();
+		await page.getByRole('menuitem', { name: 'Pausieren' }).click();
+		const kebabPutRes = await kebabPutPromise;
+		expect(kebabPutRes.ok(), 'PUT nach Kebab-Pausieren fehlgeschlagen: ' + kebabPutRes.status()).toBeTruthy();
+		const kebabPutBody = kebabPutRes.request().postDataJSON() as { schedule: string; morning_time: string };
+		// Kernaussage F004: der Kebab-PUT trägt die VORHER im Hub-Tab geänderte
+		// Uhrzeit mit (round-trip aus der gemeinsamen currentPreset-Baseline),
+		// überschreibt sie NICHT mit einem veralteten data.preset-Stand.
+		expect(kebabPutBody.schedule).toBe('manual');
+		expect(kebabPutBody.morning_time.slice(0, 5)).toBe('11:20');
+
+		await page.reload();
+		await page.waitForLoadState('networkidle');
+		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
+		const reloadedInput = page.locator('[data-testid="report-morning-time"]:visible');
+		await expect(reloadedInput).toHaveValue('11:20', { timeout: 10_000 });
+		const reloadedCta = page.locator('[data-testid="compare-hub-activation-cta"]:visible');
+		await expect(reloadedCta).toHaveText('Aktivieren', { timeout: 10_000 });
+
+		// Aufräumen: Kebab "Aktivieren", damit der Test-Vergleich nicht pausiert
+		// zurückbleibt (Preset wird ohnehin in afterEach gelöscht, aber
+		// symmetrisch zum Auftrag).
+		await page.locator('button[aria-label="Weitere Aktionen"]:visible').click();
+		await page.getByRole('menuitem', { name: 'Aktivieren' }).click();
+		await expect(reloadedCta).toHaveText('Pausieren', { timeout: 10_000 });
+	});
+
 	// ── AC-19 Regression: Vorschau-Tab Desktop/iPhone-Umschalter ────────────────
 	test('AC-19: Vorschau-Tab Desktop-Inbox/iPhone-Mail-Umschalter bleibt funktionsfähig', async ({ page }) => {
 		const suffix = Date.now();
