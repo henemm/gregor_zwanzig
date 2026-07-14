@@ -11,13 +11,12 @@
 	//
 	// Spec: docs/specs/modules/issue_517_compare_hub.md
 
-	import { Dot, Pill, Btn, Eyebrow, Card, Switch } from '$lib/components/atoms';
+	import { Dot, Pill, Btn, Eyebrow, Card } from '$lib/components/atoms';
 	import CompareChannelSwitch from '$lib/components/molecules/CompareChannelSwitch.svelte';
 	import CompareBriefingPreview from '$lib/components/molecules/CompareBriefingPreview.svelte';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
 	import CompareLayoutRow from '$lib/components/molecules/CompareLayoutRow.svelte';
-	import DetailRow from '$lib/components/molecules/DetailRow.svelte';
-	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	import { channelChipCount } from './channelChipCount.js';
 	import { CHANNEL_COL_BUDGET } from '$lib/components/trip-detail/metricsEditor';
 	import {
@@ -31,13 +30,25 @@
 	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
 	import type { ComparePreset, Location, Group } from '$lib/types.js';
 	import { api } from '$lib/api.js';
-	import { onMount, setContext } from 'svelte';
+	import { setContext } from 'svelte';
 	// Issue #1256 Scheibe 6 (AC-14/15/16/31/32/33/34): Orte-Tab-Drag +
 	// eingebetteter CorridorEditor im Idealwerte-Tab.
 	import { dndzone, type DndEvent } from 'svelte-dnd-action';
 	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
 	import { CompareWizardState } from './compareWizardState.svelte';
-	import { hydrateWizardStateFromPreset, buildHubPutPayload, flushPendingCorridorSave, snapshotForRollback, shouldFlushOnWindowPointerUp, buildToggleActivePutPayload } from './compareHubWizardBridge.ts';
+	import {
+		hydrateWizardStateFromPreset,
+		buildHubPutPayload,
+		flushPendingCorridorSave,
+		snapshotForRollback,
+		shouldFlushOnWindowPointerUp,
+		buildToggleActivePutPayload,
+		hydrateVersandFieldsFromPreset,
+		flushPendingVersandSave,
+		hubActivationBanner,
+		createPutQueue,
+		type VersandSnapshot
+	} from './compareHubWizardBridge.ts';
 	import { groupLocations } from './locationHelpers.js';
 
 	interface Props {
@@ -47,24 +58,6 @@
 	}
 
 	let { preset, locations, initialTab = 'uebersicht' }: Props = $props();
-
-	// Nutzerprofil für Kanal-Status (AC-8)
-	let userProfile = $state<{ mail_to?: string; email?: string; telegram_chat_id?: string; sms_to?: string } | null>(null);
-	onMount(async () => {
-		try {
-			const data = await api.get<{ mail_to?: string; email?: string; telegram_chat_id?: string; sms_to?: string }>('/api/auth/profile');
-			userProfile = data;
-		} catch (e) {
-			console.error(e);
-			// Profil nicht erreichbar — Fallback auf preset-Daten
-		}
-	});
-
-	const emailConnected = $derived(
-		(userProfile?.mail_to ?? userProfile?.email) ? true : preset.empfaenger.length > 0
-	);
-	const telegramConnected = $derived(!!userProfile?.telegram_chat_id);
-	const smsConnected = $derived(!!userProfile?.sms_to);
 
 	const TABS = [
 		{ value: 'uebersicht', label: 'Übersicht' },
@@ -127,11 +120,25 @@
 	// (bekannte, akzeptierte Stale-Anzeige, s. Fix-Vorgabe Scope).
 	let currentPreset = $state<ComparePreset>(snapshotForRollback(preset));
 
+	// Fix-Loop 1 (F002, Adversary CRITICAL): EINE gemeinsame Serialisierungs-
+	// Queue fuer ALLE Hub-PUT-Pfade (Orte/Idealwerte/Versand/Toggle-Active) —
+	// verhindert, dass zwei schnell aufeinanderfolgende Aktionen (z. B. eine
+	// Versand-Aenderung gefolgt vom Aktivieren-Klick) zwei parallele
+	// api.put()-Aufrufe mit derselben, noch veralteten currentPreset-Baseline
+	// ausloesen (compareHubWizardBridge.ts: createPutQueue).
+	const hubPutQueue = createPutQueue();
+
 	// Issue #1256 Scheibe 6 (AC-14/15/31/32): lokaler, optimistischer Orte-Zustand.
 	// Startet aus currentPreset.location_ids, wird bei Drag/Entfernen/Hinzufügen
 	// sofort im UI aktualisiert und per PUT persistiert (Rollback bei Fehler).
 	let currentLocationIds = $state<string[]>([...currentPreset.location_ids]);
 	const orteCount = $derived(currentLocationIds.length);
+	// Fix-Loop 2 (F003-Analogie): zuletzt ERFOLGREICH persistierter Orte-Stand,
+	// analog lastPersistedCorridorSnapshot/lastPersistedVersandSnapshot — nur
+	// so kann persistPickedIds beim Rollback auf den Stand NACH einem zuvor
+	// in der Queue bereits erfolgreichen Edit zurueckfallen statt auf einen
+	// aelteren, beim Funktionsaufruf gelesenen Stand (s. handleCorridorCommit).
+	let lastPersistedLocationIds: string[] = [...currentLocationIds];
 
 	// Orts-Auflösung: location_ids → locations[] (mit elevation_m für CompareLocationRow).
 	// allLocationsForAdd ergänzt Orte, die per Inline-Add-Panel neu hinzugefügt
@@ -169,17 +176,27 @@
 	}
 
 	async function persistPickedIds(newIds: string[]): Promise<void> {
-		const before = [...currentLocationIds];
 		currentLocationIds = newIds;
-		try {
-			const { url, body } = buildHubPutPayload(currentPreset, { pickedIds: newIds });
-			// Fix-Loop 2 (F005): Baseline aus dem Response-Body auffrischen —
-			// der PUT-Handler liefert das tatsaechlich gespeicherte Preset zurueck.
-			currentPreset = await api.put<ComparePreset>(url, body);
-		} catch (e) {
-			console.error('[CompareTabs] Orte-Persistenz fehlgeschlagen, Rollback:', e);
-			currentLocationIds = before;
-		}
+		// Fix-Loop 1 (F002): Payload-Bau innerhalb des enqueueten fn, damit
+		// currentPreset erst zur tatsaechlichen Ausfuehrungszeit gelesen wird
+		// (frisch aus einer evtl. vorher in der Queue gelaufenen PUT-Response).
+		// Fix-Loop 2 (F003-Analogie): Rollback-Baseline (lastPersistedLocationIds)
+		// ebenfalls erst HIER lesen — s. Begruendung an der Deklaration oben.
+		const updated = await hubPutQueue.enqueue(async () => {
+			try {
+				const { url, body } = buildHubPutPayload(currentPreset, { pickedIds: newIds });
+				const result = await api.put<ComparePreset>(url, body);
+				// Fix-Loop 2 (F005): Baseline aus dem Response-Body auffrischen —
+				// der PUT-Handler liefert das tatsaechlich gespeicherte Preset zurueck.
+				lastPersistedLocationIds = newIds;
+				return result;
+			} catch (e) {
+				console.error('[CompareTabs] Orte-Persistenz fehlgeschlagen, Rollback:', e);
+				currentLocationIds = lastPersistedLocationIds;
+				return null;
+			}
+		});
+		if (updated) currentPreset = updated;
 	}
 
 	// Inline-Add-Panel (AC-31): bespoke, kein Trip-Pendant (dokumentierte
@@ -270,21 +287,38 @@
 	// Subtrees nicht mehr zu einem uebersehenen Commit fuehrt.
 	async function handleCorridorCommit(): Promise<void> {
 		if (!idealwerteHydrated) return;
-		const current = currentCorridorSnapshot();
-		const before = lastPersistedCorridorSnapshot ?? current;
-		const payload = flushPendingCorridorSave(currentPreset, current, lastPersistedCorridorSnapshot);
-		if (!payload) return;
-		try {
-			// Fix-Loop 2 (F005): Baseline aus dem Response-Body auffrischen, s.o.
-			currentPreset = await api.put<ComparePreset>(payload.url, payload.body);
-			lastPersistedCorridorSnapshot = current;
-		} catch (e) {
-			console.error('[CompareTabs] Wertebereich-Persistenz fehlgeschlagen, Rollback:', e);
-			wizardState.corridors = before.corridors;
-			wizardState.idealRanges = before.idealRanges;
-			wizardState.activeMetricKeys = before.activeMetricKeys;
-			wizardState.metricAlertLevels = before.metricAlertLevels;
-		}
+		// Fix-Loop 2 (F003, Adversary MEDIUM): current/before/Diff-Check/Rollback
+		// KOMPLETT innerhalb des enqueueten fn lesen bzw. ausfuehren — bei
+		// tatsaechlicher Ausfuehrung ist `lastPersistedCorridorSnapshot` bereits
+		// durch einen zuvor in der Queue gelaufenen, erfolgreichen Edit
+		// aufgefrischt. Ein hier NEU (statt beim Funktionsaufruf) gelesenes
+		// `before` faellt bei einem Fehlschlag daher korrekt nur auf den Stand
+		// NACH diesem vorherigen Edit zurueck, nicht auf einen aelteren Stand
+		// (sonst UI/Server-Divergenz bis Reload). `current` bleibt trotzdem
+		// korrekt: wizardState wird zwischen Enqueue und Ausfuehrung von
+		// niemandem ausser dem Nutzer veraendert, ein hier gelesener Snapshot
+		// spiegelt also weiterhin (sogar aktueller) den Nutzerstand zum
+		// Commit-Zeitpunkt.
+		const updated = await hubPutQueue.enqueue(async () => {
+			const current = currentCorridorSnapshot();
+			const before = lastPersistedCorridorSnapshot ?? current;
+			const payload = flushPendingCorridorSave(currentPreset, current, lastPersistedCorridorSnapshot);
+			if (!payload) return null;
+			try {
+				const result = await api.put<ComparePreset>(payload.url, payload.body);
+				// Fix-Loop 2 (F005): Baseline aus dem Response-Body auffrischen, s.o.
+				lastPersistedCorridorSnapshot = current;
+				return result;
+			} catch (e) {
+				console.error('[CompareTabs] Wertebereich-Persistenz fehlgeschlagen, Rollback:', e);
+				wizardState.corridors = before.corridors;
+				wizardState.idealRanges = before.idealRanges;
+				wizardState.activeMetricKeys = before.activeMetricKeys;
+				wizardState.metricAlertLevels = before.metricAlertLevels;
+				return null;
+			}
+		});
+		if (updated) currentPreset = updated;
 	}
 
 	// Fix-Loop 1 (F002, Adversary HIGH): `<svelte:window>` muss auf Komponenten-
@@ -303,6 +337,97 @@
 	function handleWindowPointerUp(): void {
 		if (!shouldFlushOnWindowPointerUp(activeTab, idealwerteHydrated)) return;
 		void handleCorridorCommit();
+	}
+
+	// Issue #1256 Scheibe 7 (AC-35/36): eingebetteter VersandTab (context="vergleich")
+	// im Versand-Tab — analog Idealwerte-Bridge oben (S6-Muster), gleicher
+	// `wizardState`/gleiche `currentPreset`-Baseline, ABER eigene Snapshot-
+	// Baseline (`lastPersistedVersandSnapshot`), damit der Versand-Flush den
+	// Idealwerte-Flush nicht ueberschreibt.
+	let versandHydrated = $state(false);
+	let lastPersistedVersandSnapshot: VersandSnapshot | null = null;
+
+	function currentVersandSnapshot(): VersandSnapshot {
+		return snapshotForRollback({
+			sendTelegram: wizardState.sendTelegram,
+			sendSms: wizardState.sendSms,
+			morningEnabled: wizardState.morningEnabled,
+			morningTime: wizardState.morningTime,
+			eveningEnabled: wizardState.eveningEnabled,
+			eveningTime: wizardState.eveningTime,
+			endDate: wizardState.endDate,
+			alertCooldownMinutes: wizardState.alertCooldownMinutes,
+			alertQuietFrom: wizardState.alertQuietFrom,
+			alertQuietTo: wizardState.alertQuietTo
+		});
+	}
+
+	$effect(() => {
+		if (activeTab !== 'versand' || versandHydrated) return;
+		// F005-Muster: aus currentPreset hydrieren, damit ein vorheriger
+		// Orte-/Idealwerte-Edit in derselben Sitzung nicht ueberschrieben wird.
+		const hydrated = hydrateVersandFieldsFromPreset(currentPreset);
+		wizardState.sendEmail = hydrated.sendEmail;
+		wizardState.sendTelegram = hydrated.sendTelegram;
+		wizardState.sendSms = hydrated.sendSms;
+		wizardState.morningEnabled = hydrated.morningEnabled;
+		wizardState.morningTime = hydrated.morningTime;
+		wizardState.eveningEnabled = hydrated.eveningEnabled;
+		wizardState.eveningTime = hydrated.eveningTime;
+		wizardState.endDate = hydrated.endDate;
+		wizardState.alertCooldownMinutes = hydrated.alertCooldownMinutes;
+		wizardState.alertQuietFrom = hydrated.alertQuietFrom;
+		wizardState.alertQuietTo = hydrated.alertQuietTo;
+		lastPersistedVersandSnapshot = currentVersandSnapshot();
+		versandHydrated = true;
+	});
+
+	// Event-diskretisierte Persistenz (KEIN Debounce/#1234): change an
+	// Toggles/Zeit-/Datumsfeldern (onchangecapture), focusout an Cooldown-/
+	// Stille-Stunden-Zahlenfeldern (onfocusout bubbelt, blur nicht — S6-Kommentar).
+	//
+	// Fix-Loop 1 (F001, Adversary HIGH): zusaetzlich onclick am Wrapper —
+	// `VTLaufzeitVergleich` (Laufzeit-Control) mutiert `wiz.endDate` bei
+	// „Bis auf Weiteres" rein per Klick auf einen Button, der weder ein
+	// change- noch garantiert ein focusout-Event ausloest (WebKit fokussiert
+	// Buttons nicht per Klick) — ohne onclick wuerde diese Aenderung nie
+	// geflusht. `flushPendingVersandSave` bleibt der Waechter gegen
+	// unnoetige PUTs (No-Op bei unveraendertem Snapshot), daher unkritisch,
+	// dass auch andere Klicks im Subtree diesen Handler ausloesen.
+	async function handleVersandCommit(): Promise<void> {
+		if (!versandHydrated) return;
+		// Fix-Loop 2 (F003, Adversary MEDIUM): current/before/Diff-Check/Rollback
+		// KOMPLETT innerhalb des enqueueten fn — identisches Prinzip wie
+		// handleCorridorCommit (s. dortiger Kommentar): `lastPersistedVersandSnapshot`
+		// ist zur tatsaechlichen Ausfuehrungszeit bereits durch einen zuvor in der
+		// Queue gelaufenen, erfolgreichen Edit aufgefrischt — ein hier erst
+		// gelesenes `before` faellt bei einem Fehlschlag daher korrekt nur auf
+		// den Stand NACH diesem vorherigen Edit zurueck.
+		const updated = await hubPutQueue.enqueue(async () => {
+			const current = currentVersandSnapshot();
+			const before = lastPersistedVersandSnapshot ?? current;
+			const payload = flushPendingVersandSave(currentPreset, current, lastPersistedVersandSnapshot);
+			if (!payload) return null;
+			try {
+				const result = await api.put<ComparePreset>(payload.url, payload.body);
+				lastPersistedVersandSnapshot = current;
+				return result;
+			} catch (e) {
+				console.error('[CompareTabs] Versand-Persistenz fehlgeschlagen, Rollback:', e);
+				wizardState.sendTelegram = before.sendTelegram;
+				wizardState.sendSms = before.sendSms;
+				wizardState.morningEnabled = before.morningEnabled;
+				wizardState.morningTime = before.morningTime;
+				wizardState.eveningEnabled = before.eveningEnabled;
+				wizardState.eveningTime = before.eveningTime;
+				wizardState.endDate = before.endDate;
+				wizardState.alertCooldownMinutes = before.alertCooldownMinutes;
+				wizardState.alertQuietFrom = before.alertQuietFrom;
+				wizardState.alertQuietTo = before.alertQuietTo;
+				return null;
+			}
+		});
+		if (updated) currentPreset = updated;
 	}
 
 	const idealRanges = $derived(
@@ -388,21 +513,18 @@
 			// Fix-Loop 3 (F007, Adversary CRITICAL): Payload aus currentPreset
 			// bauen (nicht der eingefrorenen preset-Prop) und die Baseline nach
 			// Erfolg auffrischen — identisches Muster wie persistPickedIds/
-			// handleCorridorCommit (F005), da dies der dritte, vorbestehende
-			// PUT-Pfad im selben Komponenten-Scope ist.
-			const { url, body } = buildToggleActivePutPayload(currentPreset, next, previousSchedule);
-			currentPreset = await api.put<ComparePreset>(url, body);
+			// handleCorridorCommit (F005), da dies einer von mehreren
+			// PUT-Pfaden im selben Komponenten-Scope ist.
+			// Fix-Loop 1 (F002): Payload-Bau innerhalb des enqueueten fn, damit
+			// currentPreset erst zur Ausfuehrungszeit gelesen wird — verhindert
+			// den Race mit handleVersandCommit im selben Versand-Tab.
+			currentPreset = await hubPutQueue.enqueue(async () => {
+				const { url, body } = buildToggleActivePutPayload(currentPreset, next, previousSchedule);
+				return api.put<ComparePreset>(url, body);
+			});
 			localSchedule = next;
 		} catch (e) {
 			console.error('[CompareTabs] toggleActive failed:', e);
-		}
-	}
-
-	// Issue #1229 — Versand-Tab-Edit-Stift: kein Inline-Edit, echter Absprung in
-	// den Editor (CHub_EditIcon, JSX Z.428-434 hat bewusst keinen In-Hub-Handler).
-	function goToEditVersand(): void {
-		if (typeof window !== 'undefined') {
-			window.location.href = `/compare/${preset.id}/edit?tab=versand`;
 		}
 	}
 </script>
@@ -607,102 +729,59 @@
 
 	{#if activeTab === 'versand'}
 		<div class="tab-panel" data-testid="compare-detail-panel-versand">
-			<div class="versand-grid">
-				<!-- Linke Spalte -->
-				<div class="versand-left">
-					<!-- Briefing-Zeiten (Issue #1229: ersetzt "Rhythmus & Vorausschau") -->
-					<Card padding={20}>
-						<Eyebrow>Briefing-Zeiten</Eyebrow>
-						<DetailRow label="Briefings" value={presetBriefingTimesLabel(preset)}>
-							{#snippet right()}
-								<button
-									type="button"
-									title="Bearbeiten"
-									data-testid="compare-versand-edit-briefings"
-									onclick={goToEditVersand}
-									style="width: 30px; height: 30px; border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-2); background: transparent; color: var(--g-ink-3); cursor: pointer; display: inline-flex; align-items: center; justify-content: center"
-								>
-									<PencilIcon size={13} />
-								</button>
-							{/snippet}
-						</DetailRow>
-						<DetailRow label="Nächster Versand" value={formatNextSend(nextSend)} divider="none" />
-					</Card>
-
-					<!-- Kanäle -->
-					<Card padding={20} class="channel-card">
-						<Eyebrow>Kanäle</Eyebrow>
-						<div class="channel-row">
-							<Dot tone={emailConnected ? 'good' : 'neutral'} />
-							<span class="channel-name">Email</span>
-							<span class="channel-status">{emailConnected ? 'verifiziert' : 'nicht verbunden'}</span>
-							<Switch checked={emailConnected} disabled={true} size="sm" aria-label="Email-Kanal" />
-						</div>
-						<div class="channel-row">
-							<Dot tone={telegramConnected ? 'good' : 'neutral'} />
-							<span class="channel-name">Telegram</span>
-							<span class="channel-status">{telegramConnected ? 'verbunden' : 'nicht verbunden'}</span>
-							<Switch checked={telegramConnected} disabled={true} size="sm" aria-label="Telegram-Kanal" />
-						</div>
-						<div class="channel-row">
-							<Dot tone={smsConnected ? 'good' : 'neutral'} />
-							<span class="channel-name">SMS</span>
-							<span class="channel-status">{smsConnected ? userProfile?.sms_to : 'nicht verbunden'}</span>
-							<Switch checked={smsConnected} disabled={true} size="sm" aria-label="SMS-Kanal" />
-						</div>
-					</Card>
+			{#if versandHydrated}
+				<div
+					class="hub-versand-wrap"
+					onchangecapture={handleVersandCommit}
+					onfocusout={handleVersandCommit}
+					onclick={handleVersandCommit}
+				>
+					<VersandTab context="vergleich" wiz={wizardState} activation={hubActivationCard} />
 				</div>
-
-				<!-- Rechte Spalte -->
-				<div class="versand-right">
-					<Card padding={20}>
-						<Eyebrow>Aktivierung</Eyebrow>
-						{#if localSchedule !== 'manual' && preset.name && preset.location_ids.length > 0}
-							<div class="activation-status">
-								<Dot tone="good" />
-								<span class="activation-label">Aktiv</span>
-							</div>
-							<p class="activation-desc">Läuft automatisch</p>
-							<Btn variant="quiet" size="sm" onclick={handleToggleActive}>Pausieren</Btn>
-						{:else if !preset.name || preset.location_ids.length === 0}
-							<div class="activation-status">
-								<Dot tone="neutral" />
-								<span class="activation-label">Entwurf</span>
-							</div>
-							<p class="activation-desc">Noch nicht aktiv</p>
-							<Btn variant="primary" size="sm" onclick={handleToggleActive}>Aktivieren</Btn>
-						{:else}
-							<div class="activation-status">
-								<Dot tone="neutral" />
-								<span class="activation-label">Pausiert</span>
-							</div>
-							<Btn variant="primary" size="sm" onclick={handleToggleActive}>Aktivieren</Btn>
-						{/if}
-					</Card>
-
-					<!-- Test-Briefing senden -->
-					{#if sendQueued}
-						<p class="send-success" data-testid="compare-send-success-versand">
-							Briefing wurde zur Zustellung vorgemerkt.
-						</p>
-					{:else}
-						<Btn
-							variant="quiet"
-							size="sm"
-							disabled={sendLoading}
-							onclick={handleSend}
-							data-testid="compare-send-btn-versand"
-						>
-							{sendLoading ? 'Wird gesendet…' : 'Test-Briefing jetzt senden'}
-						</Btn>
-					{/if}
-					{#if sendError !== null}
-						<p class="send-error">{sendError}</p>
-					{/if}
-				</div>
-			</div>
+			{/if}
 		</div>
 	{/if}
+
+	{#snippet hubActivationCard()}
+		{@const banner = hubActivationBanner(status)}
+		<Card padding={20} style="border-left: 3px solid {banner.border}" data-testid="compare-hub-activation-card">
+			<div style="display: flex; align-items: center; gap: 9px; margin-bottom: 10px">
+				<Dot tone={banner.dotTone} size={8} />
+				<span style="font-size: 15px; font-weight: 600">{banner.statusLabel}</span>
+			</div>
+			<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.55; margin-bottom: 16px">{banner.text}</div>
+			<Btn
+				variant={status === 'active' ? 'ghost' : 'primary'}
+				size="md"
+				style="width: 100%; justify-content: center"
+				data-testid="compare-hub-activation-cta"
+				onclick={handleToggleActive}
+			>
+				{banner.cta}
+			</Btn>
+			<div style="margin-top: 10px">
+				{#if sendQueued}
+					<p class="send-success" data-testid="compare-send-success-versand">
+						Briefing wurde zur Zustellung vorgemerkt.
+					</p>
+				{:else}
+					<Btn
+						variant="quiet"
+						size="sm"
+						style="width: 100%; justify-content: center"
+						disabled={sendLoading}
+						onclick={handleSend}
+						data-testid="compare-hub-activation-testsend"
+					>
+						{sendLoading ? 'Wird gesendet…' : 'Test-Briefing jetzt senden'}
+					</Btn>
+				{/if}
+				{#if sendError !== null}
+					<p class="send-error">{sendError}</p>
+				{/if}
+			</div>
+		</Card>
+	{/snippet}
 
 	{#if activeTab === 'vorschau'}
 		<div data-testid="compare-detail-panel-vorschau">
@@ -994,69 +1073,8 @@
 		margin: 0 0 0.75rem;
 	}
 
-	/* ── Issue #527 — Versand-Tab ────────────────────────────────────────────── */
-	.versand-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1.5rem;
-		align-items: start;
-	}
-	.versand-left {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-	.versand-right {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.channel-card {
-		margin-top: 0;
-	}
-	.channel-row {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 0.5rem 0;
-		border-bottom: 1px dashed var(--g-rule-soft);
-	}
-	.channel-row:last-child {
-		border-bottom: none;
-	}
-	.channel-name {
-		flex: 1;
-		font-size: 0.875rem;
-		font-weight: 500;
-	}
-	.channel-status {
-		font-size: 0.75rem;
-		color: var(--g-ink-3);
-		font-family: var(--g-font-mono);
-	}
-
-	.activation-status {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		margin-bottom: 0.5rem;
-	}
-	.activation-label {
-		font-weight: 600;
-		font-size: 0.9375rem;
-	}
-	.activation-desc {
-		font-size: 0.875rem;
-		color: var(--g-ink-3);
-		margin: 0 0 0.75rem;
-	}
-
 	@media (max-width: 899px) {
 		.summary-grid {
-			grid-template-columns: 1fr;
-		}
-		.versand-grid {
 			grid-template-columns: 1fr;
 		}
 	}

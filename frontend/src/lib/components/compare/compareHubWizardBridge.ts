@@ -17,6 +17,7 @@ import type { ActivityProfile, ChannelLayouts, ComparePreset, Corridor } from '.
 import type { IdealRange } from './compareMetricDefs.ts';
 import { buildComparePresetSavePayload } from './compareEditorSave.ts';
 import { rehydrateActiveMetrics } from './compareEditorLoad.ts';
+import type { CompareStatus } from './subscriptionHelpers.ts';
 
 /** Plain-Objekt mit GENAU den 6 Feldern, die CorridorEditor.svelte im
  * vergleich-Kontext aus dem Wizard-State liest. Die Bridge-Komponente
@@ -60,6 +61,19 @@ export interface HubEdit {
 	idealRanges?: Record<string, IdealRange>;
 	activeMetricKeys?: string[];
 	metricAlertLevels?: Record<string, string>;
+	// Issue #1256 Scheibe 7 (AC-35/AC-36): Versand-Felder, analog Round-Trip-
+	// Prinzip — undefined = unangetastet, endDate zusaetzlich null-faehig
+	// (Loesch-Sentinel "bis auf Weiteres", #1232-Kontext).
+	sendTelegram?: boolean;
+	sendSms?: boolean;
+	morningEnabled?: boolean;
+	morningTime?: string;
+	eveningEnabled?: boolean;
+	eveningTime?: string;
+	endDate?: string | null;
+	alertCooldownMinutes?: number;
+	alertQuietFrom?: string;
+	alertQuietTo?: string;
 }
 
 /**
@@ -82,7 +96,20 @@ export function buildHubPutPayload(
 		activeMetricKeys: edit.activeMetricKeys ?? (displayConfig.active_metrics as string[] | undefined),
 		metricAlertLevels:
 			edit.metricAlertLevels ?? (displayConfig.metric_alert_levels as Record<string, string> | undefined),
-		corridors: edit.corridors ?? preset.corridors
+		corridors: edit.corridors ?? preset.corridors,
+		// Issue #1256 Scheibe 7: Versand-Felder 1:1 durchreichen — undefined
+		// bleibt undefined (Round-Trip aus `preset` via buildComparePresetSavePayload),
+		// endDate: null wird NICHT auf undefined gemappt (Loesch-Sentinel, #1232).
+		sendTelegram: edit.sendTelegram,
+		sendSms: edit.sendSms,
+		morningEnabled: edit.morningEnabled,
+		morningTime: edit.morningTime,
+		eveningEnabled: edit.eveningEnabled,
+		eveningTime: edit.eveningTime,
+		endDate: edit.endDate,
+		alertCooldownMinutes: edit.alertCooldownMinutes,
+		alertQuietFrom: edit.alertQuietFrom,
+		alertQuietTo: edit.alertQuietTo
 	});
 }
 
@@ -163,5 +190,143 @@ export function buildToggleActivePutPayload(
 	return {
 		url: `/api/compare/presets/${preset.id}`,
 		body: { ...preset, schedule, previous_schedule: previousSchedule }
+	};
+}
+
+/** Plain-Snapshot der 10 persistenzrelevanten Versand-Felder (OHNE sendEmail —
+ * `ComparePreset` kennt kein `send_email`-Feld, s. `hydrateVersandFieldsFromPreset`). */
+export interface VersandSnapshot {
+	sendTelegram: boolean;
+	sendSms: boolean;
+	morningEnabled: boolean;
+	morningTime: string;
+	eveningEnabled: boolean;
+	eveningTime: string;
+	endDate: string | null;
+	alertCooldownMinutes?: number;
+	alertQuietFrom?: string;
+	alertQuietTo?: string;
+}
+
+/**
+ * Issue #1256 Scheibe 7 (AC-35/36): Hydration der Versand-Felder, die der
+ * eingebettete `VersandTab context="vergleich"` im Hub aus `wizardState.*`
+ * liest. Defaults identisch zur Edit-Routen-Hydration
+ * (routes/compare/[id]/edit/+page.svelte:44-61). `sendEmail` ist IMMER true —
+ * ComparePreset hat kein `send_email`-Feld (vorbestehende Luecke, Known
+ * Limitation der S7-Freigabe).
+ */
+export function hydrateVersandFieldsFromPreset(preset: ComparePreset): VersandSnapshot & { sendEmail: true } {
+	return {
+		sendEmail: true,
+		sendTelegram: preset.send_telegram ?? false,
+		sendSms: preset.send_sms ?? false,
+		morningEnabled: preset.morning_enabled ?? true,
+		morningTime: (preset.morning_time ?? '06:00').slice(0, 5),
+		eveningEnabled: preset.evening_enabled ?? false,
+		eveningTime: (preset.evening_time ?? '18:00').slice(0, 5),
+		endDate: preset.end_date ?? null,
+		alertCooldownMinutes: preset.alert_cooldown_minutes ?? undefined,
+		alertQuietFrom: preset.alert_quiet_from ?? undefined,
+		alertQuietTo: preset.alert_quiet_to ?? undefined
+	};
+}
+
+/**
+ * Issue #1256 Scheibe 7 (AC-35/36): Event-diskretisierte PUT-Persistenz fuer
+ * den Hub-Versand-Tab, analog `flushPendingCorridorSave` — liefert `null`,
+ * wenn sich der Versand-Snapshot seit dem letzten persistierten Stand NICHT
+ * veraendert hat (Waechter gegen unnoetige PUTs, #1234-Kontext), sonst den
+ * fertigen PUT-Payload via `buildHubPutPayload` (Read-Modify-Write: alle
+ * nicht-Versand-Felder unveraendert aus `preset`, #1257-Kontext).
+ */
+export function flushPendingVersandSave(
+	preset: ComparePreset,
+	current: VersandSnapshot,
+	before: VersandSnapshot | null
+): { url: string; body: ComparePreset } | null {
+	const baseline = before ?? current;
+	if (JSON.stringify(current) === JSON.stringify(baseline)) return null;
+	return buildHubPutPayload(preset, {
+		sendTelegram: current.sendTelegram,
+		sendSms: current.sendSms,
+		morningEnabled: current.morningEnabled,
+		morningTime: current.morningTime,
+		eveningEnabled: current.eveningEnabled,
+		eveningTime: current.eveningTime,
+		endDate: current.endDate,
+		alertCooldownMinutes: current.alertCooldownMinutes,
+		alertQuietFrom: current.alertQuietFrom,
+		alertQuietTo: current.alertQuietTo
+	});
+}
+
+/** Modell der Hub-Aktivierungs-Karte (Soll: `screen-compare-detail.jsx:273-277`
+ * + `:313-325`). Die JSX-active-Copy "im konfigurierten Rhythmus" ist eine
+ * timeWindow-Stale-Spur (Spec § Umsetzungsregel) und wird NICHT mitkopiert —
+ * ersetzt durch "zu den konfigurierten Zeiten". */
+export function hubActivationBanner(status: CompareStatus): {
+	statusLabel: string;
+	text: string;
+	cta: string;
+	border: string;
+	dotTone: 'good' | 'neutral';
+} {
+	if (status === 'active') {
+		return {
+			statusLabel: 'Aktiv',
+			text: 'Läuft automatisch — unbegrenzt, bis du pausierst. Das Briefing geht zu den konfigurierten Zeiten in die Kanäle.',
+			cta: 'Pausieren',
+			border: 'var(--g-good)',
+			dotTone: 'good'
+		};
+	}
+	if (status === 'paused') {
+		return {
+			statusLabel: 'Pausiert',
+			text: 'Pausiert. Es geht aktuell kein Briefing raus.',
+			cta: 'Aktivieren',
+			border: 'var(--g-rule)',
+			dotTone: 'neutral'
+		};
+	}
+	return {
+		statusLabel: 'Entwurf',
+		text: 'Noch nicht aktiv. Sobald Orte, Idealwerte und mindestens ein Kanal stehen, kannst du den Vergleich aktivieren.',
+		cta: 'Aktivieren',
+		border: 'var(--g-accent)',
+		dotTone: 'neutral'
+	};
+}
+
+export interface PutQueue {
+	enqueue<T>(fn: () => Promise<T>): Promise<T>;
+}
+
+/**
+ * Issue #1256 Scheibe 7 Fix-Loop 1 (F002, Adversary CRITICAL): serialisiert
+ * ALLE Hub-PUT-Pfade (Orte/Idealwerte/Versand/Toggle-Active) auf EINE
+ * gemeinsame Kette, damit zwei schnell aufeinanderfolgende Nutzeraktionen
+ * (z. B. Versand-Aenderung + Aktivieren-Klick im selben Versand-Tab) nie
+ * zwei parallele, unsynchronisierte `api.put()`-Aufrufe auf dieselbe
+ * Ressource ausloesen — der zweite wuerde sonst mit einer veralteten
+ * `currentPreset`-Baseline die Aenderung des ersten still ueberschreiben.
+ * Payload-Bau MUSS innerhalb des enqueueten `fn` passieren (nicht davor) —
+ * nur so liest ein zweiter, spaeter ausgefuehrter Aufruf den frischen
+ * `currentPreset`-Stand aus der PUT-Response des ersten. Ein Fehler in `fn`
+ * bricht die Kette NICHT ab (die Kette resettet in jedem Fall auf einen
+ * aufgeloesten Zustand), sodass nachfolgende Aufrufe trotzdem laufen.
+ */
+export function createPutQueue(): PutQueue {
+	let tail: Promise<void> = Promise.resolve();
+	return {
+		enqueue<T>(fn: () => Promise<T>): Promise<T> {
+			const run = tail.then(fn);
+			tail = run.then(
+				() => undefined,
+				() => undefined
+			);
+			return run;
+		}
 	};
 }
