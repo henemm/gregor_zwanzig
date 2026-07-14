@@ -18,7 +18,13 @@ import { test, expect, type Page, type Request, type APIRequestContext } from '@
 
 const TRIP_PREFIX = 'e2e-1234';
 const HORIZONS_ALL = { today: true, tomorrow: true, day_after: true };
-const METRIC_IDS = ['temperature', 'wind', 'precipitation', 'wind_gust', 'uv_index'];
+// Fix-Loop 3: 'wind_gust' existierte nicht im Metrik-Katalog (echte ID: 'gust',
+// src/app/metric_catalog.py:155) — die Toggle-Abwahl-Schleife in AC-4 konnte
+// diese unbekannte ID nie abwählen, wodurch der Test nie sein eigenes
+// Soll-Ziel (0 aktive Metriken) erreichte. Betrifft NUR display_config.metrics
+// (Weather-Tab-Katalog); die Alarm-Regel-Metrik 'wind_gust' weiter unten ist
+// ein separates Enum (AlertMetric, src/app/models.py:785) und bleibt korrekt.
+const METRIC_IDS = ['temperature', 'wind', 'precipitation', 'gust', 'uv_index'];
 
 function tripId(suffix: string): string {
 	return `${TRIP_PREFIX}-${suffix}`;
@@ -193,6 +199,76 @@ test.describe('Issue #1234: Auto-Save-Hydration-Gate im Inhalt-Tab', () => {
 
 			const trip = await fetchTrip(request, id);
 			expect(activeMetricIds(trip.display_config?.metrics)).toHaveLength(0);
+		} finally {
+			await deleteTrip(request, id);
+		}
+	});
+
+	// AC-5: normale Änderungen (Metrik zuschalten, Schwellwert ändern) speichern
+	// weiterhin automatisch — das Absichts-Gate darf den legitimen Auto-Save
+	// nicht mit-blockieren, es darf nur den ungewollten Leerungs-Autosave
+	// verhindern (AC-1/AC-2/AC-6).
+	test('AC-5: Metrik zuschalten UND Schwellwert ändern speichern automatisch, bleiben nach Reload erhalten', async ({
+		page,
+		request
+	}) => {
+		const id = tripId('ac5');
+		// 'rain_probability' bewusst NICHT in der Seed-Auswahl — wird im Test
+		// zugeschaltet. 'wind' ist aktiv und threshold-fähig.
+		await createTrip(request, id, { metrics: seedMetrics(METRIC_IDS) });
+		const puts = collectTripPuts(page, id);
+		try {
+			await page.goto(`/trips/${id}`);
+			await page.getByTestId('trip-detail-tab-weather').click();
+			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
+
+			// 1) Bisher inaktive Metrik zuschalten.
+			const rainToggle = page
+				.locator('[data-testid="wm2-grundauswahl"] .toggle-btn')
+				.filter({ hasText: 'Regenwahrscheinlichkeit' });
+			await expect(rainToggle).toBeVisible();
+			await expect(rainToggle).not.toHaveClass(/\bon\b/);
+			await rainToggle.click();
+
+			const [configPutResponse] = await Promise.all([
+				page.waitForResponse(
+					(r) => r.url().includes(`/api/trips/${id}/weather-config`) && r.request().method() === 'PUT',
+					{ timeout: 10_000 }
+				)
+			]);
+			expect(configPutResponse.ok()).toBeTruthy();
+
+			// 2) Schwellwert einer threshold-fähigen, bereits aktiven Metrik ändern.
+			const windRobustLevel = page.getByTestId('threshold-level-wind-robust');
+			await expect(windRobustLevel).toBeVisible();
+			const [thresholdPutResponse] = await Promise.all([
+				page.waitForResponse(
+					(r) => r.url().includes(`/api/trips/${id}/weather-config`) && r.request().method() === 'PUT',
+					{ timeout: 10_000 }
+				),
+				windRobustLevel.click()
+			]);
+			expect(thresholdPutResponse.ok()).toBeTruthy();
+
+			const configPuts = puts.filter((r) => r.url().includes('/weather-config'));
+			expect(configPuts.length).toBeGreaterThanOrEqual(2);
+			const lastBody = configPuts[configPuts.length - 1].postDataJSON() as {
+				metrics?: Array<{ metric_id: string; enabled: boolean; sms_threshold?: number }>;
+			};
+			expect(activeMetricIds(lastBody.metrics as never)).toContain('rain_probability');
+			const windEntry = (lastBody.metrics ?? []).find((m) => m.metric_id === 'wind');
+			expect(windEntry?.sms_threshold).toBe(30);
+
+			await page.reload();
+			await page.getByTestId('trip-detail-tab-weather').click();
+			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
+
+			const trip = await fetchTrip(request, id);
+			expect(activeMetricIds(trip.display_config?.metrics)).toContain('rain_probability');
+			const persistedWind = (trip.display_config?.metrics ?? []).find(
+				(m: { metric_id: string }) => m.metric_id === 'wind'
+			);
+			expect(persistedWind?.sms_threshold).toBe(30);
 		} finally {
 			await deleteTrip(request, id);
 		}
