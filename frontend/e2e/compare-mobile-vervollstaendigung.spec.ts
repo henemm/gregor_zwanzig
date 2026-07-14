@@ -308,3 +308,49 @@ test.describe('Issue #1256 Scheibe 8 (AC-24): mobiler Editor — Lock-Toast + fl
 		await expect(cta).toBeVisible({ timeout: 5_000 });
 	});
 });
+
+// ── Issue #1256 Scheibe 8b (Rest-Inventur R1, AC-1): Hub-Vorschau-Kanal-
+// Umschalter — war ein No-Op (onchange statt onChange, Svelte-5-Props
+// case-sensitiv). Desktop-Viewport reicht laut Spec (Bug ist viewport-
+// unabhängig). Nur lesend — kein Schreibpfad betroffen.
+test.describe('Issue #1256 Scheibe 8b: Hub-Vorschau-Kanal-Umschalter (AC-1)', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.setViewportSize({ width: 1280, height: 900 });
+	});
+
+	test('AC-1: Klick auf "SMS" wechselt sichtbar den Vorschau-Kanal, Klick zurück auf "Email" zeigt wieder den E-Mail-Zweig', async ({
+		page
+	}) => {
+		const suffix = Date.now();
+		const locId = await createLocation(page, `E2E S8b Ort ${suffix}`, 47.22, 11.12);
+		const name = `E2E S8b Kanalwechsel ${suffix}`;
+		// createPresetWithLocation setzt nur `empfaenger: ['urlauber@example.com']`
+		// (E-Mail) — SMS ist für dieses Preset NICHT konfiguriert, deckt also
+		// zugleich den "Kanal nicht konfiguriert"-Hinweis (AC-3) mit ab.
+		const id = await createPresetWithLocation(page, name, 'daily', locId);
+
+		await page.goto(`/compare/${id}?tab=vorschau`);
+		await page.waitForLoadState('networkidle');
+		await page.locator('[data-testid="compare-detail-tab-vorschau"]:visible').click();
+
+		const panel = page.locator('[data-testid="compare-detail-panel-vorschau"]:visible');
+		await expect(panel).toBeVisible({ timeout: 10_000 });
+
+		const smsBtn = panel.getByRole('button', { name: 'SMS' });
+		await expect(smsBtn).toBeVisible({ timeout: 10_000 });
+		await smsBtn.click();
+
+		await expect(panel.locator('[data-testid="compare-preview-sms-hint"]')).toBeVisible({ timeout: 5_000 });
+		// AC-3: SMS ist unkonfiguriert, der Umschalter zeigt den Hinweis daneben.
+		await expect(panel.locator('[data-testid="compare-preview-channel-not-configured"]')).toBeVisible({
+			timeout: 5_000
+		});
+
+		const emailBtn = panel.getByRole('button', { name: 'Email' });
+		await emailBtn.click();
+
+		await expect(panel.locator('[data-testid="compare-preview-sms-hint"]')).toHaveCount(0);
+		await expect(panel.locator('[data-testid="compare-preview-channel-not-configured"]')).toHaveCount(0);
+		await expect(panel.locator('[data-testid="compare-preview-iframe"]')).toBeVisible({ timeout: 15_000 });
+	});
+});

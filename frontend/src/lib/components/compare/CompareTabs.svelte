@@ -25,6 +25,7 @@
 		formatLastSent,
 		formatNextSend,
 		channelNamesLabel,
+		presetChannels,
 		STATUS_MAP
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
@@ -469,7 +470,13 @@
 	const channels = ['email', 'telegram', 'sms'];
 
 	// ── Vorschau-Tab (Issue #514, #582) ─────────────────────────────────────────
-	let previewChannel = $state<'email' | 'sms'>('email');
+	let previewChannel = $state<'email' | 'sms' | 'telegram'>('email');
+	// Issue #1256 S8b (AC-2, Rest-Inventur R1): Kanal-Liste fuer den Umschalter
+	// kommt aus der Preset-Konfiguration statt hart ['email','sms'] — dieselbe
+	// Ableitungsquelle wie channelNamesLabel (S3 AC-6), nur auf die von
+	// CompareChannelSwitch erwarteten Kleinschreib-Keys projiziert (kein neues
+	// Ableitungs-Duplikat).
+	const previewConfiguredChannels = $derived(presetChannels(preset).map((c) => c.toLowerCase()));
 	let emailView = $state('desktop');
 	let previewHtml = $state('');
 	let previewLoading = $state(false);
@@ -940,8 +947,8 @@
 			<div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap">
 				<CompareChannelSwitch
 					value={previewChannel}
-					onchange={(v: string) => (previewChannel = v as 'email' | 'sms')}
-					channels={['email', 'sms']}
+					onChange={(v: string) => (previewChannel = v as 'email' | 'sms' | 'telegram')}
+					channels={previewConfiguredChannels}
 				/>
 				{#if previewChannel === 'email'}
 					<div style="display: inline-flex; background: var(--g-paper-deep); border: 1px solid var(--g-rule); border-radius: var(--g-r-2); padding: 3px; gap: 2px; margin-left: 12px">
@@ -951,6 +958,14 @@
 							</button>
 						{/each}
 					</div>
+				{/if}
+				{#if !previewConfiguredChannels.includes(previewChannel)}
+					<!-- AC-3 (Soll: screen-compare-detail.jsx:365-369): gewählter Kanal ist
+					     im Preset nicht konfiguriert — Beispiel-Render bleibt sichtbar,
+					     Hinweis läuft neben dem Umschalter statt die Render-Fläche zu leeren. -->
+					<span class="mono" data-testid="compare-preview-channel-not-configured" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.04em">
+						Kanal nicht konfiguriert · Beispiel-Render
+					</span>
 				{/if}
 			</div>
 
@@ -976,6 +991,11 @@
 				{#if previewChannel === 'sms'}
 					<p style="font-size: 0.875rem; color: var(--g-ink-3); margin: 0.5rem 0 0; font-style: italic" data-testid="compare-preview-sms-hint">
 						SMS-Vorschau ist noch nicht verfügbar.
+					</p>
+				{/if}
+				{#if previewChannel === 'telegram'}
+					<p style="font-size: 0.875rem; color: var(--g-ink-3); margin: 0.5rem 0 0; font-style: italic" data-testid="compare-preview-telegram-hint">
+						Telegram-Vorschau ist noch nicht verfügbar.
 					</p>
 				{/if}
 
