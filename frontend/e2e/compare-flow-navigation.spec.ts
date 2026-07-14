@@ -109,6 +109,41 @@ async function createPresetWithLocation(
 	return id;
 }
 
+// Fix-Loop 1 (F001): Preset MIT bereits gesetzten channel_layouts anlegen —
+// simuliert einen bestehenden Vergleich, dessen Layout-Tab schon einmal
+// gespeichert wurde. Metrik-IDs müssen nicht im aktuellen Katalog existieren
+// (dieser Test besucht den Layout-Tab absichtlich NICHT — es geht nur darum,
+// dass display_config.channel_layouts server-seitig bereits einen Wert trägt).
+async function createPresetWithChannelLayouts(
+	page: Page,
+	name: string,
+	locationId: string
+): Promise<string> {
+	const res = await page.request.post('/api/compare/presets', {
+		data: {
+			name,
+			location_ids: [locationId],
+			schedule: 'daily',
+			profil: 'wandern',
+			hour_from: 7,
+			hour_to: 16,
+			empfaenger: ['urlauber@example.com'],
+			display_config: {
+				channel_layouts: {
+					email: [{ metric_id: 'wind_max_kmh', enabled: true, bucket: 'primary', order: 0 }],
+					telegram: [{ metric_id: 'wind_max_kmh', enabled: true, bucket: 'primary', order: 0 }],
+					sms: [{ metric_id: 'wind_max_kmh', enabled: true, bucket: 'primary', order: 0 }]
+				}
+			}
+		}
+	});
+	expect(res.ok(), 'Preset-Anlage (mit channel_layouts) fehlgeschlagen: ' + res.status()).toBeTruthy();
+	const body = await res.json();
+	const id = body.id as string;
+	createdIds.push(id);
+	return id;
+}
+
 test.describe('Issue #1256 Scheibe 2: Compare-Fluss Klickpfade Desktop (AC-25–AC-29)', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize({ width: 1280, height: 900 });
@@ -459,5 +494,198 @@ test.describe('Issue #1256 Scheibe 3: Hub-Header-Kebab Lifecycle (AC-5, KL-7, AC
 		// /compare/{id}/edit) — Klick zurück auf "Übersicht" muss funktionieren,
 		// ohne dass die Seite zwischenzeitlich neu geladen wurde.
 		await expect(page).not.toHaveURL(/\/edit/);
+	});
+});
+
+// ── Scheibe 4 (AC-8, AC-9, AC-10): Editor-Tab "Layout" = geteilter
+// LayoutTab-Organism (context="vergleich") ───────────────────────────────
+//
+// WICHTIGER IST-BEFUND (s. Bericht + compare_editor_layout_tab_wiring.test.ts):
+// der Organism ist HEUTE bereits ueber die Step4Layout-Huelle intern
+// gemountet (Step4Layout.svelte:293-338 rendert <LayoutTab context="vergleich">
+// + <LTComparePreview>). Auf DOM-Ebene sind die folgenden drei Tests daher
+// schon VOR Phase 6 grün erwartet (Regressionsanker) — sie sichern ab, dass
+// beim Entfernen der Step4Layout-Huelle (Scheibe 4, CompareEditor.svelte
+// mountet LayoutTab direkt) die Orte-/Kanal-Datenanbindung erhalten bleibt.
+// Der eigentliche RED-Befund liegt auf Quelltext-Ebene (Komponenten-Identitaet
+// CompareEditor.svelte -> Step4Layout statt LayoutTab), s. Kern-Test-Datei.
+test.describe('Issue #1256 Scheibe 4: Editor-Layout-Tab = geteilter LayoutTab-Organism (AC-8, AC-9, AC-10)', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.setViewportSize({ width: 1280, height: 900 });
+	});
+
+	async function reachLayoutTabWithTwoLocations(page: Page, namePrefix: string): Promise<void> {
+		await page.goto('/compare');
+		await page.waitForLoadState('networkidle');
+
+		const newBtn = page.locator('a:has-text("Neuer Vergleich"):visible');
+		await newBtn.click();
+		await expect(page).toHaveURL(/\/compare\/new$/, { timeout: 10_000 });
+
+		const uniqueName = `${namePrefix} ${Date.now()}`;
+		await page.locator('[data-testid="compare-editor-name"]:visible').fill(uniqueName);
+		await page.locator('[data-testid="compare-editor-continue-orte"]:visible').click();
+
+		// Zwei Orte per Smart-Import (deterministisch, Muster AC-26/29 oben).
+		const uniqueSuffix = Date.now();
+		const coords: Array<[string, string, string]> = [
+			['47.2692', '11.4041', `${namePrefix}-Ort-A ${uniqueSuffix}`],
+			['47.1015', '11.2958', `${namePrefix}-Ort-B ${uniqueSuffix}`]
+		];
+		for (let i = 0; i < coords.length; i++) {
+			const [lat, lon, locName] = coords[i];
+			const importInput = page.locator('[data-testid="compare-step2-smart-import-input"]:visible');
+			await importInput.fill(`${lat}, ${lon}`);
+			await page.locator('[data-testid="compare-step2-resolve-btn"]:visible').click();
+
+			const nameInput = page.locator('[data-testid="compare-step2-name-input"]:visible');
+			await expect(nameInput).toBeVisible({ timeout: 15_000 });
+			await nameInput.fill(locName);
+
+			const addBtn = page.locator('button:has-text("Zum Vergleich hinzufügen"):visible');
+			await expect(addBtn).toBeVisible({ timeout: 15_000 });
+			await addBtn.click();
+
+			await expect(
+				page
+					.locator('[data-testid="compare-step2-picked-list"]')
+					.locator('[data-testid^="compare-step2-picked-item-"]')
+			).toHaveCount(i + 1, { timeout: 10_000 });
+		}
+
+		const pickedItemTestIds = await page
+			.locator('[data-testid="compare-step2-picked-list"]')
+			.locator('[data-testid^="compare-step2-picked-item-"]')
+			.evaluateAll((els) => els.map((el) => el.getAttribute('data-testid')));
+		for (const tid of pickedItemTestIds) {
+			const locId = tid?.replace('compare-step2-picked-item-', '');
+			if (locId) createdLocationIds.push(locId);
+		}
+
+		const idealwerteTab = page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible');
+		await idealwerteTab.click();
+		await expect(idealwerteTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
+
+		const layoutTab = page.locator('[data-testid="compare-editor-tab-layout"]:visible');
+		await layoutTab.click();
+		await expect(layoutTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
+	}
+
+	// ── AC-8: geteilter Organism sichtbar (Regressionsanker, s. Kommentar oben) ──
+	test('AC-8: Editor-Layout-Tab enthält den geteilten Organism mit data-context="vergleich"', async ({
+		page
+	}) => {
+		await reachLayoutTabWithTwoLocations(page, 'E2E S4 Organism');
+
+		const organism = page.locator('[data-testid="layout-tab"][data-context="vergleich"]:visible');
+		await expect(organism).toBeVisible({ timeout: 10_000 });
+	});
+
+	// ── AC-9: neutrale Spalten-Vorschau (Regressionsanker, s. Kommentar oben) ──
+	test('AC-9: Vorschau zeigt Orte als Spalten + "Kein Ranking"-Copy, keine Rang-/Score-Anzeige', async ({
+		page
+	}) => {
+		await reachLayoutTabWithTwoLocations(page, 'E2E S4 Preview');
+
+		const preview = page.locator('[data-testid="compare-step4-layout-preview"]:visible');
+		await expect(preview).toBeVisible({ timeout: 10_000 });
+		await expect(preview).toContainText('Kein Ranking');
+		// Neutralität (Constraint 1): explizit KEIN Rang-/Score-Text.
+		await expect(preview).not.toContainText(/Rang\s*\d|Score/i);
+	});
+
+	// ── AC-10: Telegram-Spalten-Rechnung (Regressionsanker, s. Kommentar oben) ──
+	test('AC-10: Telegram-Kanal zeigt die Spalten-Rechnung "Label + N Orte = X Spalten (max 8)"', async ({
+		page
+	}) => {
+		await reachLayoutTabWithTwoLocations(page, 'E2E S4 Telegram');
+
+		await page.locator('[data-testid="channel-tab-telegram"]:visible').click();
+
+		const preview = page.locator('[data-testid="compare-step4-layout-preview"]:visible');
+		// 2 gewählte Orte -> "Label + 2 Orte = 3 Spalten (max 8)".
+		await expect(preview).toContainText('Label + 2 Orte = 3 Spalten (max 8)', { timeout: 10_000 });
+	});
+});
+
+// ── Fix-Loop 1 (Adversary F001, HIGH): Zukunfts-Wächter gegen den behobenen
+// Bug ─────────────────────────────────────────────────────────────────────
+//
+// Root Cause (Code-Timing-Diff gegen HEAD 3e2c17af): der Katalog-Fetch +
+// channelLayouts-Rewrite-$effect hingen kurzzeitig an einem unbedingten
+// onMount() im Editor-Top-Level statt (wie im ursprünglichen Step4Layout.svelte)
+// am LAZY MOUNT des Layout-Tab-Inhalts. Dadurch wurde bei JEDEM Öffnen eines
+// bestehenden Vergleichs (unabhängig vom besuchten Tab) wiz.channelLayouts mit
+// einer strukturell abweichenden JSON-Fassung überschrieben → falscher
+// "Ungespeichert"-Zustand direkt beim Öffnen. Behoben: Fetch + Rewrite-Effect
+// sind jetzt an activeTab === 'layout' gekoppelt (einmalig, Start-Guard
+// ltCatalogLoadStarted) — s. compare_editor_layout_tab_wiring.test.ts für den
+// lokalen ROT→GRÜN-Beleg auf Quelltext-Ebene.
+//
+// Dieser Test läuft NUR sinnvoll gegen einen bereits deployten S4-Stand
+// (Staging hatte zum Zeitpunkt des Fix-Loops noch 3e2c17af, also weder Bug
+// noch Fix — ein ROT-Beleg gegen Staging ist hier strukturell unmöglich,
+// s. PO-Korrektur). Er ist der Zukunfts-Wächter für /e2e-verify nach dem
+// nächsten Push: grün dort bestätigt, dass das Fehlverhalten nicht live geht.
+test.describe('Issue #1256 Fix-Loop 1 (F001): Editor öffnet bestehenden Vergleich ohne falsches "Ungespeichert"', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.setViewportSize({ width: 1280, height: 900 });
+	});
+
+	test('Bestehender Vergleich mit gesetzten channel_layouts öffnet im Standard-Tab ohne Dirty-Indikator', async ({
+		page
+	}) => {
+		const suffix = Date.now();
+		const locId = await createLocation(page, `E2E FixLoop1 Ort ${suffix}`, 47.15, 11.05);
+		const name = `E2E FixLoop1 Dirty ${suffix}`;
+		const id = await createPresetWithChannelLayouts(page, name, locId);
+
+		// Standard-Tab (kein ?tab=-Query) — der Bug betraf JEDEN Tab, daher
+		// bewusst NICHT der Layout-Tab, um zu beweisen, dass der Fetch nicht
+		// mehr unbedingt bei Editor-Mount läuft.
+		await page.goto(`/compare/${id}/edit`);
+		await page.waitForLoadState('networkidle');
+
+		// Kurz warten (Katalog-Fetch-Fenster) — falls der Fetch fälschlich
+		// unbedingt liefe, hätte der channelLayouts-Rewrite-Effect in diesem
+		// Fenster bereits geschrieben.
+		await page.waitForTimeout(2_500);
+
+		const saveIndicator = page.locator('[data-testid="save-indicator"]:visible');
+		await expect(saveIndicator).toBeVisible({ timeout: 10_000 });
+		await expect(saveIndicator).not.toHaveAttribute('data-state', 'dirty');
+		await expect(saveIndicator).not.toContainText('Nicht gespeichert');
+	});
+});
+
+// ── Scheibe 4 (Hub, Aufgabenstellung 3c): Layout-Tab im Hub ─────────────
+//
+// KLÄRUNGSBEDARF (im Bericht markiert): die Spec selbst (Zeilen 214-216,
+// "Zielmodell") legt fest, dass der Hub-Layout-Tab bewusst ein reiner
+// Ansehen-/Summary-Tab OHNE Editier-Affordanzen bleibt ("Layout ist im JSX
+// ein reiner Summary-Tab") — NICHT der volle LayoutTab-Organism wie im
+// Editor. Dieser Test prüft daher Daten-Konsistenz (keine Organism-
+// Duplizierung, Panel bleibt erreichbar), NICHT Komponenten-Identität mit
+// dem Editor-Organism. Sollte der PO "denselben Organism" im Hub wörtlich
+// meinen, widerspricht das dem aktuellen Spec-Text und braucht eine
+// Spec-Klarstellung vor Phase 6 (s. Bericht).
+test.describe('Issue #1256 Scheibe 4 (Hub): Layout-Tab bleibt daten-konsistenter Summary-Tab', () => {
+	test('Hub-Layout-Tab bleibt erreichbar und rendert KEIN Organism-Duplikat (Ansehen-only laut Spec-Zielmodell)', async ({
+		page
+	}) => {
+		const suffix = Date.now();
+		const locId = await createLocation(page, `E2E S4 Hub-Ort ${suffix}`, 47.3, 11.0);
+		const name = `E2E S4 Hub-Layout ${suffix}`;
+		const id = await createPresetWithLocation(page, name, 'daily', locId);
+
+		await page.goto(`/compare/${id}?tab=layout`);
+		await page.waitForLoadState('networkidle');
+
+		const panel = page.locator('[data-testid="compare-detail-panel-layout"]:visible');
+		await expect(panel).toBeVisible({ timeout: 10_000 });
+		// Summary-Tab bleibt Ansehen-only laut Spec-Zielmodell — kein
+		// eingebetteter LayoutTab-Organism im Hub (Unterschied zu Orte/
+		// Idealwerte/Versand, die ab Scheibe 6/7 inline editierbar werden).
+		await expect(page.locator('[data-testid="layout-tab"]')).toHaveCount(0);
 	});
 });

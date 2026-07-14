@@ -10,6 +10,8 @@
 	import { Btn, Eyebrow, TopoBg } from '$lib/components/atoms';
 	import { Field, ConfirmDialog } from '$lib/components/molecules';
 	import { ACTIVITY_PROFILE_OPTIONS, toCompareProfile, type ActivityProfile, type Location, type ComparePreset } from '$lib/types';
+	import type { ChannelLayouts, Horizons, MetricPreset, WeatherConfigMetric } from '$lib/types';
+	import { HORIZONS_ALL } from '$lib/types';
 	import type { CompareWizardState } from './compareWizardState.svelte';
 	import { createSaveStatus, extractMessage } from '$lib/stores/saveStatusStore.svelte';
 	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
@@ -28,9 +30,27 @@
 	// bestehen (Aufraeumen ist Slice-6-Thema, s. Spec).
 	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
 	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
-	import Step4Layout from './steps/Step4Layout.svelte';
+	// Issue #1256 Scheibe 4: Step4Layout-Hülle entfernt — CompareEditor mountet
+	// den geteilten LayoutTab-Organism (context="vergleich") jetzt direkt. Die
+	// bisherige Step4Layout-eigene Kanal-/Buckets-Verwaltung wandert unten
+	// unveraendert mit (kein neuer Code fuer die Layout-Logik selbst, nur der
+	// Mount-Ort wechselt — Code-Teilungs-Invariante, Constraint 0).
+	import { OutputLayoutEditor } from '$lib/components/organisms';
+	import LayoutTab from '$lib/components/shared/layout-tab/LayoutTab.svelte';
+	import LTComparePreview from '$lib/components/shared/layout-tab/LTComparePreview.svelte';
+	import { LT_CHANNELS, LT_CH_BY_ID, type ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
+	import {
+		autoAssign,
+		buildWeatherConfigMetrics,
+		move,
+		reorder,
+		type Buckets,
+		type MetricCatalog,
+		type MetricEntry
+	} from '$lib/components/trip-detail/metricsEditor';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	import CompareAlarmSection from './CompareAlarmSection.svelte';
+	import CompareInhaltSection from './CompareInhaltSection.svelte';
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
 	import Sheet from '$lib/components/mobile/Sheet.svelte';
@@ -399,6 +419,236 @@
 			switchTab(TAB_ORDER[idx + 1]);
 		}
 	}
+
+	// ── Layout-Tab (Issue #1256 Scheibe 4) ────────────────────────────────────
+	// 1:1 aus der bisherigen Step4Layout-Hülle (Datei gelöscht) übernommen
+	// (kein neuer Code für die Layout-Logik selbst) — nur der Mount-Ort
+	// wechselt auf den direkt eingebetteten LayoutTab-Organism (context="vergleich").
+	interface LtTemplate {
+		id: string;
+		label: string;
+		metrics: string[];
+	}
+
+	let ltCatalog: MetricCatalog = $state({});
+	let ltTemplates: LtTemplate[] = $state([]);
+	let ltUserPresets: MetricPreset[] = $state([]);
+	let ltLoading = $state(true);
+	let ltLoadError: string | null = $state(null);
+
+	let ltActiveChannel = $state<ChannelId>('email');
+
+	// Pro-Kanal-State: jeder Kanal traegt seine eigenen Buckets + friendlyMap.
+	let ltChannelBuckets: Record<ChannelId, Buckets> = $state({
+		email: { primary: [], secondary: [], off: [] },
+		telegram: { primary: [], secondary: [], off: [] },
+		sms: { primary: [], secondary: [], off: [] }
+	});
+	let ltChannelFriendly: Record<ChannelId, Record<string, boolean>> = $state({
+		email: {},
+		telegram: {},
+		sms: {}
+	});
+	let ltChannelHorizons: Record<ChannelId, Record<string, Horizons>> = $state({
+		email: {},
+		telegram: {},
+		sms: {}
+	});
+	let ltChannelSelectedPreset: Record<ChannelId, string> = $state({
+		email: '',
+		telegram: '',
+		sms: ''
+	});
+
+	function ltAllCatalogIds(): string[] {
+		return Object.values(ltCatalog).flatMap((arr) => arr.map((m) => m.id));
+	}
+
+	// Buckets fuer einen Kanal aus wiz.channelLayouts oder leer ableiten.
+	// Kein weatherMetrics-Fallback im Compare-Kontext (Unterschied zum Trip-Wizard).
+	function ltBucketsForChannel(ch: ChannelId): Buckets {
+		const saved = wiz.channelLayouts?.[ch];
+		if (saved && saved.length > 0) {
+			const prim = saved
+				.filter((m) => m.enabled && m.bucket === 'primary')
+				.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+				.map((m) => m.metric_id);
+			const sec = saved
+				.filter((m) => m.enabled && m.bucket === 'secondary')
+				.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+				.map((m) => m.metric_id);
+			const active = new Set([...prim, ...sec]);
+			const off = ltAllCatalogIds().filter((id) => !active.has(id));
+			return { primary: prim, secondary: sec, off };
+		}
+		// AC-2 (#681): alle Katalog-Metriken als Standard aktiv.
+		return autoAssign(ltAllCatalogIds(), ltCatalog);
+	}
+
+	function ltFriendlyMapForChannel(ch: ChannelId): Record<string, boolean> {
+		const fMap: Record<string, boolean> = {};
+		for (const id of ltAllCatalogIds()) fMap[id] = true;
+		const saved = wiz.channelLayouts?.[ch];
+		if (saved) {
+			for (const m of saved) {
+				fMap[m.metric_id] = m.use_friendly_format ?? true;
+			}
+		}
+		return fMap;
+	}
+
+	function ltHorizonsMapForChannel(ch: ChannelId): Record<string, Horizons> {
+		const hMap: Record<string, Horizons> = {};
+		for (const id of ltAllCatalogIds()) hMap[id] = { ...HORIZONS_ALL };
+		const saved = wiz.channelLayouts?.[ch];
+		if (saved) {
+			for (const m of saved) {
+				if (m.horizons) hMap[m.metric_id] = { ...m.horizons };
+			}
+		}
+		return hMap;
+	}
+
+	function ltInitChannelState(): void {
+		const next: Record<ChannelId, Buckets> = { ...ltChannelBuckets };
+		const nextFriendly: Record<ChannelId, Record<string, boolean>> = { ...ltChannelFriendly };
+		const nextHorizons: Record<ChannelId, Record<string, Horizons>> = { ...ltChannelHorizons };
+		for (const c of LT_CHANNELS) {
+			next[c.id] = ltBucketsForChannel(c.id);
+			nextFriendly[c.id] = ltFriendlyMapForChannel(c.id);
+			nextHorizons[c.id] = ltHorizonsMapForChannel(c.id);
+		}
+		ltChannelBuckets = next;
+		ltChannelFriendly = nextFriendly;
+		ltChannelHorizons = nextHorizons;
+	}
+
+	// Fix-Loop 1 (Adversary F001, HIGH): im Original Step4Layout.svelte war der
+	// Katalog-Fetch an das LAZY MOUNTEN des Tab-Inhalts gebunden (onMount feuerte
+	// nur, wenn activeTab === 'layout' den {:else if}-Zweig überhaupt rendert).
+	// Ein unbedingter onMount() hier im Editor-Top-Level würde bei JEDEM
+	// Editor-Öffnen (jeder Tab) 3 API-Calls ausloesen UND den channelLayouts-
+	// Rewrite-$effect vorzeitig scharf schalten — dessen Server-Roundtrip-Form
+	// weicht strukturell von der initial.layouts-Baseline (Z. 122/159) ab, was
+	// unabhaengig vom tatsaechlich besuchten Tab einen falschen "Ungespeichert"-
+	// Zustand ausloest. Fix: Katalog-Fetch + Rewrite-Effect bleiben an den
+	// ERSTEN Besuch des Layout-Tabs gekoppelt (Timing-Treue zu Step4Layout),
+	// einmalig getriggert, danach idempotent (kein Re-Fetch bei erneutem
+	// Tab-Wechsel zurück auf "layout").
+	let ltCatalogLoadStarted = false;
+
+	async function ltLoadCatalog(): Promise<void> {
+		try {
+			const [catalogData, templateData, presetData] = await Promise.all([
+				api.get<MetricCatalog>('/api/metrics'),
+				api.get<LtTemplate[]>('/api/templates').catch(() => [] as LtTemplate[]),
+				api.get<MetricPreset[]>('/api/metric-presets').catch(() => [] as MetricPreset[])
+			]);
+			ltCatalog = catalogData;
+			ltTemplates = templateData;
+			ltUserPresets = presetData;
+			ltInitChannelState();
+		} catch (e: unknown) {
+			ltLoadError = (e as { error?: string })?.error ?? 'Fehler beim Laden';
+		} finally {
+			ltLoading = false;
+		}
+	}
+
+	$effect(() => {
+		if (activeTab === 'layout' && !ltCatalogLoadStarted) {
+			ltCatalogLoadStarted = true;
+			void ltLoadCatalog();
+		}
+	});
+
+	// Sync: ltChannelBuckets/Friendly -> wiz.channelLayouts (kompletter Replace).
+	// KRITISCHER Timing-Guard: wird erst aktiv sobald Katalog geladen ist —
+	// sonst werden leere Buckets in den State geschrieben und neue Subscriptions
+	// starten mit leerem Editor. Da ltLoading erst nach dem ersten Layout-Tab-
+	// Besuch auf false wechselt (s. o.), bleibt dieser Effect fuer alle anderen
+	// Tabs automatisch inaktiv.
+	$effect(() => {
+		if (ltLoading || Object.keys(ltCatalog).length === 0) return;
+		const layouts: ChannelLayouts = {};
+		for (const c of LT_CHANNELS) {
+			const metrics: WeatherConfigMetric[] = buildWeatherConfigMetrics(
+				ltChannelBuckets[c.id],
+				ltChannelFriendly[c.id],
+				ltChannelHorizons[c.id],
+				ltCatalog
+			);
+			layouts[c.id] = metrics;
+		}
+		wiz.channelLayouts = layouts;
+	});
+
+	// Aktive Spalten des gewählten Kanals — explizit per Kanal um Svelte-5-Cache zu umgehen.
+	const ltActiveAllCols = $derived.by(() => {
+		if (ltActiveChannel === 'email') {
+			return [...ltChannelBuckets.email.primary, ...ltChannelBuckets.email.secondary];
+		} else if (ltActiveChannel === 'telegram') {
+			return [...ltChannelBuckets.telegram.primary, ...ltChannelBuckets.telegram.secondary];
+		}
+		return [...ltChannelBuckets.sms.primary, ...ltChannelBuckets.sms.secondary];
+	});
+
+	// --- Benannte Handler (Safari/Factory-Pattern) ---------------------------
+
+	function ltHandleMove(id: string, target: 'primary' | 'secondary' | 'off') {
+		const b = ltChannelBuckets[ltActiveChannel];
+		const from: keyof Buckets = b.primary.includes(id)
+			? 'primary'
+			: b.secondary.includes(id)
+				? 'secondary'
+				: 'off';
+		ltChannelBuckets = {
+			...ltChannelBuckets,
+			[ltActiveChannel]: move(b, id, from, target)
+		};
+		ltChannelSelectedPreset = { ...ltChannelSelectedPreset, [ltActiveChannel]: '' };
+	}
+
+	function ltHandleReorder(bucket: 'primary' | 'secondary', id: string, dir: -1 | 1) {
+		ltChannelBuckets = {
+			...ltChannelBuckets,
+			[ltActiveChannel]: reorder(ltChannelBuckets[ltActiveChannel], bucket, id, dir)
+		};
+	}
+
+	function ltHandleDndReorder(bucket: 'primary' | 'secondary', newOrder: string[]) {
+		ltChannelBuckets = {
+			...ltChannelBuckets,
+			[ltActiveChannel]: { ...ltChannelBuckets[ltActiveChannel], [bucket]: newOrder }
+		};
+	}
+
+	function ltHandleMode(id: string, useIndicator: boolean) {
+		ltChannelFriendly = {
+			...ltChannelFriendly,
+			[ltActiveChannel]: { ...ltChannelFriendly[ltActiveChannel], [id]: useIndicator }
+		};
+	}
+
+	function ltHandleSelectPreset(id: string) {
+		const userP = ltUserPresets.find((p) => p.id === id);
+		const tmpl = ltTemplates.find((t) => t.id === id);
+		const activeIds = userP
+			? userP.metrics.filter((m) => m.enabled).map((m) => m.metric_id)
+			: tmpl
+				? tmpl.metrics
+				: [];
+		ltChannelBuckets = {
+			...ltChannelBuckets,
+			[ltActiveChannel]: autoAssign(activeIds, ltCatalog)
+		};
+		if (userP) {
+			const fMap = { ...ltChannelFriendly[ltActiveChannel] };
+			for (const m of userP.metrics) fMap[m.metric_id] = m.use_friendly_format;
+			ltChannelFriendly = { ...ltChannelFriendly, [ltActiveChannel]: fMap };
+		}
+		ltChannelSelectedPreset = { ...ltChannelSelectedPreset, [ltActiveChannel]: id };
+	}
 </script>
 
 <!-- Issue #1232 Scheibe 2b: Create-Aktivierungs-Banner als Snippet-Prop für
@@ -418,6 +668,76 @@
 		<div style:font-size="12.5px" style:color="rgba(255,255,255,0.75)" style:margin-top="4px" style:line-height="1.5">
 			{#if versandVisited}Versand konfiguriert — klicke „Briefing aktivieren".{:else}Versand einrichten zum Aktivieren.{/if}
 		</div>
+	</div>
+{/snippet}
+
+<!-- Issue #1256 Scheibe 4: Layout-Tab-Inhalt als geteiltes Snippet (Desktop +
+     Mobile mounten dasselbe Markup) — löst die frühere Step4Layout.svelte-
+     Hülle ab. Direkte Einbettung des geteilten LayoutTab-Organism
+     (context="vergleich", Constraint 0) statt einer eigenen Kanal-Tab-Leiste. -->
+{#snippet ltLayoutSection()}
+	<div class="step4-layout" data-testid="step4-layout">
+		<header class="lt-intro">
+			<Eyebrow>Layout pro Kanal</Eyebrow>
+			<p class="lt-lede">
+				Lege je Kanal fest, welche Werte als Spalten in der Tabelle erscheinen und
+				welche als Detail-Zeile darunter. SMS hat ein Zeichen-Budget — dort
+				priorisierst du eine flache Liste.
+			</p>
+		</header>
+
+		{#if ltLoading}
+			<p class="lt-loading" data-testid="step4-loading">Lade Metriken-Katalog…</p>
+		{:else if ltLoadError}
+			<p class="lt-error" data-testid="step4-error">{ltLoadError}</p>
+		{:else}
+			<LayoutTab
+				context="vergleich"
+				bind:channel={ltActiveChannel}
+				colCount={wiz.pickedIds.length + 1}
+				subjectLabel={`${wiz.pickedIds.length} Orte`}
+			>
+				{#snippet editor({ channel })}
+					<div data-testid="layout-editor">
+						<OutputLayoutEditor
+							catalog={ltCatalog}
+							bind:buckets={ltChannelBuckets[channel]}
+							bind:friendlyMap={ltChannelFriendly[channel]}
+							bind:selectedTemplate={ltChannelSelectedPreset[channel]}
+							{channel}
+							templates={ltTemplates}
+							userPresets={ltUserPresets}
+							onReorder={ltHandleReorder}
+							onMove={ltHandleMove}
+							onMode={ltHandleMode}
+							onSelectPreset={ltHandleSelectPreset}
+							onDndReorder={ltHandleDndReorder}
+						/>
+
+						<!-- ↳ Detail-Pills für Telegram-Überlauf (AC-2, #681) -->
+						{#if LT_CH_BY_ID[channel].max !== Infinity && LT_CH_BY_ID[channel].max !== 0 && ltActiveAllCols.length > LT_CH_BY_ID[channel].max}
+							{@const _maxCols = LT_CH_BY_ID[channel].max}
+							<div class="lt-detail-pills">
+								{#each ltActiveAllCols as _id, _i}
+									{#if _i >= _maxCols}
+										<span data-testid="compare-step4-detail-pill-{_i}" class="mono lt-detail-pill">
+											↳ Detail
+										</span>
+									{/if}
+								{/each}
+							</div>
+						{/if}
+					</div>
+				{/snippet}
+				{#snippet preview({ channel })}
+					<LTComparePreview {channel} pickedIds={[...wiz.pickedIds]} idealRanges={wiz.idealRanges} />
+				{/snippet}
+			</LayoutTab>
+		{/if}
+
+		<!-- Rest-Felder (Zeitfenster, Horizont, Top-N, Stundenverlauf) — bereits
+		     geteilt aus dem vormaligen Step5Versand (#1232 Scheibe 2b). -->
+		<CompareInhaltSection />
 	</div>
 {/snippet}
 
@@ -739,7 +1059,7 @@
 			<CorridorEditor context="vergleich" />
 		{/if}
 	{:else if activeTab === 'layout'}
-		<Step4Layout />
+		{@render ltLayoutSection()}
 	{:else if activeTab === 'versand'}
 		{#if isEdit}
 			<VersandTab context="vergleich" {wiz} />
@@ -910,7 +1230,7 @@
 				<CorridorEditorMobile context="vergleich" />
 			{/if}
 		{:else if activeTab === 'layout'}
-			<Step4Layout />
+			{@render ltLayoutSection()}
 		{:else if activeTab === 'versand'}
 			{#if isEdit}
 				<VersandTab context="vergleich" {wiz} />
@@ -1024,5 +1344,46 @@
 		.cm-mobile-flex {
 			display: flex !important;
 		}
+	}
+
+	/* ─── Layout-Tab-Snippet (Issue #1256 Scheibe 4, vormals steps/Step4Layout.svelte) ─── */
+	.step4-layout {
+		display: flex;
+		flex-direction: column;
+		gap: var(--g-s-5);
+	}
+	.lt-intro {
+		max-width: 760px;
+	}
+	.lt-lede {
+		font-size: var(--g-text-sm);
+		color: var(--g-ink-muted);
+		margin-top: var(--g-s-1);
+		line-height: 1.55;
+	}
+	.lt-loading,
+	.lt-error {
+		padding: var(--g-s-4);
+		text-align: center;
+		font-size: var(--g-text-sm);
+	}
+	.lt-error {
+		color: var(--g-danger);
+	}
+	.lt-detail-pills {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+		margin-top: 6px;
+	}
+	.lt-detail-pill {
+		background: rgba(192, 138, 26, 0.08);
+		border-radius: 3px;
+		padding: 2px 6px;
+		font-size: 9.5px;
+		color: var(--g-warn);
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
 	}
 </style>

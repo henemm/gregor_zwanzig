@@ -112,17 +112,28 @@ test('AC-2: Step2Orte.svelte ist noch vorhanden', () => {
 	);
 });
 
-test('AC-2: Step3Idealwerte.svelte ist noch vorhanden', () => {
-	assert.ok(
+// Issue #1256 Scheibe 4 (2026-07-14): Step3Idealwerte.svelte war bereits seit
+// #1231 Slice 4/5 unbenutzter Totcode (Idealwerte laufen vollständig über
+// CorridorEditor context="vergleich") — die #683-Garantie "muss erhalten
+// bleiben" gilt für diese Datei nicht mehr fort. Test aktualisiert statt
+// stillgelegt (Test-Politik CLAUDE.md, Muster Zeile 133/AC-2 Step5Versand).
+test('AC-2 (aktualisiert #1256 Scheibe 4): Step3Idealwerte.svelte wurde gelöscht', () => {
+	assert.strictEqual(
 		existsSync(STEP3_FILE),
-		`Step3Idealwerte.svelte fehlt — darf nicht gelöscht werden: ${STEP3_FILE}`
+		false,
+		`Step3Idealwerte.svelte muss gelöscht sein (Totcode, ersetzt durch CorridorEditor context="vergleich"), existiert aber noch: ${STEP3_FILE}`
 	);
 });
 
-test('AC-2: Step4Layout.svelte ist noch vorhanden', () => {
-	assert.ok(
+// Issue #1256 Scheibe 4 (2026-07-14): Step4Layout.svelte war nur noch eine
+// redundante Hülle um den bereits fertigen LayoutTab-Organism — CompareEditor
+// mountet <LayoutTab context="vergleich"> jetzt direkt (KL-4). Die #683-
+// Garantie "muss erhalten bleiben" gilt für diese Datei nicht mehr fort.
+test('AC-2 (aktualisiert #1256 Scheibe 4): Step4Layout.svelte wurde gelöscht', () => {
+	assert.strictEqual(
 		existsSync(STEP4_FILE),
-		`Step4Layout.svelte fehlt — darf nicht gelöscht werden: ${STEP4_FILE}`
+		false,
+		`Step4Layout.svelte muss gelöscht sein (redundante Hülle, ersetzt durch direkte <LayoutTab context="vergleich">-Einbettung), existiert aber noch: ${STEP4_FILE}`
 	);
 });
 

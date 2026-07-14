@@ -20,20 +20,22 @@ import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 
 const COMPARE_DIR = dirname(fileURLToPath(import.meta.url));
-const STEPS_DIR = join(COMPARE_DIR, 'steps');
 
 // ── Zu prüfende Dateien ────────────────────────────────────────────────────────
 // Issue #1256 Scheibe 1 (2026-07-13): AutoReportCard.svelte, AutoReportsOverview.svelte
 // und LocationsRail.svelte wurden als verifizierter Totcode gelöscht (kein
 // produktiver Import mehr, Spec Zeilen 303-305) — Einträge entfernt.
+// Issue #1256 Scheibe 4 (2026-07-14): Step3Idealwerte.svelte (Totcode) und
+// Step4Layout.svelte (redundante Hülle um den geteilten LayoutTab-Organism)
+// wurden gelöscht — Einträge entfernt. Der Eyebrow-Atom-Import, den beide
+// Dateien trugen, lebt jetzt direkt in CompareEditor.svelte (bereits seit
+// Zeile 10 aus atoms importiert, kein neuer Prüf-Eintrag nötig).
 
 const MIGRATED_FILES: Array<{ path: string; components: string[] }> = [
 	{ path: join(COMPARE_DIR, 'CreateGroupDialog.svelte'), components: ['Btn'] },
 	{ path: join(COMPARE_DIR, 'HourlyMatrix.svelte'),      components: ['Pill'] },
 	{ path: join(COMPARE_DIR, 'LocationPreviewMap.svelte'), components: ['TopoBg'] },
 	{ path: join(COMPARE_DIR, 'SavePresetDialog.svelte'),  components: ['Btn'] },
-	{ path: join(STEPS_DIR, 'Step3Idealwerte.svelte'),     components: ['Eyebrow'] },
-	{ path: join(STEPS_DIR, 'Step4Layout.svelte'),         components: ['Eyebrow'] },
 	// Issue #1232 Scheibe 2b: Step5Versand.svelte wurde gelöscht (ersetzt durch
 	// VersandTab context="vergleich" + CompareInhaltSection.svelte) — Eintrag
 	// zeigt jetzt auf den Nachfolger, der denselben Eyebrow-Atom-Import trägt.
