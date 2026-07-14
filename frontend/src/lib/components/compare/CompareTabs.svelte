@@ -609,7 +609,7 @@
 
 <div class="compare-tabs" data-testid="compare-detail-tab-list">
 	<!-- Tab-Leiste — custom buttons mit Underline-Indikator (Issue #582) -->
-	<div style="display: flex; gap: 0">
+	<div class="compare-tabs-bar" style="display: flex; gap: 0">
 		{#each TABS as t}
 			{@const on = activeTab === t.value}
 			<button
@@ -1057,7 +1057,28 @@
 	}
 
 	@media (max-width: 899px) {
-		/* Mobile: Tab-Leiste horizontal scrollbar */
+		/* Mobile: Tab-Leiste horizontal scrollbar. Fix-Loop 1 (Fresh-Eyes-Fund,
+		   S8): Regel fehlte, "Versand"/"Vorschau" waren auf 390px unerreichbar.
+		   Muster 1:1 TripTabs.svelte:330-352 (dort selbst ein Fresh-Eyes-Fund
+		   #1231 S6) — Rand-Fade statt hartem Abschnitt. */
+		.compare-tabs-bar {
+			overflow-x: auto;
+			white-space: nowrap;
+			scrollbar-width: none;
+			-ms-overflow-style: none;
+			scroll-snap-type: x mandatory;
+			scroll-padding-inline: 12px;
+			mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+			-webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+		}
+		.compare-tabs-bar::-webkit-scrollbar {
+			display: none;
+		}
+		.compare-tabs-bar button {
+			flex-shrink: 0;
+			white-space: nowrap;
+			scroll-snap-align: start;
+		}
 
 		/* Issue #1256 Scheibe 8 (AC-22): CompareTabs wird jetzt ueber die
 		   Ein-Mount-Strategie auch mobil gerendert — schmaleres Padding statt

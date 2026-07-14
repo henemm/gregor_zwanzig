@@ -133,6 +133,23 @@ describe('AC-22 — mobiler Hub: geteilte CompareTabs mit 4-Stat-2×2 statt Besp
 		);
 	});
 
+	// Fix-Loop 1 (Fresh-Eyes-Fund): der Ein-Mount-Umbau rendert die Tab-Leiste
+	// jetzt auch mobil, aber ohne horizontales Scrollen waren „Versand"/
+	// „Vorschau" auf 390px unerreichbar (Inline-Edit-Paritäts-Verletzung).
+	// Muster TripTabs.svelte:330-352.
+	test('Mobile-Media-Query macht die Tab-Leiste horizontal scrollbar (overflow-x: auto)', () => {
+		const src = readFileSync(TABS, 'utf-8');
+		const mqStart = src.indexOf('@media (max-width: 899px)');
+		assert.ok(mqStart > -1, 'CompareTabs.svelte hat keine @media (max-width: 899px)-Regel');
+		const mqBlock = src.slice(mqStart, mqStart + 1500);
+		assert.match(
+			mqBlock,
+			/\.compare-tabs-bar\s*\{[^}]*overflow-x:\s*auto/,
+			'Mobile-Media-Query enthält keine overflow-x: auto-Regel für die Tab-Leiste — ' +
+				'„Versand"/„Vorschau" bleiben auf schmalen Viewports unerreichbar'
+		);
+	});
+
 	test('Idealwerte-Tab schaltet mobil auf CorridorEditorMobile (Muster TripTabs.svelte:198-202)', () => {
 		const src = readFileSync(TABS, 'utf-8');
 		assert.match(

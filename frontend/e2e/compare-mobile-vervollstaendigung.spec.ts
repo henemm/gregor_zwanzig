@@ -192,6 +192,39 @@ test.describe('Issue #1256 Scheibe 8 (AC-22): mobiler Hub — geteilte CompareTa
 		// nicht mehr im DOM (ein Tab-Inhalt ist jeweils gemountet, kein CSS-Hide).
 		await expect(page.locator('[data-testid="compare-detail-panel-uebersicht"]')).toHaveCount(0);
 	});
+
+	// Fix-Loop 1 (Fresh-Eyes-Fund, blockierend): die Tab-Leiste war mobil NICHT
+	// scrollbar — "Versand"/"Vorschau" waren auf 390px unerreichbar
+	// (Inline-Edit-Paritäts-Verletzung). Wächter-Test (S5-Lehre: neue Mechanik
+	// braucht sofort einen eigenen Wächter): erreicht den letzten Tab
+	// ("Vorschau") per Wisch-Äquivalent (scrollIntoViewIfNeeded) + echtem Klick.
+	test('AC-22 Fix-Loop 1: letzter Tab ("Vorschau") ist per Wisch + Klick erreichbar (Tab-Leiste scrollbar)', async ({
+		page
+	}) => {
+		const suffix = Date.now();
+		const locId = await createLocation(page, `E2E S8 Ort-Scroll ${suffix}`, 47.02, 11.28);
+		const name = `E2E S8 Tab-Scroll ${suffix}`;
+		const id = await createPresetWithLocation(page, name, 'daily', locId);
+
+		await page.goto(`/compare/${id}`);
+		await page.waitForLoadState('networkidle');
+
+		await expect(page.locator('[data-testid="compare-detail-panel-uebersicht"]')).toBeVisible({
+			timeout: 10_000
+		});
+
+		const vorschauTab = page.locator('[data-testid="compare-detail-tab-vorschau"]');
+		// Vor dem Scrollen liegt der letzte Tab außerhalb des sichtbaren
+		// 390px-Ausschnitts der Tab-Leiste — scrollIntoViewIfNeeded() ist das
+		// Playwright-Äquivalent zum Nutzer-Wisch (horizontales Scrollen).
+		await vorschauTab.scrollIntoViewIfNeeded();
+		await expect(vorschauTab).toBeInViewport({ timeout: 5_000 });
+		await vorschauTab.click();
+
+		await expect(page.locator('[data-testid="compare-detail-panel-vorschau"]')).toBeVisible({
+			timeout: 10_000
+		});
+	});
 });
 
 test.describe('Issue #1256 Scheibe 8 (AC-23): mobiles Bottom-Sheet — Lifecycle-Aktionsliste', () => {
