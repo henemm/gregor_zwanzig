@@ -144,6 +144,8 @@ Punkt 3 ist die tragende Schicht. Punkte 1 und 2 beseitigen die Bedingung, die d
 
 ## Architektur-Entscheidung (ADR)
 
+**ADR-Nr.:** keine
+
 **Keine neue ADR erforderlich.** Diese Spec trifft keine neue Architektur-Entscheidung, sondern **bestätigt und verteidigt eine bestehende**: „Leere Auswahl ≠ nie konfiguriert" — festgelegt in #1191 für den Orts-Vergleich (`compareEditorSave.ts:94-100`). Genau deshalb wird der Fix client- und nicht serverseitig gebaut. Die Entscheidung, ob das Datenmodell künftig eine explizite Absichts-Kennzeichnung bekommt (und damit eine serverseitige Absicherung erlaubt), gehört in Epic #1230 und wird hier ausdrücklich **nicht** vorweggenommen.
 
 ## Changelog
