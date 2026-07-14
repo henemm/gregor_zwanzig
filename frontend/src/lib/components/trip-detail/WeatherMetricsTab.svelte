@@ -36,6 +36,8 @@
 		CATEGORY_LABELS, CATEGORY_ORDER, indicatorCapable,
 		type Buckets, type MetricEntry, type MetricCatalog, type Highlight, type WeatherSnapshot,
 	} from './metricsEditor.ts';
+	// Issue #1234: Daten-/Absichts-Gate gegen stillen Metrik-Leerungs-Autosave.
+	import { weatherSaveGate } from './weatherSaveGate.ts';
 
 	interface Template {
 		id: string;
@@ -64,7 +66,19 @@
 	let catalog: MetricCatalog = $state({});
 	let templates: Template[] = $state([]);
 	let userPresets: MetricPreset[] = $state([]);
-	let loading = $state(false);
+	// Issue #1234 (2a): wird NUR bei erfolgreichem Katalog-Fetch wahr (nicht im
+	// finally-Block) — der Render-Guard haengt daran statt an einem separaten
+	// `loading`-Flag (Fix-Loop 2 / F002: totes `loading`-State entfernt, es
+	// wurde nirgends gelesen).
+	let catalogLoaded = $state(false);
+	// Issue #1234 (2b): eigener Zustand fuer Ladefehler, getrennt von saveError
+	// (Speicherfehler) — sonst wuerde ein Ladefehler durch einen spaeteren
+	// Speicherstatus ueberschrieben werden bzw. umgekehrt.
+	let loadError: string | null = $state(null);
+	// Issue #1234 (2c, Fix-Loop 1 / F001): Absichts-Merker — AUSSCHLIESSLICH aus
+	// echten DOM-Ereignissen gesetzt (Interaktions-Handler oder Capture-Phase-
+	// Listener auf der Report-Config-Karte), niemals in einem $effect.
+	let userTouched = $state(false);
 	let saving = $state(false);
 	let saveSuccess = $state(false);
 	let saveError: string | null = $state(null);
@@ -235,7 +249,7 @@
 	}
 
 	async function load() {
-		loading = true;
+		loadError = null;
 		try {
 			const [catalogData, templateData, presetData, profileData] = await Promise.all([
 				api.get<MetricCatalog>('/api/metrics'),
@@ -250,11 +264,17 @@
 			userPresets = presetData;
 			profile = profileData;
 			initFromTrip();
+			// Issue #1234 (2c): Baseline NACH dem Laden/der ersten Normalisierung neu
+			// setzen — verhindert, dass der reportConfig-Watch einen Ladevorgang als
+			// Nutzeraenderung wertet. Kein scheduleAutoSave() hier (ohne zu speichern).
+			_lastReportConfigJson = JSON.stringify(reportConfig);
+			// Issue #1234 (2a): erst nach vollstaendigem Erfolg wahr — der Render-
+			// Guard haengt daran, damit Kindkomponenten (EditReportConfigSection) nie
+			// vor geladenem Katalog mounten.
+			catalogLoaded = true;
 		} catch (e: unknown) {
 			console.error(e);
-			saveError = (e as { error?: string })?.error ?? 'Fehler beim Laden';
-		} finally {
-			loading = false;
+			loadError = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';
 		}
 	}
 
@@ -294,6 +314,10 @@
 
 	// Preset-Auswahl
 	function applyPreset(id: string) {
+		// Issue #1234 (2c): Preset anwenden ist eine echte Nutzerabsicht (auch wenn
+		// die einmalige Activity-Vorauswahl im createMode denselben Pfad nutzt —
+		// dort greift scheduleAutoSave ohnehin nie, s. createMode-Guard).
+		userTouched = true;
 		const userP = userPresets.find((p) => p.id === id);
 		const tmpl = templates.find((t) => t.id === id);
 		const activeIds = userP
@@ -324,6 +348,7 @@
 	}
 
 	function onMode(id: string, useIndicator: boolean) {
+		userTouched = true;
 		const newFriendly = { ...friendlyMap, [id]: useIndicator };
 		applyDiff(buckets.primary, newFriendly, selectedTemplate);
 		friendlyMap = newFriendly;
@@ -333,6 +358,7 @@
 	// Toggle: Metrik aktivieren (→ primary) oder deaktivieren (→ off).
 	// secondary ist nach #587 immer leer — kein secondary-Zweig nötig (F002).
 	function onToggleMetric(id: string, wasOn: boolean) {
+		userTouched = true;
 		const from: keyof Buckets = buckets.primary.includes(id) ? 'primary' : 'off';
 		const to: keyof Buckets = wasOn ? 'off' : 'primary';
 		if (from !== to) {
@@ -347,12 +373,14 @@
 	// Issue #1117: Amtliche-Warnungen-Checkbox — named handler (kein Loop-Closure,
 	// Safari-sicher), setzt State und triggert denselben debounce-Auto-Save.
 	function onToggleOfficialAlerts(e: Event) {
+		userTouched = true;
 		officialAlertsEnabled = (e.target as HTMLInputElement).checked;
 		scheduleAutoSave();
 	}
 
 	// Aus Abschnitt 3 entfernen (→ off).
 	function onRemove(id: string) {
+		userTouched = true;
 		const newBuckets = move(buckets, id, 'primary', 'off');
 		applyDiff(newBuckets.primary, friendlyMap, selectedTemplate);
 		buckets = newBuckets;
@@ -362,6 +390,7 @@
 
 	// Reihenfolge per Drag & Drop (#848).
 	function onDndReorder(fromId: string, toId: string) {
+		userTouched = true;
 		const list = [...buckets.primary];
 		const fromIdx = list.indexOf(fromId);
 		const toIdx = list.indexOf(toId);
@@ -417,11 +446,21 @@
 	}
 
 	async function handleSave() {
+		const payload = buildWeatherPayload();
+		// Issue #1234 (Fix-Loop 1 / F001): Gate VOR jedem Speicherversuch — ohne
+		// echte Nutzergeste (userTouched) wird nie geschrieben, unabhaengig davon,
+		// ob der Payload leer waere oder nicht (AC-1/AC-2/AC-6). Die bewusste
+		// Abwahl aller Metriken bleibt moeglich, weil das Abwaehlen selbst die
+		// Geste ist, die userTouched setzt (AC-4).
+		const gateDecision = weatherSaveGate({ catalogLoaded, userTouched });
+		if (gateDecision === 'skip') {
+			saveController?.setDirty();
+			return;
+		}
 		saving = true;
 		saveSuccess = false;
 		saveError = null;
 		try {
-			const payload = buildWeatherPayload();
 			// Issue #622: Create-Modus — kein PUT, State per Binding gehalten.
 			if (!createMode) {
 				await api.put(`/api/trips/${trip.id}/weather-config`, payload);
@@ -444,9 +483,15 @@
 	}
 
 	// Issue #758: schedule auto-save via controller when metrics change.
+	// Issue #1234: Gate VOR dem Schedulen — s. handleSave() fuer Begruendung.
 	function scheduleAutoSave() {
 		if (!saveController || createMode) return;
 		const payload = buildWeatherPayload();
+		const gateDecision = weatherSaveGate({ catalogLoaded, userTouched });
+		if (gateDecision === 'skip') {
+			saveController.setDirty();
+			return;
+		}
 		saveController.schedule(async () => {
 			await api.put(`/api/trips/${trip.id}/weather-config`, payload);
 			// Issue #850: Server-Response enthält aktualisierte alert_rules — nie manuell konstruieren.
@@ -466,6 +511,31 @@
 			scheduleAutoSave();
 		}
 	});
+
+	// Issue #1234 (Fix-Loop 2 / F003+F004): Capture-Listener auf dem
+	// Report-Config-Touch-Scope (s. Markup unten). Zwei Ereignis-Paare mit
+	// unterschiedlicher Aufgabe — beide noetig, keins ersetzt das andere:
+	//   - pointerdown/keydown: deckt Quick-Pick-BUTTONS ab (EditReportConfigSection
+	//     Z. 219-228), die reportConfig aendern OHNE ein change/input-Ereignis
+	//     auszuloesen. Gefiltert auf tatsaechlich bedienbare Elemente (F003),
+	//     sonst wuerde ein Streuklick auf Ueberschrift/Beschreibungstext/Leerraum
+	//     das Gate fuer den Rest der Sitzung entwaffnen.
+	//   - change/input: deckt Aktivierungswege ab, bei denen KEIN vorheriges
+	//     pointerdown/keydown auf dem Teilbaum feuert (Screenreader-/AT-
+	//     synthetisierte Aktivierung, bestimmte Touch-Pfade) — F004. Bewusst
+	//     ungefiltert: change/input feuern per Definition nur bei einer echten
+	//     Wertaenderung eines Formular-Bedienelements, nie auf Ueberschriften
+	//     oder Text.
+	const REPORT_CONFIG_INTERACTIVE_SELECTOR =
+		'input, button, select, textarea, label, [role="checkbox"], [role="radio"], [role="switch"]';
+	function onReportConfigTouchGesture(e: Event) {
+		if ((e.target as HTMLElement | null)?.closest?.(REPORT_CONFIG_INTERACTIVE_SELECTOR)) {
+			userTouched = true;
+		}
+	}
+	function onReportConfigValueChange() {
+		userTouched = true;
+	}
 
 	async function onPresetSaved(preset: MetricPreset) {
 		userPresets = [preset, ...userPresets];
@@ -488,7 +558,14 @@
 	});
 </script>
 
-{#if loading && Object.keys(catalog).length === 0}
+{#if loadError}
+	<!-- Issue #1234 (2b): sichtbarer Fehlerpfad, unabhaengig vom saveController —
+	     kein leerer Editor, kein Schreibzugriff (AC-3). -->
+	<div class="metrics-tab load-error-shell" data-testid="weather-metrics-load-error">
+		<p class="load-error-msg">{loadError}</p>
+		<Btn variant="primary" size="sm" data-testid="weather-metrics-load-retry" onclick={load}>Wiederholen</Btn>
+	</div>
+{:else if !catalogLoaded}
 	<div class="metrics-tab loading-shell" aria-busy="true">
 		<p class="loading-msg">Lade Metriken…</p>
 	</div>
@@ -602,7 +679,7 @@
 										{ id: 'robust', label: 'Robust', float: 30 }
 									]}
 									currentFloat={smsThresholds['wind'] !== undefined && smsThresholds['wind'] !== '' ? parseFloat(smsThresholds['wind']) : null}
-									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
+									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
 								{/if}
 								{#if !buckets.off.includes('gust')}
@@ -615,7 +692,7 @@
 										{ id: 'robust', label: 'Robust', float: 50 }
 									]}
 									currentFloat={smsThresholds['gust'] !== undefined && smsThresholds['gust'] !== '' ? parseFloat(smsThresholds['gust']) : null}
-									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
+									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
 								{/if}
 								{#if !buckets.off.includes('precipitation')}
@@ -628,7 +705,7 @@
 										{ id: 'robust', label: 'Robust', float: 1.5 }
 									]}
 									currentFloat={smsThresholds['precipitation'] !== undefined && smsThresholds['precipitation'] !== '' ? parseFloat(smsThresholds['precipitation']) : null}
-									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
+									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
 								{/if}
 								{#if !buckets.off.includes('rain_probability')}
@@ -641,7 +718,7 @@
 										{ id: 'robust', label: 'Robust', float: 60 }
 									]}
 									currentFloat={smsThresholds['rain_probability'] !== undefined && smsThresholds['rain_probability'] !== '' ? parseFloat(smsThresholds['rain_probability']) : null}
-									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
+									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
 								{/if}
 								{#if !buckets.off.includes('thunder')}
@@ -653,7 +730,7 @@
 										{ id: 'high', label: 'HIGH', float: 2.0 }
 									]}
 									currentFloat={smsThresholds['thunder'] !== undefined && smsThresholds['thunder'] !== '' ? parseFloat(smsThresholds['thunder']) : null}
-									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
+									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
 								{/if}
 								{#if !buckets.off.includes('snow_depth')}
@@ -666,7 +743,7 @@
 										{ id: 'robust', label: 'Robust', float: 20 }
 									]}
 									currentFloat={smsThresholds['snow_depth'] !== undefined && smsThresholds['snow_depth'] !== '' ? parseFloat(smsThresholds['snow_depth']) : null}
-									onChange={(id, f) => { smsThresholds = { ...smsThresholds, ['snow_depth']: String(f) }; scheduleAutoSave(); }}
+									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, ['snow_depth']: String(f) }; scheduleAutoSave(); }}
 								/>
 								{/if}
 								{#if !buckets.off.includes('snowfall_limit')}
@@ -679,7 +756,7 @@
 										{ id: 'robust', label: 'Robust', float: 1000 }
 									]}
 									currentFloat={smsThresholds['snowfall_limit'] !== undefined && smsThresholds['snowfall_limit'] !== '' ? parseFloat(smsThresholds['snowfall_limit']) : null}
-									onChange={(id, f) => { smsThresholds = { ...smsThresholds, ['snowfall_limit']: String(f) }; scheduleAutoSave(); }}
+									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, ['snowfall_limit']: String(f) }; scheduleAutoSave(); }}
 								/>
 								{/if}
 							</tbody>
@@ -688,13 +765,34 @@
 				</Card>
 
 				{#if !createMode}
-				<EditReportConfigSection
-					bind:reportConfig
-					mode="edit"
-					showMailContent={true}
-					showChannels={false}
-					showSchedule={false}
-				/>
+				<!-- Issue #1234 (Fix-Loop 1 / F001, Fix-Loop 2 / F003+F004): EditReportConfigSection
+				     normalisiert reportConfig in einem eigenen $effect beim Mounten und
+				     schreibt es zurueck — das darf NICHT als Nutzergeste zaehlen (AC-6).
+				     Eine echte Interaktion des Nutzers MUSS aber weiterhin speichern
+				     (#774). EditReportConfigSection selbst darf laut Spec nicht geaendert
+				     werden, daher: vier Capture-Phase-Listener auf dem umschliessenden
+				     Container (s. onReportConfigTouchGesture/onReportConfigValueChange
+				     oben fuer die Aufgabenteilung). Alle vier feuern in der Capture-Phase
+				     noch VOR dem Ziel-Handler der Checkbox/des Buttons und damit erst
+				     recht vor dem $effect, der reportConfig zurueckschreibt und den
+				     aeusseren reportConfig-Watch (Z. ~520) ausloest — die Geste geht dem
+				     daraus folgenden State-Update also immer zeitlich voraus. Ein $effect
+				     setzt userTouched nie; hier sind es echte DOM-Event-Handler. -->
+				<div
+					class="report-config-touch-scope"
+					onpointerdowncapture={onReportConfigTouchGesture}
+					onkeydowncapture={onReportConfigTouchGesture}
+					onchangecapture={onReportConfigValueChange}
+					oninputcapture={onReportConfigValueChange}
+				>
+					<EditReportConfigSection
+						bind:reportConfig
+						mode="edit"
+						showMailContent={true}
+						showChannels={false}
+						showSchedule={false}
+					/>
+				</div>
 
 				<!-- Issue #1117: Amtliche Warnungen — zweiter Einstiegspunkt neben dem -->
 				<!-- Alerts-Tab, gleiche Optik wie die Content-Bausteine oben.          -->
@@ -764,6 +862,18 @@
 	.loading-shell {
 		padding: var(--g-s-4);
 	}
+	/* Issue #1234 (2b): sichtbarer Ladefehler-Zustand. */
+	.load-error-shell {
+		padding: var(--g-s-4);
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--g-s-2);
+	}
+	.load-error-msg {
+		color: var(--g-danger);
+		font-size: var(--g-text-sm);
+	}
 	/* Issue #618: FAB auf Desktop versteckt */
 	.mobile-mail-fab {
 		display: none;
@@ -777,6 +887,12 @@
 		border-bottom: 1px solid var(--g-rule-soft);
 		margin-bottom: 0;
 	}
+	/* Issue #1234 (Fix-Loop 1): reiner Event-Capture-Container fuer die Report-
+	   Config-Karte — bewusst OHNE eigenes CSS. Ein normaler Block-Div verhaelt
+	   sich als Flex-Item von .bottom-section (column, gap:20px) identisch zum
+	   vorherigen direkten Kind (EditReportConfigSection-Wurzel-Div), daher kein
+	   `display:contents` (das hat in aelteren WebKit-Versionen Nebenwirkungen
+	   auf Event-/ARIA-Semantik — unnoetiges Risiko fuer einen reinen Layout-No-op). */
 	.save-success {
 		font-size: var(--g-text-sm);
 		color: var(--g-success);
