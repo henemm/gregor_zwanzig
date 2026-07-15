@@ -11,7 +11,7 @@
 	//
 	// Spec: docs/specs/modules/issue_517_compare_hub.md
 
-	import { Dot, Pill, Btn, Eyebrow, Card } from '$lib/components/atoms';
+	import { Dot, Pill, Btn, Eyebrow, Card, SectionH } from '$lib/components/atoms';
 	import CompareChannelSwitch from '$lib/components/molecules/CompareChannelSwitch.svelte';
 	import CompareBriefingPreview from '$lib/components/molecules/CompareBriefingPreview.svelte';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
@@ -26,6 +26,7 @@
 		formatNextSend,
 		channelNamesLabel,
 		presetChannels,
+		presetProfileLabel,
 		STATUS_MAP
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
@@ -130,6 +131,15 @@
 	// Issue #1256 Scheibe 3 AC-6: Kanal-Namen statt Kanal-Anzahl in der
 	// Übersicht-"Kanäle"-Stat (Soll: screen-compare-detail.jsx:147-150).
 	const channelsLabel = $derived(channelNamesLabel(preset));
+
+	// Issue #1256 S8c (AC-4): SummaryCard-Titel "Keine Kanäle" statt "—"
+	// (Soll: screen-compare-detail.jsx:169) — abweichender Leerfall von channelsLabel.
+	const layoutCardTitle = $derived(channelsLabel === '—' ? 'Keine Kanäle' : channelsLabel);
+
+	// Issue #1256 S8c (AC-6/AC-7): lesbares Profil-Label statt rohem preset.profil
+	// (Soll: JSX:163) — Fallback auf den rohen Wert, falls das Mapping leer
+	// zurueckgibt (unbekanntes Profil, kein leerer Titel).
+	const profileLabel = $derived(presetProfileLabel(preset.profil) || preset.profil);
 
 	// Issue #1256 Scheibe 6 Fix-Loop 2 (F005, Adversary CRITICAL): EINE lokale,
 	// mutable Read-Modify-Write-Baseline fuer BEIDE S6-Speicherpfade (Orte +
@@ -469,6 +479,12 @@
 	const CHANNEL_COLS: Record<string, number> = CHANNEL_COL_BUDGET;
 	const channels = ['email', 'telegram', 'sms'];
 
+	// Issue #1256 S8c (AC-1/AC-2): Layout-Tab-Limit-Pillen, statisch nach
+	// JSX-Vorbild (screen-compare-detail.jsx:247, mobile: :150) — keine neue
+	// Datenquelle, SMS-Pille mobil ohne "· 0".
+	const LAYOUT_LIMIT_PILLS = ['Email · alle Spalten', 'Telegram · max 8', 'SMS · flach · 0'];
+	const LAYOUT_LIMIT_PILLS_MOBILE = ['Email · alle Spalten', 'Telegram · max 8', 'SMS · flach'];
+
 	// ── Vorschau-Tab (Issue #514, #582) ─────────────────────────────────────────
 	let previewChannel = $state<'email' | 'sms' | 'telegram'>('email');
 	// Issue #1256 S8b (AC-2, Rest-Inventur R1): Kanal-Liste fuer den Umschalter
@@ -645,10 +661,11 @@
 						<Card padding={14}>
 							<div class="hub-mobile-stat-label">Status</div>
 							<div class="hub-mobile-stat-value">
+								<!-- Issue #1256 S8c (AC-8): Kurzform statt Langform (Soll: screen-compare-detail-mobile.jsx:81). -->
 								{#if status === 'active'}
-									<span class="hub-mobile-stat-inline"><Dot tone="good" size={7}/>Läuft automatisch</span>
+									<span class="hub-mobile-stat-inline"><Dot tone="good" size={7}/>Läuft autom.</span>
 								{:else if status === 'draft'}
-									<span class="hub-mobile-stat-inline"><Dot tone="neutral" size={7}/>Entwurf · nicht aktiv</span>
+									<span class="hub-mobile-stat-inline"><Dot tone="neutral" size={7}/>Entwurf</span>
 								{:else}
 									<span class="hub-mobile-stat-inline"><Dot tone="neutral" size={7}/>Pausiert</span>
 								{/if}
@@ -722,7 +739,50 @@
 				</Card>
 				{/if}
 
-				<!-- 2×2 SummaryCard-Grid -->
+				<!-- 2×2 SummaryCard-Grid (Desktop) / Chevron-Summary-Stack (Mobil) —
+				     Issue #1256 S8c (AC-3..AC-7, Soll Mobil:
+				     screen-compare-detail-mobile.jsx:87-93,276-293). -->
+				{#snippet summaryChevron()}
+					<span class="hub-summary-row-chevron" aria-hidden="true">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+					</span>
+				{/snippet}
+				{#if isMobileViewport}
+					<div class="hub-summary-stack-mobile" data-testid="compare-detail-summary-mobile">
+						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('orte')}>
+							<span class="hub-summary-row-body">
+								<span class="hub-summary-row-eyebrow">Orte</span>
+								<span class="hub-summary-row-title">{resolvedLocations.length} Kandidaten</span>
+								<span class="hub-summary-row-desc">{resolvedLocations.slice(0, 2).map(({loc}) => loc?.name ?? '—').join(' · ')}{resolvedLocations.length > 2 ? ` +${resolvedLocations.length - 2}` : ''}</span>
+							</span>
+							{@render summaryChevron()}
+						</button>
+						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('idealwerte')}>
+							<span class="hub-summary-row-body">
+								<span class="hub-summary-row-eyebrow">Wertebereiche</span>
+								<span class="hub-summary-row-title">{profileLabel}</span>
+								<span class="hub-summary-row-desc">{Object.keys(idealRanges ?? {}).length} Metriken · Markierung, kein Score</span>
+							</span>
+							{@render summaryChevron()}
+						</button>
+						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('layout')}>
+							<span class="hub-summary-row-body">
+								<span class="hub-summary-row-eyebrow">Layout</span>
+								<span class="hub-summary-row-title">{layoutCardTitle}</span>
+								<span class="hub-summary-row-desc">Übersicht pro Kanal</span>
+							</span>
+							{@render summaryChevron()}
+						</button>
+						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('versand')}>
+							<span class="hub-summary-row-body">
+								<span class="hub-summary-row-eyebrow">Versand</span>
+								<span class="hub-summary-row-title">{status === 'draft' ? 'Nicht geplant' : presetBriefingTimesLabel(preset)}</span>
+								<span class="hub-summary-row-desc">{status === 'draft' ? 'Aktivierung offen' : `Briefings ${presetBriefingTimesLabel(preset)}`}</span>
+							</span>
+							{@render summaryChevron()}
+						</button>
+					</div>
+				{:else}
 				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
 					<Card padding={20} style="display: flex; flex-direction: column">
 						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
@@ -730,7 +790,8 @@
 							<button onclick={() => handleValueChange('orte')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
 						</div>
 						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{preset.location_ids.length} Kandidaten</div>
-						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{resolvedLocations.slice(0, 3).map(({loc}) => loc?.name ?? '—').join(' · ')}</div>
+						<!-- Issue #1256 S8c (AC-3): "+N weitere" bei >3 Orten (Soll: jsx:159). -->
+						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{resolvedLocations.slice(0, 3).map(({loc}) => loc?.name ?? '—').join(' · ')}{resolvedLocations.length > 3 ? ` +${resolvedLocations.length - 3} weitere` : ''}</div>
 					</Card>
 
 					<Card padding={20} style="display: flex; flex-direction: column">
@@ -738,7 +799,8 @@
 							<Eyebrow>Wertebereiche</Eyebrow>
 							<button onclick={() => handleValueChange('idealwerte')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
 						</div>
-						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{preset.profil}</div>
+						<!-- Issue #1256 S8c (AC-6): presetProfileLabel statt rohem preset.profil. -->
+						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{profileLabel}</div>
 						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{Object.keys(idealRanges ?? {}).length} Metriken mit Idealbereich — im Briefing pro Wert markiert. Kein Score, kein Ranking.</div>
 					</Card>
 
@@ -747,8 +809,9 @@
 							<Eyebrow>Layout pro Kanal</Eyebrow>
 							<button onclick={() => handleValueChange('layout')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
 						</div>
-						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{channels.join(' · ')}</div>
-						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">Engere Kanäle zeigen automatisch weniger Spalten</div>
+						<!-- Issue #1256 S8c (AC-4): channelNamesLabel/"Keine Kanäle" statt harter Liste (Soll: jsx:169-171). -->
+						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{layoutCardTitle}</div>
+						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">Engere Kanäle zeigen automatisch weniger Spalten — Reihenfolge nach Priorität.</div>
 					</Card>
 
 					<Card padding={20} style="display: flex; flex-direction: column">
@@ -756,10 +819,12 @@
 							<Eyebrow>Versand</Eyebrow>
 							<button onclick={() => handleValueChange('versand')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
 						</div>
-						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{presetBriefingTimesLabel(preset)}</div>
-						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{versandSummaryText}</div>
+						<!-- Issue #1256 S8c (AC-5): Draft-Sonderfall (Soll: jsx:175-177). -->
+						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{status === 'draft' ? 'Noch nicht geplant' : presetBriefingTimesLabel(preset)}</div>
+						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{status === 'draft' ? 'Briefing-Uhrzeiten im Tab Versand festlegen.' : versandSummaryText}</div>
 					</Card>
 				</div>
+				{/if}
 
 				<!-- Verifikations-Hinweis -->
 				<div style="display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--g-card); border: 1px solid var(--g-rule); border-left: 3px solid var(--g-accent); border-radius: var(--g-r-3)">
@@ -774,37 +839,57 @@
 
 	{#if activeTab === 'orte'}
 		<div class="tab-panel" data-testid="compare-detail-panel-orte">
-			{#if resolvedLocations.length === 0}
-				<p class="empty-state">Noch keine Orte ausgewählt.</p>
+			<!-- Issue #1256 S8c (AC-9): Section-Rahmen ueber SectionH-Atom + Card
+			     um Liste UND Footer (Soll Desktop: jsx:197-216; Soll Mobil: CDM:110).
+			     Fix-Loop 1 (F002): mobil ueber `eyebrow` statt `title` — kompakter
+			     CDM_SectionH-Look (Soll: screen-compare-detail-mobile.jsx:267-274). -->
+			{#if isMobileViewport}
+				<SectionH eyebrow="Verglichene Orte">
+					{#snippet right()}
+						<span class="hub-section-hint">ziehen zum Sortieren</span>
+					{/snippet}
+				</SectionH>
 			{:else}
-				<div
-					use:dndzone={{ items: orteItems, flipDurationMs: 150, dropTargetStyle: {} }}
-					onconsider={handleOrteDndConsider}
-					onfinalize={handleOrteDndFinalize}
-				>
-					{#each orteItems as item, i (item.id)}
-						{@const loc = locationById.get(item.id)}
-						{#if loc}
-							<div class="hub-orte-row" class:alt={i % 2 === 1} data-testid="hub-orte-row" data-loc-id={item.id}>
-								<span class="hub-orte-handle" aria-hidden="true">
-									<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
-								</span>
-								<div class="hub-orte-row-body"><CompareLocationRow {loc} index={i + 1} /></div>
-								<button
-									type="button"
-									class="hub-orte-remove-btn"
-									data-testid="hub-orte-remove"
-									title="Entfernen"
-									onclick={() => removeLocation(item.id)}
-								>✕</button>
-							</div>
-						{/if}
-					{/each}
-				</div>
+				<SectionH title="Verglichene Orte">
+					{#snippet right()}
+						<span class="hub-section-hint">Reihenfolge = Spalten im Briefing · ziehen zum Sortieren</span>
+					{/snippet}
+				</SectionH>
 			{/if}
-			<div class="footer-link">
-				<Btn variant="ghost" size="sm" data-testid="hub-orte-add" onclick={toggleAddPanel}>Ort hinzufügen</Btn>
-			</div>
+			<Card padding={0} style="overflow: hidden">
+				{#if resolvedLocations.length === 0}
+					<p class="empty-state" style="padding: 0 16px">Noch keine Orte ausgewählt.</p>
+				{:else}
+					<div
+						class="hub-orte-list"
+						use:dndzone={{ items: orteItems, flipDurationMs: 150, dropTargetStyle: {} }}
+						onconsider={handleOrteDndConsider}
+						onfinalize={handleOrteDndFinalize}
+					>
+						{#each orteItems as item, i (item.id)}
+							{@const loc = locationById.get(item.id)}
+							{#if loc}
+								<div class="hub-orte-row" class:alt={i % 2 === 1} data-testid="hub-orte-row" data-loc-id={item.id}>
+									<span class="hub-orte-handle" aria-hidden="true">
+										<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
+									</span>
+									<div class="hub-orte-row-body"><CompareLocationRow {loc} index={i + 1} /></div>
+									<button
+										type="button"
+										class="hub-orte-remove-btn"
+										data-testid="hub-orte-remove"
+										title="Entfernen"
+										onclick={() => removeLocation(item.id)}
+									>✕</button>
+								</div>
+							{/if}
+						{/each}
+					</div>
+				{/if}
+				<div style="padding: 14px">
+					<Btn variant="ghost" size="sm" data-testid="hub-orte-add" onclick={toggleAddPanel}>Ort hinzufügen</Btn>
+				</div>
+			</Card>
 			{#if addPanelOpen}
 				<div class="hub-add-panel" data-testid="hub-orte-panel">
 					{#if addPanelGroups.length === 0}
@@ -846,9 +931,45 @@
 
 	{#if activeTab === 'layout'}
 		<div class="tab-panel" data-testid="compare-detail-panel-layout">
-			{#each channels as ch}
-				<CompareLayoutRow channel={ch} cols={channelChipCount(CHANNEL_COLS[ch], preset.location_ids.length)} />
-			{/each}
+			<!-- Issue #1256 S8c (AC-1/AC-2): Section-Rahmen + Limit-Pillen + Card
+			     (Desktop) bzw. dense-Zeilen ohne Card (Mobil) — Soll Desktop:
+			     screen-compare-detail.jsx:245-266; Soll Mobil:
+			     screen-compare-detail-mobile.jsx:148-166. Fix-Loop 1 (F002): mobil
+			     ueber `eyebrow` statt `title` — kompakter CDM_SectionH-Look
+			     (Soll: screen-compare-detail-mobile.jsx:267-274). -->
+			{#if isMobileViewport}
+				<SectionH eyebrow="Spalten pro Kanal">
+					{#snippet right()}
+						<span class="hub-section-hint">Renderer kappt je Kanal</span>
+					{/snippet}
+				</SectionH>
+				<div class="hub-layout-pills hub-layout-pills-mobile">
+					{#each LAYOUT_LIMIT_PILLS_MOBILE as pill (pill)}
+						<span class="hub-layout-pill hub-layout-pill-mobile">{pill}</span>
+					{/each}
+				</div>
+				<div style="display: flex; flex-direction: column; gap: 10px">
+					{#each channels as ch}
+						<CompareLayoutRow channel={ch} cols={channelChipCount(CHANNEL_COLS[ch], preset.location_ids.length)} dense />
+					{/each}
+				</div>
+			{:else}
+				<SectionH title="Übersicht pro Kanal">
+					{#snippet right()}
+						<span class="hub-section-hint">Metrik-Zeilen · Orte sind die Spalten — der Renderer kappt je Kanal</span>
+					{/snippet}
+				</SectionH>
+				<div class="hub-layout-pills">
+					{#each LAYOUT_LIMIT_PILLS as pill (pill)}
+						<span class="hub-layout-pill">{pill}</span>
+					{/each}
+				</div>
+				<Card padding={20} style="display: flex; flex-direction: column; gap: 16px">
+					{#each channels as ch}
+						<CompareLayoutRow channel={ch} cols={channelChipCount(CHANNEL_COLS[ch], preset.location_ids.length)} />
+					{/each}
+				</Card>
+			{/if}
 		</div>
 	{/if}
 
@@ -1047,18 +1168,6 @@
 		font-size: 0.875rem;
 		color: var(--g-ink-3);
 		padding: 1rem 0;
-	}
-
-	.footer-link {
-		margin-top: 1rem;
-	}
-	.footer-link a {
-		color: var(--g-accent);
-		font-size: 0.875rem;
-		text-decoration: none;
-	}
-	.footer-link a:hover {
-		text-decoration: underline;
 	}
 
 	.placeholder {
@@ -1347,5 +1456,102 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 7px;
+	}
+
+	/* Issue #1256 S8c — Layout-/Orte-Tab Section-Hint (AC-1/AC-2/AC-9). */
+	.hub-section-hint {
+		font-family: var(--g-font-mono);
+		font-size: 11px;
+		color: var(--g-ink-3);
+		letter-spacing: 0.03em;
+	}
+
+	/* Issue #1256 S8c (AC-1/AC-2) — Layout-Tab Limit-Pillen. */
+	.hub-layout-pills {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+		margin-bottom: 18px;
+	}
+	.hub-layout-pill {
+		font-family: var(--g-font-mono);
+		font-size: 11px;
+		padding: 5px 10px;
+		border-radius: var(--g-r-pill);
+		border: 1px solid var(--g-rule);
+		background: var(--g-card-alt);
+		color: var(--g-ink-2);
+	}
+	.hub-layout-pills-mobile {
+		gap: 6px;
+		margin-bottom: 14px;
+	}
+	.hub-layout-pill-mobile {
+		font-size: 10.5px;
+		padding: 4px 9px;
+	}
+
+	/* Issue #1256 S8c (AC-9) — Orte-Liste im Card-Rahmen: Trenner nur unter der Liste. */
+	.hub-orte-list {
+		border-bottom: 1px solid var(--g-rule-soft);
+	}
+
+	/* Issue #1256 S8c (AC-7) — mobiler Chevron-Summary-Stack (Soll:
+	   screen-compare-detail-mobile.jsx:276-293). */
+	.hub-summary-stack-mobile {
+		background: var(--g-card);
+		border: 1px solid var(--g-rule);
+		border-radius: var(--g-r-3, 10px);
+		overflow: hidden;
+	}
+	.hub-summary-row-mobile {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		width: 100%;
+		text-align: left;
+		padding: 13px 14px;
+		background: transparent;
+		border: none;
+		border-top: 1px solid var(--g-rule-soft);
+		cursor: pointer;
+	}
+	.hub-summary-stack-mobile .hub-summary-row-mobile:first-child {
+		border-top: none;
+	}
+	.hub-summary-row-body {
+		flex: 1;
+		min-width: 0;
+	}
+	.hub-summary-row-eyebrow {
+		display: block;
+		font-family: var(--g-font-mono);
+		font-size: 9px;
+		color: var(--g-ink-4);
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		margin-bottom: 3px;
+	}
+	.hub-summary-row-title {
+		display: block;
+		font-size: 14.5px;
+		font-weight: 600;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.hub-summary-row-desc {
+		display: block;
+		font-size: 12px;
+		color: var(--g-ink-3);
+		margin-top: 2px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.hub-summary-row-chevron {
+		flex-shrink: 0;
+		color: var(--g-ink-4);
+		display: flex;
 	}
 </style>

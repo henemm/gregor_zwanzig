@@ -140,10 +140,9 @@
 
 <!-- Desktop-Layout (#491, #582) — full-width Header nach JSX-Vorlage -->
 <div class="hidden desktop:block" style="position: relative; padding: 22px 40px 0; border-bottom: 1px solid var(--g-rule)">
-	<!-- Breadcrumb (Issue #582 + Bug #589) -->
+	<!-- Breadcrumb (Issue #582 + Bug #589). Issue #1256 S8c (AC-10): App-weiter
+	     Extra-Krümel entfernt — Soll ist genau 2 Krümel (Soll: JSX:66-70). -->
 	<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px">
-		<a href="/" style="font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-4); text-decoration: none" class="breadcrumb-link">WORKSPACE</a>
-		<span style="color: var(--g-ink-4); font-size: 11px"> · </span>
 		<a href="/compare" style="font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-3); text-decoration: none" class="breadcrumb-link">ORTS-VERGLEICHE</a>
 		<span style="color: var(--g-ink-4); font-size: 11px">/</span>
 		<span style="font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-4)">Hub</span>
@@ -155,8 +154,10 @@
 				<h1 style="font-size: 30px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.1; margin: 0">{data.preset.name}</h1>
 				<span style="flex-shrink: 0"><CompareStatusPill {status}/></span>
 			</div>
+			<!-- Issue #1256 S8c (AC-11): profileLabel statt rohem preset.profil,
+			     Leerfeld-Absicherung analog Mobile-Unterzeile unten (Soll: JSX:78-80). -->
 			<div style="font-size: 14px; color: var(--g-ink-3); margin: 8px 0 18px">
-				{data.preset.display_config?.region ?? '—'} · {data.preset.profil} · {data.preset.location_ids.length} {data.preset.location_ids.length === 1 ? 'Ort' : 'Orte'}
+				{data.preset.display_config?.region ?? '—'}{#if profileLabel}{' · '}{profileLabel}{/if}{' · '}{data.preset.location_ids.length} {data.preset.location_ids.length === 1 ? 'Ort' : 'Orte'}
 			</div>
 		</div>
 
@@ -182,6 +183,9 @@
 
 <!-- Mobile-TopBar (#493) — bleibt bespoke Seiten-Chrome, s. Modulkommentar oben -->
 <div class="desktop:hidden flex flex-col gap-4 p-4">
+	<!-- Issue #1256 S8c (AC-12): mobile Eyebrow-Zeile über dem Preset-Namen
+	     (Soll: screen-compare-detail-mobile.jsx:51, Styling analog TopAppBar.svelte:56-61). -->
+	<span class="mono block" style="font-size: 9px; color: var(--g-ink-muted); letter-spacing: 0.12em; text-transform: uppercase; line-height: 1;">Orts-Vergleich · Hub</span>
 	<div class="flex items-center gap-2 min-h-[44px]">
 		<a
 			href="/compare"

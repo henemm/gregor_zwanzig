@@ -5,6 +5,14 @@
 // Source-Inspection-Tests: lesen echte .svelte-Quelldateien und prüfen,
 // dass der Breadcrumb navigierbare Links enthält. Kein Browser, keine Mocks.
 //
+// AC-2 (Update): Issue #1256 Scheibe S8c (Spec:
+// docs/specs/modules/feat_1256_s8c_hub_fidelity.md, AC-10) hat den
+// "WORKSPACE"-Krümel auf der Compare-Hub-Seite bewusst entfernt — Soll ist
+// jetzt genau 2 Krümel "Orts-Vergleiche / Hub" (JSX: screen-compare-detail.jsx:66-70).
+// Der bisherige "WORKSPACE ist ein Link"-Test prüfte damit veraltetes
+// Verhalten (Test-Politik: fixen statt liegenlassen) — ersetzt durch einen
+// Regressionsschutz gegen die Wiederkehr des Krümels.
+//
 // Ausführung:
 //   cd frontend && node --experimental-strip-types --test src/routes/compare/__tests__/bug_589_breadcrumb_links.test.ts
 
@@ -30,14 +38,15 @@ test('AC-1: "ORTS-VERGLEICHE" ist ein Link auf /compare (Desktop-Breadcrumb)', (
 	);
 });
 
-test('AC-2: "WORKSPACE" ist ein Link auf /', () => {
+test('AC-2 (Issue #1256 S8c AC-10): "ORTS-VERGLEICHE" bleibt Link auf /compare, "WORKSPACE"-Krümel ist entfernt', () => {
 	const src = read(PAGE);
-	const hasWorkspaceLink =
-		src.includes('href="/"') ||
-		src.match(/<a[^>]+href="\/"[^>]*>\s*WORKSPACE\s*<\/a>/) !== null;
 	assert.ok(
-		hasWorkspaceLink,
-		'Kein <a href="/"> für WORKSPACE in compare/[id]/+page.svelte — "WORKSPACE" muss auf / verlinken'
+		/<a[^>]+href="\/compare"[^>]*>\s*ORTS-VERGLEICHE\s*<\/a>/.test(src),
+		'ORTS-VERGLEICHE muss als <a href="/compare">ORTS-VERGLEICHE</a> im Desktop-Breadcrumb erscheinen'
+	);
+	assert.ok(
+		!src.includes('WORKSPACE'),
+		'Regression zu Issue #1256 S8c AC-10: der "WORKSPACE"-Krümel darf nicht wieder auftauchen (Soll: genau 2 Krümel "Orts-Vergleiche / Hub")'
 	);
 });
 
