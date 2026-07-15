@@ -975,6 +975,9 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
   „Frage 5". Die eigentliche Auflösung des Alarme-Tabs (Entfernung +
   Migration seiner Inhalte) ist **explizit Out-of-Scope / Folge-Arbeit**
   dieser Spec, nicht als eigene Scheibe eingeplant.
+  *(ENTSCHIEDEN 2026-07-15: PO-Beschluss 2026-07-14, Handoff-5 Punkt 5 —
+  Zielbild ist doch ein eigener, geteilter Alarme-Tab statt Auflösung in
+  Versand/Wertebereiche; umgesetzt durch #1258 S4/S5, s. Changelog.)*
 - **KL-3:** `paused_at` existiert im FE-Modell noch nicht additiv (kommt
   aus #1250 Scheibe 2). Bis dahin nutzen Scheibe 3 (Lifecycle-Toggle-Label)
   und Scheibe 8 (Mobile-Bottom-Sheet) die bestehende
@@ -1045,6 +1048,15 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
   ohne ADR auskamen.
 
 ## Changelog
+
+- **2026-07-15 (#1258 Programm-Abschluss, AC-23):** KL-2 als ENTSCHIEDEN
+  markiert. PO-Beschluss 2026-07-14 (Handoff-5 Punkt 5, Design-Request
+  „Frage 5") kehrte das in KL-2 beschriebene Zielbild um: statt Auflösung
+  des Alarme-Tabs in Versand-/Wertebereiche-Tab bekommt der Ortsvergleich
+  einen eigenen, geteilten Alarme-Tab (analog Trip). Umgesetzt durch
+  #1258 S4 (Compare-Editor-Integration) und S5 (Compare-Hub-Integration).
+  KL-2-Wortlaut bleibt unverändert stehen (Historie), Markierung am Punkt
+  selbst.
 
 - **2026-07-13 (feat-1256-compare-ui-rewire, v1.3):** KL-7 ergänzt — PO-abgesegneter
   S1→S3-Zwischenzustand (Archivieren app-weit unerreichbar bis Scheibe 3), Auslöser

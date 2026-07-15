@@ -435,11 +435,16 @@ bereits bestehenden Vergleich-Tab-CTA (Z.1045-1071,
 
 - **R5 (Kanal-Verbindungsstatus)** im Versand-Tab (Dot/„verifiziert"/„nicht
   verbunden") — wartet auf separate fachliche Klärung, nicht Teil von S8d.
+  *(EINGELÖST 2026-07-15: durch #1258 S6 — Kanal-Verbindungsstatus lebt
+  jetzt live im geteilten `VTBriefingChannels`, s. Changelog.)*
 - **S9 /edit-Redirect** (Mobile-Pencil-Icon → `/edit`-Link im Mobile-Header
   der Hub-Seite, KL-1 aus S8c) — wird in S8d nicht angefasst.
 - **Alarme-Tab** (#1258) — bleibt unangetastet; die CTA-Kette im Create-
   Modus bleibt vergleich→orte→idealwerte→layout→versand, Alarme bleibt im
   Create-Modus weiterhin gesperrt (Bestand, `CompareEditor.svelte:1177`).
+  *(ÜBERHOLT 2026-07-15 durch #1258 S4, Abschnitt 10: das edit-only-Gating
+  entfällt, Alarme ist reguläre Create-Station der Kette
+  vergleich→orte→idealwerte→layout→alarme→versand — s. Changelog)*
 - **Desktop-Suchfeld auf `/compare`** bleibt unverändert bestehen (AC-3
   betrifft ausschließlich die mobile Ansicht).
 - **Geteilte Organismen** (`CorridorEditor`, `CorridorEditorMobile`,
@@ -510,6 +515,14 @@ bei jedem `vitest`-Durchlauf ohne Staging.
 
 ## Changelog
 
+- 2026-07-15 (#1258 Programm-Abschluss, AC-23): Out-of-Scope-Verweis R5
+  (Kanal-Verbindungsstatus) als EINGELÖST markiert — #1258 S6 hat den
+  Verbindungsstatus (Dot + Label je Kanal) live im geteilten
+  `VTBriefingChannels`-Organism ergänzt, wirkt in Trip- und Compare-Fläche.
+  Zusätzlich den Out-of-Scope-Bullet „Alarme-Tab bleibt im Create-Modus
+  gesperrt" als ÜBERHOLT markiert — #1258 S4 hat das edit-only-Gating
+  entfernt und Alarme als reguläre Create-Station eingeführt (Nebenbefund
+  der AC-23-Revision, Wortlaut des Bullets unverändert belassen).
 - 2026-07-15: Initial spec created
 - 2026-07-15: PO-Entscheide eingetragen (AskUserQuestion): AC-12 wie
   spezifiziert (Boden-CTA entfällt), eine Scheibe mit LoC-Override 500

@@ -273,6 +273,8 @@ konsumiert).
   R4/Scheibe S8d, nicht S8c.
 - **(c) Kanal-Verbindungsstatus** (Dot/„verifiziert"/„nicht verbunden" im
   Versand-Tab) = R5, wartet auf separate fachliche Klärung.
+  *(EINGELÖST 2026-07-15: durch #1258 S6 — Kanal-Verbindungsstatus lebt
+  jetzt live im geteilten `VTBriefingChannels`, s. Changelog.)*
 - **(d) Mobile-Pencil-Icon → `/edit`-Link im Mobile-Header** (`+page.svelte:198`)
   hängt an S9/KL-1, wird in S8c nicht angefasst.
 - **(e) CDM zeigt Mobile-Stats ohne `Dot`-Icon**, der Ist-Zustand behält die
@@ -338,4 +340,8 @@ Byte-Identität und `SectionH.svelte`-Interface — läuft bei jedem `pytest`/
 
 ## Changelog
 
+- 2026-07-15 (#1258 Programm-Abschluss, AC-23): Known Limitation (c)
+  (Kanal-Verbindungsstatus, R5) als EINGELÖST markiert — #1258 S6 hat den
+  Verbindungsstatus (Dot + Label je Kanal) live im geteilten
+  `VTBriefingChannels`-Organism ergänzt, wirkt in Trip- und Compare-Fläche.
 - 2026-07-14: Initial spec created

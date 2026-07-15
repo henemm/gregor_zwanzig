@@ -348,7 +348,7 @@ bleiben (Punkt 6 im Auftrag: „Selektoren unverändert"), bekommt
 **AC-3:** Given ein Preset mit gesetztem Laufzeit-Ende / When ich in der Laufzeit-Sektion „Bis auf Weiteres" wähle und speichere / Then ist das Enddatum nach Reload gelöscht (unbegrenzte Laufzeit); umgekehrt setzt „Bis Datum" + Datumsauswahl + Speichern das Enddatum reload-fest — inklusive des Backend-Lösch-Sentinels (`end_date: ""`).
   - Test: Playwright Rundtrip beide Richtungen; Go-Handler-Test für den Sentinel isoliert.
 
-**AC-4:** Given der Compare-Editor (Edit-Modus) ist geöffnet / When ich Cooldown-Minuten oder Stille-Stunden im Versand-Tab ändere / Then persistieren sie wie bisher; der Alarme-Tab enthält diese Controls NICHT mehr, zeigt aber weiterhin Radar-/Official-Toggle und die Metrik-Level-Tabelle.
+**AC-4:** Given der Compare-Editor (Edit-Modus) ist geöffnet / When ich Cooldown-Minuten oder Stille-Stunden im Versand-Tab ändere / Then persistieren sie wie bisher; der Alarme-Tab enthält diese Controls NICHT mehr, zeigt aber weiterhin Radar-/Official-Toggle und die Metrik-Level-Tabelle. *(revidiert 2026-07-15 durch #1258 AC-18, s. Changelog)*
   - Test: Playwright — Cooldown-Karte NUR im Versand-Tab sichtbar, Alarme-Tab zeigt `alert-metric-level-table`, aber kein `alert-cooldown-card`.
 
 **AC-5:** Given der Compare-Editor ist geöffnet / When ich den Layout-Tab öffne / Then sind Zeitfenster, Horizont, Top-N, Stundenverlauf-Toggle+Metriken editierbar, Werte persistieren wie bisher, und alle `compare-step5-*`-Testids existieren unverändert (nur neuer Parent-Tab).
@@ -418,5 +418,12 @@ bleiben (Punkt 6 im Auftrag: „Selektoren unverändert"), bekommt
 
 ## Changelog
 
+- 2026-07-15: **AC-4 revidiert** durch #1258 AC-18 (Programm-Abschluss-
+  Dokupflicht, AC-23): die Alert-Zustellung (Cooldown, Stille Stunden,
+  amtliche-Warnungen-Toggle, Metrik-Level-Tabelle, Beispiel-Warnung) ist
+  aus dem Versand-Tab in den neuen, geteilten Alarme-Tab (`AlarmeTab.svelte`,
+  #1258 S4) umgezogen — der Versand-Tab trägt seither nur noch das
+  geplante Briefing (Kanäle, Zeitplan, Laufzeit). AC-4-Wortlaut bleibt
+  unverändert stehen (Historie), Markierung am Punkt selbst.
 - 2026-07-12: Initial spec created
 - 2026-07-12 (vor Freigabe): `## Expected Behavior` ergänzt (Input/Output/Side effects) — Pflicht-Sektion aus dem Template nachgetragen (spec-validator-Fund), keine inhaltliche Änderung an Scope/ACs.
