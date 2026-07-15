@@ -61,12 +61,8 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 		// Issue #1151: Feld-Level-Merge statt Blind-Replace, analog #1129/#1103.
 		// Teil-Updates (nur `metrics` gesendet) duerfen andere zuvor gespeicherte
 		// display_config-Keys (z.B. `theme`) nicht loeschen.
-		if trip.DisplayConfig == nil {
-			trip.DisplayConfig = map[string]interface{}{}
-		}
-		for k, v := range cfg {
-			trip.DisplayConfig[k] = v
-		}
+		// Issue #1159: konsolidiert auf den gemeinsamen mergeConfigMap-Helfer.
+		trip.DisplayConfig = mergeConfigMap(trip.DisplayConfig, cfg)
 		// Sync alert_rules with active weather metrics (Issue #701)
 		activeIDs := model.ActiveAlertableMetricIDs(trip.DisplayConfig)
 		trip.AlertRules = model.SyncAlertRules(trip.AlertRules, activeIDs)
@@ -129,7 +125,9 @@ func PutLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 			w.Write([]byte(`{"error":"bad_request"}`))
 			return
 		}
-		loc.DisplayConfig = cfg
+		// Issue #1159: Feld-Level-Merge statt Blind-Replace — behebt aktiven
+		// Datenverlust (BUG-DATALOSS-GR221, s. mergeConfigMap-Doku).
+		loc.DisplayConfig = mergeConfigMap(loc.DisplayConfig, cfg)
 		if err := s.SaveLocation(*loc); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)

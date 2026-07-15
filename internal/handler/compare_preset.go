@@ -285,9 +285,12 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// der Client es nicht mitsschickt (nil nach Decode = Feld fehlte im Request).
 		// Verhindert clobbern von Region/channel_layouts durch Clients die display_config
 		// nicht kennen (z.B. Editor-Tabs die nur Scheduler-Felder senden).
-		if updated.DisplayConfig == nil {
-			updated.DisplayConfig = original.DisplayConfig
-		}
+		// Issue #1159: von Objekt-Level-RMW auf feldweisen Merge umgestellt — ein
+		// Teil-PUT von display_config (z.B. nur geaendertes region) loescht die
+		// uebrigen Original-Keys (ideal_ranges, channel_layouts, ...) nicht mehr.
+		// NUR display_config — alle anderen object-level-preserve-Felder bleiben
+		// unveraendert object-level.
+		updated.DisplayConfig = mergeConfigMap(original.DisplayConfig, updated.DisplayConfig)
 		// #631: previous_schedule erhalten wenn Body es nicht trägt (Datenverlust-Schutz).
 		if updated.PreviousSchedule == "" {
 			updated.PreviousSchedule = original.PreviousSchedule

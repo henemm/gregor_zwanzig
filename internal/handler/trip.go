@@ -208,38 +208,19 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		}
 		if req.Aggregation != nil {
 			// Issue #1129: Feld-Level-Merge statt Blind-Replace, analog #1103.
-			if existing.Aggregation == nil {
-				existing.Aggregation = map[string]interface{}{}
-			}
-			for k, v := range *req.Aggregation {
-				existing.Aggregation[k] = v
-			}
+			// Issue #1159: konsolidiert auf den gemeinsamen mergeConfigMap-Helfer.
+			existing.Aggregation = mergeConfigMap(existing.Aggregation, *req.Aggregation)
 		}
 		if req.WeatherConfig != nil {
-			if existing.WeatherConfig == nil {
-				existing.WeatherConfig = map[string]interface{}{}
-			}
-			for k, v := range *req.WeatherConfig {
-				existing.WeatherConfig[k] = v
-			}
+			existing.WeatherConfig = mergeConfigMap(existing.WeatherConfig, *req.WeatherConfig)
 		}
 		if req.DisplayConfig != nil {
-			if existing.DisplayConfig == nil {
-				existing.DisplayConfig = map[string]interface{}{}
-			}
-			for k, v := range *req.DisplayConfig {
-				existing.DisplayConfig[k] = v
-			}
+			existing.DisplayConfig = mergeConfigMap(existing.DisplayConfig, *req.DisplayConfig)
 		}
 		if req.ReportConfig != nil {
 			// Issue #1103: Feld-Level-Merge statt Blind-Replace — Teil-Updates
 			// duerfen bestehende report_config-Keys nicht loeschen.
-			if existing.ReportConfig == nil {
-				existing.ReportConfig = map[string]interface{}{}
-			}
-			for k, v := range *req.ReportConfig {
-				existing.ReportConfig[k] = v
-			}
+			existing.ReportConfig = mergeConfigMap(existing.ReportConfig, *req.ReportConfig)
 		}
 		if req.AlertRules != nil {
 			existing.AlertRules = *req.AlertRules
