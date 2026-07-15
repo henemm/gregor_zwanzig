@@ -153,23 +153,22 @@ test.describe('Issue #736: Reiter-Reorganisation "Inhalt" vs. "Versand"', () => 
 		}
 	});
 
-	// ── AC-4: Kanal-Toggle setzt display_config + report_config synchron ────────
+	// ── AC-4: Kanal-Toggle setzt report_config synchron ──────────────────────────
 	// Fix-Loop 2026-07-13 (F011, Timebox ausgeschöpft ohne Staging-Netzwerkzugriff
 	// — kein GZ_VALIDATOR_*/E2E_*-Credential in dieser Worktree-Session):
-	// statischer Code-Befund, KEIN Fix, siehe Rückmeldung an team-lead.
-	// Hypothese A (wahrscheinlichste): `handleChannelChange` (BriefingScheduleTab.svelte)
-	// ruft `saveController.schedule(fn)` — SaveStatus.schedule() (saveStatusStore.svelte.ts:67-72)
-	// hat GENAU EINEN Debounce-Slot (`clearTimeout` + Ersetzen von `_pendingFn`
-	// bei jedem Aufruf). Falls VersandTab.svelte's eigene Alert-Zustellungs-$effects
-	// (officialAlertsEnabled/cooldown/quiet, s. VersandTab.svelte:200-204-Kommentar
-	// "EIN gemeinsamer Debounce-Slot") beim Tab-Mount ebenfalls einmal feuern, wird
-	// der Channel-PUT lautlos durch einen unpassenden PUT ersetzt/verzoegert.
-	// Hypothese B: die Assertion selbst ist strukturell falsch — `handleChannelChange`
-	// sendet NUR `{display_config: {...channels}}`, es gibt in trip.go/UpdateTripHandler
-	// KEINE serverseitige Ableitung von `report_config.send_email` aus
-	// `display_config.channels.email` — d.h. `expect(trip.report_config?.send_email).toBe(true)`
-	// koennte grundsaetzlich nie erfuellt sein, unabhaengig vom Timing.
-	test('AC-4: E-Mail aktivieren im Versand-Reiter setzt beide Persistenz-Felder', async ({
+	// statischer Code-Befund, KEIN Fix, siehe Rückmeldung an team-lead. Der
+	// `test.fixme` bleibt bestehen (Timeout-Ursache F011 ungeklärt, separater
+	// E2E-Infrastruktur-Befund).
+	//
+	// Issue #1243 (Bereinigung, 2026-07-15): `display_config.channels` war ein
+	// totes Legacy-Feld, das kein Codepfad je ausgewertet hat (loader.py:1519).
+	// Der redundante Zweitschreiber (`handleChannelChange` in
+	// BriefingScheduleTab.svelte) wurde entfernt. Die einzige Quelle der
+	// Kanal-Entscheidung ist `report_config.send_email/send_telegram/send_sms`,
+	// gelesen vom Versand-Scheduler. Die alte Erwartung
+	// `expect(trip.display_config?.channels?.email).toBe(true)` entfällt
+	// ersatzlos — sie würde nach dem Fix nie mehr zutreffen.
+	test('AC-4: E-Mail aktivieren im Versand-Reiter setzt report_config.send_email', async ({
 		page,
 		request
 	}) => {
@@ -203,12 +202,11 @@ test.describe('Issue #736: Reiter-Reorganisation "Inhalt" vs. "Versand"', () => 
 			await page.locator('[data-testid="channel-email"]').getByRole('checkbox').check();
 			await putResponsePromise;
 
-			// Beide Felder prüfen
+			// report_config.send_email ist die einzige Quelle, die der
+			// Versand-Scheduler liest (Issue #1243).
 			const tripRes = await request.get(`/api/trips/${id}`);
 			expect(tripRes.ok()).toBeTruthy();
 			const trip = await tripRes.json();
-			// display_config.channels.email UND report_config.send_email müssen true sein
-			expect(trip.display_config?.channels?.email).toBe(true);
 			expect(trip.report_config?.send_email).toBe(true);
 		} finally {
 			await deleteTrip(request, id);

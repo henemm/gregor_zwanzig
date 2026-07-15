@@ -3,7 +3,6 @@
 	import { Btn } from '$lib/components/atoms';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	import type { Trip, ReportConfig } from '$lib/types';
-	import type { ChannelConfig } from './briefingChannelGating.ts';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 
 	interface Props {
@@ -18,14 +17,6 @@
 
 	let reportConfig = $state<ReportConfig>(
 		trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {}
-	);
-
-	// Issue #617: Wetter-Kanäle aus display_config.channels durchreichen.
-	// Issue #736: Mutable state (nicht const) damit Auto-Save-Aktualisierungen sichtbar werden.
-	// Cast über unknown wie in WeatherMetricsTab (#587). Default: Email+Telegram aktiv, SMS aus.
-	let weatherChannels = $state<ChannelConfig>(
-		((trip.display_config as unknown as Record<string, unknown>)?.channels as ChannelConfig | undefined)
-		?? { email: true, telegram: true, sms: false }
 	);
 
 	// Legacy save state (only used when saveController is not present)
@@ -77,28 +68,6 @@
 			void saveController.doSave(buildSaveFn());
 		}
 	});
-
-	// Issue #736: Auto-Save bei Kanal-Toggle — display_config.channels sofort persistieren.
-	async function handleChannelChange(channel: 'email' | 'telegram' | 'sms', value: boolean) {
-		weatherChannels = { ...weatherChannels, [channel]: value };
-		const updatedDisplayConfig = {
-			...(trip.display_config as unknown as Record<string, unknown> ?? {}),
-			channels: { ...weatherChannels },
-		};
-		if (saveController) {
-			saveController.schedule(async () => {
-				await api.put(`/api/trips/${trip.id}`, { display_config: updatedDisplayConfig });
-				onTripUpdate?.({ ...trip, display_config: updatedDisplayConfig as Trip['display_config'] });
-			});
-		} else {
-			try {
-				await api.put(`/api/trips/${trip.id}`, { display_config: updatedDisplayConfig });
-				onTripUpdate?.({ ...trip, display_config: updatedDisplayConfig as Trip['display_config'] });
-			} catch (e: unknown) {
-				console.error(e);
-			}
-		}
-	}
 </script>
 
 <div class="briefing-schedule-tab">
@@ -111,7 +80,6 @@
 		{onTripUpdate}
 		{saveController}
 		bind:reportConfig
-		onChannelChange={handleChannelChange}
 		{onJump}
 	/>
 
