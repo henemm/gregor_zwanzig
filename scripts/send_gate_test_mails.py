@@ -61,12 +61,14 @@ from app.profile import ActivityProfile  # noqa: E402
 from app.trip import Stage, Trip, Waypoint  # noqa: E402
 from app.user import ComparisonResult, LocationResult, SavedLocation  # noqa: E402
 from output.channels.email import EmailOutput  # noqa: E402
+from output.renderers.alert.model import AlertMessage, OnsetEvent  # noqa: E402
 from output.renderers.email import render_email  # noqa: E402
 from output.renderers.email.helpers import dp_to_row  # noqa: E402
 from output.renderers.comparison import render_compare_email  # noqa: E402
 from output.tokens.dto import TokenLine  # noqa: E402
 from services.notification_service import NotificationService  # noqa: E402
 from services.official_alerts.models import OfficialAlert  # noqa: E402
+from services.radar_alert_service import send_radar_alert_email  # noqa: E402
 
 UTC = timezone.utc
 VIENNA = ZoneInfo("Europe/Vienna")
@@ -268,11 +270,45 @@ def send_compare_mail(settings: Settings, token: str) -> bool:
     return True
 
 
+# ---------------------------------------------------------------------------
+# (d) Radar-Onset-Alarm (#830 / Herkunfts-Footer #1241) -- ueber den echten
+#     Versandpfad services.radar_alert_service.send_radar_alert_email().
+#     Synthetische OnsetEvent-Fixture analog build_onset_alert_message()
+#     (radar_alert_service.py) bzw. tests/tdd zu Onset-Alerts. Marker-Header
+#     X-GZ-Mail-Type: radar-alert. Erfuellt die Validator-Checks P-1..P-4
+#     (Segment-/km-Label, Onset-Zeit HH:MM, Intensitaet, Cooldown-Hinweis).
+# ---------------------------------------------------------------------------
+def build_radar_alert_message(token: str) -> AlertMessage:
+    onset = OnsetEvent(
+        onset_minutes=25,
+        onset_time="14:30",
+        km_from=0.0,
+        km_to=8.0,
+        is_convective=False,
+        intensity_label="Leichter Regen",
+        source_label="Radar (DWD)",
+        briefing_context=None,
+    )
+    return AlertMessage(
+        trip_short=f"GATE1241 {token}",
+        stand_at="13:05",
+        events=(onset,),
+        source="Radar (DWD)",
+        cooldown_display="2 Stunden",
+    )
+
+
+def send_radar_alert_mail(settings: Settings, token: str) -> bool:
+    msg = build_radar_alert_message(token)
+    send_radar_alert_email(settings, msg)
+    return True
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--only", choices=["official", "briefing", "compare"], default=None,
-        help="Nur einen der drei Mail-Pfade senden (default: alle drei).",
+        "--only", choices=["official", "briefing", "compare", "radar"], default=None,
+        help="Nur einen der Mail-Pfade senden (default: official/briefing/compare).",
     )
     args = parser.parse_args()
 
@@ -299,6 +335,10 @@ def main() -> int:
     if "compare" in targets:
         sent = send_compare_mail(settings, token)
         print(f"(c) Orts-Vergleich + WarnBlock gesendet: {sent}")
+        ok = ok and sent
+    if "radar" in targets:
+        sent = send_radar_alert_mail(settings, token)
+        print(f"(d) Radar-Onset-Alarm gesendet: {sent}")
         ok = ok and sent
 
     print(f"An: {TEST_RECIPIENT} -- Token: {token}")

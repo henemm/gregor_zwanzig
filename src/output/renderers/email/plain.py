@@ -23,10 +23,10 @@ from app.profile import ActivityProfile
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
-    build_confidence_hint, build_metrics_summary_pills,
+    build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
     build_segment_label,
     build_units_legend, fmt_val, format_change_line, format_trend_tokens,
-    tone_symbol, visible_cols,
+    render_origin_footer_text, tone_symbol, visible_cols,
 )
 from src.output.renderers.email.profile_signature import profile_signature
 from src.output.renderers.alert.official_alerts import (
@@ -289,4 +289,8 @@ def render_plain(
             lines.append(f"Fallback {', '.join(fb.fallback_metrics)}: {fb.fallback_model}")
         else:
             lines.append(f"Fallback: {fb.fallback_model}")
+    # Issue #1241: Herkunfts-Fußzeile (SSoT-Helper).
+    lines.append(render_origin_footer_text(build_origin_footer(
+        "trip-briefing", "full", renderer_name="email/plain.py",
+    )))
     return "\n".join(lines)

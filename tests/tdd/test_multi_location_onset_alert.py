@@ -13,7 +13,22 @@ from __future__ import annotations
 import uuid
 from datetime import timezone
 
+import pytest
+
 from app.config import Settings
+
+
+@pytest.fixture(autouse=True)
+def _freeze_deployed_commit(monkeypatch):
+    """Issue #1241: Die Herkunfts-Fußzeile (Zeile 2) trägt den Commit-Hash aus
+    `helpers._DEPLOYED_COMMIT`. Für die Byte-Gleichheits-Golden unten auf einen
+    festen Platzhalter einfrieren, sonst brechen die Fixtures nach jedem Commit
+    (analog tests/golden/email/conftest.py). Der Renderer liest das Attribut zur
+    Laufzeit über `src.output.renderers.email.helpers` — genau dieses Modulobjekt
+    wird gepatcht."""
+    from src.output.renderers.email import helpers as helpers_mod
+
+    monkeypatch.setattr(helpers_mod, "_DEPLOYED_COMMIT", "gitrev0")
 
 # ---------------------------------------------------------------------------
 # Vorher/Nachher-Snapshot des heutigen Single-Onset-Fixtures (AC-2/AC-3).
@@ -26,6 +41,8 @@ EXPECTED_PLAIN = (
     'Intensität: leichter Regen\nQuelle: Radar (DWD)\n\n'
     'Stand: heute 14:23\n'
     'Cooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden.'
+    # Issue #1241: geteilte Herkunfts-Fußzeile (radar-alert), Commit eingefroren.
+    '\n\nRegen-/Gewitter-Alarm · alert/render.py · gitrev0'
 )
 EXPECTED_HTML = (
     '<html><body style="font-family:\'Inter Tight\', -apple-system, BlinkMacSystemFont, '
@@ -64,7 +81,13 @@ EXPECTED_HTML = (
     '2 Stunden.</div>'
     '<p style="color:#5c5a52;margin-top:16px;font-family:\'Inter Tight\', -apple-system, '
     'BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">'
-    'Stand: heute 14:23</p></body></html>'
+    'Stand: heute 14:23</p>'
+    # Issue #1241: geteilte Herkunfts-Fußzeile (radar-alert), Commit eingefroren.
+    '<div style="font-family:\'JetBrains Mono\', ui-monospace, \'SF Mono\', Menlo, '
+    'Consolas, monospace;font-size:10px;color:#9a978d;padding:10px 24px 14px;'
+    'line-height:1.5;"><div>Regen-/Gewitter-Alarm</div>'
+    '<div style="color:#b5b1a6;">alert/render.py · gitrev0</div></div>'
+    '</body></html>'
 )
 EXPECTED_TELEGRAM = (
     '<b>GR20-Test · km 5–18 · Regen in 12 Min</b>\n14:35 · leichter Regen · Radar (DWD)'

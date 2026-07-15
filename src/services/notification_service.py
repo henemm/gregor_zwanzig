@@ -513,6 +513,7 @@ class NotificationService:
         html = render_warn_block(
             dto_notices, variant="standalone", source_label=source_label,
             source_url=source_url, stand_at=stand_at, tz=alert_tz,
+            context_label=trip.name,
         )
         telegram_text = render_official_alert_telegram(
             dto_notices, prefix=trip.name, source_label=source_label, tz=alert_tz,
@@ -613,6 +614,7 @@ class NotificationService:
         html = render_warn_block(
             dto_notices, variant="standalone", source_label=source_label,
             source_url=source_url, stand_at=stand_at, tz=alert_tz,
+            context_label="Ortsvergleich",
         )
 
         sent_channels: list[str] = []

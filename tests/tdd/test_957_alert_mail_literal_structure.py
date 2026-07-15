@@ -61,8 +61,11 @@ class TestSingleEventVerdictAndDatablock:
     def test_datablock_has_three_rows(self):
         """3 separate Datenzeilen: Wert-Vergleich, Schwellwert-Status, Wo & wann."""
         html, plain = render_email(_single_event_msg())
-        # 3 <div ...>...</div>-Zeilen im Datenblock-Container (rows-Markup).
-        mono_count = html.count("font-family:'JetBrains Mono'")
+        # 3 Datenzeilen im Datenblock-Container (rows-Markup). Gezählt wird die
+        # Wert-Zelle des Datarow-Markups (`padding:8px 0;font-family:...Mono`),
+        # NICHT die bloße Mono-Font — sonst zählt die #1241-Herkunfts-Fußzeile
+        # (eigener Mono-Block mit anderem padding) fälschlich mit.
+        mono_count = html.count("padding:8px 0;font-family:'JetBrains Mono'")
         assert mono_count == 3, (
             f"Erwartet 3 Datenzeilen (Mono-Font), gefunden: {mono_count}: {html!r}"
         )
@@ -102,7 +105,9 @@ class TestMultiEventVerdictAndDatablock:
     def test_one_row_per_event(self):
         msg = _multi_event_msg()
         html, _ = render_email(msg)
-        assert html.count("font-family:'JetBrains Mono'") == len(msg.events)
+        # Wert-Zelle des Datarow-Markups zählen (nicht bloße Mono-Font), sonst
+        # zählt die #1241-Herkunfts-Fußzeile fälschlich mit.
+        assert html.count("padding:8px 0;font-family:'JetBrains Mono'") == len(msg.events)
 
     def test_dampened_row_for_under_threshold_event(self):
         """Event unter Schwelle bekommt gedämpfte Farbe (G_INK_MUTED), nicht G_DANGER."""

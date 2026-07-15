@@ -198,7 +198,11 @@ def _plain_table_rows(plain: str) -> list[str]:
             if not stripped:
                 in_table = False
                 continue
-            data_lines.append(stripped)
+            # Nur echte Stundentabellen-Zeilen (beginnen mit einer Uhrzeit/Zahl,
+            # s. Docstring). Footer-/Meta-Zeilen (Generated:/Data:/Herkunfts-
+            # Fußzeile #1241) beginnen nie mit einer Ziffer und bleiben außen vor.
+            if stripped[0].isdigit():
+                data_lines.append(stripped)
     return data_lines
 
 

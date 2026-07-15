@@ -13,8 +13,11 @@ from __future__ import annotations
 
 import html as _html
 import math
+import os as _os
 import re
+import subprocess as _subprocess
 from collections import OrderedDict
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -350,6 +353,99 @@ def format_units_legend(label_units: list[tuple[str, str]]) -> str:
         return ""
     parts = [f"{', '.join(labels)} {unit}" for unit, labels in groups.items()]
     return "Einheiten: " + " · ".join(parts)
+
+
+# ----------------------------------------------------------------------
+# Issue #1241: Herkunfts-Footer — EIN geteilter Baustein für alle Mail-Renderer
+# ----------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class OriginFooter:
+    """Zweizeilige Herkunfts-Fußzeile (#1241).
+
+    line1 = Mail-Art in Klartext (ggf. mit Kontext-Prefix).
+    line2 = erzeugender Renderer + Commit-Stand des Laufzeit-Checkouts.
+    """
+    line1: str
+    line2: str
+
+
+def _deployed_commit() -> str:
+    """Kurzer Git-Commit-Hash des Laufzeit-Checkouts (#1241).
+
+    Respektiert das aktuelle Arbeitsverzeichnis (`os.getcwd()`). Ohne `.git`
+    oder bei Git-Fehler → Fallback ``"unknown"`` (keine Exception)."""
+    try:
+        out = _subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=_os.getcwd(), capture_output=True, text=True, timeout=1,
+        )
+        commit = out.stdout.strip()
+        if out.returncode == 0 and commit:
+            return commit
+    except Exception:
+        pass
+    return "unknown"
+
+
+# Modulweit gecacht: EIN Subprozess beim Import, danach reiner Attribut-Zugriff
+# (kein git-Aufruf pro Mail). Golden-Email-Tests monkeypatchen diese Konstante
+# auf einen festen Platzhalter, damit die Fixtures nicht bei jedem Commit brechen.
+_DEPLOYED_COMMIT = _deployed_commit()
+
+
+# (mail_type, mail_format) -> Klartext-Label (Zeile 1). official-alert nutzt
+# zusätzlich context_label (s. build_origin_footer). Werte konsistent zu den
+# X-GZ-Mail-Type-Headern der Caller (notification_service u.a.).
+_MAIL_TYPE_LABELS: dict[tuple[str, "str | None"], str] = {
+    ("trip-briefing", "full"): "Etappen-Briefing · Vollversion",
+    ("trip-briefing", "compact"): "Etappen-Briefing · Kompakt",
+    ("compare", None): "Ortsvergleich",
+    ("official-alert", None): "Amtliche Warnung",
+    ("radar-alert", None): "Regen-/Gewitter-Alarm",
+    ("deviation-alert", None): "Abweichungs-Alarm",
+}
+
+
+def build_origin_footer(
+    mail_type: str,
+    mail_format: "str | None" = None,
+    *,
+    renderer_name: str,
+    context_label: "str | None" = None,
+) -> OriginFooter:
+    """Baut die zweizeilige Herkunfts-Fußzeile (#1241, SSoT).
+
+    Zeile 1: Mail-Art in Klartext (aus `_MAIL_TYPE_LABELS`); für
+    ``mail_type="official-alert"`` wird `context_label` (Trip-Name bzw.
+    „Ortsvergleich") als Prefix vorangestellt: „{context_label} · Amtliche
+    Warnung". Zeile 2: erzeugender Renderer + gecachter Commit-Stand.
+    """
+    label = _MAIL_TYPE_LABELS.get((mail_type, mail_format))
+    if label is None:
+        label = _MAIL_TYPE_LABELS.get((mail_type, None), mail_type)
+    if mail_type == "official-alert" and context_label:
+        label = f"{context_label} · {label}"
+    variant = f" ({mail_format})" if mail_format else ""
+    line2 = f"{renderer_name}{variant} · {_DEPLOYED_COMMIT}"
+    return OriginFooter(line1=label, line2=line2)
+
+
+def render_origin_footer_html(footer: OriginFooter) -> str:
+    """Dezente HTML-Herkunftszeile (Design-Tokens), zwei Zeilen."""
+    return (
+        f'<div style="font-family:{FONT_DATA};font-size:10px;color:#9a978d;'
+        f'padding:10px 24px 14px;line-height:1.5;">'
+        f'<div>{_html.escape(footer.line1)}</div>'
+        f'<div style="color:#b5b1a6;">{_html.escape(footer.line2)}</div>'
+        f'</div>'
+    )
+
+
+def render_origin_footer_text(footer: OriginFooter) -> str:
+    """Plain/Compact-Herkunftszeile: ' · '-Join beider Zeilen (im Compact-Pfad
+    faltet der bestehende `_ascii()`-Übersetzer '·' → '-')."""
+    return f"{footer.line1} · {footer.line2}"
 
 
 def build_units_legend(rows: list[dict]) -> str:

@@ -1047,6 +1047,7 @@ def _standalone_src_html(
 
 def render_official_alert_html(
     notices: list["OfficialAlertNotice"], *, source_label: str, stand_at: str, tz: "ZoneInfo",
+    context_label: str | None = None,
 ) -> str:
     """E-Mail-HTML auf dem SOLL-Design (#1233 Slice B, „Alert · Amtliche
     Warnung"): Verdict-Pill, deterministische Headline, Warnstufen-Leiter
@@ -1096,9 +1097,17 @@ def render_official_alert_html(
         f'margin:18px 0 0;">Stand: heute {_html.escape(stand_at)} · '
         f'abgerufen bei {_html.escape(source_label)}</p>'
     )
+    # Issue #1241: Herkunfts-Fußzeile mit Kontext (Trip-Name bzw. „Ortsvergleich").
+    from src.output.renderers.email.helpers import (
+        build_origin_footer, render_origin_footer_html,
+    )
+    origin = render_origin_footer_html(build_origin_footer(
+        "official-alert", renderer_name="alert/official_alerts.py",
+        context_label=context_label,
+    ))
     return (
         f'<html><body style="font-family:{FONT_UI};color:{G_INK};">'
-        f'{verdict}{headline}{ladder}{warns_block}{src}{footer}</body></html>'
+        f'{verdict}{headline}{ladder}{warns_block}{src}{footer}{origin}</body></html>'
     )
 
 
@@ -1292,6 +1301,7 @@ def render_warn_block(
     notices: list["OfficialAlertNotice"], *, variant: str, source_label: str,
     source_url: str | None = None, stand_at: str | None = None,
     tz: "ZoneInfo | None" = None, count_line: str | None = None,
+    context_label: str | None = None,
 ) -> str:
     """Geteilter WarnBlock-Renderer (Issue #1216). EIN Baustein fuer alle drei
     Mail-Flaechen (Trip-Briefing, Ortsvergleich, Standalone-Alarm), einziger
@@ -1310,6 +1320,7 @@ def render_warn_block(
     if variant == "standalone":
         return render_official_alert_html(
             notices, source_label=source_label, stand_at=stand_at or "", tz=tz,
+            context_label=context_label,
         )
     if variant == "embedded":
         return _render_warn_block_embedded(

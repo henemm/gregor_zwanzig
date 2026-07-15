@@ -26,9 +26,10 @@ from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
     ampel_level,
-    build_confidence_hint, build_metrics_summary_pills,
+    build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
     build_segment_label, build_units_legend,
     derive_horizon, fmt_val, format_change_line, format_trend_tokens, pill_html,
+    render_origin_footer_html,
     shorten_stage_name, visible_cols,
 )
 from src.output.renderers.alert.official_alerts import (
@@ -457,6 +458,10 @@ def _render_footer(
     if ampel_legend_html:
         extras += ampel_legend_html
 
+    # Issue #1241: dezente Herkunfts-Fußzeile (SSoT-Helper).
+    origin_html = render_origin_footer_html(build_origin_footer(
+        "trip-briefing", "full", renderer_name="email/html.py",
+    ))
     return (
         f'<div style="background:#1d1c1a;color:#9a978d;font-size:11px;'
         f'font-family:{FONT_DATA};padding:16px 28px 20px;">'
@@ -465,6 +470,7 @@ def _render_footer(
         + link_row
         + extras
         + "</div>"
+        + origin_html
     )
 
 

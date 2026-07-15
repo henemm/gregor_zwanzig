@@ -746,6 +746,13 @@ def _render_abo_footer(preset_name, preset_schedule, preset_weekday, location_co
 
 
 def _render_app_footer() -> str:
+    # Issue #1241: dezente Herkunfts-Fußzeile (SSoT-Helper).
+    from src.output.renderers.email.helpers import (
+        build_origin_footer, render_origin_footer_html,
+    )
+    origin_html = render_origin_footer_html(build_origin_footer(
+        "compare", renderer_name="email/compare_html.py",
+    ))
     return (
         f'<div style="padding:16px 24px 20px;background:{G_INK};color:#9a978d;'
         f'font-size:11px;font-family:{FONT_DATA};">'
@@ -758,6 +765,7 @@ def _render_app_footer() -> str:
         f'<a href="#" style="color:#9a978d;text-decoration:none;margin-right:16px;">Orte ändern</a>'
         f'<a href="#" style="color:#9a978d;text-decoration:none;">Abmelden</a>'
         f'</div></div>'
+        + origin_html
     )
 
 

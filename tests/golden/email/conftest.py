@@ -35,8 +35,13 @@ def _freeze_now(monkeypatch):
     import output.renderers.trip_report as tr_mod
     from src.output.renderers.email import plain as plain_mod
     from src.output.renderers.email import html as html_mod
+    from src.output.renderers.email import helpers as helpers_mod
 
     monkeypatch.setattr(tr_mod, "datetime", _FrozenDatetime)
     monkeypatch.setattr(plain_mod, "datetime", _FrozenDatetime)
     monkeypatch.setattr(html_mod, "datetime", _FrozenDatetime)
+    # Issue #1241: der Herkunfts-Footer trägt den Commit-Hash — für die
+    # Golden-Bit-Gleichheit auf einen festen Platzhalter einfrieren, sonst
+    # brechen die Fixtures nach jedem Commit (analog zum datetime-Freeze).
+    monkeypatch.setattr(helpers_mod, "_DEPLOYED_COMMIT", "gitrev0")
     yield

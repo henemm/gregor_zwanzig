@@ -19,7 +19,7 @@ from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
     _AMPEL_STAGE_TONES, build_confidence_hint, build_metrics_summary_pills,
-    format_trend_tokens,
+    build_origin_footer, format_trend_tokens, render_origin_footer_text,
 )
 from src.output.renderers.email.profile_signature import profile_signature
 from src.output.renderers.alert.official_alerts import (
@@ -195,6 +195,12 @@ def render_compact(
     lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
     model_name = segments[0].timeseries.meta.model if segments[0].timeseries else "n/a"
     lines.append(f"Data: {segments[0].provider} ({model_name})")
+
+    # Issue #1241: Herkunfts-Fußzeile VOR _ascii() (faltet '·' → '-', kurz
+    # halten wegen 2048-Byte-Limit des Compact-Validators).
+    lines.append(render_origin_footer_text(build_origin_footer(
+        "trip-briefing", "compact", renderer_name="email/compact.py",
+    )))
 
     body = "\n".join(lines)
     return _ascii(body)

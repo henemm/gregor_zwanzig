@@ -69,10 +69,13 @@ def _freeze_datetime() -> None:
     import output.renderers.trip_report as tr_mod
     from src.output.renderers.email import plain as plain_mod
     from src.output.renderers.email import html as html_mod
+    from src.output.renderers.email import helpers as helpers_mod
 
     tr_mod.datetime = _FrozenDatetime
     plain_mod.datetime = _FrozenDatetime
     html_mod.datetime = _FrozenDatetime
+    # Issue #1241: Herkunfts-Footer-Commit auf festen Platzhalter (s. conftest).
+    helpers_mod._DEPLOYED_COMMIT = "gitrev0"
 
 
 # --- Fixture-Builder (bit-identisch zu test_email_html_golden.py) -----------

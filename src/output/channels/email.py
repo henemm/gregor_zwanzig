@@ -12,7 +12,7 @@ import smtplib
 import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.utils import getaddresses, parseaddr
+from email.utils import formatdate, getaddresses, parseaddr
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -263,6 +263,8 @@ def build_mime_message(
         msg["Subject"] = subject
         msg["From"] = from_addr
         msg["To"] = to_header
+        # Issue #1247: RFC-2822-Date-Header im MIME-Envelope.
+        msg["Date"] = formatdate(localtime=True)
         if reply_to:
             msg["Reply-To"] = reply_to
         if mail_type is not None:
@@ -288,6 +290,8 @@ def build_mime_message(
         msg["Subject"] = subject
         msg["From"] = from_addr
         msg["To"] = to_header
+        # Issue #1247: RFC-2822-Date-Header im MIME-Envelope.
+        msg["Date"] = formatdate(localtime=True)
         if reply_to:
             msg["Reply-To"] = reply_to
         if mail_type is not None:
