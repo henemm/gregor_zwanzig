@@ -309,6 +309,40 @@ wörtlich).
   („5 Segmente" → 6) + `compare-editor-fidelity-s8d.spec.ts`
   (Mobile-CTA-Labels) — Ketten-Migration.
 
+### 11. S5-Detail-Festlegungen (Compare-Hub, 2026-07-15)
+
+Analyse-Basis: `docs/context/feat-1258-s5-hub-alarme.md` (H1–H5).
+
+- **Tab (H1):** 7. Hub-Tab `alarme`/„Alarme" zwischen `layout` und
+  `versand` (konsistent zur Editor-Reihe aus Abschnitt 10); Testids
+  automatisch `compare-detail-tab-alarme`/`compare-detail-panel-alarme`;
+  Deep-Link-Whitelist leitet sich aus `TABS` ab (kein zweiter Ort).
+- **Commit (H2):** `handleAlarmeCommit` exakt nach dem
+  `handleVersandCommit`-Muster (`CompareTabs.svelte:433-467`):
+  Wrapper-Events onchange/onfocusout/onclick, `AlarmSnapshot`
+  (officialAlertsEnabled, officialWarningsEnabled, radarAlertEnabled,
+  metricAlertLevels, alertCooldownMinutes, alertQuietFrom/To) +
+  `flushPendingAlarmSave` mit No-Op-Erkennung, Fehler = Feld-Rollback.
+  `HubEdit`/`buildHubPutPayload` werden um `officialAlertsEnabled`,
+  `officialWarnings` und `radarAlertEnabled` erweitert;
+  `official_warnings` trägt AUSSCHLIESSLICH `{enabled}` (F001-Lehre S4:
+  nie `sources` senden).
+- **Hydration (H3, kritischste Kante):** Neuer lazy Effekt beim ersten
+  Aktivieren des Alarme-Tabs ruft `hydrateAlarmFieldsFromPreset(preset)`
+  (Bridge, neu): setzt official/radar UND stellt sicher, dass
+  metricAlertLevels, Cooldown/Quiet und corridors hydriert sind (die
+  bestehenden lazy Hydrationen der Nachbar-Tabs dürfen dafür nicht
+  vorausgesetzt werden — Erst-Öffnung des Alarme-Tabs zeigt sonst
+  Defaults und ein Commit würde Bestand mit Defaults überschreiben).
+  Commit-Handler guarded auf `alarmeHydrated`;
+  `lastPersistedAlarmSnapshot` wird bei Hydration initialisiert. Die
+  Snapshot-Buchführungen von idealwerte/versand/alarme dürfen sich
+  nicht gegenseitig stale machen (gemeinsam getrackte Felder:
+  metricAlertLevels, Cooldown/Quiet).
+- **Props (H4):** `notifyCount` aus `wizardState.corridors` (notify-
+  Zähler), `onJumpToWertebereiche` → Hub-Tab `idealwerte`.
+- **Kein Backend-Delta (H5)** — FE-only.
+
 ## Expected Behavior
 
 - **Input:** Bestehende Trips/ComparePresets mit `official_alert_triggers_enabled`,
@@ -408,6 +442,9 @@ wörtlich).
 **AC-28 (S4):** Given der Create-Wizard / When ich den „Weiter"-CTAs folge / Then führt die Kette Orte → Wertebereiche → Layout → **Alarme** → Versand (Alarme ist reguläre Station mit eigenem Weiter-CTA zu Versand), und die Fortschrittsanzeige zählt sechs Stationen.
   - Test: Playwright Create-Flow klickt die CTA-Kette inkl. `compare-editor-continue-alarme`; Fortschritts-Segmente = 6.
 
+**AC-29 (S5):** Given ein bestehender Vergleich mit konfigurierten Alarm-Werten (Schwellen, Cooldown, amtliche Warnungen an) / When ich im Hub den Alarme-Tab als ERSTEN Tab öffne (Deep-Link `?tab=alarme`) / Then zeigt der Baustein die persistierten Werte (nicht die Defaults), und ein anschließender Commit ohne Änderung sendet keinen PUT bzw. verändert den Bestand nicht.
+  - Test: Bridge-Kern-Test Hydration-Vollständigkeit + No-Op-Flush; Staging-E2E Deep-Link-Erstöffnung mit Netzwerk-Listener (kein Default-Clobber-PUT).
+
 ## Scheiben-Zuordnung
 
 | Scheibe | Inhalt | ACs (Nummern) |
@@ -416,7 +453,7 @@ wörtlich).
 | **S2** | Geteilter Alarme-Organism als Baustein (AlarmeTab.svelte + AlertChannelPicker.svelte, ungewired) | 9 … 12 |
 | **S3** | Trip-Integration (Versand-Tab-Rückbau, Tab-Ergänzung Desktop+Mobile, Kanal-Feld `alert_channels`) | 13 … 15, 24 … 26 |
 | **S4** | Compare-Editor-Integration (CompareAlarmSection ablösen, Wizard-Station, officialWarnings-Verdrahtung) | 16 … 18, 27 … 28 |
-| **S5** | Compare-Hub-Integration (7. Tab, Commit-Handler, Hydration) | 19 |
+| **S5** | Compare-Hub-Integration (7. Tab, Commit-Handler, Hydration inkl. Erst-Öffnungs-Schutz) | 19, 29 |
 | **S6** | R5 Status-Dot (+ email_verified exponieren) | 20 … 22 |
 | **Programm-Abschluss** | Spec-Revisionen als Dokupflicht des Gesamtissues | 23 |
 
@@ -505,6 +542,10 @@ setzen S1 (Datenmodell) und S2 (Baustein) voraus. S5 setzt S4 voraus.
   Bestand-`sources` überleben FE-Save (AC-27)
 - FE node:test gegen `compareEditorLogic` — TAB_ORDER-Station `alarme`,
   Progress `alarmeVisited` (AC-28)
+- FE node:test gegen `compareHubWizardBridge` —
+  `hydrateAlarmFieldsFromPreset` setzt ALLE Alarm-Felder ohne
+  Nachbar-Hydration; `flushPendingAlarmSave` No-Op bei unverändertem
+  Snapshot; Payload trägt nie `sources` (AC-29, AC-19)
 
 ### Staging-E2E (Marker `live`/`staging`, Playwright gegen echten Login)
 
@@ -523,6 +564,14 @@ issue-nummerierte Testdateien).
 
 ## Changelog
 
+- 2026-07-15: **S5-Detail-Festlegungen ergänzt** (Workflow
+  `feat-1258-s5-hub-alarme`, Analyse-Doc
+  `docs/context/feat-1258-s5-hub-alarme.md`): neuer Implementation-
+  Details-Abschnitt 11 (7. Hub-Tab zwischen layout/versand,
+  handleAlarmeCommit nach Versand-Muster, hydrateAlarmFieldsFromPreset
+  mit Erst-Öffnungs-Schutz, HubEdit-Erweiterung ohne sources), neues
+  AC-29 (S5), Test Coverage ergänzt. Bestehende ACs 1–28 wortgleich
+  unverändert.
 - 2026-07-15: **S4-Detail-Festlegungen ergänzt** (Workflow
   `feat-1258-s4-compare-editor`, Analyse-Doc
   `docs/context/feat-1258-s4-compare-editor.md`): neuer Implementation-

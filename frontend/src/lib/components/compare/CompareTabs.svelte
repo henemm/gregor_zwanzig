@@ -40,6 +40,8 @@
 	// Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung der Idealwerte-Inline-
 	// Edit-Parität, Muster TripTabs.svelte:198-202.
 	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
+	// Issue #1258 Scheibe 5 (AC-19): geteilter Alarme-Organism im 7. Hub-Tab.
+	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
 	import { CompareWizardState } from './compareWizardState.svelte';
 	import {
 		hydrateWizardStateFromPreset,
@@ -50,9 +52,13 @@
 		buildToggleActivePutPayload,
 		hydrateVersandFieldsFromPreset,
 		flushPendingVersandSave,
+		hydrateAlarmFieldsFromPreset,
+		flushPendingAlarmSave,
+		rollbackAlarmSnapshot,
 		hubActivationBanner,
 		createPutQueue,
-		type VersandSnapshot
+		type VersandSnapshot,
+		type AlarmSnapshot
 	} from './compareHubWizardBridge.ts';
 	import { groupLocations } from './locationHelpers.js';
 
@@ -77,6 +83,9 @@
 		{ value: 'orte', label: 'Orte' },
 		{ value: 'idealwerte', label: 'Wertebereiche' },
 		{ value: 'layout', label: 'Layout' },
+		// Issue #1258 S5 (AC-19, H1): zwischen layout und versand — konsistent
+		// zur Editor-Reihe aus S4 (Konvergenz-Vorgabe).
+		{ value: 'alarme', label: 'Alarme' },
 		{ value: 'versand', label: 'Versand' },
 		{ value: 'vorschau', label: 'Vorschau' }
 	] as const;
@@ -466,6 +475,90 @@
 		if (updated) currentPreset = updated;
 	}
 
+	// Issue #1258 Scheibe 5 (AC-19, AC-29, H2/H3): eingebetteter AlarmeTab
+	// (context="vergleich") im 7. Hub-Tab — analog Idealwerte-/Versand-Bridge
+	// oben (gleicher `wizardState`/gleiche `currentPreset`-Baseline, eigene
+	// Snapshot-Baseline `lastPersistedAlarmSnapshot`). H3: der Alarme-Tab kann
+	// als ERSTER Tab geoeffnet werden (Deep-Link `?tab=alarme`) — der
+	// Hydrations-Effekt hydriert deshalb ALLE Alarm-Felder eigenstaendig ueber
+	// `hydrateAlarmFieldsFromPreset` (statt sich auf einen bereits gelaufenen
+	// idealwerte-/versand-Effekt zu verlassen).
+	let alarmeHydrated = $state(false);
+	let lastPersistedAlarmSnapshot: AlarmSnapshot | null = null;
+
+	function currentAlarmSnapshot(): AlarmSnapshot {
+		return snapshotForRollback({
+			officialAlertsEnabled: wizardState.officialAlertsEnabled,
+			officialWarningsEnabled: wizardState.officialWarningsEnabled,
+			radarAlertEnabled: wizardState.radarAlertEnabled,
+			metricAlertLevels: wizardState.metricAlertLevels,
+			alertCooldownMinutes: wizardState.alertCooldownMinutes,
+			alertQuietFrom: wizardState.alertQuietFrom,
+			alertQuietTo: wizardState.alertQuietTo
+		});
+	}
+
+	$effect(() => {
+		if (activeTab !== 'alarme' || alarmeHydrated) return;
+		// F005-Muster: aus currentPreset hydrieren, damit ein vorheriger
+		// Orte-/Idealwerte-/Versand-Edit in derselben Sitzung nicht
+		// ueberschrieben wird (H3: eigenstaendige Hydration ALLER Alarm-Felder,
+		// setzt KEINEN vorherigen idealwerte-/versand-Effekt voraus).
+		hydrateAlarmFieldsFromPreset(wizardState, currentPreset);
+		lastPersistedAlarmSnapshot = currentAlarmSnapshot();
+		alarmeHydrated = true;
+	});
+
+	// Event-diskretisierte Persistenz (KEIN Debounce/#1234): change/focusout/
+	// click am Wrapper, Muster identisch `handleVersandCommit` (s. dortiger
+	// Kommentar SF-1/F001 zur Bubble-Phase).
+	//
+	// H3 Snapshot-Kreuzeffekte (Adversary-Punkt, Context Zeile 33/49):
+	// `metricAlertLevels` wird auch vom Idealwerte-Snapshot
+	// (`lastPersistedCorridorSnapshot`) und `alertCooldownMinutes`/
+	// `alertQuietFrom/To` auch vom Versand-Snapshot (`lastPersistedVersandSnapshot`)
+	// getrackt — der Alarme-Tab fuehrt (S5) die ERSTE Ueberlappung zwischen
+	// zwei Hub-Snapshots ein. Fuer den ERFOLGS-Pfad unkritisch: jeder
+	// Commit-Handler liest `current` IMMER frisch aus dem gemeinsamen
+	// `wizardState` (nie aus dem stale `before`), ein bereits von einem
+	// Nachbar-Tab persistiertes Feld wird beim naechsten Flush also korrekt
+	// mitgesendet — hoechstens ein redundanter Echo-PUT desselben Werts.
+	//
+	// Fix-Loop 1 (F001, Adversary CRITICAL): der FEHLER-Pfad (Rollback) darf
+	// deshalb NICHT pauschal alle Felder auf `before` zuruecksetzen — sonst
+	// wuerde ein zwischenzeitlicher Nachbar-Tab-Edit an einem geteilten Feld
+	// (z. B. Cooldown im Versand-Tab, waehrend dieser Alarme-PUT noch
+	// in-flight war und dann fehlschlaegt) still verworfen. Diff-basierter
+	// Rollback via `rollbackAlarmSnapshot` (compareHubWizardBridge.ts): pro
+	// Feld nur zuruecksetzen, wenn `wizardState` noch den Wert traegt, den
+	// DIESER gescheiterte Commit gesendet hat (`current`); ein Feld, das ein
+	// Nachbar-Tab seither veraendert hat, bleibt unangetastet.
+	async function handleAlarmeCommit(): Promise<void> {
+		if (!alarmeHydrated) return;
+		const updated = await hubPutQueue.enqueue(async () => {
+			const current = currentAlarmSnapshot();
+			const before = lastPersistedAlarmSnapshot ?? current;
+			const payload = flushPendingAlarmSave(currentPreset, current, lastPersistedAlarmSnapshot);
+			if (!payload) return null;
+			try {
+				const result = await api.put<ComparePreset>(payload.url, payload.body);
+				lastPersistedAlarmSnapshot = current;
+				return result;
+			} catch (e) {
+				console.error('[CompareTabs] Alarme-Persistenz fehlgeschlagen, Rollback:', e);
+				rollbackAlarmSnapshot(wizardState, before, current);
+				return null;
+			}
+		});
+		if (updated) currentPreset = updated;
+	}
+
+	// Issue #1258 S5 (H4): notifyCount fuer den AlarmeTab-Kopf — Korridore
+	// kommen normalerweise aus dem idealwerte-Hydrat, der alarme-Effekt
+	// hydriert `corridors` aber selbst mit (s. hydrateAlarmFieldsFromPreset),
+	// damit die Zahl auch korrekt ist, wenn Alarme der erste geoeffnete Tab ist.
+	const notifyCount = $derived((wizardState.corridors ?? []).filter((c) => c.notify).length);
+
 	const idealRanges = $derived(
 		preset.display_config?.ideal_ranges as
 			| Record<string, { min: number; max: number; unit?: string }>
@@ -625,6 +718,7 @@
 		currentPreset = snapshotForRollback(preset);
 		idealwerteHydrated = false;
 		versandHydrated = false;
+		alarmeHydrated = false;
 	});
 </script>
 
@@ -969,6 +1063,28 @@
 						<CompareLayoutRow channel={ch} cols={channelChipCount(CHANNEL_COLS[ch], preset.location_ids.length)} />
 					{/each}
 				</Card>
+			{/if}
+		</div>
+	{/if}
+
+	{#if activeTab === 'alarme'}
+		<div class="tab-panel" data-testid="compare-detail-panel-alarme">
+			{#if alarmeHydrated}
+				<!-- Muster identisch `.hub-versand-wrap` :987-994 (Bubble-Phase,
+				     SF-1-Erkenntnis) — onchange/onfocusout/onclick am Wrapper. -->
+				<div
+					class="hub-alarme-wrap"
+					onchange={handleAlarmeCommit}
+					onfocusout={handleAlarmeCommit}
+					onclick={handleAlarmeCommit}
+				>
+					<AlarmeTab
+						context="vergleich"
+						wiz={wizardState}
+						{notifyCount}
+						onJumpToWertebereiche={() => handleValueChange('idealwerte')}
+					/>
+				</div>
 			{/if}
 		</div>
 	{/if}

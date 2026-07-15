@@ -75,6 +75,13 @@ export interface HubEdit {
 	alertCooldownMinutes?: number;
 	alertQuietFrom?: string;
 	alertQuietTo?: string;
+	// Issue #1258 S5 (AC-19/AC-29): S4-Known-Gap geschlossen — bislang kannte
+	// die Hub-Bridge nur metricAlertLevels/Cooldown/Quiet, nicht die drei
+	// amtliche-Warnungen-/Radar-Felder. officialWarnings NUR {enabled} — `sources`
+	// wird vom FE NIEMALS gesendet (F001-Lehre aus S4, Context Zeile 32).
+	officialAlertsEnabled?: boolean;
+	officialWarnings?: { enabled: boolean };
+	radarAlertEnabled?: boolean;
 }
 
 /**
@@ -110,7 +117,12 @@ export function buildHubPutPayload(
 		endDate: edit.endDate,
 		alertCooldownMinutes: edit.alertCooldownMinutes,
 		alertQuietFrom: edit.alertQuietFrom,
-		alertQuietTo: edit.alertQuietTo
+		alertQuietTo: edit.alertQuietTo,
+		// Issue #1258 S5: S4-Known-Gap geschlossen — 1:1 Round-Trip wie alle
+		// anderen HubEdit-Felder, undefined bleibt undefined.
+		officialAlertsEnabled: edit.officialAlertsEnabled,
+		officialWarnings: edit.officialWarnings,
+		radarAlertEnabled: edit.radarAlertEnabled
 	});
 }
 
@@ -352,4 +364,147 @@ export function createPutQueue(): PutQueue {
 			return run;
 		}
 	};
+}
+
+/** Ziel-Objekt fuer `hydrateAlarmFieldsFromPreset`: ALLE Felder optional, damit
+ * sowohl ein frischer Plain-Objekt-Stub (Kern-Test) als auch die reale
+ * `CompareWizardState`-Instanz (CompareTabs.svelte) strukturell passen —
+ * eine `Record<string, unknown>`-Signatur waere fuer die Klasseninstanz NICHT
+ * zuweisbar (kein Index-Signature), waehrend optionale benannte Felder in
+ * beide Richtungen kompatibel sind. */
+export interface AlarmHydrationTarget {
+	officialAlertsEnabled?: boolean;
+	officialWarningsEnabled?: boolean;
+	radarAlertEnabled?: boolean;
+	metricAlertLevels?: Record<string, string>;
+	alertCooldownMinutes?: number;
+	alertQuietFrom?: string;
+	alertQuietTo?: string;
+	corridors?: Corridor[];
+}
+
+/**
+ * Issue #1258 Scheibe 5 (AC-19, AC-29): Erst-Oeffnungs-Hydration fuer den
+ * Hub-Alarme-Tab — mutiert `state` DIREKT (analog dem lazy `alarme`-Effekt in
+ * CompareTabs.svelte, H3), OHNE eine vorherige `hydrateWizardStateFromPreset`-
+ * oder `hydrateVersandFieldsFromPreset`-Hydration vorauszusetzen. Der Alarme-
+ * Tab kann als ERSTER Tab geoeffnet werden (Deep-Link `?tab=alarme`) — deshalb
+ * hydriert diese Funktion ALLE alarm-relevanten Felder eigenstaendig, inkl.
+ * `corridors` (H4: `notifyCount` braucht Korridore auch ohne vorherigen
+ * idealwerte-Effekt).
+ *
+ * Fallbacks 1:1 analog `AlarmeTab.svelte:80-90` bzw. Trip-Pipeline
+ * (trip_alert.py): `officialWarningsEnabled` faellt auf
+ * `official_alert_triggers_enabled !== false` zurueck, wenn `official_warnings`
+ * fehlt (Legacy-Kompatibilitaet).
+ */
+export function hydrateAlarmFieldsFromPreset(state: AlarmHydrationTarget, preset: ComparePreset): void {
+	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
+	state.officialAlertsEnabled = preset.official_alerts_enabled ?? true;
+	state.officialWarningsEnabled =
+		preset.official_warnings?.enabled ?? preset.official_alert_triggers_enabled !== false;
+	state.radarAlertEnabled = preset.radar_alert_enabled ?? false;
+	state.metricAlertLevels = (displayConfig.metric_alert_levels as Record<string, string>) ?? {};
+	state.alertCooldownMinutes = preset.alert_cooldown_minutes;
+	state.alertQuietFrom = preset.alert_quiet_from;
+	state.alertQuietTo = preset.alert_quiet_to;
+	state.corridors = preset.corridors ?? [];
+}
+
+/** Plain-Snapshot der 6 persistenzrelevanten Alarme-Tab-Felder (analog
+ * `VersandSnapshot`). `corridors` ist bewusst NICHT Teil des Snapshots — die
+ * Korridor-Persistenz bleibt exklusiv beim Idealwerte-Tab (`CorridorSnapshot`),
+ * der Alarme-Tab liest `corridors` nur lesend fuer `notifyCount` (H4). */
+export interface AlarmSnapshot {
+	officialAlertsEnabled: boolean;
+	officialWarningsEnabled: boolean;
+	radarAlertEnabled: boolean;
+	metricAlertLevels: Record<string, string>;
+	alertCooldownMinutes?: number;
+	alertQuietFrom?: string;
+	alertQuietTo?: string;
+}
+
+/**
+ * Issue #1258 Scheibe 5 (AC-19, AC-29): Event-diskretisierte PUT-Persistenz
+ * fuer den Hub-Alarme-Tab, analog `flushPendingVersandSave` — liefert `null`,
+ * wenn sich der Alarm-Snapshot seit dem letzten persistierten Stand NICHT
+ * veraendert hat (Waechter gegen unnoetige PUTs, #1234-Kontext), sonst den
+ * fertigen PUT-Payload via `buildHubPutPayload` (Read-Modify-Write: alle
+ * nicht-Alarm-Felder unveraendert aus `preset`, #1257-Kontext).
+ *
+ * `officialWarnings` im Body traegt NIEMALS `sources` (F001-Lehre aus S4,
+ * Context Zeile 32) — nur `{ enabled }`, unabhaengig vom Preset-Bestand.
+ *
+ * Hinweis (H3, Snapshot-Kreuzeffekte): `metricAlertLevels`/`alertCooldown*`/
+ * `alertQuiet*` werden auch vom Idealwerte- (`CorridorSnapshot`) bzw.
+ * Versand-Snapshot (`VersandSnapshot`) getrackt — der Alarme-Tab ist die
+ * ERSTE Ueberlappung zwischen zwei Hub-Snapshots (S5 fuehrt sie ein, es gibt
+ * KEIN "vorbestehendes Muster" dafuer). Fuer den ERFOLGS-Pfad ist das
+ * unkritisch: jeder Commit-Handler liest `current` IMMER frisch aus dem
+ * gemeinsamen `wizardState` (nie aus dem stale `before`) — ein bereits von
+ * einem Nachbar-Tab persistiertes Feld wird beim naechsten Flush korrekt
+ * mitgesendet, hoechstens ein redundanter Echo-PUT. Fuer den FEHLER-Pfad
+ * (Rollback) ist ein pauschales "alles auf `before` zuruecksetzen" dagegen
+ * gefaehrlich, weil es einen zwischenzeitlichen Edit eines Nachbar-Tabs im
+ * geteilten Feld stumm ueberschreiben wuerde (S5 Fix-Loop 1, F001) — deshalb
+ * `rollbackAlarmSnapshot` (diff-basiert, s. u.) statt direkter Feldzuweisung.
+ */
+export function flushPendingAlarmSave(
+	preset: ComparePreset,
+	current: AlarmSnapshot,
+	before: AlarmSnapshot | null
+): { url: string; body: ComparePreset } | null {
+	const baseline = before ?? current;
+	if (JSON.stringify(current) === JSON.stringify(baseline)) return null;
+	return buildHubPutPayload(preset, {
+		officialAlertsEnabled: current.officialAlertsEnabled,
+		officialWarnings: { enabled: current.officialWarningsEnabled },
+		radarAlertEnabled: current.radarAlertEnabled,
+		metricAlertLevels: current.metricAlertLevels,
+		alertCooldownMinutes: current.alertCooldownMinutes,
+		alertQuietFrom: current.alertQuietFrom,
+		alertQuietTo: current.alertQuietTo
+	});
+}
+
+/**
+ * Issue #1258 Scheibe 5 Fix-Loop 1 (F001, Adversary CRITICAL): diff-basierter
+ * Rollback fuer den Hub-Alarme-Commit-Fehlerpfad. `AlarmSnapshot` teilt sich
+ * drei Felder (`metricAlertLevels`, `alertCooldownMinutes`, `alertQuietFrom/To`)
+ * mit dem Idealwerte- bzw. Versand-Snapshot (H3) — ein pauschales
+ * `state[f] = before[f]` fuer ALLE Felder wuerde einen Edit, den ein
+ * Nachbar-Tab WAEHREND des in-flight PUTs an genau diesem geteilten Feld
+ * vorgenommen hat, stumm mit dem alten Wert ueberschreiben (der Nachbar-Edit
+ * ging nie ins Netz, es gab keinen fehlgeschlagenen PUT dafuer — trotzdem
+ * waere er weg).
+ *
+ * Deshalb pro Feld: nur zuruecksetzen, wenn der AKTUELLE `state`-Wert noch
+ * exakt dem Wert entspricht, den DIESER gescheiterte Commit gesendet hat
+ * (`attempted[f]` = der `current`-Snapshot des Commits). Hat ein Nachbar-Tab
+ * das Feld zwischenzeitlich veraendert (aktuell !== attempted), bleibt es
+ * unangetastet — der fremde Edit ueberlebt, der eigene, gescheiterte Edit
+ * wird ehrlich zurueckgerollt (UI wieder deckungsgleich mit Server-Stand).
+ * Wertvergleich JSON-stabil (wie der No-Op-Guard oben) fuer `metricAlertLevels`.
+ */
+export function rollbackAlarmSnapshot(
+	state: AlarmHydrationTarget,
+	before: AlarmSnapshot,
+	attempted: AlarmSnapshot
+): void {
+	const fields: (keyof AlarmSnapshot)[] = [
+		'officialAlertsEnabled',
+		'officialWarningsEnabled',
+		'radarAlertEnabled',
+		'metricAlertLevels',
+		'alertCooldownMinutes',
+		'alertQuietFrom',
+		'alertQuietTo'
+	];
+	const target = state as Record<string, unknown>;
+	for (const field of fields) {
+		if (JSON.stringify(target[field]) === JSON.stringify(attempted[field])) {
+			target[field] = before[field];
+		}
+	}
 }
