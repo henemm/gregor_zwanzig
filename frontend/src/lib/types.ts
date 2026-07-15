@@ -306,6 +306,9 @@ export interface Trip {
 	send_sms?: boolean;
 	send_telegram?: boolean;
 	end_date?: string;
+	// Issue #1258 S1 — scharfes Feld, loest official_alert_triggers_enabled ab
+	// (Legacy-Feld bleibt fuer Rollback erhalten, wird nicht mehr gelesen/geschrieben).
+	official_warnings?: { enabled: boolean; sources?: string[] };
 }
 
 export interface HealthResponse {

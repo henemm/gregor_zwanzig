@@ -382,6 +382,25 @@ issue-nummerierte Testdateien).
 
 ## Changelog
 
+- 2026-07-15: **S2 implementiert** (AC-9…AC-12, geteilter Alarme-Organism als
+  Baustein, ungewired): neu `shared/AlarmeTab.svelte` (Abschnitte a–h über
+  `alarmeTabSections(context)` strukturell erzwungen, Radar nur vergleich,
+  route-Zweig mit EINEM `$effect` + JSON-Diff-Guard + `saveController`),
+  `shared/AlertChannelPicker.svelte` (Design corridor-editor.jsx:469-489),
+  Logik-Module `shared/alarme-tab/` (Sections/ChannelState/Payload/
+  CompareMetricMapping). Additiv: `types.ts` Trip.official_warnings-Typ
+  (S1-Nachzug), `compareWizardState.svelte.ts` officialWarningsEnabled
+  (Persistenz-Verdrahtung folgt S4). Adversary-Verdict **VERIFIED** nach
+  Fix-Loop 1 (3 Runden, `docs/artifacts/feat-1258-s2-alarme-organism/`):
+  F001 (MEDIUM) `resolveAlertChannels({})` ergab „alles aus" statt
+  Neuanlage-Default → `hasAnyExplicitChannelValue()`-Weiche; F002 (MEDIUM)
+  Payload-Builder defaultete still auf `enabled:false` → Pflichtfelder +
+  Laufzeit-Guard (Error bei nicht-boolean). F003 (LOW, #1199): Guard-
+  Asymmetrie `officialAlertsEnabled` — Spiegelung beim S3-Wiring.
+  Kern-Tests 25 grün (node:test, verhaltensbasiert gegen Logik-Module —
+  Repo hat keine Component-Render-Infrastruktur); DOM-/Playwright-Nachweise
+  AC-9/AC-10 folgen beim S3/S4-Wiring per Staging-E2E wie in Test Coverage
+  vorgesehen. Vollsuite 1682 Tests / 0 fail.
 - 2026-07-15: **Notations-Korrektur ohne inhaltliche Änderung:** Spalte „ACs"
   der Scheiben-Zuordnungstabelle von `AC-1 … AC-8` auf reine Nummern (`1 … 8`)
   umgestellt. Grund: `edit_gate.py` (Plugin 3.9.1) parst `AC-N`-Vorkommen im

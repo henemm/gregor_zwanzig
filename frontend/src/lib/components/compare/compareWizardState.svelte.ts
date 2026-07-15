@@ -51,6 +51,9 @@ export class CompareWizardState {
 	// sicherheitsrelevant, analog officialAlertsEnabled). Kanal-Opt-in nutzt die
 	// bestehenden Runen sendTelegram/sendSms (Versand-Tab), keine neue Kanal-Rune.
 	officialAlertTriggersEnabled = $state(true);
+	// Issue #1258 S2: Persistenz-Verdrahtung folgt in S4 (toPresetPayload/Hydration).
+	// Default false = F1-Neuanlage-Default (analog Trip official_warnings.enabled).
+	officialWarningsEnabled = $state(false);
 	// Issue #1170 — Alarm-Konfiguration (Epic #1095 Scheibe 3/3), Trip-identische Keys.
 	metricAlertLevels = $state<Record<string, string>>({});
 	alertCooldownMinutes = $state<number | undefined>(undefined);
