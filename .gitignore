@@ -119,3 +119,6 @@ data/users/userA/
 data/users/userB/
 data/users/bug*/
 data/users/issue*/
+
+# S7a: briefings/ wird per-Host von der Migration befuellt (service-verwaltet), nie committet
+data/users/*/briefings/
