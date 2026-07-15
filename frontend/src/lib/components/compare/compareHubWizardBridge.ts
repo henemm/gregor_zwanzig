@@ -18,6 +18,7 @@ import type { IdealRange } from './compareMetricDefs.ts';
 import { buildComparePresetSavePayload } from './compareEditorSave.ts';
 import { rehydrateActiveMetrics } from './compareEditorLoad.ts';
 import type { CompareStatus } from './subscriptionHelpers.ts';
+import { computePauseToggle } from './subscriptionHelpers.ts';
 
 /** Plain-Objekt mit GENAU den 6 Feldern, die CorridorEditor.svelte im
  * vergleich-Kontext aus dem Wizard-State liest. Die Bridge-Komponente
@@ -191,6 +192,28 @@ export function buildToggleActivePutPayload(
 		url: `/api/compare/presets/${preset.id}`,
 		body: { ...preset, schedule, previous_schedule: previousSchedule }
 	};
+}
+
+/**
+ * Issue #1259 (Read-Modify-Write): Payload-Bau fuer den Vergleichs-LISTEN-
+ * Kebab "Pausieren/Aktivieren" — analog `buildToggleActivePutPayload`, aber
+ * mit frisch via `getPreset` geladenem Server-Stand statt der eingefrorenen
+ * Listen-Prop. Verhindert stillen Server-Datenverlust, wenn Liste und
+ * Detail-Hub desselben Vergleichs gleichzeitig offen sind (Multi-Tab).
+ * `getPreset` ist injizierbar (kein hartcodiertes `fetch`) fuer
+ * DOM-/Browser-freie Kern-Tests.
+ */
+export async function buildFreshTogglePutPayload(
+	presetId: string,
+	getPreset: (id: string) => Promise<ComparePreset>
+): Promise<{ url: string; body: ComparePreset }> {
+	const fresh = await getPreset(presetId);
+	const next = computePauseToggle(fresh);
+	return buildToggleActivePutPayload(
+		fresh,
+		next.schedule,
+		next.previous_schedule ?? (fresh.schedule !== 'manual' ? fresh.schedule : 'daily')
+	);
 }
 
 /** Plain-Snapshot der 10 persistenzrelevanten Versand-Felder (OHNE sendEmail —

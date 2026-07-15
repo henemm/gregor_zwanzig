@@ -13,7 +13,8 @@
 	import { api } from '$lib/api.js';
 	import { ConfirmDialog } from '$lib/components/molecules';
 	import CompareTile from './CompareTile.svelte';
-	import { deriveStatusFromPreset, computePauseToggle } from './subscriptionHelpers.js';
+	import { deriveStatusFromPreset } from './subscriptionHelpers.js';
+	import { buildFreshTogglePutPayload } from './compareHubWizardBridge.js';
 	import { Card } from '$lib/components/atoms';
 
 	interface Props {
@@ -54,17 +55,24 @@
 	}
 
 	// Issue #631 — Pause/Aktivieren: computePauseToggle merkt sich den Rhythmus.
+	// Issue #1259 — Read-Modify-Write: frischer Server-Stand vor dem PUT statt
+	// der eingefrorenen Listen-Prop (Multi-Tab-Datenverlust-Fix).
 	async function togglePause(preset: ComparePreset) {
 		error = null;
-		const next = computePauseToggle(preset);
 		try {
-			const res = await fetch(`/api/compare/presets/${preset.id}`, {
+			const { url, body } = await buildFreshTogglePutPayload(preset.id, async (id) => {
+				const res = await fetch(`/api/compare/presets/${id}`);
+				if (!res.ok) throw new Error(`GET failed: ${res.status}`);
+				return res.json();
+			});
+			const res = await fetch(url, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ ...preset, ...next })
+				body: JSON.stringify(body)
 			});
 			if (!res.ok) throw new Error(`PUT failed: ${res.status}`);
-			presets = presets.map((p) => (p.id === preset.id ? { ...p, ...next } : p));
+			const updated = await res.json();
+			presets = presets.map((p) => (p.id === preset.id ? updated : p));
 		} catch {
 			error = 'Status-Änderung fehlgeschlagen. Bitte versuche es erneut.';
 		}
