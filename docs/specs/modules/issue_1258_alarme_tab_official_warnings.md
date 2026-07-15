@@ -289,15 +289,15 @@ eingelöst.
 
 ## Scheiben-Zuordnung
 
-| Scheibe | Inhalt | ACs |
+| Scheibe | Inhalt | ACs (Nummern) |
 |---|---|---|
-| **S1** | Datenmodell + Migration (Go+Python), Pipeline-Umstellung Trip+Compare | AC-1 … AC-8 |
-| **S2** | Geteilter Alarme-Organism als Baustein (AlarmeTab.svelte + AlertChannelPicker.svelte, ungewired) | AC-9 … AC-12 |
-| **S3** | Trip-Integration (Versand-Tab-Rückbau, Tab-Ergänzung Desktop+Mobile) | AC-13 … AC-15 |
-| **S4** | Compare-Editor-Integration (CompareAlarmSection ablösen, Create-Sichtbarkeit) | AC-16 … AC-18 |
-| **S5** | Compare-Hub-Integration (7. Tab, Commit-Handler, Hydration) | AC-19 |
-| **S6** | R5 Status-Dot (+ email_verified exponieren) | AC-20 … AC-22 |
-| **Programm-Abschluss** | Spec-Revisionen als Dokupflicht des Gesamtissues | AC-23 |
+| **S1** | Datenmodell + Migration (Go+Python), Pipeline-Umstellung Trip+Compare | 1 … 8 |
+| **S2** | Geteilter Alarme-Organism als Baustein (AlarmeTab.svelte + AlertChannelPicker.svelte, ungewired) | 9 … 12 |
+| **S3** | Trip-Integration (Versand-Tab-Rückbau, Tab-Ergänzung Desktop+Mobile) | 13 … 15 |
+| **S4** | Compare-Editor-Integration (CompareAlarmSection ablösen, Create-Sichtbarkeit) | 16 … 18 |
+| **S5** | Compare-Hub-Integration (7. Tab, Commit-Handler, Hydration) | 19 |
+| **S6** | R5 Status-Dot (+ email_verified exponieren) | 20 … 22 |
+| **Programm-Abschluss** | Spec-Revisionen als Dokupflicht des Gesamtissues | 23 |
 
 S2 und S6 sind unabhängig von S1/S3/S4/S5 startbar (S6 komplett
 unabhängig, S2 baut den Baustein ohne funktionale Kopplung an S1). S3/S4
@@ -382,6 +382,13 @@ issue-nummerierte Testdateien).
 
 ## Changelog
 
+- 2026-07-15: **Notations-Korrektur ohne inhaltliche Änderung:** Spalte „ACs"
+  der Scheiben-Zuordnungstabelle von `AC-1 … AC-8` auf reine Nummern (`1 … 8`)
+  umgestellt. Grund: `edit_gate.py` (Plugin 3.9.1) parst `AC-N`-Vorkommen im
+  GESAMTEN Dokument als AC-Einträge und blockierte die S2-Implementierung
+  wegen „AC entry too short" auf den Tabellenzellen (False Positive). Die
+  Acceptance Criteria selbst sind wortgleich unverändert. Gate-Bug separat
+  als Issue gemeldet.
 - 2026-07-15: Initial spec erstellt — Issue #1258, Programm-Spec für
   Scheiben S1–S6, PO-Entscheidungen F1 (officialWarnings scharf, Bestand
   bleibt an), F2 (ehrliche Kanal-Labels), F3 (Alarme-Tab auch im
