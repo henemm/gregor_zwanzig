@@ -104,6 +104,10 @@ export class CompareWizardState {
 			official_alert_triggers_enabled: this.officialAlertTriggersEnabled,
 			send_telegram: this.sendTelegram,
 			send_sms: this.sendSms,
+			// Issue #1258 S4 (AC-27/E3): unconditional wie die Geschwister-Booleans
+			// oben — Neuanlagen tragen immer official_warnings.enabled (F1-Default
+			// false), kein sources-Feld (FE schreibt sources nie).
+			official_warnings: { enabled: this.officialWarningsEnabled },
 			// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan (Neu-Preset-Defaults
 			// identisch zur Go-Create-Default-Tabelle aus Scheibe 2a). end_date
 			// wird nur gesendet, wenn gesetzt — kein Sentinel nötig beim Create.

@@ -61,9 +61,21 @@ function readLtComparePreview(): string {
 	return readFileSync(LT_COMPARE_PREVIEW, 'utf-8');
 }
 
-/** Extrahiert die beiden {:else if activeTab === 'layout'}…-Branches (Desktop + Mobile). */
+/** Extrahiert die beiden {:else if activeTab === 'layout'}…-Branches (Desktop + Mobile).
+ *
+ * Issue #1258 Scheibe S4: seit die Station "alarme" ZWEI weitere
+ * `{:else if activeTab === 'layout'}`-Vorkommen im Floating-CTA-Label-Block
+ * (Desktop-Fuß-Btn + Mobile-Btn-Label-Kette) um ein `{:else if activeTab ===
+ * 'alarme'}` ergänzt hat, matcht die reine "gefolgt von {:else if}"-Heuristik
+ * dort ungewollt mit (vorher terminierten diese Ketten in `{/if}`, jetzt in
+ * einem weiteren `{:else if}`). Die zusätzliche Filterung auf tatsächliche
+ * Layout-Tab-PANEL-Branches (rendern `ltLayoutSection` direkt oder via
+ * `<LayoutTab context="vergleich">`) grenzt die CTA-Label-Ketten korrekt aus —
+ * das ist der eigentliche AC-8-Prüfgegenstand ("Layout-Tab-Branches" im Sinne
+ * von "Panel, das den LayoutTab-Organism mountet"), keine Aufweichung. */
 function layoutTabBranches(src: string): string[] {
-	return [...src.matchAll(/activeTab === 'layout'\}([\s\S]*?)\{:else if/g)].map((m) => m[1]);
+	const all = [...src.matchAll(/activeTab === 'layout'\}([\s\S]*?)\{:else if/g)].map((m) => m[1]);
+	return all.filter((b) => /ltLayoutSection|<LayoutTab\b/.test(b));
 }
 
 /**

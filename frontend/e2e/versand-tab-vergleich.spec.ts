@@ -8,8 +8,9 @@
 //
 // Hinweis (RED-Probe #1232 Scheibe 2b): `alert-metric-level-table` rendert nur,
 // wenn das Preset aktive Metriken (display_config.active_metrics) hat — sonst
-// zeigt CompareAlarmSection den Hinweis `compare-alarm-no-metrics`. Presets in
-// diesem Spec setzen deshalb bewusst `active_metrics: ['wind_max_kmh']`.
+// zeigt der geteilte AlarmeTab (Issue #1258 S4, ersetzt CompareAlarmSection)
+// den Hinweis `alarme-no-metrics`. Presets in diesem Spec setzen deshalb
+// bewusst `active_metrics: ['wind_max_kmh']`.
 //
 // Ausführen:
 //   cd frontend && E2E_USER=admin E2E_PASS=test1234 \
@@ -52,8 +53,11 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 
-	// ── AC-1: 4 Versand-Sektionen in Design-Reihenfolge ──────────────────────
-	test('AC-1: Versand-Tab zeigt Kanäle → Zeitplan → Laufzeit → Alert-Zustellung', async ({
+	// ── AC-1: 3 Versand-Sektionen (Kanäle → Zeitplan → Laufzeit) ─────────────
+	// Issue #1258 Scheibe S4 (E5, AC-18): die Alert-Zustellung (Cooldown/
+	// Ruhezeiten) rendert nicht mehr im Versand-Tab, sondern im Alarme-Tab
+	// (ersetzt die alte AC-4-Aussage aus versand_tab_vergleich.md).
+	test('AC-1: Versand-Tab zeigt Kanäle → Zeitplan → Laufzeit, keine Alert-Zustellung mehr', async ({
 		page
 	}) => {
 		const { id } = await createPreset(page);
@@ -64,7 +68,7 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		});
 		await expect(page.locator('[data-testid="morning-master-switch"]:visible').first()).toBeVisible();
 		await expect(page.locator('[data-testid="briefings-laufzeit-vergleich"]:visible').first()).toBeVisible();
-		await expect(page.locator('[data-testid="alert-cooldown-card"]:visible').first()).toBeVisible();
+		await expect(page.locator('[data-testid="alert-cooldown-card"]:visible')).toHaveCount(0);
 	});
 
 	// ── AC-3: Laufzeit — "Bis auf Weiteres" löscht ein gesetztes end_date ────
@@ -107,8 +111,9 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		expect(preset.end_date).toBe('2026-10-15');
 	});
 
-	// ── AC-4: Alarme-Tab verliert Cooldown/Quiet, behält Level-Tabelle ───────
-	test('AC-4: Alarme-Tab enthält keine Cooldown-Karte mehr, Level-Tabelle bleibt', async ({
+	// ── AC-4 (Issue #1258 S4, AC-18 ersetzt die alte Aussage): Alarme-Tab hat
+	// Cooldown/Quiet UND Level-Tabelle; Versand hat weder noch ────────────────
+	test('AC-4: Alarme-Tab enthält Cooldown-Karte + Level-Tabelle, Versand-Tab keins von beidem', async ({
 		page
 	}) => {
 		const { id } = await createPreset(page);
@@ -116,13 +121,17 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		await page.waitForLoadState('networkidle');
 		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
 
-		await expect(page.locator('[data-testid="compare-alarm-section"]:visible').first()).toBeVisible({
+		await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({
 			timeout: 10_000
 		});
 		// Level-Tabelle sichtbar (Preset hat aktive Metrik wind_max_kmh → wind_gust)
 		await expect(page.locator('[data-testid="alert-metric-level-table"]:visible').first()).toBeVisible();
-		// Cooldown-Karte NICHT mehr im Alarme-Tab (zog in den Versand-Tab um)
+		// Cooldown-Karte JETZT im Alarme-Tab (zog aus dem Versand-Tab zurück, S4/AC-18).
+		await expect(page.locator('[data-testid="alert-cooldown-card"]:visible').first()).toBeVisible();
+
+		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
 		await expect(page.locator('[data-testid="alert-cooldown-card"]:visible')).toHaveCount(0);
+		await expect(page.locator('[data-testid="alert-metric-level-table"]:visible')).toHaveCount(0);
 	});
 
 	// ── AC-7: Kein Kanal aktiv → Warnbox statt Zeitplan-Karten ───────────────
@@ -185,8 +194,10 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		});
 	});
 
-	// ── AC-6: Create-Flow — POST-Body enthält die 5 Slot-Felder ──────────────
-	test('AC-6: Create-Flow sendet die 5 Slot-Felder im POST-Body an /api/compare/presets', async ({
+	// ── AC-6: Create-Flow — POST-Body enthält die 5 Slot-Felder + official_warnings ──
+	// Issue #1258 Scheibe S4 (E1/E2, AC-28): die Tab-Kette waechst um die
+	// reguläre Station "alarme" zwischen "layout" und "versand".
+	test('AC-6: Create-Flow sendet die 5 Slot-Felder + official_warnings im POST-Body an /api/compare/presets', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -213,6 +224,7 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		await d.locator('[data-testid="compare-step2-library"]').getByText(nameB, { exact: true }).click();
 		await d.locator('[data-testid="compare-editor-tab-idealwerte"]').click();
 		await d.locator('[data-testid="compare-editor-tab-layout"]').click();
+		await d.locator('[data-testid="compare-editor-tab-alarme"]').click();
 		await d.locator('[data-testid="compare-editor-tab-versand"]').click();
 
 		const [request] = await Promise.all([
@@ -228,6 +240,9 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		expect(body.evening_enabled).toBe(false);
 		expect(body.evening_time).toBe('18:00:00');
 		expect(body.end_date == null, 'end_date darf beim Create ohne Laufzeit-Auswahl fehlen/null sein').toBeTruthy();
+		// Issue #1258 S4 (AC-27, E3): official_warnings wird unconditional gesendet
+		// (F1-Neuanlage-Default false), kein sources-Key ohne Bestand.
+		expect(body.official_warnings).toEqual({ enabled: false });
 	});
 
 	// ── AC-8: Verwerfen setzt Slot-/Laufzeit-Änderungen zurück ───────────────

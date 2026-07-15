@@ -189,7 +189,10 @@ Trip- und Compare-Fläche.
 
 Trip-Editor (`TripTabs.svelte` Desktop+Mobile, neuer Tab „Alarme"
 zwischen „Wertebereiche" und „Versand"), Compare-Editor (create **und**
-edit, Tab-Reihenfolge Orte/Metriken → Wertebereiche → Alarme → Versand,
+edit, Tab-Reihenfolge Orte/Metriken → Wertebereiche → Alarme → Versand
+— *Konkretisierung S4, Abschnitt 10: der bestehende Layout-Tab bleibt
+zwischen Wertebereiche und Alarme, volle Reihe also vergleich → orte →
+idealwerte → layout → alarme → versand* —,
 edit-only-Gating in `CompareEditor.svelte:116` entfällt), Compare-Hub
 (`CompareTabs.svelte`, 7. Tab + `handleAlarmeCommit` analog
 `handleVersandCommit` + Hydration der Alarm-Felder, die heute dort noch
@@ -258,6 +261,53 @@ Analyse-Basis: `docs/context/feat-1258-s3-trip-alarme-tab.md` (D1–D5).
   bleiben unangetastet.
 - **Radar/Onset-Divergenz:** bleibt bestehen (s. Known Limitations) —
   Out of Scope „Änderung der Radar-Alarm-Fachlogik" gilt.
+
+### 10. S4-Detail-Festlegungen (Compare-Editor-Integration, 2026-07-15)
+
+Analyse-Basis: `docs/context/feat-1258-s4-compare-editor.md` (E1–E5).
+PO-Entscheid via AskUserQuestion: Wizard-Kette = **echte Station** (F3
+wörtlich).
+
+- **Station + Position (E1/E2):** `alarme` wird reguläre Station der
+  Create-Progression: `TAB_ORDER` (`compareEditorLogic.ts`) wird
+  `vergleich → orte → idealwerte → layout → alarme → versand`;
+  Progress-Modell um `alarmeVisited` erweitert; Desktop-CTA im
+  Layout-Fuß führt zu `alarme` (Testid `compare-editor-continue-alarme`),
+  neuer CTA im Alarme-Fuß zu `versand`; Mobile-Progression
+  (`handleMobileNext`, Floating-CTA-Labels) analog. Fachlicher Grund:
+  Neuanlagen starten mit amtlichen Warnungen aus (F1) — die Station
+  führt Anleger bewusst an die Alarm-Optionen. Das edit-only-Gating
+  (`mode === 'edit'` in TAB_DEFS sowie die `id !== 'alarme'`-Sonderfälle
+  in switchTab/Tabbars) entfällt.
+- **Baustein-Einbindung (E4):** `CompareEditor` bleibt selbst der
+  Container: `AlarmeTab context="vergleich" {wiz}` ersetzt
+  `CompareAlarmSection` an BEIDEN Render-Stellen (Desktop + Mobile);
+  `notifyCount` = Zahl der `wiz.corridors` mit `notify=true`;
+  `onJumpToWertebereiche` springt auf Tab `idealwerte`.
+  `CompareAlarmSection.svelte` wird gelöscht (#1170-Ablösung, einziger
+  Referenzort war der Editor).
+- **officialWarnings-Persistenz (E3):** sechs Verdrahtungsstellen —
+  `saveNewPreset`-POST (unconditional `official_warnings: {enabled}`),
+  `compareEditorSave.ts` (Edits-Typ + Body), `handleSave`
+  (initial/dirty/snapshot/reset), Edit-Hydration
+  (`routes/compare/[id]/edit/+page.svelte`), `ComparePreset`-Typ in
+  `types.ts`. Das FE sendet NIE `sources` — der Go-Handler-RMW
+  (`compare_preset.go:331-342`) erhält Bestand-Sources feldgenau.
+- **Versand-Rückbau (E5):** Alert-Sektion des `VersandTab`-vergleich-
+  Zweigs (Cooldown-/Quiet-Karten + Beispiel-Warnung) entfällt atomar im
+  selben Schritt wie die Tab-Umstellung (Doppel-Sichtbarkeit verletzt
+  AC-18; Datenverlust-Race besteht nicht, da beide UIs an dieselben
+  wiz-Runen binden und zentral über handleSave persistiert wird).
+  `versand-tab/alertDeliveryPayload.ts` + zugehöriger Unit-Test werden
+  gelöscht (ohne Produktiv-Import seit S3).
+- **E2E-Migration (bewusst brechend, im selben Commit):**
+  `compare-alarm-config.spec.ts` (Testid `compare-alarm-section` →
+  `alarme-tab`; Cooldown-Prüfpfad Versand→Alarme),
+  `versand-tab-vergleich.spec.ts` (AC-1-Wortlaut, AC-4-Umkehrung —
+  ersetzt durch Spec-AC-18, AC-6-Kette um `alarme`),
+  `compare-flow-navigation.spec.ts` + `compare-editor-slice1.spec.ts`
+  („5 Segmente" → 6) + `compare-editor-fidelity-s8d.spec.ts`
+  (Mobile-CTA-Labels) — Ketten-Migration.
 
 ## Expected Behavior
 
@@ -352,6 +402,12 @@ Analyse-Basis: `docs/context/feat-1258-s3-trip-alarme-tab.md` (D1–D5).
 **AC-26 (S3):** Given ich ändere im Trip-Alarme-Tab die Alert-Kanäle / When die Änderung gespeichert und der Trip neu geladen wird / Then zeigt der AlertChannelPicker die persistierten Werte (Roundtrip über `alert_channels`), und alle übrigen Trip-Felder bleiben durch den Read-Modify-Write-Merge unangetastet.
   - Test: Go-Handler-Test PUT mit nur `alert_channels` → Feld persistiert, Etappen/report_config/Corridors unverändert; Staging-E2E Toggle → Reload → Zustand erhalten.
 
+**AC-27 (S4):** Given der Compare-Editor (Create UND Edit) / When ich den Toggle „Amtliche Warnungen lösen Alert aus" im Alarme-Tab ändere und speichere / Then persistiert `official_warnings.enabled` im Preset (POST bzw. PUT), beim erneuten Öffnen zeigt der Toggle den gespeicherten Wert (Hydration), und die `sources`-Liste des Bestands bleibt unangetastet.
+  - Test: Create-Flow POST-Body enthält `official_warnings.enabled`; Edit-Roundtrip per API-Read; Go-RMW-Test Bestand-Sources überleben FE-Save ohne sources-Key.
+
+**AC-28 (S4):** Given der Create-Wizard / When ich den „Weiter"-CTAs folge / Then führt die Kette Orte → Wertebereiche → Layout → **Alarme** → Versand (Alarme ist reguläre Station mit eigenem Weiter-CTA zu Versand), und die Fortschrittsanzeige zählt sechs Stationen.
+  - Test: Playwright Create-Flow klickt die CTA-Kette inkl. `compare-editor-continue-alarme`; Fortschritts-Segmente = 6.
+
 ## Scheiben-Zuordnung
 
 | Scheibe | Inhalt | ACs (Nummern) |
@@ -359,7 +415,7 @@ Analyse-Basis: `docs/context/feat-1258-s3-trip-alarme-tab.md` (D1–D5).
 | **S1** | Datenmodell + Migration (Go+Python), Pipeline-Umstellung Trip+Compare | 1 … 8 |
 | **S2** | Geteilter Alarme-Organism als Baustein (AlarmeTab.svelte + AlertChannelPicker.svelte, ungewired) | 9 … 12 |
 | **S3** | Trip-Integration (Versand-Tab-Rückbau, Tab-Ergänzung Desktop+Mobile, Kanal-Feld `alert_channels`) | 13 … 15, 24 … 26 |
-| **S4** | Compare-Editor-Integration (CompareAlarmSection ablösen, Create-Sichtbarkeit) | 16 … 18 |
+| **S4** | Compare-Editor-Integration (CompareAlarmSection ablösen, Wizard-Station, officialWarnings-Verdrahtung) | 16 … 18, 27 … 28 |
 | **S5** | Compare-Hub-Integration (7. Tab, Commit-Handler, Hydration) | 19 |
 | **S6** | R5 Status-Dot (+ email_verified exponieren) | 20 … 22 |
 | **Programm-Abschluss** | Spec-Revisionen als Dokupflicht des Gesamtissues | 23 |
@@ -444,6 +500,11 @@ setzen S1 (Datenmodell) und S2 (Baustein) voraus. S5 setzt S4 voraus.
   bleiben (AC-25)
 - Go: `TestUpdateTripAlertChannelsRMW` — PUT nur mit `alert_channels`
   lässt übrige Felder unangetastet (AC-26)
+- `test_compare_official_warnings_editor_roundtrip` — Create-POST trägt
+  `official_warnings.enabled`, Edit-PUT + Hydration Roundtrip,
+  Bestand-`sources` überleben FE-Save (AC-27)
+- FE node:test gegen `compareEditorLogic` — TAB_ORDER-Station `alarme`,
+  Progress `alarmeVisited` (AC-28)
 
 ### Staging-E2E (Marker `live`/`staging`, Playwright gegen echten Login)
 
@@ -461,6 +522,18 @@ NICHT nach Issue-Nummer (`test_naming_gate.py` blockt neue
 issue-nummerierte Testdateien).
 
 ## Changelog
+
+- 2026-07-15: **S4-Detail-Festlegungen ergänzt** (Workflow
+  `feat-1258-s4-compare-editor`, Analyse-Doc
+  `docs/context/feat-1258-s4-compare-editor.md`): neuer Implementation-
+  Details-Abschnitt 10 (Wizard-Station per PO-Entscheid F3 wörtlich,
+  Position layout→alarme→versand, officialWarnings-Verdrahtung an sechs
+  Stellen, CompareAlarmSection-Löschung, VersandTab-vergleich-Rückbau,
+  E2E-Ketten-Migration), neue ACs 27–28 (S4), Test Coverage ergänzt.
+  Abschnitt 7 um eine als solche markierte Konkretisierung ergänzt
+  (Layout-Tab-Position in der Compare-Reihe — Abschnitt 7 nannte die
+  Reihe ohne den bestehenden Layout-Tab). Bestehende ACs 1–26
+  wortgleich unverändert.
 
 - 2026-07-15: **S3-Detail-Festlegungen ergänzt** (Workflow
   `feat-1258-s3-trip-alarme-tab`, Analyse-Doc

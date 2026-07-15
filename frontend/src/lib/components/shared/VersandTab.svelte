@@ -13,22 +13,18 @@
 	import { onMount, type Snippet } from 'svelte';
 	import { api } from '$lib/api.js';
 	import { toHHMMSS } from '$lib/utils/time';
-	import { Eyebrow } from '$lib/components/atoms';
 	import type { Trip, ReportConfig } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
-	import AlertCooldownCard from '$lib/components/alerts-tab/AlertCooldownCard.svelte';
-	import AlertQuietHoursCard from '$lib/components/alerts-tab/AlertQuietHoursCard.svelte';
 	import VTBriefingChannels from './versand-tab/VTBriefingChannels.svelte';
 	import VTSchedulePlan from './versand-tab/VTSchedulePlan.svelte';
 	import VTLaufzeitRoute from './versand-tab/VTLaufzeitRoute.svelte';
 	import VTLaufzeitVergleich from './versand-tab/VTLaufzeitVergleich.svelte';
-	import VTAlertSample from './versand-tab/VTAlertSample.svelte';
-	// Issue #1258 Scheibe S3 (D5): buildAlertDeliveryPayload wurde hier NUR vom
-	// route-Zweig genutzt — dieser zog in AlarmeScheduleTab/AlarmeTab.svelte
-	// um. Modul bleibt bestehen (vom vergleich-Zweig heute noch nicht
-	// genutzt, S4 raeumt auf) und wird weiterhin direkt von
-	// versand-tab/alertDeliveryPayload.test.ts getestet.
+	// Issue #1258 Scheibe S4 (E5): die komplette Alert-Zustellungs-Sektion des
+	// vergleich-Zweigs (Cooldown-/Quiet-Karten + Beispiel-Warnung) zog atomar
+	// in AlarmeTab.svelte um (Radar/Metrik-Level-Tabelle waren dort nie).
+	// AlertCooldownCard/AlertQuietHoursCard/VTAlertSample/Eyebrow werden daher
+	// hier nicht mehr importiert.
 
 	interface Props {
 		context?: 'route' | 'vergleich';
@@ -269,14 +265,9 @@
 			}}
 		/>
 
-		<div class="vt-alert-delivery">
-			<Eyebrow style="margin-bottom: 10px;">Wann Warnungen rausgehen</Eyebrow>
-			<div class="vt-alert-cards">
-				<AlertCooldownCard bind:cooldown_minutes={wiz!.alertCooldownMinutes} />
-				<AlertQuietHoursCard bind:quiet_from={wiz!.alertQuietFrom} bind:quiet_to={wiz!.alertQuietTo} />
-			</div>
-			<VTAlertSample context="vergleich" />
-		</div>
+		<!-- Issue #1258 Scheibe S4 (E5, AC-18): die Alert-Zustellungs-Sektion
+		     (Cooldown, Stille Stunden, Beispiel-Warnung) rendert seither
+		     ausschließlich der Alarme-Tab, nicht mehr hier. -->
 
 		{#if activation}
 			<div class="vt-activation-slot">{@render activation()}</div>
@@ -293,25 +284,10 @@
 		gap: 30px;
 		max-width: 900px;
 	}
-	.vt-alert-delivery {
-		display: flex;
-		flex-direction: column;
-		gap: 18px;
-		max-width: 620px;
-	}
-	.vt-alert-cards {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 16px;
-	}
-
 	@media (max-width: 899px) {
 		.versand-tab {
 			padding: 20px 16px 48px;
 			gap: 22px;
-		}
-		.vt-alert-cards {
-			grid-template-columns: 1fr;
 		}
 	}
 </style>

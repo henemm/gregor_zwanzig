@@ -24,16 +24,21 @@ const empty = {
 	pickedCount: 0,
 	idealsVisited: false,
 	layoutVisited: false,
+	alarmeVisited: false,
 	versandVisited: false
 };
 
+// Issue #1258 Scheibe S4 (AC-28): TAB_ORDER waechst um die reguläre Station
+// "alarme" zwischen "layout" und "versand" — s. auch
+// compare_wizard_alarme_station.test.ts (feingranulare AC-28-Nachweise).
 describe('TAB_ORDER', () => {
-	test('genau 5 Tabs in fester Reihenfolge', () => {
+	test('genau 6 Tabs in fester Reihenfolge', () => {
 		assert.deepEqual(TAB_ORDER, [
 			'vergleich',
 			'orte',
 			'idealwerte',
 			'layout',
+			'alarme',
 			'versand'
 		]);
 	});
@@ -63,40 +68,54 @@ describe('AC-1/AC-2: unlockedTabs — Freischalt-Progression', () => {
 		assert.ok(unlockedTabs({ ...empty, name: 'X', pickedCount: 2 }).has('idealwerte'));
 	});
 
-	test('Besuch von Idealwerte/Layout schaltet Layout/Versand frei', () => {
+	test('Besuch von Idealwerte/Layout schaltet Layout/Alarme frei, Versand erst nach Alarme', () => {
 		const base = { ...empty, name: 'X', pickedCount: 2 };
 		assert.ok(!unlockedTabs(base).has('layout'), 'Layout erst nach Idealwerte-Besuch');
 		assert.ok(unlockedTabs({ ...base, idealsVisited: true }).has('layout'));
 		assert.ok(
-			!unlockedTabs({ ...base, idealsVisited: true }).has('versand'),
-			'Versand erst nach Layout-Besuch'
+			!unlockedTabs({ ...base, idealsVisited: true }).has('alarme'),
+			'Alarme erst nach Layout-Besuch'
 		);
 		assert.ok(
-			unlockedTabs({ ...base, idealsVisited: true, layoutVisited: true }).has('versand')
+			unlockedTabs({ ...base, idealsVisited: true, layoutVisited: true }).has('alarme'),
+			'Alarme nach Layout-Besuch offen (AC-28)'
+		);
+		assert.ok(
+			!unlockedTabs({ ...base, idealsVisited: true, layoutVisited: true }).has('versand'),
+			'Versand erst nach Alarme-Besuch (AC-28)'
+		);
+		assert.ok(
+			unlockedTabs({
+				...base,
+				idealsVisited: true,
+				layoutVisited: true,
+				alarmeVisited: true
+			}).has('versand')
 		);
 	});
 });
 
 describe('AC-2/AC-3: doneTabs — Erledigt-Kennzeichnung & Fortschritt', () => {
-	test('Leerzustand: nichts erledigt (0/5)', () => {
+	test('Leerzustand: nichts erledigt (0/6)', () => {
 		assert.equal(doneTabs(empty).size, 0);
 	});
 
-	test('Name gesetzt → "vergleich" erledigt (1/5)', () => {
+	test('Name gesetzt → "vergleich" erledigt (1/6)', () => {
 		const done = doneTabs({ ...empty, name: 'Skitouren Hochkönig' });
 		assert.ok(done.has('vergleich'));
 		assert.equal(done.size, 1);
 	});
 
-	test('Voll konfiguriert → alle 5 erledigt', () => {
+	test('Voll konfiguriert → alle 6 erledigt', () => {
 		const done = doneTabs({
 			name: 'X',
 			pickedCount: 3,
 			idealsVisited: true,
 			layoutVisited: true,
+			alarmeVisited: true,
 			versandVisited: true
 		});
-		assert.equal(done.size, 5);
+		assert.equal(done.size, 6);
 		for (const t of TAB_ORDER) assert.ok(done.has(t), `${t} fehlt`);
 	});
 });

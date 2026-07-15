@@ -47,15 +47,16 @@ test.describe('Issue #678: Compare-Editor Slice 1 (Desktop/Create)', () => {
 		).toHaveAttribute('data-done', 'true');
 	});
 
-	// ── AC-3: Fortschrittsbalken 5 Segmente + „N / 5" ────────────────────────
-	test('AC-3: Fortschritt zeigt 5 Segmente und steigt mit Name', async ({ page }) => {
+	// ── AC-3 (Issue #1258 S4 AC-28): Fortschrittsbalken 6 Segmente + „N / 6" ──
+	// TAB_ORDER waechst um die reguläre Station "alarme" (compareEditorLogic.ts).
+	test('AC-3: Fortschritt zeigt 6 Segmente und steigt mit Name', async ({ page }) => {
 		const progress = page.locator('[data-testid="compare-editor-progress"]');
 		await expect(progress).toBeVisible();
 		await expect(
 			page.locator('[data-testid="compare-editor-progress-segment"]')
-		).toHaveCount(5);
+		).toHaveCount(6);
 		await page.locator('[data-testid="compare-editor-name"]').fill('Tour A');
-		await expect(progress).toContainText('1 / 5');
+		await expect(progress).toContainText('1 / 6');
 	});
 
 	// ── AC-4: Profil-Auswahl bleibt nach Tab-Wechsel erhalten ────────────────

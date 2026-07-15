@@ -8,10 +8,10 @@
 // compare-alarm-config.spec.ts (Issue #1170) uebernommen — dort NICHTS
 // bewertet, nur wiederverwendet.
 //
-// Aktuell (RED): der Toggle `compare-alarm-radar-toggle` existiert NICHT im
-// DOM von `CompareAlarmSection.svelte` — das Backend-Feld
-// `radar_alert_enabled` (Slice 1b) ist bereits live, aber im Frontend noch
-// nicht verdrahtet. AC-1/AC-2/AC-3 muessen daher fehlschlagen.
+// Issue #1258 Scheibe S4: CompareAlarmSection wurde durch den geteilten
+// AlarmeTab (context="vergleich") abgeloest und geloescht — Testids
+// migriert: `compare-alarm-section` → `alarme-tab`,
+// `compare-alarm-radar-toggle` → `alarme-radar-toggle`.
 //
 // Base-URL: GZ_SVELTE_BASE (Default: playwright.config.ts baseURL = Staging)
 //
@@ -51,18 +51,18 @@ async function openAlarmeTab(page: Page, id: string): Promise<void> {
 	await page.goto(`/compare/${id}/edit`);
 	await page.waitForLoadState('networkidle');
 	await page.locator('[data-testid="compare-editor-tab-alarme"]').click();
-	// CompareEditor.svelte rendert CompareAlarmSection zweimal (Desktop- und
-	// Mobile-Markup, `.cm-mobile` per CSS-Breakpoint ausgeblendet, DOM bleibt
-	// aber bestehen) — `.first()` greift bei 1280x900 immer den Desktop-Block.
-	await expect(page.locator('[data-testid="compare-alarm-section"]').first()).toBeVisible({
+	// CompareEditor.svelte rendert AlarmeTab zweimal (Desktop- und Mobile-
+	// Markup, `.cm-mobile` per CSS-Breakpoint ausgeblendet, DOM bleibt aber
+	// bestehen) — `.first()` greift bei 1280x900 immer den Desktop-Block.
+	await expect(page.locator('[data-testid="alarme-tab"]').first()).toBeVisible({
 		timeout: 10_000
 	});
 }
 
-// `.first()` s.o. — RADAR_TOGGLE existiert (sobald implementiert) ebenfalls
-// zweifach im DOM (Desktop/Mobile-Duplikat von CompareAlarmSection).
+// `.first()` s.o. — RADAR_TOGGLE existiert ebenfalls zweifach im DOM
+// (Desktop/Mobile-Duplikat des AlarmeTab-Organism).
 function radarToggle(page: Page) {
-	return page.locator('[data-testid="compare-alarm-radar-toggle"] input[type="checkbox"]').first();
+	return page.locator('[data-testid="alarme-radar-toggle"] input[type="checkbox"]').first();
 }
 
 test.describe('Issue #1041 Slice 2: Radar-Alarm-Schalter im Compare-Editor (Desktop)', () => {

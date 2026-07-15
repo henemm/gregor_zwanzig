@@ -315,7 +315,16 @@ test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versan
 			'true'
 		);
 
-		// AC-11: Layout-Tab -> "Versand einrichten →".
+		// AC-11 (Issue #1258 S4, AC-28): Layout-Tab -> "Alarme einrichten →" (neue
+		// reguläre Station, ersetzt den vormals direkten Sprung zu "Versand").
+		await expect(cta).toContainText('Alarme einrichten →');
+		await cta.getByRole('button').click();
+		await expect(page.locator('[data-testid="cm-mobile-tab-alarme"]:visible')).toHaveAttribute(
+			'data-active',
+			'true'
+		);
+
+		// Alarme-Tab -> "Versand einrichten →".
 		await expect(cta).toContainText('Versand einrichten →');
 		await cta.getByRole('button').click();
 		await expect(page.locator('[data-testid="cm-mobile-tab-versand"]:visible')).toHaveAttribute(
@@ -384,6 +393,9 @@ test.describe('Issue #1256 S8d (AC-15): genau eine App-Leiste im mobilen Editor'
 		await page.locator(`[data-testid="compare-step2-mobile-lib-check-${locA}"]`).click();
 		await page.locator(`[data-testid="compare-step2-mobile-lib-check-${locB}"]`).click();
 		await page.locator('button[aria-label="Schliessen"]:visible').click();
+		// Issue #1258 Scheibe S4 (AC-28): vierter Klick fuer die neue Station
+		// "alarme" (idealwerte → layout → alarme → versand).
+		await cta.getByRole('button').click();
 		await cta.getByRole('button').click();
 		await cta.getByRole('button').click();
 		await cta.getByRole('button').click();
@@ -443,7 +455,10 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 		await expect(page.getByTestId('compare-editor-tab-idealwerte')).toHaveAttribute('data-active', 'true');
 	});
 
-	test('AC-17/AC-18: Wertebereiche → „Layout einrichten →" → Layout → „Versand einrichten →"', async ({
+	// Issue #1258 Scheibe S4 (E1/E2, AC-28): Layout fuehrt jetzt zu "alarme"
+	// (Testid compare-editor-continue-alarme), Alarme fuehrt zu "versand"
+	// (neuer CTA im Alarme-Fuß, testid compare-editor-continue-versand).
+	test('AC-17/AC-18: Wertebereiche → „Layout einrichten →" → Layout → „Alarme einrichten →" → Alarme → „Versand einrichten →"', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -462,6 +477,11 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 		await expect(layoutBtn).toBeVisible();
 		await layoutBtn.click();
 		await expect(page.getByTestId('compare-editor-tab-layout')).toHaveAttribute('data-active', 'true');
+
+		const alarmeBtn = page.getByTestId('compare-editor-continue-alarme');
+		await expect(alarmeBtn).toBeVisible();
+		await alarmeBtn.click();
+		await expect(page.getByTestId('compare-editor-tab-alarme')).toHaveAttribute('data-active', 'true');
 
 		const versandBtn = page.getByTestId('compare-editor-continue-versand');
 		await expect(versandBtn).toBeVisible();

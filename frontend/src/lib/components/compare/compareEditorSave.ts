@@ -60,6 +60,11 @@ export interface CompareEditorEdits {
 	// verschachtelt). Optional → rückwärtskompatibel (undefined = Round-Trip
 	// via `...original`, wie alle anderen Felder hier).
 	corridors?: Corridor[];
+	// Issue #1258 S4 (AC-27): amtliche Warnungen ein/aus. Optional →
+	// rückwärtskompatibel (undefined = Feld nicht editiert → Round-Trip).
+	// `sources` wird NIE vom FE gesendet — Bestand aus `original` bleibt beim
+	// Body-Bau erhalten (Merge, kein Replace).
+	officialWarnings?: { enabled: boolean };
 }
 
 /**
@@ -155,7 +160,16 @@ export function buildComparePresetSavePayload(
 		...(edits.eveningTime !== undefined ? { evening_time: toHHMMSS(edits.eveningTime) } : {}),
 		...(edits.endDate !== undefined ? { end_date: edits.endDate === null ? '' : edits.endDate } : {}),
 		// Issue #1231 Slice 4: analoges Round-Trip-Prinzip für corridors.
-		...(edits.corridors !== undefined ? { corridors: edits.corridors } : {})
+		...(edits.corridors !== undefined ? { corridors: edits.corridors } : {}),
+		// Issue #1258 S4 (AC-27, Fix-Loop 1 / Adversary F001): official_warnings.
+		// enabled aus edits. `sources` wird NIEMALS im Body gesendet — auch nicht
+		// als Echo aus `original` (das war der F001-Clobber-Bug: original ist ein
+		// Mount-Snapshot und kann inzwischen serverseitig geänderte sources
+		// überschreiben). Ohne `sources`-Key im Body macht der Go-RMW
+		// (compare_preset.go:331-342) den Bestand-Merge selbst.
+		...(edits.officialWarnings !== undefined
+			? { official_warnings: { enabled: edits.officialWarnings.enabled } }
+			: {})
 	};
 
 	return { url, body };

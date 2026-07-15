@@ -49,11 +49,12 @@ test.describe('Issue #1170: Compare-Editor Tab „Alarme" (Desktop)', () => {
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 
-	// ── AC-1: Tab „Alarme" → Empfindlichkeits-Tabelle; Versand-Tab → Cooldown/Quiet ──
-	// Issue #1232 Scheibe 2b: Cooldown-/Ruhezeiten-Controls zogen aus dem
-	// Alarme-Tab in den Versand-Tab um (Alert-Zustellung). Die
-	// Empfindlichkeits-Tabelle (AlertMetricLevelTable) bleibt im Alarme-Tab.
-	test('AC-1: Alarme zeigt Empfindlichkeits-Tabelle; Versand zeigt Cooldown/Ruhezeiten', async ({
+	// ── AC-1: Tab „Alarme" → Empfindlichkeits-Tabelle + Cooldown/Quiet ──────
+	// Issue #1258 Scheibe S4 (E5, AC-18): der geteilte AlarmeTab (context=
+	// "vergleich") ersetzt CompareAlarmSection — Cooldown/Ruhezeiten ziehen
+	// vom Versand-Tab zurueck in den Alarme-Tab (umgekehrt zu #1232 Scheibe
+	// 2b). Testid `compare-alarm-section` → `alarme-tab`.
+	test('AC-1: Alarme zeigt Empfindlichkeits-Tabelle + Cooldown/Ruhezeiten; Versand nicht mehr', async ({
 		page
 	}) => {
 		const { id } = await createPreset(page);
@@ -61,17 +62,18 @@ test.describe('Issue #1170: Compare-Editor Tab „Alarme" (Desktop)', () => {
 		await page.waitForLoadState('networkidle');
 
 		await page.locator('[data-testid="compare-editor-tab-alarme"]').click();
-		await expect(page.locator('[data-testid="compare-alarm-section"]')).toBeVisible({
+		await expect(page.locator('[data-testid="alarme-tab"]').first()).toBeVisible({
 			timeout: 10_000
 		});
 		// Empfindlichkeit (aktive Metrik wind_max_kmh → wind_gust ist alarmierbar)
-		await expect(page.locator('[data-testid="alert-metric-level-table"]')).toBeVisible();
+		await expect(page.locator('[data-testid="alert-metric-level-table"]').first()).toBeVisible();
+		await expect(page.locator('[data-testid="alert-cooldown-card"]').first()).toBeVisible();
+		await expect(page.locator('[data-testid="alert-cooldown-input"]').first()).toBeVisible();
+		await expect(page.locator('[data-testid="alert-quiet-hours-card"]').first()).toBeVisible();
 
-		// Cooldown + Ruhezeiten liegen jetzt im Versand-Tab.
+		// Versand-Tab enthaelt die Alert-Zustellung nicht mehr (AC-18).
 		await page.locator('[data-testid="compare-editor-tab-versand"]').click();
-		await expect(page.locator('[data-testid="alert-cooldown-card"]')).toBeVisible();
-		await expect(page.locator('[data-testid="alert-cooldown-input"]')).toBeVisible();
-		await expect(page.locator('[data-testid="alert-quiet-hours-card"]')).toBeVisible();
+		await expect(page.locator('[data-testid="alert-cooldown-card"]')).toHaveCount(0);
 	});
 
 	// ── AC-2: Wert setzen, speichern, Reload → Wert bleibt gesetzt ──────────
@@ -80,16 +82,21 @@ test.describe('Issue #1170: Compare-Editor Tab „Alarme" (Desktop)', () => {
 		await page.goto(`/compare/${id}/edit`);
 		await page.waitForLoadState('networkidle');
 
-		await page.locator('[data-testid="compare-editor-tab-versand"]').click();
-		await expect(page.locator('[data-testid="alert-cooldown-input"]')).toBeVisible({
+		await page.locator('[data-testid="compare-editor-tab-alarme"]').click();
+		await expect(page.locator('[data-testid="alert-cooldown-input"]').first()).toBeVisible({
 			timeout: 10_000
 		});
 
-		await page.locator('[data-testid="alert-cooldown-input"]').fill('90');
+		await page.locator('[data-testid="alert-cooldown-input"]').first().fill('90');
 		await page.locator('[data-testid="compare-editor-save"]').click();
 
-		// Save navigiert zur Detail-Seite (identisches Muster wie AC-3 #679)
-		await expect(page).toHaveURL(new RegExp(`/compare/${id}$`), { timeout: 10_000 });
+		// Issue #758: handleSave() speichert direkt via api.put OHNE Redirect —
+		// SaveIndicator wechselt nach erfolgreichem PUT auf data-state="idle".
+		await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute(
+			'data-state',
+			'idle',
+			{ timeout: 10_000 }
+		);
 
 		// Persistenz via echtem GET prüfen
 		const res = await page.request.get(`/api/compare/presets/${id}`);
@@ -97,16 +104,16 @@ test.describe('Issue #1170: Compare-Editor Tab „Alarme" (Desktop)', () => {
 		const preset = await res.json();
 		expect(preset.alert_cooldown_minutes).toBe(90);
 
-		// Zusätzlich UI-seitig: erneut öffnen, Versand-Tab, Wert weiterhin gesetzt
+		// Zusätzlich UI-seitig: erneut öffnen, Alarme-Tab, Wert weiterhin gesetzt
 		await page.goto(`/compare/${id}/edit`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-editor-tab-versand"]').click();
-		await expect(page.locator('[data-testid="alert-cooldown-input"]')).toHaveValue('90');
+		await page.locator('[data-testid="compare-editor-tab-alarme"]').click();
+		await expect(page.locator('[data-testid="alert-cooldown-input"]').first()).toHaveValue('90');
 
 		// page.reload() auf derselben Edit-Seite, Tab erneut öffnen → Wert hält
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-editor-tab-versand"]').click();
-		await expect(page.locator('[data-testid="alert-cooldown-input"]')).toHaveValue('90');
+		await page.locator('[data-testid="compare-editor-tab-alarme"]').click();
+		await expect(page.locator('[data-testid="alert-cooldown-input"]').first()).toHaveValue('90');
 	});
 });

@@ -50,7 +50,7 @@
 		type MetricEntry
 	} from '$lib/components/trip-detail/metricsEditor';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
-	import CompareAlarmSection from './CompareAlarmSection.svelte';
+	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
 	import CompareInhaltSection from './CompareInhaltSection.svelte';
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
@@ -88,17 +88,18 @@
 		return () => mq.removeEventListener('change', onChange);
 	});
 
-	// Issue #1170: „Alarme"-Tab nur im Edit-Modus (Playwright-ACs decken nur Edit
-	// ab; Create-Pfad wird über wiz.saveNewPreset() direkt getestet). Erweitert
-	// CompareTabId additiv um 'alarme', ohne die Create-Wizard-Progression
-	// (TAB_ORDER/unlockedTabs/doneTabs) anzufassen.
-	export type EditorTabId = CompareTabId | 'alarme';
+	// Issue #1258 Scheibe S4 (E1, AC-16/AC-28): „Alarme" ist seither eine
+	// reguläre Station der Create-Progression (TAB_ORDER enthält 'alarme') —
+	// das frühere edit-only-Gating (Issue #1170) entfällt. EditorTabId bleibt
+	// als eigener Alias bestehen (Tab-Bar-Typen), deckt sich jetzt 1:1 mit
+	// CompareTabId.
+	export type EditorTabId = CompareTabId;
 
 	// Issue #1229 — Deep-Link `?tab=` für den Edit-Modus (Compare-Hub-Edit-Stift
 	// springt auf `/compare/{id}/edit?tab=versand`). Exakter String-Vergleich
 	// gegen bekannte EditorTabId-Werte; unbekannt/fehlend/nur-Create-Modus →
 	// bisheriger Default 'vergleich' (AC-6, kein Crash).
-	const EDITOR_TAB_IDS: readonly EditorTabId[] = ['vergleich', 'orte', 'idealwerte', 'layout', 'versand', 'alarme'];
+	const EDITOR_TAB_IDS: readonly EditorTabId[] = TAB_ORDER;
 	function initialTabFromQuery(): EditorTabId {
 		if (mode !== 'edit') return 'vergleich';
 		const raw = page.url.searchParams.get('tab');
@@ -107,20 +108,24 @@
 
 	// Issue #1231, Slice 6 (AC-17) — CorridorEditor vereint Idealwerte + Alerts:
 	// `idealwerte`-Label "Wertebereiche" (war: "Idealwerte"), `id` + Testid unverändert.
+	// Issue #1258 Scheibe S4 (E1/E2, AC-16): "alarme" ist regulaere Station
+	// zwischen "layout" und "versand" (nicht mehr nur mode === 'edit').
 	const TAB_DEFS = $derived<{ id: EditorTabId; label: string; lockHint: string | null }[]>([
 		{ id: 'vergleich', label: 'Vergleich', lockHint: null },
 		{ id: 'orte', label: 'Orte', lockHint: 'erst Vergleich benennen' },
 		{ id: 'idealwerte', label: 'Wertebereiche', lockHint: 'erst mind. 2 Orte auswählen' },
 		{ id: 'layout', label: 'Layout', lockHint: 'erst Wertebereiche öffnen' },
-		{ id: 'versand', label: 'Versand', lockHint: 'erst Layout öffnen' },
-		...(mode === 'edit' ? [{ id: 'alarme' as const, label: 'Alarme', lockHint: null }] : [])
+		{ id: 'alarme', label: 'Alarme', lockHint: 'erst Layout öffnen' },
+		{ id: 'versand', label: 'Versand', lockHint: 'erst Alarme öffnen' }
 	]);
 
 	const isEdit = $derived(mode === 'edit');
 
-	// Lokale visited-Flags (Tab 3/4/5 als „besucht" markieren → schaltet nächsten frei).
+	// Lokale visited-Flags (Tab 3/4/5/6 als „besucht" markieren → schaltet nächsten frei).
 	let idealsVisited = $state(false);
 	let layoutVisited = $state(false);
+	// Issue #1258 Scheibe S4 (E1, AC-28): neue Station im Progress-Modell.
+	let alarmeVisited = $state(false);
 	let versandVisited = $state(false);
 
 	// Issue #718: Validierungs-Status der Idealwerte — reaktiv, keine Seiteneffekte.
@@ -157,6 +162,8 @@
 		officialAlertTriggersEnabled: wiz.officialAlertTriggersEnabled,
 		sendTelegram: wiz.sendTelegram,
 		sendSms: wiz.sendSms,
+		// Issue #1258 S4 (E3/AC-27): analog officialAlertsEnabled im Dirty-Tracking.
+		officialWarningsEnabled: wiz.officialWarningsEnabled,
 		// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + Laufzeit im Dirty-Tracking
 		// (VersandTab context="vergleich" bindet direkt an diese wiz-Felder).
 		morningEnabled: wiz.morningEnabled,
@@ -190,6 +197,7 @@
 				wiz.officialAlertTriggersEnabled !== initial.officialAlertTriggersEnabled ||
 				wiz.sendTelegram !== initial.sendTelegram ||
 				wiz.sendSms !== initial.sendSms ||
+				wiz.officialWarningsEnabled !== initial.officialWarningsEnabled ||
 				wiz.morningEnabled !== initial.morningEnabled ||
 				wiz.morningTime !== initial.morningTime ||
 				wiz.eveningEnabled !== initial.eveningEnabled ||
@@ -236,7 +244,8 @@
 			name: wiz.name,
 			pickedCount: wiz.pickedIds.length,
 			idealsVisited,
-			layoutVisited
+			layoutVisited,
+			alarmeVisited
 		})
 	);
 	const done = $derived(
@@ -246,16 +255,27 @@
 			idealsVisited,
 			idealsValid,
 			layoutVisited,
+			alarmeVisited,
 			versandVisited
 		})
 	);
 	const doneCount = $derived(TAB_ORDER.filter((t) => done.has(t)).length);
 
+	// Issue #1258 Scheibe S4 (E4): Warnen-Zähler fuer den Korridor-Zusammenfassungs-
+	// Abschnitt im AlarmeTab — Anzahl der Korridore mit notify=true.
+	const alarmeNotifyCount = $derived(wiz.corridors.filter((c) => c.notify).length);
+	function jumpToWertebereiche() {
+		switchTab('idealwerte');
+	}
+
 	function switchTab(id: EditorTabId) {
-		if (!isEdit && id !== 'alarme' && !unlocked.has(id)) return;
+		// Issue #1258 Scheibe S4 (E1): "alarme" ist jetzt eine regulaere Station —
+		// das fruehere Sonder-Gating (`id !== 'alarme'`) entfaellt.
+		if (!isEdit && !unlocked.has(id)) return;
 		activeTab = id;
 		if (id === 'idealwerte') idealsVisited = true;
 		if (id === 'layout') layoutVisited = true;
+		if (id === 'alarme') alarmeVisited = true;
 		if (id === 'versand') versandVisited = true;
 	}
 
@@ -299,6 +319,8 @@
 		const savedOfficialAlertTriggersEnabled = wiz.officialAlertTriggersEnabled;
 		const savedSendTelegram = wiz.sendTelegram;
 		const savedSendSms = wiz.sendSms;
+		// Issue #1258 S4 (E3/AC-27): ebenfalls snapshotten.
+		const savedOfficialWarningsEnabled = wiz.officialWarningsEnabled;
 		// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + Laufzeit ebenfalls snapshotten.
 		const savedMorningEnabled = wiz.morningEnabled;
 		const savedMorningTime = wiz.morningTime;
@@ -334,6 +356,10 @@
 			officialAlertTriggersEnabled: wiz.officialAlertTriggersEnabled,
 			sendTelegram: wiz.sendTelegram,
 			sendSms: wiz.sendSms,
+			// Issue #1258 S4 (E3/AC-27): officialWarnings unconditional in den PUT-Body
+			// geben — buildComparePresetSavePayload uebernimmt enabled + bewahrt
+			// Bestand-sources aus original (Merge, kein Replace).
+			officialWarnings: { enabled: wiz.officialWarningsEnabled },
 			// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + Laufzeit (endDate=null →
 			// Lösch-Sentinel end_date:"" via buildComparePresetSavePayload).
 			morningEnabled: wiz.morningEnabled,
@@ -366,6 +392,7 @@
 				initial.officialAlertTriggersEnabled = savedOfficialAlertTriggersEnabled;
 				initial.sendTelegram = savedSendTelegram;
 				initial.sendSms = savedSendSms;
+				initial.officialWarningsEnabled = savedOfficialWarningsEnabled;
 				initial.morningEnabled = savedMorningEnabled;
 				initial.morningTime = savedMorningTime;
 				initial.eveningEnabled = savedEveningEnabled;
@@ -452,7 +479,9 @@
 
 	// Mobile Tab-Navigation
 	function handleMobileTabClick(id: EditorTabId) {
-		const open = isEdit || (id !== 'alarme' && unlocked.has(id));
+		// Issue #1258 Scheibe S4 (E1): "alarme" ist regulaere Station, kein
+		// Sonder-Gating mehr.
+		const open = isEdit || unlocked.has(id);
 		if (!open) {
 			const hint = TAB_DEFS.find(t => t.id === id)?.lockHint ?? 'Tab gesperrt';
 			showLockToast(hint);
@@ -960,13 +989,13 @@
 		>
 			{#each TAB_DEFS as t (t.id)}
 				{@const on = t.id === activeTab}
-				{@const open = isEdit || (t.id !== 'alarme' && unlocked.has(t.id))}
-				{@const isDone = !isEdit && t.id !== 'alarme' && done.has(t.id) && !on}
+				{@const open = isEdit || unlocked.has(t.id)}
+				{@const isDone = !isEdit && done.has(t.id) && !on}
 				<button
 					data-testid={`compare-editor-tab-${t.id}`}
 					data-active={on ? 'true' : 'false'}
 					data-locked={open ? 'false' : 'true'}
-					data-done={t.id !== 'alarme' && done.has(t.id) ? 'true' : 'false'}
+					data-done={done.has(t.id) ? 'true' : 'false'}
 					type="button"
 					onclick={() => switchTab(t.id)}
 					title={!open && t.lockHint ? `Gesperrt — ${t.lockHint}` : undefined}
@@ -1151,7 +1180,19 @@
 		{/if}
 	{:else if activeTab === 'layout'}
 		{@render ltLayoutSection()}
-		<!-- Issue #1256 S8d AC-18, C1: Weiter-CTA-Fuß, Wrapper UM ltLayoutSection. -->
+		<!-- Issue #1258 Scheibe S4 (E1/E2, AC-16/AC-28): Layout-CTA-Fuß fuehrt jetzt
+		     zur neuen Station "alarme" statt direkt zu "versand" (Testid umbenannt). -->
+		{#if !isEdit}
+			<div class="ce-cta-foot" style:max-width="1100px">
+				<div class="ce-cta-row">
+					<Btn data-testid="compare-editor-continue-alarme" variant="accent" size="md" onclick={() => switchTab('alarme')}>Alarme einrichten →</Btn>
+				</div>
+			</div>
+		{/if}
+	{:else if activeTab === 'alarme'}
+		<AlarmeTab context="vergleich" {wiz} notifyCount={alarmeNotifyCount} onJumpToWertebereiche={jumpToWertebereiche} />
+		<!-- Issue #1258 Scheibe S4 (E1/E2, AC-28): neuer Weiter-CTA-Fuß der
+		     Alarme-Station, fuehrt zu "versand". -->
 		{#if !isEdit}
 			<div class="ce-cta-foot" style:max-width="1100px">
 				<div class="ce-cta-row">
@@ -1165,8 +1206,6 @@
 		{:else}
 			<VersandTab context="vergleich" {wiz} activation={versandActivationBanner} />
 		{/if}
-	{:else if activeTab === 'alarme'}
-		<CompareAlarmSection {wiz} />
 	{/if}
 
 	<!-- DOM-Anker für AC-5 isAttached()-Test (display:none, kein sichtbarer Inhalt).
@@ -1216,7 +1255,7 @@
 		style="gap: 0; overflow-x: auto; border-bottom: 1px solid var(--g-rule-soft); -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);">
 		{#each TAB_DEFS as t (t.id)}
 			{@const on = t.id === activeTab}
-			{@const open = isEdit || (t.id !== 'alarme' && unlocked.has(t.id))}
+			{@const open = isEdit || unlocked.has(t.id)}
 			<button type="button"
 				data-testid="cm-mobile-tab-{t.id}"
 				data-active={on ? 'true' : 'false'}
@@ -1303,14 +1342,14 @@
 			{/if}
 		{:else if activeTab === 'layout'}
 			{@render ltLayoutSection()}
+		{:else if activeTab === 'alarme'}
+			<AlarmeTab context="vergleich" {wiz} notifyCount={alarmeNotifyCount} onJumpToWertebereiche={jumpToWertebereiche} />
 		{:else if activeTab === 'versand'}
 			{#if isEdit}
 				<VersandTab context="vergleich" {wiz} />
 			{:else}
 				<VersandTab context="vergleich" {wiz} activation={versandActivationBanner} />
 			{/if}
-		{:else if activeTab === 'alarme'}
-			<CompareAlarmSection {wiz} />
 		{/if}
 	</div>
 
@@ -1338,6 +1377,11 @@
 					Layout einrichten →
 				</MBtn>
 			{:else if activeTab === 'layout'}
+				<!-- Issue #1258 Scheibe S4 (E1/E2, AC-28): Layout fuehrt jetzt zu "alarme". -->
+				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>
+					Alarme einrichten →
+				</MBtn>
+			{:else if activeTab === 'alarme'}
 				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>
 					Versand einrichten →
 				</MBtn>

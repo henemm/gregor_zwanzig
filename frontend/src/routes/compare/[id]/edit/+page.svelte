@@ -43,6 +43,10 @@
 	state.officialAlertTriggersEnabled = data.preset.official_alert_triggers_enabled ?? true;
 	state.sendTelegram = data.preset.send_telegram ?? false;
 	state.sendSms = data.preset.send_sms ?? false;
+	// Issue #1258 S4 (AC-27): Hydration des scharfen Felds. Default false =
+	// F1-Neuanlage-Default (analog Trip-Hydration), sollte bei Bestand aber
+	// immer gesetzt sein (S1-Migration).
+	state.officialWarningsEnabled = data.preset.official_warnings?.enabled ?? false;
 	state.topN = (state.existingDisplayConfig.top_n as number) ?? 3; // Issue #1104
 
 	// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + editierbare Laufzeit.

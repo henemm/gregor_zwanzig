@@ -53,11 +53,14 @@ test('AC-1: ChannelToggle.svelte + wizardHelpers.ts (+Test) liegen in shared/', 
 // shared/VersandTab.svelte in shared/AlarmeTab.svelte um — VersandTab
 // importiert ChannelToggle seither nicht mehr, AlarmeTab übernimmt diesen
 // Importer-Slot.
-test('AC-1: alle 3 Importer nutzen den neuen shared/-Pfad, kein trip-wizard-Import mehr', () => {
+//
+// Issue #1258 Scheibe S4 (E5): CompareAlarmSection.svelte wurde durch den
+// geteilten AlarmeTab (context="vergleich") abgelöst und gelöscht — aus der
+// Importer-Liste entfernt, die verbleibenden 2 Importer sind unverändert.
+test('AC-1: alle 2 Importer nutzen den neuen shared/-Pfad, kein trip-wizard-Import mehr', () => {
 	const importers = [
 		join(COMPONENTS, 'compare', 'CompareInhaltSection.svelte'),
 		join(COMPONENTS, 'shared', 'AlarmeTab.svelte'),
-		join(COMPONENTS, 'compare', 'CompareAlarmSection.svelte'),
 	];
 	for (const p of importers) {
 		const src = read(p);

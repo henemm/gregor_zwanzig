@@ -284,6 +284,13 @@ test.describe('Issue #1256 Scheibe 2: Compare-Fluss Klickpfade Desktop (AC-25–
 		await layoutTab.click();
 		await expect(layoutTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
 
+		// Issue #1258 Scheibe S4 (E1/E2, AC-28): "alarme" ist reguläre Station
+		// zwischen "layout" und "versand" — "versand" bleibt ohne Alarme-Besuch
+		// gesperrt.
+		const alarmeTab = page.locator('[data-testid="compare-editor-tab-alarme"]:visible');
+		await alarmeTab.click();
+		await expect(alarmeTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
+
 		const versandTab = page.locator('[data-testid="compare-editor-tab-versand"]:visible');
 		await versandTab.click();
 		await expect(versandTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
