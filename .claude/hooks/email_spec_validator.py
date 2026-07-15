@@ -77,36 +77,102 @@ def _write_validation_log(
         pass  # fail-soft — darf Validator nie abbrechen
 
 
-def _fetch_latest_message():
-    """Gemeinsamer IMAP-Fetch: laedt die neueste Mail als geparstes
-    email.message.Message (Body UND Header aus derselben IMAP-Runde)."""
-    sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
-    from app.config import Settings
-    settings = Settings()
+# Issue #1124 (Teil B): Marker-Header, der eine Compare-Mail auszeichnet. Teil A
+# (live) sorgt dafuer, dass echte Ortsvergleichs-Mails diesen Header tragen.
+_COMPARE_MAIL_TYPE = "compare"
 
-    imap_host = settings.imap_host or settings.smtp_host
-    # #972: Test-Postfach-Credentials priorisieren (Referenz-Pattern aus
-    # radar_alert_mail_validator.py:170-171) — sonst prueft der Validator
-    # versehentlich gegen das Produktiv-Postfach.
-    imap_user = settings.test_imap_user or settings.imap_user or settings.smtp_user
-    imap_pass = settings.test_imap_pass or settings.imap_pass or settings.smtp_pass
-    if not imap_user or not imap_pass:
-        raise ValueError("IMAP nicht konfiguriert (GZ_TEST_IMAP_USER/GZ_IMAP_USER)")
 
-    imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
-    imap.login(imap_user, imap_pass)
-    imap.select('INBOX')
+def _no_compare_mail_error() -> ValueError:
+    """Einheitliche AC-3-Fehlermeldung (nennt den erwarteten Marker), damit die
+    reine Auswahl-Funktion und der IMAP-Fetch dieselbe Meldung erheben."""
+    return ValueError(
+        f"Keine Compare-Mail (X-GZ-Mail-Type: {_COMPARE_MAIL_TYPE}) im Postfach "
+        f"gefunden -- der Validator prueft nur echte Ortsvergleichs-Mails."
+    )
 
-    _, data = imap.search(None, 'ALL')
-    all_ids = data[0].split()
-    if not all_ids:
-        raise ValueError("Keine E-Mails gefunden")
 
-    _, msg_data = imap.fetch(all_ids[-1], '(RFC822)')
-    msg = email.message_from_bytes(msg_data[0][1])
+def _select_compare_uid(candidates):
+    """Issue #1124 (Teil B): Rein deterministische Auswahl der zu pruefenden
+    Mail. `candidates` ist eine geordnete Liste von ``(uid: bytes, header_bytes:
+    bytes)`` in IMAP-Suchreihenfolge (aeltest -> neuest, wie ``imap.search``
+    liefert). Rueckgabe: die UID der NEUESTEN Mail mit
+    ``X-GZ-Mail-Type: compare``.
 
-    imap.close()
-    imap.logout()
+    Faellt keine Mail unter den Marker, wird ``ValueError`` mit einer klaren
+    Meldung erhoben (statt still die falsche Mail zu pruefen, AC-3)."""
+    for uid, header_bytes in reversed(candidates):
+        headers = email.message_from_bytes(header_bytes)
+        if headers.get("X-GZ-Mail-Type") == _COMPARE_MAIL_TYPE:
+            return uid
+    raise _no_compare_mail_error()
+
+
+def _fetch_latest_message(imap=None):
+    """IMAP-Fetch der zu pruefenden Compare-Mail (Issue #1124 Teil B).
+
+    Scannt die Mails newest-first NUR ueber ihren Header (``BODY.PEEK[HEADER]``,
+    setzt kein ``\\Seen``) und stoppt beim ERSTEN Treffer mit
+    ``X-GZ-Mail-Type: compare`` (lazy Frueh-Abbruch). Es gibt KEIN festes
+    Scan-Fenster mehr (F001): auf dem geteilten Test-Postfach kann eine
+    Compare-Mail tief unter frischeren Nicht-Compare-Mails liegen -- ein Cap
+    haette sie verpasst und faelschlich AC-3 gemeldet. Erst wenn das GESAMTE
+    Postfach keine Compare-Mail traegt, wird der AC-3-Fehler erhoben.
+
+    Der Voll-Fetch der gefundenen Mail laeuft ebenfalls ueber ``BODY.PEEK[]`` --
+    die gepruefte Mail bleibt im selben Gelesen-Zustand.
+
+    Ist ``imap`` (eine fertige, bereits angemeldete Verbindung) uebergeben, wird
+    sie direkt genutzt -- ohne Settings/Credentials/IMAP4_SSL-Aufbau (Test-Seam).
+    """
+    own_connection = imap is None
+    if own_connection:
+        sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
+        from app.config import Settings
+        settings = Settings()
+
+        imap_host = settings.imap_host or settings.smtp_host
+        # #972: Test-Postfach-Credentials priorisieren (Referenz-Pattern aus
+        # radar_alert_mail_validator.py:170-171) — sonst prueft der Validator
+        # versehentlich gegen das Produktiv-Postfach.
+        imap_user = settings.test_imap_user or settings.imap_user or settings.smtp_user
+        imap_pass = settings.test_imap_pass or settings.imap_pass or settings.smtp_pass
+        if not imap_user or not imap_pass:
+            raise ValueError("IMAP nicht konfiguriert (GZ_TEST_IMAP_USER/GZ_IMAP_USER)")
+
+        imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
+        imap.login(imap_user, imap_pass)
+
+    try:
+        imap.select('INBOX')
+
+        _, data = imap.search(None, 'ALL')
+        all_ids = data[0].split()
+        if not all_ids:
+            raise ValueError("Keine E-Mails gefunden")
+
+        # Newest-first, lazy: je UID nur den Header holen (BODY.PEEK[HEADER] =>
+        # kein \Seen) und beim ERSTEN compare-Treffer stoppen. Kein Fenster-Cap
+        # (F001) -- im Normalfall (Compare = juengste Mail) genau EIN Header-Fetch.
+        selected_uid = None
+        for uid in reversed(all_ids):
+            _, hdr_data = imap.fetch(uid, '(BODY.PEEK[HEADER])')
+            headers = email.message_from_bytes(hdr_data[0][1])
+            if headers.get("X-GZ-Mail-Type") == _COMPARE_MAIL_TYPE:
+                selected_uid = uid
+                break
+        if selected_uid is None:
+            raise _no_compare_mail_error()
+
+        # Voll-Fetch der Treffer-Mail ebenfalls per BODY.PEEK[] (kein \Seen).
+        _, msg_data = imap.fetch(selected_uid, '(BODY.PEEK[])')
+        msg = email.message_from_bytes(msg_data[0][1])
+    finally:
+        if own_connection:
+            try:
+                imap.close()
+                imap.logout()
+            except Exception:
+                pass
 
     return msg
 
