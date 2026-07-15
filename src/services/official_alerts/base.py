@@ -48,20 +48,38 @@ def get_official_alerts_for_location(lat: float, lon: float) -> list[OfficialAle
     Wirft selbst nie — ein Fehler einer Quelle darf den Wetter-Fetch der
     ComparisonEngine nicht stoeren (AC-3).
 
-    Issue #1086 (Korrektur nach Adversary F002): unmittelbar vor dem Return
-    werden die gesammelten Alerts DIESES EINEN Punktes pro ``hazard`` zu
-    genau einem zusammengefasst -- hoechste ``level`` gewinnt, bei Gleichstand
-    der ZUERST gesammelte (= zuerst registrierte Quelle). Das ist der
-    Cross-Source-Kollaps fuer AT (``GeoSphereWarnSource`` vs.
-    ``MeteoAlarmSource``, #1086) -- bewusst NICHT ueber einen normalisierten
-    Namens-Schluessel in ``dedupe_official_alerts()``, weil diese Funktion im
-    Orts-Vergleich ueber MEHRERE Orte kombiniert aufgerufen wird und ein
-    namensbasierter Schluessel dort verschiedene Orte faelschlich verschmelzen
-    wuerde (Adversary F002). Da dieser Kollaps ausschliesslich innerhalb eines
-    einzelnen ``(lat, lon)``-Aufrufs wirkt, ist eine ortsuebergreifende
-    Verwechslung strukturell ausgeschlossen. Alerts unterschiedlicher
-    ``hazard`` bleiben alle erhalten; die Reihenfolge der Gefahren bleibt
-    stabil (erstes Auftreten).
+    Issue #1086 / Issue #1245 (Adversary-Korrektur F003, KRITISCH -- ersetzt
+    den vorherigen Greedy-Merge, der nicht-transitiv und reihenfolgeabhaengig
+    war und dadurch Same-Source-Perioden verschlucken konnte): deterministische
+    ZWEI-PASS-QUELLEN-PARTITIONIERUNG statt eines mutierenden Scans.
+
+    PO-Entscheidung (Zielkonflikt-Aufloesung): **„nie doppelt"** hat Vorrang.
+    Pass 1 bestimmt je ``hazard`` die EINE „beste" Quelle (hoechstes ``level``
+    ueber alle Alerts dieser Gefahr an diesem Punkt; bei Gleichstand die
+    ZUERST gesammelte = zuerst registrierte Quelle). Pass 2 behaelt NUR Alerts
+    dieser besten Quelle je Gefahr -- Alerts anderer Quellen derselben Gefahr
+    entfallen ersatzlos (Cross-Source-Kollaps, #1086: GeoSphere vs.
+    MeteoAlarm liefern nie zwei Karten fuer dasselbe Ereignis, unabhaengig
+    davon, ob ihre gemeldeten Zeitraeume geringfuegig abweichen). Innerhalb
+    der besten Quelle kollabieren nur EXAKTE Dubletten (identischer
+    ``(valid_from, valid_to)``) auf das hoechste ``level``; unterschiedliche
+    Perioden derselben Quelle bleiben getrennt (#1245 -- der Ur-Fall, zwei
+    Vigilance-Hitze-Zeitfenster derselben Single-Source, ist automatisch die
+    „beste" Quelle und behaelt daher alle seine Perioden).
+
+    Bewusst NICHT ueber einen normalisierten Namens-Schluessel in
+    ``dedupe_official_alerts()``, weil diese Funktion im Orts-Vergleich ueber
+    MEHRERE Orte kombiniert aufgerufen wird und ein namensbasierter Schluessel
+    dort verschiedene Orte faelschlich verschmelzen wuerde (Adversary F002).
+    Da dieser Kollaps ausschliesslich innerhalb eines einzelnen
+    ``(lat, lon)``-Aufrufs wirkt, ist eine ortsuebergreifende Verwechslung
+    strukturell ausgeschlossen. Alerts unterschiedlicher ``hazard`` bleiben
+    alle erhalten; die Reihenfolge bleibt stabil (erstes Auftreten der
+    behaltenen Alerts).
+
+    Known Limitation (PO-akzeptiert): eine Periode, die EXKLUSIV von einer
+    NICHT-besten Quelle derselben Gefahr gemeldet wird, faellt weg -- Folge
+    der „nie doppelt"-Entscheidung, keine Nebenwirkung.
     """
     results: list[OfficialAlert] = []
     for source in _REGISTERED_SOURCES:
@@ -76,13 +94,27 @@ def get_official_alerts_for_location(lat: float, lon: float) -> list[OfficialAle
         except Exception:
             logger.warning("official_alerts: %s fetch failed", source_name, exc_info=True)
 
-    best_by_hazard: dict[str, OfficialAlert] = {}
-    order: list[str] = []
+    # Pass 1: je hazard die "beste" Quelle bestimmen (hoechstes level;
+    # Gleichstand: zuerst gesammelt).
+    best_source: dict[str, str] = {}
+    best_level: dict[str, int] = {}
     for alert in results:
-        current = best_by_hazard.get(alert.hazard)
-        if current is None:
-            best_by_hazard[alert.hazard] = alert
-            order.append(alert.hazard)
-        elif alert.level > current.level:
-            best_by_hazard[alert.hazard] = alert
-    return [best_by_hazard[hazard] for hazard in order]
+        if alert.hazard not in best_level or alert.level > best_level[alert.hazard]:
+            best_level[alert.hazard] = alert.level
+            best_source[alert.hazard] = alert.source
+
+    # Pass 2: nur Alerts der besten Quelle je hazard behalten; exakte
+    # Dubletten (gleicher Zeitraum) kollabieren auf hoechstes level;
+    # verschiedene Perioden derselben Quelle bleiben getrennt.
+    kept: dict[tuple, OfficialAlert] = {}
+    order: list[tuple] = []
+    for alert in results:
+        if alert.source != best_source[alert.hazard]:
+            continue
+        key = (alert.hazard, alert.valid_from, alert.valid_to)
+        if key not in kept:
+            kept[key] = alert
+            order.append(key)
+        elif alert.level > kept[key].level:
+            kept[key] = alert
+    return [kept[k] for k in order]

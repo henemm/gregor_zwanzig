@@ -26,7 +26,10 @@ from typing import Optional
 
 from app.config import Settings
 from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
-from output.renderers.alert.official_alerts import dedupe_official_alerts
+from output.renderers.alert.official_alerts import (
+    dedupe_official_alerts,
+    official_alert_state_key,
+)
 from services import alert_daily_limit
 from services.alert_state import AlertStateService
 from services.deviation_alert_engine import DeviationAlertEngine
@@ -158,7 +161,7 @@ class CompareOfficialAlertService:
         new_or_escalated: list = []
         per_location_new: dict = {}
         for alert, loc_ids in deduped:
-            key = f"official_alert:{alert.region_label}:{alert.hazard}"
+            key = official_alert_state_key(alert)
             is_new = False
             for loc_id in loc_ids:
                 prev = state_by_loc[loc_id].get(key)
@@ -176,7 +179,7 @@ class CompareOfficialAlertService:
             state_svc = AlertStateService(user_id=self._user_id)
             state = state_svc.load(entity_id)
             for alert in alerts:
-                key = f"official_alert:{alert.region_label}:{alert.hazard}"
+                key = official_alert_state_key(alert)
                 state[key] = {"last_reported_value": float(alert.level), "reported_at": now_iso}
             state_svc.save(entity_id, state)
 

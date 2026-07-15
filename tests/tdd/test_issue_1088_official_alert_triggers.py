@@ -479,14 +479,9 @@ class TestAC6Dedupe:
             round1 = svc.check_official_alert_triggers(trip)
             assert len(round1) == 1, f"Runde 1 (Level 2, neu) muss feuern, erhalten: {round1!r}"
 
-            # Simuliert erfolgreichen Versand: alert_state fortschreiben.
-            # Issue #1200: round1[0] ist ein (OfficialAlert, segment_ids)-Tupel.
-            state = state_svc.load(trip.id)
-            state[f"official_alert:{region_label}:{hazard}"] = {
-                "last_reported_value": float(round1[0][0].level),
-                "reported_at": datetime.now(timezone.utc).isoformat(),
-            }
-            state_svc.save(trip.id, state)
+            # Simuliert erfolgreichen Versand: alert_state über die echte
+            # Produktionslogik fortschreiben (nicht über ein hartkodiertes State-Key-Format).
+            svc._record_official_alert_state(trip.id, round1)
 
             # Runde 2: weiterhin Level 2 -> Dedupe, kein erneuter Alert.
             round2 = svc.check_official_alert_triggers(trip)

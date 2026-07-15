@@ -200,12 +200,22 @@ def render_official_alerts_html(
                 ref = segment_refs.get(id(alert))
                 if ref:
                     seg_suffix = f' — {_html.escape(ref)}'
+            # Issue #1245 (AC-6/AC-7, Adversary F002): datumsbehaftetes Format
+            # (`_format_validity`) statt des wochentag/stunden-only
+            # SMS-Kurzformats (`_tag_time`) -- zwei Perioden mit gleichem
+            # Wochentag+Stunde, aber unterschiedlichem Kalenderdatum (z.B.
+            # exakt 7 Tage auseinander), waeren mit `_tag_time` byte-identisch
+            # gerendert worden. Nur bei vorhandenem Zeitraum -- kein
+            # "unbekannt"-Platzhalter (AC-7).
+            time_suffix = ""
+            if alert.valid_from and alert.valid_to:
+                time_suffix = f" · {_html.escape(_format_validity(alert))}"
             badges.append(
                 f'<div style="background:{G_PAPER};border-left:4px solid {color};'
                 f'padding:8px 16px;margin:8px 20px;border-radius:4px;'
                 f'font-family:{FONT_UI};font-size:13px;color:{G_INK};">'
                 f'{prefix_html}'
-                f'<span>{alert_label}{seg_suffix}</span></div>'
+                f'<span>{alert_label}{seg_suffix}{time_suffix}</span></div>'
             )
     return "".join(badges)
 
@@ -213,11 +223,21 @@ def render_official_alerts_html(
 def render_official_alerts_plain(entries: list[tuple[str, list["OfficialAlert"]]]) -> list[str]:
     """Reproduziert das alte `comparison.py`-Plain-Format exakt: eine Zeile
     je Alert, "Amtliche Warnung: {label}" — der Aufrufer haengt Ortsnamen
-    bzw. Praefixe (z.B. "   ⚠️ ") selbst davor."""
+    bzw. Praefixe (z.B. "   ⚠️ ") selbst davor.
+
+    Issue #1245 (AC-6/AC-7, Adversary F002): bei vorhandenem Zeitraum haengt
+    die Zeile einen datumsbehafteten Zusatz " ({_format_validity})" an --
+    NICHT das wochentag/stunden-only SMS-Kurzformat `_tag_time`, das zwei
+    exakt 7 Tage auseinanderliegende Perioden (gleicher Wochentag+Stunde)
+    byte-identisch gerendert haette. Ohne Zeitraum bleibt die Zeile
+    byte-stabil zum bisherigen Verhalten (kein "unbekannt"-Platzhalter)."""
     lines: list[str] = []
     for _label, alerts in entries:
         for alert in alerts:
-            lines.append(f"Amtliche Warnung: {alert.label}")
+            suffix = ""
+            if alert.valid_from and alert.valid_to:
+                suffix = f" ({_format_validity(alert)})"
+            lines.append(f"Amtliche Warnung: {alert.label}{suffix}")
     return lines
 
 
@@ -276,7 +296,16 @@ def dedupe_official_alerts(
     (`collect_trip_alert_entries`, Compare-Pro-Ort-Streifen), und dort MUESSEN
     zwei gleichartige Warnungen mit unterschiedlichem Label sichtbar bleiben
     (#1134 AC-2a: "Massiv Alpha" und "Massiv Beta" sind zwei echte Warnungen,
-    keine Dubletten)."""
+    keine Dubletten).
+
+    Issue #1245: der Schluessel traegt zusaetzlich `(valid_from, valid_to)` --
+    einheitlich in allen drei Namespaces (nicht nur region/label). Zwei
+    Perioden derselben Identitaet+Gefahr mit unterschiedlichem Zeitraum
+    bleiben dadurch getrennt erhalten (AC-1), waehrend gleicher Zeitraum +
+    unterschiedliche Stufe weiterhin zur hoechsten Stufe kollabiert (AC-2).
+    Massiv-Sperren (`dedup_id`) tragen strukturell nie einen Zeitraum
+    (`massif_closure.py`) -- fuer sie ist der Zusatz folgenlos, vermeidet aber
+    Sonderfall-Code (AC-3)."""
     best: dict[tuple, "OfficialAlert"] = {}
     segment_ids_by_key: dict[tuple, set[str]] = {}
     order: list[tuple] = []
@@ -287,7 +316,7 @@ def dedupe_official_alerts(
             ident = ("region", a.region_label)
         else:
             ident = ("label", a.label)
-        key = (ident, a.hazard)
+        key = (ident, a.hazard, a.valid_from, a.valid_to)
         if key not in best:
             best[key] = a
             segment_ids_by_key[key] = set()
@@ -296,6 +325,25 @@ def dedupe_official_alerts(
             best[key] = a
         segment_ids_by_key[key].update(segment_ids)
     return [(best[key], sorted(segment_ids_by_key[key])) for key in order]
+
+
+def official_alert_state_key(alert: "OfficialAlert") -> str:
+    """Issue #1245: Alarm-Trigger-State-Key, der exakt dieselbe Identitaet
+    widerspiegelt wie `dedupe_official_alerts` (Praezedenz `dedup_id` >
+    `region_label` > `label`, plus `hazard` und Zeitraum). Gemeinsam genutzt
+    von `TripAlertService` und `CompareOfficialAlertService`, damit zwei
+    echte Perioden derselben Region+Gefahr (AC-4) und zwei verschiedene
+    Massiv-Sperren (AC-5) getrennte Zustands-Eintraege erhalten statt sich im
+    `last-write-wins`-State zu ueberschreiben."""
+    if alert.dedup_id:
+        ident = f"id:{alert.dedup_id}"
+    elif alert.region_label:
+        ident = f"region:{alert.region_label}"
+    else:
+        ident = f"label:{alert.label}"
+    vf = alert.valid_from.isoformat() if alert.valid_from else "none"
+    vt = alert.valid_to.isoformat() if alert.valid_to else "none"
+    return f"official_alert:{ident}:{alert.hazard}:{vf}:{vt}"
 
 
 def _bundle_by_hazard_level(

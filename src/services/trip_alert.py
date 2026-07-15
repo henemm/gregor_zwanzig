@@ -926,13 +926,16 @@ class TripAlertService:
             except Exception as e:
                 logger.warning(f"official_alert_triggers: Quelle fehlgeschlagen fuer {trip.id}: {e}")
 
-        from output.renderers.alert.official_alerts import dedupe_official_alerts
+        from output.renderers.alert.official_alerts import (
+            dedupe_official_alerts,
+            official_alert_state_key,
+        )
         tagged_alerts = dedupe_official_alerts(tagged_alerts)
 
         state = AlertStateService(user_id=self._user_id).load(trip.id)
         new_or_escalated = []
         for a, segment_ids in tagged_alerts:
-            key = f"official_alert:{a.region_label}:{a.hazard}"
+            key = official_alert_state_key(a)
             prev = state.get(key)
             if prev is None or a.level > prev.get("last_reported_value", 0):
                 new_or_escalated.append((a, segment_ids))
@@ -943,13 +946,14 @@ class TripAlertService:
         (Dedupe). `official_notices` sind `(OfficialAlert, segment_ids)`-Tupel."""
         if not official_notices:
             return
+        from output.renderers.alert.official_alerts import official_alert_state_key
         from services.alert_state import AlertStateService
 
         state_svc = AlertStateService(user_id=self._user_id)
         state = state_svc.load(trip_id)
         now_iso = datetime.now(timezone.utc).isoformat()
         for a, _segment_ids in official_notices:
-            key = f"official_alert:{a.region_label}:{a.hazard}"
+            key = official_alert_state_key(a)
             state[key] = {"last_reported_value": float(a.level), "reported_at": now_iso}
         state_svc.save(trip_id, state)
 
