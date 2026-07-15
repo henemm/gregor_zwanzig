@@ -900,6 +900,12 @@ class ComparePreset:
     evening_time: Optional[str] = None
     end_date: Optional[str] = None
     corridors: List["Corridor"] = field(default_factory=list)
+    # Issue #1250 Scheibe 5 (ADR-0023): additiver Diskriminator fuer das
+    # kuenftige gemeinsame BriefingSubscription-Modell ("vergleich" bei
+    # ComparePreset). Rein additiv, NICHT von der App konsumiert/erzwungen —
+    # bestehende Schreibpfade setzen ihn nicht, nur die Migration
+    # (scripts/migrate_1250_briefings.py). None = Altdaten/noch nicht migriert.
+    kind: Optional[str] = None
     raw: dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
 
 

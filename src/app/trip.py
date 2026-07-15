@@ -218,6 +218,12 @@ class Trip:
     send_email: Optional[bool] = None
     send_sms: Optional[bool] = None
     send_telegram: Optional[bool] = None
+    # Issue #1250 Scheibe 5 (ADR-0023): additiver Diskriminator fuer das
+    # kuenftige gemeinsame BriefingSubscription-Modell ("route" bei Trip).
+    # Rein additiv, NICHT von der App konsumiert/erzwungen — bestehende
+    # Schreibpfade setzen ihn nicht, nur die Migration
+    # (scripts/migrate_1250_briefings.py). None = Altdaten/noch nicht migriert.
+    kind: Optional[str] = None
 
     @property
     def start_date(self) -> Optional[date]:

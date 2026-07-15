@@ -251,6 +251,9 @@ def compare_preset_from_dict(data: Dict[str, Any]) -> ComparePreset:
         evening_time=data.get("evening_time"),
         end_date=data.get("end_date"),
         corridors=corridors,
+        # Issue #1250 Scheibe 5: additiver Diskriminator, roundtrip-erhalten
+        # (auch als None) — Parität zu _parse_trip.kind.
+        kind=data.get("kind"),
         raw=dict(data),
     )
 
@@ -586,6 +589,9 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         # Stages) laengst verschwunden ist.
         "end_date", "morning_time", "evening_time", "morning_enabled",
         "evening_enabled", "send_email", "send_sms", "send_telegram",
+        # Issue #1250 Scheibe 5: additiver Diskriminator (roundtrip-erhalten,
+        # nicht via extra) — s. Trip.kind.
+        "kind",
     }
     extra = {k: v for k, v in data.items() if k not in KNOWN_TOP_LEVEL}
 
@@ -622,6 +628,9 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         send_email=send_email,
         send_sms=send_sms,
         send_telegram=send_telegram,
+        # Issue #1250 Scheibe 5: explizit durchreichen (auch als None) —
+        # Parität zu compare_preset_from_dict.kind.
+        kind=data.get("kind"),
     )
     return trip
 
@@ -1317,6 +1326,12 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
     # Issue #1258: additiv, RMW — None (unmigrierter Bestand) bleibt ungeschrieben.
     if trip.official_warnings is not None:
         data["official_warnings"] = trip.official_warnings
+
+    # Issue #1250 Scheibe 5: additiver Diskriminator, omitempty-guarded (RMW)
+    # — None (unmigrierter Bestand) bleibt ungeschrieben, kein erzwungener
+    # Default in den alten Schreibpfaden (ADR-0023, rein additiv).
+    if trip.kind is not None:
+        data["kind"] = trip.kind
 
     # Serialize weather config (Feature 2.6 legacy, preserved for migration)
     if trip.weather_config:

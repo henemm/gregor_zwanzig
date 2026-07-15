@@ -150,6 +150,11 @@ type Trip struct {
 	// trip.end_date). Kein Roundtrip-Verlustrisiko wie bei Corridors, da
 	// Struct-Feld (nicht Extra-Map).
 	EndDate *string `json:"end_date,omitempty"`
+	// Kind — Issue #1250 Scheibe 5 (ADR-0023): additiver Diskriminator fuer
+	// das kuenftige gemeinsame BriefingSubscription-Modell ("route" bei
+	// Trip). Rein additiv, NICHT von der App konsumiert/erzwungen — bestehende
+	// Schreibpfade setzen ihn nicht, nur die Migration (scripts/migrate_1250_briefings.py).
+	Kind string `json:"kind,omitempty"`
 }
 
 // OfficialWarningsConfig — Issue #1258, geteilt zwischen Trip und

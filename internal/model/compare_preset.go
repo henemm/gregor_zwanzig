@@ -99,4 +99,10 @@ type ComparePreset struct {
 	// Corridors — Issue #1231, Slice 1: additiv neben DisplayConfig["ideal_ranges"].
 	// Kein omitempty (analog Trip.Corridors), konsistent zum Python-Verhalten.
 	Corridors []Corridor `json:"corridors"`
+	// Kind — Issue #1250 Scheibe 5 (ADR-0023): additiver Diskriminator fuer
+	// das kuenftige gemeinsame BriefingSubscription-Modell ("vergleich" bei
+	// ComparePreset). Rein additiv, NICHT von der App konsumiert/erzwungen —
+	// bestehende Schreibpfade setzen ihn nicht, nur die Migration
+	// (scripts/migrate_1250_briefings.py).
+	Kind string `json:"kind,omitempty"`
 }
