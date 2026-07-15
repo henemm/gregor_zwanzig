@@ -307,9 +307,9 @@ class TestComparePresetsDailyEndpoint:
     def test_endpoint_count_is_integer(self, client):
         """
         GIVEN: FastAPI-App läuft (kein compare_presets.json vorhanden)
-        WHEN: POST /api/scheduler/compare-presets-daily
+        WHEN: POST /api/scheduler/compare-presets-daily?user_id=default
         THEN: count-Feld ist eine ganze Zahl
         """
-        resp = client.post("/api/scheduler/compare-presets-daily")
+        resp = client.post("/api/scheduler/compare-presets-daily?user_id=default")
         assert resp.status_code == 200
         assert isinstance(resp.json()["count"], int)

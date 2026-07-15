@@ -26,7 +26,7 @@ _telegram_reader = None
 
 
 @router.post("/trip-reports")
-def trigger_trip_reports(hour: Optional[int] = None, user_id: str = "default"):
+def trigger_trip_reports(hour: Optional[int] = None, user_id: str = Query(...)):
     """Trigger trip reports for current or specified hour."""
     from datetime import datetime
     from zoneinfo import ZoneInfo
@@ -45,7 +45,7 @@ def trigger_trip_reports(hour: Optional[int] = None, user_id: str = "default"):
 
 
 @router.post("/alert-checks")
-def trigger_alert_checks(user_id: str = "default"):
+def trigger_alert_checks(user_id: str = Query(...)):
     """Trigger weather change alert checks."""
     from services.trip_alert import TripAlertService
 
@@ -55,7 +55,7 @@ def trigger_alert_checks(user_id: str = "default"):
 
 
 @router.post("/compare-alert-checks")
-def trigger_compare_alert_checks(user_id: str = "default"):
+def trigger_compare_alert_checks(user_id: str = Query(...)):
     """Trigger Compare-Preset Deviation-Alert-Checks (Issue #1169, Epic #1095)."""
     from services.compare_alert import CompareAlertService
 
@@ -127,7 +127,7 @@ def trigger_inbound_telegram():
 
 
 @router.post("/compare-presets-daily")
-def trigger_compare_presets_daily(hour: Optional[int] = None, user_id: str = "default"):
+def trigger_compare_presets_daily(hour: Optional[int] = None, user_id: str = Query(...)):
     """Trigger compare preset dispatch for the current or specified hour.
 
     #1232 Scheibe 2a: Go-Cron ruft diesen Endpoint stuendlich auf (statt

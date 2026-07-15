@@ -26,10 +26,10 @@ class TestSchedulerTriggerEndpoints:
     def test_trip_reports_endpoint_exists(self, client):
         """
         GIVEN: FastAPI app running
-        WHEN: POST /api/scheduler/trip-reports
+        WHEN: POST /api/scheduler/trip-reports?user_id=default
         THEN: Returns 200 with status and count fields
         """
-        resp = client.post("/api/scheduler/trip-reports")
+        resp = client.post("/api/scheduler/trip-reports?user_id=default")
         assert resp.status_code == 200
         data = resp.json()
         assert "status" in data
@@ -38,10 +38,10 @@ class TestSchedulerTriggerEndpoints:
     def test_trip_reports_with_hour_param(self, client):
         """
         GIVEN: FastAPI app running
-        WHEN: POST /api/scheduler/trip-reports?hour=7
+        WHEN: POST /api/scheduler/trip-reports?hour=7&user_id=default
         THEN: Returns 200, uses specified hour
         """
-        resp = client.post("/api/scheduler/trip-reports?hour=7")
+        resp = client.post("/api/scheduler/trip-reports?hour=7&user_id=default")
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ok"
@@ -49,10 +49,10 @@ class TestSchedulerTriggerEndpoints:
     def test_alert_checks_endpoint_exists(self, client):
         """
         GIVEN: FastAPI app running
-        WHEN: POST /api/scheduler/alert-checks
+        WHEN: POST /api/scheduler/alert-checks?user_id=default
         THEN: Returns 200 with status field
         """
-        resp = client.post("/api/scheduler/alert-checks")
+        resp = client.post("/api/scheduler/alert-checks?user_id=default")
         assert resp.status_code == 200
         data = resp.json()
         assert "status" in data
