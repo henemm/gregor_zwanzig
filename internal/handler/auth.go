@@ -448,6 +448,9 @@ type profileResponse struct {
 	TelegramChatID string                `json:"telegram_chat_id,omitempty"`
 	Tier           string                `json:"tier"`
 	SmsAllowed     bool                  `json:"sms_allowed"`
+	// Issue #1258 S6 (R1) — aus EmailVerifiedAt abgeleitet, NIE der Zeitstempel
+	// selbst (AC-20).
+	EmailVerified  bool                  `json:"email_verified"`
 	// Issue #1071 — offener Level-Änderungs-Antrag. Fehlt im JSON, solange kein
 	// Antrag vorliegt (omitempty bzw. nil-Pointer).
 	RequestedTier  string                `json:"requested_tier,omitempty"`
@@ -497,6 +500,7 @@ func toProfileResponse(u *model.User) profileResponse {
 		TelegramChatID: u.TelegramChatID,
 		Tier:           tier,
 		SmsAllowed:     model.SmsAllowed(tier),
+		EmailVerified:  u.EmailVerifiedAt != nil,
 		RequestedTier:  u.RequestedTier,
 		RequestedAt:    u.RequestedAt,
 		CreatedAt:      u.CreatedAt.Format(time.RFC3339),

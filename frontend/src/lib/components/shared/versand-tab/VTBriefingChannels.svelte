@@ -11,9 +11,10 @@
 	// Spec: docs/specs/modules/versand_tab_route.md (AC-2, AC-7)
 
 	import { onMount } from 'svelte';
-	import { Eyebrow, Card } from '$lib/components/atoms';
+	import { Eyebrow, Card, Dot } from '$lib/components/atoms';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { CHANNEL_COL_BUDGET } from '$lib/components/trip-detail/metricsEditor';
+	import { channelConnectionStatus } from './channelConnectionStatus';
 
 	interface Channels {
 		email: boolean;
@@ -50,6 +51,7 @@
 		telegram_chat_id?: string;
 		sms_to?: string;
 		sms_allowed?: boolean;
+		email_verified?: boolean;
 	}
 	let profile = $state<Profile | null>(null);
 
@@ -58,6 +60,10 @@
 		telegram: !!profile?.telegram_chat_id,
 		sms: !!profile?.sms_to && profile?.sms_allowed !== false
 	});
+
+	// Issue #1258 S6 (R5): ehrlicher Verbindungsstatus je Kanal (Dot + Label),
+	// additiv zu den bestehenden Checkboxen.
+	let connectionStatus = $derived(channelConnectionStatus(profile));
 
 	onMount(() => {
 		fetch('/api/auth/profile', { credentials: 'same-origin' })
@@ -94,6 +100,10 @@
 						>E-Mail{profile?.mail_to ? ` (${profile.mail_to})` : ''}</Checkbox
 					>
 				</span>
+				<span data-testid="channel-status-email" class="vt-channel-status">
+					<Dot tone={connectionStatus.email.tone} size={7} />
+					<span class="vt-channel-status-label">{connectionStatus.email.label}</span>
+				</span>
 				<p class="vt-channel-sub pl-6">{SUB.email}</p>
 				{#if !availableChannels.email}
 					<div data-testid="channel-email-hint" class="pl-6 text-xs text-muted-foreground">
@@ -111,6 +121,10 @@
 						>Telegram{profile?.telegram_chat_id ? ` (${profile.telegram_chat_id})` : ''}</Checkbox
 					>
 				</span>
+				<span data-testid="channel-status-telegram" class="vt-channel-status">
+					<Dot tone={connectionStatus.telegram.tone} size={7} />
+					<span class="vt-channel-status-label">{connectionStatus.telegram.label}</span>
+				</span>
 				<p class="vt-channel-sub pl-6">{SUB.telegram}</p>
 				{#if !availableChannels.telegram}
 					<div data-testid="channel-telegram-hint" class="pl-6 text-xs text-muted-foreground">
@@ -124,6 +138,10 @@
 					<Checkbox checked={channels.sms} disabled={!availableChannels.sms} onchange={onSmsChange}
 						>SMS{profile?.sms_to ? ` (${profile.sms_to})` : ''}</Checkbox
 					>
+				</span>
+				<span data-testid="channel-status-sms" class="vt-channel-status">
+					<Dot tone={connectionStatus.sms.tone} size={7} />
+					<span class="vt-channel-status-label">{connectionStatus.sms.label}</span>
 				</span>
 				<p class="vt-channel-sub pl-6">{SUB.sms}</p>
 				{#if profile?.sms_allowed === false}
@@ -164,5 +182,20 @@
 		font-size: 11px;
 		color: var(--g-ink-3);
 		margin: 2px 0 0;
+	}
+	/* Issue #1258 S6 (R5): Verbindungsstatus-Dot + Mono-Label additiv, siehe
+	   claude-code-handoff/current/jsx/screen-compare-detail.jsx:289-309.
+	   --g-ink-3 statt --g-ink-4 in beiden Zustaenden (Kontrast-Leitprinzip). */
+	.vt-channel-status {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		margin-left: 10px;
+	}
+	.vt-channel-status-label {
+		font-family: var(--g-font-mono);
+		font-size: 11px;
+		letter-spacing: 0.04em;
+		color: var(--g-ink-3);
 	}
 </style>

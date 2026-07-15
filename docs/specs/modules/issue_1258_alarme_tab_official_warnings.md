@@ -343,6 +343,31 @@ Analyse-Basis: `docs/context/feat-1258-s5-hub-alarme.md` (H1–H5).
   Zähler), `onJumpToWertebereiche` → Hub-Tab `idealwerte`.
 - **Kein Backend-Delta (H5)** — FE-only.
 
+### 12. S6-Detail-Festlegungen (R5 Status-Dot, 2026-07-15)
+
+Analyse-Basis: `docs/context/feat-1258-s6-r5-status-dot.md` (R1–R4).
+
+- **Backend (R1):** `profileResponse` erhält `email_verified bool`
+  (abgeleitet aus `EmailVerifiedAt != nil` in `toProfileResponse`) —
+  der Zeitstempel selbst wird NIE exponiert (AC-20-Negativ-Assertion im
+  Go-Test). Verifikations-Reset bei Adressänderung bleibt unangetastet.
+- **Status-Logik (R2):** extrahiertes Logik-Modul
+  `versand-tab/channelConnectionStatus.ts` → je Kanal `{tone, label}`:
+  E-Mail `mail_to && email_verified` → good/„bestätigt";
+  **Kanten-Festlegung** `mail_to && !email_verified` → neutral/„nicht
+  bestätigt" (von AC-21 nicht explizit abgedeckt; F2-Geist „ehrliche
+  Labels"); kein `mail_to` → neutral/„nicht verbunden". Telegram:
+  `telegram_chat_id` → good/„verbunden", sonst neutral/„nicht
+  verbunden". SMS: `sms_to` + Tier erlaubt → good/„hinterlegt", sonst
+  neutral/„nicht verbunden" (Tier-gesperrt = effektiv nicht nutzbar).
+- **Rendering (R3):** Dot (7px, good/neutral) + Mono-Label (11px,
+  letterSpacing 0.04em, Design `screen-compare-detail.jsx:289-309`)
+  ADDITIV in die bestehenden Kanal-Zeilen von `VTBriefingChannels` —
+  bestehende Checkboxen + Testids unverändert (Playwright-Bestand,
+  #1232); neue Testids `channel-status-email|telegram|sms`. Wirkt über
+  den geteilten Baustein in Trip- UND Compare-Versand (AC-22).
+- **Kein Schema-Delta (R4).**
+
 ## Expected Behavior
 
 - **Input:** Bestehende Trips/ComparePresets mit `official_alert_triggers_enabled`,
@@ -546,6 +571,10 @@ setzen S1 (Datenmodell) und S2 (Baustein) voraus. S5 setzt S4 voraus.
   `hydrateAlarmFieldsFromPreset` setzt ALLE Alarm-Felder ohne
   Nachbar-Hydration; `flushPendingAlarmSave` No-Op bei unverändertem
   Snapshot; Payload trägt nie `sources` (AC-29, AC-19)
+- FE node:test gegen `channelConnectionStatus` — Zustands-Matrix aller
+  drei Kanäle inkl. Kante „konfiguriert aber unbestätigt" (AC-21)
+- Go: profileResponse trägt `email_verified` bool und NIEMALS
+  `email_verified_at` (AC-20)
 
 ### Staging-E2E (Marker `live`/`staging`, Playwright gegen echten Login)
 
@@ -564,6 +593,15 @@ issue-nummerierte Testdateien).
 
 ## Changelog
 
+- 2026-07-15: **S6-Detail-Festlegungen ergänzt** (Workflow
+  `feat-1258-s6-r5-status-dot`, Analyse-Doc
+  `docs/context/feat-1258-s6-r5-status-dot.md`): neuer Implementation-
+  Details-Abschnitt 12 (email_verified-Ableitung ohne Timestamp-Leak,
+  Logik-Modul channelConnectionStatus mit Kanten-Festlegung „nicht
+  bestätigt" für konfigurierte-aber-unverifizierte E-Mail, additives
+  Dot+Label-Rendering ohne Checkbox-/Testid-Bruch), Test Coverage
+  ergänzt. Keine neuen ACs (20–22 decken S6); bestehende ACs 1–29
+  wortgleich unverändert.
 - 2026-07-15: **S5-Detail-Festlegungen ergänzt** (Workflow
   `feat-1258-s5-hub-alarme`, Analyse-Doc
   `docs/context/feat-1258-s5-hub-alarme.md`): neuer Implementation-

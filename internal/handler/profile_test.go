@@ -513,3 +513,52 @@ func TestGetProfileHandlerSmsAllowedField(t *testing.T) {
 		}
 	}
 }
+
+// AC-20 (Issue #1258 S6): profileResponse liefert ein aus email_verified_at
+// abgeleitetes Boolean-Feld "email_verified", der Zeitstempel selbst wird
+// NIEMALS im JSON-Body exponiert (Negativ-Assertion).
+func TestGetProfileHandlerEmailVerifiedField_AC20(t *testing.T) {
+	s := newTestStore(t)
+
+	verifiedDir := filepath.Join(s.DataDir, "users", "lena")
+	os.MkdirAll(verifiedDir, 0755)
+	os.WriteFile(filepath.Join(verifiedDir, "user.json"),
+		[]byte(`{"id":"lena","mail_to":"lena@example.com","email_verified_at":"2026-07-01T00:00:00Z"}`), 0644)
+
+	unverifiedDir := filepath.Join(s.DataDir, "users", "moritz")
+	os.MkdirAll(unverifiedDir, 0755)
+	os.WriteFile(filepath.Join(unverifiedDir, "user.json"),
+		[]byte(`{"id":"moritz","mail_to":"moritz@example.com"}`), 0644)
+
+	h := GetProfileHandler(s)
+
+	getRaw := func(userID string) (map[string]interface{}, string) {
+		req := httptest.NewRequest("GET", "/api/auth/profile", nil)
+		ctx := middleware.ContextWithUserID(req.Context(), userID)
+		req = req.WithContext(ctx)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code != 200 {
+			t.Fatalf("%s: expected 200, got %d: %s", userID, w.Code, w.Body.String())
+		}
+		var resp map[string]interface{}
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		return resp, w.Body.String()
+	}
+
+	verifiedResp, verifiedBody := getRaw("lena")
+	if verifiedResp["email_verified"] != true {
+		t.Errorf("lena: expected email_verified=true, got %v", verifiedResp["email_verified"])
+	}
+	if strings.Contains(verifiedBody, "email_verified_at") {
+		t.Errorf("AC-20: Zeitstempel email_verified_at darf NIE im JSON-Body stehen, war: %s", verifiedBody)
+	}
+
+	unverifiedResp, unverifiedBody := getRaw("moritz")
+	if unverifiedResp["email_verified"] != false {
+		t.Errorf("moritz: expected email_verified=false, got %v", unverifiedResp["email_verified"])
+	}
+	if strings.Contains(unverifiedBody, "email_verified_at") {
+		t.Errorf("AC-20: Zeitstempel email_verified_at darf NIE im JSON-Body stehen, war: %s", unverifiedBody)
+	}
+}
