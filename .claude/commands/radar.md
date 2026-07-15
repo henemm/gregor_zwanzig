@@ -71,10 +71,23 @@ Zielformat ist vom PO festgelegt (Memory `feedback_radar_tab_plan_format`). Kurz
 - So viele Tabs wie tatsächlich aktive Worktrees aus Schritt 2 (nicht künstlich auf eine
   feste Zahl auffüllen oder kürzen) — plus ggf. einen neuen Tab-Vorschlag, falls ein
   besonders wichtiges Issue sonst gar nicht abgedeckt wäre.
+- **Buchstaben-Label PFLICHT (PO-Vorgabe 2026-07-15):** Jeder Tab bekommt zusätzlich zum
+  Themennamen ein stabiles Kürzel „Tab A", „Tab B", … — Reihenfolge: erst die tatsächlich
+  aktiven Tabs (alphabetisch nach Worktree-Name aus Schritt 2), danach Tab-Vorschläge. Der
+  User referenziert Tabs im Chat künftig per Buchstabe (z. B. „in Tab A läuft #1258") —
+  das Label macht diese Zuordnung eindeutig, auch wenn sich der Themenname zwischen zwei
+  Radar-Läufen ändert. Format je Karte: „Tab A — <Themenname>".
 - Pro Tab: kurzer Themenname (Klartext, z. B. "Warn-Mail", nicht der Workflow-Name) +
   nummerierte Liste `#<Nummer> <Klartext-Titel>`. Erster Eintrag, falls durch Schritt 2
   bestätigt aktiv: Markierung "läuft schon".
 - Gebündelte Punkte als `#A + #B (gebündelt)` in einer Zeile.
+- **Nachrückkandidaten PFLICHT (PO-Vorgabe 2026-07-15):** Jeder Tab bekommt zusätzlich 2-3
+  Nachrückkandidaten — die nächsten sinnvollen Issues für diesen Tab, falls die laufende
+  Aufgabe fertig wird oder blockiert. Gleiche Bündel-/Abhängigkeits-Logik wie die
+  Haupt-Liste, aber sichtbar als eigener, kürzerer Block „Nachrücker" unterhalb der
+  nummerierten Liste gekennzeichnet (kein Auftrag, nur Vorschlag für danach). Passen für
+  einen Tab keine 2-3 sinnvollen Kandidaten (z. B. weil das Thema erschöpft ist), reicht
+  auch 1 oder 0 — nicht künstlich auffüllen.
 - **VERBOTEN im sichtbaren Ergebnis:** Dateipfade, Workflow-/Branch-Namen, Phasen-
   Bezeichnungen ("TDD RED" etc.), Kollisionsmatrizen, "Blast-Radius"/"SOLO"-Jargon,
   mehrsätzige Begründungen. Höchstens ein kurzer Halbsatz Warum, in Geschäftssprache
