@@ -121,7 +121,11 @@ test.describe('Issue #1256 S8d (AC-2): kurzer mobiler Intro-Text', () => {
 		await page.waitForLoadState('networkidle');
 
 		await expect(page.getByText('Ohne Ranking — läuft, bis du stoppst.')).toBeVisible();
-		await expect(page.getByText('Morgen-Briefing für heute, Abend-Briefing für morgen')).toHaveCount(0);
+		// Fix-Loop 2: der lange Desktop-Satz liegt im `hidden desktop:block`-Zweig
+		// weiterhin im DOM (nur per CSS display:none versteckt) — toHaveCount(0)
+		// prueft DOM-Anwesenheit statt Sichtbarkeit und schlaegt daher faelschlich
+		// fehl. not.toBeVisible() ist die von der Spec geforderte Semantik.
+		await expect(page.getByText('Morgen-Briefing für heute, Abend-Briefing für morgen')).not.toBeVisible();
 	});
 });
 
@@ -134,7 +138,9 @@ test.describe('Issue #1256 S8d (AC-3): Suchfeld nur Desktop', () => {
 		await page.setViewportSize(MOBILE);
 		await page.goto('/compare');
 		await page.waitForLoadState('networkidle');
-		await expect(page.getByPlaceholder('Suchen…')).toHaveCount(0);
+		// Fix-Loop 2: gleiches Muster wie AC-2 — Desktop-Suchfeld ist per
+		// display:none (`hidden desktop:block`) versteckt, bleibt aber im DOM.
+		await expect(page.getByPlaceholder('Suchen…')).not.toBeVisible();
 
 		await page.setViewportSize(DESKTOP);
 		await page.reload();
@@ -186,7 +192,11 @@ test.describe('Issue #1256 S8d (AC-5): kompaktes mobiles Content-Padding', () =>
 		);
 		expect(overflow).toBeLessThanOrEqual(1);
 
-		const firstTile = page.locator('.desktop\\:hidden a[href^="/compare/"]').first();
+		// Fix-Loop 2: unscoped Selektor traf zuerst top-app-bar-new-compare
+		// (href="/compare/new", ebenfalls in einem .desktop\:hidden-Container,
+		// aber ausserhalb von <main>) statt die erste Kachel — auf <main>
+		// eingrenzen, wo ausschliesslich der mobile Kachel-Stack liegt.
+		const firstTile = page.locator('main .desktop\\:hidden a[href^="/compare/"]').first();
 		await expect(firstTile).toBeVisible();
 		const box = await firstTile.boundingBox();
 		expect(box?.x ?? 0).toBeGreaterThanOrEqual(12);
@@ -215,20 +225,31 @@ test.describe('Issue #1256 S8d (AC-6/AC-7): mobiler Orte-Tab dense-Stack', () =>
 		await page.locator('[data-testid="cm-mobile-tab-orte"]:visible').click();
 
 		await expect(page.getByText('Im Vergleich ·').first()).toBeVisible();
-		await expect(page.getByTestId('compare-step2-counter')).toHaveText('min. 2');
-		await expect(page.getByTestId('compare-step2-smart-import-input')).toHaveCount(0);
-		await expect(page.locator('[data-testid="compare-step2-library"]:visible')).toHaveCount(0);
+		// Fix-Loop 2: Step2Orte wird als GETRENNTE Instanz sowohl im .cm-desktop-
+		// als auch im .cm-mobile-Zweig gemountet (CSS-only Switch, beide Zweige
+		// im DOM) — compare-step2-counter existiert daher doppelt. Die
+		// .cm-desktop-Kopie liegt auf Mobile nur per position:fixed/1px offscreen
+		// (nicht display:none), wodurch Playwrights :visible bei Text-/Inline-
+		// Elementen (Bounding-Box bleibt am Inhalt bemessen, nicht am 1px-
+		// Container) NICHT zuverlaessig filtert — s. Runbook-Messung Fix-Loop 2.
+		// Eindeutig nur per Container-Scoping auf .cm-mobile.
+		await expect(page.locator('.cm-mobile [data-testid="compare-step2-counter"]')).toHaveText('min. 2');
+		await expect(page.locator('.cm-mobile [data-testid="compare-step2-smart-import-input"]')).toHaveCount(0);
+		await expect(page.locator('.cm-mobile [data-testid="compare-step2-library"]')).toHaveCount(0);
 
 		// Ort aus der Bibliothek hinzufügen (Sheet).
 		await page.getByTestId('compare-step2-mobile-library-btn').click();
 		await page.locator(`[data-testid="compare-step2-mobile-lib-check-${locA}"]`).click();
 		await page.locator('button[aria-label="Schliessen"]:visible').click();
 
-		const pickedItem = page.locator(`[data-testid="compare-step2-picked-item-${locA}"]:visible`);
+		// Fix-Loop 2: gleiches Doppel-Mount-Muster wie oben — Container-Scoping
+		// auf .cm-mobile statt :visible (konsistent, unabhaengig vom CSS-
+		// Layout-Zufall ob die .cm-desktop-Kopie auf 0 Breite kollabiert).
+		const pickedItem = page.locator(`.cm-mobile [data-testid="compare-step2-picked-item-${locA}"]`);
 		await expect(pickedItem).toBeVisible();
 		await expect(pickedItem).toContainText('1');
 
-		await page.locator(`[data-testid="compare-step2-picked-remove-${locA}"]:visible`).click();
+		await page.locator(`.cm-mobile [data-testid="compare-step2-picked-remove-${locA}"]`).click();
 		await expect(pickedItem).toHaveCount(0);
 	});
 });
@@ -246,10 +267,15 @@ test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versan
 		await page.goto('/compare/new');
 		await page.waitForLoadState('networkidle');
 
-		// AC-8: leerer Name -> "Name eingeben" disabled.
+		// AC-8: leerer Name -> "Name eingeben" disabled. Der Button traegt
+		// tatsaechlich das HTML disabled-Attribut (kein reiner Style-Zustand) —
+		// ein Klick darauf ist per Browser-/Playwright-Actionability nicht
+		// ausfuehrbar und lief bisher in einen 60s-Timeout. Fix-Loop 2: Zustand
+		// nur noch pruefen (disabled + Tab bleibt unveraendert auf "vergleich"),
+		// nicht mehr klicken.
 		const cta = page.locator('[data-testid="cm-mobile-cta"]:visible');
 		await expect(cta).toContainText('Name eingeben');
-		await cta.getByRole('button').click();
+		await expect(cta.getByRole('button')).toBeDisabled();
 		await expect(page.locator('[data-testid="cm-mobile-tab-vergleich"]:visible')).toHaveAttribute(
 			'data-active',
 			'true'
@@ -312,14 +338,16 @@ test.describe('Issue #1256 S8d (AC-13/AC-14): Profil-Häkchen + gekürzte Metrik
 		await page.waitForLoadState('networkidle');
 
 		// Wintersport hat 5 Metriken (SNOW_DEPTH, SNOW_NEW, SUNNY_HOURS, WIND_MAX,
-		// CLOUD_AVG) — der Desktop-Button teilt denselben wiz-State (kein
-		// zweiter Mobile-Testid nötig, s. issue-682-compare-editor-mobile.spec.ts).
-		await page.getByTestId('compare-editor-profile-wintersport').click();
+		// CLOUD_AVG) — der Desktop-Button teilt denselben wiz-State. Fix-Loop 2:
+		// compare-editor-profile-wintersport liegt im .cm-desktop-Zweig, der auf
+		// Mobile nur per position:fixed/1px-Overflow offscreen ist (nicht
+		// display:none) — dadurch bleibt der Button fuer Playwright zwar
+		// "visible", ist aber dauerhaft "outside of the viewport" und nicht
+		// klickbar (60s-Timeout). Eigener Mobile-Testid (CompareEditor.svelte)
+		// ersetzt den Klick auf das unerreichbare Desktop-Element.
+		const mobileCard = page.locator('[data-testid="compare-editor-profile-mobile-wintersport"]');
+		await mobileCard.click();
 
-		const mobileCard = page
-			.locator('.cm-mobile')
-			.locator('button', { hasText: 'Wintersport' })
-			.first();
 		await expect(mobileCard).toBeVisible();
 		await expect(mobileCard.locator('svg path[d="M2 6l3 3 5-6"]')).toBeVisible();
 		await expect(mobileCard).toContainText('…');
@@ -396,7 +424,12 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 		await page.getByTestId('compare-editor-continue-orte').click();
 
 		// Ersten Ort über die Bibliothek auswählen (Desktop-Grid).
-		await page.locator(`div[data-testid="compare-wizard-step-2"]`).waitFor({ state: 'visible' });
+		// Fix-Loop 2: Step2Orte wird als getrennte Instanz je in .cm-desktop UND
+		// .cm-mobile gemountet (CSS-only Switch) — compare-wizard-step-2 (der
+		// Root-Wrapper von Step2Orte.svelte) existiert daher doppelt. Bei
+		// diesem Test (DESKTOP-Viewport) ist .cm-mobile jedoch echtes
+		// display:none, daher hier auf .cm-desktop eingrenzen statt :visible.
+		await page.locator(`.cm-desktop div[data-testid="compare-wizard-step-2"]`).waitFor({ state: 'visible' });
 		await page.getByText(`E2E S8d D-Ort-A ${suffix}`).click();
 
 		const continueBtn = page.getByTestId('compare-editor-continue-idealwerte');

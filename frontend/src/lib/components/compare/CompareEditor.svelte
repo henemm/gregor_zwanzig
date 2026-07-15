@@ -1264,7 +1264,11 @@
 					{#each ACTIVITY_PROFILE_OPTIONS as opt (opt.value)}
 						{@const sel = wiz.activityProfile === opt.value}
 						{@const metricsList = profileMetricsLabel(opt.value).split(' · ')}
-						<button type="button" onclick={() => selectProfile(opt.value)}
+						<!-- Issue #1256 S8d Fix-Loop 2 (AC-13/AC-14 E2E): eigener Mobile-Testid,
+						     da der Desktop-Testid (compare-editor-profile-{opt.value}) auf Mobile
+						     im .cm-desktop-Zweig per position:fixed offscreen liegt und dadurch
+						     fuer Playwright nie in den Viewport scrollbar/klickbar ist. -->
+						<button type="button" data-testid={`compare-editor-profile-mobile-${opt.value}`} onclick={() => selectProfile(opt.value)}
 							style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 12px 14px; background: {sel ? 'var(--g-accent-tint)' : 'var(--g-card)'}; border: {sel ? '1.5px solid var(--g-accent)' : '1px solid var(--g-rule)'}; border-radius: var(--g-r-3); cursor: pointer; text-align: left; font-family: var(--g-font-sans);">
 							<!-- Issue #1256 Scheibe 8d (AC-14): mobil auf 4 Metrik-Labels gekürzt
 							     (Soll: JSX-M Z.186-188 slice(0, 4)); Desktop-Aufruf oben (Z. ~1041)
