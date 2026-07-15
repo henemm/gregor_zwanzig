@@ -41,7 +41,29 @@ Kernrisiko des Projekts (BUG-DATALOSS-GR221).
    wo es tatsächlich gelesen/geschrieben wird. Begründung: kein S5-AC testet das volle Modell; es
    ohne Konsumenten zu bauen, bläht die Scheibe und schafft Risiko.
 5. **Koexistenz:** In S5 lesen App/Scheduler weiter aus `trips/`+`compare_presets.json`; die
-   `briefings/`-Dateien entstehen daneben (verhaltensneutral). S6 schaltet die Lesepfade um.
+   `briefings/`-Dateien entstehen daneben (verhaltensneutral).
+
+   **Fortschreibung 2026-07-15 (S6-Analyse, `docs/context/feat-1250-s6-api-konsolidierung.md`):**
+   Die ursprüngliche Formulierung „S6 schaltet die Lesepfade um" wird korrigiert. **S6 schaltet
+   die Persistenz NICHT um.** Go-API und Python-Core teilen dieselben Alt-Dateien (Dateisystem =
+   einziger Integrationspunkt), und Python **schreibt** die Alt-Stores auch — Versand-Status
+   (`save_compare_preset_status`/`_pause`, `scheduler_dispatch_service.py:124-201`) und
+   Inbound-Command-Trip-Edits (`save_trip`, `loader.py:1476`) — und zieht erst in S7 um. Ein
+   Go-only-Umschalt auf `briefings/` erzeugt **bidirektionalen Split-Brain** (FE-Edit für
+   Python-Versand unsichtbar UND Python-Statusschreibungen für Go/FE unsichtbar) → verletzt die
+   Programm-Invariante „jede Scheibe verhaltensneutral". Verworfene Alternativen: Go-Dual-Write
+   (Python schreibt weiter nur alt → `briefings/` driftet); S6+S7 zusammen (sprengt
+   Scheiben-Granularität, hoher GR221-Risk). **Korrigierte Grenze:** S6 liefert nur die
+   `kind`-diskriminierte **API-Oberfläche** (`/api/briefings*`) als Dispatcher über die
+   **bestehenden** Stores (`LoadTrip`/`SaveTrip`, `LoadComparePresets`/`SaveComparePresets`);
+   Alt-Endpoints werden dünne Delegates. Der **atomare Cutover** Lese+Schreibpfade (Go **und**
+   Python) auf `briefings/<id>.json` inkl. Prod-`--execute` ist **S7**. `LoadBriefing`
+   (`internal/store/briefing_subscription.go`) bleibt in S6 unverdrahtet. **Bedingung aus der
+   Analyse:** `kind` wird auf `/api/briefings*` **explizit** getragen (POST-Body bzw.
+   Query-Param), nie per Store-Probing geraten — Trip-ID == Preset-ID ist real möglich (s.
+   Migrations-F001, `scripts/migrate_1250_briefings.py`). Das volle typisierte Union-Modell
+   (~40 Felder, `points`-Sum-Type) bleibt damit S7-Arbeit; S6 nutzt die schon typisierten
+   `model.Trip`/`model.ComparePreset`.
 
 ## Konsequenzen
 

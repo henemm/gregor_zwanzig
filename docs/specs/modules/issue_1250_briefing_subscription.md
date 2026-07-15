@@ -167,10 +167,22 @@ Renderer-Templates selbst bleiben getrennt (E9, KL-1).
 - Inhalt: `/api/briefings*` + dünne Kompat-Delegates für `/api/trips*` und
   `/api/compare/presets*` (C6: bestehende Testids/FE bleiben stabil); PUT
   implementiert Merge statt Replace (kein Blind-Replace, KL-5).
-- Dateien: `internal/handler/briefing_subscription.go` (CREATE),
-  `cmd/server/router.go` (MODIFY, neue Routen + Delegates), bestehende
-  `internal/handler/trip.go` / `compare_preset.go` (MODIFY, Delegate-Wrapper).
-- ~LoC: ~250.
+- **Design-Präzisierung (S6-Analyse 2026-07-15, ADR-0023-Fortschreibung, KL-6):**
+  S6 schaltet die **Persistenz NICHT** um. `/api/briefings*` ist ein Dispatcher, der
+  per `kind` über die **bestehenden** Store-Methoden geht (`LoadTrip`/`SaveTrip` für
+  `route`, `LoadComparePresets`/`SaveComparePresets` für `vergleich`); die Alt-Stores
+  bleiben einzige Wahrheit, `LoadBriefing` bleibt unverdrahtet. Grund: Go **und** Python
+  teilen dieselben Alt-Dateien; ein Go-only-Umschalt auf `briefings/` erzeugte
+  bidirektionalen Split-Brain (verletzt Verhaltensneutralität). Der atomare
+  Persistenz-Cutover (Go+Python, Lesen+Schreiben) inkl. Prod-`--execute` ist **S7**.
+  **Pflicht:** `kind` wird auf `/api/briefings*` explizit getragen (POST-Body bzw.
+  `?kind=`-Query), nie per Store-Probing geraten (Trip-ID == Preset-ID real, Migrations-F001).
+  Das volle typisierte Union-Modell (~40 Felder, `points`-Sum-Type) bleibt S7-Arbeit.
+- Dateien: `internal/handler/briefing_subscription.go` (CREATE, geteilter kind-Dispatch-Kern),
+  `internal/router/router.go` (MODIFY, neue `/api/briefings*`-Routen), bestehende
+  `internal/handler/trip.go` / `compare_preset.go` (MODIFY, dünne Delegates auf den
+  geteilten Kern mit fixem `kind`).
+- ~LoC: ~250. AC-22-Merge existiert im Bestand bereits (trip.go/compare_preset.go RMW).
 - Abhängigkeiten: braucht Scheibe 5.
 
 **Scheibe 7 — Scheduler-Vereinheitlichung**
@@ -436,6 +448,15 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
 - **KL-5:** #1203 (Config-Resolver) und #1159 (Merge-Helfer) bleiben
   eigenständig; Scheibe 1 ist Unterbau von #1203, Scheibe 6 implementiert
   Merge statt Replace einmalig korrekt.
+- **KL-6 (S6-Analyse 2026-07-15, ADR-0023-Fortschreibung):** Scheibe 6 macht
+  `briefings/<id>.json` NICHT zur Persistenz-Wahrheit — `/api/briefings*` dispatcht per
+  `kind` über die bestehenden Stores, die App liest/schreibt weiter `trips/` +
+  `compare_presets.json`. Der atomare Persistenz-Cutover (Go+Python, Lesen+Schreiben)
+  inkl. Prod-`--execute` und das volle typisierte Union-Modell sind **Scheibe 7**. Grund:
+  Go und Python teilen dieselben Alt-Dateien (Dateisystem = Integrationspunkt); ein
+  Go-only-Umschalt in S6 erzeugte bidirektionalen Split-Brain und bräche die
+  Scheiben-Verhaltensneutralität. `kind` ist auf `/api/briefings*` explizit (kein
+  Store-Probing).
 
 ## Edge Cases
 
@@ -448,6 +469,8 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
 | Migration bei teilmigriertem Bestand (Scheibe 5 nach Abbruch erneut gestartet) | Bereits migrierte Entitäten werden übersprungen (idempotent, AC-18), nur fehlende werden migriert |
 | Zwei User führen parallel Aktionen auf ihren jeweiligen Subscriptions aus | Strikte Datei-Isolation je `user_id`, kein Cross-User-Zugriff (AC-19) |
 | Legacy-`CompareSubscription`-Datei liegt nach Scheibe 0 weiter vor, wird aber nie mehr geschrieben | Datei bleibt unverändert liegen, kein Leser greift mehr zu (KL-4) |
+| `GET/PUT/DELETE /api/briefings/<id>` ohne (oder mit ungültigem) `kind`-Parameter (Scheibe 6) | 400 Bad Request — `kind` wird NIE per Store-Probing geraten (Trip-ID == Preset-ID real möglich, Migrations-F001); explizit `route`/`vergleich` erforderlich |
+| `POST /api/briefings` ohne gültiges `kind` im Body (Scheibe 6) | 400 Bad Request, kein Anlegen |
 
 ## Architektur-Entscheidung (ADR)
 
@@ -474,3 +497,10 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
   Context-Phase — 6 statt 4 Stellen (davon 1 RMW-Schreibpfad, bleibt
   Dict-basiert), Trip-Vorbild trip.py:169 statt models.py. Keine inhaltliche
   Richtungsänderung.
+- 2026-07-15 (feat-1250-s6-api-konsolidierung): Scheibe-6-Präzisierung nach
+  Context-/Analyse-Phase (Plan-Gegenprobe). ADR-0023-Fortschreibung: S6 schaltet die
+  Persistenz NICHT auf `briefings/` um (bidirektionaler Split-Brain Go↔Python), sondern
+  liefert nur die `kind`-diskriminierte API-Oberfläche als Dispatcher über die Alt-Stores;
+  atomarer Cutover + volles Union-Modell → S7 (neue KL-6). `kind` explizit auf
+  `/api/briefings*` (2 neue Edge Cases). Router-Pfad korrigiert (`internal/router/router.go`
+  statt `cmd/server/router.go`). **AC-20/21/22 inhaltlich unverändert.**

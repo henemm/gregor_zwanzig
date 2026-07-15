@@ -176,6 +176,13 @@ func New(deps Deps) chi.Router {
 	r.Patch("/api/compare/presets/{id}/state", handler.UpdateComparePresetStateHandler(deps.Store)) // Issue #611
 	r.Delete("/api/compare/presets/{id}", handler.DeleteComparePresetHandler(deps.Store))
 	r.Post("/api/compare/presets/{id}/send", handler.SendComparePresetHandler(deps.Config.PythonCoreURL))
+	// Issue #1250 Scheibe 6: kind-diskriminierte API-Konsolidierung — Dispatcher
+	// ueber die bestehenden Trip-/ComparePreset-Stores (kein briefings/-Store).
+	r.Get("/api/briefings", handler.ListBriefingsHandler(deps.Store))
+	r.Get("/api/briefings/{id}", handler.GetBriefingHandler(deps.Store))
+	r.Post("/api/briefings", handler.CreateBriefingHandler(deps.Store))
+	r.Put("/api/briefings/{id}", handler.UpdateBriefingHandler(deps.Store))
+	r.Delete("/api/briefings/{id}", handler.DeleteBriefingHandler(deps.Store))
 	// Issue #393: Cockpit-Kacheln — Versandstatus + Alarm-Historie (read-only Logs)
 	r.Get("/api/cockpit/status", handler.CockpitStatusHandler(deps.Store))
 	// Issue #396: Archiv-Statistiken — Briefings + Alarme pro Tour (Gesamtzahl, kein Zeitfilter)
