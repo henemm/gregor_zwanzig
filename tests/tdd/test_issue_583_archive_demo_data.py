@@ -36,7 +36,7 @@ def test_issue_583_ac1_creates_8_archived_trips(tmp_path: Path) -> None:
     if not SEED_SCRIPT.exists():
         pytest.fail("Seed-Script fehlt — AC-1.1 muss zuerst grün sein")
 
-    target_dir = tmp_path / "users" / "validator-issue110" / "trips"
+    target_dir = tmp_path / "users" / "validator-issue110" / "briefings"
     target_dir.mkdir(parents=True, exist_ok=True)
 
     result = subprocess.run(
@@ -70,7 +70,7 @@ def test_issue_583_ac1_idempotent(tmp_path: Path) -> None:
         f"r2={r2.returncode} stderr={r2.stderr}"
     )
 
-    target_dir = tmp_path / "users" / "validator-issue110" / "trips"
+    target_dir = tmp_path / "users" / "validator-issue110" / "briefings"
     assert len(list(target_dir.glob("*.json"))) == 8
 
 

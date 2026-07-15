@@ -67,7 +67,12 @@ func officialWarningsRawHasEnabledKey(raw []byte) bool {
 }
 
 func migrateUserTripsOfficialWarnings(s *Store) int {
-	tripEntries, err := os.ReadDir(s.TripsDir())
+	// Issue #1250 Scheibe 7a: LoadTrip/SaveTrip lesen/schreiben briefingsDir()
+	// -- die Enumeration muss von dort ausgehen (sonst findet LoadTrip die per
+	// Dateiname aufgezaehlten IDs nicht mehr). briefingsDir() traegt auch
+	// kind="vergleich"-Eintraege (S5-Migration); LoadTrip liefert dafuer
+	// bereits nil (kein Trip) -- der `trip == nil`-Skip unten deckt das ab.
+	tripEntries, err := os.ReadDir(s.briefingsDir())
 	if err != nil {
 		return 0
 	}
@@ -83,7 +88,7 @@ func migrateUserTripsOfficialWarnings(s *Store) int {
 		}
 		alreadyMigrated := trip.OfficialWarnings != nil
 		if alreadyMigrated {
-			if raw, rerr := os.ReadFile(filepath.Join(s.TripsDir(), te.Name())); rerr == nil {
+			if raw, rerr := os.ReadFile(filepath.Join(s.briefingsDir(), te.Name())); rerr == nil {
 				alreadyMigrated = officialWarningsRawHasEnabledKey(raw)
 			}
 		}

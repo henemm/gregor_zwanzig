@@ -31,7 +31,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from app.config import Settings
-from app.loader import delete_trip, get_trips_dir, load_trip, save_trip
+from app.loader import delete_trip, get_briefings_dir, load_trip, save_trip
 from app.models import TripReportConfig
 from app.trip import Stage, TimeWindow, Trip, Waypoint
 from output.renderers.sms_trip import SMSTripFormatter
@@ -118,12 +118,12 @@ class TestTripCreationAndSegments:
 
     def test_trip_saved_to_disk(self, test_trip):
         """Trip JSON exists on disk after creation."""
-        trip_path = get_trips_dir("default") / f"{TEST_TRIP_ID}.json"
+        trip_path = get_briefings_dir("default") / f"{TEST_TRIP_ID}.json"
         assert trip_path.exists(), f"Trip file not found: {trip_path}"
 
     def test_trip_roundtrip(self, test_trip):
         """Trip can be loaded back from disk with correct data."""
-        trip_path = get_trips_dir("default") / f"{TEST_TRIP_ID}.json"
+        trip_path = get_briefings_dir("default") / f"{TEST_TRIP_ID}.json"
         loaded = load_trip(trip_path)
         assert loaded.id == TEST_TRIP_ID
         assert loaded.name == TEST_TRIP_NAME
@@ -375,7 +375,7 @@ class TestReportConfigPersistence:
         save_trip(test_trip, user_id="default")
 
         # Reload from disk
-        trip_path = get_trips_dir("default") / f"{TEST_TRIP_ID}.json"
+        trip_path = get_briefings_dir("default") / f"{TEST_TRIP_ID}.json"
         loaded = load_trip(trip_path)
 
         assert loaded.report_config is not None
@@ -391,7 +391,7 @@ class TestReportConfigPersistence:
 
     def test_trip_without_config_loads_none(self, test_trip):
         """Trip without report_config loads as None."""
-        trip_path = get_trips_dir("default") / f"{TEST_TRIP_ID}.json"
+        trip_path = get_briefings_dir("default") / f"{TEST_TRIP_ID}.json"
         loaded = load_trip(trip_path)
         assert loaded.report_config is None
 

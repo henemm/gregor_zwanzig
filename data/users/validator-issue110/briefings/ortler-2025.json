@@ -1,0 +1,37 @@
+{
+  "id": "ortler-2025",
+  "name": "Ortler-Überquerung",
+  "stages": [
+    {
+      "id": "S1",
+      "name": "Etappe 1",
+      "date": "2025-09-12",
+      "waypoints": []
+    },
+    {
+      "id": "S2",
+      "name": "Etappe 2",
+      "date": "2025-09-13",
+      "waypoints": []
+    },
+    {
+      "id": "S3",
+      "name": "Etappe 3",
+      "date": "2025-09-14",
+      "waypoints": []
+    },
+    {
+      "id": "S4",
+      "name": "Etappe 4",
+      "date": "2025-09-15",
+      "waypoints": []
+    }
+  ],
+  "alert_rules": [],
+  "accuracy_pct": 92,
+  "headline": "Gewitter Tag 2 wie prognostiziert — Aufstieg vorgezogen",
+  "briefings_count": 12,
+  "alerts_count": 1,
+  "archived_at": "2025-09-16T00:00:00Z",
+  "kind": "route"
+}

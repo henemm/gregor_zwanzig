@@ -12,6 +12,15 @@ spezifische Trip-Konfiguration im Repo nicht existiert (alert_rules, nur
 report_config), legen wir den Test-Trip via fixture als echte JSON-Datei an
 und räumen anschließend auf.
 
+Issue #1250 Scheibe 7a (Adversary F001): Fixtures liegen unter
+data/users/<uid>/briefings/ (nicht trips/) -- api/routers/validator.py::
+_load_trip_raw liest seit dem Cutover dort. api/routers/validator.py
+importiert ueber `from src.app.loader import ...` (mit `src.`-Praefix) --
+ein von tests/conftest.py::_isolate_data_root separat gefuehrtes Modul-
+Objekt (`app.loader` ohne Praefix); die Isolation greift hier NICHT, die
+Fixtures schreiben deshalb bewusst in den echten data/-Baum und raeumen ihn
+danach ab.
+
 In der RED-Phase scheitert bereits der Router-Import — das ist erwartet und
 beweist, dass die Funktion noch nicht existiert.
 """
@@ -50,7 +59,7 @@ def trip_with_alert_rules():
     auf demselben Pfad wie Production-Trips.
     """
     user_id = f"test_issue_221_{uuid.uuid4().hex[:8]}"
-    trip_dir = Path("data/users") / user_id / "trips"
+    trip_dir = Path("data/users") / user_id / "briefings"
     trip_dir.mkdir(parents=True, exist_ok=True)
     trip_id = "trip-alert-rules"
     payload = {
@@ -77,7 +86,7 @@ def trip_with_alert_rules():
 def trip_with_only_report_config():
     """Test-Trip mit ausschließlich report_config (Legacy-3-Slider-Pfad)."""
     user_id = f"test_issue_221_{uuid.uuid4().hex[:8]}"
-    trip_dir = Path("data/users") / user_id / "trips"
+    trip_dir = Path("data/users") / user_id / "briefings"
     trip_dir.mkdir(parents=True, exist_ok=True)
     trip_id = "trip-report-only"
     payload = {
@@ -107,7 +116,7 @@ def trip_with_report_config_alerts_off():
     rohen JSON ``from_trip_config`` ist. Genau diese Divergenz prüft AC-11.
     """
     user_id = f"test_issue_221_{uuid.uuid4().hex[:8]}"
-    trip_dir = Path("data/users") / user_id / "trips"
+    trip_dir = Path("data/users") / user_id / "briefings"
     trip_dir.mkdir(parents=True, exist_ok=True)
     trip_id = "trip-alerts-off"
     payload = {
@@ -125,6 +134,72 @@ def trip_with_report_config_alerts_off():
     (trip_dir / f"{trip_id}.json").write_text(json.dumps(payload))
     yield user_id, trip_id
     shutil.rmtree(Path("data/users") / user_id, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# Adversary F001 (bleibender Regressionstest, Issue #1250 Scheibe 7a):
+# _load_trip_raw muss briefings/<id>.json lesen, NICHT das stillgelegte
+# trips/<id>.json -- sonst liefert der External Validator nach dem Cutover
+# einen 404 oder einen veralteten Trip-Stand.
+# ---------------------------------------------------------------------------
+
+def test_f001_validator_load_trip_raw_reads_briefings_not_stale_trips():
+    """F001: briefings/<id>.json (aktuell) UND ein abweichendes, stale
+    trips/<id>.json existieren fuer dieselbe ID -- _load_trip_raw muss den
+    briefings/-Stand liefern, nicht 404 und nicht den Alt-Stand."""
+    from api.routers.validator import _load_trip_raw
+
+    user_id = f"test_f001_{uuid.uuid4().hex[:8]}"
+    trip_id = "trip-f001"
+    user_dir = Path("data/users") / user_id
+    try:
+        briefings_dir = user_dir / "briefings"
+        briefings_dir.mkdir(parents=True, exist_ok=True)
+        (briefings_dir / f"{trip_id}.json").write_text(json.dumps({
+            "id": trip_id, "name": "Aktueller Stand (briefings)",
+            "stages": [], "kind": "route",
+        }))
+
+        trips_dir = user_dir / "trips"
+        trips_dir.mkdir(parents=True, exist_ok=True)
+        (trips_dir / f"{trip_id}.json").write_text(json.dumps({
+            "id": trip_id, "name": "Veralteter Stand (trips, stale)",
+            "stages": [],
+        }))
+
+        data = _load_trip_raw(user_id, trip_id)
+        assert data is not None, (
+            "F001: _load_trip_raw liefert None -- liest noch trips/ statt briefings/"
+        )
+        assert data["name"] == "Aktueller Stand (briefings)", (
+            f"F001: _load_trip_raw liefert nicht den briefings/-Stand: {data.get('name')!r}"
+        )
+    finally:
+        shutil.rmtree(user_dir, ignore_errors=True)
+
+
+def test_f001_validator_load_trip_raw_skips_vergleich_kind():
+    """F001-Nachbar (AC-30): briefingsDir traegt auch ComparePresets
+    (kind='vergleich', Scheibe 5 Migration) -- _load_trip_raw darf so einen
+    Eintrag NICHT als Trip zurueckliefern."""
+    from api.routers.validator import _load_trip_raw
+
+    user_id = f"test_f001b_{uuid.uuid4().hex[:8]}"
+    trip_id = "preset-f001"
+    user_dir = Path("data/users") / user_id
+    try:
+        briefings_dir = user_dir / "briefings"
+        briefings_dir.mkdir(parents=True, exist_ok=True)
+        (briefings_dir / f"{trip_id}.json").write_text(json.dumps({
+            "id": trip_id, "name": "Ein Vergleichs-Preset", "kind": "vergleich",
+        }))
+
+        data = _load_trip_raw(user_id, trip_id)
+        assert data is None, (
+            f"F001-Nachbar: kind='vergleich' wurde faelschlich als Trip geladen: {data!r}"
+        )
+    finally:
+        shutil.rmtree(user_dir, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------

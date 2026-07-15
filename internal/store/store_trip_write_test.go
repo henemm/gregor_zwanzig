@@ -16,7 +16,7 @@ func TestSaveTrip_LegacyAlertRulesCoercedToEmptyArray(t *testing.T) {
 	tmpDir := t.TempDir()
 	s := New(tmpDir, "test")
 
-	tripDir := filepath.Join(tmpDir, "users", "test", "trips")
+	tripDir := filepath.Join(tmpDir, "users", "test", "briefings")
 	if err := os.MkdirAll(tripDir, 0755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
@@ -118,7 +118,7 @@ func TestDeleteTrip(t *testing.T) {
 
 func TestDeleteTripNotFound(t *testing.T) {
 	tmpDir := t.TempDir()
-	tripDir := filepath.Join(tmpDir, "users", "test", "trips")
+	tripDir := filepath.Join(tmpDir, "users", "test", "briefings")
 	os.MkdirAll(tripDir, 0755)
 
 	s := New(tmpDir, "test")
@@ -149,7 +149,7 @@ func TestSaveTrip_MigratesSnowLineToFreezingLevel(t *testing.T) {
 		t.Fatalf("SaveTrip failed: %v", err)
 	}
 
-	written, err := os.ReadFile(filepath.Join(tmpDir, "users", "test", "trips", "snow-line-mig.json"))
+	written, err := os.ReadFile(filepath.Join(tmpDir, "users", "test", "briefings", "snow-line-mig.json"))
 	if err != nil {
 		t.Fatalf("read written: %v", err)
 	}

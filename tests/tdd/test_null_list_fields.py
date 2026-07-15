@@ -225,7 +225,7 @@ def test_central_bug_load_all_trips_returns_trip_with_null_corridors():
     """
     user_id = "user-1244-central"
     trip = _minimal_trip("trip-central-corridors-null", corridors=None)
-    trips_dir = loader.get_trips_dir(user_id)
+    trips_dir = loader.get_briefings_dir(user_id)
     _write_json(trips_dir / "trip-central-corridors-null.json", trip)
 
     trips = loader.load_all_trips(user_id)
@@ -259,7 +259,7 @@ def test_ac6_structurally_broken_trip_logs_error_not_warning(caplog):
     del broken["id"]  # strukturell defekt: Pflichtfeld fehlt -> KeyError beim Parsen
     good = _minimal_trip("trip-good")
 
-    trips_dir = loader.get_trips_dir(user_id)
+    trips_dir = loader.get_briefings_dir(user_id)
     _write_json(trips_dir / "trip-broken.json", broken)
     _write_json(trips_dir / "trip-good.json", good)
 

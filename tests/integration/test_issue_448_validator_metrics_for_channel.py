@@ -44,7 +44,10 @@ def client():
 
 
 def _write_trip(user_id: str, trip_id: str, payload: dict) -> None:
-    trip_dir = Path("data/users") / user_id / "trips"
+    # Issue #1250 Scheibe 7a (Adversary F001): validator.py liest seit dem
+    # Cutover briefings/, nicht mehr trips/ (s. test_issue_221 Modul-
+    # Docstring fuer die src.app.loader-Isolations-Ausnahme).
+    trip_dir = Path("data/users") / user_id / "briefings"
     trip_dir.mkdir(parents=True, exist_ok=True)
     (trip_dir / f"{trip_id}.json").write_text(json.dumps(payload))
 

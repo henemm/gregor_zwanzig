@@ -77,7 +77,7 @@ func TestLoadTrip_DerivesFlatSlotChannelFieldsFromReportConfig(t *testing.T) {
 	}
 
 	// AC-13: report_config bleibt unveraendert (byte-identisch auf Disk).
-	written, err := os.ReadFile(filepath.Join(tmpDir, "users", "test", "trips", "flat-fields-trip.json"))
+	written, err := os.ReadFile(filepath.Join(tmpDir, "users", "test", "briefings", "flat-fields-trip.json"))
 	if err != nil {
 		t.Fatalf("read written: %v", err)
 	}

@@ -90,8 +90,8 @@ def _save_trip_direct(trip: Trip, user_id: str) -> None:
     denselben Pfad, unter dem TripAlertService via app.loader.load_all_trips()
     liest.
     """
-    from app.loader import get_trips_dir
-    trips_dir = get_trips_dir(user_id)
+    from app.loader import get_briefings_dir
+    trips_dir = get_briefings_dir(user_id)
     trips_dir.mkdir(parents=True, exist_ok=True)
     stage = trip.stages[0]
     wp_list = []

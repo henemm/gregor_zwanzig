@@ -65,6 +65,23 @@ Kernrisiko des Projekts (BUG-DATALOSS-GR221).
    (~40 Felder, `points`-Sum-Type) bleibt damit S7-Arbeit; S6 nutzt die schon typisierten
    `model.Trip`/`model.ComparePreset`.
 
+   **2. Fortschreibung 2026-07-15 (S7-Analyse, `docs/context/feat-1250-s7-cutover.md`, Plan-Gegenprobe):**
+   Entscheidung 4 wird **teilweise revidiert**. Das **volle typisierte Union-Modell** (~40 Felder,
+   `points`-Sum-Type, `activity`↔`profil`-Konvertierung) wird **NICHT gebaut** — es ist obsolet:
+   (a) kein Konsument braucht eine Einzelstruktur (`ListBriefingsHandler` baut schon `[]interface{}`
+   gemischt); (b) `activity` (Naismith-Tempo) und `profil` (Scoring) sind **disjunkte** Namensräume
+   ohne Konvertierung (Grep bestätigt) — die Prämisse „einzige echte Wertkonvertierung" war falsch;
+   (c) `points` existiert nirgends (route→`stages[].waypoints`, vergleich→`location_ids`). Der
+   **S7-Cutover** lädt `briefings/<id>.json` per `kind` in die bestehenden `Trip`/`ComparePreset`-
+   Strukturen (Go via Repoint von `LoadTrip`/`LoadComparePresets` auf `briefingsDir()`+kind-Filter,
+   NICHT via `LoadBriefing`). Das S5-Gerüst `BriefingSubscription` + `LoadBriefing`/`SaveBriefing`
+   bleiben **ungenutzt** und werden als tot markiert. **S7 wird nach Entität geteilt** (S7a route,
+   S7b vergleich, S7c Scheduler optional), da der Go-Scheduler keinen Store liest → Cutover ⊥
+   Scheduler-Merge. **Cutover-Refresh = `briefings/` wipen + frisch remigrieren** (nicht `--force`;
+   `briefings/` ist bis zum Cutover reine Projektion der Alt-Stores, kein nativer Schreiber → Wipe
+   verliert nichts, verhindert Waisen von post-S5-Löschungen). Alle Schreibpfade einer Entität kippen
+   in EINEM Deploy (stop-writers → refresh → start-new-code); Alt-Stores bleiben für Rollback liegen.
+
 ## Konsequenzen
 
 - **Positiv:** Verlustfreiheit ist durch den Raw-Auffang strukturell garantiert; die Migration

@@ -35,7 +35,7 @@ func TestSaveTrip_NilCorridorsStagesWaypointsCoercedToEmptyArrays(t *testing.T) 
 		t.Fatalf("SaveTrip failed: %v", err)
 	}
 
-	written, err := os.ReadFile(filepath.Join(tmpDir, "users", "test", "trips", "nil-coercion-trip.json"))
+	written, err := os.ReadFile(filepath.Join(tmpDir, "users", "test", "briefings", "nil-coercion-trip.json"))
 	if err != nil {
 		t.Fatalf("read written: %v", err)
 	}
@@ -73,7 +73,7 @@ func TestSaveTrip_NilWaypointsWithinStageCoercedToEmptyArray(t *testing.T) {
 		t.Fatalf("SaveTrip failed: %v", err)
 	}
 
-	written, err := os.ReadFile(filepath.Join(tmpDir, "users", "test", "trips", "nil-waypoints-trip.json"))
+	written, err := os.ReadFile(filepath.Join(tmpDir, "users", "test", "briefings", "nil-waypoints-trip.json"))
 	if err != nil {
 		t.Fatalf("read written: %v", err)
 	}

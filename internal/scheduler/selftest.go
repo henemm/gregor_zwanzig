@@ -10,14 +10,16 @@ import (
 )
 
 // probeDataWritable prüft non-destruktiv, ob die vorhandenen Trip-Dateien unter
-// data/users/*/trips/*.json schreibbar sind. Öffnet jede Datei mit O_WRONLY
+// data/users/*/briefings/*.json schreibbar sind (Issue #1250 Scheibe 7a
+// Cutover, Adversary F002: der echte Schreibort nach dem Cutover -- war
+// trips/ davor). Öffnet jede Datei mit O_WRONLY
 // (KEIN O_TRUNC, KEIN O_CREATE) und schließt sofort — ändert weder Inhalt noch
 // mtime, verlangt aber kernelseitig dieselbe Schreibberechtigung wie der reale
 // os.WriteFile-Pfad (internal/store/write.go). Reproduziert das #1066-EACCES.
 //
 // BEWUSST kein filepath.Glob: Glob verschluckt laut Doku alle
 // Verzeichnis-Lesefehler (liefert nur ErrBadPattern) — verliert z.B.
-// users/<id>/trips/ das Leserecht (#1066-Sweep-Variante), liefert Glob
+// users/<id>/briefings/ das Leserecht (#1066-Sweep-Variante), liefert Glob
 // still eine leere Liste statt eines Fehlers. Stattdessen wird jede Ebene
 // per os.ReadDir traversiert und Lesefehler != ErrNotExist als Probe-Fehler
 // gewertet.
@@ -37,11 +39,11 @@ func probeDataWritable(dataDir string) error {
 		if !ue.IsDir() {
 			continue
 		}
-		tripsDir := filepath.Join(usersDir, ue.Name(), "trips")
+		tripsDir := filepath.Join(usersDir, ue.Name(), "briefings")
 		tripEntries, err := os.ReadDir(tripsDir)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				continue // User ohne trips/-Verzeichnis, ok
+				continue // User ohne briefings/-Verzeichnis, ok
 			}
 			failed = append(failed, fmt.Sprintf("%s (%v)", tripsDir, err))
 			continue

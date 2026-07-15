@@ -45,7 +45,7 @@ func TestMigrateAllTripsAlertRules_Idempotent(t *testing.T) {
 		ID: "trip-migrate", Name: "Migrate Test Trip", AlertRules: []model.AlertRule{},
 		DisplayConfig: displayConfigWithMetrics([]string{"gust", "snowfall_limit"}, true),
 	})
-	tripPath := filepath.Join(dataDir, "users", "user-migrate", "trips", "trip-migrate.json")
+	tripPath := filepath.Join(dataDir, "users", "user-migrate", "briefings", "trip-migrate.json")
 
 	n1, err := MigrateAllTripsAlertRules(dataDir)
 	if err != nil || n1 != 1 {

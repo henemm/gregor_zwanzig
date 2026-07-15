@@ -20,7 +20,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from src.app.loader import _parse_trip, get_trips_dir
+from src.app.loader import _parse_trip, get_briefings_dir
 from src.app.metric_catalog import format_metric_value
 from src.app.models import UnifiedWeatherDisplayConfig
 from src.app.trip import Trip
@@ -38,14 +38,24 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 def _load_trip_raw(user_id: str, trip_id: str) -> Optional[dict]:
-    """Read the raw trip JSON for a user (no parsing, no migration)."""
-    path = get_trips_dir(user_id) / f"{trip_id}.json"
+    """Read the raw trip JSON for a user (no parsing, no migration).
+
+    Issue #1250 Scheibe 7a (Adversary F001): reads `briefings/<id>.json`
+    (was `trips/<id>.json` before the Cutover) -- the External Validator
+    must see the AKTUELLEN Trip, not a stale pre-Cutover copy. `briefings/`
+    also holds ComparePresets (`kind="vergleich"`, Scheibe 5 migration) --
+    those are not Trips and must not be misread as one (AC-30).
+    """
+    path = get_briefings_dir(user_id) / f"{trip_id}.json"
     if not path.exists():
         return None
     try:
-        return json.loads(path.read_text())
+        data = json.loads(path.read_text())
     except (OSError, json.JSONDecodeError):
         return None
+    if not isinstance(data, dict) or data.get("kind") == "vergleich":
+        return None
+    return data
 
 
 def _load_trip_for_validator(user_id: str, trip_id: str) -> Optional[Trip]:

@@ -29,7 +29,7 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from app.loader import (  # noqa: E402
-    get_data_dir, get_snapshots_dir, get_trips_dir, load_all_trips, save_trip,
+    get_briefings_dir, get_data_dir, get_snapshots_dir, load_all_trips, save_trip,
 )
 from app.models import TripReportConfig  # noqa: E402
 from app.trip import Stage, Trip, Waypoint  # noqa: E402
@@ -82,7 +82,7 @@ def _load_trip(user_id: str) -> Trip:
 
 
 def _cleanup_user(user_id: str) -> None:
-    for d in (get_trips_dir(user_id), get_snapshots_dir(user_id)):
+    for d in (get_briefings_dir(user_id), get_snapshots_dir(user_id)):
         p = d / f"{_TRIP_ID}.json"
         if p.exists():
             p.unlink()
@@ -206,7 +206,7 @@ class TestAC5UserIsolation:
         assert _load_trip(_USER_B).report_config.enabled is True
 
         # default unberührt
-        default_trip = get_trips_dir(_USER_DEFAULT) / f"{_TRIP_ID}.json"
+        default_trip = get_briefings_dir(_USER_DEFAULT) / f"{_TRIP_ID}.json"
         assert not default_trip.exists(), "default darf nicht beschrieben werden"
 
 

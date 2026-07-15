@@ -60,7 +60,7 @@ def user_no_stages(tmp_path):
     # (statt eines hartkodierten REPO_ROOT-Pfads), damit dieselbe Datei
     # existiert, die der TestClient (echter API-Prozess) unter der aktiven
     # Fixture-Isolation liest.
-    trips_dir = get_data_dir(user_id) / "trips"
+    trips_dir = get_data_dir(user_id) / "briefings"
     trips_dir.mkdir(parents=True, exist_ok=True)
 
     # User-Profil: mail_to auf gregor-test setzen → with_user_profile übernimmt
@@ -101,7 +101,7 @@ def user_with_tomorrow_stage(tmp_path):
     tomorrow = (date.today() + timedelta(days=1)).isoformat()
 
     # Issue #1133: get_data_dir() folgt dem autouse-isolierten Daten-Root.
-    trips_dir = get_data_dir(user_id) / "trips"
+    trips_dir = get_data_dir(user_id) / "briefings"
     trips_dir.mkdir(parents=True, exist_ok=True)
 
     user_profile = get_data_dir(user_id) / "user.json"
@@ -283,7 +283,7 @@ class TestAC3RealImapVerification:
             pytest.skip("SMTP für tdd-716-ac3 nicht konfiguriert")
 
         # Trip laden
-        trip_path = REPO_ROOT / "data" / "users" / user_id / "trips" / f"{trip_id}.json"
+        trip_path = REPO_ROOT / "data" / "users" / user_id / "briefings" / f"{trip_id}.json"
         trip = load_trip(trip_path)
 
         # Unique Marker im Trip-Namen damit wir die Mail im IMAP finden

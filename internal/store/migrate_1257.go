@@ -7,10 +7,10 @@ import (
 )
 
 // MigrateAllTripsAlertRules materialisiert Issue #1257 rückwirkend: pro Trip
-// unter data/users/*/trips/*.json LoadTrip (Self-Heal) + SaveTrip
-// (Persistenz) — identisch zum nächsten regulären Save. Idempotent
-// (SyncAlertRules ist read-modify-write). Best-effort, bricht bei
-// Einzelfehlern nicht ab.
+// unter data/users/*/briefings/*.json (Issue #1250 Scheibe 7a Cutover)
+// LoadTrip (Self-Heal) + SaveTrip (Persistenz) — identisch zum nächsten
+// regulären Save. Idempotent (SyncAlertRules ist read-modify-write).
+// Best-effort, bricht bei Einzelfehlern nicht ab.
 func MigrateAllTripsAlertRules(dataDir string) (int, error) {
 	entries, err := os.ReadDir(filepath.Join(dataDir, "users"))
 	if err != nil {
@@ -25,7 +25,10 @@ func MigrateAllTripsAlertRules(dataDir string) (int, error) {
 			continue
 		}
 		s := New(dataDir, u.Name())
-		tripEntries, err := os.ReadDir(s.TripsDir())
+		// Issue #1250 Scheibe 7a: LoadTrip/SaveTrip lesen/schreiben briefingsDir()
+		// -- die Enumeration muss von dort ausgehen, sonst findet LoadTrip die
+		// per Dateiname aufgezaehlten IDs nicht mehr (stiller No-Op).
+		tripEntries, err := os.ReadDir(s.briefingsDir())
 		if err != nil {
 			continue
 		}

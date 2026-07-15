@@ -359,8 +359,11 @@ def load_trip(
     (Issue #205 — Tests use the dict form directly).
 
     Issue #303: when ``data_dir`` is given, ``source`` is interpreted as a
-    trip ID and resolved to ``{data_dir}/users/{user_id}/trips/{id}.json``.
-    Returns ``None`` if that file does not exist (mirrors the Go store).
+    trip ID and resolved to ``{data_dir}/users/{user_id}/briefings/{id}.json``
+    (Issue #1250 Scheibe 7a Cutover, ADR-0023 -- was ``trips/{id}.json``
+    before). Returns ``None`` if that file does not exist (mirrors the Go
+    store) or if it carries ``kind="vergleich"`` (a ComparePreset, not a Trip
+    -- briefingsDir holds both since the Scheibe 5 migration, AC-30).
 
     Args:
         source: Path to the JSON file, a trip ID (with ``data_dir``), or a dict.
@@ -374,11 +377,13 @@ def load_trip(
         LoaderError: If the file cannot be loaded or is invalid
     """
     if data_dir is not None and not isinstance(source, dict):
-        path = Path(data_dir) / "users" / user_id / "trips" / f"{source}.json"
+        path = Path(data_dir) / "users" / user_id / "briefings" / f"{source}.json"
         if not path.exists():
             return None
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
+        if data.get("kind") == "vergleich":
+            return None
         return _parse_trip(data.get("trip", data))
 
     if isinstance(source, dict):
@@ -1004,8 +1009,22 @@ def get_locations_dir(user_id: str = "default") -> Path:
 
 
 def get_trips_dir(user_id: str = "default") -> Path:
-    """Get the trips directory for a user."""
+    """Get the (legacy, pre-Cutover) trips directory for a user.
+
+    Issue #1250 Scheibe 7a: load_all_trips/load_trip/save_trip no longer
+    read/write here (see get_briefings_dir) -- this stays as a reference to
+    the old location (Rollback-Fähigkeit, AC-26) and for the historical
+    per-user directory bootstrap.
+    """
     return get_data_dir(user_id) / "trips"
+
+
+def get_briefings_dir(user_id: str = "default") -> Path:
+    """Get the briefings directory for a user (Issue #1250 Scheibe 7a
+    Cutover, ADR-0023). route-Entitäten (Trips) leben seit dem Cutover hier;
+    vergleich-Entitäten (ComparePresets) bleiben unberührt auf
+    compare_presets.json (AC-30)."""
+    return get_data_dir(user_id) / "briefings"
 
 
 def get_snapshots_dir(user_id: str = "default") -> Path:
@@ -1219,6 +1238,11 @@ def load_all_trips(
     """
     Load all trips for a user.
 
+    Issue #1250 Scheibe 7a Cutover (ADR-0023): reads ``briefings/*.json``
+    instead of ``trips/*.json``. ``briefings/`` also holds ComparePresets
+    (``kind="vergleich"``, Scheibe 5 migration) -- those are skipped here,
+    they stay reachable via ``load_compare_presets`` (AC-30).
+
     Args:
         user_id: User identifier (default: "default")
         include_archived: When False (default), trips with archived_at set are
@@ -1227,14 +1251,18 @@ def load_all_trips(
     Returns:
         List of Trip objects
     """
-    trips_dir = get_trips_dir(user_id)
-    if not trips_dir.exists():
+    briefings_dir = get_briefings_dir(user_id)
+    if not briefings_dir.exists():
         return []
 
     trips = []
-    for path in trips_dir.glob("*.json"):
+    for path in briefings_dir.glob("*.json"):
         try:
-            trip = load_trip(path)
+            with open(path, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+            if raw.get("kind") == "vergleich":
+                continue
+            trip = load_trip(raw)
             if not include_archived and trip.archived_at is not None:
                 continue
             trips.append(trip)
@@ -1490,9 +1518,16 @@ def save_trip(
     """
     Save a trip to JSON file.
 
-    Issue #303: when ``data_dir`` is given, the trip is written to
-    ``{data_dir}/users/{user_id}/trips/{id}.json`` (test-isolation), otherwise
-    the configured data root is used.
+    Issue #1250 Scheibe 7a Cutover (ADR-0023): writes to
+    ``{data_dir or data_root}/users/{user_id}/briefings/{id}.json`` (was
+    ``trips/{id}.json`` before). The legacy ``trips/{id}.json`` file is left
+    UNTOUCHED (Rollback-Fähigkeit, AC-26, kein Löschen im Cutover). Every
+    Python ``save_trip`` write is a route-Entität (this loader never writes
+    ComparePresets) -- ``kind`` is unconditionally set to ``"route"``,
+    analog Go ``store.SaveTrip``.
+
+    Issue #303: when ``data_dir`` is given, resolves under that root
+    (test-isolation), otherwise the configured data root is used.
 
     Issue #802: Compute-on-Save — arrival_calculated wird für jede Stage
     vor der Serialisierung berechnet (bit-genau zu Go store.SaveTrip).
@@ -1515,13 +1550,17 @@ def save_trip(
     )
 
     if data_dir is not None:
-        trips_dir = Path(data_dir) / "users" / user_id / "trips"
+        briefings_dir = Path(data_dir) / "users" / user_id / "briefings"
     else:
-        trips_dir = get_trips_dir(user_id)
-    trips_dir.mkdir(parents=True, exist_ok=True)
+        briefings_dir = get_briefings_dir(user_id)
+    briefings_dir.mkdir(parents=True, exist_ok=True)
 
-    path = trips_dir / f"{trip.id}.json"
+    path = briefings_dir / f"{trip.id}.json"
     python_data = _trip_to_dict(trip)
+    # Issue #1250 Scheibe 7a (AC-26): jede Python-save_trip-Schreiboperation
+    # ist per Definition eine route-Entität -- kind wird unbedingt gesetzt,
+    # unabhängig vom Vorzustand des Aufrufers (analog Go store.SaveTrip).
+    python_data["kind"] = "route"
 
     # Issue #805: RMW-Merge — vorhandene JSON laden und Python-bekannte Felder überlagern.
     # Bewahrt Go-geschriebene und Legacy-Felder die Python nicht modelliert
@@ -1544,13 +1583,28 @@ def delete_trip(trip_id: str, user_id: str = "default") -> None:
     """
     Delete a trip file.
 
+    Issue #1250 Scheibe 7a (Adversary F004): deletes
+    `briefings/<trip_id>.json` (was `trips/<trip_id>.json` before the
+    Cutover) -- write-path completeness alongside load_all_trips/load_trip/
+    save_trip. briefingsDir also holds ComparePresets (`kind="vergleich"`,
+    Scheibe 5 migration) -- a Trip delete must never remove one, even if a
+    Preset happens to share the same id (analog Go DeleteTrip's kind guard,
+    AC-30).
+
     Args:
         trip_id: ID of the trip to delete
         user_id: User identifier (default: "default")
     """
-    path = get_trips_dir(user_id) / f"{trip_id}.json"
-    if path.exists():
-        path.unlink()
+    path = get_briefings_dir(user_id) / f"{trip_id}.json"
+    if not path.exists():
+        return
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        data = None
+    if isinstance(data, dict) and data.get("kind") == "vergleich":
+        return
+    path.unlink()
 
 
 # =============================================================================

@@ -45,9 +45,21 @@ diese eine Entitaet wird in diesem Lauf nicht migriert.
 Strikte Pro-User-Isolation (AC-19): das Ziel liegt immer unter demselben
 `<uid>/briefings/` wie die Quelle, nie Cross-User.
 
+`--refresh` (Issue #1250 Scheibe 7a, AC-28, Cutover-Deploy-Schritt): Wipe +
+Remigrate statt additivem Idempotenz-Skip. Nur wirksam zusammen mit
+`--execute` (Dry-Run-Grundsatz bleibt bestehen: ohne `--execute` wird NICHTS
+gewischt/geschrieben). Backup zuerst (wie im normalen `--execute`-Pfad),
+DANN wird `briefings/` je User vollständig geleert, DANN frisch aus dem
+AKTUELLEN Alt-Store remigriert (route aus `trips/`, vergleich aus
+`compare_presets.json` -- beide, damit `briefings/` eine vollständige
+frische Projektion bleibt, kein Merge mit stale/Waisen-Eintraegen). Effekt:
+eine seit der letzten Migration geänderte Quelle liefert den AKTUELLEN
+Inhalt; eine seither gelöschte Quelle hinterlässt KEINE `briefings/`-Datei
+mehr (kein Geist-/Waisen-Eintrag).
+
 Usage:
     python3 scripts/migrate_1250_briefings.py --root <data/users> \\
-        [--backup-dir <path>] [--execute]
+        [--backup-dir <path>] [--execute] [--refresh]
 
 Ohne `--root` ist ein Lauf gegen einen echten Baum unmöglich.
 """
@@ -220,6 +232,21 @@ def _make_backup(root: Path, backup_dir: Path) -> Path:
     return backup_path
 
 
+def _wipe_briefings(root: Path) -> int:
+    """AC-28 Refresh: entfernt ALLE `<uid>/briefings/*.json` unter `root` --
+    Vorstufe fuer eine sauber frische Remigration, die anschliessende
+    `_collect_plan`-Läufe jedes Ziel als `"new"` klassifizieren laesst (kein
+    stiller Idempotenz-Skip auf stale Inhalte, keine Waisen-Ueberlebende)."""
+    removed = 0
+    for briefings_dir in sorted(root.glob("*/briefings")):
+        if not briefings_dir.is_dir():
+            continue
+        for f in briefings_dir.glob("*.json"):
+            f.unlink()
+            removed += 1
+    return removed
+
+
 def _apply(migrations: list[tuple[Path, dict]]) -> int:
     """Schreibt jede geplante Entitaet verlustfrei nach `briefings/<id>.json`
     (RMW/additiv) — die Quelldatei bleibt unangetastet liegen (s. Modul-
@@ -232,17 +259,63 @@ def _apply(migrations: list[tuple[Path, dict]]) -> int:
     return changed
 
 
+def _run_refresh(root: Path, backup_dir_arg: Path | None) -> int:
+    """AC-28: Backup zuerst (Rollback-Sicherheit), DANN briefings/ je User
+    leeren, DANN frisch aus trips/ + compare_presets.json remigrieren
+    (route + vergleich -- volle frische Projektion, kein Merge mit stale/
+    Waisen-Eintraegen)."""
+    backup_dir = (backup_dir_arg or (root.parent / ".backups")).resolve()
+    try:
+        backup_path = _make_backup(root, backup_dir)
+    except OSError as exc:
+        # Ohne Backup kein Wipe/Schreiben -- sonst waere ein Rollback nicht mehr moeglich.
+        print(f"Error: Backup nach '{backup_dir}' fehlgeschlagen -- {exc}", file=sys.stderr)
+        return 1
+    print(f"Backup geschrieben: {backup_path}")
+
+    wiped = _wipe_briefings(root)
+    print(f"Refresh: {wiped} Datei(en) aus briefings/ entfernt (Wipe).")
+
+    try:
+        migrations, report_lines = _collect_plan(root)
+    except MigrationAbort as exc:
+        # F001 gilt auch beim Refresh -- Kollisionen abbrechen VOR dem Apply
+        # (Wipe ist bereits geschehen, aber per Backup rueckholbar).
+        print(f"Error: Migration abgebrochen -- ID-Kollision(en) (F001):\n{exc}", file=sys.stderr)
+        return 1
+
+    print(f"Migrationsplan für root: {root}")
+    for line in report_lines:
+        print(line)
+
+    total = _apply(migrations)
+    print(f"Migration abgeschlossen: {total} Datei(en) migriert (Refresh: Wipe + Remigrate).")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", required=True, type=Path)
     parser.add_argument("--backup-dir", type=Path, default=None)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help=(
+            "Wipe + Remigrate (AC-28): briefings/ je User vollstaendig "
+            "leeren, dann frisch remigrieren. Nur wirksam zusammen mit "
+            "--execute."
+        ),
+    )
     args = parser.parse_args(argv)
 
     root: Path = args.root.resolve()
     if not root.exists() or not root.is_dir():
         print(f"Error: --root existiert nicht oder ist kein Verzeichnis: {root}", file=sys.stderr)
         return 1
+
+    if args.refresh and args.execute:
+        return _run_refresh(root, args.backup_dir)
 
     try:
         migrations, report_lines = _collect_plan(root)

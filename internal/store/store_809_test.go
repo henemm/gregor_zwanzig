@@ -21,10 +21,12 @@ import (
 	"github.com/henemm/gregor-api/internal/model"
 )
 
-// writeTripJSON schreibt ein Trip-Objekt als JSON in das user-scoped trips-Verzeichnis.
+// writeTripJSON schreibt ein Trip-Objekt als JSON in das user-scoped
+// briefings-Verzeichnis (Issue #1250 Scheibe 7a: LoadTrip/SaveTrip lesen/
+// schreiben briefingsDir(), nicht mehr TripsDir()).
 func writeTripJSON(t *testing.T, dataDir, userID string, trip model.Trip) {
 	t.Helper()
-	dir := filepath.Join(dataDir, "users", userID, "trips")
+	dir := filepath.Join(dataDir, "users", userID, "briefings")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +87,7 @@ func TestLoadTrip_SelfHeal_CreatesAlertRulesFromMetrics(t *testing.T) {
 	}
 
 	// Kein Write-Back: die JSON-Datei auf Platte darf noch leer sein.
-	raw, err := os.ReadFile(filepath.Join(dataDir, "users", "user1", "trips", "trip-legacy.json"))
+	raw, err := os.ReadFile(filepath.Join(dataDir, "users", "user1", "briefings", "trip-legacy.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +180,7 @@ func TestSaveTrip_SyncsAlertRules(t *testing.T) {
 	}
 
 	// Rohes JSON lesen und prüfen dass alert_rules befüllt wurde.
-	raw, err := os.ReadFile(filepath.Join(dataDir, "users", "user1", "trips", "trip-save.json"))
+	raw, err := os.ReadFile(filepath.Join(dataDir, "users", "user1", "briefings", "trip-save.json"))
 	if err != nil {
 		t.Fatal(err)
 	}

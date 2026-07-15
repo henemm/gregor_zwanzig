@@ -28,7 +28,7 @@ func TestSaveTrip_WriteFailureLogsPathAndCause(t *testing.T) {
 		t.Fatalf("initial SaveTrip should succeed, got error: %v", err)
 	}
 
-	path := filepath.Join(s.TripsDir(), "log-trip.json")
+	path := filepath.Join(s.briefingsDir(), "log-trip.json")
 	if err := os.Chmod(path, 0444); err != nil {
 		t.Fatalf("failed to chmod trip file read-only: %v", err)
 	}

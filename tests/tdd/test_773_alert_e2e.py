@@ -204,7 +204,7 @@ def test_ac2_radar_endpoint_mandantentrennung():
         assert isinstance(rb.json().get("count"), int)
 
         # Mandantentrennung: ua-Trip-Daten dürfen NICHT unter ub auftauchen.
-        ub_trips = list((_data_root() / ub / "trips").glob("*.json"))
+        ub_trips = list((_data_root() / ub / "briefings").glob("*.json"))
         assert ub_trips, "ub-Trip muss persistiert sein"
         for p in ub_trips:
             assert "trip-773-ua" not in p.read_text(), "Cross-User-Datenleck ua→ub"

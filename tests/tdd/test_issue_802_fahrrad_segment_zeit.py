@@ -123,7 +123,7 @@ def test_ac7_save_idempotent_preserves_override(tmp_path):
 def test_ac5_backfill_populates_and_preserves(tmp_path):
     import importlib
     backfill = importlib.import_module("scripts.backfill_arrival_calculated_802")
-    trips_dir = tmp_path / "users" / "u1" / "trips"
+    trips_dir = tmp_path / "users" / "u1" / "briefings"
     trips_dir.mkdir(parents=True)
     raw = {
         "id": "legacy", "name": "Legacy", "activity": "fahrrad_20",

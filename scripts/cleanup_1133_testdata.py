@@ -40,7 +40,10 @@ from pathlib import Path
 
 DEFAULT_POSITIVLIST = ["admin", "default", "henning", "steffi"]
 RESIDUE_PATTERNS = ["e2e-*", "adv-test-*", "validator-*", "test-trip*"]
-IN_USER_SCAN_DIRS = ["trips", "weather_snapshots"]
+# Issue #1250 Scheibe 7a (Adversary F003): briefings/ ist seit dem Cutover
+# der echte Trip-Schreibort; trips/ bleibt zusaetzlich gescannt (Rollback-
+# Koexistenz -- die Alt-Datei liegt bewusst weiter, s. AC-26).
+IN_USER_SCAN_DIRS = ["trips", "briefings", "weather_snapshots"]
 
 
 def _find_outside_positivlist(root: Path, positivlist: set[str]) -> list[Path]:

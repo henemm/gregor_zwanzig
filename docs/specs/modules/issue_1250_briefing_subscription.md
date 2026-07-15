@@ -84,7 +84,7 @@ Renderer-Templates selbst bleiben getrennt (E9, KL-1).
 |---|---|---|
 | Pause | `paused_at *time` (Trip-Modell gewinnt) | Preset dual-write über `schedule=="manual"` bis FE umgestellt ist (Scheibe 2); Trip-Semantik ist bereits das Zielformat für `deriveStatusFromPreset` |
 | Briefing-Slots + Kanäle | Flache Felder (Preset-Modell gewinnt) | Trip dual-read aus `report_config`-Map (Scheibe 4); Preset hat bereits die flachen Felder aus #1232 |
-| Profil | `activity_profile`-Namensraum (Neubau, einzige echte Wertkonvertierung) | Trip `Activity` (ActivityType) und Preset `Profil` (ActivityProfile) sind verschiedene Namensräume — Mapping-Tabelle nötig, kein reines Rename |
+| Profil / Activity | **BLEIBEN GETRENNT** (keine Konvergenz, keine Konvertierung) | **Korrektur S7-Analyse 2026-07-15:** Trip `Activity` (Naismith-**Tempo**, `fahrrad_15/20/25`, `naismith.go:39`) und Preset `Profil` (Scoring-**Profil**, `wintersport`/`wandern`/…, `profile.py:23`) sind **fachlich disjunkte** Namensräume — es gibt KEIN Mapping und KEINEN Konvertierungsbedarf (Grep bestätigt). Die frühere Annahme „einzige echte Wertkonvertierung" war falsch. Jeder `kind` behält sein eigenes Feld. Die einzige reale Konvertierung ist profil-intern (FE-lowercase↔Engine-uppercase, `normalizeProfile` `compare_preset.go:86`) — unverändert. |
 | endDate | Persistiert + nullable auf beiden Seiten | `route`: Server materialisiert aus `max(stage.date)` (bisher reine FE-Berechnung `computeTripEnd`); `vergleich`: bereits persistiert (`EndDate *string`) |
 | Deprecated-Felder (`Schedule`, `PreviousSchedule`, `Weekday`, `HourFrom/HourTo`, `ForecastHours`) | Dokumentierter Pass-Through bis zur Migrations-Scheibe (5) | Tragen bis dahin lebende Semantik (`schedule=="manual"` = Pause!), dürfen nicht vorzeitig entfernt werden (KL-3) |
 | `kind`-Diskriminator | Additiv, existiert vorher nirgends | Voraussetzung für gemeinsamen Store (Scheibe 5) und Scheduler-Dispatch (Scheibe 7) |
@@ -185,14 +185,32 @@ Renderer-Templates selbst bleiben getrennt (E9, KL-1).
 - ~LoC: ~250. AC-22-Merge existiert im Bestand bereits (trip.go/compare_preset.go RMW).
 - Abhängigkeiten: braucht Scheibe 5.
 
-**Scheibe 7 — Scheduler-Vereinheitlichung**
-- Inhalt: EIN Scheduler-Einstieg liest `briefings/`, dispatcht per `kind` auf
-  bestehende Render-Pfade; `last_run`-Observability je Job bleibt erhalten.
-- Dateien: `cmd/server/scheduler.go` (MODIFY, ein Cron-Einstieg statt zwei),
-  `src/services/trip_report_scheduler.py` / `scheduler_dispatch_service.py`
-  (MODIFY, Dispatch-Wrapper, Render-Logik selbst unverändert — KL-1).
-- ~LoC: ~200.
-- Abhängigkeiten: braucht Scheibe 5/6.
+**Scheibe 7 — Persistenz-Cutover auf `briefings/` (nach Entität geteilt) + Scheduler-Aufräumen**
+
+*Neu-Zuschnitt S7-Analyse 2026-07-15 (Plan-Gegenprobe, ADR-0023 2. Fortschreibung, PO-go). Ersetzt
+den ursprünglichen „ein-Scheduler"-Schnitt: der Go-Scheduler liest gar keinen Store (nur HTTP-POST an
+Python), der Cutover ist vom Scheduler-Merge entkoppelt.*
+
+**Lean-Prinzip (für alle drei Sub-Scheiben):** `briefings/<id>.json` trägt einen kind-getaggten rohen
+Trip-/Preset-Dict (Migration S5). Der Cutover lädt/speichert per `kind` in die BESTEHENDEN
+`Trip`/`ComparePreset`-Strukturen — **kein volles Union-Modell, keine `activity`↔`profil`-Konvertierung,
+kein `points`-Feld** (ADR-0023 Entscheidung 4 obsolet). Das Go-Gerüst `BriefingSubscription` +
+`LoadBriefing`/`SaveBriefing` bleiben ungenutzt → als tot markiert. Refresh = **`briefings/` wipen +
+frisch remigrieren** (nicht `--force`; `briefings/` ist reine Projektion, kein nativer Schreiber → Wipe
+verliert nichts, verhindert Waisen). Reihenfolge im Deploy: **stop-writers → wipe+remigrate → start-new-code**.
+
+- **S7a — Cutover „route" (Trips):** Lese-/Schreibpfade der route-Entität auf `briefings/` umstellen.
+  Dateien: `internal/store/trip.go` (`LoadTrip`/`SaveTrip`/`LoadTrips`/`DeleteTrip` → `briefingsDir()`+kind),
+  `src/app/loader.py` (`load_all_trips` :1225, `save_trip` :1476 → `briefings/`), `internal/handler/briefing_subscription.go`
+  (route-Zweig auf neuen Store), `scripts/migrate_1250_briefings.py` (Wipe-Refresh-Modus). ~LoC ~150-200.
+  Abhängigkeiten: braucht S5/S6. **Diese Scheibe (feat-1250-s7-cutover).**
+- **S7b — Cutover „vergleich" (Presets):** analog für die vergleich-Entität. Zusätzliche Falle: `SaveComparePresets`
+  schreibt ein ganzes Array → Per-File-`briefings/` braucht echtes Datei-Remove bei DELETE (F-A). Dateien:
+  `internal/store/compare_preset.go`, `src/services/scheduler_dispatch_service.py` (`save_compare_preset_status`/`_pause`).
+  Abhängigkeit: nach S7a.
+- **S7c — Scheduler-Aufräumen (OPTIONAL, niedrige Prio):** zwei Cron-Einstiege (`internal/scheduler/scheduler.go:91,100`)
+  zu einem zusammenlegen, Dispatch per `kind`; `last_run`-Observability-Symmetrie (AC-23/24). Rein aufräumend,
+  verhaltensneutral. Abhängigkeit: nach S7a/S7b.
 
 ## Expected Behavior
 
@@ -413,7 +431,49 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
   - Test: Bestandssatz mit N Feldern anlegen, `PUT` mit 1 geändertem Feld
     senden, GET danach zeigt alle N Felder, nur das eine geändert.
 
-<!-- Scheibe 7 — Scheduler-Vereinheitlichung -->
+<!-- Scheibe 7a — Cutover route (Trips) → briefings/ · DIESE Scheibe (feat-1250-s7-cutover) -->
+
+- **AC-25:** Given migrierte `briefings/<id>.json` für route-Entitäten / When die App
+  einen Trip lädt (Go `LoadTrip` + Python `load_all_trips`) nach S7a / Then liest sie
+  aus `briefings/<id>.json` (`kind="route"`), NICHT aus `trips/*.json`; das geladene
+  Trip-Objekt ist feldgleich zum Vor-Cutover-Load.
+  - Test: Fixture-Trip in `briefings/` (kind=route) + im Alt-`trips/`; Load liefert das
+    briefings/-Objekt, feld-für-feld identisch zum Alt-Pfad-Ergebnis.
+
+- **AC-26:** Given ein Trip-Save (Go `SaveTrip` + Python `save_trip`) nach S7a / When
+  gespeichert wird / Then landet die Änderung in `briefings/<id>.json` (kind=route),
+  ein erneuter Load spiegelt sie; die Alt-Datei `trips/<id>.json` bleibt unverändert
+  liegen (Rollback-Fähigkeit, kein Löschen im Cutover).
+  - Test: Save → `briefings/<id>.json` enthält die Änderung, `trips/<id>.json` byte-unverändert.
+
+- **AC-27:** Given ein Trip via Go-API geändert / When der Python-Lesepfad
+  (`load_all_trips`) denselben Trip liest / Then sieht er die Änderung — beide Stacks
+  lesen `briefings/`, die S6-Split-Brain-Lücke ist für route geschlossen; strikt pro
+  Nutzer (zwei User getestet, kein Cross-User-Zugriff).
+  - Test: Go schreibt `briefings/<id>.json` für User A, Python `load_all_trips(A)` liest
+    exakt diesen Wert (Cross-Language-Roundtrip, kein Mock); `load_all_trips(B)` sieht ihn nicht.
+
+- **AC-28:** Given einen route-Bestand, in dem ein Trip nach der S5-Migration geändert
+  UND ein anderer seit S5 gelöscht wurde / When der S7a-Cutover-Refresh (Wipe + Remigrate,
+  Backup vorher) läuft / Then spiegelt `briefings/<id>.json` den AKTUELLEN Trip (nicht die
+  stale S5-Kopie), UND der gelöschte Trip hat KEINE `briefings/`-Datei (kein Geist-Eintrag).
+  - Test: Fixture mit (a) geänderter Quelle, (b) Waise (`briefings/` existiert, `trips/` weg);
+    nach Refresh: (a) aktueller Inhalt, (b) `briefings/<waise>.json` entfernt.
+
+- **AC-29:** Given einen Trip mit vollständigem Feldsatz (inkl. genesteter Maps
+  `report_config`/`display_config`, Stages, Corridors, AlertRules) / When er durch den
+  neuen `briefings/`-Pfad geladen UND gespeichert wird / Then überleben alle Felder
+  (kein Top-Level-Feldverlust) — Fidelity identisch zum bisherigen `LoadTrip`/`SaveTrip`.
+  - Test: Roundtrip über `briefings/`, Feld-für-Feld-Diff Vorher/Nachher = leer.
+
+- **AC-30:** Given der Cutover ist route-only (S7a) / When er ausgeliefert ist / Then
+  lesen/schreiben ComparePresets weiterhin `compare_presets.json` (vergleich unberührt);
+  `ListBriefingsHandler` liefert route aus `briefings/`, vergleich aus dem Alt-Store —
+  konsistent per `kind`, kein Bruch.
+  - Test: nach S7a Preset-CRUD unverändert gegen `compare_presets.json`; gemischte
+    `/api/briefings`-Liste enthält beide korrekt.
+
+<!-- Scheibe 7c — Scheduler-Aufräumen (OPTIONAL, spätere Scheibe): AC-23/24 -->
 
 - **AC-23:** Given `briefings/`-Einträge mit `kind="route"` und
   `kind="vergleich"` / When der vereinheitlichte Scheduler-Einstieg nach
@@ -457,6 +517,16 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
   Go-only-Umschalt in S6 erzeugte bidirektionalen Split-Brain und bräche die
   Scheiben-Verhaltensneutralität. `kind` ist auf `/api/briefings*` explizit (kein
   Store-Probing).
+- **KL-7 (S7-Analyse 2026-07-15, ADR-0023 2. Fortschreibung):** Scheibe 7 wird nach
+  Entität geteilt (S7a route → S7b vergleich → S7c Scheduler optional), weil der Cutover
+  vom Scheduler-Merge entkoppelt ist (Go-Scheduler liest keinen Store). Der Cutover nutzt
+  KEIN volles Union-Modell und KEINE `activity`↔`profil`-Konvertierung (disjunkte Felder,
+  Richtungs-Tabelle korrigiert) — er lädt `briefings/<id>.json` per `kind` in die
+  bestehenden `Trip`/`ComparePreset`-Strukturen. Das Go-Gerüst `BriefingSubscription` +
+  `LoadBriefing`/`SaveBriefing` (S5) bleiben **ungenutzt/tot** (nicht doppelt bauen). Der
+  Cutover-Refresh ist **Wipe + Remigrate** (nicht `--force`); alle Schreibpfade einer
+  Entität kippen in EINEM Deploy (stop → refresh → start), Alt-Stores bleiben für Rollback
+  liegen. Tiefe Feld-Konvergenz zu EINER Struktur ist NICHT Teil von #1250.
 
 ## Edge Cases
 
@@ -504,3 +574,10 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
   atomarer Cutover + volles Union-Modell → S7 (neue KL-6). `kind` explizit auf
   `/api/briefings*` (2 neue Edge Cases). Router-Pfad korrigiert (`internal/router/router.go`
   statt `cmd/server/router.go`). **AC-20/21/22 inhaltlich unverändert.**
+- 2026-07-15 (feat-1250-s7-cutover): Scheibe-7-Neu-Zuschnitt nach Context-/Analyse-Phase
+  (Plan-Gegenprobe). S7 nach Entität geteilt (S7a route diese Scheibe → S7b vergleich →
+  S7c Scheduler optional), da Cutover ⊥ Scheduler-Merge (Go-Scheduler liest keinen Store).
+  Lean-Cutover: kein Union-Modell, keine `activity`↔`profil`-Konvertierung (Richtungs-
+  Tabelle §Profil korrigiert — disjunkte Felder, frühere Prämisse falsch). Refresh =
+  Wipe+Remigrate. Neue ACs AC-25–AC-30 (S7a route); AC-23/24 → S7c. Neue KL-7.
+  ADR-0023 Entscheidung 4 (volles Union-Modell) als obsolet markiert.

@@ -86,8 +86,8 @@ def _save_trip_direct(trip, user_id: str) -> None:
     # Issue #1133: get_trips_dir() folgt dem autouse-isolierten Daten-Root,
     # denselben Pfad, unter dem TripAlertService via app.loader.load_all_trips()
     # liest — statt der modulweiten DATA_ROOT-Konstante (echter Baum).
-    from app.loader import get_trips_dir
-    trips_dir = get_trips_dir(user_id)
+    from app.loader import get_briefings_dir
+    trips_dir = get_briefings_dir(user_id)
     trips_dir.mkdir(parents=True, exist_ok=True)
 
     def _wp_dict(wp) -> dict:

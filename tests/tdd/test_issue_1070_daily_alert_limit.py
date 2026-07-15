@@ -245,12 +245,13 @@ def _make_trip(trip_id: str, send_email: bool, send_telegram: bool) -> Trip:
 
 def _save_trip(trip: Trip, user_id: str) -> None:
     # Issue #1133: TripAlertService liest Trips über app.loader.load_all_trips()
-    # (isoliert via autouse-Fixture) — get_trips_dir() folgt demselben Root,
+    # (isoliert via autouse-Fixture) — get_briefings_dir() folgt demselben Root,
     # waehrend user_tier/alert_daily_limit weiterhin die relative
     # "data/users/..."-Konstruktion nutzen (bewusst nicht migriert, siehe
     # Known Limitations #1133) und daher DATA_ROOT (echter Baum) behalten.
-    from app.loader import get_trips_dir
-    trips_dir = get_trips_dir(user_id)
+    # Issue #1250 Scheibe 7a: load_all_trips liest briefings/, nicht trips/.
+    from app.loader import get_briefings_dir
+    trips_dir = get_briefings_dir(user_id)
     trips_dir.mkdir(parents=True, exist_ok=True)
     data = {
         "id": trip.id,

@@ -9,10 +9,18 @@ import (
 )
 
 // briefingsDir returns data/users/<uid>/briefings (Issue #1250 Scheibe 5,
-// ADR-0023). Per-file layout, analog TripsDir — NOT wired into API/scheduler
-// yet (S6/S7); the app keeps reading trips/compare_presets in S5.
+// ADR-0023). Per-file layout, analog TripsDir. Since Scheibe 7a (route
+// cutover), LoadTrip/LoadTrips/SaveTrip/DeleteTrip (trip.go) read/write here
+// instead of TripsDir() -- ComparePresets remain on compare_presets.json
+// (AC-30, KL-7: no union model, no LoadBriefing/SaveBriefing usage).
 func (s *Store) briefingsDir() string {
 	return filepath.Join(s.DataDir, "users", s.UserID, "briefings")
+}
+
+// BriefingsDir exposes briefingsDir() for cross-package callers (test
+// helpers analog TripsDir(), Issue #1250 Scheibe 7a).
+func (s *Store) BriefingsDir() string {
+	return s.briefingsDir()
 }
 
 // LoadBriefing loads a single briefings/<id>.json file. Returns nil, nil if

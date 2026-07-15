@@ -1,0 +1,19 @@
+{
+  "id": "rofan-2025",
+  "name": "Rofan Tageswanderung",
+  "stages": [
+    {
+      "id": "S1",
+      "name": "Etappe 1",
+      "date": "2025-08-23",
+      "waypoints": []
+    }
+  ],
+  "alert_rules": [],
+  "accuracy_pct": 76,
+  "headline": "Niederschlag 4 h früher als prognostiziert eingetroffen",
+  "briefings_count": 3,
+  "alerts_count": 1,
+  "archived_at": "2025-08-24T00:00:00Z",
+  "kind": "route"
+}

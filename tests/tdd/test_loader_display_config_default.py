@@ -235,10 +235,12 @@ class TestLoadAllTripsResilience:
         bad_data["stages"][0]["date"] = "not-a-date"
         (trips_dir / "bad-date.json").write_text(json.dumps(bad_data))
 
-        # Pfad-Helper auf tmp_path umbiegen
+        # Pfad-Helper auf tmp_path umbiegen (Issue #1250 Scheibe 7a:
+        # load_all_trips liest seit dem Cutover get_briefings_dir(), nicht
+        # mehr get_trips_dir()).
         monkeypatch.setattr(
             loader_mod,
-            "get_trips_dir",
+            "get_briefings_dir",
             lambda user_id="default": trips_dir,
         )
 

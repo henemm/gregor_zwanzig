@@ -70,7 +70,10 @@ def _build_stages(trip_id: str, date_from: str, date_to: str, count: int) -> lis
 
 def seed(data_dir: str, user: str) -> None:
     user_dir = Path(data_dir) / "users" / user
-    trips_dir = user_dir / "trips"
+    # Issue #1250 Scheibe 7a (Adversary F005): briefings/ ist seit dem
+    # Cutover der Lesepfad von load_all_trips -- ohne kind="route" waere ein
+    # frisch geseedeter Trip fuer die App unsichtbar.
+    trips_dir = user_dir / "briefings"
     trips_dir.mkdir(parents=True, exist_ok=True)
 
     for t in TRIPS:
@@ -84,6 +87,7 @@ def seed(data_dir: str, user: str) -> None:
             "stages": stages,
             "alert_rules": [],
             "archived_at": archived_at,
+            "kind": "route",
         }
 
         path = trips_dir / f"{t['id']}.json"

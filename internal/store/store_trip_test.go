@@ -7,6 +7,13 @@ import (
 )
 
 func TestLoadTripsFromRealData(t *testing.T) {
+	// Issue #1250 Scheibe 7a: LoadTrips liest seit dem Cutover briefings/
+	// statt trips/ (ADR-0023). data/users/default/briefings/ existiert erst
+	// NACH dem produktiven Migrations-Deploy-Schritt (scripts/migrate_1250_
+	// briefings.py --execute/--refresh, s. docs/reference/operations_playbook.md)
+	// -- in einem frischen Worktree/CI-Checkout (gitignored data/) fehlt sie
+	// i.d.R. noch. Analog TestLoadLocationsFromRealData (store_test.go:14).
+	t.Skip("Liest data/users/default/briefings/ — erst nach dem Migrations-Deploy-Schritt befüllt")
 	repoRoot := filepath.Join("..", "..")
 	s := New(filepath.Join(repoRoot, "data"), "default")
 
@@ -48,7 +55,7 @@ func TestLoadTripsFromRealData(t *testing.T) {
 
 func TestLoadTripsEmptyDir(t *testing.T) {
 	tmpDir := t.TempDir()
-	tripDir := filepath.Join(tmpDir, "users", "test", "trips")
+	tripDir := filepath.Join(tmpDir, "users", "test", "briefings")
 	os.MkdirAll(tripDir, 0755)
 
 	s := New(tmpDir, "test")
@@ -63,7 +70,7 @@ func TestLoadTripsEmptyDir(t *testing.T) {
 
 func TestLoadTripsBadJSON(t *testing.T) {
 	tmpDir := t.TempDir()
-	tripDir := filepath.Join(tmpDir, "users", "test", "trips")
+	tripDir := filepath.Join(tmpDir, "users", "test", "briefings")
 	os.MkdirAll(tripDir, 0755)
 
 	os.WriteFile(filepath.Join(tripDir, "good.json"), []byte(`{
@@ -89,7 +96,7 @@ func TestLoadTripsBadJSON(t *testing.T) {
 
 func TestLoadTripByID(t *testing.T) {
 	tmpDir := t.TempDir()
-	tripDir := filepath.Join(tmpDir, "users", "test", "trips")
+	tripDir := filepath.Join(tmpDir, "users", "test", "briefings")
 	os.MkdirAll(tripDir, 0755)
 
 	os.WriteFile(filepath.Join(tripDir, "my-trip.json"), []byte(`{
@@ -117,7 +124,7 @@ func TestLoadTripByID(t *testing.T) {
 
 func TestLoadTripNotFound(t *testing.T) {
 	tmpDir := t.TempDir()
-	tripDir := filepath.Join(tmpDir, "users", "test", "trips")
+	tripDir := filepath.Join(tmpDir, "users", "test", "briefings")
 	os.MkdirAll(tripDir, 0755)
 
 	s := New(tmpDir, "test")

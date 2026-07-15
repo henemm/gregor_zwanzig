@@ -16,20 +16,23 @@ import (
 	"github.com/henemm/gregor-api/internal/model"
 )
 
+// Issue #1250 Scheibe 7a: LoadTrip/SaveTrip lesen/schreiben briefingsDir(),
+// nicht mehr TripsDir() -- die Migrationsfixtures muessen deshalb dort
+// liegen, wo migrateUserTripsOfficialWarnings tatsaechlich enumeriert.
 func writeRawTripJSON1258(t *testing.T, tmpDir, userID, tripID, rawJSON string) {
 	t.Helper()
-	tripsDir := filepath.Join(tmpDir, "users", userID, "trips")
-	if err := os.MkdirAll(tripsDir, 0755); err != nil {
+	briefingsDir := filepath.Join(tmpDir, "users", userID, "briefings")
+	if err := os.MkdirAll(briefingsDir, 0755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(tripsDir, tripID+".json"), []byte(rawJSON), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(briefingsDir, tripID+".json"), []byte(rawJSON), 0644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 }
 
 func readTripRaw(t *testing.T, tmpDir, userID, tripID string) map[string]interface{} {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(tmpDir, "users", userID, "trips", tripID+".json"))
+	raw, err := os.ReadFile(filepath.Join(tmpDir, "users", userID, "briefings", tripID+".json"))
 	if err != nil {
 		t.Fatalf("ReadFile: %v", err)
 	}

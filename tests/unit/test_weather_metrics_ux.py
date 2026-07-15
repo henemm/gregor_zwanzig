@@ -296,7 +296,7 @@ class TestLoaderUseFriendlyFormat:
         """Serialization should include use_friendly_format."""
         import json
         from datetime import date
-        from app.loader import save_trip, get_trips_dir
+        from app.loader import save_trip, get_briefings_dir
         from app.models import MetricConfig, UnifiedWeatherDisplayConfig
         from app.trip import Trip, Stage, Waypoint
 
@@ -323,7 +323,7 @@ class TestLoaderUseFriendlyFormat:
 
         # Save and read raw JSON
         save_trip(trip, user_id="default")
-        trip_path = get_trips_dir("default") / "test-friendly-fmt.json"
+        trip_path = get_briefings_dir("default") / "test-friendly-fmt.json"
         try:
             raw = json.loads(trip_path.read_text())
             mc_data = raw["display_config"]["metrics"][0]

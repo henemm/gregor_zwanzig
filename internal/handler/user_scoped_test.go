@@ -103,7 +103,7 @@ func TestTripsHandlerUsesContextUserId(t *testing.T) {
 	tmpDir := t.TempDir()
 	s := store.New(tmpDir, "default")
 
-	charlieDir := filepath.Join(tmpDir, "users", "charlie", "trips")
+	charlieDir := filepath.Join(tmpDir, "users", "charlie", "briefings")
 	os.MkdirAll(charlieDir, 0755)
 	trip := model.Trip{ID: "trip1", Name: "Charlie's Trip"}
 	data, _ := json.Marshal(trip)
@@ -138,13 +138,13 @@ func TestDeleteTripHandlerUsesContextUserId(t *testing.T) {
 	s := store.New(tmpDir, "default")
 
 	// Alice has a trip
-	aliceDir := filepath.Join(tmpDir, "users", "alice", "trips")
+	aliceDir := filepath.Join(tmpDir, "users", "alice", "briefings")
 	os.MkdirAll(aliceDir, 0755)
 	os.WriteFile(filepath.Join(aliceDir, "trip1.json"),
 		[]byte(`{"id":"trip1","name":"Alice Trip"}`), 0644)
 
 	// Bob has the same trip ID
-	bobDir := filepath.Join(tmpDir, "users", "bob", "trips")
+	bobDir := filepath.Join(tmpDir, "users", "bob", "briefings")
 	os.MkdirAll(bobDir, 0755)
 	os.WriteFile(filepath.Join(bobDir, "trip1.json"),
 		[]byte(`{"id":"trip1","name":"Bob Trip"}`), 0644)

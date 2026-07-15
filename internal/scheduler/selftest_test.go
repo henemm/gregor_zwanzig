@@ -15,7 +15,7 @@ func TestProbeDataWritable_NotWritable(t *testing.T) {
 		t.Skip("root ignoriert DAC-Permission-Checks")
 	}
 	tmpDir := t.TempDir()
-	tripDir := filepath.Join(tmpDir, "users", "u", "trips")
+	tripDir := filepath.Join(tmpDir, "users", "u", "briefings")
 	if err := os.MkdirAll(tripDir, 0755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestProbeDataWritable_NotWritable(t *testing.T) {
 
 func TestProbeDataWritable_Writable(t *testing.T) {
 	tmpDir := t.TempDir()
-	tripDir := filepath.Join(tmpDir, "users", "u", "trips")
+	tripDir := filepath.Join(tmpDir, "users", "u", "briefings")
 	if err := os.MkdirAll(tripDir, 0755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
@@ -88,15 +88,21 @@ func TestProbeDataWritable_NonExistentDir(t *testing.T) {
 }
 
 // Issue #1120 Fix-Runde 1 (F001): filepath.Glob verschluckt Verzeichnis-
-// Lesefehler still (liefert leere Liste + err==nil). Verliert trips/ das
+// Lesefehler still (liefert leere Liste + err==nil). Verliert briefings/ das
 // Leserecht (#1066-Sweep-Variante), muss die Probe das als error melden,
 // nicht als false-positives "ok".
-func TestProbeDataWritable_UnreadableTripsDir(t *testing.T) {
+//
+// Issue #1250 Scheibe 7a Adversary F002 (bleibender Regressionstest): seit
+// dem Cutover ist briefings/ der echte Schreibort (war trips/ davor) --
+// dieser Test beweist, dass probeDataWritable ein read-only briefings/
+// weiterhin korrekt als Fehler erkennt (nicht mehr das inzwischen
+// stillgelegte trips/).
+func TestProbeDataWritable_UnreadableBriefingsDir(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("root ignoriert DAC-Permission-Checks")
 	}
 	tmpDir := t.TempDir()
-	tripDir := filepath.Join(tmpDir, "users", "u", "trips")
+	tripDir := filepath.Join(tmpDir, "users", "u", "briefings")
 	if err := os.MkdirAll(tripDir, 0755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
@@ -120,7 +126,7 @@ func TestProbeDataWritable_UnreadableTripsDir(t *testing.T) {
 	}
 }
 
-// User-Verzeichnis ohne trips/-Unterordner ist kein Fehlerfall (User hat
+// User-Verzeichnis ohne briefings/-Unterordner ist kein Fehlerfall (User hat
 // schlicht noch keine Trips angelegt).
 func TestProbeDataWritable_UserWithoutTripsDir(t *testing.T) {
 	tmpDir := t.TempDir()

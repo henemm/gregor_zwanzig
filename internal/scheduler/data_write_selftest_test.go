@@ -13,14 +13,16 @@ import (
 // Issue #1120: dataWriteSelftest — Edge-getriggertes Alerting + Status-Sichtbarkeit.
 
 // buildSelftestStore creates a store with one trip file at
-// users/default/trips/trip1.json and returns store + path to that file.
+// users/default/briefings/trip1.json (Issue #1250 Scheibe 7a: probeDataWritable
+// scans briefings/, the real write-location after the Cutover -- was trips/
+// before) and returns store + path to that file.
 func buildSelftestStore(t *testing.T) (*store.Store, string) {
 	t.Helper()
 	tmpDir := t.TempDir()
 	s := store.New(tmpDir, "default")
-	tripDir := filepath.Join(tmpDir, "users", "default", "trips")
+	tripDir := filepath.Join(tmpDir, "users", "default", "briefings")
 	if err := os.MkdirAll(tripDir, 0755); err != nil {
-		t.Fatalf("mkdir trips: %v", err)
+		t.Fatalf("mkdir briefings: %v", err)
 	}
 	tripFile := filepath.Join(tripDir, "trip1.json")
 	if err := os.WriteFile(tripFile, []byte(`{"id":"trip1"}`), 0644); err != nil {

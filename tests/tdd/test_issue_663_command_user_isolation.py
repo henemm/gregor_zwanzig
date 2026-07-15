@@ -11,7 +11,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from app.loader import get_data_dir, get_snapshots_dir, get_trips_dir, load_all_trips, save_trip
+from app.loader import get_briefings_dir, get_data_dir, get_snapshots_dir, load_all_trips, save_trip
 from app.trip import Stage, Trip, Waypoint
 from services.trip_command_processor import InboundMessage, TripCommandProcessor
 
@@ -57,7 +57,7 @@ def _msg(body: str, user_id: str) -> InboundMessage:
 
 
 def _cleanup_user(user_id: str) -> None:
-    tp = get_trips_dir(user_id) / f"{_TRIP_ID}.json"
+    tp = get_briefings_dir(user_id) / f"{_TRIP_ID}.json"
     if tp.exists():
         tp.unlink()
     sp = get_snapshots_dir(user_id) / f"{_TRIP_ID}.json"

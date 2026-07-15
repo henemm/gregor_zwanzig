@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-from app.loader import get_data_dir, get_trips_dir, load_trip, save_trip
+from app.loader import get_briefings_dir, get_data_dir, load_trip, save_trip
 from app.models import (
     AlertMetric, AlertRule, AlertRuleKind, AlertSeverity, TripReportConfig,
 )
@@ -53,7 +53,7 @@ def _make_trip(trip_id: str, report_config: TripReportConfig | None = None) -> T
 def _set_paused_at(user_id: str, trip_id: str, iso_value: str | None) -> None:
     """Patcht das gespeicherte Trip-JSON direkt — spiegelt den echten
     Lese-Pfad nach `PATCH /trips/{id}/state` (Go schreibt paused_at)."""
-    path = get_trips_dir(user_id) / f"{trip_id}.json"
+    path = get_briefings_dir(user_id) / f"{trip_id}.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     if iso_value is None:
         data.pop("paused_at", None)
@@ -133,7 +133,7 @@ class TestAC8ManualTestSendUnaffected:
         if not settings.can_send_email():
             pytest.skip("SMTP für tdd-995-ac8 nicht konfiguriert")
 
-        loaded = load_trip(get_trips_dir(_USER_AC8) / f"{trip_id}.json")
+        loaded = load_trip(get_briefings_dir(_USER_AC8) / f"{trip_id}.json")
         sent = TripReportSchedulerService(user_id=_USER_AC8).send_test_report(loaded, "morning")
         assert sent is True, "Contract: Test-Versand muss auch für pausierten Trip funktionieren"
 
@@ -183,7 +183,7 @@ class TestAC9AlertDispatchUnaffected:
         arr1 = (now - timedelta(hours=1) + offset).strftime("%H:%M")
         arr2 = (now + timedelta(hours=2) + offset).strftime("%H:%M")
 
-        trips_dir = get_trips_dir(_USER_AC9)
+        trips_dir = get_briefings_dir(_USER_AC9)
         trips_dir.mkdir(parents=True, exist_ok=True)
         data = {
             "id": trip_id, "name": "AC9 Trip",
@@ -250,10 +250,10 @@ class TestAC10ReadModifyWritePreservesFields:
                           threshold=-5.0, severity=AlertSeverity.INFO, enabled=False),
             ]
             save_trip(trip, user_id=uid)
-            before = load_trip(get_trips_dir(uid) / f"{trip_id}.json")
+            before = load_trip(get_briefings_dir(uid) / f"{trip_id}.json")
 
             _set_paused_at(uid, trip_id, "2026-07-03T08:00:00+00:00")
-            after = load_trip(get_trips_dir(uid) / f"{trip_id}.json")
+            after = load_trip(get_briefings_dir(uid) / f"{trip_id}.json")
 
             assert getattr(after, "paused_at", None) == "2026-07-03T08:00:00+00:00", (
                 f"AC-10 ({uid}): paused_at wird beim Laden nicht durchgereicht "

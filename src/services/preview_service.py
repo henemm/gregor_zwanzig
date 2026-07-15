@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from app.config import Settings
-from app.loader import get_trips_dir, load_trip
+from app.loader import get_briefings_dir, load_trip
 
 if TYPE_CHECKING:
     from app.trip import Trip
@@ -51,12 +51,13 @@ class PreviewService:
         self.settings = settings or Settings()
 
     def _load_trip(self, trip_id: str, user_id: str = "default") -> "Trip":
-        """Lädt einen Trip aus `data/users/<user>/trips/<id>.json`.
+        """Lädt einen Trip aus `data/users/<user>/briefings/<id>.json`
+        (Issue #1250 Scheibe 7a Cutover, ADR-0023 -- war `trips/<id>.json`).
 
         Raises:
             FileNotFoundError: wenn der Trip nicht existiert.
         """
-        trips_dir = get_trips_dir(user_id)
+        trips_dir = get_briefings_dir(user_id)
         path = trips_dir / f"{trip_id}.json"
         if not path.exists():
             raise FileNotFoundError(

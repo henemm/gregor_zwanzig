@@ -139,7 +139,7 @@ func TestSaveTrip_817_WritesDeltaRulesToDisk(t *testing.T) {
 		t.Fatalf("AC-8b: SaveTrip error: %v", err)
 	}
 
-	raw, err := os.ReadFile(filepath.Join(dataDir, "users", "user-817-save", "trips", "trip-817-save.json"))
+	raw, err := os.ReadFile(filepath.Join(dataDir, "users", "user-817-save", "briefings", "trip-817-save.json"))
 	if err != nil {
 		t.Fatalf("AC-8b: cannot read trip JSON: %v", err)
 	}

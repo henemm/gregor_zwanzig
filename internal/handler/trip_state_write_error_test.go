@@ -18,7 +18,7 @@ func TestUpdateTripStateHandler_WriteFailureReturnsGenericStoreError(t *testing.
 	s := newTestStore(t)
 	seedTrip(t, s, "write-fail-trip", "Write Fail Trip")
 
-	path := filepath.Join(s.TripsDir(), "write-fail-trip.json")
+	path := filepath.Join(s.BriefingsDir(), "write-fail-trip.json")
 	if err := os.Chmod(path, 0444); err != nil {
 		t.Fatalf("failed to chmod trip file read-only: %v", err)
 	}

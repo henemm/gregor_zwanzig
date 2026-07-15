@@ -160,7 +160,7 @@ def test_ac3_snow_line_migrates_to_freezing_level_on_load():
     When der Trip geladen wird / Then enthält metric_alert_levels danach
     freezing_level='standard' statt snow_line, alle anderen Trip-Felder sind
     unverändert (Read-Modify-Write, kein Datenverlust — BUG-DATALOSS-GR221-Lehre)."""
-    trips_dir = _REPO_ROOT / "data" / "users" / _MIG_USER / "trips"
+    trips_dir = _REPO_ROOT / "data" / "users" / _MIG_USER / "briefings"
     trips_dir.mkdir(parents=True, exist_ok=True)
     trip_id = "mig-1"
     trip_path = trips_dir / f"{trip_id}.json"

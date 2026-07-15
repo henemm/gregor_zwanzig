@@ -1,0 +1,19 @@
+{
+  "id": "zillertal-2025",
+  "name": "Zillertal mit Steffi",
+  "stages": [
+    {
+      "id": "S1",
+      "name": "Etappe 1",
+      "date": "2025-12-28",
+      "waypoints": []
+    }
+  ],
+  "alert_rules": [],
+  "accuracy_pct": 88,
+  "headline": "Sonnig wie vorhergesagt, leichter Föhn ab Mittag",
+  "briefings_count": 6,
+  "alerts_count": 0,
+  "archived_at": "2025-12-31T00:00:00Z",
+  "kind": "route"
+}

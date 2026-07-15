@@ -88,7 +88,7 @@ class TestLoaderNewFields:
 
     def _write_trip(self, tmp_path: Path, trip_json: dict) -> Path:
         trip_id = trip_json["id"]
-        trip_dir = tmp_path / "users" / "default" / "trips"
+        trip_dir = tmp_path / "users" / "default" / "briefings"
         trip_dir.mkdir(parents=True)
         p = trip_dir / f"{trip_id}.json"
         p.write_text(json.dumps(trip_json))
@@ -181,7 +181,7 @@ class TestLoaderNewFields:
         data_dir = tmp_path
         save_trip(trip, data_dir=data_dir)
 
-        trip_file = tmp_path / "users" / "default" / "trips" / "t-omit.json"
+        trip_file = tmp_path / "users" / "default" / "briefings" / "t-omit.json"
         raw = json.loads(trip_file.read_text())
         wp_raw = raw["stages"][0]["waypoints"][0]
         assert "origin" not in wp_raw

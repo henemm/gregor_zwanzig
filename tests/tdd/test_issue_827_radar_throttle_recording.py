@@ -55,11 +55,12 @@ def _make_trip(trip_id: str, send_email: bool, send_telegram: bool) -> Trip:
 
 
 def _save_trip(trip: Trip, user_id: str) -> None:
-    # Issue #1133: get_trips_dir() folgt dem autouse-isolierten Daten-Root,
+    # Issue #1133: get_briefings_dir() folgt dem autouse-isolierten Daten-Root,
     # denselben Pfad, unter dem TripAlertService via app.loader.load_all_trips()
     # liest — statt der modulweiten DATA_ROOT-Konstante (echter Baum).
-    from app.loader import get_trips_dir
-    trips_dir = get_trips_dir(user_id)
+    # Issue #1250 Scheibe 7a: load_all_trips liest briefings/, nicht trips/.
+    from app.loader import get_briefings_dir
+    trips_dir = get_briefings_dir(user_id)
     trips_dir.mkdir(parents=True, exist_ok=True)
     data = {
         "id": trip.id,

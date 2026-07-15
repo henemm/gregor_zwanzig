@@ -72,8 +72,8 @@ def _save_trip_direct(trip: Trip, user_id: str) -> None:
     liest — statt des modulweiten DATA_ROOT-Konstante (echter Baum).
     """
     import json
-    from app.loader import get_trips_dir
-    trips_dir = get_trips_dir(user_id)
+    from app.loader import get_briefings_dir
+    trips_dir = get_briefings_dir(user_id)
     trips_dir.mkdir(parents=True, exist_ok=True)
 
     def _wp_dict(wp: Waypoint) -> dict:

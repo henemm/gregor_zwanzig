@@ -123,13 +123,13 @@ class TestBug805RoundtripNoDataLoss:
     def test_region_preserved_after_roundtrip(self, tmp_path):
         trip = _parse_trip(_TRIP_FULL)
         save_trip(trip, user_id="testuser", data_dir=tmp_path)
-        saved = json.loads((tmp_path / "users" / "testuser" / "trips" / "test-805-roundtrip.json").read_text())
+        saved = json.loads((tmp_path / "users" / "testuser" / "briefings" / "test-805-roundtrip.json").read_text())
         assert saved.get("region") == "GR20"
 
     def test_archived_at_preserved_after_roundtrip(self, tmp_path):
         trip = _parse_trip(_TRIP_FULL)
         save_trip(trip, user_id="testuser", data_dir=tmp_path)
-        saved = json.loads((tmp_path / "users" / "testuser" / "trips" / "test-805-roundtrip.json").read_text())
+        saved = json.loads((tmp_path / "users" / "testuser" / "briefings" / "test-805-roundtrip.json").read_text())
         assert saved.get("archived_at") == "2025-09-01T12:00:00Z"
 
     def test_show_yesterday_comparison_false_preserved(self, tmp_path):
@@ -137,21 +137,21 @@ class TestBug805RoundtripNoDataLoss:
         trip = _parse_trip(_TRIP_FULL)
         assert trip.report_config.show_yesterday_comparison is False
         save_trip(trip, user_id="testuser", data_dir=tmp_path)
-        saved = json.loads((tmp_path / "users" / "testuser" / "trips" / "test-805-roundtrip.json").read_text())
+        saved = json.loads((tmp_path / "users" / "testuser" / "briefings" / "test-805-roundtrip.json").read_text())
         assert saved["report_config"]["show_yesterday_comparison"] is False
 
     def test_horizons_preserved_after_roundtrip(self, tmp_path):
         """Issue #805: MetricConfig.horizons muss serialisiert werden."""
         trip = _parse_trip(_TRIP_FULL)
         save_trip(trip, user_id="testuser", data_dir=tmp_path)
-        saved = json.loads((tmp_path / "users" / "testuser" / "trips" / "test-805-roundtrip.json").read_text())
+        saved = json.loads((tmp_path / "users" / "testuser" / "briefings" / "test-805-roundtrip.json").read_text())
         metrics = saved["display_config"]["metrics"]
         assert metrics[0]["horizons"] == {"today": True, "tomorrow": False, "day_after": False}
 
     def test_display_config_channels_preserved_via_rmw(self, tmp_path):
         """Issue #805: display_config.channels (Go-Feld) bleibt durch RMW-Merge erhalten."""
         # Erst die Trip-JSON direkt schreiben (simuliert Go-written file)
-        trips_dir = tmp_path / "users" / "testuser" / "trips"
+        trips_dir = tmp_path / "users" / "testuser" / "briefings"
         trips_dir.mkdir(parents=True)
         (trips_dir / "test-805-roundtrip.json").write_text(json.dumps(_TRIP_FULL))
 
@@ -162,7 +162,7 @@ class TestBug805RoundtripNoDataLoss:
 
     def test_legacy_send_signal_preserved_via_rmw(self, tmp_path):
         """Issue #805: report_config.send_signal (Legacy-Feld) bleibt durch RMW-Merge erhalten."""
-        trips_dir = tmp_path / "users" / "testuser" / "trips"
+        trips_dir = tmp_path / "users" / "testuser" / "briefings"
         trips_dir.mkdir(parents=True)
         (trips_dir / "test-805-roundtrip.json").write_text(json.dumps(_TRIP_FULL))
 
@@ -175,6 +175,6 @@ class TestBug805RoundtripNoDataLoss:
         """Pausen-Etappe bleibt nach Roundtrip erhalten (0 Wegpunkte)."""
         trip = _parse_trip(_TRIP_FULL)
         save_trip(trip, user_id="testuser", data_dir=tmp_path)
-        saved = json.loads((tmp_path / "users" / "testuser" / "trips" / "test-805-roundtrip.json").read_text())
+        saved = json.loads((tmp_path / "users" / "testuser" / "briefings" / "test-805-roundtrip.json").read_text())
         pause = next(s for s in saved["stages"] if s["id"] == "T2-pause")
         assert pause["waypoints"] == []

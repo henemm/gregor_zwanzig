@@ -20,7 +20,7 @@ func TestLoadTrip_LegacyJSONCoercesNilAlertRulesToEmpty(t *testing.T) {
 	tmpDir := t.TempDir()
 	s := New(tmpDir, "test")
 
-	tripDir := filepath.Join(tmpDir, "users", "test", "trips")
+	tripDir := filepath.Join(tmpDir, "users", "test", "briefings")
 	if err := os.MkdirAll(tripDir, 0755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestLoadTrip_PreservesExistingAlertRules(t *testing.T) {
 	tmpDir := t.TempDir()
 	s := New(tmpDir, "test")
 
-	tripDir := filepath.Join(tmpDir, "users", "test", "trips")
+	tripDir := filepath.Join(tmpDir, "users", "test", "briefings")
 	if err := os.MkdirAll(tripDir, 0755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestLoadTrip_MarshalAfterLoadProducesEmptyArrayNotNull(t *testing.T) {
 	tmpDir := t.TempDir()
 	s := New(tmpDir, "test")
 
-	tripDir := filepath.Join(tmpDir, "users", "test", "trips")
+	tripDir := filepath.Join(tmpDir, "users", "test", "briefings")
 	if err := os.MkdirAll(tripDir, 0755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}

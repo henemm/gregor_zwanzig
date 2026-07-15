@@ -107,7 +107,11 @@ func deriveFlatFields(trip *model.Trip) {
 }
 
 func (s *Store) LoadTrips() ([]model.Trip, error) {
-	dir := s.TripsDir()
+	// Issue #1250 Scheibe 7a: Cutover route -> briefings/ (ADR-0023, KL-7).
+	// briefingsDir() traegt sowohl route- als auch vergleich-Eintraege (S5-
+	// Migration) -- nur kind=="route" (bzw. leer bei unmigriertem Altbestand)
+	// sind Trips, kind=="vergleich" wird uebersprungen (AC-25/AC-30).
+	dir := s.briefingsDir()
 
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -129,6 +133,9 @@ func (s *Store) LoadTrips() ([]model.Trip, error) {
 		var trip model.Trip
 		if err := json.Unmarshal(data, &trip); err != nil {
 			log.Printf("skip %s: json error: %v", entry.Name(), err)
+			continue
+		}
+		if trip.Kind == "vergleich" {
 			continue
 		}
 
@@ -153,7 +160,8 @@ func (s *Store) LoadTrips() ([]model.Trip, error) {
 }
 
 func (s *Store) LoadTrip(id string) (*model.Trip, error) {
-	path := filepath.Join(s.TripsDir(), id+".json")
+	// Issue #1250 Scheibe 7a: Cutover route -> briefings/ (ADR-0023, KL-7).
+	path := filepath.Join(s.briefingsDir(), id+".json")
 
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -166,6 +174,10 @@ func (s *Store) LoadTrip(id string) (*model.Trip, error) {
 	var trip model.Trip
 	if err := json.Unmarshal(data, &trip); err != nil {
 		return nil, err
+	}
+	if trip.Kind == "vergleich" {
+		// briefingsDir() traegt auch ComparePresets (S5-Migration) -- kein Trip.
+		return nil, nil
 	}
 
 	// Issue #1244 F002: Read-Path-Coercion symmetrisch zu SaveTrip, für ALLE
@@ -188,7 +200,9 @@ func (s *Store) LoadTrip(id string) (*model.Trip, error) {
 // pointer parameter makes the normalization visible to every caller that
 // holds the same trip afterwards.
 func (s *Store) SaveTrip(trip *model.Trip) error {
-	dir := s.TripsDir()
+	// Issue #1250 Scheibe 7a: Cutover route -> briefings/ (ADR-0023, KL-7).
+	// trips/<id>.json wird NICHT mehr angefasst (Rollback-Faehigkeit, AC-26).
+	dir := s.briefingsDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
@@ -215,6 +229,11 @@ func (s *Store) SaveTrip(trip *model.Trip) error {
 		model.ComputeStageArrivals(&trip.Stages[i], speeds)
 	}
 
+	// Issue #1250 Scheibe 7a (AC-26): jede Go-SaveTrip-Schreiboperation ist
+	// per Definition eine route-Entitaet (Go-Store kennt keine Presets) --
+	// kind wird unbedingt gesetzt, unabhaengig vom Vorzustand des Aufrufers.
+	trip.Kind = "route"
+
 	data, err := json.MarshalIndent(trip, "", "  ")
 	if err != nil {
 		return err
@@ -224,7 +243,24 @@ func (s *Store) SaveTrip(trip *model.Trip) error {
 }
 
 func (s *Store) DeleteTrip(id string) error {
-	path := filepath.Join(s.TripsDir(), id+".json")
+	// Issue #1250 Scheibe 7a: Cutover route -> briefings/ (ADR-0023, KL-7).
+	path := filepath.Join(s.briefingsDir(), id+".json")
+
+	// Adversary F006: briefingsDir() also holds ComparePresets (kind=
+	// "vergleich", Scheibe 5 migration) -- a Trip-delete must never remove
+	// one, even if a Preset happens to share the same id as the requested
+	// Trip (analog LoadTrip's kind guard). A corrupt/unreadable-as-JSON file
+	// cannot be confirmed as a Preset either, so it falls through to delete
+	// (matches the pre-Cutover fail-open behavior for garbage files).
+	if data, rerr := os.ReadFile(path); rerr == nil {
+		var probe struct {
+			Kind string `json:"kind"`
+		}
+		if json.Unmarshal(data, &probe) == nil && probe.Kind == "vergleich" {
+			return nil
+		}
+	}
+
 	err := os.Remove(path)
 	if os.IsNotExist(err) {
 		return nil

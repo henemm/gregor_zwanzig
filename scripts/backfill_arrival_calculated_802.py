@@ -37,9 +37,12 @@ def backfill_user(user_id: str, data_dir: Optional[Path] = None) -> dict:
         # Standard-Pfad relativ zum Projektroot
         data_dir = Path(__file__).parent.parent / "data"
 
-    trips_dir = Path(data_dir) / "users" / user_id / "trips"
+    # Issue #1250 Scheibe 7a: load_trip/save_trip lesen/schreiben briefings/
+    # statt trips/ -- die Enumeration muss von dort ausgehen, sonst findet
+    # load_trip die per Dateiname aufgezaehlten IDs nicht mehr (stiller No-Op).
+    trips_dir = Path(data_dir) / "users" / user_id / "briefings"
     if not trips_dir.exists():
-        logger.info("Kein Trips-Verzeichnis für Nutzer %s: %s", user_id, trips_dir)
+        logger.info("Kein Briefings-Verzeichnis für Nutzer %s: %s", user_id, trips_dir)
         return {"trips_updated": 0, "trips_total": 0}
 
     trip_files = list(trips_dir.glob("*.json"))
@@ -71,7 +74,7 @@ def backfill_user_dry_run(user_id: str, data_dir: Optional[Path] = None) -> list
     if data_dir is None:
         data_dir = Path(__file__).parent.parent / "data"
 
-    trips_dir = Path(data_dir) / "users" / user_id / "trips"
+    trips_dir = Path(data_dir) / "users" / user_id / "briefings"
     if not trips_dir.exists():
         return []
     return [f.stem for f in trips_dir.glob("*.json")]

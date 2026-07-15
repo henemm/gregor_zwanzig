@@ -181,7 +181,7 @@ def test_end_date_not_stale_after_stages_cleared_to_empty(tmp_path):
     trip = load_trip_from_dict(d)
     save_trip(trip, user_id="testuser-1250-s4-stale", data_dir=tmp_path)
 
-    trip_file = tmp_path / "users" / "testuser-1250-s4-stale" / "trips" / f"{trip.id}.json"
+    trip_file = tmp_path / "users" / "testuser-1250-s4-stale" / "briefings" / f"{trip.id}.json"
     saved_full = json.loads(trip_file.read_text())
     assert saved_full["end_date"] == "2026-07-12"  # Sanity vor dem Leeren
 
@@ -215,7 +215,7 @@ def test_flat_channel_fields_not_stale_after_report_config_removed(tmp_path):
     trip = load_trip_from_dict(d)
     save_trip(trip, user_id="testuser-1250-s4-rc-removed", data_dir=tmp_path)
 
-    trip_file = tmp_path / "users" / "testuser-1250-s4-rc-removed" / "trips" / f"{trip.id}.json"
+    trip_file = tmp_path / "users" / "testuser-1250-s4-rc-removed" / "briefings" / f"{trip.id}.json"
     saved_full = json.loads(trip_file.read_text())
     assert saved_full["send_sms"] is True  # Sanity vor dem Entfernen
 

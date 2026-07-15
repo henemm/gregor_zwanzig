@@ -143,12 +143,13 @@ func TestTripHandler_GetOnUnmigratedLegacyFile_ResponseHasEmptyLists(t *testing.
 	}
 }
 
-// writeLegacyTripFile writes a raw JSON file directly to the trips dir,
-// bypassing SaveTrip entirely — simulates a trip persisted before this fix
-// (or before any coercion existed at all).
-func writeLegacyTripFile(t *testing.T, s interface{ TripsDir() string }, id, rawJSON string) {
+// writeLegacyTripFile writes a raw JSON file directly to the briefings dir
+// (Issue #1250 Scheibe 7a: LoadTrip/SaveTrip read/write briefingsDir(), not
+// TripsDir() anymore), bypassing SaveTrip entirely — simulates a trip
+// persisted before this fix (or before any coercion existed at all).
+func writeLegacyTripFile(t *testing.T, s interface{ BriefingsDir() string }, id, rawJSON string) {
 	t.Helper()
-	dir := s.TripsDir()
+	dir := s.BriefingsDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
