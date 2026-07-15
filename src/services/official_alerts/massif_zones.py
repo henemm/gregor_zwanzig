@@ -38,6 +38,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from services.official_alerts.geo_ray_cast import _point_in_ring
+
 logger = logging.getLogger("massif_zones")
 
 _DATA_PATH = Path(__file__).resolve().parent / "data" / "massif_polygons.json"
@@ -74,25 +76,6 @@ def _load_massifs(path: Path = _DATA_PATH) -> list[Massif]:
 
 
 MASSIFS: list[Massif] = _load_massifs()
-
-
-def _point_in_ring(lat: float, lon: float, ring: list[tuple[float, float]]) -> bool:
-    """Reines Ray-Casting (Jordan-Kurven-Test), Standardlib, keine Dependency.
-
-    `ring` ist eine Liste von (lon, lat)-Punkten (GeoJSON-Konvention). Zaehlt,
-    wie oft ein horizontaler Strahl vom Testpunkt nach rechts die Ring-Kanten
-    schneidet — ungerade Anzahl = innerhalb.
-    """
-    inside = False
-    n = len(ring)
-    j = n - 1
-    for i in range(n):
-        xi, yi = ring[i]
-        xj, yj = ring[j]
-        if (yi > lat) != (yj > lat) and lon < (xj - xi) * (lat - yi) / (yj - yi) + xi:
-            inside = not inside
-        j = i
-    return inside
 
 
 def massifs_at(lat: float, lon: float) -> list[Massif]:

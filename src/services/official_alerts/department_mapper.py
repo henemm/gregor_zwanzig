@@ -1,19 +1,46 @@
-"""Statische Département-Zentroid-Tabelle + Nächste-Nachbar-Lookup (Issue #1035).
+"""Département-Zuordnung: Point-in-Polygon + Nächste-Nachbar-Fallback (Issue #1254).
+
+`lookup_department(lat, lon)` prüft zuerst per Point-in-Polygon gegen die
+gebündelten echten Département-Grenzen (`data/department_polygons.json`,
+analog `massif_zones.py`, Issue #1037). Das behebt Fehlzuordnungen an
+exzentrischen Rändern (z.B. Draguignan/Fréjus im Département Var, dessen
+Präfektur Toulon im Südwest-Eck liegt — die frühere reine
+Nächster-Zentroid-Näherung ordnete diese Orte faelschlich Nachbar-Départements
+zu). Nur wenn kein Polygon trifft (oder die Datei fehlt/leer ist), greift die
+bisherige euklidische Nächster-Nachbar-Suche über ``DEPARTMENT_CENTROIDS`` als
+Fallback — unverändert, deckt Rundungslücken/Küstenpunkte ab.
+
+Datenherkunft `department_polygons.json` (einmalig offline erzeugt, Scratch-venv
+AUSSERHALB des Projekts, analog `massif_zones.py`-Rezept):
+1. Quelle: `gregoiredavid/france-geojson` `departements.geojson`
+   (Property `properties.code` = Département-Code, Korsika "2A"/"2B").
+2. Scratch-venv: `python3 -m venv /tmp/geo-venv && pip install shapely`.
+3. Je Feature: `shapely.geometry.shape(geom).simplify(0.005, preserve_topology=True)`,
+   je (Multi)Polygon Exterior-Ring UND Interior-Ringe (Holes) gesammelt —
+   Holes sind fuer Enklaven (Issue #1254 AC-8, Enclave des Papes: 84-Exklave
+   als Loch in 26) zwingend noetig.
+4. Ausgabe: Liste von
+   `{"code": "26", "polygons": [{"exterior": [[lon,lat],...], "holes": [[[lon,lat],...], ...]}, ...]}`.
 
 Öffentliche Näherungs-Zentroide (Präfektur-Koordinaten) für die volle
 französische Metropole (Départements 01–95, Korsika als "2A"/"2B" statt "20").
 Keine Sonderfall-Logik: Korsika sind zwei ganz normale Tabellenzeilen.
 
-``lookup_department(lat, lon)`` sucht per euklidischer Nächster-Nachbar-Distanz
-den passenden Code — kein Geo-Package. Für Vigilance-Granularität (selbst nur
-Département-genau) ausreichend; an Grenzen sind seltene Fehlnachbarn möglich
-(siehe Spec "Known Limitations").
-
-SPEC: docs/specs/modules/issue_1035_vigilance_source.md
+SPEC: docs/specs/modules/issue_1254_department_boundaries.md
+      docs/specs/modules/issue_1035_vigilance_source.md (Ursprungs-Zentroide)
 """
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple
+import json
+import logging
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+from services.official_alerts.geo_ray_cast import _point_in_ring
+
+logger = logging.getLogger("department_mapper")
+
+_DATA_PATH = Path(__file__).resolve().parent / "data" / "department_polygons.json"
 
 # Département-Code -> (lat, lon) Näherungs-Zentroid (Präfektur-Koordinaten).
 DEPARTMENT_CENTROIDS: Dict[str, Tuple[float, float]] = {
@@ -116,10 +143,44 @@ DEPARTMENT_CENTROIDS: Dict[str, Tuple[float, float]] = {
 }
 
 
-def lookup_department(lat: float, lon: float) -> Optional[str]:
-    """Ermittelt den Département-Code des nächstgelegenen Zentroids.
+def _load_department_polygons(path: Path = _DATA_PATH) -> List[dict]:
+    """Laedt die gebündelten Département-Polygone. Fail-soft (Issue #1254,
+    analog `massif_zones._load_massifs`): fehlt/kaputt die Datei, wird eine
+    Warnung geloggt und [] geliefert — NIE ein Raise, das den Import von
+    `services.official_alerts` mitreissen wuerde.
 
-    Reine euklidische Nächste-Nachbar-Suche über ``DEPARTMENT_CENTROIDS``.
+    Je Département eine Liste von Polygonen, je Polygon Exterior-Ring UND
+    Interior-Ringe (Holes) getrennt (Issue #1254 AC-8, Enklaven-Behandlung).
+    """
+    try:
+        raw = json.loads(path.read_text())
+        entries = []
+        for entry in raw:
+            polygons = []
+            for poly in entry["polygons"]:
+                exterior = [(float(pt[0]), float(pt[1])) for pt in poly["exterior"]]
+                holes = [
+                    [(float(pt[0]), float(pt[1])) for pt in hole]
+                    for hole in poly.get("holes", [])
+                ]
+                polygons.append({"exterior": exterior, "holes": holes})
+            entries.append({"code": entry["code"], "polygons": polygons})
+        return entries
+    except Exception:
+        logger.warning(
+            "department_mapper: Polygon-Daten nicht ladbar (%s) — falle auf "
+            "Nächster-Nachbar-Zentroid zurück",
+            path, exc_info=True,
+        )
+        return []
+
+
+_DEPARTMENT_POLYGONS: List[dict] = _load_department_polygons()
+
+
+def _nearest_centroid(lat: float, lon: float) -> Optional[str]:
+    """Reine euklidische Nächste-Nachbar-Suche über ``DEPARTMENT_CENTROIDS``.
+
     Gibt ``None`` nur zurück, wenn die Tabelle leer wäre (praktisch nie).
     """
     best_code: Optional[str] = None
@@ -130,3 +191,24 @@ def lookup_department(lat: float, lon: float) -> Optional[str]:
             best_dist = dist
             best_code = code
     return best_code
+
+
+def lookup_department(lat: float, lon: float) -> Optional[str]:
+    """Ermittelt den Département-Code einer Koordinate.
+
+    Schritt 1: Point-in-Polygon gegen die echten Département-Grenzen
+    (`_DEPARTMENT_POLYGONS`) — erster Treffer gewinnt. Ein Polygon matcht,
+    wenn der Punkt im Exterior-Ring liegt UND in KEINEM seiner Holes
+    (Issue #1254 AC-8: Enklaven wie die Enclave des Papes — 84-Exklave als
+    Loch im 26-Polygon — duerfen nicht faelschlich dem umschliessenden
+    Département zugerechnet werden).
+    Schritt 2 (Fallback): kein Treffer oder leere Polygonliste → bestehende
+    Nächster-Nachbar-Zentroid-Suche über ``DEPARTMENT_CENTROIDS``.
+    """
+    for entry in _DEPARTMENT_POLYGONS:
+        for poly in entry["polygons"]:
+            if _point_in_ring(lat, lon, poly["exterior"]) and not any(
+                _point_in_ring(lat, lon, hole) for hole in poly["holes"]
+            ):
+                return entry["code"]
+    return _nearest_centroid(lat, lon)
