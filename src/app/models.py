@@ -354,6 +354,9 @@ class SegmentWeatherSummary:
     dewpoint_avg_c: Optional[float] = None
     pressure_avg_hpa: Optional[float] = None
     wind_chill_min_c: Optional[float] = None
+    # Issue #1135: MAX-Pendant zu wind_chill_min_c — gefuehlte Hoechsttemperatur,
+    # Grundlage fuer das Hitzewarnungs-Plausibilitaets-Gate im Briefing-Pfad.
+    wind_chill_max_c: Optional[float] = None
     snow_depth_cm: Optional[float] = None
     freezing_level_m: Optional[int] = None
 

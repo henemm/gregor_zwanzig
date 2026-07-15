@@ -731,6 +731,7 @@ class WeatherMetricsService:
         dewpoint_avg = self._compute_dewpoint(timeseries)
         pressure_avg = self._compute_pressure(timeseries)
         wind_chill_min = self._compute_wind_chill(timeseries)
+        wind_chill_max = self._compute_wind_chill_max(timeseries)
         snow_depth = self._compute_snow_depth(timeseries)
         freezing_level = self._compute_freezing_level(timeseries)
         pop_max = self._compute_pop(timeseries)
@@ -762,6 +763,7 @@ class WeatherMetricsService:
             dewpoint_avg_c=dewpoint_avg,
             pressure_avg_hpa=pressure_avg,
             wind_chill_min_c=wind_chill_min,
+            wind_chill_max_c=wind_chill_max,
             snow_depth_cm=snow_depth,
             freezing_level_m=freezing_level,
             pop_max_pct=pop_max,
@@ -779,6 +781,7 @@ class WeatherMetricsService:
                 "dewpoint_avg_c": "avg",
                 "pressure_avg_hpa": "avg",
                 "wind_chill_min_c": "min",
+                "wind_chill_max_c": "max",
                 "snow_depth_cm": "max",
                 "freezing_level_m": "avg",
                 "pop_max_pct": "max",
@@ -819,6 +822,14 @@ class WeatherMetricsService:
             dp.wind_chill_c for dp in timeseries.data if dp.wind_chill_c is not None
         ]
         return min(wind_chills) if wind_chills else None
+
+    def _compute_wind_chill_max(self, timeseries: NormalizedTimeseries) -> Optional[float]:
+        """Compute wind-chill MAX. Returns wind_chill_max_c (Issue #1135:
+        Grundlage fuer das Hitzewarnungs-Plausibilitaets-Gate)."""
+        wind_chills = [
+            dp.wind_chill_c for dp in timeseries.data if dp.wind_chill_c is not None
+        ]
+        return max(wind_chills) if wind_chills else None
 
     def _compute_snow_depth(self, timeseries: NormalizedTimeseries) -> Optional[float]:
         """Compute snow-depth MAX. Returns snow_depth_cm (optional, winter)."""

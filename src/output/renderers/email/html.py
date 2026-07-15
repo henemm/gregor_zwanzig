@@ -33,9 +33,16 @@ from src.output.renderers.email.helpers import (
     shorten_stage_name, visible_cols,
 )
 from src.output.renderers.alert.official_alerts import (
-    OfficialAlertNotice, dedupe_official_alerts, format_segment_reference,
-    official_alert_source_label, render_official_alerts_html, render_warn_block,
+    OfficialAlertNotice, _bundle_by_hazard_level, dedupe_official_alerts,
+    format_segment_reference, official_alert_source_label,
+    render_official_alerts_html, render_warn_block,
 )
+
+# Issue #1135: Plausibilitaets-Gate fuer amtliche Hitzewarnungen. Unter dieser
+# gefuehlt-max-Schwelle widerspricht die Warnung klar der eigenen Segment-
+# Prognose und wird im Briefing ausgeblendet (Fail-safe: fehlende Daten =
+# None -> NICHT unterdruecken).
+HEAT_PLAUSIBILITY_MIN_C = 25.0
 
 # `render_official_alerts_html` bleibt hier gebunden, auch wenn der Trip-Pfad
 # ab Issue #1216 den embedded WarnBlock nutzt: test_issue_1087 beweist per
@@ -1429,20 +1436,32 @@ def render_html(
         (alert, [str(seg.segment.segment_id)])
         for seg in segments
         for alert in (getattr(seg, "official_alerts", None) or [])
+        # Issue #1135 (AC-3..AC-6): Plausibilitaets-Gate NUR fuer extreme_heat.
+        # wind_chill_max_c fehlt (None) -> Fail-safe, nie unterdruecken.
+        if not (
+            alert.hazard == "extreme_heat"
+            and getattr(seg.aggregated, "wind_chill_max_c", None) is not None
+            and seg.aggregated.wind_chill_max_c < HEAT_PLAUSIBILITY_MIN_C
+        )
     ]
-    _deduped = dedupe_official_alerts(_tagged)
+    # Issue #1135 (AC-1/AC-2): nach der Identitaets-Dedup zusaetzlich Stufe-2-
+    # Buendelung ueber Departements hinweg (analog Standalone-Alarm-Pfad
+    # `build_official_alert_notices`) — gleiche Gefahr+Stufe+Gueltigkeit ueber
+    # mehrere Regionen -> EINE Karte statt mehrerer optisch identischer.
+    _deduped = _bundle_by_hazard_level(dedupe_official_alerts(_tagged))
     # Issue #1216: geteilter embedded WarnBlock (`.wb`-Struktur) statt des flachen
     # Badge-Streifens; wird ganz oben im Body (nach Header, VOR Tageslage)
     # platziert. Segment-Bezug -> Route-Chip je Warnung.
     _warn_notices = []
-    for _a, _sids in _deduped:
+    for _a, _sids, _regions in _deduped:
         _chip = format_segment_reference(_sids) if _sids else ""
         _warn_notices.append(OfficialAlertNotice(
             alert=_a, scope_label=_chip, sms_scope="",
             affected_chips=[_chip] if _chip else [], free_chips=[],
+            regions=_regions,
         ))
     if _warn_notices:
-        _leading = max((a for a, _ in _deduped), key=lambda a: a.level)
+        _leading = max((a for a, _, _ in _deduped), key=lambda a: a.level)
         warn_block_html = render_warn_block(
             _warn_notices, variant="embedded",
             source_label=official_alert_source_label(_leading.source),

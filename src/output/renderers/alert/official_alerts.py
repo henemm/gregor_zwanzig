@@ -1210,6 +1210,7 @@ def _render_warn_block_embedded(
     from output.renderers.email.design_tokens import (
         FONT_UI, G_ALERT_L2, G_ALERT_L3, G_ALERT_L4, G_INK, G_SUCCESS,
     )
+    from services.official_alerts.fr_departments import department_name
 
     if not notices:
         return ""
@@ -1310,6 +1311,26 @@ def _render_warn_block_embedded(
                 f'monospace;font-size:12px;color:#6b6962;margin-right:8px;">'
                 f'{_format_validity(nt.alert, tz)}</span>'
             )
+        # F001 (Adversary, HIGH, #1135 Nachbesserung): der Embedded-Renderer
+        # (Trip-Briefing-Pfad) nannte bisher nur die Segment-/Umfang-Chips,
+        # NIE die betroffenen Departements -- `nt.regions` (alle Regionen des
+        # Buendels, s. `_bundle_by_hazard_level`) wurde hier nie gelesen.
+        # Codes werden ueber `department_name()` in Namen uebersetzt (AC-1
+        # verlangt Namen, nicht Codes). Fallback auf `alert.region_label`
+        # (Alt-Aufrufer/handgebaute Notices ohne `regions`); ist beides leer
+        # (z.B. Massiv-Sperren ohne Departement-Bezug), entfaellt die Zeile
+        # ganz -- Standalone-Pfad bleibt unberuehrt (eigene Funktion/Logik).
+        region_codes = nt.regions or (
+            (nt.alert.region_label,) if nt.alert.region_label else ()
+        )
+        region_line = ""
+        if region_codes:
+            region_names = [department_name(c) for c in region_codes]
+            region_line = (
+                f'<div class="wb-region" style="font-size:12px;'
+                f'color:#6b6962;margin-top:2px;">'
+                f'{_html.escape(", ".join(region_names))}</div>'
+            )
         items.append(
             f'<div class="wb-item" style="margin:0 0 7px;line-height:1.5;">'
             f'{meter}{lvl}'
@@ -1317,6 +1338,7 @@ def _render_warn_block_embedded(
             f'color:{G_INK};margin-right:8px;">{_html.escape(type_display)}</span>'
             f'{when}'
             f'<span class="wb-route">{chips}</span>'
+            f'{region_line}'
             f'</div>'
         )
 

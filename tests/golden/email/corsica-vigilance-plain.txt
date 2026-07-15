@@ -16,7 +16,7 @@ Corsica E5: 18–32°C, ⛅, mäßiger Regen bis 10:00, trocken ab 11:00, mäßi
   Sonne 180 min
 
 ━━ Amtliche Warnungen ━━
-  ⚠️ Amtliche Warnung: Extreme Hitze
+  ⚠️ Amtliche Warnung: Extreme Hitze (Sa 11.07. · 12:00–20:00)
 
 ━━ Segment 1: km 0.0–0.0 | 10:00–15:00 | ↑400m → 1200m ━━
   Time   Temp   TmpMin   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun 
