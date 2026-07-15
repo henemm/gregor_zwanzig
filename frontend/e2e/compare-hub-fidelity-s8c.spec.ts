@@ -287,7 +287,11 @@ test.describe('Issue #1256 S8c (AC-5): Versand-SummaryCard Draft-Sonderfall', ()
 		const panel = page.locator('[data-testid="compare-detail-panel-uebersicht"]');
 		await expect(panel).toBeVisible({ timeout: 10_000 });
 		await expect(panel.getByText('Noch nicht geplant')).toHaveCount(0);
-		await expect(panel.getByText('nächster Versand')).toBeVisible();
+		// Nicht auf "nächster Versand" allein matchen — das trifft (case-
+		// insensitiv) auch die Monitoring-Stat-Überschrift "Nächster Versand"
+		// im selben Panel (Strict-Mode-Kollision, Staging-Befund). Regex grenzt
+		// auf die Versand-Karten-Copy ein ("Briefings ... · nächster Versand ...").
+		await expect(panel.getByText(/Briefings .*· nächster Versand/)).toBeVisible();
 	});
 });
 
