@@ -108,6 +108,23 @@ export function deriveStatusWithScheduleOverride(
 	});
 }
 
+/**
+ * Issue #1250 Scheibe 3 (AC-12): Hub-Hinweis "Laufzeit überschritten".
+ *
+ * `true` gdw. das Preset per Auto-Pause pausiert wurde (`paused_at` gesetzt)
+ * UND ein `end_date` traegt, das (datumsmaessig, ohne Uhrzeit) vor heute
+ * liegt. Rein abgeleitet, kein eigenes Backend-Feld (Design-Entscheidung
+ * docs/context/feat-1250-s3-auto-pause.md).
+ */
+export function isRuntimeExceeded(p: ComparePreset): boolean {
+	if (!p.paused_at || !p.end_date) return false;
+	const end = new Date(`${p.end_date}T00:00:00`);
+	if (isNaN(end.getTime())) return false;
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	return end.getTime() < today.getTime();
+}
+
 /** ComparePreset → "N Orte" */
 export function presetLocationsLabel(p: ComparePreset): string {
 	return `${p.location_ids.length} ${p.location_ids.length === 1 ? 'Ort' : 'Orte'}`;

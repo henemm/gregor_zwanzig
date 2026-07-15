@@ -14,7 +14,8 @@
 	import {
 		deriveStatusWithScheduleOverride,
 		presetProfileLabel,
-		compareLifecycleActions
+		compareLifecycleActions,
+		isRuntimeExceeded
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { page } from '$app/state';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
@@ -43,6 +44,9 @@
 	}
 
 	let status = $derived(deriveStatusWithScheduleOverride(data.preset, scheduleOverride));
+	// Issue #1250 Scheibe 3 (AC-12): Hub-Hinweis, wenn Auto-Pause wegen
+	// ueberschrittenem end_date gegriffen hat.
+	let runtimeExceeded = $derived(isRuntimeExceeded(data.preset));
 	// Adversary-Finding F001: geguardetes Profil-Label für die mobile Kontext-
 	// Unterzeile (Muster CompareTile.svelte:62) — leer bei unbekanntem/fehlendem profil.
 	let profileLabel = $derived(presetProfileLabel(data.preset.profil));
@@ -153,6 +157,9 @@
 			<div style="display: flex; align-items: center; gap: 12px">
 				<h1 style="font-size: 30px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.1; margin: 0">{data.preset.name}</h1>
 				<span style="flex-shrink: 0"><CompareStatusPill {status}/></span>
+				{#if runtimeExceeded}
+					<span data-testid="runtime-exceeded-hint" style="font-size: 12px; font-weight: 600; color: var(--g-bad)">Laufzeit überschritten</span>
+				{/if}
 			</div>
 			<!-- Issue #1256 S8c (AC-11): profileLabel statt rohem preset.profil,
 			     Leerfeld-Absicherung analog Mobile-Unterzeile unten (Soll: JSX:78-80). -->
@@ -197,6 +204,9 @@
 		<span class="flex-1 flex items-center gap-3 min-w-0">
 			<span class="font-semibold truncate">{data.preset.name}</span>
 			<span class="flex-shrink-0"><CompareStatusPill {status} /></span>
+			{#if runtimeExceeded}
+				<span data-testid="runtime-exceeded-hint" class="flex-shrink-0" style="font-size: 11px; font-weight: 600; color: var(--g-bad)">Laufzeit überschritten</span>
+			{/if}
 		</span>
 		<a
 			href="/compare/{data.preset.id}/edit"

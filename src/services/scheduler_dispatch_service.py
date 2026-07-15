@@ -58,6 +58,32 @@ def run_compare_presets_daily(
         logger.error("Failed to load compare_presets.json for %s: %s", user_id, e)
         return 0
 
+    # Issue #1250 Scheibe 3 (AC-10/AC-11/AC-12): Auto-Pause fuer Presets mit
+    # ueberschrittenem end_date. `presets_due_for_hour` VERBIRGT diese
+    # Kandidaten (compare_slot_scheduler.py Guard) — eigener Durchlauf ueber
+    # ALLE geladenen Presets, unabhaengig vom Faelligkeits-Slot-Loop unten.
+    now_iso = _datetime.utcnow().isoformat() + "Z"
+    for preset in presets:
+        if preset.get("archived_at"):
+            continue
+        if preset.get("paused_at") or preset.get("schedule") == "manual":
+            continue  # bereits pausiert -> idempotent, kein erneutes Schreiben
+        end_date_str = preset.get("end_date")
+        if not end_date_str:
+            continue
+        try:
+            expired = date.fromisoformat(end_date_str) < date.today()
+        except (ValueError, TypeError) as e:
+            logger.warning(
+                "Preset %s: korruptes end_date bei Auto-Pause-Pruefung, "
+                "wird uebersprungen: %s",
+                preset.get("id", "?"),
+                e,
+            )
+            continue
+        if expired:
+            save_compare_preset_pause(user_id, preset.get("id", ""), data_root, now_iso)
+
     if hour is None:
         from zoneinfo import ZoneInfo
 
@@ -122,6 +148,50 @@ def save_compare_preset_status(
         if entry.get("id") == preset_id:
             entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
             entry["top_ort_letzter_versand"] = top_ort
+            break
+
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            _json.dump(presets, f, indent=2, ensure_ascii=False)
+    except OSError as e:
+        logger.error("Failed to write compare_presets.json %s: %s", path, e)
+
+
+def save_compare_preset_pause(
+    user_id: str,
+    preset_id: str,
+    data_root: str | None = None,
+    now_iso: str | None = None,
+) -> None:
+    """Read-Modify-Write: schreibt den Auto-Pause-Zustand (Issue #1250 Scheibe 3).
+
+    Self-konsistente Pause-Repraesentation identisch zur manuellen Pause
+    (`schedule="manual"` + `previous_schedule`), damit sie die Go-
+    Normalisierung (`NormalizeComparePreset`) uebersteht. Merge, kein
+    Replace (BUG-DATALOSS-GR221) — alle anderen Felder bleiben erhalten.
+    """
+    if data_root is None:
+        data_root = "data"
+    if now_iso is None:
+        now_iso = _datetime.utcnow().isoformat() + "Z"
+
+    path = Path(data_root) / "users" / user_id / "compare_presets.json"
+    if not path.exists():
+        return
+
+    try:
+        presets = _json.loads(path.read_text(encoding="utf-8"))
+    except Exception as e:
+        logger.error("Failed to read compare_presets.json for pause update: %s", e)
+        return
+
+    for entry in presets:
+        if entry.get("id") == preset_id:
+            if entry.get("schedule") != "manual":
+                entry["previous_schedule"] = entry.get("schedule", "")
+                entry["schedule"] = "manual"
+            if not entry.get("paused_at"):
+                entry["paused_at"] = now_iso
             break
 
     try:
