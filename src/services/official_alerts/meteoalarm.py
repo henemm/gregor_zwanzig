@@ -222,7 +222,13 @@ def _get_cached_index(country: str) -> Optional[dict]:
             timeout=TIMEOUT,
         )
         resp.raise_for_status()
-        data = resp.json()
+        if resp.status_code == 204 or not resp.content.strip():
+            # 204/leerer Body ist der reguläre "keine Warnung"-Fall (z.B. Italien
+            # bei gutem Wetter), kein Fehler -- als leeres Ergebnis, nicht als
+            # Fehlschlag cachen (kein WARNING-Log, normale Erfolgs-TTL).
+            data: dict = {"features": []}
+        else:
+            data = resp.json()
     except Exception:
         logger.warning("MeteoAlarm-Index-Abruf fehlgeschlagen (%s)", country, exc_info=True)
         _index_cache[country] = {"data": None, "fetched_at": now, "ttl": FAILURE_CACHE_TTL}

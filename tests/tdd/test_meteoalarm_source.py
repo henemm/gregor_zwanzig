@@ -439,6 +439,72 @@ def test_ac5d_meteoalarm_fehlschlag_leert_andere_quelle_nicht():
             os.environ["GZ_METEOALARM_APIKEY"] = backup_env
 
 
+class _EmptyBody204Handler(http.server.BaseHTTPRequestHandler):
+    """Echter lokaler HTTP-Server (kein Mock der HTTP-Bibliothek): liefert
+    fuer JEDEN Pfad HTTP 204 (No Content) mit leerem Koerper -- so antwortet
+    ``api.meteoalarm.org`` real, wenn ein Land aktuell keine Warnungen hat."""
+
+    def do_GET(self):  # noqa: N802 - stdlib-Signatur
+        self.send_response(204)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def log_message(self, *_args):  # Testlauf-Output nicht zumuellen
+        pass
+
+
+def test_leerer_index_204_ist_kein_fehler(monkeypatch, caplog):
+    """GIVEN eine echte HTTP-Antwort (lokaler Test-Server) mit Status 204
+    und leerem Koerper (regulaerer "keine Warnung"-Fall bei MeteoAlarm),
+    WHEN ``_get_cached_index()`` diese verarbeitet, THEN liefert es ein
+    leeres, aber gueltiges Ergebnis OHNE Exception, cached es als ERFOLG
+    (300s-TTL, kein Failure-Cache) und loggt KEIN WARNING."""
+    from services.official_alerts import meteoalarm
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), _EmptyBody204Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-204")
+        monkeypatch.setattr(
+            meteoalarm, "METEOALARM_BASE_URL",
+            f"http://127.0.0.1:{server.server_port}",
+        )
+        meteoalarm._index_cache.pop("IT", None)
+
+        with caplog.at_level("WARNING", logger="meteoalarm"):
+            data = meteoalarm._get_cached_index("IT")
+
+        assert data == {"features": []}, (
+            f"204/leerer Body muss als leeres, gueltiges Ergebnis behandelt "
+            f"werden, erhalten: {data}"
+        )
+        assert not any(
+            "fehlgeschlagen" in rec.message for rec in caplog.records
+        ), "204/leerer Body ist der reguläre Fall, kein WARNING-Log erlaubt"
+
+        cache_entry = meteoalarm._index_cache["IT"]
+        assert cache_entry["ttl"] == meteoalarm.CACHE_TTL, (
+            f"204/leerer Body muss als ERFOLG gecacht werden (300s-TTL), "
+            f"nicht als Fehlschlag (60s), erhalten ttl={cache_entry['ttl']}"
+        )
+
+        # Zweiter Aufruf innerhalb der TTL darf keinen erneuten HTTP-Call
+        # ausloesen -- Server abschalten und pruefen, dass der Cache-Treffer
+        # trotzdem klappt (kein ConnectionError).
+        server.shutdown()
+        thread.join(timeout=2)
+        data_cached = meteoalarm._get_cached_index("IT")
+        assert data_cached == {"features": []}
+    finally:
+        meteoalarm._index_cache.pop("IT", None)
+        try:
+            server.shutdown()
+        except Exception:
+            pass
+        thread.join(timeout=2)
+
+
 # ---------------------------------------------------------------------------
 # AC-6: FR-Dedup-Regression -- dedupe_official_alerts() bleibt fuer
 # Frankreich-Quellen unveraendert (REGRESSIONS-WAECHTER, bewusst schon jetzt
