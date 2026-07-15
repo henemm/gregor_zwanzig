@@ -226,6 +226,7 @@ def send_one_compare_preset(
         plain_text_body=text_body,
         to=empfaenger,
         compare_hourly_enabled=opts.hourly_enabled,
+        mail_type="compare",  # Issue #1124: Compare-Marker-Header X-GZ-Mail-Type
     )
 
     # Issue #1169: Δ-Anker je Ort schreiben (ADR-0009 — Abweichung vom zuletzt
