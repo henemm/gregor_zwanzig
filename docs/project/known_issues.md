@@ -5,6 +5,26 @@
 >
 > Diese Datei bleibt als Detail-Referenz fuer Root-Cause-Analysen bestehen.
 
+## BUG-1257-ALERTVOCAB: Alarm-Regeln bei jedem Speichern gelöscht — zwei Vokabulare, kein Übersetzer
+
+**Status:** RESOLVED (2026-07-15) | **Severity:** High (Datenverlust) | **GitHub Issue:** #1257 | **Spec:** `docs/specs/modules/bug_1257_alert_metric_mapping.md`
+
+### Symptom
+
+0 von 15 Prod-Trips hatten `alert_rules`. Eine konfigurierte Alarm-Regel wurde bereits beim Anlegen/Speichern vernichtet, war nach dem Neuladen weg.
+
+### Root Cause
+
+Zwei getrennte Namenslisten für dieselben Wettergrößen ohne Übersetzer im Go-Persistenzpfad: Metrik-Katalog (`gust`, `precipitation`, `temperature`, `snowfall_limit`, `thunder`, `freezing_level`) vs. `AlertMetric` (`wind_gust`, `precipitation_sum`, `temperature_min/max`, `snow_line`, `thunder_level`). `ActiveAlertableMetricIDs()` (`internal/model/trip.go`) schlug die Katalog-`metric_id` **roh** in `AlertableMetrics` (Alarm-Vokabular) nach — Schnittmenge leer → immer leere Liste → `SyncAlertRules()` lieferte `[]` und verwarf bestehende Regeln bei **jedem** Save/Load. Die eigentliche Lehre: die Übersetzung zwischen zwei Einheiten wurde nie geprüft — die Naht-Tests (`alert_sync_test.go`, `store_809/817_test.go`, `weather_config_701_test.go`) übergaben durchweg das **Alarm**-Vokabular als display_config und maskierten den Fehler genau an der Naht.
+
+### Fix (Committed 2026-07-15, Workflow `fix-1257-alert-metric-mapping`)
+
+Explizite Vorwärts-Abbildung Katalog-ID → AlertMetric(s) in `internal/model/trip.go` (`catalogIDToAlertMetrics`), definiert als exakte Inverse der bereits existierenden Python-Bridge `_ALERT_METRIC_TO_CATALOG_ID`, gefiltert auf `AlertableMetrics`; `temperature`→{min,max}, `snowfall_limit`+`freezing_level`→{snow_line} (dedup). Die zwei divergenten Go-Pfade wurden zusammengelegt (`extractActiveMetricIDs` entfernt, Handler nutzt `model.ActiveAlertableMetricIDs`). Drift-Schutz: `tests/tdd/test_alert_metric_mapping_parity.py` prüft Go↔Python-Konsistenz. Maskierende Naht-Tests auf echte Katalog-IDs korrigiert. Rückwirkende Materialisierung (PO-Entscheidung) via idempotentem `MigrateAllTripsAlertRules` (`internal/store/migrate_1257.go`, Deploy-Schritt pro Host mit Backup).
+
+### Known Limitations
+
+Der Fix stellt Regeln über Save/Load wieder her (Round-Trip-Integrität) und behebt fälschliches Gate-Ausschließen — er schaltet **keine** neuen Alarme ein. Das eigentliche Alarm-Feuern läuft über den `metric_alert_levels`-Pfad (#809/#817), der `alert_rules.metric` nicht liest und bewusst unangetastet bleibt.
+
 ## BUG-1133-TESTDATA: Python-Tests verschmutzten den echten `data/users/`-Baum
 
 **Status:** RESOLVED (2026-07-09) | **Severity:** High | **GitHub Issue:** #1133 | **Spec:** `docs/specs/modules/issue_1133_testdata_cleanup.md`

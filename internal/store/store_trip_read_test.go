@@ -64,7 +64,7 @@ func TestLoadTrip_PreservesExistingAlertRules(t *testing.T) {
 		"stages": [],
 		"display_config": {
 			"metrics": [
-				{"metric_id": "wind_gust", "enabled": true}
+				{"metric_id": "gust", "enabled": true}
 			]
 		},
 		"alert_rules": [

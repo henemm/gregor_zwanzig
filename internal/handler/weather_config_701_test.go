@@ -31,8 +31,8 @@ func TestPutTripWeatherConfig_SyncsAlertRules(t *testing.T) {
 	r := chi.NewRouter()
 	r.Put("/api/trips/{id}/weather-config", PutTripWeatherConfigHandler(s))
 
-	// WeatherConfig mit wind_gust + precipitation_sum aktiv senden
-	body := `{"metrics":[{"metric_id":"wind_gust","enabled":true,"use_friendly_format":true,"horizons":{"today":true,"tomorrow":true,"day_after":true}},{"metric_id":"precipitation_sum","enabled":true,"use_friendly_format":true,"horizons":{"today":true,"tomorrow":true,"day_after":true}},{"metric_id":"temperature_change","enabled":true,"use_friendly_format":false,"horizons":{"today":true,"tomorrow":true,"day_after":true}}]}`
+	// WeatherConfig mit gust + precipitation aktiv senden (Issue #1257: echte Katalog-IDs)
+	body := `{"metrics":[{"metric_id":"gust","enabled":true,"use_friendly_format":true,"horizons":{"today":true,"tomorrow":true,"day_after":true}},{"metric_id":"precipitation","enabled":true,"use_friendly_format":true,"horizons":{"today":true,"tomorrow":true,"day_after":true}},{"metric_id":"temperature_change","enabled":true,"use_friendly_format":false,"horizons":{"today":true,"tomorrow":true,"day_after":true}}]}`
 	req := httptest.NewRequest("PUT", "/api/trips/trip-sync-test/weather-config", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -89,7 +89,7 @@ func TestPutTripWeatherConfig_PreservesExistingThreshold(t *testing.T) {
 		}},
 		DisplayConfig: map[string]interface{}{
 			"metrics": []interface{}{
-				map[string]interface{}{"metric_id": "wind_gust", "enabled": true},
+				map[string]interface{}{"metric_id": "gust", "enabled": true},
 			},
 		},
 		AlertRules: []model.AlertRule{
@@ -101,8 +101,8 @@ func TestPutTripWeatherConfig_PreservesExistingThreshold(t *testing.T) {
 	r := chi.NewRouter()
 	r.Put("/api/trips/{id}/weather-config", PutTripWeatherConfigHandler(s))
 
-	// wind_gust bleibt aktiv + snow_line NEU hinzugefügt
-	body := `{"metrics":[{"metric_id":"wind_gust","enabled":true,"use_friendly_format":true,"horizons":{"today":true,"tomorrow":true,"day_after":true}},{"metric_id":"snow_line","enabled":true,"use_friendly_format":false,"horizons":{"today":true,"tomorrow":true,"day_after":true}}]}`
+	// gust bleibt aktiv + snowfall_limit NEU hinzugefügt (Issue #1257: echte Katalog-IDs)
+	body := `{"metrics":[{"metric_id":"gust","enabled":true,"use_friendly_format":true,"horizons":{"today":true,"tomorrow":true,"day_after":true}},{"metric_id":"snowfall_limit","enabled":true,"use_friendly_format":false,"horizons":{"today":true,"tomorrow":true,"day_after":true}}]}`
 	req := httptest.NewRequest("PUT", "/api/trips/trip-preserve-test/weather-config", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -170,8 +170,8 @@ func TestPutTripWeatherConfig_TenantIsolation(t *testing.T) {
 	rA := chi.NewRouter()
 	rA.Put("/api/trips/{id}/weather-config", PutTripWeatherConfigHandler(sA))
 
-	// User A speichert wind_gust
-	bodyA := `{"metrics":[{"metric_id":"wind_gust","enabled":true,"use_friendly_format":true,"horizons":{"today":true,"tomorrow":true,"day_after":true}}]}`
+	// User A speichert gust (Issue #1257: echte Katalog-ID)
+	bodyA := `{"metrics":[{"metric_id":"gust","enabled":true,"use_friendly_format":true,"horizons":{"today":true,"tomorrow":true,"day_after":true}}]}`
 	reqA := httptest.NewRequest("PUT", "/api/trips/trip-user-a/weather-config", strings.NewReader(bodyA))
 	reqA.Header.Set("Content-Type", "application/json")
 	wA := httptest.NewRecorder()

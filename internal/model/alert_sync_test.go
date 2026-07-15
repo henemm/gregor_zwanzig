@@ -122,13 +122,16 @@ func TestSyncAlertRules_RemovesDeltaRules(t *testing.T) {
 	}
 }
 
-// Issue #812: ActiveAlertableMetricIDs dedupliziert Duplikat-metric_id
+// Issue #812/#1257: ActiveAlertableMetricIDs dedupliziert Duplikat-metric_id.
+// Nutzt ECHTE Katalog-IDs ("gust", "precipitation") statt Alarm-Vokabular —
+// Issue #1257 F005: die alte Fassung dieses Tests maskierte den Bug, weil sie
+// bereits AlertMetric-Werte als metric_id einspeiste.
 func TestActiveAlertableMetricIDsDeduplicated(t *testing.T) {
 	displayConfig := map[string]interface{}{
 		"metrics": []interface{}{
-			map[string]interface{}{"metric_id": "wind_gust", "enabled": true},
-			map[string]interface{}{"metric_id": "wind_gust", "enabled": true}, // Duplikat
-			map[string]interface{}{"metric_id": "precipitation_sum", "enabled": true},
+			map[string]interface{}{"metric_id": "gust", "enabled": true},
+			map[string]interface{}{"metric_id": "gust", "enabled": true}, // Duplikat
+			map[string]interface{}{"metric_id": "precipitation", "enabled": true},
 		},
 	}
 	ids := ActiveAlertableMetricIDs(displayConfig)

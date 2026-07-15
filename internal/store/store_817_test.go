@@ -58,7 +58,7 @@ func TestLoadTrip_817_MigratesAbsoluteRulesToDelta(t *testing.T) {
 				Severity:  model.AlertSeverityWarning,
 			},
 		},
-		DisplayConfig: displayConfigWithMetrics([]string{"wind_gust", "precipitation_sum"}, true),
+		DisplayConfig: displayConfigWithMetrics([]string{"gust", "precipitation"}, true), // Issue #1257: echte Katalog-IDs
 		ReportConfig: map[string]interface{}{
 			"send_email": true,
 			"channels":   []interface{}{"email"},
@@ -131,7 +131,7 @@ func TestSaveTrip_817_WritesDeltaRulesToDisk(t *testing.T) {
 				Severity:  model.AlertSeverityWarning,
 			},
 		},
-		DisplayConfig: displayConfigWithMetrics([]string{"wind_gust"}, true),
+		DisplayConfig: displayConfigWithMetrics([]string{"gust"}, true),
 	}
 
 	s := New(dataDir, "user-817-save")
@@ -179,7 +179,7 @@ func TestLoadTrip_817_MandantentrennungRegression(t *testing.T) {
 			{ID: "rule-a", Kind: model.AlertRuleKindAbsolute, Metric: model.AlertMetricWindGust,
 				Threshold: 50, Unit: "km/h", Enabled: true, Severity: model.AlertSeverityWarning},
 		},
-		DisplayConfig: displayConfigWithMetrics([]string{"wind_gust"}, true),
+		DisplayConfig: displayConfigWithMetrics([]string{"gust"}, true),
 	}
 	tripB := model.Trip{
 		ID:   "trip-b",
@@ -188,7 +188,7 @@ func TestLoadTrip_817_MandantentrennungRegression(t *testing.T) {
 			{ID: "rule-b", Kind: model.AlertRuleKindAbsolute, Metric: model.AlertMetricTemperatureMin,
 				Threshold: -5, Unit: "°C", Enabled: true, Severity: model.AlertSeverityWarning},
 		},
-		DisplayConfig: displayConfigWithMetrics([]string{"temperature_min"}, true),
+		DisplayConfig: displayConfigWithMetrics([]string{"temperature_cold"}, true), // Issue #1257: temperature_cold → NUR temperature_min
 	}
 
 	writeTripJSON(t, dataDir, "user-a-817", tripA)

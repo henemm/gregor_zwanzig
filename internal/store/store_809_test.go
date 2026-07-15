@@ -63,7 +63,7 @@ func TestLoadTrip_SelfHeal_CreatesAlertRulesFromMetrics(t *testing.T) {
 		ID:            "trip-legacy",
 		Name:          "Legacy Trip",
 		AlertRules:    []model.AlertRule{}, // leer — simuliert Bestandstrip vor #701
-		DisplayConfig: displayConfigWithMetrics([]string{"wind_gust"}, true),
+		DisplayConfig: displayConfigWithMetrics([]string{"gust"}, true),
 	}
 	writeTripJSON(t, dataDir, "user1", trip)
 
@@ -120,7 +120,7 @@ func TestSyncAlertRules_PreservesCustomThreshold(t *testing.T) {
 				Enabled:   true,
 			},
 		},
-		DisplayConfig: displayConfigWithMetrics([]string{"wind_gust"}, true),
+		DisplayConfig: displayConfigWithMetrics([]string{"gust"}, true),
 	}
 	writeTripJSON(t, dataDir, "user1", trip)
 
@@ -169,7 +169,7 @@ func TestSaveTrip_SyncsAlertRules(t *testing.T) {
 		ID:            "trip-save",
 		Name:          "Save Sync Trip",
 		AlertRules:    []model.AlertRule{}, // leer beim Speichern
-		DisplayConfig: displayConfigWithMetrics([]string{"wind_gust"}, true),
+		DisplayConfig: displayConfigWithMetrics([]string{"gust"}, true),
 	}
 
 	s := New(dataDir, "user1")
@@ -213,13 +213,13 @@ func TestLoadTrip_SelfHeal_TwoUsersIsolated(t *testing.T) {
 		ID:            "trip-A",
 		Name:          "User A Trip",
 		AlertRules:    []model.AlertRule{},
-		DisplayConfig: displayConfigWithMetrics([]string{"wind_gust"}, true),
+		DisplayConfig: displayConfigWithMetrics([]string{"gust"}, true),
 	}
 	tripB := model.Trip{
 		ID:            "trip-B",
 		Name:          "User B Trip",
 		AlertRules:    []model.AlertRule{},
-		DisplayConfig: displayConfigWithMetrics([]string{"temperature_max"}, true),
+		DisplayConfig: displayConfigWithMetrics([]string{"temperature"}, true),
 	}
 	writeTripJSON(t, dataDir, "user_a", tripA)
 	writeTripJSON(t, dataDir, "user_b", tripB)
@@ -288,7 +288,7 @@ func TestLoadTrip_SelfHeal_PreservesOtherFields(t *testing.T) {
 		AlertCooldownMinutes: &cooldown,
 		AlertQuietFrom:       &quietFrom,
 		AlertQuietTo:         &quietTo,
-		DisplayConfig:        displayConfigWithMetrics([]string{"wind_gust"}, true),
+		DisplayConfig:        displayConfigWithMetrics([]string{"gust"}, true),
 		ReportConfig: map[string]interface{}{
 			"send_email": true,
 		},
@@ -337,45 +337,45 @@ func TestLoadTrip_SelfHeal_PreservesOtherFields(t *testing.T) {
 
 // --- model.ActiveAlertableMetricIDs Tests ---
 
-// TestActiveAlertableMetricIDs_FiltersNonAlertable (SUPERSEDED #817):
+// TestActiveAlertableMetricIDs_FiltersNonAlertable (SUPERSEDED #817, #1257):
 // Issue #817: thunder_level ist jetzt alertable (delta-Schwelle sinnvoll).
-// Nur *_change-Metriken bleiben nicht-alertable.
+// Issue #1257: nutzt ECHTE Katalog-IDs statt Alarm-Vokabular — die alte
+// Fassung maskierte den Katalog↔AlertMetric-Mismatch-Bug.
 func TestActiveAlertableMetricIDs_FiltersNonAlertable(t *testing.T) {
 	cfg := displayConfigWithMetrics([]string{
-		"wind_gust",       // alertable (delta)
-		"temperature_max", // alertable (delta)
-		"thunder_level",   // SUPERSEDED #817: jetzt alertable (delta-Schwelle 1 Level)
-		"wind_change",     // NICHT alertable (*_change konzeptionell redundant, Folge-Issue)
+		"gust",        // → wind_gust (alertable)
+		"temperature", // → temperature_min + temperature_max (beide alertable)
+		"thunder",     // → thunder_level (alertable)
+		"wind",        // NICHT alertable (wind_change konzeptionell redundant, kein Eintrag in der Map)
 	}, true)
 
 	ids := model.ActiveAlertableMetricIDs(cfg)
 
-	// SUPERSEDED #817: thunder_level ist jetzt alertable → 3 IDs statt 2
-	want := map[string]bool{"wind_gust": true, "temperature_max": true, "thunder_level": true}
+	want := map[string]bool{"wind_gust": true, "temperature_min": true, "temperature_max": true, "thunder_level": true}
 	for _, id := range ids {
 		if !want[id] {
 			t.Errorf("unexpected non-alertable metric in result: %s", id)
 		}
 	}
-	if len(ids) != 3 {
-		t.Errorf("SUPERSEDED #817: expected 3 alertable IDs (incl. thunder_level), got %d: %v", len(ids), ids)
+	if len(ids) != 4 {
+		t.Errorf("Issue #1257: expected 4 alertable AlertMetric IDs, got %d: %v", len(ids), ids)
 	}
 }
 
 // TestActiveAlertableMetricIDs_IgnoresDisabled prüft: Deaktivierte Metriken werden
-// nicht in die ID-Liste aufgenommen.
+// nicht in die ID-Liste aufgenommen. Issue #1257: echte Katalog-IDs.
 func TestActiveAlertableMetricIDs_IgnoresDisabled(t *testing.T) {
 	cfg := map[string]interface{}{
 		"metrics": []interface{}{
-			map[string]interface{}{"metric_id": "wind_gust", "enabled": false},
-			map[string]interface{}{"metric_id": "temperature_max", "enabled": true},
+			map[string]interface{}{"metric_id": "gust", "enabled": false},
+			map[string]interface{}{"metric_id": "precipitation", "enabled": true},
 		},
 	}
 
 	ids := model.ActiveAlertableMetricIDs(cfg)
 
-	if len(ids) != 1 || ids[0] != "temperature_max" {
-		t.Errorf("expected only temperature_max (enabled), got: %v", ids)
+	if len(ids) != 1 || ids[0] != "precipitation_sum" {
+		t.Errorf("expected only precipitation_sum (enabled), got: %v", ids)
 	}
 }
 

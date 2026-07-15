@@ -68,7 +68,7 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 			trip.DisplayConfig[k] = v
 		}
 		// Sync alert_rules with active weather metrics (Issue #701)
-		activeIDs := extractActiveMetricIDs(cfg)
+		activeIDs := model.ActiveAlertableMetricIDs(trip.DisplayConfig)
 		trip.AlertRules = model.SyncAlertRules(trip.AlertRules, activeIDs)
 		if err := s.SaveTrip(trip); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -141,33 +141,10 @@ func PutLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
-// extractActiveMetricIDs reads cfg["metrics"] and returns IDs of all enabled=true metrics.
-func extractActiveMetricIDs(cfg map[string]interface{}) []string {
-	raw, ok := cfg["metrics"]
-	if !ok {
-		return nil
-	}
-	metrics, ok := raw.([]interface{})
-	if !ok {
-		return nil
-	}
-	var ids []string
-	for _, m := range metrics {
-		mm, ok := m.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		enabled, _ := mm["enabled"].(bool)
-		if !enabled {
-			continue
-		}
-		id, _ := mm["metric_id"].(string)
-		if id != "" {
-			ids = append(ids, id)
-		}
-	}
-	return ids
-}
+// Issue #1257: extractActiveMetricIDs entfernt — dupliziertes, kaputtes
+// zweites Mapping (roher Katalog-ID-Vergleich gegen AlertMetric-Vokabular,
+// matchte nie). PutTripWeatherConfigHandler nutzt jetzt zentral
+// model.ActiveAlertableMetricIDs (dieselbe Stelle wie store.SaveTrip/LoadTrip).
 
 // Issue #1250 Scheibe 0: Subscription Weather Config (GetSubscriptionWeatherConfigHandler,
 // PutSubscriptionWeatherConfigHandler) entfernt — Legacy-Drittstack CompareSubscription

@@ -172,11 +172,29 @@ var DefaultAlertThreshold = map[AlertMetric]struct {
 	AlertMetricSnowLine:         {1500, "m", AlertSeverityInfo},
 }
 
-// ActiveAlertableMetricIDs reads display_config["metrics"] and returns the IDs
-// of all enabled=true metrics that are contained in AlertableMetrics.
+// catalogIDToAlertMetrics is the forward mapping from metric-catalog IDs
+// (src/app/metric_catalog.py, e.g. "gust", "temperature") to the AlertMetric
+// value(s) they activate. Issue #1257: exact inverse of the Python bridge
+// _ALERT_METRIC_TO_CATALOG_ID (src/services/weather_change_detection.py),
+// filtered to AlertableMetrics — kept in sync via
+// tests/tdd/test_alert_metric_mapping_parity.py.
+var catalogIDToAlertMetrics = map[string][]AlertMetric{
+	"gust":             {AlertMetricWindGust},
+	"precipitation":    {AlertMetricPrecipitationSum},
+	"thunder":          {AlertMetricThunderLevel},
+	"temperature":      {AlertMetricTemperatureMin, AlertMetricTemperatureMax},
+	"temperature_cold": {AlertMetricTemperatureMin},
+	"snowfall_limit":   {AlertMetricSnowLine},
+	"freezing_level":   {AlertMetricSnowLine},
+}
+
+// ActiveAlertableMetricIDs reads display_config["metrics"], translates each
+// enabled=true catalog metric_id via catalogIDToAlertMetrics into the
+// AlertMetric vocabulary, and returns the deduplicated AlertMetric values
+// that are also contained in AlertableMetrics (safety net).
 // This allows store.SaveTrip and store.LoadTrip to call SyncAlertRules centrally
 // without importing the handler package (which would create an import cycle).
-// Issue #809.
+// Issue #809, forward-mapping fix Issue #1257.
 func ActiveAlertableMetricIDs(displayConfig map[string]interface{}) []string {
 	if displayConfig == nil {
 		return nil
@@ -189,7 +207,7 @@ func ActiveAlertableMetricIDs(displayConfig map[string]interface{}) []string {
 	if !ok {
 		return nil
 	}
-	seen := map[string]bool{}
+	seen := map[AlertMetric]bool{}
 	var ids []string
 	for _, m := range metrics {
 		mm, ok := m.(map[string]interface{})
@@ -200,16 +218,19 @@ func ActiveAlertableMetricIDs(displayConfig map[string]interface{}) []string {
 		if !enabled {
 			continue
 		}
-		id, _ := mm["metric_id"].(string)
-		if id == "" {
+		catalogID, _ := mm["metric_id"].(string)
+		if catalogID == "" {
 			continue
 		}
-		if seen[id] {
-			continue
-		}
-		if _, alertable := AlertableMetrics[AlertMetric(id)]; alertable {
-			seen[id] = true
-			ids = append(ids, id)
+		for _, alertMetric := range catalogIDToAlertMetrics[catalogID] {
+			if _, alertable := AlertableMetrics[alertMetric]; !alertable {
+				continue
+			}
+			if seen[alertMetric] {
+				continue
+			}
+			seen[alertMetric] = true
+			ids = append(ids, string(alertMetric))
 		}
 	}
 	return ids

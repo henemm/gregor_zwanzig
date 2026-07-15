@@ -101,6 +101,38 @@ _ALERT_METRIC_TO_CATALOG_ID: dict[AlertMetric, tuple[str, ...]] = {
 # _ALERT_METRIC_COMPARISON). Comparison wird nur für diese Metriken abgeleitet.
 _COMPARISON_EXCLUDED_METRICS: frozenset = frozenset({AlertMetric.VISIBILITY})
 
+# Issue #1257: Go-seitiges Alarm-Vokabular (AlertableMetrics in internal/model/trip.go),
+# gespiegelt hier als benannte Modul-Konstante, um die Vorwärts-Abbildung
+# (Katalog-ID → alarmfähige AlertMetric(s)) drift-sicher aus der bereits bestehenden
+# Rückwärts-Abbildung `_ALERT_METRIC_TO_CATALOG_ID` abzuleiten — keine hartcodierte
+# Zweit-Tabelle.
+_ALERTABLE_METRIC_VALUES: frozenset[str] = frozenset({
+    "wind_gust",
+    "precipitation_sum",
+    "temperature_min",
+    "temperature_max",
+    "snow_line",
+    "thunder_level",
+})
+
+
+def catalog_id_to_alert_metrics() -> dict[str, set[str]]:
+    """Vorwärts-Abbildung Katalog-ID → alarmfähige AlertMetric-Werte.
+
+    Exakte Inverse von `_ALERT_METRIC_TO_CATALOG_ID`, gefiltert auf das
+    alarmfähige Vokabular `_ALERTABLE_METRIC_VALUES` (Go: `AlertableMetrics`).
+    Behebt Issue #1257: der Go-Persistenzpfad braucht diese Richtung, um
+    Katalog-Metrik-IDs aus `display_config.metrics[]` in AlertMetric-IDs zu
+    übersetzen, bevor `alert_rules` synchronisiert werden.
+    """
+    result: dict[str, set[str]] = {}
+    for metric, catalog_ids in _ALERT_METRIC_TO_CATALOG_ID.items():
+        if metric.value not in _ALERTABLE_METRIC_VALUES:
+            continue
+        for catalog_id in catalog_ids:
+            result.setdefault(catalog_id, set()).add(metric.value)
+    return result
+
 
 def _build_alert_metric_comparison() -> dict[AlertMetric, str]:
     """Derive comparison direction from catalog cmp at module load.
