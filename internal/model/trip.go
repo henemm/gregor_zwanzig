@@ -134,6 +134,22 @@ type Trip struct {
 	// internal/store/migrate_1258.go), gesetzt = massgeblich fuer die
 	// Sofort-Alarm-Pipeline.
 	OfficialWarnings *OfficialWarningsConfig `json:"official_warnings,omitempty"`
+	// Issue #1250 Scheibe 4: additive flache Slot-/Kanal-Felder + EndDate,
+	// ABGELEITET aus ReportConfig/Stages bei jedem Load (store.normalizeTrip)
+	// — nicht autoritativ, ReportConfig bleibt die einzige Wahrheit fuer den
+	// Versand. Pointer-Muster analog OfficialAlertsEnabled: nil = (noch) nicht
+	// ableitbar (z.B. kein ReportConfig/keine Stages).
+	MorningTime    *string `json:"morning_time,omitempty"`
+	EveningTime    *string `json:"evening_time,omitempty"`
+	MorningEnabled *bool   `json:"morning_enabled,omitempty"`
+	EveningEnabled *bool   `json:"evening_enabled,omitempty"`
+	SendEmail      *bool   `json:"send_email,omitempty"`
+	SendSms        *bool   `json:"send_sms,omitempty"`
+	SendTelegram   *bool   `json:"send_telegram,omitempty"`
+	// EndDate — max(stage.date), ISO-normalisiert (analog Python @property
+	// trip.end_date). Kein Roundtrip-Verlustrisiko wie bei Corridors, da
+	// Struct-Feld (nicht Extra-Map).
+	EndDate *string `json:"end_date,omitempty"`
 }
 
 // OfficialWarningsConfig — Issue #1258, geteilt zwischen Trip und

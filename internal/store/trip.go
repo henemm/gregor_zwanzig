@@ -41,6 +41,69 @@ func normalizeTrip(trip *model.Trip) {
 	if trip.AlertRules == nil {
 		trip.AlertRules = []model.AlertRule{}
 	}
+
+	// Issue #1250 Scheibe 4: additive flache Slot-/Kanal-Felder + EndDate,
+	// bei JEDEM normalizeTrip-Lauf (Load UND Save) frisch aus ReportConfig/
+	// Stages ABGELEITET — nie stale. ReportConfig bleibt die einzige Wahrheit
+	// fuer den Versand, s. docs/context/feat-1250-s4-trip-konvergenz.md.
+	deriveFlatFields(trip)
+}
+
+// deriveFlatFields leitet additive, nicht-autoritative flache Slot-/Kanal-
+// Felder aus trip.ReportConfig sowie EndDate aus max(stage.date) ab
+// (Dual-Read, Issue #1250 Scheibe 4). trip.ReportConfig.enabled ist der
+// EINZIGE Schalter (kein getrenntes morning/evening-Flag) -> steuert beide
+// abgeleiteten *Enabled-Felder.
+func deriveFlatFields(trip *model.Trip) {
+	// Fix-Loop F001 (Adversary BROKEN): erst ALLE abgeleiteten Pointer-Felder
+	// unbedingt zuruecksetzen, DANN neu ableiten (nur wenn Quelle vorhanden).
+	// Sonst bleibt ein zuvor persistierter Wert stehen, wenn die Quelle
+	// verschwindet (z.B. Stages werden auf [] geleert, ReportConfig entfaellt)
+	// -- Struct-Felder werden sonst nur GESETZT, nie GELOESCHT -> stale.
+	trip.MorningTime = nil
+	trip.EveningTime = nil
+	trip.MorningEnabled = nil
+	trip.EveningEnabled = nil
+	trip.SendEmail = nil
+	trip.SendSms = nil
+	trip.SendTelegram = nil
+	trip.EndDate = nil
+
+	if rc := trip.ReportConfig; rc != nil {
+		if v, ok := rc["morning_time"].(string); ok {
+			trip.MorningTime = &v
+		}
+		if v, ok := rc["evening_time"].(string); ok {
+			trip.EveningTime = &v
+		}
+		if v, ok := rc["send_email"].(bool); ok {
+			trip.SendEmail = &v
+		}
+		if v, ok := rc["send_sms"].(bool); ok {
+			trip.SendSms = &v
+		}
+		if v, ok := rc["send_telegram"].(bool); ok {
+			trip.SendTelegram = &v
+		}
+		if v, ok := rc["enabled"].(bool); ok {
+			trip.MorningEnabled = &v
+			trip.EveningEnabled = &v
+		}
+	}
+
+	if len(trip.Stages) == 0 {
+		return
+	}
+	var maxDate string
+	for _, s := range trip.Stages {
+		d := strings.Split(s.Date, "T")[0]
+		if d > maxDate {
+			maxDate = d
+		}
+	}
+	if maxDate != "" {
+		trip.EndDate = &maxDate
+	}
 }
 
 func (s *Store) LoadTrips() ([]model.Trip, error) {

@@ -293,6 +293,19 @@ export interface Trip {
 	archived_at?: string;
 	official_alerts_enabled?: boolean; // Issue #1087 — Trip-Toggle amtliche Warnungen
 	official_alert_triggers_enabled?: boolean; // Issue #1088 — Trip-Toggle amtlicher Sofort-Alert-Trigger
+	// Issue #1250 Scheibe 4 (Trip-Konvergenz) — additive flache Slot-/Kanal-
+	// Felder, serverseitig aus report_config ABGELEITET (Dual-Read, analog
+	// ComparePreset Z.497-501). Nicht autoritativ — report_config bleibt die
+	// einzige Wahrheit für den Versand. morning_time/evening_time "HH:MM:SS",
+	// end_date "YYYY-MM-DD" (max(stage.date), serverseitig materialisiert).
+	morning_enabled?: boolean;
+	morning_time?: string;
+	evening_enabled?: boolean;
+	evening_time?: string;
+	send_email?: boolean;
+	send_sms?: boolean;
+	send_telegram?: boolean;
+	end_date?: string;
 }
 
 export interface HealthResponse {

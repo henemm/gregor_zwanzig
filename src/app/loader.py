@@ -556,6 +556,20 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
     # Legacy-Migrationspfad in Slice 1 (s. scripts/migrate_1231_corridors.py, Slice 2).
     corridors = [_corridor_from_dict(c) for c in (data.get("corridors") or [])]
 
+    # Issue #1250 Scheibe 4: additive flache Slot-/Kanal-Felder aus dem bereits
+    # geparsten `report_config` ABLEITEN (Dual-Read). `report_config.enabled`
+    # ist der EINZIGE Schalter (kein getrenntes morning/evening-Flag) -> steuert
+    # beide abgeleiteten *_enabled-Felder, verifiziert gegen
+    # trip_report_scheduler._get_active_trips (rc.enabled gated dort ebenfalls
+    # morning UND evening gleichermassen). report_config bleibt Single Source.
+    morning_time = report_config.morning_time.isoformat() if report_config else None
+    evening_time = report_config.evening_time.isoformat() if report_config else None
+    morning_enabled = report_config.enabled if report_config else None
+    evening_enabled = report_config.enabled if report_config else None
+    send_email = report_config.send_email if report_config else None
+    send_sms = report_config.send_sms if report_config else None
+    send_telegram = report_config.send_telegram if report_config else None
+
     # Issue #991: unbekannte Top-Level-Keys generisch auffangen (roundtrip-erhalten),
     # statt pro Feld ein weiteres Einzelattribut anzubauen.
     KNOWN_TOP_LEVEL = {
@@ -564,6 +578,14 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         "official_alert_triggers_enabled", "official_warnings", "weather_config",
         "display_config", "report_config", "alert_rules", "corridors", "alert_cooldown_minutes",
         "alert_quiet_from", "alert_quiet_to", "trip",
+        # Issue #1250 Scheibe 4 Fix-Loop F002 (Adversary BROKEN): diese Top-
+        # Level-Keys sind ABGELEITET (nicht autoritativ). Fehlten sie in
+        # KNOWN_TOP_LEVEL, wuerde ein zuvor persistierter Alt-Wert ueber den
+        # `extra`-Mechanismus (setdefault, s.u.) als "fremdes Feld" konserviert
+        # und einen stalen Stand vortaeuschen, obwohl die Quelle (report_config/
+        # Stages) laengst verschwunden ist.
+        "end_date", "morning_time", "evening_time", "morning_enabled",
+        "evening_enabled", "send_email", "send_sms", "send_telegram",
     }
     extra = {k: v for k, v in data.items() if k not in KNOWN_TOP_LEVEL}
 
@@ -592,6 +614,14 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         # geladenen Bestandstrip (noch nicht migriert) von einer Neuanlage.
         official_warnings=data.get("official_warnings"),
         extra=extra,  # Issue #991: unmodellierte Top-Level-Keys
+        # Issue #1250 Scheibe 4: abgeleitete flache Slot-/Kanal-Felder (Dual-Read)
+        morning_time=morning_time,
+        evening_time=evening_time,
+        morning_enabled=morning_enabled,
+        evening_enabled=evening_enabled,
+        send_email=send_email,
+        send_sms=send_sms,
+        send_telegram=send_telegram,
     )
     return trip
 
@@ -1400,6 +1430,25 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "skip_next": trip.report_config.skip_next,
             "updated_at": trip.report_config.updated_at.isoformat(),
         }
+
+    # Issue #1250 Scheibe 4 Fix-Loop F002 (Adversary BROKEN): flache Slot-/
+    # Kanal-Felder + end_date werden IMMER emittiert (auch als None), NICHT
+    # omitempty-guarded. Grund: save_trip() merged diesen Output per
+    # _deep_merge_preserve_unknown gegen die Datei auf Platte — fehlt ein Key
+    # im Overlay komplett, bleibt der ALTE Plattenwert stehen (stale), statt
+    # ueberschrieben zu werden. report_config-Block (s.o.) bleibt UNVERAENDERT
+    # die einzige Wahrheit fuer den Versand.
+    data["morning_time"] = trip.morning_time
+    data["evening_time"] = trip.evening_time
+    data["morning_enabled"] = trip.morning_enabled
+    data["evening_enabled"] = trip.evening_enabled
+    data["send_email"] = trip.send_email
+    data["send_sms"] = trip.send_sms
+    data["send_telegram"] = trip.send_telegram
+    # end_date: aus der @property (trip.py:216, max(stage.date), None-sicher
+    # bei leeren Stages) materialisiert — KEIN Dataclass-Feld, die Property
+    # bleibt Single Source (trip_alert.py:315).
+    data["end_date"] = trip.end_date.isoformat() if trip.end_date is not None else None
 
     # Issue #991: unmodellierte Top-Level-Keys re-emittieren — modellierte
     # Felder haben Vorrang, extra füllt nur Lücken (setdefault).

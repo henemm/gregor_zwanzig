@@ -311,8 +311,11 @@ class TripAlertService:
             ):
                 continue
 
-            # Skip expired trips (all stages in the past)
-            if trip.end_date < today:
+            # Skip expired trips (all stages in the past). Issue #1250 S4
+            # Fix-Loop F002: end_date ist None-sicher bei leeren Stages
+            # (Editor erlaubt das) — ein Trip ohne Stages ist nicht
+            # "abgelaufen", nur nicht dispatchbar, darf also nicht crashen.
+            if trip.end_date is not None and trip.end_date < today:
                 logger.debug(f"Skipping expired trip {trip.id} (ended {trip.end_date})")
                 continue
 

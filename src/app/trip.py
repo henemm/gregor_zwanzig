@@ -206,16 +206,31 @@ class Trip:
     # Trip ohne Schluessel bleibt None (= noch nicht migriert, s. app.loader._parse_trip).
     official_warnings: Optional[dict] = field(default_factory=lambda: {"enabled": False})
     extra: Dict[str, Any] = field(default_factory=dict)  # #991: unmodellierte Top-Level-Keys, roundtrip-erhalten
+    # Issue #1250 Scheibe 4: additive flache Slot-/Kanal-Felder, beim Laden aus
+    # `report_config` ABGELEITET (Dual-Read, s. app.loader._parse_trip). Nicht
+    # autoritativ — `report_config` bleibt die einzige Wahrheit fuer den Versand.
+    # KEIN `end_date`-Feld hier (bleibt @property, s.u.) — wuerde sonst die
+    # Property verdecken (Risiko i, docs/context/feat-1250-s4-trip-konvergenz.md).
+    morning_time: Optional[str] = None
+    evening_time: Optional[str] = None
+    morning_enabled: Optional[bool] = None
+    evening_enabled: Optional[bool] = None
+    send_email: Optional[bool] = None
+    send_sms: Optional[bool] = None
+    send_telegram: Optional[bool] = None
 
     @property
-    def start_date(self) -> date:
-        """First date of the trip."""
-        return min(s.date for s in self.stages)
+    def start_date(self) -> Optional[date]:
+        """First date of the trip. None if the trip has no stages (leerer
+        Editor-Zustand ist erlaubt, s. Fix-Loop F001/F002 Issue #1250 S4:
+        Adversary BROKEN -- Materialisierung darf nicht crashen)."""
+        return min((s.date for s in self.stages), default=None)
 
     @property
-    def end_date(self) -> date:
-        """Last date of the trip."""
-        return max(s.date for s in self.stages)
+    def end_date(self) -> Optional[date]:
+        """Last date of the trip. None if the trip has no stages (s.
+        start_date)."""
+        return max((s.date for s in self.stages), default=None)
 
     @property
     def all_waypoints(self) -> List[Waypoint]:
