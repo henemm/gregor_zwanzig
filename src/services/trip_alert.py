@@ -879,7 +879,16 @@ class TripAlertService:
         KEINEN alert_state — das übernimmt der Aufrufer erst nach
         erfolgreichem Versand (Konsistenz mit dem Wetter-Delta-Pfad).
         """
-        if trip.official_alert_triggers_enabled is False:
+        # Issue #1258: official_warnings.enabled loest das Legacy-Feld ab.
+        # official_warnings is None -> Trip noch nicht migriert -> Fallback auf
+        # das bisherige Ist-Verhalten (kein Bestandsnutzer verliert Alarme).
+        # Fix-Loop F003: ein leeres {} (kein "enabled"-Schluessel, z.B.
+        # Datenmuell/nicht abgeschlossene Migration) zaehlt NICHT als
+        # migriert -> ebenfalls Legacy-Fallback statt stillem Default True.
+        if isinstance(trip.official_warnings, dict) and "enabled" in trip.official_warnings:
+            if not trip.official_warnings.get("enabled", True):
+                return []
+        elif trip.official_alert_triggers_enabled is False:
             return []
         from services.alert_state import AlertStateService
         from services.official_alerts import get_official_alerts_for_location

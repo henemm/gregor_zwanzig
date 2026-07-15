@@ -888,6 +888,10 @@ class ComparePreset:
     alert_quiet_from: Optional[str] = None
     alert_quiet_to: Optional[str] = None
     official_alert_triggers_enabled: Optional[bool] = None
+    # Issue #1258: additiv, Parität zu app.trip.Trip.official_warnings —
+    # Bare-Konstruktor (Neuanlage) -> {"enabled": False}; ueber app.loader
+    # geladene Bestandsdaten ohne Schluessel bleiben None (noch nicht migriert).
+    official_warnings: Optional[dict] = field(default_factory=lambda: {"enabled": False})
     send_telegram: Optional[bool] = None
     send_sms: Optional[bool] = None
     morning_enabled: Optional[bool] = None

@@ -79,8 +79,12 @@ type ComparePreset struct {
 	// eine bewusste Nutzer-Entscheidung. SendTelegram/SendSms sind das Kanal-
 	// Opt-in (Default falsy = E-Mail-only), analog zum Trip-Alarm.
 	OfficialAlertTriggersEnabled *bool `json:"official_alert_triggers_enabled,omitempty"`
-	SendTelegram                 *bool `json:"send_telegram,omitempty"`
-	SendSms                      *bool `json:"send_sms,omitempty"`
+	// OfficialWarnings — Issue #1258, loest OfficialAlertTriggersEnabled
+	// funktional ab (Legacy-Feld bleibt fuer Rollback-Sicherheit unveraendert
+	// bestehen). Gleicher Typ wie Trip.OfficialWarnings (internal/model/trip.go).
+	OfficialWarnings *OfficialWarningsConfig `json:"official_warnings,omitempty"`
+	SendTelegram     *bool                   `json:"send_telegram,omitempty"`
+	SendSms          *bool                   `json:"send_sms,omitempty"`
 	// Issue #1232 Scheibe 2a — Zwei-Slot-Zeitplan (additiv auf das Trip-
 	// Briefing-Modell uebertragen, docs/specs/modules/compare_preset_zeitplan.md).
 	// Pointer-Pattern wie OfficialAlertsEnabled: fehlt ein Feld im JSON

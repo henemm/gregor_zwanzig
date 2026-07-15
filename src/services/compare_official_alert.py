@@ -73,7 +73,20 @@ class CompareOfficialAlertService:
         # #1233: archivierte Vergleiche sind kein aktiver Alarm-Empfaenger mehr.
         if preset.get("archived_at"):
             return False
-        if not preset.get("official_alert_triggers_enabled", True):
+        official_warnings = preset.get("official_warnings")
+        # Issue #1258: official_warnings.enabled loest das Legacy-Feld ab.
+        # official_warnings is None -> Preset noch nicht migriert -> Fallback
+        # auf das bisherige Ist-Verhalten (kein Bestandsnutzer verliert Alarme).
+        # Fix-Loop F003: ein leeres {} (kein "enabled"-Schluessel) zaehlt
+        # NICHT als migriert -> ebenfalls Legacy-Fallback statt stillem
+        # Default True (analog trip_alert.py).
+        official_warnings_migrated = (
+            isinstance(official_warnings, dict) and "enabled" in official_warnings
+        )
+        if official_warnings_migrated:
+            if not official_warnings.get("enabled", True):
+                return False
+        elif not preset.get("official_alert_triggers_enabled", True):
             return False
         # #1233: Ruhezeit unterdrueckt frueh -> kein State-Verbrauch der Warnung,
         # damit sie nach Ende der Ruhezeit noch als "neu" zugestellt wird (AC-2).
@@ -89,7 +102,8 @@ class CompareOfficialAlertService:
         if not locs:
             return False
 
-        tagged_alerts, per_location_new = self._detect(preset_id, locs)
+        sources = (official_warnings or {}).get("sources") or None
+        tagged_alerts, per_location_new = self._detect(preset_id, locs, sources)
         if not tagged_alerts:
             return False
 
@@ -112,7 +126,9 @@ class CompareOfficialAlertService:
         alert_daily_limit.increment(self._user_id, now)
         return True
 
-    def _detect(self, preset_id: str, locs: list) -> tuple[list, dict]:
+    def _detect(
+        self, preset_id: str, locs: list, sources: Optional[list[str]] = None
+    ) -> tuple[list, dict]:
         """Fetch je Ort (getaggt mit `loc.id` -- niemals mit dem Ortsnamen,
         F005: gleichnamige Orte kollabieren sonst im Rueckweg ueber ein
         Namens-Dict und der State landet am falschen Ort), dedupliziert ueber
@@ -120,12 +136,18 @@ class CompareOfficialAlertService:
         betroffener location_id). Liefert `(new_or_escalated_tagged,
         per_location_new_alerts)` — BEIDE bleiben durchgaengig id-basiert
         (F006: die Anzeige-/Scope-Schicht loest IDs erst ganz am Ende in
-        Namen auf, s. `build_compare_official_alert_notices`)."""
+        Namen auf, s. `build_compare_official_alert_notices`).
+
+        Issue #1258 (AC-7/AC-8): `sources` (aus `official_warnings.sources`)
+        filtert NACH dem Fetch, VOR der Neu/Eskalations-Entscheidung — leer/
+        None laesst alle Quellen unveraendert durch (Ist-Verhalten)."""
         raw = [
             (alert, [loc.id])
             for loc in locs
             for alert in get_official_alerts_for_location(loc.lat, loc.lon)
         ]
+        if sources:
+            raw = [(alert, loc_ids) for alert, loc_ids in raw if alert.source in sources]
         deduped = dedupe_official_alerts(raw)
 
         state_by_loc = {

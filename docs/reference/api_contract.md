@@ -1,7 +1,7 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-06-13 (Issue #795 — Metriken-Überblick-Pills: Inhalt analog SMS (ausgeschrieben, gleiche Schwellen), Farbe via Ampel-System #759 (🟢🟡🟠🔴 = HTML-Vollfarb-Kapsel + weißer Text WCAG-AA, Plain = 4 Emojis, Compact = ASCII-Schwerezeichen); Bug #775 — Trip-Shortcode-Routing für Inbound-E-Mail-Replies: RFC-2047-Dekodierung, toleranter Whitespace↔Underscore-Lookup, neuer GZ#-Shortcode-Key als primärer Routing-Identifier, persistiert als `Trip.shortcode`; Issue #764 — ComparePreset forecast_hours Persistierung: neues Feld im Go-Modell/TS-Type (24|48|72 h), Hydration im Editor, Konsum im Python-Scheduler, Legacy-Default 48 h; Horizont-Select im Editor auf Design-System Select.svelte umgestellt); 2026-06-11 (Issue #747 — Datierter Forecast-Snapshot-Speicher: WeatherSnapshotService erweitert um `save_dated(trip_id, target_date, segments)`, `load_dated(trip_id, target_date)` und `_prune_dated_snapshots(trip_id)`. Speichert Snapshots nach Datum (`{trip_id}_{YYYY-MM-DD}.json`, max. 7 Dateien pro Trip, mtime-sortiert). Fundament für Vortag-Vergleich im Trip-Briefing. Bestehende `save()`/`load()`-Methoden für Alert-Pfad bleiben byte-identisch. Scheduler ruft `save_dated()` nach bestehendem `save()` auf. Siehe Issue #747.); 2026-06-11 (Issue #731 — Abruf-zentrierte Befehle: bare Keywords (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE) ersetzen alte Abonnenten-Befehle (PAUSE/SKIP/CONFIG). Persistenzfelder paused_until/skip_next bleiben für Bestandsdaten erhalten. TripCommandProcessor.process() neu mit _resume_trip() für WEITER-Befehl. Keine Datenstruktur-Änderungen. Siehe Issue #731.); 2026-06-10 (Issue #715 — Wettermetriken-Darstellung: GET /api/metrics filtert auf `selectable=true` — `confidence` (Vorhersage-Verlässlichkeit/Ensemble) ist KEINE pro-Etappe wählbare Metrik mehr, nur noch Vorhersage-Hinweis + SMS-Symbol; Vorschau-Emojis in WeatherV2MailPreview + Step3Weather angepasst; Beispieldaten eindeutig gekennzeichnet; Bug #716 — Test-Briefing: stiller Versagensfall weg. POST /api/trips/{id}/send gibt jetzt HTTP 422 + detail-Feld zurück wenn keine Etappendaten für Zieldatum vorhanden (statt HTTP 200). Frontend zeigt konkrete Fehlermeldung im Toast; Issue #707 — Trip-Datum-Overwrite-Bug: PUT `/api/trips/{id}` mit minimalem Body (nur geänderte Felder) statt kompletter `trip`-Spread — verhindert stale-data-Überschreibung von Etappen; Issue #690 — Eigene Wetter-Metriken-Profile: eindeutiger Name (HTTP 409 name_exists, 400 name_required), Profil sofort aktiv + persistent, "Eigene"-Markierung in Preset-Leiste, trip-übergreifend pro Nutzer); 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
+**Updated:** 2026-07-15 (Issue #1258 S1 — `official_warnings {enabled, sources?}` neu auf Trip UND ComparePreset, löst `official_alert_triggers_enabled` funktional ab (jetzt deprecated, bleibt in den Daten); idempotente Migration `internal/store/migrate_1258.go`/`scripts/migrate_1258_official_warnings.py` übernimmt Ist-Verhalten des Bestands unverändert, Neuanlage-Default `enabled=false`; PUT-RMW mit Feld-Level-Preserve für `sources`; Legacy-Fallback bei fehlendem/leerem Feld — Details Section 10.5); 2026-06-13 (Issue #795 — Metriken-Überblick-Pills: Inhalt analog SMS (ausgeschrieben, gleiche Schwellen), Farbe via Ampel-System #759 (🟢🟡🟠🔴 = HTML-Vollfarb-Kapsel + weißer Text WCAG-AA, Plain = 4 Emojis, Compact = ASCII-Schwerezeichen); Bug #775 — Trip-Shortcode-Routing für Inbound-E-Mail-Replies: RFC-2047-Dekodierung, toleranter Whitespace↔Underscore-Lookup, neuer GZ#-Shortcode-Key als primärer Routing-Identifier, persistiert als `Trip.shortcode`; Issue #764 — ComparePreset forecast_hours Persistierung: neues Feld im Go-Modell/TS-Type (24|48|72 h), Hydration im Editor, Konsum im Python-Scheduler, Legacy-Default 48 h; Horizont-Select im Editor auf Design-System Select.svelte umgestellt); 2026-06-11 (Issue #747 — Datierter Forecast-Snapshot-Speicher: WeatherSnapshotService erweitert um `save_dated(trip_id, target_date, segments)`, `load_dated(trip_id, target_date)` und `_prune_dated_snapshots(trip_id)`. Speichert Snapshots nach Datum (`{trip_id}_{YYYY-MM-DD}.json`, max. 7 Dateien pro Trip, mtime-sortiert). Fundament für Vortag-Vergleich im Trip-Briefing. Bestehende `save()`/`load()`-Methoden für Alert-Pfad bleiben byte-identisch. Scheduler ruft `save_dated()` nach bestehendem `save()` auf. Siehe Issue #747.); 2026-06-11 (Issue #731 — Abruf-zentrierte Befehle: bare Keywords (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE) ersetzen alte Abonnenten-Befehle (PAUSE/SKIP/CONFIG). Persistenzfelder paused_until/skip_next bleiben für Bestandsdaten erhalten. TripCommandProcessor.process() neu mit _resume_trip() für WEITER-Befehl. Keine Datenstruktur-Änderungen. Siehe Issue #731.); 2026-06-10 (Issue #715 — Wettermetriken-Darstellung: GET /api/metrics filtert auf `selectable=true` — `confidence` (Vorhersage-Verlässlichkeit/Ensemble) ist KEINE pro-Etappe wählbare Metrik mehr, nur noch Vorhersage-Hinweis + SMS-Symbol; Vorschau-Emojis in WeatherV2MailPreview + Step3Weather angepasst; Beispieldaten eindeutig gekennzeichnet; Bug #716 — Test-Briefing: stiller Versagensfall weg. POST /api/trips/{id}/send gibt jetzt HTTP 422 + detail-Feld zurück wenn keine Etappendaten für Zieldatum vorhanden (statt HTTP 200). Frontend zeigt konkrete Fehlermeldung im Toast; Issue #707 — Trip-Datum-Overwrite-Bug: PUT `/api/trips/{id}` mit minimalem Body (nur geänderte Felder) statt kompletter `trip`-Spread — verhindert stale-data-Überschreibung von Etappen; Issue #690 — Eigene Wetter-Metriken-Profile: eindeutiger Name (HTTP 409 name_exists, 400 name_required), Profil sofort aktiv + persistent, "Eigene"-Markierung in Preset-Leiste, trip-übergreifend pro Nutzer); 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
@@ -596,10 +596,59 @@ type Trip struct {
     PausedAt                *time.Time             `json:"paused_at,omitempty"`
     ArchivedAt              *time.Time             `json:"archived_at,omitempty"`
     OfficialAlertsEnabled   *bool                  `json:"official_alerts_enabled,omitempty"` // Issue #1087, Pointer-Muster analog ComparePreset (#1040): nil = Default true; false = kein Fetch amtlicher Warnungen für diesen Trip
-    OfficialAlertTriggersEnabled *bool             `json:"official_alert_triggers_enabled,omitempty"` // Issue #1088, strukturell getrennt von OfficialAlertsEnabled: nil = Default true; false = amtliche Warnungen lösen keinen eigenständigen Sofort-Alert aus (Briefing-Anzeige bleibt unberührt)
+    OfficialAlertTriggersEnabled *bool             `json:"official_alert_triggers_enabled,omitempty"` // @deprecated (Issue #1258, ersetzt durch official_warnings.enabled) — bleibt in den Daten fuer Rollback-Sicherheit, wird ab #1258 von UI und Pipeline nicht mehr geschrieben/gelesen. Vormals: nil = Default true; false = amtliche Warnungen lösen keinen eigenständigen Sofort-Alert aus (Briefing-Anzeige bleibt unberührt)
+    OfficialWarnings        *OfficialWarningsConfig `json:"official_warnings,omitempty"`      // Issue #1258 — s. „official_warnings (Issue #1258)" unten
     Corridors               []Corridor             `json:"corridors"`                         // Issue #1231 Slice 1, additiv neben AlertRules — s. Section 24
 }
+
+// OfficialWarningsConfig — Issue #1258, geteilt zwischen Trip und ComparePreset
+type OfficialWarningsConfig struct {
+    Enabled bool     `json:"enabled"`
+    Sources []string `json:"sources,omitempty"`
+}
 ```
+
+### official_warnings (Issue #1258)
+
+Löst `official_alert_triggers_enabled` (#1088) funktional ab: `official_warnings.enabled`
+steuert, ob amtliche Warnungen für diesen Trip/ComparePreset einen Sofort-Alarm auslösen
+(Briefing-Anzeige selbst bleibt unberührt, s. `official_alerts_enabled` #1087). Gilt identisch
+für Trip UND ComparePreset (Go `*OfficialWarningsConfig`, Python `Optional[dict]`).
+
+```json
+{"official_warnings": {"enabled": true, "sources": ["vigilance"]}}
+```
+
+| Feld | Typ | Semantik |
+|------|-----|----------|
+| `enabled` | bool | `true` = amtliche Warnungen lösen einen Sofort-Alarm aus; `false` = kein Sofort-Alarm |
+| `sources` | string[] \| omitted | Quellen-Filter (Namen aus `src/services/official_alerts/__init__.py`-Registry). Unset/leer = alle registrierten Quellen fließen ein (unverändertes Verhalten). Gesetzt = nur die genannten Quellen fließen in die Alarmentscheidung ein, andere werden ignoriert |
+
+**Fehlend/`nil`:** unmigrierter Bestand — Pipeline (`trip_alert.py`, `compare_official_alert.py`)
+fällt fail-soft auf das Legacy-Feld `official_alert_triggers_enabled` zurück (`nil`/`true` →
+Alarm aktiv, `false` → kein Alarm). Ein `{}`-Wert (Key vorhanden, `enabled` fehlt) wird wie
+`nil` behandelt (Legacy-Fallback), nicht wie `enabled=false` — Go und Python sind hierin
+identisch (Fix-Loop F003, s. Changelog #1258).
+
+**Neuanlage-Default:** `enabled: false` — bewusster Verhaltenswechsel gegenüber Bestand (der per
+Migration den alten Ist-Zustand behält, s.u.).
+
+**Migration (`internal/store/migrate_1258.go`, `scripts/migrate_1258_official_warnings.py`):**
+idempotente Batch-Migration nach Vorbild `migrate_1257.go` — pro Trip/ComparePreset unter
+`data/users/*/`: `official_warnings.enabled := (official_alert_triggers_enabled != false)`
+(nil/true → true, false → false), damit ändert sich das gesendete Alarmverhalten für Bestand
+NICHT. Zweiter Lauf ändert an bereits migrierten Objekten nichts (Idempotenz-Check über
+`officialWarningsRawHasEnabledKey()`/`"enabled" in ow`).
+
+**PUT-RMW (Read-Modify-Write, `internal/handler/trip.go`, `internal/handler/compare_preset.go`):**
+Feld im Body ganz weglassen → Bestand bleibt unverändert (Objekt-Ebene). Wird `official_warnings`
+mitgeschickt, aber `sources` darin weggelassen (Key fehlt im JSON) → bestehende `sources[]`
+bleiben erhalten (Feld-Level-Preserve, Fix-Loop F002); ein explizites `"sources": []` löscht die
+Liste bewusst. `enabled` ist innerhalb eines mitgeschickten `official_warnings`-Objekts immer
+Pflicht-Wert der Anfrage (kein separates Preserve für `enabled` selbst).
+
+**Isolation:** wie jedes trip-/presetgebundene Feld strikt über `user_id` — kein Cross-User-Leck
+(s. `CLAUDE.md` Mandantenfähigkeits-Pflicht).
 
 **Invariante — nie `null` (Issue #205, gehärtet Issue #1244):** `Stages`, jedes
 `Stage.Waypoints`, `AlertRules` und `Corridors` sind immer als `[]` serialisiert, niemals als
@@ -1268,6 +1317,8 @@ type ComparePreset struct {
     EveningTime          *string                `json:"evening_time,omitempty"`                // "HH:MM:SS"; Abend-Versand zielt auf target_date = morgen (Ankündigungs-Charakter, wie Trip-Abendbriefing)
     EndDate              *string                `json:"end_date,omitempty"`                    // "YYYY-MM-DD", nil = unbegrenzte Laufzeit; gesetzt+<heute (Europe/Vienna) = Versand-Guard greift. Bekannte Lücke: kann per PUT nicht auf nil zurückgesetzt werden (KL-7, Sammel-Issue #1199)
     Corridors            []Corridor             `json:"corridors"`                             // Issue #1231 Slice 1, additiv neben display_config["ideal_ranges"] — s. Section 24
+    OfficialAlertTriggersEnabled *bool          `json:"official_alert_triggers_enabled,omitempty"` // @deprecated (Issue #1258, ersetzt durch official_warnings.enabled) — bleibt in den Daten fuer Rollback-Sicherheit
+    OfficialWarnings     *OfficialWarningsConfig `json:"official_warnings,omitempty"`           // Issue #1258, identische Semantik wie Trip — s. Section 10.5 „official_warnings (Issue #1258)"
     CreatedAt            time.Time              `json:"created_at"`
 }
 ```
@@ -1351,6 +1402,7 @@ versendet für `target_date=heute`, Abend-Slot für `target_date=morgen`. Guards
 - **POST /api/compare/presets/{id}/send:** Immediate send endpoint (Issue #627). Executes comparison engine and emails all configured `empfaenger` immediately, regardless of `schedule` value (bypasses time-based gating). If no recipients configured, returns HTTP 400. Returns HTTP 200 with `{"status":"ok","winner":"<top_location>","empfaenger_count":N}` on success. Updates `letzter_versand` and `top_ort_letzter_versand` server-side.
 - **previous_schedule Field (Issue #631):** When a preset is paused (`schedule='manual'`), the frontend sets `previous_schedule` to the prior schedule value (`"daily"` or `"weekly"`). On reactivation, `schedule` is restored from `previous_schedule`. This field is preserved across reloads (backend-persistent); altdata without this field remain unaffected (omitempty).
 - **LocationIDs Validation:** Backend does not validate that referenced location IDs exist in `data/users/{userID}/locations.json`. Invalid IDs cause errors only during send.
+- **official_warnings (Issue #1258):** Identische Semantik wie beim Trip — s. Section 10.5 „official_warnings (Issue #1258)" für Feld-Format, Legacy-Fallback (`official_alert_triggers_enabled`), Migration und PUT-RMW-Verhalten (inkl. Feld-Level-Preserve von `sources`).
 
 ### Source Files
 

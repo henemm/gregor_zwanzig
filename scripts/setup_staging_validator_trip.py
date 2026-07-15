@@ -78,6 +78,18 @@ def _build_rolling_trip():
         name="Staging Rolling Validator Trip",
         stages=[stage_1, stage_2],
         report_config=TripReportConfig(trip_id=TRIP_ID, enabled=True, send_email=True),
+        # Issue #1258 Fix-Loop F001: bare Trip(...) liefert per Default
+        # official_warnings={"enabled": False} (Neuanlage-Semantik, s.
+        # app/trip.py). Dieses Skript baut den Trip-Objektgraph aber bei
+        # JEDEM Lauf neu (kein Laden von der Platte) — ohne den expliziten
+        # None-Override wuerde save_trip()'s RMW-Merge (loader.py
+        # _deep_merge_preserve_unknown, "overlay wins") den persistierten
+        # official_warnings-Wert bei jedem wiederkehrenden Lauf auf
+        # enabled=False zuruecksetzen. None signalisiert "vom Aufrufer nicht
+        # gesetzt" -> _trip_to_dict() laesst den Schluessel dann komplett
+        # weg, der Merge fasst den bestehenden Wert nicht an (Muster:
+        # tests/tdd/test_issue_1088_official_alert_triggers.py _minimal_trip).
+        official_warnings=None,
     )
 
 

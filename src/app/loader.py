@@ -241,6 +241,8 @@ def compare_preset_from_dict(data: Dict[str, Any]) -> ComparePreset:
         alert_quiet_from=data.get("alert_quiet_from"),
         alert_quiet_to=data.get("alert_quiet_to"),
         official_alert_triggers_enabled=data.get("official_alert_triggers_enabled"),
+        # Issue #1258: explizit durchreichen (auch als None) — Parität zu _parse_trip.
+        official_warnings=data.get("official_warnings"),
         send_telegram=data.get("send_telegram"),
         send_sms=data.get("send_sms"),
         morning_enabled=data.get("morning_enabled"),
@@ -559,7 +561,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
     KNOWN_TOP_LEVEL = {
         "id", "name", "stages", "avalanche_regions", "aggregation", "shortcode", "activity",
         "region", "archived_at", "paused_at", "official_alerts_enabled",
-        "official_alert_triggers_enabled", "weather_config",
+        "official_alert_triggers_enabled", "official_warnings", "weather_config",
         "display_config", "report_config", "alert_rules", "corridors", "alert_cooldown_minutes",
         "alert_quiet_from", "alert_quiet_to", "trip",
     }
@@ -586,6 +588,9 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         paused_at=data.get("paused_at"),  # Issue #995: Go-Feld paused_at — roundtrip-erhalten
         official_alerts_enabled=data.get("official_alerts_enabled"),  # Issue #1087
         official_alert_triggers_enabled=data.get("official_alert_triggers_enabled"),  # Issue #1088
+        # Issue #1258: explizit durchreichen (auch als None) -> unterscheidet
+        # geladenen Bestandstrip (noch nicht migriert) von einer Neuanlage.
+        official_warnings=data.get("official_warnings"),
         extra=extra,  # Issue #991: unmodellierte Top-Level-Keys
     )
     return trip
@@ -1278,6 +1283,10 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
     # Issue #1088: analog #1087 — RMW, False muss persistieren.
     if trip.official_alert_triggers_enabled is not None:
         data["official_alert_triggers_enabled"] = trip.official_alert_triggers_enabled
+
+    # Issue #1258: additiv, RMW — None (unmigrierter Bestand) bleibt ungeschrieben.
+    if trip.official_warnings is not None:
+        data["official_warnings"] = trip.official_warnings
 
     # Serialize weather config (Feature 2.6 legacy, preserved for migration)
     if trip.weather_config:

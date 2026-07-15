@@ -110,6 +110,13 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 
 		trip.Stages = ensureStageIDs(trip.Stages)
 
+		// Issue #1258 AC-4: Neuanlage ohne mitgeschicktes official_warnings
+		// erhaelt bewusst enabled=false (Verhaltenswechsel NUR fuer Neuanlagen,
+		// PO-Entscheidung F1) -- anders als ein migrierter Bestandstrip.
+		if trip.OfficialWarnings == nil {
+			trip.OfficialWarnings = &model.OfficialWarningsConfig{Enabled: false}
+		}
+
 		if err := validateTrip(trip); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(400)
@@ -157,6 +164,9 @@ type tripUpdateRequest struct {
 	Activity                     *string           `json:"activity,omitempty"`
 	OfficialAlertsEnabled        *bool             `json:"official_alerts_enabled,omitempty"`
 	OfficialAlertTriggersEnabled *bool             `json:"official_alert_triggers_enabled,omitempty"`
+	// OfficialWarnings — Issue #1258, RMW-Kontrakt analog OfficialAlertTriggersEnabled
+	// (nil = im Body nicht gesendet -> bestehender Wert bleibt erhalten).
+	OfficialWarnings *model.OfficialWarningsConfig `json:"official_warnings,omitempty"`
 }
 
 func UpdateTripHandler(s *store.Store) http.HandlerFunc {
@@ -261,6 +271,19 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		// Issue #1088 — gleiches RMW-Merge-Muster wie OfficialAlertsEnabled.
 		if req.OfficialAlertTriggersEnabled != nil {
 			existing.OfficialAlertTriggersEnabled = req.OfficialAlertTriggersEnabled
+		}
+		// Issue #1258 — gleiches RMW-Merge-Muster wie OfficialAlertTriggersEnabled.
+		if req.OfficialWarnings != nil {
+			// Fix-Loop F002: RMW griff bisher nur auf Objekt-Ebene — ein PUT mit
+			// z.B. nur {"enabled":false} (sources im Body fehlt -> nil nach
+			// Decode) hat bestehende Sources geloescht, weil der ganze Pointer
+			// ersetzt wurde. Sources nur uebernehmen, wenn der Body sie
+			// mitschickt (explizites "sources":[] bleibt non-nil und wird
+			// respektiert — nur das Fehlen des Keys bedeutet "unveraendert").
+			if req.OfficialWarnings.Sources == nil && existing.OfficialWarnings != nil {
+				req.OfficialWarnings.Sources = existing.OfficialWarnings.Sources
+			}
+			existing.OfficialWarnings = req.OfficialWarnings
 		}
 		existing.ID = id
 

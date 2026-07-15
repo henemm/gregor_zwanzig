@@ -201,6 +201,10 @@ class Trip:
     paused_at: Optional[str] = None  # Issue #995: Go-Feld paused_at (ISO-String) — Trip-Detail-Pause, roundtrip-erhalten
     official_alerts_enabled: Optional[bool] = None  # Issue #1087: None/True=aktiv, False=strukturell kein Fetch
     official_alert_triggers_enabled: Optional[bool] = None  # Issue #1088: None/True=aktiv, False=kein Sofort-Alert-Trigger
+    # Issue #1258: additiv, loest official_alert_triggers_enabled funktional ab.
+    # Bare-Konstruktor (Neuanlage) -> {"enabled": False}; ein aus JSON GELADENER
+    # Trip ohne Schluessel bleibt None (= noch nicht migriert, s. app.loader._parse_trip).
+    official_warnings: Optional[dict] = field(default_factory=lambda: {"enabled": False})
     extra: Dict[str, Any] = field(default_factory=dict)  # #991: unmodellierte Top-Level-Keys, roundtrip-erhalten
 
     @property

@@ -128,6 +128,20 @@ type Trip struct {
 	// OfficialAlertsEnabled: nil/true = eigenstaendiger Sofort-Alert-Trigger
 	// bei amtlichen Warnungen aktiv, false = kein Sofort-Alert-Trigger.
 	OfficialAlertTriggersEnabled *bool `json:"official_alert_triggers_enabled,omitempty"`
+	// OfficialWarnings — Issue #1258, loest OfficialAlertTriggersEnabled
+	// funktional ab (Legacy-Feld bleibt fuer Rollback-Sicherheit unveraendert
+	// bestehen). nil = Feld fehlte (Altdaten, noch nicht migriert, s.
+	// internal/store/migrate_1258.go), gesetzt = massgeblich fuer die
+	// Sofort-Alarm-Pipeline.
+	OfficialWarnings *OfficialWarningsConfig `json:"official_warnings,omitempty"`
+}
+
+// OfficialWarningsConfig — Issue #1258, geteilt zwischen Trip und
+// ComparePreset (Pointer-Feld-Pattern analog OfficialAlertsEnabled/#1040/
+// #1087). Sources unset/leer = alle registrierten Quellen beruecksichtigt.
+type OfficialWarningsConfig struct {
+	Enabled bool     `json:"enabled"`
+	Sources []string `json:"sources,omitempty"`
 }
 
 // AlertableMetrics are metrics that can receive an alert rule (delta-based since #817).

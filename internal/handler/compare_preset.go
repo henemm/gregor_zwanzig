@@ -225,6 +225,13 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			preset.EveningTime = &eveningTime
 		}
 
+		// Issue #1258 AC-4: Neuanlage ohne mitgeschicktes official_warnings
+		// erhaelt bewusst enabled=false (Verhaltenswechsel NUR fuer Neuanlagen,
+		// PO-Entscheidung F1) -- anders als ein migriertes Bestands-Preset.
+		if preset.OfficialWarnings == nil {
+			preset.OfficialWarnings = &model.OfficialWarningsConfig{Enabled: false}
+		}
+
 		if err := validateComparePreset(preset); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation_error", "detail": err.Error()})
 			return
@@ -317,6 +324,19 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// official_alerts_enabled — Datenverlust-Schutz (CLAUDE.md).
 		if updated.OfficialAlertTriggersEnabled == nil {
 			updated.OfficialAlertTriggersEnabled = original.OfficialAlertTriggersEnabled
+		}
+		// Issue #1258: official_warnings erhalten wenn Body es nicht traegt,
+		// analog OfficialAlertTriggersEnabled — Datenverlust-Schutz (CLAUDE.md).
+		if updated.OfficialWarnings == nil {
+			updated.OfficialWarnings = original.OfficialWarnings
+		} else if updated.OfficialWarnings.Sources == nil && original.OfficialWarnings != nil {
+			// Fix-Loop F002: RMW griff bisher nur auf Objekt-Ebene — ein PUT mit
+			// z.B. nur {"enabled":false} (sources im Body fehlt -> nil nach
+			// Decode) hat bestehende Sources geloescht, weil der ganze Pointer
+			// ersetzt wurde. Sources nur uebernehmen, wenn der Body sie
+			// mitschickt (explizites "sources":[] bleibt non-nil und wird
+			// respektiert — nur das Fehlen des Keys bedeutet "unveraendert").
+			updated.OfficialWarnings.Sources = original.OfficialWarnings.Sources
 		}
 		if updated.SendTelegram == nil {
 			updated.SendTelegram = original.SendTelegram

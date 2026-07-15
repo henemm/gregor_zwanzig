@@ -87,7 +87,17 @@ def _data(segment_id: int | str = 1, *, lat: float = LAT, lon: float = LON, **su
 
 
 def _minimal_trip(trip_id: str, **trip_kwargs) -> Trip:
-    """Trip ohne aktive Wetter-Delta-Regeln — für reine Trigger-Detektionstests."""
+    """Trip ohne aktive Wetter-Delta-Regeln — für reine Trigger-Detektionstests.
+
+    Issue #1258: `official_warnings=None` als Default, sofern der Aufrufer
+    nichts anderes mitgibt — repraesentiert einen NOCH NICHT migrierten
+    Bestandstrip (wie er per `load_trip()` aus einer Alt-Datei ohne den
+    neuen Schluessel kaeme), NICHT den Neuanlage-Default `enabled=false`
+    des blanken Konstruktors (AC-4). Ohne diese Unterscheidung wuerden alle
+    hier gebauten Fixtures faelschlich als "amtliche Warnungen deaktiviert"
+    gelten.
+    """
+    trip_kwargs.setdefault("official_warnings", None)
     stage = Stage(
         id="T1", name="Tag 1", date=date(2026, 7, 8),
         waypoints=[Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0)],
@@ -99,7 +109,11 @@ def _minimal_trip(trip_id: str, **trip_kwargs) -> Trip:
 
 def _delta_trip(trip_id: str, **trip_kwargs) -> Trip:
     """Trip mit aktiver metric_alert_levels-Regel (precipitation_sum) — löst bei
-    ausreichendem Delta einen Wetter-Delta-Alert aus (Muster: test_issue_816)."""
+    ausreichendem Delta einen Wetter-Delta-Alert aus (Muster: test_issue_816).
+
+    Issue #1258: `official_warnings=None`-Default s. `_minimal_trip`.
+    """
+    trip_kwargs.setdefault("official_warnings", None)
     stage = Stage(
         id="T1", name="Tag 1", date=date(2026, 7, 8),
         waypoints=[Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0)],
@@ -516,7 +530,13 @@ class TestF001OfficialTriggerViaCheckAllTrips:
                 id="T1", name="Tag 1", date=date.today(),
                 waypoints=[Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0)],
             )
-            trip = Trip(id="trip-f001", name="Kein-Wetter-Delta-Trip", stages=[stage])
+            # Issue #1258: official_warnings=None (noch nicht migrierter
+            # Bestandstrip) statt Neuanlage-Default enabled=false — sonst
+            # wuerde save_trip() unten faelschlich "deaktiviert" persistieren.
+            trip = Trip(
+                id="trip-f001", name="Kein-Wetter-Delta-Trip", stages=[stage],
+                official_warnings=None,
+            )
             # Wetter-Delta-Alert vom Nutzer explizit deaktiviert, keine aktive Regel
             # (kein preset, keine metric_alert_levels, keine alert_rules).
             trip.report_config = TripReportConfig(
