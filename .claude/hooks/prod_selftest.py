@@ -65,6 +65,35 @@ _URL_SENTINELS = {"n/a", "na", "-", "none", "—", "interaktiv", ""}
 _PREVIEW_EMAIL_PATH = re.compile(r"^/api/preview/[^/]+/email$")
 _TEST_TRIP_SUFFIX = ("-test", "-tdd", "-adv-test")  # bekannte Staging-Test-Trip-Marker
 
+# Interne/auth-geschützte URL-Klassen (#1197): Findings, deren Roh-URL per
+# Konstruktion nicht öffentlich per GET probebar ist — interner Loopback-Host,
+# interne Ports (8000 Python-API / 8001 Scheduler / 8090 gregor-api) oder der
+# auth-geschützte /send-Endpoint (echter Prod-Mailversand, darf öffentlich nie
+# getriggert werden). Werden übersprungen (SKIPPED_NOT_MAPPABLE) statt False-FAIL.
+_INTERNAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+_INTERNAL_PORTS = {8000, 8001, 8090}
+_SCHEDULER_SEND_PATH = re.compile(r"^/api/scheduler/.+/send$")
+
+
+def _is_internal_or_send_url(raw_url: str) -> bool:
+    """True wenn `raw_url` per Konstruktion nicht öffentlich per GET probebar ist
+    (#1197): interner Loopback-Host, interner Port (8000/8001/8090) oder der
+    auth-geschützte /api/scheduler/<x>/send-Pfad (host-unabhängig). Solche URLs
+    werden in `_probe_ac` übersprungen statt False-FAIL/PARTIAL auszulösen."""
+    try:
+        parsed = urlparse(_strip_ac_suffix(raw_url))
+        host = (parsed.hostname or "").lower()  # IPv6 → '::1' ohne Klammern
+        if host in _INTERNAL_HOSTS:
+            return True
+        if parsed.port in _INTERNAL_PORTS:
+            return True
+        if _SCHEDULER_SEND_PATH.match(parsed.path or ""):
+            return True
+    except ValueError:
+        # Parse-Fehler (z.B. ungültiger Port) → konservativ nicht überspringen
+        return False
+    return False
+
 
 def _is_staging_test_trip_preview(raw_url: str) -> bool:
     """True wenn `raw_url` ein Mail-Preview-Finding für einen synthetischen
@@ -196,6 +225,16 @@ def _probe_ac(finding: dict) -> dict:
             "prod_url": "",
             "prod_http": "—",
             "prod_status": "SKIPPED_PREVIEW_TEST_TRIP",
+        }
+
+    # Interner Host/Port oder auth-geschützter /send-Endpoint (#1197): nicht
+    # öffentlich per GET probebar → überspringen statt False-FAIL/PARTIAL.
+    if _is_internal_or_send_url(raw_url):
+        return {
+            **finding,
+            "prod_url": "",
+            "prod_http": "—",
+            "prod_status": "SKIPPED_NOT_MAPPABLE",
         }
 
     prod_url = _staging_to_prod_url(raw_url)
