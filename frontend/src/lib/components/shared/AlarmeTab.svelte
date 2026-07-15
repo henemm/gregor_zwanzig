@@ -22,6 +22,7 @@
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
+	import TelegramKurzstilToggle from '$lib/components/shared/TelegramKurzstilToggle.svelte';
 	import AlertCooldownCard from '$lib/components/alerts-tab/AlertCooldownCard.svelte';
 	import AlertQuietHoursCard from '$lib/components/alerts-tab/AlertQuietHoursCard.svelte';
 	import AlertPreviewCard from '$lib/components/alerts-tab/AlertPreviewCard.svelte';
@@ -270,6 +271,21 @@
 				{/if}
 			{:else if id === 'channels'}
 				<AlertChannelPicker channels={displayChannelState} onToggle={handleChannelToggle} />
+				{#if context === 'vergleich'}
+					<!-- Issue #1260 S5: geteilter Kurzstil-Schalter (DIESELBE Komponente
+					     wie im Trip-Versand-Tab). Bindet an display_config.telegram_style
+					     via wiz.telegramStyle; nur aktiv, wenn Telegram-Kanal an ist. -->
+					<div class="alarme-telegram-style">
+						<TelegramKurzstilToggle
+							context="vergleich"
+							style={wiz?.telegramStyle ?? 'rich'}
+							disabled={!(wiz?.sendTelegram ?? false)}
+							onchange={(s) => {
+								if (wiz) wiz.telegramStyle = s;
+							}}
+						/>
+					</div>
+				{/if}
 			{:else if id === 'cooldown'}
 				{#if context === 'vergleich'}
 					<AlertCooldownCard bind:cooldown_minutes={wiz!.alertCooldownMinutes} />
@@ -342,6 +358,9 @@
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
+	}
+	.alarme-telegram-style {
+		margin-top: 12px;
 	}
 	.alarme-no-metrics-hint {
 		margin: 0;

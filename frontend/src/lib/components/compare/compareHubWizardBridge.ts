@@ -82,6 +82,9 @@ export interface HubEdit {
 	officialAlertsEnabled?: boolean;
 	officialWarnings?: { enabled: boolean };
 	radarAlertEnabled?: boolean;
+	// Issue #1260: Telegram-Kurzstil (display_config.telegram_style). undefined =
+	// nicht editiert → Round-Trip via `preset.display_config`.
+	telegramStyle?: 'rich' | 'kurzform';
 }
 
 /**
@@ -122,7 +125,10 @@ export function buildHubPutPayload(
 		// anderen HubEdit-Felder, undefined bleibt undefined.
 		officialAlertsEnabled: edit.officialAlertsEnabled,
 		officialWarnings: edit.officialWarnings,
-		radarAlertEnabled: edit.radarAlertEnabled
+		radarAlertEnabled: edit.radarAlertEnabled,
+		// Issue #1260: 1:1 Round-Trip wie alle anderen HubEdit-Felder, undefined
+		// bleibt undefined (kein Datenverlust am telegram_style).
+		telegramStyle: edit.telegramStyle
 	});
 }
 
@@ -381,6 +387,9 @@ export interface AlarmHydrationTarget {
 	alertQuietFrom?: string;
 	alertQuietTo?: string;
 	corridors?: Corridor[];
+	// Issue #1260: Telegram-Kurzstil-Toggle im Hub-Alarme-Tab
+	// (display_config.telegram_style). Default "rich".
+	telegramStyle?: 'rich' | 'kurzform';
 }
 
 /**
@@ -409,6 +418,11 @@ export function hydrateAlarmFieldsFromPreset(state: AlarmHydrationTarget, preset
 	state.alertQuietFrom = preset.alert_quiet_from;
 	state.alertQuietTo = preset.alert_quiet_to;
 	state.corridors = preset.corridors ?? [];
+	// Issue #1260: Kurzstil-Toggle aus display_config.telegram_style hydrieren,
+	// Default "rich" (analog CompareEditor). Ohne diese Zeile bliebe der Toggle
+	// im Hub-Alarme-Tab dauerhaft auf dem Klasse-Default stehen und ein
+	// gespeicherter "kurzform"-Wert waere unsichtbar.
+	state.telegramStyle = (displayConfig.telegram_style as 'rich' | 'kurzform') ?? 'rich';
 }
 
 /** Plain-Snapshot der 6 persistenzrelevanten Alarme-Tab-Felder (analog
@@ -423,6 +437,9 @@ export interface AlarmSnapshot {
 	alertCooldownMinutes?: number;
 	alertQuietFrom?: string;
 	alertQuietTo?: string;
+	// Issue #1260: Teil des Snapshots, damit ein reiner Kurzstil-Toggle-Klick im
+	// Hub-Alarme-Tab als "dirty" erkannt wird und einen PUT ausloest.
+	telegramStyle?: 'rich' | 'kurzform';
 }
 
 /**
@@ -464,7 +481,10 @@ export function flushPendingAlarmSave(
 		metricAlertLevels: current.metricAlertLevels,
 		alertCooldownMinutes: current.alertCooldownMinutes,
 		alertQuietFrom: current.alertQuietFrom,
-		alertQuietTo: current.alertQuietTo
+		alertQuietTo: current.alertQuietTo,
+		// Issue #1260: Kurzstil in den PUT-Payload — landet via
+		// buildComparePresetSavePayload in display_config.telegram_style (RMW).
+		telegramStyle: current.telegramStyle
 	});
 }
 
@@ -499,7 +519,10 @@ export function rollbackAlarmSnapshot(
 		'metricAlertLevels',
 		'alertCooldownMinutes',
 		'alertQuietFrom',
-		'alertQuietTo'
+		'alertQuietTo',
+		// Issue #1260: der Kurzstil-Toggle rollt bei PUT-Fehler diff-basiert
+		// zurueck wie die uebrigen Alarme-Snapshot-Felder.
+		'telegramStyle'
 	];
 	const target = state as Record<string, unknown>;
 	for (const field of fields) {

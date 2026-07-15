@@ -265,26 +265,45 @@ class NotificationService:
 
         # Telegram
         if request.send_telegram and self._settings.can_send_telegram():
+            telegram_style = getattr(request.report_config, "telegram_style", "rich")
 
-            bubbles = report.telegram_bubbles or [report.email_plain]
-            for i, bubble_text in enumerate(bubbles):
-                markup = report.telegram_actions_markup if i == len(bubbles) - 1 else None
+            if telegram_style == "kurzform":
+                # Issue #1260: Kurzstil — EINE Nachricht mit dem SMS-Text,
+                # ohne Bubbles/Inline-Knöpfe, parse_mode=None (Text ist nicht
+                # HTML-escaped).
                 try:
                     TelegramOutput(self._settings).send(
                         subject=report.email_subject,
-                        body=bubble_text,
-                        reply_markup=markup,
-                        parse_mode="HTML",
+                        body=report.sms_text or report.email_plain,
+                        parse_mode=None,
                         suppress_subject_line=True,
                     )
+                    sent_channels.append("telegram")
                 except OutputError as e:
                     logger.error(
-                        f"Telegram bubble {i + 1}/{len(bubbles)} send failed for {request.trip.name}: {e}"
+                        f"Telegram kurzform send failed for {request.trip.name}: {e}"
                     )
                     telegram_fully_sent = False
-                    break
-            if telegram_fully_sent:
-                sent_channels.append("telegram")
+            else:
+                bubbles = report.telegram_bubbles or [report.email_plain]
+                for i, bubble_text in enumerate(bubbles):
+                    markup = report.telegram_actions_markup if i == len(bubbles) - 1 else None
+                    try:
+                        TelegramOutput(self._settings).send(
+                            subject=report.email_subject,
+                            body=bubble_text,
+                            reply_markup=markup,
+                            parse_mode="HTML",
+                            suppress_subject_line=True,
+                        )
+                    except OutputError as e:
+                        logger.error(
+                            f"Telegram bubble {i + 1}/{len(bubbles)} send failed for {request.trip.name}: {e}"
+                        )
+                        telegram_fully_sent = False
+                        break
+                if telegram_fully_sent:
+                    sent_channels.append("telegram")
 
         # WEATHER-04: Service-E-Mail bei SMS-only + Fehler
         if request.failed_segments:
@@ -345,6 +364,7 @@ class NotificationService:
         effective_channels: set[str],
         official_notices: Optional[list] = None,
         mail_sink: Optional[object] = None,
+        telegram_style: str = "rich",
     ) -> NotificationResult:
         """Wetter-Änderungs-Alert: rendern und über konfigurierte Kanäle versenden.
 
@@ -371,6 +391,7 @@ class NotificationService:
             radar_mode=False,
             official_notices=official_notices,
             alert_tz=alert_tz,
+            telegram_style=telegram_style,
         )
 
     def send_location_deviation_alert(
@@ -479,6 +500,7 @@ class NotificationService:
         effective_channels: set[str],
         mail_sink: Optional[object] = None,
         sms_sink: Optional[object] = None,
+        telegram_style: str = "rich",
     ) -> NotificationResult:
         """Standalone amtlicher Alert ohne Wetter-Delta (Issue #1088; Format-
         Fidelity zur Design-Vorlage in Issue #1216).
@@ -536,10 +558,22 @@ class NotificationService:
         if "telegram" in effective_channels and self._settings.can_send_telegram():
             sent_channels.append("telegram")
             try:
-                TelegramOutput(self._settings).send(
-                    subject=subject, body=telegram_text,
-                    parse_mode="HTML", suppress_subject_line=True,
-                )
+                # Issue #1260 S3: Kurzstil sendet den SMS-Text (Plaintext,
+                # parse_mode=None) statt der reichen Telegram-Warnvorlage.
+                if telegram_style == "kurzform":
+                    kurz_body = render_official_alert_sms(
+                        dto_notices, sms_prefix=trip.name.replace(" ", ""),
+                        tz=alert_tz,
+                    )
+                    TelegramOutput(self._settings).send(
+                        subject=subject, body=kurz_body,
+                        parse_mode=None, suppress_subject_line=True,
+                    )
+                else:
+                    TelegramOutput(self._settings).send(
+                        subject=subject, body=telegram_text,
+                        parse_mode="HTML", suppress_subject_line=True,
+                    )
             except Exception as e:
                 logger.error(f"Official alert telegram failed for {trip.name}: {e}")
 
@@ -565,6 +599,7 @@ class NotificationService:
         locations: list,
         tagged_alerts: list,
         effective_channels: set[str],
+        telegram_style: str = "rich",
         *,
         mail_sink: Optional[object] = None,
         sms_sink: Optional[object] = None,
@@ -624,6 +659,7 @@ class NotificationService:
         if "telegram" in effective_channels and self._settings.can_send_telegram():
             self._dispatch_compare_official_telegram(
                 preset_name, subject, dto_notices, source_label, alert_tz, telegram_sink,
+                telegram_style=telegram_style,
             )
             sent_channels.append("telegram")
         if "sms" in effective_channels and self._settings.can_send_sms():
@@ -648,10 +684,28 @@ class NotificationService:
     def _dispatch_compare_official_telegram(
         self, preset_name: str, subject: str, dto_notices: list, source_label: str,
         alert_tz: ZoneInfo, telegram_sink: Optional[object],
+        telegram_style: str = "rich",
     ) -> None:
-        from output.renderers.alert.official_alerts import render_official_alert_telegram
+        from output.renderers.alert.official_alerts import (
+            render_official_alert_sms, render_official_alert_telegram,
+        )
 
         try:
+            # Issue #1260 S4: Kurzstil sendet den amtlichen SMS-Text (Plaintext,
+            # parse_mode=None, keine Inline-Knöpfe) statt der reichen Compare-
+            # Warnvorlage. Default "rich" bleibt unverändert.
+            if telegram_style == "kurzform":
+                kurz_body = render_official_alert_sms(
+                    dto_notices, sms_prefix=preset_name.replace(" ", ""), tz=alert_tz,
+                )
+                if telegram_sink is not None:
+                    telegram_sink(kurz_body)
+                else:
+                    TelegramOutput(self._settings).send(
+                        subject=subject, body=kurz_body,
+                        parse_mode=None, suppress_subject_line=True,
+                    )
+                return
             telegram_text = render_official_alert_telegram(
                 dto_notices, prefix=preset_name, source_label=source_label, tz=alert_tz,
             )
@@ -731,8 +785,15 @@ class NotificationService:
         radar_mode: bool = False,
         official_notices: Optional[list] = None,
         alert_tz: Optional[ZoneInfo] = None,
+        telegram_style: str = "rich",
     ) -> NotificationResult:
         """Versendet eine kanonische AlertMessage über die konfigurierten Kanäle.
+
+        Issue #1260 S3: ist `telegram_style="kurzform"`, sendet der Telegram-
+        Zweig den bereits gerenderten `sms_body` (Plaintext, `parse_mode=None`,
+        keine Inline-Knöpfe) statt der reichen HTML-Bubble. Default `"rich"` —
+        Compare-Aufrufer (nicht im Scope) übergeben nichts und bleiben rich;
+        keine implizite Kopplung an ein Trip-Feld.
 
         Issue #1088: liegen `official_notices` vor, wird ein Text-Block an
         html/plain/telegram_body angehängt — SMS bewusst OHNE Zusatz
@@ -790,12 +851,20 @@ class NotificationService:
         if "telegram" in effective_channels and self._settings.can_send_telegram():
             sent_channels.append("telegram")
             try:
-                TelegramOutput(self._settings).send(
-                    subject=subject,
-                    body=telegram_body,
-                    parse_mode="HTML",
-                    suppress_subject_line=True,
-                )
+                if telegram_style == "kurzform":
+                    TelegramOutput(self._settings).send(
+                        subject=subject,
+                        body=sms_body,
+                        parse_mode=None,
+                        suppress_subject_line=True,
+                    )
+                else:
+                    TelegramOutput(self._settings).send(
+                        subject=subject,
+                        body=telegram_body,
+                        parse_mode="HTML",
+                        suppress_subject_line=True,
+                    )
             except Exception as e:
                 _log_error("telegram", e)
 

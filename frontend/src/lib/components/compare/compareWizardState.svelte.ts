@@ -56,6 +56,9 @@ export class CompareWizardState {
 	officialWarningsEnabled = $state(false);
 	// Issue #1170 — Alarm-Konfiguration (Epic #1095 Scheibe 3/3), Trip-identische Keys.
 	metricAlertLevels = $state<Record<string, string>>({});
+	// Issue #1260 S5 — Telegram-Kurzstil fuer amtliche Compare-Warnungen
+	// (display_config.telegram_style). Default "rich".
+	telegramStyle = $state<'rich' | 'kurzform'>('rich');
 	alertCooldownMinutes = $state<number | undefined>(undefined);
 	alertQuietFrom = $state<string | undefined>(undefined);
 	alertQuietTo = $state<string | undefined>(undefined);
@@ -134,7 +137,9 @@ export class CompareWizardState {
 				...(this.topN !== undefined ? { top_n: this.topN } : {}),
 				...(Object.keys(this.metricAlertLevels).length > 0
 					? { metric_alert_levels: this.metricAlertLevels }
-					: {})
+					: {}),
+				// Issue #1260 S5: nur bei Abweichung vom Default persistieren.
+				...(this.telegramStyle !== 'rich' ? { telegram_style: this.telegramStyle } : {})
 			}
 		};
 		try {
@@ -176,7 +181,8 @@ export class CompareWizardState {
 			alertCooldownMinutes: this.alertCooldownMinutes,
 			alertQuietFrom: this.alertQuietFrom,
 			alertQuietTo: this.alertQuietTo,
-			corridors: this.corridors // Issue #1231 Slice 4
+			corridors: this.corridors, // Issue #1231 Slice 4
+			telegramStyle: this.telegramStyle // Issue #1260 S5
 		});
 		try {
 			const { api } = await import('$lib/api');

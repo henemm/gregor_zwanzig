@@ -68,6 +68,10 @@
 	let send_email = $state(true);
 	let send_telegram = $state(false);
 	let send_sms = $state(false);
+	// Issue #1260 S5: Trip-Kurzstil-Schalter (report_config.telegram_style).
+	// EIN Trip-Feld regelt Briefing UND Alarme — der Schalter erscheint einmal
+	// hier im Versand-Tab.
+	let telegram_style = $state<'rich' | 'kurzform'>('rich');
 
 	onMount(() => {
 		if (reportConfig) {
@@ -87,6 +91,9 @@
 			if (typeof c.send_email === 'boolean') send_email = c.send_email;
 			if (typeof c.send_telegram === 'boolean') send_telegram = c.send_telegram;
 			if (typeof c.send_sms === 'boolean') send_sms = c.send_sms;
+			if (c.telegram_style === 'kurzform' || c.telegram_style === 'rich') {
+				telegram_style = c.telegram_style;
+			}
 			if (typeof c.multi_day_trend_morning === 'boolean') {
 				multi_day_trend_morning = c.multi_day_trend_morning;
 			} else if (Array.isArray(c.multi_day_trend_reports)) {
@@ -114,6 +121,7 @@
 			send_email,
 			send_telegram,
 			send_sms,
+			telegram_style,
 			multi_day_trend_morning,
 			multi_day_trend_evening,
 			multi_day_trend_reports
@@ -200,6 +208,8 @@
 			onEmailChange={makeChannelChangeHandler('email')}
 			onTelegramChange={makeChannelChangeHandler('telegram')}
 			onSmsChange={makeChannelChangeHandler('sms')}
+			telegramStyle={telegram_style}
+			onTelegramStyleChange={(s) => (telegram_style = s)}
 		/>
 
 		<VTSchedulePlan

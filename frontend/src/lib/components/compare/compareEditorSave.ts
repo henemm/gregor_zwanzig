@@ -34,6 +34,9 @@ export interface CompareEditorEdits {
 	hourlyEnabled?: boolean;
 	// Issue #1170: Alarm-Konfiguration (Epic #1095 Scheibe 3/3). Optional → rückwärtskompatibel.
 	metricAlertLevels?: Record<string, string>;
+	// Issue #1260 S5: Telegram-Kurzstil (display_config.telegram_style). Optional →
+	// rückwärtskompatibel; undefined = Feld nicht editiert → Round-Trip via `...original`.
+	telegramStyle?: 'rich' | 'kurzform';
 	alertCooldownMinutes?: number;
 	alertQuietFrom?: string;
 	alertQuietTo?: string;
@@ -116,6 +119,12 @@ export function buildComparePresetSavePayload(
 	// Issue #1170: metric_alert_levels lebt in display_config (analog Trip).
 	if (edits.metricAlertLevels !== undefined) {
 		displayConfig.metric_alert_levels = edits.metricAlertLevels;
+	}
+
+	// Issue #1260 S5: telegram_style lebt in display_config. undefined → Feld nicht
+	// editiert → Round-Trip via `...original.display_config` (RMW, kein Datenverlust).
+	if (edits.telegramStyle !== undefined) {
+		displayConfig.telegram_style = edits.telegramStyle;
 	}
 
 	const body: ComparePreset = {

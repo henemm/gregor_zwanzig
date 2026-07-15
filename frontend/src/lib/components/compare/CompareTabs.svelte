@@ -494,7 +494,11 @@
 			metricAlertLevels: wizardState.metricAlertLevels,
 			alertCooldownMinutes: wizardState.alertCooldownMinutes,
 			alertQuietFrom: wizardState.alertQuietFrom,
-			alertQuietTo: wizardState.alertQuietTo
+			alertQuietTo: wizardState.alertQuietTo,
+			// Issue #1260: Kurzstil-Toggle im Snapshot, damit ein reiner
+			// Toggle-Klick (ohne andere Aenderung) als dirty erkannt wird und
+			// handleAlarmeCommit einen PUT ausloest.
+			telegramStyle: wizardState.telegramStyle
 		});
 	}
 

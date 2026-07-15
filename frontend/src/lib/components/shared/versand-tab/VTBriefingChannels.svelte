@@ -15,6 +15,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { CHANNEL_COL_BUDGET } from '$lib/components/trip-detail/metricsEditor';
 	import { channelConnectionStatus } from './channelConnectionStatus';
+	import TelegramKurzstilToggle from '$lib/components/shared/TelegramKurzstilToggle.svelte';
 
 	interface Channels {
 		email: boolean;
@@ -34,6 +35,12 @@
 		emailTestid?: string;
 		telegramTestid?: string;
 		smsTestid?: string;
+		/** Issue #1260 S5: Trip-Kurzstil-Schalter (report_config.telegram_style).
+		 * Nur im route-Zweig gesetzt — im vergleich-Zweig ist das Briefing
+		 * E-Mail-only; der Compare-Kurzstil sitzt bei den amtlichen Warnungs-
+		 * Kanaelen im Alarme-Tab (dieselbe geteilte Komponente). */
+		telegramStyle?: 'rich' | 'kurzform';
+		onTelegramStyleChange?: (style: 'rich' | 'kurzform') => void;
 	}
 	let {
 		context = 'route',
@@ -43,7 +50,9 @@
 		onSmsChange,
 		emailTestid = 'channel-email',
 		telegramTestid = 'channel-telegram',
-		smsTestid = 'channel-sms'
+		smsTestid = 'channel-sms',
+		telegramStyle = 'rich',
+		onTelegramStyleChange
 	}: Props = $props();
 
 	interface Profile {
@@ -131,6 +140,16 @@
 						Telegram-Chat-ID fehlt — <a href="/account">im Account einrichten</a>
 					</div>
 				{/if}
+				{#if onTelegramStyleChange}
+					<div class="vt-telegram-style pl-6">
+						<TelegramKurzstilToggle
+							{context}
+							style={telegramStyle}
+							disabled={!channels.telegram}
+							onchange={onTelegramStyleChange}
+						/>
+					</div>
+				{/if}
 			</div>
 
 			<div class="text-sm">
@@ -197,5 +216,8 @@
 		font-size: 11px;
 		letter-spacing: 0.04em;
 		color: var(--g-ink-3);
+	}
+	.vt-telegram-style {
+		margin-top: 8px;
 	}
 </style>

@@ -151,6 +151,8 @@
 		layouts: JSON.stringify(wiz.channelLayouts),
 		// Issue #1170: Alarm-Konfiguration im Dirty-Tracking.
 		metricAlertLevels: JSON.stringify(wiz.metricAlertLevels),
+		// Issue #1260 S5: Telegram-Kurzstil im Dirty-Tracking (Alarme-Tab vergleich).
+		telegramStyle: wiz.telegramStyle,
 		alertCooldownMinutes: wiz.alertCooldownMinutes,
 		alertQuietFrom: wiz.alertQuietFrom,
 		alertQuietTo: wiz.alertQuietTo,
@@ -189,6 +191,7 @@
 				JSON.stringify(wiz.corridors) !== initial.corridors ||
 				JSON.stringify(wiz.channelLayouts) !== initial.layouts ||
 				JSON.stringify(wiz.metricAlertLevels) !== initial.metricAlertLevels ||
+				wiz.telegramStyle !== initial.telegramStyle ||
 				wiz.alertCooldownMinutes !== initial.alertCooldownMinutes ||
 				wiz.alertQuietFrom !== initial.alertQuietFrom ||
 				wiz.alertQuietTo !== initial.alertQuietTo ||
@@ -309,6 +312,8 @@
 		const savedLayouts = JSON.stringify(wiz.channelLayouts);
 		// Issue #1170: Alarm-Konfiguration ebenfalls snapshotten.
 		const savedMetricAlertLevels = JSON.stringify(wiz.metricAlertLevels);
+		// Issue #1260 S5: Telegram-Kurzstil ebenfalls snapshotten.
+		const savedTelegramStyle = wiz.telegramStyle;
 		const savedCooldown = wiz.alertCooldownMinutes;
 		const savedQuietFrom = wiz.alertQuietFrom;
 		const savedQuietTo = wiz.alertQuietTo;
@@ -342,6 +347,8 @@
 			corridors: wiz.corridors, // Issue #1231 Slice 4 — Top-Level-Feld
 			hourlyMetricKeys: wiz.hourlyMetricKeys,
 			metricAlertLevels: wiz.metricAlertLevels,
+			telegramStyle: wiz.telegramStyle, // Issue #1260 S5
+
 			alertCooldownMinutes: wiz.alertCooldownMinutes,
 			alertQuietFrom: wiz.alertQuietFrom,
 			alertQuietTo: wiz.alertQuietTo,
@@ -384,6 +391,7 @@
 				initial.corridors = savedCorridors;
 				initial.layouts = savedLayouts;
 				initial.metricAlertLevels = savedMetricAlertLevels;
+				initial.telegramStyle = savedTelegramStyle;
 				initial.alertCooldownMinutes = savedCooldown;
 				initial.alertQuietFrom = savedQuietFrom;
 				initial.alertQuietTo = savedQuietTo;

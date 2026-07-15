@@ -40,6 +40,17 @@ from services.user_tier import sms_allowed
 logger = logging.getLogger("compare_official_alert")
 
 
+def _effective_telegram_style(preset: dict) -> str:
+    """Feature #1260 S4: Kurzstil-Präferenz aus dem Compare-Preset auflösen.
+
+    Liest ``preset["display_config"]["telegram_style"]`` mit Default ``"rich"``.
+    Fehlendes/None-``display_config`` und fehlender Key fallen sicher auf
+    ``"rich"`` zurück (kein Crash). Reine Darstellungs-Präferenz — beeinflusst
+    NICHT die Kanal-Auflösung (``_effective_channels``)."""
+    dc = preset.get("display_config") or {}
+    return dc.get("telegram_style", "rich") or "rich"
+
+
 class CompareOfficialAlertService:
     """Wertet amtliche Warnungen je Compare-Preset/Ort aus und versendet EINEN
     gebuendelten Standalone-Alarm (Orts-Scope) bei neuen/eskalierten Treffern."""
@@ -119,6 +130,7 @@ class CompareOfficialAlertService:
         result = notification_service.send_multi_location_official_alert(
             preset.get("name", preset_id), locs, tagged_alerts,
             self._effective_channels(preset),
+            _effective_telegram_style(preset),
             mail_sink=self._mail_sink, sms_sink=self._sms_sink,
             telegram_sink=self._telegram_sink,
         )

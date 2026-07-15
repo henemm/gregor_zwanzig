@@ -60,6 +60,9 @@
 	// Issue #1170 — Alarm-Konfiguration (Epic #1095 Scheibe 3/3).
 	state.metricAlertLevels =
 		(state.existingDisplayConfig.metric_alert_levels as Record<string, string>) ?? {};
+	// Issue #1260 S5 — Telegram-Kurzstil aus display_config (Default "rich").
+	state.telegramStyle =
+		(state.existingDisplayConfig.telegram_style as 'rich' | 'kurzform') ?? 'rich';
 	state.alertCooldownMinutes = data.preset.alert_cooldown_minutes ?? undefined;
 	state.alertQuietFrom = data.preset.alert_quiet_from ?? undefined;
 	state.alertQuietTo = data.preset.alert_quiet_to ?? undefined;

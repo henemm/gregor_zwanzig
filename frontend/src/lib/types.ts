@@ -224,6 +224,10 @@ export interface ReportConfig {
 	show_outlook?: boolean;
 	// Issue #722 — E-Mail-Format: "full" (HTML multipart) | "compact" (plain-text only)
 	email_format?: 'full' | 'compact';
+	// Issue #1260 — Telegram im SMS-Kurzstil (opt-in). "rich" (Default, Multi-Bubble
+	// mit Inline-Knöpfen) | "kurzform" (ein Zeilentext wie SMS). Regelt Trip-Briefing
+	// UND Trip-Alarme (ein Feld je Trip).
+	telegram_style?: 'rich' | 'kurzform';
 }
 
 // Issue #429 — kanal-spezifische Layout-Listen (snake_case auf der Wire).
@@ -249,6 +253,7 @@ export interface DisplayConfig {
 	telegram_kurzform?: boolean; // Issue #614: SMS-Kurzform als Tages-Max-Anhang
 	alert_preset?: string; // Issue #846: "deaktiviert" | "entspannt" | "standard" | "sensibel"
 	metric_alert_levels?: Record<string, SensLevel>; // Issue #864: metric → SensLevel
+	telegram_style?: 'rich' | 'kurzform'; // Issue #1260: Compare-amtliche Warnung im SMS-Kurzstil (opt-in)
 }
 
 // Epic #138 Issue #177 — User-definierte Metric-Presets (Server-seitig persistiert).

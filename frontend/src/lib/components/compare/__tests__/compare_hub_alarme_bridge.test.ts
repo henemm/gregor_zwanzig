@@ -330,3 +330,91 @@ describe('S4-Known-Gap schliessen: buildHubPutPayload kennt officialAlertsEnable
 		assert.strictEqual(body.radar_alert_enabled, true);
 	});
 });
+
+// Issue #1260 (Adversary F001): ECHTER Verhaltensnachweis fuer den neu
+// verdrahteten Hub-Alarme-Kurzstil-Pfad — ruft die realen Bridge-Funktionen mit
+// einem Preset-Objekt auf und beweist, dass telegram_style aus dem Preset
+// hydriert UND ein reiner Toggle-Klick in den PUT-Payload (display_config.
+// telegram_style) wandert. KEIN Mock, KEIN Datei-Grep — direkte Aufrufe der
+// exportierten Funktionen mit Assertion auf das tatsaechliche Ergebnis.
+describe('#1260 Hub-Alarme Kurzstil-Toggle: Hydration + PUT-Persistenz (F001)', () => {
+	function makeAlarmSnapshot(overrides: Partial<AlarmSnapshot> = {}): AlarmSnapshot {
+		return {
+			officialAlertsEnabled: true,
+			officialWarningsEnabled: true,
+			radarAlertEnabled: false,
+			metricAlertLevels: {},
+			alertCooldownMinutes: 30,
+			alertQuietFrom: '22:00',
+			alertQuietTo: '07:00',
+			telegramStyle: 'rich',
+			...overrides
+		};
+	}
+
+	test('Hydration: display_config.telegram_style="kurzform" wird nach state.telegramStyle uebernommen', () => {
+		const preset = makePreset({
+			display_config: { region: 'Vorarlberg', telegram_style: 'kurzform' }
+		});
+		const state: Record<string, unknown> = {};
+
+		hydrateAlarmFieldsFromPreset(state, preset);
+
+		assert.strictEqual(
+			state.telegramStyle,
+			'kurzform',
+			'ohne diese Hydration bliebe der Kurzstil-Toggle im Hub-Alarme-Tab unsichtbar (F001)'
+		);
+	});
+
+	test('Hydration-Default: fehlt telegram_style im Preset, greift "rich"', () => {
+		const preset = makePreset({ display_config: { region: 'Vorarlberg' } });
+		const state: Record<string, unknown> = {};
+
+		hydrateAlarmFieldsFromPreset(state, preset);
+
+		assert.strictEqual(state.telegramStyle, 'rich', 'Default ist der reiche Bubble-Stil');
+	});
+
+	test('reiner Toggle-Klick (rich -> kurzform) loest PUT aus und setzt display_config.telegram_style', () => {
+		const preset = makePreset({
+			display_config: { region: 'Vorarlberg', telegram_style: 'rich' }
+		});
+		const before = makeAlarmSnapshot({ telegramStyle: 'rich' });
+		const current = makeAlarmSnapshot({ telegramStyle: 'kurzform' });
+
+		const result = flushPendingAlarmSave(preset, current, before);
+
+		assert.ok(result, 'ein reiner Kurzstil-Toggle-Klick muss einen PUT-Payload liefern (nicht null)');
+		const dc = result!.body.display_config as Record<string, unknown>;
+		assert.strictEqual(
+			dc.telegram_style,
+			'kurzform',
+			'der neue Kurzstil-Wert muss in display_config.telegram_style landen (F001-Kernbeweis)'
+		);
+	});
+
+	test('RMW: der Toggle-PUT bewahrt andere display_config-Keys (metric_alert_levels)', () => {
+		const preset = makePreset({
+			display_config: {
+				region: 'Vorarlberg',
+				telegram_style: 'rich',
+				metric_alert_levels: { snow_depth_cm: 'warn' }
+			}
+		});
+		const result = flushPendingAlarmSave(
+			preset,
+			makeAlarmSnapshot({ telegramStyle: 'kurzform', metricAlertLevels: { snow_depth_cm: 'warn' } }),
+			makeAlarmSnapshot({ telegramStyle: 'rich', metricAlertLevels: { snow_depth_cm: 'warn' } })
+		);
+
+		assert.ok(result);
+		const dc = result!.body.display_config as Record<string, unknown>;
+		assert.strictEqual(dc.telegram_style, 'kurzform');
+		assert.deepStrictEqual(
+			dc.metric_alert_levels,
+			{ snow_depth_cm: 'warn' },
+			'RMW: telegram_style-Aenderung darf metric_alert_levels nicht verlieren (#102/#1257-Kontext)'
+		);
+	});
+});

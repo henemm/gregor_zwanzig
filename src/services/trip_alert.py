@@ -37,6 +37,19 @@ def radar_alert_due(result: object, threshold_min: int) -> bool:
     return onset is not None and onset <= threshold_min
 
 
+def _trip_telegram_style(trip: "Trip") -> str:
+    """Issue #1260 S3: aufgelöster Telegram-Stil des Trips ("rich" Default).
+
+    Wird an den Trip-Alarm-Dispatch (Abweichung + amtlich) explizit
+    durchgereicht, damit die geteilten Dispatch-Methoden keine implizite
+    Kopplung an ein Trip-Feld bekommen (Compare-Pfade bleiben beim Default).
+    """
+    rc = getattr(trip, "report_config", None)
+    if rc is None:
+        return "rich"
+    return getattr(rc, "telegram_style", "rich") or "rich"
+
+
 class TripAlertService:
     """
     Service for sending weather change alerts.
@@ -859,6 +872,7 @@ class TripAlertService:
             effective_channels=effective_channels,
             official_notices=official_notices or [],
             mail_sink=self._mail_sink,
+            telegram_style=_trip_telegram_style(trip),
         )
 
         if result.sent:
@@ -981,6 +995,7 @@ class TripAlertService:
             notices=official_notices,
             effective_channels=effective_channels,
             mail_sink=self._mail_sink,
+            telegram_style=_trip_telegram_style(trip),
         )
         if result.sent:
             self._record_official_alert_state(trip.id, official_notices)

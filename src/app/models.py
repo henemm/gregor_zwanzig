@@ -757,6 +757,7 @@ class TripReportConfig:
     show_metrics_summary: bool = False          # Metriken-Überblick (Issue #664)
     show_outlook: bool = True                   # Issue #721: Ausblick-Block (Großwetterlage + nächste Etappen)
     email_format: str = "full"                  # Issue #722: "full" | "compact"
+    telegram_style: str = "rich"                # Issue #1260: "rich" | "kurzform"
     show_yesterday_comparison: bool = True      # Issue #750: Vortag-Vergleich-Sektion
 
     # Inbound-Kommandos (Issue #670)
