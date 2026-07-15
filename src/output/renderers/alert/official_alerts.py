@@ -84,6 +84,8 @@ _SOURCE_LABELS: dict[str, str] = {
     # Präfektur-Zugangssperren einzelner Wander-Massive bei akuter Waldbrandgefahr
     # (services/official_alerts/massif_closure.py, Quelle risque-prevention-incendie.fr).
     "massif_closure": "Präfektur (Zugangssperre)",
+    # Amtliche OGC-EDR-API api.meteoalarm.org (Österreich + Italien, Issue #1086).
+    "meteoalarm": "MeteoAlarm",
 }
 
 

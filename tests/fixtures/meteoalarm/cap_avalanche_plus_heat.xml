@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+  <identifier>2.49.0.0.40.0.AT.-20260714095557_d1_777</identifier>
+  <sender>cap@zamg.ac.at</sender>
+  <sent>2026-07-14T09:55:57+02:00</sent>
+  <status>Actual</status>
+  <msgType>Alert</msgType>
+  <scope>Public</scope>
+  <info>
+    <language>de-DE</language>
+    <category>Met</category>
+    <event>Lawinenwarnung</event>
+    <responseType>Monitor</responseType>
+    <urgency>Future</urgency>
+    <severity>Severe</severity>
+    <certainty>Likely</certainty>
+    <effective>2026-07-14T09:55:57+02:00</effective>
+    <onset>2026-07-15T00:00:00+02:00</onset>
+    <expires>2026-07-15T23:59:59+02:00</expires>
+    <senderName>GeoSphere Austria</senderName>
+    <headline>Lawinenwarnung</headline>
+    <description>Erhoehte Lawinengefahr.</description>
+    <instruction>Abseits gesicherter Pisten Vorsicht walten lassen.</instruction>
+    <web>http://warnungen.zamg.at/html/de/morgen/lawine/at/kaernten/</web>
+    <parameter>
+      <valueName>awareness_level</valueName>
+      <value>3; orange; Severe</value>
+    </parameter>
+    <parameter>
+      <valueName>awareness_type</valueName>
+      <value>9; avalanche</value>
+    </parameter>
+    <area>
+      <areaDesc>Villach (Stadt)</areaDesc>
+      <geocode>
+        <valueName>EMMA_ID</valueName>
+        <value>AT202</value>
+      </geocode>
+    </area>
+  </info>
+  <info>
+    <language>en-GB</language>
+    <category>Met</category>
+    <event>Avalanche warning</event>
+    <responseType>Monitor</responseType>
+    <urgency>Future</urgency>
+    <severity>Severe</severity>
+    <certainty>Likely</certainty>
+    <effective>2026-07-14T09:55:57+02:00</effective>
+    <onset>2026-07-15T00:00:00+02:00</onset>
+    <expires>2026-07-15T23:59:59+02:00</expires>
+    <senderName>GeoSphere Austria</senderName>
+    <headline>Avalanche warning</headline>
+    <description>Increased avalanche danger.</description>
+    <instruction>Exercise caution off secured pistes.</instruction>
+    <web>http://warnungen.zamg.at/html/de/morgen/lawine/at/kaernten/</web>
+    <parameter>
+      <valueName>awareness_level</valueName>
+      <value>3; orange; Severe</value>
+    </parameter>
+    <parameter>
+      <valueName>awareness_type</valueName>
+      <value>9; avalanche</value>
+    </parameter>
+    <area>
+      <areaDesc>Villach (Stadt)</areaDesc>
+      <geocode>
+        <valueName>EMMA_ID</valueName>
+        <value>AT202</value>
+      </geocode>
+    </area>
+  </info>
+  <info>
+    <language>de-DE</language>
+    <category>Met</category>
+    <event>Hitzewarnung</event>
+    <responseType>Monitor</responseType>
+    <urgency>Future</urgency>
+    <severity>Moderate</severity>
+    <certainty>Likely</certainty>
+    <effective>2026-07-14T09:55:57+02:00</effective>
+    <onset>2026-07-15T00:00:00+02:00</onset>
+    <expires>2026-07-15T23:59:59+02:00</expires>
+    <senderName>GeoSphere Austria</senderName>
+    <headline>Hitzewarnung</headline>
+    <description>Es ist mit erhoehter Hitzebelastung zu rechnen.</description>
+    <instruction>VORSICHT, grosse Hitze ist zu erwarten.</instruction>
+    <web>http://warnungen.zamg.at/html/de/morgen/hitze/at/kaernten/</web>
+    <parameter>
+      <valueName>awareness_level</valueName>
+      <value>2; yellow; Moderate</value>
+    </parameter>
+    <parameter>
+      <valueName>awareness_type</valueName>
+      <value>5; high-temperature</value>
+    </parameter>
+    <area>
+      <areaDesc>Villach (Stadt)</areaDesc>
+      <geocode>
+        <valueName>EMMA_ID</valueName>
+        <value>AT202</value>
+      </geocode>
+    </area>
+  </info>
+  <info>
+    <language>en-GB</language>
+    <category>Met</category>
+    <event>Heatwarning</event>
+    <responseType>Monitor</responseType>
+    <urgency>Future</urgency>
+    <severity>Moderate</severity>
+    <certainty>Likely</certainty>
+    <effective>2026-07-14T09:55:57+02:00</effective>
+    <onset>2026-07-15T00:00:00+02:00</onset>
+    <expires>2026-07-15T23:59:59+02:00</expires>
+    <senderName>GeoSphere Austria</senderName>
+    <headline>Heatwarning</headline>
+    <description>Enhanced heat stress must be expected.</description>
+    <instruction>BE AWARE that high temperatures are expected.</instruction>
+    <web>http://warnungen.zamg.at/html/de/morgen/hitze/at/kaernten/</web>
+    <parameter>
+      <valueName>awareness_level</valueName>
+      <value>2; yellow; Moderate</value>
+    </parameter>
+    <parameter>
+      <valueName>awareness_type</valueName>
+      <value>5; high-temperature</value>
+    </parameter>
+    <area>
+      <areaDesc>Villach (Stadt)</areaDesc>
+      <geocode>
+        <valueName>EMMA_ID</valueName>
+        <value>AT202</value>
+      </geocode>
+    </area>
+  </info>
+</alert>

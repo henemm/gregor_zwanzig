@@ -47,6 +47,21 @@ def get_official_alerts_for_location(lat: float, lon: float) -> list[OfficialAle
 
     Wirft selbst nie — ein Fehler einer Quelle darf den Wetter-Fetch der
     ComparisonEngine nicht stoeren (AC-3).
+
+    Issue #1086 (Korrektur nach Adversary F002): unmittelbar vor dem Return
+    werden die gesammelten Alerts DIESES EINEN Punktes pro ``hazard`` zu
+    genau einem zusammengefasst -- hoechste ``level`` gewinnt, bei Gleichstand
+    der ZUERST gesammelte (= zuerst registrierte Quelle). Das ist der
+    Cross-Source-Kollaps fuer AT (``GeoSphereWarnSource`` vs.
+    ``MeteoAlarmSource``, #1086) -- bewusst NICHT ueber einen normalisierten
+    Namens-Schluessel in ``dedupe_official_alerts()``, weil diese Funktion im
+    Orts-Vergleich ueber MEHRERE Orte kombiniert aufgerufen wird und ein
+    namensbasierter Schluessel dort verschiedene Orte faelschlich verschmelzen
+    wuerde (Adversary F002). Da dieser Kollaps ausschliesslich innerhalb eines
+    einzelnen ``(lat, lon)``-Aufrufs wirkt, ist eine ortsuebergreifende
+    Verwechslung strukturell ausgeschlossen. Alerts unterschiedlicher
+    ``hazard`` bleiben alle erhalten; die Reihenfolge der Gefahren bleibt
+    stabil (erstes Auftreten).
     """
     results: list[OfficialAlert] = []
     for source in _REGISTERED_SOURCES:
@@ -60,4 +75,14 @@ def get_official_alerts_for_location(lat: float, lon: float) -> list[OfficialAle
             results.extend(source.fetch(lat, lon))
         except Exception:
             logger.warning("official_alerts: %s fetch failed", source_name, exc_info=True)
-    return results
+
+    best_by_hazard: dict[str, OfficialAlert] = {}
+    order: list[str] = []
+    for alert in results:
+        current = best_by_hazard.get(alert.hazard)
+        if current is None:
+            best_by_hazard[alert.hazard] = alert
+            order.append(alert.hazard)
+        elif alert.level > current.level:
+            best_by_hazard[alert.hazard] = alert
+    return [best_by_hazard[hazard] for hazard in order]

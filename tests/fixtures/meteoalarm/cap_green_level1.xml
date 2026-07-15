@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+  <identifier>2.49.0.0.40.0.AT.-20260714095557_d1_999</identifier>
+  <sender>cap@zamg.ac.at</sender>
+  <sent>2026-07-14T09:55:57+02:00</sent>
+  <status>Actual</status>
+  <msgType>Alert</msgType>
+  <scope>Public</scope>
+  <info>
+    <language>de-DE</language>
+    <category>Met</category>
+    <event>Hinweis</event>
+    <responseType>Monitor</responseType>
+    <urgency>Future</urgency>
+    <severity>Minor</severity>
+    <certainty>Likely</certainty>
+    <effective>2026-07-14T09:55:57+02:00</effective>
+    <onset>2026-07-15T00:00:00+02:00</onset>
+    <expires>2026-07-15T23:59:59+02:00</expires>
+    <senderName>GeoSphere Austria</senderName>
+    <headline>Hinweis</headline>
+    <description>Geringes Risiko, keine besonderen Vorsichtsmassnahmen noetig.</description>
+    <instruction>Keine besonderen Massnahmen erforderlich.</instruction>
+    <web>http://warnungen.zamg.at/html/de/morgen/hitze/at/kaernten/</web>
+    <parameter>
+      <valueName>awareness_level</valueName>
+      <value>1; green; Minor</value>
+    </parameter>
+    <parameter>
+      <valueName>awareness_type</valueName>
+      <value>5; high-temperature</value>
+    </parameter>
+    <area>
+      <areaDesc>Villach (Stadt)</areaDesc>
+      <geocode>
+        <valueName>EMMA_ID</valueName>
+        <value>AT202</value>
+      </geocode>
+    </area>
+  </info>
+</alert>

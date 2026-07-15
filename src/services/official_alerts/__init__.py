@@ -12,14 +12,18 @@ from services.official_alerts.base import (
 from services.official_alerts.geosphere_warn import GeoSphereWarnSource
 from services.official_alerts.massif_closure import MassifClosureSource
 from services.official_alerts.meteo_forets import MeteoForetsSource
+from services.official_alerts.meteoalarm import MeteoAlarmSource
 from services.official_alerts.models import OfficialAlert
 from services.official_alerts.vigilance import VigilanceSource
 
-# Lazy-Registration bei Modul-Import (analog Provider-Pattern), Issue #1035/#1036/#1037/#1085.
+# Lazy-Registration bei Modul-Import (analog Provider-Pattern), Issue #1035/#1036/#1037/#1085/#1086.
+# Reihenfolge verbindlich: MeteoAlarmSource NACH GeoSphereWarnSource (Label-Tie-Break
+# bei gleicher Stufe im Cross-Source-Dedup, s. Spec #1086).
 register_official_alert_source(VigilanceSource())
 register_official_alert_source(MeteoForetsSource())
 register_official_alert_source(MassifClosureSource())
 register_official_alert_source(GeoSphereWarnSource())
+register_official_alert_source(MeteoAlarmSource())
 
 __all__ = [
     "OfficialAlert",
@@ -30,4 +34,5 @@ __all__ = [
     "MeteoForetsSource",
     "MassifClosureSource",
     "GeoSphereWarnSource",
+    "MeteoAlarmSource",
 ]
