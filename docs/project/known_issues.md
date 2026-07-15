@@ -334,6 +334,7 @@ Trip-Edit baute neues Trip-Objekt aus dem UI-Form-State, ohne Persistenz-Felder 
 
 - **Issue #99** (Backend Defense-in-Depth): `UpdateTripHandler` macht weiterhin `Replace` statt `Merge` — gleiches Bug-Pattern auf Go-Seite
 - **Issue #102 Sub-Task 3** (Migrations-Hygiene): Pre-Rework-Backup-Hook in CLAUDE.md / settings.json
+- **Issue #1159** (2026-07-15, RESOLVED): Blind-Replace-Klasse strukturell geschlossen — gemeinsamer `mergeConfigMap`-Helfer (`internal/handler/config_merge.go`) fuer alle Config-PUT-Endpoints (Trip, Location, ComparePreset) + table-driven Struktur-Test darueber. Keine verbliebene `.DisplayConfig = <body>`-Blind-Stelle mehr.
 
 ### Files Changed (Recovery)
 

@@ -756,7 +756,7 @@ Bei `start_time = "08:00"` und `activity = "fahrrad_20"`: 20 km ÷ 20 km/h = 1 h
 
 ## 11) Weather Config Endpoints (M5c)
 
-Convenience-Layer ueber die bestehenden CRUD-Handler. Erlaubt gezieltes Lesen und Schreiben des `display_config`-Subfelds auf Trip-, Location- und Subscription-Entitaeten ohne Uebertragung des gesamten Objekts. PUT auf den Trip-Endpoint mergt seit #1151 feldweise (Teil-Updates loeschen keine anderen Keys mehr, analog #1129); Location- und Subscription-Endpoint ersetzen `display_config` weiterhin blind (Folge-Issue #1159).
+Convenience-Layer ueber die bestehenden CRUD-Handler. Erlaubt gezieltes Lesen und Schreiben des `display_config`-Subfelds auf Trip- und Location-Entitaeten ohne Uebertragung des gesamten Objekts. Alle Config-schreibenden Endpoints (Trip, Location, ComparePreset) mergen feldweise ueber den gemeinsamen `mergeConfigMap`-Helfer (`internal/handler/config_merge.go`, #1159) — Teil-Updates loeschen keine anderen `display_config`-Keys mehr. Der fruehere Subscription-Endpoint wurde mit #1250 Scheibe 0 entfernt.
 
 **Handler:** `internal/handler/weather_config.go` (NEU) | **Routing:** `cmd/server/main.go`
 
@@ -768,8 +768,6 @@ Convenience-Layer ueber die bestehenden CRUD-Handler. Erlaubt gezieltes Lesen un
 | PUT | `/api/trips/{id}/weather-config` | 200 / 400 / 404 | `display_config` eines Trips setzen |
 | GET | `/api/locations/{id}/weather-config` | 200 / 404 | `display_config` einer Location lesen |
 | PUT | `/api/locations/{id}/weather-config` | 200 / 400 / 404 | `display_config` einer Location setzen |
-| GET | `/api/subscriptions/{id}/weather-config` | 200 / 404 | `display_config` einer Subscription lesen |
-| PUT | `/api/subscriptions/{id}/weather-config` | 200 / 400 / 404 | `display_config` einer Subscription setzen |
 
 ### Response Format
 
@@ -795,7 +793,6 @@ null
 ### Notes
 
 - `display_config` wird als `map[string]interface{}` ohne Schema-Validierung round-getrippt (opaque JSON)
-- Subscription-Handler laedt alle Subscriptions + lineare Suche (kein `LoadSubscription(id)`-Singleton)
 - `userID` hardcodiert auf `"default"` (V1)
 - Kein File-Locking: Race Conditions bei parallelen PUT-Requests akzeptiert (Single-User V1)
 
@@ -803,8 +800,9 @@ null
 
 | Datei | Aenderung |
 |-------|-----------|
-| `internal/handler/weather_config.go` | NEU — 6 HTTP-Handler (Get/Put fuer Trip, Location, Subscription) |
-| `cmd/server/main.go` | +6 Route-Registrierungen |
+| `internal/handler/weather_config.go` | 4 HTTP-Handler (Get/Put fuer Trip, Location) |
+| `internal/handler/config_merge.go` | NEU (#1159) — gemeinsamer `mergeConfigMap`-Helfer fuer feldweisen Merge, genutzt von Trip-, Location- und ComparePreset-Endpoints |
+| `cmd/server/main.go` | +4 Route-Registrierungen |
 
 ---
 
