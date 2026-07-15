@@ -5,6 +5,10 @@
 	import { Sidebar } from '$lib/components/ui/sidebar';
 	import TopAppBar from '$lib/components/ui/sidebar/TopAppBar.svelte';
 	import BottomNav from '$lib/components/ui/sidebar/BottomNav.svelte';
+	// Issue #1256 Scheibe 8d — Seiten befüllen die EINE globale Design-Kopfleiste
+	// über diesen Store (title/eyebrow/leftIcon/backHref/right); Default (leer)
+	// = unverändertes Wordmark/Bell/Plus-Erscheinungsbild auf allen Seiten.
+	import { topAppBarStore } from '$lib/stores/topAppBar.svelte';
 
 	let { children, data } = $props();
 
@@ -67,7 +71,16 @@
 {#if isLogin || isShowcase}
 	{@render children()}
 {:else}
-	<TopAppBar bind:mobileMenuOpen {darkMode} ontoggleDark={toggleDark} />
+	<TopAppBar
+		bind:mobileMenuOpen
+		{darkMode}
+		ontoggleDark={toggleDark}
+		title={topAppBarStore.fill.title}
+		eyebrow={topAppBarStore.fill.eyebrow}
+		leftIcon={topAppBarStore.fill.leftIcon}
+		backHref={topAppBarStore.fill.backHref}
+		right={topAppBarStore.fill.right}
+	/>
 	<div class="flex h-screen">
 		<Sidebar
 			userId={data.userId}

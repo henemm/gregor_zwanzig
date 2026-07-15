@@ -17,8 +17,15 @@
 	interface Props {
 		locations: Location[];
 		groups?: Group[];
+		// Issue #1256 Scheibe 8d (AC-6/AC-7) — dense-Variante nach LayoutTab.svelte-
+		// Muster: mobiler 1-spaltiger Stack (Kopf+Badge+nummerierte Karten+
+		// Bibliotheks-Button) statt Desktop-2-Spalten-Grid (Smart-Import +
+		// Inline-Bibliothek). onOpenLibrary öffnet das bestehende
+		// mobileLibraryOpen-Sheet in CompareEditor.svelte (Sheet unverändert).
+		dense?: boolean;
+		onOpenLibrary?: () => void;
 	}
-	let { locations, groups = [] }: Props = $props();
+	let { locations, groups = [], dense = false, onOpenLibrary }: Props = $props();
 
 	const ws = getContext<CompareWizardState>('compare-wizard-state');
 
@@ -66,6 +73,15 @@
 	const counterColor = $derived(
 		ws.pickedIds.length < 2 ? 'var(--g-warn)' : 'var(--g-ink-4)'
 	);
+
+	// Issue #1256 Scheibe 8d (AC-6) — dense-Badge-Kurzform (JSX-M Z.234), Desktop
+	// behält counterText/counterColor oben unverändert (längere Formulierung).
+	const denseCounterText = $derived.by(() => {
+		const n = ws.pickedIds.length;
+		if (n < 2) return 'min. 2';
+		if (n > 5) return 'viel — Empf. 3–5';
+		return 'passt';
+	});
 
 	// Picked-Orte aus der Locations-Liste aufgelöst
 	const pickedLocations = $derived(
@@ -191,6 +207,7 @@
 </script>
 
 <div data-testid="compare-wizard-step-2" style="position:relative; padding:28px 40px 60px; max-width:980px;">
+	{#if !dense}
 	<div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:28px;">
 		<!-- Smart-Import Panel -->
 		<div>
@@ -354,4 +371,54 @@
 		</div>
 	{/if}
 	</div>
+	{/if}
+
+	{#if dense}
+	<!-- Issue #1256 Scheibe 8d (AC-6/AC-7) — mobiler 1-spaltiger Stack
+	     (Soll: screen-compare-editor-mobile.jsx Z.226-266). -->
+	<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+		<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600;">Im Vergleich · {pickedLocations.length}</div>
+		<span
+			data-testid="compare-step2-counter"
+			style="font-family:var(--g-font-mono); font-size:10.5px; color:{counterColor}; letter-spacing:0.04em;"
+		>{denseCounterText}</span>
+	</div>
+
+	{#if pickedLocations.length === 0}
+		<div style="padding:24px 16px; border:1px dashed var(--g-rule); border-radius:var(--g-r-3); text-align:center; color:var(--g-ink-3); font-size:13px; margin-bottom:12px;">
+			Noch keine Orte gewählt.
+		</div>
+	{:else}
+		<div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+			{#each pickedLocations as loc, i (loc.id)}
+				<div
+					data-testid={`compare-step2-picked-item-${loc.id}`}
+					style="display:flex; align-items:center; gap:10px; padding:11px 14px; background:var(--g-card); border:1px solid var(--g-rule); border-radius:var(--g-r-3); min-height:52px;"
+				>
+					<span style="width:24px; height:24px; border-radius:4px; background:var(--g-ink); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; font-family:var(--g-font-mono);">{i + 1}</span>
+					<div style="flex:1; min-width:0;">
+						<div style="font-size:14px; font-weight:600; color:var(--g-ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{loc.name}</div>
+						<div style="font-family:var(--g-font-mono); font-size:10.5px; color:var(--g-ink-4); margin-top:1px;">{groupNameById.get(loc.group_id ?? '') ?? '—'} · {loc.elevation_m ?? '–'} m</div>
+					</div>
+					<button
+						data-testid={`compare-step2-picked-remove-${loc.id}`}
+						type="button"
+						onclick={() => { ws.pickedIds = ws.pickedIds.filter((x) => x !== loc.id); }}
+						style="background:transparent; border:none; padding:8px; color:var(--g-ink-4); cursor:pointer; font-size:16px; min-height:44px; flex-shrink:0;"
+					>✕</button>
+				</div>
+			{/each}
+		</div>
+	{/if}
+
+	<button
+		type="button"
+		data-testid="compare-step2-mobile-library-btn"
+		onclick={() => onOpenLibrary?.()}
+		style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:14px; min-height:52px; background:var(--g-card); border:1px dashed var(--g-rule); border-radius:var(--g-r-3); cursor:pointer; font-size:14px; color:var(--g-ink-3); font-family:var(--g-font-sans);"
+	>
+		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+		Ort aus Bibliothek wählen
+	</button>
+	{/if}
 </div>

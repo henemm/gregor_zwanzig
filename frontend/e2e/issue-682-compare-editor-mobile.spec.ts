@@ -7,8 +7,8 @@
 // CSS-only-Switch: .cm-desktop / .cm-mobile per @media (max-width: 899px).
 //
 // RED-Phase: Alle Tests schlagen fehl, weil kein .cm-mobile-Markup existiert:
-//   - cm-mobile-appbar, cm-mobile-tabbar, cm-mobile-progress, cm-mobile-cta fehlen
-//   - cm-mobile-save / cm-mobile-activate fehlen
+//   - top-app-bar, cm-mobile-tabbar, cm-mobile-progress, cm-mobile-cta fehlen
+//   - top-app-bar-save / top-app-bar-activate fehlen (Issue #1256 S8d: Design-Kopfleiste ersetzt cm-mobile-appbar)
 //   - compare-step2-mobile-library-btn fehlt (Bottom-Sheet für Bibliothek)
 //
 // Ausführen:
@@ -65,8 +65,8 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 		await page.setViewportSize(MOBILE);
 		await page.goto('/compare/new');
 
-		// cm-mobile-appbar muss sichtbar sein (Höhe > 0)
-		const appbar = page.getByTestId('cm-mobile-appbar');
+		// top-app-bar (Design-Kopfleiste, Issue #1256 S8d) muss sichtbar sein (Höhe > 0)
+		const appbar = page.getByTestId('top-app-bar');
 		await expect(appbar).toBeVisible();
 
 		// cm-mobile-tabbar muss sichtbar und mindestens 44px hoch sein
@@ -81,7 +81,7 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 		// Desktop-Breadcrumb muss verborgen sein
 		// Die Desktop-Klasse hat keinen eigenen testid — wir prüfen, ob das
 		// cm-desktop-div nicht sichtbar ist. Dazu: der TopoBg-Wrapper enthält die
-		// Desktop-Breadcrumb-Zeile. Wir prüfen direkt, dass cm-mobile-appbar sichtbar
+		// Desktop-Breadcrumb-Zeile. Wir prüfen direkt, dass top-app-bar sichtbar
 		// und die Desktop-Topbar nicht überlappt.
 		// Einfacher: kein horizontal overflow
 		const overflow = await page.evaluate(
@@ -91,11 +91,11 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 	});
 
 	// AC-1 Desktop-Regression: ≥900px → Desktop sichtbar, Mobile-Elemente verborgen
-	test('AC-1b: Desktop (≥900px) unverändert — cm-mobile-appbar nicht sichtbar', async ({ page }) => {
+	test('AC-1b: Desktop (≥900px) unverändert — top-app-bar nicht sichtbar', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		await page.goto('/compare/new');
 
-		await expect(page.getByTestId('cm-mobile-appbar')).toBeHidden();
+		await expect(page.getByTestId('top-app-bar')).toBeHidden();
 		await expect(page.getByTestId('compare-editor')).toBeVisible();
 	});
 
@@ -173,7 +173,7 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 	});
 
 	// AC-4a: Create-Modus — Floating-CTA sichtbar; bei ausgefülltem Tab wechselt aktiver Tab weiter.
-	test('AC-4a: Floating-CTA im Create-Modus sichtbar; cm-mobile-activate in App-Leiste', async ({ page }) => {
+	test('AC-4a: Floating-CTA im Create-Modus sichtbar; top-app-bar-activate in App-Leiste', async ({ page }) => {
 		await page.setViewportSize(MOBILE);
 		await page.goto('/compare/new');
 
@@ -182,7 +182,7 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 		await expect(cta).toBeVisible();
 
 		// Aktivieren-Button in App-Leiste muss sichtbar sein (deaktiviert, da noch nicht bereit)
-		const activateBtn = page.getByTestId('cm-mobile-activate');
+		const activateBtn = page.getByTestId('top-app-bar-activate');
 		await expect(activateBtn).toBeVisible();
 	});
 
@@ -199,7 +199,7 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 		await expect(cta).toBeHidden();
 
 		// Speichern-Button in App-Leiste — grau (kein dirty)
-		const saveBtn = page.getByTestId('cm-mobile-save');
+		const saveBtn = page.getByTestId('top-app-bar-save');
 		await expect(saveBtn).toBeVisible();
 
 		// Farbe grau prüfen: color sollte var(--g-ink-4) entsprechen (nicht Accent-orange)
@@ -231,8 +231,8 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 		await page.setViewportSize(MOBILE);
 		await page.goto('/compare/new');
 
-		// cm-mobile-appbar muss da sein (Mobile-Layout existiert)
-		const appbar = page.getByTestId('cm-mobile-appbar');
+		// top-app-bar muss da sein (Mobile-Layout existiert)
+		const appbar = page.getByTestId('top-app-bar');
 		await expect(appbar).toBeVisible();
 
 		// Einen Vergleichs-Namen eingeben

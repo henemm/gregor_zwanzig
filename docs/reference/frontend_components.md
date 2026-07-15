@@ -1,7 +1,7 @@
 # Frontend Components Reference
 
-**Updated:** 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31  
-**Version:** 1.8
+**Updated:** 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31  
+**Version:** 1.9
 
 ## Overview
 
@@ -488,14 +488,29 @@ Mobile-responsive navigation system with responsive layout switching at the 900p
 
 **File:** `frontend/src/lib/components/ui/sidebar/TopAppBar.svelte`
 
-Fixed header bar for mobile viewports (< 900px). Contains hamburger menu trigger, app title, and dark mode toggle.
+Fixed header bar for mobile viewports (< 900px). This is the ONE globally
+mounted instance (in `+layout.svelte`); on unfilled pages it shows the
+default hamburger + Wordmark + Bell/Plus. Since Issue #1256 Scheibe S8d it
+can be **filled per-page** (title/eyebrow/back/right action) — see
+"Per-Page Fill Pattern" below.
 
-**Props:**
+**Props (Updated 2026-07-15, Issue #1256 S8d — additive over #267/#373):**
 ```typescript
 interface Props {
-  mobileMenuOpen: boolean;
+  mobileMenuOpen?: boolean;   // #267: hamburger drawer toggle
+  darkMode?: boolean;         // #267 (optional, default false)
+  ontoggleDark?: () => void;  // #267 (optional)
+  eyebrow?: string;           // #373: small all-caps line above title
+  leftIcon?: string;          // #373/#1256-S8d: 'back' renders a back-arrow
+                               // link (→ backHref) instead of the hamburger
+  right?: Snippet;            // #373: replaces the default Bell/Plus group
+  dense?: boolean;            // #373: compact title size
+  scrolled?: boolean;         // #373: scroll-state styling hook
+  title?: string;             // #1256-S8d: replaces the Wordmark default
+                               // when set
+  backHref?: string;          // #1256-S8d: target for leftIcon="back"
+                               // (default '/')
 }
-let { mobileMenuOpen = $bindable() }: Props = $props();
 ```
 
 **Layout:**
@@ -505,11 +520,14 @@ let { mobileMenuOpen = $bindable() }: Props = $props();
 - **Visibility:** Mobile only (`class="desktop:hidden"`)
 
 **Sections:**
-1. **Left:** Hamburger button (Menu/X icon) — toggles `mobileMenuOpen` state
-2. **Center:** Title "Gregor 20" (bold)
-3. **Right:** Dark mode toggle (Moon/Sun icon)
+1. **Left:** Hamburger button (Menu/X icon), or a back-arrow link when
+   `leftIcon="back"` (navigates to `backHref`)
+2. **Center:** `title` (+ optional `eyebrow` above it) if filled, otherwise
+   the Wordmark default
+3. **Right:** page-supplied `right` snippet if given, otherwise the default
+   Bell (disabled) + Plus→`/trips/new` group
 
-**Usage:**
+**Usage (unfilled, #267 default):**
 ```svelte
 import TopAppBar from '$lib/components/ui/sidebar/TopAppBar.svelte';
 
@@ -517,6 +535,39 @@ let mobileMenuOpen = $state(false);
 // ... in template:
 <TopAppBar bind:mobileMenuOpen />
 ```
+
+### Per-Page Fill Pattern (Issue #1256 Scheibe S8d)
+
+Pages can populate the single global `TopAppBar` instance instead of
+mounting their own header. This replaced an earlier anti-pattern (a
+hand-rebuilt `cm-mobile-appbar` inside `CompareEditor.svelte`) per the
+PO rule "use/extend the Design component, never rebuild it in-page"
+(2026-07-15).
+
+**Store:** `frontend/src/lib/stores/topAppBar.svelte.ts` — a small Runes
+singleton (`topAppBarStore`, `fill: $state<TopAppBarFill>({})`) since there
+is exactly one mounted `TopAppBar`.
+
+**Contract:**
+- A page/component calls `topAppBarStore.set({ title, eyebrow, leftIcon,
+  backHref, right })` in an `$effect` on mount and `topAppBarStore.reset()`
+  on cleanup (SvelteKit navigation away from the page).
+- `+layout.svelte` reads `topAppBarStore.fill` and spreads it onto the one
+  `<TopAppBar>` mount — no other page is affected.
+- Default (`fill = {}`) reproduces the exact pre-#1256-S8d appearance
+  (Wordmark + Bell + Plus→`/trips/new`), so pages that never call `set()`
+  are unchanged.
+
+**Reference implementations:** `frontend/src/routes/compare/+page.svelte`
+(mobile list header: title "Orts-Vergleiche", eyebrow "Workspace · N",
+right = Plus→`/compare/new`) and
+`frontend/src/lib/components/compare/CompareEditor.svelte` (mobile editor
+header: title = active tab name, eyebrow = compare name, `leftIcon="back"`
+→ `/compare`, right = Speichern/„…"/„Aktivieren" depending on mode/tab).
+
+**Reuse note:** this is a generic pattern, not Compare-specific — intended
+to be reused by Trip pages during the Trip/Compare convergence work
+(Epic #1230) rather than re-invented per surface.
 
 ### BottomNav Component
 

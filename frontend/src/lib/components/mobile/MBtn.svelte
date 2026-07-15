@@ -21,10 +21,22 @@
 		block?: boolean;
 		icon?: MIconKind | string;
 		onclick?: () => void;
+		// Issue #1256 Scheibe 8d — additiv: deaktivierter Zustand (kein
+		// Klick-Effekt, reduzierte Deckkraft). Default false, kein
+		// Verhaltensunterschied für bestehende Aufrufer.
+		disabled?: boolean;
 		children?: Snippet;
 	}
 
-	let { variant = 'primary', size = 'lg', block = false, icon, onclick, children }: Props = $props();
+	let {
+		variant = 'primary',
+		size = 'lg',
+		block = false,
+		icon,
+		onclick,
+		disabled = false,
+		children
+	}: Props = $props();
 
 	// Touch-Hoehen: md 40px, lg 48px (>=44px), xl 56px (>=44px).
 	const sizes = {
@@ -48,7 +60,8 @@
 
 <button
 	type="button"
-	{onclick}
+	onclick={disabled ? undefined : onclick}
+	{disabled}
 	data-variant={variant}
 	data-size={size}
 	style:display="inline-flex"
@@ -66,7 +79,8 @@
 	style:color={v.fg}
 	style:border={v.border}
 	style:border-radius="var(--g-r-3)"
-	style:cursor="pointer"
+	style:opacity={disabled ? '0.4' : '1'}
+	style:cursor={disabled ? 'not-allowed' : 'pointer'}
 >
 	{#if icon}
 		<span style:display="inline-flex"><MIcon kind={icon} size={s.fs + 4} color={v.fg} /></span>

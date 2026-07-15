@@ -55,6 +55,9 @@
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
 	import Sheet from '$lib/components/mobile/Sheet.svelte';
+	// Issue #1256 Scheibe 8d (AC-15) — die nachgebaute Editor-Kopfzeile entfällt,
+	// stattdessen wird die EINE globale Design-Kopfleiste befüllt.
+	import { topAppBarStore } from '$lib/stores/topAppBar.svelte';
 
 	interface Props {
 		mode?: 'create' | 'edit';
@@ -204,6 +207,22 @@
 		} else if (!dirty && compareSaveCtl.state === 'dirty') {
 			compareSaveCtl.setSaved();
 		}
+	});
+
+	// Issue #1256 Scheibe 8d (AC-15) — mobil befüllt der Editor die EINE globale
+	// Design-Kopfleiste statt einer eigenen nachgebauten Editor-Kopfzeile.
+	// Nur auf <900px sichtbar (TopAppBar.svelte:desktop:hidden) — Effect läuft
+	// trotzdem unbedingt, da harmlos auf Desktop. Cleanup setzt beim Verlassen
+	// der Seite zurück (SSR-fest, kein Flackern auf anderen Seiten).
+	$effect(() => {
+		topAppBarStore.set({
+			title: TAB_DEFS.find((t) => t.id === activeTab)?.label ?? 'Vergleich',
+			eyebrow: wiz.name.trim() || (isEdit ? 'Bearbeiten' : 'Neuer Vergleich'),
+			leftIcon: 'back',
+			backHref: '/compare',
+			right: topAppBarEditorRight
+		});
+		return () => topAppBarStore.reset();
 	});
 
 	// Status-Dot (AC-6): aus dem preset-Prop lesen (nicht wiz.schedule — type-gemangelt).
@@ -371,6 +390,13 @@
 	}
 
 	const canContinue = $derived(wiz.name.trim().length > 0);
+	// Issue #1256 Scheibe 8d (AC-16) — Orte-Tab-Fuß-Bereitschaft (Desktop-CTA).
+	const orteContinueReady = $derived(wiz.pickedIds.length >= 2);
+	const orteContinueVariant = $derived(orteContinueReady ? 'accent' : 'quiet');
+	const orteContinueStyle = $derived(orteContinueReady ? '' : 'opacity:0.45; cursor:not-allowed');
+	function orteContinueClick() {
+		if (orteContinueReady) switchTab('idealwerte');
+	}
 
 	// ── Mobile-only State (Issue #682) ────────────────────────────────────────
 	let mobileLibraryOpen = $state(false);
@@ -674,6 +700,30 @@
 		ltChannelSelectedPreset = { ...ltChannelSelectedPreset, [ltActiveChannel]: id };
 	}
 </script>
+
+<!-- Issue #1256 Scheibe 8d (AC-15) — rechte Aktion der globalen Design-
+     Kopfleiste, mobil: Edit -> "Speichern" (disabled solange !dirty),
+     Create -> "…" solange der Versand-Tab nicht besucht wurde, danach
+     "Aktivieren" (Soll: screen-compare-editor-mobile.jsx Z.428-446). -->
+{#snippet topAppBarEditorRight()}
+	{#if isEdit}
+		<button
+			type="button"
+			data-testid="top-app-bar-save"
+			disabled={!dirty}
+			onclick={handleSave}
+			style="height: 44px; padding: 0 14px; border: none; background: transparent; color: {dirty ? 'var(--g-accent)' : 'var(--g-ink-4)'}; font-weight: 600; font-size: 14px; cursor: {dirty ? 'pointer' : 'default'}; font-family: var(--g-font-sans); flex-shrink: 0;"
+		>Speichern</button>
+	{:else}
+		<button
+			type="button"
+			data-testid="top-app-bar-activate"
+			disabled={!versandVisited}
+			onclick={handleActivate}
+			style="height: 44px; padding: 0 14px; border: none; background: transparent; color: {versandVisited ? 'var(--g-accent)' : 'var(--g-ink-4)'}; font-weight: 600; font-size: 14px; cursor: {versandVisited ? 'pointer' : 'default'}; font-family: var(--g-font-sans); flex-shrink: 0;"
+		>{versandVisited ? 'Aktivieren' : '…'}</button>
+	{/if}
+{/snippet}
 
 <!-- Issue #1232 Scheibe 2b: Create-Aktivierungs-Banner als Snippet-Prop für
      VersandTab (1:1 JSX-`activation`-Slot). Nur im Create-Modus sichtbar —
@@ -1073,6 +1123,15 @@
 		</div>
 	{:else if activeTab === 'orte'}
 		<Step2Orte {locations} groups={ceGroups} />
+		<!-- Issue #1256 S8d AC-16, C1: Weiter-CTA-Fuß, Wrapper UM Step2Orte. -->
+		{#if !isEdit}
+			<div class="ce-cta-foot" style:max-width="980px">
+				<div class="ce-cta-row">
+					{#if !orteContinueReady}<span class="mono ce-cta-hint">⊘ min. 2 Orte auswählen</span>{/if}
+					<Btn data-testid="compare-editor-continue-idealwerte" variant={orteContinueVariant} size="md" disabled={!orteContinueReady} onclick={orteContinueClick} style={orteContinueStyle}>Idealwerte festlegen →</Btn>
+				</div>
+			</div>
+		{/if}
 	{:else if activeTab === 'idealwerte'}
 		<!-- Issue #1231 Slice 4: ersetzt Step3Idealwerte auf Desktop (Wizard-Step-3
 		     UND Editor-Tab, PO-B — dieselbe Stelle bedient beide Modi via isEdit).
@@ -1082,8 +1141,24 @@
 		{#if !isMobileViewport}
 			<CorridorEditor context="vergleich" />
 		{/if}
+		<!-- Issue #1256 S8d AC-17, C1: Weiter-CTA-Fuß, Wrapper UM CorridorEditor. -->
+		{#if !isEdit}
+			<div class="ce-cta-foot" style:max-width="1040px">
+				<div class="ce-cta-row">
+					<Btn data-testid="compare-editor-continue-layout" variant="accent" size="md" onclick={() => switchTab('layout')}>Layout einrichten →</Btn>
+				</div>
+			</div>
+		{/if}
 	{:else if activeTab === 'layout'}
 		{@render ltLayoutSection()}
+		<!-- Issue #1256 S8d AC-18, C1: Weiter-CTA-Fuß, Wrapper UM ltLayoutSection. -->
+		{#if !isEdit}
+			<div class="ce-cta-foot" style:max-width="1100px">
+				<div class="ce-cta-row">
+					<Btn data-testid="compare-editor-continue-versand" variant="accent" size="md" onclick={() => switchTab('versand')}>Versand einrichten →</Btn>
+				</div>
+			</div>
+		{/if}
 	{:else if activeTab === 'versand'}
 		{#if isEdit}
 			<VersandTab context="vergleich" {wiz} />
@@ -1118,42 +1193,9 @@
 		<Toast kind="info" msg={lockToastMsg} />
 	{/if}
 
-	<!-- 1. App-Leiste -->
-	<div class="cm-mobile-flex" data-testid="cm-mobile-appbar"
-		style="position: sticky; top: 0; z-index: 20; align-items: center; height: 52px; padding: 0 4px; border-bottom: 1px solid var(--g-rule-soft); background: var(--g-paper); flex-shrink: 0;">
-		<!-- Zurück -->
-		<a href="/compare"
-			style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: transparent; border: none; cursor: pointer; color: var(--g-ink-3); flex-shrink: 0; text-decoration: none;">
-			<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M19 12H5M12 5l-7 7 7 7"/>
-			</svg>
-		</a>
-		<!-- Titel -->
-		<div style="flex: 1; min-width: 0; padding: 0 8px; display: flex; flex-direction: column; justify-content: center;">
-			<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.06em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-				{wiz.name.trim() || (isEdit ? 'Bearbeiten' : 'Neuer Vergleich')}
-			</div>
-			<div style="font-size: 15px; font-weight: 600; color: var(--g-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-				{TAB_DEFS.find(t => t.id === activeTab)?.label ?? 'Vergleich'}
-			</div>
-		</div>
-		<!-- Rechts: Edit → Speichern, Create → Aktivieren -->
-		{#if isEdit}
-			<button type="button" data-testid="cm-mobile-save"
-				disabled={!dirty}
-				onclick={handleSave}
-				style="height: 44px; padding: 0 14px; border: none; background: transparent; color: {dirty ? 'var(--g-accent)' : 'var(--g-ink-4)'}; font-weight: 600; font-size: 14px; cursor: {dirty ? 'pointer' : 'default'}; font-family: var(--g-font-sans); flex-shrink: 0;">
-				Speichern
-			</button>
-		{:else}
-			<button type="button" data-testid="cm-mobile-activate"
-				disabled={!versandVisited}
-				onclick={handleActivate}
-				style="height: 44px; padding: 0 14px; border: none; background: transparent; color: {versandVisited ? 'var(--g-accent)' : 'var(--g-ink-4)'}; font-weight: 600; font-size: 14px; cursor: {versandVisited ? 'pointer' : 'default'}; font-family: var(--g-font-sans); flex-shrink: 0;">
-				Aktivieren
-			</button>
-		{/if}
-	</div>
+	<!-- Issue #1256 Scheibe 8d (AC-15): die nachgebaute App-Leiste entfällt hier —
+	     der $effect oben (Z. ~208) befüllt stattdessen die EINE globale
+	     Design-Kopfleiste (ui/sidebar/TopAppBar.svelte via +layout.svelte). -->
 
 	<!-- 2. Progress-Balken (nur Create-Modus) -->
 	{#if !isEdit}
@@ -1221,30 +1263,32 @@
 				<div style="display: flex; flex-direction: column; gap: 8px;">
 					{#each ACTIVITY_PROFILE_OPTIONS as opt (opt.value)}
 						{@const sel = wiz.activityProfile === opt.value}
+						{@const metricsList = profileMetricsLabel(opt.value).split(' · ')}
 						<button type="button" onclick={() => selectProfile(opt.value)}
 							style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 12px 14px; background: {sel ? 'var(--g-accent-tint)' : 'var(--g-card)'}; border: {sel ? '1.5px solid var(--g-accent)' : '1px solid var(--g-rule)'}; border-radius: var(--g-r-3); cursor: pointer; text-align: left; font-family: var(--g-font-sans);">
-							<div style="display: flex; flex-direction: column;">
+							<!-- Issue #1256 Scheibe 8d (AC-14): mobil auf 4 Metrik-Labels gekürzt
+							     (Soll: JSX-M Z.186-188 slice(0, 4)); Desktop-Aufruf oben (Z. ~1041)
+							     bleibt ungekürzt. -->
+							<div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
 								<div style="font-size: 14px; font-weight: 600; color: {sel ? 'var(--g-accent-deep)' : 'var(--g-ink)'};">{opt.label}</div>
-								<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 4px;">{profileMetricsLabel(opt.value)}</div>
+								<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{metricsList.slice(0, 4).join(' · ')}{metricsList.length > 4 ? ' …' : ''}</div>
 							</div>
+							<!-- Issue #1256 Scheibe 8d (AC-13): Auswahl-Häkchen bei ausgewähltem
+							     Profil (Soll: JSX-M Z.190-194). -->
+							{#if sel}
+								<span style="width: 20px; height: 20px; border-radius: 50%; background: var(--g-accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+									<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><path d="M2 6l3 3 5-6"/></svg>
+								</span>
+							{/if}
 						</button>
 					{/each}
 				</div>
 			</div>
 		{:else if activeTab === 'orte'}
-			<Step2Orte {locations} groups={ceGroups} />
-			<!-- Mobiler Bibliotheks-Button (Issue #682) -->
-			<div style="margin-top: 16px;">
-				<button
-					type="button"
-					data-testid="compare-step2-mobile-library-btn"
-					onclick={() => { mobileLibraryOpen = true; }}
-					style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; min-height: 52px; background: var(--g-card); border: 1px dashed var(--g-rule); border-radius: var(--g-r-3); cursor: pointer; font-size: 14px; color: var(--g-ink-3); font-family: var(--g-font-sans);"
-				>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-					Ort aus Bibliothek wählen ({locations.length})
-				</button>
-			</div>
+			<!-- Issue #1256 Scheibe 8d (AC-6/AC-7): dense-Step2Orte-Stack statt
+			     Desktop-Grid + dupliziertem Bibliotheks-Button; onOpenLibrary
+			     öffnet das bestehende mobileLibraryOpen-Sheet unverändert. -->
+			<Step2Orte {locations} groups={ceGroups} dense onOpenLibrary={() => { mobileLibraryOpen = true; }} />
 		{:else if activeTab === 'idealwerte'}
 			<!-- Issue #1231, Slice 5: CorridorEditorMobile ersetzt Step3Idealwerte.
 			     F001-Praezedenz (Slice 4): nur mounten wenn tatsaechlich
@@ -1266,13 +1310,34 @@
 		{/if}
 	</div>
 
-	<!-- 5. Floating-CTA (nur Create-Modus) -->
-	{#if !isEdit}
+	<!-- 5. Floating-CTA (nur Create-Modus, NICHT auf dem Versand-Tab — Issue #1256
+	     Scheibe 8d AC-8..AC-12: kontextuelle Labels statt generischem "Weiter →";
+	     Aktivieren sitzt auf Versand ausschließlich in der App-Bar, s. AC-15). -->
+	{#if !isEdit && activeTab !== 'versand'}
 		<div data-testid="cm-mobile-cta"
 			style="position: sticky; bottom: 0; padding: 12px 16px; background: var(--g-paper); border-top: 1px solid var(--g-rule-soft); flex-shrink: 0;">
-			<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>
-				{activeTab === 'versand' ? 'Aktivieren' : 'Weiter →'}
-			</MBtn>
+			{#if activeTab === 'vergleich'}
+				<MBtn block variant={canContinue ? 'primary' : 'quiet'} size="xl"
+					disabled={!canContinue}
+					onclick={handleMobileNext}>
+					{canContinue ? 'Orte hinzufügen →' : 'Name eingeben'}
+				</MBtn>
+			{:else if activeTab === 'orte'}
+				{@const restOrte = 2 - wiz.pickedIds.length}
+				<MBtn block variant={wiz.pickedIds.length >= 2 ? 'primary' : 'quiet'} size="xl"
+					disabled={wiz.pickedIds.length < 2}
+					onclick={handleMobileNext}>
+					{wiz.pickedIds.length >= 2 ? 'Idealwerte festlegen →' : `noch ${restOrte} Ort${restOrte !== 1 ? 'e' : ''} nötig`}
+				</MBtn>
+			{:else if activeTab === 'idealwerte'}
+				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>
+					Layout einrichten →
+				</MBtn>
+			{:else if activeTab === 'layout'}
+				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>
+					Versand einrichten →
+				</MBtn>
+			{/if}
 		</div>
 	{/if}
 
@@ -1409,5 +1474,24 @@
 		font-weight: 600;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
+	}
+
+	/* Issue #1256 S8d (C1) — Desktop-create Weiter-CTA-Füße Orte/Idealwerte/
+	   Layout (Soll: screen-compare-editor.jsx Z.298-344), Wrapper UM die
+	   geteilten Organismen (C0-Invariante). */
+	.ce-cta-foot {
+		padding: 0 40px 48px;
+	}
+	.ce-cta-row {
+		padding-top: 20px;
+		border-top: 1px solid var(--g-rule);
+		display: flex;
+		justify-content: flex-end;
+		align-items: center;
+		gap: 12px;
+	}
+	.ce-cta-hint {
+		font-size: 11px;
+		color: var(--g-ink-4);
 	}
 </style>
