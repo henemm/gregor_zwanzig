@@ -581,6 +581,8 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         "official_alert_triggers_enabled", "official_warnings", "weather_config",
         "display_config", "report_config", "alert_rules", "corridors", "alert_cooldown_minutes",
         "alert_quiet_from", "alert_quiet_to", "trip",
+        # Issue #1258 S3: additives Trip-Kanal-Set (D2), None = Legacy.
+        "alert_channels",
         # Issue #1250 Scheibe 4 Fix-Loop F002 (Adversary BROKEN): diese Top-
         # Level-Keys sind ABGELEITET (nicht autoritativ). Fehlten sie in
         # KNOWN_TOP_LEVEL, wuerde ein zuvor persistierter Alt-Wert ueber den
@@ -619,6 +621,9 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         # Issue #1258: explizit durchreichen (auch als None) -> unterscheidet
         # geladenen Bestandstrip (noch nicht migriert) von einer Neuanlage.
         official_warnings=data.get("official_warnings"),
+        # Issue #1258 S3 (D2): explizit durchreichen (auch als None) -> None
+        # bleibt Legacy-Verhalten (s. Trip.alert_channels Docstring).
+        alert_channels=data.get("alert_channels"),
         extra=extra,  # Issue #991: unmodellierte Top-Level-Keys
         # Issue #1250 Scheibe 4: abgeleitete flache Slot-/Kanal-Felder (Dual-Read)
         morning_time=morning_time,
@@ -1332,6 +1337,10 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
     # Default in den alten Schreibpfaden (ADR-0023, rein additiv).
     if trip.kind is not None:
         data["kind"] = trip.kind
+
+    # Issue #1258 S3 (D2): additiv, RMW — None (Legacy) bleibt ungeschrieben.
+    if trip.alert_channels is not None:
+        data["alert_channels"] = trip.alert_channels
 
     # Serialize weather config (Feature 2.6 legacy, preserved for migration)
     if trip.weather_config:

@@ -203,6 +203,62 @@ als entschieden markiert, `feat_1256_s8c_hub_fidelity.md`/
 `feat_1256_s8d_mobile_editor_fidelity.md` markieren ihre R5-Verweise als
 eingelöst.
 
+### 9. S3-Detail-Festlegungen (Trip-Integration, 2026-07-15)
+
+Löst die Known Limitation „Trip-Kanal-Feld noch nicht benannt" ein.
+Analyse-Basis: `docs/context/feat-1258-s3-trip-alarme-tab.md` (D1–D5).
+
+- **Tab-Reihenfolge (D1):** Die Trip-Tab-Leiste wird an das
+  Compare-Zielbild angeglichen: overview, stages, weather, alerts
+  („Wertebereiche"), **alarme („Alarme", NEU)**, briefings („Versand"),
+  preview. `value`-Schlüssel bleiben unverändert (URL-Parameter,
+  Testids); nur die Array-Reihenfolge in `TripTabs.svelte` ändert sich
+  und der neue Eintrag kommt hinzu. Flush-Guard-Liste
+  (`TripTabs.svelte:143`) wird um `alarme` erweitert.
+- **Trip-Kanal-Feld (D2):** `alert_channels` als Objekt-Pointer
+  (Go `AlertChannels *AlertChannelsConfig` mit `Email/Telegram/Sms bool`
+  + omitempty; Python `Optional`-Parität; TS
+  `alert_channels?: { email: boolean; telegram: boolean; sms: boolean }`).
+  All-or-nothing-Semantik: `nil` = Legacy-Verhalten (Alert-Kanäle erben
+  die Briefing-Kanäle aus `report_config`, `{"email"}` bei fehlendem
+  `report_config`). Gesetzt = ersetzt in `_effective_alert_channels`
+  (`trip_alert.py:988-1022`) NUR den geerbten Briefing-Anteil (beide
+  Verwendungsstellen: Legacy-Pfad ohne aktive Regeln und
+  per-Regel-Fallback); nicht-leere `rule.channels`-Overrides (#638)
+  gewinnen unverändert weiter, das SMS-Tier-Gate bleibt aktiv.
+  Handler-Merge nach dem Pointer-Muster `AlertCooldownMinutes`
+  (`internal/handler/trip.go:250-252`), Read-Modify-Write.
+- **Container (D4):** Neuer dünner Container
+  `trip-detail/AlarmeScheduleTab.svelte` (Vorbild
+  `BriefingScheduleTab.svelte`): bettet `AlarmeTab context="route"` ein,
+  berechnet `activeMetrics`/`metricLevels` aus
+  `display_config.metric_alert_levels`, `notifyCount` aus
+  `trip.corridors` (notify-Zähler), rekonstruiert `existingChannels`
+  für AC-15 (`alert_channels` falls gesetzt, sonst Briefing-Kanäle aus
+  `report_config.send_*`) und persistiert Kanal-Toggles per PUT
+  `alert_channels` über den `saveController`.
+- **Atomarer Umzug (D5):** Tab-Einfügung und Rückbau der
+  Alert-Zustellungs-Sektion im `VersandTab`-route-Zweig (State/Effect
+  und Markup) erfolgen in EINEM Schritt — kein Zwischenzustand, in dem
+  zwei `$effect`-Schreibpfade dieselben Trip-Felder schreiben
+  (F002-Race-Lektion). Der vergleich-Zweig des VersandTab bleibt bis S4
+  unangetastet. Nebenwirkung des Umzugs: Der bisherige Versand-Toggle
+  „Amtliche Warnungen lösen Alert aus" schrieb seit S1 nur noch das
+  tote Legacy-Feld `official_alert_triggers_enabled` — im Alarme-Tab
+  bindet der Toggle auf `official_warnings.enabled` (Bestandsdefekt
+  behoben).
+- **F003-Nachzug (S2-Adversary, #1199):** Laufzeit-Guard in
+  `alarme-tab/alarmeDeliveryPayload.ts` wird symmetrisch auf
+  `officialAlertsEnabled` gespiegelt.
+- **E2E-Umverdrahtung:** `frontend/e2e/versand-tab.spec.ts` und
+  `frontend/e2e/issue-1117-official-alerts-content-tab.spec.ts`
+  erwarten die Alert-Sektion heute im briefings-Panel — Selektoren und
+  Klickpfade ziehen auf Tab/Panel `alarme` um. Compare-Specs
+  (`compare-alarm-config.spec.ts`, `versand-tab-vergleich.spec.ts`)
+  bleiben unangetastet.
+- **Radar/Onset-Divergenz:** bleibt bestehen (s. Known Limitations) —
+  Out of Scope „Änderung der Radar-Alarm-Fachlogik" gilt.
+
 ## Expected Behavior
 
 - **Input:** Bestehende Trips/ComparePresets mit `official_alert_triggers_enabled`,
@@ -287,13 +343,22 @@ eingelöst.
 **AC-23 (Programm-Abschluss, keiner Einzelscheibe zugeordnet):** Given alle Scheiben S1–S6 sind live / When die begleitenden Spec-Dokumente geprüft werden / Then ist `versand_tab_vergleich.md` AC-4 per Changelog-Eintrag revidiert, `issue_1256_compare_ui_rewire.md` KL-2 als entschieden markiert, und die R5-Verweise in `feat_1256_s8c_hub_fidelity.md`/`feat_1256_s8d_mobile_editor_fidelity.md` sind als eingelöst gekennzeichnet.
   - Test: Doc-Compliance-Check (`# doc-compliance-test`) — Changelog-Einträge und Markierungen vorhanden.
 
+**AC-24 (S3):** Given ein Bestandstrip ohne `alert_channels` (Feld nicht gesetzt) / When ein Abweichungs-Alert oder ein amtlicher Sofort-Alert versendet wird / Then ergeben sich die effektiven Kanäle exakt wie heute (geerbte Briefing-Kanäle aus `report_config`, per-Regel-Overrides, `{"email"}`-Default ohne `report_config`) — kein Verhaltenswechsel für Bestand.
+  - Test: `_effective_alert_channels` mit Fixture-Trips (mit/ohne `report_config`, mit/ohne `rule.channels`) vor und nach der Änderung — identische Ergebnisse bei `alert_channels=None`.
+
+**AC-25 (S3):** Given ein Trip mit gesetztem `alert_channels` (z. B. nur Telegram aktiv) / When ein Alert versendet wird / Then ersetzt das Kanal-Set den geerbten Briefing-Anteil (Regeln ohne eigene `channels` senden an genau diese Kanäle), während nicht-leere `rule.channels`-Overrides weiterhin gewinnen und das SMS-Tier-Gate weiterhin greift.
+  - Test: Fixture-Trip mit `alert_channels={telegram:true, email:false, sms:false}` — effektive Kanäle `{telegram}`; zusätzliche Regel mit eigenem `channels=["email"]` → Union `{telegram, email}`; SMS aktiviert aber Tier verbietet → SMS nicht im Set.
+
+**AC-26 (S3):** Given ich ändere im Trip-Alarme-Tab die Alert-Kanäle / When die Änderung gespeichert und der Trip neu geladen wird / Then zeigt der AlertChannelPicker die persistierten Werte (Roundtrip über `alert_channels`), und alle übrigen Trip-Felder bleiben durch den Read-Modify-Write-Merge unangetastet.
+  - Test: Go-Handler-Test PUT mit nur `alert_channels` → Feld persistiert, Etappen/report_config/Corridors unverändert; Staging-E2E Toggle → Reload → Zustand erhalten.
+
 ## Scheiben-Zuordnung
 
 | Scheibe | Inhalt | ACs (Nummern) |
 |---|---|---|
 | **S1** | Datenmodell + Migration (Go+Python), Pipeline-Umstellung Trip+Compare | 1 … 8 |
 | **S2** | Geteilter Alarme-Organism als Baustein (AlarmeTab.svelte + AlertChannelPicker.svelte, ungewired) | 9 … 12 |
-| **S3** | Trip-Integration (Versand-Tab-Rückbau, Tab-Ergänzung Desktop+Mobile) | 13 … 15 |
+| **S3** | Trip-Integration (Versand-Tab-Rückbau, Tab-Ergänzung Desktop+Mobile, Kanal-Feld `alert_channels`) | 13 … 15, 24 … 26 |
 | **S4** | Compare-Editor-Integration (CompareAlarmSection ablösen, Create-Sichtbarkeit) | 16 … 18 |
 | **S5** | Compare-Hub-Integration (7. Tab, Commit-Handler, Hydration) | 19 |
 | **S6** | R5 Status-Dot (+ email_verified exponieren) | 20 … 22 |
@@ -318,6 +383,14 @@ setzen S1 (Datenmodell) und S2 (Baustein) voraus. S5 setzt S4 voraus.
   AlertChannelPicker (Analogon zu `send_telegram`/`send_sms` bei Compare)
   ist zum Zeitpunkt dieser Spec noch nicht final benannt — wird bei
   S3-Implementierung festgelegt und dort im Detail dokumentiert
+  *(eingelöst 2026-07-15: `alert_channels`, s. Implementation Details
+  Abschnitt 9)*
+- Der Radar/Onset-Alert-Pfad (`trip_alert.py:743-767`) baut sein
+  Kanal-Set weiterhin eigenständig direkt aus `report_config` (E-Mail
+  default, TG/SMS opt-in) und liest weder `rule.channels` noch das neue
+  `alert_channels` — bewusste Divergenz, da „Änderung der
+  Radar-Alarm-Fachlogik" Out of Scope ist; Angleichung wäre ein eigenes
+  Issue
 - Exaktes String-Vokabular der Quellen-IDs für `sources[]` ist nicht als
   stabiles ID-Feld im Code hinterlegt (nur `OfficialAlertSource.name`) —
   muss bei S1-Implementierung verifiziert und ggf. um ein stabiles
@@ -364,6 +437,13 @@ setzen S1 (Datenmodell) und S2 (Baustein) voraus. S5 setzt S4 voraus.
 - `test_alert_channel_picker_defaults_and_empty_warning` (AC-11)
 - `test_alarme_tab_single_effect_consolidated_save` (AC-12)
 - `test_profile_exposes_email_confirmed_without_timestamp` (AC-20)
+- `test_trip_alert_channels_legacy_unchanged` — `alert_channels=None`
+  liefert exakt heutige effektive Kanäle (AC-24)
+- `test_trip_alert_channels_replaces_briefing_inheritance` — gesetztes
+  Feld ersetzt Briefing-Erbe, `rule.channels`-Präzedenz + SMS-Tier-Gate
+  bleiben (AC-25)
+- Go: `TestUpdateTripAlertChannelsRMW` — PUT nur mit `alert_channels`
+  lässt übrige Felder unangetastet (AC-26)
 
 ### Staging-E2E (Marker `live`/`staging`, Playwright gegen echten Login)
 
@@ -381,6 +461,17 @@ NICHT nach Issue-Nummer (`test_naming_gate.py` blockt neue
 issue-nummerierte Testdateien).
 
 ## Changelog
+
+- 2026-07-15: **S3-Detail-Festlegungen ergänzt** (Workflow
+  `feat-1258-s3-trip-alarme-tab`, Analyse-Doc
+  `docs/context/feat-1258-s3-trip-alarme-tab.md`): neuer Implementation-
+  Details-Abschnitt 9 (Tab-Reihenfolge-Konvergenz, Trip-Kanal-Feld
+  `alert_channels` als Objekt-Pointer mit scharfer nil=Legacy-Semantik,
+  Container `AlarmeScheduleTab.svelte`, atomarer Umzug, F003-Spiegelung,
+  E2E-Umverdrahtung), neue ACs 24–26 (S3), Known Limitations um
+  Radar/Onset-Divergenz ergänzt und Feldnamen-Limitation als eingelöst
+  markiert, Kern-Tests ergänzt. Bestehende ACs 1–23 wortgleich
+  unverändert.
 
 - 2026-07-15: **S2 implementiert** (AC-9…AC-12, geteilter Alarme-Organism als
   Baustein, ungewired): neu `shared/AlarmeTab.svelte` (Abschnitte a–h über

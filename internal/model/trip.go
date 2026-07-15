@@ -134,6 +134,12 @@ type Trip struct {
 	// internal/store/migrate_1258.go), gesetzt = massgeblich fuer die
 	// Sofort-Alarm-Pipeline.
 	OfficialWarnings *OfficialWarningsConfig `json:"official_warnings,omitempty"`
+	// AlertChannels — Issue #1258 Scheibe S3 (D2), Pointer-Muster analog
+	// OfficialWarnings: nil = Legacy-Verhalten (Alert-Kanaele erben die
+	// Briefing-Kanaele aus ReportConfig), gesetzt = ersetzt in
+	// TripAlertService._effective_alert_channels NUR den geerbten
+	// Briefing-Anteil (all-or-nothing, alle drei Felder explizit).
+	AlertChannels *AlertChannelsConfig `json:"alert_channels,omitempty"`
 	// Issue #1250 Scheibe 4: additive flache Slot-/Kanal-Felder + EndDate,
 	// ABGELEITET aus ReportConfig/Stages bei jedem Load (store.normalizeTrip)
 	// — nicht autoritativ, ReportConfig bleibt die einzige Wahrheit fuer den
@@ -163,6 +169,16 @@ type Trip struct {
 type OfficialWarningsConfig struct {
 	Enabled bool     `json:"enabled"`
 	Sources []string `json:"sources,omitempty"`
+}
+
+// AlertChannelsConfig — Issue #1258 Scheibe S3 (D2), additives Trip-Kanal-
+// Set fuer die Alert-Zustellung (Pointer-Feld-Pattern analog
+// OfficialWarningsConfig). All-or-nothing: alle drei Felder werden vom
+// Client immer explizit gesendet (kein Feld-Level-Merge noetig).
+type AlertChannelsConfig struct {
+	Email    bool `json:"email"`
+	Telegram bool `json:"telegram"`
+	Sms      bool `json:"sms"`
 }
 
 // AlertableMetrics are metrics that can receive an alert rule (delta-based since #817).

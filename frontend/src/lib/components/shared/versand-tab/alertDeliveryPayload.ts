@@ -14,6 +14,13 @@
 // neuen, der wieder alle 5 aktuellen Werte enthält (kein Feld geht verloren).
 //
 // Spec: docs/specs/modules/versand_tab_route.md (AC-6)
+//
+// Issue #1258 Scheibe S3 (D5): der route-Zweig, der dieses Modul einzig
+// aufrief, zog nach shared/alarme-tab/alarmeDeliveryPayload.ts um (neuer
+// geteilter Alarme-Tab). Dieses Modul ist seither vom vergleich-Zweig von
+// VersandTab.svelte NICHT genutzt (der bindet direkt an wiz.*, kein
+// Self-Save) — bewusst NICHT gelöscht, S4 räumt die Compare-Seite auf.
+// Weiterhin direkt getestet: versand-tab/alertDeliveryPayload.test.ts.
 
 export interface AlertDeliveryState {
 	officialAlertsEnabled: boolean;

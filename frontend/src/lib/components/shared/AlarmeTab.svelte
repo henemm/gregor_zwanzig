@@ -111,16 +111,26 @@
 	const effectiveActiveMetrics = $derived(
 		context === 'vergleich' ? deriveActiveAlertMetrics(wiz?.activeMetricKeys ?? []) : (activeMetrics ?? [])
 	);
+	// route: lokaler State (Adversary Fix-Loop 1, F001) — Initialwert aus der
+	// metricLevels-Prop (Container leitet sie aus trip.display_config her),
+	// danach editierbar hier und Teil des EINEN konsolidierten Saves unten.
+	// onMetricLevelChange bleibt als informativer Callback erhalten (API-
+	// Kompatibilitaet), die PERSISTENZ laeuft ausschliesslich ueber
+	// buildAlarmeSaveFn.
+	let routeMetricLevels = $state<Record<AlertMetric, SensLevel>>(
+		metricLevels ?? ({} as Record<AlertMetric, SensLevel>)
+	);
 	const effectiveMetricLevels = $derived(
 		context === 'vergleich'
 			? ((wiz?.metricAlertLevels ?? {}) as Record<AlertMetric, SensLevel>)
-			: (metricLevels ?? ({} as Record<AlertMetric, SensLevel>))
+			: routeMetricLevels
 	);
 	function handleMetricLevelChange(metric: AlertMetric, level: SensLevel) {
 		if (context === 'vergleich') {
 			if (wiz) wiz.metricAlertLevels = { ...wiz.metricAlertLevels, [metric]: level };
 			return;
 		}
+		routeMetricLevels = { ...routeMetricLevels, [metric]: level };
 		onMetricLevelChange?.(metric, level);
 	}
 
@@ -130,6 +140,12 @@
 	// Default (AC-11). vergleich: bindet an bestehende send_telegram/send_sms
 	// (Implementation Details Abschnitt 5) — E-Mail bleibt implizit
 	// (compare_official_alert.py:161-169), daher hier kein Toggle fuer E-Mail.
+	//
+	// Adversary Fix-Loop 1, F001: onChannelToggle ist nur noch ein
+	// informativer Callback (API-Kompatibilitaet fuer AlarmeScheduleTab) —
+	// die PERSISTENZ laeuft ausschliesslich ueber den EINEN konsolidierten
+	// Save unten (buildAlarmeSaveFn), NICHT mehr ueber einen eigenen
+	// schedule()-Aufruf im Container.
 	let routeChannelState = $state<AlertChannelState>(resolveAlertChannels(existingChannels));
 	const displayChannelState = $derived<AlertChannelState>(
 		context === 'vergleich'
@@ -153,19 +169,26 @@
 	let quietFrom = $state<string | undefined>(trip?.alert_quiet_from ?? undefined);
 	let quietTo = $state<string | undefined>(trip?.alert_quiet_to ?? undefined);
 
-	// ── AC-12: EIN $effect, EINE konsolidierte Payload-Funktion (nur route) ────
+	// ── AC-12/F001: EIN $effect, EINE konsolidierte Payload-Funktion (nur route) ─
 	// Vorbild: VersandTab.svelte:209-260 (buildAlertDeliverySaveFn, JSON-Diff-
-	// Guard) — Kanaele sind bewusst NICHT Teil dieser Payload (Trip-seitiges
-	// Kanal-Feld wird erst bei S3-Implementierung final benannt, Known
-	// Limitations der Spec).
+	// Guard). Kanaele (routeChannelState) UND Metrik-Level (routeMetricLevels)
+	// sind seit Adversary Fix-Loop 1 (F001) Teil DIESER EINEN Payload —
+	// AlarmeScheduleTab.svelte hat keine eigenen schedule()-Aufrufer mehr
+	// (die haetten sich mit diesem $effect denselben Ein-Slot-Debounce
+	// geteilt und eine der beiden Aenderungen still verworfen).
 	function buildAlarmeSaveFn() {
-		const payload = buildAlarmeDeliveryPayload({
-			officialAlertsEnabled,
-			officialWarningsEnabled,
-			cooldownMinutes,
-			quietFrom,
-			quietTo
-		});
+		const payload = buildAlarmeDeliveryPayload(
+			{
+				officialAlertsEnabled,
+				officialWarningsEnabled,
+				cooldownMinutes,
+				quietFrom,
+				quietTo,
+				channels: routeChannelState,
+				metricLevels: routeMetricLevels
+			},
+			trip?.display_config as Record<string, unknown> | undefined
+		);
 		return async () => {
 			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, payload);
 			onTripUpdate?.(updated);
@@ -177,7 +200,9 @@
 		officialWarningsEnabled,
 		cooldownMinutes,
 		quietFrom,
-		quietTo
+		quietTo,
+		routeChannelState,
+		routeMetricLevels
 	});
 	$effect(() => {
 		if (context !== 'route') return;
@@ -186,7 +211,9 @@
 			officialWarningsEnabled,
 			cooldownMinutes,
 			quietFrom,
-			quietTo
+			quietTo,
+			routeChannelState,
+			routeMetricLevels
 		});
 		if (currentJson === _prevAlarmeJson) return;
 		_prevAlarmeJson = currentJson;

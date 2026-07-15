@@ -999,23 +999,41 @@ class TripAlertService:
         report_config=None; existiert report_config mit allen Kanälen aus, wird nichts
         versendet — der Nutzer hat explizit alle Kanäle abgeschaltet).
 
+        Issue #1258 S3 (D2): ist `trip.alert_channels` gesetzt (dict mit
+        email/telegram/sms bool-Keys), ersetzt es NUR den geerbten
+        Briefing-Anteil (an beiden Stellen unten, Legacy-Pfad UND
+        per-Regel-Fallback) — nicht-leere `rule.channels`-Overrides (#638)
+        gewinnen unverändert weiter, das SMS-Tier-Gate bleibt aktiv.
+        `alert_channels=None` liefert exakt das bisherige Verhalten.
+
         Returns:
             Set of channel names ("email", "telegram", "sms") to use for alert dispatch.
         """
         active_rules = [r for r in (trip.alert_rules or []) if r.enabled]
         briefing = self._briefing_channels(trip.report_config)
 
-        # Legacy-Pfad: keine aktiven alert_rules → erbe Briefing-Kanäle (oder E-Mail-Default)
-        # E-Mail-Default gilt NUR wenn report_config None ist (kein explizites Ausschalten).
+        if trip.alert_channels is not None:
+            # Scharfes Kanal-Set ersetzt den geerbten Briefing-Anteil vollständig
+            # (auch wenn alle drei Kanäle aus sind — bewusst kein {"email"}-Default,
+            # der Nutzer hat explizit konfiguriert).
+            inherited = {
+                ch for ch in ("email", "telegram", "sms") if trip.alert_channels.get(ch)
+            }
+        else:
+            # Legacy-Pfad: E-Mail-Default gilt NUR wenn report_config None ist
+            # (kein explizites Ausschalten).
+            inherited = briefing if (briefing or trip.report_config is not None) else {"email"}
+
+        # Legacy-Pfad: keine aktiven alert_rules → erbe die (ggf. ersetzten) Kanäle.
         if not active_rules:
-            channels = briefing if (briefing or trip.report_config is not None) else {"email"}
+            channels = inherited
         else:
             channels = set()
             for rule in active_rules:
                 if rule.channels:
                     channels.update(rule.channels)
                 else:
-                    channels.update(briefing)
+                    channels.update(inherited)
 
         if "sms" in channels and not sms_allowed(self._user_id):
             channels = channels - {"sms"}

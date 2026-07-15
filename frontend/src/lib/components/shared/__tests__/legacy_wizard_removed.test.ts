@@ -47,10 +47,16 @@ test('AC-1: ChannelToggle.svelte + wizardHelpers.ts (+Test) liegen in shared/', 
 // CompareInhaltSection.svelte, die den ChannelToggle-Konsum übernimmt).
 // Der frühere maskPhone-Check auf Step5Versand prüfte einen bereits toten,
 // nie aufgerufenen Import — entfällt ersatzlos mit der Datei.
+//
+// Issue #1258 Scheibe S3 (D5): die Alert-Zustellungs-Sektion (inkl.
+// ChannelToggle-Konsum für die amtliche-Warnungen-Toggles) zog atomar aus
+// shared/VersandTab.svelte in shared/AlarmeTab.svelte um — VersandTab
+// importiert ChannelToggle seither nicht mehr, AlarmeTab übernimmt diesen
+// Importer-Slot.
 test('AC-1: alle 3 Importer nutzen den neuen shared/-Pfad, kein trip-wizard-Import mehr', () => {
 	const importers = [
 		join(COMPONENTS, 'compare', 'CompareInhaltSection.svelte'),
-		join(COMPONENTS, 'shared', 'VersandTab.svelte'),
+		join(COMPONENTS, 'shared', 'AlarmeTab.svelte'),
 		join(COMPONENTS, 'compare', 'CompareAlarmSection.svelte'),
 	];
 	for (const p of importers) {

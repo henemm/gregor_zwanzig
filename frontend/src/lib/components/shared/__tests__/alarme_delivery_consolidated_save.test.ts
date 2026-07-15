@@ -12,6 +12,11 @@
 // fehl (RED), bis Phase 6 das Modul unter
 // frontend/src/lib/components/shared/alarme-tab/alarmeDeliveryPayload.ts anlegt.
 //
+// Adversary Fix-Loop 1, F001 (S3): `channels` ist seither ein PFLICHT-Feld
+// des State-Objekts (Kanäle wurden in die konsolidierte Payload gezogen,
+// s. alarme_save_single_writer.test.ts) — alle Aufrufe unten sind um
+// `channels` ergänzt, die erwarteten Payload-Objekte um `alert_channels`.
+//
 // Ausführen:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test \
 //     src/lib/components/shared/__tests__/alarme_delivery_consolidated_save.test.ts
@@ -29,14 +34,16 @@ test('#1258 AC-12a: buildAlarmeDeliveryPayload konsolidiert mehrere geänderte F
 		officialWarningsEnabled: false,
 		cooldownMinutes: 45,
 		quietFrom: '22:00',
-		quietTo: '06:00'
+		quietTo: '06:00',
+		channels: { email: true, telegram: false, sms: false }
 	});
 	assert.deepEqual(payload, {
 		official_alerts_enabled: true,
 		official_warnings: { enabled: false },
 		alert_cooldown_minutes: 45,
 		alert_quiet_from: '22:00',
-		alert_quiet_to: '06:00'
+		alert_quiet_to: '06:00',
+		alert_channels: { email: true, telegram: false, sms: false }
 	});
 });
 
@@ -44,7 +51,8 @@ test('#1258 AC-12a: official_warnings enthält NUR "enabled", KEINEN sources-Key
 	const payload = buildAlarmeDeliveryPayload({
 		officialAlertsEnabled: true,
 		officialWarningsEnabled: true,
-		cooldownMinutes: 30
+		cooldownMinutes: 30,
+		channels: { email: true, telegram: false, sms: false }
 	}) as { official_warnings: Record<string, unknown> };
 	assert.deepEqual(Object.keys(payload.official_warnings), ['enabled']);
 	assert.equal('sources' in payload.official_warnings, false);
@@ -57,7 +65,8 @@ test('#1258 AC-12a/F002: buildAlarmeDeliveryPayload wirft bei fehlendem official
 	assert.throws(() => {
 		buildAlarmeDeliveryPayload({
 			officialAlertsEnabled: true,
-			officialWarningsEnabled: undefined as unknown as boolean
+			officialWarningsEnabled: undefined as unknown as boolean,
+			channels: { email: true, telegram: false, sms: false }
 		});
 	}, /officialWarningsEnabled/);
 });
@@ -66,7 +75,8 @@ test('#1258 AC-12a/F002: buildAlarmeDeliveryPayload wirft bei Nicht-boolean offi
 	assert.throws(() => {
 		buildAlarmeDeliveryPayload({
 			officialAlertsEnabled: true,
-			officialWarningsEnabled: 'true' as unknown as boolean
+			officialWarningsEnabled: 'true' as unknown as boolean,
+			channels: { email: true, telegram: false, sms: false }
 		});
 	}, /officialWarningsEnabled/);
 });
@@ -77,7 +87,8 @@ test('#1258 AC-12a: fehlende Cooldown/Quiet-Werte werden zu null (Vorbild alertD
 		officialWarningsEnabled: false,
 		cooldownMinutes: undefined,
 		quietFrom: undefined,
-		quietTo: undefined
+		quietTo: undefined,
+		channels: { email: true, telegram: false, sms: false }
 	}) as Record<string, unknown>;
 	assert.equal(payload.alert_cooldown_minutes, null);
 	assert.equal(payload.alert_quiet_from, null);
@@ -90,14 +101,16 @@ test('#1258 AC-12a: zwei rasch aufeinanderfolgende Änderungen ergeben je eine P
 		officialWarningsEnabled: true,
 		cooldownMinutes: undefined,
 		quietFrom: undefined,
-		quietTo: undefined
+		quietTo: undefined,
+		channels: { email: true, telegram: false, sms: false }
 	}) as Record<string, unknown>;
 	const afterSecondChange = buildAlarmeDeliveryPayload({
 		officialAlertsEnabled: true,
 		officialWarningsEnabled: false,
 		cooldownMinutes: 45,
 		quietFrom: undefined,
-		quietTo: undefined
+		quietTo: undefined,
+		channels: { email: true, telegram: false, sms: false }
 	}) as Record<string, unknown>;
 	// Die zweite (finale) Payload enthält weiterhin den ersten Änderungspfad
 	// (officialAlertsEnabled) UND die neuen Werte (officialWarningsEnabled,
@@ -182,7 +195,8 @@ test(
 			lastPayload = buildAlarmeDeliveryPayload({
 				officialAlertsEnabled: true,
 				officialWarningsEnabled: false,
-				cooldownMinutes: undefined
+				cooldownMinutes: undefined,
+				channels: { email: true, telegram: false, sms: false }
 			});
 		});
 
@@ -195,7 +209,8 @@ test(
 			lastPayload = buildAlarmeDeliveryPayload({
 				officialAlertsEnabled: true,
 				officialWarningsEnabled: false,
-				cooldownMinutes: 45
+				cooldownMinutes: 45,
+				channels: { email: true, telegram: false, sms: false }
 			});
 		});
 

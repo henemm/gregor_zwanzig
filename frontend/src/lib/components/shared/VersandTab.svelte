@@ -14,19 +14,21 @@
 	import { api } from '$lib/api.js';
 	import { toHHMMSS } from '$lib/utils/time';
 	import { Eyebrow } from '$lib/components/atoms';
-	import type { Trip, ReportConfig, AlertRule } from '$lib/types';
+	import type { Trip, ReportConfig } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
-	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
 	import AlertCooldownCard from '$lib/components/alerts-tab/AlertCooldownCard.svelte';
 	import AlertQuietHoursCard from '$lib/components/alerts-tab/AlertQuietHoursCard.svelte';
-	import AlertPreviewCard from '$lib/components/alerts-tab/AlertPreviewCard.svelte';
 	import VTBriefingChannels from './versand-tab/VTBriefingChannels.svelte';
 	import VTSchedulePlan from './versand-tab/VTSchedulePlan.svelte';
 	import VTLaufzeitRoute from './versand-tab/VTLaufzeitRoute.svelte';
 	import VTLaufzeitVergleich from './versand-tab/VTLaufzeitVergleich.svelte';
 	import VTAlertSample from './versand-tab/VTAlertSample.svelte';
-	import { buildAlertDeliveryPayload } from './versand-tab/alertDeliveryPayload.ts';
+	// Issue #1258 Scheibe S3 (D5): buildAlertDeliveryPayload wurde hier NUR vom
+	// route-Zweig genutzt — dieser zog in AlarmeScheduleTab/AlarmeTab.svelte
+	// um. Modul bleibt bestehen (vom vergleich-Zweig heute noch nicht
+	// genutzt, S4 raeumt auf) und wird weiterhin direkt von
+	// versand-tab/alertDeliveryPayload.test.ts getestet.
 
 	interface Props {
 		context?: 'route' | 'vergleich';
@@ -185,79 +187,13 @@
 		onJump?.('stages');
 	}
 
-	// ── Sektion 4: Alert-Zustellung — Speicherpfad funktionsgleich zu AlertsTab
-	// (Issue #864/#859/#1087/#1088), nur der Tab hat sich geändert. Nur route:
-	// im vergleich-Zweig binden AlertCooldownCard/AlertQuietHoursCard direkt an
-	// wiz.* (kein trip-Objekt vorhanden) — trip? defensiv, damit die Initialisierung
-	// im vergleich-Zweig (trip=undefined) nicht wirft. ─────────────────────────
-	let officialAlertsEnabled = $state<boolean>(trip?.official_alerts_enabled ?? true);
-	let officialAlertTriggersEnabled = $state<boolean>(trip?.official_alert_triggers_enabled ?? true);
-	let cooldownMinutes = $state<number | undefined>(trip?.alert_cooldown_minutes ?? undefined);
-	let quietFrom = $state<string | undefined>(trip?.alert_quiet_from ?? undefined);
-	let quietTo = $state<string | undefined>(trip?.alert_quiet_to ?? undefined);
-	let alertRules = $state<AlertRule[]>(trip?.alert_rules ?? []);
-
-	// Adversary-Fund F002 (Issue #1232 Scheibe 1): EIN gemeinsamer Debounce-Slot
-	// für die gesamte Alert-Zustellung. `saveController.schedule()` kennt nur
-	// EINEN pending Save (`_pendingFn` wird bei jedem Aufruf komplett ersetzt,
-	// siehe saveStatusStore.svelte.ts) — drei unabhängige schedule()-Aufrufe
-	// (officialAlerts, officialAlertTriggers, cooldown/quiet) würden sich
-	// gegenseitig verwerfen, wenn sie innerhalb der 700ms kollidieren. Fix:
-	// EIN $effect beobachtet alle 5 Felder und plant GENAU EINEN Save, dessen
-	// Payload immer den vollständigen aktuellen Zustand enthält (kein Feld
-	// geht verloren, egal wie viele Änderungen im Debounce-Fenster passieren).
-	function buildAlertDeliverySaveFn() {
-		const payload = buildAlertDeliveryPayload({
-			officialAlertsEnabled,
-			officialAlertTriggersEnabled,
-			cooldownMinutes,
-			quietFrom,
-			quietTo
-		});
-		return async () => {
-			// Nur im route-Zweig erreichbar (die vergleich-Handler mutieren
-			// officialAlertsEnabled/cooldownMinutes/etc. nie, siehe Kommentar oben).
-			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, payload);
-			onTripUpdate?.(updated);
-		};
-	}
-
-	// Factory-Pattern (Safari-Closure-Schutz) — die Handler setzen NUR den
-	// lokalen State; das Speichern übernimmt der gemeinsame $effect unten.
-	function makeOfficialAlertsToggleHandler() {
-		return (checked: boolean) => {
-			officialAlertsEnabled = checked;
-		};
-	}
-	function makeOfficialAlertTriggersToggleHandler() {
-		return (checked: boolean) => {
-			officialAlertTriggersEnabled = checked;
-		};
-	}
-
-	// Cooldown/Stille-Stunden sind $bindable in den wiederverwendeten Cards
-	// (kein onchange-Callback) — Auto-Save analog zum reportConfig-Muster
-	// (JSON-Diff-Guard), aber für ALLE 5 Alert-Zustellungsfelder gemeinsam.
-	let _prevAlertDeliveryJson = JSON.stringify({
-		officialAlertsEnabled,
-		officialAlertTriggersEnabled,
-		cooldownMinutes,
-		quietFrom,
-		quietTo
-	});
-	$effect(() => {
-		const currentJson = JSON.stringify({
-			officialAlertsEnabled,
-			officialAlertTriggersEnabled,
-			cooldownMinutes,
-			quietFrom,
-			quietTo
-		});
-		if (currentJson === _prevAlertDeliveryJson) return;
-		_prevAlertDeliveryJson = currentJson;
-		if (saveController) saveController.schedule(buildAlertDeliverySaveFn());
-		else void buildAlertDeliverySaveFn()();
-	});
+	// Issue #1258 Scheibe S3 (D5): die komplette Alert-Zustellungs-Sektion des
+	// route-Zweigs (officialAlertsEnabled/-Triggers, Cooldown, Stille Stunden,
+	// Beispiel-Warnung + der EINE konsolidierte $effect dafür) zog atomar in
+	// AlarmeScheduleTab.svelte/AlarmeTab.svelte um (kein Zwischenzustand mit
+	// zwei Schreibpfaden auf dieselben Trip-Felder, F002-Race-Lektion). Der
+	// vergleich-Zweig unten ist unverändert (eigene wiz.*-Bindung, kein
+	// Self-Save, S4-Thema).
 </script>
 
 {#if context === 'route'}
@@ -287,30 +223,6 @@
 		/>
 
 		<VTLaufzeitRoute {tripEnd} onOpenStages={handleOpenStages} />
-
-		<div class="vt-alert-delivery">
-			<Eyebrow style="margin-bottom: 10px;">Wann Warnungen rausgehen</Eyebrow>
-			<div class="vt-alert-toggles">
-				<ChannelToggle
-					label="Amtliche Warnungen"
-					checked={officialAlertsEnabled}
-					onchange={makeOfficialAlertsToggleHandler()}
-					testid="alerts-tab-official-alerts-toggle"
-				/>
-				<ChannelToggle
-					label="Amtliche Warnungen lösen Alert aus"
-					checked={officialAlertTriggersEnabled}
-					onchange={makeOfficialAlertTriggersToggleHandler()}
-					testid="alerts-tab-official-alert-triggers-toggle"
-				/>
-			</div>
-			<div class="vt-alert-cards">
-				<AlertCooldownCard bind:cooldown_minutes={cooldownMinutes} />
-				<AlertQuietHoursCard bind:quiet_from={quietFrom} bind:quiet_to={quietTo} />
-			</div>
-			<Eyebrow style="margin: 4px 0 10px;">Beispiel-Warnung</Eyebrow>
-			<AlertPreviewCard trip={trip!} {alertRules} />
-		</div>
 	</div>
 {:else if context === 'vergleich'}
 	<div class="versand-tab" data-testid="versand-tab">
@@ -386,11 +298,6 @@
 		flex-direction: column;
 		gap: 18px;
 		max-width: 620px;
-	}
-	.vt-alert-toggles {
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
 	}
 	.vt-alert-cards {
 		display: grid;

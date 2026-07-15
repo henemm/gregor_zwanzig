@@ -167,6 +167,11 @@ type tripUpdateRequest struct {
 	// OfficialWarnings — Issue #1258, RMW-Kontrakt analog OfficialAlertTriggersEnabled
 	// (nil = im Body nicht gesendet -> bestehender Wert bleibt erhalten).
 	OfficialWarnings *model.OfficialWarningsConfig `json:"official_warnings,omitempty"`
+	// AlertChannels — Issue #1258 Scheibe S3 (D2), RMW-Kontrakt analog
+	// OfficialWarnings (nil = im Body nicht gesendet -> bestehender Wert
+	// bleibt erhalten). All-or-nothing: kein Feld-Level-Merge noetig, der
+	// Client sendet immer alle drei Kanaele explizit.
+	AlertChannels *model.AlertChannelsConfig `json:"alert_channels,omitempty"`
 }
 
 func UpdateTripHandler(s *store.Store) http.HandlerFunc {
@@ -265,6 +270,13 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 				req.OfficialWarnings.Sources = existing.OfficialWarnings.Sources
 			}
 			existing.OfficialWarnings = req.OfficialWarnings
+		}
+		// Issue #1258 Scheibe S3 (D2) — RMW-Merge analog OfficialWarnings.
+		// All-or-nothing: der Client sendet immer alle drei Kanaele explizit,
+		// daher genuegt der Pointer-Ersatz (kein Feld-Level-Merge wie bei
+		// OfficialWarnings.Sources noetig).
+		if req.AlertChannels != nil {
+			existing.AlertChannels = req.AlertChannels
 		}
 		existing.ID = id
 

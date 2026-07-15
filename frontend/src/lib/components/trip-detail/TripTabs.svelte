@@ -4,6 +4,7 @@
 	import { Segmented } from '$lib/components/atoms';
 	import HubOverview from './HubOverview.svelte';
 	import BriefingScheduleTab from './BriefingScheduleTab.svelte';
+	import AlarmeScheduleTab from './AlarmeScheduleTab.svelte';
 	import WeatherMetricsTab from './WeatherMetricsTab.svelte';
 	// Issue #1231: CorridorEditor(Mobile) ersetzt AlertsTab auf Desktop + Mobile.
 	// Import von AlertsTab entfernt (Slice 5) — Datei bleibt vorerst bestehen
@@ -30,6 +31,7 @@
 		weather?: number;
 		briefings?: number;
 		alerts?: number;
+		alarme?: number;
 		preview?: number;
 	}
 
@@ -56,6 +58,7 @@
 		overview: badgesProp.overview,
 		weather: badgesProp.weather,
 		briefings: badgesProp.briefings,
+		alarme: badgesProp.alarme,
 		preview: badgesProp.preview
 	});
 
@@ -67,12 +70,17 @@
 	// Issue #1231, Slice 6 (AC-16) — CorridorEditor vereint Alerts + Idealwerte:
 	//   weather -> "Wetter-Metriken" (war: "Inhalt"), alerts -> "Wertebereiche" (war: "Alerts").
 	// `value`-Schlüssel bleiben unverändert — URL-Parameter und Test-IDs nicht betroffen.
+	// Issue #1258 Scheibe S3 (D1) — Konvergenz mit dem Compare-Zielbild: Reihenfolge
+	// an … → Wertebereiche → Alarme → Versand angeglichen (war: briefings VOR alerts),
+	// neuer Tab "alarme" (geteilter AlarmeTab, context="route") zwischen
+	// Wertebereiche und Versand eingefuegt.
 	const TABS = [
 		{ value: 'overview', label: 'Übersicht' },
 		{ value: 'stages', label: 'Etappen & Wegpunkte' },
 		{ value: 'weather', label: 'Wetter-Metriken' },
-		{ value: 'briefings', label: 'Versand' },
 		{ value: 'alerts', label: 'Wertebereiche' },
+		{ value: 'alarme', label: 'Alarme' },
+		{ value: 'briefings', label: 'Versand' },
 		{ value: 'preview', label: 'Vorschau' }
 	] as const;
 
@@ -139,8 +147,11 @@
 		// debounced Save verwerfen, und WeatherMetricsTab (Issue #1117, eigener
 		// Schalter für dasselbe Feld) könnte beim nächsten dortigen Save den
 		// veralteten Snapshot zurückschreiben (Regression).
+		// Issue #1258 Scheibe S3 (D5): 'alarme' ergänzt — die Alert-Zustellung
+		// zog aus dem Versand-Tab in den neuen Alarme-Tab um, derselbe
+		// Flush-Guard gilt jetzt dort.
 		if (
-			(activeTab === 'alerts' || activeTab === 'weather' || activeTab === 'briefings') &&
+			(activeTab === 'alerts' || activeTab === 'weather' || activeTab === 'briefings' || activeTab === 'alarme') &&
 			value !== activeTab &&
 			saveController?.hasPending
 		) {
@@ -200,6 +211,8 @@
 					{:else}
 						<CorridorEditor {trip} {onTripUpdate} {saveController} />
 					{/if}
+				{:else if tab.value === 'alarme' && trip}
+					<AlarmeScheduleTab {trip} {onTripUpdate} {saveController} onJump={handleValueChange} />
 				{:else if tab.value === 'briefings' && trip}
 					<BriefingScheduleTab {trip} {onTripUpdate} {saveController} onJump={handleValueChange} />
 				{:else if tab.value === 'preview' && trip}

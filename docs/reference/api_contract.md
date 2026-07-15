@@ -598,6 +598,7 @@ type Trip struct {
     OfficialAlertsEnabled   *bool                  `json:"official_alerts_enabled,omitempty"` // Issue #1087, Pointer-Muster analog ComparePreset (#1040): nil = Default true; false = kein Fetch amtlicher Warnungen für diesen Trip
     OfficialAlertTriggersEnabled *bool             `json:"official_alert_triggers_enabled,omitempty"` // @deprecated (Issue #1258, ersetzt durch official_warnings.enabled) — bleibt in den Daten fuer Rollback-Sicherheit, wird ab #1258 von UI und Pipeline nicht mehr geschrieben/gelesen. Vormals: nil = Default true; false = amtliche Warnungen lösen keinen eigenständigen Sofort-Alert aus (Briefing-Anzeige bleibt unberührt)
     OfficialWarnings        *OfficialWarningsConfig `json:"official_warnings,omitempty"`      // Issue #1258 — s. „official_warnings (Issue #1258)" unten
+    AlertChannels            *AlertChannelsConfig   `json:"alert_channels,omitempty"`          // Issue #1258 Scheibe S3 — s. „alert_channels (Issue #1258)" unten
     Corridors               []Corridor             `json:"corridors"`                         // Issue #1231 Slice 1, additiv neben AlertRules — s. Section 24
 }
 
@@ -606,7 +607,30 @@ type OfficialWarningsConfig struct {
     Enabled bool     `json:"enabled"`
     Sources []string `json:"sources,omitempty"`
 }
+
+// AlertChannelsConfig — Issue #1258 Scheibe S3, additives Trip-Kanal-Set fuer
+// die Alert-Zustellung. All-or-nothing: Client sendet immer alle drei Felder.
+type AlertChannelsConfig struct {
+    Email    bool `json:"email"`
+    Telegram bool `json:"telegram"`
+    Sms      bool `json:"sms"`
+}
 ```
+
+### alert_channels (Issue #1258)
+
+Trip-weites Kanal-Set für den Alert-Versand (Abweichungs-Alerts und amtliche Sofort-Alerts), Pointer-Feld analog `official_warnings`:
+
+```json
+{"alert_channels": {"email": true, "telegram": false, "sms": false}}
+```
+
+| Feld | Typ | Semantik |
+|------|-----|----------|
+| `alert_channels` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend (Legacy-Verhalten):** Alert-Kanäle erben die aktiven Briefing-Kanäle aus `report_config` (`send_email`/`send_telegram`/`send_sms`) — kein Verhaltenswechsel für Bestand. **Gesetzt:** ersetzt beim Alert-Versand den geerbten Briefing-Anteil (all-or-nothing, alle drei Felder explizit) |
+| `alert_channels.email`/`.telegram`/`.sms` | bool | einzelne Kanal-Flags |
+
+Präzedenz unverändert: per-Regel-`channels`-Overrides (Issue #638, s. „Versand-Logik (Kanal pro Alert)" oben) gewinnen weiterhin über den geerbten/gesetzten Trip-Anteil; das SMS-Tier-Gate bleibt in jedem Fall aktiv. Quelle: `internal/model/trip.go` (`AlertChannelsConfig`), Spec `docs/specs/modules/issue_1258_alarme_tab_official_warnings.md` Abschnitt 9.
 
 ### official_warnings (Issue #1258)
 

@@ -309,6 +309,12 @@ export interface Trip {
 	// Issue #1258 S1 — scharfes Feld, loest official_alert_triggers_enabled ab
 	// (Legacy-Feld bleibt fuer Rollback erhalten, wird nicht mehr gelesen/geschrieben).
 	official_warnings?: { enabled: boolean; sources?: string[] };
+	// Issue #1258 S3 (D2) — additives Trip-Kanal-Set fuer Alert-Zustellung.
+	// undefined/nicht gesetzt = Legacy-Verhalten (Kanaele werden aus
+	// report_config geerbt); gesetzt = ersetzt den geerbten Briefing-Anteil
+	// in TripAlertService._effective_alert_channels (all-or-nothing, alle
+	// drei Felder explizit).
+	alert_channels?: { email: boolean; telegram: boolean; sms: boolean };
 }
 
 export interface HealthResponse {

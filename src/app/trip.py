@@ -205,6 +205,13 @@ class Trip:
     # Bare-Konstruktor (Neuanlage) -> {"enabled": False}; ein aus JSON GELADENER
     # Trip ohne Schluessel bleibt None (= noch nicht migriert, s. app.loader._parse_trip).
     official_warnings: Optional[dict] = field(default_factory=lambda: {"enabled": False})
+    # Issue #1258 S3 (D2): additives Trip-Kanal-Set fuer Alert-Zustellung.
+    # None = Legacy-Verhalten (erbe Briefing-Kanaele aus report_config,
+    # {"email"} bei fehlendem report_config, s. TripAlertService.
+    # _effective_alert_channels); gesetzt (dict mit email/telegram/sms
+    # bool-Keys) = ersetzt NUR den geerbten Briefing-Anteil, rule.channels-
+    # Overrides (#638) und das SMS-Tier-Gate bleiben unveraendert wirksam.
+    alert_channels: Optional[dict] = None
     extra: Dict[str, Any] = field(default_factory=dict)  # #991: unmodellierte Top-Level-Keys, roundtrip-erhalten
     # Issue #1250 Scheibe 4: additive flache Slot-/Kanal-Felder, beim Laden aus
     # `report_config` ABGELEITET (Dual-Read, s. app.loader._parse_trip). Nicht
