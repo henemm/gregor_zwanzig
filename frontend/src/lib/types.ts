@@ -474,6 +474,10 @@ export interface ComparePreset {
 	top_ort_letzter_versand?: string | null;
 	created_at: string;
 	archived_at?: string;               // Issue #611 — gesetzt = archiviert
+	// Issue #1250 Scheibe 2 — additiv, Dual-Write mit Alt-Semantik
+	// schedule==='manual' (KL-3). Schreibende Quelle bleibt in dieser Scheibe
+	// `schedule`; Lesen (deriveStatusFromPreset) bevorzugt paused_at.
+	paused_at?: string;
 	display_config?: Record<string, unknown>;  // ideal_ranges, channel_layouts, region, active_metrics (#680), top_n (#1104)
 	official_alerts_enabled?: boolean;  // Issue #1040 — amtliche Warnungen ein/aus
 	radar_alert_enabled?: boolean;  // Issue #1041 — Radar-Alarm ein/aus (Default AUS)

@@ -35,6 +35,12 @@ type ComparePreset struct {
 	LetzterVersand       *time.Time `json:"letzter_versand,omitempty"`
 	TopOrtLetzterVersand *string    `json:"top_ort_letzter_versand,omitempty"`
 	CreatedAt            time.Time  `json:"created_at"`
+	// Issue #1250 Scheibe 2 — additiv, Dual-Write mit Alt-Semantik
+	// schedule=="manual" (KL-3). Trip-identisches Pointer-Pattern
+	// (internal/model/trip.go:121). Schreibende Quelle bleibt in dieser
+	// Scheibe `schedule`; store.NormalizeComparePreset leitet PausedAt daraus
+	// ab (gesetzt bei manual, geloescht sonst). nil = nicht pausiert.
+	PausedAt *time.Time `json:"paused_at,omitempty"`
 	// Issue #611 — manuell ins Archiv verschoben. nil = aktiv, gesetzt = archiviert.
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 	// Issue #582 — Frontend-Konfiguration (Region, channel_layouts, ideal_ranges u.a.).

@@ -876,6 +876,10 @@ class ComparePreset:
     top_ort_letzter_versand: Optional[str] = None
     created_at: str = ""
     archived_at: Optional[str] = None
+    # Issue #1250 Scheibe 2: additiv, Dual-Write mit Alt-Semantik
+    # schedule=="manual" (KL-3). Schreibende Quelle bleibt in dieser Scheibe
+    # `schedule` (Go-Store NormalizeComparePreset leitet paused_at daraus ab).
+    paused_at: Optional[str] = None
     display_config: Optional[dict[str, Any]] = None
     official_alerts_enabled: Optional[bool] = None
     radar_alert_enabled: Optional[bool] = None

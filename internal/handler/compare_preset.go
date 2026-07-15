@@ -186,6 +186,12 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// LetzterVersand + TopOrtLetzterVersand bleiben nil (server-managed).
 		preset.LetzterVersand = nil
 		preset.TopOrtLetzterVersand = nil
+		// Issue #1250 Scheibe 2 (Adversary-Fund F002 MEDIUM): paused_at ist
+		// server-verwaltet — ein Client koennte sonst mit schedule="manual"
+		// einen gefaelschten Zeitstempel unterschieben. Immer aus schedule
+		// ableiten, nie vom Client uebernehmen.
+		preset.PausedAt = nil
+		store.MaterializePausedAt(&preset, time.Now().UTC())
 
 		// Issue #1244 F001: einzige Normalisierungsquelle (Corridors/
 		// LocationIDs/Empfaenger) — writeJSON unten schreibt diese lokale
@@ -362,6 +368,15 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if updated.Corridors == nil {
 			updated.Corridors = original.Corridors
 		}
+		// Issue #1250 Scheibe 2 (Adversary-Fund F002 MEDIUM): paused_at ist
+		// server-verwaltet, analog ID/UserID/CreatedAt oben — UNBEDINGT vom
+		// Original uebernehmen, ein vom Client mitgesendeter Wert wird
+		// ignoriert (sonst koennte ein Client mit schedule="manual" einen
+		// gefaelschten Zeitstempel unterschieben). MaterializePausedAt setzt
+		// ihn bei einer echten Pausierung; NormalizeComparePreset (unten)
+		// loescht ihn bei Entpausen wieder.
+		updated.PausedAt = original.PausedAt
+		store.MaterializePausedAt(&updated, time.Now().UTC())
 		// Issue #1232 Scheibe 2b: End-Datum-Loesch-Sentinel — ein explizit
 		// gesendeter Leerstring end_date:"" loescht ein gesetztes EndDate
 		// (statt es wie oben zu erhalten). Muss NACH dem Nil-Preserve-Block

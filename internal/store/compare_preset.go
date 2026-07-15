@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/henemm/gregor-api/internal/model"
 )
@@ -28,6 +29,29 @@ func NormalizeComparePreset(p *model.ComparePreset) {
 	}
 	if p.Empfaenger == nil {
 		p.Empfaenger = []string{}
+	}
+	// Issue #1250 Scheibe 2 — Dual-Write-Invariante, Entpausen-Haelfte:
+	// schedule!="manual" loescht einen gesetzten paused_at. Deterministisch
+	// (keine time.Now()), darum sicher auf JEDEM Aufrufpfad — auch dem
+	// Lese-Pfad (LoadComparePresets) ohne Write-Back. Die SET-Haelfte
+	// (schedule=="manual" -> paused_at setzen) lebt NICHT hier, sondern in
+	// MaterializePausedAt (s.u.), die nur vom Schreib-Pfad mit injizierter
+	// Zeit gerufen wird — sonst wuerde time.Now() bei jedem GET einen neuen,
+	// nie persistierten Zeitstempel erfinden (Adversary-Fund F001 CRITICAL).
+	if p.Schedule != "manual" {
+		p.PausedAt = nil
+	}
+}
+
+// MaterializePausedAt setzt paused_at beim SCHREIBEN (nicht beim Laden),
+// damit der Zeitstempel stabil persistiert und nicht bei jedem GET driftet
+// (Issue #1250 Scheibe 2, Adversary-Fund F001). `now` wird injiziert
+// (Aufrufer: Handler mit time.Now().UTC()) fuer deterministische Tests.
+// Der PausedAt==nil-Guard bewahrt einen bestehenden Zeitstempel (springt
+// sonst bei jedem unrelated Save auf "jetzt").
+func MaterializePausedAt(p *model.ComparePreset, now time.Time) {
+	if p.Schedule == "manual" && p.PausedAt == nil {
+		p.PausedAt = &now
 	}
 }
 

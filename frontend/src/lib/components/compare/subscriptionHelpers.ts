@@ -61,9 +61,17 @@ export function formatLastSent(iso?: string | null): string {
 // Issue #472 — ComparePreset-Status-Ableitung + Orte-Label für die Listenansicht.
 // Spec: docs/specs/modules/issue_472_compare_list_restore.md (§2 + §6)
 
-/** ComparePreset → Status (rein frontend-seitig abgeleitet). */
+/**
+ * ComparePreset → Status (rein frontend-seitig abgeleitet).
+ *
+ * Issue #1250 Scheibe 2 (Pause-Konvergenz, AC-8/AC-9): `paused_at` ist die
+ * bevorzugte Quelle beim Lesen (Trip-Zielsemantik), Fallback bleibt die
+ * Alt-Semantik `schedule === 'manual'` fuer Presets, die `paused_at` noch
+ * nicht tragen. Draft-Vorrang bleibt oberste Regel.
+ */
 export function deriveStatusFromPreset(p: ComparePreset): CompareStatus {
 	if (!p.name || p.location_ids.length === 0) return 'draft';
+	if (p.paused_at) return 'paused';
 	if (p.schedule === 'manual') return 'paused';
 	return 'active';
 }
@@ -80,6 +88,12 @@ export function deriveStatusFromPreset(p: ComparePreset): CompareStatus {
  * auf dem alten Status stehen, bis ein echter Reload eintrifft.
  * `scheduleOverride === null` (kein Override gesetzt bzw. durch einen echten
  * Reload verworfen) laesst `p.schedule` unveraendert durch.
+ *
+ * Issue #1250 Scheibe 2: `deriveStatusFromPreset` bevorzugt seit AC-9
+ * `paused_at` vor `schedule`. Ein gesetzter Override wuerde sonst an einem
+ * stalen `p.paused_at` einfrieren (z.B. Reaktivieren-Override auf ein
+ * Preset, dessen `paused_at` noch den alten Pausenzeitstempel traegt) —
+ * daher wird `paused_at` bei gesetztem Override konsistent mitgefuehrt.
  */
 export function deriveStatusWithScheduleOverride(
 	p: ComparePreset,
@@ -87,7 +101,10 @@ export function deriveStatusWithScheduleOverride(
 ): CompareStatus {
 	return deriveStatusFromPreset({
 		...p,
-		schedule: (scheduleOverride ?? p.schedule) as ComparePreset['schedule']
+		schedule: (scheduleOverride ?? p.schedule) as ComparePreset['schedule'],
+		paused_at: scheduleOverride
+			? (scheduleOverride === 'manual' ? (p.paused_at ?? '__optimistic__') : undefined)
+			: p.paused_at
 	});
 }
 

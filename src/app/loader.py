@@ -232,6 +232,7 @@ def compare_preset_from_dict(data: Dict[str, Any]) -> ComparePreset:
         top_ort_letzter_versand=data.get("top_ort_letzter_versand"),
         created_at=data.get("created_at", ""),
         archived_at=data.get("archived_at"),
+        paused_at=data.get("paused_at"),
         display_config=data.get("display_config"),
         official_alerts_enabled=data.get("official_alerts_enabled"),
         radar_alert_enabled=data.get("radar_alert_enabled"),

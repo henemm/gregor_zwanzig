@@ -138,8 +138,15 @@ def test_load_compare_presets_parses_valid_file_into_dataclasses(tmp_path):
 
 def test_load_compare_presets_keeps_deprecated_fields_unnormalized(tmp_path):
     """KL-3: `schedule`, `hour_from/to`, `forecast_hours` etc. werden bis zur
-    Migrations-Scheibe (5) unveraendert durchgereicht, nicht in eine neue
-    Pause-Semantik (`paused_at`, kommt erst Scheibe 2) uebersetzt."""
+    Migrations-Scheibe (5) unveraendert durchgereicht — der Python-Loader
+    bleibt reiner Lese-Kontrakt (keine Normalisierung/Ableitung).
+
+    Update Scheibe 2 (#1250, Dual-Write `paused_at`): das additive Feld
+    existiert seit Scheibe 2 auf der Dataclass, aber der Python-Loader
+    leitet es NICHT selbst her (das macht Go store.NormalizeComparePreset
+    beim naechsten Save/Load) — ein Legacy-Dict ohne `paused_at`-Schluessel
+    liefert weiterhin `None`, keine Ableitung aus `schedule=="manual"`.
+    """
     data_root = tmp_path / "data"
     _write_presets(data_root, "testuser", [_preset_legacy_paused()])
 
@@ -148,8 +155,7 @@ def test_load_compare_presets_keeps_deprecated_fields_unnormalized(tmp_path):
     assert len(result) == 1
     legacy = result[0]
     assert legacy.schedule == "manual"
-    # Scheibe 1 fuehrt `paused_at` noch NICHT ein (kommt erst Scheibe 2).
-    assert getattr(legacy, "paused_at", "not-present") == "not-present"
+    assert legacy.paused_at is None
 
 
 def test_load_compare_presets_missing_file_returns_empty_list(tmp_path):

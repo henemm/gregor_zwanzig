@@ -32,14 +32,20 @@ function src(): string {
 describe('AC-3: status leitet sich aus localSchedule ab (nicht aus preset)', () => {
 	test('status-Ableitung enthält localSchedule', () => {
 		const code = src();
-		// Nach dem Fix muss status aus einem Objekt abgeleitet werden das
-		// localSchedule enthält, z.B.:
+		// Nach dem Fix muss status aus einem Aufruf abgeleitet werden, der
+		// localSchedule einbezieht. Urspruenglich (Bug #591):
 		//   $derived(deriveStatusFromPreset({ ...preset, schedule: localSchedule ... }))
+		// Issue #1250 Scheibe 2 (Pause-Konvergenz): konsolidiert auf den
+		// gemeinsamen, Anti-Freeze-getesteten Wrapper (deriveStatusWithScheduleOverride,
+		// siehe hub_status_pill_override.test.ts) statt der Inline-Spread-Variante —
+		// AC-3-Intent (status reagiert auf localSchedule, nicht auf unveraendertes
+		// preset) bleibt identisch, nur die konkrete Ableitungsfunktion aendert sich.
 		assert.match(
 			code,
-			/deriveStatusFromPreset\(\s*\{[^}]*localSchedule/,
+			/deriveStatusFromPreset\(\s*\{[^}]*localSchedule|deriveStatusWithScheduleOverride\(\s*preset\s*,\s*localSchedule/,
 			'AC-3 FAIL: status ist nicht auf localSchedule basiert. ' +
-			'Erwartet: deriveStatusFromPreset({ ...preset, schedule: localSchedule ... })'
+			'Erwartet: deriveStatusFromPreset({ ...preset, schedule: localSchedule ... }) ' +
+			'oder deriveStatusWithScheduleOverride(preset, localSchedule)'
 		);
 	});
 

@@ -20,7 +20,7 @@
 	import { channelChipCount } from './channelChipCount.js';
 	import { CHANNEL_COL_BUDGET } from '$lib/components/trip-detail/metricsEditor';
 	import {
-		deriveStatusFromPreset,
+		deriveStatusWithScheduleOverride,
 		presetBriefingTimesLabel,
 		formatLastSent,
 		formatNextSend,
@@ -115,7 +115,7 @@
 
 	// Tab-Daten ──────────────────────────────────────────────────────────────────
 
-	const status = $derived(deriveStatusFromPreset({ ...preset, schedule: localSchedule as ComparePreset['schedule'] }));
+	const status = $derived(deriveStatusWithScheduleOverride(preset, localSchedule));
 	const statusInfo = $derived(STATUS_MAP[status]);
 
 	// Issue #1229 Fix-Loop 1 (F001/F002): "Nächster Versand" aus dem berechneten
