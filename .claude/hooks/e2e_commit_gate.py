@@ -64,6 +64,20 @@ def detect_scope() -> str:
     )
     files = [f.strip() for f in result.stdout.splitlines() if f.strip()]
 
+    # Post-commit-Fallback (#1197/#1137): Post-commit (/e2e-verify) ist die
+    # Staging-Area leer → sonst faelschlich "docs-only" auch fuer Code-Commits.
+    # Dann auf den letzten Commit (HEAD~1..HEAD) zurueckfallen.
+    if not files:
+        fb = subprocess.run(
+            ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
+            capture_output=True, text=True,
+        )
+        if fb.returncode != 0:
+            # git-Fehler (z.B. kein Parent / HEAD~1 nicht aufloesbar) →
+            # konservativ ueber-verifizieren, kein Crash.
+            return "backend"
+        files = [f.strip() for f in fb.stdout.splitlines() if f.strip()]
+
     if not files:
         return "docs-only"
 
