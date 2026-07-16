@@ -36,6 +36,69 @@ async function openKebabForStatus(page: import('@playwright/test').Page, statusL
 	return tile;
 }
 
+// ── Isolierte Test-Fixtures (AC-2/AC-3) ────────────────────────────────────
+//
+// AC-2/AC-3 verließen sich zuvor auf zufällig vorhandene Presets aus
+// Alt-Testläufen (`.filter({ hasText: 'aktiv' })`). Das ist doppelt fragil:
+// (1) läuft nur, wenn überhaupt ein aktiver/pausierter Preset im Konto liegt,
+// (2) der lebende Locator matcht nach dem Status-Wechsel plötzlich eine ANDERE
+// Zeile (bei mehreren aktiven Presets auf Staging), sodass die Pill-Prüfung an
+// der falschen Kachel scheitert, obwohl die App korrekt umschaltet.
+//
+// Abhilfe: jeder Test legt sein EIGENES Preset (inkl. Test-Location, weil
+// `deriveStatusFromPreset` `location_ids.length > 0` für Nicht-Draft braucht,
+// subscriptionHelpers.ts:72-77) per API an, referenziert die Kachel danach
+// über die STABILE `data-testid="compare-tile-<id>"` und räumt in `finally`
+// wieder auf. Muster: createPreset/createLocation aus
+// compare-mobile-vervollstaendigung.spec.ts:42-68.
+
+async function createLocation(
+	page: import('@playwright/test').Page,
+	name: string,
+	lat: number,
+	lon: number
+): Promise<string> {
+	const res = await page.request.post('/api/locations', { data: { name, lat, lon } });
+	await expect(res, 'Location-Anlage fehlgeschlagen: ' + res.status()).toBeOK();
+	return (await res.json()).id as string;
+}
+
+async function createPresetWithLocation(
+	page: import('@playwright/test').Page,
+	name: string,
+	schedule: 'daily' | 'manual',
+	locationId: string
+): Promise<string> {
+	const res = await page.request.post('/api/compare/presets', {
+		data: {
+			name,
+			location_ids: [locationId],
+			schedule,
+			profil: 'wandern',
+			hour_from: 7,
+			hour_to: 16,
+			empfaenger: ['urlauber@example.com']
+		}
+	});
+	await expect(res, 'Preset-Anlage fehlgeschlagen: ' + res.status()).toBeOK();
+	return (await res.json()).id as string;
+}
+
+async function cleanupFixture(
+	page: import('@playwright/test').Page,
+	presetId: string | null,
+	locationId: string | null
+): Promise<void> {
+	// Staging-Hygiene: nur die selbst angelegten Artefakte entfernen, unabhängig
+	// vom Test-Ausgang. Cleanup-Fehler sind nicht test-kritisch.
+	if (presetId) {
+		await page.request.delete(`/api/compare/presets/${presetId}`).catch(() => {});
+	}
+	if (locationId) {
+		await page.request.delete(`/api/locations/${locationId}`).catch(() => {});
+	}
+}
+
 test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 	test.beforeEach(async ({ page }) => {
 		await login(page);
@@ -87,88 +150,99 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 	// ── AC-2: Aktiver Vergleich pausieren → schedule='manual' ────────────────
 
 	test('AC-2: "Pausieren" wechselt aktiven Vergleich zu pausiert', async ({ page }) => {
-		// Suche eine Kachel mit Status "aktiv"
-		const aktivTile = page.locator('[data-testid^="compare-tile-"]:visible').filter({ hasText: 'aktiv' }).first();
+		// Eigenes, isoliertes aktives Preset anlegen (schedule='daily' + eine
+		// Location ⇒ Status 'aktiv'), statt auf Fremd-Presets zu bauen.
+		const suffix = Date.now();
+		const locId = await createLocation(page, `E2E 626 AC-2 Ort ${suffix}`, 47.11, 11.21);
+		const presetId = await createPresetWithLocation(page, `E2E 626 AC-2 aktiv ${suffix}`, 'daily', locId);
 
-		// Wenn keine aktive Kachel vorhanden — Test überspringen
-		const count = await aktivTile.count();
-		if (count === 0) {
-			test.skip(true, 'Kein aktiver Vergleich auf der Seite — AC-2 nicht testbar');
-			return;
+		try {
+			await page.goto('/compare');
+			await page.waitForLoadState('networkidle');
+
+			// STABILE Referenz über die Preset-ID — der Locator matcht auch nach
+			// dem Status-Wechsel weiterhin genau DIESE Kachel (nicht per hasText,
+			// das nach dem Klick auf eine andere aktive Zeile umspringen würde).
+			const tile = page.locator(`[data-testid="compare-tile-${presetId}"]:visible`);
+			await expect(tile).toBeVisible({ timeout: 10_000 });
+
+			const statusPill = tile.locator('[data-testid="compare-status-pill"]');
+			await expect(statusPill).toContainText('aktiv', { timeout: 10_000 });
+
+			// Öffne Kebab-Menü
+			const kebab = tile.locator('button[aria-label="Weitere Aktionen"]');
+			await kebab.click();
+			await page.waitForTimeout(500);
+
+			// Prüfe: Menü enthält "Pausieren" (nicht "Aktivieren")
+			const pauseItem = page.getByRole('menuitem', { name: 'Pausieren' });
+			await expect(pauseItem).toBeVisible();
+
+			// Klick auf "Pausieren"
+			await pauseItem.click();
+
+			// Warte auf Reaktivität — Status-Pill soll auf "pausiert" wechseln
+			await page.waitForTimeout(1000);
+
+			// Prüfe: dieselbe Kachel (per ID) zeigt jetzt "pausiert"
+			// (Die Kachel bleibt in der Liste, Pausieren entfernt sie nicht.)
+			await expect(statusPill).toContainText('pausiert', { timeout: 5_000 });
+
+			// Prüfe: Kebab-Menü zeigt jetzt "Aktivieren"
+			const kebab2 = tile.locator('button[aria-label="Weitere Aktionen"]');
+			await kebab2.click();
+			await page.waitForTimeout(500);
+			await expect(page.getByRole('menuitem', { name: 'Aktivieren' })).toBeVisible();
+			await page.keyboard.press('Escape');
+		} finally {
+			await cleanupFixture(page, presetId, locId);
 		}
-
-		await expect(aktivTile).toBeVisible({ timeout: 10_000 });
-
-		// Öffne Kebab-Menü
-		const kebab = aktivTile.locator('button[aria-label="Weitere Aktionen"]');
-		await kebab.click();
-		await page.waitForTimeout(500);
-
-		// Prüfe: Menü enthält "Pausieren" (nicht "Aktivieren")
-		const pauseItem = page.getByRole('menuitem', { name: 'Pausieren' });
-		await expect(pauseItem).toBeVisible();
-
-		// Klick auf "Pausieren"
-		await pauseItem.click();
-
-		// Warte auf Reaktivität — Status-Pill soll auf "pausiert" wechseln
-		await page.waitForTimeout(1000);
-
-		// Prüfe: dieselbe Kachel zeigt jetzt "pausiert"
-		// (Die Kachel ist noch vorhanden, da Pausieren nicht aus der Liste entfernt)
-		const statusPill = aktivTile.locator('[data-testid="compare-status-pill"]');
-		await expect(statusPill).toContainText('pausiert', { timeout: 5_000 });
-
-		// Prüfe: Kebab-Menü zeigt jetzt "Aktivieren"
-		const kebab2 = aktivTile.locator('button[aria-label="Weitere Aktionen"]');
-		await kebab2.click();
-		await page.waitForTimeout(500);
-		const activateItem = page.getByRole('menuitem', { name: 'Aktivieren' });
-		await expect(activateItem).toBeVisible();
-		// Aufräumen: wieder aktivieren
-		await activateItem.click();
-		await page.waitForTimeout(1000);
 	});
 
 	// ── AC-3: Pausierten Vergleich aktivieren → schedule='daily' ─────────────
 
 	test('AC-3: "Aktivieren" wechselt pausierten Vergleich zu aktiv', async ({ page }) => {
-		// Suche eine Kachel mit Status "pausiert"
-		const pausedTile = page.locator('[data-testid^="compare-tile-"]:visible').filter({ hasText: 'pausiert' }).first();
+		// Eigenes, isoliertes pausiertes Preset anlegen (schedule='manual' + eine
+		// Location ⇒ Status 'pausiert'), statt auf Fremd-Presets zu bauen.
+		const suffix = Date.now();
+		const locId = await createLocation(page, `E2E 626 AC-3 Ort ${suffix}`, 46.98, 11.08);
+		const presetId = await createPresetWithLocation(page, `E2E 626 AC-3 pausiert ${suffix}`, 'manual', locId);
 
-		const count = await pausedTile.count();
-		if (count === 0) {
-			test.skip(true, 'Kein pausierter Vergleich auf der Seite — AC-3 nicht testbar');
-			return;
+		try {
+			await page.goto('/compare');
+			await page.waitForLoadState('networkidle');
+
+			// STABILE Referenz über die Preset-ID.
+			const tile = page.locator(`[data-testid="compare-tile-${presetId}"]:visible`);
+			await expect(tile).toBeVisible({ timeout: 10_000 });
+
+			const statusPill = tile.locator('[data-testid="compare-status-pill"]');
+			await expect(statusPill).toContainText('pausiert', { timeout: 10_000 });
+
+			const kebab = tile.locator('button[aria-label="Weitere Aktionen"]');
+			await kebab.click();
+			await page.waitForTimeout(500);
+
+			// Prüfe: Menü enthält "Aktivieren" (nicht "Pausieren")
+			const activateItem = page.getByRole('menuitem', { name: 'Aktivieren' });
+			await expect(activateItem).toBeVisible();
+
+			// Klick auf "Aktivieren"
+			await activateItem.click();
+			await page.waitForTimeout(1000);
+
+			// Prüfe: dieselbe Kachel (per ID) wechselt auf "aktiv"
+			await expect(statusPill).toContainText('aktiv', { timeout: 5_000 });
+
+			// Prüfe: Kebab-Menü zeigt jetzt "Pausieren"
+			const kebab2 = tile.locator('button[aria-label="Weitere Aktionen"]');
+			await kebab2.click();
+			await page.waitForTimeout(500);
+			await expect(page.getByRole('menuitem', { name: 'Pausieren' })).toBeVisible();
+			await page.keyboard.press('Escape');
+		} finally {
+			await cleanupFixture(page, presetId, locId);
 		}
-
-		await expect(pausedTile).toBeVisible({ timeout: 10_000 });
-
-		const kebab = pausedTile.locator('button[aria-label="Weitere Aktionen"]');
-		await kebab.click();
-		await page.waitForTimeout(500);
-
-		// Prüfe: Menü enthält "Aktivieren" (nicht "Pausieren")
-		const activateItem = page.getByRole('menuitem', { name: 'Aktivieren' });
-		await expect(activateItem).toBeVisible();
-
-		// Klick auf "Aktivieren"
-		await activateItem.click();
-		await page.waitForTimeout(1000);
-
-		// Prüfe: Status-Pill wechselt auf "aktiv"
-		const statusPill = pausedTile.locator('[data-testid="compare-status-pill"]');
-		await expect(statusPill).toContainText('aktiv', { timeout: 5_000 });
-
-		// Prüfe: Kebab-Menü zeigt jetzt "Pausieren"
-		const kebab2 = pausedTile.locator('button[aria-label="Weitere Aktionen"]');
-		await kebab2.click();
-		await page.waitForTimeout(500);
-		const pauseItem = page.getByRole('menuitem', { name: 'Pausieren' });
-		await expect(pauseItem).toBeVisible();
-		// Aufräumen: wieder pausieren
-		await pauseItem.click();
-		await page.waitForTimeout(1000);
 	});
 
 	// ── AC-5: Draft → "Setup fortsetzen" → /compare/{id}/edit ───────────────
