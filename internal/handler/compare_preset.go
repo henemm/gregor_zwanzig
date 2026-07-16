@@ -50,7 +50,9 @@ func validateComparePresetSlotTime(fieldName string, value *string) error {
 	if err != nil {
 		return fmt.Errorf("%s is not a valid time: %v", fieldName, err)
 	}
-	*value = t.Format("15:04:05")
+	// Issue #1280: Write-Normalisierung — Minuten/Sekunden auf :00 kappen
+	// (Truncate, nicht Runden). Der Scheduler nimmt ohnehin nur .hour.
+	*value = store.TruncateTimeStringToHour(t.Format("15:04:05"))
 	return nil
 }
 
@@ -167,6 +169,9 @@ func ListComparePresetsHandler(s *store.Store) http.HandlerFunc {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
 			return
 		}
+		// Issue #1280: Read-Heilung laeuft seit dem Adversary-Nachtrag zentral
+		// in s.LoadComparePresets() (internal/store/compare_preset.go) — presets
+		// kommen hier bereits geheilt an. Beruehrt NIE letzter_versand (#1268).
 		writeJSON(w, http.StatusOK, presets)
 	}
 }
@@ -523,6 +528,7 @@ func GetComparePresetHandler(s *store.Store) http.HandlerFunc {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
 			return
 		}
+		// Issue #1280: Read-Heilung (siehe ListComparePresetsHandler oben).
 		writeJSON(w, http.StatusOK, presets[idx])
 	}
 }

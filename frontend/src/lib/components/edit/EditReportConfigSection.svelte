@@ -250,6 +250,7 @@
 					type="time"
 					data-testid="report-morning-time"
 					class="g-num-input rounded-md border border-input bg-background px-2 py-1 text-sm disabled:opacity-50"
+					step={3600}
 					bind:value={morning_time}
 					disabled={!morning_enabled}
 				/>
@@ -305,6 +306,7 @@
 					type="time"
 					data-testid="report-evening-time"
 					class="g-num-input rounded-md border border-input bg-background px-2 py-1 text-sm disabled:opacity-50"
+					step={3600}
 					bind:value={evening_time}
 					disabled={!evening_enabled}
 				/>

@@ -113,6 +113,11 @@ func (s *Store) LoadComparePresets() ([]model.ComparePreset, error) {
 		}
 
 		normalizeLoadedComparePreset(&p)
+		// Issue #1280 (Tech-Lead-Entscheidung, Adversary-Nachtrag): Read-Heilung
+		// zentralisiert HIER im Load-Pfad — jeder Aufrufer, der ein ueber
+		// LoadComparePresets geladenes Preset encodiert, bekommt automatisch
+		// geheilte Zeiten. NIEMALS LetzterVersand/TopOrtLetzterVersand (#1268).
+		HealComparePresetSlotTimes(&p)
 		presets = append(presets, p)
 	}
 
@@ -148,6 +153,9 @@ func (s *Store) LoadComparePreset(id string) (*model.ComparePreset, error) {
 	}
 
 	normalizeLoadedComparePreset(&p)
+	// Issue #1280 (Tech-Lead-Entscheidung, Adversary-Nachtrag): Read-Heilung
+	// zentralisiert HIER im Load-Pfad (siehe LoadComparePresets fuer Rationale).
+	HealComparePresetSlotTimes(&p)
 	return &p, nil
 }
 

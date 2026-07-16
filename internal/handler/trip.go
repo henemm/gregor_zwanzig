@@ -25,6 +25,9 @@ func TripsHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		// Issue #1280: Read-Heilung laeuft seit dem Adversary-Nachtrag zentral
+		// in s.LoadTrips() (internal/store/trip.go) — trips kommen hier bereits
+		// geheilt an, kein Handler-spezifischer Heal-Call mehr noetig.
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(trips)
 	}
@@ -50,6 +53,9 @@ func TripHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		// Issue #1280: Read-Heilung laeuft seit dem Adversary-Nachtrag zentral
+		// in s.LoadTrip() (internal/store/trip.go) — trip kommt hier bereits
+		// geheilt an (verschachtelt + Flach-Feld), kein Handler-Heal-Call mehr.
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(trip)
 	}
@@ -109,6 +115,13 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		trip.Stages = ensureStageIDs(trip.Stages)
+
+		// Issue #1280 (Adversary F002): Write-Normalisierung auch im
+		// Anlege-Pfad — der Anlege-Wizard (TripNewEditor.svelte) POSTet direkt
+		// hierher; ohne diesen Schritt wuerde eine krumme Versandzeit
+		// unnormalisiert persistiert (und die Flach-Felder wuerden beim
+		// nachfolgenden SaveTrip aus dem noch krummen ReportConfig abgeleitet).
+		store.NormalizeReportConfigSlotTimes(trip.ReportConfig)
 
 		// Issue #1258 AC-4: Neuanlage ohne mitgeschicktes official_warnings
 		// erhaelt bewusst enabled=false (Verhaltenswechsel NUR fuer Neuanlagen,
@@ -226,6 +239,9 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			// Issue #1103: Feld-Level-Merge statt Blind-Replace — Teil-Updates
 			// duerfen bestehende report_config-Keys nicht loeschen.
 			existing.ReportConfig = mergeConfigMap(existing.ReportConfig, *req.ReportConfig)
+			// Issue #1280: Write-Normalisierung — nur morning_time/evening_time auf
+			// volle Stunde kappen, alle anderen report_config-Keys unangetastet.
+			store.NormalizeReportConfigSlotTimes(existing.ReportConfig)
 		}
 		if req.AlertRules != nil {
 			existing.AlertRules = *req.AlertRules

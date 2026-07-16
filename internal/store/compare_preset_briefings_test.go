@@ -262,7 +262,11 @@ func TestSaveComparePreset_RoundtripPreservesFields(t *testing.T) {
 	if saved["end_date"] != "2026-12-31" {
 		t.Fatalf("end_date verloren beim Roundtrip (AC-38): %v", saved["end_date"])
 	}
-	if saved["morning_time"] != "07:30:00" {
+	// Issue #1280: Read-Heilung normalisiert morning_time beim Laden auf die
+	// volle Stunde (07:30 -> 07:00, in-memory); das Feld selbst bleibt beim
+	// Roundtrip erhalten (kein Verlust, AC-38) — nur der Wert ist jetzt korrekt
+	// stundengenau statt krumm.
+	if saved["morning_time"] != "07:00:00" {
 		t.Fatalf("morning_time verloren beim Roundtrip (AC-38): %v", saved["morning_time"])
 	}
 

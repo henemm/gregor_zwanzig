@@ -86,6 +86,7 @@
 							type="time"
 							data-testid="report-morning-time"
 							class="vt-time-input"
+							step={3600}
 							value={morning_time}
 							disabled={!morning_enabled}
 							onchange={onMorningTime}
@@ -111,6 +112,7 @@
 							type="time"
 							data-testid="report-evening-time"
 							class="vt-time-input"
+							step={3600}
 							value={evening_time}
 							disabled={!evening_enabled}
 							onchange={onEveningTime}

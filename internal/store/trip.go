@@ -144,6 +144,14 @@ func (s *Store) LoadTrips() ([]model.Trip, error) {
 		// Follow-Up) — sonst liefert GET/LoadTrips auf eine unmigrierte
 		// Legacy-Datei weiterhin "stages":null/"corridors":null.
 		normalizeTrip(&trip)
+		// Issue #1280 (Tech-Lead-Entscheidung, Adversary-Nachtrag): Read-Heilung
+		// zentralisiert HIER im Load-Pfad, NACH deriveFlatFields (innerhalb
+		// normalizeTrip) — jeder Aufrufer, der einen ueber LoadTrips geladenen
+		// Trip encodiert (Handler, briefing_subscription.go, ...), bekommt
+		// automatisch geheilte Zeiten. NUR morning_time/evening_time
+		// (verschachtelt + Flach-Feld), NIEMALS andere Zeitstempel. Read-only:
+		// kein Write-Back auf die Platte (SaveTrip normalisiert NICHT hier).
+		healTripSlotTimes(&trip)
 
 		trips = append(trips, trip)
 	}
@@ -188,6 +196,10 @@ func (s *Store) LoadTrip(id string) (*model.Trip, error) {
 	// In-Memory only, kein Write-Back (analog nil-Coercion Issue #205).
 	activeIDs := model.ActiveAlertableMetricIDs(trip.DisplayConfig)
 	trip.AlertRules = model.SyncAlertRules(trip.AlertRules, activeIDs)
+
+	// Issue #1280 (Tech-Lead-Entscheidung, Adversary-Nachtrag): Read-Heilung
+	// zentralisiert HIER im Load-Pfad (siehe LoadTrips fuer Rationale).
+	healTripSlotTimes(&trip)
 
 	return &trip, nil
 }
