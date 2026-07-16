@@ -7,15 +7,172 @@
 	// Suchfeld mobil ersatzlos entfernt (Handoff-5-P3), Stats mobil size="sm",
 	// kompaktes Content-Padding (12px 16px 24px, ohne main-px-4-Doppelung).
 	import type { ComparePreset } from '$lib/types.js';
+	import { goto } from '$app/navigation';
+	import { api } from '$lib/api.js';
 	import { Eyebrow, Btn, Card, Stat } from '$lib/components/atoms';
-	import CompareGrid from '$lib/components/compare/CompareGrid.svelte';
+	import { ConfirmDialog } from '$lib/components/molecules';
+	import ListTable from '$lib/components/organisms/ListTable.svelte';
 	import CompareTile from '$lib/components/compare/CompareTile.svelte';
-	import { deriveStatusFromPreset } from '$lib/components/compare/subscriptionHelpers.js';
+	import {
+		deriveStatusFromPreset,
+		presetLocationsLabel,
+		presetProfileLabel,
+		presetChannels,
+		presetTileScheduleLabel,
+		relativeLastSent,
+		compareActions,
+		type CompareStatus
+	} from '$lib/components/compare/subscriptionHelpers.js';
+	import { buildFreshTogglePutPayload } from '$lib/components/compare/compareHubWizardBridge.js';
 	import MIcon from '$lib/components/mobile/MIcon.svelte';
 	import { topAppBarStore } from '$lib/stores/topAppBar.svelte';
 
 	let { data } = $props();
 	let presets: ComparePreset[] = $state(data.presets ?? []);
+
+	// Issue #1277 — Desktop-Übersicht über das geteilte ListTable-Organism.
+	// Aktions-Logik aus dem gelöschten Kachel-Grid hierher übernommen
+	// (togglePause · confirmSend · confirmDelete).
+	let deleteTarget: ComparePreset | null = $state(null);
+	let sendTarget: ComparePreset | null = $state(null);
+	let sendInfo: string | null = $state(null);
+	let error: string | null = $state(null);
+
+	const STATUS_LABEL: Record<CompareStatus, string> = {
+		active: 'aktiv',
+		paused: 'pausiert',
+		draft: 'draft'
+	};
+	function compareDot(status: CompareStatus): string {
+		if (status === 'active') return 'var(--g-good)';
+		if (status === 'paused') return 'var(--g-ink-3)';
+		return 'var(--g-ink-4)';
+	}
+
+	const compareColumns = [
+		{
+			key: 'name',
+			header: 'Name',
+			width: '1.5fr',
+			render: (row: unknown) => {
+				const p = row as ComparePreset;
+				const status = deriveStatusFromPreset(p);
+				return {
+					nameCell: {
+						name: p.name || '(ohne Namen)',
+						statusLabel: STATUS_LABEL[status],
+						dotColor: compareDot(status)
+					}
+				};
+			}
+		},
+		{
+			key: 'orte',
+			header: 'Orte',
+			width: '0.7fr',
+			mono: true,
+			render: (row: unknown) => presetLocationsLabel(row as ComparePreset)
+		},
+		{
+			key: 'profil',
+			header: 'Profil',
+			width: '0.9fr',
+			render: (row: unknown) => presetProfileLabel((row as ComparePreset).profil) || '—'
+		},
+		{
+			key: 'kanaele',
+			header: 'Kanäle',
+			width: '1fr',
+			render: (row: unknown) => ({ pills: presetChannels(row as ComparePreset) })
+		},
+		{
+			key: 'zeitplan',
+			header: 'Zeitplan',
+			width: '1.2fr',
+			render: (row: unknown) => {
+				const p = row as ComparePreset;
+				if (deriveStatusFromPreset(p) === 'draft') {
+					return { lines: ['Setup unvollständig', ''] };
+				}
+				const rel = relativeLastSent(p.letzter_versand);
+				return { lines: [presetTileScheduleLabel(p), rel ? `zuletzt ${rel}` : ''] };
+			}
+		}
+	];
+
+	function compareRowActions(row: unknown) {
+		const status = deriveStatusFromPreset(row as ComparePreset);
+		return compareActions(status).map((a) => ({ key: a.id, label: a.label, danger: a.danger }));
+	}
+
+	function compareRowPrimary(row: unknown) {
+		const p = row as ComparePreset;
+		return deriveStatusFromPreset(p) === 'active'
+			? { label: 'Briefing senden', onClick: () => (sendTarget = p) }
+			: null;
+	}
+
+	function onCompareAction(key: string, row: unknown) {
+		const p = row as ComparePreset;
+		if (key === 'delete') deleteTarget = p;
+		else if (key === 'setup') goto('/compare/' + p.id + '/edit');
+		else if (key === 'edit') goto('/compare/' + p.id + '/edit');
+		else if (key === 'preview') goto('/compare/' + p.id + '?tab=vorschau');
+		else if (key === 'pause') void togglePause(p);
+		else if (key === 'send') sendTarget = p;
+	}
+
+	// Issue #1259 — Read-Modify-Write: frischer Server-Stand vor dem PUT.
+	async function togglePause(preset: ComparePreset) {
+		error = null;
+		try {
+			const { url, body } = await buildFreshTogglePutPayload(preset.id, async (id) => {
+				const res = await fetch(`/api/compare/presets/${id}`);
+				if (!res.ok) throw new Error(`GET failed: ${res.status}`);
+				return res.json();
+			});
+			const res = await fetch(url, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(body)
+			});
+			if (!res.ok) throw new Error(`PUT failed: ${res.status}`);
+			const updated = await res.json();
+			presets = presets.map((p) => (p.id === preset.id ? updated : p));
+		} catch {
+			error = 'Status-Änderung fehlgeschlagen. Bitte versuche es erneut.';
+		}
+	}
+
+	// Issue #627 — Einzel-Sofortversand.
+	async function confirmSend() {
+		if (!sendTarget) return;
+		const target = sendTarget;
+		sendTarget = null;
+		error = null;
+		sendInfo = null;
+		try {
+			const res = await fetch(`/api/compare/presets/${target.id}/send`, { method: 'POST' });
+			if (!res.ok) throw new Error(`send failed: ${res.status}`);
+			sendInfo = 'Briefing wurde versendet.';
+		} catch {
+			error = 'Versand fehlgeschlagen. Bitte versuche es erneut.';
+		}
+	}
+
+	async function confirmDelete() {
+		if (!deleteTarget) return;
+		error = null;
+		const target = deleteTarget;
+		try {
+			await api.del(`/api/compare/presets/${target.id}`);
+			presets = presets.filter((p) => p.id !== target.id);
+			deleteTarget = null;
+		} catch {
+			error = 'Löschen fehlgeschlagen. Bitte versuche es erneut.';
+			deleteTarget = null;
+		}
+	}
 
 	let counts = $derived({
 		active: presets.filter((p) => deriveStatusFromPreset(p) === 'active').length,
@@ -100,14 +257,27 @@
 				<Stat label="Drafts"   value={counts.draft}  layout="inline" mono/>
 			</div>
 
-			<!-- Desktop Kachel-Grid (#490) -->
-			{#if filteredPresets.length === 0}
-				<Card padding={40} style="text-align: center; color: var(--g-ink-3); font-size: 13px">
-					{searchQuery ? `Keine Vergleiche für »${searchQuery}« gefunden.` : 'Noch keine Vergleiche angelegt.'}
-				</Card>
-			{:else}
-				<CompareGrid bind:presets {searchQuery} />
+			<!-- Desktop-Übersicht über das geteilte ListTable-Organism (Issue #1277) -->
+			{#if error}
+				<p class="text-sm text-destructive" style="margin-bottom: 12px">{error}</p>
 			{/if}
+			{#if sendInfo}
+				<p class="text-sm" style="color: var(--g-accent); margin-bottom: 12px">{sendInfo}</p>
+			{/if}
+			<ListTable
+				columns={compareColumns}
+				rows={filteredPresets}
+				getRowId={(row) => (row as ComparePreset).id}
+				onRowClick={(row) => goto(`/compare/${(row as ComparePreset).id}`)}
+				rowActions={compareRowActions}
+				rowPrimary={compareRowPrimary}
+				onAction={onCompareAction}
+				emptyText={searchQuery
+					? `Keine Vergleiche für »${searchQuery}« gefunden.`
+					: 'Noch keine Vergleiche angelegt.'}
+				rowTestid={(row) => `compare-tile-${(row as ComparePreset).id}`}
+				menuTestid={() => 'compare-row-kebab'}
+			/>
 
 			<!-- Footer-Zähler (Issue #582) -->
 			<div style="margin-top: 16px; font-size: 11px; color: var(--g-ink-4); font-family: var(--g-font-mono); letter-spacing: 0.06em">
@@ -148,3 +318,25 @@
 		</div>
 	</main>
 </div>
+
+<!-- Lösch-/Versand-Bestätigung (aus dem gelöschten Kachel-Grid übernommen) -->
+<ConfirmDialog
+	open={deleteTarget !== null}
+	title="Vergleich löschen?"
+	description={'"' + (deleteTarget?.name ?? '') + '" wird unwiderruflich gelöscht.'}
+	confirmLabel="Löschen"
+	confirmVariant="destructive"
+	onConfirm={confirmDelete}
+	onCancel={() => (deleteTarget = null)}
+	onOpenChange={(open) => { if (!open) deleteTarget = null; }}
+/>
+
+<ConfirmDialog
+	open={sendTarget !== null}
+	title="Briefing jetzt senden?"
+	description={'An ' + (sendTarget?.empfaenger?.length ?? 0) + ' Empfänger senden?'}
+	confirmLabel="Senden"
+	onConfirm={confirmSend}
+	onCancel={() => (sendTarget = null)}
+	onOpenChange={(open) => { if (!open) sendTarget = null; }}
+/>

@@ -159,9 +159,10 @@ test.describe('Issue #1256 Scheibe 2: Compare-Fluss Klickpfade Desktop (AC-25–
 		await page.goto('/compare');
 		await page.waitForLoadState('networkidle');
 
-		// Sowohl Desktop (CompareGrid) als auch Mobile-Stack rendern die Kachel mit
-		// data-testid="compare-tile-{id}" (nur einer der beiden ist :visible,
-		// analog issue-1080-Spec-Konvention gegen strict-mode-Konflikte).
+		// Sowohl Desktop (geteiltes ListTable-Organism, Issue #1277) als auch
+		// Mobile-Stack rendern die Zeile/Kachel mit data-testid="compare-tile-{id}"
+		// (nur einer der beiden ist :visible, analog issue-1080-Spec-Konvention
+		// gegen strict-mode-Konflikte).
 		const tile = page.locator(`[data-testid="compare-tile-${id}"]:visible`);
 		await expect(tile).toBeVisible({ timeout: 10_000 });
 		await tile.click();

@@ -2,9 +2,9 @@
 	import type { Trip } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { goto } from '$app/navigation';
-	import { untrack } from 'svelte';
-	import { Btn, Input, Dot, Eyebrow, Pill, Stat, Card } from '$lib/components/atoms';
+	import { Btn, Input, Dot, Eyebrow, Pill, Stat } from '$lib/components/atoms';
 	import { ConfirmDialog, ReportConfigDialog, TestReportDialog } from '$lib/components/molecules';
+	import ListTable from '$lib/components/organisms/ListTable.svelte';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import BellIcon from '@lucide/svelte/icons/bell';
 	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
@@ -15,12 +15,6 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import { deriveTripStatus, tripStatus, type HomeTripStatus } from '$lib/utils/tripStatus';
-
-	// #706 — Portal-Action: hängt das Element an document.body statt in den overflow-Baum
-	function portal(node: HTMLElement) {
-		document.body.appendChild(node);
-		return { destroy() { node.remove(); } };
-	}
 
 	const now = new Date();
 
@@ -77,70 +71,73 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 	// Mobile Action Sheet (Issue #268)
 	let sheetTrip: Trip | null = $state(null);
 
-	// Desktop Overflow-Menü (Issue #486): welche Trip-ID hat ihr Menü gerade offen
-	let openMenuId: string | null = $state(null);
-	// #706 — position:fixed Menü-Koordinaten (rechtsbündig unterhalb des "…"-Buttons)
-	let menuPos = $state({ top: 0, right: 0 });
-	// Anker-Rect des auslösenden "…"-Buttons — für Flip-Korrektur nach dem Rendern
-	let menuAnchorRect = $state<DOMRect | null>(null);
-	// Das aktive Trip-Objekt für das außerhalb-der-Card-Portal-Menü
-	let openMenuTrip = $derived(openMenuId ? (filteredTrips.find(t => t.id === openMenuId) ?? null) : null);
+	let primaryActionLoading: string | null = $state(null);
 
-	function openMenuAtBtn(e: MouseEvent, tripId: string) {
-		e.stopPropagation();
-		if (openMenuId === tripId) { openMenuId = null; menuAnchorRect = null; return; }
-		const btn = e.currentTarget as HTMLElement;
-		const rect = btn.getBoundingClientRect();
-		menuAnchorRect = rect;
-		// Vorläufige Position unterhalb des Buttons — wird ggf. vom $effect korrigiert
-		menuPos = { top: rect.bottom + 6, right: window.innerWidth - rect.right };
-		openMenuId = tripId;
+	// Issue #1277 — Desktop-Übersicht über das geteilte ListTable-Organism.
+	// Overflow-Menü (Issue #486, unverändert): 6 Einträge. Inline Quick-Action
+	// "Briefing senden" nur bei aktiven Trips (rowPrimary).
+	function tripDotColor(trip: Trip): string {
+		const st = tripStatus(trip, now);
+		if (st === 'aktiv') return 'var(--g-accent)';
+		if (st === 'geplant') return '#3d6b3a';
+		if (st === 'pausiert') return 'var(--g-warning)';
+		if (st === 'fertig') return 'var(--g-ink-3)';
+		return 'var(--g-ink-4)';
 	}
 
-	// Flip-Korrektur: nach dem Rendern messen ob das Menü unten aus dem Viewport ragt.
-	// Falls ja: Menü oberhalb des Buttons öffnen (und links clampen).
-	// untrack() verhindert, dass menuPos als reaktive Dependency des Effects registriert
-	// wird — der Effect schreibt menuPos, darf es aber nicht auch lesen (Reaktiv-Schleife).
-	let menuEl = $state<HTMLElement | null>(null);
-	$effect(() => {
-		if (!menuEl || !menuAnchorRect) return;
-		const menuRect = menuEl.getBoundingClientRect();
-		const vp = window.innerHeight;
-		const GAP = 6;
-		const MARGIN = 8;
-		// Lese den aktuellen menuPos-Zustand untracked, damit kein Selbst-Triggern entsteht.
-		const currentPos = untrack(() => ({ ...menuPos }));
-		// Vertikaler Flip: ragt das Menü unter den Viewport?
-		if (menuRect.bottom > vp) {
-			const flippedTop = menuAnchorRect.top - menuRect.height - GAP;
-			menuPos = { ...currentPos, top: Math.max(MARGIN, flippedTop) };
-		}
-		// Horizontales Clampen: ragt das Menü links heraus?
-		const menuWidth = menuRect.width;
-		const rightFromLeft = window.innerWidth - currentPos.right;
-		if (rightFromLeft - menuWidth < MARGIN) {
-			menuPos = { ...currentPos, right: window.innerWidth - (menuWidth + MARGIN) };
-		}
-	});
+	const TRIP_ACTIONS = [
+		{ key: 'send', label: 'Briefing jetzt senden' },
+		{ key: 'preview', label: 'Email-Vorschau' },
+		{ key: 'alerts', label: 'Alert-Konfiguration' },
+		{ key: 'weather', label: 'Wetter-Metriken' },
+		{ key: 'edit', label: 'Bearbeiten', testid: 'trip-edit-btn' },
+		{ key: 'delete', label: 'Löschen', danger: true }
+	];
 
-	$effect(() => {
-		if (openMenuId === null) return;
-		const close = () => { openMenuId = null; menuAnchorRect = null; };
-		// Defer scroll/resize listener by one frame so Playwright's scroll-into-view
-		// (triggered by the click) doesn't immediately close the freshly opened menu.
-		let timerId: ReturnType<typeof setTimeout>;
-		timerId = setTimeout(() => {
-			window.addEventListener('scroll', close, { capture: true, passive: true });
-			window.addEventListener('resize', close, { passive: true });
-		}, 0);
-		return () => {
-			clearTimeout(timerId);
-			window.removeEventListener('scroll', close, { capture: true });
-			window.removeEventListener('resize', close);
-		};
-	});
+	const tripColumns = [
+		{
+			key: 'name',
+			header: 'Name',
+			width: '1.6fr',
+			render: (row: unknown) => {
+				const t = row as Trip;
+				return { nameCell: { name: t.name, statusLabel: tripStatus(t, now), dotColor: tripDotColor(t) } };
+			}
+		},
+		{
+			key: 'stages',
+			header: 'Etappen',
+			width: '0.8fr',
+			render: (row: unknown) => {
+				const n = (row as Trip).stages?.length ?? 0;
+				return `${n} ${n === 1 ? 'Etappe' : 'Etappen'}`;
+			}
+		},
+		{
+			key: 'range',
+			header: 'Zeitraum',
+			width: '1.4fr',
+			mono: true,
+			render: (row: unknown) => dateRange(row as Trip)
+		}
+	];
 
-	let primaryActionLoading: string | null = $state(null);
+	function tripRowPrimary(row: unknown) {
+		const t = row as Trip;
+		return tripStatus(t, now) === 'aktiv'
+			? { label: 'Briefing senden', onClick: () => runTestReport(t, 7) }
+			: null;
+	}
+
+	function onTripAction(key: string, row: unknown) {
+		const t = row as Trip;
+		if (key === 'send') runTestReport(t, 7);
+		else if (key === 'preview') goto(`/trips/${t.id}?tab=preview`);
+		else if (key === 'alerts') openReportConfig(t);
+		else if (key === 'weather') goto(`/trips/${t.id}#weather`);
+		else if (key === 'edit') openEdit(t);
+		else if (key === 'delete') deleteTarget = t;
+	}
 
 	function statusTone(trip: Trip): 'success' | 'info' | 'warning' | 'danger' {
 		const status = deriveTripStatus(trip, now);
@@ -436,139 +433,27 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 				</div>
 			{/each}
 		</div>
-		<!-- Desktop Grid-Tabelle (Issue #580) -->
+		<!-- Desktop-Übersicht über das geteilte ListTable-Organism (Issue #1277) -->
 		<div class="hidden desktop:block">
-		<Card padding={0} style="overflow: hidden;">
-			<!-- Header-Zeile -->
-			<div style="display: grid; grid-template-columns: 1.6fr 0.8fr 1.4fr auto; gap: 0; padding: 12px 20px; background: var(--g-paper-deep); font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--g-ink-3); font-weight: 500; border-bottom: 1px solid var(--g-rule);">
-				<div>Name</div>
-				<div>Etappen</div>
-				<div>Zeitraum</div>
-				<div style="text-align: right;">Aktionen</div>
+			<ListTable
+				columns={tripColumns}
+				rows={filteredTrips}
+				getRowId={(row) => (row as Trip).id}
+				onRowClick={(row) => goto(`/trips/${(row as Trip).id}`)}
+				rowActions={() => TRIP_ACTIONS}
+				rowPrimary={tripRowPrimary}
+				onAction={onTripAction}
+				emptyText={`Keine Trips für »${search}« gefunden.`}
+				rowTestid={(row) => `trip-row-${(row as Trip).id}`}
+				menuTestid={() => 'trip-row-menu-btn'}
+			/>
+			<div style="margin-top: 14px; font-size: 11px; color: var(--g-ink-4); font-family: var(--g-font-mono); letter-spacing: 0.06em;">
+				{filteredTrips.length} von {trips.length} Trips
 			</div>
-			<!-- Trip-Zeilen (Issue #486: Overflow-Menü statt Icon-Geschwader) -->
-			{#each filteredTrips as trip, i (trip.id)}
-				{@const st = tripStatus(trip, now)}
-				{@const isActive = st === 'aktiv'}
-				{@const dotColor = st === 'aktiv' ? 'var(--g-accent)' : st === 'geplant' ? '#3d6b3a' : st === 'pausiert' ? 'var(--g-warning)' : st === 'fertig' ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}
-				<div
-					role="button"
-					tabindex="0"
-					title="{trip.name} öffnen"
-					onclick={() => goto(`/trips/${trip.id}`)}
-					onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goto(`/trips/${trip.id}`); } }}
-					style="display: grid; grid-template-columns: 1.6fr 0.8fr 1.4fr auto; align-items: center; padding: 16px 20px; background: {i % 2 === 1 ? 'var(--g-paper-deep)' : 'transparent'}; border-bottom: 1px solid var(--g-rule-soft); gap: 0; cursor: pointer; transition: background 120ms;"
-					onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-card-alt, #f1eee6)'; }}
-					onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = i % 2 === 1 ? 'var(--g-paper-deep)' : 'transparent'; }}
-				>
-					<!-- Spalte 1: Name -->
-					<div style="display: flex; align-items: center; gap: 10px;">
-						<span style="width: 7px; height: 7px; border-radius: 50%; background: {dotColor}; flex-shrink: 0;"></span>
-						<span style="font-size: 14px; font-weight: 600; letter-spacing: -0.01em;">{trip.name}</span>
-						<span class="status-caption" style="font-size: 10px; font-family: var(--g-font-mono); color: var(--g-ink-4); text-transform: uppercase; letter-spacing: 0.16em;">· {st}</span>
-					</div>
-					<!-- Spalte 2: Etappen -->
-					<div style="font-size: 13px; color: var(--g-ink-2); font-variant-numeric: tabular-nums;">
-						{trip.stages?.length ?? 0} {(trip.stages?.length ?? 0) === 1 ? 'Etappe' : 'Etappen'}
-					</div>
-					<!-- Spalte 3: Zeitraum -->
-					<div style="font-size: 13px; color: var(--g-ink-2); font-family: var(--g-font-mono); letter-spacing: 0.02em;">
-						{dateRange(trip)}
-					</div>
-					<!-- Spalte 4: Aktionen (stopPropagation verhindert Zeilen-Navigation) -->
-					<div role="presentation" onclick={(e) => e.stopPropagation()} style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; position: relative;">
-						{#if isActive}
-							<button onclick={(e) => { e.stopPropagation(); runTestReport(trip, 7); }} style="display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; height: 32px; background: transparent; border: 1px solid var(--g-rule); border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink); white-space: nowrap;">
-								<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink)" stroke-width="1.7" stroke-linecap="round"><path d="M7 5l12 7-12 7z"/></svg>
-								Briefing senden
-							</button>
-						{/if}
-						<button
-							data-testid="trip-row-menu-btn"
-							title="Aktionen"
-							aria-haspopup="menu"
-							aria-expanded={openMenuId === trip.id}
-							onclick={(e) => openMenuAtBtn(e, trip.id)}
-							style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; background: {openMenuId === trip.id ? 'var(--g-paper-deep)' : 'transparent'}; border: 1px solid var(--g-rule); border-radius: var(--g-r-2); cursor: pointer;"
-						>
-							<!-- three-dot icon -->
-							<svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-								<circle cx="5" cy="12" r="1.4" fill="var(--g-ink-2)"/>
-								<circle cx="12" cy="12" r="1.4" fill="var(--g-ink-2)"/>
-								<circle cx="19" cy="12" r="1.4" fill="var(--g-ink-2)"/>
-							</svg>
-						</button>
-						<span style="display: inline-flex; color: var(--g-ink-4); margin-left: 2px;">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-						</span>
-					</div>
-				</div>
-			{/each}
-			{#if filteredTrips.length === 0}
-				<div style="padding: 40px; text-align: center; color: var(--g-ink-3); font-size: 13px;">
-					Keine Trips für »{search}« gefunden.
-				</div>
-			{/if}
-		</Card>
-		<div style="margin-top: 14px; font-size: 11px; color: var(--g-ink-4); font-family: var(--g-font-mono); letter-spacing: 0.06em;">
-			{filteredTrips.length} von {trips.length} Trips
-		</div>
 		</div>
 		{/if}
 	{/if}
 </div>
-
-{#if openMenuTrip !== null}
-	<!-- Overlay zum Schließen bei Außenklick (portal → document.body) -->
-	<div use:portal role="presentation" onkeydown={(e)=>{ if(e.key==='Escape') { openMenuId=null; menuAnchorRect=null; } }} onclick={(e) => { e.stopPropagation(); openMenuId = null; menuAnchorRect = null; }} style="position: fixed; inset: 0; z-index: 40;"></div>
-	<!-- Overflow-Menü (#706: portal → document.body, kein overflow-Ancestor) -->
-	<div use:portal bind:this={menuEl} role="menu" style="position: fixed; top: {menuPos.top}px; right: {menuPos.right}px; z-index: 41; min-width: 232px; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); box-shadow: var(--g-shadow-2, 0 8px 28px rgba(30,26,18,.16)); padding: 6px;">
-		<!-- Briefing jetzt senden -->
-		<button role="menuitem" onclick={(e) => { const t = openMenuTrip; e.stopPropagation(); openMenuId = null; menuAnchorRect = null; if (t) runTestReport(t, 7); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
-			onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
-			onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round"><path d="M7 5l12 7-12 7z"/></svg>
-			Briefing jetzt senden
-		</button>
-		<!-- Email-Vorschau -->
-		<button role="menuitem" onclick={(e) => { const t = openMenuTrip; e.stopPropagation(); openMenuId = null; menuAnchorRect = null; if (t) goto(`/trips/${t.id}?tab=preview`); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
-			onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
-			onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-			Email-Vorschau
-		</button>
-		<!-- Alert-Konfiguration -->
-		<button role="menuitem" onclick={(e) => { const t = openMenuTrip; e.stopPropagation(); openMenuId = null; menuAnchorRect = null; if (t) openReportConfig(t); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
-			onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
-			onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
-			Alert-Konfiguration
-		</button>
-		<!-- Wetter-Metriken -->
-		<button role="menuitem" onclick={(e) => { const t = openMenuTrip; e.stopPropagation(); openMenuId = null; menuAnchorRect = null; if (t) goto(`/trips/${t.id}#weather`); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
-			onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
-			onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 4v1.5M12 18.5V20M4 12h1.5M18.5 12H20M6 6l1 1M17 17l1 1M6 18l1-1M17 7l1-1"/></svg>
-			Wetter-Metriken
-		</button>
-		<!-- Bearbeiten -->
-		<button data-testid="trip-edit-btn" role="menuitem" onclick={(e) => { const t = openMenuTrip; e.stopPropagation(); openMenuId = null; menuAnchorRect = null; if (t) openEdit(t); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
-			onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
-			onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6L9 21H3v-6z"/></svg>
-			Bearbeiten
-		</button>
-		<!-- Trenner -->
-		<div style="height: 1px; background: var(--g-rule-soft); margin: 6px 8px;"></div>
-		<!-- Löschen (danger) -->
-		<button role="menuitem" onclick={(e) => { const t = openMenuTrip; e.stopPropagation(); openMenuId = null; menuAnchorRect = null; if (t) deleteTarget = t; }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-bad, #a83232);"
-			onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
-			onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-bad, #a83232)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>
-			Löschen
-		</button>
-	</div>
-{/if}
 
 <ConfirmDialog
 	open={deleteTarget !== null}

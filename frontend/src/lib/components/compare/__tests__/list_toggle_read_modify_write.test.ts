@@ -3,7 +3,8 @@
 // Spec: docs/specs/modules/issue_1259_compare_list_toggle_rmw.md
 //
 // Der Kebab-Toggle "Pausieren/Aktivieren" in der Vergleichs-LISTEN-Ansicht
-// (`/compare`, `CompareGrid.svelte`) baut seinen PUT-Body heute aus dem beim
+// (`/compare`, seit Issue #1277 die geteilte ListTable/ListActionsMenu in
+// `routes/compare/+page.svelte`) baut seinen PUT-Body heute aus dem beim
 // Seitenaufruf geladenen, potenziell veralteten Listen-Snapshot per
 // Voll-Spread (`{ ...preset, ...next }`). Sind Liste und Detail-Hub
 // desselben Vergleichs gleichzeitig in zwei Browser-Tabs offen und aendert

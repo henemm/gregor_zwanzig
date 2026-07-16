@@ -167,14 +167,36 @@ describe('Kebab-Menü-Label aktualisiert', () => {
 });
 
 // ── Status-Caption: mono-Kürzel neben Trip-Name ──────────────────────────────
-
-describe('Status-Caption neben Trip-Name in Desktop-Tabelle', () => {
-	test('status-caption CSS-Klasse im Desktop-Tabellenbereich vorhanden', () => {
-		const src = readPage();
+// Issue #1277: Die Desktop-Tabelle rendert die Namensspalte jetzt über das
+// geteilte ListNameCell-Organism (organisms/ListNameCell.svelte) statt über
+// Inline-Markup in +page.svelte. Der Status-Kürzel-Nachweis wandert daher
+// mit auf die geteilte Komponente. Zusätzlich wird geprüft, dass die
+// Trip-Übersicht dem Namens-Zelle einen Status-Label mitgibt.
+describe('Status-Caption neben Trip-Name (geteilte ListNameCell)', () => {
+	test('status-caption CSS-Klasse in ListNameCell vorhanden', () => {
+		const nameCell = join(
+			TRIPS_DIR,
+			'..',
+			'..',
+			'lib',
+			'components',
+			'organisms',
+			'ListNameCell.svelte'
+		);
+		const src = readFileSync(nameCell, 'utf-8');
 		assert.match(
 			src,
 			/status-caption/,
-			'"status-caption" CSS-Klasse fehlt — Status-Kürzel neben Trip-Name einbauen (Schritt 10)'
+			'"status-caption" CSS-Klasse fehlt in ListNameCell — Status-Kürzel neben Name einbauen'
+		);
+	});
+
+	test('trips/+page.svelte übergibt der Namensspalte einen statusLabel', () => {
+		const src = readPage();
+		assert.match(
+			src,
+			/statusLabel/,
+			'trips/+page.svelte muss der ListTable-Namensspalte einen statusLabel mitgeben (Status-Kürzel)'
 		);
 	});
 });

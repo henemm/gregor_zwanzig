@@ -24,6 +24,12 @@ export { default as MetricGroup }         from '../trip-detail/MetricGroup.svelt
 export { default as MetricCheckbox }      from '../trip-detail/MetricCheckbox.svelte';
 
 // Issue #578 — Block C: neue Home-Organisms + Metrics-Organisms
+// Issue #1277 — Geteiltes Listen-Tabellen-Organism (Trips + Orts-Vergleiche)
+export { default as ListTable }                from './ListTable.svelte';
+export { default as ListTableRow }             from './ListTableRow.svelte';
+export { default as ListActionsMenu }          from './ListActionsMenu.svelte';
+export { default as ListNameCell }             from './ListNameCell.svelte';
+
 export { default as HomeHeroTrip }             from './HomeHeroTrip.svelte';
 export { default as HomeHeroCompare }          from './HomeHeroCompare.svelte';
 export { default as OutboxCard }               from './OutboxCard.svelte';

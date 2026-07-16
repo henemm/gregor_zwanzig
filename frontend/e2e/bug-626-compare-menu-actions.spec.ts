@@ -26,10 +26,10 @@ import { login } from './helpers.js';
 // Hilfsfunktion: Öffnet das Kebab-Menü der ersten Kachel mit einem bestimmten Status-Label
 async function openKebabForStatus(page: import('@playwright/test').Page, statusLabel: string) {
 	// Finde eine Kachel, die den gesuchten Status-Label enthält
-	const tile = page.locator('[data-testid="compare-tile"]').filter({ hasText: statusLabel }).first();
+	const tile = page.locator('[data-testid^="compare-tile-"]:visible').filter({ hasText: statusLabel }).first();
 	await expect(tile).toBeVisible({ timeout: 10_000 });
 	// Klick auf den Kebab-Button (⋯) innerhalb der Kachel
-	const kebab = tile.locator('[data-testid="compare-tile-kebab"]');
+	const kebab = tile.locator('button[aria-label="Weitere Aktionen"]');
 	await kebab.click();
 	// Warte auf Dropdown
 	await page.waitForTimeout(500);
@@ -48,11 +48,11 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 
 	test('AC-1: "Bearbeiten" navigiert zu /compare/{id}/edit', async ({ page }) => {
 		// Finde die erste aktive oder pausierte Kachel
-		const tile = page.locator('[data-testid="compare-tile"]').first();
+		const tile = page.locator('[data-testid^="compare-tile-"]:visible').first();
 		await expect(tile).toBeVisible({ timeout: 10_000 });
 
 		// Hole Preset-ID aus dem tile-Link oder data-Attribut
-		const kebab = tile.locator('[data-testid="compare-tile-kebab"]');
+		const kebab = tile.locator('button[aria-label="Weitere Aktionen"]');
 		await kebab.click();
 		await page.waitForTimeout(500);
 
@@ -68,10 +68,10 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 	// ── AC-4: Vorschau → /compare/{id}?tab=vorschau ──────────────────────────
 
 	test('AC-4: "Vorschau öffnen" navigiert zu ?tab=vorschau', async ({ page }) => {
-		const tile = page.locator('[data-testid="compare-tile"]').first();
+		const tile = page.locator('[data-testid^="compare-tile-"]:visible').first();
 		await expect(tile).toBeVisible({ timeout: 10_000 });
 
-		const kebab = tile.locator('[data-testid="compare-tile-kebab"]');
+		const kebab = tile.locator('button[aria-label="Weitere Aktionen"]');
 		await kebab.click();
 		await page.waitForTimeout(500);
 
@@ -88,7 +88,7 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 
 	test('AC-2: "Pausieren" wechselt aktiven Vergleich zu pausiert', async ({ page }) => {
 		// Suche eine Kachel mit Status "aktiv"
-		const aktivTile = page.locator('[data-testid="compare-tile"]').filter({ hasText: 'aktiv' }).first();
+		const aktivTile = page.locator('[data-testid^="compare-tile-"]:visible').filter({ hasText: 'aktiv' }).first();
 
 		// Wenn keine aktive Kachel vorhanden — Test überspringen
 		const count = await aktivTile.count();
@@ -100,7 +100,7 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		await expect(aktivTile).toBeVisible({ timeout: 10_000 });
 
 		// Öffne Kebab-Menü
-		const kebab = aktivTile.locator('[data-testid="compare-tile-kebab"]');
+		const kebab = aktivTile.locator('button[aria-label="Weitere Aktionen"]');
 		await kebab.click();
 		await page.waitForTimeout(500);
 
@@ -120,7 +120,7 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		await expect(statusPill).toContainText('pausiert', { timeout: 5_000 });
 
 		// Prüfe: Kebab-Menü zeigt jetzt "Aktivieren"
-		const kebab2 = aktivTile.locator('[data-testid="compare-tile-kebab"]');
+		const kebab2 = aktivTile.locator('button[aria-label="Weitere Aktionen"]');
 		await kebab2.click();
 		await page.waitForTimeout(500);
 		const activateItem = page.getByRole('menuitem', { name: 'Aktivieren' });
@@ -134,7 +134,7 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 
 	test('AC-3: "Aktivieren" wechselt pausierten Vergleich zu aktiv', async ({ page }) => {
 		// Suche eine Kachel mit Status "pausiert"
-		const pausedTile = page.locator('[data-testid="compare-tile"]').filter({ hasText: 'pausiert' }).first();
+		const pausedTile = page.locator('[data-testid^="compare-tile-"]:visible').filter({ hasText: 'pausiert' }).first();
 
 		const count = await pausedTile.count();
 		if (count === 0) {
@@ -144,7 +144,7 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 
 		await expect(pausedTile).toBeVisible({ timeout: 10_000 });
 
-		const kebab = pausedTile.locator('[data-testid="compare-tile-kebab"]');
+		const kebab = pausedTile.locator('button[aria-label="Weitere Aktionen"]');
 		await kebab.click();
 		await page.waitForTimeout(500);
 
@@ -161,7 +161,7 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		await expect(statusPill).toContainText('aktiv', { timeout: 5_000 });
 
 		// Prüfe: Kebab-Menü zeigt jetzt "Pausieren"
-		const kebab2 = pausedTile.locator('[data-testid="compare-tile-kebab"]');
+		const kebab2 = pausedTile.locator('button[aria-label="Weitere Aktionen"]');
 		await kebab2.click();
 		await page.waitForTimeout(500);
 		const pauseItem = page.getByRole('menuitem', { name: 'Pausieren' });
@@ -174,7 +174,7 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 	// ── AC-5: Draft → "Setup fortsetzen" → /compare/{id}/edit ───────────────
 
 	test('AC-5: "Setup fortsetzen" navigiert Draft zu /compare/{id}/edit', async ({ page }) => {
-		const draftTile = page.locator('[data-testid="compare-tile"]').filter({ hasText: 'draft' }).first();
+		const draftTile = page.locator('[data-testid^="compare-tile-"]:visible').filter({ hasText: 'draft' }).first();
 
 		const count = await draftTile.count();
 		if (count === 0) {
@@ -183,7 +183,7 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		}
 
 		await expect(draftTile).toBeVisible({ timeout: 10_000 });
-		const kebab = draftTile.locator('[data-testid="compare-tile-kebab"]');
+		const kebab = draftTile.locator('button[aria-label="Weitere Aktionen"]');
 		await kebab.click();
 		await page.waitForTimeout(500);
 
@@ -202,10 +202,10 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 	// molecules.jsx:1018-1027). Assertion auf den aktuellen Vertrag umgestellt.
 
 	test('AC-6 (korrigiert #1256 S1): Menü enthält "Briefing jetzt senden"', async ({ page }) => {
-		const tile = page.locator('[data-testid="compare-tile"]').first();
+		const tile = page.locator('[data-testid^="compare-tile-"]:visible').first();
 		await expect(tile).toBeVisible({ timeout: 10_000 });
 
-		const kebab = tile.locator('[data-testid="compare-tile-kebab"]');
+		const kebab = tile.locator('button[aria-label="Weitere Aktionen"]');
 		await kebab.click();
 		await page.waitForTimeout(500);
 
@@ -225,10 +225,10 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 	test('AC-7 (korrigiert #1256 S1): Listen-Kebab zeigt genau 5 Aktionen ohne Archivieren', async ({
 		page
 	}) => {
-		const tile = page.locator('[data-testid="compare-tile"]').first();
+		const tile = page.locator('[data-testid^="compare-tile-"]:visible').first();
 		await expect(tile).toBeVisible({ timeout: 10_000 });
 
-		const kebab = tile.locator('[data-testid="compare-tile-kebab"]');
+		const kebab = tile.locator('button[aria-label="Weitere Aktionen"]');
 		await kebab.click();
 		await page.waitForTimeout(500);
 
