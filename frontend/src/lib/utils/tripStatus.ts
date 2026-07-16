@@ -1,23 +1,23 @@
-// Spec: docs/specs/modules/epic_135_step2_trip_detail_actions.md (§4)
-// Pure function. Reihenfolge (verbindlich):
+// Spec: docs/specs/modules/fix_1271_status_zeitformat.md
+// Pure function, kanonische Quelle. Reihenfolge (verbindlich):
 //   1. archived_at gesetzt → 'archived'
 //   2. paused_at gesetzt → 'paused'
-//   3. heute zwischen erstem und letztem Stage-Datum → 'active'
-//   4. sonst → 'planned'
+//   3. keine datierten Etappen → 'draft'
+//   4. letztes Etappen-Datum < heute → 'finished'
+//   5. erstes Etappen-Datum ≤ heute ≤ letztes → 'active'
+//   6. sonst (alle Etappen in der Zukunft) → 'planned'
 
 import type { Trip } from '$lib/types';
 
-export type TripStatus = 'planned' | 'active' | 'paused' | 'archived';
+export type TripStatus = 'draft' | 'planned' | 'active' | 'paused' | 'finished' | 'archived';
 
 export function deriveTripStatus(trip: Trip, now: Date): TripStatus {
 	if (trip.archived_at != null) return 'archived';
 	if (trip.paused_at != null) return 'paused';
 
 	const stages = trip.stages ?? [];
-	if (stages.length === 0) return 'planned';
-
 	const dates = stages.map((s) => s.date).filter((d): d is string => !!d);
-	if (dates.length === 0) return 'planned';
+	if (dates.length === 0) return 'draft';
 
 	// Lokal sortieren — Stages dürfen in beliebiger Reihenfolge ankommen.
 	// ISO-Datumsstrings (YYYY-MM-DD) sind lexikographisch == chronologisch sortierbar.
@@ -28,6 +28,7 @@ export function deriveTripStatus(trip: Trip, now: Date): TripStatus {
 	const last = new Date(sorted[sorted.length - 1] + 'T00:00:00Z');
 	const today = new Date(now.toISOString().slice(0, 10) + 'T00:00:00Z');
 
+	if (today > last) return 'finished';
 	if (today >= first && today <= last) return 'active';
 	return 'planned';
 }
@@ -39,7 +40,16 @@ export function deriveTripStatus(trip: Trip, now: Date): TripStatus {
 // Spec: docs/specs/modules/screen_home_migration.md
 // ---------------------------------------------------------------------------
 
-export type HomeTripStatus = 'aktiv' | 'geplant' | 'fertig' | 'draft';
+export type HomeTripStatus = 'aktiv' | 'geplant' | 'fertig' | 'draft' | 'pausiert';
+
+const CANONICAL_TO_HOME: Record<TripStatus, HomeTripStatus> = {
+	draft: 'draft',
+	planned: 'geplant',
+	active: 'aktiv',
+	paused: 'pausiert',
+	finished: 'fertig',
+	archived: 'fertig'
+};
 
 /** Lokales ISO-Datum (YYYY-MM-DD) aus einem Date (Tageskorn). */
 function isoDay(now: Date): string {
@@ -59,21 +69,11 @@ function sortedDates(trip: Trip): string[] {
 }
 
 /**
- * Deutschsprachiger Trip-Status fürs Cockpit:
- *   - `archived_at` gesetzt → 'fertig'
- *   - keine datierten Etappen → 'draft'
- *   - letztes Etappen-Datum < heute → 'fertig'
- *   - erstes Etappen-Datum ≤ heute ≤ letztes → 'aktiv'
- *   - sonst (alle in Zukunft) → 'geplant'
+ * Deutschsprachiger Trip-Status fürs Cockpit/Liste. Thin-Wrapper ohne eigene
+ * Datums-/Feld-Logik — kanonische Quelle ist deriveTripStatus().
  */
 export function tripStatus(trip: Trip, now: Date = new Date()): HomeTripStatus {
-	if (trip.archived_at != null) return 'fertig';
-	const dates = sortedDates(trip);
-	if (dates.length === 0) return 'draft';
-	const today = isoDay(now);
-	if (dates[dates.length - 1] < today) return 'fertig';
-	if (dates[0] <= today) return 'aktiv';
-	return 'geplant';
+	return CANONICAL_TO_HOME[deriveTripStatus(trip, now)];
 }
 
 /**

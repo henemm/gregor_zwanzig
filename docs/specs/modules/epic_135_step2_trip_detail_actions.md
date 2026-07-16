@@ -116,6 +116,8 @@ archived_at?: string; // ISO-8601, optional
 
 ### §4 Frontend: Pure-Function `frontend/src/lib/utils/tripStatus.ts`
 
+> **Erweitert durch `docs/specs/modules/fix_1271_status_zeitformat.md` (2026-07-16):** Die hier beschriebene 4-Zustands-Reihenfolge (`planned | active | paused | archived`) ist die historische Fassung. Aktuell (kanonische Quelle) sind 6 Zustände inkl. `draft` und `finished` — siehe Fix #1271 §"Bug 2". Code-Block unten spiegelt NICHT mehr den Ist-Stand.
+
 ```typescript
 export type TripStatus = 'planned' | 'active' | 'paused' | 'archived';
 

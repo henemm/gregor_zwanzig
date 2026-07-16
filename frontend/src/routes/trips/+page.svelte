@@ -145,7 +145,7 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 	function statusTone(trip: Trip): 'success' | 'info' | 'warning' | 'danger' {
 		const status = deriveTripStatus(trip, now);
 		if (status === 'active') return 'success';
-		if (status === 'planned') return 'info';
+		if (status === 'planned' || status === 'draft') return 'info';
 		if (status === 'paused') return 'warning';
 		return 'danger';
 	}
@@ -386,9 +386,10 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 		<div class="desktop:hidden flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
 			{#each [
 				{ label: 'Alle',    value: 'all'     as const, count: filteredTrips.length },
-				{ label: 'Aktiv',   value: 'aktiv'   as const, count: filteredTrips.filter(t => tripStatus(t, now) === 'aktiv').length },
-				{ label: 'Geplant', value: 'geplant' as const, count: filteredTrips.filter(t => tripStatus(t, now) === 'geplant').length },
-				{ label: 'Fertig',  value: 'fertig'  as const, count: filteredTrips.filter(t => tripStatus(t, now) === 'fertig').length },
+				{ label: 'Aktiv',    value: 'aktiv'    as const, count: filteredTrips.filter(t => tripStatus(t, now) === 'aktiv').length },
+				{ label: 'Geplant',  value: 'geplant'  as const, count: filteredTrips.filter(t => tripStatus(t, now) === 'geplant').length },
+				{ label: 'Pausiert', value: 'pausiert' as const, count: filteredTrips.filter(t => tripStatus(t, now) === 'pausiert').length },
+				{ label: 'Fertig',   value: 'fertig'   as const, count: filteredTrips.filter(t => tripStatus(t, now) === 'fertig').length },
 			] as f (f.value)}
 				<button
 					class="shrink-0 cursor-pointer inline-flex items-center min-h-[44px]"
@@ -449,7 +450,7 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 			{#each filteredTrips as trip, i (trip.id)}
 				{@const st = tripStatus(trip, now)}
 				{@const isActive = st === 'aktiv'}
-				{@const dotColor = st === 'aktiv' ? 'var(--g-accent)' : st === 'geplant' ? '#3d6b3a' : st === 'fertig' ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}
+				{@const dotColor = st === 'aktiv' ? 'var(--g-accent)' : st === 'geplant' ? '#3d6b3a' : st === 'pausiert' ? 'var(--g-warning)' : st === 'fertig' ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}
 				<div
 					role="button"
 					tabindex="0"

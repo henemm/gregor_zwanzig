@@ -75,6 +75,8 @@ Die Startseite (`/`, `frontend/src/routes/+page.svelte`) wird vom heutigen schli
 
 ## Tests (mock-frei)
 
+> **Erweitert durch `docs/specs/modules/fix_1271_status_zeitformat.md` (2026-07-16):** `tripStatus()` ist inzwischen Thin-Wrapper um die kanonische `deriveTripStatus()` (6 Zustände inkl. `pausiert`), nicht mehr eigene Datumsableitung. Zeile unten (aktiv/geplant/fertig/draft) ist um `pausiert` zu ergänzen — historischer Stand.
+
 - Unit: `tripStatus.ts`-Util (aktiv/geplant/fertig/draft + heutige Etappen-Index) — reine Funktion, node:test.
 - Component/Integration: Startseite rendert für (a) aktive Tour mit Wetter, (b) nur geplante Touren, (c) leer — gegen echte Loader-Datenform (Fixtures aus echten Trip-DTOs, keine `Mock()`).
 - E2E (Post-Push, Staging): `/` rendert, Hero + Etappen-Streifen sichtbar, keine Console-Errors (Playwright).

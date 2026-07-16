@@ -60,7 +60,7 @@ Nicht geändert:
 | `frontend/src/lib/utils/rightColumn.ts` | Utility (vorhanden) | `getReportSchedule(trip)` → `ReportSchedule` mit morning/evening/enabled-Feldern |
 | `frontend/src/lib/utils/fullProfile.ts` | Utility (vorhanden) | `getActiveStageId(trip, now)` → `string \| null` — aktive Etappe des heutigen Tages |
 | `frontend/src/lib/utils/tripStats.ts` | Utility (vorhanden) | `computeTripStats(trip)` → `{ stages, kmTotal, ascentM }` |
-| `frontend/src/lib/utils/tripStatus.ts` | Utility (vorhanden) | `deriveTripStatus(trip, now)` → `'planned' \| 'active' \| 'paused' \| 'archived'` |
+| `frontend/src/lib/utils/tripStatus.ts` | Utility (vorhanden) | `deriveTripStatus(trip, now)` → `'planned' \| 'active' \| 'paused' \| 'archived'` — **erweitert durch `docs/specs/modules/fix_1271_status_zeitformat.md` (2026-07-16) um `draft`/`finished` (6 Zustände)** |
 | `frontend/src/lib/utils/alertMetricLabels.ts` | Utility (vorhanden) | `ALERT_METRIC_LABELS`, `normalizeAlertMetric()` — Labels + Icons für Alert-Metriken in AlertsPreviewCard |
 | `frontend/src/lib/types.ts` | TypeScript | `Trip`, `Stage`, `AlertRule` — keine Änderung nötig |
 | `frontend/e2e/issue-302-trip-detail-redesign.spec.ts` | E2E-Test | AC-4a–4d werden mit `test.skip` + Kommentar superseded markiert |

@@ -81,7 +81,11 @@ export function getDaysLabel(trip: Trip, now: Date): string {
 		return `läuft seit Tag ${idx + 1}`;
 	}
 
-	// archived
+	// #1271: draft (keine datierten Etappen) hat kein "Tage bis Start" —
+	// sonst fiele es in den Fallback unten und zeigte fälschlich "Trip beendet".
+	if (status === 'draft') return 'Trip noch nicht geplant';
+
+	// finished/archived
 	const dates = sortedStageDates(trip);
 	if (dates.length === 0) return 'Trip beendet';
 	const last = parseStageDate(dates[dates.length - 1]);

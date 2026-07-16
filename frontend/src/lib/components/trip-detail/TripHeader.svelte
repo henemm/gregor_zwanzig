@@ -71,7 +71,7 @@
 			const idx = todayStageIndex(trip, now);
 			return idx >= 0 ? `${idx + 1}/${total}` : `—/${total}`;
 		}
-		if (s === 'archived') return `${total}/${total}`;
+		if (s === 'archived' || s === 'finished') return `${total}/${total}`;
 		return `—/${total}`;
 	})());
 

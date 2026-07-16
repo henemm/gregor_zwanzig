@@ -58,6 +58,23 @@ test('AC-10: getDaysLabel — active, Tag 2 → "läuft seit Tag 2"', () => {
 	assert.equal(getDaysLabel(trip, TODAY), 'läuft seit Tag 2');
 });
 
+// #1271: draft (keine datierten Etappen) → eigener Text statt "Trip beendet"
+// (Fallback-Branch war vor der Statuskonsolidierung nur für archived gedacht).
+test('#1271: getDaysLabel — draft (keine Etappen) → "Trip noch nicht geplant"', () => {
+	const trip = tripWith({ stages: [] });
+	assert.equal(getDaysLabel(trip, TODAY), 'Trip noch nicht geplant');
+});
+
+// #1271: finished (vergangene Etappen, nicht archiviert) → "beendet vor X Tagen"
+// (vorher fälschlich "heute", weil deriveTripStatus für diesen Fall bisher
+// 'planned' statt 'finished' lieferte).
+test('#1271: getDaysLabel — finished (vergangene Etappen) → "beendet vor X Tagen"', () => {
+	const trip = tripWith({
+		stages: [stage('2026-05-01'), stage('2026-05-03')]
+	});
+	assert.equal(getDaysLabel(trip, TODAY), 'beendet vor 9 Tagen');
+});
+
 // =============================================================================
 // formatDateRange
 // =============================================================================

@@ -57,10 +57,10 @@ test('AC-3: paused_at gesetzt + heute zwischen Stages → paused (Vorrang)', () 
 	assert.equal(deriveTripStatus(trip, TODAY), 'paused');
 });
 
-// AC-4: planned wenn keine Stages.
-test('AC-4: trip ohne Stages + ohne Flags → planned', () => {
+// AC-4 (korrigiert #1271): keine Stages → draft (nicht mehr planned).
+test('AC-4: trip ohne Stages + ohne Flags → draft', () => {
 	const trip = tripWith({ stages: [] });
-	assert.equal(deriveTripStatus(trip, TODAY), 'planned');
+	assert.equal(deriveTripStatus(trip, TODAY), 'draft');
 });
 
 // AC-4-Variante: planned wenn alle Stages in der Zukunft liegen.
@@ -74,16 +74,17 @@ test('AC-4b: Stages alle in der Zukunft → planned', () => {
 	assert.equal(deriveTripStatus(trip, TODAY), 'planned');
 });
 
-// Edge-case: Stages alle in der Vergangenheit, keine Flags → planned
-// (kein "archived" weil archived nur durch Flag entsteht, nicht durch Datum)
-test('Edge: Stages alle in der Vergangenheit, keine Flags → planned', () => {
+// Edge-case (korrigiert #1271): Stages alle in der Vergangenheit, keine Flags
+// → finished (nicht mehr planned; kein "archived" weil archived nur durch
+// Flag entsteht, nicht durch Datum).
+test('Edge: Stages alle in der Vergangenheit, keine Flags → finished', () => {
 	const trip = tripWith({
 		stages: [
 			{ id: 's1', name: 'D1', date: '2026-04-01', waypoints: [] },
 			{ id: 's2', name: 'D2', date: '2026-04-03', waypoints: [] }
 		]
 	});
-	assert.equal(deriveTripStatus(trip, TODAY), 'planned');
+	assert.equal(deriveTripStatus(trip, TODAY), 'finished');
 });
 
 // Edge: archived_at allein → archived (auch wenn keine Stages).

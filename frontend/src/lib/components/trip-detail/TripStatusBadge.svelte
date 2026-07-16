@@ -13,16 +13,20 @@
 	let { trip, now = new Date() }: Props = $props();
 
 	const TONE_MAP: Record<TripStatus, 'info' | 'accent' | 'warning' | 'default'> = {
+		draft: 'default',
 		planned: 'info',
 		active: 'accent',
 		paused: 'warning',
+		finished: 'default',
 		archived: 'default'
 	};
 
 	const LABEL_MAP: Record<TripStatus, string> = {
+		draft: 'Entwurf',
 		planned: 'Geplant',
 		active: 'Aktiv',
 		paused: 'Pausiert',
+		finished: 'Fertig',
 		archived: 'Archiviert'
 	};
 
