@@ -275,10 +275,22 @@ class TestValidatorCompact:
 # --------------------------------------------------------------------------- #
 class TestValidatorDispatch:
     def test_ac7_compare_tagged_is_clean_noop(self):
-        """AC-7: compare-getaggte Mail → kein struktureller Fehlalarm, Exit 0 (No-Op)."""
+        """AC-7: compare-getaggte Mail → kein struktureller Fehlalarm (keine
+        Briefing-Spec-Verletzung), ABER auch kein Pass mehr.
+
+        Aktualisiert fuer #1282 AC-2 (No-Op ≠ Pass): der No-Op-Zweig fuer
+        mail_type in (compare, deviation-alert) lieferte bislang faelschlich
+        success=True — ein wirkungsloser Validator-Lauf, der vom Renderer-
+        Mail-Gate als ausreichender Nachweis gewertet wurde. Seit dem Fix
+        liefert er success=False (kein struktureller Fehler, aber auch kein
+        Nachweis) und das Log traegt zusaetzlich `skipped: true`.
+        """
         bmv = _load_validator()
         ok, errors = bmv.validate_message(_build_compare())
-        assert ok, f"compare-Mail darf nicht als kaputtes Briefing durchfallen, errors={errors}"
+        assert ok is False, (
+            "AC-2 (#1282): No-Op fuer mail_type=compare darf KEIN Pass mehr sein "
+            f"(success muss False sein). errors={errors}"
+        )
         # No-Op-Meldung statt struktureller Fehler
         assert any("compare" in e.lower() or "vergleich" in e.lower() or "briefing" in e.lower()
                    for e in errors) or errors == []

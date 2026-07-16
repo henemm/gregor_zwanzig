@@ -26,6 +26,12 @@ import re
 from pathlib import Path
 from typing import List, Tuple
 
+# Issue #1282 AC-4: shared-repo _log-Aufloesung (git-common-dir) -- gleiches
+# Muster wie renderer_mail_gate.py fuer hook_utils (sys.path-Erweiterung fuer
+# standalone-Aufruf, kein relativer Import noetig).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _e2e_paths  # noqa: E402
+
 
 def _write_validation_log(
     success: bool,
@@ -39,6 +45,12 @@ def _write_validation_log(
     Schreibt in ``.claude/workflows/_log/<ts>_<wf>_email_validation.yaml``.
     Fail-soft: jeder Fehler wird unterdrueckt, damit der Validator-Exit-Code
     erhalten bleibt.
+
+    Issue #1282 AC-4: ist ``log_dir`` NICHT explizit uebergeben, wird das
+    shared-repo `_log` (git-common-dir via ``_e2e_paths.shared_repo_dir``)
+    verwendet, Fail-soft-Fallback auf die alte __file__-relative Berechnung
+    (z.B. ausserhalb eines Git-Repos). Ein explizit uebergebenes ``log_dir``
+    behaelt weiterhin Vorrang (Tests/AC-10 in test_issue_465).
     """
     try:
         from datetime import datetime
@@ -46,8 +58,12 @@ def _write_validation_log(
 
         if log_dir is None:
             hooks_dir = Path(__file__).resolve().parent
-            project_root = hooks_dir.parent.parent
-            log_dir = project_root / ".claude" / "workflows" / "_log"
+            fallback_log_dir = hooks_dir.parent.parent / ".claude" / "workflows" / "_log"
+            try:
+                shared = _e2e_paths.shared_repo_dir(cwd=hooks_dir)
+            except Exception:
+                shared = None
+            log_dir = (shared / ".claude" / "workflows" / "_log") if shared else fallback_log_dir
 
         if workflow_id is None:
             workflow_id = os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "unknown")

@@ -63,6 +63,20 @@ _OFFICIAL_PATTERNS = [
     re.compile(r"src/output/renderers/alert/official_alerts\.py$"),
 ]
 
+# Compare-Mail-Muster (Subset von _MAIL_PATTERNS, #1282): der Ortsvergleich-
+# Renderer -- Typ X-GZ-Mail-Type: compare. Braucht einen eigenen Nachweis
+# (email_spec_validator.py), NICHT (nur) den Briefing-Nachweis.
+_COMPARE_PATTERNS = [
+    re.compile(r"src/output/renderers/email/compare_html\.py$"),
+]
+
+# Geteilte Renderer-Helfer (Subset von _MAIL_PATTERNS, #1282): werden von
+# BEIDEN Renderer-Pfaden importiert (Briefing UND Compare) -- ein Bruch hier
+# kann beide Mail-Typen treffen, daher verlangt das Gate fuer sie BEIDE Nachweise.
+_SHARED_HELPER_PATTERNS = [
+    re.compile(r"src/output/renderers/email/(helpers|design_tokens|profile_signature)\.py$"),
+]
+
 
 def _is_radar_file(name: str) -> bool:
     return any(p.search(name) for p in _RADAR_PATTERNS)
@@ -70,6 +84,14 @@ def _is_radar_file(name: str) -> bool:
 
 def _is_official_file(name: str) -> bool:
     return any(p.search(name) for p in _OFFICIAL_PATTERNS)
+
+
+def _is_compare_file(name: str) -> bool:
+    return any(p.search(name) for p in _COMPARE_PATTERNS)
+
+
+def _is_shared_helper_file(name: str) -> bool:
+    return any(p.search(name) for p in _SHARED_HELPER_PATTERNS)
 
 
 def _repo_root() -> Path:
@@ -290,6 +312,55 @@ def _official_validator_log_ok(shared: Path, name: str, repo: Path, staged: list
     return False
 
 
+def _compare_validator_log_ok(shared: Path, name: str, repo: Path, staged: list[str]) -> bool:
+    """Juengstes email_validation.yaml (email_spec_validator.py) mit
+    workflow_id == name, passed: true UND validated_at FRISCHER als die
+    mtime der gestagten Compare-/geteilten Dateien (Freshness analog
+    Briefing/Radar/Official, #1282).
+    """
+    log_dir = shared / ".claude" / "workflows" / "_log"
+    if not log_dir.exists():
+        return False
+    logs = sorted(
+        log_dir.glob("*_email_validation.yaml"),
+        key=lambda p: p.stat().st_mtime, reverse=True,
+    )
+    compare_mtime = max(
+        (
+            (repo / n).stat().st_mtime
+            for n in staged
+            if _is_compare_file(n) or _is_shared_helper_file(n)
+        ),
+        default=0.0,
+    )
+    for log in logs:
+        try:
+            text = log.read_text()
+        except OSError:
+            continue
+        wid = re.search(r"^workflow_id:\s*(\S+)", text, re.M)
+        if not wid or wid.group(1).strip().strip("'\"") != name:
+            continue
+        passed = re.search(r"^passed:\s*(\w+)", text, re.M)
+        if not (passed and passed.group(1).strip().lower() == "true"):
+            return False
+        vat = re.search(r"^validated_at:\s*'?([^'\n]+)'?", text, re.M)
+        if not vat:
+            return False
+        try:
+            vat_str = vat.group(1).strip().strip("'\"")
+            vat_dt = datetime.fromisoformat(vat_str)
+            if vat_dt.tzinfo is None:
+                vat_dt = vat_dt.replace(tzinfo=timezone.utc)
+            vat_ts = vat_dt.timestamp()
+        except (ValueError, TypeError):
+            return False
+        if vat_ts < compare_mtime:
+            return False
+        return True
+    return False
+
+
 def _block(msg: str) -> None:
     print("=" * 70, file=sys.stderr)
     print("BLOCKED - Renderer-Mail-Gate (#811)", file=sys.stderr)
@@ -321,11 +392,10 @@ def _do_record(repo: Path, shared: Path, name: str) -> None:
 
 
 def _do_hook(repo: Path, shared: Path, name: str) -> None:
-    tool_input = _read_tool_input()
-    command = tool_input.get("command", "")
-    if "git commit" not in command:
-        sys.exit(0)
-
+    """Rein Datei-/State-basierte Klassifikation + Nachweis-Pruefung (#1282:
+    die Sub-"ist das ueberhaupt ein git commit"-Frage lebt in main(), damit
+    _do_hook direkt (ohne CLAUDE_TOOL_INPUT/stdin-Simulation) testbar bleibt).
+    """
     staged = _staged_files(repo)
     mail_staged = [f for f in staged if _is_mail_file(f)]
     if not mail_staged:
@@ -346,10 +416,15 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
 
     radar_staged = [f for f in mail_staged if _is_radar_file(f)]
     official_staged = [f for f in mail_staged if _is_official_file(f)]
-    # Briefing-Mail-Dateien sind alle Mail-Inhalts-Dateien, die weder Radar-
-    # noch Official-Alert-Dateien sind.
+    compare_staged = [f for f in mail_staged if _is_compare_file(f)]
+    shared_staged = [f for f in mail_staged if _is_shared_helper_file(f)]
+    # Briefing-Mail-Dateien sind alle Mail-Inhalts-Dateien, die weder Radar-,
+    # Official-Alert-, noch (reine) Compare-Dateien sind. Geteilte Helfer
+    # bleiben Teil von briefing_staged (werden auch vom Briefing-Renderer
+    # importiert) UND loesen zusaetzlich compare_ok aus (#1282 AC-3).
     briefing_staged = [
-        f for f in mail_staged if not _is_radar_file(f) and not _is_official_file(f)
+        f for f in mail_staged
+        if not _is_radar_file(f) and not _is_official_file(f) and not _is_compare_file(f)
     ]
 
     # Matrix-Test + Briefing-Validator nur erforderlich wenn Briefing-Mail-Dateien staged.
@@ -380,6 +455,13 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
         if official_staged else True
     )
 
+    # Compare-Validator (email_spec_validator.py) erforderlich wenn compare_html.py
+    # ODER ein geteilter Renderer-Helfer staged ist (#1282 AC-1/AC-3).
+    compare_ok = (
+        _compare_validator_log_ok(shared, name, repo, staged)
+        if (compare_staged or shared_staged) else True
+    )
+
     golden_ok = True
     if briefing_staged:
         if (repo / "tests" / "golden" / "email").exists():
@@ -400,7 +482,7 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
             # keinen Sinn, wird übersprungen.
             golden_ok = True
 
-    if matrix_ok and validator_ok and radar_ok and official_ok and golden_ok:
+    if matrix_ok and validator_ok and radar_ok and official_ok and compare_ok and golden_ok:
         sys.exit(0)
 
     missing = []
@@ -428,6 +510,12 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
             "  - official_alert_mail_validator.py-Erfolgsnachweis fehlt.\n"
             "    Abhilfe: uv run python3 .claude/hooks/official_alert_mail_validator.py "
             "gegen die echt zugestellte Standalone-Amtliche-Warnung-Mail (Exit 0)."
+        )
+    if not compare_ok:
+        missing.append(
+            "  - email_spec_validator.py-Erfolgsnachweis (Compare-Mail) fehlt.\n"
+            "    Abhilfe: uv run python3 .claude/hooks/email_spec_validator.py "
+            "gegen die echt zugestellte Compare-Mail (Exit 0)."
         )
     if not golden_ok:
         missing.append(
@@ -461,6 +549,10 @@ def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "record-matrix":
         _do_record(repo, shared, name)
     else:
+        tool_input = _read_tool_input()
+        command = tool_input.get("command", "")
+        if "git commit" not in command:
+            sys.exit(0)
         _do_hook(repo, shared, name)
 
 

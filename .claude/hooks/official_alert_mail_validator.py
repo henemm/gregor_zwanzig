@@ -41,6 +41,12 @@ from email.message import Message
 from html.parser import HTMLParser
 from pathlib import Path
 
+# Issue #1282 AC-4: shared-repo _log-Aufloesung (git-common-dir) -- gleiches
+# Muster wie renderer_mail_gate.py fuer hook_utils (sys.path-Erweiterung fuer
+# standalone-Aufruf, kein relativer Import noetig).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _e2e_paths  # noqa: E402
+
 # Verdict-Zeile: "{N} amtliche Warnung" / "{N} amtliche Warnungen".
 _VERDICT_RE = re.compile(r"(\d+)\s+amtliche Warnung(?:en)?")
 
@@ -206,13 +212,23 @@ def validate_message(msg: Message) -> tuple[bool, list[str]]:
 
 
 def _write_validation_log(success: bool, errors: list) -> None:
-    """Strukturiertes Validator-Log YAML (fail-soft)."""
+    """Strukturiertes Validator-Log YAML (fail-soft).
+
+    Issue #1282 AC-4: log_dir liegt im shared-repo (git-common-dir via
+    _e2e_paths.shared_repo_dir), Fail-soft-Fallback auf die alte __file__-
+    relative Berechnung (z.B. ausserhalb eines Git-Repos).
+    """
     try:
         from datetime import datetime
         import tempfile
 
         hooks_dir = Path(__file__).resolve().parent
-        log_dir = hooks_dir.parent / "workflows" / "_log"
+        fallback_log_dir = hooks_dir.parent / "workflows" / "_log"
+        try:
+            shared = _e2e_paths.shared_repo_dir(cwd=hooks_dir)
+        except Exception:
+            shared = None
+        log_dir = (shared / ".claude" / "workflows" / "_log") if shared else fallback_log_dir
         log_dir.mkdir(parents=True, exist_ok=True)
         workflow_id = os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "unknown")
         date_str = datetime.utcnow().strftime("%Y%m%d_%H%M%S")

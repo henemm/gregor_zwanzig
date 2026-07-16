@@ -152,6 +152,31 @@ def _write_validation_log(
     return p
 
 
+def _write_email_validation_log(
+    repo: Path, *, passed: bool = True, validated_at: datetime | None = None,
+) -> Path:
+    """Schreibt ein email_validation.yaml-Log (email_spec_validator.py-Nachweis).
+
+    #1282 AC-3: `_MAIL_FILE` (helpers.py) ist ein geteilter Renderer-Helfer --
+    das Gate verlangt fuer ihn seit diesem Fix BEIDE Nachweise (briefing UND
+    compare). Genutzt von test_pass_with_both_evidences.
+    """
+    now = validated_at or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    log_dir = repo / ".claude" / "workflows" / "_log"
+    ts = now.strftime("%Y%m%d_%H%M%S")
+    p = log_dir / f"{ts}_{_WF_NAME}_email_validation.yaml"
+    p.write_text(
+        "validator: email_spec_validator\n"
+        f"validated_at: '{now.isoformat()}'\n"
+        f"workflow_id: {_WF_NAME}\n"
+        f"passed: {str(passed).lower()}\n"
+        "error_count: 0\n"
+    )
+    return p
+
+
 # ---------------------------------------------------------------------------
 # AC-2: Block ohne Nachweis
 # ---------------------------------------------------------------------------
@@ -175,7 +200,14 @@ def test_block_when_no_evidence(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_pass_with_both_evidences(tmp_path):
-    """Matrix-Nachweis (Hash passend) + Validator-Log passed (frisch) → Exit 0."""
+    """Matrix-Nachweis (Hash passend) + Validator-Log passed (frisch) → Exit 0.
+
+    Aktualisiert fuer #1282 AC-3 (geteilte Helfer = beide Nachweise): `_MAIL_FILE`
+    (helpers.py) ist ein geteilter Renderer-Helfer (Briefing UND Compare) --
+    das Gate verlangt seit diesem Fix zusaetzlich den Compare-Nachweis
+    (email_validation.yaml, email_spec_validator.py), nicht mehr nur den
+    Briefing-Nachweis.
+    """
     repo = _setup_repo(tmp_path)
     mail_path = repo / _MAIL_FILE
     mail_path.write_text("# changed\n")
@@ -190,6 +222,7 @@ def test_pass_with_both_evidences(tmp_path):
         "renderer_mail": {"matrix": {"passed": True, "mail_files_hash": mail_hash}},
     })
     _write_validation_log(repo, passed=True, validated_at=fresh_vat)
+    _write_email_validation_log(repo, passed=True, validated_at=fresh_vat)
 
     res = _run_gate(repo, stdin=_commit_stdin())
     assert res.returncode == 0, (

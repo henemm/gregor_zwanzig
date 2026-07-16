@@ -447,6 +447,15 @@ def _scope_diff_base(repo_dir: Path = REPO_DIR) -> str:
     ungleich HEAD, hat dieser Vorrang als Diff-Basis — der Selftest muss den
     gesamten seit dem letzten Prod-Deploy ausgerollten Bereich abdecken, nicht
     nur den (evtl. späteren) Gate-Marker-Punkt.
+
+    Issue #1283: `previous_commit` (der Vor-Deploy-Commit, von
+    deploy-gregor-prod.sh als `$LOCAL` erfasst) hat HÖCHSTE Priorität vor
+    `deployed_commit` — ein reiner Doku-Commit obenauf auf einem Code-Commit
+    (stacked-docs-on-code) darf nicht dazu führen, dass nur der oberste
+    (Doku-)Commit geprüft wird. Fehlt `previous_commit` (alter Marker vor
+    diesem Fix) oder ist er ≠ HEAD nicht auflösbar/gleich HEAD, greift
+    unverändert die bestehende Kette (`deployed_commit` → Gate-Marker →
+    `HEAD~1`), fail-closed (#1121) intakt.
     """
     head = _e2e_paths.head_sha(repo_dir)
 
@@ -454,9 +463,19 @@ def _scope_diff_base(repo_dir: Path = REPO_DIR) -> str:
     if prod_deploy_path.exists():
         try:
             prod_deploy_data = json.loads(prod_deploy_path.read_text())
-            deployed_commit = prod_deploy_data.get("deployed_commit")
         except (OSError, json.JSONDecodeError, ValueError):
-            deployed_commit = None
+            prod_deploy_data = {}
+
+        previous_commit = prod_deploy_data.get("previous_commit")
+        if previous_commit and previous_commit != head:
+            resolvable = subprocess.run(
+                ["git", "cat-file", "-e", previous_commit],
+                capture_output=True, text=True, cwd=str(repo_dir),
+            )
+            if resolvable.returncode == 0:
+                return previous_commit
+
+        deployed_commit = prod_deploy_data.get("deployed_commit")
         if deployed_commit and deployed_commit != head:
             resolvable = subprocess.run(
                 ["git", "cat-file", "-e", deployed_commit],

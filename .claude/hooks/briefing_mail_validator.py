@@ -27,6 +27,12 @@ from email.header import decode_header
 from email.message import Message
 from pathlib import Path
 
+# Issue #1282 AC-4: shared-repo _log-Aufloesung (git-common-dir) -- gleiches
+# Muster wie renderer_mail_gate.py fuer hook_utils (sys.path-Erweiterung fuer
+# standalone-Aufruf, kein relativer Import noetig).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _e2e_paths  # noqa: E402
+
 # Sequenzielle Stundentabellen-Heuristik: mind. 2 distinct HH:00-Treffer.
 _HOUR_RE = re.compile(r"\b([01]?\d|2[0-3]):00\b")
 # Compact-Plain: echte Tabellenzeile beginnt (ggf. eingerueckt) mit HH:00.
@@ -496,7 +502,11 @@ def validate_message(msg: Message, max_bytes: int = _MAX_BYTES_DEFAULT) -> tuple
         ]
 
     if mail_type in ("compare", "deviation-alert"):
-        return True, [
+        # Issue #1282 AC-2: No-Op ist KEIN Pass — ein wirkungsloser Validator-
+        # Lauf darf vom Renderer-Mail-Gate nie als Nachweis gewertet werden.
+        # _write_validation_log() erkennt den Marker "uebersprungen" und
+        # schreibt zusaetzlich skipped: true (Diagnose, kein Ersatz-Nachweis).
+        return False, [
             f"Keine Trip-Briefing-Mail (Typ={mail_type}) — falscher Validator, uebersprungen"
         ]
 
@@ -622,19 +632,32 @@ def run_validation(
 
 
 def _write_validation_log(success: bool, errors: list) -> None:
-    """Strukturiertes Validator-Log YAML (fail-soft, Vorbild email_spec_validator)."""
+    """Strukturiertes Validator-Log YAML (fail-soft, Vorbild email_spec_validator).
+
+    Issue #1282: (C) log_dir liegt im shared-repo (git-common-dir via
+    _e2e_paths.shared_repo_dir), Fail-soft-Fallback auf die alte __file__-
+    relative Berechnung (AC-4, z.B. ausserhalb eines Git-Repos). (A) No-Op
+    (mail_type compare/deviation-alert, erkennbar am 'uebersprungen'-Marker in
+    errors) zaehlt nie als Pass und traegt zusaetzlich 'skipped: true' (AC-2).
+    """
     try:
         from datetime import datetime
         import tempfile
         import yaml as _yaml
 
         hooks_dir = Path(__file__).resolve().parent
-        log_dir = hooks_dir.parent / "workflows" / "_log"
+        fallback_log_dir = hooks_dir.parent / "workflows" / "_log"
+        try:
+            shared = _e2e_paths.shared_repo_dir(cwd=hooks_dir)
+        except Exception:
+            shared = None
+        log_dir = (shared / ".claude" / "workflows" / "_log") if shared else fallback_log_dir
         log_dir.mkdir(parents=True, exist_ok=True)
         workflow_id = os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "unknown")
         date_str = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         log_path = log_dir / f"{date_str}_{workflow_id}_briefing_validation.yaml"
 
+        skipped = any("uebersprungen" in str(e) for e in errors)
         data = {
             "validator": "briefing_mail_validator",
             "validated_at": datetime.utcnow().isoformat(),
@@ -643,6 +666,8 @@ def _write_validation_log(success: bool, errors: list) -> None:
             "error_count": len(errors),
             "errors": list(errors),
         }
+        if skipped:
+            data["skipped"] = True
         fd, tmp = tempfile.mkstemp(dir=str(log_dir), suffix=".tmp")
         with os.fdopen(fd, "w") as f:
             _yaml.safe_dump(data, f, allow_unicode=True)
