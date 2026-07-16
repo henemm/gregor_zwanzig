@@ -163,6 +163,8 @@ func New(deps Deps) chi.Router {
 	// Issue #363: Signal/Telegram-Vorschau (kanal-bewusster Narrow-Renderer #360)
 	r.Get("/api/preview/{trip_id}/signal", handler.PreviewProxyHandler(deps.Config.PythonCoreURL, "signal"))
 	r.Get("/api/preview/{trip_id}/telegram", handler.PreviewProxyHandler(deps.Config.PythonCoreURL, "telegram"))
+	// Issue #1270: Orts-Vergleich-Vorschau — EIN Abruf, ALLE Kanäle (ADR-0011).
+	r.Post("/api/preview/compare/{preset_id}", handler.ComparePreviewProxyHandler(deps.Config.PythonCoreURL))
 	// Epic #138 Issue #177: User-MetricPresets (+ #342 PATCH Read-Modify-Write)
 	r.Get("/api/metric-presets", handler.ListMetricPresetsHandler(deps.Store))
 	r.Post("/api/metric-presets", handler.CreateMetricPresetHandler(deps.Store))

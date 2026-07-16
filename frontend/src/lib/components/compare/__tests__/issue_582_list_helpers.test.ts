@@ -127,11 +127,17 @@ test('presetChannels: Email-Empfänger ≥1 → enthält "Email"', () => {
 	assert.ok(channels.includes('Email'), `erwartet "Email" in ${JSON.stringify(channels)}`);
 });
 
-test('presetChannels: channel_layouts telegram/sms → enthält Telegram und SMS', () => {
+// Issue #1270 (AC-8/KB-6): Quelle der Kanal-Liste sind die Opt-in-Felder,
+// nicht die channel_layouts-Keys (die immer alle Kanäle enthalten). Der alte
+// Assert ("channel_layouts telegram/sms → Telegram und SMS") prüfte genau das
+// Fehlverhalten und ist damit veraltet — hier auf den neuen Vertrag gezogen.
+test('presetChannels: send_telegram/send_sms Opt-in → enthält Telegram und SMS', () => {
 	const channels = presetChannels(
 		makePreset({
 			empfaenger: [],
-			display_config: { channel_layouts: { telegram: {}, sms: {} } }
+			send_telegram: true,
+			send_sms: true,
+			display_config: {}
 		})
 	);
 	assert.ok(channels.includes('Telegram'), `erwartet "Telegram" in ${JSON.stringify(channels)}`);
@@ -142,6 +148,7 @@ test('presetChannels: NIEMALS "Signal" — auch bei signal-Key im Layout (PO #61
 	const channels = presetChannels(
 		makePreset({
 			empfaenger: ['signal@example.com'],
+			send_telegram: true,
 			display_config: { channel_layouts: { signal: {}, telegram: {} } }
 		})
 	);
@@ -167,6 +174,7 @@ test('presetChannels: channel_layouts signal-Key → NIE "Signal" als Kanal (F00
 	const channels = presetChannels(
 		makePreset({
 			empfaenger: [],
+			send_sms: true,
 			display_config: { channel_layouts: { signal: {}, sms: {} } }
 		})
 	);

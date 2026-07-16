@@ -16,6 +16,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import HTMLResponse
 
 from src.app.config import Settings
+from src.services.compare_preview_service import ComparePreviewService
 from src.services.preview_service import PreviewService, VALID_REPORT_TYPES
 
 router = APIRouter()
@@ -71,6 +72,34 @@ async def preview_sms(
             "token_line": token_line,
             "char_count": len(token_line),
         }
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+
+@router.post("/api/preview/compare/{preset_id}")
+async def preview_compare(
+    preset_id: str,
+    user_id: str = Query(..., description="Session-User (vom Go-Proxy injiziert)"),
+    date: str | None = Query(None, description="ISO-Datum, default: heute"),
+):
+    """Issue #1270: EIN Abruf, ALLE Kanaele (ADR-0011, Vorbild alert-preview).
+
+    Liefert `{subject, email_html, telegram, sms, sms_char_count}` aus EINEM
+    ComparisonEngine-Lauf — der Kanalwechsel im Vorschau-Tab braucht damit
+    keinen weiteren Request (AC-7). `user_id` kommt wie bei den Trip-Routen aus
+    dem Session-Kontext; der Preset-Loader ist user-scoped, ein fremdes Preset
+    ist damit nicht aufloesbar (404, AC-6/ADR-0003).
+    """
+    try:
+        return ComparePreviewService().render_all_channels(
+            preset_id, user_id=user_id, target_date=date,
+        )
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except LookupError as e:

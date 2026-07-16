@@ -593,6 +593,92 @@ class NotificationService:
 
         return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
 
+    # TODO(#1207): wird durch den Versand-Orchestrator generalisiert
+    def send_compare_report(
+        self,
+        *,
+        subject: str,
+        html_body: str,
+        text_body: str,
+        telegram_text: str,
+        sms_text: str,
+        recipients: list[str],
+        effective_channels: set[str],
+        compare_hourly_enabled: bool = True,
+        mail_sink: Optional[object] = None,
+        sms_sink: Optional[object] = None,
+        telegram_sink: Optional[object] = None,
+    ) -> NotificationResult:
+        """Versendet ein Vergleichs-Briefing ueber die aufgeloesten Kanaele
+        (Issue #1270, Scheibe S5).
+
+        Content-Type-spezifische Methode auf der geteilten Klasse — dasselbe
+        Muster wie `send_multi_location_official_alert` (Compare-Alarm) neben
+        `send_trip_report` (Trip-Briefing). Die Kanal-Aufloesung
+        (`effective_channels`) passiert beim Aufrufer analog
+        `compare_official_alert._effective_channels` (Opt-in UND `can_send_*()`
+        UND `sms_allowed()`); hier wird die globale Sendefaehigkeit als
+        Belt-and-Suspenders nochmals geprueft.
+
+        Fail-soft je Kanal (AC-5): Telegram-/SMS-Fehler werden geloggt, reissen
+        aber die anderen Kanaele nicht mit. Der E-Mail-Pfad propagiert Fehler
+        unveraendert — identisch zum Bestandsverhalten von `send_trip_report`
+        (`self._send_email(report)` ohne try/except) und zum bisherigen
+        Compare-Versand (`EmailOutput(settings).send(...)` in
+        `scheduler_dispatch_service`), damit ein SMTP-Ausfall weiterhin als
+        Fehler des Preset-Versands sichtbar bleibt.
+
+        `mail_sink`/`sms_sink`/`telegram_sink`: deterministische Transport-Naht
+        (Vorbild `send_multi_location_official_alert`) — kein Netz, kein SMTP.
+        """
+        sent_channels: list[str] = []
+
+        if "email" in effective_channels:
+            if mail_sink is not None:
+                mail_sink(subject=subject, body=html_body)
+            else:
+                # Laufzeit-Aufloesung (kein Modul-Level-Alias): der
+                # Compare-Versandpfad wird ueber `output.channels.email`
+                # instrumentiert (#1124-Marker-Nachweis).
+                from output.channels.email import EmailOutput as _EmailOutput
+
+                _EmailOutput(self._settings).send(
+                    subject,
+                    html_body,
+                    plain_text_body=text_body,
+                    to=recipients,
+                    compare_hourly_enabled=compare_hourly_enabled,
+                    mail_type="compare",  # Issue #1124: X-GZ-Mail-Type
+                )
+            sent_channels.append("email")
+
+        if "telegram" in effective_channels and self._settings.can_send_telegram():
+            try:
+                if telegram_sink is not None:
+                    telegram_sink(telegram_text)
+                else:
+                    TelegramOutput(self._settings).send(
+                        subject=subject,
+                        body=telegram_text,
+                        parse_mode=None,
+                        suppress_subject_line=True,
+                    )
+                sent_channels.append("telegram")
+            except Exception as e:
+                logger.error(f"Compare report telegram failed for {subject!r}: {e}")
+
+        if "sms" in effective_channels and self._settings.can_send_sms():
+            try:
+                if sms_sink is not None:
+                    sms_sink(sms_text)
+                else:
+                    SMSOutput(self._settings).send(subject="", body=sms_text)
+                sent_channels.append("sms")
+            except Exception as e:
+                logger.error(f"Compare report sms failed for {subject!r}: {e}")
+
+        return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
+
     def send_multi_location_official_alert(
         self,
         preset_name: str,

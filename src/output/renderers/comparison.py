@@ -21,10 +21,14 @@ from typing import Optional
 
 from app.models import Corridor
 from app.profile import ActivityProfile
-from app.user import ComparisonResult
+from app.user import ComparisonResult, LocationResult
+from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.email.compare_html import sort_locations_alphabetically
 from src.output.metric_format import format_value
-from src.output.renderers.alert.official_alerts import render_official_alerts_plain
+from src.output.renderers.alert.official_alerts import (
+    _word_boundary_truncate,
+    render_official_alerts_plain,
+)
 
 
 def render_comparison_text(
@@ -192,3 +196,257 @@ def render_compare_email(
     )
     text_body = render_comparison_text(result, profile=profile, enabled_metrics=enabled_metrics)
     return html_body, text_body
+
+
+# ---------------------------------------------------------------------------
+# Kanal-Renderer Telegram / SMS (Issue #1270, Scheibe S3)
+#
+# SPEC: docs/specs/modules/compare_channel_preview_dispatch.md (AC-3)
+# Neutralitaets-Vertrag identisch zu render_comparison_text (#1110): KEIN
+# Score, KEIN Rang, keine Gewinner-Hervorhebung -- Score bleibt ausschliesslich
+# interne Sortiergroesse der ComparisonEngine. Orte erscheinen alphabetisch
+# (gemeinsamer Sortier-Helfer), damit die interne Score-Reihenfolge sich nicht
+# als sichtbares Ranking niederschlaegt.
+# Metrik-Vokabular = die Uebersichts-Metrik-IDs von render_comparison_text
+# (Quelle: resolve_compare_render_options -> resolve_enabled_metrics). Keine
+# eigene Metrik-Liste, insbesondere kein confidence_pct (#710/ADR-0005).
+# ---------------------------------------------------------------------------
+
+# (metric_id, Kurz-Label) in Anzeige-Prioritaet -- deckungsgleich mit den
+# Uebersichts-Zeilen in render_comparison_text().
+_CHANNEL_METRICS: tuple[tuple[str, str], ...] = (
+    ("temp_max", "Temp"),
+    ("wind_max", "Wind"),
+    ("sunny_hours", "Sonne"),
+    ("cloud_avg", "Wolken"),
+    ("snow_depth_cm", "Schnee"),
+    ("snow_new_cm", "Neuschnee"),
+)
+
+# SMS ist flach und hart budgetiert (CHANNEL_LIMITS["sms"]["max_chars"] = 140):
+# nur die zwei wichtigsten Metriken je Ort.
+_SMS_METRICS_PER_LOCATION = 2
+
+
+def _format_channel_metric(metric_id: str, loc_result: LocationResult) -> str | None:
+    """Formatiert einen Uebersichtswert ueber die zentrale Metrik-Formatierung.
+    ``None`` = Wert nicht vorhanden (Zeile/Zelle entfaellt im Kanal-Render)."""
+    value = getattr(loc_result, metric_id, None)
+    if value is None:
+        return None
+    if metric_id == "temp_max":
+        return format_value("temperature", value, style="plain")
+    if metric_id == "wind_max":
+        return format_value("wind", value, style="plain")
+    if metric_id == "sunny_hours":
+        return f"{format_value('sunshine', value, style='bare')}h"
+    if metric_id == "cloud_avg":
+        return format_value("cloud_total", value, style="plain")
+    if metric_id == "snow_depth_cm":
+        return format_value("snow_depth", value, style="plain")
+    if metric_id == "snow_new_cm":
+        return f"{value:.0f} cm"
+    return None
+
+
+def _channel_metric_cells(
+    loc_result: LocationResult,
+    enabled_metrics: set | None,
+    limit: int | None,
+) -> list[str]:
+    """Sichtbare "Label Wert"-Zellen eines Ortes, gefiltert ueber
+    ``enabled_metrics`` (``None`` = kein Filter) und auf ``limit`` Zellen
+    budgetiert (``None`` = unbegrenzt)."""
+    cells: list[str] = []
+    for metric_id, label in _CHANNEL_METRICS:
+        if enabled_metrics is not None and metric_id not in enabled_metrics:
+            continue
+        value = _format_channel_metric(metric_id, loc_result)
+        if value is None:
+            continue
+        cells.append(f"{label} {value}")
+        if limit is not None and len(cells) >= limit:
+            break
+    return cells
+
+
+def render_compare_telegram(
+    result: ComparisonResult,
+    *,
+    enabled_metrics: set | None = None,
+    preset_name: Optional[str] = None,
+) -> str:
+    """Rendert einen Orts-Vergleich als Telegram-Nachricht (Issue #1270).
+
+    Reine Funktion, kein Score/Rang (AC-3). Budget aus
+    ``CHANNEL_LIMITS["telegram"]``: ``max_table_cols`` = 8 zaehlt inkl. der
+    impliziten Zeit-/Orts-Spalte, also hoechstens 7 Metrik-Werte je Ort;
+    ``max_chars`` = 4096 begrenzt die Gesamtnachricht.
+    """
+    limits = CHANNEL_LIMITS["telegram"]
+    max_cols = limits["max_table_cols"]
+    metric_slots = None if max_cols is None else max(1, max_cols - 1)
+
+    locations = sort_locations_alphabetically(result.locations)
+    if not locations:
+        return "Keine Vergleichsdaten verfügbar."
+
+    header: list[str] = []
+    if preset_name:
+        header.append(f"ORTS-VERGLEICH — {preset_name}")
+    else:
+        header.append("ORTS-VERGLEICH")
+    header.append(f"Datum: {result.target_date.strftime('%d.%m.%Y')}")
+    header.append(
+        f"Zeitfenster: {result.time_window[0]:02d}:00 - {result.time_window[1]:02d}:00"
+    )
+    header.append("")
+
+    blocks: list[list[str]] = []
+    for loc_result in locations:
+        block = [loc_result.location.name]
+        if loc_result.error is not None:
+            block.append(f"   Fehler: {loc_result.error}")
+            blocks.append(block)
+            continue
+        cells = _channel_metric_cells(loc_result, enabled_metrics, metric_slots)
+        block.append("   " + (" · ".join(cells) if cells else "keine Werte"))
+        for line in render_official_alerts_plain(
+            [(loc_result.location.name, loc_result.official_alerts)]
+        ):
+            block.append(f"   ⚠️ {line}")
+        blocks.append(block)
+
+    max_chars = limits["max_chars"]
+    text = _join_telegram(header, blocks)
+    if max_chars is None or len(text) <= max_chars:
+        return text
+
+    # Ueberlauf: NICHT hart mitten im Wort schneiden (das ergaebe eine halbe
+    # Datenzeile, die wie ein vollstaendiger Wert aussieht). Stattdessen ganze
+    # ORTSBLOECKE behalten und den Verlust ausweisen — gleiche Einpass-Schleife
+    # mit mitgerechnetem Hinweis wie im SMS-Pfad (alert/render.py:521-529).
+    kept: list[list[str]] = []
+    for block in blocks:
+        notice = _telegram_notice(len(blocks) - len(kept) - 1)
+        if len(_join_telegram(header, kept + [block]) + notice) <= max_chars:
+            kept.append(block)
+        else:
+            break
+
+    omitted = len(blocks) - len(kept)
+    if not kept:
+        # Degeneration: schon der erste Ortsblock sprengt 4096 Zeichen. Dann an
+        # der Wortgrenze kuerzen (letztes Sicherheitsnetz, geteilter Helfer
+        # `_word_boundary_truncate`) statt mitten im Wort.
+        notice = _telegram_notice(omitted - 1)
+        body = _join_telegram(header, [blocks[0]])
+        return _word_boundary_truncate(body, max(max_chars - len(notice), 0)) + notice
+
+    body = _join_telegram(header, kept) + _telegram_notice(omitted)
+    return body if len(body) <= max_chars else _word_boundary_truncate(body, max_chars)
+
+
+def _join_telegram(header: list[str], blocks: list[list[str]]) -> str:
+    return "\n".join(header + [line for block in blocks for line in block])
+
+
+def _telegram_notice(omitted: int) -> str:
+    """Ehrlicher Kuerzungs-Hinweis (#1269): benennt die Zahl der nicht
+    dargestellten Orte. Leer, wenn nichts entfaellt. Rang-/score-frei (AC-3)."""
+    if omitted <= 0:
+        return ""
+    return f"\n… +{omitted} weitere Orte (Telegram-Limit) — vollständig per E-Mail"
+
+
+def _sms_location_part(loc_result, enabled_metrics: set | None) -> str:
+    """Flache SMS-Darstellung EINES Ortes.
+
+    Orte ohne abrufbare Daten (``error``) werden als ``"<Name> n/a"``
+    dargestellt statt weggefiltert: ein weggefilterter Ort waere weder sichtbar
+    noch im ``+k`` gezaehlt — die SMS behauptete dann einen vollstaendigen
+    Vergleich ueber weniger Orte, als er hat (#1269). ``render_compare_telegram``
+    haelt Fehler-Orte aus demselben Grund als "Fehler: …"-Block sichtbar; die
+    SMS-Form ist nur knapper (140 Zeichen). Die Fehlerursache selbst traegt die
+    SMS bewusst nicht — sie steht in der E-Mail/Telegram-Fassung.
+
+    ASCII "n/a" statt eines Gedankenstrichs, weil ein Ort ohne Werte sonst wie
+    ein Ort mit leerem Wert aussieht.
+    """
+    if loc_result.error is not None:
+        return f"{loc_result.location.name} n/a"
+    cells = _channel_metric_cells(loc_result, enabled_metrics, _SMS_METRICS_PER_LOCATION)
+    return " ".join([loc_result.location.name] + cells)
+
+
+def render_compare_sms(
+    result: ComparisonResult,
+    *,
+    enabled_metrics: set | None = None,
+) -> str:
+    """Rendert einen Orts-Vergleich als flache SMS (Issue #1270).
+
+    Reine Funktion, kein Score/Rang (AC-3). Budget aus
+    ``CHANNEL_LIMITS["sms"]``: ``max_table_cols`` = 0 (keine Tabelle, flache
+    Zeile), ``max_chars`` = 140.
+
+    Ueberlauf folgt der Hauskonvention aus ``alert/render.py:507-535``
+    (ADR-0011:42, "SMS-Laengen-Budget mit `+k`-Ueberlauf"): Kopf immer; Orte
+    solange, wie das Ergebnis INKL. des dann noetigen ` +k`-Suffixes ins Budget
+    passt; die restlichen Orte werden als ` +k` AUSGEWIESEN. Ein stiller Abbruch
+    waere eine luegende Ausgabe (vgl. #1269) — die SMS behauptete sonst einen
+    vollstaendigen Vergleich, den sie nicht zeigt. Endgarantie: ``len <= 140``.
+    """
+    max_chars = CHANNEL_LIMITS["sms"]["max_chars"]
+    locations = sort_locations_alphabetically(result.locations)
+    if not locations:
+        return "Vergleich: keine Daten"
+
+    head = (
+        f"Vergleich {result.target_date.strftime('%d.%m.')} "
+        f"{result.time_window[0]:02d}-{result.time_window[1]:02d}h:"
+    )
+    parts = [_sms_location_part(loc, enabled_metrics) for loc in locations]
+    if not parts:
+        return f"{head} keine Werte"
+    if max_chars is None:
+        return f"{head} " + "; ".join(parts)
+
+    # Einpass-Schleife mit mitgerechnetem Marker (1:1 alert/render.py:521-529):
+    # der Marker darf das Budget nicht selbst sprengen.
+    kept: list[str] = []
+    for part in parts:
+        omitted = len(parts) - len(kept) - 1  # weggelassen, wenn wir hier stoppen
+        marker = f" +{omitted}" if omitted > 0 else ""
+        candidate = f"{head} " + "; ".join(kept + [part]) + marker
+        if len(candidate) <= max_chars:
+            kept.append(part)
+        else:
+            break
+
+    omitted = len(parts) - len(kept)
+    if not kept:
+        # Degenerationsfall: schon der erste Ort sprengt das Budget. "Ueberschrift
+        # + nichts" ist verboten — dann lieber EIN gekuerzter Ort. Gekuerzt wird
+        # der Ortsblock ALLEIN (nicht Kopf+Block), weil eine Wortgrenzen-Kuerzung
+        # ueber den Kopf hinweg bei einem einzigen ueberlangen Ortsnamen genau auf
+        # der Kopf-Grenze schnitte und wieder "Ueberschrift + nichts" ergaebe.
+        # `_word_boundary_truncate` faellt bei einem Wort > Budget auf den harten
+        # Schnitt zurueck: ein unkenntlicher Ort ist ehrlicher als ein
+        # verschwiegener.
+        marker = f" +{omitted - 1}" if omitted > 1 else ""
+        budget = max_chars - len(head) - 1 - len(marker)
+        fitted = _word_boundary_truncate(parts[0], max(budget, 0))
+        if fitted != parts[0] and not fitted.endswith("..."):
+            # Der Helfer schneidet nur an Wortgrenzen mit "..."; findet er keine
+            # (Ortsname laenger als das Budget), schneidet er hart und stumm. Ein
+            # abgeschnittener Name darf aber nicht wie ein vollstaendiger aussehen.
+            fitted = fitted[: max(len(fitted) - 3, 0)] + "..."
+        body = f"{head} " + fitted + marker
+        return body[:max_chars]
+
+    body = f"{head} " + "; ".join(kept)
+    if omitted > 0:
+        body += f" +{omitted}"
+    # Garantie len<=limit auch im Degenerationsfall (Kopf allein zu lang).
+    return body if len(body) <= max_chars else body[:max_chars]

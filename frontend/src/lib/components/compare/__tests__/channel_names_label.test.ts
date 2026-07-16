@@ -51,9 +51,13 @@ function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 }
 
 describe('AC-6: channelNamesLabel — Kanal-Namen statt Kanal-Anzahl', () => {
-	test('empfaenger=[email] + channel_layouts.telegram → "Email · Telegram" (nicht "2 Kanäle")', () => {
+	// Issue #1270 (AC-8/KB-6): Kanal-Quelle ist das Opt-in-Feld send_telegram,
+	// nicht der channel_layouts-Key. Assert-Ziel ("Email · Telegram" statt
+	// "2 Kanäle") unverändert — nur die Preset-Vorbedingung nachgezogen.
+	test('empfaenger=[email] + send_telegram → "Email · Telegram" (nicht "2 Kanäle")', () => {
 		const preset = makePreset({
 			empfaenger: ['urlauber@example.com'],
+			send_telegram: true,
 			display_config: { channel_layouts: { telegram: { columns: ['temp'] } } }
 		});
 		const label = channelNamesLabel(preset);
@@ -77,8 +81,12 @@ describe('AC-6: channelNamesLabel — Kanal-Namen statt Kanal-Anzahl', () => {
 		);
 	});
 
-	test('SMS-Layout ohne E-Mail-Empfänger → "SMS" (kein führender/verwaister Trennpunkt)', () => {
-		const preset = makePreset({ empfaenger: [], display_config: { channel_layouts: { sms: { columns: [] } } } });
+	test('SMS-Opt-in ohne E-Mail-Empfänger → "SMS" (kein führender/verwaister Trennpunkt)', () => {
+		const preset = makePreset({
+			empfaenger: [],
+			send_sms: true,
+			display_config: { channel_layouts: { sms: { columns: [] } } }
+		});
 		const label = channelNamesLabel(preset);
 		assert.equal(label, 'SMS');
 	});

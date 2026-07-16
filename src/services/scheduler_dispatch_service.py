@@ -242,6 +242,26 @@ def build_compare_preset_subject(name: str, target_date: date) -> str:
     return f"Wetter-Vergleich: {name} ({target_date.strftime('%d.%m.%Y')})"
 
 
+def _effective_compare_channels(preset: dict, settings: Settings, user_id: str) -> set[str]:
+    """E-Mail immer; Telegram/SMS nur bei Preset-Opt-in UND globaler
+    User-Faehigkeit (bei SMS zusaetzlich Tier-Gate) — identisches Muster wie
+    `compare_official_alert._effective_channels` (Alarm-Pfad), jetzt auch fuer
+    den Briefing-Pfad (Issue #1270, KB-3).
+
+    `send_email` ist auf Preset-Ebene bewusst NICHT beruecksichtigt: es wird gar
+    nicht persistiert (vorbestehende Altlast, `versand_tab_vergleich.md` KL-6) —
+    E-Mail bleibt daher wie bisher immer aktiv.
+    """
+    from services.user_tier import sms_allowed
+
+    channels = {"email"}
+    if preset.get("send_telegram") and settings.can_send_telegram():
+        channels.add("telegram")
+    if preset.get("send_sms") and settings.can_send_sms() and sms_allowed(user_id):
+        channels.add("sms")
+    return channels
+
+
 def send_one_compare_preset(
     preset: dict,
     settings: Settings,
@@ -249,6 +269,9 @@ def send_one_compare_preset(
     data_root: str,
     all_locations_cache=None,
     target_date: date | None = None,
+    mail_sink=None,
+    sms_sink=None,
+    telegram_sink=None,
 ) -> tuple:
     """Fuehrt den Versand fuer ein einzelnes Compare-Preset durch.
 
@@ -257,13 +280,17 @@ def send_one_compare_preset(
     Rueckwaertskompatibilitaet mit dem Einzelversand-Pfad
     (`send_compare_preset`, ignoriert `schedule`); der Abend-Slot des
     Daily-Loops uebergibt heute+1.
+    `mail_sink`/`sms_sink`/`telegram_sink` (#1270): deterministische
+    Transport-Naht, 1:1 durchgereicht an `NotificationService.send_compare_report`.
     Gibt (top_ort, empfaenger) zurueck. Wirft ValueError wenn kein Empfaenger konfiguriert.
     """
     if target_date is None:
         target_date = date.today()
-    from output.renderers.comparison import render_compare_email
-    from output.channels.email import EmailOutput
+    from output.renderers.comparison import (
+        render_compare_email, render_compare_sms, render_compare_telegram,
+    )
     from services.comparison_engine import ComparisonEngine
+    from services.notification_service import NotificationService
     from services.report_config_resolver import resolve_compare_render_options
 
     preset_id = preset.get("id", "")
@@ -319,13 +346,24 @@ def send_one_compare_preset(
         preset_weekday=preset.get("weekday"),
         corridors=opts.corridors,
     )
-    EmailOutput(settings).send(
-        subject,
-        html_body,
-        plain_text_body=text_body,
-        to=empfaenger,
+    # TODO(#1207): wird durch den Versand-Orchestrator generalisiert
+    # Issue #1270 (KB-3): Kanal-Fan-out ueber den geteilten NotificationService
+    # statt EmailOutput direkt — die gespeicherten Opt-ins send_telegram/
+    # send_sms wirken damit endlich auch im Briefing-Pfad.
+    NotificationService(settings, user_id).send_compare_report(
+        subject=subject,
+        html_body=html_body,
+        text_body=text_body,
+        telegram_text=render_compare_telegram(
+            result, enabled_metrics=opts.enabled_metrics, preset_name=name,
+        ),
+        sms_text=render_compare_sms(result, enabled_metrics=opts.enabled_metrics),
+        recipients=empfaenger,
+        effective_channels=_effective_compare_channels(preset, settings, user_id),
         compare_hourly_enabled=opts.hourly_enabled,
-        mail_type="compare",  # Issue #1124: Compare-Marker-Header X-GZ-Mail-Type
+        mail_sink=mail_sink,
+        sms_sink=sms_sink,
+        telegram_sink=telegram_sink,
     )
 
     # Issue #1169: Δ-Anker je Ort schreiben (ADR-0009 — Abweichung vom zuletzt

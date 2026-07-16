@@ -13,7 +13,12 @@
 
 	import { Dot, Pill, Btn, Eyebrow, Card, SectionH } from '$lib/components/atoms';
 	import CompareChannelSwitch from '$lib/components/molecules/CompareChannelSwitch.svelte';
-	import CompareBriefingPreview from '$lib/components/molecules/CompareBriefingPreview.svelte';
+	// Issue #1270: CompareBriefingPreview-Mount entfernt — er wurde nie mit
+	// profile/data gemountet und rendert darum bedingungslos die Missing-Box
+	// „Vorschau-Daten nicht verfügbar." (KB-2). Die Kanal-Anzeige läuft jetzt
+	// direkt über die beiden Anzeige-Hüllen (ADR-0011).
+	import CompareChatBubble from '$lib/components/molecules/CompareChatBubble.svelte';
+	import CompareSmsPreview from '$lib/components/molecules/CompareSmsPreview.svelte';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
 	import CompareLayoutRow from '$lib/components/molecules/CompareLayoutRow.svelte';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
@@ -601,27 +606,51 @@
 	const previewConfiguredChannels = $derived(presetChannels(preset).map((c) => c.toLowerCase()));
 	let emailView = $state('desktop');
 	let previewHtml = $state('');
+	// Issue #1270 (ADR-0011): Telegram/SMS kommen fertig gerendert aus dem
+	// Backend — das Frontend rendert Kanal-Inhalte nicht nach.
+	let previewTelegram = $state('');
+	let previewSms = $state('');
+	let previewSmsCount = $state(0);
 	let previewLoading = $state(false);
 	let previewError = $state<string | null>(null);
 	let sendQueued = $state(false);
 	let sendLoading = $state(false);
 	let sendError = $state<string | null>(null);
 
+	// Issue #1270 (AC-1/AC-2/AC-7): EIN Abruf auf /api/preview/compare/{id}
+	// liefert alle Kanäle aus EINEM ComparisonEngine-Lauf über die echten Orte
+	// des Presets. Vorher hing der Tab am Validator-Stub
+	// (/api/_validator/compare-email-preview, #464), der einen hartcodierten
+	// "Vorschau-Ort" rendert — der Endpoint selbst bleibt für den externen
+	// Validator bestehen, nur dieser Tab hängt um.
+	//
+	// AC-7: `previewChannel` wird hier bewusst NICHT gelesen — der Effect hängt
+	// nur an Tab + Preset-ID + Orte-Anzahl. Ein Kanalwechsel löst damit keinen
+	// neuen Request aus, er schaltet nur die Anzeige der bereits geladenen
+	// Payloads um. Vorbild: AlertPreviewCard.svelte:34-44.
 	$effect(() => {
 		if (activeTab !== 'vorschau') return;
 		if (preset.location_ids.length === 0) return;
+		const presetId = preset.id;
 		previewHtml = '';
+		previewTelegram = '';
+		previewSms = '';
+		previewSmsCount = 0;
 		previewError = null;
 		previewLoading = true;
 		api
-			.post<{ html: string }>('/api/_validator/compare-email-preview', {
-				profile: preset.profil,
-				time_window: [preset.hour_from, preset.hour_to],
-				target_date: new Date().toISOString().slice(0, 10),
-				winner_tags: []
-			})
+			.post<{
+				subject: string;
+				email_html: string;
+				telegram: string;
+				sms: string;
+				sms_char_count: number;
+			}>(`/api/preview/compare/${presetId}`, {})
 			.then((r) => {
-				previewHtml = r.html;
+				previewHtml = r.email_html;
+				previewTelegram = r.telegram;
+				previewSms = r.sms;
+				previewSmsCount = r.sms_char_count;
 			})
 			.catch((e: unknown) => {
 				previewError =
@@ -1227,7 +1256,7 @@
 					</p>
 				{:else if previewError !== null}
 					<p style="font-size: 0.875rem; color: var(--g-danger, #dc2626); margin: 0" data-testid="compare-preview-error">{previewError}</p>
-				{:else if previewHtml !== '' && previewChannel === 'email'}
+				{:else if previewChannel === 'email' && previewHtml !== ''}
 					<div style="width: 680px; max-width: 100%;">
 						<iframe
 							data-testid="compare-preview-iframe"
@@ -1237,24 +1266,24 @@
 							style="width: 100%; min-height: 500px; border: 0; display: block"
 						></iframe>
 					</div>
-				{/if}
-				{#if previewChannel === 'sms'}
-					<p style="font-size: 0.875rem; color: var(--g-ink-3); margin: 0.5rem 0 0; font-style: italic" data-testid="compare-preview-sms-hint">
-						SMS-Vorschau ist noch nicht verfügbar.
+				{:else if previewChannel === 'telegram' && previewTelegram !== ''}
+					<!-- Issue #1270 (AC-2): echte Telegram-Vorschau statt Platzhalter-Copy.
+					     Text kommt fertig aus dem Backend (ADR-0011), die Bubble ist reine Hülle. -->
+					<div data-testid="compare-preview-telegram">
+						<CompareChatBubble text={previewTelegram} />
+					</div>
+				{:else if previewChannel === 'sms' && previewSms !== ''}
+					<!-- Issue #1270 (AC-2): echte SMS-Vorschau statt Platzhalter-Copy. -->
+					<div data-testid="compare-preview-sms">
+						<CompareSmsPreview text={previewSms} charCount={previewSmsCount} />
+					</div>
+				{:else}
+					<!-- Ehrlicher Leerfall statt stiller Leere (KB-2/#1269): das Backend
+					     lieferte für diesen Kanal keinen Inhalt. -->
+					<p style="font-size: 0.875rem; color: var(--g-ink-3); margin: 0" data-testid="compare-preview-empty">
+						Für diesen Kanal hat das Briefing keinen Inhalt geliefert.
 					</p>
 				{/if}
-				{#if previewChannel === 'telegram'}
-					<p style="font-size: 0.875rem; color: var(--g-ink-3); margin: 0.5rem 0 0; font-style: italic" data-testid="compare-preview-telegram-hint">
-						Telegram-Vorschau ist noch nicht verfügbar.
-					</p>
-				{/if}
-
-				<CompareBriefingPreview
-					profileId={preset.profil}
-					channel={previewChannel}
-					subscriptionName={preset.name}
-					{emailView}
-				/>
 			</div>
 			{/if}
 		</div>

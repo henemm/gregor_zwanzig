@@ -213,26 +213,27 @@ export function relativeLastSent(iso: string | undefined): string {
 	return `vor ${weeks} ${weeks === 1 ? 'Woche' : 'Wochen'}`;
 }
 
-/** Kanal-Keys aus empfaenger + channel_layouts. Signal NIEMALS (PO #610). */
+/**
+ * Kanal-Keys aus empfaenger + Opt-in-Feldern. Signal NIEMALS (PO #610).
+ *
+ * Issue #1270 (AC-8, KB-6): Telegram/SMS werden aus den Opt-in-Feldern
+ * `send_telegram`/`send_sms` abgeleitet — NICHT mehr aus den Keys von
+ * `display_config.channel_layouts`. `channel_layouts` hält nur Metrik-Layouts
+ * je Kanal, und CompareEditor.svelte:605-606 legt die telegram/sms-Keys IMMER
+ * an (auch leer) — der Kanal-Umschalter zeigte Telegram/SMS darum unabhängig
+ * vom echten Opt-in an. Signal hat kein Opt-in-Feld und kann damit strukturell
+ * nicht mehr auftauchen (statt über eine Allowlist gefiltert zu werden).
+ */
 export function presetChannels(preset: ComparePreset): string[] {
 	const result: string[] = [];
-	// E-Mail: mind. ein Eintrag mit "@"
-	// Jede Adresse mit "@" gilt als E-Mail. Signal-Block läuft ausschließlich
-	// über den channel_layouts-Key-Allowlist (ALLOWED-Map unten) — nicht via
-	// Substring-Match auf Adressen, der legitime Adressen wie signal@firma.com sperrt.
+	// E-Mail: mind. ein Eintrag mit "@".
+	// Jede Adresse mit "@" gilt als E-Mail — kein Substring-Match auf Adressen,
+	// der legitime Adressen wie signal@firma.com sperren würde.
 	if (preset.empfaenger.some((e) => e.includes('@'))) {
 		result.push('Email');
 	}
-	// Sonstige Kanäle aus display_config.channel_layouts
-	const layouts = (preset.display_config as Record<string, unknown> | undefined)
-		?.channel_layouts as Record<string, unknown> | undefined;
-	if (layouts) {
-		const ALLOWED: Record<string, string> = { telegram: 'Telegram', sms: 'SMS' };
-		for (const key of Object.keys(layouts)) {
-			const label = ALLOWED[key.toLowerCase()];
-			if (label && !result.includes(label)) result.push(label);
-		}
-	}
+	if (preset.send_telegram === true) result.push('Telegram');
+	if (preset.send_sms === true) result.push('SMS');
 	return result;
 }
 
