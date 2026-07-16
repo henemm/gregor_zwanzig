@@ -10,7 +10,7 @@
 	import { Btn, Eyebrow, TopoBg } from '$lib/components/atoms';
 	import { Field, ConfirmDialog } from '$lib/components/molecules';
 	import { ACTIVITY_PROFILE_OPTIONS, toCompareProfile, type ActivityProfile, type Location, type ComparePreset, type Group } from '$lib/types';
-	import type { ChannelLayouts, Horizons, MetricPreset, WeatherConfigMetric } from '$lib/types';
+	import type { ChannelLayouts, Horizons, MetricPreset } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
 	import type { CompareWizardState } from './compareWizardState.svelte';
 	import { createSaveStatus, extractMessage } from '$lib/stores/saveStatusStore.svelte';
@@ -234,11 +234,15 @@
 	);
 
 	// Issue #758: sync dirty state → compareSaveCtl (nur wenn nicht schon saving/error).
+	// Issue #1269 (b): dirty→clean OHNE PUT (z.B. Nutzer macht eine Aenderung
+	// manuell rueckgaengig) darf savedAt NICHT neu stempeln — markPristine()
+	// statt setSaved(). Der einzige legitime setSaved()-Aufruf bleibt in
+	// handleSave() nach echtem PUT-Erfolg (s.u.).
 	$effect(() => {
 		if (dirty && compareSaveCtl.state === 'idle') {
 			compareSaveCtl.setDirty();
 		} else if (!dirty && compareSaveCtl.state === 'dirty') {
-			compareSaveCtl.setSaved();
+			compareSaveCtl.markPristine();
 		}
 	});
 
@@ -694,6 +698,22 @@
 	// Tab-Wechsel zurück auf "layout").
 	let ltCatalogLoadStarted = false;
 
+	// Issue #1269 (a): EIN Ort fuer die Buckets/Friendly/Horizons -> ChannelLayouts-
+	// Transformation, wiederverwendet vom Rewrite-$effect UND von der Re-Baseline
+	// direkt nach dem Katalog-Laden (kein Copy-Paste des Round-Trips).
+	function ltBuildLayouts(): ChannelLayouts {
+		const layouts: ChannelLayouts = {};
+		for (const c of LT_CHANNELS) {
+			layouts[c.id] = buildWeatherConfigMetrics(
+				ltChannelBuckets[c.id],
+				ltChannelFriendly[c.id],
+				ltChannelHorizons[c.id],
+				ltCatalog
+			);
+		}
+		return layouts;
+	}
+
 	async function ltLoadCatalog(): Promise<void> {
 		try {
 			const [catalogData, templateData, presetData] = await Promise.all([
@@ -705,6 +725,14 @@
 			ltTemplates = templateData;
 			ltUserPresets = presetData;
 			ltInitChannelState();
+			// Issue #1269 (a): Re-Baseline auf die Post-Kanonisierungs-Form — der
+			// gleich folgende Rewrite-$effect schreibt denselben roundtrip-
+			// kanonisierten Wert (buildWeatherConfigMetrics materialisiert
+			// order/enabled/bucket/horizons) zurueck nach wiz.channelLayouts.
+			// Event-gebunden an "Katalog gerade geladen", nicht timing-basiert:
+			// vor diesem Punkt ist die Buckets-UI nicht editierbar (ltLoading),
+			// eine echte Nutzeraenderung kann diesen Snapshot also nicht ueberholen.
+			initial.layouts = JSON.stringify(ltBuildLayouts());
 		} catch (e: unknown) {
 			ltLoadError = (e as { error?: string })?.error ?? 'Fehler beim Laden';
 		} finally {
@@ -727,17 +755,7 @@
 	// Tabs automatisch inaktiv.
 	$effect(() => {
 		if (ltLoading || Object.keys(ltCatalog).length === 0) return;
-		const layouts: ChannelLayouts = {};
-		for (const c of LT_CHANNELS) {
-			const metrics: WeatherConfigMetric[] = buildWeatherConfigMetrics(
-				ltChannelBuckets[c.id],
-				ltChannelFriendly[c.id],
-				ltChannelHorizons[c.id],
-				ltCatalog
-			);
-			layouts[c.id] = metrics;
-		}
-		wiz.channelLayouts = layouts;
+		wiz.channelLayouts = ltBuildLayouts();
 	});
 
 	// Aktive Spalten des gewählten Kanals — explizit per Kanal um Svelte-5-Cache zu umgehen.

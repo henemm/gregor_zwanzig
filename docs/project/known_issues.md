@@ -5,6 +5,48 @@
 >
 > Diese Datei bleibt als Detail-Referenz fuer Root-Cause-Analysen bestehen.
 
+## BUG-1269-SAVESTATUS-LIE: Speicher-Status-Anzeige lügt (Trip + Ortsvergleich) + ungegateter Versand-PUT
+
+**Status:** RESOLVED (2026-07-16) | **Severity:** Medium (Vertrauens-Bug + ungewollter Schreibzugriff) | **GitHub Issue:** #1269 | **Spec:** `docs/specs/modules/issue_1269_save_status_lie.md`
+
+### Symptom
+
+Der Speicher-Status-Chip lügt in zwei Richtungen: (a) bloßes Öffnen eines Tabs ohne jede Eingabe setzt „● Nicht gespeichert" (Trip-Inhalt-Tab; Ortsvergleich-Layout-Tab). (b) Der Chip springt anschließend auf „✓ Gespeichert HH:MM", obwohl kein Speichervorgang zum Server stattfand (nur Ortsvergleich-Editor). Beim Nachbohren zusätzlich (c): Das bloße Öffnen des Trip-Tabs „Versand" konnte einen echten, ungesteuerten `PUT /api/trips/{id}` auslösen — ohne jede Nutzergeste, bei Fehlschlag mit „Fehler beim Speichern"-Banner.
+
+### Root Cause
+
+Gemeinsame Wurzel: Mount-Normalisierung/Hydration (z.B. Zeitformat `"07:00"` → `"07:00:00"`, Materialisierung fehlender Default-Felder) erzeugt einen Diff gegen die Vergleichs-Baseline, der von einer echten Nutzeränderung nicht zu unterscheiden war. Drei Editor-Flächen verwalteten das uneinheitlich: `CompareEditor.svelte` rief bei dirty→clean unbedingt `setSaved()` auf — der einzige PUT-lose `setSaved()`-Aufruf im gesamten Frontend (b). `BriefingScheduleTab.svelte`s reportConfig-Watch-`$effect` rief `saveController.doSave()` ganz ohne Gesten-Gate (c) — genau der „latente Zwilling", den #1234 in seinen Known Limitations bereits benannt, aber bewusst ungefixt gelassen hatte, weil zu dem Zeitpunkt noch kein Autospeichern im Ortsvergleich lief.
+
+### Fix (Committed 2026-07-16, Workflow `fix-1269-save-status-lie`)
+
+Konsolidierung auf die bestehenden geteilten Bausteine, kein vierter Sonderweg:
+
+1. **`SaveStatus.markPristine()`** (neu, `frontend/src/lib/stores/saveStatusStore.svelte.ts`): dirty→idle **ohne** `savedAt` neu zu stempeln. Ersetzt den unbedingten `setSaved()`-Aufruf in `CompareEditor.svelte` — `setSaved()` ist jetzt ausschließlich über `doSave()` nach echtem, erfolgreichem PUT erreichbar (fixt b).
+2. **`reportConfigDirty.ts`** (neu, `frontend/src/lib/components/shared/`, Export `reportConfigChangedByUser()`): geteilte, normalisierungsbewusste Diff-Funktion (nutzt `toHHMMSS`) statt rohem Werte-/JSON-Vergleich — neu materialisierte Default-Felder zählen nicht als Änderung, ein aus der Baseline verschwundenes Feld konservativ schon (Robustheits-Invariante: im Zweifel „dirty"). Ersetzt den Diff in `WeatherMetricsTab.svelte` und `BriefingScheduleTab.svelte` (fixt a).
+3. **Schreib-Gate auf die dritte Fläche ausgeweitet:** `BriefingScheduleTab.svelte` läuft jetzt durch dasselbe `weatherSaveGate` (`catalogLoaded && userTouched`) wie Trip-Inhalt und Ortsvergleich — das bloße Öffnen des Versand-Tabs kann keinen PUT mehr auslösen (fixt c).
+
+Bewusst **verworfen**: `setDirty` an `userTouched` koppeln (Adversary-Challenge) — hätte bei einer von der Gesten-Erfassung übersehenen Interaktion (F003/F004-Klasse: Slider, Drag) die Anzeige fälschlich auf „gespeichert" gesetzt, während echte Änderungen ungespeichert geblieben wären → stiller Datenverlust. Stattdessen bleibt die Anzeige im Zweifel konservativ „nicht gespeichert" (nie fälschlich „gespeichert"), während das Schreiben im Zweifel unterbleibt (nie ungewollt) — dieselbe asymmetrisch-sichere Regel wie #1234.
+
+### Löst vertagten Befund aus #1234 ein
+
+#1234 (Known Limitations, 2026-07-14) benannte „zwei latente Zwillinge" (`BriefingScheduleTab.svelte`, `shared/VersandTab.svelte`) explizit, fixte sie aber bewusst nicht („kein Datenverlust, höchstens ein überflüssiger Speichervorgang ... sobald dort automatisches Speichern für den Ortsvergleich angeschaltet wird, kommt die Fehlerklasse mit"). #1261 (s.u.) schaltete genau das Autospeichern im Ortsvergleich an. #1269 schließt den Zwilling für den Trip-Versand-Pfad (`BriefingScheduleTab.svelte`).
+
+### Files Changed
+
+- `frontend/src/lib/stores/saveStatusStore.svelte.ts` (+ `markPristine()`)
+- `frontend/src/lib/components/shared/reportConfigDirty.ts` (NEU, geteilt Trip + Ortsvergleich)
+- `frontend/src/lib/components/compare/CompareEditor.svelte`
+- `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- `frontend/src/lib/components/trip-detail/BriefingScheduleTab.svelte`
+
+### Lessons Learned
+
+1. Mount-/Hydration-Normalisierung (Zeitformat-Kanonisierung, Default-Feld-Materialisierung) ist eine wiederkehrende Fehlerklasse (#1234, #1269) — jede Fläche, die eine Konfiguration beim Laden zurückschreibt, braucht eine normalisierungsbewusste Diff-Funktion statt eines rohen Vergleichs.
+2. Anzeige- und Schreib-Mechanik dürfen unterschiedlich konservativ sein: Die Anzeige darf im Zweifel „dirty" bleiben (harmlos), ein Schreibzugriff darf nie ohne Nutzergeste passieren (potenziell schädlich) — dieselbe Asymmetrie wie #1234.
+3. Ein in einer Spec dokumentiertes „Known Limitation" mit explizit benanntem Folgerisiko (hier: „latente Zwillinge") ist kein abgeschlossenes Thema, sondern eine vorhergesagte Falle — sie schlägt zu, sobald die Bedingung eintritt (hier: Autospeichern im Ortsvergleich via #1261).
+
+---
+
 ## BUG-1261-COMPARE-EDIT: Ortsvergleich nicht editierbar (Desktop) + kein Autospeichern
 
 **Status:** RESOLVED (2026-07-16) | **Severity:** High (Kernfunktion unauffindbar + Datenverlustrisiko bei fehlendem Speichern) | **GitHub Issue:** #1261 | **Spec:** `docs/specs/modules/issue_1261_compare_edit_autosave.md`

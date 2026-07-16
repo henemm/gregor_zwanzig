@@ -38,6 +38,9 @@
 	} from './metricsEditor.ts';
 	// Issue #1234: Daten-/Absichts-Gate gegen stillen Metrik-Leerungs-Autosave.
 	import { weatherSaveGate } from './weatherSaveGate.ts';
+	// Issue #1269 (a): Mount-Kanonisierung (EditReportConfigSection) darf nicht
+	// als Nutzeraenderung zaehlen — geteilter Baustein (Trip + Ortsvergleich).
+	import { reportConfigChangedByUser } from '$lib/components/shared/reportConfigDirty';
 
 	interface Template {
 		id: string;
@@ -267,7 +270,7 @@
 			// Issue #1234 (2c): Baseline NACH dem Laden/der ersten Normalisierung neu
 			// setzen — verhindert, dass der reportConfig-Watch einen Ladevorgang als
 			// Nutzeraenderung wertet. Kein scheduleAutoSave() hier (ohne zu speichern).
-			_lastReportConfigJson = JSON.stringify(reportConfig);
+			_lastReportConfig = reportConfig;
 			// Issue #1234 (2a): erst nach vollstaendigem Erfolg wahr — der Render-
 			// Guard haengt daran, damit Kindkomponenten (EditReportConfigSection) nie
 			// vor geladenem Katalog mounten.
@@ -503,12 +506,20 @@
 
 	// Issue #774: reportConfig-Änderungen (Checkboxen) triggern Auto-Save.
 	// Nicht-reaktive Vergleichsvariable vermeidet Rekursion.
-	let _lastReportConfigJson = JSON.stringify(reportConfig);
+	// Issue #1269 (a): reportConfigChangedByUser() statt rohem JSON-Vergleich —
+	// die Mount-Kanonisierung von EditReportConfigSection (toHHMMSS,
+	// Default-Materialisierung) erzeugt einen neuen `reportConfig`-Objektwert,
+	// OHNE dass der Nutzer etwas geaendert hat; der rohe String-/Referenz-
+	// Vergleich wertete das faelschlich als Aenderung.
+	let _lastReportConfig: ReportConfig = reportConfig;
 	$effect(() => {
-		const cur = JSON.stringify(reportConfig);
-		if (cur !== _lastReportConfigJson) {
-			_lastReportConfigJson = cur;
-			scheduleAutoSave();
+		const cur = reportConfig;
+		if (cur !== _lastReportConfig) {
+			const changed = reportConfigChangedByUser(_lastReportConfig, cur);
+			_lastReportConfig = cur;
+			if (changed) {
+				scheduleAutoSave();
+			}
 		}
 	});
 

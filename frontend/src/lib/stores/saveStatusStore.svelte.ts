@@ -39,6 +39,19 @@ export class SaveStatus {
 		this.state = 'dirty';
 	}
 
+	/**
+	 * Issue #1269 (b): dirty→idle OHNE savedAt neu zu stempeln — Gegenstück zu
+	 * setSaved(). Fuer Faelle, in denen der Zustand ohne echten PUT wieder
+	 * "clean" wird (z.B. Baseline-Korrektur einer Mount-Kanonisierung, die
+	 * faelschlich dirty gesetzt hatte). savedAt bleibt unangetastet, damit nie
+	 * ein frischer "Gespeichert HH:MM"-Zeitstempel ohne echten Speichervorgang
+	 * vorgetaeuscht wird.
+	 */
+	markPristine(): void {
+		this.state = 'idle';
+		this.error = null;
+	}
+
 	setError(msg: string): void {
 		this.state = 'error';
 		this.error = msg;

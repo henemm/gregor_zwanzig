@@ -433,29 +433,26 @@ See `docs/design-system/COMPONENTS.md` for the canonical component catalog.
   - Responsive design, icon-based nav items
   - Extracted from `+layout.svelte` (Issue #145)
 
-### Trip-Editor & Compare-Editor Save-Strategien (Issue #758)
+### Trip-Editor & Compare-Editor Save-Strategien (Issue #758, konsolidiert #1234/#1261/#1269)
 
-**Trip-Editor (Auto-Save):**
-- **TripHeader.svelte** rendert einen einheitlichen `SaveIndicator` (zentral sichtbar über allen Tabs)
-- Alle Trip-Änderungen (Name, Etappen, Briefing, Metriken) triggern **Auto-Save** mit Debounce (~700 ms)
-- Zustände: `idle` (sauber) → `saving` (API-Call läuft) → `idle` (erfolgreich) oder `error` (Fehler)
-- Explizite Speichern-Buttons wurden aus Trip-Editor-Tabs entfernt
-- Flush vor Navigation: `beforeNavigate` leert Debounce-Queue, bevor der Nutzer einen anderen Tab/Trip aufruft (Datenverlust-Schutz)
-- **Store:** `saveStatusStore.svelte.ts` — zentraler State für beide Editoren, pro Editor-Instanz ein eigenes Objekt
+**Beide Editoren: Auto-Save (Ortsvergleich seit #1261, vorher expliziter Speichern-Button):**
+- Trip: `TripHeader.svelte`; Ortsvergleich: der Compare-Editor-Header — beide rendern einen `SaveIndicator` (zentral sichtbar über allen Tabs)
+- Alle Änderungen triggern **Auto-Save** mit Debounce (~700 ms): Trip (Name, Etappen, Briefing, Metriken), Ortsvergleich (Orte, Wertebereich, Layout, Versand, Alarme)
+- Zustände: `idle` (sauber) → `dirty` → `saving` (API-Call läuft) → `idle` (erfolgreich, `savedAt` gesetzt) oder `error` (Fehler)
+- Flush vor Navigation: `beforeNavigate` leert die Debounce-Queue (Datenverlust-Schutz)
+- **Store:** `saveStatusStore.svelte.ts` (Klasse `SaveStatus`) — pro Editor-Instanz ein eigenes Objekt, kein globales Sharing
 
-**Compare-Editor (Expliziter Save):**
-- Behält expliziten Speichern-Button
-- Nutzer-Änderungen zeigen `dirty`-Zustand, erst Speichern-Klick triggert Save
-- Gleiches `SaveIndicator`-Komponente wie Trip-Editor, aber andere Zustands-Quelle (`compareWizardState`)
-- Unabhängig vom Trip-Editor-Indikator (kein globales Sharing)
+**Schreib-Gate (Issue #1234, ausgeweitet #1269):** Ein PUT darf nur nach einer echten Nutzergeste (`userTouched`) bei geladenem Katalog ausgelöst werden (`trip-detail/weatherSaveGate.ts`, `compare/compareAutosave.ts`). Gilt für alle drei Auto-Save-Flächen: Trip-Inhalt, Ortsvergleich (Layout/Wertebereich/...) und seit #1269 auch Trip-Versand (`BriefingScheduleTab.svelte`) — vorher dort gar nicht gegatet, was einen ungewollten PUT allein durchs Öffnen des Tabs auslösen konnte.
+
+**Anzeige-Ehrlichkeit (Issue #1269):** Die „geändert?"-Erkennung läuft über eine geteilte, normalisierungsbewusste Diff-Funktion (`shared/reportConfigDirty.ts::reportConfigChangedByUser`, Trip **und** Ortsvergleich) statt eines rohen Werte-/JSON-Vergleichs — Mount-Kanonisierung (z. B. Zeitformat `"07:00"` → `"07:00:00"`, materialisierte Default-Felder) erzeugt dadurch kein falsches „dirty" mehr. `setSaved()` (stempelt `savedAt`) ist ausschließlich über `doSave()` nach echtem PUT-Erfolg erreichbar; `SaveStatus.markPristine()` erlaubt dirty→idle **ohne** `savedAt` neu zu stempeln, wenn der Zustand ohne echten Speichervorgang wieder sauber wird.
 
 **Implementierungs-Details:**
 - `SaveIndicator.svelte` ist Atom-Komponente (rendert nur UI-State)
-- `saveStatusStore.svelte.ts` exportiert Setter-Funktionen (`setSaving()`, `setSaved()`, `setError()`, `setDirty()`)
+- `saveStatusStore.svelte.ts` exportiert `setSaving()`, `setSaved()`, `setDirty()`, `setError()`, `markPristine()` (#1269), `cancel()` (#1261)
 - Auto-Save nutzt Try-Catch mit explizitem Error-Reporting statt `console.error`
 - Alle PUT-Endpunkte nutzen Read-Modify-Write-Semantik (Backend, `api.ts`), kein partielles Überschreiben
 
-Siehe `docs/specs/modules/issue_758_save_indicator.md` für technische Details.
+Siehe `docs/specs/modules/issue_758_save_indicator.md`, `docs/specs/modules/issue_1234_autosave_hydration_gate.md`, `docs/specs/modules/issue_1269_save_status_lie.md` für technische Details.
 
 #### Design-System Lauf B (Issues #143, #144, #146)
 
