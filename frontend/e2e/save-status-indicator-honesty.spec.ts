@@ -130,6 +130,14 @@ test.describe('Issue #1269: Speicher-Status-Anzeige lügt', () => {
 	test('AC-1/AC-2 (Compare): Layout- und Versand-Tab öffnen ohne Eingabe → Anzeige bleibt "gespeichert", kein PUT', async ({
 		page
 	}) => {
+		// CompareEditor.svelte mountet IMMER sowohl .cm-desktop als auch .cm-mobile
+		// (CSS-only-Switch) — Tab-Inhalte wie `layout-editor`/`report-morning-time`
+		// werden über ein geteiltes Snippet in BEIDEN Zweigen gerendert und liegen
+		// darum als Duplikat im DOM. Fester Desktop-Viewport + Scope auf
+		// `.cm-desktop` (Vorbild compare-editor-autosave.spec.ts) macht die
+		// Selektoren eindeutig.
+		await page.setViewportSize({ width: 1280, height: 900 });
+		const desktop = page.locator('.cm-desktop');
 		const suffix = Date.now();
 		const locRes = await page.request.post('/api/locations', {
 			data: { name: `E2E 1269 ${suffix}`, lat: 47.05, lon: 11.05 }
@@ -164,7 +172,7 @@ test.describe('Issue #1269: Speicher-Status-Anzeige lügt', () => {
 			await expect(page.getByTestId('compare-editor')).toBeVisible({ timeout: 10_000 });
 
 			await page.getByTestId('compare-editor-tab-layout').click();
-			await expect(page.getByTestId('layout-editor')).toBeVisible({ timeout: 10_000 });
+			await expect(desktop.getByTestId('layout-editor')).toBeVisible({ timeout: 10_000 });
 			await page.waitForTimeout(2_000);
 			await expect(
 				page.getByTestId('save-indicator'),
@@ -172,7 +180,7 @@ test.describe('Issue #1269: Speicher-Status-Anzeige lügt', () => {
 			).toHaveAttribute('data-state', 'idle');
 
 			await page.getByTestId('compare-editor-tab-versand').click();
-			await expect(page.getByTestId('report-morning-time')).toBeVisible({ timeout: 10_000 });
+			await expect(desktop.getByTestId('report-morning-time')).toBeVisible({ timeout: 10_000 });
 			await page.waitForTimeout(2_000);
 			await expect(
 				page.getByTestId('save-indicator'),

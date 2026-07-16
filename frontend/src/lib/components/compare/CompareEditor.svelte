@@ -15,6 +15,10 @@
 	import type { CompareWizardState } from './compareWizardState.svelte';
 	import { createSaveStatus, extractMessage } from '$lib/stores/saveStatusStore.svelte';
 	import { computeCompareAutoSaveAction } from './compareAutosave';
+	// Issue #1269 Fix-Loop 2: inhaltsbasierter "vom Nutzer geändert?"-Vergleich
+	// für ChannelLayouts (analog reportConfigChangedByUser) — robust gegen die
+	// Mount-Kanonisierung des Layout-Tab-Roundtrips, unabhängig von Timing.
+	import { channelLayoutsChangedByUser } from '$lib/components/shared/layout-tab/channelLayoutsDirty';
 	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
 	import {
 		TAB_ORDER,
@@ -211,7 +215,10 @@
 				[...wiz.pickedIds].join(',') !== initial.picked ||
 				JSON.stringify(wiz.idealRanges) !== initial.ideals ||
 				JSON.stringify(wiz.corridors) !== initial.corridors ||
-				JSON.stringify(wiz.channelLayouts) !== initial.layouts ||
+				// Issue #1269 Fix-Loop 2: inhaltsbasiert statt roher JSON-Vergleich —
+				// die Mount-Kanonisierung des Layout-Tab-Roundtrips (ltBuildLayouts())
+				// darf nicht als Nutzeränderung zählen (s. channelLayoutsDirty.ts).
+				channelLayoutsChangedByUser(JSON.parse(initial.layouts), wiz.channelLayouts) ||
 				JSON.stringify(wiz.metricAlertLevels) !== initial.metricAlertLevels ||
 				wiz.telegramStyle !== initial.telegramStyle ||
 				wiz.alertCooldownMinutes !== initial.alertCooldownMinutes ||
@@ -954,10 +961,6 @@
 	style:position="relative"
 	style:min-height="100%"
 	style:background="var(--g-paper)"
-	onpointerdowncapture={onEditorTouchGesture}
-	onkeydowncapture={onEditorTouchGesture}
-	onchangecapture={onEditorValueChange}
-	oninputcapture={onEditorValueChange}
 >
 <div class="cm-desktop">
 	<TopoBg opacity={0.12}>
@@ -1152,6 +1155,19 @@
 	</TopoBg>
 
 	<!-- Tab-Panel -->
+	<!-- Issue #1269 Fix-Loop 2 (Adversary F001 Staging-Fund): Capture-Listener
+	     NUR um den Tab-INHALT, nicht um Kopfzeile/Aktionsleiste/Tab-Leiste.
+	     Root-Cause: die Tab-Buttons selbst sind <button>-Elemente und matchten
+	     AUTOSAVE_INTERACTIVE_SELECTOR — jeder Tab-WECHSEL (reine Navigation,
+	     keine Inhaltsänderung) setzte userTouched=true. Fuer alle Tabs ausser
+	     Layout blieb das folgenlos (dirty blieb false); im Layout-Tab traf es
+	     mit einem echten channelLayouts-Diff zusammen -> ungewollter PUT. -->
+	<div
+		onpointerdowncapture={onEditorTouchGesture}
+		onkeydowncapture={onEditorTouchGesture}
+		onchangecapture={onEditorValueChange}
+		oninputcapture={onEditorValueChange}
+	>
 	{#if activeTab === 'vergleich'}
 		<div style:position="relative" style:padding="28px 40px 60px">
 			<TopoBg opacity={0.1}>
@@ -1316,6 +1332,7 @@
 			<VersandTab context="vergleich" {wiz} activation={versandActivationBanner} />
 		{/if}
 	{/if}
+	</div><!-- /Tab-Panel Capture-Scope -->
 
 	<!-- DOM-Anker für AC-5 isAttached()-Test (display:none, kein sichtbarer Inhalt).
 	     Die sichtbare Banner-Version rendert VersandTab (Issue #1232 Scheibe 2b,
@@ -1380,7 +1397,15 @@
 	</div>
 
 	<!-- 4. Tab-Inhalt -->
-	<div style="flex: 1; overflow-y: auto; padding: 16px;">
+	<!-- Issue #1269 Fix-Loop 2: Capture-Listener analog Desktop-Zweig (s. dort) —
+	     NUR um den Tab-Inhalt, nicht um Progress-Balken/Tab-Leiste. -->
+	<div
+		style="flex: 1; overflow-y: auto; padding: 16px;"
+		onpointerdowncapture={onEditorTouchGesture}
+		onkeydowncapture={onEditorTouchGesture}
+		onchangecapture={onEditorValueChange}
+		oninputcapture={onEditorValueChange}
+	>
 		{#if activeTab === 'vergleich'}
 			<!-- Vergleich-Tab: Name + Region + Aktivitätsprofil -->
 			<div style="margin-bottom: 14px;">
@@ -1500,8 +1525,20 @@
 
 </div><!-- /.cm-mobile -->
 
-<!-- Mobile Bibliotheks-Sheet (Issue #682) — wird im Mobile-Block für Tab "Orte" verwendet -->
+<!-- Mobile Bibliotheks-Sheet (Issue #682) — wird im Mobile-Block für Tab "Orte" verwendet.
+     Issue #1269 Fix-Loop 3 (Adversary F002): das Sheet rendert als Geschwister
+     NACH `.cm-mobile` (Sheet.svelte portalt seinen `children`-Snippet in eine
+     EIGENE fixed-Overlay-DOM-Struktur, s. Sheet.svelte:131-133) — der
+     Fix-Loop-2-Wrapper um den Tab-Inhalt deckt es NICHT ab. Eigener
+     Capture-Scope NUR um die Orte-Checkbox-Liste (Sheet-Chrome/Close-Button
+     bleiben aussen, analog Tab-Leiste). -->
 <Sheet open={mobileLibraryOpen} snap="full" title="Ort wählen" onClose={() => { mobileLibraryOpen = false; }}>
+	<div
+		onpointerdowncapture={onEditorTouchGesture}
+		onkeydowncapture={onEditorTouchGesture}
+		onchangecapture={onEditorValueChange}
+		oninputcapture={onEditorValueChange}
+	>
 	{#each mobileLibraryGroups as [groupName, groupLocs] (groupName)}
 		<div style="margin-bottom: 8px;">
 			<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; padding: 8px 0 4px; font-weight: 600;">{groupName} · {groupLocs.length}</div>
@@ -1534,6 +1571,7 @@
 			{/each}
 		</div>
 	{/each}
+	</div><!-- /Sheet Capture-Scope -->
 </Sheet>
 
 <!-- Issue #880: SaveIndicator als fixes Overlay (position:fixed) — außerhalb des
