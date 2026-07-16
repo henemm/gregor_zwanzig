@@ -61,7 +61,8 @@
 					nameCell: {
 						name: p.name || '(ohne Namen)',
 						statusLabel: STATUS_LABEL[status],
-						dotColor: compareDot(status)
+						dotColor: compareDot(status),
+						statusTestid: 'compare-status-pill'
 					}
 				};
 			}

@@ -7,11 +7,19 @@
 	//
 	// Spec: docs/specs/feature/issue_1277_list_table_unify.md
 
+	// `statusTestid` ist optional und wird NUR für Compare-Zeilen gesetzt
+	// (data-testid="compare-status-pill"). Trip-Zeilen lassen es leer.
 	let {
 		name,
 		statusLabel = '',
-		dotColor = 'var(--g-ink-4)'
-	}: { name: string; statusLabel?: string; dotColor?: string } = $props();
+		dotColor = 'var(--g-ink-4)',
+		statusTestid = undefined
+	}: {
+		name: string;
+		statusLabel?: string;
+		dotColor?: string;
+		statusTestid?: string;
+	} = $props();
 </script>
 
 <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
@@ -25,6 +33,7 @@
 	{#if statusLabel}
 		<span
 			class="status-caption"
+			data-testid={statusTestid}
 			style="font-size: 10px; font-family: var(--g-font-mono); color: var(--g-ink-4); text-transform: uppercase; letter-spacing: 0.16em; flex-shrink: 0;"
 			>· {statusLabel}</span
 		>

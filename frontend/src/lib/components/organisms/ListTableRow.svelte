@@ -20,6 +20,7 @@
 		name: string;
 		statusLabel?: string;
 		dotColor?: string;
+		statusTestid?: string;
 	}
 	type CellResult = string | { nameCell: NameCell } | { pills: string[] } | { lines: string[] };
 
@@ -106,6 +107,7 @@
 					name={cell.nameCell.name}
 					statusLabel={cell.nameCell.statusLabel}
 					dotColor={cell.nameCell.dotColor}
+					statusTestid={cell.nameCell.statusTestid}
 				/>
 			{:else if isPills(cell)}
 				<div style="display: flex; flex-wrap: wrap; gap: 5px;">
