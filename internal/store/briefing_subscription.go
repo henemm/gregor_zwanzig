@@ -10,9 +10,12 @@ import (
 
 // briefingsDir returns data/users/<uid>/briefings (Issue #1250 Scheibe 5,
 // ADR-0023). Per-file layout, analog TripsDir. Since Scheibe 7a (route
-// cutover), LoadTrip/LoadTrips/SaveTrip/DeleteTrip (trip.go) read/write here
-// instead of TripsDir() -- ComparePresets remain on compare_presets.json
-// (AC-30, KL-7: no union model, no LoadBriefing/SaveBriefing usage).
+// cutover) LoadTrip/LoadTrips/SaveTrip/DeleteTrip (trip.go) and since Scheibe
+// 7b (vergleich cutover) LoadComparePresets/LoadComparePreset/SaveComparePreset/
+// DeleteComparePreset (compare_preset.go) read/write here instead of TripsDir()/
+// compare_presets.json -- die Dateien sind per kind getrennt (route vs.
+// vergleich), kein Union-Modell, LoadBriefing/SaveBriefing bleiben ungenutzt
+// (KL-7/KL-8).
 func (s *Store) briefingsDir() string {
 	return filepath.Join(s.DataDir, "users", s.UserID, "briefings")
 }

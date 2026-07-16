@@ -160,62 +160,71 @@ def _plan_entity(
     report_lines.append(f"MIGRATE {label} -> {target}")
 
 
-def _collect_plan(root: Path) -> tuple[list[tuple[Path, dict]], list[str]]:
+def _collect_plan(
+    root: Path, kind: str | None = None
+) -> tuple[list[tuple[Path, dict]], list[str]]:
     """Zweiphasig: sammelt ALLE zu migrierenden Trips+Presets + SKIP-Zeilen,
     bevor irgendetwas geschrieben wird (kein Teil-Commit). Nutzer-Enumeration
     ueber die Verzeichnisstruktur selbst (`<root>/<uid>/...`) -> Isolation
     ist strukturell garantiert (AC-19), kein separater Cross-User-Check noetig.
     Wirft `MigrationAbort`, sobald IRGENDEINE ID-Kollision (F001) gefunden
     wurde -- erst NACHDEM beide Quellen (Trips + Presets) vollstaendig
-    durchsucht sind, damit die Fehlermeldung alle Kollisionen auf einmal nennt."""
+    durchsucht sind, damit die Fehlermeldung alle Kollisionen auf einmal nennt.
+
+    Issue #1250 Scheibe 7b (AC-36): `kind` scopt die Quellen. `None` (Default)
+    plant BEIDE (Rueckwaertskompat); `"route"` nur `*/trips/*.json`;
+    `"vergleich"` nur `*/compare_presets.json`. So beruehrt ein kind-scoped
+    Refresh die jeweils ANDERE Entitaet nicht (Route-Datenverlust-Schutz)."""
     migrations: list[tuple[Path, dict]] = []
     report_lines: list[str] = []
     claimed: dict[Path, str] = {}
     collisions: list[str] = []
 
-    for trip_file in sorted(root.glob("*/trips/*.json")):
-        user_id = trip_file.parent.parent.name
-        entity_id = trip_file.stem
-        try:
-            trip = json.loads(trip_file.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            # F002: korrupte Quelle sichtbar machen statt stillschweigend zu
-            # ueberspringen -- die Quelldatei bleibt unangetastet, nur diese
-            # eine Entitaet wird in diesem Lauf nicht migriert.
-            report_lines.append(f"SKIP {user_id}/route/{entity_id}: korrupte JSON, übersprungen ({exc})")
-            print(f"Warnung: {trip_file}: korrupte JSON, übersprungen -- {exc}", file=sys.stderr)
-            continue
-        if not isinstance(trip, dict):
-            continue
-        target = root / user_id / "briefings" / f"{entity_id}.json"
-        _plan_entity(
-            target, user_id, "route", entity_id, trip,
-            claimed, collisions, migrations, report_lines,
-        )
-
-    for preset_file in sorted(root.glob("*/compare_presets.json")):
-        user_id = preset_file.parent.name
-        try:
-            presets = json.loads(preset_file.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            report_lines.append(
-                f"SKIP {user_id}/vergleich/*: korrupte JSON in {preset_file}, übersprungen ({exc})"
-            )
-            print(f"Warnung: {preset_file}: korrupte JSON, übersprungen -- {exc}", file=sys.stderr)
-            continue
-        if not isinstance(presets, list):
-            continue
-        for preset in presets:
-            if not isinstance(preset, dict):
+    if kind in (None, "route"):
+        for trip_file in sorted(root.glob("*/trips/*.json")):
+            user_id = trip_file.parent.parent.name
+            entity_id = trip_file.stem
+            try:
+                trip = json.loads(trip_file.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                # F002: korrupte Quelle sichtbar machen statt stillschweigend zu
+                # ueberspringen -- die Quelldatei bleibt unangetastet, nur diese
+                # eine Entitaet wird in diesem Lauf nicht migriert.
+                report_lines.append(f"SKIP {user_id}/route/{entity_id}: korrupte JSON, übersprungen ({exc})")
+                print(f"Warnung: {trip_file}: korrupte JSON, übersprungen -- {exc}", file=sys.stderr)
                 continue
-            entity_id = preset.get("id")
-            if not entity_id:
+            if not isinstance(trip, dict):
                 continue
             target = root / user_id / "briefings" / f"{entity_id}.json"
             _plan_entity(
-                target, user_id, "vergleich", entity_id, preset,
+                target, user_id, "route", entity_id, trip,
                 claimed, collisions, migrations, report_lines,
             )
+
+    if kind in (None, "vergleich"):
+        for preset_file in sorted(root.glob("*/compare_presets.json")):
+            user_id = preset_file.parent.name
+            try:
+                presets = json.loads(preset_file.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                report_lines.append(
+                    f"SKIP {user_id}/vergleich/*: korrupte JSON in {preset_file}, übersprungen ({exc})"
+                )
+                print(f"Warnung: {preset_file}: korrupte JSON, übersprungen -- {exc}", file=sys.stderr)
+                continue
+            if not isinstance(presets, list):
+                continue
+            for preset in presets:
+                if not isinstance(preset, dict):
+                    continue
+                entity_id = preset.get("id")
+                if not entity_id:
+                    continue
+                target = root / user_id / "briefings" / f"{entity_id}.json"
+                _plan_entity(
+                    target, user_id, "vergleich", entity_id, preset,
+                    claimed, collisions, migrations, report_lines,
+                )
 
     if collisions:
         raise MigrationAbort("\n".join(collisions))
@@ -232,16 +241,33 @@ def _make_backup(root: Path, backup_dir: Path) -> Path:
     return backup_path
 
 
-def _wipe_briefings(root: Path) -> int:
-    """AC-28 Refresh: entfernt ALLE `<uid>/briefings/*.json` unter `root` --
+def _wipe_briefings(root: Path, kind: str | None = None) -> int:
+    """AC-28 Refresh: entfernt `<uid>/briefings/*.json` unter `root` --
     Vorstufe fuer eine sauber frische Remigration, die anschliessende
     `_collect_plan`-Läufe jedes Ziel als `"new"` klassifizieren laesst (kein
-    stiller Idempotenz-Skip auf stale Inhalte, keine Waisen-Ueberlebende)."""
+    stiller Idempotenz-Skip auf stale Inhalte, keine Waisen-Ueberlebende).
+
+    Issue #1250 Scheibe 7b (AC-36, KRONJUWEL Route-Datenverlust-Schutz):
+    `kind` scopt den Wipe. `None` (Default) entfernt ALLE Dateien
+    (Rueckwaertskompat); ein truthy `kind` entfernt NUR Dateien mit genau
+    diesem `kind` -- jede Datei der anderen Entitaet (und jede korrupte/
+    unlesbare Datei) bleibt byte-unveraendert liegen. Nach dem S7a-Cutover ist
+    `trips/*.json` eingefroren; ein `--kind vergleich`-Refresh darf die seit
+    S7a live in briefings/ geschriebenen route-Dateien niemals loeschen."""
     removed = 0
     for briefings_dir in sorted(root.glob("*/briefings")):
         if not briefings_dir.is_dir():
             continue
         for f in briefings_dir.glob("*.json"):
+            if kind is not None:
+                try:
+                    data = json.loads(f.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    # Unlesbare Datei beim kind-scoped Wipe NIE anfassen
+                    # (koennte die andere Entitaet sein) -- unberuehrt lassen.
+                    continue
+                if not isinstance(data, dict) or data.get("kind") != kind:
+                    continue
             f.unlink()
             removed += 1
     return removed
@@ -259,11 +285,13 @@ def _apply(migrations: list[tuple[Path, dict]]) -> int:
     return changed
 
 
-def _run_refresh(root: Path, backup_dir_arg: Path | None) -> int:
-    """AC-28: Backup zuerst (Rollback-Sicherheit), DANN briefings/ je User
-    leeren, DANN frisch aus trips/ + compare_presets.json remigrieren
-    (route + vergleich -- volle frische Projektion, kein Merge mit stale/
-    Waisen-Eintraegen)."""
+def _run_refresh(root: Path, backup_dir_arg: Path | None, kind: str | None = None) -> int:
+    """AC-28/AC-36: Backup zuerst (Rollback-Sicherheit), DANN briefings/
+    leeren, DANN frisch aus den Alt-Stores remigrieren. `kind` scopt Wipe UND
+    Remigration auf genau eine Entitaet -- `None` (Default) refresht route +
+    vergleich (volle Projektion), `"vergleich"` nur die vergleich-Quelle
+    (compare_presets.json) und laesst jede route-Datei in briefings/
+    byte-unveraendert (Route-Datenverlust-Schutz nach dem S7a-Cutover)."""
     backup_dir = (backup_dir_arg or (root.parent / ".backups")).resolve()
     try:
         backup_path = _make_backup(root, backup_dir)
@@ -273,11 +301,12 @@ def _run_refresh(root: Path, backup_dir_arg: Path | None) -> int:
         return 1
     print(f"Backup geschrieben: {backup_path}")
 
-    wiped = _wipe_briefings(root)
-    print(f"Refresh: {wiped} Datei(en) aus briefings/ entfernt (Wipe).")
+    wiped = _wipe_briefings(root, kind=kind)
+    scope = kind or "alle"
+    print(f"Refresh: {wiped} Datei(en) aus briefings/ entfernt (Wipe, kind={scope}).")
 
     try:
-        migrations, report_lines = _collect_plan(root)
+        migrations, report_lines = _collect_plan(root, kind=kind)
     except MigrationAbort as exc:
         # F001 gilt auch beim Refresh -- Kollisionen abbrechen VOR dem Apply
         # (Wipe ist bereits geschehen, aber per Backup rueckholbar).
@@ -307,7 +336,47 @@ def main(argv: list[str] | None = None) -> int:
             "--execute."
         ),
     )
+    parser.add_argument(
+        "--kind",
+        choices=["route", "vergleich"],
+        default=None,
+        help=(
+            "Issue #1250 Scheibe 7b (AC-36): scopt Migration/Refresh auf genau "
+            "eine Entitaet. Ohne --kind werden beide (route + vergleich) "
+            "geplant. Bei --refresh entfernt/remigriert ein gesetztes --kind "
+            "NUR diese Entitaet; die jeweils andere bleibt byte-unveraendert "
+            "(Route-Datenverlust-Schutz)."
+        ),
+    )
     args = parser.parse_args(argv)
+
+    # Adversary Fix-Loop F001 (CRITICAL, Post-S7a/S7b-Cutover): ein Refresh
+    # remigriert briefings/ aus den ALTEN Stores. Nach dem Touren-Cutover (S7a)
+    # lebt route in briefings/ und `trips/` ist EINGEFROREN -- ein Refresh aus
+    # `trips/` wuerde live Route-Edits ueberschreiben. Darum:
+    #   1. --refresh OHNE --kind ist verboten (bare Refresh wischt+remigriert
+    #      ALLE briefings/ aus eingefrorenen Alt-Stores = Route-Datenverlust).
+    #   2. --kind route --refresh ist ebenfalls verboten (route lebt in
+    #      briefings/, trips/ ist tot -- eine Route-Remigration ist per se
+    #      Datenverlust). Der EINZIG valide Refresh ist --kind vergleich
+    #      (einmalig beim S7b-Deploy, Quelle compare_presets.json noch live).
+    # Hart auf argparse-Ebene (parser.error -> Exit 2), keine stille
+    # Route-Remigration mehr moeglich.
+    if args.refresh:
+        if args.kind is None:
+            parser.error(
+                "--refresh erfordert --kind {route,vergleich} (Post-S7a-Cutover: "
+                "bare Refresh wuerde live briefings/-Daten aus eingefrorenen "
+                "Alt-Stores ueberschreiben)"
+            )
+        if args.kind == "route":
+            parser.error(
+                "--kind route --refresh ist nach dem S7a-Cutover verboten: route "
+                "lebt jetzt in briefings/, trips/ ist eingefroren -- ein "
+                "Route-Refresh wuerde live Route-Edits aus dem toten trips/-Store "
+                "ueberschreiben (Route-Datenverlust). Einzig gueltiger Refresh: "
+                "--kind vergleich (einmalig beim S7b-Deploy)."
+            )
 
     root: Path = args.root.resolve()
     if not root.exists() or not root.is_dir():
@@ -315,10 +384,10 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if args.refresh and args.execute:
-        return _run_refresh(root, args.backup_dir)
+        return _run_refresh(root, args.backup_dir, kind=args.kind)
 
     try:
-        migrations, report_lines = _collect_plan(root)
+        migrations, report_lines = _collect_plan(root, kind=args.kind)
     except MigrationAbort as exc:
         # F001: zweiphasig -- der Abbruch passiert VOR jedem Schreibzugriff
         # (auch mit --execute), nichts wurde angelegt/veraendert.

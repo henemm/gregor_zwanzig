@@ -24,6 +24,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
+from tests.helpers.compare_briefings import write_compare_briefings
 
 
 class TestComparePresetSend:
@@ -34,12 +35,15 @@ class TestComparePresetSend:
         return TestClient(app)
 
     def _write_preset(self, data_root, user_id, preset):
-        """Lege ein Test-Preset in einem temporären data_root an."""
+        """Lege ein Test-Preset in einem temporären data_root an.
+
+        Issue #1250 S7b Cutover: per-Datei briefings/<id>.json (kind="vergleich")
+        — sonst laedt send_compare_preset das Preset nicht und der Test wuerde
+        aus dem falschen Grund (KeyError 'nicht gefunden') gruen.
+        """
         user_dir = data_root / "users" / user_id
         user_dir.mkdir(parents=True, exist_ok=True)
-        (user_dir / "compare_presets.json").write_text(
-            json.dumps([preset], ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        write_compare_briefings(user_dir, [preset])
 
     # ── AC-4: Preset ohne Empfänger + ohne mail_to-Fallback → Fehler ──────────
 

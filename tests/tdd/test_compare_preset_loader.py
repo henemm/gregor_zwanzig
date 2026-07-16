@@ -27,6 +27,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.helpers.compare_briefings import read_compare_briefings, write_compare_briefings
+
 # Diese Imports sind der eigentliche RED-Zustand: ComparePreset und die
 # Loader-Funktionen existieren vor Scheibe 1 (GREEN) nicht.
 from app.loader import (
@@ -105,10 +107,11 @@ def _preset_legacy_paused(preset_id: str = "preset-2") -> dict:
 
 
 def _write_presets(data_root: Path, user_id: str, presets: list) -> Path:
-    path = data_root / "users" / user_id / "compare_presets.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(presets, indent=2, ensure_ascii=False), encoding="utf-8")
-    return path
+    """Issue #1250 S7b: schreibt Presets per-Datei nach briefings/<id>.json
+    (kind="vergleich"). Gibt das briefings/-Verzeichnis zurueck."""
+    user_dir = data_root / "users" / user_id
+    user_dir.mkdir(parents=True, exist_ok=True)
+    return write_compare_briefings(user_dir, presets)
 
 
 # --- Loader-Kontrakt ---------------------------------------------------
@@ -167,7 +170,7 @@ def test_load_compare_presets_missing_file_returns_empty_list(tmp_path):
 
 def test_load_compare_presets_corrupt_json_fails_soft(tmp_path):
     data_root = tmp_path / "data"
-    path = data_root / "users" / "testuser" / "compare_presets.json"
+    path = data_root / "users" / "testuser" / "briefings" / "preset-1.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("{not valid json", encoding="utf-8")
 
@@ -178,7 +181,7 @@ def test_load_compare_presets_corrupt_json_fails_soft(tmp_path):
 
 def test_load_compare_presets_non_list_json_returns_empty_list(tmp_path):
     data_root = tmp_path / "data"
-    path = data_root / "users" / "testuser" / "compare_presets.json"
+    path = data_root / "users" / "testuser" / "briefings" / "preset-1.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"not": "a list"}), encoding="utf-8")
 
@@ -221,7 +224,8 @@ def test_ac5_presets_due_for_hour_identical_via_raw_dict_and_new_loader(tmp_path
     today = date.today()
 
     # Alter Pfad: rohes json.loads, wie es die 5 Call-Sites bisher taten.
-    raw_presets = json.loads(path.read_text(encoding="utf-8"))
+    # _write_presets liefert das briefings/-Verzeichnis -> user_dir ist dessen Elternteil.
+    raw_presets = read_compare_briefings(path.parent)
     due_old = presets_due_for_hour(raw_presets, hour, today)
 
     # Neuer Pfad: zentraler Loader + Dataclass -> Dict-Form via dem
@@ -268,7 +272,7 @@ def test_compare_preset_to_dict_roundtrips_raw_input_including_unknown_field(tmp
 
 def test_load_compare_presets_strict_raises_loader_error_on_corrupt_json(tmp_path):
     data_root = tmp_path / "data"
-    path = data_root / "users" / "testuser" / "compare_presets.json"
+    path = data_root / "users" / "testuser" / "briefings" / "preset-1.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("{not valid json", encoding="utf-8")
 
@@ -281,7 +285,7 @@ def test_send_compare_preset_raises_keyerror_with_original_parse_error_text(tmp_
     ALTEN Fehlertext ("... nicht ladbar: <Parse-Fehler>") liefern, nicht den
     irrefuehrenden "nicht gefunden"-Text des fail-soft-Loaders."""
     data_root = tmp_path / "data"
-    path = data_root / "users" / "testuser" / "compare_presets.json"
+    path = data_root / "users" / "testuser" / "briefings" / "preset-1.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("{not valid json", encoding="utf-8")
 
@@ -296,7 +300,7 @@ def test_send_compare_preset_raises_keyerror_with_original_parse_error_text(tmp_
 def test_run_compare_presets_daily_logs_error_on_corrupt_file(tmp_path, caplog):
     """F002: korrupte Datei -> ERROR-Log (nicht das Skip-INFO), return 0."""
     data_root = tmp_path / "data"
-    path = data_root / "users" / "testuser" / "compare_presets.json"
+    path = data_root / "users" / "testuser" / "briefings" / "preset-1.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("{not valid json", encoding="utf-8")
 
@@ -305,7 +309,7 @@ def test_run_compare_presets_daily_logs_error_on_corrupt_file(tmp_path, caplog):
 
     assert result == 0
     error_records = [r for r in caplog.records if r.levelno == logging.ERROR]
-    assert any("Failed to load compare_presets.json" in r.message for r in error_records)
+    assert any("Failed to load compare presets" in r.message for r in error_records)
     assert not any("No compare_presets.json" in r.message for r in caplog.records)
 
 
@@ -335,7 +339,8 @@ def test_ac6_rmw_status_update_preserves_unknown_field_after_new_loader_reads(tm
     data_root = tmp_path / "data"
     preset = _preset_full()
     preset["zukunftsfeld_go"] = {"x": 1}
-    path = _write_presets(data_root, "testuser", [preset])
+    briefings = _write_presets(data_root, "testuser", [preset])
+    path = briefings / "preset-1.json"
 
     content_before_load = path.read_text(encoding="utf-8")
 
@@ -355,9 +360,7 @@ def test_ac6_rmw_status_update_preserves_unknown_field_after_new_loader_reads(tm
         data_root=str(data_root),
     )
 
-    after_write = json.loads(path.read_text(encoding="utf-8"))
-    assert len(after_write) == 1
-    updated = after_write[0]
+    updated = json.loads(path.read_text(encoding="utf-8"))
     assert updated["top_ort_letzter_versand"] == "Neuer Ort"
     assert "letzter_versand" in updated and updated["letzter_versand"]
     # Das unbekannte Zusatzfeld ist nach dem RMW-Zyklus weiterhin vorhanden.

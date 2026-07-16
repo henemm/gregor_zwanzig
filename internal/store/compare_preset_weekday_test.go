@@ -13,8 +13,6 @@ package store
 
 import (
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -41,14 +39,7 @@ func TestLoadComparePresets_WeeklyPresetGetsDefaultWeekday(t *testing.T) {
 	}]`
 	// weekday-Feld fehlt bewusst → JSON-Unmarshal liefert 0
 
-	userDir := filepath.Join(tmpDir, "users", "user1")
-	if err := os.MkdirAll(userDir, 0755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	presetFile := filepath.Join(userDir, "compare_presets.json")
-	if err := os.WriteFile(presetFile, []byte(rawJSON), 0644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
+	writeComparePresetsJSON(t, tmpDir, "user1", rawJSON)
 
 	// WHEN: LoadComparePresets() aufgerufen
 	presets, err := s.LoadComparePresets()
@@ -93,9 +84,7 @@ func TestLoadComparePresets_DailyPresetKeepsWeekdayZero(t *testing.T) {
 		"created_at": "2026-01-01T00:00:00Z"
 	}]`
 
-	userDir := filepath.Join(tmpDir, "users", "user1")
-	os.MkdirAll(userDir, 0755)
-	os.WriteFile(filepath.Join(userDir, "compare_presets.json"), []byte(rawJSON), 0644)
+	writeComparePresetsJSON(t, tmpDir, "user1", rawJSON)
 
 	presets, err := s.LoadComparePresets()
 	if err != nil {
@@ -131,9 +120,7 @@ func TestLoadComparePresets_WeeklyPresetWithExplicitWeekday(t *testing.T) {
 		"created_at": "2026-01-01T00:00:00Z"
 	}]`
 
-	userDir := filepath.Join(tmpDir, "users", "user1")
-	os.MkdirAll(userDir, 0755)
-	os.WriteFile(filepath.Join(userDir, "compare_presets.json"), []byte(rawJSON), 0644)
+	writeComparePresetsJSON(t, tmpDir, "user1", rawJSON)
 
 	presets, err := s.LoadComparePresets()
 	if err != nil {
@@ -187,13 +174,7 @@ func TestLoadComparePresets_WeeklyPresetExplicitMondayPreserved(t *testing.T) {
 		"created_at": "2026-01-01T00:00:00Z"
 	}]`
 
-	userDir := filepath.Join(tmpDir, "users", "user1")
-	if err := os.MkdirAll(userDir, 0755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(userDir, "compare_presets.json"), []byte(rawJSON), 0644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
+	writeComparePresetsJSON(t, tmpDir, "user1", rawJSON)
 
 	presets, err := s.LoadComparePresets()
 	if err != nil {

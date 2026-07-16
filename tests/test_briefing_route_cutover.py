@@ -212,53 +212,54 @@ def test_load_all_trips_isolated_per_user_via_briefings():
 
 
 # ---------------------------------------------------------------------------
-# AC-28 — Cutover-Refresh: Wipe + Remigrate (Backup vorher)
+# AC-28 / F001 — Post-Cutover: bare + route Refresh werden HART abgelehnt
 # ---------------------------------------------------------------------------
 
-def test_migration_refresh_wipe_remigrate_updates_changed_trip_and_drops_orphan(tmp_path):
-    """GIVEN (a) ein Trip, dessen trips/-Quelle NACH der S5-Migration
-    geaendert wurde (briefings/ traegt noch die STALE Kopie) UND (b) eine
-    Waise (briefings/-Datei existiert, trips/-Quelle seit S5 geloescht) /
-    WHEN der --refresh-Modus (Wipe+Remigrate, Backup vorher) laeuft / THEN
-    spiegelt (a) den AKTUELLEN Inhalt UND (b) existiert nicht mehr (AC-28).
+def test_migration_bare_and_route_refresh_rejected_after_cutover(tmp_path):
+    """GIVEN eine LIVE route-Datei in briefings/ (route lebt seit S7a hier,
+    trips/ ist eingefroren) / WHEN ein bare `--refresh --execute` (ohne
+    --kind) ODER ein `--kind route --refresh --execute` laeuft / THEN bricht
+    der Prozess mit non-zero Exit + Fehlermeldung ab UND es wird NICHTS aus
+    briefings/ geloescht/ueberschrieben (Adversary Fix-Loop F001,
+    Route-Datenverlust-Schutz).
 
-    RED heute: `--refresh` existiert nicht -> argparse bricht mit
-    returncode != 0 ab, nichts wird angepasst."""
+    Ersetzt den frueheren S7a-Test, der bare-Refresh faelschlich als sicher
+    behauptete: nach dem Cutover ist `trips/` tot, ein Refresh daraus wuerde
+    live Route-Edits in briefings/ zerstoeren. Der EINZIG valide Refresh ist
+    `--kind vergleich` (s. tests/test_compare_vergleich_cutover.py)."""
     root = tmp_path / "users"
     uid = "cutover-refresh-user"
-
-    changed_id = "changed-trip"
     trips_dir = root / uid / "trips"
     briefings_dir = root / uid / "briefings"
     trips_dir.mkdir(parents=True)
     briefings_dir.mkdir(parents=True)
 
-    # (a) Quelle nach S5-Migration geaendert -- briefings/ traegt noch die STALE Kopie.
-    _write_json(trips_dir / f"{changed_id}.json", _full_trip_dict(changed_id, name="AKTUELL-nach-S5-Edit", kind=None))
-    _write_json(briefings_dir / f"{changed_id}.json", _full_trip_dict(changed_id, name="STALE-vor-S5-Edit"))
-
-    # (b) Waise -- briefings/ existiert, trips/-Quelle wurde seit S5 geloescht.
-    orphan_id = "orphan-trip"
-    _write_json(briefings_dir / f"{orphan_id}.json", _full_trip_dict(orphan_id, name="Geloeschter-Trip"))
+    # Live route-Datei in briefings/ (seit S7a hier geschrieben); trips/ traegt
+    # nur noch den eingefrorenen alten Stand -- ein Refresh daraus waere Verlust.
+    route_id = "live-route"
+    briefing_file = briefings_dir / f"{route_id}.json"
+    _write_json(briefing_file, _full_trip_dict(route_id, name="LIVE-Route-Edit-nach-S7a"))
+    _write_json(trips_dir / f"{route_id}.json", _full_trip_dict(route_id, name="EINGEFROREN-alt", kind=None))
+    live_bytes = briefing_file.read_bytes()
 
     backup_dir = tmp_path / "backups"
-    result = _run_migrate(root, extra_args=["--refresh", "--execute", "--backup-dir", str(backup_dir)])
+    for extra in (
+        ["--refresh", "--execute", "--backup-dir", str(backup_dir)],                    # bare Refresh: kein --kind
+        ["--kind", "route", "--refresh", "--execute", "--backup-dir", str(backup_dir)],  # Route-Refresh: post-Cutover verboten
+    ):
+        result = _run_migrate(root, extra_args=extra)
 
-    assert result.returncode == 0, (
-        f"--refresh (Wipe+Remigrate, AC-28) existiert noch nicht:\n"
-        f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
-    )
-
-    changed_briefing = json.loads((briefings_dir / f"{changed_id}.json").read_text(encoding="utf-8"))
-    assert changed_briefing["name"] == "AKTUELL-nach-S5-Edit", (
-        "Refresh muss die STALE briefings/-Kopie durch den AKTUELLEN trips/-Inhalt ersetzen (AC-28)"
-    )
-    assert changed_briefing.get("kind") == "route"
-
-    assert not (briefings_dir / f"{orphan_id}.json").exists(), (
-        "Waise (briefings/ ohne trips/-Quelle seit S5) darf nach Refresh nicht mehr existieren "
-        "(AC-28, kein Geist-Eintrag)"
-    )
+        assert result.returncode != 0, (
+            f"Refresh {extra} muss nach dem S7a-Cutover HART abbrechen "
+            f"(Route-Datenverlust-Schutz, F001):\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+        assert briefing_file.exists(), (
+            f"Refresh {extra} darf die LIVE briefings/-route-Datei NICHT loeschen (F001)"
+        )
+        assert briefing_file.read_bytes() == live_bytes, (
+            f"Refresh {extra} darf die LIVE briefings/-route-Datei NICHT ueberschreiben (F001)"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -294,26 +295,34 @@ def test_roundtrip_nested_maps_no_field_loss_via_briefings_path():
 
 
 # ---------------------------------------------------------------------------
-# AC-30 — vergleich-Guard: ComparePresets bleiben auf compare_presets.json
+# AC-31 (S7b invertiert den frueheren AC-30-Zaun): ComparePresets leben jetzt
+# per-Datei in briefings/ (kind="vergleich"), NICHT mehr auf compare_presets.json
 # ---------------------------------------------------------------------------
 
-def test_load_compare_presets_unaffected_by_route_cutover(tmp_path):
-    """AC-30: der route-Cutover (S7a) darf ComparePresets nicht beruehren --
-    sie bleiben ueber `compare_presets.json` lesbar. Dieser Test ist HEUTE
-    bereits gruen und MUSS es nach der Implementierung bleiben
-    (Regressionswaechter, kein RED)."""
+def test_load_compare_presets_reads_briefings_after_s7b_cutover(tmp_path):
+    """S7b (AC-31) invertiert den frueheren S7a-AC-30-Zaun: ComparePresets
+    liegen nach dem vergleich-Cutover per-Datei in `briefings/<id>.json`
+    (kind="vergleich"), die Legacy-`compare_presets.json` wird NICHT mehr
+    gelesen. Regressionswaechter, dass der Lesepfad wirklich gekippt ist."""
     uid = "cutover-vergleich-guard"
-    presets_path = tmp_path / "users" / uid / "compare_presets.json"
-    presets_path.parent.mkdir(parents=True)
+    briefings = tmp_path / "users" / uid / "briefings"
+    briefings.mkdir(parents=True)
     preset = {
         "id": "preset-1",
         "name": "Vergleich Wallis",
         "user_id": uid,
+        "kind": "vergleich",
         "location_ids": ["loc-a", "loc-b"],
         "schedule": "manual",
         "empfaenger": ["gregor-test@henemm.com"],
     }
-    presets_path.write_text(json.dumps([preset]), encoding="utf-8")
+    (briefings / "preset-1.json").write_text(json.dumps(preset), encoding="utf-8")
+
+    # Legacy-Array mit einem ANDEREN Preset -> beweist, dass es NICHT gelesen wird.
+    (tmp_path / "users" / uid / "compare_presets.json").write_text(
+        json.dumps([{"id": "legacy-only", "name": "Legacy", "user_id": uid, "kind": "vergleich"}]),
+        encoding="utf-8",
+    )
 
     loaded = loader.load_compare_presets(uid, data_root=str(tmp_path))
 

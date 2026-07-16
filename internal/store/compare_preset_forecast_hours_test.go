@@ -19,8 +19,6 @@ package store
 
 import (
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -47,14 +45,7 @@ func TestLoadComparePresets_LegacyPresetGetsDefaultForecastHours(t *testing.T) {
 	}]`
 	// forecast_hours-Feld fehlt bewusst → JSON-Unmarshal liefert Zero-Value 0
 
-	userDir := filepath.Join(tmpDir, "users", "user1")
-	if err := os.MkdirAll(userDir, 0755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	presetFile := filepath.Join(userDir, "compare_presets.json")
-	if err := os.WriteFile(presetFile, []byte(rawJSON), 0644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
+	writeComparePresetsJSON(t, tmpDir, "user1", rawJSON)
 
 	// WHEN: LoadComparePresets() aufgerufen
 	presets, err := s.LoadComparePresets()
@@ -97,13 +88,7 @@ func TestLoadComparePresets_ExplicitForecastHoursPreserved(t *testing.T) {
 		"created_at": "2026-01-01T00:00:00Z"
 	}]`
 
-	userDir := filepath.Join(tmpDir, "users", "user1")
-	if err := os.MkdirAll(userDir, 0755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(userDir, "compare_presets.json"), []byte(rawJSON), 0644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
+	writeComparePresetsJSON(t, tmpDir, "user1", rawJSON)
 
 	presets, err := s.LoadComparePresets()
 	if err != nil {

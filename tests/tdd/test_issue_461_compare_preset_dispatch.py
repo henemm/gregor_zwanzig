@@ -21,6 +21,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.helpers.compare_briefings import read_compare_briefings, write_compare_briefings
+
 
 # ---------------------------------------------------------------------------
 # Shared Fixtures
@@ -55,12 +57,14 @@ def _make_preset(
 
 
 def _write_presets(tmp_path: Path, user_id: str, presets: list[dict]) -> Path:
-    """Schreibt compare_presets.json als direktes Array (kein Wrapper)."""
+    """Issue #1250 S7b: schreibt Presets per-Datei nach briefings/<id>.json
+    (kind="vergleich") statt in die eine compare_presets.json. Gibt das
+    Nutzerverzeichnis zurueck; der Rueckle­se-Bestand kommt via
+    read_compare_briefings (Drop-in fuer das fruehere Array-Rueckle­sen)."""
     user_dir = tmp_path / "users" / user_id
     user_dir.mkdir(parents=True, exist_ok=True)
-    preset_file = user_dir / "compare_presets.json"
-    preset_file.write_text(json.dumps(presets, ensure_ascii=False), encoding="utf-8")
-    return preset_file
+    write_compare_briefings(user_dir, presets)
+    return user_dir
 
 
 # ---------------------------------------------------------------------------
@@ -91,7 +95,7 @@ class TestSavePresetStatus:
             data_root=str(tmp_path),
         )
 
-        updated = json.loads(preset_file.read_text(encoding="utf-8"))
+        updated = read_compare_briefings(preset_file)
         assert len(updated) == 1
         assert updated[0]["letzter_versand"] is not None
         # Muss gültiges ISO-Format sein
@@ -115,7 +119,7 @@ class TestSavePresetStatus:
             data_root=str(tmp_path),
         )
 
-        updated = json.loads(preset_file.read_text(encoding="utf-8"))
+        updated = read_compare_briefings(preset_file)
         assert updated[0]["top_ort_letzter_versand"] == "Schneepatrouille"
 
     def test_save_preserves_all_other_fields(self, tmp_path):
@@ -145,7 +149,7 @@ class TestSavePresetStatus:
             data_root=str(tmp_path),
         )
 
-        updated = json.loads(preset_file.read_text(encoding="utf-8"))[0]
+        updated = read_compare_briefings(preset_file)[0]
         assert updated["name"] == "Mein Preset"
         assert updated["schedule"] == "daily"
         assert updated["location_ids"] == ["loc-x", "loc-y", "loc-z"]
@@ -172,7 +176,7 @@ class TestSavePresetStatus:
             data_root=str(tmp_path),
         )
 
-        updated = json.loads(preset_file.read_text(encoding="utf-8"))[0]
+        updated = read_compare_briefings(preset_file)[0]
         assert "top_ort_letzter_versand" in updated
         assert updated["top_ort_letzter_versand"] is None
 
@@ -195,7 +199,7 @@ class TestSavePresetStatus:
             data_root=str(tmp_path),
         )
 
-        updated = json.loads(preset_file.read_text(encoding="utf-8"))
+        updated = read_compare_briefings(preset_file)
         preset_b_updated = next(p for p in updated if p["id"] == "cp-B")
         assert preset_b_updated["letzter_versand"] is None
         assert preset_b_updated["top_ort_letzter_versand"] is None

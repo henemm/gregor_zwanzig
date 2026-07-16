@@ -8,6 +8,7 @@ ruft dann format_email() direkt auf — kein Versand, nur Render.
 """
 from __future__ import annotations
 
+import json
 import logging
 from datetime import date
 from pathlib import Path
@@ -54,14 +55,29 @@ class PreviewService:
         """Lädt einen Trip aus `data/users/<user>/briefings/<id>.json`
         (Issue #1250 Scheibe 7a Cutover, ADR-0023 -- war `trips/<id>.json`).
 
+        Issue #1250 Scheibe 7b (AC-37): briefings/ haelt nach dem
+        vergleich-Cutover BEIDE kinds. Ein `kind=="vergleich"`-Eintrag ist ein
+        ComparePreset, kein Trip -- der Preview-Pfad weigert sich, ihn still
+        als (kaputten, stufenlosen) Trip zu bauen.
+
         Raises:
             FileNotFoundError: wenn der Trip nicht existiert.
+            ValueError: wenn der Eintrag ein Vergleich (kind=vergleich) ist.
         """
         trips_dir = get_briefings_dir(user_id)
         path = trips_dir / f"{trip_id}.json"
         if not path.exists():
             raise FileNotFoundError(
                 f"Trip '{trip_id}' nicht gefunden für user '{user_id}'"
+            )
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            raw = None
+        if isinstance(raw, dict) and raw.get("kind") == "vergleich":
+            raise ValueError(
+                f"'{trip_id}' ist ein Vergleich (kind=vergleich), kein Trip — "
+                "der Preview-Pfad lädt nur Trips (Issue #1250 AC-37)"
             )
         return load_trip(path)
 

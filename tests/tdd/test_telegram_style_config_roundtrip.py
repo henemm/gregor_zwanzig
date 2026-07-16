@@ -30,6 +30,7 @@ from app.loader import (
 from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
 from services.scheduler_dispatch_service import save_compare_preset_status
+from tests.helpers.compare_briefings import write_compare_briefings
 
 
 def _make_trip(trip_id: str, telegram_style: str) -> Trip:
@@ -148,9 +149,8 @@ class TestAC9CompareTelegramStyleSurvivesPartialUpdate:
                 "channels": ["temperature", "wind"],
             },
         }]
-        (user_dir / "compare_presets.json").write_text(
-            json.dumps(presets, indent=2), encoding="utf-8",
-        )
+        # Issue #1250 S7b Cutover: per-Datei briefings/<id>.json (kind="vergleich").
+        write_compare_briefings(user_dir, presets)
         return preset_id
 
     def test_compare_telegram_style_survives_status_update(self, tmp_path: Path) -> None:

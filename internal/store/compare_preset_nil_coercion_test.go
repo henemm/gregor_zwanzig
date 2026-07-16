@@ -32,7 +32,9 @@ func TestSaveComparePresets_NilCorridorsCoercedToEmptyArray(t *testing.T) {
 		t.Fatalf("SaveComparePresets failed: %v", err)
 	}
 
-	written, err := os.ReadFile(filepath.Join(tmpDir, "users", "user1", "compare_presets.json"))
+	// Issue #1250 Scheibe 7b: per-Datei-Persistenz — gelesen wird
+	// briefings/<id>.json statt compare_presets.json.
+	written, err := os.ReadFile(filepath.Join(tmpDir, "users", "user1", "briefings", "cp-nil-corridors.json"))
 	if err != nil {
 		t.Fatalf("read written: %v", err)
 	}

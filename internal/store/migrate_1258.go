@@ -10,8 +10,9 @@ import (
 )
 
 // MigrateAllOfficialWarnings materialisiert Issue #1258 rückwirkend: pro
-// Trip/ComparePreset unter data/users/*/{trips/*.json,compare_presets.json}
-// -- LoadTrip/LoadComparePresets (Self-Heal) + Save (RMW), analog
+// Trip/ComparePreset unter data/users/*/briefings/*.json (seit Cutover S7a
+// route + S7b vergleich, kind-getaggt) -- LoadTrip/LoadComparePreset
+// (Self-Heal) + Save (RMW), analog
 // migrate_1257.go. Formel (PO-Entscheidung F1):
 // official_warnings.enabled := (official_alert_triggers_enabled != false),
 // d.h. fehlend/true -> true, false -> false (Ist-Verhalten, kein
@@ -106,36 +107,42 @@ func migrateUserTripsOfficialWarnings(s *Store) int {
 }
 
 func migrateUserComparePresetsOfficialWarnings(s *Store) bool {
-	presets, err := s.LoadComparePresets()
-	if err != nil || len(presets) == 0 {
+	// Issue #1250 Scheibe 7b: LoadComparePreset/SaveComparePreset lesen/schreiben
+	// per-Datei briefings/<id>.json (kind=vergleich) — die Enumeration geht von
+	// dort aus, analog migrateUserTripsOfficialWarnings. LoadComparePreset
+	// liefert nil fuer kind!="vergleich" (route/leer); der preset==nil-Skip
+	// deckt das ab. Der rohe comparePresetsFile()-Index-Hack entfaellt.
+	entries, err := os.ReadDir(s.briefingsDir())
+	if err != nil {
 		return false
 	}
-	// Fix-Loop F003: rohe Bytes fuer den "enabled"-Schluessel-Check separat
-	// laden (s. officialWarningsRawHasEnabledKey) — Best-effort, bei
-	// Lesefehler faellt jedes Preset auf den bisherigen `!= nil`-Check zurueck.
-	var rawPresets []map[string]interface{}
-	if raw, rerr := os.ReadFile(s.comparePresetsFile()); rerr == nil {
-		_ = json.Unmarshal(raw, &rawPresets)
-	}
 	changed := false
-	for i := range presets {
-		alreadyMigrated := presets[i].OfficialWarnings != nil
-		if alreadyMigrated && i < len(rawPresets) {
-			if ow, ok := rawPresets[i]["official_warnings"].(map[string]interface{}); ok {
-				_, hasEnabled := ow["enabled"]
-				alreadyMigrated = hasEnabled
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		id := strings.TrimSuffix(e.Name(), ".json")
+		preset, err := s.LoadComparePreset(id)
+		if err != nil || preset == nil {
+			continue
+		}
+		alreadyMigrated := preset.OfficialWarnings != nil
+		if alreadyMigrated {
+			// Fix-Loop F003: rohe Bytes fuer den "enabled"-Schluessel-Check
+			// (s. officialWarningsRawHasEnabledKey) — `{}` gilt als unmigriert.
+			if raw, rerr := os.ReadFile(filepath.Join(s.briefingsDir(), e.Name())); rerr == nil {
+				alreadyMigrated = officialWarningsRawHasEnabledKey(raw)
 			}
 		}
 		if alreadyMigrated {
 			continue // AC-3: bereits migriert -> unangetastet lassen
 		}
-		presets[i].OfficialWarnings = &model.OfficialWarningsConfig{
-			Enabled: officialWarningsEnabledFromLegacy(presets[i].OfficialAlertTriggersEnabled),
+		preset.OfficialWarnings = &model.OfficialWarningsConfig{
+			Enabled: officialWarningsEnabledFromLegacy(preset.OfficialAlertTriggersEnabled),
 		}
-		changed = true
+		if s.SaveComparePreset(*preset) == nil {
+			changed = true
+		}
 	}
-	if !changed {
-		return false
-	}
-	return s.SaveComparePresets(presets) == nil
+	return changed
 }

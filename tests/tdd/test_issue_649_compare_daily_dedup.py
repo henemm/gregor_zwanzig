@@ -29,6 +29,7 @@ Alle Aufrufe hier uebergeben deshalb explizit `hour=6`, damit die Tests
 deterministisch bleiben (statt von der aktuellen Wanduhrzeit abzuhaengen).
 """
 import json
+from tests.helpers.compare_briefings import read_compare_briefings, write_compare_briefings
 import logging
 import uuid
 
@@ -41,11 +42,10 @@ def _fresh_user() -> str:
 
 
 def _write_presets(data_root, user_id, presets):
+    # Issue #1250 S7b Cutover: per-Datei briefings/<id>.json (kind="vergleich").
     user_dir = data_root / "users" / user_id
     user_dir.mkdir(parents=True, exist_ok=True)
-    (user_dir / "compare_presets.json").write_text(
-        json.dumps(presets, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    write_compare_briefings(user_dir, presets)
 
 
 def _daily_preset(preset_id="cp-649", location_ids=("loc-missing",), schedule="daily"):

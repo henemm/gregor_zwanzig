@@ -41,13 +41,7 @@ func TestComparePresetDisplayConfig_RoundtripWithData(t *testing.T) {
 		}
 	}]`
 
-	userDir := filepath.Join(tmpDir, "users", "user1")
-	if err := os.MkdirAll(userDir, 0755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(userDir, "compare_presets.json"), []byte(rawJSON), 0644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
+	writeComparePresetsJSON(t, tmpDir, "user1", rawJSON)
 
 	// WHEN: LoadComparePresets
 	presets, err := s.LoadComparePresets()
@@ -103,9 +97,7 @@ func TestComparePresetDisplayConfig_RoundtripAltdatenOhneField(t *testing.T) {
 		"created_at": "2025-06-01T00:00:00Z"
 	}]`
 
-	userDir := filepath.Join(tmpDir, "users", "user1")
-	os.MkdirAll(userDir, 0755)
-	os.WriteFile(filepath.Join(userDir, "compare_presets.json"), []byte(rawJSON), 0644)
+	writeComparePresetsJSON(t, tmpDir, "user1", rawJSON)
 
 	// WHEN: Load
 	presets, err := s.LoadComparePresets()
@@ -121,19 +113,21 @@ func TestComparePresetDisplayConfig_RoundtripAltdatenOhneField(t *testing.T) {
 		t.Errorf("DisplayConfig must be nil for legacy preset without field, got: %v", presets[0].DisplayConfig)
 	}
 
-	// AND: SaveComparePresets → JSON enthält KEIN display_config (omitempty)
+	// AND: SaveComparePresets → per-Datei-JSON enthält KEIN display_config
+	// (omitempty). Issue #1250 Scheibe 7b: gelesen wird die Einzeldatei
+	// briefings/<id>.json (ein Objekt), nicht mehr das Array compare_presets.json.
 	if err := s.SaveComparePresets(presets); err != nil {
 		t.Fatalf("SaveComparePresets failed: %v", err)
 	}
-	raw, err := os.ReadFile(filepath.Join(userDir, "compare_presets.json"))
+	raw, err := os.ReadFile(filepath.Join(tmpDir, "users", "user1", "briefings", "cp-legacy-1.json"))
 	if err != nil {
 		t.Fatalf("ReadFile after save: %v", err)
 	}
-	var written []map[string]interface{}
+	var written map[string]interface{}
 	if err := json.Unmarshal(raw, &written); err != nil {
 		t.Fatalf("Unmarshal saved JSON: %v", err)
 	}
-	if _, exists := written[0]["display_config"]; exists {
+	if _, exists := written["display_config"]; exists {
 		t.Error("omitempty broken: display_config must not appear in JSON for nil DisplayConfig")
 	}
 }

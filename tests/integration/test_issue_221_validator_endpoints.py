@@ -178,11 +178,14 @@ def test_f001_validator_load_trip_raw_reads_briefings_not_stale_trips():
         shutil.rmtree(user_dir, ignore_errors=True)
 
 
-def test_f001_validator_load_trip_raw_skips_vergleich_kind():
-    """F001-Nachbar (AC-30): briefingsDir traegt auch ComparePresets
-    (kind='vergleich', Scheibe 5 Migration) -- _load_trip_raw darf so einen
-    Eintrag NICHT als Trip zurueckliefern."""
-    from api.routers.validator import _load_trip_raw
+def test_validator_raw_passes_vergleich_but_trip_builder_rejects_it():
+    """AC-37 (Issue #1250 Scheibe 7b) invertiert den frueheren S7a-Vertrag:
+    briefings/ traegt nach dem vergleich-Cutover BEIDE kinds. Der Rohpfad
+    (`_load_trip_raw`) gibt einen kind='vergleich'-Eintrag jetzt ZURUECK (damit
+    der External Validator ihn als ComparePreset lesen kann), waehrend der
+    Trip-Bau-Pfad (`_load_trip_for_validator`) ihn ablehnt -- die
+    'kein-Trip-aus-vergleich'-Invariante wanderte vom Roh- in den Trip-Bau-Pfad."""
+    from api.routers.validator import _load_trip_for_validator, _load_trip_raw
 
     user_id = f"test_f001b_{uuid.uuid4().hex[:8]}"
     trip_id = "preset-f001"
@@ -194,9 +197,16 @@ def test_f001_validator_load_trip_raw_skips_vergleich_kind():
             "id": trip_id, "name": "Ein Vergleichs-Preset", "kind": "vergleich",
         }))
 
-        data = _load_trip_raw(user_id, trip_id)
-        assert data is None, (
-            f"F001-Nachbar: kind='vergleich' wurde faelschlich als Trip geladen: {data!r}"
+        raw = _load_trip_raw(user_id, trip_id)
+        assert raw is not None and raw.get("kind") == "vergleich", (
+            f"AC-37: der Rohpfad muss den vergleich-Eintrag durchreichen "
+            f"(fuer den ComparePreset-Leser), bekam: {raw!r}"
+        )
+
+        trip = _load_trip_for_validator(user_id, trip_id)
+        assert trip is None, (
+            f"AC-37: ein vergleich-Briefing darf NICHT in einen Trip fehl-geparst "
+            f"werden (Invariante im Trip-Bau-Pfad), bekam: {trip!r}"
         )
     finally:
         shutil.rmtree(user_dir, ignore_errors=True)

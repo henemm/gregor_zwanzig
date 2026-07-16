@@ -3,7 +3,9 @@ package handler
 // Issue #458 — Compare-Preset Backend: 5 CRUD-Handler für ComparePresets.
 // Spec: docs/specs/modules/issue_458_compare_preset_backend.md
 //
-// Persistenz: data/users/{userId}/compare_presets.json (JSON-Array).
+// Persistenz seit Issue #1250 Scheibe 7b: per-Datei
+// data/users/{userId}/briefings/<id>.json (kind="vergleich"), nicht mehr das
+// Array compare_presets.json. DELETE ist echtes os.Remove (F-A).
 // User-Isolation: UserID stammt ausschließlich aus dem Auth-Kontext, nie aus
 // dem Request-Body. Profil-Validierung via model.IsValidProfile().
 //
@@ -237,13 +239,10 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		presets, err := s.LoadComparePresets()
-		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
-			return
-		}
-		presets = append(presets, preset)
-		if err := s.SaveComparePresets(presets); err != nil {
+		// Issue #1250 Scheibe 7b: per-Datei-Save — nur die eigene Datei
+		// briefings/<id>.json schreiben (SaveComparePreset setzt kind=vergleich),
+		// kein Laden+Zurueckschreiben des ganzen Arrays mehr.
+		if err := s.SaveComparePreset(preset); err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
 			return
 		}
@@ -420,8 +419,9 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		presets[idx] = updated
-		if err := s.SaveComparePresets(presets); err != nil {
+		// Issue #1250 Scheibe 7b: nur die eigene Datei zurueckschreiben
+		// (per-Datei-Save), nicht das ganze Array.
+		if err := s.SaveComparePreset(updated); err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
 			return
 		}
@@ -446,8 +446,11 @@ func DeleteComparePresetHandler(s *store.Store) http.HandlerFunc {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
 			return
 		}
-		filtered := append(presets[:idx:idx], presets[idx+1:]...)
-		if err := s.SaveComparePresets(filtered); err != nil {
+		// Issue #1250 Scheibe 7b (F-A): echtes Datei-Remove statt Array-Filtern.
+		// Nur so ist das Preset nach dem Cutover wirklich weg — ein gefiltertes
+		// Array-Zurueckschreiben liesse briefings/<id>.json auf der Platte liegen
+		// (Wiederauferstehen beim naechsten Load).
+		if err := s.DeleteComparePreset(id); err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
 			return
 		}
@@ -496,7 +499,8 @@ func UpdateComparePresetStateHandler(s *store.Store) http.HandlerFunc {
 			}
 		}
 
-		if err := s.SaveComparePresets(presets); err != nil {
+		// Issue #1250 Scheibe 7b: nur die geaenderte Datei zurueckschreiben.
+		if err := s.SaveComparePreset(presets[idx]); err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
 			return
 		}

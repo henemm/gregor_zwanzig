@@ -2,7 +2,7 @@
 entity_id: issue_1250_briefing_subscription
 type: feature
 created: 2026-07-13
-updated: 2026-07-13
+updated: 2026-07-16
 status: draft
 version: "1.0"
 tags: [briefing-subscription, compare, trip, migration, epic-1230, convergence]
@@ -469,9 +469,78 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
 - **AC-30:** Given der Cutover ist route-only (S7a) / When er ausgeliefert ist / Then
   lesen/schreiben ComparePresets weiterhin `compare_presets.json` (vergleich unberührt);
   `ListBriefingsHandler` liefert route aus `briefings/`, vergleich aus dem Alt-Store —
-  konsistent per `kind`, kein Bruch.
+  konsistent per `kind`, kein Bruch. (S7a-Zwischenzustand; durch S7b/AC-31 invertiert —
+  vergleich zieht in **`briefings/`** um.)
   - Test: nach S7a Preset-CRUD unverändert gegen `compare_presets.json`; gemischte
     `/api/briefings`-Liste enthält beide korrekt.
+
+<!-- Scheibe 7b — Cutover vergleich (ComparePresets) compare_presets.json → briefings/ · feat-1250-s7b-vergleich-cutover. Invertiert AC-30. -->
+
+- **AC-31:** Given migrierte `briefings/<id>.json` mit `kind="vergleich"` / When die App
+  Presets lädt (Go `LoadComparePresets` + Python `load_compare_presets`) nach S7b / Then
+  liest sie aus `briefings/*.json` gefiltert **invers** auf `kind=="vergleich"` (route
+  bleibt ausgeschlossen — Trip beansprucht `kind==""`/`"route"`), NICHT aus
+  `compare_presets.json`; das Ergebnis ist feldgleich zum Vor-Cutover-Load.
+  - Test: Fixtures in `briefings/` (kind=vergleich + ein kind=route) + Alt-`compare_presets.json`;
+    Load liefert nur die vergleich-Einträge aus `briefings/`, feld-für-feld identisch zum
+    Alt-Pfad, der route-Eintrag wird NICHT als Preset geladen.
+
+- **AC-32:** Given ein Preset-Save (Go `SaveComparePreset`, Python `save_compare_preset_status`/
+  `_pause`) nach S7b / When gespeichert wird / Then landet die Änderung in `briefings/<id>.json`
+  (kind=vergleich), ein erneuter Load spiegelt sie; die Alt-Datei `compare_presets.json` bleibt
+  unverändert liegen (Rollback-Fähigkeit, kein Löschen im Cutover).
+  - Test: Save → `briefings/<id>.json` enthält die Änderung, `compare_presets.json` byte-unverändert.
+
+- **AC-33:** Given ein bestehendes Preset in `briefings/<id>.json` / When es gelöscht wird
+  (`DeleteComparePresetHandler`) / Then wird die Datei `briefings/<id>.json` tatsächlich entfernt
+  (echtes `os.Remove`, analog `DeleteTrip`), NICHT nur aus einem Array gefiltert; ein erneuter
+  Load liefert es nicht zurück (kein Wiederauferstehen des gelöschten Presets).
+  - Test: Delete → `os.Stat(briefings/<id>.json)` = NotExist, `LoadComparePresets(user)` enthält
+    es nicht; ein zweites, nicht gelöschtes Preset desselben Users bleibt erhalten.
+
+- **AC-34:** Given ein Preset via Go-API geändert / When der Python-Lesepfad
+  (`load_compare_presets`) dasselbe Preset liest / Then sieht er die Änderung — beide Stacks
+  lesen `briefings/`, die Split-Brain-Lücke ist für vergleich geschlossen; strikt pro Nutzer
+  (zwei User getestet, kein Cross-User-Zugriff).
+  - Test: Go schreibt `briefings/<id>.json` für User A, Python `load_compare_presets(A)` liest
+    exakt diesen Wert (Cross-Language-Roundtrip, kein Mock); `load_compare_presets(B)` sieht
+    ihn nicht.
+
+- **AC-35:** Given `run_compare_presets_daily` schreibt Versandstatus bzw. Pause über
+  `save_compare_preset_status`/`save_compare_preset_pause` nach S7b / When danach Go
+  `LoadComparePresets` liest / Then sieht Go die von Python per-Datei geschriebenen Felder
+  (`letzter_versand`/`paused_at`) — kein vergessener Schreibpfad, kein Split-Brain über die
+  zwei RMW-Funktionen.
+  - Test: Python `save_compare_preset_status(A,id,…)` → Go `LoadComparePresets(A)` zeigt
+    `letzter_versand`; Python `save_compare_preset_pause` → Go zeigt `paused_at`; beide via
+    echte Datei, kein Mock.
+
+- **AC-36:** Given ein produktiver Bestand, in dem seit S7a route-Trips in `briefings/`
+  erstellt/geändert/gelöscht wurden UND `trips/*.json` eingefroren ist / When der
+  S7b-Cutover-Refresh (`--kind=vergleich`, Wipe+Remigrate, Backup vorher) läuft / Then werden
+  AUSSCHLIESSLICH `kind=="vergleich"`-Dateien in `briefings/` gewiped und aus dem AKTUELLEN
+  `compare_presets.json` remigriert; JEDE `kind="route"`-Datei in `briefings/` bleibt
+  byte-unverändert (kein Route-Datenverlust).
+  - Test: Fixture `briefings/` mit route- + vergleich-Einträgen, dazu ein geänderter und ein
+    gelöschter vergleich-Quelleintrag; nach `--kind=vergleich`-Refresh: alle route-Dateien
+    sha256-identisch, vergleich spiegelt aktuellen `compare_presets.json`, das gelöschte
+    vergleich hat keine `briefings/`-Datei.
+
+- **AC-37:** Given nach S7b liegen vergleich-Presets in `briefings/` / When der
+  Alert-Preview-/Validator-Pfad (`api/routers/validator.py`) bzw. `src/services/preview_service.py`
+  ein vergleich-Briefing verarbeitet / Then wird es korrekt als ComparePreset geladen — der
+  invertierte S7a-Guard (`validator.py:56` gab None für vergleich) ist aufgehoben,
+  `preview_service` parst es NICHT mehr als Trip (kind-Filter ergänzt).
+  - Test: Validator-Pfad für ein vergleich-Briefing liefert gültige Daten statt None/404;
+    `preview_service` behandelt den Eintrag als vergleich, nicht als Trip.
+
+- **AC-38:** Given ein vergleich-Preset mit vollständigem Feldsatz (Corridors, LocationIDs,
+  Empfaenger, display_config, Slot-Felder, paused_at) / When es durch den neuen `briefings/`-Pfad
+  geladen UND gespeichert wird / Then überleben alle Felder (kein Top-Level-Feldverlust); Fidelity
+  identisch zum bisherigen Load/Save, server-verwaltete Felder (`paused_at`/`letzter_versand`)
+  bleiben client-unfälschbar.
+  - Test: Roundtrip über `briefings/`, Feld-für-Feld-Diff Vorher/Nachher = leer; ein PUT mit
+    gefälschtem `paused_at` ändert den server-verwalteten Wert nicht.
 
 <!-- Scheibe 7c — Scheduler-Aufräumen (OPTIONAL, spätere Scheibe): AC-23/24 -->
 
@@ -527,6 +596,19 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
   Cutover-Refresh ist **Wipe + Remigrate** (nicht `--force`); alle Schreibpfade einer
   Entität kippen in EINEM Deploy (stop → refresh → start), Alt-Stores bleiben für Rollback
   liegen. Tiefe Feld-Konvergenz zu EINER Struktur ist NICHT Teil von #1250.
+- **KL-8 (S7b-Analyse 2026-07-16):** Der Migrations-Refresh `scripts/migrate_1250_briefings.py
+  --refresh` war bis S7b **nicht kind-scoped** — `_wipe_briefings` löschte alle
+  `briefings/*.json`, `_collect_plan` remigrierte beide Quellen (`trips/` + `compare_presets.json`)
+  in jedem Lauf. Da `trips/*.json` seit dem S7a-Prod-Cutover eingefroren ist, hätte ein
+  S7b-`--refresh` den produktiven route-Bestand aus veralteten `trips/`-Daten überschrieben
+  (Datenverlust). S7b macht Refresh **kind-scoped** (`--kind=vergleich` wiped/remigriert nur
+  vergleich, route unberührt) — harte Vorbedingung, VOR dem S7b-Deploy getestet (AC-36).
+  Zweite Änderung: `load_compare_presets` wird unter dem Glob **partial-tolerant** (eine
+  korrupte Einzeldatei wird übersprungen wie `load_all_trips`, statt den ganzen
+  `run_compare_presets_daily`-Lauf abzubrechen) — bewusste Verhaltensänderung ggü. der
+  bisherigen Array-Atomarität, PO im Approval genannt. Kompat: `SaveComparePresets` (Plural)
+  bleibt als dünner Wrapper (Loop über `SaveComparePreset`, ohne Delete) für Go-Test-Call-Sites;
+  DELETE geht ausschließlich über `DeleteComparePreset(id)`.
 
 ## Edge Cases
 
@@ -581,3 +663,7 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
   Tabelle §Profil korrigiert — disjunkte Felder, frühere Prämisse falsch). Refresh =
   Wipe+Remigrate. Neue ACs AC-25–AC-30 (S7a route); AC-23/24 → S7c. Neue KL-7.
   ADR-0023 Entscheidung 4 (volles Union-Modell) als obsolet markiert.
+- 2026-07-16 (feat-1250-s7b-vergleich-cutover): Scheibe 7b — Cutover vergleich →
+  briefings/ (per-Datei-API wie Trip-Store, ADR-0023 Entscheidung 2; F-A echtes
+  Datei-Delete; Guard-Inversionen Validator/Preview/AC-30; kind-scoped Migrations-Refresh
+  gegen Route-Datenverlust). Neue ACs AC-31–AC-38, neue KL-8.

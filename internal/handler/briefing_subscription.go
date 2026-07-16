@@ -63,16 +63,17 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		presets, err := s.LoadComparePresets()
+		// Issue #1250 Scheibe 7b: per-Datei-Read ueber die neue Store-API
+		// (kind-Guard inklusive) statt Array-Scan.
+		preset, err := s.LoadComparePreset(id)
 		if bailIf(w, err != nil, http.StatusInternalServerError, "store_error") {
 			return
 		}
-		idx := findComparePresetIdx(presets, id)
-		if bailIf(w, idx < 0, http.StatusNotFound, "not_found") {
+		if bailIf(w, preset == nil, http.StatusNotFound, "not_found") {
 			return
 		}
-		presets[idx].Kind = briefingKindVergleich
-		writeJSON(w, http.StatusOK, presets[idx])
+		preset.Kind = briefingKindVergleich
+		writeJSON(w, http.StatusOK, preset)
 	}
 }
 
@@ -234,8 +235,8 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation_error", "detail": err.Error()})
 			return
 		}
-		presets[idx] = preset
-		if bailIf(w, s.SaveComparePresets(presets) != nil, http.StatusInternalServerError, "store_error") {
+		// Issue #1250 Scheibe 7b: nur die eigene Datei per-Datei zurueckschreiben.
+		if bailIf(w, s.SaveComparePreset(preset) != nil, http.StatusInternalServerError, "store_error") {
 			return
 		}
 		writeJSON(w, http.StatusOK, preset)

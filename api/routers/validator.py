@@ -38,13 +38,15 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 def _load_trip_raw(user_id: str, trip_id: str) -> Optional[dict]:
-    """Read the raw trip JSON for a user (no parsing, no migration).
+    """Read the raw briefing JSON for a user (no parsing, no migration).
 
-    Issue #1250 Scheibe 7a (Adversary F001): reads `briefings/<id>.json`
-    (was `trips/<id>.json` before the Cutover) -- the External Validator
-    must see the AKTUELLEN Trip, not a stale pre-Cutover copy. `briefings/`
-    also holds ComparePresets (`kind="vergleich"`, Scheibe 5 migration) --
-    those are not Trips and must not be misread as one (AC-30).
+    Issue #1250 Scheibe 7b (AC-37): der invertierte S7a-Zaun ist AUFGEHOBEN.
+    `briefings/` haelt nach dem vergleich-Cutover BEIDE kinds; ein
+    `kind=="vergleich"`-Briefing wird nicht mehr still auf None abgebildet,
+    sondern als Roh-Dict zurueckgegeben, damit der External Validator es als
+    ComparePreset lesen kann (`compare_preset_from_dict`). Die
+    kind-spezifische Weiterverarbeitung passiert downstream: der Trip-Pfad
+    (`_load_trip_for_validator`) lehnt vergleich explizit ab.
     """
     path = get_briefings_dir(user_id) / f"{trip_id}.json"
     if not path.exists():
@@ -53,7 +55,7 @@ def _load_trip_raw(user_id: str, trip_id: str) -> Optional[dict]:
         data = json.loads(path.read_text())
     except (OSError, json.JSONDecodeError):
         return None
-    if not isinstance(data, dict) or data.get("kind") == "vergleich":
+    if not isinstance(data, dict):
         return None
     return data
 
@@ -69,6 +71,13 @@ def _load_trip_for_validator(user_id: str, trip_id: str) -> Optional[Trip]:
     """
     data = _load_trip_raw(user_id, trip_id)
     if data is None:
+        return None
+
+    # Issue #1250 Scheibe 7b (AC-37): ein vergleich-Briefing ist ein
+    # ComparePreset, kein Trip -- nie in einen Trip fehl-parsen (der
+    # kind-Guard wanderte aus _load_trip_raw hierher, damit der Raw-Pfad
+    # vergleich weiterhin sichtbar macht).
+    if data.get("kind") == "vergleich":
         return None
 
     if not data.get("stages"):

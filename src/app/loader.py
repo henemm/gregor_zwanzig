@@ -263,36 +263,48 @@ def load_compare_presets(
     data_root: Union[str, Path] = "data",
     strict: bool = False,
 ) -> List[ComparePreset]:
-    """Zentraler Lade-Pfad fuer `compare_presets.json` (Issue #1250, Scheibe 1).
+    """Zentraler Lade-Pfad fuer ComparePresets (Issue #1250).
 
-    Ersetzt die bisher 4-fach duplizierten rohen `json.loads`-Reads an den
-    5 Lese-Call-Sites (AC-5). Default (`strict=False`) fail-soft identisch
-    zum bisherigen Verhalten: fehlende Datei, korruptes JSON/OSError oder
-    Nicht-Liste-JSON liefern `[]` (Korruption zusaetzlich mit Warning).
-    Reiner Lese-Kontrakt — schreibt beim Laden nichts zurueck (AC-6); der
-    RMW-Schreibpfad (`save_compare_preset_status`) bleibt unveraendert
-    Dict-basiert.
+    Issue #1250 Scheibe 7b Cutover (ADR-0023): liest per-Datei
+    ``briefings/*.json`` (invers gefiltert auf ``kind=="vergleich"``) statt
+    der einen Array-Datei ``compare_presets.json``. ``briefings/`` haelt seit
+    S7a auch Trips (``kind=="route"``/leer) -- die werden hier uebersprungen
+    (inverser Filter, Doppelklassifizierung blanker Dateien ausgeschlossen)
+    und bleiben ueber ``load_all_trips`` erreichbar.
 
-    `strict=True` (Adversary-Fix F001/F002): korrupte Dateien werfen
-    `LoaderError` mit der Original-Parse-Fehlermeldung statt fail-soft `[]`
-    zu liefern. Noetig fuer `send_compare_preset` (Einzelversand, #627) und
+    Partial-tolerant (KL-8, bewusste Verhaltensaenderung ggue. der frueheren
+    Array-Atomaritaet): eine korrupte Einzeldatei wird im ``strict=False``-
+    Default uebersprungen (Warning) statt den ganzen Lauf zu blockieren --
+    analog ``load_all_trips`` (Issue #111/#1244). So killt eine defekte
+    Vergleichsdatei nicht mehr alle uebrigen Presets eines Nutzers.
+
+    `strict=True` (Adversary-Fix F001/F002): eine korrupte Datei wirft
+    `LoaderError` mit der Original-Parse-Fehlermeldung statt fail-soft zu
+    ueberspringen. Noetig fuer `send_compare_preset` (Einzelversand, #627) und
     `run_compare_presets_daily`, die die urspruengliche Fehlerdiagnose
-    (HTTP-404-Detail bzw. ERROR-Log) bewahren muessen; die 3 Alert-Services
-    bleiben beim fail-soft-Default.
+    (HTTP-404-Detail bzw. ERROR-Log) bewahren; die 3 Alert-Services bleiben
+    beim partial-toleranten Default.
     """
-    path = Path(data_root) / "users" / user_id / "compare_presets.json"
-    if not path.exists():
+    briefings_dir = Path(data_root) / "users" / user_id / "briefings"
+    if not briefings_dir.exists():
         return []
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError) as e:
-        if strict:
-            raise LoaderError(str(e)) from e
-        logger.warning("Corrupt compare_presets.json for %s: %s", user_id, e)
-        return []
-    if not isinstance(data, list):
-        return []
-    return [compare_preset_from_dict(d) for d in data]
+    presets: List[ComparePreset] = []
+    for path in sorted(briefings_dir.glob("*.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as e:
+            if strict:
+                raise LoaderError(str(e)) from e
+            logger.warning("Skipping corrupt briefing %s for %s: %s", path.name, user_id, e)
+            continue
+        if not isinstance(data, dict):
+            continue
+        # Inverser kind-Filter: nur vergleich-Einträge; route/leere kind
+        # bleiben load_all_trips vorbehalten (keine Doppelklassifizierung).
+        if data.get("kind") != "vergleich":
+            continue
+        presets.append(compare_preset_from_dict(data))
+    return presets
 
 
 def compare_preset_to_dict(preset: ComparePreset) -> Dict[str, Any]:
@@ -1021,10 +1033,12 @@ def get_trips_dir(user_id: str = "default") -> Path:
 
 
 def get_briefings_dir(user_id: str = "default") -> Path:
-    """Get the briefings directory for a user (Issue #1250 Scheibe 7a
-    Cutover, ADR-0023). route-Entitäten (Trips) leben seit dem Cutover hier;
-    vergleich-Entitäten (ComparePresets) bleiben unberührt auf
-    compare_presets.json (AC-30)."""
+    """Get the briefings directory for a user (Issue #1250 Cutover, ADR-0023).
+    Seit S7a leben route-Entitäten (Trips) hier; seit S7b (AC-31) leben auch
+    vergleich-Entitäten (ComparePresets) hier als per-Datei
+    briefings/<id>.json (kind="vergleich") -- compare_presets.json wird nicht
+    mehr gelesen/geschrieben. briefings/ ist damit für BEIDE kinds die
+    einzige Persistenz-Wahrheit."""
     return get_data_dir(user_id) / "briefings"
 
 

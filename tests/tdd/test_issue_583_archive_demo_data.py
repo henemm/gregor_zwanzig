@@ -46,9 +46,11 @@ def test_issue_583_ac1_creates_8_archived_trips(tmp_path: Path) -> None:
     assert result.returncode == 0, f"Seed-Script failed: {result.stderr}"
 
     written = sorted(target_dir.glob("*.json"))
-    assert len(written) == 8, f"Expected 8 trips, got {len(written)}: {[p.name for p in written]}"
-
     by_id = {p.stem: json.loads(p.read_text()) for p in written}
+    # Issue #1250 S7b Cutover: briefings/ haelt jetzt auch vergleich-Presets;
+    # der Trip-Nachweis zaehlt gezielt die route-Entitaeten (8 Trips).
+    route_ids = [tid for tid, d in by_id.items() if d.get("kind") == "route"]
+    assert len(route_ids) == 8, f"Expected 8 route trips, got {len(route_ids)}: {route_ids}"
 
     for trip_id, name in EXPECTED_TRIPS:
         assert trip_id in by_id, f"Missing trip {trip_id} in {list(by_id.keys())}"
@@ -71,15 +73,26 @@ def test_issue_583_ac1_idempotent(tmp_path: Path) -> None:
     )
 
     target_dir = tmp_path / "users" / "validator-issue110" / "briefings"
-    assert len(list(target_dir.glob("*.json"))) == 8
+    # Issue #1250 S7b Cutover: briefings/ haelt jetzt beide Entitaeten
+    # (8 route-Trips + 2 vergleich-Presets), per-Datei.
+    kinds = [
+        json.loads(f.read_text(encoding="utf-8")).get("kind")
+        for f in target_dir.glob("*.json")
+    ]
+    assert kinds.count("route") == 8, f"erwarte 8 route-Trips, got {kinds}"
+    assert kinds.count("vergleich") == 2, f"erwarte 2 vergleich-Presets, got {kinds}"
 
 
 def test_issue_611_seeds_archived_compare_presets(tmp_path: Path) -> None:
     """AC-2: Seed-Script schreibt archivierte Orts-Vergleiche (beide Typen im Archiv).
 
-    Verhaltensnachweis: compare_presets.json muss nach dem Seed mindestens 2 Einträge
-    enthalten, jeder mit gesetztem archived_at und nicht-leerer location_ids-Liste.
+    Verhaltensnachweis: nach dem Seed liegen mindestens 2 vergleich-Einträge
+    per-Datei in briefings/ (Issue #1250 S7b Cutover — nicht mehr in
+    compare_presets.json), jeder mit gesetztem archived_at und nicht-leerer
+    location_ids-Liste.
     """
+    from tests.helpers.compare_briefings import read_compare_briefings
+
     if not SEED_SCRIPT.exists():
         pytest.fail("Seed-Script fehlt")
 
@@ -89,11 +102,8 @@ def test_issue_611_seeds_archived_compare_presets(tmp_path: Path) -> None:
     )
     assert result.returncode == 0, f"Seed-Script failed: {result.stderr}"
 
-    presets_path = tmp_path / "users" / "validator-issue110" / "compare_presets.json"
-    assert presets_path.exists(), f"compare_presets.json fehlt: {presets_path}"
-
-    presets = json.loads(presets_path.read_text(encoding="utf-8"))
-    assert len(presets) >= 2, f"Erwarte mindestens 2 Vergleiche, got {len(presets)}"
+    presets = read_compare_briefings(tmp_path / "users" / "validator-issue110")
+    assert len(presets) >= 2, f"Erwarte mindestens 2 Vergleiche in briefings/, got {len(presets)}"
 
     for preset in presets:
         assert preset.get("archived_at"), (

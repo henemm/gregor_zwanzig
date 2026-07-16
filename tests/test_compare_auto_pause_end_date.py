@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 from datetime import date, timedelta
 from pathlib import Path
+from tests.helpers.compare_briefings import read_compare_briefings, write_compare_briefings
 
 from services.scheduler_dispatch_service import run_compare_presets_daily
 
@@ -69,16 +70,15 @@ def _make_preset(
 
 
 def _write_presets(tmp_path: Path, user_id: str, presets: list[dict]) -> Path:
-    """Schreibt compare_presets.json als direktes Array (kein Wrapper)."""
+    """Issue #1250 S7b: per-Datei briefings/<id>.json (kind="vergleich")."""
     user_dir = tmp_path / "users" / user_id
     user_dir.mkdir(parents=True, exist_ok=True)
-    preset_file = user_dir / "compare_presets.json"
-    preset_file.write_text(json.dumps(presets, ensure_ascii=False), encoding="utf-8")
-    return preset_file
+    write_compare_briefings(user_dir, presets)
+    return user_dir
 
 
-def _read_presets(preset_file: Path) -> list[dict]:
-    return json.loads(preset_file.read_text(encoding="utf-8"))
+def _read_presets(user_dir: Path) -> list[dict]:
+    return read_compare_briefings(user_dir)
 
 
 def _find(presets: list[dict], preset_id: str) -> dict:

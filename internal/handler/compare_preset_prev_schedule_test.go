@@ -20,8 +20,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -91,13 +89,7 @@ func TestComparePreset_LegacyWithoutPreviousScheduleLoads(t *testing.T) {
 		"created_at": "2026-01-01T00:00:00Z"
 	}]`
 
-	userDir := filepath.Join(tmpDir, "users", "user1")
-	if err := os.MkdirAll(userDir, 0755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(userDir, "compare_presets.json"), []byte(rawJSON), 0644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
+	writeComparePresetBriefingFixture(t, tmpDir, "user1", rawJSON)
 
 	loaded, err := s.LoadComparePresets()
 	if err != nil {

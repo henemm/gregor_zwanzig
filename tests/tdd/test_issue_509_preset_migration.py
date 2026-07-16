@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from tests.helpers.compare_briefings import read_compare_briefings, write_compare_briefings
 
 
 # ---------------------------------------------------------------------------
@@ -23,11 +24,11 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 def _write_presets(tmp_path: Path, user_id: str, presets: list[dict]) -> Path:
+    # Issue #1250 S7b Cutover: per-Datei briefings/<id>.json (kind="vergleich").
     user_dir = tmp_path / "users" / user_id
     user_dir.mkdir(parents=True, exist_ok=True)
-    path = user_dir / "compare_presets.json"
-    path.write_text(json.dumps(presets, ensure_ascii=False), encoding="utf-8")
-    return path
+    write_compare_briefings(user_dir, presets)
+    return user_dir
 
 
 def _minimal_preset(preset_id: str = "p1", schedule: str = "daily", empfaenger=None) -> dict:
@@ -72,7 +73,9 @@ class TestEmpfaengerFallback:
         _write_presets(tmp_path, "fallback-user", [preset])
 
         with caplog.at_level(logging.WARNING, logger="scheduler.dispatch"):
-            _run_compare_presets_daily(user_id="fallback-user", data_root=str(tmp_path))
+            # hour=6 fixiert den Morgen-Slot (Fallback morning_time=06:00),
+            # sonst ist das Preset nur zur realen Vienna-Stunde 6 faellig (Zeit-Flake).
+            _run_compare_presets_daily(user_id="fallback-user", data_root=str(tmp_path), hour=6)
 
         skip_msgs = [r.message for r in caplog.records if "empfaenger" in r.message.lower()]
         assert len(skip_msgs) >= 1, "Erwartet Warnung wegen leerem empfaenger ohne mail_to"
@@ -96,7 +99,8 @@ class TestEmpfaengerFallback:
         _write_presets(tmp_path, "fallback-user2", [preset])
 
         with caplog.at_level(logging.INFO, logger="scheduler.dispatch"):
-            _run_compare_presets_daily(user_id="fallback-user2", data_root=str(tmp_path))
+            # hour=6: deterministischer Morgen-Slot (s.o.).
+            _run_compare_presets_daily(user_id="fallback-user2", data_root=str(tmp_path), hour=6)
 
         # Nach Fix: INFO-Meldung "nutze mail_to=..." erscheint (empfaenger-Check vor location-Resolution)
         fallback_msgs = [

@@ -36,6 +36,8 @@ from pathlib import Path
 from app.config import Settings
 from app.user import SavedLocation
 
+from tests.helpers.compare_briefings import write_compare_briefings
+
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 
@@ -120,10 +122,8 @@ def _preset_with_alert_levels(
 
 
 def _write_preset_file(user_id: str, presets: list[dict]) -> Path:
-    path = DATA_ROOT / user_id / "compare_presets.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(presets, ensure_ascii=False), encoding="utf-8")
-    return path
+    # Issue #1250 S7b Cutover: per-Datei briefings/<id>.json (kind="vergleich").
+    return write_compare_briefings(DATA_ROOT / user_id, presets)
 
 
 def _preset_multi(preset_id: str, location_ids: list[str], empfaenger: list[str]) -> dict:

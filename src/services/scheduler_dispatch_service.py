@@ -31,7 +31,8 @@ def run_compare_presets_daily(
 ) -> int:
     """Verarbeitet alle faelligen Compare-Presets fuer den gegebenen User.
 
-    #1232 Scheibe 2a: Laedt compare_presets.json (direktes Array), ermittelt
+    #1232 Scheibe 2a / #1250 S7b: Laedt ComparePresets ueber load_compare_presets
+    (per-Datei briefings/, kind="vergleich"), ermittelt
     ueber `presets_due_for_hour` (Morgen-/Abend-Slot, Pause-/Archiv-/Laufzeit-
     Guards, Migrations-Fallback fuer Altdaten) die zur gegebenen Stunde
     faelligen Presets samt Zieldatum, fuehrt ComparisonEngine aus, sendet
@@ -41,12 +42,12 @@ def run_compare_presets_daily(
     if data_root is None:
         data_root = "data"
 
-    # Issue #1250 Scheibe 1 (Adversary-Fix F002): Existenz-Check bleibt
-    # separat, strict=True bewahrt die alte ERROR-Diagnose bei Korruption
-    # statt sie unter dem Skip-INFO-Log zu verstecken.
-    preset_path = Path(data_root) / "users" / user_id / "compare_presets.json"
-    if not preset_path.exists():
-        logger.info("No compare_presets.json for user %s — skipping", user_id)
+    # Issue #1250 Scheibe 7b: Existenz-Check gegen das briefings/-Verzeichnis
+    # (Cutover-Lesepfad), strict=True bewahrt die alte ERROR-Diagnose bei
+    # Korruption statt sie unter dem Skip-INFO-Log zu verstecken.
+    briefings_dir = Path(data_root) / "users" / user_id / "briefings"
+    if not briefings_dir.exists():
+        logger.info("No briefings/ dir for user %s — skipping", user_id)
         return 0
 
     try:
@@ -55,7 +56,7 @@ def run_compare_presets_daily(
             for p in load_compare_presets(user_id=user_id, data_root=data_root, strict=True)
         ]
     except LoaderError as e:
-        logger.error("Failed to load compare_presets.json for %s: %s", user_id, e)
+        logger.error("Failed to load compare presets for %s: %s", user_id, e)
         return 0
 
     # Issue #1250 Scheibe 3 (AC-10/AC-11/AC-12): Auto-Pause fuer Presets mit
@@ -129,32 +130,49 @@ def save_compare_preset_status(
 ) -> None:
     """Read-Modify-Write: schreibt letzter_versand + top_ort_letzter_versand.
 
-    Alle anderen Felder bleiben erhalten (BUG-DATALOSS-GR221).
+    Issue #1250 Scheibe 7b Cutover: per-Datei-RMW auf briefings/<id>.json
+    (kind="vergleich") statt Array-RMW auf compare_presets.json. Alle anderen
+    Felder bleiben erhalten (BUG-DATALOSS-GR221); `kind="vergleich"` wird
+    sichergestellt, damit die Datei fuer den Go-Loader (inverser kind-Filter)
+    und load_compare_presets sichtbar bleibt.
     """
     if data_root is None:
         data_root = "data"
 
-    path = Path(data_root) / "users" / user_id / "compare_presets.json"
+    path = Path(data_root) / "users" / user_id / "briefings" / f"{preset_id}.json"
     if not path.exists():
         return
 
     try:
-        presets = _json.loads(path.read_text(encoding="utf-8"))
+        entry = _json.loads(path.read_text(encoding="utf-8"))
     except Exception as e:
-        logger.error("Failed to read compare_presets.json for status update: %s", e)
+        logger.error("Failed to read briefing %s for status update: %s", path, e)
+        return
+    if not isinstance(entry, dict):
         return
 
-    for entry in presets:
-        if entry.get("id") == preset_id:
-            entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
-            entry["top_ort_letzter_versand"] = top_ort
-            break
+    # Issue #1250 S7b (Adversary Fix-Loop F002): kind-Guard symmetrisch zu Gos
+    # DeleteComparePreset (internal/store/compare_preset.go). Bei ID-Kollision
+    # darf ein Trip (kind="route") NIE still in ein Fake-vergleich korrumpiert
+    # werden -- nur echte/neue vergleich-Eintraege (oder kind-leer) duerfen ueber
+    # diesen Pfad geschrieben werden.
+    if entry.get("kind") not in (None, "", "vergleich"):
+        logger.warning(
+            "briefing %s traegt kind=%r (kein vergleich) -- Status-Write "
+            "uebersprungen (F002, keine Trip-Korruption)",
+            path, entry.get("kind"),
+        )
+        return
+
+    entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
+    entry["top_ort_letzter_versand"] = top_ort
+    entry["kind"] = "vergleich"
 
     try:
         with open(path, "w", encoding="utf-8") as f:
-            _json.dump(presets, f, indent=2, ensure_ascii=False)
+            _json.dump(entry, f, indent=2, ensure_ascii=False)
     except OSError as e:
-        logger.error("Failed to write compare_presets.json %s: %s", path, e)
+        logger.error("Failed to write briefing %s: %s", path, e)
 
 
 def save_compare_preset_pause(
@@ -175,30 +193,41 @@ def save_compare_preset_pause(
     if now_iso is None:
         now_iso = _datetime.utcnow().isoformat() + "Z"
 
-    path = Path(data_root) / "users" / user_id / "compare_presets.json"
+    path = Path(data_root) / "users" / user_id / "briefings" / f"{preset_id}.json"
     if not path.exists():
         return
 
     try:
-        presets = _json.loads(path.read_text(encoding="utf-8"))
+        entry = _json.loads(path.read_text(encoding="utf-8"))
     except Exception as e:
-        logger.error("Failed to read compare_presets.json for pause update: %s", e)
+        logger.error("Failed to read briefing %s for pause update: %s", path, e)
+        return
+    if not isinstance(entry, dict):
         return
 
-    for entry in presets:
-        if entry.get("id") == preset_id:
-            if entry.get("schedule") != "manual":
-                entry["previous_schedule"] = entry.get("schedule", "")
-                entry["schedule"] = "manual"
-            if not entry.get("paused_at"):
-                entry["paused_at"] = now_iso
-            break
+    # Issue #1250 S7b (Adversary Fix-Loop F002): kind-Guard symmetrisch zu Gos
+    # DeleteComparePreset -- bei ID-Kollision einen Trip (kind="route") NIE
+    # still in ein Fake-vergleich pausieren/korrumpieren.
+    if entry.get("kind") not in (None, "", "vergleich"):
+        logger.warning(
+            "briefing %s traegt kind=%r (kein vergleich) -- Pause-Write "
+            "uebersprungen (F002, keine Trip-Korruption)",
+            path, entry.get("kind"),
+        )
+        return
+
+    if entry.get("schedule") != "manual":
+        entry["previous_schedule"] = entry.get("schedule", "")
+        entry["schedule"] = "manual"
+    if not entry.get("paused_at"):
+        entry["paused_at"] = now_iso
+    entry["kind"] = "vergleich"
 
     try:
         with open(path, "w", encoding="utf-8") as f:
-            _json.dump(presets, f, indent=2, ensure_ascii=False)
+            _json.dump(entry, f, indent=2, ensure_ascii=False)
     except OSError as e:
-        logger.error("Failed to write compare_presets.json %s: %s", path, e)
+        logger.error("Failed to write briefing %s: %s", path, e)
 
 
 def build_compare_preset_subject(name: str, target_date: date) -> str:

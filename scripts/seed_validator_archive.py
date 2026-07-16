@@ -94,20 +94,16 @@ def seed(data_dir: str, user: str) -> None:
         path.write_text(json.dumps(trip_json, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"  wrote {path.name}")
 
-    # Issue #611 — archivierte Vergleiche (merge in bestehende compare_presets.json).
-    presets_path = user_dir / "compare_presets.json"
-    existing = []
-    if presets_path.exists():
-        try:
-            existing = json.loads(presets_path.read_text(encoding="utf-8")) or []
-        except (json.JSONDecodeError, OSError):
-            existing = []
-    by_id = {p.get("id"): p for p in existing if isinstance(p, dict)}
+    # Issue #611 / #1250 Scheibe 7b (Cutover): archivierte Vergleiche als
+    # per-Datei briefings/<id>.json (kind="vergleich") -- analog zum
+    # Trip-Teil oben. compare_presets.json wird nach dem Cutover NICHT mehr
+    # gelesen; deshalb hier per-Datei nach briefings/ statt Merge ins Array.
     for c in COMPARE_PRESETS:
-        by_id[c["id"]] = {
+        preset_json = {
             "id": c["id"],
             "name": c["name"],
             "user_id": user,
+            "kind": "vergleich",
             "location_ids": c["location_ids"],
             "schedule": "manual",
             "profil": "SUMMER_TREKKING",
@@ -117,10 +113,10 @@ def seed(data_dir: str, user: str) -> None:
             "created_at": c["archived_at"],
             "archived_at": c["archived_at"],
         }
-    presets_path.write_text(
-        json.dumps(list(by_id.values()), ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    for c in COMPARE_PRESETS:
+        path = trips_dir / f"{c['id']}.json"
+        path.write_text(
+            json.dumps(preset_json, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
         print(f"  wrote compare preset {c['id']}")
 
     print(

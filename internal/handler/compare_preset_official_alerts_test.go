@@ -26,6 +26,39 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
+// writeComparePresetBriefingFixture legt eine Preset-Array-Fixture per-Datei
+// unter dataDir/users/<uid>/briefings/<id>.json (kind="vergleich") aus. Seit
+// Issue #1250 Scheibe 7b liest LoadComparePresets briefings/ statt der Array-
+// Datei compare_presets.json — Legacy-Seed-Blocks im Handler-Paket wandern
+// deshalb hierauf (geteilte Quelle fuer die drei Direkt-Seed-Tests).
+func writeComparePresetBriefingFixture(t *testing.T, dataDir, userID, rawJSON string) {
+	t.Helper()
+	dir := filepath.Join(dataDir, "users", userID, "briefings")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	var arr []map[string]interface{}
+	if err := json.Unmarshal([]byte(rawJSON), &arr); err != nil {
+		t.Fatalf("Unmarshal fixture array: %v", err)
+	}
+	for _, elem := range arr {
+		if _, ok := elem["kind"]; !ok {
+			elem["kind"] = "vergleich"
+		}
+		id, _ := elem["id"].(string)
+		if id == "" {
+			t.Fatalf("fixture element missing id: %v", elem)
+		}
+		data, err := json.Marshal(elem)
+		if err != nil {
+			t.Fatalf("Marshal fixture element: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, id+".json"), data, 0644); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
+	}
+}
+
 // OfficialAlertsEnabled überlebt einen Store-Roundtrip (save → load).
 func TestComparePreset_OfficialAlertsEnabledRoundtrip(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -84,13 +117,7 @@ func TestComparePreset_LegacyWithoutOfficialAlertsEnabledLoads(t *testing.T) {
 		"created_at": "2026-01-01T00:00:00Z"
 	}]`
 
-	userDir := filepath.Join(tmpDir, "users", "user1")
-	if err := os.MkdirAll(userDir, 0755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(userDir, "compare_presets.json"), []byte(rawJSON), 0644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
+	writeComparePresetBriefingFixture(t, tmpDir, "user1", rawJSON)
 
 	loaded, err := s.LoadComparePresets()
 	if err != nil {
@@ -403,20 +430,21 @@ func TestUpdateComparePreset_ChannelTogglesRoundtrip(t *testing.T) {
 		t.Errorf("expected send_sms=true persisted, got %v", loaded[0].SendSms)
 	}
 
-	// Beweis der echten JSON-Persistenz: rohe Datei lesen und Keys pruefen.
-	raw, err := os.ReadFile(filepath.Join(s.DataDir, "users", "user1", "compare_presets.json"))
+	// Beweis der echten JSON-Persistenz: rohe per-Datei lesen und Keys pruefen
+	// (Issue #1250 Scheibe 7b: briefings/<id>.json, ein Objekt).
+	raw, err := os.ReadFile(filepath.Join(s.DataDir, "users", "user1", "briefings", "cp-channels-1.json"))
 	if err != nil {
-		t.Fatalf("ReadFile compare_presets.json: %v", err)
+		t.Fatalf("ReadFile briefings/cp-channels-1.json: %v", err)
 	}
-	var rawPresets []map[string]interface{}
-	if err := json.Unmarshal(raw, &rawPresets); err != nil {
+	var rawPreset map[string]interface{}
+	if err := json.Unmarshal(raw, &rawPreset); err != nil {
 		t.Fatalf("Unmarshal raw JSON: %v", err)
 	}
-	if rawPresets[0]["send_telegram"] != true {
-		t.Errorf("expected send_telegram:true in raw JSON, got %v", rawPresets[0]["send_telegram"])
+	if rawPreset["send_telegram"] != true {
+		t.Errorf("expected send_telegram:true in raw JSON, got %v", rawPreset["send_telegram"])
 	}
-	if rawPresets[0]["send_sms"] != true {
-		t.Errorf("expected send_sms:true in raw JSON, got %v", rawPresets[0]["send_sms"])
+	if rawPreset["send_sms"] != true {
+		t.Errorf("expected send_sms:true in raw JSON, got %v", rawPreset["send_sms"])
 	}
 }
 
@@ -573,8 +601,9 @@ func TestUpdateComparePreset_TriggerCrossUserIsolation(t *testing.T) {
 		t.Errorf("cross-user leak: userb send_telegram set, expected nil, got %v", *loadedB[0].SendTelegram)
 	}
 
-	// Es darf KEIN "default"-Store-Pfad entstanden sein.
-	if _, err := os.Stat(filepath.Join(s.DataDir, "users", "default", "compare_presets.json")); err == nil {
+	// Es darf KEIN "default"-Store-Pfad entstanden sein (Issue #1250 Scheibe 7b:
+	// per-Datei-Persistenz -> ein Leak schriebe nach default/briefings/).
+	if _, err := os.Stat(filepath.Join(s.DataDir, "users", "default", "briefings")); err == nil {
 		t.Errorf("cross-user leak: unexpected default store path created")
 	}
 }

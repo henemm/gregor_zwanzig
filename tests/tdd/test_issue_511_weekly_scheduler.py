@@ -19,6 +19,7 @@ import json
 import logging
 from datetime import date
 from pathlib import Path
+from tests.helpers.compare_briefings import read_compare_briefings, write_compare_briefings
 
 import pytest
 
@@ -57,12 +58,11 @@ def _make_preset(
 
 
 def _write_presets(tmp_path: Path, user_id: str, presets: list[dict]) -> Path:
-    """Schreibt compare_presets.json als direktes Array (kein Wrapper)."""
+    """Issue #1250 S7b: per-Datei briefings/<id>.json (kind="vergleich")."""
     user_dir = tmp_path / "users" / user_id
     user_dir.mkdir(parents=True, exist_ok=True)
-    preset_file = user_dir / "compare_presets.json"
-    preset_file.write_text(json.dumps(presets, ensure_ascii=False), encoding="utf-8")
-    return preset_file
+    write_compare_briefings(user_dir, presets)
+    return user_dir
 
 
 # ---------------------------------------------------------------------------
@@ -100,7 +100,9 @@ class TestWeeklyPresetDispatch:
         _write_presets(tmp_path, "default", [preset])
 
         with caplog.at_level(logging.WARNING):
-            _run_compare_presets_daily(user_id="default", data_root=str(tmp_path))
+            # hour=6 fixiert den Morgen-Slot (Fallback morning_time=06:00),
+            # sonst nur zur realen Vienna-Stunde 6 faellig (Zeit-Flake).
+            _run_compare_presets_daily(user_id="default", data_root=str(tmp_path), hour=6)
 
         # Nach Fix: Preset wurde versucht → Log enthält "cp-weekly-match"
         # Aktuell (RED): Preset still übersprungen → kein Log-Eintrag
@@ -171,7 +173,8 @@ class TestWeeklyPresetDispatch:
         _write_presets(tmp_path, "default", [daily, weekly, manual])
 
         with caplog.at_level(logging.WARNING):
-            _run_compare_presets_daily(user_id="default", data_root=str(tmp_path))
+            # hour=6: deterministischer Morgen-Slot (s.o.).
+            _run_compare_presets_daily(user_id="default", data_root=str(tmp_path), hour=6)
 
         assert any("cp-daily-both" in r.message for r in caplog.records), (
             "Daily-Preset muss verarbeitet werden (Log-Warnung über leere location_ids)"

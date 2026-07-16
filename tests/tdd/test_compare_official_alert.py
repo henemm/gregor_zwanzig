@@ -25,6 +25,8 @@ from app.loader import save_location
 from app.user import SavedLocation
 from services.official_alerts.models import OfficialAlert
 
+from tests.helpers.compare_briefings import write_compare_briefings
+
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 # Zwei Orte mit klar getrennten Koordinaten (Toleranz der Fake-Quelle 0.05).
@@ -94,9 +96,8 @@ def _preset(preset_id, location_ids, empfaenger, *, triggers_enabled=None,
 
 
 def _write_presets(user_id: str, presets: list[dict]) -> None:
-    p = DATA_ROOT / user_id / "compare_presets.json"
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(presets, ensure_ascii=False), encoding="utf-8")
+    # Issue #1250 S7b Cutover: per-Datei briefings/<id>.json (kind="vergleich").
+    write_compare_briefings(DATA_ROOT / user_id, presets)
 
 
 def _alert(level=2, hazard="extreme_heat", label="Hitze", region="Hermagor",

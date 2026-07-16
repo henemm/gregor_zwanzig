@@ -34,6 +34,8 @@ from app.loader import save_location
 from app.user import SavedLocation
 from services.official_alerts.models import OfficialAlert
 
+from tests.helpers.compare_briefings import write_compare_briefings
+
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 LAT_A, LON_A = 46.62, 13.68  # Hermagor
@@ -73,9 +75,8 @@ def _preset(preset_id: str, official_warnings: dict, **extra) -> dict:
 
 
 def _write_presets(user_id: str, presets: list[dict]) -> None:
-    p = DATA_ROOT / user_id / "compare_presets.json"
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(presets, ensure_ascii=False), encoding="utf-8")
+    # Issue #1250 S7b Cutover: per-Datei briefings/<id>.json (kind="vergleich").
+    write_compare_briefings(DATA_ROOT / user_id, presets)
 
 
 class _FixedSourceAlertSource:

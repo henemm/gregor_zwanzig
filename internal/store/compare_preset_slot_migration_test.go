@@ -12,19 +12,42 @@ package store
 // morning_enabled=false bleibt erhalten.
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
+// writeComparePresetsJSON legt die als JSON-Array uebergebene Preset-Fixture
+// aus (geteilte Test-Helper-Quelle im store-Paket). Seit Issue #1250 Scheibe 7b
+// liest LoadComparePresets briefings/<id>.json (kind="vergleich") statt
+// compare_presets.json — die Array-Fixture wird deshalb pro Element als eigene
+// kind-getaggte Datei geschrieben (analog writeRawTripJSON1258 aus S7a).
 func writeComparePresetsJSON(t *testing.T, tmpDir, userID, rawJSON string) {
 	t.Helper()
-	userDir := filepath.Join(tmpDir, "users", userID)
-	if err := os.MkdirAll(userDir, 0755); err != nil {
+	briefingsDir := filepath.Join(tmpDir, "users", userID, "briefings")
+	if err := os.MkdirAll(briefingsDir, 0755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(userDir, "compare_presets.json"), []byte(rawJSON), 0644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
+	var arr []map[string]interface{}
+	if err := json.Unmarshal([]byte(rawJSON), &arr); err != nil {
+		t.Fatalf("Unmarshal fixture array: %v", err)
+	}
+	for _, elem := range arr {
+		if _, ok := elem["kind"]; !ok {
+			elem["kind"] = "vergleich"
+		}
+		id, _ := elem["id"].(string)
+		if id == "" {
+			t.Fatalf("fixture element missing id: %v", elem)
+		}
+		data, err := json.Marshal(elem)
+		if err != nil {
+			t.Fatalf("Marshal fixture element: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(briefingsDir, id+".json"), data, 0644); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
 	}
 }
 
