@@ -393,5 +393,20 @@
       "priority:medium"
     ],
     "body_file": "issue-bodies/body-29b-editor-konsolidierung.md"
+  },
+  {
+    "index": "30",
+    "stable_id": "uebersicht-listen-tabelle",
+    "status": "new",
+    "source": "body-30-uebersicht-listen-tabelle.md (PO Henning 2026-07-16)",
+    "title": "Listen-Uebersichten vereinheitlichen: Trips + Orts-Vergleiche als geteilte ListTable [triage:po]",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:trips",
+      "area:compare",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-30-uebersicht-listen-tabelle.md"
   }
 ]
