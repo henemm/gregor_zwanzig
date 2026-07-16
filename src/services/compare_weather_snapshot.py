@@ -20,6 +20,7 @@ from enum import Enum
 from pathlib import Path
 from typing import List
 
+from app.loader import get_data_dir
 from services.point_weather import PointWeatherData
 from services.weather_snapshot import (
     _deserialize_summary,
@@ -40,7 +41,7 @@ class CompareWeatherSnapshotService:
 
     def __init__(self, user_id: str = "default") -> None:
         self._user_id = user_id
-        self._dir = Path(f"data/users/{user_id}/compare_weather_snapshots")
+        self._dir = get_data_dir(user_id) / "compare_weather_snapshots"
 
     def _key(self, preset_id: str, location_id: str) -> str:
         return f"{preset_id}__{location_id}"

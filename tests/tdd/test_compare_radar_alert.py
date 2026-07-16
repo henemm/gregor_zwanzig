@@ -34,7 +34,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from app.config import Settings
-from app.loader import save_location
+from app.loader import get_data_dir, save_location
 from app.user import SavedLocation
 
 from tests.helpers.compare_briefings import write_compare_briefings
@@ -504,8 +504,10 @@ def test_two_users_isolated_locations_and_recipients():
         )
 
         # Datei-Isolation: nur A hat einen Throttle-Store, B (nie ausgelöst) nicht.
-        a_throttle = DATA_ROOT / user_a / "compare_radar_alert_throttle.json"
-        b_throttle = DATA_ROOT / user_b / "compare_radar_alert_throttle.json"
+        # Der Service schreibt den Throttle-Store über get_data_dir() (isolierter
+        # Root, #1133/#1265) — die Assertion muss demselben Pfad folgen.
+        a_throttle = get_data_dir(user_a) / "compare_radar_alert_throttle.json"
+        b_throttle = get_data_dir(user_b) / "compare_radar_alert_throttle.json"
         assert a_throttle.exists(), "Throttle-Store für Nutzer A fehlt nach erfolgtem Alarm"
         assert not b_throttle.exists(), "Nutzer B hat einen Throttle-Eintrag trotz Δ=trocken"
 

@@ -47,7 +47,7 @@ from output.channels import telegram as telegram_mod
 from output.channels.telegram import TelegramOutput
 from services.radar_service import NowcastResult, RadarNowcastService
 
-DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
+from app.loader import get_data_dir
 
 KM_RE = re.compile(r"km\s?\d+[–-]\d+")
 
@@ -175,7 +175,7 @@ def _trip_with_active_segment(trip_id: str, config: TripReportConfig) -> Trip:
 
 def _clean_user(uid: str) -> None:
     import shutil
-    d = DATA_ROOT / uid
+    d = get_data_dir(uid)
     if d.exists():
         shutil.rmtree(d)
 
@@ -535,8 +535,8 @@ class TestAC6SmsOnlyRadarDispatch:
         # Issue #1069: SMS-Versand ist an Level standard/premium gebunden
         # (sms_allowed() liefert bei fehlender user.json "free" = False). Dieser
         # Test prueft den SMS-Dispatch-Mechanismus selbst, nicht das Tier-Gating.
-        (DATA_ROOT / uid).mkdir(parents=True, exist_ok=True)
-        (DATA_ROOT / uid / "user.json").write_text(json.dumps({"id": uid, "tier": "standard"}))
+        get_data_dir(uid).mkdir(parents=True, exist_ok=True)
+        (get_data_dir(uid) / "user.json").write_text(json.dumps({"id": uid, "tier": "standard"}))
         stub = _SevenStub(body="100")
         try:
             config = TripReportConfig(

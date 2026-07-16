@@ -17,11 +17,10 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Optional
 
 from app.config import Settings
-from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
+from app.loader import compare_preset_to_dict, get_data_dir, load_all_locations, load_compare_presets
 from services.alert_state import AlertStateService
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
@@ -61,7 +60,7 @@ class CompareRadarAlertService:
         self._user_id = user_id
         self._radar_service = radar_service
         self._mail_sink = mail_sink
-        self._throttle_file = Path(f"data/users/{user_id}/compare_radar_alert_throttle.json")
+        self._throttle_file = get_data_dir(user_id) / "compare_radar_alert_throttle.json"
         self._last_alert_times: dict[str, datetime] = self._load_throttle_times()
 
     def check_all_compare_presets(self) -> int:

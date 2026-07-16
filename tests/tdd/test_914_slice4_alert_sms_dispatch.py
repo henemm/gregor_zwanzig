@@ -125,7 +125,7 @@ def _alert_log_count(trip_id: str) -> int:
 
 @pytest.fixture(autouse=True)
 def _clean_user_dir():
-    d = Path(f"data/users/{TEST_USER}")
+    d = get_data_dir(TEST_USER)
     if d.exists():
         shutil.rmtree(d)
     d.mkdir(parents=True, exist_ok=True)

@@ -1,9 +1,10 @@
 import json
-from pathlib import Path
+
+from app.loader import get_data_dir
 
 
 def sms_allowed(user_id: str) -> bool:
-    profile_path = Path(f"data/users/{user_id}/user.json")
+    profile_path = get_data_dir(user_id) / "user.json"
     if not profile_path.exists():
         return False
     try:
@@ -19,7 +20,7 @@ def daily_alert_limit(user_id: str) -> int | None:
     free -> 2, standard -> 4, premium -> None (kein Limit). Fehlende/kaputte
     user.json verhaelt sich wie fehlendes tier-Feld -> free-Default (Limit 2).
     """
-    profile_path = Path(f"data/users/{user_id}/user.json")
+    profile_path = get_data_dir(user_id) / "user.json"
     tier = "free"
     if profile_path.exists():
         try:

@@ -60,6 +60,7 @@ from app.models import (
     WeatherChange,
 )
 from app.user import SavedLocation
+from app.loader import get_data_dir
 import output.channels.telegram as telegram_mod
 
 from tests.helpers.compare_briefings import write_compare_briefings
@@ -450,20 +451,22 @@ def test_ac3_two_users_isolated_recipients_and_files():
 
         # Datei-Isolation: A hat einen Alert-State-Eintrag, B nicht — und keine
         # Datei eines Nutzers referenziert die Preset-ID des jeweils anderen.
-        a_state_dir = DATA_ROOT / user_a / "alert_state"
+        # Service schreibt alert_state/Snapshots über get_data_dir() (isolierter
+        # Root, #1133/#1265) — die Isolations-Assertions folgen demselben Pfad.
+        a_state_dir = get_data_dir(user_a) / "alert_state"
         assert a_state_dir.exists() and any(preset_a_id in p.name for p in a_state_dir.iterdir()), (
             "alert_state für Nutzer A wurde nicht geschrieben"
         )
-        b_state_dir = DATA_ROOT / user_b / "alert_state"
+        b_state_dir = get_data_dir(user_b) / "alert_state"
         if b_state_dir.exists():
             assert not any(preset_b_id in p.name for p in b_state_dir.iterdir()), (
                 "Nutzer B hat einen alert_state-Eintrag trotz Δ=0 — falscher Alarm"
             )
-        b_snap_dir = DATA_ROOT / user_b / "compare_weather_snapshots"
+        b_snap_dir = get_data_dir(user_b) / "compare_weather_snapshots"
         if b_snap_dir.exists():
             for p in b_snap_dir.rglob("*"):
                 assert preset_a_id not in p.name, "Cross-User-Datenleck A→B im Snapshot-Store"
-        a_snap_dir = DATA_ROOT / user_a / "compare_weather_snapshots"
+        a_snap_dir = get_data_dir(user_a) / "compare_weather_snapshots"
         if a_snap_dir.exists():
             for p in a_snap_dir.rglob("*"):
                 assert preset_b_id not in p.name, "Cross-User-Datenleck B→A im Snapshot-Store"

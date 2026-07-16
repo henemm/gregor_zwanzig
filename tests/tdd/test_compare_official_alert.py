@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from app.config import Settings
-from app.loader import save_location
+from app.loader import get_data_dir, save_location
 from app.user import SavedLocation
 from services.official_alerts.models import OfficialAlert
 
@@ -56,7 +56,10 @@ def _settings_all_channels() -> Settings:
 
 
 def _write_user_tier(user_id: str, tier: str = "premium") -> None:
-    p = DATA_ROOT / user_id / "user.json"
+    # user_tier.sms_allowed() liest seit #1265 über get_data_dir() (isolierter
+    # Root, #1133) — die user.json muss demselben Pfad folgen, sonst greift das
+    # Tier-Gate nicht und SMS/Telegram werden fälschlich unterdrückt.
+    p = get_data_dir(user_id) / "user.json"
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps({"tier": tier}), encoding="utf-8")
 

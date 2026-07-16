@@ -42,6 +42,7 @@ from zoneinfo import ZoneInfo
 import httpx
 import pytest
 
+from app.loader import get_data_dir
 from tests.helpers.staging_auth import httpx_auth, playwright_http_credentials, staging_base_url
 
 STAGING = staging_base_url()
@@ -102,7 +103,7 @@ def clean_user_dirs():
 
     def _register(user_id: str) -> str:
         created.append(user_id)
-        path = Path(f"data/users/{user_id}")
+        path = get_data_dir(user_id)
         if path.exists():
             shutil.rmtree(path)
         return user_id
@@ -110,13 +111,13 @@ def clean_user_dirs():
     yield _register
 
     for user_id in created:
-        path = Path(f"data/users/{user_id}")
+        path = get_data_dir(user_id)
         if path.exists():
             shutil.rmtree(path)
 
 
 def _write_user_json(user_id: str, tier: str | None) -> None:
-    path = Path(f"data/users/{user_id}")
+    path = get_data_dir(user_id)
     path.mkdir(parents=True, exist_ok=True)
     data = {"id": user_id}
     if tier is not None:
@@ -291,7 +292,7 @@ class TestAC7MissingTierFieldBehavesAsFree:
 
     def test_missing_tier_field_equals_free(self, clean_user_dirs, sms_stub) -> None:
         user_id = clean_user_dirs("tdd-1069-notier")
-        path = Path(f"data/users/{user_id}")
+        path = get_data_dir(user_id)
         path.mkdir(parents=True, exist_ok=True)
         (path / "user.json").write_text(json.dumps({"id": user_id}))  # explizit ohne "tier"
 

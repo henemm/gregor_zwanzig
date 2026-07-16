@@ -57,9 +57,8 @@ from app.models import (
     TripSegment,
     UnifiedWeatherDisplayConfig,
 )
+from app.loader import get_data_dir
 from app.trip import Stage, Trip, Waypoint
-
-DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 # Koordinaten im GR20-Gebiet (Korsika) — identisch zu test_issue_827
 LAT, LON = 42.20, 9.10
@@ -68,13 +67,13 @@ LAT, LON = 42.20, 9.10
 # ═══════════════════════════ Gemeinsame Helper ═══════════════════════════════
 
 def _clean_user(uid: str) -> None:
-    d = DATA_ROOT / uid
+    d = get_data_dir(uid)
     if d.exists():
         shutil.rmtree(d)
 
 
 def _write_user_tier(uid: str, tier: str) -> None:
-    d = DATA_ROOT / uid
+    d = get_data_dir(uid)
     d.mkdir(parents=True, exist_ok=True)
     (d / "user.json").write_text(json.dumps({"id": uid, "tier": tier}))
 
@@ -245,10 +244,9 @@ def _make_trip(trip_id: str, send_email: bool, send_telegram: bool) -> Trip:
 
 def _save_trip(trip: Trip, user_id: str) -> None:
     # Issue #1133: TripAlertService liest Trips über app.loader.load_all_trips()
-    # (isoliert via autouse-Fixture) — get_briefings_dir() folgt demselben Root,
-    # waehrend user_tier/alert_daily_limit weiterhin die relative
-    # "data/users/..."-Konstruktion nutzen (bewusst nicht migriert, siehe
-    # Known Limitations #1133) und daher DATA_ROOT (echter Baum) behalten.
+    # (isoliert via autouse-Fixture) — get_briefings_dir() folgt demselben Root.
+    # Seit #1265 lesen user_tier/alert_daily_limit ebenfalls über get_data_dir(),
+    # daher folgen alle Test-Helfer demselben isolierten Root.
     # Issue #1250 Scheibe 7a: load_all_trips liest briefings/, nicht trips/.
     from app.loader import get_briefings_dir
     trips_dir = get_briefings_dir(user_id)
@@ -341,7 +339,7 @@ def test_ac1_radar_alert_suppressed_when_free_daily_limit_reached():
             f"AC-1: Zähler darf bei unterdrücktem Alert nicht erhöht werden, got {data}"
         )
 
-        alert_log_path = DATA_ROOT / uid / "alert_log.json"
+        alert_log_path = get_data_dir(uid) / "alert_log.json"
         assert not alert_log_path.exists(), (
             "AC-1: alert_log.json wurde geschrieben, obwohl das Tageslimit erreicht war"
         )
@@ -509,7 +507,7 @@ def test_ac5_cross_path_daily_limit_shared_between_radar_and_deviation(telegram_
             f"stehen, got {counter_data}"
         )
 
-        alert_log_path = DATA_ROOT / uid / "alert_log.json"
+        alert_log_path = get_data_dir(uid) / "alert_log.json"
         entries_before = json.loads(alert_log_path.read_text())["entries"]
 
         # Deviation-Pfad für DENSELBEN Nutzer, anderer Trip: muss unterdrückt werden.
