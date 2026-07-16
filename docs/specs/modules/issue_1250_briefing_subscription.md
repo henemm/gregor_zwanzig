@@ -469,7 +469,7 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
 - **AC-30:** Given der Cutover ist route-only (S7a) / When er ausgeliefert ist / Then
   lesen/schreiben ComparePresets weiterhin `compare_presets.json` (vergleich unberührt);
   `ListBriefingsHandler` liefert route aus `briefings/`, vergleich aus dem Alt-Store —
-  konsistent per `kind`, kein Bruch. (S7a-Zwischenzustand; durch S7b/AC-31 invertiert —
+  konsistent per `kind`, kein Bruch. (S7a-Zwischenzustand; durch S7b/`AC-31` invertiert —
   vergleich zieht in **`briefings/`** um.)
   - Test: nach S7a Preset-CRUD unverändert gegen `compare_presets.json`; gemischte
     `/api/briefings`-Liste enthält beide korrekt.
@@ -560,6 +560,31 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
   nicht verloren.
   - Test: Scheduler-Lauf auslösen, `/api/scheduler/status` abfragen, prüft
     beide Job-Einträge mit aktualisiertem `last_run`.
+
+<!-- S7c Detail-ACs (Path A: ein Cron-Eintrag `briefing_dispatch`, Status-Expansion) -->
+
+- **AC-39:** Given der vereinheitlichte Scheduler-Einstieg (ein Cron-Eintrag
+  `0 * * * *`, der beide Teil-Jobs kapselt) / When ein Tick läuft / Then werden
+  — wie vor der Vereinheitlichung — genau die zwei POST-Fan-outs an
+  `/api/scheduler/trip-reports` (route) und `/api/scheduler/compare-presets-daily`
+  (vergleich) ausgelöst; `/api/scheduler/status` listet unverändert BEIDE Jobs
+  `trip_reports_hourly` UND `compare_presets_daily` als eigene Zeilen (Gesamtzahl
+  der Status-Job-Zeilen bleibt 9); ein Fehlschlag des einen Teil-Jobs verhindert
+  den anderen nicht (continue-on-error je Teil-Job). Verhaltensneutral: keine
+  Python-/Renderer-/Migrations-Änderung.
+  - Test: Go-Test mit Spy-Server, der beide Ziel-Pfade aufzeichnet; `Status()`
+    nach dem vereinheitlichten Lauf enthält beide Job-IDs mit frischem `last_run`;
+    `len(jobs)==9`. Zweiter Test: trip-Endpunkt error + compare-Endpunkt ok →
+    beide Fan-outs liefen, beide `last_run` gesetzt (error bzw. ok).
+
+- **AC-40:** Given der compare-Heartbeat (`heartbeatComparePresets`) / When der
+  vereinheitlichte Einstieg läuft / Then feuert der Heartbeat weiterhin
+  AUSSCHLIESSLICH bei Erfolg des compare-Teil-Jobs
+  (`lastRuns["compare_presets_daily"].Status=="ok"`), unabhängig vom Ausgang des
+  trip-Teil-Jobs — kein kombinierter „Tick-ok"-Ping (CLAUDE.md: Readiness statt
+  Liveness).
+  - Test: Go-Test — compare-Endpunkt ok + trip-Endpunkt error → Heartbeat-URL
+    genau einmal getroffen; compare-Endpunkt error → Heartbeat NICHT getroffen.
 
 ## Known Limitations
 
@@ -667,3 +692,15 @@ Zwei Schichten gemäß Test-Politik (CLAUDE.md, PO-go 2026-07-09).
   briefings/ (per-Datei-API wie Trip-Store, ADR-0023 Entscheidung 2; F-A echtes
   Datei-Delete; Guard-Inversionen Validator/Preview/AC-30; kind-scoped Migrations-Refresh
   gegen Route-Datenverlust). Neue ACs AC-31–AC-38, neue KL-8.
+- 2026-07-16 (feat-1250-s7c-scheduler-unify): Scheibe 7c — Scheduler-Vereinheitlichung
+  (PO-go: bauen statt descopen). Path A: die zwei stündlichen Cron-Einstiege
+  `trip_reports_hourly` + `compare_presets_daily` (`internal/scheduler/scheduler.go:91,100`)
+  zu EINEM Eintrag `briefing_dispatch` zusammenlegen, der beide `recordRun`-Kapseln
+  sequenziell aufruft; `Status()` expandiert den Eintrag zurück in seine zwei logischen
+  Sub-Jobs, damit `/api/scheduler/status` unverändert 9 Job-Zeilen mit je eigenem
+  `last_run` zeigt (AC-24-Erhalt). Verhaltensneutral, Go-lokal, kein Python/Renderer.
+  Neue Detail-ACs **AC-39** (Verhaltensneutralität Fan-out + 9 Status-Zeilen +
+  continue-on-error) und **AC-40** (compare-Heartbeat nur bei compare-ok).
+  Nebenbei: Prosareferenz auf `AC-31` in der AC-30-Fußnote in Backticks gesetzt
+  (reine Textform, Bedeutung unverändert) — der `edit_gate`-AC-Längencheck las die
+  Inline-Referenz fälschlich als zu kurze AC-Definition (Gate-False-Positive → #1197).

@@ -34,9 +34,17 @@ type jobResult struct {
 }
 
 // jobMeta holds the human-readable identity of a cron job.
+//
+// Issue #1250 Scheibe 7c: subs holds the logical sub-jobs of a unified cron
+// entry (e.g. briefing_dispatch fans out to trip_reports_hourly and
+// compare_presets_daily). When non-empty, Status() expands this single cron
+// entry into one row per sub-job instead of a single parent row — external
+// observability (job count, ids, per-job last_run) stays unchanged even
+// though only one cron entry actually fires.
 type jobMeta struct {
 	id   string
 	name string
+	subs []jobMeta
 }
 
 // Scheduler wraps robfig/cron and triggers Python services via HTTP.
@@ -87,27 +95,31 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		fn   func()
 		id   string
 		name string
+		subs []jobMeta
 	}
 	jobs := []jobDef{
-		{"0 * * * *", s.tripReports, "trip_reports_hourly", "Trip Reports (hourly check)"},
-		{"*/15 * * * *", s.alertChecks, "alert_checks", "Alert Checks (every 15 min)"},
-		{"*/5 * * * *", s.inboundCommands, "inbound_command_poll", "Inbound Command Poll (every 5min)"},
+		// Issue #1250 Scheibe 7c: trip_reports_hourly und compare_presets_daily
+		// liefen zuvor als zwei separate "0 * * * *"-Cron-Einträge; jetzt EIN
+		// Eintrag briefing_dispatch, der beide Fan-outs sequenziell auslöst
+		// (s. briefingDispatch()). tripReports()/comparePresetsDaily() bleiben
+		// unverändert; Status() expandiert diesen Eintrag weiterhin zu 2 Zeilen.
+		{"0 * * * *", s.briefingDispatch, "briefing_dispatch", "Briefing Dispatch (hourly)", []jobMeta{
+			{id: "trip_reports_hourly", name: "Trip Reports (hourly check)"},
+			{id: "compare_presets_daily", name: "Compare Presets Slot-Check (hourly)"},
+		}},
+		{"*/15 * * * *", s.alertChecks, "alert_checks", "Alert Checks (every 15 min)", nil},
+		{"*/5 * * * *", s.inboundCommands, "inbound_command_poll", "Inbound Command Poll (every 5min)", nil},
 		// Issue #637: inbound_telegram_poll entfernt — Telegram-Eingang läuft jetzt
 		// push-basiert über den Webhook (POST /api/webhooks/telegram/{secret}).
-		// Issue #1232 Scheibe 2a: 06:00-Cron -> stuendlicher Slot-Check (Morgen-/
-		// Abend-Zeitplan pro Preset). Job-ID bleibt unveraendert (Observability/
-		// Heartbeat-Kontinuitaet); nur die Anzeige-Beschreibung wird angepasst,
-		// da "(06:00)" nach der Cron-Umstellung irrefuehrend waere (Adversary F004).
-		{"0 * * * *", s.comparePresetsDaily, "compare_presets_daily", "Compare Presets Slot-Check (hourly)"},
-		{"*/15 * * * *", s.radarAlertChecks, "radar_alert_checks", "Radar Alert Checks (every 15 min)"},
-		{"*/15 * * * *", s.dataWriteSelftest, "data_write_selftest", "Data Write Selftest (every 15 min)"},
-		{"*/15 * * * *", s.compareAlertChecks, "compare_alert_checks", "Compare Alert Checks (every 15 min)"},
-		{"*/15 * * * *", s.compareRadarAlertChecks, "compare_radar_alert_checks", "Compare Radar Alert Checks (every 15 min)"},
-		{"*/15 * * * *", s.compareOfficialAlertChecks, "compare_official_alert_checks", "Compare Official Alert Checks (every 15 min)"},
+		{"*/15 * * * *", s.radarAlertChecks, "radar_alert_checks", "Radar Alert Checks (every 15 min)", nil},
+		{"*/15 * * * *", s.dataWriteSelftest, "data_write_selftest", "Data Write Selftest (every 15 min)", nil},
+		{"*/15 * * * *", s.compareAlertChecks, "compare_alert_checks", "Compare Alert Checks (every 15 min)", nil},
+		{"*/15 * * * *", s.compareRadarAlertChecks, "compare_radar_alert_checks", "Compare Radar Alert Checks (every 15 min)", nil},
+		{"*/15 * * * *", s.compareOfficialAlertChecks, "compare_official_alert_checks", "Compare Official Alert Checks (every 15 min)", nil},
 	}
 	for _, j := range jobs {
 		eid, _ := s.cron.AddFunc(j.expr, j.fn)
-		s.entryMap[eid] = jobMeta{id: j.id, name: j.name}
+		s.entryMap[eid] = jobMeta{id: j.id, name: j.name, subs: j.subs}
 	}
 
 	return s, nil
@@ -116,7 +128,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 // Start begins cron scheduling.
 func (s *Scheduler) Start() {
 	s.cron.Start()
-	log.Printf("[scheduler] Started: 9 jobs, timezone %s", s.cron.Location())
+	log.Printf("[scheduler] Started: 8 cron entries (9 jobs), timezone %s", s.cron.Location())
 }
 
 // Stop gracefully shuts down the scheduler and waits for running jobs.
@@ -168,6 +180,14 @@ func (s *Scheduler) runForAllUsers(jobID, path string) error {
 		}
 	}
 	return firstErr
+}
+
+// briefingDispatch ist der vereinheitlichte stündliche Briefing-Einstieg
+// (Issue #1250 S7c): EIN Cron-Eintrag, der beide Fan-outs sequenziell auslöst.
+// Jeder Teil-Job behält seine eigene recordRun-Buchführung + (compare) Heartbeat.
+func (s *Scheduler) briefingDispatch() {
+	s.tripReports()
+	s.comparePresetsDaily()
 }
 
 func (s *Scheduler) tripReports() {
@@ -411,10 +431,37 @@ func (s *Scheduler) Status() map[string]any {
 	entries := s.cron.Entries()
 	jobs := make([]map[string]any, 0, len(entries))
 	for _, e := range entries {
-		job := map[string]any{
-			"next_run": e.Next.Format(time.RFC3339),
+		nextRun := e.Next.Format(time.RFC3339)
+		meta, ok := s.entryMap[e.ID]
+		if ok && len(meta.subs) > 0 {
+			// Issue #1250 Scheibe 7c: ein unified cron entry (z.B.
+			// briefing_dispatch) expandiert zu einer Zeile PRO Sub-Job, damit
+			// die externe Beobachtbarkeit (Job-Anzahl, ids, last_run je Job)
+			// unverändert bleibt.
+			for _, sub := range meta.subs {
+				subJob := map[string]any{
+					"next_run": nextRun,
+					"id":       sub.id,
+					"name":     sub.name,
+				}
+				if lr, ok := s.lastRuns[sub.id]; ok {
+					subJob["last_run"] = map[string]any{
+						"time":   lr.Time.Format(time.RFC3339),
+						"status": lr.Status,
+						"error":  lr.Error,
+					}
+				} else {
+					subJob["last_run"] = nil
+				}
+				jobs = append(jobs, subJob)
+			}
+			continue
 		}
-		if meta, ok := s.entryMap[e.ID]; ok {
+
+		job := map[string]any{
+			"next_run": nextRun,
+		}
+		if ok {
 			job["id"] = meta.id
 			job["name"] = meta.name
 			if lr, ok := s.lastRuns[meta.id]; ok {
