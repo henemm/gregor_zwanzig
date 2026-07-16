@@ -193,6 +193,16 @@ class TripReportSchedulerService:
         liefert ein (sent, failed)-Tuple zurück, damit der Status-Endpoint
         Teilfehler sichtbar machen kann.
 
+        Issue #1207: Thin-Wrapper -- delegiert an den geteilten
+        Versand-Orchestrator (`run_briefing_dispatch`), der das Skelett
+        (Settings, Fälligkeits-/Delay-/Tally-Schleife) mit dem
+        Compare-Versandweg teilt. Verhalten unverändert (AC-3).
+
+        Adversary Fix-Loop F002: reicht das bereits von dieser Instanz
+        gehaltene `self._settings` durch (statt es im Orchestrator neu laden
+        zu lassen) -- ein per Konstruktor injiziertes Settings-Objekt wird
+        so nicht mehr stillschweigend verworfen.
+
         Args:
             current_hour: Current hour (0-23) in Europe/Vienna
 
@@ -200,11 +210,20 @@ class TripReportSchedulerService:
             Tuple (sent, failed): Anzahl erfolgreich versendeter und
             fehlgeschlagener Reports.
         """
-        if not self._settings.can_send_email():
-            return (0, 0)
+        from services.dispatch_orchestrator import run_briefing_dispatch
 
-        # Sammle alle fälligen (trip, report_type)-Paare zuerst, damit das
-        # Inter-Mail-Delay über morning UND evening hinweg greift.
+        return run_briefing_dispatch(
+            "route", self._user_id, current_hour, settings=self._settings,
+        )
+
+    def _collect_due_trips(self, current_hour: int) -> List[Tuple["Trip", str]]:
+        """Sammelt alle (trip, report_type)-Paare, die zur gegebenen Stunde fällig sind.
+
+        Issue #1207: Extrahiert aus `send_reports_for_hour` fuer Delegation
+        durch `TripDispatchStrategy.collect_due()` -- Morgen- UND
+        Abend-Fälligkeit werden VOR dem Versand gesammelt, damit das
+        Inter-Mail-Delay über beide Slots hinweg greift.
+        """
         due: List[Tuple["Trip", str]] = []
         for trip in self._get_active_trips("morning"):
             if self._get_morning_hour(trip) == current_hour:
@@ -212,35 +231,7 @@ class TripReportSchedulerService:
         for trip in self._get_active_trips("evening"):
             if self._get_evening_hour(trip) == current_hour:
                 due.append((trip, "evening"))
-
-        due_trip_ids_now = {trip.id for trip, _ in due}
-
-        sent = 0
-        failed = 0
-
-        # Issue #1012 (b2): Catch-up ZUERST — offene Nachliefer-Marker des
-        # Users abarbeiten, bevor die regulären fälligen Slots verarbeitet
-        # werden (AC-6/AC-7).
-        sent += self._process_pending_markers(current_hour, due_trip_ids_now)
-
-        for i, (trip, rtype) in enumerate(due):
-            try:
-                outcome = self._send_trip_report_outcome(trip, rtype)
-                # Issue #1012 (c): "no_weather" (kompletter Ausfall) zählt als
-                # failed statt sent — alle anderen Outcomes (sent/no_channels/
-                # no_stage) bleiben unverändert sent.
-                if outcome == "no_weather":
-                    failed += 1
-                else:
-                    sent += 1
-            except Exception as e:
-                failed += 1
-                logger.error(f"Failed {rtype} report for {trip.id}: {e}")
-            # 2s Pause zwischen aufeinanderfolgenden Mails (nicht nach der letzten).
-            if i < len(due) - 1:
-                time_module.sleep(INTER_MAIL_DELAY_SECONDS)
-
-        return (sent, failed)
+        return due
 
     def _process_pending_markers(self, current_hour: int, due_trip_ids_now: set) -> int:
         """Issue #1012 (b2): Verarbeitet offene Nachliefer-Marker VOR den

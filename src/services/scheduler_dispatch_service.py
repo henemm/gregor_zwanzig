@@ -19,50 +19,46 @@ from app.loader import (
     load_all_locations,
     load_compare_presets,
 )
-from services.compare_slot_scheduler import presets_due_for_hour
 
 logger = logging.getLogger("scheduler.dispatch")
 
 
-def run_compare_presets_daily(
-    user_id: str = "default",
-    data_root: str | None = None,
-    hour: int | None = None,
-) -> int:
-    """Verarbeitet alle faelligen Compare-Presets fuer den gegebenen User.
+def _load_presets_for_dispatch(user_id: str, data_root: str) -> list | None:
+    """Laedt die Compare-Presets eines Users fuer den Dispatch.
 
-    #1232 Scheibe 2a / #1250 S7b: Laedt ComparePresets ueber load_compare_presets
-    (per-Datei briefings/, kind="vergleich"), ermittelt
-    ueber `presets_due_for_hour` (Morgen-/Abend-Slot, Pause-/Archiv-/Laufzeit-
-    Guards, Migrations-Fallback fuer Altdaten) die zur gegebenen Stunde
-    faelligen Presets samt Zieldatum, fuehrt ComparisonEngine aus, sendet
-    E-Mail, persistiert Lauf-Status. Gibt Anzahl erfolgreich versendeter
-    Presets zurueck.
+    Issue #1207: Extrahiert aus `run_compare_presets_daily` fuer Delegation
+    durch `CompareDispatchStrategy.collect_due()`. `None` signalisiert "kein
+    Versand" (fehlendes `briefings/`-Verzeichnis oder Ladefehler, jeweils
+    bereits geloggt) -- der Aufrufer behandelt das wie eine leere
+    Faelligkeits-Liste.
     """
-    if data_root is None:
-        data_root = "data"
-
     # Issue #1250 Scheibe 7b: Existenz-Check gegen das briefings/-Verzeichnis
     # (Cutover-Lesepfad), strict=True bewahrt die alte ERROR-Diagnose bei
     # Korruption statt sie unter dem Skip-INFO-Log zu verstecken.
     briefings_dir = Path(data_root) / "users" / user_id / "briefings"
     if not briefings_dir.exists():
         logger.info("No briefings/ dir for user %s — skipping", user_id)
-        return 0
+        return None
 
     try:
-        presets = [
+        return [
             compare_preset_to_dict(p)
             for p in load_compare_presets(user_id=user_id, data_root=data_root, strict=True)
         ]
     except LoaderError as e:
         logger.error("Failed to load compare presets for %s: %s", user_id, e)
-        return 0
+        return None
 
-    # Issue #1250 Scheibe 3 (AC-10/AC-11/AC-12): Auto-Pause fuer Presets mit
-    # ueberschrittenem end_date. `presets_due_for_hour` VERBIRGT diese
-    # Kandidaten (compare_slot_scheduler.py Guard) — eigener Durchlauf ueber
-    # ALLE geladenen Presets, unabhaengig vom Faelligkeits-Slot-Loop unten.
+
+def _auto_pause_expired_presets(presets: list, user_id: str, data_root: str) -> None:
+    """Pausiert Presets mit ueberschrittenem `end_date` (Issue #1250 Scheibe 3).
+
+    Issue #1207: Extrahiert aus `run_compare_presets_daily` fuer Delegation
+    durch `CompareDispatchStrategy.pre_pass()`. `presets_due_for_hour`
+    VERBIRGT abgelaufene Presets bereits (compare_slot_scheduler.py Guard) --
+    dieser Durchlauf laeuft unabhaengig davon ueber ALLE geladenen Presets,
+    um den Pause-Zustand persistent + sichtbar (UI) zu machen.
+    """
     now_iso = _datetime.utcnow().isoformat() + "Z"
     for preset in presets:
         if preset.get("archived_at"):
@@ -85,41 +81,73 @@ def run_compare_presets_daily(
         if expired:
             save_compare_preset_pause(user_id, preset.get("id", ""), data_root, now_iso)
 
+
+def _dispatch_due_preset(
+    preset: dict,
+    target_date: date,
+    settings: Settings,
+    user_id: str,
+    data_root: str,
+    all_locations_cache: list,
+) -> bool:
+    """Sendet EIN faelliges Compare-Preset; liefert True bei Erfolg.
+
+    Issue #1207: Extrahiert aus `run_compare_presets_daily` fuer Delegation
+    durch `CompareDispatchStrategy.dispatch_one()` -- Fehler-Isolation
+    unveraendert (ValueError -> Warn-Log + Skip, sonstige Exception ->
+    Error-Log + Skip, kein Abbruch der uebrigen Presets).
+    """
+    preset_id = preset.get("id", "")
+    try:
+        send_one_compare_preset(
+            preset,
+            settings,
+            user_id,
+            data_root,
+            all_locations_cache=all_locations_cache,
+            target_date=target_date,
+        )
+        return True
+    except ValueError as e:
+        # Helper-Skip-Pfade: kein Empfaenger / Orte nicht aufloesbar → ueberspringen.
+        logger.warning("%s", e)
+        return False
+    except Exception as e:
+        logger.error("Compare preset %s failed: %s", preset_id, e)
+        return False
+
+
+def run_compare_presets_daily(
+    user_id: str = "default",
+    data_root: str | None = None,
+    hour: int | None = None,
+) -> int:
+    """Verarbeitet alle faelligen Compare-Presets fuer den gegebenen User.
+
+    #1232 Scheibe 2a / #1250 S7b: Laedt ComparePresets ueber load_compare_presets
+    (per-Datei briefings/, kind="vergleich"), ermittelt
+    ueber `presets_due_for_hour` (Morgen-/Abend-Slot, Pause-/Archiv-/Laufzeit-
+    Guards, Migrations-Fallback fuer Altdaten) die zur gegebenen Stunde
+    faelligen Presets samt Zieldatum, fuehrt ComparisonEngine aus, sendet
+    E-Mail, persistiert Lauf-Status. Gibt Anzahl erfolgreich versendeter
+    Presets zurueck.
+
+    Issue #1207: Thin-Wrapper -- delegiert an den geteilten
+    Versand-Orchestrator (`run_briefing_dispatch`), der das Skelett mit dem
+    Trip-Versandweg teilt. `data_root`-/`hour`-Defaulting bleibt hier (der
+    Orchestrator selbst kennt keinen Compare-spezifischen Default), Verhalten
+    unveraendert (AC-3).
+    """
+    if data_root is None:
+        data_root = "data"
     if hour is None:
         from zoneinfo import ZoneInfo
 
         hour = _datetime.now(ZoneInfo("Europe/Vienna")).hour
 
-    due = presets_due_for_hour(presets, hour, date.today())
+    from services.dispatch_orchestrator import run_briefing_dispatch
 
-    settings = Settings().with_user_profile(user_id)
-    success_count = 0
-    all_locations = None  # lazy: only load when a faellige preset with location_ids is found
-
-    for preset, target_date in due:
-        preset_id = preset.get("id", "")
-
-        # Lazy: erst laden, wenn ein faelliges Preset zu verarbeiten ist (#649).
-        if all_locations is None:
-            all_locations = load_all_locations(user_id=user_id)
-
-        try:
-            send_one_compare_preset(
-                preset,
-                settings,
-                user_id,
-                data_root,
-                all_locations_cache=all_locations,
-                target_date=target_date,
-            )
-            success_count += 1
-        except ValueError as e:
-            # Helper-Skip-Pfade: kein Empfaenger / Orte nicht aufloesbar → ueberspringen.
-            logger.warning("%s", e)
-        except Exception as e:
-            logger.error("Compare preset %s failed: %s", preset_id, e)
-
-    return success_count
+    return run_briefing_dispatch("vergleich", user_id, hour, data_root=data_root)
 
 
 def save_compare_preset_status(

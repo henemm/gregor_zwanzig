@@ -51,6 +51,11 @@ _SELF_EXEMPT = {
     # Werkzeug-Klasse wie die beiden Gates oben. Spec:
     # docs/specs/modules/report_config_resolver.md
     "test_report_config_scheduler_structure.py",
+    # #1207 AC-2: AST-Strukturregel auf dispatch_orchestrator.py (Produkt-Quelltext
+    # als DATEN, kein Verhaltensnachweis; # doc-compliance-test) — gleiche
+    # Werkzeug-Klasse wie test_report_config_scheduler_structure.py.
+    # Spec: docs/specs/modules/dispatch_orchestrator.md
+    "test_dispatch_orchestrator.py",
 }
 
 
