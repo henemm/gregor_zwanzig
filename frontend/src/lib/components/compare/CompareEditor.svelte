@@ -49,7 +49,6 @@
 		autoAssign,
 		buildWeatherConfigMetrics,
 		move,
-		reorder,
 		type Buckets,
 		type MetricCatalog,
 		type MetricEntry
@@ -786,13 +785,6 @@
 		ltChannelSelectedPreset = { ...ltChannelSelectedPreset, [ltActiveChannel]: '' };
 	}
 
-	function ltHandleReorder(bucket: 'primary' | 'secondary', id: string, dir: -1 | 1) {
-		ltChannelBuckets = {
-			...ltChannelBuckets,
-			[ltActiveChannel]: reorder(ltChannelBuckets[ltActiveChannel], bucket, id, dir)
-		};
-	}
-
 	function ltHandleDndReorder(bucket: 'primary' | 'secondary', newOrder: string[]) {
 		ltChannelBuckets = {
 			...ltChannelBuckets,
@@ -917,7 +909,6 @@
 							{channel}
 							templates={ltTemplates}
 							userPresets={ltUserPresets}
-							onReorder={ltHandleReorder}
 							onMove={ltHandleMove}
 							onMode={ltHandleMode}
 							onSelectPreset={ltHandleSelectPreset}

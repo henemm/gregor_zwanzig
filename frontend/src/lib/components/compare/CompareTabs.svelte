@@ -40,7 +40,8 @@
 	import { setContext, onMount } from 'svelte';
 	// Issue #1256 Scheibe 6 (AC-14/15/16/31/32/33/34): Orte-Tab-Drag +
 	// eingebetteter CorridorEditor im Idealwerte-Tab.
-	import { dndzone, type DndEvent } from 'svelte-dnd-action';
+	import SortableList from '$lib/components/shared/dnd/SortableList.svelte';
+	import DragHandle from '$lib/components/shared/dnd/DragHandle.svelte';
 	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
 	// Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung der Idealwerte-Inline-
 	// Edit-Parität, Muster TripTabs.svelte:198-202.
@@ -205,19 +206,14 @@
 		}))
 	);
 
-	// dndzone braucht Array<{id: string}> (Muster BucketSection.svelte:41-58).
-	let orteItems = $state<{ id: string }[]>([]);
-	$effect(() => {
-		orteItems = currentLocationIds.map((id) => ({ id }));
-	});
-
-	function handleOrteDndConsider(e: CustomEvent<DndEvent<{ id: string }>>) {
-		orteItems = e.detail.items;
+	// Issue #1272: DnD-State/Sync/Flip liegen jetzt im geteilten SortableList
+	// (ADR-0024). Vertrag: onDndReorder(newOrder) — nur bei finalize.
+	async function handleOrteDndReorder(newOrder: string[]): Promise<void> {
+		await persistPickedIds(newOrder);
 	}
 
-	async function handleOrteDndFinalize(e: CustomEvent<DndEvent<{ id: string }>>) {
-		orteItems = e.detail.items;
-		await persistPickedIds(orteItems.map((x) => x.id));
+	function orteItemLabel(id: string, i: number): string {
+		return `${i + 1}. ${locationById.get(id)?.name ?? id}`;
 	}
 
 	async function removeLocation(locId: string): Promise<void> {
@@ -996,31 +992,31 @@
 				{#if resolvedLocations.length === 0}
 					<p class="empty-state" style="padding: 0 16px">Noch keine Orte ausgewählt.</p>
 				{:else}
-					<div
-						class="hub-orte-list"
-						use:dndzone={{ items: orteItems, flipDurationMs: 150, dropTargetStyle: {} }}
-						onconsider={handleOrteDndConsider}
-						onfinalize={handleOrteDndFinalize}
+					<SortableList
+						items={currentLocationIds}
+						onDndReorder={handleOrteDndReorder}
+						ariaLabel="Verglichene Orte, Reihenfolge"
+						itemLabel={orteItemLabel}
+						flipDurationMs={150}
+						zoneClass="hub-orte-list"
 					>
-						{#each orteItems as item, i (item.id)}
-							{@const loc = locationById.get(item.id)}
+						{#snippet row(id: string, i: number)}
+							{@const loc = locationById.get(id)}
 							{#if loc}
-								<div class="hub-orte-row" class:alt={i % 2 === 1} data-testid="hub-orte-row" data-loc-id={item.id}>
-									<span class="hub-orte-handle" aria-hidden="true">
-										<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
-									</span>
+								<div class="hub-orte-row" class:alt={i % 2 === 1} data-testid="hub-orte-row" data-loc-id={id}>
+									<DragHandle />
 									<div class="hub-orte-row-body"><CompareLocationRow {loc} index={i + 1} /></div>
 									<button
 										type="button"
 										class="hub-orte-remove-btn"
 										data-testid="hub-orte-remove"
 										title="Entfernen"
-										onclick={() => removeLocation(item.id)}
+										onclick={() => removeLocation(id)}
 									>✕</button>
 								</div>
 							{/if}
-						{/each}
-					</div>
+						{/snippet}
+					</SortableList>
 				{/if}
 				<div style="padding: 14px">
 					<Btn variant="ghost" size="sm" data-testid="hub-orte-add" onclick={toggleAddPanel}>Ort hinzufügen</Btn>
@@ -1533,11 +1529,8 @@
 	.hub-orte-row.alt {
 		background: var(--g-paper-deep);
 	}
-	.hub-orte-handle {
+	.hub-orte-row :global(.drag-handle) {
 		padding-left: 16px;
-		color: var(--g-ink-4);
-		display: flex;
-		cursor: grab;
 	}
 	.hub-orte-row-body {
 		flex: 1;
@@ -1650,7 +1643,9 @@
 	}
 
 	/* Issue #1256 S8c (AC-9) — Orte-Liste im Card-Rahmen: Trenner nur unter der Liste. */
-	.hub-orte-list {
+	/* :global, weil `hub-orte-list` als zoneClass an SortableList durchgereicht
+	   wird und dort den Scope-Hash dieser Komponente nicht traegt (#1272). */
+	:global(.hub-orte-list) {
 		border-bottom: 1px solid var(--g-rule-soft);
 	}
 

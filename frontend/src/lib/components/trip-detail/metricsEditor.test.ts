@@ -278,7 +278,7 @@ test('selectTableColumns > respektiert Kategorie-Reihenfolge (temperature vor wi
 // =============================================================================
 // Issue #364 (Schritt B) — Bucket-Editor-Logik (AC-1..AC-8)
 // =============================================================================
-// Funktionen autoAssign/move/reorder/channelOverflow/CHANNEL_COL_BUDGET/
+// Funktionen autoAssign/move/channelOverflow/CHANNEL_COL_BUDGET/
 // buildWeatherConfigMetrics existieren noch NICHT → RED.
 
 function m(
@@ -373,32 +373,6 @@ test('F001: move mit ID die NICHT in `from` liegt ist No-Op (keine Phantom-ID)',
 	assert.deepEqual(out.primary, ['temperature']);
 	assert.deepEqual(out.secondary, ['cloud_total']);
 	assert.deepEqual(out.off, []);
-});
-
-// ---------- AC-3: reorder ↑/↓ + Ränder als No-Op -----------------------------
-
-test('AC-3: reorder dir=-1 (hoch) vertauscht mit oberem Nachbarn', () => {
-	const b: editor.Buckets = { primary: ['a', 'b', 'c'], secondary: [], off: [] };
-	const out = editor.reorder(b, 'primary', 'b', -1);
-	assert.deepEqual(out.primary, ['b', 'a', 'c']);
-});
-
-test('AC-3: reorder dir=1 (runter) vertauscht mit unterem Nachbarn', () => {
-	const b: editor.Buckets = { primary: ['a', 'b', 'c'], secondary: [], off: [] };
-	const out = editor.reorder(b, 'primary', 'b', 1);
-	assert.deepEqual(out.primary, ['a', 'c', 'b']);
-});
-
-test('AC-3: reorder am oberen Rand ist No-Op', () => {
-	const b: editor.Buckets = { primary: ['a', 'b', 'c'], secondary: [], off: [] };
-	const out = editor.reorder(b, 'primary', 'a', -1);
-	assert.deepEqual(out.primary, ['a', 'b', 'c']);
-});
-
-test('AC-3: reorder am unteren Rand ist No-Op', () => {
-	const b: editor.Buckets = { primary: ['a', 'b', 'c'], secondary: [], off: [] };
-	const out = editor.reorder(b, 'primary', 'c', 1);
-	assert.deepEqual(out.primary, ['a', 'b', 'c']);
 });
 
 // ---------- AC-5: channelOverflow / CHANNEL_COL_BUDGET ------------------------

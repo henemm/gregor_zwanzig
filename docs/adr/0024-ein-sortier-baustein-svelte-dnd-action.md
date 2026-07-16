@@ -59,8 +59,28 @@ Nicht-Teilung eine dokumentierte Begründung.
    Elementen erlaubt). Der Extraktionsgewinn liegt genau im Render-Loop.
 4. **Ein Vertrag: `onDndReorder(newOrder: string[])`**, gefeuert ausschließlich bei
    `finalize`. Die Form `(fromId, toId)` entfällt.
-5. **Die Zonen werden über `dragHandleZone`/`dragHandle` gebunden**, nicht über nacktes
-   `dndzone`. Damit ist der Griff der Interaktions- **und** der Fokus-Träger.
+5. ~~**Die Zonen werden über `dragHandleZone`/`dragHandle` gebunden**, nicht über nacktes
+   `dndzone`.~~ **KORRIGIERT 2026-07-16 (s. Changelog) — sachlich falsch.** Gültig ist:
+   **Die Zonen werden über nacktes `dndzone` gebunden; der Griff ist ein eigenes,
+   fokussierbares Element (`shared/dnd/DragHandle.svelte`), das kein `<button>` sein darf.**
+
+   Begründung (an der installierten Version verifiziert):
+   - `dragHandleZone` setzt `dragDisabled: userDragDisabled.get() || isItemsDragDisabled.get()`
+     mit `isItemsDragDisabled` initial `true` (`src/wrappers/withDragHandles.js:5,10`), und
+     `pointerAction.js:645` hängt den `mousedown`-Listener nur bei `!dragDisabled` an.
+     Ergebnis: Ziehen an der **Zeile** ist tot, nur der Griff zieht. Das bricht AC-1
+     (`e2e/sortable-list-shared.spec.ts:147` greift die Zeilenmitte) und — schlimmer —
+     den Bestandstest AC-3 (`e2e/compare-hub-inline-edit.spec.ts:120-128`, ebenfalls
+     Zeilenmitte), dessen Weiterlaufen die Spec ausdrücklich verlangt.
+   - Der Tastatur-Gewinn hängt **nicht** an `dragHandleZone`: `keyboardAction.js:324`
+     registriert `keydown` auf dem Item selbst. Space auf dem Griff blubbert zur Zeile
+     hoch und startet den Drag; Pfeiltasten wirken danach unverändert.
+   - Der Griff muss ein `<span role="button">` sein, **kein `<button>`**:
+     `keyboardAction.js:178` verwirft Space/Enter, wenn `e.target.disabled !== undefined` —
+     was auf jedes `<button>` zutrifft und den Tastatur-Pfad still abschalten würde.
+
+   Die Acceptance Criteria der Spec bleiben von dieser Korrektur **unberührt** — sie
+   beschreiben Verhalten, nicht Mechanismus.
 6. **Die ▲/▼-Buttons entfallen ersatzlos als Buttons** — ihre Funktion übernimmt der
    eingebaute Tastatur-Pfad der Bibliothek auf dem fokussierbaren Griff. Damit werden AC-3
    und AC-4 der Spec #433 ungültig; ihre Begründung ist durch die Versionslage entfallen.
@@ -122,3 +142,21 @@ Nicht-Teilung eine dokumentierte Begründung.
     sonst ist der gewonnene Tastatur-Pfad unbeschriftet.
   - Bedingtes Markup zwischen Zeilen (Telegram-Divider, Cut-Line) gehört **in** den
     Item-Wrapper, nie als Sibling in die Zone — sonst entfernt `dndzone` es aus dem DOM.
+  - Der Griff bleibt ein `<span role="button">`. Wird er je zu einem `<button>`, fällt der
+    Tastatur-Pfad still aus (`keyboardAction.js:178`) — ohne dass ein Test es merkt, solange
+    keiner den Tastatur-Pfad prüft. AC-4 ist genau dieser Test.
+
+## Changelog
+
+- **2026-07-16 (initial):** ADR erstellt und mit der Spec zu #1272 vom PO freigegeben.
+- **2026-07-16 (Korrektur Entscheidung 5):** Die Festlegung auf `dragHandleZone`/`dragHandle`
+  war sachlich falsch und wurde vor der Umsetzung zurückgenommen. Der Fehler entstand beim
+  Verfassen der ADR aus der README-Lektüre („dedizierte Handle-Wrapper vorhanden"), ohne den
+  Quelltext der Wrapper zu prüfen. Der Developer-Agent hat den Widerspruch bei der Umsetzung
+  gemeldet, statt ihn zu überdecken; die Behauptungen wurden anschließend am Quelltext der
+  installierten Version 0.9.69 nachgeprüft und bestätigt
+  (`withDragHandles.js:5,10`, `pointerAction.js:645`, `keyboardAction.js:178,324`).
+  **Wirkung auf das Produkt: keine** — die ACs beschreiben Verhalten, nicht Mechanismus, und
+  bleiben unverändert gültig. Die Korrektur verhindert im Gegenteil einen Bruch von AC-1 und
+  des Bestandstests zu AC-3. Lehre: Bibliotheks-Zusagen aus der README gehören vor einer
+  Architektur-Festlegung am Quelltext verifiziert.

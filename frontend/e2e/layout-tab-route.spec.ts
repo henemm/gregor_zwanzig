@@ -10,8 +10,33 @@
 // Ausführen:
 //   cd frontend && npx playwright test e2e/layout-tab-route.spec.ts
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 import { login } from './helpers.js';
+
+// Pointer-basierte Drag-Simulation. Seit Issue #1272 sortiert die
+// Reihenfolge-Liste ueber `svelte-dnd-action` (geteilter SortableList,
+// ADR-0024) statt ueber das native HTML5-Drag-API: die Bibliothek schaltet
+// natives Drag bewusst ab (`draggableEl.draggable = false`) und hoert nur auf
+// Pointer-Events mit 3px-Schwelle — Playwrights `locator.dragTo()` erzeugt nur
+// EINEN Move-Schritt und reisst diese Schwelle nicht.
+// Muster uebernommen aus compare-hub-inline-edit.spec.ts:22-38.
+async function dragDndZoneItem(page: Page, source: Locator, target: Locator): Promise<void> {
+	const sourceBox = await source.boundingBox();
+	const targetBox = await target.boundingBox();
+	if (!sourceBox || !targetBox) throw new Error('dragDndZoneItem: source/target ohne BoundingBox');
+
+	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+	await page.mouse.down();
+	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2 - 12, {
+		steps: 6
+	});
+	await page.waitForTimeout(120);
+	await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, {
+		steps: 15
+	});
+	await page.waitForTimeout(120);
+	await page.mouse.up();
+}
 
 const TRIP_ID = 'e2e-layout-tab-route';
 const OVERFLOW_TRIP_ID = 'e2e-layout-tab-route-overflow';
@@ -157,7 +182,7 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 			// "precipitation" (Position 3) vor "temperature" (Position 1) ziehen.
 			const source = tab.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="precipitation"]');
 			const target = tab.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="temperature"]');
-			await source.dragTo(target);
+			await dragDndZoneItem(page, source, target);
 
 			await expect(rows.first()).toHaveAttribute('data-metric-id', 'precipitation');
 

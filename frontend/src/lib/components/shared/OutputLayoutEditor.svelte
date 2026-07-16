@@ -9,7 +9,12 @@
 	//
 	// SMS-Sonderzweig: statt Bucket-Editor eine flache priorisierte Liste mit
 	// 140-Zeichen-Budget-Anzeige (Spec §6 / AC-9).
+	// Issue #1272: die SMS-Liste ist jetzt ziehbar (geteilter Baustein
+	// `shared/dnd/SortableList`), die ▲/▼-Buttons sind ersatzlos entfallen —
+	// ihre Funktion übernimmt der Tastatur-Pfad auf dem Griff (ADR-0024).
 	import { Btn, Card, Eyebrow } from '$lib/components/atoms';
+	import SortableList from '$lib/components/shared/dnd/SortableList.svelte';
+	import DragHandle from '$lib/components/shared/dnd/DragHandle.svelte';
 	import BucketSection from '$lib/components/trip-detail/BucketSection.svelte';
 	import BucketSectionOff from '$lib/components/trip-detail/BucketSectionOff.svelte';
 	import PresetRow from '$lib/components/trip-detail/PresetRow.svelte';
@@ -48,7 +53,6 @@
 		 * bleiben unverändert.
 		 */
 		hideDetailBucket?: boolean;
-		onReorder?: (bucket: 'primary' | 'secondary', id: string, dir: -1 | 1) => void;
 		onMove?: (id: string, target: 'primary' | 'secondary' | 'off') => void;
 		onMode?: (id: string, useIndicator: boolean) => void;
 		onSelectPreset?: (id: string) => void;
@@ -65,7 +69,6 @@
 		userPresets = [],
 		categoryLabels = CATEGORY_LABELS,
 		hideDetailBucket = false,
-		onReorder,
 		onMove,
 		onMode,
 		onSelectPreset,
@@ -89,11 +92,11 @@
 	});
 
 	// Issue #431 — Benannte Handler statt anonymer Closures (Safari/Factory-Pattern).
-	function handleReorderUp(id: string) {
-		onReorder?.('primary', id, -1);
+	function handleSmsDndReorder(newOrder: string[]) {
+		onDndReorder?.('primary', newOrder);
 	}
-	function handleReorderDown(id: string) {
-		onReorder?.('primary', id, 1);
+	function smsItemLabel(id: string, i: number) {
+		return `${i + 1}. ${metricById[id]?.label ?? id}`;
 	}
 	function handleRemove(id: string) {
 		onMove?.(id, 'off');
@@ -135,32 +138,20 @@
 			{#if buckets.primary.length === 0}
 				<div class="empty">Keine Metriken — aus „Nicht im Briefing" hinzufügen.</div>
 			{:else}
-				<div class="sms-rows">
-					{#each buckets.primary as id, i (id)}
+				<SortableList
+					items={buckets.primary}
+					onDndReorder={handleSmsDndReorder}
+					ariaLabel="SMS-Metriken, Reihenfolge"
+					itemLabel={smsItemLabel}
+				>
+					{#snippet row(id: string, i: number)}
 						{@const metric = metricById[id]}
 						{#if metric}
 							<div class="sms-row" data-testid={`sms-row-${id}`} data-metric-id={id}>
+								<DragHandle />
 								<span class="rank mono">{i + 1}.</span>
 								<span class="name">{metric.label}</span>
 								<div class="row-actions">
-									<Btn
-										variant="ghost"
-										size="icon-sm"
-										onclick={() => handleReorderUp(id)}
-										disabled={i === 0}
-										aria-label="Nach oben"
-									>
-										▲
-									</Btn>
-									<Btn
-										variant="ghost"
-										size="icon-sm"
-										onclick={() => handleReorderDown(id)}
-										disabled={i === buckets.primary.length - 1}
-										aria-label="Nach unten"
-									>
-										▼
-									</Btn>
 									<Btn
 										variant="ghost"
 										size="icon-sm"
@@ -172,8 +163,8 @@
 								</div>
 							</div>
 						{/if}
-					{/each}
-				</div>
+					{/snippet}
+				</SortableList>
 			{/if}
 		</Card>
 
@@ -227,7 +218,6 @@
 			hideDetailButton={hideDetailBucket}
 			onMode={(id, useIndicator) => onMode?.(id, useIndicator)}
 			onMove={(id, target) => onMove?.(id, target)}
-			onReorder={(id, dir) => onReorder?.('primary', id, dir)}
 			onDndReorder={(newOrder) => onDndReorder?.('primary', newOrder)}
 		/>
 
@@ -244,8 +234,7 @@
 				{indicatorCapable}
 				onMode={(id, useIndicator) => onMode?.(id, useIndicator)}
 				onMove={(id, target) => onMove?.(id, target)}
-				onReorder={(id, dir) => onReorder?.('secondary', id, dir)}
-				onDndReorder={(newOrder) => onDndReorder?.('secondary', newOrder)}
+					onDndReorder={(newOrder) => onDndReorder?.('secondary', newOrder)}
 			/>
 		{/if}
 
@@ -317,19 +306,17 @@
 		font-style: italic;
 		text-align: center;
 	}
-	.sms-rows {
-		display: flex;
-		flex-direction: column;
-	}
 	.sms-row {
 		display: grid;
-		grid-template-columns: auto 1fr auto;
+		grid-template-columns: auto auto 1fr auto;
 		align-items: center;
 		gap: var(--g-s-3);
 		padding: var(--g-s-3) var(--g-s-5);
 		border-bottom: 1px solid var(--g-rule-soft);
 	}
-	.sms-row:last-child {
+	/* #1272: die Zeile sitzt jetzt in einem Item-Wrapper von SortableList —
+	   :last-child griffe auf den Wrapper, nicht mehr auf die Zeile. */
+	:global(.sortable-item:last-child) .sms-row {
 		border-bottom: none;
 	}
 	.rank {

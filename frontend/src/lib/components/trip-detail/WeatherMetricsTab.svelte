@@ -391,16 +391,12 @@
 		scheduleAutoSave();
 	}
 
-	// Reihenfolge per Drag & Drop (#848).
-	function onDndReorder(fromId: string, toId: string) {
+	// Reihenfolge per Drag & Drop (#848). Issue #1272: der geteilte SortableList
+	// liefert die vollstaendige neue Reihenfolge — die splice/indexOf-Rueckrechnung
+	// aus (fromId, toId) entfaellt.
+	function onDndReorder(newOrder: string[]) {
 		userTouched = true;
-		const list = [...buckets.primary];
-		const fromIdx = list.indexOf(fromId);
-		const toIdx = list.indexOf(toId);
-		if (fromIdx === -1 || toIdx === -1) return;
-		list.splice(fromIdx, 1);
-		list.splice(toIdx, 0, fromId);
-		const newBuckets = { ...buckets, primary: list };
+		const newBuckets = { ...buckets, primary: newOrder };
 		applyDiff(newBuckets.primary, friendlyMap, selectedTemplate);
 		buckets = newBuckets;
 		scheduleAutoSave();

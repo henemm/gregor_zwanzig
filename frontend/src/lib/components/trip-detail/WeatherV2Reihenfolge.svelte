@@ -4,6 +4,11 @@
 	// Kein „→ Detail"-Knopf, keine Detail-Zeile (PO-Entscheidung 2026-06-06).
 	// Orange gestrichelte Schnittlinie nach Position 8 NUR wenn activeChannel=telegram.
 	// Issue #848 — Drag & Drop ersetzt Pfeiltasten.
+	// Issue #1272 / ADR-0024 — handverdrahtetes HTML5-Drag raus, geteilter
+	// Baustein `shared/dnd/SortableList` rein. Vertrag jetzt
+	// onDndReorder(newOrder: string[]) statt (fromId, toId). Die Cut-Line ist
+	// bedingtes Markup INNERHALB des Item-Wrappers — als Sibling in der Zone
+	// wuerde `dndzone` sie aus dem DOM entfernen.
 	// Issue #1232 Scheibe 3b: Cut-Line-Markup durch geteiltes Primitiv
 	// `LTCutLine` ersetzt (KL-1 aus Scheibe 3a wird hiermit aufgelöst).
 	import type { MetricEntry } from './metricsEditor.ts';
@@ -11,6 +16,8 @@
 	import type { Highlight } from './metricsEditor.ts';
 	import { Segmented } from '$lib/components/atoms';
 	import LTCutLine from '$lib/components/shared/layout-tab/LTCutLine.svelte';
+	import SortableList from '$lib/components/shared/dnd/SortableList.svelte';
+	import DragHandle from '$lib/components/shared/dnd/DragHandle.svelte';
 
 	interface Props {
 		primaryColumns: string[];
@@ -19,7 +26,7 @@
 		activeChannel: string;
 		highlight: Highlight | null;
 		onRemove: (id: string) => void;
-		onDndReorder: (fromId: string, toId: string) => void;
+		onDndReorder: (newOrder: string[]) => void;
 		onMode: (id: string, useIndicator: boolean) => void;
 	}
 
@@ -28,8 +35,9 @@
 	const tgBudget = CHANNEL_COL_BUDGET.telegram;
 	const showCutLine = $derived(activeChannel === 'telegram');
 
-	let dragSourceId = $state<string | null>(null);
-	let dragOverId = $state<string | null>(null);
+	function itemLabel(id: string, i: number): string {
+		return `${i + 1}. ${metricById[id]?.label ?? id}`;
+	}
 </script>
 
 <div class="reihenfolge" data-testid="wm2-reihenfolge">
@@ -38,8 +46,13 @@
 		<span class="count">· {primaryColumns.length} Metriken</span>
 		<span class="hint-right mono">links → rechts in der Email-Tabelle</span>
 	</div>
-	<div class="rows">
-		{#each primaryColumns as id, i}
+	<SortableList
+		items={primaryColumns}
+		{onDndReorder}
+		ariaLabel="Metriken, Reihenfolge"
+		{itemLabel}
+	>
+		{#snippet row(id: string, i: number)}
 			{@const m = metricById[id]}
 			{@const hl = highlight && highlight.id === id}
 			{@const hasInd = indicatorCapable(id)}
@@ -49,32 +62,9 @@
 					<LTCutLine label="Telegram" max={tgBudget} />
 				</div>
 			{/if}
-			<div
-				class="row"
-				class:hl
-				class:drag-over={dragOverId === id && dragSourceId !== id}
-				class:dragging={dragSourceId === id}
-				draggable="true"
-				data-testid="wm2-reihenfolge-row"
-				data-metric-id={id}
-				ondragstart={() => { dragSourceId = id; }}
-				ondragover={(e) => { e.preventDefault(); dragOverId = id; }}
-				ondragleave={() => { if (dragOverId === id) dragOverId = null; }}
-				ondrop={() => {
-					if (dragSourceId && dragSourceId !== id) {
-						onDndReorder(dragSourceId, id);
-					}
-					dragSourceId = null;
-					dragOverId = null;
-				}}
-				ondragend={() => { dragSourceId = null; dragOverId = null; }}
-			>
+			<div class="row" class:hl data-testid="wm2-reihenfolge-row" data-metric-id={id}>
 				<div class="pos mono">{i + 1}</div>
-				<svg class="drag-dots" width="10" height="14" viewBox="0 0 10 14" fill="var(--g-ink-4)" aria-hidden="true">
-					<circle cx="3" cy="3" r="1.1"/><circle cx="7" cy="3" r="1.1"/>
-					<circle cx="3" cy="7" r="1.1"/><circle cx="7" cy="7" r="1.1"/>
-					<circle cx="3" cy="11" r="1.1"/><circle cx="7" cy="11" r="1.1"/>
-				</svg>
+				<DragHandle size={14} />
 				<div class="label-cell">
 					{#if m}
 						<span class="metric-label">{m.label}</span>
@@ -107,8 +97,8 @@
 					</button>
 				</div>
 			</div>
-		{/each}
-	</div>
+		{/snippet}
+	</SortableList>
 </div>
 
 <style>
@@ -138,10 +128,6 @@
 		color: var(--g-ink-4);
 		margin-left: auto;
 	}
-	.rows {
-		display: flex;
-		flex-direction: column;
-	}
 	.row {
 		display: grid;
 		grid-template-columns: 28px 16px 1fr auto;
@@ -160,22 +146,11 @@
 	.row.hl {
 		background: var(--g-accent-tint);
 	}
-	.row.dragging {
-		opacity: 0.4;
-	}
-	.row.drag-over {
-		border-top-color: var(--g-accent);
-		background: color-mix(in srgb, var(--g-accent) 5%, transparent);
-	}
 	.pos {
 		font-size: 11px;
 		font-weight: 600;
 		color: var(--g-ink-4);
 		text-align: right;
-	}
-	.drag-dots {
-		opacity: 0.5;
-		flex-shrink: 0;
 	}
 	.label-cell {
 		display: flex;

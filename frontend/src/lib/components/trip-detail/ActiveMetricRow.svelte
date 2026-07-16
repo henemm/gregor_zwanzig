@@ -1,7 +1,9 @@
 <script lang="ts">
 	// Issue #364 — eine Zeile in einer BucketSection ("Spalten" / "Detail-Werte").
 	// Index (nur primary) · Label+Kürzel · Roh/Skala-Toggle bzw. "nur Rohwert" ·
-	// →Detail/✕ (primary) bzw. ↑Spalte/✕ (secondary) · ↑↓ Reihenfolge.
+	// →Detail/✕ (primary) bzw. ↑Spalte/✕ (secondary).
+	// Issue #1272: die ▲/▼-Buttons sind ersatzlos entfallen — sortiert wird per
+	// Ziehen am Griff bzw. über dessen Tastatur-Pfad (ADR-0024).
 	// Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx
 	import type { MetricEntry } from './metricsEditor.ts';
 
@@ -10,8 +12,6 @@
 		short: string;
 		bucket: 'primary' | 'secondary';
 		index: number;
-		isFirst: boolean;
-		isLast: boolean;
 		isOverLimit: boolean;
 		hasIndicator: boolean;
 		useIndicator: boolean;
@@ -19,12 +19,11 @@
 		hideDetailButton?: boolean;
 		onMode: (useIndicator: boolean) => void;
 		onMove: (target: 'primary' | 'secondary' | 'off') => void;
-		onReorder: (dir: -1 | 1) => void;
 	}
 	let {
-		metric, short, bucket, index, isFirst, isLast, isOverLimit,
+		metric, short, bucket, index, isOverLimit,
 		hasIndicator, useIndicator, hideDetailButton = false,
-		onMode, onMove, onReorder,
+		onMode, onMove,
 	}: Props = $props();
 </script>
 
@@ -77,38 +76,19 @@
 			<button type="button" class="text-btn" data-testid="metric-to-off-{metric.id}" onclick={() => onMove('off')}>✕</button>
 		{/if}
 	</div>
-
-	<div class="reorder-cell">
-		<button
-			type="button"
-			class="arrow-btn"
-			data-testid="metric-up-{metric.id}"
-			disabled={isFirst}
-			aria-label="Nach oben"
-			onclick={() => onReorder(-1)}
-		>▲</button>
-		<button
-			type="button"
-			class="arrow-btn"
-			data-testid="metric-down-{metric.id}"
-			disabled={isLast}
-			aria-label="Nach unten"
-			onclick={() => onReorder(1)}
-		>▼</button>
-	</div>
 </div>
 
 <style>
 	.row {
 		display: grid;
-		grid-template-columns: 1fr 200px 150px 76px;
+		grid-template-columns: 1fr 200px 150px;
 		gap: var(--g-s-3);
 		align-items: center;
 		padding: var(--g-s-3) var(--g-s-5);
 		border-bottom: 1px solid var(--g-rule-soft);
 	}
 	.row.with-index {
-		grid-template-columns: 30px 1fr 200px 150px 76px;
+		grid-template-columns: 30px 1fr 200px 150px;
 	}
 	.row.over-limit {
 		background: color-mix(in srgb, var(--g-warning) 4%, transparent);
@@ -181,28 +161,5 @@
 		color: var(--g-ink-muted);
 		cursor: pointer;
 		white-space: nowrap;
-	}
-	.reorder-cell {
-		display: flex;
-		gap: var(--g-s-1);
-		justify-content: flex-end;
-	}
-	.arrow-btn {
-		width: 26px;
-		height: 26px;
-		border: 1px solid var(--g-ink-faint);
-		border-radius: var(--g-radius-xs);
-		background: var(--g-surface-0);
-		color: var(--g-ink-muted);
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0;
-		font-size: 9px;
-	}
-	.arrow-btn:disabled {
-		opacity: 0.4;
-		cursor: not-allowed;
 	}
 </style>

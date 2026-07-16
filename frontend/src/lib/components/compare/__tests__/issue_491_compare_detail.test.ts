@@ -101,13 +101,21 @@ describe('AC-2: Nummerierte Standort-Kacheln vorhanden (geteilter Orte-Tab)', ()
 		);
 	});
 
-	test('CompareTabs.svelte iteriert über die Orte-Liste (each-Block)', () => {
+	// Issue #1272: die Orte-Schleife lebt nicht mehr bespoke hier, sondern im
+	// geteilten Sortier-Baustein `shared/dnd/SortableList` (ADR-0024).
+	// CompareTabs liefert ihm die Liste und rendert die Zeile per Snippet.
+	test('CompareTabs.svelte rendert die Orte-Liste über den geteilten SortableList', () => {
 		assert.ok(existsSync(TABS), 'CompareTabs.svelte fehlt');
 		const src = readFileSync(TABS, 'utf-8');
 		assert.match(
 			src,
-			/#each\s+orteItems/,
-			'CompareTabs.svelte hat keinen {#each orteItems}-Block für die Standortliste'
+			/<SortableList[\s\S]*?items=\{currentLocationIds\}/,
+			'CompareTabs.svelte speist die Orte-Liste nicht in den geteilten SortableList'
+		);
+		assert.match(
+			src,
+			/data-testid="hub-orte-row"/,
+			'CompareTabs.svelte rendert keine hub-orte-row für die Standortliste'
 		);
 	});
 });

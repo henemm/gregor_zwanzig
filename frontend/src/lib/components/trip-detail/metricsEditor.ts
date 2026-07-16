@@ -302,20 +302,6 @@ export function move(b: Buckets, id: string, from: keyof Buckets, to: keyof Buck
 }
 
 /**
- * AC-3: Vertauscht eine Metrik mit ihrem Nachbarn (dir=-1 hoch, dir=+1 runter).
- * An den Raendern No-Op (gibt das unveraenderte Objekt zurueck).
- */
-export function reorder(b: Buckets, bucket: keyof Buckets, id: string, dir: -1 | 1): Buckets {
-	const list = [...b[bucket]];
-	const idx = list.indexOf(id);
-	if (idx === -1) return b;
-	const target = idx + dir;
-	if (target < 0 || target >= list.length) return b;
-	[list[idx], list[target]] = [list[target], list[idx]];
-	return { ...b, [bucket]: list };
-}
-
-/**
  * AC-5: Liefert je Kanal, ob die primary-Spaltenzahl das Budget ueberschreitet.
  * `> budget` (nicht `>=`) — exakt am Budget ist noch ok. Signal entfernt (#610).
  */

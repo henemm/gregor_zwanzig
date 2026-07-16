@@ -8,8 +8,8 @@
 	import ActiveMetricRow from './ActiveMetricRow.svelte';
 	import { CHANNEL_COL_BUDGET, type MetricEntry } from './metricsEditor.ts';
 	import ChannelLimitMarkers from './ChannelLimitMarkers.svelte';
-	import { dndzone, type DndEvent } from 'svelte-dnd-action';
-	import { flip } from 'svelte/animate';
+	import SortableList from '$lib/components/shared/dnd/SortableList.svelte';
+	import DragHandle from '$lib/components/shared/dnd/DragHandle.svelte';
 
 	interface Props {
 		eyebrow: string;
@@ -26,35 +26,22 @@
 		hideDetailButton?: boolean;
 		onMode: (id: string, useIndicator: boolean) => void;
 		onMove: (id: string, target: 'primary' | 'secondary' | 'off') => void;
-		onReorder: (id: string, dir: -1 | 1) => void;
 		onDndReorder: (newOrder: string[]) => void;
 	}
 	let {
 		eyebrow, title, hint, bucket, items, metricById, shortById,
 		friendlyMap, indicatorCapable, showLimitMarkers = false,
 		hideDetailButton = false,
-		onMode, onMove, onReorder, onDndReorder,
+		onMode, onMove, onDndReorder,
 	}: Props = $props();
 
 	const telegramBudget = CHANNEL_COL_BUDGET.telegram; // #587: 8 wählbare Spalten (war 7)
 
-	// dndzone braucht Array<{id: string}>. Ein $effect (NICHT die abgeleitete
-	// Variante!) synct items in den lokalen DnD-State, weil dndzone die Liste
-	// während der consider-Phase mit einem Phantom-Placeholder mutiert — eine
-	// abgeleitete Variable würde den Drag-Zustand pro Tick zurücksetzen.
-	let dndItems = $state<{ id: string }[]>([]);
-
-	$effect(() => {
-		dndItems = items.map((id) => ({ id }));
-	});
-
-	function handleDndConsider(e: CustomEvent<DndEvent<{ id: string }>>) {
-		dndItems = e.detail.items;
-	}
-
-	function handleDndFinalize(e: CustomEvent<DndEvent<{ id: string }>>) {
-		dndItems = e.detail.items;
-		onDndReorder(dndItems.map((x) => x.id));
+	// Issue #1272: DnD-State/Sync/Flip liegen jetzt im geteilten SortableList
+	// (ADR-0024). Der Telegram-Trenner ist bedingtes Markup INNERHALB des
+	// Item-Wrappers — als Sibling in der Zone würde dndzone ihn entfernen.
+	function itemLabel(id: string, i: number) {
+		return `${i + 1}. ${metricById[id]?.label ?? id}`;
 	}
 </script>
 
@@ -75,38 +62,38 @@
 	{#if items.length === 0}
 		<div class="empty">Keine Einträge — Metriken aus „Nicht im Briefing" hinzufügen.</div>
 	{:else}
-		<div
-			use:dndzone={{ items: dndItems, flipDurationMs: 200, dropTargetStyle: {}, dropFromOthersDisabled: true }}
-			onconsider={handleDndConsider}
-			onfinalize={handleDndFinalize}
+		<SortableList
+			{items}
+			{onDndReorder}
+			ariaLabel="{title}, Reihenfolge"
+			{itemLabel}
+			dropFromOthersDisabled
 		>
-			{#each dndItems as item, i (item.id)}
-				<div animate:flip={{ duration: 200 }}>
-					{#if bucket === 'primary' && i === telegramBudget}
-						<div class="telegram-divider mono" data-testid="telegram-divider">
-							✂ ab hier bei <strong>Telegram</strong> abgeschnitten (max {telegramBudget} Spalten)
-						</div>
-					{/if}
-					{#if metricById[item.id]}
+			{#snippet row(id: string, i: number)}
+				{#if bucket === 'primary' && i === telegramBudget}
+					<div class="telegram-divider mono" data-testid="telegram-divider">
+						✂ ab hier bei <strong>Telegram</strong> abgeschnitten (max {telegramBudget} Spalten)
+					</div>
+				{/if}
+				{#if metricById[id]}
+					<div class="row-with-handle">
+						<DragHandle />
 						<ActiveMetricRow
-							metric={metricById[item.id]}
-							short={shortById[item.id] ?? metricById[item.id].label.slice(0, 5)}
+							metric={metricById[id]}
+							short={shortById[id] ?? metricById[id].label.slice(0, 5)}
 							{bucket}
 							index={i}
-							isFirst={i === 0}
-							isLast={i === items.length - 1}
 							isOverLimit={bucket === 'primary' && i >= telegramBudget}
-							hasIndicator={indicatorCapable(item.id)}
-							useIndicator={friendlyMap[item.id] ?? true}
+							hasIndicator={indicatorCapable(id)}
+							useIndicator={friendlyMap[id] ?? true}
 							{hideDetailButton}
-							onMode={(v) => onMode(item.id, v)}
-							onMove={(t) => onMove(item.id, t)}
-							onReorder={(d) => onReorder(item.id, d)}
+							onMode={(v) => onMode(id, v)}
+							onMove={(t) => onMove(id, t)}
 						/>
-					{/if}
-				</div>
-			{/each}
-		</div>
+					</div>
+				{/if}
+			{/snippet}
+		</SortableList>
 	{/if}
 </Card.Root>
 
@@ -145,6 +132,14 @@
 		color: var(--g-ink-muted);
 		font-style: italic;
 		text-align: center;
+	}
+	.row-with-handle {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		align-items: center;
+	}
+	.row-with-handle :global(.drag-handle) {
+		padding-left: var(--g-s-5);
 	}
 	.telegram-divider {
 		padding: var(--g-s-1) var(--g-s-5);
