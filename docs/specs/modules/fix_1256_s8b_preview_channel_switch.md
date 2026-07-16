@@ -70,3 +70,12 @@ keine neuen PUT-Pfade.
    eigener Spec-Abschnitt (Desktop-Viewport reicht — der Bug ist viewport-
    unabhängig): Kanal-Klick wechselt sichtbar.
 3. Frontend-Vollsuite bleibt 100 % grün.
+
+## Changelog
+
+- 2026-07-16: Issue #1270 — der in AC-2 offen formulierte Vorbehalt „plus
+  Hinweis solange keine dedizierte Telegram-Vorschau existiert" ist eingelöst:
+  Telegram (und SMS) haben jetzt eine echte, aus den Preset-Orten gerenderte
+  Vorschau (`POST /api/preview/compare/{preset_id}`,
+  `docs/specs/modules/compare_channel_preview_dispatch.md`). AC-Wortlaut oben
+  unverändert (beschreibt weiterhin korrekt den Zustand vor #1270).

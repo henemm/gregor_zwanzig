@@ -1,7 +1,7 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-07-16 (Issue #1250 S7b — ComparePreset-Persistenz per-Datei briefings/{id}.json (kind="vergleich"), Store-Muster wie Trip-Store; Alt-compare_presets.json nur Migrations-Quelle/Rollback; load_compare_presets partial-tolerant; kind-scoped Migrations-Refresh migrate_1250_briefings.py --kind vergleich); 2026-07-15 (Issue #1258 S1 — `official_warnings {enabled, sources?}` neu auf Trip UND ComparePreset, löst `official_alert_triggers_enabled` funktional ab (jetzt deprecated, bleibt in den Daten); idempotente Migration `internal/store/migrate_1258.go`/`scripts/migrate_1258_official_warnings.py` übernimmt Ist-Verhalten des Bestands unverändert, Neuanlage-Default `enabled=false`; PUT-RMW mit Feld-Level-Preserve für `sources`; Legacy-Fallback bei fehlendem/leerem Feld — Details Section 10.5); 2026-06-13 (Issue #795 — Metriken-Überblick-Pills: Inhalt analog SMS (ausgeschrieben, gleiche Schwellen), Farbe via Ampel-System #759 (🟢🟡🟠🔴 = HTML-Vollfarb-Kapsel + weißer Text WCAG-AA, Plain = 4 Emojis, Compact = ASCII-Schwerezeichen); Bug #775 — Trip-Shortcode-Routing für Inbound-E-Mail-Replies: RFC-2047-Dekodierung, toleranter Whitespace↔Underscore-Lookup, neuer GZ#-Shortcode-Key als primärer Routing-Identifier, persistiert als `Trip.shortcode`; Issue #764 — ComparePreset forecast_hours Persistierung: neues Feld im Go-Modell/TS-Type (24|48|72 h), Hydration im Editor, Konsum im Python-Scheduler, Legacy-Default 48 h; Horizont-Select im Editor auf Design-System Select.svelte umgestellt); 2026-06-11 (Issue #747 — Datierter Forecast-Snapshot-Speicher: WeatherSnapshotService erweitert um `save_dated(trip_id, target_date, segments)`, `load_dated(trip_id, target_date)` und `_prune_dated_snapshots(trip_id)`. Speichert Snapshots nach Datum (`{trip_id}_{YYYY-MM-DD}.json`, max. 7 Dateien pro Trip, mtime-sortiert). Fundament für Vortag-Vergleich im Trip-Briefing. Bestehende `save()`/`load()`-Methoden für Alert-Pfad bleiben byte-identisch. Scheduler ruft `save_dated()` nach bestehendem `save()` auf. Siehe Issue #747.); 2026-06-11 (Issue #731 — Abruf-zentrierte Befehle: bare Keywords (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE) ersetzen alte Abonnenten-Befehle (PAUSE/SKIP/CONFIG). Persistenzfelder paused_until/skip_next bleiben für Bestandsdaten erhalten. TripCommandProcessor.process() neu mit _resume_trip() für WEITER-Befehl. Keine Datenstruktur-Änderungen. Siehe Issue #731.); 2026-06-10 (Issue #715 — Wettermetriken-Darstellung: GET /api/metrics filtert auf `selectable=true` — `confidence` (Vorhersage-Verlässlichkeit/Ensemble) ist KEINE pro-Etappe wählbare Metrik mehr, nur noch Vorhersage-Hinweis + SMS-Symbol; Vorschau-Emojis in WeatherV2MailPreview + Step3Weather angepasst; Beispieldaten eindeutig gekennzeichnet; Bug #716 — Test-Briefing: stiller Versagensfall weg. POST /api/trips/{id}/send gibt jetzt HTTP 422 + detail-Feld zurück wenn keine Etappendaten für Zieldatum vorhanden (statt HTTP 200). Frontend zeigt konkrete Fehlermeldung im Toast; Issue #707 — Trip-Datum-Overwrite-Bug: PUT `/api/trips/{id}` mit minimalem Body (nur geänderte Felder) statt kompletter `trip`-Spread — verhindert stale-data-Überschreibung von Etappen; Issue #690 — Eigene Wetter-Metriken-Profile: eindeutiger Name (HTTP 409 name_exists, 400 name_required), Profil sofort aktiv + persistent, "Eigene"-Markierung in Preset-Leiste, trip-übergreifend pro Nutzer); 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
+**Updated:** 2026-07-16 (Issue #1270 — neuer Endpoint `POST /api/preview/compare/{preset_id}`: EIN Aufruf liefert `{subject, email_html, telegram, sms, sms_char_count}` aus einem einzigen `ComparisonEngine.run()`, ADR-0011-Muster (Erweiterung `alert-preview`), bewusste Abweichung von der älteren Trip-Preview-Routenform je Kanal; neuer `ComparePreviewService`; Compare-Briefing-Versand wird ab jetzt tatsächlich auch über Telegram/SMS zugestellt (`NotificationService.send_compare_report`), nicht mehr nur E-Mail — der Alarm-Pfad (`compare_alert.py`/`compare_radar_alert.py`) bleibt unverändert E-Mail-only. Details Section 20 und `docs/specs/modules/compare_channel_preview_dispatch.md`); 2026-07-16 (Issue #1250 S7b — ComparePreset-Persistenz per-Datei briefings/{id}.json (kind="vergleich"), Store-Muster wie Trip-Store; Alt-compare_presets.json nur Migrations-Quelle/Rollback; load_compare_presets partial-tolerant; kind-scoped Migrations-Refresh migrate_1250_briefings.py --kind vergleich); 2026-07-15 (Issue #1258 S1 — `official_warnings {enabled, sources?}` neu auf Trip UND ComparePreset, löst `official_alert_triggers_enabled` funktional ab (jetzt deprecated, bleibt in den Daten); idempotente Migration `internal/store/migrate_1258.go`/`scripts/migrate_1258_official_warnings.py` übernimmt Ist-Verhalten des Bestands unverändert, Neuanlage-Default `enabled=false`; PUT-RMW mit Feld-Level-Preserve für `sources`; Legacy-Fallback bei fehlendem/leerem Feld — Details Section 10.5); 2026-06-13 (Issue #795 — Metriken-Überblick-Pills: Inhalt analog SMS (ausgeschrieben, gleiche Schwellen), Farbe via Ampel-System #759 (🟢🟡🟠🔴 = HTML-Vollfarb-Kapsel + weißer Text WCAG-AA, Plain = 4 Emojis, Compact = ASCII-Schwerezeichen); Bug #775 — Trip-Shortcode-Routing für Inbound-E-Mail-Replies: RFC-2047-Dekodierung, toleranter Whitespace↔Underscore-Lookup, neuer GZ#-Shortcode-Key als primärer Routing-Identifier, persistiert als `Trip.shortcode`; Issue #764 — ComparePreset forecast_hours Persistierung: neues Feld im Go-Modell/TS-Type (24|48|72 h), Hydration im Editor, Konsum im Python-Scheduler, Legacy-Default 48 h; Horizont-Select im Editor auf Design-System Select.svelte umgestellt); 2026-06-11 (Issue #747 — Datierter Forecast-Snapshot-Speicher: WeatherSnapshotService erweitert um `save_dated(trip_id, target_date, segments)`, `load_dated(trip_id, target_date)` und `_prune_dated_snapshots(trip_id)`. Speichert Snapshots nach Datum (`{trip_id}_{YYYY-MM-DD}.json`, max. 7 Dateien pro Trip, mtime-sortiert). Fundament für Vortag-Vergleich im Trip-Briefing. Bestehende `save()`/`load()`-Methoden für Alert-Pfad bleiben byte-identisch. Scheduler ruft `save_dated()` nach bestehendem `save()` auf. Siehe Issue #747.); 2026-06-11 (Issue #731 — Abruf-zentrierte Befehle: bare Keywords (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE) ersetzen alte Abonnenten-Befehle (PAUSE/SKIP/CONFIG). Persistenzfelder paused_until/skip_next bleiben für Bestandsdaten erhalten. TripCommandProcessor.process() neu mit _resume_trip() für WEITER-Befehl. Keine Datenstruktur-Änderungen. Siehe Issue #731.); 2026-06-10 (Issue #715 — Wettermetriken-Darstellung: GET /api/metrics filtert auf `selectable=true` — `confidence` (Vorhersage-Verlässlichkeit/Ensemble) ist KEINE pro-Etappe wählbare Metrik mehr, nur noch Vorhersage-Hinweis + SMS-Symbol; Vorschau-Emojis in WeatherV2MailPreview + Step3Weather angepasst; Beispieldaten eindeutig gekennzeichnet; Bug #716 — Test-Briefing: stiller Versagensfall weg. POST /api/trips/{id}/send gibt jetzt HTTP 422 + detail-Feld zurück wenn keine Etappendaten für Zieldatum vorhanden (statt HTTP 200). Frontend zeigt konkrete Fehlermeldung im Toast; Issue #707 — Trip-Datum-Overwrite-Bug: PUT `/api/trips/{id}` mit minimalem Body (nur geänderte Felder) statt kompletter `trip`-Spread — verhindert stale-data-Überschreibung von Etappen; Issue #690 — Eigene Wetter-Metriken-Profile: eindeutiger Name (HTTP 409 name_exists, 400 name_required), Profil sofort aktiv + persistent, "Eigene"-Markierung in Preset-Leiste, trip-übergreifend pro Nutzer); 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
@@ -2270,11 +2270,11 @@ type WebAuthnCredential struct {
 
 ---
 
-## 20) Preview Endpoints (Issue #189, #483)
+## 20) Preview Endpoints (Issue #189, #483, #1270)
 
-Provides preview rendering of trip reports in Email, SMS, Signal, or Telegram formats. Supports both live weather and fixture-based demo mode.
+Provides preview rendering of trip reports in Email, SMS, Signal, or Telegram formats. Supports both live weather and fixture-based demo mode. Seit Issue #1270 zusätzlich: EIN Compare-Preview-Endpoint, der alle Kanäle eines Orts-Vergleich-Presets in einer Antwort liefert (s. `POST /api/preview/compare/{preset_id}` unten).
 
-**Handler:** `api/routers/preview.py` | **Routing:** `cmd/server/main.go`
+**Handler:** `api/routers/preview.py` | **Routing:** `cmd/server/main.go` (Trip-Routen), `internal/router/router.go:161-167` (Compare-Proxy)
 
 ### GET /api/preview/{trip_id}/email
 
@@ -2381,6 +2381,84 @@ enthalten; es wird ausschließlich beim tatsächlichen Versand über
 - All preview endpoints are **read-only** and do not send messages or modify state
 - Preview rendering uses the same Report Formatter and Channel Renderers as the scheduler (integrity guarantee)
 - Frontend may call multiple preview endpoints (e.g., email + SMS) to render side-by-side tabs
+
+### POST /api/preview/compare/{preset_id}
+
+Render **alle** Kanäle der Vorschau eines Orts-Vergleich-Presets in **einer**
+Antwort (Issue #1270, ADR-0011-Muster — Erweiterung des bestehenden
+`alert-preview`-Musters). Bewusste Abweichung von der Trip-Preview-Routenform
+oben (eine `GET`-Route je Kanal): ADR-0011 verlangt „die fertig gerenderten
+Kanäle über EINEN Backend-Endpunkt"; die Trip-Preview-Routen entstanden vor
+ADR-0011 (2026-06-29) und wurden nicht rückwirkend migriert (Nebenbefund,
+#1199).
+
+**Handler:** `api/routers/preview.py::preview_compare` — ruft
+`src/services/compare_preview_service.py::ComparePreviewService.render_all_channels`
+| **Go-Proxy:** `internal/handler/preview_proxy.go::ComparePreviewProxyHandler`
+(`router.go:167`)
+
+**Path Parameters:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| preset_id | string | Compare-Preset-ID |
+
+**Query Parameters:**
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| user_id | string | yes | Session-User; vom Go-Proxy aus dem Auth-Kontext injiziert — ein client-seitig mitgeschickter Wert wird verworfen (Anti-Spoofing, ADR-0003) |
+| date | string | no | Ziel-Datum ISO-8601 (`YYYY-MM-DD`), Default: heute |
+
+Kein Request-Body erforderlich — der Go-Proxy leitet den Body zwar durch, der
+Python-Handler liest ihn nicht.
+
+**Response 200:**
+
+```json
+{
+  "subject": "...",
+  "email_html": "<html>...</html>",
+  "telegram": "...",
+  "sms": "...",
+  "sms_char_count": 137
+}
+```
+
+| Feld | Type | Description |
+|------|------|-------------|
+| subject | string | Betreffzeile (`build_compare_preset_subject`) |
+| email_html | string | Vollständiges HTML der E-Mail-Vorschau (`render_compare_email`) |
+| telegram | string | Fertiger Telegram-Nachrichtentext (`render_compare_telegram`) — kein Score/Rang (#1110) |
+| sms | string | Budgetierte SMS-Zeile (`render_compare_sms`, Budget über `CHANNEL_LIMITS`, #360) |
+| sms_char_count | integer | `len(sms)` |
+
+**Error Responses:**
+
+| Status | Scenario |
+|--------|----------|
+| 404 | Preset für diese `user_id` nicht gefunden — auch bei einem Preset, das einem anderen Nutzer gehört (Multi-User-Isolation, AC-6) |
+| 422 | fehlende/leere `user_id` (kein `"default"`-Fallback, ADR-0003) · Preset ohne konfigurierte Orte · konfigurierte Orte nicht auflösbar (gelöschte Location-Referenz) · ungültiges `date`-Format |
+| 503 | Wetter-Provider nicht erreichbar (`ComparisonEngine.run()` scheitert) |
+
+Der Router mappt `FileNotFoundError`/`LookupError` → 404, `ValueError` → 422,
+`RuntimeError` → 503; `detail` enthält den Ausnahme-Text (kein fester
+Error-Code wie bei den älteren Trip-Preview-Routen).
+
+**Notes:**
+
+- Read-only wie die anderen Preview-Endpoints — kein Versand, kein
+  Logbuch-Eintrag.
+- `ComparisonEngine.run()` läuft genau **einmal** je Aufruf; alle drei
+  Kanäle sitzen auf demselben `ComparisonResult` (AC-7) — ein Kanalwechsel
+  im Vorschau-Tab löst **keinen** weiteren Request aus, daher kein Cache
+  nötig.
+- Ersetzt fachlich den Validator-Stub
+  `POST /api/_validator/compare-email-preview` (#464) als Datenquelle für
+  die UI-Vorschau (Stub rendert einen hartcodierten Ort). Der Stub selbst
+  bleibt unverändert bestehen — er gehört dem externen Validator.
+- Details, Architektur-Begründung (ADR-0011) und AC-Mapping:
+  `docs/specs/modules/compare_channel_preview_dispatch.md`.
 
 ---
 
@@ -2720,6 +2798,26 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-07-16: Issue #1270 — Echte Kanal-Vorschau + tatsächlicher Telegram/SMS-Versand
+  für den Orts-Vergleich. Neuer Endpoint `POST /api/preview/compare/{preset_id}`
+  (`api/routers/preview.py`, Go-Proxy `internal/handler/preview_proxy.go::ComparePreviewProxyHandler`,
+  `router.go:167`) liefert `{subject, email_html, telegram, sms, sms_char_count}` aus
+  **einem** `ComparisonEngine.run()` — ADR-0011-Muster, bewusst EINE Route statt der
+  Drei-Routen-Form der älteren Trip-Preview-Endpoints (die vor ADR-0011 entstanden).
+  Neuer `src/services/compare_preview_service.py::ComparePreviewService` lädt Preset +
+  echte Orte des Nutzers (ersetzt den Stub-Ort aus dem Validator-Endpoint #464 als
+  Datenquelle der UI-Vorschau; der Stub selbst bleibt unverändert). Neue Renderer
+  `render_compare_telegram`/`render_compare_sms` (`src/output/renderers/comparison.py`,
+  kein Score/Rang, Budget über `CHANNEL_LIMITS`). Verhaltensänderung: Compare-Briefings
+  waren bis dahin Ende-zu-Ende E-Mail-only (`send_telegram`/`send_sms` wurden
+  gespeichert, aber beim Versand nie gelesen) — jetzt sendet
+  `NotificationService.send_compare_report(...)` tatsächlich über Telegram/SMS, mit
+  Kanal-Gate (Opt-in UND `can_send_*()` UND `sms_allowed()`) und Fail-soft je Kanal;
+  `send_one_compare_preset` ist darauf umgehängt. Der Alarm-Pfad
+  (`compare_alert.py`/`compare_radar_alert.py`) bleibt unverändert E-Mail-only.
+  Bugfix nebenbei: `presetChannels()` (`subscriptionHelpers.ts`) liest jetzt
+  `send_telegram`/`send_sms` statt `display_config.channel_layouts`-Keys. Siehe
+  Section 20 und `docs/specs/modules/compare_channel_preview_dispatch.md`.
 - 2026-07-13: Issue #1250 (Scheibe 1) — die 5 rohen `json.loads`-Lese-Call-Sites für
   `compare_presets.json` (3 Compare-Alert-Services, Scheduler-Dispatch Daily und
   Einzelversand) laufen jetzt über den zentralen Loader `load_compare_presets()` /

@@ -70,7 +70,23 @@ class PreviewService:
 - SMS-Token-Pipeline ist implementiert (Issue #188).
 - Wetter-Provider-Calls bei jeder Vorschau — Caching erfolgt über bestehende Service-Schicht.
 
+## Verwandtes Modul — Compare-Pendant (Issue #1270)
+
+`src/services/compare_preview_service.py::ComparePreviewService` ist das
+Compare-Pendant zu `PreviewService` — **Konventions-Parität, kein gemeinsamer
+Service**: gleiche Methodennamen (`render_email_preview`/`render_sms_preview`/
+`render_telegram_preview`), gleiche Fehler-Semantik (`FileNotFoundError`/
+`LookupError` → 404, `ValueError` → 422, `RuntimeError` → 503), aber eigene
+Klasse. Begründung für die dokumentierte Ausnahme von der
+Trip/Compare-Teilungs-Invariante: `docs/specs/modules/compare_channel_preview_dispatch.md`
+Abschnitt „Architektur-Entscheidung (ADR)". Der Compare-Endpoint
+(`POST /api/preview/compare/{preset_id}`) liefert zusätzlich **alle** Kanäle
+in einer Antwort (ADR-0011-Muster) statt einer Route je Kanal — s. Section 20
+in `docs/reference/api_contract.md`.
+
 ## Changelog
 
+- 2026-07-16: Issue #1270 — Compare-Pendant `ComparePreviewService` ergänzt
+  (Konventions-Parität, eigene Klasse; Abschnitt „Verwandtes Modul" oben).
 - 2026-07-11: AC-3 präzisiert (Issue #990: Unterscheidung „keine Stage am Datum" vs. „Stage mit zu wenig Wegpunkten"), Implementation-Details um `_resolve_target_date`-Verhalten ergänzt
 - 2026-05-11: Initial sub-spec für Epic #140, Implementation Phase 6
