@@ -38,6 +38,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app.config import Settings
+from app.loader import get_data_dir
 from app.models import (
     ChangeSeverity,
     ForecastMeta,
@@ -118,7 +119,7 @@ def clean_user_dirs():
 
     def _register(user_id: str) -> str:
         created.append(user_id)
-        path = Path(f"data/users/{user_id}")
+        path = get_data_dir(user_id)
         if path.exists():
             shutil.rmtree(path)
         return user_id
@@ -126,7 +127,7 @@ def clean_user_dirs():
     yield _register
 
     for user_id in created:
-        path = Path(f"data/users/{user_id}")
+        path = get_data_dir(user_id)
         if path.exists():
             shutil.rmtree(path)
 
@@ -358,8 +359,8 @@ def test_ac4_alert_state_is_tenant_isolated(telegram_sink, clean_user_dirs):
     service_a = TripAlertService(settings=_settings_telegram_only(), user_id=user_a)
     service_a.check_and_send_alerts(trip_a, cached, fresh_weather=fresh)
 
-    state_dir_a = Path(f"data/users/{user_a}/alert_state")
-    state_dir_b = Path(f"data/users/{user_b}/alert_state")
+    state_dir_a = get_data_dir(user_a) / "alert_state"
+    state_dir_b = get_data_dir(user_b) / "alert_state"
 
     assert state_dir_a.exists() and any(state_dir_a.iterdir()), (
         "alert_state für user_a wurde nicht geschrieben"

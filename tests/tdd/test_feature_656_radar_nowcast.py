@@ -20,7 +20,7 @@ from datetime import date, datetime, time, timedelta, timezone
 
 import pytest
 
-from app.loader import save_trip
+from app.loader import get_data_dir, save_trip
 from app.trip import Stage, Trip, Waypoint
 from services.trip_command_processor import InboundMessage, TripCommandProcessor
 
@@ -262,7 +262,7 @@ def test_ac4_check_radar_alerts_sends_once_then_throttles():
     radar_service = RadarNowcastService(frame_source=real_frame_source)
 
     # Vorherige Radar-Alert-Spuren für diesen Trip entfernen (deterministisch).
-    log_path = Path(f"data/users/{user_id}/alert_log.json")
+    log_path = get_data_dir(user_id) / "alert_log.json"
     if log_path.exists():
         data = json.loads(log_path.read_text())
         data["entries"] = [e for e in data.get("entries", []) if e.get("trip_id") != _TRIP_ID]

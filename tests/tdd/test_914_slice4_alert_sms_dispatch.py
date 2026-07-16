@@ -23,6 +23,7 @@ from pathlib import Path
 import pytest
 
 from app.config import Settings
+from app.loader import get_data_dir
 from app.models import (
     ForecastDataPoint,
     ForecastMeta,
@@ -115,7 +116,7 @@ def _significant_pair():
 
 
 def _alert_log_count(trip_id: str) -> int:
-    path = Path(f"data/users/{TEST_USER}/alert_log.json")
+    path = get_data_dir(TEST_USER) / "alert_log.json"
     if not path.exists():
         return 0
     data = json.loads(path.read_text())

@@ -28,6 +28,7 @@ from pathlib import Path
 import pytest
 
 from app.config import Settings
+from app.loader import get_data_dir
 from app.models import (
     ForecastDataPoint,
     ForecastMeta,
@@ -134,7 +135,7 @@ def _settings(*, email: bool, telegram: bool) -> Settings:
 
 
 def _alert_log_count(trip_id: str) -> int:
-    path = Path(f"data/users/{TEST_USER}/alert_log.json")
+    path = get_data_dir(TEST_USER) / "alert_log.json"
     if not path.exists():
         return 0
     data = json.loads(path.read_text())
@@ -143,7 +144,7 @@ def _alert_log_count(trip_id: str) -> int:
 
 @pytest.fixture(autouse=True)
 def _clean_user_dir():
-    d = Path(f"data/users/{TEST_USER}")
+    d = get_data_dir(TEST_USER)
     if d.exists():
         shutil.rmtree(d)
     d.mkdir(parents=True, exist_ok=True)
