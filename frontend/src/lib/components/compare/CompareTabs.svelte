@@ -576,6 +576,15 @@
 	const CHANNEL_COLS: Record<string, number> = CHANNEL_COL_BUDGET;
 	const channels = ['email', 'telegram', 'sms'];
 
+	// Issue #1267: Layout-Tab-Chips zeigen echte Ortsnamen (nicht Zahlen).
+	// Namen aus resolvedLocations (Orts-Reihenfolge), pro Kanal auf das
+	// Kanal-Budget gekappt via bestehender channelChipCount-Logik.
+	const layoutLocationNames = $derived(
+		resolvedLocations.map((r) => r.loc?.name).filter((n): n is string => !!n)
+	);
+	const layoutChipNamesFor = (ch: string): string[] =>
+		layoutLocationNames.slice(0, channelChipCount(CHANNEL_COLS[ch], layoutLocationNames.length));
+
 	// Issue #1256 S8c (AC-1/AC-2): Layout-Tab-Limit-Pillen, statisch nach
 	// JSX-Vorbild (screen-compare-detail.jsx:247, mobile: :150) — keine neue
 	// Datenquelle, SMS-Pille mobil ohne "· 0".
@@ -1048,7 +1057,7 @@
 				</div>
 				<div style="display: flex; flex-direction: column; gap: 10px">
 					{#each channels as ch}
-						<CompareLayoutRow channel={ch} cols={channelChipCount(CHANNEL_COLS[ch], preset.location_ids.length)} dense />
+						<CompareLayoutRow channel={ch} cols={layoutChipNamesFor(ch)} dense />
 					{/each}
 				</div>
 			{:else}
@@ -1064,7 +1073,7 @@
 				</div>
 				<Card padding={20} style="display: flex; flex-direction: column; gap: 16px">
 					{#each channels as ch}
-						<CompareLayoutRow channel={ch} cols={channelChipCount(CHANNEL_COLS[ch], preset.location_ids.length)} />
+						<CompareLayoutRow channel={ch} cols={layoutChipNamesFor(ch)} />
 					{/each}
 				</Card>
 			{/if}

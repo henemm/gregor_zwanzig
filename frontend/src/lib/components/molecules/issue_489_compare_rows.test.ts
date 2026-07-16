@@ -140,11 +140,11 @@ test('#489 AC-3b: CompareLayoutRow SMS-Sonderfall: cols===0 zeigt Hint-Text', ()
 	);
 });
 
-test('#489 AC-3c: CompareLayoutRow cols===0 → keine Chips (isSmsFlat-Logik)', () => {
+test('#489 AC-3c: CompareLayoutRow cols.length===0 → keine Chips (isSmsFlat-Logik)', () => {
 	const src = read('CompareLayoutRow.svelte');
 	assert.ok(
-		/cols\s*===?\s*0|cols\s*==\s*0/.test(src),
-		'CompareLayoutRow: cols===0 SMS-Sonderfall-Bedingung fehlt'
+		/cols\.length\s*===?\s*0/.test(src),
+		'CompareLayoutRow: cols.length===0 SMS-Sonderfall-Bedingung fehlt (Array-Vertrag)'
 	);
 });
 

@@ -103,7 +103,7 @@ Props:
 ```typescript
 let { channel, cols, dense = false }: {
   channel: string;
-  cols: number;
+  cols: string[];
   dense?: boolean;
 } = $props();
 ```
@@ -111,15 +111,14 @@ let { channel, cols, dense = false }: {
 SMS-Sonderfall via `$derived()`:
 
 ```typescript
-const isSmsFlat = $derived(channel.toLowerCase() === 'sms' && cols === 0);
-const chipIndices = $derived(cols > 0 ? Array.from({ length: cols }, (_, i) => i + 1) : []);
+const isSmsFlat = $derived(channel.toLowerCase() === 'sms' && cols.length === 0);
 ```
 
 Aufbau:
 - Container `<div>`: Padding Standard `12px 16px`, `dense=true` → stapelt Label und Chips vertikal (flex-direction: column), sonst flex-row
-- Kanal-Label links: `channel.toUpperCase()`, `font-family: var(--g-font-mono)`, `color: var(--g-ink-3)`
-- Constraint-Hint: wenn `isSmsFlat` → Text „flach · ohne Spalten" neben Label (muted, klein)
-- Spalten-Chips rechts: für jeden Index in `chipIndices` ein `<Pill tone={i === 1 ? 'accent' : 'default'}>{i}</Pill>`; bei `isSmsFlat` keine Chips rendern
+- Kopfzeile: fetter Kanal-Name (z.B. „Email", „Telegram", „SMS") über mono Constraint-Unterzeile (z.B. „alle Spalten", „max 8", „flach")
+- Spalten-Chips rechts: für jeden Namen in `cols` ein `<Pill tone={idx === 0 ? 'accent' : 'default'}>{name}</Pill>`; bei `isSmsFlat` (Array leer) keine Chips rendern
+- **Änderung (Issue #1267, 2026-07-16):** Prop-Typ `cols: number` → `cols: string[]` (echte Ortsnamen statt Zahlen); Kopfzeile umgestellt auf fetten Channel-Label + Constraint-Text; SMS-Bedingung auf Array-Länge prüfen (`cols.length === 0`)
 
 ### molecules/index.ts — Änderung
 
