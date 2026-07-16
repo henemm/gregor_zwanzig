@@ -1,4 +1,5 @@
 import { test as setup, expect } from '@playwright/test';
+import { assertNotProdBaseURL } from './prodUrlGuard';
 import type { APIRequestContext } from '@playwright/test';
 
 // Staging-Auth für Bündel I (#970/#971) via API (Wegwerf-Testnutzer, keine echten
@@ -28,6 +29,7 @@ async function tryLogin(ctx: APIRequestContext) {
 setup('register + authenticate via API (staging) — Bündel I', async ({ playwright }) => {
 	setup.setTimeout(420_000);
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
+	assertNotProdBaseURL(base);
 	const nginxUser = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
 	const nginxPass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
 	const ctx = await playwright.request.newContext({

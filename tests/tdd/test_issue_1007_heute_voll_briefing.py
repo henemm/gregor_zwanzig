@@ -30,7 +30,7 @@ from email.header import decode_header
 from pathlib import Path
 
 
-from app.loader import save_trip
+from app.loader import get_data_dir, save_trip
 from app.models import TripReportConfig
 from app.trip import Stage, TimeWindow, Trip, Waypoint
 from services.trip_command_processor import (
@@ -39,8 +39,13 @@ from services.trip_command_processor import (
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MAIN_ENV = Path("/home/hem/gregor_zwanzig/.env")
-_DATA_USERS = _REPO_ROOT / "data" / "users"
 _TEST_MAILBOX = "gregor-test@henemm.com"
+
+
+def _data_users(user_id: str) -> Path:
+    """Issue #1265 Teil C: get_data_dir() statt hartkodiertem Repo-Pfad --
+    respektiert die pytest-Isolation (tests/conftest.py, #1133/#1265)."""
+    return get_data_dir(user_id)
 
 
 def _load_main_env() -> None:
@@ -75,7 +80,7 @@ _STAGE_START = time(8, 0)
 
 def _make_user(user_id: str) -> None:
     """Frischer Test-User mit Test-Postfach als Empfänger."""
-    udir = _DATA_USERS / user_id
+    udir = _data_users(user_id)
     if udir.exists():
         shutil.rmtree(udir)
     udir.mkdir(parents=True)
@@ -154,7 +159,7 @@ def _snapshot_path(user_id: str, trip_id: str) -> Path:
 
 
 def _briefing_log(user_id: str) -> list:
-    p = _DATA_USERS / user_id / "briefing_log.json"
+    p = _data_users(user_id) / "briefing_log.json"
     if not p.exists():
         return []
     return json.loads(p.read_text())

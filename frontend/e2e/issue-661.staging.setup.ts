@@ -1,8 +1,10 @@
 import { test as setup, expect } from '@playwright/test';
+import { assertNotProdBaseURL } from './prodUrlGuard';
 // Staging-Auth via API-Login (umgeht flakigen UI-Login + CSRF-403 auf /login).
 const authFile = 'playwright/.auth/staging-661.json';
 setup('authenticate via API (staging)', async ({ playwright }) => {
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
+	assertNotProdBaseURL(base);
 	// Staging steht hinter nginx-Basic-Auth (Validator-Creds) UND einem App-Login.
 	// Beide Schichten bleiben unabhängig — Basic-Auth kommt on top. Analog feat-880.
 	const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';

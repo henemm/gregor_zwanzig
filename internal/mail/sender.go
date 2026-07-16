@@ -17,6 +17,8 @@ import (
 	"testing"
 	"time"
 	"unicode"
+
+	"github.com/henemm/gregor-api/internal/model"
 )
 
 // encodeMailHeader serialisiert einen Header-Wert RFC-2047-konform als
@@ -44,11 +46,15 @@ type Mail struct {
 }
 
 // IsTestUser detects test-user accounts whose mail MUST NOT be sent through
-// Resend (spam reputation guard). Substring match for "test" or "tdd",
-// case-insensitive. Mirrors src/app/config.py::_is_test_user.
+// Resend (spam reputation guard). Thin wrapper around
+// model.IsTestUserIDSubstringOnly (Issue #1265 — konsolidiertes Prädikat,
+// war zuvor hier dupliziert) — BEWUSST OHNE den tg-live-e2e-Fixed-Fixture-
+// Sonderfall aus model.IsTestUserID (Adversary Runde-2-Ripple-Fund, Fix-Loop
+// 1): das Passwort-Reset-/Verifikations-Mail-Routing in handler/auth.go
+// (Zeilen 249, 660) behält damit exakt sein Vor-#1265-Verhalten für
+// tg-live-e2e — kein stiller Verhaltenswechsel im Mail-Versandpfad.
 func IsTestUser(userID string) bool {
-	id := strings.ToLower(userID)
-	return strings.Contains(id, "test") || strings.Contains(id, "tdd")
+	return model.IsTestUserIDSubstringOnly(userID)
 }
 
 // resendBlocked enforces the Resend default-deny (Issue #1122): Resend is

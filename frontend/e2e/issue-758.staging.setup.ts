@@ -1,9 +1,11 @@
 import { test as setup, expect } from '@playwright/test';
+import { assertNotProdBaseURL } from './prodUrlGuard';
 // Staging-Auth via API-Login (umgeht flakigen UI-Login + CSRF-403 auf /login).
 // Nutzt Validator-Creds (Issue #110) bzw. GZ_AUTH_* aus dem Staging-.env.
 const authFile = 'playwright/.auth/staging-758.json';
 setup('authenticate via API (staging) — #758', async ({ playwright }) => {
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
+	assertNotProdBaseURL(base);
 	const ctx = await playwright.request.newContext({ baseURL: base, ignoreHTTPSErrors: true });
 	const res = await ctx.post('/api/auth/login', {
 		data: {

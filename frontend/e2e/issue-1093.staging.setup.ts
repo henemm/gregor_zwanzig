@@ -1,4 +1,5 @@
 import { test as setup, expect } from '@playwright/test';
+import { assertNotProdBaseURL } from './prodUrlGuard';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 // Staging-Auth für issue_1093 (Compare Layout-Tab crasht → Spinner hängt).
@@ -9,6 +10,7 @@ const authFile = path.join(__dirname, 'playwright', '.auth', 'staging-1093.json'
 
 setup('authenticate via API (staging) — issue_1093', async ({ playwright }) => {
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
+	assertNotProdBaseURL(base);
 	const nginxUser = process.env.GZ_VALIDATOR_USER ?? 'admin';
 	const nginxPass = process.env.GZ_VALIDATOR_PASS ?? 'test1234';
 	const appUser = process.env.GZ_AUTH_USER ?? process.env.E2E_USER ?? 'admin';

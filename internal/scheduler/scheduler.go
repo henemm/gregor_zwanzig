@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/notify"
 	"github.com/henemm/gregor-api/internal/store"
 	"github.com/robfig/cron/v3"
@@ -127,11 +128,30 @@ func (s *Scheduler) Stop() {
 
 // runForAllUsers iterates over all registered users and triggers the endpoint
 // for each. Returns nil only if all users succeeded.
+//
+// Issue #1265 (Defense-in-Depth): Test-/tdd-Konten werden vor der
+// Verarbeitung übersprungen (model.IsTestUserID) — auch wenn ein solches
+// Konto künftig wieder in data/users/ leakt, verarbeitet der Scheduler es
+// nie. Log-Hinweis einmal je Lauf (nicht pro Job-Tick).
 func (s *Scheduler) runForAllUsers(jobID, path string) error {
-	userIDs, err := s.store.ListUserIDs()
+	allUserIDs, err := s.store.ListUserIDs()
 	if err != nil {
 		return fmt.Errorf("list users: %w", err)
 	}
+
+	userIDs := make([]string, 0, len(allUserIDs))
+	var skipped []string
+	for _, uid := range allUserIDs {
+		if model.IsTestUserID(uid) {
+			skipped = append(skipped, uid)
+			continue
+		}
+		userIDs = append(userIDs, uid)
+	}
+	if len(skipped) > 0 {
+		log.Printf("[scheduler] %s: skipping %d test-user account(s): %v", jobID, len(skipped), skipped)
+	}
+
 	if len(userIDs) == 0 {
 		log.Printf("[scheduler] %s: no users registered, skipping", jobID)
 		return nil

@@ -30,14 +30,16 @@ def _in_pytest() -> bool:
 def is_test_user_id(user_id: str, data_dir: str = "data") -> bool:
     """Zentrales Test-User-Prädikat (Issue #1013 — eine Quelle statt zwei Konventionen).
 
-    True bei "test"/"tdd"-Substring (case-insensitive), dem Fixture-User tg-live-e2e,
-    oder wenn das Profil (data_dir/users/<user_id>/user.json) is_test_user=True setzt
-    (Adversary-Finding F002 — Namens-Heuristik allein wird von neutral benannten
-    Test-Usern mit gesetztem Profil-Flag umgangen). Fail-soft: fehlt/kaputt die
-    Profildatei, entscheidet nur die Namens-Heuristik.
+    True bei "test"/"tdd"-Substring (case-insensitive), dem Fixture-User tg-live-e2e
+    (ebenfalls case-insensitive, Adversary-Finding F002 Fix-Loop 1 -- vorher verglich
+    der Fixed-ID-Zweig gegen die UN-lowercased Originalvariable), oder wenn das Profil
+    (data_dir/users/<user_id>/user.json) is_test_user=True setzt (Adversary-Finding
+    F002 Runde 1 — Namens-Heuristik allein wird von neutral benannten Test-Usern mit
+    gesetztem Profil-Flag umgangen). Fail-soft: fehlt/kaputt die Profildatei,
+    entscheidet nur die Namens-Heuristik.
     """
     uid = user_id.lower()
-    if "test" in uid or "tdd" in uid or user_id == "tg-live-e2e":
+    if "test" in uid or "tdd" in uid or uid == "tg-live-e2e":
         return True
     try:
         profile_path = Path(data_dir) / "users" / user_id / "user.json"
@@ -249,14 +251,18 @@ class Settings(BaseSettings):
         Falls back to global settings if profile doesn't exist or fields are empty.
         """
         import json
-        from pathlib import Path
+
+        from app.loader import get_data_dir
 
         # Test users AND staging always use the Stalwart test account: staging must
         # never send real briefings over Resend to real recipients (burns prod quota).
         force_test = (self.env or "").lower() == "staging" or self._is_test_user(user_id)
         base = self.for_testing() if force_test else self
 
-        profile_path = Path(f"data/users/{user_id}/user.json")
+        # Issue #1265: get_data_dir() statt hartkodiertem "data/users/..." --
+        # respektiert die pytest-Isolation (tests/conftest.py, #1133), sonst
+        # liest dieser Read-Pfad am isolierten Test-User vorbei.
+        profile_path = get_data_dir(user_id) / "user.json"
         if not profile_path.exists():
             return base
 

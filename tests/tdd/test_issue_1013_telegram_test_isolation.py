@@ -138,6 +138,18 @@ def test_central_test_user_predicate_classifies_known_ids_correctly():
     assert is_test_user_id("default") is False
 
 
+def test_central_test_user_predicate_is_case_insensitive_for_fixture_id():
+    """Adversary-Finding F002 (Issue #1265 Fix-Loop 1): der Fixed-ID-Zweig
+    verglich vor dem Fix gegen die UN-lowercased Originalvariable — eine
+    Groß-Schreibvariante der Fixture-ID (TG-LIVE-E2E) wurde fälschlich als
+    echter User behandelt. GIVEN die Groß-Schreibvariante WHEN
+    is_test_user_id() prüft THEN True — wie die Kleinschreibung."""
+    from app.config import is_test_user_id
+
+    assert is_test_user_id("TG-LIVE-E2E") is True
+    assert is_test_user_id("Tg-Live-E2e") is True
+
+
 def test_is_test_user_delegates_to_central_predicate():
     """GIVEN dieselben User-IDs (inkl. design_tdd)
     WHEN Settings()._is_test_user(uid) und is_test_user_id(uid) verglichen werden

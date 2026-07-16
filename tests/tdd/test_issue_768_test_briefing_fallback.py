@@ -43,10 +43,17 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # ---------------------------------------------------------------------------
 
 
+def _data_users(user_id: str) -> Path:
+    """Issue #1265 Teil C: get_data_dir() statt hartkodiertem Repo-Pfad --
+    respektiert die pytest-Isolation (tests/conftest.py, #1133/#1265)."""
+    from app.loader import get_data_dir
+    return get_data_dir(user_id)
+
+
 def _write_trip(user_id: str, trip_id: str, name: str, stages: list[dict]) -> Path:
-    trips_dir = REPO_ROOT / "data" / "users" / user_id / "trips"
+    trips_dir = _data_users(user_id) / "trips"
     trips_dir.mkdir(parents=True, exist_ok=True)
-    profile = REPO_ROOT / "data" / "users" / user_id / "user.json"
+    profile = _data_users(user_id) / "user.json"
     profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com"}))
     trip_path = trips_dir / f"{trip_id}.json"
     trip_path.write_text(json.dumps({
@@ -121,7 +128,7 @@ def past_only_trip():
 
 def _load_trip(user_id: str, trip_id: str):
     from app.loader import load_trip
-    return load_trip(REPO_ROOT / "data" / "users" / user_id / "trips" / f"{trip_id}.json")
+    return load_trip(_data_users(user_id) / "trips" / f"{trip_id}.json")
 
 
 # ---------------------------------------------------------------------------

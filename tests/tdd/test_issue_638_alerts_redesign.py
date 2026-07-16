@@ -46,6 +46,23 @@ from app.trip import Stage, Trip, Waypoint
 import output.channels.telegram as telegram_mod
 
 
+def _reset_alert_state(user_id: str) -> None:
+    """State-Bereinigung für Idempotenz (Issue #816: alert_state persistiert;
+    alert_daily_count.json zusaetzlich seit #1070). Issue #1265 Teil C:
+    get_data_dir() statt hartkodiertem "data/users/..." -- respektiert die
+    pytest-Isolation (tests/conftest.py, #1133/#1265)."""
+    import shutil
+    from app.loader import get_data_dir
+
+    udir = get_data_dir(user_id)
+    for fname in ("alert_state", "alert_throttle.json", "alert_log.json", "alert_daily_count.json"):
+        p = udir / fname
+        if p.is_dir():
+            shutil.rmtree(p, ignore_errors=True)
+        elif p.exists():
+            p.unlink(missing_ok=True)
+
+
 # ───────────────────────── echte Socket-Sinks (keine Mocks) ─────────────────
 
 class _TelegramSink:
@@ -261,20 +278,13 @@ def _run_alert(trip: Trip, settings: Settings, user_id: str):
     Issue #816: Alert-Pfad nutzt jetzt symmetrische Δ-Erkennung.
     gust_max_kmh Δ=35 (25→60) liegt sicher über MetricCatalog-Default 20.
     """
-    import shutil
-    from pathlib import Path
     from services.trip_alert import TripAlertService
 
     # State-Bereinigung für Idempotenz. alert_daily_count.json zusaetzlich seit
     # #1070 (Alert-Tages-Obergrenze): die fixe Test-User-ID ohne diese Bereinigung
     # wuerde nach mehreren Testlaeufen am selben Vienna-Kalendertag das Free-Limit
     # (2) erreichen und der Testfall wuerde faelschlich fehlschlagen.
-    for fname in ("alert_state", "alert_throttle.json", "alert_log.json", "alert_daily_count.json"):
-        p = Path(f"data/users/{user_id}/{fname}")
-        if p.is_dir():
-            shutil.rmtree(p, ignore_errors=True)
-        elif p.exists():
-            p.unlink(missing_ok=True)
+    _reset_alert_state(user_id)
 
     service = TripAlertService(settings=settings, user_id=user_id)
     cached = [_data(gust_max_kmh=25.0)]   # Δ=35 > MetricCatalog-Schwelle 20
@@ -460,18 +470,11 @@ def test_mixed_rules_union_both_channels(telegram_sink, smtp_refuse, tmp_path):
     trip.alert_rules = [rule_a, rule_b]
     trip.report_config = report_config
 
-    import shutil
-    from pathlib import Path
     from services.trip_alert import TripAlertService
 
     # State-Bereinigung für Idempotenz (Issue #816: alert_state persistiert;
     # alert_daily_count.json zusaetzlich seit #1070, siehe Kommentar oben).
-    for fname in ("alert_state", "alert_throttle.json", "alert_log.json", "alert_daily_count.json"):
-        p = Path(f"data/users/tdd-638-mixed/{fname}")
-        if p.is_dir():
-            shutil.rmtree(p, ignore_errors=True)
-        elif p.exists():
-            p.unlink(missing_ok=True)
+    _reset_alert_state("tdd-638-mixed")
 
     service = TripAlertService(settings=_settings(smtp_refuse.port), user_id="tdd-638-mixed")
     cached = [_data(gust_max_kmh=25.0)]   # Δ=35 > MetricCatalog-Schwelle 20
@@ -523,18 +526,11 @@ def test_channel_inheritance_no_alert_rules_uses_report_config(
     trip.alert_rules = []  # keine alert_rules → Kanäle werden aus report_config geerbt
     trip.report_config = report_config
 
-    import shutil
-    from pathlib import Path
     from services.trip_alert import TripAlertService
 
     # State-Bereinigung für Idempotenz (Issue #816: alert_state persistiert;
     # alert_daily_count.json zusaetzlich seit #1070, siehe Kommentar oben).
-    for fname in ("alert_state", "alert_throttle.json", "alert_log.json", "alert_daily_count.json"):
-        p = Path(f"data/users/tdd-638-legacy/{fname}")
-        if p.is_dir():
-            shutil.rmtree(p, ignore_errors=True)
-        elif p.exists():
-            p.unlink(missing_ok=True)
+    _reset_alert_state("tdd-638-legacy")
 
     service = TripAlertService(settings=_settings(smtp_refuse.port), user_id="tdd-638-legacy")
     # Delta=30 km/h > Standard-Schwelle 20 km/h → Change wird erkannt
@@ -571,20 +567,12 @@ def test_telegram_only_user_without_smtp_still_gets_alert(telegram_sink, tmp_pat
         telegram_bot_token="test-token",
         telegram_chat_id="test-chat",
     )
-    import shutil
-    from pathlib import Path
-
     rule = _wind_rule(AlertSeverity.WARNING, channels=["telegram"])
     trip = _trip(rule, report_config=None)
 
     # State-Bereinigung für Idempotenz (Issue #816: alert_state persistiert;
     # alert_daily_count.json zusaetzlich seit #1070, siehe Kommentar oben).
-    for fname in ("alert_state", "alert_throttle.json", "alert_log.json", "alert_daily_count.json"):
-        p = Path(f"data/users/tdd-638-f001/{fname}")
-        if p.is_dir():
-            shutil.rmtree(p, ignore_errors=True)
-        elif p.exists():
-            p.unlink(missing_ok=True)
+    _reset_alert_state("tdd-638-f001")
 
     from services.trip_alert import TripAlertService
     service = TripAlertService(settings=settings, user_id="tdd-638-f001")

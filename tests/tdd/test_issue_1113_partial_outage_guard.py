@@ -47,7 +47,7 @@ import time as time_mod
 
 import httpx
 
-from app.loader import save_trip
+from app.loader import get_data_dir, save_trip
 from app.models import GPXPoint, TripSegment
 from app.trip import Stage, TimeWindow, Trip, Waypoint
 from providers.base import ProviderError, ProviderRequestError
@@ -57,8 +57,15 @@ from services.trip_report_scheduler import TripReportSchedulerService
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _LOCAL_ENV = _REPO_ROOT / ".env"
 _MAIN_ENV = Path("/home/hem/gregor_zwanzig/.env")
-_DATA_USERS = _REPO_ROOT / "data" / "users"
 _TEST_MAILBOX = "gregor-test@henemm.com"
+
+
+def _data_users(user_id: str) -> Path:
+    """Issue #1265 Teil C: get_data_dir() statt hartkodiertem Repo-Pfad --
+    respektiert die pytest-Isolation (tests/conftest.py, #1133/#1265)."""
+    return get_data_dir(user_id)
+
+
 _REAL_FIXTURES_DIR = str(_REPO_ROOT / "fixtures" / "openmeteo")
 
 # Zwei der drei fest verdrahteten Fixture-Standorte (siehe
@@ -86,7 +93,7 @@ _load_env_file(_MAIN_ENV)
 
 def _make_user(user_id: str) -> None:
     """Frischer Test-User mit Test-Postfach als Empfänger — KEIN telegram_chat_id."""
-    udir = _DATA_USERS / user_id
+    udir = _data_users(user_id)
     if udir.exists():
         shutil.rmtree(udir)
     udir.mkdir(parents=True)
@@ -124,7 +131,7 @@ def _make_trip(
 
 
 def _briefing_log(user_id: str) -> list:
-    p = _DATA_USERS / user_id / "briefing_log.json"
+    p = _data_users(user_id) / "briefing_log.json"
     if not p.exists():
         return []
     return json.loads(p.read_text()).get("entries", [])
@@ -132,7 +139,7 @@ def _briefing_log(user_id: str) -> list:
 
 def _pending_markers(user_id: str) -> list:
     """Testkontrakt (identisch #1012): {"entries": [ {trip_id, ...} ]}."""
-    p = _DATA_USERS / user_id / "pending_briefings.json"
+    p = _data_users(user_id) / "pending_briefings.json"
     if not p.exists():
         return []
     data = json.loads(p.read_text())

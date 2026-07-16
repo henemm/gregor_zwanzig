@@ -1,4 +1,5 @@
 import { test as setup, expect } from '@playwright/test';
+import { assertNotProdBaseURL } from './prodUrlGuard';
 import * as fs from 'fs';
 // Staging-Auth + Seed für Slice 6 (#1231 Tab-Renames, AC-18-Beweis).
 // Analog feat-880.staging.setup.ts, aber mit korrigierter Credential-Kette:
@@ -10,6 +11,7 @@ const TRIP_ID = 'e2e-cockpit-test';
 
 setup('authenticate via API (staging) + seed — feat_1231_s6', async ({ playwright }) => {
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
+	assertNotProdBaseURL(base);
 	const validatorUser = process.env.GZ_VALIDATOR_USER!;
 	const validatorPass = process.env.GZ_VALIDATOR_PASS!;
 	const appUser = process.env.GZ_AUTH_USER!;

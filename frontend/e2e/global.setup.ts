@@ -1,5 +1,6 @@
 import { test as setup, expect, request as playwrightRequest } from '@playwright/test';
 import * as fs from 'fs';
+import { assertNotProdBaseURL } from './prodUrlGuard';
 
 const authFile = 'playwright/.auth/admin.json';
 const TRIP_ID = 'e2e-cockpit-test';
@@ -17,7 +18,11 @@ function isAuthFileValid(): boolean {
 	}
 }
 
-setup('authenticate and seed test data', async ({ page }) => {
+setup('authenticate and seed test data', async ({ page, baseURL }) => {
+	// Issue #1265 Teil D: harter Abbruch VOR jeder Datenanlage, falls die
+	// Base-URL auf Produktion zeigt.
+	assertNotProdBaseURL(baseURL ?? '');
+
 	const user = process.env.E2E_USER ?? 'admin';
 	const pass = process.env.E2E_PASS ?? 'test1234';
 

@@ -1,12 +1,13 @@
 import { test as setup, expect } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard';
 import * as fs from 'fs';
-// Staging-Auth für Issue #1256 Scheibe 7 (Hub-Versand-Tab Inline-Edit-Parität,
-// AC-17/AC-18/AC-19/AC-20/AC-35-AC-37). Analog feat-1256-s2.staging.setup.ts:
+// Staging-Auth fuer Issue #1258 Scheibe S4 (Compare-Editor-Integration).
 // nginx-Basic-Auth = GZ_VALIDATOR_*, App-Login = GZ_AUTH_* (getrennte Layer).
-const authFile = 'playwright/.auth/staging-1256-s7.json';
+// Kein Seed hier — Presets/Locations werden inline je Test angelegt und
+// aufgeraeumt (Muster compare-alarm-config.spec.ts / compare-flow-navigation.spec.ts).
+const authFile = 'playwright/.auth/staging-1258-s4.json';
 
-setup('authenticate via API (staging) — feat_1256_s7_versand', async ({ playwright }) => {
+setup('authenticate via API (staging) — feat_1258_s4_compare_editor', async ({ playwright }) => {
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
 	assertNotProdBaseURL(base);
 	const validatorUser = process.env.GZ_VALIDATOR_USER!;

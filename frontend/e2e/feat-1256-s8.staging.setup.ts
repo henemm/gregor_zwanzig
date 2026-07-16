@@ -1,4 +1,5 @@
 import { test as setup, expect } from '@playwright/test';
+import { assertNotProdBaseURL } from './prodUrlGuard';
 import * as fs from 'fs';
 // Staging-Auth für Issue #1256 Scheibe 8 (Mobile-Vervollständigung Orts-
 // Vergleich, AC-21–AC-24). Analog feat-1256-s7.staging.setup.ts: nginx-
@@ -7,6 +8,7 @@ const authFile = 'playwright/.auth/staging-1256-s8.json';
 
 setup('authenticate via API (staging) — feat_1256_s8_mobile', async ({ playwright }) => {
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
+	assertNotProdBaseURL(base);
 	const validatorUser = process.env.GZ_VALIDATOR_USER!;
 	const validatorPass = process.env.GZ_VALIDATOR_PASS!;
 	const appUser = process.env.GZ_AUTH_USER!;

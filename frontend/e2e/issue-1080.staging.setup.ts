@@ -1,4 +1,5 @@
 import { test as setup, expect } from '@playwright/test';
+import { assertNotProdBaseURL } from './prodUrlGuard';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 // Staging-Auth für issue_1080 (compare/new: Ort per URL hinzufügen bleibt unsichtbar).
@@ -15,6 +16,7 @@ const authFile = path.join(__dirname, 'playwright', '.auth', 'staging-1080.json'
 
 setup('authenticate via API (staging) — issue_1080', async ({ playwright }) => {
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
+	assertNotProdBaseURL(base);
 	// nginx-Basic-Auth (Validator-Creds) und App-Login (GZ_AUTH_*) sind unterschiedliche
 	// Credential-Paare — siehe docs/reference/operations_playbook.md.
 	const nginxUser = process.env.GZ_VALIDATOR_USER ?? 'admin';

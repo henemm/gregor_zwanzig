@@ -51,6 +51,21 @@ func TestIsTestUser_Boundary(t *testing.T) {
 	}
 }
 
+// TestIsTestUser_TgLiveE2eStaysNameHeuristicOnly (Issue #1265 Fix-Loop 1,
+// Adversary Runde-2-Ripple-Fund): die #1265-Konsolidierung auf
+// model.IsTestUserID hätte IsTestUser("tg-live-e2e") stillschweigend von
+// false auf true umschalten können — genau das würde das Passwort-Reset-/
+// Verifikations-Mail-Routing in handler/auth.go (Zeilen 249, 660) für die
+// Telegram-E2E-Fixture-ID ändern. Sperrt exakt das Vor-#1265-Verhalten
+// (s. TestIsTestUser_Boundary-Docstring: "name-heuristic-only").
+func TestIsTestUser_TgLiveE2eStaysNameHeuristicOnly(t *testing.T) {
+	if IsTestUser("tg-live-e2e") {
+		t.Error("IsTestUser('tg-live-e2e') = true; expected false — bewusst OHNE den " +
+			"Fixed-Fixture-Sonderfall aus model.IsTestUserID (kein Ripple-Verhaltenswechsel " +
+			"im auth.go-Mail-Routing, Issue #1265 Fix-Loop 1)")
+	}
+}
+
 func TestBuildResetMail_LinkContainsPublicHost(t *testing.T) {
 	msg := BuildResetMail("https://example.com", "alice", "abc123")
 	if !strings.Contains(msg.PlainBody, "https://example.com/reset-password?user=alice&token=abc123") {

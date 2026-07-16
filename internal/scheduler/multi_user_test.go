@@ -158,6 +158,46 @@ func TestTripReports_ContinuesOnUserError(t *testing.T) {
 	}
 }
 
+func TestRunForAllUsersSkipsTestUsers(t *testing.T) {
+	// GIVEN: ein Test-User (per Namenskonvention) und ein echter Nutzer
+	// registriert (Issue #1265 AC-3, Defense-in-Depth gegen geleakte
+	// Test-Konten in data/users/).
+	var mu sync.Mutex
+	var receivedUserIDs []string
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		uid := r.URL.Query().Get("user_id")
+		mu.Lock()
+		receivedUserIDs = append(receivedUserIDs, uid)
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, `{"status":"ok"}`)
+	}))
+	defer server.Close()
+
+	tmpDir := t.TempDir()
+	s := store.New(tmpDir, "default")
+	createTestUsers(t, tmpDir, s, []string{"tdd-1265-leak", "real-user"})
+
+	cfg := &config.Config{
+		PythonCoreURL:     server.URL,
+		SchedulerTimezone: "Europe/Vienna",
+	}
+	sched, _ := New(cfg, s)
+
+	// WHEN: ein Job-Lauf über alle registrierten Nutzer geht
+	sched.tripReports()
+
+	// THEN: nur der echte Nutzer wurde verarbeitet, das Test-Konto übersprungen
+	if len(receivedUserIDs) != 1 {
+		t.Fatalf("Expected exactly 1 request (test-user skipped), got %d: %v",
+			len(receivedUserIDs), receivedUserIDs)
+	}
+	if receivedUserIDs[0] != "real-user" {
+		t.Fatalf("Expected only real-user to be processed, got %v", receivedUserIDs)
+	}
+}
+
 func TestTripReports_NoUsers_Noop(t *testing.T) {
 	// GIVEN: No registered users
 	var requestsMade int

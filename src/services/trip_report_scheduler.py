@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 import httpx
 
 from app.config import Settings
-from app.loader import load_all_trips, save_trip
+from app.loader import get_data_dir, load_all_trips, save_trip
 from app.models import (
     NormalizedTimeseries,
     SegmentWeatherData,
@@ -255,7 +255,7 @@ class TripReportSchedulerService:
         Returns:
             Anzahl erfolgreich nachgelieferter Briefings (zählt als 'sent').
         """
-        path = Path(f"data/users/{self._user_id}/pending_briefings.json")
+        path = get_data_dir(self._user_id) / "pending_briefings.json"
         entries = _load_pending_entries(path).get("entries", [])
         if not entries:
             return 0
@@ -328,7 +328,7 @@ class TripReportSchedulerService:
         Read-Modify-Write auf data/users/<uid>/pending_briefings.json —
         ersetzt einen ggf. bestehenden Marker desselben Trips (keine Duplikate).
         """
-        path = Path(f"data/users/{self._user_id}/pending_briefings.json")
+        path = get_data_dir(self._user_id) / "pending_briefings.json"
         data = _load_pending_entries(path)
         entries = [e for e in data.get("entries", []) if e.get("trip_id") != trip.id]
         slot_hour = (
@@ -349,7 +349,7 @@ class TripReportSchedulerService:
 
     def _remove_pending_marker(self, trip_id: str) -> None:
         """Issue #1012 (b2): Entfernt den Nachliefer-Marker eines Trips (RMW)."""
-        path = Path(f"data/users/{self._user_id}/pending_briefings.json")
+        path = get_data_dir(self._user_id) / "pending_briefings.json"
         if not path.exists():
             return
         data = _load_pending_entries(path)
@@ -360,7 +360,7 @@ class TripReportSchedulerService:
 
     def _bump_pending_marker_attempts(self, trip_id: str) -> None:
         """Issue #1012 (b2, Lärmschutz): attempts += 1, Marker bleibt bestehen."""
-        path = Path(f"data/users/{self._user_id}/pending_briefings.json")
+        path = get_data_dir(self._user_id) / "pending_briefings.json"
         if not path.exists():
             return
         data = _load_pending_entries(path)
@@ -935,7 +935,7 @@ class TripReportSchedulerService:
         Wird von Go (GET /api/cockpit/status) read-only gelesen. Kein Bereinigen —
         das Frontend filtert auf "heute".
         """
-        path = Path(f"data/users/{self._user_id}/briefing_log.json")
+        path = get_data_dir(self._user_id) / "briefing_log.json"
         data = json.loads(path.read_text()) if path.exists() else {"entries": []}
         data["entries"].append({
             "trip_id": trip_id,

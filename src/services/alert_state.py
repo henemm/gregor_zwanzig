@@ -36,7 +36,11 @@ class AlertStateService:
 
     def __init__(self, user_id: str = "default") -> None:
         self._user_id = user_id
-        self._state_dir = Path(f"data/users/{user_id}/alert_state")
+        # Issue #1265: get_data_dir() statt hartkodiertem "data/users/..." --
+        # respektiert die pytest-Isolation (tests/conftest.py, #1133).
+        from app.loader import get_data_dir
+
+        self._state_dir = get_data_dir(user_id) / "alert_state"
 
     def _path(self, entity_id: str) -> Path:
         return self._state_dir / f"{entity_id}.json"

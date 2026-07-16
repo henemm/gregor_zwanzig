@@ -11,10 +11,10 @@ from __future__ import annotations
 import json
 import logging
 from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional
 
 from app.config import Settings
+from app.loader import get_data_dir
 from app.models import SegmentWeatherData, WeatherChange
 from services import alert_daily_limit
 from services.deviation_alert_engine import DeviationAlertEngine
@@ -539,7 +539,9 @@ class TripAlertService:
         zählen kann. Der Cockpit-Endpoint filtert weiterhin Go-seitig auf 24 h.
         Wird von Go (GET /api/cockpit/status, GET /api/archive/stats) read-only gelesen.
         """
-        path = Path(f"data/users/{self._user_id}/alert_log.json")
+        # Issue #1265: get_data_dir() statt hartkodiertem "data/users/..." --
+        # respektiert die pytest-Isolation (tests/conftest.py, #1133).
+        path = get_data_dir(self._user_id) / "alert_log.json"
         data = json.loads(path.read_text()) if path.exists() else {"entries": []}
         data["entries"].append({
             "trip_id": trip_id,

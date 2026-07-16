@@ -1,4 +1,5 @@
 import { test as setup, expect } from '@playwright/test';
+import { assertNotProdBaseURL } from './prodUrlGuard';
 import * as fs from 'fs';
 // Staging-Auth für Issue #1256 Scheibe 2 (Fluss-Verdrahtung Klickpfad-Tests,
 // AC-25–AC-29). Analog feat-1231-s6.staging.setup.ts: nginx-Basic-Auth =
@@ -11,6 +12,7 @@ const authFile = 'playwright/.auth/staging-1256-s2.json';
 
 setup('authenticate via API (staging) — feat_1256_s2_fluss', async ({ playwright }) => {
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
+	assertNotProdBaseURL(base);
 	const validatorUser = process.env.GZ_VALIDATOR_USER!;
 	const validatorPass = process.env.GZ_VALIDATOR_PASS!;
 	const appUser = process.env.GZ_AUTH_USER!;
