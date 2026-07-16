@@ -289,6 +289,63 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
     return 0
 
 
+def _nearest_verified_ancestor(ref: str, git_dir: Path, shared_dir: Path,
+                               max_count: int = 40) -> "tuple[str | None, dict | None]":
+    """Issue #1197: Nächster VERIFIED, nicht-staler Ancestor von ``ref`` mit
+    commit-getaggter Attestation — dient als Deploy-Basis, wenn keine exakte
+    <ref>.json existiert.
+
+    Läuft ``git rev-list --max-count=N ref`` (newest-first, ``ref``
+    eingeschlossen) im ``git_dir`` durch. Für den ERSTEN Commit C, dessen
+    commit-getaggte Attestation im ``shared_dir`` existiert, ``verified_commit
+    == C`` trägt, deren ``staging_verdict`` mit "VERIFIED" beginnt und deren
+    ``verified_at`` nicht älter als STALE_HOURS ist, wird (C, cdata)
+    zurückgegeben. Andernfalls (None, None). Jeder git-/JSON-Fehler ist
+    fail-closed → (None, None).
+
+    Anker: git_dir MUSS die Wurzel des Arbeitsbaums sein (in Produktion liefert
+    ``_verified_repo_dir()`` genau ``git rev-parse --show-toplevel``). Zeigt der
+    konfigurierte Pfad woanders hin (z.B. Unterverzeichnis, git löst per
+    Discovery ein fremdes Eltern-Repo auf), wird fail-closed geblockt.
+    """
+    toplevel = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True, text=True, cwd=str(git_dir),
+    )
+    if toplevel.returncode != 0 or not toplevel.stdout.strip():
+        return (None, None)
+    if Path(toplevel.stdout.strip()).resolve() != Path(git_dir).resolve():
+        return (None, None)
+    result = subprocess.run(
+        ["git", "rev-list", f"--max-count={max_count}", ref],
+        capture_output=True, text=True, cwd=str(git_dir),
+    )
+    if result.returncode != 0:
+        return (None, None)
+    for sha in (line.strip() for line in result.stdout.splitlines() if line.strip()):
+        path = _e2e_paths.commit_e2e_path(shared_dir, sha)
+        if not path.exists():
+            continue
+        try:
+            cdata = json.loads(path.read_text())
+        except (json.JSONDecodeError, OSError):
+            continue
+        if cdata.get("verified_commit") != sha:
+            continue
+        if not str(cdata.get("staging_verdict", "")).startswith("VERIFIED"):
+            continue
+        try:
+            verified_at = datetime.fromisoformat(cdata.get("verified_at", ""))
+            if verified_at.tzinfo is None:
+                verified_at = verified_at.replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+        if datetime.now(timezone.utc) - verified_at > timedelta(hours=STALE_HOURS):
+            continue
+        return (sha, cdata)
+    return (None, None)
+
+
 def gate_check(e2e_path: Path | None, scope_override: str | None,
                expected_commit: str | None = None) -> int:
     """Mode B: Gate-Check für deploy-gregor-prod.sh.
@@ -340,24 +397,49 @@ def gate_check(e2e_path: Path | None, scope_override: str | None,
     if e2e_path is None:
         e2e_path = _default_e2e_path(expected_commit)
 
-    if not e2e_path.exists():
-        _log(
-            f"FEHLER: e2e_verified.json fehlt unter {e2e_path}. "
-            "/e2e-verify ausführen, dann erneut deployen.",
-            stream=sys.stderr,
-        )
-        return 1
-
-    try:
-        data = json.loads(e2e_path.read_text())
-    except (json.JSONDecodeError, OSError) as exc:
-        _log(f"FEHLER: e2e_verified.json nicht lesbar: {exc}", stream=sys.stderr)
-        return 1
-
     ref = expected_commit or _head_sha()
     ref_label = "expected-commit" if preflight else "HEAD-SHA"
-    verified_commit = data.get("verified_commit", "")
+
+    data = None
+    if e2e_path.exists():
+        try:
+            data = json.loads(e2e_path.read_text())
+        except (json.JSONDecodeError, OSError) as exc:
+            _log(f"FEHLER: e2e_verified.json nicht lesbar: {exc}", stream=sys.stderr)
+            return 1
+
+    verified_commit = data.get("verified_commit", "") if data is not None else ""
+
+    # Issue #1197: Kein exakter <ref>.json-Treffer (Datei fehlt oder trägt einen
+    # anderen verified_commit) → nächsten VERIFIED, nicht-stalen Ancestor als
+    # Basis auflösen und NUR relaxieren, wenn ref dessen Nachfahre ist UND der
+    # Zuwachs Basis..ref docs-only ist. Sonst fail-closed blocken.
     if verified_commit != ref:
+        git_dir = _verified_repo_dir()
+        ancestor, _cdata = _nearest_verified_ancestor(ref, git_dir, _shared_repo_dir())
+        if ancestor is not None:
+            is_anc = subprocess.run(
+                ["git", "merge-base", "--is-ancestor", ancestor, ref],
+                capture_output=True, text=True, cwd=str(git_dir),
+            )
+            if (
+                is_anc.returncode == 0
+                and _e2e_paths._detect_scope_from_git_diff(ancestor, ref, git_dir) == "docs-only"
+            ):
+                _log(
+                    f"OK: Ancestor-Relaxierung (#1197): Basis {ancestor[:8]} VERIFIED, "
+                    f"Zuwachs {ancestor[:8]}..{ref[:8]} docs-only — Staging-Gate bestanden."
+                )
+                if not preflight:
+                    _e2e_paths.write_last_gate_scope(_shared_repo_dir(), _head_sha(), scope)
+                return 0
+        if data is None:
+            _log(
+                f"FEHLER: e2e_verified.json fehlt unter {e2e_path}. "
+                "/e2e-verify ausführen, dann erneut deployen.",
+                stream=sys.stderr,
+            )
+            return 1
         _log(
             f"FEHLER: verified_commit ({verified_commit[:8]}) != {ref_label} ({ref[:8]}). "
             "Veraltete Verifikation — /e2e-verify erneut ausführen.",
@@ -365,6 +447,7 @@ def gate_check(e2e_path: Path | None, scope_override: str | None,
         )
         return 1
 
+    # Exakt-Match (unverändertes Verhalten): VERIFIED- und Staleness-Checks auf data.
     verdict = data.get("staging_verdict", "")
     if not verdict.startswith("VERIFIED"):
         _log(
