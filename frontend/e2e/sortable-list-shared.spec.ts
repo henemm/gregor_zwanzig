@@ -28,6 +28,14 @@ import { test, expect, type Page, type Locator } from '@playwright/test';
 // erzeugt nur EINEN Move-Schritt und reißt die Schwelle nicht zuverlässig.
 // Übernommen aus dem etablierten Muster in compare-hub-inline-edit.spec.ts:22-38.
 async function dragDndZoneItem(page: Page, source: Locator, target: Locator): Promise<void> {
+	// Erst scrollen, dann messen: `boundingBox()` scrollt nicht selbst und liefert fuer
+	// Zeilen unterhalb des Viewports Koordinaten ausserhalb des Fensters — die Maus-Sequenz
+	// landet im Leeren. Hier steht die SMS-Liste zwar hoch genug, dass es heute zufaellig
+	// gutgeht; ohne diesen Schritt ist es ein latenter Flake (in layout-tab-route.spec.ts
+	// ist genau das aufgeschlagen).
+	await source.scrollIntoViewIfNeeded();
+	await target.scrollIntoViewIfNeeded();
+
 	const sourceBox = await source.boundingBox();
 	const targetBox = await target.boundingBox();
 	if (!sourceBox || !targetBox) throw new Error('dragDndZoneItem: source/target ohne BoundingBox');
@@ -146,9 +154,18 @@ test.describe('#1272 — Geteilter Sortier-Baustein', () => {
 		const second = page.locator(`[data-testid="sms-row-${before[1]}"]:visible`);
 		await dragDndZoneItem(page, first, second);
 
-		const after = await smsOrder(page);
-		expect(after[0], 'nach dem Ziehen muss die zweite Metrik vorne stehen').toBe(before[1]);
-		expect(after[1]).toBe(before[0]);
+		// `svelte-dnd-action` committet die finale Reihenfolge erst NACH der
+		// FLIP-Animation (`flipDurationMs: 200`, SortableList.svelte:46) — direkt nach
+		// mouse.up() steht im DOM noch ein Zwischenzustand der consider-Phase.
+		// Deshalb pollen statt einmalig lesen. Die Erwartung bleibt unveraendert streng:
+		// exakter Tausch der beiden beteiligten Zeilen, Rest der Liste unangetastet.
+		const expected = [before[1], before[0], ...before.slice(2)];
+		await expect
+			.poll(() => smsOrder(page), {
+				message: 'nach dem Ziehen muessen die ersten beiden Metriken getauscht sein',
+				timeout: 5_000
+			})
+			.toEqual(expected);
 	});
 
 	// AC-4: Tastatur-Pfad ueber den fokussierbaren Griff.
@@ -168,9 +185,15 @@ test.describe('#1272 — Geteilter Sortier-Baustein', () => {
 		await page.keyboard.press('ArrowDown'); // eine Position nach unten
 		await page.keyboard.press('Space'); // bestaetigen
 
-		const after = await smsOrder(page);
-		expect(after[0], 'nach ArrowDown muss die zweite Metrik vorne stehen').toBe(before[1]);
-		expect(after[1]).toBe(before[0]);
+		// Gleiche FLIP-Wartezeit wie beim Maus-Pfad (s. AC-1) — auch der Tastatur-Weg
+		// committet die Reihenfolge erst nach der Animation. Ohne Poll ist das ein
+		// latenter Flake, der hier nur zufaellig nicht zuschlaegt.
+		await expect
+			.poll(() => smsOrder(page), {
+				message: 'nach ArrowDown muessen die ersten beiden Metriken getauscht sein',
+				timeout: 5_000
+			})
+			.toEqual([before[1], before[0], ...before.slice(2)]);
 	});
 
 	// AC-5: Die ▲/▼-Buttons sind verschwunden.

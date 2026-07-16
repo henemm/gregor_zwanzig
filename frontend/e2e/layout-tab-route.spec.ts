@@ -21,6 +21,15 @@ import { login } from './helpers.js';
 // EINEN Move-Schritt und reisst diese Schwelle nicht.
 // Muster uebernommen aus compare-hub-inline-edit.spec.ts:22-38.
 async function dragDndZoneItem(page: Page, source: Locator, target: Locator): Promise<void> {
+	// Erst in den sichtbaren Bereich scrollen, DANN die Koordinaten lesen.
+	// `boundingBox()` scrollt selbst nicht (playwright-core/lib/server/dom.js:677) und
+	// liefert fuer Zeilen unterhalb des Viewports Koordinaten ausserhalb des Fensters —
+	// die Maus-Sequenz landet dann im Leeren und der Drag passiert nie. Playwrights
+	// `dragTo()`, das hier vorher stand, scrollte implizit mit; die Pointer-Simulation
+	// muss es explizit tun. Ein echter Nutzer scrollt die Zeile ebenfalls erst ins Bild.
+	await source.scrollIntoViewIfNeeded();
+	await target.scrollIntoViewIfNeeded();
+
 	const sourceBox = await source.boundingBox();
 	const targetBox = await target.boundingBox();
 	if (!sourceBox || !targetBox) throw new Error('dragDndZoneItem: source/target ohne BoundingBox');
