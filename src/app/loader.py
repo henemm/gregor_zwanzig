@@ -690,12 +690,27 @@ def _migrate_metric_alert_levels(levels: Any) -> Any:
     return migrated
 
 
+def _coerce_metric_entry(entry: Any) -> Any:
+    """Issue #1262: Legacy-Flach-String -> minimales MetricConfig-Dict.
+
+    Ein `str` (z.B. ``"temperature"`` aus einer Legacy-Flach-Metrics-Liste)
+    wird zu ``{"metric_id": entry, "enabled": True}``. Ein bereits voll
+    ausgepraegtes dict wird unveraendert zurueckgegeben, damit der bestehende
+    dict-Pfad bit-identisch bleibt (AC-3). Analog zu ``_migrate_weather_config``
+    fuer ``enabled_metrics``."""
+    if isinstance(entry, str):
+        return {"metric_id": entry, "enabled": True}
+    return entry
+
+
 def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig":
     """Parse UnifiedWeatherDisplayConfig from dict."""
     from datetime import datetime as _dt
     from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 
-    raw_metrics = data.get("metrics") or []
+    # Issue #1262: Flach-String-Eintraege vor jedem `.get()`/`["metric_id"]`
+    # zu dict normalisieren; dict-Eintraege bleiben unveraendert.
+    raw_metrics = [_coerce_metric_entry(m) for m in (data.get("metrics") or [])]
     # Issue #360 (F002): bucket/order pro Metrik aufloesen. auto_distribute wird
     # IMMER auf die aktiven Metrik-IDs angewandt, damit auch teil-migrierte
     # Configs (eine Metrik hat bucket/order, andere nicht) korrekt sind:
@@ -756,6 +771,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
                 continue
             ch_parsed: List[MetricConfig] = []
             for mc_data in ch_metrics:
+                mc_data = _coerce_metric_entry(mc_data)  # Issue #1262
                 ch_explicit_mode, ch_friendly = _normalize_legacy_mode(mc_data)
                 ch_parsed.append(MetricConfig(
                     metric_id=mc_data["metric_id"],
@@ -788,6 +804,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
                     continue
                 pr_parsed: List[MetricConfig] = []
                 for mc_data in ch_metrics:
+                    mc_data = _coerce_metric_entry(mc_data)  # Issue #1262
                     pr_mode, pr_friendly = _normalize_legacy_mode(mc_data)
                     pr_parsed.append(MetricConfig(
                         metric_id=mc_data["metric_id"],

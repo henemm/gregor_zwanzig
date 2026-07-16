@@ -125,6 +125,95 @@ def _write_pending_data(path: Path, data: dict) -> None:
     os.replace(tmp_path, path)
 
 
+@dataclasses.dataclass
+class CorruptTripObservability:
+    """Ergebnis eines Beobachtbarkeits-Laufs (Issue #1262 AC-4)."""
+
+    skipped_count: int
+    corrupt_files: List[str]
+    newly_notified: List[str]
+
+
+def _mq_notify_infra(filename: str, detail: str) -> None:
+    """Produktions-``notify``: sendet genau EINE MQ-Meldung (Prioritaet
+    ``high``) an Instanz ``infra`` ueber den etablierten claude-mq-Helper
+    (``src.lib.mq_notify.send_mq``, gleiches Ziel wie
+    ``/home/hem/claude-mq/send.sh``, aber ohne Subprozess-Aufruf).
+
+    Ist im AC-4-Test durch einen aufrufsprotokollierenden Spy ersetzt (Seam)
+    — hier keine Geschaeftslogik-Mocks. Fail-soft bereits in ``send_mq``
+    eingebaut: ohne ``CLAUDE_MQ_SECRET`` (z.B. lokale Testlaeufe) wird
+    still uebersprungen, ein Versandfehler wird nur geloggt — der Zaehler
+    bleibt in jedem Fall sichtbar (kein Crash des Scheduler-Laufs)."""
+    from lib.mq_notify import send_mq
+
+    subject = f"Kaputter Trip beim Laden uebersprungen: {filename}"
+    send_mq("gregor", "infra", "high", subject, detail)
+
+
+def record_corrupt_trip_observability(
+    user_id: str,
+    notify: Optional[callable] = None,
+) -> CorruptTripObservability:
+    """Issue #1262 AC-4: macht beim Laden uebersprungene/kaputte Trips sichtbar.
+
+    Scannt ``get_briefings_dir(user_id)``, versucht jede Datei ueber den echten
+    Loader-Pfad (``load_trip``) zu laden und zaehlt die nicht ladbaren. Fuer
+    jede NEU entdeckte kaputte Datei wird ``notify(filename, detail)`` genau
+    EINMAL aufgerufen (Dedup-Schluessel = Dateiname, persistent ueber Laeufe).
+    Der Dedup-Zustand und der letzte Zaehler landen als Diagnostics-Datei unter
+    ``get_data_dir(user_id)/diagnostics`` (Status-Sichtbarkeit).
+    """
+    from app.loader import get_briefings_dir, get_data_dir, load_trip
+
+    briefings_dir = get_briefings_dir(user_id)
+    corrupt: List[Tuple[str, str]] = []
+    if briefings_dir.exists():
+        for path in sorted(briefings_dir.glob("*.json")):
+            try:
+                raw = json.loads(path.read_text(encoding="utf-8"))
+                if isinstance(raw, dict) and raw.get("kind") == "vergleich":
+                    continue
+                load_trip(raw)
+            except Exception as exc:  # noqa: BLE001 — jede Ladefehlerursache zaehlt
+                corrupt.append((path.name, str(exc)))
+
+    diag_dir = get_data_dir(user_id) / "diagnostics"
+    state_path = diag_dir / "corrupt_trips.json"
+    already: set[str] = set()
+    if state_path.exists():
+        try:
+            already = set(json.loads(state_path.read_text(encoding="utf-8")).get("notified", []))
+        except (json.JSONDecodeError, OSError):
+            already = set()
+
+    newly: List[str] = []
+    for filename, detail in corrupt:
+        if filename in already:
+            continue
+        already.add(filename)
+        newly.append(filename)
+        if notify is not None:
+            notify(filename, detail)
+
+    diag_dir.mkdir(parents=True, exist_ok=True)
+    # Adversary F001: atomarer Schreib (tmp + os.replace) statt write_text —
+    # ein Absturz mitten im Schreiben (Restart/Deploy/OOM) darf das
+    # Dedup-Gedaechtnis nicht zerstoeren, sonst meldet der naechste Tick ALLE
+    # zuvor gemeldeten kaputten Trips erneut per MQ.
+    _write_pending_data(state_path, {
+        "notified": sorted(already),
+        "last_skipped_count": len(corrupt),
+        "last_run": datetime.now(timezone.utc).isoformat(),
+    })
+
+    return CorruptTripObservability(
+        skipped_count=len(corrupt),
+        corrupt_files=[name for name, _ in corrupt],
+        newly_notified=newly,
+    )
+
+
 class TripReportSchedulerService:
     """
     Service for scheduled trip weather reports.
@@ -210,6 +299,17 @@ class TripReportSchedulerService:
             Tuple (sent, failed): Anzahl erfolgreich versendeter und
             fehlgeschlagener Reports.
         """
+        # Issue #1262 AC-4: Beobachtbarkeit uebersprungener/kaputter Trips —
+        # einmal pro Scheduler-Lauf, fail-soft (darf den Sendelauf nie
+        # crashen, auch wenn SMTP nicht konfiguriert ist). Trip-spezifisch
+        # (basiert auf load_all_trips/briefings) -- bewusst NICHT im
+        # geteilten run_briefing_dispatch, der auch den Compare-Versandweg
+        # bedient.
+        try:
+            record_corrupt_trip_observability(self._user_id, notify=_mq_notify_infra)
+        except Exception as e:
+            logger.warning("record_corrupt_trip_observability fehlgeschlagen: %s", e)
+
         from services.dispatch_orchestrator import run_briefing_dispatch
 
         return run_briefing_dispatch(

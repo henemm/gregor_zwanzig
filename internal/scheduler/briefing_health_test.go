@@ -503,3 +503,72 @@ func TestBriefingHealthExistingFieldsUnchanged(t *testing.T) {
 		t.Errorf("briefing_health: expected additive field present")
 	}
 }
+
+// Issue #1262 AC-4: corrupt_trips_total aggregates
+// users/<uid>/diagnostics/corrupt_trips.json (written by Python's
+// record_corrupt_trip_observability) across ALL users, privacy-safe (only
+// counts + timestamp, no user_id/filenames in the response).
+func TestBriefingHealthCorruptTripsTotalAggregatesAcrossUsers(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newBriefingHealthTestScheduler(t, tmpDir, "tdd-1262-usera", "tdd-1262-userb")
+
+	writeCorruptTripsFile(t, tmpDir, "tdd-1262-usera", 2, "2026-07-16T10:00:00Z")
+	writeCorruptTripsFile(t, tmpDir, "tdd-1262-userb", 1, "2026-07-16T12:00:00Z")
+
+	code, body, rawBody := callStatusEndpoint(t, sched)
+	if code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", code)
+	}
+	bh := body["briefing_health"].(map[string]any)
+
+	if got := bh["corrupt_trips_total"]; got != float64(3) {
+		t.Errorf("corrupt_trips_total: want 3, got %v", got)
+	}
+	if got := bh["corrupt_trips_last_run_at"]; got != "2026-07-16T12:00:00Z" {
+		t.Errorf("corrupt_trips_last_run_at: want jüngstes last_run, got %v", got)
+	}
+
+	forbidden := []string{"tdd-1262-usera", "tdd-1262-userb"}
+	for _, id := range forbidden {
+		if strings.Contains(rawBody, id) {
+			t.Errorf("Privacy-Leak: response contains identifier %q", id)
+		}
+	}
+}
+
+// Fail-soft: no diagnostics/corrupt_trips.json anywhere -> zero total, nil
+// timestamp, no panic.
+func TestBriefingHealthCorruptTripsTotalZeroWhenNoFiles(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newBriefingHealthTestScheduler(t, tmpDir, "tdd-1262-usera")
+
+	code, body, _ := callStatusEndpoint(t, sched)
+	if code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", code)
+	}
+	bh := body["briefing_health"].(map[string]any)
+
+	if got := bh["corrupt_trips_total"]; got != float64(0) {
+		t.Errorf("corrupt_trips_total: want 0, got %v", got)
+	}
+	if got := bh["corrupt_trips_last_run_at"]; got != nil {
+		t.Errorf("corrupt_trips_last_run_at: want nil, got %v", got)
+	}
+}
+
+// writeCorruptTripsFile writes a real users/<uid>/diagnostics/corrupt_trips.json
+// (Python-written shape: notified/last_skipped_count/last_run). Only the
+// last_skipped_count/last_run fields are relevant to the Go aggregate.
+func writeCorruptTripsFile(t *testing.T, tmpDir, userID string, lastSkippedCount int, lastRun string) {
+	t.Helper()
+	dir := filepath.Join(tmpDir, "users", userID, "diagnostics")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	body := `{"notified":[],"last_skipped_count":` + strconv.Itoa(lastSkippedCount) +
+		`,"last_run":"` + lastRun + `"}`
+	path := filepath.Join(dir, "corrupt_trips.json")
+	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
+		t.Fatalf("write corrupt_trips.json: %v", err)
+	}
+}

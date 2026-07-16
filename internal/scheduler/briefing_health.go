@@ -121,6 +121,16 @@ func (s *Scheduler) BriefingHealth() map[string]any {
 		}
 	}
 
+	var corruptTripsLastRunAt any
+	corruptTripsTotal := 0
+	if s.store != nil {
+		total, lastRun := aggregateCorruptTrips(s.store.DataDir)
+		corruptTripsTotal = total
+		if lastRun != "" {
+			corruptTripsLastRunAt = lastRun
+		}
+	}
+
 	return map[string]any{
 		"open_pending_briefings":       openCount,
 		"degraded_segments_total":      degradedTotal,
@@ -128,7 +138,44 @@ func (s *Scheduler) BriefingHealth() map[string]any {
 		"last_provider_error_at":       lastProviderErrorAt,
 		"provider_error_streak_since":  providerErrorStreakSince,
 		"provider_errors_recent_count": providerErrorsRecentCount,
+		"corrupt_trips_total":          corruptTripsTotal,
+		"corrupt_trips_last_run_at":    corruptTripsLastRunAt,
 	}
+}
+
+// corruptTripsDiagnostics mirrors one users/<uid>/diagnostics/corrupt_trips.json
+// file, written by src/services/trip_report_scheduler.py's
+// record_corrupt_trip_observability (Issue #1262). Only the fields needed for
+// the privacy-safe aggregate are decoded — never the "notified" filenames.
+type corruptTripsDiagnostics struct {
+	LastSkippedCount int    `json:"last_skipped_count"`
+	LastRun          string `json:"last_run"`
+}
+
+// aggregateCorruptTrips sums last_skipped_count across ALL users'
+// diagnostics/corrupt_trips.json (Issue #1262 AC-4) and returns the most
+// recent last_run timestamp. Fail-soft: a missing or unparseable file is
+// skipped, never a panic. Privacy (#252): only counts and a timestamp are
+// read — never the per-file "notified" filenames or user_id.
+func aggregateCorruptTrips(dataDir string) (int, string) {
+	total := 0
+	lastRun := ""
+	matches, _ := filepath.Glob(filepath.Join(dataDir, "users", "*", "diagnostics", "corrupt_trips.json"))
+	for _, match := range matches {
+		data, err := os.ReadFile(match)
+		if err != nil {
+			continue // fail-soft: one unreadable file must not break the aggregate
+		}
+		var entry corruptTripsDiagnostics
+		if err := json.Unmarshal(data, &entry); err != nil {
+			continue
+		}
+		total += entry.LastSkippedCount
+		if entry.LastRun > lastRun {
+			lastRun = entry.LastRun
+		}
+	}
+	return total, lastRun
 }
 
 // providerErrorStreakGapThreshold is the maximum gap between two consecutive
