@@ -33,6 +33,7 @@ from pathlib import Path
 import pytest
 
 from app.config import Settings
+from app.loader import get_data_dir
 from app.models import (
     ForecastMeta,
     GPXPoint,
@@ -111,7 +112,7 @@ def clean_user_dirs():
 
     def _register(user_id: str) -> str:
         created.append(user_id)
-        path = Path(f"data/users/{user_id}")
+        path = get_data_dir(user_id)
         if path.exists():
             shutil.rmtree(path)
         return user_id
@@ -119,7 +120,7 @@ def clean_user_dirs():
     yield _register
 
     for user_id in created:
-        path = Path(f"data/users/{user_id}")
+        path = get_data_dir(user_id)
         if path.exists():
             shutil.rmtree(path)
 
@@ -229,7 +230,7 @@ def test_ac1_trip_alarm_fires_identically_after_extraction(telegram_sink, clean_
     assert sent is True, "Δ=16 ≥ Schwelle 10 muss einen Alarm auslösen"
     assert telegram_sink.send_count() == 1, "genau ein Telegram-Versand erwartet"
 
-    log_path = Path(f"data/users/{user_id}/alert_log.json")
+    log_path = get_data_dir(user_id) / "alert_log.json"
     log = json.loads(log_path.read_text())
     last_entry = log["entries"][-1]
     assert last_entry["trip_id"] == trip.id
@@ -378,7 +379,7 @@ def test_ac4_legacy_alert_state_file_still_readable(telegram_sink, clean_user_di
     # Alt-State-Datei manuell ablegen — exakt das Schema, das
     # AlertStateService.save() vor dem Umbau bereits schreibt
     # (data/users/<user_id>/alert_state/<trip_id>.json).
-    state_dir = Path(f"data/users/{user_id}/alert_state")
+    state_dir = get_data_dir(user_id) / "alert_state"
     state_dir.mkdir(parents=True, exist_ok=True)
     legacy_state = {
         "precip_sum_mm:1": {
