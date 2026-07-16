@@ -14,6 +14,7 @@
 	import { HORIZONS_ALL } from '$lib/types';
 	import type { CompareWizardState } from './compareWizardState.svelte';
 	import { createSaveStatus, extractMessage } from '$lib/stores/saveStatusStore.svelte';
+	import { computeCompareAutoSaveAction } from './compareAutosave';
 	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
 	import {
 		TAB_ORDER,
@@ -70,6 +71,27 @@
 
 	// Issue #758: eigene SaveStatus-Instanz pro CompareEditor (AC-6: kein geteilter Singleton).
 	const compareSaveCtl = createSaveStatus();
+
+	// Issue #758 AC-6 / Issue #1261 (b): Instanz erreichbar machen fuer den
+	// beforeNavigate-Flush in routes/compare/[id]/edit/+page.svelte (bind:this).
+	export function getCompareSaveController() {
+		return compareSaveCtl;
+	}
+
+	// Issue #1261 (b): #1234-Gesten-Gate — Autospeichern darf nur nach einer
+	// echten Nutzerinteraktion schreiben (verhindert, dass Hydrations-Effekte
+	// der geteilten Tabs, z.B. CorridorEditor-Dual-Write in wiz.corridors,
+	// ungewollt einen Schreibzugriff ausloesen — GR221/#1234-Fehlerklasse).
+	let userTouched = $state(false);
+
+	// Adversary F001 (CRITICAL): monotoner Zaehler, der bei JEDER echten
+	// Nutzergeste hochzaehlt. Noetig weil ein $effect NICHT erneut laeuft,
+	// wenn der `dirty`-$derived-Wert wertgleich bleibt (z.B. Feld A aendern,
+	// Debounce feuert/laeuft im Netzwerk, dann Feld B aendern waehrend
+	// dirty bereits true war) — ohne editTick wuerde die Folge-Aenderung nie
+	// einen neuen schedule()-Aufruf ausloesen und beim Wegnavigieren still
+	// verloren gehen (kein hasPending fuer den beforeNavigate-Flush).
+	let editTick = $state(0);
 
 	// Issue #1231 Slice 4 (Adversary F001, CRITICAL): echte Viewport-Erkennung
 	// NUR für den idealwerte-Tab-Inhalt — das bestehende CSS-only-Switch-Muster
@@ -220,6 +242,24 @@
 		}
 	});
 
+	// Issue #1261 (b) — Ansatz A: zentraler Auto-Save-Ausloeser. Ohne echte
+	// Nutzergeste (userTouched) bleibt es beim reinen setDirty()-Pfad oben,
+	// kein Schreibzugriff (AC-7). catalogLoaded ist im Compare-Editor
+	// faktisch immer true (synchrone SSR-Hydration) — weatherSaveGate bleibt
+	// dennoch unveraendert wiederverwendet (kein Compare-eigener Fork).
+	// Adversary F001-Fix: `editTick` wird hier gelesen (nicht nur `dirty`),
+	// damit der Effect bei JEDER Geste neu laeuft, auch wenn `dirty` bereits
+	// `true` war und wertgleich bleibt — sonst re-armiert das Autospeichern
+	// nicht fuer Folge-Aenderungen waehrend ein frueherer Save noch im
+	// Debounce-Fenster/Netzwerk unterwegs ist.
+	$effect(() => {
+		void editTick;
+		const action = computeCompareAutoSaveAction({ dirty, userTouched, catalogLoaded: true });
+		if (action === 'save') {
+			compareSaveCtl.schedule(() => Promise.resolve(handleSave()));
+		}
+	});
+
 	// Issue #1256 Scheibe 8d (AC-15) — mobil befüllt der Editor die EINE globale
 	// Design-Kopfleiste statt einer eigenen nachgebauten Editor-Kopfzeile.
 	// Nur auf <900px sichtbar (TopAppBar.svelte:desktop:hidden) — Effect läuft
@@ -297,8 +337,34 @@
 		discardOpen = true;
 	}
 
-	function handleSave() {
-		if (!preset) return;
+	// Issue #1261 (b): Capture-Listener am Editor-Root (Vorbild
+	// WeatherMetricsTab.svelte:781-787) — pointerdown/keydown NUR auf
+	// tatsaechlich bedienbaren Zielen (sonst wuerde ein Streuklick auf
+	// Ueberschrift/Leerraum das Gate fuer die Sitzung entwaffnen), change/input
+	// ungefiltert (feuern per Definition nur bei echter Formularfeld-Aenderung).
+	// Adversary F003 (CRITICAL): `.ce-handle`/`.cem-handle` bewusst ergaenzt —
+	// der Wertebereich-Slider-Griff in der GETEILTEN CorridorEditor(Mobile)
+	// (shared/corridor-editor/*.svelte, AC-13 unangetastet) ist ein plain
+	// `<div onpointerdown=...>`, kein Standard-Formularelement. Kopplung an die
+	// Griff-Klassennamen ist bewusst spezifisch (kein `<div>`-Catch-All, das
+	// wieder Streuklicks durchlassen wuerde) — robustere Loesung (z.B. ein vom
+	// CorridorEditor selbst emittiertes Gesten-Signal) gehoert in Konvergenz-
+	// Epic #1230, nicht in diesen Hotfix.
+	const AUTOSAVE_INTERACTIVE_SELECTOR =
+		'input, button, select, textarea, label, [role="checkbox"], [role="radio"], [role="switch"], .ce-handle, .cem-handle';
+	function onEditorTouchGesture(e: Event) {
+		if ((e.target as HTMLElement | null)?.closest?.(AUTOSAVE_INTERACTIVE_SELECTOR)) {
+			userTouched = true;
+			editTick++;
+		}
+	}
+	function onEditorValueChange() {
+		userTouched = true;
+		editTick++;
+	}
+
+	function handleSave(): Promise<void> {
+		if (!preset) return Promise.resolve();
 		compareSaveCtl.setSaving();
 		// Issue #758: Save direkt via api.put (kein Redirect nach /compare/{id}).
 		// Round-Trip-Spread via buildComparePresetSavePayload bleibt erhalten.
@@ -380,7 +446,11 @@
 			topN: wiz.topN,
 			hourlyEnabled: wiz.hourlyEnabled
 		});
-		api.put(url, body)
+		// Issue #1261 (b): Rueckgabewert als Promise durchreichen, damit
+		// compareSaveCtl.schedule() den echten Netzwerk-Abschluss abwartet statt
+		// nur den synchronen Funktionsaufruf (sonst zeigt der Indikator faelschlich
+		// "gespeichert" bevor der PUT tatsaechlich abgeschlossen ist).
+		return api.put(url, body)
 			.then(() => {
 				// F001: initial auf gespeicherte Werte setzen → dirty=false → Indikator idle.
 				initial.name = savedName;
@@ -708,6 +778,15 @@
 			...ltChannelBuckets,
 			[ltActiveChannel]: { ...ltChannelBuckets[ltActiveChannel], [bucket]: newOrder }
 		};
+		// Adversary F004 (CRITICAL): svelte-dnd-action (GETEILTE BucketSection.svelte,
+		// AC-13 unangetastet) feuert beim Drop nur CustomEvents ("consider"/
+		// "finalize") — kein pointerdown/keydown/change/input auf einem vom
+		// Gesten-Gate-Selector erfassten Element. Ohne diese explizite Meldung
+		// bliebe userTouched/editTick nach einem reinen Drag-Reorder unveraendert,
+		// obwohl wiz.channelLayouts (via ltChannelBuckets) tatsaechlich dirty
+		// wird — Autosave wuerde nie armieren (identische Fehlerklasse wie F003).
+		userTouched = true;
+		editTick++;
 	}
 
 	function ltHandleMode(id: string, useIndicator: boolean) {
@@ -857,6 +936,10 @@
 	style:position="relative"
 	style:min-height="100%"
 	style:background="var(--g-paper)"
+	onpointerdowncapture={onEditorTouchGesture}
+	onkeydowncapture={onEditorTouchGesture}
+	onchangecapture={onEditorValueChange}
+	oninputcapture={onEditorValueChange}
 >
 <div class="cm-desktop">
 	<TopoBg opacity={0.12}>
@@ -1442,16 +1525,24 @@
 {/if}
 </div>
 
-<!-- ConfirmDialog: Änderungen verwerfen (AC-4) -->
+<!-- ConfirmDialog: Änderungen verwerfen (AC-4). Issue #1261 (b): Copy
+     angepasst — seit Autospeichern sind bereits gesicherte Änderungen NICHT
+     mehr rückrollbar (AC-11, analog Trip-Editor ohne Verwerfen-Funktion). -->
 <ConfirmDialog
 	open={discardOpen}
 	title="Änderungen verwerfen?"
-	description="Alle Änderungen an diesem Vergleich werden verworfen."
+	description="Noch nicht gespeicherte Änderungen werden verworfen. Bereits automatisch gespeicherte Änderungen bleiben erhalten."
 	confirmLabel="Verwerfen"
 	confirmVariant="destructive"
 	cancelLabel="Weiter bearbeiten"
 	onConfirm={async () => {
 		discardOpen = false;
+		// Issue #1261 (b), Adversary F002 (CRITICAL): erst einen noch NICHT
+		// ausgelösten Autosave abbrechen (cancel(), kein saveFn-Aufruf), DANN
+		// navigieren — sonst würde der beforeNavigate-Wächter in
+		// routes/compare/[id]/edit/+page.svelte den ausstehenden Save flushen
+		// (= speichern statt verwerfen), weil hasPending noch true war.
+		compareSaveCtl.cancel();
 		const { goto } = await import('$app/navigation');
 		void goto('/compare/' + (preset?.id ?? ''));
 	}}

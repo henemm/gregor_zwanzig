@@ -133,9 +133,13 @@ test.describe('#528 Compare Hub · Header-Primäraktion', () => {
 		await expect(page.getByRole('button', { name: 'Setup abschließen' })).toBeVisible();
 	});
 
-	test('AC-3: Aktives Preset zeigt "Test senden" statt "Bearbeiten"', async ({ page }) => {
+	// Issue #1261 (a): Bearbeiten wieder im Detail-Header (Trip-Parität),
+	// ergänzt #528-Primäraktion — der Desktop-Header zeigt fuer ein aktives
+	// Preset jetzt "Test senden" UND "Bearbeiten" nebeneinander (analog
+	// Trip-Header), statt "Bearbeiten" zu verstecken.
+	test('AC-3: Aktives Preset zeigt "Test senden" UND "Bearbeiten"', async ({ page }) => {
 		await page.goto(`/compare/${activePresetId}`);
-		await expect(page.getByRole('link', { name: 'Bearbeiten' })).not.toBeVisible();
+		await expect(page.getByRole('link', { name: 'Bearbeiten' })).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Test senden' })).toBeVisible();
 	});
 });

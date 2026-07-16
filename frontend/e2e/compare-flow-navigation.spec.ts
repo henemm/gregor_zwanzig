@@ -386,22 +386,21 @@ test.describe('Issue #1256 Scheibe 2: Compare-Fluss Klickpfade Mobile (AC-25, AC
 
 // ── Scheibe 3 (AC-5, KL-7, AC-30): Hub-Header-Kebab auf Lifecycle ───────────
 //
-// Ist (vor Phase 6): CompareKebab.svelte:27 speist sich für JEDEN Aufrufer
-// (Liste UND Hub-Header) ausschließlich aus compareActions(status) — seit
-// Scheibe 1 ohne "archive". Der Hub-Header zeigt daher heute den 5er-
-// Listen-Vertrag (Pausieren/Aktivieren, Briefing jetzt senden, Vorschau
-// öffnen, Bearbeiten, Löschen) statt der 3er-Lifecycle-Liste
-// (Pausieren/Aktivieren, Archivieren, Löschen). "Archivieren" ist dadurch
-// app-weit unerreichbar (KL-7, PO-abgesegneter Zwischenzustand) — die Tests
-// unten reproduzieren genau diese Lücke und werden erst nach Phase 6 (neue
-// CompareKebab-Variante/injizierte Aktionsliste) grün.
+// Ist (Issue #1261, löst den bewusst editier-losen #1256-S3-Desktop-Zustand
+// auf — der Nutzer fand "Bearbeiten" hier nicht (Bug #1261)): Der Hub-Header-
+// Kebab speist sich aus compareDetailActions(status) (subscriptionHelpers.ts)
+// = Lifecycle-Liste (Pausieren/Aktivieren, Archivieren, Löschen) PLUS
+// "Bearbeiten" für active/paused — macht den Editor auf der Desktop-
+// Detailseite wieder auffindbar, während "Vorschau öffnen"/"Briefing jetzt
+// senden" weiterhin exklusiv über Tabs/Primäraktion laufen (nicht im
+// Hub-Kebab). "Archivieren" bleibt erreichbar (KL-7 unverändert).
 test.describe('Issue #1256 Scheibe 3: Hub-Header-Kebab Lifecycle (AC-5, KL-7, AC-30)', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 
-	// ── AC-5: Hub-Kebab bei pausiertem Vergleich = genau [Aktivieren, Archivieren, Löschen] ──
-	test('AC-5: Hub-Header-Kebab (pausierter Vergleich) zeigt genau Aktivieren/Archivieren/Löschen', async ({
+	// ── AC-5: Hub-Kebab bei pausiertem Vergleich = [Aktivieren, Archivieren, Bearbeiten, Löschen] ──
+	test('AC-5: Hub-Header-Kebab (pausierter Vergleich) zeigt Aktivieren/Archivieren/Bearbeiten/Löschen', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -416,17 +415,17 @@ test.describe('Issue #1256 Scheibe 3: Hub-Header-Kebab Lifecycle (AC-5, KL-7, AC
 		await expect(kebabTrigger).toBeVisible({ timeout: 10_000 });
 		await kebabTrigger.click();
 
-		// Lifecycle-Vertrag: genau 3 Einträge, "Archivieren" jetzt erreichbar.
+		// Lifecycle-Vertrag: "Archivieren" erreichbar (KL-7), "Bearbeiten" seit #1261 ergänzt.
 		await expect(page.getByRole('menuitem', { name: 'Aktivieren' })).toBeVisible({ timeout: 5_000 });
 		await expect(page.getByRole('menuitem', { name: 'Archivieren' })).toBeVisible({ timeout: 5_000 });
 		await expect(page.getByRole('menuitem', { name: 'Löschen' })).toBeVisible({ timeout: 5_000 });
+		await expect(page.getByRole('menuitem', { name: 'Bearbeiten' })).toBeVisible({ timeout: 5_000 });
 
-		// Listen-exklusive Aktionen dürfen im Hub-Header NICHT mehr auftauchen.
-		await expect(page.getByRole('menuitem', { name: 'Bearbeiten' })).not.toBeVisible();
+		// Listen-exklusive Aktionen dürfen im Hub-Header weiterhin NICHT auftauchen.
 		await expect(page.getByRole('menuitem', { name: 'Vorschau öffnen' })).not.toBeVisible();
 		await expect(page.getByRole('menuitem', { name: 'Briefing jetzt senden' })).not.toBeVisible();
 
-		await expect(page.getByRole('menuitem')).toHaveCount(3);
+		await expect(page.getByRole('menuitem')).toHaveCount(4);
 
 		await page.keyboard.press('Escape');
 	});

@@ -79,6 +79,39 @@ export class SaveStatus {
 			await this.doSave(fn);
 		}
 	}
+
+	/**
+	 * Issue #1261 (b), Adversary F002 (CRITICAL): bricht einen noch NICHT
+	 * ausgelösten debounced Save ab (Timer + pending-Fn löschen), OHNE
+	 * `saveFn` aufzurufen — Gegenstück zu `flush()`, das den ausstehenden Save
+	 * erzwingt statt ihn zu verwerfen. Additiv: nur Aufrufer, die `cancel()`
+	 * explizit rufen, sind betroffen (der Trip-Pfad ruft `cancel()` nirgends —
+	 * dort unverändertes Verhalten).
+	 *
+	 * Läuft ein Save bereits im Netzwerk (state 'saving', Timer bereits null,
+	 * `doSave()` steckt im `await saveFn()`), kann dieser Request nicht mehr
+	 * storniert werden — `cancel()` verhindert dann nur einen etwaigen noch
+	 * nicht gefeuerten NACHFOLGE-Timer. Das deckt sich mit der akzeptierten
+	 * Spec-Grenze (Known Limitations): vor dem Debounce-Ablauf verwirft
+	 * "Verwerfen" wirklich, nach bereits erfolgtem Autosave kein Rollback.
+	 *
+	 * Adversary MEDIUM-Fix: der Status wird NUR zurückgesetzt, wenn tatsächlich
+	 * ein noch nicht gefeuerter Timer abgebrochen wurde. Lief bereits ein
+	 * echter Save im Netzwerk (Timer schon null, state 'saving' durch
+	 * `doSave()`), bleibt der State unberührt — `doSave()`s eigenes
+	 * `setSaved()`/`setError()` nach Abschluss ist dafür zuständig, sonst
+	 * würde `cancel()` fälschlich "idle" vorgaukeln, während der Request noch
+	 * offen ist (widerspricht dem eigenen "kein Rollback nach Autosave"-Zweck).
+	 */
+	cancel(): void {
+		const hadPendingTimer = this._timer !== null;
+		if (this._timer !== null) clearTimeout(this._timer);
+		this._timer = null;
+		this._pendingFn = null;
+		if (hadPendingTimer && (this.state === 'saving' || this.state === 'dirty')) {
+			this.state = 'idle';
+		}
+	}
 }
 
 export function createSaveStatus(): SaveStatus {

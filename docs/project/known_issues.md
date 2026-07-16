@@ -5,6 +5,28 @@
 >
 > Diese Datei bleibt als Detail-Referenz fuer Root-Cause-Analysen bestehen.
 
+## BUG-1261-COMPARE-EDIT: Ortsvergleich nicht editierbar (Desktop) + kein Autospeichern
+
+**Status:** RESOLVED (2026-07-16) | **Severity:** High (Kernfunktion unauffindbar + Datenverlustrisiko bei fehlendem Speichern) | **GitHub Issue:** #1261 | **Spec:** `docs/specs/modules/issue_1261_compare_edit_autosave.md`
+
+### Symptom
+
+Nutzer fanden auf der Compare-Detailseite (Desktop) keinen Weg mehr, einen bestehenden Ortsvergleich zu bearbeiten. Zusätzlich gingen Änderungen an Orten/Wertebereich/Versand/Layout/Alarmen verloren, wenn nicht explizit auf einen manuellen Speichern-Button geklickt wurde — der Trip-Editor speichert an derselben Stelle längst automatisch.
+
+### Root Cause
+
+1. **Editier-Einstieg vollständig entfernt statt nur umgebaut:** #528 entfernte „Bearbeiten" als Header-Primäraktion der Compare-Detailseite (Desktop), #1256 Scheibe 3 ersetzte den Desktop-⋮-Kebab durch reine Lebenszyklus-Aktionen (aktivieren/pausieren/löschen) ohne „Bearbeiten". Beide Änderungen waren für sich genommen begründet, in Summe verschwand der Desktop-Editier-Einstieg komplett — ohne dass ein Ersatzpfad geprüft wurde. Mobile-Sheet (`compareLifecycleActions`) blieb unberührt und war der einzige verbliebene Weg.
+2. **Kein Autospeichern im Compare-Editor:** Der Compare-Editor kannte nur manuelles Speichern über einen Button; der Trip-Editor hatte Autospeichern (debounced, Gesten-Gate #1234) längst produktiv. Die beiden parallelen Editoren liefen damit strukturell auseinander (siehe Trip/Compare-Code-Teilungs-Vorgabe, `CLAUDE.md`).
+
+### Fix (Committed 2026-07-16, Workflow `fix-1261-compare-edit-save`)
+
+(a) Compare-Detailseiten-Header zeigt „Bearbeiten" neben „Test senden" (Trip-Parität); Desktop-⋮-Kebab nutzt neu `compareDetailActions(status)` = Lebenszyklus-Aktionen + „Bearbeiten" (aktiv/pausiert). Mobile-Sheet (`compareLifecycleActions`) und Draft/Setup-Pfad unverändert.
+(b) Autospeichern im Compare-Editor: Änderungen an Orten/Wertebereich/Versand/Layout/Alarmen werden debounced (~700 ms) automatisch gespeichert, mit `beforeNavigate`-Flush und dem #1234-Gesten-Gate (kein Schreiben ohne echte Nutzergeste). Neue Bausteine: `compareAutosave.ts` (`computeCompareAutoSaveAction`), additive `SaveStatus.cancel()`. Geteilte Tab-Komponenten (CorridorEditor/VersandTab/AlarmeTab) blieben unverändert (AC-13).
+
+### Strukturelle Lehre für Konvergenz-Epic #1230
+
+Das zentrale Gesten-Gate im Compare-Editor (Ansatz A: eine gemeinsame Debounce-/Gate-Logik, die alle Tab-Interaktionen abdecken muss) erwies sich als fragil gegenüber nicht-standardkonformen Interaktionen. Der Adversary fand vier separate Datenverlust-Fallen, die jeweils eine eigene Selector-/Callback-Erweiterung brauchten: Folge-Edit während laufendem In-Flight-PUT, „Verwerfen" speicherte statt zu verwerfen, Slider-Drag löste das Gate nicht sauber aus, Layout-Drag-Reorder ebenso nicht. Jede Falle war ein eigener Fix-Loop-Zyklus. Robustere Zielarchitektur für #1230: **per-Tab-Save-Wiring (Ansatz B)** — jeder Tab meldet seine eigenen Save-Trigger explizit, statt dass ein zentrales Gate alle Interaktionsarten erraten muss.
+
 ## BUG-1257-ALERTVOCAB: Alarm-Regeln bei jedem Speichern gelöscht — zwei Vokabulare, kein Übersetzer
 
 **Status:** RESOLVED (2026-07-15) | **Severity:** High (Datenverlust) | **GitHub Issue:** #1257 | **Spec:** `docs/specs/modules/bug_1257_alert_metric_mapping.md`

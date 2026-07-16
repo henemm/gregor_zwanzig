@@ -8,6 +8,7 @@
 	// data.preset wird zusätzlich als Prop an CompareEditor gegeben (Round-Trip-Spread + Status-Dot).
 
 	import { setContext } from 'svelte';
+	import { goto, beforeNavigate } from '$app/navigation';
 	import { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import CompareEditor from '$lib/components/compare/CompareEditor.svelte';
 	import { rehydrateActiveMetrics } from '$lib/components/compare/compareEditorLoad';
@@ -15,6 +16,28 @@
 	import type { ActivityProfile, ChannelLayouts } from '$lib/types';
 
 	let { data } = $props();
+
+	// Issue #1261 (b): Flush ausstehender Auto-Saves vor Navigation, analog
+	// routes/trips/[id]/+page.svelte:25-34. compareSaveCtl lebt in CompareEditor
+	// (eigene Instanz pro Editor, kein Singleton, Issue #758 AC-6) — via
+	// bind:this + exportiertem Getter erreichbar gemacht.
+	// Kein $state() hier (bewusst): diese Datei hat bereits eine lokale
+	// Bindung `state` (CompareWizardState, s.u.) — `$state()` daneben wuerde
+	// Sveltes Store-Autosubscription-Heuristik faelschlich triggern
+	// (store_rune_conflict). editorRef wird nur imperativ in beforeNavigate
+	// gelesen, keine reaktive Nutzung im Markup noetig.
+	let editorRef: ReturnType<typeof CompareEditor> | undefined;
+	beforeNavigate(({ cancel, to, willUnload }) => {
+		if (willUnload) return; // Browser-Navigation, kein Flush möglich
+		const saveCtl = editorRef?.getCompareSaveController();
+		if (saveCtl?.hasPending) {
+			cancel();
+			const targetUrl = to?.url?.href ?? null;
+			void saveCtl.flush().then(() => {
+				if (targetUrl) void goto(targetUrl);
+			});
+		}
+	});
 
 	const state = new CompareWizardState();
 	state.isEditMode = true;
@@ -93,4 +116,4 @@
 	setContext('compare-wizard-profile', data.profile ?? null);
 </script>
 
-<CompareEditor mode="edit" locations={data.locations} preset={data.preset} />
+<CompareEditor mode="edit" locations={data.locations} preset={data.preset} bind:this={editorRef} />

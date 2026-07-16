@@ -285,6 +285,22 @@ export function compareLifecycleActions(status: CompareStatus): CompareAction[] 
 	return [toggle, { id: 'archive', label: 'Archivieren' }, { id: 'trash', label: 'Löschen', danger: true }];
 }
 
+// Issue #1261 (a) — Desktop-Detail-Kebab: Lebenszyklus-Aktionen PLUS
+// "Bearbeiten" fuer active/paused (der bewusst tote #1256-S3-Zustand wird
+// aufgeloest — der Nutzer fand "Bearbeiten" hier nicht mehr). NUR fuer den
+// Desktop-Detail-Call-Site (routes/compare/[id]/+page.svelte) gedacht —
+// compareLifecycleActions() selbst bleibt fuer das Mobile-Sheet unveraendert
+// (#1256 Scheibe 8 AC-23, Regressionstest in compareDetailEditActions.test.ts).
+// Draft behaelt den bestehenden Setup-Pfad, bekommt daher KEIN "edit".
+export function compareDetailActions(status: CompareStatus): CompareAction[] {
+	const lifecycle = compareLifecycleActions(status);
+	if (status === 'draft') return lifecycle;
+	const editAction: CompareAction = { id: 'edit', label: 'Bearbeiten' };
+	const dangerIndex = lifecycle.findIndex((a) => a.danger);
+	if (dangerIndex === -1) return [...lifecycle, editAction];
+	return [...lifecycle.slice(0, dangerIndex), editAction, ...lifecycle.slice(dangerIndex)];
+}
+
 // Issue #1229 — Compare-Hub Briefing-Zeiten (Slot-basiert statt Rhythmus-Sprache).
 // Spec: docs/specs/modules/issue_1229_monitor_hub.md (AC-3, Edge Cases)
 

@@ -14,7 +14,7 @@
 	import {
 		deriveStatusWithScheduleOverride,
 		presetProfileLabel,
-		compareLifecycleActions,
+		compareDetailActions,
 		isRuntimeExceeded
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { page } from '$app/state';
@@ -101,7 +101,7 @@
 		if (id === 'edit' || id === 'setup') {
 			window.location.href = `/compare/${data.preset.id}/edit`;
 		} else if (id === 'pause' || id === 'resume') {
-			// 'resume' kommt aus compareLifecycleActions() (Hub-Header, #1256 S3) —
+			// 'resume' kommt aus compareDetailActions() (Hub-Header, #1256 S3 + #1261) —
 			// selbe Toggle-Aktion wie 'pause' aus compareActions() (Listen-Kebab).
 			void togglePause();
 		} else if (id === 'send') {
@@ -111,7 +111,7 @@
 		} else if (id === 'archive') {
 			void archivePreset();
 		} else if (id === 'delete' || id === 'trash') {
-			// 'trash' kommt aus compareLifecycleActions() (Hub-Header, #1256 S3) —
+			// 'trash' kommt aus compareDetailActions() (Hub-Header, #1256 S3 + #1261) —
 			// selbe Lösch-Aktion wie 'delete' aus compareActions() (Listen-Kebab).
 			void deletePreset();
 		}
@@ -175,8 +175,11 @@
 				<Btn variant="primary" onclick={handleTestSend} disabled={isSending}>
 					{isSending ? 'Wird gesendet…' : 'Test senden'}
 				</Btn>
+				<!-- Issue #1261 (a): "Bearbeiten" war zuvor nur ueber den toten
+				     handleAction('edit')-Zweig erreichbar — kein sichtbarer Einstieg. -->
+				<Btn variant="outline" href="/compare/{data.preset.id}/edit" data-testid="compare-detail-edit-button">Bearbeiten</Btn>
 			{/if}
-			<CompareKebab {status} actions={compareLifecycleActions(status)} onSelect={handleAction} />
+			<CompareKebab {status} actions={compareDetailActions(status)} onSelect={handleAction} />
 		</div>
 	</div>
 

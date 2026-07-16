@@ -254,7 +254,11 @@ test.describe('Issue #1256 Scheibe 8 (AC-23): mobiles Bottom-Sheet — Lifecycle
 		await expect(sheet).toBeVisible({ timeout: 5_000 });
 
 		// Lifecycle-Vertrag (compareLifecycleActions, paused → Aktivieren):
-		// genau 3 Aktionen, deckungsgleich mit dem Desktop-Hub-Kebab (S3).
+		// genau 3 Aktionen. Seit Issue #1261 NICHT mehr deckungsgleich mit dem
+		// Desktop-Hub-Kebab (der zeigt jetzt zusätzlich "Bearbeiten", 4 Einträge,
+		// via compareDetailActions()) — das Mobile-Sheet bleibt bewusst
+		// Lifecycle-only (#1256 Scheibe 8 AC-23), Mobile hat den separaten
+		// Stift-Button statt eines Kebab-Eintrags.
 		await expect(sheet.getByText('Aktivieren', { exact: true })).toBeVisible({ timeout: 5_000 });
 		await expect(sheet.getByText('Archivieren', { exact: true })).toBeVisible({ timeout: 5_000 });
 		await expect(sheet.getByText('Löschen', { exact: true })).toBeVisible({ timeout: 5_000 });

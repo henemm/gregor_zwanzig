@@ -1,0 +1,173 @@
+// E2E (Staging) — Issue #1261 (a): Compare-Detailseite (Desktop) — "Bearbeiten"
+// auffindbar machen (Header-Button + Desktop-⋮-Kebab), Mobile-Regression,
+// Draft-Ausnahme.
+//
+// Spec: docs/specs/modules/issue_1261_compare_edit_autosave.md
+//   § Acceptance Criteria AC-1..AC-4
+//
+// Echter Klick-Pfad (Kebab-Klick statt goto), Auth ueber die im
+// playwright.config.ts hinterlegte storageState (kein Login pro Test —
+// vermeidet das Staging-Auth-Rate-Limit, #703).
+//
+// Ausführen (gegen Staging, aus frontend/):
+//   npx playwright test e2e/compare-detail-edit-entry.spec.ts --config playwright.config.ts
+
+import { test, expect, type Page } from '@playwright/test';
+
+let createdIds: string[] = [];
+let createdLocationIds: string[] = [];
+
+test.afterEach(async ({ page }) => {
+	for (const id of createdIds) {
+		try {
+			await page.request.delete(`/api/compare/presets/${id}`);
+		} catch {
+			/* Staging-Hygiene: Cleanup-Fehler ist nicht test-kritisch */
+		}
+	}
+	createdIds = [];
+	for (const id of createdLocationIds) {
+		try {
+			await page.request.delete(`/api/locations/${id}`);
+		} catch {
+			/* Staging-Hygiene: Cleanup-Fehler ist nicht test-kritisch */
+		}
+	}
+	createdLocationIds = [];
+});
+
+async function createLocation(page: Page, name: string, lat: number, lon: number): Promise<string> {
+	const res = await page.request.post('/api/locations', { data: { name, lat, lon } });
+	expect(res.ok(), 'Location-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();
+	const body = await res.json();
+	createdLocationIds.push(body.id);
+	return body.id as string;
+}
+
+// deriveStatusFromPreset() (subscriptionHelpers.ts) braucht Name + mind. 1 Ort
+// fuer active/paused — leere location_ids faellt sonst auf "draft" zurueck.
+async function createPresetWithLocation(
+	page: Page,
+	name: string,
+	schedule: 'daily' | 'manual',
+	locationId: string
+): Promise<string> {
+	const res = await page.request.post('/api/compare/presets', {
+		data: {
+			name,
+			location_ids: [locationId],
+			schedule,
+			profil: 'wandern',
+			hour_from: 7,
+			hour_to: 16,
+			empfaenger: ['urlauber@example.com']
+		}
+	});
+	expect(res.ok(), 'Preset-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();
+	const body = await res.json();
+	createdIds.push(body.id);
+	return body.id as string;
+}
+
+async function createDraftPreset(page: Page, name: string): Promise<string> {
+	const res = await page.request.post('/api/compare/presets', {
+		data: {
+			name,
+			location_ids: [],
+			schedule: 'daily',
+			profil: 'wandern',
+			hour_from: 7,
+			hour_to: 16,
+			empfaenger: []
+		}
+	});
+	expect(res.ok(), 'Draft-Preset-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();
+	const body = await res.json();
+	createdIds.push(body.id);
+	return body.id as string;
+}
+
+test.describe('Issue #1261 (a): Compare-Detail "Bearbeiten" auffindbar (Desktop)', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.setViewportSize({ width: 1280, height: 900 });
+	});
+
+	// ── AC-1: sichtbarer Header-Button navigiert auf den Editor ──────────────
+	test('AC-1: Desktop-Header zeigt "Bearbeiten"-Button, der auf /compare/{id}/edit navigiert', async ({
+		page
+	}) => {
+		const suffix = Date.now();
+		const locId = await createLocation(page, `E2E 1261 AC1 Ort ${suffix}`, 47.05, 11.31);
+		const id = await createPresetWithLocation(page, `E2E 1261 AC1 ${suffix}`, 'daily', locId);
+
+		await page.goto(`/compare/${id}`);
+		await page.waitForLoadState('networkidle');
+
+		const editBtn = page.locator('[data-testid="compare-detail-edit-button"]:visible');
+		await expect(editBtn).toBeVisible({ timeout: 10_000 });
+		await editBtn.click();
+
+		await expect(page).toHaveURL(new RegExp(`/compare/${id}/edit$`), { timeout: 10_000 });
+	});
+
+	// ── AC-2: Desktop-⋮-Kebab enthält zusätzlich "Bearbeiten" ────────────────
+	test('AC-2: Desktop-⋮-Kebab enthält "Bearbeiten" (aktiv), navigiert auf /compare/{id}/edit', async ({
+		page
+	}) => {
+		const suffix = Date.now();
+		const locId = await createLocation(page, `E2E 1261 AC2 Ort ${suffix}`, 47.06, 11.32);
+		const id = await createPresetWithLocation(page, `E2E 1261 AC2 ${suffix}`, 'daily', locId);
+
+		await page.goto(`/compare/${id}`);
+		await page.waitForLoadState('networkidle');
+
+		const kebabTrigger = page.locator('button[aria-label="Weitere Aktionen"]:visible').first();
+		await expect(kebabTrigger).toBeVisible({ timeout: 10_000 });
+		await kebabTrigger.click();
+
+		// Erweiterung, kein Ersatz: Lebenszyklus-Einträge bleiben erhalten.
+		await expect(page.getByRole('menuitem', { name: 'Pausieren' })).toBeVisible({ timeout: 5_000 });
+		await expect(page.getByRole('menuitem', { name: 'Archivieren' })).toBeVisible();
+		await expect(page.getByRole('menuitem', { name: 'Löschen' })).toBeVisible();
+		const editItem = page.getByRole('menuitem', { name: 'Bearbeiten' });
+		await expect(editItem).toBeVisible();
+
+		await editItem.click();
+		await expect(page).toHaveURL(new RegExp(`/compare/${id}/edit$`), { timeout: 10_000 });
+	});
+
+	// ── AC-3: Mobile-Sheet bleibt ohne "Bearbeiten" (Regression #1256 S8 AC-23) ──
+	test('AC-3: Mobile Bottom-Sheet enthält weiterhin KEIN "Bearbeiten" (aktiv)', async ({ page }) => {
+		await page.setViewportSize({ width: 375, height: 667 });
+		const suffix = Date.now();
+		const locId = await createLocation(page, `E2E 1261 AC3 Ort ${suffix}`, 47.07, 11.33);
+		const id = await createPresetWithLocation(page, `E2E 1261 AC3 ${suffix}`, 'daily', locId);
+
+		await page.goto(`/compare/${id}`);
+		await page.waitForLoadState('networkidle');
+
+		const moreBtn = page.locator('button[aria-label="Weitere Aktionen"]:visible').first();
+		await expect(moreBtn).toBeVisible({ timeout: 10_000 });
+		await moreBtn.click();
+
+		await expect(page.getByRole('button', { name: 'Pausieren' })).toBeVisible({ timeout: 5_000 });
+		await expect(page.getByRole('button', { name: 'Bearbeiten' })).toHaveCount(0);
+	});
+
+	// ── AC-4: Draft — kein zusätzlicher Bearbeiten-Einstieg ──────────────────
+	test('AC-4: Draft zeigt "Setup abschließen", KEIN zusätzlichen Bearbeiten-Einstieg', async ({ page }) => {
+		const suffix = Date.now();
+		const id = await createDraftPreset(page, `E2E 1261 AC4 Draft ${suffix}`);
+
+		await page.goto(`/compare/${id}`);
+		await page.waitForLoadState('networkidle');
+
+		await expect(page.getByRole('button', { name: 'Setup abschließen' })).toBeVisible({ timeout: 10_000 });
+		await expect(page.locator('[data-testid="compare-detail-edit-button"]')).toHaveCount(0);
+
+		const kebabTrigger = page.locator('button[aria-label="Weitere Aktionen"]:visible').first();
+		await expect(kebabTrigger).toBeVisible({ timeout: 10_000 });
+		await kebabTrigger.click();
+		await expect(page.getByRole('menuitem', { name: 'Bearbeiten' })).toHaveCount(0);
+	});
+});
