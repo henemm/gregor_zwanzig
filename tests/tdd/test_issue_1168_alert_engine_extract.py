@@ -531,9 +531,7 @@ def test_ac3_engine_evaluates_generic_activation_gap_without_explicit_levels():
 def test_ac5_adr_file_present_and_accepted_by_guard():  # doc-compliance-test
     """AC-5: `docs/adr/0021-shared-deviation-alert-engine.md` existiert und
     trägt die ADR-Grundstruktur (Status/Bezug/Kontext/Entscheidung/
-    Verworfene Alternativen/Konsequenzen), damit der `adr_guard`-Hook den
-    Commit ohne `[no-adr]`-Marker durchlässt (adr_guard.py Zeile 55f: prüft
-    nur auf Existenz einer `docs/adr/*.md`-Datei im selben Commit).
+    Verworfene Alternativen/Konsequenzen).
 
     RED: die Datei existiert heute noch nicht.
     """
