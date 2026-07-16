@@ -371,6 +371,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.5 | 2026-06-26 | SMS PR-Token-Befüllung (Issue #887) — `_segments_to_normalized_forecast()` in `sms_trip.py` erzeugt synthetisches `pop_hourly` aus `agg.pop_max_pct`, damit SMS-Token `PR{p}%` nicht mehr leer bleibt |
 | 2.6 | 2026-07-01 | km-Bereichs-Bewahrung in Header (Issue #936) — `_sanitize_stage_name()` erkennt `km`-Marker und bewahrt vollständigen km-Bereich (z.B. `km0-11`) statt ihn nach 10 Zeichen abzuschneiden; Prefix gekürzt, km-Teil vollständig |
 | 2.7 | 2026-07-13 | Faltungs-Konvention auf alle Schriften erweitert (Issue #1253) — bisher nur Umlaute; einzige Quelle jetzt `fold_ascii()` in `src/utils/ascii_fold.py` (ADR-0022: `anyascii` + deutsche Digraph-Map + zeichenweiser `?`-Guard gegen stille Buchstaben-Löschung), gilt jetzt durchgängig „erst falten, dann kürzen" auch im SMS-Titelzeilen-Pfad (`_sms_stage_prefix`) |
+| 2.8 | 2026-07-16 | `TH+`-Datenquelle korrigiert (Issue #1275) — aggregiert jetzt über ALLE Segmente der tatsächlichen Folge-Etappe (statt nur das letzte Segment der heutigen Etappe zu prüfen) und nutzt dieselbe Fetch-/Aggregations-Kette wie die E-Mail-Outlook-Tabelle (`_build_stage_trend()`); stimmt dadurch garantiert mit deren Wert überein |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

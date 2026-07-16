@@ -739,15 +739,22 @@ class TripReportSchedulerService:
         if report_type == "evening" and segment_weather:
             night_weather = self._fetch_night_weather(segment_weather[-1])
 
-        # 5. Thunder forecast (+1/+2 days)
-        thunder_forecast = self._build_thunder_forecast(
-            segment_weather[-1], target_date, tz=trip_tz,
-        )
-
         # 6. Multi-day trend (configurable per report type — via Resolver, Issue #1208)
+        #    Built BEFORE the thunder forecast (#1275): both must reflect the
+        #    SAME actual future stage(s), never today's last segment.
         multi_day_trend = None
         if segment_weather and render_options.show_multi_day_trend:
             multi_day_trend = self._build_stage_trend(trip, target_date, tz=trip_tz)
+
+        # 5. Thunder forecast (+1/+2 days) — Issue #1275
+        #    Same data source as the outlook table, so SMS/Telegram/E-Mail-
+        #    Vorschau agree with it. When the multi-day trend was already built
+        #    (evening default) its rows are REUSED — no second weather fetch.
+        #    Only offsets not covered by the trend fall back to a dedicated
+        #    single-stage fetch (typically morning, where the trend is off).
+        thunder_forecast = self._build_thunder_forecast_from_trend_or_fetch(
+            trip, target_date, tz=trip_tz, multi_day_trend=multi_day_trend,
+        )
 
         # 7. Usable daylight (F11) — via Resolver (Issue #1208)
         daylight_window = None
@@ -1361,6 +1368,11 @@ class TripReportSchedulerService:
 
                 trend.append(dict(
                     weekday=WEEKDAYS_DE[stage.date.weekday()],
+                    # Issue #1275: explicit calendar date so the thunder forecast
+                    # can reuse this row (matched by date, gap-safe) instead of
+                    # re-fetching the same stage. Additive — consumers read only
+                    # their known keys (format_trend_tokens).
+                    date=stage.date,
                     name=stage.name,
                     temp_lo=temp_lo,
                     temp_hi=temp_hi,
@@ -1389,65 +1401,226 @@ class TripReportSchedulerService:
 
         return trend if trend else None
 
+    def _build_thunder_forecast_from_trend_or_fetch(
+        self,
+        trip,
+        target_date: date,
+        tz=None,
+        multi_day_trend=None,
+    ) -> Optional[dict]:
+        """Issue #1275: derive the +1/+2 thunder forecast from the SAME data as
+        the E-Mail-Outlook table.
+
+        Primary path — reuse the already-built ``multi_day_trend`` rows, matched
+        by explicit calendar date (``row["date"] == target_date + offset``):
+        NO extra weather fetch in the evening default, where the trend exists.
+
+        Fallback — only for offsets NOT present in the trend (trend disabled,
+        typically morning, or the stage is beyond the 3-row trend window): run
+        the dedicated single-stage fetch + aggregation, fail-soft.
+        """
+        forecast: dict = {}
+        trend_by_date = {
+            row["date"]: row
+            for row in (multi_day_trend or [])
+            if row.get("date") is not None
+        }
+        missing_dates: set = set()
+        for offset, key in [(1, "+1"), (2, "+2")]:
+            fc_date = target_date + timedelta(days=offset)
+            row = trend_by_date.get(fc_date)
+            if row is not None:
+                forecast[key] = self._thunder_entry_from_trend_row(row, fc_date, tz)
+            else:
+                missing_dates.add(fc_date)
+
+        if missing_dates:
+            fetched = self._collect_future_stage_weather(
+                trip, target_date, tz=tz, wanted_dates=missing_dates,
+            )
+            fetched_fc = (
+                self._build_thunder_forecast(fetched, target_date, tz=tz)
+                if fetched else None
+            ) or {}
+            for _offset, key in [(1, "+1"), (2, "+2")]:
+                if key not in forecast and key in fetched_fc:
+                    forecast[key] = fetched_fc[key]
+
+        return forecast if forecast else None
+
+    def _thunder_entry_from_trend_row(
+        self,
+        row: dict,
+        fc_date: date,
+        tz=None,
+    ) -> dict:
+        """Map one ``multi_day_trend`` row to a thunder_forecast entry (#1275).
+
+        Level from ``row["thunder"]`` (name string), earliest "ab HH:MM" from
+        ``row["hourly_thunder"]`` (HourlyValue samples, already local hour). The
+        return format matches ``_build_thunder_forecast`` so all downstream
+        consumers (SMS/Telegram/E-Mail-Vorschau) stay unchanged.
+        """
+        from app.models import ThunderLevel
+
+        try:
+            level = ThunderLevel[row.get("thunder") or "NONE"]
+        except KeyError:
+            level = ThunderLevel.NONE
+        _NUM = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
+        when = None
+        if level != ThunderLevel.NONE:
+            hours = [
+                int(hv.hour)
+                for hv in (row.get("hourly_thunder") or ())
+                if hv.value == _NUM[level]
+            ]
+            if hours:
+                when = f"{min(hours):02d}:00"
+        if level == ThunderLevel.NONE:
+            text = "Kein Gewitter erwartet"
+        elif level == ThunderLevel.MED:
+            text = f"Gewitter möglich ab {when}" if when else "Gewitter möglich"
+        else:
+            text = (
+                f"Starkes Gewitter erwartet ab {when}"
+                if when else "Starkes Gewitter erwartet"
+            )
+        return {
+            "date": fc_date.strftime("%d.%m.%Y"),
+            "level": level,
+            "text": text,
+        }
+
+    def _collect_future_stage_weather(
+        self,
+        trip,
+        target_date: date,
+        tz=None,
+        wanted_dates=None,
+    ) -> List[SegmentWeatherData]:
+        """Issue #1275: fetch weather for the actual next future stages,
+        aggregated later across ALL their segments.
+
+        Used only as the FALLBACK when the multi-day trend does not already
+        cover a needed offset (see _build_thunder_forecast_from_trend_or_fetch).
+        ``wanted_dates`` limits the fetch to exactly the uncovered calendar
+        day(s); defaults to {+1, +2}.
+
+        Reuses the exact fetch/enrich chain of `_build_stage_trend` so the
+        thunder forecast and the E-Mail-Outlook table share ONE data source.
+        Matching is by explicit calendar date (``stage.date == target_date +
+        offset``), NOT by list position — a rest day (no stage on that
+        calendar day) therefore yields an absent entry instead of silently
+        borrowing a later stage's weather (see spec Known Limitations).
+
+        Fail-soft: a per-stage fetch error is logged and the stage skipped, so
+        the corresponding TH+ key is simply absent (SMS shows ``TH+:-``) —
+        the report is never blocked.
+        """
+        from providers.openmeteo import is_within_forecast_horizon
+
+        collected: List[SegmentWeatherData] = []
+        today = date.today()
+        wanted = wanted_dates if wanted_dates is not None else {
+            target_date + timedelta(days=1),
+            target_date + timedelta(days=2),
+        }
+        for stage in trip.get_future_stages(target_date):
+            if stage.date not in wanted:
+                continue
+            if not is_within_forecast_horizon(stage.date, today):
+                continue
+            try:
+                segments = self._convert_trip_to_segments(trip, stage.date)
+                if not segments:
+                    continue
+                seg_weather = self._fetch_weather(segments)
+                if not seg_weather:
+                    continue
+                self._enrich_ensemble_for_trip(trip, seg_weather)
+                collected.extend(seg_weather)
+            except Exception as e:
+                logger.warning(
+                    f"Thunder-forecast fetch failed for stage {stage.id}: {e}"
+                )
+                continue
+        return collected
+
     def _build_thunder_forecast(
         self,
-        last_segment: SegmentWeatherData,
+        segments,
         target_date: date,
         tz=None,
     ) -> Optional[dict]:
         """
-        Build thunder forecast for +1 and +2 days from timeseries data.
+        Build thunder forecast for +1 and +2 days.
 
-        Scans the full provider timeseries for thunder levels on future days.
+        Issue #1275: aggregates the thunder level over ALL segments of the
+        given future stage(s) — not just a single (today's-last) segment — so
+        SMS/Telegram/E-Mail-Vorschau agree with the E-Mail-Outlook table (which
+        uses ``aggregate_stage`` over the same future-stage segments). A data
+        point counts for a calendar day by its LOCAL date (TZ-correct).
 
         Args:
-            last_segment: Weather data with timeseries
-            target_date: Base date
+            segments: A single ``SegmentWeatherData`` (back-compat) or a list
+                of them — typically the segments of the actual next stage(s).
+            target_date: Base date; entries are keyed by day offset (+1/+2).
+            tz: Trip timezone for local-date/-hour resolution.
 
         Returns:
-            Dict with "+1" and "+2" entries, or None if no thunder data
+            Dict with "+1" and/or "+2" entries, or None if no thunder data.
         """
         from app.models import ThunderLevel
 
-        if not last_segment.timeseries or not last_segment.timeseries.data:
+        # Back-compat: accept a single SegmentWeatherData. Duck-typed rather
+        # than isinstance() to survive the app.models / src.app.models
+        # dual-import split.
+        if not isinstance(segments, (list, tuple)):
+            segments = [segments]
+        if not segments:
             return None
 
-        # Check if timeseries extends beyond target_date
+        _ORD = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
+
+        def _local(dt):
+            return dt.astimezone(tz) if tz else dt
+
         forecast = {}
         for offset, key in [(1, "+1"), (2, "+2")]:
             fc_date = target_date + timedelta(days=offset)
             thunder_dps = [
-                dp for dp in last_segment.timeseries.data
-                if dp.ts.date() == fc_date and dp.thunder_level
+                dp
+                for sw in segments
+                if sw.timeseries and sw.timeseries.data
+                for dp in sw.timeseries.data
+                if _local(dp.ts).date() == fc_date and dp.thunder_level
             ]
             if not thunder_dps:
                 continue
 
-            max_level = max(
-                thunder_dps,
-                key=lambda dp: (
-                    0 if dp.thunder_level == ThunderLevel.NONE
-                    else 1 if dp.thunder_level == ThunderLevel.MED
-                    else 2
-                ),
+            # F002: determine the peak level first, then the CHRONOLOGICALLY
+            # earliest data point carrying it — never rely on segment/list
+            # order (two segments both HIGH at different hours must yield the
+            # earlier hour). Mirrors _thunder_entry_from_trend_row's min()-logic.
+            level = max(
+                (dp.thunder_level for dp in thunder_dps),
+                key=lambda lv: _ORD.get(lv, 0),
             )
-            if max_level.thunder_level == ThunderLevel.NONE:
-                forecast[key] = {
-                    "date": fc_date.strftime("%d.%m.%Y"),
-                    "level": ThunderLevel.NONE,
-                    "text": "Kein Gewitter erwartet",
-                }
-            elif max_level.thunder_level == ThunderLevel.MED:
-                forecast[key] = {
-                    "date": fc_date.strftime("%d.%m.%Y"),
-                    "level": ThunderLevel.MED,
-                    "text": f"Gewitter möglich ab {max_level.ts.astimezone(tz).strftime('%H:%M') if tz else max_level.ts.strftime('%H:%M')}",
-                }
+            earliest_ts = min(
+                dp.ts for dp in thunder_dps if dp.thunder_level == level
+            )
+            when = _local(earliest_ts).strftime("%H:%M")
+            if level == ThunderLevel.NONE:
+                text = "Kein Gewitter erwartet"
+            elif level == ThunderLevel.MED:
+                text = f"Gewitter möglich ab {when}"
             else:
-                forecast[key] = {
-                    "date": fc_date.strftime("%d.%m.%Y"),
-                    "level": ThunderLevel.HIGH,
-                    "text": f"Starkes Gewitter erwartet ab {max_level.ts.astimezone(tz).strftime('%H:%M') if tz else max_level.ts.strftime('%H:%M')}",
-                }
+                text = f"Starkes Gewitter erwartet ab {when}"
+            forecast[key] = {
+                "date": fc_date.strftime("%d.%m.%Y"),
+                "level": level,
+                "text": text,
+            }
 
         return forecast if forecast else None

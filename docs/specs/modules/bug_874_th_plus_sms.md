@@ -21,6 +21,13 @@ TH+:` eingebaut, aber kein Test prüft diesen Pfad end-to-end. Tests werden
 hinzugefügt, die das tatsächliche Verhalten durch `SMSTripFormatter.format_sms()`
 beweisen — für Morgen- und Abendbriefing-Kontext.
 
+> **Nachtrag (2026-07-16, Fix #1275):** Die hier getestete Format-Layer-Verdrahtung
+> (`thunder_forecast`-Dict → `TH+:`) bleibt unverändert; die *Beschaffung* dieses
+> Dicts in `trip_report_scheduler.py` wurde jedoch korrigiert — sie aggregiert
+> jetzt über alle Segmente der tatsächlichen Folge-Etappe statt nur die
+> Restdaten des letzten Segments von heute zu prüfen. Details:
+> `docs/specs/bugfix/fix_1275_sms_th_mismatch.md`.
+
 ## Source
 
 - **File:** `tests/tdd/test_bug_874_th_plus_sms.py` (CREATE)

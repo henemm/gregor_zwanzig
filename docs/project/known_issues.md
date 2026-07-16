@@ -5,6 +5,28 @@
 >
 > Diese Datei bleibt als Detail-Referenz fuer Root-Cause-Analysen bestehen.
 
+## BUG-1275-TH-MISMATCH: SMS/Telegram zeigten kein Gewitterrisiko, während E-Mail-Outlook-Tabelle "hoch" zeigte
+
+**Status:** RESOLVED (2026-07-16) | **Severity:** Critical (widersprüchliche Sicherheitsaussage zwischen Kanälen im selben Report) | **GitHub Issue:** #1275 | **Spec:** `docs/specs/bugfix/fix_1275_sms_th_mismatch.md`
+
+### Symptom
+
+Im selben Abend-Trip-Report zeigte die E-Mail-Outlook-Tabelle für die morgige Etappe korrekt "hoch ab 4 Uhr" Gewitterrisiko, während SMS (`TH+:-`), Telegram und der kleine E-Mail-Vorschau-Textblock "kein Gewitter" meldeten — für dieselbe fachliche Aussage.
+
+### Root Cause
+
+Zwei unabhängige, konkurrierende Berechnungen derselben fachlichen Aussage in `trip_report_scheduler.py`: `_build_thunder_forecast()` wurde mit `segment_weather[-1]` aufgerufen — dem letzten Segment der HEUTIGEN Etappe, nicht der tatsächlichen morgigen Etappe — und durchsuchte dessen bereits geladene Zeitreihe ohne TZ-Konvertierung. `_build_stage_trend()` (Quelle der Outlook-Tabelle) machte es dagegen bereits richtig: frischer Fetch der tatsächlichen Folge-Etappe, Aggregation über alle deren Segmente, TZ-korrekt. Liegt das Gewitter-Ereignis an einem anderen Waypoint als dem letzten Segment von heute, wurde es vom SMS/Telegram-Pfad nicht erfasst.
+
+### Fix (Committed 2026-07-16, Workflow `fix-1275-sms-th-mismatch`)
+
+`_build_stage_trend()`s bereits korrekte Fetch-/Aggregations-Kette wird jetzt als primäre Quelle für `thunder_forecast["+1"]`/`["+2"]` wiederverwendet (Reihenfolge in der Aufrufstelle umgekehrt), statt eine zweite, fehlerhafte Berechnung parallel zu betreiben. Kein zusätzlicher API-Call im Evening-Default (Trend läuft ohnehin); nur bei deaktiviertem Trend (Morning) ein extrahierter Fallback-Helper mit eigenem Einzel-Etappen-Fetch. Downstream-Konsumenten (SMS, Telegram, E-Mail-Vorschau) blieben unverändert — sie konsumieren weiterhin denselben Dict-Vertrag.
+
+### Lessons Learned
+
+Muster für Kanal-Divergenz-Bugs: Wenn mehrere Ausgabekanäle dieselbe fachliche Aussage treffen sollen, aber jeweils eine eigene Berechnung dafür haben, divergieren sie garantiert irgendwann — die Abhilfe ist Wiederverwendung der bereits bewährten Quelle statt Parallel-Implementierung, nicht das Nachziehen der fehlerhaften zweiten Implementierung.
+
+---
+
 ## BUG-1269-SAVESTATUS-LIE: Speicher-Status-Anzeige lügt (Trip + Ortsvergleich) + ungegateter Versand-PUT
 
 **Status:** RESOLVED (2026-07-16) | **Severity:** Medium (Vertrauens-Bug + ungewollter Schreibzugriff) | **GitHub Issue:** #1269 | **Spec:** `docs/specs/modules/issue_1269_save_status_lie.md`
