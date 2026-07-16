@@ -256,6 +256,26 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
         "scope": scope,
         "environment": "staging",
     }
+    # Issue #1197: Blind-Overwrite bei zwei Workflows auf demselben HEAD
+    # vermeiden. Traegt eine bestehende Attestation denselben verified_commit,
+    # werden die findings verlustfrei vereinigt (dedup ueber stabile
+    # Serialisierung) statt ueberschrieben. Bei abweichendem/fehlendem/kaputtem
+    # verified_commit bleibt das reguläre Überschreiben (bisheriges Verhalten).
+    if e2e_path.exists():
+        try:
+            existing = json.loads(e2e_path.read_text())
+        except (json.JSONDecodeError, OSError):
+            existing = None
+        if existing is not None and existing.get("verified_commit") == sha:
+            existing_findings = existing.get("findings") or []
+            seen = {json.dumps(f, sort_keys=True) for f in existing_findings}
+            merged = list(existing_findings)
+            for f in findings:
+                key = json.dumps(f, sort_keys=True)
+                if key not in seen:
+                    seen.add(key)
+                    merged.append(f)
+            payload["findings"] = merged
     e2e_path.parent.mkdir(parents=True, exist_ok=True)
     e2e_path.write_text(json.dumps(payload, indent=2))
     _log(f"Verdict geschrieben: {verdict} (commit={payload['verified_commit'][:8]}, scope={scope})")
