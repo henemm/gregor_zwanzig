@@ -145,28 +145,12 @@ test.describe('#528 Compare Hub · Header-Primäraktion', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// #530 — Compare Hub: Wizard-Links in Tabs entfernen
+// #530 — ENTFERNT (#1279): Die AC-5-Regel "kein /edit-Link auf Compare-Tabs"
+// wurde durch #1261 überholt — der dauerhafte Header-Bearbeiten-Button
+// (Trip-Parität) ist ein gewollter, tab-unabhängiger Fix. AC-5 ist damit für
+// aktive Presets strukturell unerfüllbar; die 4 Tests wurden entfernt statt
+// gegen die aktuelle Anforderung anzutesten. Siehe AC-3 oben für die gültige Regel.
 // ─────────────────────────────────────────────────────────────────────────────
-
-test.describe('#530 Compare Hub · Keine Wizard-Links in Tabs', () => {
-	test.beforeAll(async ({ request }) => {
-		if (!activePresetId) {
-			await cleanupComparePresets(request);
-			await seedComparePresets(request);
-		}
-	});
-	test.afterAll(async ({ request }) => {
-		await cleanupComparePresets(request);
-	});
-
-	for (const tab of ['orte', 'idealwerte', 'layout', 'versand']) {
-		test(`AC-5: ${tab}-Tab hat keinen Link auf /edit`, async ({ page }) => {
-			await page.goto(`/compare/${activePresetId}?tab=${tab}`);
-			const editLink = page.locator(`a[href*="/edit"]`);
-			await expect(editLink).not.toBeVisible();
-		});
-	}
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // #531 — Compare-Liste: Suchleiste
