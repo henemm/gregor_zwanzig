@@ -16,14 +16,14 @@
 	import { getContext } from 'svelte';
 	import { Eyebrow } from '$lib/components/atoms';
 	import { GCard } from '$lib/components/ui/g-card';
-	import { Select } from '$lib/components/ui/select';
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
 	import type { CompareWizardState } from './compareWizardState.svelte';
 	import { ALL_HOURLY_METRICS } from './compareHourlyMetricDefs';
 
 	const state = getContext<CompareWizardState>('compare-wizard-state');
 
-	const hasTimeOverlap = $derived(state.timeWindowStart >= state.timeWindowEnd);
+	// Issue #1268: Zeitfenster-/Horizont-Felder samt hasTimeOverlap-Validierung
+	// ersatzlos entfernt (PO-Entscheid 2026-07-16).
 
 	// Issue #1232 Scheibe 2b (KL-7): Kachel "Versand" zeigt jetzt die aktiven
 	// Slot-Zeiten statt eines festen Enum-Werts (state.schedule traegt nur noch
@@ -61,10 +61,11 @@
 </script>
 
 <div data-testid="compare-inhalt-section" class="space-y-6 py-4">
-	<!-- 3-Kacheln-Grid: Versand (Slot-Zeiten) / Zeitfenster / Horizont -->
+	<!-- Kacheln-Grid: Versand (Slot-Zeiten). Issue #1268: Zeitfenster- und
+	     Horizont-Kachel ersatzlos entfernt — Grid ist damit 2-spaltig. -->
 	<div
 		style:display="grid"
-		style:grid-template-columns="1fr 1fr 1fr"
+		style:grid-template-columns="1fr 1fr"
 		style:gap="10px"
 		style:margin-bottom="28px"
 	>
@@ -73,67 +74,7 @@
 			<span class="kachel-value">{scheduleTileValue}</span>
 			<span class="kachel-sub">Slots</span>
 		</button>
-		<button type="button" data-testid="compare-step5-timewindow-tile" class="kachel">
-			<span class="mono kachel-label">Zeitfenster</span>
-			<span class="kachel-value">{state.timeWindowStart}–{state.timeWindowEnd} Uhr</span>
-			<span class="kachel-sub">bewertet</span>
-		</button>
-		<button type="button" data-testid="compare-step5-horizon-tile" class="kachel">
-			<span class="mono kachel-label">Horizont</span>
-			<span class="kachel-value">+{state.forecastHours}h</span>
-			<span class="kachel-sub">
-				{state.forecastHours === 24
-					? 'heute'
-					: state.forecastHours === 48
-						? 'morgen + übermorgen'
-						: 'übermorgen + Folgetag'}
-			</span>
-		</button>
 	</div>
-
-	<!-- Horizont -->
-	<section class="space-y-2">
-		<Eyebrow>Horizont</Eyebrow>
-		<GCard class="rounded-md border border-[var(--g-ink-faint)]/20 p-4">
-			<Select data-testid="compare-step5-forecast-hours" bind:value={state.forecastHours} class="w-full">
-				<option value={24}>Heute (24 h)</option>
-				<option value={48}>Morgen (48 h)</option>
-				<option value={72}>Übermorgen (72 h)</option>
-			</Select>
-		</GCard>
-	</section>
-
-	<!-- Zeitfenster -->
-	<section class="space-y-2">
-		<Eyebrow>Zeitfenster</Eyebrow>
-		<GCard class="rounded-md border border-[var(--g-ink-faint)]/20 p-4">
-			<div class="flex items-center gap-3">
-				<input
-					type="number"
-					min="0"
-					max="23"
-					data-testid="compare-step5-time-window-start"
-					bind:value={state.timeWindowStart}
-					class="w-20 border rounded px-2 py-1 text-base bg-[var(--g-paper)] border-[var(--g-ink-faint)]"
-				/>
-				<span class="text-[var(--g-ink-muted)]">bis</span>
-				<input
-					type="number"
-					min="0"
-					max="23"
-					data-testid="compare-step5-time-window-end"
-					bind:value={state.timeWindowEnd}
-					class="w-20 border rounded px-2 py-1 text-base bg-[var(--g-paper)] border-[var(--g-ink-faint)]"
-				/>
-				<span class="text-[var(--g-ink-muted)] text-sm">Uhr</span>
-			</div>
-			{#if hasTimeOverlap}
-				<p data-testid="compare-step5-time-overlap-error" class="text-[var(--g-danger)] text-sm mt-2">
-					Endzeit muss nach der Startzeit liegen.
-				</p>
-			{/if}
-		</GCard>
-	</section>
 
 	<!-- Content-Flags: amtliche Warnquellen abfragen + Stundenverlauf ein/aus -->
 	<section class="space-y-2">

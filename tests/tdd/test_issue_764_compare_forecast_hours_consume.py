@@ -125,14 +125,28 @@ def _capture_forecast_hours(preset: dict, location, tmp_path) -> int:
 
 
 class TestComparePresetForecastHoursPassthrough:
-    """AC-5: der gespeicherte forecast_hours wird an ComparisonEngine.run durchgereicht."""
+    """Der an ComparisonEngine.run uebergebene forecast_hours-Wert.
 
-    def test_preset_72h_passes_72_to_engine(self, tmp_path):
-        """GIVEN: Daily-Preset mit forecast_hours=72
+    Issue #1268: Die Erwartung dieser Klasse hat sich gedreht. Sie hiess frueher
+    "der gespeicherte forecast_hours wird durchgereicht" (#764, AC-5). Seit
+    #1268 ist der Horizont kein Editor-Feld mehr; der Dispatch uebergibt fest 48
+    und liest den Preset-Wert NICHT mehr (Spec #1268 AC-4, Implementation
+    Details Punkt 1). Die #764-Passthrough-Erwartung ist damit ungueltig.
+
+    Die beiden 48er-Faelle unten bleiben grün, aber aus einem anderen Grund als
+    frueher: nicht weil der Wert durchgereicht wird, sondern weil 48 jetzt
+    hartkodiert ist. Sie sind hier als Regressionsanker belassen — der Dispatch
+    muss unter allen Preset-Varianten 48 an die Engine geben.
+    """
+
+    def test_preset_72h_ignored_engine_gets_fixed_48(self, tmp_path):
+        """GIVEN: Daily-Preset mit gespeichertem forecast_hours=72
         WHEN: _send_one_compare_preset() läuft
-        THEN: ComparisonEngine.run erhält forecast_hours=72 (NICHT hartkodiert 48)
+        THEN: ComparisonEngine.run erhält 48 — der Preset-Wert wird ignoriert.
 
-        RED: aktuell reicht der Versandpfad immer 48 durch → 72 != 48.
+        Issue #1268 nimmt das #764-Verhalten bewusst zurück: 72 h war ueber den
+        Editor einstellbar, den es nicht mehr gibt. Der frueher hier gepruefte
+        Passthrough (72 → 72) ist jetzt genau das, was NICHT passieren darf.
         """
         user_id = _fresh_user()
         loc = _resolvable_location("loc-764-a")
@@ -140,14 +154,14 @@ class TestComparePresetForecastHoursPassthrough:
         preset["_user_id"] = user_id
 
         captured = _capture_forecast_hours(preset, loc, tmp_path)
-        assert captured == 72, (
-            f"RED: ComparisonEngine.run erhielt forecast_hours={captured}, erwartet 72 — "
-            "der Versandpfad hartkodiert noch 48 statt preset.get('forecast_hours')."
+        assert captured == 48, (
+            f"ComparisonEngine.run erhielt forecast_hours={captured}, erwartet fest 48 — "
+            "der Dispatch darf den gespeicherten Preset-Horizont seit #1268 nicht mehr lesen."
         )
 
     def test_preset_48h_passes_48_to_engine(self, tmp_path):
         """GIVEN: Daily-Preset mit forecast_hours=48
-        THEN: ComparisonEngine.run erhält forecast_hours=48 (Round-Trip-Beweis).
+        THEN: ComparisonEngine.run erhält forecast_hours=48.
         """
         user_id = _fresh_user()
         loc = _resolvable_location("loc-764-b")

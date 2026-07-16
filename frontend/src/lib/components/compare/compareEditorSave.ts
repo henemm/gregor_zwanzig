@@ -22,8 +22,6 @@ export interface CompareEditorEdits {
 	activeMetricKeys?: string[];
 	// Issue #1106: Slice C — Stundenverlauf-Metriken. Optional → rückwärtskompatibel.
 	hourlyMetricKeys?: string[];
-	// Issue #764: Vorhersage-Horizont. Optional → rückwärtskompatibel.
-	forecastHours?: number;
 	// Issue #1040: amtliche Warnungen ein/aus. Optional → rückwärtskompatibel.
 	officialAlertsEnabled?: boolean;
 	// Issue #1041 Slice 2: Radar-Alarm ein/aus (Default AUS). Optional → rückwärtskompatibel.
@@ -45,10 +43,6 @@ export interface CompareEditorEdits {
 	officialAlertTriggersEnabled?: boolean;
 	sendTelegram?: boolean;
 	sendSms?: boolean;
-	// Issue #1134: Zeitfenster (Step 5). Optional → rückwärtskompatibel; ohne
-	// Angabe bleibt der Round-Trip-Spread aus `original` erhalten.
-	hourFrom?: number;
-	hourTo?: number;
 	// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + editierbare Laufzeit
 	// (VersandTab context="vergleich"). Optional → rückwärtskompatibel.
 	// endDate: undefined = unangetastet (Round-Trip), null = "bis auf Weiteres"
@@ -133,9 +127,9 @@ export function buildComparePresetSavePayload(
 		location_ids: edits.pickedIds,
 		profil: edits.activityProfile ?? original.profil,
 		display_config: displayConfig,
-		// Issue #764: Edit-Wert überschreibt den Spread-Wert aus original.
-		// undefined → Feld fehlt in edits → Spread-Wert bleibt erhalten (Round-Trip).
-		...(edits.forecastHours !== undefined ? { forecast_hours: edits.forecastHours } : {}),
+		// Issue #1268: forecast_hours/hour_from/hour_to werden nicht mehr aus dem
+		// Editor gesetzt. Der `...original`-Spread oben traegt die gespeicherten
+		// Bestandswerte unveraendert in den Body (Read-Modify-Write, kein Nullen).
 		// Issue #1040: analoges Round-Trip-Prinzip für official_alerts_enabled.
 		...(edits.officialAlertsEnabled !== undefined
 			? { official_alerts_enabled: edits.officialAlertsEnabled }
@@ -158,10 +152,6 @@ export function buildComparePresetSavePayload(
 			: {}),
 		...(edits.sendTelegram !== undefined ? { send_telegram: edits.sendTelegram } : {}),
 		...(edits.sendSms !== undefined ? { send_sms: edits.sendSms } : {}),
-		// Issue #1134: Zeitfenster überschreibt den Spread-Wert aus original.
-		// undefined → Feld fehlt in edits → Spread-Wert bleibt erhalten (Round-Trip).
-		...(edits.hourFrom !== undefined ? { hour_from: edits.hourFrom } : {}),
-		...(edits.hourTo !== undefined ? { hour_to: edits.hourTo } : {}),
 		// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + End-Datum-Lösch-Sentinel.
 		...(edits.morningEnabled !== undefined ? { morning_enabled: edits.morningEnabled } : {}),
 		...(edits.morningTime !== undefined ? { morning_time: toHHMMSS(edits.morningTime) } : {}),

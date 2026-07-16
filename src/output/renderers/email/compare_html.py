@@ -584,9 +584,9 @@ def _render_header(result: ComparisonResult, sig) -> str:
 
     weekday = _WEEKDAY_ABBR[result.target_date.weekday()]
     date_str = result.target_date.strftime("%d.%m.%Y")
-    start_h, end_h = result.time_window
-    time_str = f"{start_h:02d}:00 – {end_h:02d}:00"
-    date_line = f"{weekday}, {date_str}  ·  {time_str}"
+    # Issue #1268: keine Zeitfenster-Angabe mehr in der Kopfzeile — die
+    # Bewertung laeuft immer ueber den ganzen Tag, es gibt nichts zu zeigen.
+    date_line = f"{weekday}, {date_str}"
     date_style = f"font-family:{FONT_DATA};font-size:13px;color:{G_INK};margin-top:6px;"
 
     profil_val = _html.escape(sig.eyebrow)

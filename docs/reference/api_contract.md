@@ -1325,9 +1325,9 @@ type ComparePreset struct {
     Schedule             string                 `json:"schedule"`                              // DEPRECATED für Zeitplan-Zwecke (Issue #1232 Scheibe 2a): trägt nur noch Pause-Semantik — "manual" = pausiert, jeder andere Wert ("daily"|"weekly"|Altdaten wie "daily_morning"/"daily_evening") = aktiv. Der tatsächliche Rhythmus kommt aus den Slot-Feldern unten.
     PreviousSchedule     string                 `json:"previous_schedule,omitempty"`           // schedule saved before pause (Issue #631, server-managed)
     Profil               string                 `json:"profil"`                                // ActivityProfile: WINTERSPORT|ALPINE_TOURING|SUMMER_TREKKING|ALLGEMEIN
-    HourFrom             int                    `json:"hour_from"`                             // 0..23
-    HourTo               int                    `json:"hour_to"`                               // 0..23, >= HourFrom
-    ForecastHours        int                    `json:"forecast_hours"`                        // 24 | 48 | 72 — Vorhersage-Horizont für Compare-Versand (Issue #764, default 48)
+    HourFrom             int                    `json:"hour_from"`                             // @deprecated Issue #1268: nicht mehr vom Dispatch/Editor gelesen; bleibt in der Persistenz zur Bestandssicherung. Neue Presets erhalten 0 (Go Zero-Value). Der Versand rechnet fest über den ganzen Tag (0–23).
+    HourTo               int                    `json:"hour_to"`                               // @deprecated Issue #1268: nicht mehr vom Dispatch/Editor gelesen; bleibt in der Persistenz zur Bestandssicherung. Der Versand rechnet fest über den ganzen Tag (0–23).
+    ForecastHours        int                    `json:"forecast_hours"`                        // @deprecated Issue #1268: nicht mehr vom Dispatch gelesen; bleibt in der Persistenz zur Bestandssicherung. Der Dispatch verwendet fest 48 h. Legacy-Erklärung: 24 | 48 | 72 — Vorhersage-Horizont für Compare-Versand (Issue #764, default 48)
     Empfaenger           []string               `json:"empfaenger"`                            // Email addresses for delivery
     LetzterVersand       *time.Time             `json:"letzter_versand,omitempty"`             // last send timestamp (server-managed)
     TopOrtLetzterVersand *string                `json:"top_ort_letzter_versand,omitempty"`     // highest-ranked location from last send (server-managed)
@@ -1401,10 +1401,9 @@ versendet für `target_date=heute`, Abend-Slot für `target_date=morgen`. Guards
 | `name` | not empty |
 | `schedule` | in `{"daily", "weekly", "manual"}` |
 | `profil` | valid per `internal/compare/types.go` IsValidProfile() |
-| `hour_from` | 0–23 |
-| `hour_to` | 0–23 |
-| — | `hour_to >= hour_from` |
-| `forecast_hours` | Frontend wählt nur `{24, 48, 72}`; Store defaultet `0 → 48` beim Load. Backend-Handler erzwingt den Wertebereich noch **nicht** (Folge-Issue #781). |
+| `hour_from` | 0–23 — **weiterhin von `validateComparePreset` erzwungen** (`internal/handler/compare_preset.go:120`). @deprecated Issue #1268: nicht mehr vom Editor/Versand gelesen; bestehende Werte in Request-Body werden per RMW-Spread erhalten (Bestandsschutz). Neue Presets erhalten 0 (Go Zero-Value, von der Validierung zugelassen). |
+| `hour_to` | 0–23 **und** `hour_to >= hour_from` — **beide Regeln gelten weiter** (`compare_preset.go:123,126`); die API lehnt Verstöße auch nach #1268 ab. @deprecated: nicht mehr vom Editor/Versand gelesen; bestehende Werte per RMW-Spread erhalten. |
+| `forecast_hours` | @deprecated Issue #1268: nicht mehr vom Versand gelesen; der Dispatch verwendet fest 48 h. Bestehende Werte werden per RMW-Spread erhalten. Frontend sends dieses Feld nicht mehr mit. |
 | `empfaenger[]` | each contains `@` (basic email check) |
 
 ### Error Responses
@@ -1419,7 +1418,7 @@ versendet für `target_date=heute`, Abend-Slot für `target_date=morgen`. Guards
 
 - **User Isolation:** Every preset belongs to one user (read from Auth-Context). No user can see/modify another user's presets.
 - **Server-Managed Fields:** On CREATE, `id` is auto-generated (`cp-{hex}`) and `user_id` is set from context. On UPDATE, `user_id` and `created_at` are never overwritten from request body. `letzter_versand`, `top_ort_letzter_versand`, and `previous_schedule` are server-managed (not client-writable).
-- **forecast_hours (Issue #764):** Vorhersage-Horizont (24|48|72 Stunden) wird beim Orts-Vergleich-Versand verwendet. Beim Bearbeiten wird der Wert aus dem Preset hydratisiert; beim Speichern wird er persistiert. Legacy-Presets ohne dieses Feld laden als 48 h (Go-Store Default). Update-Handler bewahrt den Wert (Preserve-Semantik: wenn Body `forecast_hours == 0`, Original-Wert erhalten). Python-Scheduler (`_send_one_compare_preset`) konsumiert den Wert aus dem Preset statt hartkodiert 48 h.
+- **forecast_hours (Issue #764, @deprecated #1268):** Vorhersage-Horizont — Legacy-Erklärung: (24|48|72 Stunden) wurde beim Orts-Vergleich-Versand verwendet. **Seit Issue #1268:** Das Feld ist deprecated und wird vom Dispatch nicht mehr gelesen. Der Versand verwendet fest 48 h. Beim Bearbeiten wird der Wert aus dem Preset nicht mehr hydratisiert und nicht mehr in den Request-Body geschrieben. Die Go-API akzeptiert den Wert bei PUT zum Bestandsschutz (RMW-Spread), schreibt ihn aber nicht selbst. Neue Presets erhalten 0 (Go Zero-Value, keine Editor-Eingabe). Bekannte Limitation #1280 (s. Spec #1268): Versandzeit-Genauigkeit (Minuten vs. Stunden) sichtbar geworden; **PO-Entscheid liegt vor** (2026-07-16: Eingabe auf volle Stunden begrenzen), Umsetzung in #1280.
 - **display_config (Issue #680):** Opaque JSON object stored as `map[string]interface{}` (no server-side schema validation). Contains `active_metrics` (persisted Metrik-Auswahl), `ideal_ranges` (Bewertungs-Schwellwerte), und zukünftig `output_layout` + `schedule_config`. Round-Trip beim Update: Server gibt `display_config` unverändert zurück, Frontend reicht nur geänderte Felder. Bestandsfelder erhalten sich automatisch (RMW-Semantik). **Fix #1191:** `CompareAlertService._build_eval_config` reicht `display_config` seither auch in die Δ-Alarm-Auswertung durch (vorher immer `None`, wodurch der #961-Deaktivierungs-Filter für Compare-Presets wirkungslos blieb — analog zum Trip-Pfad in `trip_alert.py`). Migrations-Skript `scripts/migrate_1191_compare_active_metrics.py` setzt auf Bestands-Presets ohne `active_metrics` einmalig den vollen Metrik-Satz (bewahrt „alles feuert", jetzt explizit + abschaltbar).
 - **POST /api/compare/presets/{id}/send:** Immediate send endpoint (Issue #627). Executes comparison engine and emails all configured `empfaenger` immediately, regardless of `schedule` value (bypasses time-based gating). If no recipients configured, returns HTTP 400. Returns HTTP 200 with `{"status":"ok","winner":"<top_location>","empfaenger_count":N}` on success. Updates `letzter_versand` and `top_ort_letzter_versand` server-side.
 - **previous_schedule Field (Issue #631):** When a preset is paused (`schedule='manual'`), the frontend sets `previous_schedule` to the prior schedule value (`"daily"` or `"weekly"`). On reactivation, `schedule` is restored from `previous_schedule`. This field is preserved across reloads (backend-persistent); altdata without this field remain unaffected (omitempty).
@@ -1600,8 +1599,8 @@ Das neue `ComparePreset`-Datenmodell für Auto-Briefings (Orts-Vergleiche) mit C
 | location_ids | string[] | 1–5 Orts-IDs zum Vergleichen |
 | schedule | enum | `"daily"` \| `"weekly"` \| `"manual"` |
 | profil | enum | `"WINTERSPORT"` \| `"ALPINE_TOURING"` \| `"SUMMER_TREKKING"` \| `"ALLGEMEIN"` |
-| hour_from | integer | Start-Stunde [0..23] für tägliche Versände |
-| hour_to | integer | End-Stunde [0..23] |
+| hour_from | integer | @deprecated Issue #1268: nicht mehr vom Versand gelesen; der Versand rechnet fest über den ganzen Tag (0–23). Bleibt in Bestandsdaten zur Bestandssicherung. Neue Presets erhalten 0. |
+| hour_to | integer | @deprecated Issue #1268: nicht mehr vom Versand gelesen; der Versand rechnet fest über den ganzen Tag (0–23). Bleibt in Bestandsdaten zur Bestandssicherung. |
 | empfaenger | string[] | E-Mail-Adressen (Validierung: muss `@` enthalten) |
 | letzter_versand | datetime \| null | ISO-8601 UTC des letzten Versands |
 | top_ort_letzter_versand | string \| null | Ort mit höchstem Score beim letzten Versand |

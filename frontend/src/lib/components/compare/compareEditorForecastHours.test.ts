@@ -1,6 +1,11 @@
-// TDD RED — Issue #764: Compare-Editor — forecast_hours im Save-Payload
+// Compare-Editor — forecast_hours im Save-Payload
 //
-// Spec: docs/specs/modules/issue_764_compare_forecast_hours.md § AC-1/AC-2/AC-3
+// Ursprung: Issue #764 (Spec: docs/specs/modules/issue_764_compare_forecast_hours.md)
+// Aktualisiert: Issue #1268 (Spec: docs/specs/modules/issue_1268_compare_timewindow_removal.md)
+//   Der Horizont ist kein Editor-Feld mehr. Die #764-AC-1-Erwartung ("Edit-Wert
+//   ueberschreibt den Spread") gilt nicht mehr; die #764-AC-3-Erwartung
+//   (Round-Trip ohne Datenverlust) gilt unveraendert weiter und ist jetzt der
+//   Bestandsschutz aus #1268 AC-3.
 //
 // Reine Verhaltenstests auf der Pure-Function `buildComparePresetSavePayload`
 // (KEIN Mock, KEINE Dateiinhalt-Prüfung). Sie treiben die Payload-Bildung mit
@@ -59,28 +64,30 @@ function baseEdits() {
 	};
 }
 
-describe('buildComparePresetSavePayload — forecast_hours (AC-1)', () => {
-	test('geänderter Editor-Horizont (72) landet als forecast_hours im Body', () => {
-		// Preset war 48; im Editor auf 72 gestellt
+// ─── Issue #1268: Erwartung gedreht ──────────────────────────────────────────
+// Die beiden urspruenglichen AC-1-Tests dieser Datei ("Editor-Horizont 72/24
+// landet als forecast_hours im Body") pruefen das #764-Verhalten, das #1268
+// bewusst zuruecknimmt: Der Horizont ist kein Editor-Feld mehr, das Frontend
+// setzt forecast_hours nicht mehr aus `edits`. Sie sind hier durch den Test
+// ersetzt, der die NEUE Erwartung festschreibt — ein etwaiger edits-Wert darf
+// den Bestandswert gerade NICHT mehr ueberschreiben.
+// Der Round-Trip-Test unten (AC-3) galt vorher wie nachher und bleibt.
+describe('buildComparePresetSavePayload — forecast_hours nicht mehr aus dem Editor (#1268 AC-3)', () => {
+	test('ein forecastHours-Wert in edits wird ignoriert — Bestandswert bleibt', () => {
+		// GIVEN: gespeichertes Preset mit forecast_hours=48
+		// WHEN: gespeichert wird (ein Alt-Aufrufer reicht noch forecastHours=72 mit)
+		// THEN: der Body traegt den Bestandswert 48 aus dem `...original`-Spread —
+		//       der Editor hat keine Hoheit mehr ueber den Horizont (#1268).
 		const original = { ...makePreset72(), forecast_hours: 48 } as ComparePreset;
 		const { body } = buildComparePresetSavePayload(original, {
 			...baseEdits(),
 			forecastHours: 72
-		});
+		} as Parameters<typeof buildComparePresetSavePayload>[1]);
 		assert.equal(
 			(body as ComparePreset).forecast_hours,
-			72,
-			'forecast_hours muss aus dem Edit-Wert (72) gesetzt werden, nicht aus dem Spread (48)'
+			48,
+			'forecast_hours muss der Bestandswert (48) bleiben — seit #1268 setzt der Editor ihn nicht mehr'
 		);
-	});
-
-	test('geänderter Editor-Horizont (24) überschreibt den Spread', () => {
-		const original = makePreset72(); // forecast_hours=72
-		const { body } = buildComparePresetSavePayload(original, {
-			...baseEdits(),
-			forecastHours: 24
-		});
-		assert.equal((body as ComparePreset).forecast_hours, 24);
 	});
 });
 

@@ -88,10 +88,21 @@ test('presetProfileLabel: undefined → ""', () => {
 
 // ─── 2) presetScheduleLabel (Rhythmus-Kurzlabel) ─────────────────────────────
 
-test('presetTileScheduleLabel: daily/06 → enthält "tägl." und "06"', () => {
-	const label = presetTileScheduleLabel(makePreset({ schedule: 'daily', hour_from: 6 }));
+// Issue #1268 (AC-10): Die Erwartung hat ihre Ursache gewechselt. Vorher leitete
+// presetTileScheduleLabel die Stunde aus `hour_from` ab; seit #1268 aus dem
+// echten Versand-Slot (morning_time/evening_time). Der Test hiess "daily/06" und
+// uebergab hour_from: 6 — er blieb nach dem Umbau nur deshalb gruen, weil die
+// Fixture kein morning_time hat und der Migrations-Fallback zufaellig ebenfalls
+// 06:00 liefert. Damit haette er einen Rueckbau auf hour_from NICHT gefangen.
+// Deshalb steht die Ursache jetzt explizit in der Fixture.
+// Erschoepfende Abdeckung (Zero-Value, Abend-Slot, Fallback):
+// __tests__/compare_tile_schedule_label_slots.test.ts
+test('presetTileScheduleLabel: daily mit Versand-Slot 06:00 → enthält "tägl." und "06"', () => {
+	const label = presetTileScheduleLabel(
+		makePreset({ schedule: 'daily', morning_time: '06:00:00', hour_from: 9 })
+	);
 	assert.match(label, /tägl\./i, 'enthält Kurzform "tägl."');
-	assert.match(label, /06/, 'enthält zweistellige Stunde "06"');
+	assert.match(label, /06/, 'enthält die Versandzeit "06" — nicht hour_from=9');
 });
 
 test('presetTileScheduleLabel: weekly/weekday=5 → enthält Wochentag "Samstag"', () => {

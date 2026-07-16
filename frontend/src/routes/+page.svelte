@@ -23,7 +23,9 @@
 		nextPlannedTrip,
 		firstIncompleteCompare,
 		liveTrip,
-		deriveNextSend
+		deriveNextSend,
+		// Issue #1268 (AC-10): geteilte Slot-Aufloesung — NICHT nachbauen.
+		primarySendSlot
 	} from '$lib/utils/cockpitHelpers568.js';
 	import TripKachel from './_home/TripKachel.svelte';
 	import CompareKachel from './_home/CompareKachel.svelte';
@@ -482,7 +484,9 @@
 									>Zeitplan</div>
 									<div style:font-size="15px" style:font-weight="600">
 										{compareHero.schedule === 'daily' ? 'täglich' : compareHero.schedule === 'weekly' ? 'wöchentlich' : 'manuell'}
-										{#if compareHero.schedule !== 'manual'} · {String(compareHero.hour_from).padStart(2,'0')}:00{/if}
+										<!-- Issue #1268 (AC-10): echte Versandzeit aus dem Slot statt hour_from
+										     (zeigte bei neu angelegten Vergleichen "· 00:00"). -->
+										{#if compareHero.schedule !== 'manual' && primarySendSlot(compareHero)} · {String(primarySendSlot(compareHero)!.hour).padStart(2,'0')}:{String(primarySendSlot(compareHero)!.minute).padStart(2,'0')}{/if}
 									</div>
 								</div>
 								<div

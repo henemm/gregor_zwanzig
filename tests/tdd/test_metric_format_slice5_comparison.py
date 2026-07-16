@@ -25,11 +25,17 @@ from output.renderers.comparison import render_comparison_text
 
 # Aus dem UNMIGRIERTEN Code erzeugt (siehe Docstring) — nicht anpassen, ausser
 # eine bewusste, PO-freigegebene Verhaltensaenderung liegt vor.
+#
+# Issue #1268 (AC-5), PO-freigegeben: Die Zeile "Zeitfenster: 08:00 - 16:00" ist
+# hier entfallen — genau der im Kommentar oben vorgesehene Ausnahmefall. Das
+# Bewertungs-Zeitfenster ist kein Editor-Feld mehr; der Dispatch wertet immer den
+# ganzen Tag (0–23 Uhr) aus. Eine Zeitfenster-Angabe haette damit keinen
+# Aussagewert mehr und wurde in comparison.py ersatzlos entfernt. Der Golden
+# bleibt im Uebrigen zeichen-identisch — er ankert weiterhin die #1214-Migration.
 GOLDEN = (
     "ORTS-VERGLEICH\n"
     "========================\n"
     "Datum: Wednesday, 15.07.2026\n"
-    "Zeitfenster: 08:00 - 16:00\n"
     "Erstellt: 12.07.2026 09:00\n"
     "\n"
     "--------------------------------------------------\n"

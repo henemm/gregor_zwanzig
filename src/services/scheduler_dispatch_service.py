@@ -313,14 +313,14 @@ def send_one_compare_preset(
 
     profil_str = preset.get("profil", "").lower()
     profile = _parse_activity_profile(profil_str)
-    hour_from = preset.get("hour_from", 9)
-    hour_to = preset.get("hour_to", 16)
-
+    # Issue #1268: Zeitfenster und Horizont sind keine Editor-Felder mehr.
+    # Der Dispatch liest die (deprecateten) Preset-Werte hour_from/hour_to/
+    # forecast_hours nicht mehr — sie bleiben nur zur Bestandswahrung persistiert.
     result = ComparisonEngine.run(
         locations=locations,
-        time_window=(hour_from, hour_to),
+        time_window=(0, 23),  # Issue #1268: ganzer Tag, kein Editor-Feld mehr
         target_date=target_date,
-        forecast_hours=preset.get("forecast_hours") or 48,  # Issue #764/#781: gespeicherten Horizont nutzen, 0 → 48
+        forecast_hours=48,  # Issue #1268: fest, kein Editor-Feld mehr
         profile=profile,
         official_alerts_enabled=preset.get("official_alerts_enabled", True),  # Issue #1040
     )

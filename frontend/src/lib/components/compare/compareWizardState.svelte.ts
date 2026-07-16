@@ -38,9 +38,8 @@ export class CompareWizardState {
 	sendEmail = $state(true);
 	sendTelegram = $state(false);
 	sendSms = $state(false);
-	timeWindowStart = $state(9);
-	timeWindowEnd = $state(16);
-	forecastHours = $state(48);
+	// Issue #1268: timeWindowStart/timeWindowEnd/forecastHours entfallen — die
+	// Felder sind aus dem Editor entfernt; der Dispatch nutzt fest 0–23 Uhr / 48 h.
 	// Issue #1040: amtliche Warnungen ein/aus (Default true).
 	officialAlertsEnabled = $state(true);
 	// Issue #1041 Slice 2: Radar-Alarm ein/aus (Default AUS — opt-in).
@@ -97,9 +96,8 @@ export class CompareWizardState {
 			profil: this.activityProfile ?? 'wandern',
 			// wiz.schedule ist 'daily_morning'|'daily_evening'|'weekly'; Preset-API erwartet 'daily'|'weekly'|'manual'
 			schedule: this.schedule.startsWith('daily') ? 'daily' : this.schedule === 'weekly' ? 'weekly' : 'manual',
-			hour_from: this.timeWindowStart,
-			hour_to: this.timeWindowEnd,
-			forecast_hours: this.forecastHours, // Issue #764: Horizont persistieren
+			// Issue #1268: hour_from/hour_to/forecast_hours werden beim Anlegen nicht
+			// mehr gesendet — das Go-Backend setzt beim Create eigene Defaults.
 			official_alerts_enabled: this.officialAlertsEnabled, // Issue #1040
 			radar_alert_enabled: this.radarAlertEnabled, // Issue #1041 Slice 2
 			hourly_enabled: this.hourlyEnabled, // Issue #1107
@@ -172,7 +170,6 @@ export class CompareWizardState {
 			channelLayouts: this.channelLayouts,
 			activeMetricKeys: this.activeMetricKeys,
 			hourlyMetricKeys: this.hourlyMetricKeys, // Issue #1106
-			forecastHours: this.forecastHours, // Issue #764
 			officialAlertsEnabled: this.officialAlertsEnabled, // Issue #1040
 			radarAlertEnabled: this.radarAlertEnabled, // Issue #1041 Slice 2
 			hourlyEnabled: this.hourlyEnabled, // Issue #1107

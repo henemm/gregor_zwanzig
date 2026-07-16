@@ -138,11 +138,18 @@ class ComparePreviewService:
         resolved_date = _resolve_target_date(target_date)
         profile = _parse_activity_profile(str(preset.get("profil", "")).lower())
 
+        # Issue #1268 (AC-11): Zeitfenster und Horizont sind keine Editor-Felder
+        # mehr. Die Vorschau MUSS mit denselben festen Werten rechnen wie der
+        # echte Versand (scheduler_dispatch_service.py:319-326) — sonst zeigt sie
+        # etwas anderes, als der Nutzer bekommt. Die deprecateten Preset-Felder
+        # hour_from/hour_to/forecast_hours werden bewusst NICHT gelesen: bei neu
+        # angelegten Presets stehen dort die Go-Zero-Values (0), das ergaebe das
+        # leere Fenster (0, 0) und eine leer laufende Vorschau.
         result = ComparisonEngine.run(
             locations=locations,
-            time_window=(preset.get("hour_from", 9), preset.get("hour_to", 16)),
+            time_window=(0, 23),  # Issue #1268: ganzer Tag, kein Editor-Feld mehr
             target_date=resolved_date,
-            forecast_hours=preset.get("forecast_hours") or 48,
+            forecast_hours=48,  # Issue #1268: fest, kein Editor-Feld mehr
             profile=profile,
             official_alerts_enabled=preset.get("official_alerts_enabled", True),
         )

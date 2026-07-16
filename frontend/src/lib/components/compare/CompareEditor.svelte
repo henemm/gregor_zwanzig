@@ -199,11 +199,11 @@
 		eveningEnabled: wiz.eveningEnabled,
 		eveningTime: wiz.eveningTime,
 		endDate: wiz.endDate,
-		// Staging-F001 (#1232 Scheibe 2b AC-5): Horizont/Top-N/Stundenverlauf-Toggle
+		// Staging-F001 (#1232 Scheibe 2b AC-5): Top-N/Stundenverlauf-Toggle
 		// fehlten im Dirty-Tracking — CompareInhaltSection (Layout-Tab) ändert sie,
 		// aber ohne diesen Snapshot wurde die Änderung nie als dirty erkannt und
 		// beim Speichern nicht in den PUT-Body übernommen (vorbestehende Lücke).
-		forecastHours: wiz.forecastHours,
+		// Issue #1268: forecastHours entfernt (kein Editor-Feld mehr).
 		topN: wiz.topN,
 		hourlyEnabled: wiz.hourlyEnabled
 	});
@@ -235,7 +235,6 @@
 				wiz.eveningEnabled !== initial.eveningEnabled ||
 				wiz.eveningTime !== initial.eveningTime ||
 				wiz.endDate !== initial.endDate ||
-				wiz.forecastHours !== initial.forecastHours ||
 				wiz.topN !== initial.topN ||
 				wiz.hourlyEnabled !== initial.hourlyEnabled)
 	);
@@ -409,8 +408,7 @@
 		const savedEveningEnabled = wiz.eveningEnabled;
 		const savedEveningTime = wiz.eveningTime;
 		const savedEndDate = wiz.endDate;
-		// Staging-F001: Horizont/Top-N/Stundenverlauf-Toggle ebenfalls snapshotten.
-		const savedForecastHours = wiz.forecastHours;
+		// Staging-F001: Top-N/Stundenverlauf-Toggle ebenfalls snapshotten.
 		const savedTopN = wiz.topN;
 		const savedHourlyEnabled = wiz.hourlyEnabled;
 		const { url, body } = buildComparePresetSavePayload(preset, {
@@ -429,9 +427,6 @@
 			alertCooldownMinutes: wiz.alertCooldownMinutes,
 			alertQuietFrom: wiz.alertQuietFrom,
 			alertQuietTo: wiz.alertQuietTo,
-			// Issue #1134: Zeitfenster (Step 5) tatsächlich in den PUT-Body geben.
-			hourFrom: wiz.timeWindowStart,
-			hourTo: wiz.timeWindowEnd,
 			// Issue #1041 Slice 2 (Pflicht) / #1040 (gebündelter Edit-Bug):
 			// beide Toggles fehlten bisher im edits-Objekt → PUT persistierte sie nie.
 			radarAlertEnabled: wiz.radarAlertEnabled,
@@ -451,9 +446,10 @@
 			eveningEnabled: wiz.eveningEnabled,
 			eveningTime: wiz.eveningTime,
 			endDate: wiz.endDate,
-			// Staging-F001: Horizont/Top-N/Stundenverlauf-Toggle (CompareInhaltSection,
-			// Layout-Tab) tatsächlich in den PUT-Body geben (Muster: hourFrom/hourTo).
-			forecastHours: wiz.forecastHours,
+			// Staging-F001: Top-N/Stundenverlauf-Toggle (CompareInhaltSection,
+			// Layout-Tab) tatsächlich in den PUT-Body geben.
+			// Issue #1268: forecastHours/hourFrom/hourTo entfallen — die Bestandswerte
+			// round-trippen via `...original`-Spread im Payload-Builder.
 			topN: wiz.topN,
 			hourlyEnabled: wiz.hourlyEnabled
 		});
@@ -487,7 +483,6 @@
 				initial.eveningEnabled = savedEveningEnabled;
 				initial.eveningTime = savedEveningTime;
 				initial.endDate = savedEndDate;
-				initial.forecastHours = savedForecastHours;
 				initial.topN = savedTopN;
 				initial.hourlyEnabled = savedHourlyEnabled;
 				compareSaveCtl.setSaved();

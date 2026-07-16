@@ -170,25 +170,87 @@ export function liveTrip(trips: Trip[], now: Date): Trip | null {
 	return null;
 }
 
+/** Eine aufgeloeste Versand-Uhrzeit (Stunde/Minute) eines aktiven Slots. */
+export type SlotTime = { hour: number; minute: number };
+
+/** Parst "HH:MM:SS" / "HH:MM" → {hour, minute}; null bei unbrauchbarem Wert. */
+function parseSlotTime(raw: string | undefined): SlotTime | null {
+	const m = /^(\d{1,2}):(\d{2})/.exec(raw ?? '');
+	if (!m) return null;
+	const hour = Number(m[1]);
+	const minute = Number(m[2]);
+	if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+	return { hour, minute };
+}
+
 /**
- * Berechnet den nächsten Versand-Zeitstempel aus dem Preset-Schedule.
- * - 'daily': heute um hour_from wenn noch nicht vorbei, sonst morgen
- * - 'weekly': nächster passender Wochentag (preset.weekday, 0=Montag) um hour_from
+ * Loest die AKTIVEN Versand-Slots eines Presets auf — Anzeige-seitiges
+ * Gegenstueck zu `resolve_preset_slots` in
+ * `src/services/compare_slot_scheduler.py` (Issue #1268 / AC-9). Beide muessen
+ * deckungsgleich bleiben: Anzeige und tatsaechlicher Versand duerfen nicht
+ * auseinanderlaufen.
+ *
+ * Migrations-Fallback (identisch zur Python-Referenz): fehlt `morning_time`
+ * komplett, ist das Preset "nie migriert" — dann entscheidet der Alt-Wert von
+ * `schedule` ueber die Intention: `daily_evening` → Abend-Slot 18:00, alles
+ * andere → Morgen-Slot 06:00 (verhaltensidentisch zum frueheren 06:00-Cron).
+ */
+export function resolvePresetSlots(preset: ComparePreset): SlotTime[] {
+	if (preset.morning_time == null) {
+		return (preset.schedule as string) === 'daily_evening'
+			? [{ hour: 18, minute: 0 }]
+			: [{ hour: 6, minute: 0 }];
+	}
+
+	const slots: SlotTime[] = [];
+	const morning = parseSlotTime(preset.morning_time);
+	if ((preset.morning_enabled ?? true) && morning) slots.push(morning);
+	const evening = parseSlotTime(preset.evening_time ?? '18:00:00');
+	if ((preset.evening_enabled ?? false) && evening) slots.push(evening);
+	return slots;
+}
+
+/**
+ * Die fuer Anzeige-Labels massgebliche Versandzeit: der frueheste aktive Slot.
+ * `null`, wenn kein Slot aktiv ist (dann zeigt die Oberflaeche keine Uhrzeit).
+ *
+ * Issue #1268 (AC-10): EINE Ableitung fuer alle Flaechen, die eine Versandzeit
+ * anzeigen — Vergleichs-Kachel (`presetTileScheduleLabel`) und Startseiten-Hero
+ * (`routes/+page.svelte`). Beide lasen zuvor `hour_from` und zeigten bei neu
+ * angelegten Vergleichen "tägl. 00" bzw. "· 00:00". Bewusst hier und nicht als
+ * Kopie: die Slot-Semantik darf nur an einer Stelle leben.
+ */
+export function primarySendSlot(preset: ComparePreset): SlotTime | null {
+	const slots = resolvePresetSlots(preset);
+	if (slots.length === 0) return null;
+	return slots.reduce((a, b) => (a.hour * 60 + a.minute <= b.hour * 60 + b.minute ? a : b));
+}
+
+/**
+ * Berechnet den naechsten Versand-Zeitstempel aus den echten Versand-Slots.
+ * - 'daily': naechster bevorstehender aktiver Slot (heute, sonst morgen)
+ * - 'weekly': naechster passender Wochentag (preset.weekday, 0=Montag) zur Slot-Zeit
  * - 'manual': null
- * - fehlende Felder: null
+ * - kein aktiver Slot: null
+ *
+ * Issue #1268 (AC-9): liest NICHT mehr `hour_from` — das war der Start des
+ * Bewertungs-Zeitfensters, nicht die Versandzeit (Anzeige log: 09:00 statt
+ * 07:00). Versand-Wahrheit sind `morning_time`/`evening_time` (types.ts:304).
  */
 export function deriveNextSend(preset: ComparePreset, now: Date): Date | null {
 	if (!preset || preset.schedule === 'manual') return null;
-	const hourFrom = preset.hour_from;
-	if (hourFrom == null) return null;
+	const slots = resolvePresetSlots(preset);
+	if (slots.length === 0) return null;
 
-	if (preset.schedule === 'daily') {
-		// Heute um hour_from wenn noch nicht vorbei, sonst morgen
-		const candidate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hourFrom, 0, 0, 0);
-		if (now < candidate) return candidate;
-		// Morgen
-		const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, hourFrom, 0, 0, 0);
-		return tomorrow;
+	const at = (dayOffset: number, slot: SlotTime): Date =>
+		new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, slot.hour, slot.minute, 0, 0);
+
+	const earliest = (candidates: Date[]): Date =>
+		candidates.reduce((a, b) => (a <= b ? a : b));
+
+	if (preset.schedule === 'daily' || (preset.schedule as string) === 'daily_evening') {
+		// Heute, sofern der Slot noch bevorsteht — sonst derselbe Slot morgen.
+		return earliest(slots.map((s) => (now < at(0, s) ? at(0, s) : at(1, s))));
 	}
 
 	if (preset.schedule === 'weekly') {
@@ -196,15 +258,14 @@ export function deriveNextSend(preset: ComparePreset, now: Date): Date | null {
 		if (targetWeekday == null) return null;
 		// JS: 0=Sonntag, 1=Montag... convert: preset 0=Mon → JS 1=Mon
 		const jsWeekday = (targetWeekday + 1) % 7;
-		const nowJsDay = now.getDay();
-		let daysUntil = (jsWeekday - nowJsDay + 7) % 7;
-		// If same day, check if hour has passed
-		if (daysUntil === 0) {
-			const candidate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hourFrom, 0, 0, 0);
-			if (now < candidate) return candidate;
-			daysUntil = 7;
-		}
-		return new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntil, hourFrom, 0, 0, 0);
+		const daysUntil = (jsWeekday - now.getDay() + 7) % 7;
+		return earliest(
+			slots.map((s) =>
+				// Am Zieltag selbst zaehlt nur ein noch bevorstehender Slot,
+				// sonst erst in einer Woche.
+				daysUntil === 0 && now >= at(0, s) ? at(7, s) : at(daysUntil, s)
+			)
+		);
 	}
 
 	return null;

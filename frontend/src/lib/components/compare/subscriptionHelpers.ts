@@ -7,6 +7,8 @@
 // Spec: docs/specs/modules/issue_301b_auto_reports_overview.md (§1)
 
 import type { ComparePreset, ActivityProfile } from '../../types.js';
+// Issue #1268 (AC-10): geteilte Slot-Aufloesung — NICHT nachbauen.
+import { primarySendSlot } from '../../utils/cockpitHelpers568';
 
 // Konvention 0=Montag. NICHT Sonntag-first.
 const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
@@ -34,16 +36,25 @@ export function presetScheduleLabel(preset: ComparePreset): string {
 }
 
 /**
- * Date → kompakter Versand-String "D.M. HH:00" | "manuell" wenn null.
+ * Date → kompakter Versand-String "D.M. HH:MM" | "manuell" wenn null.
  *
  * Issue #647 — DRY: vorher lokal in CompareStatusRow.svelte dupliziert.
  * Wird in der Home-Compare-Outbox (homeCompareTimeline) und im Compare-Hero
  * wiederverwendet.
+ *
+ * Issue #1268 (Adversary-Fund F007): Die Minuten waren hart ":00" verdrahtet.
+ * Das ging auf, solange die Zeit aus `hour_from` (Integer → immer volle Stunde)
+ * stammte. Seit AC-9/AC-10 kommt sie aus `morning_time`/`evening_time`, die per
+ * <input type="time"> ohne `step` (VTSchedulePlan.svelte:86/:111) auch "07:30"
+ * sein koennen — die Zeitplan-Kachel zeigte dann 07:30, diese Anzeige daneben
+ * 07:00. Ausserdem wird diese Funktion in `_home/cockpitHelpers.ts:223` fuer
+ * `letzter_versand` benutzt, einen ECHTEN Versand-Zeitstempel: dort war ":00"
+ * schon vor #1268 falsch (ein Versand um 06:03 wurde als 06:00 angezeigt).
  */
 export function formatNextSend(d: Date | null): string {
 	if (!d) return 'manuell';
 	const pad = (n: number) => String(n).padStart(2, '0');
-	return `${d.getDate()}.${d.getMonth() + 1}. ${pad(d.getHours())}:00`;
+	return `${d.getDate()}.${d.getMonth() + 1}. ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 /** ISO-Timestamp → kurzes deutsches Datum (de-DE) | "Noch kein Versand" wenn leer/ungültig. */
@@ -176,10 +187,18 @@ export function presetProfileLabel(profil: ActivityProfile | string | undefined)
  *   daily   → "tägl. HH" (zweistellige Stunde, kein –bis)
  *   weekly  → Wochentag-Name
  *   manual  → "manuell"
+ *
+ * Issue #1268 (AC-10): Die Stunde stammt aus dem echten Versand-Slot
+ * (primarySendSlot → resolvePresetSlots, geteilt mit deriveNextSend), nicht mehr
+ * aus `hour_from`. `hour_from` war der Start des Bewertungs-Zeitfensters; seit
+ * #1268 schickt der Wizard es nicht mehr mit, Go schreibt den Zero-Value 0 —
+ * die Kachel zeigte dann "tägl. 00", eine Uhrzeit, zu der nichts passiert.
  */
 export function presetTileScheduleLabel(preset: ComparePreset): string {
 	if (preset.schedule === 'daily') {
-		const h = String(preset.hour_from).padStart(2, '0');
+		const slot = primarySendSlot(preset);
+		if (slot === null) return 'tägl.';
+		const h = String(slot.hour).padStart(2, '0');
 		return `tägl. ${h}`;
 	}
 	if (preset.schedule === 'weekly') {

@@ -62,7 +62,6 @@ def render_comparison_text(
     """
     _ = profile  # akzeptiert fuer API-Konsistenz, aktuell ohne Wirkung
 
-    time_window = result.time_window
     target_date = result.target_date
     created_at = result.created_at
     # Zentraler Sortier-Helfer (PO-Update 2026-07-08): alphabetisch, case-
@@ -75,7 +74,7 @@ def render_comparison_text(
     lines.append("ORTS-VERGLEICH")
     lines.append("=" * 24)
     lines.append(f"Datum: {target_date.strftime('%A, %d.%m.%Y')}")
-    lines.append(f"Zeitfenster: {time_window[0]:02d}:00 - {time_window[1]:02d}:00")
+    # Issue #1268: Zeitfenster-Zeile ersatzlos entfernt (Bewertung = ganzer Tag).
     lines.append(f"Erstellt: {created_at.strftime('%d.%m.%Y %H:%M')}")
     lines.append("")
     lines.append("-" * 50)
@@ -297,9 +296,8 @@ def render_compare_telegram(
     else:
         header.append("ORTS-VERGLEICH")
     header.append(f"Datum: {result.target_date.strftime('%d.%m.%Y')}")
-    header.append(
-        f"Zeitfenster: {result.time_window[0]:02d}:00 - {result.time_window[1]:02d}:00"
-    )
+    # Issue #1268: Zeitfenster-Zeile ersatzlos entfernt (Bewertung = ganzer Tag),
+    # analog render_comparison_text() und compare_html._render_header().
     header.append("")
 
     blocks: list[list[str]] = []
@@ -402,10 +400,10 @@ def render_compare_sms(
     if not locations:
         return "Vergleich: keine Daten"
 
-    head = (
-        f"Vergleich {result.target_date.strftime('%d.%m.')} "
-        f"{result.time_window[0]:02d}-{result.time_window[1]:02d}h:"
-    )
+    # Issue #1268: Stundenfenster-Angabe ersatzlos entfernt (Bewertung = ganzer
+    # Tag). Sie waere dauerhaft "00-23h" — eine Nicht-Information, die 8 der 140
+    # Zeichen belegt, die hier fuer echte Messwerte gebraucht werden.
+    head = f"Vergleich {result.target_date.strftime('%d.%m.')}:"
     parts = [_sms_location_part(loc, enabled_metrics) for loc in locations]
     if not parts:
         return f"{head} keine Werte"

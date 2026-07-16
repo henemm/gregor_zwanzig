@@ -213,9 +213,12 @@ test.describe('Issue #681: Compare-Editor Slice 4 — Layout + Versand Fidelity'
 	});
 
 	// ── AC-5: Layout-Tab zeigt Kacheln, Versand-Tab den Aktivierungs-Banner ──
-	// Issue #1232 Scheibe 2b: die 3 Info-Kacheln zogen aus Step5Versand in die
+	// Issue #1232 Scheibe 2b: die Info-Kacheln zogen aus Step5Versand in die
 	// neue CompareReportContentSection (Layout-Tab) um — Testids unveraendert.
-	test('AC-5: Layout-Tab zeigt 3 Kacheln, Versand-Tab den Aktivierungs-Banner', async ({ page }) => {
+	// Issue #1268: Zeitfenster- und Horizont-Kachel ersatzlos entfernt (der
+	// Nutzer kann beides nicht mehr einstellen) — von den urspruenglich 3
+	// Kacheln bleibt die Versand-Kachel. Der Rest des Tests ist unveraendert.
+	test('AC-5: Layout-Tab zeigt die Versand-Kachel, Versand-Tab den Aktivierungs-Banner', async ({ page }) => {
 		const { id } = await createPreset(page);
 		await page.goto(`/compare/${id}/edit`);
 		await page.waitForLoadState('networkidle');
@@ -225,16 +228,13 @@ test.describe('Issue #681: Compare-Editor Slice 4 — Layout + Versand Fidelity'
 			page.locator('[data-testid="compare-editor-tab-layout"]')
 		).toHaveAttribute('data-active', 'true');
 
-		// 3 Info-Kacheln (RED: fehlen)
+		// Versand-Kachel (RED: fehlt)
 		await expect(
 			page.locator('[data-testid="compare-step5-schedule-tile"]')
 		).toBeVisible({ timeout: 5_000 });
-		await expect(
-			page.locator('[data-testid="compare-step5-timewindow-tile"]')
-		).toBeVisible();
-		await expect(
-			page.locator('[data-testid="compare-step5-horizon-tile"]')
-		).toBeVisible();
+		// Issue #1268: Zeitfenster-/Horizont-Kachel duerfen nicht mehr erscheinen.
+		await expect(page.locator('[data-testid="compare-step5-timewindow-tile"]')).toHaveCount(0);
+		await expect(page.locator('[data-testid="compare-step5-horizon-tile"]')).toHaveCount(0);
 
 		// Aktivierungs-Banner (nur Create-Modus → im Edit-Modus nicht sichtbar, aber
 		// im Create-Modus muss er erscheinen)

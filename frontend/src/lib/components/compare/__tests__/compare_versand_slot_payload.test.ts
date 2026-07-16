@@ -123,14 +123,20 @@ describe('buildComparePresetSavePayload — End-Datum-Lösch-Sentinel (AC-3)', (
 	});
 });
 
-// ─── Staging-F001 (AC-5): Horizont/Top-N/Stundenverlauf-Toggle NEBEN den 5
-// Slot-Feldern — CompareEditor.svelte muss forecastHours/topN/hourlyEnabled
+// ─── Staging-F001 (AC-5): Top-N/Stundenverlauf-Toggle NEBEN den 5
+// Slot-Feldern — CompareEditor.svelte muss topN/hourlyEnabled
 // zusätzlich zu morningEnabled/morningTime/eveningEnabled/eveningTime/endDate
 // in denselben handleSave()-Aufruf reichen. Dieser Test treibt den
-// Payload-Builder direkt (kein Browser) und beweist, dass alle 8 Felder
-// gemeinsam übernommen werden UND sich nicht gegenseitig überschreiben. ───────
-describe('buildComparePresetSavePayload — Horizont/Top-N/Stundenverlauf NEBEN Slot-Feldern (Staging-F001, AC-5)', () => {
-	test('forecastHours/topN/hourlyEnabled werden gemeinsam mit den 5 Slot-Feldern übernommen, Rest round-trippt', () => {
+// Payload-Builder direkt (kein Browser) und beweist, dass die Felder
+// gemeinsam übernommen werden UND sich nicht gegenseitig überschreiben.
+//
+// Issue #1268: `forecastHours` ist hier entfallen — der Horizont ist kein
+// Editor-Feld mehr, der Editor reicht ihn nicht mehr in handleSave(). Die
+// topN-/hourlyEnabled-Erwartungen dieses Tests gehören zu #1268 AC-7 und
+// gelten unverändert weiter. Dass forecast_hours stattdessen aus `original`
+// round-trippt, prüft der Folgetest. ─────────────────────────────────────────
+describe('buildComparePresetSavePayload — Top-N/Stundenverlauf NEBEN Slot-Feldern (Staging-F001, AC-5)', () => {
+	test('topN/hourlyEnabled werden gemeinsam mit den 5 Slot-Feldern übernommen, Rest round-trippt', () => {
 		const original = makePreset({
 			forecast_hours: 48,
 			display_config: { region: 'Salzburger Land', top_n: 3 },
@@ -140,15 +146,15 @@ describe('buildComparePresetSavePayload — Horizont/Top-N/Stundenverlauf NEBEN 
 			...baseEdits,
 			morningTime: '08:15',
 			endDate: '2026-11-01',
-			forecastHours: 24,
 			topN: 7,
 			hourlyEnabled: false
 		});
 
 		// Neu gesetzte Content-Felder (Layout-Tab / CompareInhaltSection)
-		assert.equal(body.forecast_hours, 24);
 		assert.equal((body.display_config as Record<string, unknown>).top_n, 7);
 		assert.equal(body.hourly_enabled, false);
+		// Issue #1268: unangetastet aus `original` (kein Editor-Feld mehr)
+		assert.equal(body.forecast_hours, 48);
 
 		// Gleichzeitig geänderte Slot-Felder (Versand-Tab) bleiben unabhängig korrekt
 		assert.equal(body.morning_time, '08:15:00');

@@ -56,9 +56,9 @@
 	// Versand-Felder aus preset mappen
 	state.schedule = data.preset.schedule ?? 'daily';
 	state.weekday = data.preset.weekday ?? 0;
-	state.timeWindowStart = data.preset.hour_from ?? 9;
-	state.timeWindowEnd = data.preset.hour_to ?? 16;
-	state.forecastHours = data.preset.forecast_hours ?? 48; // Issue #764
+	// Issue #1268: hour_from/hour_to/forecast_hours werden nicht mehr hydriert —
+	// die Felder sind aus dem Editor entfernt. Sie bleiben im Preset persistiert
+	// und round-trippen beim Speichern via `...original`-Spread.
 	state.officialAlertsEnabled = data.preset.official_alerts_enabled ?? true; // Issue #1040
 	state.radarAlertEnabled = data.preset.radar_alert_enabled ?? false; // Issue #1041 Slice 2 (Default AUS)
 	state.hourlyEnabled = data.preset.hourly_enabled ?? true; // Issue #1107
