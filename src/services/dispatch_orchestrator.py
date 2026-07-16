@@ -83,13 +83,15 @@ class TripDispatchStrategy:
 class CompareDispatchStrategy:
     """Compare-Adapter (`kind="vergleich"`) -- delegiert an `scheduler_dispatch_service`.
 
-    Kein 2s-Delay (Non-Goal, Tech-Lead-Entscheidung), kein SMTP-Vorab-Guard
-    (per-Preset statt global) -- `collect_due`/`pre_pass`/`dispatch_one` rufen
-    ausschliesslich bestehende Funktionen aus `scheduler_dispatch_service.py`
-    auf.
+    2s-Delay zwischen Presets (PO-Entscheidung 2026-07-16, #1207): seit #1270
+    versendet Compare drei Kanaele (E-Mail+Telegram+SMS) pro Preset -- ohne
+    Pause besteht Rate-Limit-Risiko bei Resend/Telegram. Trip hat den gleichen
+    Schutz seit #766. Kein SMTP-Vorab-Guard (per-Preset statt global) --
+    `collect_due`/`pre_pass`/`dispatch_one` rufen ausschliesslich bestehende
+    Funktionen aus `scheduler_dispatch_service.py` auf.
     """
 
-    inter_mail_delay: float = 0
+    inter_mail_delay: float = 2.0
     smtp_guard: bool = False
 
     def __init__(self, settings: Settings, user_id: str, data_root: str | None = None) -> None:
@@ -177,7 +179,8 @@ def run_briefing_dispatch(
     for i, item in enumerate(due):
         strategy.dispatch_one(item)
         # 2s Pause zwischen aufeinanderfolgenden Mails (nicht nach der
-        # letzten) -- Trip 2.0s Rate-Limit-Schutz (#766), Compare 0.
+        # letzten) -- Rate-Limit-Schutz: Trip seit #766, Compare seit
+        # 2026-07-16 (#1207, drei Kanaele pro Preset seit #1270). Beide 2.0s.
         if i < len(due) - 1:
             time_module.sleep(strategy.inter_mail_delay)
 

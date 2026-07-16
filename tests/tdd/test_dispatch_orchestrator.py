@@ -101,12 +101,89 @@ def test_trip_inter_mail_delay_is_two_seconds():
     assert _strategy_delay(TripDispatchStrategy) == 2.0
 
 
-def test_compare_inter_mail_delay_is_zero():
-    """HIGH-Risiko-Punkt 1 (Kehrseite): Compare gewinnt KEIN 2s-Delay dazu —
-    Tech-Lead-Entscheidung, explizit als Non-Goal in der Spec festgehalten."""
+def test_compare_inter_mail_delay_is_two_seconds():
+    """PO-Entscheidung 2026-07-16: Compare bekommt dieselbe 2s-Sendepause wie
+    Trip. Ersetzt das fruehere Non-Goal ("Compare gewinnt KEIN 2s-Delay dazu")
+    aus `3ca3be14` — das war im Kontext eines verhaltensneutralen Refactors
+    richtig und ist jetzt bewusst revidiert.
+
+    Begruendung: seit #1270 verschickt Compare pro faelligem Preset DREI
+    Kanaele (E-Mail + Telegram + SMS) ohne jede Pause -> Rate-Limit-Risiko bei
+    Resend/Telegram. Der Rate-Limit-Schutz (#766), der Trip seine 2.0s gab,
+    gilt fuer Compare genauso."""
     from src.services.dispatch_orchestrator import CompareDispatchStrategy
 
-    assert _strategy_delay(CompareDispatchStrategy) == 0
+    assert _strategy_delay(CompareDispatchStrategy) == 2.0
+
+
+def test_compare_pauses_between_presets_but_not_after_the_last():
+    """Verhaltensnachweis zur PO-Entscheidung 2026-07-16: die echte
+    Orchestrator-Schleife pausiert zwischen zwei faelligen Compare-Presets
+    tatsaechlich ~2s — und NICHT nach dem letzten.
+
+    Kein Mock/Patch und kein gemocktes `time.sleep`: gemessen wird echte
+    Wanduhr-Zeit gegen den echten `run_briefing_dispatch`-Loop. Genutzt wird
+    die im Modul bereits vorhandene Naht `_STRATEGY` (Registry, s.
+    `test_strategy_registry_covers_both_kinds`): registriert wird eine echte
+    Unterklasse der echten `CompareDispatchStrategy`, die `inter_mail_delay`
+    ERBT — sinkt der Wert zurueck auf 0, wird dieser Test rot. Ueberschrieben
+    sind nur `collect_due` (zwei Dummy-Items statt echter Preset-Datei) und
+    `dispatch_one` (Zeitstempel statt echtem Versand) — damit der Test keine
+    echten Mails verschickt. Die zu pruefende Logik (Schleife, Delay-Position,
+    `i < len(due) - 1`) bleibt der echte Produktivcode.
+    """
+    import time
+
+    from src.services import dispatch_orchestrator as mod
+
+    class _RecordingCompareStrategy(mod.CompareDispatchStrategy):
+        # inter_mail_delay bewusst NICHT ueberschrieben -> geerbter Echtwert.
+        def __init__(self, settings, user_id, data_root=None):
+            super().__init__(settings, user_id, data_root)
+            self.dispatch_times: list[float] = []
+
+        def collect_due(self, hour):
+            return ["preset-a", "preset-b"]
+
+        def pre_pass(self, hour, due):
+            return None
+
+        def dispatch_one(self, item):
+            self.dispatch_times.append(time.monotonic())
+
+    user_id = _fresh_user_id("delay")
+    _make_isolated_user(user_id)
+
+    instances: list[_RecordingCompareStrategy] = []
+
+    class _Capturing(_RecordingCompareStrategy):
+        def __init__(self, settings, user_id, data_root=None):
+            super().__init__(settings, user_id, data_root)
+            instances.append(self)
+
+    original = mod._STRATEGY["vergleich"]
+    mod._STRATEGY["vergleich"] = _Capturing
+    try:
+        mod.run_briefing_dispatch("vergleich", user_id, 7)
+        returned = time.monotonic()
+    finally:
+        mod._STRATEGY["vergleich"] = original
+
+    assert len(instances) == 1
+    times = instances[0].dispatch_times
+    assert len(times) == 2, "beide faelligen Presets muessen versendet werden"
+
+    gap = times[1] - times[0]
+    assert gap >= 1.9, (
+        f"Zwischen zwei faelligen Compare-Presets wurde nicht ~2s pausiert "
+        f"(gemessen: {gap:.3f}s)"
+    )
+
+    trailing = returned - times[1]
+    assert trailing < 1.0, (
+        f"Nach dem LETZTEN Compare-Preset darf nicht pausiert werden "
+        f"(gemessen: {trailing:.3f}s nach dem letzten Versand)"
+    )
 
 
 # --- HIGH-Risiko 3: Rueckgabe-Taxonomie bleibt getrennt -------------------

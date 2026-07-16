@@ -183,7 +183,13 @@ determiniert, nicht aus dem Code ableitbar):
 - **Tiefe:** dünner Seam (Strategy-Skelett), keine tiefe DTO-/Send-Verschmelzung
 - **Compare-Kanäle:** bleibt E-Mail-only (SMS/Telegram wäre eigenes Feature, Issue-Scope schließt Template/Inhalt aus)
 - **Compare-Empfänger-Policy:** bleibt verbatim erhalten (per-Preset-Liste) — Angleichung an Trip wäre eine Verhaltensänderung
-- **Inter-Mail-Delay:** Compare bleibt 0 (kein 2s-Delay dazugewinnen)
+- **Inter-Mail-Delay:** ~~Compare bleibt 0 (kein 2s-Delay dazugewinnen)~~ —
+  **REVIDIERT per PO-Entscheidung 2026-07-16.** Das Non-Goal galt für den
+  verhaltensneutralen Refactor `3ca3be14` und war dort richtig: der Refactor
+  durfte kein Verhalten dazugewinnen. Inzwischen versendet Compare seit #1270
+  drei Kanäle (E-Mail + Telegram + SMS) pro Preset; ohne Pause zwischen den
+  Presets besteht Rate-Limit-Risiko bei Resend/Telegram. Trip hat diesen
+  Schutz seit #766. Compare bekommt daher ebenfalls `inter_mail_delay = 2.0`.
 - **Status-Semantik:** beide Tally-Formen bleiben 1:1 erhalten (kein einheitliches `DispatchResult`)
 
 Latenter Nebenbefund (nicht in Scope, mögliches Folge-Issue): Compare-Presets
@@ -236,3 +242,9 @@ Bestehende Kern-Tests, die ohne Anpassung grün bleiben müssen (Sicherheitsnetz
 ## Changelog
 
 - 2026-07-16: Initial spec created — Issue #1207
+- 2026-07-16: Non-Goal „Inter-Mail-Delay: Compare bleibt 0" revidiert
+  (PO-Entscheidung). Compare erhält `inter_mail_delay = 2.0` wie Trip (#766),
+  weil Compare seit #1270 drei Kanäle pro Preset versendet und ohne Pause
+  Rate-Limits bei Resend/Telegram riskiert. Das ursprüngliche Non-Goal bleibt
+  in „Known Limitations" durchgestrichen erhalten (Historie des
+  verhaltensneutralen Refactors `3ca3be14`).
