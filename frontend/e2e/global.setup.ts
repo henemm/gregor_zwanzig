@@ -1,7 +1,7 @@
 import { test as setup, expect, request as playwrightRequest } from '@playwright/test';
 import * as fs from 'fs';
 import { assertNotProdBaseURL, assertNotProdApiProxyTarget } from './prodUrlGuard';
-import { API_PROXY_TARGET } from './apiProxyTarget';
+import { API_PROXY_TARGET, PROD_API_PROXY_TARGET } from './apiProxyTarget';
 
 const authFile = 'playwright/.auth/admin.json';
 const TRIP_ID = 'e2e-cockpit-test';
@@ -25,6 +25,13 @@ setup('authenticate and seed test data', async ({ page, baseURL }) => {
 	assertNotProdBaseURL(baseURL ?? '');
 	// Issue #1284: zusätzlicher Abbruch, falls der /api-Proxy auf Prod zeigt.
 	await assertNotProdApiProxyTarget(API_PROXY_TARGET);
+	// Issue #1284 Fix-Loop 5: der Vite-Proxy oben deckt NICHT den Pfad, den
+	// Login und alle /api-Requests real nehmen -- SvelteKits eigene
+	// Server-Routen (src/routes/api/[...path], src/routes/login) rufen
+	// apiBase() auf, die GZ_API_BASE liest (frontend/src/lib/server/apiBase.ts).
+	// Fail-closed: fehlt GZ_API_BASE, gilt dort der Prod-Default
+	// (localhost:8090) -- also wird hier derselbe Default geprüft.
+	await assertNotProdApiProxyTarget(process.env.GZ_API_BASE ?? PROD_API_PROXY_TARGET);
 
 	const user = process.env.E2E_USER ?? 'admin';
 	const pass = process.env.E2E_PASS ?? 'test1234';

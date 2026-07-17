@@ -195,3 +195,46 @@ test('#1284 F013: IPv4-mapped IPv6-Loopback in Hex-Schreibweise ([::ffff:7f00:1]
 test('#1284 F013: IPv4-mapped IPv6-Loopback mit Nicht-Prod-Port ([::ffff:127.0.0.1]:8091) läuft unverändert an', async () => {
 	await assert.doesNotReject(() => assertNotProdApiProxyTarget('http://[::ffff:127.0.0.1]:8091'));
 });
+
+// TDD RED: Issue #1284 Fix-Loop 5 (CRITICAL). Ein echter Playwright-Lauf
+// (`npx playwright test`) hat den Login gegen PRODUKTION (Port 8090)
+// geschickt, obwohl der Fix-Loop-1..4-Guard oben grün lief -- der Guard prüft
+// nur `API_PROXY_TARGET` (Vite-Proxy), aber SvelteKits eigene Server-Routen
+// (src/routes/api/[...path], src/routes/login) rufen apiBase() auf, die
+// `GZ_API_BASE` liest (frontend/src/lib/server/apiBase.ts) und OHNE die
+// Variable auf `http://localhost:8090` (Prod) zurückfällt. Diese Tests
+// prüfen denselben Guard-Mechanismus gegen den WIRKLICH relevanten Wert:
+// `process.env.GZ_API_BASE ?? PROD_API_PROXY_TARGET` (global.setup.ts).
+// Ein frischer Kindprozess ist nötig, weil ein fehlender Env-Var sich nicht
+// im laufenden Test-Prozess simulieren lässt, ohne process.env global zu
+// mutieren (kein Mock -- echter Subprozess mit echtem Environment).
+function runGzApiBaseGuard(env: Record<string, string | undefined>) {
+	const script =
+		"import('./e2e/apiProxyTarget.ts').then(async ({ PROD_API_PROXY_TARGET }) => {" +
+		"  const { assertNotProdApiProxyTarget } = await import('./e2e/prodUrlGuard.ts');" +
+		'  await assertNotProdApiProxyTarget(process.env.GZ_API_BASE ?? PROD_API_PROXY_TARGET);' +
+		"  console.log('NO_THROW');" +
+		"}).catch(() => console.log('THROWN'));";
+	const childEnv = { ...process.env, ...env };
+	if (env.GZ_API_BASE === undefined) delete childEnv.GZ_API_BASE;
+	return spawnSync(
+		process.execPath,
+		['--import', './test-lib-loader.mjs', '--experimental-strip-types', '-e', script],
+		{ cwd: FRONTEND_DIR, encoding: 'utf-8', env: childEnv }
+	);
+}
+
+test('#1284 F5: GZ_API_BASE fehlt -> Guard wirft (apiBase()s Prod-Default gilt sonst ungeprüft)', () => {
+	const result = runGzApiBaseGuard({ GZ_API_BASE: undefined });
+	assert.equal(result.stdout.trim(), 'THROWN', `stderr: ${result.stderr}`);
+});
+
+test('#1284 F5: GZ_API_BASE=http://localhost:8090 (Prod) wirft', () => {
+	const result = runGzApiBaseGuard({ GZ_API_BASE: 'http://localhost:8090' });
+	assert.equal(result.stdout.trim(), 'THROWN', `stderr: ${result.stderr}`);
+});
+
+test('#1284 F5: GZ_API_BASE=http://localhost:8091 (Staging) läuft unverändert an', () => {
+	const result = runGzApiBaseGuard({ GZ_API_BASE: 'http://localhost:8091' });
+	assert.equal(result.stdout.trim(), 'NO_THROW', `stderr: ${result.stderr}`);
+});
