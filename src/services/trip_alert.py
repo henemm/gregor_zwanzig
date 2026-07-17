@@ -833,7 +833,9 @@ class TripAlertService:
                 service._cache.clear()
                 # Bug #288: Alert-Checks must NOT trigger ensemble-API calls
                 # (would consume the daily free-tier quota in ~30 minutes).
-                fresh = service.fetch_segment_weather(cached.segment, enrich_ensemble=False)
+                fresh = service.fetch_segment_weather(
+                    cached.segment, enrich_ensemble=False, enrich_snow=False
+                )
                 fresh_weather.append(fresh)
             except Exception as e:
                 logger.error(

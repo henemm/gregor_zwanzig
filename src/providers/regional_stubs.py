@@ -47,6 +47,7 @@ class RegionalStubProvider:
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
         enrich_ensemble: bool = True,
+        enrich_snow: bool = True,
     ) -> "NormalizedTimeseries":
         raise ProviderNotImplementedError(
             self._name,
@@ -73,6 +74,7 @@ class GeoSphereDirectProvider:
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
         enrich_ensemble: bool = True,
+        enrich_snow: bool = True,  # ignored, fetch_combined already includes SNOWGRID
     ) -> "NormalizedTimeseries":
         # `fetch_combined` (unlike `GeoSphereProvider.fetch_forecast`) does
         # NOT translate httpx exceptions into `ProviderRequestError` — the

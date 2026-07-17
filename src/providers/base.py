@@ -44,6 +44,7 @@ class WeatherProvider(Protocol):
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
         enrich_ensemble: bool = True,
+        enrich_snow: bool = True,
     ) -> "NormalizedTimeseries":
         """
         Fetch weather forecast for a location.
@@ -54,6 +55,8 @@ class WeatherProvider(Protocol):
             end: Forecast end time (default: provider-specific)
             enrich_ensemble: If True (default), enrich data points with
                 ensemble-spread confidence; if False, skip ensemble-API call.
+            enrich_snow: If True (default), enrich Alpen-Orte with SNOWGRID
+                snow depth (Epic #1301 A3); if False, skip the SNOWGRID call.
 
         Returns:
             Normalized timeseries with forecast data

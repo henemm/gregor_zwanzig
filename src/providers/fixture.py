@@ -86,12 +86,14 @@ class FixtureProvider:
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
         enrich_ensemble: bool = True,
+        enrich_snow: bool = True,
     ) -> NormalizedTimeseries:
         """Load the geographically nearest fixture and re-stamp timestamps.
 
         ``start``/``end`` are ignored — the fixture always provides its fixed
-        72 points anchored at the current UTC day. ``enrich_ensemble`` is
-        ignored: the FixtureProvider performs no HTTP call whatsoever.
+        72 points anchored at the current UTC day. ``enrich_ensemble``/
+        ``enrich_snow`` are ignored: the FixtureProvider performs no HTTP
+        call whatsoever (Epic #1301 A3).
         """
         nearest = _nearest(location.latitude, location.longitude)
         path = Path(self._dir) / nearest.filename

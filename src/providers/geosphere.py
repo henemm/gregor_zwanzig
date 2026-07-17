@@ -88,6 +88,16 @@ NWP_PARAMS = [
 # Snowgrid parameters
 SNOWGRID_PARAMS = ["snow_depth", "swe_tot"]
 
+# SNOWGRID-Abdeckungsgebiet (Alpen), inklusive Grenzen
+SNOWGRID_BOUNDS = {"min_lat": 45.0, "max_lat": 50.0, "min_lon": 8.0, "max_lon": 18.0}
+
+
+def snowgrid_covers(lat: float, lon: float) -> bool:
+    """True wenn (lat, lon) im SNOWGRID-Abdeckungsgebiet (Alpen) liegt, inklusive Grenzen."""
+    b = SNOWGRID_BOUNDS
+    return b["min_lat"] <= lat <= b["max_lat"] and b["min_lon"] <= lon <= b["max_lon"]
+
+
 # Nowcast parameters
 NOWCAST_PARAMS = ["t2m", "ff", "fx", "rr", "pt", "rh2m"]
 
@@ -175,6 +185,7 @@ class GeoSphereProvider:
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
         enrich_ensemble: bool = True,  # ignored, GeoSphere has no ensemble support
+        enrich_snow: bool = True,  # ignored, GeoSphere IS the SNOWGRID source
     ) -> NormalizedTimeseries:
         """
         Fetch weather forecast for a location.
@@ -188,6 +199,9 @@ class GeoSphereProvider:
             end: Forecast end time (default: +60h)
             enrich_ensemble: Accepted for protocol compliance but ignored
                 (Bug #288); GeoSphere has no ensemble-spread API.
+            enrich_snow: Accepted for protocol compliance but ignored
+                (Epic #1301 A3); GeoSphere already includes SNOWGRID via
+                fetch_combined(include_snow=True), no separate enrichment.
 
         Returns:
             NormalizedTimeseries with forecast data

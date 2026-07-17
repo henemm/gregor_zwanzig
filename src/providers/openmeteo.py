@@ -165,6 +165,29 @@ def is_within_forecast_horizon(stage_date: date, reference_date: date) -> bool:
     return (stage_date - reference_date).days <= OPENMETEO_MAX_FORECAST_DAYS
 
 
+def _should_enrich_snow(enrich_snow: bool, lat: float, lon: float) -> bool:
+    """A3 (Epic #1301): True nur wenn enrich_snow=True UND (lat, lon) im
+    SNOWGRID-Abdeckungsgebiet (Alpen) liegt. Reine, netzfreie Gating-Funktion."""
+    from providers.geosphere import snowgrid_covers
+
+    return bool(enrich_snow) and snowgrid_covers(lat, lon)
+
+
+def _stamp_snow(timeseries: NormalizedTimeseries, snow_depth_cm, swe_kgm2) -> List[str]:
+    """A3 (Epic #1301): Fill-only-Stamp — setzt dp.snow_depth_cm/dp.swe_kgm2 nur
+    dort, wo bislang None. Gibt die tatsaechlich gefuellten Param-Namen zurueck
+    (["snow_depth", "swe_tot"])."""
+    filled = set()
+    for dp in timeseries.data:
+        if snow_depth_cm is not None and getattr(dp, "snow_depth_cm", None) is None:
+            dp.snow_depth_cm = snow_depth_cm
+            filled.add("snow_depth")
+        if swe_kgm2 is not None and getattr(dp, "swe_kgm2", None) is None:
+            dp.swe_kgm2 = swe_kgm2
+            filled.add("swe_tot")
+    return sorted(filled)
+
+
 # Metric Availability Probe (WEATHER-05a)
 AVAILABILITY_CACHE_PATH = Path("data/cache/model_availability.json")
 AVAILABILITY_CACHE_TTL_DAYS = 7
@@ -361,6 +384,29 @@ class OpenMeteoProvider:
     ) -> List[str]:
         """Thin-Wrapper. Vertrag lebt in providers/merge.py (Issue #1302, Epic #1301)."""
         return merge_missing_fields(primary, fallback, missing_params, self._PARAM_TO_FIELD)
+
+    def _enrich_snow(
+        self, timeseries: "NormalizedTimeseries", lat: float, lon: float, enrich_snow: bool
+    ) -> None:
+        """A3 (Epic #1301): Best-effort SNOWGRID-Anreicherung (fill-only) fuer
+        Alpen-Orte. Mutiert timeseries in-place; kein Fehler propagiert
+        (fail-soft), damit ein SNOWGRID-Ausfall nie das Briefing bricht."""
+        if not _should_enrich_snow(enrich_snow, lat, lon):
+            return
+        try:
+            from providers.geosphere import GeoSphereProvider
+
+            sd, swe = GeoSphereProvider().fetch_snowgrid(lat, lon)
+            if sd is not None or swe is not None:
+                filled = _stamp_snow(timeseries, sd, swe)
+                if filled:
+                    timeseries.meta.fallback_metrics = sorted(
+                        set(timeseries.meta.fallback_metrics or []) | set(filled)
+                    )
+                    if timeseries.meta.fallback_reason is None:
+                        timeseries.meta.fallback_reason = "snow_geosphere"
+        except Exception:
+            pass
 
     def select_model(self, lat: float, lon: float) -> Tuple[str, float, str]:
         """
@@ -744,6 +790,7 @@ class OpenMeteoProvider:
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
         enrich_ensemble: bool = True,
+        enrich_snow: bool = True,
     ) -> NormalizedTimeseries:
         """
         Fetch weather forecast for a location.
@@ -757,6 +804,10 @@ class OpenMeteoProvider:
             enrich_ensemble: If True (default), enrich data points with
                 ensemble-spread confidence (Issue #121); if False, skip the
                 ensemble-API call entirely. Bug #288 reduces calls to 1/report.
+            enrich_snow: If True (default), fill-only-enrich Alpen-Orte
+                (SNOWGRID-Bounds) with snow_depth_cm/swe_kgm2 via GeoSphere
+                SNOWGRID (Epic #1301 A3); if False, skip the SNOWGRID call
+                (used by the 15-min alert path, Bug #288-Klasse).
 
         Returns:
             NormalizedTimeseries with hourly forecast
@@ -884,6 +935,7 @@ class OpenMeteoProvider:
                     )
                     ts.meta.fallback_reason = "cross_provider_total_outage"
                     ts.meta.fallback_model = direct_name
+                    self._enrich_snow(ts, location.latitude, location.longitude, enrich_snow)
                     return ts
                 except (ProviderNotImplementedError, ProviderRequestError, ProviderNotFoundError):
                     pass  # Stub noch nicht angebunden ODER Direktprovider
@@ -993,5 +1045,8 @@ class OpenMeteoProvider:
                                 logger.info("Fallback %s filled: %s", fb_id, ", ".join(filled))
                         except Exception as e:
                             logger.warning("Fallback %s failed: %s", fb_id, e)
+
+        # Epic #1301 A3: SNOWGRID fill-only enrichment for Alpen-Orte.
+        self._enrich_snow(timeseries, location.latitude, location.longitude, enrich_snow)
 
         return timeseries

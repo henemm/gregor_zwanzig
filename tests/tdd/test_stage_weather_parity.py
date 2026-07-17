@@ -56,6 +56,7 @@ class _KeyedFakeProvider:
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
         enrich_ensemble: bool = True,
+        enrich_snow: bool = True,
     ) -> NormalizedTimeseries:
         key = (location.latitude, location.longitude)
         if key not in self._by_coord:

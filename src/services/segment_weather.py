@@ -72,6 +72,7 @@ class SegmentWeatherService:
         self,
         segment: TripSegment,
         enrich_ensemble: bool = True,
+        enrich_snow: bool = True,
     ) -> SegmentWeatherData:
         """
         Fetch weather forecast for a trip segment.
@@ -91,6 +92,9 @@ class SegmentWeatherService:
             enrich_ensemble: If True (default), let provider enrich with
                 ensemble-spread confidence; if False, skip ensemble-API call
                 (Bug #288 — alert-checks must not consume daily quota).
+            enrich_snow: If True (default), let provider fill-only-enrich
+                Alpen-Orte with SNOWGRID-Schnee (Epic #1301 A3); if False,
+                skip the SNOWGRID call (alert-checks).
 
         Returns:
             SegmentWeatherData with populated metrics
@@ -138,6 +142,7 @@ class SegmentWeatherService:
                 start=segment.start_time,
                 end=segment.end_time,
                 enrich_ensemble=enrich_ensemble,
+                enrich_snow=enrich_snow,
             )
         except ProviderRequestError as e:
             logger.error(f"Provider failed for segment {segment.segment_id}: {e}")
