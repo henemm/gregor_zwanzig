@@ -84,6 +84,25 @@ async function createPresetWithLocation(
 	return (await res.json()).id as string;
 }
 
+// Draft-Preset: `location_ids: []` ⇒ `deriveStatusFromPreset` (subscriptionHelpers.ts)
+// faellt auf Status 'draft' zurueck — keine Location noetig, das ist gerade
+// der Witz an einem Draft (Setup noch nicht abgeschlossen).
+async function createDraftPreset(page: import('@playwright/test').Page, name: string): Promise<string> {
+	const res = await page.request.post('/api/compare/presets', {
+		data: {
+			name,
+			location_ids: [],
+			schedule: 'daily',
+			profil: 'wandern',
+			hour_from: 7,
+			hour_to: 16,
+			empfaenger: []
+		}
+	});
+	await expect(res, 'Draft-Preset-Anlage fehlgeschlagen: ' + res.status()).toBeOK();
+	return (await res.json()).id as string;
+}
+
 async function cleanupFixture(
 	page: import('@playwright/test').Page,
 	presetId: string | null,
@@ -114,6 +133,11 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		const tile = page.locator('[data-testid^="compare-tile-"]:visible').first();
 		await expect(tile).toBeVisible({ timeout: 10_000 });
 
+		// Preset-ID vor dem Klick sichern (Locator kann nach der Navigation
+		// nicht mehr zuverlässig abgefragt werden).
+		const tileTestId = await tile.getAttribute('data-testid');
+		const id = (tileTestId ?? '').replace('compare-tile-', '');
+
 		// Hole Preset-ID aus dem tile-Link oder data-Attribut
 		const kebab = tile.locator('button[aria-label="Weitere Aktionen"]');
 		await kebab.click();
@@ -124,8 +148,9 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		await expect(editItem).toBeVisible();
 		await editItem.click();
 
-		// Prüfe Navigation zur Edit-Seite
-		await expect(page).toHaveURL(/\/compare\/[^/]+\/edit/, { timeout: 10_000 });
+		// Epic #1273 S3: /compare/{id}/edit ist reiner Redirect auf den Hub —
+		// die finale URL landet auf /compare/{id} ohne /edit.
+		await expect(page).toHaveURL(new RegExp(`/compare/${id}(\\?|$)`), { timeout: 10_000 });
 	});
 
 	// ── AC-4: Vorschau → /compare/{id}?tab=vorschau ──────────────────────────
@@ -246,26 +271,43 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 	});
 
 	// ── AC-5: Draft → "Setup fortsetzen" → /compare/{id}/edit ───────────────
+	//
+	// Ehemals: verließ sich auf ZUFÄLLIG vorhandene Draft-Vergleiche
+	// (`.filter({ hasText: 'draft' })`) und übersprang sich per `test.skip`,
+	// wenn keiner existierte — im aktuellen Testkonto lief der Fall nie
+	// "scharf", nur "skipped" (Adversary-Fund F002). Abhilfe wie AC-2/AC-3:
+	// eigenes, isoliertes Draft-Preset per API anlegen, über die STABILE
+	// `data-testid="compare-tile-<id>"` referenzieren, in `finally` aufräumen.
 
 	test('AC-5: "Setup fortsetzen" navigiert Draft zu /compare/{id}/edit', async ({ page }) => {
-		const draftTile = page.locator('[data-testid^="compare-tile-"]:visible').filter({ hasText: 'draft' }).first();
+		const suffix = Date.now();
+		const presetId = await createDraftPreset(page, `E2E 626 AC-5 draft ${suffix}`);
 
-		const count = await draftTile.count();
-		if (count === 0) {
-			test.skip(true, 'Kein Draft-Vergleich auf der Seite — AC-5 nicht testbar');
-			return;
+		try {
+			await page.goto('/compare');
+			await page.waitForLoadState('networkidle');
+
+			// STABILE Referenz über die Preset-ID.
+			const draftTile = page.locator(`[data-testid="compare-tile-${presetId}"]:visible`);
+			await expect(draftTile).toBeVisible({ timeout: 10_000 });
+
+			const statusPill = draftTile.locator('[data-testid="compare-status-pill"]');
+			await expect(statusPill).toContainText('draft', { timeout: 10_000 });
+
+			const kebab = draftTile.locator('button[aria-label="Weitere Aktionen"]');
+			await kebab.click();
+			await page.waitForTimeout(500);
+
+			const setupItem = page.getByRole('menuitem', { name: 'Setup fortsetzen' });
+			await expect(setupItem).toBeVisible();
+			await setupItem.click();
+
+			// Epic #1273 S3: /compare/{id}/edit ist reiner Redirect auf den Hub —
+			// die finale URL landet auf /compare/{id} ohne /edit.
+			await expect(page).toHaveURL(new RegExp(`/compare/${presetId}(\\?|$)`), { timeout: 10_000 });
+		} finally {
+			await cleanupFixture(page, presetId, null);
 		}
-
-		await expect(draftTile).toBeVisible({ timeout: 10_000 });
-		const kebab = draftTile.locator('button[aria-label="Weitere Aktionen"]');
-		await kebab.click();
-		await page.waitForTimeout(500);
-
-		const setupItem = page.getByRole('menuitem', { name: 'Setup fortsetzen' });
-		await expect(setupItem).toBeVisible();
-		await setupItem.click();
-
-		await expect(page).toHaveURL(/\/compare\/[^/]+\/edit/, { timeout: 10_000 });
 	});
 
 	// ── AC-6 (korrigiert #1256 S1): "Briefing jetzt senden" IST Teil des Menüs ──

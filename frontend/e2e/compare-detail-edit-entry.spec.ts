@@ -1,9 +1,11 @@
-// E2E (Staging) — Issue #1261 (a): Compare-Detailseite (Desktop) — "Bearbeiten"
-// auffindbar machen (Header-Button + Desktop-⋮-Kebab), Mobile-Regression,
-// Draft-Ausnahme.
+// E2E (Staging) — Issue #1261 (a): Compare-Detailseite (Desktop) — Mobile-
+// Regressionswächter + Draft-Ausnahme.
 //
-// Spec: docs/specs/modules/issue_1261_compare_edit_autosave.md
-//   § Acceptance Criteria AC-1..AC-4
+// Ursprünglich Spec: docs/specs/modules/issue_1261_compare_edit_autosave.md
+//   § Acceptance Criteria AC-1..AC-4. AC-1 (Desktop-Header-"Bearbeiten") und
+// AC-2 (Kebab-"Bearbeiten") wurden mit Epic #1273 S4a entfernt — die
+// getesteten Einstiegspunkte existieren seit S3 nicht mehr (siehe
+// docs/specs/modules/epic_1273_s4a_test_migration.md § AC-4).
 //
 // Echter Klick-Pfad (Kebab-Klick statt goto), Auth ueber die im
 // playwright.config.ts hinterlegte storageState (kein Login pro Test —
@@ -92,49 +94,13 @@ test.describe('Issue #1261 (a): Compare-Detail "Bearbeiten" auffindbar (Desktop)
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 
-	// ── AC-1: sichtbarer Header-Button navigiert auf den Editor ──────────────
-	test('AC-1: Desktop-Header zeigt "Bearbeiten"-Button, der auf /compare/{id}/edit navigiert', async ({
-		page
-	}) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E 1261 AC1 Ort ${suffix}`, 47.05, 11.31);
-		const id = await createPresetWithLocation(page, `E2E 1261 AC1 ${suffix}`, 'daily', locId);
-
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-
-		const editBtn = page.locator('[data-testid="compare-detail-edit-button"]:visible');
-		await expect(editBtn).toBeVisible({ timeout: 10_000 });
-		await editBtn.click();
-
-		await expect(page).toHaveURL(new RegExp(`/compare/${id}/edit$`), { timeout: 10_000 });
-	});
-
-	// ── AC-2: Desktop-⋮-Kebab enthält zusätzlich "Bearbeiten" ────────────────
-	test('AC-2: Desktop-⋮-Kebab enthält "Bearbeiten" (aktiv), navigiert auf /compare/{id}/edit', async ({
-		page
-	}) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E 1261 AC2 Ort ${suffix}`, 47.06, 11.32);
-		const id = await createPresetWithLocation(page, `E2E 1261 AC2 ${suffix}`, 'daily', locId);
-
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-
-		const kebabTrigger = page.locator('button[aria-label="Weitere Aktionen"]:visible').first();
-		await expect(kebabTrigger).toBeVisible({ timeout: 10_000 });
-		await kebabTrigger.click();
-
-		// Erweiterung, kein Ersatz: Lebenszyklus-Einträge bleiben erhalten.
-		await expect(page.getByRole('menuitem', { name: 'Pausieren' })).toBeVisible({ timeout: 5_000 });
-		await expect(page.getByRole('menuitem', { name: 'Archivieren' })).toBeVisible();
-		await expect(page.getByRole('menuitem', { name: 'Löschen' })).toBeVisible();
-		const editItem = page.getByRole('menuitem', { name: 'Bearbeiten' });
-		await expect(editItem).toBeVisible();
-
-		await editItem.click();
-		await expect(page).toHaveURL(new RegExp(`/compare/${id}/edit$`), { timeout: 10_000 });
-	});
+	// AC-1 (Desktop-Header-"Bearbeiten"-Button) und AC-2 (Kebab-Menüpunkt
+	// "Bearbeiten") entfernt — Epic #1273 S3 hat beide Einstiegspunkte bewusst
+	// aus dem Hub entfernt ("der Hub IST die Bearbeiten-Fläche"), bestätigt
+	// durch frontend/src/lib/components/compare/__tests__/
+	// issue_1273_s3_redirect_links.test.ts AC-4. Keine URL-Korrektur möglich,
+	// da die getesteten UI-Elemente selbst nicht mehr existieren.
+	// Spec: docs/specs/modules/epic_1273_s4a_test_migration.md § AC-4
 
 	// ── AC-3: Mobile-Sheet bleibt ohne "Bearbeiten" (Regression #1256 S8 AC-23) ──
 	test('AC-3: Mobile Bottom-Sheet enthält weiterhin KEIN "Bearbeiten" (aktiv)', async ({ page }) => {
@@ -151,7 +117,9 @@ test.describe('Issue #1261 (a): Compare-Detail "Bearbeiten" auffindbar (Desktop)
 		await moreBtn.click();
 
 		await expect(page.getByRole('button', { name: 'Pausieren' })).toBeVisible({ timeout: 5_000 });
-		await expect(page.getByRole('button', { name: 'Bearbeiten' })).toHaveCount(0);
+		// Exaktes Match: Substring-Match traf sonst faelschlich die S2-Inline-Stifte
+		// "Name bearbeiten"/"Region bearbeiten" im Hub-Header (2 statt 0 Treffer).
+		await expect(page.getByRole('button', { name: 'Bearbeiten', exact: true })).toHaveCount(0);
 	});
 
 	// ── AC-4: Draft — kein zusätzlicher Bearbeiten-Einstieg ──────────────────
