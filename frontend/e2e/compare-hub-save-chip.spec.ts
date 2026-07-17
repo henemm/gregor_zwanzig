@@ -137,7 +137,6 @@ test.describe('Epic #1273 S1 — Compare-Hub Save-Chip', () => {
 		page
 	}) => {
 		const { presetId, locIds } = await seedPreset(page);
-		const puts = collectPresetPuts(page, presetId);
 		try {
 			await page.setViewportSize({ width: 1280, height: 900 });
 			await page.goto(`/compare/${presetId}?tab=idealwerte`);
@@ -146,16 +145,29 @@ test.describe('Epic #1273 S1 — Compare-Hub Save-Chip', () => {
 			});
 			await expect(page.getByTestId('corridor-editor-vergleich')).toBeVisible({ timeout: 10_000 });
 
-			// Ausgangs-Chip merken (Text inkl. Zeitstempel).
+			// Frisches Preset hat noch keine aktive Metrik (Leerzustand, kein
+			// Zahlenfeld) — über den echten Klick-Pfad eine Metrik hinzufügen,
+			// damit die Tabelle ein Zahlenfeld rendert. Das Hinzufügen selbst
+			// löst einen echten PUT aus (Commit-Handler) — deshalb PUT-
+			// Mitschnitt erst NACH dem Settle starten, sonst würde dieser
+			// beabsichtigte Save die "0 PUTs"-Prüfung unten verfälschen.
+			await page.getByRole('button', { name: '＋ Schneehöhe' }).click();
+			const table = page.getByTestId('corridor-editor-table');
+			await expect(table.locator('input[type="number"]').first()).toBeVisible({
+				timeout: 10_000
+			});
+			// Auf den PUT des Hinzufügens warten (Chip durchläuft saving→idle).
+			await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+
+			const puts = collectPresetPuts(page, presetId);
+
+			// Ausgangs-Chip merken (Text inkl. Zeitstempel) NACH dem Settle.
 			await expect(saveIndicator(page)).toBeVisible({ timeout: 10_000 });
 			await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle');
 			const before = (await saveIndicator(page).textContent()) ?? '';
 
 			// Ein Zahlenfeld fokussieren und OHNE Änderung wieder verlassen.
-			const field = page
-				.getByTestId('corridor-editor-table')
-				.locator('input[type="number"]')
-				.first();
+			const field = table.locator('input[type="number"]').first();
 			await field.focus();
 			await field.blur();
 			await page.waitForTimeout(2_000);
