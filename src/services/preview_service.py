@@ -181,6 +181,19 @@ class PreviewService:
             trip.report_config, trip.display_config, report_type,
         )
 
+        # Fix #1297: Vorschau-Pfad war nicht Teil von ADR-0025. multi_day_trend
+        # und thunder_forecast werden hier ueber DIESELBEN Scheduler-Methoden
+        # bezogen, die auch der Versandweg nutzt (trip_report_scheduler.py:836-848)
+        # — keine lokale Nachbau-Berechnung, sonst divergiert die Vorschau
+        # strukturell (SMS immer `TH+:-`). Gate auf show_multi_day_trend identisch
+        # zum Versand.
+        multi_day_trend = None
+        if segment_weather and render_options.show_multi_day_trend:
+            multi_day_trend = scheduler._build_stage_trend(trip, target, tz=trip_tz)
+        thunder_forecast = scheduler._build_thunder_forecast_from_trend_or_fetch(
+            trip, target, tz=trip_tz, multi_day_trend=multi_day_trend,
+        )
+
         # Issue #474: F12 Wetterlage-Label vor format_email berechnen.
         try:
             from services.weather_pattern import WeatherPatternService
@@ -200,6 +213,8 @@ class PreviewService:
             trip_tz=trip_tz,
             stability_result=stability_result,
             render_options=render_options,
+            thunder_forecast=thunder_forecast,
+            multi_day_trend=multi_day_trend,
         )
         return report, segment_weather, stage_name, trip_tz
 
@@ -214,8 +229,14 @@ class PreviewService:
         trip_tz,
         stability_result,
         render_options=None,
+        thunder_forecast=None,
+        multi_day_trend=None,
     ):
-        """Einzelstelle für den E-Mail-Render-Aufruf in der Vorschau."""
+        """Einzelstelle für den E-Mail-Render-Aufruf in der Vorschau.
+
+        Fix #1297: thunder_forecast/multi_day_trend werden jetzt durchgereicht,
+        damit die Vorschau denselben Gewitter-Wert wie der Versand zeigt (ADR-0025).
+        """
         from src.output.renderers.trip_report import TripReportFormatter
         return TripReportFormatter().format_email(
             segments=segment_weather,
@@ -229,6 +250,8 @@ class PreviewService:
             stability_result=stability_result,
             report_config=trip.report_config,
             render_options=render_options,
+            thunder_forecast=thunder_forecast,
+            multi_day_trend=multi_day_trend,
         )
 
     def render_email_preview(

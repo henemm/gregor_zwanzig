@@ -107,3 +107,45 @@ def test_sms_preview_omits_thunder_token_when_thunder_disabled():
     assert "TH:" not in token_line, (
         f"SMS-Vorschau zeigt TH:-Token trotz deaktivierter thunder-Metrik:\n{token_line!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Fix #1297 (AC-4): Der Wächter war laut Setup-Kommentar (Zeile 11, 39-41)
+# konstruktionsbedingt BLIND für die thunder-Metrik — genau die, die zwischen
+# Vorschau und Versand divergierte. Diese Erweiterung fügt den Gewitter-Fall
+# hinzu: MIT aktivierter thunder-Metrik + echtem Gewitter-Datenpunkt auf der
+# Folgeetappe muss die Vorschau denselben `TH+`-Wert zeigen wie der Versand.
+#
+# Warum an der Render-Naht (`_render_email`) statt end-to-end über
+# `render_sms_preview(demo=True)`: der Rechenweg des Fixes
+# (`_build_stage_trend` + `_collect_future_stage_weather`) macht in
+# demo-Vorschauen einen Live-Fetch (Spec Known Limitations) und ist damit NICHT
+# deterministisch/netzfrei. Die Naht-Prüfung reproduziert die Divergenz
+# deterministisch: Vorschau-Render == Versand-Render aus identischer
+# Datengrundlage. Fixtures werden aus test_preview_thunder_matches_sent.py
+# wiederverwendet — keine Parallel-Fixture.
+# ---------------------------------------------------------------------------
+
+def test_guard_thunder_case_preview_matches_sent():
+    """AC-4 (RED): Wächter, nicht mehr blind für thunder. Vorschau-Render und
+    Versand-Render aus derselben Gewitter-Datengrundlage liefern denselben SMS-
+    Text (inkl. `TH+:H@6`). RED heute, weil `_render_email()` `thunder_forecast`
+    nicht durchreicht (TypeError → Vorschau strukturell `TH+:-`)."""
+    from tests.tdd.test_preview_thunder_matches_sent import (
+        build_thunder_scenario,
+        preview_report,
+        send_report,
+    )
+
+    ctx = build_thunder_scenario()
+    sent = send_report(*ctx)
+    preview = preview_report(*ctx)
+
+    assert "TH+:H@6" in sent.sms_text, (
+        f"Fixture-Vorbedingung: der Versand muss `TH+:H@6` melden, war {sent.sms_text!r}"
+    )
+    assert preview.sms_text == sent.sms_text, (
+        "Der Wächter fängt jetzt die thunder-Divergenz:\n"
+        f"  Vorschau: {preview.sms_text!r}\n"
+        f"  Versand:  {sent.sms_text!r}"
+    )

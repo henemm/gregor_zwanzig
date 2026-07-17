@@ -168,3 +168,15 @@ Known-Issues-Dokument stand und nicht als bindende Regel.
   Umbau „auf die kanonische Ordnung" hätte MED still zu `L` gemacht. Genau das behebt
   `thunder_label_value()`: dieselben Werte, aber benannt, zentral und mit einem Docstring,
   der gegen `thunder_ordinal()` abgrenzt.
+- **2026-07-17 (Vorschau-Pfad nachgerüstet, Fix #1297):** Die Entscheidungen 1-5 galten
+  bisher nachweislich nur für den **Versandweg**. `PreviewService.render_sms_preview()`
+  berechnete `thunder_forecast`/`multi_day_trend` nirgends und übergab beide als `None`
+  an `format_email()` — die SMS-/E-Mail-Vorschau zeigte strukturell immer `TH+:-`,
+  unabhängig vom tatsächlichen Wetter, während der Versand für dieselbe Etappe den echten
+  Wert trug. Behoben in `src/services/preview_service.py`, indem `_build_report()`
+  dieselben `TripReportSchedulerService`-Methoden aufruft wie der Versandweg
+  (`_build_stage_trend()`, `_build_thunder_forecast_from_trend_or_fetch()`) — keine
+  zweite Berechnung, reines Wiring. Spec: `docs/specs/bugfix/fix_1297_sms_preview_thunder.md`.
+  Der Versandweg selbst bleibt unverändert. Damit gilt „eine Gewitter-Quelle" jetzt
+  nachweislich für **alle** Aufrufer von `format_email()`/`format_sms()`, nicht nur den
+  Scheduler-Versand.
