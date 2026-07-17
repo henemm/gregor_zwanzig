@@ -100,6 +100,8 @@ Responsive Tab-Editor für kleine Viewports (≤899px).
 
 Entfernung von `CompareWizard.svelte` nach Vollständigkeit aller Slices. Finalisierung Tab-Editor-Umstieg.
 
+**Fortgeführt unter Epic #1273:** Die eigentliche finale Konsolidierung (Detail-Hub `CompareTabs.svelte` wird DIE einzige Bearbeiten-Fläche, `CompareEditor.svelte` samt `/compare/[id]/edit`-Route entfällt komplett) wird nicht mehr hier, sondern unter Epic #1273 (`docs/features/epic-1273-compare-one-surface.md`, PO-Auftrag Prod-Audit Befund 9, 2026-07-16) weitergeführt. Dieses Dokument (#677) bleibt Historie des Wizard→Tab-Umbaus; Slice 6 gilt als in #1273 aufgegangen.
+
 ---
 
 ## Architecture
@@ -350,6 +352,6 @@ No special migration needed — pure frontend + endpoint routing fix. Legacy `Co
 
 - **Slice 4:** Validierungsmeldungen (Min > Max, Grenzwert-Verletzungen)
 - **Slice 5:** Mobile-Responsive Editor
-- **Slice 6:** CompareWizard-Deletion, Full Tab-Editor-Umstieg
+- **Slice 6:** CompareWizard-Deletion, Full Tab-Editor-Umstieg — fortgeführt unter Epic #1273 (`docs/features/epic-1273-compare-one-surface.md`)
 - **Follow-ups:** Step 5 (Versand) Edit-Support, Voransicht vor Speichern, Template-Library, Metrik-Sortierung (Drag)
 

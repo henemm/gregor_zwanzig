@@ -18,11 +18,18 @@
 		isRuntimeExceeded
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { page } from '$app/state';
+	import { createSaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
 
 	let { data } = $props();
+
+	// Epic #1273 S1: SaveStatus-Controller fuer den Hub — eine Instanz pro
+	// Compare-Detail-Seite (kein Singleton!), analog tripSaveCtl in
+	// routes/trips/[id]/+page.svelte:22. Wird an CompareDetail/CompareTabs
+	// durchgereicht und dort manuell (nicht via schedule()) getrieben.
+	const hubSaveCtl = createSaveStatus();
 
 	// Staging-Fund SF-2 (CRITICAL, AC-37): der Hub (CompareTabs) haelt fuer die
 	// Aktivierungs-Karte einen eigenen `localSchedule`-Zustand und PUT-Pfad
@@ -249,6 +256,7 @@
 	locations={data.locations}
 	{initialTab}
 	onScheduleChange={handleScheduleChange}
+	saveController={hubSaveCtl}
 	bind:this={compareDetailRef}
 />
 

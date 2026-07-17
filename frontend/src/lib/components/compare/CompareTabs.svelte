@@ -22,6 +22,10 @@
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
 	import CompareLayoutRow from '$lib/components/molecules/CompareLayoutRow.svelte';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
+	// Epic #1273 S1: geteilter Save-Chip (position:fixed) + SaveStatus-Typ/Helper.
+	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
+	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	import { extractMessage } from '$lib/stores/saveStatusStore.svelte';
 	import { channelChipCount } from './channelChipCount.js';
 	import { CHANNEL_COL_BUDGET } from '$lib/components/trip-detail/metricsEditor';
 	import {
@@ -80,9 +84,15 @@
 		 * der Aktivierungs-Karte auf dem alten Status stehen, bis ein Reload
 		 * erfolgt. Wird nach erfolgreichem PUT mit dem neuen `schedule` aufgerufen. */
 		onScheduleChange?: (schedule: string) => void;
+		/** Epic #1273 S1: geteilter Hub-SaveStatus-Controller (aus der Routen-
+		 * Ebene). Wird von den 5 Commit-Handlern manuell getrieben
+		 * (setSaving/setSaved/setError/markPristine), NICHT via schedule() —
+		 * die Netzwerk-Serialisierung bleibt bei hubPutQueue. */
+		saveController?: SaveStatus;
 	}
 
-	let { preset, locations, initialTab = 'uebersicht', onScheduleChange }: Props = $props();
+	let { preset, locations, initialTab = 'uebersicht', onScheduleChange, saveController }: Props =
+		$props();
 
 	const TABS = [
 		{ value: 'uebersicht', label: 'Übersicht' },
@@ -222,6 +232,12 @@
 
 	async function persistPickedIds(newIds: string[]): Promise<void> {
 		currentLocationIds = newIds;
+		// Epic #1273 S1: der try/catch liegt INNERHALB des enqueue-Closures und
+		// faengt den Fehler dort ab — der aeussere await wirft nie. Damit
+		// setError() ueberhaupt erreichbar wird, den gefangenen Fehler in einer
+		// ausserhalb deklarierten `failure`-Variable festhalten.
+		let failure: unknown = null;
+		saveController?.setSaving();
 		// Fix-Loop 1 (F002): Payload-Bau innerhalb des enqueueten fn, damit
 		// currentPreset erst zur tatsaechlichen Ausfuehrungszeit gelesen wird
 		// (frisch aus einer evtl. vorher in der Queue gelaufenen PUT-Response).
@@ -238,10 +254,16 @@
 			} catch (e) {
 				console.error('[CompareTabs] Orte-Persistenz fehlgeschlagen, Rollback:', e);
 				currentLocationIds = lastPersistedLocationIds;
+				failure = e;
 				return null;
 			}
 		});
-		if (updated) currentPreset = updated;
+		if (updated) {
+			currentPreset = updated;
+			saveController?.setSaved();
+		} else if (failure) {
+			saveController?.setError(extractMessage(failure));
+		}
 	}
 
 	// Inline-Add-Panel (AC-31): bespoke, kein Trip-Pendant (dokumentierte
@@ -332,6 +354,12 @@
 	// Subtrees nicht mehr zu einem uebersehenen Commit fuehrt.
 	async function handleCorridorCommit(): Promise<void> {
 		if (!idealwerteHydrated) return;
+		// Epic #1273 S1: `failure` trennt den No-Op-Fall (kein Diff, gar kein PUT)
+		// vom Fehlerfall — beide liefern `updated === null`. No-Op bekommt
+		// markPristine() (keine Speicher-Anzeige-Luege, #1269 AC-3), nur ein
+		// echter Fehler setError().
+		let failure: unknown = null;
+		saveController?.setSaving();
 		// Fix-Loop 2 (F003, Adversary MEDIUM): current/before/Diff-Check/Rollback
 		// KOMPLETT innerhalb des enqueueten fn lesen bzw. ausfuehren — bei
 		// tatsaechlicher Ausfuehrung ist `lastPersistedCorridorSnapshot` bereits
@@ -360,10 +388,18 @@
 				wizardState.idealRanges = before.idealRanges;
 				wizardState.activeMetricKeys = before.activeMetricKeys;
 				wizardState.metricAlertLevels = before.metricAlertLevels;
+				failure = e;
 				return null;
 			}
 		});
-		if (updated) currentPreset = updated;
+		if (updated) {
+			currentPreset = updated;
+			saveController?.setSaved();
+		} else if (failure) {
+			saveController?.setError(extractMessage(failure));
+		} else {
+			saveController?.markPristine();
+		}
 	}
 
 	// Fix-Loop 1 (F002, Adversary HIGH): `<svelte:window>` muss auf Komponenten-
@@ -442,6 +478,10 @@
 	// dass auch andere Klicks im Subtree diesen Handler ausloesen.
 	async function handleVersandCommit(): Promise<void> {
 		if (!versandHydrated) return;
+		// Epic #1273 S1: `failure` trennt No-Op (markPristine) vom Fehler
+		// (setError), s. handleCorridorCommit.
+		let failure: unknown = null;
+		saveController?.setSaving();
 		// Fix-Loop 2 (F003, Adversary MEDIUM): current/before/Diff-Check/Rollback
 		// KOMPLETT innerhalb des enqueueten fn — identisches Prinzip wie
 		// handleCorridorCommit (s. dortiger Kommentar): `lastPersistedVersandSnapshot`
@@ -470,10 +510,18 @@
 				wizardState.alertCooldownMinutes = before.alertCooldownMinutes;
 				wizardState.alertQuietFrom = before.alertQuietFrom;
 				wizardState.alertQuietTo = before.alertQuietTo;
+				failure = e;
 				return null;
 			}
 		});
-		if (updated) currentPreset = updated;
+		if (updated) {
+			currentPreset = updated;
+			saveController?.setSaved();
+		} else if (failure) {
+			saveController?.setError(extractMessage(failure));
+		} else {
+			saveController?.markPristine();
+		}
 	}
 
 	// Issue #1258 Scheibe 5 (AC-19, AC-29, H2/H3): eingebetteter AlarmeTab
@@ -540,6 +588,10 @@
 	// Nachbar-Tab seither veraendert hat, bleibt unangetastet.
 	async function handleAlarmeCommit(): Promise<void> {
 		if (!alarmeHydrated) return;
+		// Epic #1273 S1: `failure` trennt No-Op (markPristine) vom Fehler
+		// (setError), s. handleCorridorCommit.
+		let failure: unknown = null;
+		saveController?.setSaving();
 		const updated = await hubPutQueue.enqueue(async () => {
 			const current = currentAlarmSnapshot();
 			const before = lastPersistedAlarmSnapshot ?? current;
@@ -552,10 +604,18 @@
 			} catch (e) {
 				console.error('[CompareTabs] Alarme-Persistenz fehlgeschlagen, Rollback:', e);
 				rollbackAlarmSnapshot(wizardState, before, current);
+				failure = e;
 				return null;
 			}
 		});
-		if (updated) currentPreset = updated;
+		if (updated) {
+			currentPreset = updated;
+			saveController?.setSaved();
+		} else if (failure) {
+			saveController?.setError(extractMessage(failure));
+		} else {
+			saveController?.markPristine();
+		}
 	}
 
 	// Issue #1258 S5 (H4): notifyCount fuer den AlarmeTab-Kopf — Korridore
@@ -692,6 +752,10 @@
 		const isPausing = localSchedule !== 'manual';
 		if (isPausing) previousSchedule = localSchedule;
 		const next = isPausing ? 'manual' : previousSchedule;
+		// Epic #1273 S1: einziger der 5 Handler mit try/catch AUSSERHALB des
+		// enqueue-Closures — ein echter Fehler propagiert normal, daher direktes
+		// Wrapping ohne `failure`-Variable.
+		saveController?.setSaving();
 		try {
 			// Fix-Loop 3 (F007, Adversary CRITICAL): Payload aus currentPreset
 			// bauen (nicht der eingefrorenen preset-Prop) und die Baseline nach
@@ -712,9 +776,11 @@
 			// aufrufen (wuerde die eingefrorene-Prop-/currentPreset-Baseline-
 			// Architektur mit frisch geladenen `data` kollidieren lassen).
 			onScheduleChange?.(next);
+			saveController?.setSaved();
 			return true;
 		} catch (e) {
 			console.error('[CompareTabs] toggleActive failed:', e);
+			saveController?.setError(extractMessage(e));
 			return false;
 		}
 	}
@@ -761,6 +827,12 @@
 </script>
 
 <svelte:window onpointerup={handleWindowPointerUp} />
+
+<!-- Epic #1273 S1: geteilter Save-Chip (position:fixed, daher Mount-Stelle frei),
+     analog TripHeader.svelte:194-195. -->
+{#if saveController}
+	<SaveIndicator controller={saveController} />
+{/if}
 
 <div class="compare-tabs" data-testid="compare-detail-tab-list">
 	<!-- Tab-Leiste — custom buttons mit Underline-Indikator (Issue #582) -->
