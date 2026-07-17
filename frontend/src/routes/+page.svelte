@@ -94,7 +94,8 @@
 		if (!firstIncomplete) return '/compare';
 		const firstOpen = setupStepsCompare.findIndex((s) => !s.done);
 		const step = firstOpen < 0 ? 1 : firstOpen + 1;
-		return `/compare/${firstIncomplete.id}/edit`;
+		// Epic #1273 S3: Ziel ist der Hub, nicht mehr die alte /edit-Route.
+		return `/compare/${firstIncomplete.id}`;
 	}
 
 	const tripCtaHref = $derived(buildTripCtaHref());
@@ -557,19 +558,19 @@
 								glyph="route"
 								label="Orte bearbeiten"
 								sub="→ Verglichene Orte"
-								href="/compare/{compareHero.id}/edit"
+								href="/compare/{compareHero.id}"
 							/>
 							<QuickAction
 								glyph="metrics"
 								label="Ideal-Werte ändern"
 								sub="→ Ideal-Profil"
-								href="/compare/{compareHero.id}/edit#idealwerte"
+								href="/compare/{compareHero.id}?tab=idealwerte"
 							/>
 							<QuickAction
 								glyph="clock"
 								label="Briefing-Zeitplan"
 								sub="→ Zeitplan & Kanäle"
-								href="/compare/{compareHero.id}/edit#schedule"
+								href="/compare/{compareHero.id}?tab=versand"
 							/>
 							<QuickAction
 								glyph="eye"

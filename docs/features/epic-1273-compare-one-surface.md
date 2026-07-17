@@ -1,13 +1,14 @@
 # Epic 1273: Ortsvergleich auf EINE Fläche
 
-**Status:** In Progress (Slice 2 Complete — 2026-07-17)
+**Status:** In Progress (Slice 3 Complete — 2026-07-17)
 **Epic Scope:** Der Ortsvergleich-Hub (`CompareTabs.svelte`) wird nach dem Muster von #616 (Trip-IA) zur **einzigen** Bearbeiten-Fläche für einen Ortsvergleich — vollständig editierbar mit Auto-Save-Chip (`SaveStatus`/`SaveIndicator`, „✓ Gespeichert HH:MM"). Der separate Editor `/compare/[id]/edit` (`CompareEditor.svelte`, aus Epic #677) entfällt am Ende der Migration. Der Create-Wizard (`/compare/new`) bleibt unverändert bestehen.
 **Related Specs:**
 - `docs/specs/modules/feat_1273_s1_compare_hub_save_chip.md` (Slice S1 — Save-Chip-Infra) — Approved, VERIFIED
 - `docs/specs/modules/feat_1273_s2_compare_hub_name_region_profil.md` (Slice S2 — Name/Region/Aktivitätsprofil inline editierbar) — Approved, Adversary-Verdict AMBIGUOUS→Freigabe nach Test-Fix
+- `docs/specs/modules/feat_1273_s3_redirect.md` (Slice S3 — Edit-Route wird reiner Redirect) — Approved, Adversary-Verdict AMBIGUOUS→behoben, alle 7 ACs CONFIRMED
 - `docs/context/epic-1273-compare-one-surface.md` (Kontext-/Analyse-Dokument, Scheiben-Schnitt)
 
-**Child Slices:** S1 ✓ (2026-07-16) · S2 ✓ (2026-07-17) · S3 offen · S4a/S4b offen · S5 offen
+**Child Slices:** S1 ✓ (2026-07-16) · S2 ✓ (2026-07-17) · S3 ✓ (2026-07-17) · S4a/S4b offen · S5 offen
 
 **PO-Auftrag:** Prod-Audit, Befund 9, 2026-07-16.
 
@@ -41,7 +42,7 @@ Der heutige Ortsvergleich hat zwei Bearbeiten-Flächen: den Detail-Hub `CompareT
 |---|---|---|
 | **S1** | Save-Chip-Infra im Hub: `hubSaveCtl`, `SaveIndicator` im Header, 5 Commit-Handler mit `setSaving()`/`setSaved()`/`setError()`/`markPristine()` umwickelt (Serialisierung über `hubPutQueue` unverändert) | ✓ Complete 2026-07-16 |
 | **S2** | Name/Region/Aktivitätsprofil-Parität im Hub (TripHeader-Muster: isoliert, nicht über `schedule()`) — Feature-Paritäts-Lücke, Muss-Blocker vor jedem Redirect | ✓ fertig 2026-07-17 |
-| **S3** | 7 produktive Link-Stellen auf den Hub umbiegen (inkl. Hash→Query-Fix `#idealwerte`→`?tab=idealwerte`, `#schedule`→`?tab=versand`) + Redirect-Route (`/edit` → `/compare/[id]?tab=`) | Geplant |
+| **S3** | 7 produktive Link-Stellen auf den Hub umbiegen (inkl. Hash→Query-Fix `#idealwerte`→`?tab=idealwerte`, `#schedule`→`?tab=versand`) + Redirect-Route (`/edit` → `/compare/[id]?tab=`) | ✓ fertig 2026-07-17 |
 | **S4a** | ~26 e2e-Playwright-Specs von `CompareEditor.svelte`/der Edit-Route auf den Hub migrieren (ggf. Teil-Slices) | Geplant |
 | **S4b** | ~15 Unit-Tests (Source-Inspection auf `CompareEditor.svelte`) migrieren/löschen | Geplant |
 | **S5** | Cleanup: `CompareEditor.svelte` + `/edit`-Route löschen, verwaiste Helper prüfen (netto ~-1900 LoC, Sonderfall wie #616) | Geplant |
@@ -109,6 +110,33 @@ Details: `docs/specs/modules/feat_1273_s2_compare_hub_name_region_profil.md`.
 
 ---
 
+## Slice S3: Compare-Edit-Route wird reiner Redirect auf den Hub (Issue #1273, Spec `feat_1273_s3_redirect.md`)
+
+**Status:** ✓ Completed 2026-07-17, Adversary-Verdict **AMBIGUOUS** (F001 behoben, danach Verdict-Revision auf verifiziert), alle 7 ACs CONFIRMED.
+
+Biegt die letzten produktiven Zugänge zur alten Bearbeiten-Fläche auf den Hub um und macht `/compare/[id]/edit` — analog zum Trip-Vorbild #616 — zu einem reinen Redirect ohne eigenes Rendering.
+
+**Was gebaut wurde:**
+
+- `/compare/[id]/edit` ist jetzt ein reiner 307-Redirect auf `/compare/[id]` (`frontend/src/routes/compare/[id]/edit/+page.server.ts`), exaktes Vorbild `trips/[id]/edit/+page.server.ts`. Kein Fetch gegen die Python-API mehr, `+page.svelte` auf eine leere Hülle reduziert (SvelteKit-Routing verlangt die Datei weiterhin, rendert sie aber nach `redirect()` nie).
+- Alle 7 externen Linkstellen umgebogen: Home-Kachel-Kebab (`CompareKachel.svelte`), Listen-Kebab `setup`+`edit` (`compare/+page.svelte`), Home-Hero-CTA sowie 3 Schnellaktionen (`+page.svelte`) — jede zeigt jetzt auf `/compare/{id}` statt `/compare/{id}/edit`.
+- 2 davon vormals hash-basierte Schnellaktionen ("Ideal-Werte ändern", "Briefing-Zeitplan") nutzen jetzt `?tab=idealwerte` bzw. `?tab=versand` statt der zuvor toten Hash-Anker `#idealwerte`/`#schedule` (es gab kein DOM-Element mit diesen IDs) — kein neuer Mechanismus, `CompareTabs.svelte` unterstützt `?tab=` über `initialTab`/`resolve()` bereits seit S1/S2.
+- Die dadurch redundanten Hub-eigenen Bearbeiten-Affordanzen entfernt (PO-Entscheid): Desktop-„Bearbeiten"-Button (`data-testid="compare-detail-edit-button"`) und Mobile-Stift-Icon (`aria-label="Bearbeiten"`) in `compare/[id]/+page.svelte` — analog zum Trip-Hub, der ebenfalls keinen separaten „Bearbeiten"-Knopf mehr hat.
+- `compareDetailActions()` (`subscriptionHelpers.ts`) liefert keinen `edit`-Eintrag mehr — ist jetzt ein reiner 1:1-Alias auf `compareLifecycleActions(status)`, keine Sonderbehandlung mehr nötig. `compareActions()` (Listen-/Home-Kebab) bleibt bewusst unverändert und liefert weiterhin `edit`/`setup`-Einträge — nur das Linkziel der Aufrufer wurde in Schritt 2 umgebogen.
+
+**Adversary-Fund F001 (MEDIUM, behoben):** Die ursprünglichen AC-2/AC-3-Tests prüften nur per Datei-Grep (`readFileSync` + String-Match), ob `?tab=idealwerte`/`?tab=versand` im Quelltext vorkommen — ohne echten Funktionsaufruf, wie von der Spec für AC-3 explizit gefordert (`resolve('idealwerte')`/`resolve('versand')`). Behoben durch Extraktion von `TABS`/`VALID_VALUES`/`resolve()` aus `CompareTabs.svelte` in eine eigene, testbare Datei `frontend/src/lib/components/compare/compareTabsResolve.ts` (`COMPARE_TABS`/`COMPARE_TAB_VALUES`/`resolveCompareTab()`, verhaltensidentisch); `CompareTabs.svelte` importiert jetzt von dort. Der AC-3-Test ruft `resolveCompareTab()` jetzt direkt auf. F002 (LOW, veralteter Kopf-Kommentar in `CompareKachel.svelte`) bewusst nicht behoben — kosmetisch, Kandidat für Sammel-Issue #1199.
+
+**7 Acceptance Criteria** (307-Redirect ohne CompareEditor-Rendering/404; alle 7 Linkstellen zeigen auf den Hub; die 2 Tab-Schnellaktionen öffnen tatsächlich den jeweiligen Tab; Desktop-Button/Mobile-Stift-Icon entfernt; `compareDetailActions()` ohne edit-Eintrag für alle Status; `compareLifecycleActions()` unverändert ohne edit-Eintrag; Listen-/Home-Kebab funktioniert weiterhin, nur mit neuem Linkziel) — alle CONFIRMED nach Fix.
+
+**Bekannte Grenze (aus Spec übernommen):**
+- `CompareEditor.svelte` bleibt vollständig im Repo liegen — nur unerreichbar. Löschung ist explizit **S5**-Scope.
+- ~26 e2e-Playwright-Specs sowie weitere Unit-Tests außerhalb von `compareDetailEditActions.test.ts`, die noch aktiv `/compare/[id]/edit` ansteuern, sind durch diese Slice **strukturell rot** (die Route liefert jetzt einen Redirect statt der Editor-Seite). Erwartetes, akzeptiertes Verhalten dieser Slice — Behebung ist **S4**-Scope, bewusst nicht Teil von S3.
+- Kein Tab-Query-Passthrough im Redirect selbst (anders als beim Trip-Vorbild) — nicht nötig, da alle bekannten Aufrufer bereits mit dem korrekten Zielpfad inkl. `?tab=` verlinkt werden.
+
+Details: `docs/specs/modules/feat_1273_s3_redirect.md`, Adversary-Dialog: `docs/artifacts/epic-1273-s3-redirect/adversary-dialog.md`.
+
+---
+
 ## Architecture
 
 ### Component Hierarchy (Ziel-Zustand nach S5)
@@ -125,7 +153,7 @@ frontend/src/routes/compare/
     │       └── <CompareTabs saveController={...} />   (DIE einzige Bearbeiten-Fläche)
     │
     └── edit/
-        └── +page.svelte                            (S3: reiner Redirect auf /compare/[id]?tab=...; S5: Route gelöscht)
+        └── +page.svelte                            (✓ S3: reiner Redirect auf /compare/[id]?tab=...; S5: Route gelöscht)
 ```
 
 ### Speicher-Modell (S1)
@@ -165,12 +193,12 @@ Präzedenzfall: `TripHeader.svelte` (Trip-Name-Bearbeitung läuft ebenfalls isol
 |------|-------|--------|
 | 2026-07-16 | S1 | Save-Chip-Infra im Compare-Hub: `hubSaveCtl` (Routen-Ebene) + `SaveIndicator`-Chip via Thin-Shell-Pass-through (`CompareDetail.svelte`) in `CompareTabs.svelte`. Alle 5 bestehenden Commit-Handler mit `setSaving()`/`setSaved()`/`setError()`/`markPristine()` umwickelt, `hubPutQueue` unverändert für Netzwerk-Serialisierung. Adversary-Verdict VERIFIED. Issue #1273 (Slice 1). Spec: `docs/specs/modules/feat_1273_s1_compare_hub_save_chip.md`. |
 | 2026-07-17 | S2 | Name/Region/Aktivitätsprofil inline editierbar im Compare-Hub-Kopfbereich (Desktop + Mobile), TripHeader-Muster (Stift-Icon, isolierter Save-Pfad ohne `saveController`), Round-Trip-Spread-Payload gegen Datenverlust, `data.preset = updated`-Referenzersetzung für Cross-Tab-Resync über bestehenden `$effect` in `CompareTabs.svelte`. Adversary-Verdict AMBIGUOUS→Freigabe nach Test-Fix (AC-5-Test nutzte ursprünglich `page.goto()` statt In-Page-Tab-Klick, korrigiert). 6/7 ACs sofort CONFIRMED, AC-5 nach Fix ebenfalls CONFIRMED. Issue #1273 (Slice 2). Spec: `docs/specs/modules/feat_1273_s2_compare_hub_name_region_profil.md`. |
+| 2026-07-17 | S3 | `/compare/[id]/edit` wird reiner 307-Redirect auf `/compare/[id]` (Muster #616), alle 7 externen Linkstellen umgebogen, 2 vormals hash-basierte Schnellaktionen nutzen jetzt `?tab=idealwerte`/`?tab=versand`, redundante Hub-eigene Bearbeiten-Affordanzen (Desktop-Button, Mobile-Stift) entfernt, `compareDetailActions()` liefert keinen `edit`-Eintrag mehr (reiner Alias auf `compareLifecycleActions()`). Adversary-Verdict AMBIGUOUS→behoben: F001 (AC-2/AC-3-Tests nutzten Datei-Grep statt echtem Funktionsaufruf) behoben durch Extraktion von `resolveCompareTab()` in `compareTabsResolve.ts`, alle 7 ACs CONFIRMED. Bekannte Grenze: `CompareEditor.svelte` bleibt toter Code (S5), ~26 e2e-Specs + einzelne Unit-Tests auf `/edit` sind strukturell rot (S4-Scope). Issue #1273 (Slice 3). Spec: `docs/specs/modules/feat_1273_s3_redirect.md`. |
 
 ---
 
 ## Future Work
 
-- **S3:** 7 Link-Stellen umbiegen + Redirect-Route `/compare/[id]/edit` → `/compare/[id]?tab=`.
-- **S4a/S4b:** Test-Migration (~26 e2e-Specs, ~15 Unit-Tests) weg von `CompareEditor.svelte`.
+- **S4a/S4b:** Test-Migration (~26 e2e-Specs, ~15 Unit-Tests) weg von `CompareEditor.svelte` — durch S3 strukturell rot geworden, bewusst nicht Teil von S3.
 - **S5:** `CompareEditor.svelte` + `/edit`-Route löschen — schließt zugleich Slice 6 aus Epic #677 ab (dort als „CompareWizard-Deletion, Full Tab-Editor-Umstieg" vermerkt).
 

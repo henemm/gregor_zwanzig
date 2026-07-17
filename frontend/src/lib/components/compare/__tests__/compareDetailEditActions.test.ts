@@ -27,21 +27,33 @@ import assert from 'node:assert/strict';
 // Direkter Funktionsaufruf — kein Mock, kein DOM.
 const { compareDetailActions, compareLifecycleActions } = await import('../subscriptionHelpers.ts');
 
-describe('AC-2: compareDetailActions("active") enthält "Bearbeiten"', () => {
-	test('Eintrag {id:"edit", label:"Bearbeiten"} ist enthalten', () => {
+// UMKEHRUNG des #1261-AC-2-Verhaltens durch Epic #1273 Slice S3 (Spec AC-5):
+// Der separate "Bearbeiten"-Einstieg im Desktop-Detail-Kebab ist überflüssig
+// geworden, seit S2 Name/Region/Aktivitätsprofil INLINE auf dem Hub selbst
+// editierbar macht — der Hub *ist* jetzt die Bearbeiten-Fläche, ein
+// "Bearbeiten"-Eintrag im eigenen Kebab wäre zirkulär. compareDetailActions()
+// wird daher zum reinen Alias auf compareLifecycleActions() (ohne edit).
+describe('AC-5 (S3): compareDetailActions("active") enthält KEIN "Bearbeiten" mehr', () => {
+	test('kein "edit"-Eintrag (Umkehrung #1261-AC-2)', () => {
 		const actions = compareDetailActions('active');
 		const edit = actions.find((a: { id: string }) => a.id === 'edit');
-		assert.ok(edit, 'kein "edit"-Eintrag in compareDetailActions("active") gefunden');
-		assert.equal(edit?.label, 'Bearbeiten');
+		assert.equal(
+			edit,
+			undefined,
+			'compareDetailActions("active") darf keinen "edit"-Eintrag mehr liefern — der Hub ist die Bearbeiten-Fläche'
+		);
 	});
 });
 
-describe('AC-2: compareDetailActions("paused") enthält ebenfalls "Bearbeiten"', () => {
-	test('Eintrag {id:"edit", label:"Bearbeiten"} ist enthalten', () => {
+describe('AC-5 (S3): compareDetailActions("paused") enthält ebenfalls KEIN "Bearbeiten" mehr', () => {
+	test('kein "edit"-Eintrag (Umkehrung #1261-AC-2)', () => {
 		const actions = compareDetailActions('paused');
 		const edit = actions.find((a: { id: string }) => a.id === 'edit');
-		assert.ok(edit, 'kein "edit"-Eintrag in compareDetailActions("paused") gefunden');
-		assert.equal(edit?.label, 'Bearbeiten');
+		assert.equal(
+			edit,
+			undefined,
+			'compareDetailActions("paused") darf keinen "edit"-Eintrag mehr liefern — der Hub ist die Bearbeiten-Fläche'
+		);
 	});
 });
 

@@ -17,6 +17,7 @@
 	compact
 	onclick={() => goto('/compare/' + sub.id)}
 	onAction={(id) => {
-		if (id === 'edit') goto('/compare/' + sub.id + '/edit');
+		// Epic #1273 S3: Ziel ist der Hub, nicht mehr die alte /edit-Route.
+		if (id === 'edit') goto('/compare/' + sub.id);
 	}}
 />

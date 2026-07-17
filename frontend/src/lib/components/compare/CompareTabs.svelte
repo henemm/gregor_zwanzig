@@ -71,6 +71,7 @@
 		type AlarmSnapshot
 	} from './compareHubWizardBridge.ts';
 	import { groupLocations } from './locationHelpers.js';
+	import { COMPARE_TABS, resolveCompareTab } from './compareTabsResolve.js';
 
 	interface Props {
 		preset: ComparePreset;
@@ -94,21 +95,12 @@
 	let { preset, locations, initialTab = 'uebersicht', onScheduleChange, saveController }: Props =
 		$props();
 
-	const TABS = [
-		{ value: 'uebersicht', label: 'Übersicht' },
-		{ value: 'orte', label: 'Orte' },
-		{ value: 'idealwerte', label: 'Wertebereiche' },
-		{ value: 'layout', label: 'Layout' },
-		// Issue #1258 S5 (AC-19, H1): zwischen layout und versand — konsistent
-		// zur Editor-Reihe aus S4 (Konvergenz-Vorgabe).
-		{ value: 'alarme', label: 'Alarme' },
-		{ value: 'versand', label: 'Versand' },
-		{ value: 'vorschau', label: 'Vorschau' }
-	] as const;
-
-	const VALID_VALUES: readonly string[] = TABS.map((t) => t.value);
+	// Epic #1273 S3: TABS/VALID_VALUES/resolve() liegen jetzt in
+	// compareTabsResolve.ts (Adversary-Fund F001 — echter Funktionsaufruf statt
+	// Datei-Grep für AC-3 testbar), Verhalten unverändert.
+	const TABS = COMPARE_TABS;
 	function resolve(value: string): string {
-		return VALID_VALUES.includes(value) ? value : 'uebersicht';
+		return resolveCompareTab(value);
 	}
 
 	let activeTab = $state<string>('uebersicht');

@@ -116,8 +116,9 @@
 	function onCompareAction(key: string, row: unknown) {
 		const p = row as ComparePreset;
 		if (key === 'delete') deleteTarget = p;
-		else if (key === 'setup') goto('/compare/' + p.id + '/edit');
-		else if (key === 'edit') goto('/compare/' + p.id + '/edit');
+		// Epic #1273 S3: setup/edit landen auf dem Hub, nicht mehr auf /edit.
+		else if (key === 'setup') goto('/compare/' + p.id);
+		else if (key === 'edit') goto('/compare/' + p.id);
 		else if (key === 'preview') goto('/compare/' + p.id + '?tab=vorschau');
 		else if (key === 'pause') void togglePause(p);
 		else if (key === 'send') sendTarget = p;

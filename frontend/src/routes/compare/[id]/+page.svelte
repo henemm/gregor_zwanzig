@@ -214,9 +214,9 @@
 	}
 
 	function handleAction(id: string) {
-		if (id === 'edit' || id === 'setup') {
-			window.location.href = `/compare/${currentPreset.id}/edit`;
-		} else if (id === 'pause' || id === 'resume') {
+		// Epic #1273 S3: der 'edit'/'setup'-Zweig entfiel — compareDetailActions()
+		// liefert kein 'edit' mehr und kein Aufrufer im Hub uebergibt 'edit'/'setup'.
+		if (id === 'pause' || id === 'resume') {
 			// 'resume' kommt aus compareDetailActions() (Hub-Header, #1256 S3 + #1261) —
 			// selbe Toggle-Aktion wie 'pause' aus compareActions() (Listen-Kebab).
 			void togglePause();
@@ -331,9 +331,8 @@
 				<Btn variant="primary" onclick={handleTestSend} disabled={isSending}>
 					{isSending ? 'Wird gesendet…' : 'Test senden'}
 				</Btn>
-				<!-- Issue #1261 (a): "Bearbeiten" war zuvor nur ueber den toten
-				     handleAction('edit')-Zweig erreichbar — kein sichtbarer Einstieg. -->
-				<Btn variant="outline" href="/compare/{currentPreset.id}/edit" data-testid="compare-detail-edit-button">Bearbeiten</Btn>
+				<!-- Epic #1273 S3: Desktop-"Bearbeiten"-Button entfernt — der Hub selbst
+				     ist die Bearbeiten-Flaeche (Name/Region/Profil inline, Tabs). -->
 			{/if}
 			<CompareKebab {status} actions={compareDetailActions(status)} onSelect={handleAction} />
 		</div>
@@ -374,13 +373,8 @@
 				<span data-testid="runtime-exceeded-hint" class="flex-shrink-0" style="font-size: 11px; font-weight: 600; color: var(--g-bad)">Laufzeit überschritten</span>
 			{/if}
 		</span>
-		<a
-			href="/compare/{currentPreset.id}/edit"
-			class="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md"
-			aria-label="Bearbeiten"
-		>
-			<PencilIcon size={18} />
-		</a>
+		<!-- Epic #1273 S3: Mobile-Stift-Icon (Link auf /edit) entfernt — der Hub
+		     selbst ist die Bearbeiten-Flaeche. -->
 		<button
 			type="button"
 			class="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md"
