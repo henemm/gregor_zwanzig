@@ -30,6 +30,14 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from dotenv import load_dotenv
 load_dotenv(PROJECT_ROOT / ".env")
 
+import pytest
+
+# Issue #1210 B3: Footgun -- die Datei ist trotz "NICHT als pytest"-Hinweis
+# per pytest-Namenskonvention (test_alert_enabled) collectbar und mutiert
+# ungeschuetzt data/users/default/trips/*.json. Marker nimmt sie aus der
+# Standardselektion, ohne die dokumentierte manuelle Ausfuehrung zu aendern.
+pytestmark = pytest.mark.staging
+
 TRIP_JSON = PROJECT_ROOT / "data" / "users" / "default" / "trips" / "gr221-mallorca.json"
 IMAP_HOST = os.getenv("GZ_IMAP_HOST", "mail.henemm.com")
 IMAP_USER = os.getenv("GZ_TEST_IMAP_USER") or os.getenv("GZ_IMAP_USER")
@@ -69,7 +77,7 @@ def send_report():
 def get_latest_email_html():
     """Get HTML of the latest GR221 email from Stalwart INBOX."""
     time.sleep(4)
-    imap = imaplib.IMAP4_SSL(IMAP_HOST, int(os.getenv("GZ_IMAP_PORT", "993")))
+    imap = imaplib.IMAP4_SSL(IMAP_HOST, int(os.getenv("GZ_IMAP_PORT", "993")), timeout=15)
     imap.login(IMAP_USER, IMAP_PASS)
     imap.select('INBOX')
     today = datetime.now(timezone.utc)

@@ -56,6 +56,11 @@ line-length = 88
 addopts = "-q -m 'not email and not live and not staging'"
 pythonpath = ["src", "."]
 testpaths = ["tests"]
+# Issue #1210 AC-1: globales Sicherheitsnetz gegen unerwartete Haenger (z. B.
+# ein ungegateter Netz-Connect). Einzelne, bekannt langlaufende Tests
+# ueberschreiben dies gezielt per @pytest.mark.timeout(N) -- kein
+# Schwellen-Aufweichen, sondern deklarierte Ausnahmen.
+timeout = 30
 markers = [
     "tdd: TDD tests using external ground truth sources (may be slow)",
     "email: Tests that send real emails via SMTP (run with: pytest -m email)",
@@ -67,6 +72,7 @@ markers = [
 [dependency-groups]
 dev = [
     "pytest>=8.4.1",
+    "pytest-timeout>=2.4.0",
     "jsonschema",
     "ruff>=0.8.0",
     "playwright>=1.57.0",

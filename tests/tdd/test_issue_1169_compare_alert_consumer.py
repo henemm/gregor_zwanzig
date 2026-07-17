@@ -65,6 +65,10 @@ import output.channels.telegram as telegram_mod
 
 from tests.helpers.compare_briefings import write_compare_briefings
 
+# Issue #1210 B1: echte IMAP-Zustellung -> addopts-wirksamer Marker statt nur
+# Credential-Skip (primaere Ausschlussmechanik, nicht Defense-in-Depth).
+pytestmark = pytest.mark.email
+
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 
@@ -261,7 +265,7 @@ def _imap_has_subject_token(settings: Settings, token: str, *, attempts: int = 1
     imap_user = settings.imap_user or settings.smtp_user
     imap_pass = settings.imap_pass or settings.smtp_pass
     for _ in range(attempts):
-        imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
+        imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port, timeout=15)
         try:
             imap.login(imap_user, imap_pass)
             imap.select("INBOX")

@@ -25,7 +25,13 @@ import time
 import uuid
 from pathlib import Path
 
+import pytest
 from playwright.sync_api import expect, sync_playwright
+
+# Issue #1210 AC-1 Nebenwirkung: `_ui_login()` retried bis zu 3x mit
+# sleep(15) (bis zu 2x pro Test, AC-6) -- legitim >30s, daher deklarierter
+# Override statt Kollision mit dem neuen globalen ini-Timeout (30s).
+pytestmark = pytest.mark.timeout(180)
 
 _VALIDATOR_ENV = Path("/home/hem/gregor_zwanzig/.claude/validator.env")
 

@@ -42,6 +42,10 @@ from app.models import (
 )
 from app.trip import Stage, TimeWindow, Trip, Waypoint
 
+# Issue #1210 Fix-Loop 1 (F002, Adversary): KEIN modul-weiter Marker mehr --
+# AC-1/AC-3/AC-4 dialen kein echtes Netz (AC-3 nur 127.0.0.1-Socket, AC-4 nur
+# lokaler HTTP-Stub). Nur AC-2 (echter SMTP-Versand) traegt den Marker.
+
 TEST_USER = "issue684tdduser"
 
 
@@ -200,6 +204,7 @@ def test_ac1_email_only_unconfigured_smtp_no_false_positive():
 # --- AC-2: Normalfall E-Mail (regressionsfrei, echter SMTP-Versand) ---
 
 
+@pytest.mark.email
 def test_ac2_email_configured_sends_and_records():
     """AC-2: E-Mail-Kanal + konfiguriertes SMTP → realer Versand, return True,
     Alert-Log + Throttle gesetzt."""

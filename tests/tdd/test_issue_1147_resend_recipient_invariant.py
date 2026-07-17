@@ -45,6 +45,12 @@ from app.config import Settings  # noqa: E402
 from output.channels.base import OutputConfigError  # noqa: E402
 from output.channels.email import EmailOutput  # noqa: E402
 
+# Issue #1210 Fix-Loop 1 (F001, Adversary): KEIN modul-weiter Marker mehr --
+# die meisten Tests hier erwarten, dass der #1147/#1219-Guard VOR jedem
+# SMTP-Dial greift (kein Netz). Nur die Tests, deren Codepfad den Guard
+# passiert (Allowlist-Treffer) UND real smtp.resend.com/Stalwart dialt,
+# tragen @pytest.mark.email direkt an Klasse/Funktion.
+
 _MAIN_ENV = Path("/home/hem/gregor_zwanzig/.env")
 
 
@@ -224,6 +230,7 @@ class TestAC6CaseAndNameFormRobustness:
 
 
 class TestAC4NonTestRecipientUnaffected:
+    @pytest.mark.email
     def test_resend_send_to_real_user_no_1147_guard(self):
         """AC-4: GIVEN Resend-Host / WHEN send() ausschliesslich
         Nicht-Test-Empfaenger enthaelt / THEN greift die neue #1147-Invariante
@@ -342,6 +349,7 @@ class TestF003SemicolonSeparatorBypass:
         )
         _assert_1147_guard_fired(exc, "F003c")
 
+    @pytest.mark.email
     def test_resend_send_two_real_recipients_semicolon_separated_no_1147(self):
         """F003d (AC-4-Negativfall): GIVEN Resend-EmailOutput / WHEN ein
         Semikolon-getrenntes Element ausschliesslich zwei echte,
@@ -412,6 +420,7 @@ class TestF004QuotedDisplayNameBypass:
         )
         _assert_1147_guard_fired(exc, "F004b")
 
+    @pytest.mark.email
     def test_quoted_display_name_with_semicolon_real_address_no_1147(self):
         """F004c (False-Positive-Schutz): GIVEN Resend-EmailOutput / WHEN
         send() einen gequoteten Anzeigenamen mit Semikolon erhaelt, dessen
@@ -506,6 +515,7 @@ class TestF005ControlCharBypass:
         )
         _assert_1147_guard_fired(exc, "F005d")
 
+    @pytest.mark.email
     def test_control_char_real_recipient_plus_tag_no_1147(self):
         """F005e (AC-4-Negativfall 1): GIVEN Resend-EmailOutput / WHEN send()
         einen echten Empfaenger mit Plus-Tag ohne Steuerzeichen erhaelt
@@ -576,6 +586,7 @@ _EMAIL_CREDS_PRESENT = bool(
 )
 
 
+@pytest.mark.email
 @pytest.mark.skipif(
     not _EMAIL_CREDS_PRESENT,
     reason="GZ_TEST_SMTP_*/GZ_TEST_IMAP_* nicht gesetzt -- echter Stalwart-"
@@ -615,6 +626,7 @@ class TestAC3StalwartTestMailboxUnaffected:
         imap = imaplib.IMAP4_SSL(
             os.environ.get("GZ_IMAP_HOST", "mail.henemm.com"),
             int(os.environ.get("GZ_IMAP_PORT", "993")),
+            timeout=15,
         )
         imap.login(os.environ["GZ_TEST_IMAP_USER"], os.environ["GZ_TEST_IMAP_PASS"])
         imap.select("INBOX")

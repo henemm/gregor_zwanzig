@@ -46,6 +46,11 @@ from app.models import (
 )
 from app.trip import Stage, TimeWindow, Trip, Waypoint
 
+# Issue #1210 B1: echter SMTP-/IMAP-Zugriff -> addopts-wirksamer Marker statt
+# nur Credential-Skip (primaere Ausschlussmechanik, nicht Defense-in-Depth).
+pytestmark = pytest.mark.email
+
+
 def _data_root() -> Path:
     """Issue #1133: resolve at call time via get_data_dir(), not frozen at
     module import — follows the per-test data root the autouse-Fixture
@@ -141,7 +146,7 @@ def _imap_has_subject_token(settings: Settings, token: str, *, attempts: int = 1
     imap_user = settings.imap_user or settings.smtp_user
     imap_pass = settings.imap_pass or settings.smtp_pass
     for _ in range(attempts):
-        imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
+        imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port, timeout=15)
         try:
             imap.login(imap_user, imap_pass)
             imap.select("INBOX")

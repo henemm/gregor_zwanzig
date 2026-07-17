@@ -11,8 +11,6 @@ from providers.geosphere import (
     _vector_to_speed_kmh,
 )
 
-pytestmark = pytest.mark.live
-
 
 # --- Unit tests for helper functions ---
 

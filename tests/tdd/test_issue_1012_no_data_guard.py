@@ -39,10 +39,15 @@ from datetime import date, time, timedelta
 from email.header import decode_header
 from pathlib import Path
 
+import pytest
 
 from app.loader import get_data_dir, save_trip
 from app.trip import Stage, TimeWindow, Trip, Waypoint
 from services.trip_report_scheduler import TripReportSchedulerService
+
+# Issue #1210 B1: echter SMTP-/IMAP-Zugriff -> addopts-wirksamer Marker statt
+# nur Credential-Skip (primaere Ausschlussmechanik, nicht Defense-in-Depth).
+pytestmark = pytest.mark.email
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _LOCAL_ENV = _REPO_ROOT / ".env"
@@ -179,7 +184,7 @@ def _partial_fixture_dir(tmp_path: Path) -> str:
 
 def _imap():
     m = imaplib.IMAP4_SSL(os.environ.get("GZ_IMAP_HOST", "mail.henemm.com"),
-                           int(os.environ.get("GZ_IMAP_PORT", "993")))
+                           int(os.environ.get("GZ_IMAP_PORT", "993")), timeout=15)
     m.login(os.environ["GZ_TEST_IMAP_USER"], os.environ["GZ_TEST_IMAP_PASS"])
     m.select("INBOX")
     return m

@@ -29,6 +29,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from email.header import decode_header
 from pathlib import Path
 
+import pytest
 
 from app.loader import get_data_dir, save_trip
 from app.models import TripReportConfig
@@ -36,6 +37,10 @@ from app.trip import Stage, TimeWindow, Trip, Waypoint
 from services.trip_command_processor import (
     InboundMessage, TripCommandProcessor, _on_demand_failure_body,
 )
+
+# Issue #1210 B1: echter SMTP-/IMAP-Zugriff -> addopts-wirksamer Marker statt
+# nur Credential-Skip (primaere Ausschlussmechanik, nicht Defense-in-Depth).
+pytestmark = pytest.mark.email
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MAIN_ENV = Path("/home/hem/gregor_zwanzig/.env")
@@ -176,7 +181,7 @@ def _process(user_id: str, trip_name: str, body: str):
 
 def _imap():
     m = imaplib.IMAP4_SSL(os.environ.get("GZ_IMAP_HOST", "mail.henemm.com"),
-                          int(os.environ.get("GZ_IMAP_PORT", "993")))
+                          int(os.environ.get("GZ_IMAP_PORT", "993")), timeout=15)
     m.login(os.environ["GZ_TEST_IMAP_USER"], os.environ["GZ_TEST_IMAP_PASS"])
     m.select("INBOX")
     return m

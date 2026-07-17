@@ -65,6 +65,10 @@ from services.trip_command_processor import TripCommandProcessor
 
 import services.inbound_email_reader as _reader_mod
 
+# Issue #1210 B1: der bekannte 39-%-Hänger -> addopts-wirksamer Marker statt
+# nur Credential-Skip (primaere Ausschlussmechanik, nicht Defense-in-Depth).
+pytestmark = pytest.mark.email
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MAIN_ENV = Path("/home/hem/gregor_zwanzig/.env")
 _DATA_USERS = _REPO_ROOT / "data" / "users"
@@ -144,7 +148,7 @@ def _cleanup_user(user_id: str) -> None:
 
 def _imap() -> imaplib.IMAP4_SSL:
     m = imaplib.IMAP4_SSL(os.environ.get("GZ_IMAP_HOST", "mail.henemm.com"),
-                          int(os.environ.get("GZ_IMAP_PORT", "993")))
+                          int(os.environ.get("GZ_IMAP_PORT", "993")), timeout=15)
     m.login(os.environ["GZ_TEST_IMAP_USER"], os.environ["GZ_TEST_IMAP_PASS"])
     m.select("INBOX")
     return m
@@ -167,7 +171,7 @@ def _deliver_mail(header_from: str, subject: str, body: str) -> None:
     msg["From"] = header_from
     msg["To"] = _TEST_MAILBOX
     msg["Subject"] = subject
-    with smtplib.SMTP(host, port) as server:
+    with smtplib.SMTP(host, port, timeout=15) as server:
         server.starttls()
         server.login(user, password)
         server.sendmail(envelope_from, [_TEST_MAILBOX], msg.as_string())

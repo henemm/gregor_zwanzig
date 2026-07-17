@@ -26,6 +26,10 @@ from pathlib import Path
 
 import pytest
 
+# Issue #1210 B1: echter IMAP-Login (#972) -> addopts-wirksamer Marker statt
+# nur Credential-Assert (primaere Ausschlussmechanik, nicht Defense-in-Depth).
+pytestmark = pytest.mark.email
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HOOKS = REPO_ROOT / ".claude" / "hooks"
 FIXTURE = REPO_ROOT / "tests" / "fixtures" / "issue_974_evening_night_mail.html"

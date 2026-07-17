@@ -33,6 +33,10 @@ from dotenv import load_dotenv
 REPO_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(REPO_ROOT / ".env")
 
+# Issue #1210 B1: echter Versand + IMAP-Verifikation -> addopts-wirksamer
+# Marker statt nur Credential-Skip (primaere Ausschlussmechanik).
+pytestmark = pytest.mark.email
+
 NICE_LAT = 43.7102
 NICE_LON = 7.2620
 
@@ -152,7 +156,7 @@ def _poll_imap_for_marker(settings, marker: str, attempts: int = 12, wait_s: int
     body_text = ""
     for _ in range(attempts):
         time.sleep(wait_s)
-        imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port or 993)
+        imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port or 993, timeout=15)
         try:
             imap.login(imap_user, imap_pass)
             imap.select("INBOX")

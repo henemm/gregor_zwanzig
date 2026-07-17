@@ -26,10 +26,20 @@ from pathlib import Path
 
 import importlib.util
 
+import pytest
 
-# Gate-Hook im (Worktree-)Repo. Existiert in RED-Phase NICHT → RED.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _GATE_SRC = _REPO_ROOT / ".claude" / "hooks" / "renderer_mail_gate.py"
+
+# Issue #1210 AC-4: Hook-Infrastruktur kann im Ausfuehrungskontext fehlen
+# (z. B. Plugin unter anderem OS-Nutzer unsichtbar) -- dann erkennbarer Skip
+# statt Collection-Error.
+if not _GATE_SRC.exists():
+    pytest.skip(
+        f"Gate-Hook nicht gefunden: {_GATE_SRC} (Plugin im aktuellen "
+        f"Ausfuehrungskontext nicht sichtbar)",
+        allow_module_level=True,
+    )
 
 
 def _load_gate_module():

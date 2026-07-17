@@ -46,6 +46,10 @@ from tests.tdd.test_952_onset_alert_fidelity import (
     _GuaranteedWetRadar, _trip_with_active_segment,
 )
 
+# Issue #1210 B1: echter SMTP-/IMAP-Zugriff -> addopts-wirksamer Marker statt
+# nur Credential-Skip (primaere Ausschlussmechanik, nicht Defense-in-Depth).
+pytestmark = pytest.mark.email
+
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 logger = logging.getLogger("trip_alert")
@@ -84,7 +88,7 @@ def _imap_has_subject_token(settings: Settings, token: str, *, attempts: int = 2
     imap_user = settings.imap_user or settings.smtp_user
     imap_pass = settings.imap_pass or settings.smtp_pass
     for _ in range(attempts):
-        imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
+        imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port, timeout=15)
         try:
             imap.login(imap_user, imap_pass)
             imap.select("INBOX")
