@@ -111,7 +111,7 @@ class CompactSummaryFormatter:
                 parts.append(w)
 
         if "thunder" in enabled:
-            th = self._format_thunder(summary, hourly, enabled["thunder"].use_friendly_format)
+            th = self._format_thunder(hourly, enabled["thunder"].use_friendly_format)
             if th:
                 parts.append(th)
 
@@ -140,16 +140,25 @@ class CompactSummaryFormatter:
     @staticmethod
     def _collect_hourly_data(segments: list[SegmentWeatherData]) -> list[ForecastDataPoint]:
         points: list[ForecastDataPoint] = []
-        for seg_data in segments:
+        last_idx = len(segments) - 1
+        for idx, seg_data in enumerate(segments):
             if seg_data.timeseries and seg_data.timeseries.data:
                 # Bug #807: Filter data points to segment window.
                 # Mirror Bug #806 logic (inclusive start, exclusive end).
+                # Bug #1146: last segment's window end is inclusive, matching
+                # the hourly table's arrival-hour handling. Staying exclusive
+                # for non-last segments avoids double-counting the boundary
+                # hour when seg[n].end_h == seg[n+1].start_h.
                 s = seg_data.segment
                 s_h = s.start_time.hour
                 e_h = s.end_time.hour
+                is_last = idx == last_idx
                 for dp in seg_data.timeseries.data:
                     h = dp.ts.hour
-                    include = (s_h <= h < e_h) if s_h <= e_h else (h >= s_h or h < e_h)
+                    if s_h <= e_h:
+                        include = (s_h <= h <= e_h) if is_last else (s_h <= h < e_h)
+                    else:
+                        include = (h >= s_h or h <= e_h) if is_last else (h >= s_h or h < e_h)
                     if include:
                         points.append(dp)
         points.sort(key=lambda dp: dp.ts)
@@ -355,22 +364,19 @@ class CompactSummaryFormatter:
 
     def _format_thunder(
         self,
-        summary: Optional[SegmentWeatherSummary],
         hourly: list[ForecastDataPoint],
         friendly: bool,
     ) -> Optional[str]:
-        if summary is None or summary.thunder_level_max == ThunderLevel.NONE:
-            return None
-
+        # ADR-0025 Entscheidung 1: kein ungefenstertes Aggregat als Tor für
+        # nutzersichtbare Kanal-Aussagen. Die gefensterten Stundenwerte selbst
+        # entscheiden, ob Gewitter gemeldet wird (Issue #1275).
         thunder_hours = []
         for dp in hourly:
             if dp.thunder_level and dp.thunder_level != ThunderLevel.NONE:
                 thunder_hours.append(local_hour(dp.ts, self._tz))
 
         if not thunder_hours:
-            if friendly:
-                return "⚡ möglich"
-            return "Gewitter möglich"
+            return None
 
         start_h = min(thunder_hours)
         end_h = max(thunder_hours) + 1

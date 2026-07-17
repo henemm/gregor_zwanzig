@@ -119,7 +119,14 @@ Zusatz-Indiz gültig.)
 `render_telegram_bubbles()` (`narrow.py:359-371`) hat **kein** `thunder_forecast`-Argument;
 `trip_report.py:189-201` übergibt es auch nicht. Telegram rechnet eigenständig:
 - `narrow.py:164-216` (`_tg_day_footer`) — „⚡ kein/MED/HIGH" aus `agg.thunder_level_max`
-- `narrow.py:284-326` (`_overview_line`) — eigener `_thunder_severity()`
+- ~~`narrow.py:284-326` (`_overview_line`) — eigener `_thunder_severity()`~~
+  **FALSCH, korrigiert 2026-07-17:** `_overview_line` liest die `seg_tables`-Rows
+  (`r.get(key)`) aus `trip_report.py:_extract_hourly_rows` — bereits gefenstert, bereits
+  aus `dp.thunder_level`. `_thunder_severity()` ist dort nur ein Komparator zwischen
+  Row-Werten. Verifiziert gegen `git show origin/main:…/narrow.py`. Der Fehler kam aus dem
+  Challenger-Bericht und wurde ungeprüft in Kontext, Spec und ADR übernommen; der
+  Developer-Agent hat ihn bei der Umsetzung gemeldet. **Einziger echter Telegram-Defekt:
+  die Fußzeile.**
 
 **Zwei Konsequenzen:**
 1. **Die Vormittags-Spec ist faktisch falsch.** `fix_1275_sms_th_mismatch.md` AC-2 +
@@ -184,7 +191,7 @@ Stattdessen kanonischer Producer `thunder_label_value()` in `metric_format.py` n
 | `src/output/metric_format.py` | MODIFY | `thunder_label_value(level) -> int` neu (NONE=0/MED=2/HIGH=3), additiv, Docstring grenzt gegen `thunder_ordinal()` ab. |
 | `src/output/renderers/sms_trip.py:113-122,157-165` | MODIFY | **Kern-Fix**: `dp.thunder_level` in der bestehenden Schleife mitsammeln (Muster wie rain/wind/gust), `thunder_hourly=` im `DailyForecast` setzen. `_TH_VAL` (:221) → Helper. `HourlyValue(12,…)` (:227) → echte Stunde. ⚠️ **löst `renderer_mail_gate` aus** (`renderer_mail_gate.py:44`). |
 | `src/services/trip_report_scheduler.py:1580,1711` | MODIFY | `hour: Optional[int]` ins `thunder_forecast`-Entry. Stunde ist in beiden Erzeugern bereits berechnet (`min(hours)` bzw. `_local(earliest_ts)`), wird nur nicht zurückgegeben. |
-| `src/output/renderers/narrow.py:164-216,284-326` | MODIFY | **Telegram (PO-Entscheid)**: auf dieselbe gefensterte Gewitter-Quelle wie SMS/E-Mail umstellen statt `agg.thunder_level_max` (ungefenstert). |
+| `src/output/renderers/narrow.py:164-216` | MODIFY | **Telegram-Fußzeile (PO-Entscheid E4)**: `_tg_day_footer` auf dieselbe gefensterte Quelle wie SMS/E-Mail umstellen statt `agg.thunder_level_max`. `_overview_line` (:284-326) ist NICHT betroffen — s. Korrektur oben. |
 | `tests/tdd/<verhaltensbenannt>.py` | CREATE | Repro **durch `format_sms()`** mit echter `SegmentWeatherData`-Zeitreihe inkl. `dp.thunder_level`; Vorlage `tests/tdd/test_bug_874_th_plus_sms.py:45-98` (`_dp()`/`_segment()`, mock-frei). Plus: `TH+`-Stunde echt, Telegram-Konsistenz (gefenstert). **Keine** Budget-Fixture (E3). |
 | `docs/reference/sms_format.md:95-102` | MODIFY | „heute/morgen" → report-relativ (E1). `L = low` streichen — `ThunderLevel` kennt kein LOW (`models.py:33-37`), und `openmeteo.py:524-538` liefert nur HIGH oder NONE. |
 | `docs/project/known_issues.md:8-27` | MODIFY | BUG-1275: Status RESOLVED revidieren, Datenanbindungs-Defekt + Telegram ergänzen. |

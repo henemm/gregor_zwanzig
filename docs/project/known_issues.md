@@ -7,7 +7,7 @@
 
 ## BUG-1275-TH-MISMATCH: SMS/Telegram zeigten kein Gewitterrisiko, während E-Mail-Outlook-Tabelle "hoch" zeigte
 
-**Status:** RESOLVED (2026-07-16) | **Severity:** Critical (widersprüchliche Sicherheitsaussage zwischen Kanälen im selben Report) | **GitHub Issue:** #1275 | **Spec:** `docs/specs/bugfix/fix_1275_sms_th_mismatch.md`
+**Status:** WIEDERERÖFFNET (2026-07-17) — der Fix vom 2026-07-16 behob nur einen von mehreren Defekten, s. „Zweiter Anlauf" unten | **Severity:** Critical (widersprüchliche Sicherheitsaussage zwischen Kanälen im selben Report) | **GitHub Issue:** #1275 | **Specs:** `docs/specs/bugfix/fix_1275_sms_th_mismatch.md` (1. Anlauf), `docs/specs/bugfix/fix_1275_sms_thunder_today.md` (2. Anlauf) | **ADR:** `docs/adr/0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md`
 
 ### Symptom
 
@@ -21,9 +21,28 @@ Zwei unabhängige, konkurrierende Berechnungen derselben fachlichen Aussage in `
 
 `_build_stage_trend()`s bereits korrekte Fetch-/Aggregations-Kette wird jetzt als primäre Quelle für `thunder_forecast["+1"]`/`["+2"]` wiederverwendet (Reihenfolge in der Aufrufstelle umgekehrt), statt eine zweite, fehlerhafte Berechnung parallel zu betreiben. Kein zusätzlicher API-Call im Evening-Default (Trend läuft ohnehin); nur bei deaktiviertem Trend (Morning) ein extrahierter Fallback-Helper mit eigenem Einzel-Etappen-Fetch. Downstream-Konsumenten (SMS, Telegram, E-Mail-Vorschau) blieben unverändert — sie konsumieren weiterhin denselben Dict-Vertrag.
 
+### Zweiter Anlauf (2026-07-17, Workflow `fix-1275-sms-thunder-today`)
+
+Der Fix vom 2026-07-16 reparierte `thunder_forecast` (die Quelle für `TH+:`) — und war für das gemeldete Symptom auch richtig. Er ließ aber vier weitere, unabhängige Defekte derselben Wurzel stehen. Der Adversary-Lauf des ersten Anlaufs fand sie nicht, weil er gegen die Spec prüfte und die Spec diese Pfade nicht kannte (bzw. im Fall Telegram **falsch** beschrieb).
+
+| # | Defekt | Ort | Stand |
+|---|--------|-----|-------|
+| 1 | `TH:` (berichtete Etappe) hatte **gar keine Datenanbindung** — `_segments_to_normalized_forecast()` las `dp.thunder_level` nie, `thunder_hourly` blieb leer, `render_threshold_peak_value()` lieferte darum strukturell immer `-`. Unabhängig vom Wetter. | `sms_trip.py:113-165` | behoben |
+| 2 | Die Stunde in `TH+:H@12` war **erfunden** — `HourlyValue(12, …)` ist eine Konstante. Die echte Stunde war im Scheduler bereits berechnet, wurde aber nur in einen `text`-String eingebettet, den niemand parst. | `sms_trip.py:227`, `trip_report_scheduler.py:1564,1701` | behoben (`hour` additiv im Dict) |
+| 3 | Die **Telegram-Fußzeile** las `agg.thunder_level_max` — ein **ungefenstertes** Tages-Aggregat. Ein Nacht-Gewitter meldete Telegram als HIGH, während SMS/E-Mail zu Recht schwiegen. | `narrow.py:164-216` (`_tg_day_footer`) | behoben |
+| 4 | Die **E-Mail-Kopfzeile** (Kompakt-Summary, per Default sichtbar) gated ebenfalls auf `agg.thunder_level_max` und meldete `⚡ möglich` für ein Gewitter, das ausschließlich außerhalb der Wanderzeit liegt. Zusätzlich fensterte sie **exklusiv** am Etappenende, während SMS/E-Mail-Tabelle **inklusiv** fenstern — ein Gewitter zur Ankunftsstunde erschien dadurch in der SMS mit Uhrzeit, in der Kopfzeile gar nicht. | `compact_summary.py:110-131,335-355` | behoben — Tor jetzt `bool(thunder_hours)` (Aggregat wird nirgends mehr gelesen), Fensterung per `is_last` nach dem Vorbild `email/helpers.py:1439-1452`: Grenzstunde zwischen Folge-Segmenten genau 1×, Ankunftsstunde erstmals enthalten. Vom Adversary des zweiten Anlaufs gefunden (F001/F003) und in Runde 3 gegengeprüft |
+
+Nicht betroffen, entgegen der ursprünglichen Analyse: `_overview_line` (`narrow.py:284-326`) liest die bereits gefensterten `seg_tables`-Rows und war nie divergent (Faktenkorrektur im ADR-0025-Changelog).
+
 ### Lessons Learned
 
-Muster für Kanal-Divergenz-Bugs: Wenn mehrere Ausgabekanäle dieselbe fachliche Aussage treffen sollen, aber jeweils eine eigene Berechnung dafür haben, divergieren sie garantiert irgendwann — die Abhilfe ist Wiederverwendung der bereits bewährten Quelle statt Parallel-Implementierung, nicht das Nachziehen der fehlerhaften zweiten Implementierung.
+**1. Kanal-Divergenz-Bugs.** Wenn mehrere Ausgabekanäle dieselbe fachliche Aussage treffen sollen, aber jeweils eine eigene Berechnung dafür haben, divergieren sie garantiert irgendwann — die Abhilfe ist Wiederverwendung der bereits bewährten Quelle statt Parallel-Implementierung, nicht das Nachziehen der fehlerhaften zweiten Implementierung. **Diese Lehre stand am 2026-07-16 hier — und verhinderte denselben Fehler am selben Tag nicht.** Prosa in einem Known-Issues-Dokument bindet niemanden; deshalb ist die Regel jetzt ADR-0025.
+
+**2. Ein Adversary prüft gegen die Spec, nicht gegen die Wirklichkeit.** Beide Anläufe liefen durch Adversary, echte Staging-Testmail und Prod-Selftest. Der erste fand die Defekte 1-4 trotzdem nicht: Die Spec kannte den `TH:`-Pfad nicht und beschrieb den Telegram-Pfad falsch — also konnte keine Prüfung sie widerlegen. Wer eine Kanal-Aussage spezifiziert, muss **am Aufrufbaum** prüfen, welcher Renderer den Wert tatsächlich bekommt.
+
+**3. Grüne Tests über totem Code.** Kein Test schickte je eine echte Zeitreihe mit gesetztem `dp.thunder_level` durch `format_sms()`. Die Golden-Tests (`tests/golden/test_sms_golden.py:63-122`) bauen `DailyForecast(thunder_hourly=…)` **direkt** und überspringen genau die defekte Glue-Schicht. Der Snapshot zeigte seit jeher `TH:M@16(H@18)`, die Produktion lieferte `TH:-`. Ein Test, der eine Zwischenschicht direkt füttert, ist **kein** Nachweis für eine Kanal-Aussage (ADR-0025 Entscheidung 5).
+
+**4. „Vollständig" heißt: alle Konsumenten gezählt.** Defekt 4 überlebte auch den zweiten Anlauf bis in die Adversary-Phase, weil Spec und ADR von *drei* Gewitter-Quellen ausgingen. Es waren *vier*. Vor dem Fix einer geteilten Aussage: `grep` nach **jedem** Konsumenten des Aggregats, nicht nach den erinnerten.
 
 ---
 

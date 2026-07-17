@@ -220,3 +220,22 @@ unabhängiger Fetch der tatsächlichen Folge-Etappe (`_convert_trip_to_segments`
 - 2026-07-16: Implementiert in `src/services/trip_report_scheduler.py`, Adversary VERIFIED
   nach Fix-Loop-Iteration 2 (Runde 1 fand F002/F001, behoben, Runde 2 bestätigte).
   Status → `implemented`, Approval gesetzt.
+- **2026-07-17 (ERRATA, nachgetragen aus Workflow `fix-1275-sms-thunder-today`):** Diese Spec
+  enthält eine faktisch falsche Behauptung über den Telegram-Kanal. Sie wird hier korrigiert,
+  aber **nicht** neu geschrieben — der Fix selbst (`thunder_forecast` aus der Trend-Kette) war
+  richtig und bleibt gültig.
+  - **AC-2** („das `thunder_forecast`-Dict … für Telegram") wurde **nie gegen den echten
+    Renderpfad geprüft** und ist für Telegram unerfüllbar formuliert:
+    `render_telegram_bubbles()` (`narrow.py:359-371`) hat **kein** `thunder_forecast`-Argument,
+    und `trip_report.py:189-201` übergibt auch keins. `request.thunder_forecast` fließt
+    ausschließlich in `render_email()` (`trip_report.py:154`) und `format_sms()` (`:231`).
+    Kein Test dieses Fixes erwähnt Telegram. Siehe Fund A in
+    `docs/specs/bugfix/fix_1275_sms_thunder_today.md`.
+  - **Dependencies-Tabelle, Zeile 54** (`src/services/notification_service.py:222` — „Telegram-Pfad
+    über `request.thunder_forecast`") beschreibt einen Konsumpfad, den es zum Zeitpunkt dieser
+    Spec **nicht gab**. Telegram berechnete sein Gewitter-Signal eigenständig aus
+    `agg.thunder_level_max` — ungefenstert, und damit abweichend von SMS/E-Mail.
+  - **Wirkung:** Die Telegram-Divergenz war durch diese Spec gedeckt geglaubt, aber real
+    vorhanden. Behoben wird sie in `fix_1275_sms_thunder_today.md` (AC-4/AC-5), nicht hier.
+    Die Wurzelursache — Kanal-Aussagen ohne Prüfung am Aufrufbaum spezifizieren — ist jetzt in
+    ADR-0025 (Entscheidung 5 + Folgepflichten) geregelt.

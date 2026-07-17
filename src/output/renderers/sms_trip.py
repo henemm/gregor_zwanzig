@@ -22,6 +22,7 @@ from app.models import ExposedSection, RiskLevel, RiskType, SegmentWeatherData
 from services.risk_engine import RiskEngine
 from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt, local_hour
+from src.output.metric_format import thunder_label_value
 from src.output.renderers.sms import render_sms
 from src.output.tokens.builder import build_token_line
 from src.output.tokens.dto import (
@@ -94,6 +95,7 @@ def _segments_to_normalized_forecast(
     wind_samples: list[HourlyValue] = []
     gust_samples: list[HourlyValue] = []
     pop_samples: list[HourlyValue] = []
+    thunder_samples: list[HourlyValue] = []
     for seg in segments:
         agg = seg.aggregated
         # Bug #925: Stunden-Token aus der ECHTEN Stunden-Zeitreihe (Ortszeit)
@@ -120,6 +122,12 @@ def _segments_to_normalized_forecast(
                 pop = getattr(dp, "pop_pct", None)
                 if pop is not None and pop > 0:
                     pop_samples.append(HourlyValue(lh, float(pop)))
+                # Issue #1275 / ADR-0025: Gewitter aus DERSELBEN gefensterten
+                # Zeitreihe wie Regen/Wind/Boeen. Ohne diese Zeile bleibt
+                # thunder_hourly leer und `TH:` ist strukturell immer "-".
+                th_val = thunder_label_value(dp.thunder_level)
+                if th_val > 0:
+                    thunder_samples.append(HourlyValue(lh, float(th_val)))
         else:
             # Fail-soft: keine Stunden-Zeitreihe (Provider-Fehler) → Etappen-Aggregat
             # am Etappen-Start als Rückfall (Bug #398-Verhalten).
@@ -148,6 +156,7 @@ def _segments_to_normalized_forecast(
     wind_samples_d = _dedup_by_hour(wind_samples)
     gust_samples_d = _dedup_by_hour(gust_samples)
     pop_samples_d = _dedup_by_hour(pop_samples)
+    thunder_samples_d = _dedup_by_hour(thunder_samples)
 
     # Issue #121: worst-case daily confidence aggregation over segments.
     confs = [s.aggregated.confidence_pct_min for s in segments
@@ -161,6 +170,7 @@ def _segments_to_normalized_forecast(
         pop_hourly=pop_samples_d,
         wind_hourly=wind_samples_d,
         gust_hourly=gust_samples_d,
+        thunder_hourly=thunder_samples_d,
         confidence_pct_min=day_confidence,
     )
     return NormalizedForecast(days=(today,))
@@ -213,18 +223,20 @@ class SMSTripFormatter:
         forecast = _segments_to_normalized_forecast(segments, tz=tz)
 
         # Bug #874: TH+: immer als days[1] einbauen — TH+:- wenn kein Gewitter (Spec-Pflicht).
-        # Level-Mapping: NONE=0, MED=2, HIGH=3 (Builder-System: 1=L, 2=M, 3=H).
-        # Issue #1214: eigene SMS-Builder-Kodierung, KEIN Abweichler von
-        # metric_format.thunder_ordinal (andere Wertebedeutung, s. dortiger
-        # Docstring) — bewusst nicht auf die kanonische Ordnungsquelle umgestellt.
-        from app.models import ThunderLevel
-        _TH_VAL = {ThunderLevel.NONE: 0, ThunderLevel.MED: 2, ThunderLevel.HIGH: 3}
+        # Issue #1275 / ADR-0025 Entscheidung 3: Level-Wert kommt aus der
+        # kanonischen Render-Skala thunder_label_value() (NONE=0/MED=2/HIGH=3,
+        # passend zu tokens/metrics.LEVELS) — NICHT aus thunder_ordinal(), das
+        # ist die Sortier-Ordnung und wuerde MED als 'L' rendern.
         tomorrow_thunder: tuple = ()
         if thunder_forecast and "+1" in thunder_forecast:
-            lvl = thunder_forecast["+1"].get("level")
-            lvl_val = _TH_VAL.get(lvl, 0)
-            if lvl_val > 0:
-                tomorrow_thunder = (HourlyValue(12, float(lvl_val)),)
+            entry = thunder_forecast["+1"]
+            lvl_val = thunder_label_value(entry.get("level"))
+            hour = entry.get("hour")
+            # ADR-0025 Entscheidung 4: Uhrzeiten werden durchgereicht, nie
+            # erfunden. Fehlt die Stunde, entfaellt das Sample (TH+:-) — frueher
+            # stand hier die hartkodierte 12, die wie eine Vorhersage aussah.
+            if lvl_val > 0 and hour is not None:
+                tomorrow_thunder = (HourlyValue(int(hour), float(lvl_val)),)
         tomorrow_day = DailyForecast(thunder_hourly=tomorrow_thunder)
         forecast = NormalizedForecast(days=(forecast.days[0], tomorrow_day))
 

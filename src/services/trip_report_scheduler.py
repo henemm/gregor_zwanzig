@@ -1560,6 +1560,7 @@ class TripReportSchedulerService:
             level = ThunderLevel.NONE
         _NUM = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
         when = None
+        hour = None
         if level != ThunderLevel.NONE:
             hours = [
                 int(hv.hour)
@@ -1567,7 +1568,8 @@ class TripReportSchedulerService:
                 if hv.value == _NUM[level]
             ]
             if hours:
-                when = f"{min(hours):02d}:00"
+                hour = min(hours)
+                when = f"{hour:02d}:00"
         if level == ThunderLevel.NONE:
             text = "Kein Gewitter erwartet"
         elif level == ThunderLevel.MED:
@@ -1580,6 +1582,9 @@ class TripReportSchedulerService:
         return {
             "date": fc_date.strftime("%d.%m.%Y"),
             "level": level,
+            # ADR-0025, Entscheidung 4: die Stunde wird durchgereicht, damit der
+            # SMS-Pfad sie nicht erfinden muss. None = keine Stunde bekannt.
+            "hour": hour,
             "text": text,
         }
 
@@ -1701,7 +1706,8 @@ class TripReportSchedulerService:
             earliest_ts = min(
                 dp.ts for dp in thunder_dps if dp.thunder_level == level
             )
-            when = _local(earliest_ts).strftime("%H:%M")
+            earliest_local = _local(earliest_ts)
+            when = earliest_local.strftime("%H:%M")
             if level == ThunderLevel.NONE:
                 text = "Kein Gewitter erwartet"
             elif level == ThunderLevel.MED:
@@ -1711,6 +1717,9 @@ class TripReportSchedulerService:
             forecast[key] = {
                 "date": fc_date.strftime("%d.%m.%Y"),
                 "level": level,
+                # ADR-0025, Entscheidung 4: echte Stunde durchreichen statt sie
+                # im SMS-Renderer zu erfinden. Bei NONE gibt es keine Stunde.
+                "hour": None if level == ThunderLevel.NONE else earliest_local.hour,
                 "text": text,
             }
 

@@ -210,6 +210,40 @@ def thunder_ordinal(level: Optional[ThunderLevel]) -> int:
     return _THUNDER_ORDER.get(level, 0)
 
 
+# Render-Skala fuer ThunderLevel — zielt exakt auf
+# ``src/output/tokens/metrics.LEVELS = {0:'-', 1:'L', 2:'M', 3:'H'}``.
+# Die 1 ist bewusst unbesetzt: ``ThunderLevel`` (app/models.py:33-37) kennt kein
+# LOW, das Label 'L' ist damit unerreichbar.
+_THUNDER_LABEL_VALUE = {ThunderLevel.NONE: 0, ThunderLevel.MED: 2, ThunderLevel.HIGH: 3}
+
+
+def thunder_label_value(level: Optional[ThunderLevel]) -> int:
+    """Kanonischer Render-Wert fuer ``ThunderLevel`` (NONE=0, MED=2, HIGH=3).
+
+    ``None`` sowie unbekannte Werte liefern 0. Nimmt sowohl ``ThunderLevel``-
+    Instanzen als auch rohe Strings entgegen (str-Enum-Hash-Aequivalenz).
+
+    ACHTUNG — zwei Skalen, die NIE vermischt werden duerfen (ADR-0025,
+    Entscheidung 3):
+
+    * ``thunder_ordinal()``    -> {NONE:0, MED:1, HIGH:2} — **Sortier-/Vergleichs-
+      ordnung**. Nur fuer max()/Vergleiche/Peak-Ermittlung. Niemals in ein Feld
+      schreiben, das gerendert wird.
+    * ``thunder_label_value()`` -> {NONE:0, MED:2, HIGH:3} — **Render-Skala** fuer
+      ``tokens/metrics.LEVELS = {0:'-', 1:'L', 2:'M', 3:'H'}``. Nur diese Funktion
+      darf Werte fuer ``DailyForecast.thunder_hourly`` bzw. ``HourlyValue.value``
+      auf dem SMS-Token-Pfad erzeugen.
+
+    Die Verwechslung ist ein **stiller** Fehler: Wer MED ueber ``thunder_ordinal()``
+    (=1) in ``thunder_hourly`` schreibt, bekommt ``L`` statt ``M`` gerendert — und
+    aus HIGH (=2) wird ``M``. Kein Golden-Snapshot faengt das, weil die Fixtures
+    bereits auf die {0,2,3}-Skala kalibriert sind.
+    """
+    if level is None:
+        return 0
+    return _THUNDER_LABEL_VALUE.get(level, 0)
+
+
 def max_thunder(levels: Iterable[ThunderLevel]) -> ThunderLevel:
     """Liefert das hoechste ``ThunderLevel`` aus ``levels`` (kanonische Ordnung).
 

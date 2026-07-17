@@ -161,6 +161,36 @@ def _thunder_severity(level: Optional[ThunderLevel]) -> int:
     return thunder_ordinal(level)
 
 
+def _windowed_thunder_severity(seg_data: SegmentWeatherData) -> int:
+    """Schlimmstes Gewitter-Ordinal INNERHALB der geplanten Wanderzeit (#1275).
+
+    ADR-0025, Entscheidungen 1+2: Gewitter kommt aus ``dp.thunder_level`` der
+    Segment-Zeitreihe, gefenstert auf ``start_h <= h <= end_h`` — dieselbe Quelle
+    und dieselbe Fensterung wie SMS (``sms_trip.py``) und E-Mail
+    (``trip_report.py:_extract_hourly_rows``), inkl. Mitternachts-Ueberlauf (#399).
+
+    Frueher las die Fusszeile ``agg.thunder_level_max``; das rechnet
+    ``weather_metrics.py:596-598`` ueber die UNGEFENSTERTE Zeitreihe — ein
+    Gewitter um 02:00 meldete Telegram als HIGH, waehrend SMS/E-Mail zu Recht
+    schwiegen. Aggregate sind fuer nutzersichtbare Kanal-Aussagen nicht zulaessig.
+    """
+    ts = seg_data.timeseries
+    if seg_data.has_error or ts is None or not ts.data:
+        return 0
+    start_h = seg_data.segment.start_time.hour
+    end_h = seg_data.segment.end_time.hour
+    worst = 0
+    for dp in ts.data:
+        h = dp.ts.hour
+        in_window = (start_h <= h <= end_h) if start_h <= end_h else (h >= start_h or h <= end_h)
+        if not in_window:
+            continue
+        sev = _thunder_severity(dp.thunder_level)
+        if sev > worst:
+            worst = sev
+    return worst
+
+
 def _tg_day_footer(
     segments: list[SegmentWeatherData], enabled_metric_ids: set[str] | list[str]
 ) -> Optional[str]:
@@ -176,7 +206,7 @@ def _tg_day_footer(
 
     for sd in segments:
         agg = sd.aggregated
-        sev = _thunder_severity(agg.thunder_level_max)
+        sev = _windowed_thunder_severity(sd)
         if sev > max_thunder_sev:
             max_thunder_sev = sev
         if agg.visibility_min_m is not None:

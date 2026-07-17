@@ -56,7 +56,7 @@ def _make_segment(
     ascent=500.0, descent=0.0, thunder=None,
 ):
     from app.models import (
-        ForecastMeta, GPXPoint, NormalizedTimeseries, Provider,
+        ForecastDataPoint, ForecastMeta, GPXPoint, NormalizedTimeseries, Provider,
         SegmentWeatherData, SegmentWeatherSummary, ThunderLevel, TripSegment,
     )
     seg = TripSegment(
@@ -75,7 +75,23 @@ def _make_segment(
         run=datetime(2026, 7, 3, 0, 0, tzinfo=timezone.utc),
         grid_res_km=1.3, interp="point_grid",
     )
-    ts = NormalizedTimeseries(meta=meta, data=[])
+    # #1275 / ADR-0025: Die Stunden-Zeitreihe ist die EINZIGE Gewitter-Quelle aller
+    # Kanaele (Telegram-Fusszeile eingeschlossen) und wird auf die Wanderzeit
+    # gefenstert. Ein leeres `data=[]` neben einem gesetzten `thunder_level_max`
+    # war ein in der Produktion unmoeglicher Zustand: dort leiten sich sowohl das
+    # Aggregat (weather_metrics.py) als auch die Tabellen-Rows
+    # (trip_report.py:_extract_hourly_rows) aus genau dieser Zeitreihe ab.
+    # Die Zeitreihe traegt deshalb jetzt dasselbe `thunder` wie das Aggregat.
+    thunder_lvl = thunder if thunder is not None else ThunderLevel.NONE
+    data = [
+        ForecastDataPoint(
+            ts=datetime(2026, 7, 3, h, 0, tzinfo=timezone.utc),
+            t2m_c=13.0, wind10m_kmh=8.0, gust_kmh=15.0, precip_1h_mm=0.0,
+            cloud_total_pct=20, thunder_level=thunder_lvl,
+        )
+        for h in range(start_hour, end_hour + 1)
+    ]
+    ts = NormalizedTimeseries(meta=meta, data=data)
     agg = SegmentWeatherSummary(
         temp_min_c=12.0, temp_max_c=14.0, wind_max_kmh=8.0,
         precip_sum_mm=0.0, cloud_avg_pct=20,

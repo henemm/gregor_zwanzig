@@ -116,6 +116,9 @@ class TestAC1MorningMedThunder:
                 "date": "16.07.2026",
                 "level": ThunderLevel.MED,
                 "text": "Gewitter möglich ab 14:00",
+                # #1275: der Scheduler liefert die Stunde seit ADR-0025 mit;
+                # ohne sie erfand sms_trip.py frueher die Konstante 12.
+                "hour": 14,
             }
         }
         sms = SMSTripFormatter().format_sms(
@@ -152,6 +155,8 @@ class TestAC2EveningHighThunder:
                 "date": "17.07.2026",
                 "level": ThunderLevel.HIGH,
                 "text": "Starkes Gewitter erwartet ab 15:00",
+                # #1275: s.o. — Stunde kommt jetzt aus der Vorhersage.
+                "hour": 15,
             }
         }
         sms = SMSTripFormatter().format_sms(

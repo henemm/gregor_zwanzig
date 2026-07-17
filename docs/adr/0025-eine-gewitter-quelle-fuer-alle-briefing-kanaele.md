@@ -16,9 +16,11 @@ wird in drei Kanälen ausgegeben und dreimal unabhängig berechnet:
 | Kanal | Ort | Rohdaten | Fensterung auf Wanderzeit |
 |---|---|---|---|
 | E-Mail (Prosa + Stundentabelle) | `email/helpers.py:1350-1367` | `dp.thunder_level` | ja (`trip_report.py:269-275`) |
+| E-Mail (**Kopfzeile**, Kompakt-Summary, per Default sichtbar) | `compact_summary.py:332` (`_format_thunder`) | `summary.thunder_level_max` | **nein** — und die Stundenliste darunter fensterte zusätzlich **exklusiv** am Ende. **Vom Adversary gefunden, nicht von der Analyse** — s. Changelog |
 | E-Mail (Trend-Block) | `email/helpers.py:759-871` via `render_threshold_peak_value()` | `hourly_thunder` aus dem Trend | ja |
 | SMS (`TH:`/`TH+:`) | `sms_trip.py:70-166`, `:221-229` | **keine** — `dp.thunder_level` wird nie gelesen | (Fenster vorhanden, aber ungenutzt für Gewitter) |
-| Telegram | `narrow.py:164-216`, `:284-326` | `agg.thunder_level_max` | **nein** (`weather_metrics.py:596-598` rechnet ungefenstert) |
+| Telegram (Fußzeile) | `narrow.py:164-216` (`_tg_day_footer`) | `agg.thunder_level_max` | **nein** (`weather_metrics.py:596-598` rechnet ungefenstert) |
+| Telegram (Übersicht) | `narrow.py:284-326` (`_overview_line`) | `seg_tables`-Rows aus `trip_report.py:_extract_hourly_rows` | ja — **war nie divergent**, s. Changelog |
 
 Das Ergebnis war dreimal derselbe Fehlermodus:
 
@@ -123,3 +125,46 @@ Known-Issues-Dokument stand und nicht als bindende Regel.
     Vorgänger-Fixes ist die Referenz, wie es schiefgeht.
   - Ein Test, der die Glue-Schicht überspringt, darf nicht als Nachweis für eine
     Kanal-Aussage zitiert werden (Entscheidung 5).
+
+## Changelog
+
+- **2026-07-16 (initial):** ADR erstellt, mit der Spec zu #1275 vom PO freigegeben.
+- **2026-07-17 (Faktenkorrektur, Kontext-Tabelle):** Die Behauptung, `_overview_line`
+  (`narrow.py:284-326`) leite Gewitter aus `agg.thunder_level_max` ab, war **falsch** —
+  sie stand gleichlautend in Analyse, Kontext-Dokument und dieser ADR und stammte aus dem
+  Challenger-Bericht. Tatsächlich liest `_overview_line` die `seg_tables`-Rows
+  (`r.get(key)`), die aus `trip_report.py:_extract_hourly_rows` kommen — **bereits
+  gefenstert und bereits aus `dp.thunder_level` abgeleitet**. `_thunder_severity()` dient
+  dort nur als Komparator zwischen Row-Werten. Verifiziert gegen den unveränderten Stand
+  (`git show origin/main:src/output/renderers/narrow.py`). Der Developer-Agent hat den
+  Fehler bei der Umsetzung gemeldet, statt die Zeile unnötig umzubauen.
+  **Der einzige echte Telegram-Defekt war die Fußzeile** (`_tg_day_footer`, ungefenstertes
+  Aggregat) — genau die wurde behoben. Die Entscheidungen 1-5 bleiben unberührt gültig.
+- **2026-07-17 (vierter Rechenweg nachgetragen — der Adversary hat den Autor widerlegt):**
+  Die Kontext-Tabelle kannte drei Gewitter-Rechenwege. Es waren **vier**: die
+  **E-Mail-Kopfzeile** (`compact_summary.py:332`, `_format_thunder`) gated auf
+  `summary.thunder_level_max` — dasselbe ungefensterte Aggregat, das Entscheidung 1
+  verbietet. `show_compact_summary` steht per Default auf `True` (`models.py:743`),
+  verdrahtet in `trip_report.py:124-126`; die Zeile ist Teil **jedes** Trip-Reports.
+  Reproduziert: Gewitter nur um 02:00 → SMS `TH:-`, Telegram `⚡ kein`, **Kopfzeile
+  `⚡ möglich`**. AC-5 war damit für die E-Mail widerlegt.
+  **Wie es passieren konnte:** Der Autor dieser ADR hat `compact_summary.py` nach dem
+  **Dateinamen** als „eigener Renderer, out of scope" eingestuft und dafür ein
+  Folge-Ticket (#1294) aufgemacht — statt am Aufrufbaum nachzusehen, wer die Funktion
+  aufruft. Das ist wörtlich der Verstoß gegen die Folgepflicht dieser ADR
+  („prüft **am Aufrufbaum** … nicht am Wunschdenken"), begangen zwei Stunden nach dem
+  Schreiben der Regel. Der Adversary hat es gefangen; #1294 wurde als in-scope geschlossen.
+  **Zusätzlicher Fund dabei:** `_collect_hourly_data` fensterte **exklusiv** am Etappenende,
+  SMS/E-Mail-Tabelle **inklusiv** — die Ankunftsstunde fiel in der Kopfzeile komplett heraus.
+  Ein Gewitter um 17:00 am Etappenziel war dort unsichtbar. Behoben per `is_last`-Fensterung
+  (Vorbild `email/helpers.py:1439-1452`): stur inklusiv hätte die Grenzstunde zwischen
+  Folge-Segmenten doppelt gezählt und den #1146-Fehlermodus wiederbelebt — dieser Widerspruch
+  kam vom Developer-Agent und wurde übernommen.
+- **2026-07-17 (Präzisierung Entscheidung 3):** Die Formulierung, `_TH_VAL`
+  (`sms_trip.py:221`) sei ein „Abweichler", traf nicht zu — die Skala `{NONE:0, MED:2,
+  HIGH:3}` war **richtig** für `tokens/metrics.LEVELS`, und der Kommentar dort wies korrekt
+  auf die abweichende Wertebedeutung von `thunder_ordinal()` hin. Das Problem war nicht die
+  Skala, sondern dass die **richtige Skala nur lokal und unbenannt** existierte — jeder
+  Umbau „auf die kanonische Ordnung" hätte MED still zu `L` gemacht. Genau das behebt
+  `thunder_label_value()`: dieselben Werte, aber benannt, zentral und mit einem Docstring,
+  der gegen `thunder_ordinal()` abgrenzt.

@@ -92,14 +92,23 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | `PR{p}%@{h}({max}%@{h})` / `PR-` | Regenwahrscheinlichkeit Threshold + Peak (Issue #887: auch SMS via `pop_hourly` aus `agg.pop_max_pct` synthetisiert) | Hourly `pop_pct`, Threshold aus `config.rain_probability_threshold` | `PR20%@11(100%@17)` |
 | `W{v}@{h}({max}@{h})` / `W-` | Wind km/h Threshold + Peak | Hourly `wind10m_kmh`, Threshold aus `config.wind_speed_threshold` | `W10@11(15@17)` |
 | `G{v}@{h}({max}@{h})` / `G-` | Böen km/h Threshold + Peak | Hourly `gust_kmh`, Threshold aus `config.wind_gust_threshold` | `G20@11(30@17)` |
-| `TH:{level}@{h}({max}@{h})` / `TH:-` | Gewitter-Forecast heute (L/M/H) | Hourly `thunder_level` | `TH:M@16(H@18)` |
-| `TH+:{level}@{h}({max}@{h})` / `TH+:-` | Gewitter-Forecast morgen | Folgetag, Hourly `thunder_level` | `TH+:M@14(H@17)` |
+| `TH:{level}@{h}({max}@{h})` / `TH:-` | Gewitter der **berichteten** Etappe (M/H) | Hourly `dp.thunder_level` aus `seg.timeseries`, auf die Wanderzeit gefenstert | `TH:M@16(H@18)` |
+| `TH+:{level}@{h}({max}@{h})` / `TH+:-` | Gewitter der Etappe **danach** | Folge-Etappe via `thunder_forecast["+1"]` (Level **und** Stunde) | `TH+:M@14(H@17)` |
+
+**Report-relativ, nicht kalender-relativ (Issue #1275):** `TH:` und `TH+:` beziehen sich auf die
+Etappe, über die der Report spricht — nicht auf „heute"/„morgen" im Kalendersinn. Im
+**Morgen-Report** ist das heute (`TH:`) und morgen (`TH+:`), im **Abend-Report** morgen (`TH:`)
+und übermorgen (`TH+:`). Die frühere absolute Lesart war falsch.
 
 Levels für `TH`/`TH+`:
-- `L` = low (Risque d'orages)
 - `M` = med (Averses orageuses)
 - `H` = high (Orages)
 - `-` = none
+
+> `LEVELS` (`src/output/tokens/metrics.py:14`) kennt zusätzlich `L`. Dieser Wert ist
+> **unerreichbar**: `ThunderLevel` (`src/app/models.py:33-37`) hat kein LOW, und
+> `openmeteo.py:524-538` liefert ausschließlich HIGH oder NONE (WMO 95/96/99). `L` bleibt nur
+> aus Golden-Snapshot-Kompatibilität im Code stehen und ist kein Teil des Format-Vertrags.
 
 **Threshold-Logik:** `R`, `PR`, `W`, `G`, `TH`, `TH+` zeigen den **ersten Zeitpunkt** im Tagesfenster, an dem der konfigurierte Threshold erreicht/überschritten wird, gefolgt vom **Tagesmaximum** in Klammern. Wenn kein Wert ≥ Threshold: Token ist `R-` / `W-` / etc.
 

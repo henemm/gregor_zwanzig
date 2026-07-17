@@ -73,7 +73,7 @@ dieselbe Etappe dieselbe Gewitter-Aussage treffen.
 | `src/output/metric_format.py` | MODIFY | Neuer kanonischer Producer `thunder_label_value(level) -> int` (NONE=0/MED=2/HIGH=3), additiv neben `thunder_ordinal()`. Docstring grenzt die zwei Skalen (Label vs. Sortierung) explizit gegeneinander ab. |
 | `src/output/renderers/sms_trip.py` | MODIFY | Kern-Fix: `dp.thunder_level` in der bestehenden Sammel-Schleife (analog rain/wind/gust) mitsammeln, `thunder_hourly=` im `DailyForecast` setzen. `_TH_VAL` durch `thunder_label_value()` ersetzen. `HourlyValue(12, …)` durch die echte Stunde aus `thunder_forecast["+1"]["hour"]` ersetzen. |
 | `src/services/trip_report_scheduler.py` | MODIFY | `hour: Optional[int]` ins `thunder_forecast`-Entry (beide Erzeuger, Zeile ~1580/1711) — additiv, Stunde ist bereits berechnet, wird nur nicht zurückgegeben. |
-| `src/output/renderers/narrow.py` | MODIFY | Telegram (`_tg_day_footer` Zeile 164-216, `_overview_line`/`_thunder_severity` Zeile 284-326) auf dieselbe gefensterte Gewitter-Quelle wie SMS/E-Mail umstellen statt `agg.thunder_level_max` (ungefenstert). |
+| `src/output/renderers/narrow.py` | MODIFY | Telegram-**Fußzeile** (`_tg_day_footer`, Zeile 164-216) auf dieselbe gefensterte Gewitter-Quelle wie SMS/E-Mail umstellen statt `agg.thunder_level_max` (ungefenstert). **Korrektur 2026-07-17:** `_overview_line` (Zeile 284-326) ist NICHT betroffen — sie liest die `seg_tables`-Rows aus `trip_report.py:_extract_hourly_rows`, die bereits gefenstert und bereits aus `dp.thunder_level` abgeleitet sind. Die gegenteilige Behauptung der Analyse war falsch (s. ADR-0025 Changelog). |
 | `tests/tdd/<verhaltensbenannt>.py` | CREATE | Repro-Test **durch `format_sms()`** mit echter `SegmentWeatherData`-Zeitreihe inkl. `dp.thunder_level` (Vorlage `tests/tdd/test_bug_874_th_plus_sms.py:45-98`, mock-frei). Plus: `TH+`-Stunde echt, Telegram-Konsistenz (gefenstert), Telegram-Schweigen bei Gewitter außerhalb der Wanderzeit. Kein Zeichenbudget-Test (E3). |
 | `docs/reference/sms_format.md:95-102` | MODIFY | Format-Vertrag: „heute/morgen" absolut → report-relativ (E1: TH:=berichtete Etappe, TH+:=danach). `L = low` streichen — `ThunderLevel` kennt kein LOW. |
 | `docs/project/known_issues.md:8-27` | MODIFY | BUG-1275: Status `RESOLVED` revidieren, fehlende Datenanbindung + Telegram-Divergenz als eigenständigen Defekt ergänzen. |
@@ -101,7 +101,8 @@ Flickwerk):**
    Fix: `hour`-Feld additiv ins `thunder_forecast`-Dict aufnehmen; SMS nutzt es statt der
    Konstante.
 
-3. **Telegram rechnet eigenständig UND ungefenstert.** `narrow.py:164-216,284-326` nutzt
+3. **Die Telegram-Fußzeile rechnet eigenständig UND ungefenstert.** `narrow.py:164-216`
+   (`_tg_day_footer`) nutzt
    `agg.thunder_level_max`, berechnet in `weather_metrics.py:596-598` über die
    **ungefensterte** Zeitreihe der ganzen Etappe. SMS (`sms_trip.py:106-110`) und E-Mail
    (`trip_report.py:269-275`) fenstern dagegen korrekt auf die geplante Wanderzeit
