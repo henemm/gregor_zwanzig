@@ -74,9 +74,13 @@ describe('AC-1: Preset-Name, Status, Schedule, Empfänger angezeigt', () => {
 	test('+page.svelte zeigt Preset-Name an', () => {
 		assert.ok(existsSync(PAGE_SVELTE), '+page.svelte fehlt');
 		const src = readFileSync(PAGE_SVELTE, 'utf-8');
+		// Epic #1273 S2: Anzeige liest jetzt aus dem reaktiven `currentPreset`-
+		// Spiegel statt direkt aus `data.preset` (Adversary-Fund: `data` aus
+		// $props() ist nicht tief-reaktiv fuer Nested-Mutation) — Pattern
+		// deckt beide Varianten ab.
 		assert.match(
 			src,
-			/preset\.name|{preset\.name}/,
+			/(?:current)?[Pp]reset\.name/,
 			'+page.svelte zeigt preset.name nicht an'
 		);
 	});
