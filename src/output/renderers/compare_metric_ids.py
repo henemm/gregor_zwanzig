@@ -8,6 +8,10 @@ Spec: docs/specs/modules/issue_1104_compare_config_foundation.md
 """
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 FRONTEND_TO_RENDERER_METRIC_ID: dict[str, str] = {
     "snow_depth_cm": "snow_depth_cm",
     "snow_new_sum_cm": "snow_new_cm",
@@ -25,6 +29,15 @@ FRONTEND_TO_RENDERER_METRIC_ID: dict[str, str] = {
     "visibility_min_m": "visibility_min",
     "uv_index_max": "uv_max",
     "pop_max_pct": "pop_max",
+    # Issue #1296: analog #1285 -- die folgenden vier wurden bis 2026-07-17
+    # STILL verworfen. Klasse A (temp_min_c/gust_max_kmh) ist reines Mapping
+    # (LocationResult.temp_min/.gust_max existieren bereits); Klasse B
+    # (cape_max_jkg/freezing_level_m) wird live aus hourly_data abgeleitet
+    # (s. weather_metrics.summarize_points).
+    "temp_min_c": "temp_min",
+    "gust_max_kmh": "gust_max",
+    "cape_max_jkg": "cape_max",
+    "freezing_level_m": "freezing_level",
 }
 
 
@@ -81,6 +94,15 @@ def resolve_enabled_metrics(active_metrics: list[str] | None) -> set[str] | None
         return None
     if not isinstance(active_metrics, list):
         return None
+    unmapped = [m for m in active_metrics if m not in FRONTEND_TO_RENDERER_METRIC_ID]
+    if unmapped:
+        # Issue #1296: struktureller Guard (AC-6) -- sichtbares Signal statt
+        # stiller Verwerfung, damit sich der #1285/#1296-Bug-Typ nicht ein
+        # drittes Mal wiederholt.
+        logger.warning(
+            "resolve_enabled_metrics: %s ohne Renderer-Mapping — Auswahl "
+            "wird ignoriert statt angezeigt (vgl. #1285/#1296)", unmapped,
+        )
     resolved = {
         FRONTEND_TO_RENDERER_METRIC_ID[m]
         for m in active_metrics

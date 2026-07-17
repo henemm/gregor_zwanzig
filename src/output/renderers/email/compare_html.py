@@ -207,6 +207,14 @@ CV2_METRICS = [
      "fmt": _fmt_visibility_overview, "sev": _sev_visibility},
     {"key": "snow_depth_cm", "metric_id": "snow_depth", "label": "Schneehöhe", "unit": "cm"},
     {"key": "snow_new_cm", "metric_id": "fresh_snow", "label": "Neuschnee", "unit": "cm"},
+    # Issue #1296: vier weitere bis 2026-07-17 STILL verworfene Zeilen (analog
+    # #1285). temp_min ohne "sev" (_sev_temp ist eine Hitze-Schwelle, fachlich
+    # falsch fuer eine Kaelte-Kennzahl); cape_max/freezing_level ebenfalls ohne
+    # "sev" (kein AC verlangt Faerbung, s. Spec Known Limitations).
+    {"key": "temp_min", "label": "Temp min", "unit": "°C"},
+    {"key": "gust_max", "label": "Böen", "unit": "km/h", "sev": _sev_gust},
+    {"key": "cape_max", "label": "CAPE", "unit": "J/kg"},
+    {"key": "freezing_level", "label": "Frostgrenze", "unit": "m"},
 ]
 
 
@@ -329,6 +337,12 @@ _DAILY_AGGREGATE_FIELD: dict[str, str] = {
     "thunder_max": "thunder_level_max",
     "uv_max": "uv_index_max",
     "visibility_min": "visibility_min_m",
+    # Issue #1296, Klasse B: cape_max/freezing_level haben KEIN LocationResult-
+    # Feld (anders als temp_min/gust_max, die ueber den field-is-None-Zweig von
+    # _metric_value direkt per getattr(loc, key) gelesen werden) -- der Wert
+    # kommt ausschliesslich aus der Live-Ableitung (_daily_summary).
+    "cape_max": "cape_max_jkg",
+    "freezing_level": "freezing_level_m",
 }
 
 

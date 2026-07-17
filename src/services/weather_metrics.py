@@ -1010,6 +1010,8 @@ def summarize_points(points: list) -> Optional[SegmentWeatherSummary]:
     summary = svc.compute_basis_metrics(ts)
     summary.pop_max_pct = svc._compute_pop(ts)
     summary.uv_index_max = svc._compute_uv_index(ts)
+    summary.cape_max_jkg = svc._compute_cape(ts)
+    summary.freezing_level_m = svc._compute_freezing_level(ts)
     return summary
 
 

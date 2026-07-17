@@ -44,6 +44,10 @@ _DAILY_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
     ("thunder_max", "Gewitter", _fmt_thunder),
     ("uv_max", "UV max", lambda v: f"{v:.0f}"),
     ("visibility_min", "Sicht min", _fmt_visibility_overview),
+    # Issue #1296, Klasse B (kein LocationResult-Feld, Live-Ableitung ueber
+    # _metric_value -> _daily_summary, analog den fuenf #1285-Zeilen).
+    ("cape_max", "CAPE", lambda v: f"{v:.0f} J/kg"),
+    ("freezing_level", "Frostgrenze", lambda v: f"{v:.0f} m"),
 )
 
 
@@ -112,6 +116,15 @@ def render_comparison_text(
         if _metric_visible("wind_max"):
             wind_max = loc_result.wind_max
             lines.append(f"   Wind: {format_value('wind', wind_max, style='plain')}" if wind_max is not None else "   Wind: -")
+        # Issue #1296, Klasse A: temp_min/gust_max lesen -- wie temp_max/
+        # wind_max oben -- direkt das LocationResult-Feld, kein _metric_value-
+        # Umweg noetig (kein _DAILY_AGGREGATE_FIELD-Eintrag dafuer).
+        if _metric_visible("temp_min"):
+            temp_min = loc_result.temp_min
+            lines.append(f"   Temp min: {format_value('temperature', temp_min, style='plain')}" if temp_min is not None else "   Temp min: -")
+        if _metric_visible("gust_max"):
+            gust_max = loc_result.gust_max
+            lines.append(f"   Böen: {format_value('wind', gust_max, style='plain')}" if gust_max is not None else "   Böen: -")
         # Issue #1285: vier bisher still verworfene Zeilen. Werte kommen aus
         # DERSELBEN Quelle wie die HTML-Matrix (_metric_value -> Engine-Feld
         # bzw. live aus hourly_data), damit HTML und Klartext nie

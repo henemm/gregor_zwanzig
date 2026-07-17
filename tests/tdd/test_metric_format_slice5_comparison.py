@@ -30,8 +30,14 @@ from output.renderers.comparison import render_comparison_text
 # hier entfallen — genau der im Kommentar oben vorgesehene Ausnahmefall. Das
 # Bewertungs-Zeitfenster ist kein Editor-Feld mehr; der Dispatch wertet immer den
 # ganzen Tag (0–23 Uhr) aus. Eine Zeitfenster-Angabe haette damit keinen
-# Aussagewert mehr und wurde in comparison.py ersatzlos entfernt. Der Golden
-# bleibt im Uebrigen zeichen-identisch — er ankert weiterhin die #1214-Migration.
+# Aussagewert mehr und wurde in comparison.py ersatzlos entfernt.
+#
+# GOLDEN neu verankert: #1285 (Regen/Gewitter/Sicht/UV/pop) + #1296
+# (temp_min/gust/cape/freezing) erweitern die Klartext-Uebersicht. Die
+# Fixture setzt weder temp_min/gust_max noch hourly_data, darum zeigen alle
+# neuen Zeilen "-" (Wert fehlt) statt eines Messwerts — manuell gegen den
+# echten render_comparison_text(_fixture_result())-Output geprueft (Fix-Loop
+# #1296 F001): keine leeren Zeilen, kein "None", keine Duplikate.
 GOLDEN = (
     "ORTS-VERGLEICH\n"
     "========================\n"
@@ -42,6 +48,15 @@ GOLDEN = (
     "Alpsee\n"
     "   Temp max: 13°C\n"
     "   Wind: 35 km/h\n"
+    "   Temp min: -\n"
+    "   Böen: -\n"
+    "   Regen: -\n"
+    "   Regenwahrscheinlichkeit: -\n"
+    "   Gewitter: -\n"
+    "   UV max: -\n"
+    "   Sicht min: -\n"
+    "   CAPE: -\n"
+    "   Frostgrenze: -\n"
     "   Sonne: 4.7h\n"
     "   Wolken: 57%\n"
     "   Schneehöhe: 15 cm\n"
@@ -50,6 +65,15 @@ GOLDEN = (
     "Zugspitze\n"
     "   Temp max: -\n"
     "   Wind: -\n"
+    "   Temp min: -\n"
+    "   Böen: -\n"
+    "   Regen: -\n"
+    "   Regenwahrscheinlichkeit: -\n"
+    "   Gewitter: -\n"
+    "   UV max: -\n"
+    "   Sicht min: -\n"
+    "   CAPE: -\n"
+    "   Frostgrenze: -\n"
     "   Sonne: -\n"
     "   Wolken: -\n"
     "   Schneehöhe: -\n"
@@ -89,17 +113,21 @@ class TestAC1GoldenIdentical:
 class TestAC2FormatValueCalls:
     def test_overview_lines_use_format_value(self):
         """AC-2: GIVEN render_comparison_text nach der Migration / WHEN der
-        Funktions-Quelltext untersucht wird / THEN rufen genau die 5
-        migrierten Zeilen format_value(...) auf (temp/wind/wolken/
-        schneehoehe/sonne); snow_new_cm bleibt hartcodiert (Katalog-Luecke).
+        Funktions-Quelltext untersucht wird / THEN rufen genau die 7
+        migrierten Zeilen format_value(...) auf (temp_max/wind_max/
+        temp_min/gust_max/wolken/schneehoehe/sonne); snow_new_cm bleibt
+        hartcodiert (Katalog-Luecke).
         Issue #1214 Scheibe 6: sunshine.decimals=1 im Katalog macht die
         Sonne-Zeile beweisbar verhaltensneutral migrierbar (vormals F001-
         Ausnahme in Scheibe 5, s. dortiger Fix-Loop-Kommentar), Golden-
-        String (AC-1) bleibt identisch."""
+        String (AC-1) bleibt identisch.
+        # +2 seit #1296: temp_min/gust_max nutzen format_value (Klasse A,
+        # analog temp_max/wind_max)."""
         src = inspect.getsource(render_comparison_text)
         calls = re.findall(r"format_value\(", src)
-        assert len(calls) == 5, (
-            f"Erwartet 5 format_value-Aufrufe in render_comparison_text, "
+        assert len(calls) == 7, (
+            f"Erwartet 7 format_value-Aufrufe in render_comparison_text "
+            f"(5 bisherige + Temp min + Boeen aus #1296), "
             f"gefunden: {len(calls)} — Uebersichts-Zeilen noch hartcodiert "
             f"oder Sonne-Zeile nicht migriert (Scheibe 6)?"
         )

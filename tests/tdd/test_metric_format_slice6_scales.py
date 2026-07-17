@@ -126,14 +126,17 @@ class TestAC6SunshineCatalogAndMigration:
 
     def test_comparison_sun_line_uses_format_value(self):
         """AC-6: GIVEN render_comparison_text nach der Migration / WHEN der
-        Quelltext untersucht wird / THEN existieren genau 5 format_value-
-        Aufrufe (Scheibe-5-Stand 4 + migrierte Sonne-Zeile)."""
+        Quelltext untersucht wird / THEN existieren genau 7 format_value-
+        Aufrufe (Scheibe-5-Stand 4 + migrierte Sonne-Zeile + 2 aus #1296).
+        # +2 seit #1296: temp_min/gust_max nutzen format_value (Klasse A,
+        # analog temp_max/wind_max)."""
         import inspect
         import re
         from output.renderers.comparison import render_comparison_text
         calls = re.findall(r"format_value\(", inspect.getsource(render_comparison_text))
-        assert len(calls) == 5, (
-            f"Erwartet 5 format_value-Aufrufe (inkl. Sonne-Zeile), gefunden {len(calls)}"
+        assert len(calls) == 7, (
+            f"Erwartet 7 format_value-Aufrufe (inkl. Sonne-Zeile + #1296-Zeilen), "
+            f"gefunden {len(calls)}"
         )
 
 
