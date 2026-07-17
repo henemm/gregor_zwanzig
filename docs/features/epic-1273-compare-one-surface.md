@@ -1,12 +1,13 @@
 # Epic 1273: Ortsvergleich auf EINE Fläche
 
-**Status:** In Progress (Slice 1 Complete — 2026-07-16)
+**Status:** In Progress (Slice 2 Complete — 2026-07-17)
 **Epic Scope:** Der Ortsvergleich-Hub (`CompareTabs.svelte`) wird nach dem Muster von #616 (Trip-IA) zur **einzigen** Bearbeiten-Fläche für einen Ortsvergleich — vollständig editierbar mit Auto-Save-Chip (`SaveStatus`/`SaveIndicator`, „✓ Gespeichert HH:MM"). Der separate Editor `/compare/[id]/edit` (`CompareEditor.svelte`, aus Epic #677) entfällt am Ende der Migration. Der Create-Wizard (`/compare/new`) bleibt unverändert bestehen.
 **Related Specs:**
 - `docs/specs/modules/feat_1273_s1_compare_hub_save_chip.md` (Slice S1 — Save-Chip-Infra) — Approved, VERIFIED
+- `docs/specs/modules/feat_1273_s2_compare_hub_name_region_profil.md` (Slice S2 — Name/Region/Aktivitätsprofil inline editierbar) — Approved, Adversary-Verdict AMBIGUOUS→Freigabe nach Test-Fix
 - `docs/context/epic-1273-compare-one-surface.md` (Kontext-/Analyse-Dokument, Scheiben-Schnitt)
 
-**Child Slices:** S1 ✓ (2026-07-16) · S2 offen · S3 offen · S4a/S4b offen · S5 offen
+**Child Slices:** S1 ✓ (2026-07-16) · S2 ✓ (2026-07-17) · S3 offen · S4a/S4b offen · S5 offen
 
 **PO-Auftrag:** Prod-Audit, Befund 9, 2026-07-16.
 
@@ -39,7 +40,7 @@ Der heutige Ortsvergleich hat zwei Bearbeiten-Flächen: den Detail-Hub `CompareT
 | Slice | Inhalt | Status |
 |---|---|---|
 | **S1** | Save-Chip-Infra im Hub: `hubSaveCtl`, `SaveIndicator` im Header, 5 Commit-Handler mit `setSaving()`/`setSaved()`/`setError()`/`markPristine()` umwickelt (Serialisierung über `hubPutQueue` unverändert) | ✓ Complete 2026-07-16 |
-| **S2** | Name/Region/Aktivitätsprofil-Parität im Hub (TripHeader-Muster: isoliert, nicht über `schedule()`) — Feature-Paritäts-Lücke, Muss-Blocker vor jedem Redirect | Geplant |
+| **S2** | Name/Region/Aktivitätsprofil-Parität im Hub (TripHeader-Muster: isoliert, nicht über `schedule()`) — Feature-Paritäts-Lücke, Muss-Blocker vor jedem Redirect | ✓ fertig 2026-07-17 |
 | **S3** | 7 produktive Link-Stellen auf den Hub umbiegen (inkl. Hash→Query-Fix `#idealwerte`→`?tab=idealwerte`, `#schedule`→`?tab=versand`) + Redirect-Route (`/edit` → `/compare/[id]?tab=`) | Geplant |
 | **S4a** | ~26 e2e-Playwright-Specs von `CompareEditor.svelte`/der Edit-Route auf den Hub migrieren (ggf. Teil-Slices) | Geplant |
 | **S4b** | ~15 Unit-Tests (Source-Inspection auf `CompareEditor.svelte`) migrieren/löschen | Geplant |
@@ -76,6 +77,35 @@ Reine additive Infrastruktur: kein Redirect, keine Feldmigration, keine Testlös
 - Rein clientseitiger Schutz, keine serverseitige Bestätigung.
 
 Details: `docs/specs/modules/feat_1273_s1_compare_hub_save_chip.md`.
+
+---
+
+## Slice S2: Compare-Hub — Name/Region/Aktivitätsprofil inline editierbar (Issue #1273, Spec `feat_1273_s2_compare_hub_name_region_profil.md`)
+
+**Status:** ✓ Completed 2026-07-17, Adversary-Verdict **AMBIGUOUS** (nach Test-Fix Freigabe erteilt), 6/7 ACs sofort CONFIRMED, AC-5 nach Fix ebenfalls CONFIRMED.
+
+Schließt die Feature-Paritäts-Lücke, die ein Redirect von `/compare/[id]/edit` auf den Hub (S3) sonst zu einer echten Funktionsregression gemacht hätte: Name, Region und Aktivitätsprofil waren im Hub bislang nur lesbar.
+
+**Was gebaut wurde:**
+
+- Name, Region und Aktivitätsprofil sind im Kopfbereich des Compare-Hubs (`frontend/src/routes/compare/[id]/+page.svelte`) inline editierbar — Desktop- **und** Mobile-Block, identisches Verhalten auf beiden.
+- UI-Muster: Stift-Icon-Toggle (analog `TripHeader.svelte`), lokaler Edit-State pro Feld, isolierter Save-Pfad mit eigenem `api.put()` **außerhalb** von `saveController`/`schedule()` — Header-Edits laufen nicht über die `hubPutQueue`-Serialisierung der 5 bestehenden Tab-Handler.
+- Aktivitätsprofil als Auswahl-Kacheln (Muster `CompareEditor.svelte`), kein Freitext — Klick auf eine Kachel committet sofort, kein Zwischenzustand.
+- **Round-Trip-Spread-Payload** (`{ ...data.preset, <geändertes Feld> }`) statt Minimal-Body: `UpdateComparePresetHandler` dekodiert den PUT-Body in ein frisches, ungeschütztes `model.ComparePreset{}` — ein Minimal-Body hätte `location_ids`/`empfaenger`/`schedule`/`profil` auf Zero-Value zurückgesetzt (BUG-DATALOSS-Muster, CLAUDE.md). Gleiches Prinzip wie im alten `CompareEditor.svelte` (`compareEditorSave.ts`).
+- **Referenz-Ersetzung `data.preset = updated`** statt In-Place-Mutation — notwendig, damit der bereits bestehende defensive `$effect` in `CompareTabs.svelte` (Zeile 821-826) auf den Referenzwechsel reagiert und `currentPreset` auffrischt. Ohne diesen Referenzwechsel hätte ein nachfolgender Commit im selben Seitenaufenthalt (z. B. Wertebereiche- oder Versand-Tab) den gerade geänderten Namen/Region/Profil stillschweigend zurücküberschrieben — dieselbe Datenverlust-Klasse wie der bereits behobene „Staging-Fund F004".
+
+**Adversary-Fund:** Der ursprüngliche AC-5-Test (Cross-Tab-Datenverlust-Schutz) prüfte nicht das eigentlich Geforderte — er nutzte `page.goto()` statt eines echten In-Page-Tab-Klicks und hätte damit einen serverseitigen Reload statt der clientseitigen Zustandserhaltung getestet. Der Test wurde korrigiert (echter Tab-Klick innerhalb der Seite), danach war AC-5 ebenfalls CONFIRMED.
+
+**7 Acceptance Criteria** (Name/Region/Aktivitätsprofil sofort sichtbar + persistiert nach Reload; Datenverlust-Schutz bei Teil-Edit; Datenverlust-Schutz Cross-Tab; Mobile-Parität; Fehlerfall mit sichtbarer Fehlermeldung und offenem Eingabefeld) — geprüft vom Adversary-Agent (`implementation-validator`).
+
+**Known Limitations (aus Spec übernommen):**
+- Cross-Tab-Datenverlust-Schutz ist strukturell an die bestehende `$effect`-Resync-Logik in `CompareTabs.svelte` gekoppelt, kein eigenständiger Mechanismus dieser Slice.
+- Kein optimistisches Locking / keine ETags — Header-Edits laufen unabhängig von der `hubPutQueue`; „letzter Schreiber gewinnt" ist bestehendes, unverändertes Projektverhalten.
+- Kein page-weites Verwerfen — jedes Feld committet isoliert und sofort.
+- Testid-Duplikation Desktop/Mobile (etabliertes Projektmuster, Sichtbarkeitsfilter in Tests nötig).
+- Markup-Duplikation Desktop/Mobile bewusst nicht extrahiert (YAGNI).
+
+Details: `docs/specs/modules/feat_1273_s2_compare_hub_name_region_profil.md`.
 
 ---
 
@@ -134,12 +164,12 @@ Präzedenzfall: `TripHeader.svelte` (Trip-Name-Bearbeitung läuft ebenfalls isol
 | Date | Slice | Change |
 |------|-------|--------|
 | 2026-07-16 | S1 | Save-Chip-Infra im Compare-Hub: `hubSaveCtl` (Routen-Ebene) + `SaveIndicator`-Chip via Thin-Shell-Pass-through (`CompareDetail.svelte`) in `CompareTabs.svelte`. Alle 5 bestehenden Commit-Handler mit `setSaving()`/`setSaved()`/`setError()`/`markPristine()` umwickelt, `hubPutQueue` unverändert für Netzwerk-Serialisierung. Adversary-Verdict VERIFIED. Issue #1273 (Slice 1). Spec: `docs/specs/modules/feat_1273_s1_compare_hub_save_chip.md`. |
+| 2026-07-17 | S2 | Name/Region/Aktivitätsprofil inline editierbar im Compare-Hub-Kopfbereich (Desktop + Mobile), TripHeader-Muster (Stift-Icon, isolierter Save-Pfad ohne `saveController`), Round-Trip-Spread-Payload gegen Datenverlust, `data.preset = updated`-Referenzersetzung für Cross-Tab-Resync über bestehenden `$effect` in `CompareTabs.svelte`. Adversary-Verdict AMBIGUOUS→Freigabe nach Test-Fix (AC-5-Test nutzte ursprünglich `page.goto()` statt In-Page-Tab-Klick, korrigiert). 6/7 ACs sofort CONFIRMED, AC-5 nach Fix ebenfalls CONFIRMED. Issue #1273 (Slice 2). Spec: `docs/specs/modules/feat_1273_s2_compare_hub_name_region_profil.md`. |
 
 ---
 
 ## Future Work
 
-- **S2:** Name/Region/Aktivitätsprofil-Parität im Hub (Muss-Blocker vor jedem Redirect).
 - **S3:** 7 Link-Stellen umbiegen + Redirect-Route `/compare/[id]/edit` → `/compare/[id]?tab=`.
 - **S4a/S4b:** Test-Migration (~26 e2e-Specs, ~15 Unit-Tests) weg von `CompareEditor.svelte`.
 - **S5:** `CompareEditor.svelte` + `/edit`-Route löschen — schließt zugleich Slice 6 aus Epic #677 ab (dort als „CompareWizard-Deletion, Full Tab-Editor-Umstieg" vermerkt).

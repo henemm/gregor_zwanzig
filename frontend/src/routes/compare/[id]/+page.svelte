@@ -19,6 +19,8 @@
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { page } from '$app/state';
 	import { createSaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	import { api } from '$lib/api';
+	import { ACTIVITY_PROFILE_OPTIONS, type ActivityProfile, type ComparePreset } from '$lib/types';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
@@ -57,6 +59,97 @@
 	// Adversary-Finding F001: geguardetes Profil-Label für die mobile Kontext-
 	// Unterzeile (Muster CompareTile.svelte:62) — leer bei unbekanntem/fehlendem profil.
 	let profileLabel = $derived(presetProfileLabel(data.preset.profil));
+
+	// Epic #1273 S2 — Inline-Edit für Name/Region/Aktivitätsprofil im Hub
+	// (Feature-Parität zum alten CompareEditor). Muster: TripHeader.svelte:33-54.
+	// KRITISCH: Round-Trip-Spread beim PUT ({ ...data.preset, <feld> }), sonst
+	// setzt der Go-Handler (compare_preset.go:259-297) location_ids/empfaenger/
+	// schedule/profil auf Zero-Value zurück (BUG-DATALOSS). Und: nach Erfolg
+	// data.preset MIT NEUER OBJEKT-REFERENZ ersetzen, damit der defensive
+	// $effect in CompareTabs.svelte:821-826 currentPreset resynct (Cross-Tab-
+	// Datenverlust-Schutz, AC-5). NIE ein Feld in-place mutieren.
+	let editName = $state(data.preset.name);
+	let nameSaving = $state(false);
+	let isEditingName = $state(false);
+	let nameSaveError: string | null = $state(null);
+
+	let editRegion = $state((data.preset.display_config?.region as string) ?? '');
+	let regionSaving = $state(false);
+	let isEditingRegion = $state(false);
+	let regionSaveError: string | null = $state(null);
+
+	let profilSaving = $state(false);
+	let profilSaveError: string | null = $state(null);
+
+	function startNameEdit(): void {
+		editName = data.preset.name;
+		nameSaveError = null;
+		isEditingName = true;
+	}
+	function cancelNameEdit(): void {
+		editName = data.preset.name;
+		nameSaveError = null;
+		isEditingName = false;
+	}
+	async function saveName(): Promise<void> {
+		nameSaving = true;
+		nameSaveError = null;
+		try {
+			const updated = await api.put<ComparePreset>(`/api/compare/presets/${data.preset.id}`, {
+				...data.preset,
+				name: editName
+			});
+			data.preset = updated;
+			isEditingName = false;
+		} catch (e: unknown) {
+			nameSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
+		} finally {
+			nameSaving = false;
+		}
+	}
+
+	function startRegionEdit(): void {
+		editRegion = (data.preset.display_config?.region as string) ?? '';
+		regionSaveError = null;
+		isEditingRegion = true;
+	}
+	function cancelRegionEdit(): void {
+		editRegion = (data.preset.display_config?.region as string) ?? '';
+		regionSaveError = null;
+		isEditingRegion = false;
+	}
+	async function saveRegion(): Promise<void> {
+		regionSaving = true;
+		regionSaveError = null;
+		try {
+			const updated = await api.put<ComparePreset>(`/api/compare/presets/${data.preset.id}`, {
+				...data.preset,
+				display_config: { ...data.preset.display_config, region: editRegion }
+			});
+			data.preset = updated;
+			isEditingRegion = false;
+		} catch (e: unknown) {
+			regionSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
+		} finally {
+			regionSaving = false;
+		}
+	}
+
+	async function saveProfil(value: ActivityProfile): Promise<void> {
+		profilSaving = true;
+		profilSaveError = null;
+		try {
+			const updated = await api.put<ComparePreset>(`/api/compare/presets/${data.preset.id}`, {
+				...data.preset,
+				profil: value
+			});
+			data.preset = updated;
+		} catch (e: unknown) {
+			profilSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
+		} finally {
+			profilSaving = false;
+		}
+	}
 
 	// Issue #517 — ?tab=-Query-Parameter lesen und an CompareDetail/CompareTabs weitergeben.
 	const initialTab = $derived(page.url.searchParams.get('tab') ?? 'uebersicht');
@@ -162,17 +255,57 @@
 	<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 24px">
 		<div style="min-width: 0; flex: 1">
 			<div style="display: flex; align-items: center; gap: 12px">
-				<h1 style="font-size: 30px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.1; margin: 0">{data.preset.name}</h1>
+				{#if isEditingName}
+					<input type="text" data-testid="compare-hub-name-edit" bind:value={editName} aria-label="Name bearbeiten" style="font-size: 24px; font-weight: 600; padding: 4px 8px; border: 1px solid var(--g-rule); border-radius: var(--g-r-2); background: var(--g-card)" />
+					<Btn variant="ghost" size="sm" data-testid="compare-hub-name-save" disabled={nameSaving} onclick={saveName}>{nameSaving ? '…' : 'Umbenennen'}</Btn>
+					<Btn variant="ghost" size="sm" onclick={cancelNameEdit}>Abbrechen</Btn>
+				{:else}
+					<h1 style="font-size: 30px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.1; margin: 0">{data.preset.name}</h1>
+					<button type="button" data-testid="compare-hub-name-edit-toggle" aria-label="Name bearbeiten" onclick={startNameEdit} style="display: inline-flex; padding: 4px; color: var(--g-ink-3); cursor: pointer"><PencilIcon size={15} /></button>
+				{/if}
 				<span style="flex-shrink: 0"><CompareStatusPill {status}/></span>
 				{#if runtimeExceeded}
 					<span data-testid="runtime-exceeded-hint" style="font-size: 12px; font-weight: 600; color: var(--g-bad)">Laufzeit überschritten</span>
 				{/if}
 			</div>
+			{#if nameSaveError}<div data-testid="compare-hub-name-save-error" role="alert" style="font-size: 13px; color: var(--g-bad); margin-top: 6px">{nameSaveError}</div>{/if}
 			<!-- Issue #1256 S8c (AC-11): profileLabel statt rohem preset.profil,
-			     Leerfeld-Absicherung analog Mobile-Unterzeile unten (Soll: JSX:78-80). -->
-			<div style="font-size: 14px; color: var(--g-ink-3); margin: 8px 0 18px">
-				{data.preset.display_config?.region ?? '—'}{#if profileLabel}{' · '}{profileLabel}{/if}{' · '}{data.preset.location_ids.length} {data.preset.location_ids.length === 1 ? 'Ort' : 'Orte'}
+			     Leerfeld-Absicherung analog Mobile-Unterzeile unten (Soll: JSX:78-80).
+			     Epic #1273 S2: Region inline editierbar. -->
+			<div style="font-size: 14px; color: var(--g-ink-3); margin: 8px 0 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+				{#if isEditingRegion}
+					<input type="text" data-testid="compare-hub-region-edit" bind:value={editRegion} aria-label="Region bearbeiten" maxlength="60" style="font-size: 14px; padding: 3px 8px; border: 1px solid var(--g-rule); border-radius: var(--g-r-2); background: var(--g-card)" />
+					<Btn variant="ghost" size="sm" data-testid="compare-hub-region-save" disabled={regionSaving} onclick={saveRegion}>{regionSaving ? '…' : 'Speichern'}</Btn>
+					<Btn variant="ghost" size="sm" onclick={cancelRegionEdit}>Abbrechen</Btn>
+				{:else}
+					<span>{data.preset.display_config?.region ?? '—'}</span>
+					<button type="button" data-testid="compare-hub-region-edit-toggle" aria-label="Region bearbeiten" onclick={startRegionEdit} style="display: inline-flex; padding: 2px; color: var(--g-ink-3); cursor: pointer"><PencilIcon size={13} /></button>
+					{#if profileLabel}<span>· {profileLabel}</span>{/if}<span>· {data.preset.location_ids.length} {data.preset.location_ids.length === 1 ? 'Ort' : 'Orte'}</span>
+				{/if}
 			</div>
+			{#if regionSaveError}<div data-testid="compare-hub-region-save-error" role="alert" style="font-size: 13px; color: var(--g-bad); margin-bottom: 6px">{regionSaveError}</div>{/if}
+			<!-- Epic #1273 S2: Aktivitätsprofil-Kacheln (Muster CompareEditor.svelte:1193-1233),
+			     sofortiger Commit pro Klick (kein Zwischenschritt). -->
+			<div style="display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 18px">
+				{#each ACTIVITY_PROFILE_OPTIONS as opt (opt.value)}
+					{@const sel = data.preset.profil === opt.value}
+					<button
+						type="button"
+						data-testid={`compare-hub-profil-option-${opt.value}`}
+						data-selected={sel ? 'true' : 'false'}
+						disabled={profilSaving}
+						onclick={() => saveProfil(opt.value)}
+						style:padding="6px 12px"
+						style:font-size="13px"
+						style:cursor="pointer"
+						style:background={sel ? 'var(--g-accent-tint)' : 'var(--g-card)'}
+						style:border={sel ? '1.5px solid var(--g-accent)' : '1px solid var(--g-rule)'}
+						style:border-radius="var(--g-r-3)"
+						style:color={sel ? 'var(--g-accent-deep)' : 'var(--g-ink)'}
+					>{opt.label}</button>
+				{/each}
+			</div>
+			{#if profilSaveError}<div data-testid="compare-hub-profil-save-error" role="alert" style="font-size: 13px; color: var(--g-bad); margin-bottom: 8px">{profilSaveError}</div>{/if}
 		</div>
 
 		<div style="display: flex; gap: 8px; flex-shrink: 0">
@@ -211,8 +344,15 @@
 		>
 			<ArrowLeftIcon size={20} />
 		</a>
-		<span class="flex-1 flex items-center gap-3 min-w-0">
-			<span class="font-semibold truncate">{data.preset.name}</span>
+		<span class="flex-1 flex items-center gap-2 min-w-0">
+			{#if isEditingName}
+				<input type="text" data-testid="compare-hub-name-edit" bind:value={editName} aria-label="Name bearbeiten" class="min-w-0 flex-1 font-semibold px-2 py-1 rounded-md" style="border: 1px solid var(--g-rule); background: var(--g-card)" />
+				<Btn variant="ghost" size="sm" data-testid="compare-hub-name-save" disabled={nameSaving} onclick={saveName}>{nameSaving ? '…' : 'OK'}</Btn>
+				<Btn variant="ghost" size="sm" onclick={cancelNameEdit}>×</Btn>
+			{:else}
+				<span class="font-semibold truncate">{data.preset.name}</span>
+				<button type="button" data-testid="compare-hub-name-edit-toggle" aria-label="Name bearbeiten" onclick={startNameEdit} class="flex-shrink-0 flex items-center justify-center min-h-[44px] min-w-[44px]" style="color: var(--g-ink-3)"><PencilIcon size={16} /></button>
+			{/if}
 			<span class="flex-shrink-0"><CompareStatusPill {status} /></span>
 			{#if runtimeExceeded}
 				<span data-testid="runtime-exceeded-hint" class="flex-shrink-0" style="font-size: 11px; font-weight: 600; color: var(--g-bad)">Laufzeit überschritten</span>
@@ -240,9 +380,39 @@
 	     kein führender/doppelter " · " bei leerem/unbekanntem profil.
 	     Staging-Befund: {' · '} statt " · " im Markup — Svelte trimmt sonst das
 	     Leerzeichen vor {/if} weg ("Wandern ·0 Orte" statt "Wandern · 0 Orte"). -->
-	<div class="text-sm text-[var(--g-ink-3)]">
-		{#if data.preset.display_config?.region}{data.preset.display_config.region}{' · '}{/if}{#if profileLabel}{profileLabel}{' · '}{/if}{data.locations.length} {data.locations.length === 1 ? 'Ort' : 'Orte'}
+	<div class="text-sm text-[var(--g-ink-3)] flex items-center gap-2 flex-wrap">
+		{#if isEditingRegion}
+			<input type="text" data-testid="compare-hub-region-edit" bind:value={editRegion} aria-label="Region bearbeiten" maxlength="60" class="min-w-0 flex-1 px-2 py-1 rounded-md text-sm" style="border: 1px solid var(--g-rule); background: var(--g-card)" />
+			<Btn variant="ghost" size="sm" data-testid="compare-hub-region-save" disabled={regionSaving} onclick={saveRegion}>{regionSaving ? '…' : 'OK'}</Btn>
+			<Btn variant="ghost" size="sm" onclick={cancelRegionEdit}>×</Btn>
+		{:else}
+			<span>{data.preset.display_config?.region ?? '—'}</span>
+			<button type="button" data-testid="compare-hub-region-edit-toggle" aria-label="Region bearbeiten" onclick={startRegionEdit} class="flex items-center" style="color: var(--g-ink-3)"><PencilIcon size={13} /></button>
+			{#if profileLabel}<span>{' · '}{profileLabel}</span>{/if}<span>{' · '}{data.locations.length} {data.locations.length === 1 ? 'Ort' : 'Orte'}</span>
+		{/if}
 	</div>
+	{#if nameSaveError}<div data-testid="compare-hub-name-save-error" role="alert" class="text-sm" style="color: var(--g-bad)">{nameSaveError}</div>{/if}
+	{#if regionSaveError}<div data-testid="compare-hub-region-save-error" role="alert" class="text-sm" style="color: var(--g-bad)">{regionSaveError}</div>{/if}
+	<!-- Epic #1273 S2: Aktivitätsprofil-Kacheln (Mobile-Parität) -->
+	<div class="flex gap-2 flex-wrap">
+		{#each ACTIVITY_PROFILE_OPTIONS as opt (opt.value)}
+			{@const sel = data.preset.profil === opt.value}
+			<button
+				type="button"
+				data-testid={`compare-hub-profil-option-${opt.value}`}
+				data-selected={sel ? 'true' : 'false'}
+				disabled={profilSaving}
+				onclick={() => saveProfil(opt.value)}
+				class="rounded-md"
+				style:padding="6px 12px"
+				style:font-size="13px"
+				style:background={sel ? 'var(--g-accent-tint)' : 'var(--g-card)'}
+				style:border={sel ? '1.5px solid var(--g-accent)' : '1px solid var(--g-rule)'}
+				style:color={sel ? 'var(--g-accent-deep)' : 'var(--g-ink)'}
+			>{opt.label}</button>
+		{/each}
+	</div>
+	{#if profilSaveError}<div data-testid="compare-hub-profil-save-error" role="alert" class="text-sm" style="color: var(--g-bad)">{profilSaveError}</div>{/if}
 </div>
 
 <!-- Issue #1256 Scheibe 8 (AC-22, Ein-Mount-Strategie): CompareDetail wird
