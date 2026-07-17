@@ -4,6 +4,7 @@
 	import { toHHMMSS } from '$lib/utils/time';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import * as Card from '$lib/components/ui/card/index.js';
+	import VTSchedulePlan from '../shared/versand-tab/VTSchedulePlan.svelte';
 	import {
 		DEFAULT_DAILY_SUMMARY_METRICS,
 		CONTENT_MODULE_DESCRIPTIONS,
@@ -99,6 +100,15 @@
 		weatherChannels !== undefined ? activeChannelLabels(weatherChannels) : []
 	);
 	let weatherEmpty = $derived(hasNoActiveChannel(weatherChannels));
+	// Issue #1286 KL-1: VTSchedulePlan bringt einen eigenen "Kein Kanal aktiv"-
+	// Leerzustand (hasActiveChannel-basiert) mit demselben Testid
+	// briefings-channel-empty wie der Kanal-Gating-Leerzustand unten
+	// (weatherChannels-basiert). Um im Assistenten nie zwei Elemente mit
+	// identischem Testid gleichzeitig sichtbar zu haben, wird VTSchedulePlan
+	// gar nicht erst gerendert, solange der Kanal-Gating-Leerzustand aktiv ist
+	// — die beiden Leerzustände schließen sich dadurch gegenseitig aus (AC-9).
+	let scheduleGatingEmpty = $derived(weatherChannels !== undefined && weatherEmpty);
+	let hasActiveChannel = $derived(send_email || send_telegram || send_sms);
 
 	// --- Initial-Load ----------------------------------------------------------
 	onMount(() => {
@@ -215,132 +225,41 @@
 		reportConfig = syncSendFlags(merged, weatherChannels) as ReportConfig;
 	});
 
-	// --- Quick-Pick-Handler (Factory Pattern fuer Safari-Closure-Schutz) -------
-	function makeMorningTimeHandler(time: string) {
-		return function doSetMorningTime() {
-			morning_time = time;
+	// --- VTSchedulePlan-Verdrahtung (Factory Pattern fuer Safari-Closure-Schutz,
+	// analog VersandTab.svelte makeToggleHandler/makeTimeHandler) ---------------
+	function makeToggleHandler(setter: (v: boolean) => void) {
+		return function doToggle(e: Event) {
+			setter((e.target as HTMLInputElement).checked);
 		};
 	}
-	function makeEveningTimeHandler(time: string) {
-		return function doSetEveningTime() {
-			evening_time = time;
+	function makeTimeHandler(setter: (v: string) => void) {
+		return function doSetTime(e: Event) {
+			setter((e.target as HTMLInputElement).value);
 		};
 	}
 </script>
 
 <div class="space-y-6">
-	{#if showSchedule}
+	{#if showSchedule && !scheduleGatingEmpty}
 	<!-- ====================================================================== -->
-	<!-- Morgen-Report                                                          -->
+	<!-- Briefing-Zeitplan — Issue #1286: geteilte VTSchedulePlan statt eigenem -->
+	<!-- Markup (EIN Ort pflegt Morgen-/Abend-Zeitplan-UI, s. Spec KL-1).       -->
 	<!-- ====================================================================== -->
-	<Card.Root class="p-3 space-y-3 hover:translate-y-0 hover:shadow-none">
-		<div class="text-sm font-semibold">
-			<span data-testid="morning-master-switch" class="inline-flex items-center gap-2">
-				<Checkbox
-					checked={morning_enabled}
-					onchange={(e) => { morning_enabled = (e.target as HTMLInputElement).checked; }}
-				>Morgen-Report aktivieren</Checkbox>
-			</span>
-		</div>
-
-		<div class="flex flex-wrap items-center gap-2 pl-6">
-			<label class="flex items-center gap-2 text-sm">
-				<span>Uhrzeit:</span>
-				<input
-					type="time"
-					data-testid="report-morning-time"
-					class="g-num-input rounded-md border border-input bg-background px-2 py-1 text-sm disabled:opacity-50"
-					step={3600}
-					bind:value={morning_time}
-					disabled={!morning_enabled}
-				/>
-			</label>
-			<button
-				type="button"
-				data-testid="report-morning-quickpick-07"
-				class="g-quick-chip disabled:opacity-50"
-				onclick={makeMorningTimeHandler('07:00')}
-				disabled={!morning_enabled}
-			>
-				Morgens 07:00
-			</button>
-			<button
-				type="button"
-				data-testid="report-morning-quickpick-18"
-				class="g-quick-chip disabled:opacity-50"
-				onclick={makeMorningTimeHandler('18:00')}
-				disabled={!morning_enabled}
-			>
-				Abends 18:00
-			</button>
-		</div>
-
-		<div class="pl-6 text-sm">
-			<span data-testid="report-morning-trend" class="inline-flex items-center gap-2">
-				<Checkbox
-					checked={multi_day_trend_morning}
-					disabled={!morning_enabled}
-					onchange={(e) => { multi_day_trend_morning = (e.target as HTMLInputElement).checked; }}
-				>Trend über mehrere Tage zeigen</Checkbox>
-			</span>
-		</div>
-	</Card.Root>
-
-	<!-- ====================================================================== -->
-	<!-- Abend-Report                                                            -->
-	<!-- ====================================================================== -->
-	<Card.Root class="p-3 space-y-3 hover:translate-y-0 hover:shadow-none">
-		<div class="text-sm font-semibold">
-			<span data-testid="evening-master-switch" class="inline-flex items-center gap-2">
-				<Checkbox
-					checked={evening_enabled}
-					onchange={(e) => { evening_enabled = (e.target as HTMLInputElement).checked; }}
-				>Abend-Report aktivieren</Checkbox>
-			</span>
-		</div>
-
-		<div class="flex flex-wrap items-center gap-2 pl-6">
-			<label class="flex items-center gap-2 text-sm">
-				<span>Uhrzeit:</span>
-				<input
-					type="time"
-					data-testid="report-evening-time"
-					class="g-num-input rounded-md border border-input bg-background px-2 py-1 text-sm disabled:opacity-50"
-					step={3600}
-					bind:value={evening_time}
-					disabled={!evening_enabled}
-				/>
-			</label>
-			<button
-				type="button"
-				data-testid="report-evening-quickpick-07"
-				class="g-quick-chip disabled:opacity-50"
-				onclick={makeEveningTimeHandler('07:00')}
-				disabled={!evening_enabled}
-			>
-				Morgens 07:00
-			</button>
-			<button
-				type="button"
-				data-testid="report-evening-quickpick-18"
-				class="g-quick-chip disabled:opacity-50"
-				onclick={makeEveningTimeHandler('18:00')}
-				disabled={!evening_enabled}
-			>
-				Abends 18:00
-			</button>
-		</div>
-
-		<div class="pl-6 text-sm">
-			<span data-testid="report-evening-trend" class="inline-flex items-center gap-2">
-				<Checkbox
-					checked={multi_day_trend_evening}
-					disabled={!evening_enabled}
-					onchange={(e) => { multi_day_trend_evening = (e.target as HTMLInputElement).checked; }}
-				>Trend über mehrere Tage zeigen</Checkbox>
-			</span>
-		</div>
-	</Card.Root>
+	<VTSchedulePlan context="route"
+		{hasActiveChannel}
+		{morning_enabled}
+		{morning_time}
+		{evening_enabled}
+		{evening_time}
+		{multi_day_trend_morning}
+		{multi_day_trend_evening}
+		onMorningToggle={makeToggleHandler((v) => (morning_enabled = v))}
+		onEveningToggle={makeToggleHandler((v) => (evening_enabled = v))}
+		onMorningTime={makeTimeHandler((v) => (morning_time = v))}
+		onEveningTime={makeTimeHandler((v) => (evening_time = v))}
+		onTrendMorningToggle={makeToggleHandler((v) => (multi_day_trend_morning = v))}
+		onTrendEveningToggle={makeToggleHandler((v) => (multi_day_trend_evening = v))}
+	/>
 	{/if}
 
 	<!-- ====================================================================== -->
@@ -523,20 +442,3 @@
 	{/if}
 </div>
 
-<style>
-	.g-quick-chip {
-		border: 1px solid var(--g-ink-faint);
-		border-radius: var(--g-radius-pill);
-		font-family: var(--g-font-data);
-		font-size: 11px;
-		color: var(--g-ink-muted);
-		padding: 2px 8px;
-		background: transparent;
-		cursor: pointer;
-	}
-	.g-quick-chip:hover {
-		background: var(--g-surface-2);
-		color: var(--g-ink);
-	}
-
-</style>

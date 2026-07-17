@@ -51,6 +51,15 @@
 	}: Props = $props();
 
 	const isRoute = $derived(context === 'route');
+
+	// Issue #1286: Quick-Pick-Chips — feuern denselben Callback wie das
+	// Zeit-Input, mit einem synthetischen Event (Factory-Pattern, Safari-
+	// Closure-Schutz, CLAUDE.md).
+	function makeQuickPickHandler(cb: (e: Event) => void, value: string) {
+		return function doQuickPick() {
+			cb({ target: { value } } as unknown as Event);
+		};
+	}
 </script>
 
 <div>
@@ -92,6 +101,26 @@
 							onchange={onMorningTime}
 						/>
 					</label>
+					<div class="vt-quickpick-row">
+						<button
+							type="button"
+							data-testid="report-morning-quickpick-07"
+							class="vt-quick-chip"
+							disabled={!morning_enabled}
+							onclick={makeQuickPickHandler(onMorningTime, '07:00')}
+						>
+							Morgens 07:00
+						</button>
+						<button
+							type="button"
+							data-testid="report-morning-quickpick-18"
+							class="vt-quick-chip"
+							disabled={!morning_enabled}
+							onclick={makeQuickPickHandler(onMorningTime, '18:00')}
+						>
+							Abends 18:00
+						</button>
+					</div>
 				</div>
 			</Card>
 
@@ -118,6 +147,26 @@
 							onchange={onEveningTime}
 						/>
 					</label>
+					<div class="vt-quickpick-row">
+						<button
+							type="button"
+							data-testid="report-evening-quickpick-07"
+							class="vt-quick-chip"
+							disabled={!evening_enabled}
+							onclick={makeQuickPickHandler(onEveningTime, '07:00')}
+						>
+							Morgens 07:00
+						</button>
+						<button
+							type="button"
+							data-testid="report-evening-quickpick-18"
+							class="vt-quick-chip"
+							disabled={!evening_enabled}
+							onclick={makeQuickPickHandler(onEveningTime, '18:00')}
+						>
+							Abends 18:00
+						</button>
+					</div>
 				</div>
 			</Card>
 
@@ -227,6 +276,30 @@
 		background: var(--g-paper-deep, #efece3);
 		cursor: not-allowed;
 	}
+	.vt-quickpick-row {
+		display: flex;
+		gap: 6px;
+		margin-top: 10px;
+	}
+	.vt-quick-chip {
+		border: 1px solid var(--g-rule-soft, #e2ddd2);
+		border-radius: 999px;
+		font-family: var(--g-font-mono);
+		font-size: 11px;
+		color: var(--g-ink-3);
+		padding: 3px 9px;
+		background: transparent;
+		cursor: pointer;
+	}
+	.vt-quick-chip:hover:not(:disabled) {
+		background: var(--g-paper-deep, #efece3);
+		color: var(--g-ink);
+	}
+	.vt-quick-chip:disabled {
+		color: var(--g-ink-4);
+		cursor: not-allowed;
+		opacity: 0.6;
+	}
 
 	@media (max-width: 899px) {
 		.vt-schedule-grid {
@@ -237,6 +310,10 @@
 			font-size: 16px;
 			width: 100%;
 			box-sizing: border-box;
+		}
+		.vt-quick-chip {
+			min-height: 36px;
+			font-size: 12px;
 		}
 	}
 </style>
