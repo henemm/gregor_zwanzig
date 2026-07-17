@@ -44,6 +44,7 @@ from app.models import (
 )
 from providers import call_log
 from providers.base import ProviderError, ProviderRequestError
+from providers.merge import merge_missing_fields
 
 if TYPE_CHECKING:
     from app.config import Location
@@ -358,25 +359,8 @@ class OpenMeteoProvider:
         self, primary: "NormalizedTimeseries", fallback: "NormalizedTimeseries",
         missing_params: List[str]
     ) -> List[str]:
-        """Fill None fields in primary from fallback for missing_params only."""
-        fb_by_ts = {dp.ts: dp for dp in fallback.data}
-        filled: set = set()
-
-        for dp in primary.data:
-            fb_dp = fb_by_ts.get(dp.ts)
-            if fb_dp is None:
-                continue
-            for param in missing_params:
-                field_name = self._PARAM_TO_FIELD.get(param)
-                if field_name is None:
-                    continue
-                if getattr(dp, field_name, None) is None:
-                    fb_val = getattr(fb_dp, field_name, None)
-                    if fb_val is not None:
-                        setattr(dp, field_name, fb_val)
-                        filled.add(param)
-
-        return sorted(filled)
+        """Thin-Wrapper. Vertrag lebt in providers/merge.py (Issue #1302, Epic #1301)."""
+        return merge_missing_fields(primary, fallback, missing_params, self._PARAM_TO_FIELD)
 
     def select_model(self, lat: float, lon: float) -> Tuple[str, float, str]:
         """

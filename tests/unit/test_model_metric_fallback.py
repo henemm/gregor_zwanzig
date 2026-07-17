@@ -1,15 +1,17 @@
 """
 Unit tests for WEATHER-05b: Model-Metric-Fallback.
 
-Tests that:
-1. ForecastMeta has fallback tracking fields
-2. _find_fallback_model selects correct fallback
-3. _merge_fallback fills None fields without overwriting
-4. fetch_forecast integrates fallback when cache available
-5. Footer renders fallback info
+Four test classes, 11 tests total, all deterministic without network:
+1. TestForecastMetaFallbackFields -- ForecastMeta has fallback tracking fields
+2. TestFindFallbackModel -- _find_fallback_model selects correct fallback
+   (reads a local JSON cache via monkeypatch/tmp_path, no HTTP)
+3. TestMergeFallback -- _merge_fallback fills None fields without overwriting
+   (pure in-memory)
+4. TestFooterFallbackInfo -- TripReportFormatter().format_email renders
+   fallback info (pure rendering, no HTTP)
 
 SPEC: docs/specs/modules/model_metric_fallback.md v1.0
-TDD RED: All tests MUST FAIL before implementation.
+SPEC: docs/specs/modules/rework_1302_merge_contract_extraction.md (AC-4)
 """
 from __future__ import annotations
 
@@ -20,10 +22,6 @@ from pathlib import Path
 
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
-
-import pytest
-
-pytestmark = pytest.mark.live
 
 from app.models import (
     ForecastDataPoint,
