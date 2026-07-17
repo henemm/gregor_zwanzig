@@ -9,7 +9,8 @@ end_point`, minimales Zeitfenster) und nutzt
 Versand geschriebene Anker-Snapshot und das beim 15-Min-Alert-Check gefetchte
 fresh-Wetter **durch denselben Code-Pfad** erzeugt (Form-/Provider-Mismatch
 strukturell ausgeschlossen, Spec-Abschnitt A1). Provider-Wahl über
-`comparison_engine._select_provider_for_location()`. `enrich_ensemble=False`
+`get_provider("openmeteo")` (Epic #1301 A2 — Ortsvergleich holt ueberall
+openmeteo). `enrich_ensemble=False`
 beim Fetch (Bug #288-Analogon — Alert-Checks duerfen kein API-Kontingent
 konsumieren).
 
@@ -29,9 +30,9 @@ class CompareLocationWeatherSource:
     (`services/point_weather.py:67-76`)."""
 
     def fetch(self, point_id: str, lat: float, lon: float) -> PointWeatherData:
-        from services.comparison_engine import _select_provider_for_location
+        from providers.base import get_provider
 
-        provider = _select_provider_for_location(lat, lon)
+        provider = get_provider("openmeteo")
         service = SegmentWeatherService(provider)
 
         now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)

@@ -1,88 +1,18 @@
 """
-TDD RED: Compare Provider Routing — Provider-Auswahl pro Location.
+TDD: Compare Provider Routing — Ortsvergleich holt ueberall openmeteo.
 
-Bug: fetch_forecast_for_location() hardcodes GeoSphereProvider,
-     Locations ausserhalb Alpenraum (z.B. Mallorca) bekommen HTTP 400.
+Historie: fetch_forecast_for_location() hardcodete frueher GeoSphereProvider
+fuer Alpen-Koordinaten, Locations ausserhalb Alpenraum (z.B. Mallorca)
+bekamen HTTP 400. Die standort-basierte Provider-Auswahl
+(_select_provider_for_location) wurde danach eingefuehrt (GeoSphere fuer
+Alpen, OpenMeteo fuer den Rest) und ist seit Epic #1301 A2 wieder entfallen:
+der Vergleich holt jetzt ueberall ueber get_provider("openmeteo").
 
-Fix: _select_provider_for_location() waehlt GeoSphere fuer Alpen,
-     OpenMeteo fuer alles andere.
-
-Spec: docs/specs/bugfix/compare_provider_routing.md
+Spec: docs/specs/modules/epic_1301_a2_compare_openmeteo.md
 """
 import pytest
 
 pytestmark = pytest.mark.live
-
-
-# ---------------------------------------------------------------------------
-# Test 1: Provider-Auswahl nach Koordinaten
-# ---------------------------------------------------------------------------
-
-class TestSelectProviderForLocation:
-    """Provider selection based on geographic coordinates."""
-
-    def test_alpenraum_returns_geosphere(self):
-        """
-        GIVEN: Coordinates in the Alps (Innsbruck, 47.3N, 11.4E)
-        WHEN: _select_provider_for_location is called
-        THEN: Returns GeoSphereProvider instance
-        """
-        from providers.geosphere import GeoSphereProvider
-        from services.comparison_engine import _select_provider_for_location
-
-        provider = _select_provider_for_location(47.3, 11.4)
-        assert isinstance(provider, GeoSphereProvider)
-        provider.close()
-
-    def test_mallorca_returns_openmeteo(self):
-        """
-        GIVEN: Coordinates on Mallorca (Valdemossa, 39.7N, 2.6E)
-        WHEN: _select_provider_for_location is called
-        THEN: Returns OpenMeteoProvider instance
-        """
-        from providers.openmeteo import OpenMeteoProvider
-        from services.comparison_engine import _select_provider_for_location
-
-        provider = _select_provider_for_location(39.7, 2.6)
-        assert isinstance(provider, OpenMeteoProvider)
-
-    def test_boundary_lower_left_returns_geosphere(self):
-        """
-        GIVEN: Coordinates exactly on lower-left GeoSphere bound (45.0N, 8.0E)
-        WHEN: _select_provider_for_location is called
-        THEN: Returns GeoSphereProvider (inclusive bounds)
-        """
-        from providers.geosphere import GeoSphereProvider
-        from services.comparison_engine import _select_provider_for_location
-
-        provider = _select_provider_for_location(45.0, 8.0)
-        assert isinstance(provider, GeoSphereProvider)
-        provider.close()
-
-    def test_boundary_upper_right_returns_geosphere(self):
-        """
-        GIVEN: Coordinates exactly on upper-right GeoSphere bound (50.0N, 18.0E)
-        WHEN: _select_provider_for_location is called
-        THEN: Returns GeoSphereProvider (inclusive bounds)
-        """
-        from providers.geosphere import GeoSphereProvider
-        from services.comparison_engine import _select_provider_for_location
-
-        provider = _select_provider_for_location(50.0, 18.0)
-        assert isinstance(provider, GeoSphereProvider)
-        provider.close()
-
-    def test_scandinavia_returns_openmeteo(self):
-        """
-        GIVEN: Coordinates in Scandinavia (Oslo, 59.9N, 10.8E)
-        WHEN: _select_provider_for_location is called
-        THEN: Returns OpenMeteoProvider (outside GeoSphere bounds)
-        """
-        from providers.openmeteo import OpenMeteoProvider
-        from services.comparison_engine import _select_provider_for_location
-
-        provider = _select_provider_for_location(59.9, 10.8)
-        assert isinstance(provider, OpenMeteoProvider)
 
 
 # ---------------------------------------------------------------------------
@@ -142,13 +72,13 @@ class TestFetchForecastMallorca:
 # ---------------------------------------------------------------------------
 
 class TestFetchForecastAlpsRegression:
-    """Alps locations must continue to work with GeoSphere + SNOWGRID."""
+    """Alps locations must continue to work — now via openmeteo (A2)."""
 
     def test_innsbruck_returns_data(self):
         """
         GIVEN: Innsbruck location (Alps, 47.26N, 11.39E)
         WHEN: fetch_forecast_for_location is called
-        THEN: Returns valid weather data via GeoSphere
+        THEN: Returns valid weather data via openmeteo
         """
         from app.loader import SavedLocation
         from services.comparison_engine import fetch_forecast_for_location

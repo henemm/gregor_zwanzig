@@ -130,6 +130,7 @@ class FixtureProvider:
                     pop_pct=_maybe_int(p.get("pop_pct")),
                     snowfall_limit_m=_maybe_int(p.get("snowfall_limit_m")),
                     wind_dir_deg=p.get("wind_dir_deg"),
+                    freezing_level_m=_maybe_int(p.get("freezing_level_m")),
                 )
             )
 

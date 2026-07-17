@@ -16,7 +16,6 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from app.config import Location
 from app.user import ComparisonResult, LocationResult, SavedLocation
-from providers.geosphere import GeoSphereProvider
 from services.comparison_scoring import calculate_score
 from services.forecast import ForecastService
 from services.weather_metrics import WeatherMetricsService
@@ -304,24 +303,6 @@ def dict_to_comparison_result(
     )
 
 
-def _select_provider_for_location(lat: float, lon: float):
-    """Select provider based on location coordinates.
-
-    GeoSphere for Alps (SNOWGRID benefit), OpenMeteo for everything else.
-    """
-    from providers.base import get_provider
-
-    GEOSPHERE_BOUNDS = {
-        "min_lat": 45.0, "max_lat": 50.0,
-        "min_lon": 8.0, "max_lon": 18.0,
-    }
-
-    if (GEOSPHERE_BOUNDS["min_lat"] <= lat <= GEOSPHERE_BOUNDS["max_lat"]
-            and GEOSPHERE_BOUNDS["min_lon"] <= lon <= GEOSPHERE_BOUNDS["max_lon"]):
-        return GeoSphereProvider()
-    return get_provider("openmeteo")
-
-
 def fetch_forecast_for_location(
     loc: SavedLocation,
     hours: int = 48,
@@ -340,7 +321,9 @@ def fetch_forecast_for_location(
     }
 
     try:
-        provider = _select_provider_for_location(loc.lat, loc.lon)
+        from providers.base import get_provider
+
+        provider = get_provider("openmeteo")
         service = ForecastService(provider)
 
         location = Location(
