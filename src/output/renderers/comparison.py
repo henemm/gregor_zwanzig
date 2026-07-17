@@ -161,16 +161,6 @@ def render_comparison_text(
 
         lines.append("")
 
-    # Issue #1278: Kurz-Zusammenfassung je Ort, nach der Orts-Uebersicht und vor
-    # dem Stundenverlauf -- an der zum HTML analogen Stelle, wortgleich, weil
-    # derselbe geteilte Trip-Baustein den Satz erzeugt.
-    from output.renderers.compact_summary import format_location_summary
-
-    summaries = [s for s in (format_location_summary(loc, enabled_metrics) for loc in locations) if s]
-    if summaries:
-        lines.extend(summaries)
-        lines.append("")
-
     # Stundentabellen fuer ALLE Orte (kompakt, kein Rang-Praefix)
     valid = [loc for loc in locations if loc.error is None and loc.hourly_data]
     if valid:

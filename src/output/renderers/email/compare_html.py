@@ -480,31 +480,6 @@ def _render_overview_table(
     )
 
 
-def _render_summary_block(locations: list[LocationResult], enabled_metrics: set | None) -> str:
-    """Kurz-Zusammenfassung je Ort unter der Uebersichts-Matrix (Issue #1278).
-
-    Der Satz kommt vom GETEILTEN Trip-Baustein (``format_location_summary`` ->
-    ``CompactSummaryFormatter.format_weather_summary``) -- hier wird nur
-    plaziert, nicht formuliert. Orte ohne Daten liefern "" und erzeugen keinen
-    Eintrag (Anti-Erosion, AC-9); liefert kein Ort einen Satz, entfaellt der
-    ganze Block.
-    """
-    from output.renderers.compact_summary import format_location_summary
-
-    rows = []
-    for loc in locations:
-        text = format_location_summary(loc, enabled_metrics)
-        if not text:
-            continue
-        rows.append(
-            f'<div style="padding:5px 0;font-family:{FONT_UI};font-size:13px;'
-            f'line-height:1.5;color:{G_INK};">{_html.escape(text)}</div>'
-        )
-    if not rows:
-        return ""
-    return f'<div style="padding:14px 24px 0;">{"".join(rows)}</div>'
-
-
 def _render_warn_banner(locations: list[LocationResult]) -> str:
     """Aggregat-WarnBlock-Banner (Issue #1216): geteilter embedded WarnBlock mit
     Orts-Scope. Nennt die höchste amtliche Stufe + den führenden Ort („höchste
@@ -963,7 +938,6 @@ def render_compare_html(
         f'{_render_section_head("ÜBERSICHT", "Alle Orte · gewählte Metriken", "← scrollen")}'
         f'{_render_overview_table(locations, enabled_metrics, corridors)}</div>'
     )
-    summary_html = _render_summary_block(locations, enabled_metrics)
     # Issue #1278 (Nebenbefund, AC-12): die dritte Angabe war fest "09–16 Uhr" --
     # ein toter Rest des mit #1268 abgeschafften Zeitfensters. Die Bewertung
     # laeuft seit #1268 ueber den ganzen Tag; die Angabe behauptete eine
@@ -987,7 +961,7 @@ def render_compare_html(
     body_html = "\n".join(
         part for part in (
             header_html, warnings_html, warn_banner_html, overview_html,
-            summary_html, hourly_head_html, hourly_sections_html, legend_html, abo_html,
+            hourly_head_html, hourly_sections_html, legend_html, abo_html,
             app_footer_html,
         ) if part
     )
