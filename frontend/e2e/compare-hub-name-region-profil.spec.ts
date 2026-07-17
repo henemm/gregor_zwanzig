@@ -264,7 +264,13 @@ test.describe('Epic #1273 S2 — Compare-Hub Name/Region/Aktivitätsprofil inlin
 			await visible(page, 'compare-hub-name-edit').fill(neu);
 			await visible(page, 'compare-hub-name-save').click();
 
-			await expect(page.getByText(neu, { exact: false }).first()).toBeVisible({ timeout: 5_000 });
+			// Sichtbarkeitsfilter Pflicht (anders als bei AC-1 auf Desktop-Viewport):
+			// der Desktop-<h1> mit demselben Namen bleibt CSS-hidden im DOM und steht
+			// im Markup VOR dem Mobile-<span> — .first() traefe ohne Filter ihn statt
+			// den tatsaechlich sichtbaren Mobile-Text.
+			await expect(
+				page.getByText(neu, { exact: false }).and(page.locator(':visible'))
+			).toBeVisible({ timeout: 5_000 });
 
 			await page.reload();
 			expect((await fetchPreset(page, presetId)).name).toBe(neu);
@@ -307,11 +313,14 @@ test.describe('Epic #1273 S2 — Compare-Hub Name/Region/Aktivitätsprofil inlin
 				'AC-7: ein fehlgeschlagener PUT muss eine Fehlermeldung unter dem Feld zeigen'
 			).toBeVisible({ timeout: 10_000 });
 
-			// Eingabefeld bleibt offen mit der eingetippten (nicht verlorenen) Eingabe.
+			// Eingabefeld bleibt offen mit der eingetippten (nicht verlorenen) Eingabe
+			// — es gibt bei fehlgeschlagenem Save bewusst KEIN Zurueckspringen in den
+			// Anzeige-Modus (kein <h1>, solange isEditingName true bleibt).
 			await expect(visible(page, 'compare-hub-name-edit')).toHaveValue(versuch);
 
-			// Der angezeigte (persistierte) Name bleibt der alte.
-			await expect(page.getByRole('heading', { level: 1 })).toContainText(name);
+			// Der SERVERSEITIG persistierte (nicht editierte) Name bleibt der alte —
+			// der fehlgeschlagene PUT hat nichts geschrieben.
+			expect((await fetchPreset(page, presetId)).name).toBe(name);
 		} finally {
 			await cleanup(page, presetId, locIds);
 		}
