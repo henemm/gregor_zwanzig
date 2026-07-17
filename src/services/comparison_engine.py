@@ -165,6 +165,20 @@ class ComparisonEngine:
                     if cloud_high:
                         metrics["cloud_high_avg"] = int(sum(cloud_high) / len(cloud_high))
 
+                    # Issue #1285: Tages-Aggregate fuer Regen/Sicht/UV. Regeln
+                    # kanonisch aus dem Trip-Pfad (WeatherMetricsService:
+                    # Regen SUM, Sicht MIN, UV MAX) -- dieselbe Wetterlage muss
+                    # im Vergleich denselben Tageswert ergeben wie im Briefing.
+                    precips = [dp.precip_1h_mm for dp in filtered_data if dp.precip_1h_mm is not None]
+                    if precips:
+                        metrics["precip_sum_mm"] = sum(precips)
+                    vis = [dp.visibility_m for dp in filtered_data if dp.visibility_m is not None]
+                    if vis:
+                        metrics["visibility_min_m"] = min(vis)
+                    uvs = [dp.uv_index for dp in filtered_data if dp.uv_index is not None]
+                    if uvs:
+                        metrics["uv_index_max"] = max(uvs)
+
                 # Snow data
                 snow_depth = raw_result.get("snow_depth_cm")
                 snow_new = raw_result.get("snow_new_cm", 0)
@@ -217,6 +231,14 @@ class ComparisonEngine:
                     cloud_high_avg=metrics.get("cloud_high_avg"),
                     above_low_clouds=metrics.get("above_low_clouds", False),
                     sunny_hours=metrics.get("sunny_hours"),
+                    # Issue #1285: thunder_level und pop_max_pct wurden hier
+                    # schon immer berechnet (s.o.), aber beim Bau des
+                    # LocationResult verworfen -- reiner Verdrahtungs-Fix.
+                    precip_sum_mm=metrics.get("precip_sum_mm"),
+                    thunder_level_max=metrics.get("thunder_level"),
+                    visibility_min_m=metrics.get("visibility_min_m"),
+                    uv_index_max=metrics.get("uv_index_max"),
+                    pop_max_pct=metrics.get("pop_max_pct"),
                     hourly_data=filtered_data,
                 ))
 

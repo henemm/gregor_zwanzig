@@ -23,11 +23,27 @@ from app.models import Corridor
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
 from output.renderers.channel_layout import CHANNEL_LIMITS
-from output.renderers.email.compare_html import sort_locations_alphabetically
+from output.renderers.email.compare_html import (
+    _fmt_thunder, _fmt_visibility_overview, _metric_value,
+    sort_locations_alphabetically,
+)
 from src.output.metric_format import format_value
 from src.output.renderers.alert.official_alerts import (
     _word_boundary_truncate,
     render_official_alerts_plain,
+)
+
+# Issue #1285: die fuenf bisher stillschweigend verworfenen Uebersichts-Zeilen
+# (Renderer-Metrik-ID, Label, Formatierung). Wert-Quelle und Formatierung sind
+# BEWUSST die des HTML-Pfads (`compare_html._metric_value` / `_fmt_*`) statt
+# einer Klartext-Kopie -- sonst beschreibt dieselbe Wetterlage in HTML und
+# Klartext derselben Mail verschiedene Zahlen.
+_DAILY_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
+    ("precip_sum", "Regen", lambda v: f"{v:.1f} mm"),
+    ("pop_max", "Regenwahrscheinlichkeit", lambda v: f"{v:.0f}%"),
+    ("thunder_max", "Gewitter", _fmt_thunder),
+    ("uv_max", "UV max", lambda v: f"{v:.0f}"),
+    ("visibility_min", "Sicht min", _fmt_visibility_overview),
 )
 
 
@@ -96,6 +112,15 @@ def render_comparison_text(
         if _metric_visible("wind_max"):
             wind_max = loc_result.wind_max
             lines.append(f"   Wind: {format_value('wind', wind_max, style='plain')}" if wind_max is not None else "   Wind: -")
+        # Issue #1285: vier bisher still verworfene Zeilen. Werte kommen aus
+        # DERSELBEN Quelle wie die HTML-Matrix (_metric_value -> Engine-Feld
+        # bzw. live aus hourly_data), damit HTML und Klartext nie
+        # auseinanderlaufen.
+        for metric_id, label, fmt in _DAILY_PLAIN_ROWS:
+            if not _metric_visible(metric_id):
+                continue
+            value = _metric_value(loc_result, metric_id)
+            lines.append(f"   {label}: {fmt(value) if value is not None else '-'}")
         if _metric_visible("sunny_hours"):
             # Issue #1214 Scheibe 6: sunshine.decimals=1 im Katalog (vormals
             # F001-Ausnahme in Scheibe 5, s. Spec) macht die Migration jetzt
@@ -121,6 +146,16 @@ def render_comparison_text(
         for line in render_official_alerts_plain([(loc.name, loc_result.official_alerts)]):
             lines.append(f"   ⚠️ {line}")
 
+        lines.append("")
+
+    # Issue #1278: Kurz-Zusammenfassung je Ort, nach der Orts-Uebersicht und vor
+    # dem Stundenverlauf -- an der zum HTML analogen Stelle, wortgleich, weil
+    # derselbe geteilte Trip-Baustein den Satz erzeugt.
+    from output.renderers.compact_summary import format_location_summary
+
+    summaries = [s for s in (format_location_summary(loc, enabled_metrics) for loc in locations) if s]
+    if summaries:
+        lines.extend(summaries)
         lines.append("")
 
     # Stundentabellen fuer ALLE Orte (kompakt, kein Rang-Praefix)

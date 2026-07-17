@@ -15,8 +15,33 @@ FRONTEND_TO_RENDERER_METRIC_ID: dict[str, str] = {
     "wind_max_kmh": "wind_max",
     "cloud_avg_pct": "cloud_avg",
     "temp_max_c": "temp_max",
-    # visibility_min_m, precip_sum_mm, uv_index_max, thunder_level_max: kein
-    # ComparisonResult-Feld -> bewusst nicht gemappt (Folge-Scope, s. Known Limitations).
+    # Issue #1285: die folgenden fuenf wurden bis 2026-07-16 STILL verworfen
+    # (keine Matrix-Zeile, keine Meldung), weil LocationResult kein
+    # Tages-Aggregat dafuer fuehrte. Die Tageswerte werden jetzt aus
+    # hourly_data abgeleitet (kanonische Trip-Regeln, s.
+    # weather_metrics.summarize_points), damit sind sie mappbar.
+    "precip_sum_mm": "precip_sum",
+    "thunder_level_max": "thunder_max",
+    "visibility_min_m": "visibility_min",
+    "uv_index_max": "uv_max",
+    "pop_max_pct": "pop_max",
+}
+
+
+# Issue #1278: Compare-Renderer-ID -> Trip-Metrik-ID (`dc.metrics[].metric_id`).
+# Dritte Uebersetzungsrichtung neben FRONTEND_TO_RENDERER_METRIC_ID: der
+# geteilte Fliesstext-Baustein (CompactSummaryFormatter) spricht das
+# TRIP-Vokabular. Nur Compare-Zeilen mit Trip-Pendant stehen hier -- was fehlt,
+# erscheint bewusst nicht im Zusammenfassungssatz (uv_max/visibility_min/
+# sunny_hours/snow_*: kein _format_*-Zweig im Baustein, s. Spec Known
+# Limitations). Reihenfolge = Satz-Reihenfolge des Bausteins.
+RENDERER_TO_TRIP_METRIC_ID: dict[str, str] = {
+    "temp_max": "temperature",
+    "cloud_avg": "cloud_total",
+    "precip_sum": "precipitation",
+    "pop_max": "rain_probability",
+    "wind_max": "wind",
+    "thunder_max": "thunder",
 }
 
 

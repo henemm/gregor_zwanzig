@@ -978,6 +978,42 @@ class WeatherMetricsService:
 
 
 # ===========================================================================
+# Level-1 Aggregation ueber eine nackte Stundenliste (Issue #1285)
+# SPEC: docs/specs/modules/compare_location_summary.md (AC-15)
+# ===========================================================================
+
+def summarize_points(points: list) -> Optional[SegmentWeatherSummary]:
+    """Tages-Aggregat aus einer reinen ``ForecastDataPoint``-Liste.
+
+    Duenner Wrapper um die KANONISCHEN Level-1-Regeln
+    (``compute_basis_metrics`` — Regen SUM, Gewitter MAX-Ordinal, Sicht MIN —
+    plus ``_compute_pop``/``_compute_uv_index`` fuer die beiden Groessen, die
+    ``compute_basis_metrics`` nicht selbst fuellt). Es gibt hier bewusst KEINE
+    eigene Rechenregel: derselbe Stundensatz muss im Orts-Vergleich denselben
+    Tageswert ergeben wie im Trip-Briefing (AC-15).
+
+    Der Aufrufer (Compare-Pfad) hat nur Stundendaten, keine
+    ``NormalizedTimeseries`` — die Provider-Metadaten werden hier neutral
+    gesetzt; ``compute_basis_metrics`` liest ausschliesslich ``.data``.
+
+    ``None`` bei leerer Liste (kein Aggregat statt eines Null-Aggregats).
+    """
+    from app.models import ForecastMeta, Provider
+
+    if not points:
+        return None
+    svc = WeatherMetricsService()
+    ts = NormalizedTimeseries(
+        meta=ForecastMeta(provider=Provider.OPENMETEO, model="aggregate", grid_res_km=0.0),
+        data=list(points),
+    )
+    summary = svc.compute_basis_metrics(ts)
+    summary.pop_max_pct = svc._compute_pop(ts)
+    summary.uv_index_max = svc._compute_uv_index(ts)
+    return summary
+
+
+# ===========================================================================
 # Level-2 Aggregation: Stage-level (across segments)
 # SPEC: docs/specs/modules/multi_day_trend.md v2.0
 # ===========================================================================

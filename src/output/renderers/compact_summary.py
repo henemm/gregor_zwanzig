@@ -44,11 +44,41 @@ class CompactSummaryFormatter:
         dc: UnifiedWeatherDisplayConfig,
         tz: Optional[ZoneInfo] = None,
     ) -> str:
-        """Generate 1-2 line summary for a stage."""
+        """Wrapper ``context="route"`` (Trip/Etappe) um den geteilten Kern.
+
+        Trip-spezifisch ist nur die Vorbereitung: Segmente -> Aggregat +
+        Stundenliste, Etappenname -> Kurzform. Der Satz selbst entsteht im
+        kontextneutralen ``format_weather_summary()`` (Issue #1278).
+        """
+        return self.format_weather_summary(
+            self._aggregate(segments),
+            self._collect_hourly_data(segments),
+            self._shorten_stage_name(stage_name),
+            dc,
+            tz,
+        )
+
+    def format_weather_summary(
+        self,
+        summary: Optional[SegmentWeatherSummary],
+        hourly: list[ForecastDataPoint],
+        title: str,
+        dc: UnifiedWeatherDisplayConfig,
+        tz: Optional[ZoneInfo] = None,
+    ) -> str:
+        """Kontextneutraler Kern (Issue #1278): ``(summary, hourly, titel, dc,
+        tz) -> Fliesstext``.
+
+        Kennt weder Etappen noch Orte — nur ein Aggregat, eine Stundenliste und
+        einen bereits fertigen Titel. Beide Aufrufkontexte (``route`` = Etappe,
+        ``vergleich`` = Ort) teilen sich diesen Code; es gibt KEINE zweite
+        Text-Formatierungslogik (Trip/Compare-Teilungs-Invariante, CLAUDE.md).
+        Der Titel wird hier NICHT mehr veraendert — die Etappen-Kuerzungsregel
+        gehoert in den Trip-Wrapper, ein Ortsname darf nicht danach aussehen,
+        als waere er ein Etappenname (AC-8).
+        """
         self._tz = tz or ZoneInfo("UTC")
-        short_name = self._shorten_stage_name(stage_name)
-        summary = self._aggregate(segments)
-        hourly = self._collect_hourly_data(segments)
+        short_name = title
         enabled = {mc.metric_id: mc for mc in dc.metrics if mc.enabled}
 
         parts: list[str] = []
@@ -365,4 +395,63 @@ class CompactSummaryFormatter:
     # ------------------------------------------------------------------
     # Compass direction helper
     # ------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Wrapper context="vergleich" (Orts-Vergleich, Issue #1278)
+# ---------------------------------------------------------------------------
+
+def _location_tz(loc) -> Optional[ZoneInfo]:
+    """``SavedLocation.timezone`` ist optional; fehlt/ungueltig -> None, der
+    Kern faellt dann wie der Trip-Pfad auf UTC zurueck (keine neue
+    Fehlerklasse, s. Spec "Known Limitations")."""
+    name = getattr(loc.location, "timezone", None)
+    if not name:
+        return None
+    try:
+        return ZoneInfo(name)
+    except Exception:
+        return None
+
+
+def format_location_summary(loc, enabled_metrics: Optional[set] = None) -> str:
+    """Wrapper ``context="vergleich"``: ein ``LocationResult`` -> derselbe
+    Fliesstext-Satz wie im Trip (geteilter Kern ``format_weather_summary``).
+
+    - Titel = VOLLER Ortsname (keine Etappen-Kuerzung, AC-8).
+    - Metrik-Quelle = ``enabled_metrics`` (Compare-Renderer-IDs), uebersetzt in
+      das Trip-Vokabular ueber ``RENDERER_TO_TRIP_METRIC_ID``. Nur Zeilen mit
+      Trip-Pendant landen im Satz (AC-5/AC-6).
+    - ``enabled_metrics=None`` ("nie ausgewaehlt") = alles zeigen (AC-17).
+    - Aggregat = ``summarize_points()`` (kanonische Trip-Rechenregeln, AC-7/15).
+    - Fehler-Ort / keine Stundendaten -> "" (Aufrufer reiht leere Bloecke nicht
+      ein, Anti-Erosion/AC-9).
+    """
+    from app.models import MetricConfig
+    from output.renderers.compare_metric_ids import RENDERER_TO_TRIP_METRIC_ID
+    from services.weather_metrics import summarize_points
+
+    hourly = list(loc.hourly_data or [])
+    if loc.error is not None or not hourly:
+        return ""
+    metric_ids = [
+        trip_id for renderer_id, trip_id in RENDERER_TO_TRIP_METRIC_ID.items()
+        if enabled_metrics is None or renderer_id in enabled_metrics
+    ]
+    if not metric_ids:
+        return ""
+    summary = summarize_points(hourly)
+    if summary is None:
+        return ""
+    # use_friendly_format: bewusst der MetricConfig-Default (models.py:506,
+    # `use_friendly_format: bool = True`) — der Ort-Wrapper verhaelt sich wie
+    # ein frisch angelegter Trip. Der Compare-Pfad hat keine eigene Quelle
+    # dafuer (kein UnifiedWeatherDisplayConfig je Ort).
+    dc = UnifiedWeatherDisplayConfig(
+        trip_id="vergleich",
+        metrics=[MetricConfig(metric_id=m, enabled=True) for m in metric_ids],
+    )
+    return CompactSummaryFormatter().format_weather_summary(
+        summary, hourly, loc.location.name, dc, _location_tz(loc),
+    )
 

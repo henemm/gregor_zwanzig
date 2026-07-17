@@ -2,11 +2,11 @@
 entity_id: compact_summary
 type: module
 created: 2026-02-17
-updated: 2026-02-17
+updated: 2026-07-16
 status: approved
-version: "1.2"
+version: "1.3"
 workflow: F2 Kompakt-Summary
-tags: [formatter, email]
+tags: [formatter, email, compare, shared-with-trip]
 ---
 
 # F2 Kompakt-Summary
@@ -23,6 +23,19 @@ Natuerlichsprachige Wetter-Zusammenfassung pro Etappe, die oben in der E-Mail al
 
 **Story:** Standalone Feature F2 (Sprint 1 Quick Win)
 **Priority:** HIGH
+
+**Nachtrag 2026-07-16 (Issue #1278 — v1.3):** Der Baustein hat inzwischen
+**zwei Aufrufkontexte**, nicht mehr nur den Trip-Pfad: `context="route"`
+(Etappe, dieser Abschnitt, unveraendert) und `context="vergleich"` (Ort im
+Orts-Vergleich, NEU). Beide teilen sich denselben Fliesstext-Kern — es gibt
+keinen zweiten, fuer den Vergleich neu geschriebenen Formatierungscode
+(Trip/Compare-Teilungs-Invariante, CLAUDE.md). Details: Abschnitt
+"Aufrufkontexte (`route` / `vergleich`)" unten. Die urspruengliche Datei
+`src/formatters/compact_summary.py` (Stand 2026-02-17, s. "Scope"/"Data
+Flow" unten) existiert nicht mehr — der Baustein liegt seit einer spaeteren
+Renderer-Umstrukturierung unter `src/output/renderers/compact_summary.py`
+(aktueller, verifizierter Pfad; die "Scope"-Tabelle unten ist ein
+historischer Implementierungs-Schnappschuss und bleibt unangetastet).
 
 ## Scope
 
@@ -128,26 +141,115 @@ Feste Reihenfolge (nur aktivierte Metriken):
 
 ## Source
 
-- **File:** `src/formatters/compact_summary.py`
-- **Identifier:** `CompactSummaryFormatter`
+- **File (aktuell, verifiziert 2026-07-16):** `src/output/renderers/compact_summary.py`
+  — enthaelt den geteilten Kern UND beide Wrapper (Trip + Vergleich).
+- **Identifier (Kern):** `CompactSummaryFormatter.format_weather_summary()`
+  (`compact_summary.py:61`) — kontextneutral, kennt weder Etappen noch Orte.
+- **Identifier (Wrapper `context="route"`):** `CompactSummaryFormatter.format_stage_summary()`
+  (`compact_summary.py:40`) — unveraendert, bestehender Trip-Aufrufer.
+- **Identifier (Wrapper `context="vergleich"`):** `format_location_summary()`
+  (`compact_summary.py:417`, Modulfunktion, NEU seit Issue #1278) — Aufrufer
+  aus dem Orts-Vergleich.
 
 ## Dependencies
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `weather_metrics.aggregate_stage()` | Function | Stage-Level-Aggregation aus Segmenten |
+| `weather_metrics.aggregate_stage()` | Function | Stage-Level-Aggregation aus Segmenten (Level-2, `context="route"`) |
+| `weather_metrics.summarize_points()` (`weather_metrics.py:985`) | Function | Level-1-Aggregat aus einer nackten Stundenliste (Issue #1285) — Aggregationsgrundlage fuer `context="vergleich"`; duenner Wrapper um `compute_basis_metrics()`/`_compute_pop()`/`_compute_uv_index()`, keine eigene Rechenregel |
 | `metric_catalog.get_metric()` | Function | Metrik-Definitionen (unit, friendly_label) |
-| `models.UnifiedWeatherDisplayConfig` | Dataclass | Welche Metriken aktiviert + friendly |
-| `models.SegmentWeatherSummary` | Dataclass | Aggregierte Wetterdaten (Tages-Min/Max/Avg) |
-| `models.SegmentWeatherData` | Dataclass | Timeseries fuer zeitliche Analyse (Peak/Start/Ende) |
+| `models.UnifiedWeatherDisplayConfig` | Dataclass | Welche Metriken aktiviert + friendly — fuer `context="vergleich"` on-the-fly aus `enabled_metrics` gebaut (s. u.), kein persistiertes Objekt je Ort |
+| `models.SegmentWeatherSummary` | Dataclass | Aggregierte Wetterdaten (Tages-Min/Max/Avg); Rueckgabetyp von `aggregate_stage()` UND `summarize_points()` |
+| `models.SegmentWeatherData` | Dataclass | Timeseries fuer zeitliche Analyse (Peak/Start/Ende), nur `context="route"` |
 | `models.ForecastDataPoint` | Dataclass | Stuendliche Wetterdaten (ts, precip_1h_mm, wind10m_kmh, ...) |
-| `trip_report.TripReportFormatter` | Class | Aufrufer — bindet Summary in E-Mail ein |
+| `trip_report.TripReportFormatter` | Class | Aufrufer `context="route"` — bindet Summary in die Trip-E-Mail ein |
+| `output/renderers/email/compare_html.py::render_compare_html()` | Function | Aufrufer `context="vergleich"` — bindet Summary in die Vergleichs-E-Mail (HTML) ein |
+| `output/renderers/comparison.py::render_comparison_text()` | Function | Aufrufer `context="vergleich"` — bindet Summary in die Vergleichs-E-Mail (Klartext) ein |
+| `output/renderers/compare_metric_ids.py::RENDERER_TO_TRIP_METRIC_ID` | Const | Uebersetzt Compare-Renderer-IDs (`enabled_metrics`) ins Trip-Vokabular (`dc.metrics[].metric_id`) — s. "Metrik-Vokabular-Uebersetzung" unten |
+| `app.user.LocationResult` | Dataclass | Eingabe von `format_location_summary()`; liefert `hourly_data`, `location.name`, `error` |
+| `app.user.SavedLocation.timezone` | Field | Optionale Zeitzone je Ort; fehlt sie, faellt der Vergleichs-Wrapper wie der Trip-Pfad auf UTC zurueck |
 
 ## Implementation Details
 
+### 0. Aufrufkontexte (`route` / `vergleich`) — Issue #1278/#1285, 2026-07-16
+
+Der Baustein hat **einen** kontextneutralen Kern und **zwei** duenne Wrapper.
+Der Kern kennt weder Etappen noch Orte — nur ein Aggregat, eine Stundenliste
+und einen bereits fertigen Titel:
+
+```
+kontextneutraler Kern:  format_weather_summary(summary, hourly, title, dc, tz) -> Fliesstext
+  (compact_summary.py:61)
+  |                                                    |
+  Wrapper context="route" (Trip, bestehend)   Wrapper context="vergleich" (NEU, #1278)
+  format_stage_summary() (:40)                format_location_summary() (:417, Modulfunktion)
+  Eingabe: list[SegmentWeatherData]           Eingabe: LocationResult
+  Aggregat: aggregate_stage() (Level-2)       Aggregat: summarize_points() (Level-1, #1285)
+  Titel: Etappenname, GEKUERZT                Titel: voller Ortsname, NICHT gekuerzt
+  Metrik-Quelle: dc.metrics (vom Aufrufer)    Metrik-Quelle: enabled_metrics, uebersetzt
+                                               via RENDERER_TO_TRIP_METRIC_ID
+```
+
+**Regel (verbindlich):** `_shorten_stage_name()` (`compact_summary.py:387`,
+die Etappen-Kuerzungsregel "Tag N: von X nach Y" → "X → Y") wird bei
+`context="vergleich"` **nicht** angewendet. Ein Ortsname ist kein
+Etappenname und darf syntaktisch nicht danach aussehen, als waere er einer
+(z. B. "Sóller" bleibt "Sóller", auch wenn der Name zufaellig mit "von"
+beginnen wuerde). `format_location_summary()` uebergibt `loc.location.name`
+unveraendert als `title`-Argument an den Kern.
+
+**`format_location_summary(loc, enabled_metrics=None)`** baut sich pro
+Aufruf ein transientes `UnifiedWeatherDisplayConfig`-Objekt aus den
+uebersetzten Trip-Metrik-IDs (kein persistiertes Display-Config je Ort).
+`use_friendly_format` folgt dabei dem Dataclass-Default `MetricConfig.use_friendly_format=True`
+(`src/app/models.py:506`) — der Vergleichs-Wrapper verhaelt sich also wie
+ein frisch angelegter Trip; es gibt keine eigene Compare-Quelle fuer diesen
+Schalter. Fehlerfall (`loc.error is not None` oder leere `hourly_data`)
+liefert `""` — der Aufrufer reiht leere Bloecke nicht ein (Anti-Erosion,
+analog zu den uebrigen Compare-Bloecken).
+
+### 0b. Metrik-Vokabular-Uebersetzung (Single Source of Truth fuer beide Aufrufer)
+
+Drei Vokabulare treffen aufeinander, wenn eine Metrik im Orts-Vergleich
+gewaehlt wird und im Fliesstext landen soll: **Frontend-ID** (Auswahl im
+Compare-Editor, `frontend/src/lib/components/compare/compareMetricDefs.ts`),
+**Compare Renderer-ID** (`enabled_metrics`, `CV2_METRICS`-Keys in
+`compare_html.py`) und **Trip-Metrik-ID** (`dc.metrics[].metric_id`, das
+Vokabular, das dieser Baustein selbst konsumiert). Die Uebersetzung von
+Renderer-ID nach Trip-ID lebt in
+`output/renderers/compare_metric_ids.py::RENDERER_TO_TRIP_METRIC_ID` — nur
+Zeilen mit Trip-Pendant landen im Zusammenfassungssatz eines Ortes:
+
+| Frontend-ID | Compare Renderer-ID | Trip Metrik-ID | Im Fließtext-Satz? |
+|---|---|---|---|
+| `temp_max_c` | `temp_max` | `temperature` | ja |
+| `wind_max_kmh` | `wind_max` | `wind` | ja (inkl. Böen-Peak-Logik) |
+| `cloud_avg_pct` | `cloud_avg` | `cloud_total` | ja |
+| `precip_sum_mm` | `precip_sum` | `precipitation` | ja |
+| `thunder_level_max` | `thunder_max` | `thunder` | ja |
+| `uv_index_max` | `uv_max` | — | nein (kein Fließtext-Pendant) |
+| `visibility_min_m` | `visibility_min` | — | nein (kein Fließtext-Pendant) |
+| `pop_max_pct` | `pop_max` | `rain_probability` | ja — teilt sich mit `precipitation` denselben `_format_precipitation`-Zweig (`compact_summary.py:96`: `if "precipitation" in enabled or "rain_probability" in enabled`). Wählt ein Ort NUR Regenwahrscheinlichkeit (ohne Niederschlagsmenge), erscheint trotzdem der kombinierte Niederschlags-Satz — bestehendes Trip-Verhalten, keine Compare-Sonderregel |
+| `sunny_hours_h` | `sunny_hours` | — | nein — kein `_format_sunshine`-Zweig im Baustein |
+| `snow_depth_cm` | `snow_depth_cm` | — | nein — kein `_format_snow`-Zweig im Baustein |
+| `snow_new_sum_cm` | `snow_new_cm` | — | nein — kein `_format_snow`-Zweig im Baustein |
+| — (keine Frontend-ID/Matrix-Zeile) | — | `wind_direction` | nein (kein Compare-Pendant) |
+| `warn` (immer sichtbare Matrix-Zeile) | `warn` | — | nein (kein Metrik-Wert) |
+
+`enabled_metrics=None` ("nie ausgewaehlt") bedeutet fuer den Vergleichs-
+Wrapper "alles zeigen" — konsistent mit dem `None`-Verhalten der
+Uebersichts-Matrix (`resolve_enabled_metrics()`). Quelle dieser Tabelle:
+`docs/specs/modules/compare_location_summary.md` (Issue #1278/#1285,
+PO-freigegeben) — bei Aenderung an `RENDERER_TO_TRIP_METRIC_ID` gilt diese
+Datei hier als das aktuell zu pflegende Duplikat fuer beide Aufrufer.
+
 ### 1. CompactSummaryFormatter
 
-**File:** `src/formatters/compact_summary.py`
+**File (aktuell):** `src/output/renderers/compact_summary.py` (Stand 2026-02-17
+lag die Klasse noch unter `src/formatters/compact_summary.py`, s. Purpose-
+Nachtrag oben; der folgende Codeblock ist der urspruengliche v1.1-Entwurf und
+zeigt nicht den seit #1278 ergaenzten `tz`-Parameter — s. Abschnitt 0 fuer die
+aktuelle Signatur)
 
 ```python
 class CompactSummaryFormatter:
@@ -356,5 +458,19 @@ TripReportSchedulerService._send_trip_report()
 
 ## Changelog
 
+- 2026-07-16: v1.3 — Zweiter Aufrufkontext (Issue #1278/#1285, s. auch
+  `docs/specs/modules/compare_location_summary.md`). Der Baustein bekam
+  einen kontextneutralen Kern `format_weather_summary()`
+  (`compact_summary.py:61`) plus zwei Wrapper: `format_stage_summary()`
+  (`:40`, `context="route"`, unveraendert) und die neue Modulfunktion
+  `format_location_summary()` (`:417`, `context="vergleich"`, Aufrufer:
+  Orts-Vergleich-Renderer). Regel ergaenzt: `_shorten_stage_name()` wird bei
+  `context="vergleich"` nicht angewendet (Ortsname bleibt voll). Vollstaendige
+  Metrik-Vokabular-Uebersetzungstabelle (Frontend-ID → Compare-Renderer-ID →
+  Trip-Metrik-ID) aus `compare_location_summary.md` uebernommen — diese Datei
+  gilt jetzt als Single Source of Truth fuer beide Aufrufer. Source-Pfad
+  korrigiert: der Baustein liegt nicht mehr unter `src/formatters/`, sondern
+  unter `src/output/renderers/compact_summary.py` (verifiziert; die alte
+  "Scope"-Tabelle bleibt als historischer Schnappschuss unangetastet).
 - 2026-02-17: v1.0 Initial spec
 - 2026-02-17: v1.1 Zeitliche Qualifizierung (Peak-Zeiten, Uebergaenge)

@@ -65,10 +65,13 @@ class TestResolveEnabledMetrics:
     def test_unknown_ids_are_dropped_not_crashed(self):
         from output.renderers.compare_metric_ids import resolve_enabled_metrics
 
-        # visibility_min_m hat kein ComparisonResult-Feld -> bewusst nicht gemappt
-        # (siehe Spec, Known Limitations). Darf nicht crashen, muss zu None
-        # abbilden (kein leeres Matrix-Rendering statt "alle Metriken").
-        result = resolve_enabled_metrics(["visibility_min_m"])
+        # Issue #1285: Das Beispiel war bis 2026-07-16 `visibility_min_m` mit der
+        # Begruendung "kein ComparisonResult-Feld -> bewusst nicht gemappt". Genau
+        # dieses Nicht-Mappen war der Bug (Auswahl wurde still verworfen); Sicht
+        # ist jetzt gemappt und taugt nicht mehr als Beispiel fuer eine UNBEKANNTE
+        # ID. Die Aussage des Tests bleibt unveraendert -- geprueft mit einer ID,
+        # die es wirklich nicht gibt.
+        result = resolve_enabled_metrics(["voellig_unbekannte_metrik_xyz"])
         assert result is None, (
             f"Unbekannte ID muss verworfen werden -> Ergebnis None (nicht leeres "
             f"Set, nicht Absturz), erhalten {result!r}"

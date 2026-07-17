@@ -14,7 +14,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
-    from app.models import ForecastDataPoint, UnifiedWeatherDisplayConfig
+    from app.models import ForecastDataPoint, ThunderLevel, UnifiedWeatherDisplayConfig
     from services.official_alerts.models import OfficialAlert
 
 
@@ -137,6 +137,18 @@ class LocationResult:
     cloud_high_avg: Optional[int] = None  # High cloud layer for effective cloud calculation
     above_low_clouds: bool = False  # True if elevation >= 2500m (shows "*" marker)
     sunny_hours: Optional[int] = None
+    # Issue #1285 — Tages-Aggregate, die bisher fehlten (Auswahl im Editor wurde
+    # dadurch still verworfen). Additiv, optional, Default None: bestehende
+    # Aufrufer, die LocationResult ohne diese Keywords bauen
+    # (dict_to_comparison_result, validator_render_service), funktionieren
+    # unveraendert -- der Renderer leitet den Wert dann live aus hourly_data ab.
+    # Feldnamen + Rechenregeln identisch zu SegmentWeatherSummary (Trip-Pfad):
+    # Regen SUM, Gewitter MAX-Ordinal, Sicht MIN, UV MAX, Regenwahrsch. MAX.
+    precip_sum_mm: Optional[float] = None
+    thunder_level_max: Optional["ThunderLevel"] = None
+    visibility_min_m: Optional[int] = None
+    uv_index_max: Optional[float] = None
+    pop_max_pct: Optional[int] = None
     hourly_data: List["ForecastDataPoint"] = field(default_factory=list)
     error: Optional[str] = None  # Error message if fetch failed
     # Issue #1034 — amtliche Warnungen (transient, keine Persistenz betroffen)

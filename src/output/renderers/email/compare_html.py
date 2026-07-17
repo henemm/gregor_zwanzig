@@ -112,24 +112,6 @@ def _sev_visibility(v: float) -> str:
     return "danger" if v < 1000 else "warn" if v < 3000 else "caution" if v < 5000 else "ok"
 
 
-# Issue #1214 Scheibe 2: "metric_id" verweist auf den Katalog-Eintrag
-# (metric_catalog._METRICS) und ist die dokumentierte Verbindung fuer die
-# Konsolidierung. In dieser Scheibe wird nur wind ueber severity_for/Katalog
-# gefahren (Wind-45-Fix); die uebrigen Severity-/Format-Helfer bleiben lokal,
-# weil der Katalog fuer sie KEINE aequivalenten display_thresholds/decimals
-# bereitstellt (s. Report-Auffaelligkeit) und ein Umstellen sonst still das
-# Rendering aendern wuerde. Die metric_id-Felder bereiten Scheibe 3+ vor.
-CV2_METRICS = [
-    {"key": "warn", "label": "Amtliche Warnungen", "kind": "warn"},
-    {"key": "temp_max", "metric_id": "temperature", "label": "Temp max", "unit": "°C", "sev": _sev_temp},
-    {"key": "wind_max", "metric_id": "wind", "label": "Wind", "unit": "km/h", "sev": _sev_wind},
-    {"key": "sunny_hours", "metric_id": "sunshine", "label": "Sonne", "unit": "h", "decimals": 1},
-    {"key": "cloud_avg", "metric_id": "cloud_total", "label": "Wolken", "unit": "%"},
-    {"key": "uv_max", "metric_id": "uv_index", "label": "UV max", "unit": "", "sev": _sev_uv},
-    {"key": "snow_depth_cm", "metric_id": "snow_depth", "label": "Schneehöhe", "unit": "cm"},
-    {"key": "snow_new_cm", "metric_id": "fresh_snow", "label": "Neuschnee", "unit": "cm"},
-]
-
 _WEEKDAY_ABBR = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 
 # Format-Vorbild html.py:1160-1161 -- lokale Kopie statt Import (eigenstaendiges
@@ -180,6 +162,52 @@ def _sev_thunder(v):
 
 def _sev_rain_safe(v) -> str:
     return _sev_rain(v or 0.0)
+
+
+def _fmt_visibility_overview(v) -> str:
+    """Sicht-TAGESWERT der Uebersichts-Matrix (Issue #1285).
+
+    Nutzt die bestehende Compare-Darstellung (`_fmt_visibility`: Meter -> km,
+    eine Nachkommastelle) und haengt die Einheit an -- anders als die
+    Stundentabelle hat die Uebersicht keine Einheiten-Legende unter sich, in
+    der "km" sonst stuende. Der zugrundeliegende Wert bleibt der Trip-Wert in
+    Metern (AC-15), nur die Anzeige ist compare-typisch.
+    """
+    return f"{_fmt_visibility(v)} km" if v is not None else "—"
+
+
+# Issue #1214 Scheibe 2: "metric_id" verweist auf den Katalog-Eintrag
+# (metric_catalog._METRICS) und ist die dokumentierte Verbindung fuer die
+# Konsolidierung. In dieser Scheibe wird nur wind ueber severity_for/Katalog
+# gefahren (Wind-45-Fix); die uebrigen Severity-/Format-Helfer bleiben lokal,
+# weil der Katalog fuer sie KEINE aequivalenten display_thresholds/decimals
+# bereitstellt (s. Report-Auffaelligkeit) und ein Umstellen sonst still das
+# Rendering aendern wuerde. Die metric_id-Felder bereiten Scheibe 3+ vor.
+#
+# Issue #1285: precip_sum/pop_max/thunder_max/visibility_min sind NEU -- ihre
+# Auswahl wurde bis 2026-07-16 STILL verworfen, weil es die Zeile gar nicht
+# gab. "fmt" (optional) ersetzt die Zahl+Einheit-Standardformatierung
+# `_fmt_metric` -- noetig fuer Nicht-Zahlwerte (Gewitter ist ein
+# ThunderLevel-Enum und kracht in `f"{value:.0f}"` mit TypeError) und fuer die
+# m->km-Umrechnung der Sicht. Zeilen OHNE "fmt" verhalten sich unveraendert.
+CV2_METRICS = [
+    {"key": "warn", "label": "Amtliche Warnungen", "kind": "warn"},
+    {"key": "temp_max", "metric_id": "temperature", "label": "Temp max", "unit": "°C", "sev": _sev_temp},
+    {"key": "wind_max", "metric_id": "wind", "label": "Wind", "unit": "km/h", "sev": _sev_wind},
+    {"key": "precip_sum", "metric_id": "precipitation", "label": "Regen", "unit": "mm",
+     "decimals": 1, "sev": _sev_rain},
+    {"key": "pop_max", "metric_id": "rain_probability", "label": "Regenwahrscheinlichkeit",
+     "unit": "%", "sev": _sev_pop},
+    {"key": "thunder_max", "metric_id": "thunder", "label": "Gewitter",
+     "fmt": _fmt_thunder, "sev": _sev_thunder},
+    {"key": "sunny_hours", "metric_id": "sunshine", "label": "Sonne", "unit": "h", "decimals": 1},
+    {"key": "cloud_avg", "metric_id": "cloud_total", "label": "Wolken", "unit": "%"},
+    {"key": "uv_max", "metric_id": "uv_index", "label": "UV max", "unit": "", "sev": _sev_uv},
+    {"key": "visibility_min", "metric_id": "visibility", "label": "Sicht min",
+     "fmt": _fmt_visibility_overview, "sev": _sev_visibility},
+    {"key": "snow_depth_cm", "metric_id": "snow_depth", "label": "Schneehöhe", "unit": "cm"},
+    {"key": "snow_new_cm", "metric_id": "fresh_snow", "label": "Neuschnee", "unit": "cm"},
+]
 
 
 # Issue #1106: ersetzt _HOUR_COLUMNS -- 9 konfigurierbare Wert-Spalten,
@@ -291,11 +319,44 @@ def _render_warn_cell(alerts: list) -> str:
 # Uebersichtstabelle (Metriken x Orte)
 # ---------------------------------------------------------------------------
 
-def _metric_value(loc: LocationResult, key: str) -> Optional[float]:
-    if key == "uv_max":
-        vals = [dp.uv_index for dp in loc.hourly_data if dp.uv_index is not None]
-        return max(vals) if vals else None
-    return getattr(loc, key, None)
+# Issue #1285: Uebersichts-Zeilen, deren Tageswert NICHT als gleichnamiges
+# LocationResult-Feld vorliegt. (Renderer-Zeilen-Key -> LocationResult-Feld /
+# SegmentWeatherSummary-Feld). Beide Quellen tragen denselben Namen, weil das
+# LocationResult-Feld exakt das Trip-Aggregat spiegelt.
+_DAILY_AGGREGATE_FIELD: dict[str, str] = {
+    "precip_sum": "precip_sum_mm",
+    "pop_max": "pop_max_pct",
+    "thunder_max": "thunder_level_max",
+    "uv_max": "uv_index_max",
+    "visibility_min": "visibility_min_m",
+}
+
+
+def _daily_summary(loc: LocationResult):
+    """Tages-Aggregat eines Ortes aus ``hourly_data`` (kanonische Trip-Regeln).
+
+    Der Renderer darf sich NICHT darauf verlassen, dass die ComparisonEngine
+    gelaufen ist: ``dict_to_comparison_result()`` und der Validator-Render-Pfad
+    fuettern denselben Renderer ohne Engine. Genau dieses Live-Ableiten aus
+    ``hourly_data`` macht ``uv_max`` heute schon (Issue #1110); die vier neuen
+    Zeilen folgen demselben Muster.
+    """
+    from services.weather_metrics import summarize_points
+
+    return summarize_points(loc.hourly_data)
+
+
+def _metric_value(loc: LocationResult, key: str, summary=None):
+    field = _DAILY_AGGREGATE_FIELD.get(key)
+    if field is None:
+        return getattr(loc, key, None)
+    # Engine-Wert hat Vorrang; fehlt er (kein Engine-Lauf), live ableiten.
+    value = getattr(loc, field, None)
+    if value is not None:
+        return value
+    if summary is None:
+        summary = _daily_summary(loc)
+    return getattr(summary, field, None) if summary is not None else None
 
 
 def _fmt_metric(value, decimals, unit: str) -> str:
@@ -307,8 +368,12 @@ def _fmt_metric(value, decimals, unit: str) -> str:
     return f"{text}{unit}" if unit in ("°C", "%") else f"{text} {unit}"
 
 
-def _render_overview_row(m: dict, locations: list[LocationResult], marks: dict | None = None) -> str:
+def _render_overview_row(
+    m: dict, locations: list[LocationResult], marks: dict | None = None,
+    summaries: dict | None = None,
+) -> str:
     marks = marks or {}
+    summaries = summaries or {}
     label_cell = (
         f'<td style="text-align:left;padding:8px 5px;font-family:{FONT_UI};'
         f'color:{G_INK_MUTED};font-weight:500;font-size:12px;'
@@ -323,7 +388,10 @@ def _render_overview_row(m: dict, locations: list[LocationResult], marks: dict |
                 f'border-right:1px solid #f0ece1;">{content}</td>'
             )
             continue
-        value = None if loc.error is not None else _metric_value(loc, m["key"])
+        value = (
+            None if loc.error is not None
+            else _metric_value(loc, m["key"], summaries.get(id(loc)))
+        )
         sev_fn = m.get("sev")
         sev_level = sev_fn(value) if (sev_fn and value is not None) else None
         bg, fg, weight = "transparent", G_INK, "500"
@@ -332,7 +400,8 @@ def _render_overview_row(m: dict, locations: list[LocationResult], marks: dict |
             # Palette (kanonisches Vokabular), Compare-lokal -> kanonisch.
             bg, fg = tone_css(_COMPARE_TO_CANONICAL[sev_level])
             weight = "700"
-        text = _fmt_metric(value, m.get("decimals"), m.get("unit", ""))
+        fmt_fn = m.get("fmt")
+        text = fmt_fn(value) if fmt_fn else _fmt_metric(value, m.get("decimals"), m.get("unit", ""))
         marked = _is_marked(marks.get(m["key"]), value)
         cls = ' class="corridor-mark"' if marked else ""
         bg, extra_style = _mark_cell_style(bg, marked)
@@ -375,7 +444,16 @@ def _render_overview_table(
         f'{"".join(header_cells)}</tr>'
     )
     marks = _mark_lookup(corridors, FRONTEND_TO_RENDERER_METRIC_ID)
-    rows = "".join(_render_overview_row(m, locations, marks) for m in _visible_metrics(enabled_metrics))
+    visible = _visible_metrics(enabled_metrics)
+    # Tages-Aggregate EINMAL je Ort ableiten (nicht je Zeile x Ort) -- nur wenn
+    # ueberhaupt eine Zeile davon lebt.
+    summaries: dict = {}
+    if any(m["key"] in _DAILY_AGGREGATE_FIELD for m in visible):
+        summaries = {
+            id(loc): _daily_summary(loc)
+            for loc in locations if loc.error is None and loc.hourly_data
+        }
+    rows = "".join(_render_overview_row(m, locations, marks, summaries) for m in visible)
     table = (
         f'<table cellspacing="0" cellpadding="0" style="width:100%;min-width:760px;'
         f'border-collapse:collapse;font-family:{FONT_DATA};'
@@ -386,6 +464,31 @@ def _render_overview_table(
         f'<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;'
         f'margin-top:12px;border:1px solid #e6e1d3;">{table}</div>'
     )
+
+
+def _render_summary_block(locations: list[LocationResult], enabled_metrics: set | None) -> str:
+    """Kurz-Zusammenfassung je Ort unter der Uebersichts-Matrix (Issue #1278).
+
+    Der Satz kommt vom GETEILTEN Trip-Baustein (``format_location_summary`` ->
+    ``CompactSummaryFormatter.format_weather_summary``) -- hier wird nur
+    plaziert, nicht formuliert. Orte ohne Daten liefern "" und erzeugen keinen
+    Eintrag (Anti-Erosion, AC-9); liefert kein Ort einen Satz, entfaellt der
+    ganze Block.
+    """
+    from output.renderers.compact_summary import format_location_summary
+
+    rows = []
+    for loc in locations:
+        text = format_location_summary(loc, enabled_metrics)
+        if not text:
+            continue
+        rows.append(
+            f'<div style="padding:5px 0;font-family:{FONT_UI};font-size:13px;'
+            f'line-height:1.5;color:{G_INK};">{_html.escape(text)}</div>'
+        )
+    if not rows:
+        return ""
+    return f'<div style="padding:14px 24px 0;">{"".join(rows)}</div>'
 
 
 def _render_warn_banner(locations: list[LocationResult]) -> str:
@@ -846,9 +949,15 @@ def render_compare_html(
         f'{_render_section_head("ÜBERSICHT", "Alle Orte · gewählte Metriken", "← scrollen")}'
         f'{_render_overview_table(locations, enabled_metrics, corridors)}</div>'
     )
+    summary_html = _render_summary_block(locations, enabled_metrics)
+    # Issue #1278 (Nebenbefund, AC-12): die dritte Angabe war fest "09–16 Uhr" --
+    # ein toter Rest des mit #1268 abgeschafften Zeitfensters. Die Bewertung
+    # laeuft seit #1268 ueber den ganzen Tag; die Angabe behauptete eine
+    # Einschraenkung, die es nicht gibt. Ersatzlos leer (analog zur bereits
+    # entfernten Zeitfenster-Zeile im Klartext-Header, comparison.py:77).
     hourly_head_html = (
         f'<div style="padding:26px 24px 0;">'
-        f'{_render_section_head("STUNDEN", "Stundenverlauf · alle Orte", "09–16 Uhr")}</div>'
+        f'{_render_section_head("STUNDEN", "Stundenverlauf · alle Orte", "")}</div>'
     ) if hourly_enabled else ""
     hourly_sections_html = (
         "".join(_render_location_section(loc, i, hourly_metrics, corridors) for i, loc in enumerate(locations))
@@ -864,7 +973,7 @@ def render_compare_html(
     body_html = "\n".join(
         part for part in (
             header_html, warnings_html, warn_banner_html, overview_html,
-            hourly_head_html, hourly_sections_html, legend_html, abo_html,
+            summary_html, hourly_head_html, hourly_sections_html, legend_html, abo_html,
             app_footer_html,
         ) if part
     )
