@@ -62,14 +62,14 @@ const here = dirname(fileURLToPath(import.meta.url));
 // __tests__ -> compare -> steps
 const STEP2_FILE = join(here, '..', 'steps', 'Step2Orte.svelte');
 // __tests__ -> compare
-const COMPARE_EDITOR_FILE = join(here, '..', 'CompareEditor.svelte');
+const COMPARE_TABS_FILE = join(here, '..', 'CompareTabs.svelte');
 
 function readStep2(): string {
 	return readFileSync(STEP2_FILE, 'utf-8');
 }
 
-function readCompareEditor(): string {
-	return readFileSync(COMPARE_EDITOR_FILE, 'utf-8');
+function readCompareTabs(): string {
+	return readFileSync(COMPARE_TABS_FILE, 'utf-8');
 }
 
 /**
@@ -211,65 +211,65 @@ describe('Nebenbefund (selbe Root Cause wie AC-13), GREEN: Picked-Item-Meta-Zeil
 });
 
 // =============================================================================
-// Mini-Fix-Loop 1 (Adversary AMBIGUOUS, F001 MEDIUM, reine Testabdeckungs-
-// Lücke — Code war bereits korrekt): das ceGroups-Lazy-Gate
-// (CompareEditor.svelte:397-403) wehrt exakt dieselbe Fehlerklasse ab wie
-// Scheibe 4 (ltCatalogLoadStarted/ltLoadCatalog, s.
-// compare_editor_layout_tab_wiring.test.ts:343-352 — "ein $effect gated
-// ltLoadCatalog() auf activeTab === 'layout' … mit Start-Guard"), hatte aber
-// bislang KEINEN eigenen Regressions-Test. Dieser Block schließt die Lücke
-// 1:1 analog zum S4-Muster, diesmal für den Gruppen-Fetch (ceLoadGroups /
-// activeTab === 'orte' / ceGroupsLoadStarted).
+// Fix-Loop 1 (S4b-Migration, Epic #1273): das Gruppen-/Orte-Lazy-Gate lebte
+// ursprünglich als ceGroups-Pattern in CompareEditor.svelte (Adversary
+// AMBIGUOUS, F001 MEDIUM — s. Historie oben) und wehrte dieselbe Fehlerklasse
+// ab wie Scheibe 4 (unbedingter Fetch bei jedem Mount statt gegated auf
+// tatsächliche Nutzung). CompareEditor.svelte ist seit S3 nur noch vom
+// Create-Wizard erreichbar und wird in S5 gelöscht; der Hub (CompareTabs.svelte)
+// implementiert dasselbe Lazy-Gate-Muster unter anderen Namen: statt eines
+// $effect auf activeTab === 'orte' triggert hier der Klick auf "Ort
+// hinzufügen" (addPanelOpen-Toggle) den Fetch, mit demselben synchronen
+// Start-Guard-Muster (addPanelLoadStarted) VOR dem async-Aufruf.
+// Migriert im Rahmen von Epic #1273 Scheibe S4b (Unit-Test-Migration).
 // =============================================================================
 
-describe('Fix-Loop 1 (S5, Adversary F001 MEDIUM): Gruppen-Fetch ist an den Orte-Tab-Besuch gekoppelt, kein unbedingter Mount-Fetch', () => {
-	test('GET /api/groups läuft aus einer eigenständigen async-Funktion (ceLoadGroups), nicht direkt in onMount', () => {
-		const src = readCompareEditor();
+describe('Fix-Loop 1 (S4b-Migration): Orte-Bibliothek-Fetch ist an das Öffnen des "Ort hinzufügen"-Panels gekoppelt, kein unbedingter Mount-Fetch', () => {
+	test('GET /api/locations + GET /api/groups laufen aus einer eigenständigen async-Funktion (toggleAddPanel), nicht direkt in onMount', () => {
+		const src = readCompareTabs();
 		assert.match(
 			src,
-			/async function ceLoadGroups\(\)[^{]*\{[\s\S]{0,300}?\/api\/groups/,
-			'Der Gruppen-Fetch muss in einer benannten async-Funktion (ceLoadGroups) stecken, die gezielt getriggert werden kann'
+			/async function toggleAddPanel\(\)[^{]*\{[\s\S]{0,300}?\/api\/locations['"][\s\S]{0,200}?\/api\/groups/,
+			'Der Orte-/Gruppen-Fetch muss in einer benannten async-Funktion (toggleAddPanel) stecken, die gezielt getriggert werden kann'
 		);
 	});
 
-	test('ein $effect gated ceLoadGroups() auf activeTab === \'orte\' (einmalig, mit Start-Guard)', () => {
-		const src = readCompareEditor();
+	test('toggleAddPanel() gated den Fetch auf addPanelOpen (einmalig, mit Start-Guard)', () => {
+		const src = readCompareTabs();
 		assert.match(
 			src,
-			/\$effect\(\(\) => \{[\s\S]{0,200}?activeTab === 'orte'[\s\S]{0,200}?ceLoadGroups\(\)/,
-			'Es muss einen $effect geben, der ceLoadGroups() nur bei activeTab === \'orte\' aufruft'
+			/async function toggleAddPanel\(\)[\s\S]{0,30}?\{\s*addPanelOpen = !addPanelOpen;\s*\n\s*if \(!addPanelOpen \|\| addPanelLoadStarted\) return;/,
+			'toggleAddPanel() muss den Fetch nur ausführen, wenn das Panel geöffnet wird und noch nicht geladen wurde'
 		);
 		assert.ok(
-			/ceGroupsLoadStarted/.test(src),
-			'Ein Start-Guard (ceGroupsLoadStarted) muss verhindern, dass der Fetch bei jedem erneuten Tab-Wechsel zurück auf "orte" wiederholt wird'
+			/addPanelLoadStarted/.test(src),
+			'Ein Start-Guard (addPanelLoadStarted) muss verhindern, dass der Fetch bei jedem erneuten Öffnen des Panels wiederholt wird'
 		);
 	});
 
-	test('Start-Guard wird SYNCHRON vor dem Fetch-Aufruf gesetzt (verhindert Doppel-Trigger bei schnellen Tab-Wechseln)', () => {
-		const src = readCompareEditor();
+	test('Start-Guard wird SYNCHRON vor dem Fetch-Aufruf gesetzt (verhindert Doppel-Trigger bei schnellen Klicks)', () => {
+		const src = readCompareTabs();
 		assert.match(
 			src,
-			/ceGroupsLoadStarted = true;\s*\n\s*void ceLoadGroups\(\)/,
-			'ceGroupsLoadStarted muss synchron VOR dem async-Aufruf true werden — sonst kann ein zweiter ' +
-				'$effect-Lauf vor Abschluss des ersten Fetches erneut triggern (Race, S4-Analogie).'
+			/addPanelLoadStarted = true;\s*\n\s*try \{\s*\n\s*const \[locs, groups\] = await Promise\.all/,
+			'addPanelLoadStarted muss synchron VOR dem async-Aufruf true werden — sonst kann ein zweiter ' +
+				'Klick vor Abschluss des ersten Fetches erneut triggern (Race, S4-Analogie).'
 		);
 	});
 
-	// Monkeypatch-selbstprüfend (S4-Muster, hier auf ceLoadGroups zugeschnitten
-	// statt eines pauschalen Datei-weiten "kein onMount(async)"-Verbots — ein
-	// Editor mit mehreren unabhängigen Lazy-Fetches darf andere
-	// onMount(async …)-Blöcke haben, nur eben nicht FÜR ceLoadGroups): kein
-	// onMount(async …)-Block im Quelltext ruft ceLoadGroups() unbedingt auf.
-	test('KEIN onMount(async …)-Block ruft ceLoadGroups() unbedingt auf (S4-F001-Fehlerklasse abgewehrt)', () => {
-		const src = readCompareEditor();
+	// Analog zum ursprünglichen S4/S5-Muster: kein onMount(async …)-Block im
+	// Hub ruft toggleAddPanel() unbedingt auf (Fehlerklasse "unbedingter Fetch
+	// bei jedem Mount" bleibt abgewehrt).
+	test('KEIN onMount(async …)-Block ruft toggleAddPanel() unbedingt auf', () => {
+		const src = readCompareTabs();
 		const onMountAsyncBlocks = [...src.matchAll(/onMount\(async[\s\S]{0,20}?=>\s*\{([\s\S]*?)\n\t\}\);/g)];
-		const offenders = onMountAsyncBlocks.filter((m) => /ceLoadGroups\(\)/.test(m[1]));
+		const offenders = onMountAsyncBlocks.filter((m) => /toggleAddPanel\(\)/.test(m[1]));
 		assert.equal(
 			offenders.length,
 			0,
-			'ceLoadGroups() darf nicht aus einem unbedingten onMount(async …)-Block heraus aufgerufen werden — ' +
-				'das war exakt die Scheibe-4-F001-Root-Cause (unbedingter Fetch bei JEDEM Editor-Mount statt ' +
-				'gegated auf den tatsächlich besuchten Tab).'
+			'toggleAddPanel() darf nicht aus einem unbedingten onMount(async …)-Block heraus aufgerufen werden — ' +
+				'das war exakt die Scheibe-4-F001-Root-Cause (unbedingter Fetch bei JEDEM Mount statt ' +
+				'gegated auf die tatsächliche Nutzung).'
 		);
 	});
 });

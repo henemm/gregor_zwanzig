@@ -1,6 +1,6 @@
 # Epic 1273: Ortsvergleich auf EINE Fläche
 
-**Status:** In Progress (Slice 4a Complete — 2026-07-17)
+**Status:** In Progress (Slice 4b Complete — 2026-07-17)
 **Epic Scope:** Der Ortsvergleich-Hub (`CompareTabs.svelte`) wird nach dem Muster von #616 (Trip-IA) zur **einzigen** Bearbeiten-Fläche für einen Ortsvergleich — vollständig editierbar mit Auto-Save-Chip (`SaveStatus`/`SaveIndicator`, „✓ Gespeichert HH:MM"). Der separate Editor `/compare/[id]/edit` (`CompareEditor.svelte`, aus Epic #677) entfällt am Ende der Migration. Der Create-Wizard (`/compare/new`) bleibt unverändert bestehen.
 **Related Specs:**
 - `docs/specs/modules/feat_1273_s1_compare_hub_save_chip.md` (Slice S1 — Save-Chip-Infra) — Approved, VERIFIED
@@ -8,7 +8,7 @@
 - `docs/specs/modules/feat_1273_s3_redirect.md` (Slice S3 — Edit-Route wird reiner Redirect) — Approved, Adversary-Verdict AMBIGUOUS→behoben, alle 7 ACs CONFIRMED
 - `docs/context/epic-1273-compare-one-surface.md` (Kontext-/Analyse-Dokument, Scheiben-Schnitt)
 
-**Child Slices:** S1 ✓ (2026-07-16) · S2 ✓ (2026-07-17) · S3 ✓ (2026-07-17) · S4a ✓ Teilmenge 4/26 e2e (2026-07-17) · S4b offen (~15 Unit-Tests) · S4c offen (~19 verbleibende e2e-Specs, neu entdeckt bei S4a) · S5 offen, blockiert durch S4b+S4c
+**Child Slices:** S1 ✓ (2026-07-16) · S2 ✓ (2026-07-17) · S3 ✓ (2026-07-17) · S4a ✓ Teilmenge 4/26 e2e (2026-07-17) · S4b ✓ (2026-07-17) · S4c offen (~19 verbleibende e2e-Specs, neu entdeckt bei S4a) · S5 offen, blockiert durch S4c
 
 **PO-Auftrag:** Prod-Audit, Befund 9, 2026-07-16.
 
@@ -44,7 +44,7 @@ Der heutige Ortsvergleich hat zwei Bearbeiten-Flächen: den Detail-Hub `CompareT
 | **S2** | Name/Region/Aktivitätsprofil-Parität im Hub (TripHeader-Muster: isoliert, nicht über `schedule()`) — Feature-Paritäts-Lücke, Muss-Blocker vor jedem Redirect | ✓ fertig 2026-07-17 |
 | **S3** | 7 produktive Link-Stellen auf den Hub umbiegen (inkl. Hash→Query-Fix `#idealwerte`→`?tab=idealwerte`, `#schedule`→`?tab=versand`) + Redirect-Route (`/edit` → `/compare/[id]?tab=`) | ✓ fertig 2026-07-17 |
 | **S4a** | Teilmenge der ~26 e2e-Specs: 4 Dateien, die nur totes Editor-Chrome oder eine überholte URL prüfen (löschen/URL-Fix) — NICHT die vollständigen ~26, s. Korrektur unten | ✓ Complete 2026-07-17 |
-| **S4b** | ~15 Unit-Tests (Source-Inspection auf `CompareEditor.svelte`) migrieren/löschen | Geplant |
+| **S4b** | ~15 Unit-Tests (Source-Inspection auf `CompareEditor.svelte`) migrieren/löschen | ✓ Complete 2026-07-17 |
 | **S4c** *(neu, 2026-07-17 bei S4a-Recherche entdeckt)* | ~19 verbleibende e2e-Specs, die gültige Fachlogik über den alten Editor prüfen (Idealwerte, Alarme, Radar-Toggle, Altfelder-Erhalt beim Speichern — Bezug BUG-DATALOSS-GR221/#102 —, Versand-Tab, Autosave-Mandantentrennung) strukturell auf den Hub umziehen (Testids, Autosave-Warten statt Save-Klick) | Geplant — **muss vor S5 abgeschlossen sein**, sonst reißt die Editor-Löschung diese Tests ersatzlos |
 | **S5** | Cleanup: `CompareEditor.svelte` + `/edit`-Route löschen, verwaiste Helper prüfen (netto ~-1900 LoC, Sonderfall wie #616) | Geplant, blockiert durch S4b + S4c |
 
@@ -196,12 +196,12 @@ Präzedenzfall: `TripHeader.svelte` (Trip-Name-Bearbeitung läuft ebenfalls isol
 | 2026-07-17 | S2 | Name/Region/Aktivitätsprofil inline editierbar im Compare-Hub-Kopfbereich (Desktop + Mobile), TripHeader-Muster (Stift-Icon, isolierter Save-Pfad ohne `saveController`), Round-Trip-Spread-Payload gegen Datenverlust, `data.preset = updated`-Referenzersetzung für Cross-Tab-Resync über bestehenden `$effect` in `CompareTabs.svelte`. Adversary-Verdict AMBIGUOUS→Freigabe nach Test-Fix (AC-5-Test nutzte ursprünglich `page.goto()` statt In-Page-Tab-Klick, korrigiert). 6/7 ACs sofort CONFIRMED, AC-5 nach Fix ebenfalls CONFIRMED. Issue #1273 (Slice 2). Spec: `docs/specs/modules/feat_1273_s2_compare_hub_name_region_profil.md`. |
 | 2026-07-17 | S3 | `/compare/[id]/edit` wird reiner 307-Redirect auf `/compare/[id]` (Muster #616), alle 7 externen Linkstellen umgebogen, 2 vormals hash-basierte Schnellaktionen nutzen jetzt `?tab=idealwerte`/`?tab=versand`, redundante Hub-eigene Bearbeiten-Affordanzen (Desktop-Button, Mobile-Stift) entfernt, `compareDetailActions()` liefert keinen `edit`-Eintrag mehr (reiner Alias auf `compareLifecycleActions()`). Adversary-Verdict AMBIGUOUS→behoben: F001 (AC-2/AC-3-Tests nutzten Datei-Grep statt echtem Funktionsaufruf) behoben durch Extraktion von `resolveCompareTab()` in `compareTabsResolve.ts`, alle 7 ACs CONFIRMED. Bekannte Grenze: `CompareEditor.svelte` bleibt toter Code (S5), ~26 e2e-Specs + einzelne Unit-Tests auf `/edit` sind strukturell rot (S4-Scope). Issue #1273 (Slice 3). Spec: `docs/specs/modules/feat_1273_s3_redirect.md`. |
 | 2026-07-17 | S4a | 4 von ~26 e2e-Playwright-Specs migriert (nur totes Editor-Chrome/überholte URL, NICHT die vollständige Migration — Korrektur ggü. ursprünglicher Slice-Beschreibung, s. „Geplante Slices" oben). NEU: `compare-cross-user-write-block.spec.ts` (Sicherheitstest User-Isolation, rein API-basiert). GELÖSCHT: `compare-editor-edit.spec.ts` (unerreichbar nach S3-Redirect). Aktualisiert: `bug-626-compare-menu-actions.spec.ts`, `compare-detail-edit-entry.spec.ts`; `compare-editor-autosave-user-isolation.spec.ts` unverändert (selbst strukturell rot, gehört zu S4c). Adversary-Verdict AMBIGUOUS→Override erteilt (F002 gelöst via Draft-Preset-Fixture; F001/F004 kosmetisch). 11 passed, 0 failed, 0 skipped. Verbleibende ~19 e2e-Specs mit gültiger Fachlogik → neue Scheibe S4c. Issue #1273 (Slice 4a). Spec: `docs/specs/modules/epic_1273_s4a_test_migration.md`. |
+| 2026-07-17 | S4b | ~15 Unit-Tests migriert/gelöscht: GELÖSCHT 3 Dateien (`compare_editor_gesture_capture_scope.test.ts`, `compare_editor_mobile_fidelity.test.ts`, `compare_editor_layout_tab_wiring.test.ts`). ANGEPASST 2 Dateien (je ein Testblock von `CompareEditor.svelte` auf `CompareTabs.svelte` umgezogen): `step2_orte_library_grouping.test.ts`, `corridorEditorMobile.test.ts`. NACHTRAG 1 Datei: `issue_683_wizard_remove.test.ts` (veralteter S3-Test korrigiert). Gesamt Pytest-Kernlauf: 462/470 Tests grün; 5 Fehlschläge nachweislich unabhängig (#1296, #1268). Adversary-Verdict AMBIGUOUS→Override erteilt (2 kosmetische Spec-Dokumentationsfehler behoben, keine Implementierungsfehler). Issue #1273 (Slice 4b). Spec: `docs/specs/modules/epic_1273_s4b_unit_test_migration.md`. |
 
 ---
 
 ## Future Work
 
-- **S4b:** Unit-Test-Migration (~15 Unit-Tests auf `CompareEditor.svelte`).
 - **S4c:** ~19 verbleibende e2e-Specs mit gültiger Fachlogik (Idealwerte, Alarme, Radar-Toggle, Altfelder-Erhalt, Versand-Tab, Autosave-Mandantentrennung) strukturell auf den Hub umziehen — Voraussetzung für S5, sonst reißt die Editor-Löschung diese Tests ersatzlos.
-- **S5:** `CompareEditor.svelte` + `/edit`-Route löschen — schließt zugleich Slice 6 aus Epic #677 ab (dort als „CompareWizard-Deletion, Full Tab-Editor-Umstieg" vermerkt). Blockiert durch S4b + S4c.
+- **S5:** `CompareEditor.svelte` + `/edit`-Route löschen — schließt zugleich Slice 6 aus Epic #677 ab (dort als „CompareWizard-Deletion, Full Tab-Editor-Umstieg" vermerkt). Blockiert durch S4c.
 

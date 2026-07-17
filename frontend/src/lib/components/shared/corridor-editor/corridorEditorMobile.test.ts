@@ -21,7 +21,11 @@ import { openBoundValue } from './corridorEditorState.ts';
 const here = dirname(fileURLToPath(import.meta.url));
 const MOBILE = join(here, 'CorridorEditorMobile.svelte');
 const TRIP_TABS = join(here, '..', '..', 'trip-detail', 'TripTabs.svelte');
-const COMPARE_EDITOR = join(here, '..', '..', 'compare', 'CompareEditor.svelte');
+// Migriert (Epic #1273 Scheibe S4b): CompareEditor.svelte ist seit S3 nur noch
+// vom Create-Wizard erreichbar und wird in S5 geloescht. Der Hub
+// (CompareTabs.svelte) mountet CorridorEditorMobile im mobilen Idealwerte-
+// Tab-Zweig (Zeile ~1119) — identisches Muster, jetzt dort geprueft.
+const COMPARE_TABS = join(here, '..', '..', 'compare', 'CompareTabs.svelte');
 
 // ────────────────────────────────────────────────────────────────────────────
 // F001-Fix (Adversary HIGH): openBound() muss den 25%/75%-Fallback gegen die
@@ -153,10 +157,17 @@ describe('Einbau TripTabs.svelte — Mobile-Zweig context="route"', () => {
 	});
 });
 
-describe('Einbau CompareEditor.svelte — Mobile-Zweig context="vergleich"', () => {
-	test('mountet CorridorEditorMobile context="vergleich" statt Step3Idealwerte', () => {
-		const src = readFileSync(COMPARE_EDITOR, 'utf-8');
+describe('Einbau CompareTabs.svelte (Hub) — Mobile-Zweig context="vergleich"', () => {
+	test('mountet CorridorEditorMobile context="vergleich" im mobilen Idealwerte-Tab-Zweig', () => {
+		const src = readFileSync(COMPARE_TABS, 'utf-8');
 		assert.match(src, /<CorridorEditorMobile\s+context="vergleich"/, 'CorridorEditorMobile context="vergleich" fehlt im Mobile-Zweig');
-		assert.ok(!/<Step3Idealwerte\b/.test(src), 'Step3Idealwerte darf nicht mehr instanziiert werden');
+		// Negativ-Gegenprobe: der mobile Mount muss im {#if isMobileViewport}-Zweig
+		// stehen, dessen {:else}-Zweig stattdessen den Desktop-CorridorEditor mountet
+		// (kein Step3Idealwerte-Aequivalent im Hub, s. Recherche-Ergebnis S4b-Kontext).
+		assert.match(
+			src,
+			/\{#if isMobileViewport\}\s*<CorridorEditorMobile context="vergleich" \/>\s*\{:else\}\s*<CorridorEditor context="vergleich" \/>/,
+			'CorridorEditorMobile context="vergleich" muss im mobilen Zweig stehen, mit CorridorEditor context="vergleich" als Desktop-Gegenstueck im {:else}-Zweig'
+		);
 	});
 });
