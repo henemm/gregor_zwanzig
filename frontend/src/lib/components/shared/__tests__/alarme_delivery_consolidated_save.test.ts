@@ -30,7 +30,6 @@ import { buildAlarmeDeliveryPayload } from '../alarme-tab/alarmeDeliveryPayload.
 
 test('#1258 AC-12a: buildAlarmeDeliveryPayload konsolidiert mehrere geänderte Felder in EIN Payload-Objekt mit allen Keys', () => {
 	const payload = buildAlarmeDeliveryPayload({
-		officialAlertsEnabled: true,
 		officialWarningsEnabled: false,
 		cooldownMinutes: 45,
 		quietFrom: '22:00',
@@ -38,7 +37,6 @@ test('#1258 AC-12a: buildAlarmeDeliveryPayload konsolidiert mehrere geänderte F
 		channels: { email: true, telegram: false, sms: false }
 	});
 	assert.deepEqual(payload, {
-		official_alerts_enabled: true,
 		official_warnings: { enabled: false },
 		alert_cooldown_minutes: 45,
 		alert_quiet_from: '22:00',
@@ -49,7 +47,6 @@ test('#1258 AC-12a: buildAlarmeDeliveryPayload konsolidiert mehrere geänderte F
 
 test('#1258 AC-12a: official_warnings enthält NUR "enabled", KEINEN sources-Key (Server-RMW erhält Bestand, S1-F002)', () => {
 	const payload = buildAlarmeDeliveryPayload({
-		officialAlertsEnabled: true,
 		officialWarningsEnabled: true,
 		cooldownMinutes: 30,
 		channels: { email: true, telegram: false, sms: false }
@@ -58,13 +55,12 @@ test('#1258 AC-12a: official_warnings enthält NUR "enabled", KEINEN sources-Key
 	assert.equal('sources' in payload.official_warnings, false);
 });
 
-// Adversary Fix-Loop 1, F002: officialAlertsEnabled/officialWarningsEnabled
-// waren optional mit stillem Default (enabled:false) bei fehlendem Wert —
-// jetzt PFLICHT + Laufzeit-Guard (strip-types prüft zur Laufzeit nichts).
+// Adversary Fix-Loop 1, F002: officialWarningsEnabled war optional mit
+// stillem Default (enabled:false) bei fehlendem Wert — jetzt PFLICHT +
+// Laufzeit-Guard (strip-types prüft zur Laufzeit nichts).
 test('#1258 AC-12a/F002: buildAlarmeDeliveryPayload wirft bei fehlendem officialWarningsEnabled (kein stilles false)', () => {
 	assert.throws(() => {
 		buildAlarmeDeliveryPayload({
-			officialAlertsEnabled: true,
 			officialWarningsEnabled: undefined as unknown as boolean,
 			channels: { email: true, telegram: false, sms: false }
 		});
@@ -74,7 +70,6 @@ test('#1258 AC-12a/F002: buildAlarmeDeliveryPayload wirft bei fehlendem official
 test('#1258 AC-12a/F002: buildAlarmeDeliveryPayload wirft bei Nicht-boolean officialWarningsEnabled (z.B. String aus falscher Quelle)', () => {
 	assert.throws(() => {
 		buildAlarmeDeliveryPayload({
-			officialAlertsEnabled: true,
 			officialWarningsEnabled: 'true' as unknown as boolean,
 			channels: { email: true, telegram: false, sms: false }
 		});
@@ -83,7 +78,6 @@ test('#1258 AC-12a/F002: buildAlarmeDeliveryPayload wirft bei Nicht-boolean offi
 
 test('#1258 AC-12a: fehlende Cooldown/Quiet-Werte werden zu null (Vorbild alertDeliveryPayload.ts, kein undefined im PUT-Body)', () => {
 	const payload = buildAlarmeDeliveryPayload({
-		officialAlertsEnabled: false,
 		officialWarningsEnabled: false,
 		cooldownMinutes: undefined,
 		quietFrom: undefined,
@@ -97,7 +91,6 @@ test('#1258 AC-12a: fehlende Cooldown/Quiet-Werte werden zu null (Vorbild alertD
 
 test('#1258 AC-12a: zwei rasch aufeinanderfolgende Änderungen ergeben je eine Payload mit dem VOLLSTÄNDIGEN aktuellen Zustand (kein Feld geht verloren)', () => {
 	const afterFirstChange = buildAlarmeDeliveryPayload({
-		officialAlertsEnabled: true,
 		officialWarningsEnabled: true,
 		cooldownMinutes: undefined,
 		quietFrom: undefined,
@@ -105,7 +98,6 @@ test('#1258 AC-12a: zwei rasch aufeinanderfolgende Änderungen ergeben je eine P
 		channels: { email: true, telegram: false, sms: false }
 	}) as Record<string, unknown>;
 	const afterSecondChange = buildAlarmeDeliveryPayload({
-		officialAlertsEnabled: true,
 		officialWarningsEnabled: false,
 		cooldownMinutes: 45,
 		quietFrom: undefined,
@@ -113,10 +105,9 @@ test('#1258 AC-12a: zwei rasch aufeinanderfolgende Änderungen ergeben je eine P
 		channels: { email: true, telegram: false, sms: false }
 	}) as Record<string, unknown>;
 	// Die zweite (finale) Payload enthält weiterhin den ersten Änderungspfad
-	// (officialAlertsEnabled) UND die neuen Werte (officialWarningsEnabled,
-	// cooldownMinutes) — genau das macht den EINEN konsolidierten Save AC-12
-	// konform: es gibt keinen Zwischenschritt, der nur EIN Feld sendet.
-	assert.equal(afterSecondChange.official_alerts_enabled, true);
+	// (officialWarningsEnabled) UND die neuen Werte (cooldownMinutes) — genau
+	// das macht den EINEN konsolidierten Save AC-12 konform: es gibt keinen
+	// Zwischenschritt, der nur EIN Feld sendet.
 	assert.equal((afterSecondChange.official_warnings as { enabled: boolean }).enabled, false);
 	assert.equal(afterSecondChange.alert_cooldown_minutes, 45);
 	assert.notDeepEqual(afterFirstChange, afterSecondChange);
@@ -193,7 +184,6 @@ test(
 		controller.schedule(async () => {
 			saveCount++;
 			lastPayload = buildAlarmeDeliveryPayload({
-				officialAlertsEnabled: true,
 				officialWarningsEnabled: false,
 				cooldownMinutes: undefined,
 				channels: { email: true, telegram: false, sms: false }
@@ -207,7 +197,6 @@ test(
 		controller.schedule(async () => {
 			saveCount++;
 			lastPayload = buildAlarmeDeliveryPayload({
-				officialAlertsEnabled: true,
 				officialWarningsEnabled: false,
 				cooldownMinutes: 45,
 				channels: { email: true, telegram: false, sms: false }

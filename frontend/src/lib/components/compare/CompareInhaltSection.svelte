@@ -82,7 +82,7 @@
 		<GCard class="rounded-md border border-[var(--g-ink-faint)]/20 p-4">
 			<div class="space-y-3">
 				<ChannelToggle
-					label="Amtliche Warnungen"
+					label="Amtliche Warnungen im Bericht"
 					checked={state.officialAlertsEnabled}
 					onchange={(checked) => (state.officialAlertsEnabled = checked)}
 					testid="compare-step5-official-alerts-toggle"

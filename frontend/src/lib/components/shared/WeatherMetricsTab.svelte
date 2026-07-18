@@ -877,7 +877,7 @@
 							<Checkbox
 								checked={officialAlertsEnabled}
 								onchange={onToggleOfficialAlerts}
-							>Amtliche Warnungen</Checkbox>
+							>Amtliche Warnungen im Bericht</Checkbox>
 						</span>
 						<p class="pl-6 text-xs text-muted-foreground mt-0.5">Amtliche Wetterwarnungen (z. B. Unwetterwarnung) im E-Mail-Briefing anzeigen.</p>
 					</div>

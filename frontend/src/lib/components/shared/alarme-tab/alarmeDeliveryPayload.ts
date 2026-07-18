@@ -9,18 +9,19 @@
 // siehe docs/specs/modules/issue_1258_alarme_tab_official_warnings.md
 // Changelog).
 //
-// Adversary Fix-Loop 1, F002: officialAlertsEnabled/officialWarningsEnabled
-// waren optional mit stillem Default (enabled:false) bei fehlendem Wert —
-// dieselbe Fehlerklasse wie S1-F002 fuer kuenftige Aufrufer. Beide Felder
-// sind jetzt PFLICHT (kein stiller Default mehr moeglich); official_warnings
-// wird IMMER mit explizitem enabled gesendet — der Aufrufer muss den Wert
-// kennen, kein stilles false. Laufzeit-Guard faengt Aufrufer ab, die trotz
-// strip-types (keine Typpruefung zur Laufzeit) einen Nicht-boolean uebergeben.
+// Adversary Fix-Loop 1, F002: officialWarningsEnabled war optional mit
+// stillem Default (enabled:false) bei fehlendem Wert — dieselbe Fehlerklasse
+// wie S1-F002 fuer kuenftige Aufrufer. Das Feld ist jetzt PFLICHT (kein
+// stiller Default mehr moeglich); official_warnings wird IMMER mit
+// explizitem enabled gesendet — der Aufrufer muss den Wert kennen, kein
+// stilles false. Laufzeit-Guard faengt Aufrufer ab, die trotz strip-types
+// (keine Typpruefung zur Laufzeit) einen Nicht-boolean uebergeben.
 //
-// F003-Nachzug (S2-Adversary, #1199, eingeloest S3): der Guard existierte
-// bisher NUR fuer officialWarningsEnabled — officialAlertsEnabled konnte
-// unbemerkt undefined/Nicht-boolean sein und wurde klaglos in die
-// PUT-Payload durchgereicht. Guard jetzt symmetrisch fuer beide Felder.
+// D2 (#1301, #1292 P4): official_alerts_enabled wird HIER NICHT MEHR
+// geschrieben. Das Feld ist fachlich Bericht-Inhalt; alleiniger Schreiber
+// ist jetzt der Inhalt-Bereich (WeatherMetricsTab / CompareInhaltSection).
+// Der Alarm-Tab war ein doppelter Schreibpfad und ueberschrieb per
+// Last-Writer-Wins einen im Inhalt-Tab gesetzten Wert — beseitigt.
 //
 // Adversary Fix-Loop 1, F001 (S3): AlarmeScheduleTab.svelte hatte zwei
 // EIGENE saveController.schedule()-Aufrufer (Kanal-Toggle, Metrik-Level-
@@ -33,8 +34,8 @@
 // AlarmeTab.svelte route-$effect).
 //
 // `channels` ist PFLICHT (kein stiller Default, Laufzeit-Guard analog
-// officialAlertsEnabled/officialWarningsEnabled: alle drei Kanal-Werte
-// muessen echte booleans sein). `metricLevels` ist optional — NUR wenn
+// officialWarningsEnabled: alle drei Kanal-Werte muessen echte booleans
+// sein). `metricLevels` ist optional — NUR wenn
 // gesetzt, wird `display_config` als Read-Modify-Write-Spread ueber
 // `currentDisplayConfig` geschrieben (BUG-DATALOSS-Klasse: andere
 // display_config-Keys wie ideal_ranges/channel_layouts/region/top_n
@@ -49,7 +50,6 @@ export interface AlarmeChannelsState {
 }
 
 export interface AlarmeDeliveryState {
-	officialAlertsEnabled: boolean;
 	officialWarningsEnabled: boolean;
 	cooldownMinutes?: number;
 	quietFrom?: string;
@@ -62,12 +62,6 @@ export function buildAlarmeDeliveryPayload(
 	state: AlarmeDeliveryState,
 	currentDisplayConfig?: Record<string, unknown>
 ): object {
-	if (typeof state.officialAlertsEnabled !== 'boolean') {
-		throw new Error(
-			'buildAlarmeDeliveryPayload: officialAlertsEnabled fehlt oder ist kein boolean — ' +
-				'official_alerts_enabled wird IMMER mit explizitem Wert gesendet, kein stiller Default.'
-		);
-	}
 	if (typeof state.officialWarningsEnabled !== 'boolean') {
 		throw new Error(
 			'buildAlarmeDeliveryPayload: officialWarningsEnabled fehlt oder ist kein boolean — ' +
@@ -85,7 +79,6 @@ export function buildAlarmeDeliveryPayload(
 		);
 	}
 	const payload: Record<string, unknown> = {
-		official_alerts_enabled: state.officialAlertsEnabled,
 		official_warnings: { enabled: state.officialWarningsEnabled },
 		alert_cooldown_minutes: state.cooldownMinutes ?? null,
 		alert_quiet_from: state.quietFrom || null,

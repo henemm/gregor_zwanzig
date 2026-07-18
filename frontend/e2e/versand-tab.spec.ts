@@ -173,44 +173,10 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 		await expect(page.getByTestId('trip-detail-panel-stages')).toBeVisible();
 	});
 
-	// Adversary-Fund F001 (BROKEN → Fix): schneller Tab-Wechsel weg vom
-	// Alarme-Tab, VOR Ablauf des 700ms-Debounce, darf den Toggle NICHT
-	// verwerfen — TripTabs.svelte muss den Flush-Guard auch für 'alarme'
-	// greifen lassen (sonst überschreibt der nächste Save aus WeatherMetricsTab
-	// den veralteten official_alerts_enabled-Snapshot).
-	// Issue #1258 (D5): Toggle + Panel zogen aus dem Versand-Tab in den
-	// Alarme-Tab um — der Flush-Guard-Beweis bleibt inhaltlich derselbe.
-	test('F001: Toggle im Alarme-Tab überlebt sofortigen Tab-Wechsel (kein Datenverlust)', async ({ page }) => {
-		await login(page);
-		await openTripOverview(page, tripId('main'));
-		await clickAlarmeTab(page);
-
-		const toggle = page
-			.getByTestId('trip-detail-panel-alarme')
-			.getByTestId('alerts-tab-official-alerts-toggle')
-			.getByRole('checkbox');
-		await expect(toggle).toBeChecked();
-		await toggle.uncheck();
-
-		// Sofort wegklicken — VOR Ablauf des 700ms-Debounce-Fensters.
-		await page.getByTestId('trip-detail-tab-stages').first().click();
-		await expect(page.getByTestId('trip-detail-panel-stages')).toBeVisible();
-
-		// Der Flush muss bereits abgeschlossen sein (handleValueChange awaitet
-		// saveController.flush() VOR dem Tab-Wechsel) — der Server-Wert muss
-		// also sofort false sein, kein Warten auf den Debounce nötig.
-		const res = await page.request.get(`/api/trips/${tripId('main')}`);
-		expect(res.ok()).toBeTruthy();
-		const updated = await res.json();
-		expect(updated.official_alerts_enabled).toBe(false);
-
-		// Zurück in den Alarme-Tab: Wert bleibt erhalten (kein Stale-Overwrite).
-		await clickAlarmeTab(page);
-		await expect(
-			page
-				.getByTestId('trip-detail-panel-alarme')
-				.getByTestId('alerts-tab-official-alerts-toggle')
-				.getByRole('checkbox')
-		).not.toBeChecked();
-	});
+	// D2 von #1301 (2026-07-18): der ehemalige F001-Test prüfte den
+	// Flush-Guard des ATL-Toggles im Alarme-Tab (`alerts-tab-official-alerts-toggle`).
+	// Dieser Schalter ist entfernt — das Datenverlust-/Flush-Guard-Szenario für
+	// `official_alerts_enabled` ist jetzt über den Inhalt-Tab-Toggle
+	// `report-show-official-alerts` abgedeckt (siehe
+	// e2e/issue-1117-official-alerts-content-tab.spec.ts AC-3).
 });

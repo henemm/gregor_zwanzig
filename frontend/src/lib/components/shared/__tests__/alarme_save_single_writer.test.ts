@@ -56,7 +56,6 @@ test('#1258 S3 F001: AlarmeScheduleTab.svelte enthaelt keinen eigenen saveContro
 test('#1258 S3 F001: buildAlarmeDeliveryPayload konsolidiert Kanaele + Cooldown + Metrik-Level + amtliche-Toggles in EINEM Objekt', () => {
 	const payload = buildAlarmeDeliveryPayload(
 		{
-			officialAlertsEnabled: true,
 			officialWarningsEnabled: false,
 			cooldownMinutes: 30,
 			quietFrom: '21:00',
@@ -68,7 +67,6 @@ test('#1258 S3 F001: buildAlarmeDeliveryPayload konsolidiert Kanaele + Cooldown 
 	) as Record<string, unknown>;
 
 	// amtliche-Toggles + Cooldown/Quiet — wie bisher.
-	assert.equal(payload.official_alerts_enabled, true);
 	assert.deepEqual(payload.official_warnings, { enabled: false });
 	assert.equal(payload.alert_cooldown_minutes, 30);
 
@@ -87,17 +85,15 @@ test('#1258 S3 F001: buildAlarmeDeliveryPayload konsolidiert Kanaele + Cooldown 
 
 test('#1258 S3 F001: ohne metricLevels bleibt display_config komplett aus der Payload draussen (kein leerer Overwrite)', () => {
 	const payload = buildAlarmeDeliveryPayload({
-		officialAlertsEnabled: true,
 		officialWarningsEnabled: true,
 		channels: { email: true, telegram: false, sms: false }
 	}) as Record<string, unknown>;
 	assert.equal('display_config' in payload, false);
 });
 
-test('#1258 S3 F001: channels ist Pflicht — Nicht-boolean-Kanalwert wirft (Guard analog officialAlertsEnabled/officialWarningsEnabled)', () => {
+test('#1258 S3 F001: channels ist Pflicht — Nicht-boolean-Kanalwert wirft (Guard analog officialWarningsEnabled)', () => {
 	assert.throws(() => {
 		buildAlarmeDeliveryPayload({
-			officialAlertsEnabled: true,
 			officialWarningsEnabled: true,
 			channels: { email: true, telegram: 'true' as unknown as boolean, sms: false }
 		});
@@ -107,7 +103,6 @@ test('#1258 S3 F001: channels ist Pflicht — Nicht-boolean-Kanalwert wirft (Gua
 test('#1258 S3 F001: zwei rasch aufeinanderfolgende Aenderungen (Kanal, dann Metrik-Level) ergeben je eine Payload mit dem VOLLSTAENDIGEN Zustand — kein Feld geht verloren', () => {
 	// Simuliert Aenderung 1: Nutzer togglet einen Kanal.
 	const afterChannelToggle = buildAlarmeDeliveryPayload({
-		officialAlertsEnabled: true,
 		officialWarningsEnabled: false,
 		cooldownMinutes: 15,
 		channels: { email: true, telegram: true, sms: false },
@@ -119,7 +114,6 @@ test('#1258 S3 F001: zwei rasch aufeinanderfolgende Aenderungen (Kanal, dann Met
 	// lokalen State in AlarmeTab.svelte treiben, enthaelt die finale Payload
 	// (die einzige, die tatsaechlich gesendet wird) beide Aenderungen.
 	const afterMetricChange = buildAlarmeDeliveryPayload({
-		officialAlertsEnabled: true,
 		officialWarningsEnabled: false,
 		cooldownMinutes: 15,
 		channels: { email: true, telegram: true, sms: false },

@@ -73,30 +73,25 @@
 	const sections = $derived(alarmeTabSections(context));
 	const summaryLabel = $derived(notifySummaryLabel(notifyCount));
 
-	// ── (b) Amtliche Warnungen — Inhalt + scharfer Trigger (S1) ────────────────
+	// ── (b) Amtliche Warnungen — scharfer Trigger (S1; Inhalt-Schalter s.u.) ───
 	// route: lokaler State (Grundlage fuer den EINEN $effect unten).
 	// vergleich: kein lokaler State — Anzeige/Aenderung direkt gegen wiz.*
 	// (kein Self-Save, Persistenz macht CompareEditor/Hub-Bridge, s. Modul-
 	// Kommentar VersandTab.svelte:42-46).
-	let officialAlertsEnabled = $state<boolean>(trip?.official_alerts_enabled ?? true);
+	//
+	// D2 (#1301, #1292 P4): der Inhalt-Schalter (official_alerts_enabled)
+	// wurde HIER ENTFERNT — er war ein doppelter Schreibpfad neben dem
+	// Inhalt-Bereich (WeatherMetricsTab / CompareInhaltSection), der per
+	// Last-Writer-Wins einen dort gesetzten Wert ueberschreiben konnte.
+	// Alleiniger Schreiber ist jetzt der Inhalt-Bereich.
 	// Trigger bindet fachlich auf official_warnings.enabled (S1, scharf).
 	// Legacy-Fallback identisch zur Pipeline (trip_alert.py): nil -> Ist-Verhalten.
 	let officialWarningsEnabled = $state<boolean>(
 		trip?.official_warnings?.enabled ?? trip?.official_alert_triggers_enabled !== false
 	);
-	const displayOfficialAlertsEnabled = $derived(
-		context === 'vergleich' ? (wiz?.officialAlertsEnabled ?? true) : officialAlertsEnabled
-	);
 	const displayOfficialWarningsEnabled = $derived(
 		context === 'vergleich' ? (wiz?.officialWarningsEnabled ?? false) : officialWarningsEnabled
 	);
-	function handleOfficialAlertsToggle(checked: boolean) {
-		if (context === 'vergleich') {
-			if (wiz) wiz.officialAlertsEnabled = checked;
-			return;
-		}
-		officialAlertsEnabled = checked;
-	}
 	function handleOfficialWarningsToggle(checked: boolean) {
 		if (context === 'vergleich') {
 			if (wiz) wiz.officialWarningsEnabled = checked;
@@ -180,7 +175,6 @@
 	function buildAlarmeSaveFn() {
 		const payload = buildAlarmeDeliveryPayload(
 			{
-				officialAlertsEnabled,
 				officialWarningsEnabled,
 				cooldownMinutes,
 				quietFrom,
@@ -197,7 +191,6 @@
 	}
 
 	let _prevAlarmeJson = JSON.stringify({
-		officialAlertsEnabled,
 		officialWarningsEnabled,
 		cooldownMinutes,
 		quietFrom,
@@ -208,7 +201,6 @@
 	$effect(() => {
 		if (context !== 'route') return;
 		const currentJson = JSON.stringify({
-			officialAlertsEnabled,
 			officialWarningsEnabled,
 			cooldownMinutes,
 			quietFrom,
@@ -243,12 +235,6 @@
 				<div class="alarme-official-warnings">
 					<Eyebrow style="margin-bottom: 10px;">Wann Warnungen rausgehen</Eyebrow>
 					<div class="alarme-official-toggles">
-						<ChannelToggle
-							label="Amtliche Warnungen"
-							checked={displayOfficialAlertsEnabled}
-							onchange={handleOfficialAlertsToggle}
-							testid="alerts-tab-official-alerts-toggle"
-						/>
 						<ChannelToggle
 							label="Amtliche Warnungen lösen Alert aus"
 							checked={displayOfficialWarningsEnabled}
