@@ -16,7 +16,8 @@ from __future__ import annotations
 import pytest
 from datetime import date, datetime, timezone
 
-pytestmark = pytest.mark.live
+# Scheibe 2c (#1211): Netz-Sperre-Probe zeigt 0 echte Dialer in dieser Datei --
+# der bisherige Modul-Marker war zu grob. Kein Test hier braucht `-m live`.
 
 from app.models import (
     ForecastMeta,
@@ -366,7 +367,13 @@ class TestTrendRendering:
     """Test trend block rendering in HTML and plaintext — v3.0 summary format."""
 
     def _make_trend_data(self) -> list[dict]:
-        """Create trend data in v3.0 format (with summary string)."""
+        """Create trend data in v3.0 format (with summary string).
+
+        Nur noch von test_trend_dict_has_summary_field() konsumiert (prueft
+        ausschliesslich die Form dieser Fixture, nicht die Renderer-Realitaet)
+        -- siehe _make_trend_data_v4() fuer das echte #911-Spaltenformat, das
+        _build_stage_trend() (trip_report_scheduler.py) tatsaechlich erzeugt.
+        """
         return [
             {
                 "weekday": "Mi",
@@ -379,6 +386,38 @@ class TestTrendRendering:
                 "date": date(2026, 2, 19),
                 "stage_name": "Tag 4: von Tossals Verds nach Lluc",
                 "summary": "Tossals Verds → Lluc: 4–16°C, ☀️, trocken, schwacher Wind W",
+            },
+        ]
+
+    def _make_trend_data_v4(self) -> list[dict]:
+        """Trend-Zeilen im echten #911-Spaltenformat (Commits 9f14fd39/2205639e) --
+        das Format, das _build_stage_trend() (trip_report_scheduler.py) heute
+        tatsaechlich erzeugt: weekday/name/temp_lo/temp_hi/precip_mm/wind_dir/
+        wind_kmh/thunder/note statt des entfallenen v3.0 stage_name/summary."""
+        return [
+            {
+                "weekday": "Mi",
+                "date": date(2026, 2, 18),
+                "name": "Tag 3: von Soller nach Tossals Verds",
+                "temp_lo": 6,
+                "temp_hi": 14,
+                "precip_mm": 1.5,
+                "wind_dir": "NW",
+                "wind_kmh": 25,
+                "thunder": "NONE",
+                "note": None,
+            },
+            {
+                "weekday": "Do",
+                "date": date(2026, 2, 19),
+                "name": "Tag 4: von Tossals Verds nach Lluc",
+                "temp_lo": 4,
+                "temp_hi": 16,
+                "precip_mm": 0.0,
+                "wind_dir": "W",
+                "wind_kmh": 10,
+                "thunder": "NONE",
+                "note": None,
             },
         ]
 
@@ -413,11 +452,14 @@ class TestTrendRendering:
             assert "warning" not in row, "v3.0 removes warning"
 
     def test_trend_rendering_html_two_lines(self):
-        """v3.0: HTML uses 2-line layout (stage name div + summary div)."""
+        """v4.0 (#911): HTML-Ausblick ist eine OutlookTable (Tag/N/D/R/PR/Wind/
+        Boeen/Gew/ACC-Spalten) statt des entfallenen v3.0-2-Zeilen-Layouts --
+        Etappennamen erscheinen dort nicht mehr, nur Wochentag + Kennzahlen
+        (Commits 9f14fd39/2205639e)."""
         from output.renderers.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
-        trend = self._make_trend_data()
+        trend = self._make_trend_data_v4()
         last_seg = self._make_last_segment()
 
         report = formatter.format_email(
@@ -427,20 +469,22 @@ class TestTrendRendering:
             multi_day_trend=trend,
         )
 
-        assert "Etappen" in report.email_html
-        # v3.0: 2-line layout with stage name in bold div and summary in secondary div
-        assert "Soller" in report.email_html
-        assert "Tossals Verds" in report.email_html
-        # Summary line should appear in HTML
-        assert "6–14°C" in report.email_html
-        assert "mäßiger Wind" in report.email_html
+        # AC-9 (#911): Eyebrow "Ausblick · nächste 3 Tage" über der OutlookTable
+        assert "Ausblick" in report.email_html
+        # Wochentag- und Temperatur-Spalten (N=Nacht-Tief, D=Tag-Hoch)
+        assert "Mi" in report.email_html
+        assert "6°" in report.email_html
+        assert "14°" in report.email_html
 
     def test_trend_rendering_plain_two_lines(self):
-        """v3.0: Plain-text uses 2-line layout (weekday+name, then indented summary)."""
+        """v4.0 (#911): Plain-Text-Block 'Nächste Etappen' zeigt weiterhin den
+        Etappennamen + Temperatur-/Niederschlags-Tokens (format_trend_tokens()),
+        nur das darunterliegende Datenmodell wechselte von stage_name/summary
+        auf name/temp_lo/temp_hi (Commits 9f14fd39/2205639e)."""
         from output.renderers.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
-        trend = self._make_trend_data()
+        trend = self._make_trend_data_v4()
         last_seg = self._make_last_segment()
 
         report = formatter.format_email(
@@ -450,15 +494,16 @@ class TestTrendRendering:
             multi_day_trend=trend,
         )
 
-        assert "Etappen" in report.email_plain
-        # Stage name on first line
+        assert "Nächste Etappen" in report.email_plain
         assert "Tossals Verds" in report.email_plain
-        # Summary on indented second line
         assert "6–14°C" in report.email_plain
-        assert "mäßiger Wind" in report.email_plain
 
     def test_trend_no_future_stages(self):
-        """No trend block when multi_day_trend is None."""
+        """No trend block when multi_day_trend is None.
+
+        'Etappen' allein ist seit dem #1241-Herkunfts-Footer ('Etappen-
+        Briefing') IMMER im Report enthalten -- die eigentlich zu pruefende
+        Ausblick-Sektion braucht daher einen spezifischeren Anker (#911)."""
         from output.renderers.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
@@ -471,8 +516,8 @@ class TestTrendRendering:
             multi_day_trend=None,
         )
 
-        assert "Etappen" not in report.email_html
-        assert "Etappen" not in report.email_plain
+        assert "Ausblick" not in report.email_html
+        assert "Nächste Etappen" not in report.email_plain
 
     def test_morning_report_with_trend_when_configured(self):
         """Morning report WITH trend data should contain trend block."""
@@ -493,7 +538,11 @@ class TestTrendRendering:
         assert "Etappen" in report.email_plain
 
     def test_trend_disabled_in_config(self):
-        """Trend should not appear when multi_day_trend_reports excludes report type."""
+        """Trend should not appear when multi_day_trend_reports excludes report type.
+
+        Gleicher Grund wie test_trend_no_future_stages: 'Etappen' allein steht
+        seit #1241 immer im Footer, daher pruefen wir die Ausblick-Sektion
+        gezielt (#911)."""
         from app.metric_catalog import build_default_display_config
         from output.renderers.trip_report import TripReportFormatter
 
@@ -511,8 +560,8 @@ class TestTrendRendering:
             multi_day_trend=None,
         )
 
-        assert "Etappen" not in report.email_html
-        assert "Etappen" not in report.email_plain
+        assert "Ausblick" not in report.email_html
+        assert "Nächste Etappen" not in report.email_plain
 
 
 # ===========================================================================

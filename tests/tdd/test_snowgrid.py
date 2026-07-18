@@ -14,7 +14,8 @@ import pytest
 from providers.geosphere import GeoSphereProvider
 from validation import GroundTruthFetcher, all_resort_slugs, get_resort
 
-pytestmark = pytest.mark.live
+# Scheibe 2c (#1211): Modul-Marker per Netz-Sperre-Probe test-genau feingeschnitten --
+# nur die 3 tatsaechlichen Dialer unten tragen noch `@pytest.mark.live`.
 
 
 class TestSnowgridPlausibility:
@@ -78,6 +79,7 @@ class TestSnowgridPlausibility:
         )
 
     @pytest.mark.tdd
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_all_resorts_have_data(
         self, ground_truth: GroundTruthFetcher, geosphere: GeoSphereProvider
     ) -> None:
@@ -110,6 +112,7 @@ class TestSnowgridPlausibility:
         )
 
     @pytest.mark.tdd
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_snow_depth_in_reasonable_range(
         self, ground_truth: GroundTruthFetcher, geosphere: GeoSphereProvider
     ) -> None:
@@ -126,6 +129,7 @@ class TestSnowgridPlausibility:
                 )
 
     @pytest.mark.tdd
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_higher_elevation_more_snow(
         self, geosphere: GeoSphereProvider
     ) -> None:

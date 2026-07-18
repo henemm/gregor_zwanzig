@@ -18,7 +18,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-pytestmark = pytest.mark.live
+# Scheibe 2c (#1211): Modul-Marker per Netz-Sperre-Probe test-genau feingeschnitten --
+# nur die 2 tatsaechlichen Dialer unten tragen noch `@pytest.mark.live`.
 
 
 class TestForecastDataPointBackwardCompat:
@@ -106,6 +107,7 @@ class TestConfidenceCalculation:
 class TestEnsembleSpreadFetchLive:
     """AC-3: Real OpenMeteo Ensemble call for Salzburg."""
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_salzburg_yields_spread_for_90pct_of_hours(self):
         """≥90% of hourly points must have spread_t2m_k and confidence_pct populated."""
         from app.models import Location
@@ -139,6 +141,7 @@ class TestEnsembleSpreadFetchLive:
 class TestEnsembleFailureGraceful:
     """AC-6: Unreachable Ensemble API → forecast still returns, confidence fields None."""
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_unreachable_ensemble_host_does_not_break_forecast(self):
         """
         With the ensemble host pointing at a closed local port we get a real

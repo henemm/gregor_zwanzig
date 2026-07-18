@@ -20,6 +20,7 @@ Usage:
 """
 import email
 import imaplib
+import re
 import sys
 import time
 from datetime import date, time as dt_time
@@ -33,11 +34,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from app.config import Settings
 from app.loader import delete_trip, get_briefings_dir, load_trip, save_trip
 from app.models import TripReportConfig
-from app.trip import Stage, TimeWindow, Trip, Waypoint
+from app.trip import Stage, Trip, Waypoint
 from output.renderers.sms_trip import SMSTripFormatter
 from output.renderers.trip_report import TripReportFormatter
 
-pytestmark = pytest.mark.live
+# Scheibe 2c (#1211): Modul-Marker per Netz-Sperre-Probe test-genau feingeschnitten --
+# nur test_fetch_real_weather (fail-soft) und test_send_and_verify_report_email
+# (echter SMTP-Connect) tragen noch `@pytest.mark.live`.
 
 
 # ---------------------------------------------------------------------------
@@ -48,21 +51,22 @@ TEST_TRIP_ID = "e2e-test-story3"
 TEST_TRIP_NAME = "E2E Story3 Stubai"
 
 # Real Stubaier Höhenweg coordinates (Tyrol, Austria) - within GeoSphere bounds
+# Scheibe 2c (#1211) Drift-Fix: Waypoint.time_window ist seit #1004 entmachtet --
+# _convert_trip_to_segments() (services/trip_segments.py) liest nur noch
+# stage.start_time (erster Wegpunkt) + Naismith-Zeitfortschritt (arrival_calculated),
+# time_window wurde nie ausgewertet. Siehe test_segment_time_windows unten.
 STUBAI_WAYPOINTS = [
     Waypoint(
         id="S1", name="Neustift", lat=47.1100, lon=11.3100,
         elevation_m=993,
-        time_window=TimeWindow(start=dt_time(7, 0), end=dt_time(9, 0)),
     ),
     Waypoint(
         id="S2", name="Starkenburger Huette", lat=47.1000, lon=11.2700,
         elevation_m=2237,
-        time_window=TimeWindow(start=dt_time(10, 0), end=dt_time(12, 0)),
     ),
     Waypoint(
         id="S3", name="Franz-Senn-Huette", lat=47.0700, lon=11.2300,
         elevation_m=2147,
-        time_window=TimeWindow(start=dt_time(13, 0), end=dt_time(15, 0)),
     ),
 ]
 
@@ -76,6 +80,7 @@ def test_trip():
         name="Etappe 1: Neustift - Franz-Senn-Huette",
         date=today,
         waypoints=STUBAI_WAYPOINTS,
+        start_time=dt_time(7, 0),
     )
     trip = Trip(
         id=TEST_TRIP_ID,
@@ -146,16 +151,30 @@ class TestTripCreationAndSegments:
         assert seg2.descent_m > 0  # Starkenburger (2237m) -> Franz-Senn (2147m)
 
     def test_segment_time_windows(self, segments_from_trip):
-        """Segments have correct UTC time windows from waypoints."""
-        seg1 = segments_from_trip[0]
-        assert seg1.start_time.hour == 7   # S1 start: 07:00
-        assert seg1.end_time.hour == 10    # S2 start: 10:00
-        assert seg1.duration_hours == pytest.approx(3.0)
+        """Segments derive their time window from stage.start_time + Naismith-
+        Zeitfortschritt (#1004-Modell, services/trip_segments.py) -- Waypoint.
+        time_window ist entmachtet (wird nirgends mehr gelesen). Nur der erste
+        Wegpunkt uebernimmt stage.start_time direkt (07:00 lokal); Folgezeiten
+        ergeben sich aus Distanz/Hoehendifferenz (Wanderer-Default-Tempo).
+        Dauer ist rein physikalisch (Naismith-Formel) und daher DST-unabhaengig,
+        die Uhrzeit selbst wird ueber lokale Zeitzone geprueft (Erwartungswerte
+        empirisch mit dem echten #1004-Code nachgerechnet)."""
+        from utils.timezone import tz_for_coords, local_hour
 
+        seg1 = segments_from_trip[0]
         seg2 = segments_from_trip[1]
-        assert seg2.start_time.hour == 10  # S2 start: 10:00
-        assert seg2.end_time.hour == 13    # S3 start: 13:00
-        assert seg2.duration_hours == pytest.approx(3.0)
+
+        tz = tz_for_coords(seg1.start_point.lat, seg1.start_point.lon)
+        # idx==0: stage.start_time bestimmt direkt den ersten Wegpunkt.
+        assert local_hour(seg1.start_time, tz) == 7
+
+        # Segmente schliessen nahtlos an (kein Zeitsprung/Ueberlappung).
+        assert seg2.start_time == seg1.end_time
+
+        # Dauer ergibt sich rein aus der Naismith-Formel (Distanz/Tempo +
+        # Hoehe/Steig-Tempo) -- unabhaengig vom Kalenderdatum/DST.
+        assert seg1.duration_hours == pytest.approx(4.95, abs=0.01)
+        assert seg2.duration_hours == pytest.approx(1.317, abs=0.01)
 
 
 # ---------------------------------------------------------------------------
@@ -165,6 +184,7 @@ class TestTripCreationAndSegments:
 class TestWeatherFetch:
     """Fetch REAL weather data from API for trip segments."""
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_fetch_real_weather(self, segments_from_trip):
         """Weather data is fetched for all segments with plausible values."""
         from services.trip_report_scheduler import TripReportSchedulerService
@@ -212,32 +232,34 @@ class TestReportFormatting:
         assert TEST_TRIP_NAME in report.email_subject
 
     def test_email_html_contains_segments(self, segments_from_trip):
-        """HTML email contains segment table with real data."""
+        """HTML email contains segment blocks + Metriken-Überblick (#790/#795
+        loeste das alte 'Summary'/'Max Temperature'-Vokabular ab). Robust
+        gegen den Fail-soft-Platzhalter (WEATHER-04): der Metriken-Überblick-
+        Header steht unabhaengig davon, ob echte Wetterdaten oder ein
+        Anbieter-Fehler-Platzhalter gerendert wird; SEG {N} (Erfolg) bzw.
+        'Segment {N}' (Fail-soft) belegen, dass beide Segmente vorkommen."""
         weather = self._get_weather_data(segments_from_trip)
         formatter = TripReportFormatter()
         report = formatter.format_email(weather, TEST_TRIP_NAME, "morning")
 
-        # Must have segment IDs
-        assert "#1" in report.email_html
-        assert "#2" in report.email_html
-        # Must have temperature values
-        assert "°C" in report.email_html
-        # Must have wind values
-        assert "km/h" in report.email_html
-        # Must have summary section
-        assert "Summary" in report.email_html
-        assert "Max Temperature" in report.email_html
+        assert ("SEG 1" in report.email_html) or ("Segment 1" in report.email_html)
+        assert ("SEG 2" in report.email_html) or ("Segment 2" in report.email_html)
+        # Issue #790/#795: Summary-Kasten heisst seit dem Rework "Metriken-Überblick"
+        assert "Metriken-Überblick" in report.email_html
 
     def test_email_plain_text_fallback(self, segments_from_trip):
-        """Plain text email is also generated."""
+        """Plain text email is also generated -- mit der aktuellen
+        Metriken-Überblick-Struktur (#790/#795) statt der entfallenen
+        SEGMENTS/SUMMARY-Ueberschriften."""
         weather = self._get_weather_data(segments_from_trip)
         formatter = TripReportFormatter()
         report = formatter.format_email(weather, TEST_TRIP_NAME, "morning")
 
         assert report.email_plain is not None
         assert len(report.email_plain) > 100
-        assert "SEGMENTS" in report.email_plain
-        assert "SUMMARY" in report.email_plain
+        assert "Metriken-Überblick" in report.email_plain
+        assert "Segment 1" in report.email_plain
+        assert "Segment 2" in report.email_plain
 
     def test_email_subject_format(self, segments_from_trip):
         """Subject line follows §11-konformes Schema: [Trip] Stage — Morgen — ..."""
@@ -252,25 +274,29 @@ class TestReportFormatting:
         assert date.today().strftime("%d.%m.%Y") in report.email_subject
 
     def test_sms_format_compact(self, segments_from_trip):
-        """SMS is <=160 chars with correct format."""
+        """SMS is <=160 chars and follows the v2.0 token wire format
+        (sms_format.md v2.0 §2/§3, sms_trip.py) -- the legacy 'E1:T../E2:...'
+        per-segment format was replaced by a single Tag-Aggregat mit
+        N/D/R/PR/W/G/TH:/TH+:-Tokens (kein Legacy-Praefix mehr)."""
         weather = self._get_weather_data(segments_from_trip)
         formatter = SMSTripFormatter()
         sms = formatter.format_sms(weather)
 
         assert len(sms) <= 160, f"SMS too long: {len(sms)} chars: {sms}"
-        assert "E1:" in sms
-        assert "E2:" in sms
-        assert "T" in sms  # Temperature
+        assert sms.startswith("Etappe:")
+        for token in ("N", "D", "R", "PR", "W", "G", "TH:", "TH+:"):
+            assert token in sms, f"v2.0-Token '{token}' fehlt im SMS: {sms}"
 
     def test_sms_contains_temperature(self, segments_from_trip):
-        """SMS contains temperature data for each segment."""
+        """SMS enthaelt den Tag-Min/Tag-Max-Temperatur-Token (N{min} D{max},
+        sms_format.md v2.0 §2). '-' ist beim Fail-soft-Fallback (WEATHER-04,
+        aggregierte Werte fehlen) ein gueltiger Platzhalter-Wert, kein Crash."""
         weather = self._get_weather_data(segments_from_trip)
         formatter = SMSTripFormatter()
         sms = formatter.format_sms(weather)
 
-        # Format: E1:T{min}/{max}
-        assert "E1:T" in sms
-        assert "/" in sms  # min/max separator
+        assert re.search(r"\bN(-|\d)", sms), f"N-Temperatur-Token fehlt: {sms}"
+        assert re.search(r"\bD(-|\d)", sms), f"D-Temperatur-Token fehlt: {sms}"
 
 
 # ---------------------------------------------------------------------------
@@ -281,6 +307,7 @@ class TestReportFormatting:
 class TestEmailDelivery:
     """Send REAL email and verify via IMAP. Requires SMTP config."""
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_send_and_verify_report_email(self, segments_from_trip, settings):
         """Full flow: weather -> format -> SMTP send -> IMAP receive."""
         if not settings.can_send_email():
@@ -400,9 +427,13 @@ class TestReportConfigPersistence:
 # Phase 6: Full scheduler integration
 # ---------------------------------------------------------------------------
 
-@pytest.mark.email
 class TestSchedulerIntegration:
-    """Test the scheduler service with a real trip."""
+    """Test the scheduler service with a real trip.
+
+    Scheibe 2c (#1211) Feinschnitt: die Klasse trug bislang einen kompletten
+    `@pytest.mark.email`, obwohl nur test_scheduler_send_reports wirklich
+    dialt (_get_active_trips() liest ausschliesslich lokale Trip-Dateien,
+    kein Netzcall). Marker daher method-genau statt klassenweit."""
 
     def test_scheduler_finds_active_trip(self, test_trip):
         """Scheduler identifies test trip as active for today (morning)."""
@@ -415,6 +446,8 @@ class TestSchedulerIntegration:
             f"Test trip not found in active trips: {active_ids}"
         )
 
+    @pytest.mark.email
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_scheduler_send_reports(self, test_trip, settings):
         """Scheduler sends report for test trip (full E2E)."""
         if not settings.can_send_email():

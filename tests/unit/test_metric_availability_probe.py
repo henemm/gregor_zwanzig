@@ -22,7 +22,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 import pytest
 
-pytestmark = pytest.mark.live
+# Scheibe 2c (#1211): Modul-Marker per Netz-Sperre-Probe test-genau feingeschnitten --
+# nur die 2 fail-soft-Dialer unten tragen noch `@pytest.mark.live`.
 
 
 # ---------------------------------------------------------------------------
@@ -32,6 +33,7 @@ pytestmark = pytest.mark.live
 class TestProbeModelAvailability:
     """Integration tests: probe actually calls OpenMeteo API."""
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_probe_returns_dict_with_models(self) -> None:
         """probe_model_availability must return dict with 'models' key."""
         from providers.openmeteo import OpenMeteoProvider
@@ -44,6 +46,8 @@ class TestProbeModelAvailability:
         assert "probe_date" in result
         assert len(result["models"]) >= 1
 
+    # Fail-soft-Dialer + offline vakuum (Adversary F001, #1211-2c) -- nur via -m live
+    @pytest.mark.live
     def test_each_model_has_available_and_unavailable(self) -> None:
         """Each model entry must have 'available' and 'unavailable' lists."""
         from providers.openmeteo import OpenMeteoProvider
@@ -57,6 +61,7 @@ class TestProbeModelAvailability:
             assert isinstance(info["available"], list)
             assert isinstance(info["unavailable"], list)
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_ecmwf_has_most_params_available(self) -> None:
         """ECMWF IFS (global fallback) should have >= 15 params available."""
         from providers.openmeteo import OpenMeteoProvider
@@ -76,6 +81,8 @@ class TestProbeModelAvailability:
 class TestCacheWrite:
     """Cache must be written after successful probe."""
 
+    # Fail-soft-Dialer + offline vakuum (Adversary F001, #1211-2c) -- nur via -m live
+    @pytest.mark.live
     def test_cache_file_written_after_probe(self, tmp_path: Path, monkeypatch) -> None:
         """Probe must write cache file."""
         import providers.openmeteo as om

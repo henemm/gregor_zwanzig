@@ -12,7 +12,8 @@ from app.models import GPXPoint, TripSegment
 from providers.base import get_provider
 from services.segment_weather import SegmentWeatherService
 
-pytestmark = pytest.mark.live
+# Scheibe 2c (#1211): Modul-Marker per Netz-Sperre-Probe test-genau feingeschnitten --
+# nur die 4 tatsaechlichen Dialer unten tragen noch `@pytest.mark.live`.
 
 
 class TestSegmentWeatherServiceGeoSphere:
@@ -47,6 +48,7 @@ class TestSegmentWeatherServiceGeoSphere:
             descent_m=0,
         )
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_fetch_segment_weather_austria(self, service, innsbruck_segment):
         """
         GIVEN: TripSegment with Innsbruck coordinates (47.27N, 11.40E)
@@ -109,6 +111,7 @@ class TestSegmentWeatherServiceOpenMeteo:
             descent_m=0,
         )
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_fetch_segment_weather_corsica(self, service, corsica_segment):
         """
         GIVEN: TripSegment with GR20 coordinates (42.39N, 9.08E)
@@ -181,6 +184,7 @@ class TestSegmentWeatherServiceValidation:
 
         assert "Invalid segment time window" in str(exc_info.value)
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_past_time_window_warning(self, service):
         """
         GIVEN: TripSegment with end_time < now
@@ -407,6 +411,7 @@ class TestSegmentWeatherServiceEdgeCases:
             service.fetch_segment_weather(segment)
         assert "utc" in str(exc_info.value).lower()
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_elevation_rounding_not_truncation(self, service):
         """
         GIVEN: TripSegment with elevation_m=1250.7 (float)

@@ -26,7 +26,11 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.live
+# Scheibe 2c (#1211): Modul-Marker per Code-Inspektion (Subprozess-Datei,
+# nicht per Probe messbar) test-genau feingeschnitten -- ac2 dialt real,
+# ac3 startet einen Subprozess, der real gegen api.open-meteo.com dialt;
+# ac4 + test_call_log_module_exposes_api_and_marker_order sind rein lokal
+# und kommen in den Kern zurueck.
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -41,6 +45,7 @@ def _read_jsonl(path: Path):
 # AC-2: Geosphere _fetch_openmeteo_clouds protokolliert source="geosphere_clouds"
 # ---------------------------------------------------------------------------
 
+@pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
 def test_ac2_geosphere_clouds_logs_source_geosphere_clouds(tmp_path, monkeypatch):
     """
     AC-2: Ein echter GeoSphereProvider._fetch_openmeteo_clouds-Aufruf
@@ -76,6 +81,7 @@ def test_ac2_geosphere_clouds_logs_source_geosphere_clouds(tmp_path, monkeypatch
 # AC-3: Die 6 bestehenden Tests aus bd8e1e2 bleiben grün (Konsolidierung)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
 def test_ac3_existing_six_tests_still_green():
     """
     AC-3: Nach der Konsolidierung der Logging-Logik in `providers.call_log`
@@ -83,12 +89,21 @@ def test_ac3_existing_six_tests_still_green():
     weiterhin grün sein (identisches Verhalten).
 
     Wir führen sie als Sub-Prozess aus und prüfen den Exit-Code.
+
+    Scheibe 2c (#1211) Vakuum-Test-Fix: die Zieldatei traegt selbst
+    `pytestmark = pytest.mark.live`, daher deselektiert die geerbte
+    pyproject-addopts (`-m 'not email and not live and not staging'`) ALLE
+    6 Zieltests -- ohne `-o addopts=` lief dieser Subprozess bislang mit
+    Exit 5 (no tests collected) durch: Zieltests wurden deselektiert, Lauf
+    verifizierte nichts (Adversary F002, #1211-2c, empirisch korrigiert).
+    `-o addopts=` neutralisiert die Marker-Filterung, damit die 6 Tests
+    tatsaechlich ausgefuehrt werden.
     """
     existing = REPO_ROOT / "tests" / "tdd" / "test_bug_338_openmeteo_call_counter.py"
     assert existing.exists(), f"Bestehende Testdatei fehlt: {existing}"
 
     proc = subprocess.run(
-        ["uv", "run", "pytest", str(existing), "-q"],
+        ["uv", "run", "pytest", str(existing), "-q", "-o", "addopts="],
         cwd=str(REPO_ROOT),
         capture_output=True,
         text=True,

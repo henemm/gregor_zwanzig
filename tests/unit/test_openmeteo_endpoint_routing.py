@@ -21,7 +21,8 @@ import pytest
 
 sys.path.insert(0, "src")
 
-pytestmark = pytest.mark.live
+# Scheibe 2c (#1211): Modul-Marker per Netz-Sperre-Probe test-genau feingeschnitten --
+# nur die 2 tatsaechlichen Dialer unten tragen noch `@pytest.mark.live`.
 
 
 class TestSelectModelReturnsCorrectEndpoint:
@@ -83,6 +84,7 @@ class TestSelectModelReturnsCorrectEndpoint:
 class TestDedicatedEndpointReturnsValidData:
     """Test 2: Real API call to dedicated endpoint must return valid data."""
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_meteofrance_endpoint_returns_hourly_data(self):
         from providers.openmeteo import OpenMeteoProvider
 
@@ -111,6 +113,7 @@ class TestModelDataDiffersBetweenEndpoints:
     all models would return identical (wrong) data.
     """
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_arome_differs_from_icon(self):
         from providers.openmeteo import OpenMeteoProvider
 

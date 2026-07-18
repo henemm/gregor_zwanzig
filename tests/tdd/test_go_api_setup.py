@@ -8,7 +8,9 @@ SPEC: docs/specs/modules/go_api_setup.md
 """
 import pytest
 
-pytestmark = pytest.mark.live
+# Scheibe 2c (#1211): Modul-Marker per Netz-Sperre-Probe test-genau feingeschnitten --
+# nur die 4 forecast-Tests unten tragen noch `@pytest.mark.live` (echter
+# OpenMeteoProvider-Call via in-process TestClient, kein Server noetig).
 
 
 # ============================================================================
@@ -96,6 +98,7 @@ def test_config_endpoint_excludes_secrets():
 # Test 4: Forecast endpoint returns NormalizedTimeseries
 # ============================================================================
 
+@pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
 def test_forecast_endpoint_returns_timeseries():
     """
     GIVEN: The FastAPI app is running
@@ -120,6 +123,7 @@ def test_forecast_endpoint_returns_timeseries():
     assert len(data["data"]) >= 24
 
 
+@pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
 def test_forecast_meta_has_provider_info():
     """
     GIVEN: A successful forecast response
@@ -143,6 +147,7 @@ def test_forecast_meta_has_provider_info():
     assert meta["provider"] in ["OPENMETEO", "GEOSPHERE", "MOSMIX", "MET"]
 
 
+@pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
 def test_forecast_data_has_correct_fields():
     """
     GIVEN: A successful forecast response
@@ -168,6 +173,7 @@ def test_forecast_data_has_correct_fields():
     assert "t2m_c" in point
 
 
+@pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
 def test_forecast_enums_serialized_as_strings():
     """
     GIVEN: A forecast response with thunder_level present

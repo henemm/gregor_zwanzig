@@ -17,6 +17,12 @@ Spec: docs/specs/modules/rework_1211a_staging_marker.md
 Erweiterung Scheibe 2b Batch 3 (#1211b): 13 K3-Dateien bekommen einen
 email/live/staging-Marker (3 modul-weit, 10 nur auf den real dialenden
 Tests/Klassen). Spec: docs/specs/modules/rework_1211b_rot_triage.md
+
+Erweiterung Scheibe 2c (#1211c): 10 Dateien mit bislang modul-weitem
+`pytestmark = pytest.mark.live` werden test-genau feingeschnitten (74
+Netz-Sperre-Probe-gruene Tests + 2 aus test_issue_338 kommen in die
+Standard-Selektion zurueck); 6 Voll-Dialer-Dateien bleiben unveraendert
+modul-live. Spec: docs/specs/modules/rework_1211c_live_feinschnitt.md
 """
 from __future__ import annotations
 
@@ -122,6 +128,38 @@ _OFFLINE_KEEP_FILES = (
     "tests/tdd/test_issue_339_verify_timing.py",
 )
 
+# Scheibe 2c (#1211c): 10 Dateien mit bislang modul-weitem live-Marker
+# werden test-genau feingeschnitten -- je (Pfad, min_standard, Marker)-Tripel.
+# min_standard = grün-Probe-Anteil + ggf. Drift-Fixes (multi_day_trend 4,
+# story3 5); test_issue_338 korrigiert auf 2 (nur ac4 + call_log kommen
+# zurueck, ac2/ac3 bleiben live).
+_C2_SPLIT_FILES = (
+    ("tests/integration/test_multi_day_trend.py", 21, "live"),
+    ("tests/integration/test_trip_segment_weather.py", 9, "live"),
+    ("tests/tdd/test_forecast_confidence_backend.py", 16, "live"),
+    ("tests/unit/test_openmeteo_endpoint_routing.py", 9, "live"),
+    # 5 statt 7: zwei weitere fail-soft/vakuum-Tests nach Adversary-F001 live-markiert (Orchestrierer-Freigabe Fix-Loop 1, 2026-07-18)
+    ("tests/unit/test_metric_availability_probe.py", 5, "live"),
+    ("tests/unit/test_uv_air_quality.py", 1, "live"),
+    ("tests/e2e/test_e2e_story3_reports.py", 13, "live"),  # 13 statt 14: test_scheduler_send_reports dialt real (fail-soft schluckt Netzfehler -- Live-Log-Beweis), bleibt email+live (Praezisierung der Probe, 2026-07-18)
+    ("tests/tdd/test_go_api_setup.py", 5, "live"),
+    ("tests/tdd/test_snowgrid.py", 1, "live"),
+    ("tests/tdd/test_issue_338_go_geosphere_counter.py", 2, "live"),
+)
+_C2_SPLIT_PATHS = tuple(f for f, _, _ in _C2_SPLIT_FILES)
+
+# Scheibe 2c: 6 Voll-Dialer-Dateien (per Probe/Code 100% Netzcall) behalten
+# ihren Modul-Marker unveraendert -- Regressions-Waechter gegen
+# versehentliches Mit-Zurueckholen.
+_C2_KEEP_MODULE_LIVE = (
+    "tests/integration/test_snapshot_plausibility.py",
+    "tests/tdd/test_geosphere_parsing.py",
+    "tests/integration/test_segment_weather_metrics.py",
+    "tests/integration/test_segment_weather_cache.py",
+    "tests/integration/test_cli_wintersport.py",
+    "tests/tdd/test_bug_338_openmeteo_call_counter.py",
+)
+
 # addopts liefert bereits ein "-q" -> Quiet-Level 2 -> kompaktes "pfad: N"-Format
 # statt einzelner Test-IDs (empirisch verifiziert, kein Rateversuch).
 _COLLECTED_LINE = re.compile(r"^(tests/\S+\.py): (\d+)$", re.MULTILINE)
@@ -184,6 +222,15 @@ def b3_partial_total_collect() -> subprocess.CompletedProcess:
     Gesamt-Count je Datei fuer den Partitionsnachweis (Muster
     mixed_total_collect)."""
     return _collect("-o", "addopts=", *_B3_PARTIAL_FILES, timeout=60)
+
+
+@pytest.fixture(scope="module")
+def c2_split_total_collect() -> subprocess.CompletedProcess:
+    """Marker-neutrale Collection NUR der 10 Scheibe-2c-teilgeschnittenen
+    Dateien (`-o addopts=` schaltet die Marker-Filterung komplett ab) --
+    liefert den Gesamt-Count je Datei fuer den Partitionsnachweis (Muster
+    b3_partial_total_collect)."""
+    return _collect("-o", "addopts=", *_C2_SPLIT_PATHS, timeout=90)
 
 
 def test_default_selection_excludes_b1_live_leak_files(
@@ -408,6 +455,57 @@ def test_811_gate_test_skips_when_hook_missing(tmp_path):
 
     control = _collect(str(src), timeout=30)  # Gegenprobe: Hook vorhanden
     assert control.returncode == 0, control.stderr
+
+
+def test_c2_returned_tests_in_default_selection(
+    default_collect, live_collect, c2_split_total_collect,
+):
+    """GIVEN die 10 Scheibe-2c-teilgeschnittenen Dateien (74 Netz-Sperre-Probe-
+    gruene Tests + 2 aus test_issue_338, je Datei feinsortiert) WHEN
+    Standardlauf und `-m live`-Lauf gemeinsam betrachtet werden THEN zeigt
+    jede Datei im Standardlauf mindestens die erwartete Mindestzahl UND
+    Standardlauf + `-m live` == marker-neutraler Gesamt-Count
+    (Partitionsnachweis, Muster test_b3_partial_files_partition) (AC-1/AC-5).
+    Schlaegt heute fehl, weil alle 10 Dateien noch den kompletten
+    Modul-Marker tragen -- der Standardlauf zeigt fuer jede 0 Tests statt
+    der erwarteten Mindestzahl."""
+    assert c2_split_total_collect.returncode == 0, c2_split_total_collect.stderr
+
+    default_counts = _collected_counts(default_collect.stdout)
+    marker_counts = {"live": _collected_counts(live_collect.stdout)}
+    total_counts = _full_id_counts(c2_split_total_collect.stdout, _C2_SPLIT_PATHS)
+
+    for f, min_standard, marker in _C2_SPLIT_FILES:
+        std_n = default_counts.get(f, 0)
+        marker_n = marker_counts[marker].get(f, 0)
+        total_n = total_counts.get(f, 0)
+        assert total_n > 0, f"{f}: marker-neutraler Gesamt-Count ist 0 -- Collect kaputt?"
+        assert std_n >= min_standard, (
+            f"{f}: Standardlauf zeigt {std_n} Tests, erwartet mindestens "
+            f"{min_standard} zurueckgeholte Tests."
+        )
+        assert std_n + marker_n == total_n, (
+            f"{f}: Standardlauf ({std_n}) + `-m {marker}` ({marker_n}) muss den "
+            f"marker-neutralen Gesamt-Count ({total_n}) exakt ergeben -- sonst "
+            f"geht ein Test verloren oder wird doppelt gezaehlt."
+        )
+
+
+def test_c2_full_live_files_stay_excluded(default_collect):
+    """GIVEN die 6 Voll-Dialer-Dateien (per Netz-Sperre-Probe bzw. Code-Beleg
+    100% Netzcall: snapshot_plausibility, geosphere_parsing,
+    segment_weather_metrics, segment_weather_cache, cli_wintersport, bug_338)
+    WHEN der Standardlauf sammelt THEN bleiben alle 6 unveraendert bei 0
+    gesammelten Tests -- kein versehentliches Mit-Zurueckholen (AC-2,
+    Regressions-Waechter, Muster test_offline_files_remain_in_default_selection).
+    Darf schon heute gruen sein -- die Dateien tragen bereits ihren
+    Modul-Marker und sind davon durch Scheibe 2c nicht betroffen."""
+    assert default_collect.returncode == 0, default_collect.stderr
+    default_counts = _collected_counts(default_collect.stdout)
+    leaked = {
+        f: default_counts[f] for f in _C2_KEEP_MODULE_LIVE if default_counts.get(f, 0) > 0
+    }
+    assert not leaked, f"Voll-Dialer-Dateien duerfen im Standardlauf nicht auftauchen: {leaked}"
 
 
 @pytest.mark.timeout(300)

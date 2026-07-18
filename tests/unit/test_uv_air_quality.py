@@ -10,12 +10,14 @@ from datetime import datetime, timezone, timedelta
 
 import pytest
 
-pytestmark = pytest.mark.live
+# Scheibe 2c (#1211): Modul-Marker per Netz-Sperre-Probe test-genau feingeschnitten --
+# nur die 7 tatsaechlichen/fail-soft-Dialer unten tragen noch `@pytest.mark.live`.
 
 
 class TestRequestBaseHostOverride:
     """Verify _request() accepts and uses optional base_host parameter."""
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_request_signature_accepts_base_host(self) -> None:
         """_request() must accept a base_host keyword argument (backward compat)."""
         from providers.openmeteo import OpenMeteoProvider
@@ -31,6 +33,7 @@ class TestRequestBaseHostOverride:
         assert isinstance(result, dict)
         assert "hourly" in result
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_request_uses_custom_base_host(self) -> None:
         """_request() with base_host should call the AQ API, not weather API."""
         from providers.openmeteo import OpenMeteoProvider, AIR_QUALITY_HOST
@@ -58,6 +61,7 @@ class TestFetchUvData:
         assert hasattr(provider, "_fetch_uv_data")
         assert callable(provider._fetch_uv_data)
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_fetch_uv_data_returns_dict(self) -> None:
         """_fetch_uv_data() returns dict with hourly.uv_index for valid coords."""
         from providers.openmeteo import OpenMeteoProvider
@@ -75,6 +79,7 @@ class TestFetchUvData:
         assert isinstance(uv_vals, list)
         assert len(uv_vals) > 0
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_fetch_uv_data_values_plausible(self) -> None:
         """UV values from AQ API must be in WHO range 0-15."""
         from providers.openmeteo import OpenMeteoProvider
@@ -93,6 +98,7 @@ class TestFetchUvData:
 class TestFetchForecastUvIntegration:
     """Verify UV is populated in fetch_forecast() via AQ API."""
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_forecast_has_uv_values(self) -> None:
         """fetch_forecast() must return timeseries with UV populated from AQ API."""
         from providers.openmeteo import OpenMeteoProvider
@@ -109,6 +115,7 @@ class TestFetchForecastUvIntegration:
         uv_vals = [dp.uv_index for dp in timeseries.data if dp.uv_index is not None]
         assert len(uv_vals) > 0, "UV should be populated from Air Quality API"
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_forecast_uv_plausible(self) -> None:
         """UV values in timeseries must be in range 0-15."""
         from providers.openmeteo import OpenMeteoProvider
@@ -126,6 +133,7 @@ class TestFetchForecastUvIntegration:
             if dp.uv_index is not None:
                 assert 0.0 <= dp.uv_index <= 15.0, f"UV {dp.uv_index} out of range at {dp.ts}"
 
+    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
     def test_weather_05b_fallback_still_works_with_uv(self, tmp_path, monkeypatch) -> None:
         """WEATHER-05b fallback (visibility etc.) must still work alongside UV fetch."""
         import providers.openmeteo as om
