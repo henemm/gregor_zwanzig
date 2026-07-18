@@ -70,6 +70,12 @@ RENDER_NEUTRAL: dict[str, str] = {
         "render_html/render_plain entfernt; gated im Scheduler nur noch die "
         "(wirkungslose) Vorab-Berechnung. PO 2026-07-10."
     ),
+    # Issue #1306: unklassifiziertes Feld aus der Rot-Triage (#1211b).
+    "telegram_style": (
+        "Steuert den Telegram-Kurzstil-Kanal (#1260: 'rich'|'kurzform'), "
+        "nicht den E-Mail/Plain-Render-Pfad — wirkt nachweislich weder auf "
+        "render_html noch render_plain."
+    ),
 }
 
 

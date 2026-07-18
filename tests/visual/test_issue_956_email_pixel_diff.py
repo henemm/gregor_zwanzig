@@ -190,7 +190,26 @@ def test_header_no_extra_lines_and_no_stage_eyebrow():
     # (2) RED/GREEN-Gate: gerendertes DOM prüfen.
     dom = _dom_query(html, """() => {
         const spans = Array.from(document.querySelectorAll('span'));
-        const eyebrow = spans.find(s => (s.innerText || '').includes('BRIEFING'));
+        // Fragilitaets-/Architektur-Hinweis (#1306-F002): seit Issue #1306 traegt
+        // der Header ZWEI "...-BRIEFING"-Spans -- den Profil-Eyebrow
+        // (html.py:884-890, profile_signature.py:87, Default-Text
+        // "WETTER-BRIEFING") VOR dem hier zu pruefenden Routen-Eyebrow
+        // (html.py:897, `_eyebrow(f"{_rt_upper}-BRIEFING")`, z.B.
+        // "MORGEN-BRIEFING"/"ABEND-BRIEFING"). Ein reines
+        // `.includes('BRIEFING')` traf im DOM-Dokument-Order zuerst den
+        // Profil-Span und wurde dadurch blind fuer den Etappen-Zusatz-Bug in
+        // GENAU dem Element, das dieser Test eigentlich prueft. Fix: Regex auf
+        // das Muster "<GROSSBUCHSTABEN>-BRIEFING" (Praefix, KEIN End-Anker —
+        // der historische Bug haengt " · ETAPPE N: ..." HINTER "-BRIEFING" an,
+        // ein End-Anker wuerde den Test dafuer erneut blind machen) MIT
+        // explizitem Ausschluss des Profil-Textes "WETTER-BRIEFING" (der
+        // einzige Profil-Eyebrow, der ueberhaupt "BRIEFING" enthaelt -- die
+        // anderen drei Profile (profile_signature.py:69/75/81) matchen das
+        // Muster nicht).
+        const eyebrow = spans.find(s => {
+            const t = (s.innerText || '').trim();
+            return /^[A-ZÄÖÜ]+-BRIEFING/.test(t) && t !== 'WETTER-BRIEFING';
+        });
         // Header-Container: das <div> mit dem grauen Header-Hintergrund.
         const headerDiv = document.querySelector('table')?.closest('div');
         return {

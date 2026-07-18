@@ -224,21 +224,25 @@ class TestMediaQueryBreakpoint:
 
     def test_mobile_breakpoint_covers_ios_mail_viewport(self):
         """
-        AC-4 (Mobile-First): Desktop-@media-Breakpoint muss >= 601px sein.
+        AC-4 (Mobile-First): Desktop-@media-Breakpoint muss >= 600px sein.
 
         GIVEN ein gerendertes Trip-Briefing-HTML (Mobile-First-Design)
         WHEN der @media-Block auf den Desktop-Breakpoint geprueft wird
-        THEN gibt es einen @media (min-width) >= 601px (Desktop einblenden)
+        THEN gibt es einen @media (min-width) >= 600px (Desktop einblenden)
 
         Mobile ist der Default — Desktop wird erst ab min-width eingeblendet.
-        Sinn: Mobil (< 601px) greift kein @media, Desktop erst darueber.
+        Sinn: Mobil (< 600px) greift kein @media, Desktop erst darueber.
+
+        Issue #1306 (ADR-3): Breakpoint auf die korrekte #305-v2-Zahl 600px
+        korrigiert (war faelschlich 601px) — dieser Test folgt der Korrektur
+        (das eigene Klassen-Docstring sprach schon vorher von 600px).
         """
         html = _render_full_html()
         breakpoints = [int(m) for m in re.findall(r'min-width:\s*(\d+)px', html)]
         assert breakpoints, "@media min-width-Regel fehlt komplett (Mobile-First erwartet)"
         max_breakpoint = max(breakpoints)
-        assert max_breakpoint >= 601, (
-            f"Desktop @media-Breakpoint ist {max_breakpoint}px -- erwartet >= 601px.\n"
+        assert max_breakpoint >= 600, (
+            f"Desktop @media-Breakpoint ist {max_breakpoint}px -- erwartet >= 600px.\n"
             f"Mobile-First: Mobil ist Default, Desktop wird erst ab min-width eingeblendet."
         )
 
@@ -458,10 +462,15 @@ class TestMobileCompactLayout:
         THEN enthält der mobile-compact-Bereich mindestens einen Zeitstempel
 
         Wenn der mobile-compact-Block leer ist, gibt es auf Mobile gar nichts zu sehen.
+
+        Issue #1306: Anker auf den tatsaechlichen `class="mobile-compact"`-Div
+        (Zeilen-Content) umgestellt statt der bloßen `.mobile-compact`-CSS-Regel
+        im <style>-Block — die neue Profil-Eyebrow im Header verschiebt sonst
+        das fixe 5000-Zeichen-Fenster an den Zeitstempeln vorbei.
         """
         html = _render_full_html()
-        mc_start = html.find("mobile-compact")
-        assert mc_start != -1, "Kein mobile-compact gefunden"
+        mc_start = html.find('class="mobile-compact"')
+        assert mc_start != -1, "Kein mobile-compact-Div gefunden"
         mc_block = html[mc_start:mc_start + 5000]
         has_time = any(f"{h:02d}:00" in mc_block for h in range(6, 16))
         assert has_time, (

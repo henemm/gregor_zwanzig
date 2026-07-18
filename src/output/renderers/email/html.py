@@ -32,6 +32,9 @@ from src.output.renderers.email.helpers import (
     render_origin_footer_html,
     shorten_stage_name, visible_cols,
 )
+# Issue #1306: Profil-Signatur (Akzentfarbe/Icon/Eyebrow) fuer den Header —
+# bisher nur in plain.py verdrahtet, hier bislang nie aufgerufen.
+from src.output.renderers.email.profile_signature import profile_signature
 from src.output.renderers.alert.official_alerts import (
     OfficialAlertNotice, _bundle_by_hazard_level, dedupe_official_alerts,
     format_segment_reference, official_alert_source_label,
@@ -876,13 +879,24 @@ def render_html(
     else:
         _date_str = report_date  # Rückwärtskompatibilität
 
+    # Issue #1306: Profil-Signatur (Akzentfarbe/Icon/Eyebrow) — analog plain.py:105.
+    sig = profile_signature(profile)
+    profile_eyebrow_html = (
+        '<div class="eyebrow" style="margin-bottom:2px;">'
+        + sig.icon_html
+        + f'<span style="font-family:{FONT_DATA};font-size:10px;letter-spacing:0.12em;'
+        f'color:{G_ACCENT};font-weight:600;text-transform:uppercase;margin-left:4px;">'
+        f'{sig.eyebrow}</span></div>'
+    )
+
     # Two-column header
     left_col = (
         '<td style="vertical-align:top;padding-bottom:14px;border-right:none;'
         'border-bottom:none;">'
+        + profile_eyebrow_html
         + _eyebrow(f"{_rt_upper}-BRIEFING")
-        + f'<div style="font-size:22px;font-weight:600;letter-spacing:-0.015em;'
-        f'margin-top:4px;color:#1d1c1a;">{_route_title}</div>'
+        + f'<h1 style="font-size:22px;font-weight:600;letter-spacing:-0.015em;'
+        f'margin:4px 0 0 0;color:#1d1c1a;">{_route_title}</h1>'
         + f'<div style="font-family:{FONT_DATA};font-size:13px;color:#6b6962;margin-top:4px;">'
         f'{_date_str}</div>'
         + '</td>'
@@ -1421,7 +1435,7 @@ def render_html(
         li {{ margin: 4px 0; font-size: 14px; }}
         .desktop-only {{ display: none; }}
         .mobile-compact {{ display: block; }}
-        @media (min-width:601px) {{
+        @media (min-width:600px) {{
             body {{ padding:16px; }}
             .container {{ border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }}
             .header h1 {{ font-size:22px; }}

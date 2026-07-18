@@ -43,6 +43,7 @@ from app.models import (
     ThunderLevel,
     TripSegment,
 )
+from app.profile import ActivityProfile
 from output.renderers.trip_report import TripReportFormatter
 from services.official_alerts.models import OfficialAlert
 
@@ -237,9 +238,12 @@ def _scenarios():
         snow_new_cm=25.0, freezing_level_m=1800,
         lat=47.13, lon=10.20, start_elev=1500.0, end_elev=2300.0,
     )
+    # Issue #1306: Docstring sagt Wintersport — Profil bisher nicht uebergeben,
+    # dadurch faelschlich ALLGEMEIN-Fallback im Golden eingefroren.
     yield "arlberg-winter-morning", formatter.format_email(
         [seg], "Arlberg Winter", "morning",
         display_config=cfg(), stage_name="Arlberg",
+        profile=ActivityProfile.WINTERSPORT,
     )
 
     # 5. Korsika Vigilance Update — mit amtlicher Warnung (Issue #1216 AC-9):

@@ -38,6 +38,7 @@ from app.models import (
     ThunderLevel,
     TripSegment,
 )
+from app.profile import ActivityProfile
 from output.renderers.trip_report import TripReportFormatter
 from services.official_alerts.models import OfficialAlert
 
@@ -251,6 +252,7 @@ def test_email_plain_golden_arlberg_winter_morning():
         [seg], "Arlberg Winter", "morning",
         display_config=build_default_display_config(),
         stage_name="Arlberg",
+        profile=ActivityProfile.WINTERSPORT,
     )
     _assert_plain_matches_golden("arlberg-winter-morning", report.email_plain)
 

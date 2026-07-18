@@ -66,7 +66,6 @@ def test_ac1_signature_allgemein():
 
 # --- AC-2: render_html(profile=...) rendert korrekten Header --------------
 
-@pytest.mark.xfail(reason="#1306: Profil-Signatur nie in HTML verdrahtet (html.py:782 referenziert profile= nie)", strict=False)
 @pytest.mark.parametrize("profile,accent_hex,_icon,eyebrow", PROFILE_CASES)
 def test_ac2_render_html_with_profile(profile, accent_hex, _icon, eyebrow):
     """
@@ -111,7 +110,6 @@ def test_ac2_render_html_with_profile(profile, accent_hex, _icon, eyebrow):
 
 # --- AC-3: render_email reicht profile an render_html + render_plain -------
 
-@pytest.mark.xfail(reason="#1306: Profil-Signatur nie in HTML verdrahtet (html.py:782 referenziert profile= nie)", strict=False)
 def test_ac3_render_email_passes_profile_through():
     """
     AC-3: render_email(profile=WINTERSPORT) → html enthält Wintersport-Marker,
@@ -129,7 +127,6 @@ def test_ac3_render_email_passes_profile_through():
 
 # --- AC-4: format_email reicht profile an render_email durch ---------------
 
-@pytest.mark.xfail(reason="#1306: Profil-Signatur nie in HTML verdrahtet (html.py:782 referenziert profile= nie)", strict=False)
 def test_ac4_format_email_passes_profile_through():
     """
     AC-4: TripReportFormatter.format_email(profile=SUMMER_TREKKING) →
@@ -167,7 +164,6 @@ def test_ac4_format_email_passes_profile_through():
 
 # --- AC-6: Eyebrow-Block steht vor <h1> im Header -------------------------
 
-@pytest.mark.xfail(reason="#1306: Profil-Signatur nie in HTML verdrahtet (html.py:782 referenziert profile= nie)", strict=False)
 @pytest.mark.parametrize("profile,_accent,_icon,_eyebrow", PROFILE_CASES)
 def test_ac6_header_eyebrow_before_h1(profile, _accent, _icon, _eyebrow):
     """
@@ -179,7 +175,10 @@ def test_ac6_header_eyebrow_before_h1(profile, _accent, _icon, _eyebrow):
     html, _plain = render_email(token_line, profile=profile, **_common_kwargs())
 
     eyebrow_idx = html.lower().find("class=\"eyebrow\"")
-    h1_idx = html.find("<h1>")
+    # Attributtolerant (analog test_horizon_filter.py #1306): <h1 style="..."> ist
+    # gewollt (ADR-1 Margin-Reset), ein exakter "<h1>"-Bare-Match wuerde daran
+    # scheitern, obwohl der h1-Tag korrekt vorhanden ist.
+    h1_idx = html.find("<h1")
     assert eyebrow_idx != -1, "Kein <div class=\"eyebrow\"> im HTML gefunden"
     assert h1_idx != -1, "Kein <h1> im HTML gefunden"
     assert eyebrow_idx < h1_idx, (
@@ -208,7 +207,6 @@ def test_ac7_render_plain_prefix_line(profile, _accent, icon, eyebrow):
 
 # --- AC-8: Backward-Kompat — render_email ohne profile-kwarg ---------------
 
-@pytest.mark.xfail(reason="#1306: Profil-Signatur nie in HTML verdrahtet (html.py:782 referenziert profile= nie)", strict=False)
 def test_ac8_render_email_without_profile_kwarg_backward_compat():
     """
     AC-8: render_email(...) OHNE profile-kwarg darf nicht crashen und muss

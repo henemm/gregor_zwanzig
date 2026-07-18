@@ -16,9 +16,8 @@ existiert noch gar nicht. Bei `pytest` → TypeError / ImportError.
 
 from __future__ import annotations
 
+import re
 from datetime import date
-
-import pytest
 
 
 
@@ -153,7 +152,6 @@ def test_derive_horizon_negative_delta():
 # End-to-End: render_html() filtert pro Etappe
 # ----------------------------------------------------------------------
 
-@pytest.mark.xfail(reason="#1306: Gewitter-Spalte fehlt im Heute-Block trotz konfiguriertem Horizon", strict=False)
 def test_render_html_filters_per_stage():
     """E2E: render_html() propagiert horizon pro Etappe.
 
@@ -266,17 +264,22 @@ def test_render_html_filters_per_stage():
     assert len(parts) >= 4, f"Erwartet 3 Etappen-Bloecke, got {len(parts) - 1}"
     block_today, block_tomorrow, block_dayafter = parts[1], parts[2], parts[3]
 
+    def _has_th(label: str, block: str) -> bool:
+        # Attributtolerant (#1306): seit #900/#911 traegt <th> ein style-Attribut,
+        # ein exakter "<th>label</th>"-Match war stale.
+        return re.search(rf"<th[^>]*>{re.escape(label)}</th>", block) is not None
+
     # Etappe 1 (heute): Thunder sichtbar, Wind nicht.
-    assert f"<th>{th_label}</th>" in block_today, "thunder fehlt im heute-Block"
-    assert f"<th>{wind_label}</th>" not in block_today, "wind sollte heute gefiltert sein"
-    assert f"<th>{temp_label}</th>" in block_today
+    assert _has_th(th_label, block_today), "thunder fehlt im heute-Block"
+    assert not _has_th(wind_label, block_today), "wind sollte heute gefiltert sein"
+    assert _has_th(temp_label, block_today)
 
     # Etappe 2 (morgen): Wind sichtbar, Thunder nicht.
-    assert f"<th>{wind_label}</th>" in block_tomorrow, "wind fehlt im morgen-Block"
-    assert f"<th>{th_label}</th>" not in block_tomorrow, "thunder sollte morgen gefiltert sein"
-    assert f"<th>{temp_label}</th>" in block_tomorrow
+    assert _has_th(wind_label, block_tomorrow), "wind fehlt im morgen-Block"
+    assert not _has_th(th_label, block_tomorrow), "thunder sollte morgen gefiltert sein"
+    assert _has_th(temp_label, block_tomorrow)
 
     # Etappe 3 (uebermorgen): nur Temperature.
-    assert f"<th>{temp_label}</th>" in block_dayafter
-    assert f"<th>{th_label}</th>" not in block_dayafter
-    assert f"<th>{wind_label}</th>" not in block_dayafter
+    assert _has_th(temp_label, block_dayafter)
+    assert not _has_th(th_label, block_dayafter)
+    assert not _has_th(wind_label, block_dayafter)

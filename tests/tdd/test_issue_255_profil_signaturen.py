@@ -85,7 +85,6 @@ def test_ac2_255_summer_trekking_vs_allgemein_distinguishable():
 
 # ── AC-3: render_html nutzt G_PAPER als Header-BG + G_ACCENT im Eyebrow ─────
 
-@pytest.mark.xfail(reason="#1306: Profil-Signatur nie in HTML verdrahtet (html.py:782 referenziert profile= nie)", strict=False)
 def test_ac3_255_render_html_paper_header_and_accent_eyebrow():
     """AC-3: render_html setzt Header auf G_PAPER, Eyebrow-Farbe auf G_ACCENT, nutzt SVG."""
     from src.output.renderers.email.html import render_html
@@ -123,9 +122,17 @@ def test_ac3_255_render_html_paper_header_and_accent_eyebrow():
 
 # ── AC-4: Profil-Akzentfarbe NICHT als Header-Background ────────────────────
 
-@pytest.mark.xfail(reason="#1306: Profil-Signatur nie in HTML verdrahtet — kein <div class=\"header\"> mit Profil-Bezug im aktuellen render_html-Output", strict=False)
 def test_ac4_255_accent_not_as_header_background():
-    """AC-4: render_html(ALLGEMEIN) → #6b675c erscheint nicht als Header-background."""
+    """AC-4: render_html(ALLGEMEIN) → #6b675c erscheint nicht als Header-background.
+
+    Umgeschrieben fuer #1306: der urspruengliche Selektor `<div class="header"`
+    ist seit dem #884/#890-Redesign (zweispaltiger left_col/right_col-Header)
+    tot. Neuer Anker: der tatsaechliche Header-Container traegt
+    `background:{G_HEADER_BG}` (statt einer Profil-Akzentfarbe) — fachlicher
+    Zweck ("Profil-Akzent erscheint nie als Header-Hintergrund") bleibt
+    unveraendert erhalten.
+    """
+    from src.output.renderers.email.design_tokens import G_HEADER_BG
     from src.output.renderers.email.html import render_html
     kwargs = _common_kwargs()
     token_line = _make_token_line()
@@ -148,15 +155,14 @@ def test_ac4_255_accent_not_as_header_background():
         friendly_keys=kwargs["friendly_keys"],
         profile=ActivityProfile.ALLGEMEIN,
     )
-    header_start = html.find('<div class="header"')
-    assert header_start != -1, "Kein <div class=\"header\"> gefunden"
-    header_end = html.find("</div>", header_start + 200)
-    header_section = html[header_start:header_end + 6]
-    assert "background:#6b675c" not in header_section, (
-        "Header-BG ist noch #6b675c (Profil-Akzent) — muss G_PAPER sein"
+    assert f"background:{G_HEADER_BG}" in html, (
+        f"Header-Container mit background:{G_HEADER_BG} nicht gefunden"
     )
-    assert "background: #6b675c" not in header_section, (
-        "Header-BG ist noch #6b675c (mit Leerzeichen) — muss G_PAPER sein"
+    assert "background:#6b675c" not in html, (
+        "Profil-Akzent #6b675c erscheint als background — muss G_HEADER_BG sein"
+    )
+    assert "background: #6b675c" not in html, (
+        "Profil-Akzent #6b675c (mit Leerzeichen) erscheint als background"
     )
     assert G_PAPER_HEX in html, f"G_PAPER ({G_PAPER_HEX}) fehlt im HTML"
 
