@@ -43,7 +43,7 @@ const THUNDER:       MetricDef = { label: 'Gewitter',       key: 'thunder_level_
 const TEMP_MIN:      MetricDef = { label: 'Temperatur min', key: 'temp_min_c',        unit: '°C',  decimals: 0, higherIsBetter: true,  kind: 'range', rangeMin: -30,   rangeMax: 30,    step: 1   };
 const GUST_MAX:      MetricDef = { label: 'Böen',           key: 'gust_max_kmh',      unit: 'km/h',decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0,     rangeMax: 150,   step: 5   };
 const CAPE:          MetricDef = { label: 'Gewitter-Energie (CAPE)', key: 'cape_max_jkg', unit: 'J/kg', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 3000, step: 100 };
-const FREEZING_LVL:  MetricDef = { label: 'Frostgrenze',    key: 'freezing_level_m',  unit: 'm',   decimals: 0, higherIsBetter: true,  kind: 'range', rangeMin: 0,     rangeMax: 5000,  step: 100 };
+const FREEZING_LVL:  MetricDef = { label: 'Nullgradgrenze', key: 'freezing_level_m',  unit: 'm',   decimals: 0, higherIsBetter: true,  kind: 'range', rangeMin: 0,     rangeMax: 5000,  step: 100 };
 // Issue #1285: Regenwahrscheinlichkeit war als Tages-Matrix-Metrik nicht
 // wählbar (die `pop_pct`-ID in compareHourlyMetricDefs.ts ist das eigene
 // Vokabular der STUNDEN-Spalten, nicht dieses hier). Key = Backend-Feldname

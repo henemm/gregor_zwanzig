@@ -57,7 +57,7 @@ def _dp(hour: int) -> ForecastDataPoint:
         wind_chill_c=float(6 + (hour - 9)),
         # Issue #1296 (Klasse B, kein LocationResult-Feld): eine deutliche
         # Gewitter-Energie-Spitze in den beiden Gewitterstunden, eine
-        # gleichmaessig steigende Frostgrenze -- beide Werte muessen > 0
+        # gleichmaessig steigende Nullgradgrenze -- beide Werte muessen > 0
         # sein, damit ein Test-Fehlschlag nicht durch einen zufaelligen
         # Null-Wert verdeckt wird.
         cape_jkg=800.0 if hour in (13, 14) else 100.0,
@@ -149,7 +149,9 @@ def _find_row(html: str, predicate) -> dict | None:
 _IS_TEMP_MIN = lambda l: "temp" in l and "min" in l  # noqa: E731
 _IS_GUST = lambda l: "böen" in l or "boen" in l  # noqa: E731
 _IS_CAPE = lambda l: "cape" in l  # noqa: E731
-_IS_FREEZING = lambda l: "frostgrenze" in l  # noqa: E731
+# Issue #1298 (PO-Entscheid 2026-07-17): Label "Frostgrenze" -> "Nullgradgrenze"
+# ueberall, nur die Anzeige -- die Daten-ID freezing_level_m bleibt unveraendert.
+_IS_FREEZING = lambda l: "nullgradgrenze" in l  # noqa: E731
 
 _EMPTY = {"—", "-", "·", ""}
 
@@ -234,18 +236,19 @@ def test_selected_cape_metric_appears_in_overview_matrix():
 
 
 def test_selected_freezing_level_metric_appears_in_overview_matrix():
-    """AC-4 (rot vor Fix): Nutzer waehlt Frostgrenze -> keine Zeile, aus
-    demselben Grund wie CAPE (Klasse B)."""
+    """AC-4 (rot vor Fix): Nutzer waehlt Nullgradgrenze -> keine Zeile, aus
+    demselben Grund wie CAPE (Klasse B). Label seit #1298 "Nullgradgrenze"
+    (vormals "Frostgrenze", PO-Entscheid 2026-07-17)."""
     result = _result()
     enabled = resolve_enabled_metrics(["freezing_level_m"])
 
     html = render_compare_html(result, enabled_metrics=enabled)
-    row = _assert_row_with_values(html, _IS_FREEZING, "Frostgrenze")
+    row = _assert_row_with_values(html, _IS_FREEZING, "Nullgradgrenze")
 
     svc = WeatherMetricsService()
     expected = svc._compute_freezing_level(_timeseries(_hourly()))
     assert _number(row["cells"][0]) == expected, (
-        f"Frostgrenze-Tageswert stimmt nicht mit dem Trip-Pfad-Aggregat "
+        f"Nullgradgrenze-Tageswert stimmt nicht mit dem Trip-Pfad-Aggregat "
         f"ueberein: {row['cells'][0]!r} != {expected}"
     )
 
@@ -327,9 +330,9 @@ def test_plaintext_shows_all_four_new_rows():
     )
     assert _number(cape_line) == expected_cape
 
-    freezing_line = _plain_value(text, "Frostgrenze")
+    freezing_line = _plain_value(text, "Nullgradgrenze")
     assert freezing_line is not None, (
-        f"Klartext hat keine 'Frostgrenze'-Zeile, obwohl freezing_level_m "
+        f"Klartext hat keine 'Nullgradgrenze'-Zeile, obwohl freezing_level_m "
         f"gewaehlt ist:\n{text}"
     )
     assert _number(freezing_line) == expected_freezing

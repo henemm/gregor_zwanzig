@@ -112,6 +112,10 @@ def _sev_visibility(v: float) -> str:
     return "danger" if v < 1000 else "warn" if v < 3000 else "caution" if v < 5000 else "ok"
 
 
+def _sev_cape(v: float) -> str:
+    return _CANONICAL_TO_COMPARE.get(severity_for("cape", v), "ok")
+
+
 _WEEKDAY_ABBR = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 
 # Format-Vorbild html.py:1160-1161 -- lokale Kopie statt Import (eigenstaendiges
@@ -209,12 +213,13 @@ CV2_METRICS = [
     {"key": "snow_new_cm", "metric_id": "fresh_snow", "label": "Neuschnee", "unit": "cm"},
     # Issue #1296: vier weitere bis 2026-07-17 STILL verworfene Zeilen (analog
     # #1285). temp_min ohne "sev" (_sev_temp ist eine Hitze-Schwelle, fachlich
-    # falsch fuer eine Kaelte-Kennzahl); cape_max/freezing_level ebenfalls ohne
-    # "sev" (kein AC verlangt Faerbung, s. Spec Known Limitations).
+    # falsch fuer eine Kaelte-Kennzahl); freezing_level ebenfalls ohne "sev"
+    # (kein AC verlangt Faerbung, s. Spec Known Limitations). cape_max bekam
+    # mit Issue #1298 (B2) eine Ampel-Faerbung ueber _sev_cape.
     {"key": "temp_min", "label": "Temp min", "unit": "°C"},
     {"key": "gust_max", "label": "Böen", "unit": "km/h", "sev": _sev_gust},
-    {"key": "cape_max", "label": "CAPE", "unit": "J/kg"},
-    {"key": "freezing_level", "label": "Frostgrenze", "unit": "m"},
+    {"key": "cape_max", "label": "CAPE", "unit": "J/kg", "sev": _sev_cape},
+    {"key": "freezing_level", "label": "Nullgradgrenze", "unit": "m"},
 ]
 
 

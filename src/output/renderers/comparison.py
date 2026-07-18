@@ -47,7 +47,7 @@ _DAILY_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
     # Issue #1296, Klasse B (kein LocationResult-Feld, Live-Ableitung ueber
     # _metric_value -> _daily_summary, analog den fuenf #1285-Zeilen).
     ("cape_max", "CAPE", lambda v: f"{v:.0f} J/kg"),
-    ("freezing_level", "Frostgrenze", lambda v: f"{v:.0f} m"),
+    ("freezing_level", "Nullgradgrenze", lambda v: f"{v:.0f} m"),
 )
 
 
