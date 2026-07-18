@@ -28,6 +28,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("comparison_engine")
 
+# Issue #1305 (Scheibe A4 von Epic #1301): Vorhersagehorizont fuer den
+# Ortsvergleich. Seit A2 (#1303) liefert OpenMeteo bis zu
+# OPENMETEO_MAX_FORECAST_DAYS=15 Tage; 96h (4 Tage) deckt den spaeteren
+# 3-Tage-Ausblick (Scheibe B4) ab und bleibt weit unter der API-Grenze.
+# EINE Konstante fuer Versand + Vorschau + beide Engine-Defaults verhindert
+# Drift zwischen den Pfaden (Fehlerklasse #1297).
+COMPARE_FORECAST_HOURS = 96
+
 
 class ComparisonEngine:
     """
@@ -42,7 +50,7 @@ class ComparisonEngine:
         locations: List[SavedLocation],
         time_window: tuple[int, int],
         target_date: "date",
-        forecast_hours: int = 48,
+        forecast_hours: int = COMPARE_FORECAST_HOURS,
         profile: Optional["ActivityProfile"] = None,
         official_alerts_enabled: bool = True,
     ) -> ComparisonResult:
@@ -305,7 +313,7 @@ def dict_to_comparison_result(
 
 def fetch_forecast_for_location(
     loc: SavedLocation,
-    hours: int = 48,
+    hours: int = COMPARE_FORECAST_HOURS,
     settings: Optional["Settings"] = None,
 ) -> Dict[str, Any]:
     """Fetch forecast for a location and extract all available metrics.

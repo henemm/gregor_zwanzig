@@ -27,12 +27,18 @@ RED-Erwartung (vor Fix):
   Beide Presets (forecast_hours 48 und 72) reichen 48 an die Engine durch
   (hartkodiert). Die Assertion, dass das 72er-Preset auch 72 durchreicht,
   schlägt fehl → RED. Nach dem Fix reicht jedes Preset seinen eigenen Wert durch.
+
+Update Issue #1305 (Scheibe A4 von Epic #1301): der feste Wert wird von 48
+auf COMPARE_FORECAST_HOURS (96) angehoben — die Regressionsanker unten
+pruefen seither gegen die geteilte Konstante statt den Literal 48.
 """
 from __future__ import annotations
 
 import uuid
 
 import pytest
+
+from services.comparison_engine import COMPARE_FORECAST_HOURS
 
 
 class _ForecastHoursRecorded(Exception):
@@ -133,16 +139,18 @@ class TestComparePresetForecastHoursPassthrough:
     und liest den Preset-Wert NICHT mehr (Spec #1268 AC-4, Implementation
     Details Punkt 1). Die #764-Passthrough-Erwartung ist damit ungueltig.
 
-    Die beiden 48er-Faelle unten bleiben grün, aber aus einem anderen Grund als
-    frueher: nicht weil der Wert durchgereicht wird, sondern weil 48 jetzt
-    hartkodiert ist. Sie sind hier als Regressionsanker belassen — der Dispatch
-    muss unter allen Preset-Varianten 48 an die Engine geben.
+    Die beiden 48er-Faelle unten bleiben gruen, aber aus einem anderen Grund als
+    frueher: nicht weil der Wert durchgereicht wird, sondern weil der Wert
+    hartkodiert ist (48 bis Issue #1305, seither COMPARE_FORECAST_HOURS=96).
+    Sie sind hier als Regressionsanker belassen — der Dispatch muss unter
+    allen Preset-Varianten COMPARE_FORECAST_HOURS an die Engine geben.
     """
 
     def test_preset_72h_ignored_engine_gets_fixed_48(self, tmp_path):
         """GIVEN: Daily-Preset mit gespeichertem forecast_hours=72
         WHEN: _send_one_compare_preset() läuft
-        THEN: ComparisonEngine.run erhält 48 — der Preset-Wert wird ignoriert.
+        THEN: ComparisonEngine.run erhält COMPARE_FORECAST_HOURS — der
+              Preset-Wert wird ignoriert.
 
         Issue #1268 nimmt das #764-Verhalten bewusst zurück: 72 h war ueber den
         Editor einstellbar, den es nicht mehr gibt. Der frueher hier gepruefte
@@ -154,14 +162,15 @@ class TestComparePresetForecastHoursPassthrough:
         preset["_user_id"] = user_id
 
         captured = _capture_forecast_hours(preset, loc, tmp_path)
-        assert captured == 48, (
-            f"ComparisonEngine.run erhielt forecast_hours={captured}, erwartet fest 48 — "
-            "der Dispatch darf den gespeicherten Preset-Horizont seit #1268 nicht mehr lesen."
+        assert captured == COMPARE_FORECAST_HOURS, (
+            f"ComparisonEngine.run erhielt forecast_hours={captured}, erwartet fest "
+            f"{COMPARE_FORECAST_HOURS} — der Dispatch darf den gespeicherten "
+            "Preset-Horizont seit #1268 nicht mehr lesen."
         )
 
     def test_preset_48h_passes_48_to_engine(self, tmp_path):
         """GIVEN: Daily-Preset mit forecast_hours=48
-        THEN: ComparisonEngine.run erhält forecast_hours=48.
+        THEN: ComparisonEngine.run erhält forecast_hours=COMPARE_FORECAST_HOURS.
         """
         user_id = _fresh_user()
         loc = _resolvable_location("loc-764-b")
@@ -169,13 +178,15 @@ class TestComparePresetForecastHoursPassthrough:
         preset["_user_id"] = user_id
 
         captured = _capture_forecast_hours(preset, loc, tmp_path)
-        assert captured == 48, (
-            f"ComparisonEngine.run erhielt forecast_hours={captured}, erwartet 48."
+        assert captured == COMPARE_FORECAST_HOURS, (
+            f"ComparisonEngine.run erhielt forecast_hours={captured}, "
+            f"erwartet {COMPARE_FORECAST_HOURS}."
         )
 
     def test_legacy_preset_without_field_defaults_to_48(self, tmp_path):
         """GIVEN: Daily-Preset OHNE forecast_hours-Feld (Altdaten)
-        THEN: der Versandpfad reicht den Default 48 durch (kein Crash, kein 0/None).
+        THEN: der Versandpfad reicht den Default COMPARE_FORECAST_HOURS durch
+              (kein Crash, kein 0/None).
         """
         user_id = _fresh_user()
         loc = _resolvable_location("loc-764-c")
@@ -183,13 +194,15 @@ class TestComparePresetForecastHoursPassthrough:
         preset["_user_id"] = user_id
 
         captured = _capture_forecast_hours(preset, loc, tmp_path)
-        assert captured == 48, (
-            f"Legacy-Preset ohne forecast_hours: erwartet Default 48, durchgereicht wurde {captured}."
+        assert captured == COMPARE_FORECAST_HOURS, (
+            f"Legacy-Preset ohne forecast_hours: erwartet Default {COMPARE_FORECAST_HOURS}, "
+            f"durchgereicht wurde {captured}."
         )
 
     def test_preset_explicit_zero_defaults_to_48(self, tmp_path):
         """Issue #781 F001: GIVEN: Daily-Preset mit forecast_hours=0 (nur per Hand-Edit erreichbar)
-        THEN: Python-Versandpfad defaultt auf 48, weil 0 kein gueltiger Wert ist.
+        THEN: Python-Versandpfad defaultt auf COMPARE_FORECAST_HOURS, weil 0
+              kein gueltiger Wert ist.
         """
         user_id = _fresh_user()
         loc = _resolvable_location("loc-781-a")
@@ -197,7 +210,8 @@ class TestComparePresetForecastHoursPassthrough:
         preset["_user_id"] = user_id
 
         captured = _capture_forecast_hours(preset, loc, tmp_path)
-        assert captured == 48, (
-            f"Preset mit forecast_hours=0: erwartet Fallback 48, durchgereicht wurde {captured}. "
-            "preset.get('forecast_hours', 48) reicht 0 durch; Fix: preset.get('forecast_hours') or 48."
+        assert captured == COMPARE_FORECAST_HOURS, (
+            f"Preset mit forecast_hours=0: erwartet Fallback {COMPARE_FORECAST_HOURS}, "
+            f"durchgereicht wurde {captured}. preset.get('forecast_hours', 48) reicht 0 "
+            "durch; Fix: preset.get('forecast_hours') or 48."
         )

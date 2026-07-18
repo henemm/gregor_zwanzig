@@ -688,8 +688,9 @@ def _render_header(result: ComparisonResult, sig) -> str:
 
     profil_val = _html.escape(sig.eyebrow)
     orte_val = str(len(result.locations))
-    horizont_val = "+48h"
     erstellt_val = datetime.now().strftime("%H:%M")
+    # Issue #1305: keine Horizont-Kachel mehr — analog #1268 (Zeitfenster-Zeile
+    # entfiel ersatzlos). Der Wert ist kein Nutzer-relevanter Datenpunkt.
 
     cell_label_style = (
         f"font-family:{FONT_DATA};font-size:9px;"
@@ -707,10 +708,9 @@ def _render_header(result: ComparisonResult, sig) -> str:
         )
 
     desktop_cells = (
-        _cell("Profil", profil_val, "25%")
-        + _cell("Orte", orte_val, "25%")
-        + _cell("Horizont", horizont_val, "25%")
-        + _cell("Erstellt", erstellt_val, "25%")
+        _cell("Profil", profil_val, "33%")
+        + _cell("Orte", orte_val, "33%")
+        + _cell("Erstellt", erstellt_val, "34%")
     )
     desktop_table = (
         f'<table class="header-stats-desktop" cellspacing="0" cellpadding="0" '
@@ -719,7 +719,7 @@ def _render_header(result: ComparisonResult, sig) -> str:
     )
 
     mobile_row1 = _cell("Profil", profil_val, "50%") + _cell("Orte", orte_val, "50%")
-    mobile_row2 = _cell("Horizont", horizont_val, "50%") + _cell("Erstellt", erstellt_val, "50%")
+    mobile_row2 = _cell("Erstellt", erstellt_val, "100%")
     mobile_table = (
         f'<table class="header-stats-mobile" cellspacing="0" cellpadding="0" '
         f'style="display:none;width:100%;margin-top:14px;border-collapse:collapse;">'

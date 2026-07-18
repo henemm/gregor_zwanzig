@@ -31,6 +31,7 @@ from app.models import ForecastDataPoint, ThunderLevel
 from app.user import SavedLocation
 
 from tests.helpers.compare_briefings import write_compare_briefings
+from services.comparison_engine import COMPARE_FORECAST_HOURS
 
 TARGET_DATE = date(2026, 7, 8)
 
@@ -329,8 +330,9 @@ def test_single_preview_call_runs_engine_once_and_fills_all_channels(compare_env
 def test_preview_uses_fixed_full_day_window_ignoring_preset(compare_env, monkeypatch):
     """GIVEN ein Preset mit gespeichertem Zeitfenster 10-14 Uhr und Horizont 24h
     WHEN die Vorschau gerendert wird
-    THEN erhaelt ComparisonEngine.run time_window=(0, 23) und forecast_hours=48
-    — exakt das, was der echte Versand nutzt (scheduler_dispatch_service.py:319-326).
+    THEN erhaelt ComparisonEngine.run time_window=(0, 23) und
+    forecast_hours=COMPARE_FORECAST_HOURS (96, seit Issue #1305) — exakt das,
+    was der echte Versand nutzt (scheduler_dispatch_service.py:319-326).
 
     Fachlich (Issue #1268): Zeitfenster/Horizont sind keine Editor-Felder mehr.
     Eine Vorschau, die die deprecateten Preset-Werte liest, zeigt etwas anderes
@@ -362,9 +364,9 @@ def test_preview_uses_fixed_full_day_window_ignoring_preset(compare_env, monkeyp
         f"(0, 23), uebergeben wurde {calls.kwargs_seen[0].get('time_window')!r} "
         "— vermutlich aus den deprecateten Preset-Feldern hour_from/hour_to."
     )
-    assert calls.kwargs_seen[0].get("forecast_hours") == 48, (
-        "AC-11: Die Vorschau muss den festen 48h-Horizont des Versands nutzen, "
-        f"uebergeben wurde {calls.kwargs_seen[0].get('forecast_hours')!r}."
+    assert calls.kwargs_seen[0].get("forecast_hours") == COMPARE_FORECAST_HOURS, (
+        f"AC-11: Die Vorschau muss den festen {COMPARE_FORECAST_HOURS}h-Horizont des "
+        f"Versands nutzen, uebergeben wurde {calls.kwargs_seen[0].get('forecast_hours')!r}."
     )
 
 

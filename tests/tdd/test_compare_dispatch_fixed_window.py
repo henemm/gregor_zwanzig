@@ -1,5 +1,6 @@
 """TDD RED — Issue #1268 (AC-4): Compare-Dispatch nutzt ein festes Bewertungs-
-fenster (0–23 Uhr) und einen festen Horizont (48 h), unabhaengig vom Preset.
+fenster (0–23 Uhr) und einen festen Horizont (COMPARE_FORECAST_HOURS, seit
+Issue #1305 96 h), unabhaengig vom Preset.
 
 Spec: docs/specs/modules/issue_1268_compare_timewindow_removal.md § AC-4
       + Implementation Details Punkt 1
@@ -45,6 +46,8 @@ from __future__ import annotations
 import uuid
 
 import pytest
+
+from services.comparison_engine import COMPARE_FORECAST_HOURS
 
 
 class _EngineCallRecorded(Exception):
@@ -146,11 +149,13 @@ class TestCompareDispatchFixedWindow:
     def test_dispatch_uses_fixed_48h_ignoring_preset_forecast_hours(self, tmp_path):
         """GIVEN: ein Bestands-Preset mit gespeichertem Horizont 24 h
         WHEN: der Dispatch laeuft
-        THEN: ComparisonEngine.run erhaelt forecast_hours=48 — fest.
+        THEN: ComparisonEngine.run erhaelt forecast_hours=COMPARE_FORECAST_HOURS
+              (96, seit Issue #1305) — fest.
 
         Fachlich: 24 h schneidet dem Abend-Briefing (Zieltag = morgen) die
-        Daten ab (PO-Entscheid 2026-07-16). Damit wird die hartkodierte
-        "+48h"-Kachel in der Mail von einer Luege zur Wahrheit (AC-6).
+        Daten ab (PO-Entscheid 2026-07-16). Der feste Horizont ist nun ueber
+        eine geteilte Konstante mit der Vorschau synchronisiert (Issue #1305,
+        Anti-#1297).
 
         RED vor Fix: der Dispatch reicht preset["forecast_hours"] = 24 durch
         (Verhalten aus #764, das #1268 bewusst zuruecknimmt).
@@ -161,8 +166,9 @@ class TestCompareDispatchFixedWindow:
 
         recorded = _capture_engine_call(preset, loc, tmp_path)
 
-        assert recorded.forecast_hours == 48, (
-            f"RED: ComparisonEngine.run erhielt forecast_hours={recorded.forecast_hours}, erwartet 48. "
+        assert recorded.forecast_hours == COMPARE_FORECAST_HOURS, (
+            f"RED: ComparisonEngine.run erhielt forecast_hours={recorded.forecast_hours}, "
+            f"erwartet {COMPARE_FORECAST_HOURS}. "
             "Der Dispatch reicht noch den gespeicherten Preset-Horizont durch."
         )
 
@@ -170,8 +176,8 @@ class TestCompareDispatchFixedWindow:
         """GIVEN: zwei Presets mit UNTERSCHIEDLICH gespeicherten Zeitfenstern
                   (10–14 Uhr und 6–20 Uhr) und Horizonten (24 h und 72 h)
         WHEN: beide dispatched werden
-        THEN: beide erhalten identisch (0, 23) und 48 — der Preset-Wert hat
-              nachweislich KEINEN Einfluss mehr.
+        THEN: beide erhalten identisch (0, 23) und COMPARE_FORECAST_HOURS —
+              der Preset-Wert hat nachweislich KEINEN Einfluss mehr.
 
         Staerker als ein Einzel-Assert: schliesst aus, dass (0, 23) zufaellig
         aus einem Default oder aus genau diesem Preset entsteht.
@@ -199,16 +205,17 @@ class TestCompareDispatchFixedWindow:
             tmp_path,
         )
 
-        assert (a.time_window, a.forecast_hours) == (b.time_window, b.forecast_hours) == ((0, 23), 48), (
+        expected = ((0, 23), COMPARE_FORECAST_HOURS)
+        assert (a.time_window, a.forecast_hours) == (b.time_window, b.forecast_hours) == expected, (
             f"RED: Preset A ergab {(a.time_window, a.forecast_hours)}, Preset B {(b.time_window, b.forecast_hours)}. "
-            "Erwartet fuer beide ((0, 23), 48) — die gespeicherten Felder duerfen den Versand nicht mehr steuern."
+            f"Erwartet fuer beide {expected} — die gespeicherten Felder duerfen den Versand nicht mehr steuern."
         )
 
     def test_legacy_preset_without_fields_also_uses_full_day(self, tmp_path):
         """GIVEN: ein Alt-Preset komplett OHNE hour_from/hour_to/forecast_hours
         WHEN: der Dispatch laeuft
-        THEN: ebenfalls (0, 23) / 48 — kein Rueckfall auf die alten
-              9–16-Uhr-Defaults, kein Crash.
+        THEN: ebenfalls (0, 23) / COMPARE_FORECAST_HOURS — kein Rueckfall auf
+              die alten 9–16-Uhr-Defaults, kein Crash.
 
         RED vor Fix: preset.get("hour_from", 9) greift den Default 9 → (9, 16).
         """
@@ -224,6 +231,7 @@ class TestCompareDispatchFixedWindow:
             f"Legacy-Preset ohne Felder: erwartet (0, 23), durchgereicht wurde {recorded.time_window} "
             "(vermutlich der alte 9–16-Uhr-Default)."
         )
-        assert recorded.forecast_hours == 48, (
-            f"Legacy-Preset ohne Felder: erwartet 48, durchgereicht wurde {recorded.forecast_hours}."
+        assert recorded.forecast_hours == COMPARE_FORECAST_HOURS, (
+            f"Legacy-Preset ohne Felder: erwartet {COMPARE_FORECAST_HOURS}, "
+            f"durchgereicht wurde {recorded.forecast_hours}."
         )

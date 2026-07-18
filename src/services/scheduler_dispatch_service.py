@@ -317,7 +317,7 @@ def send_one_compare_preset(
     from output.renderers.comparison import (
         render_compare_email, render_compare_sms, render_compare_telegram,
     )
-    from services.comparison_engine import ComparisonEngine
+    from services.comparison_engine import COMPARE_FORECAST_HOURS, ComparisonEngine
     from services.notification_service import NotificationService
     from services.report_config_resolver import resolve_compare_render_options
 
@@ -348,7 +348,7 @@ def send_one_compare_preset(
         locations=locations,
         time_window=(0, 23),  # Issue #1268: ganzer Tag, kein Editor-Feld mehr
         target_date=target_date,
-        forecast_hours=48,  # Issue #1268: fest, kein Editor-Feld mehr
+        forecast_hours=COMPARE_FORECAST_HOURS,  # Issue #1305: geteilte Konstante statt 48 fest
         profile=profile,
         official_alerts_enabled=preset.get("official_alerts_enabled", True),  # Issue #1040
     )

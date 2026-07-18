@@ -130,7 +130,7 @@ class ComparePreviewService:
         ``ComparisonResult`` (AC-7).
         """
         from app.loader import _parse_activity_profile
-        from services.comparison_engine import ComparisonEngine
+        from services.comparison_engine import COMPARE_FORECAST_HOURS, ComparisonEngine
         from services.report_config_resolver import resolve_compare_render_options
 
         preset = self._load_preset(preset_id, user_id=user_id)
@@ -145,11 +145,15 @@ class ComparePreviewService:
         # hour_from/hour_to/forecast_hours werden bewusst NICHT gelesen: bei neu
         # angelegten Presets stehen dort die Go-Zero-Values (0), das ergaebe das
         # leere Fenster (0, 0) und eine leer laufende Vorschau.
+        # Issue #1305 (ex #1268 AC-11): Vorschau MUSS denselben Horizont anfordern
+        # wie der echte Versand (scheduler_dispatch_service.py). Der geteilte Bezug
+        # auf COMPARE_FORECAST_HOURS ersetzt den bisherigen Kommentar-Appell durch
+        # Struktur — Divergenz ist strukturell ausgeschlossen (#1297).
         result = ComparisonEngine.run(
             locations=locations,
             time_window=(0, 23),  # Issue #1268: ganzer Tag, kein Editor-Feld mehr
             target_date=resolved_date,
-            forecast_hours=48,  # Issue #1268: fest, kein Editor-Feld mehr
+            forecast_hours=COMPARE_FORECAST_HOURS,
             profile=profile,
             official_alerts_enabled=preset.get("official_alerts_enabled", True),
         )

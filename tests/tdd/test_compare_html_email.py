@@ -383,24 +383,29 @@ class TestCompareMailWithoutTimeWindow:
 
     def test_ac6_header_zeigt_48h_horizont(self):
         """GIVEN: eine beliebige Vergleichs-Mail
-        WHEN: der Nutzer die Kopfzeile-Kachel "Horizont" liest
-        THEN: sie zeigt "+48h" — konsistent zu den nach AC-4 fest abgerufenen
-              48 Vorhersagestunden.
+        WHEN: der Nutzer die Kopfzeile liest
+        THEN: es gibt keine Horizont-Kachel mehr — weder "Horizont" noch ein
+              Wert wie "+48h"/"+96h" tauchen auf.
 
-        AC-6. Erwartet GRUEN vor UND nach dem Fix: compare_html.py:594 setzt
-        horizont_val bereits hart auf "+48h". Genau das war bisher die
-        Anzeige-Luege (Context Risk 3) — durch den Dispatch-Fix (AC-4) wird
-        derselbe Wert wahr. Der Test ist der Regressionsanker dafuer, dass
-        beim Aufraeumen nicht versehentlich wieder ein Preset-Wert
-        eingeschleift wird.
+        Loest das alte #1268 AC-6 ("Kopf-Kachel zeigt +48h") bewusst ab:
+        Issue #1305 hebt den Ortsvergleich-Horizont auf 96h an und laesst die
+        Kachel ersatzlos entfallen (Spec docs/specs/modules/
+        compare_forecast_horizon.md, Known Limitations) statt einen neuen
+        Wert zu zeigen.
         """
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_result()
         html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT)
 
-        assert "+48h" in html, "Die Horizont-Kachel muss '+48h' zeigen (Spec #1268 AC-6)"
-        for stale in ("+24h", "+72h"):
+        assert "Horizont" not in html, (
+            "Die Horizont-Kachel entfaellt ersatzlos (Issue #1305)."
+        )
+        for stale in ("+24h", "+48h", "+72h", "+96h"):
             assert stale not in html, (
-                f"'{stale}' darf nicht in der Mail stehen — der Horizont ist seit #1268 fest 48 h."
+                f"'{stale}' darf nicht in der Mail stehen — es gibt keine Horizont-Kachel mehr."
+            )
+        for expected in ("Profil", "Orte", "Erstellt"):
+            assert expected in html, (
+                f"Kachel-Label '{expected}' muss weiterhin sichtbar sein."
             )
