@@ -96,7 +96,9 @@ class TestAutoPauseEndDate:
         WHEN: `run_compare_presets_daily(user_id, data_root=...)` laeuft.
         THEN: Das Preset in `compare_presets.json` hat `paused_at` gesetzt
         (nicht None), `schedule=="manual"`, `previous_schedule=="daily"` —
-        UND der Lauf crasht/sendet nicht (Rueckgabe bleibt ein int).
+        UND der Lauf crasht/sendet nicht (Rueckgabe bleibt ein (sent, failed)-
+        Tupel, Issue #1290 E1 — nicht mehr im Audit der Spec erfasst, aber
+        derselbe Rueckgabetyp-Wechsel betrifft auch diesen Test).
         """
         yesterday = (date.today() - timedelta(days=1)).isoformat()
         preset = _make_preset("cp-expired-ac10", schedule="daily", end_date=yesterday)
@@ -104,7 +106,7 @@ class TestAutoPauseEndDate:
 
         result = run_compare_presets_daily(user_id="u-ac10", data_root=str(tmp_path))
 
-        assert isinstance(result, int)
+        assert result == (0, 0)
         updated = _find(_read_presets(preset_file), "cp-expired-ac10")
         assert updated.get("paused_at") is not None, (
             "Auto-Pause muss paused_at setzen, wenn end_date in der Vergangenheit liegt"

@@ -121,7 +121,7 @@ def run_compare_presets_daily(
     user_id: str = "default",
     data_root: str | None = None,
     hour: int | None = None,
-) -> int:
+) -> tuple[int, int]:
     """Verarbeitet alle faelligen Compare-Presets fuer den gegebenen User.
 
     #1232 Scheibe 2a / #1250 S7b: Laedt ComparePresets ueber load_compare_presets
@@ -129,8 +129,10 @@ def run_compare_presets_daily(
     ueber `presets_due_for_hour` (Morgen-/Abend-Slot, Pause-/Archiv-/Laufzeit-
     Guards, Migrations-Fallback fuer Altdaten) die zur gegebenen Stunde
     faelligen Presets samt Zieldatum, fuehrt ComparisonEngine aus, sendet
-    E-Mail, persistiert Lauf-Status. Gibt Anzahl erfolgreich versendeter
-    Presets zurueck.
+    E-Mail, persistiert Lauf-Status. Gibt `(sent, failed)` zurueck --
+    Anzahl erfolgreich versendeter bzw. gescheiterter faelliger Presets
+    (Issue #1290, E1: vormals nur `sent` als `int`, ein 100%-Ausfall war von
+    einem leeren Lauf nicht unterscheidbar).
 
     Issue #1207: Thin-Wrapper -- delegiert an den geteilten
     Versand-Orchestrator (`run_briefing_dispatch`), der das Skelett mit dem

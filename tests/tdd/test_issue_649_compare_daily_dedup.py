@@ -102,7 +102,14 @@ class TestComparePresetsDailyDedup:
         with caplog.at_level(logging.WARNING):
             count = _run_compare_presets_daily(user_id=user_id, data_root=str(tmp_path), hour=6)
 
-        assert count == 0, "Unresolvable Preset darf success_count nicht erhöhen"
+        # Issue #1290 (E1, Revision der urspruenglichen Spec-Audit-Zeile):
+        # das unaufloesbare Preset ist ein ECHTER Fehlschlag -- seit E1 zaehlt
+        # das sichtbar in failed statt spurlos zu verschwinden. Die reine
+        # "(0, 0)"-Erwartung der Spec-Tabelle war fuer diese drei
+        # Fehlschlag-Szenarien (105/131/167) unzutreffend; nur der
+        # Erfolgs-Teil bleibt bei 0 (unveraendert Kernaussage: "darf
+        # success_count nicht erhoehen").
+        assert count == (0, 1), "Unresolvable Preset darf success_count nicht erhöhen"
 
         loop_logs = " ".join(r.message for r in caplog.records)
         assert ("aufloesbar" in loop_logs or "auflösbar" in loop_logs), (
@@ -128,7 +135,10 @@ class TestComparePresetsDailyDedup:
 
         # Kein pytest.raises — Fehler müssen intern abgefangen werden.
         count = _run_compare_presets_daily(user_id=user_id, data_root=str(tmp_path), hour=6)
-        assert count == 0
+        # Issue #1290 (E1, Revision): beide Presets scheitern real (nicht
+        # aufloesbare Orte) -- failed=2 macht das jetzt sichtbar statt es wie
+        # vor E1 als ununterscheidbaren Leerlauf zu tarnen.
+        assert count == (0, 2)
 
     def test_manual_preset_silently_skipped(self, tmp_path, caplog):
         """AC-4: manual-Presets werden still übersprungen (Schedule-Filter bleibt).
@@ -145,7 +155,7 @@ class TestComparePresetsDailyDedup:
         with caplog.at_level(logging.WARNING):
             count = _run_compare_presets_daily(user_id=user_id, data_root=str(tmp_path), hour=6)
 
-        assert count == 0
+        assert count == (0, 0)
         assert not any("cp-manual" in r.message for r in caplog.records), (
             "manual-Preset muss still übersprungen werden (kein Log-Eintrag)"
         )
@@ -164,4 +174,6 @@ class TestComparePresetsDailyDedup:
         _write_presets(tmp_path, user_id, [preset])
 
         count = _run_compare_presets_daily(user_id=user_id, data_root=str(tmp_path), hour=6)
-        assert count == 0
+        # Issue #1290 (E1, Revision): fehlender Empfaenger ist ein echter
+        # Fehlschlag (ValueError aus dem Helper) -- zaehlt seither in failed.
+        assert count == (0, 1)

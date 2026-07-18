@@ -6,7 +6,7 @@ import re
 import httpx
 
 from app.config import Settings
-from output.channels.base import OutputError
+from output.channels.base import OutputConfigError, OutputError
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +131,27 @@ class TelegramOutput:
     def name(self) -> str:
         return "telegram"
 
+    def _guard_test_mode_chat_id(self) -> None:
+        """Bedingungsloser Guard (Issue #1288, Vorbild email.py #1219): im
+        Test-Modus (is_test_mode=True — gesetzt durch for_testing()/
+        with_user_profile() bei Staging ODER is_test_user_id()) ist
+        AUSSCHLIESSLICH die konfigurierte Test-Chat-ID erlaubt. Faengt genau
+        die Fallback-Luecke aus config.py:225,237 ab: fehlt
+        telegram_test_chat_id, bleibt telegram_chat_id sonst unveraendert
+        die Prod-ID.
+        """
+        if not self._settings.is_test_mode:
+            return
+        test_chat_id = self._settings.telegram_test_chat_id
+        chat_id = self._settings.telegram_chat_id
+        if not test_chat_id or chat_id != test_chat_id:
+            raise OutputConfigError(
+                "telegram",
+                f"Test-Modus aktiv, aber chat_id={chat_id!r} ist nicht die "
+                "konfigurierte Test-Chat-ID (GZ_TELEGRAM_TEST_CHAT_ID) — "
+                "Versand blockiert (Issue #1288).",
+            )
+
     def send(
         self, subject: str, body: str, reply_markup: dict | None = None,
         *, parse_mode: str | None = None, suppress_subject_line: bool = False,
@@ -150,7 +171,12 @@ class TelegramOutput:
         Returns:
             message_id (int) on success (HTTP 200 + ok:true), None otherwise.
             Backward-compatible: existing callers that ignore the return value are unaffected.
+
+        Raises:
+            OutputConfigError: Test-Modus mit fehlender/abweichender
+                Test-Chat-ID (Issue #1288) — VOR jedem httpx.post.
         """
+        self._guard_test_mode_chat_id()
         token = self._settings.telegram_bot_token
         chat_id = self._settings.telegram_chat_id
         url = f"{TELEGRAM_API_BASE}/bot{token}/sendMessage"

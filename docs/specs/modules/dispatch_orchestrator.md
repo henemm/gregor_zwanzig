@@ -75,7 +75,16 @@ dupliziert ist, und delegiert den Rest an eine kind-spezifische Strategie:
 3. `strategy.pre_pass(...)` — kind-Hook (Trip: Catch-up-Marker-Verarbeitung; Compare: Auto-Pause-Loop)
 4. `due = strategy.collect_due(...)` — Fälligkeitssammlung pro `kind`
 5. Schleife mit Fehler-Isolation, `strategy.inter_mail_delay` zwischen Sends, Tally im kind-eigenen Format
-6. Rückgabe im kind-eigenen Format (Trip: `(sent, failed)`; Compare: `count`/Status-Dict — **nicht** vereinheitlichen)
+6. Rückgabe im kind-eigenen Format — **historisch** (#1207, 2026-07-16): Trip
+   `(sent, failed)`; Compare `count`/Status-Dict, bewusst **nicht**
+   vereinheitlicht. **Revidiert durch Issue #1290** (2026-07-18, Epic #1301
+   Scheibe E): Prod-Journal 2026-07-16 zeigte 133/133 stille Fehlschläge, weil
+   ein reiner Erfolgszähler einen 100%-Ausfall nicht von einem leeren Lauf
+   unterscheiden konnte. Beide Strategien liefern jetzt einheitlich
+   `tuple[int, int]` (`sent, failed`); die API-Schicht
+   (`/api/scheduler/compare-presets-daily`) leitet daraus `status`
+   (`"ok"`/`"partial"`), `count`, `failed` ab — identisches Response-Schema
+   zu `/api/scheduler/trip-reports` (#766).
 
 Divergenzen bleiben strikt in der Strategie gekapselt:
 
@@ -101,9 +110,13 @@ Channel-Schicht `EmailOutput.send(mail_type=...)`.
 - **Input:** Stündlicher Trigger vom Go-Cron `briefing_dispatch` — zwei separate
   HTTP-Aufrufe (`/api/scheduler/trip-reports`, `/api/scheduler/compare-presets-daily`)
   mit `user_id` und `hour`; `kind` ergibt sich implizit aus dem aufgerufenen Endpoint.
-- **Output:** Trip liefert weiterhin `(sent, failed)` wie vor dem Umbau; Compare
-  liefert weiterhin `count`/Status-Dict wie vor dem Umbau — beide Formen bleiben
-  1:1 erhalten, kein einheitliches `DispatchResult`.
+- **Output:** Historisch (#1207): Trip liefert `(sent, failed)` wie vor dem
+  Umbau; Compare liefert `count`/Status-Dict wie vor dem Umbau — beide Formen
+  sollten 1:1 erhalten bleiben, kein einheitliches `DispatchResult`. **Revidiert
+  durch Issue #1290** (2026-07-18): Compare liefert jetzt ebenfalls
+  `(sent, failed)` als `tuple[int, int]`, damit die HTTP-Response von
+  `/api/scheduler/compare-presets-daily` echte Fehlschläge sichtbar macht
+  (`status="partial"` bei `failed > 0`) statt sie stillschweigend nur zu loggen.
 - **Side effects:** Status-/Snapshot-Persistenz pro `kind` unverändert; E-Mail-Versand
   für beide `kind`, zusätzlich SMS/Telegram nur für Trip; `/api/scheduler/status`
   zeigt weiterhin zwei getrennte Job-Zeilen.
@@ -190,7 +203,14 @@ determiniert, nicht aus dem Code ableitbar):
   drei Kanäle (E-Mail + Telegram + SMS) pro Preset; ohne Pause zwischen den
   Presets besteht Rate-Limit-Risiko bei Resend/Telegram. Trip hat diesen
   Schutz seit #766. Compare bekommt daher ebenfalls `inter_mail_delay = 2.0`.
-- **Status-Semantik:** beide Tally-Formen bleiben 1:1 erhalten (kein einheitliches `DispatchResult`)
+- **Status-Semantik:** ~~beide Tally-Formen bleiben 1:1 erhalten (kein einheitliches `DispatchResult`)~~ —
+  **REVIDIERT per Issue #1290** (2026-07-18, Prod-Journal-Befund 2026-07-16:
+  133/133 stille Fehlschläge bei Compare). Compare liefert jetzt ebenfalls
+  `tuple[int, int]` (`sent, failed`) statt `count`/Status-Dict, damit
+  `/api/scheduler/compare-presets-daily` echte Fehlschläge im `status`-Feld
+  (`"partial"`) sichtbar macht — analog zu `/trip-reports` (#766). Weiterhin
+  kein vollständig einheitliches `DispatchResult`-Objekt, aber dieselbe
+  Tupel-Taxonomie für beide `kind`-Werte.
 
 Latenter Nebenbefund (nicht in Scope, mögliches Folge-Issue): Compare-Presets
 versenden an beliebige Adressen ohne Prüfung gegen die Nutzer-Registry —
@@ -224,8 +244,14 @@ Neue Tests in `tests/tdd/test_dispatch_orchestrator.py`:
   pro `kind` unverändert (HIGH-Risiko-Punkt 1)
 - `test_strategy_smtp_guard_preserved` — Trip `(0,0)`-Early-Return / Compare
   per-Preset-Guard bleiben kind-lokal (HIGH-Risiko-Punkt 2)
-- `test_return_taxonomy_preserved` — Trip `(sent, failed)` vs. Compare
-  `count`/Status-Dict bleiben unverändert, keine Vereinheitlichung (HIGH-Risiko-Punkt 3)
+- `test_return_taxonomy_preserved` — **historisch geplant** (#1207): sollte
+  belegen, dass Trip `(sent, failed)` vs. Compare `count`/Status-Dict
+  unverändert bleiben, keine Vereinheitlichung. **Revidiert durch Issue #1290**
+  (2026-07-18): stattdessen belegen `test_route_dispatch_returns_trip_tally_format`
+  und `test_vergleich_dispatch_returns_compare_count_format`
+  (`tests/tdd/test_dispatch_orchestrator.py`), dass BEIDE `kind`-Werte jetzt
+  dasselbe Tupel-Format `(sent, failed)` liefern (HIGH-Risiko-Punkt 3 gilt
+  weiter, nur die erwartete Ziel-Taxonomie hat sich geändert)
 - `test_entry_points_unchanged_signature` — `send_reports_for_hour` und
   `run_compare_presets_daily` bleiben namens- und signaturgleich (Delegation,
   keine Relocation)
@@ -248,3 +274,17 @@ Bestehende Kern-Tests, die ohne Anpassung grün bleiben müssen (Sicherheitsnetz
   Rate-Limits bei Resend/Telegram riskiert. Das ursprüngliche Non-Goal bleibt
   in „Known Limitations" durchgestrichen erhalten (Historie des
   verhaltensneutralen Refactors `3ca3be14`).
+- 2026-07-18: Aussage „Compare: `count`/Status-Dict — nicht vereinheitlichen"
+  (#1207) revidiert durch Issue #1290 (E1, Epic #1301 Scheibe E). Auslöser:
+  Prod-Journal-Befund 2026-07-16 — 133/133 stille Fehlschläge, weil ein reiner
+  Erfolgszähler einen 100%-Ausfall nicht von einem leeren Lauf unterscheiden
+  konnte. Beide Strategien liefern jetzt `tuple[int, int]` (`sent, failed`);
+  `/api/scheduler/compare-presets-daily` bekommt dadurch dasselbe
+  `status`/`count`/`failed`-Response-Schema wie `/api/scheduler/trip-reports`
+  (#766). Ursprüngliche Aussage bleibt an den betroffenen Stellen
+  durchgestrichen/als „historisch" markiert erhalten (kein stilles
+  Umschreiben). Ergänzend Issue #1288 (E2): `TelegramOutput.send()` bekommt
+  einen bedingungslosen Test-Modus-Guard (`OutputConfigError` bei
+  `is_test_mode=True` und chat_id ≠ konfigurierter `telegram_test_chat_id`);
+  `send_compare_report` re-raised `OutputConfigError` aus dem Telegram-Zweig
+  gezielt (Interlock), transiente Fehler bleiben fail-soft.

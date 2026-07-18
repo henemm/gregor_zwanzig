@@ -135,7 +135,7 @@ class TestWeeklyPresetDispatch:
         with caplog.at_level(logging.WARNING):
             result = _run_compare_presets_daily(user_id="default", data_root=str(tmp_path))
 
-        assert result == 0, "Nicht-fälliges weekly-Preset darf nicht in success_count zählen"
+        assert result == (0, 0), "Nicht-fälliges weekly-Preset darf nicht in success_count zählen"
         assert not any("cp-weekly-tomorrow" in r.message for r in caplog.records), (
             "Weekly-Preset mit nicht-passendem Wochentag muss still übersprungen werden "
             "(kein Log-Eintrag erwartet)"
@@ -206,7 +206,7 @@ class TestWeeklyPresetDispatch:
         _write_presets(tmp_path, "default", [preset])
 
         result = _run_compare_presets_daily(user_id="default", data_root=str(tmp_path))
-        assert result == 0
+        assert result == (0, 0)
 
 
 # ---------------------------------------------------------------------------

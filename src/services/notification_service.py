@@ -27,7 +27,7 @@ from output.renderers.email.compact import _ascii as _ascii_hint
 from output.renderers.email.design_tokens import (
     FONT_UI, G_ACCENT, G_DANGER, G_INK, G_PAPER, G_SURFACE_1, WEB_FONT_LINK,
 )
-from output.channels.base import OutputError
+from output.channels.base import OutputConfigError, OutputError
 from output.channels.email import EmailOutput
 from output.channels.sms import SMSOutput
 from output.channels.telegram import TelegramOutput
@@ -664,6 +664,9 @@ class NotificationService:
                         suppress_subject_line=True,
                     )
                 sent_channels.append("telegram")
+            except OutputConfigError:
+                raise  # NEU — permanente Fehlkonfiguration darf NICHT im
+                       # Fail-Soft-Netz verschwinden (Issue #1288/#1290 Interlock)
             except Exception as e:
                 logger.error(f"Compare report telegram failed for {subject!r}: {e}")
 

@@ -298,7 +298,16 @@ def test_send_compare_preset_raises_keyerror_with_original_parse_error_text(tmp_
 
 
 def test_run_compare_presets_daily_logs_error_on_corrupt_file(tmp_path, caplog):
-    """F002: korrupte Datei -> ERROR-Log (nicht das Skip-INFO), return 0."""
+    """F002: korrupte Datei -> ERROR-Log (nicht das Skip-INFO), return (0, 0).
+
+    Issue #1290 (E1, nicht im Spec-Audit erfasst — gleicher Rueckgabetyp-
+    Wechsel int -> tuple[int, int] betrifft auch diesen Test): die korrupte
+    Datei fuehrt zu `_load_presets_for_dispatch` -> `None` (LoaderError
+    gefangen), also KEINE faelligen Presets -> (sent=0, failed=0). Kein
+    echter Fehlschlag-Fall im Sinne von E1 (Preset wurde nie geladen, also
+    nie im Dispatch-Versuch), sondern strukturell derselbe "keine faelligen
+    Presets"-Pfad wie ein fehlendes briefings/-Verzeichnis.
+    """
     data_root = tmp_path / "data"
     path = data_root / "users" / "testuser" / "briefings" / "preset-1.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -307,7 +316,7 @@ def test_run_compare_presets_daily_logs_error_on_corrupt_file(tmp_path, caplog):
     with caplog.at_level(logging.INFO, logger="scheduler.dispatch"):
         result = run_compare_presets_daily(user_id="testuser", data_root=str(data_root), hour=6)
 
-    assert result == 0
+    assert result == (0, 0)
     error_records = [r for r in caplog.records if r.levelno == logging.ERROR]
     assert any("Failed to load compare presets" in r.message for r in error_records)
     assert not any("No compare_presets.json" in r.message for r in caplog.records)
@@ -315,14 +324,19 @@ def test_run_compare_presets_daily_logs_error_on_corrupt_file(tmp_path, caplog):
 
 def test_run_compare_presets_daily_no_skip_log_on_valid_empty_list(tmp_path, caplog):
     """F002: eine existierende, valide-leere Datei ist KEIN Skip-Fall — die
-    Datei existiert schliesslich, nur der Bestand ist leer."""
+    Datei existiert schliesslich, nur der Bestand ist leer.
+
+    Issue #1290 (E1, nicht im Spec-Audit erfasst — gleicher Rueckgabetyp-
+    Wechsel int -> tuple[int, int] betrifft auch diesen Test): eine leere
+    Preset-Liste liefert KEINE faelligen Presets -> (sent=0, failed=0).
+    """
     data_root = tmp_path / "data"
     _write_presets(data_root, "testuser", [])
 
     with caplog.at_level(logging.INFO, logger="scheduler.dispatch"):
         result = run_compare_presets_daily(user_id="testuser", data_root=str(data_root), hour=6)
 
-    assert result == 0
+    assert result == (0, 0)
     dispatch_records = [r for r in caplog.records if r.name == "scheduler.dispatch"]
     assert not any("No compare_presets.json" in r.message for r in dispatch_records)
     assert not any(r.levelno == logging.ERROR for r in dispatch_records)

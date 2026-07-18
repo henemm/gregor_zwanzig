@@ -1665,7 +1665,18 @@ aktualisiert `letzter_versand` und `top_ort_letzter_versand`.
 ```json
 {
   "status": "ok",
-  "count": 2
+  "count": 2,
+  "failed": 0
+}
+```
+
+Bei mindestens einem fehlgeschlagenen fälligen Preset (seit Issue #1290, identisches Schema zu `/api/scheduler/trip-reports`, Issue #766):
+
+```json
+{
+  "status": "partial",
+  "count": 1,
+  "failed": 1
 }
 ```
 
@@ -1673,8 +1684,9 @@ aktualisiert `letzter_versand` und `top_ort_letzter_versand`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| status | enum | Always `"ok"` (endpoint succeeds even if individual presets fail) |
-| count | int | Number of Presets processed, die zur geprüften Stunde in einem Morgen- oder Abend-Slot fällig waren (nicht error count) |
+| status | enum | `"ok"` wenn alle fälligen Presets erfolgreich versendet wurden, `"partial"` sobald `failed > 0` (Issue #1290; HTTP bleibt in beiden Fällen 200) |
+| count | int | Anzahl erfolgreich versendeter fälliger Presets (Morgen- oder Abend-Slot), die zur geprüften Stunde fällig waren |
+| failed | int | Anzahl fälliger Presets, deren Versand fehlgeschlagen ist (Issue #1290; zuvor nur intern als `error_count` geloggt, jetzt Teil der Response) |
 
 **Internal Behavior (seit Issue #1232 Scheibe 2a):**
 
@@ -1695,8 +1707,9 @@ aktualisiert `letzter_versand` und `top_ort_letzter_versand`.
 
 | Status | Body | Scenario |
 |--------|------|----------|
-| 200 | `{"status":"ok","count":0}` | No daily presets found (not an error) |
-| 200 | `{"status":"ok","count":2}` | 2 presets processed; some may have had per-item errors but HTTP 200 always |
+| 200 | `{"status":"ok","count":0,"failed":0}` | No daily presets found (not an error) |
+| 200 | `{"status":"ok","count":2,"failed":0}` | 2 presets processed erfolgreich, keine Fehlschläge |
+| 200 | `{"status":"partial","count":1,"failed":1}` | 1 Preset erfolgreich, 1 Preset fehlgeschlagen — HTTP bleibt 200, `status` zeigt `"partial"` (Issue #1290) |
 
 **Side Effects:**
 
@@ -1706,7 +1719,7 @@ aktualisiert `letzter_versand` und `top_ort_letzter_versand`.
 
 **Notes:**
 
-- Endpoint always returns HTTP 200 regardless of `error_count` (job success tracked by Go scheduler via `recordRun()`)
+- Endpoint always returns HTTP 200 regardless of `error_count`; seit Issue #1290 zeigt das `status`-Feld (`"ok"`/`"partial"`) den Fehlerfall aber im Response-Body selbst an (job success daneben weiterhin über Go-Scheduler `recordRun()` getrackt)
 - Python-side heartbeat ping (`GZ_HEARTBEAT_COMPARE_PRESETS` ENV) is not called by Python; Go scheduler handles this via `pingHeartbeat()` on the full job result
 - BetterStack Heartbeat is pinged only when `error_count == 0` — any preset-level error blocks the ping (Readiness Principle)
 
@@ -2799,6 +2812,14 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-07-18: Issue #1290 (E1 von Epic #1301, ergänzend #1288/E2) —
+  `POST /api/scheduler/compare-presets-daily` liefert jetzt `failed` als neues
+  Response-Feld, identisches Schema zu `/api/scheduler/trip-reports` (Issue
+  #766): `status` wird `"partial"` sobald `failed > 0`, `count` zählt weiterhin
+  nur erfolgreich versendete fällige Presets. `run_compare_presets_daily`/
+  `CompareDispatchStrategy.result()` liefern dafür `tuple[int, int]`
+  (sent, failed) statt der bisherigen internen `error_count`-Zählung ohne
+  Response-Sichtbarkeit. HTTP-Statuscode bleibt immer 200.
 - 2026-07-18: Issue #1299/#1291/#1287 (Scheibe C2 von Epic #1301) —
   `display_config.hourly_metrics`/`hourly_enabled` sind jetzt im Hub-
   Layout-Tab (`CompareTabs.svelte`, `activeTab==="layout"`) bedienbar,

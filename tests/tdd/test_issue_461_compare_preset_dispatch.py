@@ -230,13 +230,16 @@ class TestComparePresetsFilterLogic:
         _write_presets(tmp_path, "default", [manual_preset])
 
         with caplog.at_level(logging.WARNING):
-            count = _run_compare_presets_daily(user_id="default", data_root=str(tmp_path))
+            result = _run_compare_presets_daily(user_id="default", data_root=str(tmp_path))
 
         # Manual-Preset darf keinen Log-Eintrag erzeugen (still übersprungen)
         assert not any("cp-manual-skip" in r.message for r in caplog.records), (
             "Manual-Preset muss still übersprungen werden (kein Log-Eintrag)"
         )
-        assert isinstance(count, int)
+        # Issue #1290 (E1): Rueckgabe ist seither (sent, failed) statt int.
+        sent, failed = result
+        assert isinstance(sent, int)
+        assert isinstance(failed, int)
 
     def test_empty_location_ids_logged_not_crashed(self, tmp_path):
         """
@@ -251,14 +254,24 @@ class TestComparePresetsFilterLogic:
         _write_presets(tmp_path, "default", [bad_preset])
 
         # Kein pytest.raises — Fehler werden intern abgefangen
-        result = _run_compare_presets_daily(user_id="default", data_root=str(tmp_path))
-        assert isinstance(result, int)
+        # hour=6: expliziter Morgen-Slot (Default-Fallback ohne morning_time,
+        # s. resolve_preset_slots) -- macht das Preset deterministisch
+        # faellig, statt von der Wanduhrzeit des Testlaufs abzuhaengen
+        # (Issue #1290 Nebenbefund: die neue failed==1-Assertion braucht
+        # einen tatsaechlich fahrplanmaessig faelligen Lauf).
+        result = _run_compare_presets_daily(user_id="default", data_root=str(tmp_path), hour=6)
+        sent, failed = result
+        assert isinstance(sent, int)
+        assert isinstance(failed, int)
+        # Issue #1290 (E1): das fehlerhafte Preset muss failed erhoehen —
+        # bisher nur implizit ueber den (jetzt entfallenen) "error_count".
+        assert failed == 1
 
     def test_no_daily_presets_returns_zero(self, tmp_path):
         """
         GIVEN: compare_presets.json mit ausschließlich manual-Presets
         WHEN: _run_compare_presets_daily() aufgerufen
-        THEN: count=0 (keine Fehler, kein Versand)
+        THEN: (sent, failed) == (0, 0) (keine Fehler, kein Versand)
         """
         from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
@@ -266,19 +279,19 @@ class TestComparePresetsFilterLogic:
         _write_presets(tmp_path, "default", [manual])
 
         result = _run_compare_presets_daily(user_id="default", data_root=str(tmp_path))
-        assert result == 0
+        assert result == (0, 0)
 
     def test_missing_presets_file_returns_zero(self, tmp_path):
         """
         GIVEN: Kein compare_presets.json für den User
         WHEN: _run_compare_presets_daily() aufgerufen
-        THEN: count=0 (keine Exception, kein Crash)
+        THEN: (sent, failed) == (0, 0) (keine Exception, kein Crash)
         """
         from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         # Kein File anlegen → muss fail-soft sein
         result = _run_compare_presets_daily(user_id="default", data_root=str(tmp_path))
-        assert result == 0
+        assert result == (0, 0)
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +320,8 @@ class TestComparePresetsDailyEndpoint:
         data = resp.json()
         assert data["status"] == "ok"
         assert "count" in data
+        # Issue #1290 (E1): Schema-Paritaet zu /trip-reports (#766).
+        assert "failed" in data
 
     def test_endpoint_count_is_integer(self, client):
         """

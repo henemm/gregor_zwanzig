@@ -205,9 +205,14 @@ def test_route_dispatch_returns_trip_tally_format():
 
 
 def test_vergleich_dispatch_returns_compare_count_format():
-    """AC-1 + HIGH-Risiko-Punkt 3: `kind="vergleich"` liefert weiterhin das
-    Compare-Format (`count`, hier 0 da keine faelligen Presets) — KEINE
-    Vereinheitlichung mit dem Trip-Tupel. Echter tmp-User, kein Mock."""
+    """AC-1 + HIGH-Risiko-Punkt 3: `kind="vergleich"` liefert seit Issue #1290
+    (E1, Epic #1301 Scheibe E, PO-freigegebene Spec 2026-07-18) DASSELBE
+    Tupel-Format wie `kind="route"` — Revision der vormaligen #1207-Aussage
+    "KEINE Vereinheitlichung": der Prod-Journal-Befund 2026-07-16 (133/133
+    stille Fehlschlaege) zeigte, dass ein reiner `int`-Erfolgszaehler einen
+    100%-Ausfall nicht von einem leeren Lauf unterscheiden kann. Echter
+    tmp-User, kein Mock. Analog zur 2s-Delay-Revision in dieser Datei
+    (PO-Entscheidung 2026-07-16, ebenfalls dort dokumentiert)."""
     from src.services.dispatch_orchestrator import run_briefing_dispatch
 
     user_id = _fresh_user_id("vergleich")
@@ -215,8 +220,8 @@ def test_vergleich_dispatch_returns_compare_count_format():
 
     result = run_briefing_dispatch("vergleich", user_id, 7)
 
-    assert result == 0
-    assert not isinstance(result, tuple)
+    assert result == (0, 0)
+    assert isinstance(result, tuple)
 
 
 # --- AC-1: Entry-Points delegieren statt zu duplizieren -------------------

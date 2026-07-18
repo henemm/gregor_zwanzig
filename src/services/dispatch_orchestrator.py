@@ -101,9 +101,10 @@ class CompareDispatchStrategy:
         self._presets: list = []
         self._all_locations = None
         self._success = 0
+        self._failed = 0  # Issue #1290 (E1): Fehlschlaege zaehlen, nicht nur Erfolge
 
-    def empty_result(self) -> int:
-        return 0
+    def empty_result(self) -> tuple[int, int]:
+        return (0, 0)
 
     def collect_due(self, hour: int) -> list:
         from datetime import date
@@ -137,9 +138,14 @@ class CompareDispatchStrategy:
             self._all_locations,
         ):
             self._success += 1
+        else:
+            # Issue #1290 (E1): _dispatch_due_preset faengt bereits jede
+            # Exception (ValueError/Exception) und liefert False; Fehler-
+            # Isolation bleibt UNVERAENDERT (kein Abbruch der Schleife).
+            self._failed += 1
 
-    def result(self) -> int:
-        return self._success
+    def result(self) -> tuple[int, int]:
+        return (self._success, self._failed)
 
 
 _STRATEGY = {
@@ -157,8 +163,12 @@ def run_briefing_dispatch(
     Kapselt das geteilte Skelett: Settings-Laden, Strategie-Aufloesung,
     kind-Hook `pre_pass`, Faelligkeitssammlung `collect_due`, Schleife mit
     Fehler-Isolation + `inter_mail_delay` zwischen Sends, Rueckgabe im
-    kind-eigenen Format (Trip `(sent, failed)`, Compare `count` -- KEINE
-    Vereinheitlichung, s. Spec Known Limitations).
+    kind-eigenen Format -- Trip `(sent, failed)` seit #766/#1012, Compare
+    ebenfalls `(sent, failed)` seit Issue #1290 (E1, Epic #1301 Scheibe E):
+    die vormalige Aussage "KEINE Vereinheitlichung" (#1207) galt nur bis zum
+    Prod-Journal-Befund 2026-07-16 (133/133 stille Fehlschlaege) -- beide
+    Strategien liefern jetzt dasselbe Tupel-Format, ohne dass ein Kind vom
+    anderen abhaengt.
 
     Issue #1207 Fix-Loop F002: optionales `settings` erlaubt der aufrufenden
     Instanz (z.B. `TripReportSchedulerService` mit injiziertem Settings-Objekt

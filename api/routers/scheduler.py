@@ -133,9 +133,15 @@ def trigger_compare_presets_daily(hour: Optional[int] = None, user_id: str = Que
     #1232 Scheibe 2a: Go-Cron ruft diesen Endpoint stuendlich auf (statt
     einmal taeglich um 06:00); Slot-Faelligkeit wird in
     `run_compare_presets_daily` gegen die Stunde geprueft.
+
+    Issue #1290 (E1): (sent, failed) -- bei Teilfehlern status="partial"
+    zurueckgeben, identisches Schema zu /trip-reports (#766), damit das
+    externe Monitoring einen 100%-Ausfall (Prod-Journal 2026-07-16:
+    133/133) von einem leeren Lauf unterscheiden kann.
     """
-    count = run_compare_presets_daily(user_id, hour=hour)
-    return {"status": "ok", "count": count}
+    sent, failed = run_compare_presets_daily(user_id, hour=hour)
+    status = "partial" if failed > 0 else "ok"
+    return {"status": status, "count": sent, "failed": failed}
 
 
 def _ping_heartbeat_compare() -> None:
