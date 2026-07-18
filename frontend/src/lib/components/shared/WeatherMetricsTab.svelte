@@ -605,12 +605,40 @@
 		else active.add(metric);
 		wiz.activeMetricKeys = [...active];
 	}
+
+	// D2-Fix-Loop 2 (AC-6, Staging-Befund BROKEN): Amtliche-Warnungen-Toggle im
+	// Vergleich-Zweig — kein Self-Save (analog toggleCompareMetric oben),
+	// CompareTabs.svelte (`.hub-wetter-metriken-wrap` onchange-Bubble) persistiert
+	// via flushPendingWeatherMetricsSave. Spec: d2_1301_official_alerts_single_
+	// control.md § Punkt 6, AC-6.
+	function onToggleVergleichOfficialAlerts(e: Event) {
+		if (!wiz) return;
+		wiz.officialAlertsEnabled = (e.target as HTMLInputElement).checked;
+	}
 </script>
+
+{#snippet officialAlertsToggle(checked: boolean, onToggle: (e: Event) => void)}
+	<!-- Issue #1117 (Trip) / #1301 D2-Fix-Loop 2 (Vergleich, AC-6): Amtliche-
+	     Warnungen — geteiltes Markup fuer beide Kontexte (ein Label, eine
+	     Optik), context-abhaengig nur verdrahtet (route: lokaler State + Trip-
+	     PUT; vergleich: wiz.officialAlertsEnabled + Compare-Hub-Save). -->
+	<UiCard.Root class="p-3 space-y-2 hover:translate-y-0 hover:shadow-none">
+		<div class="text-sm">
+			<span data-testid="report-show-official-alerts" class="inline-flex items-center gap-2">
+				<Checkbox {checked} onchange={onToggle}>Amtliche Warnungen im Bericht</Checkbox>
+			</span>
+			<p class="pl-6 text-xs text-muted-foreground mt-0.5">Amtliche Wetterwarnungen (z. B. Unwetterwarnung) im E-Mail-Briefing anzeigen.</p>
+		</div>
+	</UiCard.Root>
+{/snippet}
 
 {#if context === 'vergleich'}
 	<!-- Issue #1311 (C1): Vergleich-Grundauswahl — NUR an/aus je Metrik, keine
 	     Buckets/Reihenfolge/Horizonte/SMS-Schwellen/Report-Config (AC-1, AC-8
 	     Attrappen-Verbot: jedes hier sichtbare Element hat Mail-Wirkung). -->
+	<!-- D2-Fix-Loop 2 (AC-6): 'official_alerts' ist die einzige Ausnahme —
+	     einzig erreichbare Inhalt-Heimat fuer official_alerts_enabled bei
+	     bestehenden Vergleichen, s. weatherMetricsTabSections.ts. -->
 	<div data-testid="weather-metrics-tab-vergleich" class="metrics-tab metrics-tab-vergleich">
 		<Card padding={18}>
 			<Eyebrow style="margin-bottom:4px">Wetter-Metriken</Eyebrow>
@@ -628,6 +656,9 @@
 				{/each}
 			</div>
 		</Card>
+		{#if sections.includes('official_alerts')}
+			{@render officialAlertsToggle(wiz?.officialAlertsEnabled ?? true, onToggleVergleichOfficialAlerts)}
+		{/if}
 	</div>
 {:else if loadError}
 	<!-- Issue #1234 (2b): sichtbarer Fehlerpfad, unabhaengig vom saveController —
@@ -868,20 +899,15 @@
 						showSchedule={false}
 					/>
 				</div>
+				{/if}
 
+				{#if !createMode && sections.includes('official_alerts')}
 				<!-- Issue #1117: Amtliche Warnungen — zweiter Einstiegspunkt neben dem -->
-				<!-- Alerts-Tab, gleiche Optik wie die Content-Bausteine oben.          -->
-				<UiCard.Root class="p-3 space-y-2 hover:translate-y-0 hover:shadow-none">
-					<div class="text-sm">
-						<span data-testid="report-show-official-alerts" class="inline-flex items-center gap-2">
-							<Checkbox
-								checked={officialAlertsEnabled}
-								onchange={onToggleOfficialAlerts}
-							>Amtliche Warnungen im Bericht</Checkbox>
-						</span>
-						<p class="pl-6 text-xs text-muted-foreground mt-0.5">Amtliche Wetterwarnungen (z. B. Unwetterwarnung) im E-Mail-Briefing anzeigen.</p>
-					</div>
-				</UiCard.Root>
+				<!-- Alerts-Tab, gleiche Optik wie die Content-Bausteine oben. Eigener  -->
+				<!-- 'official_alerts'-Abschnitt (D2-Fix-Loop 2), unabhaengig von       -->
+				<!-- 'report_config', damit derselbe Baustein auch im vergleich-        -->
+				<!-- Kontext (kein report_config dort) sichtbar sein kann.              -->
+				{@render officialAlertsToggle(officialAlertsEnabled, onToggleOfficialAlerts)}
 				{/if}
 			</div>
 		</div>

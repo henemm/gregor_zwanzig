@@ -139,7 +139,13 @@ describe('AC-1/AC-8: weatherMetricsTabSections(context) — reine Funktion (Vorb
 	});
 
 	test(
-		'vergleich: NUR grundauswahl — keine Buckets/Reihenfolge/Horizonte/SMS-Schwellen/Report-Config (AC-1, AC-8 Attrappen-Verbot)',
+		// D2-Fix-Loop 2 (AC-6, Staging-Befund BROKEN): 'official_alerts' ist die
+		// EINZIGE Ausnahme vom Attrappen-Verbot fuer vergleich — der Amtliche-
+		// Warnungen-Schalter hat echte Mail-Wirkung (official_alerts_enabled)
+		// und ist fuer bestehende Vergleiche nur noch ueber diesen Hub-Tab
+		// erreichbar (der Alarm-Tab-Toggle entfaellt mit D2).
+		// Spec: d2_1301_official_alerts_single_control.md § AC-6.
+		'vergleich: grundauswahl + official_alerts — keine Buckets/Reihenfolge/Horizonte/SMS-Schwellen/Report-Config (AC-1, AC-8 Attrappen-Verbot)',
 		async () => {
 			let mod: typeof import('../weather-metrics-tab/weatherMetricsTabSections.ts');
 			try {
@@ -153,8 +159,8 @@ describe('AC-1/AC-8: weatherMetricsTabSections(context) — reine Funktion (Vorb
 			const sections = mod.weatherMetricsTabSections('vergleich');
 			assert.deepEqual(
 				sections,
-				['grundauswahl'],
-				'AC-1/AC-8 FAIL: der vergleich-Kontext zeigt mehr als nur die Grundauswahl — ' +
+				['grundauswahl', 'official_alerts'],
+				'AC-1/AC-8/AC-6 FAIL: der vergleich-Kontext zeigt mehr/weniger als Grundauswahl+Amtliche-Warnungen — ' +
 					`Ist: ${JSON.stringify(sections)}. Buckets/Horizonte/SMS-Schwellen/Report-Config haetten ` +
 					'keine Mail-Wirkung im Vergleich und waeren Attrappen.'
 			);

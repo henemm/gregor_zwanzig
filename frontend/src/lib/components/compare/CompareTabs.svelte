@@ -57,7 +57,8 @@
 	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
 	import {
 		hydrateWeatherMetricsFromPreset,
-		flushPendingWeatherMetricsSave
+		flushPendingWeatherMetricsSave,
+		type WeatherMetricsSnapshot
 	} from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 	// Issue #1299/#1291/#1287 (C2 von Epic #1301): Stundenverlauf-Steuerung im
 	// Hub-Layout-Tab — geteiltes ChannelToggle-Bedienelement + eigenstaendiges
@@ -632,12 +633,24 @@
 	// werden kann (Deep-Link `?tab=wetter-metriken`), ohne dass idealwerte
 	// vorher hydriert hat.
 	let wetterMetrikenHydrated = $state(false);
-	let lastPersistedWetterMetrikenSnapshot: string[] | null = null;
+	let lastPersistedWetterMetrikenSnapshot: WeatherMetricsSnapshot | null = null;
+
+	function currentWetterMetrikenSnapshot(): WeatherMetricsSnapshot {
+		return {
+			activeMetricKeys: [...wizardState.activeMetricKeys],
+			officialAlertsEnabled: wizardState.officialAlertsEnabled
+		};
+	}
 
 	$effect(() => {
 		if (activeTab !== 'wetter-metriken' || wetterMetrikenHydrated) return;
 		wizardState.activeMetricKeys = hydrateWeatherMetricsFromPreset(currentPreset);
-		lastPersistedWetterMetrikenSnapshot = [...wizardState.activeMetricKeys];
+		// D2-Fix-Loop 2 (AC-6): officialAlertsEnabled beim Erst-Oeffnen
+		// mit-hydrieren (analog hydrateAlarmFieldsFromPreset) — sonst zeigt der
+		// Toggle bei einem Deep-Link ?tab=wetter-metriken den Klassen-Default
+		// (true) statt des echten Preset-Werts.
+		wizardState.officialAlertsEnabled = currentPreset.official_alerts_enabled ?? true;
+		lastPersistedWetterMetrikenSnapshot = currentWetterMetrikenSnapshot();
 		wetterMetrikenHydrated = true;
 	});
 
@@ -646,7 +659,7 @@
 		let failure: unknown = null;
 		saveController?.setSaving();
 		const updated = await hubPutQueue.enqueue(async () => {
-			const current = [...wizardState.activeMetricKeys];
+			const current = currentWetterMetrikenSnapshot();
 			const before = lastPersistedWetterMetrikenSnapshot ?? current;
 			const payload = flushPendingWeatherMetricsSave(currentPreset, current, lastPersistedWetterMetrikenSnapshot);
 			if (!payload) return null;
@@ -656,7 +669,8 @@
 				return result;
 			} catch (e) {
 				console.error('[CompareTabs] Wetter-Metriken-Persistenz fehlgeschlagen, Rollback:', e);
-				wizardState.activeMetricKeys = before;
+				wizardState.activeMetricKeys = before.activeMetricKeys;
+				wizardState.officialAlertsEnabled = before.officialAlertsEnabled;
 				failure = e;
 				return null;
 			}

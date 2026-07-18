@@ -78,9 +78,23 @@ regelt Auslöser/Schwellen. Zudem ist der Alarm-Tab der **problematische** Doppe
    bleiben unberührt). Guards für `officialWarningsEnabled` und `channels` bleiben.
 
 **Label-Schärfung (die zwei verbleibenden Schalter „müssen es auch heißen"):**
-5. Inhalt-Content-Flag Label → **„Amtliche Warnungen im Bericht"** in beiden Inhalt-Heimaten
-   (Trip `WeatherMetricsTab` Checkbox, Vergleich `CompareInhaltSection` Toggle). Alarm-Auslöser
-   bleibt **„Amtliche Warnungen lösen Alert aus"**. (Eyebrow-/Struktur-Umbau im Alarm-Tab ist D3.)
+5. Inhalt-Content-Flag Label → **„Amtliche Warnungen im Bericht"** in den Inhalt-Heimaten.
+   Alarm-Auslöser bleibt **„Amtliche Warnungen lösen Alert aus"**. (Eyebrow-/Struktur-Umbau im
+   Alarm-Tab ist D3.)
+
+**KORREKTUR nach Staging-Befund (Erreichbarkeit, siehe Changelog 2026-07-18b):**
+Die ursprüngliche Analyse nahm an, `CompareInhaltSection` sei die erreichbare Vergleich-Inhalt-
+Heimat. Falsch: `CompareInhaltSection` ist seit Epic #1273 S3 **nur im Anlege-Wizard `/compare/new`**
+erreichbar; `/compare/{id}/edit` leitet hart (307) auf den Hub um. Für **bestehende** Vergleiche
+war der Alarm-Tab-Toggle der **einzige** erreichbare Schalter — seine Entfernung hinterlässt ein
+Loch. Der Hub rendert bereits den geteilten `WeatherMetricsTab` (`context='vergleich'`, Tab
+„Wetter-Metriken", `CompareTabs.svelte:1262`), aber `weatherMetricsTabSections.ts` blendet den
+Abschnitt mit der Amtliche-Warnungen-Checkbox nur für `context='route'` ein.
+6. Der Amtliche-Warnungen-Toggle muss im Hub-Tab „Wetter-Metriken" **auch für `context='vergleich'`**
+   erscheinen — analog Trip, geteilter Baustein. Verdrahtung: `wiz.officialAlertsEnabled` (die
+   Hub-Bridge `compareHubWizardBridge.ts` persistiert das Feld bereits), und der Wetter-Metriken-
+   Speicherpfad (`weatherMetricsCompareSave.ts` / `handleWetterMetrikenCommit`) muss das Feld beim
+   Ändern mit-persistieren. `CompareInhaltSection` (Wizard) behält seinen Toggle für den Anlege-Fall.
 
 **Test-Anpassungen (altes Ownership-Modell → neues):**
 - `alarme_delivery_guard_symmetry.test.ts` — der `officialAlertsEnabled`-Guard-Test wird obsolet
@@ -111,11 +125,18 @@ regelt Auslöser/Schwellen. Zudem ist der Alarm-Tab der **problematische** Doppe
   - Test: `buildAlarmeDeliveryPayload(state)` enthält keinen Key `official_alerts_enabled` mehr;
     Regressions-Test über die konsolidierte Payload beweist, dass das Feld nicht mitgesendet wird.
 
-- **AC-3:** Given der Inhalt-Bereich (Trip `WeatherMetricsTab` bzw. Vergleich
+- **AC-3:** Given der Inhalt-Bereich (Trip `WeatherMetricsTab`; Vergleich: Hub-Tab
+  „Wetter-Metriken" = `WeatherMetricsTab` context='vergleich', sowie Anlege-Wizard
   `CompareInhaltSection`) / When der Nutzer den Content-Schalter betrachtet / Then trägt er das
   Label „Amtliche Warnungen im Bericht" und schaltet weiterhin `official_alerts_enabled`.
-  - Test: Rendering beider Inhalt-Komponenten zeigt das Label „Amtliche Warnungen im Bericht"; ein
-    Klick schaltet den gebundenen Zustand (`officialAlertsEnabled`/`state.officialAlertsEnabled`).
+  - Test: Rendering zeigt das Label; ein Klick schaltet den gebundenen Zustand.
+
+- **AC-6 (Erreichbarkeit Vergleich, Staging-Nachweis):** Given ein **bestehender** Ortsvergleich im
+  Hub / When der Nutzer den Tab „Wetter-Metriken" öffnet / Then ist der Schalter „Amtliche
+  Warnungen im Bericht" sichtbar; ihn umzuschalten persistiert `official_alerts_enabled` (GET nach
+  Speichern bestätigt den Wert).
+  - Test: Kern — `weatherMetricsTabSections('vergleich')` enthält den Amtliche-Warnungen-Abschnitt.
+    Staging-E2E — Toggle sichtbar für bestehenden Vergleich, Umschalten persistiert (GET-Beweis).
 
 - **AC-4:** Given der Vergleich / When der Nutzer „Amtliche Warnungen im Bericht" im Inhalt-Bereich
   umschaltet und den Vergleich speichert / Then wird `official_alerts_enabled` korrekt persistiert
@@ -147,3 +168,7 @@ regelt Auslöser/Schwellen. Zudem ist der Alarm-Tab der **problematische** Doppe
 ## Changelog
 
 - 2026-07-18: Initial spec created (Scheibe D2 von Epic #1301)
+- 2026-07-18b: Staging-Validierung BROKEN (AC-3 Vergleich) — Erreichbarkeitsfehler entdeckt:
+  `CompareInhaltSection` ist nur im Anlege-Wizard erreichbar, nicht für bestehende Vergleiche.
+  Korrektur: Amtliche-Warnungen-Toggle muss im Hub-Tab „Wetter-Metriken" (`WeatherMetricsTab`
+  context='vergleich') erscheinen und persistieren. Neuer Punkt 6 + AC-6.

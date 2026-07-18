@@ -26,17 +26,38 @@ export function hydrateWeatherMetricsFromPreset(preset: ComparePreset): string[]
 }
 
 /**
+ * D2-Fix-Loop 2 (AC-6, Staging-Befund BROKEN): der Amtliche-Warnungen-Toggle
+ * ist fuer bestehende Vergleiche nur noch ueber diesen Hub-Tab erreichbar
+ * (der Alarm-Tab-Toggle entfaellt mit D2) — der Snapshot traegt ihn deshalb
+ * neben `activeMetricKeys`, damit ein reiner Toggle-Klick (ohne Metrik-
+ * Aenderung) ebenfalls als dirty erkannt wird.
+ * Spec: d2_1301_official_alerts_single_control.md § Punkt 6, AC-6.
+ */
+export interface WeatherMetricsSnapshot {
+	activeMetricKeys: string[];
+	officialAlertsEnabled: boolean;
+}
+
+/**
  * Diff-Guard analog `flushPendingVersandSave` (compareHubWizardBridge.ts):
- * liefert `null`, wenn sich die Auswahl seit dem letzten persistierten Stand
- * nicht veraendert hat (kein Schreiben ohne Nutzer-Geste, AC-4) — sonst den
- * fertigen PUT-Payload ueber den bestehenden RMW-Pfad (`buildHubPutPayload`).
+ * liefert `null`, wenn sich weder Metrik-Auswahl noch Amtliche-Warnungen-
+ * Toggle seit dem letzten persistierten Stand veraendert haben (kein
+ * Schreiben ohne Nutzer-Geste, AC-4) — sonst den fertigen PUT-Payload ueber
+ * den bestehenden RMW-Pfad (`buildHubPutPayload`).
  */
 export function flushPendingWeatherMetricsSave(
 	preset: ComparePreset,
-	current: string[],
-	before: string[] | null
+	current: WeatherMetricsSnapshot,
+	before: WeatherMetricsSnapshot | null
 ): { url: string; body: ComparePreset } | null {
 	const baseline = before ?? current;
-	if (JSON.stringify([...current].sort()) === JSON.stringify([...baseline].sort())) return null;
-	return buildHubPutPayload(preset, { activeMetricKeys: current });
+	const norm = (s: WeatherMetricsSnapshot) => ({
+		activeMetricKeys: [...s.activeMetricKeys].sort(),
+		officialAlertsEnabled: s.officialAlertsEnabled
+	});
+	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;
+	return buildHubPutPayload(preset, {
+		activeMetricKeys: current.activeMetricKeys,
+		officialAlertsEnabled: current.officialAlertsEnabled
+	});
 }
