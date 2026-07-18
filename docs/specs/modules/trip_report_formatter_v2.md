@@ -145,6 +145,12 @@ as `night_weather` to the formatter. This ensures the provider requests two
 calendar days of data (arrival day + next morning). The formatter filters to
 2-hourly intervals.
 
+> **Update (#1313, Briefing-Parität):** Der Nacht-Block ist seit #1313 NICHT
+> mehr auf `report_type == "evening"` beschränkt — Fetch und Rendering laufen
+> für beide Report-Typen, gesteuert ausschließlich über `dc.show_night_block`.
+> Für Morgenbriefings ergibt sich das Fenster automatisch aus der heutigen
+> Ankunft bis 06:00 Folgetag. Details: `docs/specs/modules/briefing_parity_night_thunder.md`.
+
 ### 5) Thunder Forecast (+1/+2 Days)
 
 ```
@@ -155,6 +161,12 @@ Morgen (12.02.): Kein Gewitter erwartet
 
 **Data source:** Aggregate `thunder_level` from forecast data for +1 and +2 days
 at the trip's center coordinate. Provided by scheduler as `thunder_forecast` dict.
+
+> **Update (#1313, Briefing-Parität):** In E-Mail-Briefings (HTML + Plain)
+> erscheint diese Sektion seit #1313 NUR, wenn der Mehrtages-Ausblick in
+> derselben Mail NICHT aktiv ist (`outlook_active = show_outlook and
+> bool(multi_day_trend)`) — Dopplung seit #1275, gleiche Datenquelle. SMS und
+> Telegram sind unverändert. Details: `docs/specs/modules/briefing_parity_night_thunder.md`.
 
 ### 6) Summary (Highlights Only)
 

@@ -316,27 +316,37 @@ def test_ac3_preview_thunder_derives_from_scheduler_method():
 
 def test_ac6_email_preview_shows_thunder_outlook():
     """
-    AC-6 (RED, E-Mail-Teil): die E-Mail-Vorschau nennt bei Gewitterlage den
-    Gewitter-Ausblick — denselben, den die versendete E-Mail traegt.
+    AC-6 (E-Mail-Teil): die E-Mail-Vorschau zeigt bei Gewitterlage exakt
+    dasselbe Bild wie die versendete E-Mail — Parität Vorschau=Versand.
 
-    RED heute: `_render_email()` reicht `thunder_forecast` nicht durch
-    (TypeError) -> der Ausblick-Block fehlt strukturell.
+    Angepasst fuer Issue #1313 (E1, 2026-07-18): dieses Szenario ist ein
+    Abendbriefing MIT gefuelltem `multi_day_trend` -> der Mehrtages-Ausblick
+    ist aktiv (`outlook_active=True`), daher entfaellt die separate Sektion
+    "⚡ Gewitter-Vorschau" jetzt bewusst (Dopplung, #1313). Der Gewitterhinweis
+    bleibt sichtbar - er wandert in die Ausblick-Tabelle ("⚡HIGH" bei der
+    Folgeetappe). Frueher (vor #1313) stand hier "Gewitter-Vorschau in
+    sent.email_plain" als Vorbedingung; das ist mit dem neuen Spec-Verhalten
+    fuer aktiven Ausblick falsch geworden und wurde durch die aequivalente
+    Pruefung auf die Ausblick-Tabelle ersetzt. Die eigentliche Prüfung (Vorschau
+    == Versand) bleibt unveraendert bestehen.
     """
     ctx = build_thunder_scenario()
     sent = send_report(*ctx)
     preview = preview_report(*ctx)
 
-    # Vorbedingung: die versendete E-Mail traegt den Gewitter-Ausblick.
-    assert "Gewitter-Vorschau" in sent.email_plain
-    assert "Starkes Gewitter erwartet ab 06:00" in sent.email_plain
+    # Vorbedingung (#1313 E1): bei aktivem Ausblick entfaellt die separate
+    # Gewitter-Vorschau-Sektion, der Gewitterhinweis bleibt ueber die
+    # Ausblick-Tabelle sichtbar.
+    assert "Gewitter-Vorschau" not in sent.email_plain
+    assert "⚡HIGH" in sent.email_plain
 
-    # AC-6: die Vorschau zeigt exakt denselben Ausblick.
-    assert "Gewitter-Vorschau" in preview.email_plain, (
-        "E-Mail-Vorschau zeigt den Gewitter-Ausblick nicht — sie divergiert von "
-        "der versendeten E-Mail."
+    # AC-6: die Vorschau zeigt exakt dasselbe Bild wie der Versand.
+    assert "Gewitter-Vorschau" not in preview.email_plain, (
+        "E-Mail-Vorschau zeigt die Gewitter-Vorschau-Sektion trotz aktivem "
+        "Ausblick — sie divergiert von der versendeten E-Mail (#1313 E1)."
     )
-    assert "Starkes Gewitter erwartet ab 06:00" in preview.email_plain, (
-        f"E-Mail-Vorschau nennt den Gewitter-Zeitpunkt nicht.\n"
+    assert "⚡HIGH" in preview.email_plain, (
+        f"E-Mail-Vorschau nennt den Gewitterhinweis der Folgeetappe nicht.\n"
         f"email_plain:\n{preview.email_plain}"
     )
 

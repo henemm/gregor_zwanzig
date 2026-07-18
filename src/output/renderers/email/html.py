@@ -1081,8 +1081,12 @@ def render_html(
             + "</div>"
         )
 
+    # Issue #1313 (E1): Gewitter-Vorschau entfaellt, wenn der Mehrtages-
+    # Ausblick in derselben Mail aktiv ist (gleiche Datenquelle, Dopplung).
+    outlook_active = show_outlook and bool(multi_day_trend)
+
     thunder_html = ""
-    if thunder_forecast:
+    if thunder_forecast and not outlook_active:
         items = []
         for key in ("+1", "+2"):
             if key in thunder_forecast:

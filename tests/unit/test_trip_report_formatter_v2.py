@@ -214,11 +214,14 @@ class TestDisplayConfig:
 
 
 class TestNightBlock:
-    """Spec: Night block present in evening, absent in morning."""
+    """Spec: Night block present in both report types (Issue #1313, AC-3),
+    gated only via dc.show_night_block."""
 
-    def test_night_block_evening_only(self):
-        """GIVEN night_weather provided, WHEN report_type=evening,
-        THEN night block appears. WHEN morning, THEN absent."""
+    def test_night_block_in_both_report_types(self):
+        """GIVEN night_weather provided, WHEN report_type=evening OR morning,
+        THEN night block appears in both (Issue #1313 AC-3: das
+        report_type=="evening"-Gate wurde entfernt, Steuerung erfolgt
+        ausschliesslich ueber dc.show_night_block)."""
         seg = _make_segment_weather()
         night_ts = _make_timeseries(range(14, 24), day=11)
         # Also add next morning hours (day=12, 0-6)
@@ -233,7 +236,7 @@ class TestNightBlock:
             [seg], "Test", "morning", night_weather=night_ts,
         )
         assert "Nacht" in evening.email_html
-        assert "Nacht" not in morning.email_html
+        assert "Nacht" in morning.email_html
 
     def test_night_block_2hourly(self):
         """GIVEN night_weather, THEN rows appear at 2h intervals."""

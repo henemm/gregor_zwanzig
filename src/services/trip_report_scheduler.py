@@ -825,9 +825,9 @@ class TripReportSchedulerService:
         stage_name = trip.numbered_stage_label(stage) if stage else None
         stage_stats = self._compute_stage_stats(stage) if stage else None
 
-        # 4. Night weather (evening reports only)
+        # 4. Night weather (both report types — Issue #1313)
         night_weather = None
-        if report_type == "evening" and segment_weather:
+        if segment_weather:
             night_weather = self._fetch_night_weather(segment_weather[-1])
 
         # 6. Multi-day trend (configurable per report type — via Resolver, Issue #1208)

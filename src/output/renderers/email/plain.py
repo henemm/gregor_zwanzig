@@ -232,7 +232,11 @@ def render_plain(
             lines.append("  * Temperatur/Nullgradgrenze: Minimum im 2h-Block")
         lines.append("")
 
-    if thunder_forecast:
+    # Issue #1313 (E1): Gewitter-Vorschau entfaellt, wenn der Mehrtages-
+    # Ausblick in derselben Mail aktiv ist (gleiche Datenquelle, Dopplung).
+    outlook_active = show_outlook and bool(multi_day_trend)
+
+    if thunder_forecast and not outlook_active:
         lines.append("━━ Gewitter-Vorschau ━━")
         for key in ("+1", "+2"):
             if key in thunder_forecast:
@@ -241,7 +245,7 @@ def render_plain(
                 lines.append(f"  {fc['date']}: {icon}{fc['text']}")
         lines.append("")
 
-    if show_outlook and multi_day_trend:
+    if outlook_active:
         # Epic #1301 B4: Ausblick-Klartext-Block in geteilten Baustein
         # extrahiert (Trip/Compare-Teilungs-Invariante) -- show_acc=True
         # bleibt zeichengleich zum bisherigen Inline-Verhalten.

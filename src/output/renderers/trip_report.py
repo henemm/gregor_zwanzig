@@ -104,9 +104,9 @@ class TripReportFormatter:
         # Extract hourly data for each segment
         seg_tables = [self._extract_hourly_rows(s, dc) for s in segments]
 
-        # Night rows (evening only)
+        # Night rows (both report types — Issue #1313, gated via dc.show_night_block)
         night_rows = []
-        if report_type == "evening" and night_weather and dc.show_night_block:
+        if night_weather and dc.show_night_block:
             last_seg = segments[-1]
             # Bug #398: Nacht-Block beginnt bei der LOKALEN Ankunftsstunde.
             arrival_hour = local_hour(last_seg.segment.end_time, self._tz)

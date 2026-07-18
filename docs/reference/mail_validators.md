@@ -96,8 +96,9 @@ Validator verlässlich gegen `gregor-test@henemm.com` prüft. Kein Mock, kein Gm
   ≥1 sequenzielle Stundentabelle (≥2 `HH:00`-Zeilen), Werte selbst-konsistent
   (`temp_lo <= temp_hi`, Wind/Regen ≥ 0, nicht alle None/0), Stunden im
   Tagesfenster 06–22 — dieser Check läuft seit #974 nur noch auf dem HTML-Teil
-  **vor** dem ersten „🌙 Nacht am Ziel"-Marker; die Nacht-Sektion (evening-Full-
-  Mails, Ankunft→06:00 Folgetag, legitime Stunden wie 00/02/04) ist davon
+  **vor** dem ersten „🌙 Nacht am Ziel"-Marker; die Nacht-Sektion (kann in beiden
+  morning und evening Full-Mails (#1313) erscheinen, gesteuert durch `show_night_block`,
+  Ankunft→06:00 Folgetag, legitime Stunden wie 00/02/04) ist davon
   ausgenommen und löst keinen False-Positive mehr aus. Temperatur-Range- und alle
   übrigen Checks laufen weiter auf dem vollen HTML. Subject nicht leer.
 - **compact:** single `text/plain`, 7bit (oder QP bei reinem ASCII), `isascii`,
