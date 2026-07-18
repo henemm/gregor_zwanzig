@@ -26,6 +26,9 @@ for _p in (str(_ROOT), str(_ROOT / "src")):
 
 from services.radar_service import RadarNowcastService  # noqa: E402
 
+# Dialt real (Prod-API/GeoSphere/Staging-Stack) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+pytestmark = pytest.mark.live
+
 # Wien — INCA-only (lon 16.37 > RADOLAN-max 15.1; in INCA-Box 46.3–49.1 / 9.5–17.2)
 _WIEN_LAT, _WIEN_LON = 48.21, 16.37
 

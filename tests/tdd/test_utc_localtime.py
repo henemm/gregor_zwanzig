@@ -100,9 +100,12 @@ class TestHourlyTableLocalTime:
         """
         GIVEN: A ForecastDataPoint with ts=09:00 UTC
         WHEN: Rendered in hourly table with CET timezone (UTC+1)
-        THEN: Time column shows "10:00" (not "09:00") — local time, HH:MM format.
+        THEN: Time column shows "10" (not "09") — local time, bare-HH format.
 
-        Note: The time format changed to "HH:MM" (e.g. "10:00") for clarity.
+        Note: Issue #928 (2026-07-01, CLOSED) hat das Zeitformat bewusst von
+        "HH:00" zurueck auf "HH" gestellt (Commit bc7b68fc), der Mail-Validator
+        akzeptiert seitdem das bare-HH-Format. Die vorherige "HH:MM"-Erwartung
+        dieses Tests war stale gegenueber der aktuellen Konvention.
         The key assertion remains: local time is used (UTC+1 → hour 10, not UTC hour 09).
         """
         from app.models import ForecastDataPoint
@@ -119,8 +122,8 @@ class TestHourlyTableLocalTime:
 
         dc = build_default_display_config()
         row = formatter._dp_to_row(dp, dc)
-        # Format is "HH:MM" — assert local hour 10 (not UTC 09)
-        assert row["time"] == "10:00", f"Expected local time '10:00', got '{row['time']}'"
+        # Format ist bare "HH" (Issue #928) — assert local hour 10 (not UTC 09)
+        assert row["time"] == "10", f"Expected local time '10', got '{row['time']}'"
         assert not row["time"].startswith("09"), f"Must NOT show UTC hour 09, got '{row['time']}'"
 
 

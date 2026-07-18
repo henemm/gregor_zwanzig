@@ -316,6 +316,7 @@ def test_ac3_override_respects_cooldown():
 # AC-4: Override-Mail-Wording — nicht "im Briefing nicht angekündigt"
 # --------------------------------------------------------------------------
 
+@pytest.mark.xfail(reason="#1310: Akut-Override ('jetzt akut'-Hinweis) nie implementiert (nie implementierte Alt-Spec)", strict=False)
 def test_ac4_override_mail_wording_not_unannounced():
     """AC-4: Im Override-Fall darf der Body NICHT "im Briefing nicht angekündigt"
     enthalten (das wäre falsch — der Regen WAR angekündigt) sondern den Akut-Hinweis.

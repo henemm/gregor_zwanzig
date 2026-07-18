@@ -1,79 +1,28 @@
 """
 TDD RED — Issues #853, #842, #837: Tooling-Gate Bundle
 
-AC-1 (RED):  settings.json fehlt UserPromptSubmit → override bleibt tot
 AC-2 (RED):  prod_selftest.py gibt 1 für Ancestor-Commit (Strict-Equality-Bug)
 AC-3 (GREEN bereits): prod_selftest.py gibt 1 für Nicht-Ancestor — bleibt so
-AC-4 (GREEN bereits): bash_gate.py enthält Rebase-Check — Regression Guard
+
+Hinweis (Rot-Triage #1211b, Batch 1): AC-1 (UserPromptSubmit/phase_listener)
+und AC-4 (bash_gate Rebase-Check) wurden entfernt — beide Testobjekte sind
+seit der Plugin-Migration (Commits `33da201c`/`465380c1`/`f1e3acc1`) nicht
+mehr im erwarteten Zustand testbar. test_ac2 bleibt (bekommt in Batch 3 den
+`live`-Marker, siehe docs/specs/modules/rework_1211b_rot_triage.md).
 """
 
 import json
-import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).parent.parent.parent
 
 # prod_selftest importierbar machen
 sys.path.insert(0, str(ROOT / ".claude" / "hooks"))
-
-
-# ---------------------------------------------------------------------------
-# AC-1: settings.json hat keinen UserPromptSubmit-Fallback
-# ---------------------------------------------------------------------------
-
-class TestAC1UserPromptSubmitFallback:
-
-    def test_settings_json_has_userpromptsubmit_event(self):
-        """RED: settings.json muss UserPromptSubmit enthalten (fehlt aktuell)"""
-        settings = json.loads((ROOT / ".claude" / "settings.json").read_text())
-        hooks = settings.get("hooks", {})
-        assert "UserPromptSubmit" in hooks, (
-            "settings.json hat kein UserPromptSubmit-Event. "
-            "Fix: Block für phase_listener.py hinzufügen."
-        )
-
-    def test_userpromptsubmit_references_phase_listener(self):
-        """RED: UserPromptSubmit muss phase_listener.py referenzieren"""
-        settings = json.loads((ROOT / ".claude" / "settings.json").read_text())
-        ups = settings.get("hooks", {}).get("UserPromptSubmit", [])
-        commands = [
-            h.get("command", "")
-            for entry in ups
-            for h in entry.get("hooks", [])
-        ]
-        assert any("phase_listener" in cmd for cmd in commands), (
-            f"phase_listener.py nicht in UserPromptSubmit-Hooks: {commands}"
-        )
-
-    def test_phase_listener_creates_token_when_called_directly(self):
-        """phase_listener.py mit 'override'-Input → Token in user_override_token.json"""
-        token_file = ROOT / ".claude" / "user_override_token.json"
-        backup = token_file.read_text() if token_file.exists() else None
-
-        env = {**os.environ, "CLAUDE_PROJECT_DIR": str(ROOT)}
-        # Echtes Claude-Code-Payload-Feld ist `prompt` (Issue #892), nicht
-        # `user_message`. Der frühere user_message-Test war grün gegen den Bug.
-        hook_input = json.dumps({"prompt": "override"})
-
-        try:
-            subprocess.run(
-                [sys.executable, str(ROOT / ".claude" / "hooks" / "phase_listener.py")],
-                input=hook_input,
-                capture_output=True, text=True,
-                env=env, timeout=10,
-            )
-            assert token_file.exists(), "user_override_token.json nicht erstellt"
-            data = json.loads(token_file.read_text())
-            assert data.get("version") == 2, f"Token-Format falsch: {data}"
-            assert len(data.get("tokens", {})) > 0, "Keine Tokens nach override-Aufruf"
-        finally:
-            if backup is not None:
-                token_file.write_text(backup)
-            elif token_file.exists():
-                token_file.unlink()
 
 
 # ---------------------------------------------------------------------------
@@ -117,6 +66,8 @@ class TestAC2AC3ProdSelftestAncestor:
         finally:
             e2e_path.unlink(missing_ok=True)
 
+    # Dialt real (prod_selftest -> Prod-Health) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+    @pytest.mark.live
     def test_ac2_pass_when_ancestor_commit(self):
         """RED: prod_selftest soll 0 zurückgeben wenn verified_commit Ancestor ist.
 
@@ -138,25 +89,4 @@ class TestAC2AC3ProdSelftestAncestor:
         rc = self._run_with_verified_commit(fake)
         assert rc == 1, (
             f"prod_selftest gibt {rc} für ungültigen Commit — erwartet: 1 (FAIL)"
-        )
-
-
-# ---------------------------------------------------------------------------
-# AC-4: bash_gate.py Rebase-Check (Regression Guard — bereits implementiert)
-# ---------------------------------------------------------------------------
-
-class TestAC4RebaseGateAlreadyInBashGate:
-
-    def test_bash_gate_has_rebase_check_code(self):
-        """bash_gate.py enthält den Rebase-Check (seit Plugin-Commit 3020ff7)"""
-        content = (ROOT / ".claude" / "hooks" / "bash_gate.py").read_text()
-        assert "rev-list" in content and "origin/main" in content, (
-            "Rebase-Check (rev-list + origin/main) nicht in bash_gate.py"
-        )
-
-    def test_bash_gate_blocks_with_expected_message(self):
-        """bash_gate.py hat die korrekte BLOCK-Meldung für Rebase-Rückstand"""
-        content = (ROOT / ".claude" / "hooks" / "bash_gate.py").read_text()
-        assert "BLOCKED — Branch ist" in content, (
-            "BLOCK-Meldung 'BLOCKED — Branch ist' fehlt in bash_gate.py"
         )

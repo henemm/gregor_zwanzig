@@ -273,13 +273,22 @@ def test_ac2_sms_channel_without_config_no_send():
 # --- AC-3: SMS-HTTP-Fehler → geloggt, deliverable_any bleibt True via E-Mail ---
 
 
-def test_ac3_sms_http_error_logged_email_still_delivers(caplog):
+def test_ac3_sms_http_error_logged_email_still_delivers(caplog, monkeypatch):
     """AC-3: SMS + E-Mail effektive Kanäle; seven.io antwortet mit Fehler-Code
     (≠100) → SMS-Fehler wird geloggt, aber deliverable_any bleibt True
     (E-Mail-Kanal ist konfiguriert), Alert wird best-effort recorded."""
     import logging
+    import time as _time_module
 
     from services.trip_alert import TripAlertService
+
+    # smtp.invalid.test schlaegt real (Verbindungsfehler) fehl, aber die
+    # Retry-Backoff-Logik in output.channels.email (5s/15s/30s zwischen
+    # Versuchen) wuerde den globalen 30s-Test-Timeout (#1210) reissen.
+    # Backoff-Wartezeit im Test deterministisch auf 0 setzen -- die realen
+    # Verbindungsversuche selbst bleiben unveraendert, nur das Warten
+    # zwischen den Retries wird uebersprungen.
+    monkeypatch.setattr(_time_module, "sleep", lambda *_a, **_kw: None)
 
     stub = _SevenStub(body="305")  # seven.io: ungültige Empfängernummer → OutputError
     try:

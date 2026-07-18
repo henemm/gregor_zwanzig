@@ -15,7 +15,7 @@ from core.gpx_parser import parse_gpx
 from core.segment_builder import build_segments, compute_hiking_time
 
 # Real GPX test files
-DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "users" / "default" / "gpx"
 GPX_TAG1 = DATA_DIR / "2026-01-17_2753214331_Tag 1_ von Valldemossa nach Deià.gpx"
 GPX_TAG3 = DATA_DIR / "2026-01-17_2753225520_Tag 3_ von Sóller nach Tossals Verds.gpx"
 

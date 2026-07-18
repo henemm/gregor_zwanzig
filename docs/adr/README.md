@@ -84,3 +84,8 @@ ADRs sind nicht nur Konvention, sondern werden erzwungen:
 | [0020](0020-node-test-frontend-unit-runner.md) | node:test ist der kanonische Frontend-Unit-Test-Runner (kein vitest) | Akzeptiert |
 | [0021](0021-shared-deviation-alert-engine.md) | Gemeinsame `DeviationAlertEngine` für Trip- und künftige Compare-Alarme | Akzeptiert |
 | [0022](0022-ascii-faltung-via-anyascii.md) | ASCII-Faltung via `anyascii` statt handgepflegter Transliterations-Tabellen | Akzeptiert |
+| [0023](0023-briefing-subscription-shared-model.md) | Gemeinsames `BriefingSubscription`-Modell (`kind`-Diskriminator) + `briefings/`-Persistenz | Akzeptiert |
+| [0024](0024-ein-sortier-baustein-svelte-dnd-action.md) | Ein geteilter Sortier-Baustein auf svelte-dnd-action; Pfeil-Buttons weichen dem eingebauten Tastatur-Pfad | Akzeptiert |
+| [0025](0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md) | Eine Gewitter-Quelle für alle Briefing-Kanäle — gleiche Rohdaten, gleiche Fensterung, gleiche Skala | Akzeptiert |
+| [0027](0027-adr-commit-guard-entfernt.md) | Lokales ADR-Commit-Gate (`adr_guard.py`) entfernt — tot seit Plugin-Migration, ADR-Praxis bleibt bestehen | Akzeptiert |
+| [0028](0028-e2e-prod-network-unreachable-admin-loses-never-delete.md) | Prod-Datenbaum wird für E2E netzwerkseitig unerreichbar; `admin` verliert den NEVER_DELETE-Schutz aus #1265 | Akzeptiert |

@@ -242,6 +242,8 @@ class TestAC2PlainCommandBlock:
 # AC-3: bare 'heute'/'morgen' → Etappen-Wetter (kein Unbekannter Befehl)
 # ===========================================================================
 
+# Dialt real (Live-Nowcast-Kette) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+@pytest.mark.live
 class TestAC3HeuteMorgen:
     def test_heute_routes_to_query(self):
         save_trip(_make_trip(), user_id=_USER_A)

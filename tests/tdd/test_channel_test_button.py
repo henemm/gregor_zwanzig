@@ -8,6 +8,7 @@ ALLE Tests muessen FEHLSCHLAGEN, weil:
 - api/routers/notify.py existiert noch nicht
 - Der Endpoint POST /api/notify/test existiert noch nicht
 """
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -76,6 +77,8 @@ def test_notify_test_unknown_channel_returns_error():
 
 # -- Test 5: Gueltiger Kanal gibt status ok zurueck --
 
+# Dialt real (echter SMTP-Versand) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+@pytest.mark.email
 def test_notify_test_email_returns_ok():
     """
     GIVEN: Ein User mit konfigurierter E-Mail

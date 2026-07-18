@@ -202,11 +202,11 @@ _FORBIDDEN_PATTERNS = [
 ]
 
 _SVELTE_FILES = [
-    "frontend/src/lib/components/trip-wizard/TripWizardShell.svelte",
-    "frontend/src/lib/components/trip-wizard/steps/Step1Profile.svelte",
-    "frontend/src/lib/components/trip-wizard/steps/Step2Stages.svelte",
-    "frontend/src/lib/components/trip-wizard/steps/Step4Briefings.svelte",
-    "frontend/src/lib/components/trip-wizard/steps/WaypointRow.svelte",
+    # Issue #1215 (Commit d7703708, Toter-Code-Abbau Scheibe 2): der komplette
+    # alte trip-wizard/-Baum (TripWizardShell.svelte, steps/Step1Profile.svelte,
+    # steps/Step2Stages.svelte, steps/Step4Briefings.svelte, steps/WaypointRow.svelte)
+    # wurde geloescht und durch den Tab-Editor (#622) abgeloest -- alle 5 stalen
+    # Eintraege entfernt, uebrige Dateien werden weiter geprueft.
     "frontend/src/lib/components/edit/EditRouteSection.svelte",
     "frontend/src/lib/components/trip-detail/FullProfile.svelte",
     "frontend/src/lib/components/trip-detail/waypoints/WaypointCard.svelte",
@@ -215,7 +215,7 @@ _SVELTE_FILES = [
 
 class TestAC3NoAsciiUmlauts:
     """
-    AC-3: 8 Svelte-Dateien dürfen keine ASCII-Umlaut-Ersetzungen in
+    AC-3: 3 Svelte-Dateien dürfen keine ASCII-Umlaut-Ersetzungen in
     user-sichtbaren Strings enthalten.
     """
 

@@ -375,17 +375,37 @@ def test_cell_tint_fills_cell_to_gridlines():
 
     # (2) RED/GREEN-Gate: Geometrie der getönten Zellen-Box vs. der <td>-Zelle.
     # Issue #995 (Gruppe B): die Tönung sitzt jetzt als `background:` direkt am
-    # <td> selbst (kein innerer <span>-Wrapper mit Negativ-Margin mehr). Die
-    # Query prüft ZUERST den Altfall (span mit background — Kompatibilität, falls
-    # andere Pfade das noch nutzen) und fällt sonst auf den <td>-eigenen
-    # Hintergrund zurück. Bei <td>-eigenem Background ist die Tönung per
-    # Definition randlos (die getönte Box IST die Zelle → leftGap/rightGap = 0).
+    # <td> selbst (kein innerer <span>-Wrapper mit Negativ-Margin mehr). Locator-
+    # Fix: die Query muss den <td>-eigenen Hintergrund ZUERST prüfen — vorher
+    # griff `td.querySelector('span')` zuerst und traf dabei fälschlich den
+    # 10px-Ampel-Dot (`_ampel_dot_css`, html.py/helpers.py), der als Zell-INHALT
+    # (nicht als Tönungs-Wrapper) im selben getönten <td> sitzt und ebenfalls
+    # eine eigene background-Farbe hat. Der Span-Zweig bleibt als Fallback für
+    # den (heute toten) Altfall erhalten, kommt aber erst NACH dem
+    # td-Background-Check zum Zug. Bei <td>-eigenem Background ist die Tönung
+    # per Definition randlos (die getönte Box IST die Zelle → leftGap/rightGap = 0).
     geom = _dom_query(html, """() => {
         const tds = Array.from(document.querySelectorAll('td[data-label]'));
         for (const td of tds) {
             const tdCS = getComputedStyle(td);
+            // Bevorzugt (#995): der <td> selbst trägt den Hintergrund.
+            const tdBg = tdCS.backgroundColor;
+            if (tdBg && tdBg !== 'rgba(0, 0, 0, 0)' && tdBg !== 'transparent') {
+                return {
+                    found: true,
+                    tintSource: 'td',
+                    tdPaddingLeft: tdCS.paddingLeft,
+                    spanMarginLeft: 'n/a',
+                    // Die getönte Box IST die Zelle → definitionsgemäß randlos.
+                    leftGap: 0,
+                    rightGap: 0,
+                    background: tdBg,
+                };
+            }
+            // Altfall-Fallback: innerer <span> trägt den Hintergrund (Kompatibilität,
+            // falls andere Pfade das noch nutzen). Nur relevant, wenn der <td>
+            // selbst KEINEN eigenen Hintergrund hat.
             const tdBox = td.getBoundingClientRect();
-            // Altfall: innerer <span> trägt den Hintergrund.
             const span = td.querySelector('span');
             if (span) {
                 const cs = getComputedStyle(span);
@@ -402,20 +422,6 @@ def test_cell_tint_fills_cell_to_gridlines():
                         background: bg,
                     };
                 }
-            }
-            // Neuer Fall (#995): der <td> selbst trägt den Hintergrund.
-            const tdBg = tdCS.backgroundColor;
-            if (tdBg && tdBg !== 'rgba(0, 0, 0, 0)' && tdBg !== 'transparent') {
-                return {
-                    found: true,
-                    tintSource: 'td',
-                    tdPaddingLeft: tdCS.paddingLeft,
-                    spanMarginLeft: 'n/a',
-                    // Die getönte Box IST die Zelle → definitionsgemäß randlos.
-                    leftGap: 0,
-                    rightGap: 0,
-                    background: tdBg,
-                };
             }
         }
         return {found: false};

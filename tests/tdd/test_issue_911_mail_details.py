@@ -455,9 +455,14 @@ class TestAC6StatsBlockTopPadding:
         }
         html = _render(stage_stats=stage_stats)
 
-        # Suche das Stats-Grid (border-top:1px solid #e6e1d3)
+        # Suche das Stats-Grid. Locator-Fix: die Stats-Zellen tragen
+        # border-bottom (nicht border-top) — border-top:1px solid #e6e1d3
+        # matcht anderswo im Dokument (z.B. Outlook-Header), nicht den
+        # Stats-Grid-Block. Eindeutiger Anker ist der Tabellen-Wrapper aus
+        # _render_email_stat()-Aufrufstelle (html.py: border-collapse:
+        # collapse;padding:14px 0;).
         stats_match = re.search(
-            r'border-top:1px solid #e6e1d3.*?</table>',
+            r'border-collapse:collapse;padding:14px 0;.*?</table>',
             html, re.DOTALL
         )
         assert stats_match, "Stats-Grid-Block nicht gefunden"

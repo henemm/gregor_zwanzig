@@ -32,6 +32,8 @@ _INVALID = Settings(
 # =============================================================================
 
 
+# Dialt real (Telegram-API) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+@pytest.mark.live
 def test_non_200_raises_outputerror_not_typeerror():
     """
     GIVEN: ausgehender Telegram-Send mit ungültigem Bot-Token
@@ -49,6 +51,8 @@ def test_non_200_raises_outputerror_not_typeerror():
     assert str(exc_info.value).startswith("[telegram]")
 
 
+# Dialt real (Telegram-API) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+@pytest.mark.live
 def test_non_200_message_contains_status_code():
     """
     GIVEN: ungültiger Bot-Token → reale Fehler-Antwort (HTTP 4xx)

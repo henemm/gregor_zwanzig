@@ -22,6 +22,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+# Playwright-Diff (design_fidelity_diff.py) braucht >30s -- Override statt
+# Kollision mit dem globalen ini-Timeout (30s, #1210). Eigener
+# subprocess-timeout=120 je Aufruf bleibt unveraendert (Muster
+# test_issue_1010_1006_stille_fehler.py).
+pytestmark = pytest.mark.timeout(180)
+
 REPO = Path("/home/hem/gregor_zwanzig")
 DIFF_TOOL = REPO / ".claude/hooks/design_fidelity_diff.py"
 WORKFLOW = os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "fix-622-794-mobile-fidelity")

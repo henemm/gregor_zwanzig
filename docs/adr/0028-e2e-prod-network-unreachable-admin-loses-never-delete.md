@@ -1,4 +1,4 @@
-# ADR-0025: Prod-Datenbaum wird für E2E netzwerkseitig unerreichbar; `admin` verliert den NEVER_DELETE-Schutz aus #1265
+# ADR-0028: Prod-Datenbaum wird für E2E netzwerkseitig unerreichbar; `admin` verliert den NEVER_DELETE-Schutz aus #1265
 
 - **Status:** Akzeptiert (PO-Freigabe 2026-07-16)
 - **Datum:** 2026-07-16

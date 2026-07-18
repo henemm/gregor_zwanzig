@@ -43,7 +43,8 @@ _LIVE_TELEGRAM_TEST_FILES = [
     "tests/tdd/test_issue_686_telegram_functional_live.py",
     "tests/tdd/test_issue_650_telegram_foundation.py",
     "tests/tdd/test_issue_671_bot_menu_autoset.py",
-    "tests/tdd/test_e2e_telegram_pipeline.py",
+    # test_e2e_telegram_pipeline.py in #1211-2b Batch 1 geloescht (Rot-Triage) --
+    # aus der Liste entfernt, existiert nicht mehr.
     "tests/tdd/test_952_onset_alert_e2e.py",
     "tests/tdd/test_issue_1001_telegram_bubbles.py",
 ]

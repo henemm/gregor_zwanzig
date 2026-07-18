@@ -13,7 +13,7 @@ import pytest
 from core.gpx_parser import GPXParseError, parse_gpx
 
 # Real GPX test files (Mallorca GR221, Komoot export)
-DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "users" / "default" / "gpx"
 
 GPX_TAG1 = DATA_DIR / "2026-01-17_2753214331_Tag 1_ von Valldemossa nach Deià.gpx"
 GPX_TAG2 = DATA_DIR / "2026-01-17_2753216748_Tag 2_ von Deià nach Sóller.gpx"

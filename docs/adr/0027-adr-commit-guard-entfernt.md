@@ -1,4 +1,4 @@
-# ADR-0018: Lokales ADR-Commit-Gate (adr_guard.py) entfernt
+# ADR-0027: Lokales ADR-Commit-Gate (adr_guard.py) entfernt
 
 - **Status:** Akzeptiert
 - **Datum:** 2026-07-16

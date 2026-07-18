@@ -102,6 +102,8 @@ class _CountingSourceDelegate:
 class TestIssue1035VigilanceSource:
     """TDD-Reihenfolge laut Spec: AC-1 -> AC-2 -> AC-3 -> AC-4 -> AC-5."""
 
+    # Dialt real (Meteo-France Vigilance-API) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+    @pytest.mark.live
     def test_ac1_live_warnung_struktureller_vertrag(self):
         """AC-1: echter API-Call gegen die Météo-France-API. Der Live-Zustand
         aendert sich taeglich, daher wird NICHT hart auf "orange"/"Gewitter"
@@ -134,6 +136,8 @@ class TestIssue1035VigilanceSource:
             "Parser-Fehler, nicht auf eine ruhige Wetterlage."
         )
 
+    # Dialt real (Meteo-France Vigilance-API) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+    @pytest.mark.live
     def test_ac1_live_compare_render_ende_zu_ende(self):
         """AC-1 (F002-Lücke): verkettet ECHTE Live-Vigilance-Daten bis zum
         gerenderten Text-Output — nicht nur den isolierten fetch()-Vertrag.
@@ -279,6 +283,8 @@ class TestIssue1035VigilanceSource:
             oa_base._REGISTERED_SOURCES.clear()
             oa_base._REGISTERED_SOURCES.extend(backup)
 
+    # Dialt real (Meteo-France Vigilance-API) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+    @pytest.mark.live
     def test_ac4_korsika_identischer_codepfad_wie_festland(self):
         """AC-4: Ajaccio (2A) und Bastia (2B) laufen durch denselben Mapper
         und dieselbe Quelle wie ein Festland-Ort -- kein Sonderfall-Code."""

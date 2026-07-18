@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "users" / "default" / "gpx"
 GPX_TAG1 = DATA_DIR / "2026-01-17_2753214331_Tag 1_ von Valldemossa nach Deià.gpx"
 GPX_TAG4 = DATA_DIR / "2026-01-17_2753228656_Tag 4_ von Tossals Verds nach Lluc.gpx"
 

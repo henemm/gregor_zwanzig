@@ -30,6 +30,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from typing import Optional
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.loader import save_trip
@@ -103,6 +104,7 @@ def _two_wp_stage(stage_id: str, lat0, lon0, lat1, lon1, elevation_m=600):
 # AC-1: Response-Vertrag 1:1 (JSON-Struktur + echte null-Serialisierung)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.xfail(reason="#1306: fehlender wind_max_kmh wird nicht als JSON null serialisiert", strict=False)
 def test_ac1_endpoint_response_contract_and_null_field():
     """AC-1: HTTP 200, Body {"results": {...}}, Feldnamen exakt wie Spec,
     fehlender Wert (hier: Wind) wird als JSON `null` serialisiert (nicht

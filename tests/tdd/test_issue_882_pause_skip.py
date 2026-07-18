@@ -77,27 +77,42 @@ def clean_user_dir():
 # ===========================================================================
 
 class TestAC1HtmlFooter:
-    def test_pause_in_html_footer(self):  # doc-compliance-test
+    """Rendert die echte E-Mail (html.py + plain.py) und prueft den tatsaechlichen
+    Ausgabe-Text -- kein Produkt-Quelltext-Read (CLAUDE.md/#765 AC-4)."""
+
+    def test_pause_in_html_footer(self):
         # Superseded by #884 design: PAUSE CMD is now "PAUSE 2d" (no bracket hint),
         # description changed to "Briefings pausieren"
-        source = (REPO_ROOT / "src/output/renderers/email/html.py").read_text()
-        assert "PAUSE" in source, "HTML-Footer muss PAUSE enthalten (AC-1)"
-        assert "PAUSE 2d" in source, "HTML-Kommandos-Block muss PAUSE 2d enthalten (AC-1/#884)"
+        from output.renderers.email import render_email
+        from tests.unit.test_renderers_email import _common_kwargs, _make_token_line
 
-    def test_skip_in_html_footer(self):  # doc-compliance-test
+        html, _plain = render_email(_make_token_line(), **_common_kwargs())
+        assert "PAUSE" in html, "HTML-Footer muss PAUSE enthalten (AC-1)"
+        assert "PAUSE 2d" in html, "HTML-Kommandos-Block muss PAUSE 2d enthalten (AC-1/#884)"
+
+    def test_skip_in_html_footer(self):
         # Superseded by #884 design: SKIP description changed from "Nächstes Briefing überspringen"
         # to "Nächstes überspringen"
-        source = (REPO_ROOT / "src/output/renderers/email/html.py").read_text()
-        assert "SKIP" in source, "HTML-Footer muss SKIP enthalten (AC-1)"
-        assert "Nächstes überspringen" in source, "HTML-Kommandos-Block muss SKIP-Beschreibung 'Nächstes überspringen' enthalten (AC-1/#884)"
+        from output.renderers.email import render_email
+        from tests.unit.test_renderers_email import _common_kwargs, _make_token_line
 
-    def test_pause_in_plain_footer(self):  # doc-compliance-test
-        source = (REPO_ROOT / "src/output/renderers/email/plain.py").read_text()
-        assert "PAUSE" in source, "Plaintext-Footer muss PAUSE enthalten (AC-1)"
+        html, _plain = render_email(_make_token_line(), **_common_kwargs())
+        assert "SKIP" in html, "HTML-Footer muss SKIP enthalten (AC-1)"
+        assert "Nächstes überspringen" in html, "HTML-Kommandos-Block muss SKIP-Beschreibung 'Nächstes überspringen' enthalten (AC-1/#884)"
 
-    def test_skip_in_plain_footer(self):  # doc-compliance-test
-        source = (REPO_ROOT / "src/output/renderers/email/plain.py").read_text()
-        assert "SKIP" in source, "Plaintext-Footer muss SKIP enthalten (AC-1)"
+    def test_pause_in_plain_footer(self):
+        from output.renderers.email import render_email
+        from tests.unit.test_renderers_email import _common_kwargs, _make_token_line
+
+        _html, plain = render_email(_make_token_line(), **_common_kwargs())
+        assert "PAUSE" in plain, "Plaintext-Footer muss PAUSE enthalten (AC-1)"
+
+    def test_skip_in_plain_footer(self):
+        from output.renderers.email import render_email
+        from tests.unit.test_renderers_email import _common_kwargs, _make_token_line
+
+        _html, plain = render_email(_make_token_line(), **_common_kwargs())
+        assert "SKIP" in plain, "Plaintext-Footer muss SKIP enthalten (AC-1)"
 
 
 # ===========================================================================

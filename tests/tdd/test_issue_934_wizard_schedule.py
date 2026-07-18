@@ -22,6 +22,9 @@ import pytest
 import httpx
 from playwright.sync_api import sync_playwright
 
+# Dialt real (Prod-API/GeoSphere/Staging-Stack) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+pytestmark = pytest.mark.staging
+
 # Staging-Konfiguration
 BASE_URL  = os.environ.get("GZ_SVELTE_BASE", "http://127.0.0.1:3001")
 API_URL   = os.environ.get("GZ_VALIDATION_URL", "http://127.0.0.1:8091")

@@ -313,6 +313,8 @@ def _count_geosphere_clouds_calls(diagnostics_path: Path) -> int:
 # AC-1 — at_direct liefert ein valides NormalizedTimeseries von GeoSphere.
 # ---------------------------------------------------------------------------
 
+# Dialt real (GeoSphere-API) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+@pytest.mark.live
 def test_at_direct_returns_valid_geosphere_timeseries():
     """AC-1: Given eine Koordinate innerhalb der AT-Router-Box (Innsbruck),
     When der registrierte `at_direct`-Provider aufgerufen wird, Then liefert
@@ -357,6 +359,8 @@ def test_at_direct_returns_valid_geosphere_timeseries():
 # AC-2 — at_direct loest KEINEN Open-Meteo-Wolken-Call aus.
 # ---------------------------------------------------------------------------
 
+# Dialt real (GeoSphere-API) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+@pytest.mark.live
 def test_at_direct_skips_openmeteo_cloud_call(monkeypatch, tmp_path):
     """AC-2: Given der `at_direct`-Provider laeuft, When er GeoSphere-Daten
     fuer Innsbruck abruft, Then erfolgt KEIN Call gegen `api.open-meteo.com`

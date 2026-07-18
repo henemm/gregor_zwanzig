@@ -512,20 +512,22 @@ class TestLoaderHelper:
         """
         GIVEN: Default user_id
         WHEN: get_snapshots_dir()
-        THEN: Returns Path("data/users/default/weather_snapshots")
+        THEN: Returns <data_root>/users/default/weather_snapshots (Issue
+        #1133: data_root ist unter Tests der isolierte Root, nicht das
+        harte "data")
         """
-        from app.loader import get_snapshots_dir
+        from app.loader import get_data_root, get_snapshots_dir
 
         result = get_snapshots_dir()
-        assert result == Path("data/users/default/weather_snapshots")
+        assert result == get_data_root() / "users" / "default" / "weather_snapshots"
 
     def test_get_snapshots_dir_custom_user(self) -> None:
         """
         GIVEN: Custom user_id "alice"
         WHEN: get_snapshots_dir("alice")
-        THEN: Returns Path("data/users/alice/weather_snapshots")
+        THEN: Returns <data_root>/users/alice/weather_snapshots (Issue #1133)
         """
-        from app.loader import get_snapshots_dir
+        from app.loader import get_data_root, get_snapshots_dir
 
         result = get_snapshots_dir("alice")
-        assert result == Path("data/users/alice/weather_snapshots")
+        assert result == get_data_root() / "users" / "alice" / "weather_snapshots"

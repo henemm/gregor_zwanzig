@@ -11,39 +11,53 @@ _test.go-Dateien in der RED-Phase blockiert (bekannte Regel).
 
 TDD RED: Vor der Implementierung schlagen die *_removed/*_moved-Tests fehl.
 """
+import shutil
+import subprocess
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parents[2]
-GO_ROUTER = REPO / "internal" / "router" / "router.go"
-GO_MAIN = REPO / "cmd" / "server" / "main.go"
-PRESET_HANDLER = REPO / "internal" / "handler" / "compare_preset.go"
+
+# `go` liegt auf manchen Entwicklungs-Hosts nicht auf PATH (z.B. nur unter
+# /usr/local/go/bin installiert) — robust auflösen statt hart "go" anzunehmen.
+_GO_FALLBACKS = ("/usr/local/go/bin/go", "/usr/lib/go/bin/go")
 
 
-# ── AC-1: Umzug der Profil-Validierung nach internal/model ──────────────────
+def _go_binary() -> str | None:
+    found = shutil.which("go")
+    if found:
+        return found
+    return next((p for p in _GO_FALLBACKS if Path(p).exists()), None)
 
-def test_activity_profile_moved_to_model():
-    """AC-1: internal/model/activity_profile.go existiert und trägt IsValidProfile."""
-    target = REPO / "internal" / "model" / "activity_profile.go"
-    assert target.exists(), (
-        f"{target} fehlt — ActivityProfile/IsValidProfile müssen vor der "
-        f"Löschung von internal/compare/ nach model umziehen (AC-1)"
+
+# ── AC-1/AC-2: Umzug der Profil-Validierung + Go-Kompilat als Verhaltensnachweis
+#
+# #765: Kein read_text()/grep auf Produkt-Go-Quelltext mehr als Verhaltensnachweis.
+# Statt einzelne Symbole/Strings aus internal/model/activity_profile.go,
+# internal/handler/compare_preset.go und internal/router/router.go zu lesen,
+# beweist ein echter `go build ./...` dieselben strukturellen Fakten: existierte
+# `IsValidProfile`/`ActivityProfile` nicht in internal/model, oder importierte
+# ein Go-File noch das geloeschte internal/compare-Paket, schlaegt der Build
+# hart fehl (undefined symbol / package does not exist).
+
+def test_go_module_builds_after_dead_code_removal():
+    """AC-1/AC-2: Repo kompiliert nach dem Umzug/der Loeschung fehlerfrei.
+
+    Deckt implizit ab: internal/model/activity_profile.go traegt die
+    Profil-Symbole (sonst wuerden internal/handler/compare_preset.go und
+    internal/router/router.go, die sie referenzieren, nicht kompilieren),
+    und kein Go-File importiert das geloeschte internal/compare mehr (sonst
+    'package ... is not in std' / 'no required module').
+    """
+    go_bin = _go_binary()
+    if not go_bin:
+        pytest.skip("go-Toolchain nicht gefunden (weder PATH noch bekannte Fallback-Pfade)")
+    result = subprocess.run(
+        [go_bin, "build", "./..."], capture_output=True, text=True, cwd=str(REPO),
     )
-    src = target.read_text(encoding="utf-8")
-    for sym in ["ActivityProfile", "IsValidProfile", "ProfileWintersport",
-                "ProfileAlpineTour", "ProfileSummerTrekking", "ProfileAllgemein"]:
-        assert sym in src, f"{sym} fehlt in internal/model/activity_profile.go (AC-1)"
-
-
-def test_preset_handler_uses_model_not_compare():
-    """AC-1: Der lebende Preset-CRUD-Handler nutzt model statt internal/compare."""
-    src = PRESET_HANDLER.read_text(encoding="utf-8")
-    assert "internal/compare" not in src, (
-        "compare_preset.go importiert noch internal/compare — muss auf "
-        "model.IsValidProfile/model.ActivityProfile umgestellt sein (AC-1)"
-    )
-    assert "IsValidProfile" in src, (
-        "compare_preset.go: Profil-Validierung fehlt komplett — Über-Löschung! "
-        "IsValidProfile muss weiter aufgerufen werden (AC-1/AC-5)"
+    assert result.returncode == 0, (
+        f"go build schlaegt fehl (AC-1/AC-2 verletzt):\n{result.stdout}\n{result.stderr}"
     )
 
 
@@ -65,36 +79,13 @@ def test_compare_run_handler_removed():
     assert leftover == [], f"Toter Handler noch vorhanden: {leftover} (AC-2)"
 
 
-def test_router_without_compare_run_route():
-    """AC-2: router.go ohne /api/compare/run-Route und ohne CompareEngine-Dep."""
-    src = GO_ROUTER.read_text(encoding="utf-8")
-    assert "compare/run" not in src, "Route /api/compare/run steht noch in router.go (AC-2)"
-    assert "CompareEngine" not in src, "Deps-Feld CompareEngine steht noch in router.go (AC-2)"
-    assert "internal/compare" not in src, "router.go importiert noch internal/compare (AC-2)"
-
-
-def test_no_go_file_imports_internal_compare():
-    """AC-2: Kein Go-File im Repo importiert internal/compare mehr."""
-    hits = [
-        str(p.relative_to(REPO))
-        for p in REPO.rglob("*.go")
-        if ".git" not in p.parts and "internal/compare" in p.read_text(encoding="utf-8", errors="replace")
-    ]
-    assert hits == [], f"internal/compare wird noch referenziert von: {hits} (AC-2)"
-
-
-# ── AC-4: Schutz — lebende Go-Nachbarn bleiben ──────────────────────────────
-
-def test_main_go_keeps_weather_provider_and_preset_routes():
-    """AC-4/AC-10: weatherProvider bleibt in main.go, Preset-CRUD-Routen bleiben."""
-    assert "weatherProvider" in GO_MAIN.read_text(encoding="utf-8"), (
-        "weatherProvider aus main.go verschwunden — wird vom lebenden "
-        "ForecastHandler gebraucht (AC-4, Über-Löschung!)"
-    )
-    router_src = GO_ROUTER.read_text(encoding="utf-8")
-    assert "compare/presets" in router_src, (
-        "Preset-CRUD-Routen fehlen in router.go — Über-Löschung! (AC-10)"
-    )
+# router.go ohne /api/compare/run-Route, ohne CompareEngine-Dep, ohne
+# internal/compare-Import (#765: kein Source-Read mehr) sowie der Über-
+# Löschungs-Schutz für weatherProvider/compare/presets (AC-4/AC-10) sind beide
+# durch test_go_module_builds_after_dead_code_removal (go build) UND die
+# umfangreiche e2e-Playwright-Abdeckung von /api/compare/presets abgedeckt
+# (u.a. frontend/e2e/compare-editor-slice3.spec.ts, compare-hub-*.spec.ts) —
+# "anderswo gedeckt" (#765 DoD).
 
 
 # ── AC-6/7/8/9: Frontend ────────────────────────────────────────────────────

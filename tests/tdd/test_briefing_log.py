@@ -28,19 +28,26 @@ def _make_scheduler_service(user_id: str = "test-user"):
 
 # --- AC-1: _append_briefing_log schreibt Eintrag in briefing_log.json ---
 
-def test_append_briefing_log_creates_file_with_entry(tmp_path, monkeypatch):
+def test_append_briefing_log_creates_file_with_entry():
     """
     GIVEN: Kein briefing_log.json existiert
     WHEN: _append_briefing_log("trip-123", "morning", ["email"]) aufgerufen
     THEN: briefing_log.json wird erstellt mit trip_id, kind, channels, sent_at
+
+    Issue #1133-Fixture-Kollision: _append_briefing_log() schreibt ueber
+    get_data_dir(), das von der autouse-Isolationsfixture auf einen
+    eigenen isolierten Root umgebogen wird -- der Test muss denselben
+    Pfad benutzen statt einen eigenen tmp_path-Baum zu bauen.
     """
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "data" / "users" / "test-user").mkdir(parents=True)
+    from app.loader import get_data_dir
+
+    user_dir = get_data_dir("test-user")
+    user_dir.mkdir(parents=True, exist_ok=True)
 
     svc = _make_scheduler_service("test-user")
     svc._append_briefing_log("trip-123", "morning", ["email"])
 
-    log_file = tmp_path / "data" / "users" / "test-user" / "briefing_log.json"
+    log_file = user_dir / "briefing_log.json"
     assert log_file.exists(), "briefing_log.json wurde nicht erstellt"
 
     data = json.loads(log_file.read_text())
@@ -57,15 +64,16 @@ def test_append_briefing_log_creates_file_with_entry(tmp_path, monkeypatch):
     assert parsed.tzinfo is not None, "sent_at muss timezone-aware sein"
 
 
-def test_append_briefing_log_appends_to_existing_file(tmp_path, monkeypatch):
+def test_append_briefing_log_appends_to_existing_file():
     """
     GIVEN: briefing_log.json existiert mit einem Eintrag
     WHEN: _append_briefing_log ein zweites Mal aufgerufen
     THEN: Eintrag wird angehängt, erster Eintrag bleibt erhalten
     """
-    monkeypatch.chdir(tmp_path)
-    user_dir = tmp_path / "data" / "users" / "test-user"
-    user_dir.mkdir(parents=True)
+    from app.loader import get_data_dir
+
+    user_dir = get_data_dir("test-user")
+    user_dir.mkdir(parents=True, exist_ok=True)
 
     existing = {
         "entries": [
@@ -89,35 +97,39 @@ def test_append_briefing_log_appends_to_existing_file(tmp_path, monkeypatch):
     assert data["entries"][1]["channels"] == ["email", "signal"]
 
 
-def test_append_briefing_log_channels_list_preserved(tmp_path, monkeypatch):
+def test_append_briefing_log_channels_list_preserved():
     """
     GIVEN: Mehrere Kanäle konfiguriert (email + signal + telegram)
     WHEN: _append_briefing_log aufgerufen
     THEN: Alle Kanäle landen korrekt im Eintrag
     """
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "data" / "users" / "test-user").mkdir(parents=True)
+    from app.loader import get_data_dir
+
+    user_dir = get_data_dir("test-user")
+    user_dir.mkdir(parents=True, exist_ok=True)
 
     svc = _make_scheduler_service("test-user")
     svc._append_briefing_log("trip-xyz", "evening", ["email", "signal", "telegram"])
 
-    log_file = tmp_path / "data" / "users" / "test-user" / "briefing_log.json"
+    log_file = user_dir / "briefing_log.json"
     data = json.loads(log_file.read_text())
     assert data["entries"][0]["channels"] == ["email", "signal", "telegram"]
 
 
-def test_append_briefing_log_kind_evening(tmp_path, monkeypatch):
+def test_append_briefing_log_kind_evening():
     """
     GIVEN: Report-Typ ist 'evening'
     WHEN: _append_briefing_log("trip-123", "evening", [...]) aufgerufen
     THEN: kind ist 'evening' im Eintrag
     """
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "data" / "users" / "test-user").mkdir(parents=True)
+    from app.loader import get_data_dir
+
+    user_dir = get_data_dir("test-user")
+    user_dir.mkdir(parents=True, exist_ok=True)
 
     svc = _make_scheduler_service("test-user")
     svc._append_briefing_log("trip-123", "evening", ["email"])
 
-    log_file = tmp_path / "data" / "users" / "test-user" / "briefing_log.json"
+    log_file = user_dir / "briefing_log.json"
     data = json.loads(log_file.read_text())
     assert data["entries"][0]["kind"] == "evening"

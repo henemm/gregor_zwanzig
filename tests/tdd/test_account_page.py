@@ -17,6 +17,9 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
+# Dialt real (Prod-API/GeoSphere/Staging-Stack) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+pytestmark = pytest.mark.live
+
 SVELTE_BASE = os.environ.get("GZ_SVELTE_BASE", "https://gregor20.henemm.com")
 GO_BASE = "http://localhost:8090"
 FORM_HEADERS = {"Origin": SVELTE_BASE}

@@ -13,6 +13,10 @@ dort erst, wenn Marker UND `timeout=`-Parameter an ihren echten Aufrufen sitzen.
 Erweiterung Scheibe 2a (#1211a): 22 Staging-Dialer (Liste A) bekommen einen
 modul-weiten `pytest.mark.staging`, der sie aus der Standard-Selektion nimmt.
 Spec: docs/specs/modules/rework_1211a_staging_marker.md
+
+Erweiterung Scheibe 2b Batch 3 (#1211b): 13 K3-Dateien bekommen einen
+email/live/staging-Marker (3 modul-weit, 10 nur auf den real dialenden
+Tests/Klassen). Spec: docs/specs/modules/rework_1211b_rot_triage.md
 """
 from __future__ import annotations
 
@@ -80,10 +84,37 @@ _STAGING_DIALER_FILES = (
     "tests/tdd/test_ssr_cache_headers.py",
 )
 
-# Spec Liste C: 6 Dateien OHNE echten Netzcall -- bleiben unveraendert in der
-# Standard-Selektion (Regressions-Wächter gegen versehentliche Mit-Markierung).
+# Batch 3 (#1211b), K3-Tabelle: 3 Dateien bekommen einen modul-weiten Marker
+# (jeder Test dialt) -- je (Pfad, Marker)-Paar, 2x live + 1x staging.
+_B3_MODULE_MARKED = (
+    ("tests/tdd/test_account_page.py", "live"),
+    ("tests/tdd/test_feature_770_inca_nowcast_fix.py", "live"),
+    ("tests/tdd/test_issue_934_wizard_schedule.py", "staging"),
+)
+
+# Batch 3 (#1211b), K3-Tabelle: 10 Dateien bekommen nur auf den real
+# dialenden Tests/Klassen einen Marker (Rest bleibt im Standardlauf) -- je
+# (Pfad, Marker)-Paar.
+_B3_PARTIAL_MARKED = (
+    ("tests/tdd/test_issue_1069_tier_channel_gating.py", "staging"),
+    ("tests/tdd/test_issue_1037_massif_closure.py", "live"),
+    ("tests/tdd/test_issue_1142_geosphere_direct_fallback.py", "live"),
+    ("tests/tdd/test_issue_645_telegram_outputerror_arity.py", "live"),
+    ("tests/tdd/test_issue_731_unified_commands.py", "live"),
+    ("tests/tdd/test_scheduler_triggers.py", "email"),
+    ("tests/tdd/test_channel_test_button.py", "email"),
+    ("tests/tdd/test_issue_608_sms_seven_io.py", "live"),
+    ("tests/tdd/test_fix_853_842_837_tooling_gates.py", "live"),
+    ("tests/tdd/test_issue_1035_vigilance_source.py", "live"),
+)
+_B3_PARTIAL_FILES = tuple(f for f, _ in _B3_PARTIAL_MARKED)
+
+# Spec Liste C: urspruenglich 6 Dateien OHNE echten Netzcall -- bleiben
+# unveraendert in der Standard-Selektion (Regressions-Wächter gegen
+# versehentliche Mit-Markierung). test_epic_404_phase2_ist_screenshots.py
+# entfernt (#1211b Batch 1, Gruppe K6: komplett geloescht -- Datei existiert
+# nicht mehr, stale Referenz auf diesen Wächter durch Batch 3 bereinigt).
 _OFFLINE_KEEP_FILES = (
-    "tests/tdd/test_epic_404_phase2_ist_screenshots.py",
     "tests/tdd/test_prod_selftest_internal_url_skip.py",
     "tests/tdd/test_staging_gate.py",
     "tests/tdd/test_staging_gate_verdict_merge.py",
@@ -138,6 +169,21 @@ def mixed_total_collect() -> subprocess.CompletedProcess:
     Datei fuer den Partitionsnachweis (kein Test darf verloren gehen/doppelt
     zaehlen)."""
     return _collect("-o", "addopts=", *_MIXED_B1_FILES, timeout=30)
+
+
+@pytest.fixture(scope="module")
+def live_collect() -> subprocess.CompletedProcess:
+    """`-m live`-Collect fuer Batch 3 (#1211b, ein Subprozess, geteilt)."""
+    return _collect("-m", "live", timeout=90)
+
+
+@pytest.fixture(scope="module")
+def b3_partial_total_collect() -> subprocess.CompletedProcess:
+    """Marker-neutrale Collection NUR der 10 Batch-3-Teil-markierten Dateien
+    (`-o addopts=` schaltet die Marker-Filterung komplett ab) -- liefert den
+    Gesamt-Count je Datei fuer den Partitionsnachweis (Muster
+    mixed_total_collect)."""
+    return _collect("-o", "addopts=", *_B3_PARTIAL_FILES, timeout=60)
 
 
 def test_default_selection_excludes_b1_live_leak_files(
@@ -247,6 +293,66 @@ def test_offline_files_remain_in_default_selection(default_collect):
     default_counts = _collected_counts(default_collect.stdout)
     missing = sorted(f for f in _OFFLINE_KEEP_FILES if default_counts.get(f, 0) == 0)
     assert not missing, f"Offline-Dateien fehlen im Standardlauf: {missing}"
+
+
+def test_b3_module_files_excluded_from_default(default_collect, live_collect, staging_collect):
+    """GIVEN 3 Batch-3-Dateien (#1211b) mit Modul-Marker (2x live, 1x staging)
+    WHEN der Standardlauf sammelt THEN fehlen alle 3 komplett, erscheinen aber
+    unter ihrem jeweiligen Marker mit mindestens einem Test (Muster Scheibe
+    2a). Schlaegt heute fehl, weil die Dateien noch keinen Marker tragen --
+    sie erscheinen also weiterhin im Standardlauf statt unter ihrem Marker."""
+    assert default_collect.returncode == 0, default_collect.stderr
+    assert live_collect.returncode == 0, live_collect.stderr
+    assert staging_collect.returncode == 0, staging_collect.stderr
+
+    default_counts = _collected_counts(default_collect.stdout)
+    marker_counts = {
+        "live": _collected_counts(live_collect.stdout),
+        "staging": _collected_counts(staging_collect.stdout),
+    }
+
+    leaked = {f: default_counts[f] for f, _ in _B3_MODULE_MARKED if default_counts.get(f, 0) > 0}
+    assert not leaked, f"Modul-markierte Batch-3-Dateien duerfen im Standardlauf nicht erscheinen: {leaked}"
+
+    missing = sorted(f for f, marker in _B3_MODULE_MARKED if marker_counts[marker].get(f, 0) == 0)
+    assert not missing, f"Modul-markierte Batch-3-Dateien fehlen unter ihrem Marker: {missing}"
+
+
+def test_b3_partial_files_partition(
+    default_collect, live_collect, email_collect, staging_collect, b3_partial_total_collect,
+):
+    """GIVEN 10 Batch-3-Dateien (#1211b) mit Teil-Marker (nur real dialende
+    Tests/Klassen) WHEN Standardlauf und markereigener Lauf gemeinsam
+    betrachtet werden THEN hat jede Datei im Standardlauf WENIGER Tests als
+    marker-neutral gesammelt (Partitionsnachweis) UND Standardlauf +
+    eigener Marker == marker-neutraler Gesamt-Count (Muster
+    test_default_selection_excludes_b1_live_leak_files). Schlaegt heute fehl,
+    weil noch kein Teil-Marker sitzt -- Standardlauf-Count == Gesamt-Count."""
+    assert b3_partial_total_collect.returncode == 0, b3_partial_total_collect.stderr
+
+    default_counts = _collected_counts(default_collect.stdout)
+    marker_counts = {
+        "live": _collected_counts(live_collect.stdout),
+        "email": _collected_counts(email_collect.stdout),
+        "staging": _collected_counts(staging_collect.stdout),
+    }
+    total_counts = _full_id_counts(b3_partial_total_collect.stdout, _B3_PARTIAL_FILES)
+
+    for f, marker in _B3_PARTIAL_MARKED:
+        std_n = default_counts.get(f, 0)
+        marker_n = marker_counts[marker].get(f, 0)
+        total_n = total_counts.get(f, 0)
+        assert total_n > 0, f"{f}: marker-neutraler Gesamt-Count ist 0 -- Collect kaputt?"
+        assert marker_n > 0, f"{f}: Teil-markierte Datei muss dialende Tests unter `-m {marker}` zeigen, hat aber 0"
+        assert std_n < total_n, (
+            f"{f}: Standardlauf ({std_n}) muss kleiner als der marker-neutrale "
+            f"Gesamt-Count ({total_n}) sein -- sonst ist noch kein Teil-Marker wirksam."
+        )
+        assert std_n + marker_n == total_n, (
+            f"{f}: Standardlauf ({std_n}) + `-m {marker}` ({marker_n}) muss den "
+            f"marker-neutralen Gesamt-Count ({total_n}) exakt ergeben -- sonst "
+            f"geht ein Test verloren oder wird doppelt gezaehlt."
+        )
 
 
 def test_1010_1006_keeps_timeout_marker_alongside_staging():

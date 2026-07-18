@@ -68,7 +68,28 @@ Aktuelle Alternativen:
 
 Frage: "Habe ich das richtig verstanden?"
 
-### Phase 4: Dokumentieren
+### Phase 4: PFLICHT-CHECKPOINT vor Phase 5 (PO-Bestätigung)
+
+**MANDATORY — Bevor irgendetwas dokumentiert oder ein Issue angelegt wird:**
+
+Präsentiere dem PO **vollständig**:
+- **Story** (JTBD-Statement)
+- **Acceptance Criteria** (testbar, nutzersichtbar)
+- **Feature-Liste** mit Prioritäten und Abhängigkeiten
+
+Warte dann auf **explizite Bestätigung** ("go", "ja", "ok" o.ä.).
+
+**Ohne Bestätigung: STOP.** Solange keine PO-Bestätigung vorliegt:
+- **KEINE** GitHub-Issues anlegen (`gh issue create`)
+- **KEIN** Story-Dokument erstellen
+- nichts in `docs/project/` oder die Roadmap schreiben
+
+Erst nach dem expliziten "go" des PO darf Phase 5 (Dokumentieren) starten.
+
+> Hintergrund: #737–#743 wurden ohne PO-Bestätigung angelegt, mit ungeklärter
+> Interpretation der Anforderung (Issue #746). Dieser Checkpoint verhindert das.
+
+### Phase 5: Dokumentieren
 
 Erstelle User Story in `docs/stories/[feature-name].md`:
 

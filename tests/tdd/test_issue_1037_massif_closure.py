@@ -65,6 +65,8 @@ class TestIssue1037MassifClosure:
         ("Hyères", 43.1204, 6.1286),
     ]
 
+    # Dialt real (Praefektur-API DEPT=83) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+    @pytest.mark.live
     def test_ac1_var_niveau3_abgestufter_badge(self):
         """AC-1: echter Live-Call für DEPT=83. Für jeden realen Var-Ortspunkt
         wird ueber `massif_at()` (echtes Point-in-Polygon) das abdeckende
@@ -135,6 +137,8 @@ class TestIssue1037MassifClosure:
         assert best_name in html
         assert expected_word.lower() in html.lower()
 
+    # Dialt real (Praefektur-API DEPT=20) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+    @pytest.mark.live
     def test_ac2_korsika_selber_code_pfad(self):
         """AC-2: Korsika läuft durch DENSELBEN Code-Pfad wie Var — dasselbe
         Point-in-Polygon, kein Korsika-Sonderfall-Zweig. `covers()` liefert
@@ -246,6 +250,8 @@ class TestIssue1037MassifClosure:
 
         assert massif_zones._load_massifs(Path("/nonexistent/x.json")) == []
 
+    # Dialt real (Praefektur-API, beide DEPTs) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+    @pytest.mark.live
     def test_f009_ueberlappende_massive_strengstes_niveau_gewinnt(self):
         """F009: Sainte-Baume liegt real in DEPT 83 (832) UND 13 (1322).
         `massifs_at()` muss BEIDE liefern; `fetch()` muss den Alert mit dem

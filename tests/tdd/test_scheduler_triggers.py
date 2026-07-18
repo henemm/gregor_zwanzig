@@ -57,6 +57,8 @@ class TestSchedulerTriggerEndpoints:
         data = resp.json()
         assert "status" in data
 
+    # Dialt real (IMAP-Polling) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+    @pytest.mark.email
     def test_inbound_commands_endpoint_exists(self, client):
         """
         GIVEN: FastAPI app running
@@ -68,6 +70,8 @@ class TestSchedulerTriggerEndpoints:
         data = resp.json()
         assert "status" in data
 
+    # Dialt real (IMAP-Polling) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+    @pytest.mark.email
     def test_inbound_commands_skips_without_imap(self, client):
         """
         GIVEN: IMAP not configured

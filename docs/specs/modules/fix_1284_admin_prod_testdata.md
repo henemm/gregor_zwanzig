@@ -245,7 +245,7 @@ hier nicht behobene Robustheits-Schwäche (siehe „Nicht Teil dieser Spec").
 - Die 13 Specs ohne Teardown (u.a. `compare-editor-slice4`, `issue-718-idealwert-validation`,
   `layout-tab-vergleich`) bleiben ohne Teardown — sie verschmutzen künftig den
   Staging-Datenbaum statt Prod. Das ist bewusst akzeptiert (PO-Entscheid: kein
-  pro-Spec-Teardown, s. ADR-0025).
+  pro-Spec-Teardown, s. ADR-0028).
 - **Guard-Restlücken (Nachtrag 2026-07-17, beide real unerreichbar):** `assertNotProdApiProxyTarget`
   erkennt die veraltete IPv4-kompatible IPv6-Notation `::a.b.c.d` (ohne `ffff`-Präfix) nicht als
   Loopback (F014, `prodUrlGuard.ts:78-87`). Der Adversary hat empirisch belegt, dass der Kernel
@@ -289,11 +289,11 @@ beiden Schritten rot. Schritt 1 (Prod-Cleanup) ist davon unabhängig und dringli
 
 ## Architektur-Entscheidung (ADR)
 
-- **ADR-Nr.:** ADR-0025
+- **ADR-Nr.:** ADR-0028
 - **Rationale:** Neues Architekturmuster für den E2E-Prod-Schutz (Netzwerk-Wurzel-Fix statt
   pro-Spec-Teardown) und eine Abweichung von einer bestehenden Schutzregel (`admin` verliert
   den `NEVER_DELETE`-Status aus #1265) — beides ADR-würdig. Details, verworfene Alternativen
-  und Konsequenzen: `docs/adr/0025-e2e-prod-network-unreachable-admin-loses-never-delete.md`.
+  und Konsequenzen: `docs/adr/0028-e2e-prod-network-unreachable-admin-loses-never-delete.md`.
 
 ## Changelog
 

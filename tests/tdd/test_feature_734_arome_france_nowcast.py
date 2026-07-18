@@ -18,6 +18,7 @@ In der RED-Phase schlagen die AROME-Tests fehl, weil:
 """
 from __future__ import annotations
 
+import pytest
 
 import services.radar_service as rs
 from services.radar_service import NowcastResult, RadarNowcastService
@@ -35,6 +36,8 @@ _ATLANTIC_LAT, _ATLANTIC_LON = 35.0, -40.0   # keine explizite Box → globaler 
 # AC-1 — AROME wird wirklich genutzt (echter Fetch)
 # ---------------------------------------------------------------------------
 
+# Dialt real Open-Meteo/AROME (#1211-2b) -- nur via -m live
+@pytest.mark.live
 def test_ac1_arome_france_real_fetch_returns_arome_source():
     """GIVEN reale Korsika-Koordinate (GR20-Region, DPC-Box, außerhalb DE/AT)
     WHEN get_nowcast aufgerufen wird
@@ -72,6 +75,8 @@ def test_ac2_within_arome_france_bbox():
     assert within(_ATLANTIC_LAT, _ATLANTIC_LON) is False
 
 
+# Dialt real Open-Meteo/AROME (#1211-2b) -- nur via -m live
+@pytest.mark.live
 def test_ac2_chain_routing_berlin_radar_atlantic_global():
     """GIVEN die Quellen-Kette mit korrekter Reihenfolge
     WHEN get_nowcast für verschiedene Regionen läuft
@@ -146,6 +151,8 @@ def test_ac4_arome_convective_weathercode_drives_intensity():
     assert result.intensity_label == "Starker Hagel/Gewitter"
 
 
+# Dialt real Open-Meteo/AROME (#1211-2b) -- nur via -m live
+@pytest.mark.live
 def test_ac4_arome_real_fetch_has_weather_code():
     """GIVEN reale AROME-Koordinate
     WHEN _fetch_arome_france_hd aufgerufen wird (existiert in RED noch nicht)

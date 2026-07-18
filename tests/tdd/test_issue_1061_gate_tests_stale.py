@@ -2,24 +2,23 @@
 
 # doc-compliance-test
 Prueft, dass docs/features/architecture.md die tatsaechliche BOT_COMMANDS-Liste
-aus src/output/channels/telegram.py wiedergibt (Anzahl + Namen). Kein Mock —
-liest echten Quellcode und echte Doku-Datei.
+aus output.channels.telegram wiedergibt (Anzahl + Namen). Kein Mock — importiert
+das echte Modul und introspiziert das Laufzeit-Objekt (kein Produkt-Quelltext-Read
+per read_text/grep, CLAUDE.md/#765 AC-4) und liest die echte Doku-Datei.
 """
 from __future__ import annotations
 
 import re
 from pathlib import Path
 
+from output.channels.telegram import BOT_COMMANDS
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _actual_bot_commands() -> list[str]:
-    telegram_py = REPO_ROOT / "src" / "output" / "channels" / "telegram.py"
-    src = telegram_py.read_text(encoding="utf-8")
-    match = re.search(r"BOT_COMMANDS\s*=\s*\[(.*?)\n\]", src, re.S)
-    assert match, "BOT_COMMANDS-Liste nicht in telegram.py gefunden"
-    names = re.findall(r'"command"\s*:\s*"([a-z_]+)"', match.group(1))
-    assert names, "Keine Befehlsnamen aus BOT_COMMANDS extrahiert"
+    names = [entry["command"] for entry in BOT_COMMANDS]
+    assert names, "Keine Befehlsnamen in BOT_COMMANDS gefunden"
     return names
 
 

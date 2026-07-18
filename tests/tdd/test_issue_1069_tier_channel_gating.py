@@ -599,6 +599,8 @@ def ensure_frontend_test_fixtures():
     client_std.put("/api/auth/profile", json={"sms_to": None})
 
 
+# Dialt real (Staging-Stack, Playwright) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+@pytest.mark.staging
 class TestAC4LevelHintTakesPriorityOverContactHint:
     """
     GIVEN: free-Nutzer MIT hinterlegter Handynummer
@@ -638,6 +640,8 @@ class TestAC4LevelHintTakesPriorityOverContactHint:
                 browser.close()
 
 
+# Dialt real (Staging-Stack, Playwright) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+@pytest.mark.staging
 class TestAC5ContactHintUnchangedForAllowedTier:
     """
     GIVEN: standard-Nutzer OHNE hinterlegte Handynummer
@@ -673,6 +677,8 @@ class TestAC5ContactHintUnchangedForAllowedTier:
                 browser.close()
 
 
+# Dialt real (Staging-Stack, Playwright) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+@pytest.mark.staging
 class TestAC6PremiumSmsSlotVisibleButDisabled:
     """
     GIVEN: Beliebiger eingeloggter Nutzer

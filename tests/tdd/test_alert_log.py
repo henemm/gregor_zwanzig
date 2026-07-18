@@ -29,19 +29,26 @@ def _make_alert_service(user_id: str = "test-user"):
 
 # --- AC-2: _append_alert_log schreibt Eintrag in alert_log.json ---
 
-def test_append_alert_log_creates_file_with_entry(tmp_path, monkeypatch):
+def test_append_alert_log_creates_file_with_entry():
     """
     GIVEN: Kein alert_log.json existiert
     WHEN: _append_alert_log("trip-123", 2, "MODERATE") aufgerufen
     THEN: alert_log.json wird erstellt mit trip_id, sent_at, changes_count, severity
+
+    Issue #1133-Fixture-Kollision: _append_alert_log() schreibt ueber
+    get_data_dir(), das von der autouse-Isolationsfixture auf einen
+    eigenen isolierten Root umgebogen wird -- der Test muss denselben
+    Pfad benutzen statt einen eigenen tmp_path-Baum zu bauen.
     """
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "data" / "users" / "test-user").mkdir(parents=True)
+    from app.loader import get_data_dir
+
+    user_dir = get_data_dir("test-user")
+    user_dir.mkdir(parents=True, exist_ok=True)
 
     svc = _make_alert_service("test-user")
     svc._append_alert_log("trip-123", 2, "MODERATE")
 
-    log_file = tmp_path / "data" / "users" / "test-user" / "alert_log.json"
+    log_file = user_dir / "alert_log.json"
     assert log_file.exists(), "alert_log.json wurde nicht erstellt"
 
     data = json.loads(log_file.read_text())
@@ -58,15 +65,16 @@ def test_append_alert_log_creates_file_with_entry(tmp_path, monkeypatch):
     assert parsed.tzinfo is not None, "sent_at muss timezone-aware sein"
 
 
-def test_append_alert_log_appends_to_existing(tmp_path, monkeypatch):
+def test_append_alert_log_appends_to_existing():
     """
     GIVEN: alert_log.json existiert mit einem Eintrag
     WHEN: _append_alert_log ein zweites Mal aufgerufen
     THEN: Neuer Eintrag wird angehängt, alter Eintrag bleibt erhalten
     """
-    monkeypatch.chdir(tmp_path)
-    user_dir = tmp_path / "data" / "users" / "test-user"
-    user_dir.mkdir(parents=True)
+    from app.loader import get_data_dir
+
+    user_dir = get_data_dir("test-user")
+    user_dir.mkdir(parents=True, exist_ok=True)
 
     now = datetime.now(timezone.utc)
     existing = {
@@ -91,15 +99,16 @@ def test_append_alert_log_appends_to_existing(tmp_path, monkeypatch):
     assert data["entries"][1]["changes_count"] == 3
 
 
-def test_append_alert_log_purges_entries_older_than_48h(tmp_path, monkeypatch):
+def test_append_alert_log_purges_entries_older_than_48h():
     """
     GIVEN: alert_log.json enthält Einträge, darunter einen älter als 48h
     WHEN: _append_alert_log aufgerufen
     THEN: Alle Einträge bleiben erhalten (kein Purge seit #396)
     """
-    monkeypatch.chdir(tmp_path)
-    user_dir = tmp_path / "data" / "users" / "test-user"
-    user_dir.mkdir(parents=True)
+    from app.loader import get_data_dir
+
+    user_dir = get_data_dir("test-user")
+    user_dir.mkdir(parents=True, exist_ok=True)
 
     now = datetime.now(timezone.utc)
     old_ts = (now - timedelta(hours=49)).isoformat()
@@ -135,15 +144,16 @@ def test_append_alert_log_purges_entries_older_than_48h(tmp_path, monkeypatch):
     assert "HIGH" in severities
 
 
-def test_append_alert_log_retains_fresh_entries(tmp_path, monkeypatch):
+def test_append_alert_log_retains_fresh_entries():
     """
     GIVEN: alert_log.json enthält ausschließlich frische Einträge (< 48h)
     WHEN: _append_alert_log aufgerufen
     THEN: Alle frischen Einträge bleiben erhalten
     """
-    monkeypatch.chdir(tmp_path)
-    user_dir = tmp_path / "data" / "users" / "test-user"
-    user_dir.mkdir(parents=True)
+    from app.loader import get_data_dir
+
+    user_dir = get_data_dir("test-user")
+    user_dir.mkdir(parents=True, exist_ok=True)
 
     now = datetime.now(timezone.utc)
     existing = {

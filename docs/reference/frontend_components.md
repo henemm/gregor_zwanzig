@@ -1,6 +1,6 @@
 # Frontend Components Reference
 
-**Updated:** 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31  
+**Updated:** 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31  
 **Version:** 1.9
 
 ## Overview
@@ -338,7 +338,7 @@ All molecules export from the barrel `$lib/components/molecules/index.ts`.
 ### Import Pattern
 
 ```typescript
-import { ConfirmDialog, DetailRow, StagePill, ChannelRow, AlertRow, Stat } from '$lib/components/molecules';
+import { ConfirmDialog, DetailRow, ChannelRow, AlertRow, Stat } from '$lib/components/molecules';
 ```
 
 ### ConfirmDialog Component
@@ -391,7 +391,6 @@ interface ConfirmDialogProps {
 
 Additional molecules available:
 - `<DetailRow>` — Key-value pair with label, value, optional icon
-- `<StagePill>` — Stage badge with risk color + state icon
 - `<ChannelRow>` — Notification channel row with toggle switch
 - `<ChannelChip>` — Small channel indicator (compact mode for timelines)
 - `<BriefingTimelineRow>` — Briefing history row with timestamp + channels
@@ -839,6 +838,12 @@ interface WordmarkProps {
 
 **Mobile Responsiveness (Issue #702):** AlertCard, AlertCooldownCard, AlertQuietHoursCard implementieren `@media (max-width: 899px)` mit Touch-Target-Vergrößerung (WCAG): Channel-Chips ≥36px Höhe, Threshold-Input ≥120px breit, Cooldown/Time-Inputs ≥44px Höhe + 16px font-size (verhindert iOS-Zoom). Desktop Layout bleibt unverändert.
 
+### briefing-history/ — Briefing-Verlauf-Dialog (#559)
+
+| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
+|---|---|---|
+| BriefingHistoryDialog | `briefing-history/BriefingHistoryDialog.svelte` | Modal mit dem Versand-Verlauf einer archivierten Tour (Zeitpunkt, Art, Kanäle) |
+
 ### briefings-tab/ — Briefing-Zeitplan-Tab (#259)
 
 | Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
@@ -1071,6 +1076,13 @@ interface Props {
 | StageCard | `trip-detail/waypoints/StageCard.svelte` | Etappen-Karte |
 | WaypointCard | `trip-detail/waypoints/WaypointCard.svelte` | Wegpunkt-Editor-Karte |
 
+### trip-new/ — Progressiver Anlege-Editor (#622/#661)
+
+| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
+|---|---|---|
+| TripNewEditor | `trip-new/TripNewEditor.svelte` | Progressive-Tab-Editor fuer `/trips/new` (Desktop + Mobile-Paritaet, Factory-Pattern fuer Event-Handler) |
+| tripNewLogic.ts | `trip-new/tripNewLogic.ts` | Freischalt-/Fortschritts-Logik (Tabs, Progress) — reine Funktionen, testbar mit `node:test` |
+
 ### trip-wizard/ — Trip-Wizard (Epic #136) & Reusable Stepper
 
 Architektur + Detail siehe Abschnitt „Trip-Wizard Components" oben. Inventar-Ergaenzung:
@@ -1121,7 +1133,7 @@ Kanonische Komponenten-Hierarchie, 1:1 an die Claude-Design-Sandbox angeglichen.
 |---|---|---|
 | **brand** | `lib/brand/` | Marken-Bausteine: BrandIcon, BrandIconSquare, BrandWordmark, BrandUserBadge, BrandSidebar, BrandShell (Issue #370) |
 | **atoms** | `lib/components/atoms/` | 13 Atome: Eyebrow, Pill, Card, Btn, Input, Switch, Dot, WIcon, ElevSparkline, SectionH, AvatarStack, TopoBg, KV (Issue #371) |
-| **molecules** | `lib/components/molecules/` | 10 Molecules: Field, DetailRow, StagePill, ChannelRow, ChannelChip, BriefingTimelineRow, BriefingScheduleRow, ThresholdRow, Stat, AlertRow (Issue #372) |
+| **molecules** | `lib/components/molecules/` | 9 Molecules: Field, DetailRow, ChannelRow, ChannelChip, BriefingTimelineRow, BriefingScheduleRow, ThresholdRow, Stat, AlertRow (Issue #372) |
 | **mobile** | `lib/components/mobile/` | 12 Touch-Primitive (M*): MBtn, MInput, MField, MSwitch, MTab, MIcon, TopAppBar, BottomNav, Drawer, Sheet, Toast, MobileShell (Issue #373) |
 
 **Naming-Konvention:** Brand-only → `Brand*`. Mobile-only → `M*`. Atoms/Molecules → sprechender Name ohne Prefix. **Konflikt-Regel:** Bei Widerspruch gewinnt `brand-kit`, dann `atoms`.

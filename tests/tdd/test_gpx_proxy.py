@@ -9,7 +9,7 @@ SPEC: docs/specs/modules/gpx_proxy.md
 from pathlib import Path
 
 # Sample GPX file for testing (real Komoot GPX from data/)
-_SAMPLE_GPX = Path("data/2026-01-17_2753214331_Tag 1_ von Valldemossa nach Deià.gpx")
+_SAMPLE_GPX = Path("data/users/default/gpx/2026-01-17_2753214331_Tag 1_ von Valldemossa nach Deià.gpx")
 
 
 # ============================================================================
@@ -34,7 +34,7 @@ def test_gpx_router_registered():
 # Test 2: Successful GPX parse returns stage with waypoints
 # ============================================================================
 
-def test_gpx_parse_returns_stage_with_waypoints():
+def test_gpx_parse_returns_stage_with_waypoints(monkeypatch, tmp_path):
     """
     GIVEN: A valid GPX file (real Komoot export)
     WHEN: POST /api/gpx/parse with the file as multipart
@@ -46,11 +46,17 @@ def test_gpx_parse_returns_stage_with_waypoints():
     client = TestClient(app)
 
     assert _SAMPLE_GPX.exists(), f"Sample GPX not found: {_SAMPLE_GPX}"
-    with open(_SAMPLE_GPX, "rb") as f:
-        response = client.post(
-            "/api/gpx/parse",
-            files={"file": ("test.gpx", f, "application/gpx+xml")},
-        )
+    content = _SAMPLE_GPX.read_bytes()
+    # services.gpx_processing schreibt den Upload nach dem fest verdrahteten
+    # relativen _GPX_UPLOAD_DIR (data/users/default/gpx) statt ueber
+    # app.loader.get_data_dir() -- cwd testseitig in ein tmp-Verzeichnis
+    # umlenken, damit der Schreibzugriff nicht den echten Repo-Datenbaum
+    # trifft (Issue #1265 Teil C Guard in tests/conftest.py).
+    monkeypatch.chdir(tmp_path)
+    response = client.post(
+        "/api/gpx/parse",
+        files={"file": ("test.gpx", content, "application/gpx+xml")},
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -65,7 +71,7 @@ def test_gpx_parse_returns_stage_with_waypoints():
 # Test 3: Waypoints have correct structure
 # ============================================================================
 
-def test_gpx_parse_waypoint_structure():
+def test_gpx_parse_waypoint_structure(monkeypatch, tmp_path):
     """
     GIVEN: A successful GPX parse response
     WHEN: Checking a waypoint in the response
@@ -75,11 +81,12 @@ def test_gpx_parse_waypoint_structure():
     from api.main import app
 
     client = TestClient(app)
-    with open(_SAMPLE_GPX, "rb") as f:
-        response = client.post(
-            "/api/gpx/parse",
-            files={"file": ("test.gpx", f, "application/gpx+xml")},
-        )
+    content = _SAMPLE_GPX.read_bytes()
+    monkeypatch.chdir(tmp_path)  # s. Kommentar in test_gpx_parse_returns_stage_with_waypoints
+    response = client.post(
+        "/api/gpx/parse",
+        files={"file": ("test.gpx", content, "application/gpx+xml")},
+    )
 
     assert response.status_code == 200
     wp = response.json()["waypoints"][0]
@@ -99,7 +106,7 @@ def test_gpx_parse_waypoint_structure():
 # Test 4: Query params stage_date and start_hour are forwarded
 # ============================================================================
 
-def test_gpx_parse_with_stage_date():
+def test_gpx_parse_with_stage_date(monkeypatch, tmp_path):
     """
     GIVEN: A valid GPX file
     WHEN: POST /api/gpx/parse?stage_date=2026-06-15&start_hour=7
@@ -109,11 +116,12 @@ def test_gpx_parse_with_stage_date():
     from api.main import app
 
     client = TestClient(app)
-    with open(_SAMPLE_GPX, "rb") as f:
-        response = client.post(
-            "/api/gpx/parse?stage_date=2026-06-15&start_hour=7",
-            files={"file": ("test.gpx", f, "application/gpx+xml")},
-        )
+    content = _SAMPLE_GPX.read_bytes()
+    monkeypatch.chdir(tmp_path)  # s. Kommentar in test_gpx_parse_returns_stage_with_waypoints
+    response = client.post(
+        "/api/gpx/parse?stage_date=2026-06-15&start_hour=7",
+        files={"file": ("test.gpx", content, "application/gpx+xml")},
+    )
 
     assert response.status_code == 200
     data = response.json()

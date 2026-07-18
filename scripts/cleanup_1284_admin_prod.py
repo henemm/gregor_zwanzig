@@ -6,7 +6,7 @@ Spec: docs/specs/modules/fix_1284_admin_prod_testdata.md, Sektion
 "Implementation Details" AC-1. Vorbild: `scripts/cleanup_1265_prod_testdata.py`
 (Dry-Run-Default, --execute, tar.gz-Backup, Fail-Fast, Idempotenz).
 
-WICHTIG (ADR-0025, PO-Entscheid 2026-07-16): Dieses Script hebt bewusst den
+WICHTIG (ADR-0028, PO-Entscheid 2026-07-16): Dieses Script hebt bewusst den
 `NEVER_DELETE`-Schutz für `admin` auf, den `scripts/cleanup_1265_prod_testdata.py:65`
 verankert. Das ist KEIN Versehen -- `admin` hat sich seit #1265 zum reinen
 E2E-Testleichen-Sammelbecken entwickelt (153 Vergleichs-Abos, siehe Spec

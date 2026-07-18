@@ -17,11 +17,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-import yaml
-
 HOOKS_DIR = Path(__file__).resolve().parents[2] / ".claude" / "hooks"
 HOOK_SCRIPT = HOOKS_DIR / "track_token_usage.py"
-WORKFLOW_PY = HOOKS_DIR / "workflow.py"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -106,7 +103,7 @@ class TestAC1StopHookWritesTokenUsage:
             ], transcript)
 
             result = _run_hook(transcript, env={
-                "GZ_ACTIVE_WORKFLOW": "829-token-spike",
+                "OPENSPEC_ACTIVE_WORKFLOW": "829-token-spike",
                 "GZ_WORKFLOW_ROOT": wf_dir,
             })
 
@@ -156,7 +153,7 @@ class TestAC2Accumulation:
             ], transcript)
 
             result = _run_hook(transcript, env={
-                "GZ_ACTIVE_WORKFLOW": "829-token-spike",
+                "OPENSPEC_ACTIVE_WORKFLOW": "829-token-spike",
                 "GZ_WORKFLOW_ROOT": wf_dir,
             })
             assert result.returncode == 0
@@ -173,7 +170,7 @@ class TestAC2Accumulation:
 
 class TestAC3NoActiveWorkflow:
     """
-    GIVEN: GZ_ACTIVE_WORKFLOW ist nicht gesetzt
+    GIVEN: OPENSPEC_ACTIVE_WORKFLOW ist nicht gesetzt
     WHEN: Stop-Hook wird aufgerufen
     THEN: exit 0, keine Datei wird verändert
     """
@@ -185,12 +182,12 @@ class TestAC3NoActiveWorkflow:
         ], transcript)
 
         env_without_workflow = {k: v for k, v in os.environ.items()
-                                if k != "GZ_ACTIVE_WORKFLOW"}
+                                if k != "OPENSPEC_ACTIVE_WORKFLOW"}
 
         result = _run_hook(transcript, env=env_without_workflow)
 
         assert result.returncode == 0, (
-            f"Hook bei fehlendem GZ_ACTIVE_WORKFLOW schlug fehl:\n{result.stderr}"
+            f"Hook bei fehlendem OPENSPEC_ACTIVE_WORKFLOW schlug fehl:\n{result.stderr}"
         )
 
     def test_no_workflow_does_not_create_state_files(self, tmp_path):
@@ -202,7 +199,7 @@ class TestAC3NoActiveWorkflow:
 
             before_files = set(Path(wf_dir).iterdir())
             env_without_workflow = {k: v for k, v in os.environ.items()
-                                    if k != "GZ_ACTIVE_WORKFLOW"}
+                                    if k != "OPENSPEC_ACTIVE_WORKFLOW"}
             env_without_workflow["GZ_WORKFLOW_ROOT"] = wf_dir
 
             _run_hook(transcript, env=env_without_workflow)
@@ -213,58 +210,6 @@ class TestAC3NoActiveWorkflow:
             )
 
 
-# ─── AC-4: write-log schreibt token_usage ins YAML-Log ──────────────────────
-
-class TestAC4WriteLogIncludesTokenUsage:
-    """
-    GIVEN: Workflow-State enthält token_usage
-    WHEN: workflow.py write-log success wird aufgerufen
-    THEN: YAML-Execution-Log enthält token_usage-Block mit allen vier Zählern
-    """
-
-    def test_write_log_includes_token_usage(self, tmp_path):
-        with tempfile.TemporaryDirectory() as wf_dir:
-            log_dir = Path(wf_dir) / "_log"
-            log_dir.mkdir()
-
-            wf_file = Path(wf_dir) / "829-token-spike.json"
-            wf_file.write_text(json.dumps({
-                "name": "829-token-spike",
-                "current_phase": "phase5_tdd_red",
-                "phase_transitions": [],
-                "token_usage": {
-                    "input_tokens": 5000,
-                    "output_tokens": 2000,
-                    "cache_creation_tokens": 100000,
-                    "cache_read_tokens": 500000,
-                },
-            }))
-
-            result = subprocess.run(
-                [sys.executable, str(WORKFLOW_PY), "write-log", "success"],
-                capture_output=True,
-                text=True,
-                env={
-                    **os.environ,
-                    "GZ_ACTIVE_WORKFLOW": "829-token-spike",
-                    "GZ_WORKFLOW_ROOT": wf_dir,
-                },
-                cwd=str(PROJECT_ROOT),
-            )
-
-            assert result.returncode == 0, (
-                f"write-log schlug fehl:\n{result.stderr}"
-            )
-
-            log_files = list(log_dir.glob("*.yaml"))
-            assert log_files, "Kein YAML-Log geschrieben"
-
-            log_data = yaml.safe_load(log_files[0].read_text())
-            assert "token_usage" in log_data, (
-                f"token_usage fehlt im YAML-Log. Felder: {list(log_data.keys())}"
-            )
-            usage = log_data["token_usage"]
-            assert usage.get("input_tokens") == 5000
-            assert usage.get("output_tokens") == 2000
-            assert usage.get("cache_creation_tokens") == 100000
-            assert usage.get("cache_read_tokens") == 500000
+# AC-4 (test_write_log_includes_token_usage) — entfernt (Batch 4, Rot-Triage
+# #1211b): rief das mit der Plugin-Migration entfernte repo-lokale
+# workflow.py auf (K1-Muster, siehe docs/context/rework-1211b-rot-triage.md).

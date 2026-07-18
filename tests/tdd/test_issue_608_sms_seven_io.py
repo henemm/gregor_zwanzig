@@ -99,6 +99,8 @@ class TestSmsConfigValidation:
 
 class TestSmsErrorHandling:
 
+    # Dialt real (seven.io) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
+    @pytest.mark.live
     def test_invalid_api_key_raises_output_error(self):
         """
         GIVEN: Ungültiger API-Key (echter HTTP-Call, echter 401 von seven.io)
