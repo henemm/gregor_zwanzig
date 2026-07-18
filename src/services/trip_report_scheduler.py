@@ -33,7 +33,7 @@ from services.day_comparison import DayComparison
 from services.daylight_service import DaylightWindow
 from services.notification_service import NotificationService, TripReportRequest
 from services.user_tier import sms_allowed
-from utils.geo import degrees_to_compass, haversine_km
+from utils.geo import haversine_km
 from utils.timezone import tz_for_coords
 
 if TYPE_CHECKING:
@@ -1407,41 +1407,28 @@ class TripReportSchedulerService:
 
                 agg = aggregate_stage(seg_weather)
 
-                temp_lo = int(agg.temp_min_c) if agg.temp_min_c is not None else None
-                temp_hi = int(agg.temp_max_c) if agg.temp_max_c is not None else None
-                precip_mm = float(agg.precip_sum_mm or 0.0)
-                wind_kmh = int(agg.wind_max_kmh or 0)
-                wind_dir = degrees_to_compass(agg.wind_direction_avg_deg)
-                thunder_level = agg.thunder_level_max
-                thunder = thunder_level.name if thunder_level is not None else "NONE"
-                note = _trend_note(thunder, precip_mm, wind_kmh)
+                # Epic #1301 B4: Zeilenbau in geteilten Baustein extrahiert
+                # (build_outlook_row, Trip/Compare-Teilungs-Invariante).
+                # note bleibt trip-eigen (kein Feld von build_outlook_row),
+                # aus denselben Werten berechnet, die build_outlook_row intern
+                # aus `agg` ableitet.
+                from output.renderers.email.outlook import build_outlook_row
 
-                # Issue #640: Build HourlyValue samples from timeseries for @-time tokens.
-                # Uses local hours (Bug #398/#401: tz required). No extra API call.
-                from src.output.tokens.dto import HourlyValue
-                from app.models import ThunderLevel as _TL
-                from utils.timezone import local_hour as _lh
-                _tz = tz if tz is not None else __import__("zoneinfo").ZoneInfo("UTC")
-                _hourly_precip: list = []
-                _hourly_wind: list = []
-                _hourly_gust: list = []
-                _hourly_thunder: list = []
-                _THUNDER_NUM = {_TL.NONE: 0, _TL.MED: 1, _TL.HIGH: 2}
-                for sw in seg_weather:
-                    if sw.timeseries is None:
-                        continue
-                    for dp in sw.timeseries.data:
-                        lh = _lh(dp.ts, _tz)
-                        if dp.precip_1h_mm is not None:
-                            _hourly_precip.append(HourlyValue(hour=lh, value=dp.precip_1h_mm))
-                        if dp.wind10m_kmh is not None:
-                            _hourly_wind.append(HourlyValue(hour=lh, value=dp.wind10m_kmh))
-                        if dp.gust_kmh is not None:
-                            _hourly_gust.append(HourlyValue(hour=lh, value=dp.gust_kmh))
-                        if dp.thunder_level is not None:
-                            _hourly_thunder.append(HourlyValue(
-                                hour=lh, value=float(_THUNDER_NUM.get(dp.thunder_level, 0))
-                            ))
+                _thunder_name = (
+                    agg.thunder_level_max.name
+                    if agg.thunder_level_max is not None else "NONE"
+                )
+                note = _trend_note(
+                    _thunder_name,
+                    float(agg.precip_sum_mm or 0.0),
+                    int(agg.wind_max_kmh or 0),
+                )
+
+                _tz = tz if tz is not None else ZoneInfo("UTC")
+                _flat_points = [
+                    dp for sw in seg_weather if sw.timeseries is not None
+                    for dp in sw.timeseries.data
+                ]
 
                 # Resolve per-metric sms_threshold from trip display config (AC-2)
                 _sms_thr: dict = {}
@@ -1451,41 +1438,19 @@ class TripReportSchedulerService:
                         if mc.sms_threshold is not None:
                             _sms_thr[mc.metric_id] = mc.sms_threshold
 
-                # Issue #721: confidence_pct from stage-level aggregate (min over segments)
-                _conf_pct = (
-                    round(agg.confidence_pct_min)
-                    if agg.confidence_pct_min is not None else None
+                row = build_outlook_row(
+                    agg, _flat_points, WEEKDAYS_DE[stage.date.weekday()], _tz,
+                    sms_thresholds=_sms_thr,
                 )
+                # Issue #1275: explicit calendar date so the thunder forecast
+                # can reuse this row (matched by date, gap-safe) instead of
+                # re-fetching the same stage. Additive — consumers read only
+                # their known keys (format_trend_tokens).
+                row["date"] = stage.date
+                row["name"] = stage.name
+                row["note"] = note
 
-                trend.append(dict(
-                    weekday=WEEKDAYS_DE[stage.date.weekday()],
-                    # Issue #1275: explicit calendar date so the thunder forecast
-                    # can reuse this row (matched by date, gap-safe) instead of
-                    # re-fetching the same stage. Additive — consumers read only
-                    # their known keys (format_trend_tokens).
-                    date=stage.date,
-                    name=stage.name,
-                    temp_lo=temp_lo,
-                    temp_hi=temp_hi,
-                    precip_mm=precip_mm,
-                    wind_dir=wind_dir,
-                    wind_kmh=wind_kmh,
-                    thunder=thunder,
-                    note=note,
-                    hourly_precip=tuple(_hourly_precip),
-                    hourly_wind=tuple(_hourly_wind),
-                    hourly_gust=tuple(_hourly_gust),
-                    hourly_thunder=tuple(_hourly_thunder),
-                    **{k: v for k, v in {
-                        "sms_threshold_precip": _sms_thr.get("precipitation"),
-                        "sms_threshold_wind": _sms_thr.get("wind"),
-                        "sms_threshold_gust": _sms_thr.get("gust"),
-                        "sms_threshold_thunder": _sms_thr.get("thunder"),
-                        "confidence_pct": _conf_pct,
-                        # AC-13 (#911): Regenwahrscheinlichkeit für PR-Spalte in OutlookTable
-                        "rain_probability_pct": agg.pop_max_pct,
-                    }.items() if v is not None},
-                ))
+                trend.append(row)
             except Exception as e:
                 logger.warning(f"Failed to build trend for stage {stage.id}: {e}")
                 continue

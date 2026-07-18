@@ -24,9 +24,10 @@ from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
 from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.email.compare_html import (
-    _fmt_thunder, _fmt_visibility_overview, _metric_value,
-    sort_locations_alphabetically,
+    _build_location_outlook_rows, _fmt_thunder, _fmt_visibility_overview,
+    _metric_value, sort_locations_alphabetically,
 )
+from output.renderers.email.outlook import render_outlook_plain
 from src.output.metric_format import format_value
 from src.output.renderers.alert.official_alerts import (
     _word_boundary_truncate,
@@ -55,6 +56,8 @@ def render_comparison_text(
     result: ComparisonResult,
     profile: Optional[ActivityProfile] = None,
     enabled_metrics: set | None = None,
+    *,
+    outlook_enabled: bool = False,
 ) -> str:
     """
     Render ComparisonResult als Klartext (v2, Issue #1110).
@@ -177,6 +180,24 @@ def render_comparison_text(
                 lines.append(f"   {ts}  Temp {temp}  Gef. {gef}  Wind {wind}  Wolken {cloud_pct}")
             lines.append("")
 
+    # Epic #1301 B4: 3-Tage-Ausblick je Ort (Klartext), unabhaengig von der
+    # STUNDENVERLAUF-Sektion (eigenes Config-Bool). Fail-soft je Ort
+    # (Fehler/leere Daten -> Ort wird uebersprungen, kein Crash).
+    if outlook_enabled:
+        outlook_valid = [
+            loc for loc in locations if loc.error is None and loc.outlook_hourly_data
+        ]
+        if outlook_valid:
+            lines.append("AUSBLICK")
+            lines.append("-" * 15)
+            for loc_result in outlook_valid:
+                rows = _build_location_outlook_rows(loc_result)
+                if not rows:
+                    continue
+                lines.append(loc_result.location.name)
+                lines.append(render_outlook_plain(rows, show_acc=False).strip("\n"))
+                lines.append("")
+
     lines.append("---")
     lines.append("Gregor Zwanzig")
 
@@ -196,6 +217,7 @@ def render_compare_email(
     preset_schedule: Optional[str] = None,
     preset_weekday: Optional[int] = None,
     corridors: list[Corridor] | None = None,
+    outlook_enabled: bool = False,
 ) -> tuple[str, str]:
     """Render both HTML and plain-text parts for a compare email (v2, #1110).
 
@@ -230,8 +252,12 @@ def render_compare_email(
         preset_schedule=preset_schedule,
         preset_weekday=preset_weekday,
         corridors=corridors,
+        outlook_enabled=outlook_enabled,
     )
-    text_body = render_comparison_text(result, profile=profile, enabled_metrics=enabled_metrics)
+    text_body = render_comparison_text(
+        result, profile=profile, enabled_metrics=enabled_metrics,
+        outlook_enabled=outlook_enabled,
+    )
     return html_body, text_body
 
 

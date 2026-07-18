@@ -150,6 +150,11 @@ class LocationResult:
     uv_index_max: Optional[float] = None
     pop_max_pct: Optional[int] = None
     hourly_data: List["ForecastDataPoint"] = field(default_factory=list)
+    # Epic #1301 B4 — Mehrtages-Slice (bis zu 3 Kalendertage) fuer den
+    # Ausblick je Ort. Transient (kein Persistenz-Feld, kein Datenschema-
+    # Risiko), additiv, Default leer. `hourly_data` bleibt das Ein-Tages-
+    # Fenster, unveraendert.
+    outlook_hourly_data: List["ForecastDataPoint"] = field(default_factory=list)
     error: Optional[str] = None  # Error message if fetch failed
     # Issue #1034 — amtliche Warnungen (transient, keine Persistenz betroffen)
     official_alerts: List["OfficialAlert"] = field(default_factory=list)

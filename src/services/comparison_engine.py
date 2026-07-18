@@ -90,6 +90,17 @@ class ComparisonEngine:
                 # Get raw data
                 raw_data = raw_result.get("raw_data", [])
 
+                # Epic #1301 B4 — Mehrtages-Slice fuer den Ausblick (bis zu 3
+                # Kalendertage ab target_date), additiv aus demselben
+                # raw_data-Fetch gerettet. Kein zusaetzlicher API-Call: die
+                # 96h liegen durch COMPARE_FORECAST_HOURS bereits vor.
+                _outlook_days = sorted(
+                    {dp.ts.date() for dp in raw_data if dp.ts.date() >= target_date}
+                )[:3]
+                outlook_hourly_data = [
+                    dp for dp in raw_data if dp.ts.date() in _outlook_days
+                ]
+
                 # Filter by target date and time window
                 start_hour, end_hour = time_window
                 # Window length (inclusive) drives the sunshine SHARE bonus (#366)
@@ -247,6 +258,7 @@ class ComparisonEngine:
                     uv_index_max=metrics.get("uv_index_max"),
                     pop_max_pct=metrics.get("pop_max_pct"),
                     hourly_data=filtered_data,
+                    outlook_hourly_data=outlook_hourly_data,
                 ))
 
             except Exception as e:
@@ -301,6 +313,7 @@ def dict_to_comparison_result(
             cloud_high_avg=r.get("cloud_high_avg"),
             sunny_hours=r.get("sunny_hours"),
             hourly_data=r.get("hourly_data", []),
+            outlook_hourly_data=r.get("outlook_hourly_data", []),
         )
         location_results.append(loc_result)
 

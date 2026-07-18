@@ -34,6 +34,7 @@ from output.renderers.email.design_tokens import (
     G_BOX_WARNING_BG, G_INK, G_INK_FAINT, G_INK_MUTED, G_PAPER, G_SUCCESS,
     G_WARNING, WEB_FONT_LINK, tone_css,
 )
+from output.renderers.email.outlook import build_outlook_row, render_outlook_table
 from output.renderers.email.profile_signature import profile_signature
 from services.corridor_match import corridor_inside
 from src.output.metric_format import severity_for, thunder_ordinal
@@ -642,6 +643,69 @@ def _render_location_section(
     )
 
 
+# ---------------------------------------------------------------------------
+# Epic #1301 B4 — 3-Tage-Ausblick je Ort (geteilter Renderer/Zeilenbau)
+# ---------------------------------------------------------------------------
+
+_WEEKDAYS_DE_OUTLOOK = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+
+
+def _group_by_calendar_day(points: list, cap: int = 3) -> list[tuple]:
+    """Gruppiert eine flache Punktliste nach Kalendertag, Cap auf `cap` Tage."""
+    by_day: dict = {}
+    for dp in points:
+        by_day.setdefault(dp.ts.date(), []).append(dp)
+    days = sorted(by_day)[:cap]
+    return [(d, by_day[d]) for d in days]
+
+
+def _build_location_outlook_rows(loc: LocationResult) -> list[dict]:
+    """AC-5/AC-8: bis zu 3 Tages-Zeilen aus `outlook_hourly_data`, ueber
+    denselben Aggregator (`summarize_points`) und denselben Zeilenbau
+    (`build_outlook_row`) wie der Trip-Pfad (Trip/Compare-Teilungs-
+    Invariante)."""
+    from zoneinfo import ZoneInfo
+
+    from services.weather_metrics import summarize_points
+
+    tz_name = getattr(loc.location, "timezone", None) or "UTC"
+    try:
+        tz = ZoneInfo(tz_name)
+    except Exception:
+        tz = ZoneInfo("UTC")
+
+    rows = []
+    for day, day_points in _group_by_calendar_day(loc.outlook_hourly_data):
+        summary = summarize_points(day_points)
+        weekday = _WEEKDAYS_DE_OUTLOOK[day.weekday()]
+        rows.append(build_outlook_row(summary, day_points, weekday, tz))
+    return rows
+
+
+def _render_location_outlook(loc: LocationResult, index: int) -> str:
+    """AC-5/AC-9: Ausblick-Tabelle je Ort; entfaellt fail-soft bei Fehler
+    bzw. leerem `outlook_hourly_data` (kein Crash, restliche Mail
+    unveraendert)."""
+    if loc.error is not None or not loc.outlook_hourly_data:
+        return ""
+    rows = _build_location_outlook_rows(loc)
+    if not rows:
+        return ""
+    name = _html.escape(loc.location.name)
+    header = (
+        f'<div style="padding-bottom:8px;border-bottom:2px solid {G_INK};">'
+        f'<span style="font-family:{FONT_DATA};font-size:11px;font-weight:600;'
+        f'color:{G_ACCENT};letter-spacing:0.1em;">ORT</span> '
+        f'<span style="font-size:15px;font-weight:600;color:{G_INK};">{name}</span>'
+        f'</div>'
+    )
+    table = render_outlook_table(rows, show_acc=False)
+    return (
+        f'<div style="padding:{20 if index else 14}px 24px 0;">'
+        f'{header}{table}</div>'
+    )
+
+
 def _render_official_alerts_block(locations: list[LocationResult]) -> str:
     """Badges fuer amtliche Warnungen je Ort (Thin-Wrapper, ADR-0011).
 
@@ -891,6 +955,7 @@ def render_compare_html(
     preset_schedule: Optional[str] = None,
     preset_weekday: Optional[int] = None,
     corridors: list[Corridor] | None = None,
+    outlook_enabled: bool = False,
 ) -> str:
     """Rendert ComparisonResult als HTML-Mail (v2-Layout, Issue #1110).
 
@@ -925,6 +990,11 @@ def render_compare_html(
             liegt (`corridor_inside()`, C5), erhalten zusaetzlich
             `class="corridor-mark"` (additiv zur Severity-Faerbung, AC-19).
             `None`/`[]` = kein Korridor konfiguriert, HTML unveraendert.
+        outlook_enabled: Epic #1301 B4 -- ``True`` zeigt je Ort einen bis zu
+            3-Tage-Ausblick (Tagestabelle ohne ACC-Spalte, `show_acc=False`,
+            ADR-0005/#710). Default ``False`` (rueckwaertskompatibel; der
+            Aufrufer resolved den tatsaechlichen Default ueber
+            `resolve_compare_render_options`, s. `report_config_resolver.py`).
 
     Returns:
         HTML-String (DOCTYPE bis </html>).
@@ -957,6 +1027,17 @@ def render_compare_html(
         if hourly_enabled else ""
     )
 
+    # Epic #1301 B4: 3-Tage-Ausblick je Ort, unabhaengig von hourly_enabled
+    # (eigenes Config-Bool). Fail-soft je Ort (Fehler/leere Daten -> "").
+    outlook_head_html = (
+        f'<div style="padding:26px 24px 0;">'
+        f'{_render_section_head("AUSBLICK", "3-Tage-Ausblick · alle Orte", "")}</div>'
+    ) if outlook_enabled else ""
+    outlook_sections_html = (
+        "".join(_render_location_outlook(loc, i) for i, loc in enumerate(locations))
+        if outlook_enabled else ""
+    )
+
     legend_html = _render_legend(hourly_metrics, hourly_enabled)
     abo_html = _render_abo_footer(preset_name, preset_schedule, preset_weekday, len(locations), sig)
     app_footer_html = _render_app_footer()
@@ -966,8 +1047,9 @@ def render_compare_html(
     body_html = "\n".join(
         part for part in (
             header_html, warnings_html, warn_banner_html, overview_html,
-            hourly_head_html, hourly_sections_html, legend_html, abo_html,
-            app_footer_html,
+            hourly_head_html, hourly_sections_html,
+            outlook_head_html, outlook_sections_html,
+            legend_html, abo_html, app_footer_html,
         ) if part
     )
 

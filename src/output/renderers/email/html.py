@@ -53,6 +53,8 @@ from src.output.renderers.email.design_tokens import (
     G_ACCENT, G_WARNING, G_DANGER, G_BOX_WARNING_BG, G_BOX_DANGER_BG, G_HEADER_BG,
     FONT_UI, FONT_DATA, WEB_FONT_LINK,
 )
+# Epic #1301 B4: geteilter Ausblick-Renderer (Trip/Compare-Teilungs-Invariante)
+from src.output.renderers.email.outlook import render_outlook_table
 
 
 def render_stability_label_html(result: Optional["StabilityResult"]) -> str:
@@ -1117,149 +1119,10 @@ def render_html(
         # AC-8/9/12 (#911): Ausblick als OutlookTable (Tabelle statt Chips).
         # Spalten: Tag · N · D · R · PR · Wind · Böen · Gew · ACC
         # Zell-Hintergrund je Warn-Level; Code-Legende darunter.
-
-        def _outlook_cell_bg(val, thresholds: tuple) -> str:
-            """Bestimmt Zell-BG aus Schwellwert-Tupel (caution, warn, danger)."""
-            if val is None:
-                return ""
-            try:
-                v = float(val)
-            except (TypeError, ValueError):
-                return ""
-            c, w, d = thresholds
-            if d is not None and v >= d:
-                return "background:#f6c5bf;"
-            if w is not None and v >= w:
-                return "background:#fad6b8;"
-            if c is not None and v >= c:
-                return "background:#fbeeb8;"
-            return ""
-
-        def _otd(content: str, *, bg: str = "", align: str = "center") -> str:
-            """Outlook-Table-Datenzelle (kompakte inline-styles für Outlook).
-
-            fix-911-table-jsx AC-3: MONO-Font (FONT_DATA) auf Data-Cells.
-            """
-            return (
-                f'<td style="{bg}padding:6px 4px;text-align:{align};'
-                f'font-family:{FONT_DATA};'
-                f'font-size:11px;border-right:1px solid #f0ece1;'
-                f'border-bottom:1px solid #f0ece1;">'
-                f'{content}</td>'
-            )
-
-        # 4-stufiger ACC-Dot aus confidence_pct
-        # hoch>=80=ok, mittel>=60=caution, niedrig>=40=warn, sehr_niedrig<40=danger
-        def _acc_dot(conf_pct) -> str:
-            if conf_pct is None:
-                return "–"
-            try:
-                v = float(conf_pct)
-            except (TypeError, ValueError):
-                return "–"
-            if v >= 80:
-                color = "#2f8a3e"
-            elif v >= 60:
-                color = "#e3b008"
-            elif v >= 40:
-                color = "#e07b1a"
-            else:
-                color = "#c52a22"
-            return (
-                f'<span style="display:inline-block;width:10px;height:10px;'
-                f'border-radius:50%;background:{color};"></span>'
-            )
-
-        # thead
-        _oh_style = (
-            f'style="background:#fff;border-bottom:1px solid #e6e1d3;'
-            f'padding:6px 4px;text-align:center;font-family:{FONT_DATA};'
-            f'font-size:10px;font-weight:600;color:#3a3835;white-space:nowrap;"'
-        )
-        outlook_thead = (
-            f'<thead><tr>'
-            f'<th {_oh_style}>Tag</th>'
-            f'<th {_oh_style}>N</th>'
-            f'<th {_oh_style}>D</th>'
-            f'<th {_oh_style}>R</th>'
-            f'<th {_oh_style}>PR</th>'
-            f'<th {_oh_style}>Wind</th>'
-            f'<th {_oh_style}>Böen</th>'
-            f'<th {_oh_style}>Gew</th>'
-            f'<th {_oh_style}>ACC</th>'
-            f'</tr></thead>'
-        )
-
-        _THUNDER_LEVEL_LABEL = {"MED": "mittel", "HIGH": "hoch"}
-        _THUNDER_LEVEL_BG = {"MED": "background:#fad6b8;", "HIGH": "background:#f6c5bf;"}
-
-        outlook_rows = ""
-        for stage in multi_day_trend:
-            tokens = format_trend_tokens(stage)
-            weekday = stage.get("weekday", "–")
-            # F005 (#911): Scheduler schreibt temp_lo/temp_hi (trip_report_scheduler
-            # _build_stage_trend). temp_min_c/temp_max_c nur Fallback (Alt-Fixtures).
-            # Ohne temp_lo/temp_hi zeigten N/D in der echten Produktionsmail immer „–".
-            temp_min = stage.get("temp_lo", stage.get("temp_min_c"))
-            temp_max = stage.get("temp_hi", stage.get("temp_max_c"))
-            precip_mm = stage.get("precip_mm")
-            wind_kmh = stage.get("wind_kmh")
-            pr_pct = stage.get("rain_probability_pct")
-            conf_pct = stage.get("confidence_pct")
-            # Gust aus hourly_gust wenn vorhanden
-            hourly_gust = stage.get("hourly_gust") or ()
-            gust_kmh = max((float(g.value) if hasattr(g, "value") else float(g)
-                            for g in hourly_gust if g is not None), default=None)
-            # F002: Gew = Stufe + Uhrzeit (kein Fake-%), Hintergrund nach Level
-            thunder_level = (stage.get("thunder", "NONE") or "NONE").upper()
-            if thunder_level in ("MED", "HIGH"):
-                gew_str = _THUNDER_LEVEL_LABEL[thunder_level]
-                t_tok = tokens.get("thunder_token", "-")
-                _at = _re.search(r"@(\d+)", t_tok) if t_tok and t_tok != "-" else None
-                if _at:
-                    gew_str += f" @{_at.group(1)}"
-            else:
-                gew_str = "–"
-
-            n_str = f"{temp_min:.0f}°" if temp_min is not None else "–"
-            d_str = f"{temp_max:.0f}°" if temp_max is not None else "–"
-            r_str = f"{precip_mm:.1f}" if precip_mm is not None else "–"
-            pr_str = f"{int(pr_pct)}%" if pr_pct is not None else "–"
-            wind_str = f"{wind_kmh:.0f}" if wind_kmh is not None else "–"
-            gust_str = f"{gust_kmh:.0f}" if gust_kmh is not None else "–"
-
-            tag_bg = ""
-            n_bg = ""
-            d_bg = ""
-            r_bg = _outlook_cell_bg(precip_mm, (2, 5, 8))
-            pr_bg = _outlook_cell_bg(pr_pct, (50, 70, 85))
-            wind_bg = _outlook_cell_bg(wind_kmh, (20, 30, None))
-            gust_bg = _outlook_cell_bg(gust_kmh, (30, 45, 60))
-            gew_bg = _THUNDER_LEVEL_BG.get(thunder_level, "")
-            acc_bg = ""
-
-            outlook_rows += (
-                '<tr>'
-                + _otd(weekday, bg=tag_bg)
-                + _otd(n_str, bg=n_bg)
-                + _otd(d_str, bg=d_bg)
-                + _otd(r_str, bg=r_bg)
-                + _otd(pr_str, bg=pr_bg)
-                + _otd(wind_str, bg=wind_bg)
-                + _otd(gust_str, bg=gust_bg)
-                + _otd(gew_str, bg=gew_bg)
-                + _otd(_acc_dot(conf_pct), bg=acc_bg)
-                + '</tr>'
-            )
-
-        outlook_table = (
-            '<table cellpadding="0" cellspacing="0" '
-            'style="border-collapse:collapse;width:100%;'
-            'border-top:2px solid #1d1c1a;">'
-            + outlook_thead
-            + f'<tbody>{outlook_rows}</tbody>'
-            + '</table>'
-        )
+        # Epic #1301 B4: Tabellenbau in geteilten Baustein extrahiert
+        # (Trip/Compare-Teilungs-Invariante) -- show_acc=True bleibt
+        # byte-identisch zum bisherigen Inline-Verhalten.
+        outlook_table = render_outlook_table(multi_day_trend, show_acc=True)
 
         # Code-Legende
         outlook_legend = (

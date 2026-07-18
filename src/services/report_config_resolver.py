@@ -161,6 +161,11 @@ class CompareRenderOptions:
     hourly_metrics: Optional[set]
     hourly_enabled: bool
     corridors: "Optional[list[Corridor]]" = None
+    # Epic #1301 B4 — 3-Tage-Ausblick je Ort. TOP-LEVEL Preset-Feld (nicht im
+    # display_config-Blob, analog hourly_enabled), Default True bei
+    # fehlendem Preset-Key (PO-Entscheidung 2026-07-18: Ausblick ist sofort
+    # sichtbar, kein Opt-in).
+    outlook_enabled: bool = True
 
 
 def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
@@ -228,4 +233,5 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         hourly_metrics=resolve_hourly_metrics(display_config.get("hourly_metrics")),
         hourly_enabled=preset.get("hourly_enabled", True),
         corridors=corridors or None,
+        outlook_enabled=preset.get("outlook_enabled", True),
     )

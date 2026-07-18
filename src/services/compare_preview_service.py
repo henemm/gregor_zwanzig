@@ -182,6 +182,7 @@ class ComparePreviewService:
             preset_schedule=preset.get("schedule"),
             preset_weekday=preset.get("weekday"),
             corridors=opts.corridors,
+            outlook_enabled=opts.outlook_enabled,
         )
 
     def _load_preset(self, preset_id: str, *, user_id: str) -> dict:

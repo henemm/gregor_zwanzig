@@ -25,13 +25,15 @@ from utils.timezone import local_fmt
 from src.output.renderers.email.helpers import (
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
     build_segment_label,
-    build_units_legend, fmt_val, format_change_line, format_trend_tokens,
+    build_units_legend, fmt_val, format_change_line,
     render_origin_footer_text, tone_symbol, visible_cols,
 )
 from src.output.renderers.email.profile_signature import profile_signature
 from src.output.renderers.alert.official_alerts import (
     collect_trip_alert_entries, render_official_alerts_plain,
 )
+# Epic #1301 B4: geteilter Ausblick-Renderer (Trip/Compare-Teilungs-Invariante)
+from src.output.renderers.email.outlook import render_outlook_plain
 
 
 def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
@@ -240,26 +242,10 @@ def render_plain(
         lines.append("")
 
     if show_outlook and multi_day_trend:
-        lines.append("")
-        lines.append("Nächste Etappen")
-        for stage in multi_day_trend:
-            tok = format_trend_tokens(stage)
-            weekday = stage.get("weekday", "")
-            name = stage.get("name", "")
-            # Precip str — zero decision from format_trend_tokens
-            precip_str = tok["precip_str"]
-
-
-            line = (
-                f"{weekday:<3} {name:<26} {tok['temp_str']:<8} "
-                f"{precip_str:<5} {tok['wind_str']:<5} {tok['thunder_plain']}"
-            )
-            lines.append(line)
-
-            note = stage.get("note")
-            if note:
-                lines.append(f"    ↳ {note}")
-        lines.append("")
+        # Epic #1301 B4: Ausblick-Klartext-Block in geteilten Baustein
+        # extrahiert (Trip/Compare-Teilungs-Invariante) -- show_acc=True
+        # bleibt zeichengleich zum bisherigen Inline-Verhalten.
+        lines.append(render_outlook_plain(multi_day_trend, show_acc=True))
 
     # Antwort-Kommandos (Issue #731: abruf-zentrierter Grundbefehlssatz)
     lines.append("")
