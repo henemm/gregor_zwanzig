@@ -343,8 +343,13 @@ def test_ac2_quiet_hours_midnight_wrap_suppresses_alert(telegram_sink, clean_use
     )
 
     # Teil 2: End-to-End über check_and_send_alerts(), Ruhezeitfenster dynamisch
-    # um die echte aktuelle Uhrzeit gelegt (±1h), kein Zeit-Mock.
-    now = datetime.now(timezone.utc)
+    # um die echte aktuelle Uhrzeit gelegt (±1h), kein Zeit-Mock. Issue #1312:
+    # `is_quiet_hours` vergleicht seit D1 gegen Europe/Vienna-Lokalzeit, daher
+    # muss das Fenster um die Vienna-lokale "jetzt"-Zeit zentriert werden statt
+    # um die rohe UTC-Zeit — sonst reißt der CEST-Offset (+2h) das Fenster.
+    from services.deviation_alert_engine import VIENNA
+
+    now = datetime.now(timezone.utc).astimezone(VIENNA)
     quiet_from = (now.replace(second=0, microsecond=0) - timedelta(hours=1)).time()
     quiet_to = (now.replace(second=0, microsecond=0) + timedelta(hours=1)).time()
     trip.alert_quiet_from = quiet_from.strftime("%H:%M")

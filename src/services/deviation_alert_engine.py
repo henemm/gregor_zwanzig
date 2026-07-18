@@ -19,10 +19,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, time as time_type, timedelta, timezone
 from typing import List, Optional, Set
+from zoneinfo import ZoneInfo
 
 from app.models import ChangeSeverity, WeatherChange
 from services.point_weather import AlertEvaluationConfig, PointWeatherData
 from services.weather_change_detection import WeatherChangeDetectionService
+
+VIENNA = ZoneInfo("Europe/Vienna")  # Vorbild alert_daily_limit.py:21
 
 
 @dataclass
@@ -72,12 +75,26 @@ class DeviationAlertEngine:
     def is_quiet_hours(
         now: datetime, quiet_from: Optional[str], quiet_to: Optional[str]
     ) -> bool:
-        """1:1 aus `TripAlertService._is_quiet_hours()` — Mitternachts-Wrap inklusive."""
+        """Prüft, ob `now` (in Europe/Vienna-Lokalzeit) innerhalb des
+        konfigurierten Ruhezeit-Fensters liegt — inkl. Mitternachts-Wrap.
+
+        Issue #1312 (Scheibe D1): `now` wird VOR dem Vergleich nach
+        Europe/Vienna konvertiert, weil Nutzer die Uhrzeiten in gefühlter
+        Lokalzeit eingeben. Naive datetimes (kein tzinfo) werden als UTC
+        interpretiert (konservativ, deckungsgleich mit dem bisherigen
+        De-facto-Verhalten aller sechs Aufrufer). DST wird durch ZoneInfo
+        automatisch korrekt behandelt (Sommer +2h, Winter +1h). Vorbild:
+        `alert_daily_limit.py` (dieselbe Konvention für den
+        Tageszähler-Reset). Mitternachts-Wrap-Logik unverändert aus
+        `TripAlertService._is_quiet_hours()` übernommen.
+        """
         if not quiet_from or not quiet_to:
             return False
+        aware_now = now if now.tzinfo is not None else now.replace(tzinfo=timezone.utc)
+        local_now = aware_now.astimezone(VIENNA)
         from_time = time_type.fromisoformat(quiet_from)
         to_time = time_type.fromisoformat(quiet_to)
-        current = now.time()
+        current = local_now.time()
         if from_time > to_time:
             return current >= from_time or current < to_time
         return from_time <= current < to_time

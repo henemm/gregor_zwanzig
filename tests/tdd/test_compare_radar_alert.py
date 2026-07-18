@@ -144,14 +144,19 @@ def _dry_frames() -> list:
 
 
 def _quiet_hours_window_now(buffer_minutes: int = 3) -> tuple[str, str]:
-    """`(quiet_from, quiet_to)` als `HH:MM`-UTC-Strings, die den aktuellen
-    Zeitpunkt umschließen — garantiert, dass der Check-Lauf während der
-    Ruhezeit stattfindet, unabhängig von der tatsächlichen Tageszeit
-    (Vorbild-Idee: Test Plan AC-5 „gesetzte Systemzeit innerhalb des
+    """`(quiet_from, quiet_to)` als `HH:MM`-Strings in Europe/Vienna-Lokalzeit,
+    die den aktuellen Zeitpunkt umschließen — garantiert, dass der Check-Lauf
+    während der Ruhezeit stattfindet, unabhängig von der tatsächlichen
+    Tageszeit (Vorbild-Idee: Test Plan AC-5 „gesetzte Systemzeit innerhalb des
     konfigurierten Ruhezeit-Fensters" — hier über ein dynamisch um „jetzt"
     gelegtes Fenster realisiert, da `DeviationAlertEngine.is_quiet_hours`
-    keinen `now`-Injektions-Seam anbietet)."""
-    now = datetime.now(timezone.utc)
+    keinen `now`-Injektions-Seam anbietet). Issue #1312: `is_quiet_hours`
+    vergleicht seit D1 gegen Europe/Vienna-Lokalzeit statt UTC, daher wird das
+    Fenster um die Vienna-lokale „jetzt"-Zeit gelegt — sonst würde jeder
+    UTC-Offset (60/120 Min) den engen 3-Minuten-Puffer sprengen."""
+    from services.deviation_alert_engine import VIENNA
+
+    now = datetime.now(timezone.utc).astimezone(VIENNA)
     start = (now - timedelta(minutes=buffer_minutes)).strftime("%H:%M")
     end = (now + timedelta(minutes=buffer_minutes)).strftime("%H:%M")
     return start, end
