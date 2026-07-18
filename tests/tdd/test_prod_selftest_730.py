@@ -22,6 +22,11 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
+# Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
+pytestmark = pytest.mark.staging
+
 PROD_SELFTEST = Path("/home/hem/gregor_zwanzig/.claude/hooks/prod_selftest.py")
 REPO_DIR = Path("/home/hem/gregor_zwanzig")
 

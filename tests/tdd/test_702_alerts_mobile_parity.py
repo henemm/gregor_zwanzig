@@ -15,9 +15,13 @@ import json
 import os
 import time
 
+import pytest
 from playwright.sync_api import sync_playwright
 
 from tests.helpers.staging_auth import playwright_http_credentials
+
+# Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
+pytestmark = pytest.mark.staging
 
 BASE = "https://staging.gregor20.henemm.com"
 USER = "tdd-702-1781109629"

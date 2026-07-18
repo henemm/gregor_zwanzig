@@ -8,6 +8,9 @@ from pathlib import Path
 
 import pytest
 
+# Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
+pytestmark = pytest.mark.staging
+
 VALIDATOR_ENV = Path(__file__).resolve().parents[2] / ".claude" / "validator.env"
 if VALIDATOR_ENV.exists():
     for line in VALIDATOR_ENV.read_text().splitlines():

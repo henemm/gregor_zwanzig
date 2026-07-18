@@ -13,7 +13,11 @@ import re
 import time
 import uuid
 
+import pytest
 from playwright.sync_api import sync_playwright
+
+# Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
+pytestmark = pytest.mark.staging
 
 BASE = "https://staging.gregor20.henemm.com"
 USER = "validator-issue110"

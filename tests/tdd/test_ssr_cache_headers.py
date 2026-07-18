@@ -20,6 +20,10 @@ import os
 import re
 
 import httpx
+import pytest
+
+# Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
+pytestmark = pytest.mark.staging
 
 BASE_URL = os.getenv("GZ_TEST_BASE_URL", "https://staging.gregor20.henemm.com").rstrip("/")
 TIMEOUT = 10.0

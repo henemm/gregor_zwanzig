@@ -19,6 +19,11 @@ import os
 import subprocess
 from pathlib import Path
 
+import pytest
+
+# Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
+pytestmark = pytest.mark.staging
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SETUP_SCRIPT = REPO_ROOT / "scripts" / "setup-validator-user.sh"
 VALIDATE_SCRIPT = REPO_ROOT / ".claude" / "validate-external.sh"

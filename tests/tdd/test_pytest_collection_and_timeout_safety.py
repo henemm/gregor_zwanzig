@@ -9,9 +9,14 @@ gegen eine nicht routbare Adresse schlaegt schon heute (Python-Stdlib-Verhalten,
 unabhaengig von den B1-Dateien) in ca. 3s fehl -- kein Nachweis fuer eine
 Aenderung. AC-6 gilt als durch AC-2/AC-7 mitabgedeckt: die B1-Dateien zaehlen
 dort erst, wenn Marker UND `timeout=`-Parameter an ihren echten Aufrufen sitzen.
+
+Erweiterung Scheibe 2a (#1211a): 22 Staging-Dialer (Liste A) bekommen einen
+modul-weiten `pytest.mark.staging`, der sie aus der Standard-Selektion nimmt.
+Spec: docs/specs/modules/rework_1211a_staging_marker.md
 """
 from __future__ import annotations
 
+import importlib
 import re
 import shutil
 import subprocess
@@ -47,6 +52,45 @@ _FRIENDLY_FORMAT_FOOTGUN = "tests/e2e/test_e2e_friendly_format_config.py"
 _GEOSPHERE_FILES = ("tests/test_geosphere.py", "tests/test_providers_base.py")
 _TRIPS_DIR = _REPO_ROOT / "data" / "users" / "default" / "trips"
 
+# Scheibe 2a (#1211a), Spec Liste A: 22 Staging-/Prod-Dialer, die einen
+# modul-weiten `pytestmark = pytest.mark.staging` bekommen -- Marker
+# verschiebt sie aus der Standard-Selektion, loescht keinen Test.
+_STAGING_DIALER_FILES = (
+    "tests/tdd/test_674_aktivitaetstyp_fahrrad.py",
+    "tests/tdd/test_701_alerts_metrik_sync.py",
+    "tests/tdd/test_702_alerts_mobile_parity.py",
+    "tests/tdd/test_794_mobile_metric_label.py",
+    "tests/tdd/test_bug_691_autosave_trip_new.py",
+    "tests/tdd/test_bundle_d_785_yesterday_toggle.py",
+    "tests/tdd/test_bundle_h_908_973_987_staging_auth.py",
+    "tests/tdd/test_fix_698_validator_user_sync.py",
+    "tests/tdd/test_issue_1010_1006_stille_fehler.py",
+    "tests/tdd/test_issue_1020_tmp_cookie_perms.py",
+    "tests/tdd/test_issue_1068_tier_model_display.py",
+    "tests/tdd/test_issue_496_layout.py",
+    "tests/tdd/test_issue_576_token_values.py",
+    "tests/tdd/test_issue_577_atoms_values.py",
+    "tests/tdd/test_issue_675_stage_start_time.py",
+    "tests/tdd/test_issue_692_telegram_disabled_unconfigured.py",
+    "tests/tdd/test_issue_727_trips_null_safety.py",
+    "tests/tdd/test_issue_830_radar_alert_validator.py",
+    "tests/tdd/test_issue_846_alert_preset_e2e.py",
+    "tests/tdd/test_prod_selftest_564.py",
+    "tests/tdd/test_prod_selftest_730.py",
+    "tests/tdd/test_ssr_cache_headers.py",
+)
+
+# Spec Liste C: 6 Dateien OHNE echten Netzcall -- bleiben unveraendert in der
+# Standard-Selektion (Regressions-Wächter gegen versehentliche Mit-Markierung).
+_OFFLINE_KEEP_FILES = (
+    "tests/tdd/test_epic_404_phase2_ist_screenshots.py",
+    "tests/tdd/test_prod_selftest_internal_url_skip.py",
+    "tests/tdd/test_staging_gate.py",
+    "tests/tdd/test_staging_gate_verdict_merge.py",
+    "tests/tdd/test_issue_1148_prod_send_gate.py",
+    "tests/tdd/test_issue_339_verify_timing.py",
+)
+
 # addopts liefert bereits ein "-q" -> Quiet-Level 2 -> kompaktes "pfad: N"-Format
 # statt einzelner Test-IDs (empirisch verifiziert, kein Rateversuch).
 _COLLECTED_LINE = re.compile(r"^(tests/\S+\.py): (\d+)$", re.MULTILINE)
@@ -79,6 +123,12 @@ def default_collect() -> subprocess.CompletedProcess:
 @pytest.fixture(scope="module")
 def email_collect() -> subprocess.CompletedProcess:
     return _collect("-m", "email", timeout=60)
+
+
+@pytest.fixture(scope="module")
+def staging_collect() -> subprocess.CompletedProcess:
+    """`-m staging`-Collect fuer AC-2 (ein Subprozess, geteilt)."""
+    return _collect("-m", "staging", timeout=90)
 
 
 @pytest.fixture(scope="module")
@@ -161,6 +211,64 @@ def test_email_marker_run_still_collects_b1_files(email_collect):
     email_counts = _collected_counts(email_collect.stdout)
     missing = sorted(f for f in _B1_FILES if email_counts.get(f, 0) == 0)
     assert not missing, f"B1-Dateien fehlen unter `-m email`: {missing}"
+
+
+def test_default_selection_excludes_staging_dialers(default_collect):
+    """GIVEN 22 Staging-/Prod-Dialer aus Liste A (#1211a) WHEN die
+    Standard-Selektion `-m 'not email and not live and not staging'` sammelt
+    THEN erscheint KEINE der 22 Dateien mit einem gesammelten Test -- jede
+    deselektiert (AC-1). Schlaegt heute fehl, weil die Dateien noch keinen
+    `pytest.mark.staging` tragen."""
+    assert default_collect.returncode == 0, default_collect.stderr
+    default_counts = _collected_counts(default_collect.stdout)
+    leaked = {
+        f: default_counts[f] for f in _STAGING_DIALER_FILES if default_counts.get(f, 0) > 0
+    }
+    assert not leaked, f"Staging-Dialer duerfen im Standardlauf nicht erscheinen: {leaked}"
+
+
+def test_staging_marker_run_still_collects_dialers(staging_collect):
+    """GIVEN `-m staging` wird bewusst aufgerufen WHEN alle 22 Dialer aus
+    Liste A markiert sind THEN erscheint jede Datei mit mindestens einem
+    gesammelten Test -- der Marker verschiebt sie nur, loescht keinen Test
+    (AC-2). Schlaegt heute fehl, weil der Marker noch fehlt (0 gesammelt)."""
+    assert staging_collect.returncode == 0, staging_collect.stderr
+    staging_counts = _collected_counts(staging_collect.stdout)
+    missing = sorted(f for f in _STAGING_DIALER_FILES if staging_counts.get(f, 0) == 0)
+    assert not missing, f"Staging-Dialer fehlen unter `-m staging`: {missing}"
+
+
+def test_offline_files_remain_in_default_selection(default_collect):
+    """GIVEN 6 Offline-Kern-Dateien aus Liste C (kein echter Netzcall) WHEN
+    die Standard-Selektion sammelt THEN bleiben alle 6 weiterhin gesammelt --
+    keine wird versehentlich mit-markiert (AC-3). Regressions-Waechter --
+    darf schon heute gruen sein (analog AC-8 im Bestand)."""
+    assert default_collect.returncode == 0, default_collect.stderr
+    default_counts = _collected_counts(default_collect.stdout)
+    missing = sorted(f for f in _OFFLINE_KEEP_FILES if default_counts.get(f, 0) == 0)
+    assert not missing, f"Offline-Dateien fehlen im Standardlauf: {missing}"
+
+
+def test_1010_1006_keeps_timeout_marker_alongside_staging():
+    """GIVEN test_issue_1010_1006_stille_fehler.py trug vor der Aenderung
+    `pytestmark = pytest.mark.timeout(180)` WHEN der staging-Marker ergaenzt
+    wird THEN bleibt der timeout(180)-Marker erhalten UND `staging` ist
+    zusaetzlich aktiv -- pytestmark ist danach eine Liste beider Marker
+    (AC-5). Echte Modul-Introspektion per importlib, kein Datei-Grep. Der
+    Import selbst loest keinen Netzcall aus: alle `page.goto(...)`-Aufrufe
+    liegen ausschliesslich in Funktionskoerpern (_ui_login etc.), Modulebene
+    laedt nur eine lokale Datei (_load_validator_env())."""
+    mod = importlib.import_module("tests.tdd.test_issue_1010_1006_stille_fehler")
+    marks = mod.pytestmark
+    if not isinstance(marks, (list, tuple)):
+        marks = [marks]
+
+    timeout_marks = [m for m in marks if m.name == "timeout"]
+    assert timeout_marks, f"timeout-Marker fehlt komplett: {marks}"
+    assert timeout_marks[0].args == (180,), f"timeout-Marker-Args veraendert: {timeout_marks[0].args}"
+
+    staging_marks = [m for m in marks if m.name == "staging"]
+    assert staging_marks, f"staging-Marker fehlt -- pytestmark hat nur: {marks}"
 
 
 def test_geosphere_and_providers_base_pass_in_default_selection():

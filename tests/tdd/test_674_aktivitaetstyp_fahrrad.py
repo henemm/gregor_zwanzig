@@ -24,6 +24,9 @@ from pathlib import Path
 import httpx
 import pytest
 
+# Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
+pytestmark = pytest.mark.staging
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 STAGING_BASE = os.environ.get("GZ_SVELTE_BASE", "https://staging.gregor20.henemm.com")
 GO_BASE = os.environ.get("GZ_API_BASE", "http://localhost:8090")

@@ -32,6 +32,9 @@ import pytest
 
 from tests.helpers.staging_auth import httpx_auth  # Bündel H #987: Staging-Basic-Auth
 
+# Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
+pytestmark = pytest.mark.staging
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HOOKS_DIR = REPO_ROOT / ".claude" / "hooks"
 VALIDATOR_PATH = HOOKS_DIR / "radar_alert_mail_validator.py"

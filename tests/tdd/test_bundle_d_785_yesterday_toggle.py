@@ -25,6 +25,9 @@ from tests.helpers.staging_auth import (  # Bündel H #987: Staging-Basic-Auth
     playwright_http_credentials,
 )
 
+# Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
+pytestmark = pytest.mark.staging
+
 BASE = "https://staging.gregor20.henemm.com"
 USER = "tdd-785-ac"
 PASS = "tdd785testpass"

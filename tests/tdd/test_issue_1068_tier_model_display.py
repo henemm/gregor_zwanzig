@@ -40,6 +40,9 @@ import pytest
 
 from tests.helpers.staging_auth import httpx_auth, playwright_http_credentials
 
+# Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
+pytestmark = pytest.mark.staging
+
 STAGING = os.environ.get("GZ_SVELTE_BASE", "https://staging.gregor20.henemm.com")
 API = STAGING  # Go-API laeuft hinter SvelteKit-Proxy auf /api/
 STAGING_DATA_DIR = Path("/home/hem/gregor_zwanzig_staging/data")

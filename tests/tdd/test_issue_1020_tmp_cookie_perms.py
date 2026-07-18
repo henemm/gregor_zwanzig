@@ -27,9 +27,14 @@ import stat
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from test_issue_727_trips_null_safety import STATE_FILE, _ensure_session_state  # noqa: E402
+
+# Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
+pytestmark = pytest.mark.staging
 
 
 def _fresh_state_file() -> dict:

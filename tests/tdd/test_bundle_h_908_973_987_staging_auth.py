@@ -35,6 +35,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
+import pytest
+
+# Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
+pytestmark = pytest.mark.staging
 
 REPO_DIR = Path("/home/hem/gregor_zwanzig")
 _VALIDATOR_ENV = REPO_DIR / ".claude" / "validator.env"
