@@ -12,19 +12,27 @@
 	import type { Trip, MetricPreset, Horizons, ReportConfig } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
 	import { Btn, Card, Eyebrow, Pill } from '$lib/components/atoms';
-	import SavePresetDialog from './SavePresetDialog.svelte';
+	// Issue #1311 (C1, Fix-Loop 1 / F001): private Sub-Komponenten von
+	// WeatherMetricsTab mitverschoben nach shared/weather-metrics-tab/ (kein
+	// weiterer Importeur, s. grep-Beweis in der Fix-Loop-Rueckmeldung).
+	// metricsEditor.ts/weatherSaveGate.ts bleiben bewusst in trip-detail/ —
+	// beide sind breit geteilt (CompareEditor.svelte Legacy, CompareTabs.svelte,
+	// OutputLayoutEditor.svelte, ltChannels.ts u.a.) und wurden NICHT von C1
+	// eingefuehrt; sie umzuziehen haette CompareEditor.svelte (Legacy) beruehrt,
+	// was ausserhalb des C1-Scopes liegt (CLAUDE.md: "NICHT anfassen").
+	import SavePresetDialog from './weather-metrics-tab/SavePresetDialog.svelte';
 	import Sheet from '$lib/components/mobile/Sheet.svelte';
 	// v2 Sub-Komponenten (neu, standalone, keine Abhängigkeit von OutputLayoutEditor)
-	import WeatherV2PresetBar from './WeatherV2PresetBar.svelte';
-	import WeatherV2Grundauswahl from './WeatherV2Grundauswahl.svelte';
-	import WeatherV2Reihenfolge from './WeatherV2Reihenfolge.svelte';
+	import WeatherV2PresetBar from './weather-metrics-tab/WeatherV2PresetBar.svelte';
+	import WeatherV2Grundauswahl from './weather-metrics-tab/WeatherV2Grundauswahl.svelte';
+	import WeatherV2Reihenfolge from './weather-metrics-tab/WeatherV2Reihenfolge.svelte';
 	// WeatherV2Kanaele entfernt in Issue #736 (Kanal-Config → Versand-Reiter)
-	import WeatherV2MailPreview from './WeatherV2MailPreview.svelte';
+	import WeatherV2MailPreview from './weather-metrics-tab/WeatherV2MailPreview.svelte';
 	// Issue #1232 Scheibe 3b: geteilter Layout-Organism (Scheibe 3a) ersetzt das
 	// bisherige `.v2-layout`-Grid für den Ausgabe-Teil (Reihenfolge + Vorschau).
 	import LayoutTab from '$lib/components/shared/layout-tab/LayoutTab.svelte';
 	import type { ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
-	import ThresholdMetricRow from './ThresholdMetricRow.svelte';
+	import ThresholdMetricRow from './weather-metrics-tab/ThresholdMetricRow.svelte';
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
 	// Issue #1117: „Amtliche Warnungen"-Checkbox auch im Inhalt-Tab (eigener Block,
 	// EditReportConfigSection bleibt unverändert).
@@ -35,12 +43,17 @@
 		diffHighlight,
 		CATEGORY_LABELS, CATEGORY_ORDER, indicatorCapable,
 		type Buckets, type MetricEntry, type MetricCatalog, type Highlight, type WeatherSnapshot,
-	} from './metricsEditor.ts';
+	} from '../trip-detail/metricsEditor.ts';
 	// Issue #1234: Daten-/Absichts-Gate gegen stillen Metrik-Leerungs-Autosave.
-	import { weatherSaveGate } from './weatherSaveGate.ts';
+	import { weatherSaveGate } from '../trip-detail/weatherSaveGate.ts';
 	// Issue #1269 (a): Mount-Kanonisierung (EditReportConfigSection) darf nicht
 	// als Nutzeraenderung zaehlen — geteilter Baustein (Trip + Ortsvergleich).
 	import { reportConfigChangedByUser } from '$lib/components/shared/reportConfigDirty';
+	// Issue #1311 (C1 von Epic #1301): geteilter Baustein Trip + Ortsvergleich
+	// (Vorbild AlarmeTab.svelte) — context-Dispatch + Vergleich-Grundauswahl.
+	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
+	import { weatherMetricsTabSections, type WeatherMetricsContext } from './weather-metrics-tab/weatherMetricsTabSections.ts';
+	import { COMPARE_METRIC_DEFS } from './corridor-editor/corridorEditorState.ts';
 
 	interface Template {
 		id: string;
@@ -55,7 +68,10 @@
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 
 	interface Props {
-		trip: Trip;
+		/** Issue #1311: 'route' (Trip, Default) | 'vergleich' (Ortsvergleich). */
+		context?: WeatherMetricsContext;
+		// route (unveraendert)
+		trip?: Trip;
 		/** Issue #622: Create-Modus — kein PUT; Kanäle per onChannelsChange nach oben emittieren */
 		createMode?: boolean;
 		onChannelsChange?: (c: ChannelConfig) => void;
@@ -63,8 +79,14 @@
 		onTripUpdate?: (t: Trip) => void;
 		/** Issue #758: SaveStatus controller — wenn gesetzt, entfällt der explizite Speichern-Button. */
 		saveController?: SaveStatus;
+		// vergleich (neu, Issue #1311)
+		wiz?: CompareWizardState;
 	}
-	let { trip, createMode = false, onChannelsChange, onTripUpdate, saveController }: Props = $props();
+	let { context = 'route', trip, createMode = false, onChannelsChange, onTripUpdate, saveController, wiz }: Props = $props();
+
+	// Issue #1311: Abschnittsreihenfolge kommt aus einer reinen Funktion, kein
+	// Duplikat der Reihenfolge im Markup (AC-1, AC-8-Attrappen-Verbot).
+	const sections = $derived(weatherMetricsTabSections(context));
 
 	let catalog: MetricCatalog = $state({});
 	let templates: Template[] = $state([]);
@@ -94,14 +116,14 @@
 	// Issue #587: Kanal-Konfiguration (kein Signal). display_config ist additiv
 	// — channels wird als unbekanntes Feld durchgereicht, daher Cast über unknown.
 	let channels: ChannelConfig = $state(
-		((trip.display_config as unknown as Record<string, unknown>)?.channels as ChannelConfig | undefined)
+		((trip?.display_config as unknown as Record<string, unknown>)?.channels as ChannelConfig | undefined)
 			?? { email: true, telegram: true, sms: false }
 	);
 	// Issue #614: Telegram Kurzform-Toggle (SMS-Tages-Max als Anhang).
-	let telegramKurzform = $state<boolean>(trip.display_config?.telegram_kurzform ?? false);
+	let telegramKurzform = $state<boolean>(trip?.display_config?.telegram_kurzform ?? false);
 	// Issue #1117: Amtliche Warnungen im E-Mail-Briefing (zweiter Einstiegspunkt neben
 	// Alerts-Tab). Default true matcht den Backend-Default.
-	let officialAlertsEnabled = $state<boolean>(trip.official_alerts_enabled ?? true);
+	let officialAlertsEnabled = $state<boolean>(trip?.official_alerts_enabled ?? true);
 	// Issue #624: konfigurierbare Schwellwerte pro Metrik (nur threshold-fähige).
 	const SMS_THRESHOLD_METRIC_IDS = ['precipitation', 'rain_probability', 'wind', 'gust', 'thunder', 'snow_depth', 'snowfall_limit'];
 	let smsThresholds = $state<Record<string, string>>({});
@@ -112,7 +134,7 @@
 	let profile = $state<{ mail_to?: string; telegram_chat_id?: string; sms_to?: string } | null>(null);
 	// Issue #736: E-Mail-Inhalt-Karte im Inhalt-Reiter (analog BriefingScheduleTab).
 	let reportConfig = $state<ReportConfig>(
-		trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {}
+		trip?.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {}
 	);
 
 	// availableChannels entfernt in Issue #736 (WeatherV2Kanaele nicht mehr im Inhalt-Reiter)
@@ -195,7 +217,10 @@
 			hMap[id] = { ...HORIZONS_ALL };
 		}
 
-		const savedMetrics = trip.display_config?.metrics;
+		// initFromTrip() ist ausschliesslich ueber load() (route-only, s.
+		// $effect-Guard) oder handleDiscard() (route-only Button) erreichbar —
+		// trip! ist hier sicher (Issue #1311, Fix-Loop 1: context-Prop optional).
+		const savedMetrics = trip!.display_config?.metrics;
 		let b: Buckets;
 		const hasBuckets = savedMetrics?.some((m) => m.bucket || m.order !== undefined);
 
@@ -240,7 +265,7 @@
 		const mergedColumns = bucketsToColumns(b);
 		b = { primary: mergedColumns, secondary: [], off: b.off };
 
-		const savedPreset = trip.display_config?.preset_name;
+		const savedPreset = trip!.display_config?.preset_name;
 		selectedTemplate = savedPreset ?? '';
 		buckets = b;
 		friendlyMap = fMap;
@@ -282,7 +307,9 @@
 	}
 
 	$effect(() => {
-		if (Object.keys(catalog).length === 0) load();
+		// Issue #1311: der Vergleich-Zweig braucht keinen Trip-Katalog-Fetch —
+		// die Grundauswahl im vergleich-Kontext arbeitet auf COMPARE_METRIC_DEFS.
+		if (context === 'route' && Object.keys(catalog).length === 0) load();
 	});
 
 	// Issue #932: Activity-Typ → Template vorauswählen (nur createMode, einmalig).
@@ -301,7 +328,7 @@
 	};
 
 	$effect(() => {
-		if (!createMode || !trip.activity || isDirty || templates.length === 0) return;
+		if (!createMode || !trip?.activity || isDirty || templates.length === 0) return;
 		const tmplId = ACTIVITY_TO_TEMPLATE[trip.activity];
 		if (tmplId && templates.some(t => t.id === tmplId)) {
 			applyPreset(tmplId);
@@ -418,10 +445,10 @@
 		} catch (e) {
 			console.error(e);
 			initFromTrip();
-			telegramKurzform = trip.display_config?.telegram_kurzform ?? false;
+			telegramKurzform = trip!.display_config?.telegram_kurzform ?? false;
 			smsThresholds = {};
-			reportConfig = trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {};
-			officialAlertsEnabled = trip.official_alerts_enabled ?? true;
+			reportConfig = trip!.report_config ? JSON.parse(JSON.stringify(trip!.report_config)) : {};
+			officialAlertsEnabled = trip!.official_alerts_enabled ?? true;
 		}
 	}
 
@@ -437,7 +464,7 @@
 			return m;
 		});
 		return {
-			...(trip.display_config ?? {}),
+			...(trip!.display_config ?? {}),
 			metrics,
 			preset_name: selectedTemplate || undefined,
 			telegram_kurzform: telegramKurzform,
@@ -462,11 +489,11 @@
 		try {
 			// Issue #622: Create-Modus — kein PUT, State per Binding gehalten.
 			if (!createMode) {
-				await api.put(`/api/trips/${trip.id}/weather-config`, payload);
+				await api.put(`/api/trips/${trip!.id}/weather-config`, payload);
 				// Issue #776/#774: report_config separat persistieren (zweiter PUT, Read-Modify-Write im Backend).
 				// Issue #850: Server-Response enthält aktualisierte alert_rules (via SyncAlertRules) — nie manuell konstruieren.
 				// Issue #1117: official_alerts_enabled im selben zweiten PUT persistieren.
-				const updated = await api.put<Trip>(`/api/trips/${trip.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabled });
+				const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabled });
 				onTripUpdate?.(updated);
 			}
 			saveSuccess = true;
@@ -492,9 +519,9 @@
 			return;
 		}
 		saveController.schedule(async () => {
-			await api.put(`/api/trips/${trip.id}/weather-config`, payload);
+			await api.put(`/api/trips/${trip!.id}/weather-config`, payload);
 			// Issue #850: Server-Response enthält aktualisierte alert_rules — nie manuell konstruieren.
-			const updated = await api.put<Trip>(`/api/trips/${trip.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabled });
+			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabled });
 			onTripUpdate?.(updated);
 			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled);
 		});
@@ -563,9 +590,46 @@
 		for (const id of buckets.primary) map[id] = true;
 		return map;
 	});
+
+	// ── Issue #1311 (C1): Vergleich-Zweig — nur an/aus, kein Zwei-PUT-Muster ──
+	// Metrik-Pool = COMPARE_METRIC_DEFS (dieselben 14, die der Wertebereiche-Tab
+	// im vergleich-Kontext anbietet — deckt sich mit dem Namensraum von
+	// display_config.active_metrics, s. compare_metric_ids.py). Persistenz
+	// macht CompareTabs.svelte (Hub-Hydrate/-Flush-Muster), diese Komponente
+	// mutiert nur wiz.activeMetricKeys direkt (kein Self-Save, analog
+	// AlarmeTab.svelte context="vergleich").
+	function toggleCompareMetric(metric: string) {
+		if (!wiz) return;
+		const active = new Set(wiz.activeMetricKeys);
+		if (active.has(metric)) active.delete(metric);
+		else active.add(metric);
+		wiz.activeMetricKeys = [...active];
+	}
 </script>
 
-{#if loadError}
+{#if context === 'vergleich'}
+	<!-- Issue #1311 (C1): Vergleich-Grundauswahl — NUR an/aus je Metrik, keine
+	     Buckets/Reihenfolge/Horizonte/SMS-Schwellen/Report-Config (AC-1, AC-8
+	     Attrappen-Verbot: jedes hier sichtbare Element hat Mail-Wirkung). -->
+	<div data-testid="weather-metrics-tab-vergleich" class="metrics-tab metrics-tab-vergleich">
+		<Card padding={18}>
+			<Eyebrow style="margin-bottom:4px">Wetter-Metriken</Eyebrow>
+			<p class="option-hint">Nur angewählte Metriken erscheinen in der Vergleichs-Mail.</p>
+			<div class="vergleich-metric-list" data-testid="weather-metrics-vergleich-list">
+				{#each COMPARE_METRIC_DEFS as def (def.metric)}
+					<label class="vergleich-metric-row" data-testid="weather-metrics-vergleich-row-{def.metric}">
+						<input
+							type="checkbox"
+							checked={wiz?.activeMetricKeys.includes(def.metric) ?? false}
+							onchange={() => toggleCompareMetric(def.metric)}
+						/>
+						<span>{def.label}</span>
+					</label>
+				{/each}
+			</div>
+		</Card>
+	</div>
+{:else if loadError}
 	<!-- Issue #1234 (2b): sichtbarer Fehlerpfad, unabhaengig vom saveController —
 	     kein leerer Editor, kein Schreibzugriff (AC-3). -->
 	<div class="metrics-tab load-error-shell" data-testid="weather-metrics-load-error">
@@ -634,6 +698,7 @@
 			     Metriken, Zeitspalte zählt nicht mit) erwartet dieselbe reine
 			     Metriken-Zählung, sonst weicht der Overflow-Chip von Cut-Line
 			     und Vorschau-Hinweis ab. -->
+			{#if sections.includes('reihenfolge')}
 			<LayoutTab
 				context="route"
 				bind:channel={activeChannel}
@@ -665,8 +730,10 @@
 					/>
 				{/snippet}
 			</LayoutTab>
+			{/if}
 
 			<div class="bottom-section">
+				{#if sections.includes('sms_schwellen')}
 				<!-- 04 Schwellwerte (Issue #624, umbenannt in #736) -->
 				<Card padding={18}>
 					<Eyebrow style="margin-bottom:8px">04 — Schwellwerte</Eyebrow>
@@ -770,8 +837,9 @@
 						</table>
 					</div>
 				</Card>
+				{/if}
 
-				{#if !createMode}
+				{#if !createMode && sections.includes('report_config')}
 				<!-- Issue #1234 (Fix-Loop 1 / F001, Fix-Loop 2 / F003+F004): EditReportConfigSection
 				     normalisiert reportConfig in einem eigenen $effect beim Mounten und
 				     schreibt es zurueck — das darf NICHT als Nutzergeste zaehlen (AC-6).
@@ -1021,6 +1089,30 @@
 			background: rgba(255, 255, 255, 0.15);
 			padding: 2px 8px;
 			border-radius: 999px;
+		}
+	}
+	/* Issue #1311 (C1): Vergleich-Grundauswahl — schlanke Checkbox-Liste. */
+	.metrics-tab-vergleich {
+		padding: 28px 40px 60px;
+		max-width: 640px;
+	}
+	.vergleich-metric-list {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		margin-top: 10px;
+	}
+	.vergleich-metric-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		font-size: 14px;
+		color: var(--g-ink);
+		cursor: pointer;
+	}
+	@media (max-width: 899px) {
+		.metrics-tab-vergleich {
+			padding: 20px 16px 48px;
 		}
 	}
 </style>

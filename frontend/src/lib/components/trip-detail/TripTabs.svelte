@@ -5,7 +5,7 @@
 	import HubOverview from './HubOverview.svelte';
 	import BriefingScheduleTab from './BriefingScheduleTab.svelte';
 	import AlarmeScheduleTab from './AlarmeScheduleTab.svelte';
-	import WeatherMetricsTab from './WeatherMetricsTab.svelte';
+	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
 	// Issue #1231: CorridorEditor(Mobile) ersetzt AlertsTab auf Desktop + Mobile.
 	// Import von AlertsTab entfernt (Slice 5) — Datei bleibt vorerst bestehen
 	// (Aufraeumen inkl. AlertMetricLevelTable/-Row ist Slice-6-Thema, s. Spec).

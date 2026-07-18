@@ -11,7 +11,7 @@
 // AC-3: confidence_pct (selectable=false) darf hier nie auftauchen — trivial
 // erfuellt, da ROUTE_METRIC_DEFS eine fest verdrahtete 6er-Liste ist.
 
-import type { Corridor, SensLevel } from '$lib/types';
+import type { Corridor, SensLevel, WeatherConfigMetric } from '$lib/types';
 import { ALL_METRICS, PROFILE_METRICS_WITH_SCALES, IDEAL_DEFAULTS, type IdealRange, type ProfileKey } from '../../compare/compareMetricDefs.ts';
 
 export interface RouteMetricDef {
@@ -62,12 +62,47 @@ export interface CorridorRowState {
 	alarmCapable?: boolean;
 }
 
-/** Baut Zeilen aus trip.corridors[] (route-Namensraum) + verbleibenden Pool fuer "+ Metrik". */
-export function buildRoutePool(corridors: Corridor[]): {
+// Issue #1311 (C1, #1293-Wurzelfix): Namensraum-Bruecke Katalog-Metrik-ID
+// (GET /api/metrics, z.B. "gust","precipitation","temperature","thunder",
+// "snowfall_limit") -> ROUTE_METRIC_DEFS.metric (AlertMetric-Werte, z.B.
+// "wind_gust"). NICHT identisch mit alertMetricTable.ts::CATALOG_TO_ALERT_METRICS
+// (dessen Ausgabe ist auf die 13 Delta-Alarm-Metriken gefiltert und fuehrt
+// "snow_line" seit #959 nicht mehr) — eine eigene, kleine Mapping-Konstante
+// verhindert, dass der Korridor "Schneefallgrenze" nach diesem Fix nie mehr
+// im Pool erscheinen kann.
+const ROUTE_CORRIDOR_CATALOG_IDS: Record<string, string[]> = {
+	gust: ['wind_gust'],
+	precipitation: ['precipitation_sum'],
+	temperature: ['temperature_min', 'temperature_max'],
+	thunder: ['thunder_level'],
+	snowfall_limit: ['snow_line'],
+};
+
+/**
+ * Baut Zeilen aus trip.corridors[] (route-Namensraum) + verbleibenden Pool fuer "+ Metrik".
+ *
+ * Issue #1311 (C1, #1293-Wurzelfix): `activeCatalogMetrics` (optional) filtert
+ * `poolLeft` auf die Metriken, die im geteilten Wetter-Metriken-Tab aktiv
+ * sind — ohne Parameter bleibt das Alt-Verhalten (alle 6) fuer etwaige
+ * weitere Aufrufer erhalten. `rows` (bereits als Korridor gespeicherte
+ * Zeilen) werden NIE gefiltert (AC-9: kein stiller Datenverlust bei
+ * De-Selektion einer bereits konfigurierten Metrik).
+ */
+export function buildRoutePool(
+	corridors: Corridor[],
+	activeCatalogMetrics?: WeatherConfigMetric[]
+): {
 	rows: CorridorRowState[];
 	poolLeft: RouteMetricDef[];
 } {
 	const present = new Map(corridors.map((c) => [c.metric, c]));
+	const allowed = activeCatalogMetrics
+		? new Set(
+				activeCatalogMetrics
+					.filter((m) => m.enabled)
+					.flatMap((m) => ROUTE_CORRIDOR_CATALOG_IDS[m.metric_id] ?? [])
+			)
+		: null;
 	const rows: CorridorRowState[] = [];
 	const poolLeft: RouteMetricDef[] = [];
 	for (const def of ROUTE_METRIC_DEFS) {
@@ -77,7 +112,7 @@ export function buildRoutePool(corridors: Corridor[]): {
 				metric: def.metric, label: def.label, unit: def.unit, scale: def.scale, step: def.step, note: def.note,
 				min: c.range[0], max: c.range[1], notify: c.notify, mark: c.mark,
 			});
-		} else {
+		} else if (allowed === null || allowed.has(def.metric)) {
 			poolLeft.push(def);
 		}
 	}
@@ -425,11 +460,14 @@ export function buildCompareCorridorSavePayload(
 			if (r.max != null) range.max = r.max;
 			idealRanges[r.metric] = range;
 		}
-		// notify -> active_metrics + metric_alert_levels — NUR fuer die 10
-		// alarmfaehigen Metriken (defensiv: r.alarmCapable===false ignoriert
-		// notify komplett, die Alarm-Bruecke kennt diese Metriken nicht).
+		// Issue #1311 (C1): notify steuert NICHT MEHR active_metrics — das
+		// gehoert seit C1 exklusiv dem Wetter-Metriken-Tab (activeSet bleibt
+		// unveraendert, reiner Pass-Through von original.activeMetricKeys minus
+		// removedMetrics-Bereinigung oben). notify behaelt seine Alarm-Funktion
+		// (metric_alert_levels) unveraendert — NUR fuer die 10 alarmfaehigen
+		// Metriken (defensiv: r.alarmCapable===false ignoriert notify komplett,
+		// die Alarm-Bruecke kennt diese Metriken nicht).
 		if (r.alarmCapable === false) continue;
-		if (r.notify) activeSet.add(r.metric); else activeSet.delete(r.metric);
 		metricAlertLevels[r.metric] = deriveMetricAlertLevel(r.notify, r.metric, original.metricAlertLevels ?? {});
 	}
 

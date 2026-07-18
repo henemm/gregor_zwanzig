@@ -26,7 +26,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 test('AC-1: WeatherMetricsTab nutzt PUT-Response, nicht manuell konstruierten Payload', () => {
 	const src = readFileSync(
-		join(__dirname, '../trip-detail/WeatherMetricsTab.svelte'),
+		join(__dirname, '../shared/WeatherMetricsTab.svelte'),
 		'utf-8'
 	);
 	const antiPattern = 'onTripUpdate?.({ ...trip, display_config: payload, report_config: reportConfig })';
@@ -38,7 +38,7 @@ test('AC-1: WeatherMetricsTab nutzt PUT-Response, nicht manuell konstruierten Pa
 
 test('AC-1: WeatherMetricsTab nutzt api.put<Trip> Rückgabewert für onTripUpdate', () => {
 	const src = readFileSync(
-		join(__dirname, '../trip-detail/WeatherMetricsTab.svelte'),
+		join(__dirname, '../shared/WeatherMetricsTab.svelte'),
 		'utf-8'
 	);
 	assert.ok(

@@ -2,9 +2,9 @@
 	// Issue #587 — Wetter-Metriken-Tab v2: Abschnitt 2 Grundauswahl.
 	// 1:1 nach WM2_Grundauswahl aus screen-trip-edit-v2-weather.jsx.
 	// Toggle-Buttons je Kategorie; aktiv = ink-Hintergrund + paper-Text + ✓.
-	import type { MetricEntry } from './metricsEditor.ts';
-	import { CATEGORY_ORDER, CATEGORY_LABELS } from './metricsEditor.ts';
-	import type { Highlight } from './metricsEditor.ts';
+	import type { MetricEntry } from '../../trip-detail/metricsEditor.ts';
+	import { CATEGORY_ORDER, CATEGORY_LABELS } from '../../trip-detail/metricsEditor.ts';
+	import type { Highlight } from '../../trip-detail/metricsEditor.ts';
 
 	interface Props {
 		catalog: Record<string, MetricEntry[]>;

@@ -17,7 +17,7 @@ export { default as AlertRulesEditor } from '../alert-rules-editor/AlertRulesEdi
 export { default as OutputLayoutEditor } from '../shared/OutputLayoutEditor.svelte';
 
 // Issue #520 — trip-detail Organisms aufnehmen
-export { default as WeatherMetricsTab }   from '../trip-detail/WeatherMetricsTab.svelte';
+export { default as WeatherMetricsTab }   from '../shared/WeatherMetricsTab.svelte';
 export { default as ChannelPreviewBlock } from '../trip-detail/ChannelPreviewBlock.svelte';
 export { default as ChannelPreviewCard }  from '../trip-detail/ChannelPreviewCard.svelte';
 export { default as MetricGroup }         from '../trip-detail/MetricGroup.svelte';

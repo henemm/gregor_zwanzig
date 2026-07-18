@@ -17,7 +17,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 const ACTIVE_METRIC_ROW  = join(here, 'ActiveMetricRow.svelte');
 const WEATHER_CONFIG_DLG = join(here, '..', 'WeatherConfigDialog.svelte');
-const SAVE_PRESET_DLG    = join(here, 'SavePresetDialog.svelte');
+// Issue #1311 (C1, Fix-Loop 1): SavePresetDialog.svelte nach
+// shared/weather-metrics-tab/ verschoben (Teilung Trip+Vergleich).
+const SAVE_PRESET_DLG    = join(here, '..', 'shared', 'weather-metrics-tab', 'SavePresetDialog.svelte');
 const TABLE_PREVIEW      = join(here, 'TablePreview.svelte');
 
 // --- AC-1: Toggle in ActiveMetricRow ---

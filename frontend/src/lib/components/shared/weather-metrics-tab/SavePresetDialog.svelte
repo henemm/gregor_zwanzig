@@ -12,7 +12,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Btn, Eyebrow } from '$lib/components/atoms';
 	import { computeHorizonSummary, dotsForHorizons } from '$lib/utils/horizonHelpers';
-	import { buildBucketSummary, type Buckets } from './metricsEditor.ts';
+	import { buildBucketSummary, type Buckets } from '../../trip-detail/metricsEditor.ts';
 
 	type MetricCatalog = Record<string, MetricEntry[]>;
 

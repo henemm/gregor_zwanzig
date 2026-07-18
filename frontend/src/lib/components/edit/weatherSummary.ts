@@ -7,7 +7,8 @@
 // gespeicherten display_config.
 //
 // Bucket-Parsing ist KONSISTENT mit dem Loader in
-// trip-detail/WeatherMetricsTab.svelte::initFromTrip (#360/#364):
+// shared/WeatherMetricsTab.svelte::initFromTrip (#360/#364, Issue #1311: von
+// trip-detail/ nach shared/ verschoben):
 // - primary  → Spalten
 // - secondary → Detail
 // - enabled ohne expliziten bucket → defensiv Detail (looseActive)

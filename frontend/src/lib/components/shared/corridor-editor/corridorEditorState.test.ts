@@ -28,6 +28,10 @@ import {
 	buildCompareCorridorSavePayload,
 	buildComparePrefillRows,
 } from './corridorEditorState.ts';
+// Fix-Loop 1 (F005): Erwartungswerte aus der Quelle ableiten statt Hardcode —
+// ALL_METRICS waechst (zuletzt #1285: pop_max_pct), ein hartkodiertes "14"
+// veraltet dann sofort. Vakuum-Schutz (nie 0 akzeptieren) bleibt erhalten.
+import { ALL_METRICS } from '../../compare/compareMetricDefs.ts';
 
 // --- AC-3: confidence_pct darf im route-Metrikpool nie auftauchen ---
 describe('ROUTE_METRIC_DEFS — AC-3 confidence_pct-Ausschluss', () => {
@@ -291,25 +295,12 @@ describe('saveGateDecision — F005', () => {
 // 14 ALL_METRICS abdecken, nicht nur die 10 alarmfaehigen — sonst verliert der
 // Editor beim Speichern Corridor-Eintraege realer Nutzer (Slice-2-Migration
 // hat ALLE ideal_ranges-Metriken migriert, nicht nur die 10 Alarm-Keys).
-describe('COMPARE_METRIC_DEFS — AC-3 confidence_pct-Ausschluss + alle 14 ALL_METRICS', () => {
-	test('enthaelt alle 14 Compare-Metriken (ALL_METRICS), kein confidence_pct', () => {
+describe('COMPARE_METRIC_DEFS — AC-3 confidence_pct-Ausschluss + alle ALL_METRICS', () => {
+	test('enthaelt exakt alle ALL_METRICS-Keys, kein confidence_pct, nie leer (Vakuum-Schutz)', () => {
 		const ids = COMPARE_METRIC_DEFS.map((m) => m.metric).sort();
-		assert.deepEqual(ids, [
-			'cape_max_jkg',
-			'cloud_avg_pct',
-			'freezing_level_m',
-			'gust_max_kmh',
-			'precip_sum_mm',
-			'snow_depth_cm',
-			'snow_new_sum_cm',
-			'sunny_hours_h',
-			'temp_max_c',
-			'temp_min_c',
-			'thunder_level_max',
-			'uv_index_max',
-			'visibility_min_m',
-			'wind_max_kmh',
-		]);
+		const expected = ALL_METRICS.map((m) => m.key).sort();
+		assert.ok(expected.length > 0, 'Vorbedingung verletzt: ALL_METRICS ist leer');
+		assert.deepEqual(ids, expected);
 		assert.equal(ids.includes('confidence_pct'), false);
 	});
 
@@ -345,14 +336,16 @@ describe('buildComparePool', () => {
 		assert.equal(rows[0].unit, '°C');
 		assert.equal(rows[0].max, 30);
 		assert.equal(rows[0].mark, true);
-		assert.equal(poolLeft.length, 13);
+		// Fix-Loop 1 (F005): Erwartung aus COMPARE_METRIC_DEFS.length ableiten
+		// statt Hardcode (ALL_METRICS waechst, s. Import-Kommentar oben).
+		assert.equal(poolLeft.length, COMPARE_METRIC_DEFS.length - 1);
 		assert.equal(poolLeft.some((m) => m.metric === 'temp_max_c'), false);
 	});
 
-	test('leere corridors -> alle 14 Metriken im poolLeft, keine rows', () => {
+	test('leere corridors -> alle Metriken im poolLeft, keine rows', () => {
 		const { rows, poolLeft } = buildComparePool([]);
 		assert.equal(rows.length, 0);
-		assert.equal(poolLeft.length, 14);
+		assert.equal(poolLeft.length, COMPARE_METRIC_DEFS.length);
 	});
 
 	// BUG-DATALOSS-Regressionstest (Team-Lead-Fund): echter Nutzer henning hat
@@ -368,7 +361,7 @@ describe('buildComparePool', () => {
 		assert.equal(rows[0].min, 7);
 		assert.equal(rows[0].max, 12);
 		assert.equal(rows[0].alarmCapable, false);
-		assert.equal(poolLeft.length, 13);
+		assert.equal(poolLeft.length, COMPARE_METRIC_DEFS.length - 1);
 	});
 });
 
@@ -496,8 +489,13 @@ describe('buildCompareCorridorSavePayload — Dual-Write (mark -> ideal_ranges)'
 	});
 });
 
-describe('buildCompareCorridorSavePayload — Dual-Write (notify -> active_metrics/#1191)', () => {
-	test('notify=true -> Metrik landet in active_metrics + metric_alert_levels != off', () => {
+// Issue #1311 (C1 von Epic #1301): notify steuert NICHT MEHR active_metrics —
+// das gehoert seit C1 exklusiv dem Wetter-Metriken-Tab (Spec Implementation
+// Details Abschnitt 3). notify behaelt seine Alarm-Funktion (metric_alert_levels).
+// Ersetzt die vor C1 gueltigen "Dual-Write (notify -> active_metrics/#1191)"-
+// Erwartungen (aktueller Verhaltensnachweis: weatherMetricsTabCorridorCoupling.test.ts AC-3).
+describe('buildCompareCorridorSavePayload — C1 Entkopplung notify <-> active_metrics', () => {
+	test('notify=true veraendert activeMetricKeys NICHT MEHR, metric_alert_levels != off', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: true, mark: false },
 		]);
@@ -506,11 +504,11 @@ describe('buildCompareCorridorSavePayload — Dual-Write (notify -> active_metri
 			activeMetricKeys: [],
 			metricAlertLevels: {},
 		});
-		assert.deepEqual(payload.activeMetricKeys, ['wind_max_kmh']);
+		assert.deepEqual(payload.activeMetricKeys, []);
 		assert.equal(payload.metricAlertLevels.wind_max_kmh, 'standard');
 	});
 
-	test('notify=false -> Metrik NICHT in active_metrics, metric_alert_levels="off"', () => {
+	test('notify=false entfernt die Metrik NICHT MEHR aus activeMetricKeys, metric_alert_levels="off"', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: false, mark: true },
 		]);
@@ -519,7 +517,7 @@ describe('buildCompareCorridorSavePayload — Dual-Write (notify -> active_metri
 			activeMetricKeys: ['wind_max_kmh'],
 			metricAlertLevels: { wind_max_kmh: 'sensibel' },
 		});
-		assert.deepEqual(payload.activeMetricKeys, []);
+		assert.deepEqual(payload.activeMetricKeys, ['wind_max_kmh']);
 		assert.equal(payload.metricAlertLevels.wind_max_kmh, 'off');
 	});
 
@@ -538,7 +536,7 @@ describe('buildCompareCorridorSavePayload — Dual-Write (notify -> active_metri
 		assert.deepEqual(payload.activeMetricKeys, []);
 	});
 
-	test('active_metrics-Eintraege ohne Zeile in DIESER Session bleiben erhalten (RMW)', () => {
+	test('activeMetricKeys ist reiner Pass-Through von original — notify fuegt nichts mehr hinzu (RMW)', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: true, mark: false },
 		]);
@@ -548,7 +546,7 @@ describe('buildCompareCorridorSavePayload — Dual-Write (notify -> active_metri
 			metricAlertLevels: {},
 		});
 		assert.ok(payload.activeMetricKeys.includes('temp_min_c'));
-		assert.ok(payload.activeMetricKeys.includes('wind_max_kmh'));
+		assert.equal(payload.activeMetricKeys.includes('wind_max_kmh'), false);
 	});
 
 	// F002-Analogon (Slice 3): entfernte Zeile hinterlaesst keinen Geister-Alert

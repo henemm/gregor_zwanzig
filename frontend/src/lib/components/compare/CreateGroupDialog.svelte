@@ -2,7 +2,8 @@
 	// Issue #301 Lieferung A — Dialog zum Anlegen einer neuen Gruppe.
 	//
 	// Spec: docs/specs/modules/issue_301_sidebar_groups.md §6
-	// Pattern: Dialog.Root wie trip-detail/SavePresetDialog.svelte.
+	// Pattern: Dialog.Root wie shared/weather-metrics-tab/SavePresetDialog.svelte
+	// (Issue #1311: von trip-detail/ verschoben).
 	//
 	// Sendet POST /api/groups; bei doppeltem Namen (gleiche kebab-ID -> 409)
 	// zeigt der Dialog die Backend-Fehlermeldung in data-testid="create-group-error".

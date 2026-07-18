@@ -11,7 +11,7 @@
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { api } from '$lib/api.js';
 	import { Eyebrow, Btn, Input, TopoBg } from '$lib/components/atoms';
-	import WeatherMetricsTab from '$lib/components/trip-detail/WeatherMetricsTab.svelte';
+	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
 	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
 	import { AlertRulesEditor } from '$lib/components/organisms';

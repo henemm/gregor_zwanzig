@@ -5,7 +5,7 @@
 	import { goto } from '$app/navigation';
 	import EditRouteSection from './EditRouteSection.svelte';
 	// Issue #587: WeatherMetricsTab ersetzt WeatherSummaryCard im Wetter-Tab
-	import WeatherMetricsTab from '$lib/components/trip-detail/WeatherMetricsTab.svelte';
+	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
 	import EditReportConfigSection from './EditReportConfigSection.svelte';
 	import { AlertRulesEditor } from '$lib/components/organisms';
 	import EtappenStrip from '$lib/components/trip-detail/waypoints/EtappenStrip.svelte';

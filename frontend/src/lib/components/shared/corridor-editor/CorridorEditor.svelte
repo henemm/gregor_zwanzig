@@ -67,7 +67,10 @@
 		const poolLeft = COMPARE_METRIC_DEFS.filter((d) => !prefillRows.some((r) => r.metric === d.metric));
 		return { rows: prefillRows, poolLeft, unknownCorridors: [] };
 	}
-	const initial = context === 'vergleich' ? computeInitialCompare() : { ...buildRoutePool(trip?.corridors ?? []), unknownCorridors: [] };
+	// Issue #1311 (C1, #1293-Wurzelfix): Pool folgt der Metrik-Auswahl des
+	// Wetter-Metriken-Tabs (trip.display_config.metrics) statt grundsaetzlich
+	// alle 6 anzubieten.
+	const initial = context === 'vergleich' ? computeInitialCompare() : { ...buildRoutePool(trip?.corridors ?? [], trip?.display_config?.metrics), unknownCorridors: [] };
 	let rows = $state<CorridorRowState[]>(initial.rows);
 	let poolLeft = $state<(RouteMetricDef | CompareMetricDef)[]>(initial.poolLeft);
 	// F003-Fix (Adversary CRITICAL, Slice 4): Corridor-Eintraege ausserhalb des

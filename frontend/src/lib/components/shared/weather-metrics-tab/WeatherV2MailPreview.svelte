@@ -6,9 +6,9 @@
 	// Issue #1232 Scheibe 3b: interner Kanal-State + .ch-tabs entfallen — der
 	// geteilte `LTChannelPicker` (LayoutTab) steuert den Kanal jetzt controlled
 	// über die neue `channel`-Prop.
-	import type { MetricEntry } from './metricsEditor.ts';
-	import { CHANNEL_COL_BUDGET } from './metricsEditor.ts';
-	import type { Highlight } from './metricsEditor.ts';
+	import type { MetricEntry } from '../../trip-detail/metricsEditor.ts';
+	import { CHANNEL_COL_BUDGET } from '../../trip-detail/metricsEditor.ts';
+	import type { Highlight } from '../../trip-detail/metricsEditor.ts';
 	import { Eyebrow } from '$lib/components/atoms';
 	import type { ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
 

@@ -9,9 +9,10 @@ export { default as BriefingPreviewCard } from './BriefingPreviewCard.svelte';
 export { default as WeatherMetricsPreviewCard } from './WeatherMetricsPreviewCard.svelte';
 export { default as AlertsPreviewCard } from './AlertsPreviewCard.svelte';
 export { default as PreviewCard } from './PreviewCard.svelte';
-export { default as WeatherMetricsTab } from './WeatherMetricsTab.svelte';
+// Issue #1311 (C1, Fix-Loop 1 / F002): nach shared/ verschoben (Teilung Trip+Vergleich).
+export { default as WeatherMetricsTab } from '../shared/WeatherMetricsTab.svelte';
 export { default as MetricGroup } from './MetricGroup.svelte';
 export { default as MetricCheckbox } from './MetricCheckbox.svelte';
 export { default as TablePreview } from './TablePreview.svelte';
-export { default as SavePresetDialog } from './SavePresetDialog.svelte';
+export { default as SavePresetDialog } from '../shared/weather-metrics-tab/SavePresetDialog.svelte';
 export { default as DetailCard } from './DetailCard.svelte';

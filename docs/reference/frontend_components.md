@@ -1044,7 +1044,7 @@ interface Props {
 | StageList | `trip-detail/StageList.svelte` | Etappen-Liste |
 | StageDetailRow | `trip-detail/StageDetailRow.svelte` | Etappen-Detailzeile (SVG-Icons, #322) |
 | WaypointsPanel | `trip-detail/WaypointsPanel.svelte` | Panel-Wrapper fuer Wegpunkt-Editor |
-| WeatherMetricsTab | `trip-detail/WeatherMetricsTab.svelte` | Wetter-Metriken-Tab |
+| WeatherMetricsTab | `shared/WeatherMetricsTab.svelte` (Issue #1311, C1 von Epic #1301: aus `trip-detail/` extrahiert, `context="route"\|"vergleich"` — geteilt mit Compare-Hub) | Wetter-Metriken-Tab |
 | WeatherMetricsPreviewCard | `trip-detail/WeatherMetricsPreviewCard.svelte` | Live-Vorschau der Metriken-Tabelle |
 | MetricGroup | `trip-detail/MetricGroup.svelte` | Metrik-Gruppe im Editor |
 | MetricCheckbox | `trip-detail/MetricCheckbox.svelte` | Metrik-Auswahl-Checkbox |

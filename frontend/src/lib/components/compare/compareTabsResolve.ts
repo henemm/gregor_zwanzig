@@ -7,6 +7,10 @@
 export const COMPARE_TABS = [
 	{ value: 'uebersicht', label: 'Übersicht' },
 	{ value: 'orte', label: 'Orte' },
+	// Issue #1311 (C1 von Epic #1301): zwischen orte und idealwerte — der neue
+	// Tab entscheidet, welche Metriken ueberhaupt in der Vergleichs-Mail
+	// erscheinen, bevor die Wertebereiche fuer sie konfiguriert werden.
+	{ value: 'wetter-metriken', label: 'Wetter-Metriken' },
 	{ value: 'idealwerte', label: 'Wertebereiche' },
 	{ value: 'layout', label: 'Layout' },
 	// Issue #1258 S5 (AC-19, H1): zwischen layout und versand — konsistent

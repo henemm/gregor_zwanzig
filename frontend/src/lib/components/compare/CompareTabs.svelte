@@ -52,6 +52,13 @@
 	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
 	// Issue #1258 Scheibe 5 (AC-19): geteilter Alarme-Organism im 7. Hub-Tab.
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
+	// Issue #1311 (C1 von Epic #1301): geteilter Wetter-Metriken-Tab (Grundauswahl,
+	// vergleich-Kontext) — analog Alarme-/Versand-Bridge oben.
+	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
+	import {
+		hydrateWeatherMetricsFromPreset,
+		flushPendingWeatherMetricsSave
+	} from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 	import { CompareWizardState } from './compareWizardState.svelte';
 	import {
 		hydrateWizardStateFromPreset,
@@ -610,6 +617,51 @@
 		}
 	}
 
+	// Issue #1311 (C1): eingebetteter WeatherMetricsTab (context="vergleich")
+	// im neuen Hub-Tab "Wetter-Metriken" — analog Alarme-/Versand-Bridge oben.
+	// Eigene Hydrations-/Snapshot-Baseline, weil der Tab als ERSTER geoeffnet
+	// werden kann (Deep-Link `?tab=wetter-metriken`), ohne dass idealwerte
+	// vorher hydriert hat.
+	let wetterMetrikenHydrated = $state(false);
+	let lastPersistedWetterMetrikenSnapshot: string[] | null = null;
+
+	$effect(() => {
+		if (activeTab !== 'wetter-metriken' || wetterMetrikenHydrated) return;
+		wizardState.activeMetricKeys = hydrateWeatherMetricsFromPreset(currentPreset);
+		lastPersistedWetterMetrikenSnapshot = [...wizardState.activeMetricKeys];
+		wetterMetrikenHydrated = true;
+	});
+
+	async function handleWetterMetrikenCommit(): Promise<void> {
+		if (!wetterMetrikenHydrated) return;
+		let failure: unknown = null;
+		saveController?.setSaving();
+		const updated = await hubPutQueue.enqueue(async () => {
+			const current = [...wizardState.activeMetricKeys];
+			const before = lastPersistedWetterMetrikenSnapshot ?? current;
+			const payload = flushPendingWeatherMetricsSave(currentPreset, current, lastPersistedWetterMetrikenSnapshot);
+			if (!payload) return null;
+			try {
+				const result = await api.put<ComparePreset>(payload.url, payload.body);
+				lastPersistedWetterMetrikenSnapshot = current;
+				return result;
+			} catch (e) {
+				console.error('[CompareTabs] Wetter-Metriken-Persistenz fehlgeschlagen, Rollback:', e);
+				wizardState.activeMetricKeys = before;
+				failure = e;
+				return null;
+			}
+		});
+		if (updated) {
+			currentPreset = updated;
+			saveController?.setSaved();
+		} else if (failure) {
+			saveController?.setError(extractMessage(failure));
+		} else {
+			saveController?.markPristine();
+		}
+	}
+
 	// Issue #1258 S5 (H4): notifyCount fuer den AlarmeTab-Kopf — Korridore
 	// kommen normalerweise aus dem idealwerte-Hydrat, der alarme-Effekt
 	// hydriert `corridors` aber selbst mit (s. hydrateAlarmFieldsFromPreset),
@@ -815,6 +867,7 @@
 		idealwerteHydrated = false;
 		versandHydrated = false;
 		alarmeHydrated = false;
+		wetterMetrikenHydrated = false;
 	});
 </script>
 
@@ -1100,6 +1153,30 @@
 							</div>
 						{/each}
 					{/if}
+				</div>
+			{/if}
+		</div>
+	{/if}
+
+	{#if activeTab === 'wetter-metriken'}
+		<div class="tab-panel" data-testid="compare-detail-panel-wetter-metriken">
+			{#if wetterMetrikenHydrated}
+				<!-- Fix-Loop 1 (F003, Adversary HIGH): reines `onclick` am Wrapper
+				     feuert VOR dem eigenen `onchange` der Checkbox (Klick-Reihenfolge:
+				     click -> change) — der erste Toggle wurde dadurch nie persistiert
+				     (Commit las den noch alten wizardState.activeMetricKeys). Muster
+				     identisch `.hub-versand-wrap`/`.hub-alarme-wrap` (SF-1-Erkenntnis,
+				     s. dortige Kommentare): `onchange` MUSS in der Bubble-Phase laufen,
+				     dort ist die Checkbox-Mutation garantiert bereits abgeschlossen.
+				     Kein <svelte:window onpointerup> noetig (Checkbox-Toggles ohne
+				     Drag-Geste, Spec Abschnitt 2). -->
+				<div
+					class="hub-wetter-metriken-wrap"
+					onchange={handleWetterMetrikenCommit}
+					onfocusout={handleWetterMetrikenCommit}
+					onclick={handleWetterMetrikenCommit}
+				>
+					<WeatherMetricsTab context="vergleich" wiz={wizardState} />
 				</div>
 			{/if}
 		</div>

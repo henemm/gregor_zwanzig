@@ -11,9 +11,9 @@
 	// wuerde `dndzone` sie aus dem DOM entfernen.
 	// Issue #1232 Scheibe 3b: Cut-Line-Markup durch geteiltes Primitiv
 	// `LTCutLine` ersetzt (KL-1 aus Scheibe 3a wird hiermit aufgelöst).
-	import type { MetricEntry } from './metricsEditor.ts';
-	import { indicatorCapable, CHANNEL_COL_BUDGET } from './metricsEditor.ts';
-	import type { Highlight } from './metricsEditor.ts';
+	import type { MetricEntry } from '../../trip-detail/metricsEditor.ts';
+	import { indicatorCapable, CHANNEL_COL_BUDGET } from '../../trip-detail/metricsEditor.ts';
+	import type { Highlight } from '../../trip-detail/metricsEditor.ts';
 	import { Segmented } from '$lib/components/atoms';
 	import LTCutLine from '$lib/components/shared/layout-tab/LTCutLine.svelte';
 	import SortableList from '$lib/components/shared/dnd/SortableList.svelte';
