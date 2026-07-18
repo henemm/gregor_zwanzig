@@ -85,6 +85,10 @@ export interface HubEdit {
 	// Issue #1260: Telegram-Kurzstil (display_config.telegram_style). undefined =
 	// nicht editiert → Round-Trip via `preset.display_config`.
 	telegramStyle?: 'rich' | 'kurzform';
+	// Issue #1299/C2: Stundenverlauf-Felder, bisher NIE über den Hub-Pfad
+	// geschrieben (nur über den weggeleiteten wizardState.saveComparePreset()).
+	hourlyMetricKeys?: string[];
+	hourlyEnabled?: boolean;
 }
 
 /**
@@ -128,7 +132,12 @@ export function buildHubPutPayload(
 		radarAlertEnabled: edit.radarAlertEnabled,
 		// Issue #1260: 1:1 Round-Trip wie alle anderen HubEdit-Felder, undefined
 		// bleibt undefined (kein Datenverlust am telegram_style).
-		telegramStyle: edit.telegramStyle
+		telegramStyle: edit.telegramStyle,
+		// Issue #1299/C2: Lücke geschlossen — bislang kannte buildHubPutPayload
+		// diese beiden Felder nicht, obwohl buildComparePresetSavePayload sie
+		// laengst verarbeitet (compareEditorSave.ts:104-111,142).
+		hourlyMetricKeys: edit.hourlyMetricKeys ?? (displayConfig.hourly_metrics as string[] | undefined),
+		hourlyEnabled: edit.hourlyEnabled ?? preset.hourly_enabled
 	});
 }
 
@@ -530,4 +539,67 @@ export function rollbackAlarmSnapshot(
 			target[field] = before[field];
 		}
 	}
+}
+
+/** Plain-Snapshot der beiden persistenzrelevanten Layout-Tab-Felder (analog
+ * `VersandSnapshot`). Issue #1299/#1291/#1287 (Scheibe C2 von Epic #1301). */
+export interface LayoutSnapshot {
+	hourlyMetricKeys: string[];
+	hourlyEnabled: boolean;
+}
+
+/**
+ * Issue #1299/C2: Erst-Oeffnungs-Hydration fuer den Hub-Layout-Tab, analog
+ * `hydrateVersandFieldsFromPreset` — liest die Stundenverlauf-Felder aus
+ * `preset.display_config.hourly_metrics` bzw. `preset.hourly_enabled`.
+ */
+export function hydrateLayoutFieldsFromPreset(preset: ComparePreset): LayoutSnapshot {
+	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
+	return {
+		hourlyMetricKeys: (displayConfig.hourly_metrics as string[] | undefined) ?? [],
+		hourlyEnabled: preset.hourly_enabled ?? true
+	};
+}
+
+/**
+ * Issue #1299/C2: Event-diskretisierte PUT-Persistenz fuer den Hub-Layout-Tab,
+ * analog `flushPendingVersandSave` — liefert `null`, wenn sich der Snapshot
+ * seit dem letzten persistierten Stand NICHT veraendert hat (Waechter gegen
+ * unnoetige PUTs), sonst den fertigen PUT-Payload via `buildHubPutPayload`
+ * (Read-Modify-Write: alle nicht-Layout-Felder unveraendert aus `preset`).
+ *
+ * Array-Reihenfolge darf den Diff-Waechter nicht faelschlich "dirty" melden
+ * (Checkbox-Reihenfolge in ALL_HOURLY_METRICS ist stabil, aber der
+ * Materialisierungs-Zeitpunkt in makeHourlyMetricHandler kann abweichen) —
+ * deshalb sortierter Vergleich.
+ */
+export function flushPendingLayoutSave(
+	preset: ComparePreset,
+	current: LayoutSnapshot,
+	before: LayoutSnapshot | null
+): { url: string; body: ComparePreset } | null {
+	const baseline = before ?? current;
+	const norm = (s: LayoutSnapshot) => ({
+		hourlyMetricKeys: [...s.hourlyMetricKeys].sort(),
+		hourlyEnabled: s.hourlyEnabled
+	});
+	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;
+	return buildHubPutPayload(preset, {
+		hourlyMetricKeys: current.hourlyMetricKeys,
+		hourlyEnabled: current.hourlyEnabled
+	});
+}
+
+/**
+ * Issue #1299/C2 (AC-6): Rollback fuer den Hub-Layout-Commit-Fehlerpfad.
+ * `hourlyMetricKeys`/`hourlyEnabled` sind EXKLUSIV Layout-Tab-Eigentum (anders
+ * als die H3-Kreuzeffekt-Felder im Alarme-Snapshot) — direkte Zuweisung
+ * genuegt, kein diff-basierter Rollback noetig.
+ */
+export function rollbackLayoutSnapshot(
+	state: { hourlyMetricKeys?: string[]; hourlyEnabled?: boolean },
+	before: LayoutSnapshot
+): void {
+	state.hourlyMetricKeys = before.hourlyMetricKeys;
+	state.hourlyEnabled = before.hourlyEnabled;
 }

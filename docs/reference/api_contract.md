@@ -1332,7 +1332,7 @@ type ComparePreset struct {
     LetzterVersand       *time.Time             `json:"letzter_versand,omitempty"`             // last send timestamp (server-managed)
     TopOrtLetzterVersand *string                `json:"top_ort_letzter_versand,omitempty"`     // highest-ranked location from last send (server-managed)
     DisplayConfig        map[string]interface{} `json:"display_config,omitempty"`              // opaque config (Issue #680: active_metrics, ideal_ranges, etc.)
-    HourlyEnabled        *bool                  `json:"hourly_enabled,omitempty"`              // Issue #1107, Pointer-Muster analog OfficialAlertsEnabled (#1040): nil/true = Stundenverlauf-Sektion sichtbar (Default), false = komplett weggelassen (Mail behält Übersichtstabelle)
+    HourlyEnabled        *bool                  `json:"hourly_enabled,omitempty"`              // Issue #1107, Pointer-Muster analog OfficialAlertsEnabled (#1040): nil/true = Stundenverlauf-Sektion sichtbar (Default), false = komplett weggelassen (Mail behält Übersichtstabelle). Seit Issue #1299 (C2 von Epic #1301) im Hub-Layout-Tab (`CompareTabs.svelte`, `activeTab==="layout"`) bedienbar — vorher nur über den seit S3 weggeleiteten Legacy-`CompareEditor` erreichbar.
     MorningEnabled       *bool                  `json:"morning_enabled,omitempty"`             // Issue #1232 Scheibe 2a: Zwei-Slot-Zeitplan analog Trip. nil = Altdaten vor Migration (Load-Migration setzt echten Wert), sonst true/false
     MorningTime          *string                `json:"morning_time,omitempty"`                // "HH:MM:SS", Fälligkeits-Check nur auf volle Stunde (Minuten ignoriert, KL-2)
     EveningEnabled       *bool                  `json:"evening_enabled,omitempty"`             // wie MorningEnabled, für den Abend-Slot
@@ -1354,9 +1354,10 @@ Preset in der HTTP-Response gespiegelt wird. Bestandsdaten: `scripts/migrate_124
 
 **Hinweis zur Vollständigkeit:** Diese Struct-Auflistung wird nicht bei jeder additiven
 Preset-Erweiterung nachgezogen (z.B. `OfficialAlertsEnabled` #1040, `TopNDetails`/`EnabledMetrics`
-#1104, `HourlyMetrics` #1106 fehlen hier aktuell noch) — `HourlyEnabled` (#1107) wurde ergänzt, da
+#1104 fehlen hier aktuell noch) — `HourlyEnabled` (#1107) wurde ergänzt, da
 es der unmittelbare Anlass dieser Doku-Aktualisierung war; die fünf Slot-Felder (#1232 Scheibe 2a)
-wurden anlässlich des Zeitplan-Reshapes nachgezogen.
+wurden anlässlich des Zeitplan-Reshapes nachgezogen; `display_config["hourly_metrics"]` (#1106)
+wurde anlässlich C2 von Epic #1301 in die DisplayConfig-Keys-Liste oben nachgezogen.
 
 **Zwei-Slot-Zeitplan (Issue #1232 Scheibe 2a, additiv zu `schedule`):** Analog zum Trip-Briefing
 (Morgen/Abend) trägt `ComparePreset` jetzt einen eigenen Zeitplan statt eines groben
@@ -1378,6 +1379,7 @@ versendet für `target_date=heute`, Abend-Slot für `target_date=morgen`. Guards
 **DisplayConfig Keys (Issue #680 onwards):**
 - `active_metrics`: `[]string` — Ausgewählte Metrik-Keys für Vergleich (z.B. `["temp_max_c", "wind_max_kmh", "precip_sum_mm"]`). Default: Profil-spezifische Metriken aus `PROFILE_METRICS_WITH_SCALES`. Seit #1191 im Idealwerte-Tab um 4 weitere, bislang schalter-lose alarmfähige Metriken wählbar: `gust_max_kmh` (Böen), `cape_max_jkg` (Gewitter-Energie/CAPE), `freezing_level_m` (Nullgradgrenze), `temp_min_c` (Min-Temperatur). **Semantik für den Compare-Δ-Alarm (#1191):** Feld fehlt ganz (Key absent/`None`) = Legacy-Preset vor der Migration → konservativer Fallback, alle alarmfähigen Metriken feuern. Feld vorhanden — auch als leere Liste `[]` — = Nutzer hat im Editor bewusst (de-)aktiviert; nur gelistete Metriken feuern im Alarm, eine bewusst leere Liste unterdrückt sämtliche Compare-Δ-Alarme. Übersetzung Summary-Key → Alarm-Katalog-ID: `src/services/compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID`. **Schreiber seit #1311 (C1 von Epic #1301):** Der neue geteilte Hub-Tab „Wetter-Metriken" (`frontend/src/lib/components/shared/WeatherMetricsTab.svelte`, `context="vergleich"`) ist jetzt die EXKLUSIVE Schreib-Quelle für `active_metrics`. Das `notify`-Häkchen der Korridore im Wertebereiche-Tab schreibt `active_metrics` seither NICHT mehr (`corridorEditorState.ts::buildCompareCorridorSavePayload`) — es steuert nur noch `metric_alert_levels` (Alarm-Schwelle je Metrik), unverändert. Die Legacy-Semantik (absent = alle alarmfähigen feuern) bleibt davon unberührt.
 - `ideal_ranges`: `Record<string, IdealRange>` — Min/Max-Idealwerte pro Metrik (z.B. `{"temp_max_c": {"min": 15, "max": 35}, ...}`). Wird vom Compare-Engine zur Bewertung verwendet.
+- `hourly_metrics`: `string[]` — Ausgewählte Metrik-Keys für die STUNDEN-Sektion der Vergleichs-Mail (Katalog: `ALL_HOURLY_METRICS`, 9 Keys, eigenständiges Compare-Vokabular ohne Trip-Pendant, `frontend/src/lib/components/compare/compareHourlyMetricDefs.ts`). Leere Liste `[]`/Key absent = Default „alle sichtbar"; eine Leerauswahl im UI entfernt den Key wieder aus dem PUT-Body statt ihn als `[]` zu senden. **Schreiber seit Issue #1299 (C2 von Epic #1301):** bedienbar im Hub-Layout-Tab (`CompareTabs.svelte`, `activeTab==="layout"`, `flushPendingLayoutSave`/`hydrateLayoutFieldsFromPreset`/`rollbackLayoutSnapshot` in `compareHubWizardBridge.ts`, Muster wie die C1-Wetter-Metriken-Bridge). Vorher nur über den seit S3 weggeleiteten Legacy-`CompareEditor` (`CompareInhaltSection.svelte`) erreichbar.
 - `output_layout`: opaque (zukünftig) — Spalten-Reihenfolge, Formatierung per Kanal
 - `schedule_config`: opaque (zukünftig) — Wiederholungs-Details
 
@@ -2797,6 +2799,19 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-07-18: Issue #1299/#1291/#1287 (Scheibe C2 von Epic #1301) —
+  `display_config.hourly_metrics`/`hourly_enabled` sind jetzt im Hub-
+  Layout-Tab (`CompareTabs.svelte`, `activeTab==="layout"`) bedienbar,
+  vorher nur über den seit Scheibe S3 weggeleiteten Legacy-`CompareEditor`
+  erreichbar. Neue reine Persist-Bridge-Funktionen
+  `hydrateLayoutFieldsFromPreset`/`flushPendingLayoutSave`/
+  `rollbackLayoutSnapshot` in `compareHubWizardBridge.ts`, Muster wie die
+  C1-Wetter-Metriken-Bridge (Issue #1311). `top_n` und die
+  „Spalte/Detail"-Zuordnung (`channel_layouts`) sind aus der Bedienung
+  entfernt (Attrappen, #1287/#1291), round-trippen aber unverändert weiter
+  (kein Feldverlust, Read-Modify-Write). Kein neues Wire-Format-Feld —
+  beide Felder existierten bereits (#1106/#1107), nur der Schreib-Zugang
+  ändert sich. Siehe `docs/specs/modules/compare_hub_hourly_metrics.md`.
 - 2026-07-16: Issue #1278 + #1285 (eine Arbeit, gemeinsame Datenbasis) —
   Vergleichs-Mail bekommt je Ort einen Kurz-Zusammenfassungssatz (geteilter
   Trip-Baustein, kein Compare-eigener Formatierungscode) und fünf bisher

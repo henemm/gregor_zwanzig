@@ -59,6 +59,11 @@
 		hydrateWeatherMetricsFromPreset,
 		flushPendingWeatherMetricsSave
 	} from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
+	// Issue #1299/#1291/#1287 (C2 von Epic #1301): Stundenverlauf-Steuerung im
+	// Hub-Layout-Tab — geteiltes ChannelToggle-Bedienelement + eigenstaendiges
+	// Compare-Vokabular (kein Reuse von compareMetricDefs.ts).
+	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
+	import { ALL_HOURLY_METRICS } from './compareHourlyMetricDefs.ts';
 	import { CompareWizardState } from './compareWizardState.svelte';
 	import {
 		hydrateWizardStateFromPreset,
@@ -74,8 +79,12 @@
 		rollbackAlarmSnapshot,
 		hubActivationBanner,
 		createPutQueue,
+		hydrateLayoutFieldsFromPreset,
+		flushPendingLayoutSave,
+		rollbackLayoutSnapshot,
 		type VersandSnapshot,
-		type AlarmSnapshot
+		type AlarmSnapshot,
+		type LayoutSnapshot
 	} from './compareHubWizardBridge.ts';
 	import { groupLocations } from './locationHelpers.js';
 	import { COMPARE_TABS, resolveCompareTab } from './compareTabsResolve.js';
@@ -648,6 +657,80 @@
 			} catch (e) {
 				console.error('[CompareTabs] Wetter-Metriken-Persistenz fehlgeschlagen, Rollback:', e);
 				wizardState.activeMetricKeys = before;
+				failure = e;
+				return null;
+			}
+		});
+		if (updated) {
+			currentPreset = updated;
+			saveController?.setSaved();
+		} else if (failure) {
+			saveController?.setError(extractMessage(failure));
+		} else {
+			saveController?.markPristine();
+		}
+	}
+
+	// Issue #1299/#1291/#1287 (C2): eingebetteter Stundenverlauf-Bereich im
+	// Hub-Tab "Layout" — analog Wetter-Metriken-Bridge oben. Eigene
+	// Hydrations-/Snapshot-Baseline, weil der Layout-Tab als ERSTER geoeffnet
+	// werden kann (Deep-Link `?tab=layout`).
+	let layoutHydrated = $state(false);
+	let lastPersistedLayoutSnapshot: LayoutSnapshot | null = null;
+
+	$effect(() => {
+		if (activeTab !== 'layout' || layoutHydrated) return;
+		const hydrated = hydrateLayoutFieldsFromPreset(currentPreset);
+		wizardState.hourlyMetricKeys = hydrated.hourlyMetricKeys;
+		wizardState.hourlyEnabled = hydrated.hourlyEnabled;
+		lastPersistedLayoutSnapshot = hydrated;
+		layoutHydrated = true;
+	});
+
+	// Verschoben aus CompareInhaltSection.svelte:38-60 (Duplikat statt
+	// Abhaengigkeit, s. Spec Known Limitations — CompareInhaltSection wird mit
+	// F2 geloescht, darf keine Hub-Abhaengigkeit werden).
+	function isHourlyMetricActive(key: string): boolean {
+		return wizardState.hourlyMetricKeys.length === 0 || wizardState.hourlyMetricKeys.includes(key);
+	}
+
+	// Factory-Handler (Safari-Pattern): materialisiert beim ersten Abwaehlen
+	// die volle Liste, damit "alle minus eine" korrekt entsteht.
+	function makeHourlyMetricHandler(key: string) {
+		return function handleHourlyMetric(checked: boolean): void {
+			const current =
+				wizardState.hourlyMetricKeys.length === 0
+					? ALL_HOURLY_METRICS.map((m) => m.key)
+					: [...wizardState.hourlyMetricKeys];
+			if (checked) {
+				if (!current.includes(key)) current.push(key);
+			} else {
+				const idx = current.indexOf(key);
+				if (idx >= 0) current.splice(idx, 1);
+			}
+			wizardState.hourlyMetricKeys = current;
+		};
+	}
+
+	async function handleLayoutCommit(): Promise<void> {
+		if (!layoutHydrated) return;
+		let failure: unknown = null;
+		saveController?.setSaving();
+		const updated = await hubPutQueue.enqueue(async () => {
+			const current: LayoutSnapshot = {
+				hourlyMetricKeys: [...wizardState.hourlyMetricKeys],
+				hourlyEnabled: wizardState.hourlyEnabled
+			};
+			const before = lastPersistedLayoutSnapshot ?? current;
+			const payload = flushPendingLayoutSave(currentPreset, current, lastPersistedLayoutSnapshot);
+			if (!payload) return null;
+			try {
+				const result = await api.put<ComparePreset>(payload.url, payload.body);
+				lastPersistedLayoutSnapshot = current;
+				return result;
+			} catch (e) {
+				console.error('[CompareTabs] Layout-Persistenz fehlgeschlagen, Rollback:', e);
+				rollbackLayoutSnapshot(wizardState, before);
 				failure = e;
 				return null;
 			}
@@ -1242,6 +1325,38 @@
 						<CompareLayoutRow channel={ch} cols={layoutChipNamesFor(ch)} />
 					{/each}
 				</Card>
+			{/if}
+
+			<!-- Issue #1299/#1291/#1287 (C2): Stundenverlauf-Steuerung — die einzige
+			     Layout-Einstellung mit echter Mail-Wirkung, holt sie in den
+			     erreichbaren Hub (bislang nur im weggeleiteten Legacy-Editor). Muster
+			     identisch `.hub-wetter-metriken-wrap` (Bubble-Phase, SF-1-Erkenntnis)
+			     — gemeinsam fuer Desktop/Mobil, ausserhalb der Viewport-Weiche. -->
+			{#if layoutHydrated}
+				<div
+					class="hub-layout-hourly-wrap"
+					onchange={handleLayoutCommit}
+					onfocusout={handleLayoutCommit}
+					onclick={handleLayoutCommit}
+				>
+					<SectionH title="Stundenverlauf" />
+					<ChannelToggle
+						label="Stundenverlauf"
+						checked={wizardState.hourlyEnabled}
+						onchange={(checked) => (wizardState.hourlyEnabled = checked)}
+						testid="compare-layout-hourly-enabled-toggle"
+					/>
+					<div data-testid="compare-layout-hourly-metrics" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px">
+						{#each ALL_HOURLY_METRICS as metric (metric.key)}
+							<ChannelToggle
+								label={metric.label}
+								checked={isHourlyMetricActive(metric.key)}
+								onchange={makeHourlyMetricHandler(metric.key)}
+								testid={`compare-layout-hourly-metric-${metric.key}`}
+							/>
+						{/each}
+					</div>
+				</div>
 			{/if}
 		</div>
 	{/if}
