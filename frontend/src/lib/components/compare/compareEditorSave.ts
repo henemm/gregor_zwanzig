@@ -102,12 +102,12 @@ export function buildComparePresetSavePayload(
 	}
 
 	if (edits.hourlyMetricKeys !== undefined) {
-		if (edits.hourlyMetricKeys.length > 0) {
-			displayConfig.hourly_metrics = edits.hourlyMetricKeys;
-		} else {
-			// Leere Auswahl: hourly_metrics aus dem Spread entfernen (Default = alle sichtbar)
-			delete displayConfig.hourly_metrics;
-		}
+		// Bug #1299/C2 (Staging-Fund F005): Leere Auswahl EXPLIZIT als [] persistieren —
+		// NICHT den Key loeschen. Der Server-Merge (mergeConfigMap, config_merge.go, #1159)
+		// ueberschreibt Keys nur, loescht sie nie; ein weggelassener Key bliebe wirkungslos
+		// (alter Wert bleibt). Der Renderer resolve_hourly_metrics behandelt [] identisch
+		// zu absent -> alle 9 Spalten sichtbar. Analog active_metrics (#1191).
+		displayConfig.hourly_metrics = edits.hourlyMetricKeys;
 	}
 
 	// Issue #1170: metric_alert_levels lebt in display_config (analog Trip).

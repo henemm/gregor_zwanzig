@@ -103,13 +103,21 @@ describe('C2 AC-2: flushPendingLayoutSave — geänderter Snapshot → PUT-Paylo
 	});
 });
 
-describe('C2 AC-5: leere hourlyMetricKeys entfernt den Schlüssel (Default "alle sichtbar")', () => {
-	test('current.hourlyMetricKeys = [] → display_config enthält "hourly_metrics" NICHT', () => {
+describe('C2 AC-5: leere hourlyMetricKeys werden als [] persistiert (Default "alle sichtbar")', () => {
+	// Staging-Fund F005 (Bug #1299/C2): der Server-Merge (mergeConfigMap,
+	// config_merge.go, #1159-Datenverlust-Schutz) kann Keys nur ueberschreiben,
+	// nie loeschen. Ein weggelassener "hourly_metrics"-Key bliebe daher auf dem
+	// alten Wert stehen -> "alle abwaehlen" sprang nach Reload nicht zurueck.
+	// Fix: [] wird EXPLIZIT persistiert (analog active_metrics, #1191). Die
+	// Renderer-Seite (resolve_hourly_metrics) deckt separat ab, dass [] wie
+	// "kein Schluessel gesetzt" behandelt wird -> alle 9 Spalten sichtbar:
+	// tests/tdd/test_issue_1106_hourly_metrics_config.py::test_empty_list_returns_none.
+	test('current.hourlyMetricKeys = [] → display_config.hourly_metrics ist [] (kein geloeschter Schluessel)', () => {
 		// GIVEN: ein Preset mit gespeicherter Auswahl ["temp_c"], letzter Snapshot ebenso
 		// WHEN: der Nutzer alle Metriken abwaehlt (current.hourlyMetricKeys = [])
-		// THEN: der resultierende PUT-Body enthaelt display_config.hourly_metrics NICHT
-		//       (nicht als leeres Array — als fehlenden Schluessel, Default-Semantik).
-		// RED heute: Import schlaegt fehl.
+		// THEN: der resultierende PUT-Body enthaelt display_config.hourly_metrics als
+		//       leeres Array — NICHT als fehlenden Schluessel (der Server-Merge kann
+		//       fehlende Keys nicht als "loeschen" interpretieren).
 		const preset = makePresetWithFullDisplayConfig();
 		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true };
 		const current: LayoutSnapshot = { hourlyMetricKeys: [], hourlyEnabled: true };
@@ -118,10 +126,11 @@ describe('C2 AC-5: leere hourlyMetricKeys entfernt den Schlüssel (Default "alle
 
 		assert.ok(payload, 'flushPendingLayoutSave darf bei geaendertem Snapshot nicht null liefern');
 		const displayConfig = payload!.body.display_config as Record<string, unknown>;
-		assert.ok(
-			!('hourly_metrics' in displayConfig),
-			`display_config darf den Schluessel "hourly_metrics" nach Leerauswahl nicht mehr enthalten, ` +
-				`enthaelt aber: ${JSON.stringify(displayConfig.hourly_metrics)}`
+		assert.deepEqual(
+			displayConfig.hourly_metrics,
+			[],
+			`display_config.hourly_metrics muss nach Leerauswahl [] sein (nicht geloescht), ` +
+				`ist aber: ${JSON.stringify(displayConfig.hourly_metrics)}`
 		);
 	});
 });

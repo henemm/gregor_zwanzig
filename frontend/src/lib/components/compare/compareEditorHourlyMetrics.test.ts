@@ -74,7 +74,10 @@ describe('buildComparePresetSavePayload — hourly_metrics (Issue #1106)', () =>
 		);
 	});
 
-	test('leere hourlyMetricKeys -> hourly_metrics nicht im Payload (Default = alle)', () => {
+	test('leere hourlyMetricKeys -> hourly_metrics als [] im Payload (Default = alle, Bug #1299/C2)', () => {
+		// Server-Merge (mergeConfigMap, config_merge.go) kann Keys nur ueberschreiben,
+		// nie loeschen -> [] muss explizit gesendet werden (analog active_metrics,
+		// #1191). Renderer-seitig bedeutet [] "kein Filter gesetzt" -> alle sichtbar.
 		const { body } = buildComparePresetSavePayload(makePreset(), {
 			name: 'Hourly Metrics Test',
 			activityProfile: 'wintersport',
@@ -85,9 +88,10 @@ describe('buildComparePresetSavePayload — hourly_metrics (Issue #1106)', () =>
 			hourlyMetricKeys: []
 		});
 		const dc = body.display_config as Record<string, unknown>;
-		assert.ok(
-			!('hourly_metrics' in dc),
-			'leere Auswahl soll hourly_metrics aus dem Round-Trip-Spread entfernen'
+		assert.deepEqual(
+			dc.hourly_metrics,
+			[],
+			'leere Auswahl soll hourly_metrics als [] persistieren, nicht loeschen'
 		);
 	});
 
