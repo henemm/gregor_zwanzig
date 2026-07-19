@@ -459,7 +459,14 @@ class TestAC7SmsPreviewLocalTokens:
     """
 
     def _rainy_segment(self) -> SegmentWeatherData:
-        """UTC-Fenster 08:00–10:00, Regen+Wind+Böen > 0 → sichtbare @h-Token."""
+        """UTC-Fenster 08:00–10:00, Regen+Wind+Böen > 0 → sichtbare @h-Token.
+
+        Wind/Böen überschreiten die Erwähnungsschwelle EINDEUTIG erst ab
+        UTC-Stunde 8 (Stunden 0–7: 5.0/10.0 = unter Schwelle; ab 8: 30.0/50.0)
+        — damit ist "erste Stunde ≥ Schwelle" unabhängig von der Tagesfenster-
+        breite (#1317) immer 8 UTC, und die Assertions prüfen ausschließlich
+        die Zeitzonen-Verschiebung (Bug #397).
+        """
         rainy_summary = SegmentWeatherSummary(
             temp_min_c=8.0,
             temp_max_c=12.0,
@@ -473,9 +480,14 @@ class TestAC7SmsPreviewLocalTokens:
             wind_chill_min_c=6.0,
         )
         base = _segment_weather(start_hour=8, end_hour=10)
+        data = [
+            _dp(h, wind10m_kmh=(30.0 if h >= 8 else 5.0), gust_kmh=(50.0 if h >= 8 else 10.0))
+            for h in range(0, 24)
+        ]
+        ts = NormalizedTimeseries(meta=_meta(), data=data)
         return SegmentWeatherData(
             segment=base.segment,
-            timeseries=base.timeseries,
+            timeseries=ts,
             aggregated=rainy_summary,
             fetched_at=base.fetched_at,
             provider=base.provider,

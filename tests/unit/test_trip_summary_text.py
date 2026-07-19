@@ -111,7 +111,7 @@ def test_trip_summary_text_unchanged_byte_identical():
     """
     hourly = _hourly()
     recorded = (
-        "Sóller → Tossals Verds: 8–16°C, ⛅, trocken, Regen ab 13:00, "
+        "Sóller → Tossals Verds: 8–16°C, ⛅, mäßiger Regen 13:00–16:00, "
         "mäßiger Wind 20 km/h, ⚡ möglich 13:00–15:00"
     )
     actual = _trip_sentence(

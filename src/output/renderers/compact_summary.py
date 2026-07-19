@@ -17,12 +17,14 @@ from utils.timezone import local_hour
 
 from app.models import (
     ForecastDataPoint,
+    NormalizedTimeseries,
     SegmentWeatherData,
     SegmentWeatherSummary,
     ThunderLevel,
     UnifiedWeatherDisplayConfig,
 )
 from services.weather_metrics import aggregate_stage
+from output.renderers.day_window import build_day_window_points
 
 
 # Klassifikation Issue #1214 Scheibe 5, Kategorie c: KEINE Migration auf
@@ -43,16 +45,22 @@ class CompactSummaryFormatter:
         stage_name: str,
         dc: UnifiedWeatherDisplayConfig,
         tz: Optional[ZoneInfo] = None,
+        night_weather: Optional[NormalizedTimeseries] = None,
     ) -> str:
         """Wrapper ``context="route"`` (Trip/Etappe) um den geteilten Kern.
 
         Trip-spezifisch ist nur die Vorbereitung: Segmente -> Aggregat +
         Stundenliste, Etappenname -> Kurzform. Der Satz selbst entsteht im
         kontextneutralen ``format_weather_summary()`` (Issue #1278).
+
+        ``night_weather``: Issue #1317 / Epic #1319 — Rohdaten Ankunft→06:00
+        am Ziel, damit die Stundenliste dasselbe Tagesfenster 04-19 abdeckt
+        wie SMS/Pillen/Telegram-Fusszeile (ADR-0025-Konsistenz).
         """
+        effective_tz = tz or ZoneInfo("UTC")
         return self.format_weather_summary(
             self._aggregate(segments),
-            self._collect_hourly_data(segments),
+            self._collect_hourly_data(segments, night_weather, effective_tz),
             self._shorten_stage_name(stage_name),
             dc,
             tz,
@@ -138,29 +146,17 @@ class CompactSummaryFormatter:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _collect_hourly_data(segments: list[SegmentWeatherData]) -> list[ForecastDataPoint]:
-        points: list[ForecastDataPoint] = []
-        last_idx = len(segments) - 1
-        for idx, seg_data in enumerate(segments):
-            if seg_data.timeseries and seg_data.timeseries.data:
-                # Bug #807: Filter data points to segment window.
-                # Mirror Bug #806 logic (inclusive start, exclusive end).
-                # Bug #1146: last segment's window end is inclusive, matching
-                # the hourly table's arrival-hour handling. Staying exclusive
-                # for non-last segments avoids double-counting the boundary
-                # hour when seg[n].end_h == seg[n+1].start_h.
-                s = seg_data.segment
-                s_h = s.start_time.hour
-                e_h = s.end_time.hour
-                is_last = idx == last_idx
-                for dp in seg_data.timeseries.data:
-                    h = dp.ts.hour
-                    if s_h <= e_h:
-                        include = (s_h <= h <= e_h) if is_last else (s_h <= h < e_h)
-                    else:
-                        include = (h >= s_h or h <= e_h) if is_last else (h >= s_h or h < e_h)
-                    if include:
-                        points.append(dp)
+    def _collect_hourly_data(
+        segments: list[SegmentWeatherData],
+        night_weather: Optional[NormalizedTimeseries] = None,
+        tz: Optional[ZoneInfo] = None,
+    ) -> list[ForecastDataPoint]:
+        """Stundenliste im Tagesfenster 04-19 (Issue #1317 / Epic #1319).
+
+        Ortsgenau via geteiltem ``day_window``-Modul: bis zur Ankunft aus der
+        Segment-Zeitreihe, danach aus ``night_weather`` am Ziel.
+        """
+        points = build_day_window_points(segments, night_weather, tz or ZoneInfo("UTC"))
         points.sort(key=lambda dp: dp.ts)
         return points
 
@@ -230,6 +226,8 @@ class CompactSummaryFormatter:
             end_h = pattern["end_hour"]
             dry_h = pattern.get("dry_from_hour", end_h + 1)
             return f"{adj} bis {end_h}:00, trocken ab {dry_h}:00"
+        if kind == "window":
+            return f"{adj} {pattern['start_hour']}:00–{pattern['end_hour']}:00"
 
         return adj
 
@@ -277,14 +275,24 @@ class CompactSummaryFormatter:
                 return {"kind": "peak", "peak_hour": peak_hour}
             return {"kind": "throughout"}
 
-        # Dry start, rain later → starts_later
+        # Dry-hour context around the rain block.
         dry_before_rain = [h for h in dry_hours if h < first_rain]
-        if len(dry_before_rain) >= 2 and first_rain > first_hour + 1:
+        dry_after_rain = [h for h in dry_hours if h > last_rain]
+        isolated_before = len(dry_before_rain) >= 2 and first_rain > first_hour + 1
+        isolated_after = len(dry_after_rain) >= 2 and last_rain < last_hour - 1
+
+        # Isolated multi-hour shower (dry before AND after) → explicit window,
+        # never "starts_later" alone (would hide that it stops again) nor
+        # "ends_early" alone (would hide that it wasn't raining from the start).
+        if isolated_before and isolated_after and first_rain != last_rain:
+            return {"kind": "window", "start_hour": first_rain, "end_hour": last_rain + 1}
+
+        # Dry start, rain continues to (near) window end → starts_later
+        if isolated_before and not isolated_after:
             return {"kind": "starts_later", "start_hour": first_rain}
 
-        # Rain stops early → ends_early
-        dry_after_rain = [h for h in dry_hours if h > last_rain]
-        if len(dry_after_rain) >= 2 and last_rain < last_hour - 1:
+        # Rain present from (near) window start, stops early → ends_early
+        if isolated_after and not isolated_before:
             return {
                 "kind": "ends_early",
                 "end_hour": last_rain,

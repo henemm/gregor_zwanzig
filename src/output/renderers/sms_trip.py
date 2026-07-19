@@ -18,11 +18,14 @@ import re
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
-from app.models import ExposedSection, RiskLevel, RiskType, SegmentWeatherData
+from app.models import (
+    ExposedSection, NormalizedTimeseries, RiskLevel, RiskType, SegmentWeatherData,
+)
 from services.risk_engine import RiskEngine
 from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt, local_hour
 from output.metric_format import thunder_label_value
+from output.renderers.day_window import build_day_window_points
 from output.renderers.sms import render_sms
 from output.tokens.builder import build_token_line
 from output.tokens.dto import (
@@ -72,6 +75,7 @@ def _segments_to_normalized_forecast(
     segments: list[SegmentWeatherData],
     *,
     tz: ZoneInfo = ZoneInfo("UTC"),
+    night_weather: Optional[NormalizedTimeseries] = None,
 ) -> NormalizedForecast:
     """Aggregate trip segments into a single-day NormalizedForecast.
 
@@ -80,6 +84,11 @@ def _segments_to_normalized_forecast(
     Hourly samples are derived from segment aggregates (synthetic peaks
     placed at segment-start-hour) so the render_threshold_peak_value()
     path of the builder produces the right '{val}@{hour}h' tokens.
+
+    Issue #1317 / Epic #1319 Scheibe A: R/PR/W/G/TH-Token kommen aus dem
+    geteilten Tagesfenster 04:00-19:00 (``day_window.build_day_window_points``)
+    statt nur aus der Wanderzeit — ortsgenau bis zur Ankunft entlang der
+    Route, danach am Ziel (``night_weather``).
     """
     if not segments:
         raise ValueError("Cannot build forecast: no segments")
@@ -96,50 +105,46 @@ def _segments_to_normalized_forecast(
     gust_samples: list[HourlyValue] = []
     pop_samples: list[HourlyValue] = []
     thunder_samples: list[HourlyValue] = []
+
+    # Bug #925: Stunden-Token aus der ECHTEN Stunden-Zeitreihe (Ortszeit)
+    # ableiten — deckungsgleich mit der E-Mail-Tabelle. Onset@h(Peak@h) statt
+    # Etappen-Summe @ Etappen-Start. Vorbild: _build_stage_trend.
+    for dp in build_day_window_points(segments, night_weather, tz=tz):
+        lh = local_hour(dp.ts, tz)
+        if dp.precip_1h_mm is not None and dp.precip_1h_mm > 0:
+            rain_samples.append(HourlyValue(lh, float(dp.precip_1h_mm)))
+        if dp.wind10m_kmh is not None and dp.wind10m_kmh > 0:
+            wind_samples.append(HourlyValue(lh, float(dp.wind10m_kmh)))
+        if dp.gust_kmh is not None and dp.gust_kmh > 0:
+            gust_samples.append(HourlyValue(lh, float(dp.gust_kmh)))
+        pop = getattr(dp, "pop_pct", None)
+        if pop is not None and pop > 0:
+            pop_samples.append(HourlyValue(lh, float(pop)))
+        # Issue #1275 / ADR-0025: Gewitter aus DERSELBEN gefensterten
+        # Zeitreihe wie Regen/Wind/Boeen. Ohne diese Zeile bleibt
+        # thunder_hourly leer und `TH:` ist strukturell immer "-".
+        th_val = thunder_label_value(dp.thunder_level)
+        if th_val > 0:
+            thunder_samples.append(HourlyValue(lh, float(th_val)))
+
+    # Fail-soft: Segmente ohne Stunden-Zeitreihe (Provider-Fehler) → Etappen-
+    # Aggregat am Etappen-Start als Rückfall (Bug #398-Verhalten). Bleibt
+    # unveraendert ausserhalb des Tagesfensters, da diese Segmente auch nicht
+    # in build_day_window_points() einfliessen.
     for seg in segments:
-        agg = seg.aggregated
-        # Bug #925: Stunden-Token aus der ECHTEN Stunden-Zeitreihe (Ortszeit)
-        # ableiten — deckungsgleich mit der E-Mail-Tabelle. Onset@h(Peak@h) statt
-        # Etappen-Summe @ Etappen-Start. Vorbild: _build_stage_trend.
         ts = seg.timeseries
         if ts is not None and ts.data:
-            # Auf das Etappen-Zeitfenster filtern — identisch zu
-            # extract_hourly_rows (E-Mail), inkl. Mitternachts-Überlauf (#399).
-            start_h = seg.segment.start_time.hour
-            end_h = seg.segment.end_time.hour
-            for dp in ts.data:
-                h = dp.ts.hour
-                in_window = (start_h <= h <= end_h) if start_h <= end_h else (h >= start_h or h <= end_h)
-                if not in_window:
-                    continue
-                lh = local_hour(dp.ts, tz)
-                if dp.precip_1h_mm is not None and dp.precip_1h_mm > 0:
-                    rain_samples.append(HourlyValue(lh, float(dp.precip_1h_mm)))
-                if dp.wind10m_kmh is not None and dp.wind10m_kmh > 0:
-                    wind_samples.append(HourlyValue(lh, float(dp.wind10m_kmh)))
-                if dp.gust_kmh is not None and dp.gust_kmh > 0:
-                    gust_samples.append(HourlyValue(lh, float(dp.gust_kmh)))
-                pop = getattr(dp, "pop_pct", None)
-                if pop is not None and pop > 0:
-                    pop_samples.append(HourlyValue(lh, float(pop)))
-                # Issue #1275 / ADR-0025: Gewitter aus DERSELBEN gefensterten
-                # Zeitreihe wie Regen/Wind/Boeen. Ohne diese Zeile bleibt
-                # thunder_hourly leer und `TH:` ist strukturell immer "-".
-                th_val = thunder_label_value(dp.thunder_level)
-                if th_val > 0:
-                    thunder_samples.append(HourlyValue(lh, float(th_val)))
-        else:
-            # Fail-soft: keine Stunden-Zeitreihe (Provider-Fehler) → Etappen-Aggregat
-            # am Etappen-Start als Rückfall (Bug #398-Verhalten).
-            hour = local_hour(seg.segment.start_time, tz)
-            if agg.precip_sum_mm is not None and agg.precip_sum_mm > 0:
-                rain_samples.append(HourlyValue(hour, float(agg.precip_sum_mm)))
-            if agg.wind_max_kmh is not None and agg.wind_max_kmh > 0:
-                wind_samples.append(HourlyValue(hour, float(agg.wind_max_kmh)))
-            if agg.gust_max_kmh is not None and agg.gust_max_kmh > 0:
-                gust_samples.append(HourlyValue(hour, float(agg.gust_max_kmh)))
-            if agg.pop_max_pct is not None and agg.pop_max_pct > 0:
-                pop_samples.append(HourlyValue(hour, float(agg.pop_max_pct)))
+            continue
+        agg = seg.aggregated
+        hour = local_hour(seg.segment.start_time, tz)
+        if agg.precip_sum_mm is not None and agg.precip_sum_mm > 0:
+            rain_samples.append(HourlyValue(hour, float(agg.precip_sum_mm)))
+        if agg.wind_max_kmh is not None and agg.wind_max_kmh > 0:
+            wind_samples.append(HourlyValue(hour, float(agg.wind_max_kmh)))
+        if agg.gust_max_kmh is not None and agg.gust_max_kmh > 0:
+            gust_samples.append(HourlyValue(hour, float(agg.gust_max_kmh)))
+        if agg.pop_max_pct is not None and agg.pop_max_pct > 0:
+            pop_samples.append(HourlyValue(hour, float(agg.pop_max_pct)))
 
     # Bug #925 / F002: Grenz-Stunden zwischen aufeinanderfolgenden Etappen
     # (seg1.end_h == seg2.start_h, beide inklusiv) können dieselbe Stunde doppelt
@@ -195,6 +200,7 @@ class SMSTripFormatter:
         thresholds: Optional[dict[str, float]] = None,
         thunder_forecast: Optional[dict] = None,
         disabled_specs: Optional[list[MetricSpec]] = None,
+        night_weather: Optional[NormalizedTimeseries] = None,
     ) -> str:
         """Generate v2.0 SMS via TokenLine pipeline.
 
@@ -208,6 +214,8 @@ class SMSTripFormatter:
                 (abwärtskompatibel: UTC→UTC = keine Verschiebung).
             thresholds: Issue #624 — optionale Map {SMS-Symbol: Schwellwert}.
                 None = bisheriges DEFAULTS-Verhalten (bit-identisch).
+            night_weather: Issue #1317 / Epic #1319 — Rohdaten Ankunft→06:00
+                am Ziel; None = fail-soft, reine Segment-Fensterung (AC-9).
 
         Returns:
             v2.0 wire-format string, ≤ max_length chars.
@@ -220,7 +228,7 @@ class SMSTripFormatter:
         self._exposed_sections = exposed_sections
         self._tz = tz
 
-        forecast = _segments_to_normalized_forecast(segments, tz=tz)
+        forecast = _segments_to_normalized_forecast(segments, tz=tz, night_weather=night_weather)
 
         # Bug #874: TH+: immer als days[1] einbauen — TH+:- wenn kein Gewitter (Spec-Pflicht).
         # Issue #1275 / ADR-0025 Entscheidung 3: Level-Wert kommt aus der

@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
 from app.models import (
-    ExposedSection, SegmentWeatherData, UnifiedWeatherDisplayConfig,
-    WeatherChange,
+    ExposedSection, NormalizedTimeseries, SegmentWeatherData,
+    UnifiedWeatherDisplayConfig, WeatherChange,
 )
 from app.profile import ActivityProfile
 
@@ -36,6 +36,7 @@ def render_email(
     seg_tables: list[list[dict]],
     display_config: UnifiedWeatherDisplayConfig,
     night_rows: Optional[list[dict]] = None,
+    night_weather: Optional[NormalizedTimeseries] = None,
     thunder_forecast: Optional[dict] = None,
     multi_day_trend: Optional[list[dict]] = None,
     changes: Optional[list[WeatherChange]] = None,
@@ -85,6 +86,7 @@ def render_email(
             stage_name=stage_name,
             stage_stats=stage_stats,
             profile=profile,
+            night_weather=night_weather,
         )
         return "", compact_text
 
@@ -103,6 +105,7 @@ def render_email(
         report_type=report_type,
         dc=display_config,
         night_rows=night_rows_list,
+        night_weather=night_weather,
         thunder_forecast=thunder_forecast,
         changes=changes,
         stage_name=stage_name,
@@ -130,6 +133,7 @@ def render_email(
         report_type=report_type,
         dc=display_config,
         night_rows=night_rows_list,
+        night_weather=night_weather,
         thunder_forecast=thunder_forecast,
         changes=changes,
         stage_name=stage_name,

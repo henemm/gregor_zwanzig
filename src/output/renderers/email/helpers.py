@@ -26,7 +26,7 @@ from app.metric_catalog import (
     get_col_defs, get_metric, get_metric_by_col_key,
 )
 from app.models import (
-    ForecastDataPoint, ThunderLevel,
+    ForecastDataPoint, NormalizedTimeseries, ThunderLevel,
     UnifiedWeatherDisplayConfig,
 )
 from utils.geo import degrees_to_compass
@@ -1425,32 +1425,25 @@ def _pill_for_metric(
     return None
 
 
-def build_metrics_summary_pills(
-    segments: list,
-    metric_ids: list[str],
-    thresholds: dict,
-    *,
-    tz: "ZoneInfo",
-) -> list[tuple[str, str]]:
-    """Issue #664/#795: Build one (text, tone) pill per metric from segment data.
+# Issue #1317-Nachtrag: NUR die SMS-Wert-Token R/PR/W/G/TH: teilen sich das
+# erweiterte Tagesfenster 04-19+Ziel (build_day_window_points). Temperatur/
+# gefuehlte Temperatur (SMS-Token N/D bleiben auf der Wanderzeit, s.
+# tokens/builder.py) und alle uebrigen Pillen bleiben auf der bisherigen
+# Wanderzeit-Quelle — sonst zeigt die Temperatur-Kachel eine andere Spanne
+# als SMS N/D (ADR-0025-Widerspruch, QA-Befund zu #1319 Scheibe A).
+_DAY_WINDOW_PILL_IDS = frozenset({"wind", "gust", "precipitation", "rain_probability", "thunder"})
 
-    metric_ids: list of metric IDs to render (from display_config, E-Mail enabled).
-    thresholds: dict[metric_id -> float] (unbenutzt seit #795 — Erwaehnungs-
-        schwellen kommen SMS-identisch aus _sms_mention_threshold; bleibt im
-        Signatur-Vertrag fuer Rueckwaertskompatibilitaet).
-    tz: local timezone for hour formatting.
-    Returns list of (text, tone) tuples in catalog order.
-    """
-    # Collect all data-points from all segments
+
+def _collect_hiking_window_dps(segments: list) -> list:
+    """Alte Wanderzeit-Fensterung (vor #1317/day_window) — pro Segment
+    inklusiver Start/exklusives Ende, letztes Segment inklusive Ende (Bug
+    #1146/#807). Bleibt die Quelle fuer Temperatur/gefuehlte Temperatur und
+    alle Pillen ausserhalb von ``_DAY_WINDOW_PILL_IDS``."""
     all_dps = []
     last_idx = len(segments) - 1
     for idx, seg_data in enumerate(segments):
         ts = getattr(seg_data, "timeseries", None)
         if ts is not None:
-            # Bug #807: Filter data points to segment window.
-            # Mirror Bug #806 logic (inclusive start, exclusive end).
-            # Bug #1146: last segment's window end is inclusive, matching
-            # the hourly table's arrival-hour handling.
             s = seg_data.segment
             s_h = s.start_time.hour
             e_h = s.end_time.hour
@@ -1463,6 +1456,37 @@ def build_metrics_summary_pills(
                     include = (h >= s_h or h <= e_h) if is_last else (h >= s_h or h < e_h)
                 if include:
                     all_dps.append(dp)
+    return all_dps
+
+
+def build_metrics_summary_pills(
+    segments: list,
+    metric_ids: list[str],
+    thresholds: dict,
+    *,
+    tz: "ZoneInfo",
+    night_weather: Optional[NormalizedTimeseries] = None,
+) -> list[tuple[str, str]]:
+    """Issue #664/#795: Build one (text, tone) pill per metric from segment data.
+
+    metric_ids: list of metric IDs to render (from display_config, E-Mail enabled).
+    thresholds: dict[metric_id -> float] (unbenutzt seit #795 — Erwaehnungs-
+        schwellen kommen SMS-identisch aus _sms_mention_threshold; bleibt im
+        Signatur-Vertrag fuer Rueckwaertskompatibilitaet).
+    tz: local timezone for hour formatting.
+    night_weather: Issue #1317 / Epic #1319 — Rohdaten Ankunft→06:00 am Ziel;
+        None = fail-soft, reine Segment-Fensterung (AC-9). Nur die Wert-Pillen
+        Wind/Boen/Regen/Regenwahrsch./Gewitter (``_DAY_WINDOW_PILL_IDS``)
+        decken damit dasselbe Tagesfenster 04-19 ab wie SMS/Kurzzusammenfassung/
+        Telegram-Fusszeile (ADR-0025-Konsistenz). Temperatur/gefuehlte
+        Temperatur und alle uebrigen Pillen bleiben auf der Wanderzeit-Quelle
+        (QA-Nachtrag: sonst widerspricht die Temperatur-Kachel den SMS-Token
+        N/D — s. ``_collect_hiking_window_dps``).
+    Returns list of (text, tone) tuples in catalog order.
+    """
+    from output.renderers.day_window import build_day_window_points
+    window_dps = build_day_window_points(segments, night_weather, tz)
+    hiking_dps = _collect_hiking_window_dps(segments)
 
     # Render in catalog order
     ids_set = set(metric_ids)
@@ -1470,7 +1494,8 @@ def build_metrics_summary_pills(
     for mid in _PILL_CATALOG_ORDER:
         if mid not in ids_set:
             continue
-        pill = _pill_for_metric(mid, thresholds, all_dps, tz=tz)
+        dps = window_dps if mid in _DAY_WINDOW_PILL_IDS else hiking_dps
+        pill = _pill_for_metric(mid, thresholds, dps, tz=tz)
         if pill is not None:
             pills.append(pill)
     return pills

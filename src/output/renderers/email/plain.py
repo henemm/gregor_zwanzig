@@ -17,7 +17,7 @@ from app.models import (
 )
 
 if TYPE_CHECKING:
-    from app.models import StabilityResult
+    from app.models import NormalizedTimeseries, StabilityResult
     from services.day_comparison import DayComparison
 from app.profile import ActivityProfile
 from utils.timezone import local_fmt
@@ -79,7 +79,8 @@ def render_plain(
     report_type: str,
     dc: UnifiedWeatherDisplayConfig,
     night_rows: list[dict],
-    thunder_forecast: Optional[dict],
+    night_weather: Optional["NormalizedTimeseries"] = None,
+    thunder_forecast: Optional[dict] = None,
     changes: Optional[list[WeatherChange]],
     stage_name: Optional[str],
     stage_stats: Optional[dict],
@@ -153,7 +154,7 @@ def render_plain(
         if mc.alert_enabled and mc.alert_threshold is not None
     }
     _plain_pills = build_metrics_summary_pills(
-        segments, _pill_metric_ids, _pill_thresholds, tz=tz
+        segments, _pill_metric_ids, _pill_thresholds, tz=tz, night_weather=night_weather,
     )
     lines.append("━━ Metriken-Überblick ━━")
     for _lbl, _tone in _plain_pills:

@@ -180,3 +180,18 @@ Known-Issues-Dokument stand und nicht als bindende Regel.
   Der Versandweg selbst bleibt unverändert. Damit gilt „eine Gewitter-Quelle" jetzt
   nachweislich für **alle** Aufrufer von `format_email()`/`format_sms()`, nicht nur den
   Scheduler-Versand.
+- **2026-07-19 (Novellierung Fenster-Definition, Epic #1319 Scheibe A):** Die Entscheidung
+  „ein Fenster für alle Kanäle" bleibt bestehen, aber die **Fensterdefinition** wird von
+  „Wanderzeit der Etappe" auf ein **festes Tagesfenster 04:00–19:00 Ortszeit** erweitert —
+  ortsgenau: bis zur Ankunft entlang der Route (Segment-Zeitreihen), danach am Ziel
+  (`night_weather`), gespeist aus denselben Rohdaten wie die Detailtabelle. Grund: Die alte
+  Wanderzeit-Definition ließ Wetter **nach** der Ankunft am Ziel (Nachmittags-/Abendgewitter
+  am Lagerplatz, #1317) und **vor** dem Aufbruch strukturell aus allen vier Kurzformen fallen.
+  Gilt zunächst nur für die Wert-Token **R/PR/W/G/TH:** (geteiltes Modul
+  `src/output/renderers/day_window.py`, alle vier Kurzformen konsumieren dieselbe Funktion);
+  **N/D-Temperatur** bleibt bewusst bei der Wanderzeit-Quelle (Konsistenz SMS↔E-Mail, folgt in
+  Scheibe D), **TH+:** unverändert (Folgetag-Vorschau). Das Fenster ist in Scheibe A eine feste
+  Konstante; Einstellbarkeit pro Wanderung folgt in Scheibe B/C. **Adversary-Fang:** Erst-Fix
+  verglich die Ortszeit-Konstante gegen UTC-Stunden (F001, CRITICAL) — für jede reale Zeitzone
+  wären lokal 04:00/05:00 verloren gegangen; behoben (durchgängig `local_hour()`), Testfixture
+  auf `Europe/Paris` umgestellt. Spec: `docs/specs/modules/sms_daywindow_aggregation.md`.

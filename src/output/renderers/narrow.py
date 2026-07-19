@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
 if TYPE_CHECKING:
+    from app.models import NormalizedTimeseries
     from services.day_comparison import DayComparison
 
 from app.metric_catalog import get_metric
@@ -161,54 +162,38 @@ def _thunder_severity(level: Optional[ThunderLevel]) -> int:
     return thunder_ordinal(level)
 
 
-def _windowed_thunder_severity(seg_data: SegmentWeatherData) -> int:
-    """Schlimmstes Gewitter-Ordinal INNERHALB der geplanten Wanderzeit (#1275).
-
-    ADR-0025, Entscheidungen 1+2: Gewitter kommt aus ``dp.thunder_level`` der
-    Segment-Zeitreihe, gefenstert auf ``start_h <= h <= end_h`` — dieselbe Quelle
-    und dieselbe Fensterung wie SMS (``sms_trip.py``) und E-Mail
-    (``trip_report.py:_extract_hourly_rows``), inkl. Mitternachts-Ueberlauf (#399).
-
-    Frueher las die Fusszeile ``agg.thunder_level_max``; das rechnet
-    ``weather_metrics.py:596-598`` ueber die UNGEFENSTERTE Zeitreihe — ein
-    Gewitter um 02:00 meldete Telegram als HIGH, waehrend SMS/E-Mail zu Recht
-    schwiegen. Aggregate sind fuer nutzersichtbare Kanal-Aussagen nicht zulaessig.
-    """
-    ts = seg_data.timeseries
-    if seg_data.has_error or ts is None or not ts.data:
-        return 0
-    start_h = seg_data.segment.start_time.hour
-    end_h = seg_data.segment.end_time.hour
-    worst = 0
-    for dp in ts.data:
-        h = dp.ts.hour
-        in_window = (start_h <= h <= end_h) if start_h <= end_h else (h >= start_h or h <= end_h)
-        if not in_window:
-            continue
-        sev = _thunder_severity(dp.thunder_level)
-        if sev > worst:
-            worst = sev
-    return worst
-
-
 def _tg_day_footer(
-    segments: list[SegmentWeatherData], enabled_metric_ids: set[str] | list[str]
+    segments: list[SegmentWeatherData],
+    enabled_metric_ids: set[str] | list[str],
+    *,
+    night_weather: Optional["NormalizedTimeseries"] = None,
+    tz: ZoneInfo = ZoneInfo("UTC"),
 ) -> Optional[str]:
     """Fußzeile mit Tageswerten (AC-6): ⚡ kein|MED|HIGH · Sicht gut|… · 0°C-Grenze N m.
 
     Issue #954: jeder Teil erscheint nur, wenn die zugehörige Metrik in
     ``enabled_metric_ids`` aktiviert ist.
+
+    Gewitter (Issue #1317 / Epic #1319 Scheibe A): schlimmstes Ordinal aus dem
+    geteilten Tagesfenster 04-19 (``day_window.build_day_window_points``) —
+    dieselbe Quelle und dasselbe Fenster wie SMS/Kurzzusammenfassung/Pillen
+    (ADR-0025-Konsistenz), statt nur der Wanderzeit je Segment (#1275).
     """
+    from output.renderers.day_window import build_day_window_points
+
     enabled = set(enabled_metric_ids)
     max_thunder_sev = 0
     min_vis: Optional[int] = None
     rep_freeze: Optional[int] = None
 
+    if "thunder" in enabled:
+        for dp in build_day_window_points(segments, night_weather, tz):
+            sev = _thunder_severity(dp.thunder_level)
+            if sev > max_thunder_sev:
+                max_thunder_sev = sev
+
     for sd in segments:
         agg = sd.aggregated
-        sev = _windowed_thunder_severity(sd)
-        if sev > max_thunder_sev:
-            max_thunder_sev = sev
         if agg.visibility_min_m is not None:
             if min_vis is None or agg.visibility_min_m < min_vis:
                 min_vis = agg.visibility_min_m
@@ -398,6 +383,7 @@ def render_telegram_bubbles(
     stability_result: Optional[StabilityResult] = None,
     multi_day_trend: Optional[list[dict]] = None,
     day_comparison: Optional["DayComparison"] = None,
+    night_weather: Optional["NormalizedTimeseries"] = None,
 ) -> list[TelegramBubble]:
     """Render die Telegram-Briefing-Bubble-Liste (Issue #1001). Pure function.
 
@@ -431,7 +417,8 @@ def render_telegram_bubbles(
     for mid in dc.get_enabled_metric_ids():
         overview_lines.extend(_wrap(_esc(_overview_line(mid, seg_tables, fkeys)), _TG_PROSE_WIDTH))
     footer = _tg_day_footer(
-        [sd for sd in segments if not sd.has_error], dc.get_enabled_metric_ids()
+        [sd for sd in segments if not sd.has_error], dc.get_enabled_metric_ids(),
+        night_weather=night_weather, tz=tz,
     )
     if footer:
         overview_lines.append("")

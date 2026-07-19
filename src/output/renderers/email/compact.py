@@ -27,7 +27,7 @@ from output.renderers.alert.official_alerts import (
 )
 
 if TYPE_CHECKING:
-    from app.models import StabilityResult
+    from app.models import NormalizedTimeseries, StabilityResult
 from app.profile import ActivityProfile
 
 # ---------------------------------------------------------------------------
@@ -92,6 +92,7 @@ def render_compact(
     stage_name: Optional[str],
     stage_stats: Optional[dict],
     profile: Optional[ActivityProfile] = None,
+    night_weather: Optional["NormalizedTimeseries"] = None,
     **_ignored,
 ) -> str:
     """Render compact plain-text e-mail body. Pure function.
@@ -141,7 +142,9 @@ def render_compact(
         for mc in dc.metrics
         if mc.alert_enabled and mc.alert_threshold is not None
     }
-    pills = build_metrics_summary_pills(segments, metric_ids, thresholds, tz=tz)
+    pills = build_metrics_summary_pills(
+        segments, metric_ids, thresholds, tz=tz, night_weather=night_weather,
+    )
     lines.append("== Metriken-Ueberblick ==")
     for label, tone in pills:
         # Issue #795/AC-10: dezentes ASCII-Schwerezeichen aus der Ampelstufe

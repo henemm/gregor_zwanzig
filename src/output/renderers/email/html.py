@@ -19,7 +19,7 @@ from app.models import (
 )
 
 if TYPE_CHECKING:
-    from app.models import StabilityResult
+    from app.models import NormalizedTimeseries, StabilityResult
     from services.day_comparison import DayComparison
 from app.profile import ActivityProfile
 from utils.timezone import local_fmt
@@ -775,7 +775,8 @@ def render_html(
     report_type: str,
     dc: UnifiedWeatherDisplayConfig,
     night_rows: list[dict],
-    thunder_forecast: Optional[dict],
+    night_weather: Optional["NormalizedTimeseries"] = None,
+    thunder_forecast: Optional[dict] = None,
     changes: Optional[list[WeatherChange]],
     stage_name: Optional[str],
     stage_stats: Optional[dict],
@@ -1197,7 +1198,7 @@ def render_html(
         if mc.alert_enabled and mc.alert_threshold is not None
     }
     _pills = build_metrics_summary_pills(
-        segments, _pill_metric_ids, _pill_thresholds, tz=tz
+        segments, _pill_metric_ids, _pill_thresholds, tz=tz, night_weather=night_weather,
     )
     # AC-7 (#911): Abstände laut Vorlage EmailMetricsSummary
     _chips_html = "".join(pill_html(lbl, tone) for lbl, tone in _pills)

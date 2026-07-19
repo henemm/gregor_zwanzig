@@ -123,7 +123,9 @@ class TripReportFormatter:
         # F2: Compact summary (natural-language per stage)
         compact_summary = None
         if options.show_compact_summary:
-            compact_summary = self._generate_compact_summary(segments, stage_name, dc)
+            compact_summary = self._generate_compact_summary(
+                segments, stage_name, dc, night_weather,
+            )
 
         # β3 Adapter (§A2/§A6): RENDER an pure renderer delegieren.
         # Domain-Werte (highlights, compact_summary) sind oben berechnet; tz,
@@ -151,6 +153,7 @@ class TripReportFormatter:
             seg_tables=seg_tables,
             display_config=dc,
             night_rows=night_rows,
+            night_weather=night_weather,
             thunder_forecast=thunder_forecast,
             multi_day_trend=effective_trend,
             changes=changes,
@@ -198,6 +201,7 @@ class TripReportFormatter:
             stability_result=stability_result,
             multi_day_trend=effective_trend,
             day_comparison=day_comparison,
+            night_weather=night_weather,
         )
         telegram_bubbles = [b.text for b in telegram_bubbles_result]
         telegram_actions_markup = (
@@ -230,6 +234,7 @@ class TripReportFormatter:
             thresholds=_sms_thr or None,
             thunder_forecast=thunder_forecast,
             disabled_specs=_disabled_sms_specs or None,
+            night_weather=night_weather,
         )
 
         # Issue #1001 AC-10: telegram_kurzform ist wirkungslos (Kurzuebersicht-
@@ -701,13 +706,16 @@ class TripReportFormatter:
         segments: list[SegmentWeatherData],
         stage_name: Optional[str],
         dc: UnifiedWeatherDisplayConfig,
+        night_weather: Optional[NormalizedTimeseries] = None,
     ) -> Optional[str]:
         """Generate compact natural-language summary for the stage."""
         if not segments or not stage_name:
             return None
         from output.renderers.compact_summary import CompactSummaryFormatter
         formatter = CompactSummaryFormatter()
-        return formatter.format_stage_summary(segments, stage_name, dc, tz=self._tz)
+        return formatter.format_stage_summary(
+            segments, stage_name, dc, tz=self._tz, night_weather=night_weather,
+        )
 
     @staticmethod
     def _shorten_stage_name(name: str, max_len: int = 25) -> str:
