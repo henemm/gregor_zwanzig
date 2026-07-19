@@ -8,7 +8,7 @@
 - `docs/specs/modules/feat_1273_s3_redirect.md` (Slice S3 — Edit-Route wird reiner Redirect) — Approved, Adversary-Verdict AMBIGUOUS→behoben, alle 7 ACs CONFIRMED
 - `docs/context/epic-1273-compare-one-surface.md` (Kontext-/Analyse-Dokument, Scheiben-Schnitt)
 
-**Child Slices:** S1 ✓ (2026-07-16) · S2 ✓ (2026-07-17) · S3 ✓ (2026-07-17) · S4a ✓ Teilmenge 4/26 e2e (2026-07-17) · S4b ✓ (2026-07-17) · S4c offen (~19 verbleibende e2e-Specs, neu entdeckt bei S4a) · S5 offen, blockiert durch S4c
+**Child Slices:** S1 ✓ (2026-07-16) · S2 ✓ (2026-07-17) · S3 ✓ (2026-07-17) · S4a ✓ Teilmenge 4/26 e2e (2026-07-17) · S4b ✓ (2026-07-17) · S4c ✓ (2026-07-19, Commit `c822cb85`, #1301 F1-Rest: 19 Specs auf Hub/Create-Wizard migriert, Adversary VERIFIED nach 4 Runden) · S5 entblockt (nur noch offene Scheibe)
 
 **PO-Auftrag:** Prod-Audit, Befund 9, 2026-07-16.
 
@@ -45,8 +45,8 @@ Der heutige Ortsvergleich hat zwei Bearbeiten-Flächen: den Detail-Hub `CompareT
 | **S3** | 7 produktive Link-Stellen auf den Hub umbiegen (inkl. Hash→Query-Fix `#idealwerte`→`?tab=idealwerte`, `#schedule`→`?tab=versand`) + Redirect-Route (`/edit` → `/compare/[id]?tab=`) | ✓ fertig 2026-07-17 |
 | **S4a** | Teilmenge der ~26 e2e-Specs: 4 Dateien, die nur totes Editor-Chrome oder eine überholte URL prüfen (löschen/URL-Fix) — NICHT die vollständigen ~26, s. Korrektur unten | ✓ Complete 2026-07-17 |
 | **S4b** | ~15 Unit-Tests (Source-Inspection auf `CompareEditor.svelte`) migrieren/löschen | ✓ Complete 2026-07-17 |
-| **S4c** *(neu, 2026-07-17 bei S4a-Recherche entdeckt)* | ~19 verbleibende e2e-Specs, die gültige Fachlogik über den alten Editor prüfen (Idealwerte, Alarme, Radar-Toggle, Altfelder-Erhalt beim Speichern — Bezug BUG-DATALOSS-GR221/#102 —, Versand-Tab, Autosave-Mandantentrennung) strukturell auf den Hub umziehen (Testids, Autosave-Warten statt Save-Klick) | Geplant — **muss vor S5 abgeschlossen sein**, sonst reißt die Editor-Löschung diese Tests ersatzlos |
-| **S5** | Cleanup: `CompareEditor.svelte` + `/edit`-Route löschen, verwaiste Helper prüfen (netto ~-1900 LoC, Sonderfall wie #616) | Geplant, blockiert durch S4b + S4c |
+| **S4c** *(neu, 2026-07-17 bei S4a-Recherche entdeckt)* | ~19 verbleibende e2e-Specs, die gültige Fachlogik über den alten Editor prüfen (Idealwerte, Alarme, Radar-Toggle, Altfelder-Erhalt beim Speichern — Bezug BUG-DATALOSS-GR221/#102 —, Versand-Tab, Autosave-Mandantentrennung) strukturell auf den Hub umziehen (Testids, Autosave-Warten statt Save-Klick) | ✓ Complete 2026-07-19 (`c822cb85`, Spec `epic_1273_s4c_e2e_migration.md`): 9 Dateien Hub-Klasse, 5 Wizard-Klasse (echter Klickpfad ab `/compare/new`), Chrome-DELETEs spec-autorisiert; Autosave-ACs auf Hub-Semantik (1 PUT/Aktion, echte Navigations-Race); 4 vorbestehend faule Fixtures repariert (skitour-Profil, Registrierung ohne E-Mail #1226, Metrik-Keys, mail_to-Reset-Pointer-Falle) |
+| **S5** | Cleanup: `CompareEditor.svelte` + `/edit`-Route löschen, verwaiste Helper prüfen (netto ~-1900 LoC, Sonderfall wie #616). **Achtung Widerspruch klären:** Ziel-Hierarchie unten sagt „Create-Wizard bleibt unverändert" (rendert `CompareEditor mode="create"`), #1301 F2 sagt „CompareEditor.svelte löschen" — vor S5-Spec entscheiden, was aus der Anlege-Strecke wird | Entblockt (S4a/S4b/S4c ✓) — als #1301 F2 geplant |
 
 **Reihenfolge:** S1 → S2 → S3 → (S4a/S4b/S4c parallel) → S5. Nach jeder Scheibe ist die App voll funktionsfähig — additiv bis S3, S3 macht die alte Route zum reinen Redirect ohne Codelöschung (sicherer Rollback-Punkt), S4a/S4b/S4c sind reine Testarbeit, S5 räumt erst auf wenn alles grün ist.
 
