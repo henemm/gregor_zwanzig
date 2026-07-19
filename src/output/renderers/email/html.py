@@ -28,7 +28,8 @@ from src.output.renderers.email.helpers import (
     ampel_level,
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
     build_segment_label, build_units_legend,
-    derive_horizon, fmt_val, format_change_line, format_trend_tokens, pill_html,
+    derive_horizon, fmt_val, format_change_line, format_km_range,
+    format_trend_tokens, pill_html,
     render_origin_footer_html,
     shorten_stage_name, visible_cols,
 )
@@ -1031,7 +1032,7 @@ def render_html(
                 f'color:#c45a2a;letter-spacing:0.1em;">SEG {seg_id}</span>'
                 f'</div>'
                 f'<div style="font-family:{FONT_DATA};font-size:11px;color:#6b6962;">'
-                f'{seg_time} · {_from_km:.1f} km - {_to_km:.1f} km · '
+                f'{seg_time} · {format_km_range(_from_km, _to_km)} · '
                 f'{s_elev} - {e_elev} m</div>'
                 f'</div>'
             )
@@ -1051,7 +1052,7 @@ def render_html(
                 f'<div style="font-size:12px;font-weight:600;color:{G_INK};'
                 f'border-bottom:2px solid {G_ACCENT};'
                 f'padding:10px 0 6px 0;margin-top:12px;">'
-                f'SEG {seg_id} · {seg_time}</div>'
+                f'SEG {seg_id} · {seg_time} · {format_km_range(_from_km, _to_km)}</div>'
             )
             compact_rows = _render_mobile_compact_rows(
                 rows, friendly_keys=friendly_keys,

@@ -25,7 +25,7 @@ from utils.timezone import local_fmt
 from src.output.renderers.email.helpers import (
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
     build_segment_label,
-    build_units_legend, fmt_val, format_change_line,
+    build_units_legend, fmt_val, format_change_line, format_km_range,
     render_origin_footer_text, tone_symbol, visible_cols,
 )
 from src.output.renderers.email.profile_signature import profile_signature
@@ -219,7 +219,11 @@ def render_plain(
             lines.append(f"━━ \U0001f3c1 Wetter am Ziel: {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | {s_elev}m ━━")
         else:
             elev_arrow = "↑" if e_elev >= s_elev else "↓"
-            lines.append(f"━━ Segment {seg.segment_id}: km {seg.start_point.distance_from_start_km:.1f}–{seg.end_point.distance_from_start_km:.1f} | {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | {elev_arrow}{s_elev}m → {e_elev}m ━━")
+            _km_range = format_km_range(
+                seg.start_point.distance_from_start_km,
+                seg.end_point.distance_from_start_km,
+            )
+            lines.append(f"━━ Segment {seg.segment_id}: {_km_range} | {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | {elev_arrow}{s_elev}m → {e_elev}m ━━")
         lines.append(_render_text_table(rows, friendly_keys=friendly_keys, format_modes=format_modes))
         lines.append("")
 

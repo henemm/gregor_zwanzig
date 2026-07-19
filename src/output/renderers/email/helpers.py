@@ -898,6 +898,17 @@ def _fmt_km(value: float) -> str:
     return f"{value:.1f}".rstrip("0").rstrip(".")
 
 
+def format_km_range(from_km: float, to_km: float) -> str:
+    """'km 0.0–4.2' (En-Dash, feste Nachkommastelle inkl. '.0').
+
+    Issue #574: geteilte Segment-Header-Formatierung (HTML + Plain).
+    Bewusst getrennt von `_fmt_km`/`build_segment_label` (Alert-Pfad,
+    strippt '.0') — siehe ADR in
+    docs/specs/modules/feature_574_segment_km_header.md.
+    """
+    return f"km {from_km:.1f}–{to_km:.1f}"
+
+
 def build_segment_label(change, segments, *, tz: ZoneInfo = ZoneInfo("UTC"), stage_label: str | None = None) -> str:
     """
     Liefert 'Segment N (HH:MM–HH:MM)' oder '🏁 Ziel (HH:MM)' aus segment_id +

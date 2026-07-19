@@ -16,8 +16,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import pytest
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -277,7 +275,6 @@ class TestAC1PlainTextKmRange:
 
 class TestAC2HtmlKmRangeNormalSegmentOnly:
 
-    @pytest.mark.xfail(reason="#1310: Segment-km-Header nie implementiert (nie implementierte Alt-Spec)", strict=False)
     def test_html_normal_segment_has_km_range(self):
         """
         AC-2 (Teil 1): HTML-<h3> des normalen Segments enthält 'km 0.0–4.2'.
@@ -313,7 +310,6 @@ class TestAC2HtmlKmRangeNormalSegmentOnly:
             "aber nicht gefunden."
         )
 
-    @pytest.mark.xfail(reason="#1310: Segment-km-Header nie implementiert (nie implementierte Alt-Spec)", strict=False)
     def test_html_destination_segment_has_no_km_range(self):
         """
         AC-2 (Teil 2): Ziel-Segment-Header enthält KEIN 'km X.X–Y.Y'.
@@ -345,7 +341,7 @@ class TestAC2HtmlKmRangeNormalSegmentOnly:
             friendly_keys=set(),
         )
         # Ziel-Block isolieren
-        ziel_idx = result.find("Wetter am Ziel")
+        ziel_idx = result.find("WETTER AM ZIEL")
         assert ziel_idx != -1, "Ziel-Segment-Block nicht gefunden"
         # Im Ziel-Block darf kein km-Bereich stehen
         ziel_block = result[ziel_idx:ziel_idx + 200]
@@ -362,7 +358,6 @@ class TestAC2HtmlKmRangeNormalSegmentOnly:
 
 class TestAC3MobileHeaderKmRange:
 
-    @pytest.mark.xfail(reason="#1310: Segment-km-Header nie implementiert (nie implementierte Alt-Spec)", strict=False)
     def test_mobile_compact_header_contains_km_range(self):
         """
         AC-3: Mobile-Compact-Header enthält 'km 0.0–4.2'.

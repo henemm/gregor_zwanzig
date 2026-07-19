@@ -52,6 +52,8 @@ ist STALE (andere MD5) — sie hatte noch `seg.title.split(" · ")[1]` und
 `↑{fmt(seg.asc)} · {fmt(seg.fromAlt)}→{fmt(seg.toAlt)} m`. Die frische Version liegt jetzt in
 `docs/design-requests/issue-956-mail-vorschau/` (siehe unten).
 
+> **Historischer Hinweis (2026-07-19):** Das hier beschriebene Design basierte auf dem Stand von #956. Feature #574 führt ein vereinfachtes finales Format ein: `km X.X–Y.Y` (En-Dash, kumulativ). Diese Context-Datei dokumentiert die #956-Zwischenstufe als Analyseergebnis.
+
 IST (`src/output/renderers/email/html.py` Zeile 930–946, `seg_header_desktop`):
 ```python
 f'<span style="font-size:14px;font-weight:600;">'

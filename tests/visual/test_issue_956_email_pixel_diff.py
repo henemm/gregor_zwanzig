@@ -312,10 +312,11 @@ def test_segment_header_shows_km_and_elevation_span():
         f"[visueller Diff: {diff_pct:.2f}%]"
     )
     # Bug-Marker 2: die kumulierte km-Spanne fehlt (aktuell nur "4.6 km").
-    assert "0.0 km - 4.6 km" in header_text, (
+    # #574: km-Format km X.X–Y.Y ersetzt #956-Zwischenformat (Spec feature_574_segment_km_header.md ADR-1)
+    assert "km 0.0–4.6" in header_text, (
         "Teil B: SEG-Header zeigt keine kumulierte Kilometer-Spanne "
-        f"'0.0 km - 4.6 km' ({header_text!r}) — aktuell nur ein einzelner "
-        "km-Wert. Laut Vorlage: '{fromKm:.1f} km - {toKm:.1f} km'."
+        f"'km 0.0–4.6' ({header_text!r}) — aktuell nur ein einzelner "
+        "km-Wert. Laut Vorlage: 'km {fromKm:.1f}–{toKm:.1f}'."
     )
     # Bug-Marker 3: die Höhen-Spanne fehlt (aktuell nur '↑400').
     assert "400 - 1200 m" in header_text, (
@@ -350,9 +351,10 @@ def test_segment_header_accumulates_km_for_later_segments():
         "Teil B (SEG 2): SEG-Header zeigt noch den Etappen-Titel-Text "
         f"({header_text!r}) — laut Vorlage muss der Titel entfallen."
     )
-    assert "4.6 km - 9.3 km" in header_text, (
+    # #574: km-Format km X.X–Y.Y ersetzt #956-Zwischenformat (Spec feature_574_segment_km_header.md ADR-1)
+    assert "km 4.6–9.3" in header_text, (
         "Teil B (SEG 2): SEG-Header zeigt keine kumulierte Kilometer-Spanne "
-        f"'4.6 km - 9.3 km' ({header_text!r}). "
+        f"'km 4.6–9.3' ({header_text!r}). "
         "Laut Vorlage muss fromKm der echten Laufsumme entsprechen."
     )
     assert "1200 - 1500 m" in header_text, (

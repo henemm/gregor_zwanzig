@@ -118,6 +118,8 @@ Vorlage und beseitigt den Datumsfehler.
 {fromElev} - {toElev} m` — der bisherige Titel-Text (`sub_header or
 seg_header_text(seg)`) entfällt vollständig.
 
+> **Supersession-Hinweis (2026-07-19):** Dieses Format wurde durch Feature #574 superceded. Das neu festgelegte Format seit #574 ist `SEG {N} · Zeit · km X.X–Y.Y` (En-Dash, kumulierte km-Spanne statt Segmentlänge). Siehe `docs/specs/modules/feature_574_segment_km_header.md` ADR-Abschnitt für Rationale. Diese Spec (#956) bleibt als historische Referenz erhalten.
+
 ## Test Plan
 
 ### Sonderfall TDD-RED: Visuell statt Code-basiert (PO-Vorgabe, Issue-Text)
@@ -204,6 +206,7 @@ Implementation Details, Schritt 2): Playwright `page.set_content()` mit dem Outp
   OHNE den bisherigen Etappen-Titel-Text
   - Test: Pixel-Diff gegen `soll-segment-header.png` UND Wertekontrolle der berechneten
     Kilometer-Laufsumme gegen bekannte `distance_km`-Testdaten
+  - **Historischer Hinweis (2026-07-19):** Dieses AC beschreibt das Zwischenformat aus #956. Das finale Format seit Feature #574 ist `km X.X–Y.Y` (En-Dash). Siehe feature_574_segment_km_header.md.
 
 - **AC-3:** Given eine `NormalizedTimeseries` mit Stundendaten über mehr als einen
   Folgetag (Ankunftstag + Folgetag + Übermorgen mit Stunden ≤ 6) / When
