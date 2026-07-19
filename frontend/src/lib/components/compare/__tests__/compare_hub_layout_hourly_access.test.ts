@@ -241,56 +241,44 @@ describe('C2 AC-1: Hub-Layout-Tab rendert Stundenverlauf-Checkboxen + Toggle', (
 		assert.ok(ALL_HOURLY_METRICS.length >= 1);
 	});
 
-	test('AC-1: Layout-Tab-Panel iteriert ALL_HOURLY_METRICS und rendert je Eintrag eine ChannelToggle-Checkbox mit `metric.key`-Testid', () => {
+	// Epic #1301 Scheibe F2a: Die Stundenverlauf-Steuerung (Schleife ueber
+	// ALL_HOURLY_METRICS + enabled-Toggle) wurde aus dem Hub-Inline-Markup in die
+	// GETEILTE Komponente shared/CompareHourlyLayoutControls.svelte extrahiert
+	// (Hub + Anlege-Seite /compare/new teilen sie). Der Hub mountet sie jetzt nur
+	// noch — der strukturelle Anti-Hand-Kopie-Beweis (`{#each ALL_HOURLY_METRICS}`
+	// + `compare-layout-hourly-metric-${metric.key}` + enabled-Toggle) liegt jetzt
+	// im Struktur-Test der Komponente
+	// (shared/__tests__/compare_hourly_layout_controls_structure.test.ts). Hier
+	// bleibt die aequivalente Zusicherung: das Hub-Layout-Panel mountet die
+	// geteilte Komponente (und rollt die Metrik-Liste NICHT selbst hand-kopiert
+	// aus — das faengt der Negativ-Guard ALL_HOURLY_METRICS.length unten ab).
+	test('AC-1: Layout-Tab-Panel mountet die geteilte CompareHourlyLayoutControls-Komponente', () => {
 		// GIVEN: das Hub-Layout-Tab-Panel-Fragment (activeTab === 'layout')
 		// WHEN: die Komponente geparst wird (Template-AST = das Renderbare)
-		// THEN: (1) es existiert ein `{#each ALL_HOURLY_METRICS as metric}`-Block —
-		// der Iterations-Ausdruck referenziert EXAKT den Katalog-Identifier, kein
-		// Zwischen-Array/Filter, das den 1:1-Bezug zum Katalog verwaesern koennte.
-		// (2) im Schleifenkoerper rendert eine `ChannelToggle`-Instanz ein
-		// `testid`-Template-Literal mit Praefix `compare-layout-hourly-metric-`
-		// und interpoliertem `metric.key`. Aus (1)+(2) folgt strukturell: fuer
-		// JEDEN Katalog-Eintrag (auch einen kuenftigen 10.) entsteht automatisch
-		// eine Checkbox — eine 10. Metrik kann hier NICHT mehr still uebersehen
-		// werden (B3-Anti-Pattern, s. Kopfkommentar).
+		// THEN: im Panel existiert genau eine <CompareHourlyLayoutControls>-Instanz
+		// (die extrahierte Stundenverlauf-Steuerung). Die Schleife/Testids selbst
+		// werden im Struktur-Test der Komponente geprueft.
 		const ast = parseComponent();
 		const panel = findTabPanelFragment((ast as any).fragment, 'layout');
 		assert.ok(panel, 'Layout-Tab-Panel-IfBlock (activeTab === "layout") nicht gefunden');
 
-		const eachBlocks = findEachBlocksOverIdentifier(panel, 'ALL_HOURLY_METRICS');
+		const mounts = findComponents(panel, 'CompareHourlyLayoutControls');
 		assert.ok(
-			eachBlocks.length >= 1,
-			'CompareTabs.svelte Layout-Panel enthaelt keinen `{#each ALL_HOURLY_METRICS as ...}`-Block — ' +
-				'Spec C2 AC-1 (Nachbesserung) verlangt eine Schleife ueber den Katalog statt statisch ' +
-				'unrollter Checkboxen, damit eine kuenftige Katalog-Erweiterung nicht still uebersehen wird.'
+			mounts.length >= 1,
+			'CompareTabs.svelte Layout-Panel mountet die geteilte Komponente ' +
+				'<CompareHourlyLayoutControls> nicht — Spec F2a AC-7 verlangt die geteilte ' +
+				'Stundenverlauf-Steuerung (Extraktion aus dem frueheren Inline-Markup).'
 		);
 
-		const matchFound = eachBlocks.some((eachBlock) => {
-			const toggles = findComponents(eachBlock.body, 'ChannelToggle');
-			return toggles.some((toggle) =>
-				hasKeyedTestidTemplate(toggle, 'compare-layout-hourly-metric-', 'metric', 'key')
-			);
-		});
-		assert.ok(
-			matchFound,
-			'CompareTabs.svelte Layout-Panel: keine ChannelToggle-Checkbox im ALL_HOURLY_METRICS-Schleifenkoerper ' +
-				'traegt ein `testid`-Template-Literal `compare-layout-hourly-metric-${metric.key}`.'
-		);
-	});
-
-	test('AC-1: Layout-Tab-Panel rendert den "Stundenverlauf ein/aus"-Schalter', () => {
-		// GIVEN: das Hub-Layout-Tab-Panel-Fragment
-		// WHEN: die Komponente geparst wird
-		// THEN: compare-layout-hourly-enabled-toggle existiert im AST
-		// RED heute: Toggle existiert nicht im Layout-Tab.
-		const ast = parseComponent();
-		const panel = findTabPanelFragment((ast as any).fragment, 'layout');
-		assert.ok(panel, 'Layout-Tab-Panel-IfBlock (activeTab === "layout") nicht gefunden');
-		const ids = renderedTestids(panel);
-		assert.ok(
-			ids.includes('compare-layout-hourly-enabled-toggle'),
-			`CompareTabs.svelte Layout-Panel rendert "compare-layout-hourly-enabled-toggle" nicht. ` +
-				`Gefundene Testids im Panel: ${ids.join(', ')}`
+		// Anti-Hand-Kopie-Regression: das Panel darf die Metrik-Liste NICHT wieder
+		// selbst inline ausrollen (die Schleife lebt jetzt ausschliesslich in der
+		// Komponente). Kein `{#each ALL_HOURLY_METRICS ...}`-Block mehr im Hub-Panel.
+		const strayLoops = findEachBlocksOverIdentifier(panel, 'ALL_HOURLY_METRICS');
+		assert.equal(
+			strayLoops.length,
+			0,
+			'CompareTabs.svelte Layout-Panel rollt ALL_HOURLY_METRICS wieder inline aus, ' +
+				'statt die geteilte Komponente zu nutzen (Doppel-Quelle/Anti-Hand-Kopie).'
 		);
 	});
 });

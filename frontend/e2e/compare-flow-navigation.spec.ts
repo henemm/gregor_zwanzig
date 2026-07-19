@@ -277,6 +277,9 @@ test.describe('Issue #1256 Scheibe 2: Compare-Fluss Klickpfade Desktop (AC-25–
 		// versandVisited frei — Voraussetzung für "Briefing aktivieren"). Nach
 		// jedem Klick wird geprüft, dass der Tab wirklich aktiv wurde (Härtung
 		// Coordinator-Punkt 3), statt blind weiterzuspringen.
+		// Epic #1301 F2a: neue Freischalt-Kette — Wertebereiche ist erst nach Besuch
+		// des NEUEN Wetter-Metriken-Tabs frei (echter Klick, kein goto).
+		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').click();
 		const idealwerteTab = page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible');
 		await idealwerteTab.click();
 		await expect(idealwerteTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
@@ -569,6 +572,9 @@ test.describe('Issue #1256 Scheibe 4: Editor-Layout-Tab = geteilter LayoutTab-Or
 			if (locId) createdLocationIds.push(locId);
 		}
 
+		// Epic #1301 F2a: neue Freischalt-Kette — Wertebereiche ist erst nach Besuch
+		// des NEUEN Wetter-Metriken-Tabs frei (echter Klick, kein goto).
+		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').click();
 		const idealwerteTab = page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible');
 		await idealwerteTab.click();
 		await expect(idealwerteTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
@@ -578,40 +584,30 @@ test.describe('Issue #1256 Scheibe 4: Editor-Layout-Tab = geteilter LayoutTab-Or
 		await expect(layoutTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
 	}
 
-	// ── AC-8: geteilter Organism sichtbar (Regressionsanker, s. Kommentar oben) ──
-	test('AC-8: Editor-Layout-Tab enthält den geteilten Organism mit data-context="vergleich"', async ({
-		page
-	}) => {
-		await reachLayoutTabWithTwoLocations(page, 'E2E S4 Organism');
+	// ── AC-8 (Epic #1301 F2a): Editor-Layout-Tab = geteilte Stundenverlauf-Steuerung ──
+	// Umgeschrieben vom entfernten LayoutTab-/channel_layouts-Organism auf den neuen
+	// Layout-Tab-Inhalt: die geteilte Komponente CompareHourlyLayoutControls
+	// (Stundenverlauf-Toggle + Metrik-Auswahl). Die alte Attrappe
+	// (layout-tab-Organism, compare-step4-layout-preview, channel-tab-*) wurde vom
+	// Compare-Renderpfad nie gelesen (#1301-Grundbefund) und entfällt ersatzlos.
+	test('AC-8: Editor-Layout-Tab zeigt die geteilte Stundenverlauf-Steuerung', async ({ page }) => {
+		await reachLayoutTabWithTwoLocations(page, 'E2E S4 Hourly');
 
-		const organism = page.locator('[data-testid="layout-tab"][data-context="vergleich"]:visible');
-		await expect(organism).toBeVisible({ timeout: 10_000 });
+		await expect(
+			page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible').first()
+		).toBeVisible({ timeout: 10_000 });
+		await expect(
+			page.locator('[data-testid="compare-layout-hourly-metrics"]:visible').first()
+		).toBeVisible();
 	});
 
-	// ── AC-9: neutrale Spalten-Vorschau (Regressionsanker, s. Kommentar oben) ──
-	test('AC-9: Vorschau zeigt Orte als Spalten + "Kein Ranking"-Copy, keine Rang-/Score-Anzeige', async ({
-		page
-	}) => {
-		await reachLayoutTabWithTwoLocations(page, 'E2E S4 Preview');
+	// ── AC-9 (F2a): die alte channel_layouts-Attrappe ist verschwunden ──────────
+	test('AC-9: kein Layout-Preview / kein Channel-Tab im Editor-Layout-Tab mehr', async ({ page }) => {
+		await reachLayoutTabWithTwoLocations(page, 'E2E S4 NoAttrappe');
 
-		const preview = page.locator('[data-testid="compare-step4-layout-preview"]:visible');
-		await expect(preview).toBeVisible({ timeout: 10_000 });
-		await expect(preview).toContainText('Kein Ranking');
-		// Neutralität (Constraint 1): explizit KEIN Rang-/Score-Text.
-		await expect(preview).not.toContainText(/Rang\s*\d|Score/i);
-	});
-
-	// ── AC-10: Telegram-Spalten-Rechnung (Regressionsanker, s. Kommentar oben) ──
-	test('AC-10: Telegram-Kanal zeigt die Spalten-Rechnung "Label + N Orte = X Spalten (max 8)"', async ({
-		page
-	}) => {
-		await reachLayoutTabWithTwoLocations(page, 'E2E S4 Telegram');
-
-		await page.locator('[data-testid="channel-tab-telegram"]:visible').click();
-
-		const preview = page.locator('[data-testid="compare-step4-layout-preview"]:visible');
-		// 2 gewählte Orte -> "Label + 2 Orte = 3 Spalten (max 8)".
-		await expect(preview).toContainText('Label + 2 Orte = 3 Spalten (max 8)', { timeout: 10_000 });
+		await expect(page.locator('[data-testid="compare-step4-layout-preview"]')).toHaveCount(0);
+		await expect(page.locator('[data-testid="channel-tab-telegram"]')).toHaveCount(0);
+		await expect(page.locator('[data-testid="layout-tab"][data-context="vergleich"]')).toHaveCount(0);
 	});
 });
 

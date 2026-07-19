@@ -44,6 +44,10 @@ async function pickInOrteTab(page: Page, namen: string[]): Promise<void> {
 }
 
 async function openIdealwerte(page: Page): Promise<void> {
+	// Epic #1301 F2a (AC-4/AC-5): neue Freischalt-Kette — Wertebereiche ist erst
+	// nach Besuch des NEUEN Wetter-Metriken-Tabs frei (Orte → Wetter-Metriken →
+	// Wertebereiche). Echter Klick auf den Metriken-Tab, kein goto.
+	await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').first().click();
 	await page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible').first().click();
 	await expect(
 		page.locator('[data-testid="corridor-editor-vergleich"]:visible').first()

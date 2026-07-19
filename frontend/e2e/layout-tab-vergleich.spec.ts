@@ -1,10 +1,14 @@
-// E2E — Issue #1232 Scheibe 3a: geteilter LayoutTab-Organism (context="vergleich")
+// E2E — Epic #1301 Scheibe F2a: Layout-Tab der Anlege-Seite /compare/new.
 //
-// Spec: docs/specs/modules/layout_tab_vergleich.md
+// Spec: docs/specs/modules/feat_1301_f2a_compare_new_trip_pattern.md § AC-7, AC-11
 //
-// Verhaltensnachweis der ACs als eingeloggter Nutzer gegen echten
-// Compare-Preset (kein Mock). Deckt AC-1..AC-4 + AC-8 ab. AC-5/AC-6/AC-7
-// bleiben in compare-editor-slice4.spec.ts (Bestandssuite, angepasst).
+// Umgeschrieben von der alten channel_layouts-Attrappe (channel-tab-*/
+// compare-step4-layout-preview/SMS-Budget/Top-N) auf den NEUEN Layout-Tab-Inhalt:
+// ausschließlich die Stundenverlauf-Steuerung (compare-layout-hourly-*), geliefert
+// von der geteilten Komponente CompareHourlyLayoutControls. Begründung der
+// Löschung der Attrappen-Blöcke: `display_config.channel_layouts` (Top-N-Ranking,
+// SMS-Budget-DnD, Channel-Tabs) wurde vom Compare-Renderpfad NIE gelesen
+// (#1301-Grundbefund) — die neue Seite bildet diese Funktion bewusst nicht nach.
 //
 // Ausführen:
 //   cd frontend && npx playwright test e2e/layout-tab-vergleich.spec.ts
@@ -21,8 +25,8 @@ async function createLocation(page: Page, name: string): Promise<string> {
 	return body.id as string;
 }
 
-// Epic #1273 S4c: Der Layout-Preview lebt nur im Create-Wizard (view-only Hub);
-// Einstieg ab /compare/new, Layout-Tab erst ab ≥2 Orten frei.
+// Neue Freischalt-Kette (F2a): Name → ≥2 Orte → Wetter-Metriken → Wertebereiche →
+// Layout. Der Layout-Tab zeigt nur noch die Stundenverlauf-Steuerung.
 async function openLayoutTab(page: Page, orteNamen: string[]): Promise<void> {
 	await page.goto('/compare/new');
 	await page.waitForLoadState('networkidle');
@@ -38,81 +42,80 @@ async function openLayoutTab(page: Page, orteNamen: string[]): Promise<void> {
 		await lib.getByText(n, { exact: true }).click();
 	}
 
-	// Wertebereiche besuchen schaltet Layout frei, dann Layout öffnen.
+	// Wetter-Metriken besuchen → Wertebereiche frei; Wertebereiche besuchen →
+	// Layout frei; dann Layout öffnen.
+	await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').first().click();
 	await page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible').first().click();
 	const layoutTab = page.locator('[data-testid="compare-editor-tab-layout"]:visible').first();
 	await expect(async () => {
 		await layoutTab.click();
 		await expect(
-			page.locator('[data-testid="compare-step4-layout-preview"]:visible').first()
+			page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible').first()
 		).toBeVisible({ timeout: 5_000 });
 	}).toPass({ timeout: 30_000 });
 }
 
-test.describe('Issue #1232 Scheibe 3a: LayoutTab (context="vergleich")', () => {
+test.describe('F2a: Layout-Tab (/compare/new) = Stundenverlauf-Steuerung', () => {
 	test.beforeEach(async ({ page }) => {
 		await login(page);
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 
-	// ── AC-1/AC-2: Kanal-Wechsel Email→Telegram→SMS — Badge + Template-Wechsel ──
-	test('AC-1/AC-2: Kanal-Wechsel zeigt Badges ∞/8/— und wechselt Vorschau-Template', async ({
-		page
-	}) => {
+	// ── AC-7: Layout-Tab zeigt Stundenverlauf-Toggle + Metrik-Auswahl ──────────
+	test('AC-7: Layout-Tab rendert Stundenverlauf-Toggle und Metrik-Checkboxen', async ({ page }) => {
 		const nameA = 'LT-Ort-A ' + Date.now();
 		const nameB = 'LT-Ort-B ' + Date.now();
 		await createLocation(page, nameA);
 		await createLocation(page, nameB);
 		await openLayoutTab(page, [nameA, nameB]);
 
-		const preview = page.locator('[data-testid="compare-step4-layout-preview"]:visible').first();
-		await expect(preview).toBeVisible({ timeout: 8_000 });
-
-		// Email: Badge ∞, Tabelle sichtbar
-		const emailBtn = page.locator('[data-testid="channel-tab-email"]:visible').first();
-		await emailBtn.click();
-		await expect(emailBtn).toContainText('∞');
-		await expect(preview.locator('table')).toBeVisible();
-
-		// Telegram: Badge 8, weiterhin Tabelle
-		const telegramBtn = page.locator('[data-testid="channel-tab-telegram"]:visible').first();
-		await telegramBtn.click();
-		await expect(telegramBtn).toContainText('8');
-		await expect(preview.locator('table')).toBeVisible();
-
-		// SMS: Badge —, Fließtext statt Tabelle
-		const smsBtn = page.locator('[data-testid="channel-tab-sms"]:visible').first();
-		await smsBtn.click();
-		await expect(smsBtn).toContainText('—');
-		await expect(preview.locator('table')).toHaveCount(0);
 		await expect(
-			page.locator('[data-testid="compare-step4-preview-sms"]:visible').first()
-		).toBeVisible({ timeout: 5_000 });
+			page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible').first()
+		).toBeVisible();
+		await expect(
+			page.locator('[data-testid="compare-layout-hourly-metrics"]:visible').first()
+		).toBeVisible();
+		// Mindestens eine Metrik-Checkbox aus dem Katalog (z.B. Temperatur).
+		await expect(
+			page.locator('[data-testid="compare-layout-hourly-metric-temp_c"]:visible').first()
+		).toBeVisible();
 	});
 
-	// ── AC-1: >8 gewählte Orte → Telegram-Overflow-Chip "−n" ──────────────────
-	test('AC-1: >8 gewählte Orte zeigen Overflow-Chip am Telegram-Button', async ({ page }) => {
-		const namen: string[] = [];
-		for (let i = 0; i < 9; i++) {
-			const n = `LT-Overflow-${i}-` + Date.now();
-			await createLocation(page, n);
-			namen.push(n);
-		}
-		await openLayoutTab(page, namen);
-		await expect(
-			page.locator('[data-testid="compare-step4-layout-preview"]:visible').first()
-		).toBeVisible({ timeout: 8_000 });
+	// ── AC-7: Eine Metrik umschalten bleibt bedienbar (kein Crash) ─────────────
+	test('AC-7: Metrik-Checkbox lässt sich umschalten', async ({ page }) => {
+		const nameA = 'LT-Toggle-A ' + Date.now();
+		const nameB = 'LT-Toggle-B ' + Date.now();
+		await createLocation(page, nameA);
+		await createLocation(page, nameB);
+		await openLayoutTab(page, [nameA, nameB]);
 
-		// 9 Orte + 1 Label-Spalte = 10 > Telegram-Budget 8 → Overflow-Chip "−2"
-		const telegramBtn = page.locator('[data-testid="channel-tab-telegram"]:visible').first();
-		await expect(telegramBtn).toContainText('−2');
+		const metric = page
+			.locator('[data-testid="compare-layout-hourly-metric-wind_kmh"]:visible input')
+			.first();
+		await expect(metric).toBeVisible({ timeout: 8_000 });
+		await metric.click();
+		// Klick darf den Editor nicht wegwerfen — der Layout-Tab bleibt aktiv.
+		await expect(
+			page.locator('[data-testid="compare-editor-tab-layout"]:visible').first()
+		).toHaveAttribute('data-active', 'true');
 	});
 
-	// ── AC-4: Ohne gewählte Orte bleibt der Layout-Tab im Wizard gesperrt ─────
-	// Epic #1273 S4c: Der frühere 0-Orte-Empty-State war nur im (abgeschafften)
-	// Edit-Modus erreichbar. Der Create-Wizard schaltet den Layout-Tab erst ab
-	// ≥2 Orten frei — der Test prüft daher jetzt genau diese Sperre (data-locked).
-	test('AC-4: ohne Orte bleibt der Layout-Tab gesperrt (nicht erreichbar)', async ({ page }) => {
+	// ── AC-11: Die alte channel_layouts-Attrappe ist verschwunden ──────────────
+	test('AC-11: kein Channel-Tab / kein Layout-Preview / kein SMS-Budget mehr', async ({ page }) => {
+		const nameA = 'LT-NoAttrappe-A ' + Date.now();
+		const nameB = 'LT-NoAttrappe-B ' + Date.now();
+		await createLocation(page, nameA);
+		await createLocation(page, nameB);
+		await openLayoutTab(page, [nameA, nameB]);
+
+		await expect(page.locator('[data-testid="channel-tab-email"]')).toHaveCount(0);
+		await expect(page.locator('[data-testid="channel-tab-sms"]')).toHaveCount(0);
+		await expect(page.locator('[data-testid="compare-step4-layout-preview"]')).toHaveCount(0);
+		await expect(page.locator('[data-testid="sms-budget-display"]')).toHaveCount(0);
+	});
+
+	// ── AC-4: Ohne ≥2 Orte bleibt der Layout-Tab gesperrt (nicht erreichbar) ────
+	test('AC-4: ohne Orte bleibt der Layout-Tab gesperrt', async ({ page }) => {
 		await page.goto('/compare/new');
 		await page.waitForLoadState('networkidle');
 		await expect(page.locator('[data-testid="compare-editor"]:visible')).toBeVisible();
@@ -120,58 +123,28 @@ test.describe('Issue #1232 Scheibe 3a: LayoutTab (context="vergleich")', () => {
 
 		const layoutTab = page.locator('[data-testid="compare-editor-tab-layout"]:visible').first();
 		await expect(layoutTab).toHaveAttribute('data-locked', 'true', { timeout: 8_000 });
-		// Ein Klick öffnet den gesperrten Tab nicht — der Layout-Preview bleibt aus.
 		await layoutTab.click();
 		await expect(
-			page.locator('[data-testid="compare-step4-layout-preview"]:visible')
+			page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible')
 		).toHaveCount(0);
 	});
 
-	// ── AC-3: Vorschau ist neutral — kein Rang, kein Score, kein Empfehlungs-
-	//         Banner, dafür der Hinweis "Kein Ranking" und Ortsname im th-Header ─
-	test('AC-3: Vorschau neutral — kein Rang-Badge, kein Empfehlungs-Banner, "Kein Ranking" + Ortsname im th', async ({
-		page
-	}) => {
-		const nameA = 'LT-Neutral-A ' + Date.now();
-		const nameB = 'LT-Neutral-B ' + Date.now();
-		await createLocation(page, nameA);
-		await createLocation(page, nameB);
-		await openLayoutTab(page, [nameA, nameB]);
-
-		const preview = page.locator('[data-testid="compare-step4-layout-preview"]:visible').first();
-		await expect(preview).toBeVisible({ timeout: 8_000 });
-		await page.locator('[data-testid="channel-tab-email"]:visible').first().click();
-
-		await expect(preview.locator('.rank-badge')).toHaveCount(0);
-		await expect(preview.locator('.recommendation-banner')).toHaveCount(0);
-		// Whitespace normalisieren: "Kein Ranking" enthält im Markup Umbruch/Tabs.
-		const text = ((await preview.textContent()) ?? '').replace(/\s+/g, ' ');
-		expect(text).not.toContain('Empfehlung');
-		expect(text).toContain('Kein Ranking');
-
-		// Der Preview nutzt Demo-Orte (DUMMY_LOCATIONS in LTComparePreview.svelte) als
-		// Spaltenköpfe — nicht die real gewählten Orte (Planungstool zeigt kein Live-Wetter).
-		const headers = await preview.locator('thead th, th').allTextContents();
-		expect(headers.some((h) => /Hintertux|Ischgl|Zermatt/i.test(h))).toBeTruthy();
-	});
-
-	// ── AC-8: Mobile — einspaltig ohne horizontales Scrollen ─────────────────
-	// Epic #1273 S4c: Layout-Tab erst ab ≥2 Orten erreichbar → 2 Orte (statt 1).
-	test('AC-8: Mobile-Ansicht stapelt einspaltig ohne horizontales Scrollen', async ({ page }) => {
+	// ── AC-8: Mobile — Layout-Tab ohne horizontales Scrollen ───────────────────
+	test('AC-8: Mobile-Ansicht scrollt nicht horizontal', async ({ page }) => {
 		const nameA = 'LT-Mobile-A ' + Date.now();
 		const nameB = 'LT-Mobile-B ' + Date.now();
 		await createLocation(page, nameA);
 		await createLocation(page, nameB);
 
-		// Create-Klickpfad am Desktop (robuster), DANN auf Mobile umschalten und
-		// den Layout-Preview auf horizontales Scrollen prüfen.
 		await openLayoutTab(page, [nameA, nameB]);
 		await page.setViewportSize({ width: 390, height: 844 });
 
-		const preview = page.locator('[data-testid="compare-step4-layout-preview"]:visible').first();
-		await expect(preview).toBeVisible({ timeout: 8_000 });
-
-		const overflowsX = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 4);
+		await expect(
+			page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible').first()
+		).toBeVisible({ timeout: 8_000 });
+		const overflowsX = await page.evaluate(
+			() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 4
+		);
 		expect(overflowsX, 'Seite scrollt horizontal auf Mobile-Viewport').toBeFalsy();
 	});
 });

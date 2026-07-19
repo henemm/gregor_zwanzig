@@ -64,7 +64,9 @@
 	// Hub-Layout-Tab — geteiltes ChannelToggle-Bedienelement + eigenstaendiges
 	// Compare-Vokabular (kein Reuse von compareMetricDefs.ts).
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
-	import { ALL_HOURLY_METRICS } from './compareHourlyMetricDefs.ts';
+	// Epic #1301 Scheibe F2a: Stundenverlauf-Steuerung als geteilte Komponente
+	// (Hub + Anlege-Seite /compare/new). Inline-Markup + Handler wanderten dorthin.
+	import CompareHourlyLayoutControls from '$lib/components/shared/CompareHourlyLayoutControls.svelte';
 	import { CompareWizardState } from './compareWizardState.svelte';
 	import {
 		hydrateWizardStateFromPreset,
@@ -701,30 +703,9 @@
 		layoutHydrated = true;
 	});
 
-	// Verschoben aus CompareInhaltSection.svelte:38-60 (Duplikat statt
-	// Abhaengigkeit, s. Spec Known Limitations — CompareInhaltSection wird mit
-	// F2 geloescht, darf keine Hub-Abhaengigkeit werden).
-	function isHourlyMetricActive(key: string): boolean {
-		return wizardState.hourlyMetricKeys.length === 0 || wizardState.hourlyMetricKeys.includes(key);
-	}
-
-	// Factory-Handler (Safari-Pattern): materialisiert beim ersten Abwaehlen
-	// die volle Liste, damit "alle minus eine" korrekt entsteht.
-	function makeHourlyMetricHandler(key: string) {
-		return function handleHourlyMetric(checked: boolean): void {
-			const current =
-				wizardState.hourlyMetricKeys.length === 0
-					? ALL_HOURLY_METRICS.map((m) => m.key)
-					: [...wizardState.hourlyMetricKeys];
-			if (checked) {
-				if (!current.includes(key)) current.push(key);
-			} else {
-				const idx = current.indexOf(key);
-				if (idx >= 0) current.splice(idx, 1);
-			}
-			wizardState.hourlyMetricKeys = current;
-		};
-	}
+	// Epic #1301 Scheibe F2a: isHourlyMetricActive/makeHourlyMetricHandler +
+	// Inline-Markup nach shared/CompareHourlyLayoutControls.svelte extrahiert
+	// (Hub + Anlege-Seite teilen die Steuerung). Der Commit-Wrapper unten bleibt.
 
 	async function handleLayoutCommit(): Promise<void> {
 		if (!layoutHydrated) return;
@@ -1353,23 +1334,7 @@
 					onfocusout={handleLayoutCommit}
 					onclick={handleLayoutCommit}
 				>
-					<SectionH title="Stundenverlauf" />
-					<ChannelToggle
-						label="Stundenverlauf"
-						checked={wizardState.hourlyEnabled}
-						onchange={(checked) => (wizardState.hourlyEnabled = checked)}
-						testid="compare-layout-hourly-enabled-toggle"
-					/>
-					<div data-testid="compare-layout-hourly-metrics" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px">
-						{#each ALL_HOURLY_METRICS as metric (metric.key)}
-							<ChannelToggle
-								label={metric.label}
-								checked={isHourlyMetricActive(metric.key)}
-								onchange={makeHourlyMetricHandler(metric.key)}
-								testid={`compare-layout-hourly-metric-${metric.key}`}
-							/>
-						{/each}
-					</div>
+						<CompareHourlyLayoutControls wiz={wizardState} />
 				</div>
 			{/if}
 		</div>

@@ -47,16 +47,20 @@ test.describe('Issue #678: Compare-Editor Slice 1 (Desktop/Create)', () => {
 		).toHaveAttribute('data-done', 'true');
 	});
 
-	// ── AC-3 (Issue #1258 S4 AC-28): Fortschrittsbalken 6 Segmente + „N / 6" ──
-	// TAB_ORDER waechst um die reguläre Station "alarme" (compareEditorLogic.ts).
-	test('AC-3: Fortschritt zeigt 6 Segmente und steigt mit Name', async ({ page }) => {
+	// ── AC-3 (Epic #1301 F2a): Fortschrittsbalken 7 Segmente + „N / 7" ────────
+	// Der neue CompareNewEditor hat 7 Tabs (compareNewLogic.ts CompareNewTabId:
+	// vergleich · orte · metriken · idealwerte · layout · alarme · versand) — die
+	// F2a-Freischalt-Tabelle fügt den Wetter-Metriken-Tab zwischen Orte und
+	// Wertebereiche ein (schließt die C1-Lücke). progressCount() deckelt bei 7,
+	// der Fortschrittsbalken iteriert TAB_DEFS (7 Segmente).
+	test('AC-3: Fortschritt zeigt 7 Segmente und steigt mit Name', async ({ page }) => {
 		const progress = page.locator('[data-testid="compare-editor-progress"]');
 		await expect(progress).toBeVisible();
 		await expect(
 			page.locator('[data-testid="compare-editor-progress-segment"]')
-		).toHaveCount(6);
+		).toHaveCount(7);
 		await page.locator('[data-testid="compare-editor-name"]').fill('Tour A');
-		await expect(progress).toContainText('1 / 6');
+		await expect(progress).toContainText('1 / 7');
 	});
 
 	// ── AC-4: Profil-Auswahl bleibt nach Tab-Wechsel erhalten ────────────────

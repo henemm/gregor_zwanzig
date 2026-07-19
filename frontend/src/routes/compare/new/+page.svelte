@@ -1,16 +1,19 @@
 <script lang="ts">
-	// Issue #678 (Epic #677) — Compare-Editor Create-Modus Mount-Punkt.
-	// Ersetzt die Stepper-Shell (CompareWizard) durch den Progressive-Tab-Editor.
-	// Spec: docs/specs/modules/issue_678_compare_editor_shell.md
+	// Epic #1301 Scheibe F2a — /compare/new Anlege-Mount-Punkt.
+	// Mountet den Progressive-Tab-Editor CompareNewEditor (struktureller Spiegel
+	// von TripNewEditor #622) statt des Alt-Editors CompareEditor mode="create".
+	// Der Alt-Editor bleibt als Rollback-Punkt im Repo (Löschung ist F2b, AC-10).
+	// Spec: docs/specs/modules/feat_1301_f2a_compare_new_trip_pattern.md
 	//
 	// Factory-Pattern: State im script-Block instanziiert (NICHT Top-Level-Modul-Singleton),
 	// damit Svelte-5-Runes in Safari die Reaktivitaet behalten. Beide Contexts bleiben
-	// gesetzt: 'compare-wizard-state' (Editor + gemountete Steps) und
-	// 'compare-wizard-profile' (Step5Versand-Kanal-Hints).
+	// gesetzt (Namen unverändert, damit Step2Orte/Organismen weiterlaufen):
+	// 'compare-wizard-state' (Editor + gemountete Steps) und
+	// 'compare-wizard-profile' (CorridorEditor/VersandTab-Profil-Hints).
 
 	import { setContext } from 'svelte';
 	import { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
-	import CompareEditor from '$lib/components/compare/CompareEditor.svelte';
+	import CompareNewEditor from '$lib/components/compare-new/CompareNewEditor.svelte';
 
 	let { data } = $props();
 	const state = new CompareWizardState();
@@ -18,4 +21,4 @@
 	setContext('compare-wizard-profile', data.profile ?? null);
 </script>
 
-<CompareEditor mode="create" locations={data.locations} />
+<CompareNewEditor locations={data.locations} />

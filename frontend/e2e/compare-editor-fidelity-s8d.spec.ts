@@ -296,11 +296,20 @@ test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versan
 		await page.locator('button[aria-label="Schliessen"]:visible').click();
 		await expect(cta).toContainText('noch 1 Ort nötig');
 
-		// 2. Ort -> "Idealwerte festlegen →" aktiv, Klick wechselt zu Wertebereiche.
+		// 2. Ort -> Epic #1301 F2a: neuer Wetter-Metriken-Tab in der Kette. Der
+		// Orte-CTA führt jetzt zu "Wetter-Metriken →", nicht direkt zu Wertebereiche.
 		await page.getByTestId('compare-step2-mobile-library-btn').click();
 		await page.locator(`[data-testid="compare-step2-mobile-lib-check-${locB}"]`).click();
 		await page.locator('button[aria-label="Schliessen"]:visible').click();
-		await expect(cta).toContainText('Idealwerte festlegen →');
+		await expect(cta).toContainText('Wetter-Metriken →');
+		await cta.getByRole('button').click();
+		await expect(page.locator('[data-testid="cm-mobile-tab-metriken"]:visible')).toHaveAttribute(
+			'data-active',
+			'true'
+		);
+
+		// Wetter-Metriken-Tab -> "Wertebereiche festlegen →".
+		await expect(cta).toContainText('Wertebereiche festlegen →');
 		await cta.getByRole('button').click();
 		await expect(page.locator('[data-testid="cm-mobile-tab-idealwerte"]:visible')).toHaveAttribute(
 			'data-active',
@@ -393,8 +402,9 @@ test.describe('Issue #1256 S8d (AC-15): genau eine App-Leiste im mobilen Editor'
 		await page.locator(`[data-testid="compare-step2-mobile-lib-check-${locA}"]`).click();
 		await page.locator(`[data-testid="compare-step2-mobile-lib-check-${locB}"]`).click();
 		await page.locator('button[aria-label="Schliessen"]:visible').click();
-		// Issue #1258 Scheibe S4 (AC-28): vierter Klick fuer die neue Station
-		// "alarme" (idealwerte → layout → alarme → versand).
+		// Epic #1301 F2a: fünf Klicks für die 7-Tab-Kette ab Orte
+		// (orte → metriken → idealwerte → layout → alarme → versand).
+		await cta.getByRole('button').click();
 		await cta.getByRole('button').click();
 		await cta.getByRole('button').click();
 		await cta.getByRole('button').click();
@@ -444,7 +454,10 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 		await page.locator(`.cm-desktop div[data-testid="compare-wizard-step-2"]`).waitFor({ state: 'visible' });
 		await page.getByText(`E2E S8d D-Ort-A ${suffix}`).click();
 
-		const continueBtn = page.getByTestId('compare-editor-continue-idealwerte');
+		// Epic #1301 F2a: der Orte-Weiter-Knopf ist ziel-benannt
+		// (compare-editor-continue-metriken) und führt zum NEUEN Wetter-Metriken-Tab.
+		// Das ⊘-Gate (disabled bis ≥2 Orte) ist unverändert.
+		const continueBtn = page.getByTestId('compare-editor-continue-metriken');
 		await expect(page.getByText('⊘ min. 2 Orte auswählen')).toBeVisible();
 		await expect(continueBtn).toBeDisabled();
 
@@ -452,7 +465,7 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 		await expect(page.getByText('⊘ min. 2 Orte auswählen')).toHaveCount(0);
 		await expect(continueBtn).toBeEnabled();
 		await continueBtn.click();
-		await expect(page.getByTestId('compare-editor-tab-idealwerte')).toHaveAttribute('data-active', 'true');
+		await expect(page.getByTestId('compare-editor-tab-metriken')).toHaveAttribute('data-active', 'true');
 	});
 
 	// Issue #1258 Scheibe S4 (E1/E2, AC-28): Layout fuehrt jetzt zu "alarme"
@@ -471,6 +484,10 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 		await page.getByTestId('compare-editor-continue-orte').click();
 		await page.getByText(`E2E S8d D2-Ort-A ${suffix}`).click();
 		await page.getByText(`E2E S8d D2-Ort-B ${suffix}`).click();
+		// Epic #1301 F2a: neue Kette Orte → Wetter-Metriken → Wertebereiche.
+		// Orte-Fuß führt zum Metriken-Tab; der Wertebereiche-Fuß
+		// (compare-editor-continue-idealwerte) sitzt jetzt auf dem Metriken-Tab.
+		await page.getByTestId('compare-editor-continue-metriken').click();
 		await page.getByTestId('compare-editor-continue-idealwerte').click();
 
 		const layoutBtn = page.getByTestId('compare-editor-continue-layout');

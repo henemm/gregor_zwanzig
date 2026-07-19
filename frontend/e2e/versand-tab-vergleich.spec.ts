@@ -238,6 +238,9 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		await d.locator('[data-testid="compare-step2-library"]').waitFor({ timeout: 8_000 });
 		await d.locator('[data-testid="compare-step2-library"]').getByText(nameA, { exact: true }).click();
 		await d.locator('[data-testid="compare-step2-library"]').getByText(nameB, { exact: true }).click();
+		// Epic #1301 F2a: neue Kette — Wetter-Metriken-Tab besuchen schaltet
+		// Wertebereiche frei (echter Klick, kein goto).
+		await d.locator('[data-testid="compare-editor-tab-metriken"]').click();
 		await d.locator('[data-testid="compare-editor-tab-idealwerte"]').click();
 		await d.locator('[data-testid="compare-editor-tab-layout"]').click();
 		await d.locator('[data-testid="compare-editor-tab-alarme"]').click();
