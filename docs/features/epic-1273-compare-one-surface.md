@@ -8,7 +8,7 @@
 - `docs/specs/modules/feat_1273_s3_redirect.md` (Slice S3 — Edit-Route wird reiner Redirect) — Approved, Adversary-Verdict AMBIGUOUS→behoben, alle 7 ACs CONFIRMED
 - `docs/context/epic-1273-compare-one-surface.md` (Kontext-/Analyse-Dokument, Scheiben-Schnitt)
 
-**Child Slices:** S1 ✓ (2026-07-16) · S2 ✓ (2026-07-17) · S3 ✓ (2026-07-17) · S4a ✓ Teilmenge 4/26 e2e (2026-07-17) · S4b ✓ (2026-07-17) · S4c ✓ (2026-07-19, Commit `c822cb85`, #1301 F1-Rest: 19 Specs auf Hub/Create-Wizard migriert, Adversary VERIFIED nach 4 Runden) · S5 entblockt (nur noch offene Scheibe)
+**Child Slices:** S1 ✓ (2026-07-16) · S2 ✓ (2026-07-17) · S3 ✓ (2026-07-17) · S4a ✓ Teilmenge 4/26 e2e (2026-07-17) · S4b ✓ (2026-07-17) · S4c ✓ (2026-07-19, `c822cb85`) · S5/F2a ✓ (2026-07-19, `37381f47`+`c5503e3a`: /compare/new = CompareNewEditor nach Trip-Muster #622, Alt-Editor unangetastet) · offen nur F2b (Löschung)
 
 **PO-Auftrag:** Prod-Audit, Befund 9, 2026-07-16.
 
