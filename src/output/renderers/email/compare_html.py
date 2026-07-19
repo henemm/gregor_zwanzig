@@ -1022,20 +1022,19 @@ def render_compare_html(
         f'<div style="padding:26px 24px 0;">'
         f'{_render_section_head("STUNDEN", "Stundenverlauf · alle Orte", "")}</div>'
     ) if hourly_enabled else ""
-    hourly_sections_html = (
-        "".join(_render_location_section(loc, i, hourly_metrics, corridors) for i, loc in enumerate(locations))
-        if hourly_enabled else ""
-    )
 
-    # Epic #1301 B4: 3-Tage-Ausblick je Ort, unabhaengig von hourly_enabled
-    # (eigenes Config-Bool). Fail-soft je Ort (Fehler/leere Daten -> "").
-    outlook_head_html = (
-        f'<div style="padding:26px 24px 0;">'
-        f'{_render_section_head("AUSBLICK", "3-Tage-Ausblick · alle Orte", "")}</div>'
-    ) if outlook_enabled else ""
-    outlook_sections_html = (
-        "".join(_render_location_outlook(loc, i) for i, loc in enumerate(locations))
-        if outlook_enabled else ""
+    # Issue #1323: der 3-Tage-Ausblick je Ort (Epic #1301 B4) steht direkt
+    # unter dessen eigener Stundentabelle, statt als Sammelblock hinter
+    # allen Orten. Eine Per-Ort-Schleife (Reihenfolge = Uebersichts-Spalten)
+    # statt zwei getrennt gejointen Bloecken. Fail-soft je Ort bleibt
+    # erhalten (_render_location_section/_render_location_outlook liefern
+    # bei fehlenden Daten "").
+    per_location_html = "".join(
+        (
+            (_render_location_section(loc, i, hourly_metrics, corridors) if hourly_enabled else "")
+            + (_render_location_outlook(loc, i) if outlook_enabled else "")
+        )
+        for i, loc in enumerate(locations)
     )
 
     legend_html = _render_legend(hourly_metrics, hourly_enabled)
@@ -1047,8 +1046,7 @@ def render_compare_html(
     body_html = "\n".join(
         part for part in (
             header_html, warnings_html, warn_banner_html, overview_html,
-            hourly_head_html, hourly_sections_html,
-            outlook_head_html, outlook_sections_html,
+            hourly_head_html, per_location_html,
             legend_html, abo_html, app_footer_html,
         ) if part
     )

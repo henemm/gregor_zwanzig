@@ -164,39 +164,39 @@ def render_comparison_text(
 
         lines.append("")
 
-    # Stundentabellen fuer ALLE Orte (kompakt, kein Rang-Praefix)
-    valid = [loc for loc in locations if loc.error is None and loc.hourly_data]
-    if valid:
-        lines.append("STUNDENVERLAUF")
-        lines.append("-" * 15)
-        for loc_result in valid:
-            lines.append(loc_result.location.name)
+    # Stundentabelle + 3-Tage-Ausblick (Epic #1301 B4) je Ort, direkt
+    # untereinander (Issue #1323: der Ausblick folgt unmittelbar auf den
+    # Stundenblock desselben Orts, statt gesammelt in einer eigenen
+    # "AUSBLICK"-Sektion am Textende). Fail-soft je Ort -- fehlt Stunden-
+    # oder Ausblickdaten, entfaellt nur der jeweils fehlende Teil.
+    section_lines: list[str] = []
+    for loc_result in locations:
+        if loc_result.error is not None:
+            continue
+        have_hourly = bool(loc_result.hourly_data)
+        outlook_rows = (
+            _build_location_outlook_rows(loc_result)
+            if outlook_enabled and loc_result.outlook_hourly_data else []
+        )
+        if not have_hourly and not outlook_rows:
+            continue
+        section_lines.append(loc_result.location.name)
+        if have_hourly:
             for dp in loc_result.hourly_data:
                 ts = dp.ts.strftime("%H:%M") if hasattr(dp.ts, "strftime") else str(dp.ts)
                 temp = f"{dp.t2m_c:.0f}°" if dp.t2m_c is not None else "-"
                 gef = f"{dp.wind_chill_c:.0f}°" if dp.wind_chill_c is not None else "-"
                 wind = f"{dp.wind10m_kmh:.0f}" if dp.wind10m_kmh is not None else "-"
                 cloud_pct = f"{dp.cloud_total_pct}%" if dp.cloud_total_pct is not None else "-"
-                lines.append(f"   {ts}  Temp {temp}  Gef. {gef}  Wind {wind}  Wolken {cloud_pct}")
-            lines.append("")
+                section_lines.append(f"   {ts}  Temp {temp}  Gef. {gef}  Wind {wind}  Wolken {cloud_pct}")
+        if outlook_rows:
+            section_lines.append(render_outlook_plain(outlook_rows, show_acc=False).strip("\n"))
+        section_lines.append("")
 
-    # Epic #1301 B4: 3-Tage-Ausblick je Ort (Klartext), unabhaengig von der
-    # STUNDENVERLAUF-Sektion (eigenes Config-Bool). Fail-soft je Ort
-    # (Fehler/leere Daten -> Ort wird uebersprungen, kein Crash).
-    if outlook_enabled:
-        outlook_valid = [
-            loc for loc in locations if loc.error is None and loc.outlook_hourly_data
-        ]
-        if outlook_valid:
-            lines.append("AUSBLICK")
-            lines.append("-" * 15)
-            for loc_result in outlook_valid:
-                rows = _build_location_outlook_rows(loc_result)
-                if not rows:
-                    continue
-                lines.append(loc_result.location.name)
-                lines.append(render_outlook_plain(rows, show_acc=False).strip("\n"))
-                lines.append("")
+    if section_lines:
+        lines.append("STUNDENVERLAUF")
+        lines.append("-" * 15)
+        lines.extend(section_lines)
 
     lines.append("---")
     lines.append("Gregor Zwanzig")
