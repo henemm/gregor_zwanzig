@@ -133,6 +133,27 @@ describe('AC-29: hydrateAlarmFieldsFromPreset — Erst-Oeffnungs-Hydration OHNE 
 	});
 });
 
+describe('#1320: hydrateAlarmFieldsFromPreset befuellt activeMetricKeys (Alarme als Erst-Tab, kein "keine Metriken")', () => {
+	test('Preset mit display_config.active_metrics -> state.activeMetricKeys entspricht der aufgeloesten Metrik-Liste', () => {
+		const preset = makePreset({
+			display_config: {
+				region: 'Vorarlberg',
+				metric_alert_levels: { snow_depth_cm: 'warn', wind_gust: 'mark' },
+				active_metrics: ['wind_max_kmh']
+			}
+		});
+		const state: Record<string, unknown> = {};
+
+		hydrateAlarmFieldsFromPreset(state, preset);
+
+		assert.deepStrictEqual(
+			state.activeMetricKeys,
+			['wind_max_kmh'],
+			'ohne diese Verdrahtung bliebe activeMetricKeys leer und AlarmeTab.svelte zeigt faelschlich "keine Metriken" (Issue #1320)'
+		);
+	});
+});
+
 describe('AC-29 No-Op-Guard: flushPendingAlarmSave', () => {
 	function makeAlarmSnapshot(overrides: Partial<AlarmSnapshot> = {}): AlarmSnapshot {
 		return {

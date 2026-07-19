@@ -19,6 +19,7 @@ import { buildComparePresetSavePayload } from './compareEditorSave.ts';
 import { rehydrateActiveMetrics } from './compareEditorLoad.ts';
 import type { CompareStatus } from './subscriptionHelpers.ts';
 import { computePauseToggle } from './subscriptionHelpers.ts';
+import { hydrateWeatherMetricsFromPreset } from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 
 /** Plain-Objekt mit GENAU den 6 Feldern, die CorridorEditor.svelte im
  * vergleich-Kontext aus dem Wizard-State liest. Die Bridge-Komponente
@@ -399,6 +400,10 @@ export interface AlarmHydrationTarget {
 	// Issue #1260: Telegram-Kurzstil-Toggle im Hub-Alarme-Tab
 	// (display_config.telegram_style). Default "rich".
 	telegramStyle?: 'rich' | 'kurzform';
+	// Issue #1320: activeMetricKeys wird sonst nur von den Hydrations-Effekten
+	// der Tabs "wetter-metriken"/"idealwerte" befuellt — fehlt Alarme als
+	// Erst-Tab (Deep-Link), zeigt AlarmeTab.svelte faelschlich "keine Metriken".
+	activeMetricKeys?: string[];
 }
 
 /**
@@ -427,6 +432,11 @@ export function hydrateAlarmFieldsFromPreset(state: AlarmHydrationTarget, preset
 	state.alertQuietFrom = preset.alert_quiet_from;
 	state.alertQuietTo = preset.alert_quiet_to;
 	state.corridors = preset.corridors ?? [];
+	// Issue #1320: Alarme kann als ERSTER Tab geoeffnet werden — dann hat
+	// activeMetricKeys noch keinen Hydrations-Durchlauf vom Wetter-Metriken-/
+	// Idealwerte-Tab gesehen. Ohne diese Zeile zeigt die Empfindlichkeits-
+	// Tabelle faelschlich "keine Metriken", obwohl das Preset aktive Metriken hat.
+	state.activeMetricKeys = hydrateWeatherMetricsFromPreset(preset);
 	// Issue #1260: Kurzstil-Toggle aus display_config.telegram_style hydrieren,
 	// Default "rich" (analog CompareEditor). Ohne diese Zeile bliebe der Toggle
 	// im Hub-Alarme-Tab dauerhaft auf dem Klasse-Default stehen und ein
