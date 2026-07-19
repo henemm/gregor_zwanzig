@@ -1,12 +1,12 @@
-// TDD RED — Issue #718 (Epic #677): Compare-Editor Slice 4 — Idealwert-Validierung
+// Issue #718 (Epic #677): Compare-Editor Slice 4 — Idealwert-Validierung
 //
 // Spec: docs/specs/modules/issue_718_compare_editor_slice4_validierung.md
 //
-// RED-Phase: Alle Tests schlagen fehl, weil:
-//   a) validateIdealRanges() nicht in compareMetricDefs.ts exportiert wird
-//   b) doneTabs() kennt idealsValid noch nicht → gibt idealwerte als done zurück
-//      obwohl idealsValid=false gesetzt ist
-//   c) CompareWizardState hat keinen canAdvanceStep3-Getter → undefined statt boolean
+// Epic #1301 F2b (2026-07-19): Der Alt-Editor `compareEditorLogic.ts` (doneTabs)
+// wurde ersatzlos gelöscht (abgelöst durch compareNewLogic.ts, F2a). Die
+// doneTabs()-Blöcke (AC-3/AC-5) sind daher entfallen — nur die
+// validateIdealRanges()-Blöcke (compareMetricDefs.ts, bleibt bestehen) leben
+// hier weiter.
 //
 // Ausführen:
 //   cd frontend && node --experimental-strip-types --test \
@@ -15,16 +15,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-// ── Import 1: validateIdealRanges (neu — existiert noch nicht) ───────────────
-// RED: Export existiert nicht → TypeError beim Aufruf
 import { validateIdealRanges } from './compareMetricDefs.ts';
-
-// ── Import 2: doneTabs (idealsValid-Erweiterung) ─────────────────────────────
-import { doneTabs } from './compareEditorLogic.ts';
-
-// CompareWizardState verwendet Svelte-Runes ($state/$derived) — nicht in node:test
-// lauffähig. canAdvanceStep3-Verhalten wird via E2E (issue-718-idealwert-validation.spec.ts)
-// und durch die validateIdealRanges-Tests indirekt abgedeckt.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AC-1/AC-2/AC-4: validateIdealRanges() — pure Funktion
@@ -95,52 +86,10 @@ describe('AC-1/AC-4: validateIdealRanges() — Kernlogik', () => {
 	});
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AC-3: doneTabs() mit idealsValid=false → idealwerte NICHT done
-// ─────────────────────────────────────────────────────────────────────────────
-describe('AC-3: doneTabs() — idealsValid=false blockt done-Status', () => {
-	const base = {
-		name: 'Skitouren Hochkönig',
-		pickedCount: 3,
-		idealsVisited: true,
-		layoutVisited: true,
-		versandVisited: true
-	};
-
-	test('idealsValid=false → idealwerte NICHT in doneTabs', () => {
-		// RED: doneTabs() ignoriert idealsValid noch → gibt idealwerte trotzdem zurück
-		const done = doneTabs({ ...base, idealsValid: false });
-		assert.ok(
-			!done.has('idealwerte'),
-			'idealwerte darf nicht als done gelten wenn idealsValid=false'
-		);
-	});
-
-	test('idealsValid=true → idealwerte in doneTabs wie gehabt', () => {
-		const done = doneTabs({ ...base, idealsValid: true });
-		assert.ok(done.has('idealwerte'), 'idealwerte muss done sein wenn idealsValid=true');
-	});
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// AC-5: doneTabs() rückwärtskompatibel — idealsValid=undefined → weiterhin done
-// ─────────────────────────────────────────────────────────────────────────────
-describe('AC-5: doneTabs() — Rückwärtskompatibilität (undefined = valid)', () => {
-	test('idealsValid nicht übergeben (undefined) → idealwerte weiterhin done', () => {
-		// Bestehende Tests übergeben idealsValid nicht — dürfen nicht brechen
-		const done = doneTabs({
-			name: 'X',
-			pickedCount: 2,
-			idealsVisited: true,
-			layoutVisited: false
-		});
-		assert.ok(
-			done.has('idealwerte'),
-			'ohne idealsValid muss idealwerte weiterhin als done gelten'
-		);
-	});
-});
-
+// AC-3/AC-5 (doneTabs()-Blöcke) entfallen mit Epic #1301 F2b — die Alt-Editor-
+// Lock-Engine compareEditorLogic.ts (inkl. doneTabs()) wurde ersatzlos gelöscht,
+// abgelöst durch compareNewLogic.ts (F2a), dort eigenständig getestet.
+//
 // canAdvanceStep3 / canAdvanceCurrent-Getter: via E2E geprüft
 // (compare-editor-idealwert-validation.spec.ts AC-2)
 // Begründung: CompareWizardState nutzt Svelte-Runes ($state/$derived) —

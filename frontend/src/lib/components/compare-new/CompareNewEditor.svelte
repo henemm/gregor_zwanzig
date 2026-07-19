@@ -9,8 +9,9 @@
 	// in compareNewLogic.ts. Lokaler CompareWizardState (Context), EIN POST bei
 	// „Briefing aktivieren" via wiz.saveNewPreset() — kein Backend-Change.
 	//
-	// Der Alt-Editor CompareEditor.svelte bleibt unangetastet als Rollback-Punkt
-	// (AC-10, Löschung ist F2b). Testid-Familien 1:1 erhalten (E2E-Verträge).
+	// Der Alt-Editor CompareEditor.svelte wurde in Epic #1301 F2b ersatzlos
+	// gelöscht (Rollback-Punkt entfallen, dieser Editor ist der einzige Anlege-Pfad).
+	// Testid-Familien 1:1 erhalten (E2E-Verträge).
 	// Safari-Factory-Pattern für alle Handler (CLAUDE.md).
 
 	import { getContext, onMount } from 'svelte';

@@ -27,6 +27,11 @@ const STEP4_FILE  = join(COMPARE_DIR, 'steps', 'Step4Layout.svelte');
 const STEP5_FILE  = join(COMPARE_DIR, 'steps', 'Step5Versand.svelte');
 const STATE_FILE  = join(COMPARE_DIR, 'compareWizardState.svelte.ts');
 
+// F2b (Epic #1301): Alt-Editor + Helfer — Löschziele dieser Scheibe
+const EDITOR_FILE          = join(COMPARE_DIR, 'CompareEditor.svelte');
+const EDITOR_LOGIC_FILE    = join(COMPARE_DIR, 'compareEditorLogic.ts');
+const EDITOR_AUTOSAVE_FILE = join(COMPARE_DIR, 'compareAutosave.ts');
+
 // Repo-Root (6x up: __tests__ → compare → components → lib → src → frontend → repo-root)
 const REPO_ROOT   = join(here, '..', '..', '..', '..', '..', '..');
 const SRC_DIR     = join(REPO_ROOT, 'frontend', 'src');
@@ -231,15 +236,90 @@ test('AC-3 (aktualisiert #1250 Scheibe 0): compareWizardState.svelte.ts enthält
 });
 
 // =============================================================================
+// F2b (Epic #1301): Alt-Editor CompareEditor.svelte + Helfer entfernt
+// =============================================================================
+// TDD RED — Epic #1301 F2b (Spec feat_1301_f2b_editor_loeschung.md AC-1/AC-3): rot bis zur Löschung in Phase 6.
+
+test('F2b AC-1: CompareEditor.svelte (Alt-Editor) existiert nicht mehr', () => {
+	assert.strictEqual(
+		existsSync(EDITOR_FILE),
+		false,
+		`CompareEditor.svelte (Alt-Editor) muss gelöscht sein (Epic #1301 F2b), existiert aber noch: ${EDITOR_FILE}`
+	);
+});
+
+test('F2b AC-1: compareEditorLogic.ts (Alt-Editor-Lock-Engine) existiert nicht mehr', () => {
+	assert.strictEqual(
+		existsSync(EDITOR_LOGIC_FILE),
+		false,
+		`compareEditorLogic.ts muss gelöscht sein (Epic #1301 F2b, abgelöst durch compareNewLogic.ts), existiert aber noch: ${EDITOR_LOGIC_FILE}`
+	);
+});
+
+test('F2b AC-1: compareAutosave.ts (Alt-Editor-Autosave) existiert nicht mehr', () => {
+	assert.strictEqual(
+		existsSync(EDITOR_AUTOSAVE_FILE),
+		false,
+		`compareAutosave.ts muss gelöscht sein (Epic #1301 F2b, abgelöst durch den Hub-eigenen SaveController), existiert aber noch: ${EDITOR_AUTOSAVE_FILE}`
+	);
+});
+
+test('F2b AC-1: Keine Produktionsdatei importiert CompareEditor.svelte, compareEditorLogic oder compareAutosave', () => {
+	// Wortgrenzen/exakte Import-Pfade, damit CompareNewEditor / compareNewLogic
+	// (F2a-Nachfolger) NICHT fälschlich matchen.
+	const EDITOR_SVELTE_IMPORT_RE = /import[^;]*(?<![A-Za-z])CompareEditor\.svelte['"]/;
+	const EDITOR_LOGIC_IMPORT_RE = /import[^;]*compareEditorLogic(\.ts)?['"]/;
+	const EDITOR_AUTOSAVE_IMPORT_RE = /import[^;]*compareAutosave(\.ts)?['"]/;
+
+	const files = collectSourceFiles(SRC_DIR);
+	const hits: string[] = [];
+	for (const f of files) {
+		// Diese Test-Datei selbst und andere Test-Dateien überspringen
+		if (f.endsWith('issue_683_wizard_remove.test.ts')) continue;
+		if (f.includes('__tests__') || f.includes('.test.ts') || f.includes('.test.js')) continue;
+		const content = readFileSync(f, 'utf-8');
+		if (
+			EDITOR_SVELTE_IMPORT_RE.test(content) ||
+			EDITOR_LOGIC_IMPORT_RE.test(content) ||
+			EDITOR_AUTOSAVE_IMPORT_RE.test(content)
+		) {
+			hits.push(f.replace(SRC_DIR + '/', ''));
+		}
+	}
+	assert.deepStrictEqual(
+		hits,
+		[],
+		`Folgende Produktionsdateien importieren noch den Alt-Editor oder seine Helfer ` +
+			`(CompareEditor.svelte / compareEditorLogic / compareAutosave):\n  ${hits.join('\n  ')}`
+	);
+});
+
+// =============================================================================
 // AC-5: Route-Dateien importieren CompareEditor, NICHT CompareWizard
 // =============================================================================
 
-test('AC-5: compare/new/+page.svelte importiert CompareEditor', () => {
+// TDD RED — Epic #1301 F2b (Spec feat_1301_f2b_editor_loeschung.md AC-1/AC-3): rot bis zur Löschung in Phase 6.
+// AC-5 präzisiert (F2b, AC-3): die alte Prüfung matchte "CompareEditor" nur
+// zufällig grün (Prosa-Kommentar in +page.svelte, nicht der tatsächliche Import).
+// Ab F2a mountet /compare/new den Progressive-Tab-Editor CompareNewEditor
+// (#622-Muster, s. feat_1301_f2a_compare_new_trip_pattern.md) — nicht mehr
+// den Alt-Editor. Diese Fassung prüft Import UND Abwesenheit wortgrenzen-exakt.
+test('AC-5 (präzisiert F2b): compare/new/+page.svelte importiert CompareNewEditor, NICHT den Alt-Editor CompareEditor.svelte', () => {
 	assert.ok(existsSync(ROUTE_NEW), `Route-Datei fehlt: ${ROUTE_NEW}`);
 	const src = readFileSync(ROUTE_NEW, 'utf-8');
+	const hasCompareNewEditorImport =
+		/import\s+CompareNewEditor\s+from\s+['"]\$lib\/components\/compare-new\/CompareNewEditor\.svelte['"]/.test(
+			src
+		);
 	assert.ok(
-		/CompareEditor/.test(src),
-		'compare/new/+page.svelte muss CompareEditor importieren'
+		hasCompareNewEditorImport,
+		"compare/new/+page.svelte muss CompareNewEditor aus '$lib/components/compare-new/CompareNewEditor.svelte' importieren"
+	);
+	const hasOldEditorImport = /import[^;]*(?<![A-Za-z])CompareEditor\.svelte['"]/.test(src);
+	assert.strictEqual(
+		hasOldEditorImport,
+		false,
+		'compare/new/+page.svelte darf den Alt-Editor CompareEditor.svelte nicht (mehr) importieren'
 	);
 });
 

@@ -460,6 +460,8 @@ None—pure frontend changes for Steps 1–3. Backend endpoints are opaque (no s
 
 ## Migration to Tab-Editor (Epic #677)
 
+*(Update 2026-07-19: Der hier beschriebene Tab-Editor `CompareEditor.svelte` ist inzwischen ersatzlos entfernt — Epic #1301 Scheibe F2b, siehe `docs/specs/modules/feat_1301_f2b_editor_loeschung.md`. Der folgende Abschnitt beschreibt den historischen Migrationsstand und bleibt unverändert.)*
+
 **Starting 2026-06-09**, Epic #438's 5-Step-Wizard is being gradually replaced by a Tab-Editor (Epic #677, analog to Trip-Editor #616/#622). The Wizard component remains functional until Slice 6 of #677 is complete, ensuring no service interruption.
 
 **Status:**

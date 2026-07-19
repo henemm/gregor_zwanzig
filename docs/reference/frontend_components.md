@@ -1,7 +1,7 @@
 # Frontend Components Reference
 
-**Updated:** 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31  
-**Version:** 1.9
+**Updated:** 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
+**Version:** 1.10
 
 ## Overview
 
@@ -559,10 +559,10 @@ is exactly one mounted `TopAppBar`.
 
 **Reference implementations:** `frontend/src/routes/compare/+page.svelte`
 (mobile list header: title "Orts-Vergleiche", eyebrow "Workspace · N",
-right = Plus→`/compare/new`) and
-`frontend/src/lib/components/compare/CompareEditor.svelte` (mobile editor
-header: title = active tab name, eyebrow = compare name, `leftIcon="back"`
-→ `/compare`, right = Speichern/„…"/„Aktivieren" depending on mode/tab).
+right = Plus→`/compare/new`). *(Der frühere zweite Referenzfall,
+`frontend/src/lib/components/compare/CompareEditor.svelte` — mobile editor
+header mit aktivem Tab-Namen/Compare-Name/Zurück-Icon — ist mit Epic #1301
+Scheibe F2b am 2026-07-19 gelöscht; die Datei existiert nicht mehr.)*
 
 **Reuse note:** this is a generic pattern, not Compare-specific — intended
 to be reused by Trip pages during the Trip/Compare convergence work

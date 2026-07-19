@@ -1,14 +1,14 @@
 # Epic 1273: Ortsvergleich auf EINE Fläche
 
-**Status:** In Progress (Slice 4b Complete — 2026-07-17)
-**Epic Scope:** Der Ortsvergleich-Hub (`CompareTabs.svelte`) wird nach dem Muster von #616 (Trip-IA) zur **einzigen** Bearbeiten-Fläche für einen Ortsvergleich — vollständig editierbar mit Auto-Save-Chip (`SaveStatus`/`SaveIndicator`, „✓ Gespeichert HH:MM"). Der separate Editor `/compare/[id]/edit` (`CompareEditor.svelte`, aus Epic #677) entfällt am Ende der Migration. Die Anlege-Strecke `/compare/new` folgt seit F2a (2026-07-19) dem Trip-Muster #622 (`CompareNewEditor`); der alte Wizard/`CompareEditor` ist nirgends mehr gemountet und fällt mit F2b.
+**Status:** Complete (Slice S5/F2b — 2026-07-19)
+**Epic Scope:** Der Ortsvergleich-Hub (`CompareTabs.svelte`) wird nach dem Muster von #616 (Trip-IA) zur **einzigen** Bearbeiten-Fläche für einen Ortsvergleich — vollständig editierbar mit Auto-Save-Chip (`SaveStatus`/`SaveIndicator`, „✓ Gespeichert HH:MM"). Der separate Editor `/compare/[id]/edit` (`CompareEditor.svelte`, aus Epic #677) ist mit F2b (2026-07-19) ersatzlos gelöscht. Die Anlege-Strecke `/compare/new` folgt seit F2a (2026-07-19) dem Trip-Muster #622 (`CompareNewEditor`); der alte Wizard/`CompareEditor` existiert nicht mehr im Repo.
 **Related Specs:**
 - `docs/specs/modules/feat_1273_s1_compare_hub_save_chip.md` (Slice S1 — Save-Chip-Infra) — Approved, VERIFIED
 - `docs/specs/modules/feat_1273_s2_compare_hub_name_region_profil.md` (Slice S2 — Name/Region/Aktivitätsprofil inline editierbar) — Approved, Adversary-Verdict AMBIGUOUS→Freigabe nach Test-Fix
 - `docs/specs/modules/feat_1273_s3_redirect.md` (Slice S3 — Edit-Route wird reiner Redirect) — Approved, Adversary-Verdict AMBIGUOUS→behoben, alle 7 ACs CONFIRMED
 - `docs/context/epic-1273-compare-one-surface.md` (Kontext-/Analyse-Dokument, Scheiben-Schnitt)
 
-**Child Slices:** S1 ✓ (2026-07-16) · S2 ✓ (2026-07-17) · S3 ✓ (2026-07-17) · S4a ✓ Teilmenge 4/26 e2e (2026-07-17) · S4b ✓ (2026-07-17) · S4c ✓ (2026-07-19, `c822cb85`) · S5/F2a ✓ (2026-07-19, `37381f47`+`c5503e3a`: /compare/new = CompareNewEditor nach Trip-Muster #622, Alt-Editor unangetastet) · offen nur F2b (Löschung)
+**Child Slices:** S1 ✓ (2026-07-16) · S2 ✓ (2026-07-17) · S3 ✓ (2026-07-17) · S4a ✓ Teilmenge 4/26 e2e (2026-07-17) · S4b ✓ (2026-07-17) · S4c ✓ (2026-07-19, `c822cb85`) · S5/F2a ✓ (2026-07-19, `37381f47`+`c5503e3a`: /compare/new = CompareNewEditor nach Trip-Muster #622, Alt-Editor unangetastet) · S5/F2b ✓ (2026-07-19: `CompareEditor.svelte` + Editor-only-Helfer gelöscht) — **S5 KOMPLETT, Epic #1273 abgeschlossen**
 
 **PO-Auftrag:** Prod-Audit, Befund 9, 2026-07-16.
 
@@ -46,7 +46,7 @@ Der heutige Ortsvergleich hat zwei Bearbeiten-Flächen: den Detail-Hub `CompareT
 | **S4a** | Teilmenge der ~26 e2e-Specs: 4 Dateien, die nur totes Editor-Chrome oder eine überholte URL prüfen (löschen/URL-Fix) — NICHT die vollständigen ~26, s. Korrektur unten | ✓ Complete 2026-07-17 |
 | **S4b** | ~15 Unit-Tests (Source-Inspection auf `CompareEditor.svelte`) migrieren/löschen | ✓ Complete 2026-07-17 |
 | **S4c** *(neu, 2026-07-17 bei S4a-Recherche entdeckt)* | ~19 verbleibende e2e-Specs, die gültige Fachlogik über den alten Editor prüfen (Idealwerte, Alarme, Radar-Toggle, Altfelder-Erhalt beim Speichern — Bezug BUG-DATALOSS-GR221/#102 —, Versand-Tab, Autosave-Mandantentrennung) strukturell auf den Hub umziehen (Testids, Autosave-Warten statt Save-Klick) | ✓ Complete 2026-07-19 (`c822cb85`, Spec `epic_1273_s4c_e2e_migration.md`): 9 Dateien Hub-Klasse, 5 Wizard-Klasse (echter Klickpfad ab `/compare/new`), Chrome-DELETEs spec-autorisiert; Autosave-ACs auf Hub-Semantik (1 PUT/Aktion, echte Navigations-Race); 4 vorbestehend faule Fixtures repariert (skitour-Profil, Registrierung ohne E-Mail #1226, Metrik-Keys, mail_to-Reset-Pointer-Falle) |
-| **S5** | Cleanup: `CompareEditor.svelte` + `/edit`-Route löschen, verwaiste Helper prüfen (netto ~-1900 LoC, Sonderfall wie #616). **Anlege-Strecke ENTSCHIEDEN (PO-bekräftigt 2026-07-19, war nie offen):** `/compare/new` wird nach dem Trip-Muster #622 neu zusammengesetzt (Progressive-Tab-Anlege-Seite aus den geteilten Organismen WeatherMetricsTab/CorridorEditor/AlarmeTab/VersandTab, Pendant `TripNewEditor`); der alte Wizard fällt mit. Die frühere Zeile „Create-Wizard bleibt unverändert" in der Ziel-Hierarchie unten ist überholt und gilt nicht. Empfohlener Schnitt: F2a Anlege-Seite nach Trip-Vorbild, F2b Löschung | F2a ✓ 2026-07-19 (`37381f47`+`c5503e3a`) — offen nur F2b-Löschung |
+| **S5** | Cleanup: `CompareEditor.svelte` + Editor-only-Helfer löschen, verwaiste Helper prüfen (netto ~-2000 LoC, Sonderfall wie #616). **Anlege-Strecke ENTSCHIEDEN (PO-bekräftigt 2026-07-19, war nie offen):** `/compare/new` wird nach dem Trip-Muster #622 neu zusammengesetzt (Progressive-Tab-Anlege-Seite aus den geteilten Organismen WeatherMetricsTab/CorridorEditor/AlarmeTab/VersandTab, Pendant `TripNewEditor`); der alte Wizard fällt mit. Die frühere Zeile „Create-Wizard bleibt unverändert" in der Ziel-Hierarchie unten ist überholt und gilt nicht. Die `/edit`-Route selbst bleibt (Trip-Muster #616 — reiner Redirect), nur der Alt-Editor wird gelöscht. Schnitt: F2a Anlege-Seite nach Trip-Vorbild, F2b Löschung | F2a ✓ 2026-07-19 (`37381f47`+`c5503e3a`) · F2b ✓ 2026-07-19 — **S5 komplett** |
 
 **Reihenfolge:** S1 → S2 → S3 → (S4a/S4b/S4c parallel) → S5. Nach jeder Scheibe ist die App voll funktionsfähig — additiv bis S3, S3 macht die alte Route zum reinen Redirect ohne Codelöschung (sicherer Rollback-Punkt), S4a/S4b/S4c sind reine Testarbeit, S5 räumt erst auf wenn alles grün ist.
 
@@ -138,6 +138,18 @@ Details: `docs/specs/modules/feat_1273_s3_redirect.md`, Adversary-Dialog: `docs/
 
 ---
 
+## Slice S5/F2b: Ersatzlose Löschung des Alt-Editors `CompareEditor.svelte` (Issue #1301, Spec `feat_1301_f2b_editor_loeschung.md`)
+
+**Status:** ✓ Completed 2026-07-19, Adversary-verifiziert.
+
+Schließt Epic #1273 ab: der tote Alt-Editor `CompareEditor.svelte` (1.686 Zeilen, unerreichbar seit S3) sowie seine Editor-only-Helfer `compareEditorLogic.ts` und `compareAutosave.ts` samt 3 zugehöriger Testdateien werden gelöscht (−2.103/+96 LoC). `issue_718_idealwert_validation.test.ts` bereinigt (Import auf gelöschtes Modul entfernt) und der Wächter `issue_683_wizard_remove.test.ts` um Wortgrenzen-Abwesenheits-Checks für `CompareEditor.svelte`/`compareEditorLogic.ts`/`compareAutosave.ts` ergänzt (schließt die Substring-Falle `CompareEditor` ~ `CompareNewEditor`).
+
+Die Redirect-Route `/compare/[id]/edit` (307 → Hub) bleibt bewusst bestehen (Trip-Muster #616, `routes/trips/[id]/edit/`) — nur die Editor-**Komponente** wird gelöscht, nicht die Route. `Step2Orte.svelte`, `compareEditorSave.ts`/`compareEditorLoad.ts`, `compareWizardState.svelte.ts`, `compareHubWizardBridge.ts` bleiben unverändert bestehen (weiterverwendet von `CompareNewEditor`/Hub-Save-Pfad).
+
+Details: `docs/specs/modules/feat_1301_f2b_editor_loeschung.md`.
+
+---
+
 ## Architecture
 
 ### Component Hierarchy (Ziel-Zustand nach S5)
@@ -155,7 +167,7 @@ frontend/src/routes/compare/
     │       └── <CompareTabs saveController={...} />   (DIE einzige Bearbeiten-Fläche)
     │
     └── edit/
-        └── +page.svelte                            (✓ S3: reiner Redirect auf /compare/[id]?tab=...; S5: Route gelöscht)
+        └── +page.svelte                            (✓ S3: reiner Redirect auf /compare/[id]?tab=...; bleibt bestehen, Trip-Muster #616 — S5/F2b löscht nur CompareEditor.svelte selbst)
 ```
 
 ### Speicher-Modell (S1)
@@ -198,11 +210,11 @@ Präzedenzfall: `TripHeader.svelte` (Trip-Name-Bearbeitung läuft ebenfalls isol
 | 2026-07-17 | S3 | `/compare/[id]/edit` wird reiner 307-Redirect auf `/compare/[id]` (Muster #616), alle 7 externen Linkstellen umgebogen, 2 vormals hash-basierte Schnellaktionen nutzen jetzt `?tab=idealwerte`/`?tab=versand`, redundante Hub-eigene Bearbeiten-Affordanzen (Desktop-Button, Mobile-Stift) entfernt, `compareDetailActions()` liefert keinen `edit`-Eintrag mehr (reiner Alias auf `compareLifecycleActions()`). Adversary-Verdict AMBIGUOUS→behoben: F001 (AC-2/AC-3-Tests nutzten Datei-Grep statt echtem Funktionsaufruf) behoben durch Extraktion von `resolveCompareTab()` in `compareTabsResolve.ts`, alle 7 ACs CONFIRMED. Bekannte Grenze: `CompareEditor.svelte` bleibt toter Code (S5), ~26 e2e-Specs + einzelne Unit-Tests auf `/edit` sind strukturell rot (S4-Scope). Issue #1273 (Slice 3). Spec: `docs/specs/modules/feat_1273_s3_redirect.md`. |
 | 2026-07-17 | S4a | 4 von ~26 e2e-Playwright-Specs migriert (nur totes Editor-Chrome/überholte URL, NICHT die vollständige Migration — Korrektur ggü. ursprünglicher Slice-Beschreibung, s. „Geplante Slices" oben). NEU: `compare-cross-user-write-block.spec.ts` (Sicherheitstest User-Isolation, rein API-basiert). GELÖSCHT: `compare-editor-edit.spec.ts` (unerreichbar nach S3-Redirect). Aktualisiert: `bug-626-compare-menu-actions.spec.ts`, `compare-detail-edit-entry.spec.ts`; `compare-editor-autosave-user-isolation.spec.ts` unverändert (selbst strukturell rot, gehört zu S4c). Adversary-Verdict AMBIGUOUS→Override erteilt (F002 gelöst via Draft-Preset-Fixture; F001/F004 kosmetisch). 11 passed, 0 failed, 0 skipped. Verbleibende ~19 e2e-Specs mit gültiger Fachlogik → neue Scheibe S4c. Issue #1273 (Slice 4a). Spec: `docs/specs/modules/epic_1273_s4a_test_migration.md`. |
 | 2026-07-17 | S4b | ~15 Unit-Tests migriert/gelöscht: GELÖSCHT 3 Dateien (`compare_editor_gesture_capture_scope.test.ts`, `compare_editor_mobile_fidelity.test.ts`, `compare_editor_layout_tab_wiring.test.ts`). ANGEPASST 2 Dateien (je ein Testblock von `CompareEditor.svelte` auf `CompareTabs.svelte` umgezogen): `step2_orte_library_grouping.test.ts`, `corridorEditorMobile.test.ts`. NACHTRAG 1 Datei: `issue_683_wizard_remove.test.ts` (veralteter S3-Test korrigiert). Gesamt Pytest-Kernlauf: 462/470 Tests grün; 5 Fehlschläge nachweislich unabhängig (#1296, #1268). Adversary-Verdict AMBIGUOUS→Override erteilt (2 kosmetische Spec-Dokumentationsfehler behoben, keine Implementierungsfehler). Issue #1273 (Slice 4b). Spec: `docs/specs/modules/epic_1273_s4b_unit_test_migration.md`. |
+| 2026-07-19 | S5/F2b | `CompareEditor.svelte` (1.686 Z.) + `compareEditorLogic.ts` + `compareAutosave.ts` + 3 Testdateien gelöscht (−2.103/+96 LoC). `issue_718_idealwert_validation.test.ts` und Wächter `issue_683_wizard_remove.test.ts` aktualisiert (neue Wortgrenzen-Abwesenheits-Checks). Redirect-Route `/compare/[id]/edit` bleibt bestehen (Trip-Muster #616). Adversary-verifiziert. **Epic #1273 damit abgeschlossen.** Issue #1301 (Scheibe F2b) / #1273 (S5). Spec: `docs/specs/modules/feat_1301_f2b_editor_loeschung.md`. |
 
 ---
 
 ## Future Work
 
-- **S4c:** ~19 verbleibende e2e-Specs mit gültiger Fachlogik (Idealwerte, Alarme, Radar-Toggle, Altfelder-Erhalt, Versand-Tab, Autosave-Mandantentrennung) strukturell auf den Hub umziehen — Voraussetzung für S5, sonst reißt die Editor-Löschung diese Tests ersatzlos.
-- **S5:** `CompareEditor.svelte` + `/edit`-Route löschen — schließt zugleich Slice 6 aus Epic #677 ab (dort als „CompareWizard-Deletion, Full Tab-Editor-Umstieg" vermerkt). Blockiert durch S4c.
+Keine offenen Slices — Epic #1273 ist mit S5/F2b (2026-07-19) abgeschlossen. F2b schließt zugleich Slice 6 aus Epic #677 ab (dort als „CompareWizard-Deletion, Full Tab-Editor-Umstieg" vermerkt).
 
