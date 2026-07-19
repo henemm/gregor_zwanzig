@@ -46,7 +46,7 @@ Der heutige Ortsvergleich hat zwei Bearbeiten-Flächen: den Detail-Hub `CompareT
 | **S4a** | Teilmenge der ~26 e2e-Specs: 4 Dateien, die nur totes Editor-Chrome oder eine überholte URL prüfen (löschen/URL-Fix) — NICHT die vollständigen ~26, s. Korrektur unten | ✓ Complete 2026-07-17 |
 | **S4b** | ~15 Unit-Tests (Source-Inspection auf `CompareEditor.svelte`) migrieren/löschen | ✓ Complete 2026-07-17 |
 | **S4c** *(neu, 2026-07-17 bei S4a-Recherche entdeckt)* | ~19 verbleibende e2e-Specs, die gültige Fachlogik über den alten Editor prüfen (Idealwerte, Alarme, Radar-Toggle, Altfelder-Erhalt beim Speichern — Bezug BUG-DATALOSS-GR221/#102 —, Versand-Tab, Autosave-Mandantentrennung) strukturell auf den Hub umziehen (Testids, Autosave-Warten statt Save-Klick) | ✓ Complete 2026-07-19 (`c822cb85`, Spec `epic_1273_s4c_e2e_migration.md`): 9 Dateien Hub-Klasse, 5 Wizard-Klasse (echter Klickpfad ab `/compare/new`), Chrome-DELETEs spec-autorisiert; Autosave-ACs auf Hub-Semantik (1 PUT/Aktion, echte Navigations-Race); 4 vorbestehend faule Fixtures repariert (skitour-Profil, Registrierung ohne E-Mail #1226, Metrik-Keys, mail_to-Reset-Pointer-Falle) |
-| **S5** | Cleanup: `CompareEditor.svelte` + `/edit`-Route löschen, verwaiste Helper prüfen (netto ~-1900 LoC, Sonderfall wie #616). **Achtung Widerspruch klären:** Ziel-Hierarchie unten sagt „Create-Wizard bleibt unverändert" (rendert `CompareEditor mode="create"`), #1301 F2 sagt „CompareEditor.svelte löschen" — vor S5-Spec entscheiden, was aus der Anlege-Strecke wird | Entblockt (S4a/S4b/S4c ✓) — als #1301 F2 geplant |
+| **S5** | Cleanup: `CompareEditor.svelte` + `/edit`-Route löschen, verwaiste Helper prüfen (netto ~-1900 LoC, Sonderfall wie #616). **Anlege-Strecke ENTSCHIEDEN (PO-bekräftigt 2026-07-19, war nie offen):** `/compare/new` wird nach dem Trip-Muster #622 neu zusammengesetzt (Progressive-Tab-Anlege-Seite aus den geteilten Organismen WeatherMetricsTab/CorridorEditor/AlarmeTab/VersandTab, Pendant `TripNewEditor`); der alte Wizard fällt mit. Die frühere Zeile „Create-Wizard bleibt unverändert" in der Ziel-Hierarchie unten ist überholt und gilt nicht. Empfohlener Schnitt: F2a Anlege-Seite nach Trip-Vorbild, F2b Löschung | Entblockt (S4a/S4b/S4c ✓) — als #1301 F2 geplant |
 
 **Reihenfolge:** S1 → S2 → S3 → (S4a/S4b/S4c parallel) → S5. Nach jeder Scheibe ist die App voll funktionsfähig — additiv bis S3, S3 macht die alte Route zum reinen Redirect ohne Codelöschung (sicherer Rollback-Punkt), S4a/S4b/S4c sind reine Testarbeit, S5 räumt erst auf wenn alles grün ist.
 
@@ -146,7 +146,8 @@ Details: `docs/specs/modules/feat_1273_s3_redirect.md`, Adversary-Dialog: `docs/
 frontend/src/routes/compare/
 ├── new/
 │   └── +page.svelte
-│       └── <CompareEditor mode="create" />        (bleibt — Create-Wizard unverändert)
+│       └── (S5/F2: Progressive-Tab-Anlege-Seite nach Trip-Muster #622 aus geteilten
+│            Organismen — ersetzt <CompareEditor mode="create">; PO-bekräftigt 2026-07-19)
 │
 └── [id]/
     ├── +page.svelte
