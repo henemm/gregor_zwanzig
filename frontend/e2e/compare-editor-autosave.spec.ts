@@ -80,8 +80,18 @@ function collectPresetPuts(page: Page, id: string): Request[] {
 }
 
 async function openEditor(page: Page, id: string): Promise<void> {
-	await page.goto(`/compare/${id}/edit`);
-	await expect(page.getByTestId('compare-editor')).toBeVisible({ timeout: 10_000 });
+	// Epic #1273 S4c: Einstieg direkt am Hub (Editor = 307-Redirect seit S3);
+	// die Tab-Leiste (compare-detail-tab-list) belegt, dass der Hub geladen ist.
+	await page.goto(`/compare/${id}`);
+	await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 10_000 });
+}
+
+/** Entfernt einen Ort über den Hub-Orte-Tab (hub-orte-row[data-loc-id] +
+ * hub-orte-remove statt Wizard-Testid compare-step2-picked-remove-{id}). */
+function removeOrt(page: Page, locId: string): Locator {
+	return page.locator(
+		`[data-testid="hub-orte-row"][data-loc-id="${locId}"] [data-testid="hub-orte-remove"]`
+	);
 }
 
 /**
@@ -142,10 +152,10 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 		const id = await createPresetWithLocations(page, `E2E 1261 AC5 ${suffix}`, [locA, locB]);
 
 		await openEditor(page, id);
-		await page.getByTestId('compare-editor-tab-orte').click();
+		await page.getByTestId('compare-detail-tab-orte').click();
 
 		const puts = collectPresetPuts(page, id);
-		await page.getByTestId(`compare-step2-picked-remove-${locB}`).click();
+		await removeOrt(page, locB).click();
 
 		const put = await page.waitForResponse(
 			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
@@ -158,8 +168,9 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 		expect(body.location_ids).toEqual([locA]);
 	});
 
-	// ── AC-6: zwei Felder innerhalb des Debounce-Fensters → EIN konsolidierter PUT ──
-	test('AC-6: zwei Änderungen (Ort + Kanal) innerhalb des Debounce-Fensters lösen genau EINEN PUT aus', async ({
+	// ── AC-6: zwei Aktionen → genau ZWEI PUTs, beide persistent ──────────────
+	// Epic #1273 S4c: Hub feuert pro Aktion EINEN PUT (hubPutQueue, kein Merge).
+	test('AC-6: zwei Aktionen (Ort + Versand-Zeit) lösen genau ZWEI PUTs aus, beide persistent', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -170,33 +181,40 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 		await openEditor(page, id);
 		const puts = collectPresetPuts(page, id);
 
-		await page.getByTestId('compare-editor-tab-orte').click();
-		await page.getByTestId(`compare-step2-picked-remove-${locB}`).click();
-
-		// Zweites Feld auf dem Versand-Tab: Morgen-Briefing-Uhrzeit. Bewusst NICHT
-		// der Telegram-Kanal-Toggle — der ist ausgegraut, solange das Test-Konto
-		// keine telegram_chat_id im Profil trägt (Staging-Realität, s. Memory
-		// "Staging-Validator-Konto ohne Kontaktfelder"). sendEmail=true ist
-		// wiz-Default (unabhängig vom Konto) → der Zeitplan-Bereich ist immer sichtbar.
-		await page.getByTestId('compare-editor-tab-versand').click();
-		const morningTime = page.getByTestId('report-morning-time');
-		await expect(morningTime).toBeVisible({ timeout: 10_000 });
-		await morningTime.fill('06:15');
-		await morningTime.blur();
-
-		// Beide Aktionen liegen weit innerhalb des 700ms-Debounce-Fensters
-		// (Tab-Klick + Eingabe sind fuer Playwright im ms-Bereich) — genau EIN PUT.
-		await page.waitForResponse(
+		// Aktion 1: Ort abwählen → ein PUT (Wartepromise VOR dem Klick registrieren).
+		await page.getByTestId('compare-detail-tab-orte').click();
+		const put1 = page.waitForResponse(
 			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
 			{ timeout: 5_000 }
 		);
-		// Rest-Debounce-Fenster abwarten, falls doch zwei Timer gelaufen wären.
-		await page.waitForTimeout(500);
+		await removeOrt(page, locB).click();
+		await put1;
 
-		expect(puts.map((p) => p.url())).toHaveLength(1);
-		const body = puts[0].postDataJSON() as { location_ids?: string[]; morning_time?: string };
-		expect(body.location_ids).toEqual([locA]);
-		expect(body.morning_time).toContain('06:15');
+		// Aktion 2: Morgen-Uhrzeit ändern → weiterer PUT. Volle Stunde (Input
+		// step={3600}, VTSchedulePlan); Telegram-Toggle ist ohne chat_id ausgegraut.
+		await page.getByTestId('compare-detail-tab-versand').click();
+		const morningTime = page.locator('[data-testid="report-morning-time"]:visible').first();
+		await expect(morningTime).toBeVisible({ timeout: 10_000 });
+		const put2 = page.waitForResponse(
+			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
+			{ timeout: 5_000 }
+		);
+		await morningTime.fill('05:00');
+		await morningTime.blur();
+		await put2;
+
+		// Rest-Fenster abwarten, um ein etwaiges Doppel-Feuer pro Aktion zu fangen.
+		await page.waitForTimeout(700);
+		expect(
+			puts.length,
+			'genau ein PUT je Nutzeraktion (kein Doppel-Feuer über die hubPutQueue)'
+		).toBe(2);
+
+		// Endzustand: beide Änderungen sind serverseitig persistent.
+		const res = await page.request.get(`/api/compare/presets/${id}`);
+		const preset = await res.json();
+		expect(preset.location_ids).toEqual([locA]);
+		expect(String(preset.morning_time ?? '')).toContain('05:00');
 	});
 
 	// ── F001-Regression (Adversary CRITICAL): Re-Armierung während laufendem Autosave ──
@@ -226,16 +244,16 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 		});
 
 		await openEditor(page, id);
-		await page.getByTestId('compare-editor-tab-orte').click();
+		await page.getByTestId('compare-detail-tab-orte').click();
 
 		// t≈0: erste Geste (Ort B abwählen) → nach 700ms Debounce feuert der
 		// erste Save, haengt wegen der Route-Verzoegerung ~900ms im Netz.
-		await page.getByTestId(`compare-step2-picked-remove-${locB}`).click();
+		await removeOrt(page, locB).click();
 
 		// t≈900ms: WÄHREND der erste PUT noch unterwegs ist, zweite Geste
 		// (Ort C abwählen) — genau das vom Adversary beschriebene Fenster.
 		await page.waitForTimeout(900);
-		await page.getByTestId(`compare-step2-picked-remove-${locC}`).click();
+		await removeOrt(page, locC).click();
 
 		// Ausreichend Zeit für beide Debounce-Fenster + Route-Verzögerung.
 		await page.waitForTimeout(4_000);
@@ -270,34 +288,38 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 		expect(puts.map((p) => p.url()), 'kein PUT ohne echte Nutzergeste erwartet').toHaveLength(0);
 	});
 
-	// ── AC-8: beforeNavigate-Flush — Änderung wird vor Verlassen gesichert ───
-	test('AC-8: Änderung + sofortige Navigation → beforeNavigate-Flush speichert vor dem Verlassen', async ({
+	// ── AC-8: Änderung + sofortige Navigation → kein Datenverlust ────────────
+	// Epic #1273 S4c: Hub persistiert pro Aktion sofort → „beforeNavigate-Flush"
+	// gegenstandslos; geprüft bleibt: kein Datenverlust (echte Race, s.u.).
+	test('AC-8: Änderung + sofortige Navigation → Wert bleibt persistent (kein Datenverlust)', async ({
 		page
 	}) => {
-		await page.setViewportSize({ width: 375, height: 667 }); // top-app-bar-back nur mobil sichtbar
 		const suffix = Date.now();
 		const locA = await createLocation(page, `E2E 1261 AC8 A ${suffix}`, 47.5, 11.5);
 		const locB = await createLocation(page, `E2E 1261 AC8 B ${suffix}`, 47.6, 11.6);
 		const id = await createPresetWithLocations(page, `E2E 1261 AC8 ${suffix}`, [locA, locB]);
 
 		await openEditor(page, id);
-		await page.getByTestId('compare-editor-tab-orte').click();
+		await page.getByTestId('compare-detail-tab-orte').click();
 
-		const putPromise = page.waitForResponse(
-			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
-			{ timeout: 10_000 }
-		);
-		await page.getByTestId(`compare-step2-picked-remove-${locB}`).click();
-		// Sofortige Navigation, deutlich VOR Ablauf des 700ms-Debounce-Fensters —
-		// beforeNavigate muss den ausstehenden Save flushen, bevor die Navigation greift.
-		await page.getByTestId('top-app-bar-back').click();
+		// Echte Race: Ort entfernen und SOFORT wegnavigieren, OHNE await auf den PUT
+		// — schnitte die Navigation den Save ab, ginge die Änderung verloren. Danach
+		// per API-GET-Polling beweisen, dass sie ankam (s. F001-Race-Test oben).
+		await removeOrt(page, locB).click();
+		await page.goto('/compare');
 
-		const put = await putPromise;
-		expect(put.ok(), 'PUT (Flush) fehlgeschlagen: ' + put.status()).toBeTruthy();
-
-		const res = await page.request.get(`/api/compare/presets/${id}`);
-		const preset = await res.json();
-		expect(preset.location_ids).toEqual([locA]);
+		await expect
+			.poll(
+				async () => {
+					const r = await page.request.get(`/api/compare/presets/${id}`);
+					return (await r.json()).location_ids as string[];
+				},
+				{
+					message: 'AC-8: die Änderung darf trotz sofortiger Navigation nicht verloren gehen',
+					timeout: 8_000
+				}
+			)
+			.toEqual([locA]);
 	});
 
 	// ── AC-9: Statuspille durchläuft "wird gespeichert" → "gespeichert" ──────
@@ -310,8 +332,8 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 		const id = await createPresetWithLocations(page, `E2E 1261 AC9 ${suffix}`, [locA, locB]);
 
 		await openEditor(page, id);
-		await page.getByTestId('compare-editor-tab-orte').click();
-		await page.getByTestId(`compare-step2-picked-remove-${locB}`).click();
+		await page.getByTestId('compare-detail-tab-orte').click();
+		await removeOrt(page, locB).click();
 
 		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'saving', {
 			timeout: 2_000
@@ -321,8 +343,11 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 		});
 	});
 
-	// ── AC-10: manueller Speichern-Klick während laufendem Autosave ─────────
-	test('AC-10: manueller Speichern-Klick während ausstehendem Autosave führt zu keinem Widerspruch', async ({
+	// ── AC-10: Autospeichern schließt ohne Fehler ab ────────────────────────
+	// Epic #1273 S4c: Der Hub hat keinen manuellen Speichern-Button mehr; es
+	// bleibt der Nachweis, dass die automatische Speicherung sauber (idle, kein
+	// error) abschließt und persistiert.
+	test('AC-10: Autospeichern schließt ohne Fehler ab und persistiert', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -331,10 +356,8 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 		const id = await createPresetWithLocations(page, `E2E 1261 AC10 ${suffix}`, [locA, locB]);
 
 		await openEditor(page, id);
-		await page.getByTestId('compare-editor-tab-orte').click();
-		await page.getByTestId(`compare-step2-picked-remove-${locB}`).click();
-		// Manueller Klick, während der Debounce-Timer noch läuft (idempotenter PUT).
-		await page.getByTestId('compare-editor-save').click();
+		await page.getByTestId('compare-detail-tab-orte').click();
+		await removeOrt(page, locB).click();
 
 		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
 			timeout: 8_000
@@ -346,79 +369,9 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 		expect(preset.location_ids).toEqual([locA]);
 	});
 
-	// ── AC-11: "Verwerfen" nach abgeschlossenem Autosave rollt NICHT zurück ──
-	test('AC-11: "Verwerfen" nach abgeschlossenem Autosave macht die Änderung NICHT rückgängig', async ({
-		page
-	}) => {
-		const suffix = Date.now();
-		const locA = await createLocation(page, `E2E 1261 AC11 A ${suffix}`, 48.1, 12.1);
-		const locB = await createLocation(page, `E2E 1261 AC11 B ${suffix}`, 48.2, 12.2);
-		const id = await createPresetWithLocations(page, `E2E 1261 AC11 ${suffix}`, [locA, locB]);
-
-		await openEditor(page, id);
-		await page.getByTestId('compare-editor-tab-orte').click();
-		await page.getByTestId(`compare-step2-picked-remove-${locB}`).click();
-
-		// Debounce + Flush abwarten, bis der Indikator wieder idle ("gespeichert") zeigt.
-		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
-			timeout: 8_000
-		});
-
-		await page.getByTestId('compare-editor-discard').click();
-		const confirm = page.getByRole('button', { name: /Verwerfen|Bestätigen|Ja/ });
-		await confirm.click();
-
-		await expect(page).toHaveURL(new RegExp(`/compare/${id}$`), { timeout: 10_000 });
-
-		const res = await page.request.get(`/api/compare/presets/${id}`);
-		const preset = await res.json();
-		// Die bereits automatisch gespeicherte Änderung bleibt erhalten (kein Rollback).
-		expect(preset.location_ids).toEqual([locA]);
-	});
-
-	// ── F002-Regression (Adversary CRITICAL): "Verwerfen" VOR Debounce-Ablauf ──
-	// Ursache des Bugs: das ConfirmDialog-onConfirm rief `goto(...)`, was den
-	// `beforeNavigate`-Wächter auslöste — der sah `hasPending === true` und
-	// FLUSHTE (= speicherte) den noch nicht abgelaufenen Autosave, statt ihn zu
-	// verwerfen. Fix: `compareSaveCtl.cancel()` VOR dem `goto(...)` bricht den
-	// Timer ab, ohne `saveFn` aufzurufen — Nachweis hier: Geste sofort, ohne
-	// jede Wartezeit auf den 700ms-Debounce, gefolgt von "Verwerfen" → NULL
-	// PUT-Requests, Serverzustand exakt wie vor der Geste.
-	test('F002-Regression: "Verwerfen" VOR Debounce-Ablauf speichert NICHTS', async ({ page }) => {
-		const suffix = Date.now();
-		const locA = await createLocation(page, `E2E 1261 F002 A ${suffix}`, 49.0, 13.1);
-		const locB = await createLocation(page, `E2E 1261 F002 B ${suffix}`, 49.01, 13.11);
-		const id = await createPresetWithLocations(page, `E2E 1261 F002 ${suffix}`, [locA, locB]);
-
-		const puts = collectPresetPuts(page, id);
-
-		await openEditor(page, id);
-		await page.getByTestId('compare-editor-tab-orte').click();
-
-		// Sofort (weit VOR dem 700ms-Debounce-Fenster) abwählen und Verwerfen klicken.
-		await page.getByTestId(`compare-step2-picked-remove-${locB}`).click();
-		await page.getByTestId('compare-editor-discard').click();
-		const confirm = page.getByRole('button', { name: /Verwerfen|Bestätigen|Ja/ });
-		await confirm.click();
-
-		await expect(page).toHaveURL(new RegExp(`/compare/${id}$`), { timeout: 10_000 });
-
-		// Über das ehemalige Debounce-Fenster hinaus abwarten — beweist, dass
-		// wirklich NICHTS im Hintergrund nachgespeichert wurde (kein Wettlauf-Save).
-		await page.waitForTimeout(1_500);
-
-		expect(
-			puts.map((p) => p.url()),
-			'F002: cancel() muss den Timer vor der Navigation stoppen — kein PUT erwartet'
-		).toHaveLength(0);
-
-		const res = await page.request.get(`/api/compare/presets/${id}`);
-		const preset = await res.json();
-		expect(preset.location_ids, 'F002: "Verwerfen" darf die Änderung NICHT persistieren').toEqual([
-			locA,
-			locB
-		]);
-	});
+	// Epic #1273 S4c: Die früheren AC-11 + F002 (Verwerfen-Button) wurden entfernt
+	// — der Hub hat keinen Verwerfen-Button (Autosave-Modell), die Interaktion
+	// existiert nicht mehr (Spec § „Einzelfallprüfung", analog versand-tab AC-8).
 
 	// ── AC-14: Wertebereich-Tab löst unabhängig einen Auto-Save aus ─────────
 	// (Orte-Tab bereits durch AC-5 belegt; Versand-Tab durch AC-6 und den
@@ -426,15 +379,17 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 	test('AC-14 (Wertebereich): Warnen-Toggle im Wertebereich-Tab speichert automatisch', async ({ page }) => {
 		const suffix = Date.now();
 		const locA = await createLocation(page, `E2E 1261 AC14w A ${suffix}`, 48.3, 12.3);
+		// Der Hub-CorridorEditor (vergleich) kennt nur Compare-Metrik-Keys, nicht
+		// Route-Keys — gust_max_kmh ist alarm-fähig + Range (Warnen + Slider).
 		const id = await createPresetWithLocations(page, `E2E 1261 AC14w ${suffix}`, [locA], {
-			corridors: [{ metric: 'thunder_level', range: [null, 40], notify: true, mark: false }]
+			corridors: [{ metric: 'gust_max_kmh', range: [null, 40], notify: true, mark: false }]
 		});
 
 		await openEditor(page, id);
-		await page.getByTestId('compare-editor-tab-idealwerte').click();
+		await page.getByTestId('compare-detail-tab-idealwerte').click();
 		await expect(page.getByTestId('corridor-editor-vergleich')).toBeVisible({ timeout: 10_000 });
 
-		const notifyToggle = page.getByTestId('corridor-row-thunder_level').getByRole('button', { name: 'Warnen' });
+		const notifyToggle = page.getByTestId('corridor-row-gust_max_kmh').getByRole('button', { name: 'Warnen' });
 		await expect(notifyToggle).toHaveAttribute('aria-pressed', 'true');
 
 		const put = page.waitForResponse(
@@ -447,7 +402,7 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 
 		const res = await page.request.get(`/api/compare/presets/${id}`);
 		const preset = await res.json();
-		const corridor = (preset.corridors ?? []).find((c: { metric: string }) => c.metric === 'thunder_level');
+		const corridor = (preset.corridors ?? []).find((c: { metric: string }) => c.metric === 'gust_max_kmh');
 		expect(corridor?.notify).toBe(false);
 	});
 
@@ -464,89 +419,36 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 	}) => {
 		const suffix = Date.now();
 		const locA = await createLocation(page, `E2E 1261 F003 A ${suffix}`, 48.36, 12.36);
+		// Compare-Metrik-Key (s. AC-14): gust_max_kmh = Range-Metrik mit .ce-handle.
 		const id = await createPresetWithLocations(page, `E2E 1261 F003 ${suffix}`, [locA], {
-			corridors: [{ metric: 'wind_gust', range: [null, 70], notify: true, mark: false }]
+			corridors: [{ metric: 'gust_max_kmh', range: [null, 70], notify: true, mark: false }]
 		});
 
 		await openEditor(page, id);
-		await page.getByTestId('compare-editor-tab-idealwerte').click();
+		await page.getByTestId('compare-detail-tab-idealwerte').click();
 		await expect(page.getByTestId('corridor-editor-vergleich')).toBeVisible({ timeout: 10_000 });
 
 		const put = page.waitForResponse(
 			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
 			{ timeout: 8_000 }
 		);
-		await dragCorridorHandle(page, 'wind_gust', -60);
+		await dragCorridorHandle(page, 'gust_max_kmh', -60);
 		const putRes = await put;
 		expect(putRes.ok(), 'PUT (Wertebereich-Drag) fehlgeschlagen: ' + putRes.status()).toBeTruthy();
 
 		const res = await page.request.get(`/api/compare/presets/${id}`);
 		const preset = await res.json();
-		const corridor = (preset.corridors ?? []).find((c: { metric: string }) => c.metric === 'wind_gust');
+		const corridor = (preset.corridors ?? []).find((c: { metric: string }) => c.metric === 'gust_max_kmh');
 		expect(
 			corridor?.range?.[1],
 			'F003: Drag-Änderung am Wertebereich-Griff muss automatisch gespeichert werden'
 		).not.toBe(70);
 	});
 
-	// ── F004-Regression (Adversary CRITICAL): Layout-Tab Drag-Sortieren ─────
-	// Ursache: BucketSection.svelte (geteilt) nutzt svelte-dnd-action OHNE
-	// dragHandleSelector — die ganze Metrik-Zeile (Label/Meta sind plain
-	// <div>/<span>) ist Drag-Griff. Der Drop feuert nur die CustomEvents
-	// "consider"/"finalize", KEIN pointerdown/change/input auf einem vom
-	// Gesten-Gate-Selector erfassten Element — ohne die explizite Meldung in
-	// ltHandleDndReorder (CompareEditor.svelte) bliebe userTouched/editTick
-	// unverändert, obwohl wiz.channelLayouts tatsächlich dirty wird.
-	test('F004-Regression (Layout-Drag): Metrik-Zeile per Drag umsortieren speichert automatisch (kein Pfeil-Klick)', async ({
-		page
-	}) => {
-		const suffix = Date.now();
-		const locA = await createLocation(page, `E2E 1261 F004 A ${suffix}`, 48.4, 12.4);
-		const id = await createPresetWithLocations(page, `E2E 1261 F004 ${suffix}`, [locA]);
-
-		await openEditor(page, id);
-		await page.getByTestId('compare-editor-tab-layout').click();
-		await expect(page.getByTestId('layout-editor')).toBeVisible({ timeout: 10_000 });
-
-		// "email" ist der Default-Kanal (autoAssign befüllt "Spalten"/primary
-		// beim ersten Layout-Tab-Besuch mit allen Katalog-Metriken, AC-2 #681).
-		const primaryRows = page.locator(
-			'[data-testid="bucket-section-primary"] [data-testid^="active-metric-row-"]'
-		);
-		await expect(primaryRows.first()).toBeVisible({ timeout: 10_000 });
-		const rowCount = await primaryRows.count();
-		expect(
-			rowCount,
-			'mind. 2 Metriken im "Spalten"-Bucket nötig, um per Drag umzusortieren'
-		).toBeGreaterThanOrEqual(2);
-
-		const beforeOrder = await primaryRows.evaluateAll((els) =>
-			els.map((el) => el.getAttribute('data-testid'))
-		);
-
-		const put = page.waitForResponse(
-			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
-			{ timeout: 8_000 }
-		);
-		// Drag am Label-Text der ERSTEN Zeile (NICHT am ▲/▼-Pfeil-Button!) auf
-		// die Position einer späteren Zeile.
-		const targetIdx = Math.min(2, rowCount - 1);
-		await dragElementCenterTo(page, primaryRows.nth(0).locator('.label'), primaryRows.nth(targetIdx));
-		const putRes = await put;
-		expect(putRes.ok(), 'PUT (Layout-Drag) fehlgeschlagen: ' + putRes.status()).toBeTruthy();
-
-		const res = await page.request.get(`/api/compare/presets/${id}`);
-		const preset = await res.json();
-		const emailOrder = (preset.display_config?.channel_layouts?.email ?? [])
-			.filter((m: { enabled: boolean; bucket?: string }) => m.enabled && (m.bucket ?? 'primary') === 'primary')
-			.sort((a: { order?: number }, b: { order?: number }) => (a.order ?? 0) - (b.order ?? 0))
-			.map((m: { metric_id: string }) => `active-metric-row-${m.metric_id}`);
-
-		expect(
-			emailOrder,
-			'F004: Drag-Reihenfolge muss automatisch gespeichert werden (Server-Reihenfolge muss sich von der Ausgangsreihenfolge unterscheiden)'
-		).not.toEqual(beforeOrder);
-	});
+	// Epic #1273 S4c: Die F004-Regression (Layout-Tab Drag-Sortieren) wurde
+	// entfernt — der Hub-Layout-Tab ist view-only (keine DnD; layout-editor/
+	// bucket-section-* leben nur im Wizard). Diese Abdeckung liegt im Wizard-
+	// migrierten sortable-list-shared.spec.ts. dragElementCenterTo bleibt Helper.
 
 	// ── AC-14: Versand-Tab löst unabhängig einen Auto-Save aus (Zeitplan) ────
 	test('AC-14 (Versand): Zeitplan-Änderung im Versand-Tab speichert automatisch', async ({ page }) => {
@@ -555,21 +457,22 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 		const id = await createPresetWithLocations(page, `E2E 1261 AC14v ${suffix}`, [locA]);
 
 		await openEditor(page, id);
-		await page.getByTestId('compare-editor-tab-versand').click();
+		await page.getByTestId('compare-detail-tab-versand').click();
 
 		const put = page.waitForResponse(
 			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
 			{ timeout: 5_000 }
 		);
-		const morningTime = page.getByTestId('report-morning-time');
+		// Volle Stunde: report-morning-time-Input trägt step={3600} (VTSchedulePlan).
+		const morningTime = page.locator('[data-testid="report-morning-time"]:visible').first();
 		await expect(morningTime).toBeVisible({ timeout: 10_000 });
-		await morningTime.fill('06:45');
+		await morningTime.fill('05:00');
 		await morningTime.blur();
 		const putRes = await put;
 		expect(putRes.ok(), 'PUT (Versand) fehlgeschlagen: ' + putRes.status()).toBeTruthy();
 
 		const res = await page.request.get(`/api/compare/presets/${id}`);
 		const preset = await res.json();
-		expect(String(preset.morning_time ?? '')).toContain('06:45');
+		expect(String(preset.morning_time ?? '')).toContain('05:00');
 	});
 });

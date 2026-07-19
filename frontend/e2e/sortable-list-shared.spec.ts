@@ -105,25 +105,39 @@ async function createPreset(page: Page, name: string, locationIds: string[]): Pr
 // Tabs/Kanal werden echt geklickt (kein goto auf den Zielzustand).
 async function openLayoutSms(page: Page): Promise<void> {
 	const suffix = Date.now();
-	const locA = await createLocation(page, `E2E 1272 Ort-A ${suffix}`, 47.26, 11.4);
-	const locB = await createLocation(page, `E2E 1272 Ort-B ${suffix}`, 47.1, 11.29);
-	const locC = await createLocation(page, `E2E 1272 Ort-C ${suffix}`, 47.05, 11.32);
-	const id = await createPreset(page, `E2E 1272 Sortier ${suffix}`, [locA, locB, locC]);
+	// Orte im Konto anlegen (erscheinen dadurch in der Wizard-Bibliothek).
+	const nameA = `E2E 1272 Ort-A ${suffix}`;
+	const nameB = `E2E 1272 Ort-B ${suffix}`;
+	const nameC = `E2E 1272 Ort-C ${suffix}`;
+	await createLocation(page, nameA, 47.26, 11.4);
+	await createLocation(page, nameB, 47.1, 11.29);
+	await createLocation(page, nameC, 47.05, 11.32);
 
-	// Die Sortier-Liste sitzt im EDITOR (/compare/{id}/edit → CompareEditor.svelte:904),
-	// nicht im Hub (/compare/{id} → CompareTabs.svelte), dessen Layout-Tab nur eine
-	// Kanal-Übersicht zeigt. Vgl. Issue-Screenshot "04-edit-layout-desktop.png".
-	await page.goto(`/compare/${id}/edit`);
+	// Epic #1273 S4c: Sortier-Liste lebt nur im Wizard; Einstieg ab /compare/new.
+	await page.goto('/compare/new');
 	await page.waitForLoadState('networkidle');
-	// Erst warten, bis der Editor hydratisiert ist — ein Klick davor markiert den Tab
-	// zwar als aktiv, schaltet den Inhalt aber nicht um (beobachteter Race auf Staging).
+	// Auf Editor-Hydration warten (Klick davor schaltet den Inhalt nicht um).
 	await expect(page.locator('[data-testid="compare-editor"]:visible')).toBeVisible();
 
-	// Desktop- und Mobil-Variante liegen gleichzeitig im DOM → Testids existieren doppelt.
-	// Immer auf die sichtbare Variante einschränken (gilt auch für sms-row-/drag-handle).
+	// Vergleich-Tab: Name + Profil (wintersport liefert ≥2 SMS-Metriken).
+	await page.locator('[data-testid="compare-editor-name"]').fill(`E2E 1272 Sortier ${suffix}`);
+	await page.locator('[data-testid="compare-editor-profile-wintersport"]:visible').first().click();
+
+	// Orte-Tab: drei Orte aus der Bibliothek wählen (schaltet Wertebereiche frei).
+	await page.locator('[data-testid="compare-editor-tab-orte"]:visible').first().click();
+	const lib = page.locator('[data-testid="compare-step2-library"]:visible').first();
+	await lib.waitFor({ timeout: 8_000 });
+	for (const n of [nameA, nameB, nameC]) {
+		await lib.getByText(n, { exact: true }).click();
+	}
+
+	// Wertebereiche besuchen (schaltet Layout frei), dann Layout-Tab öffnen.
+	await page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible').first().click();
+
+	// Desktop/Mobil doppelt im DOM → immer :visible (auch sms-row-/drag-handle).
 	const layoutEditor = page.locator('[data-testid="layout-editor"]:visible');
 	await expect(async () => {
-		await page.locator('[data-testid="compare-editor-tab-layout"]:visible').click();
+		await page.locator('[data-testid="compare-editor-tab-layout"]:visible').first().click();
 		await expect(layoutEditor).toBeVisible({ timeout: 5_000 });
 	}).toPass({ timeout: 30_000 });
 	// Kanal-Umschalter des geteilten LayoutTab (shared/layout-tab/LTChannelPicker.svelte:34)

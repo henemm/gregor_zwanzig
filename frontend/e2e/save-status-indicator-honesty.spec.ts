@@ -130,14 +130,9 @@ test.describe('Issue #1269: Speicher-Status-Anzeige lügt', () => {
 	test('AC-1/AC-2 (Compare): Layout- und Versand-Tab öffnen ohne Eingabe → Anzeige bleibt "gespeichert", kein PUT', async ({
 		page
 	}) => {
-		// CompareEditor.svelte mountet IMMER sowohl .cm-desktop als auch .cm-mobile
-		// (CSS-only-Switch) — Tab-Inhalte wie `layout-editor`/`report-morning-time`
-		// werden über ein geteiltes Snippet in BEIDEN Zweigen gerendert und liegen
-		// darum als Duplikat im DOM. Fester Desktop-Viewport + Scope auf
-		// `.cm-desktop` (Vorbild compare-editor-autosave.spec.ts) macht die
-		// Selektoren eindeutig.
+		// Epic #1273 S4c: Einstieg am Hub statt am weggeleiteten Editor; fester
+		// Desktop-Viewport + :visible-Filter gegen Doppel-Mount im DOM.
 		await page.setViewportSize({ width: 1280, height: 900 });
-		const desktop = page.locator('.cm-desktop');
 		const suffix = Date.now();
 		const locRes = await page.request.post('/api/locations', {
 			data: { name: `E2E 1269 ${suffix}`, lat: 47.05, lon: 11.05 }
@@ -168,19 +163,23 @@ test.describe('Issue #1269: Speicher-Status-Anzeige lügt', () => {
 		});
 
 		try {
-			await page.goto(`/compare/${presetId}/edit`);
-			await expect(page.getByTestId('compare-editor')).toBeVisible({ timeout: 10_000 });
+			await page.goto(`/compare/${presetId}`);
+			await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 10_000 });
 
-			await page.getByTestId('compare-editor-tab-layout').click();
-			await expect(desktop.getByTestId('layout-editor')).toBeVisible({ timeout: 10_000 });
+			await page.locator('[data-testid="compare-detail-tab-layout"]:visible').first().click();
+			await expect(
+				page.locator('[data-testid="compare-detail-panel-layout"]:visible').first()
+			).toBeVisible({ timeout: 10_000 });
 			await page.waitForTimeout(2_000);
 			await expect(
 				page.getByTestId('save-indicator'),
 				'AC-1: Layout-Tab öffnen ohne Eingabe darf nicht "Nicht gespeichert" zeigen'
 			).toHaveAttribute('data-state', 'idle');
 
-			await page.getByTestId('compare-editor-tab-versand').click();
-			await expect(desktop.getByTestId('report-morning-time')).toBeVisible({ timeout: 10_000 });
+			await page.locator('[data-testid="compare-detail-tab-versand"]:visible').first().click();
+			await expect(
+				page.locator('[data-testid="report-morning-time"]:visible').first()
+			).toBeVisible({ timeout: 10_000 });
 			await page.waitForTimeout(2_000);
 			await expect(
 				page.getByTestId('save-indicator'),

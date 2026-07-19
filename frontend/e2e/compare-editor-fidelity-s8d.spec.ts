@@ -490,23 +490,6 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 	});
 });
 
-test.describe('Issue #1256 S8d (AC-19): Edit-Modus zeigt keine Create-CTA-Füße', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize(DESKTOP);
-	});
-
-	test('Orte/Wertebereiche/Layout im Edit-Modus ohne "→"-Weiter-CTA-Fuß', async ({ page }) => {
-		const suffix = Date.now();
-		const locA = await createLocation(page, `E2E S8d Edit-Ort-A ${suffix}`, 47.17, 11.17);
-		const locB = await createLocation(page, `E2E S8d Edit-Ort-B ${suffix}`, 47.18, 11.18);
-		const id = await createPresetWithLocations(page, `E2E S8d Edit-Preset ${suffix}`, [locA, locB]);
-
-		await page.goto(`/compare/${id}/edit`);
-		await page.waitForLoadState('networkidle');
-
-		for (const tab of ['orte', 'idealwerte', 'layout']) {
-			await page.getByTestId(`compare-editor-tab-${tab}`).click();
-			await expect(page.locator('a:has-text("→"), button:has-text("→")')).toHaveCount(0);
-		}
-	});
-});
+// Epic #1273 S4c: Die describe-Gruppe „Edit-Modus zeigt keine Create-CTA-Füße"
+// (Issue #1256 S8d) wurde entfernt — der abgeschaffte Edit-Modus kannte nie
+// Create-CTA-Füße; im Hub-Modell gegenstandslos.

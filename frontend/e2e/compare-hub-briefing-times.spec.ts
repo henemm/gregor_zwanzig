@@ -141,8 +141,10 @@ test.describe('Issue #1229: Compare-Hub Briefing-Zeiten + Neutralisierung', () =
 		}
 	});
 
-	// ── AC-5: Edit-Stift → /edit?tab=versand, Versand-Tab dort direkt aktiv ──
-	test('AC-5: Edit-Stift bei "Briefings" navigiert zu /edit?tab=versand mit aktivem Versand-Tab', async ({
+	// ── AC-5: "Bearbeiten →" der Versand-Karte wechselt inline auf Versand ───
+	// Epic #1273 S4c: "Bearbeiten →" (neuer Testid compare-hub-versand-edit) ist
+	// ein reiner Inline-Tab-Wechsel — keine /edit-URL. Nachweis über aktives Panel.
+	test('AC-5: "Bearbeiten →" der Versand-Karte wechselt inline auf den Versand-Tab', async ({
 		page
 	}) => {
 		const { id } = await createPreset(page);
@@ -150,38 +152,39 @@ test.describe('Issue #1229: Compare-Hub Briefing-Zeiten + Neutralisierung', () =
 			await page.setViewportSize({ width: 1280, height: 900 });
 			await page.goto(`/compare/${id}`);
 			await page.waitForLoadState('networkidle');
-			await page.locator('[data-testid="compare-detail-tab-versand"]:visible').first().click();
 
-			await page.locator('[data-testid="compare-versand-edit-briefings"]:visible').first().click();
-			await page.waitForLoadState('networkidle');
+			// Der "Bearbeiten →"-Button der Versand-Karte liegt im Übersichts-Tab.
+			await page.locator('[data-testid="compare-hub-versand-edit"]:visible').first().click();
 
-			await expect(page).toHaveURL(new RegExp(`/compare/${id}/edit\\?tab=versand$`));
 			await expect(
-				page.locator('[data-testid="compare-editor-tab-versand"]:visible').first()
-			).toHaveAttribute('data-active', 'true', { timeout: 10_000 });
+				page.locator('[data-testid="compare-detail-panel-versand"]:visible').first()
+			).toBeVisible({ timeout: 10_000 });
+			// Kein Seitenwechsel: die URL bleibt der Hub (keine /edit-Route).
+			await expect(page).toHaveURL(new RegExp(`/compare/${id}(\\?|$)`));
 		} finally {
 			await deletePreset(page, id);
 		}
 	});
 
-	// ── AC-6: unbekannter/fehlender ?tab=-Wert → Default-Tab ─────────────────
-	test('AC-6: unbekannter ?tab=-Wert im Editor → Default-Tab "vergleich" aktiv, kein Crash', async ({
+	// ── AC-6: unbekannter ?tab=-Wert → Default-Tab "uebersicht" (Hub löst selbst auf) ──
+	test('AC-6: unbekannter ?tab=-Wert im Hub → Default-Tab "uebersicht" aktiv, kein Crash', async ({
 		page
 	}) => {
 		const { id } = await createPreset(page);
 		try {
-			await page.goto(`/compare/${id}/edit?tab=doesnotexist`);
+			await page.setViewportSize({ width: 1280, height: 900 });
+			await page.goto(`/compare/${id}?tab=doesnotexist`);
 			await page.waitForLoadState('networkidle');
 
 			await expect(
-				page.locator('[data-testid="compare-editor-tab-vergleich"]:visible').first()
-			).toHaveAttribute('data-active', 'true', { timeout: 10_000 });
+				page.locator('[data-testid="compare-detail-panel-uebersicht"]:visible').first()
+			).toBeVisible({ timeout: 10_000 });
 
-			await page.goto(`/compare/${id}/edit`);
+			await page.goto(`/compare/${id}`);
 			await page.waitForLoadState('networkidle');
 			await expect(
-				page.locator('[data-testid="compare-editor-tab-vergleich"]:visible').first()
-			).toHaveAttribute('data-active', 'true', { timeout: 10_000 });
+				page.locator('[data-testid="compare-detail-panel-uebersicht"]:visible').first()
+			).toBeVisible({ timeout: 10_000 });
 		} finally {
 			await deletePreset(page, id);
 		}

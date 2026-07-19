@@ -35,10 +35,19 @@
 //   cd frontend && npx playwright test e2e/compare-legacy-fields-survive-save.spec.ts \
 //     --config playwright.config.ts
 
-import { test, expect, type Page, type Locator } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { login } from './helpers.js';
 
-const saveIndicator = (page: Page): Locator => page.getByTestId('save-indicator');
+/** Ändert im Hub den Namen via Inline-Edit (Stift → Feld → OK), wartet auf den
+ * neuen Namen im Kopf (Epic #1273 S4c). */
+async function renameInHub(page: Page, neuerName: string): Promise<void> {
+	await page.locator('[data-testid="compare-hub-name-edit-toggle"]:visible').first().click();
+	await page.locator('[data-testid="compare-hub-name-edit"]:visible').first().fill(neuerName);
+	await page.locator('[data-testid="compare-hub-name-save"]:visible').first().click();
+	await expect(page.getByRole('heading', { level: 1 })).toContainText(neuerName, {
+		timeout: 10_000
+	});
+}
 
 /** Legt ein Preset mit explizit gesetzten Alt-Feldern an (echte Mandanten-Bindung). */
 async function createLegacyPreset(
@@ -84,12 +93,10 @@ test.describe('Issue #1268: Bestandsfelder überleben einen echten Speichervorga
 		// Die Zeitfenster-/Horizont-Felder gibt es seit #1268 nicht mehr — der
 		// Nutzer kann sie gar nicht anfassen. Genau das ist der Punkt: der PUT
 		// darf sie trotzdem nicht nullen.
-		await page.goto(`/compare/${id}/edit`);
+		await page.goto(`/compare/${id}`);
 		await page.waitForLoadState('networkidle');
 		const neuerName = 'Nur-Name-1268 ' + Date.now();
-		await page.locator('[data-testid="compare-editor-name"]').fill(neuerName);
-		await page.locator('[data-testid="compare-editor-save"]').click();
-		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+		await renameInHub(page, neuerName);
 
 		// THEN: der echte Server hat die Alt-Werte unverändert behalten.
 		const res = await page.request.get(`/api/compare/presets/${id}`);
@@ -117,13 +124,11 @@ test.describe('Issue #1268: Bestandsfelder überleben einen echten Speichervorga
 		// vorgaenge aber nicht.
 		const { id } = await createLegacyPreset(page);
 
-		await page.goto(`/compare/${id}/edit`);
+		await page.goto(`/compare/${id}`);
 		await page.waitForLoadState('networkidle');
 
 		for (const suffix of ['A', 'B']) {
-			await page.locator('[data-testid="compare-editor-name"]').fill('Drift-1268-' + suffix);
-			await page.locator('[data-testid="compare-editor-save"]').click();
-			await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+			await renameInHub(page, 'Drift-1268-' + suffix);
 		}
 
 		const res = await page.request.get(`/api/compare/presets/${id}`);

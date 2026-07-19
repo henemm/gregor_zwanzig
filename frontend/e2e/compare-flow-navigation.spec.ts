@@ -650,7 +650,7 @@ test.describe('Issue #1256 Fix-Loop 1 (F001): Editor öffnet bestehenden Verglei
 		// Standard-Tab (kein ?tab=-Query) — der Bug betraf JEDEN Tab, daher
 		// bewusst NICHT der Layout-Tab, um zu beweisen, dass der Fetch nicht
 		// mehr unbedingt bei Editor-Mount läuft.
-		await page.goto(`/compare/${id}/edit`);
+		await page.goto(`/compare/${id}`);
 		await page.waitForLoadState('networkidle');
 
 		// Kurz warten (Katalog-Fetch-Fenster) — falls der Fetch fälschlich

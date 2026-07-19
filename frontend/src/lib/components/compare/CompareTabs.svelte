@@ -1163,7 +1163,7 @@
 					<Card padding={20} style="display: flex; flex-direction: column">
 						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
 							<Eyebrow>Versand</Eyebrow>
-							<button onclick={() => handleValueChange('versand')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
+							<button data-testid="compare-hub-versand-edit" onclick={() => handleValueChange('versand')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
 						</div>
 						<!-- Issue #1256 S8c (AC-5): Draft-Sonderfall (Soll: jsx:175-177). -->
 						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{status === 'draft' ? 'Noch nicht geplant' : presetBriefingTimesLabel(preset)}</div>

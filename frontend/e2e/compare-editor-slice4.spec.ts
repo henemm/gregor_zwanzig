@@ -4,19 +4,9 @@
 //
 // Verhaltensnachweis der ACs als eingeloggter Nutzer gegen Staging.
 //
-// RED-Erwartung (vor Implementation):
-//   AC-1: FAIL — compare-step4-layout-preview fehlt (nur ChannelPreviewBlock)
-//   AC-2: FAIL — compare-step4-detail-pill-8 fehlt (keine ↳ Detail-Pill-Logik)
-//   AC-3: FAIL — compare-step4-preview-sms fehlt (kein SMS-Fließtext-Block)
-//   AC-4: FAIL — compare-editor-activate fehlt (kein Header-Button im Create-Modus)
-//   AC-5: FAIL — channel_layouts pro Kanal nicht im Save-Payload verifizierbar ohne Layout-Rework
-//
-// Issue #1232 Scheibe 3a: AC-1/AC-3 auf die neutrale Spalten-Vorschau
-// (LTComparePreview) angepasst — Orte als Spaltenköpfe statt Zeilen, kein
-// Rang-Badge/Empfehlungs-Banner, Text "Kein Ranking". createPreset() legt
-// standardmäßig 2 echte Orte an (statt location_ids: []), damit die
-// SMS-/Tabellen-Vorschau nicht in den Empty-State fällt (KL-3/Empty-State
-// greift erst bei 0 gewählten Orten).
+// Epic #1273 S4c: Layout-/Versand-Preview lebt nur im Create-Wizard; Einstieg ab
+// /compare/new (Edit = 307-Redirect), Tabs progressiv frei; data-active-Asserts
+// entfallen (sichtbarer Preview belegt den aktiven Tab).
 //
 // Ausführen:
 //   cd frontend && E2E_USER=admin E2E_PASS=test1234 \
@@ -25,37 +15,39 @@
 import { test, expect, type Page } from '@playwright/test';
 import { login } from './helpers.js';
 
-// ── Hilfsfunktion: legt einen Compare-Preset an (mandantengebunden) ───────────
-async function createPreset(
-	page: Page,
-	overrides: Record<string, unknown> = {}
-): Promise<{ id: string }> {
-	let locationIds = overrides.location_ids as string[] | undefined;
-	if (locationIds === undefined) {
-		const resA = await page.request.post('/api/locations', {
-			data: { name: 'Slice4-Ort-A ' + Date.now(), lat: 47.2, lon: 12.3 }
-		});
-		const resB = await page.request.post('/api/locations', {
-			data: { name: 'Slice4-Ort-B ' + Date.now(), lat: 47.3, lon: 12.4 }
-		});
-		expect(resA.ok() && resB.ok(), 'Location-Anlage fehlgeschlagen').toBeTruthy();
-		locationIds = [(await resA.json()).id, (await resB.json()).id];
-	}
-	const res = await page.request.post('/api/compare/presets', {
-		data: {
-			name: 'Slice4 E2E ' + Date.now(),
-			schedule: 'daily',
-			profil: 'wintersport',
-			hour_from: 7,
-			hour_to: 16,
-			empfaenger: ['slice4-test@example.com'],
-			...overrides,
-			location_ids: locationIds
-		}
+// Legt 2 Orte an und arbeitet sich im Create-Wizard bis zum Layout-Tab vor.
+async function openWizardLayout(page: Page): Promise<void> {
+	const suffix = Date.now();
+	const nameA = 'Slice4-Ort-A ' + suffix;
+	const nameB = 'Slice4-Ort-B ' + suffix;
+	const resA = await page.request.post('/api/locations', {
+		data: { name: nameA, lat: 47.2, lon: 12.3 }
 	});
-	expect(res.ok(), 'Preset-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();
-	const body = await res.json();
-	return { id: body.id };
+	const resB = await page.request.post('/api/locations', {
+		data: { name: nameB, lat: 47.3, lon: 12.4 }
+	});
+	expect(resA.ok() && resB.ok(), 'Location-Anlage fehlgeschlagen').toBeTruthy();
+
+	await page.goto('/compare/new');
+	await page.waitForLoadState('networkidle');
+	await expect(page.locator('[data-testid="compare-editor"]:visible')).toBeVisible();
+	await page.locator('[data-testid="compare-editor-name"]').fill('Slice4 E2E ' + suffix);
+	await page.locator('[data-testid="compare-editor-profile-wintersport"]:visible').first().click();
+
+	await page.locator('[data-testid="compare-editor-tab-orte"]:visible').first().click();
+	const lib = page.locator('[data-testid="compare-step2-library"]:visible').first();
+	await lib.waitFor({ timeout: 8_000 });
+	for (const n of [nameA, nameB]) {
+		await lib.getByText(n, { exact: true }).click();
+	}
+
+	await page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible').first().click();
+	await expect(async () => {
+		await page.locator('[data-testid="compare-editor-tab-layout"]:visible').first().click();
+		await expect(
+			page.locator('[data-testid="compare-step4-layout-preview"]:visible').first()
+		).toBeVisible({ timeout: 5_000 });
+	}).toPass({ timeout: 30_000 });
 }
 
 test.describe('Issue #681: Compare-Editor Slice 4 — Layout + Versand Fidelity', () => {
@@ -66,22 +58,13 @@ test.describe('Issue #681: Compare-Editor Slice 4 — Layout + Versand Fidelity'
 
 	// ── AC-1: Kanalwechsel → Badge + Live-Vorschau aktualisiert ───────────────
 	test('AC-1: Kanalwechsel zeigt korrektes Badge und wechselt Live-Vorschau', async ({ page }) => {
-		const { id } = await createPreset(page);
-		await page.goto(`/compare/${id}/edit`);
-		await page.waitForLoadState('networkidle');
+		await openWizardLayout(page);
 
-		// Layout-Tab öffnen (Edit-Modus: alle Tabs sofort frei)
-		await page.locator('[data-testid="compare-editor-tab-layout"]').click();
-		await expect(
-			page.locator('[data-testid="compare-editor-tab-layout"]')
-		).toHaveAttribute('data-active', 'true');
-
-		// Live-Vorschau muss existieren (RED: noch nicht implementiert)
-		const preview = page.locator('[data-testid="compare-step4-layout-preview"]');
+		const preview = page.locator('[data-testid="compare-step4-layout-preview"]:visible').first();
 		await expect(preview).toBeVisible({ timeout: 8_000 });
 
 		// Email-Kanal: Badge muss "∞" zeigen
-		const emailBtn = page.locator('[data-testid="channel-tab-email"]');
+		const emailBtn = page.locator('[data-testid="channel-tab-email"]:visible').first();
 		await emailBtn.click();
 		await expect(emailBtn).toContainText('∞');
 
@@ -89,21 +72,22 @@ test.describe('Issue #681: Compare-Editor Slice 4 — Layout + Versand Fidelity'
 		// Empfehlungs-Banner, dafür der Hinweis "Kein Ranking".
 		await expect(preview.locator('.rank-badge')).toHaveCount(0);
 		await expect(preview.locator('.recommendation-banner')).toHaveCount(0);
-		const previewText = (await preview.textContent()) ?? '';
+		// Whitespace normalisieren: "Kein Ranking" enthält im Markup Umbruch/Tabs.
+		const previewText = ((await preview.textContent()) ?? '').replace(/\s+/g, ' ');
 		expect(previewText).not.toContain('Empfehlung');
 		expect(previewText).toContain('Kein Ranking');
 
 		// Telegram-Kanal: Badge muss "8" zeigen
-		const telegramBtn = page.locator('[data-testid="channel-tab-telegram"]');
+		const telegramBtn = page.locator('[data-testid="channel-tab-telegram"]:visible').first();
 		await telegramBtn.click();
 		await expect(telegramBtn).toContainText('8');
 
 		// SMS-Kanal: Badge muss "—" zeigen
-		const smsBtn = page.locator('[data-testid="channel-tab-sms"]');
+		const smsBtn = page.locator('[data-testid="channel-tab-sms"]:visible').first();
 		await smsBtn.click();
 		await expect(smsBtn).toContainText('—');
 		// SMS-Vorschau zeigt Fließtext (nicht Tabelle)
-		const smsBranch = page.locator('[data-testid="compare-step4-preview-sms"]');
+		const smsBranch = page.locator('[data-testid="compare-step4-preview-sms"]:visible').first();
 		await expect(smsBranch).toBeVisible({ timeout: 5_000 });
 	});
 
@@ -111,40 +95,29 @@ test.describe('Issue #681: Compare-Editor Slice 4 — Layout + Versand Fidelity'
 	test('AC-2: Telegram-Kanal zeigt ↳ Detail-Pill für Spalten jenseits Position 8', async ({
 		page
 	}) => {
-		const { id } = await createPreset(page);
-		await page.goto(`/compare/${id}/edit`);
-		await page.waitForLoadState('networkidle');
-
-		await page.locator('[data-testid="compare-editor-tab-layout"]').click();
-		await expect(
-			page.locator('[data-testid="compare-editor-tab-layout"]')
-		).toHaveAttribute('data-active', 'true');
+		await openWizardLayout(page);
 
 		// Telegram-Kanal wählen
-		await page.locator('[data-testid="channel-tab-telegram"]').click();
+		await page.locator('[data-testid="channel-tab-telegram"]:visible').first().click();
 
 		// Pill für Position 8 (Index 8, 0-basiert) muss existieren wenn >8 aktive Spalten
-		// (RED: compare-step4-detail-pill-8 existiert noch nicht)
-		const detailPill = page.locator('[data-testid="compare-step4-detail-pill-8"]');
+		const detailPill = page.locator('[data-testid="compare-step4-detail-pill-8"]:visible').first();
 		await expect(detailPill).toBeVisible({ timeout: 5_000 });
 		await expect(detailPill).toContainText('↳ Detail');
 	});
 
 	// ── AC-3: SMS-Vorschau zeigt Fließtext ≤ 140 Zeichen, keine Tabelle ───────
 	test('AC-3: SMS-Vorschau ist Fließtext ≤ 140 Zeichen (keine Tabelle)', async ({ page }) => {
-		const { id } = await createPreset(page);
-		await page.goto(`/compare/${id}/edit`);
-		await page.waitForLoadState('networkidle');
+		await openWizardLayout(page);
 
-		await page.locator('[data-testid="compare-editor-tab-layout"]').click();
-		await page.locator('[data-testid="channel-tab-sms"]').click();
+		await page.locator('[data-testid="channel-tab-sms"]:visible').first().click();
 
-		// SMS-Fließtext-Block muss existieren (RED: fehlt)
-		const smsBlock = page.locator('[data-testid="compare-step4-preview-sms"]');
+		// SMS-Fließtext-Block muss existieren
+		const smsBlock = page.locator('[data-testid="compare-step4-preview-sms"]:visible').first();
 		await expect(smsBlock).toBeVisible({ timeout: 5_000 });
 
 		// Kein <table>-Element innerhalb der Vorschau
-		const preview = page.locator('[data-testid="compare-step4-layout-preview"]');
+		const preview = page.locator('[data-testid="compare-step4-layout-preview"]:visible').first();
 		await expect(preview.locator('table')).toHaveCount(0);
 
 		// Text-Länge ≤ 140 Zeichen
@@ -155,12 +128,12 @@ test.describe('Issue #681: Compare-Editor Slice 4 — Layout + Versand Fidelity'
 		).toBeLessThanOrEqual(200); // etwas Puffer für Hinweis-Zeile
 	});
 
-	// ── AC-4a: „Briefing aktivieren" im Create-Modus — disabled vor Versand ───
+	// ── AC-4a: „Briefing aktivieren" disabled bis Versand-Tab besucht ────────
 	test('AC-4a: "Briefing aktivieren" ist disabled bis Versand-Tab besucht', async ({ page }) => {
 		await page.goto('/compare/new');
 		await page.waitForLoadState('networkidle');
 
-		// Button muss sichtbar sein (RED: fehlt komplett)
+		// Button muss sichtbar sein
 		const activateBtn = page.locator('[data-testid="compare-editor-activate"]');
 		await expect(activateBtn).toBeVisible({ timeout: 8_000 });
 
@@ -177,111 +150,66 @@ test.describe('Issue #681: Compare-Editor Slice 4 — Layout + Versand Fidelity'
 		await expect(hint).toBeVisible();
 	});
 
-	// ── AC-4b: Nach Versand-Tab-Besuch wird Button aktiv + speichert ──────────
-	test('AC-4b: Nach Versand-Besuch ist "Briefing aktivieren" aktiv und speichert korrekt', async ({
-		page
-	}) => {
+	// ── AC-4b: „Briefing aktivieren" existiert im Create-Modus ────────────────
+	// Epic #1273 S4c: vestigialer /edit-Umweg entfernt; es bleibt: der
+	// Aktivieren-Button ist im Create-Wizard vorhanden.
+	test('AC-4b: "Briefing aktivieren" ist im Create-Wizard vorhanden', async ({ page }) => {
 		await page.goto('/compare/new');
 		await page.waitForLoadState('networkidle');
-
-		// Name eintragen (Orte-Tab freischalten)
 		await page.locator('[data-testid="compare-editor-name"]').fill('Slice4-Aktivierung ' + Date.now());
 
-		// Tab-Sequenz durchlaufen bis Versand
-		// (Für diesen Test: direkt über das versandVisited-Flag testen, indem wir
-		// den Versand-Tab anklicken — aber dafür muss Idealwerte vorher besucht sein)
-		// Vereinfacht: prüfen dass der Button nach Versand-Besuch enabled ist.
-		// Da die sequenzielle Freischaltung die anderen Tabs sperrt, testen wir
-		// das "Briefing aktivieren" im Edit-Modus (alle Tabs frei, kann Versand besuchen).
-		const { id } = await createPreset(page);
-		await page.goto(`/compare/${id}/edit`);
-		await page.waitForLoadState('networkidle');
-
-		// Edit-Modus hat keinen Aktivierungs-Button → korrekt, nur Create-Modus hat ihn
-		// Dieser Test prüft daher nur das Create-Modus-Verhalten:
-		// After navigating to versand tab in create mode (if accessible).
-		// Für vollständigen Roundtrip: nur prüfen dass button nach dem echten flow enabled wird.
-		// (In der Implementation wird versandVisited gesetzt, wenn /versand-Tab geklickt wird)
-		const activateBtn = page.locator('[data-testid="compare-editor-activate"]');
-		// Im Edit-Modus gibt es keinen activate-Button → dieser Test prüft Create-Modus
-		// Gesonderte Verifikation: Button existiert auf /compare/new
-		await page.goto('/compare/new');
-		await page.waitForLoadState('networkidle');
 		await expect(
 			page.locator('[data-testid="compare-editor-activate"]')
 		).toBeVisible({ timeout: 8_000 });
 	});
 
-	// ── AC-5: Layout-Tab zeigt Kacheln, Versand-Tab den Aktivierungs-Banner ──
-	// Issue #1232 Scheibe 2b: die Info-Kacheln zogen aus Step5Versand in die
-	// neue CompareReportContentSection (Layout-Tab) um — Testids unveraendert.
-	// Issue #1268: Zeitfenster- und Horizont-Kachel ersatzlos entfernt (der
-	// Nutzer kann beides nicht mehr einstellen) — von den urspruenglich 3
-	// Kacheln bleibt die Versand-Kachel. Der Rest des Tests ist unveraendert.
-	test('AC-5: Layout-Tab zeigt die Versand-Kachel, Versand-Tab den Aktivierungs-Banner', async ({ page }) => {
-		const { id } = await createPreset(page);
-		await page.goto(`/compare/${id}/edit`);
-		await page.waitForLoadState('networkidle');
+	// ── AC-5: Layout-Tab zeigt die Versand-Kachel, Wizard den Aktivierungs-Banner ──
+	// Issue #1268: Zeitfenster-/Horizont-Kachel entfernt — es bleibt die
+	// Versand-Kachel (Testids unverändert seit #1232 Scheibe 2b).
+	test('AC-5: Layout-Tab zeigt die Versand-Kachel, Create-Wizard den Aktivierungs-Banner', async ({ page }) => {
+		await openWizardLayout(page);
 
-		await page.locator('[data-testid="compare-editor-tab-layout"]').click();
+		// Versand-Kachel im Layout-Tab
 		await expect(
-			page.locator('[data-testid="compare-editor-tab-layout"]')
-		).toHaveAttribute('data-active', 'true');
-
-		// Versand-Kachel (RED: fehlt)
-		await expect(
-			page.locator('[data-testid="compare-step5-schedule-tile"]')
+			page.locator('[data-testid="compare-step5-schedule-tile"]:visible').first()
 		).toBeVisible({ timeout: 5_000 });
 		// Issue #1268: Zeitfenster-/Horizont-Kachel duerfen nicht mehr erscheinen.
 		await expect(page.locator('[data-testid="compare-step5-timewindow-tile"]')).toHaveCount(0);
 		await expect(page.locator('[data-testid="compare-step5-horizon-tile"]')).toHaveCount(0);
 
-		// Aktivierungs-Banner (nur Create-Modus → im Edit-Modus nicht sichtbar, aber
-		// im Create-Modus muss er erscheinen)
-		// Im Edit-Modus: banner nicht vorhanden (kein Create-Flow)
-		// Separater Teiltest für den Banner im Create-Modus:
-		await page.goto('/compare/new');
-		await page.waitForLoadState('networkidle');
-		// Minimal-Setup: Name eintragen damit Versand-Tab erreichbar wird
-		// (sequenzielle Freischaltung → über direkten Klick nicht erreichbar ohne Vorarbeit)
-		// Wir prüfen hier nur, dass der Banner-testid vorhanden ist — wenn der Tab gesperrt ist,
-		// schlägt der Test fehl wegen "Banner nicht sichtbar" (korrekt für RED)
-		const banner = page.locator('[data-testid="compare-step5-activation-banner"]');
-		// Im Create-Modus muss der Banner nach Versand-Besuch sichtbar sein
-		// Da wir Versand noch nicht besucht haben, zeigt er den dark-State (data-ready=false)
-		// Dieser Test schlägt in RED fehl weil der testid nicht existiert
-		await expect(banner).toBeAttached({ timeout: 3_000 });
+		// Aktivierungs-Banner ist im Create-Wizard vorhanden (bereits im obigen
+		// /compare/new-Flow gemountet).
+		await expect(
+			page.locator('[data-testid="compare-step5-activation-banner"]')
+		).toBeAttached({ timeout: 3_000 });
 	});
 
-	// ── AC-5: channel_layouts werden pro Kanal getrennt persistiert ───────────
-	test('AC-5b: channel_layouts im Save-Payload pro Kanal getrennt', async ({ page }) => {
-		const { id } = await createPreset(page);
-		await page.goto(`/compare/${id}/edit`);
-		await page.waitForLoadState('networkidle');
+	// ── AC-5b: channel_layouts pro Kanal getrennt persistiert ────────────────
+	// Epic #1273 S4c: Preset entsteht erst beim Aktivieren → POST-Body-Nachweis.
+	test('AC-5b: channel_layouts im Aktivierungs-POST-Body pro Kanal getrennt', async ({ page }) => {
+		await openWizardLayout(page);
 
-		// Layout-Tab öffnen + Email-Kanal auswählen (Standard)
-		await page.locator('[data-testid="compare-editor-tab-layout"]').click();
-		await page.locator('[data-testid="channel-tab-email"]').click();
+		// Layout-Tab: zwischen Kanälen wechseln (befüllt channel_layouts).
+		await page.locator('[data-testid="channel-tab-email"]:visible').first().click();
+		await page.locator('[data-testid="channel-tab-telegram"]:visible').first().click();
+		await page.locator('[data-testid="channel-tab-email"]:visible').first().click();
 
-		// Telegram-Kanal wählen und zurück zu Email
-		await page.locator('[data-testid="channel-tab-telegram"]').click();
-		await page.locator('[data-testid="channel-tab-email"]').click();
+		// Bis zum Versand-Tab durchklicken (schaltet den Aktivieren-Button frei).
+		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
 
-		// Speichern
-		await page.locator('[data-testid="compare-editor-save"]').click();
-		await page.waitForURL(new RegExp(`/compare/${id}$`), { timeout: 10_000 });
-
-		// Persistenz: channel_layouts enthält email UND telegram als separate Einträge
-		const res = await page.request.get(`/api/compare/presets/${id}`);
-		expect(res.ok()).toBeTruthy();
-		const preset = await res.json();
-		const dc = preset.display_config ?? {};
+		const [request] = await Promise.all([
+			page.waitForRequest(
+				(req) => req.url().includes('/api/compare/presets') && req.method() === 'POST'
+			),
+			page.locator('[data-testid="compare-editor-activate"]:visible').first().click()
+		]);
+		const body = request.postDataJSON() as Record<string, unknown>;
+		const dc = (body.display_config ?? {}) as Record<string, unknown>;
 		const cl = dc.channel_layouts ?? {};
-		// Nach Layout-Tab-Besuch muss channel_layouts befüllt sein (RED: wird scheitern
-		// wenn Layout-Tab noch nicht die neue LayoutPreview-Komponente rendert)
 		expect(
 			typeof cl === 'object' && cl !== null,
-			'display_config.channel_layouts muss Objekt sein'
+			'display_config.channel_layouts muss im POST-Body ein Objekt sein'
 		).toBeTruthy();
 	});
 });

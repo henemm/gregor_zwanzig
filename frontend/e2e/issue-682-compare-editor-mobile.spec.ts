@@ -186,38 +186,8 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 		await expect(activateBtn).toBeVisible();
 	});
 
-	// AC-4b: Edit-Modus — kein Floating-CTA; Speichern in App-Leiste (orange bei Änderungen).
-	test('AC-4b: Edit-Modus hat Speichern in App-Leiste (orangé bei Änderung, grau ohne)', async ({ page }) => {
-		await page.setViewportSize(MOBILE);
-
-		// Preset anlegen
-		const presetId = await createPreset(page);
-		await page.goto(`/compare/${presetId}/edit`);
-
-		// Kein Floating-CTA im Edit-Modus
-		const cta = page.getByTestId('cm-mobile-cta');
-		await expect(cta).toBeHidden();
-
-		// Speichern-Button in App-Leiste — grau (kein dirty)
-		const saveBtn = page.getByTestId('top-app-bar-save');
-		await expect(saveBtn).toBeVisible();
-
-		// Farbe grau prüfen: color sollte var(--g-ink-4) entsprechen (nicht Accent-orange)
-		const colorBefore = await saveBtn.evaluate(
-			(el) => window.getComputedStyle(el).color
-		);
-
-		// Eine Änderung vornehmen
-		await page.getByTestId('compare-editor-name').fill('Geänderter Name');
-
-		// Speichern-Button muss jetzt orange/accent sein
-		const colorAfter = await saveBtn.evaluate(
-			(el) => window.getComputedStyle(el).color
-		);
-
-		// Farben müssen sich unterscheiden (dirty → orange)
-		expect(colorBefore).not.toBe(colorAfter);
-	});
+	// Epic #1273 S4c: Der frühere Edit-Modus-Speichern-Farbwechsel-Test wurde
+	// entfernt — der Hub hat keinen manuellen Speichern-Button (Autosave).
 
 	// AC-5: Persistenz mandantengetrennt — Nutzer A legt Preset an, Nutzer B sieht es nicht.
 	// (Staging-Only-Test — läuft nur wenn GZ_SVELTE_BASE gesetzt)

@@ -48,12 +48,11 @@ async function createPreset(
 }
 
 async function openAlarmeTab(page: Page, id: string): Promise<void> {
-	await page.goto(`/compare/${id}/edit`);
+	await page.goto(`/compare/${id}`);
 	await page.waitForLoadState('networkidle');
-	await page.locator('[data-testid="compare-editor-tab-alarme"]').click();
-	// CompareEditor.svelte rendert AlarmeTab zweimal (Desktop- und Mobile-
-	// Markup, `.cm-mobile` per CSS-Breakpoint ausgeblendet, DOM bleibt aber
-	// bestehen) — `.first()` greift bei 1280x900 immer den Desktop-Block.
+	await page.locator('[data-testid="compare-detail-tab-alarme"]').click();
+	// Hub rendert AlarmeTab doppelt (Desktop/Mobile im DOM) — `.first()` greift
+	// bei 1280x900 den Desktop-Block.
 	await expect(page.locator('[data-testid="alarme-tab"]').first()).toBeVisible({
 		timeout: 10_000
 	});
@@ -91,11 +90,7 @@ test.describe('Issue #1041 Slice 2: Radar-Alarm-Schalter im Compare-Editor (Desk
 		await toggle.click();
 		await expect(toggle).toBeChecked();
 
-		await page.locator('[data-testid="compare-editor-save"]').click();
-		// Issue #758: handleSave() speichert direkt via api.put OHNE Redirect
-		// (CompareEditor.svelte:164 „Save direkt via api.put, kein Redirect") —
-		// kein toHaveURL-Wait mehr. Stattdessen: SaveIndicator wechselt nach
-		// erfolgreichem PUT auf data-state="idle" (compareSaveCtl.setSaved()).
+		// Hub-Autosave (Epic #1273 S4c): kein Speichern-Button (SaveIndicator → idle).
 		await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute(
 			'data-state',
 			'idle',
@@ -111,7 +106,7 @@ test.describe('Issue #1041 Slice 2: Radar-Alarm-Schalter im Compare-Editor (Desk
 		// Zusaetzlich UI-seitig: Seite neu laden, Tab „Alarme“, Schalter AN.
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-editor-tab-alarme"]').click();
+		await page.locator('[data-testid="compare-detail-tab-alarme"]').click();
 		await expect(radarToggle(page)).toBeChecked();
 	});
 
@@ -123,34 +118,35 @@ test.describe('Issue #1041 Slice 2: Radar-Alarm-Schalter im Compare-Editor (Desk
 		const toggle = radarToggle(page);
 		await toggle.click();
 		await expect(toggle).toBeChecked();
-		await page.locator('[data-testid="compare-editor-save"]').click();
-		// Issue #758: kein Redirect nach dem Speichern (s. AC-2-Kommentar oben) —
-		// auf den SaveIndicator-Abschluss warten statt auf eine URL-Änderung.
+		// Hub-Autosave (s. AC-2): kein manueller Speichern-Button — auf den
+		// SaveIndicator-Abschluss (idle) warten.
 		await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute(
 			'data-state',
 			'idle',
 			{ timeout: 10_000 }
 		);
 
-		// Nur der Name wird geaendert — Radar-Alarm-Feld nicht angefasst.
-		await page.goto(`/compare/${id}/edit`);
+		// Nur der Name wird geaendert (Radar-Feld unberührt) — im Hub via
+		// Inline-Edit-Sequenz (Stift → Feld → OK).
+		const neuerName = 'Nur Name geändert ' + Date.now();
+		await page.goto(`/compare/${id}`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-editor-name"]').fill('Nur Name geändert ' + Date.now());
-		await page.locator('[data-testid="compare-editor-save"]').click();
-		await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute(
-			'data-state',
-			'idle',
-			{ timeout: 10_000 }
-		);
+		await page.locator('[data-testid="compare-hub-name-edit-toggle"]:visible').first().click();
+		await page.locator('[data-testid="compare-hub-name-edit"]:visible').first().fill(neuerName);
+		await page.locator('[data-testid="compare-hub-name-save"]:visible').first().click();
+		// Umbenennung persistiert, sobald der Kopf den neuen Namen zeigt.
+		await expect(page.getByRole('heading', { level: 1 })).toContainText(neuerName, {
+			timeout: 10_000
+		});
 
 		const res = await page.request.get(`/api/compare/presets/${id}`);
 		expect(res.ok()).toBeTruthy();
 		const preset = await res.json();
 		expect(preset.radar_alert_enabled).toBe(true);
 
-		await page.goto(`/compare/${id}/edit`);
+		await page.goto(`/compare/${id}`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-editor-tab-alarme"]').click();
+		await page.locator('[data-testid="compare-detail-tab-alarme"]').click();
 		await expect(radarToggle(page)).toBeChecked();
 	});
 });

@@ -170,19 +170,21 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('Issue #758 — Ortsvergleich Speicher-Status', () => {
 	async function createPreset(page: Page): Promise<string> {
+		// Eindeutige Ortsnamen je Lauf — feste Namen kollidieren (HTTP 409).
+		const suffix = Date.now();
 		const resA = await page.request.post('/api/locations', {
-			data: { name: 'Ort-758-A', lat: 47.4, lon: 13.0, region: 'Hochkönig' }
+			data: { name: `Ort-758-A ${suffix}`, lat: 47.4, lon: 13.0, region: 'Hochkönig' }
 		});
-		expect(resA.ok()).toBeTruthy();
+		expect(resA.ok(), `locA HTTP ${resA.status()}`).toBeTruthy();
 		const locA = await resA.json();
 		const resB = await page.request.post('/api/locations', {
-			data: { name: 'Ort-758-B', lat: 47.1, lon: 12.8, region: 'Hochkönig' }
+			data: { name: `Ort-758-B ${suffix}`, lat: 47.1, lon: 12.8, region: 'Hochkönig' }
 		});
-		expect(resB.ok()).toBeTruthy();
+		expect(resB.ok(), `locB HTTP ${resB.status()}`).toBeTruthy();
 		const locB = await resB.json();
 		const resP = await page.request.post('/api/compare/presets', {
 			data: {
-				name: 'Vergleich #758 ' + Date.now(),
+				name: 'Vergleich #758 ' + suffix,
 				location_ids: [locA.id, locB.id],
 				schedule: 'daily',
 				profil: 'wintersport',
@@ -197,24 +199,28 @@ test.describe('Issue #758 — Ortsvergleich Speicher-Status', () => {
 		return preset.id;
 	}
 
-	// AC-3: Änderung markiert „Nicht gespeichert" (dirty); nach Speichern-Klick
-	// wechselt der Indikator über „Speichere…" zu „Gespeichert ✓".
-	test('AC-3: Compare dirty → nach Speichern „Gespeichert ✓"', async ({ page }) => {
+	// AC-3: Eine Änderung im Hub speichert automatisch → idle „Gespeichert ✓".
+	// Epic #1273 S4c: kein manueller Speichern-Button mehr (Autosave-Modell).
+	test('AC-3: Compare-Änderung speichert automatisch → „Gespeichert ✓"', async ({ page }) => {
 		const presetId = await createPreset(page);
-		await page.goto(`/compare/${presetId}/edit`);
-		await expect(page.getByTestId('compare-editor')).toBeVisible();
+		await page.goto(`/compare/${presetId}`);
+		await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible();
 
 		// Indikator existiert und ist initial idle.
 		await expect(saveIndicator(page)).toBeVisible();
 		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle');
 
-		// Name ändern → dirty.
-		await page.getByTestId('compare-editor-name').fill('Vergleich #758 geändert');
-		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'dirty', { timeout: 3000 });
+		// Versand-Zeit ändern → Autosave.
+		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').first().click();
+		// Volle Stunde: report-morning-time-Input trägt step={3600} (VTSchedulePlan).
+		const morningTime = page.locator('[data-testid="report-morning-time"]:visible').first();
+		await expect(morningTime).toBeVisible({ timeout: 10_000 });
+		await morningTime.fill('05:00');
+		await morningTime.blur();
 
-		// Expliziter Speichern-Klick → zurück auf idle „Gespeichert".
-		await page.getByTestId('compare-editor-save').click();
-		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle', { timeout: 5000 });
+		// Autosave abgeschlossen → idle „Gespeichert", kein Fehler.
+		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+		await expect(saveIndicator(page)).not.toHaveAttribute('data-state', 'error');
 		await expect(saveIndicator(page)).toContainText(/Gespeichert/i);
 	});
 
@@ -222,8 +228,8 @@ test.describe('Issue #758 — Ortsvergleich Speicher-Status', () => {
 	// getrennte Zustände (kein geteilter globaler Store).
 	test('AC-6: Compare-Indikator unabhängig vom Trip-Editor-Zustand', async ({ page }) => {
 		const presetId = await createPreset(page);
-		await page.goto(`/compare/${presetId}/edit`);
-		await expect(page.getByTestId('compare-editor')).toBeVisible();
+		await page.goto(`/compare/${presetId}`);
+		await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible();
 		// Frisch geladener Compare-Editor zeigt idle, unabhängig von irgendeinem
 		// vorher in einem anderen Editor aufgetretenen Fehler.
 		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle');

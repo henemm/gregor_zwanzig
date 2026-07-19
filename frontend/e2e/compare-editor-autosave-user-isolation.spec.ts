@@ -69,9 +69,16 @@ test('AC-12: Autosave-Änderung bei Nutzer A ändert Nutzer Bs eigenes Preset NI
 	const pageB = await ctxB.newPage();
 	const userB = 'e2e1261b' + suffix;
 	const reg = await pageB.request.post('/api/auth/register', {
-		data: { username: userB, password: 'test1234' }
+		// Issue #1226: E-Mail ist Pflichtfeld bei der Registrierung.
+		data: { username: userB, password: 'test1234', email: `${userB}@example.com` }
 	});
 	expect([200, 201].includes(reg.status()), 'Registrierung B fehlgeschlagen: ' + reg.status()).toBeTruthy();
+	// RegisterHandler setzt kein Session-Cookie — erst der Login etabliert die
+	// zweite echte Nutzer-Session (sonst presetB nicht unter userB isoliert).
+	const loginB = await pageB.request.post('/api/auth/login', {
+		data: { username: userB, password: 'test1234' }
+	});
+	expect(loginB.ok(), 'Login B fehlgeschlagen: ' + loginB.status()).toBeTruthy();
 
 	const locB = await createLocation(pageB, `E2E 1261 AC12 B ${suffix}`, 48.6, 12.6);
 	const presetB = await createPresetWithLocation(pageB, `E2E 1261 AC12 Preset-B ${suffix}`, locB);
@@ -80,15 +87,21 @@ test('AC-12: Autosave-Änderung bei Nutzer A ändert Nutzer Bs eigenes Preset NI
 	try {
 		// Nutzer A: echte Geste im Editor (Ort abwählen) löst debounced Autosave aus.
 		await pageA.setViewportSize({ width: 1280, height: 900 });
-		await pageA.goto(`/compare/${presetA}/edit`);
-		await expect(pageA.getByTestId('compare-editor')).toBeVisible({ timeout: 10_000 });
-		await pageA.getByTestId('compare-editor-tab-orte').click();
+		// Epic #1273 S4c: Einstieg am Hub (Editor = 307-Redirect).
+		await pageA.goto(`/compare/${presetA}`);
+		await expect(pageA.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 10_000 });
+		await pageA.getByTestId('compare-detail-tab-orte').click();
 
 		const putA = pageA.waitForResponse(
 			(r) => r.url().includes(`/api/compare/presets/${presetA}`) && r.request().method() === 'PUT',
 			{ timeout: 10_000 }
 		);
-		await pageA.getByTestId(`compare-step2-picked-remove-${locA2}`).click();
+		// Hub-Orte-Tab: Ort abwählen.
+		await pageA
+			.locator(
+				`[data-testid="hub-orte-row"][data-loc-id="${locA2}"] [data-testid="hub-orte-remove"]`
+			)
+			.click();
 		const putARes = await putA;
 		expect(putARes.ok(), 'Autosave-PUT (A) fehlgeschlagen: ' + putARes.status()).toBeTruthy();
 		// KERN: der Autosave-PUT trifft ausschließlich das eigene Preset von A.

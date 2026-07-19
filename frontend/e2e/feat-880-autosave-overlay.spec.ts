@@ -163,19 +163,21 @@ test.describe('feat_880 — Trip-Editor Autospeicher-Overlay', () => {
 
 test.describe('feat_880 — Compare-Editor & Cross-Tab-Isolation', () => {
 	async function createPreset(page: Page): Promise<string> {
+		// Eindeutige Ortsnamen je Lauf — feste Namen kollidieren (HTTP 409).
+		const suffix = Date.now();
 		const resA = await page.request.post('/api/locations', {
-			data: { name: 'Ort-880-A', lat: 47.4, lon: 13.0, region: 'Hochkönig' }
+			data: { name: `Ort-880-A ${suffix}`, lat: 47.4, lon: 13.0, region: 'Hochkönig' }
 		});
 		expect(resA.ok(), `locA HTTP ${resA.status()}`).toBeTruthy();
 		const locA = await resA.json();
 		const resB = await page.request.post('/api/locations', {
-			data: { name: 'Ort-880-B', lat: 47.1, lon: 12.8, region: 'Hochkönig' }
+			data: { name: `Ort-880-B ${suffix}`, lat: 47.1, lon: 12.8, region: 'Hochkönig' }
 		});
 		expect(resB.ok(), `locB HTTP ${resB.status()}`).toBeTruthy();
 		const locB = await resB.json();
 		const resP = await page.request.post('/api/compare/presets', {
 			data: {
-				name: 'Vergleich #880 ' + Date.now(),
+				name: 'Vergleich #880 ' + suffix,
 				location_ids: [locA.id, locB.id],
 				schedule: 'daily',
 				profil: 'wintersport',
@@ -192,8 +194,8 @@ test.describe('feat_880 — Compare-Editor & Cross-Tab-Isolation', () => {
 	// AC-7: Compare-Editor rendert genau EIN Overlay (kein zweiter inline-Indikator).
 	test('AC-7: Compare-Editor hat genau ein save-indicator', async ({ page }) => {
 		const presetId = await createPreset(page);
-		await page.goto(`/compare/${presetId}/edit`);
-		await expect(page.getByTestId('compare-editor')).toBeVisible();
+		await page.goto(`/compare/${presetId}`);
+		await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible();
 		await expect(saveIndicator(page)).toHaveCount(1);
 		expect(await overlayStyle(page, 'position')).toBe('fixed');
 	});
@@ -219,8 +221,8 @@ test.describe('feat_880 — Compare-Editor & Cross-Tab-Isolation', () => {
 			expect(seed.ok(), `seed HTTP ${seed.status()}`).toBeTruthy();
 
 			const presetId = await createPreset(pageCompare);
-			await pageCompare.goto(`/compare/${presetId}/edit`);
-			await expect(pageCompare.getByTestId('compare-editor')).toBeVisible();
+			await pageCompare.goto(`/compare/${presetId}`);
+			await expect(pageCompare.getByTestId('compare-detail-tab-list')).toBeVisible();
 			// Compare-Editor frisch → idle, kein savedAt-Timestamp.
 			await expect(saveIndicator(pageCompare)).toHaveAttribute('data-state', 'idle');
 			await expect(saveIndicator(pageCompare).locator('.save-time')).toHaveCount(0);

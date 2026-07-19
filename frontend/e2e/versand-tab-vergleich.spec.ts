@@ -16,7 +16,7 @@
 //   cd frontend && E2E_USER=admin E2E_PASS=test1234 \
 //     npx playwright test e2e/versand-tab-vergleich.spec.ts --config playwright.config.ts
 
-import { test, expect, type Page, type Locator } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { login } from './helpers.js';
 
 async function createPreset(
@@ -42,9 +42,9 @@ async function createPreset(
 }
 
 async function openVersandTab(page: Page, id: string): Promise<void> {
-	await page.goto(`/compare/${id}/edit`);
+	await page.goto(`/compare/${id}`);
 	await page.waitForLoadState('networkidle');
-	await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
+	await page.locator('[data-testid="compare-detail-tab-versand"]:visible').first().click();
 }
 
 test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor', () => {
@@ -79,7 +79,6 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		await openVersandTab(page, id);
 
 		await page.locator('[data-testid="compare-versand-enddate-open"]:visible').first().click();
-		await page.locator('[data-testid="compare-editor-save"]').click();
 		await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', {
 			timeout: 10_000
 		});
@@ -100,7 +99,6 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 			.locator('[data-testid="compare-versand-enddate-input"]:visible')
 			.first()
 			.fill('2026-10-15');
-		await page.locator('[data-testid="compare-editor-save"]').click();
 		await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', {
 			timeout: 10_000
 		});
@@ -117,9 +115,12 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		page
 	}) => {
 		const { id } = await createPreset(page);
-		await page.goto(`/compare/${id}/edit`);
+		await page.goto(`/compare/${id}`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
+		// BEFUND: activeMetricKeys hydratisiert nur lazy beim Wetter-Metriken-Besuch.
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').first().click();
+		await page.waitForTimeout(300);
+		await page.locator('[data-testid="compare-detail-tab-alarme"]:visible').first().click();
 
 		await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({
 			timeout: 10_000
@@ -129,34 +130,49 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		// Cooldown-Karte JETZT im Alarme-Tab (zog aus dem Versand-Tab zurück, S4/AC-18).
 		await expect(page.locator('[data-testid="alert-cooldown-card"]:visible').first()).toBeVisible();
 
-		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
+		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').first().click();
 		await expect(page.locator('[data-testid="alert-cooldown-card"]:visible')).toHaveCount(0);
 		await expect(page.locator('[data-testid="alert-metric-level-table"]:visible')).toHaveCount(0);
 	});
 
 	// ── AC-7: Kein Kanal aktiv → Warnbox statt Zeitplan-Karten ───────────────
+	// sendEmail ist reiner UI-Zustand (kein Persistenz-Feld, #1230). Voraussetzung:
+	// Testkonto braucht mail_to, sonst ist die E-Mail-Checkbox disabled
+	// (VTBriefingChannels.svelte:108).
 	test('AC-7: alle Kanäle aus zeigt "Kein Kanal aktiv" statt Zeitplan-Karten', async ({ page }) => {
-		const { id } = await createPreset(page);
-		await openVersandTab(page, id);
+		const prof = await (await page.request.get('/api/auth/profile')).json();
+		const origMailTo = (prof.mail_to as string | null) ?? null;
+		await page.request.put('/api/auth/profile', { data: { mail_to: 'ac7-versand@example.com' } });
+		try {
+			const { id } = await createPreset(page);
+			await openVersandTab(page, id);
 
-		const email: Locator = page
-			.locator('[data-testid="compare-step5-channel-email"]:visible')
-			.first()
-			.locator('input[type="checkbox"]');
-		if (await email.isChecked()) await email.uncheck();
+			// E-Mail abwählen (jetzt aktiv wegen mail_to) → hasActiveChannel false.
+			// (Telegram/SMS sind ohne Kontaktfeld ohnehin aus.)
+			const email = page
+				.locator('[data-testid="compare-step5-channel-email"]:visible')
+				.first()
+				.locator('input[type="checkbox"]');
+			if (await email.isChecked()) await email.uncheck();
 
-		await expect(page.locator('[data-testid="briefings-channel-empty"]:visible').first()).toBeVisible({
-			timeout: 10_000
-		});
+			await expect(
+				page.locator('[data-testid="briefings-channel-empty"]:visible').first()
+			).toBeVisible({ timeout: 10_000 });
+		} finally {
+			// Leerstring statt null: Go überspringt JSON-null bei *string wie ein
+			// fehlendes Feld (auth.go:578-Guard, gleiche Pointer-Semantik wie
+			// trip.go:233) — sonst bliebe die Fremdadresse dauerhaft am Konto.
+			await page.request.put('/api/auth/profile', { data: { mail_to: origMailTo ?? '' } });
+		}
 	});
 
 	// ── AC-9/AC-10: Doppel-Mount Desktop+Mobile, kein horizontales Scrollen ──
 	test('AC-10: mobiler Viewport — Versand-Tab ohne horizontales Scrollen', async ({ page }) => {
 		const { id } = await createPreset(page);
 		await page.setViewportSize({ width: 390, height: 844 });
-		await page.goto(`/compare/${id}/edit`);
+		await page.goto(`/compare/${id}`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="cm-mobile-tab-versand"]').click();
+		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').first().click();
 
 		await expect(page.locator('[data-testid="compare-step5-channel-email"]:visible').first()).toBeVisible({
 			timeout: 10_000
@@ -175,20 +191,20 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		const morningTime = () => page.locator('[data-testid="report-morning-time"]:visible').first();
 		await expect(morningTime()).toHaveValue('07:00', { timeout: 10_000 });
 
-		await morningTime().fill('08:30');
-		await page.locator('[data-testid="compare-editor-save"]').click();
+		// Volle Stunde: report-morning-time-Input trägt step={3600} (VTSchedulePlan).
+		await morningTime().fill('08:00');
+		await morningTime().blur();
 		await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', {
 			timeout: 10_000
 		});
 
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
-		await expect(morningTime()).toHaveValue('08:30', { timeout: 10_000 });
+		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').first().click();
+		await expect(morningTime()).toHaveValue('08:00', { timeout: 10_000 });
 
 		// Testdaten sauber: Ausgangswert wiederherstellen und speichern.
 		await morningTime().fill('07:00');
-		await page.locator('[data-testid="compare-editor-save"]').click();
 		await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', {
 			timeout: 10_000
 		});
@@ -245,71 +261,30 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		expect(body.official_warnings).toEqual({ enabled: false });
 	});
 
-	// ── AC-8: Verwerfen setzt Slot-/Laufzeit-Änderungen zurück ───────────────
-	test('AC-8: Verwerfen verwirft geänderte Slot-Felder und Laufzeit', async ({ page }) => {
-		const { id } = await createPreset(page); // Default: morning 07:00 an, kein end_date
-		await openVersandTab(page, id);
+	// Epic #1273 S4c: AC-8 („Verwerfen") entfernt — der Hub hat keinen
+	// Verwerfen-Button (Autosave-Modell), die Interaktion ist gegenstandslos.
 
-		await page.locator('[data-testid="report-morning-time"]:visible').first().fill('11:15');
-		await page.locator('[data-testid="compare-versand-enddate-date"]:visible').first().click();
-		await page
-			.locator('[data-testid="compare-versand-enddate-input"]:visible')
-			.first()
-			.fill('2026-12-01');
-
-		await page.locator('[data-testid="compare-editor-discard"]').click();
-		const confirmBtn = page.getByRole('button', { name: /Verwerfen|Bestätigen|Ja/ });
-		await confirmBtn.click();
-
-		await expect(page).toHaveURL(new RegExp(`/compare/${id}$`), { timeout: 10_000 });
-
-		// Persistenz unangetastet (API).
-		const res = await page.request.get(`/api/compare/presets/${id}`);
-		expect(res.ok()).toBeTruthy();
-		const preset = await res.json();
-		expect(preset.morning_time).toBe('07:00:00');
-		expect(preset.end_date == null).toBeTruthy();
-
-		// UI-seitig: frisches Öffnen des Edit-Pfads zeigt den zuletzt gespeicherten Stand.
-		await openVersandTab(page, id);
-		await expect(page.locator('[data-testid="report-morning-time"]:visible').first()).toHaveValue('07:00');
-		await expect(page.locator('[data-testid="compare-versand-enddate-open"]:visible').first()).toHaveAttribute(
-			'aria-selected',
-			'true'
-		);
-	});
-
-	// ── Staging-F001 (AC-5): Top-N/Stundenverlauf persistieren ──────────────
-	// Bug: CompareEditor.svelte trackte topN/hourlyEnabled weder
-	// im Dirty-Snapshot noch im handleSave()-Aufruf — UI änderte sich, der
-	// PUT-Body enthielt aber weiterhin die alten Werte (Round-Trip-Spread aus
-	// original statt aus wiz.*). Layout-Tab (CompareInhaltSection) ist analog
-	// zu CompareInhaltSection ebenfalls Doppel-Mount (Desktop+Mobile) — `:visible`.
-	//
-	// Issue #1268: Der Horizont-Select ist entfernt (kein Editor-Feld mehr) und
-	// hier entfallen. Top-N und Stundenverlauf-Toggle bleiben Teil des Tests —
-	// sie sind der AC-7-Regressionsanker.
-	test('Staging-F001: Top-N/Stundenverlauf-Toggle persistieren über den zentralen Speichern-Button', async ({
+	// ── Staging-F001 (AC-5): Stundenverlauf-Toggle persistiert (Hub-Autosave) ─
+	// Epic #1273 S4c: Top-N ist im Hub-Layout-Tab nicht editierbar (read-only
+	// Pills, nur im Wizard) und entfällt. Die Stundenverlauf-Steuerung
+	// (compare-layout-hourly-enabled-toggle) ist bewusst in den Hub geholt und
+	// speichert per Autosave — sie bleibt hier der Regressionsanker.
+	test('Staging-F001: Stundenverlauf-Toggle persistiert über Hub-Autosave', async ({
 		page
 	}) => {
-		const { id } = await createPreset(page); // Default: topN=3, hourly_enabled=true
-		await page.goto(`/compare/${id}/edit`);
+		const { id } = await createPreset(page); // Default: hourly_enabled=true
+		await page.goto(`/compare/${id}`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-editor-tab-layout"]:visible').first().click();
+		await page.locator('[data-testid="compare-detail-tab-layout"]:visible').first().click();
 
-		const topN = page.locator('[data-testid="compare-step5-topn"]:visible').first();
 		const hourlyToggle = page
-			.locator('[data-testid="compare-step5-hourly-enabled-toggle"]:visible')
+			.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible')
 			.first()
 			.locator('input[type="checkbox"]');
 
-		await expect(topN).toBeVisible({ timeout: 10_000 });
-		await expect(hourlyToggle).toBeChecked();
-
-		await topN.fill('7');
+		await expect(hourlyToggle).toBeChecked({ timeout: 10_000 });
 		await hourlyToggle.uncheck();
 
-		await page.locator('[data-testid="compare-editor-save"]').click();
 		await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', {
 			timeout: 10_000
 		});
@@ -317,16 +292,10 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		const res = await page.request.get(`/api/compare/presets/${id}`);
 		expect(res.ok()).toBeTruthy();
 		const preset = await res.json();
-		expect(
-			(preset.display_config ?? {}).top_n,
-			'Top-N muss auf 7 persistieren'
-		).toBe(7);
 		expect(preset.hourly_enabled, 'Stundenverlauf-Toggle muss auf false persistieren').toBe(false);
 
-		// Testdaten sauber: Ausgangswerte wiederherstellen und speichern.
-		await topN.fill('3');
+		// Testdaten sauber: Ausgangswert wiederherstellen (Autosave).
 		await hourlyToggle.check();
-		await page.locator('[data-testid="compare-editor-save"]').click();
 		await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', {
 			timeout: 10_000
 		});

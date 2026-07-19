@@ -83,30 +83,19 @@ test.describe('Issue #951 — Sheet-Panel darf BottomNav nicht blockieren', () =
 	test('AC-3: Compare-Editor Bibliotheks-Sheet — Backdrop weiterhin sichtbar, schließt bei Klick', async ({
 		page
 	}) => {
+		// Ein Ort im Konto (füllt die Wizard-Bibliothek).
 		const resLoc = await page.request.post('/api/locations', {
-			data: { name: 'Ort-951', lat: 47.4, lon: 13.0, region: 'Hochkönig' }
+			data: { name: 'Ort-951 ' + Date.now(), lat: 47.4, lon: 13.0, region: 'Hochkönig' }
 		});
 		expect(resLoc.ok(), `loc HTTP ${resLoc.status()}`).toBeTruthy();
-		const loc = await resLoc.json();
 
-		const resPreset = await page.request.post('/api/compare/presets', {
-			data: {
-				name: 'Vergleich #951 ' + Date.now(),
-				location_ids: [loc.id],
-				schedule: 'daily',
-				profil: 'wintersport',
-				hour_from: 7,
-				hour_to: 16,
-				empfaenger: ['e2e-951@example.com'],
-				display_config: {}
-			}
-		});
-		expect(resPreset.ok(), `preset HTTP ${resPreset.status()}`).toBeTruthy();
-		const presetId = (await resPreset.json()).id;
-
+		// Epic #1273 S4c: Das Bibliotheks-Sheet lebt nur im Wizard; Einstieg über
+		// /compare/new (Orte-Tab wird durch Namenseingabe freigeschaltet).
 		await page.setViewportSize({ width: 390, height: 844 });
-		await page.goto(`/compare/${presetId}/edit`);
+		await page.goto('/compare/new');
+		await page.waitForLoadState('networkidle');
 		await expect(page.getByTestId('compare-editor')).toBeVisible();
+		await page.locator('[data-testid="compare-editor-name"]').fill('Vergleich #951 ' + Date.now());
 
 		await page.getByTestId('cm-mobile-tab-orte').click();
 		await page.getByTestId('compare-step2-mobile-library-btn').click();
@@ -116,8 +105,6 @@ test.describe('Issue #951 — Sheet-Panel darf BottomNav nicht blockieren', () =
 
 		await backdrop.click({ position: { x: 5, y: 5 } });
 		await expect(backdrop).toHaveCount(0);
-
-		await page.request.delete(`/api/compare/presets/${presetId}`).catch(() => {});
 	});
 
 	// AC-4: ProfileSheetEmbedded zeigt weiterhin Profil + Wegpunktliste, aber
