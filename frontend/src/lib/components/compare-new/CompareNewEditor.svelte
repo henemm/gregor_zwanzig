@@ -160,9 +160,22 @@
 	}
 
 	// ── „Briefing aktivieren" — genau EIN POST (saveNewPreset), dann Redirect ──
-	function handleActivate() {
-		if (!canActivateNow) return;
-		void wiz.saveNewPreset();
+	// Re-Entrancy-Guard nach Trip-Vorbild (TripNewEditor.buildAndSave:
+	// `if (!ready || saving || savedTripId) return`) — ein Doppelklick auf
+	// „Briefing aktivieren" darf NUR EIN Preset anlegen (Staging-Fund #1301 F2a:
+	// 2× POST /api/compare/presets = Duplikat-Karteileiche). Während des Speicherns
+	// sind beide Aktivieren-Knöpfe (Desktop + mobile App-Leiste) disabled + „…".
+	let activating = $state(false);
+	async function handleActivate() {
+		if (!canActivateNow || activating) return;
+		activating = true;
+		try {
+			await wiz.saveNewPreset();
+		} finally {
+			// Erfolg navigiert weg (Redirect in saveNewPreset); bei Fehler bleibt die
+			// Seite und der Knopf wird für einen erneuten Versuch wieder freigegeben.
+			activating = false;
+		}
 	}
 
 	// ── Mobile-only State ──────────────────────────────────────────────────────
@@ -210,10 +223,10 @@
 	<button
 		type="button"
 		data-testid="top-app-bar-activate"
-		disabled={!canActivateNow}
+		disabled={!canActivateNow || activating}
 		onclick={handleActivate}
-		style="height: 44px; padding: 0 14px; border: none; background: transparent; color: {canActivateNow ? 'var(--g-accent)' : 'var(--g-ink-4)'}; font-weight: 600; font-size: 14px; cursor: {canActivateNow ? 'pointer' : 'default'}; font-family: var(--g-font-sans); flex-shrink: 0;"
-	>{canActivateNow ? 'Aktivieren' : '…'}</button>
+		style="height: 44px; padding: 0 14px; border: none; background: transparent; color: {canActivateNow && !activating ? 'var(--g-accent)' : 'var(--g-ink-4)'}; font-weight: 600; font-size: 14px; cursor: {canActivateNow && !activating ? 'pointer' : 'default'}; font-family: var(--g-font-sans); flex-shrink: 0;"
+	>{activating ? '…' : canActivateNow ? 'Aktivieren' : '…'}</button>
 {/snippet}
 
 <!-- Create-Aktivierungs-Banner als Snippet-Prop für VersandTab (1:1 Muster). -->
@@ -250,12 +263,12 @@
 				<Btn variant="ghost" size="sm" href="/compare">Abbrechen</Btn>
 				<Btn
 					data-testid="compare-editor-activate"
-					variant={canActivateNow ? 'primary' : 'quiet'}
+					variant={canActivateNow && !activating ? 'primary' : 'quiet'}
 					size="sm"
-					disabled={!canActivateNow}
+					disabled={!canActivateNow || activating}
 					onclick={handleActivate}
-					style={canActivateNow ? '' : 'opacity:0.4; cursor:not-allowed'}
-				>Briefing aktivieren</Btn>
+					style={canActivateNow && !activating ? '' : 'opacity:0.4; cursor:not-allowed'}
+				>{activating ? 'Speichere…' : 'Briefing aktivieren'}</Btn>
 			</div>
 		</div>
 

@@ -157,6 +157,48 @@ test.describe('F2a: /compare/new Aktivieren-Gate + Create-POST', () => {
 		await page.request.delete(`/api/compare/presets/${created.id}`).catch(() => {});
 	});
 
+	// ── AC-9b (Staging-Fund #1301 F2a): Doppelklick → genau EIN Create-POST ─────
+	// Re-Entrancy-Guard: ein schneller Doppelklick auf „Briefing aktivieren" darf
+	// NUR ein Preset anlegen (vorher: 2× POST = Duplikat-Karteileiche, 3/3 repro).
+	test('AC-9b: Doppelklick auf „Briefing aktivieren" löst genau EINEN POST aus', async ({ page }) => {
+		const [nameA, nameB] = await makeTwoLocations(page);
+		await page.goto('/compare/new');
+		await page.waitForLoadState('networkidle');
+		await expect(page.locator('[data-testid="compare-editor"]:visible')).toBeVisible();
+		await page.locator('[data-testid="compare-editor-name"]').fill('Slice4-Dbl ' + Date.now());
+		await page.locator('[data-testid="compare-editor-tab-orte"]:visible').first().click();
+		const lib = page.locator('[data-testid="compare-step2-library"]:visible').first();
+		await lib.waitFor({ timeout: 8_000 });
+		for (const n of [nameA, nameB]) {
+			await lib.getByText(n, { exact: true }).click();
+		}
+		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-layout"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
+
+		// Alle Create-POSTs mitzählen (nicht nur den ersten abwarten).
+		let postCount = 0;
+		page.on('request', (req) => {
+			if (req.url().includes('/api/compare/presets') && req.method() === 'POST') postCount++;
+		});
+		const respPromise = page.waitForResponse(
+			(res) => res.url().includes('/api/compare/presets') && res.request().method() === 'POST'
+		);
+
+		// Schneller Doppelklick — der Guard muss den zweiten POST verhindern.
+		await page.locator('[data-testid="compare-editor-activate"]:visible').first().dblclick();
+		const resp = await respPromise;
+		const created = (await resp.json()) as { id: string };
+
+		// Zeitfenster für einen etwaigen (unerwünschten) zweiten POST offen lassen.
+		await page.waitForTimeout(2_000);
+		expect(postCount, `Doppelklick löste ${postCount} POST(s) aus, erwartet genau 1`).toBe(1);
+
+		await page.request.delete(`/api/compare/presets/${created.id}`).catch(() => {});
+	});
+
 	// ── AC-11: keine Layout-Attrappe (channel-tab/preview) auf dem Layout-Tab ───
 	test('AC-11: Layout-Tab zeigt keine channel_layouts-Attrappe mehr', async ({ page }) => {
 		const [nameA, nameB] = await makeTwoLocations(page);
