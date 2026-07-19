@@ -13,7 +13,6 @@
 //     npx playwright test e2e/compare-alarm-config.spec.ts --config playwright.config.ts
 
 import { test, expect, type Page } from '@playwright/test';
-import { login } from './helpers.js';
 
 // ── Hilfsfunktion: legt einen Compare-Preset im aktuellen Nutzer-Kontext an ──
 // Identisch zu compare-editor-edit.spec.ts::createPreset (Issue #679), zusätzlich
@@ -58,7 +57,6 @@ async function openAlarmeTab(page: Page, id: string): Promise<void> {
 
 test.describe('Issue #1170: Compare-Editor Tab „Alarme" (Desktop)', () => {
 	test.beforeEach(async ({ page }) => {
-		await login(page);
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 

@@ -14,7 +14,6 @@
 //   cd frontend && npx playwright test e2e/layout-tab-vergleich.spec.ts
 
 import { test, expect, type Page } from '@playwright/test';
-import { login } from './helpers.js';
 
 async function createLocation(page: Page, name: string): Promise<string> {
 	const res = await page.request.post('/api/locations', {
@@ -57,7 +56,6 @@ async function openLayoutTab(page: Page, orteNamen: string[]): Promise<void> {
 
 test.describe('F2a: Layout-Tab (/compare/new) = Stundenverlauf-Steuerung', () => {
 	test.beforeEach(async ({ page }) => {
-		await login(page);
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 

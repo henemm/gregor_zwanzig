@@ -36,7 +36,6 @@
 //     --config playwright.config.ts
 
 import { test, expect, type Page } from '@playwright/test';
-import { login } from './helpers.js';
 
 /** Ändert im Hub den Namen via Inline-Edit (Stift → Feld → OK), wartet auf den
  * neuen Namen im Kopf (Epic #1273 S4c). */
@@ -79,10 +78,6 @@ async function createLegacyPreset(
 }
 
 test.describe('Issue #1268: Bestandsfelder überleben einen echten Speichervorgang', () => {
-	test.beforeEach(async ({ page }) => {
-		await login(page);
-	});
-
 	test('AC-3: reine Namensänderung lässt hour_from/hour_to/forecast_hours unverändert', async ({
 		page
 	}) => {

@@ -20,7 +20,6 @@
 //     npx playwright test e2e/compare-radar-toggle.spec.ts --config playwright.config.ts
 
 import { test, expect, type Page } from '@playwright/test';
-import { login } from './helpers.js';
 
 // ── Hilfsfunktion: legt einen Compare-Preset im aktuellen Nutzer-Kontext an ──
 // Identisch zu compare-alarm-config.spec.ts::createPreset (Issue #1170).
@@ -66,7 +65,6 @@ function radarToggle(page: Page) {
 
 test.describe('Issue #1041 Slice 2: Radar-Alarm-Schalter im Compare-Editor (Desktop)', () => {
 	test.beforeEach(async ({ page }) => {
-		await login(page);
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 

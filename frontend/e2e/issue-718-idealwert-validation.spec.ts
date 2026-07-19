@@ -9,7 +9,6 @@
 // Wetter-Metriken-Tab (Ziel-benannt), nicht mehr direkt zu Wertebereiche.
 
 import { test, expect, type Page } from '@playwright/test';
-import { login } from './helpers.js';
 
 async function createLoc(page: Page, name: string, lat: number, lon: number): Promise<string> {
 	const res = await page.request.post('/api/locations', { data: { name, lat, lon } });
@@ -19,7 +18,6 @@ async function createLoc(page: Page, name: string, lat: number, lon: number): Pr
 
 test.describe('Compare-Create-Wizard: Orte-Gate (Weiter erst ab 2 Orten) [Issue #718 / #1231]', () => {
 	test.beforeEach(async ({ page }) => {
-		await login(page);
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 

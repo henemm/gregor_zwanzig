@@ -4,11 +4,10 @@ import { defineConfig } from '@playwright/test';
 // haben. Zwei Layer: nginx-Basic-Auth = GZ_VALIDATOR_* (httpCredentials),
 // App-Login separat.
 //
-// Zwei Projekte:
-//  - `chromium-login`: Dateien mit eigenem UI-Login im Testkörper (login(page)
-//    aus helpers.ts) — kein storageState nötig.
-//  - `chromium-storagestate`: Dateien ohne eigenen Login (Autosave-Semantik +
-//    Mandantentrennung) — App-Session via Setup-Projekt.
+// Ein Testprojekt-Muster (Issue #1321): `chromium-storagestate` — alle
+// migrierten Compare-Spec-Dateien nutzen die vom Setup-Projekt einmalig
+// erzeugte App-Session (storageState), kein Pro-Test-UI-Login mehr. Das
+// verhindert den Login-Rate-Limit-Kollaps bei wiederholten Staging-Läufen.
 //
 // compare-hub-briefing-times ist bereits über playwright.1229-hub.staging.config.ts
 // abgedeckt und daher hier NICHT gelistet.
@@ -28,21 +27,16 @@ export default defineConfig({
 	projects: [
 		{ name: 'setup', testMatch: /f1-1273-s4c\.staging\.setup\.ts/ },
 		{
-			name: 'chromium-login',
+			name: 'chromium-storagestate',
 			testMatch: [
+				/compare-editor-autosave\.spec\.ts/,
+				/compare-editor-autosave-user-isolation\.spec\.ts/,
 				/compare-radar-toggle\.spec\.ts/,
 				/compare-alarm-config\.spec\.ts/,
 				/compare-legacy-fields-survive-save\.spec\.ts/,
 				/versand-tab-vergleich\.spec\.ts/,
 				/layout-tab-vergleich\.spec\.ts/,
 				/issue-718-idealwert-validation\.spec\.ts/
-			]
-		},
-		{
-			name: 'chromium-storagestate',
-			testMatch: [
-				/compare-editor-autosave\.spec\.ts/,
-				/compare-editor-autosave-user-isolation\.spec\.ts/
 			],
 			dependencies: ['setup'],
 			use: { storageState: 'playwright/.auth/staging-1273-s4c.json' }

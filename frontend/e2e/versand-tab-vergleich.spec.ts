@@ -17,7 +17,6 @@
 //     npx playwright test e2e/versand-tab-vergleich.spec.ts --config playwright.config.ts
 
 import { test, expect, type Page } from '@playwright/test';
-import { login } from './helpers.js';
 
 async function createPreset(
 	page: Page,
@@ -49,7 +48,6 @@ async function openVersandTab(page: Page, id: string): Promise<void> {
 
 test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor', () => {
 	test.beforeEach(async ({ page }) => {
-		await login(page);
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 
