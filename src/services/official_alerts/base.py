@@ -12,6 +12,7 @@ Spec) — nur Standardlib und eigene Modelle.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from typing import Protocol
 
 from services.official_alerts.models import OfficialAlert
@@ -42,7 +43,56 @@ def register_official_alert_source(source: OfficialAlertSource) -> None:
     _REGISTERED_SOURCES.append(source)
 
 
-def get_official_alerts_for_location(lat: float, lon: float) -> list[OfficialAlert]:
+def _as_aware_utc(value: datetime | None) -> datetime | None:
+    """Adversary F001: manche Quellen (vigilance.py/meteoalarm.py) liefern
+    naive (tz-lose) Zeitstempel, wenn der Rohstring ohne "Z"/Offset kommt.
+    Ein Vergleich naiv-vs-aware wirft sonst TypeError -- das verletzt das
+    dokumentierte "wirft selbst nie"-Versprechen von
+    get_official_alerts_for_location(). Naive Werte werden hier als UTC
+    interpretiert (Quellen-Parser bleiben unangetastet, Scope von #1316)."""
+    if value is not None and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
+def filter_alerts_to_window(
+    alerts: list[OfficialAlert],
+    window_start: datetime | None,
+    window_end: datetime | None,
+) -> list[OfficialAlert]:
+    """Ueberlappungssemantik (Issue #1316): eine Warnung bleibt, wenn ihr
+    Zeitraum das Fenster ``[window_start, window_end]`` irgendwo schneidet.
+    Teilueberlappung genuegt (AC-2). Warnungen ohne ``valid_from`` ODER ohne
+    ``valid_to`` bleiben IMMER erhalten -- fail-safe, da eine fehlende
+    Zeitangabe nie sicher als "abgelaufen" gelten kann (AC-3).
+
+    Reihenfolge der Eingabeliste bleibt erhalten (keine Sortierung, kein
+    zusaetzlicher Dedup-Schritt).
+
+    Adversary F001: naive (tz-lose) ``valid_from``/``valid_to``/Fenstergrenzen
+    werden vor dem Vergleich als UTC interpretiert (``_as_aware_utc``), damit
+    kein ``TypeError`` bei naiv-vs-aware-Vergleichen entsteht."""
+    window_start = _as_aware_utc(window_start)
+    window_end = _as_aware_utc(window_end)
+    kept: list[OfficialAlert] = []
+    for alert in alerts:
+        if alert.valid_from is None or alert.valid_to is None:
+            kept.append(alert)
+            continue
+        valid_from = _as_aware_utc(alert.valid_from)
+        valid_to = _as_aware_utc(alert.valid_to)
+        if valid_to >= window_start and (window_end is None or valid_from <= window_end):
+            kept.append(alert)
+    return kept
+
+
+def get_official_alerts_for_location(
+    lat: float,
+    lon: float,
+    window_start: datetime | None = None,
+    window_end: datetime | None = None,
+    now: datetime | None = None,
+) -> list[OfficialAlert]:
     """Fragt alle zustaendigen registrierten Quellen ab, fail-soft pro Quelle.
 
     Wirft selbst nie — ein Fehler einer Quelle darf den Wetter-Fetch der
@@ -80,6 +130,14 @@ def get_official_alerts_for_location(lat: float, lon: float) -> list[OfficialAle
     Known Limitation (PO-akzeptiert): eine Periode, die EXKLUSIV von einer
     NICHT-besten Quelle derselben Gefahr gemeldet wird, faellt weg -- Folge
     der „nie doppelt"-Entscheidung, keine Nebenwirkung.
+
+    Issue #1316: VOR dem Zwei-Pass-Dedup wird ``filter_alerts_to_window()``
+    angewendet, effektives Fenster ``[max(now, window_start or now),
+    window_end or +inf)`` -- eine in der Vergangenheit liegende
+    ``window_start`` darf ``now`` nie unterschreiten (Klemm-Invariante). Der
+    Filter laeuft bewusst VOR Pass 1, sonst koennte eine bereits abgelaufene
+    Warnung als "beste Quelle" gewinnen und eine noch gueltige verdraengen
+    (AC-5).
     """
     results: list[OfficialAlert] = []
     for source in _REGISTERED_SOURCES:
@@ -93,6 +151,11 @@ def get_official_alerts_for_location(lat: float, lon: float) -> list[OfficialAle
             results.extend(source.fetch(lat, lon))
         except Exception:
             logger.warning("official_alerts: %s fetch failed", source_name, exc_info=True)
+
+    if now is None:
+        now = datetime.now(timezone.utc)
+    effective_start = max(now, window_start) if window_start is not None else now
+    results = filter_alerts_to_window(results, effective_start, window_end)
 
     # Pass 1: je hazard die "beste" Quelle bestimmen (hoechstes level;
     # Gleichstand: zuerst gesammelt).

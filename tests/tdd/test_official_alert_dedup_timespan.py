@@ -30,7 +30,7 @@ from __future__ import annotations
 import html as html_module
 import shutil
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from app.models import (
@@ -280,10 +280,14 @@ class TestAC4TriggerNewPeriodFiresIndependently:
 
             region = "Cevennes-1245-AC4"
             hazard = "extreme_heat"
-            period_a_from = datetime(2026, 7, 13, 4, 0, tzinfo=timezone.utc)
-            period_a_to = datetime(2026, 7, 13, 22, 0, tzinfo=timezone.utc)
-            period_b_from = datetime(2026, 7, 13, 22, 0, tzinfo=timezone.utc)
-            period_b_to = datetime(2026, 7, 14, 22, 0, tzinfo=timezone.utc)
+            # Issue #1316 (AC-8): relative statt fixer Kalenderdaten -- der neue
+            # Default-Zeitfenster-Filter [now, +inf) wuerde fixe Vergangenheits-
+            # daten sonst faelschlich als abgelaufen ausfiltern.
+            now = datetime.now(timezone.utc)
+            period_a_from = now - timedelta(hours=1)
+            period_a_to = now + timedelta(hours=18)
+            period_b_from = period_a_to
+            period_b_to = period_a_to + timedelta(hours=24)
 
             alert_a = OfficialAlert(
                 source="test-1245-ac4", hazard=hazard, level=3,
@@ -559,12 +563,16 @@ class TestF001CrossSourceCollapseSurvivesTimespanFix:
         backup_sources = list(oa_base._REGISTERED_SOURCES)
         oa_base._REGISTERED_SOURCES.clear()
         try:
-            vf_geo = datetime(2026, 7, 13, 4, 0, tzinfo=timezone.utc)
-            vt_geo = datetime(2026, 7, 13, 22, 0, tzinfo=timezone.utc)
+            # Issue #1316 (AC-8): relative statt fixer Kalenderdaten -- der neue
+            # Default-Zeitfenster-Filter [now, +inf) wuerde fixe Vergangenheits-
+            # daten sonst faelschlich als abgelaufen ausfiltern.
+            now = datetime.now(timezone.utc)
+            vf_geo = now - timedelta(hours=1)
+            vt_geo = now + timedelta(hours=17)
             # Nur Minuten abweichend -- typische Realitaet zweier unabhaengiger
             # amtlicher Dienste fuer dasselbe Ereignis.
-            vf_meteoalarm = datetime(2026, 7, 13, 4, 1, tzinfo=timezone.utc)
-            vt_meteoalarm = datetime(2026, 7, 13, 21, 58, tzinfo=timezone.utc)
+            vf_meteoalarm = vf_geo + timedelta(minutes=1)
+            vt_meteoalarm = vt_geo - timedelta(minutes=2)
 
             register_official_alert_source(_RealGeoSphereLikeSource(vf_geo, vt_geo, level=2))
             register_official_alert_source(
@@ -632,12 +640,18 @@ class TestF003PartitioningDoesNotSwallowSameSourcePeriod:
     Quelle -- keine Karte einer anderen Quelle kann sich dazwischenschieben."""
 
     @staticmethod
-    def _build_alerts() -> tuple["OfficialAlert", "OfficialAlert", "OfficialAlert"]:
+    def _build_alerts() -> tuple["OfficialAlert", "OfficialAlert", "OfficialAlert", datetime, datetime]:
+        # Issue #1316 (AC-8): relative statt fixer Kalenderdaten -- der neue
+        # Default-Zeitfenster-Filter [now, +inf) wuerde fixe Vergangenheits-
+        # daten sonst faelschlich als abgelaufen ausfiltern. mon_from/wed_from
+        # werden zurueckgegeben, damit _assert_expected_result dieselben
+        # Zeitstempel vergleicht statt sie unabhaengig neu zu berechnen.
         hazard = "extreme_heat"
-        mon_from = datetime(2026, 7, 13, 4, 0, tzinfo=timezone.utc)
-        mon_to = datetime(2026, 7, 13, 22, 0, tzinfo=timezone.utc)
-        wed_from = datetime(2026, 7, 15, 4, 0, tzinfo=timezone.utc)
-        wed_to = datetime(2026, 7, 15, 22, 0, tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        mon_from = now - timedelta(hours=1)
+        mon_to = now + timedelta(hours=17)
+        wed_from = now + timedelta(hours=65)
+        wed_to = now + timedelta(hours=83)
 
         geo_mon = OfficialAlert(
             source="geosphere_warn", hazard=hazard, level=2,
@@ -654,12 +668,11 @@ class TestF003PartitioningDoesNotSwallowSameSourcePeriod:
             label="Hitzewarnung Mittwoch", region_label="Villach (Stadt)",
             valid_from=wed_from, valid_to=wed_to,
         )
-        return geo_mon, geo_wed, meteoalarm_wed
+        return geo_mon, geo_wed, meteoalarm_wed, mon_from, wed_from
 
-    def _assert_expected_result(self, alerts: list["OfficialAlert"]) -> None:
-        mon_from = datetime(2026, 7, 13, 4, 0, tzinfo=timezone.utc)
-        wed_from = datetime(2026, 7, 15, 4, 0, tzinfo=timezone.utc)
-
+    def _assert_expected_result(
+        self, alerts: list["OfficialAlert"], mon_from: datetime, wed_from: datetime,
+    ) -> None:
         heat_alerts = [a for a in alerts if a.hazard == "extreme_heat"]
         assert len(heat_alerts) == 2, (
             f"Erwartet GENAU 2 Eintraege (Montag GeoSphere level 2 + Mittwoch "
@@ -695,12 +708,12 @@ class TestF003PartitioningDoesNotSwallowSameSourcePeriod:
         backup_sources = list(oa_base._REGISTERED_SOURCES)
         oa_base._REGISTERED_SOURCES.clear()
         try:
-            geo_mon, geo_wed, meteoalarm_wed = self._build_alerts()
+            geo_mon, geo_wed, meteoalarm_wed, mon_from, wed_from = self._build_alerts()
             register_official_alert_source(_MultiPeriodGeoSphereLikeSource([geo_mon, geo_wed]))
             register_official_alert_source(_SingleAlertMeteoAlarmLikeSource(meteoalarm_wed))
 
             alerts = get_official_alerts_for_location(LAT, LON)
-            self._assert_expected_result(alerts)
+            self._assert_expected_result(alerts, mon_from, wed_from)
         finally:
             oa_base._REGISTERED_SOURCES.clear()
             oa_base._REGISTERED_SOURCES.extend(backup_sources)
@@ -719,12 +732,12 @@ class TestF003PartitioningDoesNotSwallowSameSourcePeriod:
         backup_sources = list(oa_base._REGISTERED_SOURCES)
         oa_base._REGISTERED_SOURCES.clear()
         try:
-            geo_mon, geo_wed, meteoalarm_wed = self._build_alerts()
+            geo_mon, geo_wed, meteoalarm_wed, mon_from, wed_from = self._build_alerts()
             register_official_alert_source(_SingleAlertMeteoAlarmLikeSource(meteoalarm_wed))
             register_official_alert_source(_MultiPeriodGeoSphereLikeSource([geo_mon, geo_wed]))
 
             alerts = get_official_alerts_for_location(LAT, LON)
-            self._assert_expected_result(alerts)
+            self._assert_expected_result(alerts, mon_from, wed_from)
         finally:
             oa_base._REGISTERED_SOURCES.clear()
             oa_base._REGISTERED_SOURCES.extend(backup_sources)

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from services.official_alerts.base import (
     OfficialAlertSource,
+    filter_alerts_to_window,
     get_official_alerts_for_location,
     register_official_alert_source,
 )
@@ -30,6 +31,7 @@ __all__ = [
     "OfficialAlertSource",
     "register_official_alert_source",
     "get_official_alerts_for_location",
+    "filter_alerts_to_window",
     "VigilanceSource",
     "MeteoForetsSource",
     "MassifClosureSource",

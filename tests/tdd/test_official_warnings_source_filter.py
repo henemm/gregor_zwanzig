@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from app.config import Settings
@@ -39,6 +39,15 @@ from tests.helpers.compare_briefings import write_compare_briefings
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 LAT_A, LON_A = 46.62, 13.68  # Hermagor
+
+# Issue #1316 (AC-8): relativer statt fixer Kalenderdaten -- der neue Default-
+# Zeitfenster-Filter [now, +inf) in get_official_alerts_for_location() wuerde
+# fixe Vergangenheitsdaten (2026-07-15) sonst faelschlich als abgelaufen
+# ausfiltern. Einmal beim Modul-Import berechnet, damit beide Alert-Fixtures
+# denselben Gueltigkeitszeitraum tragen (analog Vorher-Konstanten).
+_NOW = datetime.now(timezone.utc)
+_VALID_FROM = _NOW - timedelta(hours=1)
+_VALID_TO = _NOW + timedelta(hours=11)
 
 
 def _clean_user(user_id: str) -> None:
@@ -103,8 +112,8 @@ def _vigilance_alert() -> OfficialAlert:
     return OfficialAlert(
         source="meteofrance_vigilance", hazard="thunderstorm", level=3,
         label="Vigilance-Warnung (#1258 AC-7 — MUSS erscheinen)",
-        valid_from=datetime(2026, 7, 15, 8, 0, tzinfo=timezone.utc),
-        valid_to=datetime(2026, 7, 15, 20, 0, tzinfo=timezone.utc),
+        valid_from=_VALID_FROM,
+        valid_to=_VALID_TO,
         region_label="Hermagor",
     )
 
@@ -113,8 +122,8 @@ def _geosphere_alert() -> OfficialAlert:
     return OfficialAlert(
         source="geosphere_warn", hazard="wind", level=2,
         label="GeoSphere-Warnung (#1258 AC-7 — darf NICHT erscheinen)",
-        valid_from=datetime(2026, 7, 15, 8, 0, tzinfo=timezone.utc),
-        valid_to=datetime(2026, 7, 15, 20, 0, tzinfo=timezone.utc),
+        valid_from=_VALID_FROM,
+        valid_to=_VALID_TO,
         region_label="Hermagor",
     )
 

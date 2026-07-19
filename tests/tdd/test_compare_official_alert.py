@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from app.config import Settings
@@ -32,6 +32,16 @@ DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 # Zwei Orte mit klar getrennten Koordinaten (Toleranz der Fake-Quelle 0.05).
 LAT_A, LON_A = 46.62, 13.68   # Hermagor
 LAT_B, LON_B = 46.60, 13.20   # St. Stefan im Gailtal
+
+# Issue #1316 (AC-8): einmal beim Modul-Import berechnet, damit mehrere
+# _alert()-Aufrufe mit Default-Werten exakt identische Zeitraeume liefern
+# (Dedup-Vergleiche in build_compare_official_alert_notices vergleichen
+# (valid_from, valid_to)) -- analog zu den vorher fest verdrahteten Konstanten
+# (2026-07-11 00:00-23:59), jetzt relativ zur echten Ausfuehrungszeit, damit
+# der neue Default-Zeitfenster-Filter [now, +inf) sie nicht ausfiltert.
+_NOW = datetime.now(timezone.utc)
+_DEFAULT_VALID_FROM = _NOW - timedelta(hours=1)
+_DEFAULT_VALID_TO = _NOW + timedelta(hours=23, minutes=59)
 
 
 def _clean_user(user_id: str) -> None:
@@ -107,8 +117,8 @@ def _alert(level=2, hazard="extreme_heat", label="Hitze", region="Hermagor",
            vf=None, vt=None) -> OfficialAlert:
     return OfficialAlert(
         source="test-1216s2", hazard=hazard, level=level, label=label,
-        valid_from=vf or datetime(2026, 7, 11, 0, 0, tzinfo=timezone.utc),
-        valid_to=vt or datetime(2026, 7, 11, 23, 59, tzinfo=timezone.utc),
+        valid_from=vf or _DEFAULT_VALID_FROM,
+        valid_to=vt or _DEFAULT_VALID_TO,
         region_label=region,
     )
 
@@ -355,8 +365,13 @@ def test_f001_compare_alert_localizes_validity_to_location_timezone():
     try:
         save_location(_location("loc-a", "Hermagor", LAT_A, LON_A), user_id=uid)
         _write_presets(uid, [_preset("p1", ["loc-a"], ["e@x.invalid"])])
-        vf = datetime(2026, 7, 11, 12, 0, tzinfo=timezone.utc)
-        vt = datetime(2026, 7, 11, 18, 0, tzinfo=timezone.utc)
+        # Issue #1316 (AC-8): relativer statt fixer Tag (der neue Default-
+        # Zeitfenster-Filter wuerde ein Vergangenheitsdatum ausfiltern) -- Stunde
+        # bleibt exakt 12:00/18:00 UTC, damit die 14:00/20:00-Lokalisierungs-
+        # Assertion (Europe/Vienna, +2 im Sommer) unveraendert gilt.
+        tomorrow = datetime.now(timezone.utc).date() + timedelta(days=1)
+        vf = datetime(tomorrow.year, tomorrow.month, tomorrow.day, 12, 0, tzinfo=timezone.utc)
+        vt = datetime(tomorrow.year, tomorrow.month, tomorrow.day, 18, 0, tzinfo=timezone.utc)
         register_official_alert_source(
             _FakeOfficialAlertSource(LAT_A, LON_A, [_alert(vf=vf, vt=vt)])
         )

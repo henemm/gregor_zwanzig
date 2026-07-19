@@ -762,7 +762,11 @@ class TripReportSchedulerService:
                 seen_coords.add(coord)
                 try:
                     from services.official_alerts import get_official_alerts_for_location
-                    sw.official_alerts = get_official_alerts_for_location(*coord)
+                    sw.official_alerts = get_official_alerts_for_location(
+                        *coord,
+                        window_start=segments[0].start_time,
+                        window_end=segments[-1].end_time,
+                    )
                 except Exception:
                     logger.warning(
                         "trip_report_scheduler: official_alerts nicht ladbar",
