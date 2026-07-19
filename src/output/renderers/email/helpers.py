@@ -32,7 +32,7 @@ from app.models import (
 from utils.geo import degrees_to_compass
 from utils.timezone import local_fmt, local_hour
 
-from src.output.renderers.email.design_tokens import FONT_DATA
+from output.renderers.email.design_tokens import FONT_DATA
 
 # Issue #121: German weekday names (0=Monday).
 _WEEKDAY_DE = [
@@ -165,7 +165,7 @@ def aggregate_night_block(dps: list[ForecastDataPoint],
             continue
         if metric_def.dp_field == "thunder_level":
             # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
-            from src.output.metric_format import max_thunder
+            from output.metric_format import max_thunder
             row[metric_def.col_key] = max_thunder(values)
             continue
         if metric_def.dp_field == "precip_type":
@@ -538,7 +538,7 @@ def _ampel_dot_severity(metric_id: str, value) -> str:
     """
     # Lokaler Import vermeidet einen Zirkelbezug: metric_format importiert
     # (ueber design_tokens) das renderers-Paket, das wiederum helpers laedt.
-    from src.output.metric_format import severity_for
+    from output.metric_format import severity_for
     level = severity_for(metric_id, value)
     if level is None:
         return "–"
@@ -593,7 +593,7 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
 
     # Issue #1214 Scheibe 3/6: konsolidierte Zahlen-/Wolken-Formatierung.
     # Lokaler Import vermeidet den Zirkelbezug metric_format -> renderers -> helpers.
-    from src.output.metric_format import cloud_emoji, format_value
+    from output.metric_format import cloud_emoji, format_value
 
     # Resolve effective mode per column (Issue #435).
     if format_modes is not None:
@@ -792,7 +792,7 @@ def format_trend_tokens(stage: dict) -> dict:
             gust_token      — '{v}@{h}(...)' or '-' (#640)
             thunder_token   — 'M@{h}(H@{h})' or '-' (#640)
     """
-    from src.output.tokens.metrics import render_threshold_peak_value
+    from output.tokens.metrics import render_threshold_peak_value
 
     # Default thresholds (AC-2)
     _DEFAULT_PRECIP_THR = 0.5   # mm
@@ -1118,7 +1118,7 @@ def _sms_mention_threshold(metric_id: str) -> Optional[float]:
     (90 %) sind in der SMS keine POSITIONAL-Tokens und behalten ihre eigene,
     hier zentral gepflegte Schwelle.
     """
-    from src.output.tokens.builder import DEFAULTS
+    from output.tokens.builder import DEFAULTS
     _id_to_sms_symbol = {
         "wind": "W", "gust": "G", "precipitation": "R",
         "rain_probability": "PR", "thunder": "TH:",
@@ -1197,7 +1197,7 @@ def _pill_for_metric(
     """
     from app.models import ThunderLevel
     # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
-    from src.output.metric_format import thunder_ordinal
+    from output.metric_format import thunder_ordinal
 
     # ---- Klasse 2 — Bereichs-/Kontext-Metriken (mit Uhrzeit, neutral) ----
     if metric_id == "temperature":

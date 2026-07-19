@@ -1,5 +1,5 @@
 """src.output - Channel-agnostic output building (β1)."""
-from src.output.tokens import (
+from output.tokens import (
     NormalizedForecast, HourlyValue, DailyForecast, MetricSpec,
     Token, TokenLine, build_token_line,
 )

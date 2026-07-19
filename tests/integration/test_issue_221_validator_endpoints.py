@@ -14,12 +14,14 @@ und räumen anschließend auf.
 
 Issue #1250 Scheibe 7a (Adversary F001): Fixtures liegen unter
 data/users/<uid>/briefings/ (nicht trips/) -- api/routers/validator.py::
-_load_trip_raw liest seit dem Cutover dort. api/routers/validator.py
-importiert ueber `from src.app.loader import ...` (mit `src.`-Praefix) --
-ein von tests/conftest.py::_isolate_data_root separat gefuehrtes Modul-
-Objekt (`app.loader` ohne Praefix); die Isolation greift hier NICHT, die
-Fixtures schreiben deshalb bewusst in den echten data/-Baum und raeumen ihn
-danach ab.
+_load_trip_raw liest seit dem Cutover dort.
+
+Issue #1308-Update: api/routers/validator.py importiert jetzt bare
+(`from app.loader import ...`) -- damit greift die #1133-Isolation
+(tests/conftest.py::_isolate_data_root) auch hier. Die Fixtures schreiben
+weiterhin bewusst in den echten data/-Baum und raeumen ihn danach ab; das
+gesamte Modul ist deshalb mit `real_data_root` markiert (Opt-out aus der
+Isolation), statt sich auf einen zufaelligen Import-Stil zu verlassen.
 
 In der RED-Phase scheitert bereits der Router-Import — das ist erwartet und
 beweist, dass die Funktion noch nicht existiert.
@@ -35,6 +37,8 @@ from pathlib import Path
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+
+pytestmark = pytest.mark.real_data_root
 
 
 # ---------------------------------------------------------------------------

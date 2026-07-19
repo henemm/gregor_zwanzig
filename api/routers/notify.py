@@ -6,7 +6,7 @@ POST /api/notify/test sends a real test message via the chosen channel.
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
-from src.services.channel_test_service import send_test_message
+from services.channel_test_service import send_test_message
 
 router = APIRouter()
 

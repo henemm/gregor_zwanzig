@@ -106,7 +106,7 @@ def _cloud_pct_emoji(cloud_pct: Optional[int]) -> str:
     """Fallback emoji from cloud% (kanonische Skala, Issue #1214 Scheibe 6)."""
     if cloud_pct is None:
         return "?"
-    from src.output.metric_format import cloud_emoji
+    from output.metric_format import cloud_emoji
     return cloud_emoji(cloud_pct)
 
 
@@ -601,7 +601,7 @@ class WeatherMetricsService:
             return None
 
         # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
-        from src.output.metric_format import max_thunder
+        from output.metric_format import max_thunder
         return max_thunder(levels)
 
     def _compute_visibility(
@@ -1071,7 +1071,7 @@ def aggregate_stage(
                 # Aggregation (ThunderLevel UND PrecipType) — nur der Thunder-
                 # Anteil bezieht sich kanonisch aus thunder_ordinal, der
                 # PrecipType-Anteil bleibt lokal (kein Duplikat, eigenes Konzept).
-                from src.output.metric_format import thunder_ordinal
+                from output.metric_format import thunder_ordinal
                 _ENUM_ORDER = {
                     **{lvl: thunder_ordinal(lvl) for lvl in ThunderLevel},
                     PrecipType.RAIN: 0, PrecipType.SNOW: 1, PrecipType.MIXED: 2,

@@ -43,9 +43,9 @@ from app.profile import ActivityProfile
 from services.daylight_service import DaylightWindow
 from services.report_config_resolver import ReportRenderOptions, resolve_report_render_options
 from services.risk_engine import RiskEngine
-from src.output.renderers.email import render_email
-from src.output.renderers.email.helpers import build_friendly_keys
-from src.output.tokens.dto import MetricSpec, TokenLine
+from output.renderers.email import render_email
+from output.renderers.email.helpers import build_friendly_keys
+from output.tokens.dto import MetricSpec, TokenLine
 
 
 class TripReportFormatter:
@@ -186,7 +186,7 @@ class TripReportFormatter:
 
         # Issue #1001: Multi-Bubble-Telegram-Rendering (ersetzt #360-Narrow-Body).
         # Reine Zusatzberechnung — email_plain bleibt unveraendert.
-        from src.output.renderers.narrow import render_telegram_bubbles
+        from output.renderers.narrow import render_telegram_bubbles
         telegram_bubbles_result = render_telegram_bubbles(
             segments=segments,
             seg_tables=seg_tables,
@@ -204,7 +204,7 @@ class TripReportFormatter:
             telegram_bubbles_result[-1].reply_markup if telegram_bubbles_result else None
         )
 
-        from src.output.renderers.sms_trip import SMSTripFormatter, SMS_SYMBOL_BY_METRIC
+        from output.renderers.sms_trip import SMSTripFormatter, SMS_SYMBOL_BY_METRIC
         # Issue #624: konfigurierte Schwellwerte aus MetricConfig ableiten.
         _sms_thr = {
             SMS_SYMBOL_BY_METRIC[m.metric_id]: m.sms_threshold
@@ -357,7 +357,7 @@ class TripReportFormatter:
             # Special handling for enum types
             if metric_def.dp_field == "thunder_level":
                 # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
-                from src.output.metric_format import max_thunder
+                from output.metric_format import max_thunder
                 row[metric_def.col_key] = max_thunder(values)
                 continue
             if metric_def.dp_field == "precip_type":
@@ -689,7 +689,7 @@ class TripReportFormatter:
         `format_mode == "scale"`. Default (legacy) behaviour preserved via
         catalog default_format_mode="scale" for wind_direction.
         """
-        from src.output.renderers.email.helpers import should_merge_wind_dir
+        from output.renderers.email.helpers import should_merge_wind_dir
         return should_merge_wind_dir(dc)
 
     # ------------------------------------------------------------------

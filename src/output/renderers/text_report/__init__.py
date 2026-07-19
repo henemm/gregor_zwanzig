@@ -7,12 +7,12 @@ implicitly via the `token_line` (profile-agnostic per §A5).
 """
 from __future__ import annotations
 
-from src.output.renderers.sms import render_sms
-from src.output.tokens.dto import ReportType, TokenLine
+from output.renderers.sms import render_sms
+from output.tokens.dto import ReportType, TokenLine
 
 # Imported lazily inside the renderer to avoid a hard dependency on the
 # adapter at import time (TokenLine itself does not need WaypointDetail).
-from src.output.adapters.trip_result import WaypointDetail
+from output.adapters.trip_result import WaypointDetail
 
 _SEP = "=" * 60
 _SUBSEP = "-" * 44

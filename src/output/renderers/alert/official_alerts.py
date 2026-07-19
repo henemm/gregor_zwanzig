@@ -180,7 +180,7 @@ def render_official_alerts_html(
     `segment_refs` (Default, Compare-Pfad) bleibt das erzeugte HTML
     byte-identisch zum bisherigen Verhalten (AC-Byte-Gleichheit #1087).
     """
-    from src.output.renderers.email.design_tokens import (
+    from output.renderers.email.design_tokens import (
         FONT_UI, G_ALERT_L2, G_ALERT_L3, G_ALERT_L4, G_INK, G_PAPER, G_SUCCESS,
     )
 
@@ -1146,7 +1146,7 @@ def render_official_alert_html(
         f'abgerufen bei {_html.escape(source_label)}</p>'
     )
     # Issue #1241: Herkunfts-Fußzeile mit Kontext (Trip-Name bzw. „Ortsvergleich").
-    from src.output.renderers.email.helpers import (
+    from output.renderers.email.helpers import (
         build_origin_footer, render_origin_footer_html,
     )
     origin = render_origin_footer_html(build_origin_footer(

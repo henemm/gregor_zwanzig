@@ -16,6 +16,12 @@ Sechs ACs decken die dreistufige Kaskade ab:
 
 Keine Mocks — echte Trip-Fixtures in data/users/. Tests scheitern in RED,
 weil GET /api/_validator/metrics-for-channel noch nicht implementiert ist.
+
+Issue #1308: api/routers/validator.py importiert bare (`from app.loader
+import ...`), damit greift die #1133-Isolation auch hier. Die Fixtures
+(`_write_trip`) schreiben bewusst in den echten data/-Baum und raeumen ihn
+danach ab (s. test_issue_221-Modul-Docstring) -- deshalb modulweit
+`real_data_root` markiert.
 """
 
 from __future__ import annotations
@@ -28,6 +34,8 @@ from pathlib import Path
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+
+pytestmark = pytest.mark.real_data_root
 
 
 # ---------------------------------------------------------------------------

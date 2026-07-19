@@ -28,8 +28,8 @@ if TYPE_CHECKING:
     from datetime import tzinfo
     from app.models import SegmentWeatherSummary, ForecastDataPoint
 
-from src.output.renderers.email.helpers import format_trend_tokens
-from src.output.renderers.email.design_tokens import FONT_DATA
+from output.renderers.email.helpers import format_trend_tokens
+from output.renderers.email.design_tokens import FONT_DATA
 from utils.geo import degrees_to_compass
 
 
@@ -258,7 +258,7 @@ def build_outlook_row(
     (analog ``trip_report_scheduler._build_stage_trend``).
     """
     from app.models import ThunderLevel as _TL
-    from src.output.tokens.dto import HourlyValue
+    from output.tokens.dto import HourlyValue
     from utils.timezone import local_hour as _lh
 
     temp_lo = int(summary.temp_min_c) if summary.temp_min_c is not None else None

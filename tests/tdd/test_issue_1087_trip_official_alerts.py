@@ -280,15 +280,15 @@ class TestAC2SharedRendererNoDuplicate:
         import importlib
         import inspect
 
-        shared = importlib.import_module("src.output.renderers.alert.official_alerts")
+        shared = importlib.import_module("output.renderers.alert.official_alerts")
         assert hasattr(shared, "render_official_alerts_html")
         assert hasattr(shared, "render_official_alerts_plain")
         assert hasattr(shared, "collect_trip_alert_entries")
 
-        compare_html_mod = importlib.import_module("src.output.renderers.email.compare_html")
-        html_mod = importlib.import_module("src.output.renderers.email.html")
-        plain_mod = importlib.import_module("src.output.renderers.email.plain")
-        compact_mod = importlib.import_module("src.output.renderers.email.compact")
+        compare_html_mod = importlib.import_module("output.renderers.email.compare_html")
+        html_mod = importlib.import_module("output.renderers.email.html")
+        plain_mod = importlib.import_module("output.renderers.email.plain")
+        compact_mod = importlib.import_module("output.renderers.email.compact")
 
         for mod in (compare_html_mod, html_mod, plain_mod, compact_mod):
             src = inspect.getsource(mod)
@@ -318,7 +318,7 @@ class TestAC2SharedRendererNoDuplicate:
         )
 
         # Kein eigenstaendiger Duplikat-Loop ausserhalb des Shared-Moduls.
-        comparison_mod = importlib.import_module("src.output.renderers.comparison")
+        comparison_mod = importlib.import_module("output.renderers.comparison")
         assert comparison_mod.render_official_alerts_plain is shared.render_official_alerts_plain, (
             "comparison.render_official_alerts_plain ist NICHT dasselbe "
             "Funktionsobjekt wie im Shared-Modul -> zwei Modulinstanzen (F001)."
@@ -418,7 +418,7 @@ class TestAC2SharedRendererNoDuplicate:
         RED (vor F002-Fix): das Label erscheint ZWEIMAL im HTML-Fragment.
         """
         from services.official_alerts.models import OfficialAlert
-        from src.output.renderers.alert.official_alerts import (
+        from output.renderers.alert.official_alerts import (
             collect_trip_alert_entries, render_official_alerts_html,
         )
 

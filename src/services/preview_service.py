@@ -237,7 +237,7 @@ class PreviewService:
         Fix #1297: thunder_forecast/multi_day_trend werden jetzt durchgereicht,
         damit die Vorschau denselben Gewitter-Wert wie der Versand zeigt (ADR-0025).
         """
-        from src.output.renderers.trip_report import TripReportFormatter
+        from output.renderers.trip_report import TripReportFormatter
         return TripReportFormatter().format_email(
             segments=segment_weather,
             trip_name=trip.name,

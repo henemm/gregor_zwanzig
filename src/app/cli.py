@@ -22,15 +22,15 @@ from providers.base import get_provider, ProviderError
 from services.forecast import ForecastService
 from services.trip_forecast import TripForecastService
 
-from src.output.adapters.trip_result import (
+from output.adapters.trip_result import (
     _summary_to_rows,
     _trip_result_to_normalized,
     _waypoint_to_detail,
     _wintersport_default_config,
 )
-from src.output.renderers.sms import render_sms
-from src.output.renderers.text_report import render_text_report
-from src.output.tokens.builder import build_token_line
+from output.renderers.sms import render_sms
+from output.renderers.text_report import render_text_report
+from output.tokens.builder import build_token_line
 
 
 def create_parser() -> argparse.ArgumentParser:

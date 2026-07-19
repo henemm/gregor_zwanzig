@@ -4,8 +4,8 @@ SPEC: docs/specs/modules/output_channel_renderers.md §A3 + 'render_sms() Signat
 """
 from __future__ import annotations
 
-from src.output.tokens.dto import TokenLine
-from src.output.tokens.render import render_line
+from output.tokens.dto import TokenLine
+from output.tokens.render import render_line
 
 
 def render_sms(token_line: TokenLine, max_length: int = 160) -> str:

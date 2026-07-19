@@ -193,7 +193,7 @@ class CompactSummaryFormatter:
         if friendly:
             # Issue #1214 Scheibe 6: kanonische Skala (PO-Entscheidung
             # 2026-07-12, statt der bisherigen lokalen <20/40/60/80-Stufen).
-            from src.output.metric_format import cloud_emoji
+            from output.metric_format import cloud_emoji
             return cloud_emoji(pct)
         return f"Wolken {pct}%"
 

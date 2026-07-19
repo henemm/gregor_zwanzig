@@ -23,10 +23,10 @@ from app.metric_catalog import get_metric
 from app.models import SegmentWeatherData, StabilityResult, ThunderLevel, UnifiedWeatherDisplayConfig
 from utils.timezone import local_fmt
 
-from src.output.renderers.alert.render import _esc
-from src.output.renderers.channel_layout import render_for_channel
-from src.output.renderers.email.helpers import fmt_val, format_trend_tokens
-from src.services.trip_command_processor import ACTIONS_BUBBLE_BUTTONS
+from output.renderers.alert.render import _esc
+from output.renderers.channel_layout import render_for_channel
+from output.renderers.email.helpers import fmt_val, format_trend_tokens
+from services.trip_command_processor import ACTIONS_BUBBLE_BUTTONS
 
 # Großzügige Wrap-Breite für Telegram-Prosa-Zeilen (Kopf-/Kurzuebersicht-
 # /Mini-Header-Bubbles, #635-Erbe). Telegram sendet Klartext (proportional)
@@ -157,7 +157,7 @@ def _narrow_table(
 
 def _thunder_severity(level: Optional[ThunderLevel]) -> int:
     """Issue #1214 Scheibe 6: Wrapper, delegiert an die kanonische Ordinal-Quelle."""
-    from src.output.metric_format import thunder_ordinal
+    from output.metric_format import thunder_ordinal
     return thunder_ordinal(level)
 
 

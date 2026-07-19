@@ -37,8 +37,8 @@ from output.renderers.email.design_tokens import (
 from output.renderers.email.outlook import build_outlook_row, render_outlook_table
 from output.renderers.email.profile_signature import profile_signature
 from services.corridor_match import corridor_inside
-from src.output.metric_format import severity_for, thunder_ordinal
-from src.output.renderers.alert.official_alerts import (
+from output.metric_format import severity_for, thunder_ordinal
+from output.renderers.alert.official_alerts import (
     _LEVEL_WORDS, OfficialAlertNotice, official_alert_source_label,
     render_official_alerts_html, render_warn_block,
 )
@@ -305,7 +305,7 @@ def _dedup_alerts(alerts: list) -> list:
     """Duenner Wrapper um die kanonische Dedup-Quelle `dedupe_official_alerts`
     (Issue #1217/#1218): Uebersichts-Chip und Pro-Ort-Streifen nutzen dieselbe
     Gruppierung `(region_label or label, hazard)` + hoechste Stufe."""
-    from src.output.renderers.alert.official_alerts import dedupe_official_alerts
+    from output.renderers.alert.official_alerts import dedupe_official_alerts
 
     return [a for a, _ in dedupe_official_alerts([(a, []) for a in alerts])]
 
@@ -908,7 +908,7 @@ def _render_abo_footer(preset_name, preset_schedule, preset_weekday, location_co
 
 def _render_app_footer() -> str:
     # Issue #1241: dezente Herkunfts-Fußzeile (SSoT-Helper).
-    from src.output.renderers.email.helpers import (
+    from output.renderers.email.helpers import (
         build_origin_footer, render_origin_footer_html,
     )
     origin_html = render_origin_footer_html(build_origin_footer(

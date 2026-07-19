@@ -68,9 +68,9 @@ def _freeze_datetime() -> None:
     Channel-Renderer emittieren den Footer-Timestamp.
     """
     import output.renderers.trip_report as tr_mod
-    from src.output.renderers.email import plain as plain_mod
-    from src.output.renderers.email import html as html_mod
-    from src.output.renderers.email import helpers as helpers_mod
+    from output.renderers.email import plain as plain_mod
+    from output.renderers.email import html as html_mod
+    from output.renderers.email import helpers as helpers_mod
 
     tr_mod.datetime = _FrozenDatetime
     plain_mod.datetime = _FrozenDatetime

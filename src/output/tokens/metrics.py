@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from src.output.tokens.dto import HourlyValue
+from output.tokens.dto import HourlyValue
 
 LEVELS = {0: "-", 1: "L", 2: "M", 3: "H"}
 

@@ -718,7 +718,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
     # stillschweigend auf ("secondary", 0) zu fallen.
     bucket_order_by_id: Dict[str, tuple] = {}
     if raw_metrics:
-        from src.output.renderers.channel_layout import auto_distribute
+        from output.renderers.channel_layout import auto_distribute
         active_ids = [mc["metric_id"] for mc in raw_metrics if mc.get("enabled", True)]
         for dist in auto_distribute(active_ids):
             bucket_order_by_id[dist.metric_id] = (dist.bucket, dist.order)

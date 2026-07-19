@@ -22,18 +22,18 @@ if TYPE_CHECKING:
 from app.profile import ActivityProfile
 from utils.timezone import local_fmt
 
-from src.output.renderers.email.helpers import (
+from output.renderers.email.helpers import (
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
     build_segment_label,
     build_units_legend, fmt_val, format_change_line, format_km_range,
     render_origin_footer_text, tone_symbol, visible_cols,
 )
-from src.output.renderers.email.profile_signature import profile_signature
-from src.output.renderers.alert.official_alerts import (
+from output.renderers.email.profile_signature import profile_signature
+from output.renderers.alert.official_alerts import (
     collect_trip_alert_entries, render_official_alerts_plain,
 )
 # Epic #1301 B4: geteilter Ausblick-Renderer (Trip/Compare-Teilungs-Invariante)
-from src.output.renderers.email.outlook import render_outlook_plain
+from output.renderers.email.outlook import render_outlook_plain
 
 
 def _render_text_table(rows: list[dict], *, friendly_keys: set[str],

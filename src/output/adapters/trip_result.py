@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from services.aggregation import AggregatedSummary, WaypointForecast
 from services.trip_forecast import TripForecastResult
 
-from src.output.tokens.dto import (
+from output.tokens.dto import (
     DailyForecast,
     HourlyValue,
     MetricSpec,

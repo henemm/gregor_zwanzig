@@ -100,7 +100,7 @@ class TokenLine:
     shortcode: str | None = None  # Bug #775: GZ#XXXX — primärer Routing-Key im Betreff
 
     def render(self, max_length: int = 160) -> str:
-        from src.output.tokens.render import render_line
+        from output.tokens.render import render_line
         return render_line(self, max_length)
 
     def filter_for_subject(self) -> "TokenLine":

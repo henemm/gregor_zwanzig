@@ -21,6 +21,13 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+# Issue #1308: der validator-Router liest jetzt ueber den (isolierten) bare
+# app.loader-Pfad -- dieser Test braucht bewusst die echte, committete
+# Trip-Fixture data/users/default/trips/gr221-mallorca.json (rein lesend,
+# etabliertes Muster). Vor #1308 funktionierte das zufaellig, weil
+# validator.py "src.app.loader" (unisoliert) importierte.
+pytestmark = pytest.mark.real_data_root
+
 
 ALERT_BODY_VISIBILITY = {
     "changes": [

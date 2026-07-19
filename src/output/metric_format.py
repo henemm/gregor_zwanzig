@@ -30,7 +30,7 @@ from app.models import ThunderLevel
 
 # tone_css lebt in design_tokens (naeher an den uebrigen Mail-Farbkonstanten),
 # wird hier nur re-exportiert, damit Konsumenten ein einziges Modul brauchen.
-from src.output.renderers.email.design_tokens import tone_css
+from output.renderers.email.design_tokens import tone_css
 
 __all__ = [
     "format_value",

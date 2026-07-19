@@ -633,7 +633,6 @@ class TestAC5TelegramOutputBackwardCompatible:
 
 
 class TestAC7AlertPreviewOnsetPayload:
-    @pytest.mark.xfail(reason="#1308: app.loader vs src.app.loader Dual-Modul-Leck (api/routers/validator.py:23 unisoliert)", strict=False)
     def test_post_alert_preview_with_onset_payload_returns_onset_render(self):
         from fastapi.testclient import TestClient
 

@@ -17,12 +17,12 @@ from app.models import SegmentWeatherData, UnifiedWeatherDisplayConfig
 from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt
 
-from src.output.renderers.email.helpers import (
+from output.renderers.email.helpers import (
     _AMPEL_STAGE_TONES, build_confidence_hint, build_metrics_summary_pills,
     build_origin_footer, format_trend_tokens, render_origin_footer_text,
 )
-from src.output.renderers.email.profile_signature import profile_signature
-from src.output.renderers.alert.official_alerts import (
+from output.renderers.email.profile_signature import profile_signature
+from output.renderers.alert.official_alerts import (
     collect_trip_alert_entries, render_official_alerts_plain,
 )
 

@@ -8,7 +8,7 @@ Re-exports:
 """
 from __future__ import annotations
 
-from src.output.renderers.email import render_email
-from src.output.renderers.sms import render_sms
+from output.renderers.email import render_email
+from output.renderers.sms import render_sms
 
 __all__ = ["render_email", "render_sms"]

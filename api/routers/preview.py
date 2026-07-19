@@ -15,9 +15,9 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import HTMLResponse
 
-from src.app.config import Settings
-from src.services.compare_preview_service import ComparePreviewService
-from src.services.preview_service import PreviewService, VALID_REPORT_TYPES
+from app.config import Settings
+from services.compare_preview_service import ComparePreviewService
+from services.preview_service import PreviewService, VALID_REPORT_TYPES
 
 router = APIRouter()
 

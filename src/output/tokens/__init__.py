@@ -2,11 +2,11 @@
 
 Spec: docs/specs/modules/output_token_builder.md v1.1
 """
-from src.output.tokens.dto import (
+from output.tokens.dto import (
     DailyForecast, HourlyValue, MetricSpec, NormalizedForecast,
     Token, TokenLine,
 )
-from src.output.tokens.builder import build_token_line
+from output.tokens.builder import build_token_line
 
 __all__ = [
     "DailyForecast", "HourlyValue", "MetricSpec", "NormalizedForecast",

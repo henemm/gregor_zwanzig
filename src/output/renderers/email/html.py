@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 from app.profile import ActivityProfile
 from utils.timezone import local_fmt
 
-from src.output.renderers.email.helpers import (
+from output.renderers.email.helpers import (
     ampel_level,
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
     build_segment_label, build_units_legend,
@@ -35,8 +35,8 @@ from src.output.renderers.email.helpers import (
 )
 # Issue #1306: Profil-Signatur (Akzentfarbe/Icon/Eyebrow) fuer den Header —
 # bisher nur in plain.py verdrahtet, hier bislang nie aufgerufen.
-from src.output.renderers.email.profile_signature import profile_signature
-from src.output.renderers.alert.official_alerts import (
+from output.renderers.email.profile_signature import profile_signature
+from output.renderers.alert.official_alerts import (
     OfficialAlertNotice, _bundle_by_hazard_level, dedupe_official_alerts,
     format_segment_reference, official_alert_source_label,
     render_official_alerts_html, render_warn_block,
@@ -52,13 +52,13 @@ HEAT_PLAUSIBILITY_MIN_C = 25.0
 # ab Issue #1216 den embedded WarnBlock nutzt: test_issue_1087 beweist per
 # `is`-Identitaet, dass html.py DASSELBE Shared-Funktionsobjekt referenziert.
 _ = render_official_alerts_html
-from src.output.renderers.email.design_tokens import (
+from output.renderers.email.design_tokens import (
     G_PAPER, G_SURFACE_1, G_INK, G_INK_MUTED, G_INK_FAINT,
     G_ACCENT, G_WARNING, G_DANGER, G_BOX_WARNING_BG, G_BOX_DANGER_BG, G_HEADER_BG,
     FONT_UI, FONT_DATA, WEB_FONT_LINK,
 )
 # Epic #1301 B4: geteilter Ausblick-Renderer (Trip/Compare-Teilungs-Invariante)
-from src.output.renderers.email.outlook import render_outlook_table
+from output.renderers.email.outlook import render_outlook_table
 
 
 def render_stability_label_html(result: Optional["StabilityResult"]) -> str:

@@ -10,6 +10,11 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+# Issue #1308: der /loaded-Endpoint liest bewusst den echten data/-Bestand
+# (rein lesend) — bewusstes Opt-out aus der #1133-Autouse-Isolation für das
+# gesamte Modul, etabliertes Muster (u. a. test_epic_140_preview_endpoints.py).
+pytestmark = pytest.mark.real_data_root
+
 
 @pytest.fixture
 def client():

@@ -8,15 +8,17 @@ direkt beobachtbar. Nicht versionsstabil, nicht für Frontend/Endbenutzer.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 
-# Hinweis Modul-Duplikat (pythonpath enthaelt "src" UND "."): dieser Router
-# importiert ``app.loader`` bewusst zweimal unter verschiedenen Namen. Der
-# bestehende /loaded-Endpoint nutzt seit jeher die "src."-Variante (eigenes
-# Modul-Objekt, eigenes ``_DATA_ROOT`` -- von ``tests/conftest.py::_isolate_data_root``
-# NICHT gepatcht, siehe dortige Tests gegen echte data/users/default/). Der neue
-# Stage-Weather-Endpoint braucht dagegen genau diese Isolation (Issue #1212
-# RED-Tests speichern via `app.loader.save_trip`), daher die zweite, kurze
-# Import-Variante fuer ``load_all_trips``.
-from src.app.loader import load_all_trips as _legacy_load_all_trips, _trip_to_dict
+# Issue #1308: Frueher gab es hier ein echtes Modul-Duplikat -- der
+# /loaded-Endpoint importierte ``src.app.loader`` (eigenes Modul-Objekt,
+# eigenes ungepatchtes ``_DATA_ROOT``), waehrend der Stage-Weather-Endpoint
+# ueber den bare ``app.loader``-Pfad isoliert lief. Beide Namen sind jetzt
+# bare-Importe desselben Modulobjekts -- kein Dual-Modul-Duplikat mehr, nur
+# noch ein Namens-Alias fuer Lesbarkeit. Der /loaded-Endpoint liest bewusst
+# den echten ``data/``-Bestand (Issue #115); die Isolation fuer diesen Test
+# wird jetzt explizit ueber ``pytest.mark.real_data_root`` gesteuert
+# (tests/tdd/test_internal_loaded_endpoint.py), nicht mehr zufaellig ueber
+# den Import-Stil.
+from app.loader import load_all_trips as _legacy_load_all_trips, _trip_to_dict
 from app.loader import load_all_trips
 from providers.base import get_provider
 from services.stage_weather import compute_stage_weather

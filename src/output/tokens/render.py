@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from dataclasses import replace
 
-from src.output.tokens.dto import Token, TokenLine
+from output.tokens.dto import Token, TokenLine
 
 # §6 removal order (one symbol at a time, repeated until budget met).
 DROP_ORDER = ["DBG", "WC", "AV", "SFL", "SN24+", "SN", "Z:", "MAX", "M:"]

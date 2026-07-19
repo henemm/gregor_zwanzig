@@ -18,11 +18,11 @@ from app.models import (
 )
 from app.profile import ActivityProfile
 
-from src.output.renderers.email.compact import render_compact
-from src.output.renderers.email.helpers import build_format_modes, build_html_indicator_keys
-from src.output.renderers.email.html import render_html
-from src.output.renderers.email.plain import render_plain
-from src.output.tokens.dto import TokenLine
+from output.renderers.email.compact import render_compact
+from output.renderers.email.helpers import build_format_modes, build_html_indicator_keys
+from output.renderers.email.html import render_html
+from output.renderers.email.plain import render_plain
+from output.tokens.dto import TokenLine
 
 if TYPE_CHECKING:
     from app.models import StabilityResult

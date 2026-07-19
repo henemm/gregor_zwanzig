@@ -28,8 +28,8 @@ from output.renderers.email.compare_html import (
     _metric_value, sort_locations_alphabetically,
 )
 from output.renderers.email.outlook import render_outlook_plain
-from src.output.metric_format import format_value
-from src.output.renderers.alert.official_alerts import (
+from output.metric_format import format_value
+from output.renderers.alert.official_alerts import (
     _word_boundary_truncate,
     render_official_alerts_plain,
 )

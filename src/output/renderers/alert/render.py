@@ -372,7 +372,7 @@ def _datarow_html(label: str, value: str, value_color: str, first: bool) -> str:
 def _with_origin(html: str, plain: str, mail_type: str) -> tuple[str, str]:
     """Issue #1241: hängt die geteilte Herkunfts-Fußzeile an (HTML vor
     </body>, Plain am Ende)."""
-    from src.output.renderers.email.helpers import (
+    from output.renderers.email.helpers import (
         build_origin_footer, render_origin_footer_html, render_origin_footer_text,
     )
     footer = build_origin_footer(mail_type, renderer_name="alert/render.py")

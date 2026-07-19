@@ -22,10 +22,10 @@ from app.models import ExposedSection, RiskLevel, RiskType, SegmentWeatherData
 from services.risk_engine import RiskEngine
 from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt, local_hour
-from src.output.metric_format import thunder_label_value
-from src.output.renderers.sms import render_sms
-from src.output.tokens.builder import build_token_line
-from src.output.tokens.dto import (
+from output.metric_format import thunder_label_value
+from output.renderers.sms import render_sms
+from output.tokens.builder import build_token_line
+from output.tokens.dto import (
     DailyForecast, HourlyValue, MetricSpec, NormalizedForecast,
 )
 

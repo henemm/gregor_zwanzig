@@ -5,11 +5,11 @@ from typing import Iterable, Optional
 
 from utils.ascii_fold import fold_ascii
 
-from src.output.tokens.dto import (
+from output.tokens.dto import (
     DailyForecast, MetricSpec, NormalizedForecast, Profile, ReportType,
     Token, TokenLine,
 )
-from src.output.tokens.metrics import (
+from output.tokens.metrics import (
     render_temperature, render_threshold_peak_value, render_int,
 )
 

@@ -11,7 +11,7 @@ renderer. No parallel data fetching, no side effects, deterministic.
 """
 from __future__ import annotations
 
-from src.output.tokens.dto import Token, TokenLine
+from output.tokens.dto import Token, TokenLine
 
 # A2: ReportType-Mapping (English internal -> German label).
 _REPORT_TYPE_DE: dict[str, str] = {

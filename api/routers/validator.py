@@ -20,12 +20,12 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from src.app.loader import _parse_trip, get_briefings_dir
-from src.app.metric_catalog import format_metric_value
-from src.app.models import UnifiedWeatherDisplayConfig
-from src.app.trip import Trip
-from src.services.trip_alert import TripAlertService
-from src.services.validator_render_service import (
+from app.loader import _parse_trip, get_briefings_dir
+from app.metric_catalog import format_metric_value
+from app.models import UnifiedWeatherDisplayConfig
+from app.trip import Trip
+from services.trip_alert import TripAlertService
+from services.validator_render_service import (
     render_alert_preview,
     render_compare_email_preview,
 )

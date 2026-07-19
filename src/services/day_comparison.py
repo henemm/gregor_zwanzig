@@ -342,7 +342,7 @@ def _thunder_delta(
     # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
     # Der .value-Normalisierungs-Ausdruck bleibt (str-Enum-Hash-Aequivalenz
     # macht ihn technisch redundant, aber verhaltensneutral in beide Richtungen).
-    from src.output.metric_format import thunder_ordinal
+    from output.metric_format import thunder_ordinal
     today_ord = thunder_ordinal(today_level.value if hasattr(today_level, "value") else today_level)
     yday_ord = thunder_ordinal(yday_level.value if hasattr(yday_level, "value") else yday_level)
     delta = today_ord - yday_ord

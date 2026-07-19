@@ -13,6 +13,11 @@ GREEN-Zustand (nach β4-Implementation):
   _waypoint_to_detail(wf)            -> WaypointDetail
   _summary_to_rows(summary)          -> list[tuple[str, str]]
   _wintersport_default_config()      -> list[MetricSpec]
+
+Issue #1308: Importe auf bare umgestellt (`output.` statt `src.output.`).
+Das Modul unter Test bindet jetzt bare -- ein weiterhin `src.`-praefixierter
+Import hier haette ein zweites, inkompatibles Klassenobjekt fuer
+HourlyValue/MetricSpec erzeugt (Dual-Modul-Isolation, is-/isinstance-Bruch).
 """
 from __future__ import annotations
 
@@ -34,7 +39,7 @@ from services.aggregation import (
 )
 from services.trip_forecast import TripForecastResult
 
-from src.output.tokens.dto import (
+from output.tokens.dto import (
     DailyForecast,
     HourlyValue,
     MetricSpec,
@@ -179,7 +184,7 @@ def test_adapter_produces_normalized_forecast():
 
     Spec §5.1 Adapter-Verantwortung.
     """
-    from src.output.adapters.trip_result import _trip_result_to_normalized
+    from output.adapters.trip_result import _trip_result_to_normalized
 
     result = _make_simple_result()
     forecast = _trip_result_to_normalized(result)
@@ -204,7 +209,7 @@ def test_adapter_handles_all_none_summary():
 
     Spec §7 Fehlerbehandlung — All-None → DailyForecast-Defaults.
     """
-    from src.output.adapters.trip_result import _trip_result_to_normalized
+    from output.adapters.trip_result import _trip_result_to_normalized
 
     result = _all_none_summary_result()
     forecast = _trip_result_to_normalized(result)
@@ -228,7 +233,7 @@ def test_adapter_pure_function():
 
     Pure function — Determinismus gemäß Spec §3.3.
     """
-    from src.output.adapters.trip_result import _trip_result_to_normalized
+    from output.adapters.trip_result import _trip_result_to_normalized
 
     result = _make_simple_result()
     out_a = _trip_result_to_normalized(result)
@@ -244,7 +249,7 @@ def test_adapter_avalanche_level_is_none():
 
     Spec §5.1 Tabellenzeile 'avalanche_level' + §13 Out-of-Scope.
     """
-    from src.output.adapters.trip_result import _trip_result_to_normalized
+    from output.adapters.trip_result import _trip_result_to_normalized
 
     result = _make_simple_result()
     forecast = _trip_result_to_normalized(result)
@@ -261,7 +266,7 @@ def test_adapter_hourly_samples_anchor_at_hour_12():
     Spec §5.1 'als Single-Sample bei Stunde 12 (Default-Stunde, da
     AggregatedSummary keine Stunde kennt)'.
     """
-    from src.output.adapters.trip_result import _trip_result_to_normalized
+    from output.adapters.trip_result import _trip_result_to_normalized
 
     result = _make_simple_result(wind=45.0)
     forecast = _trip_result_to_normalized(result)
@@ -280,7 +285,7 @@ def test_waypoint_to_detail_extracts_id_name_elevation_timewindow():
 
     Spec §4.2 WaypointDetail-Dataclass.
     """
-    from src.output.adapters.trip_result import (
+    from output.adapters.trip_result import (
         WaypointDetail,
         _waypoint_to_detail,
     )
@@ -308,7 +313,7 @@ def test_summary_to_rows_formats_temperature_range():
     Spec §A4 + §5.3 Schritt 3: Adapter erzeugt formatierte Zeilen
     analog WintersportFormatter._format_summary().
     """
-    from src.output.adapters.trip_result import _summary_to_rows
+    from output.adapters.trip_result import _summary_to_rows
 
     result = _make_simple_result()
     rows = _summary_to_rows(result.summary)
@@ -329,7 +334,7 @@ def test_summary_to_rows_omits_none_fields():
 
     Spec §A4: Adapter unterdrückt Felder ohne Wert.
     """
-    from src.output.adapters.trip_result import _summary_to_rows
+    from output.adapters.trip_result import _summary_to_rows
 
     result = _make_simple_result(snow_depth=None)
     rows = _summary_to_rows(result.summary)
@@ -350,7 +355,7 @@ def test_wintersport_default_config_enables_av_wc_sn_sn24_sfl():
     produziert die Standard-MetricSpec-Liste für Wintersport (alle
     Wintersport-Tokens enabled, keine Friendly-Form)'.
     """
-    from src.output.adapters.trip_result import _wintersport_default_config
+    from output.adapters.trip_result import _wintersport_default_config
 
     specs = _wintersport_default_config()
     assert isinstance(specs, list)
