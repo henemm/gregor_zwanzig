@@ -10,7 +10,9 @@ import * as fs from 'fs';
 // EINEN storageState statt sich pro Test einzuloggen — sonst erschöpft die Suite
 // das Staging-Login-Rate-Limit (#703). Eigener Pfad zur Isolation gegenüber S3.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const authFile = path.join(__dirname, 'playwright', '.auth', 'staging-1273-s4c.json');
+// __dirname ist frontend/e2e/ → ein Verzeichnis hoch, damit der Pfad
+// (frontend/playwright/.auth/) mit dem storageState der Config übereinstimmt.
+const authFile = path.join(__dirname, '..', 'playwright', '.auth', 'staging-1273-s4c.json');
 
 setup('authenticate via API (staging) — epic_1273_s4c_e2e_migration', async ({ playwright }) => {
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
