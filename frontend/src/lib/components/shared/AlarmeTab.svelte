@@ -32,6 +32,7 @@
 	import {
 		alarmeTabSections,
 		notifySummaryLabel,
+		triggerGroupHeading,
 		type AlarmeContext
 	} from './alarme-tab/alarmeTabSections.ts';
 	import { resolveAlertChannels, type AlertChannelState } from './alarme-tab/alertChannelState.ts';
@@ -217,7 +218,10 @@
 
 <div class="alarme-tab" data-testid="alarme-tab">
 	{#each sections as id (id)}
-		<div class="alarme-section" data-testid="alarme-section-{id}">
+		<div
+			class="alarme-section{id === 'radar' ? ' alarme-section--tight' : ''}"
+			data-testid="alarme-section-{id}"
+		>
 			{#if id === 'korridor-summary'}
 				<div class="alarme-korridor-summary">
 					<Eyebrow style="margin-bottom: 6px;">Korridor-Auslöser</Eyebrow>
@@ -233,7 +237,7 @@
 				</div>
 			{:else if id === 'official-warnings'}
 				<div class="alarme-official-warnings">
-					<Eyebrow style="margin-bottom: 10px;">Wann Warnungen rausgehen</Eyebrow>
+					<Eyebrow style="margin-bottom: 10px;">{triggerGroupHeading(context)}</Eyebrow>
 					<div class="alarme-official-toggles">
 						<ChannelToggle
 							label="Amtliche Warnungen lösen Alert aus"
@@ -318,6 +322,13 @@
 		display: flex;
 		flex-direction: column;
 		max-width: 620px;
+	}
+	/* Epic #1301 D3: Radar-Schalter visuell dicht unter dem
+	   Amtliche-Warnungen-Schalter halten (eine Ausloeser-Gruppe unter einer
+	   Ueberschrift), ohne den regulaeren Section-Abstand fuer alle Blöcke
+	   zu aendern. */
+	.alarme-section--tight {
+		margin-top: -14px;
 	}
 	.alarme-korridor-summary {
 		display: flex;

@@ -8,7 +8,8 @@
 
 export type AlarmeContext = 'route' | 'vergleich';
 
-// Abschnitte a-f + h, ohne 'radar' (g) — das kommt nur bei vergleich dazu.
+// Abschnitte a-f + h. 'radar' (g) kommt nur bei vergleich dazu, direkt
+// hinter 'official-warnings' (Epic #1301 D3).
 const BASE_SECTIONS = [
 	'korridor-summary',
 	'official-warnings',
@@ -20,9 +21,18 @@ const BASE_SECTIONS = [
 
 export function alarmeTabSections(context: AlarmeContext): string[] {
 	const sections: string[] = [...BASE_SECTIONS];
-	if (context === 'vergleich') sections.push('radar');
+	if (context === 'vergleich') {
+		const officialIdx = sections.indexOf('official-warnings');
+		sections.splice(officialIdx + 1, 0, 'radar');
+	}
 	sections.push('sample');
 	return sections;
+}
+
+// Epic #1301 D3 AC-2: Ueberschrift ueber der Ausloeser-Gruppe
+// (official-warnings + radar), kontextabhaengig.
+export function triggerGroupHeading(context: AlarmeContext): string {
+	return context === 'vergleich' ? 'Amtliche & Radar-Warnungen' : 'Amtliche Warnungen';
 }
 
 export function notifySummaryLabel(notifyCount: number): string | null {
