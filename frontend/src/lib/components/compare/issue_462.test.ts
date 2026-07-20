@@ -30,12 +30,14 @@ const COMPARE_DIR = dirname(fileURLToPath(import.meta.url));
 // wurden gelöscht — Einträge entfernt. Der Eyebrow-Atom-Import, den beide
 // Dateien trugen, lebt jetzt direkt in CompareEditor.svelte (bereits seit
 // Zeile 10 aus atoms importiert, kein neuer Prüf-Eintrag nötig).
+// Epic #1301 Scheibe F3 (#1206, 2026-07-19/20): SavePresetDialog.svelte wurde
+// als referenzloser Totcode gelöscht (Alt-Editor-Relikt, F2b hat den letzten
+// Aufrufer CompareEditor.svelte bereits entfernt) — Eintrag entfernt.
 
 const MIGRATED_FILES: Array<{ path: string; components: string[] }> = [
 	{ path: join(COMPARE_DIR, 'CreateGroupDialog.svelte'), components: ['Btn'] },
 	{ path: join(COMPARE_DIR, 'HourlyMatrix.svelte'),      components: ['Pill'] },
 	{ path: join(COMPARE_DIR, 'LocationPreviewMap.svelte'), components: ['TopoBg'] },
-	{ path: join(COMPARE_DIR, 'SavePresetDialog.svelte'),  components: ['Btn'] },
 	// Issue #1232 Scheibe 2b: Step5Versand.svelte wurde gelöscht (ersetzt durch
 	// VersandTab context="vergleich" + CompareInhaltSection.svelte) — Eintrag
 	// zeigt jetzt auf den Nachfolger, der denselben Eyebrow-Atom-Import trägt.

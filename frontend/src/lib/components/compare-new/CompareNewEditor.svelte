@@ -445,7 +445,7 @@
 		{#if activeTab === 'vergleich'}
 			<div style="margin-bottom: 14px;">
 				<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">Name des Vergleichs</div>
-				<input type="text" maxlength="80" placeholder="z.B. Skitouren Hochkönig" bind:value={wiz.name}
+				<input data-testid="compare-editor-name-mobile" type="text" maxlength="80" placeholder="z.B. Skitouren Hochkönig" bind:value={wiz.name}
 					style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 16px; border: 1px solid var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card); font-family: var(--g-font-sans); color: var(--g-ink); outline: none; min-height: 48px;" />
 			</div>
 			<div style="margin-bottom: 14px;">
@@ -542,21 +542,16 @@
 </div>
 
 <style>
-	/* CSS-only Responsive Switch (Muster #682/#661). Desktop offscreen statt
-	   display:none, damit compare-editor-name auf Mobile für Playwright befüllbar
-	   bleibt (ein Element, strict-mode-safe). .cm-mobile display:none für
-	   toBeHidden() in Desktop-Tests. */
+	/* CSS-only Responsive Switch, Trip-Muster #661 (Epic #1301 F3, #989).
+	   Desktop-Block wird auf ≤899px per display:none versteckt (nicht mehr
+	   per Offscreen-Koordinaten) — dank eigenständigem Mobile-Namensfeld
+	   (compare-editor-name-mobile) entfällt die frühere Test-Krücke. */
 	.cm-mobile {
 		display: none !important;
 	}
 	@media (max-width: 899px) {
 		.cm-desktop {
-			position: fixed !important;
-			top: -9999px !important;
-			left: -9999px !important;
-			width: 1px !important;
-			height: 1px !important;
-			overflow: hidden !important;
+			display: none !important;
 		}
 		.cm-mobile {
 			display: block !important;

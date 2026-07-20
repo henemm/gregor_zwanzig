@@ -145,14 +145,9 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 		await page.goto('/compare/new');
 
 		// Vergleichs-Name eingeben → "Orte"-Tab freischalten
-		// Im Mobile-Block gibt es einen Input — wir füllen über die API-Anforderung
-		// Zunächst: Desktop-Input (auch im DOM, aber display:none) oder direkten
-		// Mobile-Input nutzen
-		// Den Vergleichs-Namen über das sichtbare mobile-Feld eingeben:
-		const mobileVergleich = page.locator('.cm-mobile').getByRole('textbox').first();
-		// Falls nicht vorhanden: Desktop-Input (display:none, aber per fill() erreichbar)
-		// Direkt den Editor-name ausfüllen (beide Input-Elemente verwalten denselben State):
-		await page.getByTestId('compare-editor-name').fill('Test-Vergleich');
+		// Epic #1301 F3 (#989): eigenständiges Mobile-Namensfeld, gebunden auf
+		// denselben State wie das Desktop-Feld (compare-editor-name).
+		await page.getByTestId('compare-editor-name-mobile').fill('Test-Vergleich');
 
 		// Tab "Orte" tippen (jetzt freigeschaltet)
 		const tabbar = page.getByTestId('cm-mobile-tabbar');
@@ -205,8 +200,8 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 		const appbar = page.getByTestId('top-app-bar');
 		await expect(appbar).toBeVisible();
 
-		// Einen Vergleichs-Namen eingeben
-		await page.getByTestId('compare-editor-name').fill('AC5-Mobile-Test-' + Date.now());
+		// Einen Vergleichs-Namen eingeben (Epic #1301 F3: eigenständiges Mobile-Feld)
+		await page.getByTestId('compare-editor-name-mobile').fill('AC5-Mobile-Test-' + Date.now());
 
 		// Der eigentliche Multi-User-Test ist im staging-validator (AC-5 E2E).
 		// Hier prüfen wir nur, dass /compare für den eingeloggten Nutzer erreichbar ist.

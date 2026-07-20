@@ -95,7 +95,8 @@ test.describe('Issue #951 — Sheet-Panel darf BottomNav nicht blockieren', () =
 		await page.goto('/compare/new');
 		await page.waitForLoadState('networkidle');
 		await expect(page.getByTestId('compare-editor')).toBeVisible();
-		await page.locator('[data-testid="compare-editor-name"]').fill('Vergleich #951 ' + Date.now());
+		// Epic #1301 F3 (#989): eigenständiges Mobile-Namensfeld statt Offscreen-Desktop-Feld.
+		await page.locator('[data-testid="compare-editor-name-mobile"]').fill('Vergleich #951 ' + Date.now());
 
 		await page.getByTestId('cm-mobile-tab-orte').click();
 		await page.getByTestId('compare-step2-mobile-library-btn').click();

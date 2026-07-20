@@ -221,7 +221,8 @@ test.describe('Issue #1256 S8d (AC-6/AC-7): mobiler Orte-Tab dense-Stack', () =>
 
 		await page.goto('/compare/new');
 		await page.waitForLoadState('networkidle');
-		await page.getByTestId('compare-editor-name').fill(`E2E S8d Editor ${suffix}`);
+		// Epic #1301 F3 (#989): eigenständiges Mobile-Namensfeld.
+		await page.getByTestId('compare-editor-name-mobile').fill(`E2E S8d Editor ${suffix}`);
 		await page.locator('[data-testid="cm-mobile-tab-orte"]:visible').click();
 
 		await expect(page.getByText('Im Vergleich ·').first()).toBeVisible();
@@ -282,7 +283,8 @@ test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versan
 		);
 
 		// Name setzen -> "Orte hinzufügen →" aktiv, Klick wechselt zu Orte.
-		await page.getByTestId('compare-editor-name').fill(`E2E S8d Cta ${suffix}`);
+		// Epic #1301 F3 (#989): eigenständiges Mobile-Namensfeld.
+		await page.getByTestId('compare-editor-name-mobile').fill(`E2E S8d Cta ${suffix}`);
 		await expect(cta).toContainText('Orte hinzufügen →');
 		await cta.getByRole('button').click();
 		await expect(page.locator('[data-testid="cm-mobile-tab-orte"]:visible')).toHaveAttribute(
@@ -392,7 +394,8 @@ test.describe('Issue #1256 S8d (AC-15): genau eine App-Leiste im mobilen Editor'
 		await expect(bars.getByTestId('top-app-bar-title')).toHaveText('Vergleich');
 		await expect(bars.getByTestId('top-app-bar-activate')).toHaveText('…');
 
-		await page.getByTestId('compare-editor-name').fill(`E2E S8d Bar ${suffix}`);
+		// Epic #1301 F3 (#989): eigenständiges Mobile-Namensfeld.
+		await page.getByTestId('compare-editor-name-mobile').fill(`E2E S8d Bar ${suffix}`);
 		await expect(bars.getByTestId('top-app-bar-title')).toHaveText('Vergleich');
 		const cta = page.locator('[data-testid="cm-mobile-cta"]:visible');
 		await cta.getByRole('button').click();
