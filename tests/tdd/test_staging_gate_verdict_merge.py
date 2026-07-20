@@ -98,8 +98,34 @@ def _call(verdict: str, findings_path: Path, e2e_path: Path) -> int:
     )
 
 
+def _identifying_parts(f: dict) -> dict:
+    """Identifizierende Teile eines Findings (ac/status/url/evidence), OHNE
+    das von Fix 3 (#1327/#1228) hinzugefuegte 'workflow'-Feld — fuer
+    Vergleiche, die bewusst nur den fachlichen Inhalt pruefen, nicht die
+    Workflow-Herkunft."""
+    return {k: f.get(k) for k in ("ac", "status", "url", "evidence")}
+
+
+def _contains_finding(findings: list, expected: dict) -> bool:
+    """True wenn `findings` einen Eintrag mit denselben identifizierenden
+    Teilen wie `expected` enthaelt (workflow-Tag wird ignoriert)."""
+    return any(_identifying_parts(f) == _identifying_parts(expected) for f in findings)
+
+
+def _count_matching(findings: list, expected: dict) -> int:
+    return sum(1 for f in findings if _identifying_parts(f) == _identifying_parts(expected))
+
+
 def test_ac1_merge_preserves_existing_findings(tmp_path):
-    """AC-1: bestehend [A] + neu [B] auf demselben SHA → Ergebnis enthält A und B."""
+    """AC-1: bestehend [A] + neu [B] auf demselben SHA → Ergebnis enthält A und B.
+
+    #1327/#1228 Fix 3: NEU geschriebene Findings tragen zusätzlich ein
+    'workflow'-Feld — B wird deshalb über die identifizierenden Teile
+    (ac/status/url/evidence) geprüft statt über exakte Dict-Gleichheit. A
+    (Altbestand, ohne Tag) bleibt unverändert und wird weiter exakt verglichen
+    — die Kernaussage (Erstschreiber-Evidenz geht nicht verloren) ist
+    unverändert bewiesen.
+    """
     head = mod._head_sha()
     e2e_path = tmp_path / "e2e_verified.json"
     _write_existing(e2e_path, head, [FINDING_A])
@@ -112,11 +138,21 @@ def test_ac1_merge_preserves_existing_findings(tmp_path):
     assert FINDING_A in result["findings"], (
         "Finding des Erstschreibers ging beim Schreiben verloren (Blind-Overwrite)."
     )
-    assert FINDING_B in result["findings"], "Neues Finding fehlt im Ergebnis."
+    assert _contains_finding(result["findings"], FINDING_B), "Neues Finding fehlt im Ergebnis."
 
 
 def test_ac2_merge_deduplicates_shared_finding(tmp_path):
-    """AC-2: bestehend [A, shared] + neu [shared, B] → shared genau einmal, Länge 3."""
+    """AC-2 (#1197, weiterhin gültig unter #1327 Fix 3): bestehend [A, shared]
+    + neu [shared, B] → shared genau einmal, Länge 3.
+
+    Der Inhalts-Dedup aus #1197 bleibt aktiv, ignoriert beim Vergleich aber
+    das 'workflow'-Tag aus Fix 3 (staging_gate._dedup_key) — ein
+    inhaltsgleicher Altbestands-/Fremdeintrag verhindert weiterhin eine
+    Zweitfassung, während #1327 AC-3/AC-4 zusätzlich dafür sorgen, dass
+    eigene Workflow-Einträge bei Re-Write ersetzt statt dupliziert werden
+    (siehe test_ac4_same_workflow_rewrite_replaces_own_keeps_foreign_and_legacy).
+    B ist ein genuin neuer Eintrag und trägt deshalb ein 'workflow'-Tag —
+    Prüfung über die identifizierenden Teile statt exakter Dict-Gleichheit."""
     head = mod._head_sha()
     e2e_path = tmp_path / "e2e_verified.json"
     _write_existing(e2e_path, head, [FINDING_A, FINDING_SHARED])
@@ -129,15 +165,19 @@ def test_ac2_merge_deduplicates_shared_finding(tmp_path):
     findings = result["findings"]
     shared_count = sum(1 for f in findings if f == FINDING_SHARED)
     assert shared_count == 1, (
-        f"Gemeinsames Finding soll genau einmal erscheinen, erschien {shared_count}x."
+        f"Gemeinsames Finding soll genau einmal erscheinen, erschien {shared_count}x: {findings}"
     )
     assert FINDING_A in findings
-    assert FINDING_B in findings
+    assert _contains_finding(findings, FINDING_B), "Neues Finding (B) fehlt im Ergebnis."
     assert len(findings) == 3, f"Erwartet 3 dedup'te Findings, bekam {len(findings)}: {findings}"
 
 
 def test_ac3_no_existing_file_writes_only_new_findings(tmp_path):
-    """AC-3: keine bestehende Datei → nur die neuen Findings (Regressions-Guard)."""
+    """AC-3: keine bestehende Datei → nur die neuen Findings (Regressions-Guard).
+
+    #1327/#1228 Fix 3: das einzige geschriebene Finding trägt zusätzlich ein
+    'workflow'-Feld — Vergleich über identifizierende Teile statt exakter
+    Dict-Gleichheit."""
     e2e_path = tmp_path / "e2e_verified.json"
     assert not e2e_path.exists()
     findings_path = _write_findings(tmp_path, [FINDING_B])
@@ -146,13 +186,18 @@ def test_ac3_no_existing_file_writes_only_new_findings(tmp_path):
 
     assert rc == 0
     result = json.loads(e2e_path.read_text())
-    assert result["findings"] == [FINDING_B], (
-        f"Ohne Bestandsdatei nur neue Findings erwartet, bekam: {result['findings']}"
+    findings = result["findings"]
+    assert len(findings) == 1 and _contains_finding(findings, FINDING_B), (
+        f"Ohne Bestandsdatei nur neue Findings erwartet, bekam: {findings}"
     )
 
 
 def test_ac4_stale_commit_is_overwritten_not_merged(tmp_path):
-    """AC-4: bestehende Datei trägt fremden verified_commit → kein Merge, überschreiben."""
+    """AC-4: bestehende Datei trägt fremden verified_commit → kein Merge, überschreiben.
+
+    #1327/#1228 Fix 3: das geschriebene Finding trägt zusätzlich ein
+    'workflow'-Feld — Vergleich über identifizierende Teile statt exakter
+    Dict-Gleichheit."""
     head = mod._head_sha()
     stale = "deadbeef" + head[8:]  # gleich lang, aber != HEAD
     assert stale != head
@@ -168,7 +213,10 @@ def test_ac4_stale_commit_is_overwritten_not_merged(tmp_path):
     assert FINDING_A not in result["findings"], (
         "Fremd-Commit-Findings dürfen nicht in die neue Attestation gemischt werden."
     )
-    assert result["findings"] == [FINDING_B]
+    findings = result["findings"]
+    assert len(findings) == 1 and _contains_finding(findings, FINDING_B), (
+        f"Erwartet nur B (Stale-SHA überschrieben), bekam: {findings}"
+    )
 
 
 def test_ac5_merged_verdict_stays_deploy_gateable(tmp_path):
@@ -204,3 +252,218 @@ def test_ac6_broken_leaves_existing_attestation_untouched(tmp_path):
     )
     assert after["staging_verdict"] == "VERIFIED: Bestand grün"
     assert e2e_path.read_text() == before, "BROKEN-Lauf hat die Bestandsdatei berührt."
+
+
+# ---------------------------------------------------------------------------
+# RED (#1327/#1228 Fix 3, AC-3/AC-4): Findings werden workflow-partitioniert
+# statt inhaltsbasiert dedupliziert. Jedes geschriebene Finding traegt ein
+# 'workflow'-Feld (aus OPENSPEC_ACTIVE_WORKFLOW). Bei einem Re-Write desselben
+# Workflows werden NUR dessen eigene (gleich-getaggte) Findings ersetzt;
+# fremde Findings (anderer Workflow ODER kein 'workflow'-Feld = Altbestand)
+# bleiben unveraendert erhalten.
+# ---------------------------------------------------------------------------
+
+def test_ac3_two_workflows_on_same_sha_keep_both_finding_sets(tmp_path, monkeypatch):
+    """AC-3: W1 schreibt F1, danach schreibt W2 auf demselben SHA F2 →
+    Ergebnis enthaelt sowohl F1 (workflow=W1) als auch F2 (workflow=W2)."""
+    e2e_path = tmp_path / "e2e_verified.json"
+
+    monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w1")
+    findings_a = _write_findings(tmp_path, [FINDING_A])
+    rc1 = mod.write_verdict(
+        "VERIFIED: W1 grün", findings_a, e2e_path=e2e_path, scope_override="backend"
+    )
+    assert rc1 == 0
+
+    monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w2")
+    findings_b = _write_findings(tmp_path, [FINDING_B])
+    rc2 = mod.write_verdict(
+        "VERIFIED: W2 grün", findings_b, e2e_path=e2e_path, scope_override="backend"
+    )
+    assert rc2 == 0
+
+    result = json.loads(e2e_path.read_text())
+    findings = result["findings"]
+    w1_entries = [
+        f for f in findings
+        if f.get("ac") == FINDING_A["ac"] and f.get("workflow") == "workflow-w1"
+    ]
+    w2_entries = [
+        f for f in findings
+        if f.get("ac") == FINDING_B["ac"] and f.get("workflow") == "workflow-w2"
+    ]
+    assert w1_entries, f"F1 (workflow=workflow-w1) fehlt im Ergebnis: {findings}"
+    assert w2_entries, f"F2 (workflow=workflow-w2) fehlt im Ergebnis: {findings}"
+
+
+def test_ac3_written_findings_carry_workflow_field(tmp_path, monkeypatch):
+    """AC-3: jedes von write_verdict geschriebene Finding traegt ein
+    'workflow'-Feld mit dem Wert von OPENSPEC_ACTIVE_WORKFLOW."""
+    e2e_path = tmp_path / "e2e_verified.json"
+    monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w1")
+    findings_a = _write_findings(tmp_path, [FINDING_A])
+
+    rc = mod.write_verdict(
+        "VERIFIED: solo", findings_a, e2e_path=e2e_path, scope_override="backend"
+    )
+
+    assert rc == 0
+    result = json.loads(e2e_path.read_text())
+    assert result["findings"], "keine Findings geschrieben"
+    for f in result["findings"]:
+        assert f.get("workflow") == "workflow-w1", (
+            f"Finding traegt kein/falsches 'workflow'-Feld: {f}"
+        )
+
+
+def test_ac4_same_workflow_rewrite_replaces_own_keeps_foreign_and_legacy(
+    tmp_path, monkeypatch
+):
+    """AC-4: W1 schreibt F1, W2 schreibt dazwischen F2, W1 schreibt eine
+    korrigierte Fassung F1' — Ergebnis: alte F1 (workflow=W1) verschwunden,
+    F1' vorhanden, W2-Finding (fremd) weiterhin vorhanden, ein Alt-Finding
+    ohne 'workflow'-Feld (Altbestand) bleibt ebenfalls unangetastet."""
+    head = mod._head_sha()
+    e2e_path = tmp_path / "e2e_verified.json"
+    legacy_finding = {
+        **FINDING_A,
+        "ac": "AC-legacy",
+        "evidence": "Altbestand ohne workflow-Tag",
+    }
+    _write_existing(e2e_path, head, [legacy_finding])
+
+    monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w1")
+    findings_f1 = _write_findings(tmp_path, [FINDING_A])
+    assert mod.write_verdict(
+        "VERIFIED: W1 initial", findings_f1, e2e_path=e2e_path, scope_override="backend"
+    ) == 0
+
+    monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w2")
+    findings_f2 = _write_findings(tmp_path, [FINDING_B])
+    assert mod.write_verdict(
+        "VERIFIED: W2 dazwischen", findings_f2, e2e_path=e2e_path, scope_override="backend"
+    ) == 0
+
+    finding_a_corrected = {**FINDING_A, "evidence": "korrigierte Fassung"}
+    monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w1")
+    findings_f1b = _write_findings(tmp_path, [finding_a_corrected])
+    assert mod.write_verdict(
+        "VERIFIED: W1 Korrektur", findings_f1b, e2e_path=e2e_path, scope_override="backend"
+    ) == 0
+
+    result = json.loads(e2e_path.read_text())
+    findings = result["findings"]
+
+    old_a_present = any(
+        f.get("ac") == FINDING_A["ac"] and f.get("evidence") == FINDING_A["evidence"]
+        for f in findings
+    )
+    assert not old_a_present, (
+        f"alte F1-Fassung (workflow-w1) haette beim Re-Write ersetzt werden "
+        f"muessen: {findings}"
+    )
+    assert any(
+        f.get("evidence") == "korrigierte Fassung" and f.get("workflow") == "workflow-w1"
+        for f in findings
+    ), f"F1' (Korrektur, workflow=workflow-w1) fehlt: {findings}"
+    assert any(
+        f.get("ac") == FINDING_B["ac"] and f.get("workflow") == "workflow-w2"
+        for f in findings
+    ), f"W2-Finding (fremd) fehlt nach W1-Korrektur: {findings}"
+    assert any(
+        f.get("evidence") == "Altbestand ohne workflow-Tag" for f in findings
+    ), f"Alt-Finding ohne 'workflow'-Feld ist verloren gegangen: {findings}"
+
+
+# ---------------------------------------------------------------------------
+# Regressions-Schutz fuer Adversary-Fund F002 (#1327/#1228, AC-3/AC-4,
+# MEDIUM): der Inhalts-Dedup (staging_gate._content_key) wirkt NUR noch gegen
+# taglosen Altbestand. Zwei verschiedene Workflows, die unabhaengig voneinander
+# denselben Punkt pruefen und ein INHALTSGLEICHES Finding schreiben, duerfen
+# sich NICHT gegenseitig content-dedupliziert wegloeschen -- jeder behaelt
+# seinen eigenen, getaggten Eintrag.
+# ---------------------------------------------------------------------------
+
+_F002_IDENTICAL_CONTENT = {
+    "ac": "AC-1",
+    "status": "PASS",
+    "url": "https://staging.gregor20.henemm.com/trips:AC-1",
+    "evidence": "beide Workflows haben denselben Button unabhängig gefunden",
+}
+
+
+def test_f002_two_workflows_writing_identical_content_finding_both_preserved(
+    tmp_path, monkeypatch
+):
+    """F002: W1 und W2 prüfen unabhängig denselben Punkt und schreiben ein
+    inhaltsgleiches Finding (gleiche ac/status/url/evidence) auf demselben
+    SHA → beide Einträge bleiben erhalten, je mit eigenem workflow-Tag (kein
+    stiller Content-Dedup über getaggte Fremd-Einträge hinweg)."""
+    e2e_path = tmp_path / "e2e_verified.json"
+
+    monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w1")
+    findings_w1 = _write_findings(tmp_path, [dict(_F002_IDENTICAL_CONTENT)])
+    assert mod.write_verdict(
+        "VERIFIED: W1", findings_w1, e2e_path=e2e_path, scope_override="backend"
+    ) == 0
+
+    monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w2")
+    findings_w2 = _write_findings(tmp_path, [dict(_F002_IDENTICAL_CONTENT)])
+    assert mod.write_verdict(
+        "VERIFIED: W2", findings_w2, e2e_path=e2e_path, scope_override="backend"
+    ) == 0
+
+    result = json.loads(e2e_path.read_text())
+    findings = result["findings"]
+    w1_entries = [f for f in findings if f.get("workflow") == "workflow-w1"]
+    w2_entries = [f for f in findings if f.get("workflow") == "workflow-w2"]
+    assert len(w1_entries) == 1, f"W1-Eintrag fehlt/dupliziert: {findings}"
+    assert len(w2_entries) == 1, (
+        f"W2-Eintrag fehlt (F002-Regression: gegen getaggten Fremd-Eintrag "
+        f"content-dedupliziert): {findings}"
+    )
+    assert len(findings) == 2, (
+        f"Erwartet 2 getaggte Einträge (gleicher Inhalt, verschiedene "
+        f"Workflows), bekam {len(findings)}: {findings}"
+    )
+
+
+def test_f002_rewrite_by_one_workflow_does_not_delete_other_workflows_identical_finding(
+    tmp_path, monkeypatch
+):
+    """F002 Fortsetzung: W1 schreibt danach ERNEUT (Re-Write, inhaltlich
+    identisch) — W2s inhaltsgleicher Eintrag bleibt trotzdem erhalten (eigene
+    Zuordnung bleibt gewahrt, kein lautloser Verlust bei jedem weiteren
+    Schreibvorgang eines Dritten)."""
+    e2e_path = tmp_path / "e2e_verified.json"
+
+    monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w1")
+    findings_w1 = _write_findings(tmp_path, [dict(_F002_IDENTICAL_CONTENT)])
+    assert mod.write_verdict(
+        "VERIFIED: W1 initial", findings_w1, e2e_path=e2e_path, scope_override="backend"
+    ) == 0
+
+    monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w2")
+    findings_w2 = _write_findings(tmp_path, [dict(_F002_IDENTICAL_CONTENT)])
+    assert mod.write_verdict(
+        "VERIFIED: W2", findings_w2, e2e_path=e2e_path, scope_override="backend"
+    ) == 0
+
+    monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w1")
+    findings_w1_rewrite = _write_findings(tmp_path, [dict(_F002_IDENTICAL_CONTENT)])
+    assert mod.write_verdict(
+        "VERIFIED: W1 re-write", findings_w1_rewrite, e2e_path=e2e_path,
+        scope_override="backend"
+    ) == 0
+
+    result = json.loads(e2e_path.read_text())
+    findings = result["findings"]
+    w2_entries = [f for f in findings if f.get("workflow") == "workflow-w2"]
+    assert w2_entries, (
+        f"W2s inhaltsgleicher Eintrag wurde beim Re-Write von W1 gelöscht "
+        f"(F002-Regression): {findings}"
+    )
+    assert len(findings) == 2, (
+        f"Erwartet weiterhin 2 Einträge (W1 nach Re-Write, W2 unverändert), "
+        f"bekam {len(findings)}: {findings}"
+    )

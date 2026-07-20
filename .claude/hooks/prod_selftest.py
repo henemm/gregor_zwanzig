@@ -237,6 +237,25 @@ def _probe_ac(finding: dict) -> dict:
             "prod_status": "SKIPPED_NOT_MAPPABLE",
         }
 
+    # Freitext-Erkennung (#1327/#1228 Fix 1): raw_url ohne führendes 'http(s)://'
+    # oder '/' ist kein echter Pfad — _staging_to_prod_url würde per
+    # Konkatenation einen syntaktisch validen, aber falschen Fantasie-Host
+    # bauen (z.B. 'https://gregor20.henemm.comcompareMetricDefs.ts/...'), der
+    # _is_probeable_url passiert und erst per DNS-Fehler in FAIL läuft. Der
+    # Kurzschluss greift VOR jeder Pfad-Konkatenation, kein _http_get-Versuch.
+    trimmed = _strip_ac_suffix(raw_url).strip()
+    if not (
+        trimmed.startswith("/")
+        or trimmed.startswith("http://")
+        or trimmed.startswith("https://")
+    ):
+        return {
+            **finding,
+            "prod_url": "",
+            "prod_http": "—",
+            "prod_status": "SKIPPED_NO_URL",
+        }
+
     prod_url = _staging_to_prod_url(raw_url)
 
     # Validitäts-Gate: nicht-probebare URLs (Freitext, Leerzeichen, Steuerzeichen)
@@ -251,6 +270,16 @@ def _probe_ac(finding: dict) -> dict:
 
     try:
         status, _ = _http_get(prod_url, follow_redirects=False)
+        # Method-Not-Probeable (#1327/#1228 Fix 2): POST-only-Endpoints
+        # antworten auf GET korrekt mit 405 — das ist kein FAIL des Features,
+        # sondern eine strukturell nicht per GET probebare Route.
+        if status == 405:
+            return {
+                **finding,
+                "prod_url": prod_url,
+                "prod_http": status,
+                "prod_status": "SKIPPED_METHOD_NOT_PROBEABLE",
+            }
         ok = status in (200, 302)
         return {
             **finding,
@@ -667,11 +696,19 @@ def main() -> int:
 
     e2e_path = Path(args.e2e_path) if args.e2e_path else _default_e2e_path()
 
-    workflow = args.workflow or os.environ.get("OPENSPEC_ACTIVE_WORKFLOW")
+    # Fix 5 (#1327/#1228): OPENSPEC_ACTIVE_WORKFLOW ist die primäre Quelle,
+    # GZ_ACTIVE_WORKFLOW (Legacy-Fallback, analog prod_send_gate.py) greift
+    # nur wenn OPENSPEC_ACTIVE_WORKFLOW fehlt/leer ist.
+    workflow = (
+        args.workflow
+        or os.environ.get("OPENSPEC_ACTIVE_WORKFLOW")
+        or os.environ.get("GZ_ACTIVE_WORKFLOW")
+    )
     if not workflow:
         _log(
-            "WARN: GZ_ACTIVE_WORKFLOW nicht gesetzt — Bericht wird unter "
-            "docs/artifacts/unknown/prod-selftest.md abgelegt.",
+            "WARN: weder OPENSPEC_ACTIVE_WORKFLOW noch GZ_ACTIVE_WORKFLOW "
+            "gesetzt — Bericht wird unter docs/artifacts/unknown/prod-selftest.md "
+            "abgelegt.",
             stream=sys.stderr,
         )
         workflow = "unknown"

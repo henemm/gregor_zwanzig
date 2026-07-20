@@ -22,14 +22,18 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 
-STAGING_GATE = Path("/home/hem/gregor_zwanzig/.claude/hooks/staging_gate.py")
-REPO_DIR = Path("/home/hem/gregor_zwanzig")
-
-# Issue #1096: hermetisches Temp-Repo fuer TestGateCheckModeB (AC-5/AC-6) —
+# Issue #1096 / #1327: repo-relative Auflösung statt Hauptrepo-Hartkodierung —
 # Hook-Kopien kommen aus dem AKTUELLEN Arbeitsverzeichnis (Worktree), nicht
-# aus dem Hauptrepo hartkodiert (Muster test_issue_916_gate_scope_marker.py).
+# aus dem Hauptrepo hartkodiert (Muster test_issue_916_gate_scope_marker.py,
+# test_staging_gate_verdict_merge.py:31-32). Ein hartkodierter Hauptrepo-Pfad
+# würde bei Worktree-Isolation die UNVERÄNDERTE Hauptrepo-Kopie testen statt
+# der hier tatsächlich bearbeiteten Datei (#1327/#1228 Fix 3/Fix 4 blieben
+# sonst rot, obwohl staging_gate.py korrekt gefixt ist).
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _HOOKS_SRC = _REPO_ROOT / ".claude" / "hooks"
+
+STAGING_GATE = _HOOKS_SRC / "staging_gate.py"
+REPO_DIR = Path("/home/hem/gregor_zwanzig")
 
 
 def _head_sha() -> str:
@@ -578,4 +582,170 @@ class TestGateCheckExpectedCommit:
         assert rc == 1, (
             f"Leerer EXP muss fail-closed (Exit 1) sein, bekam {rc}.\n"
             f"stdout: {out}\nstderr: {err}"
+        )
+
+
+class TestFix4WriteVerdictRejectsPlaceholder:
+    """RED (#1327/#1228 Fix 4, AC-5): --write-verdict akzeptiert nur Strings,
+    die mit VERIFIED/AMBIGUOUS/BROKEN beginnen. Ein Platzhalter wie 'TEST'
+    (beginnt mit keinem der drei Praefixe) muss abgelehnt werden — Exit != 0,
+    und eine bereits bestehende Attestation fuer denselben Commit bleibt
+    byteidentisch unveraendert (kein Schreibversuch)."""
+
+    def test_placeholder_verdict_returns_nonzero_and_leaves_attestation_untouched(
+        self, tmp_path
+    ):
+        out_path = tmp_path / "e2e_verified.json"
+        out_path.write_text(
+            json.dumps(
+                {
+                    "verified_commit": _head_sha(),
+                    "staging_verdict": "VERIFIED: Bestand gruen",
+                    "findings": [],
+                    "verified_at": datetime.now(timezone.utc).isoformat(),
+                    "environment": "staging",
+                    "scope": "backend",
+                },
+                indent=2,
+            )
+        )
+        before = out_path.read_text()
+
+        findings = tmp_path / "findings.json"
+        findings.write_text(json.dumps([]))
+
+        rc, out, err = _run_gate(
+            [
+                "--write-verdict",
+                "TEST: irgendwas",
+                "--findings-json",
+                str(findings),
+                "--e2e-path",
+                str(out_path),
+            ]
+        )
+
+        assert rc != 0, (
+            f"Platzhalter-Verdict 'TEST: irgendwas' muss Exit != 0 liefern, "
+            f"bekam {rc}.\nstdout: {out}\nstderr: {err}"
+        )
+        after = out_path.read_text()
+        assert after == before, (
+            "Bestehende Attestation wurde trotz abgelehntem Platzhalter-Verdict "
+            f"veraendert.\nvorher: {before}\nnachher: {after}"
+        )
+
+
+class TestFix4VerdictWhitelistCaseSensitiveAndTrimmed:
+    """Regressions-Schutz fuer Adversary-Fund F001 (#1327/#1228, AC-5, HIGH):
+    die Positiv-Whitelist prueft case-sensitiv auf dem GETRIMMTEN
+    Verdict-String, und genau dieser getrimmte String landet in
+    staging_verdict — Schreib- ('--write-verdict') und Lese-Pfad
+    ('--check'/gate_check) teilen dieselbe Bedingung. Vor dem Fix passierte
+    z.B. 'verified: klein' (Kleinschreibung) die Schreib-Whitelist (die
+    damals case-insensitiv auf verdict_upper prüfte), wurde geschrieben, und
+    scheiterte danach am case-sensitiven Lese-Check in gate_check — eine
+    Attestation, die niemals ein Deploy-Gate bestehen konnte."""
+
+    def _write_baseline(self, out_path: Path) -> str:
+        out_path.write_text(
+            json.dumps(
+                {
+                    "verified_commit": _head_sha(),
+                    "staging_verdict": "VERIFIED: Bestand gruen",
+                    "findings": [],
+                    "verified_at": datetime.now(timezone.utc).isoformat(),
+                    "environment": "staging",
+                    "scope": "backend",
+                },
+                indent=2,
+            )
+        )
+        return out_path.read_text()
+
+    def test_lowercase_verified_prefix_rejected_and_file_untouched(self, tmp_path):
+        out_path = tmp_path / "e2e_verified.json"
+        before = self._write_baseline(out_path)
+        findings = tmp_path / "findings.json"
+        findings.write_text(json.dumps([]))
+
+        rc, out, err = _run_gate(
+            [
+                "--write-verdict", "verified: klein",
+                "--findings-json", str(findings),
+                "--e2e-path", str(out_path),
+            ]
+        )
+
+        assert rc != 0, (
+            f"'verified: klein' (Kleinschreibung) muss Exit != 0 liefern, "
+            f"bekam {rc}.\nstdout: {out}\nstderr: {err}"
+        )
+        assert out_path.read_text() == before, (
+            "Bestehende Attestation wurde trotz abgelehntem "
+            "Kleinschreibungs-Verdict veraendert."
+        )
+
+    def test_lowercase_verified_prefix_with_padding_rejected_and_file_untouched(
+        self, tmp_path
+    ):
+        out_path = tmp_path / "e2e_verified.json"
+        before = self._write_baseline(out_path)
+        findings = tmp_path / "findings.json"
+        findings.write_text(json.dumps([]))
+
+        rc, out, err = _run_gate(
+            [
+                "--write-verdict", "  verified: mit rand  ",
+                "--findings-json", str(findings),
+                "--e2e-path", str(out_path),
+            ]
+        )
+
+        assert rc != 0, (
+            f"'  verified: mit rand  ' (Kleinschreibung + Rand-Whitespace) "
+            f"muss Exit != 0 liefern, bekam {rc}.\nstdout: {out}\nstderr: {err}"
+        )
+        assert out_path.read_text() == before, (
+            "Bestehende Attestation wurde trotz abgelehntem Verdict veraendert."
+        )
+
+    def test_padded_correct_case_verified_is_accepted_and_passes_check_roundtrip(
+        self, tmp_path
+    ):
+        """Schreib-/Lese-Rundlauf: ' VERIFIED: mit rand ' (nur Rand-Whitespace,
+        korrekte Gross-/Kleinschreibung) wird getrimmt akzeptiert UND ein
+        anschliessender --check-Lauf gegen genau diese Datei akzeptiert sie
+        ebenfalls (F001-Kern: Schreib- und Lese-Pfad duerfen nie auseinander-
+        laufen)."""
+        out_path = tmp_path / "e2e_verified.json"
+        findings = tmp_path / "findings.json"
+        findings.write_text(json.dumps([]))
+
+        rc_write, out_w, err_w = _run_gate(
+            [
+                "--write-verdict", " VERIFIED: mit rand ",
+                "--findings-json", str(findings),
+                "--e2e-path", str(out_path),
+            ]
+        )
+        assert rc_write == 0, (
+            f"' VERIFIED: mit rand ' (korrekte Gross-/Kleinschreibung, nur "
+            f"Rand-Whitespace) muss Exit 0 liefern, bekam {rc_write}.\n"
+            f"stdout: {out_w}\nstderr: {err_w}"
+        )
+        assert out_path.exists(), "e2e_verified.json wurde nicht geschrieben"
+        data = json.loads(out_path.read_text())
+        assert data["staging_verdict"] == "VERIFIED: mit rand", (
+            f"staging_verdict muss der getrimmte String sein, bekam: "
+            f"{data['staging_verdict']!r}"
+        )
+
+        rc_check, out_c, err_c = _run_gate(
+            ["--check", "--e2e-path", str(out_path), "--scope=backend"]
+        )
+        assert rc_check == 0, (
+            f"Rundlauf: --check gegen dieselbe Datei muss den getrimmten "
+            f"VERIFIED-Verdict akzeptieren, bekam Exit {rc_check}.\n"
+            f"stdout: {out_c}\nstderr: {err_c}"
         )

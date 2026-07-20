@@ -232,10 +232,22 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
     sha = _head_sha()
     if e2e_path is None:
         e2e_path = _commit_e2e_path(sha)
-    verdict_upper = verdict.strip().upper()
-    if verdict_upper.startswith("BROKEN"):
+    verdict = verdict.strip()
+    if verdict.upper().startswith("BROKEN"):
         _log(f"BROKEN-Verdict erhalten: {verdict}")
         _log("Kein VERIFIED-Artefakt geschrieben — /e2e-verify erneut ausführen.", stream=sys.stderr)
+        return 1
+    # Issue #1327 (AC-5): Positiv-Whitelist statt reiner BROKEN-Abwehr. Frei
+    # gewählte Verdict-Texte (z.B. "TEST") wurden bisher geschrieben und ließen
+    # den Lese-Check (gate_check verlangt VERIFIED-Präfix) später hart scheitern.
+    # Bewusst GROSS-/KLEINSCHREIBUNGS-GENAU auf dem bereits getrimmten String,
+    # den auch payload["staging_verdict"] erhält: Schreib- und Lese-Pfad teilen
+    # exakt dieselbe Bedingung. Sonst passiert "verified: …" die Prüfung, wird
+    # geschrieben und vom Deploy-Gate später trotzdem abgelehnt (Fund F001).
+    if not verdict.startswith(("VERIFIED", "AMBIGUOUS")):
+        _log(f"Ungültiges Verdict-Präfix: {verdict!r}", stream=sys.stderr)
+        _log("Erlaubt: 'VERIFIED: …' oder 'AMBIGUOUS: …' (exakt so geschrieben, "
+             "BROKEN blockt). Attestation unverändert.", stream=sys.stderr)
         return 1
 
     if _telegram_live_gate() != 0:
@@ -246,6 +258,18 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
     except (json.JSONDecodeError, OSError) as exc:
         _log(f"Findings-Datei nicht lesbar: {exc}", stream=sys.stderr)
         return 1
+
+    # Issue #1327 (AC-3): Findings tragen ihren Urheber-Workflow, damit der
+    # Merge unten eigene von fremden Einträgen unterscheiden kann.
+    workflow = (
+        os.environ.get("OPENSPEC_ACTIVE_WORKFLOW")
+        or os.environ.get("GZ_ACTIVE_WORKFLOW")
+        or "unknown"
+    ).strip() or "unknown"
+    findings = [
+        {**f, "workflow": workflow} if isinstance(f, dict) else f
+        for f in findings
+    ]
 
     scope = scope_override or _detect_committed_scope()
     payload = {
@@ -268,10 +292,38 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
             existing = None
         if existing is not None and existing.get("verified_commit") == sha:
             existing_findings = existing.get("findings") or []
-            seen = {json.dumps(f, sort_keys=True) for f in existing_findings}
-            merged = list(existing_findings)
+            # Issue #1327 (AC-4): Einträge DIESES Workflows werden ersetzt statt
+            # additiv angehängt — sonst überleben korrigierte Fassungen neben den
+            # fehlerhaften und erzeugen dauerhaft False-FAILs. Fremde Workflows
+            # und Altbestand ohne workflow-Feld bleiben unangetastet (#1197:
+            # kein Evidenz-Verlust des Erstschreibers).
+            kept = [
+                f for f in existing_findings
+                if not (isinstance(f, dict) and f.get("workflow") == workflow)
+            ]
+            # Der Inhalts-Dedup aus #1197 bleibt zusätzlich aktiv, aber NUR gegen
+            # Altbestand OHNE workflow-Tag: dort verhindert er, dass jeder
+            # Schreiber neben dem taglosen Eintrag eine inhaltsgleiche
+            # Zweitfassung anhäuft (die Duplikat-Klasse aus #1327). Gegen FREMDE
+            # getaggte Einträge wird NICHT dedupliziert — sonst verlöre ein
+            # zweiter Workflow, der denselben Punkt eigenständig verifiziert hat,
+            # lautlos seine Zuordnung und mit ihr sein Finding, sobald der
+            # Erstschreiber sein Set neu schreibt (Fund F002).
+            def _content_key(entry):
+                if not isinstance(entry, dict):
+                    return json.dumps(entry, sort_keys=True)
+                return json.dumps(
+                    {k: v for k, v in entry.items() if k != "workflow"},
+                    sort_keys=True,
+                )
+
+            seen = {
+                _content_key(f) for f in kept
+                if not (isinstance(f, dict) and f.get("workflow"))
+            }
+            merged = list(kept)
             for f in findings:
-                key = json.dumps(f, sort_keys=True)
+                key = _content_key(f)
                 if key not in seen:
                     seen.add(key)
                     merged.append(f)
