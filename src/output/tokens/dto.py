@@ -34,6 +34,7 @@ class DailyForecast:
     avalanche_level: Optional[int] = None
     wind_chill_c: Optional[float] = None
     confidence_pct_min: Optional[int] = None  # Issue #121: worst-case daily confidence
+    has_data_gap: bool = False  # Issue #1328: True -> "-" wird zu "?" (unbekannt)
 
 
 @dataclass(frozen=True)

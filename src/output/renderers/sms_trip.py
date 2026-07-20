@@ -27,7 +27,7 @@ from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt, local_hour
 from output.metric_format import thunder_label_value
 from output.renderers.alert.official_alerts import dedupe_official_alerts
-from output.renderers.day_window import build_day_window_points
+from output.renderers.day_window import build_day_window_points, segments_have_gap
 from output.renderers.sms import render_sms
 from output.tokens.builder import build_token_line
 from output.tokens.dto import (
@@ -225,6 +225,7 @@ def _segments_to_normalized_forecast(
         gust_hourly=gust_samples_d,
         thunder_hourly=thunder_samples_d,
         confidence_pct_min=day_confidence,
+        has_data_gap=segments_have_gap(segments),
     )
     return NormalizedForecast(
         days=(today,),

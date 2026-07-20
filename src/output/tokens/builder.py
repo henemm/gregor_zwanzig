@@ -89,7 +89,8 @@ def _spec_uses_friendly_token(spec: Optional[MetricSpec]) -> bool:
 
 
 def _mk_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
-               rt: ReportType, is_level: bool = False) -> Optional[Token]:
+               rt: ReportType, is_level: bool = False,
+               has_gap: bool = False) -> Optional[Token]:
     if not _visible(spec, rt):
         return None
     if spec and _spec_uses_friendly_token(spec) and spec.friendly_label:
@@ -98,6 +99,12 @@ def _mk_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
         thr = spec.threshold if (spec and spec.threshold is not None) \
             else DEFAULTS.get(symbol)
         value = render_threshold_peak_value(symbol, samples, thr, is_level=is_level)
+        # Issue #1328 (verschaerft 2026-07-20, PO-Entscheidung): jede
+        # Entwarnung "-" wird bei einer Datenluecke im Fenster zu "?"
+        # ("unbekannt"), unabhaengig davon, ob unterschwellige Stichproben
+        # vorlagen. Ein gefundener Wert (value != "-") wird nie ueberschrieben.
+        if value == "-" and has_gap:
+            value = "?"
     return Token(
         symbol=symbol, value=value, category="forecast",
         priority=PRIORITY.get(symbol, 5),
@@ -216,7 +223,8 @@ def build_token_line(
         (FORECAST_TH, today.thunder_hourly, True),
     ]:
         spec = by_sym.get(sym) or by_sym.get(sym.rstrip(":"))
-        tok = _mk_metric(sym, samples, spec, report_type, is_lvl)
+        tok = _mk_metric(sym, samples, spec, report_type, is_lvl,
+                          has_gap=today.has_data_gap)
         if tok:
             tokens.append(tok)
 
