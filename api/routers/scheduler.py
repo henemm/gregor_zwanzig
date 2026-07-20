@@ -195,14 +195,24 @@ def send_test_trip_report(trip_id: str, user_id: str = "default", report_type: s
 
     service = TripReportSchedulerService(user_id=user_id)
     try:
-        sent = service.send_test_report(trip, report_type)
+        outcome = service.send_test_report_outcome(trip, report_type)
     except ValueError as e:
         # F003-Fix: Ungültiger report_type → 422 statt 500
         raise HTTPException(status_code=422, detail=str(e))
-    if not sent:
+    if outcome == "no_stage":
         raise HTTPException(
             status_code=422,
             detail=f"Kein Briefing für {report_type} — keine Etappendaten für das aktuelle Datum",
+        )
+    # Issue #1325: "no_weather" ist ein genuiner Wetter-Ausfall (der
+    # Test-Fallback-Pfad klemmt Vergangenheits-Etappen bereits auf heute —
+    # dieser Fall bleibt trotzdem möglich, z.B. bei einem echten
+    # Provider-Ausfall) und wird NICHT mehr mit der irreführenden
+    # No-Stage-Meldung vermischt.
+    if outcome == "no_weather":
+        raise HTTPException(
+            status_code=422,
+            detail=f"Kein Briefing für {report_type} — keine Wetterdaten für die gewählte Etappe verfügbar",
         )
     return {"status": "ok", "trip_id": trip_id, "report_type": report_type, "sent": True}
 

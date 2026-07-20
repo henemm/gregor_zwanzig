@@ -621,6 +621,29 @@ class TripReportSchedulerService:
             raise ValueError(f"Invalid report_type: {report_type}")
         return self._send_trip_report(trip, report_type, allow_test_fallback=True)
 
+    def send_test_report_outcome(self, trip: "Trip", report_type: str) -> str:
+        """
+        Public outcome-returning variant of send_test_report() (Issue #1325).
+
+        Analog zum bestehenden send_on_demand_report()-Muster (#1007): lässt
+        Aufrufer (API-Router) "no_stage" von "no_weather" unterscheiden,
+        statt beides auf einen bloßen bool zu kollabieren. send_test_report()
+        selbst bleibt für seine 6 bestehenden bool-Aufrufer unangetastet.
+
+        Args:
+            trip: Trip object
+            report_type: "morning" or "evening"
+
+        Returns:
+            Outcome string: "sent" | "no_stage" | "no_weather" | "no_channels"
+
+        Raises:
+            ValueError: If report_type is invalid
+        """
+        if report_type not in ("morning", "evening"):
+            raise ValueError(f"Invalid report_type: {report_type}")
+        return self._send_trip_report_outcome(trip, report_type, allow_test_fallback=True)
+
     def send_on_demand_report(self, trip: "Trip", report_type: str) -> bool:
         """
         Send an on-demand full briefing triggered by an inbound heute/morgen command.
@@ -718,6 +741,16 @@ class TripReportSchedulerService:
 
         logger.debug(f"Created {len(segments)} segments for {trip.id}")
 
+        # Issue #1325: Datums-Klemme NUR für den Wetter-Abruf im Test-
+        # Fallback-Pfad. target_date (Stage-Header, Marker, Snapshot, s.u.)
+        # bleibt unverändert auf dem echten (ggf. vergangenen) Etappendatum —
+        # nur die Segment-Zeiten, die in _fetch_weather() gehen, wandern auf
+        # "heute", damit ein echter Forecast statt eines toten
+        # Vergangenheits-Requests entsteht.
+        weather_segments = segments
+        if allow_test_fallback and target_date < date.today():
+            weather_segments = self._clamp_segments_to_today(segments, target_date)
+
         # 1b. Compute local timezone from coordinates for display
         # (tz_for_coords now imported top-level — Bug #401)
         trip_tz = tz_for_coords(segments[0].start_point.lat, segments[0].start_point.lon)
@@ -743,7 +776,7 @@ class TripReportSchedulerService:
             exposed_sections = []
 
         # 3. Fetch weather for each segment
-        segment_weather = self._fetch_weather(segments)
+        segment_weather = self._fetch_weather(weather_segments)
 
         # Issue #1087: amtliche Warnungen pro eindeutigem Segment-Startpunkt,
         # strukturell kein Fetch bei official_alerts_enabled=False (analog
@@ -1059,6 +1092,31 @@ class TripReportSchedulerService:
         """
         from services.trip_segments import convert_trip_to_segments
         return convert_trip_to_segments(trip, target_date)
+
+    def _clamp_segments_to_today(
+        self, segments: List[TripSegment], from_date: date,
+    ) -> List[TripSegment]:
+        """Shift segment start_time/end_time from `from_date` to today (Issue #1325).
+
+        Pure helper — kein Netz-/IO-Zugriff. Erhält den Uhrzeit-Anteil, nur
+        das Kalenderdatum wandert um `date.today() - from_date` Tage nach
+        vorne. Ausschließlich für den Wetter-Abruf-Input im Test-Fallback-
+        Pfad genutzt, damit ein veralteter Test-Trip (alle Etappen in der
+        Vergangenheit) trotzdem einen echten Forecast statt eines toten
+        historischen Datums bekommt.
+        """
+        delta_days = (date.today() - from_date).days
+        if delta_days <= 0:
+            return segments
+        shift = timedelta(days=delta_days)
+        return [
+            dataclasses.replace(
+                seg,
+                start_time=seg.start_time + shift,
+                end_time=seg.end_time + shift,
+            )
+            for seg in segments
+        ]
 
     def _fetch_weather(
         self,
