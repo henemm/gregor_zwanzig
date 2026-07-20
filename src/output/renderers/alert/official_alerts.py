@@ -20,6 +20,8 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
+from output.tokens.hazard_symbols import HAZARD_SMS_SYMBOLS, sms_symbol_for
+
 if TYPE_CHECKING:
     from app.models import SegmentWeatherData
     from app.trip import Trip
@@ -47,16 +49,16 @@ _LEVEL_CLASS: dict[int, str] = {2: "gelb", 3: "orange", 4: "rot"}
 # Positions-Wort fuer den `.stufe-hint` (Design-Vorlage, AC-8).
 _LEVEL_POSITION_WORD: dict[int, str] = {1: "niedrigste", 2: "mittlere", 3: "höchste"}
 
-# hazard -> (Anzeige, SMS-Kuerzel), Issue #1216 Spec-Tabelle.
-_HAZARD_DISPLAY: dict[str, tuple[str, str]] = {
-    "extreme_heat": ("Hitze", "HZ"),
-    "thunderstorm": ("Gewitter", "TH"),
-    "extreme_cold": ("Kälte", "KL"),
-    "wind_gust": ("Sturm", "ST"),
-    "rain": ("Starkregen", "RR"),
-    "snow": ("Schneefall", "SN"),
-    "black_ice": ("Glatteis", "GL"),
-    "access_ban": ("Zugang gesperrt", "ZG"),
+# hazard -> deutsches Anzeige-Label, Issue #1216 Spec-Tabelle.
+_HAZARD_LABELS: dict[str, str] = {
+    "extreme_heat": "Hitze",
+    "thunderstorm": "Gewitter",
+    "extreme_cold": "Kälte",
+    "wind_gust": "Sturm",
+    "rain": "Starkregen",
+    "snow": "Schneefall",
+    "black_ice": "Glatteis",
+    "access_ban": "Zugang gesperrt",
     # Adversary F004 (HIGH, #1239 Nachzug Runde 2): "wildfire_risk" (Quelle
     # meteo_forets.py, Label "Waldbrand-Gefahr — Stufe N") fehlte hier -- ohne
     # Mapping fiel `_hazard_display` auf den ROHEN Quell-Label zurueck,
@@ -64,7 +66,16 @@ _HAZARD_DISPLAY: dict[str, tuple[str, str]] = {
     # Doppel-Stufe-Symptome (Standalone-Titel, Betreff, embedded Detail-Banner,
     # Compare-Aggregat-Banner) -- die vier Anzeige-Stellen waren nur Symptome
     # dieser einen fehlenden Zeile.
-    "wildfire_risk": ("Waldbrand-Gefahr", "WB"),
+    "wildfire_risk": "Waldbrand-Gefahr",
+}
+
+# hazard -> (Anzeige, SMS-Kuerzel). Issue #1318 Abschnitt 1b: die Anzeige-Labels
+# bleiben deutsch, das SMS-Kuerzel kommt aus dem EINZIGEN Katalog
+# `output/tokens/hazard_symbols.py` — dieselbe Gefahr darf in der Trip-Briefing-
+# SMS und in der Standalone-Warn-SMS nicht zwei verschiedene Codes tragen.
+_HAZARD_DISPLAY: dict[str, tuple[str, str]] = {
+    hazard: (label, HAZARD_SMS_SYMBOLS[hazard])
+    for hazard, label in _HAZARD_LABELS.items()
 }
 
 _DE_WEEKDAYS = ("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
@@ -499,8 +510,9 @@ def _hazard_display(alert: "OfficialAlert") -> tuple[str, str]:
     mapped = _HAZARD_DISPLAY.get(alert.hazard)
     if mapped:
         return mapped
-    letters = "".join(ch for ch in alert.hazard.upper() if ch.isascii() and ch.isalpha())
-    return alert.label, (letters[:2] or "XX")
+    # Kuerzel-Fallback kommt aus der geteilten Quelle, damit Trip-Briefing-SMS
+    # und Standalone-Warn-SMS fuer denselben unbekannten hazard nie divergieren.
+    return alert.label, sms_symbol_for(alert.hazard)
 
 
 # Issue #1238 AC-6: numerische Quell-Stufe am Label-Ende ("Waldbrand-Gefahr —

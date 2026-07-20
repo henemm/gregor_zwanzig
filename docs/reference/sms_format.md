@@ -13,7 +13,7 @@ tags: [sms, compact, tokens, single-source-of-truth]
 - [x] Approved (v2.0 am 2026-04-25)
 - [x] Implementiert in SMS-Adapter via `src/output/renderers/sms/` (β3, 2026-04-28)
 
-# SMS / Kompakt-Format Specification (v2.7)
+# SMS / Kompakt-Format Specification (v2.9)
 
 **Single Source of Truth** für die kompakte Token-Zeile, die in allen Channels (SMS, Satellit, E-Mail-Header, Push) identisch verwendet wird. Alle anderen Repräsentationen (E-Mail-Body, Tabellen, Push-Titel) leiten sich aus dieser Token-Zeile ab.
 
@@ -42,7 +42,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 ## 2. Token-Reihenfolge (fix)
 
 ```
-{Name}: N D R PR W G TH: TH+: C HR:TH: Z: M: [SN SN24+ SFL AV WC] DBG
+{Name}: N D R PR W G TH: TH+: C HR:TH: !{Warn-Block} Z: M: [SN SN24+ SFL AV WC] DBG
 ```
 
 | Block | Tokens | Pflicht? |
@@ -51,6 +51,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | Forecast | `N D R PR W G TH: TH+:` | immer (bei `-` als Null-Wert) |
 | Confidence | `C` | nur wenn Provider Konfidenz liefert (Issue #121, v2.1) |
 | Risks (Vigilance) | `HR:TH:` (zusammenhängend, kein Leerzeichen zwischen den beiden) | nur bei FR-Provider |
+| Amtliche Warnungen | `!{Kürzel}:{Stufe}[@{h}]` … (Warn-Block, Marker `!` genau einmal) | nur bei aktiver amtlicher Warnung ab Stufe ORANGE (§3.4c) |
 | Fire-Zonen | `Z: M:` | nur Korsika, weglassen wenn leer |
 | Wintersport | `SN SN24+ SFL AV WC` | optional |
 | Debug | `DBG[...]` | nur Dry-Run / Debug-Modus |
@@ -134,9 +135,12 @@ Levels:
 
 **Geographische Geltung:** Météo France Vigilance API funktioniert nur für Frankreich. Außerhalb FR werden beide Tokens **komplett weggelassen** (nicht als `-` ausgegeben).
 
-### 3.4 Disambiguierung der zwei `TH:`-Tokens
+### 3.4 Disambiguierung geteilter Kürzel
 
-Es gibt zwei `TH:`-Tokens mit unterschiedlicher Bedeutung. Disambiguierung erfolgt durch **Position** in der Token-Reihenfolge:
+Dasselbe Kürzel kann in mehreren Blöcken vorkommen — ein Phänomen trägt überall dasselbe Kürzel, unterschieden wird der **Block**. Zwei Mechanismen, in dieser Reihenfolge:
+
+1. **Marker** (ab v2.9): alles ab dem `!` gehört zum amtlichen Warn-Block (§3.4c). Vorhersage-Tokens tragen nie ein `!`.
+2. **Position** (unverändert seit v2.0): innerhalb der markerfreien Tokens unterscheidet die Position Forecast- von Vigilance-`TH:`:
 
 | Position | Bedeutung | Quelle |
 |----------|-----------|--------|
@@ -146,6 +150,51 @@ Es gibt zwei `TH:`-Tokens mit unterschiedlicher Bedeutung. Disambiguierung erfol
 Parser erkennen den Unterschied durch:
 - Forecast-`TH:` ist von Leerzeichen umgeben
 - Vigilance-`TH:` folgt **direkt** auf `HR:` ohne Leerzeichen
+- Amtliches `TH:` steht im `!`-Block (§3.4c)
+
+### 3.4c Amtliche Warn-Token (`!`-Block, v2.9, Issue #1318)
+
+Amtliche Unwetterwarnungen (`official_alerts`-Dienst, alle Provider) erscheinen als eigener Block am Ende der Vorhersage-Tokens, eingeleitet durch **genau ein** `!` vor dem ersten Warn-Token (1 Zeichen, GSM-7-sicher, kein Emoji). Die weiteren Warn-Tokens folgen mit normalem Leerzeichen, **ohne** zweites `!`.
+
+| hazard | Kürzel | Bedeutung |
+|--------|--------|-----------|
+| `thunderstorm` | `TH` | Gewitter |
+| `rain` | `HR` | Starkregen |
+| `wind_gust` | `W` | Sturm |
+| `snow` | `SN` | Schneefall |
+| `black_ice` | `IC` | Glatteis |
+| `extreme_heat` | `HT` | Hitze |
+| `extreme_cold` | `CD` | Kälte |
+| `wildfire_risk` | `FR` | Waldbrand-Gefahr |
+| `access_ban` | `CL` | Zugang gesperrt |
+
+**Single Source of Truth der Kürzel:** `src/output/tokens/hazard_symbols.py` — derselbe Katalog speist die Trip-Briefing-SMS **und** die eigenständige amtliche-Warnung-SMS (`render_official_alert_sms`). Zwei getrennte Listen sind ein Fehler.
+
+**Stufe:** dieselbe `L/M/H`-Skala wie die Vorhersage-Tokens, abgebildet gelb(2)→`L`, orange(3)→`M`, rot(4)→`H`.
+
+**Filter (sicherheitsrelevant):** nur Stufe **orange (3) und rot (4)** erscheinen. Gelb (2) und grün (1) werden vor dem Rendern verworfen — `L` bleibt im Mapping strukturell vorhanden, ist aber praktisch nie sichtbar (analog zur `L`-Fußnote in §3.2).
+
+**Stunde `@h`:** erscheint, wenn die Warnung zu einer bestimmten Stunde beginnt (Beginn-Stunde in Ortszeit). Bei ganztägiger Gültigkeit entfällt sie ersatzlos — `W:M`, nicht `W:M@0`.
+
+**Sonderfall `access_ban` (`CL`):** eine Zugangssperre ist ein binärer Zustand ohne Schweregrad (analog zu den `Z:`/`M:`-Fire-Tokens) — sie erscheint als blankes `CL` ohne Doppelpunkt und ohne Stufe, nie als `CL:H`, und trägt nie eine Stunde.
+
+**Sortierung:** Stufe absteigend (rot vor orange), bei Gleichstand die Katalog-Reihenfolge der Tabelle oben — deterministisch, unabhängig vom Gültigkeitsbeginn.
+
+**Truncation:** der Warn-Block trägt die höchste Priorität (11, §6) und fällt beim Kürzen als **letztes** — nach `PR`, `D`, `N` und selbst nach `W`/`G`/`TH:`.
+
+**Unbekannte Gefahrenart (Rückfall-Kürzel):** Steht ein `hazard`-Wert **nicht** in der Tabelle oben (neu hinzukommender Provider-Typ), wird die Warnung **niemals verworfen** — `sms_symbol_for()` (`hazard_symbols.py`) bildet ein Kürzel aus den ersten zwei ASCII-Großbuchstaben des `hazard`-Strings, ersatzweise `XX`. Der Stufenfilter (≥ orange) bleibt davon unberührt wirksam; gefiltert wird ausschließlich nach Schwere, nie nach „Typ unbekannt".
+
+Würde dieses Rückfall-Kürzel mit einem der neun vergebenen Katalog-Kürzel kollidieren (z. B. `thunder_squall` → `TH` wie eine echte Gewitterwarnung), wird deterministisch auf **drei** Buchstaben verlängert (`THU`, `SNO`); notfalls wird `X` angehängt. Da alle Katalog-Kürzel ein bis zwei Zeichen lang sind, kann ein dreistelliges Kürzel strukturell nicht kollidieren.
+
+Beides ist sicherheitsrelevant, nicht kosmetisch: eine amtliche Warnung, die still verschwindet, ist der Schaden, den dieser Block verhindern soll (Präzedenz: fehlendes `wildfire_risk`-Mapping, Issue #1239); eine Warnung, die sich als **andere** Gefahr ausgibt, ist Fehlinformation in einer Sicherheitsmeldung. Dass die Provider-Adapter unbekannte Quell-Codes heute bereits beim Einlesen wegfiltern, macht den Rückfall nicht überflüssig — er ist das Netz für den Tag, an dem ein neuer Typ dazukommt. Vertraglich abgesichert durch AC-16/AC-17 in `docs/specs/modules/sms_official_alert_tokens.md`.
+
+**Beispiele:**
+
+```
+Nur Vorhersage:   GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16
+Mit Warnung:      GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16 !TH:H@14 W:M
+Brand + Sperrung: GR20 E5: N9 D28 R- W12@11 TH:- !FR:H CL
+```
 
 ### 3.4b Confidence-Symbol `C` (v2.1, Issue #121)
 
@@ -330,6 +379,7 @@ Ballone: N9 D16 R- PR- W- G- TH:- TH+:-
 | `TH+` | Folgetag `thunder_level` | wie TH, aber +1 Tag | ✅ vorhanden |
 | `HR` (Vigilance) | Météo France `get_warning_full()` | offizielle Warnung | ⚠️ Provider TODO |
 | `TH` (Vigilance) | Météo France `get_warning_full()` | offizielle Warnung | ⚠️ Provider TODO |
+| `!`-Warn-Block (§3.4c) | `SegmentWeatherData.official_alerts` (`official_alerts`-Dienst, alle Provider, 9 hazards) | Dedup (`dedupe_official_alerts`) + Filter Stufe ≥ orange, Kürzel aus `hazard_symbols.py` | ✅ vorhanden (Issue #1318) — **andere Quelle** als die beiden Vigilance-Zeilen darüber, die weiterhin am alten `get_warning_full()`-Pfad hängen |
 | `Z`/`M` | `risque-prevention-incendie.fr` | tagesaktueller JSON | ⚠️ Provider TODO |
 | `SN`/`SN24`/`SFL` | GeoSphere/SLF | siehe Wintersport-Spec | ⚠️ teilweise vorhanden |
 | `AV` | `AvalancheReport.danger.level` | aus Lawinenbericht | ⚠️ Provider TODO |
@@ -381,6 +431,8 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.6 | 2026-07-01 | km-Bereichs-Bewahrung in Header (Issue #936) — `_sanitize_stage_name()` erkennt `km`-Marker und bewahrt vollständigen km-Bereich (z.B. `km0-11`) statt ihn nach 10 Zeichen abzuschneiden; Prefix gekürzt, km-Teil vollständig |
 | 2.7 | 2026-07-13 | Faltungs-Konvention auf alle Schriften erweitert (Issue #1253) — bisher nur Umlaute; einzige Quelle jetzt `fold_ascii()` in `src/utils/ascii_fold.py` (ADR-0022: `anyascii` + deutsche Digraph-Map + zeichenweiser `?`-Guard gegen stille Buchstaben-Löschung), gilt jetzt durchgängig „erst falten, dann kürzen" auch im SMS-Titelzeilen-Pfad (`_sms_stage_prefix`) |
 | 2.8 | 2026-07-16 | `TH+`-Datenquelle korrigiert (Issue #1275) — aggregiert jetzt über ALLE Segmente der tatsächlichen Folge-Etappe (statt nur das letzte Segment der heutigen Etappe zu prüfen) und nutzt dieselbe Fetch-/Aggregations-Kette wie die E-Mail-Outlook-Tabelle (`_build_stage_trend()`); stimmt dadurch garantiert mit deren Wert überein |
+
+| 2.9 | 2026-07-20 | Amtlicher Warn-Block `!` in der Trip-Briefing-SMS (Issue #1318) — 9 internationale Gefahren-Kürzel aus dem einzigen Katalog `src/output/tokens/hazard_symbols.py` (§3.4c), Filter ab Stufe ORANGE, `@h` nur bei nicht-ganztägigem Beginn, `CL` ohne Stufe, höchste Truncation-Priorität; §3.4 von positions- auf marker-basierte Disambiguierung verallgemeinert; die eigenständige amtliche-Warnung-SMS nutzt denselben Katalog (alte deutsch abgeleitete Kürzel `HZ`/`ST`/`RR`/`GL`/`ZG`/`WB`/`KL` entfallen ersatzlos) |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

@@ -15,6 +15,7 @@ _detect_risk() erhalten (§A4 - Alert-Pfad nicht migriert in β3).
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
@@ -25,11 +26,16 @@ from services.risk_engine import RiskEngine
 from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt, local_hour
 from output.metric_format import thunder_label_value
+from output.renderers.alert.official_alerts import dedupe_official_alerts
 from output.renderers.day_window import build_day_window_points
 from output.renderers.sms import render_sms
 from output.tokens.builder import build_token_line
 from output.tokens.dto import (
     DailyForecast, HourlyValue, MetricSpec, NormalizedForecast,
+)
+from output.tokens.hazard_symbols import (
+    HAZARD_ORDER, LEVEL_LETTERS, LEVELLESS_HAZARDS,
+    MIN_SMS_LEVEL, sms_symbol_for,
 )
 
 _ETAPPE_RE = re.compile(r'^Etappe\s+(\d+)', re.IGNORECASE)
@@ -69,6 +75,48 @@ _SMS_RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
     (RiskType.WIND_EXPOSITION, RiskLevel.HIGH): "GratSturm",
     (RiskType.WIND_EXPOSITION, RiskLevel.MODERATE): "GratWind",
 }
+
+
+def _warn_hour(alert, tz: ZoneInfo) -> Optional[int]:
+    """Beginn-Stunde einer amtlichen Warnung in Ortszeit — `None` bei
+    ganztaegiger Gueltigkeit oder fehlendem Zeitraum (dann entfaellt `@h`
+    ersatzlos). Ganztags-Erkennung wie `official_alerts._format_validity`."""
+    vf, vt = alert.valid_from, alert.valid_to
+    if not vf or not vt:
+        return None
+    vf_l, vt_l = vf.astimezone(tz), vt.astimezone(tz)
+    if (vf_l.hour, vf_l.minute, vt_l.hour, vt_l.minute) == (0, 0, 23, 59):
+        return None
+    return vf_l.hour
+
+
+def _official_alert_entries(
+    segments: list[SegmentWeatherData], tz: ZoneInfo,
+) -> tuple[tuple[str, str, Optional[int]], ...]:
+    """Issue #1318: amtliche Warnungen aller Segmente -> Warn-Block-Tripel.
+
+    Dedup ueber die geteilte `dedupe_official_alerts()` (kein eigener
+    Dedup-Code), Filter auf Stufe >= orange, Kuerzel aus dem einzigen Katalog
+    `hazard_symbols.py`. Sortierung: Stufe absteigend, bei Gleichstand
+    Katalog-Reihenfolge — deterministisch, unabhaengig von `valid_from`.
+    """
+    tagged = [
+        (alert, [])
+        for seg in segments
+        for alert in (getattr(seg, "official_alerts", None) or [])
+    ]
+    rows = []
+    for alert, _ in dedupe_official_alerts(tagged):
+        if alert.level < MIN_SMS_LEVEL:
+            continue
+        symbol = sms_symbol_for(alert.hazard)
+        if alert.hazard in LEVELLESS_HAZARDS:
+            entry = (symbol, "", None)
+        else:
+            entry = (symbol, LEVEL_LETTERS.get(alert.level, "H"), _warn_hour(alert, tz))
+        rows.append((-alert.level, HAZARD_ORDER.get(alert.hazard, len(HAZARD_ORDER)), entry))
+    rows.sort(key=lambda r: (r[0], r[1]))
+    return tuple(entry for _lvl, _ord, entry in rows)
 
 
 def _segments_to_normalized_forecast(
@@ -178,7 +226,10 @@ def _segments_to_normalized_forecast(
         thunder_hourly=thunder_samples_d,
         confidence_pct_min=day_confidence,
     )
-    return NormalizedForecast(days=(today,))
+    return NormalizedForecast(
+        days=(today,),
+        official_alerts=_official_alert_entries(segments, tz),
+    )
 
 
 class SMSTripFormatter:
@@ -246,7 +297,9 @@ class SMSTripFormatter:
             if lvl_val > 0 and hour is not None:
                 tomorrow_thunder = (HourlyValue(int(hour), float(lvl_val)),)
         tomorrow_day = DailyForecast(thunder_hourly=tomorrow_thunder)
-        forecast = NormalizedForecast(days=(forecast.days[0], tomorrow_day))
+        # `replace` statt Neubau: der Warn-Block (#1318) darf beim Anhaengen
+        # des Folgetags nicht verlorengehen.
+        forecast = replace(forecast, days=(forecast.days[0], tomorrow_day))
 
         # Worst-case WIND_EXPOSITION aus allen Segmenten bestimmen
         we_label: Optional[str] = None

@@ -2,9 +2,9 @@
 entity_id: issue_1216_official_alert_template
 type: module
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-20
 status: draft
-version: "1.0"
+version: "1.1"
 tags: [official-alerts, alert-rendering, email, telegram, sms, design-fidelity]
 ---
 
@@ -65,18 +65,31 @@ Der Aufrufer dedupliziert via `dedupe_official_alerts` und baut `affected_scope`
 - Skala-Position „N/3": GELB=1/3, ORANGE=2/3, ROT=3/3.
 - Betreff/Reihenfolge/Meter: **höchste Stufe führt** (level absteigend), bei Gleichstand nach `valid_from`.
 
-### hazard → (Anzeige, SMS-Kürzel) — neues Mapping
-| hazard | Anzeige | SMS |
-|--------|---------|-----|
-| extreme_heat | Hitze | HZ |
-| thunderstorm | Gewitter | TH |
-| extreme_cold | Kälte | KL |
-| wind_gust | Sturm | ST |
-| rain | Starkregen | RR |
-| snow | Schneefall | SN |
-| black_ice | Glatteis | GL |
-| access_ban | Zugang gesperrt | ZG |
-| (unbekannt) | `label` | erste 2 ASCII-Großbuchstaben aus hazard |
+### hazard → (Anzeige, SMS-Kürzel) — Mapping
+
+> **Aktualisiert 2026-07-20 (PO-Entscheidung, Nachtrag zu Issue #1318/#1220,
+> `docs/specs/modules/sms_official_alert_tokens.md`):** die SMS-Kürzel-Spalte dieser Tabelle
+> war ursprünglich eine eigene, deutsch abgeleitete Liste, unabhängig vom Trip-Briefing-SMS.
+> Das ist durch #1318 aufgelöst worden — **es gibt nur noch einen Kürzel-Katalog**
+> (`src/output/tokens/hazard_symbols.py`), international verständlich, von diesem Renderer UND
+> der Briefing-Token-Zeile gemeinsam genutzt. Die alten, hier ursprünglich definierten Kürzel
+> `HZ`/`ST`/`RR`/`GL`/`ZG`/`WB` sind **ersatzlos ersetzt** (nur `TH`/`SN` stimmten zufällig
+> bereits überein). Die **Anzeige-Spalte** (deutsches Klartext-Label) bleibt unverändert und
+> weiterhin hier verantwortet — nur die SMS-Kürzel-Spalte wechselt die Quelle. Details, ACs und
+> Rationale: siehe `sms_official_alert_tokens.md` AC-13/AC-14.
+
+| hazard | Anzeige | SMS (ab #1318, aus `hazard_symbols.py`) | SMS (vor #1318, Original dieser Spec) |
+|--------|---------|------------------------------------------|-----------------------------------------|
+| extreme_heat | Hitze | `HT` | ~~HZ~~ |
+| thunderstorm | Gewitter | `TH` | TH (unverändert) |
+| extreme_cold | Kälte | `CD` | ~~KL~~ |
+| wind_gust | Sturm | `W` | ~~ST~~ |
+| rain | Starkregen | `HR` | ~~RR~~ |
+| snow | Schneefall | `SN` | SN (unverändert) |
+| black_ice | Glatteis | `IC` | ~~GL~~ |
+| access_ban | Zugang gesperrt | `CL` | ~~ZG~~ |
+| wildfire_risk | Waldbrand-Gefahr | `FR` | ~~WB~~ (Nachzug #1239 Runde 2, F004) |
+| (unbekannt) | `label` | erste 2 ASCII-Großbuchstaben aus hazard (unverändert) | — |
 
 ### DE-Wochentag
 Neuer Helfer `_de_weekday_short(dt, tz)` → {Mo,Di,Mi,Do,Fr,Sa,So} (ersetzt locale-abhängiges `%a`, das „Fri" statt „Fr" liefert). Datum `%d.%m.`.
@@ -96,6 +109,7 @@ Fette erste Zeile: `<kurz> · <Reichweite> · Warnstufe <Stufe> (N/3)` (einheitl
 - Einheitliche Stufe: `<KHW> AMT <STUFE>N/3: <code> <Tag>[<zeit>] + …, <scope>`.
 - Gemischte Stufen: `<KHW> AMT: <code> <STUFE> <Tag><zeit> <seg> + …` — jede Warnung mit Stufen-Wort, höchste zuerst.
 - Kein Emoji, kein Δ/Pfeil; `_ascii()`-Normalisierung; Budget-Kürzung analog `render_sms`.
+- `<code>` = das SMS-Kürzel aus der Tabelle oben (ab #1318 aus `hazard_symbols.py`, siehe Update-Hinweis).
 
 ### Verdrahtung `send_official_alert`
 - E-Mail: `render_official_alert_html` → `send(..., html=True, mail_type="official-alert")` (statt Plain).
@@ -118,13 +132,13 @@ Fette erste Zeile: `<kurz> · <Reichweite> · Warnstufe <Stufe> (N/3)` (einheitl
 - **AC-2:** Given dieselben zwei GELB-Warnungen / When die **E-Mail-HTML** gerendert wird / Then enthält sie (a) einen Verdict-Badge „2 amtliche Warnungen", (b) genau **eine** Warnstufen-Leiter mit GELB→ORANGE→ROT und GELB als aktiver Stufe (kein Eskalations-Meter, da einheitlich), (c) je Warnung Typ + Gültigkeit („Fr … · ganztägig" bzw. „Sa … · 15:00–21:00") + Segment-Chips, (d) eine Quelle-Zeile mit „GeoSphere Austria". Der String enthält weder „→" noch „%"-Delta (kein Deviation-Vokabular).
   - Test: HTML-Rendering-Assert auf strukturelle Marker + Abwesenheit von Δ/Pfeil; Plausibilität, keine reine String-Presence.
 
-- **AC-3:** Given eine ORANGE-Gewitter-Warnung (Segment 3) und eine GELB-Hitze-Warnung (Segment 1), also **gemischte Stufen** / When Betreff, HTML, Telegram und SMS gerendert werden / Then führt überall die **höchste Stufe (ORANGE)** zuerst: Betreff `[KHW 403] Segment 3 · ORANGE Gewitter (Sa) + GELB Hitze (Fr)`; HTML zeigt **pro Warnung ein Eskalations-Meter** (ORANGE 2/3, GELB 1/3) statt gemeinsamer Leiter; Telegram-Kopf `… · höchste Stufe ORANGE (2/3)`; SMS `KHW403 AMT: TH ORANGE …` vor `HZ GELB …`.
+- **AC-3:** Given eine ORANGE-Gewitter-Warnung (Segment 3) und eine GELB-Hitze-Warnung (Segment 1), also **gemischte Stufen** / When Betreff, HTML, Telegram und SMS gerendert werden / Then führt überall die **höchste Stufe (ORANGE)** zuerst: Betreff `[KHW 403] Segment 3 · ORANGE Gewitter (Sa) + GELB Hitze (Fr)`; HTML zeigt **pro Warnung ein Eskalations-Meter** (ORANGE 2/3, GELB 1/3) statt gemeinsamer Leiter; Telegram-Kopf `… · höchste Stufe ORANGE (2/3)`; SMS `KHW403 AMT: TH ORANGE …` vor `HT ORANGE …` (Kürzel ab #1318 aus `hazard_symbols.py` — der ursprüngliche Wortlaut dieses ACs nannte hier `HZ`, siehe Update-Hinweis).
   - Test: je Kanal ein Assert auf Reihenfolge (ORANGE-Warnung vor GELB) + Meter-statt-Leiter im HTML.
 
 - **AC-4:** Given eine einzelne GELB-Gewitter-Warnung, die **nur Segment 2–4** eines 4-Segment-Trips (Segmente 1,2,3,4 + Ziel) betrifft / When Betreff und HTML gerendert werden / Then nennt der Betreff `Segment 2–4` (nicht „gesamte Route"), und im HTML sind die **nicht betroffenen** Segment-Chips (Segment 1, Ziel) **durchgestrichen** dargestellt, die betroffenen normal.
   - Test: Betreff-Assert + HTML-Assert auf durchgestrichen-Markup genau für die freien Segmente.
 
-- **AC-5:** Given ein Trip mit `sms` in den aktiven Kanälen und eine GELB-Hitze- + GELB-Gewitter-Warnung über die gesamte Route / When `send_official_alert` läuft / Then wird eine **SMS versendet** (heute gar keine), im GSM-7/ASCII-Format ≤140 Zeichen, Inhalt beginnt mit `KHW403 AMT GELB1/3:` und enthält die Kürzel `HZ` und `TH` sowie den Reichweiten-Token `ges.Route`; sie enthält kein Emoji und kein „→".
+- **AC-5:** Given ein Trip mit `sms` in den aktiven Kanälen und eine GELB-Hitze- + GELB-Gewitter-Warnung über die gesamte Route / When `send_official_alert` läuft / Then wird eine **SMS versendet** (heute gar keine), im GSM-7/ASCII-Format ≤140 Zeichen, Inhalt beginnt mit `KHW403 AMT GELB1/3:` und enthält die Kürzel `HT` und `TH` (ab #1318; ursprünglich `HZ`/`TH`, siehe Update-Hinweis) sowie den Reichweiten-Token `ges.Route`; sie enthält kein Emoji und kein „→".
   - Test: Über `mail_sink`/SMS-Spy prüfen, dass der SMS-Kanal aufgerufen wird; Assert auf Länge ≤140, ASCII-only, Token-Inhalt.
 
 - **AC-6:** Given eine amtliche Warnung mit valid_from = Freitag 00:00 und valid_to = Freitag 23:59 (lokale Zeit) / When die Gültigkeit gerendert wird / Then erscheint „**Fr** … · ganztägig" — deutsches Wochentagskürzel „Fr" (nicht „Fri") und „ganztägig" statt „00:00–23:59".
@@ -138,6 +152,7 @@ Fette erste Zeile: `<kurz> · <Reichweite> · Warnstufe <Stufe> (N/3)` (einheitl
 - **Nur Trip-Standalone (Slice 1).** Ortsvergleich-Standalone-Alarm (gleiche Renderer, Orts-Scope, Trigger/State) folgt in Slice 2 unter #1216. Eingebettete Warn-Sektion **innerhalb** der Briefing-/Vergleichs-Mail bleibt unverändert — dafür existiert keine Vorlage (bei Bedarf Claude-Design-Anfrage).
 - **Level 1 (GRÜN):** Standalone-Alarme feuern praktisch nur bei neu/eskaliert (Level ≥ 2). Tritt Level 1 dennoch auf, wird es als GRÜN mit Position „0/3" behandelt (kein aktives Leiter-Segment) — Randfall, kein Vorlagen-Bild vorhanden.
 - **`[KHW …]`-Präfix** kommt beim Trip aus `trip.name`. Der Ortsvergleich-Kurzname wird in Slice 2 festgelegt.
+- **SMS-Kürzel-Spalte seit 2026-07-20 fremdverwaltet:** die SMS-Kürzel-Spalte der hazard-Tabelle wird nicht mehr in diesem Modul gepflegt, sondern importiert aus `src/output/tokens/hazard_symbols.py` (SSOT ab Issue #1318). Änderungen an den Kürzeln gehören künftig dorthin, nicht in `_HAZARD_DISPLAY`.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -147,3 +162,4 @@ Fette erste Zeile: `<kurz> · <Reichweite> · Warnstufe <Stufe> (N/3)` (einheitl
 ## Changelog
 
 - 2026-07-10: Initial spec (Slice 1) erstellt
+- 2026-07-20: **SMS-Kürzel-Spalte aktualisiert** (PO-Entscheidung, Nachtrag zu Issue #1318/#1220): die hazard→SMS-Kürzel-Tabelle wechselt von einer eigenen, deutsch abgeleiteten Liste auf den international verständlichen Katalog aus `src/output/tokens/hazard_symbols.py`, geteilt mit dem Trip-Briefing-SMS. AC-3/AC-5 entsprechend mit den neuen Kürzeln versehen (Kürzel-Änderung selbst ist Gegenstand von `sms_official_alert_tokens.md` AC-13/AC-14, hier nur nachgezogen). Datei nicht gelöscht (Transparenz-Prinzip), nur die betroffene Spalte/ACs aktualisiert.

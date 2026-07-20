@@ -229,7 +229,7 @@ def test_ac6_sms_unchanged():
     from output.renderers.alert.official_alerts import render_official_alert_sms
     _ab, _vig, n_ab, n_vig = _ab_and_vigilance_notices()
     sms = render_official_alert_sms([n_ab, n_vig], sms_prefix="KHW403")
-    assert sms == "KHW403 AMT: HZ ORANGE Fr ges.Route + ZG GELB Sa15-21 ges.Route", (
+    assert sms == "KHW403 AMT: HT ORANGE Fr ges.Route + CL GELB Sa15-21 ges.Route", (
         f"SMS hat sich veraendert: {sms!r}"
     )
 

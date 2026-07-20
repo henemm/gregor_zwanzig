@@ -267,7 +267,7 @@ def test_ac2_sms_uniform_scope_same_level_bit_identical():
     / When die SMS gerendert wird / Then bleibt ihr Text bit-identisch zum Stand
     vor diesem Fix (gemeinsamer Ortszusatz am Ende)."""
     sms = _sms(_uniform_scope_same_level_notices())
-    assert sms == "GZ AMT ORANGE2/3: HZ Fr06-20 + ST Sa15-21, Toulon+Hyeres", (
+    assert sms == "GZ AMT ORANGE2/3: HT Fr06-20 + W Sa15-21, Toulon+Hyeres", (
         f"SMS bei einheitlichem Umfang veraendert: {sms!r}"
     )
 
@@ -279,7 +279,7 @@ def test_ac2_sms_uniform_scope_mixed_level_bit_identical():
     gerendert wird / Then bleibt der Umfang je Token wie im Bestand (Stufe +
     Ort pro Warnung), ohne sinnfreies "?"-Zeit-Token bei fehlender Zeit."""
     sms = _sms(_uniform_scope_mixed_level_notices())
-    assert sms == "GZ AMT: WB ORANGE alleOrte + HZ GELB Sa15-21 alleOrte", (
+    assert sms == "GZ AMT: FR ORANGE alleOrte + HT GELB Sa15-21 alleOrte", (
         f"SMS bei einheitlichem Umfang + gemischter Stufe veraendert: {sms!r}"
     )
 
@@ -366,10 +366,11 @@ def test_ac5_sms_hazard_shortcodes_unchanged():
     """AC-5 (Non-Regression, JETZT SCHON GRUEN): Given amtliche Warnungen
     unterschiedlicher Gefahrentypen / When die SMS gerendert wird / Then bleiben
     die verwendeten Zwei-Buchstaben-Kuerzel je Gefahrentyp identisch zum Stand
-    vor diesem Fix (Hitze HZ, Gewitter TH, Zugangssperre ZG, Waldbrand WB)."""
+    aus dem geteilten Katalog `hazard_symbols.py` (Issue #1318 AC-13/AC-14:
+    Hitze HT, Gewitter TH, Zugangssperre CL, Waldbrand FR)."""
     sms = _sms(_mixed_scope_notices())
-    for code, hazard in (("ZG", "Zugangssperre"), ("WB", "Waldbrand"),
-                         ("TH", "Gewitter"), ("HZ", "Hitze")):
+    for code, hazard in (("CL", "Zugangssperre"), ("FR", "Waldbrand"),
+                         ("TH", "Gewitter"), ("HT", "Hitze")):
         assert re.search(rf"(?:^|[ :]){code} ", sms), (
             f"SMS-Kuerzel {code!r} ({hazard}) fehlt/veraendert: {sms!r}"
         )
@@ -601,7 +602,7 @@ def test_ac14_sms_token_omits_placeholder_when_time_unknown():
     assert "?" not in sms, f"SMS enthaelt weiterhin den Zeit-Platzhalter '?': {sms!r}"
 
     # Non-Regression: Warnungen MIT Zeit zeigen ihre Zeitangabe unveraendert.
-    for code, tag in (("WB", "Fr06-20"), ("TH", "Sa15-21"), ("HZ", "Sa15-21")):
+    for code, tag in (("FR", "Fr06-20"), ("TH", "Sa15-21"), ("HT", "Sa15-21")):
         assert tag in sms, f"Zeitangabe {tag!r} fuer {code!r} fehlt: {sms!r}"
 
 
@@ -621,7 +622,7 @@ def test_ac15_sms_survives_when_leading_location_overflows_budget():
     assert 0 < len(sms) <= SMS_LIMIT, (
         f"SMS ist leer oder ueberschreitet das Limit: {len(sms)} — {sms!r}"
     )
-    assert "HZ" in sms, f"SMS verliert die Gefahr (Kuerzel 'HZ'): {sms!r}"
+    assert "HT" in sms, f"SMS verliert die Gefahr (Kuerzel 'HT'): {sms!r}"
     assert "Sa15-21" in sms, f"SMS verliert die Zeitangabe der schwersten Warnung: {sms!r}"
     # Kein Wort-Fragment des ueberlangen Ortsnamens am Ende.
     huge_prefix = "SaintJulien"  # ASCII-/Leerzeichen-bereinigtes Praefix des Ortsnamens
@@ -641,7 +642,7 @@ def test_ac16_sms_survives_single_location_longer_than_entire_limit():
     assert 0 < len(sms) <= SMS_LIMIT, (
         f"SMS ist leer oder ueberschreitet das Limit: {len(sms)} — {sms!r}"
     )
-    assert "HZ" in sms, f"SMS verliert die Gefahr (Kuerzel 'HZ'): {sms!r}"
+    assert "HT" in sms, f"SMS verliert die Gefahr (Kuerzel 'HT'): {sms!r}"
     assert "X" * 10 not in sms, (
         f"SMS enthaelt ein Fragment des 250 Zeichen langen Ortsnamens: {sms!r}"
     )
@@ -653,7 +654,7 @@ def test_ac15_sms_normal_location_names_unaffected():
     die Ausgabe unveraendert (Ort bleibt Teil der schwersten Warnung) -- die
     Rueckfallebene greift NICHT, wenn sie nicht gebraucht wird."""
     sms = _sms(_uniform_scope_same_level_notices())
-    assert sms == "GZ AMT ORANGE2/3: HZ Fr06-20 + ST Sa15-21, Toulon+Hyeres", (
+    assert sms == "GZ AMT ORANGE2/3: HT Fr06-20 + W Sa15-21, Toulon+Hyeres", (
         f"Normalfall (kein Overflow) veraendert durch die Rueckfallebene: {sms!r}"
     )
     sms2 = _sms(_overflow_notices())

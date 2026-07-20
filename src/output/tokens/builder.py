@@ -41,6 +41,10 @@ PRIORITY = {
     "W": 8, "G": 8, FORECAST_THP: 9, VIGI_HR: 10, FORECAST_TH: 10,
 }
 
+# Issue #1318: amtliche Warnungen faellen beim Kuerzen ZULETZT — hoeher als
+# jeder Vorhersage-Token (bisheriges Maximum 10).
+OFFICIAL_ALERT_PRIORITY = 11
+
 # (symbol, category) -> §2 POSITIONAL index. Vigilance shares 'TH:' symbol.
 POSITIONAL = [
     ("N", "forecast"), ("D", "forecast"), ("R", "forecast"),
@@ -53,6 +57,8 @@ POSITIONAL = [
     ("DBG", "debug"),
 ]
 POS_INDEX = {key: i for i, key in enumerate(POSITIONAL)}
+# §2: der Warn-Block steht nach dem Vigilance-Block, vor Fire/Wintersport/DBG.
+OFFICIAL_ALERT_POS = POS_INDEX[(VIGI_TH, "vigilance")] + 0.5
 STD_SYMBOLS = {s for s, _ in POSITIONAL}
 
 DEFAULTS = {"R": 0.2, "PR": 20.0, "W": 10.0, "G": 20.0,
@@ -110,6 +116,20 @@ def _vigilance(fc: NormalizedForecast) -> list[Token]:
         Token(VIGI_HR, hr_v, "vigilance", PRIORITY[VIGI_HR]),
         Token(VIGI_TH, th_v, "vigilance", PRIORITY[VIGI_TH]),
     ]
+
+
+def _official_alerts(fc: NormalizedForecast) -> list[Token]:
+    """Issue #1318: Warn-Block-Token aus den bereits gefilterten und sortierten
+    `(Kuerzel, Stufenbuchstabe, Stunde)`-Tripeln. Der `!`-Marker selbst gehoert
+    dem Renderer (genau einmal vor dem ersten Token des Blocks)."""
+    out: list[Token] = []
+    for symbol, level, hour in fc.official_alerts:
+        if not level:
+            out.append(Token(symbol, "", "official_alert", OFFICIAL_ALERT_PRIORITY))
+            continue
+        value = level if hour is None else f"{level}@{hour}"
+        out.append(Token(f"{symbol}:", value, "official_alert", OFFICIAL_ALERT_PRIORITY))
+    return out
 
 
 def _fire(fc: NormalizedForecast) -> list[Token]:
@@ -208,6 +228,7 @@ def build_token_line(
             tokens.append(tok)
 
     tokens.extend(_vigilance(forecast))
+    tokens.extend(_official_alerts(forecast))
     tokens.extend(_fire(forecast))
     if profile == "wintersport":
         tokens.extend(_wintersport(today, by_sym, report_type))
@@ -232,7 +253,10 @@ def build_token_line(
             "debug", PRIORITY["DBG"],
         ))
 
-    tokens.sort(key=lambda t: POS_INDEX.get((t.symbol, t.category), 99))
+    tokens.sort(key=lambda t: (
+        OFFICIAL_ALERT_POS if t.category == "official_alert"
+        else POS_INDEX.get((t.symbol, t.category), 99)
+    ))
     return TokenLine(
         stage_name=_sanitize_stage_name(stage_name), report_type=report_type,
         tokens=tuple(tokens), truncated=False, full_length=0,

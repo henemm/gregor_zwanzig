@@ -13,8 +13,16 @@ DROP_ORDER = ["DBG", "WC", "AV", "SFL", "SN24+", "SN", "Z:", "MAX", "M:"]
 def _fuse(tokens: list[Token]) -> list[str]:
     parts: list[str] = []
     i = 0
+    warn_marker_pending = True
     while i < len(tokens):
         t = tokens[i]
+        # Issue #1318: der `!`-Marker leitet den Warn-Block genau einmal ein.
+        if t.category == "official_alert":
+            prefix = "!" if warn_marker_pending else ""
+            warn_marker_pending = False
+            parts.append(f"{prefix}{t.render()}")
+            i += 1
+            continue
         if (t.symbol == "HR:" and t.category == "vigilance"
                 and i + 1 < len(tokens)
                 and tokens[i + 1].symbol == "TH:"
@@ -70,14 +78,18 @@ def _truncate(tokens: list[Token], stage: str, mx: int) -> tuple[list[Token], bo
             truncated = True
             if len(_draw(stage, tokens)) <= mx:
                 return tokens, True
-    # Last resort: drop forecast/vigilance tokens by ascending priority.
-    while len([t for t in tokens
-               if t.category in ("forecast", "vigilance")]) > 1:
+    # Last resort: drop forecast/vigilance/official_alert tokens by ascending
+    # priority. Issue #1318: die amtliche Warnung traegt die hoechste Prioritaet
+    # und faellt damit als allerletzte. Entfernt wird das GEWAEHLTE Token
+    # (Identitaet), nicht das erste mit gleichem Symbol — 'TH:' tragen
+    # Vorhersage, Vigilance und Warn-Block gemeinsam.
+    _last_resort = ("forecast", "vigilance", "official_alert")
+    while len([t for t in tokens if t.category in _last_resort]) > 1:
         cand = sorted(
-            [t for t in tokens if t.category in ("forecast", "vigilance")],
+            [t for t in tokens if t.category in _last_resort],
             key=lambda t: t.priority,
         )[0]
-        _drop_first(tokens, cand.symbol)
+        tokens.remove(cand)
         truncated = True
         if len(_draw(stage, tokens)) <= mx:
             return tokens, True

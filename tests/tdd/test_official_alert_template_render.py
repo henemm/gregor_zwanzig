@@ -144,7 +144,7 @@ def test_ac3_mixed_levels_highest_leads_all_channels():
     assert telegram.index("Gewitter") < telegram.index("Hitze")
 
     sms = render_official_alert_sms(notices, sms_prefix="KHW403")
-    assert sms.index("TH") < sms.index("HZ"), f"ORANGE(TH) muss vor GELB(HZ) stehen: {sms!r}"
+    assert sms.index("TH") < sms.index("HT"), f"ORANGE(TH) muss vor GELB(HT) stehen: {sms!r}"
     assert "ORANGE" in sms and "GELB" in sms
 
 
@@ -198,7 +198,7 @@ def test_ac5_sms_format_tokens():
     from output.renderers.alert.official_alerts import render_official_alert_sms
     sms = render_official_alert_sms(_two_gelb_full_route(), sms_prefix="KHW403")
     assert sms.startswith("KHW403 AMT GELB1/3:"), f"SMS-Kopf weicht ab: {sms!r}"
-    assert "HZ" in sms and "TH" in sms
+    assert "HT" in sms and "TH" in sms
     assert "ges.Route" in sms
     assert len(sms) <= 140
     assert sms.isascii(), f"SMS muss reines ASCII/GSM-7 sein: {sms!r}"
@@ -232,7 +232,7 @@ def test_ac5_sms_actually_dispatched():
     assert len(sms_calls) == 1, f"Erwartet genau 1 SMS-Versand, erhalten: {sms_calls!r}"
     text = sms_calls[0]
     assert len(text) <= 140 and text.isascii()
-    assert "AMT" in text and "HZ" in text
+    assert "AMT" in text and "HT" in text
 
 
 # ---------------------------------------------------------------------------

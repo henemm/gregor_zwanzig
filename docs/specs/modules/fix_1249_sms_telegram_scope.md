@@ -2,9 +2,9 @@
 entity_id: fix_1249_sms_telegram_scope
 type: module
 created: 2026-07-13
-updated: 2026-07-13
+updated: 2026-07-20
 status: draft
-version: "1.0"
+version: "1.1"
 tags: [official-alerts, sms, telegram, scope, design-fidelity]
 ---
 
@@ -37,7 +37,7 @@ Schicht: **Python-Core / Domain-Backend** (`src/output/renderers/alert/`) — ke
 |--------|------|---------|
 | `_uniform_scope(notices)` (official_alerts.py:951) | reuse | Identitätsbasierte Prüfung (über `scope_ids`, nicht Anzeige-Namen), ob ALLE Warnungen denselben betroffenen Umfang haben — bereits die geteilte Grundlage für Quelle-Box/Headline/Betreff in der Mail (#1238/#1239), wird hier zusätzlich von SMS und Telegram konsumiert |
 | `_display_label(alert)` (official_alerts.py:462) | reuse | Reicher Quell-Label statt generischem Typ-Wort, entfernt doppelte numerische Stufe — speist bereits Betreff/Titel/embedded Block der Mail, wird hier zusätzlich von Telegram-Warnungszeilen konsumiert |
-| `_hazard_display(alert)` (official_alerts.py:446) | reuse (unverändert) | Liefert `(Anzeige, SMS-Kürzel)` — das SMS-Kürzel (`[1]`) bleibt exakt wie bisher, Träger des Zeichenbudgets; nur die Telegram-Nutzung der Anzeige-Komponente (`[0]`) wird durch `_display_label` ersetzt |
+| `_hazard_display(alert)` (official_alerts.py:446) | reuse (unverändert **bis 2026-07-20**, danach SMS-Komponente fremdverwaltet — s. Update-Hinweis bei AC-5) | Liefert `(Anzeige, SMS-Kürzel)` — das SMS-Kürzel (`[1]`) bleibt exakt wie bisher, Träger des Zeichenbudgets; nur die Telegram-Nutzung der Anzeige-Komponente (`[0]`) wird durch `_display_label` ersetzt |
 | `_sms_truncate(head, tokens, limit, suffix)` (official_alerts.py:1363) | **Runde 3 überholt** — s. Changelog | Ursprünglich als „reuse (unverändert)" eingeplant; Adversary F004 (CRITICAL) fand, dass die Funktion kein Minimum garantierte (leere SMS bzw. Schnitt mitten im Ortsnamen möglich). Zu `_sms_pack`/`_sms_pack_with_fallback` erweitert (AC-4/AC-15/AC-16) — einziger Aufrufer bleibt `render_official_alert_sms` |
 | `OfficialAlertNotice.scope_ids` / `.scope_label` / `.sms_scope` (official_alerts.py:110) | reuse (unverändert) | Pro-Notice-Umfang, bereits von beiden Buildern (`build_official_alert_notices` Trip, `build_compare_official_alert_notices` Compare) gesetzt |
 | `notification_service.py` Trip-/Compare-Standalone (Zeilen ~517, ~548, ~652, ~672) | consume (unverändert) | Ruft `render_official_alert_sms`/`render_official_alert_telegram` mit derselben Notice-Liste auf, die auch die Mail speist — kein Aufrufer-Änderungsbedarf |
@@ -77,6 +77,13 @@ Bestand (werden bei Bedarf an das neue Verhalten angepasst, nicht als Regression
 
 Neu (nach Verhalten benannt, NICHT nach Issue-Nummer — Gate `test_naming_gate.py`): z. B. `test_official_alert_channel_scope.py` (S1/S3/S4: Umfang je Warnung in SMS und Telegram bei uneinheitlichem Scope; S2: Zeichenbudget-Verhalten; S5: Telegram-Gefahrenbezeichnung).
 
+> **Update 2026-07-20:** `tests/tdd/test_official_alert_channel_scope.py` und
+> `tests/tdd/test_official_alert_template_render.py` enthalten literale Kürzel-Erwartungen
+> (`HZ`/`ST`/`RR`/`GL`/`ZG`/`WB`), die durch die Kürzel-Vereinheitlichung aus
+> `sms_official_alert_tokens.md` (Issue #1318) auf die neuen internationalen Kürzel
+> (`HT`/`W`/`HR`/`IC`/`CL`/`FR`) umzustellen sind — bewusste, PO-freigegebene
+> Formatänderung, keine Regression dieser Spec.
+
 ## Acceptance Criteria
 
 - **AC-1:** Given mehrere amtliche Warnungen mit unterschiedlichem betroffenem Umfang (z. B. zwei verschiedene Orte) / When die SMS gerendert wird / Then nennt jede in der SMS enthaltene Warnung ihren eigenen Ort statt eines einzigen, gemeinsamen Ortszusatzes am Ende.
@@ -91,8 +98,16 @@ Neu (nach Verhalten benannt, NICHT nach Issue-Nummer — Gate `test_naming_gate.
 - **AC-4** (präzisiert 2026-07-13 Runde 3, s. Changelog): Given mehr Warnungen mit unterschiedlichem Umfang, als vollständig samt Ort ins Zeichenlimit passen / When die SMS gerendert wird / Then fallen die schwächeren Warnungen als vollständige Einträge weg (mit „+N"-Hinweis), während die schwerste Warnung **in dieser Rückfallreihenfolge** erhalten bleibt: (1) Kürzel + Zeit + Ort, falls das ins Budget passt; (2) sonst Kürzel + Zeit, **ohne** Ort; (3) sonst nur das Gefahren-Kürzel. In **keinem** Fall wird die SMS inhaltsleer, und in keinem Fall wird mitten in einem Wort (Ortsname oder anderswo) abgeschnitten.
   - Test: Assert, dass bei einem Überlauf-Szenario der Text der schwersten Warnung (in der jeweils höchsten noch passenden Rückfallstufe) vollständig im Ergebnis steht und ein „+N"-Marker die Anzahl der weggelassenen Warnungen korrekt beziffert; kein abgeschnittenes Wort am Ende. Zusätzlich: ein Szenario mit einem einzelnen, das gesamte Zeichenlimit überschreitenden Ortsnamen ergibt weiterhin eine gültige, nicht-leere SMS mit Gefahr und Stufe (AC-15/AC-16).
 
-- **AC-5:** Given amtliche Warnungen unterschiedlicher Gefahrentypen / When die SMS gerendert wird / Then bleiben die verwendeten Zwei-Buchstaben-Kürzel je Gefahrentyp identisch zum Stand vor diesem Fix.
-  - Test: Non-Regression-Assert, dass die bekannten Kürzel (z. B. für Hitze, Gewitter, Zugangssperre, Waldbrand) unverändert im SMS-Text erscheinen.
+- **AC-5** (⚠️ **überholt seit 2026-07-20, s. Update-Hinweis unten — nicht mehr als Zusage gültig**): ~~Given amtliche Warnungen unterschiedlicher Gefahrentypen / When die SMS gerendert wird / Then bleiben die verwendeten Zwei-Buchstaben-Kürzel je Gefahrentyp identisch zum Stand vor diesem Fix.~~
+  - ~~Test: Non-Regression-Assert, dass die bekannten Kürzel (z. B. für Hitze, Gewitter, Zugangssperre, Waldbrand) unverändert im SMS-Text erscheinen.~~
+  - **Update 2026-07-20 (PO-Entscheidung, Nachtrag zu Issue #1318/#1220):** diese Non-Regression-
+    Zusage ist durch die Kürzel-Vereinheitlichung zwischen Trip-Briefing-SMS und Standalone-
+    Warn-SMS **absichtlich gebrochen** — genau das war das Ziel der Änderung (derselbe Nutzer
+    darf für dieselbe Gefahr nicht zwei verschiedene Codes in zwei verschiedenen Nachrichten
+    bekommen). AC-5 wird hier **als überholt markiert, nicht gelöscht** (Transparenz-Prinzip).
+    Die gültige Nachfolge-Zusage steht in `sms_official_alert_tokens.md` AC-13 (Standalone-SMS
+    nutzt die neuen Kürzel) und AC-14 (beide Pfade liefern für denselben Hazard dasselbe
+    Kürzel — die eigentliche Anti-Divergenz-Absicherung).
 
 - **AC-6:** Given mehrere amtliche Warnungen mit unterschiedlichem betroffenem Umfang / When die Telegram-Kopfzeile gerendert wird / Then nennt die Kopfzeile keinen Umfang mehr, der fälschlich für alle Warnungen gälte.
   - Test: Assert, dass die gerenderte Telegram-Kopfzeile bei uneinheitlichem Umfang keinen einzelnen Ortsnamen mehr enthält, der nicht für alle folgenden Warnungszeilen zutrifft.
@@ -134,6 +149,7 @@ Neu (nach Verhalten benannt, NICHT nach Issue-Nummer — Gate `test_naming_gate.
 - **Einzelfall trivial uniform:** Enthält eine Nachricht nur eine einzige Warnung, ist `_uniform_scope` trivial wahr — Verhalten entspricht dann automatisch dem heutigen Stand.
 - **Rückfallebene nur für die schwerste Warnung (Runde 3):** Fällt das Budget knapp aus, greift die Rückfallebene (Ort weglassen, dann nur Kürzel) ausschließlich für die schwerste Warnung. Schwächere Warnungen folgen weiterhin der bestehenden Logik aus AC-4 (ganze Tokens fallen weg, „+N"-Marker) — sie bekommen keine eigene abgestufte Rückfallebene, weil sie ohnehin als Ganzes wegfallen dürfen, wenn kein Platz bleibt.
 - **Letztes Sicherheitsnetz nur bei unrealistischem `sms_prefix`:** Die Wortgrenzen-Kürzung (`_word_boundary_truncate`) greift nur, wenn selbst Kopf + blankes Gefahren-Kürzel das Limit sprengt — in der Praxis nur bei einem absurd langen, nutzerdefinierten `sms_prefix` (Trip-/Vergleichsname) denkbar, nicht bei realistischen Ortsnamen.
+- **SMS-Kürzel seit 2026-07-20 fremdverwaltet (s. AC-5-Update):** die SMS-Kürzel-Komponente von `_hazard_display` kommt seither aus `src/output/tokens/hazard_symbols.py` (SSOT ab Issue #1318), nicht mehr aus dieser Spec bzw. `official_alerts.py` selbst gepflegt.
 
 ## Ersetzt/Überschreibt
 
@@ -150,3 +166,4 @@ Diese Spec löst die in `docs/specs/modules/fix_1237_1238_1239_mail_darstellung.
 - 2026-07-13: **AC-9 präzisiert** (im TDD-RED aufgefallen, nicht stillschweigend geändert). Die ursprüngliche Formulierung „bleiben sie schlank … und bit-identisch zum Stand vor diesem Fix" widersprach AC-10/S5: der Wechsel der Telegram-Zeilen auf `_display_label` ändert die Gefahren-Bezeichnung (z. B. „Hitze" → „Extreme Hitze") **auch dann, wenn der Umfang einheitlich ist** — beide ACs konnten nur gleichzeitig erfüllt werden, indem die Test-Fixture Gefahren wählt, deren Quell-Label zufällig dem Typ-Wort entspricht (Gewitter/Sturm). Damit hätte der Test nicht mehr geprüft, was er verspricht. AC-9 sagt jetzt genau das aus, was AC-9 schützen soll: die **Umfangs-Behandlung** (kein wiederholter Umfang je Zeile bei einheitlichem Umfang) ist bit-identisch; die Gefahren-Bezeichnung ist ausgenommen und liegt allein bei AC-10. Die Test-Fixture wurde entsprechend auf eine Gefahr mit reichem Label („Extreme Hitze") umgestellt, damit der echte Konfliktfall geprüft wird. Sachlicher Umfang des Fixes unverändert; keine neue Verhaltenszusage.
 - 2026-07-13 (Runde 2): **AC-12/AC-13/AC-14 ergänzt** (F001/F002/F003), nach Review der Runde-1-Beispielausgaben. Dieselbe PO-Beanstandung aus #1238 („Warum ‚Gültig: unbekannt‘?") lebte in Telegram fort (`_format_validity` liefert dort weiterhin „unbekannt", `_tag_time` in der SMS weiterhin „?"), obwohl die Mail sie mit #1238 AC-7 bereits ersatzlos entfernt. Zusätzlich kollidierte ein neu eingeführter Zeilen-Trenner „—" zwischen Label und Zeitangabe mit dem Gedankenstrich, den ein reiches `_display_label` selbst tragen kann („Zugang eingeschränkt — Monts Toulonnais — Sa 11.07. …"). Fix: (a) Telegram-Zeile lässt die Zeitangabe samt Trennzeichen ganz weg, wenn `valid_from`/`valid_to` fehlen (F001, Gleichlauf mit der Mail); (b) Trennzeichen zwischen Label und Zeitangabe ist „·" statt „—", konsistent mit dem bereits genutzten Umfangs-Trenner (F002); (c) `_tag_time` liefert „" statt „?" bei fehlender Zeit, das SMS-Zeit-Token entfällt dann ganz (F003). AC-2 (mixed-level, SMS) und AC-9 (Telegram-Zeilen, uniform scope) mussten dadurch inhaltlich angepasst werden: die betroffenen literalen Erwartungs-Strings verlieren das „?" bzw. wechseln „—" zu „·" — die jeweils geprüfte Kern-Zusage (Umfangs-Bit-Identität) bleibt unverändert, nur der orthogonale Zeit-/Trennzeichen-Fehler ist behoben. Kein Scope-Creep über #1249 hinaus — beide Fehlerklassen entstammen der ursprünglichen #1216-Implementierung und werden hier im Zuge der ohnehin geänderten Zeilen mitbehoben.
 - 2026-07-13 (Runde 3): **AC-4 präzisiert, AC-15/AC-16 ergänzt** (F004, CRITICAL — Adversary-Verdict BROKEN). `_sms_truncate` (Vorgänger von `_sms_pack`) garantierte entgegen dem Wortlaut von AC-4 und der PO-Entscheidung („muss immer mindestens die schwerste Warnung samt Ort enthalten") **kein Minimum**: Ortsnamen sind nutzereingegeben und im Modell nicht längenbegrenzt. Sprengte Kopf + erstes Token + Ort das Limit, wurden **alle** Tokens verworfen (`kept=[]`, SMS wie „GZ AMT:  +2" — ohne jeden Inhalt), und im Ein-Warnung-Fall griff `body[:limit]` — ein Schnitt mitten im Ortsnamen, obwohl „nie mitten im Token" eine dokumentierte Invariante der Funktion war. Der Defekt bestand bereits auf `origin/main` (nicht durch #1249 eingebaut), wird aber hier behoben: eine im Ernstfall nicht haltende Zusage ist schlimmer als keine, und eine leere Unwetterwarnung ist der schlechteste denkbare Ausgang. Fix: `_sms_pack_with_fallback` (neu) probiert für die schwerste Warnung drei Stufen durch — (1) Kürzel+Zeit+Ort wie bisher, (2) Kürzel+Zeit ohne Ort, (3) nur das Kürzel — und garantiert mit `_word_boundary_truncate` als letztem Sicherheitsnetz, dass NIE ein leeres Ergebnis und NIE ein Schnitt mitten im Wort entsteht. `_sms_truncate` wurde zu `_sms_pack` (liefert zusätzlich die Anzahl behaltener Tokens, damit der Aufrufer einen Fehlschlag der ersten Stufe erkennen kann) umbenannt; einziger Aufrufer bleibt `render_official_alert_sms`, kein anderer Kanal betroffen. AC-4 wurde um die Rückfallreihenfolge präzisiert (war zuvor ohne Einschränkung formuliert, hätte im Grenzfall also weiterhin etwas versprochen, das nicht hielt); AC-15/AC-16 sichern den Normalfall-Overflow bzw. den Extremfall (Ortsname länger als das gesamte Limit) explizit ab. Bestehende Non-Regression-Tests (AC-2, AC-4, `tests/golden/test_sms_golden.py`) bleiben unverändert grün, da die Rückfallebene nur greift, wenn Stufe 1 tatsächlich nicht passt.
+- 2026-07-20: **AC-5 als überholt markiert** (PO-Entscheidung, Nachtrag zu Issue #1318/#1220): die Zusage „Kürzel bleiben identisch zum Stand vor #1249" wird durch die Kürzel-Vereinheitlichung zwischen Trip-Briefing-SMS und Standalone-Warn-SMS absichtlich gebrochen. Nicht gelöscht, sondern durchgestrichen mit Verweis auf die Nachfolge-ACs in `sms_official_alert_tokens.md`. Kein anderer Teil dieser Spec (S1–S5, AC-1 bis AC-4, AC-6 bis AC-16) ist davon betroffen.

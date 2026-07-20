@@ -6,7 +6,9 @@ from typing import Literal, Optional
 
 ReportType = Literal["morning", "evening", "update", "compare"]
 Profile = Literal["standard", "wintersport"]
-TokenCategory = Literal["forecast", "vigilance", "fire", "wintersport", "debug"]
+TokenCategory = Literal[
+    "forecast", "vigilance", "official_alert", "fire", "wintersport", "debug",
+]
 
 
 @dataclass(frozen=True)
@@ -44,6 +46,11 @@ class NormalizedForecast:
     vigilance_hr_hour: Optional[int] = None
     vigilance_th_level: Optional[str] = None
     vigilance_th_hour: Optional[int] = None
+    # Issue #1318: gefilterte, gekuerzelte amtliche Warnungen des Tages als
+    # (Kuerzel, Stufenbuchstabe, Stunde) — Stufenbuchstabe "" = blankes Kuerzel
+    # ohne Stufe (access_ban), Stunde None = ganztaegig (kein '@h').
+    # Bereits sortiert (Stufe absteigend, dann Katalog-Reihenfolge).
+    official_alerts: tuple[tuple[str, str, Optional[int]], ...] = field(default_factory=tuple)
     fire_zones_high: tuple[str, ...] = field(default_factory=tuple)
     fire_zones_max: tuple[str, ...] = field(default_factory=tuple)
     fire_massifs: tuple[str, ...] = field(default_factory=tuple)
