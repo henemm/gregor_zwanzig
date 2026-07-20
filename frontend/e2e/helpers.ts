@@ -1,4 +1,4 @@
-import { type Page } from '@playwright/test';
+import { type APIRequestContext, type Page } from '@playwright/test';
 import * as path from 'node:path';
 
 /**
@@ -211,4 +211,186 @@ export async function fillStep4(page: Page, input: Step4Input = {}): Promise<voi
 	if (input.expectSaveSuccess !== false) {
 		await page.waitForURL(/\/trips\/[^/]+$/, { timeout: 10000 });
 	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// #1329 Maßnahme B: geteilter, auto-registrierender E2E-Datenanlage-Helfer.
+//
+// Spec: docs/specs/modules/fix_1329_e2e_data_hygiene.md
+//
+// Jede Funktion vergibt einen Namen/ID mit reserviertem Präfix `E2E-GZ-` +
+// kollisionsfreiem Zeitstempel/Random-Suffix, ruft die passende REST-API auf
+// und registriert die erzeugte ID modul-intern (`registerForCleanup`). Das
+// eigentliche Sicherheitsnetz ist `global.teardown.ts` (Präfix-Sweep nach
+// Suite-Ende) — `cleanupTracked()` ist ein optionaler Zusatz für Specs, die
+// zusätzlich pro Testfall/Datei aufräumen wollen.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const E2E_TEST_PREFIX = 'E2E-GZ-';
+
+type CleanupKind = 'preset' | 'trip' | 'location';
+
+// Reihenfolge referenzierender vor referenzierten Objekten (behebt 409-Waisen,
+// AC-3): Presets/Trips referenzieren Orte, nie umgekehrt.
+const CLEANUP_ORDER: CleanupKind[] = ['preset', 'trip', 'location'];
+
+const tracked: Record<CleanupKind, Set<string>> = {
+	preset: new Set(),
+	trip: new Set(),
+	location: new Set()
+};
+
+function uniqueSuffix(): string {
+	return `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+}
+
+/** Trägt eine ID modul-intern zur späteren Bereinigung ein (s. `cleanupTracked`). */
+export function registerForCleanup(kind: CleanupKind, id: string): void {
+	tracked[kind].add(id);
+}
+
+async function deleteById(request: APIRequestContext, kind: CleanupKind, id: string): Promise<void> {
+	const urlPath =
+		kind === 'preset'
+			? `/api/compare/presets/${id}`
+			: kind === 'trip'
+				? `/api/trips/${id}`
+				: `/api/locations/${id}`;
+	try {
+		const res = await request.delete(urlPath);
+		if (!res.ok() && res.status() !== 404) {
+			// DELETE-Fehler werden GELOGGT statt stillschweigend verschluckt
+			// (Root Cause #3, Kontext-Dokument #1329) — kein `.catch(() => {})`.
+			console.error(`[e2e-cleanup] DELETE ${urlPath} -> HTTP ${res.status()}`);
+		}
+	} catch (err) {
+		console.error(`[e2e-cleanup] DELETE ${urlPath} threw:`, err);
+	}
+}
+
+/** Löscht alle bislang registrierten Test-Objekte, Reihenfolge Preset/Trip → Ort. */
+export async function cleanupTracked(request: APIRequestContext): Promise<void> {
+	for (const kind of CLEANUP_ORDER) {
+		const ids = Array.from(tracked[kind]);
+		tracked[kind].clear();
+		for (const id of ids) {
+			await deleteById(request, kind, id);
+		}
+	}
+}
+
+export interface TestLocationOpts {
+	name?: string;
+	lat?: number;
+	lon?: number;
+	elevation_m?: number;
+	region?: string;
+	group?: string;
+}
+
+export interface TestLocation {
+	id: string;
+	name: string;
+}
+
+/**
+ * Stellt sicher, dass ein Name mit dem reservierten Präfix beginnt — idempotent.
+ * Aufrufer, die das Präfix selbst schon einbauen (und per exact-Match darauf prüfen),
+ * dürfen NICHT doppelt präfixiert werden (`E2E-GZ-E2E-GZ-…`).
+ */
+function ensureTestPrefix(name: string): string {
+	return name.startsWith(E2E_TEST_PREFIX) ? name : `${E2E_TEST_PREFIX}${name}`;
+}
+
+/** Legt einen Test-Ort mit reserviertem Präfix an und registriert ihn zur Bereinigung. */
+export async function createTestLocation(
+	request: APIRequestContext,
+	opts: TestLocationOpts = {}
+): Promise<TestLocation> {
+	const suffix = uniqueSuffix();
+	const name = opts.name ? ensureTestPrefix(opts.name) : `${E2E_TEST_PREFIX}Loc-${suffix}`;
+	const res = await request.post('/api/locations', {
+		data: {
+			name,
+			lat: opts.lat ?? 47.0 + Math.random() * 0.5,
+			lon: opts.lon ?? 11.0 + Math.random() * 0.5,
+			...(opts.elevation_m !== undefined ? { elevation_m: opts.elevation_m } : {}),
+			...(opts.region !== undefined ? { region: opts.region } : {}),
+			...(opts.group !== undefined ? { group: opts.group } : {})
+		}
+	});
+	if (!res.ok()) {
+		throw new Error(`createTestLocation fehlgeschlagen: HTTP ${res.status()} — ${await res.text()}`);
+	}
+	const body = (await res.json()) as { id: string; name: string };
+	registerForCleanup('location', body.id);
+	return { id: body.id, name: body.name };
+}
+
+export interface TestComparePresetOpts {
+	name?: string;
+	locationIds: string[];
+	schedule?: 'daily' | 'weekly' | 'manual';
+	profil?: string;
+	hourFrom?: number;
+	hourTo?: number;
+	empfaenger?: string[];
+}
+
+export interface TestComparePreset {
+	id: string;
+	name: string;
+}
+
+/** Legt ein Test-Compare-Preset mit reserviertem Präfix an und registriert es zur Bereinigung. */
+export async function createTestComparePreset(
+	request: APIRequestContext,
+	opts: TestComparePresetOpts
+): Promise<TestComparePreset> {
+	const suffix = uniqueSuffix();
+	const name = opts.name ? ensureTestPrefix(opts.name) : `${E2E_TEST_PREFIX}Preset-${suffix}`;
+	const res = await request.post('/api/compare/presets', {
+		data: {
+			name,
+			location_ids: opts.locationIds,
+			schedule: opts.schedule ?? 'daily',
+			profil: opts.profil ?? 'wandern',
+			hour_from: opts.hourFrom ?? 7,
+			hour_to: opts.hourTo ?? 18,
+			empfaenger: opts.empfaenger ?? ['urlauber@example.com']
+		}
+	});
+	if (!res.ok()) {
+		throw new Error(`createTestComparePreset fehlgeschlagen: HTTP ${res.status()} — ${await res.text()}`);
+	}
+	const body = (await res.json()) as { id: string; name: string };
+	registerForCleanup('preset', body.id);
+	return { id: body.id, name: body.name };
+}
+
+export interface TestTripOpts {
+	id?: string;
+	name?: string;
+	stages?: unknown[];
+}
+
+export interface TestTrip {
+	id: string;
+	name: string;
+}
+
+/** Legt einen Test-Trip mit reserviertem Präfix an und registriert ihn zur Bereinigung. */
+export async function createTestTrip(request: APIRequestContext, opts: TestTripOpts = {}): Promise<TestTrip> {
+	const suffix = uniqueSuffix();
+	const id = opts.id ?? `e2e-gz-trip-${suffix}`;
+	const name = opts.name ? ensureTestPrefix(opts.name) : `${E2E_TEST_PREFIX}Trip-${suffix}`;
+	const res = await request.post('/api/trips', {
+		data: { id, name, stages: opts.stages ?? [] }
+	});
+	if (!res.ok()) {
+		throw new Error(`createTestTrip fehlgeschlagen: HTTP ${res.status()} — ${await res.text()}`);
+	}
+	const body = (await res.json()) as { id: string; name: string };
+	registerForCleanup('trip', body.id);
+	return { id: body.id, name: body.name };
 }

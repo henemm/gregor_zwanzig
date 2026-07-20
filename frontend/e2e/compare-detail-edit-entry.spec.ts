@@ -15,6 +15,7 @@
 //   npx playwright test e2e/compare-detail-edit-entry.spec.ts --config playwright.config.ts
 
 import { test, expect, type Page } from '@playwright/test';
+import { createTestLocation } from './helpers';
 
 let createdIds: string[] = [];
 let createdLocationIds: string[] = [];
@@ -39,11 +40,10 @@ test.afterEach(async ({ page }) => {
 });
 
 async function createLocation(page: Page, name: string, lat: number, lon: number): Promise<string> {
-	const res = await page.request.post('/api/locations', { data: { name, lat, lon } });
-	expect(res.ok(), 'Location-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();
-	const body = await res.json();
-	createdLocationIds.push(body.id);
-	return body.id as string;
+	// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts).
+	const loc = await createTestLocation(page.request, { name, lat, lon });
+	createdLocationIds.push(loc.id);
+	return loc.id;
 }
 
 // deriveStatusFromPreset() (subscriptionHelpers.ts) braucht Name + mind. 1 Ort

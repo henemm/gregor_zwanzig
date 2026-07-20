@@ -13,12 +13,12 @@
 //   npx playwright test e2e/compare-editor-autosave-user-isolation.spec.ts --config playwright.config.ts
 
 import { test, expect, type Page } from '@playwright/test';
+import { createTestLocation } from './helpers';
 
 async function createLocation(page: Page, name: string, lat: number, lon: number): Promise<string> {
-	const res = await page.request.post('/api/locations', { data: { name, lat, lon } });
-	expect(res.ok(), 'Location-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();
-	const body = await res.json();
-	return body.id as string;
+	// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts).
+	const loc = await createTestLocation(page.request, { name, lat, lon });
+	return loc.id;
 }
 
 async function createPresetWithLocation(page: Page, name: string, locationId: string): Promise<string> {

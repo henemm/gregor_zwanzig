@@ -17,6 +17,7 @@
 //     npx playwright test e2e/issue-758-save-indicator.spec.ts
 
 import { test, expect, type Page } from '@playwright/test';
+import { createTestLocation } from './helpers';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Trip-Seed (analog issue-498)
@@ -169,22 +170,16 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 // Compare-Editor: derselbe Indikator, expliziter Speichern-Schritt bleibt.
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('Issue #758 — Ortsvergleich Speicher-Status', () => {
+	// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts) —
+	// diese Describe-Suite hatte zuvor GAR kein Cleanup (garantierter Leak,
+	// Kontext-Dok.).
 	async function createPreset(page: Page): Promise<string> {
-		// Eindeutige Ortsnamen je Lauf — feste Namen kollidieren (HTTP 409).
 		const suffix = Date.now();
-		const resA = await page.request.post('/api/locations', {
-			data: { name: `Ort-758-A ${suffix}`, lat: 47.4, lon: 13.0, region: 'Hochkönig' }
-		});
-		expect(resA.ok(), `locA HTTP ${resA.status()}`).toBeTruthy();
-		const locA = await resA.json();
-		const resB = await page.request.post('/api/locations', {
-			data: { name: `Ort-758-B ${suffix}`, lat: 47.1, lon: 12.8, region: 'Hochkönig' }
-		});
-		expect(resB.ok(), `locB HTTP ${resB.status()}`).toBeTruthy();
-		const locB = await resB.json();
+		const locA = await createTestLocation(page.request, { lat: 47.4, lon: 13.0, region: 'Hochkönig' });
+		const locB = await createTestLocation(page.request, { lat: 47.1, lon: 12.8, region: 'Hochkönig' });
 		const resP = await page.request.post('/api/compare/presets', {
 			data: {
-				name: 'Vergleich #758 ' + suffix,
+				name: 'E2E-GZ-Vergleich-758-' + suffix,
 				location_ids: [locA.id, locB.id],
 				schedule: 'daily',
 				profil: 'wintersport',

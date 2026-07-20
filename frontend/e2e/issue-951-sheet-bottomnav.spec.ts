@@ -4,6 +4,7 @@
 // Ausführen: cd frontend && npx playwright test e2e/issue-951-sheet-bottomnav.spec.ts --reporter=list
 
 import { test, expect, type Page } from '@playwright/test';
+import { createTestLocation } from './helpers';
 
 const TRIP_ID = 'e2e-951-sheet-bottomnav';
 const TRIP_NAME = 'E2E #951 Sheet BottomNav';
@@ -84,10 +85,9 @@ test.describe('Issue #951 — Sheet-Panel darf BottomNav nicht blockieren', () =
 		page
 	}) => {
 		// Ein Ort im Konto (füllt die Wizard-Bibliothek).
-		const resLoc = await page.request.post('/api/locations', {
-			data: { name: 'Ort-951 ' + Date.now(), lat: 47.4, lon: 13.0, region: 'Hochkönig' }
-		});
-		expect(resLoc.ok(), `loc HTTP ${resLoc.status()}`).toBeTruthy();
+		// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts) —
+		// dieser Ort war zuvor ein garantierter Leak (Kontext-Dok.).
+		await createTestLocation(page.request, { lat: 47.4, lon: 13.0, region: 'Hochkönig' });
 
 		// Epic #1273 S4c: Das Bibliotheks-Sheet lebt nur im Wizard; Einstieg über
 		// /compare/new (Orte-Tab wird durch Namenseingabe freigeschaltet).

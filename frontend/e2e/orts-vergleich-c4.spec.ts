@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { login } from './helpers.js';
+import { login, createTestLocation } from './helpers.js';
 
 test.describe('F76 Phase C4: Location-Gruppen in Sidebar', () => {
 	test.beforeEach(async ({ page }) => {
@@ -58,7 +58,7 @@ test.describe('F76 Phase C4: Location-Gruppen in Sidebar', () => {
 		await expect(groupInput).toBeVisible();
 	});
 
-	test('backend accepts group field on location', async ({ page, request }) => {
+	test('backend accepts group field on location', async ({ page }) => {
 		/**
 		 * GIVEN: Go API is running
 		 * WHEN: POST /api/locations with group field
@@ -66,31 +66,22 @@ test.describe('F76 Phase C4: Location-Gruppen in Sidebar', () => {
 		 */
 		// Login to get session
 		await login(page);
-		const cookies = await page.context().cookies();
-		const session = cookies.find(c => c.name === 'gz_session');
 
-		const resp = await request.post('http://localhost:8090/api/locations', {
-			headers: {
-				'Content-Type': 'application/json',
-				'Cookie': `gz_session=${session?.value}`
-			},
-			data: {
-				name: '__test_c4_group__',
-				lat: 47.0,
-				lon: 11.0,
-				elevation_m: 2000,
-				group: 'Test-Gruppe'
-			}
+		// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts).
+		// Vormals hart auf `http://localhost:8090` (PROD-Go-Port!) verdrahtet
+		// statt relativ über die aktuelle baseURL/den Proxy zu laufen — der
+		// geteilte Helfer nutzt `page.request`, respektiert also die konfigurierte
+		// baseURL und trägt zusätzlich das reservierte Präfix (vormals
+		// `__test_c4_group__`, kollisionsanfällig, Kontext-Dok.).
+		const loc = await createTestLocation(page.request, {
+			lat: 47.0,
+			lon: 11.0,
+			elevation_m: 2000,
+			group: 'Test-Gruppe'
 		});
+		const resp = await page.request.get(`/api/locations/${loc.id}`);
 		expect(resp.ok()).toBeTruthy();
 		const body = await resp.json();
 		expect(body.group).toBe('Test-Gruppe');
-
-		// Cleanup
-		if (body.id) {
-			await request.delete(`http://localhost:8090/api/locations/${body.id}`, {
-				headers: { 'Cookie': `gz_session=${session?.value}` }
-			});
-		}
 	});
 });

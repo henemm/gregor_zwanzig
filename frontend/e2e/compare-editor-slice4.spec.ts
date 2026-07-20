@@ -14,16 +14,14 @@
 //   cd frontend && npx playwright test e2e/compare-editor-slice4.spec.ts --config playwright.config.ts
 
 import { test, expect, type Page } from '@playwright/test';
-import { login } from './helpers.js';
+import { login, createTestLocation } from './helpers.js';
 
+// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts) —
+// diese Datei hatte zuvor GAR kein Cleanup (garantierter Leak, Kontext-Dok.).
 async function makeTwoLocations(page: Page): Promise<[string, string]> {
-	const suffix = Date.now();
-	const nameA = 'Slice4-Ort-A ' + suffix;
-	const nameB = 'Slice4-Ort-B ' + suffix;
-	const resA = await page.request.post('/api/locations', { data: { name: nameA, lat: 47.2, lon: 12.3 } });
-	const resB = await page.request.post('/api/locations', { data: { name: nameB, lat: 47.3, lon: 12.4 } });
-	expect(resA.ok() && resB.ok(), 'Location-Anlage fehlgeschlagen').toBeTruthy();
-	return [nameA, nameB];
+	const locA = await createTestLocation(page.request, { lat: 47.2, lon: 12.3 });
+	const locB = await createTestLocation(page.request, { lat: 47.3, lon: 12.4 });
+	return [locA.name, locB.name];
 }
 
 test.describe('F2a: /compare/new Aktivieren-Gate + Create-POST', () => {

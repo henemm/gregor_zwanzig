@@ -9,11 +9,13 @@
 // Wetter-Metriken-Tab (Ziel-benannt), nicht mehr direkt zu Wertebereiche.
 
 import { test, expect, type Page } from '@playwright/test';
+import { createTestLocation } from './helpers';
 
+// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts) —
+// diese Datei hatte zuvor GAR kein Cleanup (garantierter Leak, Kontext-Dok.).
 async function createLoc(page: Page, name: string, lat: number, lon: number): Promise<string> {
-	const res = await page.request.post('/api/locations', { data: { name, lat, lon } });
-	expect(res.ok(), `Location-Anlage fehlgeschlagen: ${name}`).toBeTruthy();
-	return (await res.json()).id as string;
+	const loc = await createTestLocation(page.request, { name, lat, lon });
+	return loc.id;
 }
 
 test.describe('Compare-Create-Wizard: Orte-Gate (Weiter erst ab 2 Orten) [Issue #718 / #1231]', () => {
@@ -24,8 +26,8 @@ test.describe('Compare-Create-Wizard: Orte-Gate (Weiter erst ab 2 Orten) [Issue 
 	// ── AC-2: Weiter-Button disabled bis 2 Orte gewählt (echter Klickpfad ab /compare/new) ──
 	test('AC-2: Weiter-Button im Wizard ist disabled bis 2 Orte gewählt sind', async ({ page }) => {
 		const suffix = Date.now();
-		const nameA = 'Idealwert-A ' + suffix;
-		const nameB = 'Idealwert-B ' + suffix;
+		const nameA = 'E2E-GZ-Idealwert-A-' + suffix;
+		const nameB = 'E2E-GZ-Idealwert-B-' + suffix;
 		await createLoc(page, nameA, 47.4, 13.0);
 		await createLoc(page, nameB, 47.1, 12.8);
 

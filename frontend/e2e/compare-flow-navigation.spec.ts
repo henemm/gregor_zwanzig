@@ -27,6 +27,7 @@
 //   npx playwright test --config=playwright.1256-s2.staging.config.ts
 
 import { test, expect, type Page } from '@playwright/test';
+import { createTestLocation } from './helpers';
 
 // Staging-Hygiene (Fix-Loop F003): jeder in einem Test angelegte Preset wird
 // hier gesammelt und im file-weiten afterEach wieder gelöscht.
@@ -77,12 +78,10 @@ async function createPreset(page: Page, name: string): Promise<string> {
 //    deriveStatusFromPreset() nicht auf "draft" fällt (location_ids darf
 //    für den Lifecycle-Status nicht leer sein). ────────────────────────────
 async function createLocation(page: Page, name: string, lat: number, lon: number): Promise<string> {
-	const res = await page.request.post('/api/locations', { data: { name, lat, lon } });
-	expect(res.ok(), 'Location-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();
-	const body = await res.json();
-	const id = body.id as string;
-	createdLocationIds.push(id);
-	return id;
+	// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts).
+	const loc = await createTestLocation(page.request, { name, lat, lon });
+	createdLocationIds.push(loc.id);
+	return loc.id;
 }
 
 async function createPresetWithLocation(

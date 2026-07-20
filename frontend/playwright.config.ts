@@ -13,6 +13,9 @@ process.env.GZ_API_BASE ??= 'http://localhost:8091';
 
 export default defineConfig({
 	testDir: 'e2e',
+	// #1329 Maßnahme B: Sicherheitsnetz-Räumlauf nach Suite-Ende (auch bei
+	// Testfehlern/Abbrüchen) — löscht alle E2E-GZ--Präfix-Objekte.
+	globalTeardown: './e2e/global.teardown.ts',
 	timeout: 30_000,
 	retries: 0,
 	use: {

@@ -21,7 +21,7 @@
 //     --config playwright.config.ts
 
 import { test, expect } from '@playwright/test';
-import { login } from './helpers.js';
+import { login, createTestLocation } from './helpers.js';
 
 // Hilfsfunktion: Öffnet das Kebab-Menü der ersten Kachel mit einem bestimmten Status-Label
 async function openKebabForStatus(page: import('@playwright/test').Page, statusLabel: string) {
@@ -58,9 +58,9 @@ async function createLocation(
 	lat: number,
 	lon: number
 ): Promise<string> {
-	const res = await page.request.post('/api/locations', { data: { name, lat, lon } });
-	await expect(res, 'Location-Anlage fehlgeschlagen: ' + res.status()).toBeOK();
-	return (await res.json()).id as string;
+	// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts).
+	const loc = await createTestLocation(page.request, { name, lat, lon });
+	return loc.id;
 }
 
 async function createPresetWithLocation(

@@ -6,6 +6,7 @@
 //   --config=playwright.880.staging.config.ts --reporter=list
 
 import { test, expect, type Page } from '@playwright/test';
+import { createTestLocation } from './helpers';
 
 const TRIP_ID = 'e2e-880-overlay';
 const TRIP_NAME = 'E2E #880 Overlay';
@@ -162,22 +163,16 @@ test.describe('feat_880 — Trip-Editor Autospeicher-Overlay', () => {
 });
 
 test.describe('feat_880 — Compare-Editor & Cross-Tab-Isolation', () => {
+	// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts) —
+	// diese Describe-Suite hatte zuvor GAR kein Cleanup (garantierter Leak,
+	// Kontext-Dok.).
 	async function createPreset(page: Page): Promise<string> {
-		// Eindeutige Ortsnamen je Lauf — feste Namen kollidieren (HTTP 409).
 		const suffix = Date.now();
-		const resA = await page.request.post('/api/locations', {
-			data: { name: `Ort-880-A ${suffix}`, lat: 47.4, lon: 13.0, region: 'Hochkönig' }
-		});
-		expect(resA.ok(), `locA HTTP ${resA.status()}`).toBeTruthy();
-		const locA = await resA.json();
-		const resB = await page.request.post('/api/locations', {
-			data: { name: `Ort-880-B ${suffix}`, lat: 47.1, lon: 12.8, region: 'Hochkönig' }
-		});
-		expect(resB.ok(), `locB HTTP ${resB.status()}`).toBeTruthy();
-		const locB = await resB.json();
+		const locA = await createTestLocation(page.request, { lat: 47.4, lon: 13.0, region: 'Hochkönig' });
+		const locB = await createTestLocation(page.request, { lat: 47.1, lon: 12.8, region: 'Hochkönig' });
 		const resP = await page.request.post('/api/compare/presets', {
 			data: {
-				name: 'Vergleich #880 ' + suffix,
+				name: 'E2E-GZ-Vergleich-880-' + suffix,
 				location_ids: [locA.id, locB.id],
 				schedule: 'daily',
 				profil: 'wintersport',

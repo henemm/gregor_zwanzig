@@ -8,8 +8,11 @@
 // CorridorEditor ersetzt — die Idealwerte-Tests prüfen gegen corridor-row-*.
 
 import { test, expect, type Page } from '@playwright/test';
+import { createTestLocation } from './helpers';
 
 // ── Create-Wizard-Klickpfad-Helper ──────────────────────────────────────────
+// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts) —
+// diese Datei hatte zuvor GAR kein Cleanup (garantierter Leak, Kontext-Dok.).
 async function createLoc(
 	page: Page,
 	name: string,
@@ -17,11 +20,8 @@ async function createLoc(
 	lon: number,
 	region?: string
 ): Promise<string> {
-	const res = await page.request.post('/api/locations', {
-		data: { name, lat, lon, ...(region ? { region } : {}) }
-	});
-	expect(res.ok(), `Location-Anlage fehlgeschlagen: ${name}`).toBeTruthy();
-	return (await res.json()).id as string;
+	const loc = await createTestLocation(page.request, { name, lat, lon, region });
+	return loc.id;
 }
 
 async function newWizard(page: Page, name: string, profil?: string): Promise<void> {
@@ -61,8 +61,8 @@ async function seedTwoAndOpenIdealwerte(
 	label: string
 ): Promise<{ idA: string; idB: string }> {
 	const suffix = Date.now();
-	const nameA = `${label}-A ${suffix}`;
-	const nameB = `${label}-B ${suffix}`;
+	const nameA = `E2E-GZ-${label}-A-${suffix}`;
+	const nameB = `E2E-GZ-${label}-B-${suffix}`;
 	const idA = await createLoc(page, nameA, 47.4, 13.0);
 	const idB = await createLoc(page, nameB, 47.1, 12.8);
 	await newWizard(page, `Slice3 ${label} ${suffix}`, profil);
@@ -84,8 +84,8 @@ test.describe('Issue #680: Compare-Editor Slice 3 — Orte + Idealwerte', () => 
 	// ── AC-1: Nummerierte Picked-Liste mit ✕ ─────────────────────────────────
 	test('AC-1: Picked-Liste zeigt Nummern und ✕-Entfernen-Buttons', async ({ page }) => {
 		const suffix = Date.now();
-		const nameA = 'Ort-Region-A ' + suffix;
-		const nameB = 'Ort-kein-Region ' + suffix;
+		const nameA = 'E2E-GZ-Ort-Region-A-' + suffix;
+		const nameB = 'E2E-GZ-Ort-kein-Region-' + suffix;
 		const locIdA = await createLoc(page, nameA, 47.4, 13.0, 'Hochkönig');
 		const locIdB = await createLoc(page, nameB, 47.1, 12.8);
 
@@ -115,7 +115,7 @@ test.describe('Issue #680: Compare-Editor Slice 3 — Orte + Idealwerte', () => 
 	// ── AC-2: Counter Warn/OK ────────────────────────────────────────────────
 	test('AC-2: Counter zeigt "min. 2 erforderlich" unter 2 Orten', async ({ page }) => {
 		const suffix = Date.now();
-		const nameA = 'Ort-Solo-A ' + suffix;
+		const nameA = 'E2E-GZ-Ort-Solo-A-' + suffix;
 		await createLoc(page, nameA, 47.4, 13.0, 'Hochkönig');
 
 		await newWizard(page, 'Slice3 Counter ' + suffix);
@@ -132,8 +132,8 @@ test.describe('Issue #680: Compare-Editor Slice 3 — Orte + Idealwerte', () => 
 	// Ort ohne Gruppe landet in "Weitere" (kein "Hochkönig"-Header mehr).
 	test('AC-3: Bibliothek gruppiert Orte (Sammelgruppe "Weitere" als Überschrift)', async ({ page }) => {
 		const suffix = Date.now();
-		await createLoc(page, 'Ort-Region-A ' + suffix, 47.4, 13.0, 'Hochkönig');
-		await createLoc(page, 'Ort-kein-Region ' + suffix, 47.1, 12.8);
+		await createLoc(page, 'E2E-GZ-Ort-Region-A-' + suffix, 47.4, 13.0, 'Hochkönig');
+		await createLoc(page, 'E2E-GZ-Ort-kein-Region-' + suffix, 47.1, 12.8);
 
 		await newWizard(page, 'Slice3 Library ' + suffix);
 		await page.locator('[data-testid="compare-editor-tab-orte"]:visible').first().click();

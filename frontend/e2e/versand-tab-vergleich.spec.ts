@@ -17,6 +17,7 @@
 //     npx playwright test e2e/versand-tab-vergleich.spec.ts --config playwright.config.ts
 
 import { test, expect, type Page } from '@playwright/test';
+import { createTestLocation } from './helpers';
 
 async function createPreset(
 	page: Page,
@@ -24,7 +25,7 @@ async function createPreset(
 ): Promise<{ id: string }> {
 	const res = await page.request.post('/api/compare/presets', {
 		data: {
-			name: 'VersandTab-Vergleich-E2E ' + Date.now(),
+			name: 'E2E-GZ-VersandTab-Vergleich-' + Date.now(),
 			location_ids: [],
 			schedule: 'daily',
 			profil: 'wandern',
@@ -215,23 +216,20 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		page
 	}) => {
 		const suffix = Date.now();
-		const nameA = 'VersandVergleich-Ort-A-' + suffix;
-		const nameB = 'VersandVergleich-Ort-B-' + suffix;
-		const [rA, rB] = await Promise.all([
-			page.request.post('/api/locations', {
-				data: { name: nameA, lat: 47.0, lon: 13.0, region: 'VersandVergleich-Region' }
-			}),
-			page.request.post('/api/locations', {
-				data: { name: nameB, lat: 47.1, lon: 13.1, region: 'VersandVergleich-Region' }
-			})
+		// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts) —
+		// diese Orte waren zuvor ein garantierter Leak (Kontext-Dok.).
+		const [locA, locB] = await Promise.all([
+			createTestLocation(page.request, { lat: 47.0, lon: 13.0, region: 'VersandVergleich-Region' }),
+			createTestLocation(page.request, { lat: 47.1, lon: 13.1, region: 'VersandVergleich-Region' })
 		]);
-		expect(rA.ok() && rB.ok(), 'Location-Anlage fehlgeschlagen').toBeTruthy();
+		const nameA = locA.name;
+		const nameB = locB.name;
 
 		await page.goto('/compare/new');
 		await page.waitForLoadState('networkidle');
 		const d = page.locator('.cm-desktop');
 
-		await d.locator('[data-testid="compare-editor-name"]').fill('AC-6 Create-Flow ' + suffix);
+		await d.locator('[data-testid="compare-editor-name"]').fill('E2E-GZ-AC-6-Create-Flow-' + suffix);
 		await d.locator('[data-testid="compare-editor-tab-orte"]').click();
 		await d.locator('[data-testid="compare-step2-library"]').waitFor({ timeout: 8_000 });
 		await d.locator('[data-testid="compare-step2-library"]').getByText(nameA, { exact: true }).click();

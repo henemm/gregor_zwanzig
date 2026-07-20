@@ -14,14 +14,17 @@
 //   cd frontend && npx playwright test e2e/layout-tab-vergleich.spec.ts
 
 import { test, expect, type Page } from '@playwright/test';
+import { createTestLocation } from './helpers';
 
 async function createLocation(page: Page, name: string): Promise<string> {
-	const res = await page.request.post('/api/locations', {
-		data: { name, lat: 47.0 + Math.random(), lon: 12.0 + Math.random() }
+	// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts) —
+	// diese Datei hatte zuvor GAR kein Cleanup (garantierter Leak, Kontext-Dok.).
+	const loc = await createTestLocation(page.request, {
+		name,
+		lat: 47.0 + Math.random(),
+		lon: 12.0 + Math.random()
 	});
-	expect(res.ok(), `Location-Anlage fehlgeschlagen: ${name}`).toBeTruthy();
-	const body = await res.json();
-	return body.id as string;
+	return loc.id;
 }
 
 // Neue Freischalt-Kette (F2a): Name → ≥2 Orte → Wetter-Metriken → Wertebereiche →
@@ -61,8 +64,8 @@ test.describe('F2a: Layout-Tab (/compare/new) = Stundenverlauf-Steuerung', () =>
 
 	// ── AC-7: Layout-Tab zeigt Stundenverlauf-Toggle + Metrik-Auswahl ──────────
 	test('AC-7: Layout-Tab rendert Stundenverlauf-Toggle und Metrik-Checkboxen', async ({ page }) => {
-		const nameA = 'LT-Ort-A ' + Date.now();
-		const nameB = 'LT-Ort-B ' + Date.now();
+		const nameA = 'E2E-GZ-LT-Ort-A-' + Date.now();
+		const nameB = 'E2E-GZ-LT-Ort-B-' + Date.now();
 		await createLocation(page, nameA);
 		await createLocation(page, nameB);
 		await openLayoutTab(page, [nameA, nameB]);
@@ -81,8 +84,8 @@ test.describe('F2a: Layout-Tab (/compare/new) = Stundenverlauf-Steuerung', () =>
 
 	// ── AC-7: Eine Metrik umschalten bleibt bedienbar (kein Crash) ─────────────
 	test('AC-7: Metrik-Checkbox lässt sich umschalten', async ({ page }) => {
-		const nameA = 'LT-Toggle-A ' + Date.now();
-		const nameB = 'LT-Toggle-B ' + Date.now();
+		const nameA = 'E2E-GZ-LT-Toggle-A-' + Date.now();
+		const nameB = 'E2E-GZ-LT-Toggle-B-' + Date.now();
 		await createLocation(page, nameA);
 		await createLocation(page, nameB);
 		await openLayoutTab(page, [nameA, nameB]);
@@ -100,8 +103,8 @@ test.describe('F2a: Layout-Tab (/compare/new) = Stundenverlauf-Steuerung', () =>
 
 	// ── AC-11: Die alte channel_layouts-Attrappe ist verschwunden ──────────────
 	test('AC-11: kein Channel-Tab / kein Layout-Preview / kein SMS-Budget mehr', async ({ page }) => {
-		const nameA = 'LT-NoAttrappe-A ' + Date.now();
-		const nameB = 'LT-NoAttrappe-B ' + Date.now();
+		const nameA = 'E2E-GZ-LT-NoAttrappe-A-' + Date.now();
+		const nameB = 'E2E-GZ-LT-NoAttrappe-B-' + Date.now();
 		await createLocation(page, nameA);
 		await createLocation(page, nameB);
 		await openLayoutTab(page, [nameA, nameB]);
@@ -129,8 +132,8 @@ test.describe('F2a: Layout-Tab (/compare/new) = Stundenverlauf-Steuerung', () =>
 
 	// ── AC-8: Mobile — Layout-Tab ohne horizontales Scrollen ───────────────────
 	test('AC-8: Mobile-Ansicht scrollt nicht horizontal', async ({ page }) => {
-		const nameA = 'LT-Mobile-A ' + Date.now();
-		const nameB = 'LT-Mobile-B ' + Date.now();
+		const nameA = 'E2E-GZ-LT-Mobile-A-' + Date.now();
+		const nameB = 'E2E-GZ-LT-Mobile-B-' + Date.now();
 		await createLocation(page, nameA);
 		await createLocation(page, nameB);
 

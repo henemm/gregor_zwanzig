@@ -8,6 +8,8 @@ const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234'
 
 export default defineConfig({
 	testDir: '.',
+	// #1329 Maßnahme B: Sicherheitsnetz-Räumlauf nach Suite-Ende.
+	globalTeardown: './global.teardown.ts',
 	timeout: 60_000,
 	retries: 0,
 	use: {

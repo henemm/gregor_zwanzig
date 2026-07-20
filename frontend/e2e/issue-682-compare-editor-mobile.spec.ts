@@ -18,25 +18,20 @@
 //   npx playwright test e2e/issue-682-compare-editor-mobile.spec.ts
 
 import { test, expect, type Page } from '@playwright/test';
+import { createTestLocation } from './helpers';
 
 const MOBILE  = { width: 375, height: 667 };
 const DESKTOP = { width: 1280, height: 900 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: Vergleichs-Preset + 2 Locations anlegen (für Edit-Modus-Tests)
+// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts) — die
+// vormals festen, kollisionsanfälligen Namen ('Loc-Mobile-A'/-B, Kontext-Dok.)
+// tragen jetzt automatisch das reservierte Präfix + einen eindeutigen Suffix.
 // ─────────────────────────────────────────────────────────────────────────────
 async function createPreset(page: Page): Promise<string> {
-	const resA = await page.request.post('/api/locations', {
-		data: { name: 'Loc-Mobile-A', lat: 47.4, lon: 13.0, region: 'Hochkönig' }
-	});
-	expect(resA.ok(), `Location A: ${resA.status()}`).toBeTruthy();
-	const locA = await resA.json();
-
-	const resB = await page.request.post('/api/locations', {
-		data: { name: 'Loc-Mobile-B', lat: 47.1, lon: 12.8, region: 'Dachstein' }
-	});
-	expect(resB.ok(), `Location B: ${resB.status()}`).toBeTruthy();
-	const locB = await resB.json();
+	const locA = await createTestLocation(page.request, { lat: 47.4, lon: 13.0, region: 'Hochkönig' });
+	const locB = await createTestLocation(page.request, { lat: 47.1, lon: 12.8, region: 'Dachstein' });
 
 	const resP = await page.request.post('/api/compare/presets', {
 		data: {
