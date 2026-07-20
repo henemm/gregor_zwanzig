@@ -225,15 +225,13 @@ test.describe('Issue #1256 S8d (AC-6/AC-7): mobiler Orte-Tab dense-Stack', () =>
 		await page.getByTestId('compare-editor-name-mobile').fill(`E2E S8d Editor ${suffix}`);
 		await page.locator('[data-testid="cm-mobile-tab-orte"]:visible').click();
 
-		await expect(page.getByText('Im Vergleich ·').first()).toBeVisible();
-		// Fix-Loop 2: Step2Orte wird als GETRENNTE Instanz sowohl im .cm-desktop-
-		// als auch im .cm-mobile-Zweig gemountet (CSS-only Switch, beide Zweige
-		// im DOM) — compare-step2-counter existiert daher doppelt. Die
-		// .cm-desktop-Kopie liegt auf Mobile nur per position:fixed/1px offscreen
-		// (nicht display:none), wodurch Playwrights :visible bei Text-/Inline-
-		// Elementen (Bounding-Box bleibt am Inhalt bemessen, nicht am 1px-
-		// Container) NICHT zuverlaessig filtert — s. Runbook-Messung Fix-Loop 2.
-		// Eindeutig nur per Container-Scoping auf .cm-mobile.
+		await expect(page.locator('.cm-mobile').getByText('Im Vergleich ·')).toBeVisible();
+		// Step2Orte wird als GETRENNTE Instanz sowohl im .cm-desktop- als auch im
+		// .cm-mobile-Zweig gemountet (CSS-only Switch, beide Zweige im DOM) —
+		// compare-step2-counter existiert daher doppelt. Seit Epic #1301 F3
+		// (#989) ist der .cm-desktop-Zweig auf Mobile per display:none versteckt,
+		// bleibt aber im DOM — Container-Scoping auf .cm-mobile ist deshalb
+		// weiterhin fuer die doppelt vorhandenen Elemente noetig.
 		await expect(page.locator('.cm-mobile [data-testid="compare-step2-counter"]')).toHaveText('min. 2');
 		await expect(page.locator('.cm-mobile [data-testid="compare-step2-smart-import-input"]')).toHaveCount(0);
 		await expect(page.locator('.cm-mobile [data-testid="compare-step2-library"]')).toHaveCount(0);
