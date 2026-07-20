@@ -76,7 +76,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("scheduler error: %v", err)
 	}
-	sched.Start()
+	if scheduler.SchedulerEnabled(cfg) {
+		sched.Start()
+	} else {
+		log.Printf("[scheduler] disabled for env=%s (staging quota gate, Issue #1329)", cfg.Env)
+	}
 	defer sched.Stop()
 
 	r := router.New(router.Deps{

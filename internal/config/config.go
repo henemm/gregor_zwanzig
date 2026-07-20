@@ -42,6 +42,9 @@ type Config struct {
 	WebAuthnRPID          string `envconfig:"WEBAUTHN_RP_ID" default:"localhost"`
 	WebAuthnRPDisplayName string `envconfig:"WEBAUTHN_RP_DISPLAY_NAME" default:"Gregor Zwanzig"`
 	WebAuthnRPOrigins     string `envconfig:"WEBAUTHN_RP_ORIGINS" default:"http://localhost:5173"`
+	// Issue #1329 — Staging-Scheduler-Gate: GZ_ENV=staging deaktiviert den
+	// autonomen Cron-Scheduler (open-meteo-Kontingent-Schutz).
+	Env string `envconfig:"ENV" default:""`
 }
 
 func Load() (*Config, error) {
