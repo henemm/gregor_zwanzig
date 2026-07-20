@@ -121,6 +121,8 @@ func New(deps Deps) chi.Router {
 	r.Get("/api/config", handler.ProxyHandler(deps.Config.PythonCoreURL, "/config"))
 	r.Get("/api/metrics", handler.ProxyHandler(deps.Config.PythonCoreURL, "/metrics"))
 	r.Get("/api/templates", handler.ProxyHandler(deps.Config.PythonCoreURL, "/templates"))
+	// Issue #1318 AC-9: read-only SMS-Kuerzel-Katalog (Metriken + Gefahrenarten).
+	r.Get("/api/sms-symbols", handler.ProxyHandler(deps.Config.PythonCoreURL, "/sms-symbols"))
 	r.Get("/api/forecast", handler.ForecastHandler(deps.WeatherProvider))
 	r.Get("/api/locations", handler.LocationsHandler(deps.Store))
 	r.Get("/api/locations/{id}", handler.LocationHandler(deps.Store))

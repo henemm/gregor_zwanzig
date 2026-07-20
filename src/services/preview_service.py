@@ -241,6 +241,7 @@ class PreviewService:
         return TripReportFormatter().format_email(
             segments=segment_weather,
             trip_name=trip.name,
+            trip=trip,
             report_type=report_type,
             display_config=trip.display_config,
             stage_name=stage_name,

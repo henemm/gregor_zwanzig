@@ -1676,15 +1676,21 @@ def render_official_alert_sms(
     return _sms_pack_with_fallback(head, leading_variants, tokens[1:], limit, suffix)
 
 
-def _trip_total_segment_ids(trip: "Trip") -> list[str]:
+def _trip_total_segment_ids(trip: "Trip | None") -> list[str]:
     """Segment-IDs '1'..'N' + 'Ziel' fuer die 'gesamte Route'-Erkennung
-    (N = Anzahl Wegpunkte - 1, minimal 0)."""
+    (N = Anzahl Wegpunkte - 1, minimal 0).
+
+    Issue #1318 Scheibe B: ohne Trip-Objekt (`None`) ist die Gesamtroute
+    unbekannt -> leere Liste. Der Aufrufer verliert damit nur die
+    "gesamte Route"-Verdichtung, nie die Warnung selbst."""
+    if trip is None:
+        return []
     n = max(len(trip.all_waypoints) - 1, 0)
     return [str(i) for i in range(1, n + 1)] + ["Ziel"]
 
 
 def build_official_alert_notices(
-    trip: "Trip", tagged_alerts: list[tuple["OfficialAlert", list[str]]],
+    trip: "Trip | None", tagged_alerts: list[tuple["OfficialAlert", list[str]]],
 ) -> list["OfficialAlertNotice"]:
     """Baut die `OfficialAlertNotice`-DTOs fuer den Trip-Standalone-Alarm
     (Issue #1216): dedupliziert via `dedupe_official_alerts`, leitet

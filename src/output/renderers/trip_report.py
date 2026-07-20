@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
 if TYPE_CHECKING:
+    from app.trip import Trip
     from services.day_comparison import DayComparison
 
 from utils.timezone import local_fmt, local_hour
@@ -76,6 +77,7 @@ class TripReportFormatter:
         stage_total: Optional[int] = None,
         trip_url: Optional[str] = None,
         render_options: Optional[ReportRenderOptions] = None,
+        trip: Optional["Trip"] = None,
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email."""
         if not segments:
@@ -202,6 +204,7 @@ class TripReportFormatter:
             multi_day_trend=effective_trend,
             day_comparison=day_comparison,
             night_weather=night_weather,
+            trip=trip,
         )
         telegram_bubbles = [b.text for b in telegram_bubbles_result]
         telegram_actions_markup = (

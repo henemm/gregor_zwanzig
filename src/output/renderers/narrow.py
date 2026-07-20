@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 
 if TYPE_CHECKING:
     from app.models import NormalizedTimeseries
+    from app.trip import Trip
     from services.day_comparison import DayComparison
 
 from app.metric_catalog import get_metric
@@ -296,6 +297,47 @@ class TelegramBubble:
     reply_markup: Optional[dict] = None
 
 
+def _official_alert_bubble(
+    segments: list[SegmentWeatherData], tz: ZoneInfo, trip: Optional["Trip"] = None,
+) -> Optional[TelegramBubble]:
+    """Amtliche Warnungen als eigene Bubble (Issue #1318 Scheibe B, AC-8).
+
+    Nutzt den GETEILTEN `render_official_alert_telegram` — kein zweiter
+    Renderer, keine SMS-Kuerzel, keine Kappung (Telegram ist ausgeschrieben).
+    Gefiltert wird ueber dasselbe `MIN_SMS_LEVEL` wie die SMS: beide Kanaele
+    zeigen dieselbe Teilmenge, nur unterschiedlich lang ausformuliert
+    (ADR-0025). Ohne Warnung >= Filter -> `None` -> Bubble-Liste bleibt
+    bit-identisch zum Stand vor #1318.
+
+    `trip` ist optional: fehlt es, faellt nur die "gesamte Route"-Verdichtung
+    des Umfangs weg — die Warnung selbst haengt an den Segmenten und darf nie
+    an einem fehlenden Kontext-Parameter scheitern.
+    """
+    from output.renderers.alert.official_alerts import (
+        build_official_alert_notices, official_alert_source_label,
+        render_official_alert_telegram,
+    )
+    from output.tokens.hazard_symbols import MIN_SMS_LEVEL
+
+    tagged = [
+        (alert, [str(sd.segment.segment_id)])
+        for sd in segments
+        for alert in (getattr(sd, "official_alerts", None) or [])
+        if alert.level >= MIN_SMS_LEVEL
+    ]
+    if not tagged:
+        return None
+    notices = build_official_alert_notices(trip, tagged)
+    if not notices:
+        return None
+    sources = list(dict.fromkeys(
+        official_alert_source_label(alert.source) for alert, _ in tagged
+    ))
+    return TelegramBubble(text=render_official_alert_telegram(
+        notices, prefix="Amtliche Warnung", source_label=" · ".join(sources), tz=tz,
+    ))
+
+
 def _overview_line(metric_id: str, seg_tables: list[list[dict]], fkeys: set[str]) -> str:
     """Eine Kurzübersicht-Zeile ``{Kürzel} {Min}-{Max}@{Peak-Stunde}`` (oder
     Einzelwert/kategorisch).
@@ -384,6 +426,7 @@ def render_telegram_bubbles(
     multi_day_trend: Optional[list[dict]] = None,
     day_comparison: Optional["DayComparison"] = None,
     night_weather: Optional["NormalizedTimeseries"] = None,
+    trip: Optional["Trip"] = None,
 ) -> list[TelegramBubble]:
     """Render die Telegram-Briefing-Bubble-Liste (Issue #1001). Pure function.
 
@@ -410,6 +453,12 @@ def render_telegram_bubbles(
     if stability_result is not None:
         head_lines.extend(_wrap(_esc(f"WL: {stability_result.label}"), _TG_PROSE_WIDTH))
     bubbles.append(TelegramBubble(text="\n".join(head_lines)))
+
+    # 1b. Amtliche Warnungen (#1318 AC-8) — direkt nach dem Kopf, weil
+    # sicherheitsrelevant. Ohne Warnung >= MIN_SMS_LEVEL entfaellt sie ganz.
+    warn_bubble = _official_alert_bubble(segments, tz, trip)
+    if warn_bubble is not None:
+        bubbles.append(warn_bubble)
 
     # 2. Kurzuebersicht-Bubble — ALLE konfigurierten Metriken (AC-3), immer
     # vorhanden, unabhaengig von telegram_kurzform (AC-10).

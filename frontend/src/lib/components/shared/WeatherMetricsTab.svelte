@@ -67,6 +67,15 @@
 	}
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 
+	interface SmsSymbolEntry {
+		metric_id: string;
+		sms_symbol: string;
+	}
+	interface SmsSymbolCatalog {
+		metrics: SmsSymbolEntry[];
+		hazards: { hazard: string; sms_symbol: string; label: string }[];
+	}
+
 	interface Props {
 		/** Issue #1311: 'route' (Trip, Default) | 'vergleich' (Ortsvergleich). */
 		context?: WeatherMetricsContext;
@@ -89,6 +98,17 @@
 	const sections = $derived(weatherMetricsTabSections(context));
 
 	let catalog: MetricCatalog = $state({});
+	// Issue #1318 AC-9: SMS-Kuerzel kommen ausschliesslich aus dem Backend
+	// (/api/sms-symbols -> hazard_symbols.py + sms_trip.py). Hier steht bewusst
+	// KEINE Zuordnung Gefahrenart/Metrik -> Kuerzel — eine zweite Liste im
+	// Frontend koennte still von der SMS abweichen, die der Nutzer wirklich
+	// bekommt.
+	let smsSymbols = $state<SmsSymbolCatalog | null>(null);
+	const metricSymbols = $derived(
+		Object.fromEntries(
+			(smsSymbols?.metrics ?? []).map((m: SmsSymbolEntry) => [m.metric_id, m.sms_symbol])
+		)
+	);
 	let templates: Template[] = $state([]);
 	let userPresets: MetricPreset[] = $state([]);
 	// Issue #1234 (2a): wird NUR bei erfolgreichem Katalog-Fetch wahr (nicht im
@@ -279,15 +299,19 @@
 	async function load() {
 		loadError = null;
 		try {
-			const [catalogData, templateData, presetData, profileData] = await Promise.all([
+			const [catalogData, templateData, presetData, profileData, symbolData] = await Promise.all([
 				api.get<MetricCatalog>('/api/metrics'),
 				api.get<Template[]>('/api/templates').catch(() => [] as Template[]),
 				api.get<MetricPreset[]>('/api/metric-presets').catch(() => [] as MetricPreset[]),
 				fetch('/api/auth/profile', { credentials: 'same-origin' })
 					.then((r) => (r.ok ? r.json() : null))
 					.catch(() => null),
+				// Fail-soft: ohne Kuerzel-Katalog bleibt der Reiter voll bedienbar,
+				// nur die Kuerzel-Anzeige entfaellt.
+				api.get<SmsSymbolCatalog>('/api/sms-symbols').catch(() => null),
 			]);
 			catalog = catalogData;
+			smsSymbols = symbolData;
 			templates = templateData;
 			userPresets = presetData;
 			profile = profileData;
@@ -629,6 +653,30 @@
 			</span>
 			<p class="pl-6 text-xs text-muted-foreground mt-0.5">Amtliche Wetterwarnungen (z. B. Unwetterwarnung) im E-Mail-Briefing anzeigen.</p>
 		</div>
+		<!-- Issue #1318 AC-9: Kuerzel-Legende zur SMS-/Telegram-Kurzform. Alle
+		     Kuerzel stammen aus dem Backend-Katalog (smsSymbols), damit die
+		     Legende nicht von der tatsaechlich versendeten SMS abweichen kann.
+		     NUR im Trip-Kontext: die Vergleichs-SMS zeigt amtliche Warnungen gar
+		     nicht (render_compare_sms), die Vergleichs-Telegram-Nachricht zeigt
+		     sie ungefiltert in Langform ohne '!'/Kuerzel/Stufe
+		     (render_official_alerts_plain). Im Vergleich waere die Legende also
+		     eine falsche Aussage ueber die eigenen Nachrichten — lieber keine
+		     Erklaerung (Attrappen-Verbot, s.u.). Der Schalter selbst bleibt. -->
+		{#if context !== 'vergleich' && smsSymbols}
+			<div data-testid="official-alerts-symbol-legend" class="pl-6 text-xs text-muted-foreground space-y-1">
+				<p>In SMS und Telegram-Kurzform beginnt der Warn-Block mit <code>!</code> — alles dahinter ist eine amtliche Warnung, nicht die eigene Vorhersage.</p>
+				<ul class="legend-symbols">
+					{#each smsSymbols.hazards as h (h.hazard)}
+						<li><code>{h.sms_symbol}</code> {h.label}</li>
+					{/each}
+				</ul>
+				<p>
+					Die Warnstufe steht nach dem Doppelpunkt: <code>L</code> = gelb,
+					<code>M</code> = orange, <code>H</code> = rot (z. B. <code>TH:H</code> =
+					rote Gewitterwarnung).
+				</p>
+			</div>
+		{/if}
 	</UiCard.Root>
 {/snippet}
 
@@ -777,6 +825,7 @@
 								{#if !buckets.off.includes('wind')}
 								<ThresholdMetricRow
 									metricId="wind"
+									smsSymbol={metricSymbols['wind']}
 									label="Wind (km/h)"
 									levels={[
 										{ id: 'sensibel', label: 'Sensibel', float: 15 },
@@ -790,6 +839,7 @@
 								{#if !buckets.off.includes('gust')}
 								<ThresholdMetricRow
 									metricId="gust"
+									smsSymbol={metricSymbols['gust']}
 									label="Böen (km/h)"
 									levels={[
 										{ id: 'sensibel', label: 'Sensibel', float: 30 },
@@ -803,6 +853,7 @@
 								{#if !buckets.off.includes('precipitation')}
 								<ThresholdMetricRow
 									metricId="precipitation"
+									smsSymbol={metricSymbols['precipitation']}
 									label="Niederschlag (mm)"
 									levels={[
 										{ id: 'sensibel', label: 'Sensibel', float: 0.3 },
@@ -816,6 +867,7 @@
 								{#if !buckets.off.includes('rain_probability')}
 								<ThresholdMetricRow
 									metricId="rain_probability"
+									smsSymbol={metricSymbols['rain_probability']}
 									label="Regenwahrsch. (%)"
 									levels={[
 										{ id: 'sensibel', label: 'Sensibel', float: 25 },
@@ -829,6 +881,7 @@
 								{#if !buckets.off.includes('thunder')}
 								<ThresholdMetricRow
 									metricId="thunder"
+									smsSymbol={metricSymbols['thunder']}
 									label="Gewitter"
 									levels={[
 										{ id: 'med', label: 'MED', float: 1.0 },
@@ -841,6 +894,7 @@
 								{#if !buckets.off.includes('snow_depth')}
 								<ThresholdMetricRow
 									metricId="snow_depth"
+									smsSymbol={metricSymbols['snow_depth']}
 									label="Schneehöhe (cm)"
 									levels={[
 										{ id: 'sensibel', label: 'Sensibel', float: 5 },
@@ -854,6 +908,7 @@
 								{#if !buckets.off.includes('snowfall_limit')}
 								<ThresholdMetricRow
 									metricId="snowfall_limit"
+									smsSymbol={metricSymbols['snowfall_limit']}
 									label="Schneefallgrenze (m)"
 									levels={[
 										{ id: 'sensibel', label: 'Sensibel', float: 2000 },

@@ -27,6 +27,34 @@ def get_templates() -> list[dict]:
     return get_all_templates()
 
 
+@router.get("/sms-symbols")
+def get_sms_symbols():
+    """Read-only Serialisierung der SMS-Kuerzel-Kataloge (Issue #1318 AC-9).
+
+    Eigener Endpoint statt Erweiterung von `/metrics`: dessen Antwort ist ein
+    `Record<Kategorie, Metrik[]>`, in das die 9 Gefahrenarten nur als
+    Pseudo-Kategorie passten — sie wuerden dann von jedem Katalog-Konsumenten
+    (autoAssign, allCatalogIds) als waehlbare Metriken missverstanden. Ein
+    schreibgeschuetzter Endpoint schafft weniger Flaeche als dieser Umbau.
+    Quelle bleibt allein das Backend: `hazard_symbols.py` (Gefahren) und
+    `sms_trip.py` (Metriken) — das Frontend fuehrt keine zweite Liste.
+    """
+    from output.renderers.alert.official_alerts import _HAZARD_LABELS
+    from output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC
+    from output.tokens.hazard_symbols import HAZARD_SMS_SYMBOLS
+
+    return {
+        "metrics": [
+            {"metric_id": mid, "sms_symbol": sym.rstrip(":")}
+            for mid, sym in SMS_SYMBOL_BY_METRIC.items()
+        ],
+        "hazards": [
+            {"hazard": h, "sms_symbol": sym, "label": _HAZARD_LABELS.get(h, h)}
+            for h, sym in HAZARD_SMS_SYMBOLS.items()
+        ],
+    }
+
+
 @router.get("/metrics")
 def get_metrics():
     from app.metric_catalog import get_all_metrics

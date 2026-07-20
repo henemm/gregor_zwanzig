@@ -216,6 +216,7 @@ class NotificationService:
         report = self._formatter.format_email(
             segments=request.segment_weather,
             trip_name=request.trip.name,
+            trip=request.trip,
             report_type=request.report_type,
             display_config=request.display_config,
             night_weather=request.night_weather,

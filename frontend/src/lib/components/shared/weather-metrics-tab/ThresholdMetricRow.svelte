@@ -16,9 +16,12 @@
 		levels: Level[];
 		currentFloat: number | null;
 		onChange: (metricId: string, float: number) => void;
+		// Issue #1318 AC-9: SMS-Kuerzel dieser Metrik, aus dem Backend-Katalog
+		// (/api/sms-symbols). Fehlt es, entfaellt die Anzeige ersatzlos.
+		smsSymbol?: string;
 	}
 
-	let { metricId, label, levels, currentFloat, onChange }: Props = $props();
+	let { metricId, label, levels, currentFloat, onChange, smsSymbol }: Props = $props();
 
 	// Reverse-Mapping: aktive Stufe aus currentFloat. Kein Treffer → erste Stufe (Fallback).
 	const activeId = $derived(
@@ -29,7 +32,10 @@
 </script>
 
 <tr data-testid="threshold-metric-row-{metricId}" data-metric={metricId}>
-	<td class="metric-label">{label}</td>
+	<td class="metric-label">
+		{label}
+		{#if smsSymbol}<code class="sms-symbol" data-testid="sms-symbol-{metricId}">{smsSymbol}</code>{/if}
+	</td>
 	<td class="segmented-control" data-testid="threshold-segmented-{metricId}">
 		{#each levels as l (l.id)}
 			<button
@@ -51,6 +57,13 @@
 		padding: 8px;
 		font-size: 14px;
 		color: var(--g-ink);
+	}
+
+	.sms-symbol {
+		font-family: var(--g-font-mono, monospace);
+		font-size: 12px;
+		color: var(--g-ink-2, #555);
+		margin-left: 4px;
 	}
 
 	.threshold {
