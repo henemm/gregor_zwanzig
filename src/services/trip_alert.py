@@ -829,12 +829,22 @@ class TripAlertService:
             if cached.segment.start_time.date() > today_utc:
                 continue  # Beginnt erst morgen oder später — überspringen
             try:
-                # Clear cache to force fresh fetch
-                service._cache.clear()
+                # Issue #1329: der frühere `service._cache.clear()` erzwang
+                # bei JEDEM Alarm-Check einen Upstream-Fetch. Mit dem
+                # geteilten Cache (10-Minuten-TTL) ist das nicht mehr nötig
+                # -- die maximale Datenalterung ist bereits durch den TTL auf
+                # ≤ 10 Minuten begrenzt (AC-6), unabhängig davon, ob ein
+                # anderer Aufrufer (z.B. das letzte Briefing) denselben Ort
+                # kurz zuvor gefüllt hat. Bewusste Verhaltensänderung:
+                # vorher "garantiert taufrisch pro Check", nachher
+                # "garantiert ≤ 10 Min alt".
                 # Bug #288: Alert-Checks must NOT trigger ensemble-API calls
                 # (would consume the daily free-tier quota in ~30 minutes).
                 fresh = service.fetch_segment_weather(
-                    cached.segment, enrich_ensemble=False, enrich_snow=False
+                    cached.segment,
+                    enrich_ensemble=False,
+                    enrich_snow=False,
+                    priority="alert_check",
                 )
                 fresh_weather.append(fresh)
             except Exception as e:

@@ -20,6 +20,7 @@ from app.models import SegmentWeatherData, SegmentWeatherSummary, TripSegment
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from app.models import NormalizedTimeseries
     from providers.base import WeatherProvider
     from services.weather_cache import WeatherCacheService
 
@@ -56,11 +57,15 @@ class SegmentWeatherService:
         """
         self._provider = provider
         self._debug = debug if debug is not None else DebugBuffer()
-        
-        # Initialize cache (Feature 2.4)
+
+        # Initialize cache (Feature 2.4). Issue #1329: default is now the
+        # PROCESS-WIDE shared singleton (10min TTL) instead of a fresh
+        # per-instance cache -- every caller used to build its own
+        # SegmentWeatherService with cache=None, so nothing was ever
+        # actually shared. Explicit injection still overrides it (tests).
         if cache is None:
-            from services.weather_cache import WeatherCacheService
-            cache = WeatherCacheService()
+            from services.weather_cache import get_shared_weather_cache
+            cache = get_shared_weather_cache()
         self._cache = cache
 
     @property
@@ -73,18 +78,25 @@ class SegmentWeatherService:
         segment: TripSegment,
         enrich_ensemble: bool = True,
         enrich_snow: bool = True,
+        priority: str = "user_briefing",
     ) -> SegmentWeatherData:
         """
         Fetch weather forecast for a trip segment.
 
-        Algorithm (updated for Feature 2.4):
-        0. Check cache first (Feature 2.4)
+        Algorithm (updated for Issue #1329, Adversary-Fund F001):
+        -1. Resolve model_id (part of the cache bucket)
+        0. Check shared cache for a RAW timeseries whose window COVERS this
+           segment's window (Feature 2.4 + Issue #1329 Teil 1). The cache
+           never stores a derived SegmentWeatherData -- identity and
+           aggregate are ALWAYS computed here, from THIS segment, never
+           taken from another caller's cached result (F001 fix).
+        0b. Check forecast budget gate on cache miss (Issue #1329 Teil 2)
         1. Validate segment time window (start < end)
         2. Extract coordinates from segment.start_point
         3. Create Location object
         4. Call provider.fetch_forecast(location, start, end)
-        5. Compute metrics (2.2a + 2.2b)
-        6. Store in cache (Feature 2.4)
+        5. Store raw timeseries in cache (Feature 2.4)
+        6. Aggregate metrics over THIS segment's own window (2.2a + 2.2b)
         7. Return SegmentWeatherData
 
         Args:
@@ -95,22 +107,64 @@ class SegmentWeatherService:
             enrich_snow: If True (default), let provider fill-only-enrich
                 Alpen-Orte with SNOWGRID-Schnee (Epic #1301 A3); if False,
                 skip the SNOWGRID call (alert-checks).
+            priority: Verbrauchsbudget-Prioritaet (Issue #1329):
+                "user_briefing" (default, NIE gedrosselt), "alert_check"
+                (gedrosselt ab 95% Tagesbudget) oder "polling" (ab 80%).
+                Rueckwaertskompatibler Default schuetzt alle bestehenden
+                Aufrufer, die priority nicht kennen.
 
         Returns:
-            SegmentWeatherData with populated metrics
+            SegmentWeatherData with populated metrics, ALWAYS carrying
+            THIS segment's own identity and an aggregate computed ONLY over
+            THIS segment's own window (Adversary-Fund F001 fix -- even on a
+            cache hit against a wider cached window). Bei Budget-Drosselung
+            (Issue #1329): has_error=True, error_message="budget_throttled".
 
         Raises:
             ProviderRequestError: If the provider request fails
             ValueError: If segment time window is invalid
         """
-        # Step 0: Check cache first (Feature 2.4)
-        cached = self._cache.get(segment)
+        from services.forecast_budget import ForecastBudgetGate
+
+        budget_gate = ForecastBudgetGate()
+
+        # Step -1: Modellkennung VOR dem Cache-Zugriff bestimmen (Issue
+        # #1329): der Cache-Schluessel muss das Modell einschliessen, sonst
+        # koennten zwei Orte mit unterschiedlichem Modell denselben
+        # Schluessel treffen und Daten des falschen Modells liefern.
+        model_id = self._resolve_model_id(
+            segment.start_point.lat, segment.start_point.lon
+        )
+
+        # Step 0: Check shared cache for a covering RAW timeseries (Feature
+        # 2.4 + Issue #1329 Teil 1). NEVER returns a cached SegmentWeatherData
+        # (Adversary-Fund F001) -- aggregation always happens below, for
+        # THIS segment.
+        cached = self._cache.get(segment, enrich_ensemble, enrich_snow, model_id)
         if cached is not None:
-            self._debug.add("weather.cache: HIT")
-            return cached
-        
+            self._debug.add("weather.cache: HIT (raw timeseries)")
+            budget_gate.record_cache_hit()
+            return self._aggregate_for_segment(
+                segment, cached.timeseries, fetched_at=cached.cached_at
+            )
+
         self._debug.add("weather.cache: MISS - fetching from provider")
-        
+        budget_gate.record_cache_miss()
+
+        # Step 0b: Verbrauchsbudget pruefen (Issue #1329 Teil 2) -- NUR bei
+        # Cache-Miss, denn ein Cache-Hit verbraucht kein Kontingent.
+        if not budget_gate.allow(priority):
+            self._debug.add(f"budget.throttled: priority={priority}")
+            return SegmentWeatherData(
+                segment=segment,
+                timeseries=None,
+                aggregated=SegmentWeatherSummary(),
+                fetched_at=datetime.now(timezone.utc),
+                provider=self._provider.name,
+                has_error=True,
+                error_message="budget_throttled",
+            )
+
         # Step 1: Validate time window
         self._validate_segment(segment)
 
@@ -137,6 +191,7 @@ class SegmentWeatherService:
         # Step 4: Fetch weather data (WEATHER-04: catch provider errors)
         from providers.base import ProviderRequestError
         try:
+            budget_gate.record_call()  # Issue #1329: tatsaechlicher Upstream-Versuch
             timeseries = self._provider.fetch_forecast(
                 location,
                 start=segment.start_time,
@@ -157,11 +212,29 @@ class SegmentWeatherService:
                 error_message=str(e),
             )
 
-        # Step 5: Log provider response
+        # Step 5: Log provider response, store RAW timeseries in cache
+        # (Feature 2.4 + Issue #1329 Teil 1, F001 fix: never the derived
+        # SegmentWeatherData).
         self._debug.add(f"forecast.points: {len(timeseries.data)}")
         self._debug.add(f"forecast.model: {timeseries.meta.model}")
+        fetched_at = datetime.now(timezone.utc)
+        self._cache.put(segment, timeseries, enrich_ensemble, enrich_snow, model_id)
 
-        # Step 6: Filter timeseries to segment window for aggregation
+        # Step 6+7: Aggregate over THIS segment's own window and wrap
+        return self._aggregate_for_segment(segment, timeseries, fetched_at=fetched_at)
+
+    def _aggregate_for_segment(
+        self,
+        segment: TripSegment,
+        timeseries: "NormalizedTimeseries",
+        fetched_at: datetime,
+    ) -> SegmentWeatherData:
+        """Filtert eine (moeglicherweise breitere, gecachte) Zeitreihe auf
+        GENAU dieses Segment-Fenster und aggregiert NUR darueber (Issue
+        #1329, Adversary-Fund F001-Fix): Identitaet (`segment`) und Aggregat
+        entstehen bei JEDEM Aufruf hier, beim aufrufenden Segment -- nie aus
+        einem fremden Cache-Kontext (weder Trip- noch Compare-Identitaet
+        sickert je in einen anderen Aufrufer)."""
         # OpenMeteo returns full-day (24h) data; aggregation must use only
         # segment hours. Unfiltered timeseries is kept for table display.
         seg_start_h = segment.start_time.hour
@@ -186,28 +259,41 @@ class SegmentWeatherService:
         filtered_ts = NTS(meta=timeseries.meta, data=filtered_data)
         self._debug.add(f"filtered.points: {len(filtered_data)} (of {len(timeseries.data)})")
 
-        # Step 6a: Compute basis metrics from FILTERED timeseries
+        # Compute basis + extended metrics from FILTERED timeseries
         from services.weather_metrics import WeatherMetricsService
 
         metrics_service = WeatherMetricsService(debug=self._debug)
         basis_summary = metrics_service.compute_basis_metrics(filtered_ts)
-
-        # Step 6b: Compute extended metrics from FILTERED timeseries
         extended_summary = metrics_service.compute_extended_metrics(filtered_ts, basis_summary)
 
-        # Step 7: Wrap in SegmentWeatherData
-        data = SegmentWeatherData(
+        return SegmentWeatherData(
             segment=segment,
             timeseries=timeseries,
             aggregated=extended_summary,
-            fetched_at=datetime.now(timezone.utc),
+            fetched_at=fetched_at,
             provider=self._provider.name,
         )
-        
-        # Step 8: Store in cache (Feature 2.4)
-        self._cache.put(segment, data)
-        
-        return data
+
+    def _resolve_model_id(self, lat: float, lon: float) -> str:
+        """Modellkennung fuer den Cache-Schluessel (Issue #1329 Teil 1.2).
+
+        Nutzt, falls vorhanden, `select_model()` des BEREITS injizierten
+        Providers (`self._provider`) -- KEINE Wegwerf-Instanz. Bislang
+        implementiert nur `OpenMeteoProvider.select_model()`
+        (`providers/openmeteo.py:411`), eine reine Funktion der Koordinate
+        ohne Netzzugriff. Provider ohne diese Methode (z.B. GeoSphereProvider,
+        FixtureProvider, Test-Fakes) fallen auf den Provider-Namen zurueck:
+        unterscheidet ausreichend zwischen Anbietern, auch wenn er innerhalb
+        eines Anbieters keine Modellvarianten kennt (Tech-Lead-Entscheidung
+        2026-07-20, ersetzt die urspruengliche Spec-Vorgabe eines direkten
+        Modul-Imports von `select_model`, das tatsaechlich eine
+        Instanzmethode ist).
+        """
+        select_model = getattr(self._provider, "select_model", None)
+        if callable(select_model):
+            model_id, _, _ = select_model(lat, lon)
+            return model_id
+        return self._provider.name
 
     def _validate_segment(self, segment: TripSegment) -> None:
         """

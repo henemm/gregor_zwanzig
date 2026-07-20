@@ -49,6 +49,9 @@ class CompareLocationWeatherSource:
             descent_m=0,
         )
         segment_weather = service.fetch_segment_weather(
-            segment, enrich_ensemble=False, enrich_snow=False
+            segment,
+            enrich_ensemble=False,
+            enrich_snow=False,
+            priority="alert_check",  # Issue #1329 Teil 2
         )
         return TripSegmentWeatherAdapter.to_points([segment_weather])[0]
