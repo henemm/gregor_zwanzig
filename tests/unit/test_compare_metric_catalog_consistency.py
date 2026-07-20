@@ -95,8 +95,8 @@ def test_ts_parser_finds_all_15_ids_on_real_file():
         f"{COMPARE_METRIC_DEFS_TS}"
     )
     ids = parse_all_metrics_ids()
-    assert len(ids) == 15, (
-        f"Parser fand {len(ids)} IDs statt 15 auf der echten Datei -- "
+    assert len(ids) == 25, (
+        f"Parser fand {len(ids)} IDs statt 25 auf der echten Datei -- "
         f"Vakuum-Schutz-Verdacht (kaputtes Format oder falscher Pfad): {ids}"
     )
     assert len(ids) == len(set(ids)), f"Parser liefert Duplikate: {ids}"

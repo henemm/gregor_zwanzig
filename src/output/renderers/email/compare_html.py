@@ -169,6 +169,23 @@ def _sev_rain_safe(v) -> str:
     return _sev_rain(v or 0.0)
 
 
+_PRECIP_TYPE_LABEL = {
+    "RAIN": "Regen",
+    "SNOW": "Schnee",
+    "MIXED": "Mischniederschlag",
+    "FREEZING_RAIN": "Eisregen",
+}
+
+
+def _fmt_precip_type(v) -> str:
+    """Niederschlagsart-TAGESWERT (Issue #1324): PrecipType-Enum -> deutsches
+    Label, analog ``_fmt_thunder``."""
+    if v is None:
+        return "—"
+    key = v.value if hasattr(v, "value") else str(v)
+    return _PRECIP_TYPE_LABEL.get(key, "—")
+
+
 def _fmt_visibility_overview(v) -> str:
     """Sicht-TAGESWERT der Uebersichts-Matrix (Issue #1285).
 
@@ -221,6 +238,19 @@ CV2_METRICS = [
     {"key": "gust_max", "label": "Böen", "unit": "km/h", "sev": _sev_gust},
     {"key": "cape_max", "label": "CAPE", "unit": "J/kg", "sev": _sev_cape},
     {"key": "freezing_level", "label": "Nullgradgrenze", "unit": "m"},
+    # Issue #1324: zehn weitere additive Zeilen (keine Severity-Faerbung, s.
+    # Spec Known Limitations). Klasse A (Renderer-ID = LocationResult-Feld):
+    {"key": "wind_direction_avg", "label": "Windrichtung", "unit": "°"},
+    {"key": "wind_chill_min", "label": "Gefühlte Temp. min", "unit": "°C"},
+    {"key": "cloud_low_avg", "label": "Wolken tief", "unit": "%"},
+    {"key": "cloud_mid_avg", "label": "Wolken mittel", "unit": "%"},
+    {"key": "cloud_high_avg", "label": "Wolken hoch", "unit": "%"},
+    # Klasse B (Live-Aggregat ueber _DAILY_AGGREGATE_FIELD):
+    {"key": "humidity_avg", "label": "Luftfeuchtigkeit Ø", "unit": "%"},
+    {"key": "dewpoint_avg", "label": "Taupunkt Ø", "unit": "°C"},
+    {"key": "pressure_avg", "label": "Luftdruck Ø", "unit": "hPa"},
+    {"key": "precip_type", "label": "Niederschlagsart", "fmt": _fmt_precip_type},
+    {"key": "snowfall_limit", "label": "Schneefallgrenze", "unit": "m"},
 ]
 
 
@@ -349,6 +379,13 @@ _DAILY_AGGREGATE_FIELD: dict[str, str] = {
     # kommt ausschliesslich aus der Live-Ableitung (_daily_summary).
     "cape_max": "cape_max_jkg",
     "freezing_level": "freezing_level_m",
+    # Issue #1324, Klasse B: kein LocationResult-Feld, Wert kommt aus der
+    # Live-Ableitung (_daily_summary -> SegmentWeatherSummary).
+    "humidity_avg": "humidity_avg_pct",
+    "dewpoint_avg": "dewpoint_avg_c",
+    "pressure_avg": "pressure_avg_hpa",
+    "precip_type": "precip_type_dominant",
+    "snowfall_limit": "snowfall_limit_m",
 }
 
 

@@ -359,6 +359,9 @@ class SegmentWeatherSummary:
     wind_chill_max_c: Optional[float] = None
     snow_depth_cm: Optional[float] = None
     freezing_level_m: Optional[int] = None
+    # Issue #1324: transientes Compare-Tagesaggregat (MIN-Regel, s.
+    # weather_metrics._compute_snowfall_limit); nie persistiert.
+    snowfall_limit_m: Optional[int] = None
 
     # Additional metrics (OpenMeteo)
     pop_max_pct: Optional[int] = None

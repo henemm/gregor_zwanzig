@@ -49,12 +49,28 @@ const FREEZING_LVL:  MetricDef = { label: 'Nullgradgrenze', key: 'freezing_level
 // Vokabular der STUNDEN-Spalten, nicht dieses hier). Key = Backend-Feldname
 // `SegmentWeatherSummary.pop_max_pct`, exakt wie bei den anderen Einträgen.
 const POP_MAX:       MetricDef = { label: 'Regenwahrscheinlichkeit', key: 'pop_max_pct', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5 };
+// Issue #1324: zehn weitere Trip-Metriken, die im Ortsvergleich fehlten
+// (Windrichtung, Wind Chill min, Luftfeuchtigkeit, Taupunkt, Schneefallgrenze,
+// Niederschlagsart, drei Wolkenschichten, Luftdruck). Additiv nach dem
+// #1285/#1296-Muster; Keys = Backend-Frontend-IDs (compare_metric_ids.py).
+const WIND_DIRECTION: MetricDef = { label: 'Windrichtung',        key: 'wind_direction_deg', unit: '°',   decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0,   rangeMax: 360,  step: 10  };
+const WIND_CHILL_MIN: MetricDef = { label: 'Gefühlte Temp. min',  key: 'wind_chill_min_c',   unit: '°C',  decimals: 0, higherIsBetter: true,  kind: 'range', rangeMin: -30, rangeMax: 30,   step: 1   };
+const HUMIDITY_AVG:   MetricDef = { label: 'Luftfeuchtigkeit Ø',  key: 'humidity_avg_pct',   unit: '%',   decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0,   rangeMax: 100,  step: 5   };
+const DEWPOINT_AVG:   MetricDef = { label: 'Taupunkt Ø',          key: 'dewpoint_avg_c',     unit: '°C',  decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: -20, rangeMax: 30,   step: 1   };
+const SNOWFALL_LIMIT: MetricDef = { label: 'Schneefallgrenze',    key: 'snowfall_limit_m',   unit: 'm',   decimals: 0, higherIsBetter: true,  kind: 'range', rangeMin: 0,   rangeMax: 5000, step: 100 };
+const PRECIP_TYPE:    MetricDef = { label: 'Niederschlagsart',    key: 'precip_type_dominant', unit: '',  decimals: 0, higherIsBetter: false, kind: 'enum',  enumValues: ['RAIN', 'SNOW', 'MIXED', 'FREEZING_RAIN'] };
+const CLOUD_LOW_AVG:  MetricDef = { label: 'Wolken tief',         key: 'cloud_low_avg_pct',  unit: '%',   decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0,   rangeMax: 100,  step: 5   };
+const CLOUD_MID_AVG:  MetricDef = { label: 'Wolken mittel',       key: 'cloud_mid_avg_pct',  unit: '%',   decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0,   rangeMax: 100,  step: 5   };
+const CLOUD_HIGH_AVG: MetricDef = { label: 'Wolken hoch',         key: 'cloud_high_avg_pct', unit: '%',   decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0,   rangeMax: 100,  step: 5   };
+const PRESSURE_AVG:   MetricDef = { label: 'Luftdruck Ø',         key: 'pressure_avg_hpa',   unit: 'hPa', decimals: 0, higherIsBetter: true,  kind: 'range', rangeMin: 950, rangeMax: 1050, step: 5   };
 
 // Issue #680: Slice 3 — flaches Array aller anwählbaren Metriken (AC-8/AC-9)
 export const ALL_METRICS: MetricDef[] = [
 	SNOW_DEPTH, SNOW_NEW, SUNNY_HOURS, WIND_MAX,
 	CLOUD_AVG, VISIBILITY, PRECIP_SUM, UV_INDEX, TEMP_MAX, THUNDER,
-	TEMP_MIN, GUST_MAX, CAPE, FREEZING_LVL, POP_MAX
+	TEMP_MIN, GUST_MAX, CAPE, FREEZING_LVL, POP_MAX,
+	WIND_DIRECTION, WIND_CHILL_MIN, HUMIDITY_AVG, DEWPOINT_AVG, SNOWFALL_LIMIT,
+	PRECIP_TYPE, CLOUD_LOW_AVG, CLOUD_MID_AVG, CLOUD_HIGH_AVG, PRESSURE_AVG
 ];
 
 /**

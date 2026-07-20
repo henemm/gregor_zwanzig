@@ -845,6 +845,18 @@ class WeatherMetricsService:
         ]
         return round(sum(freezing_levels) / len(freezing_levels)) if freezing_levels else None
 
+    def _compute_snowfall_limit(self, timeseries: NormalizedTimeseries) -> Optional[int]:
+        """Compute snowfall-limit MIN. Returns snowfall_limit_m (Issue #1324).
+
+        Kanonische Trip-Regel (aggregation.py: ``MIN`` — "lowest limit is most
+        relevant"), damit Compare- und Trip-Pfad bei gleichen Stundendaten
+        denselben Tageswert liefern.
+        """
+        limits = [
+            dp.snowfall_limit_m for dp in timeseries.data if dp.snowfall_limit_m is not None
+        ]
+        return min(limits) if limits else None
+
     def _compute_pop(self, timeseries: NormalizedTimeseries) -> Optional[int]:
         """Compute precipitation probability MAX. Returns pop_max_pct."""
         pop_vals = [dp.pop_pct for dp in timeseries.data if dp.pop_pct is not None]
@@ -1012,6 +1024,12 @@ def summarize_points(points: list) -> Optional[SegmentWeatherSummary]:
     summary.uv_index_max = svc._compute_uv_index(ts)
     summary.cape_max_jkg = svc._compute_cape(ts)
     summary.freezing_level_m = svc._compute_freezing_level(ts)
+    # Issue #1324: vier weitere Klasse-B-Aggregate verdrahten (humidity_avg_pct
+    # ist bereits via compute_basis_metrics gesetzt); kanonische Trip-Regeln.
+    summary.dewpoint_avg_c = svc._compute_dewpoint(ts)
+    summary.pressure_avg_hpa = svc._compute_pressure(ts)
+    summary.precip_type_dominant = svc._compute_precip_type(ts)
+    summary.snowfall_limit_m = svc._compute_snowfall_limit(ts)
     return summary
 
 

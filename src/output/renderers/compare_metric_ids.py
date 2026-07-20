@@ -38,6 +38,21 @@ FRONTEND_TO_RENDERER_METRIC_ID: dict[str, str] = {
     "gust_max_kmh": "gust_max",
     "cape_max_jkg": "cape_max",
     "freezing_level_m": "freezing_level",
+    # Issue #1324: zehn weitere additive Metriken. Klasse A (Renderer-ID =
+    # bestehendes LocationResult-Feld, gelesen ueber den field-is-None-Zweig
+    # von _metric_value, kein _DAILY_AGGREGATE_FIELD-Eintrag noetig):
+    "wind_direction_deg": "wind_direction_avg",
+    "wind_chill_min_c": "wind_chill_min",
+    "cloud_low_avg_pct": "cloud_low_avg",
+    "cloud_mid_avg_pct": "cloud_mid_avg",
+    "cloud_high_avg_pct": "cloud_high_avg",
+    # Klasse B (eigene Renderer-ID -> SegmentWeatherSummary-Feld ueber
+    # _DAILY_AGGREGATE_FIELD, Live-Ableitung aus hourly_data):
+    "humidity_avg_pct": "humidity_avg",
+    "dewpoint_avg_c": "dewpoint_avg",
+    "pressure_avg_hpa": "pressure_avg",
+    "precip_type_dominant": "precip_type",
+    "snowfall_limit_m": "snowfall_limit",
 }
 
 

@@ -24,8 +24,8 @@ from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
 from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.email.compare_html import (
-    _build_location_outlook_rows, _fmt_thunder, _fmt_visibility_overview,
-    _metric_value, sort_locations_alphabetically,
+    _build_location_outlook_rows, _fmt_precip_type, _fmt_thunder,
+    _fmt_visibility_overview, _metric_value, sort_locations_alphabetically,
 )
 from output.renderers.email.outlook import render_outlook_plain
 from output.metric_format import format_value
@@ -49,6 +49,13 @@ _DAILY_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
     # _metric_value -> _daily_summary, analog den fuenf #1285-Zeilen).
     ("cape_max", "CAPE", lambda v: f"{v:.0f} J/kg"),
     ("freezing_level", "Nullgradgrenze", lambda v: f"{v:.0f} m"),
+    # Issue #1324, Klasse B (kein LocationResult-Feld, Live-Ableitung ueber
+    # _metric_value -> _daily_summary). HTML-Parität: dieselben Werte/Labels.
+    ("humidity_avg", "Luftfeuchtigkeit Ø", lambda v: f"{v:.0f}%"),
+    ("dewpoint_avg", "Taupunkt Ø", lambda v: format_value("temperature", v, style="plain")),
+    ("pressure_avg", "Luftdruck Ø", lambda v: f"{v:.0f} hPa"),
+    ("precip_type", "Niederschlagsart", _fmt_precip_type),
+    ("snowfall_limit", "Schneefallgrenze", lambda v: f"{v:.0f} m"),
 )
 
 
@@ -128,6 +135,24 @@ def render_comparison_text(
         if _metric_visible("gust_max"):
             gust_max = loc_result.gust_max
             lines.append(f"   Böen: {format_value('wind', gust_max, style='plain')}" if gust_max is not None else "   Böen: -")
+        # Issue #1324, Klasse A: fuenf weitere LocationResult-Felder direkt
+        # lesen (wie temp_min/gust_max) -- Klartext-Pendant zu den HTML-Zeilen,
+        # sonst HTML/Text-Asymmetrie.
+        if _metric_visible("wind_direction_avg"):
+            wind_dir = loc_result.wind_direction_avg
+            lines.append(f"   Windrichtung: {wind_dir}°" if wind_dir is not None else "   Windrichtung: -")
+        if _metric_visible("wind_chill_min"):
+            wc_min = loc_result.wind_chill_min
+            lines.append(f"   Gefühlte Temp. min: {format_value('temperature', wc_min, style='plain')}" if wc_min is not None else "   Gefühlte Temp. min: -")
+        if _metric_visible("cloud_low_avg"):
+            c_low = loc_result.cloud_low_avg
+            lines.append(f"   Wolken tief: {c_low}%" if c_low is not None else "   Wolken tief: -")
+        if _metric_visible("cloud_mid_avg"):
+            c_mid = loc_result.cloud_mid_avg
+            lines.append(f"   Wolken mittel: {c_mid}%" if c_mid is not None else "   Wolken mittel: -")
+        if _metric_visible("cloud_high_avg"):
+            c_high = loc_result.cloud_high_avg
+            lines.append(f"   Wolken hoch: {c_high}%" if c_high is not None else "   Wolken hoch: -")
         # Issue #1285: vier bisher still verworfene Zeilen. Werte kommen aus
         # DERSELBEN Quelle wie die HTML-Matrix (_metric_value -> Engine-Feld
         # bzw. live aus hourly_data), damit HTML und Klartext nie
