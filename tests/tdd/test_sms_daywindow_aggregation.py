@@ -412,6 +412,53 @@ class TestAC3CompanionValuesAtSameHour:
             f"Boeen-Pille fehlt.\nPlain:\n{plain}"
         )
 
+    def test_compact_summary_shows_night_only_rain_ac1(self):
+        """Fix #1330 AC-1: Regen ausschliesslich NACH Ankunft (Segment-
+        Aggregat `summary.precip_sum_mm` explizit 0.0/trocken) muss in der
+        Kurzzusammenfassung als Regen erscheinen, nicht als 'trocken' — die
+        Ja/Nein-Weiche in `_format_precipitation()` liest heute noch das
+        leere Segment-Aggregat statt der Tagesfenster-Summe aus `hourly`."""
+        segments = [_segment(day=20, agg_precip_sum_mm=0.0)]
+        night = _night_weather(
+            day=20, event_hour=14, thunder=ThunderLevel.NONE, precip=0.5,
+        )
+        report = _report(segments, night)
+        compact = _compact_line(report.email_plain)
+
+        assert "trocken" not in compact, (
+            f"Kurzzusammenfassung meldet 'trocken', obwohl im Tagesfenster "
+            f"um 14:00 (nach Ankunft) 0.5mm Regen liegen — die Ja/Nein-"
+            f"Weiche liest noch summary.precip_sum_mm=0.0 statt der "
+            f"Tagesfenster-Summe aus `hourly`.\nKompakt: {compact!r}"
+        )
+        assert "Regen" in compact and "14:00" in compact, (
+            f"Kurzzusammenfassung nennt keinen Regen um 14:00.\n"
+            f"Kompakt: {compact!r}"
+        )
+
+    def test_compact_summary_shows_daywindow_gust_peak_ac2(self):
+        """Fix #1330 AC-2: der Böen-Anteil der Kurzzusammenfassung muss die
+        Tagesfenster-Spitze aus `hourly` zeigen (hier 45 km/h über
+        night_weather um 14:00), nicht das hartkodierte, veraltete
+        Segment-Aggregat `summary.gust_max_kmh=25.0` aus `_segment()`."""
+        segments = [_segment(day=20)]
+        night = _night_weather(
+            day=20, event_hour=14, thunder=ThunderLevel.NONE, gust=45.0,
+        )
+        report = _report(segments, night)
+        compact = _compact_line(report.email_plain)
+
+        assert "25 km/h" not in compact, (
+            f"Kurzzusammenfassung zeigt noch den veralteten Segment-"
+            f"Böenwert 25 km/h statt der Tagesfenster-Spitze — "
+            f"_format_wind() liest noch summary.gust_max_kmh statt max() "
+            f"über `hourly`.\nKompakt: {compact!r}"
+        )
+        assert "45 km/h" in compact, (
+            f"Kurzzusammenfassung nennt nicht die Tagesfenster-Böenspitze "
+            f"45 km/h.\nKompakt: {compact!r}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # AC-4: Konsistenz-Invariante — alle vier Kurzformen + Detailtabelle einig

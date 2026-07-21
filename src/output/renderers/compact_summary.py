@@ -205,8 +205,10 @@ class CompactSummaryFormatter:
     ) -> Optional[str]:
         if summary is None:
             return None
-        precip = summary.precip_sum_mm
-        if precip is None or precip < self._RAIN_DETECT:
+        if not hourly:
+            return None
+        precip = sum(dp.precip_1h_mm or 0.0 for dp in hourly)
+        if precip < self._RAIN_DETECT:
             return "trocken"
 
         adj = self._precip_adjective(precip)
@@ -318,8 +320,10 @@ class CompactSummaryFormatter:
     ) -> Optional[str]:
         if summary is None:
             return None
-        wind_max = summary.wind_max_kmh
-        gust_max = summary.gust_max_kmh
+        if not hourly:
+            return None
+        wind_max = max((dp.wind10m_kmh or 0.0 for dp in hourly), default=None)
+        gust_max = max((dp.gust_kmh or 0.0 for dp in hourly), default=None)
 
         if wind_max is None and gust_max is None:
             return None

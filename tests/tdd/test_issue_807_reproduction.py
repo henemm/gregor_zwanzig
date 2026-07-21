@@ -89,26 +89,27 @@ def test_pills_respect_segment_window():
         assert "95" not in t, f"Peak von 95 km/h (02:00) wurde fälschlicherweise in Pills aufgenommen: {t}"
 def test_compact_summary_respects_segment_window():
     """
-    GIVEN ein Segment von 08:00 bis 12:00 UTC.
-    AND ein Wind-Peak von 95 km/h um 02:00 UTC (außerhalb).
+    GIVEN ein Segment von 08:00 bis 12:00 UTC (= 10:00-14:00 Ortszeit CEST).
+    AND ein Wind-Peak von 95 km/h um 00:00 UTC (= 02:00 Ortszeit, echt
+    ausserhalb des Tagesfensters 04:00-19:00 Ortszeit, day_window.py).
     WHEN CompactSummaryFormatter.format_stage_summary aufgerufen wird.
     THEN darf das Summary den Peak von 95 km/h NICHT enthalten.
     """
     from src.output.renderers.compact_summary import CompactSummaryFormatter
     from app.metric_catalog import build_default_display_config
-    
-    # Peak 95 um 02:00 UTC, Segment ist 08:00-12:00
-    seg = _build_segment_with_full_day_data(start_h=8, end_h=12, peak_h=2, peak_val=95.0)
+
+    # Peak 95 um 00:00 UTC (02:00 Ortszeit), Segment ist 08:00-12:00 UTC
+    seg = _build_segment_with_full_day_data(start_h=8, end_h=12, peak_h=0, peak_val=95.0)
     # aggregated hat gust_max_kmh=10.0 (siehe _build_segment_with_full_day_data)
-    
+
     dc = build_default_display_config()
-    
+
     formatter = CompactSummaryFormatter()
     summary = formatter.format_stage_summary([seg], "Etappe 1", dc, tz=TZ)
-    
+
     # Mit dem Fix darf 95 (auch aus hourly) nicht mehr auftauchen.
-    assert "95" not in summary, f"Peak von 95 km/h (02:00) wurde fälschlicherweise in Compact Summary aufgenommen: {summary}"
-    assert "04:00" not in summary
+    assert "95" not in summary, f"Peak von 95 km/h (02:00 Ortszeit) wurde fälschlicherweise in Compact Summary aufgenommen: {summary}"
+    assert "ab 2:00" not in summary, f"Ortszeit des ausgeschlossenen Peaks (02:00) tauchte fälschlicherweise als Böen-Zeitpunkt auf: {summary}"
 
 
 def test_compact_summary_peak_time_matches_window():
