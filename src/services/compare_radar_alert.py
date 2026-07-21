@@ -137,7 +137,9 @@ class CompareRadarAlertService:
                 )
                 continue
             try:
-                result = radar_service.get_nowcast(loc.lat, loc.lon)
+                # Issue #1329 C2: Scheduler-Radar ist ein polling-Check
+                # (drosselbar bei Budget-Druck) -- kein Nutzer-Briefing.
+                result = radar_service.get_nowcast(loc.lat, loc.lon, priority="polling")
             except Exception as e:
                 logger.error(f"Compare-Radar-Alert nowcast failed for {preset_id}/{location_id}: {e}")
                 continue

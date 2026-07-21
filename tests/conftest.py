@@ -108,3 +108,18 @@ def _isolate_data_root(request, tmp_path_factory):
             "oder falls der Test bewusst den echten Baum braucht: "
             "@pytest.mark.real_data_root / @pytest.mark.live setzen."
         )
+
+
+@pytest.fixture(autouse=True)
+def _reset_shared_radar_cache():
+    """Issue #1329 C2: der Radar-Frame-Cache (`services.radar_cache`) ist
+    ein Prozess-Singleton mit 300s-TTL. Ohne Reset zwischen Tests koennten
+    zwei Testfaelle, die dieselbe (gerundete) Koordinate verwenden aber
+    unterschiedliche `frame_source`-Fakes injizieren, sich innerhalb des
+    TTL-Fensters gegenseitig kontaminieren (Cache-Hit liefert Frames eines
+    ANDEREN Tests). Lazy-Import haelt Tests, die den Radar-Pfad nicht
+    beruehren, frei von einer Import-Zeit-Abhaengigkeit."""
+    from services.radar_cache import reset_shared_radar_cache_for_tests
+    reset_shared_radar_cache_for_tests()
+    yield
+    reset_shared_radar_cache_for_tests()

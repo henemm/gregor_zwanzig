@@ -1,0 +1,9 @@
+{
+  "frames": [
+    {"offset_min": 0, "precip_mm_h": 0.0, "weather_code": 0},
+    {"offset_min": 15, "precip_mm_h": 0.0, "weather_code": 0},
+    {"offset_min": 30, "precip_mm_h": 0.0, "weather_code": 0},
+    {"offset_min": 45, "precip_mm_h": 0.0, "weather_code": 0},
+    {"offset_min": 60, "precip_mm_h": 0.0, "weather_code": 0}
+  ]
+}

@@ -499,7 +499,11 @@ class TestAC8RadarAlertRespectsTier:
                     source="radar", is_convective=False,
                 )
 
-            def get_nowcast(self, lat: float, lon: float) -> NowcastResult:
+            def get_nowcast(self, lat: float, lon: float, priority: str = "user_briefing") -> NowcastResult:
+                # Issue #1329 C2: get_nowcast() akzeptiert seit Scheibe C2
+                # zusaetzlich `priority` (trip_alert.py ruft jetzt
+                # priority="polling"). Dieses Fake ignoriert die
+                # Prioritaet bewusst -- fest verdrahtetes Ergebnis.
                 return self._fixed
 
         _write_user_json(user_id, tier=tier)

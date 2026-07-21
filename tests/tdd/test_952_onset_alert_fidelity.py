@@ -114,7 +114,12 @@ class _GuaranteedWetRadar(RadarNowcastService):
             source=source, is_convective=is_convective,
         )
 
-    def get_nowcast(self, lat: float, lon: float) -> NowcastResult:
+    def get_nowcast(self, lat: float, lon: float, priority: str = "user_briefing") -> NowcastResult:
+        # Issue #1329 C2: RadarNowcastService.get_nowcast() akzeptiert seit
+        # Scheibe C2 zusaetzlich `priority` (Call-Site trip_alert.py ruft
+        # jetzt priority="polling" auf). Dieses Fake ignoriert die
+        # Prioritaet bewusst -- es liefert ohnehin immer ein fest
+        # verdrahtetes Ergebnis, unabhaengig von Budget/Drosselung.
         return self._fixed
 
 

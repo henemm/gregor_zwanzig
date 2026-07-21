@@ -1108,7 +1108,9 @@ class TripCommandProcessor:
             )
         wp = stage.waypoints[0]
         svc = RadarNowcastService()
-        result = svc.get_nowcast(wp.lat, wp.lon)
+        # Issue #1329 C2: /jetzt ist eine Nutzeraktion -- explizit
+        # user_briefing (Default, nie gedrosselt), zur Dokumentation der Absicht.
+        result = svc.get_nowcast(wp.lat, wp.lon, priority="user_briefing")
         body = svc.format_now_text(result)
         return CommandResult(
             success=True, command="now",

@@ -674,7 +674,9 @@ class TripAlertService:
             tz = tz_for_coords(lat, lon)
             try:
                 radar_svc = self._get_radar_service()
-                result = radar_svc.get_nowcast(lat, lon)
+                # Issue #1329 C2: Scheduler-Radar ist ein polling-Check
+                # (drosselbar bei Budget-Druck) -- kein Nutzer-Briefing.
+                result = radar_svc.get_nowcast(lat, lon, priority="polling")
             except Exception as e:
                 logger.error(f"Radar nowcast failed for trip {trip.id}: {e}")
                 continue

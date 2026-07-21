@@ -132,12 +132,20 @@ def test_ac3_dpc_failure_falls_back_to_next_source():
 # AC-4a: Convective-Sidecar-Match innerhalb Toleranz -> is_convective gemerged
 # ===========================================================================
 
-def test_ac4_dpc_merges_convective_flag_from_sidecar():
+def test_ac4_dpc_merges_convective_flag_from_sidecar(monkeypatch):
     """AC-4a: ein konvektives Sidecar-Frame (WMO 95/96/99) innerhalb +-5 Min wird
     auf das zeitlich passende DPC-Frame gemerged; precip_mm_h bleibt DPC-Quelle."""
     from providers.brightsky import RadarFrame
     from providers.radar_dpc import RadarDPCProvider
     from services.radar_service import RadarNowcastService
+
+    # Issue #1329 C2 / AC-11: der globale Offline-Guard (GZ_TEST_FIXTURE_DIR,
+    # von tests/conftest.py autouse gesetzt) wuerde _fetch_radar_dpc VOR der
+    # Provider-Konstruktion kurzschliessen. Dieser Test prueft aber genau
+    # die reale DPC-Provider-Konstruktion (mit eigenem Methoden-Patch als
+    # Netz-Schutz) -- der globale Schalter ist hier kontraproduktiv, nicht
+    # sein Sicherheitsnetz.
+    monkeypatch.delenv("GZ_TEST_FIXTURE_DIR", raising=False)
 
     dpc_ts = datetime.now(tz=timezone.utc).replace(second=0, microsecond=0)
 
@@ -170,13 +178,19 @@ def test_ac4_dpc_merges_convective_flag_from_sidecar():
 # AC-4b: Sidecar-Fail-Soft-Fall -> convective_checked=False (ADR-0018)
 # ===========================================================================
 
-def test_ac4_dpc_sidecar_failure_sets_convective_checked_false():
+def test_ac4_dpc_sidecar_failure_sets_convective_checked_false(monkeypatch):
     """AC-4b: schlaegt der Open-Meteo-Sidecar fehl (liefert [], realer Fail-Soft-
     Vertrag), bleibt die DPC-Regen-Nowcast nutzbar, aber `convective_checked` wird
     False und `format_now_text` weist das sichtbar aus statt es zu kaschieren."""
     from providers.brightsky import RadarFrame
     from providers.radar_dpc import RadarDPCProvider
     from services.radar_service import RadarNowcastService
+
+    # Issue #1329 C2 / AC-11: siehe test_ac4_dpc_merges_convective_flag_from_sidecar
+    # -- der globale Offline-Guard wuerde die Provider-Konstruktion, die
+    # dieser Test gerade prueft, kurzschliessen. Eigener Methoden-Patch ist
+    # der Netz-Schutz dieses Tests.
+    monkeypatch.delenv("GZ_TEST_FIXTURE_DIR", raising=False)
 
     dpc_ts = datetime.now(tz=timezone.utc).replace(second=0, microsecond=0)
 

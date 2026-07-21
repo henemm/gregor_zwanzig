@@ -17,8 +17,10 @@ SPEC: docs/specs/modules/radar_nowcast.md
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 from typing import Callable, Optional
 from zoneinfo import ZoneInfo
 
@@ -71,6 +73,18 @@ class NowcastResult:
     frames: list = field(default_factory=list)
     is_convective: bool = False     # True when nowcast indicates thunderstorm/hail
     convective_checked: bool = True  # False when INCA sidecar convective-check failed
+    throttled: bool = False        # True when no frames due to budget throttling,
+                                    # not "genuinely dry" (Issue #1329 C2, AC-6).
+                                    # Pure observability signal -- radar_alert_due()
+                                    # treats onset_minutes=None identically either way
+                                    # (safe: a missed poll beats a quota outage).
+
+
+def _offline_fixture_active() -> bool:
+    """True wenn GZ_TEST_FIXTURE_DIR gesetzt ist (Issue #1329 C2) -- identische
+    Aktivierungsregel wie providers/base.py:144. EIN Schalter fuer den
+    gesamten Radar-Pfad, kein separater Radar-Env-Var (ADR-0033 Punkt 3)."""
+    return bool(os.environ.get("GZ_TEST_FIXTURE_DIR", "").strip())
 
 
 class RadarNowcastService:
@@ -84,9 +98,23 @@ class RadarNowcastService:
     def __init__(
         self,
         frame_source: Optional[Callable[[float, float], list]] = None,
+        cache: Optional["RadarNowcastCacheService"] = None,  # noqa: F821 (lazy import below)
+        now_fn: Optional[Callable[[], datetime]] = None,
     ) -> None:
         self._frame_source = frame_source
         self._convective_checked = True
+        # Issue #1329 C2: injizierbare Uhr fuer deterministische
+        # Onset-Recompute-/TTL-Tests ohne sleep. Default = echte Uhr,
+        # Produktionsverhalten unveraendert.
+        self._now_fn = now_fn or (lambda: datetime.now(timezone.utc))
+        if cache is None:
+            from services.radar_cache import get_shared_radar_cache
+            cache = get_shared_radar_cache()
+        self._cache = cache
+        self._openmeteo_unavailable_this_call = False
+        self._budget_throttled_this_call = False
+        self._priority = "user_briefing"
+        self._budget_gate = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -115,21 +143,54 @@ class RadarNowcastService:
         """Return True if WMO weather code indicates convective activity (thunderstorm/hail)."""
         return code in (95, 96, 99)
 
-    def get_nowcast(self, lat: float, lon: float) -> NowcastResult:
+    def get_nowcast(self, lat: float, lon: float, priority: str = "user_briefing") -> NowcastResult:
         """
-        Fetch frames and derive nowcast result.
+        Fetch frames (cache-first) and derive nowcast result.
 
-        If frame_source is injected, uses it (test DI seam).
-        Otherwise uses coordinate-based source chain.
+        If frame_source is injected, uses it (test DI seam) on a cache miss.
+        Otherwise uses the coordinate-based source chain on a cache miss.
+
+        Issue #1329 C2: `priority` steuert die Drosselung des internen
+        open-meteo-Funnels ueber den geteilten `ForecastBudgetGate`
+        ("polling" fuer Scheduler-Checks, "user_briefing" -- Default, nie
+        gedrosselt -- fuer Nutzeraktionen wie `/jetzt`). Der Cache-Lookup
+        selbst ist von `priority` unabhaengig; die Ableitung
+        (`_derive_result`) laeuft bei Cache-Hit UND -Miss immer frisch
+        relativ zur aktuellen (bzw. injizierten) Zeit -- der Cache liefert
+        nie ein fertiges Ergebnis (Lehre aus Adversary-Fund F001, Scheibe C).
         """
         self._convective_checked = True
+        self._openmeteo_unavailable_this_call = False
+        self._budget_throttled_this_call = False
+        self._priority = priority
+        from services.forecast_budget import ForecastBudgetGate
+        self._budget_gate = ForecastBudgetGate()
+        now = self._now_fn()
+
+        # Adversary-Fund F001 (Issue #1329 C2, BROKEN-Verdict behoben): der
+        # Region-Bucket ist Bestandteil des Cache-Schluessels, damit zwei
+        # Koordinaten beidseits einer harten Routing-Grenze (die auf
+        # denselben gerundeten Koordinaten-Wert fallen koennen) sich NIE
+        # faelschlich einen Eintrag der jeweils anderen Region teilen.
+        region = _region_bucket(lat, lon)
+
+        cached = self._cache.get(lat, lon, region, now=now)
+        if cached is not None:
+            self._budget_gate.record_cache_hit()
+            return self._derive_result(cached.frames, cached.source, now=now)
+
+        self._budget_gate.record_cache_miss()
+
         if self._frame_source is not None:
             frames = self._frame_source(lat, lon)
             source = "radar"
         else:
             frames, source = self._fetch_frames_with_fallback(lat, lon)
 
-        return self._derive_result(frames, source)
+        if frames:
+            self._cache.put(lat, lon, region, frames, source, now=now)
+
+        return self._derive_result(frames, source, now=now)
 
     # Human-readable source labels (single source of truth — used by
     # format_now_text and by the body-builder in trip_alert.check_radar_alerts).
@@ -234,6 +295,9 @@ class RadarNowcastService:
         return frames, "minutely_15"
 
     def _fetch_brightsky(self, lat: float, lon: float) -> list:
+        if _offline_fixture_active():
+            # Issue #1329 C2 Abschnitt 8: kein Netz zu BrightSky im Offline-Modus.
+            return []
         try:
             from providers.brightsky import BrightSkyProvider
             provider = BrightSkyProvider()
@@ -243,6 +307,10 @@ class RadarNowcastService:
             return []
 
     def _fetch_geosphere_inca(self, lat: float, lon: float) -> list:
+        if _offline_fixture_active():
+            # Issue #1329 C2 Abschnitt 8: kein Netz zu GeoSphere im Offline-Modus
+            # (auch der Sidecar-open-meteo-Call unten wird dadurch nie erreicht).
+            return []
         try:
             from providers.geosphere import GeoSphereProvider
             from providers.brightsky import RadarFrame
@@ -281,6 +349,10 @@ class RadarNowcastService:
                 frame.is_convective = nearest.is_convective
 
     def _fetch_radar_dpc(self, lat: float, lon: float) -> list:
+        if _offline_fixture_active():
+            # Issue #1329 C2 Abschnitt 8: kein Netz zu Radar-DPC im Offline-Modus
+            # (auch der Sidecar-open-meteo-Call unten wird dadurch nie erreicht).
+            return []
         try:
             from providers.radar_dpc import RadarDPCProvider
             frames = RadarDPCProvider().fetch_nowcast(lat, lon)
@@ -317,7 +389,28 @@ class RadarNowcastService:
     def _fetch_openmeteo_15(
         self, lat: float, lon: float, models: Optional[str] = None
     ) -> list:
-        """Shared Open-Meteo minutely_15 fetch/parse. Optional explicit model. Fail-soft -> []."""
+        """Shared Open-Meteo minutely_15 fetch/parse. Optional explicit model. Fail-soft -> [].
+
+        Issue #1329 C2: EINZIGER Funnel, durch den JEDER open-meteo-Zweig
+        laeuft (AROME-FR, ICON-D2, ARPAE, finaler minutely_15-Fallback, UND
+        beide Sidecar-Aufrufe aus _fetch_geosphere_inca/_fetch_radar_dpc) --
+        ein Gate-Einbau hier deckt Budget UND Doppelverbrauch-Fix UND
+        Offline-Fixture fuer den gesamten open-meteo-Anteil ab.
+        """
+        if self._openmeteo_unavailable_this_call:
+            # Root Cause 3 (Doppelverbrauch-Fix): nach einem ECHTEN
+            # Fehlschlag/einer Drosselung in DIESEM get_nowcast()-Aufruf kein
+            # zweiter Versuch -- unabhaengig davon, welcher Zweig als
+            # naechstes in der Kette folgt. Der bestehende All-None-Guard
+            # (unten) setzt dieses Flag NICHT, faellt also weiterhin sauber
+            # zum naechsten Modell durch.
+            return []
+        if _offline_fixture_active():
+            return self._load_radar_fixture_frames()
+        if not self._budget_gate.allow(self._priority):
+            self._budget_throttled_this_call = True
+            self._openmeteo_unavailable_this_call = True
+            return []
         try:
             import httpx
             from providers.brightsky import RadarFrame
@@ -329,6 +422,7 @@ class RadarNowcastService:
                 f"&minutely_15=precipitation,weather_code"
                 f"&timezone=UTC&forecast_minutely_15=96"
             )
+            self._budget_gate.record_call()  # unmittelbar vor dem echten Fetch
             with httpx.Client(timeout=HTTPX_TIMEOUT) as client:
                 resp = client.get(url)
                 resp.raise_for_status()
@@ -360,11 +454,61 @@ class RadarNowcastService:
             return frames
         except Exception as e:
             logger.warning(f"Open-Meteo minutely_15 (models={models}) failed: {e}")
+            # Root Cause 3: ein ECHTER Fehlschlag (nicht der All-None-Guard
+            # oben, der vor diesem except-Block returnt) sperrt weitere
+            # open-meteo-Versuche fuer den Rest DIESES get_nowcast()-Aufrufs.
+            self._openmeteo_unavailable_this_call = True
             return []
 
-    def _derive_result(self, frames: list, source: str) -> NowcastResult:
-        """Derive onset_minutes and intensity_label from frames."""
-        now = datetime.now(tz=timezone.utc)
+    def _load_radar_fixture_frames(self) -> list:
+        """Issue #1329 C2 Abschnitt 8: laedt fixtures/radar/minutely_15.json
+        und stempelt die Zeitstempel relativ zu self._now_fn() um (Muster
+        FixtureProvider.fetch_forecast: `providers/fixture.py:110-117`).
+
+        Pfad hergeleitet als Geschwister-Verzeichnis von GZ_TEST_FIXTURE_DIR
+        (kein neuer Env-Var, derselbe Wurzelpfad wie der Forecast-Fixture-
+        Ordner). Fail-soft: fehlende/kaputte Datei -> [] (setzt
+        _openmeteo_unavailable_this_call, kein Absturz) -- degradiert zum
+        regulaeren "keine Frames -> kein Alarm"-Pfad (Known Limitation a).
+        """
+        fixture_dir = os.environ.get("GZ_TEST_FIXTURE_DIR", "").strip()
+        if not fixture_dir:
+            self._openmeteo_unavailable_this_call = True
+            return []
+        path = Path(fixture_dir).resolve().parent / "radar" / "minutely_15.json"
+        try:
+            import json
+            from providers.brightsky import RadarFrame
+
+            raw = json.loads(path.read_text())
+            entries = raw.get("frames") or []
+            if not entries:
+                raise ValueError("fixture has no frames")
+            base = self._now_fn()
+            frames = []
+            for entry in entries:
+                offset_min = entry.get("offset_min", 0)
+                precip = entry.get("precip_mm_h", 0.0)
+                code = entry.get("weather_code")
+                ts = base + timedelta(minutes=offset_min)
+                is_convective = self._is_convective_weathercode(code)
+                frames.append(
+                    RadarFrame(timestamp=ts, precip_mm_h=float(precip), is_convective=is_convective)
+                )
+            return frames
+        except Exception as e:
+            logger.warning(f"Radar-Fixture nicht ladbar ({path}): {e}")
+            self._openmeteo_unavailable_this_call = True
+            return []
+
+    def _derive_result(self, frames: list, source: str, now: Optional[datetime] = None) -> NowcastResult:
+        """Derive onset_minutes and intensity_label from frames.
+
+        Issue #1329 C2: `now` optional injizierbar (Default = self._now_fn())
+        -- laeuft bei JEDEM Aufruf frisch, egal ob frames aus dem Cache oder
+        einem frischen Fetch stammen (Cache liefert nie ein fertiges Ergebnis).
+        """
+        now = now or self._now_fn()
         horizon = now + timedelta(minutes=_NOWCAST_HORIZON_MIN)
 
         # Filter to nowcast window
@@ -391,6 +535,12 @@ class RadarNowcastService:
 
         intensity_label = self.intensity_to_text(max_rate, is_convective=is_convective)
 
+        # Issue #1329 C2 AC-6: throttled=True nur wenn KEINE Frames geliefert
+        # wurden UND die Ursache eine Budget-Drosselung war (nicht "echt kein
+        # Regen"). Beobachtbarkeits-Signal -- radar_alert_due() behandelt
+        # onset_minutes=None ohnehin gleich (kein Alarm bei Drosselung).
+        throttled = bool(getattr(self, "_budget_throttled_this_call", False)) and not frames
+
         return NowcastResult(
             onset_minutes=onset_minutes,
             intensity_label=intensity_label,
@@ -398,6 +548,7 @@ class RadarNowcastService:
             frames=frames,
             is_convective=is_convective,
             convective_checked=self._convective_checked,
+            throttled=throttled,
         )
 
 
@@ -434,3 +585,35 @@ def _within_icon_d2(lat: float, lon: float) -> bool:
         _ICON_D2_LAT_MIN <= lat <= _ICON_D2_LAT_MAX
         and _ICON_D2_LON_MIN <= lon <= _ICON_D2_LON_MAX
     )
+
+
+def _region_bucket(lat: float, lon: float) -> str:
+    """Primaere Regions-Klassifikation einer Koordinate -- reine,
+    deterministische Funktion der Koordinaten, DIESELBE Reihenfolge wie die
+    tatsaechliche Quellenkette in `_fetch_frames_with_fallback`. Bestandteil
+    des Radar-Cache-Schluessels (Adversary-Fund F001, Issue #1329 C2,
+    BROKEN-Verdict behoben): ohne Region im Schluessel konnten zwei
+    Koordinaten beidseits einer harten Routing-Grenze (z.B. RADOLAN-Rand
+    bei lat=47.0, nur ~1m auseinander) auf denselben gerundeten
+    Koordinaten-Schluessel fallen und sich faelschlich einen Cache-Eintrag
+    der jeweils ANDEREN Region/Quelle teilen.
+
+    Bildet bewusst die PRIMAER gewaehlte Region ab (den ersten Treffer in
+    der Bounding-Box-Kette), NICHT die nach evtl. Fallback tatsaechlich
+    resolvte Quelle (z.B. AROME-FR-Fehlschlag -> minutely_15-Fallback) --
+    das ist konsistent, weil der Cache-Lookup VOR dem Fetch passiert und
+    den finalen resolvten Wert prinzipiell noch nicht kennen kann. Der
+    tatsaechlich resolvte Wert wird weiterhin unveraendert als `source`-
+    Metadatum im Cache-Eintrag mitgefuehrt (nicht als Schluesselbestandteil).
+    """
+    if _within_radolan(lat, lon):
+        return "radolan"
+    if _within_inca(lat, lon):
+        return "inca"
+    if _within_dpc(lat, lon):
+        return "dpc"
+    if _within_arome_france(lat, lon):
+        return "arome_france"
+    if _within_icon_d2(lat, lon):
+        return "icon_d2"
+    return "global"

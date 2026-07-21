@@ -52,12 +52,20 @@ def _real_inca_timeseries(ts: datetime, precip_1h_mm: float):
 # AC-1: Sidecar-Match innerhalb Toleranz -> is_convective wird gemerged
 # ===========================================================================
 
-def test_ac1_inca_merges_convective_flag_from_sidecar():
+def test_ac1_inca_merges_convective_flag_from_sidecar(monkeypatch):
     """AC-1: konvektives Sidecar-Frame (WMO 95/96/99) innerhalb +-5 Min wird auf das
     zeitlich passende INCA-Frame gemerged; die Regen-Rate bleibt INCA-Quelle."""
     from providers.brightsky import RadarFrame
     from providers.geosphere import GeoSphereProvider
     from services.radar_service import RadarNowcastService
+
+    # Issue #1329 C2 / AC-11: der globale Offline-Guard (GZ_TEST_FIXTURE_DIR,
+    # von tests/conftest.py autouse gesetzt) wuerde _fetch_geosphere_inca
+    # VOR der Provider-Konstruktion kurzschliessen. Dieser Test prueft aber
+    # genau die reale INCA-Provider-Konstruktion (mit eigenem Methoden-Patch
+    # als Netz-Schutz) -- der globale Schalter ist hier kontraproduktiv,
+    # nicht sein Sicherheitsnetz.
+    monkeypatch.delenv("GZ_TEST_FIXTURE_DIR", raising=False)
 
     inca_ts = datetime.now(tz=timezone.utc).replace(second=0, microsecond=0)
     ts = _real_inca_timeseries(inca_ts, precip_1h_mm=1.0)  # -> 4.0 mm/h (INCA 15-min -> *4)
@@ -93,13 +101,19 @@ def test_ac1_inca_merges_convective_flag_from_sidecar():
 #        + Sidecar wurde tatsaechlich aufgerufen (kein blosses Default-Verhalten)
 # ===========================================================================
 
-def test_ac2_inca_non_convective_sidecar_unchanged():
+def test_ac2_inca_non_convective_sidecar_unchanged(monkeypatch):
     """AC-2: nicht-konvektives Sidecar-Frame -> is_convective bleibt False, aber der
     Sidecar-Call muss tatsaechlich stattgefunden haben (echter Merge-Pfad, nicht nur
     der unveraenderte Default)."""
     from providers.brightsky import RadarFrame
     from providers.geosphere import GeoSphereProvider
     from services.radar_service import RadarNowcastService
+
+    # Issue #1329 C2 / AC-11: siehe test_ac1_inca_merges_convective_flag_from_sidecar
+    # -- der globale Offline-Guard wuerde die Provider-Konstruktion, die
+    # dieser Test gerade prueft, kurzschliessen. Eigener Methoden-Patch ist
+    # der Netz-Schutz dieses Tests.
+    monkeypatch.delenv("GZ_TEST_FIXTURE_DIR", raising=False)
 
     inca_ts = datetime.now(tz=timezone.utc).replace(second=0, microsecond=0)
     ts = _real_inca_timeseries(inca_ts, precip_1h_mm=0.5)
@@ -140,12 +154,18 @@ def test_ac2_inca_non_convective_sidecar_unchanged():
 #        (Nicht-Kaschieren-Invariante, ADR-0018)
 # ===========================================================================
 
-def test_ac3_inca_sidecar_failure_sets_convective_checked_false():
+def test_ac3_inca_sidecar_failure_sets_convective_checked_false(monkeypatch):
     """AC-3: schlaegt der Open-Meteo-Sidecar fehl (liefert [], realer Fail-Soft-
     Vertrag), bleibt die INCA-Regen-Nowcast nutzbar, aber `convective_checked` wird
     False und `format_now_text` weist das sichtbar aus statt es zu kaschieren."""
     from providers.geosphere import GeoSphereProvider
     from services.radar_service import RadarNowcastService
+
+    # Issue #1329 C2 / AC-11: siehe test_ac1_inca_merges_convective_flag_from_sidecar
+    # -- der globale Offline-Guard wuerde die Provider-Konstruktion, die
+    # dieser Test gerade prueft, kurzschliessen. Eigener Methoden-Patch ist
+    # der Netz-Schutz dieses Tests.
+    monkeypatch.delenv("GZ_TEST_FIXTURE_DIR", raising=False)
 
     inca_ts = datetime.now(tz=timezone.utc).replace(second=0, microsecond=0)
     ts = _real_inca_timeseries(inca_ts, precip_1h_mm=2.0)
