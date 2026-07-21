@@ -63,8 +63,7 @@ gebracht — vorher NICHT auf dem alten Stand weiterbauen, sondern neuen Workspa
 
 **#1017 — Doku-Drift:** `AGENTS.md` (Z. 8 + 127): `api/` gehört zum Python-Core, Go-API =
 `cmd/server/` + `internal/`. Dasselbe in `docs/specs/_template.md`. In
-`docs/features/architecture.md`: Signal-Erwähnungen entfernen (Z. 10, 535 — Signal ist seit
-#610 raus), Produktivpfad = Python-Core-Pipeline statt CLI-Fluss. NUR Doku-Dateien anfassen.
+`docs/features/architecture.md`: *[erledigt 2026-07 — signalfrei, Produktivpfad beschrieben]*. NUR Doku-Dateien anfassen.
 
 **#1028 — Router-Auszug:** `cmd/server/main.go` → Routing-Aufbau nach `internal/router/`
 (z. B. `router.New(deps) http.Handler`), Inline-Handler in benannte Funktionen unter

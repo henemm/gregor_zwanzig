@@ -9,17 +9,17 @@ fälschlich grün gerendert, kein Scope-Fix in #1035).
 Behörden-Warnungen pro Ort, sofern eine Datenquelle für den Ort zuständig ist; die Anzeige ist
 pro Orts-Vergleich ein-/ausschaltbar (Slice 5, #1040).
 **Related Specs:**
-- `docs/specs/modules/issue_1034_official_alerts_foundation.md` (Slice 1 — Fundament)
-- `docs/specs/modules/issue_1035_vigilance_source.md` (Slice 2 — Météo-France Vigilance,
+- `docs/specs/_archive/modules/issue_1034_official_alerts_foundation.md` (Slice 1 — Fundament)
+- `docs/specs/_archive/modules/issue_1035_vigilance_source.md` (Slice 2 — Météo-France Vigilance,
   implementiert; ersetzt den veralteten Vor-Analyse-Entwurf
   `issue_1035_official_alerts_vigilance.md`, siehe dessen Superseded-Hinweis)
-- `docs/specs/modules/issue_1040_alerts_toggle.md` (Slice 5 — Konfiguration/Checkbox, implementiert;
+- `docs/specs/_archive/modules/issue_1040_alerts_toggle.md` (Slice 5 — Konfiguration/Checkbox, implementiert;
   ersetzt den veralteten Vor-Analyse-Entwurf `issue_1040_official_alerts_config_toggle.md`, siehe
   dessen Superseded-Hinweis)
-- `docs/specs/modules/issue_1036_meteo_forets_source.md` (Slice 3 — Météo des forêts,
+- `docs/specs/_archive/modules/issue_1036_meteo_forets_source.md` (Slice 3 — Météo des forêts,
   implementiert; ersetzt den veralteten Vor-Analyse-Entwurf
   `issue_1036_official_alerts_meteo_forets.md`, siehe dessen Superseded-Hinweis)
-- `docs/specs/modules/issue_1037_official_alerts_massif_closure.md` (Slice 4 — Massiv-Sperrungen)
+- `docs/specs/_archive/modules/issue_1037_official_alerts_massif_closure.md` (Slice 4 — Massiv-Sperrungen)
 
 **Related ADR:** `docs/adr/0016-amtliche-warnungen-additiver-typ.md`
 
@@ -153,8 +153,7 @@ Amtliche Warnungen sind pro Orts-Vergleich ein-/ausschaltbar, Default an:
   ein bestehendes Form-Atom (`atoms/Switch.svelte` oder `ui/checkbox`) — keine neue
   UI-Architektur.
 - **Wichtige Abgrenzung:** Der Legacy-Pfad `CompareSubscription`/`compare_subscriptions.json`
-  (Issue #456, `/api/subscriptions/{id}/send`) ist außerhalb des produktiven Scheduler-/
-  Editor-Flusses und wird von Slice 5 nicht angefasst — die einzige Quelle der Wahrheit für den
+  (Issue #456, `/api/subscriptions/{id}/send`) wurde inzwischen komplett entfernt (Routen liefern 404) — die einzige Quelle der Wahrheit für den
   Orts-Vergleich ist `compare_presets.json` (Go-Modell, editiert im Frontend).
 
 ### Aus Vorgängerprojekt wiederverwendbare Muster (nur als Referenz, nicht kopiert)
@@ -186,7 +185,7 @@ Neues Paket `src/services/official_alerts/` (`models.py`: `OfficialAlert`-Datacl
 `ComparisonEngine.run()` angereichert. `_render_official_alerts_block()` in `compare_html.py`
 rendert div/span-Badges (kein `<table>`) vor der Vergleichsmatrix, farbcodiert über die
 bestehenden `G_SUCCESS`/`G_WARNING`/`G_DANGER`-Tokens. Spec:
-`docs/specs/modules/issue_1034_official_alerts_foundation.md`.
+`docs/specs/_archive/modules/issue_1034_official_alerts_foundation.md`.
 
 **Nebenbefunde bei der Adversary-Prüfung:**
 - **#1046:** Der bei der Analyse zugrunde gelegte Validator-Vertrag für die Compare-Mail
@@ -204,7 +203,7 @@ kein OAuth2 — siehe Korrektur oben). `VigilanceSource` liefert Alerts ab Level
 Phänomene Sturmböen/Gewitter/Extreme Hitze. Bringt `department_mapper.py` (Nearest-Centroid,
 volle Metropole + Korsika 2A/2B) mit, das Slice 3 wiederverwendet. Text-Renderer-Parität in
 `render_comparison_text()` ergänzt (HTML-Badge war bereits aus Slice 1 verdrahtet). Spec:
-`docs/specs/modules/issue_1035_vigilance_source.md`.
+`docs/specs/_archive/modules/issue_1035_vigilance_source.md`.
 
 **Nebenbefund bei der Adversary-Prüfung:**
 - **#1056:** `compare_html.py` (`_render_official_alerts_block()`, aus Slice 1) mappt Level 1–2
@@ -220,7 +219,7 @@ département-scoped JSON-Endpoint `.../DPMeteoForets/v1/carte/departement/encour
 `OfficialAlert(hazard="wildfire_risk", level=1-4)` — ohne Mindest-Schwellwert (jede Stufe 1–4
 erscheint als Badge, anders als Vigilance ab Level ≥2). Baut auf #1034 (Registry-Plumbing) und
 #1035 (Département-Mapping) auf. Badge-Renderer aus Slice 1 verdrahtet, fail-soft bei fehlender
-API-Authentifizierung oder Netzwerkfehler. Spec: `docs/specs/modules/issue_1036_meteo_forets_source.md`.
+API-Authentifizierung oder Netzwerkfehler. Spec: `docs/specs/_archive/modules/issue_1036_meteo_forets_source.md`.
 
 ### Slice 4: Massiv-Betretungsverbote (Issue #1037) — implementiert (2026-07-07, Adversary VERIFIED)
 
@@ -254,7 +253,7 @@ Merge im `UpdateComparePresetHandler`, `ComparisonEngine.run(official_alerts_ena
 überspringt bei ausgeschaltetem Flag den Fetch komplett (nicht nur die Anzeige), Checkbox in
 `Step5Versand.svelte` (Vorbild `ChannelToggle`). Baut nur auf #1034 auf, ist aber erst nach #1035
 sinnvoll nutzbar (siehe Details oben unter "Konfigurierbarkeit"). Spec:
-`docs/specs/modules/issue_1040_alerts_toggle.md`.
+`docs/specs/_archive/modules/issue_1040_alerts_toggle.md`.
 
 ---
 

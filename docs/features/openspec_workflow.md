@@ -1,201 +1,50 @@
-# OpenSpec 8-Phasen-Workflow
+# OpenSpec-Workflow (Ist-Stand)
 
-## Überblick
+> Stand: 2026-07-21 (Doku-Audit #1341). Ersetzt die 8-Phasen-Fassung mit
+> einstelligen Commands und `workflow_state.json` (Git-Historie). Maßgeblich
+> sind die installierten Plugin-Skills und die Hooks — dieses Dokument ist nur
+> der Wegweiser.
 
-Das Gregor Zwanzig Projekt nutzt den OpenSpec Framework Workflow, der aus 8 sequentiellen Phasen besteht (inkl. Phase 6b Adversary Verification). Jede Phase wird durch einen Skill-Command ausgelöst und delegiert Aufgaben an spezialisierte Sub-Agenten mit strategischer Model-Auswahl.
+## Phasen und Commands
 
-**Command Naming:** Projekt nutzt die canonische OpenSpec-Namenskonvention mit Dashes (`/2-analyse`, `/3-write-spec`). Frühere Underscore-Varianten (`/1_analyse`, `/2_write-spec`) wurden im Februar 2026 gemerged und entfernt.
+Die Commands sind zweistellig; Deploy ist eine **eigene** Phase:
 
-## Die 8 Phasen
+| Command | Phase | PO-Eingriff |
+|---|---|---|
+| `/00-intake`, `/00-bug`, `/01-feature` | Einstieg/Klassifikation | — |
+| `/10-context` | Kontext sammeln | — |
+| `/20-analyse` | Request verstehen, Codebase recherchieren | optional |
+| `/30-write-spec` | Spezifikation mit AC-N-Format | **Pflicht: ACs freigeben („go")** |
+| `/40-tdd-red` | Fehlschlagende Tests (RED) | optional |
+| `/50-implement` | Implementieren (GREEN) + Adversary | — |
+| `/60-validate` | Validieren vor Commit | — |
+| `/70-deploy` | Staging-Verifikation + Prod-Deploy | **Pflicht: Tech-Lead-Brief + „go"** |
+| `/80-workflow`, `/82-test`, `/90-retro`, `/99-reset` | Verwaltung/Hilfsphasen | — |
 
-### 1. Analyse (`/2-analyse`)
+## State & Enforcement
 
-**Ziel:** Request verstehen, Codebase durchsuchen, Strategie entwickeln
+- **State pro Workflow:** `.claude/workflows/<name>.json` (laufend) bzw.
+  `_archive/` (abgeschlossen). Aktiver Workflow AUSSCHLIESSLICH über die
+  Umgebungsvariable `GZ_ACTIVE_WORKFLOW` (Symlink-Fallback deaktiviert).
+- **Hooks erzwingen den Ablauf** (Auswahl): `workflow_gate` (Phasen-Sequenz,
+  AC-N-Pflicht), `qa_gate`/Adversary-Verdict-Gating, `renderer_mail_gate`
+  (#811), `e2e_commit_gate`, `nebenbefund_gate`, `test_naming_gate`.
+  Gate-/Hook-Bugs gehören ins Plugin-Repo (agent-os-openspec).
+- Die verbindliche Kurzreferenz der Regeln (LoC-Limit, Execution-Log,
+  Token-Tracking, Trigger-Typen) steht in **CLAUDE.md → „Workflow-Tools v3"**.
 
-**Ablauf:**
-1. **Type Detection** - Bug oder Feature?
-2. **Investigation:**
-   - **Features:** 3x parallele Explore/haiku Agents
-     - Affected Files Agent
-     - Existing Specs Agent
-     - Dependencies Agent
-   - **Bugs:** bug-intake/haiku Agent (spawnt eigene Sub-Agents)
-     - Error Trail Agent
-     - Recent Changes Agent
-     - State & Config Agent
-3. **Strategic Planning:** Plan/sonnet synthethisiert Erkenntnisse
-4. **Output:** Analyse-Zusammenfassung + workflow_state.json Update
+## Adversary Verification
 
-### 2. Spec schreiben (`/3-write-spec`)
+Nach der Implementierung führt ein unabhängiger `implementation-validator`
+(Sonnet) einen strukturierten Dialog, um die Implementierung aktiv zu brechen —
+ohne Zugriff auf das Reasoning des Implementierers. Tri-State-Verdict:
+`VERIFIED` / `BROKEN` / `AMBIGUOUS` (AMBIGUOUS → `override-ambiguous` mit
+Begründung, BROKEN → Fix-Loop). Findings brauchen `Code reference: file:line`.
+Bei UI-Änderungen ergänzt der `fresh-eyes-inspector` (Screenshots OHNE
+Bug-Kontext, gegen Confirmation Bias).
 
-**Ziel:** Vollständige, konkrete Spezifikation erstellen
+## Rollen
 
-**Ablauf:**
-1. **Context Loading** aus workflow_state.json
-2. **Spec Creation:** general-purpose/sonnet nutzt spec-writer.md
-3. **Validation:** spec-validator/haiku prüft Vollständigkeit
-4. **Auto-Fix Loop:** Bei INVALID → Korrektur → Re-Validierung
-5. **Output:** Spec-Datei in `docs/specs/[category]/` + Freigabe-Anfrage
-
-**Validation-Checks:**
-- Frontmatter komplett (entity_id, type, status, etc.)
-- Alle Required Sections vorhanden
-- KEINE Placeholders (TBD, TODO, etc.)
-- Konsistenz zwischen Sections
-
-### 3. Kontext sammeln (`/1-context`)
-
-**Ziel:** Relevanten Kontext für das Feature sammeln
-
-**Ablauf:**
-1. **Codebase Exploration:** Explore/haiku durchsucht relevante Dateien
-2. **Context Document:** Erstellt `docs/context/[workflow-name].md`
-3. **Output:** Kontext-Zusammenfassung + workflow_state.json Update
-
-### 4. TDD RED (`/4-tdd-red`)
-
-**Ziel:** Fehlschlagende Tests schreiben, bevor Code existiert
-
-**Ablauf:**
-1. **Test-Dateien schreiben:** Tests die das gewünschte Verhalten beschreiben
-2. **Tests ausführen:** Müssen FEHLSCHLAGEN (RED)
-3. **Artifacts registrieren:** Echte Test-Failure-Outputs
-4. **Output:** Registrierte RED-Artifacts + phase5_tdd_red
-
-### 5. Implementieren (`/5-implement`)
-
-**Ziel:** Spec in Code umsetzen, Tests grün machen
-
-**Ablauf:**
-1. **Context Loading:** Explore/haiku lädt Spec + betroffene Dateien
-2. **Core Implementation:** Main Context (Opus) implementiert Hauptfunktionalität
-3. **Parallel Tasks:**
-   - general-purpose/sonnet schreibt Tests
-   - general-purpose/haiku updated Config (falls nötig)
-4. **Integration:** Syntax-Check, Tests ausführen
-5. **User-Freigabe:** User muss GREEN-Ergebnisse mit "go" bestätigen
-6. **Output:** Implementierte Dateien + Tests + GREEN-Artifacts
-
-### 5b. Adversary Verification (phase6b_adversary)
-
-**Ziel:** Unabhängige QA-Prüfung durch gegnerischen Agenten
-
-**Konzept:** Zwei Rollen spielen gegeneinander:
-- **Fixer (Implementierer/Opus):** Hat den Code geschrieben, liefert Beweise
-- **QA-Tester (implementation-validator/Sonnet):** Versucht aktiv die Implementierung zu brechen
-
-**Context Isolation:** Der QA-Tester bekommt NUR die Spec und Test-Outputs, NICHT die Reasoning-Chain des Implementierers. Das verhindert Confirmation Bias.
-
-**Authenticated Requests:** Der External Validator authentifiziert sich automatisch über `POST /api/auth/login` mit Credentials aus `.claude/validator.env` und holt das `gz_session`-Cookie (Issue #110, Spec: `docs/specs/modules/external_validator_auth.md`). Damit können eingeloggte `/api/*`-Routen geprüft werden, ohne dass im Production-Code ein Auth-Bypass entsteht.
-
-**Ablauf:**
-1. **Spec parsen:** `adversary_dialog.py parse <spec>` extrahiert Expected-Behavior-Checkliste
-2. **Dialog führen:** implementation-validator Agent prüft jeden Punkt
-   - Min. 2 Runden Pflicht (Early-Agreement-Skepticism)
-   - Structured Findings: ID, Severity, Category, Evidence, Remediation
-3. **Dialog-Protokoll speichern:** `docs/artifacts/<workflow>/adversary-dialog.md`
-4. **QA-Gate:** `qa_gate.py` validiert Test-Output + Checklist → setzt Verdict
-
-**Tri-State Verdict:**
-- **VERIFIED** — Implementierung hat Adversary-Testing bestanden
-- **BROKEN** — Defekte gefunden → zurück zur Implementierung (max 3 Iterationen)
-- **AMBIGUOUS** — Unklare Befunde → User-Review empfohlen (blockiert nicht)
-
-**Circuit Breaker:** Nach 3 QA-Fixer-Loops → Eskalation an User
-
-**Fresh Eyes Inspector:** Bei UI-Änderungen zusätzlich `fresh-eyes-inspector` Agent — beschreibt Screenshots NEUTRAL ohne Bug-Kontext.
-
-### 6. Validieren & Deployen (`/6-validate`)
-
-**Ziel:** Alles prüfen, Auto-Fix, Doku aktualisieren, Deployment automatisch durchführen
-
-**Ablauf:**
-1. **4x Parallel Validation:**
-   - Bash/haiku: Tests ausführen + Syntax-Check
-   - spec-validator/haiku: Spec-Compliance prüfen
-   - Explore/haiku: Regression-Check
-   - general-purpose/haiku: Scope-Review (±250 LoC Limit)
-2. **Auto-Fix (bei Failures):**
-   - general-purpose/sonnet: Ein Fix-Versuch
-   - Re-Run Tests
-3. **Documentation Update:**
-   - docs-updater/haiku aktualisiert betroffene Docs
-4. **Commit & Push:**
-   - Änderungen werden auf `main` committed und gepushed
-   - Session-Stop-Hook `track_token_usage.py` erfasst automatisch den Token-Verbrauch in den Workflow-State
-5. **Inline Deployment (Issue #563):**
-   - Staging-Deploy wird sofort getriggert
-   - E2E-Verifikation gegen Staging läuft automatisch (staging-validator Agent)
-   - Nach E2E VERIFIED: Tech-Lead-Brief wird ausgegeben
-   - PO sagt `go` → Prod-Deploy läuft automatisch
-   - **Post-Deploy-Selftest (Issue #564):** Automatische Nachverifikation gegen Produktion (Commit-Attestation, Health-Check, AC-HTTP-Probes)
-   - Issue wird nur nach erfolgreichem Prod-Deploy + Selftest-PASS automatisch geschlossen
-6. **Output:** Validierungs-Report + Execution-Log-YAML (mit token_usage) + workflow_state.json Update + Live-Deployment + Prod-Selftest-Report
-
-## Model Selection Strategy
-
-| Model | Einsatz | Rationale |
-|-------|---------|-----------|
-| **haiku** | Context loading, Validation, Syntax checks, Scope reviews | Schnell, günstig, ausreichend für strukturierte Tasks |
-| **sonnet** | Spec writing, Test writing, Strategic planning, Auto-fixes | Balance zwischen Qualität und Kosten |
-| **opus** | Core implementation (nur Main Context) | Höchste Qualität für kritische Implementierung |
-
-## Workflow Enforcement
-
-### Hooks
-
-**workflow_gate.py:**
-- Blockiert Edit/Write auf geschützte Dateien ohne korrekten workflow_state
-- Erzwingt sequentielle Phasen (kein `/5-implement` ohne approved spec)
-
-**spec_enforcement.py:**
-- Prüft ob Spec existiert vor Implementation
-- Validiert Spec-Status (muss `active` oder `approved` sein)
-
-### State-Datei
-
-`.claude/workflow_state.json` speichert:
-- Current Phase
-- Spec Path
-- Analysis Summary
-- Approval Status
-
-## Architektur
-
-```
-User Command → Skill (.claude/commands/N_*.md)
-             ↓
-   Task Delegation (model=haiku/sonnet/opus)
-             ↓
-   Agent Definitions (.claude/agents/*.md)
-             ↓
-   Structured Output (file paths, VALID/INVALID, reports)
-             ↓
-   workflow_state.json Update
-```
-
-## Agent Definitions
-
-| Agent | Input Contract | Output | Model |
-|-------|---------------|---------|-------|
-| **spec-writer** | Feature Name, Analysis, Files, Dependencies | Spec file path | sonnet |
-| **spec-validator** | Spec file path | VALID/INVALID + Errors | haiku |
-| **implementation-validator** | Spec + Test outputs (NO implementer reasoning) | VERDICT: VERIFIED/BROKEN/AMBIGUOUS + Findings | sonnet |
-| **fresh-eyes-inspector** | Screenshot only (NO bug context) | Neutral UI observation report | sonnet |
-| **docs-updater** | Changed files, Summary, Spec path | Updated doc paths | haiku |
-| **bug-intake** | Bug description, Error messages | Investigation report | sonnet |
-
-## Known Limitations
-
-- Model selection ist hardcoded (nicht per-Project konfigurierbar)
-- Keine Retry-Logik bei Subagent-Failures (nur 1 Versuch)
-- Parallele Agent-Anzahl ist fix (3 bei analyse, 4 bei validate)
-- Auto-Fix in validate limitiert auf 1 Versuch
-- workflow_state.json tracked nicht Subagent-Execution-History
-
-## Siehe auch
-
-- `docs/specs/modules/agent_orchestration.md` - Vollständige Spec
-- `.claude/agents/*.md` - Agent Definitions
-- `.claude/commands/*.md` - Skill Commands
-- `.claude/hooks/workflow_gate.py` - Workflow Enforcement
+Main Context (Opus) ist reiner Orchestrierer und schreibt keinen Code;
+Implementierung macht der `developer`-Agent. Agentenliste mit Modellen:
+CLAUDE.md → „Agenten-Rollen und Modelle"; Definitionen: `.claude/agents/*.md`.

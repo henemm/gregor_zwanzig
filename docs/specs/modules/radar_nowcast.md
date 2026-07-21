@@ -117,5 +117,5 @@ Testdatei: `tests/tdd/test_feature_656_radar_nowcast.py` (mock-frei).
 
 - 2026-06-07: Initial spec created (Issue #656)
 - 2026-06-08: Known Limitation "Gewitter/Hagel-Stufe" aufgelöst durch Issue #660 (WMO-weather_code Konvektions-Indikator integriert); AC-2 angepasst
-- 2026-07-09: Known Limitation zur regionalen Abdeckung korrigiert — Italien (inkl. Korsika) fällt seit Issue #1162 (Radar-DPC/Protezione Civile) nicht mehr auf den globalen `minutely_15`-Fallback zurück, siehe `docs/specs/modules/issue_1162_radar_dpc.md`
+- 2026-07-09: Known Limitation zur regionalen Abdeckung korrigiert — Italien (inkl. Korsika) fällt seit Issue #1162 (Radar-DPC/Protezione Civile) nicht mehr auf den globalen `minutely_15`-Fallback zurück, siehe `docs/specs/_archive/modules/issue_1162_radar_dpc.md`
 - 2026-07-09: ARPAE-ICON-2I-Modell-Rückfall unter Radar-DPC ergänzt (Issue #1186) — vervollständigt die Zwei-Ebenen-Absicherung für Italien (echtes Radar primär, regionales Modell als Netz), siehe `docs/specs/modules/radar_nowcast_italy_arpae_fallback.md`

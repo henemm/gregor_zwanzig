@@ -42,8 +42,8 @@ F2a **unangetastet als Rollback-Punkt** im Repo; seine Löschung ist F2b (separa
 
 - **Analyse:** `docs/context/f2a-1301-compare-new-trip-pattern.md` (3 parallele Explore-Agenten:
   Trip-Vorbild, heutiger Compare-Anlege-Fluss, Organismen-Readiness + E2E-Verträge).
-- **Vorbild-Spec:** `docs/specs/modules/issue_622_trip_new_progressive_editor.md` (+ `issue_661_trip_new_mobile.md`).
-- **E2E-Vertragslage:** `docs/specs/modules/epic_1273_s4c_e2e_migration.md` (Testid-Familien auf `/compare/new`).
+- **Vorbild-Spec:** `docs/specs/_archive/modules/issue_622_trip_new_progressive_editor.md` (+ `issue_661_trip_new_mobile.md`).
+- **E2E-Vertragslage:** `docs/specs/_archive/modules/epic_1273_s4c_e2e_migration.md` (Testid-Familien auf `/compare/new`).
 - **S5-Programmplan:** `docs/features/epic-1273-compare-one-surface.md`.
 
 ## Dependencies

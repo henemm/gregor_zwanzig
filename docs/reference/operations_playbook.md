@@ -211,7 +211,7 @@ wiederholtem Lauf).
 Löschung, ohne Retention-Limit (dauerhaft aufbewahrt).
 
 Details (In-User-Musterbereinigung, Root-Cause-Fix, Adversary-Verlauf):
-Spec `docs/specs/modules/issue_1133_testdata_cleanup.md`, Root-Cause-Eintrag
+Spec `docs/specs/_archive/modules/issue_1133_testdata_cleanup.md`, Root-Cause-Eintrag
 `docs/project/known_issues.md` → `BUG-1133-TESTDATA`.
 
 ---
@@ -242,7 +242,7 @@ migrierte Daten erzeugt einen leeren Plan und schreibt nichts. Backup: tar.gz na
 | 2 | Teilerfolg — mindestens eine Datei nicht lesbar/parsebar und/oder nicht schreibbar (Details in den `ERROR`-Zeilen der Ausgabe) |
 
 Details (Read-Modify-Write-Prinzip, Feldliste, Adversary-Findings): Spec
-`docs/specs/modules/fix_1244_null_list_fields.md`.
+`docs/specs/_archive/modules/fix_1244_null_list_fields.md`.
 
 ---
 

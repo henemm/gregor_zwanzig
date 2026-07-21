@@ -8,7 +8,7 @@ version: "1.0"
 tags: [backend, preview, epic-140]
 ---
 
-<!-- Sub-Spec des Epic #140 — siehe docs/specs/modules/epic_140_output_vorschau.md -->
+<!-- Sub-Spec des Epic #140 — siehe docs/specs/_archive/modules/epic_140_output_vorschau.md -->
 
 # PreviewService
 
@@ -20,7 +20,7 @@ tags: [backend, preview, epic-140]
 
 Backend-Service, der Email-HTML und SMS-Token-Zeile als Vorschau erzeugt — ohne tatsächlichen Versand. Wiederverwendet die existierende Trip-Report-Pipeline (`TripReportSchedulerService` für Trip→Segments→Wetter, `TripReportFormatter.format_email()` für den Render).
 
-Detail-Spec: `docs/specs/modules/epic_140_output_vorschau.md` (Master).
+Detail-Spec: `docs/specs/_archive/modules/epic_140_output_vorschau.md` (Master).
 
 ## Source
 
@@ -55,7 +55,7 @@ class PreviewService:
 
 - **AC-1:** Given gültiger Trip + Stage am Zieldatum / When `render_email_preview` läuft / Then liefert es das `email_html` aus `TripReportFormatter.format_email()`
 - **AC-2:** Given Trip-ID nicht in `data/users/<user>/trips/` / When der Service aufgerufen wird / Then `FileNotFoundError`
-- **AC-3:** Given Trip ohne Stage am Zieldatum / When der Service aufgerufen wird / Then `LookupError` mit "Keine Stage am ..." Meldung. Abgrenzung (Issue #990): existiert am Zieldatum eine Stage, hat sie aber weniger als 2 Wegpunkte, wirft der Service ebenfalls `LookupError`, jedoch mit einem Text, der das Wort „waypoints" enthält — dieser Fall ist von „keine Stage am Datum" zu unterscheiden. Details: `docs/specs/modules/fix_990_preview_empty_waypoints.md`.
+- **AC-3:** Given Trip ohne Stage am Zieldatum / When der Service aufgerufen wird / Then `LookupError` mit "Keine Stage am ..." Meldung. Abgrenzung (Issue #990): existiert am Zieldatum eine Stage, hat sie aber weniger als 2 Wegpunkte, wirft der Service ebenfalls `LookupError`, jedoch mit einem Text, der das Wort „waypoints" enthält — dieser Fall ist von „keine Stage am Datum" zu unterscheiden. Details: `docs/specs/_archive/modules/fix_990_preview_empty_waypoints.md`.
 - **AC-4:** Given Wetter-Provider liefert keine Daten (Rate-Limit etc.) / When der Service aufgerufen wird / Then `RuntimeError`
 - **AC-5:** Given `report_type` weder "morning" noch "evening" / When der Service aufgerufen wird / Then `ValueError`
 

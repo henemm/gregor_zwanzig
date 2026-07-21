@@ -1,59 +1,38 @@
-# Documentation - Gregor Zwanzig
+# Dokumentation — Gregor Zwanzig: Wegweiser
 
-Diese Dokumentation folgt der **OpenSpec-Struktur** fuer spec-first Entwicklung.
+> Stand: 2026-07-21 (Doku-Audit #1340/#1341). Regel: **lieber wenig Korrektes
+> als viel Halbwahres** — was aus dem Code ablesbar ist (Inventare, Mappings,
+> Exporte), wird nicht in Prosa gedoppelt. Offene Arbeit steht ausschließlich
+> in GitHub Issues.
 
-## Struktur
+## Referenz (gepflegt — hier zuerst suchen)
 
-```
-docs/
-├── specs/              # Entity-Spezifikationen
-│   ├── modules/        # Modul-Specs (CLI, Provider, Engine, etc.)
-│   ├── functions/      # Einzelne Funktions-Specs
-│   └── _template.md    # Spec-Template
-│
-├── reference/          # Technische Referenz
-│   ├── api_contract.md # Datenstrukturen & DTOs
-│   ├── provider_mapping.md
-│   ├── decision_matrix.md
-│   ├── symbol_mapping.md
-│   ├── sms_format.md
-│   ├── debug_format.md
-│   └── renderer_email_spec.md
-│
-├── features/           # Feature-Dokumentation
-│   ├── scope.md        # Projektvision & Scope
-│   ├── architecture.md # Systemarchitektur
-│   └── cli_spec.md     # CLI-Spezifikation
-│
-└── project/            # Projekt-Management
-    └── backlog.md      # Backlog (PO-Ansicht)
-```
+| Ort | Inhalt |
+|---|---|
+| `CLAUDE.md` (Repo-Root) | Arbeitsregeln, Workflow, Deploy, Pflicht-Gates |
+| `reference/` | Technische Referenz: `api_contract.md` (DTOs, SSOT), `decision_matrix.md` (Provider-Ist-Stand), `operations_playbook.md` (Deploy/E2E/Rollback), `mail_validators.md`, `navigation.md` (URL-Modell), `frontend_components.md` (Konzepte, kein Inventar), `design_system.md` |
+| `adr/` | Architektur-Entscheidungen (nummeriert; Status beachten — einzelne sind superseded) |
+| `design-system/` | CHARTER, COMPONENTS, TOKENS, SCREENS |
+| `features/` | `architecture.md` (Systemarchitektur), `scope.md` (Vision), `openspec_workflow.md` (Workflow-Wegweiser) + aktive Epic-Dokumente |
+| `project/` | `known_issues.md` (Root-Cause-Archiv), `strategic-directions.md`, Architektur-Programm 2026-07 |
+| `runbooks/` | Betriebsanleitungen (z. B. `telegram-webhook.md`) |
 
-## Workflow
+## Arbeits- und Wegwerf-Material
 
-Dieses Projekt nutzt den **OpenSpec 4-Phasen-Workflow**:
+| Ort | Charakter |
+|---|---|
+| `specs/modules/` u. a. | Specs: thematische Modul-Specs + Specs OFFENER Issues. Template: `specs/_template.md` |
+| `specs/_archive/` | Wegwerf-Specs GESCHLOSSENER Issues (2026-07-21 archiviert; durchsuchbar, nicht maßgeblich) |
+| `artifacts/` | Workflow-Artefakte laufender Vorgänge — Ordner abgeschlossener Workflows werden gelöscht (Git-Historie bewahrt sie) |
+| `analysis/` | Punktuelle Analysen (datiert, nicht gepflegt) |
+| `design-requests/`, `claude-design-queue/`, `design/` | Design-Austausch-Artefakte (Momentaufnahmen) |
 
-1. `/analyse` - Request verstehen, Codebase recherchieren
-2. `/write-spec` - Spezifikation erstellen
-3. User: "approved" - Spec freigeben
-4. `/implement` - Implementieren nach Spec
-5. `/validate` - Validieren vor Commit
+## Gelöscht (2026-07-21, in Git-Historie abrufbar)
 
-## Quick Links
-
-### Specs (Module)
-- [CLI](specs/modules/cli.md) - Einstiegspunkt
-- [SMTP Mailer](specs/modules/smtp_mailer.md) - E-Mail-Versand
-- [DebugBuffer](specs/modules/debug_buffer.md) - Debug-Sammlung
-- [Provider MET](specs/modules/provider_met.md) - MET Norway Adapter (draft)
-- [Provider MOSMIX](specs/modules/provider_mosmix.md) - DWD Adapter (draft)
-- [Risk Engine](specs/modules/risk_engine.md) - Risiko-Bewertung (draft)
-- [Report Formatter](specs/modules/report_formatter.md) - Report-Generierung (draft)
-
-### Reference
-- [API Contract](reference/api_contract.md) - Single Source of Truth fuer Datenformate
-- [Decision Matrix](reference/decision_matrix.md) - Provider-Auswahl-Regeln
-
-### Features
-- [Scope](features/scope.md) - Was ist Gregor Zwanzig?
-- [Architecture](features/architecture.md) - Wie ist es aufgebaut?
+`context/` (Sitzungsnotizen pro Issue), `project/backlog/` (Alt-Planung —
+Planung lebt in GitHub Issues), `bugs/`, alte `artifacts/`-Ordner,
+`reference/provider_mapping.md` (MET/MOSMIX-Ära), `features/cli_spec.md`,
+`features/epic-438-compare-wizard.md`, `features/epic-677-compare-editor.md`
+(Wizard-Ära), `project/migration-plan-go-sveltekit.md` (Migration
+abgeschlossen). Tote Links auf diese Pfade in alten Specs/Changelogs sind
+Historie — im Zweifel `git log --all -- <pfad>`.

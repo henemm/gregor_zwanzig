@@ -3,9 +3,9 @@
 - **Status:** Akzeptiert (PO-Freigabe „Go" am 2026-07-16)
 - **Datum:** 2026-07-16
 - **Bezug:** GitHub-Issue #1275 (zweiter Anlauf), Spec
-  `docs/specs/bugfix/fix_1275_sms_thunder_today.md`, Kontext
+  `docs/specs/_archive/bugfix/fix_1275_sms_thunder_today.md`, Kontext
   `docs/context/fix-1275-sms-thunder-today.md`. Vorgänger-Fix `e08a51c8`
-  (`docs/specs/bugfix/fix_1275_sms_th_mismatch.md`), Lessons Learned in
+  (`docs/specs/_archive/bugfix/fix_1275_sms_th_mismatch.md`), Lessons Learned in
   `docs/project/known_issues.md:26`.
 
 ## Kontext
@@ -176,7 +176,7 @@ Known-Issues-Dokument stand und nicht als bindende Regel.
   Wert trug. Behoben in `src/services/preview_service.py`, indem `_build_report()`
   dieselben `TripReportSchedulerService`-Methoden aufruft wie der Versandweg
   (`_build_stage_trend()`, `_build_thunder_forecast_from_trend_or_fetch()`) — keine
-  zweite Berechnung, reines Wiring. Spec: `docs/specs/bugfix/fix_1297_sms_preview_thunder.md`.
+  zweite Berechnung, reines Wiring. Spec: `docs/specs/_archive/bugfix/fix_1297_sms_preview_thunder.md`.
   Der Versandweg selbst bleibt unverändert. Damit gilt „eine Gewitter-Quelle" jetzt
   nachweislich für **alle** Aufrufer von `format_email()`/`format_sms()`, nicht nur den
   Scheduler-Versand.

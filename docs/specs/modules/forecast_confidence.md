@@ -43,7 +43,7 @@ Diese **Master-Spec** umfasst das vollständige Feature. Die Umsetzung erfolgt i
 - **Änderung:** `src/output/renderers/email/html.py` + `plain.py` — Klartext-Hinweis bei `<60 %` in T+0-72h
 - **Änderung:** `docs/reference/sms_format.md` — v2.0 → v2.1
 - **Änderung:** `docs/reference/renderer_email_spec.md` — Spalte „Sicherheit" + Hinweis-Regel
-- **Neu:** `docs/specs/modules/issue_121_confidence_output.md` — Sub-Spec, referenziert diese Master-Spec
+- **Neu:** `docs/specs/_archive/modules/issue_121_confidence_output.md` — Sub-Spec, referenziert diese Master-Spec
 
 ## Dependencies
 

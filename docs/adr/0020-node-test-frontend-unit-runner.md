@@ -2,7 +2,7 @@
 
 - **Status:** Akzeptiert
 - **Datum:** 2026-07-02
-- **Bezug:** GitHub-Issue #975, Spec `docs/specs/modules/fix_972_974_975_tooling.md`
+- **Bezug:** GitHub-Issue #975, Spec `docs/specs/_archive/modules/fix_972_974_975_tooling.md`
 
 ## Kontext
 

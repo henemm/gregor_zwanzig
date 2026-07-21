@@ -2,7 +2,7 @@
 
 **Status:** Implemented ✓  
 **Completion Date:** 2026-05-09  
-**Related Spec:** `docs/specs/modules/epic_134_startseite_cockpit.md`  
+**Related Spec:** `docs/specs/_archive/modules/epic_134_startseite_cockpit.md`  
 **Child Issues:** #147–#152  
 
 ## Overview

@@ -803,7 +803,7 @@ visuelles Konzept beschreiben (`ChevronDown`, `GripVertical`), bleiben unveränd
 **Wichtig:** Für Wetter-Icons (Sonne, Regen, Schnee, Gewitter usw.) ausschließlich
 `<WIcon kind="..." />` aus `$lib/components/ui/wicon` verwenden. Lucide-Wetter-Icons
 (`Cloud`, `Sun`, `CloudRain`, …) dürfen in der App-UI **nicht** direkt importiert werden.
-`WIcon` ist in `docs/specs/modules/issue_322_wicon_komponente.md` spezifiziert.
+`WIcon` ist in `docs/specs/_archive/modules/issue_322_wicon_komponente.md` spezifiziert.
 
 **Kreuzreferenz:** AP-009 (Emojis als Icons verboten — stattdessen Lucide bzw. WIcon),
 AP-005 (kein Icon-Überfluss — nicht jede Zeile braucht ein Icon).
@@ -813,7 +813,7 @@ AP-005 (kein Icon-Überfluss — nicht jede Zeile braucht ein Icon).
 ## Resources
 
 - **Component Library:** `docs/reference/frontend_components.md`
-- **Design Tokens:** `docs/specs/modules/epic_133_design_system_lauf_a.md`
+- **Design Tokens:** `docs/specs/_archive/modules/epic_133_design_system_lauf_a.md`
 - **Svelte 5 Docs:** https://svelte.dev/docs
 - **SvelteKit Docs:** https://kit.svelte.dev/docs
 - **Tailwind CSS:** https://tailwindcss.com/docs

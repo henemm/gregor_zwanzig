@@ -239,7 +239,7 @@ Offene Frage aus der Analyse-Phase, hier entschieden: Der Trip-Guard (`routes/tr
 ## Architektur-Entscheidung (ADR)
 
 - **ADR-Nr.:** keine
-- **Rationale:** Diese Slice trifft keine neue Architektur-Entscheidung, sondern konsolidiert auf die bestehenden geteilten Bausteine `SaveStatus`/`createSaveStatus`/`markPristine` (#758/#880, um die No-Op-Transition aus #1269 erweitert) und `SaveIndicator.svelte`, die der Trip-Editor bereits vollständig und der Compare-Editor teilweise nutzt. Es entsteht **kein** vierter Sonderweg und **kein** Compare-eigener Baustein — genau die Trip/Compare-Teilungs-Invariante aus CLAUDE.md. Analog zur Begründung in `docs/specs/modules/issue_1269_save_status_lie.md` (ADR-Nr. dort ebenfalls „keine").
+- **Rationale:** Diese Slice trifft keine neue Architektur-Entscheidung, sondern konsolidiert auf die bestehenden geteilten Bausteine `SaveStatus`/`createSaveStatus`/`markPristine` (#758/#880, um die No-Op-Transition aus #1269 erweitert) und `SaveIndicator.svelte`, die der Trip-Editor bereits vollständig und der Compare-Editor teilweise nutzt. Es entsteht **kein** vierter Sonderweg und **kein** Compare-eigener Baustein — genau die Trip/Compare-Teilungs-Invariante aus CLAUDE.md. Analog zur Begründung in `docs/specs/_archive/modules/issue_1269_save_status_lie.md` (ADR-Nr. dort ebenfalls „keine").
 
 ## Changelog
 

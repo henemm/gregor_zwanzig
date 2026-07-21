@@ -1,6 +1,6 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-07-03 (Issue #1001 — Telegram-Ausgabe neu gebaut: `render_telegram_bubbles()` ersetzt `render_narrow()` für den Telegram-Kanal, Multi-Bubble-Versand statt Prosa-Nachricht, echte Monospace-Segment-Tabellen, Inline-Keyboard-Aktionen-Bubble); 2026-06-30 (Issue #919 — Radar-Alert auf kanonischen Renderer migriert: `OnsetEvent`-Datenklasse + `cooldown_display` in `model.py`, Onset-Zweige in alle vier `render_*`-Funktionen, `check_radar_alerts` baut jetzt `AlertMessage(OnsetEvent(...))`, `src/outputs/radar_alert.py` gelöscht); 2026-06-26 (Issue #887 — SMS/Telegram Report-Konsistenz: SMS `pop_hourly` aus `agg.pop_max_pct`, Telegram Detail-Zeile mit config-gesteuerten Metriken; Issue #884 — HTML-Mail Fidelity: 8-Sektion-Layout mit zweispaltigem Header + Stats-Grid, Ziel-Sektion, Ausblick mit Risk-Dot, Kommandos-Sektion, zweigeteilt Footer); 2026-06-15 (Issue #822 — Radar-/Regen-Nowcast-Alert segmentbewusst: gemeinsamer Segment-Helfer, aktives/nächstes Segment nach Tageszeit, Ort-Label via build_segment_label, Tour-TZ via tz_for_coords, dynamischer Cooldown-Text); 2026-06-14 (Issue #816 — Alert-Abweichungs-Kern: read-only Snapshot, alert_state Melde-Gedächtnis, knapper Render-Pfad); 2026-06-12 (Issue #758 — Einheitlicher Speicher-Status-Indikator + Trip-Editor Auto-Save; #733 Briefing-Mail-Validator Marker-Header); 2026-06-11 (Issue #749 — Day Comparison Renderer: render_day_comparison_html/plain für Vortag-Vergleich-Sektion); 2026-06-09 (Issue #675 — Etappen-Startzeiten Editor-Widget; Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
+**Updated:** 2026-07-21 (Doku-Audit #1341 — Frontend-Sektionen auf Ist-Stand: Wizards entfernt, Organisms-Barrel korrigiert, /api/subscriptions → /api/compare/presets + /api/briefings); 2026-07-03 (Issue #1001 — Telegram-Ausgabe neu gebaut: `render_telegram_bubbles()` ersetzt `render_narrow()` für den Telegram-Kanal, Multi-Bubble-Versand statt Prosa-Nachricht, echte Monospace-Segment-Tabellen, Inline-Keyboard-Aktionen-Bubble); 2026-06-30 (Issue #919 — Radar-Alert auf kanonischen Renderer migriert: `OnsetEvent`-Datenklasse + `cooldown_display` in `model.py`, Onset-Zweige in alle vier `render_*`-Funktionen, `check_radar_alerts` baut jetzt `AlertMessage(OnsetEvent(...))`, `src/outputs/radar_alert.py` gelöscht); 2026-06-26 (Issue #887 — SMS/Telegram Report-Konsistenz: SMS `pop_hourly` aus `agg.pop_max_pct`, Telegram Detail-Zeile mit config-gesteuerten Metriken; Issue #884 — HTML-Mail Fidelity: 8-Sektion-Layout mit zweispaltigem Header + Stats-Grid, Ziel-Sektion, Ausblick mit Risk-Dot, Kommandos-Sektion, zweigeteilt Footer); 2026-06-15 (Issue #822 — Radar-/Regen-Nowcast-Alert segmentbewusst: gemeinsamer Segment-Helfer, aktives/nächstes Segment nach Tageszeit, Ort-Label via build_segment_label, Tour-TZ via tz_for_coords, dynamischer Cooldown-Text); 2026-06-14 (Issue #816 — Alert-Abweichungs-Kern: read-only Snapshot, alert_state Melde-Gedächtnis, knapper Render-Pfad); 2026-06-12 (Issue #758 — Einheitlicher Speicher-Status-Indikator + Trip-Editor Auto-Save; #733 Briefing-Mail-Validator Marker-Header); 2026-06-11 (Issue #749 — Day Comparison Renderer: render_day_comparison_html/plain für Vortag-Vergleich-Sektion); 2026-06-09 (Issue #675 — Etappen-Startzeiten Editor-Widget; Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
 
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separatem Frontend (SvelteKit) und einem Dual-Stack-Backend (Go + Python):
@@ -9,7 +9,7 @@ Gregor Zwanzig ist ein verteiltes System mit separatem Frontend (SvelteKit) und 
 - **Python-Core:** Wetter-Domäne (Provider, Risk Engine, Aggregation), alle Kanal-Renderer und -Transporte, Scheduler, Alerts, Inbound-Handler (FastAPI, Port 8000)
 - **Frontend:** SvelteKit Web-UI für Trip-Management, Konfiguration und Orts-Vergleiche
 - **Channels:** E-Mail (SMTP), Telegram, SMS (seven.io)
-- **Subscriptions:** Trip-Reports (automatisch pro Etappe), Orts-Vergleiche (personalisierte Standort-Rankings)
+- **Abo-Objekte:** Briefing-Subscriptions für Trips (ADR-0023) und Compare-Presets für Orts-Vergleiche — getrennte Domänenobjekte, keine gemeinsame „Subscription“-Abstraktion mehr
 
 Siehe `docs/adr/0015-dual-stack-zielarchitektur.md` für die verbindliche Zuständigkeitsgrenze.
 
@@ -33,7 +33,7 @@ Die Vertragsgrenze zwischen Go und Python ist HTTP mit den DTOs aus
 Die folgenden Komponenten leben im Python-Core:
 
 1. **Business-Logik**
-   - **Provider-Adapter**: holen Rohdaten von Wetter-APIs (z. B. MET Norway, DWD)
+   - **Provider-Adapter**: holen Rohdaten von Wetter-APIs — Standard Open-Meteo, Fallback-Kette siehe `docs/reference/decision_matrix.md`
    - **Normalizer**: wandelt Daten in ein gemeinsames DTO ([api_contract.md](./api_contract.md))
    - **Risk Engine**: bewertet Forecasts anhand Schwellen (Regen, Gewitter, Wind, Hitze)
    - **Report Formatter**: erzeugt kurze Texte + Debug-Anhang
@@ -196,7 +196,7 @@ der (bei einem Punkt sinnlosen) km-Spanne. Alarmkonfiguration ist in Scheibe 2 h
 (Default-Sensitivität „standard", 120 Min Cooldown, nur E-Mail) — editierbare UI folgt in
 Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cron-Job
 `compare_alert_checks` (`*/15 * * * *`, 7. registrierter Job). Details:
-`docs/specs/modules/issue_1169_compare_alert_consumer.md`.
+`docs/specs/_archive/modules/issue_1169_compare_alert_consumer.md`.
 
 **Architektur:**
 
@@ -304,7 +304,7 @@ send_one_compare_preset() [scheduler_dispatch_service.py, nach Report-Versand]
 
 **Mandantentrennung:** `AlertStateService(user_id=...)`, `TripAlertService(user_id=...)` laden/speichern strikt unter `data/users/{user_id}/alert_state/` resp. `data/users/{user_id}/radar_alert_throttle.json`.
 
-Siehe: `docs/features/issue-816-alert-deviation-core.md`, `docs/specs/modules/issue_816_alert_deviation_core.md`, `docs/specs/modules/issue_822_radar_nowcast_segment.md`, `docs/specs/modules/issue_883_acute_danger_override.md`
+Siehe: `docs/features/issue-816-alert-deviation-core.md`, `docs/specs/_archive/modules/issue_816_alert_deviation_core.md`, `docs/specs/_archive/modules/issue_822_radar_nowcast_segment.md`, `docs/specs/_archive/modules/issue_883_acute_danger_override.md`
 
 ---
 
@@ -332,13 +332,10 @@ frontend/
 │   │   │   ├── molecules/         # Molecule-Schicht (Atomic Design Level 2, Epic #372)
 │   │   │   │   └── *.svelte       # Combinations of atoms (FieldGroup, StatCard, etc.)
 │   │   │   ├── organisms/         # Organism-Schicht (Atomic Design Level 3, Epic #471)
-│   │   │   │   ├── index.ts       # Barrel re-export (TripHeader, TripWizardShell, AlertRulesEditor)
+│   │   │   │   ├── index.ts       # Barrel re-export (19 Organisms — Datei lesen, nicht raten)
 │   │   │   │   └── organisms.test.ts  # Source-inspection tests (no ui/ imports)
-│   │   │   ├── trip-wizard/       # Trip creation/editing wizard
-│   │   │   │   ├── TripWizardShell.svelte
-│   │   │   │   ├── Stepper.svelte
-│   │   │   │   ├── steps/*.svelte
-│   │   │   │   └── templates/
+│   │   │   ├── trip-new/          # Progressiver Anlege-Editor /trips/new (TripNewEditor, #622)
+│   │   │   ├── compare-new/       # Progressiver Anlege-Editor /compare/new (CompareNewEditor, #1301 F2)
 │   │   │   ├── trip-detail/       # Trip display & editing
 │   │   │   │   ├── TripHeader.svelte
 │   │   │   │   ├── TripTabs.svelte
@@ -349,14 +346,9 @@ frontend/
 │   │   │   ├── alert-rules-editor/  # Alert configuration
 │   │   │   │   ├── AlertRulesEditor.svelte
 │   │   │   │   └── components/
-│   │   │   ├── compare/           # Compare-Wizard (Epic #438)
-│   │   │   │   ├── CompareWizard.svelte
-│   │   │   │   ├── CompareMatrix.svelte
-│   │   │   │   ├── compareWizardState.svelte.ts
-│   │   │   │   ├── compareMetricDefs.ts
-│   │   │   │   ├── steps/
-│   │   │   │   └── __tests__/
-│   │   │   ├── shared/            # Cross-feature components (OutputLayoutEditor, etc.)
+│   │   │   ├── compare/           # Vergleichs-Screen (CompareTabs, CompareDetail, CompareMatrix, …)
+│   │   │   ├── shared/            # Geteilte Tab-Organismen route|vergleich (WeatherMetricsTab,
+│   │   │   │                      #   layout-tab/, versand-tab/, alarme-tab/, OutputLayoutEditor)
 │   │   │   ├── preview/           # Email/SMS preview renderers
 │   │   │   ├── email-preview/     # Email rendering
 │   │   │   ├── mobile/            # Mobile-only components
@@ -369,16 +361,14 @@ frontend/
 │   └── routes/
 │       ├── +layout.svelte         # Root layout (includes Sidebar)
 │       ├── +page.svelte           # Home (Trip Cockpit Dashboard, Epic #134)
-│       ├── trips/                 # Trip management (CRUD wizard)
-│       ├── compare/               # Compare wizard + subscription list
-│       │   ├── +page.svelte       # Create new comparison
-│       │   ├── [id]/
-│       │   │   └── edit/
-│       │   │       ├── +page.svelte
-│       │   │       └── +page.server.ts
-│       │   └── +page.server.ts
-│       ├── account/               # User account settings
-│       └── _design/               # Component showcase (dev-only)
+│       ├── trips/                 # Trip-Liste, Detail-Hub (?tab=), /trips/new (TripNewEditor)
+│       ├── compare/               # Vergleichs-Liste, Detail-Hub, /compare/new (CompareNewEditor)
+│       ├── locations/ · settings/ · subscriptions/ · archiv/ · gpx-upload/ · account/
+│       ├── login/ · register/ · logout/ · magic-link/ · forgot-password/ · reset-password/ · verify-email/
+│       ├── _home/                 # Route-lokale Cockpit-Kacheln
+│       ├── _design/ · _design-system/  # Component showcases (dev-only)
+│       └── email-preview-dev/     # Mail-Vorschau (dev-only)
+│       (URL-Konvention ?tab= statt #hash: docs/reference/navigation.md)
 ├── e2e/                           # Playwright E2E tests
 │   ├── helpers.ts                 # Auth helpers, shared utilities
 │   ├── design-system-lauf-a.spec.ts
@@ -395,7 +385,7 @@ Frontend components follow Atomic Design principles with 3 explicit layers:
 |-------|----------|---------|----------|------|
 | **Atoms** | `components/atoms/` | Base UI primitives | Button, Label, Badge, Icon | #371 |
 | **Molecules** | `components/molecules/` | Combinations of atoms | FieldGroup, StatCard, Tabs | #372 |
-| **Organisms** | `components/organisms/` | Complex page sections | TripHeader, TripWizardShell, AlertRulesEditor | #471 |
+| **Organisms** | `components/organisms/` | Complex page sections | TripHeader, AlertRulesEditor, ListTable, HomeHero* | #471 |
 
 **Import Rules:**
 - **Atoms** may import from `ui/` (shadcn + gregor primitives)
@@ -404,13 +394,10 @@ Frontend components follow Atomic Design principles with 3 explicit layers:
 - **Routes** should prefer importing from `organisms/` and `molecules/`, using `atoms/` only for rare custom layouts
 
 **Organism Barrel** (`components/organisms/index.ts`):
-Re-exports 4 core organisms without moving their physical source files:
-```typescript
-export { default as TripHeader } from '../trip-detail/TripHeader.svelte';
-export { default as TripWizardShell } from '../trip-wizard/TripWizardShell.svelte';
-export { default as AlertRulesEditor } from '../alert-rules-editor/AlertRulesEditor.svelte';
-export { default as OutputLayoutEditor } from '../shared/OutputLayoutEditor.svelte';
-```
+Re-exportiert die Organisms (aktuell 19, u. a. `TripHeader`, `AlertRulesEditor`,
+`OutputLayoutEditor`, `WeatherMetricsTab`, `ListTable*`, `HomeHeroTrip/Compare`,
+`OutboxCard`, `AlertsCard`, `PresetRail`). Die Datei selbst ist die Wahrheit —
+Exporte hier nicht duplizieren.
 
 Consumers import via: `import { TripHeader, OutputLayoutEditor } from '$lib/components/organisms'`
 
@@ -452,7 +439,7 @@ See `docs/design-system/COMPONENTS.md` for the canonical component catalog.
 - Auto-Save nutzt Try-Catch mit explizitem Error-Reporting statt `console.error`
 - Alle PUT-Endpunkte nutzen Read-Modify-Write-Semantik (Backend, `api.ts`), kein partielles Überschreiben
 
-Siehe `docs/specs/modules/issue_758_save_indicator.md`, `docs/specs/modules/issue_1234_autosave_hydration_gate.md`, `docs/specs/modules/issue_1269_save_status_lie.md` für technische Details.
+Siehe `docs/specs/_archive/modules/issue_758_save_indicator.md`, `docs/specs/_archive/modules/issue_1234_autosave_hydration_gate.md`, `docs/specs/_archive/modules/issue_1269_save_status_lie.md` für technische Details.
 
 #### Design-System Lauf B (Issues #143, #144, #146)
 
@@ -556,29 +543,20 @@ HTML + Client-Side Interactivity
 - **Production:** Systemd service `gregor-frontend.service` (port 5173)
 - **Nginx Reverse-Proxy:** Routes `/` to SvelteKit frontend
 
-### Multi-Step Wizards
+### Anlege- und Bearbeitungs-Editoren (Wizards abgeschafft)
 
-The frontend includes two configurable wizard systems:
+Die früheren Multi-Step-Wizards (Trip-Wizard Epic #136, Compare-Wizard Epic #438)
+wurden ersatzlos entfernt (#622, Epic #1273/#1301; Absicherung:
+`shared/__tests__/legacy_wizard_removed.test.ts`). Heute gilt das geteilte
+Editor-Muster (PO-Invariante, CLAUDE.md „Trip/Ortsvergleich-Code-Teilung“):
 
-#### Trip Wizard (Epic #136)
-- **Purpose:** Create/edit trips with stages and waypoints
-- **Steps:** 4 (Name/Profile, Stages, Waypoints, Review)
-- **State Management:** `tripWizardState.svelte.ts`
-- **Component:** `frontend/src/lib/components/trip-wizard/`
-- **Persistence:** `/api/trips` POST/PUT
-
-#### Compare Wizard (Epic #438)
-- **Purpose:** Create/edit location comparison subscriptions
-- **Steps:** 5 (Name/Profile, Locations, Ideal Values, Layout, Schedule)
-- **State Management:** `compareWizardState.svelte.ts`
-- **Component:** `frontend/src/lib/components/compare/`
-- **Persistence:** `/api/subscriptions` POST/PUT
-- **Current Status:**
-  - ✓ Step 1: Name + Activity Profile (Issue #440, auto-preselect via #547)
-  - ✓ Step 2: Location selection (Issue #440)
-  - ✓ Step 3: Ideal value ranges per metric (Issue #441, uses `compareMetricDefs.ts`)
-  - ✓ Step 4: Output formatting layout (Issue #442)
-  - ✓ Step 5: Schedule + delivery config (Issue #443)
+- **Anlegen:** `/trips/new` → `trip-new/TripNewEditor.svelte`; `/compare/new` →
+  `compare-new/CompareNewEditor.svelte` — progressive Tab-Anlege-Seiten aus den
+  geteilten Tab-Organismen (`shared/`, `context="route"|"vergleich"`), Auto-Save.
+- **Bearbeiten:** Detail-Hub mit `?tab=`-Navigation (`trip-detail/` bzw.
+  `compare/CompareTabs.svelte`/`CompareDetail.svelte`).
+- **Persistenz:** `/api/trips` bzw. `/api/compare/presets` (nicht
+  `/api/subscriptions` — entfernt, 404).
 
 **Key Data Structures:**
 - `ActivityProfile` — Enum type for activity categories (WINTERSPORT, ALPINE_TOURING, SUMMER_TREKKING, ALLGEMEIN)
@@ -613,38 +591,17 @@ The frontend includes two configurable wizard systems:
 | `/api/trips/{id}/stages` | GET/POST | Stage management |
 | `/api/trips/{id}/briefing-history` | GET | Briefing delivery log for archived trip (Issue #559) |
 | `/api/locations` | GET/POST | Location library (for compare) |
-| `/api/subscriptions` | GET/POST | Create/list subscriptions (compare) |
-| `/api/subscriptions/{id}` | GET/PUT/DELETE | Individual subscription |
-| `/api/subscriptions/{id}/preview` | POST | Preview comparison output |
+| `/api/compare/presets` | GET/POST | Compare-Presets (Orts-Vergleich) |
+| `/api/compare/presets/{id}` | GET/PUT/DELETE | Einzelnes Compare-Preset (`PATCH …/state`, `POST …/send`) |
+| `/api/preview/compare/{preset_id}` | POST | Vorschau aller Kanäle eines Compare-Presets (#1270) |
+| `/api/briefings` | GET | Briefing-Subscriptions (Trip-Briefing-Abos, ADR-0023) |
 | `/api/preview/{id}/email\|sms\|telegram` | GET | Trip report preview rendering (demo mode optional) |
 | `/api/account` | GET/PUT | User account |
 | `/api/scheduler/status` | GET | Job status monitoring |
 
-**Subscription Types:**
-- `"trip"` — Auto-generated reports per stage
-- `"compare"` — Location comparison (configurable via wizard)
-
-**Compare Subscription Payload:**
-```json
-{
-  "id": "compare-001",
-  "name": "Ski 2026",
-  "enabled": true,
-  "config": {
-    "activity_profile": "WINTERSPORT",
-    "location_ids": ["hut-a", "hut-b", "hut-c"]
-  },
-  "display_config": {
-    "ideal_ranges": {
-      "temp_max_c": { "min": -5, "max": 5 },
-      "snow_depth_cm": { "min": 30, "max": 200 },
-      "wind_max_kmh": { "min": 0, "max": 40 }
-    },
-    "output_layout": { /* TBD #442 */ },
-    "schedule": { /* TBD #443 */ }
-  }
-}
-```
+**Abo-Objekte:** getrennte Domänenobjekte statt einer `subscription`-Abstraktion
+mit `type`-Feld — Compare-Presets und Briefing-Subscriptions (ADR-0023).
+Feld-Definitionen: `internal/model/` und `docs/reference/api_contract.md` Sektion 10.
 
 **Format:** JSON, standard HTTP methods (GET, POST, PUT, DELETE)
 
@@ -667,7 +624,7 @@ Frontend **does not** directly call E-Mail/SMS channels. Instead:
 - **Scheduler Status:** `/api/scheduler/status` shows last-run timestamps and errors per job
 
 **Compare-Specific:**
-- Frontend validates wizard steps before saving
+- Frontend validiert die Editor-Tabs vor dem Speichern (Schreib-Gate, s. Save-Strategien)
 - Backend accepts any `display_config` (opaque, no schema enforcement)
 - No server-side validation of `ideal_ranges` values yet (future enhancement)
 
@@ -677,7 +634,6 @@ See `~/.claude/CLAUDE.md` → Monitoring for details.
 
 ## Feature Documentation
 
-- **Epic #438 (Compare Wizard):** `docs/features/epic-438-compare-wizard.md`
 - **Epic #134 (Trip Cockpit Dashboard):** `docs/features/epic-134-cockpit-dashboard.md`
 - **Epic #1033 (Amtliche Alerts im Orts-Vergleich):** `docs/features/epic-1033-compare-official-alerts.md` — additives `src/services/official_alerts/`-Modul (Slices 1, 2, 5 implementiert), Registry-Pattern analog Provider-Adapter, Fail-soft-Garantie, pro Orts-Vergleich ein-/ausschaltbar (Slice 5)
 - **Epic #1073 (Amtliche Alerts AT/IT + querschnittliche Nutzung):** `docs/features/epic-1073-alerts-at-it.md` — Slice 1 (#1085, implementiert): `GeoSphereWarnSource` (AT), erste Nicht-FR-Quelle im Registry, auth-frei, koordinatenbasiert, `warnstufeid`→`level`-Mapping; Slice 3 (#1087, implementiert): amtliche Warnungen jetzt auch in Trip-Briefings, gemeinsame Renderer-Komponente `src/output/renderers/alert/official_alerts.py` (Compare + Trip, keine Kopie), Trip-Toggle `official_alerts_enabled`
@@ -690,10 +646,7 @@ See `~/.claude/CLAUDE.md` → Monitoring for details.
 ## Related Issues
 
 - **#559:** Archive page completion — Briefing-Verlauf modal, Template copy, Event summary ✓
-- **#440:** Compare Wizard shell + Steps 1–2 ✓
-- **#441:** Compare Wizard Step 3 (Ideal Ranges) ✓
-- **#442:** Compare Wizard Step 4 (Layout) — planned
-- **#443:** Compare Wizard Step 5 (Schedule) — planned
+- **#440–#443:** Compare Wizard ✓ (historisch — Wizard-System inzwischen durch progressive Editoren ersetzt, s. o.)
 - **#134:** Trip Cockpit Dashboard ✓
-- **#136:** Trip Wizard completion ✓
+- **#136:** Trip Wizard ✓ (historisch — ersetzt durch TripNewEditor, #622)
 - **#133:** Design System (Atoms + Tokens) ✓

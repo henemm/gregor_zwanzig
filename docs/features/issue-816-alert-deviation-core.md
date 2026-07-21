@@ -4,7 +4,7 @@
 **Prioritaet:** HIGH  
 **Kategorie:** Services / Alert System  
 **Erstellt:** 2026-06-14  
-**Spec:** `docs/specs/modules/issue_816_alert_deviation_core.md` (v1.0)  
+**Spec:** `docs/specs/_archive/modules/issue_816_alert_deviation_core.md` (v1.0)  
 **Epic:** #813 (Alert-Rework Slice 1)
 
 ## Problem
@@ -182,7 +182,7 @@ Warnung als Text-Zusatz in dieselbe Nachricht gebündelt (`_send_alert(..., offi
 ohne Wetter-Delta erfolgt ein eigenständiger Versand über
 `NotificationService.send_official_alert()`. SMS bleibt ohne Zusatztext (Zeichenlimit). Details:
 `docs/features/epic-1073-alerts-at-it.md` (Slice 4), Spec
-`docs/specs/modules/issue_1088_alert_official_warnings.md`.
+`docs/specs/_archive/modules/issue_1088_alert_official_warnings.md`.
 
 ---
 
@@ -196,7 +196,7 @@ ohne Wetter-Delta erfolgt ein eigenständiger Versand über
 
 ## Referenzen
 
-- **Spec:** `docs/specs/modules/issue_816_alert_deviation_core.md`
+- **Spec:** `docs/specs/_archive/modules/issue_816_alert_deviation_core.md`
 - **Weather Snapshot Service:** `docs/features/weather_snapshot_service.md`
 - **Change Detection:** `src/services/weather_change_detection.py`
 - **Trip Report Scheduler:** `src/services/trip_report_scheduler.py`

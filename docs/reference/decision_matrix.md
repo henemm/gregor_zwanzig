@@ -1,36 +1,41 @@
-# Decision Matrix — Forecast Source Selection
+# Decision Matrix — Wetterdaten-Provider (Ist-Stand)
 
-## Regeln (Gate)
-1) Standard: **MET Norway (Locationforecast)**
-2) Ausnahme: **MOSMIX**, nur wenn alle erfüllt:
-   - Distanz ≤ 25 km
-   - |ΔH| ≤ 150 m
-   - Land/See-Flag: **gleich**
-3) Sonst: MET
-4) Fallback (nicht MVP): entfällt
+> Stand: 2026-07-21. Ersetzt das MET/MOSMIX-Auswahlmodell der MVP-Ära
+> (historisch: ADR-0002, superseded). Quelle der Wahrheit für Details ist der
+> Code — dieses Dokument beschreibt nur die Auswahllogik und wo sie liegt.
 
-## Confidence (nur zur *gewählten* Quelle)
-- Start: 100
-- Distanz > 10 km: −1 / 5 km (max −20)
-- |ΔH| > 100 m: −1 / 50 m (max −20)
-- *Gebirge*: −20 (Heuristik; s. unten)
-- Ergebnisband: **HIGH** (75–100), **MED** (50–74), **LOW** (< 50)
+## Standard-Provider: Open-Meteo
 
-## Debug (Beispiel)
-```
-source.decision: MOSMIX rejected (dist=20.0km, delta_h=220m, land_sea_match=false)
-source.chosen: MET
-source.confidence: MED (62)
-source.coords: 54.29N,10.90E
-source.meta: run=2025-08-28T19:12Z, model=ECMWF
-```
+Alle Produktionspfade (Briefings, Orts-Vergleich, Alerts, Vorschau) holen
+Wetterdaten über `get_provider("openmeteo")` — Registry in
+`src/providers/base.py` (`_load_providers()`).
 
-## Datenquellen (Minimal)
-- **MOSMIX Stationskatalog** (IDs, Lat/Lon, Höhe)
-- **DEM** (SRTM/EU-DEM) für Höhen + ΔH
-- **Land/See-Maske** (Natural Earth / ESA CCI)
-- **Zeiten** UTC; Run-ID z. B. `2025-08-28T19:12Z`
+## Fallback-Kette (in dieser Reihenfolge)
 
-## „Gebirge“-Heuristik
-APIs liefern **keine** generische „Gebirge“-Flag. Minimalheuristik:
-- `is_mountain = (elev ≥ 1200 m) OR (Relief_5km ≥ 400 m)`  → konfigurierbar
+| Stufe | Was | Wo im Code | Referenz |
+|---|---|---|---|
+| 1 | **Intra-Modell-Fallback** innerhalb Open-Meteo: regionale Modelle → gröbere Modelle, ohne den Ausfall zu kaschieren | `src/providers/openmeteo.py` (`REGIONAL_MODELS`) | ADR-0018, #1115 |
+| 2 | **Cross-Provider-Fallback** bei Open-Meteo-Totalausfall: Koordinate → regionale Direktanbindung (AT → `at_direct`/GeoSphere, DE → `de_direct`, FR → `fr_direct`; Prüfreihenfolge AT→DE→FR, Alpenraum fällt bewusst an AT) | `src/providers/region_routing.py` | Epic #1127, #1141 |
+
+## Weitere registrierte Provider
+
+| Name | Zweck |
+|---|---|
+| `geosphere` | GeoSphere Austria (Direktanbindung, AT-Fallback-Basis) |
+| `brightsky` | DWD-Daten via BrightSky — genutzt im Radar-Pfad (`src/services/radar_service.py`) |
+| `radar_dpc` | Radar-Nowcast Italien (DPC) |
+| `fixture` | Offline-Testmodus: aktiv wenn `GZ_TEST_FIXTURE_DIR` gesetzt (#346) — bedient `openmeteo`-Anfragen aus versionierten Fixtures |
+
+## Kontingent-Regeln (Open-Meteo)
+
+Der Radar-Pfad dominiert den API-Verbrauch (#1329): geteilter Forecast-Cache +
+Budget-/Prioritätssteuerung sind aktiv. Bei Änderungen an Abruf-Pfaden immer
+den Kontingent-Effekt mitdenken; Verbrauchslog: `openmeteo_calls.jsonl`
+(erfasst den Radar-Pfad NICHT).
+
+## Historie
+
+- MET Norway / MOSMIX (MVP-Auswahlmodell mit Distanz-/Höhen-Gate): entfernt,
+  siehe ADR-0002 (superseded) und Git-Historie dieses Dokuments.
+- Metrik-Mapping der Provider: steht im jeweiligen Provider-Modul
+  (`src/providers/*.py`), nicht mehr in separater Prosa-Referenz.

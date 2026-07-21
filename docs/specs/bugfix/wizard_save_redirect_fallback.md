@@ -32,7 +32,7 @@ Fix the unconditional `goto(/trips/${trip.id})` in `WizardState.save()` that red
 | `$app/navigation` | Module (lazy import) | `goto(path)` — performs client-side navigation after successful save |
 | `Trip` | Type | Return type of `api.post`; `.id` field is read from the response for the redirect URL |
 | `extractErrorMessage` | Utility function | Converts caught error to a human-readable string for `saveError` |
-| `docs/specs/modules/epic_136_trip_wizard.md` §1.4 | Spec | Save-Pipeline clause that prescribes fallback behaviour; updated in parallel with this fix (Issue #197) |
+| `docs/specs/_archive/modules/epic_136_trip_wizard.md` §1.4 | Spec | Save-Pipeline clause that prescribes fallback behaviour; updated in parallel with this fix (Issue #197) |
 
 ## Root Cause Analysis
 
@@ -112,7 +112,7 @@ Key changes from broken to fixed:
 
   - Test: (populated after /tdd-red)
 
-- **AC-4:** Given `docs/specs/modules/epic_136_trip_wizard.md` §1.4, When the Save-Pipeline fallback clause is read, Then the fallback target is `/trips` (not `/`) and includes a reference to Issue #197 with the rationale that the user sees the new trip in the overview list.
+- **AC-4:** Given `docs/specs/_archive/modules/epic_136_trip_wizard.md` §1.4, When the Save-Pipeline fallback clause is read, Then the fallback target is `/trips` (not `/`) and includes a reference to Issue #197 with the rationale that the user sees the new trip in the overview list.
 
   - Test: (populated after /tdd-red)
 

@@ -11,18 +11,17 @@
 
 ## Workflow
 
-OpenSpec 8-Phasen-Workflow mit Adversary Verification:
+OpenSpec-Workflow mit Adversary Verification (Commands sind zweistellig; Einstiege: `/00-intake`, `/00-bug`, `/01-feature`):
 
-| Phase | Command | Purpose | PO-Eingriff |
-|-------|---------|---------|-------------|
-| 1 | `/1-context` | Kontext sammeln | — |
-| 2 | `/2-analyse` | Request verstehen, Codebase recherchieren | Optional: 3-Satz-Zusammenfassung korrigieren |
-| 3 | `/3-write-spec` | Spezifikation erstellen | **Pflicht: ACs auf Deutsch freigeben** ('go') |
-| 4 | — | Spec freigegeben | — |
-| 5 | `/4-tdd-red` | Fehlschlagende Tests schreiben (RED) | Optional: AC-Test-Mapping lesen |
-| 6 | `/5-implement` | Implementieren (GREEN) + Adversary | — (läuft automatisch durch) |
-| 7 | `/6-validate` | Validieren vor Commit | — |
-| 8 | — | Deployment (inline in `/6-validate` Step 5) | **Pflicht: Tech-Lead-Brief lesen + 'go' sagen** |
+| Command | Purpose | PO-Eingriff |
+|---------|---------|-------------|
+| `/10-context` | Kontext sammeln | — |
+| `/20-analyse` | Request verstehen, Codebase recherchieren | Optional: 3-Satz-Zusammenfassung korrigieren |
+| `/30-write-spec` | Spezifikation erstellen | **Pflicht: ACs auf Deutsch freigeben** ('go') |
+| `/40-tdd-red` | Fehlschlagende Tests schreiben (RED) | Optional: AC-Test-Mapping lesen |
+| `/50-implement` | Implementieren (GREEN) + Adversary | — (läuft automatisch durch) |
+| `/60-validate` | Validieren vor Commit | — |
+| `/70-deploy` | Staging-Verifikation + Prod-Deploy (eigene Phase) | **Pflicht: Tech-Lead-Brief lesen + 'go' sagen** |
 
 **Adversary Verification:** Nach Implementation führt ein unabhängiger `implementation-validator` Agent (Sonnet) einen strukturierten Dialog, um die Implementierung aktiv zu brechen. Tri-State Verdict: VERIFIED / BROKEN / AMBIGUOUS. Details: `docs/features/openspec_workflow.md`
 
@@ -46,7 +45,7 @@ OpenSpec 8-Phasen-Workflow mit Adversary Verification:
 
 **SYMLINK VERBOTEN:** `.active`-Symlink-Fallback ist deaktiviert; `workflow.py` bricht FATAL ab ohne `GZ_ACTIVE_WORKFLOW`. Niemals `state['active_workflow']` lesen — immer `os.environ['GZ_ACTIVE_WORKFLOW']`. Beim Agent-Spawn immer `export GZ_ACTIVE_WORKFLOW=<name>` im Prompt übergeben.
 
-**KEINE Mocks in Tests!** Bei Adversary-Findings ist `Code reference: file:line` Pflicht — siehe `.claude/agents/implementation-validator.md` Sektion „Findings-Format".
+**Test-Politik: siehe „Test-Politik: Zwei Schichten" weiter unten** (Mock-Theater bleibt verboten; die alte Absolutform „keine Mocks" ist ersetzt). Bei Adversary-Findings ist `Code reference: file:line` Pflicht — siehe `.claude/agents/implementation-validator.md` Sektion „Findings-Format".
 
 **Product Owner Pattern:** Main Context (Opus) ist reiner Orchestrierer und schreibt KEINEN Code. Implementierung geht an den Developer Agent (Opus, Worktree-Isolation).
 
@@ -68,9 +67,16 @@ OpenSpec 8-Phasen-Workflow mit Adversary Verification:
 
 ## Architektur
 
+Verteiltes System, drei Prozesse:
+
 ```
-CLI -> Config -> Provider-Adapter -> Normalizer -> Risk Engine -> Formatter -> Channel
+SvelteKit-Frontend  ->  Go-API (Port 8090)  ->  Python-Core (FastAPI, intern Port 8000)
+                        Auth/Store/Scheduler     Provider -> Risk Engine -> Renderer -> Channel
 ```
+
+- **Go-API** (`internal/`, `cmd/`): Auth/Sessions, Mandantentrennung, Persistenz (`data/users/<user_id>/`), Cron-Scheduler, Proxy zum Python-Core
+- **Python-Core** (`api/`, `src/`): Wetter-Domäne (Provider Open-Meteo + Fallbacks, Risk Engine, Aggregation), alle Kanal-Renderer/-Transporte, Alerts, Inbound-Handler
+- Die Legacy-CLI (`src/app/cli.py`, s. u.) ist Debug-Werkzeug, nicht der Produktivpfad
 
 Details: `docs/features/architecture.md`
 
@@ -78,12 +84,12 @@ Details: `docs/features/architecture.md`
 
 | Dokument | Beschreibung |
 |----------|--------------|
-| `docs/features/epic-438-compare-wizard.md` | Orts-Vergleich Wizard (5 Steps, Step 3 ✓) |
 | `docs/features/epic-134-cockpit-dashboard.md` | Trip-Cockpit-Startseite |
-| `docs/features/architecture.md` | Systemarchitektur (Backend + Frontend + Wizards) |
+| `docs/features/architecture.md` | Systemarchitektur (Backend + Frontend + Editoren) |
 | `docs/reference/api_contract.md` | Single Source of Truth: DTOs & Datenformate |
-| `docs/reference/decision_matrix.md` | Provider-Auswahl (MET vs MOSMIX) |
+| `docs/reference/decision_matrix.md` | Provider-Ist-Stand (Open-Meteo + Fallback-Kette) |
 | `docs/features/scope.md` | Projektvision & Ziele |
+| `docs/README.md` | Wegweiser durch docs/ (Referenz vs. Archiv) |
 
 ## CLI
 

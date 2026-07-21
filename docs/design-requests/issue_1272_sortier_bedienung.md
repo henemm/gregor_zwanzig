@@ -1,6 +1,6 @@
 # Nachzieh-Hinweis an Claude Design: Sortier-Bedienung im Layout-Tab
 
-**Bezug:** Issue #1272, ADR-0024, Spec `docs/specs/modules/issue_1272_shared_sortable.md`
+**Bezug:** Issue #1272, ADR-0024, Spec `docs/specs/_archive/modules/issue_1272_shared_sortable.md`
 **Datum:** 2026-07-16 · **Kein Blocker** — #1272 wird auf PO-Entscheid hin bereits umgesetzt.
 
 ## Worum es geht
@@ -29,7 +29,7 @@ kehren nicht zurück. Grund: Ziel von #1272 ist eine durchgängige Sortier-Bedie
 Pfeile im Route-Zweig wären der einzige verbleibende Sonderweg.
 
 Die Tastatur-Bedienung, für die die Pfeile ursprünglich standen
-(`docs/specs/modules/issue_433_layout_dnd.md:21`), geht nicht verloren: sie wandert auf den
+(`docs/specs/_archive/modules/issue_433_layout_dnd.md:21`), geht nicht verloren: sie wandert auf den
 Griff selbst (Space/Enter → Sortier-Modus, Pfeiltasten → verschieben), getragen vom
 eingebauten Tastatur-Support von `svelte-dnd-action@0.9.69`.
 

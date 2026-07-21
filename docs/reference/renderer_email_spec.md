@@ -38,7 +38,7 @@ Siehe CLAUDE.md für Scope-Details und Pflicht-Gate-Dokumentation.
 | 7 | **Antwort-Kommandos** | LIVE | Dedizierte Sektion mit 3-spaltigem Grid der Befehle (HEUTE, MORGEN, JETZT/NOW, GEWITTER, PAUSE 2d, SKIP, STOP/WEITER, STATUS, CONFIG, HELP) + Hinweistext |
 | 8 | **Footer** (zweigeteilt) | LIVE | Obere Zeile: Brand + Briefing-Typ; untere Zeile: Links (Trip-Übersicht, Zeitplan, Abmelden) |
 
-Detaillierte Sektionsspezifikationen: siehe `docs/specs/modules/issue_884_mail_fidelity.md` (AC-1..AC-10).
+Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_884_mail_fidelity.md` (AC-1..AC-10).
 
 ### HTML-Rendering-Details (Issue #884)
 
@@ -136,13 +136,9 @@ Im E-Mail-Body wird ein Klartext-Hinweis ausgegeben, wenn an mindestens einer St
   - token line used
 - Example:
   ```
-  DBG[MET MED]
-  source.decision: MOSMIX rejected (dist=20.0km, delta_h=220m, land_sea_match=false)
-  source.chosen: MET
-  source.confidence: MED (62)
-  source.coords: 54.29N,10.90E
-  source.meta: run=2025-08-28T19:12Z, model=ECMWF
-  tokens: Monte: N15 D25 R- PR20%@14 W22@14(28@16) G35@14(48@17) TH:M@14 DBG[MET MED]
+  (Beispiel aus der MVP-Ära entfernt — das damalige source.decision/MOSMIX-Format
+  existiert nicht mehr im Code. Maßgeblich ist der tatsächliche Debug-Block der
+  gerenderten Mail; Provider-Ist-Stand: docs/reference/decision_matrix.md.)
   ```
 
 ---
@@ -173,7 +169,7 @@ X-GZ-Format:    full | compact
 |----------|--------|--------|-----------|
 | `trip-briefing` | `full` | `trip_report_scheduler.py` (Briefing-Versand) | `.claude/hooks/briefing_mail_validator.py` (AC-1/4) |
 | `trip-briefing` | `compact` | `trip_report_scheduler.py` (compact-Renderer seit #722) | `.claude/hooks/briefing_mail_validator.py` (AC-2/6) |
-| `compare` | `full` | `src/app/cli.py` (Compare-Wizard Versand) | `.claude/hooks/email_spec_validator.py` (AC-3) |
+| `compare` | `full` | `src/services/scheduler_dispatch_service.py` → `notification_service.py` (Scheduler-Lauf + „Senden“-Button) | `.claude/hooks/email_spec_validator.py` (AC-3) |
 
 ### Validierungslogik
 

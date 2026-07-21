@@ -67,7 +67,7 @@ Erste Nicht-Frankreich-Quelle im Registry-Muster von Epic #1033: `GeoSphereWarnS
 wie bei den FR-Quellen nötig). Mappt `warnstufeid` (1–3) auf die gemeinsame `OfficialAlert.level`-
 Skala (2–4) und deckt 7 Warn-Typen ab. Cache pro Koordinate (300s Normalfall / 60s bei aktiver
 Warnung), fail-soft wie alle Quellen des Registries. Spec:
-`docs/specs/modules/issue_1085_geosphere_warn_source.md`.
+`docs/specs/_archive/modules/issue_1085_geosphere_warn_source.md`.
 
 ### Slice 3: Warnungen in Trip-Briefings (Issue #1087) — implementiert 2026-07-07
 
@@ -88,7 +88,7 @@ Trip-Briefing-Mails verfügbar:
   Tab „Inhalt" (`WeatherMetricsTab.svelte`, Issue #1117); bei `false` findet strukturell kein Fetch statt.
 - **Format-Parität:** `full` (HTML + Plain) und `compact` zeigen die Warnungen; `sms_trip.py`
   bewusst ohne Warn-Block (160-Zeichen-Limit).
-- Spec: `docs/specs/modules/epic_1073_trip_official_alerts.md`.
+- Spec: `docs/specs/_archive/modules/epic_1073_trip_official_alerts.md`.
 
 ### Slice 4: Amtliche Warnungen als eigenständiger Alert-Trigger (Issue #1088) — implementiert 2026-07-08
 
@@ -110,7 +110,7 @@ Wetter-Delta-Alert-Regeln konfiguriert sind:
   (Zeichenlimit, analog Slice-3-AC-6-Präzedenzfall).
 - **Full-Stack-Toggle:** Go-Pendant `internal/model/trip.go::OfficialAlertTriggersEnabled` +
   RMW-Merge in `internal/handler/trip.go`, analog `OfficialAlertsEnabled` (#1087).
-- Spec: `docs/specs/modules/issue_1088_alert_official_warnings.md`.
+- Spec: `docs/specs/_archive/modules/issue_1088_alert_official_warnings.md`.
 
 ### Slice 5: Region-optimale Nowcasts (Issue #1089) — AT-Teil (#1161) implementiert 2026-07-08, IT-Teil (#1162) implementiert 2026-07-09
 
@@ -121,14 +121,14 @@ umgesetzt; das Epic-Issue #1089 selbst war zum Zeitpunkt dieser Doku noch offen:
 - **AT (Issue #1161):** österreichische Orte nutzen für die Gewitter-/Hagel-Erkennung den
   GeoSphere-**INCA**-Nowcast statt der generischen Provider-Kette, inkl. Open-Meteo-Sidecar für
   das Konvektionsfeld (`convective_checked`-Flag, ADR-0018-konform bei Sidecar-Ausfall).
-  Spec: `docs/specs/modules/issue_1161_inca_convective.md`.
+  Spec: `docs/specs/_archive/modules/issue_1161_inca_convective.md`.
 - **IT (Issue #1162):** italienische Orte (inkl. Korsika, PO-Entscheidung — siehe unten) nutzen
   **Radar-DPC** (Protezione Civile) als reale Radarbeobachtung statt Modell-Downscaling
   (AROME-FR) bzw. globalem `minutely_15`-Fallback, ebenfalls mit Open-Meteo-Sidecar für die
   Konvektionserkennung. **PO-Entscheidung 2026-07-09:** Korsika wechselt von AROME-FR auf DPC,
   da die beiden BBoxen sich überlappen und geografisch nicht per Rechteck von Sardinien getrennt
   werden können — reale Radarbeobachtung hat Vorrang. Spec:
-  `docs/specs/modules/issue_1162_radar_dpc.md`.
+  `docs/specs/_archive/modules/issue_1162_radar_dpc.md`.
 
 ## Betreiber-Voraussetzung (kein Code)
 

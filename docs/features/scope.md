@@ -1,57 +1,54 @@
-# Gregor Zwanzig – Scope
+# Gregor Zwanzig – Scope & Vision
 
-## Codename
-Gregor Zwanzig
+> Stand: 2026-07-21 (Doku-Audit #1341). Ersetzt die MVP-/CLI-Ära-Fassung
+> (Git-Historie). Offene Arbeit steht ausschließlich in GitHub Issues.
 
-## User
-- Primärer Nutzer: Henning (Hiker/PO) und zukünftig weitere Weitwanderer.
-- Nutzungskontext: Mehrtägige Treks (z. B. GR20), eingeschränkte Konnektivität, kurze Nachrichtenkanäle.
+## Produkt
 
-## Problem
-Während mehrtägiger Outdoor-Touren rechtzeitig und verlässlich vor gefährlichem Wetter gewarnt werden, ohne selbst permanent Forecasts prüfen zu müssen.
+Wetter-Risiko-Briefings für Weitwanderungen und Orts-Vergleiche — als
+Multi-User-Webprodukt (SvelteKit-Frontend) mit automatischem Versand über
+E-Mail, Telegram und SMS (seven.io). Signal wurde entfernt (#610).
 
-## Lösung (High-Level)
-Ein automatisiertes System, das Wetterdaten aus mehreren Quellen abruft, normalisiert, Risiko-Regeln anwendet und kompakte Status-/Warnmeldungen versendet (E-Mail; später optional SMS/Push). Meldungen sind kurz, robust und auch bei schlechter Konnektivität zustellbar.
+## Nutzer & Kontext
 
-## Ziele (MVP) — DONE
-- Abendbericht: Prognose für die **nächste Etappe**.
-- Morgenbericht: aktualisierte Prognose (Letzte Änderungen, Risiken).
-- Untertagswarnung: zusätzliche Warnung bei signifikanter Verschlechterung (z. B. Gewitteranstieg).
+- Mehrtägige Treks (z. B. GR20): eingeschränkte Konnektivität, kurze Kanäle,
+  Entscheidung unter Zeitdruck.
+- Orts-Vergleich: Vor-Ort-Urlauber, die täglich den besten Ort für den
+  Tagesausflug wählen.
+- Es gibt derzeit keine aktiven Produktiv-User außer dem PO — Datenmigrationen
+  bleiben trotzdem Pflicht (Bestandsdaten erhalten).
 
-## Ziele (v2) — Geplant
-- Kompakt-Summary: 3-5 Zeilen Kurzfassung fuer schnelle Erfassung (F2)
-- Multi-Day Trend: 3-5 Tage Vorschau im Evening-Report (F3)
-- Biwak-/Zelt-Modus: Erweiterte Nacht-Details fuer Zelter (F5)
-- Trip-Briefing: Einmaliger Gesamt-Report am Vorabend (F4)
-- SMS + Satellite Delivery (F1, F9)
+## Kern-Erkenntnis (unverändert gültig)
 
-## Nicht-Ziele (v1)
-- Keine eigene meteorologische Modellierung.
-- Kein „alles für alle Sportarten"; Fokus: Trekking/Gebirge.
-- Keine paternalistischen Empfehlungen (Go/No-Go, Timing) — User entscheidet selbst.
-- Kein Trip-Sharing, kein Wetter-Tagebuch.
+Gregor Zwanzig differenziert sich nicht durch MEHR Daten, sondern durch **die
+richtige Information im richtigen Moment über den richtigen Kanal**: kompakt
+(30 Sekunden reichen), asynchron (Reports kommen zum User), Low-Connectivity-
+tauglich, unterwegs steuerbar (Inbound-Kommandos), kontextbezogen (Profil).
 
-## Datenquellen (Start)
-- MET Norway (primär), DWD/MOSMIX optional, AROME optional.
-- Abstraktionsschicht: Provider-Adapter + Normalisierung.
+## Was das Produkt heute leistet
 
-## Kommunikationskanäle
-- E-Mail/SMTP (done, MVP) — verfügbar auf allen Levels (Free, Standard, Premium)
-- SMS via Gateway (F1, geplant Q2 2026) — verfügbar ab Level Standard (Issue #1069, Slice 2 of Epic #1067)
-- Garmin inReach Email-Bridge (F9, geplant Q2 2026, setzt Kompakt-Summary F2 voraus) — Premium-only-Kanal
+- **Trip-Briefings:** Abend-/Morgen-Briefings pro Etappe (E-Mail full/compact,
+  Telegram-Bubbles, SMS ≤160 Zeichen), Zeitpläne pro Nutzer.
+- **Orts-Vergleich:** Vergleichsmatrix über ≥2 Orte mit Idealbereichen,
+  Winner-Logik, eigenem Mail-Template, Zeitplan-Versand.
+- **Alerts als Abweichungs-Wächter:** Nowcast/aktueller Forecast vs. letztes
+  Briefing (Deviation-Engine), Radar-Nowcast, amtliche Warnungen (FR/AT/IT) —
+  für Trips und Orts-Vergleiche.
+- **Steuerung unterwegs:** Inbound-Kommandos per E-Mail/Telegram (Umplanung,
+  Zoom), Webhook-basierter Telegram-Bot.
+- **Planungs-Frontend:** Trip-/Compare-Verwaltung, progressive Anlege-Editoren,
+  Vorschau aller Kanäle. Das Frontend ist Planungswerkzeug — KEIN
+  Live-Wetter-Portal.
 
-## Steuerung
-- Asynchrone Trip-Umplanung per SMS/Email-Reply (F6, geplant Q3 2026)
-- Kein UI noetig — Low-Connectivity-Paradigma
+## Nicht-Ziele (weiterhin gültig)
 
-## Debug & Konsistenz
-- Debug-Infos werden **konsistent** erzeugt: eine gemeinsame Debug-Struktur liefert identische Inhalte für Console und E-Mail (Console darf zusätzlich ausführlicher sein).
-- CLI bietet Schalter (z. B. `--report`, `--channel`, `--dry-run`, `--config`), fällt bei fehlenden Optionen auf Konfiguration zurück.
+- Keine eigene meteorologische Modellierung (Provider: Open-Meteo + Fallbacks,
+  siehe `docs/reference/decision_matrix.md`).
+- Keine paternalistischen Empfehlungen (Go/No-Go) — der User entscheidet.
+- Kein Trip-Sharing, kein Wetter-Tagebuch, kein Live-Wetter-Dashboard.
 
 ## Qualitätskriterien
-- TDD, kleine Commits, Live-Verifikation (echter Versand/echte Daten), klarer Rollback-Pfad.
 
-## Acceptance Criteria (MVP)
-- Abend- und Morgenbericht mit realen Forecast-Daten und echtem Versand möglich.
-- Untertagswarnung triggerbar (konfigurierbare Schwellen).
-- Debug-Infos in E-Mail stimmen **1:1** mit den entsprechenden Console-Zeilen überein.
+- TDD mit Zwei-Schichten-Testpolitik (Kern deterministisch, Live-E2E gegen
+  Staging), kleine Commits, Staging-Verifikation vor Prod-Deploy, klarer
+  Rollback-Pfad. Details: CLAUDE.md + `docs/reference/operations_playbook.md`.

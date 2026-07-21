@@ -7,7 +7,7 @@
 
 ## BUG-1275-TH-MISMATCH: SMS/Telegram zeigten kein Gewitterrisiko, während E-Mail-Outlook-Tabelle "hoch" zeigte
 
-**Status:** WIEDERERÖFFNET (2026-07-17) — der Fix vom 2026-07-16 behob nur einen von mehreren Defekten, s. „Zweiter Anlauf" unten | **Severity:** Critical (widersprüchliche Sicherheitsaussage zwischen Kanälen im selben Report) | **GitHub Issue:** #1275 | **Specs:** `docs/specs/bugfix/fix_1275_sms_th_mismatch.md` (1. Anlauf), `docs/specs/bugfix/fix_1275_sms_thunder_today.md` (2. Anlauf) | **ADR:** `docs/adr/0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md`
+**Status:** WIEDERERÖFFNET (2026-07-17) — der Fix vom 2026-07-16 behob nur einen von mehreren Defekten, s. „Zweiter Anlauf" unten | **Severity:** Critical (widersprüchliche Sicherheitsaussage zwischen Kanälen im selben Report) | **GitHub Issue:** #1275 | **Specs:** `docs/specs/_archive/bugfix/fix_1275_sms_th_mismatch.md` (1. Anlauf), `docs/specs/_archive/bugfix/fix_1275_sms_thunder_today.md` (2. Anlauf) | **ADR:** `docs/adr/0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md`
 
 ### Symptom
 
@@ -48,7 +48,7 @@ Nicht betroffen, entgegen der ursprünglichen Analyse: `_overview_line` (`narrow
 
 ## BUG-1269-SAVESTATUS-LIE: Speicher-Status-Anzeige lügt (Trip + Ortsvergleich) + ungegateter Versand-PUT
 
-**Status:** RESOLVED (2026-07-16) | **Severity:** Medium (Vertrauens-Bug + ungewollter Schreibzugriff) | **GitHub Issue:** #1269 | **Spec:** `docs/specs/modules/issue_1269_save_status_lie.md`
+**Status:** RESOLVED (2026-07-16) | **Severity:** Medium (Vertrauens-Bug + ungewollter Schreibzugriff) | **GitHub Issue:** #1269 | **Spec:** `docs/specs/_archive/modules/issue_1269_save_status_lie.md`
 
 ### Symptom
 
@@ -90,7 +90,7 @@ Bewusst **verworfen**: `setDirty` an `userTouched` koppeln (Adversary-Challenge)
 
 ## BUG-1261-COMPARE-EDIT: Ortsvergleich nicht editierbar (Desktop) + kein Autospeichern
 
-**Status:** RESOLVED (2026-07-16) | **Severity:** High (Kernfunktion unauffindbar + Datenverlustrisiko bei fehlendem Speichern) | **GitHub Issue:** #1261 | **Spec:** `docs/specs/modules/issue_1261_compare_edit_autosave.md`
+**Status:** RESOLVED (2026-07-16) | **Severity:** High (Kernfunktion unauffindbar + Datenverlustrisiko bei fehlendem Speichern) | **GitHub Issue:** #1261 | **Spec:** `docs/specs/_archive/modules/issue_1261_compare_edit_autosave.md`
 
 ### Symptom
 
@@ -112,7 +112,7 @@ Das zentrale Gesten-Gate im Compare-Editor (Ansatz A: eine gemeinsame Debounce-/
 
 ## BUG-1257-ALERTVOCAB: Alarm-Regeln bei jedem Speichern gelöscht — zwei Vokabulare, kein Übersetzer
 
-**Status:** RESOLVED (2026-07-15) | **Severity:** High (Datenverlust) | **GitHub Issue:** #1257 | **Spec:** `docs/specs/modules/bug_1257_alert_metric_mapping.md`
+**Status:** RESOLVED (2026-07-15) | **Severity:** High (Datenverlust) | **GitHub Issue:** #1257 | **Spec:** `docs/specs/_archive/modules/bug_1257_alert_metric_mapping.md`
 
 ### Symptom
 
@@ -132,7 +132,7 @@ Der Fix stellt Regeln über Save/Load wieder her (Round-Trip-Integrität) und be
 
 ## BUG-1133-TESTDATA: Python-Tests verschmutzten den echten `data/users/`-Baum
 
-**Status:** RESOLVED (2026-07-09) | **Severity:** High | **GitHub Issue:** #1133 | **Spec:** `docs/specs/modules/issue_1133_testdata_cleanup.md`
+**Status:** RESOLVED (2026-07-09) | **Severity:** High | **GitHub Issue:** #1133 | **Spec:** `docs/specs/_archive/modules/issue_1133_testdata_cleanup.md`
 
 ### Symptom
 
@@ -156,7 +156,7 @@ Die erste Implementierung brach 55 zuvor grüne TDD-Tests: Testdateien, die para
 
 ## BUG-1066-STORE-WRITE: Trip-Speichern schlägt still fehl bei Group-ACL-Entzug
 
-**Status:** RESOLVED (2026-07-08) | **Severity:** High | **GitHub Issue:** #1066 | **Spec:** `docs/specs/modules/fix_1066_store_write_logging.md`
+**Status:** RESOLVED (2026-07-08) | **Severity:** High | **GitHub Issue:** #1066 | **Spec:** `docs/specs/_archive/modules/fix_1066_store_write_logging.md`
 
 ### Symptom
 
@@ -194,7 +194,7 @@ Neuer Helper `internal/store/write.go::writeFileLogged()` loggt jeden Schreibfeh
 
 ## FOLLOWUP-1120: Aktiver Schreib-Selftest für data/ (Gegenmaßnahme zu #1066)
 
-**Status:** RESOLVED (2026-07-08) | **Severity:** Medium | **GitHub Issue:** #1120 | **Spec:** `docs/specs/modules/fix_1120_write_selftest.md`
+**Status:** RESOLVED (2026-07-08) | **Severity:** Medium | **GitHub Issue:** #1120 | **Spec:** `docs/specs/_archive/modules/fix_1120_write_selftest.md`
 
 ### Kontext
 
@@ -239,7 +239,7 @@ erschöpft).
 
 ## BUG-774: Metriken-Überblick-Checkbox persistiert nicht
 
-**Status:** RESOLVED (2026-06-12) | **Severity:** Medium | **GitHub Issue:** #774 | **Spec:** `docs/specs/bugfix/issue_774_metrics_summary_persist.md`
+**Status:** RESOLVED (2026-06-12) | **Severity:** Medium | **GitHub Issue:** #774 | **Spec:** `docs/specs/_archive/bugfix/issue_774_metrics_summary_persist.md`
 
 ### Symptom
 
@@ -281,7 +281,7 @@ Zwei Probleme:
 
 ## BUG-730-INVALIDURL: prod_selftest.py crasht bei nicht-probearen URLs
 
-**Status:** RESOLVED (2026-06-11) | **Severity:** Low | **GitHub Issue:** #730 | **Spec:** `docs/specs/modules/bug_730_prod_selftest_invalidurl.md`
+**Status:** RESOLVED (2026-06-11) | **Severity:** Low | **GitHub Issue:** #730 | **Spec:** `docs/specs/_archive/modules/bug_730_prod_selftest_invalidurl.md`
 
 ### Symptom
 
@@ -333,7 +333,7 @@ if not _is_probeable_url(prod_url):
 
 ## BUG-1084-STALE-MARKER: prod_selftest.py übersprang sich still bei stale Gate-Marker
 
-**Status:** RESOLVED (2026-07-07) | **Severity:** Medium | **GitHub Issue:** #1084 | **Spec:** `docs/specs/modules/issue_1084_gate_scope_cache.md`
+**Status:** RESOLVED (2026-07-07) | **Severity:** Medium | **GitHub Issue:** #1084 | **Spec:** `docs/specs/_archive/modules/issue_1084_gate_scope_cache.md`
 
 ### Symptom
 
@@ -360,7 +360,7 @@ Scope-Cache im Marker selbst: `write_last_gate_scope()` speichert zusätzlich de
 
 ## BUG-1096-SELFPOISON: staging_gate.py vergiftete eigenen Scope-Marker bei Doppel-Lauf
 
-**Status:** RESOLVED (2026-07-08) | **Severity:** High | **GitHub Issue:** #1096 | **Spec:** `docs/specs/modules/issue_1096_gate_scope_selfpoison.md`
+**Status:** RESOLVED (2026-07-08) | **Severity:** High | **GitHub Issue:** #1096 | **Spec:** `docs/specs/_archive/modules/issue_1096_gate_scope_selfpoison.md`
 
 ### Symptom
 
@@ -612,7 +612,7 @@ GitHub Issue #556 manuell geschlossen — kein Code-Fix erforderlich.
 
 ## BUG-720-STALE-SPREAD: display_config wird in TripEditView beim Speichern zurückgesetzt
 
-**Status:** RESOLVED (2026-06-10) | **Severity:** Medium | **GitHub Issue:** #720 | **Spec:** `docs/specs/bugfix/bug720_tripeditview_spread_fix.md`
+**Status:** RESOLVED (2026-06-10) | **Severity:** Medium | **GitHub Issue:** #720 | **Spec:** `docs/specs/_archive/bugfix/bug720_tripeditview_spread_fix.md`
 
 ### Symptom
 
@@ -668,7 +668,7 @@ Das `const updated: Trip`-Intermediate-Object wurde entfernt. Der minimale Body 
 
 ## BUG-707-STALE-SPREAD: Trip-Datum wird bei Name-/Config-Speichern überschrieben
 
-**Status:** RESOLVED (2026-06-10) | **Severity:** Medium | **GitHub Issue:** #707 | **Spec:** `docs/specs/bugfix/bug707_trip_datum_overwrite.md`
+**Status:** RESOLVED (2026-06-10) | **Severity:** Medium | **GitHub Issue:** #707 | **Spec:** `docs/specs/_archive/bugfix/bug707_trip_datum_overwrite.md`
 
 ### Symptom
 
@@ -747,7 +747,7 @@ Atomic-Migration (#368) und Token-Konsolidierung (#519) waren teilweise unvollst
 - Frontend: 35 `.svelte` Komponenten (mechanisches Token-Rename)
 - Styles: `frontend/src/app.css` (Token-Definitionen + Pill/Dot-Regeln)
 - Tests: 3 TypeScript-Testdateien (Assertions aktualisiert)
-- Spec: `docs/specs/modules/bug-541-543-544-token-checkbox-tailwind.md` v1.0
+- Spec: `docs/specs/_archive/modules/bug-541-543-544-token-checkbox-tailwind.md` v1.0
 
 ### Lessons Learned
 

@@ -88,10 +88,10 @@ Darstellung zu sprengen.
 | `src.outputs.telegram.TelegramOutput.send()` | intern (Klasse/Methode) | Unveränderter Versand-Baustein; `parse_mode="HTML"` + `suppress_subject_line=True` + optional `reply_markup` pro Bubble-Aufruf. Rückgabewert `message_id` als Erfolgsnachweis |
 | `src.services.trip_command_processor.py` Inline-Keyboard-Pattern (Zeile 100-128) | intern (Konvention) | Vorbild für `{"inline_keyboard": [[{"text": ..., "callback_data": ...}]]}`-Struktur der Aktionen-Bubble |
 | `docs/adr/0012-telegram-parse-mode-html.md` | ADR | Bereits akzeptierte Entscheidung für `parse_mode="HTML"` + `_esc()`-Escaping — dieses Feature wendet die Entscheidung erstmals auf Briefings (statt nur Alerts) an |
-| `docs/specs/modules/issue_360_signal_channel_renderer.md` | Spec (überholt) | Ursprungs-Spec der Tabellen-Logik — #1001 kehrt zur dort spezifizierten Tabellen-Darstellung zurück, jetzt kanal-exklusiv für Telegram statt geteilt mit Signal |
-| `docs/specs/modules/issue_635_telegram_weather_readable.md` | Spec (abgelöst) | PO-Entscheidung "Prosa statt Tabelle" — wird durch #1001 fachlich aufgehoben |
-| `docs/specs/modules/issue_614_615_telegram_kurzform.md` | Spec (teilweise abgelöst) | Text-Anhang-Mechanik entfällt; die zugrunde liegende Idee (Tages-Kurzform) lebt als eigene Bubble weiter, jetzt mit anderer Kürzel-Quelle |
-| `docs/specs/modules/fix_887_report_inkonsistenz.md` | Spec (abgelöst) | Ursprung der jetzt entfernten `_tg_extra_detail_line()`; Bug #994 (kaputte Klammern darin) wird durch Entfernung des Codes miterledigt |
+| `docs/specs/_archive/modules/issue_360_signal_channel_renderer.md` | Spec (überholt) | Ursprungs-Spec der Tabellen-Logik — #1001 kehrt zur dort spezifizierten Tabellen-Darstellung zurück, jetzt kanal-exklusiv für Telegram statt geteilt mit Signal |
+| `docs/specs/_archive/modules/issue_635_telegram_weather_readable.md` | Spec (abgelöst) | PO-Entscheidung "Prosa statt Tabelle" — wird durch #1001 fachlich aufgehoben |
+| `docs/specs/_archive/modules/issue_614_615_telegram_kurzform.md` | Spec (teilweise abgelöst) | Text-Anhang-Mechanik entfällt; die zugrunde liegende Idee (Tages-Kurzform) lebt als eigene Bubble weiter, jetzt mit anderer Kürzel-Quelle |
+| `docs/specs/_archive/modules/fix_887_report_inkonsistenz.md` | Spec (abgelöst) | Ursprung der jetzt entfernten `_tg_extra_detail_line()`; Bug #994 (kaputte Klammern darin) wird durch Entfernung des Codes miterledigt |
 
 ## Implementation Details
 

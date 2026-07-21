@@ -10,7 +10,7 @@ Single Source of Truth für visuelle Sprache, Tokens und Komponenten-Verträge. 
 
 Alpin, präzise, datenehrlich. Paper-Off-White als Bühne, Burnt-Orange als einziger Markenakzent, Topo-Linien als ruhige Hintergrundstimmung.
 
-**Voice — Tun:** „Heute 18:00 geht ein Abend-Briefing an Email + Signal." · „Böen bis 47 km/h ab 17:00."
+**Voice — Tun:** „Heute 18:00 geht ein Abend-Briefing an Email + Telegram." · „Böen bis 47 km/h ab 17:00."
 **Voice — Lassen:** „Wir kümmern uns um dein Wetter!" · „Aktiviere jetzt deinen Premium-Schutz" · Werbefloskeln.
 
 ---
@@ -236,9 +236,9 @@ Aus dem Redesign-Canvas — diese Bühnen sind der visuelle Maßstab für alle F
 5. **Wetter-Metriken-Editor** (1440×1500)
 6. **Alert-Konfigurator** (1440×1700)
 7. **Wegpunkt-Editor** — Karte + Höhenprofil synchron, KI-Vorschläge orange gestrichelt, **keine Lat/Lon-Inputs** (1440×1100)
-8. **Trip-Wizard** — 4 Schritte: Profil → GPX-Import (Multi-Upload + Pause-Markierung) → Wegpunkte (KI-Vorschläge) → Briefings & Kanäle
+8. **Trip-Anlegen** — historisch als 4-Schritt-Wizard entworfen; heute progressive Tab-Anlege-Seite (`TripNewEditor`, #622)
 9. **Compare** + **Location-New** — Ad-hoc-POI-Vergleich (1680 breit)
-10. **Output-Preview** — Email (760) + SMS/Signal (420), pixelnahe Vorschau
+10. **Output-Preview** — Email (760) + SMS/Telegram (420), pixelnahe Vorschau (Signal entfernt, #610)
 
 Die JSX-Quellen liegen im Anthropic-Artifact-Tarball; sind nicht in das Repo eingecheckt, weil Frontend-Stack hier SvelteKit (kein React) ist. Die Files sind Konzept-Vorlagen, keine Code-Quelle.
 

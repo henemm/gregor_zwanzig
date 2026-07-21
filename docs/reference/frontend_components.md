@@ -1,6 +1,6 @@
 # Frontend Components Reference
 
-**Updated:** 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
+**Updated:** 2026-07-21 (Doku-Audit #1341 — Wizard-Sektionen und Datei-Inventar entfernt, Anlege-Editoren dokumentiert); 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
 **Version:** 1.10
 
 ## Overview
@@ -30,25 +30,23 @@ frontend/src/lib/components/
 │       ├── BottomNav.svelte    # Fixed bottom nav (mobile-only, Issue #267)
 │       └── Sidebar.svelte      # Main navigation (Issue #145)
 │
-├── trip-wizard/          # Trip-Wizard components (Epic #136)
-│   ├── TripWizardShell.svelte   # Shell + 4-step stepper
-│   ├── Stepper.svelte           # Generic step indicator
-│   ├── wizardState.svelte.ts    # Central Runes state class
-│   ├── wizardHelpers.ts         # Shared helpers (newId, today, isPauseStage, etc.)
-│   ├── steps/
-│   │   ├── Step1Profile.svelte      # Activity profile + name/dates
-│   │   ├── Step2Stages.svelte       # Multi-GPX upload, drag-sort, pause
-│   │   ├── Step3Waypoints.svelte    # AI waypoint confirmation
-│   │   └── Step4Briefings.svelte    # Briefing channels & thresholds
-│   ├── templates/
-│   │   └── TemplatePicker.svelte    # GR20, KHW, Stubai pre-configs
-│   └── __tests__/
-│       ├── wizardHelpers.test.ts
-│       └── wizardState.test.ts
-│
-└── layout/
-    └── (organized in sidebar/ above)
+├── trip-new/             # Progressiver Anlege-Editor /trips/new (TripNewEditor, #622)
+├── compare-new/          # Progressiver Anlege-Editor /compare/new (CompareNewEditor, #1301 F2)
+├── shared/               # Geteilte Tab-Organismen (context="route"|"vergleich"):
+│                         #   WeatherMetricsTab, layout-tab/, versand-tab/, alarme-tab/,
+│                         #   OutputLayoutEditor, corridor-editor/, dnd/
+├── trip-detail/          # Trip-Detail-Ansicht + Wegpunkt-Editor
+├── compare/              # Vergleichs-Screen (CompareTabs, CompareDetail, CompareMatrix, …)
+├── edit/                 # Trip-Bearbeitungs-Sektionen
+├── organisms/            # Barrel: lib/components/organisms/index.ts (Exporte = Wahrheit)
+├── atoms/ · molecules/ · mobile/  # Atomic-Design-Bibliothek (Epic #368, s.u.)
+└── alert-rules-editor/ · alerts-tab/ · briefings-tab/ · briefing-history/ · preview/ · email-preview/
 ```
+
+**Wizards existieren nicht mehr.** `trip-wizard/` und `CompareWizard.svelte` wurden
+ersatzlos entfernt (#622, Epic #1273/#1301); Anlegen läuft über die progressiven
+Tab-Editoren `TripNewEditor`/`CompareNewEditor` mit Auto-Save. Absicherung:
+`shared/__tests__/legacy_wizard_removed.test.ts`.
 
 ## Gregor Atoms (Epic #133)
 
@@ -406,7 +404,7 @@ See `docs/design-system/COMPONENTS.md` §4.5 for full spec.
 
 ## Design Tokens
 
-All Gregor atoms reference design tokens defined in `app.css` `@layer base`. See `docs/specs/modules/epic_133_design_system_lauf_a.md` for the full token list.
+All Gregor atoms reference design tokens defined in `app.css` `@layer base`. See `docs/specs/_archive/modules/epic_133_design_system_lauf_a.md` for the full token list.
 
 ### Token Namespace: `--g-*`
 
@@ -665,465 +663,39 @@ Updated to support both desktop full-sidebar and mobile drawer modes.
 
 ---
 
-## Trip-Wizard Components (Epic #136)
+## Anlege-Editoren (statt Wizards)
 
-Multi-step wizard for creating new trips with activity profiles, GPX import, AI waypoint confirmation, and briefing config.
+`/trips/new` und `/compare/new` sind progressive Tab-Anlege-Seiten aus geteilten
+Bausteinen — **kein** Multi-Step-Wizard mit Stepper (abgeschafft, PO-bekräftigt
+2026-07-19):
 
-**Route:** `/trips/new` → mounted by `frontend/src/routes/trips/new/+page.svelte`
+| Route | Editor | Logik |
+|---|---|---|
+| `/trips/new` | `trip-new/TripNewEditor.svelte` (#622) | `trip-new/tripNewLogic.ts` (Freischalt-/Fortschritts-Logik, reine Funktionen) |
+| `/compare/new` | `compare-new/CompareNewEditor.svelte` (#1301 F2) | `compare-new/compareNewLogic.ts` |
 
-**Varianten:** Der Trip-Wizard hat zwei mögliche Step-4-Konfigurationen (per Trip konfigurierbar):
-1. **Step4Briefings** (traditionell): Kanal-Toggles + Alarm-Schwellenwerte
-2. **Step4Layout** (Issue #431): Pro-Kanal-Metriken-Konfiguration (Reihenfolge, Bucket-Zuordnung) — wird in `compareWizardState` als Vorlage für Orts-Vergleiche verwendet
-
-### Component Architecture
-
-```
-TripWizardShell (container, stepper + steps)
-├── Stepper (visual step indicator)
-├── Step1Profile (activity + name + dates)
-├── Step2Stages (GPX multi-upload, drag-sort, pause)
-├── Step3Waypoints (confirm AI-suggested waypoints)
-├── Step4Briefings OR Step4Layout (channel config variants)
-└── TemplatePicker (GR20, KHW, Stubai shortcuts)
-```
-
-**State Management:** `WizardState` (Svelte 5 Runes class in `wizardState.svelte.ts`)
-
-**Shared Helpers:** `wizardHelpers.ts`
-- `newId()` — Generate unique component IDs
-- `today()` — Current date (test-injectable)
-- `addDays(date, n)` — Date arithmetic
-- `mapActivityToProfile(activityType)` — Maps 5 UI profiles → 4 canonical aggregation profiles (Wintersport, Wandern, Summer-Trekking, Allgemein)
-- `formatStageNumber(index)` — Formats as "T01", "T02", etc.
-- `isPauseStage(stage)` — True if `waypoints: []` (pause day)
-
-### Datenmodell Extensions (Epic #136)
-
-**Trip model additions** (`internal/model/trip.go` + `frontend/src/lib/types.ts`):
-- `Trip.shortcode?: string` — Short identifier for trip (e.g., "GR20", "KHW")
-- `Trip.activity?: ActivityType` — Selected profile ("wandern", "wintersport", "summer_trekking", "allgemein", "klettern")
-
-**Waypoint model** — New transient field:
-- `Waypoint.suggested?: boolean` — True if AI-generated (UI hint: show "Confirm" button, not "Edit")
-
-**Pause Stage Support:**
-- Stages with `waypoints: []` are valid (represent pause days)
-- Backend `validateTrip()` accepts this pattern
-- Frontend renders as gray/muted pill
-
-### Key Features
-
-1. **Profile Selection (Step 1):** 5 activity chips → UI state saved as `trip.activity`
-2. **Multi-GPX Upload (Step 2):** Drag-drop multiple GPX files, auto-sorted, natural sort order (T01, T02, ..., T10, T11, not T10, T11, T2)
-3. **Pause Days:** Insert empty-waypoint stages to skip days (e.g., rest day, weather day)
-4. **AI Waypoint Confirmation (Step 3):** Show suggested waypoints per stage, user confirms/edits
-5. **Briefing Config (Step 4a, traditional):** Email/SMS toggles, thresholds (temp, wind, precip, etc.)
-6. **Layout Config (Step 4b, Issue #431):** Pro-Kanal-Metrik-Reihenfolge, Bucket-Zuordnung (primär/sekundär/aus), Channel-Constraint-Anzeige
-7. **Templates (Step 2 right sidebar):** GR20, KHW, Stubai → quick-populate name, dates, stages from template
-
-### Example Usage
-
-```svelte
-<TripWizardShell {wizardState} />
-
-<!-- From within Step1Profile: -->
-<Btn on:click={() => wizardState.goToStep(2)}>Nächster Schritt</Btn>
-
-<!-- Check pause status: -->
-{#if isPauseStage(stage)}
-  <Pill tone="info">Pausentag</Pill>
-{/if}
-```
-
-### Links
-
-- **Master Spec:** `docs/specs/modules/epic_136_trip_wizard.md`
-- **Sub-Specs:** `docs/specs/modules/epic_136_step{0..5}_*.md`
-- **Child Issues:** #160–#165
+Beide nutzen die geteilten Tab-Organismen aus `shared/` (`context="route"|"vergleich"`).
+Persistenz: Auto-Save gegen `/api/trips` bzw. `/api/compare/presets` — nicht
+`/api/subscriptions` (entfernt, liefert 404).
 
 ---
 
-## Component Inventory (Ist-Stand Phase 1 + Issue #440)
+## Komponenten-Inventar: Dateisystem ist die Wahrheit
 
-Vollstaendiges Inventar aller Komponenten unter `frontend/src/lib/components/` (plus
-route-lokale Kacheln unter `frontend/src/routes/_home/`). Pfade sind relativ zu
-`frontend/src/lib/components/`. Volle Props-Tiefe nur fuer Kern-Atome (siehe oben:
-Btn, GCard, Pill, Eyebrow, Dot, TopoBg, ElevSparkline) sowie Wordmark (unten);
-Detail-Props weiterer Komponenten stehen im jeweiligen Quellcode/Spec.
+Frühere Fassungen dieses Dokuments pflegten Datei-für-Datei-Tabellen aller
+Komponenten. Die veralteten zwangsläufig (gelöschte Wizards, umbenannte
+Komponenten) und wurden 2026-07-21 entfernt. Regel:
 
-**2026-05-29:** Orts-Vergleich-Wizard hinzugefuegt (Issue #440) — separater 5-Schritt-Wizard fuer Create/Edit-Modus mit Stepper-Reuse + Test-Suites.
+- **Inventar:** `ls frontend/src/lib/components/<ordner>/` — nie hier abschreiben.
+- **Organisms-Exporte:** `lib/components/organisms/index.ts` lesen, nicht raten.
+- **Props/Verhalten:** jeweilige `.svelte`-Datei + co-located Tests.
+- **Route-lokale Bausteine:** unter `frontend/src/routes/` (z. B. `_home/` Kacheln,
+  `_design-system/` Showcase).
 
-### ui/ — Atome & shadcn-Bausteine
-
-| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
-|---|---|---|
-| Btn | `ui/btn/Btn.svelte` | Gregor-Button-Atom, 3 Varianten (siehe Detail oben), Issue #144 |
-| GCard | `ui/g-card/GCard.svelte` | Surface-Container mit Elevation/Hover, Issue #144 |
-| Pill | `ui/pill/Pill.svelte` | Kompaktes Inline-Label mit semantischen Tones, Issue #144 |
-| Eyebrow | `ui/eyebrow/Eyebrow.svelte` | All-Caps-Metadaten-/Sektions-Label, Issue #144 |
-| Dot | `ui/dot/Dot.svelte` | Runder Status-/Wetter-Indikator, Issue #144 |
-| TopoBg | `ui/topo/TopoBg.svelte` | Topographisches Hintergrundmuster, Issue #143 |
-| ElevSparkline | `ui/elev-sparkline/ElevSparkline.svelte` | Inline-SVG-Sparkline fuer Hoehenprofile, Issue #146 |
-| badge | `ui/badge/badge.svelte` | shadcn-Label/Tag |
-| Checkbox | `ui/checkbox/Checkbox.svelte` | Auswahl-Checkbox |
-| HorizonChip | `ui/horizon-chip/HorizonChip.svelte` | Chip fuer Zeit-Horizont-Auswahl |
-| input | `ui/input/input.svelte` | shadcn-Texteingabefeld |
-| label | `ui/label/label.svelte` | shadcn-Formular-Label |
-| Segmented | `ui/segmented/Segmented.svelte` | Segmented-Control ([data-slot]-Muster), Issue #285 |
-| Select | `ui/select/Select.svelte` | Dropdown-Auswahl |
-| table | `ui/table/table.svelte` (+ table-* Teile) | shadcn-Tabellen-Bausteine |
-| card | `ui/card/card.svelte` (+ card-* Teile) | shadcn-Card-Bausteine |
-| dialog | `ui/dialog/dialog.svelte` (+ dialog-* Teile) | shadcn-Modal-Bausteine |
-| WIcon | `ui/wicon/WIcon.svelte` | Lucide-Wrapper, 8 Wetter-Icon-Kinds, Issue #322 |
-| Wordmark | `ui/wordmark/Wordmark.svelte` | Wortmarke „gregor.zwanzig" (siehe Props unten), Issue #293 |
-
-#### Icons (Lucide)
-
-**WICHTIG:** Das Icon-System ist in `docs/reference/sveltekit_best_practices.md` → „Icons (Lucide)" dokumentiert. Dort stehen die verbindlichen Regeln für:
-- **Import-Pfade:** Immer `@lucide/svelte/icons/<name>` (kein Barrel-Import)
-- **Alias-Namenskonvention:** Kurze/mehrdeutige Namen mit `-Icon`-Suffix (`PencilIcon`, `CheckIcon`, `XIcon`, `Trash2Icon`, `PlusIcon`, `UploadIcon`, `ArchiveIcon`); mehrsilbige selbsterklärende Namen ohne Suffix (`GripVertical`, `ChevronDown`, `EllipsisVertical`, `Loader2`)
-- **Genehmigte Aktions-Icons:** Vollständige Liste für Bearbeiten/Löschen/Schließen/Hinzufügen/Bestätigen/usw.
-- **Wetter-Icons:** Nur `<WIcon kind="..." />` verwenden, nicht direkt `Cloud`/`Sun`/`CloudRain` etc. (Issue #322)
-
-**Beziehung zu WIcon:** `WIcon` ist ein spezialisierter Wrapper für Wetter-Inhalte (8 kinds: rain, sun, wind, snow, thunder, fog + 2 Fallbacks). Alle anderen UI-Icons (Buttons, Menüs, Listen) nutzen Lucide-Icons gemäß der Konvention oben.
-| TopAppBar | `ui/sidebar/TopAppBar.svelte` | Fixierte Top-Bar (mobile), Issue #267 (Detail oben) |
-| BottomNav | `ui/sidebar/BottomNav.svelte` | Fixierte Bottom-Navigation (mobile), Issue #267 (Detail oben) |
-| Sidebar | `ui/sidebar/Sidebar.svelte` | Haupt-Navigation (Desktop + Drawer), Issue #145 (Detail oben) |
-
-#### Wordmark Component
-
-**File:** `frontend/src/lib/components/ui/wordmark/Wordmark.svelte`
-
-Wortmarke „gregor.zwanzig" in JetBrains Mono. Rendert als anklickbarer
-`<a href>`-Link (Home-Link), Ziel ueber `href` (Default `/`).
-
-**Props:**
-```typescript
-interface WordmarkProps {
-  size?: 'sm' | 'md' | 'lg';   // 14–24px; Untertitel ab 'md'; default 'md'
-  href?: string;               // Link-Ziel, default '/'
-}
-```
-
-**Darstellung:**
-- „gregor**.**zwanzig" in JetBrains Mono (`--g-font-data`)
-- Punkt in `--g-ink-faint`, „zwanzig" in `--g-accent`
-- Untertitel „v0.20 · wetter-briefing" ab `md`
-- Drei Groessen: `sm`/`md`/`lg` (14–24px)
-
-**Einsatz:** Sidebar (`md`), TopAppBar (`sm`), Login-Seite (`lg`). Spec: `docs/specs/modules/issue_293_wordmark.md`.
-
-### alert-rules-editor/ — Alert-Regel-Editor (#284/#297/#317)
-
-| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
-|---|---|---|
-| AlertRulesEditor | `alert-rules-editor/AlertRulesEditor.svelte` | Container fuer Alert-Regeln, Brand-Token-Styling |
-| AlertRuleRow | `alert-rules-editor/AlertRuleRow.svelte` | Einzelne Alert-Regel-Zeile (Metrik + Schwellwert + Schweregrad) |
-| ModeCard | `alert-rules-editor/ModeCard.svelte` | Modus-Auswahl (Absolut/Δ/Beides), Issue #297 |
-| alertRuleDefaults.ts | `alert-rules-editor/alertRuleDefaults.ts` | Default-Werte + Metrik-Normalisierung (Helper) |
-
-### alerts-tab/ — Alarm-Tab (#180, #700–#701, #702)
-
-| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
-|---|---|---|
-| AlertsTab | `alerts-tab/AlertsTab.svelte` | Tab-Container fuer Alarm-Konfiguration; mobil ≤899px: volle Breite, `.actions`-Bar hidden |
-| AlertCard | `alerts-tab/AlertCard.svelte` | Alert-Karte (Metrik + Schwellwert + Kanäle); mobil: Channel-Chips ≥36px, Inputs ≥120px (#701) |
-| AlertCooldownCard | `alerts-tab/AlertCooldownCard.svelte` | Cooldown-Minuten; mobil ≤899px: Eingabe ≥44px, font-size 16px (iOS-Zoom-Guard, #702) |
-| AlertQuietHoursCard | `alerts-tab/AlertQuietHoursCard.svelte` | Ruhezeiten; mobil ≤899px: Time-Inputs ≥44px, font-size 16px (#702) |
-| AlertMetricTable | `alerts-tab/AlertMetricTable.svelte` | Schwellwert-Tabelle mit Metrik-Zeilen |
-| AlertMetricRow | `alerts-tab/AlertMetricRow.svelte` | Einzelne Metrik-Zeile (Toggle + Schwellwert + Schweregrad) |
-| AlertPreviewCard | `alerts-tab/AlertPreviewCard.svelte` | Vorschau ausgeloester Alarme |
-| alertMetricTable.ts | `alerts-tab/alertMetricTable.ts` | Tabellen-Logik (Helper) |
-| alertPreviewHelpers.ts | `alerts-tab/alertPreviewHelpers.ts` | Vorschau-Logik (Helper) |
-
-**Mobile Responsiveness (Issue #702):** AlertCard, AlertCooldownCard, AlertQuietHoursCard implementieren `@media (max-width: 899px)` mit Touch-Target-Vergrößerung (WCAG): Channel-Chips ≥36px Höhe, Threshold-Input ≥120px breit, Cooldown/Time-Inputs ≥44px Höhe + 16px font-size (verhindert iOS-Zoom). Desktop Layout bleibt unverändert.
-
-### briefing-history/ — Briefing-Verlauf-Dialog (#559)
-
-| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
-|---|---|---|
-| BriefingHistoryDialog | `briefing-history/BriefingHistoryDialog.svelte` | Modal mit dem Versand-Verlauf einer archivierten Tour (Zeitpunkt, Art, Kanäle) |
-
-### briefings-tab/ — Briefing-Zeitplan-Tab (#259)
-
-| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
-|---|---|---|
-| BriefingsTab | `briefings-tab/BriefingsTab.svelte` | Briefing-Zeitplan-Tab (morgen/abend, Kanaele, Optionen) |
-
-### compare/ — Vergleichs-Screen (EPIC #246/#250) & Orts-Vergleich-Wizard (Issue #440)
-
-#### Screen & Report Components (existing)
-
-| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
-|---|---|---|
-| AddReportCard | `compare/AddReportCard.svelte` | Karte zum Hinzufuegen eines Vergleichs-Reports |
-| AutoReportCard | `compare/AutoReportCard.svelte` | Auto-Report-Karte (umgebaut auf ComparePreset, Issue #459) |
-| AutoReportsOverview | `compare/AutoReportsOverview.svelte` | Uebersicht automatischer Reports (ComparePreset-System, Issue #459) |
-| SavePresetDialog | `compare/SavePresetDialog.svelte` | Dialog zum Speichern neuer Presets (Issue #459) |
-| CompareMatrix | `compare/CompareMatrix.svelte` | Vergleichs-Matrix (Locations × Metriken) |
-| CreateGroupDialog | `compare/CreateGroupDialog.svelte` | Dialog zum Anlegen einer Location-Gruppe |
-| HourlyMatrix | `compare/HourlyMatrix.svelte` | Stuendliche Wetter-Matrix |
-| LocationPreviewMap | `compare/LocationPreviewMap.svelte` | Mini-Map-Vorschau im Wizard, Issue #266 |
-| LocationsRail | `compare/LocationsRail.svelte` | Sidebar (Suche + Chip-Filter + Gruppen + Drag-Reorder), Issue #249/#453 |
-| GroupSection | `compare/GroupSection.svelte` | Gruppen-Abschnitt in der Sidebar mit Drag-Reihenfolge, Issue #301/#453 |
-| NewLocationWizard | `compare/NewLocationWizard.svelte` | 3-Schritt-Wizard (Verortung→Benennung→Profil), Issue #249 |
-| PresetHeader | `compare/PresetHeader.svelte` | Kopfzeile fuer Compare-Preset |
-| RecommendationBanner | `compare/RecommendationBanner.svelte` | Empfehlungs-Banner (Winner-Tags) |
-| locationHelpers.ts | `compare/locationHelpers.ts` | Location-Logik inkl. isCoordsValid() (Helper) |
-| subscriptionHelpers.ts | `compare/subscriptionHelpers.ts` | Subscription- und Preset-Logik: presetScheduleLabel, formatLastSent, formatNextSend (Issue #459, #647) |
-
-#### Orts-Vergleich-Wizard (Issue #440 — Create/Edit Mode)
-
-New 5-step wizard for creating and editing compare subscriptions (Orts-Vergleiche). Separate from TripWizard, reuses `Stepper` via `testidPrefix` prop.
-
-| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
-|---|---|---|
-| CompareWizard | `compare/CompareWizard.svelte` | Shell + 5-Schritt-Stepper, State-Management |
-| compareWizardState.svelte.ts | `compare/compareWizardState.svelte.ts` | Zentrale State-Klasse (Runes), analog `wizardState.svelte.ts` |
-| Step1Vergleich | `compare/steps/Step1Vergleich.svelte` | Schritt 1: Name + Region + Aktivitaetsprofil |
-| Step2Orte | `compare/steps/Step2Orte.svelte` | Schritt 2: Orte waehlen via Smart-Import + Library |
-| Step3Metriken | `compare/steps/Step3Metriken.svelte` | Schritt 3: Wetter-Metriken waehlen |
-| Step4Layout | `compare/steps/Step4Layout.svelte` | Schritt 4: Pro-Kanal-Layout (E-Mail/Telegram/Signal/SMS), Issue #442 |
-| Step5Versand | `compare/steps/Step5Versand.svelte` | Schritt 5: Versand + Aktivierung |
-| compareWizardHelpers.ts | `compare/compareWizardHelpers.ts` | Shared helpers (newId, validRegions, mapActivityProfile) |
-
-**Step4Layout (Issue #442):** Directe Adaption von Trip-Wizard Step4Layout. Der Nutzer konfiguriert pro Kanal (Email/Telegram/Signal/SMS) die Wetter-Metriken und deren Reihenfolge im Briefing. Verwendet `OutputLayoutEditor` (gemeinsame Komponente, Issue #431) mit Channel-Tabs + Bucket-Konfiguration (primär/sekundär/aus). Fallback bei neuer Subscription: `autoAssign([], catalog)` statt `weatherMetrics`.
-
-**Routes:**
-- `frontend/src/routes/compare/new/+page.svelte` — Create mode (Wizard-Entry)
-- `frontend/src/routes/compare/new/+page.server.ts` — Server actions (POST /api/subscriptions)
-- `frontend/src/routes/compare/[id]/edit/+page.svelte` — Edit mode (Load existing subscription)
-- `frontend/src/routes/compare/[id]/edit/+page.server.ts` — Server actions (PUT /api/subscriptions/{id})
-
-#### LocationsRail Component (Issue #453)
-
-**File:** `frontend/src/lib/components/compare/LocationsRail.svelte`
-
-Sidebar-Rail für die Compare-Hauptbühne. Zeigt Locations als gruppierte/ungrupierte Liste mit Suche, Chip-Filter nach Gruppen/Aktivitätsprofilen, Constraint-Zähler (min 2 / max 8) mit farblicher Warnung, Leerzustand, und HTML5-Drag-Reihenfolge-Unterstützung.
-
-**Props:**
-```typescript
-interface Props {
-  locations: Location[];
-  groups: Group[];
-  selectedIds: string[];
-  groupedLocations: { sections: { group: Group; locations: Location[] }[]; ungrouped: Location[] };
-  openGroups: Set<string>;
-  allSelected: boolean;
-  onToggleAll: () => void;
-  onToggleLocation: (id: string) => void;
-  onToggleGroup: (id: string) => void;
-  onToggleGroupSelection: (id: string) => void;
-  onShowWeather: (id: string) => void;
-  onEditLocation: (loc: Location) => void;
-  onNewLocation: () => void;
-  onGroupCreated: (group: Group) => void;
-  onReorder?: (sourceId: string, targetId: string) => void;  // NEW Issue #453
-}
-```
-
-**Layout & Sizing (Issue #453):**
-- **Width:** `240px` (fixed, no responsive variants)
-- **Border:** Right border 1px, `--g-ink-faint` at 40% opacity
-- **Sections (top to bottom):**
-  1. Search input
-  2. Constraint-Zähler (nur wenn `locations.length > 0`), TestID: `compare-rail-counter`
-  3. Chip-Filter für Gruppen + Activity-Profile (optional)
-  4. "Alle auswählen" Checkbox
-  5. Gruppierte/Ungrupierte Locations mit Drag-Support
-  6. Footer mit "+ Ort" + "+ Gruppe" Buttons
-
-**Constraint-Zähler Farben (Issue #453):**
-```
-< 2:   --g-danger   (Mindestanzahl unterschritten)
-2–8:   --g-success  (Gültige Bereich)
-> 8:   --g-ink-muted (Obergrenze überschritten, kein Hard-Block)
-```
-
-**EmptyState (Issue #453):**
-Wenn `locations.length === 0`:
-- Zeigt `EmptyState` mit Title "Noch keine Orte" + Description + CTA "Ersten Ort anlegen"
-- TestID des Wrapper-Divs: `compare-rail-empty`
-- Normal-Render (Zähler, Filter, Liste) ist nicht sichtbar
-
-**Drag-and-Drop (Issue #453):**
-- Alle Location-Items (`<li>`) sind `draggable="true"`
-- `ondragstart` setzt intern `dragSourceId`
-- `ondrop` ruft optional `onReorder(sourceId, targetId)` auf
-- Drop auf dasselbe Item wird ignoriert (kein Callback)
-- Keine visuelle Reorder-Animation im Component selbst — Consumer (Compare-Hauptbühne) verantwortlich
-
-**TestIDs:**
-- `compare-rail` — Hauptcontainer
-- `compare-rail-search` — Suchfeld
-- `compare-rail-counter` — Constraint-Zähler
-- `compare-rail-empty` — EmptyState-Wrapper
-- `compare-rail-chip` — Gruppen-Filter-Chip
-- `compare-rail-profile-chip` — Profil-Filter-Chip
-- `compare-rail-new-btn` — "+ Ort"-Button
-- `compare-rail-new-group-btn` — "+ Gruppe"-Button
-- `ungroup-section` — Ungrupierte-Sektion-Wrapper
-- `loc-name-{loc.id}` — Location-Namen-Button
-- `group-section-{group.id}` — Gruppen-Sektion (aus GroupSection)
-
-**Related (Issue #453):**
-- `GroupSection.svelte` — Rendert Gruppen-Blöcke mit neuen DnD-Props `onDragStart` / `onDrop`
-- `EmptyState` — UI-Komponente für Leerzustand (aus `$lib/components/ui/empty-state/`)
-
-#### GroupSection Component (Issue #301/#453)
-
-**File:** `frontend/src/lib/components/compare/GroupSection.svelte`
-
-Render-Komponente für eine einzelne Gruppen-Sektion in LocationsRail. Zeigt klapbare Gruppen-Header (Chevron + Checkbox mit indeterminate-State + Profil-Dot + Name + Count) und darunter Liste mit Locations + Drag-Support.
-
-**Props (Issue #453):**
-```typescript
-interface Props {
-  group: Group;
-  locations: Location[];
-  open?: boolean;
-  selectedIds: string[];
-  onToggle: () => void;
-  onToggleAll: () => void;
-  onToggleLocation: (id: string) => void;
-  onEditLocation: (loc: Location) => void;
-  onShowWeather: (id: string) => void;
-  onDragStart?: (id: string) => void;    // NEW Issue #453
-  onDrop?: (targetId: string) => void;   // NEW Issue #453
-}
-```
-
-**Drag-Support (Issue #453):**
-- Alle Location-Items in der ausgeklappten Liste sind `draggable="true"`
-- `ondragstart={() => onDragStart?.(loc.id)}` — Parent (LocationsRail) setzt `dragSourceId`
-- `ondragover={(e) => e.preventDefault()}` — Standard DnD-Handling
-- `ondrop={() => onDrop?.(loc.id)}` — Parent ruft `onReorder` auf; Logik: `if (dragSourceId !== targetId)`
-
-**TestIDs:**
-- `group-section-{group.id}` — Sektion-Wrapper
-- `compare-rail-group-header` — Gruppen-Header-Zeile
-- `group-count-{group.id}` — Locations-Zähler im Header
+Konzeptionelles (Atome mit Beispielen, Design Tokens, App-Shell-Navigation,
+Naming-Regeln) steht weiterhin in diesem Dokument — siehe Sektionen oben/unten.
 
 ---
-
-### edit/ — Trip-Bearbeitung
-
-| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
-|---|---|---|
-| TripEditView | `edit/TripEditView.svelte` | Container der Trip-Bearbeitung |
-| EditReportConfigSection | `edit/EditReportConfigSection.svelte` | Report-Konfiguration (Zeiten, Kanaele, Optionen) |
-| EditRouteSection | `edit/EditRouteSection.svelte` | Routen-/Region-Bearbeitung |
-| EditStagesPanelNew | `edit/EditStagesPanelNew.svelte` | Etappen-Panel |
-| EditWeatherSection | `edit/EditWeatherSection.svelte` | Wetter-Metriken-Bearbeitung |
-| AccordionSection | `edit/AccordionSection.svelte` | Aufklappbarer Abschnitts-Wrapper |
-
-### email-preview/ — Email-Vorschau-Kopf
-
-| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
-|---|---|---|
-| EmailPreviewHeader | `email-preview/EmailPreviewHeader.svelte` | Kopfzeile der Email-Vorschau |
-| headerStats.ts | `email-preview/headerStats.ts` | Statistik-Logik fuer den Kopf (Helper) |
-
-### preview/ — Output-Vorschau (Epic #140)
-
-| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
-|---|---|---|
-| EmailIframe | `preview/EmailIframe.svelte` | Gerenderte HTML-Mail im iframe |
-| SmsPhoneFrame | `preview/SmsPhoneFrame.svelte` | SMS-Vorschau im iOS-Phone-Frame |
-| previewHelpers.ts | `preview/previewHelpers.ts` | Vorschau-Logik (Helper) |
-
-### trip-detail/ — Trip-Detail-Ansicht (#302/#138/#259)
-
-| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
-|---|---|---|
-| TripHeader | `trip-detail/TripHeader.svelte` | H1-Header mit Breadcrumb + Status; Titel-Bearbeitung via Stift-Icon (Issue #713) |
-| TripOverview | `trip-detail/TripOverview.svelte` | 2×2 DetailCard-Grid (Uebersicht-Tab) |
-| TripTabs | `trip-detail/TripTabs.svelte` | Tab-Leiste mit Badge-Zaehlern |
-| TripStatusBadge | `trip-detail/TripStatusBadge.svelte` | Status-Badge des Trips |
-| DetailCard | `trip-detail/DetailCard.svelte` | Karte im Uebersicht-Grid |
-| StageList | `trip-detail/StageList.svelte` | Etappen-Liste |
-| StageDetailRow | `trip-detail/StageDetailRow.svelte` | Etappen-Detailzeile (SVG-Icons, #322) |
-| WaypointsPanel | `trip-detail/WaypointsPanel.svelte` | Panel-Wrapper fuer Wegpunkt-Editor |
-| WeatherMetricsTab | `shared/WeatherMetricsTab.svelte` (Issue #1311, C1 von Epic #1301: aus `trip-detail/` extrahiert, `context="route"\|"vergleich"` — geteilt mit Compare-Hub) | Wetter-Metriken-Tab |
-| WeatherMetricsPreviewCard | `trip-detail/WeatherMetricsPreviewCard.svelte` | Live-Vorschau der Metriken-Tabelle |
-| MetricGroup | `trip-detail/MetricGroup.svelte` | Metrik-Gruppe im Editor |
-| MetricCheckbox | `trip-detail/MetricCheckbox.svelte` | Metrik-Auswahl-Checkbox |
-| TablePreview | `trip-detail/TablePreview.svelte` | Tabellen-Vorschau der Metriken |
-| SavePresetDialog | `trip-detail/SavePresetDialog.svelte` | Dialog zum Speichern eines Presets |
-| PresetRow | `trip-detail/PresetRow.svelte` | Preset-Listenzeile |
-| ActiveMetricRow | `trip-detail/ActiveMetricRow.svelte` | Aktive-Metrik-Zeile |
-| BucketSection | `trip-detail/BucketSection.svelte` | Metrik-Bucket-Abschnitt |
-| BucketSectionOff | `trip-detail/BucketSectionOff.svelte` | Deaktivierter Bucket-Abschnitt |
-| FullProfile | `trip-detail/FullProfile.svelte` | Vollstaendige Profil-Ansicht |
-| AboutOutputLayout | `trip-detail/AboutOutputLayout.svelte` | Erklaer-Layout zur Ausgabe |
-| BriefingPreviewCard | `trip-detail/BriefingPreviewCard.svelte` | Briefing-Vorschau-Karte |
-| ChannelPreviewCard | `trip-detail/ChannelPreviewCard.svelte` | Kanal-Vorschau-Karte |
-| ChannelPreviewBlock | `trip-detail/ChannelPreviewBlock.svelte` | Kanal-Vorschau-Block |
-| ChannelLimitMarkers | `trip-detail/ChannelLimitMarkers.svelte` | Zeichen-Limit-Marker (SMS) |
-| PreviewCard | `trip-detail/PreviewCard.svelte` | Generische Vorschau-Karte |
-| OutputLayoutEditor | `shared/OutputLayoutEditor.svelte` (re-exported via `organisms/index.ts`, Issue #475) | Universal Layout-Editor mit Channel-Tabs + Bucket-Reorder (Issue #431, reused in Compare Issue #442) |
-| metricsEditor.ts | `trip-detail/metricsEditor.ts` | Metriken-Editor-Logik (Helper) — `autoAssign`, `buildWeatherConfigMetrics`, `move`, `reorder`, `CHANNEL_COL_BUDGET` |
-
-### trip-detail/waypoints/ — Wegpunkt-Editor (Epic #137)
-
-| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
-|---|---|---|
-| EtappenStrip | `trip-detail/waypoints/EtappenStrip.svelte` | Etappen-Strip mit Drag-Drop |
-| MapCanvas | `trip-detail/waypoints/MapCanvas.svelte` | Leaflet-Karte mit OpenTopoMap-Tiles (Issue #495) |
-| WaypointPin | `trip-detail/waypoints/WaypointPin.svelte` | Wegpunkt-Marker auf der Karte |
-| PauseStageView | `trip-detail/waypoints/PauseStageView.svelte` | Ansicht fuer Pausen-Etappen |
-| ProfileEditor | `trip-detail/waypoints/ProfileEditor.svelte` | Hoehenprofil-Editor |
-| StageCard | `trip-detail/waypoints/StageCard.svelte` | Etappen-Karte |
-| WaypointCard | `trip-detail/waypoints/WaypointCard.svelte` | Wegpunkt-Editor-Karte |
-
-### trip-new/ — Progressiver Anlege-Editor (#622/#661)
-
-| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
-|---|---|---|
-| TripNewEditor | `trip-new/TripNewEditor.svelte` | Progressive-Tab-Editor fuer `/trips/new` (Desktop + Mobile-Paritaet, Factory-Pattern fuer Event-Handler) |
-| tripNewLogic.ts | `trip-new/tripNewLogic.ts` | Freischalt-/Fortschritts-Logik (Tabs, Progress) — reine Funktionen, testbar mit `node:test` |
-
-### trip-wizard/ — Trip-Wizard (Epic #136) & Reusable Stepper
-
-Architektur + Detail siehe Abschnitt „Trip-Wizard Components" oben. Inventar-Ergaenzung:
-
-| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
-|---|---|---|
-| TripWizardShell | `trip-wizard/TripWizardShell.svelte` | Shell + 5-Schritt-Stepper |
-| Stepper | `trip-wizard/Stepper.svelte` | Generischer Schritt-Indikator, reusbar via `testidPrefix` + `onStepClick` Props (Issue #440) |
-| Step1Profile | `trip-wizard/steps/Step1Profile.svelte` | Schritt 1: Profil + Name + Datum |
-| Step2Stages | `trip-wizard/steps/Step2Stages.svelte` | Schritt 2: GPX-Upload, Drag-Sort, Pause |
-| Step3Waypoints | `trip-wizard/steps/Step3Waypoints.svelte` | Schritt 3: Wegpunkt-Bestaetigung |
-| Step4Briefings | `trip-wizard/steps/Step4Briefings.svelte` | Schritt 4: Briefings & Kanaele |
-| Step4Layout | `trip-wizard/steps/Step4Layout.svelte` | Schritt 4 (alt.): Pro-Kanal-Layout (E-Mail/Telegram/Signal/SMS), Issue #431 |
-| ChannelToggle | `trip-wizard/steps/ChannelToggle.svelte` | Kanal-Umschalter |
-| ProfileChart | `trip-wizard/steps/ProfileChart.svelte` | Profil-Chart-Vorschau |
-| ReportRow | `trip-wizard/steps/ReportRow.svelte` | Report-Zeile |
-| StageRow | `trip-wizard/steps/StageRow.svelte` | Etappen-Zeile |
-| WaypointRow | `trip-wizard/steps/WaypointRow.svelte` | Wegpunkt-Zeile |
-| TemplatePicker | `trip-wizard/templates/TemplatePicker.svelte` | Vorlagen (GR20, KHW, Stubai) |
-| stepperCompact.ts | `trip-wizard/stepperCompact.ts` | Kompakter Stepper-Zustand (Helper) |
-| stepperState.ts | `trip-wizard/stepperState.ts` | Stepper-Zustand (Helper) |
-| tripTemplates.ts | `trip-wizard/templates/tripTemplates.ts` | Vorlagen-Definitionen (Helper) |
-
-### Top-Level (direkt in components/)
-
-| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
-|---|---|---|
-| LocationForm | `LocationForm.svelte` | Formular zum Anlegen/Bearbeiten einer Location |
-| SubscriptionForm | `SubscriptionForm.svelte` | Formular fuer Abonnement-/Empfaenger-Daten |
-| WeatherConfigDialog | `WeatherConfigDialog.svelte` | Dialog fuer Wetter-Konfiguration, Issue #285 |
-
-### routes/_home/ — Route-lokale Kacheln & Helpers
-
-Pfade relativ zu `frontend/src/routes/_home/`.
-
-| Komponente | Pfad rel. zu routes/_home/ | Kurzbeschreibung |
-|---|---|---|
-| TripKachel | `TripKachel.svelte` | Trip-Kachel auf der Startseite |
-| CompareKachel | `CompareKachel.svelte` | Vergleichs-Kachel auf der Startseite |
-| EmptyKachel | `EmptyKachel.svelte` | Platzhalter-Kachel (kein Inhalt) |
-| cockpitHelpers.ts | `cockpitHelpers.ts` | Pure Helpers: `liveTrip`, `deriveNextSend` (Issue #571), `homeCompareTimeline` (Issue #647) |
 
 ## Atomic-Design-Bibliothek (Epic #368)
 

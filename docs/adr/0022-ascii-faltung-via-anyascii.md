@@ -3,7 +3,7 @@
 - **Status:** Akzeptiert
 - **Datum:** 2026-07-13
 - **Bezug:** GitHub-Issue #1253 (gebündelt mit #1252), Spec
-  `docs/specs/modules/fix_1252_1253_kanal_text.md`, `docs/reference/sms_format.md:27,66`,
+  `docs/specs/_archive/modules/fix_1252_1253_kanal_text.md`, `docs/reference/sms_format.md:27,66`,
   Implementierung `src/utils/ascii_fold.py`
 
 ## Kontext

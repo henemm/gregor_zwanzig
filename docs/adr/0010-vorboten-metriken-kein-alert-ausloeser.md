@@ -2,7 +2,7 @@
 
 - **Status:** Akzeptiert
 - **Datum:** 2026-06-26
-- **Bezug:** GitHub-Issue #889, Spec `docs/specs/modules/issue_889_feuchte_alerts.md`
+- **Bezug:** GitHub-Issue #889, Spec `docs/specs/_archive/modules/issue_889_feuchte_alerts.md`
 
 ## Kontext
 

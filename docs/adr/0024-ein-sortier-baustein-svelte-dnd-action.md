@@ -3,9 +3,9 @@
 - **Status:** Akzeptiert (PO-Freigabe „go" am 2026-07-16)
 - **Datum:** 2026-07-16
 - **Bezug:** GitHub-Issue #1272 (aus Prod-Audit 2026-07-16, Befund 7), Spec
-  `docs/specs/modules/issue_1272_shared_sortable.md`, Kontext
+  `docs/specs/_archive/modules/issue_1272_shared_sortable.md`, Kontext
   `docs/context/refactor-1272-drag-sort.md`. Löst Teile von
-  `docs/specs/modules/issue_433_layout_dnd.md` ab (dort AC-3 und AC-4).
+  `docs/specs/_archive/modules/issue_433_layout_dnd.md` ab (dort AC-3 und AC-4).
 
 ## Kontext
 

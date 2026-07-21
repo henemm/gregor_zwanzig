@@ -490,83 +490,23 @@ Leitet GPX-Upload vom SvelteKit-Frontend via Go-Proxy an Python FastAPI weiter. 
 
 ---
 
-## 10) Subscriptions CRUD Endpoints (M5b)
+## 10) Orts-Vergleich-Presets & Briefing-Abos (ersetzt Subscriptions CRUD)
 
-**Handler:** `internal/handler/subscription.go` | **Store:** `internal/store/store.go` | **Model:** `internal/model/subscription.go`
+> Die alte `CompareSubscription`-Abstraktion und alle `/api/subscriptions`-Routen
+> wurden entfernt und liefern absichtlich 404
+> (`internal/router/legacy_subscription_routes_removed_test.go`). Ebenso entfernt:
+> die Legacy-Scheduler-Routen `/api/scheduler/morning-subscriptions|evening-subscriptions|subscriptions-status`.
+> Historische Details: Git-Historie dieses Dokuments.
 
-**Pfad-Prefix:** `/api/subscriptions`
+Heute existieren zwei getrennte Domänenobjekte:
 
-### CompareSubscription DTO
+| Domäne | Pfad-Prefix | Handler | Persistenz |
+|---|---|---|---|
+| **Compare-Presets** (Orts-Vergleich) | `/api/compare/presets` (CRUD, `PATCH …/{id}/state`, `POST …/{id}/send`), Vorschau: `POST /api/preview/compare/{preset_id}` | `internal/handler/compare_preset.go` | `data/users/{userID}/briefings/` (kind=vergleich) |
+| **Briefing-Subscriptions** (Trip-Briefing-Abos, ADR-0023) | `/api/briefings` | `internal/handler/briefing_subscription.go` | `data/users/{userID}/briefings/` |
 
-```go
-type CompareSubscription struct {
-    ID              string                 `json:"id"`
-    Name            string                 `json:"name"`
-    Enabled         bool                   `json:"enabled"`
-    Locations       []string               `json:"locations"`
-    ForecastHours   int                    `json:"forecast_hours"`
-    TimeWindowStart int                    `json:"time_window_start"`
-    TimeWindowEnd   int                    `json:"time_window_end"`
-    Schedule        string                 `json:"schedule"`
-    Weekday         int                    `json:"weekday"`
-    IncludeHourly   bool                   `json:"include_hourly"`
-    TopN            int                    `json:"top_n"`
-    SendEmail       bool                   `json:"send_email"`
-    SendSignal      bool                   `json:"send_signal"`
-    DisplayConfig   map[string]interface{} `json:"display_config,omitempty"`
-}
-```
-
-### Endpoints
-
-| Method | Path | Status | Description |
-|--------|------|--------|-------------|
-| GET | `/api/subscriptions` | 200 | Liste aller Subscriptions (`[]` bei leer, nie `null`) |
-| GET | `/api/subscriptions/{id}` | 200 / 404 | Einzelne Subscription |
-| POST | `/api/subscriptions` | 201 / 400 / 409 | Neue Subscription erstellen |
-| PUT | `/api/subscriptions/{id}` | 200 / 400 / 404 | Subscription aktualisieren (Pfad-ID massgeblich) |
-| DELETE | `/api/subscriptions/{id}` | 204 / 404 | Subscription loeschen |
-
-### Validierungsregeln (POST/PUT)
-
-| Feld | Constraint |
-|------|-----------|
-| `id` | nicht leer |
-| `name` | nicht leer |
-| `forecast_hours` | in `{24, 48, 72}` |
-| `schedule` | in `{"daily_morning", "daily_evening", "weekly"}` |
-| `time_window_start` | 0–23 |
-| `time_window_end` | 1–23 |
-| — | `time_window_start < time_window_end` |
-| `top_n` | 1–10 |
-| `weekday` | 0–6 |
-
-### Error Responses
-
-| Status | Body | Szenario |
-|--------|------|----------|
-| 400 | `{"error":"validation_error","detail":"..."}` | Pflichtfeld fehlt oder Wertebereich verletzt |
-| 400 | `{"error":"bad_request"}` | JSON nicht dekodierbar |
-| 404 | `{"error":"not_found"}` | ID nicht gefunden (GET/PUT/DELETE) |
-| 409 | `{"error":"already_exists"}` | Duplikat-ID bei POST |
-
-### Storage
-
-- Datei: `data/users/{userID}/compare_subscriptions.json`
-- Format: `{"subscriptions": [...]}`
-- Legacy-Migration: `schedule:"weekly_friday"` → `schedule:"weekly"` + `weekday:4` (beim Laden)
-- V1: `userID` hardcodiert auf `"default"`
-
-### Source Files
-
-| Datei | Aenderung |
-|-------|-----------|
-| `internal/model/subscription.go` | NEU — `CompareSubscription` Struct |
-| `internal/store/store.go` | +`LoadSubscriptions`, `SaveSubscriptions`, `DeleteSubscription` |
-| `internal/handler/subscription.go` | NEU — 5 HTTP-Handler |
-| `cmd/server/main.go` | +5 Route-Registrierungen |
-
----
+Feld-Definitionen und Validierungsregeln: massgeblich sind die Go-Structs in
+`internal/model/` und die Handler-Validierung — hier nicht dupliziert.
 
 ---
 
@@ -630,7 +570,7 @@ Trip-weites Kanal-Set für den Alert-Versand (Abweichungs-Alerts und amtliche So
 | `alert_channels` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend (Legacy-Verhalten):** Alert-Kanäle erben die aktiven Briefing-Kanäle aus `report_config` (`send_email`/`send_telegram`/`send_sms`) — kein Verhaltenswechsel für Bestand. **Gesetzt:** ersetzt beim Alert-Versand den geerbten Briefing-Anteil (all-or-nothing, alle drei Felder explizit) |
 | `alert_channels.email`/`.telegram`/`.sms` | bool | einzelne Kanal-Flags |
 
-Präzedenz unverändert: per-Regel-`channels`-Overrides (Issue #638, s. „Versand-Logik (Kanal pro Alert)" oben) gewinnen weiterhin über den geerbten/gesetzten Trip-Anteil; das SMS-Tier-Gate bleibt in jedem Fall aktiv. Quelle: `internal/model/trip.go` (`AlertChannelsConfig`), Spec `docs/specs/modules/issue_1258_alarme_tab_official_warnings.md` Abschnitt 9.
+Präzedenz unverändert: per-Regel-`channels`-Overrides (Issue #638, s. „Versand-Logik (Kanal pro Alert)" oben) gewinnen weiterhin über den geerbten/gesetzten Trip-Anteil; das SMS-Tier-Gate bleibt in jedem Fall aktiv. Quelle: `internal/model/trip.go` (`AlertChannelsConfig`), Spec `docs/specs/_archive/modules/issue_1258_alarme_tab_official_warnings.md` Abschnitt 9.
 
 ### official_warnings (Issue #1258)
 
@@ -1085,7 +1025,7 @@ Returns catalog of all available weather metrics with format mode options and de
 | metrics[].unit | string | Unit of measurement |
 | metrics[].format_modes | string[] | Supported format modes for this metric (`raw`, `scale`, `simplified`, `symbol`) |
 | metrics[].default_format_mode | string | Recommended default format mode (must be in `format_modes`) |
-| metrics[].selectable | bool | Whether this metric appears in the user-facing selector (Wizard/Editor). Backend internal metric (`confidence`) has `selectable=false` (Issue #710) — these are never returned by `/api/metrics` but used internally for aggregation/forecast-hints |
+| metrics[].selectable | bool | Whether this metric appears in the user-facing selector (Wizard/Editor). Backend internal metric (`confidence`) has `selectable=false` (Issue #710) — these are never returned by `/api/metrics` but used internally for aggregation/forecast-hints (UI-Auswahl heißt heute Editor-Metrik-Auswahl, kein Wizard) |
 | metrics[].sms_code | string | GSM-7-safe short token for the metric in SMS/Subject/Telegram alert tokens (e.g., `W`, `G`, `R`, `PR`, `TH`, `CP`, `SL`, `VS`, `HU`). Single source for alert renderers (Issue #914 Slice 1); the metric catalog is the only place these are defined |
 | metrics[].decimals | int \| null | Rounding precision for display (e.g., `precipitation: 1`, `visibility: 1`, most metrics `0`). `null` ⇒ fall back to the unit-based heuristic in `format_metric_value()` |
 | metrics[].cmp | string | Comparison direction: `"über"` or `"unter"`. Single source for the direction/arrow used by deviation and absolute alert detection (Issue #914 Slice 1) — replaces the former hand-coded `_ALERT_METRIC_COMPARISON` dict. **Not** a threshold comparator for the deviation-alert (live) path: per ADR-0013, an event triggers there when `abs(value_to − value_from) ≥ threshold` regardless of `cmp`; `cmp` remains a literal exceeds/falls-below comparator only for `ABSOLUTE`-kind rules (`_detect_absolute_changes()`), which is unused in the send path (`include_absolute=False`) |
@@ -1107,7 +1047,7 @@ Returns catalog of all available weather metrics with format mode options and de
 
 **Notes:**
 
-- Frontend uses `format_modes` to filter dropdown options in Wizard Step 3 and WeatherConfigDialog
+- Frontend uses `format_modes` to filter dropdown options in der Metrik-Auswahl der Editoren (WeatherMetricsTab, WeatherConfigDialog)
 - `MetricConfig.format_mode` in persisted configs (e.g., `trips.json`, `locations.json`) refers to one of the values in the corresponding metric's `format_modes` array
 - Legacy code may use `MetricConfig.use_friendly_format` (deprecated boolean) — loader automatically maps to `format_mode` for backward compatibility
 - **Confidence (`confidence`) is NOT a selectable per-stage weather metric** (Issue #710): Forecast reliability is a meta-attribute (Ensemble API, multi-day validity) and appears only as forecast-reliability hints in email/SMS output (e.g., "From Wednesday, forecast confidence is lower") and as SMS icon indicators. The metric definition exists internally for aggregation/scoring but is marked `selectable=false` and filtered from `/api/metrics` — **never appears in Trip Editor/Wizard/Metric Selector UI, even for legacy trips with saved `confidence` metric configs** (configs load silently, metric ignored in render paths). This rule (since 2026-06-10) prevents the metric from re-appearing across future versions.
@@ -2237,7 +2177,7 @@ verändert — Freigabe erfolgt weiterhin manuell durch den PO.
   die bereits gesendete `200`-Antwort nicht — der Antrag ist unabhängig vom Mail-Ergebnis
   persistiert.
 - Kein Dedup, kein Clear-Endpoint, kein Rate-Limiting über die Session-Auth hinaus — siehe
-  `docs/specs/modules/issue_1071_tier_change_request.md` (Known Limitations).
+  `docs/specs/_archive/modules/issue_1071_tier_change_request.md` (Known Limitations).
 
 ### User Model Extensions
 
@@ -2286,7 +2226,7 @@ type WebAuthnCredential struct {
 
 ## 20) Preview Endpoints (Issue #189, #483, #1270)
 
-Provides preview rendering of trip reports in Email, SMS, Signal, or Telegram formats. Supports both live weather and fixture-based demo mode. Seit Issue #1270 zusätzlich: EIN Compare-Preview-Endpoint, der alle Kanäle eines Orts-Vergleich-Presets in einer Antwort liefert (s. `POST /api/preview/compare/{preset_id}` unten).
+Provides preview rendering of trip reports in Email, SMS, or Telegram formats (Signal wurde app-weit entfernt, Issue #610). Supports both live weather and fixture-based demo mode. Seit Issue #1270 zusätzlich: EIN Compare-Preview-Endpoint, der alle Kanäle eines Orts-Vergleich-Presets in einer Antwort liefert (s. `POST /api/preview/compare/{preset_id}` unten).
 
 **Handler:** `api/routers/preview.py` | **Routing:** `cmd/server/main.go` (Trip-Routen), `internal/router/router.go:161-167` (Compare-Proxy)
 
@@ -2342,21 +2282,6 @@ Render trip report preview as SMS text (≤160 characters per message).
 ```
 Content-Type: text/plain
 Grüße! Morgen: 18°C, Wind 22 km/h, Regenwahrscheinlichkeit 20%.
-```
-
-**Error Responses:** Same as `/email`
-
-### GET /api/preview/{trip_id}/signal
-
-Render trip report preview for Signal channel.
-
-**Query Parameters:** Same as `/email` (type, date, demo)
-
-**Response 200:**
-
-```
-Content-Type: text/plain
-<Signal-formatted message>
 ```
 
 **Error Responses:** Same as `/email`
@@ -2514,7 +2439,7 @@ Retrieves briefing delivery log for a specific trip (archived or active).
 |-------|------|-------------|
 | sent_at | datetime | ISO-8601 UTC timestamp of briefing send |
 | kind | enum | Briefing type: `"morning"` or `"evening"` |
-| channels | string[] | Delivery channels used (e.g., `["email"]`, `["email", "signal"]`) |
+| channels | string[] | Delivery channels used (e.g., `["email"]`, `["email", "telegram"]`) |
 
 **Failure Modes:**
 
@@ -2806,7 +2731,7 @@ function corridorInside(value, min, max) {
   nach `corridors[notify]` und Compare-`ideal_ranges` nach `corridors[mark]`, verlustfrei
   (Report `alt → neu` je Eintrag), respektiert #1191-Erhalt (`active_metrics: []` bleibt leer).
 
-**Spec:** `docs/specs/modules/issue_1231_korridor_editor.md`
+**Spec:** `docs/specs/_archive/modules/issue_1231_korridor_editor.md`
 
 ---
 
@@ -2897,7 +2822,7 @@ function corridorInside(value, min, max) {
   Trip jetzt als `ERROR` statt `warning`. Bestandsdaten-Migration:
   `scripts/migrate_1244_null_lists.py` (Dry-Run-Default, `--execute`, tar.gz-Backup, idempotent).
   Erweitert die bisherige AlertRules-only-Coercion aus Issue #205. Siehe
-  `docs/specs/modules/fix_1244_null_list_fields.md`.
+  `docs/specs/_archive/modules/fix_1244_null_list_fields.md`.
 - 2026-07-12: Issue #1231 (Slice 1 von Epic #29 „Briefing-Abo-Chassis") — neues additives
   Datenmodell `Corridor{metric, range:[min|null,max|null], notify, mark, prio?}` an
   `Trip.Corridors` (Go) und `ComparePreset.Corridors` (Go), Python-Pendant in
@@ -2907,7 +2832,7 @@ function corridorInside(value, min, max) {
   `corridorInside()` in Python (`src/services/corridor_match.py`) und TS
   (`frontend/src/lib/components/shared/corridor-editor/corridorMatch.ts`). Loader normalisiert malformed
   `range` defensiv (nie trip-unladbar). Siehe Section 24 und
-  `docs/specs/modules/issue_1231_korridor_editor.md`.
+  `docs/specs/_archive/modules/issue_1231_korridor_editor.md`.
 - 2026-07-11: Issue #1226 — `POST /api/auth/register` bekommt neues Pflichtfeld `email`
   (minimale `strings.Contains(email, "@")`-Prüfung, kein Uniqueness-Check); neue
   Fehlerantworten `validation failed` (fehlend) und `invalid_email` (kein `@`). Bei
@@ -2916,7 +2841,7 @@ function corridorInside(value, min, max) {
   Google-OAuth-Erstanmeldung (`createOAuthUser`) und Passkey-Public-Registrierung
   (`PasskeyRegisterPublicFinishHandler`), nicht mehr nur bei Profil-E-Mail-Änderungen.
   Kein Dispatch bei OAuth-Login eines bestehenden Nutzers. Siehe
-  `docs/specs/modules/fix_1226_register_verify.md`.
+  `docs/specs/_archive/modules/fix_1226_register_verify.md`.
 - 2026-07-10: Issue #1212 (Slice R1) — neuer interner Endpoint `GET
   /api/_internal/trips/{trip_id}/stages-weather` (`api/routers/internal.py`,
   `src/services/stage_weather.py::compute_stage_weather()`): liefert pro Etappe
@@ -2935,9 +2860,9 @@ function corridorInside(value, min, max) {
   von diesem Issue nicht betroffen). Der Observability-Endpoint aus Issue #464
   (`POST /api/_validator/compare-email-preview`) nimmt das Request-Feld `winner_tags`
   weiterhin an, ignoriert es aber (Parameter im Renderer entfernt; Body-Schema
-  unverändert für Abwärtskompatibilität). Siehe `docs/specs/modules/issue_1110_compare_mail_v2.md`
-  (löst `docs/specs/modules/issue_253_compare_email.md` und
-  `docs/specs/modules/issue_460_compare_email_template.md` ab, beide als `status: superseded`
+  unverändert für Abwärtskompatibilität). Siehe `docs/specs/_archive/modules/issue_1110_compare_mail_v2.md`
+  (löst `docs/specs/_archive/modules/issue_253_compare_email.md` und
+  `docs/specs/_archive/modules/issue_460_compare_email_template.md` ab, beide als `status: superseded`
   markiert).
 - 2026-07-07: Issue #1071 (Slice 4 aus Epic #1067 Nutzerlevel Free/Standard/Premium, letztes
   Slice — Epic damit VOLLSTÄNDIG) — neuer Endpoint `POST /api/auth/tier-change-request` für
@@ -2945,12 +2870,12 @@ function corridorInside(value, min, max) {
   `requested_at` (beide `omitempty`, `requested_at` serverseitig Pointer-Typ). Antrag wird per
   Read-Modify-Write in `user.json` vermerkt und löst eine asynchrone Mail an `PO_EMAIL` aus; das
   effektive `tier`-Feld ändert sich dadurch nicht. Siehe
-  `docs/specs/modules/issue_1071_tier_change_request.md`.
+  `docs/specs/_archive/modules/issue_1071_tier_change_request.md`.
 - 2026-07-07: Issue #1068 (Slice 1 aus Epic #1067 Nutzerlevel Free/Standard/Premium) — `GET
   /api/auth/profile` liefert neu ein Feld `tier` (`free`/`standard`/`premium`, immer vorhanden,
   Default `free` falls im `user.json` nicht gesetzt, Fallback nur beim Lesen, kein Rückschreiben).
   Reine Anzeige (Badge im Account-Bereich), kein Channel-Gating, keine Alert-Frequenz-Logik in
-  diesem Slice. Siehe `docs/specs/modules/issue_1068_tier_model_display.md`.
+  diesem Slice. Siehe `docs/specs/_archive/modules/issue_1068_tier_model_display.md`.
 - 2026-07-03: Issue #1004 — SSoT-Fix Segment-Startzeit (Re-Fix von #995 Gruppe A, verworfener
   Flag-Ansatz): das nie persistierte `Waypoint.time_window_origin` (siehe Eintrag #995 unten)
   wird ersatzlos entfernt. Es gibt genau EINE massgebliche Startzeit pro Etappe —
@@ -2958,7 +2883,7 @@ function corridorInside(value, min, max) {
   `arrival_override` > `stage.start_time` (Segment 1) > `arrival_calculated` (Naismith) >
   Default 08:00; `time_window` fliegt komplett aus dem Vergleich (bleibt nur Roundtrip-Feld),
   gilt sofort für ALLE Trips inkl. Bestand ohne Migration. Kein Wire-Format-Impact. See
-  `docs/specs/modules/issue_1004_startzeit_ssot.md`.
+  `docs/specs/_archive/modules/issue_1004_startzeit_ssot.md`.
 - 2026-07-03: Issue #1001 — Telegram-Ausgabe neu gebaut (Multi-Bubble-Format): `GET
   /api/preview/{trip_id}/telegram` liefert zusätzlich `bubbles: list[str]` neben dem
   bestehenden `body`-Feld (additiv, rückwärtskompatibel — `body` bleibt die mit
@@ -2975,23 +2900,23 @@ function corridorInside(value, min, max) {
   `trip_report_scheduler.py::_get_active_trips()` überspringt pausierte Trips beim automatischen
   Versand — das Go-Feld `PausedAt` selbst war bereits seit Issue #153 Teil des Trip-DTOs (siehe
   oben), neu ist nur die Python-seitige Auswertung. Manueller Test-Versand und Alert-Dispatch
-  bleiben unberührt. See `docs/specs/modules/issue_995_mail_bugs_bundle.md`.
+  bleiben unberührt. See `docs/specs/_archive/modules/issue_995_mail_bugs_bundle.md`.
 - 2026-06-11: Issue #733 — Briefing-Mail-Validator (Marker-Headers + Plausibilität-Gate): `build_mime_message()` erweitert um optionale Parameter `mail_type` / `mail_format` (setzen `X-GZ-Mail-Type` / `X-GZ-Format` Header additiv, rückwärts-kompatibel). Scheduler + CLI taggen ausgehende Mails deterministisch: `trip-briefing/full|compact` (Briefing) vs. `compare/full` (Orts-Vergleich). Neuer Validator `.claude/hooks/briefing_mail_validator.py`: dispatcht auf Header, prüft **Trip-Briefing-Mails format-spezifisch auf Plausibilität** (full: multipart/alternative, HTML+Plain, ≥1 Stundentabelle, Werte self-konsistent; compact: single text/plain, 7bit, isascii, <2 KB, keine Stundentabelle). Compare-Mails bekommen No-Op-Klassifikation (Exit 0). Marker-Header ermöglichen deterministische Routing zu kanonischen Validatoren: `email_spec_validator.py` (Orts-Vergleich, fest auf Winner-Box verdrahtet) / `briefing_mail_validator.py` (Briefing). CLAUDE.md Sektion „BRIEFING-MAIL-VALIDATOR" dokumentiert Pflicht-Gate + Scope-Trennung. Siehe `docs/reference/renderer_email_spec.md` Sektion „Marker Headers and Validation Routing" und `docs/specs/modules/briefing_mail_validator.md`.
-- 2026-06-11: Issue #722 [#709 Slice 2] — E-Mail-Format Kompakt (Nur-Text, minimal-Byte): Neuer Format-Schalter `TripReportConfig.email_format: 'full' | 'compact'` (default `'full'`). `'full'` = bestehende multipart-HTML-Mail mit stündlichen Werte-Tabellen (byte-identisch unverändert). `'compact'` = reine `text/plain`-Mail (single part, kein HTML, kein multipart), reines ASCII (7bit-CTE), mit fix nur Kopf + Metriken-Überblick + Ausblick + Footer (ohne Baustein-Toggles), ~95% kleiner (~1 KB für Wanderer mit schlechter Konnektivität). Backend: neuer isolierter `render_compact()`-Renderer (`src/output/renderers/email/compact.py`, ~50 LoC), `build_mime_message()` extrahiert (`html=False` → `us-ascii`/7bit), Scheduler leitet Email-Format durch. Frontend: Format-Schalter in `EditReportConfigSection.svelte`, Baustein-Gruppe bei compact deaktiviert (UI-Hinweis). Go-Modell `ReportConfig` Passthrough (no changes). Tests: Backend E2E gegen Staging (AC-1–5 Multipart-Strukturverifizierung + ASCII-Validierung + Baustein-Ignorance), Playwright E2E (AC-6 UI-Persistenz), Multi-User (AC-7). See `docs/specs/modules/issue_722_email_compact_format.md`.
-- 2026-06-10: Issue #702 — Alerts-Tab Mobile-Parität TM2 (Frontend CSS-only, Epic #700 Slice 2/2): `AlertsTab.svelte`, `AlertCard.svelte`, `AlertCooldownCard.svelte`, `AlertQuietHoursCard.svelte` mit `@media (max-width: 899px)` Breakpoint-spezifischen Touch-Target-Sizing: Channel-Chips ≥36px Höhe, Threshold-Input ≥120px breit, Cooldown/Time-Inputs ≥44px Höhe + 16px font-size (verhindert iOS-Auto-Zoom). Desktop Layout bleibt byte-identisch. `.actions`-Bar auf mobil ausgeblendet, Mobile-Footer-Button sichtbar (bestehend). Keine API/DTO-Änderungen. Tests: Playwright E2E gegen Staging @375px Viewport (AC-1/AC-2/AC-3/AC-5 Touch-Targets, AC-4 Desktop-Regression). See `docs/specs/modules/issue_702_alerts_mobile_parity.md`.
-- 2026-06-10: Issue #721 (Slice 1 von #709) — E-Mail-Ausblick verschmolzen: neues additives Feld `TripReportConfig.show_outlook` (bool, default true). Verschmilzt Großwetterlage (als Kopf), Tabelle der nächsten Etappen mit Uhrzeiten (`format_trend_tokens`, #640) und neuer Vorhersage-Sicherheit pro Etappe (`confidence_pct` aus `SegmentWeatherSummary.confidence_pct_min`, propagiert über `_build_stage_trend`) zu **einem** Ausblick-Block. `show_outlook=false` blendet den gesamten Block in HTML **und** Plain-Text aus (Großwetterlage zusätzlich an `show_stability` gekoppelt; fehlt `confidence_pct`, entfällt nur die Prozentangabe — kein „0%"). Altfelder (`show_stability`/`show_compact_summary`/`show_highlights`) bleiben erhalten (kein Schema-Removal). UI-Schalter folgt in Slice 3 (#723). See `docs/specs/modules/issue_721_email_outlook.md`.
-- 2026-06-10: Issue #690 — Eigene Wetter-Metriken-Profile (MetricPreset CRUD): Section 15.5 hinzugefügt. 4 REST-Endpoints: GET/POST/DELETE/PATCH `/api/metric-presets{/{id}}`. MetricPreset DTO mit Name (eindeutig pro Nutzer, case-insensitive, getrimmt), Metrics ([]DisplayMetric mit Horizons), is_default, CreatedAt. POST antwortet mit HTTP 201 bei Erfolg; HTTP 400 bei leerem Name (`"name_required"`); HTTP 409 bei Duplikat-Name (`"name_exists"`, case-insensitive). Bestands-Daten: Single-File Storage `metric_presets.json` pro Nutzer; User-Isolation via Auth-Context (`user_id`). Frontend: Dialog zeigt Client-Validierung (Duplikat-Check), neues Profil wird nach Speichern sofort aktiv auf Trip (`display_config.preset_name = preset.id`), "Eigene"-Markierung in Preset-Leiste (unterscheidet User-Profile von System-Vorlagen), trip-übergreifend sichtbar. See `docs/specs/modules/issue_690_custom_metric_presets.md`.
-- 2026-06-09: Issue #674 — Fahrradtouren als Aktivitätstypen (15 / 20 / 25 km/h): Neue `ActivityType`-Werte `"fahrrad_15"`, `"fahrrad_20"`, `"fahrrad_25"` in Go + TypeScript mit korrekten Naismith-Raten (600 m/h Aufstieg, 1000 m/h Abstieg — doppelt so schnell wie Wanderer). Section 10.5 hinzugefügt (Trip Model und Activity Types). Trip.activity Feld existierte bereits (Epic #136), wird jetzt dokumentiert mit vollständiger Aktivitäts-Tabelle. `ComputeStageArrivals()` Signatur erweitert auf `ActivitySpeeds`-Parameter statt hardcodiert; `ActivitySpeed(trip.activity)` Hilfsfunktion in Go. Frontend: `activityToSpeed(activityType?)` Hilfsfunktion, `computeArrivalTimes()` akzeptiert optionalen `speedFlatKmh`-Parameter. Wizard Step 3 zeigt 3 neue Fahrrad-Optionen im Dropdown. EditStagesPanelNew erhält `activityType`-Prop, leitet Speed weiter. Backward-Compatibility: unbekannte/leere Activity → Wanderer-Default (4.0 km/h, 300/500 Hm/h). Keine Python-Erweiterung (OUT OF SCOPE, Folge-Issue für EtappenConfig). See `docs/specs/modules/issue_674_aktivitaetstyp_fahrrad.md`.
-- 2026-06-09: Issue #680 — Compare-Editor Slice 3 Fidelity-Tabs „Orte" + „Idealwerte" (Epic #677): ComparePreset DTO erweitert um opaque `display_config` field (Section 16). Keys: `active_metrics` ([]string — ausgewählte Metriken pro Vergleich), `ideal_ranges` (min/max-Idealwerte für Bewertung), zukünftig `output_layout` + `schedule_config`. Frontend RMW-Semantik: nur geänderte Felder senden, Server roundtrippt alles (bestandsfelder erhalten). Zero-schema-validation im Backend. Neue UI-Komponenten: `RangeSlider.svelte` (Dual-Handle für range-Metriken), Segmented-Control (Enum-Metriken). compareMetricDefs.ts: `ALL_METRICS`-Katalog + `deriveIdealText()`. compareWizardState.svelte.ts: `activeMetricKeys`, `metricsManuallyEdited`. Step2Orte: nummerierte Picked-Liste mit Entfernen, Region-gruppierte Bibliothek (Checkbox). Step3Idealwerte: Slider, Add/Remove-Metrik, Persistenz. See `docs/specs/modules/issue_680_compare_editor_slice3.md`.
-- 2026-06-09: Issue #675 — Etappen-Startzeiten editierbar (Frontend-only, no API changes): (1) New `StageTimeField.svelte` component (analog `StageDateField`) renders `<input type="time">` within `.box` wrapper with label "STARTZEIT"; (2) Editor displays default `08:00` when `stage.start_time` is unset (displayValue fallback); (3) `EditStagesPanelNew.svelte` handler `handleStartTimeChange()` implements immutable update: setting empty string removes `start_time` (returns to default), otherwise sets to user-chosen time; (4) Component renders in both Desktop header (.stage-header-fields) and Mobile markup (@media ≤899px) for Desktop–Mobile parity; (5) Skipped for pause stages (`activeIsPause === true`); (6) Live Naismith `$derived arrivals` recalculates from changed `start_time` without explicit save (feature display); (7) Existing `Stage.start_time?: string` field (already present in model, Naismith, and Backend RMW) requires no data migration; unset trips remain byte-equal on open+save (alt-treu). ACs 1–7 verified via Playwright E2E + staging_validator. See `docs/specs/modules/issue_675_etappen_startzeiten.md`.
-- 2026-06-09: Issue #638 — Alerts-Tab Karten-Modell + Severity-Falle + pro-Alert Kanäle: (1) Added section 22 — AlertRule DTO with new `channels: list[str]` field (empty = inherit active briefing channels; non-empty = override); (2) `AlertRule.severity` now label-only (not used for send filtering anymore — eliminates severity trap where info-alerts were silently dropped); (3) Frontend Alerts-Tab moved from table paradigm to card model via AlertCard.svelte; Severity dropdown UI removed; Channel chips per alert with toggle UI; (4) Versand-Logik: per-alert kanal-routing via `trip_alert.py:_send_alert()` gruppiert Changes nach effektiven Kanälen; (5) Backward compatibility: bestandsdaten ohne `channels` laden mit leerer Liste (RMW bei Versand); `severity` bleibt lesbar. See `docs/specs/modules/issue_638_alerts_redesign.md`.
-- 2026-06-02: Issue #559 — Archive page completion: (1) Added `GET /api/trips/{id}/briefing-history` endpoint (section 21) to display chronological list of sent briefings (morning/evening) with timestamps and channels; (2) Frontend `BriefingHistoryDialog.svelte` modal with formatted timestamps (DD.MM.YYYY HH:MM) and localized kind labels; (3) "Als Vorlage" (Use as Template) button on archive page copies trip config via query param `?from={id}` to wizard page, with `templateTrip` loaded in `+page.server.ts`; (4) "Was passiert ist" (What Happened) column shows formatted event summary via `formatEventSummary(briefings, alerts)` helper. See `docs/specs/modules/issue_559_archiv_fertigstellen.md`.
-- 2026-06-01: Issue #523 — Code-Debt Cleanup: Removed `Waypoint.Suggested` (bool) and `Waypoint.SuggestionReason` (*string) fields from backend Go model (`internal/model/trip.go`). Legacy normalization block in `ConfirmWaypointHandler` removed. Frontend TypeScript `Waypoint` interface no longer declares `suggested?` and `suggestion_reason?` properties. Utility function `stripSuggested()` and all callers removed from waypoint editor. UI component `WaypointPin.suggested` property and dashed-stroke visualization deleted. Cleanup fulfills Constraint C8 from Issue #506 (Remove AI-Suggestion UI). 13 files edited, ~-190 LoC net deletion. Backward compatibility: bestandsdaten mit `"suggested":true` im JSON bleiben lesbar (Go ignoriert unknown JSON fields bei deserialisierung). See `docs/specs/modules/issue_523_suggested_flag_cleanup.md`.
+- 2026-06-11: Issue #722 [#709 Slice 2] — E-Mail-Format Kompakt (Nur-Text, minimal-Byte): Neuer Format-Schalter `TripReportConfig.email_format: 'full' | 'compact'` (default `'full'`). `'full'` = bestehende multipart-HTML-Mail mit stündlichen Werte-Tabellen (byte-identisch unverändert). `'compact'` = reine `text/plain`-Mail (single part, kein HTML, kein multipart), reines ASCII (7bit-CTE), mit fix nur Kopf + Metriken-Überblick + Ausblick + Footer (ohne Baustein-Toggles), ~95% kleiner (~1 KB für Wanderer mit schlechter Konnektivität). Backend: neuer isolierter `render_compact()`-Renderer (`src/output/renderers/email/compact.py`, ~50 LoC), `build_mime_message()` extrahiert (`html=False` → `us-ascii`/7bit), Scheduler leitet Email-Format durch. Frontend: Format-Schalter in `EditReportConfigSection.svelte`, Baustein-Gruppe bei compact deaktiviert (UI-Hinweis). Go-Modell `ReportConfig` Passthrough (no changes). Tests: Backend E2E gegen Staging (AC-1–5 Multipart-Strukturverifizierung + ASCII-Validierung + Baustein-Ignorance), Playwright E2E (AC-6 UI-Persistenz), Multi-User (AC-7). See `docs/specs/_archive/modules/issue_722_email_compact_format.md`.
+- 2026-06-10: Issue #702 — Alerts-Tab Mobile-Parität TM2 (Frontend CSS-only, Epic #700 Slice 2/2): `AlertsTab.svelte`, `AlertCard.svelte`, `AlertCooldownCard.svelte`, `AlertQuietHoursCard.svelte` mit `@media (max-width: 899px)` Breakpoint-spezifischen Touch-Target-Sizing: Channel-Chips ≥36px Höhe, Threshold-Input ≥120px breit, Cooldown/Time-Inputs ≥44px Höhe + 16px font-size (verhindert iOS-Auto-Zoom). Desktop Layout bleibt byte-identisch. `.actions`-Bar auf mobil ausgeblendet, Mobile-Footer-Button sichtbar (bestehend). Keine API/DTO-Änderungen. Tests: Playwright E2E gegen Staging @375px Viewport (AC-1/AC-2/AC-3/AC-5 Touch-Targets, AC-4 Desktop-Regression). See `docs/specs/_archive/modules/issue_702_alerts_mobile_parity.md`.
+- 2026-06-10: Issue #721 (Slice 1 von #709) — E-Mail-Ausblick verschmolzen: neues additives Feld `TripReportConfig.show_outlook` (bool, default true). Verschmilzt Großwetterlage (als Kopf), Tabelle der nächsten Etappen mit Uhrzeiten (`format_trend_tokens`, #640) und neuer Vorhersage-Sicherheit pro Etappe (`confidence_pct` aus `SegmentWeatherSummary.confidence_pct_min`, propagiert über `_build_stage_trend`) zu **einem** Ausblick-Block. `show_outlook=false` blendet den gesamten Block in HTML **und** Plain-Text aus (Großwetterlage zusätzlich an `show_stability` gekoppelt; fehlt `confidence_pct`, entfällt nur die Prozentangabe — kein „0%"). Altfelder (`show_stability`/`show_compact_summary`/`show_highlights`) bleiben erhalten (kein Schema-Removal). UI-Schalter folgt in Slice 3 (#723). See `docs/specs/_archive/modules/issue_721_email_outlook.md`.
+- 2026-06-10: Issue #690 — Eigene Wetter-Metriken-Profile (MetricPreset CRUD): Section 15.5 hinzugefügt. 4 REST-Endpoints: GET/POST/DELETE/PATCH `/api/metric-presets{/{id}}`. MetricPreset DTO mit Name (eindeutig pro Nutzer, case-insensitive, getrimmt), Metrics ([]DisplayMetric mit Horizons), is_default, CreatedAt. POST antwortet mit HTTP 201 bei Erfolg; HTTP 400 bei leerem Name (`"name_required"`); HTTP 409 bei Duplikat-Name (`"name_exists"`, case-insensitive). Bestands-Daten: Single-File Storage `metric_presets.json` pro Nutzer; User-Isolation via Auth-Context (`user_id`). Frontend: Dialog zeigt Client-Validierung (Duplikat-Check), neues Profil wird nach Speichern sofort aktiv auf Trip (`display_config.preset_name = preset.id`), "Eigene"-Markierung in Preset-Leiste (unterscheidet User-Profile von System-Vorlagen), trip-übergreifend sichtbar. See `docs/specs/_archive/modules/issue_690_custom_metric_presets.md`.
+- 2026-06-09: Issue #674 — Fahrradtouren als Aktivitätstypen (15 / 20 / 25 km/h): Neue `ActivityType`-Werte `"fahrrad_15"`, `"fahrrad_20"`, `"fahrrad_25"` in Go + TypeScript mit korrekten Naismith-Raten (600 m/h Aufstieg, 1000 m/h Abstieg — doppelt so schnell wie Wanderer). Section 10.5 hinzugefügt (Trip Model und Activity Types). Trip.activity Feld existierte bereits (Epic #136), wird jetzt dokumentiert mit vollständiger Aktivitäts-Tabelle. `ComputeStageArrivals()` Signatur erweitert auf `ActivitySpeeds`-Parameter statt hardcodiert; `ActivitySpeed(trip.activity)` Hilfsfunktion in Go. Frontend: `activityToSpeed(activityType?)` Hilfsfunktion, `computeArrivalTimes()` akzeptiert optionalen `speedFlatKmh`-Parameter. Wizard Step 3 zeigt 3 neue Fahrrad-Optionen im Dropdown. EditStagesPanelNew erhält `activityType`-Prop, leitet Speed weiter. Backward-Compatibility: unbekannte/leere Activity → Wanderer-Default (4.0 km/h, 300/500 Hm/h). Keine Python-Erweiterung (OUT OF SCOPE, Folge-Issue für EtappenConfig). See `docs/specs/_archive/modules/issue_674_aktivitaetstyp_fahrrad.md`.
+- 2026-06-09: Issue #680 — Compare-Editor Slice 3 Fidelity-Tabs „Orte" + „Idealwerte" (Epic #677): ComparePreset DTO erweitert um opaque `display_config` field (Section 16). Keys: `active_metrics` ([]string — ausgewählte Metriken pro Vergleich), `ideal_ranges` (min/max-Idealwerte für Bewertung), zukünftig `output_layout` + `schedule_config`. Frontend RMW-Semantik: nur geänderte Felder senden, Server roundtrippt alles (bestandsfelder erhalten). Zero-schema-validation im Backend. Neue UI-Komponenten: `RangeSlider.svelte` (Dual-Handle für range-Metriken), Segmented-Control (Enum-Metriken). compareMetricDefs.ts: `ALL_METRICS`-Katalog + `deriveIdealText()`. compareWizardState.svelte.ts: `activeMetricKeys`, `metricsManuallyEdited`. Step2Orte: nummerierte Picked-Liste mit Entfernen, Region-gruppierte Bibliothek (Checkbox). Step3Idealwerte: Slider, Add/Remove-Metrik, Persistenz. See `docs/specs/_archive/modules/issue_680_compare_editor_slice3.md`.
+- 2026-06-09: Issue #675 — Etappen-Startzeiten editierbar (Frontend-only, no API changes): (1) New `StageTimeField.svelte` component (analog `StageDateField`) renders `<input type="time">` within `.box` wrapper with label "STARTZEIT"; (2) Editor displays default `08:00` when `stage.start_time` is unset (displayValue fallback); (3) `EditStagesPanelNew.svelte` handler `handleStartTimeChange()` implements immutable update: setting empty string removes `start_time` (returns to default), otherwise sets to user-chosen time; (4) Component renders in both Desktop header (.stage-header-fields) and Mobile markup (@media ≤899px) for Desktop–Mobile parity; (5) Skipped for pause stages (`activeIsPause === true`); (6) Live Naismith `$derived arrivals` recalculates from changed `start_time` without explicit save (feature display); (7) Existing `Stage.start_time?: string` field (already present in model, Naismith, and Backend RMW) requires no data migration; unset trips remain byte-equal on open+save (alt-treu). ACs 1–7 verified via Playwright E2E + staging_validator. See `docs/specs/_archive/modules/issue_675_etappen_startzeiten.md`.
+- 2026-06-09: Issue #638 — Alerts-Tab Karten-Modell + Severity-Falle + pro-Alert Kanäle: (1) Added section 22 — AlertRule DTO with new `channels: list[str]` field (empty = inherit active briefing channels; non-empty = override); (2) `AlertRule.severity` now label-only (not used for send filtering anymore — eliminates severity trap where info-alerts were silently dropped); (3) Frontend Alerts-Tab moved from table paradigm to card model via AlertCard.svelte; Severity dropdown UI removed; Channel chips per alert with toggle UI; (4) Versand-Logik: per-alert kanal-routing via `trip_alert.py:_send_alert()` gruppiert Changes nach effektiven Kanälen; (5) Backward compatibility: bestandsdaten ohne `channels` laden mit leerer Liste (RMW bei Versand); `severity` bleibt lesbar. See `docs/specs/_archive/modules/issue_638_alerts_redesign.md`.
+- 2026-06-02: Issue #559 — Archive page completion: (1) Added `GET /api/trips/{id}/briefing-history` endpoint (section 21) to display chronological list of sent briefings (morning/evening) with timestamps and channels; (2) Frontend `BriefingHistoryDialog.svelte` modal with formatted timestamps (DD.MM.YYYY HH:MM) and localized kind labels; (3) "Als Vorlage" (Use as Template) button on archive page copies trip config via query param `?from={id}` to wizard page, with `templateTrip` loaded in `+page.server.ts`; (4) "Was passiert ist" (What Happened) column shows formatted event summary via `formatEventSummary(briefings, alerts)` helper. See `docs/specs/_archive/modules/issue_559_archiv_fertigstellen.md`.
+- 2026-06-01: Issue #523 — Code-Debt Cleanup: Removed `Waypoint.Suggested` (bool) and `Waypoint.SuggestionReason` (*string) fields from backend Go model (`internal/model/trip.go`). Legacy normalization block in `ConfirmWaypointHandler` removed. Frontend TypeScript `Waypoint` interface no longer declares `suggested?` and `suggestion_reason?` properties. Utility function `stripSuggested()` and all callers removed from waypoint editor. UI component `WaypointPin.suggested` property and dashed-stroke visualization deleted. Cleanup fulfills Constraint C8 from Issue #506 (Remove AI-Suggestion UI). 13 files edited, ~-190 LoC net deletion. Backward compatibility: bestandsdaten mit `"suggested":true` im JSON bleiben lesbar (Go ignoriert unknown JSON fields bei deserialisierung). See `docs/specs/_archive/modules/issue_523_suggested_flag_cleanup.md`.
 - 2026-06-01: Issue #497 (BugFix) — Preview SMS Stage-Name + Fixture Fields: ForecastDataPoint from FixtureProvider now reads all 4 demo-mode fields (`cloud_low_pct`, `pop_pct`, `snowfall_limit_m`, `wind_dir_deg`) from fixture JSONs. Preview SMS rendering fixed: `.split(":", 1)[0].strip()` for correct Stage-Name extraction.
-- 2026-05-31: Issue #483 — Demo-Modus im Vorschau-Tab: Added `demo: bool` Query-Parameter to all 4 preview endpoints (`/api/preview/{trip_id}/[email|sms|signal|telegram]`). When `demo=1`, endpoints use FixtureProvider instead of live weather; demo mode ideal for testing preview rendering on past trips. Supports AC-1–AC-6 for demo banner UX and fallback to live weather. See section 20 (new) and `docs/specs/modules/issue_483_demo_mode_preview.md`.
+- 2026-05-31: Issue #483 — Demo-Modus im Vorschau-Tab: Added `demo: bool` Query-Parameter to all 4 preview endpoints (`/api/preview/{trip_id}/[email|sms|signal|telegram]`). When `demo=1`, endpoints use FixtureProvider instead of live weather; demo mode ideal for testing preview rendering on past trips. Supports AC-1–AC-6 for demo banner UX and fallback to live weather. See section 20 (new) and `docs/specs/_archive/modules/issue_483_demo_mode_preview.md`.
 - 2026-05-31: Issue #495 — MapCanvas Leaflet-Karte: `MapCanvas.svelte` vollständig auf Leaflet 1.9.4 mit OpenTopoMap-Tiles umgestellt. `buildMapPositions()` und `MapPosition`-Typ aus `frontend/src/lib/utils/waypointEditor.ts` entfernt — Leaflet übernimmt Projektion und Zoom. Wegpunkt-Editor zeigt jetzt geografisch korrekte Höhenschichtlinien-Karte mit Marker-Popups und Polyline. 3 Dateien geändert: `package.json` (+leaflet, +@types/leaflet), `MapCanvas.svelte` (~180 LoC Rewrite), `waypointEditor.ts` (-buildMapPositions, -MapPosition).
-- 2026-05-30: Issue #467 — Passkey V3 Discoverable Credentials + Conditional UI: 2 new public endpoints (`POST /api/auth/passkey/discoverable/begin` and `/finish`) enable login without username. Browser shows registered passkeys as native autofill suggestions on username field focus via WebAuthn `mediation: 'conditional'`. Begin returns full assertion object with top-level `"mediation":"conditional"` flag. Finish accepts `userHandle` from authenticator and looks up user via `DiscoverableUserHandler` callback. Rate-limit 30/h per IP (same as V1). Frontend: `loginWithDiscoverablePasskey()` function in `passkey.ts` + `onMount` conditional UI init in login page with `autocomplete="username webauthn"` attribute. Tests: 6 mock-free roundtrip tests covering success path, empty userHandle, unknown user, challenge replay, and TTL expiry. See `docs/specs/modules/issue_467_discoverable_credentials.md`.
-- 2026-05-30: Issue #464 — Compare-E-Mail Observability-Endpoint `POST /api/_validator/compare-email-preview` (Tooling-API, nicht versionsstabil): Macht den Compare-HTML-Renderer von außen direkt aufrufbar für Validator-Observability. Go-Proxy + Python-Handler (validator.py). Request-Body: `{profile, time_window, target_date, winner_tags}`. Response: `{html: "..."}` mit gerendertem HTML. Stub-LocationResult mit score=85, keine echten Wetterdaten. AC-1/2/3 prüfbar per `curl | grep`. Siehe `docs/specs/modules/issue_464_compare_email_preview_validator.md`.
+- 2026-05-30: Issue #467 — Passkey V3 Discoverable Credentials + Conditional UI: 2 new public endpoints (`POST /api/auth/passkey/discoverable/begin` and `/finish`) enable login without username. Browser shows registered passkeys as native autofill suggestions on username field focus via WebAuthn `mediation: 'conditional'`. Begin returns full assertion object with top-level `"mediation":"conditional"` flag. Finish accepts `userHandle` from authenticator and looks up user via `DiscoverableUserHandler` callback. Rate-limit 30/h per IP (same as V1). Frontend: `loginWithDiscoverablePasskey()` function in `passkey.ts` + `onMount` conditional UI init in login page with `autocomplete="username webauthn"` attribute. Tests: 6 mock-free roundtrip tests covering success path, empty userHandle, unknown user, challenge replay, and TTL expiry. See `docs/specs/_archive/modules/issue_467_discoverable_credentials.md`.
+- 2026-05-30: Issue #464 — Compare-E-Mail Observability-Endpoint `POST /api/_validator/compare-email-preview` (Tooling-API, nicht versionsstabil): Macht den Compare-HTML-Renderer von außen direkt aufrufbar für Validator-Observability. Go-Proxy + Python-Handler (validator.py). Request-Body: `{profile, time_window, target_date, winner_tags}`. Response: `{html: "..."}` mit gerendertem HTML. Stub-LocationResult mit score=85, keine echten Wetterdaten. AC-1/2/3 prüfbar per `curl | grep`. Siehe `docs/specs/_archive/modules/issue_464_compare_email_preview_validator.md`.
 - 2026-05-30: Issue #468 — AAGUID-Labels in der Passkey-Liste: GET `/api/auth/profile` Passkey-Einträge zeigen neu optionales Feld `authenticator_name` (z.B. "iCloud Keychain", "Windows Hello") basierend auf AAGUID-Mapping. Field omitempty bei Zero/Unknown-AAGUID. Frontend zeigt kombiniert `"{authenticator_name} · {label}"`. Siehe `docs/specs/modules/aaguid_labels.md`. Implementation: ~90 LoC (`aaguid.go`, `auth.go`, `account/+page.svelte`).
 
 ---
@@ -3052,14 +2977,14 @@ _snapshot_svc.save_dated(trip_id, target_date, segment_weather)  # neu, Issue #7
 - 2026-05-30: Issue #459 — Auto-Briefings Sidepanel Frontend (ComparePreset-System): AutoReportsOverview, SavePresetDialog, subscriptionHelpers (presetScheduleLabel, formatLastSent), ComparePreset-Interface in types.ts; +page.server.ts lädt `/api/compare/presets`; AutoReportCard und AutoReportsOverview auf ComparePreset umgebaut mit manuellem Versand-Button. Spec #458-Backend-Endpoints vorausgesetzt (`GET /api/compare/presets`, `/send`).
 - 2026-05-31: Issue #475 — OutputLayoutEditor Organisms-Migration (Pure Frontend): OutputLayoutEditor verliert direkten `ui/card`-Import, nutzt stattdessen `atoms/Card.svelte`. Komponente wird als vierter Eintrag in `organisms/index.ts` re-exportiert. Consumer-Imports (Step4Layout×2, WeatherMetricsTab) auf `$lib/components/organisms` umgestellt. Keine API/DTO-Änderungen.
 - 2026-05-30: Issue #458 — Compare-Preset Backend (CRUD+Endpoints): Neues `ComparePreset`-Datenmodell (separate Entität von `CompareSubscription`); 5 REST-Endpoints: GET/POST/PUT/DELETE + `/send`-Stub; Single-File Storage `compare_presets.json`; User-Isolation; Validierung. Siehe Abschnitt 16.
-- 2026-05-29: Issue #455 — Compare-Hauptbühne Frontend `/compare` route implemented (pure frontend, no API changes). 3-column layout: LocationsRail (left 320px) | CompareMatrix/RecommendationBanner/HourlyMatrix (center flex) | AutoReportsOverview (right 320px). POST `/api/compare/run` contract unchanged; frontend wires existing Go-backend endpoint. See `docs/specs/modules/issue_455_compare_main_stage.md`.
+- 2026-05-29: Issue #455 — Compare-Hauptbühne Frontend `/compare` route implemented (pure frontend, no API changes). 3-column layout: LocationsRail (left 320px) | CompareMatrix/RecommendationBanner/HourlyMatrix (center flex) | AutoReportsOverview (right 320px). POST `/api/compare/run` contract unchanged; frontend wires existing Go-backend endpoint. See `docs/specs/_archive/modules/issue_455_compare_main_stage.md`.
 - 2026-05-29: Issue #448 — Validator-Endpoint `GET /api/_validator/metrics-for-channel` ergänzt (Tooling-API, nicht versionsstabil): Macht die dreistufige Kaskade von `get_metrics_for_channel()` (per_report → per_channel → global) von außen prüfbar. Response: `{"source": "per_report|per_channel|global", "metric_ids": [...]}`. Params: `trip`, `channel`, `report`, `user_id` (via Go-Proxy injiziert).
 - 2026-05-29: Issue #442 — Compare-Wizard Step 4 Layout (Pure Frontend): Step4Layout component added to Compare-Wizard, enabling per-channel metric configuration (Email/Telegram/Signal/SMS) with reusable OutputLayoutEditor component (Issue #431). Wizard calls GET /api/metrics (required), GET /api/templates (optional), GET /api/metric-presets (optional) on mount. No backend changes; `channel_layouts` field added to CompareSubscription state (frontend-only persistence via `save()`).
 - 2026-05-29: Issue #446 — Format-Mode-Validierung in `_resolve_format_mode()`: Unbekannte `format_mode`-Strings (z.B. `"Symbol"` mit Großbuchstabe, `"raw_v2"`) werden jetzt gegen `MetricDefinition.format_modes` validiert und auf `default_format_mode` zurückgefallen, mit WARNING-Log.
 - 2026-05-29: Added section (legacy 16, neu nummeriert) — Google OAuth Login Endpoints (Issue #425): GET /api/auth/google/init (initiates flow, redirect to Google), GET /api/auth/google/callback (code exchange, user creation/lookup, session issuance). User model extended with `OAuthProvider` and `OAuthSub` fields. Feature-gated via `GZ_GOOGLE_CLIENT_ID` config. New User-ID format `g-{8hex}` for OAuth users (prevents session parse errors).
 - 2026-05-29: Added section 15 — Metric Catalog Endpoint (Issue #435): GET /api/metrics exposes `format_modes[]` and `default_format_mode` per metric for frontend UI filtering and backward-compatibility mapping.
 - 2026-05-29: Issue #440 — Orts-Vergleich-Wizard Phase 1 — Extended CompareSubscription model with `activity_profile` (optional, validProfiles: wintersport|wandern|summer_trekking|allgemein). Frontend: CompareWizard Shell + Step 1 (Name/Region/Profile) + Step 2 (Smart-Import + Library). Stepper component made reusable via testidPrefix + onStepClick props. See `docs/specs/modules/issue_440_compare_wizard_shell_step1_step2.md`.
-- 2026-05-10: Epic #136 Trip-Wizard Master-Spec Fundament — Extended Trip model with `shortcode` and `activity` fields; Waypoint.suggested transient flag for wizard UI; Backend Trip.validateTrip() now accepts pause stages (waypoints: []). See `docs/specs/modules/epic_136_trip_wizard.md`.
+- 2026-05-10: Epic #136 Trip-Wizard Master-Spec Fundament — Extended Trip model with `shortcode` and `activity` fields; Waypoint.suggested transient flag for wizard UI; Backend Trip.validateTrip() now accepts pause stages (waypoints: []). See `docs/specs/_archive/modules/epic_136_trip_wizard.md`.
 - 2026-05-09: Added sections 12, 13, 14 — Scheduler Status, Forecast Query, Trip-Reports Trigger Endpoints (Epic #134). Support for dashboard briefing timeline, non-blocking client-side weather, and manual report trigger via API.
 - 2026-04-14: Added section 11 — Weather Config Endpoints (M5c): 6 GET/PUT-Endpoints fuer display_config auf Trip, Location und Subscription als opaque JSON.
 - 2026-04-14: Added section 10 — Subscriptions CRUD Endpoints (M5b): 5 REST-Endpoints fuer CompareSubscription, Single-File Storage, Validierung, Legacy-Migration.

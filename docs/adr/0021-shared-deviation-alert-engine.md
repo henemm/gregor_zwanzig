@@ -3,7 +3,7 @@
 - **Status:** Akzeptiert (PO-„go" 2026-07-09)
 - **Datum:** 2026-07-09
 - **Bezug:** GitHub-Issue #1168 (Scheibe 1/3, Epic #1095), Spec
-  `docs/specs/modules/issue_1168_alert_engine_extract.md`, Architektur-Gegenüberstellung
+  `docs/specs/_archive/modules/issue_1168_alert_engine_extract.md`, Architektur-Gegenüberstellung
   `docs/context/feat-1095-compare-alerts.md` (Abschnitt „Architektur-Gegenüberstellung
   Trip ↔ Compare"); verwandt [ADR-0011](0011-alert-render-single-backend-renderer.md)
   (kanonischer Alert-Renderer), [ADR-0017](0017-output-paket-konsolidierung.md)
@@ -87,7 +87,7 @@ dieser Scheibe (Scheibe 2, #1169).
   hartkodierten Defaults, `compare_location_weather_source.py` als
   `LocationWeatherSource`-Implementierung) und den Orts-Vergleich als **zweiten, realisierten
   Consumer** an dieselbe Engine angeschlossen — siehe
-  `docs/specs/modules/issue_1169_compare_alert_consumer.md`. Scheibe 3 (#1170, offen) ergänzt
+  `docs/specs/_archive/modules/issue_1169_compare_alert_consumer.md`. Scheibe 3 (#1170, offen) ergänzt
   die Config-UI. Tageslimit (`alert_daily_limit`), Alert-Log und Radar-Onset-Pfad
   bleiben vorerst Trip-spezifisch im Adapter (siehe „Known Limitations" der Spec) —
   eine Verallgemeinerung dieser Bausteine ist separat zu betrachten, falls Compare

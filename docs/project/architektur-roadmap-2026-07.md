@@ -55,7 +55,7 @@ Phase-2-Issues: siehe GitHub (Label `type:rework`, Referenz „Roadmap Phase 2")
 Risikoarm, kein Code-Verhalten betroffen. Issues werden mit dieser Vorlage angelegt.
 
 1. **Doku-Drift beheben:** `AGENTS.md` (`api/` = Python-Core), `docs/specs/_template.md`,
-   `docs/features/architecture.md` (Signal raus, Produktivpfad statt CLI-Fluss).
+   `docs/features/architecture.md` (Signal raus, Produktivpfad statt CLI-Fluss). *[erledigt — architecture.md ist seit 2026-07 signalfrei und beschreibt den Produktivpfad; Rest-Drift-Prüfung AGENTS.md/_template.md offen]*
 2. **CI-Ausbau (secrets-frei):** Go-Tests (102 Dateien), Frontend-Unit-Tests (126 Dateien) und
    `svelte-check` in `ci.yml`. `tests/tdd/` bleibt bewusst draußen (braucht Staging/Creds).
    `mypy`: installieren **oder** `[tool.mypy]` entfernen (Empfehlung: erst entfernen, Einführung

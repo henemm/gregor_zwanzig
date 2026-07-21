@@ -2,7 +2,7 @@
 
 - **Status:** Akzeptiert
 - **Datum:** 2026-07-02
-- **Bezug:** GitHub-Issue #952, `docs/specs/modules/issue_952_onset_alert_fidelity.md`, ADR-0011 (ein Backend-Renderer)
+- **Bezug:** GitHub-Issue #952, `docs/specs/_archive/modules/issue_952_onset_alert_fidelity.md`, ADR-0011 (ein Backend-Renderer)
 
 ## Kontext
 

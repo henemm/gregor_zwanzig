@@ -3,7 +3,7 @@
 - **Status:** Akzeptiert (PO-„freigabe" 2026-07-15)
 - **Datum:** 2026-07-15
 - **Bezug:** GitHub-Issue #1250 (Scheibe 5, Phase 3 von Epic #1230
-  „Briefing-Abo-Chassis"), Spec `docs/specs/modules/issue_1250_briefing_subscription.md`
+  „Briefing-Abo-Chassis"), Spec `docs/specs/_archive/modules/issue_1250_briefing_subscription.md`
   (AC-16–AC-19, Zielmodell §72-90), Analyse `docs/context/feat-1250-s5-kind-migration.md`;
   verwandt [ADR-0021](0021-shared-deviation-alert-engine.md) (geteilte Alert-Engine),
   [ADR-0003](0003-multi-tenant-isolation.md) (per-User-Isolation). Vorstufen live:

@@ -11,7 +11,7 @@ Pilot #1021 (Store-Split) erfolgreich abgeschlossen. Aktuelle Warteschlange:
 
 Die Drift-Analyse hat gezeigt: Kimi liefert **präzise Faktenarbeit** (Zahlen fast durchgehend
 exakt), aber **ohne Kenntnis der Projekt-Kontexte** (Gate-System in `.claude/`, ADR-Geltungsbereiche,
-bewusste PO-Entscheidungen wie „keine Mocks"). Daraus folgt das Grundmuster:
+bewusste PO-Entscheidungen wie die Zwei-Schichten-Testpolitik, s. CLAUDE.md). Daraus folgt das Grundmuster:
 
 > **Kimi produziert, Claude verifiziert und integriert, der PO entscheidet.**
 

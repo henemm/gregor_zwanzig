@@ -82,8 +82,8 @@ setzen (CLAUDE.md: „Kein LoC-Override ohne Permission").
 | `official_alerts`-Dienst (`SegmentWeatherData.official_alerts`) | Daten | Amtliche Quelle je Segment, bereits geladen (`trip_report_scheduler.py:764-775`) — **andere Quelle** als die Vorhersage-Token, keine neue Datenbeschaffung nötig |
 | `output.renderers.alert.official_alerts` (geteiltes Modul, ADR-0011) | Modul | `_HAZARD_DISPLAY`-Muster, `render_official_alert_telegram()`, `render_official_alert_sms()`, `_sort_notices()`, `dedupe_official_alerts()` — Telegram-Pfad UND Standalone-Warn-SMS hängen sich hier ein, kein neuer Renderer |
 | `docs/reference/sms_format.md` v2.7 | SSOT | Wire-Format der Token-Zeile; diese Spec erweitert §2/§3 auf v2.8/v3.0, siehe unten |
-| `docs/specs/modules/issue_1216_official_alert_template.md` | Alt-Spec | hazard→(Anzeige, SMS-Kürzel)-Tabelle; SMS-Kürzel-Spalte wechselt auf `hazard_symbols.py` als Quelle (Liefergegenstand dieser Spec) |
-| `docs/specs/modules/fix_1249_sms_telegram_scope.md` | Alt-Spec | dessen AC-5 (Kürzel-Non-Regression) wird durch diese Spec überholt — als überholt markiert, nicht gelöscht (Liefergegenstand dieser Spec) |
+| `docs/specs/_archive/modules/issue_1216_official_alert_template.md` | Alt-Spec | hazard→(Anzeige, SMS-Kürzel)-Tabelle; SMS-Kürzel-Spalte wechselt auf `hazard_symbols.py` als Quelle (Liefergegenstand dieser Spec) |
+| `docs/specs/_archive/modules/fix_1249_sms_telegram_scope.md` | Alt-Spec | dessen AC-5 (Kürzel-Non-Regression) wird durch diese Spec überholt — als überholt markiert, nicht gelöscht (Liefergegenstand dieser Spec) |
 | `docs/adr/0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md` | ADR | Konsistenz-Invariante: amtliche Warnung darf der Vorhersage nicht widersprechen, muss als eigene Kategorie erkennbar sein — hier über den `!`-Marker gelöst |
 | `day_window.build_day_window_points()` | Modul | Bereits für #1220 verifiziert (Scheibe A der #1319-Zerlegung) — Ankunftsstunde inklusiv, kein Änderungsbedarf |
 
@@ -266,11 +266,11 @@ Tabelle oben) — deterministisch, keine Abhängigkeit von `valid_from`.
   Implementierung der aktuelle Stand ist — `sms_format.md` steht bereits bei v2.7).
 
 **Zusätzlich zwei Alt-Specs MÜSSEN mitgezogen werden (Liefergegenstand, nicht Nacharbeit):**
-- `docs/specs/modules/issue_1216_official_alert_template.md` — die hazard→(Anzeige,
+- `docs/specs/_archive/modules/issue_1216_official_alert_template.md` — die hazard→(Anzeige,
   SMS-Kürzel)-Tabelle auf die neuen internationalen Kürzel umstellen, mit Verweis auf diese
   Spec und `hazard_symbols.py` als neue SSOT für die Kürzel-Spalte. **Bereits erledigt** als
   Teil dieses Nachtrags (2026-07-20) — siehe dortiger Changelog.
-- `docs/specs/modules/fix_1249_sms_telegram_scope.md` — dessen AC-5 („Kürzel bleiben identisch
+- `docs/specs/_archive/modules/fix_1249_sms_telegram_scope.md` — dessen AC-5 („Kürzel bleiben identisch
   zum Stand vor #1249") ist durch diese PO-Entscheidung überholt, als überholt gekennzeichnet
   (nicht gelöscht), mit Verweis auf AC-13/AC-14 dieser Spec. **Bereits erledigt** als Teil
   dieses Nachtrags (2026-07-20) — siehe dortiger Changelog.
@@ -421,7 +421,7 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
     Kataloge.
 
 - **AC-15 (Alt-Specs mitgezogen, doc-compliance-test):** Given die aktualisierten Dateien
-  `docs/specs/modules/issue_1216_official_alert_template.md` und `docs/specs/modules/
+  `docs/specs/_archive/modules/issue_1216_official_alert_template.md` und `docs/specs/modules/
   fix_1249_sms_telegram_scope.md` / When die Dateien gelesen werden / Then enthält
   `issue_1216_official_alert_template.md` die neuen internationalen Kürzel in der
   hazard→SMS-Tabelle mit einem Verweis auf `hazard_symbols.py` als SSOT, und
@@ -512,6 +512,6 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
   Kataloge. Abschnitt 1b neu eingefügt (Katalog-Vereinheitlichung als Pflicht-Scope statt
   Limitation); AC-13/AC-14/AC-15 ergänzt; Estimated Scope auf Zwei-Scheiben-Teilung (A:
   sicherheitskritischer Kern inkl. Vereinheitlichung, B: Telegram + Konfigurationsoberfläche)
-  umgestellt; `docs/specs/modules/issue_1216_official_alert_template.md` und `docs/specs/
+  umgestellt; `docs/specs/_archive/modules/issue_1216_official_alert_template.md` und `docs/specs/
   modules/fix_1249_sms_telegram_scope.md` als Alt-Specs mitgezogen (dort je eigener
   Changelog-Eintrag).
