@@ -34,6 +34,7 @@ from src.app.models import (
     TripSegment,
 )
 from src.output.renderers.sms_trip import SMSTripFormatter
+from src.services.notification_service import compute_has_gap
 
 _YEAR, _MONTH, _DAY = 2026, 7, 20
 _TZ = ZoneInfo("UTC")
@@ -117,10 +118,28 @@ def _regular_segment(
     )
 
 
-def _format(segments: list[SegmentWeatherData]) -> str:
+def _format(
+    segments: list[SegmentWeatherData],
+    night_weather: NormalizedTimeseries | None = None,
+) -> str:
+    """Issue #1331/#1334 F008: die Ziel-Datenluecke wird nicht mehr in
+    ``format_sms()`` selbst berechnet (einziger Berechnungspunkt ist jetzt
+    ``notification_service.compute_has_gap()``) -- dieser Helper bildet
+    genau den echten Versandpfad nach, statt eine feste Konstante zu raten."""
+    has_gap = compute_has_gap(segments, night_weather, _TZ)
     return SMSTripFormatter().format_sms(
         segments, stage_name="E1", report_type="morning", tz=_TZ,
+        night_weather=night_weather, has_gap=has_gap,
     )
+
+
+def _complete_night_weather(start_h: int = 17, end_h: int = 23) -> NormalizedTimeseries:
+    """Vollstaendige (ereignislose) Nacht-Zeitreihe -- Issue #1331: ohne sie
+    meldet ``compute_has_gap`` bei Ankunft <= 19 Uhr faelschlich eine
+    Ziel-Luecke, auch wenn der Test gar keine Segment-Datenluecke pruefen
+    will."""
+    data = [_dp(h) for h in range(start_h, end_h + 1)]
+    return NormalizedTimeseries(meta=_meta(), data=data)
 
 
 class TestAC1ShowsUnknownTokenOnSegmentError:
@@ -169,8 +188,13 @@ class TestAC3RegressionNoGapStaysDash:
     """AC-3 (Regressionsschutz): ohne Datenluecke bleibt `-` unveraendert."""
 
     def test_sms_shows_dash_when_no_gap(self):
+        """Issue #1331 (semantisch gewollt): Ankunft 17:00 <= Fensterende
+        19:00 erwartet Nach-Ankunft-Stunden am Ziel -- ohne ``night_weather``
+        waere das jetzt selbst eine Ziel-Luecke. Um ausschliesslich die
+        urspruengliche Aussage (keine SEGMENT-Datenluecke -> `-` bleibt)
+        zu pruefen, liefert der Test eine vollstaendige Nacht-Zeitreihe."""
         segments = [_regular_segment(start_h=4, end_h=9), _regular_segment(start_h=9, end_h=17)]
-        sms = _format(segments)
+        sms = _format(segments, night_weather=_complete_night_weather())
 
         assert "TH:-" in sms, f"Erwartet weiterhin `-` ohne Datenluecke.\nSMS: {sms}"
         assert "TH:?" not in sms, f"Kein `?` ohne Datenluecke erwartet.\nSMS: {sms}"

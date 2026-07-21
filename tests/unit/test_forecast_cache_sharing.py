@@ -126,6 +126,45 @@ class HourlyCountingFakeProvider:
         return NormalizedTimeseries(meta=meta, data=data)
 
 
+class MultiDayHourlyCountingFakeProvider:
+    """Wie ``HourlyCountingFakeProvider`` (KEIN Mock/patch), liefert aber
+    ZWEI volle UTC-Tage (48h) ab einem festen Tag-1-Anker mit GLOBAL
+    fortlaufendem ``t2m_c = float(i)`` (i=0..47) -- Tag 1 Stunde H hat
+    einen ANDEREN Wert (i=H) als Tag 2 Stunde H (i=24+H). Grundlage fuer
+    Issue #1334 AC-1: der Wraparound-Filter darf NIE Punkte vom falschen
+    Tag ziehen -- mit gleichwertigen Werten pro Tag waere das unsichtbar."""
+
+    def __init__(self, day1_anchor: datetime) -> None:
+        self.call_count = 0
+        self._anchor = day1_anchor
+
+    @property
+    def name(self) -> str:
+        return "openmeteo"
+
+    def fetch_forecast(
+        self,
+        location,
+        start=None,
+        end=None,
+        enrich_ensemble: bool = True,
+        enrich_snow: bool = True,
+    ) -> NormalizedTimeseries:
+        self.call_count += 1
+        meta = ForecastMeta(
+            provider=Provider.OPENMETEO,
+            model="icon_d2",
+            grid_res_km=2.2,
+            run=datetime.now(timezone.utc),
+            interp="grid_point",
+        )
+        data = [
+            ForecastDataPoint(ts=self._anchor + timedelta(hours=i), t2m_c=float(i))
+            for i in range(48)
+        ]
+        return NormalizedTimeseries(meta=meta, data=data)
+
+
 def _safe_test_hour(hour_of_day: int = 10) -> datetime:
     """Ein UTC-Zeitpunkt an einer SICHEREN Tagesstunde (weit weg vom
     Tageswechsel), damit Tests mit mehrstuendigen Fenstern nie ueber
@@ -470,4 +509,85 @@ def test_end_to_end_real_call_paths_trip_alert_and_compare_share_cache_with_own_
         "AC-4: Trip-Alarmpfad und Compare-Alarmpfad am selben Ort muessen "
         f"sich EINEN Cache-Eintrag teilen (kein separater Compare-Fetch), "
         f"tatsaechlich gefunden: {len(matching_entries)}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Issue #1334: Segment-Filter ueber Mitternacht -- volle Zeitstempel statt
+# reiner Stundenzahl (docs/specs/modules/daywindow_gap_and_midnight_fix.md)
+# ---------------------------------------------------------------------------
+
+def test_overnight_segment_excludes_same_hour_points_from_wrong_day():
+    """AC-1 (#1334, MUSS ROT): Segment 22:00 Tag1 -> 02:00 Tag2 auf einer
+    48h-Zeitreihe (zwei volle Tage, ``MultiDayHourlyCountingFakeProvider``).
+    NUR die Stunden 22:00/23:00 (Tag1, Werte 22.0/23.0) und 00:00/01:00
+    (Tag2, Werte 24.0/25.0) duerfen einfliessen. Der bestehende
+    Wraparound-Filter in ``_aggregate_for_segment`` (Z.254:
+    ``dp.ts.hour >= seg_start_h or dp.ts.hour < seg_end_h``) vergleicht nur
+    die Stunde, nicht das volle Datum -- er zieht dieselben Uhrzeiten von
+    BEIDEN Tagen (zusaetzlich Tag2 22:00/23:00 = 46.0/47.0 und Tag1
+    00:00/01:00 = 0.0/1.0) -> falsches, zu weites Min/Max."""
+    day1_anchor = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    provider = MultiDayHourlyCountingFakeProvider(day1_anchor)
+
+    seg = _segment(
+        "overnight-1", 47.5000, 11.0000,
+        day1_anchor + timedelta(hours=22), duration_hours=4.0,
+    )
+    service = SegmentWeatherService(provider)
+    result = service.fetch_segment_weather(seg, enrich_ensemble=False, enrich_snow=False)
+
+    assert result.aggregated.temp_min_c == pytest.approx(22.0), (
+        "AC-1: Segment 22:00->02:00 darf NUR die Stunden 22:00/23:00 (Tag1) "
+        "und 00:00/01:00 (Tag2) aggregieren -- temp_min_c muss 22.0 sein "
+        f"(Stunde 22:00 Tag1), tatsaechlich: {result.aggregated.temp_min_c} "
+        "(Wraparound zieht faelschlich auch 00:00/01:00 von TAG1 = 0.0/1.0 "
+        "mit ein)."
+    )
+    assert result.aggregated.temp_max_c == pytest.approx(25.0), (
+        "AC-1: temp_max_c muss 25.0 sein (Stunde 01:00 Tag2 = Index 25), "
+        f"tatsaechlich: {result.aggregated.temp_max_c} (Wraparound zieht "
+        "faelschlich auch 22:00/23:00 von TAG2 = 46.0/47.0 mit ein -> 47.0)."
+    )
+
+
+def test_daytime_segment_excludes_end_hour_boundary():
+    """AC-2 (#1334 Guard/#806, muss GRUEN bleiben): normales Tag-Segment
+    10:00->13:00 -- die Endstunde 13:00 bleibt AUSGESCHLOSSEN (nur Stunden
+    10,11,12), bitgleich zur bestehenden #806-Invariante. Bereits heute
+    gruen; Regressionsschutz fuer den #1334-Fix."""
+    provider = HourlyCountingFakeProvider()
+    hour = _safe_test_hour(10)
+    seg = _segment("t-daytime-10-13", 47.1000, 11.2000, hour, duration_hours=3.0)
+
+    service = SegmentWeatherService(provider)
+    result = service.fetch_segment_weather(seg, enrich_ensemble=False, enrich_snow=False)
+
+    assert result.aggregated.temp_min_c == pytest.approx(10.0)
+    assert result.aggregated.temp_max_c == pytest.approx(12.0), (
+        "AC-2: Endstunde 13:00 muss ausgeschlossen bleiben (Stunden "
+        f"10,11,12 -> max 12.0), tatsaechlich: {result.aggregated.temp_max_c}"
+    )
+
+
+def test_sub_hour_segment_includes_exact_start_hour_point():
+    """AC-3 (#1334 Guard/#856, muss GRUEN bleiben): Sub-Stunden-Segment
+    10:15->10:45 auf einer stuendlichen Zeitreihe -- enthaelt GENAU den
+    10:00-Datenpunkt (nicht leer). Bereits heute gruen; Regressionsschutz
+    fuer den #1334-Fix."""
+    provider = HourlyCountingFakeProvider()
+    hour = _safe_test_hour(10)
+    start = hour + timedelta(minutes=15)
+    seg = _segment("t-subhour-10-15-10-45", 47.3000, 11.4000, start, duration_hours=0.5)
+
+    service = SegmentWeatherService(provider)
+    result = service.fetch_segment_weather(seg, enrich_ensemble=False, enrich_snow=False)
+
+    assert result.aggregated.temp_min_c == pytest.approx(10.0)
+    assert result.aggregated.temp_max_c == pytest.approx(10.0), (
+        "AC-3: 10:15->10:45 muss genau den 10:00-Punkt liefern (nicht "
+        f"leer), tatsaechlich min={result.aggregated.temp_min_c} "
+        f"max={result.aggregated.temp_max_c}"
     )

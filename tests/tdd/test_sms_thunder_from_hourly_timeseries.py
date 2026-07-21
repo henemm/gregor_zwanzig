@@ -118,14 +118,24 @@ def _segment(thunder_by_hour: dict[int, ThunderLevel] | None = None) -> SegmentW
     )
 
 
-def _sms(segments, report_type="evening", thunder_forecast=None) -> str:
+def _sms(segments, report_type="evening", thunder_forecast=None, night_weather=None) -> str:
     return SMSTripFormatter().format_sms(
         segments,
         stage_name="E7",
         report_type=report_type,
         tz=_TZ,
         thunder_forecast=thunder_forecast,
+        night_weather=night_weather,
     )
+
+
+def _complete_night_weather() -> NormalizedTimeseries:
+    """Vollstaendige (ereignislose) Nacht-Zeitreihe Ankunft(17:00)->19:00 --
+    Issue #1331: ohne sie meldet ``segments_have_gap`` bei Ankunft <= 19 Uhr
+    eine Ziel-Luecke (`?` statt `-`), die mit dieser Gewitter-Fensterungs-
+    Suite (#1275) nichts zu tun hat."""
+    data = [_dp(h) for h in (17, 18, 19)]
+    return NormalizedTimeseries(meta=_meta(), data=data)
 
 
 class TestThunderTodayReachesSms:
@@ -171,10 +181,13 @@ class TestThunderTodayReachesSms:
         THEN:  `TH:-` — kein erfundenes Signal, wo keins ist
 
         GUARD, kein RED: dieser Test ist heute schon gruen — aber aus dem falschen
-        Grund (TH: ist immer "-"). Er muss nach dem Fix gruen BLEIBEN.
+        Grund (TH: ist immer "-"). Er muss nach dem Fix gruen BLEIBEN. Issue
+        #1331: vollstaendige ``night_weather`` haelt die Ankunfts-Luecke
+        (17:00 <= 19:00 Fensterende) geschlossen, damit dieser Test weiterhin
+        die Gewitter-Fensterung (#1275) prueft, nicht die Ziel-Datenluecke.
         """
         segments = [_segment()]
-        sms = _sms(segments)
+        sms = _sms(segments, night_weather=_complete_night_weather())
 
         assert "TH:-" in sms, f"Ohne Gewitter muss `TH:-` stehen.\nSMS: {sms}"
 
@@ -184,9 +197,13 @@ class TestThunderTodayReachesSms:
         WHEN:  die SMS erzeugt wird
         THEN:  `TH:-` — die SMS warnt nicht vor einem Ereignis, das den Wanderer
                nicht betrifft (Fensterung wie bei Regen/Wind/Boeen)
+
+        Issue #1331: vollstaendige ``night_weather`` haelt die Ankunfts-Luecke
+        geschlossen, damit dieser Test weiterhin die Gewitter-Fensterung
+        (#1275) prueft, nicht die Ziel-Datenluecke.
         """
         segments = [_segment({2: ThunderLevel.HIGH})]
-        sms = _sms(segments)
+        sms = _sms(segments, night_weather=_complete_night_weather())
 
         assert "TH:-" in sms, (
             f"Gewitter um 02:00 liegt ausserhalb der Wanderzeit 07-17 und darf die "
@@ -198,7 +215,7 @@ class TestAllChannelsAgree:
     """AC-4/AC-5: Telegram sagt dasselbe wie die SMS — auch beim Nacht-Gewitter."""
 
     @staticmethod
-    def _telegram_footer(segments) -> str:
+    def _telegram_footer(segments, night_weather=None) -> str:
         """Rendert die Telegram-Bubbles durch den ECHTEN Einstiegspunkt.
 
         ADR-0025, Entscheidung 5: eine Kanal-Aussage wird durch den echten
@@ -219,6 +236,7 @@ class TestAllChannelsAgree:
         bubbles = render_telegram_bubbles(
             segments=segments, seg_tables=rows, dc=dc,
             report_type="evening", tz=_TZ, trip_name="E7",
+            night_weather=night_weather,
         )
         return "\n".join(b.text for b in bubbles)
 
@@ -231,11 +249,16 @@ class TestAllChannelsAgree:
         RED-Erwartung: schlaegt fehl, weil `_tg_day_footer` `agg.thunder_level_max`
         liest, das `weather_metrics.py:596-598` UNGEFENSTERT berechnet — Telegram
         meldet HIGH, waehrend SMS/E-Mail zu Recht schweigen.
+
+        Issue #1331: vollstaendige ``night_weather`` haelt die Ankunfts-Luecke
+        auf beiden Kanaelen geschlossen, damit dieser Test weiterhin die
+        Gewitter-Fensterung (#1275) prueft, nicht die Ziel-Datenluecke.
         """
         segments = [_segment({2: ThunderLevel.HIGH})]
+        night = _complete_night_weather()
 
-        sms = _sms(segments)
-        telegram = self._telegram_footer(segments)
+        sms = _sms(segments, night_weather=night)
+        telegram = self._telegram_footer(segments, night_weather=night)
 
         assert "TH:-" in sms, f"Vorbedingung: SMS muss schweigen.\nSMS: {sms}"
         assert "⚡ HIGH" not in telegram and "⚡ MED" not in telegram, (
@@ -274,7 +297,7 @@ class TestEmailAndSmsAgree:
     """
 
     @staticmethod
-    def _report(segments):
+    def _report(segments, night_weather=None):
         from src.output.renderers.trip_report import TripReportFormatter
 
         return TripReportFormatter().format_email(
@@ -283,6 +306,7 @@ class TestEmailAndSmsAgree:
             report_type="evening",
             stage_name="E7",
             tz=_TZ,
+            night_weather=night_weather,
         )
 
     @staticmethod
@@ -326,9 +350,13 @@ class TestEmailAndSmsAgree:
         ADR-0025 Entscheidung 1 fuer nutzersichtbare Kanal-Aussagen verbietet.
         Die Mail warnt dann mit `⚡ möglich` vor einem Nacht-Gewitter, waehrend
         SMS und Telegram zu Recht schweigen.
+
+        Issue #1331: vollstaendige ``night_weather`` haelt die Ankunfts-Luecke
+        geschlossen, damit dieser Test weiterhin die Gewitter-Fensterung
+        (#1275) prueft, nicht die Ziel-Datenluecke.
         """
         segments = [_segment({2: ThunderLevel.HIGH})]
-        report = self._report(segments)
+        report = self._report(segments, night_weather=_complete_night_weather())
         compact = self._compact_line(report.email_plain)
 
         assert "TH:-" in report.sms_text, (

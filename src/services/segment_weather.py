@@ -237,22 +237,24 @@ class SegmentWeatherService:
         sickert je in einen anderen Aufrufer)."""
         # OpenMeteo returns full-day (24h) data; aggregation must use only
         # segment hours. Unfiltered timeseries is kept for table display.
-        seg_start_h = segment.start_time.hour
-        seg_end_h = segment.end_time.hour
-        # Bug #806: Randstunde exklusiv am Ende (< seg_end_h), damit jede Stunde
+        # Issue #1334: Vergleich ueber volle Zeitstempel (geflooret auf die
+        # Stunde) statt nur die Stundenzahl -- der fruehere reine
+        # Stunden-Wraparound-Vergleich zog faelschlich gleiche Uhrzeiten von
+        # JEDEM Tag der Zeitreihe (falsche Min/Max bei Segmenten ueber
+        # Mitternacht). `dp.ts` und `segment.start_time`/`.end_time` sind
+        # beide UTC-aware und direkt vergleichbar.
+        start_floor = segment.start_time.replace(minute=0, second=0, microsecond=0)
+        end_floor = segment.end_time.replace(minute=0, second=0, microsecond=0)
+        # Bug #806: Randstunde exklusiv am Ende (< end_floor), damit jede Stunde
         # genau einem Segment gehört (Vermeidung von Widersprüchen bei Start-Punkt-Sampling).
         # Bug #856: Wenn Start- und Endstunde identisch sind (Segment < 1h, gleiche UTC-Stunde),
-        # würde < seg_end_h immer False liefern → Fallback auf == seg_start_h.
+        # würde < end_floor immer False liefern → Fallback auf == start_floor.
         filtered_data = [
             dp for dp in timeseries.data
             if (
-                (dp.ts.hour == seg_start_h)
-                if seg_start_h == seg_end_h
-                else (
-                    (seg_start_h <= dp.ts.hour < seg_end_h)
-                    if seg_start_h < seg_end_h
-                    else (dp.ts.hour >= seg_start_h or dp.ts.hour < seg_end_h)
-                )
+                (dp.ts == start_floor)
+                if start_floor == end_floor
+                else (start_floor <= dp.ts < end_floor)
             )
         ]
         from app.models import NormalizedTimeseries as NTS

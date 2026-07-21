@@ -776,6 +776,7 @@ def render_html(
     dc: UnifiedWeatherDisplayConfig,
     night_rows: list[dict],
     night_weather: Optional["NormalizedTimeseries"] = None,
+    has_gap: bool = False,
     thunder_forecast: Optional[dict] = None,
     changes: Optional[list[WeatherChange]],
     stage_name: Optional[str],
@@ -802,6 +803,13 @@ def render_html(
     Issue #790: removed parameters (highlights, daylight, show_quick_take_tags,
     show_highlights, daily_summary_metrics, show_metrics_summary) are absorbed
     by **_ignored for backward compatibility — they no longer affect output.
+
+    Issue #1331/#1334 F002: ``has_gap`` (Ziel-Datenluecke fuer die Kopf-Pille)
+    ist ein expliziter Parameter, KEINE eigene Berechnung hier — der Aufrufer
+    (``format_email``) kennt ``night_weather`` als echten Vertragsteil und
+    ermittelt die Luecke einmal zentral via
+    ``notification_service.compute_has_gap()`` (aus
+    ``day_window.build_day_window_points()``).
     """
     # Bug #397: Datums-Header in Ortszeit (passt zu lokalen Segment-Zeiten).
     report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")
@@ -1198,7 +1206,8 @@ def render_html(
         if mc.alert_enabled and mc.alert_threshold is not None
     }
     _pills = build_metrics_summary_pills(
-        segments, _pill_metric_ids, _pill_thresholds, tz=tz, night_weather=night_weather,
+        segments, _pill_metric_ids, _pill_thresholds, tz=tz,
+        night_weather=night_weather, has_gap=has_gap,
     )
     # AC-7 (#911): Abstände laut Vorlage EmailMetricsSummary
     _chips_html = "".join(pill_html(lbl, tone) for lbl, tone in _pills)

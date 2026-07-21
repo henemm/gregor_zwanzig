@@ -93,6 +93,7 @@ def render_compact(
     stage_stats: Optional[dict],
     profile: Optional[ActivityProfile] = None,
     night_weather: Optional["NormalizedTimeseries"] = None,
+    has_gap: bool = False,
     **_ignored,
 ) -> str:
     """Render compact plain-text e-mail body. Pure function.
@@ -143,7 +144,8 @@ def render_compact(
         if mc.alert_enabled and mc.alert_threshold is not None
     }
     pills = build_metrics_summary_pills(
-        segments, metric_ids, thresholds, tz=tz, night_weather=night_weather,
+        segments, metric_ids, thresholds, tz=tz,
+        night_weather=night_weather, has_gap=has_gap,
     )
     lines.append("== Metriken-Ueberblick ==")
     for label, tone in pills:

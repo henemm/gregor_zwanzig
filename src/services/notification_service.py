@@ -186,6 +186,36 @@ def _official_source_label_for(dto_notices: list) -> str:
     return official_alert_source_label(leading.alert.source)
 
 
+def compute_has_gap(
+    segments: list["SegmentWeatherData"],
+    night_weather: Optional["NormalizedTimeseries"],
+    tz: ZoneInfo,
+) -> bool:
+    """Issue #1331/#1334 Fix-Loop 4 (Option C): EINZIGER Berechnungspunkt fuer
+    die Ziel-Datenluecke — der echte Versandpfad (``send_trip_report``, unten)
+    ruft GENAU diese Funktion unmittelbar vor ``format_email()`` auf, weil
+    ``night_weather`` hier real vorliegt (Scheduler holt es unbedingt, #1313).
+
+    Statt die Luecke NACHZURECHNEN (Fix-Loop 3, separate Gap-Heuristik,
+    wiederholt an Kanten abgewichen: F004-F007), wird sie DIREKT aus dem echten
+    Renderer-Ergebnis abgeleitet — Erkennung == Anzeige per Konstruktion,
+    keine Divergenz mehr moeglich. Subsumiert Segment-Luecken UND
+    Nacht-Luecken in EINER Pruefung."""
+    if not segments:
+        return False
+    from output.renderers.day_window import (
+        DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, build_day_window_points,
+    )
+    from utils.timezone import local_hour
+
+    rendered = {
+        local_hour(dp.ts, tz)
+        for dp in build_day_window_points(segments, night_weather, tz)
+    }
+    expected = set(range(DAY_WINDOW_START_HOUR, DAY_WINDOW_END_HOUR + 1))
+    return not expected.issubset(rendered)
+
+
 def _official_source_url_for(dto_notices: list) -> str | None:
     """Quelle-Link der führenden (höchststufigen) Warnung (Issue #1216 F002).
     Für variant="standalone" derzeit ungenutzt (der Thin-Wrapper reicht 1:1 an
@@ -213,6 +243,13 @@ class NotificationService:
         if not request.segment_weather:
             return NotificationResult(sent=False, error="no segments")
 
+        # Issue #1331/#1334 Fix-Loop 3 (F003): siehe compute_has_gap()
+        # Docstring — Vorschau/Golden-Tests, die format_email() ohne
+        # night_weather aufrufen, bekommen bewusst KEINE Luecke unterstellt.
+        has_gap = compute_has_gap(
+            request.segment_weather, request.night_weather, request.trip_tz,
+        )
+
         report = self._formatter.format_email(
             segments=request.segment_weather,
             trip_name=request.trip.name,
@@ -235,6 +272,7 @@ class NotificationService:
             stage_total=request.stage_total,
             trip_url=request.trip_url,
             render_options=request.render_options,
+            has_gap=has_gap,
         )
 
         self._apply_prefixes(report, request)

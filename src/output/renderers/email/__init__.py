@@ -37,6 +37,7 @@ def render_email(
     display_config: UnifiedWeatherDisplayConfig,
     night_rows: Optional[list[dict]] = None,
     night_weather: Optional[NormalizedTimeseries] = None,
+    has_gap: bool = False,
     thunder_forecast: Optional[dict] = None,
     multi_day_trend: Optional[list[dict]] = None,
     changes: Optional[list[WeatherChange]] = None,
@@ -66,6 +67,13 @@ def render_email(
     explicit kwargs (spec §A6).
 
     Determinism: identical inputs → bit-identical (html, plain) tuple.
+
+    Issue #1331/#1334 F002: ``has_gap`` (Ziel-Datenluecke, ermittelt von
+    ``notification_service.compute_has_gap()`` aus
+    ``day_window.build_day_window_points()``) ist ein expliziter
+    Durchreich-Parameter (Default False) — der Caller
+    (``TripReportFormatter.format_email``) berechnet ihn einmal und reicht
+    ihn hier nur weiter.
     """
     # token_line carries trip_name and report_type — read from there with
     # graceful fallback to keep tests calling minimal-TokenLines working.
@@ -87,6 +95,7 @@ def render_email(
             stage_stats=stage_stats,
             profile=profile,
             night_weather=night_weather,
+            has_gap=has_gap,
         )
         return "", compact_text
 
@@ -106,6 +115,7 @@ def render_email(
         dc=display_config,
         night_rows=night_rows_list,
         night_weather=night_weather,
+        has_gap=has_gap,
         thunder_forecast=thunder_forecast,
         changes=changes,
         stage_name=stage_name,
@@ -134,6 +144,7 @@ def render_email(
         dc=display_config,
         night_rows=night_rows_list,
         night_weather=night_weather,
+        has_gap=has_gap,
         thunder_forecast=thunder_forecast,
         changes=changes,
         stage_name=stage_name,

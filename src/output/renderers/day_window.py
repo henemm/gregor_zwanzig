@@ -56,16 +56,6 @@ def _merge_hour(dps: list[ForecastDataPoint]) -> ForecastDataPoint:
     )
 
 
-def segments_have_gap(segments: Sequence[SegmentWeatherData]) -> bool:
-    """True, wenn mindestens ein Segment im Fenster keine Zeitreihe beitragen
-    konnte (Provider-Fehler oder leere/fehlende Daten) — dieselbe Bedingung
-    wie der Skip in build_day_window_points()."""
-    return any(
-        seg.has_error or seg.timeseries is None or not seg.timeseries.data
-        for seg in segments
-    )
-
-
 def build_day_window_points(
     segments: Sequence[SegmentWeatherData],
     night_weather: Optional[NormalizedTimeseries],

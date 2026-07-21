@@ -152,6 +152,15 @@ def _sms(alerts: list[OfficialAlert] | None = None, **kwargs) -> str:
     )
 
 
+def _complete_night_weather() -> NormalizedTimeseries:
+    """Vollstaendige (ereignislose) Nacht-Zeitreihe Ankunft(17:00)->19:00 --
+    Issue #1331: ohne sie meldet ``segments_have_gap`` bei Ankunft <= 19 Uhr
+    eine Ziel-Luecke (`?` statt `-`), die mit dieser Warn-Block-Suite
+    (#1318) nichts zu tun hat."""
+    data = [_dp(h) for h in (17, 18, 19)]
+    return NormalizedTimeseries(meta=_meta(), data=data)
+
+
 def _notice(alert: OfficialAlert):
     from output.renderers.alert.official_alerts import OfficialAlertNotice
     return OfficialAlertNotice(
@@ -214,7 +223,10 @@ GOLDEN_WET_NO_ALERTS = (
 
 
 def test_ac4_token_line_without_alerts_is_bit_identical():
-    sms = _sms([])
+    """Issue #1331: vollstaendige ``night_weather`` haelt die Ankunfts-Luecke
+    (17:00 <= 19:00 Fensterende) geschlossen, damit dieser Warn-Block-Test
+    (#1318) unveraendert die eingefrorene alert-freie Token-Zeile prueft."""
+    sms = _sms([], night_weather=_complete_night_weather())
     assert sms == GOLDEN_NO_ALERTS, (
         "Token-Zeile ohne amtliche Warnung hat sich veraendert.\n"
         f"  erwartet: {GOLDEN_NO_ALERTS!r}\n  erhalten: {sms!r}"
@@ -320,12 +332,16 @@ def test_ac7_warn_block_survives_truncation_before_pr():
 # AC-12 — Mehrbenutzer-Isolation: Warnung von A faerbt nicht auf B ab
 # ---------------------------------------------------------------------------
 def test_ac12_warning_of_user_a_does_not_leak_into_user_b():
+    """Issue #1331: vollstaendige ``night_weather`` haelt die Ankunfts-Luecke
+    fuer beide Nutzer geschlossen -- der Test prueft Warn-Block-Isolation
+    (#1318), nicht die Ziel-Datenluecken-Erkennung."""
     formatter = SMSTripFormatter()
     seg_a = _segment([_alert("thunderstorm", 4)])
     seg_b = _segment([], segment_id=2)
+    night = _complete_night_weather()
 
-    sms_a = formatter.format_sms([seg_a], stage_name="Etappe 5", tz=_TZ)
-    sms_b = formatter.format_sms([seg_b], stage_name="Etappe 5", tz=_TZ)
+    sms_a = formatter.format_sms([seg_a], stage_name="Etappe 5", tz=_TZ, night_weather=night)
+    sms_b = formatter.format_sms([seg_b], stage_name="Etappe 5", tz=_TZ, night_weather=night)
 
     assert "!TH:H@14" in sms_a, f"Nutzer A ohne Warn-Block: {sms_a!r}"
     assert "!" not in sms_b, (

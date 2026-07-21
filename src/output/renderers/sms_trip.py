@@ -27,7 +27,7 @@ from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt, local_hour
 from output.metric_format import thunder_label_value
 from output.renderers.alert.official_alerts import dedupe_official_alerts
-from output.renderers.day_window import build_day_window_points, segments_have_gap
+from output.renderers.day_window import build_day_window_points
 from output.renderers.sms import render_sms
 from output.tokens.builder import build_token_line
 from output.tokens.dto import (
@@ -124,6 +124,7 @@ def _segments_to_normalized_forecast(
     *,
     tz: ZoneInfo = ZoneInfo("UTC"),
     night_weather: Optional[NormalizedTimeseries] = None,
+    has_gap: bool = False,
 ) -> NormalizedForecast:
     """Aggregate trip segments into a single-day NormalizedForecast.
 
@@ -137,6 +138,15 @@ def _segments_to_normalized_forecast(
     geteilten Tagesfenster 04:00-19:00 (``day_window.build_day_window_points``)
     statt nur aus der Wanderzeit — ortsgenau bis zur Ankunft entlang der
     Route, danach am Ziel (``night_weather``).
+
+    ``has_gap`` (Issue #1331/#1334 F008): einziger Berechnungspunkt ist
+    ``notification_service.compute_has_gap()`` (aus dem echten Renderer-
+    Ergebnis, ``build_day_window_points``) — wird hier 1:1 durchgereicht,
+    Dieser Renderer rechnet die Luecke nicht selbst nach.
+    Ein has_error-Segment, dessen Stunden im gerenderten Fenster von
+    Nachbarsegmenten gedeckt werden, fehlt in ``build_day_window_points``
+    NICHT und darf deshalb auch keinen Fehlalarm ausloesen — ein echter
+    Ausfall fehlt dort real und wird von ``compute_has_gap`` ohnehin erkannt.
     """
     if not segments:
         raise ValueError("Cannot build forecast: no segments")
@@ -225,7 +235,7 @@ def _segments_to_normalized_forecast(
         gust_hourly=gust_samples_d,
         thunder_hourly=thunder_samples_d,
         confidence_pct_min=day_confidence,
-        has_data_gap=segments_have_gap(segments),
+        has_data_gap=has_gap,
     )
     return NormalizedForecast(
         days=(today,),
@@ -253,6 +263,7 @@ class SMSTripFormatter:
         thunder_forecast: Optional[dict] = None,
         disabled_specs: Optional[list[MetricSpec]] = None,
         night_weather: Optional[NormalizedTimeseries] = None,
+        has_gap: bool = False,
     ) -> str:
         """Generate v2.0 SMS via TokenLine pipeline.
 
@@ -268,6 +279,12 @@ class SMSTripFormatter:
                 None = bisheriges DEFAULTS-Verhalten (bit-identisch).
             night_weather: Issue #1317 / Epic #1319 — Rohdaten Ankunft→06:00
                 am Ziel; None = fail-soft, reine Segment-Fensterung (AC-9).
+            has_gap: Issue #1331/#1334 F003 — vom echten Versandpfad bereits
+                per ``notification_service.compute_has_gap()`` (aus
+                ``day_window.build_day_window_points()``) ermittelte
+                Ziel-Datenluecke, explizit durchgereicht statt hier aus
+                ``night_weather`` neu abgeleitet zu werden. Default False
+                (Vorschau/Tests ohne echten Versandpfad).
 
         Returns:
             v2.0 wire-format string, ≤ max_length chars.
@@ -280,7 +297,9 @@ class SMSTripFormatter:
         self._exposed_sections = exposed_sections
         self._tz = tz
 
-        forecast = _segments_to_normalized_forecast(segments, tz=tz, night_weather=night_weather)
+        forecast = _segments_to_normalized_forecast(
+            segments, tz=tz, night_weather=night_weather, has_gap=has_gap,
+        )
 
         # Bug #874: TH+: immer als days[1] einbauen — TH+:- wenn kein Gewitter (Spec-Pflicht).
         # Issue #1275 / ADR-0025 Entscheidung 3: Level-Wert kommt aus der

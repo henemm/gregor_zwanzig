@@ -169,6 +169,7 @@ def _tg_day_footer(
     *,
     night_weather: Optional["NormalizedTimeseries"] = None,
     tz: ZoneInfo = ZoneInfo("UTC"),
+    has_gap: bool = False,
 ) -> Optional[str]:
     """Fußzeile mit Tageswerten (AC-6): ⚡ kein|MED|HIGH · Sicht gut|… · 0°C-Grenze N m.
 
@@ -179,6 +180,10 @@ def _tg_day_footer(
     geteilten Tagesfenster 04-19 (``day_window.build_day_window_points``) —
     dieselbe Quelle und dasselbe Fenster wie SMS/Kurzzusammenfassung/Pillen
     (ADR-0025-Konsistenz), statt nur der Wanderzeit je Segment (#1275).
+
+    ``has_gap`` (Issue #1331/#1334 F002): vom Aufrufer (``render_telegram_
+    bubbles``, dem echten Bubble-Einstiegspunkt mit ``night_weather``) bereits
+    ermittelte Ziel-Datenluecke — KEINE eigene Berechnung mehr hier.
     """
     from output.renderers.day_window import build_day_window_points
 
@@ -206,7 +211,9 @@ def _tg_day_footer(
     # Gewitter
     if "thunder" in enabled:
         if max_thunder_sev == 0:
-            thunder_word = "kein"
+            # Issue #1331: Ziel-Datenluecke darf keine positive Entwarnung
+            # "kein" vortaeuschen -- Unsicherheitsmarker statt Fehl-Entwarnung.
+            thunder_word = "?" if has_gap else "kein"
         elif max_thunder_sev == 1:
             thunder_word = "MED"
         else:
@@ -427,6 +434,7 @@ def render_telegram_bubbles(
     day_comparison: Optional["DayComparison"] = None,
     night_weather: Optional["NormalizedTimeseries"] = None,
     trip: Optional["Trip"] = None,
+    has_gap: bool = False,
 ) -> list[TelegramBubble]:
     """Render die Telegram-Briefing-Bubble-Liste (Issue #1001). Pure function.
 
@@ -434,6 +442,13 @@ def render_telegram_bubbles(
     ``telegram_kurzform`` wirkungslos — AC-10), je Segment/Ziel eine Tabellen-
     Bubble, optionaler Ausblick (nur wenn ``multi_day_trend`` gesetzt),
     Aktionen (Inline-Keyboard).
+
+    ``has_gap`` (Issue #1331/#1334 F008): vom echten Versandpfad bereits per
+    ``notification_service.compute_has_gap()`` (aus
+    ``day_window.build_day_window_points()``) ermittelte Ziel-Datenluecke —
+    einziger Berechnungspunkt, wird 1:1 durchgereicht (Default False fuer
+    Vorschau/Tests ohne echten Versandpfad). Dieser Renderer rechnet die
+    Luecke nicht selbst nach.
     """
     fkeys = friendly_keys if friendly_keys is not None else set()
     layout = render_for_channel("telegram", dc, report_type)
@@ -465,9 +480,14 @@ def render_telegram_bubbles(
     overview_lines: list[str] = ["Kurzübersicht"]
     for mid in dc.get_enabled_metric_ids():
         overview_lines.extend(_wrap(_esc(_overview_line(mid, seg_tables, fkeys)), _TG_PROSE_WIDTH))
+    # Issue #1331/#1334 F008: has_gap kommt als expliziter Parameter vom
+    # echten Versandpfad (notification_service.compute_has_gap() aus
+    # day_window.build_day_window_points(), einziger Berechnungspunkt) —
+    # dieser Renderer rechnet die Luecke nicht selbst nach.
     footer = _tg_day_footer(
         [sd for sd in segments if not sd.has_error], dc.get_enabled_metric_ids(),
         night_weather=night_weather, tz=tz,
+        has_gap=has_gap,
     )
     if footer:
         overview_lines.append("")

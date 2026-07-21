@@ -78,8 +78,23 @@ class TripReportFormatter:
         trip_url: Optional[str] = None,
         render_options: Optional[ReportRenderOptions] = None,
         trip: Optional["Trip"] = None,
+        has_gap: bool = False,
     ) -> TripReport:
-        """Format trip segments into HTML + plain-text email."""
+        """Format trip segments into HTML + plain-text email.
+
+        ``has_gap`` (Issue #1331/#1334 Fix-Loop 3, F003): explizite,
+        vorberechnete Ziel-Datenluecke (Segment-Luecke ODER Nacht-Luecke).
+        KEINE eigene Ableitung mehr aus ``night_weather`` hier — das war die
+        Ursache des Over-Flaggings (Golden-Tests, ``preview_service.py``, die
+        nie Nachtdaten holen, zeigten faelschlich `?`). Der EINZIGE
+        Berechnungspunkt ist der echte Versandpfad
+        (``notification_service.send_trip_report``, wo ``night_weather``
+        real vorliegt — Scheduler #1313) via
+        ``notification_service.compute_has_gap()`` (aus
+        ``day_window.build_day_window_points()``). Default False:
+        Vorschau/Tests/Goldens, die diesen Parameter weglassen, bekommen
+        KEINE Luecke unterstellt.
+        """
         if not segments:
             raise ValueError("Cannot format email with no segments")
 
@@ -126,7 +141,7 @@ class TripReportFormatter:
         compact_summary = None
         if options.show_compact_summary:
             compact_summary = self._generate_compact_summary(
-                segments, stage_name, dc, night_weather,
+                segments, stage_name, dc, night_weather, has_gap=has_gap,
             )
 
         # β3 Adapter (§A2/§A6): RENDER an pure renderer delegieren.
@@ -156,6 +171,7 @@ class TripReportFormatter:
             display_config=dc,
             night_rows=night_rows,
             night_weather=night_weather,
+            has_gap=has_gap,
             thunder_forecast=thunder_forecast,
             multi_day_trend=effective_trend,
             changes=changes,
@@ -205,6 +221,7 @@ class TripReportFormatter:
             day_comparison=day_comparison,
             night_weather=night_weather,
             trip=trip,
+            has_gap=has_gap,
         )
         telegram_bubbles = [b.text for b in telegram_bubbles_result]
         telegram_actions_markup = (
@@ -238,6 +255,7 @@ class TripReportFormatter:
             thunder_forecast=thunder_forecast,
             disabled_specs=_disabled_sms_specs or None,
             night_weather=night_weather,
+            has_gap=has_gap,
         )
 
         # Issue #1001 AC-10: telegram_kurzform ist wirkungslos (Kurzuebersicht-
@@ -710,6 +728,8 @@ class TripReportFormatter:
         stage_name: Optional[str],
         dc: UnifiedWeatherDisplayConfig,
         night_weather: Optional[NormalizedTimeseries] = None,
+        *,
+        has_gap: bool = False,
     ) -> Optional[str]:
         """Generate compact natural-language summary for the stage."""
         if not segments or not stage_name:
@@ -718,6 +738,7 @@ class TripReportFormatter:
         formatter = CompactSummaryFormatter()
         return formatter.format_stage_summary(
             segments, stage_name, dc, tz=self._tz, night_weather=night_weather,
+            has_gap=has_gap,
         )
 
     @staticmethod

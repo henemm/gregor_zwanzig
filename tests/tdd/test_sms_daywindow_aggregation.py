@@ -247,9 +247,18 @@ def _dc(*, rain_probability: bool = False):
     return dc
 
 
-def _report(segments, night_weather, *, report_type: str = "morning", dc=None):
+def _report(segments, night_weather, *, report_type: str = "morning", dc=None, has_gap: bool = False):
     """Der EINE Einstiegspunkt: erzeugt SMS + E-Mail (HTML/Plain, inkl.
-    Kopf-Pillen + Detailtabelle) + Telegram-Bubbles aus DENSELBEN Rohdaten."""
+    Kopf-Pillen + Detailtabelle) + Telegram-Bubbles aus DENSELBEN Rohdaten.
+
+    ``has_gap`` (Issue #1331/#1334 Fix-Loop 3, F003): ``format_email()``
+    leitet die Ziel-Datenluecke NICHT mehr selbst aus ``night_weather`` ab
+    (das war die Ursache des Over-Flaggings) — im echten Versandpfad
+    berechnet ``notification_service.send_trip_report()`` sie explizit
+    (``day_window.segments_have_gap``/``night_gap``) und reicht sie durch.
+    Tests, die eine Ziel-Luecke pruefen wollen, setzen ``has_gap=True``
+    explizit, statt sich auf ein implizites ``night_weather=None`` zu
+    verlassen."""
     return TripReportFormatter().format_email(
         segments,
         trip_name="E7",
@@ -258,6 +267,7 @@ def _report(segments, night_weather, *, report_type: str = "morning", dc=None):
         display_config=dc or _dc(),
         stage_name="E7",
         tz=_TZ,
+        has_gap=has_gap,
     )
 
 
@@ -567,13 +577,22 @@ class TestAC7LowerBoundBeforeDeparture:
 
     def test_03_00_thunder_before_departure_stays_excluded(self):
         """GUARD: 03:00 liegt ausserhalb 04-19 — heute schon (zufaellig)
-        ausgeschlossen, muss es auch nach der Fensteraufweitung bleiben."""
+        ausgeschlossen, muss es auch nach der Fensteraufweitung bleiben.
+        Issue #1331 (PO-Entscheidung 2026-07-21, semantisch gewollt):
+        Ankunft 12:00 + night_weather=None loest jetzt die Ziel-Luecke aus
+        -> `TH:?` statt `TH:-` (keine Fehl-Entwarnung fuer das unbeobachtete
+        Zielfenster). Die eigentliche Aussage des Tests (03:00 loest KEIN
+        Ereignis-Token aus) bleibt unveraendert gueltig. F003-Fix-Loop-3:
+        ``has_gap`` wird jetzt explizit gesetzt (echter Versandpfad
+        berechnet sie, ``format_email()`` selbst nicht mehr)."""
         segments = [_segment(day=20, early_event=(3, ThunderLevel.HIGH))]
-        report = _report(segments, None, report_type="morning")
+        report = _report(segments, None, report_type="morning", has_gap=True)
 
-        assert "TH:-" in report.sms_text, (
+        assert "TH:?" in report.sms_text, (
             f"03:00 liegt ausserhalb des Tagesfensters 04-19 und darf kein "
-            f"Token ausloesen.\nSMS: {report.sms_text}"
+            f"Ereignis-Token ausloesen -- die Ziel-Luecke (Ankunft 12:00, "
+            f"night_weather=None) zeigt `TH:?` statt `TH:-`.\n"
+            f"SMS: {report.sms_text}"
         )
         assert "TH:H@3" not in report.sms_text, f"SMS: {report.sms_text}"
 
@@ -610,13 +629,20 @@ class TestAC9NightWeatherNoneFailSoft:
     Ergebnis ist reine Segment-Fensterung im 04-19-Fenster."""
 
     def test_no_night_weather_does_not_crash_and_stays_plausible(self):
+        """Issue #1331 (PO-Entscheidung 2026-07-21, semantisch gewollt):
+        Ankunft 12:00 + night_weather=None ist jetzt eine erkannte
+        Ziel-Luecke -> `TH:?` (Unsicherheit) statt `TH:-` (Fehl-Entwarnung).
+        fail-soft bleibt: kein Absturz, plausible Ausgabe in allen Kanaelen.
+        F003-Fix-Loop-3: ``has_gap`` wird explizit gesetzt (echter
+        Versandpfad berechnet sie, ``format_email()`` selbst nicht mehr)."""
         segments = [_segment(day=20)]
-        report = _report(segments, None, report_type="morning")
+        report = _report(segments, None, report_type="morning", has_gap=True)
 
         assert report.sms_text, "SMS-Text fehlt komplett (Absturz/Leerlauf?)"
-        assert "TH:-" in report.sms_text, (
-            f"Ohne night_weather und ohne Gewitter in der Etappe muss `TH:-` "
-            f"stehen (fail-soft, kein erfundenes Signal).\nSMS: {report.sms_text}"
+        assert "TH:?" in report.sms_text, (
+            f"Ohne night_weather und mit Ankunft vor Fensterende (12:00) "
+            f"muss die Ziel-Luecke `TH:?` zeigen (kein erfundenes "
+            f"Entwarnungs-Signal `TH:-`).\nSMS: {report.sms_text}"
         )
         assert report.email_plain, "email_plain fehlt komplett (Absturz/Leerlauf?)"
         assert report.telegram_bubbles, "Telegram-Bubbles fehlen komplett (Absturz/Leerlauf?)"
@@ -713,3 +739,254 @@ class TestAdversarySmsLengthUnderFullWindow:
         )
         assert "TH:" in sms, f"TH: fehlt (durch Truncation verschluckt?).\nSMS: {sms}"
         assert "TH:-" not in sms, f"Gewitter-Ereignis wurde nicht erkannt.\nSMS: {sms}"
+
+
+# ---------------------------------------------------------------------------
+# Issue #1331 (docs/specs/modules/daywindow_gap_and_midnight_fix.md):
+# AC-4..AC-7 -- `segments_have_gap()` kennt `night_weather` heute nicht, ein
+# unbeobachtetes Zielfenster (Ankunft->19 Uhr) meldet faelschlich Entwarnung
+# statt einer Datenluecke (`?`, analog #1328).
+# ---------------------------------------------------------------------------
+
+class TestAC4TargetWindowGapShowsUnknownInSms:
+    """AC-4: fehlerfreie Segmente, Ankunft 12:00, `night_weather=None` -- das
+    Zielfenster 12-19 Uhr hat KEINE Daten (kein Segment deckt es ab, keine
+    Nacht-Zeitreihe vorhanden). `segments_have_gap()` prueft heute nur
+    Segment-Fehler, nicht die fehlende Nacht-Zeitreihe -- die SMS zeigt
+    faelschlich Entwarnung (`-`) fuer alle fuenf Fenster-Symbole R/PR/W/G/
+    TH: statt der Datenluecke (`?`). RED: aktueller Code kennt keine
+    Ziel-Luecke."""
+
+    def test_sms_shows_unknown_for_all_five_window_symbols(self):
+        segments = [_segment(day=20)]  # Wanderzeit 08-12, Ankunft 12:00
+        report = _report(
+            segments, None, report_type="morning", dc=_dc(rain_probability=True), has_gap=True,
+        )
+        sms = report.sms_text
+
+        assert "E7: N10 D20 R? PR? W? G? TH:? TH+:-" in sms, (
+            f"Erwartet, dass die Ziel-Datenluecke (Ankunft 12:00, "
+            f"night_weather=None, Fenster 12-19 unbeobachtet) alle fuenf "
+            f"Fenster-Symbole R/PR/W/G/TH: von `-` auf `?` umstellt -- "
+            f"segments_have_gap() kennt night_weather noch nicht.\nSMS: {sms}"
+        )
+
+    def test_compact_summary_shows_uncertainty_marker(self):
+        """Loser gekoppelt an die konkrete Formulierung (die Kurzzusammen-
+        fassung ist Fliesstext, kein Token-Format wie SMS): fordert nur,
+        dass ueberhaupt ein Unsicherheits-Marker (`?`) erscheint, statt
+        schweigend 'trocken'/ruhigen Wind als abschliessende Aussage zu
+        treffen."""
+        segments = [_segment(day=20)]
+        report = _report(
+            segments, None, report_type="morning", dc=_dc(rain_probability=True), has_gap=True,
+        )
+        compact = _compact_line(report.email_plain)
+
+        assert "?" in compact, (
+            f"Kurzzusammenfassung meldet keine Unsicherheit fuer das "
+            f"unbeobachtete Zielfenster 12-19 (Ankunft 12:00, "
+            f"night_weather=None).\nKompakt: {compact!r}"
+        )
+
+    def test_pill_shows_thunder_uncertainty_not_kein_gewitter(self):
+        segments = [_segment(day=20)]
+        report = _report(
+            segments, None, report_type="morning", dc=_dc(rain_probability=True), has_gap=True,
+        )
+        plain = report.email_plain
+
+        assert "kein Gewitter" not in plain, (
+            f"Gewitter-Pille meldet 'kein Gewitter', obwohl das "
+            f"Zielfenster 12-19 (Ankunft 12:00, night_weather=None) "
+            f"unbeobachtet ist -- Fehl-Entwarnung statt Datenluecke.\n"
+            f"Plain:\n{plain}"
+        )
+        assert "Gewitter" in plain and "?" in plain, (
+            f"Erwartet einen Unsicherheits-Marker (`?`) fuer Gewitter statt "
+            f"stiller Entwarnung.\nPlain:\n{plain}"
+        )
+
+    def test_pill_shows_uncertainty_for_all_five_window_metrics(self):
+        """F001 (Adversary-Fund): NICHT nur die Gewitter-Pille, sondern auch
+        Wind/Boen/Regen/Regen-W. duerfen bei der Ziel-Datenluecke keine
+        positive Entwarnung mehr zeigen -- sonst widerspricht die Mail sich
+        selbst (SMS 'W? G? R? PR? TH:?' vs. Pillen 'Wind max .. km/h'/
+        'kein Regen'/'Regen-W. max 0%'). Spiegelt exakt die SMS-Parität
+        (builder._mk_metric: '-' + has_gap -> '?')."""
+        segments = [_segment(day=20)]
+        report = _report(
+            segments, None, report_type="morning", dc=_dc(rain_probability=True), has_gap=True,
+        )
+        plain = report.email_plain
+
+        # Entwarnungs-Phrasen duerfen NICHT mehr auftauchen (waren die
+        # widerspruechliche Fehl-Entwarnung vor dem Fix).
+        for absent_phrase in (
+            "kein Regen", "Regen-W. max 0%", "Wind max 5 km/h", "Böen max 5 km/h",
+            "kein Gewitter",
+        ):
+            assert absent_phrase not in plain, (
+                f"Entwarnungs-Phrase {absent_phrase!r} haette bei der "
+                f"unbeobachteten Ziel-Datenluecke durch einen Unsicherheits-"
+                f"Marker (`?`) ersetzt werden muessen.\nPlain:\n{plain}"
+            )
+        # Unsicherheits-Marker fuer alle fuenf Fenster-Metriken (Wind, Boen,
+        # Regen, Regenwahrscheinlichkeit, Gewitter), SMS-identisch.
+        for present_phrase in (
+            "Wind ?", "Böen ?", "Regen ?", "Regen-W. ?", "Gewitter ?",
+        ):
+            assert present_phrase in plain, (
+                f"Erwartet den Unsicherheits-Marker {present_phrase!r} in "
+                f"der Kopf-Pille (SMS-Parität mit '?').\nPlain:\n{plain}"
+            )
+
+    def test_telegram_footer_shows_thunder_uncertainty_not_kein(self):
+        segments = [_segment(day=20)]
+        report = _report(
+            segments, None, report_type="morning", dc=_dc(rain_probability=True), has_gap=True,
+        )
+        telegram = _telegram_text(report)
+
+        assert "⚡ kein" not in telegram, (
+            f"Telegram-Fusszeile meldet '⚡ kein', obwohl das Zielfenster "
+            f"12-19 unbeobachtet ist (Ankunft 12:00, night_weather=None) -- "
+            f"Fehl-Entwarnung statt Datenluecke.\nTelegram:\n{telegram}"
+        )
+        assert "?" in telegram, (
+            f"Erwartet einen Unsicherheits-Marker (`?`) in der "
+            f"Telegram-Fusszeile.\nTelegram:\n{telegram}"
+        )
+
+
+class TestAC5FoundValueStaysVisibleDespiteGap:
+    """AC-5: wie AC-4, aber ein tatsaechlich gefundener Wert (Regen um
+    10:00, VOR Ankunft 12:00, also aus der regulaeren Segment-Zeitreihe --
+    kein Rateergebnis) bleibt sichtbar und wird NICHT durch `?` ersetzt
+    (#1328-Invariante AC-2). RED gekoppelt an AC-4: erst wenn PR/W/G/TH:
+    ueberhaupt auf `?` umstellen, kann geprueft werden, dass der gefundene
+    R-Wert davon unberuehrt bleibt."""
+
+    def test_sms_keeps_found_rain_but_marks_rest_unknown(self):
+        segments = [_segment_with_hour_overrides(
+            day=20, start_h=_WALK_START_H, end_h=_ARRIVAL_H,
+            overrides={10: {"precip": 0.5}},
+        )]
+        report = _report(
+            segments, None, report_type="morning", dc=_dc(rain_probability=True), has_gap=True,
+        )
+        sms = report.sms_text
+
+        assert "E7: N10 D20 R0.5@10 PR? W? G? TH:? TH+:-" in sms, (
+            f"Erwartet: gefundener Regen (10:00, vor Ankunft) bleibt "
+            f"sichtbar (`R0.5@10`), waehrend PR/W/G/TH: ohne Fund im "
+            f"unbeobachteten Zielfenster auf `?` wechseln.\nSMS: {sms}"
+        )
+
+    def test_pill_keeps_found_rain_visible_others_stay_unknown(self):
+        """AC-5-Invariante fuer die Kopf-Pille: ein tatsaechlich gefundener
+        Wert (Regen 10:00, vor Ankunft) bleibt in der Regen-Pille sichtbar
+        und wird NICHT durch `?` ersetzt, waehrend die uebrigen
+        Fenster-Metriken (ohne Fund) weiterhin `?` zeigen (F001-Symmetrie
+        mit SMS `R0.5@10 PR? W? G? TH:?`)."""
+        segments = [_segment_with_hour_overrides(
+            day=20, start_h=_WALK_START_H, end_h=_ARRIVAL_H,
+            overrides={10: {"precip": 0.5}},
+        )]
+        report = _report(
+            segments, None, report_type="morning", dc=_dc(rain_probability=True), has_gap=True,
+        )
+        plain = report.email_plain
+
+        assert "Regen ab 10:00 · 0.5 mm" in plain, (
+            f"Erwartet: der gefundene Regen-Wert (10:00, vor Ankunft) bleibt "
+            f"in der Regen-Pille sichtbar, statt durch `?` verdraengt zu "
+            f"werden.\nPlain:\n{plain}"
+        )
+        assert "Regen ?" not in plain, (
+            f"Regen-Pille haette den gefundenen Wert nicht durch `?` "
+            f"ersetzen duerfen.\nPlain:\n{plain}"
+        )
+        for present_phrase in ("Wind ?", "Böen ?", "Regen-W. ?", "Gewitter ?"):
+            assert present_phrase in plain, (
+                f"Erwartet weiterhin den Unsicherheits-Marker "
+                f"{present_phrase!r} fuer die Metriken ohne Fund.\n"
+                f"Plain:\n{plain}"
+            )
+
+    def test_compact_summary_keeps_found_rain_mention(self):
+        """Regressionsschutz (darf bereits heute gruen sein): der gefundene
+        Regen-Wert wird in der Kurzzusammenfassung genannt, nicht durch
+        Schweigen/Unsicherheit verdraengt."""
+        segments = [_segment_with_hour_overrides(
+            day=20, start_h=_WALK_START_H, end_h=_ARRIVAL_H,
+            overrides={10: {"precip": 0.5}},
+        )]
+        report = _report(segments, None, report_type="morning", dc=_dc(rain_probability=True))
+        compact = _compact_line(report.email_plain)
+
+        assert "Regen" in compact and "10:00" in compact, (
+            f"Erwartet, dass der gefundene Regen-Wert (10:00, vor Ankunft) "
+            f"weiterhin in der Kurzzusammenfassung genannt wird.\n"
+            f"Kompakt: {compact!r}"
+        )
+
+
+class TestAC6ArrivalAfter19NoOverFlagging:
+    """AC-6 GUARD (muss GRUEN bleiben): Ankunft nach 19:00 Uhr,
+    `night_weather=None` -- im Tagesfenster (bis 19:00) sind KEINE
+    Nach-Ankunft-Stunden erwartet, also keine Ziel-Luecke, kein `?`.
+    Ueber-Flagging-Schutz. Bereits heute gruen (weil night_weather
+    ueberhaupt nicht in die Luecken-Erkennung einfliesst); muss nach dem
+    Fix aus dem RICHTIGEN Grund gruen bleiben (arrival_hour > 19)."""
+
+    def test_sms_stays_dash_when_arrival_after_window_end(self):
+        segments = [_segment(day=20, start_h=15, end_h=20)]  # Ankunft 20:00
+        report = _report(segments, None, report_type="morning", dc=_dc(rain_probability=True))
+        sms = report.sms_text
+
+        assert "TH:?" not in sms and "R?" not in sms and "PR?" not in sms, (
+            f"Kein `?` erwartet -- Ankunft 20:00 liegt nach dem "
+            f"Tagesfenster-Ende 19:00, es sind keine Nach-Ankunft-Stunden "
+            f"im Fenster erwartet (Ueber-Flagging-Schutz).\nSMS: {sms}"
+        )
+        assert "E7: N10 D20 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
+
+    def test_no_channel_shows_unknown_marker_when_arrival_after_window_end(self):
+        segments = [_segment(day=20, start_h=15, end_h=20)]  # Ankunft 20:00
+        report = _report(segments, None, report_type="morning", dc=_dc(rain_probability=True))
+        compact = _compact_line(report.email_plain)
+        telegram = _telegram_text(report)
+
+        assert "?" not in compact, f"Kompakt: {compact!r}"
+        assert "kein Gewitter" in report.email_plain, f"Plain:\n{report.email_plain}"
+        assert "⚡ kein" in telegram, f"Telegram:\n{telegram}"
+
+
+class TestAC7CompleteDataNoNewUnknown:
+    """AC-7 GUARD (muss GRUEN bleiben): vollstaendiges Briefing mit
+    fehlerfreien Segmenten UND vollstaendigem `night_weather` -- keine
+    Luecke, kein neues `?`. Regressionsschutz gegen Fehlalarm."""
+
+    def test_sms_stays_dash_with_complete_night_weather(self):
+        segments = [_segment(day=20)]
+        night = _night_weather(day=20, event_hour=None)  # kein Ereignis, aber VORHANDEN
+        report = _report(segments, night, report_type="morning", dc=_dc(rain_probability=True))
+        sms = report.sms_text
+
+        assert "?" not in sms, (
+            f"Kein `?` erwartet -- night_weather ist vollstaendig vorhanden "
+            f"(nur ereignislos), keine Datenluecke.\nSMS: {sms}"
+        )
+        assert "E7: N10 D20 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
+
+    def test_no_channel_shows_unknown_marker_with_complete_night_weather(self):
+        segments = [_segment(day=20)]
+        night = _night_weather(day=20, event_hour=None)
+        report = _report(segments, night, report_type="morning", dc=_dc(rain_probability=True))
+        compact = _compact_line(report.email_plain)
+        telegram = _telegram_text(report)
+
+        assert "?" not in compact, f"Kompakt: {compact!r}"
+        assert "kein Gewitter" in report.email_plain, f"Plain:\n{report.email_plain}"
+        assert "⚡ kein" in telegram, f"Telegram:\n{telegram}"

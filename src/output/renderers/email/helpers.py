@@ -1187,6 +1187,7 @@ def _pill_for_metric(
     all_dps: list,
     *,
     tz: "ZoneInfo",
+    has_gap: bool = False,
 ) -> Optional[tuple[str, str]]:
     """Issue #795/RC0+RC5: (text, tone) pill je Metrik, analog SMS ausgeschrieben.
 
@@ -1312,6 +1313,10 @@ def _pill_for_metric(
             text = (f"{label} >{int(thr)} km/h ab {first_hh:02d}:00 · "
                     f"max {int(pv)} ({pk_hh:02d}:00)")
             return (text, tone)
+        # Issue #1331 F001: Keine Schwellenueberschreitung entspricht SMS "-";
+        # bei Ziel-Datenluecke keine positive Entwarnung vortaeuschen.
+        if has_gap:
+            return (f"{label} ?", "ampel_yellow")
         # Keine Schwellenüberschreitung: max-Form mit Uhrzeit
         peak_ts = max(vals, key=lambda x: (x[0], -x[1].timestamp()))[1]
         peak_hh = local_hour(peak_ts, tz)
@@ -1332,6 +1337,10 @@ def _pill_for_metric(
             first_hh, _pv, _pk_hh = fp
             total_str = f"{total:.1f}".rstrip("0").rstrip(".")
             return (f"Regen ab {first_hh:02d}:00 · {total_str} mm", tone)
+        # Issue #1331 F001: Keine Schwellenueberschreitung entspricht SMS "-";
+        # bei Ziel-Datenluecke keine positive Entwarnung vortaeuschen.
+        if has_gap:
+            return ("Regen ?", "ampel_yellow")
         if round(total, 1) > 0:
             total_str = f"{total:.1f}".rstrip("0").rstrip(".")
             return (f"Regen ges. {total_str} mm", tone)
@@ -1353,6 +1362,10 @@ def _pill_for_metric(
             text = (f"Regen-W. >{int(thr)}% ab {first_hh:02d}:00 · "
                     f"max {int(pv)}% ({peak_hh:02d}:00)")
             return (text, tone)
+        # Issue #1331 F001: Keine Schwellenueberschreitung entspricht SMS "-";
+        # bei Ziel-Datenluecke keine positive Entwarnung vortaeuschen.
+        if has_gap:
+            return ("Regen-W. ?", "ampel_yellow")
         # Kein Schwellenüberschreitung: max-Form
         peak_ts = max(vals, key=lambda x: (x[0], -x[1].timestamp()))[1]
         max_hh = local_hour(peak_ts, tz)
@@ -1376,6 +1389,10 @@ def _pill_for_metric(
             peak_hh = local_hour(peak_ts or first_thunder_ts, tz)
             return (f"Gewitter ab {first_hh:02d}:00 · stärkste {peak_hh:02d}:00",
                     "ampel_red")
+        # Issue #1331: Ziel-Datenluecke (Ankunft->19 Uhr unbeobachtet) darf
+        # keine positive Entwarnung "kein Gewitter" vortaeuschen.
+        if has_gap:
+            return ("Gewitter ?", "ampel_yellow")
         return ("kein Gewitter", "ampel_green")
 
     if metric_id == "visibility":
@@ -1466,6 +1483,7 @@ def build_metrics_summary_pills(
     *,
     tz: "ZoneInfo",
     night_weather: Optional[NormalizedTimeseries] = None,
+    has_gap: bool = False,
 ) -> list[tuple[str, str]]:
     """Issue #664/#795: Build one (text, tone) pill per metric from segment data.
 
@@ -1482,6 +1500,14 @@ def build_metrics_summary_pills(
         Temperatur und alle uebrigen Pillen bleiben auf der Wanderzeit-Quelle
         (QA-Nachtrag: sonst widerspricht die Temperatur-Kachel den SMS-Token
         N/D — s. ``_collect_hiking_window_dps``).
+    has_gap: Issue #1331/#1334 F002 — vom Aufrufer bereits per
+        ``notification_service.compute_has_gap()`` (aus
+        ``day_window.build_day_window_points()``) ermittelte
+        Ziel-Datenluecke. Wird HIER NICHT selbst aus ``night_weather``
+        berechnet: direkte Aufrufer ohne
+        ``night_weather`` (z.B. Bestandstests mit vollstaendigen Segment-
+        Daten) sollen keine Luecke unterstellt bekommen, nur weil sie den
+        Nacht-Parameter nicht mitgeben. Default False = keine Luecke.
     Returns list of (text, tone) tuples in catalog order.
     """
     from output.renderers.day_window import build_day_window_points
@@ -1495,7 +1521,7 @@ def build_metrics_summary_pills(
         if mid not in ids_set:
             continue
         dps = window_dps if mid in _DAY_WINDOW_PILL_IDS else hiking_dps
-        pill = _pill_for_metric(mid, thresholds, dps, tz=tz)
+        pill = _pill_for_metric(mid, thresholds, dps, tz=tz, has_gap=has_gap)
         if pill is not None:
             pills.append(pill)
     return pills

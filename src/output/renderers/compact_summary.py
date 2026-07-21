@@ -46,6 +46,8 @@ class CompactSummaryFormatter:
         dc: UnifiedWeatherDisplayConfig,
         tz: Optional[ZoneInfo] = None,
         night_weather: Optional[NormalizedTimeseries] = None,
+        *,
+        has_gap: bool = False,
     ) -> str:
         """Wrapper ``context="route"`` (Trip/Etappe) um den geteilten Kern.
 
@@ -56,6 +58,14 @@ class CompactSummaryFormatter:
         ``night_weather``: Issue #1317 / Epic #1319 — Rohdaten Ankunft→06:00
         am Ziel, damit die Stundenliste dasselbe Tagesfenster 04-19 abdeckt
         wie SMS/Pillen/Telegram-Fusszeile (ADR-0025-Konsistenz).
+
+        ``has_gap``: Issue #1331/#1334 F002 — vom Aufrufer bereits per
+        ``notification_service.compute_has_gap()`` (aus
+        ``day_window.build_day_window_points()``) ermittelte
+        Ziel-Datenluecke, KEINE eigene Berechnung hier (direkte Aufrufer
+        ohne ``night_weather`` sollen keine Luecke unterstellt bekommen).
+        Default False = keine Luecke; nur der Trip-Kontext
+        (``format_email``) berechnet und uebergibt sie echt.
         """
         effective_tz = tz or ZoneInfo("UTC")
         return self.format_weather_summary(
@@ -64,6 +74,7 @@ class CompactSummaryFormatter:
             self._shorten_stage_name(stage_name),
             dc,
             tz,
+            has_gap=has_gap,
         )
 
     def format_weather_summary(
@@ -73,6 +84,7 @@ class CompactSummaryFormatter:
         title: str,
         dc: UnifiedWeatherDisplayConfig,
         tz: Optional[ZoneInfo] = None,
+        has_gap: bool = False,
     ) -> str:
         """Kontextneutraler Kern (Issue #1278): ``(summary, hourly, titel, dc,
         tz) -> Fliesstext``.
@@ -83,9 +95,13 @@ class CompactSummaryFormatter:
         Text-Formatierungslogik (Trip/Compare-Teilungs-Invariante, CLAUDE.md).
         Der Titel wird hier NICHT mehr veraendert — die Etappen-Kuerzungsregel
         gehoert in den Trip-Wrapper, ein Ortsname darf nicht danach aussehen,
-        als waere er ein Etappenname (AC-8).
+        als waere er ein Etappenname (AC-8). ``has_gap`` (Issue #1331):
+        unbeobachtetes Zielfenster -- die Entwarnung "trocken" wird durch
+        einen Unsicherheitsmarker ersetzt, ein tatsaechlich gefundener
+        Regenwert bleibt unveraendert (#1328-Invariante).
         """
         self._tz = tz or ZoneInfo("UTC")
+        self._has_gap = has_gap
         short_name = title
         enabled = {mc.metric_id: mc for mc in dc.metrics if mc.enabled}
 
@@ -209,7 +225,9 @@ class CompactSummaryFormatter:
             return None
         precip = sum(dp.precip_1h_mm or 0.0 for dp in hourly)
         if precip < self._RAIN_DETECT:
-            return "trocken"
+            # Issue #1331: kein gefundener Regen UND Ziel-Datenluecke ->
+            # Unsicherheitsmarker statt Fehl-Entwarnung "trocken".
+            return "trocken?" if getattr(self, "_has_gap", False) else "trocken"
 
         adj = self._precip_adjective(precip)
         pattern = self._find_rain_pattern(hourly)

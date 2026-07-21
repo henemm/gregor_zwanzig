@@ -80,6 +80,7 @@ def render_plain(
     dc: UnifiedWeatherDisplayConfig,
     night_rows: list[dict],
     night_weather: Optional["NormalizedTimeseries"] = None,
+    has_gap: bool = False,
     thunder_forecast: Optional[dict] = None,
     changes: Optional[list[WeatherChange]],
     stage_name: Optional[str],
@@ -102,6 +103,9 @@ def render_plain(
     Issue #790: removed parameters (highlights, daylight, show_highlights,
     daily_summary_metrics, show_metrics_summary) are absorbed by **_ignored
     for backward compatibility — they no longer affect output.
+
+    Issue #1331/#1334 F002: ``has_gap`` ist ein expliziter Parameter (Default
+    False) — s. ``render_html`` fuer die Begruendung.
     """
     sig = profile_signature(profile)
     lines = []
@@ -154,7 +158,8 @@ def render_plain(
         if mc.alert_enabled and mc.alert_threshold is not None
     }
     _plain_pills = build_metrics_summary_pills(
-        segments, _pill_metric_ids, _pill_thresholds, tz=tz, night_weather=night_weather,
+        segments, _pill_metric_ids, _pill_thresholds, tz=tz,
+        night_weather=night_weather, has_gap=has_gap,
     )
     lines.append("━━ Metriken-Überblick ━━")
     for _lbl, _tone in _plain_pills:
