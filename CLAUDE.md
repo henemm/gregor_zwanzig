@@ -257,7 +257,7 @@ Folge-Arbeit: Surface-Stack-Migration (vor Atom-Migration) → Token-Rename → 
 
 ## Signal als Channel — ENTFERNT (2026-06-06, Issue #610)
 
-Kanäle sind nur noch **E-Mail · Telegram · SMS**. Frontend + Backend bereinigt: keine Kanal-Auswahl, keine `SignalOutput`, kein `signal_text`/`send_signal`, kein `/api/preview/{trip}/signal`. Callmebot-Infrastruktur existiert weiter serverseitig für andere Dienste, aber nicht mehr für Gregor Zwanzig. Wiedereinführung müsste neu spezifiziert werden.
+Kanäle sind nur noch **E-Mail · Telegram · SMS**. Kein `SignalOutput`/`signal_text`/`send_signal`, kein `/api/preview/{trip}/signal`. Wiedereinführung müsste neu spezifiziert werden. (Callmebot bleibt serverseitig für andere Dienste.)
 
 ## Confidence (Vorhersage-Verlässlichkeit) — NICHT wählbar als Metrik (2026-06-10, Issue #710)
 
