@@ -1,8 +1,0 @@
-=== /api/metrics summary ===
-temperature: 4
-wind: 3
-precipitation: 6
-atmosphere: 9
-winter: 3
-TOTAL: 25, Categories: 5
-Metrics with has_friendly_format field: 0/25

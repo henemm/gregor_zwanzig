@@ -1,4 +1,0 @@
-=== RUN   TestPostTrip_AcceptsPauseStage
---- PASS: TestPostTrip_AcceptsPauseStage (0.00s)
-PASS
-ok  	github.com/henemm/gregor-api/internal/handler	0.005s

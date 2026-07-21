@@ -1,8 +1,0 @@
-============================= test session starts ==============================
-collected 51 items
-
-tests/tdd/test_forecast_confidence_backend.py ..................         [ 35%]
-tests/integration/test_risk_engine.py .................                  [ 68%]
-tests/unit/test_weather_metrics.py ................                      [100%]
-
-============================== 51 passed in 0.33s ==============================

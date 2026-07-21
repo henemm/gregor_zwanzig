@@ -1,9 +1,0 @@
-TAP version 13
-1..1
-not ok 1 - src/lib/utils/fullProfile.test.ts
-    ---
-    error:
-        name: "Error"
-        message: "Cannot find module './fullProfile' imported from /home/hem/gregor_zwanzig/frontend/src/lib/utils/fullProfile.test.ts"
-    at: "/home/hem/gregor_zwanzig/frontend/src/lib/utils/fullProfile.test.ts:16:1"
-    ...

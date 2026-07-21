@@ -1,1 +1,0 @@
-Test FAILED: Weather Config dialog shows Coming soon instead of metric toggles

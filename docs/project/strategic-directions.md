@@ -81,9 +81,7 @@ F6 Trip-Umplanung ───→ F7 Wind-Exposition
 
 **Treiber:** AI-gestuetzte Entwicklung mit Python produziert zu viele Fehler (dynamische Typen, NiceGUI-Magie, Import-Probleme). Go's Compile-Time Safety und SvelteKit's konsistente Trainingsdaten reduzieren die Fehlerrate signifikant.
 
-**Details:** `docs/project/backlog/stories/sveltekit-migration.md`
-
-**Epic:** `docs/project/backlog/epics.md` → "Tech Stack Migration"
+**Status:** Migration abgeschlossen (Go-API + SvelteKit-Frontend sind produktiv). Die damaligen Planungsdokumente (`docs/project/backlog/`) wurden 2026-07-21 gelöscht und liegen in der Git-Historie.
 
 ---
 

@@ -1,5 +1,0 @@
-ERROR tests/tdd/test_change_password.py::TestPasswordChangeUI::test_account_has_password_change_section
-ERROR tests/tdd/test_change_password.py::TestPasswordChangeUI::test_account_has_old_password_field
-ERROR tests/tdd/test_change_password.py::TestPasswordChangeUI::test_account_has_new_password_fields
-ERROR tests/tdd/test_change_password.py::TestPasswordChangeEndpoint::test_change_password_endpoint_exists
-41 failed, 1302 passed, 20 skipped, 7 deselected, 1 xfailed, 2 warnings, 17 errors in 38.06s

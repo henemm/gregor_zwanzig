@@ -1,5 +1,0 @@
-
-Run npm run preview to preview your production build locally.
-
-> Using @sveltejs/adapter-node
-  ✔ done
