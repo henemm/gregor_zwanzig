@@ -15,7 +15,7 @@ renderer directly. SPEC: docs/specs/modules/output_channel_renderers.md §A8.
 from __future__ import annotations
 
 import dataclasses
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
@@ -127,8 +127,13 @@ class TripReportFormatter:
             last_seg = segments[-1]
             # Bug #398: Nacht-Block beginnt bei der LOKALEN Ankunftsstunde.
             arrival_hour = local_hour(last_seg.segment.end_time, self._tz)
+            # Issue #1347: kanonisches Ankunftsdatum aus derselben Quelle wie
+            # arrival_hour ableiten (analog day_window-Fix 0b2cc5ed) -- nicht
+            # aus dem kontaminierbaren night_weather.data[0].ts.
+            arrival_date = last_seg.segment.end_time.astimezone(self._tz).date()
             night_rows = self._extract_night_rows(
                 night_weather, arrival_hour, dc.night_interval_hours, dc,
+                arrival_date=arrival_date,
             )
 
         # Highlights
@@ -309,13 +314,24 @@ class TripReportFormatter:
         arrival_hour: int,
         interval: int = 2,
         dc: Optional[UnifiedWeatherDisplayConfig] = None,
+        arrival_date: Optional[date] = None,
     ) -> list[dict]:
-        """Aggregate night data into 2h blocks from arrival to 06:00."""
+        """Aggregate night data into 2h blocks from arrival to 06:00.
+
+        Issue #1347: ``first_date`` verankert auf ``arrival_date`` (das
+        kanonische Ankunftsdatum), NICHT auf ``night_weather.data[0].ts`` --
+        letzteres kann durch WeatherCacheService's "covers"-Regel eine
+        breitere, ungetrimmte Roh-Zeitreihe sein, die vor der echten Ankunft
+        beginnt (Vortags-Kontamination). ``arrival_date`` ist optional mit
+        Fallback auf das Bestandsverhalten (data[0].ts.date()), damit
+        Direktaufrufer ohne segments (Tests/Vorschau) unveraendert bleiben --
+        der echte Render-Pfad (format_email) liefert es kanonisch.
+        """
         dc = dc or build_default_display_config()
         if not night_weather.data:
             return []
 
-        first_date = night_weather.data[0].ts.astimezone(self._tz).date()
+        first_date = arrival_date or night_weather.data[0].ts.astimezone(self._tz).date()
 
         # Step 1: Filter to night range
         night_dps: list[ForecastDataPoint] = []
