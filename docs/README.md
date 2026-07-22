@@ -10,7 +10,7 @@
 | Ort | Inhalt |
 |---|---|
 | `CLAUDE.md` (Repo-Root) | Arbeitsregeln, Workflow, Deploy, Pflicht-Gates |
-| `reference/` | Technische Referenz: `api_contract.md` (DTOs, SSOT), `decision_matrix.md` (Provider-Ist-Stand), `operations_playbook.md` (Deploy/E2E/Rollback), `mail_validators.md`, `navigation.md` (URL-Modell), `frontend_components.md` (Konzepte, kein Inventar), `design_system.md` |
+| `reference/` | Technische Referenz: `api_contract.md` (DTOs, SSOT — driftgesichert via `tests/test_api_contract_drift.py`), `decision_matrix.md` (Provider-Ist-Stand), `operations_playbook.md` (Deploy/E2E/Rollback), `mail_validators.md`, `navigation.md` (URL-Modell), `frontend_components.md` (Konzepte, kein Inventar), `design_system.md`, `critical_lessons.md` (Regeln ohne anderen Wächter) |
 | `adr/` | Architektur-Entscheidungen (nummeriert; Status beachten — einzelne sind superseded) |
 | `design-system/` | CHARTER, COMPONENTS, TOKENS, SCREENS |
 | `features/` | `architecture.md` (Systemarchitektur), `scope.md` (Vision), `openspec_workflow.md` (Workflow-Wegweiser) + aktive Epic-Dokumente |
