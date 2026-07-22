@@ -162,11 +162,13 @@ def _ampel_present(html_fragment: str) -> bool:
     return _has_ampel(html_fragment)
 
 
-def _has_pre_block(html: str) -> bool:
-    """Prueft ob ein .mobile-compact Div einen <pre>-Block enthaelt (Roh-Modus)."""
+def _has_bordered_table(html: str) -> bool:
+    """fix-mobile-grid-decouple-ampel: Prueft ob ein .mobile-compact Div eine
+    bordierte <table> enthaelt (Roh-Modus rendert seit dem Fix keinen <pre>-
+    Block mehr, sondern dieselbe Tabellen-Struktur wie der Ampel-Modus)."""
     for m in re.finditer(r'class="mobile-compact"[^>]*>', html):
         chunk = _mobile_block_chunk(html, m.end())
-        if re.search(r'<pre[^>]*>', chunk):
+        if re.search(r'<table[^>]*data-table="resp"', chunk):
             return True
     return False
 
@@ -201,27 +203,33 @@ def test_mobile_compact_einfach_shows_ampel(metric_id):
 
 
 # ---------------------------------------------------------------------------
-# AC-2 GREEN-Sicherung: Roh-Modus bleibt Monospace-<pre> (MUSS HEUTE GRUEN SEIN)
+# AC-2 GREEN-Sicherung (angepasst, fix-mobile-grid-decouple-ampel): Roh-Modus
+# zeigt seit dem Fix ebenfalls eine bordierte Tabelle (statt <pre>), aber
+# weiterhin OHNE Ampel-Faerbung.
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("metric_id", [
     "wind", "gust", "precipitation", "rain_probability",
 ], ids=["wind", "gust", "precip", "pop"])
-def test_mobile_compact_roh_keeps_pre_block(metric_id):
-    """AC-2 GREEN: Roh-Modus → .mobile-compact-Div enthaelt <pre>-Block, kein Ampel.
+def test_mobile_compact_roh_keeps_bordered_table_no_ampel(metric_id):
+    """AC-2 GREEN (angepasst): Roh-Modus → .mobile-compact-Div enthaelt eine
+    bordierte <table>, kein Ampel.
 
-    Sichert das unveraenderte #636-Verhalten ab. Muss vor und nach dem Fix gruen sein.
+    fix-mobile-grid-decouple-ampel: Der alte gitterlose <pre>-Block entfaellt;
+    die Handy-Ansicht rendert jetzt IMMER die bordierte Tabelle. Die Ampel-
+    Abwesenheit im Roh-Modus bleibt unveraendert.
     """
     html, _plain = _render(raw=True, enabled={"temperature", metric_id})
-    assert _has_pre_block(html), (
-        f"AC-2: Roh-Modus muss <pre>-Block im .mobile-compact enthalten fuer '{metric_id}'."
+    assert _has_bordered_table(html), (
+        f"AC-2: Roh-Modus muss eine bordierte <table> im .mobile-compact enthalten "
+        f"fuer '{metric_id}'."
     )
     inner_blocks = _mobile_compact_inner(html)
     assert inner_blocks, "AC-2: Kein Daten-Block in .mobile-compact-Div gefunden"
 
     combined = "\n".join(inner_blocks)
     assert not _ampel_present(combined), (
-        f"AC-2: Roh-Modus darf KEIN Ampel-Emoji im <pre>-Block zeigen fuer '{metric_id}'. "
+        f"AC-2: Roh-Modus darf KEIN Ampel-Emoji in der Tabelle zeigen fuer '{metric_id}'. "
         f"Gefunden: {[e for e in _AMPEL_EMOJIS if e in combined]}"
     )
 

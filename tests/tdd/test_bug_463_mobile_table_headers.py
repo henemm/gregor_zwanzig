@@ -332,43 +332,31 @@ class TestMobileCompactEmptyRows:
 
 class TestMobileCompactDefaultNoHeader:
 
-    def test_default_no_header(self):
+    def test_default_header_still_present_via_table(self):
         """
-        AC-4: Default include_header=False erzeugt keinen Header-Block.
+        AC-4 (angepasst, fix-mobile-grid-decouple-ampel): include_header ist seit
+        der Umstellung auf "immer bordierte Tabelle" ein No-Op-Parameter — das
+        <thead> der Tabelle bringt die Spalten-Labels strukturell IMMER mit,
+        auch mit Default include_header=False (frueher: kein separates
+        Header-Div ohne den Flag).
 
         GIVEN _render_mobile_compact_rows ohne include_header (Default = False)
         WHEN der Output ausgewertet wird
-        THEN enthält er KEINEN Header mit den Spalten-Labels — nur die Daten-Rows
+        THEN enthält er trotzdem ein <thead> UND die Daten-Rows (Zeitstempel)
         """
         from output.renderers.email.html import _render_mobile_compact_rows
-        from output.renderers.email.helpers import visible_cols
 
         result = _render_mobile_compact_rows(
             _ROWS_WITH_TEMP_WIND,
             friendly_keys=set(),
-            # include_header nicht übergeben → Default False
+            # include_header nicht übergeben → Default False (No-Op seit dem Fix)
         )
 
-        cols = visible_cols(_ROWS_WITH_TEMP_WIND)
-        # Mit Default False darf KEIN Label-Block als dedizierter Header erscheinen.
-        # Zeitstempel müssen aber da sein (Daten-Rows vorhanden).
         assert "09:00" in result, "FEHLT: Zeitstempel in Default-Output"
-
-        # Die Labels dürfen in den Daten-Rows (data-label="...") vorkommen,
-        # aber es darf kein dedizierter Font-600-Header-Div existieren.
-        # Wir prüfen: font-weight:600" darf nicht VOR dem ersten Zeitstempel stehen
-        # (das wäre der Header-Block).
-        first_time_pos = result.find("09:00")
-        header_indicator = 'font-weight:600'
-        header_pos = result.find(header_indicator)
-
-        # Entweder kein font-weight:600 vorhanden, oder es kommt erst NACH den Daten
-        if header_pos != -1:
-            assert header_pos > first_time_pos, (
-                f"FEHLER: Mit include_header=False erscheint ein Header-Block "
-                f"(font-weight:600 @ pos {header_pos}) VOR dem ersten Zeitstempel "
-                f"(@ pos {first_time_pos})."
-            )
+        assert "<thead>" in result, (
+            "FEHLT: <thead> auch bei Default include_header=False — "
+            "Tabellen-Header ist seit dem Fix untrennbar von der Tabelle."
+        )
 
     def test_existing_callers_not_broken(self):
         """

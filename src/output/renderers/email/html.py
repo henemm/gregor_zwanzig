@@ -657,87 +657,37 @@ def _render_mobile_compact_rows(
     indicator_keys: Optional[set[str]] = None,
     col_order: Optional[list[str]] = None,
 ) -> str:
-    """Bug #636: Monospace fixed-width grid for the mobile compact email view.
+    """fix-mobile-grid-decouple-ampel: Handy-Stundentabelle rendert IMMER als
+    bordierte <table> (via _render_html_table), in overflow-x:auto gewickelt —
+    auch im Roh-Modus (indicator_keys leer). indicator_keys steuert weiterhin
+    nur die Ampel-FÄRBUNG innerhalb der Zellen, nicht mehr Tabelle-vs-Monospace.
 
-    Each column has a fixed character width = max(label_len, widest_value).
-    Empty/None cells are rendered as placeholder '–' (not deleted).
-    Wrapped in overflow-x:auto for horizontal scroll on narrow screens.
-
-    Bug #463: include_header=True renders a header row before the data rows.
+    Bug #636 (Historie, abgelöst): frueher gitterloser <pre>-Monospace-Block
+    im Roh-Modus — entfernt, da inkonsistent zur bordierten Ampel-Tabelle.
+    Bug #463 (Historie): Header kommt jetzt immer über das <thead> von
+    _render_html_table (Time/Spalten-Labels); include_header bleibt als
+    No-Op-Parameter fuer Aufrufkompatibilitaet erhalten.
     AC-3 (#911): col_order durchgereicht für Einfach-Modus (F001).
     """
-    if indicator_keys:
-        # Einfach-Modus: Desktop-HTML-Tabelle wiederverwenden (AC-3: col_order durchreichen)
-        return _render_html_table(
-            rows,
-            friendly_keys=friendly_keys,
-            allowed_col_keys=allowed_col_keys,
-            format_modes=format_modes,
-            indicator_keys=indicator_keys,
-            col_order=col_order,
-        )
-    cols = visible_cols(rows) if rows else []
+    if not rows:
+        return ""
+    cols = visible_cols(rows)
     if allowed_col_keys is not None:
         cols = [(k, label) for (k, label) in cols if k in allowed_col_keys]
     if not cols:
         return ""
-
-    # Collect plain-text cell values for all rows and columns.
-    time_vals: list[str] = [r.get("time", "") for r in rows]
-    col_vals: list[list[str]] = []
-    for key, _ in cols:
-        col_cell_vals: list[str] = []
-        for r in rows:
-            try:
-                cell = fmt_val(key, r.get(key), friendly_keys=friendly_keys,
-                               html=False, row=r, format_modes=format_modes)
-            except (TypeError, ValueError):
-                raw = r.get(key)
-                cell = str(raw) if raw is not None else "–"
-            if not cell or cell == "–":
-                cell = "–"
-            col_cell_vals.append(cell)
-        col_vals.append(col_cell_vals)
-
-    if not time_vals:
-        return ""
-
-    # Compute fixed column widths.
-    time_w = max(len("Zeit"), max((len(t) for t in time_vals), default=0))
-    col_widths: list[int] = []
-    for ci, (_, label) in enumerate(cols):
-        w = max(len(label), max((len(v) for v in col_vals[ci]), default=0))
-        col_widths.append(w)
-
-    sep = " "
-
-    def _build_line(time_cell: str, cells: list[str]) -> str:
-        parts = [time_cell.ljust(time_w)]
-        for ci, cell in enumerate(cells):
-            parts.append(cell.ljust(col_widths[ci]))
-        return sep.join(parts)
-
-    grid_lines: list[str] = []
-    if include_header:
-        header_cells = [label for (_, label) in cols]
-        grid_lines.append(_build_line("Zeit", header_cells))
-    for ri in range(len(rows)):
-        data_cells = [col_vals[ci][ri] for ci in range(len(cols))]
-        grid_lines.append(_build_line(time_vals[ri], data_cells))
-
-    if not grid_lines:
-        return ""
-
-    grid_text = _html.escape("\n".join(grid_lines))
-    # font-size:11px on the outer div only when include_header=True (AC-1 marker,
-    # compat with test_bug305 which uses font-size:11px as the header indicator).
-    outer_font = "font-size:11px;" if include_header else ""
+    table_html = _render_html_table(
+        rows,
+        friendly_keys=friendly_keys,
+        allowed_col_keys=allowed_col_keys,
+        format_modes=format_modes,
+        indicator_keys=indicator_keys,
+        col_order=col_order,
+    )
     return (
-        '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0;' + outer_font + '">' +
-        '<pre style="font-family:' + FONT_DATA + ';font-size:12px;' +
-        'margin:0;white-space:pre;line-height:1.6;color:' + G_INK + ';">' +
-        grid_text +
-        '</pre></div>'
+        '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0;">'
+        + table_html
+        + '</div>'
     )
 
 

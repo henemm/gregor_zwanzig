@@ -310,14 +310,18 @@ class TestMobileLayoutPlaywright:
 
     def test_header_row_hidden_at_375px(self, html_path):
         """
-        AC-6: Header-Zeile muss bei 375 px versteckt sein.
+        AC-6: Die DESKTOP-Header-Zeile (.desktop-only) muss bei 375 px versteckt sein.
 
         GIVEN ein gerendertes HTML mit Tabellen-Header
         WHEN die Seite bei 375 px geoeffnet wird
-        THEN hat kein <th>-Element eine sichtbare Hoehe > 0
+        THEN hat kein <th>-Element INNERHALB von .desktop-only eine sichtbare Hoehe > 0
 
-        Aktuell: <th>-Elemente sind sichtbar und horizontal (kein <thead>
-        im HTML -> CSS-Regel 'thead { display:none }' greift nicht).
+        fix-mobile-grid-decouple-ampel (2026-07-22): Seit die Handy-Ansicht
+        (.mobile-compact) selbst eine bordierte <table> mit eigenem <thead>
+        rendert (statt eines gitterlosen <pre>-Blocks), zeigt sie ihren
+        Header ABSICHTLICH (Bug #463 — Spalten-Labels sollen sichtbar sein).
+        Nur die .desktop-only-Tabelle darf bei 375px unsichtbar sein
+        (versteckt via .desktop-only { display:none } auf den ganzen Wrapper).
         """
         from playwright.sync_api import sync_playwright
 
@@ -331,7 +335,7 @@ class TestMobileLayoutPlaywright:
             page.wait_for_load_state("networkidle")
 
             th_visible = page.evaluate("""() => {
-                const ths = Array.from(document.querySelectorAll('table[data-table="resp"] th'));
+                const ths = Array.from(document.querySelectorAll('.desktop-only table[data-table="resp"] th'));
                 return ths.map(th => ({
                     text: th.textContent.trim(),
                     offsetHeight: th.offsetHeight,
@@ -342,12 +346,12 @@ class TestMobileLayoutPlaywright:
 
         visible_headers = [th for th in th_visible if th["visible"]]
         assert not visible_headers, (
-            f"Header-Zeile sichtbar bei 375px -- {len(visible_headers)} sichtbare <th>-Elemente:\n"
+            f"Desktop-Header-Zeile sichtbar bei 375px -- {len(visible_headers)} sichtbare <th>-Elemente:\n"
             + "\n".join(
                 f"  - '{th['text']}' (Hoehe: {th['offsetHeight']}px)"
                 for th in visible_headers
             )
-            + "\n\nRoot Cause: Kein <thead>-Tag -> CSS-Regel greift nicht."
+            + "\n\nRoot Cause: .desktop-only-Wrapper wird bei 375px nicht versteckt."
         )
 
 
@@ -616,76 +620,88 @@ class TestMobileCompactHeader:
 
     def test_header_present_when_include_header_true(self):
         """
-        AC-1: include_header=True + sichtbare Spalten → Header-Element mit Label "Zeit".
+        AC-1: include_header=True + sichtbare Spalten → <thead> mit Label "Time".
+
+        fix-mobile-grid-decouple-ampel: Der Header kommt jetzt immer aus dem
+        <thead> von _render_html_table (Leitspalten-Label "Time", nicht mehr
+        das deutsche "Zeit" des alten <pre>-Rasters).
 
         GIVEN _render_mobile_compact_rows mit einer Zeile und include_header=True
         WHEN  das Ergebnis ausgewertet wird
-        THEN  enthält es ein Header-Element mit dem Label "Zeit" (font-size:11px)
+        THEN  enthält es ein <thead> mit dem Label "Time" (font-size:11px)
         """
         from src.output.renderers.email.html import _render_mobile_compact_rows
 
         result = _render_mobile_compact_rows(
             [_HEADER_TEST_ROW], friendly_keys=set(), include_header=True
         )
-        assert "Zeit" in result, (
-            "Header-Label 'Zeit' fehlt bei include_header=True"
+        assert "<thead>" in result, "Kein <thead> bei include_header=True"
+        assert "Time" in result, (
+            "Header-Label 'Time' fehlt bei include_header=True"
         )
         assert "font-size:11px" in result, (
-            "Header-Div (font-size:11px) fehlt bei include_header=True"
+            "Header-Zellen-Stil (font-size:11px) fehlt bei include_header=True"
         )
 
     def test_header_appears_before_data_rows(self):
         """
-        AC-1: Header-Div (font-size:11px) muss vor Daten-Rows (font-size:12px) erscheinen.
+        AC-1: <thead> muss vor <tbody> (Daten-Rows) erscheinen.
+
+        fix-mobile-grid-decouple-ampel: strukturelle Reihenfolge statt der
+        alten font-size:11px/12px-Textmarker (Tabellen-Zellen tragen kein
+        eigenes font-size mehr).
 
         GIVEN _render_mobile_compact_rows mit include_header=True
         WHEN  das Ergebnis auf Reihenfolge geprüft wird
-        THEN  liegt 'font-size:11px' (Header) vor 'font-size:12px' (Daten-Row)
+        THEN  liegt '<thead>' vor '<tbody>'
         """
         from src.output.renderers.email.html import _render_mobile_compact_rows
 
         result = _render_mobile_compact_rows(
             [_HEADER_TEST_ROW], friendly_keys=set(), include_header=True
         )
-        header_pos = result.find("font-size:11px")
-        data_pos = result.find("font-size:12px")
-        assert header_pos != -1, "Kein Header (font-size:11px) im Output"
-        assert data_pos != -1, "Keine Daten-Row (font-size:12px) im Output"
+        header_pos = result.find("<thead>")
+        data_pos = result.find("<tbody>")
+        assert header_pos != -1, "Kein <thead> im Output"
+        assert data_pos != -1, "Kein <tbody> im Output"
         assert header_pos < data_pos, (
-            f"Header@{header_pos} liegt NACH Daten-Row@{data_pos} — Header muss zuerst kommen"
+            f"<thead>@{header_pos} liegt NACH <tbody>@{data_pos} — Header muss zuerst kommen"
         )
 
     def test_no_header_when_rows_empty(self):
         """
-        AC-3: Leere Rows-Liste + include_header=True → kein Header, leerer/kurzer String.
+        AC-3: Leere Rows-Liste + include_header=True → kein Header, leerer String.
 
         GIVEN _render_mobile_compact_rows mit rows=[] und include_header=True
         WHEN  das Ergebnis geprüft wird
-        THEN  enthält es kein "Zeit"-Label (kein Header erzeugt)
+        THEN  enthält es kein "Time"-Label (kein Header erzeugt)
         """
         from src.output.renderers.email.html import _render_mobile_compact_rows
 
         result = _render_mobile_compact_rows([], friendly_keys=set(), include_header=True)
-        assert "Zeit" not in result, (
+        assert "Time" not in result, (
             f"Header unerwartet erzeugt bei leerer Rows-Liste — Output: {result!r}"
         )
 
-    def test_no_header_when_include_header_false(self):
+    def test_header_shown_even_when_include_header_false(self):
         """
-        AC-4: include_header=False (Default) → kein Header-Div.
+        AC-4 (angepasst, fix-mobile-grid-decouple-ampel): include_header ist seit
+        der Umstellung auf "immer bordierte Tabelle" ein No-Op-Parameter —
+        die Tabelle bringt ihr <thead> strukturell IMMER mit, unabhängig vom
+        Flag (frueher: separates Text-Header-Div nur bei include_header=True).
 
         GIVEN _render_mobile_compact_rows mit Daten-Rows und include_header=False
         WHEN  das Ergebnis auf Header geprüft wird
-        THEN  enthält es kein Header-Div mit font-size:11px
-              (Daten-Rows selbst haben font-size:12px → unterscheidbar)
+        THEN  enthält es trotzdem ein <thead> (Tabellen-Header ist untrennbar)
         """
         from src.output.renderers.email.html import _render_mobile_compact_rows
 
         result = _render_mobile_compact_rows(
             [_HEADER_TEST_ROW], friendly_keys=set(), include_header=False
         )
-        assert "font-size:11px" not in result, (
-            "Header-Div (font-size:11px) unerwartet vorhanden bei include_header=False"
+        assert "<thead>" in result, (
+            "FEHLT: <thead> auch bei include_header=False — Tabellen-Header "
+            "ist seit dem Fix untrennbar von der bordierten Tabelle."
         )
 
     def test_only_allowed_columns_in_header(self):
@@ -706,7 +722,7 @@ class TestMobileCompactHeader:
             allowed_col_keys={"temp", "wind"},
             include_header=True,
         )
-        assert "Zeit" in result, "Header-Label 'Zeit' fehlt"
+        assert "Time" in result, "Header-Label 'Time' fehlt"
         assert "Temp" in result, "Spalten-Label 'Temp' fehlt im Header"
         assert "Wind" in result, "Spalten-Label 'Wind' fehlt im Header"
         assert "Thunder" not in result, (
