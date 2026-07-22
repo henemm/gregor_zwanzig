@@ -12,6 +12,7 @@ from fastapi import FastAPI
 
 from api.routers import config, compare, forecast, gpx, health, internal, notify, preview, scheduler, validator, webhook
 from app.config import Settings
+from app.egress_guard import install_egress_guard
 from output.channels.telegram import TelegramOutput
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,14 @@ def _init_telegram_bot_menu(settings: Settings | None = None) -> None:
 
 @asynccontextmanager
 async def lifespan(app):  # noqa: ANN001
-    _init_telegram_bot_menu()
+    # Issue #1337 Scheibe A, Fix F001: Egress-Waechter im ECHTEN Laufzeitprozess
+    # (uvicorn api.main:app, systemd gregor-python-staging) scharf schalten.
+    # No-Op in Prod (Aktivierungsbedingung liegt im Modul: nur is_test_mode oder
+    # env==staging). Idempotent -- Doppel-Install (z.B. conftest-Fixture + App-
+    # Start unter TestClient) faengt das _installed-Flag im Modul sauber ab.
+    settings = Settings()
+    install_egress_guard(settings)
+    _init_telegram_bot_menu(settings)
     yield
 
 

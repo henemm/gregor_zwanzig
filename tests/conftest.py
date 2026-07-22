@@ -110,6 +110,66 @@ def _isolate_data_root(request, tmp_path_factory):
         )
 
 
+_EGRESS_SETTINGS = None
+
+
+def _egress_guard_settings():
+    """Ein einziges ``Settings(is_test_mode=True)`` fuer die gesamte Session
+    zwischenspeichern -- pydantic ``BaseSettings`` liest sonst pro Test die
+    ``.env`` neu (Overhead ueber ~5000 Tests). Nur die statischen Felder
+    ``is_test_mode``/``env``/``test_smtp_host``/``imap_host`` werden vom Guard
+    gelesen; diese sind pro Session konstant."""
+    global _EGRESS_SETTINGS
+    if _EGRESS_SETTINGS is None:
+        from app.config import Settings
+
+        _EGRESS_SETTINGS = Settings(is_test_mode=True)
+    return _EGRESS_SETTINGS
+
+
+@pytest.fixture(autouse=True)
+def _egress_guard(request):
+    """Issue #1337 Scheibe A: zentraler Egress-Waechter als Tripwire im
+    deterministischen Kern-Testlauf aktiv -- faengt unbemerkten realen Egress
+    an kostenpflichtige/nebenwirkungsbehaftete Dienste (seven.io, Telegram,
+    Resend, undeklarierte Hosts). Nach jedem Test werden die drei
+    Transport-Primitive auf ihre Original-Referenzen zurueckgesetzt
+    (uninstall_egress_guard), damit kein Patch-Zustand in Folgetests leakt
+    (Spec ``egress_guard.md`` Test 8).
+
+    Ausnahmen (bewusst enger Scope, damit kein Bestandstest bricht und die
+    Spec-Absicht -- Tripwire fuer den Kern -- erhalten bleibt):
+
+    - ``live``/``email``/``staging``-Marker: das sind exakt die Schichten, in
+      denen echte externe Aufrufe *gewollt* sind (Spec ``Known Limitations``:
+      "@pytest.mark.live-Tests installieren den Guard bewusst nicht"). Der
+      deterministische Kern ist genau ``not live and not staging and not
+      email`` -- dort und nur dort greift der Waechter.
+    - Das ``test_egress_guard``-Modul verwaltet den Guard selbst: es setzt
+      eigene Sentinel-Transporte VOR ``install_egress_guard()``. Ein globaler
+      Vor-Install wuerde per Idempotenz-Flag den Eigen-``install()`` zum No-Op
+      machen, sodass der Guard die Sentinels nicht mehr umschliesst -- die
+      Eigen-Tests wuerden falsch scheitern.
+    """
+    node = request.node
+    if (
+        node.get_closest_marker("live")
+        or node.get_closest_marker("email")
+        or node.get_closest_marker("staging")
+        or "test_egress_guard" in node.nodeid
+    ):
+        yield
+        return
+
+    from app.egress_guard import install_egress_guard, uninstall_egress_guard
+
+    install_egress_guard(_egress_guard_settings())
+    try:
+        yield
+    finally:
+        uninstall_egress_guard()
+
+
 @pytest.fixture(autouse=True)
 def _reset_shared_radar_cache():
     """Issue #1329 C2: der Radar-Frame-Cache (`services.radar_cache`) ist

@@ -15,6 +15,7 @@ from typing import Optional
 
 from app.config import Settings
 from app.debug import DebugBuffer
+from app.egress_guard import install_egress_guard
 from app.loader import load_trip, LoaderError
 from app.models import NormalizedTimeseries
 from output.channels.base import get_channel, OutputError
@@ -163,6 +164,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         overrides["debug_level"] = args.debug
 
     settings = Settings(**overrides)
+    # Issue #1337 Scheibe A: Egress-Waechter fuer Staging-CLI-Laeufe scharf
+    # schalten (No-Op in Prod, Aktivierungsbedingung liegt im Modul).
+    install_egress_guard(settings)
     debug = DebugBuffer()
 
     debug.add(f"settings.provider: {settings.provider}")
