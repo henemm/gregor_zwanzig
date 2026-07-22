@@ -1,12 +1,102 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-07-16 (Issue #1278 + #1285 — Vergleichs-Mail-Kurzzusammenfassung je Ort (geteilter Trip-Baustein) + fünf reparierte, bisher still verworfene Tages-Aggregate; `LocationResult` bekommt 5 additive optionale Felder (`precip_sum_mm`/`thunder_level_max`/`visibility_min_m`/`uv_index_max`/`pop_max_pct`), keine Persistenz/kein Wire-Format betroffen; Details s. Changelog-Abschnitt unten); 2026-07-16 (Issue #1270 — neuer Endpoint `POST /api/preview/compare/{preset_id}`: EIN Aufruf liefert `{subject, email_html, telegram, sms, sms_char_count}` aus einem einzigen `ComparisonEngine.run()`, ADR-0011-Muster (Erweiterung `alert-preview`), bewusste Abweichung von der älteren Trip-Preview-Routenform je Kanal; neuer `ComparePreviewService`; Compare-Briefing-Versand wird ab jetzt tatsächlich auch über Telegram/SMS zugestellt (`NotificationService.send_compare_report`), nicht mehr nur E-Mail — der Alarm-Pfad (`compare_alert.py`/`compare_radar_alert.py`) bleibt unverändert E-Mail-only. Details Section 20 und `docs/specs/modules/compare_channel_preview_dispatch.md`); 2026-07-16 (Issue #1250 S7b — ComparePreset-Persistenz per-Datei briefings/{id}.json (kind="vergleich"), Store-Muster wie Trip-Store; Alt-compare_presets.json nur Migrations-Quelle/Rollback; load_compare_presets partial-tolerant; kind-scoped Migrations-Refresh migrate_1250_briefings.py --kind vergleich); 2026-07-15 (Issue #1258 S1 — `official_warnings {enabled, sources?}` neu auf Trip UND ComparePreset, löst `official_alert_triggers_enabled` funktional ab (jetzt deprecated, bleibt in den Daten); idempotente Migration `internal/store/migrate_1258.go`/`scripts/migrate_1258_official_warnings.py` übernimmt Ist-Verhalten des Bestands unverändert, Neuanlage-Default `enabled=false`; PUT-RMW mit Feld-Level-Preserve für `sources`; Legacy-Fallback bei fehlendem/leerem Feld — Details Section 10.5); 2026-06-13 (Issue #795 — Metriken-Überblick-Pills: Inhalt analog SMS (ausgeschrieben, gleiche Schwellen), Farbe via Ampel-System #759 (🟢🟡🟠🔴 = HTML-Vollfarb-Kapsel + weißer Text WCAG-AA, Plain = 4 Emojis, Compact = ASCII-Schwerezeichen); Bug #775 — Trip-Shortcode-Routing für Inbound-E-Mail-Replies: RFC-2047-Dekodierung, toleranter Whitespace↔Underscore-Lookup, neuer GZ#-Shortcode-Key als primärer Routing-Identifier, persistiert als `Trip.shortcode`; Issue #764 — ComparePreset forecast_hours Persistierung: neues Feld im Go-Modell/TS-Type (24|48|72 h), Hydration im Editor, Konsum im Python-Scheduler, Legacy-Default 48 h; Horizont-Select im Editor auf Design-System Select.svelte umgestellt); 2026-06-11 (Issue #747 — Datierter Forecast-Snapshot-Speicher: WeatherSnapshotService erweitert um `save_dated(trip_id, target_date, segments)`, `load_dated(trip_id, target_date)` und `_prune_dated_snapshots(trip_id)`. Speichert Snapshots nach Datum (`{trip_id}_{YYYY-MM-DD}.json`, max. 7 Dateien pro Trip, mtime-sortiert). Fundament für Vortag-Vergleich im Trip-Briefing. Bestehende `save()`/`load()`-Methoden für Alert-Pfad bleiben byte-identisch. Scheduler ruft `save_dated()` nach bestehendem `save()` auf. Siehe Issue #747.); 2026-06-11 (Issue #731 — Abruf-zentrierte Befehle: bare Keywords (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE) ersetzen alte Abonnenten-Befehle (PAUSE/SKIP/CONFIG). Persistenzfelder paused_until/skip_next bleiben für Bestandsdaten erhalten. TripCommandProcessor.process() neu mit _resume_trip() für WEITER-Befehl. Keine Datenstruktur-Änderungen. Siehe Issue #731.); 2026-06-10 (Issue #715 — Wettermetriken-Darstellung: GET /api/metrics filtert auf `selectable=true` — `confidence` (Vorhersage-Verlässlichkeit/Ensemble) ist KEINE pro-Etappe wählbare Metrik mehr, nur noch Vorhersage-Hinweis + SMS-Symbol; Vorschau-Emojis in WeatherV2MailPreview + Step3Weather angepasst; Beispieldaten eindeutig gekennzeichnet; Bug #716 — Test-Briefing: stiller Versagensfall weg. POST /api/trips/{id}/send gibt jetzt HTTP 422 + detail-Feld zurück wenn keine Etappendaten für Zieldatum vorhanden (statt HTTP 200). Frontend zeigt konkrete Fehlermeldung im Toast; Issue #707 — Trip-Datum-Overwrite-Bug: PUT `/api/trips/{id}` mit minimalem Body (nur geänderte Felder) statt kompletter `trip`-Spread — verhindert stale-data-Überschreibung von Etappen; Issue #690 — Eigene Wetter-Metriken-Profile: eindeutiger Name (HTTP 409 name_exists, 400 name_required), Profil sofort aktiv + persistent, "Eigene"-Markierung in Preset-Leiste, trip-übergreifend pro Nutzer); 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
+**Updated:** 2026-07-22 (Issue #1342 — Drift-Sanierung: Trip/Stage/Waypoint/ComparePreset-DTOs auf Struct-Wahrheit, Auth-Fehler-Bodies auf Code-Wortlaut, vollständiges Endpunkt-Inventar Sektion 0.5, Routing-Verweise auf internal/router/router.go; abgesichert durch tests/test_api_contract_drift.py); 2026-07-16 (Issue #1278 + #1285 — Vergleichs-Mail-Kurzzusammenfassung je Ort (geteilter Trip-Baustein) + fünf reparierte, bisher still verworfene Tages-Aggregate; `LocationResult` bekommt 5 additive optionale Felder (`precip_sum_mm`/`thunder_level_max`/`visibility_min_m`/`uv_index_max`/`pop_max_pct`), keine Persistenz/kein Wire-Format betroffen; Details s. Changelog-Abschnitt unten); 2026-07-16 (Issue #1270 — neuer Endpoint `POST /api/preview/compare/{preset_id}`: EIN Aufruf liefert `{subject, email_html, telegram, sms, sms_char_count}` aus einem einzigen `ComparisonEngine.run()`, ADR-0011-Muster (Erweiterung `alert-preview`), bewusste Abweichung von der älteren Trip-Preview-Routenform je Kanal; neuer `ComparePreviewService`; Compare-Briefing-Versand wird ab jetzt tatsächlich auch über Telegram/SMS zugestellt (`NotificationService.send_compare_report`), nicht mehr nur E-Mail — der Alarm-Pfad (`compare_alert.py`/`compare_radar_alert.py`) bleibt unverändert E-Mail-only. Details Section 20 und `docs/specs/modules/compare_channel_preview_dispatch.md`); 2026-07-16 (Issue #1250 S7b — ComparePreset-Persistenz per-Datei briefings/{id}.json (kind="vergleich"), Store-Muster wie Trip-Store; Alt-compare_presets.json nur Migrations-Quelle/Rollback; load_compare_presets partial-tolerant; kind-scoped Migrations-Refresh migrate_1250_briefings.py --kind vergleich); 2026-07-15 (Issue #1258 S1 — `official_warnings {enabled, sources?}` neu auf Trip UND ComparePreset, löst `official_alert_triggers_enabled` funktional ab (jetzt deprecated, bleibt in den Daten); idempotente Migration `internal/store/migrate_1258.go`/`scripts/migrate_1258_official_warnings.py` übernimmt Ist-Verhalten des Bestands unverändert, Neuanlage-Default `enabled=false`; PUT-RMW mit Feld-Level-Preserve für `sources`; Legacy-Fallback bei fehlendem/leerem Feld — Details Section 10.5); 2026-06-13 (Issue #795 — Metriken-Überblick-Pills: Inhalt analog SMS (ausgeschrieben, gleiche Schwellen), Farbe via Ampel-System #759 (🟢🟡🟠🔴 = HTML-Vollfarb-Kapsel + weißer Text WCAG-AA, Plain = 4 Emojis, Compact = ASCII-Schwerezeichen); Bug #775 — Trip-Shortcode-Routing für Inbound-E-Mail-Replies: RFC-2047-Dekodierung, toleranter Whitespace↔Underscore-Lookup, neuer GZ#-Shortcode-Key als primärer Routing-Identifier, persistiert als `Trip.shortcode`; Issue #764 — ComparePreset forecast_hours Persistierung: neues Feld im Go-Modell/TS-Type (24|48|72 h), Hydration im Editor, Konsum im Python-Scheduler, Legacy-Default 48 h; Horizont-Select im Editor auf Design-System Select.svelte umgestellt); 2026-06-11 (Issue #747 — Datierter Forecast-Snapshot-Speicher: WeatherSnapshotService erweitert um `save_dated(trip_id, target_date, segments)`, `load_dated(trip_id, target_date)` und `_prune_dated_snapshots(trip_id)`. Speichert Snapshots nach Datum (`{trip_id}_{YYYY-MM-DD}.json`, max. 7 Dateien pro Trip, mtime-sortiert). Fundament für Vortag-Vergleich im Trip-Briefing. Bestehende `save()`/`load()`-Methoden für Alert-Pfad bleiben byte-identisch. Scheduler ruft `save_dated()` nach bestehendem `save()` auf. Siehe Issue #747.); 2026-06-11 (Issue #731 — Abruf-zentrierte Befehle: bare Keywords (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE) ersetzen alte Abonnenten-Befehle (PAUSE/SKIP/CONFIG). Persistenzfelder paused_until/skip_next bleiben für Bestandsdaten erhalten. TripCommandProcessor.process() neu mit _resume_trip() für WEITER-Befehl. Keine Datenstruktur-Änderungen. Siehe Issue #731.); 2026-06-10 (Issue #715 — Wettermetriken-Darstellung: GET /api/metrics filtert auf `selectable=true` — `confidence` (Vorhersage-Verlässlichkeit/Ensemble) ist KEINE pro-Etappe wählbare Metrik mehr, nur noch Vorhersage-Hinweis + SMS-Symbol; Vorschau-Emojis in WeatherV2MailPreview + Step3Weather angepasst; Beispieldaten eindeutig gekennzeichnet; Bug #716 — Test-Briefing: stiller Versagensfall weg. POST /api/trips/{id}/send gibt jetzt HTTP 422 + detail-Feld zurück wenn keine Etappendaten für Zieldatum vorhanden (statt HTTP 200). Frontend zeigt konkrete Fehlermeldung im Toast; Issue #707 — Trip-Datum-Overwrite-Bug: PUT `/api/trips/{id}` mit minimalem Body (nur geänderte Felder) statt kompletter `trip`-Spread — verhindert stale-data-Überschreibung von Etappen; Issue #690 — Eigene Wetter-Metriken-Profile: eindeutiger Name (HTTP 409 name_exists, 400 name_required), Profil sofort aktiv + persistent, "Eigene"-Markierung in Preset-Leiste, trip-übergreifend pro Nutzer); 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
 - Einheiten im Feldnamen: `*_c`, `*_kmh`, `*_mmph`, `*_mm`, `*_pct`, `*_hpa`, `*_jkg`, `*_m`, `*_cm`
-- Provider: `MOSMIX` | `MET` | `NOWCASTMIX` | `GEOSPHERE` | `SLF` | `EUREGIO`
+- Provider (Ist-Stand, s. `docs/reference/decision_matrix.md`): `openmeteo` (Standard) | `geosphere` | `brightsky` | `radar_dpc` | `at_direct`/`de_direct`/`fr_direct` (Fallback)
+
+---
+
+## 0.5) Endpunkt-Inventar (vollständig, generiert aus `internal/router/router.go`)
+
+> Stand 2026-07-22 (#1342). Dieses Inventar listet JEDE registrierte Go-Route.
+> Der Drift-Test `tests/test_api_contract_drift.py` erzwingt: neue Route im
+> Router ⇒ Zeile hier, sonst rot. Detail-Sektionen weiter unten decken nicht
+> jede Route ab — das Inventar ist die Vollständigkeits-Garantie.
+
+| Pfad | Methoden |
+|------|----------|
+| `/api/_internal/trip/{id}/loaded` | GET |
+| `/api/_validator/compare-email-preview` | POST |
+| `/api/_validator/detector-thresholds` | GET |
+| `/api/_validator/format-metric` | GET |
+| `/api/_validator/metrics-for-channel` | GET |
+| `/api/archive/stats` | GET |
+| `/api/auth/account` | DELETE |
+| `/api/auth/forgot-password` | POST |
+| `/api/auth/google/callback` | GET |
+| `/api/auth/google/init` | GET |
+| `/api/auth/login` | POST |
+| `/api/auth/logout` | POST |
+| `/api/auth/magic-link` | POST |
+| `/api/auth/magic-link/verify` | POST |
+| `/api/auth/passkey/credentials/{id}` | DELETE |
+| `/api/auth/passkey/discoverable/begin` | POST |
+| `/api/auth/passkey/discoverable/finish` | POST |
+| `/api/auth/passkey/login/begin` | POST |
+| `/api/auth/passkey/login/finish` | POST |
+| `/api/auth/passkey/register/begin` | POST |
+| `/api/auth/passkey/register/finish` | POST |
+| `/api/auth/passkey/register/public/begin` | POST |
+| `/api/auth/passkey/register/public/finish` | POST |
+| `/api/auth/password` | PUT |
+| `/api/auth/profile` | GET, PUT |
+| `/api/auth/register` | POST |
+| `/api/auth/reset-password` | POST |
+| `/api/auth/telegram-link` | GET |
+| `/api/auth/telegram-status` | GET |
+| `/api/auth/tier-change-request` | POST |
+| `/api/auth/verify-email` | POST |
+| `/api/briefings` | GET, POST |
+| `/api/briefings/{id}` | DELETE, GET, PUT |
+| `/api/cockpit/status` | GET |
+| `/api/compare` | GET |
+| `/api/compare/presets` | GET, POST |
+| `/api/compare/presets/{id}` | DELETE, GET, PUT |
+| `/api/compare/presets/{id}/send` | POST |
+| `/api/compare/presets/{id}/state` | PATCH |
+| `/api/config` | GET |
+| `/api/debug/trigger-radar-alert` | POST |
+| `/api/forecast` | GET |
+| `/api/gpx/parse` | POST |
+| `/api/groups` | GET, POST |
+| `/api/groups/{id}` | DELETE, PATCH |
+| `/api/health` | GET |
+| `/api/internal/telegram-connect` | POST |
+| `/api/locations` | GET, POST |
+| `/api/locations/resolve` | POST |
+| `/api/locations/{id}` | DELETE, GET, PATCH, PUT |
+| `/api/locations/{id}/weather-config` | GET, PUT |
+| `/api/metric-presets` | GET, POST |
+| `/api/metric-presets/{id}` | DELETE, PATCH |
+| `/api/metrics` | GET |
+| `/api/notify/test` | POST |
+| `/api/preview/compare/{preset_id}` | POST |
+| `/api/preview/{trip_id}/email` | GET |
+| `/api/preview/{trip_id}/signal` | GET | — **tote Route** (Python-Core kennt Signal nicht mehr, #610; Abbau → Sammel-Issue #1199)
+| `/api/preview/{trip_id}/sms` | GET |
+| `/api/preview/{trip_id}/telegram` | GET |
+| `/api/scheduler/alert-checks` | POST |
+| `/api/scheduler/inbound-commands` | POST |
+| `/api/scheduler/status` | GET |
+| `/api/scheduler/trip-reports` | POST |
+| `/api/sms-symbols` | GET |
+| `/api/templates` | GET |
+| `/api/trips` | GET, POST |
+| `/api/trips/{id}` | DELETE, GET, PUT |
+| `/api/trips/{id}/alert-preview` | POST |
+| `/api/trips/{id}/briefing-history` | GET |
+| `/api/trips/{id}/send` | POST |
+| `/api/trips/{id}/stages/weather` | GET |
+| `/api/trips/{id}/state` | PATCH |
+| `/api/trips/{id}/waypoints/{waypointId}/confirm` | PATCH |
+| `/api/trips/{id}/weather-config` | GET, PUT |
+| `/api/webhooks/telegram/{secret}` | POST |
+
+(76 Pfade, 96 Routen-Registrierungen.)
 
 ---
 
@@ -27,7 +117,7 @@ Ein **Normalized Forecast Timeseries**-Objekt (siehe unten), bestehend aus `meta
 ```json
 {
   "meta": {
-    "provider": "MET",
+    "provider": "openmeteo",
     "model": "ECMWF",
     "run": "2025-08-29T06:00Z",
     "grid_res_km": 9,
@@ -484,7 +574,7 @@ Leitet GPX-Upload vom SvelteKit-Frontend via Go-Proxy an Python FastAPI weiter. 
 | `api/routers/gpx.py` | NEU — FastAPI Router mit `parse_gpx()` |
 | `api/main.py` | +`app.include_router(gpx.router)` |
 | `internal/handler/proxy.go` | +`GpxProxyHandler` — Multipart+Query-Param Forwarding, 30s Timeout |
-| `cmd/server/main.go` | +`r.Post("/api/gpx/parse", handler.GpxProxyHandler(...))` |
+| `internal/router/router.go` | `r.Post("/api/gpx/parse", handler.GpxProxyHandler(...))` |
 
 ---
 
@@ -540,6 +630,18 @@ type Trip struct {
     OfficialWarnings        *OfficialWarningsConfig `json:"official_warnings,omitempty"`      // Issue #1258 — s. „official_warnings (Issue #1258)" unten
     AlertChannels            *AlertChannelsConfig   `json:"alert_channels,omitempty"`          // Issue #1258 Scheibe S3 — s. „alert_channels (Issue #1258)" unten
     Corridors               []Corridor             `json:"corridors"`                         // Issue #1231 Slice 1, additiv neben AlertRules — s. Section 24
+    // Issue #1250 Scheibe 4 — flache Slot-/Kanal-Felder + EndDate, ABGELEITET aus
+    // ReportConfig/Stages bei jedem Load (store.normalizeTrip). NICHT autoritativ:
+    // ReportConfig bleibt die einzige Wahrheit fuer den Versand. nil = nicht ableitbar.
+    MorningTime             *string                `json:"morning_time,omitempty"`
+    EveningTime             *string                `json:"evening_time,omitempty"`
+    MorningEnabled          *bool                  `json:"morning_enabled,omitempty"`
+    EveningEnabled          *bool                  `json:"evening_enabled,omitempty"`
+    SendEmail               *bool                  `json:"send_email,omitempty"`
+    SendSms                 *bool                  `json:"send_sms,omitempty"`
+    SendTelegram            *bool                  `json:"send_telegram,omitempty"`
+    EndDate                 *string                `json:"end_date,omitempty"`                // max(stage.date), ISO
+    Kind                    string                 `json:"kind,omitempty"`                    // ADR-0023-Diskriminator ("route"); nur Migration schreibt ihn
 }
 
 // OfficialWarningsConfig — Issue #1258, geteilt zwischen Trip und ComparePreset
@@ -659,30 +761,32 @@ Das Feld `shortcode` dient als eindeutiger, pro Nutzer stabiler Routing-Identifi
 
 ```go
 type Stage struct {
-    ID                string       `json:"id"`
-    Name              string       `json:"name"`
-    Date              string       `json:"date"`        // YYYY-MM-DD
-    StartTime         string       `json:"start_time,omitempty"` // HH:MM (Issue #675)
-    Waypoints         []Waypoint   `json:"waypoints"`
-    Distance          float64      `json:"distance_km"`
-    Ascent            float64      `json:"ascent_m"`
-    Descent           float64      `json:"descent_m"`
-    DurationMinutes   *int         `json:"duration_minutes,omitempty"`
-    ArrivalCalculated string       `json:"arrival_calculated,omitempty"` // HH:MM
+    ID        string     `json:"id"`
+    Name      string     `json:"name"`
+    Date      string     `json:"date"`                  // YYYY-MM-DD
+    Waypoints []Waypoint `json:"waypoints"`
+    StartTime *string    `json:"start_time,omitempty"`  // HH:MM (Issue #675)
 }
 ```
+
+> Distanz/Auf-/Abstieg/Dauer sind KEINE persistierten Stage-Felder — sie werden
+> zur Anzeige aus den Waypoints berechnet (Frontend) bzw. via Naismith abgeleitet.
+> Ankunftszeiten leben pro Waypoint (`arrival_calculated`), nicht auf der Stage.
 
 ### Waypoint DTO
 
 ```go
 type Waypoint struct {
-    ID                  string     `json:"id"`
-    Name                string     `json:"name"`
-    Lat                 float64    `json:"lat"`
-    Lon                 float64    `json:"lon"`
-    ElevationM          *float64   `json:"elevation_m,omitempty"`
-    DistanceFromStartKm float64    `json:"distance_from_start_km"`
-    ArrivalCalculated   string     `json:"arrival_calculated,omitempty"` // HH:MM (berechnet aus Activity)
+    ID                string  `json:"id"`
+    Name              string  `json:"name"`
+    Lat               float64 `json:"lat"`
+    Lon               float64 `json:"lon"`
+    ElevationM        int     `json:"elevation_m"`
+    TimeWindow        *string `json:"time_window,omitempty"`
+    ArrivalCalculated *string `json:"arrival_calculated,omitempty"` // Issue #296 — "HH:MM", Backend-berechnet (Naismith)
+    Origin            string  `json:"origin,omitempty"`             // "manual" | "algorithmic"; leer = "manual" (Issue #303)
+    Confirmed         *bool   `json:"confirmed,omitempty"`          // *bool: false bleibt serialisierbar
+    ArrivalOverride   *string `json:"arrival_override,omitempty"`   // User-Override "HH:MM"
 }
 ```
 
@@ -710,11 +814,12 @@ wurde als wirkungslos entfernt (nie persistiert, Bestandstrips blieben ausgenomm
   "lat": 46.45,
   "lon": 8.65,
   "elevation_m": 1500,
-  "distance_from_start_km": 20,
   "arrival_calculated": "09:00"
 }
 ```
-Bei `start_time = "08:00"` und `activity = "fahrrad_20"`: 20 km ÷ 20 km/h = 1 h → 09:00 ✓
+Bei `start_time = "08:00"`, `activity = "fahrrad_20"` und 20 km kumulierter Distanz
+(aus den GPX-Punkten berechnet — KEIN persistiertes Waypoint-Feld im Go-Struct):
+20 km ÷ 20 km/h = 1 h → 09:00 ✓
 
 ---
 
@@ -722,7 +827,7 @@ Bei `start_time = "08:00"` und `activity = "fahrrad_20"`: 20 km ÷ 20 km/h = 1 h
 
 Convenience-Layer ueber die bestehenden CRUD-Handler. Erlaubt gezieltes Lesen und Schreiben des `display_config`-Subfelds auf Trip- und Location-Entitaeten ohne Uebertragung des gesamten Objekts. Alle Config-schreibenden Endpoints (Trip, Location, ComparePreset) mergen feldweise ueber den gemeinsamen `mergeConfigMap`-Helfer (`internal/handler/config_merge.go`, #1159) — Teil-Updates loeschen keine anderen `display_config`-Keys mehr. Der fruehere Subscription-Endpoint wurde mit #1250 Scheibe 0 entfernt.
 
-**Handler:** `internal/handler/weather_config.go` (NEU) | **Routing:** `cmd/server/main.go`
+**Handler:** `internal/handler/weather_config.go` (NEU) | **Routing:** `internal/router/router.go`
 
 ### Endpoints
 
@@ -766,7 +871,7 @@ null
 |-------|-----------|
 | `internal/handler/weather_config.go` | 4 HTTP-Handler (Get/Put fuer Trip, Location) |
 | `internal/handler/config_merge.go` | NEU (#1159) — gemeinsamer `mergeConfigMap`-Helfer fuer feldweisen Merge, genutzt von Trip-, Location- und ComparePreset-Endpoints |
-| `cmd/server/main.go` | +4 Route-Registrierungen |
+| `internal/router/router.go` | Route-Registrierungen |
 
 ---
 
@@ -774,7 +879,7 @@ null
 
 Exposes scheduler job metadata for dashboard display (BriefingsTimeline component).
 
-**Handler:** `internal/handler/scheduler.go` | **Routing:** `cmd/server/main.go`
+**Handler:** `internal/handler/scheduler_status.go` | **Routing:** `internal/router/router.go`
 
 ### GET /api/scheduler/status
 
@@ -838,7 +943,7 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
 
 Client-side forecast fetch for dashboard weather display (non-blocking).
 
-**Handler:** Proxies to Python weather provider | **Routing:** `cmd/server/main.go`
+**Handler:** Proxies to Python weather provider | **Routing:** `internal/router/router.go`
 
 ### GET /api/forecast
 
@@ -892,7 +997,7 @@ Fetches normalized weather forecast for a given coordinate.
 
 Manually triggers briefing generation for immediate test/delivery.
 
-**Handler:** `internal/handler/scheduler.go` | **Routing:** `cmd/server/main.go`
+**Handler:** `internal/handler/scheduler_status.go` | **Routing:** `internal/router/router.go`
 
 ### POST /api/scheduler/trip-reports
 
@@ -972,7 +1077,7 @@ Triggers immediate test briefing send for one trip. Returns success/failure base
 
 Provides metadata about available weather metrics, including per-metric format modes.
 
-**Handler:** `api/routers/config.py` | **Routing:** `cmd/server/main.go`
+**Handler:** `api/routers/config.py` | **Routing:** `internal/router/router.go`
 
 ### GET /api/metrics
 
@@ -1063,7 +1168,7 @@ Returns catalog of all available weather metrics with format mode options and de
 
 Manages persisted custom weather metric profiles (user's own presets for metric selection, format modes, and horizons).
 
-**Handler:** `internal/handler/metric_preset.go` | **Storage:** `data/users/{userID}/metric_presets.json` | **Routing:** `cmd/server/main.go`
+**Handler:** `internal/handler/metric_preset.go` | **Storage:** `data/users/{userID}/metric_presets.json` | **Routing:** `internal/router/router.go`
 
 ### MetricPreset DTO
 
@@ -1252,7 +1357,7 @@ Updates selected fields of a metric preset (name, description, metrics, is_defau
 
 Manages persisted Compare-Preset configurations for automatic, multi-location comparison reports (foundation for Epic #456 — Auto-Briefings).
 
-**Handler:** `internal/handler/compare_preset.go` | **Storage:** `data/users/{userID}/briefings/{id}.json` (per-Datei, `kind="vergleich"`; Legacy `data/users/{userID}/compare_presets.json` nur noch Migrations-Quelle/Rollback, Issue #1250 S7b) | **Routing:** `cmd/server/main.go`
+**Handler:** `internal/handler/compare_preset.go` | **Storage:** `data/users/{userID}/briefings/{id}.json` (per-Datei, `kind="vergleich"`; Legacy `data/users/{userID}/compare_presets.json` nur noch Migrations-Quelle/Rollback, Issue #1250 S7b) | **Routing:** `internal/router/router.go`
 
 ### ComparePreset DTO
 
@@ -1281,6 +1386,17 @@ type ComparePreset struct {
     Corridors            []Corridor             `json:"corridors"`                             // Issue #1231 Slice 1, additiv neben display_config["ideal_ranges"] — s. Section 24
     OfficialAlertTriggersEnabled *bool          `json:"official_alert_triggers_enabled,omitempty"` // @deprecated (Issue #1258, ersetzt durch official_warnings.enabled) — bleibt in den Daten fuer Rollback-Sicherheit
     OfficialWarnings     *OfficialWarningsConfig `json:"official_warnings,omitempty"`           // Issue #1258, identische Semantik wie Trip — s. Section 10.5 „official_warnings (Issue #1258)"
+    Weekday              *int                   `json:"weekday,omitempty"`                     // 0=Mo…6=So; DEPRECATED seit #1232 (Wochenrhythmus entfällt) — nur Altdaten-Träger
+    PausedAt             *time.Time             `json:"paused_at,omitempty"`                   // Issue #1250 Scheibe 2: aus schedule=="manual" abgeleitet (Dual-Write); nil = nicht pausiert
+    ArchivedAt           *time.Time             `json:"archived_at,omitempty"`                 // Issue #611: nil = aktiv, gesetzt = archiviert
+    OfficialAlertsEnabled *bool                 `json:"official_alerts_enabled,omitempty"`     // Issue #1040: nil/true = amtliche Quellen abgefragt (Default), false = kein Fetch
+    RadarAlertEnabled    *bool                  `json:"radar_alert_enabled,omitempty"`         // Issue #1041 Slice 1b: UMGEKEHRTER Default — nil/fehlend = AUS (opt-in, Netzwerkkosten je Ort)
+    AlertCooldownMinutes *int                   `json:"alert_cooldown_minutes,omitempty"`      // Issue #1170: nil = Default in compare_alert.py
+    AlertQuietFrom       *string                `json:"alert_quiet_from,omitempty"`            // Issue #1170
+    AlertQuietTo         *string                `json:"alert_quiet_to,omitempty"`              // Issue #1170
+    SendTelegram         *bool                  `json:"send_telegram,omitempty"`               // Issue #1216 Slice 2b: Alarm-Kanal-Opt-in (Default falsy = E-Mail-only)
+    SendSms              *bool                  `json:"send_sms,omitempty"`                    // Issue #1216 Slice 2b
+    Kind                 string                 `json:"kind,omitempty"`                        // ADR-0023-Diskriminator ("vergleich"); nur Migration schreibt ihn
     CreatedAt            time.Time              `json:"created_at"`
 }
 ```
@@ -1292,12 +1408,10 @@ sowohl aus dem Schreibpfad (`SaveComparePresets`) als auch aus dem Lesepfad
 (`LoadComparePresets`) sowie direkt aus dem Handler, wenn ein frisch erstelltes/aktualisiertes
 Preset in der HTTP-Response gespiegelt wird. Bestandsdaten: `scripts/migrate_1244_null_lists.py`.
 
-**Hinweis zur Vollständigkeit:** Diese Struct-Auflistung wird nicht bei jeder additiven
-Preset-Erweiterung nachgezogen (z.B. `OfficialAlertsEnabled` #1040, `TopNDetails`/`EnabledMetrics`
-#1104 fehlen hier aktuell noch) — `HourlyEnabled` (#1107) wurde ergänzt, da
-es der unmittelbare Anlass dieser Doku-Aktualisierung war; die fünf Slot-Felder (#1232 Scheibe 2a)
-wurden anlässlich des Zeitplan-Reshapes nachgezogen; `display_config["hourly_metrics"]` (#1106)
-wurde anlässlich C2 von Epic #1301 in die DisplayConfig-Keys-Liste oben nachgezogen.
+**Vollständigkeit (seit 2026-07-22, #1342):** Diese Struct-Auflistung ist vollständig gegen
+`internal/model/compare_preset.go` abgeglichen und wird durch den Drift-Test
+`tests/test_api_contract_drift.py` abgesichert — jedes neue JSON-Tag im Go-Struct macht den
+Test rot, bis die Doku nachgezogen ist.
 
 **Zwei-Slot-Zeitplan (Issue #1232 Scheibe 2a, additiv zu `schedule`):** Analog zum Trip-Briefing
 (Morgen/Abend) trägt `ComparePreset` jetzt einen eigenen Zeitplan statt eines groben
@@ -1342,7 +1456,7 @@ versendet für `target_date=heute`, Abend-Slot für `target_date=morgen`. Guards
 |-------|-----------|
 | `name` | not empty |
 | `schedule` | in `{"daily", "weekly", "manual"}` |
-| `profil` | valid per `internal/compare/types.go` IsValidProfile() |
+| `profil` | valid per `internal/model/activity_profile.go` `IsValidProfile()` (seit #1215 in model) |
 | `hour_from` | 0–23 — **weiterhin von `validateComparePreset` erzwungen** (`internal/handler/compare_preset.go:120`). @deprecated Issue #1268: nicht mehr vom Editor/Versand gelesen; bestehende Werte in Request-Body werden per RMW-Spread erhalten (Bestandsschutz). Neue Presets erhalten 0 (Go Zero-Value, von der Validierung zugelassen). |
 | `hour_to` | 0–23 **und** `hour_to >= hour_from` — **beide Regeln gelten weiter** (`compare_preset.go:123,126`); die API lehnt Verstöße auch nach #1268 ab. @deprecated: nicht mehr vom Editor/Versand gelesen; bestehende Werte per RMW-Spread erhalten. |
 | `forecast_hours` | @deprecated Issue #1268: nicht mehr vom Versand gelesen; der Dispatch verwendet fest 96 h (Issue #1305, zuvor 48 h). Bestehende Werte werden per RMW-Spread erhalten. Frontend sends dieses Feld nicht mehr mit. |
@@ -1371,16 +1485,16 @@ versendet für `target_date=heute`, Abend-Slot für `target_date=morgen`. Guards
 
 | File | Change |
 |------|--------|
-| `internal/model/compare_preset.go` | NEW — ComparePreset struct |
-| `internal/store/store.go` | +LoadComparePresets(), SaveComparePresets(), comparePresetsFile() |
-| `internal/handler/compare_preset.go` | NEW — 5 handlers + newComparePresetID(), validateComparePreset() |
-| `cmd/server/main.go` | +5 route registrations |
+| `internal/model/compare_preset.go` | ComparePreset struct |
+| `internal/store/compare_preset.go` | LoadComparePresets(), SaveComparePresets(), NormalizeComparePreset() |
+| `internal/handler/compare_preset.go` | Handler + newComparePresetID(), validateComparePreset() |
+| `internal/router/router.go` | Route-Registrierungen |
 
 ---
 
 ## 17) Google OAuth Login Endpoints (Issue #425)
 
-**Handler:** `internal/handler/auth_oauth.go` (NEW) | **Routing:** `cmd/server/main.go`
+**Handler:** `internal/handler/auth_oauth.go` (NEW) | **Routing:** `internal/router/router.go`
 
 ### Endpoints
 
@@ -1582,7 +1696,7 @@ pro Preset die Zwei-Slot-Felder (`morning_time`/`evening_time`, s. Abschnitt 16)
 Stunde (Europe/Vienna) statt eines einzigen festen Filters. `schedule` wirkt nur noch als
 Pause-Flag (`manual` = pausiert). Details: `docs/specs/modules/compare_preset_zeitplan.md`.
 
-**Handler:** `api/routers/scheduler.py` (`run_compare_presets_daily`) | **Routing:** `cmd/server/main.go`
+**Handler:** `api/routers/scheduler.py` (`run_compare_presets_daily`) | **Routing:** `internal/router/router.go`
 
 ### POST /api/scheduler/compare-presets-daily
 
@@ -1669,7 +1783,7 @@ Bei mindestens einem fehlgeschlagenen fälligen Preset (seit Issue #1290, identi
 
 On-demand send for a single Compare-Preset: triggers comparison engine and emails all configured recipients immediately, bypassing schedule-based gating.
 
-**Handler:** `api/routers/scheduler.py` (Python endpoint) | `internal/handler/compare_preset.go` (Go proxy) | **Routing:** `cmd/server/main.go`
+**Handler:** `api/routers/scheduler.py` (Python endpoint) | `internal/handler/compare_preset.go` (Go proxy) | **Routing:** `internal/router/router.go`
 
 ### POST /api/scheduler/compare-presets/{id}/send
 
@@ -1738,7 +1852,7 @@ Executes comparison and sends report for a single preset immediately (regardless
 
 **Scope:** User registration, password-based login, and FIDO2 passkey-based authentication.
 
-**Handler:** `internal/handler/auth.go` | **Middleware:** `internal/middleware/auth.go` | **Routing:** `cmd/server/main.go`
+**Handler:** `internal/handler/auth.go` | **Middleware:** `internal/middleware/auth.go` | **Routing:** `internal/router/router.go`
 
 ### A) Password-based Authentication
 
@@ -1765,10 +1879,11 @@ User registration with username + password + email (HTTP 201 on success, 409 if 
 
 | Status | Body | Scenario |
 |--------|------|----------|
-| 400 | `{"error":"validation_error","detail":"..."}` | username/password missing or too short |
-| 400 | `{"error":"validation failed"}` | `email` missing/empty |
-| 400 | `{"error":"invalid_email"}` | `email` present but without `@` |
-| 409 | `{"error":"user_already_exists"}` | User with this ID already registered |
+| 400 | `{"error":"invalid request"}` | JSON malformed (`internal/handler/auth.go:36`) |
+| 400 | `{"error":"validation failed"}` | username/password/email missing or too short (auth.go:43-67) |
+| 400 | `{"error":"invalid_email"}` | `email` present but without `@` (auth.go:73) |
+| 409 | `{"error":"user already exists"}` | User with this ID already registered (auth.go:80 — Klartext mit Leerzeichen, KEIN snake_case) |
+| 500 | `{"error":"internal error"}` / `{"error":"store_error"}` | Hashing-/Persistenz-Fehler (auth.go:88,101) |
 
 Since Issue #1226, a valid `email` also triggers the existing `dispatchVerificationMail` helper (from #1219) after account creation — same Double-Opt-In flow as profile email changes. Google-OAuth account creation (`createOAuthUser`) and passkey-public account creation (`PasskeyRegisterPublicFinishHandler`) trigger the same dispatch on first-time account creation (not on existing-user login).
 
@@ -1793,8 +1908,8 @@ User login with username + password, returns session cookie.
 
 | Status | Body | Scenario |
 |--------|------|----------|
-| 400 | `{"error":"bad_request"}` | JSON malformed |
-| 401 | `{"error":"invalid_credentials"}` | User not found or password incorrect (same message for both) |
+| 400 | `{"error":"invalid request"}` | JSON malformed (auth.go:124 — Klartext, KEIN snake_case) |
+| 401 | `{"error":"invalid credentials"}` | User not found or password incorrect — same message for both (auth.go:132,139; Klartext mit Leerzeichen) |
 
 ### B) Passkey Authentication (WebAuthn/FIDO2)
 
@@ -2228,7 +2343,7 @@ type WebAuthnCredential struct {
 
 Provides preview rendering of trip reports in Email, SMS, or Telegram formats (Signal wurde app-weit entfernt, Issue #610). Supports both live weather and fixture-based demo mode. Seit Issue #1270 zusätzlich: EIN Compare-Preview-Endpoint, der alle Kanäle eines Orts-Vergleich-Presets in einer Antwort liefert (s. `POST /api/preview/compare/{preset_id}` unten).
 
-**Handler:** `api/routers/preview.py` | **Routing:** `cmd/server/main.go` (Trip-Routen), `internal/router/router.go:161-167` (Compare-Proxy)
+**Handler:** `api/routers/preview.py` | **Routing:** `internal/router/router.go` (Trip-Routen), `internal/router/router.go:161-167` (Compare-Proxy)
 
 ### GET /api/preview/{trip_id}/email
 
@@ -2407,7 +2522,7 @@ Error-Code wie bei den älteren Trip-Preview-Routen).
 
 Lists all sent briefings (morning/evening) for an archived trip, ordered chronologically.
 
-**Handler:** `internal/handler/briefing_history.go` | **Routing:** `cmd/server/main.go`
+**Handler:** `internal/handler/briefing_history.go` | **Routing:** `internal/router/router.go`
 
 ### GET /api/trips/{id}/briefing-history
 
@@ -2472,14 +2587,16 @@ Alerts sind personalisierbare Benachrichtigungen bei Wetteränderungen auf einem
 ```go
 // internal/model/trip.go (Go)
 type AlertRule struct {
-    ID       string   `json:"id"`
-    Kind     string   `json:"kind"`           // "absolute" | "delta"
-    Metric   string   `json:"metric"`         // WIND_GUST, PRECIPITATION_SUM, ...
-    Threshold float64 `json:"threshold"`
-    Severity string   `json:"severity"`       // "info", "warning", "critical" (Label nur; nicht mehr für Versand-Entscheidung)
-    Enabled  bool     `json:"enabled"`
-    Unit     string   `json:"unit,omitempty"`
-    Channels []string `json:"channels,omitempty"` // NEW: pro-Alert Kanal-Override (empty = erbe Briefing-Kanäle)
+    ID          string   `json:"id"`
+    Kind        string   `json:"kind"`                   // "absolute" | "delta"
+    Metric      string   `json:"metric"`                 // wind_gust, precipitation_sum, … (AlertMetric-Konstanten, internal/model/trip.go:38-48)
+    Threshold   float64  `json:"threshold"`
+    Unit        string   `json:"unit,omitempty"`
+    Severity    string   `json:"severity"`               // "info", "warning", "critical" (Label nur; nicht mehr für Versand-Entscheidung)
+    Enabled     bool     `json:"enabled"`
+    PairID      *string  `json:"pair_id,omitempty"`      // Issue #297
+    DeltaWindow *string  `json:"delta_window,omitempty"` // Issue #297
+    Channels    []string `json:"channels,omitempty"`     // pro-Alert Kanal-Override (empty = erbe Briefing-Kanäle, Issue #638)
 }
 ```
 
@@ -2517,7 +2634,7 @@ export interface AlertRule {
 |------|-----|------------|
 | id | string | Eindeutige Alert-ID (z.B. `alert-gust-1`) |
 | kind | enum | `"absolute"` (Schwellenwert überschritten) oder `"delta"` (Änderung größer als Schwelle) |
-| metric | enum | Gemessene Metrik: WIND_GUST, PRECIPITATION_SUM, TEMPERATURE_MIN/MAX, THUNDER_LEVEL, FREEZING_LEVEL, TEMPERATURE/WIND/PRECIPITATION_CHANGE. `SNOW_LINE` bleibt als toter Enum-Wert nur für Backward-Compat-Deserialisierung alt-persistierter Regeln erhalten (ADR-0019) — nicht mehr wählbar. |
+| metric | enum | Gemessene Metrik (AlertMetric-Werte, klein): wind_gust, precipitation_sum, temperature_min/max, thunder_level, snow_line, temperature/wind/precipitation_change. Hinweis: `freezing_level` ist KEINE AlertMetric-Konstante, sondern eine Katalog-ID, die via `catalogIDToAlertMetrics` auf `snow_line` mappt (trip.go:239, ADR-0019). |
 | threshold | float | Schwellenwert (z.B. `50.0` für 50 km/h Wind-Böen) |
 | severity | enum | `"info"`, `"warning"`, `"critical"` — nur noch Label am Alert, **nicht mehr** für Versand-Filterung (behebt Severity-Falle: Info-Alerts werden nicht mehr still verschluckt) |
 | enabled | bool | Alert aktiv? (default: true) |
