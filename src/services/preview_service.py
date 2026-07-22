@@ -194,6 +194,19 @@ class PreviewService:
             trip, target, tz=trip_tz, multi_day_trend=multi_day_trend,
         )
 
+        # Issue #1315: Nacht-Wetter fuer BEIDE report_types (#1313-Semantik),
+        # ueber dieselbe geteilte Funktion wie der Versand (kein Duplikat).
+        # Nur beschaffen, wenn der Trip die Sektion ueberhaupt zeigen wuerde
+        # -- has_gap bleibt bewusst False (#1331, kein Versand-Kontext hier).
+        # Adversary-Fix (F001, Issue #483): im Demo-Modus denselben
+        # FixtureProvider durchreichen wie an _fetch_weather (Z.158-163) --
+        # sonst loest die Demo-Vorschau einen echten Live-open-meteo-Call
+        # fuer das Nacht-Segment aus und verletzt den Demo-Vertrag.
+        night_weather = None
+        if segment_weather and trip.display_config.show_night_block:
+            from services.segment_weather import fetch_night_weather
+            night_weather = fetch_night_weather(segment_weather[-1], provider=provider)
+
         # Issue #474: F12 Wetterlage-Label vor format_email berechnen.
         try:
             from services.weather_pattern import WeatherPatternService
@@ -215,6 +228,7 @@ class PreviewService:
             render_options=render_options,
             thunder_forecast=thunder_forecast,
             multi_day_trend=multi_day_trend,
+            night_weather=night_weather,
         )
         return report, segment_weather, stage_name, trip_tz
 
@@ -231,11 +245,14 @@ class PreviewService:
         render_options=None,
         thunder_forecast=None,
         multi_day_trend=None,
+        night_weather=None,
     ):
         """Einzelstelle für den E-Mail-Render-Aufruf in der Vorschau.
 
         Fix #1297: thunder_forecast/multi_day_trend werden jetzt durchgereicht,
         damit die Vorschau denselben Gewitter-Wert wie der Versand zeigt (ADR-0025).
+        Fix #1315: night_weather ebenso -- sonst zeigt die Vorschau nie die
+        Sektion "Nacht am Ziel" (has_gap bleibt bewusst False, #1331).
         """
         from output.renderers.trip_report import TripReportFormatter
         return TripReportFormatter().format_email(
@@ -253,6 +270,7 @@ class PreviewService:
             render_options=render_options,
             thunder_forecast=thunder_forecast,
             multi_day_trend=multi_day_trend,
+            night_weather=night_weather,
         )
 
     def render_email_preview(

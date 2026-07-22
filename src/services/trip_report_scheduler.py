@@ -1239,52 +1239,13 @@ class TripReportSchedulerService:
         """
         Fetch night weather from arrival until 06:00 next morning.
 
-        Creates a temporary segment at the arrival point spanning two days
-        so the provider returns data for both evening and next morning.
-
-        Args:
-            last_segment: Weather data for the last segment of the day
-
-        Returns:
-            NormalizedTimeseries covering arrival hour through 06:00 next day
+        Issue #1315: thin delegator — the actual fetch lives in
+        ``services.segment_weather.fetch_night_weather`` so the Vorschau
+        (preview_service) can reuse the exact same behaviour (Konsolidierung,
+        kein Duplikat). Versand-Verhalten unveraendert.
         """
-        from providers.base import get_provider
-        from services.segment_weather import SegmentWeatherService
-
-        seg = last_segment.segment
-        arrival = seg.end_time
-        next_morning = datetime.combine(
-            arrival.date() + timedelta(days=1),
-            datetime.min.time(),
-            tzinfo=timezone.utc,
-        ).replace(hour=6)
-
-        # Create a temporary segment spanning arrival → 06:00 next day
-        night_segment = TripSegment(
-            segment_id=999,
-            start_point=seg.end_point,
-            end_point=seg.end_point,
-            start_time=arrival,
-            end_time=next_morning,
-            duration_hours=(next_morning - arrival).total_seconds() / 3600,
-            distance_km=0.0,
-            ascent_m=0.0,
-            descent_m=0.0,
-        )
-
-        try:
-            provider = get_provider("openmeteo")
-            service = SegmentWeatherService(provider)
-            # Bug #288: night fetch is part of the per-stage data; ensemble
-            # is added once per trip via _enrich_ensemble_for_trip().
-            night_data = service.fetch_segment_weather(night_segment, enrich_ensemble=False)
-            return night_data.timeseries
-        except Exception as e:
-            logger.warning(f"Failed to fetch night weather: {e}")
-            # Fallback: use last segment's timeseries (evening hours only)
-            if last_segment.timeseries and last_segment.timeseries.data:
-                return last_segment.timeseries
-            return None
+        from services.segment_weather import fetch_night_weather
+        return fetch_night_weather(last_segment)
 
     def _enrich_ensemble_for_trip(
         self,

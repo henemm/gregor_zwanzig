@@ -8,7 +8,7 @@ SPEC: docs/specs/modules/segment_weather.md v1.0
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Optional
 
 import logging
@@ -390,3 +390,66 @@ class SegmentWeatherService:
                 f"WARNING: Segment time window is in the past "
                 f"(end: {segment.end_time}, now: {now})"
             )
+
+
+def fetch_night_weather(
+    last_segment: SegmentWeatherData,
+    provider: "Optional[WeatherProvider]" = None,
+) -> "Optional[NormalizedTimeseries]":
+    """
+    Fetch night weather from arrival until 06:00 next morning.
+
+    Extracted from ``TripReportSchedulerService._fetch_night_weather``
+    (Issue #1315) so both the scheduler (Versand) and the preview
+    pipeline (Vorschau) use ONE fetch path — behaviour is unchanged.
+
+    Creates a temporary segment at the arrival point spanning two days
+    so the provider returns data for both evening and next morning.
+
+    Args:
+        last_segment: Weather data for the last segment of the day
+        provider: Optionaler Provider (Adversary-Fix #1315 F001, Issue #483).
+            Wenn gesetzt (Demo-Vorschau -> FixtureProvider), wird DIESER
+            genutzt statt live open-meteo -- die Vorschau bleibt so
+            quota-/API-unabhaengig verfuegbar. Default ``None`` erhaelt das
+            Scheduler-/Versandverhalten 1:1 (immer live openmeteo).
+
+    Returns:
+        NormalizedTimeseries covering arrival hour through 06:00 next day
+    """
+    from providers.base import get_provider
+
+    seg = last_segment.segment
+    arrival = seg.end_time
+    next_morning = datetime.combine(
+        arrival.date() + timedelta(days=1),
+        datetime.min.time(),
+        tzinfo=timezone.utc,
+    ).replace(hour=6)
+
+    # Create a temporary segment spanning arrival → 06:00 next day
+    night_segment = TripSegment(
+        segment_id=999,
+        start_point=seg.end_point,
+        end_point=seg.end_point,
+        start_time=arrival,
+        end_time=next_morning,
+        duration_hours=(next_morning - arrival).total_seconds() / 3600,
+        distance_km=0.0,
+        ascent_m=0.0,
+        descent_m=0.0,
+    )
+
+    try:
+        active_provider = provider or get_provider("openmeteo")
+        service = SegmentWeatherService(active_provider)
+        # Bug #288: night fetch is part of the per-stage data; ensemble
+        # is added once per trip via _enrich_ensemble_for_trip().
+        night_data = service.fetch_segment_weather(night_segment, enrich_ensemble=False)
+        return night_data.timeseries
+    except Exception as e:
+        logger.warning(f"Failed to fetch night weather: {e}")
+        # Fallback: use last segment's timeseries (evening hours only)
+        if last_segment.timeseries and last_segment.timeseries.data:
+            return last_segment.timeseries
+        return None
