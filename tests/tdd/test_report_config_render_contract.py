@@ -103,20 +103,6 @@ def _stability():
     return StabilityResult(label="WECHSELHAFT", confidence_pct=60)
 
 
-def _daylight():
-    from services.daylight_service import DaylightWindow
-    base = datetime(2026, 7, 11, tzinfo=timezone.utc)
-    return DaylightWindow(
-        civil_dawn=base.replace(hour=4, minute=42),
-        civil_dusk=base.replace(hour=20, minute=18),
-        sunrise=base.replace(hour=5, minute=12),
-        sunset=base.replace(hour=19, minute=48),
-        usable_start=base.replace(hour=5, minute=0),
-        usable_end=base.replace(hour=20, minute=0),
-        duration_minutes=900,
-    )
-
-
 def _trend():
     """Trend-Stage-dict wie vom Scheduler gebaut (Vorbild test_issue_721)."""
     return [dict(
@@ -152,12 +138,12 @@ def _resolve(cfg, dc):
 def _scheduler_gated_kwargs(options) -> dict:
     """Bildet die Scheduler-Gates nach, die VOR format_email liegen.
 
-    show_daylight / show_multi_day_trend gaten heute im Scheduler, ob die
-    Inputs ueberhaupt berechnet werden — der Test speist die Inputs exakt
-    so ein, wie es der umgebaute Scheduler anhand der Options tut.
+    show_multi_day_trend gatet heute im Scheduler, ob der Input ueberhaupt
+    berechnet wird — der Test speist ihn exakt so ein, wie es der Scheduler
+    anhand der Options tut. Issue #1224: das ehemalige show_daylight-Gate
+    entfaellt (Feld aus ReportRenderOptions entfernt).
     """
     return dict(
-        daylight=_daylight() if options.show_daylight else None,
         multi_day_trend=_trend() if options.show_multi_day_trend else None,
     )
 
@@ -180,7 +166,7 @@ def _format_email(cfg, *, render_options=None, gated_kwargs=None):
         stage_total=3,
     )
     if gated_kwargs is None:
-        gated_kwargs = dict(daylight=_daylight(), multi_day_trend=_trend())
+        gated_kwargs = dict(multi_day_trend=_trend())
     kwargs.update(gated_kwargs)
     if render_options is not None:
         kwargs["render_options"] = render_options

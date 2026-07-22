@@ -212,7 +212,6 @@ def _build_request_and_send(user_id: str, send_sms_config: bool, stub_port: int)
         thunder_forecast=None,
         multi_day_trend=None,
         stability_result=None,
-        daylight_window=None,
         day_comparison=None,
         exposed_sections=[],
         allow_test_fallback=False,

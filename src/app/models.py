@@ -752,7 +752,12 @@ class TripReportConfig:
 
     # Report-Optionen (migrated from UnifiedWeatherDisplayConfig)
     show_compact_summary: bool = True           # F2: Kompakt-Summary vor Detail-Tabellen
-    show_daylight: bool = True                  # F11: Effektives Tageslicht (Ohne Stirnlampe)
+    # Issue #1224: show_daylight (F11, seit #790 render-wirkungslos) entfernt.
+    # Alte Trip-JSONs mit report_config.show_daylight laden weiter fehlerfrei
+    # (loader.py liest das Feld per rc_data.get(...) explizit aus — ein
+    # unbekannter Key im rohen Dict wird schlicht nicht mehr abgegriffen,
+    # kein Crash). save_trip()'s RMW-Merge (_deep_merge_preserve_unknown)
+    # bewahrt einen evtl. vorhandenen Alt-Wert in der Datei zusaetzlich.
     multi_day_trend_reports: list[str] = field(
         default_factory=lambda: ["evening"]
     )                                           # F3: Etappen-Ausblick morning/evening

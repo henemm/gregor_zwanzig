@@ -46,7 +46,6 @@ if TYPE_CHECKING:
     )
     from app.profile import ActivityProfile
     from app.trip import Trip
-    from services.daylight_service import DaylightWindow
     from services.report_config_resolver import ReportRenderOptions
 
 logger = logging.getLogger(__name__)
@@ -69,7 +68,6 @@ class TripReportRequest:
     thunder_forecast: Optional[dict] = None
     multi_day_trend: Optional[list[dict]] = None
     stability_result: Optional["StabilityResult"] = None
-    daylight_window: Optional["DaylightWindow"] = None
     day_comparison: Optional["DayComparison"] = None
     exposed_sections: list = field(default_factory=list)
     report_config: Optional["TripReportConfig"] = None
@@ -262,7 +260,6 @@ class NotificationService:
             stage_name=request.stage_name,
             stage_stats=request.stage_stats,
             exposed_sections=request.exposed_sections,
-            daylight=request.daylight_window,
             tz=request.trip_tz,
             profile=request.profile,
             stability_result=request.stability_result,

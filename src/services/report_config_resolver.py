@@ -22,10 +22,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Die 7 render-wirksamen TripReportConfig-Felder (Spec v1.1 §Implementation
-# Details). PO-Entscheidung 2026-07-10 (GREEN-Review): show_daylight wurde
-# hier entfernt und nach RENDER_NEUTRAL verschoben — der Tageslicht-Block
-# wurde bereits in #790 aus render_html/render_plain entfernt, der Toggle
-# ist strukturell wirkungslos (bestaetigt durch test_issue_790_briefing_simplify.py).
+# Details). PO-Entscheidung 2026-07-10 (GREEN-Review): show_daylight war hier
+# entfernt und nach RENDER_NEUTRAL verschoben (Toggle strukturell wirkungslos
+# seit #790). Issue #1224: das Feld selbst wurde inzwischen ganz aus
+# TripReportConfig entfernt — kein RENDER_NEUTRAL-Eintrag mehr noetig.
 RENDER_EFFECTIVE_FIELDS: tuple[str, ...] = (
     "email_format",
     "show_outlook",
@@ -36,8 +36,9 @@ RENDER_EFFECTIVE_FIELDS: tuple[str, ...] = (
     "multi_day_trend_reports",
 )
 
-# Die uebrigen 20 TripReportConfig-Felder — begruendet nach Kategorie
-# (Spec-Tabelle "RENDER_NEUTRAL — 20 Felder, kategorisiert und begruendet").
+# Die uebrigen 19 TripReportConfig-Felder — begruendet nach Kategorie
+# (Spec-Tabelle "RENDER_NEUTRAL — 20 Felder, kategorisiert und begruendet";
+# seit #1224 nur noch 19, show_daylight entfernt).
 RENDER_NEUTRAL: dict[str, str] = {
     # Metadaten
     "trip_id": "Reine Identifikation, keine Render-Wirkung.",
@@ -65,11 +66,6 @@ RENDER_NEUTRAL: dict[str, str] = {
     "show_highlights": "Seit #790 in render_email() **_ignored absorbiert, strukturell wirkungslos.",
     "daily_summary_metrics": "Seit #790 in render_email() **_ignored absorbiert, strukturell wirkungslos.",
     "show_metrics_summary": "Seit #790 in render_email() **_ignored absorbiert, strukturell wirkungslos.",
-    "show_daylight": (
-        "Tote #790-Toggle-Klasse: Tageslicht-Block in #790 aus "
-        "render_html/render_plain entfernt; gated im Scheduler nur noch die "
-        "(wirkungslose) Vorab-Berechnung. PO 2026-07-10."
-    ),
     # Issue #1306: unklassifiziertes Feld aus der Rot-Triage (#1211b).
     "telegram_style": (
         "Steuert den Telegram-Kurzstil-Kanal (#1260: 'rich'|'kurzform'), "
@@ -87,11 +83,9 @@ class ReportRenderOptions:
     `trip.display_config.show_compact_summary` mutiert hat
     (`trip_report_scheduler.py:779`).
 
-    `show_daylight` ist NICHT render-wirksam (PO-Entscheidung 2026-07-10,
-    `RENDER_NEUTRAL` — der Tageslicht-Block wurde in #790 aus den Renderern
-    entfernt), bleibt aber als Attribut hier, weil der Scheduler damit die
-    (teure) Tageslicht-BERECHNUNG vorab gated (Pre-Render-Gate), bevor
-    `format_email()` ueberhaupt aufgerufen wird.
+    Issue #1224: `show_daylight` entfernt — die Tageslicht-BERECHNUNG (Pre-
+    Render-Gate im Scheduler) wurde ersatzlos gestrichen, der Tageslicht-Block
+    war seit #790 ohnehin nie im Rendering.
     """
 
     email_format: str
@@ -99,7 +93,6 @@ class ReportRenderOptions:
     show_stage_stats: bool
     show_stability: bool
     show_compact_summary: bool
-    show_daylight: bool
     show_multi_day_trend: bool
     show_yesterday_comparison: bool
     display_config: "UnifiedWeatherDisplayConfig"
@@ -133,7 +126,6 @@ def resolve_report_render_options(
             show_stage_stats=True,
             show_stability=True,
             show_compact_summary=True,
-            show_daylight=True,
             show_multi_day_trend=report_type in (dc.multi_day_trend_reports or ["evening"]),
             show_yesterday_comparison=True,
             display_config=dc,
@@ -146,7 +138,6 @@ def resolve_report_render_options(
         show_stage_stats=report_config.show_stage_stats,
         show_stability=report_config.show_stability,
         show_compact_summary=report_config.show_compact_summary,
-        show_daylight=report_config.show_daylight,
         show_multi_day_trend=report_type in trend_reports,
         show_yesterday_comparison=report_config.show_yesterday_comparison,
         display_config=dc,

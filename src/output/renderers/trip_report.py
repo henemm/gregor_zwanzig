@@ -41,7 +41,6 @@ from app.models import (
     WeatherChange,
 )
 from app.profile import ActivityProfile
-from services.daylight_service import DaylightWindow
 from services.report_config_resolver import ReportRenderOptions, resolve_report_render_options
 from services.risk_engine import RiskEngine
 from output.renderers.email import render_email
@@ -67,7 +66,6 @@ class TripReportFormatter:
         stage_name: Optional[str] = None,
         stage_stats: Optional[dict] = None,
         exposed_sections: Optional[list[ExposedSection]] = None,
-        daylight: Optional[DaylightWindow] = None,
         tz: Optional[ZoneInfo] = None,
         profile: Optional[ActivityProfile] = None,
         stability_result: Optional[StabilityResult] = None,
@@ -184,7 +182,6 @@ class TripReportFormatter:
             stage_stats=stage_stats,
             highlights=highlights,
             compact_summary=compact_summary,
-            daylight=daylight,
             tz=self._tz,
             exposed_sections=exposed_sections,
             friendly_keys=self._friendly_keys,

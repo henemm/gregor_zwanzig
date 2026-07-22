@@ -56,7 +56,6 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 		change_threshold_wind_kmh: 20,
 		change_threshold_precip_mm: 10,
 		show_compact_summary: true,
-		show_daylight: true,
 		wind_exposition_min_elevation_m: null as number | null,
 		multi_day_trend_reports: ['evening'] as string[]
 	});
@@ -264,7 +263,6 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 					change_threshold_wind_kmh: rc.change_threshold_wind_kmh ?? 20,
 					change_threshold_precip_mm: rc.change_threshold_precip_mm ?? 10,
 					show_compact_summary: rc.show_compact_summary ?? true,
-					show_daylight: rc.show_daylight ?? true,
 					wind_exposition_min_elevation_m: rc.wind_exposition_min_elevation_m ?? null,
 					multi_day_trend_reports: rc.multi_day_trend_reports ?? ['evening']
 				};
@@ -281,7 +279,6 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 					change_threshold_wind_kmh: 20,
 					change_threshold_precip_mm: 10,
 					show_compact_summary: true,
-					show_daylight: true,
 					wind_exposition_min_elevation_m: null as number | null,
 					multi_day_trend_reports: ['evening'] as string[]
 				};

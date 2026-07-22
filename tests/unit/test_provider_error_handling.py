@@ -283,7 +283,6 @@ class TestServiceEmailMethod:
                     thunder_forecast=None,
                     multi_day_trend=None,
                     stability_result=None,
-                    daylight_window=None,
                     day_comparison=None,
                     exposed_sections=[],
                     allow_test_fallback=False,

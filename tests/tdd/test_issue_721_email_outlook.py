@@ -213,6 +213,9 @@ class TestAC5LegacyFieldsPreserved:
                 "show_stability": False,
                 "show_compact_summary": False,
                 "show_highlights": False,
+                # Issue #1224: show_daylight ist kein TripReportConfig-Feld
+                # mehr — bewusst als Alt-Feld in der Roh-JSON belassen, um zu
+                # beweisen, dass das Laden trotzdem nicht crasht (AC-3).
                 "show_daylight": False,
                 "daily_summary_metrics": ["temperature"],
             },
@@ -235,7 +238,7 @@ class TestAC5LegacyFieldsPreserved:
         assert rc["show_stability"] is False
         assert rc["show_compact_summary"] is False
         assert rc["show_highlights"] is False
-        assert rc["show_daylight"] is False
+        assert "show_daylight" not in rc  # Issue #1224: kein Modellfeld mehr
         assert rc["daily_summary_metrics"] == ["temperature"]
         # Neues Feld additiv vorhanden
         assert "show_outlook" in rc

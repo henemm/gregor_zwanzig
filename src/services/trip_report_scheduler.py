@@ -30,7 +30,6 @@ from app.models import (
     TripSegment,
 )
 from services.day_comparison import DayComparison
-from services.daylight_service import DaylightWindow
 from services.notification_service import NotificationService, TripReportRequest
 from services.user_tier import sms_allowed
 from utils.geo import haversine_km
@@ -884,30 +883,6 @@ class TripReportSchedulerService:
             trip, target_date, tz=trip_tz, multi_day_trend=multi_day_trend,
         )
 
-        # 7. Usable daylight (F11) — via Resolver (Issue #1208)
-        daylight_window = None
-        if render_options.show_daylight:
-            try:
-                from services.daylight_service import compute_usable_daylight
-                first_seg = segments[0]
-                # Route max elevation from all waypoints in stage
-                route_max_elev = stage_stats.get("max_elevation_m", first_seg.start_point.elevation_m) if stage_stats else first_seg.start_point.elevation_m
-                # Collect all forecast data points for weather corrections
-                all_forecast_data = []
-                for sw in segment_weather:
-                    if sw.timeseries and sw.timeseries.data:
-                        all_forecast_data.extend(sw.timeseries.data)
-                daylight_window = compute_usable_daylight(
-                    lat=first_seg.start_point.lat,
-                    lon=first_seg.start_point.lon,
-                    target_date=target_date,
-                    elevation_m=first_seg.start_point.elevation_m,
-                    route_max_elevation_m=float(route_max_elev),
-                    forecast_data=all_forecast_data,
-                )
-            except Exception as e:
-                logger.warning(f"Daylight computation failed for {trip.id}: {e}")
-
         # 7b. Vortag-Vergleich (Issue #750): gestrigen Snapshot laden + Deltas
         # berechnen. Fail-soft — fehlt der Vortag, bleibt day_comparison None.
         # Issue #1208: Patch-Hack (`trip.display_config.show_compact_summary =
@@ -941,7 +916,6 @@ class TripReportSchedulerService:
             thunder_forecast=thunder_forecast,
             multi_day_trend=multi_day_trend,
             stability_result=stability_result,
-            daylight_window=daylight_window,
             day_comparison=day_comparison,
             exposed_sections=exposed_sections,
             allow_test_fallback=allow_test_fallback,
@@ -1007,7 +981,6 @@ class TripReportSchedulerService:
         thunder_forecast: Optional[dict],
         multi_day_trend: Optional[list[dict]],
         stability_result: Optional[StabilityResult],
-        daylight_window: Optional[DaylightWindow],
         day_comparison: Optional[DayComparison],
         exposed_sections: list,
         allow_test_fallback: bool,
@@ -1035,7 +1008,6 @@ class TripReportSchedulerService:
             thunder_forecast=thunder_forecast,
             multi_day_trend=multi_day_trend,
             stability_result=stability_result,
-            daylight_window=daylight_window,
             day_comparison=day_comparison,
             exposed_sections=exposed_sections,
             report_config=config,

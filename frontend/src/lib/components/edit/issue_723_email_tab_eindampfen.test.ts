@@ -126,8 +126,11 @@ test('#723: buildMailElementWrite setzt show_outlook=true wenn UI-Feld undefined
 
 test('#723: buildMailElementWrite erhält aus dem UI entfernte Felder via original-Spread', () => {
 	// Diese Felder hat das UI nicht mehr — sie müssen byte-identisch überleben.
+	// (Issue #1224: show_daylight wurde als Beispielfeld hier durch
+	// telegram_style ersetzt — der Toggle selbst wurde entfernt, nicht bloß
+	// verlagert, daher taugt er nicht mehr als "vom UI entfernt"-Beispiel.)
 	const original = {
-		show_daylight: true,
+		telegram_style: 'kurzform',
 		wind_exposition_min_elevation_m: 1500,
 		show_compact_summary: false,
 		// vom UI weiterhin gepflegte, aber hier mit Altwert:
@@ -145,7 +148,7 @@ test('#723: buildMailElementWrite erhält aus dem UI entfernte Felder via origin
 	const result = buildMailElementWrite(original, ui);
 
 	// Entfernte Felder unverändert erhalten:
-	assert.equal(result.show_daylight, true, 'show_daylight darf nicht verloren gehen');
+	assert.equal(result.telegram_style, 'kurzform', 'telegram_style darf nicht verloren gehen');
 	assert.equal(result.wind_exposition_min_elevation_m, 1500, 'Wind-Exposition-Höhe erhalten');
 	assert.equal(result.show_compact_summary, false, 'show_compact_summary erhalten');
 	// Vom UI gepflegtes Feld überschrieben:

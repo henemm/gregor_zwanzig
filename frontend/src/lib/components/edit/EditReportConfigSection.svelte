@@ -59,7 +59,6 @@
 	// Bestandsdaten-Erhalt: diese States werden nicht mehr im UI gezeigt,
 	// aber weiterhin für den Read-Modify-Write im merged-Objekt benötigt.
 	let show_compact_summary = $state(true);
-	let show_daylight = $state(true);
 	let wind_exposition_min_elevation_m: number | null = $state(null);
 
 	// E-Mail-Elemente (Issue #619 — Backend seit #621 live)
@@ -138,7 +137,6 @@
 			if (typeof c.send_sms === 'boolean') send_sms = c.send_sms;
 
 			if (typeof c.show_compact_summary === 'boolean') show_compact_summary = c.show_compact_summary;
-			if (typeof c.show_daylight === 'boolean') show_daylight = c.show_daylight;
 			wind_exposition_min_elevation_m = typeof c.wind_exposition_min_elevation_m === 'number'
 				? c.wind_exposition_min_elevation_m
 				: null;
@@ -202,7 +200,6 @@
 			multi_day_trend_evening,
 			multi_day_trend_reports,
 			show_compact_summary,
-			show_daylight,
 			wind_exposition_min_elevation_m,
 			// Issue #619: E-Mail-Elemente
 			show_stage_stats,

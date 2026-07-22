@@ -207,7 +207,6 @@ export interface ReportConfig {
 	change_threshold_wind_kmh?: number;
 	change_threshold_precip_mm?: number;
 	show_compact_summary?: boolean;
-	show_daylight?: boolean;
 	wind_exposition_min_elevation_m?: number | null;
 	multi_day_trend_morning?: boolean;
 	multi_day_trend_evening?: boolean;

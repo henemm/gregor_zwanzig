@@ -494,26 +494,36 @@ class TestAC9LegacyFieldsPreserved:
                 "morning_time": "07:00:00", "evening_time": "18:00:00",
                 "show_quick_take_tags": False,
                 "show_highlights": False,
+                # Issue #1224: show_daylight ist kein TripReportConfig-Feld
+                # mehr — hier bewusst als Alt-Feld in der Roh-JSON belassen,
+                # um zu beweisen, dass das Laden trotzdem nicht crasht (AC-3).
                 "show_daylight": False,
                 "daily_summary_metrics": ["temperature"],
             },
         }
 
     def test_fields_still_loadable(self):
+        """AC-3 (#1224): unbekanntes Alt-Feld show_daylight crasht das Laden
+        nicht; die uebrigen Legacy-Felder bleiben unveraendert ladbar."""
         from app.loader import load_trip_from_dict
         trip = load_trip_from_dict(self._trip_dict())
         rc = trip.report_config
         assert rc.show_quick_take_tags is False
         assert rc.show_highlights is False
-        assert rc.show_daylight is False
+        assert not hasattr(rc, "show_daylight"), (
+            "Issue #1224: show_daylight wurde aus TripReportConfig entfernt"
+        )
         assert rc.daily_summary_metrics == ["temperature"]
 
     def test_roundtrip_preserves_fields(self):
+        """Issue #1224: show_daylight ist aus der Python-eigenen
+        _trip_to_dict()-Serialisierung entfernt (kein Modellfeld mehr) —
+        die uebrigen Legacy-Felder roundtrippen unveraendert weiter."""
         from app.loader import load_trip_from_dict, _trip_to_dict
         trip = load_trip_from_dict(self._trip_dict())
         dumped = _trip_to_dict(trip)
         rc = dumped["report_config"]
         assert rc["show_quick_take_tags"] is False
         assert rc["show_highlights"] is False
-        assert rc["show_daylight"] is False
+        assert "show_daylight" not in rc
         assert rc["daily_summary_metrics"] == ["temperature"]

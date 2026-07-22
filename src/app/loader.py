@@ -547,7 +547,6 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
                 "show_compact_summary",
                 dc_data.get("show_compact_summary", True),
             ),
-            show_daylight=rc_data.get("show_daylight", True),
             multi_day_trend_reports=rc_data.get(
                 "multi_day_trend_reports",
                 dc_data.get("multi_day_trend_reports", ["evening"]),
@@ -1499,7 +1498,6 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "change_threshold_precip_mm": trip.report_config.change_threshold_precip_mm,
             "wind_exposition_min_elevation_m": trip.report_config.wind_exposition_min_elevation_m,
             "show_compact_summary": trip.report_config.show_compact_summary,
-            "show_daylight": trip.report_config.show_daylight,
             "multi_day_trend_reports": trip.report_config.multi_day_trend_reports,
             "show_stage_stats": trip.report_config.show_stage_stats,
             "show_quick_take_tags": trip.report_config.show_quick_take_tags,

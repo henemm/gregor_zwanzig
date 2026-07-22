@@ -26,7 +26,6 @@
 		change_threshold_wind_kmh: number;
 		change_threshold_precip_mm: number;
 		show_compact_summary: boolean;
-		show_daylight: boolean;
 		wind_exposition_min_elevation_m: number | null;
 		multi_day_trend_reports: string[];
 	}
@@ -132,7 +131,6 @@
 					<div class="space-y-2 text-sm">
 						<div><Checkbox bind:checked={config.alert_on_changes}>Alert bei Änderungen</Checkbox></div>
 						<div><Checkbox bind:checked={config.show_compact_summary}>Kompakte Zusammenfassung anzeigen</Checkbox></div>
-						<div><Checkbox bind:checked={config.show_daylight}>Tageslicht anzeigen</Checkbox></div>
 					</div>
 				</div>
 
