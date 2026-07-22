@@ -48,6 +48,10 @@ def _require_meteofrance_key() -> None:
 class TestIssue1036MeteoForetsSource:
     """TDD-Reihenfolge laut Spec: AC-1 -> AC-2 -> AC-3."""
 
+    # Echter Meteo-France-Call (public-api.meteofrance.fr) -- seit #1348 Scheibe
+    # 2b im Kern via Egress-Guard blockiert. Struktureller Live-Vertrag gehoert
+    # in die Live-Schicht (Guard aus), sonst vakuoes gruen ueber leere Liste.
+    @pytest.mark.live
     def test_ac1_live_waldbrandgefahr_struktureller_vertrag_und_badge(self):
         """AC-1: echter API-Call fuer die Leitszenario-Departements. Heutiges
         Testdatum liegt in der Saison (Juni-September). Da sich das

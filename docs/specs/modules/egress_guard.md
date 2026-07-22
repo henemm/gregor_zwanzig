@@ -142,12 +142,12 @@ vollständige bekannte Host-Set mit konservativer Default-Isolationsart
 | `api.open-meteo.com` | TEST_ACCESS |
 | `air-quality-api.open-meteo.com` | TEST_ACCESS |
 | `dataset.api.hub.geosphere.at` | TEST_ACCESS |
-| `warnungen.zamg.at` | TEST_ACCESS |
+| `warnungen.zamg.at` | BLOCKED (Scheibe 2b #1348) |
 | `api.brightsky.dev` | TEST_ACCESS |
 | `radar-api.protezionecivile.it` | TEST_ACCESS |
-| `api.meteoalarm.org` | TEST_ACCESS |
-| `public-api.meteofrance.fr` | TEST_ACCESS |
-| `www.risque-prevention-incendie.fr` | TEST_ACCESS |
+| `api.meteoalarm.org` | BLOCKED (Scheibe 2b #1348) |
+| `public-api.meteofrance.fr` | BLOCKED (Scheibe 2b #1348) |
+| `www.risque-prevention-incendie.fr` | BLOCKED (Scheibe 2b #1348) |
 | `gateway.seven.io` | BLOCKED |
 | `api.telegram.org` | BLOCKED |
 | `mail.henemm.com` | TEST_ACCESS |

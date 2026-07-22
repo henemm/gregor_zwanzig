@@ -33,12 +33,16 @@ INVENTORY: dict[str, IsolationKind] = {
     "api.open-meteo.com": IsolationKind.TEST_ACCESS,
     "air-quality-api.open-meteo.com": IsolationKind.TEST_ACCESS,
     "dataset.api.hub.geosphere.at": IsolationKind.TEST_ACCESS,
-    "warnungen.zamg.at": IsolationKind.TEST_ACCESS,
+    # Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
+    "warnungen.zamg.at": IsolationKind.BLOCKED,
     "api.brightsky.dev": IsolationKind.TEST_ACCESS,
     "radar-api.protezionecivile.it": IsolationKind.TEST_ACCESS,
-    "api.meteoalarm.org": IsolationKind.TEST_ACCESS,
-    "public-api.meteofrance.fr": IsolationKind.TEST_ACCESS,
-    "www.risque-prevention-incendie.fr": IsolationKind.TEST_ACCESS,
+    # Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
+    "api.meteoalarm.org": IsolationKind.BLOCKED,
+    # Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
+    "public-api.meteofrance.fr": IsolationKind.BLOCKED,
+    # Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
+    "www.risque-prevention-incendie.fr": IsolationKind.BLOCKED,
     "gateway.seven.io": IsolationKind.BLOCKED,
     "api.telegram.org": IsolationKind.BLOCKED,
     "mail.henemm.com": IsolationKind.TEST_ACCESS,

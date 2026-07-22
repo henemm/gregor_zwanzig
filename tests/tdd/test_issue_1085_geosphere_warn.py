@@ -26,6 +26,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
+
 # Reale Koordinaten aus Spec/Kontext-Dokument.
 INNSBRUCK = (47.2692, 11.4041)  # Oesterreich, INCA-Bbox, Live-Warnungen moeglich
 PARIS = (48.8566, 2.3522)  # ausserhalb der INCA-Bbox (lon < 9.5)
@@ -110,6 +112,10 @@ class TestIssue1085GeosphereWarnSource:
         assert source.covers(*PARIS) is False
         assert source.covers(*HAMBURG) is False
 
+    # Echter GeoSphere-Call (warnungen.zamg.at) -- seit #1348 Scheibe 2b im Kern
+    # via Egress-Guard blockiert. Struktureller Live-Vertrag gehoert in die
+    # Live-Schicht (Guard aus), sonst vakuoes gruen ueber leere Liste.
+    @pytest.mark.live
     def test_ac1_ac4_live_innsbruck_struktureller_vertrag(self):
         """AC-1/AC-4: GIVEN Innsbruck (echte AT-Koordinate), WHEN fetch()
         einen echten Live-Call gegen die GeoSphere-API macht, THEN ist das
@@ -134,6 +140,11 @@ class TestIssue1085GeosphereWarnSource:
                 f"sein, war {alert.region_label!r}"
             )
 
+    # Beweist Fail-soft AUF EINEN ECHTEN 404 der GeoSphere-API
+    # (warnungen.zamg.at) -- seit #1348 Scheibe 2b im Kern via Egress-Guard
+    # blockiert; ohne den echten 404-Call ist die Assertion vakuoes. Gehoert in
+    # die Live-Schicht (Guard aus).
+    @pytest.mark.live
     def test_ac3_fail_soft_404_grenzgebiet_ohne_at_gemeinde(self):
         """AC-3: GIVEN eine Koordinate innerhalb der INCA-Bbox, aber real
         ausserhalb einer oesterreichischen Gemeinde (Schweizer Grenzgebiet
