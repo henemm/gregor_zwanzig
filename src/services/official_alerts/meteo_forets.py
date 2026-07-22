@@ -20,12 +20,12 @@ from __future__ import annotations
 
 import logging
 import os
-import time
 from datetime import datetime
 from typing import Optional
 
 import httpx
 
+from services.official_alerts import warn_egress
 from services.official_alerts.department_mapper import lookup_department
 from services.official_alerts.models import OfficialAlert
 from services.radar_service import (
@@ -41,8 +41,9 @@ METEO_FORETS_URL = (
     "https://public-api.meteofrance.fr/public/DPMeteoForets/v1/carte/departement/encours"
 )
 TIMEOUT = 8.0
-CACHE_TTL = 300.0  # Sekunden — Erfolgs-Fenster pro Département
-FAILURE_CACHE_TTL = 60.0  # Sekunden — kurzes Failure-Fenster gegen Call-pro-Ort-Sturm
+# Issue #1348: Erfolgs-/Failure-TTL aus dem geteilten Egress-Kern (1800s/60s).
+CACHE_TTL = warn_egress.WARN_SUCCESS_TTL  # 1800.0 — Erfolgs-Fenster pro Département
+FAILURE_CACHE_TTL = warn_egress.WARN_FAILURE_TTL  # 60.0 — kurzes Failure-Fenster
 
 # Saison Juni–September: nur in diesen Monaten liefert die Quelle Werte.
 _SEASON_MONTHS = {6, 7, 8, 9}
@@ -68,15 +69,14 @@ def _warn_once_missing_key() -> None:
 
 
 def _get_cached_departement(department: str) -> Optional[list]:
-    """Liefert die département-scoped Antwort, gecacht mit TTL. ``None`` bei Fehler."""
-    now = time.monotonic()
-    entry = _cache.get(department)
-    if entry is not None and (now - entry["fetched_at"]) < entry["ttl"]:
-        return entry["data"]
+    """Liefert die département-scoped Antwort, gecacht via ``warn_egress``.
 
-    key = os.environ.get("GZ_METEOFRANCE_APIKEY")
-    try:
-        resp = httpx.get(
+    30-Min-Erfolgs-Cache + 429-bewusster Rückzug + Egress-Zähler über den
+    geteilten Kern (Issue #1348). Der ENV-Check bleibt in ``fetch()`` — hier wird
+    der Key nur für den Header gelesen. ``None`` bei Fehler."""
+    def _do_request() -> httpx.Response:
+        key = os.environ.get("GZ_METEOFRANCE_APIKEY")
+        return httpx.get(
             METEO_FORETS_URL,
             params={
                 "format": "json",
@@ -86,15 +86,12 @@ def _get_cached_departement(department: str) -> Optional[list]:
             headers={"apikey": key},
             timeout=TIMEOUT,
         )
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception:
-        logger.warning("Météo-Forêts-API-Abruf fehlgeschlagen", exc_info=True)
-        _cache[department] = {"data": None, "fetched_at": now, "ttl": FAILURE_CACHE_TTL}
-        return None
 
-    _cache[department] = {"data": data, "fetched_at": now, "ttl": CACHE_TTL}
-    return data
+    return warn_egress.cached_fetch(
+        cache=_cache, cache_key=department, service="meteo_forets",
+        host="public-api.meteofrance.fr", request_fn=_do_request,
+        parse_fn=lambda resp: resp.json(), log=logger,
+    )
 
 
 def _extract_alert(data: list, department: str) -> list[OfficialAlert]:

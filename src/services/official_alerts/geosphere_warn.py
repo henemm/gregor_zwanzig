@@ -15,12 +15,12 @@ SPEC: docs/specs/modules/issue_1085_geosphere_warn_source.md
 from __future__ import annotations
 
 import logging
-import time
 from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
 
+from services.official_alerts import warn_egress
 from services.official_alerts.models import OfficialAlert
 from services.radar_service import (
     _INCA_LAT_MAX,
@@ -33,8 +33,9 @@ logger = logging.getLogger("geosphere_warn")
 
 GEOSPHERE_WARN_URL = "https://warnungen.zamg.at/wsapp/api/getWarningsForCoords"
 TIMEOUT = 8.0
-CACHE_TTL = 300.0  # Sekunden — Erfolgs-Fenster pro Koordinate
-FAILURE_CACHE_TTL = 60.0  # Sekunden — kurzes Failure-Fenster gegen Call-pro-Ort-Sturm
+# Issue #1348: Erfolgs-/Failure-TTL aus dem geteilten Egress-Kern (1800s/60s).
+CACHE_TTL = warn_egress.WARN_SUCCESS_TTL  # 1800.0 — Erfolgs-Fenster pro Koordinate
+FAILURE_CACHE_TTL = warn_egress.WARN_FAILURE_TTL  # 60.0 — kurzes Failure-Fenster
 
 # warntypid -> (hazard, deutsches Label). Wo ein Vigilance-hazard existiert,
 # wird derselbe Bezeichner verwendet (Konsistenz für nachgelagerte Filter).
@@ -66,28 +67,24 @@ def _parse_epoch(value: Optional[str]) -> Optional[datetime]:
 
 
 def _get_cached_warnings(lat: float, lon: float) -> Optional[dict]:
-    """Liefert die koordinaten-scoped Antwort, gecacht mit TTL. ``None`` bei Fehler."""
-    key = _round_coord(lat, lon)
-    now = time.monotonic()
-    entry = _cache.get(key)
-    if entry is not None and (now - entry["fetched_at"]) < entry["ttl"]:
-        return entry["data"]
+    """Liefert die koordinaten-scoped Antwort, gecacht via ``warn_egress``.
 
-    try:
-        resp = httpx.get(
+    30-Min-Erfolgs-Cache + 429-bewusster Rückzug + Egress-Zähler über den
+    geteilten Kern (Issue #1348). ``None`` bei Fehler."""
+    key = _round_coord(lat, lon)
+
+    def _do_request() -> httpx.Response:
+        return httpx.get(
             GEOSPHERE_WARN_URL,
             params={"lat": key[0], "lon": key[1], "lang": "de"},
             timeout=TIMEOUT,
         )
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception:
-        logger.warning("GeoSphere-Warn-API-Abruf fehlgeschlagen", exc_info=True)
-        _cache[key] = {"data": None, "fetched_at": now, "ttl": FAILURE_CACHE_TTL}
-        return None
 
-    _cache[key] = {"data": data, "fetched_at": now, "ttl": CACHE_TTL}
-    return data
+    return warn_egress.cached_fetch(
+        cache=_cache, cache_key=key, service="geosphere_warn",
+        host="warnungen.zamg.at", request_fn=_do_request,
+        parse_fn=lambda resp: resp.json(), log=logger,
+    )
 
 
 def _extract_alerts(data: dict) -> list[OfficialAlert]:

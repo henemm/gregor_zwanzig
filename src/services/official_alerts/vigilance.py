@@ -15,12 +15,12 @@ from __future__ import annotations
 
 import logging
 import os
-import time
 from datetime import datetime
 from typing import Optional
 
 import httpx
 
+from services.official_alerts import warn_egress
 from services.official_alerts.department_mapper import lookup_department
 from services.official_alerts.models import OfficialAlert
 from services.radar_service import (
@@ -36,14 +36,13 @@ VIGILANCE_URL = (
     "https://public-api.meteofrance.fr/public/DPVigilance/v1/cartevigilance/encours"
 )
 TIMEOUT = 8.0
-CACHE_TTL = 300.0  # Sekunden — ein National-Call pro Fenster für alle Lookups
-# Fehlschlag-TTL bewusst kürzer (60s statt 300s): Der Kern-Fix (F001) ist, dass
-# ein API-Ausfall NICHT zu einem echten HTTP-Call pro verglichenem Ort führt —
-# innerhalb eines Compare-Laufs (Sekundenbereich) reicht schon ein sehr kurzes
-# Fenster, um den Call-pro-Ort-Sturm zu unterbinden. Gleichzeitig soll ein nur
-# temporärer Ausfall (Timeout/5xx) nicht die volle Erfolgs-TTL lang "eingefroren"
-# bleiben, damit sich die Warnungen nach kurzer Erholung wieder zeigen.
-FAILURE_CACHE_TTL = 60.0  # Sekunden — kurzes Failure-Fenster gegen Call-pro-Ort-Sturm
+# Issue #1348: Erfolgs-/Failure-TTL aus dem geteilten Egress-Kern (1800s/60s).
+# Ein National-Call pro Fenster bedient weiterhin alle Orts-Lookups (fester
+# cache_key "national"). Die kürzere Failure-TTL (60s statt Erfolgs-TTL) bewahrt
+# den F001-Fix: ein API-Ausfall friert die Warnungen nicht die volle Erfolgs-TTL
+# lang ein, unterbindet aber den Call-pro-Ort-Sturm im Compare-Lauf.
+CACHE_TTL = warn_egress.WARN_SUCCESS_TTL  # 1800.0 — ein National-Call pro Fenster
+FAILURE_CACHE_TTL = warn_egress.WARN_FAILURE_TTL  # 60.0 — kurzes Failure-Fenster
 
 # Scope: nur Sturmböen (1), Gewitter (3), Extreme Hitze (6).
 _PHENOMENON_MAP = {
@@ -52,7 +51,11 @@ _PHENOMENON_MAP = {
     "6": ("extreme_heat", "Extreme Hitze"),
 }
 
-_cache: dict = {"data": None, "fetched_at": None, "ttl": CACHE_TTL}
+# Adapter auf die keyed ``warn_egress``-Cache-Vertragsform (Issue #1348): der
+# flache National-Cache wird zu einem keyed Dict mit festem Schlüssel "national".
+# So bedient EIN nationaler Call weiterhin alle Orts-Lookups im TTL-Fenster.
+_CACHE_KEY = "national"
+_cache: dict = {}
 _warned_missing_key = False
 
 
@@ -76,35 +79,22 @@ def _parse_iso(value: Optional[str]) -> Optional[datetime]:
 
 
 def _get_cached_cartevigilance() -> Optional[dict]:
-    """Liefert die nationale Vigilance-Antwort, gecacht mit TTL. ``None`` bei Fehler."""
-    now = time.monotonic()
-    fetched_at = _cache["fetched_at"]
-    # Cache-Treffer gilt für Erfolg (data != None, TTL 300s) UND Fehlschlag
-    # (data == None, Failure-TTL 60s): In beiden Fällen wird KEIN neuer echter
-    # HTTP-Call ausgelöst, solange das jeweilige TTL-Fenster gilt (F001-Fix).
-    if fetched_at is not None and (now - fetched_at) < _cache["ttl"]:
-        return _cache["data"]
+    """Liefert die nationale Vigilance-Antwort, gecacht via ``warn_egress``.
 
-    key = os.environ.get("GZ_METEOFRANCE_APIKEY")
-    try:
-        resp = httpx.get(VIGILANCE_URL, headers={"apikey": key}, timeout=TIMEOUT)
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception:
-        logger.warning("Vigilance-API-Abruf fehlgeschlagen", exc_info=True)
-        # F001: Fehlschlag ebenfalls cachen (mit kürzerer Failure-TTL), damit
-        # nicht jeder weitere fetch()-Aufruf im selben Compare-Lauf erneut einen
-        # echten Netzwerk-Call auslöst. data bleibt None -> Aufrufer erhält wie
-        # bisher None (fail-soft), aber ohne Call-pro-Ort-Sturm.
-        _cache["data"] = None
-        _cache["fetched_at"] = now
-        _cache["ttl"] = FAILURE_CACHE_TTL
-        return None
+    Fester ``cache_key`` "national": EIN Call im Erfolgs- wie Fehlschlag-Fenster
+    bedient alle Orts-Lookups (F001-Fix, bewahrt). 30-Min-Erfolgs-Cache +
+    429-bewusster Rückzug + Egress-Zähler über den geteilten Kern (Issue #1348).
+    Der ENV-Check bleibt in ``fetch()`` — hier wird der Key nur für den Header
+    gelesen. ``None`` bei Fehler."""
+    def _do_request() -> httpx.Response:
+        key = os.environ.get("GZ_METEOFRANCE_APIKEY")
+        return httpx.get(VIGILANCE_URL, headers={"apikey": key}, timeout=TIMEOUT)
 
-    _cache["data"] = data
-    _cache["fetched_at"] = now
-    _cache["ttl"] = CACHE_TTL
-    return data
+    return warn_egress.cached_fetch(
+        cache=_cache, cache_key=_CACHE_KEY, service="vigilance",
+        host="public-api.meteofrance.fr", request_fn=_do_request,
+        parse_fn=lambda resp: resp.json(), log=logger,
+    )
 
 
 def _extract_alerts(data: dict, department: str) -> list[OfficialAlert]:

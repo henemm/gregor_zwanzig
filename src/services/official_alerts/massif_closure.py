@@ -20,12 +20,12 @@ SPEC: docs/specs/modules/issue_1037_official_alerts_massif_closure.md
 from __future__ import annotations
 
 import logging
-import time
 from datetime import datetime
 from typing import Optional
 
 import httpx
 
+from services.official_alerts import warn_egress
 from services.official_alerts.massif_zones import Massif, massif_at, massifs_at
 from services.official_alerts.models import OfficialAlert
 
@@ -33,8 +33,9 @@ logger = logging.getLogger("massif_closure")
 
 _ENDPOINT = "https://www.risque-prevention-incendie.fr/static/{src}/import_data/{ymd}.json"
 TIMEOUT = 15.0
-CACHE_TTL = 300.0  # Sekunden — Erfolgs-Fenster pro Source-DEPT
-FAILURE_CACHE_TTL = 60.0  # Sekunden — kurzes Failure-Fenster
+# Issue #1348: Erfolgs-/Failure-TTL aus dem geteilten Egress-Kern (1800s/60s).
+CACHE_TTL = warn_egress.WARN_SUCCESS_TTL  # 1800.0 — Erfolgs-Fenster pro Source-DEPT
+FAILURE_CACHE_TTL = warn_egress.WARN_FAILURE_TTL  # 60.0 — kurzes Failure-Fenster
 
 # Modul-Level-Cache PRO Source-DEPT: {src: {"data": ..., "fetched_at": ..., "ttl": ...}}
 _cache: dict = {}
@@ -93,24 +94,19 @@ def _extract_alert(data, hit: Massif) -> list[OfficialAlert]:
 
 
 def _get_cached_daily_json(src: str) -> Optional[dict]:
-    """Tages-JSON fuer ein Source-DEPT, gecacht mit TTL. ``None`` bei Fehler."""
-    now = time.monotonic()
-    entry = _cache.get(src)
-    if entry is not None and (now - entry["fetched_at"]) < entry["ttl"]:
-        return entry["data"]
+    """Tages-JSON fuer ein Source-DEPT, gecacht via ``warn_egress``.
 
-    ymd = datetime.now().strftime("%Y%m%d")
-    try:
-        resp = httpx.get(_ENDPOINT.format(src=src, ymd=ymd), timeout=TIMEOUT)
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception:
-        logger.warning("massif_closure: Abruf fehlgeschlagen fuer src=%s", src, exc_info=True)
-        _cache[src] = {"data": None, "fetched_at": now, "ttl": FAILURE_CACHE_TTL}
-        return None
+    30-Min-Erfolgs-Cache + 429-bewusster Rückzug + Egress-Zähler über den
+    geteilten Kern (Issue #1348). ``None`` bei Fehler."""
+    def _do_request() -> httpx.Response:
+        ymd = datetime.now().strftime("%Y%m%d")
+        return httpx.get(_ENDPOINT.format(src=src, ymd=ymd), timeout=TIMEOUT)
 
-    _cache[src] = {"data": data, "fetched_at": now, "ttl": CACHE_TTL}
-    return data
+    return warn_egress.cached_fetch(
+        cache=_cache, cache_key=src, service="massif_closure",
+        host="www.risque-prevention-incendie.fr", request_fn=_do_request,
+        parse_fn=lambda resp: resp.json(), log=logger,
+    )
 
 
 class MassifClosureSource:
