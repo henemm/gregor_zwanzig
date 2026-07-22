@@ -19,13 +19,13 @@ from __future__ import annotations
 import logging
 import os
 import re
-import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import httpx
 
+from services.official_alerts import warn_egress
 from services.official_alerts.models import OfficialAlert
 from services.radar_service import (
     _DPC_LAT_MAX,
@@ -42,8 +42,10 @@ logger = logging.getLogger("meteoalarm")
 
 METEOALARM_BASE_URL = "https://api.meteoalarm.org/edr/v1"
 TIMEOUT = 8.0
-CACHE_TTL = 300.0  # Sekunden — Erfolgs-Fenster
-FAILURE_CACHE_TTL = 60.0  # Sekunden — kurzes Failure-Fenster
+# Issue #1348: Erfolgs-/Failure-TTL aus dem geteilten Egress-Kern (1800s/60s).
+# Attributname + Rolle im Cache-Eintrag bleiben, der Wert steigt auf 1800s.
+CACHE_TTL = warn_egress.WARN_SUCCESS_TTL  # 1800.0 — Erfolgs-Fenster (30 min)
+FAILURE_CACHE_TTL = warn_egress.WARN_FAILURE_TTL  # 60.0 — kurzes Failure-Fenster
 
 # awareness_type (führende Ganzzahl) -> App-hazard. 4 (fog), 7 (coastal-event),
 # 9 (avalanche), 11 (flood): keine App-Kategorie, bewusst NICHT gemappt ->
@@ -203,39 +205,32 @@ def _extract_alerts_from_cap(cap_source: "str | bytes") -> list[OfficialAlert]:
 
 
 def _get_cached_index(country: str) -> Optional[dict]:
-    """Liefert den Länder-Index, gecacht mit TTL. ``None`` bei Fehler."""
-    now = time.monotonic()
-    entry = _index_cache.get(country)
-    if entry is not None and (now - entry["fetched_at"]) < entry["ttl"]:
-        return entry["data"]
-
-    key = os.environ.get("GZ_METEOALARM_APIKEY")
-    now_dt = datetime.now(timezone.utc)
-    start = (now_dt - timedelta(hours=23)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    end = now_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-    url = f"{METEOALARM_BASE_URL}/collections/warnings/locations/{country}"
-    try:
-        resp = httpx.get(
+    """Liefert den Länder-Index, gecacht via ``warn_egress``. ``None`` bei Fehler."""
+    def _do_request() -> httpx.Response:
+        key = os.environ.get("GZ_METEOALARM_APIKEY")
+        now_dt = datetime.now(timezone.utc)
+        start = (now_dt - timedelta(hours=23)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        end = now_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        url = f"{METEOALARM_BASE_URL}/collections/warnings/locations/{country}"
+        return httpx.get(
             url,
             params={"datetime": f"{start}/{end}"},
             headers={"Authorization": f"Bearer {key}"},
             timeout=TIMEOUT,
         )
-        resp.raise_for_status()
-        if resp.status_code == 204 or not resp.content.strip():
-            # 204/leerer Body ist der reguläre "keine Warnung"-Fall (z.B. Italien
-            # bei gutem Wetter), kein Fehler -- als leeres Ergebnis, nicht als
-            # Fehlschlag cachen (kein WARNING-Log, normale Erfolgs-TTL).
-            data: dict = {"features": []}
-        else:
-            data = resp.json()
-    except Exception:
-        logger.warning("MeteoAlarm-Index-Abruf fehlgeschlagen (%s)", country, exc_info=True)
-        _index_cache[country] = {"data": None, "fetched_at": now, "ttl": FAILURE_CACHE_TTL}
-        return None
 
-    _index_cache[country] = {"data": data, "fetched_at": now, "ttl": CACHE_TTL}
-    return data
+    def _parse(resp: httpx.Response) -> dict:
+        # 204/leerer Body ist der reguläre "keine Warnung"-Fall (z.B. Italien bei
+        # gutem Wetter), kein Fehler -- als leeres, gültiges Ergebnis behandeln.
+        if resp.status_code == 204 or not resp.content.strip():
+            return {"features": []}
+        return resp.json()
+
+    return warn_egress.cached_fetch(
+        cache=_index_cache, cache_key=country, service="meteoalarm",
+        host="api.meteoalarm.org", request_fn=_do_request, parse_fn=_parse,
+        log=logger,
+    )
 
 
 def _fetch_geometry_link(feature: dict) -> Optional[dict]:
@@ -246,38 +241,24 @@ def _fetch_geometry_link(feature: dict) -> Optional[dict]:
     )
     if not href:
         return None
-    now = time.monotonic()
-    entry = _geometry_cache.get(href)
-    if entry is not None and (now - entry["fetched_at"]) < entry["ttl"]:
-        return entry["data"]
-    try:
-        resp = httpx.get(href, timeout=TIMEOUT)
-        resp.raise_for_status()
-        geometry = resp.json().get("geometry")
-    except Exception:
-        logger.warning("MeteoAlarm-Geometry-Abruf fehlgeschlagen", exc_info=True)
-        _geometry_cache[href] = {"data": None, "fetched_at": now, "ttl": FAILURE_CACHE_TTL}
-        return None
-    _geometry_cache[href] = {"data": geometry, "fetched_at": now, "ttl": CACHE_TTL}
-    return geometry
+    return warn_egress.cached_fetch(
+        cache=_geometry_cache, cache_key=href, service="meteoalarm",
+        host="api.meteoalarm.org",
+        request_fn=lambda: httpx.get(href, timeout=TIMEOUT),
+        parse_fn=lambda resp: resp.json().get("geometry"),
+        log=logger,
+    )
 
 
 def _fetch_cap(url: str) -> Optional[str]:
     """Lädt die CAP-XML (auth-frei), gecacht pro URL."""
-    now = time.monotonic()
-    entry = _cap_cache.get(url)
-    if entry is not None and (now - entry["fetched_at"]) < entry["ttl"]:
-        return entry["data"]
-    try:
-        resp = httpx.get(url, timeout=TIMEOUT)
-        resp.raise_for_status()
-        text = resp.text
-    except Exception:
-        logger.warning("MeteoAlarm-CAP-Abruf fehlgeschlagen", exc_info=True)
-        _cap_cache[url] = {"data": None, "fetched_at": now, "ttl": FAILURE_CACHE_TTL}
-        return None
-    _cap_cache[url] = {"data": text, "fetched_at": now, "ttl": CACHE_TTL}
-    return text
+    return warn_egress.cached_fetch(
+        cache=_cap_cache, cache_key=url, service="meteoalarm",
+        host="api.meteoalarm.org",
+        request_fn=lambda: httpx.get(url, timeout=TIMEOUT),
+        parse_fn=lambda resp: resp.text,
+        log=logger,
+    )
 
 
 def _point_in_ring(lat: float, lon: float, ring: list) -> bool:

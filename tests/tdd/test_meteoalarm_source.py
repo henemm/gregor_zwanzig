@@ -347,12 +347,14 @@ class _BrokenJSONHandler(http.server.BaseHTTPRequestHandler):
         pass
 
 
-def test_ac5b_kaputtes_index_json_liefert_leere_liste(monkeypatch):
+def test_ac5b_kaputtes_index_json_liefert_leere_liste(monkeypatch, tmp_path):
     """AC-5b: GIVEN eine echte HTTP-Antwort (lokaler Test-Server) mit
     strukturell kaputtem JSON-Koerper, WHEN fetch() den Index-Call macht,
     THEN liefert fetch() [] ohne Exception."""
     from services.official_alerts import meteoalarm
 
+    # WARN_CALLS_PATH-Umlenkung erfolgt global via conftest-Autouse-Fixture
+    # ``_isolate_warn_calls_path`` (Issue #1348) — kein Per-Test-Monkeypatch nötig.
     server = http.server.HTTPServer(("127.0.0.1", 0), _BrokenJSONHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -453,7 +455,7 @@ class _EmptyBody204Handler(http.server.BaseHTTPRequestHandler):
         pass
 
 
-def test_leerer_index_204_ist_kein_fehler(monkeypatch, caplog):
+def test_leerer_index_204_ist_kein_fehler(monkeypatch, caplog, tmp_path):
     """GIVEN eine echte HTTP-Antwort (lokaler Test-Server) mit Status 204
     und leerem Koerper (regulaerer "keine Warnung"-Fall bei MeteoAlarm),
     WHEN ``_get_cached_index()`` diese verarbeitet, THEN liefert es ein
@@ -461,6 +463,8 @@ def test_leerer_index_204_ist_kein_fehler(monkeypatch, caplog):
     (300s-TTL, kein Failure-Cache) und loggt KEIN WARNING."""
     from services.official_alerts import meteoalarm
 
+    # WARN_CALLS_PATH-Umlenkung erfolgt global via conftest-Autouse-Fixture
+    # ``_isolate_warn_calls_path`` (Issue #1348) — kein Per-Test-Monkeypatch nötig.
     server = http.server.HTTPServer(("127.0.0.1", 0), _EmptyBody204Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -814,3 +818,95 @@ def test_ac7_zwei_verschiedene_orte_aehnlicher_name_kollabieren_nicht():
         f"State-Keys muessen fuer verschiedene Orte verschieden sein, "
         f"waren beide {key_a!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Issue #1348 (Scheibe 2a von #1337) — Warn-Dienst-Verbrauch senken +
+# 429-bewusster Rückzug. Die folgenden Tests sind in der RED-Phase ABSICHTLICH
+# rot: heute ist ``meteoalarm.CACHE_TTL == 300.0`` und der 429-Pfad läuft über
+# ``raise_for_status()`` -> generischer ``except`` -> 60s-Failure-Cache (kein
+# Retry-After-Backoff). SPEC: docs/specs/modules/warn_service_consumption.md
+# AC-1, AC-4, AC-6, AC-10.
+# ---------------------------------------------------------------------------
+
+def test_ttl_ist_dreissig_minuten():
+    """AC-1: GIVEN das MeteoAlarm-Modul, WHEN es importiert wird, THEN beträgt
+    die Erfolgs-TTL 1800.0 Sekunden (30 Minuten, warngerecht länger als der
+    15-Minuten-Scheduler-Takt) und die Failure-TTL bleibt bei 60.0 Sekunden.
+
+    RED heute: ``CACHE_TTL == 300.0`` -> die erste Assertion schlägt fehl."""
+    from services.official_alerts import meteoalarm
+
+    assert meteoalarm.CACHE_TTL == 1800.0, (
+        f"Erfolgs-TTL muss auf 1800.0s (30 min) angehoben sein, war {meteoalarm.CACHE_TTL}"
+    )
+    assert meteoalarm.FAILURE_CACHE_TTL == 60.0, (
+        f"Failure-TTL bleibt unverändert bei 60.0s, war {meteoalarm.FAILURE_CACHE_TTL}"
+    )
+
+
+class _Http429RetryAfterHandler(http.server.BaseHTTPRequestHandler):
+    """Echter lokaler HTTP-Server (kein Mock der HTTP-Bibliothek): liefert für
+    JEDEN Pfad HTTP 429 mit ``Retry-After: 120`` — so verhält sich
+    ``api.meteoalarm.org`` real, wenn das Tages-Kontingent erschöpft ist."""
+
+    def do_GET(self):  # noqa: N802 - stdlib-Signatur
+        body = b'{"detail": "rate limited"}'
+        self.send_response(429)
+        self.send_header("Retry-After", "120")
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *_args):  # Testlauf-Output nicht zumuellen
+        pass
+
+
+def test_429_lokaler_server_retry_after_respektiert(monkeypatch, caplog, tmp_path):
+    """AC-4/AC-6 (End-zu-Ende über den echten ``meteoalarm``-Pfad): GIVEN ein
+    echter lokaler HTTP-Server, der 429 + ``Retry-After: 120`` liefert, WHEN
+    ``_get_cached_index()`` den Index-Call macht, THEN wird der Cache-Eintrag
+    mit einem Backoff-TTL von ``max(120, 1800) = 1800`` gesetzt (statt wie
+    heute stumm 60s-Failure-Cache) UND ein WARNING-Log nennt explizit "429".
+
+    RED heute: der 429 läuft über ``raise_for_status()`` in den generischen
+    ``except`` -> Cache-TTL == 60.0 (nicht 1800) und keine 429-spezifische
+    WARNING-Meldung -> beide Kern-Assertions schlagen fehl."""
+    from services.official_alerts import meteoalarm
+
+    # WARN_CALLS_PATH-Umlenkung erfolgt global via conftest-Autouse-Fixture
+    # ``_isolate_warn_calls_path`` (Issue #1348) — kein Per-Test-Monkeypatch nötig.
+    server = http.server.HTTPServer(("127.0.0.1", 0), _Http429RetryAfterHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-429")
+        monkeypatch.setattr(
+            meteoalarm, "METEOALARM_BASE_URL",
+            f"http://127.0.0.1:{server.server_port}",
+        )
+        meteoalarm._index_cache.pop("AT", None)
+
+        with caplog.at_level("WARNING", logger="meteoalarm"):
+            data = meteoalarm._get_cached_index("AT")
+
+        assert data is None, (
+            f"429 ist kein Erfolg — _get_cached_index() muss None liefern, war {data!r}"
+        )
+
+        cache_entry = meteoalarm._index_cache["AT"]
+        assert cache_entry["ttl"] == max(120.0, meteoalarm.CACHE_TTL), (
+            f"429 mit Retry-After:120 muss Backoff max(120, 1800)=1800 als "
+            f"Cache-TTL setzen (kein 15-Minuten-Dauerfeuer), war {cache_entry['ttl']}"
+        )
+        assert cache_entry["ttl"] == 1800.0
+
+        warnings = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
+        assert any("429" in m for m in warnings), (
+            f"429 muss LAUT geloggt werden (Text enthält '429'), Records: {warnings}"
+        )
+    finally:
+        meteoalarm._index_cache.pop("AT", None)
+        server.shutdown()
+        thread.join(timeout=2)
