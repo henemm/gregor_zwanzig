@@ -91,6 +91,10 @@ Details: `docs/features/architecture.md`
 | `docs/features/scope.md` | Projektvision & Ziele |
 | `docs/README.md` | Wegweiser durch docs/ (Referenz vs. Archiv) |
 
+## Architektur-Entscheidungen (ADRs)
+
+`docs/adr/` (Index: `docs/adr/README.md`) hält die Grundsatzentscheidungen fest — **vor Änderungen an Entscheidungsflächen** (Kanäle, Provider, Datenmodell/Persistenz, Auth, Editor-Paradigma, Test-/Deploy-Strategie) dort nachsehen. Eine dokumentierte Entscheidung wird nie still rückgängig gemacht: Abweichung ⇒ neues ADR (Status „Abgelöst durch"). Index↔Datei-Konsistenz erzwingt `tests/test_adr_index_drift.py`.
+
 ## CLI
 
 ```bash

@@ -1,8 +1,8 @@
 # ADR-0001: Migration Python/NiceGUI → Go/SvelteKit
 
-- **Status:** Akzeptiert
+- **Status:** Akzeptiert — Endzustand präzisiert durch ADR-0015 (Dual-Stack dauerhaft: Python bleibt Teil der Zielarchitektur)
 - **Datum:** 2026-04-12
-- **Bezug:** `docs/project/migration-plan-go-sveltekit.md`
+- **Bezug:** `docs/project/migration-plan-go-sveltekit.md` (Planungsdokument gelöscht 2026-07-21, Git-Historie), ADR-0015
 
 ## Kontext
 

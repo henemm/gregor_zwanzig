@@ -39,17 +39,18 @@ bzw. in den Specs unter `docs/specs/`.
    **Abgelöst durch ADR-XXXX** setzen und ein neues ADR schreiben. Die Historie bleibt damit
    nachvollziehbar.
 
-## Durchsetzung (mechanisch, seit Issue #885)
+## Durchsetzung (Stand 2026-07-22, #1343)
 
-ADRs sind nicht nur Konvention, sondern werden erzwungen:
-
-- **Commit-Gate** (`.claude/hooks/adr_guard.py`, eingehängt in `bash_gate.py`): Wer eine
-  *entscheidungs-tragende* Datei staged (Kanäle, Provider/Quellenwahl, Metrik-Sichtbarkeit,
-  Gate-/Guard-Hooks), muss im selben Commit **entweder** ein `docs/adr/*.md` mitliefern **oder**
-  bewusst `[no-adr]` in die Commit-Message schreiben — sonst blockiert der Commit.
-- **Spec-Pflichtfeld** (`workflow.py` `_validate_transition`): Specs mit `created >= 2026-06-25`
-  lassen sich nur freigeben, wenn die Sektion `## Architektur-Entscheidung (ADR)` ausgefüllt ist
-  (ADR-Nr. oder „keine"). Ältere Specs sind grandfathered.
+- **Spec-Pflichtfeld** (Plugin-Workflow `workflow.py` `_validate_transition`): Specs mit
+  `created >= 2026-06-25` lassen sich nur freigeben, wenn die Sektion
+  `## Architektur-Entscheidung (ADR)` ausgefüllt ist (ADR-Nr. oder „keine"). Ältere Specs
+  sind grandfathered. Dieser Mechanismus ist AKTIV (227 Specs tragen die Sektion).
+- **Commit-Gate:** Das frühere `adr_guard.py`-Gate (Issue #885) ist ENTFERNT — siehe
+  ADR-0027. Auf Datei-Ebene gilt Konvention, nicht Mechanik.
+- **Index-Drift-Test** (`tests/test_adr_index_drift.py`, `# doc-compliance-test`): erzwingt,
+  dass jede ADR-Datei im Index steht und der Index-Status zur Status-Zeile der Datei passt —
+  der Index ist vor #1343 zweimal nachweislich gedriftet (issue_1165, ADR-0002).
+- **Einstiegsfläche:** CLAUDE.md → „Architektur-Entscheidungen (ADRs)" verweist hierher.
 
 ## Status-Werte
 
@@ -63,7 +64,7 @@ ADRs sind nicht nur Konvention, sondern werden erzwungen:
 | ADR | Titel | Status |
 |-----|-------|--------|
 | [0001](0001-go-sveltekit-migration.md) | Migration Python/NiceGUI → Go/SvelteKit | Akzeptiert |
-| [0002](0002-met-vs-mosmix-forecast-source.md) | Wetterquelle: MET Norway als Standard, MOSMIX nur als enge Ausnahme | Akzeptiert |
+| [0002](0002-met-vs-mosmix-forecast-source.md) | Wetterquelle: MET Norway als Standard, MOSMIX nur als enge Ausnahme | Abgelöst durch ADR-0029 |
 | [0003](0003-multi-tenant-isolation.md) | Konsequente Mandantentrennung, kein `"default"`-Fallback | Akzeptiert |
 | [0004](0004-signal-channel-removed.md) | Signal als Briefing-Kanal entfernt | Akzeptiert |
 | [0005](0005-confidence-not-selectable-metric.md) | Confidence ist keine pro-Etappe wählbare Metrik | Akzeptiert |
@@ -87,5 +88,10 @@ ADRs sind nicht nur Konvention, sondern werden erzwungen:
 | [0023](0023-briefing-subscription-shared-model.md) | Gemeinsames `BriefingSubscription`-Modell (`kind`-Diskriminator) + `briefings/`-Persistenz | Akzeptiert |
 | [0024](0024-ein-sortier-baustein-svelte-dnd-action.md) | Ein geteilter Sortier-Baustein auf svelte-dnd-action; Pfeil-Buttons weichen dem eingebauten Tastatur-Pfad | Akzeptiert |
 | [0025](0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md) | Eine Gewitter-Quelle für alle Briefing-Kanäle — gleiche Rohdaten, gleiche Fensterung, gleiche Skala | Akzeptiert |
+| 0026 | — (Nummer nie vergeben; Lücke dokumentiert 2026-07-22, kein Dokument) | — |
 | [0027](0027-adr-commit-guard-entfernt.md) | Lokales ADR-Commit-Gate (`adr_guard.py`) entfernt — tot seit Plugin-Migration, ADR-Praxis bleibt bestehen | Akzeptiert |
 | [0028](0028-e2e-prod-network-unreachable-admin-loses-never-delete.md) | Prod-Datenbaum wird für E2E netzwerkseitig unerreichbar; `admin` verliert den NEVER_DELETE-Schutz aus #1265 | Akzeptiert |
+| [0029](0029-openmeteo-standard-provider.md) | Open-Meteo als Standard-Wetterdaten-Provider (löst 0002 ab) | Akzeptiert |
+| [0030](0030-session-auth-hmac-cookie.md) | Session-Auth über HMAC-signiertes Cookie (kein JWT, keine Session-Tabelle) | Akzeptiert |
+| [0031](0031-persistenz-dateibasiert-data-users.md) | Dateibasierte JSON-Persistenz unter `data/users/{user_id}/` (keine Datenbank) | Akzeptiert |
+| [0032](0032-wizard-abschaffung-progressive-editoren.md) | Multi-Step-Wizards abgeschafft — progressive Tab-Editoren mit Auto-Save | Akzeptiert |

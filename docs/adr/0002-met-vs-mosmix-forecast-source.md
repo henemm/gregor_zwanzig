@@ -1,6 +1,6 @@
 # ADR-0002: Wetterquelle — MET Norway als Standard, MOSMIX nur als enge Ausnahme
 
-- **Status:** Superseded (2026-07-21) — Produktions-Provider ist Open-Meteo mit Fallback-Kette, siehe ADR-0018 und `docs/reference/decision_matrix.md`. MET/MOSMIX sind nicht mehr im Code.
+- **Status:** Abgelöst durch ADR-0029 (2026-07-21/22) — Produktions-Provider ist Open-Meteo mit Fallback-Kette, siehe ADR-0029, ADR-0018 und `docs/reference/decision_matrix.md`. MET/MOSMIX sind nicht mehr im Code.
 - **Datum:** 2025-08-28
 - **Bezug:** `docs/reference/decision_matrix.md` (heute Ist-Stand Open-Meteo; `provider_mapping.md` gelöscht 2026-07-21)
 
