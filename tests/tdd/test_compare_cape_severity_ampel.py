@@ -90,26 +90,30 @@ def _cape_row_html(html: str) -> str:
 
 def test_sev_cape_matches_catalog_thresholds():
     """AC-1 (rot vor Fix): ``_sev_cape`` existiert noch nicht -- ImportError.
-    Nach dem Fix muss sie exakt die Katalog-Schwellen (yellow:1000,
-    orange:2500, red:3500) auf das Compare-lokale Vokabular abbilden."""
-    assert _sev_cape(500.0) == "ok"
-    assert _sev_cape(1500.0) == "caution"
-    assert _sev_cape(2800.0) == "warn"
-    assert _sev_cape(4000.0) == "danger"
+    Nach dem Fix muss sie exakt die Katalog-Schwellen auf das Compare-lokale
+    Vokabular abbilden. Schwellen (Workflow fix-briefing-grid-and-summary,
+    Berg-Kalibrierung): yellow:300, orange:800, red:1500 -- vormals (Issue
+    #814 AC-4) die Flachland-Skala yellow:1000/orange:2500/red:3500."""
+    assert _sev_cape(250.0) == "ok"
+    assert _sev_cape(500.0) == "caution"
+    assert _sev_cape(1000.0) == "warn"
+    assert _sev_cape(2000.0) == "danger"
 
 
-def test_cape_orange_band_value_gets_ampel_color_in_overview_matrix():
-    """AC-1 (rot vor Fix): CAPE=2800 J/kg liegt im orange-Band, die
-    Matrix-Zelle bleibt heute aber transparent -- ``cape_max`` hat in
-    ``CV2_METRICS`` kein ``"sev"``."""
+def test_cape_red_band_value_gets_ampel_color_in_overview_matrix():
+    """AC-1 (rot vor Fix): CAPE=2800 J/kg liegt im (neu kalibrierten) roten
+    Band, die Matrix-Zelle bleibt heute aber transparent -- ``cape_max`` hat
+    in ``CV2_METRICS`` kein ``"sev"``. Workflow fix-briefing-grid-and-summary:
+    2800 lag unter der Flachland-Skala (Issue #814 AC-4) im orange-Band
+    (<3500); die neue Berg-Skala (red ab 1500) stuft denselben Wert rot."""
     result = _result(cape=2800.0)
     enabled = resolve_enabled_metrics(["cape_max_jkg"])
 
     html = render_compare_html(result, enabled_metrics=enabled)
     row_html = _cape_row_html(html)
 
-    assert "#fad6b8" in row_html, (
-        f"CAPE-Zelle zeigt fuer 2800 J/kg (orange-Band laut Katalog) keine "
-        f"Ampel-Faerbung (erwartet background:#fad6b8 aus tone_css('orange')): "
+    assert "#f6c5bf" in row_html, (
+        f"CAPE-Zelle zeigt fuer 2800 J/kg (rotes Band laut Katalog) keine "
+        f"Ampel-Faerbung (erwartet background:#f6c5bf aus tone_css('red')): "
         f"{row_html}"
     )

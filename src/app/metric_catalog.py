@@ -254,8 +254,14 @@ _METRICS: list[MetricDefinition] = [
         friendly_label="\U0001f7e2\U0001f7e1\U0001f534",
         summary_fields={"max": "cape_max_jkg"},
         default_change_threshold=500.0,
-        # Issue #814 AC-4: Best-Practice-Schwellen (Standard-Konvektionsskala).
-        display_thresholds={"yellow": 1000.0, "orange": 2500.0, "red": 3500.0},
+        # Workflow fix-briefing-grid-and-summary (PO-go 2026-07-22, CAPE-
+        # Bergkalibrierung): Berg-Gewitter triggern orographisch bei deutlich
+        # niedrigerem CAPE als die Flachland-Konvektionsskala (vormals
+        # yellow:1000/orange:2500/red:3500) — dauergrün trotz realer
+        # Gewitterwarnung. Neu kalibriert fuer Gebirgs-Kontext.
+        # default_change_threshold (Alarm-Schwelle) bewusst unveraendert
+        # (separate Metrik-Bedeutung).
+        display_thresholds={"yellow": 300.0, "orange": 800.0, "red": 1500.0},
         highlight_threshold=1000.0,
         risk_thresholds={"medium": 1000.0, "high": 2000.0},
         format_modes=("raw", "symbol"),

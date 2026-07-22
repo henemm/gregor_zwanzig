@@ -223,17 +223,18 @@ class TestEmailFriendlyVsRawFormatting:
         # (but may appear in highlights, so just check emoji exists)
 
     def test_all_friendly_cape_emoji_in_html(self):
-        """CAPE 1200 J/kg → gelber CSS-Dot when friendly ON (≥ yellow-Schwelle 1000, < orange 2500).
+        """CAPE 1200 J/kg → orangefarbener CSS-Dot when friendly ON (Workflow
+        fix-briefing-grid-and-summary: Berg-Kalibrierung, orange-Schwelle 800,
+        < red 1500 — vormals lag 1200 zwischen der Flachland-Skala yellow:1000/
+        orange:2500 und war damit gelb; die neuen Bergschwellen stufen hoeher.
 
         #911 AC-11: Emoji-Ampel-Legende im Footer entfernt → dieser Test prüft jetzt
-        echt die Datenzelle. Vorheriger Wert 800 lag unter der gelben Schwelle (→ green)
-        und bestand nur durch das gelbe Symbol in der alten Legende (Falsch-Positiv).
-        Issue #1222: Kreis-Emoji durch gestylten CSS-Dot ersetzt.
+        echt die Datenzelle. Issue #1222: Kreis-Emoji durch gestylten CSS-Dot ersetzt.
         """
         dc = self._make_config(True, True, True)
         report = self._generate_report(dc, cape=1200.0)
         assert "border-radius:50%" in report.email_html
-        assert "#ca8a04" in report.email_html  # yellow fill (Issue #1222 SSoT)
+        assert "#c2410c" in report.email_html  # orange fill (Issue #1222 SSoT)
 
     def test_all_friendly_visibility_level_in_html(self):
         """Visibility 5000m → km-Zahl auch im Einfach-Modus (Issue #814 AC-5: kein Wort/Ampel)."""
@@ -302,18 +303,19 @@ class TestEmailFriendlyVsRawFormatting:
         assert "1500" in html
         assert "background" in html  # Has highlighting span
 
-    def test_cape_extreme_friendly_shows_orange(self):
-        """CAPE 2600 → orangefarbener CSS-Dot when friendly ON (≥ orange-Schwelle 2500, < red 3500).
+    def test_cape_extreme_friendly_shows_red(self):
+        """CAPE 2600 → roter CSS-Dot when friendly ON (Workflow
+        fix-briefing-grid-and-summary: Berg-Kalibrierung, red-Schwelle 1500 —
+        vormals lag 2600 zwischen der Flachland-Skala orange:2500/red:3500 und
+        war damit orange; die neuen Bergschwellen stufen hoeher.
 
         #911 AC-11: Emoji-Ampel-Legende im Footer entfernt → dieser Test prüft jetzt
-        echt die Datenzelle. Vorheriger Wert 1500 lag unter der orangen Schwelle (→ yellow)
-        und bestand nur durch das orange Symbol in der alten Legende (Falsch-Positiv).
-        Issue #1222: Kreis-Emoji durch gestylten CSS-Dot ersetzt.
+        echt die Datenzelle. Issue #1222: Kreis-Emoji durch gestylten CSS-Dot ersetzt.
         """
         dc = self._make_config(False, True, False)
         report = self._generate_report(dc, cape=2600.0)
         assert "border-radius:50%" in report.email_html
-        assert "#c2410c" in report.email_html  # orange fill (Issue #1222 SSoT)
+        assert "#b91c1c" in report.email_html  # red fill (Issue #1222 SSoT)
 
     def test_visibility_fog_raw_html_highlighted(self):
         """Visibility < 500m gets HTML highlighting when raw (now in km)."""
