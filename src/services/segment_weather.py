@@ -241,10 +241,22 @@ class SegmentWeatherService:
         # Stunde) statt nur die Stundenzahl -- der fruehere reine
         # Stunden-Wraparound-Vergleich zog faelschlich gleiche Uhrzeiten von
         # JEDEM Tag der Zeitreihe (falsche Min/Max bei Segmenten ueber
-        # Mitternacht). `dp.ts` und `segment.start_time`/`.end_time` sind
-        # beide UTC-aware und direkt vergleichbar.
-        start_floor = segment.start_time.replace(minute=0, second=0, microsecond=0)
-        end_floor = segment.end_time.replace(minute=0, second=0, microsecond=0)
+        # Mitternacht). Issue #1345: `dp.ts` ist seit
+        # `ForecastDataPoint.__post_init__` immer naive UTC;
+        # `start_floor`/`end_floor` werden hier zusaetzlich auf naive UTC
+        # gebracht, damit der Vergleich funktioniert, unabhaengig davon ob
+        # der liefernde Provider aware oder naive Zeitstempel produziert.
+        # Adversary-Fund F001: ein aware Segment-Zeitstempel mit tzinfo !=
+        # UTC (z.B. +02:00) muss ERST nach UTC konvertiert werden, bevor
+        # tzinfo gestrippt wird -- ein reines .replace(tzinfo=None) wuerde
+        # die lokale Uhrzeit als UTC missdeuten und falsche Stunden
+        # zuordnen (analog zu app/models.py:155).
+        start_floor = segment.start_time.astimezone(timezone.utc).replace(
+            minute=0, second=0, microsecond=0, tzinfo=None
+        )
+        end_floor = segment.end_time.astimezone(timezone.utc).replace(
+            minute=0, second=0, microsecond=0, tzinfo=None
+        )
         # Bug #806: Randstunde exklusiv am Ende (< end_floor), damit jede Stunde
         # genau einem Segment gehört (Vermeidung von Widersprüchen bei Start-Punkt-Sampling).
         # Bug #856: Wenn Start- und Endstunde identisch sind (Segment < 1h, gleiche UTC-Stunde),

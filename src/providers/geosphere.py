@@ -19,6 +19,7 @@ import math
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
+from zoneinfo import ZoneInfo
 
 import httpx
 from tenacity import (
@@ -395,9 +396,15 @@ class GeoSphereProvider:
             for i, time_str in enumerate(times):
                 # Parse time (format: "2025-12-28T09:00")
                 dt = datetime.fromisoformat(time_str)
-                # Make timezone-aware (Europe/Vienna)
+                # Issue #1345: Open-Meteo liefert lokale Wiener Zeit (Request
+                # fragt `timezone=Europe/Vienna` ab, Zeile 371). Die frühere
+                # Hartkodierung `timezone(timedelta(hours=1))` war im Sommer
+                # (CEST = UTC+2) eine Stunde falsch. ZoneInfo kennt die
+                # tatsächliche DST-Regel für Wien.
                 if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=timezone(timedelta(hours=1)))
+                    dt = dt.replace(tzinfo=ZoneInfo("Europe/Vienna")).astimezone(
+                        timezone.utc
+                    )
 
                 low = int(cloud_low[i]) if i < len(cloud_low) and cloud_low[i] is not None else None
                 mid = int(cloud_mid[i]) if i < len(cloud_mid) and cloud_mid[i] is not None else None

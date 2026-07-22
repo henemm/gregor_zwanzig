@@ -146,6 +146,14 @@ class ForecastDataPoint:
         if self.wind_dir_deg is not None and self.wind_direction_deg is None:
             # dataclass with frozen=False allows direct assignment
             object.__setattr__(self, "wind_direction_deg", int(self.wind_dir_deg))
+        # Issue #1345: Hausnorm "naive UTC" an der Provider-Grenze erzwingen —
+        # aware Zeitstempel (z.B. von GeoSphere) werden nach UTC konvertiert
+        # und dann auf naiv gestrippt, damit `ts` provider-uebergreifend
+        # konsistent mit naiv/UTC-Vergleichen (z.B. segment_weather.py) bleibt.
+        if self.ts.tzinfo is not None:
+            object.__setattr__(
+                self, "ts", self.ts.astimezone(timezone.utc).replace(tzinfo=None)
+            )
 
 
 @dataclass

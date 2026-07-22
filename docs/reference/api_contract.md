@@ -152,7 +152,7 @@ Ein **Normalized Forecast Timeseries**-Objekt (siehe unten), bestehend aus `meta
 #### Basis-Felder (immer)
 | Feld               | Typ              | Beschreibung                                   |
 |--------------------|-----------------|------------------------------------------------|
-| ts                 | datetime        | Zeitpunkt (UTC ISO-8601)                       |
+| ts                 | datetime        | Zeitpunkt (UTC ISO-8601). Hausnorm: **naive UTC** — aware Eingaben werden bei Konstruktion nach UTC konvertiert und das tzinfo entfernt (`ForecastDataPoint.__post_init__`, #1345) |
 | t2m_c              | float           | 2 m-Temperatur [°C]                            |
 | wind10m_kmh        | float           | 10 m-Windgeschwindigkeit [km/h]                |
 | gust_kmh           | float           | Böenspitze [km/h]                              |

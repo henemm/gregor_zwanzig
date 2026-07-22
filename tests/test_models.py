@@ -37,7 +37,9 @@ def test_forecast_data_point_base_fields():
         wind10m_kmh=20.0,
         gust_kmh=35.0,
     )
-    assert dp.ts == ts
+    # Issue #1345: __post_init__ normalisiert aware ts auf naive UTC
+    # (Hausnorm "naive UTC" an der Provider-Grenze).
+    assert dp.ts == ts.replace(tzinfo=None)
     assert dp.t2m_c == 5.0
     assert dp.wind10m_kmh == 20.0
     assert dp.snow_depth_cm is None  # Optional field
