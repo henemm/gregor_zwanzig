@@ -704,8 +704,14 @@ func TestCompareOfficialAlertChecks_RegisteredAndRuns(t *testing.T) {
 }
 
 // --- Tests: comparePresetsDaily heartbeat (Issue #461) ---
+//
+// Issue #1346: der Heartbeat-Ping ist aus comparePresetsDaily() in
+// briefingDispatch() konsolidiert (gated auf BEIDE Teil-Jobs, nicht mehr
+// allein auf den Compare-Erfolg). Ein direkter comparePresetsDaily()-Aufruf
+// pingt daher nicht mehr selbst — das deckt TestBriefingDispatch_* in
+// scheduler_unify_test.go ab.
 
-func TestComparePresetsDaily_TriggersHeartbeat(t *testing.T) {
+func TestComparePresetsDaily_AloneDoesNotTriggerHeartbeat(t *testing.T) {
 	var heartbeatPinged bool
 	heartbeatServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		heartbeatPinged = true
@@ -731,8 +737,8 @@ func TestComparePresetsDaily_TriggersHeartbeat(t *testing.T) {
 
 	sched.comparePresetsDaily()
 
-	if !heartbeatPinged {
-		t.Fatal("Heartbeat should be pinged after successful trigger")
+	if heartbeatPinged {
+		t.Fatal("comparePresetsDaily() alone should NOT ping the heartbeat after #1346 (consolidated into briefingDispatch())")
 	}
 }
 

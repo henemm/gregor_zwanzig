@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/henemm/gregor-api/internal/config"
@@ -224,11 +225,12 @@ func TestBriefingDispatch_ContinueOnError(t *testing.T) {
 	}
 }
 
-// --- AC-40: Heartbeat hängt ausschließlich am Erfolg des compare-Aufrufs,
-// unabhängig vom Ausgang des trip-Aufrufs. ---
+// --- #1346 löst die #1250-AC-40-Kopplung ab: Heartbeat pingt nicht mehr
+// allein am compare-Erfolg, sondern nur wenn BEIDE Teil-Jobs ok sind — sonst
+// verdeckt ein Trip-Briefing-Totalausfall den Heartbeat-Erfolg. ---
 
 func TestBriefingDispatch_HeartbeatOnlyOnCompareOk(t *testing.T) {
-	t.Run("compare ok despite trip failure -> heartbeat pinged exactly once", func(t *testing.T) {
+	t.Run("trip failure despite compare ok -> heartbeat NOT pinged", func(t *testing.T) {
 		var mu sync.Mutex
 		var heartbeatHits int
 
@@ -263,15 +265,15 @@ func TestBriefingDispatch_HeartbeatOnlyOnCompareOk(t *testing.T) {
 		if err != nil {
 			t.Fatalf("New() error: %v", err)
 		}
+		sched.notifier = func(_, _, _, _, _ string) error { return nil }
 
-		// RED: briefingDispatch does not exist yet.
 		sched.briefingDispatch()
 
 		mu.Lock()
 		hits := heartbeatHits
 		mu.Unlock()
-		if hits != 1 {
-			t.Fatalf("expected heartbeat to be pinged exactly once (compare succeeded despite trip failure), got %d", hits)
+		if hits != 0 {
+			t.Fatalf("expected 0 heartbeat pings when trip-reports fails despite compare ok (#1346), got %d", hits)
 		}
 	})
 
@@ -310,8 +312,8 @@ func TestBriefingDispatch_HeartbeatOnlyOnCompareOk(t *testing.T) {
 		if err != nil {
 			t.Fatalf("New() error: %v", err)
 		}
+		sched.notifier = func(_, _, _, _, _ string) error { return nil }
 
-		// RED: briefingDispatch does not exist yet.
 		sched.briefingDispatch()
 
 		mu.Lock()
@@ -321,4 +323,143 @@ func TestBriefingDispatch_HeartbeatOnlyOnCompareOk(t *testing.T) {
 			t.Fatalf("expected heartbeat NOT to be pinged when compare-presets-daily fails, got %d hits", hits)
 		}
 	})
+
+	t.Run("both ok -> heartbeat pinged exactly once", func(t *testing.T) {
+		var mu sync.Mutex
+		var heartbeatHits int
+
+		heartbeatServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			mu.Lock()
+			heartbeatHits++
+			mu.Unlock()
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer heartbeatServer.Close()
+
+		triggerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, `{"status":"ok","count":1}`)
+		}))
+		defer triggerServer.Close()
+
+		cfg := &config.Config{
+			PythonCoreURL:           triggerServer.URL,
+			HeartbeatComparePresets: heartbeatServer.URL + "/heartbeat/compare-presets",
+			SchedulerTimezone:       "Europe/Vienna",
+		}
+		sched, err := New(cfg, testStore(t))
+		if err != nil {
+			t.Fatalf("New() error: %v", err)
+		}
+		sched.notifier = func(_, _, _, _, _ string) error { return nil }
+
+		sched.briefingDispatch()
+
+		mu.Lock()
+		hits := heartbeatHits
+		mu.Unlock()
+		if hits != 1 {
+			t.Fatalf("expected exactly 1 heartbeat ping when both jobs ok, got %d", hits)
+		}
+	})
+}
+
+// --- AC-3/AC-4: edge-getriggerter MQ-Alarm bei Trip-Briefing-Totalausfall
+// (analog dataWriteSelftest, #1346). ---
+
+func TestBriefingDispatch_TripFailureTriggersMQAlarm(t *testing.T) {
+	type call struct {
+		sender, recipient, priority, subject, body string
+	}
+	var tripOK atomic.Bool
+	tripOK.Store(true)
+
+	triggerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/api/scheduler/trip-reports"):
+			if tripOK.Load() {
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprint(w, `{"status":"ok","count":1}`)
+			} else {
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, `{"error":"boom"}`)
+			}
+		case strings.HasPrefix(r.URL.Path, "/api/scheduler/compare-presets-daily"):
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, `{"status":"ok","count":1}`)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer triggerServer.Close()
+
+	// Dummy-Heartbeat-Server: verhindert, dass die "Heartbeat-URL leer"-Warnung
+	// (warnMissingHeartbeatOnce) den Alarm-Zähler dieses Tests verfälscht.
+	heartbeatServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer heartbeatServer.Close()
+
+	cfg := &config.Config{
+		PythonCoreURL:           triggerServer.URL,
+		HeartbeatComparePresets: heartbeatServer.URL + "/heartbeat/compare-presets",
+		SchedulerTimezone:       "Europe/Vienna",
+	}
+	sched, err := New(cfg, testStore(t))
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	var mu sync.Mutex
+	var calls []call
+	sched.notifier = func(sender, recipient, priority, subject, body string) error {
+		mu.Lock()
+		calls = append(calls, call{sender, recipient, priority, subject, body})
+		mu.Unlock()
+		return nil
+	}
+	snapshot := func() []call {
+		mu.Lock()
+		defer mu.Unlock()
+		return append([]call(nil), calls...)
+	}
+
+	// Tick 1: trip ok -> 0 alarms.
+	tripOK.Store(true)
+	sched.briefingDispatch()
+	if got := snapshot(); len(got) != 0 {
+		t.Fatalf("expected 0 alarms after ok tick, got %d: %v", len(got), got)
+	}
+
+	// Tick 2: trip error -> exactly 1 alarm, high priority, to infra.
+	tripOK.Store(false)
+	sched.briefingDispatch()
+	got := snapshot()
+	if len(got) != 1 {
+		t.Fatalf("expected exactly 1 alarm after ok->error transition, got %d: %v", len(got), got)
+	}
+	if got[0].sender != "gregor" || got[0].recipient != "infra" || got[0].priority != "high" {
+		t.Fatalf("expected (gregor,infra,high,...), got (%q,%q,%q,...)", got[0].sender, got[0].recipient, got[0].priority)
+	}
+	if !strings.Contains(got[0].subject, "1346") ||
+		!(strings.Contains(got[0].subject, "Briefing") || strings.Contains(got[0].subject, "Trip")) {
+		t.Fatalf("expected subject to reference Briefing-Totalausfall + #1346, got %q", got[0].subject)
+	}
+
+	// Tick 3: trip stays error -> no additional alarm (edge-trigger).
+	sched.briefingDispatch()
+	if got := snapshot(); len(got) != 1 {
+		t.Fatalf("expected no additional alarm on repeated error tick, got %d: %v", len(got), got)
+	}
+
+	// Tick 4: trip recovers -> exactly 1 recovery alarm, normal priority.
+	tripOK.Store(true)
+	sched.briefingDispatch()
+	got = snapshot()
+	if len(got) != 2 {
+		t.Fatalf("expected exactly 2 alarms total after recovery, got %d: %v", len(got), got)
+	}
+	if got[1].priority != "normal" {
+		t.Fatalf("expected recovery alarm priority normal, got %q", got[1].priority)
+	}
 }

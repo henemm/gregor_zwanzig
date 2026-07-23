@@ -184,16 +184,65 @@ func (s *Scheduler) runForAllUsers(jobID, path string) error {
 
 // briefingDispatch ist der vereinheitlichte stündliche Briefing-Einstieg
 // (Issue #1250 S7c): EIN Cron-Eintrag, der beide Fan-outs sequenziell auslöst.
-// Jeder Teil-Job behält seine eigene recordRun-Buchführung + (compare) Heartbeat.
+// Jeder Teil-Job behält seine eigene recordRun-Buchführung.
+//
+// Issue #1346: der Heartbeat wird hier zentral konsolidiert (statt allein an
+// comparePresetsDaily() zu hängen) — nur wenn BEIDE Teil-Jobs "ok" sind, gilt
+// der Briefing-Dispatch als vollständig erfolgreich und pingt.
 func (s *Scheduler) briefingDispatch() {
 	s.tripReports()
 	s.comparePresetsDaily()
+
+	s.mu.RLock()
+	tripLR := s.lastRuns["trip_reports_hourly"]
+	compareLR := s.lastRuns["compare_presets_daily"]
+	s.mu.RUnlock()
+
+	if tripLR != nil && tripLR.Status == "ok" &&
+		compareLR != nil && compareLR.Status == "ok" {
+		s.pingHeartbeat("briefing_dispatch", s.heartbeatComparePresets)
+	}
 }
 
+// tripReports triggert den stündlichen Trip-Briefing-Versand.
+//
+// Issue #1346: edge-getriggerter MQ-Alarm analog dataWriteSelftest() — ein
+// Totalausfall (alle Touren scheitern am Wetterabruf) muss aktiv an infra
+// gemeldet werden statt still zu bleiben, weil der Heartbeat allein den
+// Ausfall nicht mehr sichtbar macht (er hängt jetzt an briefingDispatch()).
 func (s *Scheduler) tripReports() {
+	s.mu.RLock()
+	prevStatus := ""
+	if lr := s.lastRuns["trip_reports_hourly"]; lr != nil {
+		prevStatus = lr.Status
+	}
+	s.mu.RUnlock()
+
 	s.recordRun("trip_reports_hourly", func() error {
 		return s.runForAllUsers("trip_reports_hourly", "/api/scheduler/trip-reports")
 	})
+
+	s.mu.RLock()
+	cur := s.lastRuns["trip_reports_hourly"]
+	s.mu.RUnlock()
+	if cur == nil || s.notifier == nil {
+		return
+	}
+	// ok→error (inkl. erster Lauf ohne Vorzustand) → Alarm high
+	if cur.Status == "error" && prevStatus != "error" {
+		subject := "Trip-Briefing-Totalausfall (#1346)"
+		body := fmt.Sprintf("Job trip_reports_hourly: Trip-Briefing-Versand fehlgeschlagen.\n%s", cur.Error)
+		if err := s.notifier("gregor", "infra", "high", subject, body); err != nil {
+			log.Printf("[scheduler] WARN: trip-reports alert notifier failed: %v", err)
+		}
+	} else if cur.Status == "ok" && prevStatus == "error" {
+		// error→ok: Recovery-Notiz
+		subject := "Trip-Briefing wieder OK (#1346)"
+		body := "Job trip_reports_hourly: Trip-Briefing-Versand läuft wieder erfolgreich."
+		if err := s.notifier("gregor", "infra", "normal", subject, body); err != nil {
+			log.Printf("[scheduler] WARN: trip-reports recovery notifier failed: %v", err)
+		}
+	}
 }
 
 func (s *Scheduler) alertChecks() {
@@ -279,17 +328,14 @@ func (s *Scheduler) inboundCommands() {
 	})
 }
 
+// comparePresetsDaily triggert den Ortsvergleich-Slot-Check. Der Heartbeat-
+// Ping wurde nach #1346 in briefingDispatch() konsolidiert (dort gated auf
+// BEIDE Teil-Jobs statt allein diesen).
 func (s *Scheduler) comparePresetsDaily() {
 	log.Println("[scheduler] Running compare presets daily...")
 	s.recordRun("compare_presets_daily", func() error {
 		return s.runForAllUsers("compare_presets_daily", "/api/scheduler/compare-presets-daily")
 	})
-	s.mu.RLock()
-	lr := s.lastRuns["compare_presets_daily"]
-	s.mu.RUnlock()
-	if lr != nil && lr.Status == "ok" {
-		s.pingHeartbeat("compare_presets_daily", s.heartbeatComparePresets)
-	}
 }
 
 // recordRun executes a job function and stores the result.
