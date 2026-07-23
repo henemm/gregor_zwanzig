@@ -153,6 +153,7 @@ class TripReportFormatter:
             compact_summary = self._generate_compact_summary(
                 segments, stage_name, dc, night_weather, has_gap=has_gap,
                 day_window_start_hour=_dw_start, day_window_end_hour=_dw_end,
+                report_type=report_type,
             )
 
         # β3 Adapter (§A2/§A6): RENDER an pure renderer delegieren.
@@ -759,6 +760,7 @@ class TripReportFormatter:
         has_gap: bool = False,
         day_window_start_hour: Optional[int] = None,
         day_window_end_hour: Optional[int] = None,
+        report_type: str = "evening",
     ) -> Optional[str]:
         """Generate compact natural-language summary for the stage."""
         if not segments or not stage_name:
@@ -773,6 +775,7 @@ class TripReportFormatter:
             has_gap=has_gap,
             day_window_start_hour=_start,
             day_window_end_hour=_end,
+            report_type=report_type,
         )
 
     @staticmethod

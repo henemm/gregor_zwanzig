@@ -13,6 +13,7 @@ Scheibe B durch einen konfigurierbaren Wert ersetzt.
 from __future__ import annotations
 
 import dataclasses
+from datetime import timedelta
 from typing import Optional, Sequence
 from zoneinfo import ZoneInfo
 
@@ -151,3 +152,39 @@ def build_day_window_points(
             by_hour.setdefault(h, []).append(dp)
 
     return [_merge_hour(by_hour[h]) for h in sorted(by_hour)]
+
+
+def night_temp_min_c(
+    night_weather: Optional[NormalizedTimeseries],
+    segments: Sequence[SegmentWeatherData],
+    tz: ZoneInfo,
+) -> Optional[float]:
+    """Echte Nacht-Tiefsttemperatur am Schlafplatz (Issue #1319 Scheibe D).
+
+    Fenster: Ankunft (Ende des letzten Segments) bis 06:00 Folgetag,
+    gefiltert wie ``trip_report.py::_extract_night_rows`` Schritt 1 (gegen
+    WeatherCacheService-"covers"-Kontamination durch Datenpunkte anderer
+    Kalendertage), dann ``min(t2m_c)`` ueber die verbleibenden Punkte.
+    ``None`` bei fehlenden Daten (fail-soft, kein Crash). Ersetzt NICHT
+    ``_extract_night_rows()`` (bleibt fuer die grosse E-Mail-Tabelle
+    unveraendert, DEC-3) -- separate, einfachere Ableitung ohne
+    2h-Block-Aggregation.
+    """
+    if not night_weather or not night_weather.data or not segments:
+        return None
+    arrival_dt = segments[-1].segment.end_time
+    arrival_hour = local_hour(arrival_dt, tz)
+    arrival_date = arrival_dt.astimezone(tz).date()
+    next_day = arrival_date + timedelta(days=1)
+    temps: list[float] = []
+    for dp in night_weather.data:
+        local_dt = dp.ts.astimezone(tz)
+        dp_date = local_dt.date()
+        is_same_day = dp_date == arrival_date
+        is_next_day = dp_date == next_day
+        in_range = (is_same_day and local_dt.hour >= arrival_hour) or (
+            is_next_day and local_dt.hour <= 6
+        )
+        if in_range and dp.t2m_c is not None:
+            temps.append(dp.t2m_c)
+    return min(temps) if temps else None

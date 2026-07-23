@@ -1,7 +1,7 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.10"
+version: "2.11"
 status: active
 created: 2025-12-27
 updated: 2026-07-23
@@ -13,7 +13,7 @@ tags: [sms, compact, tokens, single-source-of-truth]
 - [x] Approved (v2.0 am 2026-04-25)
 - [x] Implementiert in SMS-Adapter via `src/output/renderers/sms/` (β3, 2026-04-28)
 
-# SMS / Kompakt-Format Specification (v2.10)
+# SMS / Kompakt-Format Specification (v2.11)
 
 **Single Source of Truth** für die kompakte Token-Zeile, die in allen Channels (SMS, Satellit, E-Mail-Header, Push) identisch verwendet wird. Alle anderen Repräsentationen (E-Mail-Body, Tabellen, Push-Titel) leiten sich aus dieser Token-Zeile ab.
 
@@ -48,7 +48,8 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | Block | Tokens | Pflicht? |
 |-------|--------|---------|
 | Header | `{Name}:` | immer |
-| Forecast | `N D R PR W G TH: TH+:` | immer (bei `-` als Null-Wert) |
+| Forecast (Nacht) | `N` | **nur Abendbriefing** (Issue #1319 Scheibe D) — im Morgenbriefing entfällt der Token komplett, nicht als `N-` |
+| Forecast | `D R PR W G TH: TH+:` | immer (bei `-` als Null-Wert) |
 | Confidence | `C` | nur wenn Provider Konfidenz liefert (Issue #121, v2.1) |
 | Risks (Vigilance) | `HR:TH:` (zusammenhängend, kein Leerzeichen zwischen den beiden) | nur bei FR-Provider |
 | Amtliche Warnungen | `!{Kürzel}:{Stufe}[@{h}]` … (Warn-Block, Marker `!` genau einmal) | nur bei aktiver amtlicher Warnung ab Stufe ORANGE (§3.4c) |
@@ -58,6 +59,8 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | Debug | `DBG[...]` | nur Dry-Run / Debug-Modus |
 
 **Hinweis zu `HR:TH:`** — Das sind zwei separate Tokens, die ohne Leerzeichen aneinandergeschrieben werden (z.B. `HR:M@17TH:H@17` oder `HR:-TH:-`). Siehe §3.3 und §3.4.
+
+**Hinweis zu `N` (Issue #1319 Scheibe D, 2026-07-23):** Im Abendbriefing ist `N` das erste Forecast-Token wie oben dargestellt. Im Morgenbriefing entfällt `N` vollständig aus der Zeile (nicht `N-`) — die Reihenfolge rutscht entsprechend nach: `{Name}: D R PR W G TH: TH+: ...`.
 
 ---
 
@@ -88,7 +91,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 
 | Token | Bedeutung | Quelle (DTO-Feld) | Beispiel |
 |-------|-----------|-------------------|----------|
-| `N{temp}` / `N-` | Nacht-Min °C, ganzzahlig — Wert AM letzten GEO-Punkt der Etappe (kein Min über mehrere Punkte) | `temp_min_c` aus DAILY_FORECAST des letzten Etappenpunkts | `N9` |
+| `N{temp}` / `N-` (**nur Abendbriefing**) | Nacht-Tiefsttemperatur °C am Schlafplatz, ganzzahlig — Fenster Ankunft→06:00 Folgetag am Etappenziel, NICHT das Tagessegment-Minimum. Im Morgenbriefing entfällt der Token komplett (kein `N-`). | `night_temp_min_c()` aus `night_weather` (Fallback: Tagessegment-`temp_min_c`, wenn `night_weather` fehlt/leer) | `N9` |
 | `D{temp}` / `D-` | Tag-Max °C, ganzzahlig | Alle GEO-Punkte der Etappe, MAX über `temp_max_c` | `D24` |
 | `R{mm}@{h}({max}@{h})` / `R-` | Regen Threshold@Stunde + Peak | Hourly `precip_1h_mm`, Threshold aus `config.rain_amount_threshold` | `R0.2@6(1.4@16)` |
 | `PR{p}%@{h}({max}%@{h})` / `PR-` | Regenwahrscheinlichkeit Threshold + Peak (Issue #887: auch SMS via `pop_hourly` aus `agg.pop_max_pct` synthetisiert) | Hourly `pop_pct`, Threshold aus `config.rain_probability_threshold` | `PR20%@11(100%@17)` |
@@ -96,6 +99,12 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | `G{v}@{h}({max}@{h})` / `G-` | Böen km/h Threshold + Peak | Hourly `gust_kmh`, Threshold aus `config.wind_gust_threshold` | `G20@11(30@17)` |
 | `TH:{level}@{h}({max}@{h})` / `TH:-` | Gewitter der **berichteten** Etappe (M/H) | Hourly `dp.thunder_level` aus `seg.timeseries`, auf die Wanderzeit gefenstert | `TH:M@16(H@18)` |
 | `TH+:{level}@{h}({max}@{h})` / `TH+:-` | Gewitter der Etappe **danach** | Folge-Etappe via `thunder_forecast["+1"]` (Level **und** Stunde) | `TH+:M@14(H@17)` |
+
+**`N` ist report-type-abhängig (Issue #1319 Scheibe D, 2026-07-23):** anders als `D R PR W G TH: TH+:`
+hat `N` keine feste Sichtbarkeit — es erscheint ausschließlich im Abendbriefing. Wert-Quelle ist die
+echte kommende Nacht am Schlafplatz (`night_weather`, Ankunft→06:00 Folgetag), dieselbe Quelle wie
+die große E-Mail-Tabelle „🌙 Nacht am Ziel" (die unverändert bleibt). Fällt `night_weather` aus, greift
+fail-soft der alte Tagessegment-Minimum-Wert. Spec: `docs/specs/modules/night_temp_evening_only.md`.
 
 **Report-relativ, nicht kalender-relativ (Issue #1275):** `TH:` und `TH+:` beziehen sich auf die
 Etappe, über die der Report spricht — nicht auf „heute"/„morgen" im Kalendersinn. Im
@@ -273,7 +282,8 @@ Nur in Dry-Run / Debug-Modus angehängt, ansonsten weggelassen.
 
 | Token | Null-Form | Anmerkung |
 |-------|-----------|-----------|
-| `N` / `D` | `N-` / `D-` | Bei fehlenden Temperaturen |
+| `N` (nur Abend) | `N-` | Bei fehlender Nacht-Temperatur — **nur im Abendbriefing**; im Morgenbriefing fehlt der Token komplett (kein `N-`) |
+| `D` | `D-` | Bei fehlender Tag-Temperatur |
 | `R` / `PR` | `R-` / `PR-` | Bei fehlendem oder Sub-Threshold-Niederschlag |
 | `W` / `G` | `W-` / `G-` | Bei fehlendem oder Sub-Threshold-Wind |
 | `TH` / `TH+` | `TH:-` / `TH+:-` | Bei fehlendem oder Sub-Threshold-Gewitter |
@@ -327,25 +337,29 @@ Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, werden Tokens in dieser 
 
 - `{Name}:` ist immer im Output.
 - Mindestens **ein** Wert-/Risk-Token ist Pflicht (z.B. `TH:M@14`, `W22@14`, `R0.2@6` oder `HR:M@17`).
-- Reine Null-Zeilen (`Ballone: N- D- R- PR- W- G- TH:- TH+:-`) sind erlaubt und zeigen "alles ruhig".
+- Reine Null-Zeilen sind erlaubt und zeigen "alles ruhig" — Abendbriefing:
+  `Ballone: N- D- R- PR- W- G- TH:- TH+:-`; Morgenbriefing (ohne `N`, Issue #1319):
+  `Ballone: D- R- PR- W- G- TH:- TH+:-`.
 
 ---
 
 ## 8. Beispiele
 
-Alle Beispiele sind ≤160 Zeichen.
+Alle Beispiele sind ≤160 Zeichen. Seit Issue #1319 Scheibe D (2026-07-23) fehlt `N` in
+Morning-Report-Beispielen komplett (nicht `N-`); Beispiele ohne explizite Report-Typ-Kennzeichnung,
+die `N` zeigen, sind als Abendbriefing zu lesen.
 
 ### 8.1 Morning Report (Forecast, kein Risiko)
 ```
-Ballone: N9 D16 R- PR10%@14(20%@17) W- G- TH:- TH+:-
+Ballone: D16 R- PR10%@14(20%@17) W- G- TH:- TH+:-
 ```
-**Länge:** 51 Zeichen.
+**Länge:** 49 Zeichen. (Kein `N`-Token — Morgenbriefing.)
 
 ### 8.2 Morning Report (mit Schwellenwerten)
 ```
-Paliri: N8 D24 R0.2@6(1.4@16) PR20%@11(100%@17) W10@11(15@17) G20@11(30@17) TH:M@16(H@18) TH+:M@14(H@17)
+Paliri: D24 R0.2@6(1.4@16) PR20%@11(100%@17) W10@11(15@17) G20@11(30@17) TH:M@16(H@18) TH+:M@14(H@17)
 ```
-**Länge:** 105 Zeichen.
+**Länge:** 102 Zeichen. (Kein `N`-Token — Morgenbriefing.)
 
 ### 8.3 Evening Report mit Vigilance + Fire-Block (Korsika)
 ```
@@ -383,7 +397,7 @@ Ballone: N9 D16 R- PR- W- G- TH:- TH+:-
 
 | Token | Quelle | Aggregation | Status (gregor_zwanzig) |
 |-------|--------|-------------|--------------------------|
-| `N` | `SegmentWeatherSummary.temp_min_c` (Nacht-Segment) | Wert am letzten GEO-Punkt der Etappe (kein MIN über mehrere Punkte) | ✅ vorhanden |
+| `N` (nur Abend, Issue #1319) | `night_weather` (Ankunft→06:00 Folgetag am Etappenziel) via `night_temp_min_c()`; Fallback `SegmentWeatherSummary.temp_min_c` wenn `night_weather` fehlt | MIN über `t2m_c` im Nachtfenster; im Morgenbriefing entfällt der Token komplett | ✅ vorhanden |
 | `D` | `SegmentWeatherSummary.temp_max_c` (Tag-Segment) | MAX über alle Geo-Punkte | ✅ vorhanden |
 | `R` | `precip_1h_mm` hourly | Threshold + MAX | ✅ vorhanden |
 | `PR` | `pop_pct` hourly | Threshold + MAX | ✅ vorhanden |
@@ -448,6 +462,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 
 | 2.9 | 2026-07-20 | Amtlicher Warn-Block `!` in der Trip-Briefing-SMS (Issue #1318) — 9 internationale Gefahren-Kürzel aus dem einzigen Katalog `src/output/tokens/hazard_symbols.py` (§3.4c), Filter ab Stufe ORANGE, `@h` nur bei nicht-ganztägigem Beginn, `CL` ohne Stufe, höchste Truncation-Priorität; §3.4 von positions- auf marker-basierte Disambiguierung verallgemeinert; die eigenständige amtliche-Warnung-SMS nutzt denselben Katalog (alte deutsch abgeleitete Kürzel `HZ`/`ST`/`RR`/`GL`/`ZG`/`WB`/`KL` entfallen ersatzlos) |
 | 2.10 | 2026-07-23 | Compare-SMS zeigt jetzt denselben `!`-Warn-Block (Issue #1332, Bugfix) — `render_compare_sms` (`src/output/renderers/comparison.py`) nutzt `official_alerts_to_sms_entries`/`sms_symbol_for` aus demselben Katalog wie die Trip-Briefing-SMS; vorher zeigte die Compare-SMS gar keine amtlichen Warnungen |
+| 2.11 | 2026-07-23 | `N` (Nacht-Tiefsttemperatur) nur noch im Abendbriefing (Issue #1319 Scheibe D) — Morgenbriefing lässt den Token komplett weg (kein `N-`); Wert-Quelle wechselt abends von `SegmentWeatherSummary.temp_min_c` (Tagessegment) auf `night_weather` (Ankunft→06:00 Folgetag am Ziel), Fallback aufs alte Verhalten wenn `night_weather` fehlt; große E-Mail-Tabelle „🌙 Nacht am Ziel" bleibt unverändert. Spec: `docs/specs/modules/night_temp_evening_only.md` |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

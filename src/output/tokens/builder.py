@@ -222,6 +222,11 @@ def build_token_line(
     tokens: list[Token] = []
     for sym, val in (("N", today.temp_min_c), ("D", today.temp_max_c)):
         spec = by_sym.get(sym)
+        # Issue #1319 Scheibe D (DEC-1/DEC-2): N hat keine MetricSpec, daher
+        # ist _visible(None, ...) immer True -- hartes Zusatz-Gate, N nur im
+        # Abendbriefing (kein Platzhalter morgens).
+        if sym == "N" and report_type != "evening":
+            continue
         if not _visible(spec, report_type):
             continue
         tokens.append(Token(

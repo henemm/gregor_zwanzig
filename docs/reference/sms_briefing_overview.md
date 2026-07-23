@@ -53,7 +53,7 @@ Feste Reihenfolge (POSITIONAL, `sms_format.md:44`):
 | Kürzel | Bedeutung | Wert-Format | Immer da? |
 |---|---|---|---|
 | `{Name}:` | Etappen-/Ortsname (max. 10 Zeichen, km-Bereich bleibt) | `Paliri:` / `GR221 km0-11:` | ja |
-| `N` | Nacht-/Tief-Temperatur °C | `N8`, `N-12`, `N-` | ja |
+| `N` | Nacht-Tief-Temperatur °C am Schlafplatz | `N8`, `N-12` | nur abends (Issue #1319 Scheibe D) — im Morgenbriefing entfällt der Token komplett |
 | `D` | Tag-/Höchst-Temperatur °C | `D24`, `D-` | ja |
 | `R` | Regen (mm) | `R0.2@6(1.4@16)` / `R-` | ja |
 | `PR` | Regenwahrscheinlichkeit (%) | `PR20%@11(100%@17)` / `PR-` | ja |
@@ -81,10 +81,15 @@ Böen 20 km/h · Gewitter ab mittlerer Stufe. Pro Trip/Metrik überschreibbar.
 
 ## 2. Welche Zeit fließt ein? (der Kernpunkt)
 
-**Verbindliche Regel heute (Ist-Code):** **Alle** „Heute"-Werte (`N D R PR W G TH:`) werden
+**Verbindliche Regel heute (Ist-Code):** **Alle** „Heute"-Werte (`D R PR W G TH:`) werden
 ausschließlich aus der **Wanderzeit der Etappe** berechnet — vom Etappenstart bis zur
 **Ankunftsstunde** am Ziel (`sms_trip.py:106-130`; Temperatur über die wanderzeit-gefensterten
 Segment-Aggregate, `segment_weather.py:173-196`).
+
+**Ausnahme `N` (Issue #1319 Scheibe D, 2026-07-23):** Die Nacht-Tiefsttemperatur wird nicht mehr aus
+der Wanderzeit-Segment-Aggregation berechnet, sondern kommt — nur im Abendbriefing — aus
+`night_weather` (Ankunft→06:00 Folgetag am Ziel), analog zur großen E-Mail-Tabelle „🌙 Nacht am Ziel".
+Im Morgenbriefing entfällt `N` komplett.
 
 **Was das bedeutet:** Wetter, das **nach der Ankunft** am Ziel eintritt (Nachmittag/Abend/Nacht am
 Lagerplatz oder in der Hütte), erscheint in der SMS **nicht** — auch wenn die große E-Mail es in der
@@ -145,6 +150,7 @@ Vorgängerprojekt `weather_email_autobot` (festes Tagesfenster über die Etappe)
    und SMS können nie widersprechen.
 4. **N (Nacht-Tiefsttemperatur):** nur im **Abendbriefing**, Tiefstwert der **kommenden Nacht am
    aktuellen Schlafplatz** (Etappenende) — getrennt vom Tagesfenster. Im Morgenbriefing entfällt N.
+   (Umgesetzt: Issue #1319 Scheibe D, 2026-07-23.)
 5. **Bezugstag / Vorschau `TH+:`:** `TH:` = berichteter Tag (Morgen = heute, Abend = morgen),
    `TH+:` = Tag danach (Morgen → morgen, Abend → übermorgen). Rein aus `report_type` ableitbar.
 6. **Gilt einheitlich für alle Kurzformen** (SMS, E-Mail-Kurzzusammenfassung, Telegram-Fußzeile) —
@@ -155,12 +161,15 @@ Vorgängerprojekt `weather_email_autobot` (festes Tagesfenster über die Etappe)
    Konzepts, sondern ein späteres, optionales Feature.
 9. **Amtliche Warnungen** in SMS/Kurzzusammenfassung bleiben ausgelagert → #1318.
 
-**Umsetzungsstand (Stand 2026-07-19):** **Scheibe A umgesetzt** (im Code, Staging-/Deploy-pending) —
+**Umsetzungsstand (Stand 2026-07-23):** **Scheibe A umgesetzt** (im Code, Staging-/Deploy-pending) —
 die Wert-Token **R/PR/W/G/TH:** aller vier Kurzformen kommen jetzt aus dem festen Tagesfenster
-04:00–19:00 (geteiltes Modul `src/output/renderers/day_window.py`); dadurch löst sich #1317. Noch
-offen: **N/D-Temperatur** (Scheibe D) und **Einstellbarkeit** des Fensters (Scheibe B/C) laufen
-weiterhin über die Wanderzeit bzw. die feste Konstante. Damit ist Abschnitt 2 („nur Wanderzeit") für
-die Wert-Token überholt, für Temperatur noch gültig.
+04:00–19:00 (geteiltes Modul `src/output/renderers/day_window.py`); dadurch löst sich #1317.
+**Scheibe D umgesetzt** (adversary-VERIFIED, 2026-07-23, Spec:
+`docs/specs/modules/night_temp_evening_only.md`) — `N` erscheint jetzt nur noch im Abendbriefing und
+stammt aus `night_weather` (Ankunft→06:00 am Ziel) statt aus dem Tagessegment-Minimum, konsistent mit
+der großen E-Mail-Tabelle „🌙 Nacht am Ziel". Noch offen: **Einstellbarkeit** des Tagesfensters
+(Scheibe B/C) läuft weiterhin über die feste Konstante 04:00–19:00; `D` (Tag-Max) bleibt unverändert
+über die Wanderzeit-Segment-Aggregate.
 
 ## 6. Leitplanken für jede SMS-Änderung (nicht verletzen)
 

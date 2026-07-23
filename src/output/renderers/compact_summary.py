@@ -26,6 +26,7 @@ from app.models import (
 from services.weather_metrics import aggregate_stage
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, build_day_window_points,
+    night_temp_min_c,
 )
 
 
@@ -52,6 +53,7 @@ class CompactSummaryFormatter:
         has_gap: bool = False,
         day_window_start_hour: int = DAY_WINDOW_START_HOUR,
         day_window_end_hour: int = DAY_WINDOW_END_HOUR,
+        report_type: str = "evening",
     ) -> str:
         """Wrapper ``context="route"`` (Trip/Etappe) um den geteilten Kern.
 
@@ -70,8 +72,14 @@ class CompactSummaryFormatter:
         ohne ``night_weather`` sollen keine Luecke unterstellt bekommen).
         Default False = keine Luecke; nur der Trip-Kontext
         (``format_email``) berechnet und uebergibt sie echt.
+
+        ``report_type`` (Issue #1319 Scheibe D, DEC-1): 'morning' zeigt nur
+        ``t_max``, 'evening' zeigt die echte Nacht-Tiefsttemperatur am
+        Schlafplatz aus ``night_temp_min_c()`` statt ``summary.temp_min_c``
+        (fail-soft auf Letzteres, wenn ``night_weather`` fehlt/leer).
         """
         effective_tz = tz or ZoneInfo("UTC")
+        night_min_c = night_temp_min_c(night_weather, segments, effective_tz)
         return self.format_weather_summary(
             self._aggregate(segments),
             self._collect_hourly_data(
@@ -82,6 +90,8 @@ class CompactSummaryFormatter:
             dc,
             tz,
             has_gap=has_gap,
+            report_type=report_type,
+            night_min_c=night_min_c,
         )
 
     def format_weather_summary(
@@ -92,6 +102,8 @@ class CompactSummaryFormatter:
         dc: UnifiedWeatherDisplayConfig,
         tz: Optional[ZoneInfo] = None,
         has_gap: bool = False,
+        report_type: str = "evening",
+        night_min_c: Optional[float] = None,
     ) -> str:
         """Kontextneutraler Kern (Issue #1278): ``(summary, hourly, titel, dc,
         tz) -> Fliesstext``.
@@ -106,6 +118,13 @@ class CompactSummaryFormatter:
         unbeobachtetes Zielfenster -- die Entwarnung "trocken" wird durch
         einen Unsicherheitsmarker ersetzt, ein tatsaechlich gefundener
         Regenwert bleibt unveraendert (#1328-Invariante).
+
+        ``report_type``/``night_min_c`` (Issue #1319 Scheibe D): 'morning'
+        zeigt nur ``t_max``, 'evening' zeigt ``night_min_c`` statt
+        ``summary.temp_min_c`` (fail-soft, wenn ``None``). Default
+        ``report_type="evening"``/``night_min_c=None`` reproduziert das
+        Bestandsverhalten (Bereich aus ``summary``) fuer Aufrufer ohne
+        Report-Typ-Konzept (Orts-Vergleich, ``format_location_summary``).
         """
         self._tz = tz or ZoneInfo("UTC")
         self._has_gap = has_gap
@@ -115,7 +134,10 @@ class CompactSummaryFormatter:
         parts: list[str] = []
 
         if "temperature" in enabled:
-            t = self._format_temperature(summary, enabled["temperature"].use_friendly_format)
+            t = self._format_temperature(
+                summary, enabled["temperature"].use_friendly_format,
+                report_type=report_type, night_min_c=night_min_c,
+            )
             if t:
                 parts.append(t)
 
@@ -194,11 +216,21 @@ class CompactSummaryFormatter:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _format_temperature(summary: Optional[SegmentWeatherSummary], friendly: bool) -> Optional[str]:
+    def _format_temperature(
+        summary: Optional[SegmentWeatherSummary],
+        friendly: bool,
+        *,
+        report_type: str = "evening",
+        night_min_c: Optional[float] = None,
+    ) -> Optional[str]:
         if summary is None:
             return None
-        t_min = summary.temp_min_c
         t_max = summary.temp_max_c
+        # Issue #1319 Scheibe D (DEC-1/DEC-2): morgens nur das Tagesmaximum,
+        # kein Bereich/Min-Wert.
+        if report_type == "morning":
+            return f"{int(round(t_max))}°C" if t_max is not None else None
+        t_min = night_min_c if night_min_c is not None else summary.temp_min_c
         if t_min is None and t_max is None:
             return None
         if t_min is not None and t_max is not None:

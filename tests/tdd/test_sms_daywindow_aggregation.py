@@ -764,7 +764,7 @@ class TestAC4TargetWindowGapShowsUnknownInSms:
         )
         sms = report.sms_text
 
-        assert "E7: N10 D20 R? PR? W? G? TH:? TH+:-" in sms, (
+        assert "E7: D20 R? PR? W? G? TH:? TH+:-" in sms, (
             f"Erwartet, dass die Ziel-Datenluecke (Ankunft 12:00, "
             f"night_weather=None, Fenster 12-19 unbeobachtet) alle fuenf "
             f"Fenster-Symbole R/PR/W/G/TH: von `-` auf `?` umstellt -- "
@@ -877,7 +877,7 @@ class TestAC5FoundValueStaysVisibleDespiteGap:
         )
         sms = report.sms_text
 
-        assert "E7: N10 D20 R0.5@10 PR? W? G? TH:? TH+:-" in sms, (
+        assert "E7: D20 R0.5@10 PR? W? G? TH:? TH+:-" in sms, (
             f"Erwartet: gefundener Regen (10:00, vor Ankunft) bleibt "
             f"sichtbar (`R0.5@10`), waehrend PR/W/G/TH: ohne Fund im "
             f"unbeobachteten Zielfenster auf `?` wechseln.\nSMS: {sms}"
@@ -950,7 +950,7 @@ class TestAC6ArrivalAfter19NoOverFlagging:
             f"Tagesfenster-Ende 19:00, es sind keine Nach-Ankunft-Stunden "
             f"im Fenster erwartet (Ueber-Flagging-Schutz).\nSMS: {sms}"
         )
-        assert "E7: N10 D20 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
+        assert "E7: D20 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
 
     def test_no_channel_shows_unknown_marker_when_arrival_after_window_end(self):
         segments = [_segment(day=20, start_h=15, end_h=20)]  # Ankunft 20:00
@@ -978,7 +978,7 @@ class TestAC7CompleteDataNoNewUnknown:
             f"Kein `?` erwartet -- night_weather ist vollstaendig vorhanden "
             f"(nur ereignislos), keine Datenluecke.\nSMS: {sms}"
         )
-        assert "E7: N10 D20 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
+        assert "E7: D20 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
 
     def test_no_channel_shows_unknown_marker_with_complete_night_weather(self):
         segments = [_segment(day=20)]

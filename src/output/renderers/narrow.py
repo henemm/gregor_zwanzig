@@ -27,7 +27,9 @@ from utils.timezone import local_fmt
 
 from output.renderers.alert.render import _esc
 from output.renderers.channel_layout import render_for_channel
-from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
+from output.renderers.day_window import (
+    DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, night_temp_min_c,
+)
 from output.renderers.email.helpers import fmt_val, format_trend_tokens
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable,
@@ -249,12 +251,18 @@ def _tg_day_footer(
     return " · ".join(parts)
 
 
-def _tg_vortag_line(day_comparison: Optional["DayComparison"]) -> Optional[str]:
+def _tg_vortag_line(
+    day_comparison: Optional["DayComparison"], report_type: str = "evening",
+) -> Optional[str]:
     """F6 (#752): Kompakte Vortag-Zeile für Telegram.
 
     Sammelt alle abweichenden Metrik-Deltas über alle Segmente, sortiert
     absteigend nach |delta| und nimmt die Top-3. Gibt None zurück wenn keine
     abweichenden Metriken vorliegen (oder day_comparison None/leer).
+
+    ``report_type`` (Issue #1319 Scheibe D): morgens entfaellt der
+    "Temp min"-Delta aus der Kandidatenliste (DEC-2 -- N ist morgens gar
+    nicht sichtbar, ein Delta darauf wuerde verwirren, Epic-Punkt 6).
     """
     from services.day_comparison import ComparisonDirection
 
@@ -277,6 +285,8 @@ def _tg_vortag_line(day_comparison: Optional["DayComparison"]) -> Optional[str]:
         ("temp_min", "Temp min", "°C"),
         ("thunder", "Gewitter", ""),
     ]
+    if report_type == "morning":
+        _LABELS = [entry for entry in _LABELS if entry[0] != "temp_min"]
 
     collected: list[tuple[float, str, str, float]] = []  # (|delta|, label, unit, delta)
     for entry in day_comparison.entries:
@@ -355,7 +365,10 @@ def _official_alert_bubble(
     ))
 
 
-def _overview_line(metric_id: str, seg_tables: list[list[dict]], fkeys: set[str]) -> str:
+def _overview_line(
+    metric_id: str, seg_tables: list[list[dict]], fkeys: set[str],
+    *, report_type: str = "evening", night_min_c: Optional[float] = None,
+) -> str:
     """Eine Kurzübersicht-Zeile ``{Kürzel} {Min}-{Max}@{Peak-Stunde}`` (oder
     Einzelwert/kategorisch).
 
@@ -370,6 +383,12 @@ def _overview_line(metric_id: str, seg_tables: list[list[dict]], fkeys: set[str]
     Adversary-Finding F001: sonst widerspricht sich diese Zeile mit der
     Fusszeile derselben Bubble). Andere nicht-numerische Metriken zeigen
     weiterhin den zuletzt beobachteten Wert ohne Uhrzeit.
+
+    ``report_type``/``night_min_c`` (Issue #1319 Scheibe D, nur
+    ``metric_id == "temperature"``): morgens nur der Max-Wert (kein
+    Min-Max-Bereich, DEC-2); abends ``night_min_c`` (echte
+    Nacht-Tiefsttemperatur am Ziel) statt des Tagessegment-Minimums aus
+    ``seg_tables`` -- fail-soft auf Letzteres, wenn ``night_min_c`` fehlt.
     """
     label = _compact_label(metric_id)
     key = _col_key(metric_id)
@@ -386,6 +405,11 @@ def _overview_line(metric_id: str, seg_tables: list[list[dict]], fkeys: set[str]
         hi_row = hits[nums.index(max(nums))]
         lo = _cell(metric_id, lo_row, fkeys)
         hi = _cell(metric_id, hi_row, fkeys)
+        if metric_id == "temperature":
+            if report_type == "morning":
+                return f"{label} {hi}"
+            if night_min_c is not None:
+                lo = f"{night_min_c:.1f}"
         if lo == hi:
             value = lo
         else:
@@ -465,6 +489,10 @@ def render_telegram_bubbles(
     fkeys = friendly_keys if friendly_keys is not None else set()
     layout = render_for_channel("telegram", dc, report_type)
     bubbles: list[TelegramBubble] = []
+    # Issue #1319 Scheibe D: EINE Berechnung, an die Kurzuebersicht-
+    # Temperatur-Zeile durchgereicht (fail-soft None bei fehlendem
+    # night_weather/leerem Nachtfenster).
+    _night_min_c = night_temp_min_c(night_weather, segments, tz)
 
     # 1. Kopf-Bubble.
     head_lines: list[str] = []
@@ -498,7 +526,9 @@ def render_telegram_bubbles(
     # vorhanden, unabhaengig von telegram_kurzform (AC-10).
     overview_lines: list[str] = ["Kurzübersicht"]
     for mid in dc.get_enabled_metric_ids():
-        overview_lines.extend(_wrap(_esc(_overview_line(mid, seg_tables, fkeys)), _TG_PROSE_WIDTH))
+        overview_lines.extend(_wrap(_esc(_overview_line(
+            mid, seg_tables, fkeys, report_type=report_type, night_min_c=_night_min_c,
+        )), _TG_PROSE_WIDTH))
     # Issue #1331/#1334 F008: has_gap kommt als expliziter Parameter vom
     # echten Versandpfad (notification_service.compute_has_gap() aus
     # day_window.build_day_window_points(), einziger Berechnungspunkt) —
@@ -513,7 +543,7 @@ def render_telegram_bubbles(
     if footer:
         overview_lines.append("")
         overview_lines.extend(_wrap(_esc(footer), _TG_PROSE_WIDTH))
-    vortag_line = _tg_vortag_line(day_comparison)
+    vortag_line = _tg_vortag_line(day_comparison, report_type)
     if vortag_line:
         overview_lines.append("")
         overview_lines.extend(_wrap(_esc(vortag_line), _TG_PROSE_WIDTH))

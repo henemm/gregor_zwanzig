@@ -29,6 +29,7 @@ from output.metric_format import thunder_label_value
 from output.renderers.alert.official_alerts import official_alerts_to_sms_entries
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, build_day_window_points,
+    night_temp_min_c,
 )
 from output.renderers.sms import render_sms
 from output.tokens.builder import build_token_line
@@ -99,6 +100,7 @@ def _segments_to_normalized_forecast(
     has_gap: bool = False,
     day_window_start_hour: int = DAY_WINDOW_START_HOUR,
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,
+    report_type: str = "evening",
 ) -> NormalizedForecast:
     """Aggregate trip segments into a single-day NormalizedForecast.
 
@@ -131,6 +133,13 @@ def _segments_to_normalized_forecast(
                  if s.aggregated.temp_max_c is not None]
     day_min = min(temps_min) if temps_min else None
     day_max = max(temps_max) if temps_max else None
+    # Issue #1319 Scheibe D (DEC-1): abends echte Nacht-Tiefsttemperatur am
+    # Schlafplatz statt Tagessegment-Minimum -- fail-soft auf day_min, wenn
+    # night_weather fehlt oder das Nachtfenster keine Punkte liefert (AC-6).
+    if report_type == "evening":
+        night_min = night_temp_min_c(night_weather, segments, tz)
+        if night_min is not None:
+            day_min = night_min
 
     rain_samples: list[HourlyValue] = []
     wind_samples: list[HourlyValue] = []
@@ -287,6 +296,7 @@ class SMSTripFormatter:
             segments, tz=tz, night_weather=night_weather, has_gap=has_gap,
             day_window_start_hour=day_window_start_hour,
             day_window_end_hour=day_window_end_hour,
+            report_type=report_type,
         )
 
         # Bug #874: TH+: immer als days[1] einbauen — TH+:- wenn kein Gewitter (Spec-Pflicht).

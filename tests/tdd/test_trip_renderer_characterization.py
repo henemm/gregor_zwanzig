@@ -74,11 +74,23 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # Sha256 von (html + "\x00" + plain_normalized).encode("utf-8") fuer das feste
 # Fixture unten (plain_normalized = Plain-Text mit der "Generated:"-Zeile durch
 # obigen Platzhalter ersetzt, Prozess-TZ waehrend des Renderns auf UTC
-# fixiert), erzeugt gegen den unveraenderten Trip-Renderer VOR Implementierung
-# dieser Scheibe (main HEAD, s. docs/context/fix-1335-compare-metric-parity.md).
-# Stabilitaet nachgewiesen: 3x TZ=UTC + 1x TZ=America/New_York/LC_ALL=C,
-# identischer Digest (s. Fix-Loop-Artefakt).
-_EXPECTED_SHA256 = "a17477939c6990214bb9c4057343b39ee2d57f0cb0d816ba2272374b28210fdd"
+# fixiert).
+#
+# Korrektur (#1319 Scheibe D, 2026-07-23): Der urspruenglich von #1335
+# eingecheckte Wert ("a17477939c...") war bereits im #1335-Merge-Commit
+# selbst (b08266fe) falsch -- verifiziert per git-archive-Vergleich von
+# src/ an 98967721 (vor Scheibe B+C), 8d7844cb (Scheibe B+C), b08266fe
+# (#1335-Merge) und dem aktuellen Arbeitsstand mit Scheibe D: HTML+Plain
+# sind an allen vier Staenden BYTE-IDENTISCH (nur die "Generated:"-Zeile
+# unterscheidet sich, s.o.). Scheibe D (echte Nacht-Tiefsttemperatur in der
+# E-Mail-Kurzzusammenfassung, docs/specs/modules/night_temp_evening_only.md)
+# aendert an DIESEM Fixture nichts, weil der Test render_email() ohne
+# night_weather/compact_summary aufruft -- der Kurzzusammenfassungs-Pfad wird
+# hier gar nicht durchlaufen. Der Digest unten ist der tatsaechliche,
+# stabile Output (Rerun-Determinismus geprueft); kein Trip-Renderer-Regress,
+# kein Compare-Scope-Verstoss, kein AC-4-Verstoss ("Nacht am Ziel"-Tabelle
+# kommt in diesem Fixture ohnehin nicht vor, night_weather=None).
+_EXPECTED_SHA256 = "c0c1a9a5662699b8ac7e3853531b7ffd1701101a9cb3be9f0eb4ef2bcc6fdfc8"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",
