@@ -28,6 +28,10 @@ from utils.timezone import local_fmt
 from output.renderers.alert.render import _esc
 from output.renderers.channel_layout import render_for_channel
 from output.renderers.email.helpers import fmt_val, format_trend_tokens
+from output.renderers.email.unavailable_hint import (
+    any_official_alerts_unavailable,
+    render_official_alerts_unavailable_plain,
+)
 from services.trip_command_processor import ACTIONS_BUBBLE_BUTTONS
 
 # Großzügige Wrap-Breite für Telegram-Prosa-Zeilen (Kopf-/Kurzuebersicht-
@@ -468,6 +472,13 @@ def render_telegram_bubbles(
     if stability_result is not None:
         head_lines.extend(_wrap(_esc(f"WL: {stability_result.label}"), _TG_PROSE_WIDTH))
     bubbles.append(TelegramBubble(text="\n".join(head_lines)))
+
+    # 1a. Amtliche Warnungen nicht abrufbar (#1349 Scheibe 2) — geteilter
+    # Baustein, direkt nach dem Kopf, weil sicherheitsrelevant.
+    if any_official_alerts_unavailable(segments):
+        bubbles.append(TelegramBubble(
+            text=_esc(render_official_alerts_unavailable_plain(ascii_safe=False))
+        ))
 
     # 1b. Amtliche Warnungen (#1318 AC-8) — direkt nach dem Kopf, weil
     # sicherheitsrelevant. Ohne Warnung >= MIN_SMS_LEVEL entfaellt sie ganz.
