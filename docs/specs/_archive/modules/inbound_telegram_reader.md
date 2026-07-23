@@ -2,8 +2,8 @@
 entity_id: inbound_telegram_reader
 type: module
 created: 2026-06-03
-updated: 2026-06-07
-status: deprecated
+updated: 2026-07-23
+status: superseded
 version: "1.0"
 tags: [telegram, inbound, bot, polling, channel, f7, issue-570]
 github_issue: 570
@@ -12,6 +12,8 @@ deprecated_by: telegram_webhook_inbound
 ---
 
 # Inbound Telegram Reader (DEPRECATED)
+
+> **HISTORISCH / ABGELÖST (2026-07-23).** Diese Modul-Spec beschreibt einen nicht mehr gültigen Stand — die zugrundeliegende Architektur (NiceGUI-UI unter `src/web/`, Python-APScheduler, Signal-Kanal bzw. Compare-Subscriptions) wurde ersetzt (SvelteKit-Frontend, Go-Scheduler `internal/scheduler/`, briefings/trips). Die genannten Quelldateien existieren nicht mehr. **Aktueller Stand:** der Code + `docs/reference/api_contract.md`. Aufbewahrt zur Nachvollziehbarkeit.
 
 > **⚠️ DEPRECATED:** Diese Spec beschreibt die Polling-basierte Implementierung (Issue #570).
 > Seit **Issue #637** (2026-06-07) erfolgt der Telegram-Inbound via **Webhook** (push-basiert, kein Polling).

@@ -21,13 +21,13 @@ phase: phase5_tdd_red
 Test-Manifest für den Inbound Telegram Reader (Issue #570).
 Mappt pytest-Funktionsnamen auf die Acceptance Criteria der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/inbound_telegram_reader.md`.
+Parent-Spec: `docs/specs/_archive/modules/inbound_telegram_reader.md`.
 
 ## Source
 
 - **Files:**
   - `tests/tdd/test_inbound_telegram_reader.py` (NEU)
-- **Spec:** `docs/specs/modules/inbound_telegram_reader.md` v1.0
+- **Spec:** `docs/specs/_archive/modules/inbound_telegram_reader.md` v1.0
 
 ## Test Inventory
 

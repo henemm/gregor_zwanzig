@@ -2,8 +2,8 @@
 entity_id: gpx_import_in_trip_dialog
 type: feature
 created: 2026-02-12
-updated: 2026-02-12
-status: draft
+updated: 2026-07-23
+status: superseded
 version: "2.0"
 tags: [ui, gpx, trips, upload, nicegui]
 related_specs:
@@ -12,6 +12,8 @@ related_specs:
 ---
 
 # GPX Import in Trip-Dialogen
+
+> **HISTORISCH / ABGELÖST (2026-07-23).** Diese Modul-Spec beschreibt einen nicht mehr gültigen Stand — die zugrundeliegende Architektur (NiceGUI-UI unter `src/web/`, Python-APScheduler, Signal-Kanal bzw. Compare-Subscriptions) wurde ersetzt (SvelteKit-Frontend, Go-Scheduler `internal/scheduler/`, briefings/trips). Die genannten Quelldateien existieren nicht mehr. **Aktueller Stand:** der Code + `docs/reference/api_contract.md`. Aufbewahrt zur Nachvollziehbarkeit.
 
 ## Approval
 

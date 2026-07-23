@@ -2,13 +2,15 @@
 entity_id: report_config
 type: module
 created: 2026-02-10
-updated: 2026-02-13
-status: draft
+updated: 2026-07-23
+status: superseded
 version: "1.1"
 tags: [webui, config, report, nicegui, safari, story3]
 ---
 
 # Report Config UI
+
+> **HISTORISCH / ABGELÖST (2026-07-23).** Diese Modul-Spec beschreibt einen nicht mehr gültigen Stand — die zugrundeliegende Architektur (NiceGUI-UI unter `src/web/`, Python-APScheduler, Signal-Kanal bzw. Compare-Subscriptions) wurde ersetzt (SvelteKit-Frontend, Go-Scheduler `internal/scheduler/`, briefings/trips). Die genannten Quelldateien existieren nicht mehr. **Aktueller Stand:** der Code + `docs/reference/api_contract.md`. Aufbewahrt zur Nachvollziehbarkeit.
 
 ## Approval
 
@@ -149,7 +151,7 @@ IMPORTANT: Safari Compatibility
 - Pattern: make_<action>_handler() returns do_<action>()
 - See: docs/reference/nicegui_best_practices.md
 
-SPEC: docs/specs/modules/report_config.md v1.0
+SPEC: docs/specs/_archive/modules/report_config.md v1.0
 """
 
 def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:

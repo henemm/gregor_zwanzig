@@ -2,13 +2,15 @@
 entity_id: generic_locations_ui
 type: module
 created: 2026-04-04
-updated: 2026-04-04
-status: draft
+updated: 2026-07-23
+status: superseded
 version: "1.0"
 tags: [locations, ui, weather-config, safari, nicegui]
 ---
 
 # Generic Locations UI (F11b)
+
+> **HISTORISCH / ABGELÖST (2026-07-23).** Diese Modul-Spec beschreibt einen nicht mehr gültigen Stand — die zugrundeliegende Architektur (NiceGUI-UI unter `src/web/`, Python-APScheduler, Signal-Kanal bzw. Compare-Subscriptions) wurde ersetzt (SvelteKit-Frontend, Go-Scheduler `internal/scheduler/`, briefings/trips). Die genannten Quelldateien existieren nicht mehr. **Aktueller Stand:** der Code + `docs/reference/api_contract.md`. Aufbewahrt zur Nachvollziehbarkeit.
 
 ## Approval
 

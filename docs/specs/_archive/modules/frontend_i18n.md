@@ -2,13 +2,15 @@
 entity_id: frontend_i18n
 type: refactor
 created: 2026-01-01
-updated: 2026-01-01
-status: draft
+updated: 2026-07-23
+status: superseded
 version: "1.0"
 tags: [i18n, frontend, ui, english]
 ---
 
 # Frontend i18n: German to English
+
+> **HISTORISCH / ABGELÖST (2026-07-23).** Diese Modul-Spec beschreibt einen nicht mehr gültigen Stand — die zugrundeliegende Architektur (NiceGUI-UI unter `src/web/`, Python-APScheduler, Signal-Kanal bzw. Compare-Subscriptions) wurde ersetzt (SvelteKit-Frontend, Go-Scheduler `internal/scheduler/`, briefings/trips). Die genannten Quelldateien existieren nicht mehr. **Aktueller Stand:** der Code + `docs/reference/api_contract.md`. Aufbewahrt zur Nachvollziehbarkeit.
 
 ## Approval
 

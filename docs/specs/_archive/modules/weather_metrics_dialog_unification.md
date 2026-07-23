@@ -2,13 +2,15 @@
 entity_id: weather_metrics_dialog_unification
 type: module
 created: 2026-04-25
-updated: 2026-04-25
-status: approved
+updated: 2026-07-23
+status: superseded
 version: "1.1"
 tags: [ui, weather-config, refactor, locations, subscriptions, trip, cleanup, bugfix]
 ---
 
 # Weather Metrics Dialog Unification (Bug #89)
+
+> **HISTORISCH / ABGELÖST (2026-07-23).** Diese Modul-Spec beschreibt einen nicht mehr gültigen Stand — die zugrundeliegende Architektur (NiceGUI-UI unter `src/web/`, Python-APScheduler, Signal-Kanal bzw. Compare-Subscriptions) wurde ersetzt (SvelteKit-Frontend, Go-Scheduler `internal/scheduler/`, briefings/trips). Die genannten Quelldateien existieren nicht mehr. **Aktueller Stand:** der Code + `docs/reference/api_contract.md`. Aufbewahrt zur Nachvollziehbarkeit.
 
 ## Approval
 

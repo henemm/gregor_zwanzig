@@ -2,13 +2,15 @@
 entity_id: etappen_config
 type: feature
 created: 2026-02-11
-status: draft
+status: superseded
 version: "1.0"
 workflow: gpx-etappen-config
 tags: [webui, gpx, story-1, config]
 ---
 
 # Etappen-Config WebUI (Feature 1.6)
+
+> **HISTORISCH / ABGELÖST (2026-07-23).** Diese Modul-Spec beschreibt einen nicht mehr gültigen Stand — die zugrundeliegende Architektur (NiceGUI-UI unter `src/web/`, Python-APScheduler, Signal-Kanal bzw. Compare-Subscriptions) wurde ersetzt (SvelteKit-Frontend, Go-Scheduler `internal/scheduler/`, briefings/trips). Die genannten Quelldateien existieren nicht mehr. **Aktueller Stand:** der Code + `docs/reference/api_contract.md`. Aufbewahrt zur Nachvollziehbarkeit.
 
 ## Approval
 

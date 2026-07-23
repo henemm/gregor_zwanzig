@@ -2,13 +2,15 @@
 entity_id: scheduler
 type: module
 created: 2025-12-30
-updated: 2026-01-01
-status: draft
+updated: 2026-07-23
+status: superseded
 version: "1.1"
 tags: [scheduler, email, background, apscheduler, bugfix]
 ---
 
 # Scheduler Module
+
+> **HISTORISCH / ABGELÖST (2026-07-23).** Diese Modul-Spec beschreibt einen nicht mehr gültigen Stand — die zugrundeliegende Architektur (NiceGUI-UI unter `src/web/`, Python-APScheduler, Signal-Kanal bzw. Compare-Subscriptions) wurde ersetzt (SvelteKit-Frontend, Go-Scheduler `internal/scheduler/`, briefings/trips). Die genannten Quelldateien existieren nicht mehr. **Aktueller Stand:** der Code + `docs/reference/api_contract.md`. Aufbewahrt zur Nachvollziehbarkeit.
 
 ## Approval
 
