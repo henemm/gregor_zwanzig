@@ -421,6 +421,28 @@ export function toCompareProfile(profile: ActivityProfile): string {
 	}
 }
 
+// Issue #1350 Teil 2: Katalog-Eintrag von GET /api/compare/metrics (Teil 1,
+// a824a6cc) — Quelle der Compare-Metrik-Auswahlliste. `unit`..`ordinalLabels`
+// werden in Teil 2 nicht konsumiert, aber mitgefuehrt (Teil 3: Schwellen/
+// Winner-Box-Migration).
+export interface CompareMetricCatalogEntry {
+	key: string;
+	label: string;
+	unit?: string;
+	decimals?: number;
+	higherIsBetter?: boolean;
+	kind?: string;
+	rangeMin?: number;
+	rangeMax?: number;
+	step?: number;
+	ordinalLabels?: string[];
+	enumValues?: string[];
+}
+
+export interface CompareMetricCatalogResponse {
+	metrics: CompareMetricCatalogEntry[];
+}
+
 export interface ForecastMeta {
 	provider: string;
 	model: string;

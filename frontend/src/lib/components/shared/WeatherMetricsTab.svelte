@@ -53,7 +53,11 @@
 	// (Vorbild AlarmeTab.svelte) — context-Dispatch + Vergleich-Grundauswahl.
 	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import { weatherMetricsTabSections, type WeatherMetricsContext } from './weather-metrics-tab/weatherMetricsTabSections.ts';
-	import { COMPARE_METRIC_DEFS } from './corridor-editor/corridorEditorState.ts';
+	// Issue #1350 Teil 2: Vergleich-Auswahlliste kommt jetzt aus GET
+	// /api/compare/metrics statt aus COMPARE_METRIC_DEFS (bleibt fuer
+	// Schwellen-Slider/Winner-Box/Save-Default-Fallback unveraendert, Teil 3).
+	import { toCompareSelectionEntries, type CompareSelectionEntry } from './weather-metrics-tab/compareMetricSelection.ts';
+	import type { CompareMetricCatalogResponse } from '$lib/types';
 
 	interface Template {
 		id: string;
@@ -120,6 +124,13 @@
 	// (Speicherfehler) — sonst wuerde ein Ladefehler durch einen spaeteren
 	// Speicherstatus ueberschrieben werden bzw. umgekehrt.
 	let loadError: string | null = $state(null);
+	// Issue #1350 Teil 2: eigenstaendiger Ladezustand fuer die Vergleich-
+	// Auswahlliste (GET /api/compare/metrics) — bewusst getrennt vom Route-
+	// Zustand (catalog/catalogLoaded/loadError) oben, damit der Route-Fetch
+	// unangetastet bleibt (Spec compare_metric_selection_source.md § 2).
+	let compareCatalog: CompareSelectionEntry[] = $state([]);
+	let compareCatalogLoaded = $state(false);
+	let compareCatalogError: string | null = $state(null);
 	// Issue #1234 (2c, Fix-Loop 1 / F001): Absichts-Merker — AUSSCHLIESSLICH aus
 	// echten DOM-Ereignissen gesetzt (Interaktions-Handler oder Capture-Phase-
 	// Listener auf der Report-Config-Karte), niemals in einem $effect.
@@ -338,10 +349,38 @@
 		}
 	}
 
+	// Issue #1350 Teil 2: laedt die Compare-Metrik-Auswahlliste aus dem SSoT-
+	// Endpoint. Reines Lesen — kein scheduleAutoSave()/PUT (AC-5).
+	async function loadCompareMetricCatalog() {
+		compareCatalogError = null;
+		try {
+			const res = await api.get<CompareMetricCatalogResponse>('/api/compare/metrics');
+			compareCatalog = toCompareSelectionEntries(res);
+			compareCatalogLoaded = true;
+		} catch (e: unknown) {
+			compareCatalogError = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';
+		}
+	}
+
 	$effect(() => {
 		// Issue #1311: der Vergleich-Zweig braucht keinen Trip-Katalog-Fetch —
 		// die Grundauswahl im vergleich-Kontext arbeitet auf COMPARE_METRIC_DEFS.
 		if (context === 'route' && Object.keys(catalog).length === 0) load();
+	});
+
+	$effect(() => {
+		// Issue #1350 Teil 2: analog dem Route-Guard oben, aber fuer den
+		// Vergleich-Zweig — greift auch im createMode (/compare/new), da beide
+		// dieselbe Komponenten-Instanz teilen.
+		// F001-Fix: compareCatalogError bewusst NICHT im Guard lesen (wie beim
+		// Route-Guard oben, der loadError ebenfalls nicht trackt). Wuerde der
+		// Effect compareCatalogError tracken, setzt loadCompareMetricCatalog()
+		// es als Erstes auf null zurueck — das aendert eine getrackte Dependency
+		// und der Effect feuert einen zweiten, konkurrierenden Fetch (Doppel-
+		// Fetch bei "Wiederholen" bzw. Auto-Retry-Loop bei jedem Fehlschlag).
+		if (context === 'vergleich' && !compareCatalogLoaded) {
+			loadCompareMetricCatalog();
+		}
 	});
 
 	$effect(() => {
@@ -706,22 +745,38 @@
 	     einzig erreichbare Inhalt-Heimat fuer official_alerts_enabled bei
 	     bestehenden Vergleichen, s. weatherMetricsTabSections.ts. -->
 	<div data-testid="weather-metrics-tab-vergleich" class="metrics-tab metrics-tab-vergleich">
-		<Card padding={18}>
-			<Eyebrow style="margin-bottom:4px">Wetter-Metriken</Eyebrow>
-			<p class="option-hint">Nur angewählte Metriken erscheinen in der Vergleichs-Mail.</p>
-			<div class="vergleich-metric-list" data-testid="weather-metrics-vergleich-list">
-				{#each COMPARE_METRIC_DEFS as def (def.metric)}
-					<label class="vergleich-metric-row" data-testid="weather-metrics-vergleich-row-{def.metric}">
-						<input
-							type="checkbox"
-							checked={wiz?.activeMetricKeys.includes(def.metric) ?? false}
-							onchange={() => toggleCompareMetric(def.metric)}
-						/>
-						<span>{def.label}</span>
-					</label>
-				{/each}
+		{#if compareCatalogError}
+			<!-- Issue #1350 Teil 2 (AC-4): sichtbarer Fehlerpfad, kein stiller leerer
+			     Editor — der Endpoint ist die einzige Quelle, ohne ihn kein Zugriff. -->
+			<div class="metrics-tab load-error-shell" data-testid="weather-metrics-vergleich-load-error">
+				<p class="load-error-msg">{compareCatalogError}</p>
+				<Btn variant="primary" size="sm" data-testid="weather-metrics-vergleich-load-retry" onclick={loadCompareMetricCatalog}>Wiederholen</Btn>
 			</div>
-		</Card>
+		{:else if !compareCatalogLoaded}
+			<div class="metrics-tab loading-shell" aria-busy="true" data-testid="weather-metrics-vergleich-loading">
+				<p class="loading-msg">Lade Metriken…</p>
+			</div>
+		{:else}
+			<Card padding={18}>
+				<Eyebrow style="margin-bottom:4px">Wetter-Metriken</Eyebrow>
+				<p class="option-hint">Nur angewählte Metriken erscheinen in der Vergleichs-Mail.</p>
+				<div class="vergleich-metric-list" data-testid="weather-metrics-vergleich-list">
+					{#each compareCatalog as entry (entry.metric)}
+						<label class="vergleich-metric-row" data-testid="weather-metrics-vergleich-row-{entry.metric}">
+							<input
+								type="checkbox"
+								checked={wiz?.activeMetricKeys.includes(entry.metric) ?? false}
+								onchange={() => toggleCompareMetric(entry.metric)}
+							/>
+							<span>{entry.label}</span>
+						</label>
+					{/each}
+				</div>
+			</Card>
+		{/if}
+		<!-- Issue #1350 Teil 2: Amtliche-Warnungen-Toggle haengt nicht am
+		     Metrik-Katalog-Fetch (Known Limitations: "nur die Auswahl-UI ist
+		     betroffen") — bleibt unabhaengig vom Lade-/Fehlerzustand sichtbar. -->
 		{#if sections.includes('official_alerts')}
 			{@render officialAlertsToggle(wiz?.officialAlertsEnabled ?? true, onToggleVergleichOfficialAlerts)}
 		{/if}
