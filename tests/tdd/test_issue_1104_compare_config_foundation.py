@@ -46,8 +46,9 @@ class TestResolveEnabledMetrics:
         from output.renderers.compare_metric_ids import resolve_enabled_metrics
 
         result = resolve_enabled_metrics(["wind_max_kmh", "cloud_avg_pct"])
-        assert result == {"wind_max", "cloud_avg"}, (
-            f"Erwartet {{'wind_max', 'cloud_avg'}}, erhalten {result!r}"
+        # Issue #1335 Scheibe 1: reihenfolge-erhaltende Liste statt Set.
+        assert result == ["wind_max", "cloud_avg"], (
+            f"Erwartet ['wind_max', 'cloud_avg'], erhalten {result!r}"
         )
 
     def test_empty_list_returns_none(self):
@@ -220,9 +221,10 @@ class TestIssue1104ActiveMetricsWiring:
         preset["_user_id"] = user_id
 
         _, enabled_metrics = _capture_render_call(preset, loc, tmp_path)
-        assert enabled_metrics == {"wind_max", "cloud_avg"}, (
+        # Issue #1335 Scheibe 1: reihenfolge-erhaltende Liste statt Set.
+        assert enabled_metrics == ["wind_max", "cloud_avg"], (
             f"RED: render_compare_email erhielt enabled_metrics={enabled_metrics!r}, "
-            "erwartet {'wind_max', 'cloud_avg'} -- der Versandpfad liest "
+            "erwartet ['wind_max', 'cloud_avg'] -- der Versandpfad liest "
             "display_config.active_metrics noch nicht und uebergibt "
             "enabled_metrics gar nicht."
         )

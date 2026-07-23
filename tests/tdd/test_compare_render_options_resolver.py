@@ -113,7 +113,8 @@ def test_deactivated_metric_missing_from_enabled_metrics():
     options = resolve_compare_render_options(preset)
     assert options.enabled_metrics is not None
     assert "wind_max" not in options.enabled_metrics
-    assert options.enabled_metrics == {"temp_max", "cloud_avg"}
+    # Issue #1335 Scheibe 1: reihenfolge-erhaltende Liste statt Set.
+    assert options.enabled_metrics == ["temp_max", "cloud_avg"]
 
 
 def test_no_active_metrics_means_no_filter():
@@ -142,7 +143,8 @@ def test_hourly_metrics_resolved_from_display_config():
         "display_config": {"hourly_metrics": ["wind_kmh"]},
     }
     options = resolve_compare_render_options(preset)
-    assert options.hourly_metrics == {"wind10m_kmh"}
+    # Issue #1335 Scheibe 1: reihenfolge-erhaltende Liste statt Set.
+    assert options.hourly_metrics == ["wind10m_kmh"]
 
 
 def test_no_hourly_metrics_means_no_filter():

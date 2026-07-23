@@ -38,6 +38,7 @@ from output.renderers.email.outlook import build_outlook_row, render_outlook_tab
 from output.renderers.email.profile_signature import profile_signature
 from services.corridor_match import corridor_inside
 from output.metric_format import severity_for, thunder_ordinal
+from utils.geo import degrees_to_compass
 from output.renderers.alert.official_alerts import (
     _LEVEL_WORDS, OfficialAlertNotice, official_alert_source_label,
     render_official_alerts_html, render_warn_block,
@@ -470,19 +471,28 @@ def _render_overview_row(
     return f'<tr style="border-bottom:1px solid #f0ece1;">{"".join(cells)}</tr>'
 
 
-def _visible_metrics(enabled_metrics: set | None) -> list[dict]:
+def _visible_metrics(enabled_metrics: list[str] | None) -> list[dict]:
     """Issue #1104: filtert die NUMERISCHEN Uebersichts-Zeilen auf
-    ``enabled_metrics`` (Set von Renderer-Metrik-IDs wie "wind_max"). Die
-    Warn-Zeile ("Amtliche Warnungen") ist immer sichtbar. ``None`` = kein
-    Filter (alle Zeilen, Rueckwaertskompatibilitaet)."""
+    ``enabled_metrics`` (Liste von Renderer-Metrik-IDs wie "wind_max"). Die
+    Warn-Zeile ("Amtliche Warnungen") ist immer sichtbar UND immer erste
+    Zeile (AC-7), unabhaengig von ihrer Position/Abwesenheit in
+    ``enabled_metrics``. ``None`` = kein Filter (alle Zeilen,
+    Rueckwaertskompatibilitaet).
+
+    Issue #1335 Scheibe 1 (AC-1): die uebrigen Zeilen folgen der Reihenfolge
+    von ``enabled_metrics`` statt der festen ``CV2_METRICS``-
+    Deklarationsreihenfolge."""
+    warn_row = [m for m in CV2_METRICS if m["key"] == "warn"]
     if enabled_metrics is None:
         return CV2_METRICS
-    return [m for m in CV2_METRICS if m["key"] == "warn" or m["key"] in enabled_metrics]
+    by_key = {m["key"]: m for m in CV2_METRICS}
+    ordered = [by_key[k] for k in enabled_metrics if k in by_key and k != "warn"]
+    return warn_row + ordered
 
 
 def _render_overview_table(
     locations: list[LocationResult],
-    enabled_metrics: set | None = None,
+    enabled_metrics: list[str] | None = None,
     corridors: list[Corridor] | None = None,
 ) -> str:
     header_cells = [
@@ -595,17 +605,38 @@ def _hour_td(
     )
 
 
-def _visible_hour_metrics(hourly_metrics: set | None) -> list[dict]:
-    """Issue #1106: filtert ``HOUR_METRICS`` auf ``hourly_metrics`` (Set von
+def _visible_hour_metrics(hourly_metrics: list[str] | None) -> list[dict]:
+    """Issue #1106: filtert ``HOUR_METRICS`` auf ``hourly_metrics`` (Liste von
     Renderer-Metrik-IDs wie "t2m_c"). ``None`` = kein Filter (alle 9 Spalten,
-    Default). Kanonische Reihenfolge (Reihenfolge von HOUR_METRICS) bleibt
-    unabhaengig von der Set-Konstruktions-Reihenfolge erhalten (AC-8)."""
+    Default).
+
+    Issue #1335 Scheibe 1 (AC-2): die sichtbaren Spalten folgen jetzt der
+    Reihenfolge von ``hourly_metrics`` statt der festen ``HOUR_METRICS``-
+    Deklarationsreihenfolge. "wind_direction_deg" ist bewusst KEIN
+    ``HOUR_METRICS``-Key (reines Merge-Signal, s. ``_should_merge_wind_dir``)
+    -- es erzeugt hier nie eine eigene Spalte."""
     if hourly_metrics is None:
         return HOUR_METRICS
-    return [m for m in HOUR_METRICS if m["key"] in hourly_metrics]
+    by_key = {m["key"]: m for m in HOUR_METRICS}
+    return [by_key[k] for k in hourly_metrics if k in by_key]
 
 
-def _render_hour_row(dp, visible: list[dict], marks: dict) -> str:
+def _should_merge_wind_dir(hourly_metrics: list[str] | None) -> bool:
+    """Issue #1335 Scheibe 1 (AC-3/AC-4), analog Trip-Muster
+    ``helpers.should_merge_wind_dir``: Windrichtung wird nur dann als
+    Kompass-Text in die Wind-Zelle gemergt, wenn BEIDE explizit in der
+    Auswahl stehen -- "wind10m_kmh" (Wind-Spalte) UND "wind_direction_deg"
+    (Merge-Signal). ``hourly_metrics=None`` (kein Filter/Altbestand) merged
+    nie -- kein stiller Verhaltenswechsel fuer Bestandsnutzer ohne
+    Konfiguration."""
+    if hourly_metrics is None:
+        return False
+    return "wind10m_kmh" in hourly_metrics and "wind_direction_deg" in hourly_metrics
+
+
+def _render_hour_row(
+    dp, visible: list[dict], marks: dict, merge_wind_dir: bool = False,
+) -> str:
     # Issue #1237 (AC-1): nur die Stunde ("07"), kein Minutenanteil -- identisch
     # zur bereits korrekten Trip-Briefing-Formatierung (helpers.dp_to_row).
     hh = dp.ts.strftime("%H") if hasattr(dp.ts, "strftime") else str(dp.ts)
@@ -613,6 +644,13 @@ def _render_hour_row(dp, visible: list[dict], marks: dict) -> str:
     for m in visible:
         value = getattr(dp, m["key"], None)
         text = m["fmt"](value)
+        # Issue #1335 Scheibe 1 (AC-3): Windrichtung als Kompass-Text an die
+        # Wind-Zelle angehaengt, analog Trip-Muster (helpers.py:648-651) --
+        # keine eigene Spalte.
+        if merge_wind_dir and m["key"] == "wind10m_kmh":
+            compass = degrees_to_compass(getattr(dp, "wind_direction_deg", None))
+            if compass:
+                text = f"{text} {compass}"
         sev_fn = m.get("sev")
         sev_level = sev_fn(value) if (sev_fn and value is not None) else None
         style = _sev_cell_style(sev_level)
@@ -622,9 +660,11 @@ def _render_hour_row(dp, visible: list[dict], marks: dict) -> str:
 
 
 def _render_hour_table(
-    loc: LocationResult, hourly_metrics: set | None = None, corridors: list[Corridor] | None = None,
+    loc: LocationResult, hourly_metrics: list[str] | None = None,
+    corridors: list[Corridor] | None = None,
 ) -> str:
     visible = _visible_hour_metrics(hourly_metrics)
+    merge_wind_dir = _should_merge_wind_dir(hourly_metrics)
     marks = _mark_lookup(corridors, CORRIDOR_METRIC_TO_HOUR_KEY)
     columns = ["Zeit"] + [m["label"] for m in visible]
     ths = "".join(
@@ -634,7 +674,7 @@ def _render_hour_table(
         for col in columns
     )
     header = f'<tr style="background:{G_PAPER};border-bottom:1px solid #e6e1d3;">{ths}</tr>'
-    rows = "".join(_render_hour_row(dp, visible, marks) for dp in loc.hourly_data)
+    rows = "".join(_render_hour_row(dp, visible, marks, merge_wind_dir) for dp in loc.hourly_data)
     table = (
         f'<table cellspacing="0" cellpadding="0" style="width:100%;'
         f'border-collapse:collapse;margin-top:12px;font-family:{FONT_DATA};'
@@ -648,7 +688,7 @@ def _render_hour_table(
 
 
 def _render_location_section(
-    loc: LocationResult, index: int, hourly_metrics: set | None = None,
+    loc: LocationResult, index: int, hourly_metrics: list[str] | None = None,
     corridors: list[Corridor] | None = None,
 ) -> str:
     """Ort-Kopf + Langform-Warn-Streifen + Stundentabelle. Entfaellt bei Fehler
@@ -868,7 +908,7 @@ def _units_legend_text(visible: list[dict]) -> str:
     return format_units_legend(pairs)
 
 
-def _render_units_legend(hourly_metrics: set | None) -> str:
+def _render_units_legend(hourly_metrics: list[str] | None) -> str:
     """Einheiten-Legende UNTER der Stundentabelle (nicht im Spaltenkopf) --
     die Spaltenkoepfe bleiben 'Zeit'/'Sicht' (AC-2)."""
     text = _units_legend_text(_visible_hour_metrics(hourly_metrics))
@@ -880,7 +920,7 @@ def _render_units_legend(hourly_metrics: set | None) -> str:
     )
 
 
-def _render_legend(hourly_metrics: set | None = None, hourly_enabled: bool = True) -> str:
+def _render_legend(hourly_metrics: list[str] | None = None, hourly_enabled: bool = True) -> str:
     items = [("#2f8a3e", "unkritisch"), ("#e3b008", "Achtung"), ("#e07b1a", "Warnung"), ("#c52a22", "Gefahr")]
     dots = "".join(
         f'<span style="display:inline-block;margin-right:16px;font-family:{FONT_DATA};'
@@ -985,8 +1025,8 @@ def render_compare_html(
     profile: Optional[ActivityProfile] = None,
     warnings: list[str] | None = None,
     top_n_details: Optional[int] = None,
-    enabled_metrics: set | None = None,
-    hourly_metrics: set | None = None,
+    enabled_metrics: list[str] | None = None,
+    hourly_metrics: list[str] | None = None,
     hourly_enabled: bool = True,
     preset_name: Optional[str] = None,
     preset_schedule: Optional[str] = None,
@@ -1005,14 +1045,20 @@ def render_compare_html(
         top_n_details: Issue #1104 -- wird angenommen, hat AKTUELL KEINE
             Wirkung (PO 2026-07-08: die Mail zeigt immer alle Orte;
             Stundentabellen-Beschraenkung wird in #1105-#1107 neu definiert).
-        enabled_metrics: Optionales Set von Renderer-Metrik-IDs (z.B.
-            "wind_max"/"cloud_avg"), filtert die numerischen Uebersichts-
-            Zeilen. Die Warn-Zeile "Amtliche Warnungen" ist immer sichtbar.
-            ``None`` = alle Metriken (Default, rueckwaertskompatibel).
-        hourly_metrics: Optionales Set von Renderer-Metrik-IDs (Issue #1106,
-            z.B. "t2m_c"/"thunder_level"), filtert die Wert-Spalten je
-            Stundentabelle. "Zeit" bleibt immer erste Spalte. ``None`` = alle
-            9 Spalten (Default).
+        enabled_metrics: Optionale Liste von Renderer-Metrik-IDs (z.B.
+            "wind_max"/"cloud_avg"), filtert UND ordnet die numerischen
+            Uebersichts-Zeilen in genau dieser Reihenfolge (Issue #1335
+            Scheibe 1, AC-1). Die Warn-Zeile "Amtliche Warnungen" ist immer
+            sichtbar und immer erste Zeile (AC-7). ``None`` = alle Metriken
+            in CV2_METRICS-Reihenfolge (Default, rueckwaertskompatibel).
+        hourly_metrics: Optionale Liste von Renderer-Metrik-IDs (Issue #1106,
+            z.B. "t2m_c"/"thunder_level"), filtert UND ordnet die Wert-Spalten
+            je Stundentabelle in genau dieser Reihenfolge (Issue #1335
+            Scheibe 1, AC-2). "wind_direction_deg" erzeugt keine eigene
+            Spalte, sondern merged als Kompass-Text in die Wind-Zelle, wenn
+            "wind10m_kmh" ebenfalls ausgewaehlt ist (AC-3/AC-4). "Zeit"
+            bleibt immer erste Spalte. ``None`` = alle 9 Spalten in
+            HOUR_METRICS-Reihenfolge (Default).
         hourly_enabled: Issue #1107 -- ``False`` laesst die komplette
             Stundenverlauf-Sektion (Kopf "STUNDEN" + alle Orts-
             Stundentabellen) weg. ``hourly_metrics`` (Spalten-Filter,

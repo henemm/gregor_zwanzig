@@ -97,14 +97,19 @@ CORRIDOR_METRIC_TO_HOUR_KEY: dict[str, str] = {
 }
 
 
-def resolve_enabled_metrics(active_metrics: list[str] | None) -> set[str] | None:
+def resolve_enabled_metrics(active_metrics: list[str] | None) -> list[str] | None:
     """Rueckgabe None (= kein Filter, alle Metriken sichtbar) wenn active_metrics
     leer/None ist -- rueckwaertskompatibler Default (AC-2/AC-4). Nicht mappbare
     IDs werden verworfen statt zum Absturz zu fuehren; bildet die Auswahl komplett
     auf nichts Mappbares ab -> ebenfalls None (kein leeres Matrix-Rendering).
 
     Nicht-Listen-Input (dict/str/int) wird ebenfalls defensiv zu None -- kein
-    TypeError, kein fehlerhaftes Iterieren ueber String-Zeichen oder Dict-Keys."""
+    TypeError, kein fehlerhaftes Iterieren ueber String-Zeichen oder Dict-Keys.
+
+    Issue #1335 Scheibe 1: Rueckgabetyp ist eine reihenfolge-erhaltende,
+    deduplizierte Liste (erste-Vorkommen-Reihenfolge von ``active_metrics``)
+    statt eines ungeordneten ``set`` -- die Nutzer-Reihenfolge der Config
+    erreicht so den Renderer (AC-1)."""
     if not active_metrics:
         return None
     if not isinstance(active_metrics, list):
@@ -118,9 +123,9 @@ def resolve_enabled_metrics(active_metrics: list[str] | None) -> set[str] | None
             "resolve_enabled_metrics: %s ohne Renderer-Mapping — Auswahl "
             "wird ignoriert statt angezeigt (vgl. #1285/#1296)", unmapped,
         )
-    resolved = {
+    resolved = list(dict.fromkeys(
         FRONTEND_TO_RENDERER_METRIC_ID[m]
         for m in active_metrics
         if m in FRONTEND_TO_RENDERER_METRIC_ID
-    }
+    ))
     return resolved or None

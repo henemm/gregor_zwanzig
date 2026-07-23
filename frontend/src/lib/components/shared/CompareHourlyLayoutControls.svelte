@@ -17,7 +17,11 @@
 
 	import { SectionH } from '$lib/components/atoms';
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
-	import { ALL_HOURLY_METRICS } from '../compare/compareHourlyMetricDefs.ts';
+	import {
+		ALL_HOURLY_METRICS,
+		DEFAULT_HOURLY_METRIC_KEYS,
+		applyHourlyMetricToggle
+	} from '../compare/compareHourlyMetricDefs.ts';
 	import type { CompareWizardState } from '../compare/compareWizardState.svelte';
 
 	interface Props {
@@ -25,25 +29,19 @@
 	}
 	let { wiz }: Props = $props();
 
-	// Leere Auswahl = „alle aktiv" (Renderer-Default). Erst beim ersten Abwählen
-	// wird die volle Liste materialisiert (Hub-Verhalten, CompareTabs.svelte:707).
+	// Leere Auswahl = „Default aktiv" (Renderer-Default). Reine Merge-Signale
+	// (defaultOff, z.B. Windrichtung) zaehlen dabei NICHT zum Default -- sonst
+	// waere die Checkbox faelschlich als aktiv dargestellt, obwohl der Merge im
+	// leeren Auswahl-Zustand serverseitig nicht greift (Issue #1335 F002).
 	function isHourlyMetricActive(key: string): boolean {
-		return wiz.hourlyMetricKeys.length === 0 || wiz.hourlyMetricKeys.includes(key);
+		return wiz.hourlyMetricKeys.length === 0
+			? DEFAULT_HOURLY_METRIC_KEYS.includes(key)
+			: wiz.hourlyMetricKeys.includes(key);
 	}
 
 	function makeHourlyMetricHandler(key: string) {
 		return function handleHourlyMetric(checked: boolean): void {
-			const current =
-				wiz.hourlyMetricKeys.length === 0
-					? ALL_HOURLY_METRICS.map((m) => m.key)
-					: [...wiz.hourlyMetricKeys];
-			if (checked) {
-				if (!current.includes(key)) current.push(key);
-			} else {
-				const idx = current.indexOf(key);
-				if (idx >= 0) current.splice(idx, 1);
-			}
-			wiz.hourlyMetricKeys = current;
+			wiz.hourlyMetricKeys = applyHourlyMetricToggle(wiz.hourlyMetricKeys, key, checked);
 		};
 	}
 

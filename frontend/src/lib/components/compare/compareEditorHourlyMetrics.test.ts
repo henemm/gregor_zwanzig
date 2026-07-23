@@ -14,7 +14,11 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { buildComparePresetSavePayload } from './compareEditorSave.ts';
-import { ALL_HOURLY_METRICS } from './compareHourlyMetricDefs.ts';
+import {
+	ALL_HOURLY_METRICS,
+	DEFAULT_HOURLY_METRIC_KEYS,
+	applyHourlyMetricToggle
+} from './compareHourlyMetricDefs.ts';
 import type { ComparePreset } from '../../types.ts';
 
 function makePreset(): ComparePreset {
@@ -38,8 +42,9 @@ function makePreset(): ComparePreset {
 }
 
 describe('ALL_HOURLY_METRICS — Katalog (Issue #1106)', () => {
-	test('enthaelt genau 9 Eintraege, "Zeit" nicht dabei', () => {
-		assert.equal(ALL_HOURLY_METRICS.length, 9);
+	test('enthaelt genau 10 Eintraege, "Zeit" nicht dabei', () => {
+		// Issue #1335 Scheibe 1: 9 -> 10 (neuer Windrichtungs-Eintrag, AC-8).
+		assert.equal(ALL_HOURLY_METRICS.length, 10);
 		assert.ok(!ALL_HOURLY_METRICS.some((m) => m.label === 'Zeit'));
 	});
 
@@ -53,6 +58,43 @@ describe('ALL_HOURLY_METRICS — Katalog (Issue #1106)', () => {
 	test('keine doppelten keys', () => {
 		const keys = ALL_HOURLY_METRICS.map((m) => m.key);
 		assert.equal(new Set(keys).size, keys.length);
+	});
+
+	test('Issue #1335 Scheibe 1 (AC-8): Windrichtungs-Eintrag wind_dir_deg vorhanden', () => {
+		const entry = ALL_HOURLY_METRICS.find((m) => m.key === 'wind_dir_deg');
+		assert.ok(entry, 'ALL_HOURLY_METRICS enthaelt keinen Eintrag mit key "wind_dir_deg"');
+		assert.equal(entry?.label, 'Windrichtung');
+	});
+});
+
+describe('applyHourlyMetricToggle — kein stiller Windrichtungs-Merge (Issue #1335 Adversary F002)', () => {
+	test('DEFAULT_HOURLY_METRIC_KEYS enthaelt wind_dir_deg NICHT (9 von 10 Katalog-Eintraegen)', () => {
+		assert.equal(DEFAULT_HOURLY_METRIC_KEYS.length, 9);
+		assert.ok(!DEFAULT_HOURLY_METRIC_KEYS.includes('wind_dir_deg'));
+	});
+
+	test('Toggle einer ANDEREN Metrik aus Leer-Auswahl materialisiert wind_dir_deg NICHT mit', () => {
+		// GIVEN: Bestandsnutzer ohne je konfigurierte Stundenmetriken (leere Auswahl)
+		// WHEN: er tickt "Sicht" an (echter Klick-Handler-Pfad, wie im Adversary-Fund F002)
+		const result = applyHourlyMetricToggle([], 'visibility_m', true);
+		// THEN: die materialisierte Auswahl enthaelt die getoggelte Metrik ...
+		assert.ok(result.includes('visibility_m'));
+		// ... aber KEINE stille Windrichtungs-Aktivierung (kein Server-Merge-Trigger)
+		assert.ok(
+			!result.includes('wind_dir_deg'),
+			'wind_dir_deg wurde still mitmaterialisiert -- stiller Merge-Regress F002'
+		);
+	});
+
+	test('expliziter Toggle von Windrichtung aktiviert sie (AC-8 bleibt erfuellt)', () => {
+		const result = applyHourlyMetricToggle([], 'wind_dir_deg', true);
+		assert.ok(result.includes('wind_dir_deg'));
+	});
+
+	test('Windrichtung laesst sich nach explizitem Aktivieren wieder abwaehlen', () => {
+		const withWindDir = applyHourlyMetricToggle([], 'wind_dir_deg', true);
+		const withoutWindDir = applyHourlyMetricToggle(withWindDir, 'wind_dir_deg', false);
+		assert.ok(!withoutWindDir.includes('wind_dir_deg'));
 	});
 });
 
