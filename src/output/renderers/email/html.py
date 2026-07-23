@@ -37,9 +37,14 @@ from output.renderers.email.helpers import (
 # bisher nur in plain.py verdrahtet, hier bislang nie aufgerufen.
 from output.renderers.email.profile_signature import profile_signature
 from output.renderers.alert.official_alerts import (
-    OfficialAlertNotice, _bundle_by_hazard_level, dedupe_official_alerts,
+    OfficialAlertNotice, _bundle_by_hazard_level,
+    dedupe_official_alerts,
     format_segment_reference, official_alert_source_label,
-    render_official_alerts_html, render_warn_block,
+    render_official_alerts_html,
+    render_warn_block,
+)
+from output.renderers.email.unavailable_hint import (
+    any_official_alerts_unavailable, render_official_alerts_unavailable_html,
 )
 
 # Issue #1135: Plausibilitaets-Gate fuer amtliche Hitzewarnungen. Unter dieser
@@ -1311,6 +1316,12 @@ def render_html(
         )
     else:
         warn_block_html = ""
+
+    # Issue #1348: Hinweis "amtliche Warnungen nicht abrufbar" — orthogonal zu
+    # den echten Warnungen (erscheint auch, wenn keine Alerts vorliegen). Nur bei
+    # gesetztem Flag -> Byte-Gleichheit im "keine Warnungen, alle Quellen ok"-Fall.
+    if any_official_alerts_unavailable(segments):
+        warn_block_html += render_official_alerts_unavailable_html()
 
     all_rows = [r for tbl in seg_tables for r in tbl]
     legend_text = build_units_legend(all_rows) if all_rows else ""

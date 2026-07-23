@@ -86,6 +86,81 @@ def filter_alerts_to_window(
     return kept
 
 
+def get_official_alerts_with_status(
+    lat: float,
+    lon: float,
+    *,
+    window_start: datetime | None = None,
+    window_end: datetime | None = None,
+    now: datetime | None = None,
+) -> tuple[list[OfficialAlert], bool]:
+    """Wie ``get_official_alerts_for_location``, liefert zusaetzlich einen
+    ``unavailable``-Status (Issue #1348).
+
+    ``unavailable = covering > 0 and failed >= 1`` (PO-Entscheid 2026-07-23,
+    STRENG): schon EINE abdeckende, beim Fetch ausgefallene Quelle genuegt —
+    sie haette eine Warnung tragen koennen, die die anderen Quellen nicht
+    abdecken. Fehlt Coverage ganz (``covering == 0``) oder liefern ALLE
+    abdeckenden Quellen erfolgreich (auch leer), ist ``unavailable = False``.
+
+    Wirft selbst nie (fail-soft pro Quelle) — Fetch-/Filter-/Dedup-Koerper
+    identisch zu ``get_official_alerts_for_location``.
+    """
+    results: list[OfficialAlert] = []
+    covering, failed = 0, 0
+    for source in _REGISTERED_SOURCES:
+        try:
+            source_name = str(source.name)
+        except Exception:
+            source_name = "unbekannte Quelle"
+        try:
+            does_cover = source.covers(lat, lon)
+        except Exception:
+            # Faellt-sicher: KEIN Coverage-Nachweis -> zaehlt weder als covering
+            # noch als failed (ohne Zustaendigkeit kein Nicht-abrufbar-Alarm).
+            logger.warning("official_alerts: %s covers() failed", source_name, exc_info=True)
+            continue
+        if not does_cover:
+            continue
+        covering += 1
+        try:
+            results.extend(source.fetch(lat, lon))
+        except Exception:
+            logger.warning("official_alerts: %s fetch failed", source_name, exc_info=True)
+            failed += 1
+    unavailable = covering > 0 and failed >= 1
+
+    if now is None:
+        now = datetime.now(timezone.utc)
+    effective_start = max(now, window_start) if window_start is not None else now
+    results = filter_alerts_to_window(results, effective_start, window_end)
+
+    # Pass 1: je hazard die "beste" Quelle bestimmen (hoechstes level;
+    # Gleichstand: zuerst gesammelt).
+    best_source: dict[str, str] = {}
+    best_level: dict[str, int] = {}
+    for alert in results:
+        if alert.hazard not in best_level or alert.level > best_level[alert.hazard]:
+            best_level[alert.hazard] = alert.level
+            best_source[alert.hazard] = alert.source
+
+    # Pass 2: nur Alerts der besten Quelle je hazard behalten; exakte
+    # Dubletten (gleicher Zeitraum) kollabieren auf hoechstes level;
+    # verschiedene Perioden derselben Quelle bleiben getrennt.
+    kept: dict[tuple, OfficialAlert] = {}
+    order: list[tuple] = []
+    for alert in results:
+        if alert.source != best_source[alert.hazard]:
+            continue
+        key = (alert.hazard, alert.valid_from, alert.valid_to)
+        if key not in kept:
+            kept[key] = alert
+            order.append(key)
+        elif alert.level > kept[key].level:
+            kept[key] = alert
+    return [kept[k] for k in order], unavailable
+
+
 def get_official_alerts_for_location(
     lat: float,
     lon: float,
@@ -94,6 +169,11 @@ def get_official_alerts_for_location(
     now: datetime | None = None,
 ) -> list[OfficialAlert]:
     """Fragt alle zustaendigen registrierten Quellen ab, fail-soft pro Quelle.
+
+    Duenner Wrapper um ``get_official_alerts_with_status`` (Issue #1348) — der
+    Rueckgabetyp bleibt eine reine Liste, damit alle 37 Bestandsaufrufer (u.a.
+    ``trip_alert.py``, ``compare_official_alert.py``, ``comparison_engine.py``)
+    unveraendert bleiben (AC-5).
 
     Wirft selbst nie — ein Fehler einer Quelle darf den Wetter-Fetch der
     ComparisonEngine nicht stoeren (AC-3).
@@ -139,45 +219,8 @@ def get_official_alerts_for_location(
     Warnung als "beste Quelle" gewinnen und eine noch gueltige verdraengen
     (AC-5).
     """
-    results: list[OfficialAlert] = []
-    for source in _REGISTERED_SOURCES:
-        try:
-            source_name = str(source.name)
-        except Exception:
-            source_name = "unbekannte Quelle"
-        try:
-            if not source.covers(lat, lon):
-                continue
-            results.extend(source.fetch(lat, lon))
-        except Exception:
-            logger.warning("official_alerts: %s fetch failed", source_name, exc_info=True)
-
-    if now is None:
-        now = datetime.now(timezone.utc)
-    effective_start = max(now, window_start) if window_start is not None else now
-    results = filter_alerts_to_window(results, effective_start, window_end)
-
-    # Pass 1: je hazard die "beste" Quelle bestimmen (hoechstes level;
-    # Gleichstand: zuerst gesammelt).
-    best_source: dict[str, str] = {}
-    best_level: dict[str, int] = {}
-    for alert in results:
-        if alert.hazard not in best_level or alert.level > best_level[alert.hazard]:
-            best_level[alert.hazard] = alert.level
-            best_source[alert.hazard] = alert.source
-
-    # Pass 2: nur Alerts der besten Quelle je hazard behalten; exakte
-    # Dubletten (gleicher Zeitraum) kollabieren auf hoechstes level;
-    # verschiedene Perioden derselben Quelle bleiben getrennt.
-    kept: dict[tuple, OfficialAlert] = {}
-    order: list[tuple] = []
-    for alert in results:
-        if alert.source != best_source[alert.hazard]:
-            continue
-        key = (alert.hazard, alert.valid_from, alert.valid_to)
-        if key not in kept:
-            kept[key] = alert
-            order.append(key)
-        elif alert.level > kept[key].level:
-            kept[key] = alert
-    return [kept[k] for k in order]
+    alerts, _unavailable = get_official_alerts_with_status(
+        lat, lon,
+        window_start=window_start, window_end=window_end, now=now,
+    )
+    return alerts

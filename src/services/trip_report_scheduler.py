@@ -793,11 +793,13 @@ class TripReportSchedulerService:
                     continue
                 seen_coords.add(coord)
                 try:
-                    from services.official_alerts import get_official_alerts_for_location
-                    sw.official_alerts = get_official_alerts_for_location(
-                        *coord,
-                        window_start=segments[0].start_time,
-                        window_end=segments[-1].end_time,
+                    from services.official_alerts import get_official_alerts_with_status
+                    sw.official_alerts, sw.official_alerts_unavailable = (
+                        get_official_alerts_with_status(
+                            *coord,
+                            window_start=segments[0].start_time,
+                            window_end=segments[-1].end_time,
+                        )
                     )
                 except Exception:
                     logger.warning(
@@ -805,6 +807,9 @@ class TripReportSchedulerService:
                         exc_info=True,
                     )
                     sw.official_alerts = []
+                    # Issue #1348: unerwarteter Fehler (z.B. Import) -> im Zweifel
+                    # sicherheitsseitig warnen statt schweigen.
+                    sw.official_alerts_unavailable = True
 
         # Issue #1113: Schwelle statt binärem Totalausfall (#1012) —
         # _fetch_weather() liefert bei Provider-Fehlern pro Segment einen

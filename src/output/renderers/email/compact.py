@@ -25,6 +25,9 @@ from output.renderers.email.profile_signature import profile_signature
 from output.renderers.alert.official_alerts import (
     collect_trip_alert_entries, render_official_alerts_plain,
 )
+from output.renderers.email.unavailable_hint import (
+    any_official_alerts_unavailable, render_official_alerts_unavailable_plain,
+)
 
 if TYPE_CHECKING:
     from app.models import NormalizedTimeseries, StabilityResult
@@ -164,6 +167,14 @@ def render_compact(
         lines.append("== Warnungen ==")
         for _line in render_official_alerts_plain(_alert_entries):
             lines.append(_ascii(f"  ! {_line}"))
+        lines.append("")
+
+    # Issue #1348: Hinweis "amtliche Warnungen nicht abrufbar" — orthogonal zu
+    # echten Warnungen, ASCII-Praefix "!!", nur bei gesetztem Ausfall-Flag.
+    if any_official_alerts_unavailable(segments):
+        lines.append(_ascii(
+            f"  {render_official_alerts_unavailable_plain(ascii_safe=True)}"
+        ))
         lines.append("")
 
     # --- Ausblick: Grosswetterlage + Naechste Etappen ---

@@ -32,6 +32,9 @@ from output.renderers.email.profile_signature import profile_signature
 from output.renderers.alert.official_alerts import (
     collect_trip_alert_entries, render_official_alerts_plain,
 )
+from output.renderers.email.unavailable_hint import (
+    any_official_alerts_unavailable, render_official_alerts_unavailable_plain,
+)
 # Epic #1301 B4: geteilter Ausblick-Renderer (Trip/Compare-Teilungs-Invariante)
 from output.renderers.email.outlook import render_outlook_plain
 
@@ -210,6 +213,12 @@ def render_plain(
         lines.append("━━ Amtliche Warnungen ━━")
         for _line in render_official_alerts_plain(_alert_entries):
             lines.append(f"  ⚠️ {_line}")
+        lines.append("")
+
+    # Issue #1348: Hinweis "amtliche Warnungen nicht abrufbar" — orthogonal zu
+    # echten Warnungen, nur bei gesetztem Ausfall-Flag (Byte-Gleichheit sonst).
+    if any_official_alerts_unavailable(segments):
+        lines.append(f"  {render_official_alerts_unavailable_plain()}")
         lines.append("")
 
     for seg_data, rows in zip(segments, seg_tables):

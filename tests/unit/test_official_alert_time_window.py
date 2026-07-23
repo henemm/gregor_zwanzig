@@ -285,9 +285,14 @@ class TestAC6TwoValidPeriodsSameSourceStayApart:
 
 class TestAC7BriefingPassesExactSegmentWindow:
     def test_scheduler_calls_with_first_segment_start_and_last_segment_end(self):
-        """AC-7: trip_report_scheduler.py muss get_official_alerts_for_location()
+        """AC-7: trip_report_scheduler.py muss get_official_alerts_with_status()
         mit window_start=segments[0].start_time und window_end=segments[-1].end_time
         aufrufen -- keine parallele Neuberechnung des Etappenfensters (SSoT #822).
+
+        Issue #1348: Der Scheduler ruft nun die Status-Variante
+        get_official_alerts_with_status() (liefert (alerts, unavailable)) statt
+        des duennen Wrappers get_official_alerts_for_location() -- der
+        Fenster-Vertrag (window_start/window_end) bleibt unveraendert.
 
         Schlanker Capture (kein Mock-Theater): ersetzt NICHTS Wetter-/Netz-
         bezogenes, sondern ausschliesslich die tatsaechlich aufgerufene
@@ -325,20 +330,20 @@ class TestAC7BriefingPassesExactSegmentWindow:
         expected_end = segments[-1].end_time
 
         captured: dict = {}
-        original = oa_pkg.get_official_alerts_for_location
+        original = oa_pkg.get_official_alerts_with_status
 
         def _capturing(*args, **kwargs):
             captured["args"] = args
             captured["kwargs"] = kwargs
-            return []
+            return [], False
 
-        oa_pkg.get_official_alerts_for_location = _capturing
+        oa_pkg.get_official_alerts_with_status = _capturing
         try:
             svc.send_on_demand_report(trip, "morning")
         finally:
-            oa_pkg.get_official_alerts_for_location = original
+            oa_pkg.get_official_alerts_with_status = original
 
-        assert captured, "get_official_alerts_for_location wurde beim Briefing-Lauf nicht aufgerufen"
+        assert captured, "get_official_alerts_with_status wurde beim Briefing-Lauf nicht aufgerufen"
         assert captured["kwargs"].get("window_start") == expected_start, (
             f"window_start muss segments[0].start_time ({expected_start!r}) sein, "
             f"erhalten: {captured['kwargs']!r}"

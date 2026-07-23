@@ -419,6 +419,11 @@ class SegmentWeatherData:
     # Issue #1087: amtliche Warnungen fuer den Segment-Startpunkt, additiv,
     # symmetrisch zu LocationResult.official_alerts (Compare-Vorbild #1034).
     official_alerts: List["OfficialAlert"] = field(default_factory=list)
+    # Issue #1348: True, wenn fuer diesen Segment-Startpunkt MINDESTENS EINE
+    # abdeckende amtliche Warn-Quelle beim Fetch ausgefallen ist (fail-soft []
+    # darf dann nicht als "keine Warnungen, alles ruhig" durchgehen). Additiv,
+    # Default False -> bestehende Konstruktions-Aufrufe bleiben gueltig.
+    official_alerts_unavailable: bool = False
 
 
 # --- Weather Change Detection DTOs (Feature 2.5) ---

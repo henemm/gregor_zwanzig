@@ -8,6 +8,7 @@ from services.official_alerts.base import (
     OfficialAlertSource,
     filter_alerts_to_window,
     get_official_alerts_for_location,
+    get_official_alerts_with_status,
     register_official_alert_source,
 )
 from services.official_alerts.geosphere_warn import GeoSphereWarnSource
@@ -31,6 +32,7 @@ __all__ = [
     "OfficialAlertSource",
     "register_official_alert_source",
     "get_official_alerts_for_location",
+    "get_official_alerts_with_status",
     "filter_alerts_to_window",
     "VigilanceSource",
     "MeteoForetsSource",
