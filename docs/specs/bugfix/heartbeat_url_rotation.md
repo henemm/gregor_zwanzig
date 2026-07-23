@@ -60,7 +60,7 @@ HEARTBEAT_EVENING = "https://uptime.betterstack.com/api/v1/heartbeat/<EVENING_TO
 
 `tests/tdd/test_betterstack_heartbeat.py:23/33` asserten gegen exakt diese URLs — beim Entfernen der Defaults würden RED-Tests sonst aus den falschen Gründen scheitern.
 
-`docs/specs/modules/betterstack_heartbeat.md` und `docs/specs/modules/go_scheduler.md` zeigen die URLs als Code-Beispiel.
+`docs/specs/_archive/modules/betterstack_heartbeat.md` und `docs/specs/_archive/modules/go_scheduler.md` zeigen die URLs als Code-Beispiel.
 
 ### Sicherheits-Implikation
 
@@ -402,8 +402,8 @@ func TestPingHeartbeat_EmptyURL_WarnsOncePerJob(t *testing.T) {
 
 ### 8. Spec- & Doku-Anonymisierung
 
-- `docs/specs/modules/betterstack_heartbeat.md`: Vorkommen der beiden URLs durch `<HEARTBEAT_MORNING_URL>` bzw. `<HEARTBEAT_EVENING_URL>` ersetzen
-- `docs/specs/modules/go_scheduler.md`: dito
+- `docs/specs/_archive/modules/betterstack_heartbeat.md`: Vorkommen der beiden URLs durch `<HEARTBEAT_MORNING_URL>` bzw. `<HEARTBEAT_EVENING_URL>` ersetzen
+- `docs/specs/_archive/modules/go_scheduler.md`: dito
 - `CLAUDE.md` (project, Abschnitt „Monitoring"): Satz „Heartbeat-Pings wurden entfernt (April 2026)" korrigieren — die Pings laufen weiter im Go-Scheduler und (parallel) im Python-Scheduler; Monitoring extern via `henemm-infra/check-gregor20.sh` ergänzt sie
 
 ### 9. Migrations-Sequenz
@@ -453,7 +453,7 @@ func TestPingHeartbeat_EmptyURL_WarnsOncePerJob(t *testing.T) {
 - [ ] Neue Test `test_ping_heartbeat_empty_url_sends_mq_only_once` grün (Patch auf `lib.mq_notify.send_mq`, `call_count == 1` nach mehreren Aufrufen)
 - [ ] Neuer Go-Test `TestPingHeartbeat_EmptyURL_NoCrash` grün
 - [ ] Neuer Go-Test `TestPingHeartbeat_EmptyURL_WarnsOncePerJob` grün (kein Panic bei mehrfachem Aufruf, sync.Once-Semantik)
-- [ ] `docs/specs/modules/betterstack_heartbeat.md` und `docs/specs/modules/go_scheduler.md`: keine Klartext-URLs mehr
+- [ ] `docs/specs/_archive/modules/betterstack_heartbeat.md` und `docs/specs/_archive/modules/go_scheduler.md`: keine Klartext-URLs mehr
 - [ ] `CLAUDE.md` (project, Abschnitt „Monitoring") korrigiert: Heartbeat-Pings laufen weiter im Scheduler
 - [ ] Live-Verifikation Staging: Service mit gesetzter ENV → BetterStack erhält Heartbeat (sichtbar im BetterStack-Dashboard nach 07:00/18:00 Trigger)
 - [ ] Live-Verifikation: Service mit leerer ENV (z. B. lokaler Test-Run) → MQ erreicht `infra` (per `/home/hem/claude-mq/check-messages.sh` auf Server prüfbar), kein Crash
@@ -470,8 +470,8 @@ func TestPingHeartbeat_EmptyURL_WarnsOncePerJob(t *testing.T) {
 | `src/web/scheduler.py` (Z. 38–42, 198–205, 143/154) | ENV-Lookup, `_ping_heartbeat(url, job_name)`, `_warned_missing_heartbeats`-Set, Aufrufer-Update | ~30 |
 | `tests/tdd/test_betterstack_heartbeat.py` | Pattern-Asserts, neue Empty-URL-Tests | ~60 |
 | `internal/scheduler/scheduler_test.go` (neu / erweitert) | 2 neue Tests | ~30 |
-| `docs/specs/modules/betterstack_heartbeat.md` | URLs → Platzhalter | <10 |
-| `docs/specs/modules/go_scheduler.md` | URLs → Platzhalter | <10 |
+| `docs/specs/_archive/modules/betterstack_heartbeat.md` | URLs → Platzhalter | <10 |
+| `docs/specs/_archive/modules/go_scheduler.md` | URLs → Platzhalter | <10 |
 | `CLAUDE.md` (project, „Monitoring") | Korrektur Heartbeat-Status | ~5 |
 
 Gesamt: 10 Dateien (3 neu, 7 modifiziert). ~260 LoC.

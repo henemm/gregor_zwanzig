@@ -2,13 +2,23 @@
 entity_id: go_scheduler
 type: module
 created: 2026-04-14
-updated: 2026-04-14
-status: draft
+updated: 2026-07-23
+status: superseded
 version: "1.0"
-tags: [migration, go, scheduler, cron, heartbeat]
+tags: [migration, go, scheduler, cron, heartbeat, archive]
 ---
 
 # M4a: Go Cron-Scheduler
+
+> **HISTORISCH / ABGELÖST (2026-07-23).** Dieses Dokument ist der Migrations-Record
+> der M4a-Umstellung (APScheduler → Go-Cron, April 2026) und beschreibt einen
+> **nicht mehr gültigen** Stand: Morning/Evening-Subscription-Endpoints,
+> `HEARTBEAT_MORNING/EVENING`, Signal-Kanal und NiceGUI existieren nicht mehr; die
+> Jobs wurden seither mehrfach umgebaut (u. a. unified `briefingDispatch` #1250,
+> Compare-Presets #461, konsolidierter Heartbeat #1346). **Aktueller Stand:** der
+> Scheduler-Code (`internal/scheduler/scheduler.go`) und die SSoT
+> `docs/reference/api_contract.md` (§17). Aufbewahrt nur zur Nachvollziehbarkeit
+> der Migration.
 
 ## Approval
 

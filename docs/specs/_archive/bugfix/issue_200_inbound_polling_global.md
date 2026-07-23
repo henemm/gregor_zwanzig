@@ -33,7 +33,7 @@ Fix: `inboundCommands()` ruft den Endpoint genau einmal pro Tick auf, unabhängi
 |--------|------|---------|
 | `internal/scheduler/scheduler.go` | go file | Cron-Scheduler |
 | `api/routers/scheduler.py` | python file | `/inbound-commands`-Endpoint (bleibt unverändert, ist bereits global) |
-| `docs/specs/modules/go_scheduler.md` | spec | Übergeordnete Spec — definiert `*/5 → POST /inbound-commands` (1 Call) |
+| `docs/specs/_archive/modules/go_scheduler.md` | spec | Übergeordnete Spec — definiert `*/5 → POST /inbound-commands` (1 Call) |
 
 ## Implementation Details
 

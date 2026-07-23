@@ -2,13 +2,24 @@
 entity_id: betterstack_heartbeat
 type: module
 created: 2026-04-02
-updated: 2026-04-02
-status: draft
+updated: 2026-07-23
+status: superseded
 version: "1.0"
-tags: [monitoring, betterstack, heartbeat]
+tags: [monitoring, betterstack, heartbeat, archive]
 ---
 
 # BetterStack Heartbeat Monitoring
+
+> **HISTORISCH / ABGELÖST (2026-07-23).** Beschreibt den ursprünglichen
+> Python-seitigen Heartbeat (`_ping_heartbeat()`, `HEARTBEAT_MORNING/EVENING`,
+> Morning/Evening-Subscriptions) — **nicht mehr gültig**: der Heartbeat wird seit
+> der Go-Migration Go-seitig gefeuert (`internal/scheduler/scheduler.go`), Morning/
+> Evening-Subscriptions existieren nicht mehr. Die hier dokumentierte Regel
+> „Heartbeat wird **immer** gepingt, auch wenn alle E-Mails fehlschlagen" ist
+> **explizit überholt**: seit der Readiness-Regel (`~/.claude/CLAUDE.md`) und
+> Issue #1346 pingt der Heartbeat nur bei tatsächlichem fachlichem Erfolg des
+> gesamten Briefing-Dispatch. **Aktueller Stand:** `docs/reference/api_contract.md`
+> (§17) + Scheduler-Code. Aufbewahrt zur Migrations-Nachvollziehbarkeit.
 
 ## Approval
 

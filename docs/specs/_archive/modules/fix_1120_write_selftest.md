@@ -208,7 +208,7 @@ bestehenden `warnMissingHeartbeatOnce`-Muster (scheduler.go:287-312), aber bewus
 
 - **ADR-Nr.:** keine
 - **Rationale:** Additiver, isolierter neuer Scheduler-Job innerhalb der bestehenden
-  Job-Architektur (`jobs[]`-Tabelle + `recordRun`-Muster aus `docs/specs/modules/go_scheduler.md`).
+  Job-Architektur (`jobs[]`-Tabelle + `recordRun`-Muster aus `docs/specs/_archive/modules/go_scheduler.md`).
   Keine neue Architekturentscheidung, keine neuen Abhaengigkeiten, kein neuer Kommunikationsweg —
   folgt exakt dem etablierten Edge-Alert-Muster (`warnMissingHeartbeatOnce`).
 
