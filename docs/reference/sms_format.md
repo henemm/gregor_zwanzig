@@ -42,7 +42,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 ## 2. Token-Reihenfolge (fix)
 
 ```
-{Name}: N D R PR W G TH: TH+: C HR:TH: !{Warn-Block} Z: M: [SN SN24+ SFL AV WC] DBG
+{Name}: N D R PR W G TH: TH+: C HR:TH: !{Warn-Block} Z: M: [SN SN24+ SFL AV WC] W? DBG
 ```
 
 | Block | Tokens | Pflicht? |
@@ -54,6 +54,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | Amtliche Warnungen | `!{Kürzel}:{Stufe}[@{h}]` … (Warn-Block, Marker `!` genau einmal) | nur bei aktiver amtlicher Warnung ab Stufe ORANGE (§3.4c) |
 | Fire-Zonen | `Z: M:` | nur Korsika, weglassen wenn leer |
 | Wintersport | `SN SN24+ SFL AV WC` | optional |
+| Nicht abrufbar | `W?` | nur wenn ≥1 abdeckende amtliche Warn-Quelle beim Fetch ausgefallen ist (§3.4d, Issue #1349) |
 | Debug | `DBG[...]` | nur Dry-Run / Debug-Modus |
 
 **Hinweis zu `HR:TH:`** — Das sind zwei separate Tokens, die ohne Leerzeichen aneinandergeschrieben werden (z.B. `HR:M@17TH:H@17` oder `HR:-TH:-`). Siehe §3.3 und §3.4.
@@ -194,7 +195,20 @@ Beides ist sicherheitsrelevant, nicht kosmetisch: eine amtliche Warnung, die sti
 Nur Vorhersage:   GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16
 Mit Warnung:      GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16 !TH:H@14 W:M
 Brand + Sperrung: GR20 E5: N9 D28 R- W12@11 TH:- !FR:H CL
+Nicht abrufbar:   GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16 W?
 ```
+
+### 3.4d Nicht-abrufbar-Marker `W?` (Issue #1349, Folge von #1348)
+
+Ein **eigenständiger** Marker `W?` (2 Zeichen, GSM-7-sicher) signalisiert: für mindestens ein Segment ist **mindestens eine abdeckende amtliche Warn-Quelle beim Fetch ausgefallen** — „keine Warnung" bedeutet dann **nicht** sicher „alles ruhig". Semantisch das Kurzform-Pendant zum E-Mail-/Telegram-Hinweis „amtliche Warnungen aktuell nicht abrufbar".
+
+- **Bedingung:** `any(SegmentWeatherData.official_alerts_unavailable)` — gesetzt am echten Fail-soft-Pfad (`get_official_alerts_with_status`, #1348). Strenge Regel: **eine** ausgefallene abdeckende Quelle genügt.
+- **Kein Warn-Block-Token:** `W?` gehört zur eigenen Kategorie `unavailable`, trägt **nie** den `!`-Marker (§3.4c) und darf nicht als amtliche Warnung („`!W?`") gelesen werden. Es ist „nicht abrufbar", nicht „es liegt eine Warnung vor".
+- **Position:** am Ende der Zeile (nach Wintersport-Block, vor `DBG`), analog zum Verlässlichkeits-Symbol `C`.
+- **Truncation:** höchste Priorität (12, §6, noch über dem Warn-Block) und **nicht** in der Drop-Liste — der sicherheitsrelevante Marker fällt unter 160-Zeichen-Druck **strukturell nie** weg.
+- **Kanäle:** In Telegram-Kurzform (die `sms_text` sendet) erscheint `W?` automatisch mit; das Telegram-„rich"-Briefing und die Compare-/Trip-Mail zeigen stattdessen die ausgeschriebene Hinweiszeile bzw. den Banner.
+
+Quelle des Flags: `src/output/tokens/dto.py` (`NormalizedForecast.official_alerts_unavailable`), Emission in `src/output/tokens/builder.py`. Vertraglich abgesichert durch `docs/specs/modules/feat_1349_sms_unavailable.md`.
 
 ### 3.4b Confidence-Symbol `C` (v2.1, Issue #121)
 
