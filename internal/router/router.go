@@ -151,6 +151,8 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/gpx/parse", handler.GpxProxyHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/notify/test", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/notify/test"))
 	r.Get("/api/compare", handler.CompareProxyHandler(deps.Config.PythonCoreURL))
+	// Issue #1350 Teil 1: read-only Compare-Metrik-Katalog (statisch, kein user_id-Bezug).
+	r.Get("/api/compare/metrics", handler.ProxyHandler(deps.Config.PythonCoreURL, "/api/compare/metrics"))
 	r.Get("/api/_internal/trip/{id}/loaded", handler.LoadedTripProxyHandler(deps.Config.PythonCoreURL))
 	// Issue #221: External Validator observability endpoints (cookie-auth via global middleware).
 	r.Get("/api/_validator/format-metric", handler.ValidatorFormatMetricProxyHandler(deps.Config.PythonCoreURL))

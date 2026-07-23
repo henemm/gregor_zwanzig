@@ -54,6 +54,7 @@
 | `/api/briefings/{id}` | DELETE, GET, PUT |
 | `/api/cockpit/status` | GET |
 | `/api/compare` | GET |
+| `/api/compare/metrics` | GET |
 | `/api/compare/presets` | GET, POST |
 | `/api/compare/presets/{id}` | DELETE, GET, PUT |
 | `/api/compare/presets/{id}/send` | POST |
@@ -1163,6 +1164,83 @@ Returns catalog of all available weather metrics with format mode options and de
   - Der **Roh/Einfach-Umschalter im Trip-Editor** wird NICHT vom Backend-Feld `has_friendly_format` gesteuert, sondern frontend-seitig über die `INDICATOR_MAP` in `frontend/src/lib/components/trip-detail/metricsEditor.ts` (seit #814: `visibility` entfernt, `precipitation` ergänzt).
 
 - **Metric Display Contract (Issue #814):** Der vollständige Einfach/Roh-Vertrag aller Metriken ist nun kodifiziert in `docs/reference/renderer_email_spec.md` § „Metric Display Contract". `use_friendly_format=true` → HTML-Ampelpunkte für Severity-Metriken, Emojis für Wetterbild-Piktogramme, ⚡-Symbol für Gewitter; `use_friendly_format=false` → nackte Zahlen überall, keine Markierungen. Plain-Text immer numerisch (außer Gewitter = deutsches Wort). **„Roh ist Roh":** Roh-Modus hat **keine** inline-Farb-/Hintergrund-Markierungen.
+
+---
+
+## 15.1) Compare-Metrik-Katalog-Endpoint (Issue #1350, Teil 1)
+
+Read-only Backend-Katalog der 25 Ortsvergleich-Metriken (Label/Einheit/
+Wertebereich/`higherIsBetter`/Ordinal-/Enum-Angaben), aus einer einzigen
+Backend-Quelle. **Teil 1 der Strangler-Migration:** der Endpoint wird nur
+bereitgestellt, das Frontend konsumiert ihn noch nicht (weiterhin
+`compareMetricDefs.ts::ALL_METRICS`) — keine sichtbare Änderung im
+Ortsvergleich-Editor.
+
+**Handler:** `api/routers/compare.py` | **Datenquelle:**
+`src/output/renderers/compare_metric_catalog.py` | **Routing:**
+`internal/router/router.go` (generischer `ProxyHandler`, kein `user_id`-Bezug)
+
+### GET /api/compare/metrics
+
+Kein Query-Parameter. Antwort: `{"metrics": [...]}`, genau 25 Einträge,
+Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
+
+**Response 200:**
+
+```json
+{
+  "metrics": [
+    {
+      "key": "snow_depth_cm",
+      "label": "Schneehöhe",
+      "unit": "cm",
+      "decimals": 0,
+      "higherIsBetter": true,
+      "kind": "range",
+      "rangeMin": 0,
+      "rangeMax": 200,
+      "step": 5
+    },
+    {
+      "key": "thunder_level_max",
+      "label": "Gewitter",
+      "unit": "",
+      "decimals": 0,
+      "higherIsBetter": false,
+      "kind": "ordinal",
+      "ordinalLabels": ["kein", "mittel", "hoch"]
+    },
+    {
+      "key": "precip_type_dominant",
+      "label": "Niederschlagsart",
+      "unit": "",
+      "decimals": 0,
+      "higherIsBetter": false,
+      "kind": "enum",
+      "enumValues": ["RAIN", "SNOW", "MIXED", "FREEZING_RAIN"]
+    }
+  ]
+}
+```
+
+**Field Definitions:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| metrics[].key | string | Identisch zu `compare_metric_ids.FRONTEND_TO_RENDERER_METRIC_ID`-Keys (keine sechste Kopie der Keyliste) |
+| metrics[].kind | string | `range` (23 Einträge, mit `rangeMin`/`rangeMax`/`step`), `enum` (`precip_type_dominant`, mit `enumValues`) oder `ordinal` (`thunder_level_max`, mit `ordinalLabels` — übernimmt die im Editor tatsächlich sichtbare 3-Stufen-Darstellung statt des rohen Enum, PO-Entscheidung 2026-07-12) |
+| metrics[].higherIsBetter | bool | Richtung für die Compare-Winner-Box (`true` = höherer Wert gewinnt) |
+
+**Notes:**
+
+- Additiv, rein lesend, keine Persistenz-/Render-/Frontend-Änderung. Keine
+  Auswirkung auf `active_metrics`/`corridors`-Persistenz oder
+  `resolve_enabled_metrics()`.
+- `precip_type_dominant` bleibt `enum`, obwohl der Corridor-Editor es intern
+  über den generischen `range`-Zweig rendert (bestehende Frontend-Eigenart,
+  nicht Teil dieses Endpoints).
+- Teil 2 (Folge-Issue) stellt den Frontend-Konsum (`compareMetricDefs.ts`)
+  auf diesen Endpoint um.
 
 ---
 
@@ -2856,6 +2934,13 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-07-23: Issue #1350 Teil 1 (Strangler-Migration) — neuer read-only
+  Endpoint `GET /api/compare/metrics` liefert den 25-Einträge-Ortsvergleich-
+  Metrik-Katalog aus einer einzigen Backend-Quelle
+  (`src/output/renderers/compare_metric_catalog.py`), Go-Proxy analog
+  `/api/metrics`. Rein additiv — Teil 1 stellt den Endpoint nur bereit, das
+  Frontend konsumiert ihn noch nicht (`compareMetricDefs.ts` bleibt Quelle
+  bis Teil 2). Siehe Section 15.1.
 - 2026-07-23: Issue #1346 — Stiller Briefing-Totalausfall wird laut. Der
   BetterStack-Heartbeat (`HeartbeatComparePresets`) ist von `comparePresetsDaily()`
   nach `briefingDispatch()` verlagert und deckt nun den gesamten stündlichen

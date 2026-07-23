@@ -8,6 +8,20 @@ from datetime import date, datetime
 router = APIRouter(tags=["compare"])
 
 
+@router.get("/api/compare/metrics")
+def get_compare_metrics():
+    """Backend-Katalog der 25 Ortsvergleich-Metriken (Issue #1350 Teil 1).
+
+    Read-only, kein user_id-Bezug (statischer Katalog, analog /api/metrics).
+    Teil 1 der Strangler-Migration: der Endpoint wird bereitgestellt, aber
+    vom Frontend noch nicht konsumiert (compareMetricDefs.ts bleibt Quelle
+    bis Teil 2).
+    """
+    from output.renderers.compare_metric_catalog import get_compare_metric_catalog
+
+    return {"metrics": get_compare_metric_catalog()}
+
+
 @router.get("/api/compare")
 def run_comparison(
     location_ids: str = Query(..., description="Comma-separated location IDs, or '*' for all"),
