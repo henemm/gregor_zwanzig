@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.7"
+version: "2.10"
 status: active
 created: 2025-12-27
-updated: 2026-07-13
+updated: 2026-07-23
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -13,7 +13,7 @@ tags: [sms, compact, tokens, single-source-of-truth]
 - [x] Approved (v2.0 am 2026-04-25)
 - [x] Implementiert in SMS-Adapter via `src/output/renderers/sms/` (β3, 2026-04-28)
 
-# SMS / Kompakt-Format Specification (v2.9)
+# SMS / Kompakt-Format Specification (v2.10)
 
 **Single Source of Truth** für die kompakte Token-Zeile, die in allen Channels (SMS, Satellit, E-Mail-Header, Push) identisch verwendet wird. Alle anderen Repräsentationen (E-Mail-Body, Tabellen, Push-Titel) leiten sich aus dieser Token-Zeile ab.
 
@@ -169,7 +169,7 @@ Amtliche Unwetterwarnungen (`official_alerts`-Dienst, alle Provider) erscheinen 
 | `wildfire_risk` | `FR` | Waldbrand-Gefahr |
 | `access_ban` | `CL` | Zugang gesperrt |
 
-**Single Source of Truth der Kürzel:** `src/output/tokens/hazard_symbols.py` — derselbe Katalog speist die Trip-Briefing-SMS **und** die eigenständige amtliche-Warnung-SMS (`render_official_alert_sms`). Zwei getrennte Listen sind ein Fehler.
+**Single Source of Truth der Kürzel:** `src/output/tokens/hazard_symbols.py` — derselbe Katalog speist die Trip-Briefing-SMS, die eigenständige amtliche-Warnung-SMS (`render_official_alert_sms`) **und** die Compare-SMS (`render_compare_sms` in `src/output/renderers/comparison.py`, Issue #1332). Zwei getrennte Listen sind ein Fehler.
 
 **Stufe:** dieselbe `L/M/H`-Skala wie die Vorhersage-Tokens, abgebildet gelb(2)→`L`, orange(3)→`M`, rot(4)→`H`.
 
@@ -447,6 +447,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.8 | 2026-07-16 | `TH+`-Datenquelle korrigiert (Issue #1275) — aggregiert jetzt über ALLE Segmente der tatsächlichen Folge-Etappe (statt nur das letzte Segment der heutigen Etappe zu prüfen) und nutzt dieselbe Fetch-/Aggregations-Kette wie die E-Mail-Outlook-Tabelle (`_build_stage_trend()`); stimmt dadurch garantiert mit deren Wert überein |
 
 | 2.9 | 2026-07-20 | Amtlicher Warn-Block `!` in der Trip-Briefing-SMS (Issue #1318) — 9 internationale Gefahren-Kürzel aus dem einzigen Katalog `src/output/tokens/hazard_symbols.py` (§3.4c), Filter ab Stufe ORANGE, `@h` nur bei nicht-ganztägigem Beginn, `CL` ohne Stufe, höchste Truncation-Priorität; §3.4 von positions- auf marker-basierte Disambiguierung verallgemeinert; die eigenständige amtliche-Warnung-SMS nutzt denselben Katalog (alte deutsch abgeleitete Kürzel `HZ`/`ST`/`RR`/`GL`/`ZG`/`WB`/`KL` entfallen ersatzlos) |
+| 2.10 | 2026-07-23 | Compare-SMS zeigt jetzt denselben `!`-Warn-Block (Issue #1332, Bugfix) — `render_compare_sms` (`src/output/renderers/comparison.py`) nutzt `official_alerts_to_sms_entries`/`sms_symbol_for` aus demselben Katalog wie die Trip-Briefing-SMS; vorher zeigte die Compare-SMS gar keine amtlichen Warnungen |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

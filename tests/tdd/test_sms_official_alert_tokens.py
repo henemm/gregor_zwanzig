@@ -526,3 +526,29 @@ def test_f002_colliding_unknown_same_symbol_in_both_sms_paths(hazard: str):
     assert _word_present(standalone, symbol), (
         f"Standalone-Warn-SMS ohne {symbol!r}: {standalone!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Charakterisierungstest (#1332): Ist-Stand des Trip-SMS-Warn-Blocks als
+# eingefrorenes Literal, BEVOR der gemeinsame Kern
+# (`official_alerts_to_sms_entries`) aus `_official_alert_entries` extrahiert
+# wird. Dieser Test ist HEUTE bereits gruen -- er beschreibt Ist-Verhalten
+# und dient als Regressionsanker: die Extraktion darf diesen String nicht um
+# ein Byte veraendern (AC-3).
+# ---------------------------------------------------------------------------
+GOLDEN_TWO_ALERTS_MIXED_LEVEL = (
+    "E5: N9 D24 R- PR- W- G- TH:- TH+:- !TH:H@14 W:M@14"
+)
+
+
+def test_characterization_two_alerts_mixed_level_survives_extraction():
+    """Fixiertes Segment mit zwei amtlichen Warnungen (Gewitter ROT, Sturm
+    ORANGE, beide 14:00-18:00 Uhr) -- die spaetere Extraktion von
+    `official_alerts_to_sms_entries()` (#1332) muss dieses Ergebnis
+    byte-identisch reproduzieren."""
+    sms = _sms([_alert("wind_gust", 3), _alert("thunderstorm", 4)])
+    assert sms == GOLDEN_TWO_ALERTS_MIXED_LEVEL, (
+        "Trip-SMS-Warn-Block hat sich veraendert -- Regressionsanker fuer die "
+        "Extraktion (#1332) gebrochen.\n"
+        f"  erwartet: {GOLDEN_TWO_ALERTS_MIXED_LEVEL!r}\n  erhalten: {sms!r}"
+    )

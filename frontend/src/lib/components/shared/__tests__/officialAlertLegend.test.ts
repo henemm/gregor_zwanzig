@@ -126,12 +126,16 @@ describe('AC-9: Legende beim Schalter „Amtliche Warnungen"', () => {
 	});
 });
 
-// FB01 (Adversary Scheibe B, HIGH): Die Legende beschreibt ausschliesslich die
-// TRIP-Kurzform. Die Vergleichs-SMS (`render_compare_sms`) zeigt amtliche
-// Warnungen gar nicht, die Vergleichs-Telegram-Nachricht zeigt sie ungefiltert
-// in Langform ohne `!`, Kürzel und Stufe. Im Vergleich-Kontext waere die
-// Legende also eine Falschaussage — sie muss dort verschwinden, der Schalter
-// selbst bleibt (Non-Regression).
+// FB01 (Adversary Scheibe B, HIGH — abgeloest durch Issue #1332, PO-Korrektur
+// 2026-07-23): urspruenglich beschrieb die Legende ausschliesslich die
+// TRIP-Kurzform, weil die Vergleichs-SMS amtliche Warnungen gar nicht zeigte
+// und die Vergleichs-Telegram-Nachricht sie ungefiltert/kuerzelfrei zeigte --
+// die Legende waere im Vergleich-Kontext eine Falschaussage gewesen.
+// Mit #1332 zeigt sowohl die Vergleichs-SMS (`!`-Kuerzel-Marker, ab orange)
+// als auch das Vergleichs-Telegram (ausgeschriebener Warn-Block wie das
+// Trip-Telegram) dasselbe Format wie der Trip-Pfad -- die Legende beschreibt
+// jetzt beide Kontexte korrekt und steht deshalb OHNE Kontext-Schalter,
+// gebunden nur an den geladenen Kuerzel-Katalog (`smsSymbols`).
 //
 // Nachweis per ECHTEM Svelte-5-Compiler-AST (Muster:
 // compare_hourly_layout_controls_structure.test.ts), nicht per Datei-Grep: es
@@ -174,23 +178,25 @@ function ifConditionsAbove(ast: any, source: string, testid: string): string[] |
 	return result;
 }
 
-describe('FB01: Die Legende erscheint nur im Trip-Kontext', () => {
+describe('FB01: Die Legende erscheint in BEIDEN Kontexten (#1332)', () => {
 	const source = read(WEATHER_METRICS_TAB);
 	const ast = parse(source, { modern: true });
 
-	test('Die Legende haengt an einer Bedingung ueber `context`', () => {
+	test('Die Legende haengt an KEINER Bedingung ueber `context` mehr', () => {
 		const conditions = ifConditionsAbove(ast, source, LEGEND_TESTID);
 		assert.ok(conditions, `Legende (testid "${LEGEND_TESTID}") im Template nicht gefunden.`);
 		const guard = conditions!.find((c) => /\bcontext\b/.test(c));
-		assert.ok(
-			guard,
-			'Die Legende steht unter keiner context-Bedingung — sie wuerde damit auch im ' +
-				'Vergleich gerendert, wo sie die tatsaechlich versendeten Nachrichten ' +
-				`falsch beschreibt. Gefundene Bedingungen: ${JSON.stringify(conditions)}`
+		assert.equal(
+			guard, undefined,
+			'Die Legende darf im Vergleich-Kontext nicht mehr ausgeblendet werden (#1332: ' +
+				'Vergleichs-SMS und -Telegram zeigen dasselbe Kuerzel-/Warn-Block-Format wie der ' +
+				`Trip-Pfad). Gefundene context-Bedingung: ${guard}`
 		);
+		const symbolGuard = conditions!.find((c) => /\bsmsSymbols\b/.test(c));
 		assert.ok(
-			/'vergleich'|"vergleich"|'route'|"route"/.test(guard!),
-			`Die context-Bedingung muss den Vergleich-Kontext ausschliessen, ist aber: ${guard}`
+			symbolGuard,
+			'Die Legende muss weiterhin an den geladenen Kuerzel-Katalog (`smsSymbols`) ' +
+				`gebunden sein (Fail-soft ohne Katalog). Gefundene Bedingungen: ${JSON.stringify(conditions)}`
 		);
 	});
 
@@ -230,6 +236,84 @@ describe('FB01: Die Legende erscheint nur im Trip-Kontext', () => {
 		assert.ok(
 			renderIdx > vergleichIdx && renderIdx - vergleichIdx < 3000,
 			'Der Vergleich-Zweig rendert das geteilte officialAlertsToggle-Snippet nicht mehr.'
+		);
+	});
+});
+
+// F003 (Adversary-Fund, Fix-Loop 2 / #1332): die Legende haengt an
+// `smsSymbols` (s. FB01 oben), aber `smsSymbols` wurde ausschliesslich in
+// load() gesetzt, und load() laeuft nur im route-$effect (context ===
+// 'route'). Im Vergleich-Kontext blieb `smsSymbols` deshalb IMMER null —
+// die Legende erschien nie, obwohl der {#if}-Guard laengst context-frei war.
+// Geprueft wird per Instance-Script-AST, dass es einen eigenen Ladepfad
+// (`$effect`, an eine 'vergleich'-Bedingung gekoppelt) gibt.
+describe('F003: Ladepfad fuer smsSymbols im Vergleich-Kontext (#1332 Fix-Loop 2)', () => {
+	const source = read(WEATHER_METRICS_TAB);
+	const ast = parse(source, { modern: true });
+	const instanceBody = (ast as any).instance.content.body as any[];
+
+	function effectStatements(): any[] {
+		return instanceBody.filter(
+			(stmt) =>
+				stmt.type === 'ExpressionStatement' &&
+				stmt.expression?.type === 'CallExpression' &&
+				stmt.expression.callee?.name === '$effect'
+		);
+	}
+
+	test('Es gibt einen $effect-Block, dessen Bedingung an context === "vergleich" haengt und smsSymbols laedt', () => {
+		const effects = effectStatements();
+		assert.ok(effects.length > 0, 'Keine $effect-Bloecke im Instance-Script gefunden.');
+		const matching = effects.filter((stmt) => {
+			const block = source.slice(stmt.start, stmt.end);
+			const hasVergleichGuard = /context\s*===\s*['"]vergleich['"]/.test(block);
+			const loadsSymbols = /loadSmsSymbols\s*\(/.test(block) || /\/api\/sms-symbols/.test(block);
+			return hasVergleichGuard && loadsSymbols;
+		});
+		assert.equal(
+			matching.length, 1,
+			'Es muss genau einen $effect-Block geben, der context === "vergleich" prueft ' +
+				'UND smsSymbols laedt (loadSmsSymbols() oder direkt /api/sms-symbols) — ' +
+				'sonst bleibt smsSymbols im Vergleich-Kontext fuer immer null und die ' +
+				'Legende erscheint nie (F003).'
+		);
+	});
+
+	test('Der neue Ladepfad ist idempotent (Guard `!smsSymbols`), keine Endlosschleife', () => {
+		const effects = effectStatements();
+		const vergleichEffect = effects.find((stmt) => {
+			const block = source.slice(stmt.start, stmt.end);
+			return /context\s*===\s*['"]vergleich['"]/.test(block) &&
+				(/loadSmsSymbols\s*\(/.test(block) || /\/api\/sms-symbols/.test(block));
+		});
+		assert.ok(vergleichEffect, 'Vergleich-$effect fuer smsSymbols nicht gefunden.');
+		const block = source.slice(vergleichEffect.start, vergleichEffect.end);
+		assert.ok(
+			/!\s*smsSymbols/.test(block),
+			'Der Vergleich-$effect muss per `!smsSymbols` guarden, sonst feuert er bei ' +
+				'jedem reaktiven Re-Run erneut (Endlosschleife/Doppel-Fetch).'
+		);
+	});
+
+	test('loadSmsSymbols() selbst ist idempotent und wird auch von load() (Route) genutzt', () => {
+		const fnIdx = source.indexOf('async function loadSmsSymbols()');
+		assert.ok(fnIdx >= 0, 'Es muss eine eigene Funktion `loadSmsSymbols()` geben (extrahiert aus load()).');
+		const fnBlock = source.slice(fnIdx, fnIdx + 400);
+		assert.ok(
+			/if\s*\(\s*smsSymbols\s*\)\s*return/.test(fnBlock),
+			'loadSmsSymbols() muss frueh zurueckkehren, wenn smsSymbols schon gesetzt ist (Idempotenz).'
+		);
+		assert.ok(
+			fnBlock.includes('/api/sms-symbols'),
+			'loadSmsSymbols() muss den Katalog-Endpunkt /api/sms-symbols aufrufen.'
+		);
+		const loadIdx = source.indexOf('async function load()');
+		assert.ok(loadIdx >= 0, 'load() (Route-Pfad) fehlt.');
+		const loadBlock = source.slice(loadIdx, source.indexOf('\n\t$effect', loadIdx));
+		assert.ok(
+			loadBlock.includes('loadSmsSymbols()'),
+			'load() (Route) muss weiterhin loadSmsSymbols() aufrufen — sonst laedt der Route-Pfad ' +
+				'die Kuerzel nicht mehr (Non-Regression).'
 		);
 	});
 });

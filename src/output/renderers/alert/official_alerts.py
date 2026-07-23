@@ -17,10 +17,13 @@ import html as _html
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
-from output.tokens.hazard_symbols import HAZARD_SMS_SYMBOLS, sms_symbol_for
+from output.tokens.hazard_symbols import (
+    HAZARD_ORDER, HAZARD_SMS_SYMBOLS, LEVEL_LETTERS, LEVELLESS_HAZARDS,
+    MIN_SMS_LEVEL, sms_symbol_for,
+)
 
 if TYPE_CHECKING:
     from app.models import SegmentWeatherData
@@ -336,6 +339,52 @@ def dedupe_official_alerts(
             best[key] = a
         segment_ids_by_key[key].update(segment_ids)
     return [(best[key], sorted(segment_ids_by_key[key])) for key in order]
+
+
+def _warn_hour(alert: "OfficialAlert", tz: "ZoneInfo") -> Optional[int]:
+    """Beginn-Stunde einer amtlichen Warnung in Ortszeit — `None` bei
+    ganztaegiger Gueltigkeit oder fehlendem Zeitraum (dann entfaellt `@h`
+    ersatzlos). Ganztags-Erkennung wie `_format_validity`."""
+    vf, vt = alert.valid_from, alert.valid_to
+    if not vf or not vt:
+        return None
+    vf_l, vt_l = vf.astimezone(tz), vt.astimezone(tz)
+    if (vf_l.hour, vf_l.minute, vt_l.hour, vt_l.minute) == (0, 0, 23, 59):
+        return None
+    return vf_l.hour
+
+
+def official_alerts_to_sms_entries(
+    alerts: list["OfficialAlert"], tz: Optional["ZoneInfo"] = None,
+) -> tuple[tuple[str, str, Optional[int]], ...]:
+    """Issue #1318/#1332: amtliche Warnungen -> Warn-Block-Tripel (Kuerzel,
+    Stufenbuchstabe, Stunde). Dedup ueber die geteilte `dedupe_official_
+    alerts()` (kein eigener Dedup-Code), Filter auf Stufe >= orange
+    (`MIN_SMS_LEVEL`), Kuerzel aus dem einzigen Katalog `hazard_symbols.py`.
+    Sortierung: Stufe absteigend, bei Gleichstand Katalog-Reihenfolge --
+    deterministisch, unabhaengig von `valid_from`.
+
+    Geteilter Kern von Trip-SMS (`sms_trip.py::_official_alert_entries`, duenner
+    Wrapper) UND Compare-SMS (`comparison.py::render_compare_sms`) -- kein
+    zweiter Kuerzel-Katalog, keine abweichende Filterlogik (#1332 AC-4).
+
+    `tz=None` (Compare-Orte ohne hinterlegte `SavedLocation.timezone`): der
+    Stunden-Teil entfaellt ersatzlos, kein Platzhalter -- analog der
+    bestehenden Trip-Konvention bei fehlendem Gueltigkeitszeitraum."""
+    tagged = [(alert, []) for alert in alerts]
+    rows = []
+    for alert, _ in dedupe_official_alerts(tagged):
+        if alert.level < MIN_SMS_LEVEL:
+            continue
+        symbol = sms_symbol_for(alert.hazard)
+        if alert.hazard in LEVELLESS_HAZARDS:
+            entry = (symbol, "", None)
+        else:
+            hour = _warn_hour(alert, tz) if tz is not None else None
+            entry = (symbol, LEVEL_LETTERS.get(alert.level, "H"), hour)
+        rows.append((-alert.level, HAZARD_ORDER.get(alert.hazard, len(HAZARD_ORDER)), entry))
+    rows.sort(key=lambda r: (r[0], r[1]))
+    return tuple(entry for _lvl, _ord, entry in rows)
 
 
 def official_alert_state_key(alert: "OfficialAlert") -> str:
@@ -1414,9 +1463,18 @@ def render_warn_block(
 
 def render_official_alert_telegram(
     notices: list["OfficialAlertNotice"], *, prefix: str, source_label: str,
-    tz: "ZoneInfo | None" = None,
+    tz: "ZoneInfo | None" = None, show_scope: bool = True,
 ) -> str:
     """Fette erste Zeile + je Warnung eine Zeile, hoechste Stufe zuerst.
+
+    `show_scope` (Issue #1332 F001, Default True -- bestehende Aufrufer
+    unveraendert): unterdrueckt das Scope-Segment ganz, wenn `prefix` die
+    Umfangs-Identitaet bereits traegt (Compare-Telegram ruft dies JE ORT auf,
+    der Ortsname steht schon als Block-Ueberschrift/`prefix` -- ein per-Ort
+    berechnetes `scope_label` waere dort zwangslaeufig entweder "unbekannt"
+    (kein Trip-Segment bekannt) oder redundant/irrefuehrend ("alle Orte" fuer
+    genau den einen Block). Bei `show_scope=False` bleibt die Kopfzeile ohne
+    Scope-Segment (nur Praefix + Stufe), die Zeilen ohne Umfangs-Suffix.
 
     `tz` (Issue #1216 F001, optional): lokalisiert `valid_from/valid_to` wie
     `render_official_alert_html` es bereits tut. Ohne `tz` (Default None)
@@ -1451,12 +1509,12 @@ def render_official_alert_telegram(
     _emoji, leading_word = _LEVEL_WORDS.get(leading.alert.level, ("🔴", "ROT"))
     pos = _LEVEL_POSITION.get(leading.alert.level, 0)
     kind = "Warnstufe" if uniform else "höchste Stufe"
-    scope_part = f"{leading.scope_label} · " if uniform_scope else ""
+    scope_part = f"{leading.scope_label} · " if (show_scope and uniform_scope) else ""
     head = f"{prefix} · {scope_part}{kind} {leading_word} ({pos}/3)"
     lines = [f"<b>{_html.escape(head)}</b>"]
     for n in ordered:
         emoji, _word = _LEVEL_WORDS.get(n.alert.level, ("🔴", "ROT"))
-        scope = "" if uniform_scope else f" · {_html.escape(n.scope_label)}"
+        scope = "" if (not show_scope or uniform_scope) else f" · {_html.escape(n.scope_label)}"
         body = _html.escape(_display_label(n.alert))
         if n.alert.valid_from and n.alert.valid_to:
             body = f"{body} · {_html.escape(_format_validity(n.alert, tz))}"

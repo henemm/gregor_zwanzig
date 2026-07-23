@@ -18,6 +18,7 @@ SPEC (v2): docs/specs/modules/issue_1110_compare_mail_v2.md
 from __future__ import annotations
 
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from app.models import Corridor
 from app.profile import ActivityProfile
@@ -31,8 +32,13 @@ from output.renderers.email.outlook import render_outlook_plain
 from output.metric_format import format_value
 from output.renderers.alert.official_alerts import (
     _word_boundary_truncate,
+    build_official_alert_notices,
+    official_alert_source_label,
+    official_alerts_to_sms_entries,
+    render_official_alert_telegram,
     render_official_alerts_plain,
 )
+from output.tokens.hazard_symbols import MIN_SMS_LEVEL
 
 # Issue #1285: die fuenf bisher stillschweigend verworfenen Uebersichts-Zeilen
 # (Renderer-Metrik-ID, Label, Formatierung). Wert-Quelle und Formatierung sind
@@ -398,10 +404,33 @@ def render_compare_telegram(
             continue
         cells = _channel_metric_cells(loc_result, enabled_metrics, metric_slots)
         block.append("   " + (" · ".join(cells) if cells else "keine Werte"))
-        for line in render_official_alerts_plain(
-            [(loc_result.location.name, loc_result.official_alerts)]
-        ):
-            block.append(f"   ⚠️ {line}")
+        # Issue #1332 (PO-Korrektur 2026-07-23): Sicherheits-Filter ab orange
+        # (`MIN_SMS_LEVEL`, wie Compare-SMS und der Trip-Pfad) + geteilte,
+        # kontext-agnostische Bausteine (`build_official_alert_notices`/
+        # `render_official_alert_telegram`, `trip=None` fuer den einzelnen
+        # Ort) -- exakt dasselbe narrative Format wie das Trip-Telegram.
+        # KEIN SMS-Kuerzel-Marker hier: Compare-Telegram soll wie
+        # Trip-Telegram aussehen (ausgeschrieben, kein `!TH:H`); das Kuerzel
+        # bleibt exklusiv im SMS-Pfad (`_sms_location_part`).
+        # Issue #1332 F001 (Adversary HIGH): `trip=None` liefert je Ort ein
+        # `scope_label` von "unbekannt" (kein Trip-Segment bekannt) -- dieser
+        # Render-Pfad baut aber JE ORT einen eigenen Block, dessen
+        # Ortsname bereits als `prefix`/Block-Ueberschrift steht. Ein
+        # Scope-Segment waere hier IMMER redundant oder irrefuehrend, egal ob
+        # "unbekannt" oder (ueber den Compare-Builder) "alle Orte" fuer genau
+        # den einen Block -- daher `show_scope=False` statt eines zweiten
+        # Builder-Aufrufs mit demselben Ergebnis.
+        filtered = [a for a in loc_result.official_alerts if a.level >= MIN_SMS_LEVEL]
+        if filtered:
+            notices = build_official_alert_notices(None, [(a, []) for a in filtered])
+            sources = list(dict.fromkeys(
+                official_alert_source_label(a.source) for a in filtered
+            ))
+            warn_text = render_official_alert_telegram(
+                notices, prefix=loc_result.location.name,
+                source_label=" · ".join(sources), show_scope=False,
+            )
+            block.append(f"   {warn_text}")
         blocks.append(block)
 
     max_chars = limits["max_chars"]
@@ -446,6 +475,29 @@ def _telegram_notice(omitted: int) -> str:
     return f"\n… +{omitted} weitere Orte (Telegram-Limit) — vollständig per E-Mail"
 
 
+def _official_alert_sms_marker(
+    entries: tuple[tuple[str, str, "int | None"], ...],
+) -> str:
+    """`!`-Kuerzel-Marker aus den geteilten `(Kuerzel, Stufe, Stunde)`-Tripeln
+    (`official_alerts_to_sms_entries`) -- ausschliesslich fuer Compare-SMS
+    (Issue #1332 AC-1/AC-4; PO-Korrektur 2026-07-23: Compare-Telegram
+    verwendet dieses Kuerzel NICHT mehr, s. `render_compare_telegram`). Kein
+    zweiter Kuerzel-Katalog: das Tripel kommt bereits gefiltert (>= orange)
+    und sortiert aus dem geteilten Kern, hier nur noch String-Bau.
+    Leeres Tripel -> leerer Marker (kein Ort ohne anzuzeigende Warnung zeigt
+    einen `!`)."""
+    if not entries:
+        return ""
+    parts = []
+    for symbol, level, hour in entries:
+        if not level:
+            parts.append(symbol)
+        else:
+            value = f"{level}@{hour}" if hour is not None else level
+            parts.append(f"{symbol}:{value}")
+    return "!" + " ".join(parts)
+
+
 def _sms_location_part(loc_result, enabled_metrics: set | None) -> str:
     """Flache SMS-Darstellung EINES Ortes.
 
@@ -459,11 +511,27 @@ def _sms_location_part(loc_result, enabled_metrics: set | None) -> str:
 
     ASCII "n/a" statt eines Gedankenstrichs, weil ein Ort ohne Werte sonst wie
     ein Ort mit leerem Wert aussieht.
+
+    Issue #1332: traegt ein Ort eine amtliche Warnung >= orange, haengt ein
+    `!`-Kuerzel-Marker an (geteilter Kern ``official_alerts_to_sms_entries``,
+    kein zweiter Katalog). Die Zahl der Metrik-Zellen sinkt dann
+    deterministisch von 2 auf 1, damit der Marker garantiert Platz hat --
+    Sicherheit vor Optik (Design-Leitprinzip), statt fragiler Nachtraeglich-
+    Kuerzung. `@Stunde` erscheint nur, wenn der Ort eine Zeitzone hinterlegt
+    hat (``SavedLocation.timezone``); ohne sie entfaellt der Stunden-Teil
+    ersatzlos (Known Limitation der Spec).
     """
     if loc_result.error is not None:
         return f"{loc_result.location.name} n/a"
-    cells = _channel_metric_cells(loc_result, enabled_metrics, _SMS_METRICS_PER_LOCATION)
-    return " ".join([loc_result.location.name] + cells)
+    tz = ZoneInfo(loc_result.location.timezone) if loc_result.location.timezone else None
+    entries = official_alerts_to_sms_entries(loc_result.official_alerts, tz)
+    limit = 1 if entries else _SMS_METRICS_PER_LOCATION
+    cells = _channel_metric_cells(loc_result, enabled_metrics, limit)
+    parts = [loc_result.location.name] + cells
+    marker = _official_alert_sms_marker(entries)
+    if marker:
+        parts.append(marker)
+    return " ".join(parts)
 
 
 def render_compare_sms(

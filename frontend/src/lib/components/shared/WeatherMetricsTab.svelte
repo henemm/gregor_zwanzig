@@ -296,22 +296,30 @@
 		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled);
 	}
 
+	// Issue #1332 F003 (Fix-Loop 2): eigener, idempotenter Ladepfad fuer die
+	// Kuerzel-Legende — load() (Route) und der Vergleich-$effect unten teilen
+	// sich diese Funktion, statt dass der Vergleich-Zweig (der load() nie
+	// aufruft) ohne smsSymbols bleibt.
+	async function loadSmsSymbols() {
+		if (smsSymbols) return;
+		// Fail-soft: ohne Kuerzel-Katalog bleibt der Reiter voll bedienbar,
+		// nur die Kuerzel-Anzeige entfaellt.
+		smsSymbols = await api.get<SmsSymbolCatalog>('/api/sms-symbols').catch(() => null);
+	}
+
 	async function load() {
 		loadError = null;
 		try {
-			const [catalogData, templateData, presetData, profileData, symbolData] = await Promise.all([
+			const [catalogData, templateData, presetData, profileData] = await Promise.all([
 				api.get<MetricCatalog>('/api/metrics'),
 				api.get<Template[]>('/api/templates').catch(() => [] as Template[]),
 				api.get<MetricPreset[]>('/api/metric-presets').catch(() => [] as MetricPreset[]),
 				fetch('/api/auth/profile', { credentials: 'same-origin' })
 					.then((r) => (r.ok ? r.json() : null))
 					.catch(() => null),
-				// Fail-soft: ohne Kuerzel-Katalog bleibt der Reiter voll bedienbar,
-				// nur die Kuerzel-Anzeige entfaellt.
-				api.get<SmsSymbolCatalog>('/api/sms-symbols').catch(() => null),
+				loadSmsSymbols(),
 			]);
 			catalog = catalogData;
-			smsSymbols = symbolData;
 			templates = templateData;
 			userPresets = presetData;
 			profile = profileData;
@@ -334,6 +342,16 @@
 		// Issue #1311: der Vergleich-Zweig braucht keinen Trip-Katalog-Fetch —
 		// die Grundauswahl im vergleich-Kontext arbeitet auf COMPARE_METRIC_DEFS.
 		if (context === 'route' && Object.keys(catalog).length === 0) load();
+	});
+
+	$effect(() => {
+		// Issue #1332 F003: load() wird im Vergleich-Kontext nie aufgerufen (s.o.),
+		// die Kuerzel-Legende (officialAlertsToggle-Snippet) braucht smsSymbols
+		// aber auch hier. Guard !smsSymbols verhindert Endlosschleife: nach
+		// erfolgreichem Fetch ist smsSymbols gesetzt, nach Fehlschlag bleibt es
+		// null und der naechste Effect-Lauf faengt sich nur bei einer echten
+		// Dependency-Aenderung (context) erneut ein.
+		if (context === 'vergleich' && !smsSymbols) loadSmsSymbols();
 	});
 
 	// Issue #932: Activity-Typ → Template vorauswählen (nur createMode, einmalig).
@@ -653,16 +671,16 @@
 			</span>
 			<p class="pl-6 text-xs text-muted-foreground mt-0.5">Amtliche Wetterwarnungen (z. B. Unwetterwarnung) im E-Mail-Briefing anzeigen.</p>
 		</div>
-		<!-- Issue #1318 AC-9: Kuerzel-Legende zur SMS-/Telegram-Kurzform. Alle
-		     Kuerzel stammen aus dem Backend-Katalog (smsSymbols), damit die
+		<!-- Issue #1318 AC-9 / #1332: Kuerzel-Legende zur SMS-/Telegram-Kurzform.
+		     Alle Kuerzel stammen aus dem Backend-Katalog (smsSymbols), damit die
 		     Legende nicht von der tatsaechlich versendeten SMS abweichen kann.
-		     NUR im Trip-Kontext: die Vergleichs-SMS zeigt amtliche Warnungen gar
-		     nicht (render_compare_sms), die Vergleichs-Telegram-Nachricht zeigt
-		     sie ungefiltert in Langform ohne '!'/Kuerzel/Stufe
-		     (render_official_alerts_plain). Im Vergleich waere die Legende also
-		     eine falsche Aussage ueber die eigenen Nachrichten — lieber keine
-		     Erklaerung (Attrappen-Verbot, s.u.). Der Schalter selbst bleibt. -->
-		{#if context !== 'vergleich' && smsSymbols}
+		     Auch im Vergleich-Kontext sichtbar: seit #1332 filtert die
+		     Vergleichs-SMS (render_compare_sms) amtliche Warnungen ab orange und
+		     zeigt denselben '!'-Kuerzel-Marker wie der Trip-Pfad, und die
+		     Vergleichs-Telegram-Nachricht (render_compare_telegram) traegt
+		     dasselbe Kuerzel/Stufe -- die Legende trifft damit fuer beide
+		     Kontexte zu (die vormalige Ausblendung war ein Bug, kein Feature). -->
+		{#if smsSymbols}
 			<div data-testid="official-alerts-symbol-legend" class="pl-6 text-xs text-muted-foreground space-y-1">
 				<p>In SMS und Telegram-Kurzform beginnt der Warn-Block mit <code>!</code> — alles dahinter ist eine amtliche Warnung, nicht die eigene Vorhersage.</p>
 				<ul class="legend-symbols">
