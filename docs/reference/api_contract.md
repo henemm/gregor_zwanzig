@@ -1755,7 +1755,7 @@ Bei mindestens einem fehlgeschlagenen fälligen Preset (seit Issue #1290, identi
    - Send via Resend to all `preset["empfaenger"]`
    - Call `_save_preset_status(user_id, preset_id, top_ort)` to update JSON
    - On any error: log warning, increment `error_count`, continue (no job abort)
-5. Go scheduler (Cron `0 * * * *`, stündlich statt vormals einmal täglich 06:00 UTC) pingt BetterStack Heartbeat (`GZ_HEARTBEAT_COMPARE_PRESETS`) nur wenn `error_count == 0` (operator-visible success indicator)
+5. Go scheduler (Cron `0 * * * *`, stündlich statt vormals einmal täglich 06:00 UTC) pingt den BetterStack Heartbeat (`GZ_HEARTBEAT_COMPARE_PRESETS` / Go `HeartbeatComparePresets`). Seit **Issue #1346** ist dieser Ping in `briefingDispatch()` **konsolidiert** und deckt den gesamten stündlichen Briefing-Versand ab: er feuert nur, wenn im selben Tick **beide** Teil-Jobs erfolgreich sind — `compare_presets_daily` (`error_count == 0`) **und** `trip_reports_hourly` (Status `ok`). Ein Trip-Briefing-Totalausfall unterdrückt den Ping (früher verdeckt) und löst zusätzlich einen edge-getriggerten MQ-Alarm an `infra` aus.
 
 **Error Responses:**
 
@@ -1774,8 +1774,8 @@ Bei mindestens einem fehlgeschlagenen fälligen Preset (seit Issue #1290, identi
 **Notes:**
 
 - Endpoint always returns HTTP 200 regardless of `error_count`; seit Issue #1290 zeigt das `status`-Feld (`"ok"`/`"partial"`) den Fehlerfall aber im Response-Body selbst an (job success daneben weiterhin über Go-Scheduler `recordRun()` getrackt)
-- Python-side heartbeat ping (`GZ_HEARTBEAT_COMPARE_PRESETS` ENV) is not called by Python; Go scheduler handles this via `pingHeartbeat()` on the full job result
-- BetterStack Heartbeat is pinged only when `error_count == 0` — any preset-level error blocks the ping (Readiness Principle)
+- Python-side heartbeat ping (`GZ_HEARTBEAT_COMPARE_PRESETS` ENV) is not called by Python; the Go scheduler handles this via `pingHeartbeat()` — seit Issue #1346 nicht mehr in `comparePresetsDaily()` selbst, sondern zentral in `briefingDispatch()` nach beiden Teil-Jobs
+- BetterStack Heartbeat is pinged only when the **full briefing dispatch** succeeds: `compare_presets_daily` `error_count == 0` **and** `trip_reports_hourly` status `ok` (Readiness Principle, Issue #1346). Any preset-level error OR a trip-briefing total outage blocks the ping; the trip outage additionally fires an MQ alarm to `infra` (edge-triggered ok→error, recovery on error→ok)
 
 ---
 
@@ -2854,6 +2854,15 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-07-23: Issue #1346 — Stiller Briefing-Totalausfall wird laut. Der
+  BetterStack-Heartbeat (`HeartbeatComparePresets`) ist von `comparePresetsDaily()`
+  nach `briefingDispatch()` verlagert und deckt nun den gesamten stündlichen
+  Briefing-Versand ab: Ping nur wenn `trip_reports_hourly` **und**
+  `compare_presets_daily` erfolgreich sind (vorher hing er allein am Ortsvergleich
+  und verdeckte einen Trip-Totalausfall). Zusätzlich edge-getriggerter MQ-Alarm an
+  `infra` bei `trip_reports_hourly` ok→error (high) + Recovery error→ok (normal),
+  analog `dataWriteSelftest`. Kein neuer BetterStack-Heartbeat (Kontingent).
+  Reine Go-Änderung (`internal/scheduler/scheduler.go`).
 - 2026-07-18: Issue #1290 (E1 von Epic #1301, ergänzend #1288/E2) —
   `POST /api/scheduler/compare-presets-daily` liefert jetzt `failed` als neues
   Response-Feld, identisches Schema zu `/api/scheduler/trip-reports` (Issue
