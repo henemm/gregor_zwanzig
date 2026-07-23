@@ -75,10 +75,10 @@ _LAPPLAND = Location(latitude=65.0, longitude=18.0, name="Lappland")
 
 # Berlin (52.52, 13.40): liegt in der DE-Box (47.2-55.1 lat, 5.8-15.1 lon),
 # NICHT in der AT-Box (lat 52.52 > 49.1 max_lat) -> direct_provider_for
-# liefert "de_direct". Seit #1142 ist "at_direct" kein Stub mehr (echter
-# GeoSphereDirectProvider), daher treffen die Stub-spezifischen Tests unten
-# bewusst DE statt AT -- "de_direct" bleibt bis #1144 ein echter Stub
-# (ProviderNotImplementedError).
+# liefert "de_direct". Seit #1144 ist "de_direct" kein Stub mehr (echter
+# `DwdDirectProvider`, #1144) -- die unten stehenden Tests biegen ihn
+# bewusst auf einen echten Fehlschlag (503) statt eines Stub-Fehlers, um
+# weiterhin den Original-Fehler-Durchreiche-Pfad zu pruefen.
 _BERLIN = Location(latitude=52.52, longitude=13.40, name="Berlin")
 
 
@@ -173,6 +173,59 @@ def _read_diagnostics(path: Path) -> list[dict]:
     if not path.exists():
         return []
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+class _DwdAlwaysFailServer(ThreadingHTTPServer):
+    """Liefert fuer JEDEN Pfad denselben Status (Stellvertreter fuer einen
+    ausgefallenen `de_direct`/DwdDirectProvider-Endpoint, #1144) -- anders
+    als `_FaultServer` (pfadabhaengige Status-Map fuer Open-Meteo-Endpoints)
+    reicht hier ein einzelner Status, da jeder ICON-D2-Parameter/Zeitschritt-
+    Request gleichermassen fehlschlagen soll."""
+
+    def __init__(self, server_address, handler, status: int):
+        super().__init__(server_address, handler)
+        self.status = status
+        self.request_count = 0
+        self._lock = threading.Lock()
+
+    def record(self) -> None:
+        with self._lock:
+            self.request_count += 1
+
+
+class _DwdAlwaysFailHandler(BaseHTTPRequestHandler):
+    def do_GET(self):  # noqa: N802
+        self.server.record()
+        body = json.dumps(
+            {"error": True, "reason": f"HTTP {self.server.status} (test seam)"}
+        ).encode("utf-8")
+        self.send_response(self.server.status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):  # Ruhe im pytest-Output
+        pass
+
+
+@contextmanager
+def _dwd_always_fail_server(status: int = 503):
+    """Echter lokaler HTTP-Server, gegen den `DwdDirectProvider.BASE_URL`
+    umgebogen wird -- verhindert einen echten (vom Egress-Guard geblockten)
+    Call auf `opendata.dwd.de` und macht `de_direct` deterministisch als
+    ECHTEN, aber fehlschlagenden Provider verhalten (ProviderRequestError
+    statt ProviderNotImplementedError)."""
+    server = _DwdAlwaysFailServer(("127.0.0.1", 0), _DwdAlwaysFailHandler, status)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    host, port = server.server_address
+    try:
+        yield f"http://{host}:{port}/", server
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
 
 
 class _TestDirectProvider:
@@ -406,40 +459,45 @@ def test_plain_email_footer_no_leading_colon_on_empty_metrics():
 # ---------------------------------------------------------------------------
 
 def test_stub_provider_reraises_original_error(monkeypatch, tmp_path):
-    """AC-5: Given der Regions-Direktprovider ist noch der produktive Stub aus
-    `providers.regional_stubs` (wirft `ProviderNotImplementedError`), When der
-    Total-Ausfall fuer diese Region (Berlin -> de_direct) eintritt, Then wird
-    die urspruengliche `ProviderRequestError` des zuletzt gescheiterten
-    Open-Meteo-Modells unveraendert weitergereicht — NICHT
-    `ProviderNotImplementedError`, keine neue Ersatz-Exception.
+    """AC-5: Given der Regions-Direktprovider ist seit #1144 ein echter
+    Provider (`DwdDirectProvider`), hier bewusst auf einen Fehlschlag (503)
+    gebogen, When der Total-Ausfall fuer diese Region (Berlin -> de_direct)
+    eintritt, Then wird die urspruengliche `ProviderRequestError` des zuletzt
+    gescheiterten Open-Meteo-Modells unveraendert weitergereicht — NICHT die
+    `ProviderRequestError` des Direktprovider-Fehlschlags selbst, keine neue
+    Ersatz-Exception.
 
-    Seit #1142 ist "at_direct" kein Stub mehr (echter GeoSphereDirectProvider,
-    liefert fuer AT-Koordinaten wie Muenchen jetzt tatsaechlich Daten statt zu
-    werfen) — dieser Test nutzt daher bewusst Berlin/"de_direct", das bis
-    #1144 ein echter Stub bleibt, um weiterhin den Stub-Fehlerpfad zu pruefen.
-
-    RED heute (vor #1142 wie vor #1144): `from providers.base import
-    ProviderNotImplementedError` schlaegt mit ImportError fehl, solange
-    `providers.base`/`providers.regional_stubs` die Exception-Klasse bzw.
-    den Stub nicht kennen.
+    Seit #1142/#1143/#1144 ist keiner der drei Regions-Direktprovider mehr
+    ein Stub -- dieser Test biegt `de_direct` (`DwdDirectProvider`) daher
+    ueber einen lokalen 503-Server auf einen echten Fehlschlag, um weiterhin
+    den Original-Fehler-Durchreiche-Pfad (F001, #1141) zu pruefen.
     """
     from providers.base import ProviderNotImplementedError  # noqa: F401 (Existenz-Beweis)
+    from providers.dwd import DwdDirectProvider
     from providers.region_routing import direct_provider_for
 
     assert direct_provider_for(_BERLIN.latitude, _BERLIN.longitude) == "de_direct", (
         "AC-5 Vorbedingung: Berlin (52.52, 13.40) muss auf 'de_direct' "
-        "routen (DE-Box, ausserhalb AT-Box) — de_direct bleibt bis #1144 ein "
-        "echter Stub."
+        "routen (DE-Box, ausserhalb AT-Box)."
     )
 
-    with _total_outage_seam(monkeypatch, tmp_path) as (provider, server, _diag):
-        with pytest.raises(ProviderRequestError) as exc:
-            provider.fetch_forecast(_BERLIN, enrich_ensemble=False)
+    with _dwd_always_fail_server() as (dwd_url, _dwd_server):
+        monkeypatch.setattr("providers.dwd.BASE_URL", dwd_url)
+        monkeypatch.setattr(DwdDirectProvider._request.retry, "wait", tenacity.wait_none())
+
+        with _total_outage_seam(monkeypatch, tmp_path) as (provider, server, _diag):
+            with pytest.raises(ProviderRequestError) as exc:
+                provider.fetch_forecast(_BERLIN, enrich_ensemble=False)
 
     assert not isinstance(exc.value, ProviderNotImplementedError), (
-        "AC-5: Der Stub-Fehler (ProviderNotImplementedError) darf niemals "
-        "bis zum Aufrufer durchsickern — es muss die urspruengliche "
+        "AC-5: Der Direktprovider-Fehlschlag darf niemals unveraendert bis "
+        "zum Aufrufer durchsickern — es muss die urspruengliche "
         "ProviderRequestError des Open-Meteo-Total-Ausfalls sein."
+    )
+    assert exc.value.provider == "openmeteo", (
+        "AC-5: die sichtbare ProviderRequestError muss vom urspruenglichen "
+        f"Open-Meteo-Total-Ausfall stammen (provider='openmeteo') — war "
+        f"provider={exc.value.provider!r}."
     )
 
 
@@ -449,33 +507,34 @@ def test_stub_provider_reraises_original_error(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_total_outage_keeps_feeding_error_log(monkeypatch, tmp_path):
-    """AC-6: Given Open-Meteo UND der Direkt-Provider (Stub) fallen aus, When
-    das Segment verarbeitet wird, Then bleiben die 5xx-Calls wie bisher in
-    der (auf tmp umgebogenen) `openmeteo_calls.jsonl` protokolliert (Log-
+    """AC-6: Given Open-Meteo UND der Direkt-Provider (seit #1144 ein echter,
+    hier bewusst auf 503 gebogener `DwdDirectProvider`) fallen aus, When das
+    Segment verarbeitet wird, Then bleiben die 5xx-Calls wie bisher in der
+    (auf tmp umgebogenen) `openmeteo_calls.jsonl` protokolliert (Log-
     Grundlage fuer `provider_error_streak`, Go-seitig, bleibt erhalten — kein
     Log-Eintrag wird durch das Cross-Provider-Routing unterdrueckt).
 
-    Seit #1142 ist "at_direct" kein Stub mehr — dieser Test nutzt daher
-    bewusst Berlin/"de_direct" (Stub bis #1144), analog zu
+    Seit #1142/#1143/#1144 ist keiner der drei Regions-Direktprovider mehr
+    ein Stub — dieser Test biegt `de_direct` daher ueber einen lokalen
+    503-Server auf einen echten Fehlschlag, analog
     `test_stub_provider_reraises_original_error`.
-
-    RED heute (vor #1142 wie vor #1144): `from providers.base import
-    ProviderNotImplementedError` schlaegt mit ImportError fehl — ohne den
-    produktiven Stub kann das AC-5-Szenario (Stub-Ausfall bei bekannter
-    Region), auf dem dieser Test aufbaut, gar nicht hergestellt werden.
     """
     from providers.base import ProviderNotImplementedError  # noqa: F401
+    from providers.dwd import DwdDirectProvider
     from providers.region_routing import direct_provider_for
 
     assert direct_provider_for(_BERLIN.latitude, _BERLIN.longitude) == "de_direct", (
         "AC-6 Vorbedingung: Berlin (52.52, 13.40) muss auf 'de_direct' "
-        "routen (DE-Box, ausserhalb AT-Box) — de_direct bleibt bis #1144 ein "
-        "echter Stub."
+        "routen (DE-Box, ausserhalb AT-Box)."
     )
 
-    with _total_outage_seam(monkeypatch, tmp_path) as (provider, server, diag_path):
-        with pytest.raises(ProviderRequestError):
-            provider.fetch_forecast(_BERLIN, enrich_ensemble=False)
+    with _dwd_always_fail_server() as (dwd_url, _dwd_server):
+        monkeypatch.setattr("providers.dwd.BASE_URL", dwd_url)
+        monkeypatch.setattr(DwdDirectProvider._request.retry, "wait", tenacity.wait_none())
+
+        with _total_outage_seam(monkeypatch, tmp_path) as (provider, server, diag_path):
+            with pytest.raises(ProviderRequestError):
+                provider.fetch_forecast(_BERLIN, enrich_ensemble=False)
 
     entries = _read_diagnostics(diag_path)
     server_5xx_entries = [e for e in entries if e.get("status") == 503]

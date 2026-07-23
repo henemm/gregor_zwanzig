@@ -15,7 +15,7 @@ Wetterdaten über `get_provider("openmeteo")` — Registry in
 | Stufe | Was | Wo im Code | Referenz |
 |---|---|---|---|
 | 1 | **Intra-Modell-Fallback** innerhalb Open-Meteo: regionale Modelle → gröbere Modelle, ohne den Ausfall zu kaschieren | `src/providers/openmeteo.py` (`REGIONAL_MODELS`) | ADR-0018, #1115 |
-| 2 | **Cross-Provider-Fallback** bei Open-Meteo-Totalausfall: Koordinate → regionale Direktanbindung (AT → `at_direct`/GeoSphere, DE → `de_direct` Stub, FR → `fr_direct`/AROME-WCS-Direktprovider (Météo-France); Prüfreihenfolge AT→DE→FR, Alpenraum fällt bewusst an AT) | `src/providers/region_routing.py` | Epic #1127, #1141, #1143 |
+| 2 | **Cross-Provider-Fallback** bei Open-Meteo-Totalausfall: Koordinate → regionale Direktanbindung (AT → `at_direct`/GeoSphere, DE → `de_direct`/ICON-D2-Open-Data-Direktprovider (DWD), FR → `fr_direct`/AROME-WCS-Direktprovider (Météo-France); Prüfreihenfolge AT→DE→FR, Alpenraum fällt bewusst an AT) | `src/providers/region_routing.py` | Epic #1127, #1141, #1143, #1144 |
 
 ## Weitere registrierte Provider
 
@@ -23,6 +23,7 @@ Wetterdaten über `get_provider("openmeteo")` — Registry in
 |---|---|
 | `geosphere` | GeoSphere Austria (Direktanbindung, AT-Fallback-Basis) |
 | `fr_direct` | Météo-France AROME-WCS (Direktanbindung, FR-Fallback, #1143) |
+| `de_direct` | DWD ICON-D2 Open Data (GRIB2-Direktanbindung, DE-Fallback, #1144) |
 | `brightsky` | DWD-Daten via BrightSky — genutzt im Radar-Pfad (`src/services/radar_service.py`) |
 | `radar_dpc` | Radar-Nowcast Italien (DPC) |
 | `fixture` | Offline-Testmodus: aktiv wenn `GZ_TEST_FIXTURE_DIR` gesetzt (#346) — bedient `openmeteo`-Anfragen aus versionierten Fixtures |

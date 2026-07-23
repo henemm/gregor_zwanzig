@@ -1,7 +1,10 @@
 # Epic 1127: Infrastruktur-unabhängiger Provider-Fallback (Original-Dienste direkt)
 
-**Status:** Slice 0 (#1141, Routing-Unterbau) implementiert (2026-07-09). AT/FR/DE (#1142-#1144)
-noch offen, s. Sub-Issues-Tabelle unten.
+**Status:** ✅ Inhaltlich abgeschlossen (2026-07-23). Alle vier Slices (0/AT/FR/DE, #1141-#1144)
+implementiert — der letzte Regions-Stub (`de_direct` in `regional_stubs.py`) ist mit #1144 durch
+einen echten Direktprovider ersetzt; `regional_stubs.py` enthält damit keine Stub-Provider mehr.
+Verbleibende Epic-Risiken (z. B. uneinheitliche Coverage-Bounds zwischen den Regionen, s. Offene
+Fragen 3/4) sind eigene Folgearbeit, kein offener Epic-Scope mehr.
 **Baut auf:** #1115 (Intra-Open-Meteo-Modell-Fallback, live, ADR-0018). #1127 ist die **zweite
 Redundanz-Stufe**: greift nur, wenn Open-Meteo als Verteiler **komplett** ausfällt (nicht nur ein
 einzelner Modell-Kanal — das fängt #1115 bereits ab).
@@ -248,8 +251,8 @@ GeoSphere heimlich von Open-Meteo abhängig — das würde das Epic-Ziel unterla
 |---|---|---|---|
 | #1141 | Routing-Unterbau + Total-Ausfall-Erkennung (Slice 0) | 1 (Fundament) | ✅ implementiert (2026-07-09) |
 | #1142 | GeoSphere-Direktfallback vervollständigen (Slice AT) | 2 | ✅ implementiert (2026-07-09) |
-| #1143 | Météo-France direkt (Slice FR) — Portal-Zugang zuerst klären | 3 | offen |
-| #1144 | DWD direkt (Slice DE) — Quellenentscheidung MOSMIX vs. ICON-D2 vorab | 4 | offen |
+| #1143 | Météo-France direkt (Slice FR) — Portal-Zugang zuerst klären | 3 | ✅ implementiert |
+| #1144 | DWD direkt (Slice DE) — Quellenentscheidung MOSMIX vs. ICON-D2 vorab | 4 | ✅ implementiert (2026-07-23) |
 | #1145 | (Follow-up, unabhängig) Footer-Doppelpunkt-Artefakt aus #1115 | — | offen |
 
 ### Slice 0 (#1141) — Implementierungsstand (2026-07-09)
@@ -283,3 +286,29 @@ Liefert **nur den Unterbau** — echte Provider-Anbindungen folgen in #1142 (AT)
 - **Empirischer Coverage-Befund:** GeoSphere-AROME-Domäne deckt AT-Router-Box vollständig ab
   — ursprüngliches AC-2 (Box-Schärfung bei Außenkoordinaten) entfiel, `direct_provider_for()`
   Prüfreihenfolge AT→DE→FR genügt.
+
+### Slice FR (#1143) — Implementierungsstand
+
+**Status: ✅ Implementiert**
+
+- **NEU `src/providers/meteofrance.py`:** `MeteoFranceDirectProvider` (Registry-Key `fr_direct`),
+  echte AROME-WCS-Direktanbindung gegen Météo-France.
+- **`src/providers/regional_stubs.py`:** FR-Stub durch den echten Provider ersetzt (direkte
+  Registrierung, kein Adapter wie bei AT).
+
+### Slice DE (#1144) — Implementierungsstand (2026-07-23)
+
+**Status: ✅ Implementiert**
+
+- **NEU `src/providers/dwd.py`:** `DwdDirectProvider` (Registry-Key `de_direct`) — ruft die
+  öffentliche ICON-D2-Open-Data-API (`opendata.dwd.de`, 2,2-km-Gitter) direkt ab und liest die
+  GRIB2-Antworten über den bereits vorhandenen `rasterio`/GDAL-GRIB-Treiber (keine neue
+  Dependency). `precip_1h_mm` wird als Differenz aufeinanderfolgender kumulierter `tot_prec`-Werte
+  gebildet (nicht wie bei AROME direkt übernommen); `t_2m` ist bereits °C, keine
+  Kelvin-Umrechnung. Bounded auf 24h-Horizont (PO-Tech-Lead-Entscheidung 2026-07-23).
+- **`src/providers/base.py`:** Registry-Umhängung `de_direct` → `DwdDirectProvider`.
+- **`src/providers/regional_stubs.py`:** DE-Stub durch den echten Provider ersetzt — damit ist
+  `regional_stubs.py` **stub-frei**, alle drei Regionen (AT/FR/DE) haben einen echten
+  Direktprovider.
+- **`src/app/models.py`:** `Provider.DWD` ergänzt.
+- Spec: `docs/specs/modules/provider_dwd.md`.

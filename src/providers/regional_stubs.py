@@ -15,11 +15,14 @@ outage doesn't itself contact Open-Meteo again.
 Slice #1143 replaces the FR stub with `MeteoFranceDirectProvider`
 (`src/providers/meteofrance.py`), registered directly (no adapter here).
 
-The remaining real provider lands in a follow-up slice: #1144 (DWD DE).
+Slice #1144 replaces the DE stub with `DwdDirectProvider`
+(`src/providers/dwd.py`), registered directly (no adapter here). After
+#1144 no region stub is left open — AT/FR/DE all have a real direct
+provider; `RegionalStubProvider` stays in this module as a generic
+building block but is no longer instantiated by `_load_providers()`.
 """
 from __future__ import annotations
 
-from functools import partial
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
@@ -96,7 +99,3 @@ class GeoSphereDirectProvider:
             )
         except httpx.RequestError as e:
             raise ProviderRequestError(self.name, f"Request failed: {e}")
-
-
-# No-arg factory for the provider registry (get_provider calls factory()).
-make_de_direct = partial(RegionalStubProvider, "de_direct")

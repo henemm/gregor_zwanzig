@@ -29,6 +29,7 @@ class Provider(str, Enum):
     SLF = "SLF"
     EUREGIO = "EUREGIO"
     METEOFRANCE = "METEOFRANCE"
+    DWD = "DWD"
 
 
 class ThunderLevel(str, Enum):
