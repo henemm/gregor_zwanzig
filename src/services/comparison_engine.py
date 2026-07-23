@@ -220,21 +220,26 @@ class ComparisonEngine:
                 # Issue #1040: strukturell kein Fetch bei official_alerts_enabled=False.
                 if official_alerts_enabled:
                     try:
-                        from services.official_alerts import get_official_alerts_for_location
-                        official_alerts = get_official_alerts_for_location(loc.lat, loc.lon)
+                        from services.official_alerts import get_official_alerts_with_status
+                        official_alerts, official_alerts_unavailable = get_official_alerts_with_status(loc.lat, loc.lon)
                     except Exception:
                         logger.warning(
                             "comparison_engine: official_alerts nicht ladbar — "
                             "Alerts fuer diesen Ort deaktiviert", exc_info=True,
                         )
                         official_alerts = []
+                        # Issue #1349: unerwarteter Fehler -> sicherheitsseitig als
+                        # Ausfall werten (analog trip_report_scheduler.py:810-812).
+                        official_alerts_unavailable = True
                 else:
                     official_alerts = []
+                    official_alerts_unavailable = False
 
                 results.append(LocationResult(
                     location=loc,
                     score=score,
                     official_alerts=official_alerts,
+                    official_alerts_unavailable=official_alerts_unavailable,
                     snow_depth_cm=snow_depth,
                     snow_new_cm=snow_new,
                     temp_min=metrics.get("temp_min"),

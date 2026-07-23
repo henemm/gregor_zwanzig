@@ -158,6 +158,9 @@ class LocationResult:
     error: Optional[str] = None  # Error message if fetch failed
     # Issue #1034 — amtliche Warnungen (transient, keine Persistenz betroffen)
     official_alerts: List["OfficialAlert"] = field(default_factory=list)
+    # Issue #1349 (Scheibe 3) — Ausfall-Flag einer abdeckenden amtlichen
+    # Quelle, additiv wie oben. Default False = rueckwaertskompatibel.
+    official_alerts_unavailable: bool = False
 
 
 @dataclass

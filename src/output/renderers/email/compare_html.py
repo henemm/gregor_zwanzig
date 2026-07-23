@@ -1044,6 +1044,15 @@ def render_compare_html(
     header_html = _render_header(result, sig)
     warnings_html = "".join(_render_warning_banner(w) for w in warnings)
     warn_banner_html = _render_warn_banner(locations)
+    # Issue #1349 (Scheibe 3) — geteilter Baustein aus unavailable_hint.py,
+    # kein Nachbau. Nur bei gesetztem Flag aufgerufen (AC-2 Byte-Identitaet).
+    from output.renderers.email.unavailable_hint import (
+        any_official_alerts_unavailable, render_official_alerts_unavailable_html,
+    )
+    unavailable_banner_html = (
+        render_official_alerts_unavailable_html()
+        if any_official_alerts_unavailable(locations) else ""
+    )
 
     overview_html = (
         f'<div style="padding:6px 24px 0;">'
@@ -1082,8 +1091,8 @@ def render_compare_html(
     # Warn-Lead/keine Warnungen, analog zur Anti-Erosion-Regel aus #1034).
     body_html = "\n".join(
         part for part in (
-            header_html, warnings_html, warn_banner_html, overview_html,
-            hourly_head_html, per_location_html,
+            header_html, warnings_html, warn_banner_html, unavailable_banner_html,
+            overview_html, hourly_head_html, per_location_html,
             legend_html, abo_html, app_footer_html,
         ) if part
     )
