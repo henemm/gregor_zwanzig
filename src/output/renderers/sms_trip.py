@@ -237,9 +237,16 @@ def _segments_to_normalized_forecast(
         confidence_pct_min=day_confidence,
         has_data_gap=has_gap,
     )
+    # Issue #1349: Flag ueber die Segmente aggregieren (Muster identisch zum
+    # E-Mail-Renderer, output/renderers/email/unavailable_hint.py) — die
+    # Erkennung selbst lebt am Fail-soft-Pfad des Schedulers (#1348).
+    unavailable = any(
+        getattr(seg, "official_alerts_unavailable", False) for seg in segments
+    )
     return NormalizedForecast(
         days=(today,),
         official_alerts=_official_alert_entries(segments, tz),
+        official_alerts_unavailable=unavailable,
     )
 
 

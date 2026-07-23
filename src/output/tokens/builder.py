@@ -45,6 +45,12 @@ PRIORITY = {
 # jeder Vorhersage-Token (bisheriges Maximum 10).
 OFFICIAL_ALERT_PRIORITY = 11
 
+# Issue #1349: "amtliche Warnungen nicht abrufbar" — sicherheitsrelevant,
+# darf unter Truncation-Druck nie wegfallen (ausserhalb DROP_ORDER/
+# _last_resort in render.py; Prioritaet hier nur dokumentarisch >= 11).
+UNAVAILABLE_SYMBOL = "W?"
+UNAVAILABLE_PRIORITY = OFFICIAL_ALERT_PRIORITY + 1
+
 # (symbol, category) -> §2 POSITIONAL index. Vigilance shares 'TH:' symbol.
 POSITIONAL = [
     ("N", "forecast"), ("D", "forecast"), ("R", "forecast"),
@@ -54,6 +60,7 @@ POSITIONAL = [
     ("Z:", "fire"), ("MAX", "fire"), ("M:", "fire"),
     ("SN", "wintersport"), ("SN24+", "wintersport"),
     ("SFL", "wintersport"), ("AV", "wintersport"), ("WC", "wintersport"),
+    (UNAVAILABLE_SYMBOL, "unavailable"),
     ("DBG", "debug"),
 ]
 POS_INDEX = {key: i for i, key in enumerate(POSITIONAL)}
@@ -137,6 +144,15 @@ def _official_alerts(fc: NormalizedForecast) -> list[Token]:
         value = level if hour is None else f"{level}@{hour}"
         out.append(Token(f"{symbol}:", value, "official_alert", OFFICIAL_ALERT_PRIORITY))
     return out
+
+
+def _unavailable(fc: NormalizedForecast) -> list[Token]:
+    """Issue #1349: eigenstaendiger 'W?'-Marker in eigener Kategorie
+    ('unavailable', NICHT 'official_alert') — sonst wuerde render.py's
+    '!'-Warnblock-Fusion ihn faelschlich als amtliche Warnung lesen."""
+    if not fc.official_alerts_unavailable:
+        return []
+    return [Token(UNAVAILABLE_SYMBOL, "", "unavailable", UNAVAILABLE_PRIORITY)]
 
 
 def _fire(fc: NormalizedForecast) -> list[Token]:
@@ -237,6 +253,7 @@ def build_token_line(
 
     tokens.extend(_vigilance(forecast))
     tokens.extend(_official_alerts(forecast))
+    tokens.extend(_unavailable(forecast))
     tokens.extend(_fire(forecast))
     if profile == "wintersport":
         tokens.extend(_wintersport(today, by_sym, report_type))

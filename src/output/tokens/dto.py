@@ -8,6 +8,7 @@ ReportType = Literal["morning", "evening", "update", "compare"]
 Profile = Literal["standard", "wintersport"]
 TokenCategory = Literal[
     "forecast", "vigilance", "official_alert", "fire", "wintersport", "debug",
+    "unavailable",
 ]
 
 
@@ -52,6 +53,10 @@ class NormalizedForecast:
     # ohne Stufe (access_ban), Stunde None = ganztaegig (kein '@h').
     # Bereits sortiert (Stufe absteigend, dann Katalog-Reihenfolge).
     official_alerts: tuple[tuple[str, str, Optional[int]], ...] = field(default_factory=tuple)
+    # Issue #1349: mindestens eine abdeckende amtliche Warn-Quelle beim Fetch
+    # ausgefallen (kein Neuaufbau der Erkennung — Flag wird 1:1 durchgereicht).
+    # Additiv, Default False -> Byte-Identitaet fuer alle Bestandsaufrufer.
+    official_alerts_unavailable: bool = False
     fire_zones_high: tuple[str, ...] = field(default_factory=tuple)
     fire_zones_max: tuple[str, ...] = field(default_factory=tuple)
     fire_massifs: tuple[str, ...] = field(default_factory=tuple)
