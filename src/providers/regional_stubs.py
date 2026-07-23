@@ -12,8 +12,10 @@ adapter delegating to the existing, production-used `GeoSphereProvider`
 (`include_cloud_layers=False`), so the fallback for an Open-Meteo total
 outage doesn't itself contact Open-Meteo again.
 
-The remaining real providers land in follow-up slices: #1143
-(Météo-France FR), #1144 (DWD DE).
+Slice #1143 replaces the FR stub with `MeteoFranceDirectProvider`
+(`src/providers/meteofrance.py`), registered directly (no adapter here).
+
+The remaining real provider lands in a follow-up slice: #1144 (DWD DE).
 """
 from __future__ import annotations
 
@@ -96,6 +98,5 @@ class GeoSphereDirectProvider:
             raise ProviderRequestError(self.name, f"Request failed: {e}")
 
 
-# No-arg factories for the provider registry (get_provider calls factory()).
+# No-arg factory for the provider registry (get_provider calls factory()).
 make_de_direct = partial(RegionalStubProvider, "de_direct")
-make_fr_direct = partial(RegionalStubProvider, "fr_direct")

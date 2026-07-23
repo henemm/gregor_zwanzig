@@ -33,7 +33,7 @@ class _RegionBounds(NamedTuple):
 _REGIONS: tuple[_RegionBounds, ...] = (
     _RegionBounds("AT", 46.3, 49.1, 9.5, 17.2, "at_direct"),
     _RegionBounds("DE", 47.2, 55.1, 5.8, 15.1, "de_direct"),
-    _RegionBounds("FR", 41.3, 51.1, -5.2, 8.3, "fr_direct"),
+    _RegionBounds("FR", 41.3, 51.1, -5.2, 9.7, "fr_direct"),
 )
 
 

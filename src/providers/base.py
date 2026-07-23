@@ -181,12 +181,15 @@ def _load_providers() -> None:
         pass
 
     try:
-        from providers.regional_stubs import (
-            GeoSphereDirectProvider, make_de_direct, make_fr_direct,
-        )
+        from providers.regional_stubs import GeoSphereDirectProvider, make_de_direct
         register_provider("at_direct", GeoSphereDirectProvider)
         register_provider("de_direct", make_de_direct)
-        register_provider("fr_direct", make_fr_direct)
+    except ImportError:
+        pass
+
+    try:
+        from providers.meteofrance import MeteoFranceDirectProvider
+        register_provider("fr_direct", MeteoFranceDirectProvider)
     except ImportError:
         pass
 
