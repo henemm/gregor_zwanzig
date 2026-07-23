@@ -23,17 +23,56 @@ SPEC: docs/specs/modules/warn_service_consumption.md
 """
 from __future__ import annotations
 
+import contextvars
 import json
 import logging
 import time
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Iterator, Optional
 
 logger = logging.getLogger("warn_egress")
 
 WARN_SUCCESS_TTL = 1800.0  # Sekunden — Erfolgs-Fenster (30 min, warngerecht)
 WARN_FAILURE_TTL = 60.0  # Sekunden — kurzes Failure-Fenster
+
+# Issue #1348 (Real-Pfad-Fix): ``cached_fetch`` faengt JEDEN Fehlschlag fail-soft
+# ab und gibt ``None`` zurueck; die Quellen wandeln ``None`` -> ``[]`` und werfen
+# NICHT. Damit ``get_official_alerts_with_status`` "Abruf real fehlgeschlagen"
+# (Block/429/HTTP>=400/Netz-/Parse-Fehler ODER gecachter Fehlschlag) von
+# "erfolgreich leer" unterscheiden kann, vermerkt jeder Fehlschlag-Pfad einen
+# Marker im aktuell aktiven Beobachtungs-Kontext (falls einer gesetzt ist).
+# OHNE aktiven Kontext ist das ein No-Op — der Fail-soft-Vertrag von ``fetch()``
+# und ``get_official_alerts_for_location()`` und damit alle Bestandsaufrufer
+# bleiben unveraendert. ``ContextVar`` isoliert korrekt ueber Threads/Tasks.
+_fetch_failure_sink: contextvars.ContextVar[Optional[dict]] = contextvars.ContextVar(
+    "warn_fetch_failure_sink", default=None
+)
+
+
+def _record_fetch_failure() -> None:
+    """Vermerkt einen realen Fetch-Fehlschlag im aktiven Beobachtungs-Kontext.
+
+    Ausserhalb jeder ``observe_fetch_failure()``-Beobachtung ein No-Op."""
+    sink = _fetch_failure_sink.get()
+    if sink is not None:
+        sink["failed"] = True
+
+
+@contextmanager
+def observe_fetch_failure() -> Iterator[dict]:
+    """Beobachtet, ob innerhalb des Kontexts mindestens ein ``cached_fetch``
+    real fehlschlug (im Gegensatz zu erfolgreich-leer). Liefert ein Dict mit
+    Schluessel ``failed`` (bool, initial ``False``).
+
+    Verschachtelbar und thread-/task-sicher (``contextvars``)."""
+    sink: dict = {"failed": False}
+    token = _fetch_failure_sink.set(sink)
+    try:
+        yield sink
+    finally:
+        _fetch_failure_sink.reset(token)
 
 # Append-only JSONL für jeden Warn-Dienst-Egress (Cache-Hit wie echter Call).
 # Verzeichnis `data/diagnostics/` ist in .gitignore.
@@ -117,6 +156,10 @@ def cached_fetch(
     if entry is not None and entry.get("fetched_at") is not None \
             and (now - entry["fetched_at"]) < entry["ttl"]:
         log_warn_service_call(service, host, status=None, cache_hit=True)
+        # Ein gecachter Fehlschlag (data=None, z.B. waehrend 429-Backoff) ist
+        # weiterhin "nicht abrufbar" — nicht "erfolgreich leer" (Issue #1348).
+        if entry["data"] is None:
+            _record_fetch_failure()
         return entry["data"]
 
     try:
@@ -125,6 +168,7 @@ def cached_fetch(
         log.warning("%s-Abruf fehlgeschlagen (%s)", service, host, exc_info=True)
         cache[cache_key] = {"data": None, "fetched_at": now, "ttl": failure_ttl}
         log_warn_service_call(service, host, status=None, cache_hit=False)
+        _record_fetch_failure()
         return None
 
     status = resp.status_code
@@ -139,12 +183,14 @@ def cached_fetch(
         cache[cache_key] = {"data": None, "fetched_at": now, "ttl": backoff}
         log_warn_service_call(service, host, status=429, cache_hit=False,
                               retry_after=retry_after)
+        _record_fetch_failure()
         return None
 
     if status >= 400:
         log.warning("%s-Abruf fehlgeschlagen (%s, HTTP %s)", service, host, status)
         cache[cache_key] = {"data": None, "fetched_at": now, "ttl": failure_ttl}
         log_warn_service_call(service, host, status=status, cache_hit=False)
+        _record_fetch_failure()
         return None
 
     try:
@@ -153,6 +199,7 @@ def cached_fetch(
         log.warning("%s-Abruf fehlgeschlagen (%s, Parse)", service, host, exc_info=True)
         cache[cache_key] = {"data": None, "fetched_at": now, "ttl": failure_ttl}
         log_warn_service_call(service, host, status=status, cache_hit=False)
+        _record_fetch_failure()
         return None
 
     cache[cache_key] = {"data": data, "fetched_at": now, "ttl": success_ttl}

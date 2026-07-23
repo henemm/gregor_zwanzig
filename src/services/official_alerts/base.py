@@ -15,6 +15,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Protocol
 
+from services.official_alerts import warn_egress
 from services.official_alerts.models import OfficialAlert
 
 logger = logging.getLogger(__name__)
@@ -103,6 +104,14 @@ def get_official_alerts_with_status(
     abdecken. Fehlt Coverage ganz (``covering == 0``) oder liefern ALLE
     abdeckenden Quellen erfolgreich (auch leer), ist ``unavailable = False``.
 
+    "Ausgefallen" umfasst ZWEI Faelle (Issue #1348 Fix-Loop): (a) ``fetch()``
+    wirft eine Exception; (b) ``fetch()`` liefert fail-soft ``[]``, obwohl ein
+    ``warn_egress.cached_fetch()``-Aufruf darin real fehlschlug (Egress-Block/
+    429/HTTP>=400/Netz-/Parse-Fehler ODER gecachter Fehlschlag). Fall (b) wird
+    ueber ``warn_egress.observe_fetch_failure()`` erkannt — ohne den Fail-soft-
+    Vertrag von ``fetch()`` zu brechen. Fall (b) ist der eigentliche Real-Pfad:
+    die echten Quellen fangen jeden Fehler intern ab und werfen NICHT.
+
     Wirft selbst nie (fail-soft pro Quelle) — Fetch-/Filter-/Dedup-Koerper
     identisch zu ``get_official_alerts_for_location``.
     """
@@ -123,10 +132,16 @@ def get_official_alerts_with_status(
         if not does_cover:
             continue
         covering += 1
-        try:
-            results.extend(source.fetch(lat, lon))
-        except Exception:
-            logger.warning("official_alerts: %s fetch failed", source_name, exc_info=True)
+        with warn_egress.observe_fetch_failure() as fetch_status:
+            try:
+                results.extend(source.fetch(lat, lon))
+            except Exception:
+                logger.warning("official_alerts: %s fetch failed", source_name, exc_info=True)
+                failed += 1
+                continue
+        # Kein Throw, aber ein interner cached_fetch-Fehlschlag (Real-Pfad):
+        # die Quelle lieferte fail-soft [], war aber real nicht abrufbar.
+        if fetch_status["failed"]:
             failed += 1
     unavailable = covering > 0 and failed >= 1
 

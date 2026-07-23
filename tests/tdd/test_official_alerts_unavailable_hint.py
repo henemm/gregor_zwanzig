@@ -193,6 +193,55 @@ class TestUnavailableSignal:
             oa_base._REGISTERED_SOURCES.clear()
             oa_base._REGISTERED_SOURCES.extend(backup)
 
+    def test_real_failsoft_empty_from_blocked_source_is_unavailable(self):
+        """REAL-PFAD-REGRESSIONSWAECHTER (Issue #1348 Fix-Loop, der eigentliche
+        Punkt): eine ECHTE Quelle (``GeoSphereWarnSource``), deren Host im
+        Egress-Waechter BLOCKED ist, faengt den Block intern (``cached_fetch``)
+        fail-soft ab und liefert ``[]`` OHNE zu werfen. Genau dieser Pfad — kein
+        Throw, aber realer Ausfall — MUSS ``unavailable=True`` ergeben.
+
+        OHNE den Fix ist dieser Test ROT: der alte Code zaehlte ``failed`` NUR
+        bei einer geworfenen Exception; die fail-soft-``[]``-Quelle lief als
+        "erfolgreich leer" durch -> ``unavailable=False``. Genau diese
+        Nicht-Unterscheidbarkeit von "blockiert" und "keine Warnung" war der Bug.
+
+        Kein Mock-Theater: echte ``GeoSphereWarnSource``, echter Egress-Waechter
+        (conftest-autouse, ``warnungen.zamg.at`` steht real auf BLOCKED), echte
+        ``cached_fetch``-Fail-soft-Kette. Kein gesendetes Byte.
+        """
+        import services.official_alerts.base as oa_base
+        from services.official_alerts.base import get_official_alerts_with_status
+        from services.official_alerts.geosphere_warn import (
+            GeoSphereWarnSource, _cache,
+        )
+
+        # Innsbruck — sicher innerhalb der GeoSphere-/INCA-Bbox (covers=True).
+        at_lat, at_lon = 47.26, 11.39
+
+        backup = list(oa_base._REGISTERED_SOURCES)
+        oa_base._REGISTERED_SOURCES.clear()
+        _cache.clear()  # kein Erfolgs-Cache aus einem Vortest
+        try:
+            source = GeoSphereWarnSource()
+            assert source.covers(at_lat, at_lon) is True, (
+                "Testkoordinate muss in der GeoSphere-Bbox liegen (deckende Quelle)."
+            )
+            oa_base._REGISTERED_SOURCES.append(source)
+
+            alerts, unavailable = get_official_alerts_with_status(at_lat, at_lon)
+            assert alerts == [], (
+                f"Die geblockte Quelle darf keine Alerts liefern, war {alerts!r}"
+            )
+            assert unavailable is True, (
+                "Eine ECHTE deckende Quelle, deren Host geblockt ist und die intern "
+                "fail-soft [] liefert (OHNE zu werfen), MUSS unavailable=True "
+                "ergeben — Regressionswaechter gegen genau den #1348-Bug."
+            )
+        finally:
+            oa_base._REGISTERED_SOURCES.clear()
+            oa_base._REGISTERED_SOURCES.extend(backup)
+            _cache.clear()
+
     def test_ac5_wrapper_returns_same_alert_list(self):
         """AC-5 Rueckwaertskompat: get_official_alerts_for_location() liefert bei
         gleicher Fixture-Lage weiter dieselbe reine Alert-Liste (kein Tuple).
