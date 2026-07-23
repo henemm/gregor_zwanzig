@@ -227,6 +227,10 @@ export interface ReportConfig {
 	// mit Inline-Knöpfen) | "kurzform" (ein Zeilentext wie SMS). Regelt Trip-Briefing
 	// UND Trip-Alarme (ein Feld je Trip).
 	telegram_style?: 'rich' | 'kurzform';
+	// Epic #1319 Scheibe B — konfigurierbares Tagesfenster fuer SMS/Kurz-
+	// zusammenfassung/Metriken-Pillen/Telegram-Fusszeile. null/fehlend = Default 4/19.
+	day_window_start_hour?: number | null;
+	day_window_end_hour?: number | null;
 }
 
 // Issue #429 — kanal-spezifische Layout-Listen (snake_case auf der Wire).

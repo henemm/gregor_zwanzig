@@ -17,6 +17,7 @@ from app.models import SegmentWeatherData, UnifiedWeatherDisplayConfig
 from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt
 
+from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
 from output.renderers.email.helpers import (
     _AMPEL_STAGE_TONES, build_confidence_hint, build_metrics_summary_pills,
     build_origin_footer, format_trend_tokens, render_origin_footer_text,
@@ -97,6 +98,8 @@ def render_compact(
     profile: Optional[ActivityProfile] = None,
     night_weather: Optional["NormalizedTimeseries"] = None,
     has_gap: bool = False,
+    day_window_start_hour: int = DAY_WINDOW_START_HOUR,
+    day_window_end_hour: int = DAY_WINDOW_END_HOUR,
     **_ignored,
 ) -> str:
     """Render compact plain-text e-mail body. Pure function.
@@ -149,6 +152,8 @@ def render_compact(
     pills = build_metrics_summary_pills(
         segments, metric_ids, thresholds, tz=tz,
         night_weather=night_weather, has_gap=has_gap,
+        day_window_start_hour=day_window_start_hour,
+        day_window_end_hour=day_window_end_hour,
     )
     lines.append("== Metriken-Ueberblick ==")
     for label, tone in pills:

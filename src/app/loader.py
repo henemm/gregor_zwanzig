@@ -95,6 +95,29 @@ def _friendly_from_mode(mode: str) -> bool:
     return mode != "raw"
 
 
+def _clamped_day_window(
+    start_hour: Optional[int], end_hour: Optional[int],
+) -> tuple[Optional[int], Optional[int]]:
+    """Epic #1319 Scheibe B AC-4: defensive Klemmung beim Lesen.
+
+    Ein ueber Import/Migration/API-Umgehung direkt geschriebenes ungueltiges
+    Feld-Paar (ausserhalb 0-23 oder ``start >= end``) wird beim Laden auf
+    ``(None, None)`` zurueckgesetzt (= Default 4/19 beim Rendern), statt einen
+    kaputten Wert in den Trip zu uebernehmen.
+    """
+    if start_hour is None or end_hour is None:
+        return None, None
+    # F004: bool ist eine int-Subklasse in Python -- ohne den expliziten
+    # Ausschluss wuerde JSON true/false als Stunde 1/0 durchgehen.
+    if not (type(start_hour) is int and type(end_hour) is int):
+        return None, None
+    if not (0 <= start_hour <= 23 and 0 <= end_hour <= 23):
+        return None, None
+    if start_hour >= end_hour:
+        return None, None
+    return start_hour, end_hour
+
+
 def _deep_merge_preserve_unknown(base: dict, overlay: dict) -> dict:
     """Merge overlay into base. overlay wins on key conflicts; unknown keys in base are preserved.
 
@@ -530,6 +553,9 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         from datetime import datetime, time
         rc_data = data["report_config"]
         dc_data = data.get("display_config") or {}
+        _dw_start, _dw_end = _clamped_day_window(
+            rc_data.get("day_window_start_hour"), rc_data.get("day_window_end_hour"),
+        )
         report_config = TripReportConfig(
             trip_id=rc_data.get("trip_id", data["id"]),
             enabled=rc_data.get("enabled", True),
@@ -564,6 +590,8 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
             email_format=rc_data.get("email_format", "full"),
             telegram_style=rc_data.get("telegram_style", "rich"),
             show_yesterday_comparison=rc_data.get("show_yesterday_comparison", True),
+            day_window_start_hour=_dw_start,
+            day_window_end_hour=_dw_end,
             paused_until=datetime.fromisoformat(rc_data["paused_until"]) if rc_data.get("paused_until") else None,
             skip_next=rc_data.get("skip_next", False),
             updated_at=datetime.fromisoformat(rc_data["updated_at"]) if "updated_at" in rc_data else datetime.now(),
@@ -1509,6 +1537,8 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "email_format": trip.report_config.email_format,
             "telegram_style": trip.report_config.telegram_style,
             "show_yesterday_comparison": trip.report_config.show_yesterday_comparison,
+            "day_window_start_hour": trip.report_config.day_window_start_hour,
+            "day_window_end_hour": trip.report_config.day_window_end_hour,
             "paused_until": trip.report_config.paused_until.isoformat() if trip.report_config.paused_until else None,
             "skip_next": trip.report_config.skip_next,
             "updated_at": trip.report_config.updated_at.isoformat(),

@@ -27,6 +27,7 @@ from utils.timezone import local_fmt
 
 from output.renderers.alert.render import _esc
 from output.renderers.channel_layout import render_for_channel
+from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
 from output.renderers.email.helpers import fmt_val, format_trend_tokens
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable,
@@ -174,6 +175,8 @@ def _tg_day_footer(
     night_weather: Optional["NormalizedTimeseries"] = None,
     tz: ZoneInfo = ZoneInfo("UTC"),
     has_gap: bool = False,
+    day_window_start_hour: int = DAY_WINDOW_START_HOUR,
+    day_window_end_hour: int = DAY_WINDOW_END_HOUR,
 ) -> Optional[str]:
     """Fußzeile mit Tageswerten (AC-6): ⚡ kein|MED|HIGH · Sicht gut|… · 0°C-Grenze N m.
 
@@ -197,7 +200,10 @@ def _tg_day_footer(
     rep_freeze: Optional[int] = None
 
     if "thunder" in enabled:
-        for dp in build_day_window_points(segments, night_weather, tz):
+        for dp in build_day_window_points(
+            segments, night_weather, tz,
+            start_hour=day_window_start_hour, end_hour=day_window_end_hour,
+        ):
             sev = _thunder_severity(dp.thunder_level)
             if sev > max_thunder_sev:
                 max_thunder_sev = sev
@@ -439,6 +445,8 @@ def render_telegram_bubbles(
     night_weather: Optional["NormalizedTimeseries"] = None,
     trip: Optional["Trip"] = None,
     has_gap: bool = False,
+    day_window_start_hour: int = DAY_WINDOW_START_HOUR,
+    day_window_end_hour: int = DAY_WINDOW_END_HOUR,
 ) -> list[TelegramBubble]:
     """Render die Telegram-Briefing-Bubble-Liste (Issue #1001). Pure function.
 
@@ -499,6 +507,8 @@ def render_telegram_bubbles(
         [sd for sd in segments if not sd.has_error], dc.get_enabled_metric_ids(),
         night_weather=night_weather, tz=tz,
         has_gap=has_gap,
+        day_window_start_hour=day_window_start_hour,
+        day_window_end_hour=day_window_end_hour,
     )
     if footer:
         overview_lines.append("")

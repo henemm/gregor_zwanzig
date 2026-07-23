@@ -20,6 +20,7 @@
 	import VTSchedulePlan from './versand-tab/VTSchedulePlan.svelte';
 	import VTLaufzeitRoute from './versand-tab/VTLaufzeitRoute.svelte';
 	import VTLaufzeitVergleich from './versand-tab/VTLaufzeitVergleich.svelte';
+	import { clampDayWindowEndHour } from './versand-tab/dayWindowClamp.ts';
 	// Issue #1258 Scheibe S4 (E5): die komplette Alert-Zustellungs-Sektion des
 	// vergleich-Zweigs (Cooldown-/Quiet-Karten + Beispiel-Warnung) zog atomar
 	// in AlarmeTab.svelte um (Radar/Metrik-Level-Tabelle waren dort nie).
@@ -72,6 +73,10 @@
 	// EIN Trip-Feld regelt Briefing UND Alarme — der Schalter erscheint einmal
 	// hier im Versand-Tab.
 	let telegram_style = $state<'rich' | 'kurzform'>('rich');
+	// Epic #1319 Scheibe B: konfigurierbares Tagesfenster (nur context="route",
+	// DEC-4 — Compare hat sein eigenes hour_from/hour_to, #1318 FB01).
+	let day_window_start_hour = $state(4);
+	let day_window_end_hour = $state(19);
 
 	onMount(() => {
 		if (reportConfig) {
@@ -104,6 +109,8 @@
 			} else if (Array.isArray(c.multi_day_trend_reports)) {
 				multi_day_trend_evening = c.multi_day_trend_reports.includes('evening');
 			}
+			if (typeof c.day_window_start_hour === 'number') day_window_start_hour = c.day_window_start_hour;
+			if (typeof c.day_window_end_hour === 'number') day_window_end_hour = c.day_window_end_hour;
 		}
 	});
 
@@ -124,7 +131,9 @@
 			telegram_style,
 			multi_day_trend_morning,
 			multi_day_trend_evening,
-			multi_day_trend_reports
+			multi_day_trend_reports,
+			day_window_start_hour,
+			day_window_end_hour
 		};
 		reportConfig = merged as ReportConfig;
 	});
@@ -165,6 +174,25 @@
 	function makeTimeHandler(setter: (v: string) => void) {
 		return function doSetTime(e: Event) {
 			setter((e.target as HTMLInputElement).value);
+		};
+	}
+	// Epic #1319 Scheibe B: Tagesfenster-Stunden-Dropdowns (Factory-Pattern,
+	// Safari-Closure-Schutz, CLAUDE.md).
+	function makeHourSelectHandler(setter: (v: number) => void) {
+		return function doSetHour(e: Event) {
+			setter(Number((e.target as HTMLSelectElement).value));
+		};
+	}
+	// Issue #1319 Scheibe B Fix-Loop (F001): eine Startstunden-Aenderung, die
+	// die aktuelle Endstunde ungueltig macht (start >= end), zieht die
+	// Endstunde automatisch nach (AC-5). Beide $state-Werte werden synchron
+	// in diesem einen Handler-Aufruf gesetzt, sodass der reportConfig-$effect
+	// unten nur EINMAL mit einem bereits gueltigen Paar feuert (kein Doppel-PUT).
+	function makeDayWindowStartHandler() {
+		return function doSetDayWindowStart(e: Event) {
+			const v = Number((e.target as HTMLSelectElement).value);
+			day_window_start_hour = v;
+			day_window_end_hour = clampDayWindowEndHour(v, day_window_end_hour);
 		};
 	}
 
@@ -226,6 +254,10 @@
 			onEveningTime={makeTimeHandler((v) => (evening_time = v))}
 			onTrendMorningToggle={makeToggleHandler((v) => (multi_day_trend_morning = v))}
 			onTrendEveningToggle={makeToggleHandler((v) => (multi_day_trend_evening = v))}
+			{day_window_start_hour}
+			{day_window_end_hour}
+			onDayWindowStartHour={makeDayWindowStartHandler()}
+			onDayWindowEndHour={makeHourSelectHandler((v) => (day_window_end_hour = v))}
 		/>
 
 		<VTLaufzeitRoute {tripEnd} onOpenStages={handleOpenStages} />

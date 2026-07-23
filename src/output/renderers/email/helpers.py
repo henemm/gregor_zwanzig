@@ -32,6 +32,7 @@ from app.models import (
 from utils.geo import degrees_to_compass
 from utils.timezone import local_fmt, local_hour
 
+from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
 from output.renderers.email.design_tokens import FONT_DATA
 
 # Issue #121: German weekday names (0=Monday).
@@ -1484,6 +1485,8 @@ def build_metrics_summary_pills(
     tz: "ZoneInfo",
     night_weather: Optional[NormalizedTimeseries] = None,
     has_gap: bool = False,
+    day_window_start_hour: int = DAY_WINDOW_START_HOUR,
+    day_window_end_hour: int = DAY_WINDOW_END_HOUR,
 ) -> list[tuple[str, str]]:
     """Issue #664/#795: Build one (text, tone) pill per metric from segment data.
 
@@ -1511,7 +1514,10 @@ def build_metrics_summary_pills(
     Returns list of (text, tone) tuples in catalog order.
     """
     from output.renderers.day_window import build_day_window_points
-    window_dps = build_day_window_points(segments, night_weather, tz)
+    window_dps = build_day_window_points(
+        segments, night_weather, tz,
+        start_hour=day_window_start_hour, end_hour=day_window_end_hour,
+    )
     hiking_dps = _collect_hiking_window_dps(segments)
 
     # Render in catalog order

@@ -18,6 +18,7 @@ from app.models import (
 )
 from app.profile import ActivityProfile
 
+from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
 from output.renderers.email.compact import render_compact
 from output.renderers.email.helpers import build_format_modes, build_html_indicator_keys
 from output.renderers.email.html import render_html
@@ -38,6 +39,8 @@ def render_email(
     night_rows: Optional[list[dict]] = None,
     night_weather: Optional[NormalizedTimeseries] = None,
     has_gap: bool = False,
+    day_window_start_hour: int = DAY_WINDOW_START_HOUR,
+    day_window_end_hour: int = DAY_WINDOW_END_HOUR,
     thunder_forecast: Optional[dict] = None,
     multi_day_trend: Optional[list[dict]] = None,
     changes: Optional[list[WeatherChange]] = None,
@@ -96,6 +99,8 @@ def render_email(
             profile=profile,
             night_weather=night_weather,
             has_gap=has_gap,
+            day_window_start_hour=day_window_start_hour,
+            day_window_end_hour=day_window_end_hour,
         )
         return "", compact_text
 
@@ -116,6 +121,8 @@ def render_email(
         night_rows=night_rows_list,
         night_weather=night_weather,
         has_gap=has_gap,
+        day_window_start_hour=day_window_start_hour,
+        day_window_end_hour=day_window_end_hour,
         thunder_forecast=thunder_forecast,
         changes=changes,
         stage_name=stage_name,
@@ -145,6 +152,8 @@ def render_email(
         night_rows=night_rows_list,
         night_weather=night_weather,
         has_gap=has_gap,
+        day_window_start_hour=day_window_start_hour,
+        day_window_end_hour=day_window_end_hour,
         thunder_forecast=thunder_forecast,
         changes=changes,
         stage_name=stage_name,

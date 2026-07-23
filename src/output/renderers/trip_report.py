@@ -41,6 +41,7 @@ from app.models import (
     WeatherChange,
 )
 from app.profile import ActivityProfile
+from output.renderers.day_window import resolve_configured_window
 from services.report_config_resolver import ReportRenderOptions, resolve_report_render_options
 from services.risk_engine import RiskEngine
 from output.renderers.email import render_email
@@ -102,6 +103,12 @@ class TripReportFormatter:
         options = render_options or resolve_report_render_options(
             report_config, display_config, report_type,
         )
+        # Epic #1319 Scheibe B: EINE Aufloesung des konfigurierten
+        # Tagesfensters, an alle vier Kurzformen + Gap-Kopplung durchgereicht.
+        _dw_start, _dw_end = resolve_configured_window(
+            getattr(report_config, "day_window_start_hour", None),
+            getattr(report_config, "day_window_end_hour", None),
+        )
 
         dc = display_config or build_default_display_config()
         if report_type in ("morning", "evening"):
@@ -145,6 +152,7 @@ class TripReportFormatter:
         if options.show_compact_summary:
             compact_summary = self._generate_compact_summary(
                 segments, stage_name, dc, night_weather, has_gap=has_gap,
+                day_window_start_hour=_dw_start, day_window_end_hour=_dw_end,
             )
 
         # β3 Adapter (§A2/§A6): RENDER an pure renderer delegieren.
@@ -175,6 +183,8 @@ class TripReportFormatter:
             night_rows=night_rows,
             night_weather=night_weather,
             has_gap=has_gap,
+            day_window_start_hour=_dw_start,
+            day_window_end_hour=_dw_end,
             thunder_forecast=thunder_forecast,
             multi_day_trend=effective_trend,
             changes=changes,
@@ -224,6 +234,8 @@ class TripReportFormatter:
             night_weather=night_weather,
             trip=trip,
             has_gap=has_gap,
+            day_window_start_hour=_dw_start,
+            day_window_end_hour=_dw_end,
         )
         telegram_bubbles = [b.text for b in telegram_bubbles_result]
         telegram_actions_markup = (
@@ -258,6 +270,8 @@ class TripReportFormatter:
             disabled_specs=_disabled_sms_specs or None,
             night_weather=night_weather,
             has_gap=has_gap,
+            day_window_start_hour=_dw_start,
+            day_window_end_hour=_dw_end,
         )
 
         # Issue #1001 AC-10: telegram_kurzform ist wirkungslos (Kurzuebersicht-
@@ -743,15 +757,22 @@ class TripReportFormatter:
         night_weather: Optional[NormalizedTimeseries] = None,
         *,
         has_gap: bool = False,
+        day_window_start_hour: Optional[int] = None,
+        day_window_end_hour: Optional[int] = None,
     ) -> Optional[str]:
         """Generate compact natural-language summary for the stage."""
         if not segments or not stage_name:
             return None
         from output.renderers.compact_summary import CompactSummaryFormatter
+        from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
         formatter = CompactSummaryFormatter()
+        _start = DAY_WINDOW_START_HOUR if day_window_start_hour is None else day_window_start_hour
+        _end = DAY_WINDOW_END_HOUR if day_window_end_hour is None else day_window_end_hour
         return formatter.format_stage_summary(
             segments, stage_name, dc, tz=self._tz, night_weather=night_weather,
             has_gap=has_gap,
+            day_window_start_hour=_start,
+            day_window_end_hour=_end,
         )
 
     @staticmethod

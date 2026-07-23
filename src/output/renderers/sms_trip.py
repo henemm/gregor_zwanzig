@@ -27,7 +27,9 @@ from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt, local_hour
 from output.metric_format import thunder_label_value
 from output.renderers.alert.official_alerts import official_alerts_to_sms_entries
-from output.renderers.day_window import build_day_window_points
+from output.renderers.day_window import (
+    DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, build_day_window_points,
+)
 from output.renderers.sms import render_sms
 from output.tokens.builder import build_token_line
 from output.tokens.dto import (
@@ -95,6 +97,8 @@ def _segments_to_normalized_forecast(
     tz: ZoneInfo = ZoneInfo("UTC"),
     night_weather: Optional[NormalizedTimeseries] = None,
     has_gap: bool = False,
+    day_window_start_hour: int = DAY_WINDOW_START_HOUR,
+    day_window_end_hour: int = DAY_WINDOW_END_HOUR,
 ) -> NormalizedForecast:
     """Aggregate trip segments into a single-day NormalizedForecast.
 
@@ -137,7 +141,10 @@ def _segments_to_normalized_forecast(
     # Bug #925: Stunden-Token aus der ECHTEN Stunden-Zeitreihe (Ortszeit)
     # ableiten — deckungsgleich mit der E-Mail-Tabelle. Onset@h(Peak@h) statt
     # Etappen-Summe @ Etappen-Start. Vorbild: _build_stage_trend.
-    for dp in build_day_window_points(segments, night_weather, tz=tz):
+    for dp in build_day_window_points(
+        segments, night_weather, tz=tz,
+        start_hour=day_window_start_hour, end_hour=day_window_end_hour,
+    ):
         lh = local_hour(dp.ts, tz)
         if dp.precip_1h_mm is not None and dp.precip_1h_mm > 0:
             rain_samples.append(HourlyValue(lh, float(dp.precip_1h_mm)))
@@ -241,6 +248,8 @@ class SMSTripFormatter:
         disabled_specs: Optional[list[MetricSpec]] = None,
         night_weather: Optional[NormalizedTimeseries] = None,
         has_gap: bool = False,
+        day_window_start_hour: int = DAY_WINDOW_START_HOUR,
+        day_window_end_hour: int = DAY_WINDOW_END_HOUR,
     ) -> str:
         """Generate v2.0 SMS via TokenLine pipeline.
 
@@ -276,6 +285,8 @@ class SMSTripFormatter:
 
         forecast = _segments_to_normalized_forecast(
             segments, tz=tz, night_weather=night_weather, has_gap=has_gap,
+            day_window_start_hour=day_window_start_hour,
+            day_window_end_hour=day_window_end_hour,
         )
 
         # Bug #874: TH+: immer als days[1] einbauen — TH+:- wenn kein Gewitter (Spec-Pflicht).

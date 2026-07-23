@@ -122,6 +122,11 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		// unnormalisiert persistiert (und die Flach-Felder wuerden beim
 		// nachfolgenden SaveTrip aus dem noch krummen ReportConfig abgeleitet).
 		store.NormalizeReportConfigSlotTimes(trip.ReportConfig)
+		// Issue #1319 Scheibe B (F001 Fix): Write-Seam-Klemmung analog
+		// NormalizeReportConfigSlotTimes — ein ungueltiges day_window-Paar
+		// (start>=end oder ausserhalb 0-23) darf nie auf die Platte kommen,
+		// auch nicht ueber einen direkten API-/Import-POST an diesen Pfad.
+		store.ClampReportConfigDayWindow(trip.ReportConfig)
 
 		// Issue #1258 AC-4: Neuanlage ohne mitgeschicktes official_warnings
 		// erhaelt bewusst enabled=false (Verhaltenswechsel NUR fuer Neuanlagen,
@@ -242,6 +247,11 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			// Issue #1280: Write-Normalisierung — nur morning_time/evening_time auf
 			// volle Stunde kappen, alle anderen report_config-Keys unangetastet.
 			store.NormalizeReportConfigSlotTimes(existing.ReportConfig)
+			// Issue #1319 Scheibe B (F001 Fix): gleicher Write-Seam-Schutz fuer
+			// day_window_start_hour/_end_hour — ein ungueltiges Paar wird hier
+			// entfernt (statt erst beim naechsten Load), damit auch die
+			// PUT-Antwort (existing wird direkt zurueckgegeben) konsistent ist.
+			store.ClampReportConfigDayWindow(existing.ReportConfig)
 		}
 		if req.AlertRules != nil {
 			existing.AlertRules = *req.AlertRules

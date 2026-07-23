@@ -188,6 +188,8 @@ def compute_has_gap(
     segments: list["SegmentWeatherData"],
     night_weather: Optional["NormalizedTimeseries"],
     tz: ZoneInfo,
+    start_hour: Optional[int] = None,
+    end_hour: Optional[int] = None,
 ) -> bool:
     """Issue #1331/#1334 Fix-Loop 4 (Option C): EINZIGER Berechnungspunkt fuer
     die Ziel-Datenluecke — der echte Versandpfad (``send_trip_report``, unten)
@@ -206,11 +208,15 @@ def compute_has_gap(
     )
     from utils.timezone import local_hour
 
+    _start = DAY_WINDOW_START_HOUR if start_hour is None else start_hour
+    _end = DAY_WINDOW_END_HOUR if end_hour is None else end_hour
     rendered = {
         local_hour(dp.ts, tz)
-        for dp in build_day_window_points(segments, night_weather, tz)
+        for dp in build_day_window_points(
+            segments, night_weather, tz, start_hour=_start, end_hour=_end,
+        )
     }
-    expected = set(range(DAY_WINDOW_START_HOUR, DAY_WINDOW_END_HOUR + 1))
+    expected = set(range(_start, _end + 1))
     return not expected.issubset(rendered)
 
 
@@ -244,8 +250,15 @@ class NotificationService:
         # Issue #1331/#1334 Fix-Loop 3 (F003): siehe compute_has_gap()
         # Docstring — Vorschau/Golden-Tests, die format_email() ohne
         # night_weather aufrufen, bekommen bewusst KEINE Luecke unterstellt.
+        from output.renderers.day_window import resolve_configured_window
+        _rc = request.report_config
+        _dw_start, _dw_end = resolve_configured_window(
+            getattr(_rc, "day_window_start_hour", None) if _rc else None,
+            getattr(_rc, "day_window_end_hour", None) if _rc else None,
+        )
         has_gap = compute_has_gap(
             request.segment_weather, request.night_weather, request.trip_tz,
+            start_hour=_dw_start, end_hour=_dw_end,
         )
 
         report = self._formatter.format_email(

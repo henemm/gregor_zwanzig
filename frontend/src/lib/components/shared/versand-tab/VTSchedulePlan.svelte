@@ -32,6 +32,12 @@
 		onEveningTime: (e: Event) => void;
 		onTrendMorningToggle?: (e: Event) => void;
 		onTrendEveningToggle?: (e: Event) => void;
+		/** Epic #1319 Scheibe B (DEC-4): nur context="route" — Compare hat sein
+		 * eigenes hour_from/hour_to (#1318 FB01), kein Konvergenz-Feld hier. */
+		day_window_start_hour?: number;
+		day_window_end_hour?: number;
+		onDayWindowStartHour?: (e: Event) => void;
+		onDayWindowEndHour?: (e: Event) => void;
 	}
 	let {
 		context = 'route',
@@ -47,10 +53,24 @@
 		onMorningTime,
 		onEveningTime,
 		onTrendMorningToggle,
-		onTrendEveningToggle
+		onTrendEveningToggle,
+		day_window_start_hour = 4,
+		day_window_end_hour = 19,
+		onDayWindowStartHour,
+		onDayWindowEndHour
 	}: Props = $props();
 
 	const isRoute = $derived(context === 'route');
+	const dayWindowHourOptions = Array.from({ length: 24 }, (_, h) => h);
+	// F005-Fix (Issue #1319 Scheibe B, Fix-Loop 2): Start darf nur 0..22 sein,
+	// sonst kann `end > start` innerhalb 0..23 nie erfuellt werden (23 waere
+	// als Start immer ein ungueltiges Paar). Jede ueber das UI waehlbare
+	// Startstunde (<=22) kann so immer mit einer Endstunde (>start, <=23)
+	// kombiniert werden.
+	const dayWindowStartOptions = dayWindowHourOptions.filter((h) => h < 23);
+	const dayWindowEndOptions = $derived(
+		dayWindowHourOptions.filter((h) => h > day_window_start_hour)
+	);
 
 	// Issue #1286: Quick-Pick-Chips — feuern denselben Callback wie das
 	// Zeit-Input, mit einem synthetischen Event (Factory-Pattern, Safari-
@@ -191,6 +211,43 @@
 						</span>
 					</div>
 				</Card>
+
+				<Card padding={18} data-testid="day-window-control">
+					<div class="vt-card-head">
+						<div>
+							<div class="vt-card-title">Tagesfenster</div>
+							<div class="vt-card-sub">Zeitraum für SMS/Kurzzusammenfassung/Fußzeile</div>
+						</div>
+					</div>
+					<div class="vt-card-body vt-daywindow-body">
+						<label class="vt-time-label">
+							<span class="vt-time-caption">Von</span>
+							<select
+								data-testid="day-window-start-hour"
+								class="vt-time-input"
+								value={day_window_start_hour}
+								onchange={onDayWindowStartHour}
+							>
+								{#each dayWindowStartOptions as h (h)}
+									<option value={h}>{h.toString().padStart(2, '0')}:00</option>
+								{/each}
+							</select>
+						</label>
+						<label class="vt-time-label">
+							<span class="vt-time-caption">Bis</span>
+							<select
+								data-testid="day-window-end-hour"
+								class="vt-time-input"
+								value={day_window_end_hour}
+								onchange={onDayWindowEndHour}
+							>
+								{#each dayWindowEndOptions as h (h)}
+									<option value={h}>{h.toString().padStart(2, '0')}:00</option>
+								{/each}
+							</select>
+						</label>
+					</div>
+				</Card>
 			{/if}
 		</div>
 	{/if}
@@ -248,6 +305,10 @@
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
+	}
+	.vt-daywindow-body {
+		display: flex;
+		gap: 18px;
 	}
 	.vt-time-label {
 		display: inline-flex;

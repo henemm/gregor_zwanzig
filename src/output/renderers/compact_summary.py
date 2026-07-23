@@ -24,7 +24,9 @@ from app.models import (
     UnifiedWeatherDisplayConfig,
 )
 from services.weather_metrics import aggregate_stage
-from output.renderers.day_window import build_day_window_points
+from output.renderers.day_window import (
+    DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, build_day_window_points,
+)
 
 
 # Klassifikation Issue #1214 Scheibe 5, Kategorie c: KEINE Migration auf
@@ -48,6 +50,8 @@ class CompactSummaryFormatter:
         night_weather: Optional[NormalizedTimeseries] = None,
         *,
         has_gap: bool = False,
+        day_window_start_hour: int = DAY_WINDOW_START_HOUR,
+        day_window_end_hour: int = DAY_WINDOW_END_HOUR,
     ) -> str:
         """Wrapper ``context="route"`` (Trip/Etappe) um den geteilten Kern.
 
@@ -70,7 +74,10 @@ class CompactSummaryFormatter:
         effective_tz = tz or ZoneInfo("UTC")
         return self.format_weather_summary(
             self._aggregate(segments),
-            self._collect_hourly_data(segments, night_weather, effective_tz),
+            self._collect_hourly_data(
+                segments, night_weather, effective_tz,
+                start_hour=day_window_start_hour, end_hour=day_window_end_hour,
+            ),
             self._shorten_stage_name(stage_name),
             dc,
             tz,
@@ -166,13 +173,19 @@ class CompactSummaryFormatter:
         segments: list[SegmentWeatherData],
         night_weather: Optional[NormalizedTimeseries] = None,
         tz: Optional[ZoneInfo] = None,
+        *,
+        start_hour: int = DAY_WINDOW_START_HOUR,
+        end_hour: int = DAY_WINDOW_END_HOUR,
     ) -> list[ForecastDataPoint]:
-        """Stundenliste im Tagesfenster 04-19 (Issue #1317 / Epic #1319).
+        """Stundenliste im (konfigurierbaren) Tagesfenster (Issue #1317 / Epic #1319).
 
         Ortsgenau via geteiltem ``day_window``-Modul: bis zur Ankunft aus der
         Segment-Zeitreihe, danach aus ``night_weather`` am Ziel.
         """
-        points = build_day_window_points(segments, night_weather, tz or ZoneInfo("UTC"))
+        points = build_day_window_points(
+            segments, night_weather, tz or ZoneInfo("UTC"),
+            start_hour=start_hour, end_hour=end_hour,
+        )
         points.sort(key=lambda dp: dp.ts)
         return points
 

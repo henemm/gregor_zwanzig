@@ -783,6 +783,13 @@ class TripReportConfig:
     telegram_style: str = "rich"                # Issue #1260: "rich" | "kurzform"
     show_yesterday_comparison: bool = True      # Issue #750: Vortag-Vergleich-Sektion
 
+    # Konfigurierbares Tagesfenster (Epic #1319 Scheibe B) — None/fehlend =
+    # Default 4/19 (Rueckwaertskompatibilitaet). Gueltigkeitspruefung
+    # (0-23, start<end) erfolgt beim Laden (loader.py) bzw. defensiv beim
+    # Rendern (day_window.resolve_configured_window).
+    day_window_start_hour: Optional[int] = None
+    day_window_end_hour: Optional[int] = None
+
     # Inbound-Kommandos (Issue #670)
     paused_until: Optional[datetime] = None     # PAUSE: ruht bis dieser UTC-Zeitpunkt
     skip_next: bool = False                     # SKIP: einmaliges Überspringen

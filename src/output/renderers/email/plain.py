@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 from app.profile import ActivityProfile
 from utils.timezone import local_fmt
 
+from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
 from output.renderers.email.helpers import (
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
     build_segment_label,
@@ -84,6 +85,8 @@ def render_plain(
     night_rows: list[dict],
     night_weather: Optional["NormalizedTimeseries"] = None,
     has_gap: bool = False,
+    day_window_start_hour: int = DAY_WINDOW_START_HOUR,
+    day_window_end_hour: int = DAY_WINDOW_END_HOUR,
     thunder_forecast: Optional[dict] = None,
     changes: Optional[list[WeatherChange]],
     stage_name: Optional[str],
@@ -163,6 +166,8 @@ def render_plain(
     _plain_pills = build_metrics_summary_pills(
         segments, _pill_metric_ids, _pill_thresholds, tz=tz,
         night_weather=night_weather, has_gap=has_gap,
+        day_window_start_hour=day_window_start_hour,
+        day_window_end_hour=day_window_end_hour,
     )
     lines.append("━━ Metriken-Überblick ━━")
     for _lbl, _tone in _plain_pills:

@@ -56,10 +56,37 @@ def _merge_hour(dps: list[ForecastDataPoint]) -> ForecastDataPoint:
     )
 
 
+def resolve_configured_window(
+    day_window_start_hour: Optional[int],
+    day_window_end_hour: Optional[int],
+) -> tuple[int, int]:
+    """Epic #1319 Scheibe B: eine Quelle fuer die effektiven Fenster-Grenzen.
+
+    ``None``/fehlend (Alt-Trip, Rueckwaertskompatibilitaet) oder ein
+    ungueltiges Paar (ausserhalb 0-23, ``start >= end``) faellt still auf
+    den Default 4/19 zurueck -- Defense-in-Depth, falls eine ungueltige
+    Kombination den Go-Store-Klemmpfad umgeht und dennoch bis zum Renderer
+    durchreicht (AC-4).
+    """
+    if day_window_start_hour is None or day_window_end_hour is None:
+        return DAY_WINDOW_START_HOUR, DAY_WINDOW_END_HOUR
+    # F004: bool ist eine int-Subklasse in Python -- ohne den expliziten
+    # Ausschluss wuerde JSON true/false als Stunde 1/0 durchgehen.
+    if not (type(day_window_start_hour) is int and type(day_window_end_hour) is int):
+        return DAY_WINDOW_START_HOUR, DAY_WINDOW_END_HOUR
+    if not (0 <= day_window_start_hour <= 23 and 0 <= day_window_end_hour <= 23):
+        return DAY_WINDOW_START_HOUR, DAY_WINDOW_END_HOUR
+    if day_window_start_hour >= day_window_end_hour:
+        return DAY_WINDOW_START_HOUR, DAY_WINDOW_END_HOUR
+    return day_window_start_hour, day_window_end_hour
+
+
 def build_day_window_points(
     segments: Sequence[SegmentWeatherData],
     night_weather: Optional[NormalizedTimeseries],
     tz: ZoneInfo,
+    start_hour: int = DAY_WINDOW_START_HOUR,
+    end_hour: int = DAY_WINDOW_END_HOUR,
 ) -> list[ForecastDataPoint]:
     """``(segments, night_weather, tz)`` -> deduplizierte Punktliste 04-19 Uhr.
 
@@ -99,7 +126,7 @@ def build_day_window_points(
         start_h = local_hour(seg.segment.start_time, tz)
         end_h = local_hour(seg.segment.end_time, tz)
         if idx == 0:
-            start_h = DAY_WINDOW_START_HOUR
+            start_h = start_hour
         for dp in ts.data:
             h = local_hour(dp.ts, tz)
             in_window = (start_h <= h <= end_h) if start_h <= end_h else (h >= start_h or h <= end_h)
@@ -114,13 +141,13 @@ def build_day_window_points(
             if dp.ts.astimezone(tz).date() != arrival_date:
                 continue  # kein Folgetag-Leck in die heutige Stunde (Kurzform-Tabelle-Datumsfilter)
             h = local_hour(dp.ts, tz)
-            if arrival_hour <= h <= DAY_WINDOW_END_HOUR:
+            if arrival_hour <= h <= end_hour:
                 raw.append(dp)
 
     by_hour: dict[int, list[ForecastDataPoint]] = {}
     for dp in raw:
         h = local_hour(dp.ts, tz)
-        if DAY_WINDOW_START_HOUR <= h <= DAY_WINDOW_END_HOUR:
+        if start_hour <= h <= end_hour:
             by_hour.setdefault(h, []).append(dp)
 
     return [_merge_hour(by_hour[h]) for h in sorted(by_hour)]

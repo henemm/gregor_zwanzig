@@ -84,6 +84,44 @@ func NormalizeReportConfigSlotTimes(rc map[string]interface{}) {
 	}
 }
 
+// ClampReportConfigDayWindow validiert/klemmt report_config.day_window_start_hour
+// und _end_hour (Epic #1319 Scheibe B, DEC-2 Defense-in-Depth): liegt einer der
+// beiden Werte ausserhalb 0-23 oder ist start >= end, werden BEIDE Keys aus der
+// Map entfernt (-> Python-seitiger Default 4/19 beim naechsten Lesen). Ein
+// gueltiges Paar bleibt unangetastet. Alle anderen report_config-Keys bleiben
+// unberuehrt (kein Replace).
+func ClampReportConfigDayWindow(rc map[string]interface{}) {
+	if rc == nil {
+		return
+	}
+	start, startOk := toIntHour(rc["day_window_start_hour"])
+	end, endOk := toIntHour(rc["day_window_end_hour"])
+	if !startOk && !endOk {
+		return // kein Feld-Paar gesetzt -- nichts zu tun
+	}
+	valid := startOk && endOk &&
+		start >= 0 && start <= 23 &&
+		end >= 0 && end <= 23 &&
+		start < end
+	if !valid {
+		delete(rc, "day_window_start_hour")
+		delete(rc, "day_window_end_hour")
+	}
+}
+
+// toIntHour liest einen Stunden-Wert aus einer JSON-dekodierten map[string]interface{}
+// (Zahlen kommen aus encoding/json typischerweise als float64 an).
+func toIntHour(v interface{}) (int, bool) {
+	switch n := v.(type) {
+	case float64:
+		return int(n), true
+	case int:
+		return n, true
+	default:
+		return 0, false
+	}
+}
+
 // healTripSlotTimes kappt sowohl das verschachtelte report_config.morning_time/
 // evening_time ALS AUCH die daraus abgeleiteten obersten Flach-Felder
 // (trip.MorningTime/EveningTime, s. deriveFlatFields) auf die volle Stunde.
@@ -93,6 +131,7 @@ func NormalizeReportConfigSlotTimes(rc map[string]interface{}) {
 // bleiben und die Heilung beim naechsten Load nachweisbar ist.
 func healTripSlotTimes(trip *model.Trip) {
 	NormalizeReportConfigSlotTimes(trip.ReportConfig)
+	ClampReportConfigDayWindow(trip.ReportConfig)
 	trip.MorningTime = TruncateTimePtrToHour(trip.MorningTime)
 	trip.EveningTime = TruncateTimePtrToHour(trip.EveningTime)
 }
