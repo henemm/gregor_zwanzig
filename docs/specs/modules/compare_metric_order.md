@@ -298,6 +298,22 @@ bleibt aber im Scope des Issues.
     erklärender Hinweistext sichtbar ist. Ergänzend (Live-E2E): in der
     zugestellten Mail aus AC-4 steht „Amtliche Warnungen" unabhängig von der
     übrigen Reihenfolge immer an erster Stelle.
+  - **Präzisiert am 2026-07-24 nach der Staging-Verifikation.** Der
+    Mail-Nachweis gilt für die **HTML-Vergleichsmatrix** — dort steht die
+    Warn-Zeile in beiden Durchgängen auf Position 1, auch wenn `warn` in
+    keiner der Metrik-Listen vorkam. Der **Klartext-Teil hat gar keine
+    „Amtliche Warnungen"-Zeile**: Warnungen erscheinen dort als
+    ⚠️-Zeilen *hinter* den Metrik-Zeilen des jeweiligen Ortes
+    (`render_official_alerts_plain`). Gegen `d2838c65` geprüft: **vorher
+    identisch, keine Regression dieser Scheibe.** Das AC ist damit für die
+    HTML-Matrix erfüllt und für den Klartext gegenstandslos — nicht
+    verletzt. Ob der Klartext eine eigene Warn-Zeile bekommen soll, ist
+    eine eigene Produktfrage, nicht Teil von #1359.
+  - Einschränkung des Nachweises: Die Warn-Zellen waren inhaltlich leer
+    (`—`), weil zum Prüfzeitpunkt für die Testorte keine amtliche Warnung
+    aktiv war. Bewiesen ist die **Position** der Zeile, nicht das Rendern
+    eines Warntextes — das deckt der bestehende Bestand an
+    Warnungs-Tests ab.
 
 - **AC-7:** Given ein Ortsvergleich, für den noch nie eine Metrik-Auswahl
   gespeichert wurde / When für ihn zum ersten Mal seit dieser Änderung die

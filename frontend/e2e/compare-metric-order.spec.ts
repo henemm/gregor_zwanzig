@@ -136,6 +136,12 @@ async function dragDndZoneItem(page: Page, source: Locator, target: Locator): Pr
 async function openMetricsTab(page: Page, id: string): Promise<Locator> {
 	await page.goto(`/compare/${id}`);
 	await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 15_000 });
+	// Validator-Fund (staging, reproduzierbar ~2/3): SvelteKit liefert die
+	// Tab-Leiste server-gerendert VOR der Hydration aus — ein Klick, der vor
+	// dem Attachen der Event-Listener ankommt, geht spurlos verloren (generische
+	// SvelteKit-Race, nicht spezifisch fuer diesen Tab). `networkidle`
+	// abwarten, bevor geklickt wird, macht den Klick deterministisch.
+	await page.waitForLoadState('networkidle');
 	await page.getByTestId('compare-detail-tab-wetter-metriken').click();
 	const panel = page.getByTestId('compare-detail-panel-wetter-metriken');
 	await expect(panel).toBeVisible({ timeout: 10_000 });
