@@ -329,25 +329,35 @@ def _trip_notices():
     return build_official_alert_notices(trip, tagged)
 
 
-def test_ac11_trip_path_keeps_segment_chips_and_route_note():
-    """AC-11 (Non-Regression, JETZT SCHON GRUEN): Given eine Trip-Standalone-
-    Alarmmail mit Warnungen, die nur einen Teil der Route betreffen / When die
-    Warn-Sektion gerendert wird / Then zeigt sie weiterhin Segment-Chips inkl.
-    durchgestrichener freier Segmente und den erklaerenden Hinweistext,
-    unveraendert."""
+def test_ac11_trip_path_shows_only_affected_segment_chips():
+    """AC-11 (ADR-0033, #1326a): Given eine Trip-Standalone-Alarmmail mit
+    Warnungen, die nur einen Teil der Route betreffen / When die Warn-Sektion
+    gerendert wird / Then zeigt sie ausschliesslich den betroffenen Segment-
+    Chip -- keine durchgestrichenen freien Segment-Chips, kein 'uebrige
+    Strecke frei'-Hinweistext (abgeloest: die alte #1233/#1216-Festlegung
+    eines Vollrouten-Gitters ist per ADR-0033 zurueckgebaut). Das
+    Trip-Feldlabel 'Route:' bleibt unveraendert (Compare-Pfad nutzt 'Orte:')."""
     notices = _trip_notices()
     assert notices[0].affected_chips == ["Segment 2"], (
         f"Trip-Segment-Chips veraendert: {notices[0].affected_chips!r}"
     )
-    assert notices[0].free_chips == ["Segment 1", "Segment 3", "🏁 Ziel"], (
-        f"Freie Trip-Segment-Chips veraendert: {notices[0].free_chips!r}"
+    assert notices[0].free_chips == [], (
+        f"ADR-0033: Trip-Pfad darf keine freien Segment-Chips mehr fuehren, "
+        f"erhalten: {notices[0].free_chips!r}"
     )
     html = _render_standalone(notices)
     soup = _soup(html)
-    struck = [c for c in soup.select("span.seg") if "line-through" in (c.get("style") or "")]
-    assert struck, "Durchgestrichene freie Segment-Chips fehlen im Trip-Pfad"
-    assert soup.select_one("div.route-note") is not None, "route-note fehlt im Trip-Pfad"
-    assert "übrige Strecke frei" in _text(html), "Hinweistext im Trip-Pfad veraendert"
+    chips = soup.select("span.seg")
+    assert [c.get_text(strip=True) for c in chips] == ["Segment 2"], (
+        f"Trip-Pfad zeigt nicht nur den betroffenen Segment-Chip: "
+        f"{[c.get_text(strip=True) for c in chips]!r}"
+    )
+    struck = [c for c in chips if "line-through" in (c.get("style") or "")]
+    assert not struck, "Durchgestrichene freie Segment-Chips im Trip-Pfad (ADR-0033)"
+    assert soup.select_one("div.route-note") is None, "route-note im Trip-Pfad (ADR-0033)"
+    assert "übrige Strecke frei" not in _text(html), (
+        "Veraltete 'uebrige Strecke frei'-Formulierung im Trip-Pfad (ADR-0033)"
+    )
     assert "Route:" in _text(html), "Trip-Feldlabel 'Route:' veraendert"
 
 

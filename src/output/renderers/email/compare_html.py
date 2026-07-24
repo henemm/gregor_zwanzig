@@ -984,12 +984,15 @@ def _render_abo_footer(preset_name, preset_schedule, preset_weekday, location_co
 
 
 def _render_app_footer() -> str:
-    # Issue #1241: dezente Herkunfts-Fußzeile (SSoT-Helper).
+    # Issue #1241/warnmail-Spec AC-5 (Befund 4a): dezente Herkunfts-Fußzeile
+    # (SSoT-Helper) -- keine per-Ort-Provider-Info hier verfügbar (Known
+    # Limitation der Spec), fester Fallback "Open-Meteo" (ADR-0029) statt
+    # des internen Renderer-Pfads.
     from output.renderers.email.helpers import (
         build_origin_footer, render_origin_footer_html,
     )
     origin_html = render_origin_footer_html(build_origin_footer(
-        "compare", renderer_name="email/compare_html.py",
+        "compare", source="Open-Meteo",
     ))
     return (
         f'<div style="padding:16px 24px 20px;background:{G_INK};color:#9a978d;'

@@ -303,8 +303,10 @@ def render_plain(
             lines.append(f"Fallback {', '.join(fb.fallback_metrics)}: {fb.fallback_model}")
         else:
             lines.append(f"Fallback: {fb.fallback_model}")
-    # Issue #1241: Herkunfts-Fußzeile (SSoT-Helper).
+    # Issue #1241/warnmail-Spec AC-5 (Befund 4a): Herkunfts-Fußzeile
+    # (SSoT-Helper) -- Zeile 2 zeigt die echte Datenquelle
+    # (`segments[0].provider`), nicht mehr den internen Renderer-Pfad.
     lines.append(render_origin_footer_text(build_origin_footer(
-        "trip-briefing", "full", renderer_name="email/plain.py",
+        "trip-briefing", "full", source=segments[0].provider,
     )))
     return "\n".join(lines)

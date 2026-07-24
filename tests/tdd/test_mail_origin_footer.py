@@ -200,10 +200,20 @@ class TestAC1TripFullFooter:
             assert LBL_FULL_A in out, f"{name}: Footer-Label '{LBL_FULL_A}' fehlt"
             assert LBL_FULL_B in out, f"{name}: Footer-Label '{LBL_FULL_B}' fehlt"
 
-        # Zeile 2 (Renderer + Commit-Stand) — Commit muss im Output stehen.
+        # Zeile 2 (warnmail-Spec AC-5/Befund 4a, löst #1241 ab): MUSS die echte
+        # Datenquelle (segments[0].provider) zeigen, NICHT mehr den
+        # Renderer-Pfad + Commit-Hash.
         commit = _deployed_commit_value()
-        assert commit in html, "HTML-Footer trägt keinen Commit-Stand"
-        assert commit in plain, "Plain-Footer trägt keinen Commit-Stand"
+        assert commit not in html, (
+            "AC-5/Befund 4a: Footer-Zeile 2 soll NICHT mehr den Commit-Hash "
+            "zeigen, sondern die echte Datenquelle (segments[0].provider)"
+        )
+        assert commit not in plain, (
+            "AC-5/Befund 4a: Plain-Footer soll NICHT mehr den Commit-Hash zeigen"
+        )
+        assert "email/html.py" not in html, (
+            "AC-5/Befund 4a: HTML-Footer zeigt noch den internen Renderer-Pfad"
+        )
 
 
 # ===========================================================================
@@ -257,8 +267,17 @@ class TestAC3CompareFooter:
         html = render_compare_html(self._result(), profile=ActivityProfile.WINTERSPORT)
 
         assert LBL_COMPARE in html, "Compare-Footer-Label 'Ortsvergleich' fehlt"
+        # warnmail-Spec AC-5/Befund 4a: Compare hat keine echte per-Event-
+        # Provider-Info verfügbar -- fester Fallback "Open-Meteo" (ADR-0029)
+        # statt Commit-Hash.
         commit = _deployed_commit_value()
-        assert commit in html, "Compare-Footer trägt keinen Commit-Stand"
+        assert commit not in html, (
+            "AC-5/Befund 4a: Compare-Footer soll NICHT mehr den Commit-Hash "
+            "zeigen, sondern den festen Fallback 'Open-Meteo'"
+        )
+        assert "Open-Meteo" in html, (
+            "AC-5/Befund 4a: Compare-Footer fehlt der feste Quell-Fallback 'Open-Meteo'"
+        )
 
 
 # ===========================================================================

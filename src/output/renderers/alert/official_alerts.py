@@ -509,8 +509,16 @@ def render_official_alert_notice_plain(
         if lines:
             lines.append("")
         # Issue #1222: E-Mail/SMS-Plain-Notice ohne Kreis-Emoji — nur das Wort ([1]).
+        # Adversary F002 (warnmail, AC-2): `_display_label` statt des rohen
+        # `a.label` -- sonst zeigt der eingebettete Deviation-Alert im Plain-/
+        # Telegram-Body das englische Quell-Label ("Orange Thunderstorm
+        # Warning") statt des gemappten deutschen Typ-Worts ("Gewitter").
+        # `_display_label` bewahrt reichere Labels (access_ban "Zugang
+        # gesperrt — {Massiv}", Vigilance "Extreme Hitze") unveraendert --
+        # nur ein voellig eigenstaendiges Roh-Label wird durch das Typ-Wort
+        # ersetzt (s. `_display_label`-Docstring Fall (d)).
         word = _LEVEL_WORDS.get(a.level, ("🔴", "ROT"))[1]
-        lines.append(f"{word} — {a.label}")
+        lines.append(f"{word} — {_display_label(a)}")
         region_line = f"Region: {a.region_label or 'unbekannt'}"
         if segment_ids:
             region_line += f" — {format_segment_reference(segment_ids)}"
@@ -584,11 +592,13 @@ def _display_label(alert: "OfficialAlert") -> str:
     abweicht ("Zugang eingeschraenkt — {Massiv}") -> Label ERSETZT das Typ-Wort.
     (c) Standardfall (label == Typ-Wort, z.B. GeoSphere "Gewitter"/"Hitze")
     -> exakt das Typ-Wort (AC-5).
-    (d) Adversary F001 (HIGH, Regression): greift KEINE der beiden
+    (d) Befund 2 (#1326b, ADR-Bestandsschutz): greift KEINE der beiden
     Ersetz-Heuristiken UND das Label ist trotzdem ungleich dem Typ-Wort (ein
     voellig eigenstaendiges Label ohne Bezug zum normalisierten Typ, z.B. ein
-    externer Trigger-Text) -> das Label darf NICHT verlorengehen. Es wird -
-    wie im Bestand vor #1238 - an das Typ-Wort ANGEHAENGT statt verworfen.
+    englisches MeteoAlarm/Vigilance-Roh-Label) -> NUR das deutsche Typ-Wort
+    erscheint. Vor #1326b wurde das Roh-Label hier an das Typ-Wort ANGEHAENGT
+    ("Gewitter — Orange Thunderstorm Warning") -- diese Verkettung war der Bug
+    (doppelte Gefahren-Benennung).
 
     Adversary F002 (MEDIUM, AC-6): die numerische Quell-Stufe am Label-Ende
     ("— Stufe 3") wird IMMER am Ende entfernt -- an ALLEN drei Anzeige-Orten
@@ -605,7 +615,9 @@ def _display_label(alert: "OfficialAlert") -> str:
     elif typ in label or "—" in label:
         display = label
     else:
-        display = f"{typ} — {label}"
+        # Befund 2 (#1326b): nur das gemappte deutsche Typ-Wort, keine
+        # Verkettung mit dem rohen Quell-Label (s. Docstring Fall (d)).
+        display = typ
     return _SOURCE_LEVEL_SUFFIX.sub("", display)
 
 
@@ -704,22 +716,22 @@ def render_official_alert_subject(
     die tatsaechliche, aus den Trip-/Ort-Koordinaten abgeleitete `alert_tz`
     durch, die auch der Body erhaelt.
 
-    Adversary F006 (HIGH, Staging-Fund, proaktiv auch hier gefixt): dieselbe
-    Fehlerklasse wie in Quelle-Box/Headline -- im ORTSVERGLEICH
-    (`scope_kind="locations"`) ist die Reichweite nur dann die der FUEHRENDEN
-    Warnung (`_scope_display(leading)`), wenn ALLE Warnungen denselben Umfang
-    haben (`_uniform_scope`). Sonst wuerde der Betreff den Umfang eines
-    einzelnen Hazards faelschlich auf alle aufgezaehlten Gefahren-Typen
-    verallgemeinern (Staging-Beispiel: "Toulon, Hyères" im Betreff, obwohl eine
-    Warnung ausschliesslich Draguignan betraf) -- ein neutraler Platzhalter
-    ("mehrere Orte") steht dann an dessen Stelle.
+    Adversary F006 (HIGH, Staging-Fund) + Befund 3 (#1248, ADR-Bestandsschutz):
+    dieselbe Fehlerklasse wie in Quelle-Box/Headline -- die Reichweite ist nur
+    dann die der FUEHRENDEN Warnung (`_scope_display(leading)`), wenn ALLE
+    Warnungen denselben Umfang haben (`_uniform_scope`). Sonst wuerde der
+    Betreff den Umfang eines einzelnen Hazards faelschlich auf alle
+    aufgezaehlten Gefahren-Typen verallgemeinern (Staging-Beispiel: "Toulon,
+    Hyères" im Betreff, obwohl eine Warnung ausschliesslich Draguignan
+    betraf) -- ein neutraler Platzhalter ("mehrere Orte" bzw. "mehrere
+    Segmente" fuer den Trip-Pfad) steht dann an dessen Stelle.
 
-    BEWUSST NICHT fuer den Trip-Pfad (`scope_kind="route"`): dort ist "Segment
-    N der fuehrenden Warnung" ein etabliertes, separat getestetes Verhalten
-    (`test_official_alert_template_render.py::test_ac3_mixed_levels_highest_
-    leads_all_channels`) -- Segment-Angaben sind eine schwaechere Behauptung
-    als Ortsnamen (dieselbe Route, kein falscher-Ort-Vorwurf) und werden hier
-    bewusst nicht angetastet, um dieses etablierte Verhalten nicht zu brechen.
+    Befund 3 (#1248): die `_uniform_scope`-Pruefung galt frueher NUR fuer
+    `scope_kind="locations"` -- der Route-Pfad (Trip, Default) nahm
+    bedingungslos `_scope_display(leading)`, auch wenn die Warnungen
+    UNTERSCHIEDLICHE Segmente betrafen (Bug: "Segment 1" im Betreff, obwohl
+    eine zweite Warnung nur Segment 3 betraf). Die Pruefung greift jetzt
+    unabhaengig von `scope_kind`.
 
     AC-16 (Bit-Identitaet bei <=2 Orten/Warnungen) bleibt gewahrt: alle
     bisherigen Testfaelle haben einheitlichen Umfang je Notice-Liste, der neue
@@ -743,8 +755,8 @@ def render_official_alert_subject(
             f"{_LEVEL_WORDS.get(n.alert.level, ('🔴', 'ROT'))[1]} {_typ_tag(n, tz)}"
             for n in shown
         )
-    if leading.scope_kind == "locations" and not _uniform_scope(ordered):
-        scope_text = "mehrere Orte"
+    if not _uniform_scope(ordered):
+        scope_text = "mehrere Orte" if leading.scope_kind == "locations" else "mehrere Segmente"
     else:
         scope_text = _scope_display(leading)
     return f"[{prefix}] {scope_text} · {body}{more}"
@@ -857,7 +869,7 @@ def _standalone_headline_html(ordered: list["OfficialAlertNotice"], uniform: boo
         f"margin:0 0 18px;line-height:1.2;color:{G_INK};"
     )
     types_html = _join_de(types)
-    if _uniform_scope(ordered):
+    if _uniform_scope(ordered) and not _scope_matches_sole_chip(ordered[0]):
         scope = _html.escape(_scope_display(ordered[0]))
         return f'<div class="body-h1" style="{style}">{types_html} für {scope} gemeldet.</div>'
     return f'<div class="body-h1" style="{style}">{types_html} gemeldet.</div>'
@@ -1081,6 +1093,18 @@ def _uniform_scope(notices: list["OfficialAlertNotice"]) -> bool:
     return len({n.scope_label for n in notices}) <= 1
 
 
+def _scope_matches_sole_chip(notice: "OfficialAlertNotice") -> bool:
+    """Befund 1 (#1326a, ADR-0033): true, wenn `scope_label` exakt dem
+    einzigen betroffenen Chip entspricht -- Headline/Quelle-Satz wuerden dann
+    dieselbe Information ein zweites Mal wiederholen, die bereits im
+    Fakten-Feld/Chip steht (der Route-Teilstrecken-Fall des Trip-Builders,
+    `build_official_alert_notices`, setzt `scope_label` immer identisch zum
+    einzigen Chip). Fuer Compare (`scope_label` traegt ein 'nur '-Praefix bzw.
+    eine Komma-Liste, nie identisch zum bloßen Chip-Text) und fuer die
+    Sonderfaelle 'gesamte Route'/'alle Orte' greift dies nie."""
+    return len(notice.affected_chips) == 1 and notice.scope_label == notice.affected_chips[0]
+
+
 def _standalone_src_sentence(ordered: list["OfficialAlertNotice"], uniform: bool) -> str:
     """Prosaischer Scope-Satz der `.src`-Box (Spec Slice B Punkt 6) --
     deterministisches Template, keine freie Prosa (bereits HTML-escaped).
@@ -1113,6 +1137,10 @@ def _standalone_src_sentence(ordered: list["OfficialAlertNotice"], uniform: bool
     if scope in ("gesamte Route", "alle Orte"):
         subject = "Die Warnung deckt" if len(ordered) == 1 else "Alle Warnungen decken"
         return f"{subject} die {scope_html} ab."
+    if _scope_matches_sole_chip(leading):
+        # Befund 1 (#1326a, ADR-0033): der betroffene Umfang steht bereits als
+        # Chip im Fakten-Feld -- keine zweite Nennung in Prosa.
+        return ""
     # Nebenbefund (#1238): der Compare-`scope_label` traegt bei einem einzelnen
     # Ort bereits "nur X" -> ohne diese Bereinigung entstand "Betrifft nur nur
     # Toulon". Das "nur" gehoert genau einmal in den Satz.
@@ -1206,13 +1234,14 @@ def render_official_alert_html(
         f'margin:18px 0 0;">Stand: heute {_html.escape(stand_at)} · '
         f'abgerufen bei {_html.escape(source_label)}</p>'
     )
-    # Issue #1241: Herkunfts-Fußzeile mit Kontext (Trip-Name bzw. „Ortsvergleich").
+    # Issue #1241/warnmail-Spec AC-5 (Befund 4a): Herkunfts-Fußzeile mit
+    # Kontext (Trip-Name bzw. „Ortsvergleich") -- Zeile 2 zeigt die echte
+    # Quelle (`source_label`, ggf. nach AC-4 mehrfach), nicht den Renderer-Pfad.
     from output.renderers.email.helpers import (
         build_origin_footer, render_origin_footer_html,
     )
     origin = render_origin_footer_html(build_origin_footer(
-        "official-alert", renderer_name="alert/official_alerts.py",
-        context_label=context_label,
+        "official-alert", source=source_label, context_label=context_label,
     ))
     return (
         f'<html><body style="font-family:{FONT_UI};color:{G_INK};">'
@@ -1781,17 +1810,17 @@ def build_official_alert_notices(
                 sms_scope = f"nur {sms_scope}"
         if is_full:
             # Volle Route -> ein sauberer Chip statt format_segment_reference()s
-            # "N Segmente"-Verdichtung ab >4 Segmenten (Issue #1216 F005); keine
-            # freien Chips (auch nicht bei der len(all_ids)<=1-Trivialroute).
+            # "N Segmente"-Verdichtung ab >4 Segmenten (Issue #1216 F005).
             affected = ["gesamte Route"]
-            free_ids = []
         elif segment_ids:
             affected = [format_segment_reference(segment_ids)]
-            free_ids = [i for i in all_ids if i not in segment_ids]
         else:
             affected = []
-            free_ids = [i for i in all_ids if i not in segment_ids]
-        free = ["🏁 Ziel" if i == "Ziel" else f"Segment {i}" for i in free_ids]
+        # Befund 1 (#1326a, ADR-0033): die Karte nennt NUR den betroffenen
+        # Umfang -- keine durchgestrichenen Chips der uebrigen, nicht
+        # betroffenen Segmente (Vorbild: `build_compare_official_alert_notices`
+        # setzt `free_chips=[]` bereits fest).
+        free: list[str] = []
         notices.append(OfficialAlertNotice(
             alert=alert, scope_label=scope_label, sms_scope=sms_scope,
             affected_chips=affected, free_chips=free,

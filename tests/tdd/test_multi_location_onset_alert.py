@@ -41,8 +41,10 @@ EXPECTED_PLAIN = (
     'Intensität: leichter Regen\nQuelle: Radar (DWD)\n\n'
     'Stand: heute 14:23\n'
     'Cooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden.'
-    # Issue #1241: geteilte Herkunfts-Fußzeile (radar-alert), Commit eingefroren.
-    '\n\nRegen-/Gewitter-Alarm · alert/render.py · gitrev0'
+    # ADR-0034 (löst #1241 ab): geteilte Herkunfts-Fußzeile (radar-alert)
+    # zeigt die reale Quelle (OnsetEvent.source_label), nie mehr
+    # Renderer-Pfad + Commit-Hash.
+    '\n\nRegen-/Gewitter-Alarm · Radar (DWD)'
 )
 EXPECTED_HTML = (
     '<html><body style="font-family:\'Inter Tight\', -apple-system, BlinkMacSystemFont, '
@@ -82,11 +84,13 @@ EXPECTED_HTML = (
     '<p style="color:#5c5a52;margin-top:16px;font-family:\'Inter Tight\', -apple-system, '
     'BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">'
     'Stand: heute 14:23</p>'
-    # Issue #1241: geteilte Herkunfts-Fußzeile (radar-alert), Commit eingefroren.
+    # ADR-0034 (löst #1241 ab): geteilte Herkunfts-Fußzeile (radar-alert)
+    # zeigt die reale Quelle (OnsetEvent.source_label), nie mehr
+    # Renderer-Pfad + Commit-Hash.
     '<div style="font-family:\'JetBrains Mono\', ui-monospace, \'SF Mono\', Menlo, '
     'Consolas, monospace;font-size:10px;color:#9a978d;padding:10px 24px 14px;'
     'line-height:1.5;"><div>Regen-/Gewitter-Alarm</div>'
-    '<div style="color:#b5b1a6;">alert/render.py · gitrev0</div></div>'
+    '<div style="color:#b5b1a6;">Radar (DWD)</div></div>'
     '</body></html>'
 )
 EXPECTED_TELEGRAM = (

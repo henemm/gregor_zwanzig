@@ -477,9 +477,11 @@ def _render_footer(
     if ampel_legend_html:
         extras += ampel_legend_html
 
-    # Issue #1241: dezente Herkunfts-Fußzeile (SSoT-Helper).
+    # Issue #1241/warnmail-Spec AC-5 (Befund 4a): dezente Herkunfts-Fußzeile
+    # (SSoT-Helper) -- Zeile 2 zeigt die echte Datenquelle (`provider_str`,
+    # bereits lokal vorhanden), nicht mehr den internen Renderer-Pfad.
     origin_html = render_origin_footer_html(build_origin_footer(
-        "trip-briefing", "full", renderer_name="email/html.py",
+        "trip-briefing", "full", source=provider_str,
     ))
     return (
         f'<div style="background:#1d1c1a;color:#9a978d;font-size:11px;'

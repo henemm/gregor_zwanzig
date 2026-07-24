@@ -369,13 +369,14 @@ def _datarow_html(label: str, value: str, value_color: str, first: bool) -> str:
     )
 
 
-def _with_origin(html: str, plain: str, mail_type: str) -> tuple[str, str]:
-    """Issue #1241: hängt die geteilte Herkunfts-Fußzeile an (HTML vor
-    </body>, Plain am Ende)."""
+def _with_origin(html: str, plain: str, mail_type: str, source: str) -> tuple[str, str]:
+    """Issue #1241/warnmail-Spec AC-5 (Befund 4a): hängt die geteilte
+    Herkunfts-Fußzeile an (HTML vor </body>, Plain am Ende) -- Zeile 2 zeigt
+    die echte Datenquelle (`source`), nicht mehr den internen Renderer-Pfad."""
     from output.renderers.email.helpers import (
         build_origin_footer, render_origin_footer_html, render_origin_footer_text,
     )
-    footer = build_origin_footer(mail_type, renderer_name="alert/render.py")
+    footer = build_origin_footer(mail_type, source=source)
     html = html.replace(
         "</body></html>", render_origin_footer_html(footer) + "</body></html>",
     )
@@ -386,7 +387,9 @@ def _with_origin(html: str, plain: str, mail_type: str) -> tuple[str, str]:
 def render_email(msg: AlertMessage) -> tuple[str, str]:
     if msg.source is not None:
         html, plain = _render_email_onset(msg)
-        return _with_origin(html, plain, "radar-alert")
+        # AC-5 (Befund 4a): reale Quelle des ersten (fuehrenden) Onset-Events.
+        onset_source = getattr(msg.events[0], "source_label", None) or "Open-Meteo"
+        return _with_origin(html, plain, "radar-alert", onset_source)
     evs = _sorted(msg)
     h1 = _h1(msg)
     single = len(evs) == 1
@@ -466,7 +469,9 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         f"<p style=\"color:{G_INK_MUTED};margin-top:16px;font-family:{FONT_UI};\">{_esc(footer)}</p>"
         "</body></html>"
     )
-    return _with_origin(html, plain, "deviation-alert")
+    # AC-5 (Befund 4a, Known Limitation): kein per-Event-Provider im Modell --
+    # fester Fallback "Open-Meteo" (ADR-0029).
+    return _with_origin(html, plain, "deviation-alert", "Open-Meteo")
 
 
 def render_telegram(msg: AlertMessage) -> str:

@@ -172,16 +172,19 @@ def build_service_error_email_html(trip_name: str, report_type: str, error_lines
 
 
 def _official_source_label_for(dto_notices: list) -> str:
-    """Anzeigename der amtlichen Quelle (Issue #1216 AC-7): abgeleitet aus der
-    führenden (höchststufigen) Warnung statt des früher hartkodierten
-    „GeoSphere Austria" für ALLE Quellen. Bei mehreren Quellen unter denselben
-    Notices gewinnt die Quelle der höchststufigen Warnung."""
+    """Anzeigename(n) der amtlichen Quelle(n) (Issue #1216 AC-7, erweitert um
+    #1251): abgeleitet aus ALLEN beteiligten Warnungen statt nur der
+    führenden (höchststufigen) — ein Bündel aus zwei Behörden (z.B. GeoSphere
+    Austria + Météo-France) nennt beide, statt die zweite Quelle zu verlieren.
+    Reihenfolge: höchste Stufe zuerst (Vorbild `_sort_notices`), dedupliziert
+    bei mehreren Warnungen derselben Quelle."""
     from output.renderers.alert.official_alerts import official_alert_source_label
 
     if not dto_notices:
         return "Amtliche Quelle"
-    leading = max(dto_notices, key=lambda n: n.alert.level)
-    return official_alert_source_label(leading.alert.source)
+    ordered = sorted(dto_notices, key=lambda n: -n.alert.level)
+    labels = [official_alert_source_label(n.alert.source) for n in ordered]
+    return ", ".join(dict.fromkeys(labels))
 
 
 def compute_has_gap(
@@ -943,20 +946,37 @@ class NotificationService:
         sms_body = render_alert_sms(alert_msg)
 
         if official_notices:
-            import html as _html_mod
-
             from output.renderers.alert.official_alerts import (
-                render_official_alert_notice_plain,
+                build_official_alert_notices, render_official_alert_notice_plain,
+                render_warn_block,
             )
 
+            # Befund 4b (#1338 Format, AC-6): der eingebettete amtliche
+            # Zusatzblock nutzt den geteilten `render_warn_block(variant=
+            # "embedded")` -- dieselbe Bannerform (.wb, Farb-Tokens, Chips,
+            # Quelle-Zeile) wie `send_official_alert` -- statt HTML-escaped
+            # Plaintext in ein rohes `<p>`. `official_notices` ist hier eine
+            # Liste roher `(OfficialAlert, segment_ids)`-Tupel (kein `trip`
+            # verfuegbar) -- `build_official_alert_notices(None, ...)` baut
+            # daraus die DTOs (ohne Trip faellt die Segment-Gesamtzahl leer
+            # aus, "gesamte Route"-Verdichtung entfaellt ersatzlos, s.
+            # `_trip_total_segment_ids`-Docstring).
+            embed_notices = build_official_alert_notices(None, official_notices)
+            embed_source = _official_source_label_for(embed_notices)
+            embedded_html = render_warn_block(
+                embed_notices, variant="embedded", source_label=embed_source,
+                tz=alert_tz,
+            )
+            html = html.replace(
+                "</body></html>", embedded_html + "</body></html>",
+            )
+            # Plain/Telegram bleiben beim bestehenden Notice-Text (AC-6 betrifft
+            # nur das HTML-Format, das aus dem Rahmen brach).
             extra_lines = render_official_alert_notice_plain(
                 official_notices, tz=alert_tz,
             )
             extra_text = "\n".join(extra_lines)
             plain += "\n\n" + extra_text
-            html = html.replace(
-                "</body></html>", f"<p>{_html_mod.escape(extra_text)}</p></body></html>",
-            )
             telegram_body += "\n\n" + extra_text
 
         sent_channels: list[str] = []

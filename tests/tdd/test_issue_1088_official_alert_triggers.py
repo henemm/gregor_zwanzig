@@ -441,7 +441,14 @@ class TestAC5Bundling:
                 f"Erwartet genau 1 Mail-Versand (Bündelung), erhalten: {len(mail_calls)}"
             )
             _, body = mail_calls[0]
-            assert alert.label in body, "Amtliche Warnung fehlt im gebündelten Alert-Body"
+            # Adversary F002 (warnmail): der eingebettete Plain-Zusatz zeigt
+            # seit dem Fix `_display_label(alert)` statt des rohen
+            # `alert.label` -- fuer ein hazard="thunderstorm"-Label ohne
+            # Bezug zum deutschen Typ-Wort ("Gebündelte Warnung...") ersetzt
+            # `_display_label` es durch "Gewitter" (Fall (d), kein Regress:
+            # die Warnung selbst ist weiterhin im Body vorhanden).
+            from output.renderers.alert.official_alerts import _display_label
+            assert _display_label(alert) in body, "Amtliche Warnung fehlt im gebündelten Alert-Body"
         finally:
             oa_base._REGISTERED_SOURCES.clear()
             oa_base._REGISTERED_SOURCES.extend(backup)
@@ -565,7 +572,13 @@ class TestF001OfficialTriggerViaCheckAllTrips:
                 f"Erwartet genau 1 Mail-Versand, erhalten: {len(mail_calls)}"
             )
             _, body = mail_calls[0]
-            assert alert.label in body, "Amtliche Warnung fehlt im eigenständig versendeten Alert-Body"
+            # ADR-0033/Befund 2 (#1326b): das Test-Label traegt keine echte
+            # Zusatzinfo (kein Massiv-Name, kein "—"-Separator, keine
+            # Erweiterung des Typ-Worts) -- _display_label zeigt daher nur
+            # das gemappte deutsche Typ-Wort ("Gewitter" fuer "thunderstorm"),
+            # nicht das rohe Test-Label. Die Quelle bleibt als Beleg im Body.
+            assert "Gewitter" in body, "Amtliche Warnung (Typ-Wort) fehlt im eigenständig versendeten Alert-Body"
+            assert alert.source in body, "Warnquelle fehlt im eigenständig versendeten Alert-Body"
         finally:
             oa_base._REGISTERED_SOURCES.clear()
             oa_base._REGISTERED_SOURCES.extend(backup)
@@ -622,7 +635,13 @@ class TestAC7SmsWithoutParity:
 
             assert len(mail_calls) == 1
             _, body = mail_calls[0]
-            assert alert.label in body, "E-Mail-Body muss den Zusatz für die amtliche Warnung enthalten"
+            # Adversary F002 (warnmail): s. Begründung in TestAC5Bundling oben --
+            # der eingebettete Plain-Zusatz zeigt `_display_label(alert)`, nicht
+            # mehr das rohe `alert.label`.
+            from output.renderers.alert.official_alerts import _display_label
+            assert _display_label(alert) in body, (
+                "E-Mail-Body muss den Zusatz für die amtliche Warnung enthalten"
+            )
 
             sms_after = render_alert_sms(alert_msg)
             assert alert.label not in sms_after, "SMS-Rendering darf keinen Alert-Text-Zusatz enthalten"

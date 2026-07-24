@@ -90,7 +90,16 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # stabile Output (Rerun-Determinismus geprueft); kein Trip-Renderer-Regress,
 # kein Compare-Scope-Verstoss, kein AC-4-Verstoss ("Nacht am Ziel"-Tabelle
 # kommt in diesem Fixture ohnehin nicht vor, night_weather=None).
-_EXPECTED_SHA256 = "c0c1a9a5662699b8ac7e3853531b7ffd1701101a9cb3be9f0eb4ef2bcc6fdfc8"
+#
+# Korrektur (warnmail-Spec AC-5/ADR-0034, 2026-07-23): ADR-0034 aendert die
+# Herkunfts-Fusszeile (Zeile 2) fuer trip-briefing von
+# "email/{html,plain}.py · <commit-hash>" auf die reale Datenquelle
+# (`segments[0].provider`, hier "openmeteo") -- verifiziert per Vergleich der
+# HEAD-Fassung (vor ADR-0034) von html.py/plain.py/helpers.py gegen den
+# Arbeitsstand: einziger Unterschied ist der `source=`/`renderer_name=`-Aufruf
+# von `build_origin_footer()`, kein anderer Text-/Layout-Block hat sich
+# geaendert. Digest unten neu ermittelt fuer den ADR-0034-Stand.
+_EXPECTED_SHA256 = "78075cb3fa70f762d334f0be6b7c597b1a0cba13f3942f758d4c36c1a17a714a"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",

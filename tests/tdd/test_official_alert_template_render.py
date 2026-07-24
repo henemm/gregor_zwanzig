@@ -127,7 +127,11 @@ def test_ac3_mixed_levels_highest_leads_all_channels():
     notices = _mixed_orange_gelb()
 
     subject = render_official_alert_subject(notices, prefix="KHW 403")
-    assert subject == "[KHW 403] Segment 3 · ORANGE Gewitter (Sa) + GELB Hitze (Fr)", subject
+    # Issue #1248 (Befund 3, warnmail-Spec AC-3): der Betreff behauptete
+    # faelschlich das Segment der FUEHRENDEN Warnung als Gesamt-Umfang, obwohl
+    # die beiden Warnungen unterschiedliche Segmente betreffen (Segment 3 vs.
+    # Segment 1). "mehrere Segmente" ist die ehrliche Sammelangabe.
+    assert subject == "[KHW 403] mehrere Segmente · ORANGE Gewitter (Sa) + GELB Hitze (Fr)", subject
 
     html = render_official_alert_html(
         notices, source_label="GeoSphere Austria", stand_at="09:30", tz=UTC,

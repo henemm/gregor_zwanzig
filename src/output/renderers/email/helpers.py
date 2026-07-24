@@ -362,10 +362,12 @@ def format_units_legend(label_units: list[tuple[str, str]]) -> str:
 
 @dataclass(frozen=True)
 class OriginFooter:
-    """Zweizeilige Herkunfts-Fußzeile (#1241).
+    """Zweizeilige Herkunfts-Fußzeile (#1241, Zeile 2 seit warnmail-Spec
+    AC-5/Befund 4a, ADR-0034 -- löst #1241 ab).
 
     line1 = Mail-Art in Klartext (ggf. mit Kontext-Prefix).
-    line2 = erzeugender Renderer + Commit-Stand des Laufzeit-Checkouts.
+    line2 = die tatsächliche Datenquelle (Wetter-Provider bzw. amtliche
+    Quelle(n)), NIE der interne Renderer-Pfad oder ein Commit-Hash.
     """
     line1: str
     line2: str
@@ -412,24 +414,35 @@ def build_origin_footer(
     mail_type: str,
     mail_format: "str | None" = None,
     *,
-    renderer_name: str,
+    source: str,
     context_label: "str | None" = None,
 ) -> OriginFooter:
-    """Baut die zweizeilige Herkunfts-Fußzeile (#1241, SSoT).
+    """Baut die zweizeilige Herkunfts-Fußzeile (#1241 SSoT, Zeile-2-Inhalt
+    seit warnmail-Spec AC-5/Befund 4a, ADR-0034 geändert).
 
     Zeile 1: Mail-Art in Klartext (aus `_MAIL_TYPE_LABELS`); für
     ``mail_type="official-alert"`` wird `context_label` (Trip-Name bzw.
     „Ortsvergleich") als Prefix vorangestellt: „{context_label} · Amtliche
-    Warnung". Zeile 2: erzeugender Renderer + gecachter Commit-Stand.
+    Warnung". Zeile 2: die tatsächliche Datenquelle (`source`, vom Aufrufer
+    bestimmt -- Wetter-Provider, amtliche Quelle(n) oder fester Fallback
+    „Open-Meteo" nach ADR-0029), NIE mehr Renderer-Pfad + Commit-Hash.
     """
     label = _MAIL_TYPE_LABELS.get((mail_type, mail_format))
     if label is None:
         label = _MAIL_TYPE_LABELS.get((mail_type, None), mail_type)
     if mail_type == "official-alert" and context_label:
         label = f"{context_label} · {label}"
-    variant = f" ({mail_format})" if mail_format else ""
-    line2 = f"{renderer_name}{variant} · {_DEPLOYED_COMMIT}"
-    return OriginFooter(line1=label, line2=line2)
+    # Adversary F001 (warnmail, AC-5): `source` kann im Fehlerfall legitim der
+    # Platzhalter-String "unknown" sein (segments[0].provider, WEATHER-04 in
+    # trip_report_scheduler.py) -- Zeile 2 zeigt dann faelschlich "unknown"
+    # statt einer Quellenangabe. Zentraler Fallback auf "Open-Meteo" (ADR-0029,
+    # bereits der feste Fallback fuer den Ortsvergleich ohne Provider-Info)
+    # bei leerem oder "unknown"-Source; andere Aufrufer (radar OnsetEvent.
+    # source_label, official-alert source_label, deviation-Fallback) liefern
+    # stets echte Labels und sind hiervon nie betroffen.
+    if not source or source == "unknown":
+        source = "Open-Meteo"
+    return OriginFooter(line1=label, line2=source)
 
 
 def render_origin_footer_html(footer: OriginFooter) -> str:

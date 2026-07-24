@@ -217,10 +217,12 @@ def render_compact(
     model_name = segments[0].timeseries.meta.model if segments[0].timeseries else "n/a"
     lines.append(f"Data: {segments[0].provider} ({model_name})")
 
-    # Issue #1241: Herkunfts-Fußzeile VOR _ascii() (faltet '·' → '-', kurz
-    # halten wegen 2048-Byte-Limit des Compact-Validators).
+    # Issue #1241/warnmail-Spec AC-5 (Befund 4a): Herkunfts-Fußzeile VOR
+    # _ascii() (faltet '·' → '-', kurz halten wegen 2048-Byte-Limit des
+    # Compact-Validators) -- Zeile 2 zeigt die echte Datenquelle
+    # (`segments[0].provider`), nicht mehr den internen Renderer-Pfad.
     lines.append(render_origin_footer_text(build_origin_footer(
-        "trip-briefing", "compact", renderer_name="email/compact.py",
+        "trip-briefing", "compact", source=segments[0].provider,
     )))
 
     body = "\n".join(lines)

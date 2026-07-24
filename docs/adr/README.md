@@ -95,3 +95,5 @@ bzw. in den Specs unter `docs/specs/`.
 | [0030](0030-session-auth-hmac-cookie.md) | Session-Auth über HMAC-signiertes Cookie (kein JWT, keine Session-Tabelle) | Akzeptiert |
 | [0031](0031-persistenz-dateibasiert-data-users.md) | Dateibasierte JSON-Persistenz unter `data/users/{user_id}/` (keine Datenbank) | Akzeptiert |
 | [0032](0032-wizard-abschaffung-progressive-editoren.md) | Multi-Step-Wizards abgeschafft — progressive Tab-Editoren mit Auto-Save | Akzeptiert |
+| [0033](0033-warn-karte-nur-betroffene-segmente.md) | Amtliche Warn-Karte zeigt nur betroffene Segmente, kein Vollrouten-Gitter (löst #1233/#1216 ab) | Akzeptiert |
+| [0034](0034-herkunftsfusszeile-reale-datenquelle.md) | Herkunfts-Fußzeile zeigt die reale Datenquelle statt Renderer-Pfad + Commit-Hash (löst #1241 ab) | Akzeptiert |

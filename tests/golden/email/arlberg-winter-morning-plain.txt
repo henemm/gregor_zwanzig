@@ -41,4 +41,4 @@ Einheiten: Temp, TmpMin, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · C
 ------------------------------------------------------------
 Generated: 2026-04-28 12:00 UTC
 Data: openmeteo (arome_france)
-Etappen-Briefing · Vollversion · email/plain.py (full) · gitrev0
+Etappen-Briefing · Vollversion · openmeteo
