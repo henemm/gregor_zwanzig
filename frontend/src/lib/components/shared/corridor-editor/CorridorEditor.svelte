@@ -20,15 +20,15 @@
 	import { toCompareProfile, type Trip, type SensLevel, type Corridor } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
-	import type { ProfileKey } from '$lib/components/compare/compareMetricDefs';
 	import {
 		buildRoutePool, addRow, removeRow, patchRow, validateCorridorRows,
 		buildCorridorSavePayload, ROUTE_CTX_DEFAULTS, valueAtPointer, clampDragValue, clampBoundInput,
 		saveGateDecision, type CorridorRowState,
-		COMPARE_METRIC_DEFS, buildComparePool, addCompareRow, VERGLEICH_CTX_DEFAULTS,
+		buildComparePool, addCompareRow, VERGLEICH_CTX_DEFAULTS,
 		buildCompareCorridorSavePayload, buildComparePrefillRows,
-		type RouteMetricDef, type CompareMetricDef,
+		type RouteMetricDef, type CompareMetricDef, type ProfileKey,
 	} from './corridorEditorState.ts';
+	import { loadCompareMetricCatalog } from './compareMetricCatalogLoader.ts';
 
 	interface Props {
 		context?: 'route' | 'vergleich';
@@ -60,28 +60,60 @@
 	// Step3Idealwerte aus dem Aktivitaetsprofil — sonst startet der Editor im
 	// Create-Fluss leer (UX-Verschlechterung ggü. heute).
 	const isFreshCompareCreate = context === 'vergleich' && !ws?.isEditMode && (ws?.corridors ?? []).length === 0;
-	function computeInitialCompare(): { rows: CorridorRowState[]; poolLeft: CompareMetricDef[]; unknownCorridors: Corridor[] } {
-		if (!isFreshCompareCreate) return buildComparePool(ws?.corridors ?? []);
+	function computeInitialCompare(defs: CompareMetricDef[]): { rows: CorridorRowState[]; poolLeft: CompareMetricDef[]; unknownCorridors: Corridor[] } {
+		if (!isFreshCompareCreate) return buildComparePool(ws?.corridors ?? [], defs);
 		const profileKey = ws?.activityProfile ? (toCompareProfile(ws.activityProfile) as ProfileKey) : 'ALLGEMEIN';
-		const prefillRows = buildComparePrefillRows(profileKey);
-		const poolLeft = COMPARE_METRIC_DEFS.filter((d) => !prefillRows.some((r) => r.metric === d.metric));
+		const prefillRows = buildComparePrefillRows(profileKey, defs);
+		const poolLeft = defs.filter((d) => !prefillRows.some((r) => r.metric === d.metric));
 		return { rows: prefillRows, poolLeft, unknownCorridors: [] };
 	}
 	// Issue #1311 (C1, #1293-Wurzelfix): Pool folgt der Metrik-Auswahl des
 	// Wetter-Metriken-Tabs (trip.display_config.metrics) statt grundsaetzlich
 	// alle 6 anzubieten.
-	const initial = context === 'vergleich' ? computeInitialCompare() : { ...buildRoutePool(trip?.corridors ?? [], trip?.display_config?.metrics), unknownCorridors: [] };
-	let rows = $state<CorridorRowState[]>(initial.rows);
-	let poolLeft = $state<(RouteMetricDef | CompareMetricDef)[]>(initial.poolLeft);
+	const initialRoute = context === 'route' ? buildRoutePool(trip?.corridors ?? [], trip?.display_config?.metrics) : null;
+	let rows = $state<CorridorRowState[]>(initialRoute?.rows ?? []);
+	let poolLeft = $state<(RouteMetricDef | CompareMetricDef)[]>(initialRoute?.poolLeft ?? []);
 	// F003-Fix (Adversary CRITICAL, Slice 4): Corridor-Eintraege ausserhalb des
-	// bekannten 14er-Katalogs (unbekannte/zukuenftige Metrik-IDs) — reiner
+	// bekannten Katalogs (unbekannte/zukuenftige Metrik-IDs) — reiner
 	// Pass-Through, keine UI-Zeile, aber beim Speichern unveraendert erhalten
 	// (buildCompareCorridorSavePayload haengt sie an corridors[] an).
-	const unknownCorridors: Corridor[] = initial.unknownCorridors;
+	let unknownCorridors = $state<Corridor[]>([]);
 	// F002-Fix (Adversary HIGH, Slice 3): Metriken, die per "✕ entfernen" aus rows
 	// verschwunden sind — die Save-Payload-Funktionen setzen deren Level explizit
 	// auf "off", sonst warnt der Δ-Wächter unsichtbar mit der alten Stufe weiter.
 	let removedMetrics = $state<string[]>([]);
+
+	// Issue #1350 Teil 3: der vergleich-Zweig laedt seine CompareMetricDef[]
+	// jetzt asynchron aus GET /api/compare/metrics statt sie synchron aus einer
+	// Modul-Konstante zu lesen (groesstes Einzelrisiko der Migration, Spec
+	// Implementation Details Punkt 6). context==='route' bleibt unveraendert
+	// synchron (ROUTE_METRIC_DEFS wird nicht migriert).
+	let compareDefs = $state<CompareMetricDef[] | null>(null);
+	let compareDefsError = $state<string | null>(null);
+
+	$effect(() => {
+		// Guard analog Teil-2-Muster (WeatherMetricsTab.svelte): laedt genau
+		// einmal beim Mount. Der "Wiederholen"-Button loest den Refetch aus,
+		// indem er compareDefsError zuruecksetzt (NICHT durch einen direkten
+		// zweiten loadCompareMetricCatalog()-Aufruf, sonst Doppel-Fetch-Race
+		// zwischen Klick-Handler und diesem Effect).
+		if (context !== 'vergleich' || compareDefs !== null || compareDefsError) return;
+		loadCompareMetricCatalog()
+			.then((defs) => {
+				compareDefs = defs;
+				const initial = computeInitialCompare(defs);
+				rows = initial.rows;
+				poolLeft = initial.poolLeft;
+				unknownCorridors = initial.unknownCorridors;
+				// Prefill sofort in die wiz-Runen spiegeln — analog Step3Idealwertes
+				// altem Mount-Effekt: auch ohne weitere User-Interaktion muss
+				// "Briefing aktivieren" bereits die Profil-Defaults mitschicken.
+				if (isFreshCompareCreate && rows.length > 0) syncToWizard();
+			})
+			.catch((e: unknown) => {
+				compareDefsError = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';
+			});
+	});
 
 	const validation = $derived(validateCorridorRows(rows));
 	const notifyN = $derived(rows.filter((r) => r.notify).length);
@@ -115,10 +147,10 @@
 		ws.metricAlertLevels = payload.metricAlertLevels;
 	}
 
-	// Prefill sofort in die wiz-Runen spiegeln — analog Step3Idealwertes altem
-	// Mount-Effekt: auch ohne weitere User-Interaktion muss "Briefing
-	// aktivieren" bereits die Profil-Defaults mitschicken.
-	if (isFreshCompareCreate && rows.length > 0) syncToWizard();
+	// Issue #1350 Teil 3: der Fresh-Create-Prefill fuer den vergleich-Zweig
+	// laeuft jetzt im $effect oben (nach erfolgreichem Katalog-Laden) — vorher
+	// synchron hier, aber `rows` ist beim Skript-Start fuer 'vergleich' noch
+	// leer (compareDefs noch nicht geladen).
 
 	// F001/F005-Fix (Adversary HIGH, Slice 3): bei AC-12-Verletzung gar nicht
 	// schedulen/synchronisieren (der Save-Indikator wuerde sonst faelschlich
@@ -148,7 +180,7 @@
 		// (Legacy-Bestand ohne Corridor-Eintrag) -> notify=true erhalten statt
 		// stillschweigend auf den Kontext-Default (false) zu fallen.
 		const next = context === 'vergleich'
-			? addCompareRow(rows, poolLeft as CompareMetricDef[], metric, VERGLEICH_CTX_DEFAULTS, originalActiveMetricKeys.includes(metric))
+			? addCompareRow(rows, poolLeft as CompareMetricDef[], metric, compareDefs ?? [], VERGLEICH_CTX_DEFAULTS, originalActiveMetricKeys.includes(metric))
 			: addRow(rows, poolLeft as RouteMetricDef[], metric, ROUTE_CTX_DEFAULTS);
 		rows = next.rows;
 		poolLeft = next.poolLeft;
@@ -181,6 +213,23 @@
 <svelte:window onpointermove={onWindowPointerMove} onpointerup={onWindowPointerUp} />
 
 <div class="corridor-editor" data-testid="corridor-editor-{context}">
+	{#if context === 'vergleich' && compareDefsError}
+		<!-- Issue #1350 Teil 3 (AC-4): sichtbarer Fehlerzustand statt still
+		     leerem Editor bei Endpoint-Ausfall -- kein Pool, keine Zeilen. -->
+		<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
+		<p class="ce-error" role="alert" data-testid="corridor-editor-vergleich-load-error">
+			{compareDefsError}
+		</p>
+		<button
+			type="button"
+			class="ce-pool-btn"
+			data-testid="corridor-editor-vergleich-load-retry"
+			onclick={() => (compareDefsError = null)}
+		>Wiederholen</button>
+	{:else if context === 'vergleich' && compareDefs === null}
+		<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
+		<p class="ce-lead" aria-busy="true" data-testid="corridor-editor-vergleich-loading">Lade Metriken…</p>
+	{:else}
 	{#if context === 'vergleich'}
 		<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
 		<h2 class="ce-h2">Sag mir, welche Werte dir ideal sind</h2>
@@ -298,7 +347,7 @@
 			<div class="ce-pool">
 				<span class="ce-pool-label">Metrik hinzufügen:</span>
 				{#each poolLeft as m (m.metric)}
-					<button type="button" class="ce-pool-btn" onclick={() => add(m.metric)}>＋ {m.label}</button>
+					<button type="button" class="ce-pool-btn" data-testid="corridor-editor-pool-item-{m.metric}" onclick={() => add(m.metric)}>＋ {m.label}</button>
 				{/each}
 			</div>
 		{/if}
@@ -320,6 +369,7 @@
 			{/if}
 		{/if}
 	</div>
+	{/if}
 </div>
 
 <style>

@@ -1,16 +1,18 @@
-// TDD RED — Issue #680 (Epic #677): Compare-Editor Slice 3 — Logik-Tests
+// TDD — Issue #680 (Epic #677): Compare-Editor Slice 3 — Logik-Tests
 //
 // Spec: docs/specs/modules/issue_680_compare_editor_slice3.md
 //
-// Prüft die reinen Logik-Bausteine, die für Slice 3 neu hinzukommen:
-//   1. ALL_METRICS-Katalog in compareMetricDefs.ts (AC-8/AC-9)
-//   2. Ideal-Text-Ableitung aus min/max + unit (AC-6)
-//   3. active_metrics im Save-Payload (AC-10)
+// Prüft verbleibende reine Logik-Bausteine:
+//   1. active_metrics im Save-Payload (AC-10)
+//   2. Lade-Pfad-Rehydrierung (#1191)
+//   3. Profil-Default-Metriken (AC-4/AC-5)
 //
-// RED: Alle Tests schlagen fehl, weil
-//   a) ALL_METRICS nicht exportiert wird
-//   b) deriveIdealText() nicht existiert
-//   c) buildComparePresetSavePayload() activeMetricKeys noch nicht kennt
+// Issue #1350 Teil 3 (2026-07-24): die Bloecke "ALL_METRICS — vollstaendiger
+// Metrik-Katalog" (AC-8/AC-9) und "deriveIdealText" (AC-6) sind mit
+// compareMetricDefs.ts geloescht (ersatzlos, s.
+// docs/specs/modules/compare_metric_ssot_final.md Punkt 7/8) — der Katalog
+// lebt jetzt ausschliesslich im Backend (compare_metric_catalog.py) bzw. im
+// FE-Loader (compareMetricCatalogLoader.ts, eigene Paritaets-Tests).
 //
 // Ausführen:
 //   cd frontend && node --experimental-strip-types --test \
@@ -19,15 +21,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-// ── Import 1: ALL_METRICS (neu in AC-8) ─────────────────────────────────────
-// RED: Export existiert noch nicht → Modul-Fehler oder fehlender Export
-import { ALL_METRICS } from './compareMetricDefs.ts';
-
-// ── Import 2: Ideal-Text-Ableitung (neu) ────────────────────────────────────
-// RED: Funktion existiert noch nicht in compareMetricDefs.ts
-import { deriveIdealText } from './compareMetricDefs.ts';
-
-// ── Import 3: Save-Payload mit activeMetricKeys (AC-10) ─────────────────────
+// ── Import: Save-Payload mit activeMetricKeys (AC-10) ────────────────────────
 import { buildComparePresetSavePayload } from './compareEditorSave.ts';
 import type { ComparePreset } from '../../types.ts';
 
@@ -57,74 +51,6 @@ function makePreset(): ComparePreset {
 		}
 	};
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// AC-8/AC-9: ALL_METRICS-Katalog
-// ─────────────────────────────────────────────────────────────────────────────
-describe('ALL_METRICS — vollständiger Metrik-Katalog (AC-8/AC-9)', () => {
-	test('ALL_METRICS ist ein Array mit mindestens 10 Einträgen', () => {
-		assert.ok(Array.isArray(ALL_METRICS), 'ALL_METRICS muss Array sein');
-		assert.ok(ALL_METRICS.length >= 10, `Zu wenige Metriken: ${ALL_METRICS.length}`);
-	});
-
-	test('jede Metrik hat key + label + unit + kind', () => {
-		for (const m of ALL_METRICS) {
-			assert.ok(typeof m.key === 'string' && m.key.length > 0, `key fehlt: ${JSON.stringify(m)}`);
-			assert.ok(typeof m.label === 'string' && m.label.length > 0, `label fehlt für key=${m.key}`);
-			assert.ok(typeof m.unit === 'string', `unit fehlt für key=${m.key}`);
-			assert.ok(m.kind === 'range' || m.kind === 'enum', `kind ungültig für key=${m.key}`);
-		}
-	});
-
-	test('ALL_METRICS enthält alle Profile-Metriken (snow_depth, wind, precip, thunder)', () => {
-		const keys = ALL_METRICS.map((m) => m.key);
-		assert.ok(keys.includes('snow_depth_cm'), 'snow_depth_cm fehlt');
-		assert.ok(keys.includes('wind_max_kmh'), 'wind_max_kmh fehlt');
-		assert.ok(keys.includes('precip_sum_mm'), 'precip_sum_mm fehlt');
-		assert.ok(keys.includes('thunder_level_max'), 'thunder_level_max fehlt');
-	});
-
-	test('keine doppelten keys in ALL_METRICS', () => {
-		const keys = ALL_METRICS.map((m) => m.key);
-		const unique = new Set(keys);
-		assert.equal(unique.size, keys.length, 'Doppelte keys in ALL_METRICS');
-	});
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// AC-6: Ideal-Text-Ableitung
-// ─────────────────────────────────────────────────────────────────────────────
-describe('deriveIdealText — Ideal-Text aus min/max + unit (AC-6)', () => {
-	test('min + max vorhanden → "min–max unit"', () => {
-		assert.equal(deriveIdealText({ min: 30, max: 200 }, 'cm'), '30–200 cm');
-	});
-
-	test('nur min → "≥ min unit"', () => {
-		assert.equal(deriveIdealText({ min: 5, max: null }, 'h'), '≥ 5 h');
-	});
-
-	test('nur max → "≤ max unit"', () => {
-		assert.equal(deriveIdealText({ min: null, max: 40 }, 'km/h'), '≤ 40 km/h');
-	});
-
-	test('weder min noch max → "–"', () => {
-		assert.equal(deriveIdealText({ min: null, max: null }, 'mm'), '–');
-	});
-
-	test('leeres Objekt → "–"', () => {
-		assert.equal(deriveIdealText({}, '%'), '–');
-	});
-
-	test('min === 0 ist gültig (nicht falsy-gecheckt!)', () => {
-		// 0 ist ein gültiger Wert — "0–5 mm" statt "≤ 5 mm"
-		assert.equal(deriveIdealText({ min: 0, max: 5 }, 'mm'), '0–5 mm');
-	});
-
-	test('unit leer → kein führendes Leerzeichen', () => {
-		const text = deriveIdealText({ min: 1, max: 5 }, '');
-		assert.ok(!text.endsWith(' '), `unerwartetes Leerzeichen: "${text}"`);
-	});
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AC-10: active_metrics im Save-Payload
@@ -232,13 +158,13 @@ describe('rehydrateActiveMetrics — Lade-Pfad-Rehydrierung (#1191)', () => {
 describe('Profil-Default-Metriken (AC-4/AC-5)', () => {
 	// Importiere PROFILE_METRICS_WITH_SCALES direkt — keine Logik, reine Daten-Prüfung
 	test('WINTERSPORT-Profil hat snow_depth_cm in seinen Default-Metriken', async () => {
-		const { PROFILE_METRICS_WITH_SCALES } = await import('./compareMetricDefs.ts');
+		const { PROFILE_METRICS_WITH_SCALES } = await import('../shared/corridor-editor/corridorEditorState.ts');
 		const keys = PROFILE_METRICS_WITH_SCALES.WINTERSPORT.map((m) => m.key);
 		assert.ok(keys.includes('snow_depth_cm'), 'snow_depth_cm fehlt in WINTERSPORT');
 	});
 
 	test('SUMMER_TREKKING-Profil hat thunder_level_max', async () => {
-		const { PROFILE_METRICS_WITH_SCALES } = await import('./compareMetricDefs.ts');
+		const { PROFILE_METRICS_WITH_SCALES } = await import('../shared/corridor-editor/corridorEditorState.ts');
 		const keys = PROFILE_METRICS_WITH_SCALES.SUMMER_TREKKING.map((m) => m.key);
 		assert.ok(keys.includes('thunder_level_max'), 'thunder_level_max fehlt in SUMMER_TREKKING');
 	});

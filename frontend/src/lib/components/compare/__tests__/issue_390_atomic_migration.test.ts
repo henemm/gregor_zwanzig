@@ -113,17 +113,7 @@ test('AC-3: GroupSection Profil-Dot hat title-Attribut mit eyebrow-Label', () =>
 // Issue #1256 Scheibe 1 (2026-07-13): AutoReportsOverview.svelte wurde als
 // verifizierter Totcode gelöscht (kein produktiver Import, Spec Zeilen 303-305)
 // — Eintrag entfernt.
-
-const PAGE_LOCAL_COMPOSITES = [
-	'src/lib/components/compare/CompareMatrix.svelte',
-	'src/lib/components/compare/HourlyMatrix.svelte',
-];
-
-for (const relPath of PAGE_LOCAL_COMPOSITES) {
-	test(`AC-6: ${relPath} existiert (Composite bleibt unveraendert)`, () => {
-		const fullPath = join(ROOT, relPath);
-		// Testet nur Existenz — Git-diff wird manuell geprueft
-		const src = readFileSync(fullPath, 'utf-8');
-		assert.ok(src.length > 100, `${relPath} muss eine echte Komponente sein (>100 Zeichen)`);
-	});
-}
+// Issue #1350 Teil 3 (2026-07-24): CompareMatrix.svelte + HourlyMatrix.svelte
+// wurden als bestaetigter Totcode geloescht (AC-20,
+// compare_matrix_dead_code.test.ts, jetzt ebenfalls entfernt) — die
+// Existenz-Pruefung unten entfaellt ersatzlos.

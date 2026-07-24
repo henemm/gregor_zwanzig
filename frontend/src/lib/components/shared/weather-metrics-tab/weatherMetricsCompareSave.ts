@@ -9,7 +9,7 @@
 import type { ComparePreset } from '../../../types.ts';
 import { buildHubPutPayload } from '../../compare/compareHubWizardBridge.ts';
 import { rehydrateActiveMetrics } from '../../compare/compareEditorLoad.ts';
-import { COMPARE_METRIC_DEFS } from '../corridor-editor/corridorEditorState.ts';
+import { COMPARE_METRIC_KEYS } from '../corridor-editor/corridorEditorState.ts';
 
 /**
  * Erst-Oeffnungs-Hydration fuer den Vergleichs-Zweig: ein zuvor NIE
@@ -22,7 +22,7 @@ import { COMPARE_METRIC_DEFS } from '../corridor-editor/corridorEditorState.ts';
 export function hydrateWeatherMetricsFromPreset(preset: ComparePreset): string[] {
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
 	const rehydrated = rehydrateActiveMetrics(displayConfig.active_metrics as string[] | undefined);
-	return rehydrated ? rehydrated.activeMetricKeys : COMPARE_METRIC_DEFS.map((d) => d.metric);
+	return rehydrated ? rehydrated.activeMetricKeys : [...COMPARE_METRIC_KEYS];
 }
 
 /**

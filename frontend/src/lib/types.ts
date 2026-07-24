@@ -437,6 +437,8 @@ export interface CompareMetricCatalogEntry {
 	step?: number;
 	ordinalLabels?: string[];
 	enumValues?: string[];
+	// Issue #1350 Teil 3: steuert die "Warnen"-Button-Sperre im Schwellen-Editor.
+	alarmCapable?: boolean;
 }
 
 export interface CompareMetricCatalogResponse {

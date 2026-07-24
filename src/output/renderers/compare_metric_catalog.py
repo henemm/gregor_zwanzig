@@ -11,6 +11,11 @@ Teil 1 (Strangler-Migration, Issue #1350): Der Katalog wird NUR bereitgestellt,
 noch nicht vom Frontend konsumiert. Keine Aenderung an compareMetricDefs.ts,
 corridorEditorState.ts oder der `active_metrics`/`corridors`-Persistenz.
 
+Teil 3 (docs/specs/modules/compare_metric_ssot_final.md, D1 Hybrid): jeder
+Eintrag traegt zusaetzlich `alarmCapable: bool` -- `True` fuer genau die 10
+Keys aus `compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID` (semantisches
+Alarm-Engine-Wissen gehoert ins Backend), sonst `False`.
+
 Keys sind identisch zu `compare_metric_ids.py::FRONTEND_TO_RENDERER_METRIC_ID`
 (keine sechste Kopie der Keyliste) -- der Modul-Import-Assert unten macht eine
 kuenftige Drift wie #1324 strukturell unmoeglich: fehlt ein Key im Katalog oder
@@ -19,6 +24,7 @@ im Resolver, schlaegt der Import fehl.
 from __future__ import annotations
 
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
+from services.compare_alert import _SUMMARY_KEY_TO_CATALOG_ID
 
 # Reihenfolge = ALL_METRICS-Reihenfolge im Frontend (compareMetricDefs.ts),
 # erleichtert visuellen Diff in Teil 2 (Spec "Expected Behavior").
@@ -90,7 +96,21 @@ assert _catalog_keys == _resolver_keys, (
     f"nur im Resolver: {_resolver_keys - _catalog_keys}"
 )
 
+# Drift-Waechter (Teil 3, defensiv): alarmfaehige Keys muessen eine Teilmenge
+# der Katalog-Keys sein -- kein neuer Datenverlust-Pfad, falls
+# _SUMMARY_KEY_TO_CATALOG_ID jemals einen Key nennt, den es im Katalog nicht
+# (mehr) gibt.
+_alarm_keys = set(_SUMMARY_KEY_TO_CATALOG_ID.keys())
+assert _alarm_keys <= _catalog_keys, (
+    "compare_alert._SUMMARY_KEY_TO_CATALOG_ID nennt Keys, die nicht im "
+    f"Compare-Metrik-Katalog existieren: {_alarm_keys - _catalog_keys}"
+)
+
 
 def get_compare_metric_catalog() -> list[dict]:
-    """Liefert die 25 Ortsvergleich-Metriken (read-only Kopie der Katalog-Liste)."""
-    return [dict(entry) for entry in COMPARE_METRIC_CATALOG]
+    """Liefert die 25 Ortsvergleich-Metriken (read-only Kopie der Katalog-Liste),
+    angereichert um `alarmCapable` (Teil 3, D1 Hybrid)."""
+    return [
+        {**entry, "alarmCapable": entry["key"] in _alarm_keys}
+        for entry in COMPARE_METRIC_CATALOG
+    ]

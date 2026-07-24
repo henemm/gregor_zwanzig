@@ -23,6 +23,17 @@ import {
 } from '../corridor-editor/corridorEditorState.ts';
 import { buildComparePresetSavePayload, type CompareEditorEdits } from '../../compare/compareEditorSave.ts';
 import type { ComparePreset } from '../../../types.ts';
+// Issue #1350 Teil 3: buildComparePool() braucht seit der SSoT-Migration ein
+// explizites `defs`-Argument (vorher Modul-Konstante COMPARE_METRIC_DEFS).
+// Dieser Test braucht nur wind_max_kmh -> minimale, lokale Fixture statt des
+// vollen 25-Eintraege-Katalogs (der lebt in corridorEditorState.test.ts).
+import { buildCompareMetricDefs } from '../corridor-editor/compareMetricCatalogLoader.ts';
+
+const TEST_DEFS = buildCompareMetricDefs({
+	metrics: [
+		{ key: 'wind_max_kmh', label: 'Windspitzen', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: true },
+	],
+});
 
 // ════════════════════════════════════════════════════════════════════════
 // AC-3: notify entkoppelt von active_metrics — Alarm-Funktion bleibt.
@@ -31,7 +42,7 @@ describe('buildCompareCorridorSavePayload — AC-3 Entkopplung notify <-> active
 	test('notify=true veraendert activeMetricKeys NICHT MEHR (reiner Pass-Through von original.activeMetricKeys)', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: true, mark: false },
-		]);
+		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: {},
 			activeMetricKeys: [], // original hatte die Metrik NICHT aktiv
@@ -48,7 +59,7 @@ describe('buildCompareCorridorSavePayload — AC-3 Entkopplung notify <-> active
 	test('notify=false entfernt eine Metrik NICHT MEHR aus activeMetricKeys', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: false, mark: true },
-		]);
+		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: {},
 			activeMetricKeys: ['wind_max_kmh'], // original hatte die Metrik aktiv (z.B. ueber den neuen Wetter-Tab gesetzt)
@@ -67,7 +78,7 @@ describe('buildCompareCorridorSavePayload — AC-3 Entkopplung notify <-> active
 	test('Regressions-Anker: notify steuert weiterhin metricAlertLevels (Δ-Wächter-Alarm bleibt aktiv)', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: true, mark: false },
-		]);
+		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: {},
 			activeMetricKeys: [],
@@ -83,7 +94,7 @@ describe('buildCompareCorridorSavePayload — AC-3 Entkopplung notify <-> active
 	test('Regressions-Anker: notify=false setzt metricAlertLevels weiterhin auf "off"', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: false, mark: true },
-		]);
+		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: {},
 			activeMetricKeys: ['wind_max_kmh'],
@@ -101,7 +112,7 @@ describe('buildCompareCorridorSavePayload — AC-3 Entkopplung notify <-> active
 	test('Regressions-Anker (AC-7): unknownCorridors bleiben unveraendert an corridors[] angehaengt', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: true, mark: false },
-		]);
+		], TEST_DEFS);
 		const unknown = [{ metric: 'foo_bar', range: [1, 2] as [number, number], notify: false, mark: true }];
 		const payload = buildCompareCorridorSavePayload(
 			rows,

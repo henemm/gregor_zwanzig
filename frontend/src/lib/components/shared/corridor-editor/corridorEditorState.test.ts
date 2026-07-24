@@ -21,17 +21,55 @@ import {
 	clampDragValue,
 	clampBoundInput,
 	saveGateDecision,
-	COMPARE_METRIC_DEFS,
 	VERGLEICH_CTX_DEFAULTS,
 	buildComparePool,
 	addCompareRow,
 	buildCompareCorridorSavePayload,
 	buildComparePrefillRows,
+	type CompareMetricDef,
 } from './corridorEditorState.ts';
-// Fix-Loop 1 (F005): Erwartungswerte aus der Quelle ableiten statt Hardcode —
-// ALL_METRICS waechst (zuletzt #1285: pop_max_pct), ein hartkodiertes "14"
-// veraltet dann sofort. Vakuum-Schutz (nie 0 akzeptieren) bleibt erhalten.
-import { ALL_METRICS } from '../../compare/compareMetricDefs.ts';
+// Issue #1350 Teil 3: COMPARE_METRIC_DEFS (Modul-Konstante) entfaellt — die
+// Tests unten bauen ihre eigene, frozen Defs-Liste ueber den echten Mapper
+// (buildCompareMetricDefs) aus einer Endpoint-Antwort-Fixture (1:1 aus
+// src/output/renderers/compare_metric_catalog.py, identisch zur Fixture in
+// __tests__/compareMetricCatalogParity.test.ts). Testet damit gegen den
+// echten Produktionscode statt eine zweite Erwartung zu erfinden.
+import { buildCompareMetricDefs } from './compareMetricCatalogLoader.ts';
+
+// Endpoint-Antwort-Fixture: 25 Eintraege 1:1 aus
+// src/output/renderers/compare_metric_catalog.py::COMPARE_METRIC_CATALOG,
+// alarmCapable = die 10 Keys aus compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID.
+const CATALOG_FIXTURE = {
+	metrics: [
+		{ key: 'snow_depth_cm', label: 'Schneehöhe', unit: 'cm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 200, step: 5, alarmCapable: false },
+		{ key: 'snow_new_sum_cm', label: 'Neuschnee', unit: 'cm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 50, step: 1, alarmCapable: true },
+		{ key: 'sunny_hours_h', label: 'Sonnenstunden', unit: 'h', decimals: 1, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 12, step: 0.5, alarmCapable: false },
+		{ key: 'wind_max_kmh', label: 'Windspitzen', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: true },
+		{ key: 'cloud_avg_pct', label: 'Bewölkung Ø', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
+		{ key: 'visibility_min_m', label: 'Sichtweite min', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 10000, step: 500, alarmCapable: true },
+		{ key: 'precip_sum_mm', label: 'Niederschlag', unit: 'mm', decimals: 1, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 30, step: 0.5, alarmCapable: true },
+		{ key: 'uv_index_max', label: 'UV-Index max', unit: '', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 12, step: 1, alarmCapable: false },
+		{ key: 'temp_max_c', label: 'Temperatur max', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -20, rangeMax: 45, step: 1, alarmCapable: true },
+		{ key: 'thunder_level_max', label: 'Gewitter', unit: '', decimals: 0, higherIsBetter: false, kind: 'ordinal', ordinalLabels: ['kein', 'mittel', 'hoch'], alarmCapable: true },
+		{ key: 'temp_min_c', label: 'Temperatur min', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, alarmCapable: true },
+		{ key: 'gust_max_kmh', label: 'Böen', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 150, step: 5, alarmCapable: true },
+		{ key: 'cape_max_jkg', label: 'Gewitter-Energie (CAPE)', unit: 'J/kg', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 3000, step: 100, alarmCapable: true },
+		{ key: 'freezing_level_m', label: 'Nullgradgrenze', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 5000, step: 100, alarmCapable: true },
+		{ key: 'pop_max_pct', label: 'Regenwahrscheinlichkeit', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
+		{ key: 'wind_direction_deg', label: 'Windrichtung', unit: '°', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 360, step: 10, alarmCapable: false },
+		{ key: 'wind_chill_min_c', label: 'Gefühlte Temp. min', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, alarmCapable: false },
+		{ key: 'humidity_avg_pct', label: 'Luftfeuchtigkeit Ø', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
+		{ key: 'dewpoint_avg_c', label: 'Taupunkt Ø', unit: '°C', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: -20, rangeMax: 30, step: 1, alarmCapable: false },
+		{ key: 'snowfall_limit_m', label: 'Schneefallgrenze', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 5000, step: 100, alarmCapable: false },
+		{ key: 'precip_type_dominant', label: 'Niederschlagsart', unit: '', decimals: 0, higherIsBetter: false, kind: 'enum', enumValues: ['RAIN', 'SNOW', 'MIXED', 'FREEZING_RAIN'], alarmCapable: false },
+		{ key: 'cloud_low_avg_pct', label: 'Wolken tief', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
+		{ key: 'cloud_mid_avg_pct', label: 'Wolken mittel', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
+		{ key: 'cloud_high_avg_pct', label: 'Wolken hoch', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
+		{ key: 'pressure_avg_hpa', label: 'Luftdruck Ø', unit: 'hPa', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 950, rangeMax: 1050, step: 5, alarmCapable: false },
+	],
+};
+
+const TEST_DEFS: CompareMetricDef[] = buildCompareMetricDefs(CATALOG_FIXTURE);
 
 // --- AC-3: confidence_pct darf im route-Metrikpool nie auftauchen ---
 describe('ROUTE_METRIC_DEFS — AC-3 confidence_pct-Ausschluss', () => {
@@ -295,17 +333,17 @@ describe('saveGateDecision — F005', () => {
 // 14 ALL_METRICS abdecken, nicht nur die 10 alarmfaehigen — sonst verliert der
 // Editor beim Speichern Corridor-Eintraege realer Nutzer (Slice-2-Migration
 // hat ALLE ideal_ranges-Metriken migriert, nicht nur die 10 Alarm-Keys).
-describe('COMPARE_METRIC_DEFS — AC-3 confidence_pct-Ausschluss + alle ALL_METRICS', () => {
-	test('enthaelt exakt alle ALL_METRICS-Keys, kein confidence_pct, nie leer (Vakuum-Schutz)', () => {
-		const ids = COMPARE_METRIC_DEFS.map((m) => m.metric).sort();
-		const expected = ALL_METRICS.map((m) => m.key).sort();
-		assert.ok(expected.length > 0, 'Vorbedingung verletzt: ALL_METRICS ist leer');
+describe('TEST_DEFS (buildCompareMetricDefs) — AC-3 confidence_pct-Ausschluss + alle Katalog-Keys', () => {
+	test('enthaelt exakt alle Endpoint-Katalog-Keys, kein confidence_pct, nie leer (Vakuum-Schutz)', () => {
+		const ids = TEST_DEFS.map((m) => m.metric).sort();
+		const expected = CATALOG_FIXTURE.metrics.map((m) => m.key).sort();
+		assert.ok(expected.length > 0, 'Vorbedingung verletzt: CATALOG_FIXTURE ist leer');
 		assert.deepEqual(ids, expected);
 		assert.equal(ids.includes('confidence_pct'), false);
 	});
 
 	test('thunder_level_max ist kind "ordinal" mit 3 Stufen (kein/mittel/hoch)', () => {
-		const thunder = COMPARE_METRIC_DEFS.find((m) => m.metric === 'thunder_level_max');
+		const thunder = TEST_DEFS.find((m) => m.metric === 'thunder_level_max');
 		assert.equal(thunder?.kind, 'ordinal');
 		assert.deepEqual(thunder?.ordinalLabels, ['kein', 'mittel', 'hoch']);
 		assert.deepEqual(thunder?.scale, [0, 2]);
@@ -314,7 +352,7 @@ describe('COMPARE_METRIC_DEFS — AC-3 confidence_pct-Ausschluss + alle ALL_METR
 	// notify-Bruecke (compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID) kennt nur
 	// 10 Metriken — die 4 uebrigen sind reine "mark"-Metriken (kein Alarm-Abgleich).
 	test('alarmCapable=true fuer die 10 Alarm-Keys, false fuer die 4 reinen Vergleichs-Metriken', () => {
-		const byId = new Map(COMPARE_METRIC_DEFS.map((m) => [m.metric, m.alarmCapable]));
+		const byId = new Map(TEST_DEFS.map((m) => [m.metric, m.alarmCapable]));
 		for (const k of ['temp_max_c', 'temp_min_c', 'wind_max_kmh', 'gust_max_kmh', 'precip_sum_mm',
 			'thunder_level_max', 'visibility_min_m', 'snow_new_sum_cm', 'cape_max_jkg', 'freezing_level_m']) {
 			assert.equal(byId.get(k), true, `${k} sollte alarmCapable sein`);
@@ -330,22 +368,22 @@ describe('buildComparePool', () => {
 	test('baut Zeile aus vorhandenem Corridor + Metrik-Definition', () => {
 		const { rows, poolLeft } = buildComparePool([
 			{ metric: 'temp_max_c', range: [null, 30], notify: false, mark: true },
-		]);
+		], TEST_DEFS);
 		assert.equal(rows.length, 1);
 		assert.equal(rows[0].label, 'Temperatur max');
 		assert.equal(rows[0].unit, '°C');
 		assert.equal(rows[0].max, 30);
 		assert.equal(rows[0].mark, true);
-		// Fix-Loop 1 (F005): Erwartung aus COMPARE_METRIC_DEFS.length ableiten
+		// Fix-Loop 1 (F005): Erwartung aus TEST_DEFS.length ableiten
 		// statt Hardcode (ALL_METRICS waechst, s. Import-Kommentar oben).
-		assert.equal(poolLeft.length, COMPARE_METRIC_DEFS.length - 1);
+		assert.equal(poolLeft.length, TEST_DEFS.length - 1);
 		assert.equal(poolLeft.some((m) => m.metric === 'temp_max_c'), false);
 	});
 
 	test('leere corridors -> alle Metriken im poolLeft, keine rows', () => {
-		const { rows, poolLeft } = buildComparePool([]);
+		const { rows, poolLeft } = buildComparePool([], TEST_DEFS);
 		assert.equal(rows.length, 0);
-		assert.equal(poolLeft.length, COMPARE_METRIC_DEFS.length);
+		assert.equal(poolLeft.length, TEST_DEFS.length);
 	});
 
 	// BUG-DATALOSS-Regressionstest (Team-Lead-Fund): echter Nutzer henning hat
@@ -355,13 +393,13 @@ describe('buildComparePool', () => {
 	test('Corridor mit nicht-alarmfaehiger Metrik (sunny_hours_h) geht NICHT verloren', () => {
 		const { rows, poolLeft } = buildComparePool([
 			{ metric: 'sunny_hours_h', range: [7, 12], notify: false, mark: true },
-		]);
+		], TEST_DEFS);
 		assert.equal(rows.length, 1);
 		assert.equal(rows[0].metric, 'sunny_hours_h');
 		assert.equal(rows[0].min, 7);
 		assert.equal(rows[0].max, 12);
 		assert.equal(rows[0].alarmCapable, false);
-		assert.equal(poolLeft.length, COMPARE_METRIC_DEFS.length - 1);
+		assert.equal(poolLeft.length, TEST_DEFS.length - 1);
 	});
 });
 
@@ -372,8 +410,8 @@ describe('addCompareRow — VERGLEICH_CTX_DEFAULTS', () => {
 	});
 
 	test('addCompareRow uebernimmt Default-Range + Kontext-Defaults der Metrik', () => {
-		const { rows, poolLeft } = buildComparePool([]);
-		const next = addCompareRow(rows, poolLeft, 'wind_max_kmh', VERGLEICH_CTX_DEFAULTS);
+		const { rows, poolLeft } = buildComparePool([], TEST_DEFS);
+		const next = addCompareRow(rows, poolLeft, 'wind_max_kmh', TEST_DEFS, VERGLEICH_CTX_DEFAULTS);
 		assert.equal(next.rows.length, 1);
 		assert.equal(next.rows[0].metric, 'wind_max_kmh');
 		assert.equal(next.rows[0].notify, false);
@@ -382,8 +420,8 @@ describe('addCompareRow — VERGLEICH_CTX_DEFAULTS', () => {
 	});
 
 	test('addCompareRow fuer thunder_level_max setzt Ordinal-Default (kind + Bounds)', () => {
-		const { rows, poolLeft } = buildComparePool([]);
-		const next = addCompareRow(rows, poolLeft, 'thunder_level_max', VERGLEICH_CTX_DEFAULTS);
+		const { rows, poolLeft } = buildComparePool([], TEST_DEFS);
+		const next = addCompareRow(rows, poolLeft, 'thunder_level_max', TEST_DEFS, VERGLEICH_CTX_DEFAULTS);
 		assert.equal(next.rows[0].kind, 'ordinal');
 		assert.equal(next.rows[0].max, 0); // NONE, aus SUMMER_TREKKING-Default gespiegelt
 	});
@@ -394,7 +432,7 @@ describe('buildCompareCorridorSavePayload — Dual-Write (mark -> ideal_ranges)'
 	test('mark=true numerische Zeile -> ideal_ranges[metric] = {min?,max?}, offene Seite weggelassen', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'temp_max_c', range: [null, 30], notify: false, mark: true },
-		]);
+		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: {},
 			activeMetricKeys: [],
@@ -407,7 +445,7 @@ describe('buildCompareCorridorSavePayload — Dual-Write (mark -> ideal_ranges)'
 	test('mark=false -> Key wird aus ideal_ranges entfernt', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'temp_max_c', range: [null, 30], notify: false, mark: false },
-		]);
+		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: { temp_max_c: { max: 30 } },
 			activeMetricKeys: [],
@@ -419,7 +457,7 @@ describe('buildCompareCorridorSavePayload — Dual-Write (mark -> ideal_ranges)'
 	test('ideal_ranges-Keys ohne Zeile in DIESER Session (z.B. noch nicht geladen) bleiben erhalten (RMW)', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'temp_max_c', range: [null, 30], notify: false, mark: true },
-		]);
+		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: { snow_depth_cm: { min: 30, max: 200 } },
 			activeMetricKeys: [],
@@ -435,7 +473,7 @@ describe('buildCompareCorridorSavePayload — Dual-Write (mark -> ideal_ranges)'
 	test('nicht-alarmfaehige Metrik (sunny_hours_h) geht beim Speichern NICHT verloren', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'sunny_hours_h', range: [7, 12], notify: false, mark: true },
-		]);
+		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: {},
 			activeMetricKeys: [],
@@ -454,7 +492,7 @@ describe('buildCompareCorridorSavePayload — Dual-Write (mark -> ideal_ranges)'
 	test('notify=true auf nicht-alarmfaehiger Zeile wird ignoriert (kein Alarm-Abgleich)', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'sunny_hours_h', range: [7, 12], notify: true, mark: true },
-		]);
+		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: {},
 			activeMetricKeys: [],
@@ -467,7 +505,7 @@ describe('buildCompareCorridorSavePayload — Dual-Write (mark -> ideal_ranges)'
 	test('Gewitter-Ordinal mark=true -> ideal_ranges.thunder_level_max spiegelt Enum-String (heutiges Format)', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'thunder_level_max', range: [null, 0], notify: false, mark: true },
-		]);
+		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: {},
 			activeMetricKeys: [],
@@ -479,7 +517,7 @@ describe('buildCompareCorridorSavePayload — Dual-Write (mark -> ideal_ranges)'
 	test('Gewitter-Ordinal ohne max (nur min gesetzt) -> keine Legacy-Repraesentation, Key entfernt', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'thunder_level_max', range: [1, null], notify: false, mark: true },
-		]);
+		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: { thunder_level_max: { max: 'HIGH' } },
 			activeMetricKeys: [],
@@ -498,7 +536,7 @@ describe('buildCompareCorridorSavePayload — C1 Entkopplung notify <-> active_m
 	test('notify=true veraendert activeMetricKeys NICHT MEHR, metric_alert_levels != off', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: true, mark: false },
-		]);
+		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: {},
 			activeMetricKeys: [],
@@ -511,7 +549,7 @@ describe('buildCompareCorridorSavePayload — C1 Entkopplung notify <-> active_m
 	test('notify=false entfernt die Metrik NICHT MEHR aus activeMetricKeys, metric_alert_levels="off"', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: false, mark: true },
-		]);
+		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: {},
 			activeMetricKeys: ['wind_max_kmh'],
@@ -527,7 +565,7 @@ describe('buildCompareCorridorSavePayload — C1 Entkopplung notify <-> active_m
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: false, mark: true },
 			{ metric: 'temp_max_c', range: [null, 30], notify: false, mark: true },
-		]);
+		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: {},
 			activeMetricKeys: [],
@@ -539,7 +577,7 @@ describe('buildCompareCorridorSavePayload — C1 Entkopplung notify <-> active_m
 	test('activeMetricKeys ist reiner Pass-Through von original — notify fuegt nichts mehr hinzu (RMW)', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: true, mark: false },
-		]);
+		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: {},
 			activeMetricKeys: ['temp_min_c'],
@@ -554,7 +592,7 @@ describe('buildCompareCorridorSavePayload — C1 Entkopplung notify <-> active_m
 	test('removedMetrics -> Level explizit "off", aus active_metrics UND ideal_ranges entfernt', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: true, mark: true },
-		]);
+		], TEST_DEFS);
 		const afterRemove = removeRow(rows, 'wind_max_kmh');
 		const payload = buildCompareCorridorSavePayload(afterRemove, ['wind_max_kmh'], {
 			idealRanges: { wind_max_kmh: { min: 0, max: 50 } },
@@ -587,7 +625,7 @@ describe('Ordinal-Snap fuer Gewitter (scale [0,2], step 1)', () => {
 // ════════════════════════════════════════════════════════════════════════
 describe('buildComparePrefillRows — Wizard-Create-Default (wie Step3Idealwerte heute)', () => {
 	test('ALLGEMEIN: 4 Profil-Metriken, alle mark=true+notify=true (alle 4 sind alarmfaehig)', () => {
-		const rows = buildComparePrefillRows('ALLGEMEIN');
+		const rows = buildComparePrefillRows('ALLGEMEIN', TEST_DEFS);
 		const ids = rows.map((r) => r.metric).sort();
 		assert.deepEqual(ids, ['precip_sum_mm', 'temp_max_c', 'visibility_min_m', 'wind_max_kmh']);
 		for (const r of rows) {
@@ -605,7 +643,7 @@ describe('buildComparePrefillRows — Wizard-Create-Default (wie Step3Idealwerte
 	});
 
 	test('WINTERSPORT: 5 Profil-Metriken, notify nur bei den alarmfaehigen (snow_new_sum_cm/wind_max_kmh)', () => {
-		const rows = buildComparePrefillRows('WINTERSPORT');
+		const rows = buildComparePrefillRows('WINTERSPORT', TEST_DEFS);
 		const byId = new Map(rows.map((r) => [r.metric, r]));
 		assert.equal(byId.size, 5);
 		// alarmfaehig
@@ -624,7 +662,7 @@ describe('buildComparePrefillRows — Wizard-Create-Default (wie Step3Idealwerte
 	});
 
 	test('SUMMER_TREKKING: Gewitter-Ordinal-Default aus Enum-String "NONE" gespiegelt', () => {
-		const rows = buildComparePrefillRows('SUMMER_TREKKING');
+		const rows = buildComparePrefillRows('SUMMER_TREKKING', TEST_DEFS);
 		const thunder = rows.find((r) => r.metric === 'thunder_level_max')!;
 		assert.equal(thunder.kind, 'ordinal');
 		assert.equal(thunder.max, 0); // NONE
@@ -633,7 +671,7 @@ describe('buildComparePrefillRows — Wizard-Create-Default (wie Step3Idealwerte
 	});
 
 	test('unbekannter/keiner Profil-Key -> Fallback ALLGEMEIN (analog Step3Idealwerte)', () => {
-		const rows = buildComparePrefillRows('ALLGEMEIN');
+		const rows = buildComparePrefillRows('ALLGEMEIN', TEST_DEFS);
 		assert.equal(rows.length, 4);
 	});
 });
@@ -648,20 +686,20 @@ describe('buildComparePrefillRows — Wizard-Create-Default (wie Step3Idealwerte
 
 describe('addCompareRow — F002 Bestandserhalt (wasActive)', () => {
 	test('wasActive=true -> notify=true, unabhaengig vom Kontext-Default (kein stilles Alarm-Aus)', () => {
-		const { rows, poolLeft } = buildComparePool([]);
-		const next = addCompareRow(rows, poolLeft, 'temp_max_c', VERGLEICH_CTX_DEFAULTS, true);
+		const { rows, poolLeft } = buildComparePool([], TEST_DEFS);
+		const next = addCompareRow(rows, poolLeft, 'temp_max_c', TEST_DEFS, VERGLEICH_CTX_DEFAULTS, true);
 		assert.equal(next.rows[0].notify, true);
 	});
 
 	test('wasActive=false (Standardfall) -> notify=Kontext-Default (unveraendertes Verhalten)', () => {
-		const { rows, poolLeft } = buildComparePool([]);
-		const next = addCompareRow(rows, poolLeft, 'temp_max_c', VERGLEICH_CTX_DEFAULTS, false);
+		const { rows, poolLeft } = buildComparePool([], TEST_DEFS);
+		const next = addCompareRow(rows, poolLeft, 'temp_max_c', TEST_DEFS, VERGLEICH_CTX_DEFAULTS, false);
 		assert.equal(next.rows[0].notify, false);
 	});
 
 	test('wasActive=true auf nicht-alarmfaehiger Metrik -> notify bleibt false (defensiv)', () => {
-		const { rows, poolLeft } = buildComparePool([]);
-		const next = addCompareRow(rows, poolLeft, 'sunny_hours_h', VERGLEICH_CTX_DEFAULTS, true);
+		const { rows, poolLeft } = buildComparePool([], TEST_DEFS);
+		const next = addCompareRow(rows, poolLeft, 'sunny_hours_h', TEST_DEFS, VERGLEICH_CTX_DEFAULTS, true);
 		assert.equal(next.rows[0].notify, false);
 	});
 
@@ -672,9 +710,9 @@ describe('addCompareRow — F002 Bestandserhalt (wasActive)', () => {
 			'temp_max_c', 'temp_min_c', 'wind_max_kmh', 'gust_max_kmh', 'precip_sum_mm',
 			'thunder_level_max', 'visibility_min_m', 'snow_new_sum_cm', 'cape_max_jkg', 'freezing_level_m',
 		];
-		const { rows, poolLeft } = buildComparePool([]); // corridors fehlt (Legacy, nicht migriert)
+		const { rows, poolLeft } = buildComparePool([], TEST_DEFS); // corridors fehlt (Legacy, nicht migriert)
 		const wasActive = activeMetricKeys.includes('temp_max_c');
-		const next = addCompareRow(rows, poolLeft, 'temp_max_c', VERGLEICH_CTX_DEFAULTS, wasActive);
+		const next = addCompareRow(rows, poolLeft, 'temp_max_c', TEST_DEFS, VERGLEICH_CTX_DEFAULTS, wasActive);
 		const payload = buildCompareCorridorSavePayload(next.rows, [], {
 			idealRanges: {},
 			activeMetricKeys,
@@ -689,7 +727,7 @@ describe('buildComparePool — F003 unknownCorridors (Pass-Through)', () => {
 	test('Corridor mit Metrik-ID ausserhalb des 14er-Katalogs landet in unknownCorridors, nicht in rows/poolLeft', () => {
 		const { rows, unknownCorridors } = buildComparePool([
 			{ metric: 'foo_bar', range: [1, 2], notify: false, mark: true },
-		]);
+		], TEST_DEFS);
 		assert.equal(rows.some((r) => r.metric === 'foo_bar'), false);
 		assert.equal(unknownCorridors.length, 1);
 		assert.deepEqual(unknownCorridors[0], { metric: 'foo_bar', range: [1, 2], notify: false, mark: true });
@@ -699,7 +737,7 @@ describe('buildComparePool — F003 unknownCorridors (Pass-Through)', () => {
 		const { rows, unknownCorridors } = buildComparePool([
 			{ metric: 'temp_max_c', range: [null, 30], notify: false, mark: true },
 			{ metric: 'foo_bar', range: [1, 2], notify: false, mark: true },
-		]);
+		], TEST_DEFS);
 		assert.equal(rows.length, 1);
 		assert.equal(unknownCorridors.length, 1);
 	});
@@ -709,7 +747,7 @@ describe('buildCompareCorridorSavePayload — F003 unknownCorridors bleiben beim
 	test('unknownCorridors werden unveraendert an corridors[] angehaengt', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'temp_max_c', range: [null, 30], notify: false, mark: true },
-		]);
+		], TEST_DEFS);
 		const unknown = [{ metric: 'foo_bar', range: [1, 2] as [number, number], notify: false, mark: true }];
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: {},
@@ -728,7 +766,7 @@ describe('buildCompareCorridorSavePayload — F003 unknownCorridors bleiben beim
 		const { rows, unknownCorridors } = buildComparePool([
 			{ metric: 'foo_bar', range: [1, 2], notify: false, mark: true },
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: false, mark: true },
-		]);
+		], TEST_DEFS);
 		// User aendert NUR wind_max_kmh (bekannte Zeile) — foo_bar bleibt unangetastet.
 		const changedRows = patchRow(rows, 'wind_max_kmh', { max: 60 });
 		const payload = buildCompareCorridorSavePayload(changedRows, [], {

@@ -1199,7 +1199,8 @@ Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
       "kind": "range",
       "rangeMin": 0,
       "rangeMax": 200,
-      "step": 5
+      "step": 5,
+      "alarmCapable": false
     },
     {
       "key": "thunder_level_max",
@@ -1208,7 +1209,8 @@ Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
       "decimals": 0,
       "higherIsBetter": false,
       "kind": "ordinal",
-      "ordinalLabels": ["kein", "mittel", "hoch"]
+      "ordinalLabels": ["kein", "mittel", "hoch"],
+      "alarmCapable": true
     },
     {
       "key": "precip_type_dominant",
@@ -1217,7 +1219,8 @@ Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
       "decimals": 0,
       "higherIsBetter": false,
       "kind": "enum",
-      "enumValues": ["RAIN", "SNOW", "MIXED", "FREEZING_RAIN"]
+      "enumValues": ["RAIN", "SNOW", "MIXED", "FREEZING_RAIN"],
+      "alarmCapable": false
     }
   ]
 }
@@ -1230,6 +1233,7 @@ Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
 | metrics[].key | string | Identisch zu `compare_metric_ids.FRONTEND_TO_RENDERER_METRIC_ID`-Keys (keine sechste Kopie der Keyliste) |
 | metrics[].kind | string | `range` (23 Einträge, mit `rangeMin`/`rangeMax`/`step`), `enum` (`precip_type_dominant`, mit `enumValues`) oder `ordinal` (`thunder_level_max`, mit `ordinalLabels` — übernimmt die im Editor tatsächlich sichtbare 3-Stufen-Darstellung statt des rohen Enum, PO-Entscheidung 2026-07-12) |
 | metrics[].higherIsBetter | bool | Richtung für die Compare-Winner-Box (`true` = höherer Wert gewinnt) |
+| metrics[].alarmCapable | bool | Seit Teil 3 (#1350). `true` für genau die 10 Keys aus `compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID`, sonst `false` — steuert die „Warnen"-Button-Sperre im Schwellen-Editor |
 
 **Notes:**
 
@@ -1239,8 +1243,9 @@ Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
 - `precip_type_dominant` bleibt `enum`, obwohl der Corridor-Editor es intern
   über den generischen `range`-Zweig rendert (bestehende Frontend-Eigenart,
   nicht Teil dieses Endpoints).
-- Teil 2 (Folge-Issue) stellt den Frontend-Konsum (`compareMetricDefs.ts`)
-  auf diesen Endpoint um.
+- Seit Teil 3 (#1350, `compare_metric_ssot_final.md`) ist dieser Endpoint die
+  einzige verbleibende Quelle für den Schwellen-Editor des Ortsvergleichs
+  (`corridorEditorState.ts`) — `compareMetricDefs.ts` existiert nicht mehr.
 
 ---
 
@@ -2934,6 +2939,11 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-07-24: Issue #1350 Teil 3 (SSoT-Abschluss) — `GET /api/compare/metrics`
+  trägt pro Eintrag zusätzlich `alarmCapable: bool` (D1 Hybrid). Der
+  Schwellen-Editor des Ortsvergleichs (`corridorEditorState.ts`) bezieht seine
+  Metrik-Definitionen jetzt aus diesem Endpoint statt aus dem gelöschten
+  `compareMetricDefs.ts`. Siehe Section 15.1.
 - 2026-07-23: Issue #1350 Teil 1 (Strangler-Migration) — neuer read-only
   Endpoint `GET /api/compare/metrics` liefert den 25-Einträge-Ortsvergleich-
   Metrik-Katalog aus einer einzigen Backend-Quelle

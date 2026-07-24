@@ -8,7 +8,7 @@
 // Kein Browser-/SvelteKit-Import — lauffaehig unter node --experimental-strip-types.
 
 import type { ComparePreset, ActivityProfile, ChannelLayouts, Corridor } from '../../types.ts';
-import type { IdealRange } from './compareMetricDefs.ts';
+import type { IdealRange } from '../shared/corridor-editor/corridorEditorState.ts';
 import { toHHMMSS } from '../../utils/time.ts';
 
 export interface CompareEditorEdits {

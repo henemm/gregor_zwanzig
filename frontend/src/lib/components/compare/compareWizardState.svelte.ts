@@ -5,7 +5,7 @@
 // Lazy imports von goto/api damit Unit-Tests die Klasse ohne Browser-APIs testen.
 
 import type { ActivityProfile, ChannelLayouts, ComparePreset, Corridor } from '$lib/types';
-import type { IdealRange } from './compareMetricDefs';
+import type { IdealRange } from '../shared/corridor-editor/corridorEditorState';
 import { buildComparePresetSavePayload } from './compareEditorSave';
 import { toHHMMSS } from '$lib/utils/time';
 

@@ -12,7 +12,6 @@
 // erfuellt, da ROUTE_METRIC_DEFS eine fest verdrahtete 6er-Liste ist.
 
 import type { Corridor, SensLevel, WeatherConfigMetric } from '$lib/types';
-import { ALL_METRICS, PROFILE_METRICS_WITH_SCALES, IDEAL_DEFAULTS, type IdealRange, type ProfileKey } from '../../compare/compareMetricDefs.ts';
 
 export interface RouteMetricDef {
 	metric: string;
@@ -214,6 +213,12 @@ export function buildCorridorSavePayload(
 // (compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID) bleibt auf 10 Metriken
 // beschraenkt — die uebrigen 4 sind reine "mark"-Metriken (alarmCapable=false).
 // AC-3: confidence_pct ist in ALL_METRICS nie enthalten — trivial erfuellt.
+//
+// Issue #1350 Teil 3: der Katalog (inzwischen 25 Metriken) kommt nicht mehr
+// aus dem geloeschten ALL_METRICS-Import, sondern aus GET /api/compare/metrics
+// (compareMetricCatalogLoader.ts::buildCompareMetricDefs) — die
+// Funktionen unten nehmen `defs` deshalb als explizites Argument statt einer
+// Modul-Konstante. Siehe docs/specs/modules/compare_metric_ssot_final.md.
 // ════════════════════════════════════════════════════════════════════════
 
 export interface CompareMetricDef {
@@ -232,14 +237,10 @@ export interface CompareMetricDef {
 	alarmCapable: boolean;
 }
 
-const _COMPARE_ALARM_KEYS = [
-	'temp_max_c', 'temp_min_c', 'wind_max_kmh', 'gust_max_kmh', 'precip_sum_mm',
-	'thunder_level_max', 'visibility_min_m', 'snow_new_sum_cm', 'cape_max_jkg', 'freezing_level_m',
-] as const;
+// Issue #1350 Teil 3 (D1 Hybrid): alarmCapable kommt jetzt aus dem Backend-
+// Katalog (compare_metric_catalog.py) statt aus einer FE-Liste — die
+// ehemalige _COMPARE_ALARM_KEYS-Konstante entfaellt ersatzlos.
 
-// Gewitter (PO-entschieden 2026-07-12, Empfehlung a): 3-Stufen-Ordinal-Band
-// statt %-Slider — kein numerisches Backing im Compare (docs/context/feat-1231-s4-prep.md §3).
-const THUNDER_ORDINAL_LABELS = ['kein', 'mittel', 'hoch'];
 export const ORDINAL_ENUM = ['NONE', 'MED', 'HIGH'] as const;
 
 /** Inverse von ORDINAL_ENUM — fuer den Wizard-Prefill (IDEAL_DEFAULTS.thunder_level_max ist ein Enum-String). */
@@ -248,12 +249,17 @@ function enumToOrdinal(s: string): number | null {
 	return idx >= 0 ? idx : null;
 }
 
-// Default-Von/Bis je Metrik beim "+ Metrik hinzufuegen": aus IDEAL_DEFAULTS
-// uebernommen, wo vorhanden; Metriken ohne Profil-Default (die 4 seit #1191
-// alarmfaehigen temp_min_c/gust_max_kmh/cape_max_jkg/freezing_level_m sowie
-// sunny_hours_h, das in KEINEM der 4 Profile einen Default hat) bekommen
-// einen literalen, an route/JSX angelehnten Sinnwert.
-const _COMPARE_DEFAULTS: Record<string, { defaultMin: number | null; defaultMax: number | null }> = {
+// Issue #1350 Teil 3 (D1 Hybrid, Spec Punkt 3): dünne FE-UX-Tabelle bleibt
+// bewusst FE-seitig (Praezedenz: Trip/ROUTE_METRIC_DEFS haelt Startwerte
+// ebenfalls FE-seitig) — Default-Von/Bis je Metrik beim "+ Metrik
+// hinzufuegen": aus IDEAL_DEFAULTS uebernommen, wo vorhanden; Metriken ohne
+// Profil-Default (die 4 seit #1191 alarmfaehigen
+// temp_min_c/gust_max_kmh/cape_max_jkg/freezing_level_m sowie sunny_hours_h,
+// das in KEINEM der 4 Profile einen Default hat) bekommen einen literalen,
+// an route/JSX angelehnten Sinnwert. Wird jetzt von
+// compareMetricCatalogLoader.ts::buildCompareMetricDefs() gelesen (Import),
+// nicht mehr von einer Modul-Konstante COMPARE_METRIC_DEFS.
+export const _COMPARE_DEFAULTS: Record<string, { defaultMin: number | null; defaultMax: number | null }> = {
 	temp_max_c: { defaultMin: 15, defaultMax: 35 },
 	temp_min_c: { defaultMin: -5, defaultMax: null },
 	wind_max_kmh: { defaultMin: 0, defaultMax: 50 },
@@ -270,40 +276,99 @@ const _COMPARE_DEFAULTS: Record<string, { defaultMin: number | null; defaultMax:
 	sunny_hours_h: { defaultMin: 4, defaultMax: null }, // kein Profil-Default vorhanden — Sinnwert
 };
 
-export const COMPARE_METRIC_DEFS: CompareMetricDef[] = ALL_METRICS.map((src) => {
-	const key = src.key;
-	const defaults = _COMPARE_DEFAULTS[key] ?? { defaultMin: null, defaultMax: null };
-	const alarmCapable = (_COMPARE_ALARM_KEYS as readonly string[]).includes(key);
-	if (key === 'thunder_level_max') {
-		return {
-			metric: key, label: src.label, unit: '', scale: [0, 2], step: 1,
-			kind: 'ordinal', ordinalLabels: THUNDER_ORDINAL_LABELS,
-			defaultMin: defaults.defaultMin, defaultMax: defaults.defaultMax, alarmCapable,
-		};
-	}
-	return {
-		metric: key, label: src.label, unit: src.unit ?? '',
-		scale: [src.rangeMin ?? 0, src.rangeMax ?? 100], step: src.step ?? 1,
-		kind: 'range', defaultMin: defaults.defaultMin, defaultMax: defaults.defaultMax, alarmCapable,
-	};
-});
+// Issue #1350 Teil 3 (Spec Punkt 6, weatherMetricsCompareSave.ts): Legacy-
+// Default "active_metrics=null -> alle Metriken aktiv" braucht eine
+// SYNCHRONE Key-Liste ohne Fetch. Reine Key-Liste (keine Labels/Skalen),
+// Reihenfolge = compare_metric_catalog.py::COMPARE_METRIC_CATALOG.
+export const COMPARE_METRIC_KEYS: string[] = [
+	'snow_depth_cm', 'snow_new_sum_cm', 'sunny_hours_h', 'wind_max_kmh',
+	'cloud_avg_pct', 'visibility_min_m', 'precip_sum_mm', 'uv_index_max', 'temp_max_c',
+	'thunder_level_max', 'temp_min_c', 'gust_max_kmh', 'cape_max_jkg', 'freezing_level_m',
+	'pop_max_pct', 'wind_direction_deg', 'wind_chill_min_c', 'humidity_avg_pct',
+	'dewpoint_avg_c', 'snowfall_limit_m', 'precip_type_dominant', 'cloud_low_avg_pct',
+	'cloud_mid_avg_pct', 'cloud_high_avg_pct', 'pressure_avg_hpa',
+];
 
-const COMPARE_METRIC_DEF_BY_ID = new Map(COMPARE_METRIC_DEFS.map((m) => [m.metric, m]));
+// Issue #1350 Teil 3 (D3): Profil-Feature zieht aus dem geloeschten
+// compareMetricDefs.ts hierher um — natuerlicher, einziger verbleibender Ort.
+export type ProfileKey = 'WINTERSPORT' | 'ALPINE_TOURING' | 'SUMMER_TREKKING' | 'ALLGEMEIN';
+
+export interface IdealRange {
+	min?: number | null;
+	max?: number | string | null; // string fuer enum (NONE/MED/HIGH)
+}
+
+// Reduziert auf {key,label} (D3): Konsumenten lesen ausschliesslich m.key/m.label
+// (verifiziert in CompareNewEditor.svelte + buildComparePrefillRows unten).
+// Werte 1:1 aus den ehemaligen MetricDef-Objekten uebernommen.
+export const PROFILE_METRICS_WITH_SCALES: Record<ProfileKey, { key: string; label: string }[]> = {
+	WINTERSPORT: [
+		{ key: 'snow_depth_cm', label: 'Schneehöhe' },
+		{ key: 'snow_new_sum_cm', label: 'Neuschnee' },
+		{ key: 'sunny_hours_h', label: 'Sonnenstunden' },
+		{ key: 'wind_max_kmh', label: 'Windspitzen' },
+		{ key: 'cloud_avg_pct', label: 'Bewölkung Ø' },
+	],
+	ALPINE_TOURING: [
+		{ key: 'snow_new_sum_cm', label: 'Neuschnee' },
+		{ key: 'visibility_min_m', label: 'Sichtweite min' },
+		{ key: 'wind_max_kmh', label: 'Windspitzen' },
+	],
+	SUMMER_TREKKING: [
+		{ key: 'precip_sum_mm', label: 'Niederschlag' },
+		{ key: 'thunder_level_max', label: 'Gewitter' },
+		{ key: 'wind_max_kmh', label: 'Windspitzen' },
+		{ key: 'uv_index_max', label: 'UV-Index max' },
+		{ key: 'visibility_min_m', label: 'Sichtweite min' },
+	],
+	ALLGEMEIN: [
+		{ key: 'temp_max_c', label: 'Temperatur max' },
+		{ key: 'wind_max_kmh', label: 'Windspitzen' },
+		{ key: 'precip_sum_mm', label: 'Niederschlag' },
+		{ key: 'visibility_min_m', label: 'Sichtweite min' },
+	],
+};
+
+export const IDEAL_DEFAULTS: Record<ProfileKey, Record<string, IdealRange>> = {
+	WINTERSPORT: {
+		snow_depth_cm: { min: 30, max: 200 },
+		snow_new_sum_cm: { min: 5, max: 50 },
+		wind_max_kmh: { min: 0, max: 40 },
+		cloud_avg_pct: { min: 0, max: 60 },
+	},
+	ALPINE_TOURING: {
+		snow_new_sum_cm: { min: 0, max: 10 },
+		visibility_min_m: { min: 2000, max: 10000 },
+		wind_max_kmh: { min: 0, max: 50 },
+	},
+	SUMMER_TREKKING: {
+		precip_sum_mm: { min: 0, max: 3 },
+		thunder_level_max: { max: 'NONE' },
+		wind_max_kmh: { min: 0, max: 35 },
+		uv_index_max: { min: 0, max: 8 },
+	},
+	ALLGEMEIN: {
+		temp_max_c: { min: 15, max: 35 },
+		wind_max_kmh: { min: 0, max: 50 },
+		precip_sum_mm: { min: 0, max: 5 },
+	},
+};
 
 export const VERGLEICH_CTX_DEFAULTS = { notify: false, mark: true };
 
 /**
  * Baut Zeilen aus preset.corridors[] (vergleich-Namensraum) + Rest als Pool.
- * Analog buildRoutePool.
+ * Analog buildRoutePool. Issue #1350 Teil 3: `defs` kommt jetzt vom Aufrufer
+ * (async aus GET /api/compare/metrics geladen) statt aus einer Modul-Konstante.
  *
  * F003-Fix (Adversary CRITICAL): Corridor-Eintraege mit einer Metrik-ID
- * AUSSERHALB von COMPARE_METRIC_DEFS (z.B. ein zukuenftig entferntes Feld,
- * ein Tippfehler-Import o.ae.) werden NICHT verworfen, sondern in
+ * AUSSERHALB von `defs` (z.B. ein zukuenftig entferntes Feld, ein
+ * Tippfehler-Import o.ae.) werden NICHT verworfen, sondern in
  * `unknownCorridors` gesammelt — reiner Pass-Through, keine UI-Zeile, aber
  * `buildCompareCorridorSavePayload` haengt sie unveraendert an `corridors[]`
  * an (kein stiller Datenverlust beim naechsten Speichern).
  */
-export function buildComparePool(corridors: Corridor[]): {
+export function buildComparePool(corridors: Corridor[], defs: CompareMetricDef[]): {
 	rows: CorridorRowState[];
 	poolLeft: CompareMetricDef[];
 	unknownCorridors: Corridor[];
@@ -311,7 +376,7 @@ export function buildComparePool(corridors: Corridor[]): {
 	const remaining = new Map(corridors.map((c) => [c.metric, c]));
 	const rows: CorridorRowState[] = [];
 	const poolLeft: CompareMetricDef[] = [];
-	for (const def of COMPARE_METRIC_DEFS) {
+	for (const def of defs) {
 		const c = remaining.get(def.metric);
 		if (c) {
 			rows.push({
@@ -329,6 +394,7 @@ export function buildComparePool(corridors: Corridor[]): {
 
 /**
  * Fuegt eine Zeile aus dem vergleich-Pool hinzu. Analog addRow, andere Def-Quelle.
+ * Issue #1350 Teil 3: `defs` kommt jetzt vom Aufrufer statt aus einer Modul-Konstante.
  *
  * F002-Fix (Adversary CRITICAL): `wasActive` = war die Metrik beim Mount
  * bereits in `active_metrics` aktiv (Bestand ohne Corridor-Eintrag, z.B.
@@ -342,10 +408,11 @@ export function addCompareRow(
 	rows: CorridorRowState[],
 	poolLeft: CompareMetricDef[],
 	metric: string,
+	defs: CompareMetricDef[],
 	ctxDefaults: { notify: boolean; mark: boolean } = VERGLEICH_CTX_DEFAULTS,
 	wasActive: boolean = false
 ): { rows: CorridorRowState[]; poolLeft: CompareMetricDef[] } {
-	const def = COMPARE_METRIC_DEF_BY_ID.get(metric);
+	const def = defs.find((d) => d.metric === metric);
 	if (!def) return { rows, poolLeft };
 	// Nicht-alarmfaehige Metriken koennen nie "Warnen" — notify bleibt fest false,
 	// unabhaengig von wasActive (defensiv, s. alarmCapable-Invariante oben).
@@ -365,6 +432,7 @@ export function addCompareRow(
  * dem Aktivitaetsprofil (PROFILE_METRICS_WITH_SCALES + IDEAL_DEFAULTS,
  * activeMetricKeys = alle Profil-Metriken). Nur fuer den leeren Create-Fall
  * aufgerufen (CorridorEditor.svelte: !ws.isEditMode && corridors.length===0).
+ * Issue #1350 Teil 3: `defs` kommt jetzt vom Aufrufer statt aus einer Modul-Konstante.
  *
  * notify=alarmCapable (spiegelt das heutige Verhalten: ein frisch erzeugtes
  * Preset setzt `active_metrics` = Profil-Metriken, das war frueher die
@@ -372,12 +440,13 @@ export function addCompareRow(
  * Vergleichs-Metriken konnten nie alarmieren). mark=true fuer alle (jede
  * Profil-Metrik hatte im alten Editor einen Idealwert-Slider).
  */
-export function buildComparePrefillRows(profileKey: ProfileKey): CorridorRowState[] {
+export function buildComparePrefillRows(profileKey: ProfileKey, defs: CompareMetricDef[]): CorridorRowState[] {
+	const defById = new Map(defs.map((d) => [d.metric, d]));
 	const profileMetrics = PROFILE_METRICS_WITH_SCALES[profileKey] ?? PROFILE_METRICS_WITH_SCALES.ALLGEMEIN;
 	const defaults = IDEAL_DEFAULTS[profileKey] ?? {};
 	const rows: CorridorRowState[] = [];
 	for (const m of profileMetrics) {
-		const def = COMPARE_METRIC_DEF_BY_ID.get(m.key);
+		const def = defById.get(m.key);
 		if (!def) continue;
 		const idealDefault = defaults[m.key];
 		let min = def.defaultMin;

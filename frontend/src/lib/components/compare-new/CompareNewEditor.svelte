@@ -25,7 +25,7 @@
 		type Group
 	} from '$lib/types';
 	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
-	import { PROFILE_METRICS_WITH_SCALES, type ProfileKey } from '$lib/components/compare/compareMetricDefs';
+	import { PROFILE_METRICS_WITH_SCALES, type ProfileKey } from '$lib/components/shared/corridor-editor/corridorEditorState';
 	import { api } from '$lib/api.js';
 	import {
 		unlockedTabs,

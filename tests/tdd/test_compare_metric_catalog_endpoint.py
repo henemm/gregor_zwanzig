@@ -169,3 +169,40 @@ class TestCompareMetricCatalogEndpoint:
                     f"{expected['key']}.{field}: erwartet {expected[field]!r}, "
                     f"erhalten {actual.get(field)!r}"
                 )
+
+    def test_each_entry_has_alarm_capable_flag(self, client: TestClient) -> None:
+        """AC-3 (Teil 3, #1350): jeder Eintrag traegt `alarmCapable: bool` -- heute
+        ROT, das Feld fehlt noch (D1 Hybrid, compare_metric_ssot_final.md).
+        RED-Erwartung: Zugriff via `entry["alarmCapable"]` (nicht `.get()`) macht den
+        Fehlschlag explizit als KeyError statt eines stillen `assert None == ...`."""
+        response = client.get("/api/compare/metrics")
+        metrics = response.json()["metrics"]
+        for entry in metrics:
+            assert "alarmCapable" in entry, f"{entry['key']}: fehlt alarmCapable"
+            assert isinstance(entry["alarmCapable"], bool), (
+                f"{entry['key']}: alarmCapable muss bool sein, ist {entry['alarmCapable']!r}"
+            )
+
+    def test_alarm_capable_true_for_exactly_the_ten_alarm_keys(self, client: TestClient) -> None:
+        """AC-3 (Teil 3, KERN): `alarmCapable=True` fuer genau die 10 Keys aus
+        compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID, sonst False."""
+        expected_alarm_keys = {
+            "temp_max_c", "temp_min_c", "wind_max_kmh", "gust_max_kmh",
+            "precip_sum_mm", "thunder_level_max", "visibility_min_m",
+            "snow_new_sum_cm", "cape_max_jkg", "freezing_level_m",
+        }
+        response = client.get("/api/compare/metrics")
+        metrics = response.json()["metrics"]
+
+        actual_alarm_keys = {m["key"] for m in metrics if m.get("alarmCapable") is True}
+        assert actual_alarm_keys == expected_alarm_keys, (
+            "alarmCapable=True weicht von den 10 Alarm-Keys ab: "
+            f"fehlend {expected_alarm_keys - actual_alarm_keys}, "
+            f"zusaetzlich {actual_alarm_keys - expected_alarm_keys}"
+        )
+
+        for m in metrics:
+            expected = m["key"] in expected_alarm_keys
+            assert m.get("alarmCapable") is expected, (
+                f"{m['key']}: alarmCapable erwartet {expected}, erhalten {m.get('alarmCapable')!r}"
+            )

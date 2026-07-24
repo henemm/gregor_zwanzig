@@ -33,10 +33,12 @@ const COMPARE_DIR = dirname(fileURLToPath(import.meta.url));
 // Epic #1301 Scheibe F3 (#1206, 2026-07-19/20): SavePresetDialog.svelte wurde
 // als referenzloser Totcode gelöscht (Alt-Editor-Relikt, F2b hat den letzten
 // Aufrufer CompareEditor.svelte bereits entfernt) — Eintrag entfernt.
+// Issue #1350 Teil 3 (2026-07-24): HourlyMatrix.svelte + CompareMatrix.svelte
+// (bestaetigter Totcode, AC-20 compare_matrix_dead_code.test.ts) wurden
+// geloescht — Eintrag entfernt, s. auch AC-3-Test unten (Card-Check entfernt).
 
 const MIGRATED_FILES: Array<{ path: string; components: string[] }> = [
 	{ path: join(COMPARE_DIR, 'CreateGroupDialog.svelte'), components: ['Btn'] },
-	{ path: join(COMPARE_DIR, 'HourlyMatrix.svelte'),      components: ['Pill'] },
 	{ path: join(COMPARE_DIR, 'LocationPreviewMap.svelte'), components: ['TopoBg'] },
 	// Issue #1232 Scheibe 2b: Step5Versand.svelte wurde gelöscht (ersetzt durch
 	// VersandTab context="vergleich" + CompareInhaltSection.svelte) — Eintrag
@@ -123,13 +125,9 @@ test('AC-1: Keine der 13 Dateien importiert Btn/Eyebrow/Pill/Input/TopoBg noch a
 
 // ── AC-1: Scope-Grenze — nicht-migrierbare ui/-Importe bleiben erhalten ──────
 
-test('AC-1: Komponenten ohne Atom-Pendant (Card-NS, Dialog, Table, Checkbox) bleiben in ui/', () => {
-	// CompareMatrix nutzt Card + Table
-	const matrix = readFile(join(COMPARE_DIR, 'CompareMatrix.svelte'));
-	assert.ok(
-		matrix.includes('ui/card') || matrix.includes("from '$lib/components/ui/card"),
-		'CompareMatrix.svelte: Card-Namespace-Import aus ui/ fehlt (darf nicht migriert werden)'
-	);
+test('AC-1: Komponenten ohne Atom-Pendant (Dialog, Table, Checkbox) bleiben in ui/', () => {
+	// Issue #1350 Teil 3: CompareMatrix.svelte (Card-NS-Beispiel) wurde als
+	// bestaetigter Totcode geloescht — der Card-Check entfaellt ersatzlos.
 	// Issue #1277: CompareGrid.svelte wurde gelöscht (Desktop-Übersicht läuft
 	// jetzt über das geteilte ListTable-Organism). Der ConfirmDialog-Wrapper
 	// (Löschen/Senden) lebt seitdem direkt in routes/compare/+page.svelte —
