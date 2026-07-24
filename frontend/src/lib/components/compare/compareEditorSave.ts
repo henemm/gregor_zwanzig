@@ -7,7 +7,7 @@
 //
 // Kein Browser-/SvelteKit-Import — lauffaehig unter node --experimental-strip-types.
 
-import type { ComparePreset, ActivityProfile, ChannelLayouts, Corridor } from '../../types.ts';
+import type { ComparePreset, ActivityProfile, Corridor } from '../../types.ts';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState.ts';
 import { toHHMMSS } from '../../utils/time.ts';
 
@@ -17,7 +17,6 @@ export interface CompareEditorEdits {
 	pickedIds: string[];
 	region: string;
 	idealRanges: Record<string, IdealRange>;
-	channelLayouts: ChannelLayouts | null;
 	// Issue #680: Slice 3 — aktive Metriken (AC-10). Optional → rückwärtskompatibel.
 	activeMetricKeys?: string[];
 	// Issue #1106: Slice C — Stundenverlauf-Metriken. Optional → rückwärtskompatibel.
@@ -76,17 +75,20 @@ export function buildComparePresetSavePayload(
 ): { url: string; body: ComparePreset } {
 	const url = '/api/compare/presets/' + original.id;
 
+	// Issue #1351 Teil 2 (AC-6): channel_layouts ist Compare-Ballast (seit
+	// #1287/#1291 vom Editor nicht mehr bedient) — Read-Modify-Write-Merge
+	// bleibt fuer ALLE anderen Felder aus original.display_config erhalten,
+	// nur dieser eine Key faellt beim Speichern universell weg (auch bei
+	// noch nicht migrierten Alt-Presets).
+	const { channel_layouts: _droppedChannelLayouts, ...restDisplayConfig } =
+		(original.display_config as Record<string, unknown>) ?? {};
 	const displayConfig: Record<string, unknown> = {
-		...((original.display_config as Record<string, unknown>) ?? {}),
+		...restDisplayConfig,
 		region: edits.region
 	};
 
 	if (Object.keys(edits.idealRanges).length > 0) {
 		displayConfig.ideal_ranges = edits.idealRanges;
-	}
-
-	if (edits.channelLayouts !== null) {
-		displayConfig.channel_layouts = edits.channelLayouts;
 	}
 
 	if (edits.topN !== undefined) {

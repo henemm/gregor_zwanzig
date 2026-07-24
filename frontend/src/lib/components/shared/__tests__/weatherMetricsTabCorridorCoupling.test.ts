@@ -152,7 +152,6 @@ describe('buildComparePresetSavePayload — AC-4 Regressions-Anker (bereits heut
 			pickedIds: ['a', 'b'],
 			region: 'gr20',
 			idealRanges: {},
-			channelLayouts: null,
 			// activeMetricKeys bewusst NICHT gesetzt (Tab nie geoeffnet, kein Klick)
 		};
 		const { body } = buildComparePresetSavePayload(original, edits);

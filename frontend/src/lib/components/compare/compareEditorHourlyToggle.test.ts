@@ -50,7 +50,6 @@ function baseEdits() {
 		pickedIds: ['loc-1', 'loc-2', 'loc-3'],
 		region: 'Zillertal',
 		idealRanges: {},
-		channelLayouts: null
 	};
 }
 

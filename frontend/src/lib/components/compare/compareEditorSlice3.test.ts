@@ -63,7 +63,6 @@ describe('buildComparePresetSavePayload — active_metrics (AC-10)', () => {
 			pickedIds: ['loc-a', 'loc-b'],
 			region: 'Hochkönig',
 			idealRanges: { snow_depth_cm: { min: 30, max: 200 } },
-			channelLayouts: null,
 			activeMetricKeys: ['snow_depth_cm', 'wind_max_kmh', 'precip_sum_mm']
 		});
 		assert.deepEqual(
@@ -80,7 +79,6 @@ describe('buildComparePresetSavePayload — active_metrics (AC-10)', () => {
 			pickedIds: ['loc-a', 'loc-b'],
 			region: 'Hochkönig',
 			idealRanges: {},
-			channelLayouts: null,
 			activeMetricKeys: []
 		});
 		const dc = body.display_config as Record<string, unknown>;
@@ -97,7 +95,6 @@ describe('buildComparePresetSavePayload — active_metrics (AC-10)', () => {
 			pickedIds: ['loc-a', 'loc-b'],
 			region: 'Hochkönig',
 			idealRanges: { snow_depth_cm: { min: 30, max: 200 } },
-			channelLayouts: null,
 			activeMetricKeys: ['snow_depth_cm']
 		});
 		const dc = body.display_config as Record<string, unknown>;
@@ -117,7 +114,6 @@ describe('buildComparePresetSavePayload — active_metrics (AC-10)', () => {
 				pickedIds: ['loc-a', 'loc-b'],
 				region: 'Hochkönig',
 				idealRanges: {},
-				channelLayouts: null
 				// activeMetricKeys absichtlich weggelassen
 			});
 		});

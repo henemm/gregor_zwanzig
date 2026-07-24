@@ -47,10 +47,10 @@ function makePresetWithFullDisplayConfig(): ComparePreset {
 		display_config: {
 			region: 'Stubaier Alpen',
 			top_n: 7,
-			channel_layouts: {
-				email: [{ metric_id: 'wind_max_kmh', enabled: true }],
-				sms: [{ metric_id: 'temp_max_c', enabled: true }]
-			},
+			// Issue #1351 (AC-6): channel_layouts faellt beim Speichern immer weg —
+			// metric_alert_levels dient hier als Beispiel-Feld fuer den
+			// AC-3-Datenerhalt-Beweis (unbeteiligte Felder bleiben unangetastet).
+			metric_alert_levels: { wind_max_kmh: 'sensibel' },
 			hourly_metrics: ['temp_c']
 		}
 	} as ComparePreset;
@@ -135,7 +135,7 @@ describe('C2 AC-5: leere hourlyMetricKeys werden als [] persistiert (Default "al
 	});
 });
 
-describe('C2 AC-3 (PFLICHT Datenerhalt): top_n/channel_layouts/forecast_hours/hour_from/hour_to bleiben unangetastet', () => {
+describe('C2 AC-3 (PFLICHT Datenerhalt): top_n/metric_alert_levels/forecast_hours/hour_from/hour_to bleiben unangetastet', () => {
 	test('fünf Bestandsfelder sind nach einer Stundenverlauf-Änderung byteidentisch zum Ausgangs-Preset', () => {
 		// GIVEN: ein Preset mit gesetzten top_n, channel_layouts (display_config)
 		//        sowie forecast_hours, hour_from, hour_to (top-level)
@@ -156,12 +156,9 @@ describe('C2 AC-3 (PFLICHT Datenerhalt): top_n/channel_layouts/forecast_hours/ho
 
 		assert.equal(displayConfig.top_n, 7, 'display_config.top_n darf sich nicht veraendern');
 		assert.deepEqual(
-			displayConfig.channel_layouts,
-			{
-				email: [{ metric_id: 'wind_max_kmh', enabled: true }],
-				sms: [{ metric_id: 'temp_max_c', enabled: true }]
-			},
-			'display_config.channel_layouts darf sich nicht veraendern'
+			displayConfig.metric_alert_levels,
+			{ wind_max_kmh: 'sensibel' },
+			'display_config.metric_alert_levels darf sich nicht veraendern'
 		);
 		assert.equal(body.forecast_hours, 72, 'forecast_hours darf sich nicht veraendern');
 		assert.equal(body.hour_from, 6, 'hour_from darf sich nicht veraendern');

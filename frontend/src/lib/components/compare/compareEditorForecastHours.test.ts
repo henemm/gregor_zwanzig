@@ -60,7 +60,6 @@ function baseEdits() {
 		pickedIds: ['loc-1', 'loc-2'],
 		region: 'Salzburger Land',
 		idealRanges: {},
-		channelLayouts: null
 	};
 }
 

@@ -53,7 +53,6 @@ const baseEditFields = {
 	pickedIds: ['loc-1', 'loc-2'],
 	region: 'Salzburger Land',
 	idealRanges: {},
-	channelLayouts: null
 };
 
 describe('buildComparePresetSavePayload — officialWarnings gesetzt (AC-27)', () => {

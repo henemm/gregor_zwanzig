@@ -8,10 +8,14 @@ Endpoint existiert zum Zeitpunkt dieses Commits noch nicht -> alle Tests sind RO
 (404, weil die Route fehlt).
 
 Paritaets-Fixture (AC-3): eingefroren aus
-frontend/src/lib/components/compare/compareMetricDefs.ts::ALL_METRICS (25 Eintraege,
-Stand 2026-07-23), angereichert um die ``kind``-Sonderbehandlung aus
+frontend/src/lib/components/compare/compareMetricDefs.ts::ALL_METRICS (urspruenglich
+25 Eintraege, Stand 2026-07-23), angereichert um die ``kind``-Sonderbehandlung aus
 frontend/src/lib/components/shared/corridor-editor/corridorEditorState.ts:273-289
 (thunder_level_max -> 'ordinal' statt 'enum', PO-Entscheidung 2026-07-12).
+
+Issue #1351 Teil 1: ``wind_chill_max_c`` (Gefuehlte Temp. max, analog
+``temp_max_c``) kommt als 26. Eintrag hinzu -- Katalog ist seit #1350 die
+SSoT, das Frontend-Fixture ist nur noch die eingefrorene Ausgangsbasis.
 """
 from __future__ import annotations
 
@@ -68,6 +72,9 @@ EXPECTED_METRICS: list[dict] = [
      "kind": "range", "rangeMin": 0, "rangeMax": 360},
     {"key": "wind_chill_min_c", "label": "Gefühlte Temp. min", "higherIsBetter": True,
      "kind": "range", "rangeMin": -30, "rangeMax": 30},
+    # Issue #1351 Teil 1: 26. Eintrag, analog temp_max_c (Wertebereich).
+    {"key": "wind_chill_max_c", "label": "Gefühlte Temp. max", "higherIsBetter": True,
+     "kind": "range", "rangeMin": -20, "rangeMax": 45},
     {"key": "humidity_avg_pct", "label": "Luftfeuchtigkeit Ø", "higherIsBetter": False,
      "kind": "range", "rangeMin": 0, "rangeMax": 100},
     {"key": "dewpoint_avg_c", "label": "Taupunkt Ø", "higherIsBetter": False,
@@ -86,12 +93,12 @@ EXPECTED_METRICS: list[dict] = [
      "kind": "range", "rangeMin": 950, "rangeMax": 1050},
 ]
 
-assert len(EXPECTED_METRICS) == 25, "Paritaets-Fixture muss exakt 25 Eintraege haben"
+assert len(EXPECTED_METRICS) == 26, "Paritaets-Fixture muss exakt 26 Eintraege haben (#1351: +wind_chill_max_c)"
 
 
 class TestCompareMetricCatalogEndpoint:
-    """AC-1/AC-2/AC-3: GET /api/compare/metrics liefert 25 Eintraege mit Editor-Feldern,
-    bitgleich zu compareMetricDefs.ts::ALL_METRICS."""
+    """AC-1/AC-2/AC-3: GET /api/compare/metrics liefert 26 Eintraege mit Editor-Feldern,
+    bitgleich zu compareMetricDefs.ts::ALL_METRICS + #1351-Ergaenzung."""
 
     def test_endpoint_returns_200(self, client: TestClient) -> None:
         """AC-1: Given der Python-Core / When GET /api/compare/metrics / Then HTTP 200
@@ -99,12 +106,12 @@ class TestCompareMetricCatalogEndpoint:
         response = client.get("/api/compare/metrics")
         assert response.status_code == 200
 
-    def test_endpoint_returns_exactly_25_metrics(self, client: TestClient) -> None:
-        """AC-1: genau 25 Eintraege unter dem Schluessel 'metrics'."""
+    def test_endpoint_returns_exactly_26_metrics(self, client: TestClient) -> None:
+        """AC-1 (#1351: +wind_chill_max_c): genau 26 Eintraege unter dem Schluessel 'metrics'."""
         response = client.get("/api/compare/metrics")
         data = response.json()
         assert "metrics" in data
-        assert len(data["metrics"]) == 25
+        assert len(data["metrics"]) == 26
 
     def test_each_entry_has_fields_matching_its_kind(self, client: TestClient) -> None:
         """AC-2: jeder Eintrag traegt key/label/unit/decimals/higherIsBetter/kind plus

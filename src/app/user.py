@@ -131,6 +131,7 @@ class LocationResult:
     wind_direction_avg: Optional[int] = None  # Average wind direction (degrees, 0=N)
     gust_max: Optional[float] = None  # Maximum gust speed
     wind_chill_min: Optional[float] = None
+    wind_chill_max: Optional[float] = None
     cloud_avg: Optional[int] = None  # Effective cloud cover (elevation-aware)
     cloud_low_avg: Optional[int] = None  # Low cloud layer for "Wolkenlage" analysis
     cloud_mid_avg: Optional[int] = None  # Mid cloud layer for effective cloud calculation

@@ -243,6 +243,7 @@ CV2_METRICS = [
     # Spec Known Limitations). Klasse A (Renderer-ID = LocationResult-Feld):
     {"key": "wind_direction_avg", "label": "Windrichtung", "unit": "°"},
     {"key": "wind_chill_min", "label": "Gefühlte Temp. min", "unit": "°C"},
+    {"key": "wind_chill_max", "label": "Gefühlte Temp. max", "unit": "°C"},
     {"key": "cloud_low_avg", "label": "Wolken tief", "unit": "%"},
     {"key": "cloud_mid_avg", "label": "Wolken mittel", "unit": "%"},
     {"key": "cloud_high_avg", "label": "Wolken hoch", "unit": "%"},

@@ -106,7 +106,6 @@ describe('buildComparePresetSavePayload — hourly_metrics (Issue #1106)', () =>
 			pickedIds: ['loc-a', 'loc-b'],
 			region: 'Hochkönig',
 			idealRanges: {},
-			channelLayouts: null,
 			hourlyMetricKeys: ['temp_c', 'wind_kmh', 'thunder_level']
 		});
 		assert.deepEqual(
@@ -126,7 +125,6 @@ describe('buildComparePresetSavePayload — hourly_metrics (Issue #1106)', () =>
 			pickedIds: ['loc-a', 'loc-b'],
 			region: 'Hochkönig',
 			idealRanges: {},
-			channelLayouts: null,
 			hourlyMetricKeys: []
 		});
 		const dc = body.display_config as Record<string, unknown>;
@@ -145,7 +143,6 @@ describe('buildComparePresetSavePayload — hourly_metrics (Issue #1106)', () =>
 				pickedIds: ['loc-a', 'loc-b'],
 				region: 'Hochkönig',
 				idealRanges: {},
-				channelLayouts: null
 				// hourlyMetricKeys absichtlich weggelassen -> Rueckwaertskompatibilitaet
 			});
 			const dc = body.display_config as Record<string, unknown>;
@@ -160,7 +157,6 @@ describe('buildComparePresetSavePayload — hourly_metrics (Issue #1106)', () =>
 			pickedIds: ['loc-a', 'loc-b'],
 			region: 'Hochkönig',
 			idealRanges: {},
-			channelLayouts: null,
 			hourlyMetricKeys: ['visibility_m', 'temp_c']
 		});
 		assert.deepEqual(

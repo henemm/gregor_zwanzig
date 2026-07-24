@@ -95,6 +95,24 @@ test('#568 setupStepCompare: 2 location_ids → Orte-Schritt done', () => {
 	assert.strictEqual(steps[1].done, true, 'Orte-Schritt: 2 location_ids → done');
 });
 
+// #1351 Fix-Loop (Adversary F006, HIGH): channel_layouts/preset_name sind seit
+// #1351 (AC-6) kein Compare-Feld mehr — der "Layout"-Schritt muss auf ein
+// tatsächlich vom Nutzer bedientes Signal (active_metrics) umgestellt sein,
+// sonst bleibt er für JEDEN Vergleich für immer offen.
+test('#1351 F006 setupStepCompare: ausgewählte active_metrics → Layout-Schritt done', () => {
+	const steps = setupStepCompare(comparePreset({
+		display_config: { active_metrics: ['wind_speed', 'temp_max_c'] }
+	}));
+	assert.strictEqual(steps[3].label, 'Layout');
+	assert.strictEqual(steps[3].done, true, 'Layout-Schritt: gesetzte active_metrics → done');
+});
+
+test('#1351 F006 setupStepCompare: frischer, unkonfigurierter Vergleich → Layout-Schritt offen', () => {
+	const steps = setupStepCompare(comparePreset());
+	assert.strictEqual(steps[3].label, 'Layout');
+	assert.strictEqual(steps[3].done, false, 'Layout-Schritt: keine active_metrics → offen');
+});
+
 test('#568 nextPlannedTrip: gibt ersten Trip mit zukünftigem Startdatum zurück', () => {
 	const future = trip({
 		id: 'future',
@@ -126,7 +144,10 @@ test('#568 firstIncompleteCompare: Vergleich ohne Versand → nicht vollständig
 test('#568 firstIncompleteCompare: vollständiger Vergleich → null', () => {
 	const preset = comparePreset({
 		location_ids: ['l1', 'l2'],
-		display_config: { ideal_ranges: { wind_speed: { min: 0, max: 20 } }, channel_layouts: {} }
+		// #1351 F006-Fix: channel_layouts ist kein Compare-Signal mehr (AC-6) —
+		// active_metrics (tatsächlich vom Nutzer im Wetter-Metriken-Tab gepflegt)
+		// steht jetzt für den "Layout"-Schritt.
+		display_config: { ideal_ranges: { wind_speed: { min: 0, max: 20 } }, active_metrics: ['wind_speed'] }
 	}) as unknown as import('./types.ts').ComparePreset;
 	(preset as unknown as Record<string, unknown>)['report_config'] = { morning_enabled: true };
 	const result = firstIncompleteCompare([preset]);

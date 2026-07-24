@@ -150,6 +150,9 @@ def render_comparison_text(
         if _metric_visible("wind_chill_min"):
             wc_min = loc_result.wind_chill_min
             lines.append(f"   Gefühlte Temp. min: {format_value('temperature', wc_min, style='plain')}" if wc_min is not None else "   Gefühlte Temp. min: -")
+        if _metric_visible("wind_chill_max"):
+            wc_max = loc_result.wind_chill_max
+            lines.append(f"   Gefühlte Temp. max: {format_value('temperature', wc_max, style='plain')}" if wc_max is not None else "   Gefühlte Temp. max: -")
         if _metric_visible("cloud_low_avg"):
             c_low = loc_result.cloud_low_avg
             lines.append(f"   Wolken tief: {c_low}%" if c_low is not None else "   Wolken tief: -")

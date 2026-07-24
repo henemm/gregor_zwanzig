@@ -4,7 +4,7 @@
 // Factory-Pattern: Instanziierung im +page.svelte mount (Safari-Reaktivitaets-Fix).
 // Lazy imports von goto/api damit Unit-Tests die Klasse ohne Browser-APIs testen.
 
-import type { ActivityProfile, ChannelLayouts, ComparePreset, Corridor } from '$lib/types';
+import type { ActivityProfile, ComparePreset, Corridor } from '$lib/types';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState';
 import { buildComparePresetSavePayload } from './compareEditorSave';
 import { toHHMMSS } from '$lib/utils/time';
@@ -32,8 +32,6 @@ export class CompareWizardState {
 	// Issue #1106: Slice C — Stundenverlauf-Metriken-Auswahl (aus display_config.hourly_metrics)
 	hourlyMetricKeys = $state<string[]>([]);
 	metricsManuallyEdited = $state(false);
-	// Issue #442: Pro-Kanal-Layouts. null = Step 4 nicht besucht / nichts konfiguriert.
-	channelLayouts = $state<ChannelLayouts | null>(null);
 	// Issue #443 — Step 5 Versand-Felder
 	sendEmail = $state(true);
 	sendTelegram = $state(false);
@@ -129,7 +127,6 @@ export class CompareWizardState {
 			display_config: {
 				region: this.region,
 				...(Object.keys(this.idealRanges).length > 0 ? { ideal_ranges: this.idealRanges } : {}),
-				...(this.channelLayouts !== null ? { channel_layouts: this.channelLayouts } : {}),
 				...(this.activeMetricKeys.length > 0 ? { active_metrics: this.activeMetricKeys } : {}),
 				...(this.hourlyMetricKeys.length > 0 ? { hourly_metrics: this.hourlyMetricKeys } : {}),
 				...(this.topN !== undefined ? { top_n: this.topN } : {}),
@@ -167,7 +164,6 @@ export class CompareWizardState {
 			pickedIds: this.pickedIds,
 			region: this.region,
 			idealRanges: this.idealRanges,
-			channelLayouts: this.channelLayouts,
 			activeMetricKeys: this.activeMetricKeys,
 			hourlyMetricKeys: this.hourlyMetricKeys, // Issue #1106
 			officialAlertsEnabled: this.officialAlertsEnabled, // Issue #1040

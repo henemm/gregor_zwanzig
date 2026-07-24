@@ -101,10 +101,10 @@ _METRICS: list[MetricDefinition] = [
     MetricDefinition(
         id="wind_chill", label_de="Gefühlte Temperatur", unit="°C",
         dp_field="wind_chill_c", category="temperature",
-        default_aggregations=("min",),
+        default_aggregations=("min", "max"),
         compact_label="TF", col_key="felt", col_label="Feels",
         providers={"openmeteo": True, "geosphere": True},
-        summary_fields={"min": "wind_chill_min_c"},
+        summary_fields={"min": "wind_chill_min_c", "max": "wind_chill_max_c"},
         # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
         # is_precursor=True verhindert Alerts in from_display_config/from_alert_rules.
         default_change_threshold=None,

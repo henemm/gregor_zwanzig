@@ -1231,14 +1231,24 @@ def _pill_for_metric(
         return (text, _PILL_NEUTRAL_TONE)
 
     if metric_id == "wind_chill":
-        # AC-2: "gef. min 6.6°C · 13:00"
+        # AC-2: "gef. min 6.6°C · 13:00".
+        # #1351 F001: die gefuehlte Hoechsttemperatur (wind_chill_max_c) wird
+        # HIER bewusst NICHT zusaetzlich angezeigt — build_metrics_summary_pills
+        # bekommt nur eine Liste von metric_id-Strings (kein Auswahl-Signal
+        # dafuer, ob der Nutzer die max-Aggregation gewaehlt hat), siehe
+        # html.py:1157 (`_pill_metric_ids = [mc.metric_id for mc in dc.metrics
+        # if mc.enabled]`). Eine reine Werteabweichungs-Heuristik (max != min)
+        # wuerde ungewollt fuer JEDEN Trip die Hoechsttemperatur einblenden.
+        # AC-4 (Trip-Pill max-Anzeige) braucht dafuer eine eigene Scheibe mit
+        # echtem Aggregations-Auswahl-Pfad zum Renderer.
         vals_ts = [(getattr(dp, "wind_chill_c", None), dp.ts) for dp in all_dps]
         vals_ts = [(v, ts) for v, ts in vals_ts if v is not None]
         if not vals_ts:
             return None
         min_val, min_ts = min(vals_ts, key=lambda x: x[0])
         min_hh = local_hour(min_ts, tz)
-        return (f"gef. min {min_val:.1f}°C · {min_hh:02d}:00", _PILL_NEUTRAL_TONE)
+        text = f"gef. min {min_val:.1f}°C · {min_hh:02d}:00"
+        return (text, _PILL_NEUTRAL_TONE)
 
     if metric_id == "cloud_total":
         # AC-7: "60–95% bewölkt · Max 12:00" — kein Label-Präfix

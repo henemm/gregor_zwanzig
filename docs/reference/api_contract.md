@@ -1169,12 +1169,14 @@ Returns catalog of all available weather metrics with format mode options and de
 
 ## 15.1) Compare-Metrik-Katalog-Endpoint (Issue #1350, Teil 1)
 
-Read-only Backend-Katalog der 25 Ortsvergleich-Metriken (Label/Einheit/
+Read-only Backend-Katalog der 26 Ortsvergleich-Metriken (Label/Einheit/
 Wertebereich/`higherIsBetter`/Ordinal-/Enum-Angaben), aus einer einzigen
 Backend-Quelle. **Teil 1 der Strangler-Migration:** der Endpoint wird nur
 bereitgestellt, das Frontend konsumiert ihn noch nicht (weiterhin
 `compareMetricDefs.ts::ALL_METRICS`) — keine sichtbare Änderung im
-Ortsvergleich-Editor.
+Ortsvergleich-Editor. (Ursprünglich 25 Einträge bei Einführung 2026-07-23;
+seit 2026-07-24 26 Einträge durch den neuen `wind_chill_max_c`-Eintrag,
+Issue #1351 Teil 1.)
 
 **Handler:** `api/routers/compare.py` | **Datenquelle:**
 `src/output/renderers/compare_metric_catalog.py` | **Routing:**
@@ -1182,7 +1184,7 @@ Ortsvergleich-Editor.
 
 ### GET /api/compare/metrics
 
-Kein Query-Parameter. Antwort: `{"metrics": [...]}`, genau 25 Einträge,
+Kein Query-Parameter. Antwort: `{"metrics": [...]}`, genau 26 Einträge,
 Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
 
 **Response 200:**
@@ -2939,6 +2941,26 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-07-24: Issue #1351 (Teil 1 + Teil 2) — Zwei unabhängige Compare-
+  Änderungen. **Teil 1:** Neuer Katalog-Eintrag `wind_chill_max_c`
+  („Gefühlte Temp. max") im Compare-Metrik-Katalog
+  (`src/output/renderers/compare_metric_catalog.py`) — `GET
+  /api/compare/metrics` liefert damit **26** statt 25 Einträge (Section
+  15.1 aktualisiert). Ortsvergleich wählbar und in der Vergleichs-Mail
+  (HTML + Plain/SMS) darstellbar; im Trip-Briefing weiterhin NICHT
+  verfügbar (ausgegliedert nach #1357 — dem Trip fehlt ein
+  Auswahl-Pfad für Aggregationen). **Teil 2:** `channel_layouts` wird im
+  Compare-Pfad nicht mehr mitgeführt — `buildComparePresetSavePayload`
+  (`compareEditorSave.ts`) entfernt den Key beim Speichern jetzt aktiv aus
+  `display_config`, statt ihn wie bisher über den `...original`-Spread
+  round-zu-trippen. Einmalige Migration
+  `scripts/migrate_1351_drop_compare_channel_layouts.py` (idempotent,
+  Backup vor Schreiben, nur `kind=vergleich`) räumt Bestandsdaten. **Der
+  Trip-Pfad ist unverändert** — dort bleibt `channel_layouts` eine echte,
+  gelesene Funktion. Macht die „round-trippt unverändert weiter"-Aussage
+  zu `channel_layouts` im #1299/#1291/#1287-Eintrag vom 2026-07-18 (unten)
+  für den Compare-Pfad obsolet — die dortige `top_n`-Aussage bleibt
+  unverändert gültig. Siehe `docs/specs/modules/rework_1351_compare_catalog.md`.
 - 2026-07-24: Issue #1350 Teil 3 (SSoT-Abschluss) — `GET /api/compare/metrics`
   trägt pro Eintrag zusätzlich `alarmCapable: bool` (D1 Hybrid). Der
   Schwellen-Editor des Ortsvergleichs (`corridorEditorState.ts`) bezieht seine
@@ -2981,6 +3003,9 @@ function corridorInside(value, min, max) {
   (kein Feldverlust, Read-Modify-Write). Kein neues Wire-Format-Feld —
   beide Felder existierten bereits (#1106/#1107), nur der Schreib-Zugang
   ändert sich. Siehe `docs/specs/modules/compare_hub_hourly_metrics.md`.
+  **Überholt seit 2026-07-24 (#1351, s.o.) für `channel_layouts`:** das
+  Feld round-trippt im Compare-Pfad nicht mehr, sondern wird beim Speichern
+  aktiv entfernt. Die `top_n`-Aussage hier bleibt unverändert gültig.
 - 2026-07-16: Issue #1278 + #1285 (eine Arbeit, gemeinsame Datenbasis) —
   Vergleichs-Mail bekommt je Ort einen Kurz-Zusammenfassungssatz (geteilter
   Trip-Baustein, kein Compare-eigener Formatierungscode) und fünf bisher

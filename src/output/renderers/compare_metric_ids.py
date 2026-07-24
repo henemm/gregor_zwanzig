@@ -43,6 +43,7 @@ FRONTEND_TO_RENDERER_METRIC_ID: dict[str, str] = {
     # von _metric_value, kein _DAILY_AGGREGATE_FIELD-Eintrag noetig):
     "wind_direction_deg": "wind_direction_avg",
     "wind_chill_min_c": "wind_chill_min",
+    "wind_chill_max_c": "wind_chill_max",
     "cloud_low_avg_pct": "cloud_low_avg",
     "cloud_mid_avg_pct": "cloud_mid_avg",
     "cloud_high_avg_pct": "cloud_high_avg",

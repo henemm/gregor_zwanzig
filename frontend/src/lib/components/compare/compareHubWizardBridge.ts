@@ -13,7 +13,7 @@
 //
 // Kein Browser-/SvelteKit-Import — lauffaehig unter node --experimental-strip-types.
 
-import type { ActivityProfile, ChannelLayouts, ComparePreset, Corridor } from '../../types.ts';
+import type { ActivityProfile, ComparePreset, Corridor } from '../../types.ts';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState.ts';
 import { buildComparePresetSavePayload } from './compareEditorSave.ts';
 import { rehydrateActiveMetrics } from './compareEditorLoad.ts';
@@ -108,7 +108,6 @@ export function buildHubPutPayload(
 		pickedIds: edit.pickedIds ?? preset.location_ids ?? [],
 		region: (displayConfig.region as string) ?? '',
 		idealRanges: edit.idealRanges ?? (displayConfig.ideal_ranges as Record<string, IdealRange>) ?? {},
-		channelLayouts: (displayConfig.channel_layouts as ChannelLayouts) ?? null,
 		activeMetricKeys: edit.activeMetricKeys ?? (displayConfig.active_metrics as string[] | undefined),
 		metricAlertLevels:
 			edit.metricAlertLevels ?? (displayConfig.metric_alert_levels as Record<string, string> | undefined),

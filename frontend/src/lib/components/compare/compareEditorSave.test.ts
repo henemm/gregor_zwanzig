@@ -49,7 +49,6 @@ describe('buildComparePresetSavePayload — Endpoint (AC-3)', () => {
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
-			channelLayouts: null
 		});
 		assert.equal(url, '/api/compare/presets/preset-abc-123');
 		assert.ok(!url.includes('/api/subscriptions'), 'falscher Store (subscriptions)');
@@ -65,7 +64,6 @@ describe('buildComparePresetSavePayload — Datenverlust-Schutz (AC-3)', () => {
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
-			channelLayouts: null
 		});
 		assert.deepEqual(body.empfaenger, ['a@example.com', 'b@example.com']);
 		assert.equal(body.name, 'Neuer Name');
@@ -79,7 +77,6 @@ describe('buildComparePresetSavePayload — Datenverlust-Schutz (AC-3)', () => {
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
-			channelLayouts: null
 		});
 		assert.equal(body.schedule, 'daily');
 		assert.equal(body.hour_from, 7);
@@ -96,7 +93,6 @@ describe('buildComparePresetSavePayload — Datenverlust-Schutz (AC-3)', () => {
 			pickedIds: ['loc-1', 'loc-2', 'loc-9'],
 			region: 'Salzburger Land',
 			idealRanges: {},
-			channelLayouts: null
 		});
 		assert.deepEqual(body.location_ids, ['loc-1', 'loc-2', 'loc-9']);
 		assert.equal(body.profil, 'trekking');
@@ -110,7 +106,6 @@ describe('buildComparePresetSavePayload — Datenverlust-Schutz (AC-3)', () => {
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Tirol',
 			idealRanges: {},
-			channelLayouts: null
 		});
 		const dc = body.display_config as Record<string, unknown>;
 		assert.equal(dc.region, 'Tirol');
@@ -126,7 +121,6 @@ describe('buildComparePresetSavePayload — Datenverlust-Schutz (AC-3)', () => {
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
-			channelLayouts: null
 		});
 		assert.equal(body.id, 'preset-abc-123');
 	});
@@ -142,7 +136,6 @@ describe('buildComparePresetSavePayload — Alarm-Konfiguration (Issue #1170)', 
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
-			channelLayouts: null,
 			metricAlertLevels: { wind_gust: 'sensibel', temperature_min: 'standard' },
 			alertCooldownMinutes: 90,
 			alertQuietFrom: '22:00',
@@ -177,7 +170,6 @@ describe('buildComparePresetSavePayload — Alarm-Konfiguration (Issue #1170)', 
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
-			channelLayouts: null
 		});
 
 		const dc = body.display_config as Record<string, unknown>;
@@ -198,7 +190,6 @@ describe('buildComparePresetSavePayload — Alarm-Trigger + Kanäle (#1216)', ()
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
-			channelLayouts: null,
 			officialAlertTriggersEnabled: false,
 			sendTelegram: true,
 			sendSms: true
@@ -220,7 +211,6 @@ describe('buildComparePresetSavePayload — Alarm-Trigger + Kanäle (#1216)', ()
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
-			channelLayouts: null
 		});
 
 		assert.ok(
@@ -238,6 +228,35 @@ describe('buildComparePresetSavePayload — Alarm-Trigger + Kanäle (#1216)', ()
 	});
 });
 
+// ─── Issue #1351 F002: channel_layouts ist Compare-Ballast, faellt IMMER weg ──
+describe('buildComparePresetSavePayload — channel_layouts-Entfernung (#1351 AC-6)', () => {
+	test('Alt-Preset mit channel_layouts + unbekanntem Zusatzfeld: channel_layouts faellt weg, Zusatzfeld bleibt (Read-Modify-Write)', () => {
+		const original: ComparePreset = {
+			...makePreset(),
+			display_config: {
+				region: 'Salzburger Land',
+				channel_layouts: { email: ['temp_min_c'], sms: ['temp_min_c'] },
+				future_unknown_field: 'muss erhalten bleiben'
+			}
+		};
+		const { body } = buildComparePresetSavePayload(original, {
+			name: original.name,
+			activityProfile: 'skitour',
+			pickedIds: ['loc-1', 'loc-2'],
+			region: 'Salzburger Land',
+			idealRanges: {},
+		});
+
+		const dc = body.display_config as Record<string, unknown>;
+		assert.ok(
+			!Object.prototype.hasOwnProperty.call(dc, 'channel_layouts'),
+			'channel_layouts muss nach dem Speichern entfernt sein'
+		);
+		assert.equal(dc.future_unknown_field, 'muss erhalten bleiben');
+		assert.equal(dc.region, 'Salzburger Land');
+	});
+});
+
 // ─── Issue #1231 Slice 4: corridors — TOP-LEVEL Feld (nicht in display_config,
 // analog Go-Model ComparePreset.Corridors `json:"corridors"`) ──
 describe('buildComparePresetSavePayload — corridors (#1231 Slice 4)', () => {
@@ -252,7 +271,6 @@ describe('buildComparePresetSavePayload — corridors (#1231 Slice 4)', () => {
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
-			channelLayouts: null,
 			corridors: edits
 		});
 		assert.deepEqual(body.corridors, edits);
@@ -272,7 +290,6 @@ describe('buildComparePresetSavePayload — corridors (#1231 Slice 4)', () => {
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
-			channelLayouts: null
 		});
 		// Round-Trip-Spread (`...original`) traegt original.corridors weiter —
 		// kein expliziter edits-Key noetig, da der Spread es bereits enthaelt.

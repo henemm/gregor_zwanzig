@@ -79,11 +79,17 @@ export function setupStepTrip(trip: Trip): SetupStep[] {
  *   2. Orte       — done wenn location_ids.length >= 2
  *   3. Wertebereiche — done wenn display_config.ideal_ranges nicht leer
  *      (Issue #1231 Slice 6: Label „Idealwerte" -> „Wertebereiche", Datenfeld unverändert)
- *   4. Layout     — done wenn display_config.channel_layouts gesetzt
+ *   4. Layout     — done wenn display_config.active_metrics nicht leer (Nutzer hat
+ *      im Wetter-Metriken-Tab tatsächlich Metriken ausgewählt)
  *   5. Versand    — done wenn report_config.morning_enabled || evening_enabled
  *
  * F002-Fix (Adversary): Orte liegen in location_ids (string[]), nicht locations.
  * Idealwerte und Layout in display_config; Versand in report_config.
+ *
+ * F006-Fix (Adversary, #1351 Fix-Loop): channel_layouts/preset_name sind seit
+ * #1351 (AC-6) kein Compare-Feld mehr und werden vom Editor nie gesetzt — als
+ * Fortschritts-Signal wären sie ab sofort dauerhaft leer. active_metrics ist
+ * der Tab, den der Nutzer tatsächlich bedient (analog Trip-Schritt „Wetter").
  */
 export function setupStepCompare(preset: ComparePreset): SetupStep[] {
 	const locCount = Array.isArray(preset.location_ids) ? preset.location_ids.length : 0;
@@ -96,7 +102,8 @@ export function setupStepCompare(preset: ComparePreset): SetupStep[] {
 		!Array.isArray(idealRanges) &&
 		Object.keys(idealRanges as Record<string, unknown>).length > 0;
 
-	const hasLayout = dc['channel_layouts'] != null || dc['preset_name'] != null;
+	const activeMetrics = dc['active_metrics'];
+	const hasLayout = Array.isArray(activeMetrics) && activeMetrics.length > 0;
 
 	const rc = (preset as unknown as Record<string, unknown>)['report_config'];
 	const rcObj = rc && typeof rc === 'object' && !Array.isArray(rc)

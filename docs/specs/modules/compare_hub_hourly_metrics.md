@@ -33,6 +33,12 @@ gespeicherten Werte bleiben aber unverändert erhalten. Behebt #1299
 (Zugang), #1291 (Semantik — „Gruppe 2" existiert nicht), #1287
 (Top-N-Attrappe).
 
+> **Update 2026-07-24 (Issue #1351 Teil 2):** `channel_layouts` round-trippt
+> im Compare-Pfad seither NICHT mehr — `buildComparePresetSavePayload`
+> (`compareEditorSave.ts`) entfernt den Key beim Speichern jetzt aktiv aus
+> `display_config`. Betrifft AC-3 und Known Limitations unten; `top_n`
+> round-trippt unverändert weiter.
+
 ## Source
 
 - **File:** `frontend/src/lib/components/compare/CompareTabs.svelte`
@@ -72,7 +78,7 @@ gespeicherten Werte bleiben aber unverändert erhalten. Behebt #1299
 | `frontend/src/lib/components/compare/compareHourlyMetricDefs.ts` (`ALL_HOURLY_METRICS`, 9 Keys) | intern | Katalogquelle für die Checkbox-Zeilen — eigenständiges Compare-Vokabular (Rohwerte/Stunde), bewusst kein Reuse von `compareMetricDefs.ts`/`COMPARE_METRIC_DEFS` |
 | `frontend/src/lib/components/compare/compareWizardState.svelte.ts:33,48` (`hourlyMetricKeys`, `hourlyEnabled`) | intern | Bereits vorhandene State-Felder — C2 fügt keine neuen Runen hinzu, verdrahtet nur den Hub-Persist-Pfad dafür |
 | `frontend/src/lib/components/compare/compareHubWizardBridge.ts:27-88` (`HubEdit`, `buildHubPutPayload`) | intern | `HubEdit` kennt `hourlyMetricKeys`/`hourlyEnabled` bislang **nicht** (Lücke aus C1-Ära) — `buildHubPutPayload` reicht sie folglich nicht an `buildComparePresetSavePayload` durch, obwohl Letztere sie längst verarbeitet (`compareEditorSave.ts:104-111,142`). C2 schließt diese Lücke |
-| `frontend/src/lib/components/compare/compareEditorSave.ts:104-111,130-142` (`buildComparePresetSavePayload`) | intern | RMW-Kern — `hourlyMetricKeys`/`hourlyEnabled` bereits vollständig verdrahtet, KEINE Änderung nötig; `top_n`/`channel_layouts`/`forecast_hours`/`hour_from`/`hour_to` round-trippen strukturell über `...original`-Spread (Body) bzw. `...original.display_config`-Spread (displayConfig), solange kein `edits.*`-Feld dafür gesetzt wird |
+| `frontend/src/lib/components/compare/compareEditorSave.ts:104-111,130-142` (`buildComparePresetSavePayload`) | intern | RMW-Kern — `hourlyMetricKeys`/`hourlyEnabled` bereits vollständig verdrahtet, KEINE Änderung nötig; `top_n`/`forecast_hours`/`hour_from`/`hour_to` round-trippen strukturell über `...original`-Spread (Body) bzw. `...original.display_config`-Spread (displayConfig), solange kein `edits.*`-Feld dafür gesetzt wird. **Update #1351 Teil 2 (2026-07-24):** `channel_layouts` round-trippt nicht mehr — die Funktion entfernt den Key jetzt aktiv aus `displayConfig` |
 | `frontend/src/lib/components/shared/ChannelToggle.svelte` | intern | Bestehendes An/Aus-Bedienelement, bereits im Vorbild `CompareInhaltSection.svelte:84-95,119-134` für exakt dieselben zwei Felder verwendet — wird 1:1 in `CompareTabs.svelte` importiert (kein neuer Baustein) |
 | `frontend/src/lib/components/compare/CompareInhaltSection.svelte:38-60` (`isHourlyMetricActive`, `makeHourlyMetricHandler`) | intern | UI-Hilfslogik (leere Auswahl = „alle angehakt", Factory-Handler materialisiert beim ersten Abwählen die volle Liste) — Logik wird nach `CompareTabs.svelte` **verschoben/dupliziert** (nicht referenziert), da `CompareInhaltSection` nicht als Abhängigkeit dienen darf (wird in F2 gelöscht) |
 | `frontend/src/lib/components/compare/compareHubWizardBridge.ts:343-373` (`PutQueue`/`hubPutQueue`) | intern | Bestehende Serialisierungs-Queue für alle Hub-PUT-Pfade — `handleLayoutCommit` reiht sich dort ein, analog `handleWetterMetrikenCommit`/`handleAlarmeCommit` |
@@ -309,12 +315,16 @@ Hub folgt seiner eigenen Konvention (`compare-detail-panel-*`,
     → `null`; geänderter Snapshot → Payload mit korrektem
     `display_config.hourly_metrics`/`hourly_enabled`.
 
-- **AC-3 (PFLICHT, Datenerhalt):** Given ein Preset mit gespeicherten
-  `top_n`, `channel_layouts`, `forecast_hours`, `hour_from`, `hour_to` /
-  When eine Stundenverlauf-Änderung über `flushPendingLayoutSave` →
+- **AC-3 (PFLICHT, Datenerhalt) — Stand bei Verfassen dieser Spec, siehe
+  Update-Hinweis oben:** Given ein Preset mit gespeicherten `top_n`,
+  `channel_layouts`, `forecast_hours`, `hour_from`, `hour_to` / When eine
+  Stundenverlauf-Änderung über `flushPendingLayoutSave` →
   `buildHubPutPayload` persistiert wird / Then bleiben alle fünf Felder im
   resultierenden PUT-Body byteidentisch zum Ausgangswert erhalten (kein
-  Nullen, kein stiller Verlust, BUG-DATALOSS-GR221/#102).
+  Nullen, kein stiller Verlust, BUG-DATALOSS-GR221/#102). **Seit #1351
+  Teil 2 gilt das für `channel_layouts` nicht mehr** — der Key wird beim
+  Speichern bewusst entfernt (Absicht, nicht Datenverlust); die übrigen
+  vier Felder round-trippen unverändert wie hier beschrieben.
   - Test: Preset-Fixture mit allen fünf Feldern befüllen, Layout-Edit
     durchführen, PUT-Body auf Unverändertheit der fünf Felder prüfen. Rot
     vor Fix (heute wirft `HubEdit` diese Felder implizit auf den Boden,
@@ -362,12 +372,14 @@ Hub folgt seiner eigenen Konvention (`compare-detail-panel-*`,
   `CompareInhaltSection:84-89` dupliziert den bereits im Hub-AlarmeTab
   (C1/S5) vorhandenen Toggle. Die Bereinigung dieser Dublette ist
   D2-Territorium; C2 rührt Alarm-Felder nicht an.
-- **`top_n`/`channel_layouts` bleiben aus der Bedienung, nicht aus der
-  Persistenz** — beide Felder round-trippen strukturell weiter (kein
-  neues Bedienelement dafür im Hub), können aber ohne einen künftigen
-  Editor gar nicht mehr geändert werden, solange kein Folge-Slice das
-  nachliefert. Das ist beabsichtigt (#1287-Attrappen-Fix), nicht ein
-  Nebenbefund.
+- **`top_n` bleibt aus der Bedienung, nicht aus der Persistenz** — das
+  Feld round-trippt strukturell weiter (kein neues Bedienelement dafür im
+  Hub), kann aber ohne einen künftigen Editor gar nicht mehr geändert
+  werden, solange kein Folge-Slice das nachliefert. Das ist beabsichtigt
+  (#1287-Attrappen-Fix), nicht ein Nebenbefund. **`channel_layouts`
+  dagegen wird seit #1351 Teil 2 (2026-07-24) beim Speichern aktiv aus
+  `display_config` entfernt** — nicht mehr nur unbedienbar, sondern
+  strukturell abgebaut (Compare-Ballast, vom Renderer nie gelesen).
 - **`hourly_metrics` ist echtes Compare-eigenes Vokabular** (Rohwerte pro
   Stunde, kein Trip-Pendant, s. `compareHourlyMetricDefs.ts`-Kommentar) —
   die Übernahme als reine Compare-Steuerung ohne geteilten Trip-Baustein

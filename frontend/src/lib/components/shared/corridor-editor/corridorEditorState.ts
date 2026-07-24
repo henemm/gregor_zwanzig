@@ -284,9 +284,9 @@ export const COMPARE_METRIC_KEYS: string[] = [
 	'snow_depth_cm', 'snow_new_sum_cm', 'sunny_hours_h', 'wind_max_kmh',
 	'cloud_avg_pct', 'visibility_min_m', 'precip_sum_mm', 'uv_index_max', 'temp_max_c',
 	'thunder_level_max', 'temp_min_c', 'gust_max_kmh', 'cape_max_jkg', 'freezing_level_m',
-	'pop_max_pct', 'wind_direction_deg', 'wind_chill_min_c', 'humidity_avg_pct',
-	'dewpoint_avg_c', 'snowfall_limit_m', 'precip_type_dominant', 'cloud_low_avg_pct',
-	'cloud_mid_avg_pct', 'cloud_high_avg_pct', 'pressure_avg_hpa',
+	'pop_max_pct', 'wind_direction_deg', 'wind_chill_min_c', 'wind_chill_max_c',
+	'humidity_avg_pct', 'dewpoint_avg_c', 'snowfall_limit_m', 'precip_type_dominant',
+	'cloud_low_avg_pct', 'cloud_mid_avg_pct', 'cloud_high_avg_pct', 'pressure_avg_hpa',
 ];
 
 // Issue #1350 Teil 3 (D3): Profil-Feature zieht aus dem geloeschten

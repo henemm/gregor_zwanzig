@@ -55,7 +55,6 @@ function editsOhneZeitfenster(): CompareEditorEdits {
 		pickedIds: ['ort-a', 'ort-b'],
 		region: 'Tirol',
 		idealRanges: {},
-		channelLayouts: null,
 		topN: 3
 	};
 }

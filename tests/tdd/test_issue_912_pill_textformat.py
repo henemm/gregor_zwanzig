@@ -176,10 +176,13 @@ class TestAC2WindChill:
         )
 
     def test_wind_chill_format_exact(self):
-        """SOLL: 'gef. min 6.6°C · 10:00'."""
+        """SOLL: Pill-Text ist EXAKT 'gef. min 6.6°C · 10:00' — kein zusaetzliches
+        'gef. max'-Segment (#1351 F001: max-Anzeige braucht Auswahl-Signal, das
+        aktuell nicht zum Renderer durchgereicht wird; reine Werteabweichung
+        darf die max-Anzeige nicht triggern)."""
         pills = self._pills()
         texts = [t for t, _ in pills]
-        assert any("gef. min 6.6°C · 10:00" in t for t in texts), (
+        assert texts == ["gef. min 6.6°C · 10:00"], (
             f"AC-2: Exaktes Format 'gef. min 6.6°C · 10:00' erwartet — got: {texts}"
         )
 

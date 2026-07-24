@@ -145,6 +145,7 @@ class ComparisonEngine:
                     wc = [dp.wind_chill_c for dp in filtered_data if dp.wind_chill_c is not None]
                     if wc:
                         metrics["wind_chill_min"] = min(wc)
+                        metrics["wind_chill_max"] = max(wc)
 
                     # Clouds - use effective cloud for high elevations
                     # SPEC: docs/specs/cloud_cover_simplification.md
@@ -248,6 +249,7 @@ class ComparisonEngine:
                     wind_direction_avg=metrics.get("wind_direction_avg"),
                     gust_max=metrics.get("gust_max"),
                     wind_chill_min=metrics.get("wind_chill_min"),
+                    wind_chill_max=metrics.get("wind_chill_max"),
                     cloud_avg=metrics.get("cloud_avg"),
                     cloud_low_avg=metrics.get("cloud_low_avg"),
                     cloud_mid_avg=metrics.get("cloud_mid_avg"),
@@ -312,6 +314,7 @@ def dict_to_comparison_result(
             wind_direction_avg=r.get("wind_direction_avg"),
             gust_max=r.get("gust_max"),
             wind_chill_min=r.get("wind_chill_min"),
+            wind_chill_max=r.get("wind_chill_max"),
             cloud_avg=r.get("cloud_avg"),
             cloud_low_avg=r.get("cloud_low_avg"),
             cloud_mid_avg=r.get("cloud_mid_avg"),

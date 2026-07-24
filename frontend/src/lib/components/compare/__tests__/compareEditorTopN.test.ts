@@ -56,10 +56,10 @@ function makePresetWithDisplayConfig(): ComparePreset {
 		display_config: {
 			region: 'Salzburger Land',
 			ideal_ranges: { wind_max_kmh: { min: 0, max: 30 } },
-			channel_layouts: {
-				email: [{ metric_id: 'wind_max_kmh', enabled: true }],
-				sms: [{ metric_id: 'temp_max_c', enabled: true }]
-			}
+			// Issue #1351 (AC-6): channel_layouts faellt beim Speichern immer weg —
+			// metric_alert_levels dient hier als Beispiel fuer "andere, am topN-Edit
+			// unbeteiligte Felder bleiben erhalten" (AC-3, Round-Trip-Beweis).
+			metric_alert_levels: { wind_max_kmh: 'sensibel', temp_max_c: 'standard' }
 		}
 	} as ComparePreset;
 }
@@ -70,8 +70,7 @@ function baseEdits() {
 		activityProfile: 'skitour' as const,
 		pickedIds: ['loc-1', 'loc-2'],
 		region: 'Salzburger Land',
-		idealRanges: { wind_max_kmh: { min: 0, max: 30 } },
-		channelLayouts: null
+		idealRanges: { wind_max_kmh: { min: 0, max: 30 } }
 	};
 }
 
@@ -92,10 +91,11 @@ describe('buildComparePresetSavePayload — top_n (AC-2/AC-3)', () => {
 		// Round-Trip: andere display_config-Felder bleiben unveraendert (AC-3)
 		assert.equal(displayConfig.region, 'Salzburger Land');
 		assert.deepEqual(displayConfig.ideal_ranges, { wind_max_kmh: { min: 0, max: 30 } });
-		// AC-3 nennt channel_layouts explizit als zu erhaltendes Feld.
-		assert.deepEqual(displayConfig.channel_layouts, {
-			email: [{ metric_id: 'wind_max_kmh', enabled: true }],
-			sms: [{ metric_id: 'temp_max_c', enabled: true }]
+		// Issue #1351 (AC-6): channel_layouts faellt weg — metric_alert_levels
+		// beweist hier stattdessen, dass unbeteiligte Felder round-trippen (AC-3).
+		assert.deepEqual(displayConfig.metric_alert_levels, {
+			wind_max_kmh: 'sensibel',
+			temp_max_c: 'standard'
 		});
 	});
 
@@ -111,10 +111,11 @@ describe('buildComparePresetSavePayload — top_n (AC-2/AC-3)', () => {
 		);
 		assert.equal(displayConfig.region, 'Salzburger Land');
 		assert.deepEqual(displayConfig.ideal_ranges, { wind_max_kmh: { min: 0, max: 30 } });
-		// AC-3 nennt channel_layouts explizit als zu erhaltendes Feld.
-		assert.deepEqual(displayConfig.channel_layouts, {
-			email: [{ metric_id: 'wind_max_kmh', enabled: true }],
-			sms: [{ metric_id: 'temp_max_c', enabled: true }]
+		// Issue #1351 (AC-6): channel_layouts faellt weg — metric_alert_levels
+		// beweist hier stattdessen, dass unbeteiligte Felder round-trippen (AC-3).
+		assert.deepEqual(displayConfig.metric_alert_levels, {
+			wind_max_kmh: 'sensibel',
+			temp_max_c: 'standard'
 		});
 	});
 });

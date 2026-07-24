@@ -64,6 +64,8 @@ COMPARE_METRIC_CATALOG: list[dict] = [
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 360, "step": 10},
     {"key": "wind_chill_min_c", "label": "Gefühlte Temp. min", "unit": "°C", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": -30, "rangeMax": 30, "step": 1},
+    {"key": "wind_chill_max_c", "label": "Gefühlte Temp. max", "unit": "°C", "decimals": 0,
+     "higherIsBetter": True, "kind": "range", "rangeMin": -20, "rangeMax": 45, "step": 1},
     {"key": "humidity_avg_pct", "label": "Luftfeuchtigkeit Ø", "unit": "%", "decimals": 0,
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 100, "step": 5},
     {"key": "dewpoint_avg_c", "label": "Taupunkt Ø", "unit": "°C", "decimals": 0,

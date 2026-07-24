@@ -46,7 +46,6 @@ const baseEdits = {
 	pickedIds: ['loc-1', 'loc-2'],
 	region: 'Salzburger Land',
 	idealRanges: {},
-	channelLayouts: null
 };
 
 describe('buildComparePresetSavePayload — Slot-Felder Round-Trip (AC-2)', () => {

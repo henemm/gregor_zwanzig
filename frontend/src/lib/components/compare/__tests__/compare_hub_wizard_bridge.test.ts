@@ -68,8 +68,9 @@ import {
 } from '../compareHubWizardBridge.ts';
 
 // Fixture nach dem echten DTO (compareEditorSave.ts:71-162, routes/compare/[id]/edit/+page.svelte:19-86):
-// location_ids/schedule/profil/display_config (region, ideal_ranges, channel_layouts,
-// active_metrics, metric_alert_levels) + Top-Level `corridors` (Issue #1231 Slice 4).
+// location_ids/schedule/profil/display_config (region, ideal_ranges, active_metrics,
+// metric_alert_levels) + Top-Level `corridors` (Issue #1231 Slice 4). channel_layouts
+// ist seit #1351 (AC-6) kein Compare-Feld mehr — ein realistisches Preset führt es nicht.
 function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 	return {
 		id: 'cmp-42',
@@ -89,7 +90,6 @@ function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 		display_config: {
 			region: 'Tirol',
 			ideal_ranges: { snow_depth_cm: { min: 20, max: null } },
-			channel_layouts: { email: { columns: ['temp'] } },
 			active_metrics: ['snow_depth_cm', 'wind_gust'],
 			metric_alert_levels: { snow_depth_cm: 'warn', wind_gust: 'mark' }
 		},
