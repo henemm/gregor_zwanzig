@@ -139,13 +139,22 @@ describe('AC-1/AC-8: weatherMetricsTabSections(context) — reine Funktion (Vorb
 	});
 
 	test(
-		// D2-Fix-Loop 2 (AC-6, Staging-Befund BROKEN): 'official_alerts' ist die
-		// EINZIGE Ausnahme vom Attrappen-Verbot fuer vergleich — der Amtliche-
+		// D2-Fix-Loop 2 (AC-6, Staging-Befund BROKEN): 'official_alerts' ist eine
+		// Ausnahme vom Attrappen-Verbot fuer vergleich — der Amtliche-
 		// Warnungen-Schalter hat echte Mail-Wirkung (official_alerts_enabled)
 		// und ist fuer bestehende Vergleiche nur noch ueber diesen Hub-Tab
 		// erreichbar (der Alarm-Tab-Toggle entfaellt mit D2).
 		// Spec: d2_1301_official_alerts_single_control.md § AC-6.
-		'vergleich: grundauswahl + official_alerts — keine Buckets/Reihenfolge/Horizonte/SMS-Schwellen/Report-Config (AC-1, AC-8 Attrappen-Verbot)',
+		//
+		// Issue #1359 Scheibe 1: 'reihenfolge' kommt DAZU. Diese Erwartung fror
+		// das Fehlen des Abschnitts fest — sie dreht sich um, weil die
+		// Listenposition in `display_config.active_metrics` seit #1335/#1359 die
+		// Zeilenfolge in HTML-Mail, Klartext und Telegram bestimmt (und ueber
+		// das SMS-Budget sogar, WELCHE Metriken die SMS erreichen). Damit hat
+		// der Abschnitt echte Mail-Wirkung und ist keine Attrappe.
+		// Spec: compare_metric_order.md § "Abgeloeste Festlegung".
+		// 'sms_schwellen'/'report_config' bleiben route-exklusiv.
+		'vergleich: grundauswahl + reihenfolge + official_alerts — keine Buckets/Horizonte/SMS-Schwellen/Report-Config (AC-1, AC-8 Attrappen-Verbot)',
 		async () => {
 			let mod: typeof import('../weather-metrics-tab/weatherMetricsTabSections.ts');
 			try {
@@ -159,9 +168,9 @@ describe('AC-1/AC-8: weatherMetricsTabSections(context) — reine Funktion (Vorb
 			const sections = mod.weatherMetricsTabSections('vergleich');
 			assert.deepEqual(
 				sections,
-				['grundauswahl', 'official_alerts'],
-				'AC-1/AC-8/AC-6 FAIL: der vergleich-Kontext zeigt mehr/weniger als Grundauswahl+Amtliche-Warnungen — ' +
-					`Ist: ${JSON.stringify(sections)}. Buckets/Horizonte/SMS-Schwellen/Report-Config haetten ` +
+				['grundauswahl', 'reihenfolge', 'official_alerts'],
+				'AC-1/AC-8/AC-6 FAIL: der vergleich-Kontext zeigt mehr/weniger als Grundauswahl+Reihenfolge+Amtliche-Warnungen — ' +
+					`Ist: ${JSON.stringify(sections)}. Horizonte/SMS-Schwellen/Report-Config haetten ` +
 					'keine Mail-Wirkung im Vergleich und waeren Attrappen.'
 			);
 		}

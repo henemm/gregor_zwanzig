@@ -51,8 +51,16 @@ export function flushPendingWeatherMetricsSave(
 	before: WeatherMetricsSnapshot | null
 ): { url: string; body: ComparePreset } | null {
 	const baseline = before ?? current;
+	// Issue #1359 Scheibe 1: KEIN `.sort()` mehr. Die Listenposition IST die
+	// Metrik-Reihenfolge (kein eigenes order-Feld) — sortiert verglichen galten
+	// zwei Listen mit derselben MENGE in anderer Reihenfolge als identisch,
+	// `flushPendingWeatherMetricsSave` lieferte `null` und eine reine
+	// Umsortierung wurde nie gespeichert. Die AC-4-Zusage "kein Schreiben ohne
+	// Nutzer-Geste" bleibt gewahrt: der Guard entscheidet nur, OB ein
+	// Unterschied vorliegt — ausgeloest wird weiterhin nur von einer echten
+	// Geste (Checkbox-Toggle bzw. Drag-Ende).
 	const norm = (s: WeatherMetricsSnapshot) => ({
-		activeMetricKeys: [...s.activeMetricKeys].sort(),
+		activeMetricKeys: [...s.activeMetricKeys],
 		officialAlertsEnabled: s.officialAlertsEnabled
 	});
 	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;

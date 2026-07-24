@@ -154,7 +154,14 @@ class CompareRenderOptions:
     """
 
     top_n_details: int
-    enabled_metrics: Optional[set]
+    # Issue #1359: GEORDNETE Liste, kein `set`. `resolve_enabled_metrics()`
+    # liefert seit #1335 bewusst eine reihenfolge-erhaltende Liste — die
+    # Listenposition IST die vom Nutzer eingestellte Metrik-Reihenfolge und
+    # bestimmt die Zeilenfolge in HTML-Mail, Klartext und Telegram (und ueber
+    # das SMS-Budget, welche Metriken die SMS erreichen). Eine Mengen-
+    # Annotation an dieser vorgelagerten Stelle laedt zum naechsten
+    # Reihenfolge-Verlust ein (dieselbe Fehlerklasse wie in comparison.py).
+    enabled_metrics: Optional[list[str]]
     hourly_metrics: Optional[set]
     hourly_enabled: bool
     corridors: "Optional[list[Corridor]]" = None

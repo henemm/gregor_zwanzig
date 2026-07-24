@@ -64,11 +64,58 @@ _DAILY_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
     ("snowfall_limit", "Schneefallgrenze", lambda v: f"{v:.0f} m"),
 )
 
+# Issue #1359 Scheibe 1: ALLE Uebersichts-Zeilen des Klartext-Teils als EINE
+# geordnete Tabelle (Renderer-Metrik-ID, Label, Formatierung). Vorher standen
+# sie als feste Folge einzelner `if _metric_visible(...)`-Bloecke im Quelltext
+# -- die im Editor eingestellte Metrik-Reihenfolge konnte deshalb gar nicht
+# ankommen (der Test prueft nur Mitgliedschaft, nicht Position).
+# Die Reihenfolge DIESER Konstante bleibt die Standard-Reihenfolge fuer
+# Altbestaende ohne gespeicherte Auswahl (AC-7, eingefroren in
+# tests/unit/test_compare_metric_order.py).
+# Werte kommen einheitlich ueber `_metric_value` (HTML-Paritaet, keine zweite
+# Wert-Quelle): fuer IDs ohne `_DAILY_AGGREGATE_FIELD`-Eintrag ist das exakt
+# das bisherige `getattr(loc_result, metric_id)`.
+_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
+    ("temp_max", "Temp max", lambda v: format_value("temperature", v, style="plain")),
+    ("wind_max", "Wind", lambda v: format_value("wind", v, style="plain")),
+    ("temp_min", "Temp min", lambda v: format_value("temperature", v, style="plain")),
+    ("gust_max", "Böen", lambda v: format_value("wind", v, style="plain")),
+    ("wind_direction_avg", "Windrichtung", lambda v: f"{v}°"),
+    ("wind_chill_min", "Gefühlte Temp. min",
+     lambda v: format_value("temperature", v, style="plain")),
+    ("wind_chill_max", "Gefühlte Temp. max",
+     lambda v: format_value("temperature", v, style="plain")),
+    ("cloud_low_avg", "Wolken tief", lambda v: f"{v}%"),
+    ("cloud_mid_avg", "Wolken mittel", lambda v: f"{v}%"),
+    ("cloud_high_avg", "Wolken hoch", lambda v: f"{v}%"),
+    *_DAILY_PLAIN_ROWS,
+    ("sunny_hours", "Sonne", lambda v: f"{format_value('sunshine', v, style='bare')}h"),
+    ("cloud_avg", "Wolken", lambda v: format_value("cloud_total", v, style="plain")),
+    ("snow_depth_cm", "Schneehöhe", lambda v: format_value("snow_depth", v, style="plain")),
+    ("snow_new_cm", "Neuschnee", lambda v: f"{v:.0f} cm"),
+)
+
+
+def _ordered_rows(rows, enabled_metrics: list[str] | None) -> list | tuple:
+    """Zeilen-/Zell-Definitionen in der vom Nutzer eingestellten Reihenfolge.
+
+    Issue #1359: ``enabled_metrics`` ist eine GEORDNETE Liste (Listenposition
+    = Reihenfolge, kein eigenes ``order``-Feld). ``None`` = Altbestand ohne
+    gespeicherte Auswahl und behaelt die unveraenderte Quellcode-Reihenfolge
+    (AC-7). Eine leere Liste bleibt leer (AC-8) -- sie darf nicht in "alle
+    Metriken" umgedeutet werden. Semantik identisch zu ``_visible_metrics()``
+    im HTML-Pfad (``output.renderers.email.compare_html``).
+    """
+    if enabled_metrics is None:
+        return rows
+    by_id = {row[0]: row for row in rows}
+    return [by_id[m] for m in dict.fromkeys(enabled_metrics) if m in by_id]
+
 
 def render_comparison_text(
     result: ComparisonResult,
     profile: Optional[ActivityProfile] = None,
-    enabled_metrics: set | None = None,
+    enabled_metrics: list[str] | None = None,
     *,
     outlook_enabled: bool = False,
 ) -> str:
@@ -85,9 +132,11 @@ def render_comparison_text(
         profile: Optional ActivityProfile (aktuell ohne Einfluss auf den
             Klartext-Inhalt, akzeptiert fuer API-Konsistenz mit
             ``render_compare_html``).
-        enabled_metrics: Issue #1125. Filtert die sechs Uebersichts-Zeilen
-            je Ort auf die enthaltenen Renderer-Metrik-IDs (z.B.
-            "temp_max", "wind_max"). ``None`` = kein Filter (alle Zeilen,
+        enabled_metrics: Issue #1125. Filtert die Uebersichts-Zeilen je Ort
+            auf die enthaltenen Renderer-Metrik-IDs (z.B. "temp_max",
+            "wind_max") und bestimmt seit Issue #1359 auch deren
+            REIHENFOLGE (Listenposition = Reihenfolge). ``None`` = kein
+            Filter (alle Zeilen in Standard-Reihenfolge,
             Rueckwaertskompatibilitaet). Spiegelt exakt die Semantik von
             ``_visible_metrics()`` im HTML-Pfad
             (``output.renderers.email.compare_html``). Amtliche Warnungen
@@ -123,73 +172,13 @@ def render_comparison_text(
             lines.append("")
             continue
 
-        def _metric_visible(metric_id: str) -> bool:
-            return enabled_metrics is None or metric_id in enabled_metrics
-
-        if _metric_visible("temp_max"):
-            temp_max = loc_result.temp_max
-            lines.append(f"   Temp max: {format_value('temperature', temp_max, style='plain')}" if temp_max is not None else "   Temp max: -")
-        if _metric_visible("wind_max"):
-            wind_max = loc_result.wind_max
-            lines.append(f"   Wind: {format_value('wind', wind_max, style='plain')}" if wind_max is not None else "   Wind: -")
-        # Issue #1296, Klasse A: temp_min/gust_max lesen -- wie temp_max/
-        # wind_max oben -- direkt das LocationResult-Feld, kein _metric_value-
-        # Umweg noetig (kein _DAILY_AGGREGATE_FIELD-Eintrag dafuer).
-        if _metric_visible("temp_min"):
-            temp_min = loc_result.temp_min
-            lines.append(f"   Temp min: {format_value('temperature', temp_min, style='plain')}" if temp_min is not None else "   Temp min: -")
-        if _metric_visible("gust_max"):
-            gust_max = loc_result.gust_max
-            lines.append(f"   Böen: {format_value('wind', gust_max, style='plain')}" if gust_max is not None else "   Böen: -")
-        # Issue #1324, Klasse A: fuenf weitere LocationResult-Felder direkt
-        # lesen (wie temp_min/gust_max) -- Klartext-Pendant zu den HTML-Zeilen,
-        # sonst HTML/Text-Asymmetrie.
-        if _metric_visible("wind_direction_avg"):
-            wind_dir = loc_result.wind_direction_avg
-            lines.append(f"   Windrichtung: {wind_dir}°" if wind_dir is not None else "   Windrichtung: -")
-        if _metric_visible("wind_chill_min"):
-            wc_min = loc_result.wind_chill_min
-            lines.append(f"   Gefühlte Temp. min: {format_value('temperature', wc_min, style='plain')}" if wc_min is not None else "   Gefühlte Temp. min: -")
-        if _metric_visible("wind_chill_max"):
-            wc_max = loc_result.wind_chill_max
-            lines.append(f"   Gefühlte Temp. max: {format_value('temperature', wc_max, style='plain')}" if wc_max is not None else "   Gefühlte Temp. max: -")
-        if _metric_visible("cloud_low_avg"):
-            c_low = loc_result.cloud_low_avg
-            lines.append(f"   Wolken tief: {c_low}%" if c_low is not None else "   Wolken tief: -")
-        if _metric_visible("cloud_mid_avg"):
-            c_mid = loc_result.cloud_mid_avg
-            lines.append(f"   Wolken mittel: {c_mid}%" if c_mid is not None else "   Wolken mittel: -")
-        if _metric_visible("cloud_high_avg"):
-            c_high = loc_result.cloud_high_avg
-            lines.append(f"   Wolken hoch: {c_high}%" if c_high is not None else "   Wolken hoch: -")
-        # Issue #1285: vier bisher still verworfene Zeilen. Werte kommen aus
-        # DERSELBEN Quelle wie die HTML-Matrix (_metric_value -> Engine-Feld
-        # bzw. live aus hourly_data), damit HTML und Klartext nie
-        # auseinanderlaufen.
-        for metric_id, label, fmt in _DAILY_PLAIN_ROWS:
-            if not _metric_visible(metric_id):
-                continue
+        # Issue #1359: EINE geordnete Schleife statt fester if-Kette. Die
+        # Werte kommen weiterhin aus DERSELBEN Quelle wie die HTML-Matrix
+        # (`_metric_value` -> Engine-Feld bzw. live aus hourly_data), damit
+        # HTML und Klartext derselben Mail nie auseinanderlaufen.
+        for metric_id, label, fmt in _ordered_rows(_PLAIN_ROWS, enabled_metrics):
             value = _metric_value(loc_result, metric_id)
             lines.append(f"   {label}: {fmt(value) if value is not None else '-'}")
-        if _metric_visible("sunny_hours"):
-            # Issue #1214 Scheibe 6: sunshine.decimals=1 im Katalog (vormals
-            # F001-Ausnahme in Scheibe 5, s. Spec) macht die Migration jetzt
-            # beweisbar verhaltensneutral: calculate_sunny_hours liefert immer
-            # round(x, 1) als float, also str(4.7) == "4.7" == f"{4.7:.1f}".
-            sunny_h = loc_result.sunny_hours
-            lines.append(
-                f"   Sonne: {format_value('sunshine', sunny_h, style='bare')}h"
-                if sunny_h is not None else "   Sonne: -"
-            )
-        if _metric_visible("cloud_avg"):
-            cloud = loc_result.cloud_avg
-            lines.append(f"   Wolken: {format_value('cloud_total', cloud, style='plain')}" if cloud is not None else "   Wolken: -")
-        if _metric_visible("snow_depth_cm"):
-            snow_depth = loc_result.snow_depth_cm
-            lines.append(f"   Schneehöhe: {format_value('snow_depth', snow_depth, style='plain')}" if snow_depth is not None else "   Schneehöhe: -")
-        if _metric_visible("snow_new_cm"):
-            snow_new = loc_result.snow_new_cm
-            lines.append(f"   Neuschnee: {snow_new:.0f} cm" if snow_new is not None else "   Neuschnee: -")
 
         # Amtliche Warnungen, eine Zeile pro Warnung (Epic #1073 Punkt 6,
         # gemeinsamer Renderer statt Copy-Paste).
@@ -244,7 +233,7 @@ def render_compare_email(
     profile: Optional[ActivityProfile] = None,
     warnings: list[str] | None = None,
     top_n_details: Optional[int] = None,
-    enabled_metrics: set | None = None,
+    enabled_metrics: list[str] | None = None,
     hourly_metrics: set | None = None,
     hourly_enabled: bool = True,
     preset_name: Optional[str] = None,
@@ -348,16 +337,19 @@ def _format_channel_metric(metric_id: str, loc_result: LocationResult) -> str | 
 
 def _channel_metric_cells(
     loc_result: LocationResult,
-    enabled_metrics: set | None,
+    enabled_metrics: list[str] | None,
     limit: int | None,
 ) -> list[str]:
-    """Sichtbare "Label Wert"-Zellen eines Ortes, gefiltert ueber
-    ``enabled_metrics`` (``None`` = kein Filter) und auf ``limit`` Zellen
-    budgetiert (``None`` = unbegrenzt)."""
+    """Sichtbare "Label Wert"-Zellen eines Ortes, gefiltert UND geordnet ueber
+    ``enabled_metrics`` (``None`` = kein Filter, Konstanten-Reihenfolge) und auf
+    ``limit`` Zellen budgetiert (``None`` = unbegrenzt).
+
+    Issue #1359: bei gesetzter Auswahl entscheidet deren Reihenfolge -- im
+    Telegram die Zellfolge (AC-5), in der SMS zusaetzlich, WELCHE zwei
+    Metriken das harte 140-Zeichen-Budget ueberhaupt erreichen (AC-10).
+    """
     cells: list[str] = []
-    for metric_id, label in _CHANNEL_METRICS:
-        if enabled_metrics is not None and metric_id not in enabled_metrics:
-            continue
+    for metric_id, label in _ordered_rows(_CHANNEL_METRICS, enabled_metrics):
         value = _format_channel_metric(metric_id, loc_result)
         if value is None:
             continue
@@ -370,7 +362,7 @@ def _channel_metric_cells(
 def render_compare_telegram(
     result: ComparisonResult,
     *,
-    enabled_metrics: set | None = None,
+    enabled_metrics: list[str] | None = None,
     preset_name: Optional[str] = None,
 ) -> str:
     """Rendert einen Orts-Vergleich als Telegram-Nachricht (Issue #1270).
@@ -501,7 +493,7 @@ def _official_alert_sms_marker(
     return "!" + " ".join(parts)
 
 
-def _sms_location_part(loc_result, enabled_metrics: set | None) -> str:
+def _sms_location_part(loc_result, enabled_metrics: list[str] | None) -> str:
     """Flache SMS-Darstellung EINES Ortes.
 
     Orte ohne abrufbare Daten (``error``) werden als ``"<Name> n/a"``
@@ -540,7 +532,7 @@ def _sms_location_part(loc_result, enabled_metrics: set | None) -> str:
 def render_compare_sms(
     result: ComparisonResult,
     *,
-    enabled_metrics: set | None = None,
+    enabled_metrics: list[str] | None = None,
 ) -> str:
     """Rendert einen Orts-Vergleich als flache SMS (Issue #1270).
 

@@ -125,18 +125,44 @@ class TestAC6SunshineCatalogAndMigration:
             assert format_value("sunshine", v, style="bare") == str(v)
 
     def test_comparison_sun_line_uses_format_value(self):
-        """AC-6: GIVEN render_comparison_text nach der Migration / WHEN der
-        Quelltext untersucht wird / THEN existieren genau 7 format_value-
-        Aufrufe (Scheibe-5-Stand 4 + migrierte Sonne-Zeile + 2 aus #1296).
-        # +2 seit #1296: temp_min/gust_max nutzen format_value (Klasse A,
-        # analog temp_max/wind_max)."""
-        import inspect
-        import re
+        """AC-6: GIVEN sunshine.decimals=1 im Katalog / WHEN der Klartext-Teil
+        der Vergleichs-Mail gerendert wird / THEN traegt die Sonne-Zeile den
+        ueber die zentrale Formatierung gebildeten Wert (4,7 Stunden erscheinen
+        als "4.7h", NICHT als handgerundetes "5h").
+
+        Issue #1359: vorher zaehlte dieser Test ``format_value(``-Vorkommen im
+        Quelltext von ``render_comparison_text``. Zwei Gruende, warum das nicht
+        mehr traegt: (1) er war seit Issue #1324 veraltet und ROT (9 statt der
+        erwarteten 7 Aufrufe -- die Gefuehlte-Temp-Zeilen kamen dazu, ohne dass
+        ihn jemand nachzog); (2) mit #1359 wandern die Uebersichts-Zeilen in
+        die geordnete Modul-Tabelle ``_PLAIN_ROWS``, damit die im Editor
+        eingestellte Metrik-Reihenfolge ueberhaupt ankommen kann -- ein Zaehler
+        auf dem Funktionskoerper misst seitdem strukturell 0.
+
+        Der Verhaltensnachweis hier ist SCHAERFER als der alte Zaehler und
+        eigenstaendig neben dem Schwester-Test in
+        test_metric_format_slice5_comparison.py (``TestAC2FormatValueCalls``,
+        dort gleichfalls von Struktur auf Verhalten umgestellt): jener bildet
+        seine Erwartung selbst ueber ``format_value`` und wuerde eine
+        Katalog-Regression (decimals zurueck auf None) NICHT bemerken. Dieser
+        prueft die literale Zeichenfolge und faengt genau das -- die
+        Kernaussage von Scheibe 6.
+        """
+        from datetime import date, datetime
+
+        from app.user import ComparisonResult, LocationResult, SavedLocation
         from output.renderers.comparison import render_comparison_text
-        calls = re.findall(r"format_value\(", inspect.getsource(render_comparison_text))
-        assert len(calls) == 7, (
-            f"Erwartet 7 format_value-Aufrufe (inkl. Sonne-Zeile + #1296-Zeilen), "
-            f"gefunden {len(calls)}"
+
+        loc = SavedLocation(id="a", name="Alpsee", lat=47.5, lon=10.2, elevation_m=800)
+        result = ComparisonResult(
+            locations=[LocationResult(location=loc, sunny_hours=4.7)],
+            time_window=(8, 16), target_date=date(2026, 7, 15),
+            created_at=datetime(2026, 7, 12, 9, 0),
+        )
+        text = render_comparison_text(result)
+        assert "   Sonne: 4.7h\n" in text, (
+            "AC-6: die Sonne-Zeile folgt nicht mehr der zentralen Formatierung "
+            f"(sunshine.decimals=1).\nText:\n{text}"
         )
 
 

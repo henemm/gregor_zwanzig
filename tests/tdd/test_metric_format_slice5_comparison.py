@@ -16,12 +16,11 @@ im Code, nur die automatisierte Praesenzpruefung entfaellt.
 """
 from __future__ import annotations
 
-import inspect
-import re
 from datetime import date, datetime
 
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.comparison import render_comparison_text
+from output.metric_format import format_value
 
 # Aus dem UNMIGRIERTEN Code erzeugt (siehe Docstring) — nicht anpassen, ausser
 # eine bewusste, PO-freigegebene Verhaltensaenderung liegt vor.
@@ -50,6 +49,12 @@ GOLDEN = (
     "   Wind: 35 km/h\n"
     "   Temp min: -\n"
     "   Böen: -\n"
+    "   Windrichtung: -\n"
+    "   Gefühlte Temp. min: -\n"
+    "   Gefühlte Temp. max: -\n"
+    "   Wolken tief: -\n"
+    "   Wolken mittel: -\n"
+    "   Wolken hoch: -\n"
     "   Regen: -\n"
     "   Regenwahrscheinlichkeit: -\n"
     "   Gewitter: -\n"
@@ -57,6 +62,11 @@ GOLDEN = (
     "   Sicht min: -\n"
     "   CAPE: -\n"
     "   Nullgradgrenze: -\n"
+    "   Luftfeuchtigkeit Ø: -\n"
+    "   Taupunkt Ø: -\n"
+    "   Luftdruck Ø: -\n"
+    "   Niederschlagsart: -\n"
+    "   Schneefallgrenze: -\n"
     "   Sonne: 4.7h\n"
     "   Wolken: 57%\n"
     "   Schneehöhe: 15 cm\n"
@@ -67,6 +77,12 @@ GOLDEN = (
     "   Wind: -\n"
     "   Temp min: -\n"
     "   Böen: -\n"
+    "   Windrichtung: -\n"
+    "   Gefühlte Temp. min: -\n"
+    "   Gefühlte Temp. max: -\n"
+    "   Wolken tief: -\n"
+    "   Wolken mittel: -\n"
+    "   Wolken hoch: -\n"
     "   Regen: -\n"
     "   Regenwahrscheinlichkeit: -\n"
     "   Gewitter: -\n"
@@ -74,6 +90,11 @@ GOLDEN = (
     "   Sicht min: -\n"
     "   CAPE: -\n"
     "   Nullgradgrenze: -\n"
+    "   Luftfeuchtigkeit Ø: -\n"
+    "   Taupunkt Ø: -\n"
+    "   Luftdruck Ø: -\n"
+    "   Niederschlagsart: -\n"
+    "   Schneefallgrenze: -\n"
     "   Sonne: -\n"
     "   Wolken: -\n"
     "   Schneehöhe: -\n"
@@ -111,23 +132,46 @@ class TestAC1GoldenIdentical:
 
 
 class TestAC2FormatValueCalls:
+    """AC-2 — auf die EIGENSCHAFT umgestellt (Issue #1359).
+
+    Vorher zaehlte dieser Test ``format_value(``-Vorkommen im Quelltext von
+    ``render_comparison_text``. Zwei Gruende, warum das nicht mehr trifft:
+    (1) er war seit Issue #1324 veraltet und ROT (9 statt der erwarteten 7
+    Aufrufe -- die Gefuehlte-Temp-Zeilen kamen dazu, ohne dass ihn jemand
+    nachzog); (2) mit #1359 wandern die Uebersichts-Zeilen in die geordnete
+    Modul-Tabelle ``_PLAIN_ROWS``, damit die im Editor eingestellte
+    Metrik-Reihenfolge ueberhaupt ankommen kann -- ein Zaehler auf dem
+    Funktionskoerper misst seitdem strukturell 0.
+
+    Geprueft wird jetzt das, worum es AC-2 ging: die gerenderte Zeile traegt
+    exakt das Ergebnis der zentralen ``metric_format.format_value`` und keine
+    handgebaute Zweitformatierung. Das ist ein Verhaltensnachweis statt eines
+    Quelltext-Greps (#765-Hygiene) und faengt eine Rueck-Handformatierung
+    zuverlaessiger als ein Zaehler.
+    """
+
     def test_overview_lines_use_format_value(self):
-        """AC-2: GIVEN render_comparison_text nach der Migration / WHEN der
-        Funktions-Quelltext untersucht wird / THEN rufen genau die 7
-        migrierten Zeilen format_value(...) auf (temp_max/wind_max/
-        temp_min/gust_max/wolken/schneehoehe/sonne); snow_new_cm bleibt
-        hartcodiert (Katalog-Luecke).
-        Issue #1214 Scheibe 6: sunshine.decimals=1 im Katalog macht die
-        Sonne-Zeile beweisbar verhaltensneutral migrierbar (vormals F001-
-        Ausnahme in Scheibe 5, s. dortiger Fix-Loop-Kommentar), Golden-
-        String (AC-1) bleibt identisch.
-        # +2 seit #1296: temp_min/gust_max nutzen format_value (Klasse A,
-        # analog temp_max/wind_max)."""
-        src = inspect.getsource(render_comparison_text)
-        calls = re.findall(r"format_value\(", src)
-        assert len(calls) == 7, (
-            f"Erwartet 7 format_value-Aufrufe in render_comparison_text "
-            f"(5 bisherige + Temp min + Boeen aus #1296), "
-            f"gefunden: {len(calls)} — Uebersichts-Zeilen noch hartcodiert "
-            f"oder Sonne-Zeile nicht migriert (Scheibe 6)?"
+        loc = SavedLocation(id="a", name="Alpsee", lat=47.5, lon=10.2, elevation_m=800)
+        result = ComparisonResult(
+            locations=[LocationResult(
+                location=loc, temp_max=12.6, temp_min=3.4, wind_max=34.7,
+                gust_max=51.2, sunny_hours=4.7, cloud_avg=57, snow_depth_cm=15.4,
+            )],
+            time_window=(8, 16), target_date=date(2026, 7, 15),
+            created_at=datetime(2026, 7, 12, 9, 0),
         )
+        text = render_comparison_text(result)
+        expected = {
+            "Temp max": format_value("temperature", 12.6, style="plain"),
+            "Temp min": format_value("temperature", 3.4, style="plain"),
+            "Wind": format_value("wind", 34.7, style="plain"),
+            "Böen": format_value("wind", 51.2, style="plain"),
+            "Sonne": f"{format_value('sunshine', 4.7, style='bare')}h",
+            "Wolken": format_value("cloud_total", 57, style="plain"),
+            "Schneehöhe": format_value("snow_depth", 15.4, style="plain"),
+        }
+        for label, value in expected.items():
+            assert f"   {label}: {value}\n" in text, (
+                f"AC-2: Zeile '{label}' folgt nicht der zentralen Formatierung "
+                f"(erwartet '{value}').\nText:\n{text}"
+            )

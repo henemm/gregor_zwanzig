@@ -1254,7 +1254,16 @@
 					onfocusout={handleWetterMetrikenCommit}
 					onclick={handleWetterMetrikenCommit}
 				>
-					<WeatherMetricsTab context="vergleich" wiz={wizardState} />
+					<!-- Issue #1359: `onCompareCommit` verdrahtet den Speichervorgang
+					     DIREKT (wie im Trip), statt sich auf die Wrapper-Ereignisse
+					     oben zu verlassen. Nach einer Ziehgeste unterdruecken Browser
+					     das nachfolgende `click` haeufig — die neue Reihenfolge waere
+					     dann nie gespeichert (Kontext-Doku § Risiko 5). -->
+					<WeatherMetricsTab
+						context="vergleich"
+						wiz={wizardState}
+						onCompareCommit={handleWetterMetrikenCommit}
+					/>
 				</div>
 			{/if}
 		</div>

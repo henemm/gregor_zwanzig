@@ -57,6 +57,9 @@
 	// /api/compare/metrics statt aus COMPARE_METRIC_DEFS (bleibt fuer
 	// Schwellen-Slider/Winner-Box/Save-Default-Fallback unveraendert, Teil 3).
 	import { toCompareSelectionEntries, type CompareSelectionEntry } from './weather-metrics-tab/compareMetricSelection.ts';
+	// Issue #1359 Scheibe 1: reihenfolge-erhaltendes An-/Abwaehlen als reine,
+	// testbare Funktion (Muster: weatherMetricsTabSections.ts nebenan).
+	import { toggleCompareMetricKey } from './weather-metrics-tab/compareMetricOrder.ts';
 	import type { CompareMetricCatalogResponse } from '$lib/types';
 
 	interface Template {
@@ -94,8 +97,15 @@
 		saveController?: SaveStatus;
 		// vergleich (neu, Issue #1311)
 		wiz?: CompareWizardState;
+		/** Issue #1359 (vergleich): direkter Speicherauslöser nach einer
+		 *  Ziehgeste. Browser unterdrücken nach einem Drag häufig das
+		 *  nachfolgende `click` — der Wrapper-Commit in CompareTabs.svelte
+		 *  (`.hub-wetter-metriken-wrap` onclick/onchange) würde dann NIE
+		 *  feuern und die neue Reihenfolge bliebe ungespeichert. Der Trip löst
+		 *  aus demselben Grund direkt aus (`onDndReorder` → scheduleAutoSave). */
+		onCompareCommit?: () => void;
 	}
-	let { context = 'route', trip, createMode = false, onChannelsChange, onTripUpdate, saveController, wiz }: Props = $props();
+	let { context = 'route', trip, createMode = false, onChannelsChange, onTripUpdate, saveController, wiz, onCompareCommit }: Props = $props();
 
 	// Issue #1311: Abschnittsreihenfolge kommt aus einer reinen Funktion, kein
 	// Duplikat der Reihenfolge im Markup (AC-1, AC-8-Attrappen-Verbot).
@@ -679,13 +689,44 @@
 	// macht CompareTabs.svelte (Hub-Hydrate/-Flush-Muster), diese Komponente
 	// mutiert nur wiz.activeMetricKeys direkt (kein Self-Save, analog
 	// AlarmeTab.svelte context="vergleich").
+	// Issue #1359: Set-Neuaufbau raus (zerstoerte die eingestellte Reihenfolge),
+	// Array-Filter/-Push rein — Logik in compareMetricOrder.ts, damit sie ohne
+	// Komponenten-Mount pruefbar ist (AC-2).
 	function toggleCompareMetric(metric: string) {
 		if (!wiz) return;
-		const active = new Set(wiz.activeMetricKeys);
-		if (active.has(metric)) active.delete(metric);
-		else active.add(metric);
-		wiz.activeMetricKeys = [...active];
+		wiz.activeMetricKeys = toggleCompareMetricKey(wiz.activeMetricKeys, metric);
 	}
+
+	// ── Issue #1359 Scheibe 1: Reihenfolge-Block im Vergleich ────────────────
+	// Label/Einheit fuer WeatherV2Reihenfolge kommen aus dem BEREITS geladenen
+	// Compare-Katalog (GET /api/compare/metrics) — der route-`catalog`
+	// (/api/metrics) wird im Vergleich nie geladen, `metricById` oben waere
+	// hier also leer.
+	const compareMetricById = $derived.by(() => {
+		const map: Record<string, MetricEntry> = {};
+		for (const e of compareCatalog) map[e.metric] = { id: e.metric, label: e.label } as MetricEntry;
+		return map;
+	});
+
+	// Ziehen = Reihenfolge setzen + SOFORT speichern (s. onCompareCommit-Prop).
+	function onCompareDndReorder(newOrder: string[]) {
+		if (!wiz) return;
+		wiz.activeMetricKeys = newOrder;
+		onCompareCommit?.();
+	}
+
+	// "Aus" in der Reihenfolge-Liste = abwaehlen. Kein zweiter Pfad: derselbe
+	// reihenfolge-erhaltende Toggle wie die Grundauswahl-Checkbox.
+	function onCompareRemove(metric: string) {
+		toggleCompareMetric(metric);
+		onCompareCommit?.();
+	}
+
+	// Roh/Einfach-Umschalter gibt es im Vergleich nicht (indicatorCapable() ist
+	// fuer die Compare-Metrik-IDs durchgaengig false, die Segmented-Steuerung
+	// wird also nie gerendert). Named function statt Inline-Closure im Markup
+	// (Safari-Factory-Muster).
+	function noopMode() {}
 
 	// D2-Fix-Loop 2 (AC-6, Staging-Befund BROKEN): Amtliche-Warnungen-Toggle im
 	// Vergleich-Zweig — kein Self-Save (analog toggleCompareMetric oben),
@@ -738,9 +779,11 @@
 {/snippet}
 
 {#if context === 'vergleich'}
-	<!-- Issue #1311 (C1): Vergleich-Grundauswahl — NUR an/aus je Metrik, keine
-	     Buckets/Reihenfolge/Horizonte/SMS-Schwellen/Report-Config (AC-1, AC-8
-	     Attrappen-Verbot: jedes hier sichtbare Element hat Mail-Wirkung). -->
+	<!-- Issue #1311 (C1): Vergleich-Grundauswahl — an/aus je Metrik, keine
+	     Buckets/Horizonte/SMS-Schwellen/Report-Config (AC-1, AC-8
+	     Attrappen-Verbot: jedes hier sichtbare Element hat Mail-Wirkung).
+	     Issue #1359: 'reihenfolge' kommt dazu — die Listenposition bestimmt
+	     die Zeilenfolge in Mail/Telegram und das SMS-Budget. -->
 	<!-- D2-Fix-Loop 2 (AC-6): 'official_alerts' ist die einzige Ausnahme —
 	     einzig erreichbare Inhalt-Heimat fuer official_alerts_enabled bei
 	     bestehenden Vergleichen, s. weatherMetricsTabSections.ts. -->
@@ -773,6 +816,42 @@
 					{/each}
 				</div>
 			</Card>
+
+			<!-- Issue #1359 Scheibe 1 (AC-1/AC-6): DERSELBE geteilte Reihenfolge-
+			     Baustein wie im Trip — WeatherV2Reihenfolge (SortableList +
+			     DragHandle + Positionsnummern), unveraendert, nur aus
+			     wiz.activeMetricKeys gespeist. Kein Compare-Eigenbau
+			     (Epic #1230 / Trip-Compare-Invariante).
+
+			     BEWUSSTE ABWEICHUNG von der Spec (§2 "LayoutTab-Block"): der
+			     LayoutTab-Organism bleibt aussen vor. Seine Kappungs-Aussage ist
+			     SPALTEN-basiert ("N Spalten (Label + …) · max 8") — im Vergleich
+			     sind die Spalten aber die ORTE (so nutzt ihn der Hub-Reiter
+			     "Layout", CompareTabs.svelte), Metriken sind Zeilen; mit
+			     Metriken als colCount stuende dort eine falsche Zahl (echte
+			     Compare-Budgets: 7 Metrik-Zellen je Ort im Telegram, 2 in der
+			     SMS — nicht 8/0 aus CHANNEL_COL_BUDGET). Und die echte
+			     Mail-Vorschau lebt im Hub-Reiter "Vorschau" (Server-Render,
+			     echte Werte); eine trip-geformte Beispieltabelle waere hier eine
+			     Attrappe (AC-8). -->
+			{#if sections.includes('reihenfolge')}
+			<Card padding={0}>
+				<p class="option-hint reihenfolge-hint" data-testid="weather-metrics-vergleich-warn-hint">
+					Amtliche Warnungen stehen unabhängig von dieser Reihenfolge immer an
+					erster Stelle und sind deshalb nicht Teil der sortierbaren Liste.
+				</p>
+				<WeatherV2Reihenfolge
+					primaryColumns={wiz?.activeMetricKeys ?? []}
+					metricById={compareMetricById}
+					friendlyMap={{}}
+					activeChannel="email"
+					highlight={null}
+					onRemove={onCompareRemove}
+					onDndReorder={onCompareDndReorder}
+					onMode={noopMode}
+				/>
+			</Card>
+			{/if}
 		{/if}
 		<!-- Issue #1350 Teil 2: Amtliche-Warnungen-Toggle haengt nicht am
 		     Metrik-Katalog-Fetch (Known Limitations: "nur die Auswahl-UI ist
@@ -1249,12 +1328,23 @@
 	.metrics-tab-vergleich {
 		padding: 28px 40px 60px;
 		max-width: 640px;
+		/* Issue #1359: seit dem Reihenfolge-Block stapeln sich drei Karten —
+		   ohne Abstand kleben sie aneinander. */
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
 	}
 	.vergleich-metric-list {
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
 		margin-top: 10px;
+	}
+	/* Issue #1359: Hinweis zur fixierten Amtliche-Warnungen-Zeile sitzt im
+	   randlosen Reihenfolge-Card (padding=0), braucht daher eigenen Innenrand. */
+	.reihenfolge-hint {
+		padding: 14px 16px 0;
+		margin-bottom: 0;
 	}
 	.vergleich-metric-row {
 		display: flex;

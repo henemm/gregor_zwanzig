@@ -278,15 +278,25 @@ export const _COMPARE_DEFAULTS: Record<string, { defaultMin: number | null; defa
 
 // Issue #1350 Teil 3 (Spec Punkt 6, weatherMetricsCompareSave.ts): Legacy-
 // Default "active_metrics=null -> alle Metriken aktiv" braucht eine
-// SYNCHRONE Key-Liste ohne Fetch. Reine Key-Liste (keine Labels/Skalen),
-// Reihenfolge = compare_metric_catalog.py::COMPARE_METRIC_CATALOG.
+// SYNCHRONE Key-Liste ohne Fetch. Reine Key-Liste (keine Labels/Skalen).
+//
+// Issue #1359 Scheibe 1: Reihenfolge auf die RENDERER-Standardreihenfolge
+// gezogen (`CV2_METRICS` in src/output/renderers/email/compare_html.py, ohne
+// dessen "warn"-Zeile — die ist kein Bestandteil von activeMetricKeys und
+// steht ohnehin immer an erster Stelle). Grund: ein Alt-Vergleich ohne je
+// gespeicherte `active_metrics` rendert seine Mail heute in
+// CV2_METRICS-Reihenfolge. Speichert er ueber diesen Tab zum ersten Mal
+// irgendetwas, materialisiert sich DIESE Liste als `active_metrics` — mit der
+// alten (abweichenden) Reihenfolge waere seine Mail ungefragt umgesprungen.
+// Der Paritaets-Waechter (compareMetricKeysParity.test.ts) vergleicht
+// sortiert und ist von der Reihenfolge unberuehrt.
 export const COMPARE_METRIC_KEYS: string[] = [
-	'snow_depth_cm', 'snow_new_sum_cm', 'sunny_hours_h', 'wind_max_kmh',
-	'cloud_avg_pct', 'visibility_min_m', 'precip_sum_mm', 'uv_index_max', 'temp_max_c',
-	'thunder_level_max', 'temp_min_c', 'gust_max_kmh', 'cape_max_jkg', 'freezing_level_m',
-	'pop_max_pct', 'wind_direction_deg', 'wind_chill_min_c', 'wind_chill_max_c',
-	'humidity_avg_pct', 'dewpoint_avg_c', 'snowfall_limit_m', 'precip_type_dominant',
-	'cloud_low_avg_pct', 'cloud_mid_avg_pct', 'cloud_high_avg_pct', 'pressure_avg_hpa',
+	'temp_max_c', 'wind_max_kmh', 'precip_sum_mm', 'pop_max_pct', 'thunder_level_max',
+	'sunny_hours_h', 'cloud_avg_pct', 'uv_index_max', 'visibility_min_m', 'snow_depth_cm',
+	'snow_new_sum_cm', 'temp_min_c', 'gust_max_kmh', 'cape_max_jkg', 'freezing_level_m',
+	'wind_direction_deg', 'wind_chill_min_c', 'wind_chill_max_c', 'cloud_low_avg_pct',
+	'cloud_mid_avg_pct', 'cloud_high_avg_pct', 'humidity_avg_pct', 'dewpoint_avg_c',
+	'pressure_avg_hpa', 'precip_type_dominant', 'snowfall_limit_m',
 ];
 
 // Issue #1350 Teil 3 (D3): Profil-Feature zieht aus dem geloeschten

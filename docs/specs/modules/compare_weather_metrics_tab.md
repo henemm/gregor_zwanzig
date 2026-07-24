@@ -119,10 +119,21 @@ verdrahteten 6er-Liste.
 </script>
 ```
 
+> **⚠️ Teilweise abgelöst am 2026-07-24 durch
+> [`compare_metric_order.md`](compare_metric_order.md) (Issue #1359,
+> Scheibe 1).** Der Abschnitt `'reihenfolge'` ist **nicht mehr**
+> route-exklusiv — er ist seither in **beiden** Kontexten sichtbar, damit
+> die Metrik-Reihenfolge im Ortsvergleich einstellbar ist. Der folgende
+> Code-Ausschnitt und der Satz „nur die Grundauswahl" beschreiben den Stand
+> **vor** dieser Änderung und sind nur noch historisch zu lesen. Alles
+> Übrige in diesem Dokument (Katalogquelle, Persistenz, AC-4-Zusage „kein
+> Schreiben ohne Nutzer-Geste") gilt unverändert weiter.
+
 ```typescript
 // frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts
 // Vorbild: shared/alarme-tab/alarmeTabSections.ts — reine Funktion, keine
 // Duplikat-Reihenfolge im Markup.
+// HISTORISCH (Stand vor #1359) — aktueller Stand: siehe compare_metric_order.md
 export type WeatherMetricsContext = 'route' | 'vergleich';
 
 const ROUTE_ONLY_SECTIONS = ['reihenfolge', 'sms_schwellen', 'report_config'] as const;
@@ -134,8 +145,8 @@ export function weatherMetricsTabSections(context: WeatherMetricsContext): strin
 }
 ```
 
-Im `context="vergleich"`-Zweig wird **nur** die Grundauswahl (Metrik an/aus)
-gerendert. **Katalogquelle im Vergleich-Kontext ist `COMPARE_METRIC_DEFS`**
+Im `context="vergleich"`-Zweig wurde **bis #1359 nur** die Grundauswahl
+(Metrik an/aus) gerendert; seither zusätzlich der Reihenfolge-Abschnitt. **Katalogquelle im Vergleich-Kontext ist `COMPARE_METRIC_DEFS`**
 (derselbe 15er-Pool wie im Idealwerte-Tab; 15 seit `pop_max_pct`/#1285) — NICHT der Trip-Katalog aus
 `GET /api/metrics`: `display_config.active_metrics` lebt im
 Compare-Namensraum (`temp_max_c`, `wind_max_kmh`, … — vgl.
