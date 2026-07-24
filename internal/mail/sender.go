@@ -18,6 +18,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/henemm/gregor-api/internal/egress"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -371,6 +372,13 @@ func recipientBlocked(host, to string) error {
 // dieselbe Sende-Logik mit einem eigenen Guard-Satz nutzen kann — kein
 // Duplikat der MIME-/Boundary-/STARTTLS-Logik zwischen den beiden Pfaden.
 func dialAndSend(cfg MailConfig, to string, msg Mail) error {
+	// Issue #1337 — Egress-Linie: in Staging/Test darf nur an einen als
+	// TestAccess deklarierten SMTP-Host gesendet werden. Tritt ZUSAETZLICH vor
+	// recipientBlocked/resendBlocked, ersetzt keine der beiden Linien; ohne
+	// installierten Waechter (Prod) immer nil.
+	if err := egress.SMTPAllowed(cfg.Host); err != nil {
+		return err
+	}
 	if cfg.Host == "" || cfg.User == "" || cfg.Pass == "" {
 		return fmt.Errorf("mail.Send: incomplete SMTP config (host/user/pass)")
 	}

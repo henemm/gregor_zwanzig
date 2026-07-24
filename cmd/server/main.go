@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/egress"
 	"github.com/henemm/gregor-api/internal/handler"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/provider"
@@ -28,6 +29,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("config error: %v", err)
 	}
+
+	// Issue #1337 — Egress-Waechter: in Staging/Test laufen alle ausgehenden
+	// HTTP-Rufe gegen das Host-Inventar. In Prod ein No-Op.
+	egress.Install(cfg)
 
 	s := store.New(cfg.DataDir, cfg.UserID)
 	telegramTokenStore := handler.NewTelegramTokenStore(cfg.DataDir)

@@ -230,6 +230,7 @@ Entscheidungsregel, Idempotenz) wird von B–E **nicht** angefasst.
 - Validation-Tools (`src/validation/ground_truth.py` — Bergfex, `src/validation/geosphere_validator.py`) sind bewusst außerhalb von Scheibe A — sie laufen nicht im Staging-Report-Prozess.
 - `@pytest.mark.live`-Tests installieren den Guard bewusst nicht (echte APIs sind dort gewollt).
 - Scheiben B (SMS-Finalisierung), C (Telegram-alle-Methoden), D (Warn-Dienste-Feinjustierung), E (Resend-Relay, infra#114) sind explizit NICHT Teil dieser Spec.
+- **Geschlossen von der Scheibe „Go-Prozess" (`docs/specs/modules/egress_guard_go.md`):** der Go-Dienst `gregor-api` war als zweiter Prozess ungeschützt (eigener `http.DefaultTransport`, eigener `net/smtp`-Pfad), und der asynchrone httpx-Transport (`httpx.AsyncHTTPTransport.handle_async_request`) war auf der Python-Seite nicht gepatcht. Beides ist dort erledigt; das Host-Inventar liegt seither doppelt (Python + Go) und wird von `tests/test_egress_inventory_drift.py` deckungsgleich gehalten.
 
 ## Architektur-Entscheidung (ADR)
 

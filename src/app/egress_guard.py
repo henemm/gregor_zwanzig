@@ -46,6 +46,22 @@ INVENTORY: dict[str, IsolationKind] = {
     "gateway.seven.io": IsolationKind.BLOCKED,
     "api.telegram.org": IsolationKind.BLOCKED,
     "mail.henemm.com": IsolationKind.TEST_ACCESS,
+    # Go-Dienst (#1337, Scheibe Go-Prozess): Ortsaufloesung, Hoehen,
+    # Tour-Import -- kostenlos und nebenwirkungsfrei, muss auf Staging gehen.
+    "nominatim.openstreetmap.org": IsolationKind.TEST_ACCESS,
+    "api.open-elevation.com": IsolationKind.TEST_ACCESS,
+    "www.komoot.com": IsolationKind.TEST_ACCESS,
+    # Aufloesung geteilter Google-Maps-Links (followGoogleMapsRedirect).
+    "maps.app.goo.gl": IsolationKind.TEST_ACCESS,
+    "goo.gl": IsolationKind.TEST_ACCESS,
+    "www.google.com": IsolationKind.TEST_ACCESS,
+    "maps.google.com": IsolationKind.TEST_ACCESS,
+    # Google-Login auf Staging.
+    "www.googleapis.com": IsolationKind.TEST_ACCESS,
+    "oauth2.googleapis.com": IsolationKind.TEST_ACCESS,
+    "accounts.google.com": IsolationKind.TEST_ACCESS,
+    # Staging darf keine Produktions-Heartbeats gruen pingen.
+    "uptime.betterstack.com": IsolationKind.BLOCKED,
 }
 
 _LOCALHOST_HOSTS = {"localhost", "127.0.0.1"}
@@ -54,6 +70,7 @@ _LOCALHOST_HOSTS = {"localhost", "127.0.0.1"}
 # Restore-Ziel fuer uninstall() -- unabhaengig davon, was zwischenzeitlich
 # (z.B. durch Test-Sentinels) auf den Klassenattributen sitzt.
 _TRUE_ORIG_HTTPX_HANDLE_REQUEST: Any = httpx.HTTPTransport.handle_request
+_TRUE_ORIG_HTTPX_ASYNC_HANDLE_REQUEST: Any = httpx.AsyncHTTPTransport.handle_async_request
 _TRUE_ORIG_SMTP_CONNECT: Any = smtplib.SMTP.connect
 _TRUE_ORIG_IMAP_OPEN: Any = imaplib.IMAP4.open
 
@@ -63,6 +80,7 @@ _dynamic_test_hosts: set[str] = set()
 # Call-through-Ziele: die Funktion, die direkt UNTER dem Guard-Patch sass, im
 # Moment des install()-Aufrufs (kann ein Test-Sentinel sein).
 _orig_httpx_handle_request: Any = None
+_orig_httpx_async_handle_request: Any = None
 _orig_smtp_connect: Any = None
 _orig_imap_open: Any = None
 
@@ -70,6 +88,10 @@ _orig_imap_open: Any = None
 def _is_allowed(host: str | None) -> bool:
     if not host:
         return False
+    # F001: Host case-insensitiv normalisieren — smtplib/imaplib bekommen den
+    # Host als rohes Argument, httpx-Redirects fremder Server liefern beliebiges
+    # Casing im Location-Header. Inventar-Keys sind durchweg lowercase.
+    host = host.lower()
     if host in _LOCALHOST_HOSTS:
         return True
     if host in _dynamic_test_hosts:
@@ -82,6 +104,13 @@ def _guarded_httpx_handle_request(self, request):  # noqa: ANN001
     if _is_allowed(host):
         return _orig_httpx_handle_request(self, request)
     raise EgressBlockedError(f"httpx egress blocked for host: {host}")
+
+
+async def _guarded_httpx_async_handle_request(self, request):  # noqa: ANN001
+    host = request.url.host
+    if _is_allowed(host):
+        return await _orig_httpx_async_handle_request(self, request)
+    raise EgressBlockedError(f"httpx async egress blocked for host: {host}")
 
 
 def _guarded_smtp_connect(self, host="localhost", port=0, source_address=None):
@@ -103,7 +132,7 @@ def install_egress_guard(settings) -> None:
     wiederholtem Aufruf (Idempotenz).
     """
     global _installed, _orig_httpx_handle_request, _orig_smtp_connect
-    global _orig_imap_open
+    global _orig_imap_open, _orig_httpx_async_handle_request
 
     if not (settings.is_test_mode or settings.env == "staging"):
         return
@@ -112,13 +141,17 @@ def install_egress_guard(settings) -> None:
 
     for host in (getattr(settings, "test_smtp_host", None), getattr(settings, "imap_host", None)):
         if host:
-            _dynamic_test_hosts.add(host)
+            # F001: lowercase gespeichert, damit der (ebenfalls normalisierte)
+            # _is_allowed-Vergleich unabhaengig vom ENV-Casing greift.
+            _dynamic_test_hosts.add(host.lower())
 
     _orig_httpx_handle_request = httpx.HTTPTransport.handle_request
+    _orig_httpx_async_handle_request = httpx.AsyncHTTPTransport.handle_async_request
     _orig_smtp_connect = smtplib.SMTP.connect
     _orig_imap_open = imaplib.IMAP4.open
 
     httpx.HTTPTransport.handle_request = _guarded_httpx_handle_request
+    httpx.AsyncHTTPTransport.handle_async_request = _guarded_httpx_async_handle_request
     smtplib.SMTP.connect = _guarded_smtp_connect
     imaplib.IMAP4.open = _guarded_imap_open
 
@@ -130,6 +163,7 @@ def uninstall_egress_guard() -> None:
     global _installed
 
     httpx.HTTPTransport.handle_request = _TRUE_ORIG_HTTPX_HANDLE_REQUEST
+    httpx.AsyncHTTPTransport.handle_async_request = _TRUE_ORIG_HTTPX_ASYNC_HANDLE_REQUEST
     smtplib.SMTP.connect = _TRUE_ORIG_SMTP_CONNECT
     imaplib.IMAP4.open = _TRUE_ORIG_IMAP_OPEN
 
