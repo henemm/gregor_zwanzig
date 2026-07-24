@@ -215,7 +215,7 @@ def test_ac3_yellow_and_green_warnings_are_filtered(level: int):
 # Eingefrorener Ist-Stand vor #1318 (erzeugt mit demselben Fixture, leerer
 # official_alerts-Liste). Aendert sich dieser String, hat #1318 eine
 # bestehende Token-Zeile verschoben — genau das darf nicht passieren.
-GOLDEN_NO_ALERTS = "E5: N9 D24 R- PR- W- G- TH:- TH+:-"
+GOLDEN_NO_ALERTS = "E5: N18 D24 R- PR- W- G- TH:- TH+:-"
 GOLDEN_WET_NO_ALERTS = (
     "E5: N9 D24 R0.4@11(2.5@16) PR60%@11(80%@16) W18@11(28@16) "
     "G30@11(45@16) TH:M@16 TH+:-"
