@@ -1,27 +1,34 @@
 """
 Struktureller Guard gegen wiederholtes stilles Verwerfen waehlbarer
-Compare-Metriken (#1296, AC-6; gehaertet #1298, B3).
+Compare-Metriken (#1296, AC-6; gehaertet #1298, B3; umgehaengt nach #1350
+Teil 3 -- Bugfix-Session 2026-07-24).
 
-Ohne sichtbares Signal wiederholt sich der Bug-Typ von #1285/#1296 bei der
-naechsten neu eingefuehrten Frontend-Metrik ein drittes Mal. Dieser Test haelt
-zwei Dinge fest: (a) eine nicht mappbare ID erzeugt ein Log-Warning statt
-stiller Verwerfung, (b) der Editor-Katalog (``compareMetricDefs.ts::
-ALL_METRICS``, 15 IDs) ist 1:1 auf ``FRONTEND_TO_RENDERER_METRIC_ID``
-abgebildet.
+Ohne sichtbares Signal wiederholt sich der Bug-Typ von #1285/#1296/#1324 bei
+der naechsten neu eingefuehrten Backend-Katalog-Metrik ein weiteres Mal.
 
-Issue #1298 (B3): die urspruengliche Fassung hielt die 15 IDs als von Hand
-gepflegte Kopie -- bei einer 16. Metrik ohne Nachpflege blieb der Test
-faelschlich gruen. Seit der Haertung liest ``_ts_metric_parser.
-parse_all_metrics_ids()`` die IDs direkt aus der echten
-``compareMetricDefs.ts`` (Vakuum-Schutz: der Parser muss auf der realen
-Datei nachweislich alle 15 IDs finden, nicht 0).
+Seit #1350 (Teil 3) ist der Backend-Katalog (`compare_metric_catalog.py`) die
+einzige Quelle fuer waehlbare Compare-Metriken -- `compareMetricDefs.ts`
+wurde in Commit 16c9d318 gelöscht. Ein struktureller Drift-Assert Katalog <->
+Resolver (`FRONTEND_TO_RENDERER_METRIC_ID`) existiert bereits als
+Modul-Import-Assert in `compare_metric_catalog.py`. UNGESCHUETZT blieb eine
+dritte Kopie: die Render-Liste `CV2_METRICS` in
+`src/output/renderers/email/compare_html.py` -- fehlt dort eine Zeile fuer
+einen Katalog-Eintrag, ist die Metrik im Editor waehlbar, taucht aber nie in
+der Mail auf (exakt der alte Bug-Typ).
 
-Kern-Schicht, deterministisch: kein Mock, kein Netz, kein patch(). Reiner
-Konsistenz-Check gegen die Konstanten des Moduls + echtes Logger-Verhalten
-(``caplog``, kein gemocktes Logging-Objekt).
+Dieser Test prueft daher direkt in Python (kein TypeScript-Parsing mehr --
+das brach beim Loeschen von compareMetricDefs.ts die GESAMTE Testsuite-
+Collection, s. Vorfall 2026-07-24): jeder Katalog-Key hat ueber
+`FRONTEND_TO_RENDERER_METRIC_ID` eine CV2_METRICS-Zeile, und umgekehrt hat
+jede CV2_METRICS-Zeile (ausser "warn") einen Katalog-Ursprung.
+
+Kern-Schicht, deterministisch: kein Mock, kein Netz, kein patch(), kein
+Datei-I/O auf Modul-Ebene. Reiner Konsistenz-Check gegen die Konstanten der
+Module + echtes Logger-Verhalten (``caplog``, kein gemocktes Logging-Objekt).
 
 SPEC: docs/specs/modules/issue_1296_compare_metrics_dropped.md
 SPEC: docs/specs/modules/issue_1298_compare_metric_guard_cape_label.md
+SPEC: docs/specs/modules/compare_metric_ssot_final.md
 """
 from __future__ import annotations
 
@@ -29,17 +36,12 @@ import logging
 
 import pytest
 
+from output.renderers.compare_metric_catalog import get_compare_metric_catalog
 from output.renderers.compare_metric_ids import (
     FRONTEND_TO_RENDERER_METRIC_ID,
     resolve_enabled_metrics,
 )
-
-from _ts_metric_parser import COMPARE_METRIC_DEFS_TS, parse_all_metrics_ids
-
-# Issue #1298 (B3): ersetzt die vormalige Hand-Kopie der 15 IDs -- die Menge
-# wird jetzt live aus der echten compareMetricDefs.ts gelesen (siehe
-# _ts_metric_parser), kann also nicht mehr veralten.
-ALL_METRICS_FRONTEND_IDS: set[str] = set(parse_all_metrics_ids())
+from output.renderers.email.compare_html import CV2_METRICS
 
 
 def test_unmapped_metric_logs_warning_instead_of_silent_drop(caplog):
@@ -61,75 +63,78 @@ def test_unmapped_metric_logs_warning_instead_of_silent_drop(caplog):
     )
 
 
-def test_all_frontend_metric_ids_have_renderer_mapping():
-    """AC-6: JEDE im Editor waehlbare Metrik-ID braucht ein
-    Renderer-Mapping. Schlaegt fehl, sobald eine neu eingefuehrte waehlbare
-    Metrik ohne Mapping hinzukommt (struktureller Guard) -- die Menge kommt
-    seit #1298 (B3) live aus der echten ``compareMetricDefs.ts``, nicht mehr
-    aus einer Hand-Kopie.
+def _cv2_renderer_keys() -> set[str]:
+    """CV2_METRICS-Keys ohne die feste "warn"-Zeile (keine Katalog-Metrik,
+    sondern die amtlichen Warnungen -- s. Spec Known Limitations)."""
+    return {m["key"] for m in CV2_METRICS if m["key"] != "warn"}
+
+
+def test_all_catalog_metrics_have_cv2_render_row():
+    """Struktureller Guard: JEDE im Backend-Katalog gefuehrte, waehlbare
+    Compare-Metrik-ID braucht eine CV2_METRICS-Renderzeile in der Mail.
+    Schlaegt fehl, sobald eine neu eingefuehrte Katalog-Metrik ohne
+    zugehoerige Mail-Zeile hinzukommt (der Bug-Typ von #1285/#1296/#1324).
+    Keine hartkodierte Anzahl -- Mengen-Vergleich, kein ``== N``.
     """
-    mapped = set(FRONTEND_TO_RENDERER_METRIC_ID.keys())
-    missing = ALL_METRICS_FRONTEND_IDS - mapped
+    catalog_keys = {entry["key"] for entry in get_compare_metric_catalog()}
+    renderer_ids_from_catalog = {
+        FRONTEND_TO_RENDERER_METRIC_ID[k]
+        for k in catalog_keys
+        if k in FRONTEND_TO_RENDERER_METRIC_ID
+    }
+    cv2_keys = _cv2_renderer_keys()
+
+    missing = renderer_ids_from_catalog - cv2_keys
     assert not missing, (
-        f"Editor-waehlbare Metrik-IDs ohne Renderer-Mapping (werden still "
+        f"Katalog-Metriken ohne CV2_METRICS-Zeile (werden in der Mail still "
         f"verworfen statt angezeigt): {sorted(missing)}"
     )
-    orphaned = mapped - ALL_METRICS_FRONTEND_IDS
+
+    orphaned = cv2_keys - renderer_ids_from_catalog
     assert not orphaned, (
-        f"FRONTEND_TO_RENDERER_METRIC_ID enthaelt Eintraege, die nicht in "
-        f"ALL_METRICS stehen (verwaistes Mapping, hart hinterlegte Kopie "
-        f"veraltet?): {sorted(orphaned)}"
+        f"CV2_METRICS enthaelt Zeilen ohne Katalog-Ursprung (verwaiste "
+        f"Renderzeile, Katalog veraltet?): {sorted(orphaned)}"
     )
 
 
-def test_ts_parser_finds_all_15_ids_on_real_file():
-    """AC-2 Vakuum-Schutz (rot vor Fix: ``_ts_metric_parser`` existiert noch
-    nicht -- ImportError). Der Parser muss auf der ECHTEN
-    ``compareMetricDefs.ts`` nachweislich alle 15 IDs finden -- ein
-    kaputter/leerer Parser (0 IDs) duerfte den Waechter oben sonst
-    faelschlich immer gruen erscheinen lassen, weil eine leere Menge nie
-    eine fehlende ID entdeckt.
+def test_guard_actually_fails_when_a_catalog_metric_has_no_cv2_row():
+    """Wirkungsnachweis (analog #1298 B3): haelt den Kern-Vergleich aus
+    ``test_all_catalog_metrics_have_cv2_render_row`` gegen KUENSTLICH um eine
+    CV2-Zeile reduzierte Kopien der Daten -- simuliert eine neue Katalog-
+    Metrik, die (wie bei #1285/#1296/#1324) keine Renderzeile in der Mail
+    bekommen hat. Arbeitet auf Kopien, mutiert keine Produktivdaten.
     """
-    assert COMPARE_METRIC_DEFS_TS.exists(), (
-        f"Erwarteter Pfad zu compareMetricDefs.ts existiert nicht: "
-        f"{COMPARE_METRIC_DEFS_TS}"
+    catalog_keys = {entry["key"] for entry in get_compare_metric_catalog()}
+    renderer_ids_from_catalog = {
+        FRONTEND_TO_RENDERER_METRIC_ID[k]
+        for k in catalog_keys
+        if k in FRONTEND_TO_RENDERER_METRIC_ID
+    }
+    real_cv2_keys = _cv2_renderer_keys()
+
+    # Vorbedingung: die echten Daten sind heute konsistent (kein bestehender
+    # Drift, den dieser Test nur zufaellig aufdecken wuerde).
+    assert renderer_ids_from_catalog - real_cv2_keys == set(), (
+        "Vorbedingung verletzt: echte Katalog-/CV2-Daten sind bereits "
+        "inkonsistent -- Wirkungsnachweis nicht aussagekraeftig."
     )
-    ids = parse_all_metrics_ids()
-    assert len(ids) == 25, (
-        f"Parser fand {len(ids)} IDs statt 25 auf der echten Datei -- "
-        f"Vakuum-Schutz-Verdacht (kaputtes Format oder falscher Pfad): {ids}"
-    )
-    assert len(ids) == len(set(ids)), f"Parser liefert Duplikate: {ids}"
 
+    # Kuenstlich reduzierte Kopie: eine CV2-Zeile "fehlt" (simuliert eine neue
+    # Katalog-Metrik ohne Renderzeile).
+    removed_key = next(iter(real_cv2_keys))
+    reduced_cv2_keys = real_cv2_keys - {removed_key}
 
-def test_guard_actually_fails_when_a_16th_metric_has_no_mapping():
-    """AC-2 Wirkungsnachweis (rot vor Fix: ``_ts_metric_parser`` existiert
-    noch nicht -- ImportError). Haelt den Kern-Vergleich aus
-    ``test_all_frontend_metric_ids_have_renderer_mapping`` gegen eine
-    KUENSTLICH um ein Mapping reduzierte Kopie von
-    ``FRONTEND_TO_RENDERER_METRIC_ID`` -- simuliert eine 16. waehlbare
-    Metrik, die (wie bei #1285/#1296) kein Renderer-Mapping bekommen hat.
-    Der Guard muss dafuer tatsaechlich rot werden, nicht nur zufaellig gruen
-    bleiben.
-    """
-    real_ids = parse_all_metrics_ids()
-    assert real_ids, "Vorbedingung: Parser liefert IDs (s. Vakuum-Schutz-Test)."
-
-    incomplete_mapping = dict(FRONTEND_TO_RENDERER_METRIC_ID)
-    del incomplete_mapping[real_ids[0]]
-
-    missing = set(real_ids) - set(incomplete_mapping.keys())
-    assert missing == {real_ids[0]}, (
-        f"Guard-Vergleich erkennt die kuenstlich entfernte ID "
-        f"'{real_ids[0]}' nicht als fehlend -- Wirkungsnachweis "
+    missing = renderer_ids_from_catalog - reduced_cv2_keys
+    assert missing == {removed_key}, (
+        f"Guard-Vergleich erkennt die kuenstlich entfernte Zeile "
+        f"'{removed_key}' nicht als fehlend -- Wirkungsnachweis "
         f"fehlgeschlagen: missing={missing}"
     )
 
-    # Wirkungsnachweis: derselbe Assert-Ausdruck wie im echten Guard-Test
-    # (test_all_frontend_metric_ids_have_renderer_mapping) muss gegen das
-    # kuenstlich reduzierte Mapping tatsaechlich einen AssertionError werfen.
+    # Derselbe Assert-Ausdruck wie im echten Guard-Test muss gegen die
+    # kuenstlich reduzierten Daten tatsaechlich einen AssertionError werfen.
     with pytest.raises(AssertionError):
         assert not missing, (
-            f"Editor-waehlbare Metrik-IDs ohne Renderer-Mapping (werden still "
-            f"verworfen statt angezeigt): {sorted(missing)}"
+            f"Katalog-Metriken ohne CV2_METRICS-Zeile (werden in der Mail "
+            f"still verworfen statt angezeigt): {sorted(missing)}"
         )
