@@ -3,8 +3,9 @@
 Pure Function ``render_compare_html()`` — analog zu ``html.py`` (Trip-Mail).
 
 v2-Layout (loest Score/Winner-Vertrag aus #253 ab, s. #1108):
-- Kein Score/Ranking/Winner-Card mehr — Orte alphabetisch nach Ortsname
-  sortiert (case-insensitiv, PO-Update 2026-07-08, `sort_locations_alphabetically`).
+- Kein Score/Ranking/Winner-Card mehr — Orte in der vom Nutzer konfigurierten
+  Preset-Reihenfolge (Issue #1359 Scheibe 2, `location_render_order`; loest die
+  alphabetische Sortierung des PO-Updates 2026-07-08 ab).
 - Uebersichtstabelle: Metriken als Zeilen x Orte als Spalten, inkl. Warn-Zeile
   mit Kuerzel-Chips je Ort (``CV2_METRICS``). KEIN Best-Wert-Highlight (Adversary
   F001, PO-Entscheidung) -- Zellfaerbung ausschliesslich ueber die Risk-Skala.
@@ -1011,12 +1012,19 @@ def _render_app_footer() -> str:
     )
 
 
-def sort_locations_alphabetically(locations: list[LocationResult]) -> list[LocationResult]:
-    """Zentraler Sortier-Helfer (PO-Update 2026-07-08): alphabetisch nach
-    Ortsname, case-insensitiv -- einheitlich fuer Uebersichts-Spalten,
-    Stundentabellen-Abschnitte (hier) UND Klartext (output.renderers.comparison,
-    importiert von dort -- keine Doppel-Implementierung)."""
-    return sorted(locations, key=lambda loc: loc.location.name.casefold())
+def location_render_order(locations: list[LocationResult]) -> list[LocationResult]:
+    """Zentraler Orts-Reihenfolge-Helfer (Issue #1359 Scheibe 2): reicht die
+    bereits in ``ComparisonResult.locations`` ankommende, vom Nutzer
+    konfigurierte Reihenfolge unveraendert durch -- einheitlich fuer
+    Uebersichts-Spalten, Stundentabellen-Abschnitte (hier), Klartext, Telegram
+    und SMS (output.renderers.comparison, importiert von dort -- keine
+    Doppel-Implementierung).
+
+    Bleibt als einziger Choke-Point bestehen (fruehere alphabetische
+    Sortierung, PO-Update 2026-07-08, abgeloest durch #1359): sollte kuenftig
+    doch wieder eine serverseitige Sortierregel gebraucht werden, gibt es
+    weiterhin genau eine Stelle dafuer statt vier Aufrufstellen."""
+    return list(locations)
 
 
 # ---------------------------------------------------------------------------
@@ -1089,7 +1097,7 @@ def render_compare_html(
     _ = top_n_details  # akzeptiert (Issue #1104), aktuell ohne Wirkung (s. Docstring)
     warnings = warnings or []
     sig = profile_signature(profile)
-    locations = sort_locations_alphabetically(result.locations)
+    locations = location_render_order(result.locations)
 
     header_html = _render_header(result, sig)
     warnings_html = "".join(_render_warning_banner(w) for w in warnings)
@@ -1188,5 +1196,5 @@ __all__ = [
     "render_compare_html",
     "CV2_METRICS",
     "HOUR_METRICS",
-    "sort_locations_alphabetically",
+    "location_render_order",
 ]

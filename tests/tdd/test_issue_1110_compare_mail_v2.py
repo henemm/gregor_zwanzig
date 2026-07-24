@@ -232,10 +232,12 @@ class TestCompareMailV2HTML:
     SPEC: docs/specs/modules/issue_1110_compare_mail_v2.md
     """
 
-    def test_ac1_kein_score_kein_winner_orte_alphabetisch_sortiert(self):
-        """AC-1 (PO-Update 2026-07-08): kein 'Score'/'Empfehlung'/'Bester
-        Standort'/🏆 mehr im HTML, Orte erscheinen ALPHABETISCH sortiert
-        (case-insensitiv), NICHT in Preset-/Input-Reihenfolge."""
+    def test_ac1_kein_score_kein_winner_orte_in_preset_reihenfolge(self):
+        """AC-1 — die alte alphabetische AC ist durch #1359 Scheibe 2
+        abgeloest (Spec: compare_location_order.md). Kein
+        'Score'/'Empfehlung'/'Bester Standort'/🏆 mehr im HTML, Orte erscheinen
+        jetzt in der vom Nutzer konfigurierten PRESET-/Input-Reihenfolge
+        (Collobrières, Marseille, Fréjus), NICHT alphabetisch."""
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
@@ -247,21 +249,20 @@ class TestCompareMailV2HTML:
             )
 
         input_names = [loc.location.name for loc in result.locations]
-        expected_order = sorted(input_names, key=str.casefold)
-        assert input_names != expected_order, (
+        assert input_names != sorted(input_names, key=str.casefold), (
             "Test-Fixture muss bewusst NICHT alphabetisch sein (Collobrières, "
-            "Marseille, Fréjus), sonst beweist der Test die Sortierung nicht"
+            "Marseille, Fréjus), sonst beweist der Test die Reihenfolge nicht"
         )
 
         # Der Aggregat-WarnBlock-Banner (#1216, AC-4) nennt bewusst den
         # fuehrenden Ort ganz oben ("höchste Stufe ROT · Marseille"). Die
-        # alphabetische Sortierung ist eine Eigenschaft der Uebersichtstabelle
+        # Orts-Reihenfolge ist eine Eigenschaft der Uebersichtstabelle
         # (Spaltenreihenfolge) — dort wird sie geprueft, nicht am gesamten HTML
         # inkl. des neuen Banners.
         table = _find_overview_table(html)
-        positions = [table.index(name) for name in expected_order]
+        positions = [table.index(name) for name in input_names]
         assert positions == sorted(positions), (
-            f"Orte muessen alphabetisch sortiert {expected_order} erscheinen, "
+            f"Orte muessen in Preset-Reihenfolge {input_names} erscheinen, "
             f"gefundene Positionen: {positions}"
         )
 
@@ -279,11 +280,12 @@ class TestCompareMailV2HTML:
         rows = _rows(table)
         assert len(rows) >= 2, "Uebersichtstabelle braucht mind. Header + 1 Datenzeile"
 
-        # Alphabetische Spaltenreihenfolge (PO-Update 2026-07-08):
-        # Collobrières < Fréjus < Marseille (case-insensitiv).
+        # Preset-/Input-Spaltenreihenfolge (#1359 Scheibe 2, loest die
+        # alphabetische Sortierung des PO-Updates 2026-07-08 ab):
+        # Collobrières, Marseille, Fréjus (Fixture-Reihenfolge).
         header = rows[0]
-        assert header[1:] == ["Collobrières", "Fréjus", "Marseille"], (
-            f"Spaltenkoepfe muessen die Ortsnamen alphabetisch sortiert zeigen, war: {header}"
+        assert header[1:] == ["Collobrières", "Marseille", "Fréjus"], (
+            f"Spaltenkoepfe muessen die Ortsnamen in Preset-Reihenfolge zeigen, war: {header}"
         )
 
         warn_row = rows[1]
@@ -293,8 +295,8 @@ class TestCompareMailV2HTML:
         assert "Hitze" in warn_row[1] and "Zugang" in warn_row[1], (
             f"Collobrières-Warnzelle muss Kuerzel 'Hitze' und 'Zugang' zeigen, war: {warn_row[1]!r}"
         )
-        assert "Brand" in warn_row[3] and "4" in warn_row[3], (
-            f"Marseille-Warnzelle muss Kuerzel 'Brand · 4' zeigen, war: {warn_row[3]!r}"
+        assert "Brand" in warn_row[2] and "4" in warn_row[2], (
+            f"Marseille-Warnzelle muss Kuerzel 'Brand · 4' zeigen, war: {warn_row[2]!r}"
         )
 
     def test_ac2_kein_best_value_highlight(self):
@@ -386,9 +388,10 @@ class TestCompareMailV2HTML:
         assert table, "Uebersichtstabelle nicht gefunden"
         rows = _rows(table)
         warn_row = rows[1]
-        # Alphabetisch: Spalte 2 = Fréjus (Collobrières < Fréjus < Marseille).
-        assert warn_row[2] == "—", (
-            f"Fréjus (alert-frei) muss exakt '—' in der Warn-Zeile zeigen, war: {warn_row[2]!r}"
+        # Preset-Reihenfolge (#1359 Scheibe 2): Spalte 3 = Fréjus
+        # (Collobrières, Marseille, Fréjus — Fixture-Reihenfolge).
+        assert warn_row[3] == "—", (
+            f"Fréjus (alert-frei) muss exakt '—' in der Warn-Zeile zeigen, war: {warn_row[3]!r}"
         )
 
     def test_ac4a_warn_lead_block_vorhanden_wenn_warnungen(self):
@@ -432,8 +435,8 @@ class TestCompareMailV2HTML:
     def test_ac5_langform_warnstreifen_direkt_vor_stundentabelle(self):
         """AC-5: Langform-Warntext (nicht nur Kuerzel) steht direkt ueber der
         Stundentabelle des betroffenen Ortes; alert-freier Ort zeigt keinen
-        Streifen. Alphabetische Reihenfolge (PO-Update 2026-07-08):
-        Index 0 = Collobrières, Index 1 = Fréjus (alert-frei), Index 2 = Marseille."""
+        Streifen. Preset-/Input-Reihenfolge (#1359 Scheibe 2):
+        Index 0 = Collobrières, Index 1 = Marseille, Index 2 = Fréjus (alert-frei)."""
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
@@ -448,8 +451,10 @@ class TestCompareMailV2HTML:
             "Langform-Warntext (Hitze) muss direkt ueber Collobrières' Stundentabelle stehen"
         )
 
-        section1 = _location_section_before_hours(html, 1, n)
-        assert "Extreme Hitze" not in section1 and "Zugang" not in section1, (
+        # #1359 Scheibe 2: der alert-freie Fréjus steht jetzt an Index 2
+        # (Preset-Reihenfolge), nicht mehr an Index 1 (alphabetisch).
+        section2 = _location_section_before_hours(html, 2, n)
+        assert "Extreme Hitze" not in section2 and "Zugang" not in section2, (
             "Fréjus (alert-frei) darf keinen Warn-Streifen ueber seiner Stundentabelle zeigen"
         )
 
@@ -631,19 +636,20 @@ class TestCompareMailV2Text:
             "Klartext muss die amtliche Warnung 'Waldbrand-Gefahr — Stufe 4' (Marseille) zeigen"
         )
 
-    def test_ac10_klartext_alphabetisch_sortiert(self):
-        """PO-Update 2026-07-08: die alphabetische Sortierung gilt einheitlich
-        auch fuer den Klartext-Teil (zentraler Sortier-Helfer, keine
-        Doppel-Logik)."""
+    def test_ac10_klartext_in_preset_reihenfolge(self):
+        """AC-10 — die alte alphabetische AC ist durch #1359 Scheibe 2 abgeloest
+        (Spec: compare_location_order.md). Die konfigurierte Preset-Reihenfolge
+        gilt einheitlich auch fuer den Klartext-Teil (zentraler Reihenfolge-
+        Helfer location_render_order, keine Doppel-Logik)."""
         from output.renderers.comparison import render_compare_email
 
         result = _make_v2_result()
         _html_body, text_body = render_compare_email(result, profile=ActivityProfile.ALLGEMEIN)
 
-        expected_order = ["Collobrières", "Fréjus", "Marseille"]
+        expected_order = ["Collobrières", "Marseille", "Fréjus"]
         positions = [text_body.index(name) for name in expected_order]
         assert positions == sorted(positions), (
-            f"Klartext muss Orte alphabetisch sortiert {expected_order} zeigen, "
+            f"Klartext muss Orte in Preset-Reihenfolge {expected_order} zeigen, "
             f"gefundene Positionen: {positions}"
         )
 

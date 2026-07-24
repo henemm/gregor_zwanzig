@@ -172,7 +172,7 @@ class ComparisonResult:
     Single source of truth for both Web UI and Email renderers.
     Guarantees identical content across all output formats.
     """
-    locations: List[LocationResult]  # Sorted by score (descending)
+    locations: List[LocationResult]  # Reihenfolge = konfigurierte Preset-Reihenfolge, kein Score-Sort (#1110/#1359)
     time_window: Tuple[int, int]     # (start_hour, end_hour)
     target_date: date                # Forecast date
     created_at: datetime = field(default_factory=datetime.now)

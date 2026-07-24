@@ -378,7 +378,8 @@ Eindruck einer Uhrzeit-Einschränkung erweckt.
   IDs)
 - **Output:** Übersichts-Matrix mit bis zu fünf zusätzlichen Zeilen, wenn
   gewählt; HTML-Zusammenfassungs-Block + Klartext-Zusammenfassungs-Block, je
-  ein Satz pro Ort mit Daten, alphabetisch geordnet, unterhalb der Übersicht,
+  ein Satz pro Ort mit Daten, in der vom Nutzer konfigurierten Reihenfolge
+  (siehe Ablösungs-Vermerk bei AC-10), unterhalb der Übersicht,
   inhaltlich beschränkt auf die tatsächlich gewählten Metriken
 - **Side effects:** keine (rein formatierend/berechnend, pure functions wie
   der restliche Compare-Renderer-Pfad; `LocationResult` bleibt transient)
@@ -461,13 +462,21 @@ Eindruck einer Uhrzeit-Einschränkung erweckt.
   - Test: `LocationResult(error="...")` bzw. `hourly_data=[]` → kein Eintrag,
     keine leere Zeile, kein Crash.
 
-- **AC-10:** Given ein Vergleich mit mehreren Orten, When die
-  Zusammenfassungs-Sektion erscheint, Then sind die Orte alphabetisch
-  geordnet, identisch zur Reihenfolge in der Matrix darüber — es gibt keine
-  Sortierung nach Score und keine optische Hervorhebung eines
-  "Gewinner"-Orts.
-  - Test: Orte in nicht-alphabetischer Score-Reihenfolge im Input →
-    Zusammenfassungs-Reihenfolge ist alphabetisch und deckt sich mit der
+> **⚠️ AC-10 abgelöst am 2026-07-24 durch
+> [`compare_location_order.md`](compare_location_order.md) (Issue #1359,
+> Scheibe 2).** Die Orts-Reihenfolge ist **nicht mehr alphabetisch**, sondern
+> folgt der vom Nutzer im Orte-Tab konfigurierten Preset-Reihenfolge. Der
+> zweite Halbsatz (keine Score-Sortierung, keine Gewinner-Hervorhebung) gilt
+> unverändert weiter. Die folgende Fassung beschreibt den Stand **vor** dieser
+> Änderung und ist nur noch historisch zu lesen.
+
+- **AC-10 (HISTORISCH, abgelöst durch #1359 Scheibe 2):** Given ein Vergleich
+  mit mehreren Orten, When die Zusammenfassungs-Sektion erscheint, Then sind
+  die Orte in der vom Nutzer konfigurierten Reihenfolge geordnet, identisch
+  zur Reihenfolge in der Matrix darüber — es gibt keine Sortierung nach Score
+  und keine optische Hervorhebung eines "Gewinner"-Orts.
+  - Test: Orte in bewusst nicht-alphabetischer Reihenfolge im Input →
+    Zusammenfassungs-Reihenfolge folgt der Eingabe und deckt sich mit der
     Matrix-Kopfzeile.
 
 - **AC-11:** Given eine bestehende Trip-Briefing-Mail (HTML und Klartext),

@@ -319,6 +319,7 @@ def send_one_compare_preset(
     from output.renderers.comparison import (
         render_compare_email, render_compare_sms, render_compare_telegram,
     )
+    from services.compare_preview_service import order_locations_by_ids
     from services.comparison_engine import COMPARE_FORECAST_HOURS, ComparisonEngine
     from services.notification_service import NotificationService
     from services.report_config_resolver import resolve_compare_render_options
@@ -337,7 +338,9 @@ def send_one_compare_preset(
 
     if all_locations_cache is None:
         all_locations_cache = load_all_locations(user_id=user_id)
-    locations = [loc for loc in all_locations_cache if loc.id in location_ids]
+    # Issue #1359 Scheibe 2: reihenfolge-erhaltend über location_ids filtern
+    # (konfigurierte Orts-Reihenfolge), nicht über die Cache-Reihenfolge.
+    locations = order_locations_by_ids(all_locations_cache, location_ids)
     if not locations:
         raise ValueError(f"Preset {preset_id}: Orte {location_ids} nicht aufloesbar")
 

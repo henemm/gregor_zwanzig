@@ -274,8 +274,9 @@ class ComparisonEngine:
                     error=str(e),
                 ))
 
-        # Sort by score (descending)
-        results.sort(key=lambda r: r.score if r.error is None else -1, reverse=True)
+        # Issue #1359 Scheibe 2: keine Score-Sortierung mehr — `results` entsteht
+        # bereits in der Reihenfolge des `locations`-Arguments (= konfigurierte
+        # Orts-Reihenfolge). `score` bleibt berechnet, wird aber nicht sortiert.
 
         return ComparisonResult(
             locations=results,

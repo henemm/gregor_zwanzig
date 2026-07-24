@@ -11,6 +11,18 @@ tags: [compare, email, renderer, html, python, redesign]
 
 # Issue #1110 — Ortsvergleich-Mail v2 (neues Layout nach Design-Vorlage)
 
+> **⚠️ Teil-Ablösung am 2026-07-24 durch
+> [`compare_location_order.md`](../../modules/compare_location_order.md)
+> (Issue #1359, Scheibe 2).** Die hier festgeschriebene **alphabetische**
+> Orts-Reihenfolge (AC-1, Zeilen 223-227, sowie die Erwähnungen bei „Datenmodell"
+> und „Ort-Reihenfolge in HTML und Klartext") ist nicht mehr gültig: Orte
+> erscheinen jetzt in der vom Nutzer im Orte-Tab konfigurierten
+> Preset-Reihenfolge. Bemerkenswert: die alphabetische Festlegung überstimmte
+> 2026-07-08 ihrerseits eine frühere Preset-Reihenfolge-Vorgabe — #1359 Scheibe 2
+> stellt exakt jene ältere Vorgabe wieder her. Der Rest (kein Score, kein Winner,
+> kein Best-Wert-Highlight) gilt unverändert. Diese Archiv-Datei wird bewusst
+> **nicht** umgeschrieben — nur dieser Vermerk verweist auf den aktuellen Stand.
+
 ## Approval
 
 - [ ] Approved

@@ -26,7 +26,7 @@ from app.user import ComparisonResult, LocationResult
 from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.email.compare_html import (
     _build_location_outlook_rows, _fmt_precip_type, _fmt_thunder,
-    _fmt_visibility_overview, _metric_value, sort_locations_alphabetically,
+    _fmt_visibility_overview, _metric_value, location_render_order,
 )
 from output.renderers.email.outlook import render_outlook_plain
 from output.metric_format import format_value
@@ -151,7 +151,7 @@ def render_comparison_text(
     created_at = result.created_at
     # Zentraler Sortier-Helfer (PO-Update 2026-07-08): alphabetisch, case-
     # insensitiv, identisch zu render_compare_html() -- keine Doppel-Logik.
-    locations = sort_locations_alphabetically(result.locations)
+    locations = location_render_order(result.locations)
     if not locations:
         return "Keine Vergleichsdaten verfügbar."
 
@@ -376,7 +376,7 @@ def render_compare_telegram(
     max_cols = limits["max_table_cols"]
     metric_slots = None if max_cols is None else max(1, max_cols - 1)
 
-    locations = sort_locations_alphabetically(result.locations)
+    locations = location_render_order(result.locations)
     if not locations:
         return "Keine Vergleichsdaten verfügbar."
 
@@ -548,7 +548,7 @@ def render_compare_sms(
     vollstaendigen Vergleich, den sie nicht zeigt. Endgarantie: ``len <= 140``.
     """
     max_chars = CHANNEL_LIMITS["sms"]["max_chars"]
-    locations = sort_locations_alphabetically(result.locations)
+    locations = location_render_order(result.locations)
     if not locations:
         return "Vergleich: keine Daten"
 

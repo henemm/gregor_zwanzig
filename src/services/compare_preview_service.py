@@ -217,14 +217,30 @@ class ComparePreviewService:
                 f"Orts-Vergleich '{preset.get('id', '')}' hat keine Orte konfiguriert — "
                 "es gibt nichts zu vergleichen."
             )
-        by_id = {loc.id: loc for loc in load_all_locations(user_id=user_id)}
-        locations = [by_id[loc_id] for loc_id in location_ids if loc_id in by_id]
+        locations = order_locations_by_ids(
+            load_all_locations(user_id=user_id), location_ids
+        )
         if not locations:
             raise ValueError(
                 f"Orts-Vergleich '{preset.get('id', '')}': Orte {location_ids} "
                 "nicht aufloesbar"
             )
         return locations
+
+
+def order_locations_by_ids(locations: list, location_ids: list[str]) -> list:
+    """Filtert ``locations`` reihenfolge-erhaltend nach ``location_ids``.
+
+    Ordnungs-Kern (dict-by-id aufbauen, dann über ``location_ids`` iterieren) —
+    die Listenposition in ``location_ids`` IST die vom Nutzer konfigurierte
+    Reihenfolge (Issue #1359 Scheibe 2). Geteilt zwischen
+    ``ComparePreviewService._resolve_locations()`` und dem Versandpfad
+    (``scheduler_dispatch_service.send_one_compare_preset``), damit beide Wege
+    die gespeicherte Orts-Reihenfolge bewahren statt über eine andere Sammlung
+    (z. B. den Orte-Cache) zu iterieren.
+    """
+    by_id = {loc.id: loc for loc in locations}
+    return [by_id[loc_id] for loc_id in location_ids if loc_id in by_id]
 
 
 def _resolve_target_date(given: str | date | None) -> date:
