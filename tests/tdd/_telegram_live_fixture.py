@@ -8,9 +8,12 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
+
+import httpx as _httpx
 
 # ---------------------------------------------------------------------------
 # Konstanten
@@ -20,6 +23,72 @@ TEST_USER_ID = "tg-live-e2e"
 
 _STAGING_ENV_PATH = Path("/home/hem/gregor_zwanzig_staging/.env")
 _WANTED_KEYS = {"GZ_TELEGRAM_BOT_TOKEN", "GZ_TELEGRAM_CHAT_ID", "GZ_TELEGRAM_TEST_CHAT_ID"}
+
+# ---------------------------------------------------------------------------
+# Rate-Limit-Verträglichkeit für den Live-Sendepfad (Issue #686 Testpflege)
+# ---------------------------------------------------------------------------
+#
+# `deliver_and_cleanup()` feuert für 7 Kommandos (teils mehrere Bubbles, s.
+# notification_service._send_channels) + das jeweilige deleteMessage-Cleanup
+# in schneller Folge an denselben Test-Chat. Telegram erlaubt grob ~20
+# Nachrichten/Minute pro Chat und antwortet sonst mit HTTP 429
+# (`retry_after` ~35-43s) — reproduzierbar, kein Zufall. Der Wrapper unten
+# pacet JEDEN echten POST an api.telegram.org (sendMessage UND
+# deleteMessage laufen beide über httpx.post in output.channels.telegram)
+# und respektiert bei 429 den von Telegram gelieferten retry_after-Wert,
+# begrenzt auf max. 2 Versuche. Nicht-Telegram-POSTs (z.B. Wetter-Provider
+# in AC-3) sind unberührt — reines Testfixture, kein Produktivcode-Edit.
+
+_PACING_SECONDS = 3.5
+_MAX_ATTEMPTS_ON_429 = 2
+_last_telegram_post_at = [0.0]
+_patch_state = {"installed": False}
+# Original httpx.post VOR dem Patchen sichern -- tg.httpx ist dasselbe
+# Modul-Objekt wie _httpx (kein Kopie-Import), ein Patch auf tg.httpx.post
+# ändert also auch _httpx.post selbst. Ohne diese gesicherte Referenz würde
+# der Wrapper unten sich selbst aufrufen (unendliche Rekursion).
+_real_httpx_post = _httpx.post
+
+
+def _paced_telegram_post(url, *args, **kwargs):
+    """Wrapper um httpx.post: Pacing + 429-Backoff, nur für die Telegram-API.
+
+    Wartet vor jedem Telegram-POST mindestens _PACING_SECONDS seit dem
+    letzten Telegram-POST (Bubbles/Cleanup zählen beide aufs Limit). Bei
+    HTTP 429 wird der von Telegram gelieferte `retry_after` respektiert und
+    bis zu _MAX_ATTEMPTS_ON_429 mal versucht, statt hart zu scheitern.
+    """
+    if "api.telegram.org" not in url:
+        return _real_httpx_post(url, *args, **kwargs)
+
+    elapsed = time.monotonic() - _last_telegram_post_at[0]
+    if elapsed < _PACING_SECONDS:
+        time.sleep(_PACING_SECONDS - elapsed)
+
+    attempt = 1
+    while True:
+        response = _real_httpx_post(url, *args, **kwargs)
+        _last_telegram_post_at[0] = time.monotonic()
+        if response.status_code != 429 or attempt >= _MAX_ATTEMPTS_ON_429:
+            return response
+        retry_after = 5.0
+        try:
+            retry_after = float(response.json().get("parameters", {}).get("retry_after", retry_after))
+        except (ValueError, AttributeError, TypeError):
+            pass
+        time.sleep(retry_after + 1.0)
+        attempt += 1
+
+
+def _ensure_paced_telegram_post() -> None:
+    """Installiert den Pacing/Backoff-Wrapper einmalig auf dem echten
+    Sendepfad (output.channels.telegram.httpx.post). Rein testseitig für
+    den Live-Testlauf — Produktivcode bleibt unverändert."""
+    if _patch_state["installed"]:
+        return
+    import output.channels.telegram as tg
+    tg.httpx.post = _paced_telegram_post
+    _patch_state["installed"] = True
 
 
 # ---------------------------------------------------------------------------
@@ -145,19 +214,27 @@ def ensure_test_user_with_active_trip(
 def active_trip_for(user_id: str, data_dir: str = "data") -> Optional[object]:
     """Gibt den heute-aktiven Trip des Users zurück, sonst None.
 
-    Liest direkt aus {data_dir}/users/{user_id}/trips/*.json via load_trip(path).
-    Nicht load_all_trips (CWD-relativ, ignoriert data_dir).
+    Liest direkt aus {data_dir}/users/{user_id}/briefings/*.json via
+    load_trip(path) (Issue #1250 Scheibe 7a Cutover, ADR-0023 -- die
+    Anwendung liest trips seither aus briefings/, nicht mehr aus trips/,
+    s. app.loader.load_all_trips/get_briefings_dir). Nicht load_all_trips
+    (CWD-relativ, ignoriert data_dir). briefings/ enthaelt auch
+    ComparePresets (kind="vergleich") -- die werden hier uebersprungen,
+    damit ein Orts-Vergleich nie faelschlich als aktiver Trip durchgeht.
     """
     from app.loader import load_trip
 
-    trips_dir = Path(data_dir) / "users" / user_id / "trips"
-    if not trips_dir.exists():
+    briefings_dir = Path(data_dir) / "users" / user_id / "briefings"
+    if not briefings_dir.exists():
         return None
 
     today = date.today()
-    for trip_file in trips_dir.glob("*.json"):
+    for briefing_file in briefings_dir.glob("*.json"):
         try:
-            trip = load_trip(str(trip_file))
+            raw = json.loads(briefing_file.read_text(encoding="utf-8"))
+            if raw.get("kind") == "vergleich":
+                continue
+            trip = load_trip(raw)
             if trip is None:
                 continue
             if trip.start_date <= today <= trip.end_date:
@@ -266,6 +343,7 @@ def deliver_and_cleanup(
     from output.channels.telegram import TelegramOutput
     from services.inbound_telegram_reader import InboundTelegramReader
 
+    _ensure_paced_telegram_post()
     settings = Settings()
 
     # Echtes Update-Dict wie Telegram es senden würde (message-Typ)
@@ -386,8 +464,12 @@ def _create_active_trip(user_id: str, data_dir: str) -> None:
     tomorrow = today + timedelta(days=1)
     end = today + timedelta(days=2)
 
-    trips_dir = Path(data_dir) / "users" / user_id / "trips"
-    trips_dir.mkdir(parents=True, exist_ok=True)
+    # Issue #1250 Scheibe 7a Cutover (ADR-0023): die Anwendung liest Trips
+    # aus briefings/, nicht mehr aus trips/ (s. app.loader.load_all_trips,
+    # get_briefings_dir). data_dir bleibt respektiert (Sicherheits-Guard
+    # #1013 oben) -- nur der Unterordner wechselt.
+    briefings_dir = Path(data_dir) / "users" / user_id / "briefings"
+    briefings_dir.mkdir(parents=True, exist_ok=True)
 
     trip_id = "tg-live-e2e-trip"
     trip_data = {
@@ -498,7 +580,7 @@ def _create_active_trip(user_id: str, data_dir: str) -> None:
         "report_config": {"trip_id": trip_id, "send_telegram": True},
     }
 
-    trip_file = trips_dir / f"{trip_id}.json"
+    trip_file = briefings_dir / f"{trip_id}.json"
     trip_file.write_text(json.dumps(trip_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 

@@ -135,6 +135,7 @@ def test_ac1_fixture_ensures_user_with_active_trip(tmp_path):
 # AC-3 — alle 7 Befehle erzeugen sinnvollen Inhalt (echte Pipeline)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.real_data_root
 @pytest.mark.skipif(
     not live_telegram_enabled(),
     reason="GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)",
@@ -238,6 +239,8 @@ def test_ac3_all_seven_commands_produce_meaningful_content():
 # AC-4 — echte Zustellung + Cleanup gegen den echten Bot (gated)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.real_data_root
+@pytest.mark.timeout(240)
 @pytest.mark.skipif(
     not live_telegram_enabled(),
     reason="GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)",
@@ -256,6 +259,14 @@ def test_ac4_live_delivery_and_cleanup():
     + Segment-Bubble) und räumt sie ebenfalls auf — damit ist das siebte
     Akzeptanzkriterium aus der 1007-Spec (volle Bubbles statt Einzeiler) hier
     erstmals live bewiesen.
+
+    @pytest.mark.timeout(240) (statt globalem 30s-Default, Issue #1210 AC-1
+    erlaubt deklarierte Ausnahmen): der Live-Sendepfad im Fixture pacet jeden
+    Telegram-POST (_paced_telegram_post in _telegram_live_fixture.py) mit
+    ~3.5s Abstand, weil Telegram sonst mit HTTP 429 abriegelt (7 Kommandos,
+    teils mehrere Bubbles, plus Cleanup-deleteMessage zählt ebenfalls aufs
+    Limit) — die Summe der Wartezeiten sprengt 30s, bleibt aber im Rahmen
+    "ein paar Minuten" für einen Test, der nur beim Deploy läuft.
     """
     from tests.tdd._telegram_live_fixture import deliver_and_cleanup
 
