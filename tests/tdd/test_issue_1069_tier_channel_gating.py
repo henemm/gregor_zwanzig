@@ -130,6 +130,7 @@ def _stub_settings(port: int, user_id: str):
     return Settings().with_user_profile(user_id).model_copy(update={
         "sms_gateway_url": f"http://127.0.0.1:{port}/api/sms",
         "seven_api_key": "test-stub-key",
+        "seven_sandbox_key": "test-stub-key",
         "sms_to": "+49000000000",
         "sms_from": None,
     })

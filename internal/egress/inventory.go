@@ -31,7 +31,7 @@ var Inventory = map[string]Kind{
 	"api.meteoalarm.org":                Blocked,
 	"public-api.meteofrance.fr":         Blocked,
 	"www.risque-prevention-incendie.fr": Blocked,
-	"gateway.seven.io":                  Blocked,
+	"gateway.seven.io":                  TestAccess,
 	"api.telegram.org":                  Blocked,
 	"mail.henemm.com":                   TestAccess,
 	// Go-Dienst: Ortsauflösung, Höhen, Tour-Import — kostenlos und

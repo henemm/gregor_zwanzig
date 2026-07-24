@@ -154,6 +154,10 @@ class Settings(BaseSettings):
     # SMS settings (for sms channel)
     sms_gateway_url: str = Field(default="https://gateway.seven.io/api/sms", description="SMS gateway HTTP endpoint")
     seven_api_key: Optional[str] = Field(default=None, description="seven.io API key (env: GZ_SEVEN_API_KEY)")
+    seven_sandbox_key: Optional[str] = Field(
+        default=None,
+        description="seven.io Sandbox-API-Key (env: GZ_SEVEN_SANDBOX_KEY) — sendet nie, kostet nie",
+    )
     sms_from: Optional[str] = Field(default=None, description="SMS sender ID or number")
     sms_to: Optional[str] = Field(default=None, description="SMS recipient phone number")
 
@@ -223,6 +227,7 @@ class Settings(BaseSettings):
                 "smtp_host": test_host,
                 "smtp_port": self.test_smtp_port,
                 "telegram_chat_id": self.telegram_test_chat_id or self.telegram_chat_id,
+                "seven_api_key": self.seven_sandbox_key or self.seven_api_key,
             })
         return self.model_copy(update={
             "smtp_host": test_host,
@@ -235,6 +240,7 @@ class Settings(BaseSettings):
             "imap_pass": self.test_imap_pass or self.test_smtp_pass,
             "is_test_mode": True,
             "telegram_chat_id": self.telegram_test_chat_id or self.telegram_chat_id,
+            "seven_api_key": self.seven_sandbox_key or self.seven_api_key,
         })
 
     @staticmethod

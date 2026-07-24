@@ -29,8 +29,28 @@ class SMSOutput:
     def name(self) -> str:
         return "sms"
 
+    def _guard_test_mode_sandbox_key(self) -> None:
+        """Bedingungsloser Guard (Issue #1336, Vorbild telegram.py #1288): im
+        Test-Modus (is_test_mode=True) ist AUSSCHLIESSLICH der konfigurierte
+        seven.io-Sandbox-Key erlaubt. Faengt die Fallback-Luecke aus
+        config.py::for_testing() ab: fehlt seven_sandbox_key, bleibt
+        seven_api_key sonst unveraendert der Prod-Key.
+        """
+        if not self._settings.is_test_mode:
+            return
+        sandbox_key = self._settings.seven_sandbox_key
+        active = self._settings.seven_api_key
+        if not sandbox_key or active != sandbox_key:
+            raise OutputConfigError(
+                "sms",
+                "Test-Modus aktiv, aber seven_api_key ist nicht der "
+                "Sandbox-Zugang (GZ_SEVEN_SANDBOX_KEY) — Versand blockiert "
+                "(Issue #1336).",
+            )
+
     def send(self, subject: str, body: str) -> None:
         """Send body as SMS via seven.io. subject is ignored."""
+        self._guard_test_mode_sandbox_key()
         payload: dict[str, str] = {
             "to": self._settings.sms_to,
             "text": body,

@@ -43,7 +43,7 @@ INVENTORY: dict[str, IsolationKind] = {
     "public-api.meteofrance.fr": IsolationKind.BLOCKED,
     # Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
     "www.risque-prevention-incendie.fr": IsolationKind.BLOCKED,
-    "gateway.seven.io": IsolationKind.BLOCKED,
+    "gateway.seven.io": IsolationKind.TEST_ACCESS,
     "api.telegram.org": IsolationKind.BLOCKED,
     "mail.henemm.com": IsolationKind.TEST_ACCESS,
     # Go-Dienst (#1337, Scheibe Go-Prozess): Ortsaufloesung, Hoehen,
