@@ -152,6 +152,42 @@ class TelegramOutput:
                 "Versand blockiert (Issue #1288).",
             )
 
+    def _guard_test_mode_bot_token(self) -> None:
+        """Fail-closed Token-Guard (Issue #1363, Vorbild sms.py
+        _guard_test_mode_sandbox_key #1336): im Test-Modus ist AUSSCHLIESSLICH
+        der konfigurierte Test-Bot-Token erlaubt. Faengt die Fallback-Luecke
+        aus config.py::for_testing() ab: fehlt telegram_test_bot_token, bleibt
+        telegram_bot_token sonst unveraendert der Prod-Token.
+        """
+        if not self._settings.is_test_mode:
+            return
+        test_token = self._settings.telegram_test_bot_token
+        active = self._settings.telegram_bot_token
+        if not test_token or active != test_token:
+            raise OutputConfigError(
+                "telegram",
+                "Test-Modus aktiv, aber es ist nicht der Test-Bot-Token "
+                "(GZ_TELEGRAM_TEST_BOT_TOKEN) — Versand blockiert (Issue #1363).",
+            )
+
+    def _guard_test_mode_target_chat(self, chat_id) -> None:
+        """Argument-basierter Chat-Guard (Issue #1363): prueft die
+        UEBERGEBENE chat_id, nicht settings.telegram_chat_id (das deckt
+        bereits _guard_test_mode_chat_id, #1288). Faengt die drei
+        argument-basierten schreibenden Methoden ab, die der bestehende Guard
+        nicht erfasst.
+        """
+        if not self._settings.is_test_mode:
+            return
+        test_chat_id = self._settings.telegram_test_chat_id
+        if not test_chat_id or str(chat_id) != str(test_chat_id):
+            raise OutputConfigError(
+                "telegram",
+                f"Test-Modus aktiv, aber chat_id={chat_id!r} ist nicht die "
+                "konfigurierte Test-Chat-ID (GZ_TELEGRAM_TEST_CHAT_ID) — "
+                "Versand blockiert (Issue #1363).",
+            )
+
     def send(
         self, subject: str, body: str, reply_markup: dict | None = None,
         *, parse_mode: str | None = None, suppress_subject_line: bool = False,
@@ -176,6 +212,7 @@ class TelegramOutput:
             OutputConfigError: Test-Modus mit fehlender/abweichender
                 Test-Chat-ID (Issue #1288) — VOR jedem httpx.post.
         """
+        self._guard_test_mode_bot_token()
         self._guard_test_mode_chat_id()
         token = self._settings.telegram_bot_token
         chat_id = self._settings.telegram_chat_id
@@ -240,6 +277,8 @@ class TelegramOutput:
         OHNE `parse_mode`, mit gestrippten HTML-Tags UND `html.unescape()`ten
         Entities — sonst wuerde der Fallback "&amp;" statt "&" zeigen, ein
         kosmetischer Fehler gegen einen anderen getauscht."""
+        self._guard_test_mode_bot_token()
+        self._guard_test_mode_target_chat(chat_id)
         token = self._settings.telegram_bot_token
         url = f"{TELEGRAM_API_BASE}/bot{token}/sendMessage"
         fallback_text = html.unescape(_HTML_TAG_RE.sub("", message))
@@ -281,6 +320,8 @@ class TelegramOutput:
         Returns:
             True on HTTP 200 + ok:true, False otherwise.
         """
+        self._guard_test_mode_bot_token()
+        self._guard_test_mode_target_chat(chat_id)
         token = self._settings.telegram_bot_token
         url = f"{TELEGRAM_API_BASE}/bot{token}/deleteMessage"
         payload: dict = {"chat_id": chat_id, "message_id": message_id}
@@ -316,6 +357,8 @@ class TelegramOutput:
         fail-soft: a non-200 / HTTPError / Timeout is only logged, never raised —
         "message is not modified" and stale messages must not crash the webhook.
         """
+        self._guard_test_mode_bot_token()
+        self._guard_test_mode_target_chat(chat_id)
         token = self._settings.telegram_bot_token
         url = f"{TELEGRAM_API_BASE}/bot{token}/editMessageText"
 
@@ -369,6 +412,7 @@ class TelegramOutput:
             commands: List of command dicts with 'command' and 'description' keys.
                       Defaults to BOT_COMMANDS when None.
         """
+        self._guard_test_mode_bot_token()
         token = self._settings.telegram_bot_token
         url = f"{TELEGRAM_API_BASE}/bot{token}/setMyCommands"
         payload = {"commands": commands if commands is not None else BOT_COMMANDS}

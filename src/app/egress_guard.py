@@ -44,7 +44,7 @@ INVENTORY: dict[str, IsolationKind] = {
     # Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
     "www.risque-prevention-incendie.fr": IsolationKind.BLOCKED,
     "gateway.seven.io": IsolationKind.TEST_ACCESS,
-    "api.telegram.org": IsolationKind.BLOCKED,
+    "api.telegram.org": IsolationKind.TEST_ACCESS,
     "mail.henemm.com": IsolationKind.TEST_ACCESS,
     # Go-Dienst (#1337, Scheibe Go-Prozess): Ortsaufloesung, Hoehen,
     # Tour-Import -- kostenlos und nebenwirkungsfrei, muss auf Staging gehen.

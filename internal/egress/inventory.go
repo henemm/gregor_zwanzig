@@ -32,7 +32,7 @@ var Inventory = map[string]Kind{
 	"public-api.meteofrance.fr":         Blocked,
 	"www.risque-prevention-incendie.fr": Blocked,
 	"gateway.seven.io":                  TestAccess,
-	"api.telegram.org":                  Blocked,
+	"api.telegram.org":                  TestAccess,
 	"mail.henemm.com":                   TestAccess,
 	// Go-Dienst: Ortsauflösung, Höhen, Tour-Import — kostenlos und
 	// nebenwirkungsfrei, muss auf Staging funktionieren.

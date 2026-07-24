@@ -149,16 +149,18 @@ vollständige bekannte Host-Set mit konservativer Default-Isolationsart
 | `public-api.meteofrance.fr` | BLOCKED (Scheibe 2b #1348) |
 | `www.risque-prevention-incendie.fr` | BLOCKED (Scheibe 2b #1348) |
 | `gateway.seven.io` | TEST_ACCESS (Scheibe B #1336, s. u.) |
-| `api.telegram.org` | BLOCKED |
+| `api.telegram.org` | TEST_ACCESS (Scheibe C #1363, s. u.) |
 | `mail.henemm.com` | TEST_ACCESS |
 
-`api.telegram.org` ist als `BLOCKED` deklariert, weil der Host in Staging
-keinen dedizierten Test-Zugang hat (Chat-ID-Risiko) — Scheibe C verfeinert das
-(z.B. Test-Chat-ID als eigener `TEST_ACCESS`-Pfad), das ist bewusst außerhalb
-von Scheibe A. `gateway.seven.io` war hier ursprünglich ebenso als `BLOCKED`
-deklariert (SMS-Kosten); Scheibe B (#1336, s. Known Limitations) hat dafür
-inzwischen einen dedizierten seven.io-Sandbox-Zugang gebaut, der Host steht
-deshalb jetzt auf `TEST_ACCESS`.
+`gateway.seven.io` und `api.telegram.org` waren hier ursprünglich beide als
+`BLOCKED` deklariert, weil Scheibe A für beide Hosts konservativ startete —
+zum Zeitpunkt von Scheibe A gab es keinen dedizierten Test-Zugang (SMS-Kosten-
+Risiko bzw. Chat-ID-Risiko). Scheibe B (#1336) hat für `gateway.seven.io`
+inzwischen einen dedizierten seven.io-Sandbox-Zugang gebaut, Scheibe C (#1363,
+`docs/specs/modules/egress_guard_telegram.md`) hat für `api.telegram.org`
+einen fail-closed Token-Guard plus einen argument-basierten Chat-Guard
+ergänzt. Beide Hosts stehen deshalb inzwischen auf `TEST_ACCESS` — Details je
+Scheibe siehe Known Limitations unten.
 
 ### Deterministischer Tripwire-Test (kein Netz, kein Mock-Theater)
 Das Original-`handle_request` wird durch einen Sentinel ersetzt, der eine
@@ -232,9 +234,10 @@ Entscheidungsregel, Idempotenz) wird von B–E **nicht** angefasst.
 - Import-Guard (Erkennung von `requests`/`aiosmtplib`, falls künftig eingeführt) ist NICHT Teil von Scheibe A — LoC-Budget. Aktuell gibt es keine `requests`/`aiosmtplib`/`urlopen`-Aufrufe im Repo (nur `urllib.parse.urlencode`), daher keine akute Lücke, aber dokumentierte Restlücke für B–E.
 - Validation-Tools (`src/validation/ground_truth.py` — Bergfex, `src/validation/geosphere_validator.py`) sind bewusst außerhalb von Scheibe A — sie laufen nicht im Staging-Report-Prozess.
 - `@pytest.mark.live`-Tests installieren den Guard bewusst nicht (echte APIs sind dort gewollt).
-- Scheiben C (Telegram-alle-Methoden), D (Warn-Dienste-Feinjustierung), E (Resend-Relay, infra#114) sind explizit NICHT Teil dieser Spec.
+- Scheiben D (Warn-Dienste-Feinjustierung), E (Resend-Relay, infra#114) sind explizit NICHT Teil dieser Spec.
 - **Geschlossen von der Scheibe „Go-Prozess" (`docs/specs/modules/egress_guard_go.md`):** der Go-Dienst `gregor-api` war als zweiter Prozess ungeschützt (eigener `http.DefaultTransport`, eigener `net/smtp`-Pfad), und der asynchrone httpx-Transport (`httpx.AsyncHTTPTransport.handle_async_request`) war auf der Python-Seite nicht gepatcht. Beides ist dort erledigt; das Host-Inventar liegt seither doppelt (Python + Go) und wird von `tests/test_egress_inventory_drift.py` deckungsgleich gehalten.
 - **Geschlossen von Scheibe B (`docs/specs/modules/egress_guard_sms.md`, #1336):** `gateway.seven.io` hatte keinen dedizierten Test-Zugang und stand deshalb auf `BLOCKED` (SMS-Kosten-Risiko). Scheibe B hat einen separaten seven.io-Sandbox-API-Key (`GZ_SEVEN_SANDBOX_KEY`) eingeführt, der laut Anbieter-Design nie sendet und nie kostet, plus einen fail-closed Channel-Guard (`SMSOutput._guard_test_mode_sandbox_key()`, Vorbild `telegram.py::_guard_test_mode_chat_id`, #1288). Der Host steht seither auf `TEST_ACCESS`.
+- **Geschlossen von Scheibe C (`docs/specs/modules/egress_guard_telegram.md`, #1363):** der bestehende Staging-Bot (`@GregorZwanzigStaging_bot`) hatte nur eine reine Umgebungskonfiguration ohne Erzwingung, `api.telegram.org` stand deshalb auf `BLOCKED`. Scheibe C hat mit `GZ_TELEGRAM_TEST_BOT_TOKEN` einen erzwungenen Platz für den Test-Bot geschaffen — ein fail-closed Token-Guard (`_guard_test_mode_bot_token`) plus ein argument-basierter Chat-Guard (`_guard_test_mode_target_chat`) auf 5 schreibenden Methoden. Der Host steht seither auf `TEST_ACCESS`. **Rest-Lücke:** `src/services/inbound_telegram_reader.py::_get_updates` (eigene Klasse, greift direkt auf den rohen `telegram_bot_token` zu) umgeht beide Guards und ist durch den Inventar-Flip erstmals passierbar — ausgelagert als **#1369**.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -255,3 +258,4 @@ ergänzen.
 - 2026-07-21: Initial spec erstellt — Issue #1337, Scheibe A
 - 2026-07-21: `## Test Plan`-Sektion ergänzt (nach `## Scope`, vor `## Implementation Details`) — spec-validator INVALID behoben
 - 2026-07-24: Scheibe B (#1336) geschlossen — `gateway.seven.io` von `BLOCKED` auf `TEST_ACCESS` gehoben (dedizierter seven.io-Sandbox-Zugang), Inventar-Tabelle und Known Limitations aktualisiert. Siehe `docs/specs/modules/egress_guard_sms.md`.
+- 2026-07-24: Scheibe C (#1363) geschlossen — `api.telegram.org` von `BLOCKED` auf `TEST_ACCESS` gehoben (fail-closed Token-Guard + argument-basierter Chat-Guard auf 5 schreibenden Methoden), Inventar-Tabelle, Absatz darunter und Known Limitations aktualisiert (inkl. Rest-Lücke `_get_updates` → #1369). Siehe `docs/specs/modules/egress_guard_telegram.md`.

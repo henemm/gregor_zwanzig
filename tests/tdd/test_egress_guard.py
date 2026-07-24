@@ -170,9 +170,13 @@ def test_all_three_transports_covered():
     settings = Settings(is_test_mode=True)
     install_egress_guard(settings)
 
-    # httpx: BLOCKED-Host aus dem Inventar -> EgressBlockedError, kein Touch.
+    # httpx: undeklarierter Host (Tripwire-Pfad) -> EgressBlockedError, kein
+    # Touch. Bewusst KEIN konkreter Inventar-Eintrag als Beispiel: jede
+    # kuenftige Scheibe (D: Warn-Dienste, E: Resend) hebt weitere Hosts von
+    # BLOCKED auf TEST_ACCESS -- der Tripwire-Pfad fuer undeklarierte Hosts
+    # bleibt dagegen dauerhaft stabil (s. api.telegram.org-Flip, Issue #1363).
     with pytest.raises(EgressBlockedError):
-        httpx.get("https://api.telegram.org/bot123/sendMessage")
+        httpx.get("https://nicht-im-inventar.invalid/bot123/sendMessage")
 
     # smtplib: undeklarierter Host -> EgressBlockedError, kein Touch.
     with pytest.raises(EgressBlockedError):

@@ -165,6 +165,11 @@ class Settings(BaseSettings):
     telegram_bot_token: str = Field(default="", description="Telegram Bot API token from @BotFather")
     telegram_chat_id: str = Field(default="", description="Telegram chat ID of recipient")
     telegram_test_chat_id: str = Field(default="", description="Telegram test chat ID (staging/test users) — GZ_TELEGRAM_TEST_CHAT_ID")
+    telegram_test_bot_token: str = Field(
+        default="",
+        description="Telegram Test-Bot-Token (env: GZ_TELEGRAM_TEST_BOT_TOKEN) — "
+                    "Staging-Bot, nie der Produktiv-Bot",
+    )
 
     @model_validator(mode="after")
     def _resend_default_deny(self) -> "Settings":
@@ -227,6 +232,7 @@ class Settings(BaseSettings):
                 "smtp_host": test_host,
                 "smtp_port": self.test_smtp_port,
                 "telegram_chat_id": self.telegram_test_chat_id or self.telegram_chat_id,
+                "telegram_bot_token": self.telegram_test_bot_token or self.telegram_bot_token,
                 "seven_api_key": self.seven_sandbox_key or self.seven_api_key,
             })
         return self.model_copy(update={
@@ -240,6 +246,7 @@ class Settings(BaseSettings):
             "imap_pass": self.test_imap_pass or self.test_smtp_pass,
             "is_test_mode": True,
             "telegram_chat_id": self.telegram_test_chat_id or self.telegram_chat_id,
+            "telegram_bot_token": self.telegram_test_bot_token or self.telegram_bot_token,
             "seven_api_key": self.seven_sandbox_key or self.seven_api_key,
         })
 

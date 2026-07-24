@@ -79,9 +79,14 @@ def httpx_sink(monkeypatch) -> _HttpxPostSink:
 
 def _guard_settings(**overrides) -> Settings:
     """Test-Modus-Settings mit der Fallback-Luecke aus config.py: Test-Chat-ID
-    fehlt, chat_id zeigt auf die Prod-ID."""
+    fehlt, chat_id zeigt auf die Prod-ID.
+
+    telegram_test_bot_token wird identisch zu telegram_bot_token gesetzt
+    (Issue #1363 Token-Guard, Faelle bleiben ausschliesslich Chat-ID-Faelle —
+    der neue Token-Guard soll hier nicht zusaetzlich greifen)."""
     defaults = dict(
         telegram_bot_token="fake:token",
+        telegram_test_bot_token="fake:token",
         telegram_chat_id=PROD_CHAT_ID,
         telegram_test_chat_id="",
         is_test_mode=True,
@@ -200,6 +205,7 @@ def test_profile_flagged_test_user_is_blocked_via_with_user_profile(
 
     base = Settings(
         telegram_bot_token="fake:token",
+        telegram_test_bot_token="fake:token",
         telegram_chat_id=PROD_CHAT_ID,
         telegram_test_chat_id="",
     )
