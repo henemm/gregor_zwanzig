@@ -2,7 +2,7 @@
 entity_id: gpx_proxy
 type: module
 created: 2026-04-14
-updated: 2026-04-14
+updated: 2026-07-24
 status: implemented
 version: "1.0"
 tags: [gpx, proxy, go, fastapi, multipart, pipeline]
@@ -27,10 +27,11 @@ Go-Handler und Python-FastAPI-Router, die zusammen das Parsen von GPX-Dateien au
 - 30-Sekunden-Timeout fuer grosse GPX-Dateien
 - Route-Registrierung in `cmd/server/main.go`
 - Fehler-Handling: 400 bei fehlender/ungueltiger GPX, 503 bei Python nicht erreichbar
+- Benutzer-Isolation (Issue #1352): `user_id` ist Pflicht-Query-Param, vom Go-Proxy aus der
+  Session injiziert; das Upload-Ziel wird per `get_data_dir(user_id) / "gpx"` aufgeloest
 
 ### Out of Scope
 - GPX-Datei-Verwaltung (Speichern, Loeschen, Auflisten)
-- Authentifizierung / Benutzer-Isolation
 - Batch-Upload mehrerer GPX-Dateien
 - Veraenderung der GPX-Parsing-Pipeline selbst
 
@@ -46,15 +47,17 @@ SvelteKit
     internal/handler/proxy.go
     GpxProxyHandler
             │  multipart + query params weiterleiten
+            │  haengt user_id der Session als Query-Param an (Issue #1352)
             │  30s Timeout
             ▼
     Python FastAPI (:8000)
     api/routers/gpx.py
     POST /api/gpx/parse
-            │
+            │  loest ueber get_data_dir(user_id) das nutzer-eigene
+            │  Upload-Ziel data/users/<user_id>/gpx/ auf
             ▼
     gpx_to_stage_data()
-    src/web/pages/trips.py
+    src/services/gpx_processing.py
             │  GPX-Parsing-Pipeline:
             │  gpx_parser → segment_builder →
             │  elevation_analysis → hybrid_segmentation
@@ -83,6 +86,8 @@ SvelteKit
 **Request:**
 - Content-Type: `multipart/form-data`
 - Body field `file`: GPX-Datei (`.gpx`)
+- Query-Param `user_id` (**Pflicht**, Issue #1352): vom Go-Proxy aus der Session injiziert, nicht
+  vom Client setzbar; bestimmt das per-Nutzer-Upload-Ziel `data/users/<user_id>/gpx/`
 - Query-Param `stage_date` (optional): `YYYY-MM-DD`, wird an Python weitergeleitet
 - Query-Param `start_hour` (optional): Integer, default `8`, wird an Python weitergeleitet
 
@@ -114,6 +119,17 @@ SvelteKit
 {"detail": "Ungueltiges GPX-Format: ..."}
 ```
 
+**Response 400:** `user_id` enthaelt Pfadanteile oder ist sonst kein gueltiger Ordnername
+(Issue #1352)
+```json
+{"detail": "invalid_user_id"}
+```
+
+**Response 422:** `user_id`-Query-Param fehlt (Pflichtparameter, FastAPI Validation)
+```json
+{"detail": [{"type": "missing", "loc": ["query", "user_id"], "msg": "Field required"}]}
+```
+
 **Response 503:** Python-Backend nicht erreichbar
 ```json
 {"error": "core_unavailable"}
@@ -127,7 +143,8 @@ SvelteKit
 | `net/http` | go stdlib | Multipart-Request bauen und an Python senden |
 | Python FastAPI | service | Backend auf localhost:8000 |
 | `gpxpy` | python package | GPX-Datei einlesen (via bestehende Pipeline) |
-| `src/web/pages/trips.gpx_to_stage_data` | python function | Kern-Pipeline: GPX → Stage + Waypoints |
+| `src/services/gpx_processing.gpx_to_stage_data` | python function | Kern-Pipeline: GPX → Stage + Waypoints |
+| `app.loader.get_data_dir` | python function | Loest das nutzer-eigene Datenverzeichnis auf (`data/users/<user_id>/`), Grundlage des Upload-Ziels (Issue #1352) |
 | `api/routers/gpx.py` | python module | FastAPI Router (neu) |
 
 ## Implementation Details
@@ -135,28 +152,41 @@ SvelteKit
 ### Python Router (`api/routers/gpx.py`)
 
 ```python
+import re
 from fastapi import APIRouter, UploadFile, File, Query, HTTPException
 from typing import Optional
 from datetime import date
 
 router = APIRouter()
 
+# Bug #1352: user_id darf keine Pfadanteile enthalten, sonst kann get_data_dir()
+# in den Ordner eines anderen Nutzers schreiben. Muster identisch zu
+# internal/handler/passkey.go (Go-Registrierung).
+_VALID_USER_ID = re.compile(r"^[a-zA-Z0-9_-]+$")
+
 @router.post("/api/gpx/parse")
 async def parse_gpx(
     file: UploadFile = File(...),
+    user_id: str = Query(..., description="Session-User (vom Go-Proxy injiziert)"),
     stage_date: Optional[date] = Query(None),
     start_hour: int = Query(8, ge=0, le=23),
 ):
-    # Lazy Import um NiceGUI-Abhaengigkeiten beim Modul-Load zu vermeiden
-    from src.web.pages.trips import gpx_to_stage_data
+    from app.loader import get_data_dir
+    from services.gpx_processing import gpx_to_stage_data
+
+    if not _VALID_USER_ID.match(user_id):
+        raise HTTPException(status_code=400, detail="invalid_user_id")
 
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="no_file_content")
 
+    upload_dir = get_data_dir(user_id) / "gpx"
+
     try:
-        # gpx_to_stage_data(content: bytes, filename: str, stage_date, start_hour)
-        result = gpx_to_stage_data(content, file.filename, stage_date, start_hour)
+        result = gpx_to_stage_data(
+            content, file.filename, stage_date, start_hour, upload_dir=upload_dir,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -227,6 +257,8 @@ app.include_router(gpx.router)
 | Szenario | HTTP Status | Body |
 |----------|-------------|------|
 | Kein `file`-Field im Request | 422 | `{"detail": [{"type": "missing", ...}]}` (FastAPI Validation) |
+| `user_id`-Query-Param fehlt | 422 | `{"detail": [{"type": "missing", "loc": ["query", "user_id"], ...}]}` (FastAPI Validation) |
+| `user_id` enthaelt Pfadanteile o.ae. ungueltige Zeichen (Issue #1352) | 400 | `{"detail": "invalid_user_id"}` |
 | Leere GPX-Datei | 400 | `{"detail": "no_file_content"}` |
 | GPX-Datei nicht parsebar | 400 | `{"detail": "Ungueltiges GPX-Format: ..."}` |
 | Python-Backend nicht erreichbar | 503 | `{"error": "core_unavailable"}` |
@@ -244,3 +276,5 @@ app.include_router(gpx.router)
 - 2026-04-14: Initial spec (M5a — GPX Proxy, Go + Python FastAPI)
 - 2026-04-14: Status → implemented; files api/routers/gpx.py (NEW), api/main.py, internal/handler/proxy.go, cmd/server/main.go
 - 2026-04-14: Error Cases an FastAPI-Standardverhalten angepasst (422 statt 400 bei fehlendem File, detail-Format)
+- 2026-07-24: Benutzer-Isolation (Issue #1352) nachgezogen — `user_id` als Pflicht-Query-Param,
+  `_VALID_USER_ID`-Pruefung im Codebeispiel, Error Cases fuer fehlende/ungueltige `user_id`

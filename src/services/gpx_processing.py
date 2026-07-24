@@ -15,8 +15,13 @@ Function order matches the spec:
 
 API-Contract: gpx_to_stage_data is consumed by api/routers/gpx.py
 (Production endpoint POST /api/gpx/parse). Signature
-(content, filename, stage_date, start_hour, upload_dir) and return
+(content, filename, stage_date, start_hour, *, upload_dir) and return
 shape (dict with keys name, date, waypoints) MUST stay stable.
+
+upload_dir is a MANDATORY keyword-only argument on every writing function
+(Issue #1352): the module must never resolve a write target itself, so no
+code path can silently fall back to a shared directory. Callers resolve it
+per user via app.loader.get_data_dir(user_id).
 """
 from __future__ import annotations
 
@@ -33,22 +38,18 @@ from core.natural_sort import natural_sort_key
 from core.segment_builder import build_segments
 
 
-# Default upload directories (preserved from original modules)
-_DEFAULT_UPLOAD_DIR = Path("data/users/default/gpx")
-_GPX_UPLOAD_DIR = Path("data/users/default/gpx")
-
-
 def process_gpx_upload(
     content: bytes,
     filename: str,
-    upload_dir: Path = _DEFAULT_UPLOAD_DIR,
+    *,
+    upload_dir: Path,
 ) -> GPXTrack:
     """Validate, save, and parse an uploaded GPX file.
 
     Args:
         content: Raw file content bytes.
         filename: Original filename (must end with .gpx).
-        upload_dir: Directory to save the file to.
+        upload_dir: Directory to save the file to (mandatory).
 
     Returns:
         Parsed GPXTrack object.
@@ -61,7 +62,8 @@ def process_gpx_upload(
         raise ValueError(f"Nur .gpx Dateien erlaubt, nicht '{filename}'")
 
     upload_dir.mkdir(parents=True, exist_ok=True)
-    saved_path = upload_dir / filename
+    # Only the bare name — a crafted filename must not escape upload_dir (#1352).
+    saved_path = upload_dir / Path(filename).name
 
     saved_path.write_bytes(content)
 
@@ -197,7 +199,8 @@ def gpx_to_stage_data(
     filename: str,
     stage_date: Optional[date] = None,
     start_hour: int = 8,
-    upload_dir: Path = _GPX_UPLOAD_DIR,
+    *,
+    upload_dir: Path,
 ) -> dict:
     """Parse GPX file and return a single stage dict for the trip dialog.
 
@@ -211,7 +214,7 @@ def gpx_to_stage_data(
         filename: Original filename (must end with .gpx).
         stage_date: Date for the stage (defaults to today).
         start_hour: Start hour of the hike (0-23).
-        upload_dir: Directory to save the GPX file.
+        upload_dir: Directory to save the GPX file (mandatory).
 
     Returns:
         Dict with keys: name, date, waypoints[]
@@ -260,7 +263,8 @@ def gpx_to_stage_data(
 def process_bulk_gpx_uploads(
     files: list[tuple[str, bytes]],
     start_date: date,
-    upload_dir: Path = _GPX_UPLOAD_DIR,
+    *,
+    upload_dir: Path,
 ) -> list[dict]:
     """Process multiple uploaded GPX files in natural-sort order.
 
@@ -276,7 +280,7 @@ def process_bulk_gpx_uploads(
         files: List of (filename, content_bytes) tuples as collected
             from the multi-upload buffer (browser FileList order).
         start_date: First valid stage's date.
-        upload_dir: Directory to save the GPX file copies.
+        upload_dir: Directory to save the GPX file copies (mandatory).
 
     Returns:
         List of stage dicts (same shape as gpx_to_stage_data output),
