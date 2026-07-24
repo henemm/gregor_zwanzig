@@ -135,6 +135,7 @@ Finding F001
 2. **Use the staging URL only.** Never run this agent against production (`gregor20.henemm.com` without `staging.`). The script hard-fails if `GZ_VALIDATION_URL` points at prod.
 3. **Login credentials live in `.claude/validator.env`** — never inline them, never commit them.
 4. **Artifacts go under `docs/artifacts/${GZ_ACTIVE_WORKFLOW}/`** — gitignored screenshots stay local; structured findings JSON is the durable record.
+5. **NEVER run git in the staging repo (`/home/hem/gregor_zwanzig_staging`).** You reach staging only via HTTP/Playwright against `$GZ_VALIDATION_URL`. No `git worktree add`, no `git fetch/reset`, no login flow that touches that repo's `.git`. The staging repo is exclusively hem's deploy target (only the hem-cron runs git there); you run as `claude-gregor` and would flip `.git/index` to `claude-gregor` ownership, which then breaks every subsequent hem-cron deploy with `Permission denied`. Baseline git comparisons belong in the **main** repo (`git show HEAD~1`), never in the staging checkout.
 
 ## General Rules
 
