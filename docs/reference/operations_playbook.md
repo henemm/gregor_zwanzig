@@ -45,21 +45,26 @@ und parallele HTTP-Probes auf alle aus der Staging-Verifikation bekannten AC-Pfa
 
 1. Commit-Attestation: `git HEAD` muss mit `e2e_verified.json[verified_commit]` übereinstimmen
 2. Health-Check: `https://gregor20.henemm.com/api/health` muss HTTP 200 + `status=ok` antworten
-3. AC-Attestation: pro Staging-Finding (max 5 parallel) HTTP GET auf entsprechende Prod-URL (erwartet 200 oder 302)
+3. AC-Attestation: pro Staging-Finding (max 5 parallel) HTTP GET auf entsprechende Prod-URL (erwartet 200 oder 302; ein 302 auf `/login` gilt seit Fix #1353 NICHT mehr als inhaltlicher Nachweis, s.u.)
 4. Bericht: Markdown-Tabelle in `docs/artifacts/<workflow>/prod-selftest.md` mit pro-AC-Status
-5. Exit-Code: 0 = alle ACs bestätigt (PASS) oder alle ACs übersprungen (docs-only); 1 = Mismatch/Fehler
+5. Exit-Code: 0 = alle ACs bestätigt (PASS), alle ACs übersprungen (docs-only) oder alle Probes auf den Login-Redirect gelaufen (`SKIPPED_AUTH_REDIRECT`); 1 = Mismatch/Fehler
 
 **Verdict-Ableitung:**
 
 - **PASS:** alle PASS-Findings bestätigen sich in Produktion
 - **PARTIAL:** mind. ein PASS-Finding fehlt oder ist unerreichbar in Produktion
 - **FAIL:** Commit-Mismatch oder Health unreachable
-- **SKIP:** `e2e_verified.json` nicht vorhanden (docs-only Deploy)
+- **SKIPPED_ALL:** `e2e_verified.json` nicht vorhanden (docs-only Deploy)
+- **SKIPPED_AUTH_REDIRECT** (Fix #1353): ALLE geprobten Findings landeten unauthentifiziert auf `302 → /login`. Der Selbsttest läuft ohne Login — ein Auth-Redirect ist strukturell nicht per unauth-GET beweisbar, kein Defekt. Zählt zur Exit-0-Menge, blockiert den Deploy also nicht, ist aber **kein Ersatz für die Staging-Verifikation**: Es wurde in Prod kein einziger AC inhaltlich bestätigt, nur die Anmelde-Schranke gesehen.
 
 **Schutzwirkung:** Issue-Close erfolgt nur bei Exit 0. Bei PARTIAL/FAIL wird der Bericht
 untersucht und ggf. Rollback eingeleitet, bevor das Issue geschlossen wird. Verhindert, dass
 Issues geschlossen werden, obwohl der Deploy still fehlschlug oder der falsche Code-Stand
-deployed wurde. Siehe Spec Issue #564 für technische Details.
+deployed wurde. Bei `SKIPPED_AUTH_REDIRECT` gilt „Issue-Close nur bei Exit 0" unverändert,
+aber der eigentliche AC-Beweis für geschützte Endpoints bleibt Aufgabe von `/e2e-verify`
+gegen Staging (Schritt 3 oben) — der Selbsttest bestätigt hier nur „Prod lebt und leitet
+korrekt auf Login um", nicht „Feature funktioniert". Siehe Spec Issue #564 und #1353 für
+technische Details.
 
 ---
 

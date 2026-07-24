@@ -146,9 +146,10 @@ def _staging_to_prod_url(staging_url: str) -> str:
     return f"{PROD_BASE}{path}{query}"
 
 
-def _http_get(url: str, follow_redirects: bool = False) -> tuple[int, bytes]:
-    """HTTP-GET via stdlib. Returns (status_code, body).
+def _http_get(url: str, follow_redirects: bool = False) -> tuple[int, bytes, str]:
+    """HTTP-GET via stdlib. Returns (status_code, body, location).
 
+    location: Redirect-Ziel bei 3xx (leer bei 2xx / kein Location-Header).
     follow_redirects=False: HTTPError(3xx) wird abgefangen → status_code aus dem Fehler.
     Raises urllib.error.URLError bei DNS/Connect-Fehlern (vom Caller behandelt).
     """
@@ -160,14 +161,37 @@ def _http_get(url: str, follow_redirects: bool = False) -> tuple[int, bytes]:
         opener = urllib.request.build_opener()
     try:
         with opener.open(req, timeout=PROBE_TIMEOUT) as resp:
-            return resp.status, resp.read()
+            return resp.status, resp.read(), ""
     except urllib.error.HTTPError as exc:
         # 3xx und 4xx/5xx landen hier — body lesen, Status zurückgeben
         try:
             body = exc.read()
         except Exception:
             body = b""
-        return exc.code, body
+        location = exc.headers.get("Location", "") or "" if exc.headers else ""
+        return exc.code, body, location
+
+
+def _normalize_http_get_result(result: tuple) -> tuple[int, bytes, str]:
+    """Normalisiert `_http_get`-Rückgaben auf ein Drei-Tupel (Spec Punkt 5):
+    bestehende Tests monkeypatchen `_http_get` weiterhin mit einem Zwei-Tupel
+    `(status, body)` — dieser Helper macht Aufrufstellen kompatibel zu beiden
+    Formen, ohne die bestehenden Testdateien zu ändern."""
+    if len(result) == 2:
+        status, body = result
+        return status, body, ""
+    status, body, location = result
+    return status, body, location
+
+
+def _is_login_redirect(location: str) -> bool:
+    """True wenn `location` auf die Anmeldeseite zeigt (Pfad exakt '/login'
+    oder beginnt mit '/login') — robust gegen absolute/relative URL und
+    Query-String (via urlparse den Pfad extrahieren)."""
+    if not location:
+        return False
+    path = urlparse(location).path
+    return path == "/login" or path.startswith("/login")
 
 
 class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -269,7 +293,9 @@ def _probe_ac(finding: dict) -> dict:
         }
 
     try:
-        status, _ = _http_get(prod_url, follow_redirects=False)
+        status, _body, location = _normalize_http_get_result(
+            _http_get(prod_url, follow_redirects=False)
+        )
         # Method-Not-Probeable (#1327/#1228 Fix 2): POST-only-Endpoints
         # antworten auf GET korrekt mit 405 — das ist kein FAIL des Features,
         # sondern eine strukturell nicht per GET probebare Route.
@@ -280,12 +306,20 @@ def _probe_ac(finding: dict) -> dict:
                 "prod_http": status,
                 "prod_status": "SKIPPED_METHOD_NOT_PROBEABLE",
             }
-        ok = status in (200, 302)
+        if status in (301, 302, 303, 307, 308):
+            if _is_login_redirect(location):
+                prod_status = "SKIPPED_AUTH_REDIRECT"
+            else:
+                prod_status = "PASS"
+        elif status == 200:
+            prod_status = "PASS"
+        else:
+            prod_status = "FAIL"
         return {
             **finding,
             "prod_url": prod_url,
             "prod_http": status,
-            "prod_status": "PASS" if ok else "FAIL",
+            "prod_status": prod_status,
         }
     except (urllib.error.URLError, OSError, http.client.InvalidURL, ValueError) as exc:
         return {
@@ -300,7 +334,9 @@ def _probe_ac(finding: dict) -> dict:
 def _check_health() -> tuple[bool, str]:
     """Prüft /api/health. Returns (ok, message)."""
     try:
-        status, body = _http_get(HEALTH_URL, follow_redirects=True)
+        status, body, _location = _normalize_http_get_result(
+            _http_get(HEALTH_URL, follow_redirects=True)
+        )
         if status != 200:
             return False, f"HTTP {status}"
         try:
@@ -388,6 +424,13 @@ def _render_full_report(
             "Alle Findings sind SKIPPED (Backend-/E-Mail-ACs ohne HTTP-Nachweis). "
             "Kein PASS-Block — Issue-Close freigegeben."
         )
+    elif verdict == "SKIPPED_AUTH_REDIRECT":
+        lines.append(
+            "Alle geprobten ACs leiten unauthentifiziert auf die Anmeldeseite "
+            "um (SKIPPED_AUTH_REDIRECT) — kein inhaltlicher Prod-Nachweis "
+            "möglich, aber auch kein FAIL. Kein Deploy-Block — Issue-Close "
+            "freigegeben (#1353)."
+        )
     elif verdict == "FAIL":
         lines.append(
             "FAIL: Regression in Produktion (Bot-Menü oder AC). Issue NICHT schließen."
@@ -417,7 +460,9 @@ def check_bot_menu(
 
     url = f"{api_base}/bot{token}/getMyCommands"
     try:
-        status, body = _http_get(url, follow_redirects=False)
+        status, body, _location = _normalize_http_get_result(
+            _http_get(url, follow_redirects=False)
+        )
         payload = json.loads(body.decode("utf-8", errors="replace"))
         result = payload.get("result", [])
         live_names = [c["command"] for c in result]
@@ -451,6 +496,14 @@ def _derive_verdict(probes: list[dict]) -> str:
         # Keine PASS-Findings, aber auch nicht alles SKIPPED — als PASS werten
         # (leere oder nicht-klassifizierbare Findings sind kein Block)
         return "PASS"
+
+    # Fix #1353 (Spec v1.1, Punkt 4): ergaben ALLE geprobten PASS-Findings
+    # ausschliesslich SKIPPED_AUTH_REDIRECT (kein einziger inhaltlicher
+    # Nachweis), ist die Gesamt-Note NICHT PASS, sondern spiegelt den Skip
+    # wider — sonst bliebe der Bug (blinder Gesamt-PASS) auf Verdict-Ebene
+    # bestehen.
+    if all(p.get("prod_status") == "SKIPPED_AUTH_REDIRECT" for p in pass_probes):
+        return "SKIPPED_AUTH_REDIRECT"
 
     failed = [p for p in pass_probes if p.get("prod_status") == "FAIL"]
     if failed:
@@ -630,7 +683,7 @@ def run_selftest(e2e_path: Path, workflow: str, scope: str | None = None) -> int
     _write_report(report_path, report_content)
 
     _log(f"Verdict={verdict} (Bericht: {report_path})")
-    return 0 if verdict in ("PASS", "SKIPPED_ALL") else 1
+    return 0 if verdict in ("PASS", "SKIPPED_ALL", "SKIPPED_AUTH_REDIRECT") else 1
 
 
 def _check_bot_menu_prod() -> dict:
