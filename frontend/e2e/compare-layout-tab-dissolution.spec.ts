@@ -377,8 +377,14 @@ test.describe('Issue #1360: Layout-Reiter aufgelöst, Stundenverlauf bei den Wet
 				'Wetter-Metriken liegen — identisch zur Bearbeitung'
 		).toBeVisible({ timeout: 10_000 });
 
+		// Staging-Verifikation 2026-07-25: NICHT 'thunder_level' verwenden -- diese
+		// Groesse ist auf der Anlege-Seite bereits vorausgewaehlt (Default-Liste in
+		// compareHourlyMetricDefs.ts, #1335 Scheibe 1/F002 -- bewusst kein
+		// defaultOff). Ein Klick schaltet sie AB, der Test erwartete AN und wurde
+		// dadurch reproduzierbar falsch-rot. 'wind_dir_deg' ist der einzige
+		// defaultOff-Eintrag und startet garantiert abgewaehlt.
 		const newToggle = hourly
-			.locator('[data-testid="compare-layout-hourly-metric-thunder_level"] input')
+			.locator('[data-testid="compare-layout-hourly-metric-wind_dir_deg"] input')
 			.first();
 		await expect(newToggle).toBeVisible({ timeout: 10_000 });
 		await newToggle.click();
@@ -405,7 +411,7 @@ test.describe('Issue #1360: Layout-Reiter aufgelöst, Stundenverlauf bei den Wet
 			'AC-6: die im Anlegen getroffene Stundengrößen-Auswahl muss im neuen Vergleich stehen'
 		).toBeDefined();
 		expect(dc.hourly_metrics, 'AC-6: die umgeschaltete Stundengröße ist enthalten').toContain(
-			'thunder_level'
+			'wind_dir_deg'
 		);
 	});
 });
