@@ -41,6 +41,9 @@ function makeSnapshot(overrides: Partial<WeatherMetricsSnapshot> = {}): WeatherM
 	return {
 		activeMetricKeys: ['temp_max', 'wind'],
 		officialAlertsEnabled: true,
+		// Issue #1361/#1372 S1b: Teil desselben Snapshots, Default 4/19.
+		dayWindowStartHour: 4,
+		dayWindowEndHour: 19,
 		...overrides
 	};
 }

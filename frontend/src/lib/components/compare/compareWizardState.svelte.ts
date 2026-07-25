@@ -69,6 +69,11 @@ export class CompareWizardState {
 	eveningTime = $state('18:00');
 	endDate = $state<string | null>(null);
 	includeHourly = $state(false);
+	// Issue #1361/#1372 S1b — gemeinsames Tagesfenster mit dem Trip (Reiter
+	// Wetter-Metriken). Default 4/19 identisch zum Renderer-Default
+	// (day_window.py DAY_WINDOW_START_HOUR/_END_HOUR).
+	dayWindowStartHour = $state(4);
+	dayWindowEndHour = $state(19);
 	saveStatus = $state<SaveStatus>('idle');
 	saveError = $state<string | null>(null);
 
@@ -103,6 +108,10 @@ export class CompareWizardState {
 			eveningEnabled: this.eveningEnabled,
 			eveningTime: this.eveningTime,
 			endDate: this.endDate,
+			// Issue #1361/#1372 S1b: Tagesfenster — Anlegen folgt dem Trip-Muster
+			// (#622), das Feld gehört von Anfang an zur Bedienfläche.
+			dayWindowStartHour: this.dayWindowStartHour,
+			dayWindowEndHour: this.dayWindowEndHour,
 			alertCooldownMinutes: this.alertCooldownMinutes, // Issue #1170
 			alertQuietFrom: this.alertQuietFrom,
 			alertQuietTo: this.alertQuietTo,
@@ -151,7 +160,9 @@ export class CompareWizardState {
 			alertQuietFrom: this.alertQuietFrom,
 			alertQuietTo: this.alertQuietTo,
 			corridors: this.corridors, // Issue #1231 Slice 4
-			telegramStyle: this.telegramStyle // Issue #1260 S5
+			telegramStyle: this.telegramStyle, // Issue #1260 S5
+			dayWindowStartHour: this.dayWindowStartHour, // Issue #1361/#1372 S1b
+			dayWindowEndHour: this.dayWindowEndHour
 		});
 		try {
 			const { api } = await import('$lib/api');

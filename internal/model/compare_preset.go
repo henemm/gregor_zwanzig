@@ -105,4 +105,13 @@ type ComparePreset struct {
 	// bestehende Schreibpfade setzen ihn nicht, nur die Migration
 	// (scripts/migrate_1250_briefings.py).
 	Kind string `json:"kind,omitempty"`
+	// Issue #1361/#1372 S1b — gemeinsames Tagesfenster mit dem Trip
+	// (day_window.resolve_configured_window() auf der Python-Seite, Epic
+	// #1319 Scheibe B). Pointer-Pattern wie HourlyEnabled: fehlt das Feld im
+	// JSON (Altdaten), decodiert Go zu nil -> Python-Default 4/19 beim
+	// naechsten Lesen. Ersetzt HourFrom/HourTo als Bedien-/Auflösungsfeld;
+	// diese bleiben oben nur zur Bestandswahrung persistiert (Bereinigung:
+	// scripts/migrate_1361_drop_compare_hour_from_to.py).
+	DayWindowStartHour *int `json:"day_window_start_hour,omitempty"`
+	DayWindowEndHour   *int `json:"day_window_end_hour,omitempty"`
 }

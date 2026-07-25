@@ -55,6 +55,7 @@
 	import {
 		hydrateWeatherMetricsFromPreset,
 		flushPendingWeatherMetricsSave,
+		hydrateDayWindowFromPreset,
 		type WeatherMetricsSnapshot
 	} from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 	// Issue #1299/#1291/#1287 (C2 von Epic #1301): Stundenverlauf-Steuerung im
@@ -635,7 +636,9 @@
 	function currentWetterMetrikenSnapshot(): WeatherMetricsSnapshot {
 		return {
 			activeMetricKeys: [...wizardState.activeMetricKeys],
-			officialAlertsEnabled: wizardState.officialAlertsEnabled
+			officialAlertsEnabled: wizardState.officialAlertsEnabled,
+			dayWindowStartHour: wizardState.dayWindowStartHour,
+			dayWindowEndHour: wizardState.dayWindowEndHour
 		};
 	}
 
@@ -647,6 +650,12 @@
 		// Toggle bei einem Deep-Link ?tab=wetter-metriken den Klassen-Default
 		// (true) statt des echten Preset-Werts.
 		wizardState.officialAlertsEnabled = currentPreset.official_alerts_enabled ?? true;
+		// Issue #1361/#1372 S1b: Tagesfenster mit-hydrieren (analog oben) —
+		// sonst zeigt ein Deep-Link ?tab=wetter-metriken den Wizard-Default
+		// statt des echten Preset-Werts.
+		const dayWindow = hydrateDayWindowFromPreset(currentPreset);
+		wizardState.dayWindowStartHour = dayWindow.dayWindowStartHour;
+		wizardState.dayWindowEndHour = dayWindow.dayWindowEndHour;
 		lastPersistedWetterMetrikenSnapshot = currentWetterMetrikenSnapshot();
 		wetterMetrikenHydrated = true;
 	});
@@ -668,6 +677,8 @@
 				console.error('[CompareTabs] Wetter-Metriken-Persistenz fehlgeschlagen, Rollback:', e);
 				wizardState.activeMetricKeys = before.activeMetricKeys;
 				wizardState.officialAlertsEnabled = before.officialAlertsEnabled;
+				wizardState.dayWindowStartHour = before.dayWindowStartHour;
+				wizardState.dayWindowEndHour = before.dayWindowEndHour;
 				failure = e;
 				return null;
 			}

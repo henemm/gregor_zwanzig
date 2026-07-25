@@ -175,6 +175,22 @@ class CompareRenderOptions:
     outlook_enabled: bool = True
 
 
+def resolve_compare_time_window(preset: dict) -> tuple[int, int]:
+    """Loest das Tagesfenster eines Compare-Presets ueber dieselbe Quelle auf
+    wie der Trip-Zweig (Issue #1361/#1372 S1b, AC-1/AC-2). Ersetzt die
+    deprecateten Preset-Felder ``hour_from``/``hour_to`` (#1268-Alt-Pfad) —
+    diese werden hier bewusst NICHT gelesen. Geteilt zwischen
+    ``scheduler_dispatch_service.send_one_compare_preset`` und
+    ``compare_preview_service.ComparePreviewService._prepare`` (identisches
+    Fenster fuer Versand UND Vorschau, AC-2)."""
+    from output.renderers.day_window import resolve_configured_window
+
+    return resolve_configured_window(
+        preset.get("day_window_start_hour"),
+        preset.get("day_window_end_hour"),
+    )
+
+
 def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
     """Loest ein rohes Compare-Preset-Dict VOLLSTAENDIG in `CompareRenderOptions` auf.
 

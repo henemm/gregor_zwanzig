@@ -49,6 +49,8 @@ function fullFields(): NewComparePresetFields {
 		eveningEnabled: false,
 		eveningTime: '18:00',
 		endDate: null,
+		dayWindowStartHour: 4,
+		dayWindowEndHour: 19,
 		corridors: [],
 		region: 'Salzburger Land',
 		idealRanges: { wind_max_kmh: { min: 0, max: 30 } },
@@ -81,5 +83,28 @@ describe('buildNewComparePresetPayload — Issue #1360 F002: top_n ersatzlos ent
 		assert.deepEqual(displayConfig.hourly_metrics, ['temp_c']);
 		assert.deepEqual(displayConfig.ideal_ranges, { wind_max_kmh: { min: 0, max: 30 } });
 		assert.deepEqual(displayConfig.metric_alert_levels, { wind_max_kmh: 'sensibel' });
+	});
+});
+
+describe('Issue #1361/#1372 S1b: das Tagesfenster wird auch beim Anlegen mitgesendet', () => {
+	test('day_window_start_hour/_end_hour stehen TOP-LEVEL im POST-Body (nicht in display_config)', () => {
+		const fields = fullFields();
+		fields.dayWindowStartHour = 6;
+		fields.dayWindowEndHour = 20;
+		const payload = buildNewComparePresetPayload(fields);
+
+		assert.equal(
+			payload.day_window_start_hour,
+			6,
+			'day_window_start_hour fehlt im Anlege-POST — das Tagesfenster ginge beim Anlegen eines ' +
+				'Vergleichs verloren (buildNewComparePresetPayload kannte das Feld vor diesem Fix nicht)'
+		);
+		assert.equal(payload.day_window_end_hour, 20);
+	});
+
+	test('Default-Werte (4/19) werden ebenfalls gesendet, nicht nur abweichende Werte', () => {
+		const payload = buildNewComparePresetPayload(fullFields());
+		assert.equal(payload.day_window_start_hour, 4);
+		assert.equal(payload.day_window_end_hour, 19);
 	});
 });

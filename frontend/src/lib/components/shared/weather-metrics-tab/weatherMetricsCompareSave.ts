@@ -11,6 +11,24 @@ import { buildHubPutPayload } from '../../compare/compareHubWizardBridge.ts';
 import { rehydrateActiveMetrics } from '../../compare/compareEditorLoad.ts';
 import { COMPARE_METRIC_KEYS } from '../corridor-editor/corridorEditorState.ts';
 
+// Issue #1361/#1372 S1b — Trip-Default (day_window.py DAY_WINDOW_START_HOUR/
+// _END_HOUR), geteilt zwischen Hydration und Neuanlage.
+const DEFAULT_DAY_WINDOW_START_HOUR = 4;
+const DEFAULT_DAY_WINDOW_END_HOUR = 19;
+
+/** Tagesfenster-Hydration aus dem Preset — undefined/null (Alt-Preset) fällt
+ * auf denselben Default (4/19) zurück wie der Renderer
+ * (day_window.resolve_configured_window()), AC-4. */
+export function hydrateDayWindowFromPreset(preset: ComparePreset): {
+	dayWindowStartHour: number;
+	dayWindowEndHour: number;
+} {
+	return {
+		dayWindowStartHour: preset.day_window_start_hour ?? DEFAULT_DAY_WINDOW_START_HOUR,
+		dayWindowEndHour: preset.day_window_end_hour ?? DEFAULT_DAY_WINDOW_END_HOUR
+	};
+}
+
 /**
  * Erst-Oeffnungs-Hydration fuer den Vergleichs-Zweig: ein zuvor NIE
  * gespeichertes `active_metrics`-Feld (Legacy, AC-4) zeigt sich im Tab als
@@ -36,6 +54,11 @@ export function hydrateWeatherMetricsFromPreset(preset: ComparePreset): string[]
 export interface WeatherMetricsSnapshot {
 	activeMetricKeys: string[];
 	officialAlertsEnabled: boolean;
+	// Issue #1361/#1372 S1b: Tagesfenster — Teil desselben Snapshots, damit ein
+	// reiner Von/Bis-Wechsel (ohne Metrik-/Toggle-Aenderung) ebenfalls als dirty
+	// erkannt wird (analog officialAlertsEnabled oben).
+	dayWindowStartHour: number;
+	dayWindowEndHour: number;
 }
 
 /**
@@ -61,11 +84,15 @@ export function flushPendingWeatherMetricsSave(
 	// Geste (Checkbox-Toggle bzw. Drag-Ende).
 	const norm = (s: WeatherMetricsSnapshot) => ({
 		activeMetricKeys: [...s.activeMetricKeys],
-		officialAlertsEnabled: s.officialAlertsEnabled
+		officialAlertsEnabled: s.officialAlertsEnabled,
+		dayWindowStartHour: s.dayWindowStartHour,
+		dayWindowEndHour: s.dayWindowEndHour
 	});
 	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;
 	return buildHubPutPayload(preset, {
 		activeMetricKeys: current.activeMetricKeys,
-		officialAlertsEnabled: current.officialAlertsEnabled
+		officialAlertsEnabled: current.officialAlertsEnabled,
+		dayWindowStartHour: current.dayWindowStartHour,
+		dayWindowEndHour: current.dayWindowEndHour
 	});
 }

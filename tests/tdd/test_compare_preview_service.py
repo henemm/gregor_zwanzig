@@ -323,31 +323,29 @@ def test_single_preview_call_runs_engine_once_and_fills_all_channels(compare_env
 
 
 # ---------------------------------------------------------------------------
-# Issue #1268 (AC-11) — die Vorschau rechnet mit dem Fenster des echten Versands
+# Issue #1361/#1372 S1b (AC-1/AC-2) — die Vorschau rechnet mit demselben
+# konfigurierbaren Tagesfenster wie der echte Versand (day_window.
+# resolve_configured_window). Ersetzt die #1268-Erwartung "immer (0, 23)".
 # ---------------------------------------------------------------------------
 
 
-def test_preview_uses_fixed_full_day_window_ignoring_preset(compare_env, monkeypatch):
-    """GIVEN ein Preset mit gespeichertem Zeitfenster 10-14 Uhr und Horizont 24h
+def test_preview_ignores_deprecated_hour_from_hour_to(compare_env, monkeypatch):
+    """GIVEN ein Preset mit gespeichertem hour_from=10/hour_to=14 (deprecated),
+    aber OHNE day_window_start_hour/_end_hour
     WHEN die Vorschau gerendert wird
-    THEN erhaelt ComparisonEngine.run time_window=(0, 23) und
-    forecast_hours=COMPARE_FORECAST_HOURS (96, seit Issue #1305) — exakt das,
-    was der echte Versand nutzt (scheduler_dispatch_service.py:319-326).
+    THEN erhaelt ComparisonEngine.run den Default (4, 19) — exakt das, was der
+    echte Versand nutzt (scheduler_dispatch_service.py) — und
+    forecast_hours=COMPARE_FORECAST_HOURS (96, seit Issue #1305).
 
-    Fachlich (Issue #1268): Zeitfenster/Horizont sind keine Editor-Felder mehr.
-    Eine Vorschau, die die deprecateten Preset-Werte liest, zeigt etwas anderes
-    als die tatsaechlich versendete Mail — genau der Widerspruch, den AC-11
-    ausschliesst.
-
-    RED vor Fix: der Service liest preset.get("hour_from", 9)/("hour_to", 16)
-    und reicht (10, 14)/24 durch (compare_preview_service.py:143-145)."""
+    Fachlich: hour_from/hour_to sind seit #1268 keine Editor-Felder mehr und
+    duerfen es auch nicht wieder werden (#1361 Befund 1)."""
     user_id = compare_env
     locations = [_location("loc-ibk", "Innsbruck", 47.27, 11.39)]
     _seed(
         user_id,
         locations,
         _preset(
-            "cp-1268-pv", user_id, ["loc-ibk"], hour_from=10, hour_to=14, forecast_hours=24
+            "cp-1361-pv", user_id, ["loc-ibk"], hour_from=10, hour_to=14, forecast_hours=24
         ),
     )
 
@@ -356,40 +354,33 @@ def test_preview_uses_fixed_full_day_window_ignoring_preset(compare_env, monkeyp
     from services.compare_preview_service import ComparePreviewService
 
     ComparePreviewService().render_all_channels(
-        "cp-1268-pv", user_id=user_id, target_date=TARGET_DATE.isoformat()
+        "cp-1361-pv", user_id=user_id, target_date=TARGET_DATE.isoformat()
     )
 
-    assert calls.kwargs_seen[0].get("time_window") == (0, 23), (
-        "AC-11: Die Vorschau muss denselben Zeitraum rechnen wie der Versand "
-        f"(0, 23), uebergeben wurde {calls.kwargs_seen[0].get('time_window')!r} "
+    assert calls.kwargs_seen[0].get("time_window") == (4, 19), (
+        "Die Vorschau muss denselben Zeitraum rechnen wie der Versand (4, 19), "
+        f"uebergeben wurde {calls.kwargs_seen[0].get('time_window')!r} "
         "— vermutlich aus den deprecateten Preset-Feldern hour_from/hour_to."
     )
     assert calls.kwargs_seen[0].get("forecast_hours") == COMPARE_FORECAST_HOURS, (
-        f"AC-11: Die Vorschau muss den festen {COMPARE_FORECAST_HOURS}h-Horizont des "
+        f"Die Vorschau muss den festen {COMPARE_FORECAST_HOURS}h-Horizont des "
         f"Versands nutzen, uebergeben wurde {calls.kwargs_seen[0].get('forecast_hours')!r}."
     )
 
 
-def test_preview_of_new_preset_without_hours_is_not_empty_window(compare_env, monkeypatch):
-    """GIVEN ein NEU angelegtes Preset — der Wizard schickt hour_from/hour_to
-    seit #1268 nicht mehr, das Go-Model persistiert daher den Zero-Value 0
+def test_preview_honours_configured_day_window(compare_env, monkeypatch):
+    """GIVEN ein Preset mit gesetztem day_window_start_hour=6/_end_hour=20
     WHEN die Vorschau gerendert wird
-    THEN rechnet sie NICHT mit dem leeren Fenster (0, 0), sondern mit (0, 23).
-
-    Genau der in AC-11 benannte Schaden: "ein aus hour_from/hour_to gebautes
-    Fenster, das bei neuen Vergleichen 0-0 Uhr waere und die Vorschau leer
-    liefe". Staerker als der Assert oben: schliesst aus, dass (0, 23) zufaellig
-    aus einem Default entsteht.
-
-    RED vor Fix: preset.get("hour_from", 9) findet die persistierte 0 (der
-    Default 9 greift NICHT, der Schluessel existiert) -> (0, 0)."""
+    THEN erhaelt ComparisonEngine.run genau (6, 20) — das NEUE Feld wirkt,
+    identisch zum Versandpfad (AC-2)."""
     user_id = compare_env
     locations = [_location("loc-ibk", "Innsbruck", 47.27, 11.39)]
     _seed(
         user_id,
         locations,
         _preset(
-            "cp-1268-new", user_id, ["loc-ibk"], hour_from=0, hour_to=0, forecast_hours=0
+            "cp-1361-configured", user_id, ["loc-ibk"],
+            day_window_start_hour=6, day_window_end_hour=20,
         ),
     )
 
@@ -398,14 +389,43 @@ def test_preview_of_new_preset_without_hours_is_not_empty_window(compare_env, mo
     from services.compare_preview_service import ComparePreviewService
 
     ComparePreviewService().render_all_channels(
-        "cp-1268-new", user_id=user_id, target_date=TARGET_DATE.isoformat()
+        "cp-1361-configured", user_id=user_id, target_date=TARGET_DATE.isoformat()
     )
 
-    assert calls.kwargs_seen[0].get("time_window") == (0, 23), (
-        "AC-11: Ein neu angelegtes Preset traegt hour_from/hour_to = 0 (Go "
-        "Zero-Value, der Wizard schickt die Felder nicht mehr). Die Vorschau "
-        f"rechnet damit mit {calls.kwargs_seen[0].get('time_window')!r} und "
-        "liefe leer — erwartet (0, 23)."
+    assert calls.kwargs_seen[0].get("time_window") == (6, 20), (
+        f"uebergeben wurde {calls.kwargs_seen[0].get('time_window')!r}, erwartet (6, 20)."
+    )
+
+
+def test_preview_honours_configured_midnight_wrap_window(compare_env, monkeypatch):
+    """AC-3 (ADR-0035, PO-Entscheidung 2026-07-25): ein Fenster ueber
+    Mitternacht (day_window_start_hour=22, _end_hour=2) ist GUELTIG und wird
+    unveraendert an die Engine durchgereicht — identisch zum Versandpfad
+    (test_compare_dispatch_fixed_window.py::test_dispatch_honours_configured_midnight_wrap_window).
+    Reine Test-Symmetrie: die Vorschau MUSS mit demselben Fenster rechnen wie
+    der echte Versand, sonst zeigt sie etwas anderes als der Nutzer bekommt."""
+    user_id = compare_env
+    locations = [_location("loc-ibk", "Innsbruck", 47.27, 11.39)]
+    _seed(
+        user_id,
+        locations,
+        _preset(
+            "cp-1361-wrap", user_id, ["loc-ibk"],
+            day_window_start_hour=22, day_window_end_hour=2,
+        ),
+    )
+
+    calls = _EngineCalls()
+    _install_recording_engine(monkeypatch, calls)
+    from services.compare_preview_service import ComparePreviewService
+
+    ComparePreviewService().render_all_channels(
+        "cp-1361-wrap", user_id=user_id, target_date=TARGET_DATE.isoformat()
+    )
+
+    assert calls.kwargs_seen[0].get("time_window") == (22, 2), (
+        f"uebergeben wurde {calls.kwargs_seen[0].get('time_window')!r}, erwartet (22, 2) — "
+        "ein Mitternachts-Fenster darf nicht auf den Default zurueckfallen (AC-3)."
     )
 
 

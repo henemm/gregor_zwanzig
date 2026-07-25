@@ -205,6 +205,9 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// `preset`-Kopie, nicht die von SaveComparePresets normalisierte
 		// Slice-Kopie, daher muss `preset` selbst normalisiert sein.
 		store.NormalizeComparePreset(&preset)
+		// Issue #1361/#1372 S1b: ein ungueltiges Tagesfenster-Paar wird am
+		// Schreib-Seam geklemmt (analog ClampReportConfigDayWindow beim Trip).
+		store.ClampComparePresetDayWindow(&preset)
 		// Issue #781: forecast_hours fehlt oder ist 0 → Default 48 ( konsistent mit
 		// LoadComparePresets-Migration und dem Python-Versandpfad).
 		if preset.ForecastHours == 0 {
@@ -315,6 +318,15 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if updated.HourlyEnabled == nil {
 			updated.HourlyEnabled = original.HourlyEnabled
 		}
+		// Issue #1361/#1372 S1b: Tagesfenster erhalten, wenn der Body es nicht
+		// traegt (nil nach Decode = Feld fehlte im Request) — analog
+		// HourlyEnabled. Ein explizit gesendetes Paar wird unten geklemmt.
+		if updated.DayWindowStartHour == nil {
+			updated.DayWindowStartHour = original.DayWindowStartHour
+		}
+		if updated.DayWindowEndHour == nil {
+			updated.DayWindowEndHour = original.DayWindowEndHour
+		}
 		// Issue #1170: Alarm-Konfiguration erhalten wenn Body sie nicht trägt
 		// (nil nach Decode = Feld fehlte im Request), analog official_alerts_enabled.
 		if updated.AlertCooldownMinutes == nil {
@@ -418,6 +430,11 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// oben laufen, sonst bleibt "corridors":null in der Response, wenn
 		// bereits das Original (Legacy-Datei) null hatte.
 		store.NormalizeComparePreset(&updated)
+		// Issue #1361/#1372 S1b: ein ungueltiges Tagesfenster-Paar wird am
+		// Schreib-Seam geklemmt (analog ClampReportConfigDayWindow beim Trip) —
+		// NACH dem Preserve-Block, damit ein bewusst gesendetes ungueltiges
+		// Paar wirklich geprueft wird, nicht der erhaltene Alt-Wert.
+		store.ClampComparePresetDayWindow(&updated)
 
 		if err := validateComparePreset(updated); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation_error", "detail": err.Error()})

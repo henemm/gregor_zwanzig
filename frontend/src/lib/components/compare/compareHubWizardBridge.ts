@@ -90,6 +90,10 @@ export interface HubEdit {
 	// geschrieben (nur über den weggeleiteten wizardState.saveComparePreset()).
 	hourlyMetricKeys?: string[];
 	hourlyEnabled?: boolean;
+	// Issue #1361/#1372 S1b: gemeinsames Tagesfenster. undefined = nicht
+	// editiert -> Round-Trip via `preset.day_window_start_hour/_end_hour`.
+	dayWindowStartHour?: number;
+	dayWindowEndHour?: number;
 }
 
 /**
@@ -137,7 +141,10 @@ export function buildHubPutPayload(
 		// diese beiden Felder nicht, obwohl buildComparePresetSavePayload sie
 		// laengst verarbeitet (compareEditorSave.ts:104-111,142).
 		hourlyMetricKeys: edit.hourlyMetricKeys ?? (displayConfig.hourly_metrics as string[] | undefined),
-		hourlyEnabled: edit.hourlyEnabled ?? preset.hourly_enabled
+		hourlyEnabled: edit.hourlyEnabled ?? preset.hourly_enabled,
+		// Issue #1361/#1372 S1b: 1:1 Round-Trip wie alle anderen HubEdit-Felder.
+		dayWindowStartHour: edit.dayWindowStartHour ?? preset.day_window_start_hour ?? undefined,
+		dayWindowEndHour: edit.dayWindowEndHour ?? preset.day_window_end_hour ?? undefined
 	});
 }
 

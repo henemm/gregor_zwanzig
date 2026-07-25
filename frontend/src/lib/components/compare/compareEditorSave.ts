@@ -59,6 +59,11 @@ export interface CompareEditorEdits {
 	// `sources` wird NIE vom FE gesendet — Bestand aus `original` bleibt beim
 	// Body-Bau erhalten (Merge, kein Replace).
 	officialWarnings?: { enabled: boolean };
+	// Issue #1361/#1372 S1b: gemeinsames Tagesfenster (Reiter Wetter-Metriken,
+	// beide Kontexte). Optional → rückwärtskompatibel (undefined = Feld nicht
+	// editiert → Round-Trip via `...original`).
+	dayWindowStartHour?: number;
+	dayWindowEndHour?: number;
 }
 
 /**
@@ -164,7 +169,12 @@ export function buildComparePresetSavePayload(
 		// (compare_preset.go:331-342) den Bestand-Merge selbst.
 		...(edits.officialWarnings !== undefined
 			? { official_warnings: { enabled: edits.officialWarnings.enabled } }
-			: {})
+			: {}),
+		// Issue #1361/#1372 S1b: analoges Round-Trip-Prinzip für das Tagesfenster.
+		...(edits.dayWindowStartHour !== undefined
+			? { day_window_start_hour: edits.dayWindowStartHour }
+			: {}),
+		...(edits.dayWindowEndHour !== undefined ? { day_window_end_hour: edits.dayWindowEndHour } : {})
 	};
 
 	return { url, body };
@@ -195,6 +205,10 @@ export interface NewComparePresetFields {
 	eveningEnabled: boolean;
 	eveningTime: string;
 	endDate: string | null;
+	// Issue #1361/#1372 S1b: Tagesfenster — Anlegen folgt dem Trip-Muster
+	// (#622), das Feld gehört von Anfang an zur Bedienfläche (Default 4/19).
+	dayWindowStartHour: number;
+	dayWindowEndHour: number;
 	alertCooldownMinutes?: number;
 	alertQuietFrom?: string;
 	alertQuietTo?: string;
@@ -244,6 +258,10 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 		evening_enabled: fields.eveningEnabled,
 		evening_time: toHHMMSS(fields.eveningTime),
 		...(fields.endDate ? { end_date: fields.endDate } : {}),
+		// Issue #1361/#1372 S1b: Tagesfenster — von Anfang an zur Bedienfläche,
+		// analog morning_enabled/hourly_enabled oben immer gesendet.
+		day_window_start_hour: fields.dayWindowStartHour,
+		day_window_end_hour: fields.dayWindowEndHour,
 		// Issue #1170: Alarm-Konfiguration — cooldown/quiet Top-Level (Trip-identisch).
 		...(fields.alertCooldownMinutes !== undefined
 			? { alert_cooldown_minutes: fields.alertCooldownMinutes }

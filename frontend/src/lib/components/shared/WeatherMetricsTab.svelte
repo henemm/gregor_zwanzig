@@ -56,6 +56,9 @@
 	// Issue #1360: geteilte Stundenverlauf-Steuerung (Hub + Anlege-Seite),
 	// unveraendert uebernommen aus dem aufgeloesten Layout-Reiter.
 	import CompareHourlyLayoutControls from '$lib/components/shared/CompareHourlyLayoutControls.svelte';
+	// Issue #1361/#1372 S1b: geteiltes Tagesfenster (Trip UND Vergleich),
+	// zieht beim Trip aus dem Versand-Reiter hierher (VersandTab/VTSchedulePlan).
+	import DayWindowCard from './weather-metrics-tab/DayWindowCard.svelte';
 	// Issue #1350 Teil 2: Vergleich-Auswahlliste kommt jetzt aus GET
 	// /api/compare/metrics statt aus COMPARE_METRIC_DEFS (bleibt fuer
 	// Schwellen-Slider/Winner-Box/Save-Default-Fallback unveraendert, Teil 3).
@@ -856,6 +859,20 @@
 			</Card>
 			{/if}
 		{/if}
+		<!-- Issue #1361/#1372 S1b: geteiltes Tagesfenster — wirkt auf
+		     Stundentabelle UND Vergleichswerte (day_window.resolve_configured_window()).
+		     Bewusst AUSSERHALB des Metrik-Katalog-Fetch-Zweigs (analog
+		     'stundenverlauf'/'official_alerts' unten). -->
+		{#if sections.includes('tagesfenster') && wiz}
+			<div data-testid="weather-metrics-tagesfenster">
+				<DayWindowCard
+					startHour={wiz.dayWindowStartHour}
+					endHour={wiz.dayWindowEndHour}
+					onStartHour={(v) => { if (wiz) wiz.dayWindowStartHour = v; }}
+					onEndHour={(v) => { if (wiz) wiz.dayWindowEndHour = v; }}
+				/>
+			</div>
+		{/if}
 		<!-- Issue #1360 (Scheibe S1a von Epic #1372): neue Heimat der
 		     Stundenverlauf-Steuerung — der Reiter "Layout" ist aufgeloest.
 		     Position laut Spec: nach 'reihenfolge', vor 'official_alerts' (erst
@@ -980,6 +997,49 @@
 					/>
 				{/snippet}
 			</LayoutTab>
+			{/if}
+
+			<!-- Issue #1361/#1372 S1b: Tagesfenster zieht aus dem Versand-Reiter
+			     hierher (VersandTab/VTSchedulePlan) — welche Stunden bewertet
+			     werden, ist eine Inhalts- und keine Versandfrage. Bindet direkt an
+			     reportConfig (derselbe $state, den EditReportConfigSection unten
+			     bind:reportConfig nutzt).
+			     Adversary Runde 3 (F001, CRITICAL): DayWindowCard liegt AUSSERHALB
+			     des `report-config-touch-scope`-Containers (der nur EditReportConfigSection
+			     umschliesst) -- dessen Capture-Listener sehen diese Aenderung daher
+			     NIE, `userTouched` bliebe `false` und `weatherSaveGate` wuerde JEDEN
+			     Speicherversuch verwerfen, selbst nach der reportConfigDirty-Korrektur.
+			     Deshalb hier wie bei den Schwellwert-Feldern (smsThresholds, s.u.)
+			     `userTouched` UND `scheduleAutoSave()` explizit aus der echten
+			     DOM-Geste heraus setzen, statt sich auf den ambienten $effect zu
+			     verlassen.
+			     !createMode (analog 'report_config' unten): TripNewEditor.svelte
+			     haelt beim Anlegen eine EIGENE, separate reportConfig-Instanz
+			     (eigener EditReportConfigSection auSSerhalb dieser Komponente) —
+			     dieser hier lokale reportConfig-$state waere dort wirkungslos
+			     (Known Limitation, s. Spec-Rueckmeldung). -->
+			{#if !createMode && sections.includes('tagesfenster')}
+				<div data-testid="weather-metrics-tagesfenster">
+					<!-- Reassign statt In-Place-Mutation: der Auto-Save-Effekt oben
+					     (Z. 635) vergleicht `cur !== _lastReportConfig` — eine reine
+					     Feld-Mutation auf dem bestehenden $state-Objekt aendert die
+					     Referenz nicht und wuerde das Gate NIE ausloesen (stiller
+					     Nicht-Speicher-Bug, analog #1360-Falle). -->
+					<DayWindowCard
+						startHour={reportConfig.day_window_start_hour ?? 4}
+						endHour={reportConfig.day_window_end_hour ?? 19}
+						onStartHour={(v) => {
+							reportConfig = { ...reportConfig, day_window_start_hour: v };
+							userTouched = true;
+							scheduleAutoSave();
+						}}
+						onEndHour={(v) => {
+							reportConfig = { ...reportConfig, day_window_end_hour: v };
+							userTouched = true;
+							scheduleAutoSave();
+						}}
+					/>
+				</div>
 			{/if}
 
 			<div class="bottom-section">

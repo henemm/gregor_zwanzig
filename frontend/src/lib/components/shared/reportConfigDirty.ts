@@ -12,6 +12,25 @@
 // und in `current` fehlt, wird konservativ als Aenderung gewertet
 // (Robustheits-Invariante: im Zweifel "dirty", s. Spec).
 //
+// Issue #1361/#1372 S1b, Adversary Runde 3/4: ein Feld, das ein Trip NIE
+// gesetzt hat (z.B. `day_window_start_hour`), existiert im geladenen
+// `report_config` gar nicht — waehlt der Nutzer zum ersten Mal einen Wert,
+// saehe eine Vereinigungs-basierte Pruefung hier "veraendert". Ein Versuch,
+// das ueber diese allgemeine Funktion zu loesen (Iteration ueber die
+// Vereinigung beider Schluesselmengen), wurde WIEDER VERWORFEN (Runde 4,
+// Tech-Lead-Entscheidung 2026-07-25): der skip-Zweig von
+// `scheduleAutoSave()` ruft bei verweigerter Nutzergeste
+// `saveController.setDirty()` -- das erzeugte ein falsches "Nicht
+// gespeichert" beim bloszen Oeffnen JEDES Bestandstrips (Mount-Kanonisierung
+// meldet nach der Vereinigungs-Regel faelschlich "geaendert"). Der
+// tragfaehige Weg fuer neue, zunaechst leere Felder ist der AUSDRUECKLICHE
+// Pfad: der Aufrufer setzt `userTouched`/loest `scheduleAutoSave()` direkt
+// aus der echten DOM-Geste aus (Muster: die SMS-Schwellwert-Felder in
+// WeatherMetricsTab.svelte) — diese Funktion hier entscheidet dann gar
+// nicht mehr mit. Bei einem kuenftigen neuen optionalen Feld: dem
+// ausdruecklichen Pfad folgen, NICHT diese Funktion erneut auf Vereinigung
+// umstellen.
+//
 // Wiederverwendet `toHHMMSS` statt Zeitformat-Logik zu duplizieren.
 
 import { toHHMMSS } from '$lib/utils/time';

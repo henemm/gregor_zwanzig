@@ -96,8 +96,13 @@ func TestSaveComparePresetsThenLoadComparePresets_HealsMorningTime(t *testing.T)
 }
 
 // Epic #1319 Scheibe B AC-4: ein roh geseedetes ungueltiges Tagesfenster-Paar
-// (start=20 >= end=10) wird beim Laden auf "nicht gesetzt" zurueckgesetzt --
+// (start == end == 20) wird beim Laden auf "nicht gesetzt" zurueckgesetzt --
 // kein Crash, kein Absturz. Ein gueltiges Paar bleibt unangetastet.
+//
+// Issue #1361/#1372 S1b (PO-Entscheidung 2026-07-25): der bisherige
+// Repro-Fall (start=20/end=10) ist seit dieser Scheibe ein GUELTIGES
+// Mitternachts-Fenster -- wandert daher zu start==end. Der Mitternachts-Fall
+// wird in TestSaveTripThenLoadTrip_KeepsValidWrapDayWindowPair separat bewiesen.
 func TestSaveTripThenLoadTrip_ClampsInvalidDayWindowPair(t *testing.T) {
 	tmpDir := t.TempDir()
 	s := New(tmpDir, "heal-user")
@@ -112,7 +117,7 @@ func TestSaveTripThenLoadTrip_ClampsInvalidDayWindowPair(t *testing.T) {
 		ReportConfig: map[string]interface{}{
 			"enabled":               true,
 			"day_window_start_hour": 20,
-			"day_window_end_hour":   10,
+			"day_window_end_hour":   20,
 		},
 	}
 	if err := s.SaveTrip(&trip); err != nil {
@@ -128,6 +133,40 @@ func TestSaveTripThenLoadTrip_ClampsInvalidDayWindowPair(t *testing.T) {
 	}
 	if _, ok := loaded.ReportConfig["day_window_end_hour"]; ok {
 		t.Errorf("day_window_end_hour haette bei ungueltigem Paar entfernt werden muessen, got %v", loaded.ReportConfig["day_window_end_hour"])
+	}
+}
+
+// Issue #1361/#1372 S1b (AC-3, PO-Entscheidung 2026-07-25): ein Fenster ueber
+// Mitternacht (start=20, end=10) ist GUELTIG und bleibt beim Laden unveraendert.
+func TestSaveTripThenLoadTrip_KeepsValidWrapDayWindowPair(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := New(tmpDir, "heal-user")
+
+	trip := model.Trip{
+		ID:   "trip-daywindow-wrap",
+		Name: "Day-Window Wrap Trip",
+		Stages: []model.Stage{
+			{ID: "S1", Name: "D1", Date: "2026-05-01",
+				Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 47.0, Lon: 11.0, ElevationM: 500}}},
+		},
+		ReportConfig: map[string]interface{}{
+			"enabled":               true,
+			"day_window_start_hour": 20,
+			"day_window_end_hour":   10,
+		},
+	}
+	if err := s.SaveTrip(&trip); err != nil {
+		t.Fatalf("SaveTrip failed: %v", err)
+	}
+
+	loaded, err := s.LoadTrip("trip-daywindow-wrap")
+	if err != nil || loaded == nil {
+		t.Fatalf("LoadTrip failed: err=%v loaded=%v", err, loaded)
+	}
+	start, _ := toIntHour(loaded.ReportConfig["day_window_start_hour"])
+	end, _ := toIntHour(loaded.ReportConfig["day_window_end_hour"])
+	if start != 20 || end != 10 {
+		t.Errorf("Mitternachts-Fenster (20-10) haette erhalten bleiben muessen, got start=%v end=%v", start, end)
 	}
 }
 

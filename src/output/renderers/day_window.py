@@ -61,13 +61,21 @@ def resolve_configured_window(
     day_window_start_hour: Optional[int],
     day_window_end_hour: Optional[int],
 ) -> tuple[int, int]:
-    """Epic #1319 Scheibe B: eine Quelle fuer die effektiven Fenster-Grenzen.
+    """Epic #1319 Scheibe B (erweitert Issue #1361/#1372 S1b, AC-3): eine
+    Quelle fuer die effektiven Fenster-Grenzen.
 
     ``None``/fehlend (Alt-Trip, Rueckwaertskompatibilitaet) oder ein
-    ungueltiges Paar (ausserhalb 0-23, ``start >= end``) faellt still auf
+    ungueltiges Paar (ausserhalb 0-23, ``start == end``) faellt still auf
     den Default 4/19 zurueck -- Defense-in-Depth, falls eine ungueltige
     Kombination den Go-Store-Klemmpfad umgeht und dennoch bis zum Renderer
     durchreicht (AC-4).
+
+    ``start > end`` ist seit #1361/#1372 S1b (PO-Entscheidung 2026-07-25)
+    ein GUELTIGES Fenster ueber Mitternacht (z. B. 22-2 Uhr) -- NICHT mehr
+    invalide. Nur ``start == end`` (Nullstunden- bzw. Ganztags-Mehrdeutigkeit)
+    bleibt abgelehnt. Konsumenten (``build_day_window_points()``,
+    ``comparison_engine._filter_by_target_date_and_window()``) muessen den
+    Mitternachts-Fall selbst wrap-aware behandeln.
     """
     if day_window_start_hour is None or day_window_end_hour is None:
         return DAY_WINDOW_START_HOUR, DAY_WINDOW_END_HOUR
@@ -77,7 +85,7 @@ def resolve_configured_window(
         return DAY_WINDOW_START_HOUR, DAY_WINDOW_END_HOUR
     if not (0 <= day_window_start_hour <= 23 and 0 <= day_window_end_hour <= 23):
         return DAY_WINDOW_START_HOUR, DAY_WINDOW_END_HOUR
-    if day_window_start_hour >= day_window_end_hour:
+    if day_window_start_hour == day_window_end_hour:
         return DAY_WINDOW_START_HOUR, DAY_WINDOW_END_HOUR
     return day_window_start_hour, day_window_end_hour
 
@@ -110,10 +118,13 @@ def build_day_window_points(
     Zeitreihe) via _merge_hour die heutige Stunde -- die Kurzform behauptet
     dann ein Gewitter-/Regenfenster, das in KEINER gerenderten Tabellenzeile
     auftaucht (die Tabelle filtert bereits korrekt nach Datum). Das Fenster
-    endet hier stets am Ankunftstag selbst (DAY_WINDOW_END_HOUR = 19 Uhr
-    desselben Tages) -- anders als _extract_night_rows braucht diese
-    Funktion daher KEINEN separaten Folgetag-Zweig (kein Analogon zu deren
-    is_next_day, der dort das Nacht-Fenster bis 06:00 morgens erweitert).
+    endet normalerweise (``start_hour <= end_hour``) am Ankunftstag selbst.
+
+    Issue #1361/#1372 S1b (AC-3): geht das Fenster ueber Mitternacht
+    (``start_hour > end_hour``, z. B. 22-2 Uhr), erweitert sich der
+    Nacht-Anteil zusaetzlich auf den ARRIVAL-Folgetag bis ``end_hour``
+    desselben -- analog ``_extract_night_rows``' ``is_next_day``-Zweig, den
+    diese Funktion vorher bewusst nicht brauchte (s. Historie unten).
     """
     if not segments:
         return []
@@ -134,21 +145,35 @@ def build_day_window_points(
             if in_window:
                 raw.append(dp)
 
+    wraps = start_hour > end_hour
     if night_weather is not None and night_weather.data:
         arrival_dt = segments[-1].segment.end_time
         arrival_hour = local_hour(arrival_dt, tz)
         arrival_date = arrival_dt.astimezone(tz).date()
+        next_date = arrival_date + timedelta(days=1)
         for dp in night_weather.data:
-            if dp.ts.astimezone(tz).date() != arrival_date:
-                continue  # kein Folgetag-Leck in die heutige Stunde (Kurzform-Tabelle-Datumsfilter)
+            dp_date = dp.ts.astimezone(tz).date()
             h = local_hour(dp.ts, tz)
-            if arrival_hour <= h <= end_hour:
-                raw.append(dp)
+            if dp_date == arrival_date:
+                # Mitternachts-Fenster (AC-3): am Ankunftstag reicht der
+                # Nacht-Anteil bis 23 Uhr (der Rest liegt im Folgetag-Zweig
+                # unten); ohne Wrap wie bisher nur bis end_hour.
+                upper = 23 if wraps else end_hour
+                if arrival_hour <= h <= upper:
+                    raw.append(dp)
+            elif wraps and dp_date == next_date:
+                # Mitternachts-Fenster: der Folgetag-Anteil bis end_hour
+                # (analog trip_report.py::_extract_night_rows is_next_day).
+                if h <= end_hour:
+                    raw.append(dp)
+            # kein Wrap + anderer Kalendertag: kein Folgetag-Leck
+            # (Kurzform-Tabelle-Datumsfilter, unveraendertes Bestandsverhalten).
 
     by_hour: dict[int, list[ForecastDataPoint]] = {}
     for dp in raw:
         h = local_hour(dp.ts, tz)
-        if start_hour <= h <= end_hour:
+        in_final_window = (start_hour <= h <= end_hour) if not wraps else (h >= start_hour or h <= end_hour)
+        if in_final_window:
             by_hour.setdefault(h, []).append(dp)
 
     return [_merge_hour(by_hour[h]) for h in sorted(by_hour)]

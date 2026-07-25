@@ -322,7 +322,9 @@ def send_one_compare_preset(
     from services.compare_preview_service import order_locations_by_ids
     from services.comparison_engine import COMPARE_FORECAST_HOURS, ComparisonEngine
     from services.notification_service import NotificationService
-    from services.report_config_resolver import resolve_compare_render_options
+    from services.report_config_resolver import (
+        resolve_compare_render_options, resolve_compare_time_window,
+    )
 
     preset_id = preset.get("id", "")
     location_ids = preset.get("location_ids") or []
@@ -346,12 +348,13 @@ def send_one_compare_preset(
 
     profil_str = preset.get("profil", "").lower()
     profile = _parse_activity_profile(profil_str)
-    # Issue #1268: Zeitfenster und Horizont sind keine Editor-Felder mehr.
-    # Der Dispatch liest die (deprecateten) Preset-Werte hour_from/hour_to/
-    # forecast_hours nicht mehr — sie bleiben nur zur Bestandswahrung persistiert.
+    # Issue #1361/#1372 S1b: der Dispatch liest das Tagesfenster ueber
+    # dieselbe Quelle wie der Trip-Zweig (day_window.resolve_configured_window).
+    # Die deprecateten Preset-Werte hour_from/hour_to bleiben wirkungslos —
+    # nur noch zur Bestandswahrung persistiert (#1361 Befund 1).
     result = ComparisonEngine.run(
         locations=locations,
-        time_window=(0, 23),  # Issue #1268: ganzer Tag, kein Editor-Feld mehr
+        time_window=resolve_compare_time_window(preset),
         target_date=target_date,
         forecast_hours=COMPARE_FORECAST_HOURS,  # Issue #1305: geteilte Konstante statt 48 fest
         profile=profile,

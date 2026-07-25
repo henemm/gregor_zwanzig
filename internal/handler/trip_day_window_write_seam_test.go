@@ -122,15 +122,21 @@ func TestUpdateTripHandler_KeepsValidDayWindowPairOnWrite(t *testing.T) {
 }
 
 // AC-4 (Write-Seam, Anlege-Pfad): POST /api/trips mit einem ungueltigen Paar
-// darf das Paar ebenfalls nicht persistieren (analog Issue #1280 F002-Fix fuer
-// morning_time/evening_time).
+// (start == end) darf das Paar ebenfalls nicht persistieren (analog Issue
+// #1280 F002-Fix fuer morning_time/evening_time).
+//
+// Issue #1361/#1372 S1b (PO-Entscheidung 2026-07-25): der bisherige
+// Repro-Fall dieses Tests (start=20/end=10) ist seit dieser Scheibe ein
+// GUELTIGES Mitternachts-Fenster -- wandert daher zu start==end (weiterhin
+// die einzige verbleibende Mehrdeutigkeit). Der Mitternachts-Fall wird in
+// TestCreateTripHandler_KeepsValidWrapDayWindowPairOnWrite separat bewiesen.
 func TestCreateTripHandler_ClampsInvalidDayWindowPairOnWrite(t *testing.T) {
 	s := newTestStore(t)
 
 	body := `{"id":"trip-1319-daywindow-create","name":"Create DayWindow Clamp Trip",` +
 		`"stages":[{"id":"S1","name":"D1","date":"2026-05-01",` +
 		`"waypoints":[{"id":"W1","name":"P","lat":47.0,"lon":11.0,"elevation_m":500}]}],` +
-		`"report_config":{"enabled":true,"day_window_start_hour":20,"day_window_end_hour":10}}`
+		`"report_config":{"enabled":true,"day_window_start_hour":20,"day_window_end_hour":20}}`
 
 	h := CreateTripHandler(s)
 	req := httptest.NewRequest("POST", "/api/trips", strings.NewReader(body))
@@ -148,5 +154,38 @@ func TestCreateTripHandler_ClampsInvalidDayWindowPairOnWrite(t *testing.T) {
 	}
 	if _, ok := got.ReportConfig["day_window_start_hour"]; ok {
 		t.Errorf("Persistiert darf day_window_start_hour nicht ungeklemmt vorliegen, got %v", got.ReportConfig["day_window_start_hour"])
+	}
+}
+
+// AC-3 (Write-Seam, Anlege-Pfad, PO-Entscheidung 2026-07-25): ein Fenster
+// ueber Mitternacht (start=20, end=10) ist GUELTIG und darf beim Anlegen
+// nicht geklemmt werden.
+func TestCreateTripHandler_KeepsValidWrapDayWindowPairOnWrite(t *testing.T) {
+	s := newTestStore(t)
+
+	body := `{"id":"trip-1361-wrap-create","name":"Wrap DayWindow Create Trip",` +
+		`"stages":[{"id":"S1","name":"D1","date":"2026-05-01",` +
+		`"waypoints":[{"id":"W1","name":"P","lat":47.0,"lon":11.0,"elevation_m":500}]}],` +
+		`"report_config":{"enabled":true,"day_window_start_hour":20,"day_window_end_hour":10}}`
+
+	h := CreateTripHandler(s)
+	req := httptest.NewRequest("POST", "/api/trips", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != 201 {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	got, err := s.LoadTrip("trip-1361-wrap-create")
+	if err != nil || got == nil {
+		t.Fatalf("LoadTrip failed: %v", err)
+	}
+	if got.ReportConfig["day_window_start_hour"] != float64(20) {
+		t.Errorf("Mitternachts-Fenster darf nicht geklemmt werden, day_window_start_hour: erwartet 20, got %v", got.ReportConfig["day_window_start_hour"])
+	}
+	if got.ReportConfig["day_window_end_hour"] != float64(10) {
+		t.Errorf("Mitternachts-Fenster darf nicht geklemmt werden, day_window_end_hour: erwartet 10, got %v", got.ReportConfig["day_window_end_hour"])
 	}
 }

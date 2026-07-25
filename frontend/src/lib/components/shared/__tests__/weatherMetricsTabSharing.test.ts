@@ -169,10 +169,12 @@ describe('AC-1/AC-8: weatherMetricsTabSections(context) — reine Funktion (Vorb
 			// Issue #1360: 'stundenverlauf' ist die neue Heimat der Stundenverlauf-
 			// Steuerung (Layout-Reiter aufgeloest). Sie hat echte Mail-Wirkung
 			// (hourly_enabled/hourly_metrics) und ist deshalb KEINE Attrappe.
+			// Issue #1361/#1372 S1b: 'tagesfenster' kommt DAZU — geteilt mit dem
+			// Trip (AC-4), wirkt auf Stundentabelle UND Vergleichswerte.
 			assert.deepEqual(
 				sections,
-				['grundauswahl', 'reihenfolge', 'stundenverlauf', 'official_alerts'],
-				'AC-1/AC-8/AC-6 FAIL: der vergleich-Kontext zeigt mehr/weniger als Grundauswahl+Reihenfolge+Stundenverlauf+Amtliche-Warnungen — ' +
+				['grundauswahl', 'reihenfolge', 'tagesfenster', 'stundenverlauf', 'official_alerts'],
+				'AC-1/AC-8/AC-6 FAIL: der vergleich-Kontext zeigt mehr/weniger als Grundauswahl+Reihenfolge+Tagesfenster+Stundenverlauf+Amtliche-Warnungen — ' +
 					`Ist: ${JSON.stringify(sections)}. Horizonte/SMS-Schwellen/Report-Config haetten ` +
 					'keine Mail-Wirkung im Vergleich und waeren Attrappen.'
 			);

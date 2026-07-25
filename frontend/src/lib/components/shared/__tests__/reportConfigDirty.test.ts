@@ -42,6 +42,19 @@ import type { ReportConfig } from '$lib/types';
 const { reportConfigChangedByUser } = await import('../reportConfigDirty.ts');
 
 describe('AC-1/AC-3: reine Mount-Kanonisierung (Format + Default-Ergänzung) ist KEINE Nutzeränderung', () => {
+	// Adversary Runde 4 (Regression, gefunden waehrend eines Zwischenstands
+	// dieser Scheibe): ein Versuch, `reportConfigChangedByUser()` auf die
+	// VEREINIGUNG beider Schluesselmengen umzustellen, wurde WIEDER VERWORFEN.
+	// Die Mount-Kanonisierung materialisiert selbst ATOMAR viele neue
+	// Default-Felder (ohne Nutzerzutun, s. Testfall unten) — eine
+	// Vereinigungs-Regel haette das faelschlich als "veraendert" gemeldet,
+	// und der skip-Zweig von `scheduleAutoSave()` ruft `saveController.
+	// setDirty()` auch bei verweigerter Nutzergeste -> falsches "Nicht
+	// gespeichert" beim bloszen Oeffnen JEDES Bestandstrips. Diese Funktion
+	// bleibt daher bei der Baseline-Iteration (s. Modul-Kommentar oben); ein
+	// neues, zunaechst leeres Feld (z.B. `day_window_start_hour`) geht seither
+	// bewusst ueber den AUSDRUECKLICHEN Pfad (userTouched + scheduleAutoSave()
+	// direkt aus der DOM-Geste, s. weatherMetricsTabDayWindowSave.test.ts).
 	test('rohe geladene Config vs. ihre Mount-normalisierte Form (nur toHHMMSS + Default-Materialisierung) → false', () => {
 		// So kommt report_config typischerweise vom Server (Legacy-Trip, Zeiten
 		// ohne Sekunden, mehrere Default-Felder fehlen noch).
@@ -139,5 +152,22 @@ describe('Gegenprobe: eine ECHTE inhaltliche Änderung bleibt "dirty" (darf NICH
 			send_telegram: true
 		};
 		assert.equal(reportConfigChangedByUser(baseline, afterUserEdit), true);
+	});
+});
+
+describe('Robustheits-Invariante: ein zuvor gesetztes Feld, das in current fehlt, bleibt konservativ "dirty"', () => {
+	// Unveraendert durch Runde 3/4 — betrifft nur Schluessel, die BEREITS in
+	// baseline standen (nicht den verworfenen Vereinigungs-Fall neuer
+	// Schluessel, s. Modul-Kommentar in reportConfigDirty.ts).
+	test('Feld verschwindet aus current (war in baseline gesetzt) → true', () => {
+		const baseline: ReportConfig = { enabled: true, day_window_start_hour: 6 };
+		const { day_window_start_hour: _removed, ...afterRemoval } = baseline as Record<string, unknown>;
+
+		assert.equal(
+			reportConfigChangedByUser(baseline, afterRemoval as ReportConfig),
+			true,
+			'ein zuvor gesetztes Feld, das in current fehlt, bleibt konservativ "dirty" — Bestandsverhalten darf ' +
+				'sich hier nicht aendern'
+		);
 	});
 });

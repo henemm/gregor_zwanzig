@@ -40,6 +40,7 @@ from src.app.trip import Stage, Trip, Waypoint
 from src.output.renderers.day_window import build_day_window_points
 from src.output.renderers.trip_report import TripReportFormatter
 from src.services.notification_service import compute_has_gap
+from src.utils.timezone import local_hour
 
 _YEAR, _MONTH = 2026, 7
 _TZ = ZoneInfo("Europe/Paris")
@@ -355,15 +356,19 @@ class TestAC3ConfiguredWindowAppliesToAllFourChannelsAndGapCheck:
 
 class TestAC4DefensiveClampingInvalidWindowPair:
     """AC-4: ein ueber die API/Migration direkt gesetztes ungueltiges
-    Feld-Paar (start=20 >= end=10) wird beim Laden still auf None (= Default
-    4/19) zurueckgesetzt -- kein Crash, kein leeres Briefing. Simuliert eine
-    Umgehung der UI-Validierung durch direktes Schreiben in die Trip-JSON
-    (kein Python-/Go-Konstruktor-Aufruf).
+    Feld-Paar (start == end, hier 20/20) wird beim Laden still auf None
+    (= Default 4/19) zurueckgesetzt -- kein Crash, kein leeres Briefing.
+    Simuliert eine Umgehung der UI-Validierung durch direktes Schreiben in
+    die Trip-JSON (kein Python-/Go-Konstruktor-Aufruf).
 
-    RED: `TripReportConfig` hat noch kein `day_window_start_hour`-Attribut
-    -> AttributeError statt geklemmtem Rueckfall auf None."""
+    Issue #1361/#1372 S1b (PO-Entscheidung 2026-07-25): ``start > end``
+    (z. B. 20/10) ist seit dieser Scheibe ein GUELTIGES Mitternachts-Fenster,
+    nicht mehr invalide -- der bisherige Repro-Fall dieser Klasse wandert
+    daher zu ``start == end`` (weiterhin die einzige verbleibende
+    Mehrdeutigkeit). Der Mitternachts-Fall wird unten in
+    ``TestAC3MidnightWrapWindowIsValid`` separat bewiesen."""
 
-    def test_invalid_raw_window_pair_loads_and_renders_with_default_fallback(self, tmp_path: Path):
+    def test_equal_start_and_end_loads_and_renders_with_default_fallback(self, tmp_path: Path):
         data_dir = tmp_path / "data"
         trip = _minimal_trip("invalid-window-trip")
         save_trip(trip, user_id="clamp-user", data_dir=data_dir)
@@ -373,18 +378,18 @@ class TestAC4DefensiveClampingInvalidWindowPair:
         # Direkte Plattenmanipulation (Import/Migration/API-Umgehung, DEC-2) --
         # bewusst KEIN TripReportConfig(...)-Konstruktor-Aufruf hier.
         raw["report_config"]["day_window_start_hour"] = 20
-        raw["report_config"]["day_window_end_hour"] = 10
+        raw["report_config"]["day_window_end_hour"] = 20
         path.write_text(json.dumps(raw, indent=2, ensure_ascii=False), encoding="utf-8")
 
         loaded = load_trip("invalid-window-trip", data_dir=str(data_dir), user_id="clamp-user")
         assert loaded is not None
 
         assert loaded.report_config.day_window_start_hour is None, (
-            "Ungueltiges Feld-Paar (start=20 >= end=10) haette beim Laden auf "
+            "Ungueltiges Feld-Paar (start == end == 20) haette beim Laden auf "
             "None (= Default 4/19) zurueckgesetzt werden muessen."
         )
         assert loaded.report_config.day_window_end_hour is None, (
-            "Ungueltiges Feld-Paar (start=20 >= end=10) haette beim Laden auf "
+            "Ungueltiges Feld-Paar (start == end == 20) haette beim Laden auf "
             "None (= Default 4/19) zurueckgesetzt werden muessen."
         )
 
@@ -397,3 +402,88 @@ class TestAC4DefensiveClampingInvalidWindowPair:
             f"Erwarteter Default-Fenster-Fallback (4-19): Ereignis um 18:00 "
             f"sollte sichtbar sein.\nSMS: {report.sms_text}"
         )
+
+
+# ---------------------------------------------------------------------------
+# AC-3 (erweitert #1361/#1372 S1b): Fenster ueber Mitternacht ist GUELTIG
+# ---------------------------------------------------------------------------
+
+class TestAC3MidnightWrapWindowIsValid:
+    """AC-3 (PO-Entscheidung 2026-07-25): ein Fenster mit start > end (z. B.
+    20-10 Uhr) ist ein gueltiges Fenster ueber Mitternacht -- wird NICHT mehr
+    auf den Default geklemmt, persistiert unveraendert, und rendert Ereignisse
+    von BEIDEN Kalendertagsseiten (Ankunftstag ab Startstunde + Folgetag bis
+    Endstunde), aber keine Ereignisse dazwischen (Tagesstunden).
+
+    RED vor Fix: `resolve_configured_window()`/`_clamped_day_window()` lehnen
+    start > end als "start >= end" ab -> Fenster faellt auf Default 4-19
+    zurueck, Ereignisse ausserhalb 4-19 verschwinden."""
+
+    def test_wrap_window_persists_unclamped(self, tmp_path: Path):
+        data_dir = tmp_path / "data"
+        trip = _minimal_trip("wrap-window-trip")
+        save_trip(trip, user_id="wrap-user", data_dir=data_dir)
+
+        path = data_dir / "users" / "wrap-user" / "briefings" / "wrap-window-trip.json"
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        raw["report_config"]["day_window_start_hour"] = 20
+        raw["report_config"]["day_window_end_hour"] = 10
+        path.write_text(json.dumps(raw, indent=2, ensure_ascii=False), encoding="utf-8")
+
+        loaded = load_trip("wrap-window-trip", data_dir=str(data_dir), user_id="wrap-user")
+        assert loaded is not None
+        assert loaded.report_config.day_window_start_hour == 20, (
+            f"Mitternachts-Fenster (20-10) darf nicht geklemmt werden, "
+            f"got start={loaded.report_config.day_window_start_hour}"
+        )
+        assert loaded.report_config.day_window_end_hour == 10, (
+            f"Mitternachts-Fenster (20-10) darf nicht geklemmt werden, "
+            f"got end={loaded.report_config.day_window_end_hour}"
+        )
+
+    def test_wrap_window_shows_events_from_both_calendar_sides_not_daytime(self):
+        """Fenster 20-10 Uhr: `build_day_window_points()` (der gemeinsame
+        Baustein, den alle vier Kurzformen konsumieren) muss Stunden 20-23
+        (Ankunftstag) UND 0-10 (Folgetag) enthalten, aber keine Tagesstunde
+        dazwischen (z. B. 14 Uhr).
+
+        Direkter Unit-Test statt ueber die SMS-Token-Ebene: das SMS-Format
+        traegt genau EINEN "TH:H@<Stunde>"-Token (die Positionsindex-Logik in
+        `tokens/builder.py`/`sms_trip.py` zeigt keine Liste mehrerer Stunden),
+        daher ist ein Test ueber zwei gleichzeitig sichtbare Stunden auf
+        SMS-Ebene strukturell nicht moeglich -- der Baustein selbst ist aber
+        exakt hier (AC-3) geprueft."""
+        segments = [_segment(day=20, early_event=(14, ThunderLevel.HIGH))]
+        # Eigene night_weather-Konstruktion (nicht ueber den Helper, der
+        # Folgetag-Punkte hart auf NONE setzt): Ankunft(12)-23 Uhr Ankunftstag,
+        # plus 0-6 Uhr Folgetag.
+        points = [_dp(20, h) for h in range(_ARRIVAL_H, 24)] + [_dp(21, h) for h in range(0, 7)]
+        night = NormalizedTimeseries(meta=_meta(), data=points)
+
+        result = build_day_window_points(segments, night, _TZ, start_hour=20, end_hour=10)
+        hours_seen = sorted({local_hour(dp.ts, _TZ) for dp in result})
+
+        assert 14 not in hours_seen, (
+            f"14 Uhr (Tagsueber, ausserhalb 20-10) darf NICHT im Fenster sein: {hours_seen}"
+        )
+        for expected_hour in (20, 21, 22, 23):
+            assert expected_hour in hours_seen, (
+                f"{expected_hour} Uhr (Ankunftstag, im Mitternachts-Fenster 20-10) "
+                f"fehlt: {hours_seen}"
+            )
+        for expected_hour in (0, 5, 10):
+            assert expected_hour in hours_seen, (
+                f"{expected_hour} Uhr (Folgetag, im Mitternachts-Fenster 20-10) "
+                f"fehlt: {hours_seen}"
+            )
+
+    def test_normal_window_unaffected_by_wrap_support(self):
+        """Regressionsgrenze (PO-Entscheidung): ein normales Fenster
+        (start < end, hier 6-16) muss sich exakt wie vorher verhalten."""
+        segments = [_segment(day=20)]
+        night = _night_weather(day=20, event_hour=16, thunder=ThunderLevel.HIGH)
+        report_config = TripReportConfig(
+            trip_id="e7", day_window_start_hour=6, day_window_end_hour=16,
+        )
+        report = _report(segments, night, report_config=report_config)
+        assert "TH:H@16" in report.sms_text, f"SMS: {report.sms_text}"

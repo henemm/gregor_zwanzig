@@ -98,12 +98,15 @@ def _friendly_from_mode(mode: str) -> bool:
 def _clamped_day_window(
     start_hour: Optional[int], end_hour: Optional[int],
 ) -> tuple[Optional[int], Optional[int]]:
-    """Epic #1319 Scheibe B AC-4: defensive Klemmung beim Lesen.
+    """Epic #1319 Scheibe B AC-4 (erweitert Issue #1361/#1372 S1b): defensive
+    Klemmung beim Lesen.
 
     Ein ueber Import/Migration/API-Umgehung direkt geschriebenes ungueltiges
-    Feld-Paar (ausserhalb 0-23 oder ``start >= end``) wird beim Laden auf
+    Feld-Paar (ausserhalb 0-23 oder ``start == end``) wird beim Laden auf
     ``(None, None)`` zurueckgesetzt (= Default 4/19 beim Rendern), statt einen
-    kaputten Wert in den Trip zu uebernehmen.
+    kaputten Wert in den Trip zu uebernehmen. ``start > end`` ist seit
+    #1361/#1372 S1b ein GUELTIGES Fenster ueber Mitternacht (PO-Entscheidung
+    2026-07-25) -- dieselbe Regel wie ``day_window.resolve_configured_window()``.
     """
     if start_hour is None or end_hour is None:
         return None, None
@@ -113,7 +116,7 @@ def _clamped_day_window(
         return None, None
     if not (0 <= start_hour <= 23 and 0 <= end_hour <= 23):
         return None, None
-    if start_hour >= end_hour:
+    if start_hour == end_hour:
         return None, None
     return start_hour, end_hour
 
@@ -277,6 +280,10 @@ def compare_preset_from_dict(data: Dict[str, Any]) -> ComparePreset:
         # Issue #1250 Scheibe 5: additiver Diskriminator, roundtrip-erhalten
         # (auch als None) — Parität zu _parse_trip.kind.
         kind=data.get("kind"),
+        # Issue #1361/#1372 S1b: gemeinsames Tagesfenster, roundtrip-erhalten
+        # (auch als None -> Default 4/19 in day_window.resolve_configured_window).
+        day_window_start_hour=data.get("day_window_start_hour"),
+        day_window_end_hour=data.get("day_window_end_hour"),
         raw=dict(data),
     )
 

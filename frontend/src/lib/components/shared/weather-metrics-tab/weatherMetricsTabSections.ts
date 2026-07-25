@@ -39,8 +39,13 @@ const ROUTE_ONLY_SECTIONS = ['sms_schwellen', 'report_config'] as const;
 // dieser Scheibe (Spec § Known Limitations).
 const COMPARE_ONLY_SECTIONS = ['stundenverlauf'] as const;
 
+// Issue #1361/#1372 S1b: 'tagesfenster' ist NICHT kontext-exklusiv — beide
+// Seiten teilen sich ab jetzt EIN Tagesfenster (dieselbe Bedienfläche, gleiche
+// Position). Beim Trip zieht die Steuerung damit aus dem Versand-Reiter hierher
+// (PO-Entscheidung: "Welche Stunden bewertet werden, ist eine Inhalts- und
+// keine Versandfrage").
 export function weatherMetricsTabSections(context: WeatherMetricsContext): string[] {
-	const sections: string[] = ['grundauswahl', 'reihenfolge'];
+	const sections: string[] = ['grundauswahl', 'reihenfolge', 'tagesfenster'];
 	if (context === 'route') sections.push(...ROUTE_ONLY_SECTIONS);
 	if (context === 'vergleich') sections.push(...COMPARE_ONLY_SECTIONS);
 	sections.push('official_alerts');

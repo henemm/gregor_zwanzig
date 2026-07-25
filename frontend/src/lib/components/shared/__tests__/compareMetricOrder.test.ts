@@ -26,11 +26,12 @@ describe('Issue #1359 Scheibe 1: Reihenfolge-Abschnitt im Vergleich', () => {
 		}
 	});
 
-	test('AC-9: route-Kontext bleibt unveraendert (Regressionsschutz Trip)', () => {
+	test('AC-9: route-Kontext (Regressionsschutz Trip, seit #1361/#1372 S1b mit tagesfenster)', () => {
 		const sections = weatherMetricsTabSections('route');
 		assert.deepEqual(sections, [
 			'grundauswahl',
 			'reihenfolge',
+			'tagesfenster',
 			'sms_schwellen',
 			'report_config',
 			'official_alerts'
@@ -79,8 +80,18 @@ describe('Issue #1359 Scheibe 1: Diff-Guard erkennt reine Umsortierung (AC-3)', 
 	test('AC-3: nur umsortiert -> Speicher-Payload mit der NEUEN Reihenfolge', () => {
 		const payload = flushPendingWeatherMetricsSave(
 			preset,
-			{ activeMetricKeys: ['wind_max_kmh', 'temp_max_c'], officialAlertsEnabled: true },
-			{ activeMetricKeys: ['temp_max_c', 'wind_max_kmh'], officialAlertsEnabled: true }
+			{
+				activeMetricKeys: ['wind_max_kmh', 'temp_max_c'],
+				officialAlertsEnabled: true,
+				dayWindowStartHour: 4,
+				dayWindowEndHour: 19
+			},
+			{
+				activeMetricKeys: ['temp_max_c', 'wind_max_kmh'],
+				officialAlertsEnabled: true,
+				dayWindowStartHour: 4,
+				dayWindowEndHour: 19
+			}
 		);
 		assert.ok(payload, 'AC-3 FAIL: reine Umsortierung wurde als "keine Aenderung" verworfen');
 		assert.deepEqual(payload!.body.display_config?.active_metrics, [
@@ -92,7 +103,9 @@ describe('Issue #1359 Scheibe 1: Diff-Guard erkennt reine Umsortierung (AC-3)', 
 	test('AC-3: unveraenderte Reihenfolge schreibt weiterhin NICHT', () => {
 		const snapshot = {
 			activeMetricKeys: ['temp_max_c', 'wind_max_kmh'],
-			officialAlertsEnabled: true
+			officialAlertsEnabled: true,
+			dayWindowStartHour: 4,
+			dayWindowEndHour: 19
 		};
 		assert.equal(
 			flushPendingWeatherMetricsSave(preset, { ...snapshot }, { ...snapshot }),

@@ -559,6 +559,12 @@ export interface ComparePreset {
 	// (Legacy-Feld bleibt fuer Rollback erhalten, wird nicht mehr gelesen/geschrieben).
 	// FE schreibt `sources` nie — der Go-Handler-RMW bewahrt Bestand-Sources.
 	official_warnings?: { enabled: boolean; sources?: string[] };
+	// Issue #1361/#1372 S1b — gemeinsames Tagesfenster mit dem Trip (Reiter
+	// Wetter-Metriken). Ersetzt hour_from/hour_to als Bedienfeld; diese bleiben
+	// oben nur zur Bestandswahrung persistiert. undefined/null (Alt-Preset) ->
+	// Default 4/19 (day_window.resolve_configured_window()).
+	day_window_start_hour?: number | null;
+	day_window_end_hour?: number | null;
 }
 
 // Issue #1068 — Nutzerlevel (Slice 1 aus Epic #1067).

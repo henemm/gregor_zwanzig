@@ -1,21 +1,17 @@
-// E2E — Epic #1319 Scheibe B+C: konfigurierbares Tagesfenster im Trip-Editor
-// (Versand-Tab, "SMS-/Zeitplan-Einstellung", context="route").
+// E2E — Epic #1319 Scheibe B+C, erweitert Issue #1361/#1372 S1b (ADR-0035):
+// konfigurierbares Tagesfenster im Trip-Editor, Reiter "Wetter-Metriken"
+// (context="route").
 //
-// Spec: docs/specs/modules/daywindow_configurable_window.md (AC-5)
-// Kontext: docs/context/issue-1319-slice-b.md
-// Workflow: issue-1319-slice-b
+// Spec: docs/specs/modules/compare_shared_day_window.md (AC-4/AC-5)
+// Vorgaenger: docs/specs/modules/daywindow_configurable_window.md (AC-5,
+// Epic #1319) — das Control lag dort noch im Versand-Tab; #1361/#1372 S1b
+// verschiebt es in den Reiter Wetter-Metriken (Inhalts-, keine Versandfrage)
+// und macht ein Fenster ueber Mitternacht gueltig (ADR-0035, Punkt 5).
 //
-// TDD RED: das Fenster-Control (Testid `day-window-control`, s.u.) existiert
-// noch nicht in VTSchedulePlan.svelte -- dieser Test muss NICHT lokal laufen
-// (kein Staging-/Preview-Verify in der RED-Phase), aber er MUSS existieren
-// und den Ziel-Testid referenzieren, damit die Implement-Phase gegen ein
-// konkretes Ziel arbeitet. Erwartete Fehlschlagsursache heute: Timeout beim
-// Warten auf `[data-testid="day-window-control"]` (Locator nie sichtbar).
+// Muster uebernommen aus versand-tab.spec.ts (createTrip/openTripOverview)
+// + weather-metrics-tab-autosave.spec.ts (clickWeatherTab/collectTripPuts).
 //
-// Muster uebernommen aus versand-tab.spec.ts (createTrip/openTripOverview/
-// clickVersandTab) + weather-metrics-tab-autosave.spec.ts (collectTripPuts).
-//
-// Ausfuehren (sobald implementiert, gegen Staging/Preview):
+// Ausfuehren (gegen Staging/Preview):
 //   cd frontend && npx playwright test e2e/daywindow-schedule-control.spec.ts
 
 import { test, expect, type APIRequestContext, type Page, type Request } from '@playwright/test';
@@ -59,9 +55,9 @@ async function openTripOverview(page: Page, id: string): Promise<void> {
 	await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible();
 }
 
-async function clickVersandTab(page: Page): Promise<void> {
-	await page.getByTestId('trip-detail-tab-briefings').first().click();
-	await expect(page.getByTestId('trip-detail-panel-briefings')).toBeVisible();
+async function clickWeatherTab(page: Page): Promise<void> {
+	await page.getByTestId('trip-detail-tab-weather').first().click();
+	await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 }
 
 /** Zeichnet jeden PUT-Request auf den Trip auf (Muster: weather-metrics-tab-autosave.spec.ts). */
@@ -75,7 +71,7 @@ function collectTripPuts(page: Page, id: string): Request[] {
 	return puts;
 }
 
-test.describe('Epic #1319 Scheibe B+C: Tagesfenster-Control im Versand-Tab (context=route)', () => {
+test.describe('Issue #1361/#1372 S1b: Tagesfenster-Control im Reiter Wetter-Metriken (context=route)', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.request.delete(`/api/trips/${tripId('ac5')}`).catch(() => {});
 		await createTrip(page.request, tripId('ac5'));
@@ -85,15 +81,16 @@ test.describe('Epic #1319 Scheibe B+C: Tagesfenster-Control im Versand-Tab (cont
 		await deleteTrip(page.request, tripId('ac5'));
 	});
 
-	// AC-5: Startstunde setzen -> Endstunde-Optionen nur > Startstunde; Speichern
-	// loest genau EINEN PUT aus, der das Feld-Paar persistiert; Reload behaelt
-	// den Wert.
-	test('AC-5: Startstunde begrenzt Endstunde-Optionen, genau 1 PUT, Reload persistiert', async ({
+	// AC-5: Startstunde setzen -> Endstunde-Optionen bieten alle Stunden AUSSER
+	// der Startstunde (ADR-0035: ein Fenster ueber Mitternacht ist gueltig, die
+	// Endstunde darf also auch VOR der Startstunde liegen); Speichern loest
+	// genau EINEN PUT aus, der das Feld-Paar persistiert; Reload behaelt den Wert.
+	test('AC-5: Endstunde-Optionen schliessen nur die Startstunde selbst aus, genau 1 PUT, Reload persistiert', async ({
 		page
 	}) => {
 		await login(page);
 		await openTripOverview(page, tripId('ac5'));
-		await clickVersandTab(page);
+		await clickWeatherTab(page);
 
 		const control = page.locator('[data-testid="day-window-control"]:visible').first();
 		await expect(control).toBeVisible({ timeout: 10_000 });
@@ -103,13 +100,13 @@ test.describe('Epic #1319 Scheibe B+C: Tagesfenster-Control im Versand-Tab (cont
 
 		await startSelect.selectOption('6');
 
-		// Nur Endstunden > 6 duerfen waehlbar sein (0-23 begrenzt).
+		// ADR-0035: alle Stunden AUSSER der Startstunde sind waehlbar (auch
+		// Werte VOR der Startstunde -- das bildet ein Fenster ueber Mitternacht).
 		const endOptionValues = await endSelect.locator('option').evaluateAll((opts) =>
 			opts.map((o) => (o as HTMLOptionElement).value)
 		);
-		for (const v of endOptionValues) {
-			expect(Number(v), `Endstunde-Option ${v} muss > 6 sein`).toBeGreaterThan(6);
-		}
+		expect(endOptionValues.map(Number)).not.toContain(6);
+		expect(endOptionValues.length, 'erwartet 23 Optionen (alle 24 Stunden ausser der Startstunde)').toBe(23);
 
 		const puts = collectTripPuts(page, tripId('ac5'));
 		await endSelect.selectOption('16');
@@ -124,9 +121,47 @@ test.describe('Epic #1319 Scheibe B+C: Tagesfenster-Control im Versand-Tab (cont
 
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await clickVersandTab(page);
+		await clickWeatherTab(page);
 
 		await expect(startSelect).toHaveValue('6', { timeout: 10_000 });
 		await expect(endSelect).toHaveValue('16', { timeout: 10_000 });
+	});
+
+	// AC-3/AC-5 (ADR-0035, Punkt 5): ein Fenster ueber Mitternacht (Endstunde
+	// VOR der Startstunde) ist ueber die Oberfläche waehlbar, persistiert, und
+	// die Karte zeigt den Mitternachts-Hinweis.
+	test('AC-3: Mitternachts-Fenster (22-2 Uhr) ist waehlbar, zeigt den Hinweis, persistiert nach Reload', async ({
+		page
+	}) => {
+		await login(page);
+		await openTripOverview(page, tripId('ac5'));
+		await clickWeatherTab(page);
+
+		const control = page.locator('[data-testid="day-window-control"]:visible').first();
+		await expect(control).toBeVisible({ timeout: 10_000 });
+
+		const startSelect = control.locator('[data-testid="day-window-start-hour"]:visible').first();
+		const endSelect = control.locator('[data-testid="day-window-end-hour"]:visible').first();
+
+		const puts = collectTripPuts(page, tripId('ac5'));
+		await startSelect.selectOption('22');
+		await endSelect.selectOption('2');
+		await page.waitForTimeout(1_500);
+
+		expect(puts.length, `Erwartet mindestens 1 PUT, erhalten ${puts.length}`).toBeGreaterThanOrEqual(1);
+		const lastBody = puts[puts.length - 1].postDataJSON() as {
+			report_config?: { day_window_start_hour?: number; day_window_end_hour?: number };
+		};
+		expect(lastBody.report_config?.day_window_start_hour).toBe(22);
+		expect(lastBody.report_config?.day_window_end_hour).toBe(2);
+
+		await expect(control.locator('[data-testid="day-window-wrap-hint"]:visible').first()).toBeVisible();
+
+		await page.reload();
+		await page.waitForLoadState('networkidle');
+		await clickWeatherTab(page);
+
+		await expect(startSelect).toHaveValue('22', { timeout: 10_000 });
+		await expect(endSelect).toHaveValue('2', { timeout: 10_000 });
 	});
 });

@@ -37,6 +37,30 @@ logger = logging.getLogger("comparison_engine")
 COMPARE_FORECAST_HOURS = 96
 
 
+def _filter_by_target_date_and_window(
+    raw_data: List["ForecastDataPoint"], target_date: "date",
+    start_hour: int, end_hour: int,
+) -> List["ForecastDataPoint"]:
+    """Filtert `raw_data` auf `target_date` + Zeitfenster — inkl. Mitternachts-
+    Uebergang (Bug #399-Muster, analog `email/helpers.py::extract_hourly_rows()`,
+    hier zusaetzlich mit Kalendertag-Bezug, weil `raw_data` mehrere Tage
+    umfasst). `start_hour <= end_hour`: normales Fenster am `target_date`.
+    `start_hour > end_hour`: das Fenster reicht von `target_date` abends bis
+    `target_date + 1 Tag` morgens (Issue #1361/#1372 S1b, AC-3)."""
+    if start_hour <= end_hour:
+        return [
+            dp for dp in raw_data
+            if dp.ts.date() == target_date and start_hour <= dp.ts.hour <= end_hour
+        ]
+    from datetime import timedelta
+    next_date = target_date + timedelta(days=1)
+    return [
+        dp for dp in raw_data
+        if (dp.ts.date() == target_date and dp.ts.hour >= start_hour)
+        or (dp.ts.date() == next_date and dp.ts.hour <= end_hour)
+    ]
+
+
 class ComparisonEngine:
     """
     Single processor for ski resort comparisons.
@@ -101,15 +125,17 @@ class ComparisonEngine:
                     dp for dp in raw_data if dp.ts.date() in _outlook_days
                 ]
 
-                # Filter by target date and time window
+                # Filter by target date and time window (Issue #1361/#1372
+                # S1b: inkl. Mitternachts-Uebergang, AC-3).
                 start_hour, end_hour = time_window
                 # Window length (inclusive) drives the sunshine SHARE bonus (#366)
-                window_hours = end_hour - start_hour + 1
-                filtered_data = [
-                    dp for dp in raw_data
-                    if dp.ts.date() == target_date
-                    and start_hour <= dp.ts.hour <= end_hour
-                ]
+                window_hours = (
+                    end_hour - start_hour + 1 if start_hour <= end_hour
+                    else (24 - start_hour) + end_hour + 1
+                )
+                filtered_data = _filter_by_target_date_and_window(
+                    raw_data, target_date, start_hour, end_hour,
+                )
 
                 # Calculate metrics from filtered data
                 metrics: Dict[str, Any] = {}

@@ -85,11 +85,15 @@ func NormalizeReportConfigSlotTimes(rc map[string]interface{}) {
 }
 
 // ClampReportConfigDayWindow validiert/klemmt report_config.day_window_start_hour
-// und _end_hour (Epic #1319 Scheibe B, DEC-2 Defense-in-Depth): liegt einer der
-// beiden Werte ausserhalb 0-23 oder ist start >= end, werden BEIDE Keys aus der
-// Map entfernt (-> Python-seitiger Default 4/19 beim naechsten Lesen). Ein
-// gueltiges Paar bleibt unangetastet. Alle anderen report_config-Keys bleiben
-// unberuehrt (kein Replace).
+// und _end_hour (Epic #1319 Scheibe B, DEC-2 Defense-in-Depth; erweitert
+// Issue #1361/#1372 S1b, PO-Entscheidung 2026-07-25): liegt einer der beiden
+// Werte ausserhalb 0-23 oder ist start == end, werden BEIDE Keys aus der Map
+// entfernt (-> Python-seitiger Default 4/19 beim naechsten Lesen). start > end
+// ist seit #1361/#1372 S1b ein GUELTIGES Fenster ueber Mitternacht (z. B.
+// 22-2 Uhr), keine Klemmung mehr -- dieselbe Regel wie
+// day_window.resolve_configured_window() auf der Python-Seite. Ein gueltiges
+// Paar bleibt unangetastet. Alle anderen report_config-Keys bleiben unberuehrt
+// (kein Replace).
 func ClampReportConfigDayWindow(rc map[string]interface{}) {
 	if rc == nil {
 		return
@@ -102,10 +106,33 @@ func ClampReportConfigDayWindow(rc map[string]interface{}) {
 	valid := startOk && endOk &&
 		start >= 0 && start <= 23 &&
 		end >= 0 && end <= 23 &&
-		start < end
+		start != end
 	if !valid {
 		delete(rc, "day_window_start_hour")
 		delete(rc, "day_window_end_hour")
+	}
+}
+
+// ClampComparePresetDayWindow validiert/klemmt ComparePreset.DayWindowStartHour/
+// DayWindowEndHour (Issue #1361/#1372 S1b, analog ClampReportConfigDayWindow
+// fuer den Trip): liegt einer der beiden Werte ausserhalb 0-23 oder ist
+// start == end, werden BEIDE Pointer auf nil gesetzt (-> Python-seitiger
+// Default 4/19 beim naechsten Lesen). start > end ist ein GUELTIGES Fenster
+// ueber Mitternacht (PO-Entscheidung 2026-07-25), keine Klemmung mehr. Ist
+// nur EINER der beiden Pointer gesetzt (Teil-Input), gilt das ebenfalls als
+// ungueltiges Paar -> beide nil. Ein gueltiges Paar bleibt unangetastet.
+// Alle anderen Preset-Felder bleiben unberuehrt.
+func ClampComparePresetDayWindow(p *model.ComparePreset) {
+	if p.DayWindowStartHour == nil && p.DayWindowEndHour == nil {
+		return // kein Feld-Paar gesetzt -- nichts zu tun
+	}
+	valid := p.DayWindowStartHour != nil && p.DayWindowEndHour != nil &&
+		*p.DayWindowStartHour >= 0 && *p.DayWindowStartHour <= 23 &&
+		*p.DayWindowEndHour >= 0 && *p.DayWindowEndHour <= 23 &&
+		*p.DayWindowStartHour != *p.DayWindowEndHour
+	if !valid {
+		p.DayWindowStartHour = nil
+		p.DayWindowEndHour = nil
 	}
 }
 

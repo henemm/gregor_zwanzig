@@ -76,6 +76,9 @@ func normalizeLoadedComparePreset(p *model.ComparePreset) {
 	// sonst liefert GET auf eine unmigrierte Legacy-Datei weiterhin
 	// "corridors":null.
 	NormalizeComparePreset(p)
+	// Issue #1361/#1372 S1b: Read-Heilung eines ungueltigen Tagesfenster-Paars
+	// (Defense-in-Depth, analog ClampReportConfigDayWindow beim Trip).
+	ClampComparePresetDayWindow(p)
 }
 
 // LoadComparePresets liest seit Issue #1250 Scheibe 7b (ADR-0023, KL-8) NICHT
