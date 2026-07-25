@@ -79,6 +79,9 @@ async function expectWithinViewport(page: Page, testid: string, scope: 'editor' 
 	await expect(el).toBeVisible();
 	const box = await el.boundingBox();
 	expect(box, `${testid}: keine boundingBox`).not.toBeNull();
+	// Viewport-Höhe aus der Seite lesen statt der MOBILE-Konstante — die Fälle
+	// unten laufen bewusst auch mit engerem Viewport (Staging-Chrome-Emulation).
+	const viewportHeight = page.viewportSize()?.height ?? MOBILE.height;
 	const top = box!.y;
 	const bottom = box!.y + box!.height;
 	expect(
@@ -87,8 +90,8 @@ async function expectWithinViewport(page: Page, testid: string, scope: 'editor' 
 	).toBeGreaterThanOrEqual(TOP_APP_BAR);
 	expect(
 		bottom,
-		`${testid}: Unterkante y=${bottom.toFixed(0)}px liegt unter der BottomNav-Grenze (${MOBILE.height - BOTTOM_NAV}px, Viewport ${MOBILE.height}px)`
-	).toBeLessThanOrEqual(MOBILE.height - BOTTOM_NAV);
+		`${testid}: Unterkante y=${bottom.toFixed(0)}px liegt unter der BottomNav-Grenze (${viewportHeight - BOTTOM_NAV}px, Viewport ${viewportHeight}px)`
+	).toBeLessThanOrEqual(viewportHeight - BOTTOM_NAV);
 	return box!;
 }
 
@@ -198,6 +201,104 @@ test.describe('Mobile-Editor — Steuerelemente im Viewport (#963)', () => {
 		const addBox = await expectWithinViewport(page, 'add-waypoint');
 		await expectTopmostAt(page, 'add-waypoint', addBox);
 	});
+
+	// #1375 Fix-Loop 1 (Staging-Befund 2026-07-25) — „im Ausschnitt" ist NICHT
+	// „klickbar". `expectWithinViewport` misst nur die Bounding-Box; auf Staging
+	// überlappte der fixierte Kaskaden-Banner (y=670.6–772.0) die Steuerelemente
+	// (stage-switcher-pill y=656.8–690.3, add-waypoint y=656.8–701.1) — beide
+	// formal im Viewport, per echtem `click()` aber blockiert („subtree intercepts
+	// pointer events"). Ursache: Staging hat mehr Chrome über der Karte, die Karte
+	// beginnt dort erst bei y≈645 statt lokal y≈553. Der zweite Viewport unten
+	// emuliert diese Enge lokal (gleiche Rest-Höhe zwischen Kartenoberkante und
+	// BottomNav) — ohne ihn wäre der Regress lokal unsichtbar geblieben.
+	// Geprüft wird per echtem Playwright-`click()` (volle Actionability inkl.
+	// Hit-Target), NICHT per Bounding-Box, und in BEIDE Richtungen: Kartensteuerung
+	// UND die beiden Schaltflächen der Rückfrage selbst.
+	for (const vp of [
+		{
+			// Trifft die Staging-Geometrie: der längere Tourname schiebt den
+			// Kartenblock auf y≈644.8 — gemessen auf Staging: 644.8, add-waypoint
+			// dort 656.8–701.1, hier 656.8–700.8. Das alte, starr unten verankerte
+			// Banner-Band lag bei 670.6–772.0 und schnitt beide Steuerelemente.
+			label: 'Staging-Geometrie 390×844 (Kartenblock bei y≈645)',
+			size: { width: 390, height: 844 },
+			tripName: 'E2E GR20 Nordabschnitt Etappenplan'
+		},
+		{
+			// Zweiter, unabhängiger Weg in dieselbe Kollision: kurzer Viewport zieht
+			// das untere Banner-Band nach oben statt die Karte nach unten.
+			label: 'kurzer Viewport 390×700',
+			size: { width: 390, height: 700 },
+			tripName: 'E2E Kurz'
+		}
+	]) {
+		test(`AC-2-Klick (${vp.label}): Kartensteuerung und Kaskaden-Rückfrage sind gleichzeitig klickbar`, async ({
+			page
+		}) => {
+			const id = `e2e-1375-click-${vp.size.height}`;
+			await seed(page, id, vp.tripName, 'Tag 1');
+			await openMobileStagesEditorAtViewport(page, id, vp.size);
+
+			// Vorbedingung OHNE Rückfrage: in dieser Geometrie sind beide
+			// Steuerelemente klickbar. Schlägt schon das fehl, prüft der Fall die
+			// dokumentierte #963-Grenze (Karte zu flach, Sheet überlappt) statt der
+			// Banner-Verdeckung — dann ist das Szenario untauglich, nicht der Fix.
+			await expectTopmostAt(
+				page,
+				'stage-switcher-pill',
+				await expectWithinViewport(page, 'stage-switcher-pill')
+			);
+			await expectTopmostAt(page, 'add-waypoint', await expectWithinViewport(page, 'add-waypoint'));
+
+			const headerDate = page.locator('[data-testid="stage-date-field"] input[type="date"]').first();
+			await headerDate.fill('2026-08-05');
+			await headerDate.press('Tab');
+			await expect(page.getByTestId('cascade-strip')).toBeVisible();
+
+			// Nutzer schaut auf die Karte (Scroll oben) — genau der Staging-Zustand.
+			await page.evaluate(() => document.querySelector('main')?.scrollTo(0, 0));
+
+			// Geometrie protokollieren, damit der Befund im Artefakt nachvollziehbar ist.
+			const geo: Record<string, string> = {};
+			for (const [key, loc] of [
+				['cascade-strip', page.getByTestId('cascade-strip')],
+				['stage-switcher-pill', control(page, 'stage-switcher-pill')],
+				['add-waypoint', control(page, 'add-waypoint')],
+				['mobile-editor', page.getByTestId('mobile-editor')]
+			] as const) {
+				const b = await loc.boundingBox();
+				geo[key] = b ? `y=${b.y.toFixed(1)}–${(b.y + b.height).toFixed(1)}` : 'keine Box';
+			}
+			console.log(`GEOMETRIE ${vp.label}:`, JSON.stringify(geo));
+
+			// Vorbedingung: dieser Fall ist nur aussagekräftig, solange beide
+			// Steuerelemente überhaupt im Ausschnitt liegen — sonst prüfte er die
+			// dokumentierte #963-Grenze (Karte zu flach) statt der Banner-Verdeckung.
+			const pillBox = await expectWithinViewport(page, 'stage-switcher-pill');
+			const addBox = await expectWithinViewport(page, 'add-waypoint');
+
+			// 1a) Verdeckung scroll-immun prüfen: am Mittelpunkt beider Steuerelemente
+			//     muss das Steuerelement selbst das oberste sein. Playwrights `click()`
+			//     scrollt vor dem Hit-Test automatisch und kann eine Verdeckung dadurch
+			//     zufällig auflösen — diese Messung kann das nicht.
+			await expectTopmostAt(page, 'stage-switcher-pill', pillBox);
+			await expectTopmostAt(page, 'add-waypoint', addBox);
+
+			// 1b) Kartensteuerung: echte Klicks, kein force, kurzer Timeout — damit die
+			//     Fehlermeldung die Verdeckung benennt statt ins Test-Timeout zu laufen.
+			await control(page, 'add-waypoint').click({ timeout: 5000 });
+			await control(page, 'stage-switcher-pill').click({ timeout: 5000 });
+			const overlay = page.locator('div[role="presentation"]');
+			await expect(overlay).toBeVisible();
+			await overlay.click({ position: { x: 5, y: 5 } });
+			await expect(overlay).toHaveCount(0);
+
+			// 2) Gegenrichtung: die Rückfrage selbst muss bedienbar bleiben.
+			await expect(page.getByRole('button', { name: /Alle mitverschieben/ })).toBeVisible();
+			await page.getByRole('button', { name: /Nur diese Etappe/ }).click({ timeout: 5000 });
+			await expect(page.getByTestId('cascade-strip')).toHaveCount(0);
+		});
+	}
 
 	// Fix-Loop 2 (Adversary-Findings F001/F002) — Mindesthöhen-Schutz.
 	//

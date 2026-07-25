@@ -109,6 +109,47 @@
 		};
 	});
 
+	// Bug #1375 Fix-Loop 1 (Staging-Befund): der auf Mobil fixierte Kaskaden-Banner
+	// darf die Kartensteuerelemente (#963: `top:12px` im Kartenblock) NIE verdecken.
+	// Auf Staging steht mehr Chrome über der Karte, dadurch rutschten Pille und
+	// Wegpunkt-Button genau in das Band am unteren Rand, das der Banner belegte —
+	// beide lagen formal im Ausschnitt, waren real aber unklickbar.
+	// Regel: passt der Banner ÜBER die Steuerelemente (Unterkante 8px über deren
+	// Oberkante, Oberkante noch unter der TopAppBar), wird er dort verankert; sonst
+	// bleibt er unten über der BottomNav — dann liegt der Kartenblock nämlich im
+	// oberen Bildschirmbereich und die Steuerelemente sind weit vom unteren Rand
+	// entfernt. Damit ist Überlappungsfreiheit in beiden Fällen konstruktiv
+	// garantiert, unabhängig von Chrome-Höhe und Scrollposition.
+	const MAP_CONTROLS_TOP_PX = 12; // .stage-switcher-pill / .map-control: top:12px
+	const CASCADE_GAP_PX = 8;
+	const TOP_APP_BAR_PX = 56; // app.css `.mobile-scroll-pad` padding-top
+	let cascadeEl = $state<HTMLDivElement | null>(null);
+	let cascadeBottomPx = $state(BOTTOM_NAV_HEIGHT_PX + CASCADE_GAP_PX);
+
+	$effect(() => {
+		if (!browser || !mobileEditorEl || !cascadeEl) return;
+		const mapEl = mobileEditorEl;
+		const bannerEl = cascadeEl;
+		function place(): void {
+			const controlsTop = mapEl.getBoundingClientRect().top + MAP_CONTROLS_TOP_PX;
+			const bannerBottomY = controlsTop - CASCADE_GAP_PX;
+			const fitsAbove = bannerBottomY - bannerEl.offsetHeight >= TOP_APP_BAR_PX;
+			cascadeBottomPx = fitsAbove
+				? window.innerHeight - bannerBottomY
+				: BOTTOM_NAV_HEIGHT_PX + CASCADE_GAP_PX + getSafeAreaBottomPx();
+		}
+		place();
+		window.addEventListener('resize', place);
+		window.addEventListener('orientationchange', place);
+		// Capture-Phase: fängt auch das Scrollen des `main`-Containers (nicht window).
+		window.addEventListener('scroll', place, true);
+		return () => {
+			window.removeEventListener('resize', place);
+			window.removeEventListener('orientationchange', place);
+			window.removeEventListener('scroll', place, true);
+		};
+	});
+
 	async function save(): Promise<Trip | null> {
 		if (!tripId) return null;
 		saving = true;
@@ -473,7 +514,12 @@
 
 			{#if cascade && activeStageIndex === 0}
 				{#if !cascade.done}
-					<div class="cascade-prompt" data-testid="cascade-strip">
+					<div
+						class="cascade-prompt"
+						data-testid="cascade-strip"
+						bind:this={cascadeEl}
+						style="--gz-cascade-bottom: {cascadeBottomPx}px"
+					>
 						<p>
 							<strong
 								>Tourstart um {cascade.days > 0 ? '+' : ''}{cascade.days}
@@ -487,7 +533,12 @@
 						</div>
 					</div>
 				{:else}
-					<div class="cascade-done" data-testid="cascade-done">
+					<div
+						class="cascade-done"
+						data-testid="cascade-done"
+						bind:this={cascadeEl}
+						style="--gz-cascade-bottom: {cascadeBottomPx}px"
+					>
 						<Dot tone="success" />
 						<span>
 							<strong>{cascade.count} Folge-Etappen verschoben</strong> · alle Daten um
@@ -744,15 +795,18 @@
 		   regulärer Flex-Block hinter der per `order:-1` vorgezogenen Karte
 		   einsortiert wird — er landete dadurch bei y≈1300px, weit unter dem
 		   844px-Viewport, und wurde nie gesehen. Statt den DOM umzubauen (das
-		   verschöbe den Desktop-Ort) wird er auf Mobil zum fixen Banner über der
-		   BottomNav: unabhängig von der Scrollposition im Bildschirmausschnitt und
-		   ohne die Kartensteuerelemente (#963, top:12px) zu verdecken. */
+		   verschöbe den Desktop-Ort) wird er auf Mobil zum fixen Banner:
+		   unabhängig von der Scrollposition im Bildschirmausschnitt.
+		   Fix-Loop 1 (Staging-Befund): die Unterkante liefert `--gz-cascade-bottom`
+		   aus dem Platzierungs-$effect oben — der Banner weicht den Karten-
+		   steuerelementen (#963, top:12px) nach oben aus, statt sie zu verdecken.
+		   Der Fallback-Wert gilt nur, falls das Skript (noch) nicht gemessen hat. */
 		.cascade-prompt,
 		.cascade-done {
 			position: fixed;
 			left: 8px;
 			right: 8px;
-			bottom: calc(72px + env(safe-area-inset-bottom));
+			bottom: var(--gz-cascade-bottom, calc(72px + env(safe-area-inset-bottom)));
 			z-index: 62; /* über Bottom-Sheet (61) und BottomNav (50) */
 			flex-direction: column;
 			align-items: stretch;
