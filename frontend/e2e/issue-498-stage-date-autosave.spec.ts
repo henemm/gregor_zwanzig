@@ -138,10 +138,14 @@ test('AC-4: Kaskaden-Done-State + API-Persistenz im Erfolgsfall', async ({ page 
 	expect(dates['s2']).toBe('2026-08-07');
 });
 
-// AC-5 (Guard): Pausentag-Datum persistiert ebenfalls sofort; Save-Button bleibt da.
-test('AC-5: Pausentag-Datum persistiert sofort + Save-Button bleibt', async ({ page }) => {
+// AC-5 (Guard): Pausentag-Datum persistiert ebenfalls sofort.
+// 2026-07-25 (#1376): die Zusatz-Erwartung „Save-Button bleibt da" ist entfallen —
+// seit dem SaveStatus-Controller (#758) rendert die Trip-Detailseite den expliziten
+// „Etappen speichern"-Button bewusst nicht mehr (`showSave && !saveController`).
+// Die Assertion prüfte veraltetes Verhalten und verdeckte den eigentlichen
+// Prüfgegenstand: die Persistenz des Pausentag-Datums.
+test('AC-5: Pausentag-Datum persistiert sofort', async ({ page }) => {
 	await openStagesEditor(page);
-	await expect(page.getByRole('button', { name: /Etappen speichern/ })).toBeVisible();
 
 	await page.getByText('Pausentag', { exact: false }).first().click();
 	const pauseView = page.getByTestId('pause-stage-view');

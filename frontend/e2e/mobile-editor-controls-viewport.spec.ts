@@ -72,8 +72,10 @@ function control(page: Page, testid: string): Locator {
  * sichtbaren Viewports liegt (unterhalb TopAppBar, oberhalb BottomNav) — OHNE
  * vorheriges Auto-Scroll. Gibt die Box für Folge-Assertions zurück.
  */
-async function expectWithinViewport(page: Page, testid: string) {
-	const el = control(page, testid);
+async function expectWithinViewport(page: Page, testid: string, scope: 'editor' | 'page' = 'editor') {
+	// #1375: der Kaskaden-Streifen liegt außerhalb von `.mobile-editor` — für ihn
+	// wird seitenweit gesucht, sonst unverändert im Editor-Teilbaum.
+	const el = scope === 'page' ? page.getByTestId(testid) : control(page, testid);
 	await expect(el).toBeVisible();
 	const box = await el.boundingBox();
 	expect(box, `${testid}: keine boundingBox`).not.toBeNull();
@@ -157,25 +159,44 @@ test.describe('Mobile-Editor — Steuerelemente im Viewport (#963)', () => {
 		await expectWithinViewport(page, 'add-waypoint');
 	});
 
-	test('AC-4: sichtbarer Cascade-Strip — beide Steuerelemente im Viewport', async ({ page }) => {
+	// #1375 (Fix 2026-07-25): Dieser Fall prüfte früher NUR `toBeVisible()` direkt
+	// nach einem `.fill()` — und war deshalb falsch-grün: Playwright scrollt beim
+	// `.fill()` automatisch zum Datumsfeld, `toBeVisible()` sagt nichts über die
+	// Lage im Bildschirmausschnitt aus. Real lag der Rückfrage-Streifen bei
+	// y≈1102px auf einem 844px hohen Viewport — der Nutzer sah ihn nie. Jetzt wird
+	// die echte Bounding-Box gemessen (`expectWithinViewport`), und zwar in BEIDEN
+	// Zuständen: direkt nach der Datumsänderung UND nach dem Zurückscrollen zur
+	// Karte. Ein erneutes Verstecken des Streifens unter der Karte lässt den Test
+	// wieder rot werden.
+	test('AC-4: Kaskaden-Rückfrage liegt im Viewport — mitsamt beider Steuerelemente', async ({ page }) => {
 		const id = 'e2e-963-cascade';
 		await seed(page, id, 'E2E #963 Cascade', 'Tag 1');
 		await openMobileStagesEditor(page, id);
 
 		// Cascade-Strip erzwingen: Tourstart-Datum der ersten Etappe verschieben.
 		// handleDateChange(idx===0, Δ≠0, stages.length>1) setzt `cascade` → Strip erscheint.
-		// Das Datumsfeld liegt nach dem Map-First-Reorder unterhalb der Karte —
-		// Playwright scrollt beim `.fill()` automatisch dorthin. Nach dem Trigger
-		// scrollen wir zurück nach oben (entspricht dem Nutzer, der den Tab erneut
-		// betrachtet), um die AC-4-Aussage ("beim Öffnen des Tabs") korrekt zu prüfen.
 		const headerDate = page.locator('[data-testid="stage-date-field"] input[type="date"]').first();
 		await headerDate.fill('2026-08-05');
 		await headerDate.press('Tab'); // löst echten blur/change aus (zuverlässiger als dispatchEvent)
 		await expect(page.getByTestId('cascade-strip')).toBeVisible();
-		await page.evaluate(() => document.querySelector('main')?.scrollTo(0, 0));
 
-		await expectWithinViewport(page, 'stage-switcher-pill');
-		await expectWithinViewport(page, 'add-waypoint');
+		// Zustand 1 — unmittelbar nach der Änderung (Scroll steht dort, wohin das
+		// `.fill()` gescrollt hat): der Nutzer muss die Rückfrage JETZT sehen,
+		// ohne selbst zu scrollen. Kein `scrollTo` vor dieser Messung.
+		const promptBox = await expectWithinViewport(page, 'cascade-strip', 'page');
+		await expectTopmostAt(page, 'cascade-strip', promptBox);
+		await expect(page.getByRole('button', { name: /Alle mitverschieben/ })).toBeVisible();
+		await expect(page.getByRole('button', { name: /Nur diese Etappe/ })).toBeVisible();
+
+		// Zustand 2 — Nutzer betrachtet die Karte (Scroll oben, wie beim Öffnen des
+		// Tabs): Rückfrage bleibt sichtbar UND verdeckt die #963-Steuerelemente nicht.
+		await page.evaluate(() => document.querySelector('main')?.scrollTo(0, 0));
+		const topBox = await expectWithinViewport(page, 'cascade-strip', 'page');
+		await expectTopmostAt(page, 'cascade-strip', topBox);
+		const pillBox = await expectWithinViewport(page, 'stage-switcher-pill');
+		await expectTopmostAt(page, 'stage-switcher-pill', pillBox);
+		const addBox = await expectWithinViewport(page, 'add-waypoint');
+		await expectTopmostAt(page, 'add-waypoint', addBox);
 	});
 
 	// Fix-Loop 2 (Adversary-Findings F001/F002) — Mindesthöhen-Schutz.

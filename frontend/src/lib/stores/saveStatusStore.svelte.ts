@@ -4,6 +4,15 @@
 
 export type SaveState = 'idle' | 'dirty' | 'saving' | 'error';
 
+/**
+ * Issue #1376: die Speicher-Funktion darf optional Fetch-Optionen entgegennehmen.
+ * Nur so kann der Flush beim Verlassen der Seite `{ keepalive: true }` durchreichen —
+ * ein normaler Request würde beim Entladen des Dokuments abgebrochen und die
+ * Änderung ginge still verloren. Aufrufer, die das Argument ignorieren, bleiben
+ * unverändert gültig.
+ */
+export type SaveFn = (init?: RequestInit) => Promise<void>;
+
 export function extractMessage(e: unknown): string {
 	if (e && typeof e === 'object') {
 		const obj = e as Record<string, unknown>;
@@ -22,7 +31,7 @@ export class SaveStatus {
 
 	// Debounce-Internals
 	private _timer: ReturnType<typeof setTimeout> | null = null;
-	private _pendingFn: (() => Promise<void>) | null = null;
+	private _pendingFn: SaveFn | null = null;
 
 	setSaving(): void {
 		this.state = 'saving';
@@ -57,12 +66,12 @@ export class SaveStatus {
 		this.error = msg;
 	}
 
-	async doSave(saveFn: () => Promise<void>): Promise<void> {
+	async doSave(saveFn: SaveFn, init?: RequestInit): Promise<void> {
 		this._pendingFn = null;
 		this._timer = null;
 		this.setSaving();
 		try {
-			await saveFn();
+			await saveFn(init);
 			this.setSaved();
 		} catch (e) {
 			this.setError(extractMessage(e));
@@ -77,19 +86,23 @@ export class SaveStatus {
 	/** Schedule a debounced save (700ms default). Calling again cancels previous timer.
 	 *  SOFORT setSaving() — damit der Indikator nie "idle" (Gespeichert ✓) zeigt,
 	 *  während eine ungespeicherte Änderung im Debounce-Fenster wartet (AC-1). */
-	schedule(saveFn: () => Promise<void>, ms = 700): void {
+	schedule(saveFn: SaveFn, ms = 700): void {
 		this.setSaving();
 		this._pendingFn = saveFn;
 		if (this._timer !== null) clearTimeout(this._timer);
 		this._timer = setTimeout(() => { void this.doSave(saveFn); }, ms);
 	}
 
-	/** Flush any pending debounced save immediately. Returns a promise that resolves when done. */
-	async flush(): Promise<void> {
+	/** Flush any pending debounced save immediately. Returns a promise that resolves when done.
+	 *  Issue #1376: `init` wird an die Speicher-Funktion durchgereicht — beim
+	 *  Entladen der Seite ruft der Aufrufer `flush({ keepalive: true })`, damit
+	 *  der Request das Dokument überlebt. Der Request wird dabei noch synchron
+	 *  im Aufrufer-Tick abgesetzt (kein `await` vor dem `fetch`). */
+	async flush(init?: RequestInit): Promise<void> {
 		if (this._timer !== null && this._pendingFn !== null) {
 			clearTimeout(this._timer);
 			const fn = this._pendingFn;
-			await this.doSave(fn);
+			await this.doSave(fn, init);
 		}
 	}
 

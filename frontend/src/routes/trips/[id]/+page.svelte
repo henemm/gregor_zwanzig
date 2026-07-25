@@ -23,7 +23,15 @@
 
 	// Issue #758: Flush ausstehender Auto-Saves vor Navigation (AC-5).
 	beforeNavigate(({ cancel, to, willUnload }) => {
-		if (willUnload) return; // Browser-Navigation, kein Flush möglich
+		if (willUnload) {
+			// Issue #1376: Reload/Tab-Verlassen — der 700ms-Debounce verfiel hier
+			// bisher kommentarlos (stiller Datenverlust). Jetzt Best-Effort-Flush
+			// mit `keepalive`, damit der Request das Entladen überlebt. Bewusst
+			// OHNE cancel() → keine Verlassen-Warnung (PO-Entscheidung 2026-07-25:
+			// still speichern statt fragen).
+			if (tripSaveCtl.hasPending) void tripSaveCtl.flush({ keepalive: true });
+			return;
+		}
 		if (tripSaveCtl.hasPending) {
 			cancel();
 			const targetUrl = to?.url?.href ?? null;

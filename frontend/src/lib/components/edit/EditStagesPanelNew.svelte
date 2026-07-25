@@ -131,8 +131,11 @@
 	function scheduleSave(): void {
 		if (!saveController || !tripId) return;
 		const currentStages = stages;
-		saveController.schedule(async () => {
-			const updatedTrip = await api.put<Trip>(`/api/trips/${tripId}`, { stages: currentStages });
+		// Issue #1376: `init` kommt vom Flush beim Verlassen der Seite und trägt dort
+		// `{ keepalive: true }` — ohne das bricht der Browser den Request beim
+		// Entladen ab und die Datumsänderung wäre still verloren.
+		saveController.schedule(async (init) => {
+			const updatedTrip = await api.put<Trip>(`/api/trips/${tripId}`, { stages: currentStages }, init);
 			onTripUpdate?.(updatedTrip);
 		});
 	}
@@ -222,6 +225,11 @@
 			return { ...s, date: addDays(s.date, days), dateOverridden: true };
 		});
 		if (saveController) {
+			// Issue #1376: den noch offenen Debounce aus handleDateChange verwerfen —
+			// er trägt einen veralteten Schnappschuss (nur erste Etappe verschoben)
+			// und würde das gleich folgende Kaskaden-Ergebnis wieder überschreiben,
+			// sobald er verzögert oder beim Verlassen der Seite feuert.
+			saveController.cancel();
 			// Flush immediately (cascade = user intent, no debounce needed).
 			const currentStages = stages;
 			try {
@@ -730,6 +738,27 @@
 		}
 		.editor-grid {
 			display: none;
+		}
+		/* Bug #1375 — Kaskaden-Rückfrage auf Mobil sichtbar halten.
+		   Der Streifen steckt im Inhalts-Wrapper (padding 20/40/60), der als
+		   regulärer Flex-Block hinter der per `order:-1` vorgezogenen Karte
+		   einsortiert wird — er landete dadurch bei y≈1300px, weit unter dem
+		   844px-Viewport, und wurde nie gesehen. Statt den DOM umzubauen (das
+		   verschöbe den Desktop-Ort) wird er auf Mobil zum fixen Banner über der
+		   BottomNav: unabhängig von der Scrollposition im Bildschirmausschnitt und
+		   ohne die Kartensteuerelemente (#963, top:12px) zu verdecken. */
+		.cascade-prompt,
+		.cascade-done {
+			position: fixed;
+			left: 8px;
+			right: 8px;
+			bottom: calc(72px + env(safe-area-inset-bottom));
+			z-index: 62; /* über Bottom-Sheet (61) und BottomNav (50) */
+			flex-direction: column;
+			align-items: stretch;
+			/* --g-accent-tint ist transluzent (8%) — über der Karte unlesbar. */
+			background: var(--g-card);
+			box-shadow: 0 6px 20px rgba(26, 26, 24, 0.18);
 		}
 	}
 	.save-bar {

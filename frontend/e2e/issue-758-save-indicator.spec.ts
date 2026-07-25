@@ -152,7 +152,16 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 		const res = await page.request.get(`/api/trips/${TRIP_ID}`);
 		expect(res.ok(), `GET trip HTTP ${res.status()}`).toBeTruthy();
 		const trip = await res.json();
-		expect(trip.report_config?.morning_time).toMatch(/^05:30/);
+		// ERWARTUNG BITTE NICHT AUF 05:30 „ZURUECKREPARIEREN": seit Issue #1280
+		// (Commit f78f06eb, 2026-07-16) kappt der Server Versandzeiten serverseitig
+		// auf die volle Stunde — internal/store/slot_hour_normalization.go,
+		// TruncateTimeStringToHour(); der Go-Cron-Scheduler laeuft im Stundentakt,
+		// Minuten haetten keine Wirkung. Der Client sendet nachweislich
+		// "morning_time":"05:30:00", persistiert wird "05:00:00".
+		// Der Testfall behaelt seinen Wert doppelt: 05:00 != Seed-Wert 07:00 beweist,
+		// dass die Aenderung die sofortige Navigation ueberlebt hat (urspruengliche
+		// AC-5-Aussage), und die Uhrzeit-Form bewacht zugleich die #1280-Kappung.
+		expect(trip.report_config?.morning_time).toMatch(/^05:00/);
 	});
 
 	// AC-7: In „Briefing" gibt es keinen expliziten Speichern-Button mehr; Änderungen

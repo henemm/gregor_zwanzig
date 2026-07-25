@@ -39,7 +39,8 @@ export { default as SetupResumeCard } from './SetupResumeCard.svelte';
 export { default as CompareStatusRow } from './CompareStatusRow.svelte';
 
 // Issue #578 — Block B: neue Molecules
-export { default as StageCascadeNotice }    from './StageCascadeNotice.svelte';
+// StageCascadeNotice mit #1375 entfernt (tote Zweitfassung der Kaskaden-Rückfrage;
+// produktiv lebt sie inline in edit/EditStagesPanelNew.svelte).
 export { default as HorizonChips }          from './HorizonChips.svelte';
 export { default as ScoreToggle }           from './ScoreToggle.svelte';
 export { default as CompareChannelSwitch }  from './CompareChannelSwitch.svelte';

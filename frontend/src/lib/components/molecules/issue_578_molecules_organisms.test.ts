@@ -191,36 +191,11 @@ describe('AC-5: CompareStatusRow — konsistente Empfänger-Pille', () => {
 
 // ════════════════ BLOCK B — Neue Molecules ════════════════
 
-describe('AC-6: StageCascadeNotice — neues Molecule', () => {
-	test('StageCascadeNotice.svelte existiert in molecules/', () => {
-		assert.ok(
-			hasMol('StageCascadeNotice.svelte'),
-			'molecules/StageCascadeNotice.svelte fehlt — noch nicht implementiert'
-		);
-	});
-	test('StageCascadeNotice done=false: accent-tint + Btns', () => {
-		const src = readMol('StageCascadeNotice.svelte');
-		assert.ok(/g-accent-tint/.test(src), 'StageCascadeNotice: --g-accent-tint fehlt');
-		assert.ok(/g-accent/.test(src), 'StageCascadeNotice: --g-accent border-left fehlt');
-		assert.ok(/Alle mitverschieben/.test(src), 'StageCascadeNotice: "Alle mitverschieben"-CTA fehlt');
-		assert.ok(/Nur diese Etappe/.test(src), 'StageCascadeNotice: "Nur diese Etappe"-CTA fehlt');
-	});
-	test('StageCascadeNotice done=true: good-tint + Bestätigungstext', () => {
-		const src = readMol('StageCascadeNotice.svelte');
-		assert.ok(
-			/rgba\(61,107,58.*0\.10\)|g-good-tint|green.*0\.10/.test(src),
-			'StageCascadeNotice done: grüner Hintergrund fehlt'
-		);
-		assert.ok(/g-good/.test(src), 'StageCascadeNotice done: --g-good border-left fehlt');
-	});
-	test('StageCascadeNotice in molecules/index.ts exportiert', () => {
-		const idx = readMol('index.ts');
-		assert.ok(
-			/StageCascadeNotice/.test(idx),
-			'molecules/index.ts: StageCascadeNotice nicht exportiert'
-		);
-	});
-});
+// AC-6 (StageCascadeNotice) entfernt 2026-07-25 mit #1375: die Molecule war seit
+// #578 nirgends eingebunden — die produktiv sichtbare Kaskaden-Rückfrage lebt
+// inline in edit/EditStagesPanelNew.svelte. Komponente gelöscht, damit es nur
+// eine Fassung dieses Dialogs gibt; die Tests hier prüften ohnehin nur
+// Dateiinhalte per Regex (kein Verhaltensnachweis nach Projekt-Testpolitik).
 
 describe('AC-7: HorizonChips — neues Molecule', () => {
 	test('HorizonChips.svelte existiert in molecules/', () => {
@@ -468,7 +443,7 @@ describe('AC-19: organisms/index.ts — alle neuen Organisms exportiert', () => 
 
 describe('AC-20: molecules/index.ts — alle neuen Molecules exportiert', () => {
 	const ALL_NEW_MOLECULES = [
-		'StageCascadeNotice',
+		// 'StageCascadeNotice' entfällt seit #1375 (tote Zweitfassung, s.o.)
 		'HorizonChips',
 		'ScoreToggle',
 		'CompareChannelSwitch',
