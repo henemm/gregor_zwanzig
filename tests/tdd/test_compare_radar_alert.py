@@ -143,6 +143,23 @@ def _dry_frames() -> list:
     return []
 
 
+def _fmt_window(start: datetime, end: datetime, tz, *, offset_minutes: int = 0) -> set[str]:
+    """Alle `HH:MM`-Strings, die `start`+offset … `end`+offset in `tz` annehmen
+    kann. Die Alarm-Nachricht ruft `datetime.now(timezone.utc)` selbst auf
+    (`project.py:149`) und lässt sich nicht einfrieren — der Erwartungswert wird
+    deshalb gegen die reale Uhr nachgerechnet (Muster
+    `_quiet_hours_window_now()` oben) und als Menge zulässiger Werte geführt."""
+    from utils.timezone import local_fmt
+
+    out: set[str] = set()
+    t = start
+    while t <= end:
+        out.add(local_fmt(t + timedelta(minutes=offset_minutes), tz))
+        t += timedelta(seconds=1)
+    out.add(local_fmt(end + timedelta(minutes=offset_minutes), tz))
+    return out
+
+
 def _quiet_hours_window_now(buffer_minutes: int = 3) -> tuple[str, str]:
     """`(quiet_from, quiet_to)` als `HH:MM`-Strings in Europe/Vienna-Lokalzeit,
     die den aktuellen Zeitpunkt umschließen — garantiert, dass der Check-Lauf
@@ -200,6 +217,75 @@ def test_single_location_onset_triggers_bundled_alert():
         assert "8" in subject, f"Onset-Zeitangabe fehlt im Betreff: {subject!r}"
         assert "höchstens einmal in" in body, (
             f"Cooldown-Hinweis fehlt in der Compare-Radar-Alarm-Mail: {body!r}"
+        )
+    finally:
+        _clean_user(uid)
+
+
+def test_bundled_alert_shows_location_local_time_not_utc():
+    """Regression (Issue #1383): Die Uhrzeiten der Compare-Radar-Alarm-Mail
+    (Onset-Zeit „ab HH:MM" und „Stand: …") stehen in der ORTSZEIT des
+    gewarnten Ortes, nicht in UTC.
+
+    Testort Zermatt (46.0207/7.7491 → Europe/Zurich) hat garantiert einen
+    Nicht-Null-Offset zu UTC (Winter +1 h, Sommer +2 h) — die naive UTC-Zeit
+    darf im Body deshalb nirgends auftauchen.
+    """
+    from services.compare_radar_alert import CompareRadarAlertService
+    from services.radar_service import RadarNowcastService
+    from utils.timezone import tz_for_coords
+
+    lat, lon = 46.0207, 7.7491
+    onset_minutes = 8
+    uid = "tdd-radartz-local"
+    _clean_user(uid)
+    try:
+        save_location(_location("loc-tz", "Zermatt-Ortszeit", lat, lon), user_id=uid)
+        _write_preset_file(
+            uid, [_radar_preset("cp-radartz", ["loc-tz"], ["gregor-test@henemm.com"])],
+        )
+
+        frame_source = _CoordFrameSource({(lat, lon): _wet_frame(onset_minutes)})
+        mail_calls: list[tuple[str, str]] = []
+        service = CompareRadarAlertService(
+            settings=_settings_email_capable_dummy(), user_id=uid,
+            radar_service=RadarNowcastService(frame_source=frame_source),
+            mail_sink=lambda subject, body: mail_calls.append((subject, body)),
+        )
+
+        before = datetime.now(timezone.utc)
+        sent = service.check_all_compare_presets()
+        after = datetime.now(timezone.utc)
+
+        assert sent == 1, f"Onset ≤ 20 Min muss alarmieren, erhalten: {sent}"
+        _subject, body = mail_calls[0]
+
+        tz_local = tz_for_coords(lat, lon)
+        utc = timezone.utc
+        # Sanity: ohne echten Offset wäre der Test aussagelos.
+        offset = before.astimezone(tz_local).utcoffset()
+        assert offset != timedelta(0), (
+            f"Testort muss einen Offset zu UTC haben, hat aber {offset}"
+        )
+
+        local_onset = _fmt_window(before, after, tz_local, offset_minutes=onset_minutes)
+        utc_onset = _fmt_window(before, after, utc, offset_minutes=onset_minutes)
+        local_stand = _fmt_window(before, after, tz_local)
+        utc_stand = _fmt_window(before, after, utc)
+
+        assert any(t in body for t in local_onset), (
+            f"Onset-Zeit fehlt in Ortszeit {sorted(local_onset)} im Body: {body!r}"
+        )
+        assert not any(t in body for t in utc_onset - local_onset), (
+            f"Onset-Zeit steht in UTC {sorted(utc_onset)} statt in Ortszeit "
+            f"{sorted(local_onset)}: {body!r}"
+        )
+        assert any(t in body for t in local_stand), (
+            f"Stand-Zeit fehlt in Ortszeit {sorted(local_stand)} im Body: {body!r}"
+        )
+        assert not any(t in body for t in utc_stand - local_stand), (
+            f"Stand-Zeit steht in UTC {sorted(utc_stand)} statt in Ortszeit "
+            f"{sorted(local_stand)}: {body!r}"
         )
     finally:
         _clean_user(uid)

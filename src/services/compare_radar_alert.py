@@ -109,7 +109,10 @@ class CompareRadarAlertService:
             return False
 
         notification_service = self._notification_service_for(preset)
-        entities = [(name, result) for name, _loc, result in triggered]
+        # Issue #1383: Das Orts-Objekt MUSS mitgereicht werden — der Versand
+        # leitet daraus die Ortszeit ab (vorher wurde `_loc` verworfen und die
+        # Mail rendete alle Uhrzeiten in UTC).
+        entities = list(triggered)
         notif_result = notification_service.send_multi_location_radar_alert(
             entities=entities, effective_channels={"email"}, mail_sink=self._mail_sink,
             cooldown_display=_format_cooldown_display(cooldown_minutes),
@@ -126,7 +129,11 @@ class CompareRadarAlertService:
         self, preset_id: str, location_ids: list[str], all_locations: dict
     ) -> list[tuple]:
         """Je Ort im Preset: Nowcast holen, Auslöse-Schwelle prüfen (`radar_alert_due`,
-        `trip_alert.py:33`) — reine Detect-Phase, kein Versand."""
+        `trip_alert.py:33`) — reine Detect-Phase, kein Versand.
+
+        Liefert `(loc.name, loc, NowcastResult)`-Tripel; das Orts-Objekt wird
+        vom Versand für die Ortszeit-Ableitung gebraucht (Issue #1383) und vom
+        Dedup-Gedächtnis für `loc.id`."""
         radar_service = self._get_radar_service()
         triggered: list[tuple] = []
         for location_id in location_ids:

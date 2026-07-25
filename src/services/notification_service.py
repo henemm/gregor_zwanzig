@@ -535,7 +535,7 @@ class NotificationService:
 
     def send_multi_location_radar_alert(
         self,
-        entities: list[tuple[str, "NowcastResult"]],
+        entities: list[tuple[str, object, "NowcastResult"]],
         effective_channels: set[str],
         *,
         tz: Optional[ZoneInfo] = None,
@@ -549,19 +549,38 @@ class NotificationService:
         Baut über `to_multi_location_onset_alert_message()` EINE `AlertMessage`
         für alle übergebenen Orte und delegiert unverändert an
         `_dispatch_alert_message()` (ADR-0021: Rendering/Versand bleiben
-        geteilt). `entities`: `list[(location_name, NowcastResult)]`.
+        geteilt). `entities`: `list[(location_name, location, NowcastResult)]`
+        — das Orts-Objekt (`.lat`/`.lon`) trägt die Zeitzone bei.
         `cooldown_display`: optionaler, bereits formatierter Cooldown-Hinweis
         (Pflicht-Fix, analog `send_radar_alert()`s gleichnamigem Parameter).
+
+        Issue #1383: Die Zeitzone wird — wie in der Schwestermethode
+        `send_multi_location_deviation_alert()` — aus den Koordinaten des
+        ersten Ortes abgeleitet. Der frühere stille `ZoneInfo("UTC")`-Default
+        ließ jeden Aufrufer ohne `tz` alle Uhrzeiten in UTC rendern (echte
+        Prod-Mail: „Regen in 15 Min ab 20:00" für Orte in Europe/Paris = 2 h
+        daneben). `tz` bleibt als expliziter Override erhalten; UTC ist nur
+        noch letzter Notnagel bei fehlenden Koordinaten (Guard analog
+        `send_multi_location_official_alert()`).
         """
         from output.renderers.alert.project import to_multi_location_onset_alert_message
+        from utils.timezone import tz_for_coords
 
-        alert_tz = tz or ZoneInfo("UTC")
+        first_loc = entities[0][1] if entities else None
+        alert_tz = tz or (
+            tz_for_coords(first_loc.lat, first_loc.lon)
+            if first_loc is not None
+            and getattr(first_loc, "lat", None) is not None
+            and getattr(first_loc, "lon", None) is not None
+            else ZoneInfo("UTC")
+        )
         resolved_stand_at = stand_at or local_fmt(datetime.now(timezone.utc), alert_tz)
         alert_msg = to_multi_location_onset_alert_message(
-            entities, tz=alert_tz, stand_at=resolved_stand_at,
+            [(name, nc) for name, _loc, nc in entities],
+            tz=alert_tz, stand_at=resolved_stand_at,
             cooldown_display=cooldown_display,
         )
-        target_name = ", ".join(name for name, _nc in entities)
+        target_name = ", ".join(name for name, _loc, _nc in entities)
         return self._dispatch_alert_message(
             alert_msg=alert_msg,
             effective_channels=effective_channels,

@@ -152,9 +152,18 @@ def test_bundled_email_lists_all_locations():
 
     RED: `NotificationService.send_multi_location_radar_alert` existiert
     noch nicht -> AttributeError.
+
+    Issue #1383: `entities` sind 3-Tupel `(name, Ort, NowcastResult)` — das
+    Orts-Objekt trägt die Koordinaten, aus denen der Versand die Ortszeit
+    ableitet. Zusätzlich geprüft: die Onset-Zeit im Body steht in der
+    Ortszeit des ersten Ortes (Europe/Zurich), nicht in UTC.
     """
+    from datetime import datetime, timedelta
+
+    from app.user import SavedLocation
     from services.notification_service import NotificationService
     from services.radar_service import NowcastResult
+    from utils.timezone import local_fmt, tz_for_coords
 
     nc_zermatt = NowcastResult(
         onset_minutes=8, intensity_label="leichter Regen", source="radar",
@@ -164,16 +173,24 @@ def test_bundled_email_lists_all_locations():
         onset_minutes=15, intensity_label="mäßiger Regen", source="AROME-FR",
         is_convective=False,
     )
+    loc_zermatt = SavedLocation(
+        id="loc-zermatt", name="Zermatt", lat=46.0207, lon=7.7491, elevation_m=1608,
+    )
+    loc_chamonix = SavedLocation(
+        id="loc-chamonix", name="Chamonix", lat=45.9237, lon=6.8694, elevation_m=1035,
+    )
 
     settings = _test_settings()
     service = NotificationService(settings, _fresh_user("ac1"))
 
     mail_calls: list[tuple[str, str]] = []
+    before = datetime.now(timezone.utc)
     result = service.send_multi_location_radar_alert(
-        [("Zermatt", nc_zermatt), ("Chamonix", nc_chamonix)],
+        [("Zermatt", loc_zermatt, nc_zermatt), ("Chamonix", loc_chamonix, nc_chamonix)],
         {"email"},
         mail_sink=lambda subject, body: mail_calls.append((subject, body)),
     )
+    after = datetime.now(timezone.utc)
 
     assert len(mail_calls) == 1, (
         f"Erwartet genau EINE gebündelte Mail, erhalten: {len(mail_calls)}"
@@ -187,6 +204,26 @@ def test_bundled_email_lists_all_locations():
     line_chamonix = _line_for(body, "Chamonix")
     assert line_chamonix is not None, f"Ort 'Chamonix' fehlt im Body: {body!r}"
     assert "15" in line_chamonix, f"Onset-Angabe für Chamonix fehlt: {line_chamonix!r}"
+
+    # Issue #1383: Ortszeit statt UTC. Die Nachricht ruft `datetime.now()`
+    # selbst auf (project.py:149) — Erwartungswert gegen die reale Uhr
+    # nachrechnen und die Sekunden-Spanne des Aufrufs zulassen.
+    tz_local = tz_for_coords(loc_zermatt.lat, loc_zermatt.lon)
+    assert before.astimezone(tz_local).utcoffset() != timedelta(0), (
+        "Testort ohne Offset zu UTC — Assertion wäre aussagelos"
+    )
+    local_candidates, utc_candidates = set(), set()
+    t = before
+    while t <= after + timedelta(seconds=1):
+        local_candidates.add(local_fmt(t + timedelta(minutes=8), tz_local))
+        utc_candidates.add(local_fmt(t + timedelta(minutes=8), timezone.utc))
+        t += timedelta(seconds=1)
+    assert any(c in line_zermatt for c in local_candidates), (
+        f"Onset-Zeit nicht in Ortszeit {sorted(local_candidates)}: {line_zermatt!r}"
+    )
+    assert not any(c in line_zermatt for c in utc_candidates - local_candidates), (
+        f"Onset-Zeit steht in UTC statt Ortszeit: {line_zermatt!r}"
+    )
 
     assert result.sent is True
     assert "email" in result.sent_channels
