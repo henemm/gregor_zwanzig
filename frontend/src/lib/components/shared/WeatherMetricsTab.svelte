@@ -624,6 +624,28 @@
 		});
 	}
 
+	// Issue #1361/#1372 S1b (Staging-Fund AC-5): das Tagesfenster ist reine
+	// report_config — es gehoert NICHT zum Metrik-Katalog (buckets/friendlyMap/
+	// telegramKurzform), den `scheduleAutoSave()` unbedingt mit auf
+	// `/weather-config` schreibt. #1234s Isolationsgarantie ("eine Aenderung in
+	// einem Bereich darf keine fremden Daten mitschreiben") verlangt einen
+	// EIGENEN Speicherpfad, der ausschliesslich `/api/trips/{id}` (report_config)
+	// anspricht — analog dem bereits entkoppelten Compare-Pfad
+	// (flushPendingWeatherMetricsSave, EIN PUT auf /api/compare/presets/{id}).
+	function scheduleReportConfigOnlySave() {
+		if (!saveController || createMode) return;
+		const gateDecision = weatherSaveGate({ catalogLoaded, userTouched });
+		if (gateDecision === 'skip') {
+			saveController.setDirty();
+			return;
+		}
+		saveController.schedule(async () => {
+			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabled });
+			onTripUpdate?.(updated);
+			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled);
+		});
+	}
+
 	// Issue #774: reportConfig-Änderungen (Checkboxen) triggern Auto-Save.
 	// Nicht-reaktive Vergleichsvariable vermeidet Rekursion.
 	// Issue #1269 (a): reportConfigChangedByUser() statt rohem JSON-Vergleich —
@@ -638,7 +660,14 @@
 			const changed = reportConfigChangedByUser(_lastReportConfig, cur);
 			_lastReportConfig = cur;
 			if (changed) {
-				scheduleAutoSave();
+				// Issue #1361/#1372 S1b (Staging-Fund AC-5): reine report_config-
+				// Aenderungen (EditReportConfigSection-Checkboxen, Tagesfenster)
+				// duerfen NICHT den Metrik-Katalog auf /weather-config mitschreiben
+				// — dieser Effekt reagiert ausschliesslich auf reportConfig, daher
+				// scheduleReportConfigOnlySave() statt der vollen scheduleAutoSave().
+				// Ein direkter Aufruf von scheduleAutoSave() aus einem Metrik-Handler
+				// (buckets/smsThresholds) bleibt unveraendert und wandert NICHT hierher.
+				scheduleReportConfigOnlySave();
 			}
 		}
 	});
@@ -1031,12 +1060,12 @@
 						onStartHour={(v) => {
 							reportConfig = { ...reportConfig, day_window_start_hour: v };
 							userTouched = true;
-							scheduleAutoSave();
+							scheduleReportConfigOnlySave();
 						}}
 						onEndHour={(v) => {
 							reportConfig = { ...reportConfig, day_window_end_hour: v };
 							userTouched = true;
-							scheduleAutoSave();
+							scheduleReportConfigOnlySave();
 						}}
 					/>
 				</div>

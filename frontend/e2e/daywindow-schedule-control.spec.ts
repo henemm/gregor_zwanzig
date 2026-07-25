@@ -112,6 +112,21 @@ test.describe('Issue #1361/#1372 S1b: Tagesfenster-Control im Reiter Wetter-Metr
 		await endSelect.selectOption('16');
 		await page.waitForTimeout(1_500); // Debounce-Fenster (Autosave-Muster anderer Tabs)
 
+		// Staging-Fund AC-5 (zweifach live reproduziert): ein reiner
+		// Endstunden-Wechsel loeste zusaetzlich einen unbeteiligten PUT auf
+		// /weather-config aus (kompletter, unveraenderter Metrik-Katalog
+		// mitgeschrieben — Verstoss gegen die #1234-Isolationsgarantie).
+		// `collectTripPuts` filtert nur auf ".../trips/{id}" als Substring, das
+		// faengt BEIDE Endpunkte (".../trips/{id}" UND ".../trips/{id}/weather-
+		// config" enthalten beide diesen Substring) -- die Laengen-Pruefung
+		// allein haette den Bug also bereits gefangen; die explizite
+		// Endpunkt-Pruefung unten macht die Ursache im Fehlerfall sofort sichtbar.
+		const weatherConfigPuts = puts.filter((r) => r.url().includes('weather-config'));
+		expect(
+			weatherConfigPuts.length,
+			`Ein reiner Tagesfenster-Wechsel darf /weather-config nicht anfassen (Isolationsgarantie #1234), ` +
+				`getroffene URLs: ${puts.map((r) => r.url()).join(', ')}`
+		).toBe(0);
 		expect(puts.length, `Erwartet genau 1 PUT nach Fenster-Aenderung, erhalten ${puts.length}`).toBe(1);
 		const body = puts[0].postDataJSON() as {
 			report_config?: { day_window_start_hour?: number; day_window_end_hour?: number };
