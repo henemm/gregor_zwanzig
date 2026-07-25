@@ -190,8 +190,9 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		const morningTime = () => page.locator('[data-testid="report-morning-time"]:visible').first();
 		await expect(morningTime()).toHaveValue('07:00', { timeout: 10_000 });
 
-		// Volle Stunde: report-morning-time-Input trägt step={3600} (VTSchedulePlan).
-		await morningTime().fill('08:00');
+		// Issue #1379: Auswahlliste mit den 24 vollen Stunden (VTSchedulePlan) —
+		// eine Minuten-Eingabe ist hier nicht mehr moeglich.
+		await morningTime().selectOption('08:00');
 		await morningTime().blur();
 		await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', {
 			timeout: 10_000
@@ -203,7 +204,7 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		await expect(morningTime()).toHaveValue('08:00', { timeout: 10_000 });
 
 		// Testdaten sauber: Ausgangswert wiederherstellen und speichern.
-		await morningTime().fill('07:00');
+		await morningTime().selectOption('07:00');
 		await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', {
 			timeout: 10_000
 		});

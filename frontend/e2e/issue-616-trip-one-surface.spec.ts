@@ -120,7 +120,9 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		await page.goto(`${DETAIL_URL}?tab=briefings`);
 		const morning = page.getByTestId('report-morning-time');
 		await expect(morning).toBeVisible({ timeout: 8000 });
-		await morning.fill('05:30');
+		// Issue #1379: Stunden-Auswahlliste — Minuten sind nicht mehr waehlbar
+		// (der Server kappte sie seit #1280 ohnehin auf die volle Stunde).
+		await morning.selectOption('05:00');
 		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
 			timeout: 5000
 		});
@@ -129,7 +131,7 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		const res = await page.request.get(`/api/trips/${TRIP_ID}`);
 		expect(res.ok()).toBeTruthy();
 		const trip = await res.json();
-		expect(String(trip.report_config?.morning_time)).toMatch(/^05:30/);
+		expect(String(trip.report_config?.morning_time)).toMatch(/^05:00/);
 		// Read-Modify-Write: display_config darf nicht verloren gehen
 		expect(trip.display_config?.metrics).toContain('temp_min');
 	});

@@ -142,7 +142,10 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 		await expect(timeInput).toBeVisible();
 		await expect(timeInput).toHaveValue('07:00');
 
-		await timeInput.fill('05:30');
+		// Issue #1379: Stunden-Auswahlliste statt Uhrzeit-Eingabe — 05:00 statt
+		// des frueheren 05:30 (Minuten sind gar nicht mehr waehlbar). Die Aussage
+		// des Tests bleibt: 05:00 != Seed-Wert 07:00.
+		await timeInput.selectOption('05:00');
 		await timeInput.blur();
 
 		// Sofort weg-navigieren — KEIN „Briefing-Zeitplan speichern"-Klick.
@@ -156,11 +159,11 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 		// (Commit f78f06eb, 2026-07-16) kappt der Server Versandzeiten serverseitig
 		// auf die volle Stunde — internal/store/slot_hour_normalization.go,
 		// TruncateTimeStringToHour(); der Go-Cron-Scheduler laeuft im Stundentakt,
-		// Minuten haetten keine Wirkung. Der Client sendet nachweislich
-		// "morning_time":"05:30:00", persistiert wird "05:00:00".
-		// Der Testfall behaelt seinen Wert doppelt: 05:00 != Seed-Wert 07:00 beweist,
-		// dass die Aenderung die sofortige Navigation ueberlebt hat (urspruengliche
-		// AC-5-Aussage), und die Uhrzeit-Form bewacht zugleich die #1280-Kappung.
+		// Minuten haetten keine Wirkung. Seit Issue #1379 bietet die Oberflaeche
+		// ohnehin nur noch volle Stunden zur Auswahl an, es wird also direkt
+		// "05:00:00" gesendet. Der Testfall behaelt seinen Wert: 05:00 != Seed-Wert
+		// 07:00 beweist, dass die Aenderung die sofortige Navigation ueberlebt hat
+		// (urspruengliche AC-5-Aussage).
 		expect(trip.report_config?.morning_time).toMatch(/^05:00/);
 	});
 
@@ -216,10 +219,10 @@ test.describe('Issue #758 — Ortsvergleich Speicher-Status', () => {
 
 		// Versand-Zeit ändern → Autosave.
 		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').first().click();
-		// Volle Stunde: report-morning-time-Input trägt step={3600} (VTSchedulePlan).
+		// Volle Stunde: report-morning-time ist eine Stunden-Auswahlliste (#1379).
 		const morningTime = page.locator('[data-testid="report-morning-time"]:visible').first();
 		await expect(morningTime).toBeVisible({ timeout: 10_000 });
-		await morningTime.fill('05:00');
+		await morningTime.selectOption('05:00');
 		await morningTime.blur();
 
 		// Autosave abgeschlossen → idle „Gespeichert", kein Fehler.

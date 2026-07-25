@@ -7,8 +7,12 @@
 // `formatNextSend()` schrieb die Minuten hart als ":00". Das war korrekt,
 // solange die Zeit aus `hour_from` stammte — ein Integer, also immer volle
 // Stunde. Seit AC-9/AC-10 kommt sie aus `morning_time`/`evening_time`, und die
-// koennen "07:30" sein: VTSchedulePlan.svelte:86/:111 sind <input type="time">
-// OHNE `step`-Begrenzung, der Nutzer kann Minuten setzen.
+// koennen "07:30" sein: VTSchedulePlan.svelte:86/:111 waren <input type="time">
+// OHNE `step`-Begrenzung, der Nutzer konnte Minuten setzen.
+// NACHTRAG Issue #1379: ueber die Oberflaeche sind nur noch volle Stunden
+// waehlbar (Auswahlliste). Die Anzeige-Helfer muessen Minuten trotzdem korrekt
+// darstellen — fuer Bestandswerte und fuer `letzter_versand` (echter
+// Versand-Zeitstempel, s. letzter Testfall). Dieser Test bleibt gueltig.
 //
 // Folge (der Widerspruch, den wir selbst gebaut haben): die Zeitplan-Kachel
 // zeigt "07:30", die "Nächster Versand"-Kachel direkt daneben zeigt "07:00".

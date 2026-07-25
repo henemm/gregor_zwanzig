@@ -211,9 +211,11 @@ test.describe('Issue #88: Report Config Dialog', () => {
 				await morningSwitch.click();
 			}
 
-			// Time-Input zeigt initial 05:30
+			// Issue #1379 AC-5: der Trip wurde mit 05:30 angelegt; der Server kappt
+			// beim Schreiben auf die volle Stunde (#1280) und die Auswahlliste zeigt
+			// den zugehoerigen vollen Stunden-Eintrag — nicht leer, nicht zufaellig.
 			const morningTime = page.locator('[data-testid="report-morning-time"]');
-			await expect(morningTime).toHaveValue('05:30');
+			await expect(morningTime).toHaveValue('05:00');
 
 			// Quick-Pick "Morgens 07:00" klicken
 			await page.locator('[data-testid="report-morning-quickpick-07"]').click();

@@ -199,7 +199,7 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
 			{ timeout: 5_000 }
 		);
-		await morningTime.fill('05:00');
+		await morningTime.selectOption('05:00');
 		await morningTime.blur();
 		await put2;
 
@@ -463,10 +463,10 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
 			{ timeout: 5_000 }
 		);
-		// Volle Stunde: report-morning-time-Input trägt step={3600} (VTSchedulePlan).
+		// Volle Stunde: report-morning-time ist eine Stunden-Auswahlliste (#1379).
 		const morningTime = page.locator('[data-testid="report-morning-time"]:visible').first();
 		await expect(morningTime).toBeVisible({ timeout: 10_000 });
-		await morningTime.fill('05:00');
+		await morningTime.selectOption('05:00');
 		await morningTime.blur();
 		const putRes = await put;
 		expect(putRes.ok(), 'PUT (Versand) fehlgeschlagen: ' + putRes.status()).toBeTruthy();

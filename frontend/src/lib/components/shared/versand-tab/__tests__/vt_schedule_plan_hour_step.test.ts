@@ -1,74 +1,100 @@
-// TDD RED — Issue #1280: Versandzeit-Eingabe auf volle Stunden begrenzen.
+// doc-compliance-test
 //
-// Spec: docs/specs/modules/fix_1280_versandzeit_stunden_raster.md (AC-5)
+// Issue #1379 (Nachfolger von #1280): Die Versandzeit wird ueber eine
+// Auswahlliste mit den 24 vollen Stunden gewaehlt — ein frei beschreibbares
+// Uhrzeit-Feld (mit Minuten) gibt es nicht mehr. Der Schutzzweck des alten
+// step={3600}-Tests bleibt: an dieser Stelle darf keine Minuten-Eingabe
+// entstehen. Nur der Mechanismus aendert sich (Eingabefeld -> Auswahlliste).
 //
-// Source-Inspection-Test (kein DOM-Rendering, keine Mocks, kein Playwright —
-// Praezedenz: shared/corridor-editor/corridorEditorMobile.test.ts,
-// organisms/__tests__/list_table_unify.test.ts). Svelte-5-Komponenten sind
-// ohne @testing-library/svelte (nicht in package.json) in diesem
-// Test-Setup nicht mountbar; die tatsaechliche Browser-Wirkung von
-// step={3600} wird laut Spec "Known Limitations" ergaenzend ueber die
-// Server-Write-Normalisierung abgesichert (separate Go-Tests, siehe Spec).
+// Spec: docs/specs/modules/versandzeit_stundenwahl.md (AC-1, AC-3)
 //
-// RED-Erwartung: VTSchedulePlan.svelte traegt aktuell KEIN step-Attribut auf
-// den beiden Zeit-Inputs (Zeile 86 morning, Zeile 111 evening) — beide
-// step-Assertions unten schlagen fehl, bis Phase 6 sie behebt.
-//
-// Ausfuehrung:
-//   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test \
-//     src/lib/components/shared/versand-tab/__tests__/vt_schedule_plan_hour_step.test.ts
+// Source-Inspection-Test (kein DOM-Rendering, keine Mocks — Svelte-5-Komponenten
+// sind ohne @testing-library/svelte in diesem Setup nicht mountbar). Die
+// Auswahl-LOGIK (Stunden-Liste, Bestandswert-Kappung, AC-5) ist als echter
+// Verhaltenstest in src/lib/utils/time.test.ts abgedeckt, das gerenderte
+// Verhalten in e2e/versandzeit-stundenwahl.spec.ts; hier wird geprueft, dass die
+// Komponente genau diese Logik verwendet und kein Eingabefeld mehr rendert.
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { HOUR_OPTIONS, toHourOption } from '../../../../utils/time.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const VT_SCHEDULE_PLAN = join(here, '..', 'VTSchedulePlan.svelte');
 const VERSAND_TAB = join(here, '..', '..', 'VersandTab.svelte');
 
 /**
- * Extrahiert den kompletten <input ...> Tag-Block, der einen gegebenen
- * data-testid traegt (nicht-greedy bis zum schliessenden ">"), damit die
- * step-Pruefung wirklich AM Input haengt statt irgendwo im Datei-Text.
+ * Extrahiert den kompletten Element-Block (oeffnender Tag), der einen
+ * gegebenen data-testid traegt — inklusive Tag-Namen davor, damit geprueft
+ * werden kann, WELCHES Element den testid traegt.
  */
-function extractInputBlock(src: string, testid: string): string {
+function extractTagBlock(src: string, testid: string): string {
 	const marker = `data-testid="${testid}"`;
 	const markerIdx = src.indexOf(marker);
 	assert.ok(markerIdx >= 0, `data-testid="${testid}" nicht gefunden`);
-	// Tag-Anfang vor dem Marker suchen.
-	const tagStart = src.lastIndexOf('<input', markerIdx);
-	assert.ok(tagStart >= 0, `kein <input vor data-testid="${testid}" gefunden`);
-	const tagEnd = src.indexOf('/>', tagStart);
-	assert.ok(tagEnd >= 0, `kein schliessendes /> nach data-testid="${testid}" gefunden`);
-	return src.slice(tagStart, tagEnd + 2);
+	const tagStart = src.lastIndexOf('<', markerIdx);
+	assert.ok(tagStart >= 0, `kein oeffnender Tag vor data-testid="${testid}" gefunden`);
+	const tagEnd = src.indexOf('>', markerIdx);
+	assert.ok(tagEnd >= 0, `kein schliessendes > nach data-testid="${testid}" gefunden`);
+	return src.slice(tagStart, tagEnd + 1);
 }
 
-describe('AC-5: VTSchedulePlan.svelte begrenzt beide Zeitfelder auf volle Stunden (step=3600)', () => {
+describe('AC-1: VTSchedulePlan.svelte bietet die Versandzeit als Stunden-Auswahlliste an', () => {
 	test('VTSchedulePlan.svelte existiert (geteilte Komponente)', () => {
 		assert.ok(existsSync(VT_SCHEDULE_PLAN), 'VTSchedulePlan.svelte fehlt');
 	});
 
-	test('report-morning-time Input traegt step={3600}', () => {
+	for (const testid of ['report-morning-time', 'report-evening-time']) {
+		test(`${testid} ist eine Auswahlliste, kein frei beschreibbares Uhrzeit-Feld`, () => {
+			const src = readFileSync(VT_SCHEDULE_PLAN, 'utf-8');
+			const block = extractTagBlock(src, testid);
+			assert.ok(
+				/^<Select[\s>]/.test(block) || /^<select[\s>]/.test(block),
+				`${testid} muss eine Auswahlliste (<Select>/<select>) sein, aktueller Block:\n${block}`
+			);
+			assert.ok(
+				!/<input/i.test(block) && !/type="time"/.test(block),
+				`${testid} darf kein <input type="time"> mehr sein, aktueller Block:\n${block}`
+			);
+		});
+
+		test(`${testid} bezieht seinen Wert ueber toHourOption (Bestandswert-Kappung, AC-5)`, () => {
+			const src = readFileSync(VT_SCHEDULE_PLAN, 'utf-8');
+			const block = extractTagBlock(src, testid);
+			assert.ok(
+				/value=\{[^}]*HourOption[^}]*\}/.test(block),
+				`${testid} muss seinen angezeigten Wert aus toHourOption(...) ableiten, aktueller Block:\n${block}`
+			);
+		});
+	}
+
+	test('die Optionen kommen aus der geteilten HOUR_OPTIONS-Liste (24 volle Stunden)', () => {
 		const src = readFileSync(VT_SCHEDULE_PLAN, 'utf-8');
-		const block = extractInputBlock(src, 'report-morning-time');
 		assert.ok(
-			/step=\{?3600\}?|step="3600"/.test(block),
-			`report-morning-time-Input muss step=3600 (volle Stunde) tragen, aktueller Tag-Block:\n${block}`
+			/import \{[^}]*HOUR_OPTIONS[^}]*\} from '\$lib\/utils\/time'/.test(src),
+			'VTSchedulePlan.svelte muss HOUR_OPTIONS aus $lib/utils/time importieren (keine eigene Liste)'
+		);
+		assert.ok(
+			/\{#each HOUR_OPTIONS as /.test(src),
+			'die Optionen muessen ueber {#each HOUR_OPTIONS ...} gerendert werden'
+		);
+		// Gegenprobe auf die Liste selbst (echter Wert, kein Datei-Text):
+		assert.equal(HOUR_OPTIONS.length, 24);
+		assert.equal(toHourOption('07:30'), '07:00');
+	});
+
+	test('kein type="time"-Eingabefeld mehr in der gesamten Komponente', () => {
+		const src = readFileSync(VT_SCHEDULE_PLAN, 'utf-8');
+		assert.ok(
+			!src.includes('type="time"'),
+			'VTSchedulePlan.svelte darf kein <input type="time"> mehr enthalten (Minuten waeren eintippbar)'
 		);
 	});
 
-	test('report-evening-time Input traegt step={3600}', () => {
-		const src = readFileSync(VT_SCHEDULE_PLAN, 'utf-8');
-		const block = extractInputBlock(src, 'report-evening-time');
-		assert.ok(
-			/step=\{?3600\}?|step="3600"/.test(block),
-			`report-evening-time-Input muss step=3600 (volle Stunde) tragen, aktueller Tag-Block:\n${block}`
-		);
-	});
-
-	// Trip/Compare-Teilungs-Invariante (CLAUDE.md): der Fix darf NICHT
+	// AC-3 / Trip-Compare-Teilungs-Invariante (CLAUDE.md): der Fix darf NICHT
 	// dupliziert werden — es gibt genau EINEN Import-/Nutzungsort, der beide
 	// Kontexte (context="route" implizit als Default, context="vergleich"
 	// explizit) mit derselben Komponente bedient.

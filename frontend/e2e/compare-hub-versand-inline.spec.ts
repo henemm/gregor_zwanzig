@@ -168,12 +168,12 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 		const putPromise = page.waitForResponse(
 			(res) => res.url().includes(`/api/compare/presets/${id}`) && res.request().method() === 'PUT'
 		);
-		await timeInput.fill('09:15');
+		await timeInput.selectOption('09:00');
 		await timeInput.blur();
 		const putRes = await putPromise;
 		expect(putRes.ok(), 'PUT nach Uhrzeit-Änderung fehlgeschlagen: ' + putRes.status()).toBeTruthy();
 		const putBody = putRes.request().postDataJSON() as { morning_time: string };
-		expect(putBody.morning_time.slice(0, 5)).toBe('09:15');
+		expect(putBody.morning_time.slice(0, 5)).toBe('09:00');
 
 		// AC-36 Kernaussage: keine goToEditVersand()-Navigation nach /edit.
 		expect(page.url()).toBe(urlBefore);
@@ -183,7 +183,7 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 		await page.waitForLoadState('networkidle');
 		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
 		const reloadedInput = page.locator('[data-testid="report-morning-time"]:visible');
-		await expect(reloadedInput).toHaveValue('09:15', { timeout: 10_000 });
+		await expect(reloadedInput).toHaveValue('09:00', { timeout: 10_000 });
 	});
 
 	// ── AC-37 + AC-17 + AC-18: Aktivierungs-Karte ───────────────────────────────
@@ -293,7 +293,7 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 
 		// Kein Warten zwischen den beiden Aktionen — Stresstest für die
 		// gemeinsame hubPutQueue (Fix-Loop 1, F002, Adversary CRITICAL).
-		await timeInput.fill('10:45');
+		await timeInput.selectOption('10:00');
 		await cta.click();
 
 		await page.waitForLoadState('networkidle');
@@ -303,7 +303,7 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 		await page.waitForLoadState('networkidle');
 		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
 		const reloadedInput = page.locator('[data-testid="report-morning-time"]:visible');
-		await expect(reloadedInput).toHaveValue('10:45', { timeout: 10_000 });
+		await expect(reloadedInput).toHaveValue('10:00', { timeout: 10_000 });
 		const reloadedCta = page.locator('[data-testid="compare-hub-activation-cta"]:visible');
 		await expect(reloadedCta).toHaveText('Aktivieren', { timeout: 10_000 });
 	});
@@ -330,7 +330,7 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 		const fieldPutPromise = page.waitForResponse(
 			(res) => res.url().includes(`/api/compare/presets/${id}`) && res.request().method() === 'PUT'
 		);
-		await timeInput.fill('11:20');
+		await timeInput.selectOption('11:00');
 		await timeInput.blur();
 		const fieldPutRes = await fieldPutPromise;
 		expect(fieldPutRes.ok(), 'PUT nach Uhrzeit-Änderung fehlgeschlagen: ' + fieldPutRes.status()).toBeTruthy();
@@ -350,13 +350,13 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 		// Uhrzeit mit (round-trip aus der gemeinsamen currentPreset-Baseline),
 		// überschreibt sie NICHT mit einem veralteten data.preset-Stand.
 		expect(kebabPutBody.schedule).toBe('manual');
-		expect(kebabPutBody.morning_time.slice(0, 5)).toBe('11:20');
+		expect(kebabPutBody.morning_time.slice(0, 5)).toBe('11:00');
 
 		await page.reload();
 		await page.waitForLoadState('networkidle');
 		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
 		const reloadedInput = page.locator('[data-testid="report-morning-time"]:visible');
-		await expect(reloadedInput).toHaveValue('11:20', { timeout: 10_000 });
+		await expect(reloadedInput).toHaveValue('11:00', { timeout: 10_000 });
 		const reloadedCta = page.locator('[data-testid="compare-hub-activation-cta"]:visible');
 		await expect(reloadedCta).toHaveText('Aktivieren', { timeout: 10_000 });
 

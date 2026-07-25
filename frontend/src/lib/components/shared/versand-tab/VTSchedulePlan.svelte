@@ -13,6 +13,8 @@
 
 	import { Eyebrow, Card } from '$lib/components/atoms';
 	import { Checkbox } from '$lib/components/ui/checkbox';
+	import { Select } from '$lib/components/ui/select';
+	import { HOUR_OPTIONS, toHourOption } from '$lib/utils/time';
 
 	interface Props {
 		/** Issue #1232 Scheibe 2b: context-Diskriminierung — vergleich zeigt
@@ -52,8 +54,15 @@
 
 	const isRoute = $derived(context === 'route');
 
-	// Issue #1286: Quick-Pick-Chips — feuern denselben Callback wie das
-	// Zeit-Input, mit einem synthetischen Event (Factory-Pattern, Safari-
+	// Issue #1379: Versandzeit = volle Stunde aus HOUR_OPTIONS (kein eintippbares
+	// Uhrzeit-Feld mehr; Minuten wurden serverseitig ohnehin gekappt, #1280). Ein
+	// Bestandswert mit Minuten wird nur fuer die ANZEIGE gekappt — geschrieben
+	// wird erst, wenn der Nutzer selbst waehlt (AC-5).
+	const morningHourOption = $derived(toHourOption(morning_time, '07:00'));
+	const eveningHourOption = $derived(toHourOption(evening_time, '18:00'));
+
+	// Issue #1286: Quick-Pick-Chips — feuern denselben Callback wie die
+	// Zeit-Auswahl, mit einem synthetischen Event (Factory-Pattern, Safari-
 	// Closure-Schutz, CLAUDE.md).
 	function makeQuickPickHandler(cb: (e: Event) => void, value: string) {
 		return function doQuickPick() {
@@ -89,17 +98,18 @@
 					</span>
 				</div>
 				<div class="vt-card-body">
-					<label class="vt-time-label">
+					<label class="vt-time-label vt-time-choice">
 						<span class="vt-time-caption">Uhrzeit</span>
-						<input
-							type="time"
+						<Select
 							data-testid="report-morning-time"
-							class="vt-time-input"
-							step={3600}
-							value={morning_time}
+							value={morningHourOption}
 							disabled={!morning_enabled}
 							onchange={onMorningTime}
-						/>
+						>
+							{#each HOUR_OPTIONS as h (h)}
+								<option value={h}>{h}</option>
+							{/each}
+						</Select>
 					</label>
 					<div class="vt-quickpick-row">
 						<button
@@ -135,17 +145,18 @@
 					</span>
 				</div>
 				<div class="vt-card-body">
-					<label class="vt-time-label">
+					<label class="vt-time-label vt-time-choice">
 						<span class="vt-time-caption">Uhrzeit</span>
-						<input
-							type="time"
+						<Select
 							data-testid="report-evening-time"
-							class="vt-time-input"
-							step={3600}
-							value={evening_time}
+							value={eveningHourOption}
 							disabled={!evening_enabled}
 							onchange={onEveningTime}
-						/>
+						>
+							{#each HOUR_OPTIONS as h (h)}
+								<option value={h}>{h}</option>
+							{/each}
+						</Select>
 					</label>
 					<div class="vt-quickpick-row">
 						<button
@@ -261,20 +272,15 @@
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 	}
-	.vt-time-input {
+	/* #1379: Select bringt eigene Optik mit (inkl. :disabled) — hier nur die
+	   Mono-Ziffern-Anmutung angleichen. Die frueheren .vt-time-input-Regeln sind
+	   mit dem Uhrzeit-Eingabefeld (#1379) und dem Tagesfenster-Block (#1361)
+	   nutzerlos geworden und entfallen. */
+	.vt-time-choice :global(select) {
 		font-family: var(--g-font-mono);
 		font-size: 13px;
 		font-weight: 600;
-		border: 1px solid var(--g-rule);
-		border-radius: var(--g-r-1, 4px);
-		padding: 5px 8px;
 		background: var(--g-card);
-		color: var(--g-ink);
-	}
-	.vt-time-input:disabled {
-		color: var(--g-ink-4);
-		background: var(--g-paper-deep, #efece3);
-		cursor: not-allowed;
 	}
 	.vt-quickpick-row {
 		display: flex;
@@ -305,10 +311,12 @@
 		.vt-schedule-grid {
 			grid-template-columns: 1fr;
 		}
-		.vt-time-input {
+		.vt-time-choice :global(.gz-select) {
+			flex: 1;
+		}
+		.vt-time-choice :global(select) {
 			min-height: 44px;
 			font-size: 16px;
-			width: 100%;
 			box-sizing: border-box;
 		}
 		.vt-quick-chip {
