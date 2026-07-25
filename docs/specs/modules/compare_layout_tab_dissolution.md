@@ -52,6 +52,8 @@ Reihenfolge, stilles Verwerfen) folgt unmittelbar als S1b.
 | `compare/CompareTabs.svelte` | MODIFY | Layout-Panel + Limit-Pillen entfernen, Speicher-Kopplung (`handleLayoutCommit`, `.hub-layout-hourly-wrap`) mitziehen |
 | `compare/compareTabsResolve.ts` | MODIFY | Reiter-Liste (SSoT, `COMPARE_TABS`), Umleitung alter Deep-Links (`resolveCompareTab`) |
 | `compare-new/CompareNewEditor.svelte` | MODIFY | Anlege-Seite zieht identisch mit (nutzt `CompareHourlyLayoutControls` bereits an zwei Stellen — Desktop/Mobil) |
+| `compare/compareWizardState.svelte.ts` | MODIFY | **Nachtrag F002:** `topN`-State (`:73`), `top_n` in der Create-Payload (`:132`) und die Übergabe an `saveComparePreset()` (`:172`) — der Anlege-Pfad schrieb das Feld sonst bei jeder Neuanlage weiter |
+| `compare/compareEditorSave.ts` | MODIFY | **Nachtrag F002:** `topN` aus `CompareEditorEdits` und dessen Schreibzweig (`displayConfig.top_n`); NEU `buildNewComparePresetPayload()` — Create-Payload als reine Funktion, siehe Implementation Details Punkt 10 |
 | `molecules/CompareLayoutRow.svelte` | DELETE | Attrappen-Zeile ohne Handler |
 | `compare/channelChipCount.ts` (+ Test) | DELETE | wendet Trip-Spaltenbudget auf Orte an — nur noch in `CompareTabs.svelte` genutzt |
 | `compare/CompareInhaltSection.svelte` | DELETE | toter Bestand: verifiziert nirgends mehr importiert (`grep -r "import.*CompareInhaltSection"` → 0 Treffer außer der Datei selbst) |
@@ -159,6 +161,44 @@ Reihenfolge, stilles Verwerfen) folgt unmittelbar als S1b.
    (`SectionH eyebrow="Spalten pro Kanal"`, Hinweis „Renderer kappt je Kanal",
    `LAYOUT_LIMIT_PILLS_MOBILE = ['Email · alle Spalten', 'Telegram · max 8',
    'SMS · flach']`) — Desktop-Rueckbau allein erfuellt AC-4 nicht.
+
+10. NACHTRAG 2026-07-25 (Restpunkt F002, Commit d015349a): Der Rueckbau von
+    Punkt 5 blieb auf halbem Weg stehen. Aus AUFLOESUNG und RENDERERN war
+    `top_n` entfernt, das FRONTEND schrieb es aber weiter — jeder ueber
+    `/compare/new` angelegte Vergleich trug `display_config.top_n: 3`
+    (live gegen Staging reproduziert). Die einmalige Bereinigung aus Punkt 6
+    wurde damit von jeder Neuanlage wieder unterlaufen; AC-8 war nicht erfuellt.
+
+    Warum es durchrutschte — und was dagegen jetzt greift: Die Create-Payload
+    wurde INLINE in `compareWizardState.svelte.ts` gebaut. Wegen der
+    `$state`-Runen ist die Klasse ausserhalb der Svelte-Runtime nicht
+    instanziierbar (Konvention: Tests inspizieren nur den Prototype, siehe
+    `__tests__/wizard_state_no_legacy_save.test.ts`) — der ANLEGE-Pfad war
+    strukturell nicht testbar, waehrend der BEARBEITEN-Pfad ueber die reine
+    Funktion `buildComparePresetSavePayload()` abgedeckt war. Genau in dieser
+    Luecke sass der Fehler.
+
+    Behoben durch Extraktion der Create-Payload als reine Funktion
+    `buildNewComparePresetPayload()` neben ihr Edit-Pendant. Verifiziert, dass
+    die Extraktion nichts still veraendert: die Payload traegt exakt 29 statt
+    30 Schluessel (nur `top_n` faellt weg), alle 27 Werte werden unveraendert
+    durchgereicht, `toHHMMSS` ist mitgewandert. Unabhaengig per deep-equal
+    gegen die alte Inline-Logik nachgerechnet (zwei Feld-Saetze, inkl.
+    Edge-Cases) — keine Abweichung.
+
+    Zwei neue Absicherungen, weil eine allein die Luecke nicht schliesst:
+    `__tests__/compare_new_preset_payload.test.ts` (Kern, treibt die echte
+    Payload-Funktion) und eine Zusicherung in AC-6 von
+    `e2e/compare-layout-tab-dissolution.spec.ts` (Staging, echter Klickpfad).
+
+    Bestandsdaten bleiben unberuehrt: ein bereits gespeichertes `top_n`
+    ueberlebt jeden Save (Read-Modify-Write, BUG-DATALOSS-GR221) — Wegraeumen
+    bleibt allein Aufgabe des Migrationsskripts aus Punkt 6.
+
+    ABLEITUNG fuer kuenftige Scheiben: Bei Create/Edit-Paaren pruefen, ob
+    BEIDE Seiten gleich gut testbar sind. Ein Rueckbau ist erst vollstaendig,
+    wenn auch der schreibende Pfad ihn nicht mehr erzeugt — nicht schon, wenn
+    die lesenden Pfade ihn ignorieren.
 ```
 
 ## Gate-Auflagen
@@ -278,6 +318,10 @@ Das ist eine Auflage für die Implementierung, keine Akzeptanzkriterium.
   (`tests/tdd/test_compare_render_options_resolver.py:66-99,229`,
   `internal/handler/compare_preset_top_n_test.go`), prüfen nach dem Rückbau
   veraltetes Verhalten und werden gelöscht, nicht aufgeweicht.
+- Der Hub-PUT-Pfad (`CompareTabs.svelte`) war von F002 **nicht** betroffen —
+  er führt `topN` nicht im Edit-Payload. Betroffen waren allein der Anlege-Pfad
+  und der Bearbeiten-Pfad über den Wizard-State (siehe Implementation Details
+  Punkt 10).
 
 ## Architektur-Entscheidung (ADR)
 
@@ -297,3 +341,11 @@ Das ist eine Auflage für die Implementierung, keine Akzeptanzkriterium.
   Punkte 7-9 ergänzt (CompareInhaltSection-Entscheidung, Anlege-Seite 6 Reiter
   + Lock-Kette, AC-4 gilt auch mobil), HourFrom/HourTo-Datenverlustfalle
   (#1268 F003) als Umzugs-Auflage dokumentiert
+- 2026-07-25 (nach Auslieferung): Restpunkt **F002** nachgetragen — der
+  Rückbau war im Frontend unvollständig, der Anlege-Pfad schrieb `top_n`
+  weiter. Dateiliste um `compareWizardState.svelte.ts` und
+  `compareEditorSave.ts` ergänzt, Implementation Details Punkt 10 (Ursache:
+  Create-Payload war wegen `$state`-Runen nicht testbar, während der
+  Edit-Pfad Tests hatte; Behebung per Extraktion als reine Funktion; zwei
+  neue Absicherungen). Behoben mit Commit `d015349a`, am echten Klickpfad
+  gegen Staging nachgewiesen. Damit ist AC-8 erfüllt.
