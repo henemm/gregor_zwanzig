@@ -405,7 +405,7 @@ test.describe('Issue #1360: Layout-Reiter aufgelöst, Stundenverlauf bei den Wet
 		registerForCleanup('preset', created.id);
 
 		const preset = await readPreset(page, created.id);
-		const dc = (preset.display_config ?? {}) as { hourly_metrics?: string[] };
+		const dc = (preset.display_config ?? {}) as { hourly_metrics?: string[]; top_n?: number };
 		expect(
 			dc.hourly_metrics,
 			'AC-6: die im Anlegen getroffene Stundengrößen-Auswahl muss im neuen Vergleich stehen'
@@ -413,5 +413,14 @@ test.describe('Issue #1360: Layout-Reiter aufgelöst, Stundenverlauf bei den Wet
 		expect(dc.hourly_metrics, 'AC-6: die umgeschaltete Stundengröße ist enthalten').toContain(
 			'wind_dir_deg'
 		);
+		// Issue #1360 AC-8, Restpunkt F002: top_n stammt aus dem abgeschafften
+		// Layout-Reiter und darf am Anlege-Pfad nicht wieder auftauchen — sonst
+		// unterläuft die Neuanlage die Datenbereinigung (migrate_1360_drop_compare_top_n.py)
+		// dauerhaft.
+		expect(
+			dc.top_n,
+			'Issue #1360 F002: über /compare/new angelegter Vergleich darf KEIN display_config.top_n ' +
+				'tragen — der Layout-Reiter-Rückbau würde sonst am Anlege-Pfad wieder unterlaufen'
+		).toBeUndefined();
 	});
 });

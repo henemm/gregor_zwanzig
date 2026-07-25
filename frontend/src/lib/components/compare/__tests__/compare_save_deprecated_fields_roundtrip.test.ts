@@ -54,8 +54,7 @@ function editsOhneZeitfenster(): CompareEditorEdits {
 		activityProfile: null,
 		pickedIds: ['ort-a', 'ort-b'],
 		region: 'Tirol',
-		idealRanges: {},
-		topN: 3
+		idealRanges: {}
 	};
 }
 

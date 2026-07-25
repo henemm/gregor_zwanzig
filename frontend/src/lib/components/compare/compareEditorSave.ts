@@ -25,8 +25,6 @@ export interface CompareEditorEdits {
 	officialAlertsEnabled?: boolean;
 	// Issue #1041 Slice 2: Radar-Alarm ein/aus (Default AUS). Optional → rückwärtskompatibel.
 	radarAlertEnabled?: boolean;
-	// Issue #1104: Anzahl Orte mit stündlichem Detail. Optional → rückwärtskompatibel.
-	topN?: number;
 	// Issue #1107: Stundenverlauf-Sektion ein/aus. Optional → rückwärtskompatibel.
 	hourlyEnabled?: boolean;
 	// Issue #1170: Alarm-Konfiguration (Epic #1095 Scheibe 3/3). Optional → rückwärtskompatibel.
@@ -89,10 +87,6 @@ export function buildComparePresetSavePayload(
 
 	if (Object.keys(edits.idealRanges).length > 0) {
 		displayConfig.ideal_ranges = edits.idealRanges;
-	}
-
-	if (edits.topN !== undefined) {
-		displayConfig.top_n = edits.topN;
 	}
 
 	if (edits.activeMetricKeys !== undefined) {
@@ -174,4 +168,101 @@ export function buildComparePresetSavePayload(
 	};
 
 	return { url, body };
+}
+
+// ─── Create-Pfad (POST /api/compare/presets) ──────────────────────────────
+//
+// Issue #1360 F002: Pure-Function-Gegenstueck zu buildComparePresetSavePayload
+// fuer die Neuanlage (`CompareWizardState.saveNewPreset()`). Analoges Prinzip
+// (keine Browser-/SvelteKit-Imports, plain Input-Objekt statt $state-Runen) —
+// damit ist die Create-Payload ohne Svelte-Runtime testbar (kein nachgebautes
+// Objekt im Test, keine Mock-Rückspiegelung).
+
+export interface NewComparePresetFields {
+	name: string;
+	pickedIds: string[];
+	activityProfile: ActivityProfile | null;
+	schedule: 'daily_morning' | 'daily_evening' | 'weekly';
+	officialAlertsEnabled: boolean;
+	radarAlertEnabled: boolean;
+	hourlyEnabled: boolean;
+	officialAlertTriggersEnabled: boolean;
+	sendTelegram: boolean;
+	sendSms: boolean;
+	officialWarningsEnabled: boolean;
+	morningEnabled: boolean;
+	morningTime: string;
+	eveningEnabled: boolean;
+	eveningTime: string;
+	endDate: string | null;
+	alertCooldownMinutes?: number;
+	alertQuietFrom?: string;
+	alertQuietTo?: string;
+	corridors: Corridor[];
+	region: string;
+	idealRanges: Record<string, IdealRange>;
+	activeMetricKeys: string[];
+	hourlyMetricKeys: string[];
+	metricAlertLevels: Record<string, string>;
+	telegramStyle: 'rich' | 'kurzform';
+}
+
+/**
+ * Baut den POST-Payload fuer `/api/compare/presets` (Neuanlage). Anders als
+ * beim Edit-Pfad gibt es kein `original` zum Round-Trippen — alle Felder
+ * kommen direkt aus dem Wizard-Zustand.
+ */
+export function buildNewComparePresetPayload(fields: NewComparePresetFields): Record<string, unknown> {
+	return {
+		name: fields.name,
+		location_ids: fields.pickedIds,
+		profil: fields.activityProfile ?? 'wandern',
+		// fields.schedule ist 'daily_morning'|'daily_evening'|'weekly'; Preset-API erwartet 'daily'|'weekly'|'manual'
+		schedule: fields.schedule.startsWith('daily')
+			? 'daily'
+			: fields.schedule === 'weekly'
+				? 'weekly'
+				: 'manual',
+		// Issue #1268: hour_from/hour_to/forecast_hours werden beim Anlegen nicht
+		// mehr gesendet — das Go-Backend setzt beim Create eigene Defaults.
+		official_alerts_enabled: fields.officialAlertsEnabled, // Issue #1040
+		radar_alert_enabled: fields.radarAlertEnabled, // Issue #1041 Slice 2
+		hourly_enabled: fields.hourlyEnabled, // Issue #1107
+		// Issue #1216 Slice 2b: Amtliche-Warnungen-Alarm-Trigger + Kanal-Opt-in.
+		official_alert_triggers_enabled: fields.officialAlertTriggersEnabled,
+		send_telegram: fields.sendTelegram,
+		send_sms: fields.sendSms,
+		// Issue #1258 S4 (AC-27/E3): unconditional wie die Geschwister-Booleans
+		// oben — Neuanlagen tragen immer official_warnings.enabled (F1-Default
+		// false), kein sources-Feld (FE schreibt sources nie).
+		official_warnings: { enabled: fields.officialWarningsEnabled },
+		// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan (Neu-Preset-Defaults
+		// identisch zur Go-Create-Default-Tabelle aus Scheibe 2a). end_date
+		// wird nur gesendet, wenn gesetzt — kein Sentinel nötig beim Create.
+		morning_enabled: fields.morningEnabled,
+		morning_time: toHHMMSS(fields.morningTime),
+		evening_enabled: fields.eveningEnabled,
+		evening_time: toHHMMSS(fields.eveningTime),
+		...(fields.endDate ? { end_date: fields.endDate } : {}),
+		// Issue #1170: Alarm-Konfiguration — cooldown/quiet Top-Level (Trip-identisch).
+		...(fields.alertCooldownMinutes !== undefined
+			? { alert_cooldown_minutes: fields.alertCooldownMinutes }
+			: {}),
+		...(fields.alertQuietFrom !== undefined ? { alert_quiet_from: fields.alertQuietFrom } : {}),
+		...(fields.alertQuietTo !== undefined ? { alert_quiet_to: fields.alertQuietTo } : {}),
+		empfaenger: [],
+		// Issue #1231 Slice 4: Top-Level-Feld (analog Go-Model ComparePreset.Corridors).
+		corridors: fields.corridors,
+		display_config: {
+			region: fields.region,
+			...(Object.keys(fields.idealRanges).length > 0 ? { ideal_ranges: fields.idealRanges } : {}),
+			...(fields.activeMetricKeys.length > 0 ? { active_metrics: fields.activeMetricKeys } : {}),
+			...(fields.hourlyMetricKeys.length > 0 ? { hourly_metrics: fields.hourlyMetricKeys } : {}),
+			...(Object.keys(fields.metricAlertLevels).length > 0
+				? { metric_alert_levels: fields.metricAlertLevels }
+				: {}),
+			// Issue #1260 S5: nur bei Abweichung vom Default persistieren.
+			...(fields.telegramStyle !== 'rich' ? { telegram_style: fields.telegramStyle } : {})
+		}
+	};
 }

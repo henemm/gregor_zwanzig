@@ -122,35 +122,35 @@ describe('buildComparePresetSavePayload — End-Datum-Lösch-Sentinel (AC-3)', (
 	});
 });
 
-// ─── Staging-F001 (AC-5): Top-N/Stundenverlauf-Toggle NEBEN den 5
-// Slot-Feldern — CompareEditor.svelte muss topN/hourlyEnabled
-// zusätzlich zu morningEnabled/morningTime/eveningEnabled/eveningTime/endDate
-// in denselben handleSave()-Aufruf reichen. Dieser Test treibt den
-// Payload-Builder direkt (kein Browser) und beweist, dass die Felder
-// gemeinsam übernommen werden UND sich nicht gegenseitig überschreiben.
+// ─── Staging-F001 (AC-5): Stundenverlauf-Toggle NEBEN den 5 Slot-Feldern —
+// CompareEditor.svelte muss hourlyEnabled zusätzlich zu
+// morningEnabled/morningTime/eveningEnabled/eveningTime/endDate in denselben
+// handleSave()-Aufruf reichen. Dieser Test treibt den Payload-Builder direkt
+// (kein Browser) und beweist, dass die Felder gemeinsam übernommen werden UND
+// sich nicht gegenseitig überschreiben.
 //
 // Issue #1268: `forecastHours` ist hier entfallen — der Horizont ist kein
 // Editor-Feld mehr, der Editor reicht ihn nicht mehr in handleSave(). Die
-// topN-/hourlyEnabled-Erwartungen dieses Tests gehören zu #1268 AC-7 und
-// gelten unverändert weiter. Dass forecast_hours stattdessen aus `original`
-// round-trippt, prüft der Folgetest. ─────────────────────────────────────────
-describe('buildComparePresetSavePayload — Top-N/Stundenverlauf NEBEN Slot-Feldern (Staging-F001, AC-5)', () => {
-	test('topN/hourlyEnabled werden gemeinsam mit den 5 Slot-Feldern übernommen, Rest round-trippt', () => {
+// hourlyEnabled-Erwartungen dieses Tests gehören zu #1268 AC-7 und gelten
+// unverändert weiter. Dass forecast_hours stattdessen aus `original`
+// round-trippt, prüft der Folgetest.
+//
+// Issue #1360 F002: `topN` ist ersatzlos entfallen (Layout-Tab-Abschaffung) —
+// die frühere top_n-Erwartung hier ist mit dem Feld gestorben. ─────────────
+describe('buildComparePresetSavePayload — Stundenverlauf NEBEN Slot-Feldern (Staging-F001, AC-5)', () => {
+	test('hourlyEnabled wird gemeinsam mit den 5 Slot-Feldern übernommen, Rest round-trippt', () => {
 		const original = makePreset({
 			forecast_hours: 48,
-			display_config: { region: 'Salzburger Land', top_n: 3 },
+			display_config: { region: 'Salzburger Land' },
 			hourly_enabled: true
 		});
 		const { body } = buildComparePresetSavePayload(original, {
 			...baseEdits,
 			morningTime: '08:15',
 			endDate: '2026-11-01',
-			topN: 7,
 			hourlyEnabled: false
 		});
 
-		// Neu gesetzte Content-Felder (Layout-Tab / CompareInhaltSection)
-		assert.equal((body.display_config as Record<string, unknown>).top_n, 7);
 		assert.equal(body.hourly_enabled, false);
 		// Issue #1268: unangetastet aus `original` (kein Editor-Feld mehr)
 		assert.equal(body.forecast_hours, 48);
@@ -164,20 +164,15 @@ describe('buildComparePresetSavePayload — Top-N/Stundenverlauf NEBEN Slot-Feld
 		assert.equal(body.evening_time, '18:00:00');
 	});
 
-	test('ohne edits.forecastHours/topN/hourlyEnabled bleiben die Original-Werte erhalten (Round-Trip)', () => {
+	test('ohne edits.forecastHours/hourlyEnabled bleiben die Original-Werte erhalten (Round-Trip)', () => {
 		const original = makePreset({
 			forecast_hours: 72,
-			display_config: { region: 'Salzburger Land', top_n: 5 },
+			display_config: { region: 'Salzburger Land' },
 			hourly_enabled: false
 		});
 		const { body } = buildComparePresetSavePayload(original, { ...baseEdits });
 
 		assert.equal(body.forecast_hours, 72, 'forecast_hours round-trippt ohne edits.forecastHours');
-		assert.equal(
-			(body.display_config as Record<string, unknown>).top_n,
-			5,
-			'display_config.top_n round-trippt ohne edits.topN'
-		);
 		assert.equal(body.hourly_enabled, false, 'hourly_enabled round-trippt ohne edits.hourlyEnabled');
 	});
 });

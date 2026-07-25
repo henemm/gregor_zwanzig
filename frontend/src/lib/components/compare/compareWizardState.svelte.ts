@@ -6,8 +6,7 @@
 
 import type { ActivityProfile, ComparePreset, Corridor } from '$lib/types';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState';
-import { buildComparePresetSavePayload } from './compareEditorSave';
-import { toHHMMSS } from '$lib/utils/time';
+import { buildComparePresetSavePayload, buildNewComparePresetPayload } from './compareEditorSave';
 
 export type SaveStatus = 'idle' | 'saving' | 'ok' | 'error';
 
@@ -70,7 +69,6 @@ export class CompareWizardState {
 	eveningTime = $state('18:00');
 	endDate = $state<string | null>(null);
 	includeHourly = $state(false);
-	topN = $state(3);
 	saveStatus = $state<SaveStatus>('idle');
 	saveError = $state<string | null>(null);
 
@@ -88,55 +86,34 @@ export class CompareWizardState {
 	async saveNewPreset(): Promise<void> {
 		this.saveStatus = 'saving';
 		this.saveError = null;
-		const payload = {
+		const payload = buildNewComparePresetPayload({
 			name: this.name,
-			location_ids: this.pickedIds,
-			profil: this.activityProfile ?? 'wandern',
-			// wiz.schedule ist 'daily_morning'|'daily_evening'|'weekly'; Preset-API erwartet 'daily'|'weekly'|'manual'
-			schedule: this.schedule.startsWith('daily') ? 'daily' : this.schedule === 'weekly' ? 'weekly' : 'manual',
-			// Issue #1268: hour_from/hour_to/forecast_hours werden beim Anlegen nicht
-			// mehr gesendet — das Go-Backend setzt beim Create eigene Defaults.
-			official_alerts_enabled: this.officialAlertsEnabled, // Issue #1040
-			radar_alert_enabled: this.radarAlertEnabled, // Issue #1041 Slice 2
-			hourly_enabled: this.hourlyEnabled, // Issue #1107
-			// Issue #1216 Slice 2b: Amtliche-Warnungen-Alarm-Trigger + Kanal-Opt-in.
-			official_alert_triggers_enabled: this.officialAlertTriggersEnabled,
-			send_telegram: this.sendTelegram,
-			send_sms: this.sendSms,
-			// Issue #1258 S4 (AC-27/E3): unconditional wie die Geschwister-Booleans
-			// oben — Neuanlagen tragen immer official_warnings.enabled (F1-Default
-			// false), kein sources-Feld (FE schreibt sources nie).
-			official_warnings: { enabled: this.officialWarningsEnabled },
-			// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan (Neu-Preset-Defaults
-			// identisch zur Go-Create-Default-Tabelle aus Scheibe 2a). end_date
-			// wird nur gesendet, wenn gesetzt — kein Sentinel nötig beim Create.
-			morning_enabled: this.morningEnabled,
-			morning_time: toHHMMSS(this.morningTime),
-			evening_enabled: this.eveningEnabled,
-			evening_time: toHHMMSS(this.eveningTime),
-			...(this.endDate ? { end_date: this.endDate } : {}),
-			// Issue #1170: Alarm-Konfiguration — cooldown/quiet Top-Level (Trip-identisch).
-			...(this.alertCooldownMinutes !== undefined
-				? { alert_cooldown_minutes: this.alertCooldownMinutes }
-				: {}),
-			...(this.alertQuietFrom !== undefined ? { alert_quiet_from: this.alertQuietFrom } : {}),
-			...(this.alertQuietTo !== undefined ? { alert_quiet_to: this.alertQuietTo } : {}),
-			empfaenger: [],
-			// Issue #1231 Slice 4: Top-Level-Feld (analog Go-Model ComparePreset.Corridors).
-			corridors: this.corridors,
-			display_config: {
-				region: this.region,
-				...(Object.keys(this.idealRanges).length > 0 ? { ideal_ranges: this.idealRanges } : {}),
-				...(this.activeMetricKeys.length > 0 ? { active_metrics: this.activeMetricKeys } : {}),
-				...(this.hourlyMetricKeys.length > 0 ? { hourly_metrics: this.hourlyMetricKeys } : {}),
-				...(this.topN !== undefined ? { top_n: this.topN } : {}),
-				...(Object.keys(this.metricAlertLevels).length > 0
-					? { metric_alert_levels: this.metricAlertLevels }
-					: {}),
-				// Issue #1260 S5: nur bei Abweichung vom Default persistieren.
-				...(this.telegramStyle !== 'rich' ? { telegram_style: this.telegramStyle } : {})
-			}
-		};
+			pickedIds: this.pickedIds,
+			activityProfile: this.activityProfile,
+			schedule: this.schedule,
+			officialAlertsEnabled: this.officialAlertsEnabled, // Issue #1040
+			radarAlertEnabled: this.radarAlertEnabled, // Issue #1041 Slice 2
+			hourlyEnabled: this.hourlyEnabled, // Issue #1107
+			officialAlertTriggersEnabled: this.officialAlertTriggersEnabled, // Issue #1216 Slice 2b
+			sendTelegram: this.sendTelegram,
+			sendSms: this.sendSms,
+			officialWarningsEnabled: this.officialWarningsEnabled, // Issue #1258 S4
+			morningEnabled: this.morningEnabled, // Issue #1232 Scheibe 2b
+			morningTime: this.morningTime,
+			eveningEnabled: this.eveningEnabled,
+			eveningTime: this.eveningTime,
+			endDate: this.endDate,
+			alertCooldownMinutes: this.alertCooldownMinutes, // Issue #1170
+			alertQuietFrom: this.alertQuietFrom,
+			alertQuietTo: this.alertQuietTo,
+			corridors: this.corridors, // Issue #1231 Slice 4
+			region: this.region,
+			idealRanges: this.idealRanges,
+			activeMetricKeys: this.activeMetricKeys,
+			hourlyMetricKeys: this.hourlyMetricKeys,
+			metricAlertLevels: this.metricAlertLevels, // Issue #1170
+			telegramStyle: this.telegramStyle // Issue #1260 S5
+		});
 		try {
 			const { api } = await import('$lib/api');
 			const { goto } = await import('$app/navigation');
@@ -169,7 +146,6 @@ export class CompareWizardState {
 			officialAlertsEnabled: this.officialAlertsEnabled, // Issue #1040
 			radarAlertEnabled: this.radarAlertEnabled, // Issue #1041 Slice 2
 			hourlyEnabled: this.hourlyEnabled, // Issue #1107
-			topN: this.topN, // Issue #1104
 			metricAlertLevels: this.metricAlertLevels, // Issue #1170
 			alertCooldownMinutes: this.alertCooldownMinutes,
 			alertQuietFrom: this.alertQuietFrom,
