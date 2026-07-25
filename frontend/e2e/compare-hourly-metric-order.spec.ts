@@ -225,35 +225,46 @@ test.describe('Issue #1361 Befund 4/5: Reihenfolge des Stundenverlaufs im Ortsve
 		const target = hourlyBlock(panel).locator(
 			'[data-testid="wm2-reihenfolge-row"][data-metric-id="temp_c"]'
 		);
-		await dragDndZoneItem(page, source, target);
 
 		const expectedOrder = ['uv_index', 'temp_c', 'wind_kmh'];
-		await expect
-			.poll(async () => hourlyOrderInEditor(panel), {
-				message: 'AC-1: die gezogene Stundengröße muss sofort an der neuen Position stehen',
-				timeout: 5_000
-			})
-			.toEqual(expectedOrder);
+
+		// Team-Lead-Fund (Flake, reproduzierbar): der sichtbare DOM-Zustand nach
+		// der Ziehgeste kann bereits aus `consider` (Live-Vorschau während des
+		// Drags) stammen -- VOR dem eigentlichen State-Commit in `finalize`
+		// (SortableList.svelte). Anders als auf der Anlege-Seite (AC-4, feste
+		// Wartezeit, dort gibt es kein beobachtbares Signal) hat der Hub eins:
+		// den PUT selbst (`onHourlyCommit` -> `handleLayoutCommit`, synchron aus
+		// `handleDndFinalize` ausgeloest). Der Test haengt deshalb kausal an
+		// `page.waitForResponse()` auf genau diesen PUT -- gekoppelt per
+		// `Promise.all` an die Ziehgeste selbst, nicht an eine geratene Dauer
+		// oder eine reine DOM-Umsortierungs-Pruefung danach.
+		const [putResponse] = await Promise.all([
+			page.waitForResponse(
+				(res) =>
+					res.request().method() === 'PUT' &&
+					res.url().includes(`/api/compare/presets/${id}`),
+				{ timeout: 10_000 }
+			),
+			dragDndZoneItem(page, source, target)
+		]);
 
 		// Nachweis 1 (Fallstrick 1 aus dem Auftrag): es wurde WIRKLICH
 		// gespeichert — der Wrapper-Bubble-Handler ist bei einer Ziehgeste kein
-		// verlässlicher Speicherweg.
-		await expect
-			.poll(() => puts.length, {
-				message:
-					'AC-2: nach der Ziehgeste muss ein Speichervorgang (PUT) feuern — reines DOM-Umsortieren ' +
-					'ist KEIN Nachweis, s. reference_compare_hub_save_hangs_on_event_bubbling',
-				timeout: 8_000
-			})
-			.toBeGreaterThan(0);
-
-		const lastPut = puts[puts.length - 1].postDataJSON() as {
+		// verlässlicher Speicherweg. `waitForResponse` oben ist bereits der
+		// kausale Beweis (kein DOM-Umsortieren allein); die folgende Prüfung
+		// verifiziert zusätzlich den INHALT dieses PUT.
+		const putBody = putResponse.request().postDataJSON() as {
 			display_config?: { hourly_metrics?: string[] };
 		};
 		expect(
-			lastPut.display_config?.hourly_metrics,
+			putBody.display_config?.hourly_metrics,
 			'AC-2: der PUT muss die neue Stundenverlauf-Reihenfolge tragen'
 		).toEqual(expectedOrder);
+		expect(puts.length, 'AC-2: genau der erwartete PUT wurde erfasst').toBeGreaterThan(0);
+
+		// Jetzt, NACH dem bestätigten PUT, muss auch das DOM die neue Position
+		// zeigen (kein Wettlauf mehr — der Commit ist bereits durch).
+		expect(await hourlyOrderInEditor(panel)).toEqual(expectedOrder);
 
 		// Nachweis 2 — Server behält sie, und der Editor zeigt sie nach echtem Reload.
 		await expect
