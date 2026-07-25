@@ -362,20 +362,11 @@ class TestCompareMailV2HTML:
                 f"gefundene Zeilen-Labels: {labels}"
             )
 
-    def test_top_n_details_ohne_wirkung_alle_orte_bekommen_stundentabelle(self):
-        """PO 2026-07-08: top_n_details wird angenommen, hat aber KEINE
-        Wirkung -- bei 3 Orten und top_n_details=2 erscheinen trotzdem 3
-        Stundentabellen (die Mail zeigt immer alle Orte; #1105-#1107 definieren
-        die Einstellung neu)."""
-        from output.renderers.email.compare_html import render_compare_html
-
-        result = _make_v2_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, top_n_details=2)
-
-        assert len(_zeit_positions(html)) == len(result.locations), (
-            f"top_n_details=2 darf die Anzahl der Stundentabellen bei "
-            f"{len(result.locations)} Orten nicht auf 2 begrenzen"
-        )
+    # Issue #1360: `test_top_n_details_ohne_wirkung_alle_orte_bekommen_stunden-
+    # tabelle` ist GELOESCHT — der Parameter `top_n_details` existiert nicht mehr,
+    # der Test rief den Renderer damit auf und pruefte veraltetes Verhalten. Die
+    # Aussage "alle Orte bekommen eine Stundentabelle" bleibt durch
+    # `test_ac6_stundentabelle_spaltenreihenfolge_alle_orte` abgedeckt.
 
     def test_ac3_warnzelle_alertfreier_ort_zeigt_strich(self):
         """AC-3: Ort ohne official_alerts zeigt exakt '—' statt leerer Zelle/Chip."""

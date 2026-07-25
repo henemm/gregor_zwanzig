@@ -111,16 +111,16 @@ class TestResolveEnabledMetrics:
 
 class _RenderCallRecorded(Exception):
     """Sentinel: bricht send_one_compare_preset gezielt nach dem
-    render_compare_email-Aufruf ab, bevor SMTP beruehrt wird. Traegt die
-    aufgezeichneten Kwargs (oder den Sentinel-String "NOT_PASSED", wenn der
-    jeweilige Kwarg fehlt)."""
+    render_compare_email-Aufruf ab, bevor SMTP beruehrt wird. Traegt den
+    aufgezeichneten Kwarg (oder den Sentinel-String "NOT_PASSED", wenn er
+    fehlt).
 
-    def __init__(self, top_n_details, enabled_metrics):
-        self.top_n_details = top_n_details
+    Issue #1360: der frueher mitaufgezeichnete `top_n_details`-Kwarg ist
+    entfallen — der Renderer nimmt ihn nicht mehr an."""
+
+    def __init__(self, enabled_metrics):
         self.enabled_metrics = enabled_metrics
-        super().__init__(
-            f"recorded top_n_details={top_n_details!r} enabled_metrics={enabled_metrics!r}"
-        )
+        super().__init__(f"recorded enabled_metrics={enabled_metrics!r}")
 
 
 def _fresh_user() -> str:
@@ -160,11 +160,10 @@ def _preset(preset_id: str, display_config, loc_id: str) -> dict:
     return p
 
 
-def _capture_render_call(preset: dict, location, tmp_path) -> tuple:
+def _capture_render_call(preset: dict, location, tmp_path):
     """Fuehrt send_one_compare_preset mit einer echten Aufzeichnungs-Funktion
-    fuer render_compare_email aus und gibt (top_n_details, enabled_metrics)
-    zurueck, wie sie tatsaechlich uebergeben wurden (oder "NOT_PASSED", wenn
-    der jeweilige Kwarg fehlt).
+    fuer render_compare_email aus und gibt `enabled_metrics` zurueck, wie es
+    tatsaechlich uebergeben wurde (oder "NOT_PASSED", wenn der Kwarg fehlt).
 
     Mock-frei: echtes Funktions-Rebind auf dem Modul
     output.renderers.comparison, restauriert in finally. Bricht via
@@ -182,9 +181,8 @@ def _capture_render_call(preset: dict, location, tmp_path) -> tuple:
     original_render = compare_render_mod.render_compare_email
 
     def _recording_render_compare_email(*args, **kwargs):
-        top_n_details = kwargs.get("top_n_details", "NOT_PASSED")
         enabled_metrics = kwargs.get("enabled_metrics", "NOT_PASSED")
-        raise _RenderCallRecorded(top_n_details, enabled_metrics)
+        raise _RenderCallRecorded(enabled_metrics)
 
     compare_render_mod.render_compare_email = _recording_render_compare_email
     try:
@@ -196,7 +194,7 @@ def _capture_render_call(preset: dict, location, tmp_path) -> tuple:
                 str(tmp_path),
                 all_locations_cache=[location],
             )
-        return exc.value.top_n_details, exc.value.enabled_metrics
+        return exc.value.enabled_metrics
     finally:
         compare_render_mod.render_compare_email = original_render
 
@@ -220,7 +218,7 @@ class TestIssue1104ActiveMetricsWiring:
         )
         preset["_user_id"] = user_id
 
-        _, enabled_metrics = _capture_render_call(preset, loc, tmp_path)
+        enabled_metrics = _capture_render_call(preset, loc, tmp_path)
         # Issue #1335 Scheibe 1: reihenfolge-erhaltende Liste statt Set.
         assert enabled_metrics == ["wind_max", "cloud_avg"], (
             f"RED: render_compare_email erhielt enabled_metrics={enabled_metrics!r}, "
@@ -235,7 +233,7 @@ class TestIssue1104ActiveMetricsWiring:
         preset = _preset("cp-1104-none", display_config=None, loc_id="loc-1104-b")
         preset["_user_id"] = user_id
 
-        _, enabled_metrics = _capture_render_call(preset, loc, tmp_path)
+        enabled_metrics = _capture_render_call(preset, loc, tmp_path)
         assert enabled_metrics is None, (
             f"Ohne active_metrics muss enabled_metrics=None durchgereicht werden "
             f"(kein Filter, alle Metriken wie vor diesem Slice), erhalten "
@@ -244,90 +242,8 @@ class TestIssue1104ActiveMetricsWiring:
         )
 
 
-class TestIssue1104TopNWiring:
-    """AC-2: `display_config.top_n` wird an `render_compare_email()` als
-    `top_n_details` durchgereicht, Default 3 bei fehlendem Feld.
-
-    RED: send_one_compare_preset() liest top_n heute nicht -> aufgezeichneter
-    Kwarg fehlt ("NOT_PASSED") statt 3 bzw. dem konfigurierten Wert.
-    """
-
-    def test_missing_top_n_defaults_to_3(self, tmp_path):
-        user_id = _fresh_user()
-        loc = _resolvable_location("loc-1104-c")
-        preset = _preset("cp-1104-default", display_config=None, loc_id="loc-1104-c")
-        preset["_user_id"] = user_id
-
-        top_n_details, _ = _capture_render_call(preset, loc, tmp_path)
-        assert top_n_details == 3, (
-            f"RED: render_compare_email erhielt top_n_details={top_n_details!r}, "
-            "erwartet Default 3 -- der Versandpfad uebergibt top_n_details heute "
-            "gar nicht (kommt als 'NOT_PASSED' an)."
-        )
-
-    def test_explicit_top_n_1_passes_through(self, tmp_path):
-        user_id = _fresh_user()
-        loc = _resolvable_location("loc-1104-d")
-        preset = _preset("cp-1104-topn1", display_config={"top_n": 1}, loc_id="loc-1104-d")
-        preset["_user_id"] = user_id
-
-        top_n_details, _ = _capture_render_call(preset, loc, tmp_path)
-        assert top_n_details == 1, (
-            f"RED: render_compare_email erhielt top_n_details={top_n_details!r}, "
-            "erwartet 1 -- display_config.top_n wird vom Versandpfad noch nicht "
-            "gelesen."
-        )
-
-    def test_corrupt_top_n_falls_back_to_3_no_exception(self, tmp_path):
-        """Adversary F001: ein nicht-numerischer top_n-Wert darf keinen
-        ValueError werfen, der im Daily-Loop mit 'kein Empfaenger' verwechselt
-        und still verschluckt wird -- stattdessen Default 3 + Warnung."""
-        user_id = _fresh_user()
-        loc = _resolvable_location("loc-1104-e")
-        preset = _preset(
-            "cp-1104-corrupt-topn",
-            display_config={"top_n": "abc"},
-            loc_id="loc-1104-e",
-        )
-        preset["_user_id"] = user_id
-
-        top_n_details, _ = _capture_render_call(preset, loc, tmp_path)
-        assert top_n_details == 3, (
-            f"Korrupter top_n-Wert 'abc' muss auf Default 3 zurueckfallen "
-            f"(kein Exception-Bubble-Up), erhalten {top_n_details!r}"
-        )
-
-    def test_top_n_zero_is_clamped_to_1(self, tmp_path):
-        """F003: top_n=0 wuerde top_locs[:0] ergeben -> Stundenverlauf-Sektion
-        still ausgeblendet. Muss auf 1 geclamped werden (mind. ein Ort)."""
-        user_id = _fresh_user()
-        loc = _resolvable_location("loc-1104-f")
-        preset = _preset("cp-1104-topn0", display_config={"top_n": 0}, loc_id="loc-1104-f")
-        preset["_user_id"] = user_id
-
-        top_n_details, _ = _capture_render_call(preset, loc, tmp_path)
-        assert top_n_details == 1, (
-            f"top_n=0 muss auf 1 geclamped werden, erhalten {top_n_details!r}"
-        )
-
-    def test_top_n_too_large_is_clamped_to_10(self, tmp_path):
-        user_id = _fresh_user()
-        loc = _resolvable_location("loc-1104-g")
-        preset = _preset("cp-1104-topn99", display_config={"top_n": 99}, loc_id="loc-1104-g")
-        preset["_user_id"] = user_id
-
-        top_n_details, _ = _capture_render_call(preset, loc, tmp_path)
-        assert top_n_details == 10, (
-            f"top_n=99 muss auf 10 geclamped werden, erhalten {top_n_details!r}"
-        )
-
-    def test_top_n_negative_is_clamped_to_1(self, tmp_path):
-        user_id = _fresh_user()
-        loc = _resolvable_location("loc-1104-h")
-        preset = _preset("cp-1104-topn-neg", display_config={"top_n": -5}, loc_id="loc-1104-h")
-        preset["_user_id"] = user_id
-
-        top_n_details, _ = _capture_render_call(preset, loc, tmp_path)
-        assert top_n_details == 1, (
-            f"top_n=-5 muss auf 1 geclamped werden, erhalten {top_n_details!r}"
-        )
+# Issue #1360: die Klasse TestIssue1104TopNWiring (6 Tests zu
+# `display_config.top_n` -> `top_n_details`-Durchreichung samt Default/Clamp)
+# ist GELOESCHT. Der Regler ist ersatzlos entfallen (Spec
+# compare_layout_tab_dissolution, Implementation Details Punkt 5) — die Tests
+# prueften damit veraltetes Verhalten.

@@ -43,7 +43,8 @@ const MIGRATED_FILES: Array<{ path: string; components: string[] }> = [
 	// Issue #1232 Scheibe 2b: Step5Versand.svelte wurde gelöscht (ersetzt durch
 	// VersandTab context="vergleich" + CompareInhaltSection.svelte) — Eintrag
 	// zeigt jetzt auf den Nachfolger, der denselben Eyebrow-Atom-Import trägt.
-	{ path: join(COMPARE_DIR, 'CompareInhaltSection.svelte'), components: ['Eyebrow'] },
+	// Issue #1360: CompareInhaltSection.svelte ist geloescht (nachweislich nirgends
+	// importiert, Spec compare_layout_tab_dissolution Punkt 7) — Eintrag entfernt.
 ];
 
 // ui/-Pfade die nach der Migration NICHT mehr für Atom-Komponenten genutzt werden dürfen
@@ -84,7 +85,7 @@ function namedImportsFrom(src: string, modulePath: string): string[] {
 
 // ── AC-1: Alle migrierten Komponenten kommen aus atoms ───────────────────────
 
-test('AC-1: Alle 13 Dateien importieren ihre Atom-Komponenten aus $lib/components/atoms', () => {
+test('AC-1: Alle 12 Dateien importieren ihre Atom-Komponenten aus $lib/components/atoms', () => {
 	const missing: string[] = [];
 	for (const { path, components } of MIGRATED_FILES) {
 		const src = readFile(path);
@@ -105,7 +106,7 @@ test('AC-1: Alle 13 Dateien importieren ihre Atom-Komponenten aus $lib/component
 
 // ── AC-1 (negativ): Kein direkter ui/-Import mehr für die 5 Atom-Namen ───────
 
-test('AC-1: Keine der 13 Dateien importiert Btn/Eyebrow/Pill/Input/TopoBg noch aus ui/', () => {
+test('AC-1: Keine der 12 Dateien importiert Btn/Eyebrow/Pill/Input/TopoBg noch aus ui/', () => {
 	const offenders: string[] = [];
 	for (const { path } of MIGRATED_FILES) {
 		const src = readFile(path);

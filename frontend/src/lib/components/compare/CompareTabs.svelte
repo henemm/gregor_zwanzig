@@ -20,14 +20,11 @@
 	import CompareChatBubble from '$lib/components/molecules/CompareChatBubble.svelte';
 	import CompareSmsPreview from '$lib/components/molecules/CompareSmsPreview.svelte';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
-	import CompareLayoutRow from '$lib/components/molecules/CompareLayoutRow.svelte';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	// Epic #1273 S1: geteilter Save-Chip (position:fixed) + SaveStatus-Typ/Helper.
 	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { extractMessage } from '$lib/stores/saveStatusStore.svelte';
-	import { channelChipCount } from './channelChipCount.js';
-	import { CHANNEL_COL_BUDGET } from '$lib/components/trip-detail/metricsEditor';
 	import {
 		deriveStatusWithScheduleOverride,
 		presetBriefingTimesLabel,
@@ -66,7 +63,6 @@
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
 	// Epic #1301 Scheibe F2a: Stundenverlauf-Steuerung als geteilte Komponente
 	// (Hub + Anlege-Seite /compare/new). Inline-Markup + Handler wanderten dorthin.
-	import CompareHourlyLayoutControls from '$lib/components/shared/CompareHourlyLayoutControls.svelte';
 	import { CompareWizardState } from './compareWizardState.svelte';
 	import {
 		hydrateWizardStateFromPreset,
@@ -170,7 +166,6 @@
 
 	// Issue #1256 S8c (AC-4): SummaryCard-Titel "Keine Kanäle" statt "—"
 	// (Soll: screen-compare-detail.jsx:169) — abweichender Leerfall von channelsLabel.
-	const layoutCardTitle = $derived(channelsLabel === '—' ? 'Keine Kanäle' : channelsLabel);
 
 	// Issue #1256 S8c (AC-6/AC-7): lesbares Profil-Label statt rohem preset.profil
 	// (Soll: JSX:163) — Fallback auf den rohen Wert, falls das Mapping leer
@@ -687,15 +682,17 @@
 		}
 	}
 
-	// Issue #1299/#1291/#1287 (C2): eingebetteter Stundenverlauf-Bereich im
-	// Hub-Tab "Layout" — analog Wetter-Metriken-Bridge oben. Eigene
-	// Hydrations-/Snapshot-Baseline, weil der Layout-Tab als ERSTER geoeffnet
-	// werden kann (Deep-Link `?tab=layout`).
+	// Issue #1299/#1291/#1287 (C2): eingebetteter Stundenverlauf-Bereich —
+	// analog Wetter-Metriken-Bridge oben. Eigene Hydrations-/Snapshot-Baseline.
+	// Issue #1360: der Bereich liegt jetzt im Reiter "Wetter-Metriken" (der
+	// Layout-Reiter ist aufgeloest), die Hydration haengt entsprechend an
+	// `wetter-metriken` — auch bei Deep-Link `?tab=wetter-metriken` oder dem
+	// umgeleiteten Alt-Link `?tab=layout` (resolveCompareTab).
 	let layoutHydrated = $state(false);
 	let lastPersistedLayoutSnapshot: LayoutSnapshot | null = null;
 
 	$effect(() => {
-		if (activeTab !== 'layout' || layoutHydrated) return;
+		if (activeTab !== 'wetter-metriken' || layoutHydrated) return;
 		const hydrated = hydrateLayoutFieldsFromPreset(currentPreset);
 		wizardState.hourlyMetricKeys = hydrated.hourlyMetricKeys;
 		wizardState.hourlyEnabled = hydrated.hourlyEnabled;
@@ -752,27 +749,19 @@
 			| undefined
 	);
 
-	// Issue #1232 Scheibe 3a: einzige Kappungs-Quelle CHANNEL_COL_BUDGET
-	// (metricsEditor.ts) statt eigenem Literal (bisher email:99 statt Infinity —
-	// Ergebnis identisch, da Math.min(Infinity, N) === N === Math.min(99, N)
-	// für jede praktisch vorkommende Orts-Anzahl N < 99).
-	const CHANNEL_COLS: Record<string, number> = CHANNEL_COL_BUDGET;
-	const channels = ['email', 'telegram', 'sms'];
-
-	// Issue #1267: Layout-Tab-Chips zeigen echte Ortsnamen (nicht Zahlen).
-	// Namen aus resolvedLocations (Orts-Reihenfolge), pro Kanal auf das
-	// Kanal-Budget gekappt via bestehender channelChipCount-Logik.
-	const layoutLocationNames = $derived(
-		resolvedLocations.map((r) => r.loc?.name).filter((n): n is string => !!n)
-	);
-	const layoutChipNamesFor = (ch: string): string[] =>
-		layoutLocationNames.slice(0, channelChipCount(CHANNEL_COLS[ch], layoutLocationNames.length));
+	// Issue #1360 (Scheibe S1a von Epic #1372): CHANNEL_COLS/channels/
+	// layoutLocationNames/layoutChipNamesFor sind ersatzlos entfallen. Sie
+	// speisten ausschliesslich die Karte "Übersicht pro Kanal" des aufgeloesten
+	// Layout-Reiters und wendeten ein SPALTEN-Budget des Trips auf ORTE an — im
+	// Ortsvergleich sachlich falsch: alle drei Kanaele geben ALLE Orte aus
+	// (gekappt werden Metrikwerte je Ort bzw. die Nachrichtenlaenge).
 
 	// Issue #1256 S8c (AC-1/AC-2): Layout-Tab-Limit-Pillen, statisch nach
 	// JSX-Vorbild (screen-compare-detail.jsx:247, mobile: :150) — keine neue
 	// Datenquelle, SMS-Pille mobil ohne "· 0".
-	const LAYOUT_LIMIT_PILLS = ['Email · alle Spalten', 'Telegram · max 8', 'SMS · flach · 0'];
-	const LAYOUT_LIMIT_PILLS_MOBILE = ['Email · alle Spalten', 'Telegram · max 8', 'SMS · flach'];
+	// Issue #1360: LAYOUT_LIMIT_PILLS(_MOBILE) ersatzlos entfernt — die Pillen
+	// behaupteten eine Orts-Kappung je Kanal ("Telegram · max 8"), die es im
+	// Ortsvergleich nicht gibt (AC-4).
 
 	// ── Vorschau-Tab (Issue #514, #582) ─────────────────────────────────────────
 	let previewChannel = $state<'email' | 'sms' | 'telegram'>('email');
@@ -1092,14 +1081,8 @@
 							</span>
 							{@render summaryChevron()}
 						</button>
-						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('layout')}>
-							<span class="hub-summary-row-body">
-								<span class="hub-summary-row-eyebrow">Layout</span>
-								<span class="hub-summary-row-title">{layoutCardTitle}</span>
-								<span class="hub-summary-row-desc">Übersicht pro Kanal</span>
-							</span>
-							{@render summaryChevron()}
-						</button>
+						<!-- Issue #1360: Übersichts-Zeile "Layout" entfaellt — sie sprang auf
+						     den aufgeloesten Reiter und behauptete eine Orts-Kappung je Kanal. -->
 						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('versand')}>
 							<span class="hub-summary-row-body">
 								<span class="hub-summary-row-eyebrow">Versand</span>
@@ -1131,15 +1114,10 @@
 						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{Object.keys(idealRanges ?? {}).length} Metriken mit Idealbereich — im Briefing pro Wert markiert. Kein Score, kein Ranking.</div>
 					</Card>
 
-					<Card padding={20} style="display: flex; flex-direction: column">
-						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
-							<Eyebrow>Layout pro Kanal</Eyebrow>
-							<button onclick={() => handleValueChange('layout')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
-						</div>
-						<!-- Issue #1256 S8c (AC-4): channelNamesLabel/"Keine Kanäle" statt harter Liste (Soll: jsx:169-171). -->
-						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{layoutCardTitle}</div>
-						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">Engere Kanäle zeigen automatisch weniger Spalten — Reihenfolge nach Priorität.</div>
-					</Card>
+					<!-- Issue #1360 (AC-4): Karte "Layout pro Kanal" entfaellt. Sie sprang auf
+					     den aufgeloesten Reiter und behauptete "Engere Kanäle zeigen
+					     automatisch weniger Spalten" — im Ortsvergleich unwahr: alle drei
+					     Kanaele geben ALLE Orte aus. -->
 
 					<Card padding={20} style="display: flex; flex-direction: column">
 						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
@@ -1248,22 +1226,39 @@
 				     dort ist die Checkbox-Mutation garantiert bereits abgeschlossen.
 				     Kein <svelte:window onpointerup> noetig (Checkbox-Toggles ohne
 				     Drag-Geste, Spec Abschnitt 2). -->
+				<!-- Issue #1360: die Stundenverlauf-Steuerung ist mit dem aufgeloesten
+				     Layout-Reiter in WeatherMetricsTab gewandert. Ihr Speicherweg MUSS
+				     mitwandern, sonst speichert sie stumm nicht mehr (bekannte Falle,
+				     vgl. #1359 Ziehgeste): deshalb hier der bestehende
+				     `.hub-layout-hourly-wrap` als AEUSSERER Wrapper. Beide Commits sind
+				     diff-geschuetzt (flushPendingLayoutSave/flushPendingWeatherMetrics-
+				     Save liefern `null` ohne Aenderung) — ein Klick erzeugt deshalb
+				     genau EINEN PUT, und beide gehen ueber denselben
+				     Round-Trip-Spread (buildComparePresetSavePayload: `...original`),
+				     der hour_from/hour_to schuetzt. -->
 				<div
-					class="hub-wetter-metriken-wrap"
-					onchange={handleWetterMetrikenCommit}
-					onfocusout={handleWetterMetrikenCommit}
-					onclick={handleWetterMetrikenCommit}
+					class="hub-layout-hourly-wrap"
+					onchange={handleLayoutCommit}
+					onfocusout={handleLayoutCommit}
+					onclick={handleLayoutCommit}
 				>
-					<!-- Issue #1359: `onCompareCommit` verdrahtet den Speichervorgang
-					     DIREKT (wie im Trip), statt sich auf die Wrapper-Ereignisse
-					     oben zu verlassen. Nach einer Ziehgeste unterdruecken Browser
-					     das nachfolgende `click` haeufig — die neue Reihenfolge waere
-					     dann nie gespeichert (Kontext-Doku § Risiko 5). -->
-					<WeatherMetricsTab
-						context="vergleich"
-						wiz={wizardState}
-						onCompareCommit={handleWetterMetrikenCommit}
-					/>
+					<div
+						class="hub-wetter-metriken-wrap"
+						onchange={handleWetterMetrikenCommit}
+						onfocusout={handleWetterMetrikenCommit}
+						onclick={handleWetterMetrikenCommit}
+					>
+						<!-- Issue #1359: `onCompareCommit` verdrahtet den Speichervorgang
+						     DIREKT (wie im Trip), statt sich auf die Wrapper-Ereignisse
+						     oben zu verlassen. Nach einer Ziehgeste unterdruecken Browser
+						     das nachfolgende `click` haeufig — die neue Reihenfolge waere
+						     dann nie gespeichert (Kontext-Doku § Risiko 5). -->
+						<WeatherMetricsTab
+							context="vergleich"
+							wiz={wizardState}
+							onCompareCommit={handleWetterMetrikenCommit}
+						/>
+					</div>
 				</div>
 			{/if}
 		</div>
@@ -1289,65 +1284,13 @@
 		</div>
 	{/if}
 
-	{#if activeTab === 'layout'}
-		<div class="tab-panel" data-testid="compare-detail-panel-layout">
-			<!-- Issue #1256 S8c (AC-1/AC-2): Section-Rahmen + Limit-Pillen + Card
-			     (Desktop) bzw. dense-Zeilen ohne Card (Mobil) — Soll Desktop:
-			     screen-compare-detail.jsx:245-266; Soll Mobil:
-			     screen-compare-detail-mobile.jsx:148-166. Fix-Loop 1 (F002): mobil
-			     ueber `eyebrow` statt `title` — kompakter CDM_SectionH-Look
-			     (Soll: screen-compare-detail-mobile.jsx:267-274). -->
-			{#if isMobileViewport}
-				<SectionH eyebrow="Spalten pro Kanal">
-					{#snippet right()}
-						<span class="hub-section-hint">Renderer kappt je Kanal</span>
-					{/snippet}
-				</SectionH>
-				<div class="hub-layout-pills hub-layout-pills-mobile">
-					{#each LAYOUT_LIMIT_PILLS_MOBILE as pill (pill)}
-						<span class="hub-layout-pill hub-layout-pill-mobile">{pill}</span>
-					{/each}
-				</div>
-				<div style="display: flex; flex-direction: column; gap: 10px">
-					{#each channels as ch}
-						<CompareLayoutRow channel={ch} cols={layoutChipNamesFor(ch)} dense />
-					{/each}
-				</div>
-			{:else}
-				<SectionH title="Übersicht pro Kanal">
-					{#snippet right()}
-						<span class="hub-section-hint">Metrik-Zeilen · Orte sind die Spalten — der Renderer kappt je Kanal</span>
-					{/snippet}
-				</SectionH>
-				<div class="hub-layout-pills">
-					{#each LAYOUT_LIMIT_PILLS as pill (pill)}
-						<span class="hub-layout-pill">{pill}</span>
-					{/each}
-				</div>
-				<Card padding={20} style="display: flex; flex-direction: column; gap: 16px">
-					{#each channels as ch}
-						<CompareLayoutRow channel={ch} cols={layoutChipNamesFor(ch)} />
-					{/each}
-				</Card>
-			{/if}
-
-			<!-- Issue #1299/#1291/#1287 (C2): Stundenverlauf-Steuerung — die einzige
-			     Layout-Einstellung mit echter Mail-Wirkung, holt sie in den
-			     erreichbaren Hub (bislang nur im weggeleiteten Legacy-Editor). Muster
-			     identisch `.hub-wetter-metriken-wrap` (Bubble-Phase, SF-1-Erkenntnis)
-			     — gemeinsam fuer Desktop/Mobil, ausserhalb der Viewport-Weiche. -->
-			{#if layoutHydrated}
-				<div
-					class="hub-layout-hourly-wrap"
-					onchange={handleLayoutCommit}
-					onfocusout={handleLayoutCommit}
-					onclick={handleLayoutCommit}
-				>
-						<CompareHourlyLayoutControls wiz={wizardState} />
-				</div>
-			{/if}
-		</div>
-	{/if}
+	<!-- Issue #1360 (Scheibe S1a von Epic #1372): das Layout-Panel ist
+	     ersatzlos entfallen. Seine einzige wirksame Einstellung (Stundenverlauf)
+	     liegt jetzt im Reiter "Wetter-Metriken" oben — inklusive ihres
+	     Bubble-Wrappers `.hub-layout-hourly-wrap`, damit der Speicherweg
+	     (Round-Trip-Spread ueber flushPendingLayoutSave) mitwandert. Alles
+	     uebrige (Karte "Übersicht pro Kanal", Limit-Pillen, CompareLayoutRow)
+	     war bedienlose Attrappe mit sachlich falscher Kappungs-Aussage. -->
 
 	{#if activeTab === 'alarme'}
 		<div class="tab-panel" data-testid="compare-detail-panel-alarme">
@@ -1862,29 +1805,6 @@
 	}
 
 	/* Issue #1256 S8c (AC-1/AC-2) — Layout-Tab Limit-Pillen. */
-	.hub-layout-pills {
-		display: flex;
-		gap: 8px;
-		flex-wrap: wrap;
-		margin-bottom: 18px;
-	}
-	.hub-layout-pill {
-		font-family: var(--g-font-mono);
-		font-size: 11px;
-		padding: 5px 10px;
-		border-radius: var(--g-r-pill);
-		border: 1px solid var(--g-rule);
-		background: var(--g-card-alt);
-		color: var(--g-ink-2);
-	}
-	.hub-layout-pills-mobile {
-		gap: 6px;
-		margin-bottom: 14px;
-	}
-	.hub-layout-pill-mobile {
-		font-size: 10.5px;
-		padding: 4px 9px;
-	}
 
 	/* Issue #1256 S8c (AC-9) — Orte-Liste im Card-Rahmen: Trenner nur unter der Liste. */
 	/* :global, weil `hub-orte-list` als zoneClass an SortableList durchgereicht

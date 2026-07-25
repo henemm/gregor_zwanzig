@@ -1036,7 +1036,6 @@ def render_compare_html(
     *,
     profile: Optional[ActivityProfile] = None,
     warnings: list[str] | None = None,
-    top_n_details: Optional[int] = None,
     enabled_metrics: list[str] | None = None,
     hourly_metrics: list[str] | None = None,
     hourly_enabled: bool = True,
@@ -1054,9 +1053,6 @@ def render_compare_html(
         result: ComparisonResult aus ComparisonEngine.
         profile: ActivityProfile fuer Eyebrow. Default ALLGEMEIN.
         warnings: Liste allgemeiner Betriebswarnungen (orange Banner).
-        top_n_details: Issue #1104 -- wird angenommen, hat AKTUELL KEINE
-            Wirkung (PO 2026-07-08: die Mail zeigt immer alle Orte;
-            Stundentabellen-Beschraenkung wird in #1105-#1107 neu definiert).
         enabled_metrics: Optionale Liste von Renderer-Metrik-IDs (z.B.
             "wind_max"/"cloud_avg"), filtert UND ordnet die numerischen
             Uebersichts-Zeilen in genau dieser Reihenfolge (Issue #1335
@@ -1093,8 +1089,12 @@ def render_compare_html(
 
     Returns:
         HTML-String (DOCTYPE bis </html>).
+
+    Issue #1360: der frueher akzeptierte, sofort verworfene Parameter
+    `top_n_details` (#1104) ist ersatzlos entfallen. Die Mail zeigt immer ALLE
+    Orte — ein Aufruf mit `top_n_details=` scheitert jetzt sichtbar mit
+    `TypeError` statt still zu wirken wie eine Einstellung.
     """
-    _ = top_n_details  # akzeptiert (Issue #1104), aktuell ohne Wirkung (s. Docstring)
     warnings = warnings or []
     sig = profile_signature(profile)
     locations = location_render_order(result.locations)

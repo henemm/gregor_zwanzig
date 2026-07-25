@@ -53,6 +53,9 @@
 	// (Vorbild AlarmeTab.svelte) — context-Dispatch + Vergleich-Grundauswahl.
 	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import { weatherMetricsTabSections, type WeatherMetricsContext } from './weather-metrics-tab/weatherMetricsTabSections.ts';
+	// Issue #1360: geteilte Stundenverlauf-Steuerung (Hub + Anlege-Seite),
+	// unveraendert uebernommen aus dem aufgeloesten Layout-Reiter.
+	import CompareHourlyLayoutControls from '$lib/components/shared/CompareHourlyLayoutControls.svelte';
 	// Issue #1350 Teil 2: Vergleich-Auswahlliste kommt jetzt aus GET
 	// /api/compare/metrics statt aus COMPARE_METRIC_DEFS (bleibt fuer
 	// Schwellen-Slider/Winner-Box/Save-Default-Fallback unveraendert, Teil 3).
@@ -852,6 +855,22 @@
 				/>
 			</Card>
 			{/if}
+		{/if}
+		<!-- Issue #1360 (Scheibe S1a von Epic #1372): neue Heimat der
+		     Stundenverlauf-Steuerung — der Reiter "Layout" ist aufgeloest.
+		     Position laut Spec: nach 'reihenfolge', vor 'official_alerts' (erst
+		     welche Tageswerte und in welcher Folge, dann der Stundenverlauf).
+		     Die GETEILTE Komponente wird unveraendert eingehaengt; die
+		     Persistenz-Kopplung bleibt beim Aufrufer (Teilungs-Invariante):
+		     im Hub der Bubble-Wrapper `.hub-layout-hourly-wrap`, auf der
+		     Anlege-Seite der lokale Speicherpfad.
+		     Bewusst — wie der Amtliche-Warnungen-Toggle — AUSSERHALB des
+		     Metrik-Katalog-Fetch-Zweigs: ein fehlgeschlagener Katalog-Abruf darf
+		     die Stundenverlauf-Steuerung nicht unerreichbar machen. -->
+		{#if sections.includes('stundenverlauf') && wiz}
+			<div data-testid="weather-metrics-stundenverlauf">
+				<CompareHourlyLayoutControls {wiz} />
+			</div>
 		{/if}
 		<!-- Issue #1350 Teil 2: Amtliche-Warnungen-Toggle haengt nicht am
 		     Metrik-Katalog-Fetch (Known Limitations: "nur die Auswahl-UI ist

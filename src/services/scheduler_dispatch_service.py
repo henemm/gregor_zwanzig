@@ -370,7 +370,6 @@ def send_one_compare_preset(
     html_body, text_body = render_compare_email(
         result,
         profile=profile,
-        top_n_details=opts.top_n_details,
         enabled_metrics=opts.enabled_metrics,
         hourly_metrics=opts.hourly_metrics,
         hourly_enabled=opts.hourly_enabled,

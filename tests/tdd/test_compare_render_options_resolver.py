@@ -63,40 +63,17 @@ def _make_comparison_result(names: list[str]) -> ComparisonResult:
 
 
 # ---------------------------------------------------------------------------
-# top_n_details — Default 3 / Clamp 1..10 / ungueltiger Wert (Bestandsverhalten
-# aus scheduler_dispatch_service.py:254-270)
+# Die 6 Tests zu `top_n_details` (Default 3 / Clamp 1..10 / ungueltiger Wert)
+# sind mit Issue #1360 GELOESCHT: der Regler ist ersatzlos entfallen, sie
+# prueften damit veraltetes Verhalten. Der Nachweis, dass ein noch gespeichertes
+# `top_n` keinerlei Wirkung mehr hat, liegt in
+# `tests/test_compare_top_n_render_invariance.py`.
 # ---------------------------------------------------------------------------
 
 
-def test_missing_top_n_defaults_to_3():
+def test_resolver_returns_compare_render_options_instance():
     options = resolve_compare_render_options({"id": "p1"})
     assert isinstance(options, CompareRenderOptions)
-    assert options.top_n_details == 3
-
-
-def test_top_n_within_range_passes_through():
-    options = resolve_compare_render_options({"id": "p2", "display_config": {"top_n": 5}})
-    assert options.top_n_details == 5
-
-
-def test_top_n_15_is_clamped_to_10():
-    options = resolve_compare_render_options({"id": "p3", "display_config": {"top_n": 15}})
-    assert options.top_n_details == 10
-
-
-def test_top_n_invalid_string_falls_back_to_default_3():
-    options = resolve_compare_render_options({"id": "p4", "display_config": {"top_n": "abc"}})
-    assert options.top_n_details == 3
-
-
-def test_top_n_zero_is_clamped_to_1():
-    options = resolve_compare_render_options({"id": "p5", "display_config": {"top_n": 0}})
-    assert options.top_n_details == 1
-
-
-def test_top_n_negative_is_clamped_to_1():
-    options = resolve_compare_render_options({"id": "p6", "display_config": {"top_n": -5}})
-    assert options.top_n_details == 1
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +203,6 @@ def test_disabled_metric_absent_from_rendered_compare_mail_html_and_plain():
 
     html, plain = render_compare_email(
         result,
-        top_n_details=options.top_n_details,
         enabled_metrics=options.enabled_metrics,
         hourly_metrics=options.hourly_metrics,
         hourly_enabled=options.hourly_enabled,

@@ -59,7 +59,8 @@ test('AC-1: ChannelToggle.svelte + wizardHelpers.ts (+Test) liegen in shared/', 
 // Importer-Liste entfernt, die verbleibenden 2 Importer sind unverändert.
 test('AC-1: alle 2 Importer nutzen den neuen shared/-Pfad, kein trip-wizard-Import mehr', () => {
 	const importers = [
-		join(COMPONENTS, 'compare', 'CompareInhaltSection.svelte'),
+	// Issue #1360: CompareInhaltSection.svelte ist geloescht (Spec
+	// compare_layout_tab_dissolution Punkt 7) — Eintrag entfernt.
 		join(COMPONENTS, 'shared', 'AlarmeTab.svelte'),
 	];
 	for (const p of importers) {

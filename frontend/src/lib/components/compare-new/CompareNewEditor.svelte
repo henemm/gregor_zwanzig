@@ -5,7 +5,8 @@
 	// Struktureller Spiegel von trip-new/TripNewEditor.svelte (#622): eigene
 	// Anlege-Shell je Domäne (ADR-0029), zusammengesetzt aus den GETEILTEN
 	// Organismen (Step2Orte, WeatherMetricsTab, CorridorEditor(Mobile),
-	// CompareHourlyLayoutControls, AlarmeTab, VersandTab). Reine Freischalt-Logik
+	// AlarmeTab, VersandTab; Stundenverlauf jetzt via WeatherMetricsTab, #1360).
+	// Reine Freischalt-Logik
 	// in compareNewLogic.ts. Lokaler CompareWizardState (Context), EIN POST bei
 	// „Briefing aktivieren" via wiz.saveNewPreset() — kein Backend-Change.
 	//
@@ -40,7 +41,6 @@
 	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
 	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
 	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
-	import CompareHourlyLayoutControls from '$lib/components/shared/CompareHourlyLayoutControls.svelte';
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	import Toast from '$lib/components/mobile/Toast.svelte';
@@ -56,21 +56,24 @@
 
 	const wiz = getContext<CompareWizardState>('compare-wizard-state');
 
-	// ── Tab-Definitionen (7 Tabs, Spec-Tabelle) ───────────────────────────────
+	// ── Tab-Definitionen (6 Tabs, Spec-Tabelle) ───────────────────────────────
+	// Issue #1360 (Scheibe S1a von Epic #1372): der Reiter 'layout' ist aufgeloest,
+	// die Stundenverlauf-Steuerung liegt im Reiter 'metriken' (via
+	// WeatherMetricsTab, Abschnitt 'stundenverlauf'). Der Hinweis des
+	// Alarme-Reiters MUSS mit umgehaengt werden — er verwies auf einen Reiter,
+	// den es nicht mehr gibt, und haette den Alarme-Reiter unerreichbar gemacht.
 	const TAB_DEFS: { id: CompareNewTabId; label: string; lockHint: string | null }[] = [
 		{ id: 'vergleich', label: 'Vergleich', lockHint: null },
 		{ id: 'orte', label: 'Orte', lockHint: 'erst Vergleich benennen' },
 		{ id: 'metriken', label: 'Wetter-Metriken', lockHint: 'erst mind. 2 Orte auswählen' },
 		{ id: 'idealwerte', label: 'Wertebereiche', lockHint: 'erst Wetter-Metriken öffnen' },
-		{ id: 'layout', label: 'Layout', lockHint: 'erst Wertebereiche öffnen' },
-		{ id: 'alarme', label: 'Alarme', lockHint: 'erst Layout öffnen' },
+		{ id: 'alarme', label: 'Alarme', lockHint: 'erst Wertebereiche öffnen' },
 		{ id: 'versand', label: 'Versand', lockHint: 'erst Alarme öffnen' }
 	];
 
 	// ── Visited-Flags (Tab-Besuch → nächster Tab frei; nie zurückgesetzt) ──────
 	let metrikenVisited = $state(false);
 	let idealsVisited = $state(false);
-	let layoutVisited = $state(false);
 	let alarmeVisited = $state(false);
 	let versandVisited = $state(false);
 
@@ -94,7 +97,6 @@
 		pickedCount: wiz.pickedIds.length,
 		metrikenVisited,
 		idealsVisited,
-		layoutVisited,
 		alarmeVisited,
 		versandVisited
 	});
@@ -138,7 +140,6 @@
 		activeTab = id;
 		if (id === 'metriken') metrikenVisited = true;
 		if (id === 'idealwerte') idealsVisited = true;
-		if (id === 'layout') layoutVisited = true;
 		if (id === 'alarme') alarmeVisited = true;
 		if (id === 'versand') versandVisited = true;
 	}
@@ -381,19 +382,6 @@
 		{#if !isMobileViewport}
 			<CorridorEditor context="vergleich" />
 		{/if}
-		<div class="ce-cta-foot" style:max-width="1040px">
-			<div class="ce-cta-row">
-				<Btn data-testid="compare-editor-continue-layout" variant="accent" size="md" onclick={makeContinueHandler('layout')}>Layout einrichten →</Btn>
-			</div>
-		</div>
-	{:else if activeTab === 'layout'}
-		<div style:padding="28px 40px 20px" style:max-width="760px">
-			<Eyebrow style="margin-bottom: 8px">Stundenverlauf</Eyebrow>
-			<p class="mono" style:font-size="12px" style:color="var(--g-ink-3)" style:margin-bottom="18px" style:line-height="1.55">
-				Lege fest, ob die Vergleichs-Mail einen stündlichen Detailverlauf enthält und welche Metriken darin erscheinen.
-			</p>
-			<CompareHourlyLayoutControls {wiz} />
-		</div>
 		<div class="ce-cta-foot" style:max-width="1100px">
 			<div class="ce-cta-row">
 				<Btn data-testid="compare-editor-continue-alarme" variant="accent" size="md" onclick={makeContinueHandler('alarme')}>Alarme einrichten →</Btn>
@@ -484,11 +472,6 @@
 			{#if isMobileViewport}
 				<CorridorEditorMobile context="vergleich" />
 			{/if}
-		{:else if activeTab === 'layout'}
-			<div class="mono" style="font-size: 12px; color: var(--g-ink-3); margin-bottom: 14px; line-height: 1.55;">
-				Stundenverlauf für die Vergleichs-Mail konfigurieren.
-			</div>
-			<CompareHourlyLayoutControls {wiz} />
 		{:else if activeTab === 'alarme'}
 			<AlarmeTab context="vergleich" {wiz} notifyCount={alarmeNotifyCount} onJumpToWertebereiche={jumpToWertebereiche} />
 		{:else if activeTab === 'versand'}
@@ -507,8 +490,6 @@
 			{:else if activeTab === 'metriken'}
 				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>Wertebereiche festlegen →</MBtn>
 			{:else if activeTab === 'idealwerte'}
-				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>Layout einrichten →</MBtn>
-			{:else if activeTab === 'layout'}
 				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>Alarme einrichten →</MBtn>
 			{:else if activeTab === 'alarme'}
 				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>Versand einrichten →</MBtn>

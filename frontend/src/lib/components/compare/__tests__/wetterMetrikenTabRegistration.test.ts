@@ -61,11 +61,13 @@ describe('AC-1: COMPARE_TABS registriert den neuen Tab "Wetter-Metriken"', () =>
 		);
 	});
 
-	// Regressions-Anker: bestehende 7 Tabs (inkl. Reihenfolge relativ zueinander)
+	// Regressions-Anker: die Bestands-Tabs (inkl. Reihenfolge relativ zueinander)
 	// bleiben unangetastet — nur EIN neuer Eintrag wird eingefuegt.
-	test('Regressions-Anker: alle 7 Bestands-Tabs sind weiterhin vorhanden', () => {
+	// Issue #1360: 'layout' ist aus dem Anker entfernt, der Reiter ist aufgeloest
+	// (Spec compare_layout_tab_dissolution, AC-1).
+	test('Regressions-Anker: alle 6 Bestands-Tabs sind weiterhin vorhanden', () => {
 		const values = COMPARE_TABS.map((t) => t.value);
-		for (const v of ['uebersicht', 'orte', 'idealwerte', 'layout', 'alarme', 'versand', 'vorschau']) {
+		for (const v of ['uebersicht', 'orte', 'idealwerte', 'alarme', 'versand', 'vorschau']) {
 			assert.ok(values.includes(v), `Regression: Bestands-Tab "${v}" fehlt in COMPARE_TABS`);
 		}
 	});

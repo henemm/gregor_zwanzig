@@ -30,9 +30,19 @@ export type WeatherMetricsContext = 'route' | 'vergleich';
 // Vergleich keine Mail-Wirkung (Attrappen-Verbot).
 const ROUTE_ONLY_SECTIONS = ['sms_schwellen', 'report_config'] as const;
 
+// Issue #1360 (Scheibe S1a von Epic #1372): 'stundenverlauf' ist die neue
+// Heimat der Stundenverlauf-Steuerung — der Reiter "Layout" des Ortsvergleichs
+// ist aufgeloest. Position: NACH 'reihenfolge', VOR 'official_alerts' (erst
+// welche Tageswerte und in welcher Folge, dann der Stundenverlauf).
+// Geteilt vorbereitet, in dieser Scheibe aber NUR im Vergleich aktiv: der Trip
+// hat heute keine Stundenverlauf-Steuerung, sie nachzuruesten ist nicht Teil
+// dieser Scheibe (Spec § Known Limitations).
+const COMPARE_ONLY_SECTIONS = ['stundenverlauf'] as const;
+
 export function weatherMetricsTabSections(context: WeatherMetricsContext): string[] {
 	const sections: string[] = ['grundauswahl', 'reihenfolge'];
 	if (context === 'route') sections.push(...ROUTE_ONLY_SECTIONS);
+	if (context === 'vergleich') sections.push(...COMPARE_ONLY_SECTIONS);
 	sections.push('official_alerts');
 	return sections;
 }

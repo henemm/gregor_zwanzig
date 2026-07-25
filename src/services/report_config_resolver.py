@@ -153,7 +153,10 @@ class CompareRenderOptions:
     unveraenderlichen Struktur — analog `ReportRenderOptions`.
     """
 
-    top_n_details: int
+    # Issue #1360 (Scheibe S1a von Epic #1372): `top_n_details` ersatzlos
+    # entfernt. Der Wert wurde seit der PO-Entscheidung 2026-07-08 von JEDEM
+    # Render-Pfad verworfen (`compare_html.py`: `_ = top_n_details`) und
+    # taeuschte im Editor eine Wirkung vor, die es nie gab.
     # Issue #1359: GEORDNETE Liste, kein `set`. `resolve_enabled_metrics()`
     # liefert seit #1335 bewusst eine reihenfolge-erhaltende Liste — die
     # Listenposition IST die vom Nutzer eingestellte Metrik-Reihenfolge und
@@ -177,9 +180,6 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
 
     Reproduziert 1:1 das Bestandsverhalten aus
     `scheduler_dispatch_service.py:252-276` (Issue #1104/#1106/#1107):
-    - `top_n_details`: Default 3, geclampt auf 1..10, ungueltige Werte
-      (nicht int-konvertierbar) fallen auf 3 zurueck (jeweils mit
-      `logger.warning`).
     - `enabled_metrics`/`hourly_metrics`: ueber `resolve_enabled_metrics()`/
       `resolve_hourly_metrics()` aus `display_config`.
     - `hourly_enabled`: TOP-LEVEL Preset-Feld (nicht im display_config-Blob),
@@ -189,6 +189,10 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
       Trip-Parser `_corridor_from_dict` (malformte Eintraege fallen still
       raus statt den Versand zu crashen, analog Trip-Ladepfad).
 
+    Issue #1360: ein noch gespeichertes `display_config.top_n` wird nicht mehr
+    gelesen — es hat auf die Auflösung und damit auf die Mail keinerlei
+    Wirkung. Aus den Daten raeumt es `scripts/migrate_1360_drop_compare_top_n.py`.
+
     Reine Funktion — kein I/O, keine Mutation von `preset`.
     """
     from app.loader import _corridor_from_dict
@@ -197,23 +201,6 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
 
     preset_id = preset.get("id", "")
     display_config = preset.get("display_config") or {}
-    top_n_raw = display_config.get("top_n")
-    try:
-        top_n_details = int(top_n_raw) if top_n_raw is not None else 3
-    except (TypeError, ValueError):
-        logger.warning(
-            "Compare-Preset %s: ungueltiger top_n-Wert %r — nutze Default 3",
-            preset_id,
-            top_n_raw,
-        )
-        top_n_details = 3
-    if top_n_details < 1 or top_n_details > 10:
-        logger.warning(
-            "Compare-Preset %s: top_n %r ausserhalb 1..10 — geclamped",
-            preset_id,
-            top_n_details,
-        )
-        top_n_details = max(1, min(10, top_n_details))
 
     # Adversary F004 (Fix-Loop): Nicht-Dict-Eintraege (str/int/None/...) crashen
     # sonst den gesamten Versand -- `_corridor_from_dict` ruft `d.get(...)`
@@ -232,7 +219,6 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
             logger.warning("Compare-Preset %s: ungueltiger Korridor %r uebersprungen", preset_id, raw)
 
     return CompareRenderOptions(
-        top_n_details=top_n_details,
         enabled_metrics=resolve_enabled_metrics(display_config.get("active_metrics")),
         hourly_metrics=resolve_hourly_metrics(display_config.get("hourly_metrics")),
         hourly_enabled=preset.get("hourly_enabled", True),

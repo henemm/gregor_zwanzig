@@ -31,37 +31,12 @@ const SECTION_H_FILE = join(COMPARE_DIR, '..', 'atoms', 'SectionH.svelte');
 const tabs = () => readFileSync(TABS_FILE, 'utf-8');
 const page = () => readFileSync(PAGE_FILE, 'utf-8');
 
-describe('AC-1: Layout-Tab Desktop-Rahmen (screen-compare-detail.jsx:245-266)', () => {
-	test('Section-Header „Übersicht pro Kanal" mit Kappungs-Hint vorhanden', () => {
-		const code = tabs();
-		assert.ok(code.includes('Übersicht pro Kanal'), 'AC-1 FAIL: Header „Übersicht pro Kanal" fehlt im Layout-Tab');
-		assert.ok(
-			code.includes('Metrik-Zeilen · Orte sind die Spalten — der Renderer kappt je Kanal'),
-			'AC-1 FAIL: mono-Hint „Metrik-Zeilen · Orte sind die Spalten …" fehlt'
-		);
-	});
-	test('3 Limit-Pillen (Email/Telegram/SMS) vorhanden', () => {
-		const code = tabs();
-		assert.ok(code.includes('Email · alle Spalten'), 'AC-1 FAIL: Pille „Email · alle Spalten" fehlt');
-		assert.ok(code.includes('Telegram · max 8'), 'AC-1 FAIL: Pille „Telegram · max 8" fehlt');
-		assert.ok(code.includes('SMS · flach · 0'), 'AC-1 FAIL: Pille „SMS · flach · 0" fehlt');
-	});
-});
-
-describe('AC-2: Layout-Tab Mobil-Variante (screen-compare-detail-mobile.jsx:148-166)', () => {
-	test('mobiler Header „Spalten pro Kanal" + Kurz-Hint vorhanden', () => {
-		const code = tabs();
-		assert.ok(code.includes('Spalten pro Kanal'), 'AC-2 FAIL: mobiler Header „Spalten pro Kanal" fehlt');
-		assert.ok(code.includes('Renderer kappt je Kanal'), 'AC-2 FAIL: mobiler Hint „Renderer kappt je Kanal" fehlt');
-	});
-	test('CompareLayoutRow bekommt mobil die dense-Prop', () => {
-		assert.match(
-			tabs(),
-			/<CompareLayoutRow[^>]*\bdense\b/s,
-			'AC-2 FAIL: keine CompareLayoutRow-Verwendung mit dense-Prop im Layout-Tab'
-		);
-	});
-});
+// Issue #1360 (Scheibe S1a von Epic #1372): die Fidelity-Pruefungen zum
+// Layout-Reiter (AC-1 Desktop-Rahmen „Übersicht pro Kanal" + Limit-Pillen,
+// AC-2 Mobil-Variante „Spalten pro Kanal" + CompareLayoutRow dense) sind
+// GELOESCHT: ihr Pruefsubjekt — das Layout-Panel samt CompareLayoutRow — ist
+// ersatzlos entfallen. Sie zementierten genau die Attrappe mit der sachlich
+// falschen Kappungs-Aussage, die #1360 beseitigt (AC-4).
 
 describe('AC-3: Orte-SummaryCard „+N weitere" (jsx:159)', () => {
 	test('Suffix „+N weitere" bei mehr als 3 Orten', () => {
@@ -75,23 +50,11 @@ describe('AC-3: Orte-SummaryCard „+N weitere" (jsx:159)', () => {
 	});
 });
 
-describe('AC-4: Layout-SummaryCard Kanal-Labels + Prioritäts-Copy (jsx:169-171)', () => {
-	test('Titel-Fallback „Keine Kanäle" vorhanden', () => {
-		assert.ok(tabs().includes('Keine Kanäle'), 'AC-4 FAIL: Fallback „Keine Kanäle" fehlt');
-	});
-	test('Copy endet mit „— Reihenfolge nach Priorität."', () => {
-		assert.ok(
-			tabs().includes('Reihenfolge nach Priorität.'),
-			'AC-4 FAIL: Copy-Suffix „— Reihenfolge nach Priorität." fehlt'
-		);
-	});
-	test('harte channels-Liste nicht mehr als Karten-Titel', () => {
-		assert.ok(
-			!/\{channels\.join\(' · '\)\}/.test(tabs()),
-			'AC-4 FAIL: Karten-Titel nutzt noch die harte channels.join-Liste statt channelNamesLabel'
-		);
-	});
-});
+// Issue #1360: die Fidelity-Pruefung der Layout-SummaryCard („Layout pro Kanal",
+// „Engere Kanäle zeigen automatisch weniger Spalten — Reihenfolge nach
+// Priorität.") ist GELOESCHT — die Karte ist entfallen (AC-4: keine Flaeche
+// behauptet mehr eine Orts-Kappung je Kanal) und sprang auf den aufgeloesten
+// Reiter.
 
 describe('AC-5: Versand-SummaryCard Draft-Sonderfall (jsx:175-177)', () => {
 	test('Draft-Titel und Draft-Copy vorhanden', () => {

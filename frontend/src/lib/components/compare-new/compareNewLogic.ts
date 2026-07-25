@@ -6,19 +6,24 @@
 // Svelte-Runes, keine Seiteneffekte — unit-testbar mit node:test.
 //
 // Freischalt-Kette exakt nach der Tab-Struktur-Tabelle der Spec:
-//   Name → Orte≥2 → Wetter-Metriken → Wertebereiche → Layout → Alarme → Versand
+//   Name → Orte≥2 → Wetter-Metriken → Wertebereiche → Alarme → Versand
 // Die *Visited-Flags werden von CompareNewEditor.svelte beim Tab-Wechsel gesetzt
 // und NICHT zurückgesetzt (einmal besucht bleibt besucht, wie im Trip-Vorbild).
+//
+// Issue #1360 (Scheibe S1a von Epic #1372): der Reiter 'layout' ist aufgelöst —
+// sechs Reiter statt sieben, und `layoutVisited` entfällt aus der Kette. Ohne
+// diesen Rückbau wäre der Alarme-Reiter unerreichbar, weil seine Freischaltung
+// auf dem Besuch eines Reiters beruhte, den es nicht mehr gibt. Die
+// Stundenverlauf-Steuerung wohnt jetzt im Reiter 'metriken'.
 
 export type CompareNewTabId =
-	'vergleich' | 'orte' | 'metriken' | 'idealwerte' | 'layout' | 'alarme' | 'versand';
+	'vergleich' | 'orte' | 'metriken' | 'idealwerte' | 'alarme' | 'versand';
 
 export interface CompareNewProgress {
 	name: string;
 	pickedCount: number;
 	metrikenVisited: boolean;
 	idealsVisited: boolean;
-	layoutVisited: boolean;
 	alarmeVisited: boolean;
 	versandVisited: boolean;
 }
@@ -29,15 +34,12 @@ export function unlockedTabs(p: CompareNewProgress): Set<CompareNewTabId> {
 	if (p.name.trim()) s.add('orte');
 	if (p.name.trim() && p.pickedCount >= 2) s.add('metriken');
 	if (p.name.trim() && p.pickedCount >= 2 && p.metrikenVisited) s.add('idealwerte');
-	if (p.name.trim() && p.pickedCount >= 2 && p.metrikenVisited && p.idealsVisited) s.add('layout');
-	if (p.name.trim() && p.pickedCount >= 2 && p.metrikenVisited && p.idealsVisited && p.layoutVisited)
-		s.add('alarme');
+	if (p.name.trim() && p.pickedCount >= 2 && p.metrikenVisited && p.idealsVisited) s.add('alarme');
 	if (
 		p.name.trim() &&
 		p.pickedCount >= 2 &&
 		p.metrikenVisited &&
 		p.idealsVisited &&
-		p.layoutVisited &&
 		p.alarmeVisited
 	)
 		s.add('versand');
@@ -51,15 +53,14 @@ export function doneTabs(p: CompareNewProgress): Set<CompareNewTabId> {
 	if (p.pickedCount >= 2) s.add('orte');
 	if (p.metrikenVisited) s.add('metriken');
 	if (p.idealsVisited) s.add('idealwerte');
-	if (p.layoutVisited) s.add('layout');
 	if (p.alarmeVisited) s.add('alarme');
 	if (p.versandVisited) s.add('versand');
 	return s;
 }
 
-/** Fortschrittszähler = Anzahl erledigter Tabs, gedeckelt bei 7. */
+/** Fortschrittszähler = Anzahl erledigter Tabs, gedeckelt bei 6 (Issue #1360). */
 export function progressCount(done: Set<CompareNewTabId>): number {
-	return Math.min(done.size, 7);
+	return Math.min(done.size, 6);
 }
 
 /** „Briefing aktivieren" erst nach Besuch des Versand-Tabs. */

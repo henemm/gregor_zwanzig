@@ -174,7 +174,6 @@ class ComparePreviewService:
         return render_compare_email(
             ctx["result"],
             profile=ctx["profile"],
-            top_n_details=opts.top_n_details,
             enabled_metrics=opts.enabled_metrics,
             hourly_metrics=opts.hourly_metrics,
             hourly_enabled=opts.hourly_enabled,

@@ -178,6 +178,38 @@ function ifConditionsAbove(ast: any, source: string, testid: string): string[] |
 	return result;
 }
 
+/** Bedingungen (Quelltext) aller {#if}-Bloecke oberhalb des ERSTEN
+ *  `{@render <name>(...)}`-Aufrufs im Template. `null`, wenn es keinen gibt.
+ *  Issue #1360: ersetzt eine brueckige Zeichen-Abstands-Naeherung. */
+function renderTagConditions(ast: any, source: string, snippetName: string): string[] | null {
+	let result: string[] | null = null;
+	function visit(node: unknown, conditions: string[]): void {
+		if (node === null || typeof node !== 'object' || result) return;
+		if (Array.isArray(node)) {
+			node.forEach((c) => visit(c, conditions));
+			return;
+		}
+		const n = node as Record<string, any>;
+		let next = conditions;
+		if (n.type === 'IfBlock' && n.test) {
+			next = [...conditions, source.slice(n.test.start, n.test.end)];
+		}
+		if (n.type === 'RenderTag') {
+			const raw = source.slice(n.start, n.end);
+			if (raw.includes(snippetName + '(')) {
+				result = next;
+				return;
+			}
+		}
+		for (const key of Object.keys(n)) {
+			if (key === 'parent' || result) continue;
+			visit(n[key], key === 'alternate' ? conditions : next);
+		}
+	}
+	visit(ast.fragment, []);
+	return result;
+}
+
 describe('FB01: Die Legende erscheint in BEIDEN Kontexten (#1332)', () => {
 	const source = read(WEATHER_METRICS_TAB);
 	const ast = parse(source, { modern: true });
@@ -231,11 +263,23 @@ describe('FB01: Die Legende erscheint in BEIDEN Kontexten (#1332)', () => {
 				`im Vergleich die einzige Heimat von official_alerts_enabled. Bedingung: ${contextGuard}`
 		);
 		// Und die Vergleich-Aufrufstelle rendert das geteilte Snippet weiterhin.
-		const vergleichIdx = source.indexOf('weather-metrics-tab-vergleich');
-		const renderIdx = source.indexOf('{@render officialAlertsToggle(', vergleichIdx);
+		// Issue #1360: frueher als Zeichen-Abstand geprueft
+		// (`renderIdx - vergleichIdx < 3000`). Diese Naeherung war bruechig — der
+		// neue Abschnitt 'stundenverlauf' (Spec compare_layout_tab_dissolution,
+		// Punkt 2: zwischen 'reihenfolge' und 'official_alerts') schob den Aufruf
+		// legitim ueber die Grenze, ohne dass sich am Verhalten etwas aenderte.
+		// Jetzt STRUKTURELL geprueft: der Render-Aufruf liegt im Block
+		// `{#if sections.includes('official_alerts')}` — unabhaengig davon, wie
+		// viel davor steht.
+		const renderConditions = renderTagConditions(ast, source, 'officialAlertsToggle');
 		assert.ok(
-			renderIdx > vergleichIdx && renderIdx - vergleichIdx < 3000,
+			renderConditions,
 			'Der Vergleich-Zweig rendert das geteilte officialAlertsToggle-Snippet nicht mehr.'
+		);
+		assert.ok(
+			renderConditions!.some((c) => /sections\.includes\(\s*'official_alerts'\s*\)/.test(c)),
+			'Der officialAlertsToggle-Aufruf haengt nicht am Abschnitt-Schalter ' +
+				`\`sections.includes('official_alerts')\`. Bedingungen: ${JSON.stringify(renderConditions)}`
 		);
 	});
 });

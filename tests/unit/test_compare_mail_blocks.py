@@ -250,9 +250,11 @@ def test_dispatch_and_preview_share_render_path_without_summary_block():
     }
     opts = resolve_compare_render_options(preset)
 
+    # Issue #1360: `top_n_details` ist aus der Renderer-Signatur entfallen
+    # (Regler ohne Wirkung, PO 2026-07-08) — der Aufruf spiegelt den echten
+    # Versand-/Vorschau-Pfad nach dem Rueckbau.
     html_body, text_body = render_compare_email(
         result,
-        top_n_details=opts.top_n_details,
         enabled_metrics=opts.enabled_metrics,
         hourly_metrics=opts.hourly_metrics,
         hourly_enabled=opts.hourly_enabled,

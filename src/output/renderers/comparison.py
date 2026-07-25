@@ -232,7 +232,6 @@ def render_compare_email(
     *,
     profile: Optional[ActivityProfile] = None,
     warnings: list[str] | None = None,
-    top_n_details: Optional[int] = None,
     enabled_metrics: list[str] | None = None,
     hourly_metrics: set | None = None,
     hourly_enabled: bool = True,
@@ -247,9 +246,9 @@ def render_compare_email(
     Single entry point for all compare-email render callers. Keeps the HTML
     renderer (output.renderers.email.compare_html) and the plain-text renderer
     (this module) in one place. Kein Score/Winner mehr -- ``winner_tags``
-    entfaellt vollstaendig. ``top_n_details`` (Issue #1104) wird angenommen,
-    hat aber AKTUELL KEINE Wirkung: PO 2026-07-08 -- Mail zeigt immer alle
-    Orte; die Semantik wird in #1105-#1107 neu definiert. ``enabled_metrics``
+    entfaellt vollstaendig. ``top_n_details`` (Issue #1104) ist mit Issue #1360
+    ersatzlos entfallen -- der Wert wurde von jedem Renderer verworfen, die Mail
+    zeigt immer ALLE Orte. ``enabled_metrics``
     filtert die numerischen Uebersichts-Zeilen (s. ``render_compare_html``).
     ``hourly_metrics`` (Issue #1106) filtert die Wert-Spalten je
     Stundentabelle-Ort-Sektion, analog ``enabled_metrics``. ``hourly_enabled``
@@ -267,7 +266,6 @@ def render_compare_email(
         result,
         profile=profile,
         warnings=warnings,
-        top_n_details=top_n_details,
         enabled_metrics=enabled_metrics,
         hourly_metrics=hourly_metrics,
         hourly_enabled=hourly_enabled,

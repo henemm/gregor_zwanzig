@@ -35,7 +35,6 @@ function progress(over: Partial<CompareNewProgress> = {}): CompareNewProgress {
 		pickedCount: 0,
 		metrikenVisited: false,
 		idealsVisited: false,
-		layoutVisited: false,
 		alarmeVisited: false,
 		versandVisited: false,
 		...over,
@@ -73,28 +72,24 @@ describe('AC-2: unlockedTabs — progressive Freischaltung', () => {
 		assert.ok(!u.has('idealwerte'), 'idealwerte noch gesperrt (Metriken nicht besucht)');
 	});
 
-	test('AC-5: metrikenVisited → "idealwerte" frei; AC-6: idealsVisited → "layout" frei', () => {
+	test('AC-5: metrikenVisited → "idealwerte" frei, "alarme" bleibt gesperrt', () => {
 		const u1 = unlockedTabs(progress({ name: 'X', pickedCount: 2, metrikenVisited: true }));
 		assert.ok(u1.has('idealwerte'), 'idealwerte frei nach Metriken-Besuch');
-		assert.ok(!u1.has('layout'), 'layout noch gesperrt');
-		const u2 = unlockedTabs(
-			progress({ name: 'X', pickedCount: 2, metrikenVisited: true, idealsVisited: true })
-		);
-		assert.ok(u2.has('layout'), 'layout frei nach Wertebereiche-Besuch');
-		assert.ok(!u2.has('alarme'), 'alarme noch gesperrt');
+		// Issue #1360: hier stand vormals der Layout-Reiter — er ist aufgeloest,
+		// naechste Stufe ist direkt 'alarme'.
+		assert.ok(!u1.has('alarme'), 'alarme noch gesperrt (Wertebereiche nicht besucht)');
 	});
 
-	test('AC-7/8: layoutVisited → "alarme" frei; alarmeVisited → "versand" frei', () => {
+	test('AC-7/8: idealsVisited → "alarme" frei; alarmeVisited → "versand" frei', () => {
 		const u1 = unlockedTabs(
 			progress({
 				name: 'X',
 				pickedCount: 2,
 				metrikenVisited: true,
 				idealsVisited: true,
-				layoutVisited: true,
 			})
 		);
-		assert.ok(u1.has('alarme'), 'alarme frei nach Layout-Besuch');
+		assert.ok(u1.has('alarme'), 'alarme frei nach Wertebereiche-Besuch (#1360: Layout-Reiter aufgeloest)');
 		assert.ok(!u1.has('versand'), 'versand noch gesperrt');
 		const u2 = unlockedTabs(
 			progress({
@@ -102,29 +97,28 @@ describe('AC-2: unlockedTabs — progressive Freischaltung', () => {
 				pickedCount: 2,
 				metrikenVisited: true,
 				idealsVisited: true,
-				layoutVisited: true,
 				alarmeVisited: true,
 			})
 		);
 		assert.ok(u2.has('versand'), 'versand frei nach Alarme-Besuch');
 	});
 
-	test('Kaskade übersprungen: layoutVisited ohne Vorstufen schaltet "alarme" NICHT frei', () => {
-		// Nur layoutVisited=true, aber ohne Name/Orte/metriken/ideals — der Tab
-		// selbst darf ohne die kompletten Vorbedingungen nicht erreichbar sein.
-		const u = unlockedTabs(progress({ layoutVisited: true }));
-		assert.ok(!u.has('alarme'), 'ohne Name/Orte/metriken/ideals kein alarme-Zugang');
+	test('Kaskade übersprungen: idealsVisited ohne Vorstufen schaltet "alarme" NICHT frei', () => {
+		// Nur idealsVisited=true, aber ohne Name/Orte/metriken — der Tab selbst
+		// darf ohne die kompletten Vorbedingungen nicht erreichbar sein.
+		// Issue #1360: vormals layoutVisited (Reiter aufgeloest).
+		const u = unlockedTabs(progress({ idealsVisited: true }));
+		assert.ok(!u.has('alarme'), 'ohne Name/Orte/metriken kein alarme-Zugang');
 		assert.deepEqual([...u].sort(), ['vergleich']);
 	});
 
-	test('Vollständige Kette: alle 7 Tabs offen', () => {
+	test('Vollständige Kette: alle 6 Tabs offen (#1360: ohne Layout-Reiter)', () => {
 		const u = unlockedTabs(
 			progress({
 				name: 'X',
 				pickedCount: 3,
 				metrikenVisited: true,
 				idealsVisited: true,
-				layoutVisited: true,
 				alarmeVisited: true,
 				versandVisited: true,
 			})
@@ -132,7 +126,6 @@ describe('AC-2: unlockedTabs — progressive Freischaltung', () => {
 		const expected: CompareNewTabId[] = [
 			'alarme',
 			'idealwerte',
-			'layout',
 			'metriken',
 			'orte',
 			'vergleich',
@@ -165,50 +158,48 @@ describe('doneTabs — Done-Zustand nach Spec-Tabelle', () => {
 				pickedCount: 2,
 				metrikenVisited: true,
 				idealsVisited: true,
-				layoutVisited: true,
 				alarmeVisited: true,
 				versandVisited: true,
 			})
 		);
-		for (const id of ['metriken', 'idealwerte', 'layout', 'alarme', 'versand'] as CompareNewTabId[]) {
+		for (const id of ['metriken', 'idealwerte', 'alarme', 'versand'] as CompareNewTabId[]) {
 			assert.ok(d.has(id), `${id} muss done sein`);
 		}
 	});
 });
 
-// ── progressCount (done.size, max 7) ─────────────────────────────────────────
+// ── progressCount (done.size, max 6 — Issue #1360) ───────────────────────────
 
 describe('progressCount — Fortschrittszähler', () => {
 	test('Leerzustand = 0', () => {
 		assert.equal(progressCount(doneTabs(progress())), 0);
 	});
 
-	test('vollständige Kette = 7', () => {
+	test('vollständige Kette = 6', () => {
 		const d = doneTabs(
 			progress({
 				name: 'X',
 				pickedCount: 2,
 				metrikenVisited: true,
 				idealsVisited: true,
-				layoutVisited: true,
 				alarmeVisited: true,
 				versandVisited: true,
 			})
 		);
-		assert.equal(progressCount(d), 7);
+		assert.equal(progressCount(d), 6);
 	});
 
-	test('deckelt bei 7, auch wenn ein Fremd-Set größer wäre', () => {
+	test('deckelt bei 6, auch wenn ein Fremd-Set größer wäre', () => {
 		const bloated = new Set<CompareNewTabId>([
 			'vergleich',
 			'orte',
 			'metriken',
 			'idealwerte',
-			'layout',
 			'alarme',
 			'versand',
+			'nochwas' as CompareNewTabId,
 		]);
-		assert.equal(progressCount(bloated), 7);
+		assert.equal(progressCount(bloated), 6);
 	});
 });
 
@@ -222,7 +213,6 @@ describe('canActivate — "Briefing aktivieren" erst nach Versand-Besuch', () =>
 				pickedCount: 2,
 				metrikenVisited: true,
 				idealsVisited: true,
-				layoutVisited: true,
 				alarmeVisited: true,
 				versandVisited: false,
 			})
@@ -237,7 +227,6 @@ describe('canActivate — "Briefing aktivieren" erst nach Versand-Besuch', () =>
 				pickedCount: 2,
 				metrikenVisited: true,
 				idealsVisited: true,
-				layoutVisited: true,
 				alarmeVisited: true,
 				versandVisited: true,
 			})

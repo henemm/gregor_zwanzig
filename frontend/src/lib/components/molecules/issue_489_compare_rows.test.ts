@@ -25,17 +25,20 @@ const has = (f: string) => existsSync(join(here, f));
 // AC-4 (Datei-Existenz + index.ts Re-Exporte)
 // ──────────────────────────────────────────────────────────────────────────────
 
-test('#489 AC-4a: alle 3 Komponenten-Dateien existieren in molecules/', () => {
+// Issue #1360: CompareLayoutRow.svelte ist geloescht (Attrappen-Zeile ohne
+// Handler, Spec compare_layout_tab_dissolution § Dependencies) — aus allen
+// Listen dieser Suite entfernt. Die uebrigen 2 Molecules bleiben unveraendert.
+test('#489 AC-4a: alle 2 Komponenten-Dateien existieren in molecules/', () => {
 	assert.ok(has('CompareLocationRow.svelte'), 'molecules/CompareLocationRow.svelte fehlt');
 	assert.ok(has('CompareIdealRow.svelte'),    'molecules/CompareIdealRow.svelte fehlt');
-	assert.ok(has('CompareLayoutRow.svelte'),   'molecules/CompareLayoutRow.svelte fehlt');
+	assert.ok(!has('CompareLayoutRow.svelte'), 'CompareLayoutRow.svelte muss mit #1360 geloescht sein');
 });
 
-test('#489 AC-4b: index.ts re-exportiert alle 3 Komponenten', () => {
+test('#489 AC-4b: index.ts re-exportiert alle 2 Komponenten', () => {
 	const idx = read('index.ts');
 	assert.ok(/CompareLocationRow/.test(idx), 'index.ts exportiert CompareLocationRow nicht');
 	assert.ok(/CompareIdealRow/.test(idx),    'index.ts exportiert CompareIdealRow nicht');
-	assert.ok(/CompareLayoutRow/.test(idx),   'index.ts exportiert CompareLayoutRow nicht');
+	assert.ok(!/CompareLayoutRow/.test(idx), 'index.ts darf CompareLayoutRow nicht mehr exportieren (#1360)');
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -87,97 +90,21 @@ test('#489 AC-1g: CompareLocationRow hat unteren Divider (--g-rule-soft)', () =>
 // ──────────────────────────────────────────────────────────────────────────────
 // AC-2: CompareIdealRow
 // ──────────────────────────────────────────────────────────────────────────────
-
-test('#489 AC-2a: CompareIdealRow hat Props item, dense, last', () => {
-	const src = read('CompareIdealRow.svelte');
-	assert.ok(/\bitem\b/.test(src),  'CompareIdealRow: prop item fehlt');
-	assert.ok(/\bdense\b/.test(src), 'CompareIdealRow: prop dense fehlt');
-	assert.ok(/\blast\b/.test(src),  'CompareIdealRow: prop last fehlt');
-});
-
-test('#489 AC-2b: CompareIdealRow Pill-Tone-Mapping hoch→accent, mittel→default, niedrig→ghost', () => {
-	const src = read('CompareIdealRow.svelte');
-	assert.ok(/accent/.test(src),   'CompareIdealRow: tone "accent" (hoch) fehlt');
-	assert.ok(/default/.test(src),  'CompareIdealRow: tone "default" (mittel) fehlt');
-	assert.ok(/ghost/.test(src),    'CompareIdealRow: tone "ghost" (niedrig) fehlt');
-});
-
-test('#489 AC-2c: CompareIdealRow importiert Pill aus atoms', () => {
-	const src = read('CompareIdealRow.svelte');
-	assert.ok(
-		/import\b[^;]*\bPill\b[^;]*\bfrom\b/.test(src),
-		'CompareIdealRow: echter Pill-Import aus atoms fehlt'
-	);
-});
-
-test('#489 AC-2d: CompareIdealRow last-Prop unterdrückt Divider', () => {
-	const src = read('CompareIdealRow.svelte');
-	assert.ok(/last/.test(src) && /g-rule-soft/.test(src),
-		'CompareIdealRow: last-Prop + Divider-Unterdrückung fehlt');
-});
-
-test('#489 AC-2e: CompareIdealRow nutzt $derived() für Tone-Mapping', () => {
-	const src = read('CompareIdealRow.svelte');
-	assert.ok(/\$derived\(/.test(src), 'CompareIdealRow: $derived() für Tone-Mapping fehlt (kein Svelte 5)');
-});
-
-// ──────────────────────────────────────────────────────────────────────────────
-// AC-3: CompareLayoutRow
-// ──────────────────────────────────────────────────────────────────────────────
-
-test('#489 AC-3a: CompareLayoutRow hat Props channel, cols, dense', () => {
-	const src = read('CompareLayoutRow.svelte');
-	assert.ok(/\bchannel\b/.test(src), 'CompareLayoutRow: prop channel fehlt');
-	assert.ok(/\bcols\b/.test(src),    'CompareLayoutRow: prop cols fehlt');
-	assert.ok(/\bdense\b/.test(src),   'CompareLayoutRow: prop dense fehlt');
-});
-
-test('#489 AC-3b: CompareLayoutRow SMS-Sonderfall: cols===0 zeigt Hint-Text', () => {
-	const src = read('CompareLayoutRow.svelte');
-	assert.ok(
-		/flach[\s·•]*ohne\s+Spalten|flach\s*·\s*ohne Spalten/.test(src),
-		'CompareLayoutRow: SMS-Hint-Text „flach · ohne Spalten" fehlt'
-	);
-});
-
-test('#489 AC-3c: CompareLayoutRow cols.length===0 → keine Chips (isSmsFlat-Logik)', () => {
-	const src = read('CompareLayoutRow.svelte');
-	assert.ok(
-		/cols\.length\s*===?\s*0/.test(src),
-		'CompareLayoutRow: cols.length===0 SMS-Sonderfall-Bedingung fehlt (Array-Vertrag)'
-	);
-});
-
-test('#489 AC-3d: CompareLayoutRow importiert Pill aus atoms', () => {
-	const src = read('CompareLayoutRow.svelte');
-	assert.ok(
-		/import\b[^;]*\bPill\b[^;]*\bfrom\b/.test(src),
-		'CompareLayoutRow: echter Pill-Import aus atoms fehlt'
-	);
-});
-
-test('#489 AC-3e: CompareLayoutRow erstes Chip accent, restliche default', () => {
-	const src = read('CompareLayoutRow.svelte');
-	assert.ok(/accent/.test(src),  'CompareLayoutRow: tone "accent" für erstes Chip fehlt');
-	assert.ok(/default/.test(src), 'CompareLayoutRow: tone "default" für restliche Chips fehlt');
-});
-
-// ──────────────────────────────────────────────────────────────────────────────
 // Stil-Konventionen (Svelte 5, kein Tailwind, CSS-Tokens)
 // ──────────────────────────────────────────────────────────────────────────────
 
-test('#489 Konvention: alle 3 Komponenten nutzen $props() (Svelte 5)', () => {
-	for (const name of ['CompareLocationRow', 'CompareIdealRow', 'CompareLayoutRow']) {
+test('#489 Konvention: alle 2 Komponenten nutzen $props() (Svelte 5)', () => {
+	for (const name of ['CompareLocationRow', 'CompareIdealRow']) {
 		const src = read(`${name}.svelte`);
 		assert.ok(/\$props\(/.test(src), `${name}: $props() fehlt (Svelte 5 Pflicht)`);
 	}
 });
 
-test('#489 Konvention: keine Tailwind-Klassen in den 3 Komponenten', () => {
+test('#489 Konvention: keine Tailwind-Klassen in den 2 Komponenten', () => {
 	// Tailwind-Klassen sind class="..." oder class:xxx Direktiven mit Tailwind-Namen
 	// Prüfe auf typische Tailwind-Muster wie "flex", "items-center" als class-String
 	const TAILWIND_PATTERN = /class="[^"]*(?:flex|items-|gap-|p-\d|m-\d|text-\[|font-mono|border-)[^"]*"/;
-	for (const name of ['CompareLocationRow', 'CompareIdealRow', 'CompareLayoutRow']) {
+	for (const name of ['CompareLocationRow', 'CompareIdealRow']) {
 		const src = read(`${name}.svelte`);
 		assert.ok(
 			!TAILWIND_PATTERN.test(src),
@@ -186,8 +113,8 @@ test('#489 Konvention: keine Tailwind-Klassen in den 3 Komponenten', () => {
 	}
 });
 
-test('#489 Konvention: alle 3 Komponenten nutzen --g-font-mono', () => {
-	for (const name of ['CompareLocationRow', 'CompareIdealRow', 'CompareLayoutRow']) {
+test('#489 Konvention: alle 2 Komponenten nutzen --g-font-mono', () => {
+	for (const name of ['CompareLocationRow', 'CompareIdealRow']) {
 		const src = read(`${name}.svelte`);
 		assert.ok(/g-font-mono/.test(src), `${name}: --g-font-mono fehlt`);
 	}
