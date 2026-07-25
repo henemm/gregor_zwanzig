@@ -566,18 +566,28 @@ class NotificationService:
         from output.renderers.alert.project import to_multi_location_onset_alert_message
         from utils.timezone import tz_for_coords
 
-        first_loc = entities[0][1] if entities else None
+        # Befund F002 (#1385): der frühere `if entities else None`-Zweig war tot
+        # — der einzige Aufrufer schliesst leere Bündel aus, und der Renderer
+        # quittiert sie ohnehin mit `ValueError`. Hier derselbe Fehlertyp,
+        # nur früher und mit klarer Ursache statt eines IndexError.
+        if not entities:
+            raise ValueError(
+                "send_multi_location_radar_alert benötigt mindestens einen Ort"
+            )
+        first_loc = entities[0][1]
         alert_tz = tz or (
             tz_for_coords(first_loc.lat, first_loc.lon)
-            if first_loc is not None
-            and getattr(first_loc, "lat", None) is not None
+            if getattr(first_loc, "lat", None) is not None
             and getattr(first_loc, "lon", None) is not None
             else ZoneInfo("UTC")
         )
         resolved_stand_at = stand_at or local_fmt(datetime.now(timezone.utc), alert_tz)
+        # Issue #1385: Die Orts-Objekte werden MITGEREICHT — der Renderer
+        # formatiert die Onset-Zeit je Ort in dessen eigener Zeitzone. Vorher
+        # wurde `_loc` hier weggeworfen, wodurch alle Orte die Ortszeit des
+        # ERSTEN Ortes trugen (Zermatt + Auckland → beide „ab 23:18").
         alert_msg = to_multi_location_onset_alert_message(
-            [(name, nc) for name, _loc, nc in entities],
-            tz=alert_tz, stand_at=resolved_stand_at,
+            list(entities), tz=alert_tz, stand_at=resolved_stand_at,
             cooldown_display=cooldown_display,
         )
         target_name = ", ".join(name for name, _loc, _nc in entities)

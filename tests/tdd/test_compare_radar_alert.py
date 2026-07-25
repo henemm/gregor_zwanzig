@@ -29,6 +29,7 @@ SPEC: docs/specs/modules/issue_1041b_compare_radar_alert_service.md
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -160,6 +161,17 @@ def _fmt_window(start: datetime, end: datetime, tz, *, offset_minutes: int = 0) 
     return out
 
 
+def _onset_time_for(body: str, location_name: str) -> str | None:
+    """`ab HH:MM` aus der Bündel-Zeile GENAU dieses Ortes (Plain-Body,
+    `render.py::_render_email_onset_multi` — je Ort eine Zeile)."""
+    for line in body.splitlines():
+        if location_name in line:
+            m = re.search(r"ab (\d{2}:\d{2})", line)
+            if m:
+                return m.group(1)
+    return None
+
+
 def _quiet_hours_window_now(buffer_minutes: int = 3) -> tuple[str, str]:
     """`(quiet_from, quiet_to)` als `HH:MM`-Strings in Europe/Vienna-Lokalzeit,
     die den aktuellen Zeitpunkt umschließen — garantiert, dass der Check-Lauf
@@ -286,6 +298,81 @@ def test_bundled_alert_shows_location_local_time_not_utc():
         assert not any(t in body for t in utc_stand - local_stand), (
             f"Stand-Zeit steht in UTC {sorted(utc_stand)} statt in Ortszeit "
             f"{sorted(local_stand)}: {body!r}"
+        )
+    finally:
+        _clean_user(uid)
+
+
+def test_bundled_alert_uses_each_locations_own_timezone():
+    """Regression (Issue #1385): Lösen MEHRERE Orte EINES Presets gleichzeitig
+    aus und liegen sie in VERSCHIEDENEN Zeitzonen, trägt jeder Ort in der
+    gebündelten Mail seine EIGENE Ortszeit im „ab HH:MM" — nicht die des
+    ersten Ortes.
+
+    Zermatt (46.0207/7.7491 → Europe/Zurich) und Auckland (-36.85/174.76 →
+    Pacific/Auckland) liegen ~10–12 h auseinander. Beide bekommen denselben
+    Onset (8 Min), damit ein Zeitunterschied AUSSCHLIESSLICH aus der Zeitzone
+    stammen kann. Zeit-Nachrechnung wie im Bestandstest
+    `test_bundled_alert_shows_location_local_time_not_utc` (`datetime.now()`
+    in `project.py` ist nicht einfrierbar).
+    """
+    from services.compare_radar_alert import CompareRadarAlertService
+    from services.radar_service import RadarNowcastService
+    from utils.timezone import tz_for_coords
+
+    zermatt = (46.0207, 7.7491)
+    auckland = (-36.85, 174.76)
+    onset_minutes = 8
+    uid = "tdd-1385-multitz"
+    _clean_user(uid)
+    try:
+        save_location(_location("loc-zrh", "Zermatt-MTZ", *zermatt), user_id=uid)
+        save_location(_location("loc-akl", "Auckland-MTZ", *auckland), user_id=uid)
+        _write_preset_file(
+            uid,
+            [_radar_preset("cp-1385", ["loc-zrh", "loc-akl"], ["gregor-test@henemm.com"])],
+        )
+
+        frame_source = _CoordFrameSource({
+            zermatt: _wet_frame(onset_minutes),
+            auckland: _wet_frame(onset_minutes),
+        })
+        mail_calls: list[tuple[str, str]] = []
+        service = CompareRadarAlertService(
+            settings=_settings_email_capable_dummy(), user_id=uid,
+            radar_service=RadarNowcastService(frame_source=frame_source),
+            mail_sink=lambda subject, body: mail_calls.append((subject, body)),
+        )
+
+        before = datetime.now(timezone.utc)
+        sent = service.check_all_compare_presets()
+        after = datetime.now(timezone.utc)
+
+        assert sent == 1, f"Beide Orte müssen EINEN Bündel-Alarm auslösen: {sent}"
+        _subject, body = mail_calls[0]
+
+        tz_zrh, tz_akl = tz_for_coords(*zermatt), tz_for_coords(*auckland)
+        # Sanity: ohne echten Zeitzonen-Unterschied wäre der Test aussagelos.
+        assert (before.astimezone(tz_zrh).utcoffset()
+                != before.astimezone(tz_akl).utcoffset())
+
+        expect_zrh = _fmt_window(before, after, tz_zrh, offset_minutes=onset_minutes)
+        expect_akl = _fmt_window(before, after, tz_akl, offset_minutes=onset_minutes)
+
+        time_zrh = _onset_time_for(body, "Zermatt-MTZ")
+        time_akl = _onset_time_for(body, "Auckland-MTZ")
+        assert time_zrh is not None, f"Onset-Zeile für Zermatt fehlt: {body!r}"
+        assert time_akl is not None, f"Onset-Zeile für Auckland fehlt: {body!r}"
+        assert time_zrh in expect_zrh, (
+            f"Zermatt zeigt {time_zrh!r} statt Ortszeit {sorted(expect_zrh)}: {body!r}"
+        )
+        assert time_akl in expect_akl, (
+            f"Auckland zeigt {time_akl!r} statt eigener Ortszeit "
+            f"{sorted(expect_akl)} — vermutlich die Zeit des ERSTEN Ortes: {body!r}"
+        )
+        assert time_zrh != time_akl, (
+            f"Beide Orte tragen dieselbe Uhrzeit {time_zrh!r}, obwohl sie in "
+            f"verschiedenen Zeitzonen liegen: {body!r}"
         )
     finally:
         _clean_user(uid)

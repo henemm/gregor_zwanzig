@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from app.metric_catalog import _METRICS, get_cmp
-from utils.timezone import local_fmt
+from utils.timezone import local_fmt, tz_for_coords
 from .model import AlertEvent, AlertMessage, OnsetEvent
 
 
@@ -108,16 +108,48 @@ def to_multi_point_alert_message(groups, *, tz, stand_at) -> AlertMessage:
     )
 
 
+def _tz_for_location(loc, fallback_tz):
+    """Zeitzone DIESES Ortes aus seinen Koordinaten (Issue #1385).
+
+    Guard: kein Ortsobjekt oder fehlende/`None`-Koordinaten → `fallback_tz`
+    (das Bündel-`tz`), niemals ein Absturz im Versandpfad.
+    """
+    lat = getattr(loc, "lat", None)
+    lon = getattr(loc, "lon", None)
+    if lat is None or lon is None:
+        return fallback_tz
+    try:
+        return tz_for_coords(lat, lon)
+    except Exception:
+        return fallback_tz
+
+
 def to_multi_location_onset_alert_message(
     groups, *, tz, stand_at, cooldown_display: str | None = None
 ) -> AlertMessage:
     """Radar-Onset-Ergebnisse MEHRERER gleichzeitig auslösender Vergleichs-Orte
     (Issue #1041 Slice 1a) → EINE kanonische AlertMessage.
 
-    `groups`: `list[(location_name: str, NowcastResult)]`. Je Gruppe ein
+    `groups`: `list[(location_name: str, location, NowcastResult)]` — `location`
+    trägt `.lat`/`.lon` und damit die ZEITZONE DIESES Ortes. Die kurze Form
+    `(location_name, NowcastResult)` bleibt zulässig (Aufrufer ohne Ortsobjekt);
+    dann gilt für diesen Ort das übergebene Bündel-`tz`. Je Gruppe ein
     `OnsetEvent` (`km_from=km_to=0.0`, kein Etappen-km, Muster
     `to_multi_point_alert_message:98`). Bei MEHR ALS EINER Gruppe trägt jedes
     Event das `location_label` SEINER Gruppe (Renderer-Multi-Zweig).
+
+    Issue #1385: `onset_time` („ab HH:MM") wird JE ORT in dessen eigener
+    Ortszeit formatiert (`tz_for_coords(loc.lat, loc.lon)`). Vorher galt das
+    eine Bündel-`tz` (= Zeitzone des ERSTEN Ortes) für alle Orte — bei Orten in
+    verschiedenen Zeitzonen war die Angabe für jeden weiteren Ort schlicht
+    falsch. Fehlen Koordinaten (kein Ortsobjekt, `lat`/`lon` `None`), gilt für
+    diesen Ort weiterhin das Bündel-`tz` (Guard statt Absturz).
+
+    `tz` bleibt: (a) Zeitzone für `stand_at`, (b) Fallback ohne Koordinaten.
+    ABSICHTLICH NICHT je Ort aufgelöst wird `stand_at` — es ist eine Aussage
+    über die NACHRICHT („Stand: heute HH:MM", Fußzeile, genau EINMAL pro Mail),
+    nicht über einen Ort; es bleibt in der Zeitzone des ersten Ortes. Das ist
+    kein Bug (Issue #1385, bewusste Entscheidung).
 
     INVARIANTE: bei GENAU einer Gruppe bleibt `location_label=None` — fällt
     damit auf den unveränderten Single-Onset-Renderpfad zurück (AC-5).
@@ -139,7 +171,12 @@ def to_multi_location_onset_alert_message(
         raise ValueError(
             "to_multi_location_onset_alert_message benötigt mindestens einen Ort"
         )
-    valid_groups = [(name, nc) for name, nc in groups if nc.onset_minutes is not None]
+    normalized = [
+        (g[0], g[1], g[2]) if len(g) == 3 else (g[0], None, g[1]) for g in groups
+    ]
+    valid_groups = [
+        (name, loc, nc) for name, loc, nc in normalized if nc.onset_minutes is not None
+    ]
     if not valid_groups:
         raise ValueError(
             "to_multi_location_onset_alert_message benötigt mindestens einen Ort "
@@ -148,8 +185,10 @@ def to_multi_location_onset_alert_message(
     multi = len(valid_groups) > 1
     now = datetime.now(timezone.utc)
     events: list[OnsetEvent] = []
-    for location_name, nc in valid_groups:
-        onset_time = local_fmt(now + timedelta(minutes=nc.onset_minutes), tz)
+    for location_name, loc, nc in valid_groups:
+        onset_time = local_fmt(
+            now + timedelta(minutes=nc.onset_minutes), _tz_for_location(loc, tz),
+        )
         events.append(OnsetEvent(
             onset_minutes=nc.onset_minutes, onset_time=onset_time,
             km_from=0.0, km_to=0.0, is_convective=nc.is_convective,
@@ -157,7 +196,8 @@ def to_multi_location_onset_alert_message(
             location_label=location_name if multi else None,
         ))
     trip_short = (
-        ", ".join(name for name, _nc in valid_groups) if multi else valid_groups[0][0]
+        ", ".join(name for name, _loc, _nc in valid_groups)
+        if multi else valid_groups[0][0]
     )
     return AlertMessage(
         trip_short=trip_short, stand_at=stand_at, events=tuple(events),
