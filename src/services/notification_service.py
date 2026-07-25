@@ -338,6 +338,11 @@ class NotificationService:
                     telegram_fully_sent = False
             else:
                 bubbles = report.telegram_bubbles or [report.email_plain]
+                # Issue #1370: KEIN Abbruch der Serie mehr. Ein endgueltig
+                # gescheiterter Teil darf die restlichen Teile nicht mehr
+                # verschlucken — der Nutzer bekam sonst ein halbes Briefing
+                # ohne jede Meldung.
+                failed_bubbles = 0
                 for i, bubble_text in enumerate(bubbles):
                     markup = report.telegram_actions_markup if i == len(bubbles) - 1 else None
                     try:
@@ -353,8 +358,12 @@ class NotificationService:
                             f"Telegram bubble {i + 1}/{len(bubbles)} send failed for {request.trip.name}: {e}"
                         )
                         telegram_fully_sent = False
-                        break
+                        failed_bubbles += 1
+                if failed_bubbles:
+                    self._send_telegram_incomplete_hint(report, failed_bubbles)
                 if telegram_fully_sent:
+                    # Nur bei vollstaendiger Zustellung — das Briefing-Log darf
+                    # nicht behaupten, Telegram sei komplett zugestellt worden.
                     sent_channels.append("telegram")
 
         # WEATHER-04: Service-E-Mail bei SMS-only + Fehler
@@ -367,6 +376,24 @@ class NotificationService:
             telegram_fully_sent=telegram_fully_sent,
             no_channel_configured=no_channel_configured,
         )
+
+    def _send_telegram_incomplete_hint(self, report, missing_count: int) -> None:
+        """Sichtbarer „Briefing unvollstaendig"-Hinweis (Issue #1370).
+
+        fail-soft: scheitert auch dieser Hinweis, wird das nur protokolliert —
+        er darf den Versandlauf nie mit einer Ausnahme abbrechen.
+        """
+        from output.renderers.narrow import render_telegram_incomplete_hint
+
+        try:
+            TelegramOutput(self._settings).send(
+                subject=report.email_subject,
+                body=render_telegram_incomplete_hint(missing_count),
+                parse_mode="HTML",
+                suppress_subject_line=True,
+            )
+        except Exception as e:  # noqa: BLE001 — fail-soft, siehe Docstring
+            logger.error(f"Telegram incomplete-briefing hint failed: {e}")
 
     def send_no_data_hint(
         self,

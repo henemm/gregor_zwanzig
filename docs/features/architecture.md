@@ -59,7 +59,17 @@ Die folgenden Komponenten leben im Python-Core:
 
 3. **Channels**
    - **SMTP-Mailer** (`src/output/channels/email.py`) – E-Mail-Versand
-   - **Telegram-Bot** (`src/output/channels/telegram.py`) – Telegram-Versand
+   - **Telegram-Bot** (`src/output/channels/telegram.py`) – Telegram-Versand.
+     Alle Schreibzugriffe laufen über einen einzigen privaten Transportweg (`_post`)
+     mit **Drossel-Bremse** und **429-Behandlung** (Issue #1370): gleitendes Fenster
+     von `telegram_rate_limit_window_seconds` (60) pro Chat mit Obergrenze
+     `telegram_rate_limit_max_per_window` (18) — unterhalb der Grenze wird **nicht**
+     gewartet, reale Briefings (5–13 Nachrichten) bleiben unverzögert. Bei HTTP 429
+     wird `parameters.retry_after` aus dem JSON-Rumpf gelesen, auf
+     `telegram_retry_after_cap_seconds` (45) gedeckelt und **genau einmal** erneut
+     gesendet. Die Egress-Guards (#1288/#1363) bleiben bewusst **vor** `_post` in
+     den öffentlichen Methoden; `_post` wertet keine Statuscodes aus.
+     Spec: `docs/specs/modules/telegram_send_pacing.md`.
    - **SMS** (`src/output/channels/sms.py`) – SMS-Versand via seven.io
 
 ### Datenfluss (Produktiv)

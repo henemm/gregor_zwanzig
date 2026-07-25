@@ -454,6 +454,25 @@ def _outlook_lines(multi_day_trend: list[dict]) -> list[str]:
     return lines
 
 
+def render_telegram_incomplete_hint(missing_count: int) -> str:
+    """Hinweis „Briefing unvollstaendig" (Issue #1370). Pure function.
+
+    Bauart nach dem Vorbild des Nicht-abrufbar-Hinweises (#1348,
+    ``email/unavailable_hint.py``): kurz, hochkontrastig eingeleitet, in
+    Klartext-Deutsch fuer einen Wanderer ohne technisches Vorwissen — kein
+    Fachbegriff, keine Statuscodes. Nennt die Anzahl der fehlenden Teile,
+    damit der Nutzer weiss, wie viel ihm entgeht.
+    """
+    count = max(1, int(missing_count))
+    teile = "Teil" if count == 1 else "Teile"
+    ist_sind = "ist" if count == 1 else "sind"
+    return (
+        f"⚠️ Briefing unvollständig — {count} {teile} des Briefings "
+        f"{ist_sind} nicht angekommen. Bitte fordere das Briefing gleich "
+        "noch einmal an."
+    )
+
+
 def render_telegram_bubbles(
     *,
     segments: list[SegmentWeatherData],

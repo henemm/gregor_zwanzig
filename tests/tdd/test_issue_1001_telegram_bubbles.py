@@ -347,13 +347,18 @@ class TestAC5ReportCarriesBubbleFields:
 @pytest.mark.skipif(not _LIVE_CREDS_AVAILABLE, reason=_LIVE_SKIP_REASON)
 class TestAC5LiveAbortAfterFirstFailure:
     def test_break_after_first_failed_bubble_no_partial_retry(self):
-        """AC-5: Sobald render_telegram_bubbles() existiert, muss ein
-        Fehlschlag beim Senden einer Bubble den Rest der Sequenz stoppen.
-        Diese Testversion treibt render_telegram_bubbles() echt und simuliert
-        den in der Spec dokumentierten Scheduler-Loop 1:1 gegen echte
-        TelegramOutput.send()-Aufrufe (echter Erfolg + echter Fehlschlag via
-        kaputtem Bot-Token) — bis render_telegram_bubbles() existiert,
-        schlägt bereits der Aufbau (ImportError) fehl."""
+        """Kanal-Ebene: ein Fehlschlag beim Senden einer Bubble muss als
+        OutputError sichtbar werden — echter Erfolg (gültiger Bot-Token) und
+        echter Fehlschlag (kaputter Bot-Token) gegen render_telegram_bubbles()
+        und echte TelegramOutput.send()-Aufrufe.
+
+        Die Abbruch-Schleife steht IN DIESEM TEST (er treibt sie selbst) und
+        beschreibt NICHT mehr das Produktverhalten: seit Issue #1370 läuft die
+        Serie im echten Versandpfad (NotificationService) nach einem
+        endgültigen Fehlschlag weiter und schickt am Ende einen
+        „Briefing unvollständig"-Hinweis. Geprüft wird hier ausschließlich,
+        dass der Kanal den Fehlschlag überhaupt meldet, statt ihn zu
+        verschlucken."""
         from app.config import Settings
         from output.renderers.narrow import render_telegram_bubbles
         from output.channels.base import OutputError
@@ -840,11 +845,15 @@ def _f003_trip_and_log():
 @pytest.mark.skipif(not _LIVE_CREDS_AVAILABLE, reason=_LIVE_SKIP_REASON)
 class TestF003BriefingLogOmitsTelegramOnLoopAbort:
     def test_broken_token_aborts_send_loop_and_log_omits_telegram(self, _f003_trip_and_log):
-        """F003-Regression: Ein echter Sendefehlschlag (ungültiger Bot-Token)
-        bricht die Bubble-Schleife bereits bei der ersten Nachricht ab (AC-5)
-        — das Briefing-Log darf 'telegram' dann NICHT als gesendeten Kanal
-        verzeichnen (vorher: unbedingtes Anhängen, unabhängig vom
-        Schleifenerfolg)."""
+        """F003-Regression: Bei einem echten Sendefehlschlag (ungültiger
+        Bot-Token) darf das Briefing-Log 'telegram' NICHT als gesendeten Kanal
+        verzeichnen (vorher: unbedingtes Anhängen, unabhängig vom Erfolg).
+
+        Seit Issue #1370 bricht die Bubble-Schleife nicht mehr beim ersten
+        Fehlschlag ab, sondern versucht alle Teile und meldet dem Nutzer am
+        Ende, dass das Briefing unvollständig ist. Am Log-Vertrag ändert das
+        nichts: 'telegram' erscheint nur bei VOLLSTÄNDIGER Zustellung — hier
+        scheitert jede Bubble, also steht der Kanal nicht im Log."""
         import json as _json
 
         from app.config import Settings

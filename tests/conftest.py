@@ -216,3 +216,17 @@ def _reset_shared_radar_cache():
     reset_shared_radar_cache_for_tests()
     yield
     reset_shared_radar_cache_for_tests()
+
+
+@pytest.fixture(autouse=True)
+def _reset_telegram_rate_limit():
+    """Issue #1370: die Telegram-Sende-Drossel fuehrt ihre Zeitstempel je Chat
+    prozessweit auf Klassenebene (fuer JEDE Bubble wird eine frische
+    ``TelegramOutput``-Instanz gebaut — ein Instanz-Attribut waere wirkungslos).
+    Ohne Reset zwischen Testfaellen summieren sich die Sendungen vieler Tests,
+    die dieselbe Chat-ID verwenden, im 60-Sekunden-Fenster auf und ein spaeterer
+    Test laeuft in eine echte Wartezeit. Analog ``_reset_shared_radar_cache``."""
+    from output.channels.telegram import reset_telegram_rate_limit_for_tests
+    reset_telegram_rate_limit_for_tests()
+    yield
+    reset_telegram_rate_limit_for_tests()

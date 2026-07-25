@@ -180,19 +180,87 @@ class TestComputeHasGapRealSendPath:
         assert "⚡ kein" in telegram, f"Telegram:\n{telegram}"
 
 
+# Einzige erlaubte Verbindung vom Zeitplaner zur Darstellungsschicht.
+# Begruendung: Epic #1301 B4 hat den Zeilenbau der Ausblick-Tabelle in einen
+# GETEILTEN Baustein extrahiert, damit Trip und Ortsvergleich dieselbe Logik
+# benutzen (Trip/Compare-Teilungs-Invariante, CLAUDE.md). Ein eigener
+# Zeilenbau im Zeitplaner waere die Duplikat-Variante, die genau diese
+# Invariante verletzt. Die Ausnahme ist deshalb Absicht, keine Schlamperei —
+# und sie gilt ZEILENGENAU fuer diesen einen Import, nicht pauschal fuer
+# "irgendwas aus output".
+_ALLOWED_SHARED_IMPORT = "from output.renderers.email.outlook import build_outlook_row"
+
+# Alles, was auf einen Renderer- oder Transport-Zugriff im Zeitplaner hindeutet.
+_FORBIDDEN_OUTPUT_TOKENS = (
+    "from formatters",
+    "from output",
+    "from outputs",
+    "import output",
+    "EmailOutput",
+    "SMSOutput",
+    "TelegramOutput",
+    "TripReportFormatter",
+)
+
+
+def _forbidden_output_references(text: str) -> list[str]:
+    """Liefert alle verbotenen Renderer-/Transport-Bezuege in ``text``.
+
+    Die eine erlaubte Ausnahme (:data:`_ALLOWED_SHARED_IMPORT`) wird
+    ZEILENGENAU herausgenommen — die Zeile muss exakt so lauten. Jede andere
+    Zeile bleibt sichtbar, auch wenn sie aus demselben Modul importiert oder
+    den erlaubten Import um weitere Namen erweitert.
+    """
+    remaining = "\n".join(
+        line for line in text.splitlines()
+        if line.strip() != _ALLOWED_SHARED_IMPORT
+    )
+    return [token for token in _FORBIDDEN_OUTPUT_TOKENS if token in remaining]
+
+
 def test_scheduler_has_no_output_imports():
-    """Regression: trip_report_scheduler.py importiert keine Renderer/Transporte."""
+    """Regression: trip_report_scheduler.py importiert keine Renderer/Transporte —
+    ausser dem bewusst geteilten Baustein ``build_outlook_row`` (Epic #1301 B4)."""
     import src.services.trip_report_scheduler as mod
-    source = mod.__file__
-    text = open(source).read()
-    forbidden = [
-        "from formatters",
-        "from output",
-        "from outputs",
-        "EmailOutput",
-        "SMSOutput",
-        "TelegramOutput",
-        "TripReportFormatter",
-    ]
-    for token in forbidden:
-        assert token not in text, f"{token} darf in trip_report_scheduler.py nicht vorkommen"
+    with open(mod.__file__, encoding="utf-8") as fh:
+        text = fh.read()
+
+    assert _ALLOWED_SHARED_IMPORT in text, (
+        "Vorbedingung: Der geteilte Baustein wird nicht mehr importiert — "
+        "dann gehoert die Ausnahme geloescht statt gepflegt."
+    )
+    assert _forbidden_output_references(text) == []
+
+
+class TestSchedulerOutputGuardStaysVigilant:
+    """Beweist ohne Anfassen der Quelldatei, dass die Wache noch beisst:
+    die Ausnahme deckt genau eine Zeile ab, nicht die Schicht."""
+
+    _ALLOWED_LINE = f"                {_ALLOWED_SHARED_IMPORT}\n"
+
+    def test_allowed_shared_import_alone_passes(self):
+        assert _forbidden_output_references(self._ALLOWED_LINE) == []
+
+    def test_additional_renderer_import_is_caught(self):
+        text = self._ALLOWED_LINE + "from output.renderers.trip_report import TripReportFormatter\n"
+        assert _forbidden_output_references(text) == [
+            "from output", "TripReportFormatter",
+        ]
+
+    def test_additional_transport_import_is_caught(self):
+        text = self._ALLOWED_LINE + "from output.channels.email import EmailOutput\n"
+        assert "EmailOutput" in _forbidden_output_references(text)
+
+    def test_widened_import_from_same_module_is_caught(self):
+        """Die Ausnahme darf nicht als Einfallstor fuer weitere Namen aus
+        demselben Modul dienen."""
+        text = "from output.renderers.email.outlook import build_outlook_row, render_email\n"
+        assert "from output" in _forbidden_output_references(text)
+
+    def test_module_import_style_is_caught(self):
+        text = self._ALLOWED_LINE + "import output.channels.telegram as tg\n"
+        assert "import output" in _forbidden_output_references(text)
+
+    def test_legacy_formatters_package_is_caught(self):
+        text = self._ALLOWED_LINE + "from formatters.sms import SMSOutput\n"
+        assert _forbidden_output_references(text) == ["from formatters", "SMSOutput"]

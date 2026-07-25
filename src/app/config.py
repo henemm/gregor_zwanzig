@@ -170,6 +170,26 @@ class Settings(BaseSettings):
         description="Telegram Test-Bot-Token (env: GZ_TELEGRAM_TEST_BOT_TOKEN) — "
                     "Staging-Bot, nie der Produktiv-Bot",
     )
+    # Sende-Drossel (Issue #1370): gleitendes Zeitfenster je Chat. Telegram
+    # drosselt ab ~20 Nachrichten/Minute pro Chat mit HTTP 429. Die Obergrenze
+    # liegt bewusst UEBER dem real ueblichen Briefing-Umfang (5-13 Bubbles),
+    # damit der Normalfall ungebremst bleibt.
+    telegram_rate_limit_max_per_window: int = Field(
+        default=18,
+        description="Telegram: max. Schreibzugriffe je Chat und Zeitfenster "
+                    "(env: GZ_TELEGRAM_RATE_LIMIT_MAX_PER_WINDOW)",
+    )
+    telegram_rate_limit_window_seconds: float = Field(
+        default=60,
+        description="Telegram: Laenge des gleitenden Drossel-Fensters in Sekunden "
+                    "(env: GZ_TELEGRAM_RATE_LIMIT_WINDOW_SECONDS)",
+    )
+    telegram_retry_after_cap_seconds: float = Field(
+        default=45,
+        description="Telegram: Obergrenze fuer die aus einer 429-Antwort gelesene "
+                    "Wartezeit vor dem einen Wiederholversuch "
+                    "(env: GZ_TELEGRAM_RETRY_AFTER_CAP_SECONDS)",
+    )
 
     @model_validator(mode="after")
     def _resend_default_deny(self) -> "Settings":

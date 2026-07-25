@@ -2,6 +2,8 @@
 import html
 import logging
 import re
+import threading
+import time
 
 import httpx
 
@@ -12,6 +14,16 @@ logger = logging.getLogger(__name__)
 
 TELEGRAM_API_BASE = "https://api.telegram.org"
 MAX_MESSAGE_LENGTH = 4096
+
+# Issue #1370: Fallback-Wartezeit, wenn eine 429-Antwort keinen lesbaren
+# `parameters.retry_after` mitliefert. Wird ebenfalls gedeckelt.
+DEFAULT_RETRY_AFTER_SECONDS = 1.0
+# Kleinste Schlafdauer im Warteschleifen-Durchlauf — verhindert Busy-Waiting,
+# ohne den Normalfall (kein Warten) zu beruehren.
+_MIN_SLEEP_SECONDS = 0.005
+# Buchungsschluessel fuer Schreibzugriffe ohne Chat-Bezug (setMyCommands,
+# getMyCommands, answerCallbackQuery).
+_NO_CHAT_KEY = "_bot"
 
 # Telegram-Bot-API erlaubt in parse_mode=HTML eine begrenzte Menge an Tags.
 # Wir tracken nur Paare von öffnenden/schließenden Tags; self-closing Tags werden
@@ -122,6 +134,13 @@ class TelegramOutput:
     recent_message_ids: list[int] = []
     _RECENT_MESSAGE_IDS_MAX = 50
 
+    # Issue #1370 (Sende-Drossel): Zeitstempel der letzten Schreibzugriffe je
+    # chat_id, gleitendes Fenster. BEWUSST auf Klassenebene (prozessweit) —
+    # notification_service.py:344 baut fuer JEDE Bubble eine frische
+    # TelegramOutput-Instanz; ein Instanz-Attribut waere wirkungslos.
+    _rate_limit_lock = threading.Lock()
+    _rate_limit_stamps: dict[str, list[float]] = {}
+
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings if settings else Settings()
         self._timeout = 10
@@ -188,6 +207,102 @@ class TelegramOutput:
                 "Versand blockiert (Issue #1363).",
             )
 
+    def _reserve_send_slot(self, chat_key: str) -> None:
+        """Drossel-Bremse (Issue #1370): haelt die Schreibzugriffe je Chat unter
+        der Telegram-Grenze (~20/Minute). Gleitendes Fenster — liegen weniger
+        als ``telegram_rate_limit_max_per_window`` Zeitstempel im Fenster, wird
+        SOFORT gesendet (kein Warten im Normalfall). Sonst wird gewartet, bis
+        der aelteste Eintrag aus dem Fenster faellt.
+
+        Thread-Sicherheit: der Lock schuetzt ausschliesslich die Buchfuehrung;
+        geschlafen wird ausserhalb der kritischen Sektion, danach wird erneut
+        geprueft. Sonst blockierte ein wartender Chat alle anderen.
+        """
+        max_per_window = int(getattr(self._settings, "telegram_rate_limit_max_per_window", 18))
+        window = float(getattr(self._settings, "telegram_rate_limit_window_seconds", 60))
+        if max_per_window <= 0 or window <= 0:
+            return
+
+        while True:
+            with TelegramOutput._rate_limit_lock:
+                now = time.monotonic()
+                book = TelegramOutput._rate_limit_stamps
+                # Aufraeumen und Pruefen bleiben in EINER kritischen Sektion.
+                # Aufgeraeumt wird die GANZE Buchfuehrung, nicht nur der eigene
+                # Chat: sonst bliebe je jemals bedientem Chat ein Eintrag
+                # zurueck und das Dict waechst ueber die Prozesslaufzeit
+                # unbegrenzt (Gegenpruefungs-Befund F002). Die Fensterlaenge
+                # stammt aus der prozessweiten Konfiguration (GZ_-Env), ist also
+                # fuer alle Chats dieselbe.
+                for key in list(book):
+                    book[key] = [t for t in book[key] if now - t < window]
+                    if not book[key]:
+                        del book[key]
+                stamps = book.setdefault(chat_key, [])
+                if len(stamps) < max_per_window:
+                    stamps.append(now)
+                    return
+                wait = window - (now - stamps[0])
+            logger.info(
+                "Telegram-Drossel: warte %.2fs vor dem naechsten Schreibzugriff "
+                "(chat=%s, %d/%ds)", wait, chat_key, max_per_window, window,
+            )
+            time.sleep(max(wait, _MIN_SLEEP_SECONDS))
+
+    def _retry_after_seconds(self, response: httpx.Response) -> float:
+        """Wartezeit aus einer 429-Antwort (Issue #1370). Gelesen wird der
+        JSON-Rumpf (``parameters.retry_after``, Form belegt in
+        ``tests/tdd/_telegram_live_fixture.py``) — NICHT der HTTP-Header.
+        Gedeckelt auf ``telegram_retry_after_cap_seconds``, damit ein einzelner
+        Wiederholversuch das 120-s-Budget des Scheduler-Laufs nicht sprengt.
+        """
+        cap = float(getattr(self._settings, "telegram_retry_after_cap_seconds", 45))
+        seconds = DEFAULT_RETRY_AFTER_SECONDS
+        try:
+            seconds = float(response.json()["parameters"]["retry_after"])
+        except (ValueError, KeyError, TypeError):
+            pass
+        return max(0.0, min(seconds, cap))
+
+    def _post(self, url: str, payload: dict, *, chat_id=None) -> httpx.Response:
+        """Einziger Transportweg zur Bot-API (Issue #1370). Kapselt AUSSCHLIESSLICH
+        Drossel-Bremse -> POST -> genau EINE 429-Wiederholung und gibt die rohe
+        Antwort zurueck.
+
+        Bewusst KEINE Guards und KEINE Statuscode-Auswertung: die Egress-Guards
+        (#1288/#1363) bleiben in der jeweiligen oeffentlichen Methode VOR diesem
+        Aufruf stehen (``test_telegram_test_isolation.py`` sichert die
+        Reihenfolge ab), und ob ein Nicht-200 eine Ausnahme wirft, fail-soft ist
+        oder den 400-HTML-Fallback ausloest (ADR-0012), entscheidet weiterhin
+        der Aufrufer.
+
+        Args:
+            chat_id: Chat aus der jeweiligen Anfrage (Nutzlast bzw. Argument),
+                nicht aus ``self._settings`` — sonst liefe ``delete_message``
+                auf das falsche Chat-Konto.
+        """
+        chat_key = _NO_CHAT_KEY if chat_id is None else str(chat_id)
+        self._reserve_send_slot(chat_key)
+        response = httpx.post(url, json=payload, timeout=self._timeout)
+        if response.status_code != 429:
+            return response
+
+        wait = self._retry_after_seconds(response)
+        logger.warning(
+            "Telegram drosselt (HTTP 429, chat=%s) — warte %.2fs und sende "
+            "genau einmal erneut", chat_key, wait,
+        )
+        if wait > 0:
+            time.sleep(wait)
+        # BEWUSST keine zweite Slot-Reservierung: der beim ersten Versuch
+        # gebuchte Platz gilt fuer diese Nachricht weiter — Telegram hat sie ja
+        # gerade ABGELEHNT, sie zaehlt nicht als zugestellt. Sonst haengte an
+        # der gedeckelten Wartezeit die UNGEDECKELTE Wartezeit von
+        # `_reserve_send_slot` (bis zu einer vollen Fensterlaenge) dran, und
+        # zwar im Regelfall: gedrosselt wird typischerweise genau dann, wenn das
+        # eigene Fenster ohnehin an der Obergrenze steht.
+        return httpx.post(url, json=payload, timeout=self._timeout)
+
     def send(
         self, subject: str, body: str, reply_markup: dict | None = None,
         *, parse_mode: str | None = None, suppress_subject_line: bool = False,
@@ -231,7 +346,7 @@ class TelegramOutput:
             payload["parse_mode"] = parse_mode
 
         try:
-            response = httpx.post(url, json=payload, timeout=self._timeout)
+            response = self._post(url, payload, chat_id=chat_id)
             if response.status_code == 200 and _api_ok(response):
                 logger.info("Telegram message sent (subject=%r)", subject)
                 try:
@@ -286,7 +401,7 @@ class TelegramOutput:
         if reply_markup is not None:
             payload["reply_markup"] = reply_markup
 
-        response = httpx.post(url, json=payload, timeout=self._timeout)
+        response = self._post(url, payload, chat_id=chat_id)
         if response.status_code == 200 and _api_ok(response):
             logger.warning(
                 "Telegram 400-fallback (no parse_mode) delivered (subject=%r)", subject,
@@ -327,7 +442,7 @@ class TelegramOutput:
         payload: dict = {"chat_id": chat_id, "message_id": message_id}
 
         try:
-            response = httpx.post(url, json=payload, timeout=self._timeout)
+            response = self._post(url, payload, chat_id=chat_id)
             if response.status_code == 200 and _api_ok(response):
                 logger.info("Telegram deleteMessage ok (message_id=%r)", message_id)
                 # Issue #1007: recent_message_ids trackt NUR noch existierende
@@ -372,7 +487,7 @@ class TelegramOutput:
             payload["reply_markup"] = reply_markup
 
         try:
-            response = httpx.post(url, json=payload, timeout=self._timeout)
+            response = self._post(url, payload, chat_id=chat_id)
             if response.status_code != 200:
                 logger.warning(
                     "editMessageText returned status %d: %s",
@@ -395,7 +510,7 @@ class TelegramOutput:
             payload["text"] = text
 
         try:
-            response = httpx.post(url, json=payload, timeout=self._timeout)
+            response = self._post(url, payload)
             if response.status_code != 200:
                 logger.warning(
                     "answerCallbackQuery returned status %d: %s",
@@ -418,7 +533,7 @@ class TelegramOutput:
         payload = {"commands": commands if commands is not None else BOT_COMMANDS}
 
         try:
-            response = httpx.post(url, json=payload, timeout=self._timeout)
+            response = self._post(url, payload)
             if response.status_code != 200:
                 raise OutputError("telegram", f"setMyCommands returned status {response.status_code}")
             # Bot-API kann HTTP 200 mit ok:false liefern → als Fehler behandeln.
@@ -440,7 +555,7 @@ class TelegramOutput:
         url = f"{TELEGRAM_API_BASE}/bot{token}/getMyCommands"
 
         try:
-            response = httpx.post(url, json={}, timeout=self._timeout)
+            response = self._post(url, {})
             if response.status_code != 200:
                 raise OutputError("telegram", f"getMyCommands returned status {response.status_code}")
             try:
@@ -454,3 +569,16 @@ class TelegramOutput:
             raise OutputError("telegram", f"getMyCommands timed out after {self._timeout}s")
         except httpx.HTTPError as exc:
             raise OutputError("telegram", f"getMyCommands failed: {exc}") from exc
+
+
+def reset_telegram_rate_limit_for_tests() -> None:
+    """Leert die prozessweite Drossel-Buchfuehrung (Issue #1370).
+
+    Vorbild: ``services.radar_cache.reset_shared_radar_cache_for_tests`` — ein
+    Prozess-Singleton braucht einen expliziten Reset-Punkt, sonst schleppen
+    aufeinanderfolgende Testfaelle, die dieselbe Chat-ID verwenden, fremde
+    Zeitstempel mit und laufen in eine echte Wartezeit. KEIN Sonderpfad im
+    Sendeweg — die Grenzwerte bleiben ausschliesslich Konfiguration (AC-8).
+    """
+    with TelegramOutput._rate_limit_lock:
+        TelegramOutput._rate_limit_stamps.clear()
