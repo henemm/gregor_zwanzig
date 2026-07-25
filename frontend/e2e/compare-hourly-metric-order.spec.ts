@@ -98,6 +98,37 @@ async function createPreset(page: Page, name: string, locationIds: string[]): Pr
 	return body.id as string;
 }
 
+/**
+ * Vorbereitungs-Update AUSSERHALB der UI (z.B. um vor einem Test einen
+ * bestimmten Ausgangszustand zu setzen). Team-Lead-Fund: ein PUT mit NUR
+ * `display_config` wird vom Go-Handler mit HTTP 400 abgewiesen
+ * (`validateComparePreset`, compare_preset.go:109-138 — verlangt u.a. `name`,
+ * `schedule`, `forecast_hours`, `hour_from`/`hour_to`). Deshalb hier erst der
+ * aktuelle Preset-Stand per GET geholt und die volle Struktur zurückgesendet
+ * (display_config gemergt) — UND der Rückgabewert geprüft, damit ein
+ * fehlgeschlagenes Vorbereiten nicht als inhaltliches Test-Scheitern maskiert
+ * wird (genau das ist beim ursprünglichen rohen PUT passiert).
+ */
+async function updatePresetDisplayConfig(
+	page: Page,
+	id: string,
+	displayConfigPatch: Record<string, unknown>
+): Promise<void> {
+	const getRes = await page.request.get(`/api/compare/presets/${id}`);
+	expect(getRes.ok(), `Vorbereitung: GET Preset fehlgeschlagen: HTTP ${getRes.status()}`).toBeTruthy();
+	const preset = await getRes.json();
+	const putRes = await page.request.put(`/api/compare/presets/${id}`, {
+		data: {
+			...preset,
+			display_config: { ...(preset.display_config ?? {}), ...displayConfigPatch }
+		}
+	});
+	expect(
+		putRes.ok(),
+		`Vorbereitung: PUT fehlgeschlagen: HTTP ${putRes.status()} — ${await putRes.text()}`
+	).toBeTruthy();
+}
+
 /** Zeichnet jeden PUT auf diesen Vergleich auf (Speicher-Nachweis). */
 function collectPresetPuts(page: Page, id: string): Request[] {
 	const puts: Request[] = [];
@@ -273,9 +304,7 @@ test.describe('Issue #1361 Befund 4/5: Reihenfolge des Stundenverlaufs im Ortsve
 		const id = await createPreset(page, `E2E 1361 CutLine ${suffix}`, [locA, locB]);
 		// Alle 9 orderable Keys nachtragen (Preset startete mit START_ORDER = 3).
 		const allNine = ['temp_c', 'wind_chill_c', 'wind_kmh', 'gust_kmh', 'precip_mm', 'uv_index', 'thunder_level', 'pop_pct', 'visibility_m'];
-		await page.request.put(`/api/compare/presets/${id}`, {
-			data: { display_config: { hourly_metrics: allNine } }
-		});
+		await updatePresetDisplayConfig(page, id, { hourly_metrics: allNine });
 
 		const panel = await openHubMetricsTab(page, id);
 		await expect(hourlyReihenfolgeRows(panel)).toHaveCount(allNine.length, { timeout: 10_000 });
@@ -307,8 +336,22 @@ test.describe('Issue #1361 Befund 4/5: Reihenfolge des Stundenverlaufs im Ortsve
 		page
 	}) => {
 		const suffix = Date.now();
-		const locA = await createLocation(page, `E2E 1361 New A ${suffix}`, 47.5, 11.5);
-		const locB = await createLocation(page, `E2E 1361 New B ${suffix}`, 47.6, 11.6);
+		// Test-Bug (Team-Lead-Fund): `createLocation()` liefert nur die ID
+		// (Promise<string>) — für die Orte-Bibliothek wird hier aber der
+		// ANZEIGENAME zum Anklicken gebraucht. Deshalb direkt `createTestLocation`
+		// (liefert {id, name}), analog compare-layout-tab-dissolution.spec.ts AC-6.
+		const locA = await createTestLocation(page.request, {
+			name: `E2E 1361 New A ${suffix}`,
+			lat: 47.5,
+			lon: 11.5
+		});
+		createdLocationIds.push(locA.id);
+		const locB = await createTestLocation(page.request, {
+			name: `E2E 1361 New B ${suffix}`,
+			lat: 47.6,
+			lon: 11.6
+		});
+		createdLocationIds.push(locB.id);
 
 		await page.goto('/compare/new');
 		await page.waitForLoadState('networkidle');
@@ -327,9 +370,14 @@ test.describe('Issue #1361 Befund 4/5: Reihenfolge des Stundenverlaufs im Ortsve
 			await lib.getByText(n, { exact: true }).click();
 		}
 
+		// Testfehler (Team-Lead-Fund, zweite Runde): `compare-detail-panel-
+		// wetter-metriken` ist ein HUB-Testid (CompareTabs.svelte) — die
+		// Anlege-Seite (CompareNewEditor.svelte) hat keinen solchen Panel-
+		// Wrapper, sie rendert WeatherMetricsTab direkt im `metriken`-Tab-
+		// Zweig. Analog compare-layout-tab-dissolution.spec.ts AC-6: direkt
+		// auf der Seite scopen, nicht über einen nicht existierenden Panel-Testid.
 		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').first().click();
-		const panel = page.locator('[data-testid="compare-detail-panel-wetter-metriken"]:visible').first();
-		const hourly = panel.locator('[data-testid="weather-metrics-stundenverlauf"]:visible').first();
+		const hourly = page.locator('[data-testid="weather-metrics-stundenverlauf"]:visible').first();
 		await expect(hourly).toBeVisible({ timeout: 10_000 });
 
 		// Default-Auswahl der Anlege-Seite ist DEFAULT_HOURLY_METRIC_KEYS (9 ohne
