@@ -88,18 +88,48 @@ describe('C2 AC-2: flushPendingLayoutSave — geänderter Snapshot → PUT-Paylo
 		assert.equal(payload!.body.hourly_enabled, false);
 	});
 
-	test('identischer Snapshot (auch bei umsortiertem hourlyMetricKeys-Array) → null (No-Op-Guard)', () => {
-		// GIVEN: current und before enthalten dieselben Keys, nur andere Reihenfolge
+	// Issue #1361 (S1-Rest von Epic #1372, Adversary-Fund BROKEN): dieser Test
+	// verlangte bis #1299/C2 ausdruecklich, dass eine reine Umsortierung als
+	// "keine Aenderung" gilt (sortierter Vergleich in flushPendingLayoutSave).
+	// Das war richtig, SOLANGE die Reihenfolge bedeutungslos war. Seit #1335
+	// Scheibe 1 folgt der Renderer (_visible_hour_metrics, compare_html.py:
+	// 610-623) exakt der gespeicherten Reihenfolge — #1361 fuehrt eine
+	// ziehbare Reihenfolge-Liste ein, die #1299-Altregel wuerde eine reine
+	// Ziehgeste STILL verwerfen (kein PUT, aber "gespeichert" angezeigt). Die
+	// Aussage "identischer Snapshot -> null" bleibt richtig (s. eigener Test
+	// unten); falsch war nur die Gleichsetzung "umsortiert = identisch".
+	test('Issue #1361: umsortierter Snapshot (gleiche Menge, neue Reihenfolge) → PUT mit der neuen Reihenfolge (loest die #1299-No-Op-Regel ab)', () => {
+		// GIVEN: current und before enthalten dieselben Keys, nur in anderer Reihenfolge
 		// WHEN: flushPendingLayoutSave aufgerufen wird
-		// THEN: kein PUT ausgeloest (null) — Diff-Waechter normalisiert per sort()
-		// RED heute: Import schlaegt fehl.
+		// THEN: die Reihenfolge ist bedeutungstragend -> ein PUT mit der NEUEN
+		// Reihenfolge muss ausgeloest werden, kein No-Op mehr.
 		const preset = makePresetWithFullDisplayConfig();
 		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true };
 		const current: LayoutSnapshot = { hourlyMetricKeys: ['wind_kmh', 'temp_c'], hourlyEnabled: true };
 
 		const payload = flushPendingLayoutSave(preset, current, before);
 
-		assert.equal(payload, null, 'identischer (nur umsortierter) Snapshot muss No-Op sein');
+		assert.ok(payload, 'Issue #1361: eine reine Ziehgeste (Umsortierung) MUSS einen PUT ausloesen, nicht null');
+		const displayConfig = payload!.body.display_config as Record<string, unknown>;
+		assert.deepEqual(
+			displayConfig.hourly_metrics,
+			['wind_kmh', 'temp_c'],
+			'der PUT muss die NEUE (gezogene) Reihenfolge tragen, nicht die alte'
+		);
+	});
+
+	test('wirklich identischer Snapshot (gleiche Reihenfolge, gleiche Werte) → null (No-Op-Guard bleibt bestehen)', () => {
+		// GIVEN: current und before sind bitgleich (auch in der Reihenfolge)
+		// WHEN: flushPendingLayoutSave aufgerufen wird
+		// THEN: weiterhin null — die #1299-Regel bleibt fuer ECHTE Identitaet
+		// richtig, nur "umsortiert" zaehlt seit #1361 nicht mehr als identisch.
+		const preset = makePresetWithFullDisplayConfig();
+		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true };
+		const current: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true };
+
+		const payload = flushPendingLayoutSave(preset, current, before);
+
+		assert.equal(payload, null, 'bitgleicher Snapshot (auch Reihenfolge gleich) muss weiterhin No-Op sein');
 	});
 });
 

@@ -1263,11 +1263,15 @@
 						     DIREKT (wie im Trip), statt sich auf die Wrapper-Ereignisse
 						     oben zu verlassen. Nach einer Ziehgeste unterdruecken Browser
 						     das nachfolgende `click` haeufig — die neue Reihenfolge waere
-						     dann nie gespeichert (Kontext-Doku § Risiko 5). -->
+						     dann nie gespeichert (Kontext-Doku § Risiko 5). Issue #1361
+						     Befund 4: `onHourlyCommit={handleLayoutCommit}` loest dasselbe
+						     Problem fuer die neue Stundenverlauf-Reihenfolge (dieselbe
+						     Ziehgeste, anderer Speicherpfad/Commit-Funktion). -->
 						<WeatherMetricsTab
 							context="vergleich"
 							wiz={wizardState}
 							onCompareCommit={handleWetterMetrikenCommit}
+							onHourlyCommit={handleLayoutCommit}
 						/>
 					</div>
 				</div>

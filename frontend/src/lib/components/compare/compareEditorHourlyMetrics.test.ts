@@ -17,7 +17,9 @@ import { buildComparePresetSavePayload } from './compareEditorSave.ts';
 import {
 	ALL_HOURLY_METRICS,
 	DEFAULT_HOURLY_METRIC_KEYS,
-	applyHourlyMetricToggle
+	applyHourlyMetricToggle,
+	orderableHourlyMetricKeys,
+	applyHourlyReorder
 } from './compareHourlyMetricDefs.ts';
 import type { ComparePreset } from '../../types.ts';
 
@@ -95,6 +97,65 @@ describe('applyHourlyMetricToggle — kein stiller Windrichtungs-Merge (Issue #1
 		const withWindDir = applyHourlyMetricToggle([], 'wind_dir_deg', true);
 		const withoutWindDir = applyHourlyMetricToggle(withWindDir, 'wind_dir_deg', false);
 		assert.ok(!withoutWindDir.includes('wind_dir_deg'));
+	});
+});
+
+describe('orderableHourlyMetricKeys — Merge-only Metriken raus aus der Reihenfolge-Liste (Issue #1361 Befund 4/5)', () => {
+	test('wind_dir_deg wird aus einer Auswahl herausgefiltert', () => {
+		const result = orderableHourlyMetricKeys(['temp_c', 'wind_dir_deg', 'wind_kmh']);
+		assert.deepEqual(result, ['temp_c', 'wind_kmh']);
+	});
+
+	test('Reihenfolge der verbleibenden Keys bleibt erhalten', () => {
+		const result = orderableHourlyMetricKeys(['visibility_m', 'temp_c', 'wind_dir_deg', 'uv_index']);
+		assert.deepEqual(result, ['visibility_m', 'temp_c', 'uv_index']);
+	});
+
+	test('leere Auswahl bleibt leer', () => {
+		assert.deepEqual(orderableHourlyMetricKeys([]), []);
+	});
+
+	test('Auswahl ohne wind_dir_deg bleibt unveraendert', () => {
+		const result = orderableHourlyMetricKeys(['temp_c', 'wind_kmh']);
+		assert.deepEqual(result, ['temp_c', 'wind_kmh']);
+	});
+});
+
+describe('applyHourlyReorder — Ziehgeste baut die vollstaendige Liste neu (Issue #1361 Befund 4)', () => {
+	test('ohne Merge-only-Metrik: neue Reihenfolge wird 1:1 uebernommen', () => {
+		const result = applyHourlyReorder(['temp_c', 'wind_kmh', 'uv_index'], ['uv_index', 'temp_c', 'wind_kmh']);
+		assert.deepEqual(result, ['uv_index', 'temp_c', 'wind_kmh']);
+	});
+
+	test('aktive wind_dir_deg bleibt erhalten und wandert ans Ende', () => {
+		const materialized = ['temp_c', 'wind_dir_deg', 'wind_kmh'];
+		// Ziehgeste betrifft nur die orderable Teilmenge (ohne wind_dir_deg).
+		const newOrder = orderableHourlyMetricKeys(materialized).reverse();
+		const result = applyHourlyReorder(materialized, newOrder);
+		assert.deepEqual(result, ['wind_kmh', 'temp_c', 'wind_dir_deg']);
+	});
+
+	test('inaktive wind_dir_deg (nicht im Bestand) taucht auch danach nicht auf', () => {
+		const result = applyHourlyReorder(['temp_c', 'wind_kmh'], ['wind_kmh', 'temp_c']);
+		assert.deepEqual(result, ['wind_kmh', 'temp_c']);
+		assert.ok(!result.includes('wind_dir_deg'));
+	});
+
+	test('Round-Trip: das Ergebnis landet unveraendert im Save-Payload (hourly_metrics)', () => {
+		const materialized = ['temp_c', 'wind_dir_deg', 'wind_kmh', 'uv_index'];
+		const reordered = applyHourlyReorder(materialized, ['uv_index', 'wind_kmh', 'temp_c']);
+		const { body } = buildComparePresetSavePayload(makePreset(), {
+			name: 'Hourly Metrics Test',
+			activityProfile: 'wintersport',
+			pickedIds: ['loc-a', 'loc-b'],
+			region: 'Hochkönig',
+			idealRanges: {},
+			hourlyMetricKeys: reordered
+		});
+		assert.deepEqual(
+			(body.display_config as Record<string, unknown>).hourly_metrics,
+			['uv_index', 'wind_kmh', 'temp_c', 'wind_dir_deg']
+		);
 	});
 });
 

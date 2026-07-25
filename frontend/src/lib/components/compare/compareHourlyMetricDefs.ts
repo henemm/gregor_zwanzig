@@ -71,3 +71,32 @@ export function applyHourlyMetricToggle(
 	}
 	return materialized;
 }
+
+/**
+ * Issue #1361 Befund 4/5: filtert reine Merge-Signale (aktuell nur
+ * `wind_dir_deg`, `defaultOff: true`) aus einer Liste aktiver Stundenverlauf-
+ * Metrik-Keys heraus. Merge-Signale erzeugen NIE eine eigene Mail-Spalte
+ * (FRONTEND_TO_HOURLY_METRIC_ID-Kommentar: kein Eintrag in `HOUR_METRICS`,
+ * `_should_merge_wind_dir` prueft nur Mitgliedschaft, nicht Position) --
+ * eine Listenposition in der Reihenfolge-Ansicht waere fuer sie also eine
+ * Falschaussage. Sie bleiben in der bestehenden An/Aus-Auswahl unveraendert
+ * sichtbar (keine Regression, s. CompareHourlyLayoutControls.svelte).
+ */
+export function orderableHourlyMetricKeys(keys: string[]): string[] {
+	const mergeOnly = new Set(ALL_HOURLY_METRICS.filter((m) => m.defaultOff).map((m) => m.key));
+	return keys.filter((k) => !mergeOnly.has(k));
+}
+
+/**
+ * Issue #1361 Befund 4: baut die neue vollstaendige `hourlyMetricKeys`-Liste
+ * nach einer Ziehgeste in der Reihenfolge-Ansicht. `newOrder` ist die neue
+ * Reihenfolge der SORTIERBAREN Teilmenge (s. orderableHourlyMetricKeys) --
+ * Merge-only Keys (falls im materialisierten Bestand aktiv) werden
+ * unveraendert uebernommen und ans Ende gestellt, da ihre Position fuer den
+ * Renderer wirkungslos ist (s. orderableHourlyMetricKeys-Kommentar).
+ */
+export function applyHourlyReorder(materializedKeys: string[], newOrder: string[]): string[] {
+	const orderable = new Set(orderableHourlyMetricKeys(materializedKeys));
+	const mergeOnlyActive = materializedKeys.filter((k) => !orderable.has(k));
+	return [...newOrder, ...mergeOnlyActive];
+}

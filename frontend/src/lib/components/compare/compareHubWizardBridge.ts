@@ -584,10 +584,19 @@ export function hydrateLayoutFieldsFromPreset(preset: ComparePreset): LayoutSnap
  * unnoetige PUTs), sonst den fertigen PUT-Payload via `buildHubPutPayload`
  * (Read-Modify-Write: alle nicht-Layout-Felder unveraendert aus `preset`).
  *
- * Array-Reihenfolge darf den Diff-Waechter nicht faelschlich "dirty" melden
- * (Checkbox-Reihenfolge in ALL_HOURLY_METRICS ist stabil, aber der
- * Materialisierungs-Zeitpunkt in makeHourlyMetricHandler kann abweichen) —
- * deshalb sortierter Vergleich.
+ * Issue #1361 (S1-Rest von Epic #1372, Adversary-Fund BROKEN, loest die
+ * #1299-Altregel ab): `hourlyMetricKeys` wurde HIER frueher sortiert
+ * verglichen ("Array-Reihenfolge darf den Diff-Waechter nicht faelschlich
+ * dirty melden"). Das war richtig, SOLANGE die Reihenfolge bedeutungslos war.
+ * Seit #1335 Scheibe 1 folgt der Renderer (`_visible_hour_metrics`,
+ * compare_html.py:610-623) exakt der gespeicherten Reihenfolge — eine reine
+ * Ziehgeste (gleiche Menge an Keys, neue Reihenfolge) MUSS also als Aenderung
+ * zaehlen. Mit sortiertem Vergleich lieferte diese Funktion bei einer
+ * Umsortierung `null`, `CompareTabs.svelte` sendete keinen PUT, meldete aber
+ * trotzdem "gespeichert" — die neue Reihenfolge ging beim naechsten Reload
+ * verloren. Deshalb jetzt positionssensitiver Vergleich (KEIN `sort()` mehr
+ * auf `hourlyMetricKeys`); "identischer Snapshot -> null" bleibt fuer echte
+ * Identitaet richtig, nur die Gleichsetzung "umsortiert = identisch" entfaellt.
  */
 export function flushPendingLayoutSave(
 	preset: ComparePreset,
@@ -596,7 +605,7 @@ export function flushPendingLayoutSave(
 ): { url: string; body: ComparePreset } | null {
 	const baseline = before ?? current;
 	const norm = (s: LayoutSnapshot) => ({
-		hourlyMetricKeys: [...s.hourlyMetricKeys].sort(),
+		hourlyMetricKeys: [...s.hourlyMetricKeys],
 		hourlyEnabled: s.hourlyEnabled
 	});
 	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;

@@ -110,8 +110,13 @@
 		 *  feuern und die neue Reihenfolge bliebe ungespeichert. Der Trip löst
 		 *  aus demselben Grund direkt aus (`onDndReorder` → scheduleAutoSave). */
 		onCompareCommit?: () => void;
+		/** Issue #1361 Befund 4: derselbe direkte Speicherausloeser, aber fuer
+		 *  den Stundenverlauf-Reihenfolge-Block (eigener Hub-Speicherpfad
+		 *  `.hub-layout-hourly-wrap`/`handleLayoutCommit`, getrennt von
+		 *  `onCompareCommit`). Reine Weiterreichung an CompareHourlyLayoutControls. */
+		onHourlyCommit?: () => void;
 	}
-	let { context = 'route', trip, createMode = false, onChannelsChange, onTripUpdate, saveController, wiz, onCompareCommit }: Props = $props();
+	let { context = 'route', trip, createMode = false, onChannelsChange, onTripUpdate, saveController, wiz, onCompareCommit, onHourlyCommit }: Props = $props();
 
 	// Issue #1311: Abschnittsreihenfolge kommt aus einer reinen Funktion, kein
 	// Duplikat der Reihenfolge im Markup (AC-1, AC-8-Attrappen-Verbot).
@@ -915,7 +920,7 @@
 		     die Stundenverlauf-Steuerung nicht unerreichbar machen. -->
 		{#if sections.includes('stundenverlauf') && wiz}
 			<div data-testid="weather-metrics-stundenverlauf">
-				<CompareHourlyLayoutControls {wiz} />
+				<CompareHourlyLayoutControls {wiz} {onHourlyCommit} />
 			</div>
 		{/if}
 		<!-- Issue #1350 Teil 2: Amtliche-Warnungen-Toggle haengt nicht am
