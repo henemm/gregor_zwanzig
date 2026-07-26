@@ -684,3 +684,50 @@ test('AC-19 (#1390): eine andere Etappe anklicken lässt die Rückfrage erreichb
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
 	await expectShiftedExactlyOnce(page);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bug #1390 Adversary F001/F002 (CRITICAL) — der dritte positionsgebundene
+// Riegel, erreichbar erst durch die Reparatur oben.
+//
+// `handleDateChange()` stellte die Kaskaden-Rechnung unter `if (idx === 0)`.
+// Seit die Rückfrage ein Umsortieren überlebt, kann der Nutzer die auslösende
+// Etappe von Platz 1 wegziehen und ihr Datum ein ZWEITES Mal ändern — dann
+// greift dieses Gate nicht mehr: der Banner bleibt mit dem ALTEN Versatz stehen
+// und rechnet nicht neu, während das neue Datum über den bedingungslosen Pfad
+// darunter sofort gespeichert wird. „Alle mitverschieben" verschiebt die
+// Folge-Etappen danach um den veralteten Betrag — die Tour ist in sich
+// widersprüchlich (auf Staging belegt: Tourstart +199, Folge-Etappen +163).
+// ─────────────────────────────────────────────────────────────────────────────
+
+test('AC-20 (#1390 F001/F002): zweites Umdatieren NACH dem Umsortieren rechnet gegen das Ausgangsdatum', async ({
+	page
+}) => {
+	test.setTimeout(60_000);
+	await openCascadePlus21(page); // s1: 2026-08-01 → 2026-08-22, Rückfrage steht auf +21
+	await expect(page.getByTestId('cascade-strip')).toContainText('+21');
+
+	// Umsortieren, ohne die Rückfrage zu beantworten — s1 wandert auf Platz 2.
+	await dragStageCard(page, 0, 1);
+	await expect(page.getByTestId('stage-card-1')).toContainText('Tag 1');
+	await expect(page.getByTestId('cascade-strip')).toBeVisible();
+
+	// Zweite Korrektur an DERSELBEN Etappe: 2026-08-22 → 2026-09-01.
+	// Gegen das Ausgangsdatum 2026-08-01 sind das +31 Tage, nicht mehr +21.
+	await expect(activeDateInput(page)).toHaveValue('2026-08-22');
+	await activeDateInput(page).fill('2026-09-01');
+	await activeDateInput(page).blur();
+	await expect(page.getByTestId('cascade-strip')).toContainText('+31');
+
+	await page.getByRole('button', { name: /Alle mitverschieben/ }).click();
+	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
+
+	// Nach dem Neuladen muss die Tour in sich stimmig sein: alle Etappen tragen
+	// denselben Versatz gegen ihren Ausgangsstand.
+	await page.reload();
+	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	const dates = await fetchStageDates(page);
+	expect(dates['s1'], 'bearbeitete Etappe trägt das zuletzt gewählte Datum').toBe('2026-09-01');
+	expect(dates['s2'], 'Folge-Etappe mit dem AKTUELLEN Versatz (+31), nicht dem veralteten (+21)').toBe('2026-09-02');
+	expect(dates['s3']).toBe('2026-09-03');
+	expect(dates['pause']).toBe('2026-09-04');
+});

@@ -249,12 +249,14 @@
 	// ausstehende Entscheidung muss erreichbar bleiben.
 	const cascadeVisible = $derived(!!cascade && stages.some((s) => s.id === cascade!.stageId));
 
-	// Bug #1389 F005: Momentaufnahme der Folge-Etappen-Daten (id → ISO). Etappen
-	// ohne Datum (frisch angelegt) bleiben draußen und damit unangetastet.
-	function snapshotFollowUpDates(): Record<string, string> {
+	// Bug #1389 F005: Momentaufnahme der mitzuverschiebenden Etappen (id → ISO).
+	// Etappen ohne Datum (frisch angelegt) bleiben draußen und damit unangetastet.
+	// Bug #1390: ausgenommen wird die auslösende Etappe über ihre ID, nicht über
+	// Position 0 — sonst hinge auch diese Grundlage an der Reihenfolge.
+	function snapshotFollowUpDates(exceptStageId: string): Record<string, string> {
 		const snap: Record<string, string> = {};
-		stages.forEach((s, i) => {
-			if (i > 0 && s.date) snap[s.id] = s.date;
+		stages.forEach((s) => {
+			if (s.id !== exceptStageId && s.date) snap[s.id] = s.date;
 		});
 		return snap;
 	}
@@ -269,20 +271,27 @@
 			i === idx ? { ...s, date: newDate, dateOverridden: true } : s,
 		);
 
-		// Kaskaden-Vorschlag nur bei erster Etappe und gültigem altem Datum.
-		if (idx === 0 && oldDate) {
-			// Bug #1389 F005: bei offener Rückfrage bleibt ihre Grundlage stehen. Sonst
-			// wäre `oldDate` beim zweiten Umdatieren nur der Zwischenstand und der
-			// Versatz käme zu klein heraus.
-			// Bug #1390: nur für DIESELBE Etappe weitertragen. Nach einem Umsortieren
-			// steht an Position 0 womöglich eine andere — deren Versatz gegen die alte
-			// Grundlage zu rechnen ergäbe eine falsche Tageszahl.
-			const open = cascade !== null && !cascade.done && cascade.stageId === stageId;
+		// Bug #1389 F005 / #1390: gehört zu DIESER Etappe (Identität, nicht Position —
+		// nach einem Umsortieren steht auf Platz 0 womöglich eine andere) eine
+		// unbeantwortete Rückfrage? Dann bleibt ihre Grundlage stehen, sonst wäre
+		// `oldDate` beim zweiten Umdatieren nur der Zwischenstand.
+		const open = cascade !== null && !cascade.done && cascade.stageId === stageId;
+		// Kaskade bei gültigem altem Datum — erste Etappe (neue Rückfrage) ODER die
+		// Etappe mit offener Rückfrage. Bug #1390 F001/F002: der zweite Zweig fehlte;
+		// wanderte sie von Platz 1 weg, fiel ein zweites Umdatieren durch dieses Gate.
+		// Der Banner blieb auf dem ALTEN Versatz, das neue Datum wurde unten
+		// bedingungslos gespeichert — „Alle mitverschieben" verschob die Folge-Etappen
+		// dann um den veralteten Betrag (Staging: Start +199, Folge +163).
+		if ((idx === 0 || open) && oldDate) {
 			const baseFirstDate = open ? cascade!.baseFirstDate : oldDate;
-			const baseDates = open ? cascade!.baseDates : snapshotFollowUpDates();
+			const baseDates = open ? cascade!.baseDates : snapshotFollowUpDates(stageId);
 			const delta = computeCascadeDelta(baseFirstDate, newDate);
-			if (delta !== 0 && stages.length > 1) {
-				cascade = { stageId, days: delta, count: stages.length - 1, done: false, baseFirstDate, baseDates };
+			// Bug #1390: genannt wird die Anzahl der TATSÄCHLICH betroffenen Etappen
+			// (Einträge der Grundlage), nicht `stages.length - 1` — sonst verspricht
+			// der Banner mehr, als applyCascade() verschiebt.
+			const count = Object.keys(baseDates).length;
+			if (delta !== 0 && count > 0) {
+				cascade = { stageId, days: delta, count, done: false, baseFirstDate, baseDates };
 				// Bug #1389: NICHT sofort speichern. Der frühere 700ms-Auto-Save trug den
 				// Stand „Etappe 1 neu, Folge-Etappen ALT"; bei Antwort nach >700ms waren
 				// zwei Schreibvorgänge unterwegs und der veraltete konnte gewinnen (das
