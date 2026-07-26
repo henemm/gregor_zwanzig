@@ -177,7 +177,7 @@ test.describe('Mobile-Editor — Steuerelemente im Viewport (#963)', () => {
 		await openMobileStagesEditor(page, id);
 
 		// Cascade-Strip erzwingen: Tourstart-Datum der ersten Etappe verschieben.
-		// handleDateChange(idx===0, Δ≠0, stages.length>1) setzt `cascade` → Strip erscheint.
+		// handleDateChange(Δ≠0, Etappen mit Datum dahinter) setzt `cascade` → Strip erscheint.
 		const headerDate = page.locator('[data-testid="stage-date-field"] input[type="date"]').first();
 		await headerDate.fill('2026-08-05');
 		await headerDate.press('Tab'); // löst echten blur/change aus (zuverlässiger als dispatchEvent)
@@ -188,7 +188,7 @@ test.describe('Mobile-Editor — Steuerelemente im Viewport (#963)', () => {
 		// ohne selbst zu scrollen. Kein `scrollTo` vor dieser Messung.
 		const promptBox = await expectWithinViewport(page, 'cascade-strip', 'page');
 		await expectTopmostAt(page, 'cascade-strip', promptBox);
-		await expect(page.getByRole('button', { name: /Alle mitverschieben/ })).toBeVisible();
+		await expect(page.getByRole('button', { name: /Lückenlos anschließen/ })).toBeVisible();
 		await expect(page.getByRole('button', { name: /Nur diese Etappe/ })).toBeVisible();
 
 		// Zustand 2 — Nutzer betrachtet die Karte (Scroll oben, wie beim Öffnen des
@@ -294,7 +294,7 @@ test.describe('Mobile-Editor — Steuerelemente im Viewport (#963)', () => {
 			await expect(overlay).toHaveCount(0);
 
 			// 2) Gegenrichtung: die Rückfrage selbst muss bedienbar bleiben.
-			await expect(page.getByRole('button', { name: /Alle mitverschieben/ })).toBeVisible();
+			await expect(page.getByRole('button', { name: /Lückenlos anschließen/ })).toBeVisible();
 			await page.getByRole('button', { name: /Nur diese Etappe/ }).click({ timeout: 5000 });
 			await expect(page.getByTestId('cascade-strip')).toHaveCount(0);
 		});

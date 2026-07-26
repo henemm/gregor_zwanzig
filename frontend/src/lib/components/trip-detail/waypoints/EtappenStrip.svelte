@@ -13,13 +13,25 @@
 		stages: Stage[];
 		activeStageId: string;
 		onStagesReorder: (stages: Stage[]) => void;
+		/** Bug #1393 R2-F002: `onStagesReorder` feuert bei JEDEM `dragover`, also
+		 *  laufend während des Ziehens und für jeden Zwischenzustand. Wer auf die
+		 *  FERTIGE Reihenfolge reagieren muss (und nicht auf jede Zwischenstation),
+		 *  hängt sich hier ein — einmal, beim Loslassen. Optional; bestehende
+		 *  Aufrufer bleiben unberührt. */
+		onReorderEnd?: () => void;
+		/** Bug #1393 R5-F001: solange eine Antwort auf die Kaskaden-Rückfrage
+		 *  geschrieben wird, sind BAULICHE Änderungen (Umsortieren, Löschen,
+		 *  Hinzufügen) gesperrt — sonst zerfällt der gerade abgeschickte Stand
+		 *  gegen die Liste, die der Nutzer inzwischen vor sich hat. Sichtbar
+		 *  gesperrt, nicht stillschweigend verschluckt. */
+		locked?: boolean;
 		onStageActivate: (stageId: string) => void;
 		onPauseInsert?: (afterIndex: number) => void;
 		onRemoveStage?: (stageId: string) => void;
 		onAddStage?: () => void;
 	}
 
-	let { stages, activeStageId, onStagesReorder, onStageActivate, onPauseInsert, onRemoveStage, onAddStage }: Props = $props();
+	let { stages, activeStageId, onStagesReorder, onReorderEnd, locked = false, onStageActivate, onPauseInsert, onRemoveStage, onAddStage }: Props = $props();
 
 	let drag = $state<string | null>(null);
 	let hoverGap = $state<number | null>(null);
@@ -56,6 +68,7 @@
 	function makeDragOverHandler(id: string) {
 		return function handleDragOver(e: DragEvent) {
 			e.preventDefault();
+			if (locked) return;
 			if (drag && drag !== id) reorder(drag, id);
 		};
 	}
@@ -63,7 +76,9 @@
 
 <div
 	data-testid="etappen-strip-wrapper"
-	style="padding: 14px 40px 16px; border-bottom: 1px solid var(--g-rule-soft); background: rgba(255,255,255,0.4); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);"
+	data-locked={locked ? 'true' : undefined}
+	aria-busy={locked}
+	style="{locked ? 'opacity:0.5; pointer-events:none; ' : ''}padding: 14px 40px 16px; border-bottom: 1px solid var(--g-rule-soft); background: rgba(255,255,255,0.4); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);"
 >
 	<!-- Eyebrow-Header mit Zähler -->
 	<div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
@@ -88,7 +103,7 @@
 				style="flex-shrink:0; display:flex; flex-direction:row; align-items:stretch;"
 				ondragstart={makeDragStartHandler(stage.id)}
 				ondragover={makeDragOverHandler(stage.id)}
-				ondragend={() => { drag = null; }}
+				ondragend={() => { drag = null; onReorderEnd?.(); }}
 			>
 				<StageCard
 					{stage}

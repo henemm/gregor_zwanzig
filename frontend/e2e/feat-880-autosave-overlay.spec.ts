@@ -53,7 +53,7 @@ async function overlayStyle(page: Page, prop: string): Promise<string> {
 }
 
 // Bug #1389: bewusst die ZWEITE Etappe. Eine Datumsänderung an der ERSTEN
-// Etappe öffnet die Kaskaden-Rückfrage („Folge-Etappen mitverschieben?") und
+// Etappe öffnet die Kaskaden-Rückfrage („lückenlos anschließen?") und
 // stellt das Speichern bis zur Antwort zurück — vorher lief dort sofort ein
 // Auto-Save mit dem halbfertigen Stand los, der bei schlechter Verbindung das
 // Kaskaden-Ergebnis überschrieb. Diese Tests prüfen das Overlay (Zeitstempel,

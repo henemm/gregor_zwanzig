@@ -14,7 +14,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { addDays, computeCascadeDelta } from './cascade.ts';
+import { addDays, computeCascadeDelta, consecutiveDates, formatDeDate } from './cascade.ts';
 
 // =============================================================================
 // addDays() — pure date arithmetic auf ISO YYYY-MM-DD.
@@ -59,4 +59,44 @@ test('AC-8: computeCascadeDelta -3 Tage (rückwärts)', () => {
 
 test('AC-9: computeCascadeDelta über Monatsgrenze', () => {
 	assert.equal(computeCascadeDelta('2026-01-30', '2026-02-02'), 3);
+});
+
+// =============================================================================
+// Bug #1393 — lückenlos durchdatieren statt „gleicher Versatz".
+// Ändert der Nutzer eine Etappe auf den 26.7., wird die nächste der 27.7., die
+// übernächste der 28.7. usw. Ungleiche Abstände werden dabei eingeebnet.
+// =============================================================================
+
+test('AC-21: consecutiveDates datiert lückenlos ab dem Anker durch', () => {
+	assert.deepEqual(consecutiveDates('2026-07-26', ['b', 'c', 'd']), {
+		b: '2026-07-27',
+		c: '2026-07-28',
+		d: '2026-07-29'
+	});
+});
+
+test('AC-22: consecutiveDates ebnet ungleiche Abstände ein', () => {
+	// Ausgangstour 1./5./12./13. — nach dem Durchdatieren ab dem 3. lückenlos.
+	assert.deepEqual(consecutiveDates('2026-08-03', ['s2', 's3', 's4']), {
+		s2: '2026-08-04',
+		s3: '2026-08-05',
+		s4: '2026-08-06'
+	});
+});
+
+test('AC-23: consecutiveDates ohne Folge-Etappen liefert nichts zu tun', () => {
+	assert.deepEqual(consecutiveDates('2026-08-03', []), {});
+});
+
+test('AC-24: consecutiveDates läuft über die Monatsgrenze', () => {
+	assert.deepEqual(consecutiveDates('2026-08-30', ['x', 'y', 'z']), {
+		x: '2026-08-31',
+		y: '2026-09-01',
+		z: '2026-09-02'
+	});
+});
+
+test('AC-25: formatDeDate schreibt ISO-Daten in deutscher Schreibweise', () => {
+	assert.equal(formatDeDate('2026-07-26'), '26.07.2026');
+	assert.equal(formatDeDate(''), '');
 });
