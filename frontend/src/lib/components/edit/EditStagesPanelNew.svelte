@@ -222,24 +222,32 @@
 		days: number;
 		count: number;
 		done: boolean;
+		// Bug #1390: die Rückfrage gehört zu einer IDENTITÄT, nicht zu einer Position.
+		// Vorher hing ihre Sichtbarkeit an `activeStageIndex === 0` — zog der Nutzer
+		// die bearbeitete Etappe im Streifen von Platz 1 weg, während die Rückfrage
+		// noch offen war, verschwand sie ersatzlos: beide Knöpfe unerreichbar, die
+		// Entscheidung weiter offen, der Anzeiger dauerhaft auf „Nicht gespeichert".
+		/** Etappe, deren Datum die Rückfrage ausgelöst hat. */
+		stageId: string;
 		// Bug #1389 Adversary F005 (CRITICAL): die UNVERÄNDERLICHE Grundlage der
-		// Rechnung, festgehalten beim Aufstellen der Rückfrage. Vorher verschob
-		// applyCascade() aus dem laufend mutierten Zustand heraus — jeder erneute
-		// Aufruf addierte den Versatz nochmal. Genau ein Wiederholungs-Klick nach
-		// einem fehlgeschlagenen Schreibvorgang reichte dafür (Funkloch-Alltag der
-		// Zielgruppe). Mit „Grundlage + Versatz" liefert jeder Aufruf dasselbe
-		// Ergebnis; der Fehlerpfad braucht dadurch gar keine Rücknahme, die selbst
-		// wieder scheitern könnte.
+		// Rechnung, festgehalten beim Aufstellen der Rückfrage. Vorher rechnete
+		// applyCascade() aus dem laufend mutierten Zustand — ein Wiederholungs-Klick
+		// nach einem Fehlschlag addierte den Versatz nochmal (Funkloch-Alltag der
+		// Zielgruppe). „Grundlage + Versatz" ist idempotent und braucht keine
+		// Rücknahme, die selbst wieder scheitern könnte.
 		/** Datum von Etappe 1, BEVOR der Nutzer es angefasst hat. */
 		baseFirstDate: string;
 		/** Datum je Folge-Etappe (id → ISO), bevor irgendetwas verschoben wurde. */
 		baseDates: Record<string, string>;
 	}
 	let cascade = $state<CascadeState | null>(null);
-	// Bug #1389 Adversary F004: läuft gerade eine Kaskaden-Anwendung? Dient als
-	// Reentrancy-Riegel in applyCascade() UND schaltet den Knopf ab, damit die
-	// Oberfläche einen zweiten Tipp gar nicht erst anbietet.
+	// Bug #1389 Adversary F004: Reentrancy-Riegel für applyCascade() — schaltet
+	// zugleich den Knopf ab, damit ein zweiter Tipp gar nicht erst angeboten wird.
 	let cascadeBusy = $state(false);
+	// Bug #1390: sichtbar, solange es die auslösende Etappe noch gibt — unabhängig
+	// davon, an welcher Position sie steht und welche Etappe gerade aktiv ist. Eine
+	// ausstehende Entscheidung muss erreichbar bleiben.
+	const cascadeVisible = $derived(!!cascade && stages.some((s) => s.id === cascade!.stageId));
 
 	// Bug #1389 F005: Momentaufnahme der Folge-Etappen-Daten (id → ISO). Etappen
 	// ohne Datum (frisch angelegt) bleiben draußen und damit unangetastet.
@@ -263,26 +271,24 @@
 
 		// Kaskaden-Vorschlag nur bei erster Etappe und gültigem altem Datum.
 		if (idx === 0 && oldDate) {
-			// Bug #1389 F005: Solange eine Rückfrage offen ist, bleibt ihre Grundlage
-			// stehen. Ändert der Nutzer das Datum ein zweites Mal, BEVOR er geantwortet
-			// hat, wäre `oldDate` nur der Zwischenstand — der Versatz käme zu klein
-			// heraus. Gerechnet wird deshalb immer gegen das Ausgangsdatum.
-			const open = cascade !== null && !cascade.done;
+			// Bug #1389 F005: bei offener Rückfrage bleibt ihre Grundlage stehen. Sonst
+			// wäre `oldDate` beim zweiten Umdatieren nur der Zwischenstand und der
+			// Versatz käme zu klein heraus.
+			// Bug #1390: nur für DIESELBE Etappe weitertragen. Nach einem Umsortieren
+			// steht an Position 0 womöglich eine andere — deren Versatz gegen die alte
+			// Grundlage zu rechnen ergäbe eine falsche Tageszahl.
+			const open = cascade !== null && !cascade.done && cascade.stageId === stageId;
 			const baseFirstDate = open ? cascade!.baseFirstDate : oldDate;
 			const baseDates = open ? cascade!.baseDates : snapshotFollowUpDates();
 			const delta = computeCascadeDelta(baseFirstDate, newDate);
 			if (delta !== 0 && stages.length > 1) {
-				cascade = { days: delta, count: stages.length - 1, done: false, baseFirstDate, baseDates };
-				// Bug #1389: NICHT sofort speichern. Vorher ging hier ein Auto-Save
-				// (700ms) mit dem Stand „Etappe 1 neu, Folge-Etappen ALT" los, während
-				// der Nutzer die Rückfrage noch las. Beantwortet er sie später als
-				// 700ms, sind zwei Schreibvorgänge unterwegs — das Backend ersetzt die
-				// Etappen komplett und kennt keine Reihenfolge, bei asymmetrischer
-				// Netz-Laufzeit (Funkloch/Netzwechsel/Retry) gewinnt der veraltete.
-				// Geschrieben wird jetzt erst mit der Antwort: applyCascade() (alle
-				// Etappen) bzw. dismissCascade() (nur Etappe 1) — genau EIN PUT.
-				// Der zurückgestellte Stand bleibt `hasPending`, damit beforeNavigate
-				// ihn beim Verlassen/Neuladen der Seite noch schreibt (Bezug #1376).
+				cascade = { stageId, days: delta, count: stages.length - 1, done: false, baseFirstDate, baseDates };
+				// Bug #1389: NICHT sofort speichern. Der frühere 700ms-Auto-Save trug den
+				// Stand „Etappe 1 neu, Folge-Etappen ALT"; bei Antwort nach >700ms waren
+				// zwei Schreibvorgänge unterwegs und der veraltete konnte gewinnen (das
+				// Backend ersetzt die Etappen komplett, ohne Reihenfolge-Garantie).
+				// Geschrieben wird erst mit der Antwort — genau EIN PUT. Der zurückgestellte
+				// Stand bleibt `hasPending` für beforeNavigate (Bezug #1376).
 				deferSave();
 				return;
 			} else {
@@ -311,47 +317,39 @@
 
 	async function applyCascade(): Promise<void> {
 		// Bug #1389 Adversary F004: Reentrancy-Riegel, synchron VOR jedem `await`.
-		// `cascade.done` wird erst nach dem ersten `await` gesetzt — zwei Tipps im
-		// selben JS-Tick (auf dem Handy alltäglich) kamen deshalb beide durch die
-		// Eingangsprüfung und verschoben die Folge-Etappen ZWEIMAL (belegt: s2 landete
-		// auf +42 statt +21 Tagen). Seit `await settle()` (F002) klafft dieses Fenster
-		// bis zu SETTLE_TIMEOUT_MS auseinander statt nur die Dauer eines PUT, deshalb
-		// muss der Riegel hier stehen und nicht am ersten Netzwerk-Aufruf.
+		// `cascade.done` fällt erst nach dem ersten `await` — zwei Tipps im selben
+		// Tick kamen beide durch und verschoben ZWEIMAL (s2 auf +42 statt +21). Seit
+		// `settle()` klafft das Fenster bis SETTLE_TIMEOUT_MS, nicht nur einen PUT.
 		if (cascadeBusy) return;
 		if (!cascade || cascade.done) return;
-		// Adversary MEDIUM: den Zustand hier festhalten. `dismissCascade()` kann im
-		// selben Tick `cascade = null` setzen; ein späteres `{ ...cascade, done: true }`
-		// ergäbe dann `{}` und der Erfolgsbanner stünde ohne Anzahl und Tageszahl da
-		// („Folge-Etappen verschoben · alle Daten um Tage angepasst.").
+		// Adversary MEDIUM: Zustand festhalten. `dismissCascade()` kann im selben Tick
+		// `cascade = null` setzen; `{ ...cascade, done: true }` ergäbe dann `{}` und der
+		// Erfolgsbanner stünde ohne Anzahl und Tageszahl da.
 		const active = cascade;
 		cascadeBusy = true;
 		try {
 			// Bug #1389 F005: aus der festgehaltenen Grundlage rechnen, NICHT aus dem
-			// aktuellen (womöglich schon verschobenen) Stand. Dadurch ist der Aufruf
-			// idempotent: ein Wiederholungs-Klick nach einem Fehlschlag — oder zehn —
-			// führt immer zum selben Ergebnis.
+			// (womöglich schon verschobenen) Stand — dadurch ist der Aufruf idempotent.
 			const days = active.days;
 			const base = active.baseDates;
-			stages = stages.map((s, i) => {
-				if (i === 0) return s;
+			// Bug #1390: kein `i === 0`-Sonderfall mehr. Nach einem Umsortieren steht an
+			// Position 0 womöglich eine Folge-Etappe, die dann übersprungen worden wäre.
+			// Die Grundlage ist bereits id-basiert und enthält die auslösende Etappe
+			// nicht — sie bleibt dadurch von selbst unangetastet.
+			stages = stages.map((s) => {
 				const from = base[s.id];
 				if (!from) return s;
 				return { ...s, date: addDays(from, days), dateOverridden: true };
 			});
 			if (saveController) {
-				// Issue #1376: den noch offenen Debounce aus handleDateChange verwerfen —
-				// er trägt einen veralteten Schnappschuss (nur erste Etappe verschoben)
-				// und würde das gleich folgende Kaskaden-Ergebnis wieder überschreiben,
-				// sobald er verzögert oder beim Verlassen der Seite feuert.
+				// Issue #1376: den offenen Debounce aus handleDateChange verwerfen — er
+				// trägt einen veralteten Schnappschuss und überschriebe sonst das gleich
+				// folgende Kaskaden-Ergebnis.
 				saveController.cancel();
-				// Bug #1389 (Gürtel und Hosenträger): `cancel()` stoppt nur einen noch
-				// nicht ausgelösten Speichervorgang. Ist wider Erwarten doch schon einer
-				// im Netz unterwegs, muss darauf GEWARTET werden — sonst entscheidet die
-				// Netz-Laufzeit, welcher Stand am Ende persistiert ist.
-				// Adversary F002: `setSaving()` bewusst VOR dem Warten — sonst stünde die
-				// Anzeige während des (auf SETTLE_TIMEOUT_MS gedeckelten) Wartens auf
-				// „Gespeichert ✓" bzw. „Nicht gespeichert" und die Oberfläche wirkte
-				// eingefroren. `settle()` gibt nach dem Deckel auf und schreibt trotzdem.
+				// Bug #1389: `cancel()` stoppt nur Noch-nicht-Abgeschicktes; auf einen
+				// bereits laufenden Request muss GEWARTET werden, sonst entscheidet die
+				// Netz-Laufzeit. Adversary F002: `setSaving()` bewusst VOR dem Warten,
+				// sonst wirkte die Oberfläche während des gedeckelten Wartens eingefroren.
 				saveController.setSaving();
 				await saveController.settle();
 				// Flush immediately (cascade = user intent, no debounce needed).
@@ -364,13 +362,10 @@
 				} catch (e: unknown) {
 					const msg = e instanceof Error ? e.message : 'Speichern fehlgeschlagen';
 					// Bug #1389 F006 (Spiegelfall): `cancel()` oben hat den zurückgestellten
-					// Speichervorgang abgeräumt. Ohne Neu-Anmeldung hätte weder
-					// `beforeNavigate` noch der Reiterwechsel etwas zu retten — die
-					// Datumsänderung ginge beim Wegnavigieren still verloren. Gerettet wird
-					// die geäußerte Absicht (alle mitverschieben); der Schreibvorgang war
-					// nur fehlgeschlagen. Reihenfolge beachtet: `deferSave()` setzt den
-					// Zustand auf `dirty`, deshalb MUSS `setError()` danach kommen, sonst
-					// verschwindet die Fehlermeldung.
+					// Save abgeräumt — ohne Neu-Anmeldung fänden `beforeNavigate` und
+					// Reiterwechsel nichts vor, die Änderung ginge still verloren. Gerettet
+					// wird die geäußerte Absicht. Reihenfolge: `deferSave()` setzt `dirty`,
+					// deshalb MUSS `setError()` danach kommen.
 					deferSave();
 					saveController.setError(msg);
 				}
@@ -386,30 +381,25 @@
 	}
 
 	function dismissCascade(): void {
-		// „Nur diese Etappe" ist die ANTWORT auf die Rückfrage — erst jetzt wird
-		// geschrieben. Beim „Schließen" des Erfolgs-Streifens (cascade.done) gibt es
-		// nichts zu speichern, dann bleibt es beim reinen Ausblenden.
-		//
-		// Adversary F004: läuft gerade eine Kaskaden-Anwendung, hier NICHT
-		// dazwischenfunken — sonst kämpfen zwei Schreibvorgänge gegeneinander. Ein
-		// Doppeltipp auf diesen Knopf selbst ist unkritisch: die Funktion ist
-		// synchron und nullt `cascade` vor jeder Weitergabe (Nachweis e2e AC-10).
+		// „Nur diese Etappe" ist die ANTWORT — erst jetzt wird geschrieben. Beim
+		// „Schließen" des Erfolgs-Streifens (cascade.done) gibt es nichts zu speichern.
+		// Adversary F004: läuft eine Kaskaden-Anwendung, hier NICHT dazwischenfunken —
+		// sonst kämpfen zwei Schreibvorgänge. Ein Doppeltipp auf diesen Knopf ist
+		// unkritisch: synchron, `cascade` wird vor jeder Weitergabe genullt (e2e AC-10).
 		if (cascadeBusy) return;
 		const open = cascade !== null && !cascade.done;
 		const base = cascade?.baseDates;
 		cascade = null;
 		if (!open) return;
 
-		// Bug #1389 F006: UNBEDINGT schreiben, unabhängig vom Zustand der Steuerung.
-		// Ein fehlgeschlagener Kaskaden-Versuch hat den zurückgestellten
-		// Speichervorgang bereits abgeräumt (applyCascade → cancel()) UND die
-		// Folge-Etappen lokal schon verschoben. Das bisherige `flush()` lief dann
-		// ins Leere: Der Nutzer sah sein neues Datum im Feld, hatte bewusst
-		// entschieden — und gespeichert war nichts. Deshalb: Folge-Etappen aus der
-		// Grundlage zurücksetzen, Etappe 1 behält ihr neues Datum, ein Schreibvorgang.
+		// Bug #1389 F006: UNBEDINGT schreiben. Ein fehlgeschlagener Kaskaden-Versuch
+		// hat den zurückgestellten Save abgeräumt (applyCascade → cancel()) UND lokal
+		// schon verschoben — das frühere `flush()` lief ins Leere und speicherte nichts.
+		// Deshalb: Folge-Etappen aus der Grundlage zurücksetzen, die bearbeitete Etappe
+		// behält ihr neues Datum, ein Schreibvorgang.
 		if (base) {
-			stages = stages.map((s, i) => {
-				if (i === 0) return s;
+			// Bug #1390: id-basiert, s. applyCascade().
+			stages = stages.map((s) => {
 				const from = base[s.id];
 				return from && s.date !== from ? { ...s, date: from } : s;
 			});
@@ -445,6 +435,17 @@
 		stages = stages.filter(s => s.id !== stageId);
 		if (activeStageId === stageId) {
 			activeStageId = stages[0]?.id ?? '';
+		}
+		// Bug #1390: verschwindet die auslösende Etappe, ist die Rückfrage
+		// gegenstandslos — sonst bliebe eine Leiche stehen, deren „Alle
+		// mitverschieben" Etappen wegen einer nicht mehr existierenden Änderung
+		// verschöbe. Der zurückgestellte Speichervorgang trägt noch den Stand VOR dem
+		// Löschen (er würde die Etappe wiederauferstehen lassen) und wird deshalb mit
+		// dem aktuellen Stand neu aufgesetzt statt verworfen — verwerfen wäre der
+		// stille Datenverlust aus F006.
+		if (cascade?.stageId === stageId) {
+			cascade = null;
+			if (saveController?.hasPending) deferSave();
 		}
 		pendingRemoveStageId = null;
 	}
@@ -532,6 +533,54 @@
 	}
 </script>
 
+<!-- Bug #1390: EIN Kaskaden-Banner fuer beide Etappen-Ansichten. Als Snippet,
+     weil der Inhaltsbereich fuer Wander-Etappen und die PauseStageView getrennte
+     Zweige sind — stand der Streifen nur im Wander-Zweig, verschwand die offene
+     Rueckfrage beim Anklicken eines Pausentags genauso wie beim Umsortieren. -->
+{#snippet cascadeBanner()}
+	{#if cascade && cascadeVisible}
+		{#if !cascade.done}
+			<div
+				class="cascade-prompt"
+				data-testid="cascade-strip"
+				bind:this={cascadeEl}
+				style="--gz-cascade-bottom: {cascadeBottomPx}px"
+			>
+				<p>
+					<strong
+						>Tourstart um {cascade.days > 0 ? '+' : ''}{cascade.days}
+						{Math.abs(cascade.days) === 1 ? 'Tag' : 'Tage'} verschoben.</strong
+					>
+					Sollen die {cascade.count} Folge-Etappen um denselben Betrag mitverschoben werden?
+				</p>
+				<!-- Bug #1389 F004: während der Verarbeitung nicht erneut auslösbar.
+				     Der Riegel in applyCascade() ist die eigentliche Absicherung. -->
+				<div class="cascade-actions">
+					<Btn variant="accent" size="sm" onclick={applyCascade} disabled={cascadeBusy}>
+						{cascadeBusy ? 'Wird verschoben …' : 'Alle mitverschieben'}
+					</Btn>
+					<Btn variant="outline" size="sm" onclick={dismissCascade} disabled={cascadeBusy}>Nur diese Etappe</Btn>
+				</div>
+			</div>
+		{:else}
+			<div
+				class="cascade-done"
+				data-testid="cascade-done"
+				bind:this={cascadeEl}
+				style="--gz-cascade-bottom: {cascadeBottomPx}px"
+			>
+				<Dot tone="success" />
+				<span>
+					<strong>{cascade.count} Folge-Etappen verschoben</strong> · alle Daten um
+					{cascade.days > 0 ? '+' : ''}{cascade.days}
+					{Math.abs(cascade.days) === 1 ? 'Tag' : 'Tage'} angepasst.
+				</span>
+				<Btn variant="ghost" size="sm" onclick={dismissCascade}>Schließen</Btn>
+			</div>
+		{/if}
+	{/if}
+{/snippet}
+
 <div data-testid="edit-stages-panel" class="flex flex-col gap-4">
 	<!-- EtappenStrip (volle Breite, eigene Navigations-Achse) -->
 	<EtappenStrip
@@ -600,6 +649,7 @@
 
 	{#if activeStage}
 		{#if activeIsPause}
+			{@render cascadeBanner()}
 			<PauseStageView
 				stage={activeStage}
 				{prevStage}
@@ -639,49 +689,7 @@
 				</div>
 			</div>
 
-			{#if cascade && activeStageIndex === 0}
-				{#if !cascade.done}
-					<div
-						class="cascade-prompt"
-						data-testid="cascade-strip"
-						bind:this={cascadeEl}
-						style="--gz-cascade-bottom: {cascadeBottomPx}px"
-					>
-						<p>
-							<strong
-								>Tourstart um {cascade.days > 0 ? '+' : ''}{cascade.days}
-								{Math.abs(cascade.days) === 1 ? 'Tag' : 'Tage'} verschoben.</strong
-							>
-							Sollen die {cascade.count} Folge-Etappen um denselben Betrag mitverschoben werden?
-						</p>
-						<!-- Bug #1389 F004: während der Verarbeitung nicht erneut auslösbar
-						     und sichtbar im Wartezustand. Der Riegel in applyCascade() ist
-						     die Absicherung; hier soll der zweite Tipp gar nicht erst
-						     angeboten werden. -->
-						<div class="cascade-actions">
-							<Btn variant="accent" size="sm" onclick={applyCascade} disabled={cascadeBusy}>
-								{cascadeBusy ? 'Wird verschoben …' : 'Alle mitverschieben'}
-							</Btn>
-							<Btn variant="outline" size="sm" onclick={dismissCascade} disabled={cascadeBusy}>Nur diese Etappe</Btn>
-						</div>
-					</div>
-				{:else}
-					<div
-						class="cascade-done"
-						data-testid="cascade-done"
-						bind:this={cascadeEl}
-						style="--gz-cascade-bottom: {cascadeBottomPx}px"
-					>
-						<Dot tone="success" />
-						<span>
-							<strong>{cascade.count} Folge-Etappen verschoben</strong> · alle Daten um
-							{cascade.days > 0 ? '+' : ''}{cascade.days}
-							{Math.abs(cascade.days) === 1 ? 'Tag' : 'Tage'} angepasst.
-						</span>
-						<Btn variant="ghost" size="sm" onclick={dismissCascade}>Schließen</Btn>
-					</div>
-				{/if}
-			{/if}
+			{@render cascadeBanner()}
 
 			<!-- Issue #503: Grid 1fr / 360px — Karte+Profil links, Wegpunkte rechts -->
 			<div class="editor-grid" data-testid="editor-grid">

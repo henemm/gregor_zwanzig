@@ -574,3 +574,113 @@ test('AC-16 (#1389): beide Knöpfe im selben Tick — der Erfolgsbanner bleibt v
 	await expect(done).toContainText('3 Folge-Etappen verschoben');
 	await expect(done).toContainText('+21');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bug #1390 — die Rückfrage verschwindet, wenn die Etappe umsortiert wird.
+//
+// Die Sichtbarkeit hing an der POSITION (`cascade && activeStageIndex === 0`),
+// nicht an der IDENTITÄT der Etappe. Zieht der Nutzer die bearbeitete Etappe im
+// Etappen-Streifen von Position 1 weg, während die Rückfrage noch offen ist,
+// wird die Bedingung falsch: beide Knöpfe sind unerreichbar, die Entscheidung
+// steht weiter aus, der Speicher-Anzeiger bleibt dauerhaft auf „Nicht
+// gespeichert". Ohne die Seite zu verlassen kommt man da nicht mehr heraus.
+// Vorbestehend seit c763a11f (#498).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Zieht die Etappen-Karte an Position `fromIdx` auf die an Position `toIdx`.
+ *  Der Etappen-Streifen nutzt das native HTML5-Drag-API (EtappenStrip:
+ *  `draggable={true}` + ondragstart/ondragover) — dafür ist Playwrights
+ *  `dragTo()` das passende Werkzeug (es erzeugt echte Eingabe-Ereignisse, aus
+ *  denen Chromium die Drag-Ereignisse ableitet).
+ *
+ *  Zwei bekannte Fallen dieses Repos sind hier berücksichtigt:
+ *  1) Scrollen — `boundingBox()` scrollt nicht selbst; liegt der Streifen
+ *     außerhalb des Ausschnitts, landet die Maus im Leeren. `dragTo()` scrollt
+ *     implizit mit, der zusätzliche `scrollIntoViewIfNeeded()` macht es
+ *     unabhängig von dieser Zusicherung.
+ *  2) Umsortier-Animation/Neuaufbau — der `{#each}` ist nach `stage.id`
+ *     verschlüsselt, die Karten wechseln beim Ablegen ihren Platz im DOM.
+ *     Deshalb wird danach auf den neuen Namen an der Zielposition GEWARTET
+ *     statt sofort weiterzuklicken. */
+async function dragStageCard(page: Page, fromIdx: number, toIdx: number): Promise<void> {
+	const source = page.getByTestId(`stage-card-${fromIdx}`);
+	const target = page.getByTestId(`stage-card-${toIdx}`);
+	await source.scrollIntoViewIfNeeded();
+	await target.scrollIntoViewIfNeeded();
+	await source.dragTo(target);
+}
+
+test('AC-17 (#1390): Umsortieren bei offener Rückfrage lässt beide Knöpfe erreichbar', async ({
+	page
+}) => {
+	test.setTimeout(60_000);
+	await openCascadePlus21(page);
+
+	// Der Nutzer sortiert um, BEVOR er die Rückfrage beantwortet.
+	await dragStageCard(page, 0, 1);
+	await expect(page.getByTestId('stage-card-0')).toContainText('Tag 2');
+	await expect(page.getByTestId('stage-card-1')).toContainText('Tag 1');
+
+	// Die Entscheidung steht weiter aus — beide Knöpfe müssen erreichbar sein.
+	await expect(page.getByTestId('cascade-strip')).toBeVisible();
+	const apply = page.getByRole('button', { name: /Alle mitverschieben/ });
+	const dismiss = page.getByRole('button', { name: /Nur diese Etappe/ });
+	await expect(apply).toBeVisible();
+	await expect(dismiss).toBeVisible();
+
+	// Und die Antwort wirkt weiterhin richtig — nachweislich PERSISTIERT.
+	await apply.click();
+	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
+	await page.reload();
+	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await expectShiftedExactlyOnce(page);
+});
+
+test('AC-18 (#1390): Löschen der Etappe mit offener Rückfrage lässt keine Leiche zurück', async ({
+	page
+}) => {
+	test.setTimeout(60_000);
+	await openCascadePlus21(page);
+
+	// Genau die Etappe löschen, zu der die Rückfrage gehört.
+	await page.getByTestId('stage-card-0').getByRole('button', { name: 'Etappe entfernen' }).click();
+	await page.getByTestId('confirm-delete-stage').click();
+	await expect(page.getByTestId('stage-card-0')).toContainText('Tag 2');
+
+	// Die Frage ist gegenstandslos: weder Rückfrage noch Erfolgsbanner dürfen
+	// stehenbleiben — sonst verschöbe ein Klick Etappen wegen einer Änderung,
+	// die es nicht mehr gibt.
+	await expect(page.getByTestId('cascade-strip')).toHaveCount(0);
+	await expect(page.getByTestId('cascade-done')).toHaveCount(0);
+
+	// Das Löschen selbst persistiert; die Folge-Etappen bleiben unverschoben.
+	await page.reload();
+	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	const dates = await fetchStageDates(page);
+	expect(dates['s1'], 'gelöschte Etappe ist weg').toBeUndefined();
+	expect(dates['s2']).toBe('2026-08-02');
+	expect(dates['s3']).toBe('2026-08-03');
+	expect(dates['pause']).toBe('2026-08-04');
+});
+
+test('AC-19 (#1390): eine andere Etappe anklicken lässt die Rückfrage erreichbar', async ({
+	page
+}) => {
+	// Die Entscheidung steht aus — sie muss auch dann erreichbar bleiben, wenn der
+	// Nutzer sich zwischendurch eine andere Etappe ansieht. Der Pausentag ist der
+	// schärfste Fall: er hat eine eigene Ansicht (PauseStageView).
+	test.setTimeout(60_000);
+	await openCascadePlus21(page);
+
+	await page.getByText('Pausentag', { exact: false }).first().click();
+	await expect(page.getByTestId('pause-stage-view')).toBeVisible();
+	await expect(page.getByTestId('cascade-strip')).toBeVisible();
+	await expect(page.getByRole('button', { name: /Alle mitverschieben/ })).toBeVisible();
+
+	// Auch von hier aus wirkt die Antwort — nachweislich persistiert.
+	await page.getByRole('button', { name: /Alle mitverschieben/ }).click();
+	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
+	await page.reload();
+	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await expectShiftedExactlyOnce(page);
+});

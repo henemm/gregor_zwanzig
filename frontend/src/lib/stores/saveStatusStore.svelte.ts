@@ -14,16 +14,13 @@ export type SaveState = 'idle' | 'dirty' | 'saving' | 'error';
 export type SaveFn = (init?: RequestInit) => Promise<void>;
 
 /**
- * Bug #1389 (Adversary F002): Obergrenze für `settle()`. Ein unbegrenztes
- * Warten auf einen laufenden Request wäre ein Rückschritt — antwortet er im
- * Funkloch NIE (genau die Zielgruppe: Weitwanderer mit Netzabbrüchen), stünde
- * die Kaskaden-Bestätigung für immer still: keine Rückmeldung, kein Abbruch.
- * Nach Ablauf wird bewusst TROTZDEM geschrieben — das ist unbedenklich, weil
- * Maßnahme (a) im Normalfall gar keinen zweiten Schreibvorgang mehr erzeugt
- * (`defer()` statt `schedule()` bei offener Rückfrage); `settle()` ist nur
- * noch Rückfallschutz für Restwege. 8 s liegt deutlich über jeder normalen
- * Antwortzeit (Staging < 20 ms) und deutlich unter der Geduldsgrenze eines
- * Nutzers, der gerade auf „Alle mitverschieben" geklickt hat.
+ * Bug #1389 (Adversary F002): Obergrenze für `settle()`. Unbegrenztes Warten
+ * legte die Kaskaden-Bestätigung im Funkloch für immer still (Zielgruppe:
+ * Weitwanderer mit Netzabbrüchen). Nach Ablauf wird bewusst TROTZDEM
+ * geschrieben — unbedenklich, weil bei offener Rückfrage ohnehin `defer()`
+ * statt `schedule()` läuft und `settle()` nur Rückfallschutz ist. 8 s liegt
+ * weit über jeder normalen Antwortzeit (Staging < 20 ms) und unter der
+ * Geduldsgrenze nach einem Klick auf „Alle mitverschieben".
  */
 export const SETTLE_TIMEOUT_MS = 8000;
 
@@ -102,17 +99,12 @@ export class SaveStatus {
 	}
 
 	/**
-	 * Bug #1389: wartet, bis ein bereits abgeschickter Speichervorgang
-	 * abgeschlossen ist. Ohne diesen Riegel könnte ein danach gestarteter
-	 * Schreibvorgang (z.B. die Kaskaden-Bestätigung) beim Server FRÜHER ankommen
-	 * als der zuvor abgeschickte — das Backend ersetzt die Etappen komplett und
-	 * kennt keine Reihenfolge, der veraltete Stand gewinnt lautlos.
-	 * Ohne laufenden Request kehrt die Methode sofort zurück.
-	 *
-	 * Adversary F002: das Warten ist auf `SETTLE_TIMEOUT_MS` gedeckelt und der
-	 * Aufrufer fährt danach fort — ein hängender Request darf die Oberfläche
-	 * nicht einfrieren (Begründung s. Konstante). Der Aufrufer hält die Anzeige
-	 * währenddessen auf `saving`, damit die Wartezeit sichtbar ist.
+	 * Bug #1389: wartet auf einen bereits abgeschickten Speichervorgang (ohne
+	 * laufenden Request sofortige Rückkehr). Sonst könnte ein danach gestarteter
+	 * Schreibvorgang FRÜHER ankommen und der veraltete Stand lautlos gewinnen —
+	 * das Backend ersetzt die Etappen komplett und kennt keine Reihenfolge.
+	 * Adversary F002: gedeckelt auf `SETTLE_TIMEOUT_MS` (Begründung s. Konstante),
+	 * der Aufrufer hält die Anzeige derweil auf `saving`.
 	 */
 	async settle(): Promise<void> {
 		const deadline = Date.now() + SETTLE_TIMEOUT_MS;
@@ -133,11 +125,9 @@ export class SaveStatus {
 	}
 
 	/** Returns true if a save is pending (debounced or deferred, not yet flushed).
-	 *  Bug #1389: geprüft wird die ausstehende Funktion, nicht der Timer — ein
-	 *  per `defer()` zurückgestellter Speichervorgang hat bewusst keinen Timer,
-	 *  muss aber beim Verlassen der Seite geflusht werden (Bezug #1376). Für den
-	 *  Debounce-Weg ist das unverändert (schedule setzt beides, doSave/cancel
-	 *  löschen beides). */
+	 *  Bug #1389: geprüft wird die ausstehende Funktion, nicht der Timer — ein per
+	 *  `defer()` zurückgestellter Save hat bewusst keinen Timer, muss aber beim
+	 *  Verlassen der Seite geflusht werden (#1376). Debounce-Weg unverändert. */
 	get hasPending(): boolean {
 		return this._pendingFn !== null;
 	}
@@ -166,18 +156,13 @@ export class SaveStatus {
 	}
 
 	/**
-	 * Bug #1389: stellt einen Speichervorgang zurück, OHNE einen Timer zu starten.
-	 * Er feuert nie von selbst — nur `flush()` (Antwort auf die Rückfrage bzw.
-	 * `beforeNavigate` beim Verlassen der Seite) löst ihn aus.
-	 *
-	 * Zweck: solange eine Rückfrage offen ist ("Folge-Etappen mitverschieben?"),
-	 * darf kein Schreibvorgang mit dem halbfertigen Zwischenstand losgehen — sonst
-	 * sind zwei Schreibvorgänge unterwegs und die Netz-Laufzeit entscheidet.
-	 * Gleichzeitig gilt der Stand als ausstehend (`hasPending`), damit ein Reload
-	 * oder Seitenwechsel ihn noch schreibt statt ihn zu verlieren (Bezug #1376).
-	 *
-	 * Der Zustand wird `dirty` ("Nicht gespeichert") — ehrlich, denn es wurde
-	 * bewusst noch nichts geschrieben.
+	 * Bug #1389: stellt einen Speichervorgang zurück, OHNE Timer — er feuert nie
+	 * von selbst, nur `flush()` (Antwort auf die Rückfrage bzw. `beforeNavigate`)
+	 * löst ihn aus. Zweck: solange eine Rückfrage offen ist, darf kein
+	 * Schreibvorgang mit dem halbfertigen Zwischenstand losgehen, sonst sind zwei
+	 * unterwegs und die Netz-Laufzeit entscheidet. Er gilt trotzdem als ausstehend
+	 * (`hasPending`), damit Reload/Seitenwechsel ihn noch schreibt (#1376).
+	 * Zustand `dirty` ("Nicht gespeichert") — es wurde bewusst nichts geschrieben.
 	 */
 	defer(saveFn: SaveFn): void {
 		if (this._timer !== null) clearTimeout(this._timer);
@@ -209,13 +194,11 @@ export class SaveStatus {
 	 * würde `cancel()` fälschlich "idle" vorgaukeln, während der Request noch
 	 * offen ist (widerspricht dem eigenen "kein Rollback nach Autosave"-Zweck).
 	 *
-	 * Bug #1389: verwirft ebenso einen per `defer()` zurückgestellten Save.
-	 *
-	 * Adversary F003: `defer()` setzt bewusst KEINEN Timer — ohne den zweiten
-	 * Zweig bliebe nach dem Abbruch eines zurückgestellten Saves `dirty`
-	 * („Nicht gespeichert") stehen, obwohl gar nichts mehr aussteht. Der
-	 * Zusatz-Riegel `_inflight === null` hält die oben beschriebene Regel
-	 * ein: läuft ein echter Request im Netz, wird hier nichts zurückgesetzt.
+	 * Bug #1389 / Adversary F003: verwirft ebenso einen per `defer()`
+	 * zurückgestellten Save. Dessen eigener Zweig ist nötig, weil `defer()` keinen
+	 * Timer setzt — sonst bliebe `dirty` stehen, obwohl nichts mehr aussteht. Der
+	 * Riegel `_inflight === null` wahrt die Regel oben: läuft ein echter Request
+	 * im Netz, wird hier nichts zurückgesetzt.
 	 */
 	cancel(): void {
 		const hadPendingTimer = this._timer !== null;
