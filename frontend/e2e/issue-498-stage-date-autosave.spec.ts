@@ -371,3 +371,130 @@ test('AC-10 (#1389 F004): Doppeltipp auf „Nur diese Etappe" schreibt genau ein
 	expect(dates['s2'], 'die Rückfrage wurde abgelehnt — Folge-Etappen bleiben unberührt').toBe('2026-08-02');
 	expect(puts.n, 'ein Doppeltipp darf genau EINEN Schreibvorgang auslösen').toBe(1);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bug #1389 Adversary F005 (CRITICAL) — Wiederholungs-Klick verdoppelt den Versatz.
+//
+// `applyCascade()` rechnete bei JEDEM Aufruf aus dem AKTUELLEN Speicherstand
+// (`stages.map(addDays)`), und der Fehlerzweig nahm die Verschiebung nicht
+// zurück. Nach einem fehlgeschlagenen Schreibvorgang blieb die Rückfrage stehen
+// (`cascade.done === false`, `cascadeBusy` im `finally` gelöst) — genau EIN
+// naheliegender Wiederholungs-Klick addierte den Versatz ein zweites Mal.
+// Kein Doppeltipp nötig; das ist der Funkloch-Alltag der Zielgruppe.
+//
+// Der Riegel aus F004 hilft hier nicht: er verhindert Gleichzeitigkeit, nicht
+// Wiederholung.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Lässt die ersten `n` PUTs mit 500 scheitern, danach alles normal durch.
+ *  Liefert den Zähler der insgesamt gesehenen PUTs. */
+async function failFirstPuts(page: Page, n: number): Promise<{ puts: number }> {
+	const stats = { puts: 0 };
+	let failsLeft = n;
+	await page.route('**/api/trips/**', async (route) => {
+		if (route.request().method() !== 'PUT') {
+			await route.continue();
+			return;
+		}
+		stats.puts++;
+		if (failsLeft > 0) {
+			failsLeft--;
+			await route.fulfill({ status: 500, body: JSON.stringify({ error: 'Serverfehler' }) });
+			return;
+		}
+		await route.continue();
+	});
+	return stats;
+}
+
+async function openCascadePlus21(page: Page): Promise<void> {
+	await openStagesEditor(page);
+	await page.getByText('Tag 1', { exact: false }).first().click();
+	await expect(activeDateInput(page)).toHaveValue('2026-08-01');
+	// 08-01 → 08-22 (+21 Tage). Zweimal angewandt ergäbe s2 = 2026-09-13.
+	await activeDateInput(page).fill('2026-08-22');
+	await activeDateInput(page).blur();
+	await expect(page.getByTestId('cascade-strip')).toBeVisible();
+}
+
+/** Der Versatz steckt GENAU EINMAL im persistierten Stand. */
+async function expectShiftedExactlyOnce(page: Page): Promise<void> {
+	const dates = await fetchStageDates(page);
+	expect(dates['s1']).toBe('2026-08-22');
+	expect(dates['s2'], 'der Versatz darf nur EINMAL drinstecken (+21, nicht +42)').toBe('2026-08-23');
+	expect(dates['s3']).toBe('2026-08-24');
+	expect(dates['pause']).toBe('2026-08-25');
+}
+
+test('AC-11 (#1389 F005): EIN Wiederholungs-Klick nach fehlgeschlagenem Schreibvorgang verdoppelt den Versatz nicht', async ({ page }) => {
+	test.setTimeout(60_000);
+	const stats = await failFirstPuts(page, 1);
+	await openCascadePlus21(page);
+
+	// Versuch 1 — schlägt fehl, die Rückfrage bleibt stehen und lädt zum Wiederholen ein.
+	await page.getByRole('button', { name: /Alle mitverschieben/ }).click();
+	await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'error', {
+		timeout: 15_000
+	});
+	await expect(page.getByTestId('cascade-strip')).toBeVisible();
+
+	// Genau EIN Wiederholungs-Klick — kein Doppeltipp.
+	await page.getByRole('button', { name: /Alle mitverschieben/ }).click();
+	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
+	expect(stats.puts, 'zwei Versuche = zwei Schreibvorgänge').toBe(2);
+
+	await page.reload();
+	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await expectShiftedExactlyOnce(page);
+});
+
+test('AC-12 (#1389 F005): zwei Fehlschläge, dann Erfolg — der Versatz bleibt einfach', async ({ page }) => {
+	test.setTimeout(90_000);
+	const stats = await failFirstPuts(page, 2);
+	await openCascadePlus21(page);
+
+	const apply = page.getByRole('button', { name: /Alle mitverschieben/ });
+	await apply.click();
+	await expect.poll(() => stats.puts, { timeout: 15_000 }).toBe(1);
+	await apply.click();
+	await expect.poll(() => stats.puts, { timeout: 15_000 }).toBe(2);
+	await apply.click();
+	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
+	expect(stats.puts, 'drei Versuche = drei Schreibvorgänge').toBe(3);
+
+	await page.reload();
+	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	// Dreifacher Versatz wäre 2026-10-04 — auch das darf nicht passieren.
+	await expectShiftedExactlyOnce(page);
+});
+
+test('AC-13 (#1389 F005 / Nebenbefund #1199): zweimal umdatieren vor der Antwort rechnet gegen das AUSGANGSdatum', async ({ page }) => {
+	// Der Nutzer korrigiert sich, bevor er die Rückfrage beantwortet. Vorher
+	// rechnete der zweite Durchlauf den Versatz gegen den ZWISCHENSTAND
+	// (08-11 → 08-21 = +10) statt gegen das Ausgangsdatum (08-01 → 08-21 = +20);
+	// die Folge-Etappen wanderten dadurch zu wenig weit.
+	test.setTimeout(60_000);
+	await openStagesEditor(page);
+	await page.getByText('Tag 1', { exact: false }).first().click();
+	await expect(activeDateInput(page)).toHaveValue('2026-08-01');
+
+	await activeDateInput(page).fill('2026-08-11');
+	await activeDateInput(page).blur();
+	await expect(page.getByTestId('cascade-strip')).toBeVisible();
+
+	// Zweite Korrektur, OHNE die Rückfrage zu beantworten.
+	await activeDateInput(page).fill('2026-08-21');
+	await activeDateInput(page).blur();
+	await expect(page.getByTestId('cascade-strip')).toContainText('+20');
+
+	await page.getByRole('button', { name: /Alle mitverschieben/ }).click();
+	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
+
+	await page.reload();
+	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	const dates = await fetchStageDates(page);
+	expect(dates['s1']).toBe('2026-08-21');
+	expect(dates['s2'], 'Versatz gegen das Ausgangsdatum: +20, nicht +10').toBe('2026-08-22');
+	expect(dates['s3']).toBe('2026-08-23');
+	expect(dates['pause']).toBe('2026-08-24');
+});

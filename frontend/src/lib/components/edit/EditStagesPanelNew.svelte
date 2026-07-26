@@ -222,12 +222,34 @@
 		days: number;
 		count: number;
 		done: boolean;
+		// Bug #1389 Adversary F005 (CRITICAL): die UNVERÄNDERLICHE Grundlage der
+		// Rechnung, festgehalten beim Aufstellen der Rückfrage. Vorher verschob
+		// applyCascade() aus dem laufend mutierten Zustand heraus — jeder erneute
+		// Aufruf addierte den Versatz nochmal. Genau ein Wiederholungs-Klick nach
+		// einem fehlgeschlagenen Schreibvorgang reichte dafür (Funkloch-Alltag der
+		// Zielgruppe). Mit „Grundlage + Versatz" liefert jeder Aufruf dasselbe
+		// Ergebnis; der Fehlerpfad braucht dadurch gar keine Rücknahme, die selbst
+		// wieder scheitern könnte.
+		/** Datum von Etappe 1, BEVOR der Nutzer es angefasst hat. */
+		baseFirstDate: string;
+		/** Datum je Folge-Etappe (id → ISO), bevor irgendetwas verschoben wurde. */
+		baseDates: Record<string, string>;
 	}
 	let cascade = $state<CascadeState | null>(null);
 	// Bug #1389 Adversary F004: läuft gerade eine Kaskaden-Anwendung? Dient als
 	// Reentrancy-Riegel in applyCascade() UND schaltet den Knopf ab, damit die
 	// Oberfläche einen zweiten Tipp gar nicht erst anbietet.
 	let cascadeBusy = $state(false);
+
+	// Bug #1389 F005: Momentaufnahme der Folge-Etappen-Daten (id → ISO). Etappen
+	// ohne Datum (frisch angelegt) bleiben draußen und damit unangetastet.
+	function snapshotFollowUpDates(): Record<string, string> {
+		const snap: Record<string, string> = {};
+		stages.forEach((s, i) => {
+			if (i > 0 && s.date) snap[s.id] = s.date;
+		});
+		return snap;
+	}
 
 	function handleDateChange(stageId: string, newDate: string): void {
 		const idx = stages.findIndex((s) => s.id === stageId);
@@ -241,9 +263,16 @@
 
 		// Kaskaden-Vorschlag nur bei erster Etappe und gültigem altem Datum.
 		if (idx === 0 && oldDate) {
-			const delta = computeCascadeDelta(oldDate, newDate);
+			// Bug #1389 F005: Solange eine Rückfrage offen ist, bleibt ihre Grundlage
+			// stehen. Ändert der Nutzer das Datum ein zweites Mal, BEVOR er geantwortet
+			// hat, wäre `oldDate` nur der Zwischenstand — der Versatz käme zu klein
+			// heraus. Gerechnet wird deshalb immer gegen das Ausgangsdatum.
+			const open = cascade !== null && !cascade.done;
+			const baseFirstDate = open ? cascade!.baseFirstDate : oldDate;
+			const baseDates = open ? cascade!.baseDates : snapshotFollowUpDates();
+			const delta = computeCascadeDelta(baseFirstDate, newDate);
 			if (delta !== 0 && stages.length > 1) {
-				cascade = { days: delta, count: stages.length - 1, done: false };
+				cascade = { days: delta, count: stages.length - 1, done: false, baseFirstDate, baseDates };
 				// Bug #1389: NICHT sofort speichern. Vorher ging hier ein Auto-Save
 				// (700ms) mit dem Stand „Etappe 1 neu, Folge-Etappen ALT" los, während
 				// der Nutzer die Rückfrage noch las. Beantwortet er sie später als
@@ -292,11 +321,17 @@
 		if (!cascade || cascade.done) return;
 		cascadeBusy = true;
 		try {
+			// Bug #1389 F005: aus der festgehaltenen Grundlage rechnen, NICHT aus dem
+			// aktuellen (womöglich schon verschobenen) Stand. Dadurch ist der Aufruf
+			// idempotent: ein Wiederholungs-Klick nach einem Fehlschlag — oder zehn —
+			// führt immer zum selben Ergebnis.
 			const days = cascade.days;
+			const base = cascade.baseDates;
 			stages = stages.map((s, i) => {
 				if (i === 0) return s;
-				if (!s.date) return s;
-				return { ...s, date: addDays(s.date, days), dateOverridden: true };
+				const from = base[s.id];
+				if (!from) return s;
+				return { ...s, date: addDays(from, days), dateOverridden: true };
 			});
 			if (saveController) {
 				// Issue #1376: den noch offenen Debounce aus handleDateChange verwerfen —
