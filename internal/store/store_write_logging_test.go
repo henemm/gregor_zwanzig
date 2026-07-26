@@ -28,12 +28,17 @@ func TestSaveTrip_WriteFailureLogsPathAndCause(t *testing.T) {
 		t.Fatalf("initial SaveTrip should succeed, got error: %v", err)
 	}
 
+	// Issue #1395 Scheibe 1: Der Schreibvorgang ist atomar (tmp-Datei +
+	// rename). Ein schreibgeschuetztes ZIEL-FILE reicht als Fehler-Injektion
+	// darum nicht mehr aus -- rename braucht Schreibrecht am VERZEICHNIS, nicht
+	// an der Datei. Die geprueften Zusagen aus #1066 (Log mit Pfad + Ursache)
+	// bleiben unveraendert, nur die Fehlerquelle ist jetzt das Verzeichnis.
 	path := filepath.Join(s.briefingsDir(), "log-trip.json")
-	if err := os.Chmod(path, 0444); err != nil {
-		t.Fatalf("failed to chmod trip file read-only: %v", err)
+	if err := os.Chmod(s.briefingsDir(), 0555); err != nil {
+		t.Fatalf("failed to chmod briefings dir read-only: %v", err)
 	}
 	defer func() {
-		_ = os.Chmod(path, 0644)
+		_ = os.Chmod(s.briefingsDir(), 0755)
 	}()
 
 	var buf bytes.Buffer
@@ -63,11 +68,13 @@ func TestWriteFileLogged_ReturnsWrappedErrorWithPath(t *testing.T) {
 	if err := os.WriteFile(path, []byte("{}"), 0644); err != nil {
 		t.Fatalf("setup write failed: %v", err)
 	}
-	if err := os.Chmod(path, 0444); err != nil {
+	// Issue #1395 Scheibe 1: Fehler-Injektion am Verzeichnis statt an der
+	// Datei (atomarer Schreibvorgang, s. TestSaveTrip_WriteFailureLogsPathAndCause).
+	if err := os.Chmod(tmp, 0555); err != nil {
 		t.Fatalf("chmod failed: %v", err)
 	}
 	defer func() {
-		_ = os.Chmod(path, 0644)
+		_ = os.Chmod(tmp, 0755)
 	}()
 
 	var buf bytes.Buffer

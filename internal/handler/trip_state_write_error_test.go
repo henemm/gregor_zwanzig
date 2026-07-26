@@ -18,12 +18,16 @@ func TestUpdateTripStateHandler_WriteFailureReturnsGenericStoreError(t *testing.
 	s := newTestStore(t)
 	seedTrip(t, s, "write-fail-trip", "Write Fail Trip")
 
+	// Issue #1395 Scheibe 1: Der Store schreibt atomar (tmp-Datei + rename).
+	// Fehler-Injektion darum ueber das schreibgeschuetzte VERZEICHNIS statt
+	// ueber die schreibgeschuetzte Datei — die geprueften Zusagen aus #1066
+	// (500 + generischer Body ohne Pfad/OS-Text) bleiben unveraendert.
 	path := filepath.Join(s.BriefingsDir(), "write-fail-trip.json")
-	if err := os.Chmod(path, 0444); err != nil {
-		t.Fatalf("failed to chmod trip file read-only: %v", err)
+	if err := os.Chmod(s.BriefingsDir(), 0555); err != nil {
+		t.Fatalf("failed to chmod briefings dir read-only: %v", err)
 	}
 	defer func() {
-		_ = os.Chmod(path, 0644)
+		_ = os.Chmod(s.BriefingsDir(), 0755)
 	}()
 
 	r := chi.NewRouter()
