@@ -319,14 +319,19 @@
 		// muss der Riegel hier stehen und nicht am ersten Netzwerk-Aufruf.
 		if (cascadeBusy) return;
 		if (!cascade || cascade.done) return;
+		// Adversary MEDIUM: den Zustand hier festhalten. `dismissCascade()` kann im
+		// selben Tick `cascade = null` setzen; ein späteres `{ ...cascade, done: true }`
+		// ergäbe dann `{}` und der Erfolgsbanner stünde ohne Anzahl und Tageszahl da
+		// („Folge-Etappen verschoben · alle Daten um Tage angepasst.").
+		const active = cascade;
 		cascadeBusy = true;
 		try {
 			// Bug #1389 F005: aus der festgehaltenen Grundlage rechnen, NICHT aus dem
 			// aktuellen (womöglich schon verschobenen) Stand. Dadurch ist der Aufruf
 			// idempotent: ein Wiederholungs-Klick nach einem Fehlschlag — oder zehn —
 			// führt immer zum selben Ergebnis.
-			const days = cascade.days;
-			const base = cascade.baseDates;
+			const days = active.days;
+			const base = active.baseDates;
 			stages = stages.map((s, i) => {
 				if (i === 0) return s;
 				const from = base[s.id];
@@ -355,15 +360,24 @@
 					const updatedTrip = await api.put<Trip>(`/api/trips/${tripId!}`, { stages: currentStages });
 					saveController.setSaved();
 					onTripUpdate?.(updatedTrip);
-					cascade = { ...cascade, done: true };
+					cascade = { ...active, done: true };
 				} catch (e: unknown) {
 					const msg = e instanceof Error ? e.message : 'Speichern fehlgeschlagen';
+					// Bug #1389 F006 (Spiegelfall): `cancel()` oben hat den zurückgestellten
+					// Speichervorgang abgeräumt. Ohne Neu-Anmeldung hätte weder
+					// `beforeNavigate` noch der Reiterwechsel etwas zu retten — die
+					// Datumsänderung ginge beim Wegnavigieren still verloren. Gerettet wird
+					// die geäußerte Absicht (alle mitverschieben); der Schreibvorgang war
+					// nur fehlgeschlagen. Reihenfolge beachtet: `deferSave()` setzt den
+					// Zustand auf `dirty`, deshalb MUSS `setError()` danach kommen, sonst
+					// verschwindet die Fehlermeldung.
+					deferSave();
 					saveController.setError(msg);
 				}
 			} else {
 				const result = await save();
 				if (result !== null) {
-					cascade = { ...cascade, done: true };
+					cascade = { ...active, done: true };
 				}
 			}
 		} finally {
@@ -372,22 +386,40 @@
 	}
 
 	function dismissCascade(): void {
-		// Bug #1389: „Nur diese Etappe" ist die ANTWORT auf die Rückfrage — erst
-		// jetzt (und genau einmal) wird der zurückgestellte Stand „nur Etappe 1"
-		// geschrieben. Beim „Schließen" des Erfolgs-Streifens (cascade.done) ist
-		// nichts mehr ausstehend, dann bleibt es beim reinen Ausblenden.
+		// „Nur diese Etappe" ist die ANTWORT auf die Rückfrage — erst jetzt wird
+		// geschrieben. Beim „Schließen" des Erfolgs-Streifens (cascade.done) gibt es
+		// nichts zu speichern, dann bleibt es beim reinen Ausblenden.
 		//
-		// Adversary F004 (geprüft, kein Riegel nötig): ein Doppeltipp kann hier
-		// keine zwei Schreibvorgänge auslösen. Die Funktion ist synchron und setzt
-		// `cascade = null` VOR jeder Weitergabe — der zweite Aufruf sieht bereits
-		// `wasOpenQuestion === false` und steigt aus. Zusätzlich ist `flush()`
-		// selbst idempotent: `doSave()` nullt `_pendingFn` synchron, bevor es das
-		// erste Mal wartet. Nachweis: e2e AC-10 (war schon vor dem Fix grün) und
-		// der Kern-Test „flush() ist idempotent".
-		const wasOpenQuestion = cascade !== null && !cascade.done;
+		// Adversary F004: läuft gerade eine Kaskaden-Anwendung, hier NICHT
+		// dazwischenfunken — sonst kämpfen zwei Schreibvorgänge gegeneinander. Ein
+		// Doppeltipp auf diesen Knopf selbst ist unkritisch: die Funktion ist
+		// synchron und nullt `cascade` vor jeder Weitergabe (Nachweis e2e AC-10).
+		if (cascadeBusy) return;
+		const open = cascade !== null && !cascade.done;
+		const base = cascade?.baseDates;
 		cascade = null;
-		if (!wasOpenQuestion) return;
-		if (saveController) void saveController.flush(); else void save();
+		if (!open) return;
+
+		// Bug #1389 F006: UNBEDINGT schreiben, unabhängig vom Zustand der Steuerung.
+		// Ein fehlgeschlagener Kaskaden-Versuch hat den zurückgestellten
+		// Speichervorgang bereits abgeräumt (applyCascade → cancel()) UND die
+		// Folge-Etappen lokal schon verschoben. Das bisherige `flush()` lief dann
+		// ins Leere: Der Nutzer sah sein neues Datum im Feld, hatte bewusst
+		// entschieden — und gespeichert war nichts. Deshalb: Folge-Etappen aus der
+		// Grundlage zurücksetzen, Etappe 1 behält ihr neues Datum, ein Schreibvorgang.
+		if (base) {
+			stages = stages.map((s, i) => {
+				if (i === 0) return s;
+				const from = base[s.id];
+				return from && s.date !== from ? { ...s, date: from } : s;
+			});
+		}
+		if (saveController) {
+			saveController.cancel();
+			void saveController.doSave(buildStagesSave());
+		} else {
+			void save();
+		}
 	}
 
 	// EtappenStrip-Handler

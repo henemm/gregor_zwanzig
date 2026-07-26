@@ -498,3 +498,79 @@ test('AC-13 (#1389 F005 / Nebenbefund #1199): zweimal umdatieren vor der Antwort
 	expect(dates['s3']).toBe('2026-08-23');
 	expect(dates['pause']).toBe('2026-08-24');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bug #1389 Adversary F006 — stiller Datenverlust nach fehlgeschlagenem
+// Kaskaden-Schreibvorgang.
+//
+// `applyCascade()` räumt den zurückgestellten Speichervorgang ab (`cancel()`).
+// Schlägt der eigene Schreibvorgang danach fehl, gibt es nichts mehr zu
+// flushen: „Nur diese Etappe" rief `flush()` ins Leere, der Reiterwechsel und
+// `beforeNavigate` fanden nichts vor. Der Nutzer sieht sein neues Datum im
+// Feld, hat bewusst entschieden — und gespeichert ist nichts.
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function failFirstCascadeThenSee(page: Page): Promise<{ puts: number }> {
+	const stats = await failFirstPuts(page, 1);
+	await openCascadePlus21(page);
+	await page.getByRole('button', { name: /Alle mitverschieben/ }).click();
+	await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'error', {
+		timeout: 15_000
+	});
+	await expect(page.getByTestId('cascade-strip')).toBeVisible();
+	return stats;
+}
+
+test('AC-14 (#1389 F006): nach einem Fehlschlag speichert „Nur diese Etappe" statt still zu verwerfen', async ({ page }) => {
+	test.setTimeout(60_000);
+	const stats = await failFirstCascadeThenSee(page);
+
+	// Der Nutzer entscheidet sich um.
+	await page.getByRole('button', { name: /Nur diese Etappe/ }).click();
+
+	await expect
+		.poll(async () => (await fetchStageDates(page))['s1'], { timeout: 15_000 })
+		.toBe('2026-08-22');
+	const dates = await fetchStageDates(page);
+	expect(dates['s2'], 'Folge-Etappen zurück auf den Ausgangsstand').toBe('2026-08-02');
+	expect(dates['s3']).toBe('2026-08-03');
+	expect(dates['pause']).toBe('2026-08-04');
+	expect(stats.puts, 'ein fehlgeschlagener + ein erfolgreicher Schreibvorgang').toBe(2);
+});
+
+test('AC-15 (#1389 F006 Spiegelfall): nach einem Fehlschlag überlebt die Änderung einen Reiterwechsel', async ({ page }) => {
+	test.setTimeout(60_000);
+	await failFirstCascadeThenSee(page);
+
+	// Rückfrage NICHT beantworten — der Nutzer wechselt den Reiter.
+	await page.getByRole('tab', { name: /Wetter-Metriken/ }).click();
+
+	// Die Absicht war „alle mitverschieben"; der Schreibvorgang war nur
+	// fehlgeschlagen. Gerettet wird deshalb genau diese Absicht — nicht nichts.
+	await expect
+		.poll(async () => (await fetchStageDates(page))['s1'], { timeout: 15_000 })
+		.toBe('2026-08-22');
+	const dates = await fetchStageDates(page);
+	expect(dates['s2']).toBe('2026-08-23');
+	expect(dates['s3']).toBe('2026-08-24');
+});
+
+test('AC-16 (#1389): beide Knöpfe im selben Tick — der Erfolgsbanner bleibt vollständig', async ({ page }) => {
+	test.setTimeout(60_000);
+	await openCascadePlus21(page);
+
+	await page.evaluate(() => {
+		const btns = Array.from(
+			document.querySelectorAll('[data-testid="cascade-strip"] button')
+		) as HTMLElement[];
+		btns[0]?.click();
+		btns[1]?.click();
+	});
+
+	const done = page.getByTestId('cascade-done');
+	await expect(done).toBeVisible({ timeout: 20_000 });
+	// Vorher stand dort „Folge-Etappen verschoben · alle Daten um Tage angepasst."
+	// — Anzahl und Tageszahl fehlten, weil der Zustand zwischendurch genullt wurde.
+	await expect(done).toContainText('3 Folge-Etappen verschoben');
+	await expect(done).toContainText('+21');
+});
