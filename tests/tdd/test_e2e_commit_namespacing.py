@@ -16,8 +16,8 @@ Getestete ACs (siehe docs/specs/modules/issue_662_e2e_commit_namespacing.md):
   AC-6: .claude/e2e_verified/ ist gitignored
   AC-7: e2e-verify.md Backend-Pfad schreibt commit-getaggt (doc-compliance)
 
-In der RED-Phase fehlen `_commit_e2e_path` / `_default_e2e_path` und die
-Default-Pfad-Verdrahtung → die Tests scheitern (AttributeError / falscher Pfad).
+In der RED-Phase fehlt `_commit_e2e_path` und die Default-Pfad-Verdrahtung →
+die Tests scheitern (AttributeError / falscher Pfad).
 """
 
 import importlib.util
@@ -75,7 +75,12 @@ def repo(tmp_path):
 def _patch_paths(monkeypatch, mod, root: Path):
     """Biegt die hartkodierten Pfade auf das Temp-Repo um (reale Pfade, kein Mock)."""
     monkeypatch.setattr(mod, "REPO_DIR", root)
-    monkeypatch.setattr(mod, "CANONICAL_E2E_PATH", root / ".claude" / "e2e_verified.json")
+    # Fix #1382: CANONICAL_E2E_PATH entfällt (kein Singleton-Rückfall mehr).
+    # raising=False haelt diesen Patch als reines Sicherheitsnetz weiterhin
+    # gueltig, auch wenn das Attribut nicht mehr existiert.
+    monkeypatch.setattr(
+        mod, "CANONICAL_E2E_PATH", root / ".claude" / "e2e_verified.json", raising=False
+    )
 
 
 def _findings_file(tmp_path) -> Path:
@@ -133,8 +138,13 @@ class TestGateAcceptsCommitTagged:
 # AC-3: Singleton-Fallback + Vorrang der getaggten Datei
 # ---------------------------------------------------------------------------
 class TestSingletonFallbackAndPrecedence:
-    def test_legacy_singleton_is_read_as_fallback(self, repo, monkeypatch):
-        """AC-3: Existiert NUR das alte Singleton → Gate liest es (Exit 0)."""
+    def test_legacy_singleton_is_ignored_not_read_as_fallback(self, repo, monkeypatch):
+        """Fix #1382: der Rückfall auf das alte Singleton entfällt ersatzlos.
+        Existiert NUR das alte Singleton (kein commit-getaggter Nachweis für
+        HEAD) → Gate blockiert (Exit 1), weil kein Nachweis für den Zielstand
+        vorliegt — die Singleton-Datei wird nie mehr gelesen (vorher:
+        test_legacy_singleton_is_read_as_fallback, erwartete Exit 0 über den
+        jetzt entfernten Fallback)."""
         root, shas = repo
         sg = _load_module(STAGING_GATE, "staging_gate")
         _patch_paths(monkeypatch, sg, root)
@@ -148,7 +158,11 @@ class TestSingletonFallbackAndPrecedence:
             "environment": "staging",
             "findings": [],
         }))
-        assert sg.gate_check(None, None) == 0, "Fallback auf Singleton muss greifen"
+        assert sg.gate_check(None, None) == 1, (
+            "Singleton-Rückfall ist entfernt — ohne commit-getaggten Nachweis "
+            "für HEAD muss das Gate blockieren, auch wenn das Singleton "
+            "inhaltlich passen würde."
+        )
 
     def test_commit_tagged_takes_precedence_over_singleton(self, repo, monkeypatch):
         """AC-3: Existiert beides, gewinnt die commit-getaggte Datei — hier blockiert
@@ -204,7 +218,7 @@ class TestForeignCommitDoesNotUnlock:
 # ---------------------------------------------------------------------------
 class TestProdSelftestPathResolution:
     def test_prod_selftest_resolves_commit_tagged_path(self, repo, monkeypatch):
-        """AC-5: prod_selftest._default_e2e_path() liefert die commit-getaggte Datei
+        """AC-5: prod_selftest._commit_e2e_path() liefert die commit-getaggte Datei
         für HEAD (dieselbe Quelle wie das Gate)."""
         root, shas = repo
         ps = _load_module(PROD_SELFTEST, "prod_selftest")
@@ -219,7 +233,7 @@ class TestProdSelftestPathResolution:
             "scope": "backend", "environment": "staging", "findings": [],
         }))
 
-        resolved = ps._default_e2e_path()
+        resolved = ps._commit_e2e_path()
         assert resolved == tagged, (
             f"prod_selftest muss den commit-getaggten Pfad auflösen, war: {resolved}"
         )

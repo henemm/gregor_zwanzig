@@ -84,8 +84,12 @@ def patched_repo(tmp_path, monkeypatch):
     repo.mkdir()
     head = _init_git_repo(repo)
     monkeypatch.setattr(staging_gate, "REPO_DIR", repo)
+    # Fix #1382: CANONICAL_E2E_PATH entfällt (kein Singleton-Rückfall mehr).
+    # raising=False haelt diesen Patch als reines Sicherheitsnetz weiterhin
+    # gueltig, auch wenn das Attribut nicht mehr existiert.
     monkeypatch.setattr(
-        staging_gate, "CANONICAL_E2E_PATH", repo / ".claude" / "e2e_verified.json"
+        staging_gate, "CANONICAL_E2E_PATH", repo / ".claude" / "e2e_verified.json",
+        raising=False,
     )
     findings = tmp_path / "findings.json"
     findings.write_text("[]")

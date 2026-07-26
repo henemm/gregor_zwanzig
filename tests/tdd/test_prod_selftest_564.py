@@ -350,40 +350,148 @@ class TestAC4SkippedFindings:
         )
 
 
+def _init_evidence_free_repo(root: Path) -> str:
+    """Erzeugt ein isoliertes, echtes Git-Repo OHNE JEDE Attestation.
+
+    Für die 'kein Nachweis'-Fälle unten reicht ein Direktaufruf mit
+    explizitem ``scope=`` allein NICHT: run_selftest() sucht bei
+    Nicht-Exakt-Treffer über ``_e2e_paths._nearest_verified_ancestor`` im
+    Git-Verlauf von ``REPO_DIR`` nach einem Vorfahren mit gültiger
+    Attestation. Bliebe ``REPO_DIR`` auf dem echten Hauptrepo verdrahtet,
+    fände dieser Scan reale, dort tatsächlich vorhandene Attestationen für
+    Vorfahren des aktuellen HEAD und der Test würde fälschlich PASS liefern
+    — abhängig vom Zufallszustand des Hauptrepos (genau der vom PO
+    gemeldete Fehlerklasse, 2026-07-26). Ein `.gitignore` analog dem echten
+    Projekt (.gitignore:42-43) verhindert zusätzlich, dass eine versehentlich
+    geschriebene Attestations-Datei durch `git add -A` eingecheckt wird.
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.name", "Tester"], cwd=root, check=True)
+    (root / ".gitignore").write_text(".claude/e2e_verified/\n.claude/e2e_verified.json\n")
+    (root / "src").mkdir()
+    (root / "src" / "a.py").write_text("a = 1\n")
+    subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=root, check=True)
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True
+    ).stdout.strip()
+
+
 class TestAC5NoE2EFile:
-    """AC-5: Kein e2e_verified.json → Exit 0 (graceful skip), kein Bericht."""
+    """Fix #1382 löst #564 AC-5 TEILWEISE ab: fehlender Nachweis blockiert
+    jetzt (Exit 1) UND schreibt einen Bericht, sofern der Scope NICHT
+    docs-only ist — echter Code wurde dann ausgerollt, ohne dass irgendein
+    Nachweis (exakt oder Ancestor) vorliegt. Der docs-only-Teil von AC-5
+    bleibt unverändert gültig (Exit 0, kein Bericht — reiner
+    Doku-/Tooling-Deploy, kein Code in Prod), s.
+    test_docs_only_scope_with_missing_evidence_still_exits_zero.
 
-    def test_exit0_when_e2e_verified_missing(self, tmp_path):
-        """AC-5: Fehlendes e2e_verified.json → Exit 0."""
-        non_existent = tmp_path / "does_not_exist.json"
-        rc, out, err = _run_selftest(
-            e2e_path=non_existent, workflow="issue-564-ac5-no-file"
-        )
-        combined = out + err
-        assert rc == 0, (
-            f"Erwartet Exit 0 bei fehlendem e2e_verified.json, aber Exit {rc}\n{combined}"
+    Direktaufruf von run_selftest() mit explizitem ``scope=`` statt über
+    den Subprozess-Helfer _run_selftest(): das Skript ermittelt den Scope
+    sonst selbst gegen das ECHTE Hauptrepo (REPO_DIR ist dort fest
+    verdrahtet, keine --scope-CLI-Option existiert) — am aktuellen HEAD
+    steht das faktisch auf 'docs-only' und der Kurzschluss (run_selftest,
+    Scope-Check) greift, bevor die Nachweis-Logik überhaupt erreicht wird.
+    Zusätzlich wird ``REPO_DIR`` für die drei 'kein Nachweis'-Fälle per
+    Monkeypatch auf ein isoliertes, evidenzfreies Repo umgebogen (s.
+    _init_evidence_free_repo) — sonst fände die Ancestor-Suche reale
+    Attestationen im echten Hauptrepo und der Test würde je nach dessen
+    Zustand zufällig PASS statt FAIL liefern (PO-Befund 2026-07-26)."""
+
+    def test_exit1_when_e2e_verified_missing_and_scope_not_docs_only(
+        self, tmp_path, monkeypatch
+    ):
+        """Fix #1382 (löst #564 AC-5 teilweise ab): Fehlendes e2e_verified.json
+        bei explizit nicht-docs-only Scope UND ohne jeden Vorfahren-Nachweis
+        → Exit 1 statt wie bisher Exit 0. Vorher: test_exit0_when_e2e_verified_missing,
+        erwartete Exit 0 (das von #564 AC-5 festgelegte, für diesen Fall jetzt
+        abgelöste Verhalten)."""
+        mod = _load_prod_selftest_module()
+        root = tmp_path / "repo"
+        _init_evidence_free_repo(root)
+        monkeypatch.setattr(mod, "REPO_DIR", root)
+        non_existent = root / ".claude" / "e2e_verified" / "does_not_exist.json"
+
+        rc = mod.run_selftest(non_existent, "issue-564-ac5-no-file", scope="backend")
+
+        assert rc == 1, (
+            f"Erwartet Exit 1 bei fehlendem Nachweis (weder exakt noch Vorfahre) "
+            f"und Nicht-docs-only-Scope (Fix #1382 löst #564 AC-5 teilweise ab), "
+            f"aber Exit {rc}"
         )
 
-    def test_info_message_when_e2e_verified_missing(self, tmp_path):
-        """AC-5: INFO-Meldung wenn kein e2e_verified.json vorhanden."""
-        non_existent = tmp_path / "does_not_exist.json"
-        rc, out, err = _run_selftest(e2e_path=non_existent, workflow="issue-564-ac5-info")
-        combined = out + err
+    def test_fail_message_when_e2e_verified_missing_and_scope_not_docs_only(
+        self, tmp_path, monkeypatch, capfd
+    ):
+        """Ersetzt die alte INFO-Meldung (test_info_message_when_e2e_verified_missing):
+        bei Nicht-docs-only-Scope und fehlendem Nachweis ist die Meldung jetzt
+        eine FAIL-Meldung, die klar benennt, dass kein Nachweis vorlag."""
+        mod = _load_prod_selftest_module()
+        root = tmp_path / "repo"
+        _init_evidence_free_repo(root)
+        monkeypatch.setattr(mod, "REPO_DIR", root)
+        non_existent = root / ".claude" / "e2e_verified" / "does_not_exist.json"
+
+        capfd.readouterr()
+        rc = mod.run_selftest(non_existent, "issue-564-ac5-fail-message", scope="backend")
+        combined = "".join(capfd.readouterr())
+
+        assert rc == 1
+        assert "FAIL" in combined
         assert any(
-            kw in combined.lower()
-            for kw in ["übersprungen", "skipped", "info", "nicht vorhanden", "not found", "missing"]
-        ), f"Keine INFO-Meldung bei fehlendem e2e_verified.json:\n{combined}"
+            kw in combined.lower() for kw in ["kein nachweis", "keine attestation"]
+        ), f"Meldung muss erklären, dass kein Nachweis vorlag:\n{combined}"
 
-    def test_no_report_written_when_e2e_verified_missing(self, tmp_path):
-        """AC-5: Kein Bericht wird geschrieben wenn e2e_verified.json fehlt."""
-        workflow_name = "issue-564-ac5-no-report"
-        non_existent = tmp_path / "does_not_exist.json"
-        _run_selftest(e2e_path=non_existent, workflow=workflow_name)
+    def test_report_written_when_e2e_verified_missing_and_scope_not_docs_only(
+        self, tmp_path, monkeypatch
+    ):
+        """Ersetzt test_no_report_written_when_e2e_verified_missing: die neue
+        Regel (Fix #1382, AC-7) schreibt jetzt EINEN Bericht, der den
+        fehlenden Nachweis erklärt — das genaue Gegenteil der alten
+        Erwartung 'kein Bericht'."""
+        mod = _load_prod_selftest_module()
+        root = tmp_path / "repo"
+        _init_evidence_free_repo(root)
+        monkeypatch.setattr(mod, "REPO_DIR", root)
+        non_existent = root / ".claude" / "e2e_verified" / "does_not_exist.json"
+        workflow_name = "issue-564-ac5-report-on-missing-evidence"
+        report_path = root / "docs" / "artifacts" / workflow_name / "prod-selftest.md"
 
-        report_path = REPO_DIR / "docs" / "artifacts" / workflow_name / "prod-selftest.md"
-        assert not report_path.exists(), (
-            f"Bericht fälschlicherweise geschrieben obwohl kein e2e_verified.json vorhanden: {report_path}"
+        rc = mod.run_selftest(non_existent, workflow_name, scope="backend")
+
+        assert rc == 1
+        assert report_path.exists(), (
+            f"Fix #1382 (AC-7): bei fehlendem Nachweis und Nicht-docs-only-Scope "
+            f"MUSS jetzt ein Bericht geschrieben werden: {report_path}"
         )
+        content = report_path.read_text()
+        assert "FAIL" in content
+        assert any(
+            kw in content.lower() for kw in ["kein nachweis", "keine attestation"]
+        ), f"Bericht muss erklären, dass kein Nachweis vorlag:\n{content}"
+
+    def test_docs_only_scope_with_missing_evidence_still_exits_zero(
+        self, tmp_path, monkeypatch
+    ):
+        """Weiterhin gültiger Teil von #564 AC-5 (NICHT abgelöst): docs-only
+        Scope + fehlender Nachweis → Exit 0, kein Bericht (reiner
+        Doku-/Tooling-Deploy, kein Code in Prod — der Scope-Check läuft vor
+        der Nachweis-Logik und greift unverändert, unabhängig davon, ob im
+        Repo Attestationen existieren)."""
+        mod = _load_prod_selftest_module()
+        root = tmp_path / "repo"
+        _init_evidence_free_repo(root)
+        monkeypatch.setattr(mod, "REPO_DIR", root)
+        non_existent = root / ".claude" / "e2e_verified" / "does_not_exist.json"
+        workflow_name = "issue-564-ac5-docs-only-still-exit0"
+        report_path = root / "docs" / "artifacts" / workflow_name / "prod-selftest.md"
+
+        rc = mod.run_selftest(non_existent, workflow_name, scope="docs-only")
+
+        assert rc == 0, "Docs-only-Scope + fehlender Nachweis muss weiterhin Exit 0 liefern"
+        assert not report_path.exists(), "Docs-only-Skip darf keinen Bericht schreiben"
 
 
 class TestAC6ReportFormat:

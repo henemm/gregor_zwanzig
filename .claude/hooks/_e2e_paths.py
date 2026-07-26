@@ -7,7 +7,12 @@ prod_selftest.py als dünner Shim-Layer verwendet.
 
 import json
 import subprocess
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+# Fix #1382: einzige Quelle der Stale-Grenze, geteilt von staging_gate.py und
+# prod_selftest.py (vorher zwei getrennte/eine fehlende Definition).
+STALE_HOURS = 24
 
 
 def last_gate_scope_path(repo_dir) -> Path:
@@ -219,16 +224,71 @@ def worktree_repo_dir(cwd=None) -> "Path | None":
     return Path(result.stdout.strip())
 
 
-def default_e2e_path(repo_dir, canonical_path, sha) -> Path:
-    """Default-Pfad-Auflösung: commit-getaggt (Vorrang), sonst Singleton-Fallback.
+def _nearest_verified_ancestor(ref: str, git_dir: Path, shared_dir: Path,
+                               max_count: int = 40) -> "tuple[str | None, dict | None]":
+    """Fix #1382 (verschoben aus staging_gate.py, Issue #1197): Nächster VERIFIED,
+    nicht-staler Ancestor von ``ref`` mit commit-getaggter Attestation — dient als
+    Deploy-Basis, wenn keine exakte <ref>.json existiert.
 
-    Existiert die commit-getaggte Datei → diese.
-    Existiert nur der Singleton-Pfad → Fallback (Migration).
-    Sonst die (nicht existente) getaggte Datei → wird als 'fehlt' behandelt.
+    Läuft ``git rev-list --max-count=N ref`` (newest-first, ``ref``
+    eingeschlossen) im ``git_dir`` durch. Für den ERSTEN Commit C, dessen
+    commit-getaggte Attestation im ``shared_dir`` existiert, ``verified_commit
+    == C`` trägt, deren ``staging_verdict`` mit "VERIFIED" beginnt und deren
+    ``verified_at`` nicht älter als STALE_HOURS ist, wird (C, cdata)
+    zurückgegeben. Andernfalls (None, None). Jeder git-/JSON-Fehler ist
+    fail-closed → (None, None).
+
+    Anker: git_dir MUSS die Wurzel des Arbeitsbaums sein (in Produktion liefert
+    ``_verified_repo_dir()`` genau ``git rev-parse --show-toplevel``). Zeigt der
+    konfigurierte Pfad woanders hin (z.B. Unterverzeichnis, git löst per
+    Discovery ein fremdes Eltern-Repo auf), wird fail-closed geblockt.
+
+    Einzige Definition dieser Ancestor-Prüfung im Projekt — staging_gate.py und
+    prod_selftest.py delegieren beide hierher (Fix #1382, Scheibe 2).
     """
-    tagged = commit_e2e_path(repo_dir, sha)
-    if tagged.exists():
-        return tagged
-    if Path(canonical_path).exists():
-        return Path(canonical_path)
-    return tagged
+    toplevel = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True, text=True, cwd=str(git_dir),
+    )
+    if toplevel.returncode != 0 or not toplevel.stdout.strip():
+        return (None, None)
+    if Path(toplevel.stdout.strip()).resolve() != Path(git_dir).resolve():
+        return (None, None)
+    result = subprocess.run(
+        ["git", "rev-list", f"--max-count={max_count}", ref],
+        capture_output=True, text=True, cwd=str(git_dir),
+    )
+    if result.returncode != 0:
+        return (None, None)
+    for sha in (line.strip() for line in result.stdout.splitlines() if line.strip()):
+        path = commit_e2e_path(shared_dir, sha)
+        if not path.exists():
+            continue
+        # Fix #1382 Scheibe 2 (Adversary-Fund F001, PO-Entscheidung 2026-07-26):
+        # Der ERSTE Commit mit einer existierenden Attestation ist entscheidend.
+        # Vorher wurde ein nicht bestandener Nachweis (BROKEN/AMBIGUOUS/leer/
+        # fehlendes Feld/korrupt/veraltet) per `continue` übersprungen, sodass
+        # die Suche an ihm vorbei zu einem älteren, evtl. bestandenen Vorfahren
+        # weiterlief. Jetzt beendet der erste gefundene Nachweis die Suche
+        # fail-closed, sobald er nicht besteht — einheitlich für alle
+        # Fehlerarten (kein Sonderfall mehr für "zu alt").
+        try:
+            cdata = json.loads(path.read_text())
+        except (json.JSONDecodeError, OSError):
+            return (None, None)
+        if not isinstance(cdata, dict):
+            return (None, None)
+        if cdata.get("verified_commit") != sha:
+            return (None, None)
+        if not str(cdata.get("staging_verdict", "")).startswith("VERIFIED"):
+            return (None, None)
+        try:
+            verified_at = datetime.fromisoformat(cdata.get("verified_at", ""))
+            if verified_at.tzinfo is None:
+                verified_at = verified_at.replace(tzinfo=timezone.utc)
+        except ValueError:
+            return (None, None)
+        if datetime.now(timezone.utc) - verified_at > timedelta(hours=STALE_HOURS):
+            return (None, None)
+        return (sha, cdata)
+    return (None, None)

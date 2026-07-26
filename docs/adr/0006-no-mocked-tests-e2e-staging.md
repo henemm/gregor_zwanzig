@@ -20,9 +20,14 @@ deployten Stand (lokale Maschine = Produktion).
    Mindestens ein Test muss den Bug aus **Nutzerperspektive** reproduzieren (rot vor Fix, grün danach).
    *Ausnahme:* Dokumentations-Compliance-Tests, markiert mit `# doc-compliance-test`.
 2. **Echte E2E-Verifikation läuft nach dem Push gegen Staging** (`staging.gregor20.henemm.com`) —
-   nie durch lokalen Neustart des Live-Servers. Der Prod-Deploy ist über `e2e_verified.json`
-   (`verified_commit` + `staging_verdict`) als **Hard Gate** abgesichert (#521); nach dem Deploy
+   nie durch lokalen Neustart des Live-Servers. Der Prod-Deploy ist über einen Nachweis mit
+   `verified_commit` + `staging_verdict` als **Hard Gate** abgesichert (#521); nach dem Deploy
    verifiziert ein Post-Deploy-Selftest gegen Produktion (#564).
+   *Nachtrag #1382 (2026-07-26):* Der Nachweis liegt **commit-benannt** unter
+   `.claude/e2e_verified/<sha>.json` — ein Nachweis je Stand, geschrieben und gelesen über
+   dieselbe Auflösung. Die frühere einzelne Sammeldatei ist abgekündigt und wird nicht mehr
+   gelesen; ein fehlender Nachweis für den Zielstand blockiert, statt auf einen fremden
+   zurückzufallen. Dieselbe Bedingung gilt für Deploy-Gate und Post-Deploy-Selftest.
 
 ## Verworfene Alternativen
 

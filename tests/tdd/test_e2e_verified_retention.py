@@ -75,7 +75,12 @@ def repo(tmp_path):
 def _patch_paths(monkeypatch, mod, root: Path):
     """Biegt die hartkodierten Pfade auf das Temp-Repo um (reale Pfade, kein Mock)."""
     monkeypatch.setattr(mod, "REPO_DIR", root)
-    monkeypatch.setattr(mod, "CANONICAL_E2E_PATH", root / ".claude" / "e2e_verified.json")
+    # Fix #1382: CANONICAL_E2E_PATH entfällt (kein Singleton-Rückfall mehr).
+    # raising=False haelt diesen Patch als reines Sicherheitsnetz weiterhin
+    # gueltig, auch wenn das Attribut nicht mehr existiert.
+    monkeypatch.setattr(
+        mod, "CANONICAL_E2E_PATH", root / ".claude" / "e2e_verified.json", raising=False
+    )
 
 
 def _findings_file(tmp_path) -> Path:

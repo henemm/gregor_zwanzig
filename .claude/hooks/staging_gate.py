@@ -8,22 +8,27 @@ Mode A — Verdict schreiben (vom Staging Validator Agent aufgerufen):
     python3 staging_gate.py --write-verdict "VERIFIED: ..." \
         --findings-json /tmp/findings.json [--e2e-path PATH]
 
-    Schreibt .claude/e2e_verified.json mit verified_commit, staging_verdict,
-    findings, verified_at, scope, environment.
+    Schreibt die commit-getaggte Nachweis-Datei .claude/e2e_verified/<sha>.json
+    mit verified_commit, staging_verdict, findings, verified_at, scope,
+    environment.
     Exit 0 bei VERIFIED/AMBIGUOUS, Exit 1 bei BROKEN.
     Datei wird NUR bei Exit 0 geschrieben (kein BROKEN-Artefakt).
 
 Mode B — Gate-Check (von deploy-gregor-prod.sh aufgerufen):
-    python3 staging_gate.py --check [--e2e-path PATH] [--scope SCOPE]
+    python3 staging_gate.py --check [--e2e-path PATH] [--scope SCOPE] [--expected-commit REF]
 
-    Prüft Reihenfolge:
+    Nachweis wird ausschließlich über den commit-getaggten Pfad
+    .claude/e2e_verified/<sha>.json aufgelöst (Fix #1382 — kein Rückfall mehr
+    auf die frühere Sammeldatei, Details s. Issue #1382). Prüft Reihenfolge:
       1. GZ_SKIP_E2E_GATE=1 → Warn + Exit 0
       2. --scope=docs-only ODER detect_scope==docs-only → Exit 0
-      3. e2e_verified.json fehlt → Exit 1
-      4. verified_commit != HEAD-SHA → Exit 1
-      5. staging_verdict beginnt nicht mit VERIFIED → Exit 1
-      6. verified_at älter als 24h → Exit 1
-      7. Alle OK → Exit 0
+      3. Kein exakter Treffer für den Zielstand → Ancestor-Relaxierung
+         versuchen (nur bei VERIFIED, nicht-stalem Vorfahren UND docs-only
+         Zuwachs); sonst Exit 1 mit einer von fünf Meldungen (i)-(v), s.
+         docs/specs/modules/fix_1382_deploy_gate_evidence.md
+      4. Exakter Treffer: staging_verdict beginnt nicht mit VERIFIED → Exit 1
+      5. Exakter Treffer: verified_at älter als 24h → Exit 1
+      6. Alle OK → Exit 0
 
 Mode C — Scope detection:
     python3 staging_gate.py --detect-scope  # gibt Scope-String auf stdout
@@ -48,8 +53,11 @@ _e2e_paths_spec.loader.exec_module(_e2e_paths)
 
 _DEFAULT_REPO_DIR = Path("/home/hem/gregor_zwanzig")
 REPO_DIR = _DEFAULT_REPO_DIR
-CANONICAL_E2E_PATH = REPO_DIR / ".claude" / "e2e_verified.json"
-STALE_HOURS = 24
+# Fix #1382: der Rückfall auf die frühere Sammeldatei entfällt ersatzlos — es
+# gibt keine gesonderte Konstante für ihren Pfad mehr. Der Nachweis-Pfad wird
+# ausschließlich über _commit_e2e_path()/_e2e_paths.commit_e2e_path()
+# aufgelöst, dieselbe Funktion, die auch write_verdict beim Schreiben nutzt.
+STALE_HOURS = _e2e_paths.STALE_HOURS
 # Issue #666: max. behaltene commit-getaggte Attestationen (analog .backups/-Pattern)
 ATTESTATION_RETENTION = 20
 
@@ -89,24 +97,16 @@ def _head_sha() -> str:
 
 
 def _commit_e2e_path(sha: str | None = None) -> Path:
-    """Commit-getaggter Attestation-Pfad: .claude/e2e_verified/<sha>.json"""
-    return _e2e_paths.commit_e2e_path(_shared_repo_dir(), sha or _head_sha())
+    """Commit-getaggter Nachweis-Pfad: .claude/e2e_verified/<sha>.json — die
+    einzige Pfad-Auflösung (Fix #1382, kein Rückfall mehr auf eine frühere
+    Sammeldatei, s. Issue #1382). Existiert die Datei für den Referenz-Commit
+    nicht, wird sie (nicht existent) zurückgegeben und von gate_check als
+    'fehlt' behandelt.
 
-
-def _default_e2e_path(expected_commit: str | None = None) -> Path:
-    """Default-Pfad-Auflösung: commit-getaggt (Vorrang), sonst Singleton-Fallback.
-
-    Existiert die commit-getaggte Datei für den Referenz-Commit → diese (auch wenn
-    ihr Inhalt veraltet ist; das prüft gate_check). Sonst, wenn das alte Singleton
-    existiert → Fallback (Migration). Sonst die (nicht existente) getaggte Datei →
-    wird von gate_check als 'fehlt' behandelt.
-
-    Issue #1130: Im Preflight (``expected_commit`` gesetzt) wird die Attestation für
-    den ZIEL-Commit gesucht, nicht für den (noch alten) HEAD.
+    Issue #1130: Ohne ``sha`` wird die Attestation für den aktuellen HEAD
+    adressiert; im Preflight übergibt gate_check den ZIEL-Commit statt HEAD.
     """
-    shared = _shared_repo_dir()
-    canonical = CANONICAL_E2E_PATH if REPO_DIR != _DEFAULT_REPO_DIR else shared / ".claude" / "e2e_verified.json"
-    return _e2e_paths.default_e2e_path(shared, canonical, expected_commit or _head_sha())
+    return _e2e_paths.commit_e2e_path(_shared_repo_dir(), sha or _head_sha())
 
 
 def _scope_diff_base() -> str:
@@ -228,7 +228,7 @@ def _telegram_live_gate() -> int:
 
 def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = None,
                   scope_override: str | None = None) -> int:
-    """Mode A: Verdict in e2e_verified.json schreiben."""
+    """Mode A: Verdict in die commit-getaggte Nachweis-Datei schreiben."""
     sha = _head_sha()
     if e2e_path is None:
         e2e_path = _commit_e2e_path(sha)
@@ -341,63 +341,6 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
     return 0
 
 
-def _nearest_verified_ancestor(ref: str, git_dir: Path, shared_dir: Path,
-                               max_count: int = 40) -> "tuple[str | None, dict | None]":
-    """Issue #1197: Nächster VERIFIED, nicht-staler Ancestor von ``ref`` mit
-    commit-getaggter Attestation — dient als Deploy-Basis, wenn keine exakte
-    <ref>.json existiert.
-
-    Läuft ``git rev-list --max-count=N ref`` (newest-first, ``ref``
-    eingeschlossen) im ``git_dir`` durch. Für den ERSTEN Commit C, dessen
-    commit-getaggte Attestation im ``shared_dir`` existiert, ``verified_commit
-    == C`` trägt, deren ``staging_verdict`` mit "VERIFIED" beginnt und deren
-    ``verified_at`` nicht älter als STALE_HOURS ist, wird (C, cdata)
-    zurückgegeben. Andernfalls (None, None). Jeder git-/JSON-Fehler ist
-    fail-closed → (None, None).
-
-    Anker: git_dir MUSS die Wurzel des Arbeitsbaums sein (in Produktion liefert
-    ``_verified_repo_dir()`` genau ``git rev-parse --show-toplevel``). Zeigt der
-    konfigurierte Pfad woanders hin (z.B. Unterverzeichnis, git löst per
-    Discovery ein fremdes Eltern-Repo auf), wird fail-closed geblockt.
-    """
-    toplevel = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"],
-        capture_output=True, text=True, cwd=str(git_dir),
-    )
-    if toplevel.returncode != 0 or not toplevel.stdout.strip():
-        return (None, None)
-    if Path(toplevel.stdout.strip()).resolve() != Path(git_dir).resolve():
-        return (None, None)
-    result = subprocess.run(
-        ["git", "rev-list", f"--max-count={max_count}", ref],
-        capture_output=True, text=True, cwd=str(git_dir),
-    )
-    if result.returncode != 0:
-        return (None, None)
-    for sha in (line.strip() for line in result.stdout.splitlines() if line.strip()):
-        path = _e2e_paths.commit_e2e_path(shared_dir, sha)
-        if not path.exists():
-            continue
-        try:
-            cdata = json.loads(path.read_text())
-        except (json.JSONDecodeError, OSError):
-            continue
-        if cdata.get("verified_commit") != sha:
-            continue
-        if not str(cdata.get("staging_verdict", "")).startswith("VERIFIED"):
-            continue
-        try:
-            verified_at = datetime.fromisoformat(cdata.get("verified_at", ""))
-            if verified_at.tzinfo is None:
-                verified_at = verified_at.replace(tzinfo=timezone.utc)
-        except ValueError:
-            continue
-        if datetime.now(timezone.utc) - verified_at > timedelta(hours=STALE_HOURS):
-            continue
-        return (sha, cdata)
-    return (None, None)
-
-
 def gate_check(e2e_path: Path | None, scope_override: str | None,
                expected_commit: str | None = None) -> int:
     """Mode B: Gate-Check für deploy-gregor-prod.sh.
@@ -408,10 +351,23 @@ def gate_check(e2e_path: Path | None, scope_override: str | None,
     sich dann auf EXP. Der HEAD-basierte Scope-Marker wird im Preflight NICHT
     geschrieben (kein Cache-Poisoning eines noch nicht ausgerollten Zustands).
     Ohne das Flag ist das Verhalten unverändert.
+
+    Fix #1382: ``expected_commit`` wird bei erfolgreicher Auflösung auf die
+    volle, von git aufgelöste SHA normalisiert (AC-6) — Kurz-SHA/``origin/main``
+    liefern damit denselben Pfad und dieselbe Meldung wie die volle SHA. Bei
+    Blockade wird einer von fünf unterscheidbaren Gründen gemeldet (i)-(v),
+    s. docs/specs/modules/fix_1382_deploy_gate_evidence.md.
     """
     if os.environ.get("GZ_SKIP_E2E_GATE") == "1":
         _log("WARN: GZ_SKIP_E2E_GATE=1 — Staging-Gate übersprungen (Notfall-Override).", stream=sys.stderr)
         return 0
+
+    # Fix #1382 (Nachtrag): eine ausdruecklich uebergebene Nachweis-Datei
+    # (--e2e-path) ist massgeblich. Passt ihr Inhalt nicht zum Zielstand, gibt
+    # es KEINE Vorfahren-Relaxierung — sonst wuerde eine benannte
+    # Nachweisquelle stillschweigend uebergangen. Muss VOR der Umwidmung von
+    # e2e_path (Default-Pfad-Auflösung weiter unten) erfasst werden.
+    explicit_path = e2e_path is not None
 
     preflight = expected_commit is not None
     # Issue #1130 / Adversary F001: Der Ziel-Commit ist im Preflight ungeprüfter
@@ -432,6 +388,11 @@ def gate_check(e2e_path: Path | None, scope_override: str | None,
                 stream=sys.stderr,
             )
             return 1
+        # Fix #1382 (AC-6): die volle, aufgelöste SHA übernehmen statt des
+        # rohen Arguments — sonst erzeugen Kurz-SHA/`origin/main` einen
+        # Nachweis-Pfad, der nie existieren kann (schreibt wird immer mit der
+        # vollen SHA benannt).
+        expected_commit = resolved.stdout.strip()
     scope = scope_override or _detect_committed_scope(expected_commit)
     if scope == "docs-only":
         _log(f"Scope '{scope}' — Staging-Gate übersprungen (kein UI/Backend-Change).")
@@ -447,64 +408,89 @@ def gate_check(e2e_path: Path | None, scope_override: str | None,
         return 0
 
     if e2e_path is None:
-        e2e_path = _default_e2e_path(expected_commit)
+        e2e_path = _commit_e2e_path(expected_commit)
 
     ref = expected_commit or _head_sha()
-    ref_label = "expected-commit" if preflight else "HEAD-SHA"
 
     data = None
     if e2e_path.exists():
         try:
             data = json.loads(e2e_path.read_text())
         except (json.JSONDecodeError, OSError) as exc:
-            _log(f"FEHLER: e2e_verified.json nicht lesbar: {exc}", stream=sys.stderr)
+            _log(f"FEHLER: Nachweis-Datei {e2e_path} nicht lesbar: {exc}", stream=sys.stderr)
             return 1
 
     verified_commit = data.get("verified_commit", "") if data is not None else ""
 
-    # Issue #1197: Kein exakter <ref>.json-Treffer (Datei fehlt oder trägt einen
-    # anderen verified_commit) → nächsten VERIFIED, nicht-stalen Ancestor als
-    # Basis auflösen und NUR relaxieren, wenn ref dessen Nachfahre ist UND der
-    # Zuwachs Basis..ref docs-only ist. Sonst fail-closed blocken.
+    # Issue #1197 / Fix #1382: Kein exakter <ref>.json-Treffer (Datei fehlt oder
+    # trägt einen anderen verified_commit) → nächsten VERIFIED, nicht-stalen
+    # Ancestor als Basis auflösen und NUR relaxieren, wenn ref dessen Nachfahre
+    # ist UND der Zuwachs Basis..ref docs-only ist. Sonst fail-closed blocken
+    # mit einer von fünf unterscheidbaren Meldungen (i)-(v).
     if verified_commit != ref:
         git_dir = _verified_repo_dir()
-        ancestor, _cdata = _nearest_verified_ancestor(ref, git_dir, _shared_repo_dir())
+        # Ausdruecklich uebergebener Pfad ist massgeblich: keine
+        # Vorfahren-Relaxierung, direkt zu den Fall-(i)/(v)-Meldungen unten.
+        ancestor = None
+        if not explicit_path:
+            ancestor, _cdata = _e2e_paths._nearest_verified_ancestor(ref, git_dir, _shared_repo_dir())
         if ancestor is not None:
             is_anc = subprocess.run(
                 ["git", "merge-base", "--is-ancestor", ancestor, ref],
                 capture_output=True, text=True, cwd=str(git_dir),
             )
-            if (
-                is_anc.returncode == 0
-                and _e2e_paths._detect_scope_from_git_diff(ancestor, ref, git_dir) == "docs-only"
-            ):
+            if is_anc.returncode == 0:
+                if _e2e_paths._detect_scope_from_git_diff(ancestor, ref, git_dir) == "docs-only":
+                    _log(
+                        f"OK: Ancestor-Relaxierung (#1197): Basis {ancestor[:8]} VERIFIED, "
+                        f"Zuwachs {ancestor[:8]}..{ref[:8]} docs-only — Staging-Gate bestanden."
+                    )
+                    if not preflight:
+                        _e2e_paths.write_last_gate_scope(_shared_repo_dir(), _head_sha(), scope)
+                    return 0
+                # Fall (iv): Zielstand ist neuer als der zuletzt geprüfte Stand,
+                # und der Zuwachs enthält Programmcode — vermutlich hat eine
+                # parallele Sitzung dazwischen gepusht.
+                changed = _e2e_paths._git_diff_names(ancestor, ref, git_dir) or []
+                shown = ", ".join(changed[:5]) or "(Dateiliste nicht ermittelbar)"
                 _log(
-                    f"OK: Ancestor-Relaxierung (#1197): Basis {ancestor[:8]} VERIFIED, "
-                    f"Zuwachs {ancestor[:8]}..{ref[:8]} docs-only — Staging-Gate bestanden."
+                    f"FEHLER: Zwischen dem zuletzt geprüften Stand ({ancestor[:8]}) und "
+                    f"dem Zielstand ({ref[:8]}) wurde zusätzlicher Programmcode gepusht — "
+                    "vermutlich hat eine parallele Sitzung deployt. Betroffene Datei(en): "
+                    f"{shown}. Zuerst /e2e-verify für den neuen Zielstand ausführen, dann "
+                    "erneut deployen.",
+                    stream=sys.stderr,
                 )
-                if not preflight:
-                    _e2e_paths.write_last_gate_scope(_shared_repo_dir(), _head_sha(), scope)
-                return 0
+                return 1
         if data is None:
+            # Fall (i): weder eine passende Nachweis-Datei noch ein Vorfahre.
             _log(
-                f"FEHLER: e2e_verified.json fehlt unter {e2e_path}. "
-                "/e2e-verify ausführen, dann erneut deployen.",
+                f"FEHLER: Für den Zielstand {ref[:8]} liegt kein Nachweis vor — weder "
+                "eine passende Verifikations-Datei noch ein geprüfter, aktueller "
+                "Vorgänger-Stand. /e2e-verify ausführen, dann erneut deployen.",
                 stream=sys.stderr,
             )
             return 1
+        # Fall (v): eine Nachweis-Datei wurde gefunden, ihr Inhalt trägt aber
+        # einen anderen Stand als den Dateinamen (beschädigt/manuell verändert)
+        # — von Fall (i) klar unterscheidbar.
         _log(
-            f"FEHLER: verified_commit ({verified_commit[:8]}) != {ref_label} ({ref[:8]}). "
-            "Veraltete Verifikation — /e2e-verify erneut ausführen.",
+            f"FEHLER: Für den Zielstand {ref[:8]} wurde eine Nachweis-Datei gefunden, "
+            f"aber ihr Inhalt passt nicht zum Zielstand (trägt {verified_commit[:8] or 'einen leeren Stand'}). "
+            "Vermutlich beschädigt oder manuell verändert. /e2e-verify erneut "
+            "ausführen, dann erneut deployen.",
             stream=sys.stderr,
         )
         return 1
 
-    # Exakt-Match (unverändertes Verhalten): VERIFIED- und Staleness-Checks auf data.
+    # Exakt-Match: VERIFIED- und Staleness-Checks auf data.
     verdict = data.get("staging_verdict", "")
     if not verdict.startswith("VERIFIED"):
+        # Fall (ii): Nachweis vorhanden, aber nicht VERIFIED.
         _log(
-            f"FEHLER: staging_verdict ist nicht VERIFIED (war: {verdict!r}). "
-            "/e2e-verify ausführen, dann erneut deployen.",
+            f"FEHLER: Für den Zielstand {ref[:8]} liegt eine Verifikation vor, aber "
+            f"ihr Ergebnis ist nicht VERIFIED (war: {verdict!r}). /e2e-verify erneut "
+            "ausführen, dann erneut deployen.",
             stream=sys.stderr,
         )
         return 1
@@ -520,9 +506,11 @@ def gate_check(e2e_path: Path | None, scope_override: str | None,
 
     age = datetime.now(timezone.utc) - verified_at
     if age > timedelta(hours=STALE_HOURS):
+        # Fall (iii): Nachweis zu alt.
         _log(
-            f"FEHLER: Verifikation ist {age.total_seconds()/3600:.1f}h alt (max {STALE_HOURS}h). "
-            "Artefakt abgelaufen — /e2e-verify erneut ausführen.",
+            f"FEHLER: Die Verifikation für {ref[:8]} ist {age.total_seconds()/3600:.1f}h "
+            f"alt (max {STALE_HOURS}h) — abgelaufen. /e2e-verify erneut ausführen, dann "
+            "erneut deployen.",
             stream=sys.stderr,
         )
         return 1
@@ -540,7 +528,7 @@ def main() -> int:
     parser.add_argument("--check", action="store_true", help="Mode B: Gate-Check")
     parser.add_argument("--write-verdict", help="Mode A: Verdict-String zum Schreiben")
     parser.add_argument("--findings-json", help="Pfad zur Findings-JSON (Mode A)")
-    parser.add_argument("--e2e-path", help="Pfad zur e2e_verified.json (Override)")
+    parser.add_argument("--e2e-path", help="Pfad zur commit-getaggten Nachweis-Datei (Override)")
     parser.add_argument("--scope", help="Scope-Override (frontend-only|backend|full-stack|docs-only)")
     parser.add_argument("--expected-commit", help="Ziel-Commit für Preflight-Check (Issue #1130): prüft gegen diesen SHA statt HEAD")
     parser.add_argument("--detect-scope", action="store_true", help="Mode C: Scope ausgeben")

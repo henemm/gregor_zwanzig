@@ -3,7 +3,10 @@
 Post-Deploy-Selbsttest (Issue #564).
 
 Läuft nach `deploy-gregor-prod.sh` und attestiert gegen Produktion:
-  Phase 1 — Commit-Attestation: git HEAD == e2e_verified.json["verified_commit"]
+  Phase 1 — Commit-Attestation: exakter Treffer für git HEAD in der
+            commit-getaggten Nachweis-Datei, ODER ein über
+            _e2e_paths._nearest_verified_ancestor gefundener gültiger
+            Vorfahre (bestanden + frisch + Zuwachs seither nur Dokumentation)
   Phase 2 — Health-Check: https://gregor20.henemm.com/api/health → HTTP 200 + status=ok
   Phase 3 — AC-Attestation: pro Finding HTTP-Probe auf Prod-URL (parallel, max 5)
 
@@ -14,8 +17,13 @@ Verdict-Ableitung:
   SKIPPED_ALL  — alle Findings status=SKIPPED
 
 Exit-Codes:
-  0 — PASS / SKIPPED_ALL / e2e_verified.json fehlt (docs-only)
-  1 — FAIL / PARTIAL
+  0 — PASS / SKIPPED_ALL / Scope docs-only (kein Code-Deploy)
+  1 — FAIL / PARTIAL / kein Nachweis bei Code-Deploy (Fix #1382, löst #564 AC-5 ab)
+
+Fix #1382 (Scheibe 2): Phase 1 nutzt dieselbe Ancestor-Definition wie
+staging_gate.py (_e2e_paths._nearest_verified_ancestor — VERIFIED + nicht
+stale). Fehlt jeder Nachweis bei einem Nicht-docs-only-Deploy, blockiert der
+Selbsttest (vorher: Exit 0 + INFO, s. abgelöste Festlegung #564 AC-5).
 
 CLI:
   python3 prod_selftest.py [--e2e-path PATH] [--workflow NAME]
@@ -32,7 +40,7 @@ import sys
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -46,7 +54,8 @@ _e2e_paths = _importlib_util.module_from_spec(_e2e_paths_spec)
 _e2e_paths_spec.loader.exec_module(_e2e_paths)
 
 REPO_DIR = Path("/home/hem/gregor_zwanzig")
-CANONICAL_E2E_PATH = REPO_DIR / ".claude" / "e2e_verified.json"
+# Fix #1382: der Rückfall auf die frühere Sammeldatei entfällt ersatzlos —
+# es gibt keine gesonderte Konstante für ihren Pfad mehr.
 PROD_BASE = "https://gregor20.henemm.com"
 HEALTH_URL = f"{PROD_BASE}/api/health"
 PROBE_TIMEOUT = 8
@@ -117,18 +126,13 @@ def _head_sha() -> str:
 
 
 def _commit_e2e_path(sha: str | None = None) -> Path:
-    """Commit-getaggter Attestation-Pfad: .claude/e2e_verified/<sha>.json"""
-    return _e2e_paths.commit_e2e_path(REPO_DIR, sha or _head_sha())
-
-
-def _default_e2e_path() -> Path:
-    """Default-Pfad-Auflösung: commit-getaggt (Vorrang), sonst Singleton-Fallback.
-
-    Existiert die commit-getaggte Datei für HEAD → diese. Sonst, wenn das alte
-    Singleton existiert → Fallback (Migration). Sonst die (nicht existente)
-    getaggte Datei → wird von run_selftest als 'fehlt' behandelt.
+    """Commit-getaggter Nachweis-Pfad: .claude/e2e_verified/<sha>.json — die
+    einzige Pfad-Auflösung (Fix #1382, kein Rückfall mehr auf eine frühere
+    Sammeldatei). Existiert die Datei für den Referenz-Commit (Default: HEAD)
+    nicht, wird sie (nicht existent) zurückgegeben und von run_selftest als
+    'fehlt' behandelt.
     """
-    return _e2e_paths.default_e2e_path(REPO_DIR, CANONICAL_E2E_PATH, _head_sha())
+    return _e2e_paths.commit_e2e_path(REPO_DIR, sha or _head_sha())
 
 
 def _strip_ac_suffix(url: str) -> str:
@@ -358,19 +362,44 @@ def _write_report(report_path: Path, content: str) -> None:
         _log(f"WARN: Bericht konnte nicht geschrieben werden: {exc}", stream=sys.stderr)
 
 
-def _render_fail_commit_mismatch(
-    workflow: str, head: str, verified_commit: str
-) -> str:
+def _render_fail_no_evidence(workflow: str, head: str) -> str:
+    """Fix #1382 (löst #564 AC-5 ab): kein Nachweis für HEAD bei Code-Deploy."""
     return (
         f"# Prod-Selftest — {workflow}\n\n"
         f"**Datum:** {datetime.now(timezone.utc).isoformat()}\n"
         f"**Commit (HEAD):** {head[:8]}\n"
-        f"**Commit (verifiziert):** {verified_commit[:8]}\n"
         f"**Verdict: FAIL**\n\n"
         f"## Fazit\n\n"
-        f"Commit-Mismatch: HEAD ({head[:8]}) stimmt nicht mit "
-        f"verified_commit ({verified_commit[:8]}) überein. "
-        f"Veraltete Staging-Verifikation — /e2e-verify erneut ausführen.\n"
+        f"Kein Nachweis für {head[:8]} gefunden — weder eine exakte "
+        f"Verifikations-Datei noch ein verifizierter, nicht abgelaufener "
+        f"Vorgänger-Stand. Es wurde Programmcode ausgerollt (kein docs-only-"
+        f"Deploy), ohne dass zuvor eine gültige Staging-Verifikation vorlag. "
+        f"/e2e-verify ausführen, dann erneut deployen.\n"
+    )
+
+
+def _render_fail_not_verified(workflow: str, head: str, verdict: str) -> str:
+    return (
+        f"# Prod-Selftest — {workflow}\n\n"
+        f"**Datum:** {datetime.now(timezone.utc).isoformat()}\n"
+        f"**Commit:** {head[:8]}\n"
+        f"**Verdict: FAIL**\n\n"
+        f"## Fazit\n\n"
+        f"Die Verifikation für {head[:8]} ist nicht VERIFIED (war: {verdict!r}). "
+        f"/e2e-verify erneut ausführen, dann erneut deployen.\n"
+    )
+
+
+def _render_fail_stale(workflow: str, head: str, age_hours: float) -> str:
+    return (
+        f"# Prod-Selftest — {workflow}\n\n"
+        f"**Datum:** {datetime.now(timezone.utc).isoformat()}\n"
+        f"**Commit:** {head[:8]}\n"
+        f"**Verdict: FAIL**\n\n"
+        f"## Fazit\n\n"
+        f"Die Verifikation für {head[:8]} ist {age_hours:.1f}h alt (max "
+        f"{_e2e_paths.STALE_HOURS}h) — abgelaufen. /e2e-verify erneut "
+        f"ausführen, dann erneut deployen.\n"
     )
 
 
@@ -599,7 +628,12 @@ def _detect_committed_scope(repo_dir: Path = REPO_DIR) -> str:
     return _e2e_paths._detect_scope_from_git_diff(base, "HEAD", repo_dir)
 
 
-def run_selftest(e2e_path: Path, workflow: str, scope: str | None = None) -> int:
+def run_selftest(
+    e2e_path: Path,
+    workflow: str,
+    scope: str | None = None,
+    explicit_path: bool = False,
+) -> int:
     # Issue #786: docs-only/tooling-Deploy → kein Code in Prod → Selftest skippen,
     # statt an stale Singleton-Attestation (Commit-Mismatch) zu scheitern.
     if scope is None:
@@ -609,41 +643,70 @@ def run_selftest(e2e_path: Path, workflow: str, scope: str | None = None) -> int
         return 0
 
     report_path = REPO_DIR / "docs" / "artifacts" / workflow / "prod-selftest.md"
-
-    # AC-5: e2e_verified.json fehlt → docs-only / kein Block
-    if not e2e_path.exists():
-        _log(
-            f"INFO: e2e_verified.json nicht vorhanden unter {e2e_path} — "
-            "Selftest übersprungen (docs-only oder erster Deploy)."
-        )
-        return 0
-
-    try:
-        verified = json.loads(e2e_path.read_text())
-    except (json.JSONDecodeError, OSError) as exc:
-        _log(f"FEHLER: e2e_verified.json nicht lesbar: {exc}", stream=sys.stderr)
-        return 1
-
     head = _head_sha()
-    verified_commit = verified.get("verified_commit", "")
 
-    # Phase 1: Commit-Attestation (Ancestor-Check)
-    if head != verified_commit:
-        ancestor = subprocess.run(
-            ["git", "merge-base", "--is-ancestor", verified_commit, head],
-            cwd=str(REPO_DIR), capture_output=True
+    # Phase 1: Commit-Attestation. Fix #1382 (Scheibe 2, loest #564 AC-5 ab):
+    # exakter Treffer fuer HEAD wird geprueft (VERIFIED + nicht stale); fehlt
+    # er, entscheidet dieselbe geteilte Ancestor-Funktion wie staging_gate.py
+    # (_e2e_paths._nearest_verified_ancestor) statt eines eigenen, laxeren
+    # Ad-hoc-Merge-Base-Checks. Kein Nachweis (weder exakt noch Ancestor) bei
+    # einem Nicht-docs-only-Deploy blockiert (vorher: Exit 0 + INFO).
+    exact_data = None
+    if e2e_path.exists():
+        try:
+            exact_data = json.loads(e2e_path.read_text())
+        except (json.JSONDecodeError, OSError) as exc:
+            _log(f"FEHLER: Nachweis-Datei {e2e_path} nicht lesbar: {exc}", stream=sys.stderr)
+            return 1
+
+    if exact_data is not None and exact_data.get("verified_commit") == head:
+        verified = exact_data
+        verdict = verified.get("staging_verdict", "")
+        if not verdict.startswith("VERIFIED"):
+            _log(f"FAIL: staging_verdict ist nicht VERIFIED (war: {verdict!r}).", stream=sys.stderr)
+            _write_report(report_path, _render_fail_not_verified(workflow, head, verdict))
+            return 1
+        try:
+            verified_at = datetime.fromisoformat(verified.get("verified_at", ""))
+            if verified_at.tzinfo is None:
+                verified_at = verified_at.replace(tzinfo=timezone.utc)
+        except ValueError:
+            _log("FEHLER: verified_at ist kein ISO-Timestamp.", stream=sys.stderr)
+            return 1
+        age = datetime.now(timezone.utc) - verified_at
+        if age > timedelta(hours=_e2e_paths.STALE_HOURS):
+            hours = age.total_seconds() / 3600
+            _log(f"FAIL: Verifikation ist {hours:.1f}h alt (max {_e2e_paths.STALE_HOURS}h).", stream=sys.stderr)
+            _write_report(report_path, _render_fail_stale(workflow, head, hours))
+            return 1
+        _log(f"PASS (Exakt): verified_commit={head[:8]} entspricht HEAD.")
+    elif explicit_path:
+        # Fix #1382 (Nachtrag): eine ausdruecklich uebergebene Nachweis-Datei
+        # (--e2e-path) ist massgeblich. Passt ihr verified_commit nicht zum
+        # Zielstand (oder fehlt sie/ist unlesbar), gibt es KEINE
+        # Vorfahren-Suche im echten Repo — sonst wuerde eine benannte
+        # Nachweisquelle stillschweigend uebergangen (genau die Fehlerklasse,
+        # die dieses Ticket schliesst).
+        _log(
+            f"FAIL: Ausdruecklich uebergebene Nachweis-Datei {e2e_path} passt nicht "
+            f"zum Zielstand {head[:8]} (Vorfahren-Suche wird bei explizit "
+            "angegebenem Pfad nicht durchgefuehrt).",
+            stream=sys.stderr,
         )
-        if ancestor.returncode != 0:
+        _write_report(report_path, _render_fail_no_evidence(workflow, head))
+        return 1
+    else:
+        ancestor, cdata = _e2e_paths._nearest_verified_ancestor(head, REPO_DIR, REPO_DIR)
+        if ancestor is None:
             _log(
-                f"FAIL: Commit-Mismatch — HEAD={head[:8]} vs verified={verified_commit[:8]}",
+                f"FAIL: Kein Nachweis fuer {head[:8]} - weder exakte Attestation "
+                "noch verifizierter Vorgaenger-Stand.",
                 stream=sys.stderr,
             )
-            _write_report(
-                report_path,
-                _render_fail_commit_mismatch(workflow, head, verified_commit),
-            )
+            _write_report(report_path, _render_fail_no_evidence(workflow, head))
             return 1
-        _log(f"PASS (Ancestor): verified_commit={verified_commit[:8]} ist Ancestor von HEAD={head[:8]}")
+        verified = cdata
+        _log(f"PASS (Ancestor): verified_commit={ancestor[:8]} ist Ancestor von HEAD={head[:8]}")
 
     # Phase 2: Health-Check
     health_ok, health_msg = _check_health()
@@ -739,7 +802,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(prog="prod_selftest")
     parser.add_argument(
         "--e2e-path",
-        help="Override für .claude/e2e_verified.json",
+        help="Override für die commit-getaggte Nachweis-Datei",
     )
     parser.add_argument(
         "--workflow",
@@ -747,7 +810,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    e2e_path = Path(args.e2e_path) if args.e2e_path else _default_e2e_path()
+    e2e_path = Path(args.e2e_path) if args.e2e_path else _commit_e2e_path()
 
     # Fix 5 (#1327/#1228): OPENSPEC_ACTIVE_WORKFLOW ist die primäre Quelle,
     # GZ_ACTIVE_WORKFLOW (Legacy-Fallback, analog prod_send_gate.py) greift
@@ -766,7 +829,7 @@ def main() -> int:
         )
         workflow = "unknown"
 
-    return run_selftest(e2e_path, workflow)
+    return run_selftest(e2e_path, workflow, explicit_path=bool(args.e2e_path))
 
 
 if __name__ == "__main__":

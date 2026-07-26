@@ -192,7 +192,7 @@ class TestGateCheckModeB:
         rc, out, err = _run_gate_in(repo, ["--check", f"--e2e-path={json_file}", "--scope=backend"])
         assert rc == 1, f"Erwartet Exit 1 bei falschem Commit, bekam {rc}"
         combined = out + err
-        assert any(w in combined.lower() for w in ["commit", "sha", "mismatch", "verifizier"]), (
+        assert any(w in combined.lower() for w in ["zielstand", "passt nicht"]), (
             f"Hinweis auf Commit-Mismatch erwartet, bekam: {combined}"
         )
 

@@ -68,7 +68,13 @@ def repo(tmp_path):
 
 def _patch_paths(monkeypatch, mod, root: Path):
     monkeypatch.setattr(mod, "REPO_DIR", root)
-    monkeypatch.setattr(mod, "CANONICAL_E2E_PATH", root / ".claude" / "e2e_verified.json")
+    # Fix #1382: CANONICAL_E2E_PATH entfällt aus beiden Hooks (kein Rückfall
+    # auf die alte Sammeldatei mehr). raising=False haelt diesen Patch als
+    # reines Sicherheitsnetz weiterhin gueltig, auch wenn das Attribut nicht
+    # mehr existiert (kein AttributeError in der GREEN-Phase).
+    monkeypatch.setattr(
+        mod, "CANONICAL_E2E_PATH", root / ".claude" / "e2e_verified.json", raising=False
+    )
 
 
 def _both_hooks():
@@ -86,7 +92,7 @@ class TestCrossHookConsistency:
         sg, ps = _both_hooks()
         _patch_paths(monkeypatch, sg, root)
         _patch_paths(monkeypatch, ps, root)
-        return sg._default_e2e_path(), ps._default_e2e_path()
+        return sg._commit_e2e_path(), ps._commit_e2e_path()
 
     def test_tagged_file_exists_same_path(self, monkeypatch, repo):
         root, head = repo
@@ -96,12 +102,20 @@ class TestCrossHookConsistency:
         a, b = self._resolve_both(monkeypatch, root)
         assert a == b == tagged
 
-    def test_only_singleton_same_path(self, monkeypatch, repo):
-        root, _ = repo
+    def test_singleton_only_evidence_is_ignored_uses_tagged_path(self, monkeypatch, repo):
+        """Fix #1382: der Rückfall auf die alte Sammeldatei entfällt ersatzlos.
+        Existiert NUR die Singleton-Datei (kein commit-getaggter Nachweis),
+        lösen beide Hooks weiterhin denselben, aber NICHT-EXISTENTEN
+        commit-getaggten Pfad auf — die Singleton-Datei wird nie mehr
+        gelesen (vorher: test_only_singleton_same_path, erwartete den
+        Fallback auf singleton)."""
+        root, head = repo
         singleton = root / ".claude" / "e2e_verified.json"
         singleton.write_text("{}")
         a, b = self._resolve_both(monkeypatch, root)
-        assert a == b == singleton
+        tagged = root / ".claude" / "e2e_verified" / f"{head}.json"
+        assert a == b == tagged
+        assert a != singleton
 
     def test_no_file_same_path(self, monkeypatch, repo):
         root, head = repo
