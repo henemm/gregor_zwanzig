@@ -1272,7 +1272,11 @@ darf nur schrumpfen — ein eigener Test erzwingt das, und er hat gehalten.
 
 - Additiv, rein lesend, keine Persistenz-/Render-/Frontend-Änderung. Keine
   Auswirkung auf `active_metrics`/`corridors`-Persistenz oder
-  `resolve_enabled_metrics()`.
+  `resolve_enabled_metrics()` durch DIESEN Endpoint selbst. Die
+  `metric_id`/`aggregation`-Herkunftsfelder, die er hier zusätzlich liefert,
+  sind aber die Grundlage des Umkehr-Index, über den die Folgelieferung
+  Scheibe B (#1373, s. `active_metrics` in Section 16) das
+  Persistenzformat der Metrik-Auswahl umstellt.
 - `precip_type_dominant` bleibt `enum`, obwohl der Corridor-Editor es intern
   über den generischen `range`-Zweig rendert (bestehende Frontend-Eigenart,
   nicht Teil dieses Endpoints).
@@ -1549,7 +1553,58 @@ versendet für `target_date=heute`, Abend-Slot für `target_date=morgen`. Guards
 `schedule=="manual"` (pausiert), `archived_at` gesetzt, `end_date` gesetzt und `< heute`.
 
 **DisplayConfig Keys (Issue #680 onwards):**
-- `active_metrics`: `[]string` — Ausgewählte Metrik-Keys für Vergleich (z.B. `["temp_max_c", "wind_max_kmh", "precip_sum_mm"]`). Default: Profil-spezifische Metriken aus `PROFILE_METRICS_WITH_SCALES`. Seit #1191 im Idealwerte-Tab um 4 weitere, bislang schalter-lose alarmfähige Metriken wählbar: `gust_max_kmh` (Böen), `cape_max_jkg` (Gewitter-Energie/CAPE), `freezing_level_m` (Nullgradgrenze), `temp_min_c` (Min-Temperatur). **Semantik für den Compare-Δ-Alarm (#1191):** Feld fehlt ganz (Key absent/`None`) = Legacy-Preset vor der Migration → konservativer Fallback, alle alarmfähigen Metriken feuern. Feld vorhanden — auch als leere Liste `[]` — = Nutzer hat im Editor bewusst (de-)aktiviert; nur gelistete Metriken feuern im Alarm, eine bewusst leere Liste unterdrückt sämtliche Compare-Δ-Alarme. Übersetzung Summary-Key → Alarm-Katalog-ID: `src/services/compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID`. **Schreiber seit #1311 (C1 von Epic #1301):** Der neue geteilte Hub-Tab „Wetter-Metriken" (`frontend/src/lib/components/shared/WeatherMetricsTab.svelte`, `context="vergleich"`) ist jetzt die EXKLUSIVE Schreib-Quelle für `active_metrics`. Das `notify`-Häkchen der Korridore im Wertebereiche-Tab schreibt `active_metrics` seither NICHT mehr (`corridorEditorState.ts::buildCompareCorridorSavePayload`) — es steuert nur noch `metric_alert_levels` (Alarm-Schwelle je Metrik), unverändert. Die Legacy-Semantik (absent = alle alarmfähigen feuern) bleibt davon unberührt.
+- `active_metrics`: Ausgewählte Metriken für den Vergleich. **Speicherformat seit
+  Issue #1373 S2 Scheibe B (2026-07-26):** eine Liste, deren Reihenfolge
+  bedeutungstragend ist (Metrik-Reihenfolge, #1335/#1359), mit zwei gültigen
+  Elementformen, die auch **gemischt in derselben Liste** vorkommen dürfen und
+  pro Element aufgelöst werden:
+  - **Neuformat (einzig geschriebenes Format ab dieser Lieferung):**
+    `[{"metric_id": "temperature", "aggregation": "max"}, ...]` — Größe +
+    Auswertung. Aufgelöst über den Umkehr-Index `key_for(metric_id,
+    aggregation)` in `src/output/renderers/compare_metric_catalog.py`, der auf
+    den `metric_id`/`aggregation`-Herkunftsfeldern des Vergleichs-Katalogs
+    aufsetzt (Scheibe A, `373d3970`).
+  - **Altformat (z.B. `["temp_max_c", "wind_max_kmh", "precip_sum_mm"]`):**
+    Liste von Anzeige-Schlüsseln, wie vor dieser Lieferung. Wird **dauerhaft**
+    weiter gelesen, seit dieser Lieferung aber **nie mehr geschrieben**.
+    „Dauerhaft" statt nur übergangsweise bis zur Migration, weil eine im
+    Browser stehengebliebene Sitzung mit altem Frontend-Code jederzeit wieder
+    Altformat schreiben kann (Restrisiko R1,
+    `feat_1373_s2b_metrik_speicherformat.md`) — der tolerante Leser ist daher
+    fester Codebestandteil, keine befristete Übergangshilfe.
+  - Leere Liste `[]` bleibt von einem fehlenden Feld unterscheidbar (#1191):
+    `[]` = bewusst alles abgewählt, fehlendes Feld = Legacy-Fallback (s.u.).
+    Dieses Verhalten ändert sich durch das neue Speicherformat nicht.
+  - Zwei unabhängige Leser lösen pro Element auf: `resolve_enabled_metrics()`
+    in `src/output/renderers/compare_metric_ids.py` (Render-/Übersichtspfad)
+    und `_display_config_from_active_metrics()` in
+    `src/services/compare_alert.py` (Δ-Alarm-Pfad, normalisiert Neuformat-
+    Einträge vor der bestehenden `_SUMMARY_KEY_TO_CATALOG_ID`-Übersetzung).
+  - Bestandsumstellung:
+    `scripts/migrate_1373_compare_active_metrics_format.py` (Read-Modify-
+    Write, tar.gz-Sicherung, idempotent — s.
+    `docs/reference/operations_playbook.md`).
+  - Spec: `docs/specs/modules/feat_1373_s2b_metrik_speicherformat.md`.
+
+  Default: Profil-spezifische Metriken aus `PROFILE_METRICS_WITH_SCALES`. Seit
+  #1191 im Idealwerte-Tab um 4 weitere, bislang schalter-lose alarmfähige
+  Metriken wählbar: `gust_max_kmh` (Böen), `cape_max_jkg`
+  (Gewitter-Energie/CAPE), `freezing_level_m` (Nullgradgrenze), `temp_min_c`
+  (Min-Temperatur). **Semantik für den Compare-Δ-Alarm (#1191):** Feld fehlt
+  ganz (Key absent/`None`) = Legacy-Preset vor der Migration → konservativer
+  Fallback, alle alarmfähigen Metriken feuern. Feld vorhanden — auch als leere
+  Liste `[]` — = Nutzer hat im Editor bewusst (de-)aktiviert; nur gelistete
+  Metriken feuern im Alarm, eine bewusst leere Liste unterdrückt sämtliche
+  Compare-Δ-Alarme. Übersetzung Summary-Key → Alarm-Katalog-ID:
+  `src/services/compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID`. **Schreiber
+  seit #1311 (C1 von Epic #1301):** Der neue geteilte Hub-Tab
+  „Wetter-Metriken" (`frontend/src/lib/components/shared/WeatherMetricsTab.svelte`,
+  `context="vergleich"`) ist jetzt die EXKLUSIVE Schreib-Quelle für
+  `active_metrics`. Das `notify`-Häkchen der Korridore im Wertebereiche-Tab
+  schreibt `active_metrics` seither NICHT mehr
+  (`corridorEditorState.ts::buildCompareCorridorSavePayload`) — es steuert nur
+  noch `metric_alert_levels` (Alarm-Schwelle je Metrik), unverändert. Die
+  Legacy-Semantik (absent = alle alarmfähigen feuern) bleibt davon unberührt.
 - `ideal_ranges`: `Record<string, IdealRange>` — Min/Max-Idealwerte pro Metrik (z.B. `{"temp_max_c": {"min": 15, "max": 35}, ...}`). Wird vom Compare-Engine zur Bewertung verwendet.
 - `hourly_metrics`: `string[]` — Ausgewählte Metrik-Keys für die STUNDEN-Sektion der Vergleichs-Mail (Katalog: `ALL_HOURLY_METRICS`, 9 Keys, eigenständiges Compare-Vokabular ohne Trip-Pendant, `frontend/src/lib/components/compare/compareHourlyMetricDefs.ts`). Leere Liste `[]`/Key absent = Default „alle sichtbar"; eine Leerauswahl im UI entfernt den Key wieder aus dem PUT-Body statt ihn als `[]` zu senden. **Schreiber seit Issue #1299 (C2 von Epic #1301):** bedienbar im Hub-Layout-Tab (`CompareTabs.svelte`, `activeTab==="layout"`, `flushPendingLayoutSave`/`hydrateLayoutFieldsFromPreset`/`rollbackLayoutSnapshot` in `compareHubWizardBridge.ts`, Muster wie die C1-Wetter-Metriken-Bridge). Vorher nur über den seit S3 weggeleiteten Legacy-`CompareEditor` (`CompareInhaltSection.svelte`) erreichbar.
 - `output_layout`: opaque (zukünftig) — Spalten-Reihenfolge, Formatierung per Kanal
@@ -2972,6 +3027,19 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-07-26: Issue #1373 S2 Scheibe B (`1f413a54`) — Speicherformat von
+  `display_config.active_metrics` (Compare-Preset, `kind=vergleich`)
+  umgestellt: geschrieben wird ab dieser Lieferung ausschließlich
+  `[{"metric_id": ..., "aggregation": ...}, ...]` statt der bisherigen
+  Anzeige-Schlüsselliste (`["temp_max_c", ...]`). Das Altformat bleibt
+  dauerhaft lesbar (nicht nur übergangsweise, s. Section 16), eine gemischte
+  Liste aus Alt- und Neuformat ist gültige Eingabe und wird pro Element
+  aufgelöst. Reihenfolge (#1335/#1359) und die #1191-Unterscheidung
+  `[]` vs. fehlendes Feld bleiben unverändert. Migration:
+  `scripts/migrate_1373_compare_active_metrics_format.py` (s.
+  `docs/reference/operations_playbook.md`). Details, Restrisiken (R1
+  Mischlisten durch alte Browser-Sitzungen, R2 Rollback-Absturz):
+  `docs/specs/modules/feat_1373_s2b_metrik_speicherformat.md`.
 - 2026-07-26: Issues #1391/#1392 — `SegmentWeatherSummary` bekommt drei
   additive Felder `cloud_low_avg_pct`/`cloud_mid_avg_pct`/`cloud_high_avg_pct`
   (Optional, Default `None`; Tages-Mittel mit `round()` wie `cloud_avg_pct`).

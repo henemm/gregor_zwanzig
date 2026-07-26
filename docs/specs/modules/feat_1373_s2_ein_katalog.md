@@ -183,6 +183,12 @@ unangetastet: der Renderer (`compare_html.py`, S3/S5) und `compare_hourly_metric
 
 ## Scheibe B (Folgelieferung, nicht in dieser Spec)
 
+**Geliefert:** `4d8fafae` — eigene Spec
+`docs/specs/modules/feat_1373_s2b_metrik_speicherformat.md` (12 AC). Die
+Skizze unten ist die Vorarbeit dieser Spec und bleibt zur Entscheidungs-
+Nachvollziehbarkeit erhalten; für den aktuellen Stand gilt die verlinkte
+Scheibe-B-Spec.
+
 Ausgegliedert per PO-Entscheidung 2026-07-26 (250-Zeilen-Deckel, sachlich
 trennbar von Scheibe A). Damit die nächste Sitzung nicht neu recherchieren
 muss, verdichtet hier festgehalten:

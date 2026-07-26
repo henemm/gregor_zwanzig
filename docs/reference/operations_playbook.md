@@ -266,6 +266,63 @@ Details (Read-Modify-Write-Prinzip, Feldliste, Adversary-Findings): Spec
 
 ---
 
+## Compare-Metrik-Auswahl auf Größe+Auswertung umstellen (#1373 S2 Scheibe B)
+
+Bestandsdateien, die vor dieser Lieferung angelegt wurden, tragen
+`display_config.active_metrics` (Compare-Preset, `kind=vergleich`) noch als
+Liste von Anzeige-Schlüsseln (`["temp_max_c", "temp_min_c"]`). Ab dieser
+Lieferung wird nur noch das neue Format geschrieben
+(`[{"metric_id": "temperature", "aggregation": "max"}, ...]`) — das Altformat
+bleibt dauerhaft lesbar, aber nicht mehr geschrieben (Begründung, Restrisiken:
+`docs/specs/modules/feat_1373_s2b_metrik_speicherformat.md`). Läuft **je Host**
+(zuerst Staging, danach Produktion), als User `claude-gregor`, **nach**
+erfolgreichem Deploy (`deploy-gregor-prod.sh` bringt Go, Python und Frontend
+im selben Lauf auf denselben Commit — es gibt keinen Zwischenzustand
+„schreibt neu, liest alt", zu sequenzieren ist nur die Migration selbst):
+
+```bash
+uv run python3 scripts/migrate_1373_compare_active_metrics_format.py --root data/users              # Dry-Run (Default)
+uv run python3 scripts/migrate_1373_compare_active_metrics_format.py --root data/users --execute    # Backup + Schreiben
+```
+
+**Immer zuerst den Dry-Run lesen.** Das Script ist idempotent — ein zweiter
+Lauf über bereits migrierte Daten erzeugt einen leeren Plan und schreibt
+nichts. Backup: tar.gz nach `.backups/migrate-1373-<timestamp>.tar.gz` vor
+jedem `--execute`-Lauf. Read-Modify-Write: nur `display_config.active_metrics`
+ändert sich, alle anderen Felder (auch dem Skript unbekannte) bleiben
+erhalten. Touren (`kind=route`) und unbekannte Alt-Einträge bleiben
+unverändert stehen — die Umstellung ist eine Formatänderung, keine
+Bereinigung.
+
+**Warnung — Rollback nach Migrationsstart ist NICHT gefahrlos:** Der alte
+(vor dieser Lieferung eingesetzte) Auflöser `resolve_enabled_metrics()` prüft
+Mitgliedschaft eines Elements in einem Dict und wirft bei einem
+Neuformat-Objekt `TypeError: unhashable type: 'dict'` — der komplette
+Vergleichs-Mailversand für das betroffene Preset bricht dann ab, nicht nur
+eine einzelne Metrik fällt weg. Sobald die Migration gegen einen Host
+gelaufen ist, darf der Code-Commit auf diesem Host nicht mehr ohne Weiteres
+zurückgerollt werden.
+
+**Exit-Codes:**
+
+| Code | Bedeutung |
+|------|-----------|
+| 0 | Erfolg — inkl. leerem Plan beim idempotenten Wiederholungslauf und beim reinen Dry-Run |
+| 1 | `--root` existiert nicht/kein Verzeichnis, Backup fehlgeschlagen, oder mindestens ein Preset konnte nicht geschrieben werden (Details in den `Error:`-Zeilen der Ausgabe) |
+
+**Verifikationsanker (gemessen am Produktionsbestand 2026-07-26):** 3
+Produktions-Vergleiche mit sowohl Höchst- als auch Tiefsttemperatur in der
+Auswahl, 1 mit gefühlter Tiefsttemperatur. Nach der Migration müssen es
+weiterhin vier eigenständige, getrennte Einträge sein — keiner darf mit
+einem anderen verschmelzen (die Falle: `temp_max_c` und `temp_min_c` teilen
+sich dieselbe `metric_id` `"temperature"` und unterscheiden sich nur in der
+`aggregation`).
+
+Details (Read-Modify-Write-Prinzip, Restrisiken R1/R2, AC-Zuordnung): Spec
+`docs/specs/modules/feat_1373_s2b_metrik_speicherformat.md`.
+
+---
+
 ## Prod-Mail-Pfad-Nachweis: nur passiv (#1147)
 
 **VERBOT: synthetische Sends oder Kunst-User auf Prod zur Pfad-Verifikation.**
