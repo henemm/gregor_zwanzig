@@ -136,7 +136,9 @@ Jede neue Pflicht-Regel, jedes neue Gate, jeder neue Pflicht-Validator muss beim
 
 Verifikation läuft **nach** dem Push gegen Staging (`https://staging.gregor20.henemm.com`) — **nie** durch lokalen Neustart des Live-Servers (= Produktion). Issue #339.
 
-**Ablauf:** Push → ~5 Min Staging-Auto-Deploy → `/e2e-verify` → `deploy-gregor-prod.sh` → Post-Deploy-Selftest (#564) → Issue close. Prod-Deploy ist Hard Gate: blockt, wenn `e2e_verified.json[verified_commit]` ≠ HEAD oder `staging_verdict` nicht mit `VERIFIED` beginnt (#521).
+**Ablauf:** Push → ~5 Min Staging-Auto-Deploy → `/e2e-verify` → `deploy-gregor-prod.sh` → Post-Deploy-Selftest (#564) → Issue close. Prod-Deploy ist Hard Gate: blockt, wenn für den Zielstand kein bestandener, frischer Nachweis vorliegt (#521).
+
+**Nachweis-Ablage (seit #1382):** **eine Datei je Stand** unter `.claude/e2e_verified/<sha>.json` — geschrieben und gelesen über dieselbe Auflösung. Die frühere einzelne Sammeldatei ist abgekündigt und wird **nicht mehr gelesen**; fehlt der Nachweis für den Zielstand, blockiert das Gate und sagt genau das, statt einen fremden Stand zu nennen. Dieselbe Bedingung gilt für Deploy-Gate und Post-Deploy-Selftest: exakter Treffer ODER ein Vorgänger, der bestanden **und** frisch ist **und** dessen Zuwachs reine Doku ist. Ein ausdrücklich übergebener `--e2e-path` ist maßgeblich (keine Vorgänger-Suche). Kommt `verified_commit (<fremder Stand>) != expected-commit` — das ist der **alte** Wortlaut; dann läuft dort noch Code vor #1382.
 
 **VERBOTEN:** lokalen Live-Server stoppen/neustarten · Sammel-Versand über alle Touren (nur Test-Trip) · „E2E bestanden" ohne Staging-Verifikation sagen.
 
@@ -291,4 +293,4 @@ Bei aktivem OpenSpec-Workflow (`GZ_ACTIVE_WORKFLOW` gesetzt) beim Komprimieren I
 - **Implementierung & QA:** geänderte Dateien, Adversary-Verdict, offene Fix-Loop-Punkte
 - **Deploy-relevant:** Scope (frontend-only vs. full-stack), `verified_commit`-Status, Staging-Verdict
 
-Verwerfen: rohe Tool-Output-Dumps, allgemeines Hin-und-Her, Implementierungs-Detail-Diskussionen die bereits in Code/State-Dateien (`.claude/workflows/<name>.json`, `e2e_verified.json`, `docs/artifacts/`) stehen.
+Verwerfen: rohe Tool-Output-Dumps, allgemeines Hin-und-Her, Implementierungs-Detail-Diskussionen die bereits in Code/State-Dateien (`.claude/workflows/<name>.json`, `.claude/e2e_verified/<sha>.json`, `docs/artifacts/`) stehen.

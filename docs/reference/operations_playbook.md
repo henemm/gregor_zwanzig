@@ -19,9 +19,9 @@ Neustart des Live-Servers (auf dieser Maschine = Produktion). Siehe Issue #339.
 
 1. Smoke gegen Staging (`/` + `/api/health`)
 2. Scope bestimmen (frontend-only vs. backend/full-stack)
-3. frontend-only → `staging-validator` Agent prüft alle ACs aus der Spec via Playwright; schreibt `e2e_verified.json` mit `verified_commit` + `staging_verdict`
+3. frontend-only → `staging-validator` Agent prüft alle ACs aus der Spec via Playwright; schreibt den Nachweis mit `verified_commit` + `staging_verdict`
 4. backend/full-stack → Test-Trip auf Staging, Mail nur an `gregor-test@henemm.com`, IMAP-Prüfung
-5. Nachweis in `.claude/e2e_verified.json` mit `verified_commit` (HEAD-SHA), `staging_verdict` und strukturierten Findings pro AC
+5. Nachweis in `.claude/e2e_verified/<sha>.json` — **eine Datei je Stand** (commit-benannt), mit `verified_commit`, `staging_verdict` und strukturierten Findings pro AC
 
 Basis-URL für Browser-Checks via `GZ_SVELTE_BASE` (Default Staging):
 ```bash
@@ -29,9 +29,24 @@ GZ_SVELTE_BASE=https://staging.gregor20.henemm.com \
   uv run python3 .claude/hooks/e2e_browser_test.py browser --check "Feature" --url "/"
 ```
 
-`deploy-gregor-prod.sh` liest `e2e_verified.json` und blockiert den Prod-Deploy als Hard Gate,
-wenn `verified_commit` nicht dem aktuellen HEAD entspricht oder `staging_verdict` nicht mit
-`VERIFIED` beginnt (Issue #521).
+`deploy-gregor-prod.sh` liest den Nachweis für den Zielstand (`.claude/e2e_verified/<sha>.json`)
+und blockiert den Prod-Deploy als Hard Gate, wenn keiner vorliegt, `verified_commit` nicht passt
+oder `staging_verdict` nicht mit `VERIFIED` beginnt (Issue #521).
+
+**Seit Fix #1382 (2026-07-26):**
+
+- Gesucht wird **ausschließlich** die commit-benannte Datei — es gibt keinen Rückfall mehr auf eine
+  einzelne Sammeldatei. Fehlt der Nachweis für den Zielstand, sagt das Gate genau das, statt einen
+  fremden alten Stand zu nennen.
+- Fünf unterscheidbare Meldungen: kein Nachweis · nicht bestanden · zu alt · **Zielstand von einer
+  Parallelsitzung weitergeschoben** (nennt die dazwischen geänderten Dateien und zwei Auswege) ·
+  Datei passt nicht zu ihrem Namen.
+- Der Zielstand darf als volle Kennung, Kurzform oder `origin/main` übergeben werden — alle drei
+  ergeben denselben Nachweis-Pfad.
+- Wird ein Pfad **ausdrücklich** übergeben (`--e2e-path`), ist er maßgeblich; es wird dann kein
+  Vorgänger-Stand gesucht.
+- Trifft die Vorgänger-Suche auf einen Nachweis, der **nicht bestanden** ist, blockiert sie —
+  sie läuft nicht mehr daran vorbei zu einer älteren bestandenen Basis.
 
 ---
 
@@ -43,7 +58,7 @@ und parallele HTTP-Probes auf alle aus der Staging-Verifikation bekannten AC-Pfa
 
 **Ablauf (integriert in `/7-deploy`):**
 
-1. Commit-Attestation: `git HEAD` muss mit `e2e_verified.json[verified_commit]` übereinstimmen
+1. Commit-Attestation: für `git HEAD` muss ein bestandener Nachweis vorliegen — entweder exakt (`.claude/e2e_verified/<HEAD>.json`) oder über einen Vorgänger-Stand, der bestanden **und** frisch ist **und** dessen Zuwachs bis HEAD reine Dokumentation ist (seit #1382 dieselbe Bedingung wie im Deploy-Gate). Fehlt beides bei ausgeliefertem Programmcode, blockiert der Selbsttest (löst #564 AC-5 teilweise ab)
 2. Health-Check: `https://gregor20.henemm.com/api/health` muss HTTP 200 + `status=ok` antworten
 3. AC-Attestation: pro Staging-Finding (max 5 parallel) HTTP GET auf entsprechende Prod-URL (erwartet 200 oder 302; ein 302 auf `/login` gilt seit Fix #1353 NICHT mehr als inhaltlicher Nachweis, s.u.)
 4. Bericht: Markdown-Tabelle in `docs/artifacts/<workflow>/prod-selftest.md` mit pro-AC-Status
@@ -54,7 +69,7 @@ und parallele HTTP-Probes auf alle aus der Staging-Verifikation bekannten AC-Pfa
 - **PASS:** alle PASS-Findings bestätigen sich in Produktion
 - **PARTIAL:** mind. ein PASS-Finding fehlt oder ist unerreichbar in Produktion
 - **FAIL:** Commit-Mismatch oder Health unreachable
-- **SKIPPED_ALL:** `e2e_verified.json` nicht vorhanden (docs-only Deploy)
+- **SKIPPED_ALL:** reiner Doku-Deploy (Scope `docs-only`) — dann wird ohne Nachweis übersprungen. Bei ausgeliefertem Programmcode **ohne** Nachweis wird seit #1382 blockiert statt übersprungen
 - **SKIPPED_AUTH_REDIRECT** (Fix #1353): ALLE geprobten Findings landeten unauthentifiziert auf `302 → /login`. Der Selbsttest läuft ohne Login — ein Auth-Redirect ist strukturell nicht per unauth-GET beweisbar, kein Defekt. Zählt zur Exit-0-Menge, blockiert den Deploy also nicht, ist aber **kein Ersatz für die Staging-Verifikation**: Es wurde in Prod kein einziger AC inhaltlich bestätigt, nur die Anmelde-Schranke gesehen.
 
 **Schutzwirkung:** Issue-Close erfolgt nur bei Exit 0. Bei PARTIAL/FAIL wird der Bericht
