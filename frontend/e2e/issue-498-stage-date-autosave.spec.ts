@@ -290,3 +290,84 @@ test('AC-8 (#1389): „Nur diese Etappe" persistiert die Etappe-1-Änderung', as
 	const dates = await fetchStageDates(page);
 	expect(dates['s2']).toBe('2026-08-02');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bug #1389 Adversary F004 — Doppeltipp auf „Alle mitverschieben".
+//
+// `cascade.done` wird erst NACH dem ersten `await` gesetzt. Zwei Tipps im
+// selben JS-Tick (auf dem Handy alltäglich) laufen deshalb beide durch die
+// Eingangsprüfung und verschieben die Folge-Etappen ZWEIMAL — Datenkorruption
+// an der echten Tour. Seit `await settle()` (F002) klafft dieses Fenster sogar
+// bis zu 8 s auseinander statt nur die Dauer eines PUT.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Zählt die PUTs auf /api/trips/… die der BROWSER absetzt (page.request bleibt
+ *  unangetastet, Seed/GET verfälschen den Zähler also nicht). */
+async function countTripPuts(page: Page): Promise<{ n: number }> {
+	const stats = { n: 0 };
+	await page.route('**/api/trips/**', async (route) => {
+		if (route.request().method() === 'PUT') stats.n++;
+		await route.continue();
+	});
+	return stats;
+}
+
+/** Zwei native Klicks im SELBEN Tick. Bewusst nicht zweimal `Locator.click()`:
+ *  das wartet jeweils auf Aktionierbarkeit und setzt den zweiten Klick erst
+ *  nach dem Re-Render ab — genau daran scheitert der Nachweis sonst. */
+async function doubleTap(page: Page, name: RegExp): Promise<void> {
+	await page.getByRole('button', { name }).evaluate((el: HTMLElement) => {
+		el.click();
+		el.click();
+	});
+}
+
+test('AC-9 (#1389 F004): Doppeltipp auf „Alle mitverschieben" verschiebt die Folge-Etappen nur EINMAL', async ({ page }) => {
+	test.setTimeout(60_000);
+	const puts = await countTripPuts(page);
+
+	await openStagesEditor(page);
+	await page.getByText('Tag 1', { exact: false }).first().click();
+	await expect(activeDateInput(page)).toHaveValue('2026-08-01');
+
+	// 08-01 → 08-22 (+21 Tage). Doppelt angewandt ergäbe s2 = 2026-09-13.
+	await activeDateInput(page).fill('2026-08-22');
+	await activeDateInput(page).blur();
+	await expect(page.getByTestId('cascade-strip')).toBeVisible();
+
+	await doubleTap(page, /Alle mitverschieben/);
+
+	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
+	await page.waitForTimeout(2000);
+	await page.reload();
+	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+
+	const dates = await fetchStageDates(page);
+	expect(dates['s1']).toBe('2026-08-22');
+	expect(dates['s2'], 'Folge-Etappe darf NICHT doppelt verschoben werden (+21, nicht +42)').toBe('2026-08-23');
+	expect(dates['s3']).toBe('2026-08-24');
+	expect(dates['pause']).toBe('2026-08-25');
+	expect(puts.n, 'ein Doppeltipp darf genau EINEN Schreibvorgang auslösen').toBe(1);
+});
+
+test('AC-10 (#1389 F004): Doppeltipp auf „Nur diese Etappe" schreibt genau einmal', async ({ page }) => {
+	test.setTimeout(60_000);
+	const puts = await countTripPuts(page);
+
+	await openStagesEditor(page);
+	await page.getByText('Tag 1', { exact: false }).first().click();
+	await activeDateInput(page).fill('2026-08-22');
+	await activeDateInput(page).blur();
+	await expect(page.getByTestId('cascade-strip')).toBeVisible();
+
+	await doubleTap(page, /Nur diese Etappe/);
+
+	await expect
+		.poll(async () => (await fetchStageDates(page))['s1'], { timeout: 15_000 })
+		.toBe('2026-08-22');
+	await page.waitForTimeout(1500);
+
+	const dates = await fetchStageDates(page);
+	expect(dates['s2'], 'die Rückfrage wurde abgelehnt — Folge-Etappen bleiben unberührt').toBe('2026-08-02');
+	expect(puts.n, 'ein Doppeltipp darf genau EINEN Schreibvorgang auslösen').toBe(1);
+});

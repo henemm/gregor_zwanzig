@@ -378,3 +378,31 @@ describe('Bug #1389 Fix-Loop 1 (Adversary F002/F003)', () => {
 		assert.equal(c.state, 'idle', 'erst der Abschluss des echten Requests meldet „gespeichert"');
 	});
 });
+
+describe('Bug #1389 Fix-Loop 2 (Adversary F004): Doppeltipp darf nicht doppelt schreiben', () => {
+	// Der Reentrancy-Riegel für „Alle mitverschieben" sitzt in
+	// EditStagesPanelNew.svelte (Svelte-Komponente, in node:test nicht
+	// instanziierbar — s. Kommentarblock oben); er ist per e2e AC-9 abgedeckt.
+	// Hier wird die Zusage der Steuerung geprüft, auf die sich der ANDERE Knopf
+	// („Nur diese Etappe" → dismissCascade → flush()) verlässt.
+	test('flush() ist idempotent: zwei Aufrufe im selben Tick schreiben genau EINMAL', async () => {
+		const c = createTestInstance();
+		let calls = 0;
+		c.defer(async () => {
+			calls++;
+		});
+
+		// Zwei Aufrufe OHNE dazwischenliegendes await — exakt der Doppeltipp.
+		const a = c.flush();
+		const b = c.flush();
+		await Promise.all([a, b]);
+
+		assert.equal(
+			calls,
+			1,
+			'der zweite Aufruf darf nichts mehr finden — `doSave()` nullt `_pendingFn` synchron, ' +
+				'bevor es das erste Mal wartet (Bug #1389 F004)'
+		);
+		assert.equal(c.hasPending, false);
+	});
+});

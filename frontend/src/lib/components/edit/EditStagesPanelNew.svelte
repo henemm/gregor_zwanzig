@@ -224,6 +224,10 @@
 		done: boolean;
 	}
 	let cascade = $state<CascadeState | null>(null);
+	// Bug #1389 Adversary F004: läuft gerade eine Kaskaden-Anwendung? Dient als
+	// Reentrancy-Riegel in applyCascade() UND schaltet den Knopf ab, damit die
+	// Oberfläche einen zweiten Tipp gar nicht erst anbietet.
+	let cascadeBusy = $state(false);
 
 	function handleDateChange(stageId: string, newDate: string): void {
 		const idx = stages.findIndex((s) => s.id === stageId);
@@ -277,45 +281,58 @@
 	}
 
 	async function applyCascade(): Promise<void> {
+		// Bug #1389 Adversary F004: Reentrancy-Riegel, synchron VOR jedem `await`.
+		// `cascade.done` wird erst nach dem ersten `await` gesetzt — zwei Tipps im
+		// selben JS-Tick (auf dem Handy alltäglich) kamen deshalb beide durch die
+		// Eingangsprüfung und verschoben die Folge-Etappen ZWEIMAL (belegt: s2 landete
+		// auf +42 statt +21 Tagen). Seit `await settle()` (F002) klafft dieses Fenster
+		// bis zu SETTLE_TIMEOUT_MS auseinander statt nur die Dauer eines PUT, deshalb
+		// muss der Riegel hier stehen und nicht am ersten Netzwerk-Aufruf.
+		if (cascadeBusy) return;
 		if (!cascade || cascade.done) return;
-		const days = cascade.days;
-		stages = stages.map((s, i) => {
-			if (i === 0) return s;
-			if (!s.date) return s;
-			return { ...s, date: addDays(s.date, days), dateOverridden: true };
-		});
-		if (saveController) {
-			// Issue #1376: den noch offenen Debounce aus handleDateChange verwerfen —
-			// er trägt einen veralteten Schnappschuss (nur erste Etappe verschoben)
-			// und würde das gleich folgende Kaskaden-Ergebnis wieder überschreiben,
-			// sobald er verzögert oder beim Verlassen der Seite feuert.
-			saveController.cancel();
-			// Bug #1389 (Gürtel und Hosenträger): `cancel()` stoppt nur einen noch
-			// nicht ausgelösten Speichervorgang. Ist wider Erwarten doch schon einer
-			// im Netz unterwegs, muss darauf GEWARTET werden — sonst entscheidet die
-			// Netz-Laufzeit, welcher Stand am Ende persistiert ist.
-			// Adversary F002: `setSaving()` bewusst VOR dem Warten — sonst stünde die
-			// Anzeige während des (auf SETTLE_TIMEOUT_MS gedeckelten) Wartens auf
-			// „Gespeichert ✓" bzw. „Nicht gespeichert" und die Oberfläche wirkte
-			// eingefroren. `settle()` gibt nach dem Deckel auf und schreibt trotzdem.
-			saveController.setSaving();
-			await saveController.settle();
-			// Flush immediately (cascade = user intent, no debounce needed).
-			const currentStages = stages;
-			try {
-				const updatedTrip = await api.put<Trip>(`/api/trips/${tripId!}`, { stages: currentStages });
-				saveController.setSaved();
-				onTripUpdate?.(updatedTrip);
-				cascade = { ...cascade, done: true };
-			} catch (e: unknown) {
-				const msg = e instanceof Error ? e.message : 'Speichern fehlgeschlagen';
-				saveController.setError(msg);
+		cascadeBusy = true;
+		try {
+			const days = cascade.days;
+			stages = stages.map((s, i) => {
+				if (i === 0) return s;
+				if (!s.date) return s;
+				return { ...s, date: addDays(s.date, days), dateOverridden: true };
+			});
+			if (saveController) {
+				// Issue #1376: den noch offenen Debounce aus handleDateChange verwerfen —
+				// er trägt einen veralteten Schnappschuss (nur erste Etappe verschoben)
+				// und würde das gleich folgende Kaskaden-Ergebnis wieder überschreiben,
+				// sobald er verzögert oder beim Verlassen der Seite feuert.
+				saveController.cancel();
+				// Bug #1389 (Gürtel und Hosenträger): `cancel()` stoppt nur einen noch
+				// nicht ausgelösten Speichervorgang. Ist wider Erwarten doch schon einer
+				// im Netz unterwegs, muss darauf GEWARTET werden — sonst entscheidet die
+				// Netz-Laufzeit, welcher Stand am Ende persistiert ist.
+				// Adversary F002: `setSaving()` bewusst VOR dem Warten — sonst stünde die
+				// Anzeige während des (auf SETTLE_TIMEOUT_MS gedeckelten) Wartens auf
+				// „Gespeichert ✓" bzw. „Nicht gespeichert" und die Oberfläche wirkte
+				// eingefroren. `settle()` gibt nach dem Deckel auf und schreibt trotzdem.
+				saveController.setSaving();
+				await saveController.settle();
+				// Flush immediately (cascade = user intent, no debounce needed).
+				const currentStages = stages;
+				try {
+					const updatedTrip = await api.put<Trip>(`/api/trips/${tripId!}`, { stages: currentStages });
+					saveController.setSaved();
+					onTripUpdate?.(updatedTrip);
+					cascade = { ...cascade, done: true };
+				} catch (e: unknown) {
+					const msg = e instanceof Error ? e.message : 'Speichern fehlgeschlagen';
+					saveController.setError(msg);
+				}
+			} else {
+				const result = await save();
+				if (result !== null) {
+					cascade = { ...cascade, done: true };
+				}
 			}
-		} else {
-			const result = await save();
-			if (result !== null) {
-				cascade = { ...cascade, done: true };
-			}
+		} finally {
+			cascadeBusy = false;
 		}
 	}
 
@@ -324,6 +341,14 @@
 		// jetzt (und genau einmal) wird der zurückgestellte Stand „nur Etappe 1"
 		// geschrieben. Beim „Schließen" des Erfolgs-Streifens (cascade.done) ist
 		// nichts mehr ausstehend, dann bleibt es beim reinen Ausblenden.
+		//
+		// Adversary F004 (geprüft, kein Riegel nötig): ein Doppeltipp kann hier
+		// keine zwei Schreibvorgänge auslösen. Die Funktion ist synchron und setzt
+		// `cascade = null` VOR jeder Weitergabe — der zweite Aufruf sieht bereits
+		// `wasOpenQuestion === false` und steigt aus. Zusätzlich ist `flush()`
+		// selbst idempotent: `doSave()` nullt `_pendingFn` synchron, bevor es das
+		// erste Mal wartet. Nachweis: e2e AC-10 (war schon vor dem Fix grün) und
+		// der Kern-Test „flush() ist idempotent".
 		const wasOpenQuestion = cascade !== null && !cascade.done;
 		cascade = null;
 		if (!wasOpenQuestion) return;
@@ -562,9 +587,15 @@
 							>
 							Sollen die {cascade.count} Folge-Etappen um denselben Betrag mitverschoben werden?
 						</p>
+						<!-- Bug #1389 F004: während der Verarbeitung nicht erneut auslösbar
+						     und sichtbar im Wartezustand. Der Riegel in applyCascade() ist
+						     die Absicherung; hier soll der zweite Tipp gar nicht erst
+						     angeboten werden. -->
 						<div class="cascade-actions">
-							<Btn variant="accent" size="sm" onclick={applyCascade}>Alle mitverschieben</Btn>
-							<Btn variant="outline" size="sm" onclick={dismissCascade}>Nur diese Etappe</Btn>
+							<Btn variant="accent" size="sm" onclick={applyCascade} disabled={cascadeBusy}>
+								{cascadeBusy ? 'Wird verschoben …' : 'Alle mitverschieben'}
+							</Btn>
+							<Btn variant="outline" size="sm" onclick={dismissCascade} disabled={cascadeBusy}>Nur diese Etappe</Btn>
 						</div>
 					</div>
 				{:else}
