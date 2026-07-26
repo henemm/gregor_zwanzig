@@ -66,6 +66,17 @@ Dokumentiert als „vier inkompatible Metrik-Vokabulare"
 durch Übersetzungstabellen; fehlt ein Eintrag, verschwindet der Wert **still**
 (#1285, #1296, #1324, #1362, #1361 Befund 3).
 
+> **Korrektur 2026-07-26 (#1384/#1387): es sind fünf, nicht vier.** Der Korridor-Editor
+> (Reiter *Wertebereiche*, geteilt Trip + Vergleich) hält eine eigene, fest verdrahtete
+> Sechser-Liste `ROUTE_METRIC_DEFS` plus eine Brücke `ROUTE_CORRIDOR_CATALOG_IDS`
+> (`frontend/src/lib/components/shared/corridor-editor/corridorEditorState.ts:28-35,72-90`).
+> Herkunft ist das abgeschaffte Absolut-Alarm-Modell (`AlertableMetrics`,
+> `internal/model/trip.go:188-195`); das Backend erzwingt nichts (`Corridor.Metric` ohne
+> Enum). Folge: nur 5 von 24 auswählbaren Katalog-Größen sind überhaupt als Wertebereich
+> hinzufügbar (#1384, Etappe S2). Ein Auftreten derselben Fehlerklasse ist mit #1387
+> bereits behoben — dort fehlte `freezing_level` in der Brücke, seither durch einen
+> Drift-Wächter abgesichert.
+
 **Scheiben (Epic #1372):** S1 #1360+#1361 (Layout-Reiter auflösen, Stundenverlauf
 ehrlich) · S2 #1373 (ein Katalog für die Oberfläche) · S3 #1361 Befund 2 + #1366
 (Zuordnung je Ausgabe) · S4 #1357 (Auswertung wählbar, geteilt) · S5 #1362, #1356
