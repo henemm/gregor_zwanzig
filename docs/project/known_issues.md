@@ -858,3 +858,42 @@ Atomic-Migration (#368) und Token-Konsolidierung (#519) waren teilweise unvollst
 1. Atomic-Migration und Token-Refactorings brauchen abschließende Audits gegen die gesamte Codebasis (Grep-Suche, nicht nur visuelles Review)
 2. Temporäre Bridge-Aliasse sollten mit explizitem Verfallsdatum dokumentiert sein
 3. Guard-Tests gegen veraltete Token-Namen helfen, Regressions zu fangen
+
+---
+
+## BUG-1389-CASCADE-RACE: Kaskade „Folgeetappen mitverschieben" blieb wirkungslos (#1389, #1390)
+
+### Symptom
+Der Nutzer änderte auf dem Handy das Datum der ersten Etappe, bestätigte die Rückfrage „Sollen die N Folgeetappen mitverschoben werden?" — und nur Etappe 1 bewegte sich. Die Oberfläche meldete dabei sogar „N Folge-Etappen verschoben · alle Daten angepasst".
+
+Folgewirkung: Der 3-Tages-Ausblick verschwand aus den Briefing-Mails (#1388), weil nach der halben Verschiebung keine Etappe mehr in der Zukunft lag.
+
+### Root Cause — zwei unabhängige Ursachen-Klassen
+
+**(1) Konkurrierende Schreibvorgänge ohne Serverseite-Sperre.**
+`handleDateChange()` plante beim Umdatieren sofort einen Debounce-Speichervorgang (700 ms) mit dem Stand „Etappe 1 neu, Folgeetappen ALT". Wer den Banner erst liest, klickt später — der veraltete Schreibvorgang war da schon unterwegs. `applyCascade()` rief `cancel()`, das aber nur einen **noch nicht ausgelösten** Timer stoppt, und sendete einen zweiten PUT. `UpdateTripHandler` (`internal/handler/trip.go`) ersetzt die Etappen vollständig, ohne Version/ETag/Mutex — **wer zuletzt ankommt, gewinnt**, nicht wer zuletzt sendet.
+
+Auf schnellem Netz gewinnt zufällig der richtige. Der Fehler braucht **asymmetrische** Verzögerung: die früher gesendete Anfrage trifft später ein. Genau das ist bei eingeschränkter Konnektivität der Normalfall — und das ist die Zielgruppe dieses Produkts.
+
+**(2) Position statt Identität.** Vier Riegel derselben Bauart in einer Datei: `activeStageIndex === 0` (Sichtbarkeit der Rückfrage), `i === 0` (Überspringen beim Anwenden), `idx === 0` (Neuberechnung beim zweiten Umdatieren), sowie ein positionsbasierter Ausschluss beim Festhalten der Grundlage. Alle waren **zufällig** richtig, solange die auslösende Etappe nicht umsortiert werden konnte — und fielen der Reihe nach um, sobald das ging.
+
+### Fix (live 2026-07-26, Commits `920cc99c` … `d38740c2`)
+- **Kein zweiter Schreibvorgang:** `SaveStatus.defer()` stellt zurück, statt zu takten, solange die Rückfrage offen ist. Genau ein PUT je Entscheidung.
+- **Reihenfolge nicht dem Netz überlassen:** `SaveStatus.settle()` wartet auf einen dennoch laufenden Schreibvorgang, gedeckelt auf `SETTLE_TIMEOUT_MS`.
+- **Idempotenz:** Die Zieldaten werden aus einer beim Aufstellen der Rückfrage festgehaltenen Grundlage (`baseFirstDate`/`baseDates`, nach `id` geschlüsselt) berechnet — nicht aus dem laufend veränderten Zustand. Wiederholung nach Fehlschlag verdoppelt dadurch nichts.
+- **Reentrancy-Riegel** vor dem ersten `await`; Knöpfe während der Verarbeitung gesperrt.
+- **`dismissCascade()` speichert unbedingt**, statt sich auf einen möglicherweise abgeräumten Speichervorgang zu verlassen; im Fehlerfall wird die geäußerte Absicht neu vorgemerkt, damit `beforeNavigate` sie retten kann.
+- **Durchgängig identitätsbasiert:** Aufstellen, Grundlage, Anzeige, Anwenden, Zurücknehmen, Verwerfen.
+
+### Lessons Learned
+
+**Ein Test, der schneller klickt als ein Mensch, beweist den falschen Pfad.** `issue-498-stage-date-autosave.spec.ts` AC-2 prüfte diesen Ablauf seit jeher inklusive Neuladen — und war immer grün. Playwright klickt in Millisekunden, der Debounce-Timer war da noch nicht gefeuert, ein zweiter Schreibvorgang entstand nie. Der Test bewies genau den einen Fall, den ein Mensch nie auslöst. **Wo eine Bedienung eine menschliche Lesepause enthält, muss der Test sie enthalten** — und wo Nebenläufigkeit die Ursache ist, muss der Test sie erzwingen (`page.route()` mit gezielter Verzögerung), nicht auf sie hoffen.
+
+**Sechs Staging-Runden, sechs neue Funde — keinen davon sah die Kern-Suite.** Doppeltipp, Wiederholung nach Fehlschlag, stilles Verwerfen bei „Nur diese Etappe", derselbe Verlust beim Reiterwechsel, ein unbegrenzter Hänger, den die Reparatur selbst eingebaut hätte. Alle wurden erst durch aktives Brechen am echten Klickpfad sichtbar.
+
+**„Position" ist fast nie gemeint, wenn „Identität" gemeint ist.** Nach dem dritten Riegel derselben Bauart wurde die Datei systematisch nach Positions-Annahmen durchgesehen; das förderte zwei weitere latente Fehler zutage. Die Durchsicht war billiger als die drei Einzelrunden davor. Bemerkenswert: **eine** Stelle sieht aus wie derselbe Fehler und ist richtig — der Marker „· Tourstart" **soll** an der jetzt ersten Etappe hängen.
+
+**Offen und bewusst nicht behoben:** Das Backend hat weiterhin keine optimistische Sperre. Die ganze Klasse „zwei parallele Speichervorgänge überschreiben sich" ist damit nur an dieser einen Stelle entschärft, nicht grundsätzlich. Ein Versionsstempel am Trip wäre die strukturelle Lösung — eigener Vorgang, mehrere PUT-Verbraucher betroffen.
+
+### Testing
+`frontend/e2e/issue-498-stage-date-autosave.spec.ts` — von 5 auf 21 Punkte gewachsen. Kern der Absicherung: AC-6 verzögert den veralteten Schreibvorgang gezielt und prüft den **persistierten** Stand. Dass er die Reparatur wirklich bewacht, wurde durch Rückrollen des Produktivcodes belegt — dann wird er rot mit exakt dem gemeldeten Symptom.
