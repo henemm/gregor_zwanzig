@@ -26,8 +26,10 @@ from app.user import ComparisonResult, LocationResult
 from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.email.compare_html import (
     _build_location_outlook_rows, _fmt_precip_type, _fmt_thunder,
-    _fmt_visibility_overview, _metric_value, location_render_order,
+    _fmt_visibility_overview, _metric_value, _should_merge_wind_dir,
+    _visible_hour_metrics, location_render_order,
 )
+from utils.geo import degrees_to_compass
 from output.renderers.email.outlook import render_outlook_plain
 from output.metric_format import format_value
 from output.renderers.alert.official_alerts import (
@@ -118,6 +120,8 @@ def render_comparison_text(
     enabled_metrics: list[str] | None = None,
     *,
     outlook_enabled: bool = False,
+    hourly_metrics: list[str] | None = None,
+    hourly_enabled: bool = True,
 ) -> str:
     """
     Render ComparisonResult als Klartext (v2, Issue #1110).
@@ -141,6 +145,14 @@ def render_comparison_text(
             ``_visible_metrics()`` im HTML-Pfad
             (``output.renderers.email.compare_html``). Amtliche Warnungen
             bleiben davon unabhaengig immer sichtbar.
+        hourly_metrics: Issue #1366 F003 (Staging-Fund, AC-4): Spalten-Filter
+            fuer die Stundenzeile je Ort, exakt dieselbe Semantik wie im
+            HTML-Pfad (``_visible_hour_metrics``) -- ``None`` = alle 9
+            Spalten, sonst nur die gewaehlten, in der gewaehlten Reihenfolge.
+        hourly_enabled: Issue #1366 F003: ``False`` laesst den gesamten
+            Stundenverlauf-Abschnitt (Ueberschrift + Tabellenzeilen) je Ort
+            entfallen -- der 3-Tage-Ausblick haengt NICHT an dieser
+            Bedingung und bleibt unveraendert sichtbar (Issue #1323).
 
     Returns:
         Klartext-String fuer die E-Mail.
@@ -192,11 +204,19 @@ def render_comparison_text(
     # Stundenblock desselben Orts, statt gesammelt in einer eigenen
     # "AUSBLICK"-Sektion am Textende). Fail-soft je Ort -- fehlt Stunden-
     # oder Ausblickdaten, entfaellt nur der jeweils fehlende Teil.
+    # Issue #1366 F003 (Staging-Fund, AC-4): dieselbe Spaltenauflösung wie im
+    # HTML-Pfad -- ``hourly_metrics=None`` (Altbestand) liefert alle 9
+    # Spalten in Katalog-Reihenfolge, eine gesetzte Auswahl nur die
+    # gewaehlten, in der gewaehlten Reihenfolge (Issue #1335/#1359).
+    visible_hour_metrics = _visible_hour_metrics(hourly_metrics)
+    merge_wind_dir = _should_merge_wind_dir(hourly_metrics)
     section_lines: list[str] = []
     for loc_result in locations:
         if loc_result.error is not None:
             continue
-        have_hourly = bool(loc_result.hourly_data)
+        # hourly_enabled=False laesst die Tabelle entfallen -- der Ausblick
+        # haengt NICHT an dieser Bedingung (Issue #1323, bleibt unabhaengig).
+        have_hourly = hourly_enabled and bool(loc_result.hourly_data)
         outlook_rows = (
             _build_location_outlook_rows(loc_result)
             if outlook_enabled and loc_result.outlook_hourly_data else []
@@ -207,11 +227,15 @@ def render_comparison_text(
         if have_hourly:
             for dp in loc_result.hourly_data:
                 ts = dp.ts.strftime("%H:%M") if hasattr(dp.ts, "strftime") else str(dp.ts)
-                temp = f"{dp.t2m_c:.0f}°" if dp.t2m_c is not None else "-"
-                gef = f"{dp.wind_chill_c:.0f}°" if dp.wind_chill_c is not None else "-"
-                wind = f"{dp.wind10m_kmh:.0f}" if dp.wind10m_kmh is not None else "-"
-                cloud_pct = f"{dp.cloud_total_pct}%" if dp.cloud_total_pct is not None else "-"
-                section_lines.append(f"   {ts}  Temp {temp}  Gef. {gef}  Wind {wind}  Wolken {cloud_pct}")
+                cells = []
+                for m in visible_hour_metrics:
+                    text = m["fmt"](getattr(dp, m["key"], None))
+                    if merge_wind_dir and m["key"] == "wind10m_kmh":
+                        compass = degrees_to_compass(getattr(dp, "wind_direction_deg", None))
+                        if compass:
+                            text = f"{text} {compass}"
+                    cells.append(f"{m['label']} {text}")
+                section_lines.append(f"   {ts}  " + "  ".join(cells))
         if outlook_rows:
             section_lines.append(render_outlook_plain(outlook_rows, show_acc=False).strip("\n"))
         section_lines.append("")
@@ -278,6 +302,12 @@ def render_compare_email(
     text_body = render_comparison_text(
         result, profile=profile, enabled_metrics=enabled_metrics,
         outlook_enabled=outlook_enabled,
+        # Issue #1366 F003 (Staging-Fund, AC-4): dieselbe Quelle wie der
+        # HTML-Pfad oben -- vorher kannte render_comparison_text diese beiden
+        # Parameter gar nicht, der Klartext-Teil zeigte die Stundentabelle
+        # unabhaengig von Auswahl/Schalter.
+        hourly_metrics=hourly_metrics,
+        hourly_enabled=hourly_enabled,
     )
     return html_body, text_body
 

@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime
 
+from app.models import ForecastDataPoint
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.comparison import render_compare_email, render_compare_telegram
 from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
@@ -41,6 +42,20 @@ def _result() -> ComparisonResult:
     return ComparisonResult(
         locations=[_loc_result("a", "Aachen"), _loc_result("b", "Bremen")],
         time_window=(0, 23), target_date=date(2026, 7, 24),
+        created_at=datetime(2026, 7, 24, 4, 0),
+    )
+
+
+# Staging-Fund AC-4 (2026-07-26): der Klartext-Teil zeigte den Stundenblock
+# bislang UNABHAENGIG von Auswahl/Schalter -- kein Kern-Test deckte ihn ab,
+# weil _loc_result() oben keine hourly_data traegt. Eigene Fixture MIT
+# hourly_data fuer den Klartext-Stundenverlauf-Nachweis.
+def _result_mit_stunden() -> ComparisonResult:
+    dp = ForecastDataPoint(ts=datetime(2026, 7, 24, 8, 0), t2m_c=18.0, wind10m_kmh=12.0)
+    loc = _loc_result("a", "Innsbruck")
+    loc.hourly_data = [dp]
+    return ComparisonResult(
+        locations=[loc], time_window=(0, 23), target_date=date(2026, 7, 24),
         created_at=datetime(2026, 7, 24, 4, 0),
     )
 
@@ -150,3 +165,46 @@ class TestMailWirkungAC1AC9:
             assert f"{label} " not in msg, (
                 f"Telegram darf bei Leerauswahl keine Wettergroessen-Zelle '{label}' zeigen"
             )
+
+
+class TestKlartextStundenverlaufAC4:
+    """Staging-Fund (2026-07-26, IMAP-ID 12330): der Klartext-Teil zeigte den
+    Stundenblock bislang unabhaengig von Auswahl/Schalter. Ueber
+    resolve_compare_render_options() mit einem Preset-Dict, nicht mit direkt
+    gesetzten Parametern -- genau der Weg, der beim Versand tatsaechlich
+    durchlaufen wird und den kein bisheriger Kern-Test abdeckte."""
+
+    def test_leere_stundenauswahl_und_abgeschalteter_schalter_zeigen_keinen_stundenblock(self):
+        preset = {"id": "p-ac4", "display_config": {"hourly_metrics": []}}
+        options = resolve_compare_render_options(preset)
+        assert options.hourly_enabled is False  # Voraussetzung, s. TestReportConfigResolverAC4AC5
+
+        _, plain = render_compare_email(
+            _result_mit_stunden(),
+            hourly_metrics=options.hourly_metrics,
+            hourly_enabled=options.hourly_enabled,
+        )
+        assert "STUNDENVERLAUF" not in plain, (
+            "AC-4: bewusste Leerauswahl (-> hourly_enabled=False) darf im Klartext "
+            "keinen Stundenverlauf-Abschnitt zeigen"
+        )
+
+    def test_gesetzte_auswahl_zeigt_nur_die_gewaehlten_werte_in_der_gewaehlten_reihenfolge(self):
+        preset = {
+            "id": "p-ac4-auswahl",
+            "display_config": {"hourly_metrics": ["wind_kmh", "temp_c"]},
+            "hourly_enabled": True,
+        }
+        options = resolve_compare_render_options(preset)
+
+        _, plain = render_compare_email(
+            _result_mit_stunden(),
+            hourly_metrics=options.hourly_metrics,
+            hourly_enabled=options.hourly_enabled,
+        )
+        assert "STUNDENVERLAUF" in plain
+        hour_line = next(line for line in plain.splitlines() if "08:00" in line)
+        assert hour_line.index("Wind") < hour_line.index("Temp"), (
+            f"Reihenfolge der Auswahl muss die Spaltenfolge bestimmen, erhalten: {hour_line!r}"
+        )
+        assert "Gef." not in hour_line, "nicht gewaehlte Spalten duerfen nicht erscheinen"

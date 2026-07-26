@@ -131,8 +131,12 @@ auf der übergebenen (ggf. leeren) Liste.
   Renderer-IDs abbilden lassen.
 - **Output:** Vergleichs-Mail (HTML + Klartext), Telegram-Nachricht und SMS
   respektieren „Feld fehlt → alle" und „Feld leer/unauflösbar → keine"
-  identisch für alle vier Kanäle (Übersicht) bzw. HTML-only (Stundenverlauf,
-  da nur dieser Kanal Stundenspalten kennt).
+  identisch für alle vier Kanäle (Übersicht). Für den Stundenverlauf gilt das
+  identisch für HTML- **und** Klartext-Teil derselben Mail — Telegram und SMS
+  kennen weiterhin keine Stundenspalten (Staging-Verifikation 2026-07-26
+  falsifiziert die frühere Annahme „HTML-only, da nur dieser Kanal
+  Stundenspalten kennt": der Klartext-Teil zeigte den Stundenblock bis zum
+  Fix F003 unabhängig von Auswahl/Schalter).
 - **Side effects:** Neues `logger.warning` beim Stundenverlauf-Auflöser für
   unauflösbare Kennungen; keine Datenmigration, keine Änderung an
   Bestandsverhalten für Presets ohne gespeicherte Auswahl.
@@ -198,8 +202,13 @@ auf der übergebenen (ggf. leeren) Liste.
   Empfänger verschickt wird / Then zeigt keiner der vier Ausgabewege eine
   Wettergrößen-Zeile bzw. -Zelle für diesen Vergleich — die Regel gilt
   einheitlich für alle Kanäle, weil `resolve_enabled_metrics()` die einzige
-  Weiche für alle vier ist (Stundenverlauf betrifft dagegen ausschließlich
-  die HTML-Mail, da nur sie eine Stundentabelle rendert).
+  Weiche für alle vier ist. Für den Stundenverlauf (AC-4/AC-5) gilt seit Fix
+  F003 dieselbe Einheitlichkeit für HTML **und** Klartext derselben Mail —
+  Telegram/SMS rendern grundsätzlich keine Stundenspalten (unverändert, kein
+  Fehlerpfad, da `_CHANNEL_METRICS` dort ausschließlich Übersichtswerte
+  kennt). Die frühere Formulierung „Stundenverlauf betrifft ausschließlich
+  die HTML-Mail" war durch den Staging-Fund vom 2026-07-26 widerlegt: der
+  Klartext-Teil zeigte den Stundenblock unabhängig von Auswahl/Schalter.
 
 ## Invarianten
 
