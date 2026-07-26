@@ -16,13 +16,13 @@ tags: [migration, sveltekit, auth, frontend]
 
 ## Purpose
 
-SvelteKit 5 Projekt aufsetzen als Ersatz fuer NiceGUI. Grundlagen-Infrastruktur: Projekt-Scaffold, UI-Library, TypeScript API Client, Cookie-basierte Auth und Layout Shell. Bildet das Fundament fuer alle spaeter portierten Frontend-Pages (M6).
+SvelteKit 2 Projekt aufsetzen als Ersatz fuer NiceGUI. Grundlagen-Infrastruktur: Projekt-Scaffold, UI-Library, TypeScript API Client, Cookie-basierte Auth und Layout Shell. Bildet das Fundament fuer alle spaeter portierten Frontend-Pages (M6).
 
 ## Scope
 
 ### In Scope (M2)
 
-- SvelteKit 5 Scaffold mit TypeScript, Vite, adapter-node (Port 3000)
+- SvelteKit 2 Scaffold mit TypeScript, Vite, adapter-node (Port 3000)
 - shadcn-svelte (bits-ui) + Tailwind CSS Setup
 - Hand-written TypeScript Types aus OpenAPI Spec
 - Typed fetch API Client
@@ -99,7 +99,7 @@ Cookie-Attribute:
 
 | Datei | Zweck |
 |-------|-------|
-| `frontend/package.json` | Dependencies: SvelteKit 5, adapter-node, shadcn-svelte, tailwind |
+| `frontend/package.json` | Dependencies: SvelteKit 2, adapter-node, shadcn-svelte, tailwind |
 | `frontend/svelte.config.ts` | SvelteKit Config mit adapter-node |
 | `frontend/vite.config.ts` | Vite Config mit /api Proxy auf :8090 |
 | `frontend/tailwind.config.ts` | Tailwind + shadcn-svelte Preset |

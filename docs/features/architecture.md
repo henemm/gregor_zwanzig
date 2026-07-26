@@ -320,7 +320,7 @@ Siehe: `docs/features/issue-816-alert-deviation-core.md`, `docs/specs/_archive/m
 
 ## Frontend Architecture (SvelteKit)
 
-**Stack:** SvelteKit 5 (Svelte 5 Runes), Tailwind CSS, Playwright E2E
+**Stack:** SvelteKit 2 mit Svelte 5 (Runes), Tailwind CSS, Playwright E2E
 
 **Location:** `frontend/` (SvelteKit project root)
 
@@ -533,7 +533,7 @@ HTML + Client-Side Interactivity
 ### Frontend Dependencies
 
 **Key libraries:**
-- **SvelteKit 5:** React framework + SSR
+- **SvelteKit 2:** Svelte-Meta-Framework — Routing, Load-Funktionen + SSR
 - **Svelte 5:** Runes-based reactivity
 - **Tailwind CSS:** Utility-first styling
 - **Leaflet (~1.9.4):** Interactive maps for waypoint editing (Issue #495)
