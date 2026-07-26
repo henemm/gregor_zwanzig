@@ -110,6 +110,49 @@ describe('buildRoutePool', () => {
 	});
 });
 
+// --- Issue #1387: Namensraum-Bruecke Katalog-ID -> Korridor-Metrik ---
+// Nutzersicht: im Reiter "Wetter-Metriken" ist NUR "Nullgradgrenze"
+// (freezing_level) angehakt; im Reiter "Wertebereiche" bot "+ Metrik" die
+// Schneefallgrenze (snow_line) trotzdem nicht an. Go
+// (internal/model/trip.go::catalogIDToAlertMetrics) und Python
+// (weather_change_detection.py::catalog_id_to_alert_metrics) bilden BEIDE
+// Katalog-IDs auf snow_line ab — nur diese dritte Schicht war gedriftet.
+describe('buildRoutePool — Katalog-Filter (Issue #1387)', () => {
+	test('nur "Nullgradgrenze" (freezing_level) aktiv -> snow_line steht im poolLeft', () => {
+		const { poolLeft } = buildRoutePool([], [
+			{ metric_id: 'freezing_level', enabled: true },
+		]);
+		assert.equal(
+			poolLeft.some((m) => m.metric === 'snow_line'),
+			true,
+			'Schneefallgrenze fehlt im "+ Metrik"-Pool, obwohl Nullgradgrenze aktiv ist'
+		);
+	});
+
+	// Regressionsschutz: der bereits vorhandene Pfad darf nicht kaputtgehen.
+	test('nur "Schneefallgrenze" (snowfall_limit) aktiv -> snow_line steht weiterhin im poolLeft', () => {
+		const { poolLeft } = buildRoutePool([], [
+			{ metric_id: 'snowfall_limit', enabled: true },
+		]);
+		assert.equal(poolLeft.some((m) => m.metric === 'snow_line'), true);
+	});
+
+	test('beide aktiv -> snow_line erscheint genau EINMAL (keine Dublette)', () => {
+		const { poolLeft } = buildRoutePool([], [
+			{ metric_id: 'freezing_level', enabled: true },
+			{ metric_id: 'snowfall_limit', enabled: true },
+		]);
+		assert.equal(poolLeft.filter((m) => m.metric === 'snow_line').length, 1);
+	});
+
+	test('freezing_level deaktiviert -> snow_line bleibt draussen', () => {
+		const { poolLeft } = buildRoutePool([], [
+			{ metric_id: 'freezing_level', enabled: false },
+		]);
+		assert.equal(poolLeft.some((m) => m.metric === 'snow_line'), false);
+	});
+});
+
 // --- addRow / removeRow / patchRow — Reducer ---
 describe('addRow / removeRow / patchRow', () => {
 	test('addRow uebernimmt Default-Range + Kontext-Defaults der Metrik', () => {

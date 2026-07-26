@@ -69,12 +69,28 @@ export interface CorridorRowState {
 // "snow_line" seit #959 nicht mehr) — eine eigene, kleine Mapping-Konstante
 // verhindert, dass der Korridor "Schneefallgrenze" nach diesem Fix nie mehr
 // im Pool erscheinen kann.
+//
+// Issue #1387: Diese Tabelle ist die DRITTE Kopie derselben Abbildung — Go
+// (internal/model/trip.go::catalogIDToAlertMetrics) und Python
+// (weather_change_detection.py::catalog_id_to_alert_metrics) halten sie
+// ebenfalls. Beide bilden "freezing_level" (Nullgradgrenze) UND
+// "snowfall_limit" (Schneefallgrenze) auf snow_line ab; hier fehlte
+// "freezing_level" — Folge: wer nur die Nullgradgrenze aktiviert hatte, bekam
+// unter "+ Metrik" keinen Schneefallgrenzen-Bereich angeboten. Aenderungen hier
+// deshalb NUR gemeinsam mit den beiden anderen Schichten.
+// Abgesichert ist davon nur die Haelfte: diese Tabelle gegen Python erzwingt
+// der Drift-Waechter tests/tdd/test_alert_metric_mapping_parity.py (er parst
+// diese Konstante). Die Go-Tabelle bleibt eine von Hand gespiegelte Kopie ohne
+// automatische Pruefung — dort muss weiterhin manuell nachgezogen werden.
+// Einzige zugelassene Abweichung: "temperature_cold" (selectable=false im
+// Katalog, im Wetter-Metriken-Tab nie aktivierbar) fehlt hier bewusst.
 const ROUTE_CORRIDOR_CATALOG_IDS: Record<string, string[]> = {
 	gust: ['wind_gust'],
 	precipitation: ['precipitation_sum'],
 	temperature: ['temperature_min', 'temperature_max'],
 	thunder: ['thunder_level'],
 	snowfall_limit: ['snow_line'],
+	freezing_level: ['snow_line'],
 };
 
 /**
