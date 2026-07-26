@@ -213,9 +213,11 @@ _OVERVIEW_WARN_LABEL = "Amtliche Warnungen"
 _TABLE_RE = re.compile(r'<table[^>]*>(.*?)</table>', re.DOTALL)
 
 # v2-Stunden-Spaltenvertrag (compare_html.py:HOUR_METRICS), Issue #1106:
-# kanonische 10-Spalten-Superset-Liste ("Zeit" + 9 konfigurierbare Wert-
-# Spalten). Konfigurierbare Teilmengen sind zulaessig (Teilmengen-mit-
-# Reihenfolge-Pruefung statt Exakt-Vergleich), s. validate_structure().
+# 10-Spalten-Superset-Liste ("Zeit" + 9 konfigurierbare Wert-Spalten).
+# Issue #1381: Diese Liste ist eine ALLOWLIST, KEINE Reihenfolge-Vorgabe --
+# seit #1359 ist die Spaltenreihenfolge nutzerseitig frei einstellbar.
+# Konfigurierbare Teilmengen in beliebiger Anordnung sind zulaessig,
+# s. validate_structure().
 _HOUR_COLUMNS_V2 = [
     "Zeit", "Temp", "Gef.", "Wind", "Böen", "Regen", "UV", "Gew.", "Regen-W.", "Sicht",
 ]
@@ -320,10 +322,12 @@ def _find_location_hour_table(body: str, location_name: str, occurrence: int = 0
 
 def validate_structure(body: str, hourly_enabled: bool = True) -> List[str]:
     """Validate email structure against the v2-Vertrag (Issue #1108/#1110,
-    Spalten-Konfigurierbarkeit #1106): Uebersichtstabelle (Warn-Zeile + >=1
-    numerische Zeile), Stundentabellen fuer alle gelisteten Orte mit einer
-    gueltigen Teilmenge-mit-Reihenfolge von ``_HOUR_COLUMNS_V2`` (Mindestens
-    "Zeit" + 1 Wert-Spalte), kein Score-/Winner-Vertrag mehr."""
+    Spalten-Konfigurierbarkeit #1106, freie Spaltenreihenfolge #1381):
+    Uebersichtstabelle (Warn-Zeile + >=1 numerische Zeile), Stundentabellen fuer
+    alle gelisteten Orte mit einer gueltigen Teilmenge von ``_HOUR_COLUMNS_V2``
+    (Mindestens "Zeit" + 1 Wert-Spalte, keine Fremdspalten, keine Duplikate --
+    Reihenfolge frei, aber mail-weit einheitlich), kein Score-/Winner-Vertrag
+    mehr."""
     errors: List[str] = []
 
     rows = extract_table_rows(body)
@@ -370,7 +374,7 @@ def validate_structure(body: str, hourly_enabled: bool = True) -> List[str]:
                 )
                 continue
             header_cols, _rows = table
-            # Issue #1106: Teilmengen-mit-Reihenfolge-Pruefung statt Exakt-Vergleich.
+            # Issue #1106: Teilmengen-Pruefung statt Exakt-Vergleich.
             # Mindestspalten-Regel: "Zeit" muss erste Spalte sein UND es muss
             # mindestens eine Wert-Spalte daneben existieren (sonst sinnlose Config).
             if not header_cols or header_cols[0] != "Zeit" or len(header_cols) < 2:
@@ -380,12 +384,31 @@ def validate_structure(body: str, hourly_enabled: bool = True) -> List[str]:
                     f"Spalten {header_cols}"
                 )
                 continue
-            if [c for c in _HOUR_COLUMNS_V2 if c in header_cols] != header_cols:
+            # Issue #1381: KEINE Reihenfolge-Pruefung gegen _HOUR_COLUMNS_V2 mehr
+            # (die Spaltenreihenfolge ist seit #1359 nutzerseitig frei einstellbar;
+            # die alte Projektion auf die Kanon-Reihenfolge lehnte korrekte Mails ab
+            # und blockierte damit das Renderer-Commit-Gate #811). An ihre Stelle
+            # treten zwei ausdrueckliche Pruefungen, die benennen, WELCHE Spalte
+            # stoert -- sie halten das, was die Projektion bisher nur als
+            # Nebeneffekt leistete. NICHT wieder eine Reihenfolge einbauen.
+            unknown_cols = [c for c in header_cols if c not in _HOUR_COLUMNS_V2]
+            if unknown_cols:
                 errors.append(
-                    f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) hat "
-                    f"Spalten {header_cols}, erwartet eine gueltige Teilmenge (in Reihenfolge) von "
+                    f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) "
+                    f"enthaelt unbekannte Spalte(n) {unknown_cols} -- zulaessig sind nur "
                     f"{_HOUR_COLUMNS_V2}"
                 )
+            duplicate_cols = sorted(
+                {c for c in header_cols if header_cols.count(c) > 1},
+                key=header_cols.index,
+            )
+            if duplicate_cols:
+                errors.append(
+                    f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) "
+                    f"enthaelt doppelte Spalte(n) {duplicate_cols} -- jede Spalte darf nur "
+                    f"einmal vorkommen, Spalten {header_cols}"
+                )
+            if unknown_cols or duplicate_cols:
                 continue
             # Cross-Location-Konsistenz: erst hier pruefen, da nur individuell
             # gueltige Spaltenlisten als Referenz bzw. Vergleichswert taugen.

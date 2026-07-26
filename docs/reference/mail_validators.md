@@ -19,18 +19,19 @@ mit der Warn-Zeile „Amtliche Warnungen" als **erster Datenzeile** (identifizie
 die Tabelle, ersetzt die alte `class="matrix-table"`-Erkennung) sowie eine
 **Stundentabelle je gelistetem Ort**. Seit Issue #1106 sind die Stundenverlauf-
 Spalten konfigurierbar (9 wählbare Wert-Spalten: Temp/Gef./Wind/Böen/Regen/UV/
-Gew./Regen-W./Sicht, Wolken entfernt) — der Validator prüft dafür **keinen
-Exakt-Vertrag mehr, sondern eine Teilmenge-mit-Reihenfolge** gegen die
-kanonische 10-Spalten-Superset-Liste `_HOUR_COLUMNS_V2` ("Zeit" + die 9
-Metriken in fester Reihenfolge): "Zeit" muss erste Spalte sein, mindestens
-eine Wert-Spalte muss vorhanden sein (Mindestspalten-Regel), und die
-vorhandenen Spalten müssen eine geordnete Teilmenge von `_HOUR_COLUMNS_V2`
-sein (keine Fremdspalten, keine Umsortierung). Zusätzlich gilt eine
-**Cross-Location-Konsistenz-Regel** (Adversary-Fix #1106): die Spaltenauswahl
-gilt mail-weit für alle Orte in einem Versand — weicht die Stundentabelle
-eines Ortes von der des ersten (strukturell gültigen) Ortes ab, ist das ein
-Fehler, auch wenn beide Tabellen isoliert betrachtet je eine gültige
-Teilmenge wären. Es gibt **keine feste Metrik-Zeilenanzahl** mehr in der
+Gew./Regen-W./Sicht, Wolken entfernt), seit Issue #1359 auch ihre Reihenfolge.
+Der Validator prüft dafür **keinen Exakt-Vertrag**: `_HOUR_COLUMNS_V2` ("Zeit"
++ die 9 Metriken) ist eine **Allowlist, keine Reihenfolge-Vorgabe** (#1381).
+Gültig ist eine **Teilmenge in beliebiger Reihenfolge**: "Zeit" muss erste
+Spalte sein und mindestens eine Wert-Spalte muss vorhanden sein
+(Mindestspalten-Regel), jede weitere Spalte muss in `_HOUR_COLUMNS_V2` stehen
+(keine Fremdspalten) und darf nur einmal vorkommen (keine Duplikate) — beides
+mit eigener Fehlermeldung, die die betroffene Spalte benennt. Zusätzlich gilt
+eine **Cross-Location-Konsistenz-Regel** (Adversary-Fix #1106): die
+Spaltenauswahl **und ihre Reihenfolge** gelten mail-weit für alle Orte in einem
+Versand — weicht die Stundentabelle eines Ortes von der des ersten
+(strukturell gültigen) Ortes ab, ist das ein Fehler, auch wenn beide Tabellen
+isoliert betrachtet je eine gültige Teilmenge wären. Es gibt **keine feste Metrik-Zeilenanzahl** mehr in der
 Übersichtstabelle — sie darf preset-bedingt auf Warn-Zeile + einzelne
 Metriken gefiltert sein (#1104); Mindestanforderung ist Warn-Zeile +
 ≥1 numerische Zeile. **Score-/Winner-Sprache ist ein Fehler, keine Pflicht** —
