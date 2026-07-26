@@ -9,6 +9,7 @@ SPEC: docs/specs/modules/weather_change_detection.md v2.0
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
@@ -217,15 +218,34 @@ _RULE_SEVERITY_TO_CHANGE_SEVERITY: dict[AlertSeverity, ChangeSeverity] = {
 }
 
 
+def _as_utc(ts: "datetime | None") -> "datetime | None":
+    """Naiven Zeitstempel als UTC deuten (Issue #1386).
+
+    Hausnorm ist "naive UTC" an der Provider-Grenze (`ForecastDataPoint.
+    __post_init__`, #1345), Segment-Fenster sind je nach Aufrufer naiv ODER
+    aware. Ohne Normalisierung (a) sprengt der Fenstervergleich mit `TypeError`,
+    (b) deutet ein späteres `astimezone()` den naiven Wert als System-Lokalzeit
+    — auf einem UTC-Server zufällig richtig, überall sonst falsch.
+    """
+    if ts is not None and ts.tzinfo is None:
+        return ts.replace(tzinfo=timezone.utc)
+    return ts
+
+
 def _peak_occurred_at(
     summary_field: str,
     new_data: "SegmentWeatherData",
-) -> "str | None":
-    """Best-effort: find 'HH:MM' of the peak value for the given summary field.
+) -> "datetime | None":
+    """Best-effort: Zeitstempel (UTC-aware) des Spitzenwerts dieses summary_field.
 
     Looks up the metric's dp_field and aggregation type from the catalog,
     then scans the timeseries for the peak point within the segment window.
     Returns None on any error — never raises.
+
+    Issue #1386: liefert den ROHEN Zeitpunkt, KEIN fertiges "HH:MM". Die
+    Formatierung passiert erst in der Projektionsschicht
+    (`output/renderers/alert/project.py`) — nur dort sind die Koordinaten und
+    damit die ORTSZEIT bekannt. Vorher wurde hier die Weltzeit ausgegeben.
     """
     try:
         from app.metric_catalog import _METRICS
@@ -247,13 +267,14 @@ def _peak_occurred_at(
         if not points:
             return None
 
-        seg_start = seg.start_time
-        seg_end = seg.end_time
+        seg_start = _as_utc(seg.start_time)
+        seg_end = _as_utc(seg.end_time)
 
-        # Filter to points within the segment window
+        # Filter to points within the segment window (beide Seiten UTC-aware,
+        # sonst TypeError bei gemischt naiv/aware — Issue #1386)
         window = [
             p for p in points
-            if p.ts is not None and seg_start <= p.ts <= seg_end
+            if p.ts is not None and seg_start <= _as_utc(p.ts) <= seg_end
         ]
         if not window:
             window = points  # fallback: use all points
@@ -281,11 +302,7 @@ def _peak_occurred_at(
 
         if best is None or best.ts is None:
             return None
-
-        ts = best.ts
-        if hasattr(ts, "hour"):
-            return f"{ts.hour:02d}:{ts.minute:02d}"
-        return None
+        return _as_utc(best.ts)
     except Exception:
         return None
 

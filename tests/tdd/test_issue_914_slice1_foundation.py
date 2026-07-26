@@ -10,7 +10,6 @@ SPEC: docs/specs/modules/alert_render_foundation.md
 """
 from __future__ import annotations
 
-import re
 from datetime import datetime, timedelta, timezone
 
 
@@ -296,14 +295,25 @@ class TestAC2CatalogComparisionDirection:
 # ---------------------------------------------------------------------------
 
 class TestAC3WeatherChangeOccurredAt:
-    """AC-3: WeatherChange.occurred_at ist None oder HH:MM-String im Segment-Fenster."""
+    """AC-3: WeatherChange.occurred_at ist None oder ein UTC-Zeitpunkt im Segment-Fenster."""
 
     def test_ac3_weatherchange_carries_plausible_occurred_at(self) -> None:
         """
         GIVEN: a real detection run with hourly forecast data and a clear threshold crossing
         WHEN: detect_changes() produces a WeatherChange
-        THEN: occurred_at is None OR matches ^\\d{2}:\\d{2}$ and lies within the
+        THEN: occurred_at is None OR a timezone-aware UTC datetime inside the
               segment time window; never raises an exception.
+
+        Issue #1386: dieser Test schrieb bis dahin einen fertigen
+        "HH:MM"-String fest, der ROH aus dem UTC-Zeitstempel kam — genau das
+        war der Bug (Alarm nannte Weltzeit statt Ortszeit; NZ ~12 h daneben).
+        Der Detektor liefert jetzt den rohen UTC-Zeitpunkt, die Ortszeit
+        entsteht erst in der Projektion (`output/renderers/alert/project.py`,
+        gedeckt durch tests/unit/test_alert_event_time_uses_local_timezone.py).
+        Die Prüfung wurde dabei NICHT abgeschwächt, sondern verschärft: statt
+        nur des Formats und einer Stundenspanne [08,14] werden jetzt Typ,
+        UTC-Zeitzonenbindung UND das exakte Segmentfenster geprüft — und
+        zusätzlich, dass die Spitze wirklich auf der Wind-Spitzenstunde liegt.
         """
         from app.models import (
             ForecastDataPoint,
@@ -371,19 +381,24 @@ class TestAC3WeatherChangeOccurredAt:
         assert len(changes) > 0, "Expected at least one change to be detected"
 
         for change in changes:
-            # occurred_at is the new field — AttributeError until implemented
-            occ = change.occurred_at  # AttributeError until WeatherChange has this field
+            occ = change.occurred_at
 
             if occ is not None:
-                # Must match HH:MM format
-                assert re.match(r"^\d{2}:\d{2}$", occ), (
-                    f"occurred_at {occ!r} does not match HH:MM format"
+                assert isinstance(occ, datetime), (
+                    f"occurred_at muss ein datetime sein (#1386), ist {type(occ)!r}"
                 )
-                # Must lie within the segment window (08:00–14:00 UTC for this test)
-                hour, minute = map(int, occ.split(":"))
-                assert 8 <= hour <= 14, (
-                    f"occurred_at hour {hour} not in segment window [08, 14]"
+                assert occ.tzinfo is not None and occ.utcoffset() == timedelta(0), (
+                    f"occurred_at muss UTC-aware sein (#1386-Guard), ist {occ!r}"
                 )
+                # Exaktes Segmentfenster (08:00–14:00 UTC in diesem Test)
+                assert start_time <= occ <= end_time, (
+                    f"occurred_at {occ!r} liegt ausserhalb [{start_time}, {end_time}]"
+                )
+                if change.metric == "wind_max_kmh":
+                    # Wind steigt monoton, Spitze bei Stunde 6 = 14:00 UTC
+                    assert occ == start_time + timedelta(hours=6), (
+                        f"Wind-Spitze muss 14:00 UTC sein, ist {occ!r}"
+                    )
             # else: None is acceptable (best-effort)
 
 
@@ -465,7 +480,12 @@ class TestAC5WeatherChangeRoundtrip:
         WHEN: it is serialized via dataclasses.asdict and reconstructed
         THEN: all existing fields are preserved; occurred_at defaults to None
               when not supplied; the roundtrip is lossless; occurred_at can also
-              be set to a valid HH:MM string.
+              carry a UTC datetime.
+
+        Issue #1386: `occurred_at` ist ein UTC-`datetime` statt eines fertigen
+        "HH:MM"-Strings — der String war Weltzeit und damit der Bug. Die
+        Roundtrip-Zusicherung bleibt unverändert streng (Wert UND Zeitzone
+        müssen den Roundtrip überleben).
         """
         import dataclasses
 
@@ -516,7 +536,8 @@ class TestAC5WeatherChangeRoundtrip:
         assert reconstructed.segment_id == change.segment_id
         assert reconstructed.occurred_at is None
 
-        # --- Also verify that occurred_at can be set to a valid HH:MM string ---
+        # --- occurred_at trägt einen UTC-Zeitpunkt (#1386) und überlebt den Roundtrip ---
+        peak = datetime(2026, 7, 1, 11, 0, tzinfo=timezone.utc)
         change_with_time = WeatherChange(
             metric="wind_max_kmh",
             old_value=20.0,
@@ -526,8 +547,15 @@ class TestAC5WeatherChangeRoundtrip:
             severity=ChangeSeverity.MAJOR,
             direction="increase",
             segment_id="1",
-            occurred_at="11:00",
+            occurred_at=peak,
         )
-        assert change_with_time.occurred_at == "11:00", (
-            "occurred_at must accept and preserve HH:MM string"
+        assert change_with_time.occurred_at == peak, (
+            "occurred_at muss den UTC-Zeitpunkt unverändert bewahren"
+        )
+        roundtripped = WeatherChange(**dataclasses.asdict(change_with_time))
+        assert roundtripped.occurred_at == peak, (
+            "occurred_at muss den asdict-Roundtrip überleben"
+        )
+        assert roundtripped.occurred_at.utcoffset() == timedelta(0), (
+            "occurred_at muss UTC-aware bleiben (Roundtrip darf tzinfo nicht verlieren)"
         )

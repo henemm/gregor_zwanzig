@@ -70,7 +70,18 @@ def _make_segment(segment_id, km_from: float, km_to: float):
 def _make_change(metric: str, old: float, new: float, direction: str,
                  threshold: float = 5.0, segment_id: str = "1",
                  occurred_at: str | None = "14:00") -> "WeatherChange":
+    """`occurred_at` ist hier die ORTSZEIT ("HH:MM") am Etappen-Ort
+    (`_make_gpx_point`: 45.0/7.0 → Europe/Rome). Issue #1386: das Feld trägt
+    seither den rohen UTC-Zeitpunkt, die Ortszeit entsteht erst in der
+    Projektion — der Helfer rechnet die gewünschte Ortszeit deshalb in den
+    UTC-Zeitpunkt um. Die erwarteten HH:MM der Testfälle bleiben unverändert.
+    """
     from app.models import WeatherChange, ChangeSeverity
+    if occurred_at is not None:
+        h, m = (int(p) for p in occurred_at.split(":"))
+        occurred_at = datetime(
+            2026, 7, 1, h, m, tzinfo=ZoneInfo("Europe/Rome"),
+        ).astimezone(timezone.utc)
     return WeatherChange(
         metric=metric,
         old_value=old,

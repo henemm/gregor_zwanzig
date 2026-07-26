@@ -35,32 +35,52 @@ def _resolve_metric_id(field: str, direction: str) -> str:
     )
 
 
-def _segment_km(segments, segment_id: str) -> tuple[float, float]:
-    """km-Spanne des referenzierten Segments. Bei nicht auflösbarer/leerer
-    segment_id Fallback auf das erste Segment (kein Crash im Versandpfad —
-    der Detector liefert nicht immer eine exakte segment_id)."""
+def _find_segment(segments, segment_id: str):
+    """Referenziertes Segment. Bei nicht auflösbarer/leerer segment_id Fallback
+    auf das erste Segment (kein Crash im Versandpfad — der Detector liefert
+    nicht immer eine exakte segment_id)."""
     match = next(
         (s for s in segments if str(s.segment.segment_id) == str(segment_id)),
         segments[0] if segments else None,
     )
     if match is None:
         raise KeyError(f"Kein Segment für segment_id={segment_id!r}")
-    return (match.segment.start_point.distance_from_start_km,
-            match.segment.end_point.distance_from_start_km)
+    return match
+
+
+def _fmt_occurred_at(value, tz) -> str | None:
+    """Peak-Zeitpunkt (UTC-`datetime`, s. `WeatherChange.occurred_at`) → "HH:MM"
+    in ORTSZEIT (Issue #1386). Guard: naiv hereingereichte Zeitstempel gelten
+    als UTC — sonst deutet `astimezone()` sie als System-Lokalzeit."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return local_fmt(value, tz)
 
 
 def to_alert_message(changes, segments, trip_name, *, tz, stand_at) -> AlertMessage:
-    """WeatherChange-Events → kanonische AlertMessage. source bei Deviation = None."""
+    """WeatherChange-Events → kanonische AlertMessage. source bei Deviation = None.
+
+    Issue #1386: die Ereigniszeit („Wo & wann … · HH:MM", SMS `@HH`) wird HIER
+    in ORTSZEIT formatiert — je Event aus den Koordinaten SEINER Etappe
+    (`TripSegment.start_point`), `tz` ist Fallback ohne Koordinaten.
+    """
     events: list[AlertEvent] = []
     for ch in changes:
         metric_id = _resolve_metric_id(ch.metric, ch.direction)
         cmp = get_cmp(metric_id)
         if not cmp:
             raise ValueError(f"Leeres cmp für metric_id={metric_id!r}")
-        km_from, km_to = _segment_km(segments, ch.segment_id)
+        match = _find_segment(segments, ch.segment_id)
+        km_from = match.segment.start_point.distance_from_start_km
+        km_to = match.segment.end_point.distance_from_start_km
         events.append(AlertEvent(
             metric_id=metric_id, value_from=ch.old_value, value_to=ch.new_value,
-            threshold=ch.threshold, cmp=cmp, occurred_at=ch.occurred_at,
+            threshold=ch.threshold, cmp=cmp,
+            occurred_at=_fmt_occurred_at(
+                ch.occurred_at, _tz_for_location(match.segment.start_point, tz)
+            ),
             km_from=km_from, km_to=km_to,
         ))
     return AlertMessage(
@@ -72,12 +92,15 @@ def to_multi_point_alert_message(groups, *, tz, stand_at) -> AlertMessage:
     """WeatherChange-Events MEHRERER gleichzeitig betroffener Vergleichs-Orte
     (Issue #1170, AC-7-Bündelung) → EINE kanonische AlertMessage.
 
-    `groups`: `list[(location_name, changes, point)]` — `point` ist aktuell
-    ungenutzt (Formangleichung an `to_point_alert_message`, Platz für
-    künftige Positions-Anreicherung). Bei MEHR ALS EINER Gruppe trägt jedes
-    `AlertEvent` das `location_label` SEINER Gruppe, damit der Renderer je
-    Datenblock den richtigen Ort zeigt (statt nur den kollektiven
-    `AlertMessage.location_label`).
+    `groups`: `list[(location_name, changes, point)]` — `point` trägt
+    `.lat`/`.lon` und liefert damit die ZEITZONE DIESES Ortes für die
+    Ereigniszeit („Wo & wann … · HH:MM", SMS `@HH`; Issue #1386, vorher
+    ungenutzt und die Zeit stand in Weltzeit). Ohne Koordinaten gilt für
+    diesen Ort das Bündel-`tz` (Fallback, `_tz_for_location`) — das ist
+    zugleich die einzige Rolle des `tz`-Parameters hier. Bei MEHR ALS EINER
+    Gruppe trägt jedes `AlertEvent` das `location_label` SEINER Gruppe, damit
+    der Renderer je Datenblock den richtigen Ort zeigt (statt nur den
+    kollektiven `AlertMessage.location_label`).
 
     INVARIANTE: bei GENAU einer Gruppe ist das Ergebnis byte-identisch zu
     `to_point_alert_message()` — `to_point_alert_message()` delegiert
@@ -89,7 +112,8 @@ def to_multi_point_alert_message(groups, *, tz, stand_at) -> AlertMessage:
     """
     events: list[AlertEvent] = []
     multi = len(groups) > 1
-    for location_name, changes, _point in groups:
+    for location_name, changes, point in groups:
+        point_tz = _tz_for_location(point, tz)
         for ch in changes:
             metric_id = _resolve_metric_id(ch.metric, ch.direction)
             cmp = get_cmp(metric_id)
@@ -97,7 +121,8 @@ def to_multi_point_alert_message(groups, *, tz, stand_at) -> AlertMessage:
                 raise ValueError(f"Leeres cmp für metric_id={metric_id!r}")
             events.append(AlertEvent(
                 metric_id=metric_id, value_from=ch.old_value, value_to=ch.new_value,
-                threshold=ch.threshold, cmp=cmp, occurred_at=ch.occurred_at,
+                threshold=ch.threshold, cmp=cmp,
+                occurred_at=_fmt_occurred_at(ch.occurred_at, point_tz),
                 km_from=0.0, km_to=0.0,
                 location_label=location_name if multi else None,
             ))
@@ -207,7 +232,7 @@ def to_multi_location_onset_alert_message(
 
 def to_point_alert_message(changes, points, entity_name, *, tz, stand_at) -> AlertMessage:
     """WeatherChange-Events (Punkt-Kontext, Issue #1169) → kanonische
-    AlertMessage — OHNE `_segment_km()`-Lookup (ein Vergleichs-Ort ist ein
+    AlertMessage — OHNE `_find_segment()`-Lookup (ein Vergleichs-Ort ist ein
     Punkt ohne km-Spanne, `km_from=km_to=0.0` als neutraler Platzhalter).
     Setzt zusätzlich `location_label`, damit der geteilte Renderer den
     Ortsnamen statt "km 0–0" zeigt (`render.py`).

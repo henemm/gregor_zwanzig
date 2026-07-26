@@ -74,13 +74,17 @@ DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 @pytest.fixture(autouse=True)
 def _freeze_deployed_commit(monkeypatch):
-    """Issue #1241: Die Herkunfts-Fußzeile (Zeile 2) trägt den Commit-Hash aus
+    """Issue #1241: Die Herkunfts-Fußzeile trug den Commit-Hash aus
     `helpers._DEPLOYED_COMMIT`. Für den Byte-Gleichheits-Golden in
     `test_ac7_trip_alert_rendering_unchanged` auf einen festen Platzhalter
     einfrieren, sonst bricht die Erwartung nach jedem Commit (analog
     tests/golden/email/conftest.py). Der Renderer liest das Attribut zur Laufzeit
     über `src.output.renderers.email.helpers` — genau dieses Modulobjekt wird
-    gepatcht. Für die übrigen Tests ist der Patch wirkungslos."""
+    gepatcht. Für die übrigen Tests ist der Patch wirkungslos.
+
+    Seit Commit 239f210c (#1338a, ADR-0034) zeigt Zeile 2 die echte Datenquelle
+    statt Renderer-Pfad + Commit; der Patch schützt seither nichts mehr, bleibt
+    aber als Schutz stehen, falls wieder ein Commit-Hash in eine Mail wandert."""
     from src.output.renderers.email import helpers as helpers_mod
 
     monkeypatch.setattr(helpers_mod, "_DEPLOYED_COMMIT", "gitrev0")
@@ -723,8 +727,13 @@ def test_ac7_trip_alert_rendering_unchanged():
         "Alarm-Schwelle 10,0 mm: Änderung über ✗\n"
         "Wo & wann: km 12–18\n\n"
         "Stand: heute 14:00 · verglichen mit dem letzten Briefing"
-        # Issue #1241: geteilte Herkunfts-Fußzeile (deviation-alert), Commit eingefroren.
-        "\n\nAbweichungs-Alarm · alert/render.py · gitrev0"
+        # Issue #1241: geteilte Herkunfts-Fußzeile (deviation-alert). Zeile 2
+        # trug bis Commit 239f210c (#1338a, ADR-0034) den Renderer-Pfad plus
+        # Commit-Hash ("alert/render.py · gitrev0"); seither steht dort die
+        # ECHTE Datenquelle — im Deviation-Pfad der feste Wert "Open-Meteo"
+        # (render.py:474, ADR-0029). Erwartung nachgezogen, nicht gelockert:
+        # weiterhin Byte-Gleichheit der kompletten Plain-Mail.
+        "\n\nAbweichungs-Alarm · Open-Meteo"
     ), plain
     assert telegram_text == (
         "<b>GR20 · km 12–18 · ↑ Niedersch</b>\n"

@@ -18,6 +18,15 @@ from output.renderers.alert.project import to_alert_message
 from output.renderers.alert.render import render_subject, render_telegram, render_sms
 
 
+def _local(h: int, m: int, now: datetime) -> datetime:
+    """Ortszeit (Mallorca) → UTC-Zeitpunkt. Issue #1386: `WeatherChange.
+    occurred_at` traegt den rohen UTC-Zeitpunkt, die Ortszeit entsteht erst in
+    der Projektion aus den Etappen-Koordinaten."""
+    return datetime(
+        now.year, now.month, now.day, h, m, tzinfo=ZoneInfo("Europe/Madrid"),
+    ).astimezone(timezone.utc)
+
+
 def _make_msg(trip_name: str = "GR221 Mallorca"):
     tz = ZoneInfo("Europe/Madrid")
     now = datetime.now(timezone.utc)
@@ -39,12 +48,12 @@ def _make_msg(trip_name: str = "GR221 Mallorca"):
         WeatherChange(
             metric="wind_max_kmh", old_value=25.0, new_value=55.0, delta=30.0,
             threshold=20.0, severity=ChangeSeverity.MAJOR, direction="increase",
-            segment_id="1", occurred_at="11:00",
+            segment_id="1", occurred_at=_local(11, 0, now),
         ),
         WeatherChange(
             metric="precip_sum_mm", old_value=1.0, new_value=8.5, delta=7.5,
             threshold=5.0, severity=ChangeSeverity.MODERATE, direction="increase",
-            segment_id="1", occurred_at="10:30",
+            segment_id="1", occurred_at=_local(10, 30, now),
         ),
     ]
     return to_alert_message(changes, [weather_data], trip_name, tz=tz, stand_at="10:00")

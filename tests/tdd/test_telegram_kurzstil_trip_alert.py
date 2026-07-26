@@ -177,10 +177,15 @@ def _make_segment_data() -> SegmentWeatherData:
 
 
 def _make_change() -> WeatherChange:
+    # Issue #1386: `occurred_at` traegt den rohen UTC-Zeitpunkt; die Ortszeit
+    # (hier Korsika/Europe/Paris, = 12:00 lokal) entsteht erst in der Projektion.
     return WeatherChange(
         metric="temp_max_c", old_value=18.0, new_value=26.0, delta=8.0,
         threshold=5.0, severity=ChangeSeverity.MODERATE, direction="increase",
-        segment_id="1", occurred_at="12:00",
+        segment_id="1",
+        occurred_at=datetime(
+            2026, 5, 1, 12, 0, tzinfo=ZoneInfo("Europe/Paris"),
+        ).astimezone(timezone.utc),
     )
 
 
