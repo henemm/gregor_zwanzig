@@ -163,3 +163,130 @@ test('AC-5: Pausentag-Datum persistiert sofort', async ({ page }) => {
 	const dates = await fetchStageDates(page);
 	expect(dates['pause']).toBe('2026-08-09');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bug #1389 — die Kaskaden-Bestätigung wird von einem veralteten Auto-Speicher-
+// Vorgang überholt.
+//
+// Auf Staging reproduziert: `handleDateChange()` plante bisher SOFORT einen PUT
+// (700ms Debounce) mit dem Stand „Etappe 1 neu, Folge-Etappen ALT", während der
+// Nutzer die Rückfrage noch liest. Beantwortet er sie später als 700ms, sind
+// zwei Schreibvorgänge unterwegs; das Backend kennt keine Reihenfolge-Garantie
+// (UpdateTripHandler ersetzt die Etappen komplett) — wer zuletzt ankommt,
+// gewinnt. Bei asymmetrischer Netz-Laufzeit (Funkloch, Netzwechsel, Retry nach
+// Paketverlust — Zielgruppe wandert!) ist das genau der veraltete Request.
+//
+// Ein Test, der nur schnell klickt, würde den Bug NIE sehen. Deshalb wird hier
+// gezielt die veraltete Anfrage verzögert und danach der PERSISTIERTE Stand
+// geprüft (Reload + GET), nicht der Browserzustand direkt nach dem Klick.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Verzögert jede PUT-Anfrage, die die Folge-Etappe s2 noch mit ihrem ALTEN
+ *  Datum trägt (= der veraltete Schnappschuss), um `delayMs`. Alles andere
+ *  läuft unverzögert durch. Liefert einen Zähler der verzögerten Anfragen. */
+async function delayStalePut(page: Page, delayMs: number): Promise<{ count: number }> {
+	const stats = { count: 0 };
+	await page.route('**/api/trips/**', async (route) => {
+		const req = route.request();
+		if (req.method() !== 'PUT') {
+			await route.continue();
+			return;
+		}
+		let stale = false;
+		try {
+			const body = req.postDataJSON() as { stages?: Array<{ id: string; date: string }> };
+			stale = body?.stages?.some((s) => s.id === 's2' && s.date === '2026-08-02') ?? false;
+		} catch {
+			stale = false;
+		}
+		if (stale) {
+			stats.count++;
+			// Handler kehrt SOFORT zurück (blockiert die Route-Queue nicht) und
+			// schickt die Anfrage erst verzögert los — die früher abgesendete
+			// Anfrage kommt dadurch später an als die spätere.
+			setTimeout(() => void route.continue().catch(() => {}), delayMs);
+			return;
+		}
+		await route.continue();
+	});
+	return stats;
+}
+
+test('AC-6 (#1389): veralteter Auto-Speichervorgang überholt die Kaskade nicht', async ({ page }) => {
+	test.setTimeout(90_000);
+	const stale = await delayStalePut(page, 4000);
+
+	await openStagesEditor(page);
+	await page.getByText('Tag 1', { exact: false }).first().click();
+	await expect(activeDateInput(page)).toHaveValue('2026-08-01');
+
+	// 08-01 → 07-22 (−10 Tage).
+	await activeDateInput(page).fill('2026-07-22');
+	await activeDateInput(page).blur();
+	await expect(page.getByTestId('cascade-strip')).toBeVisible();
+
+	// Realistische Lesepause — deutlich länger als das 700ms-Debounce-Fenster.
+	await page.waitForTimeout(3000);
+	await page.getByRole('button', { name: /Alle mitverschieben/ }).click();
+	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
+
+	// Warten, bis eine etwaige verzögerte Anfrage angekommen wäre.
+	await page.waitForTimeout(6000);
+
+	await page.reload();
+	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+
+	const dates = await fetchStageDates(page);
+	expect(dates['s1'], 'Etappe 1 trägt das neue Datum').toBe('2026-07-22');
+	expect(dates['s2'], 'Folge-Etappe 2 muss mitverschoben BLEIBEN (nicht vom veralteten Stand überschrieben)').toBe('2026-07-23');
+	expect(dates['s3']).toBe('2026-07-24');
+	expect(dates['pause']).toBe('2026-07-25');
+
+	// Zusatzsignal: während die Rückfrage offen ist, darf überhaupt kein
+	// Speichervorgang mit dem veralteten Stand entstehen.
+	expect(stale.count, 'kein Speichervorgang mit veralteten Folge-Etappen, solange die Rückfrage offen ist').toBe(0);
+});
+
+test('AC-7 (#1389): Etappe-1-Änderung überlebt einen Reload bei OFFENER Rückfrage', async ({ page }) => {
+	// Regressionsschutz für AC-6: „bei offener Rückfrage nicht speichern" darf
+	// NICHT bedeuten „Änderung verlieren" (Bezug #1376).
+	test.setTimeout(60_000);
+	await openStagesEditor(page);
+	await page.getByText('Tag 1', { exact: false }).first().click();
+	await expect(activeDateInput(page)).toHaveValue('2026-08-01');
+
+	await activeDateInput(page).fill('2026-07-22');
+	await activeDateInput(page).blur();
+	await expect(page.getByTestId('cascade-strip')).toBeVisible();
+
+	// Rückfrage BEWUSST unbeantwortet lassen und die Seite neu laden.
+	await page.waitForTimeout(1500);
+	await page.reload();
+	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+
+	await expect
+		.poll(async () => (await fetchStageDates(page))['s1'], { timeout: 15_000 })
+		.toBe('2026-07-22');
+	// Ohne Antwort auf die Rückfrage bleiben die Folge-Etappen unverändert.
+	const dates = await fetchStageDates(page);
+	expect(dates['s2']).toBe('2026-08-02');
+	expect(dates['s3']).toBe('2026-08-03');
+});
+
+test('AC-8 (#1389): „Nur diese Etappe" persistiert die Etappe-1-Änderung', async ({ page }) => {
+	test.setTimeout(60_000);
+	await openStagesEditor(page);
+	await page.getByText('Tag 1', { exact: false }).first().click();
+	await activeDateInput(page).fill('2026-07-22');
+	await activeDateInput(page).blur();
+	await expect(page.getByTestId('cascade-strip')).toBeVisible();
+
+	await page.waitForTimeout(1500);
+	await page.getByRole('button', { name: /Nur diese Etappe/ }).click();
+
+	await expect
+		.poll(async () => (await fetchStageDates(page))['s1'], { timeout: 15_000 })
+		.toBe('2026-07-22');
+	const dates = await fetchStageDates(page);
+	expect(dates['s2']).toBe('2026-08-02');
+});

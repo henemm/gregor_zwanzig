@@ -29,7 +29,7 @@
 	import type { ActivityType, Stage, Trip, Waypoint } from '$lib/types';
 	import { api } from '$lib/api.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { browser } from '$app/environment';
 
 	interface Props {
@@ -169,16 +169,26 @@
 	}
 
 	// Issue #758: Auto-Save via controller (when saveController is provided).
-	function scheduleSave(): void {
-		if (!saveController || !tripId) return;
+	// Issue #1376: `init` kommt vom Flush beim Verlassen der Seite und trägt dort
+	// `{ keepalive: true }` — ohne das bricht der Browser den Request beim
+	// Entladen ab und die Datumsänderung wäre still verloren.
+	function buildStagesSave(): SaveFn {
 		const currentStages = stages;
-		// Issue #1376: `init` kommt vom Flush beim Verlassen der Seite und trägt dort
-		// `{ keepalive: true }` — ohne das bricht der Browser den Request beim
-		// Entladen ab und die Datumsänderung wäre still verloren.
-		saveController.schedule(async (init) => {
+		return async (init) => {
 			const updatedTrip = await api.put<Trip>(`/api/trips/${tripId}`, { stages: currentStages }, init);
 			onTripUpdate?.(updatedTrip);
-		});
+		};
+	}
+	function scheduleSave(): void {
+		if (!saveController || !tripId) return;
+		saveController.schedule(buildStagesSave());
+	}
+	// Bug #1389: zurückgestellter Speichervorgang — feuert NICHT von selbst,
+	// sondern erst mit der Antwort auf die Kaskaden-Rückfrage (bzw. beim
+	// Verlassen der Seite via beforeNavigate-Flush, damit nichts verlorengeht).
+	function deferSave(): void {
+		if (!saveController || !tripId) return;
+		saveController.defer(buildStagesSave());
 	}
 
 	// Pausentag = Etappe ohne Wegpunkte (Spec-Definition §5/AC-10).
@@ -230,8 +240,17 @@
 			const delta = computeCascadeDelta(oldDate, newDate);
 			if (delta !== 0 && stages.length > 1) {
 				cascade = { days: delta, count: stages.length - 1, done: false };
-				// Erste Etappe sofort speichern; Folge-Etappen speichert applyCascade().
-				if (saveController) scheduleSave(); else void save();
+				// Bug #1389: NICHT sofort speichern. Vorher ging hier ein Auto-Save
+				// (700ms) mit dem Stand „Etappe 1 neu, Folge-Etappen ALT" los, während
+				// der Nutzer die Rückfrage noch las. Beantwortet er sie später als
+				// 700ms, sind zwei Schreibvorgänge unterwegs — das Backend ersetzt die
+				// Etappen komplett und kennt keine Reihenfolge, bei asymmetrischer
+				// Netz-Laufzeit (Funkloch/Netzwechsel/Retry) gewinnt der veraltete.
+				// Geschrieben wird jetzt erst mit der Antwort: applyCascade() (alle
+				// Etappen) bzw. dismissCascade() (nur Etappe 1) — genau EIN PUT.
+				// Der zurückgestellte Stand bleibt `hasPending`, damit beforeNavigate
+				// ihn beim Verlassen/Neuladen der Seite noch schreibt (Bezug #1376).
+				deferSave();
 				return;
 			} else {
 				cascade = null; // F001: stalen Cascade zurücksetzen wenn delta=0
@@ -271,10 +290,19 @@
 			// und würde das gleich folgende Kaskaden-Ergebnis wieder überschreiben,
 			// sobald er verzögert oder beim Verlassen der Seite feuert.
 			saveController.cancel();
+			// Bug #1389 (Gürtel und Hosenträger): `cancel()` stoppt nur einen noch
+			// nicht ausgelösten Speichervorgang. Ist wider Erwarten doch schon einer
+			// im Netz unterwegs, muss darauf GEWARTET werden — sonst entscheidet die
+			// Netz-Laufzeit, welcher Stand am Ende persistiert ist.
+			// Adversary F002: `setSaving()` bewusst VOR dem Warten — sonst stünde die
+			// Anzeige während des (auf SETTLE_TIMEOUT_MS gedeckelten) Wartens auf
+			// „Gespeichert ✓" bzw. „Nicht gespeichert" und die Oberfläche wirkte
+			// eingefroren. `settle()` gibt nach dem Deckel auf und schreibt trotzdem.
+			saveController.setSaving();
+			await saveController.settle();
 			// Flush immediately (cascade = user intent, no debounce needed).
 			const currentStages = stages;
 			try {
-				saveController.setSaving();
 				const updatedTrip = await api.put<Trip>(`/api/trips/${tripId!}`, { stages: currentStages });
 				saveController.setSaved();
 				onTripUpdate?.(updatedTrip);
@@ -292,7 +320,14 @@
 	}
 
 	function dismissCascade(): void {
+		// Bug #1389: „Nur diese Etappe" ist die ANTWORT auf die Rückfrage — erst
+		// jetzt (und genau einmal) wird der zurückgestellte Stand „nur Etappe 1"
+		// geschrieben. Beim „Schließen" des Erfolgs-Streifens (cascade.done) ist
+		// nichts mehr ausstehend, dann bleibt es beim reinen Ausblenden.
+		const wasOpenQuestion = cascade !== null && !cascade.done;
 		cascade = null;
+		if (!wasOpenQuestion) return;
+		if (saveController) void saveController.flush(); else void save();
 	}
 
 	// EtappenStrip-Handler

@@ -13,6 +13,20 @@ export type SaveState = 'idle' | 'dirty' | 'saving' | 'error';
  */
 export type SaveFn = (init?: RequestInit) => Promise<void>;
 
+/**
+ * Bug #1389 (Adversary F002): Obergrenze für `settle()`. Ein unbegrenztes
+ * Warten auf einen laufenden Request wäre ein Rückschritt — antwortet er im
+ * Funkloch NIE (genau die Zielgruppe: Weitwanderer mit Netzabbrüchen), stünde
+ * die Kaskaden-Bestätigung für immer still: keine Rückmeldung, kein Abbruch.
+ * Nach Ablauf wird bewusst TROTZDEM geschrieben — das ist unbedenklich, weil
+ * Maßnahme (a) im Normalfall gar keinen zweiten Schreibvorgang mehr erzeugt
+ * (`defer()` statt `schedule()` bei offener Rückfrage); `settle()` ist nur
+ * noch Rückfallschutz für Restwege. 8 s liegt deutlich über jeder normalen
+ * Antwortzeit (Staging < 20 ms) und deutlich unter der Geduldsgrenze eines
+ * Nutzers, der gerade auf „Alle mitverschieben" geklickt hat.
+ */
+export const SETTLE_TIMEOUT_MS = 8000;
+
 export function extractMessage(e: unknown): string {
 	if (e && typeof e === 'object') {
 		const obj = e as Record<string, unknown>;
@@ -32,6 +46,10 @@ export class SaveStatus {
 	// Debounce-Internals
 	private _timer: ReturnType<typeof setTimeout> | null = null;
 	private _pendingFn: SaveFn | null = null;
+	// Bug #1389: der gerade im Netz laufende Speichervorgang. `cancel()` kann ihn
+	// nicht mehr stoppen — wer ihn überschreiben will, muss auf ihn WARTEN
+	// (`settle()`), sonst entscheidet die Netz-Laufzeit, welcher Stand gewinnt.
+	private _inflight: Promise<void> | null = null;
 
 	setSaving(): void {
 		this.state = 'saving';
@@ -70,17 +88,58 @@ export class SaveStatus {
 		this._pendingFn = null;
 		this._timer = null;
 		this.setSaving();
-		try {
-			await saveFn(init);
-			this.setSaved();
-		} catch (e) {
-			this.setError(extractMessage(e));
+		const run = (async () => {
+			try {
+				await saveFn(init);
+				this.setSaved();
+			} catch (e) {
+				this.setError(extractMessage(e));
+			}
+		})();
+		this._inflight = run;
+		await run;
+		if (this._inflight === run) this._inflight = null;
+	}
+
+	/**
+	 * Bug #1389: wartet, bis ein bereits abgeschickter Speichervorgang
+	 * abgeschlossen ist. Ohne diesen Riegel könnte ein danach gestarteter
+	 * Schreibvorgang (z.B. die Kaskaden-Bestätigung) beim Server FRÜHER ankommen
+	 * als der zuvor abgeschickte — das Backend ersetzt die Etappen komplett und
+	 * kennt keine Reihenfolge, der veraltete Stand gewinnt lautlos.
+	 * Ohne laufenden Request kehrt die Methode sofort zurück.
+	 *
+	 * Adversary F002: das Warten ist auf `SETTLE_TIMEOUT_MS` gedeckelt und der
+	 * Aufrufer fährt danach fort — ein hängender Request darf die Oberfläche
+	 * nicht einfrieren (Begründung s. Konstante). Der Aufrufer hält die Anzeige
+	 * währenddessen auf `saving`, damit die Wartezeit sichtbar ist.
+	 */
+	async settle(): Promise<void> {
+		const deadline = Date.now() + SETTLE_TIMEOUT_MS;
+		// Schleife: `doSave()` kann während des Wartens erneut gefeuert haben.
+		for (let i = 0; i < 5; i++) {
+			const inflight = this._inflight;
+			if (!inflight) return;
+			const remaining = deadline - Date.now();
+			if (remaining <= 0) return;
+			let timer: ReturnType<typeof setTimeout> | undefined;
+			const capped = new Promise<'timeout'>((resolve) => {
+				timer = setTimeout(() => resolve('timeout'), remaining);
+			});
+			const outcome = await Promise.race([inflight.then(() => 'done' as const), capped]);
+			if (timer !== undefined) clearTimeout(timer);
+			if (outcome === 'timeout') return;
 		}
 	}
 
-	/** Returns true if a debounced save is pending (not yet flushed). */
+	/** Returns true if a save is pending (debounced or deferred, not yet flushed).
+	 *  Bug #1389: geprüft wird die ausstehende Funktion, nicht der Timer — ein
+	 *  per `defer()` zurückgestellter Speichervorgang hat bewusst keinen Timer,
+	 *  muss aber beim Verlassen der Seite geflusht werden (Bezug #1376). Für den
+	 *  Debounce-Weg ist das unverändert (schedule setzt beides, doSave/cancel
+	 *  löschen beides). */
 	get hasPending(): boolean {
-		return this._timer !== null;
+		return this._pendingFn !== null;
 	}
 
 	/** Schedule a debounced save (700ms default). Calling again cancels previous timer.
@@ -99,11 +158,32 @@ export class SaveStatus {
 	 *  der Request das Dokument überlebt. Der Request wird dabei noch synchron
 	 *  im Aufrufer-Tick abgesetzt (kein `await` vor dem `fetch`). */
 	async flush(init?: RequestInit): Promise<void> {
-		if (this._timer !== null && this._pendingFn !== null) {
-			clearTimeout(this._timer);
+		if (this._pendingFn !== null) {
+			if (this._timer !== null) clearTimeout(this._timer);
 			const fn = this._pendingFn;
 			await this.doSave(fn, init);
 		}
+	}
+
+	/**
+	 * Bug #1389: stellt einen Speichervorgang zurück, OHNE einen Timer zu starten.
+	 * Er feuert nie von selbst — nur `flush()` (Antwort auf die Rückfrage bzw.
+	 * `beforeNavigate` beim Verlassen der Seite) löst ihn aus.
+	 *
+	 * Zweck: solange eine Rückfrage offen ist ("Folge-Etappen mitverschieben?"),
+	 * darf kein Schreibvorgang mit dem halbfertigen Zwischenstand losgehen — sonst
+	 * sind zwei Schreibvorgänge unterwegs und die Netz-Laufzeit entscheidet.
+	 * Gleichzeitig gilt der Stand als ausstehend (`hasPending`), damit ein Reload
+	 * oder Seitenwechsel ihn noch schreibt statt ihn zu verlieren (Bezug #1376).
+	 *
+	 * Der Zustand wird `dirty` ("Nicht gespeichert") — ehrlich, denn es wurde
+	 * bewusst noch nichts geschrieben.
+	 */
+	defer(saveFn: SaveFn): void {
+		if (this._timer !== null) clearTimeout(this._timer);
+		this._timer = null;
+		this._pendingFn = saveFn;
+		this.setDirty();
 	}
 
 	/**
@@ -128,13 +208,23 @@ export class SaveStatus {
 	 * `setSaved()`/`setError()` nach Abschluss ist dafür zuständig, sonst
 	 * würde `cancel()` fälschlich "idle" vorgaukeln, während der Request noch
 	 * offen ist (widerspricht dem eigenen "kein Rollback nach Autosave"-Zweck).
+	 *
+	 * Bug #1389: verwirft ebenso einen per `defer()` zurückgestellten Save.
+	 *
+	 * Adversary F003: `defer()` setzt bewusst KEINEN Timer — ohne den zweiten
+	 * Zweig bliebe nach dem Abbruch eines zurückgestellten Saves `dirty`
+	 * („Nicht gespeichert") stehen, obwohl gar nichts mehr aussteht. Der
+	 * Zusatz-Riegel `_inflight === null` hält die oben beschriebene Regel
+	 * ein: läuft ein echter Request im Netz, wird hier nichts zurückgesetzt.
 	 */
 	cancel(): void {
 		const hadPendingTimer = this._timer !== null;
+		const hadDeferred = !hadPendingTimer && this._pendingFn !== null;
 		if (this._timer !== null) clearTimeout(this._timer);
 		this._timer = null;
 		this._pendingFn = null;
-		if (hadPendingTimer && (this.state === 'saving' || this.state === 'dirty')) {
+		const resettable = hadPendingTimer || (hadDeferred && this._inflight === null);
+		if (resettable && (this.state === 'saving' || this.state === 'dirty')) {
 			this.state = 'idle';
 		}
 	}

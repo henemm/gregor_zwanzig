@@ -50,7 +50,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { SaveStatus } from '../saveStatusStore.svelte.ts';
+import { SaveStatus, SETTLE_TIMEOUT_MS } from '../saveStatusStore.svelte.ts';
 import { weatherSaveGate } from '../../components/trip-detail/weatherSaveGate.ts';
 import { reportConfigChangedByUser } from '../../components/shared/reportConfigDirty.ts';
 
@@ -64,6 +64,14 @@ function createTestInstance(): SaveStatus {
 	(inst as unknown as { state: string }).state = 'idle';
 	(inst as unknown as { savedAt: Date | null }).savedAt = null;
 	(inst as unknown as { error: string | null }).error = null;
+	// Bug #1389: die Debounce-Internals sind ebenfalls Konstruktor-Felder
+	// (`= null`) und müssen hier genauso vorbelegt werden — sonst wären sie
+	// `undefined` und die `!== null`-Prüfungen in schedule/flush/cancel gäben
+	// ein falsches Ergebnis.
+	const internals = inst as unknown as Record<string, unknown>;
+	internals._timer = null;
+	internals._pendingFn = null;
+	internals._inflight = null;
 	return inst;
 }
 
@@ -206,5 +214,167 @@ describe('Fix-Loop 1 (Adversary F001, Issue #1269 (c)): Anzeige aus dem Inhalts-
 
 		assert.equal(c.state, 'idle');
 		assert.ok(c.savedAt instanceof Date, 'ein echter Speichervorgang muss savedAt setzen');
+	});
+});
+
+describe('Bug #1389: Kaskaden-Rückfrage darf keinen zweiten Speichervorgang erzeugen', () => {
+	// Ausgangslage: `handleDateChange()` startete den Auto-Speichervorgang SOFORT
+	// (700ms), während der Nutzer die Rückfrage „Folge-Etappen mitverschieben?"
+	// noch liest. Beantwortet er sie später als 700ms, ist der veraltete Stand
+	// („nur Etappe 1 verschoben") schon unterwegs und überholt bei asymmetrischer
+	// Netz-Laufzeit das Kaskaden-Ergebnis. Die Steuerung braucht dafür zwei
+	// Bausteine, die es noch NICHT gibt → RED.
+
+	test('defer() stellt den Speichervorgang zurück: er feuert NICHT von selbst, bleibt aber flushbar (Datenverlust-Schutz)', async () => {
+		const c = createTestInstance();
+		let calls = 0;
+		let lastInit: RequestInit | undefined;
+
+		c.defer(async (init) => {
+			calls++;
+			lastInit = init;
+		});
+
+		// Deutlich länger als das 700ms-Debounce-Fenster warten (echte Zeit).
+		await new Promise((r) => setTimeout(r, 900));
+		assert.equal(
+			calls,
+			0,
+			'ein zurückgestellter Speichervorgang darf NIE von selbst feuern — sonst geht der veraltete ' +
+				'Stand „nur Etappe 1" los, während die Rückfrage noch offen ist (Bug #1389)'
+		);
+		assert.equal(
+			c.hasPending,
+			true,
+			'er muss trotzdem als ausstehend gelten — sonst flusht beforeNavigate ihn nicht und die ' +
+				'Datumsänderung ginge beim Verlassen der Seite verloren (Bezug #1376)'
+		);
+		assert.notEqual(c.state, 'idle', 'die Anzeige darf nicht „gespeichert" behaupten, solange nichts geschrieben wurde');
+
+		await c.flush({ keepalive: true });
+		assert.equal(calls, 1, 'flush() (Verlassen der Seite) muss den zurückgestellten Stand schreiben');
+		assert.equal(lastInit?.keepalive, true, 'keepalive muss durchgereicht werden (#1376)');
+		assert.equal(c.hasPending, false, 'nach dem Flush ist nichts mehr ausstehend');
+	});
+
+	test('cancel() entfernt auch einen zurückgestellten Speichervorgang', async () => {
+		const c = createTestInstance();
+		let calls = 0;
+		c.defer(async () => {
+			calls++;
+		});
+		c.cancel();
+		assert.equal(c.hasPending, false);
+		await c.flush();
+		assert.equal(calls, 0, 'nach cancel() darf der zurückgestellte Stand nicht mehr geschrieben werden');
+	});
+
+	test('settle() wartet auf einen bereits laufenden Speichervorgang — die Reihenfolge hängt nicht mehr am Netz', async () => {
+		const c = createTestInstance();
+		const order: string[] = [];
+
+		// Ein bereits abgeschickter Request mit dem VERALTETEN Stand, der lange
+		// unterwegs ist (schlechte Mobilverbindung).
+		let release!: () => void;
+		const onTheWire = new Promise<void>((r) => {
+			release = r;
+		});
+		const stale = c.doSave(async () => {
+			await onTheWire;
+			order.push('veraltet');
+		});
+
+		// Die Kaskaden-Bestätigung muss darauf WARTEN statt ihn nur abbestellen
+		// zu wollen (cancel() erwischt einen laufenden Request nicht).
+		const cascade = (async () => {
+			c.cancel();
+			await c.settle();
+			order.push('kaskade');
+		})();
+
+		setTimeout(() => release(), 50);
+		await Promise.all([stale, cascade]);
+
+		assert.deepEqual(
+			order,
+			['veraltet', 'kaskade'],
+			'der Kaskaden-Schreibvorgang darf erst starten, wenn der veraltete Request abgeschlossen ist — ' +
+				'sonst entscheidet die Netz-Laufzeit, welcher Stand am Ende in der Datenbank liegt (Bug #1389)'
+		);
+	});
+
+	test('settle() ist ein No-Op, wenn nichts unterwegs ist (kein künstliches Warten)', async () => {
+		const c = createTestInstance();
+		const t0 = Date.now();
+		await c.settle();
+		assert.ok(Date.now() - t0 < 100, 'settle() darf ohne laufenden Request nicht blockieren');
+	});
+});
+
+describe('Bug #1389 Fix-Loop 1 (Adversary F002/F003)', () => {
+	test('F002: settle() wartet nicht ewig — ein hängender Request friert die Oberfläche nicht ein', async () => {
+		const c = createTestInstance();
+		// Ein Request, der NIE antwortet (Funkloch — genau die Zielgruppe).
+		// Bewusst nicht awaited: doSave() kehrt hier nie zurück.
+		void c.doSave(() => new Promise<void>(() => {}));
+
+		const t0 = Date.now();
+		await c.settle();
+		const waited = Date.now() - t0;
+
+		assert.ok(
+			waited >= SETTLE_TIMEOUT_MS - 500,
+			`settle() muss auf den laufenden Request warten (gewartet: ${waited}ms)`
+		);
+		assert.ok(
+			waited < SETTLE_TIMEOUT_MS + 2000,
+			`settle() muss nach ${SETTLE_TIMEOUT_MS}ms aufgeben und den Aufrufer fortfahren lassen — ` +
+				`sonst wäre die Race gegen einen unbegrenzten Hänger getauscht (gewartet: ${waited}ms)`
+		);
+		assert.equal(
+			c.state,
+			'saving',
+			'während der Wartezeit muss die Anzeige „Speichere …" zeigen, nicht „Gespeichert ✓"'
+		);
+	});
+
+	test('F003: cancel() eines zurückgestellten Saves lässt kein falsches „Nicht gespeichert" stehen', () => {
+		const c = createTestInstance();
+		c.defer(async () => {});
+		assert.equal(c.state, 'dirty', 'Vorbedingung: zurückgestellt = ehrlich „Nicht gespeichert"');
+
+		c.cancel();
+
+		assert.equal(c.hasPending, false);
+		assert.equal(
+			c.state,
+			'idle',
+			'nach cancel() steht nichts mehr aus — „Nicht gespeichert" wäre eine Falschmeldung ' +
+				'(defer() setzt keinen Timer, deshalb griff der alte hadPendingTimer-Zweig nicht)'
+		);
+	});
+
+	test('F003-Abgrenzung: cancel() setzt NICHT zurück, solange ein echter Request im Netz läuft', async () => {
+		const c = createTestInstance();
+		let release!: () => void;
+		const onTheWire = new Promise<void>((r) => {
+			release = r;
+		});
+		const running = c.doSave(async () => {
+			await onTheWire;
+		});
+		c.defer(async () => {});
+
+		c.cancel();
+		assert.notEqual(
+			c.state,
+			'idle',
+			'ein laufender Request darf nicht als „gespeichert ✓" gemeldet werden, nur weil ein ' +
+				'zurückgestellter Save abgeräumt wurde — der F003-Zweig muss bei _inflight schweigen'
+		);
+
+		release();
+		await running;
+		assert.equal(c.state, 'idle', 'erst der Abschluss des echten Requests meldet „gespeichert"');
 	});
 });

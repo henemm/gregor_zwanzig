@@ -150,8 +150,14 @@
 		// Issue #1258 Scheibe S3 (D5): 'alarme' ergänzt — die Alert-Zustellung
 		// zog aus dem Versand-Tab in den neuen Alarme-Tab um, derselbe
 		// Flush-Guard gilt jetzt dort.
+		// Bug #1389 (Adversary F001): 'stages' ergänzt — der Etappen-Reiter nutzt
+		// denselben Controller und kennt seit #1389 zusätzlich zurückgestellte
+		// Speichervorgänge (offene Kaskaden-Rückfrage, `defer()`). Deren Rettung
+		// hing hier allein am `beforeNavigate`-Haken der Seite, also implizit.
+		// Explizit ist besser: die Asymmetrie wäre genau die Abhängigkeit, die
+		// beim nächsten Framework-Update still kippt.
 		if (
-			(activeTab === 'alerts' || activeTab === 'weather' || activeTab === 'briefings' || activeTab === 'alarme') &&
+			(activeTab === 'alerts' || activeTab === 'weather' || activeTab === 'briefings' || activeTab === 'alarme' || activeTab === 'stages') &&
 			value !== activeTab &&
 			saveController?.hasPending
 		) {

@@ -52,8 +52,21 @@ async function overlayStyle(page: Page, prop: string): Promise<string> {
 	);
 }
 
+// Bug #1389: bewusst die ZWEITE Etappe. Eine Datumsänderung an der ERSTEN
+// Etappe öffnet die Kaskaden-Rückfrage („Folge-Etappen mitverschieben?") und
+// stellt das Speichern bis zur Antwort zurück — vorher lief dort sofort ein
+// Auto-Save mit dem halbfertigen Stand los, der bei schlechter Verbindung das
+// Kaskaden-Ergebnis überschrieb. Diese Tests prüfen das Overlay (Zeitstempel,
+// Abdimmen, Fehlerzustand), nicht die Kaskade; über die erste Etappe würden sie
+// jetzt einen Nebenschauplatz mitprüfen und hingen an einer unbeantworteten
+// Rückfrage fest. Dasselbe Muster nutzt das Schwester-Spec
+// e2e/issue-758-save-indicator.spec.ts (AC-1) schon länger. Der Kaskaden-Pfad
+// selbst ist in e2e/issue-498-stage-date-autosave.spec.ts (AC-6/AC-7/AC-8)
+// abgedeckt.
 async function changeStageDate(page: Page, value: string) {
+	await page.getByText('Tag 2', { exact: false }).first().click();
 	const input = firstDateInput(page);
+	await expect(input).toHaveValue('2026-08-02');
 	await input.fill(value);
 	await input.blur();
 }
