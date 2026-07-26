@@ -1204,6 +1204,8 @@ Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
       "rangeMin": 0,
       "rangeMax": 200,
       "step": 5,
+      "metric_id": "snow_depth",
+      "aggregation": "max",
       "alarmCapable": false
     },
     {
@@ -1214,6 +1216,8 @@ Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
       "higherIsBetter": false,
       "kind": "ordinal",
       "ordinalLabels": ["kein", "mittel", "hoch"],
+      "metric_id": "thunder",
+      "aggregation": "max",
       "alarmCapable": true
     },
     {
@@ -1224,6 +1228,8 @@ Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
       "higherIsBetter": false,
       "kind": "enum",
       "enumValues": ["RAIN", "SNOW", "MIXED", "FREEZING_RAIN"],
+      "metric_id": "precip_type",
+      "aggregation": "max",
       "alarmCapable": false
     }
   ]
@@ -1238,6 +1244,24 @@ Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
 | metrics[].kind | string | `range` (23 Einträge, mit `rangeMin`/`rangeMax`/`step`), `enum` (`precip_type_dominant`, mit `enumValues`) oder `ordinal` (`thunder_level_max`, mit `ordinalLabels` — übernimmt die im Editor tatsächlich sichtbare 3-Stufen-Darstellung statt des rohen Enum, PO-Entscheidung 2026-07-12) |
 | metrics[].higherIsBetter | bool | Richtung für die Compare-Winner-Box (`true` = höherer Wert gewinnt) |
 | metrics[].alarmCapable | bool | Seit Teil 3 (#1350). `true` für genau die 10 Keys aus `compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID`, sonst `false` — steuert die „Warnen"-Button-Sperre im Schwellen-Editor |
+| metrics[].metric_id | string | Seit Issue #1373 S2 Scheibe A. Kennung der zugrundeliegenden Größe im zentralen Wetterkatalog (`src/app/metric_catalog.py`), z. B. `"temperature"` |
+| metrics[].aggregation | string | Seit Issue #1373 S2 Scheibe A. Die Auswertung dieser Größe, die der Eintrag zeigt (`min`/`max`/`avg`/`sum`), z. B. `"max"` |
+
+Jeder Compare-Eintrag ist damit nachweisbar an eine Größe des zentralen
+Wetterkatalogs gebunden — der Katalog bleibt jedoch eine **kuratierte**
+Tabelle (Label/Wertebereich/Bedienstruktur bleiben redaktionell gepflegt in
+`src/output/renderers/compare_metric_catalog.py`); `metric_id`/`aggregation`
+werden nicht **daraus erzeugt**, sondern nur **gegen** ihn geprüft. Drei
+Tests in `tests/unit/test_compare_catalog_derives_from_central_catalog.py`
+stellen sicher: (a) jede wählbare Größe des zentralen Katalogs hat
+mindestens einen Compare-Eintrag, (b) jeder Compare-Eintrag verweist auf
+eine tatsächlich existierende zentrale Größe, (c) die angegebene
+`aggregation` ist eine der zentral vorgesehenen Auswertungen dieser Größe.
+Eine benannte Ausnahmeliste (`AGGREGATION_CHECK_EXEMPTIONS`) nimmt vier
+Größen von Prüfung (c) aus, weil ihnen im zentralen Katalog das
+Tages-Auswertungsfeld (`summary_fields`) fehlt: `cloud_low`/`cloud_mid`/
+`cloud_high` (#1392) und `snowfall_limit` (#1391). Die Liste darf nur
+schrumpfen — ein eigener Test erzwingt das.
 
 **Notes:**
 
@@ -2943,6 +2967,13 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-07-26: Issue #1373 S2 Scheibe A — `GET /api/compare/metrics` trägt
+  pro Eintrag zusätzlich `metric_id` und `aggregation`, gebunden an die
+  Größen des zentralen Wetterkatalogs (`src/app/metric_catalog.py`). Der
+  Compare-Katalog bleibt eine kuratierte Tabelle — die neuen Felder
+  belegen die Beziehung, erzeugen den Katalog aber nicht. `key` bleibt
+  unverändert für Rückwärtskompatibilität. Weiterhin genau 26 Einträge.
+  Siehe Section 15.1.
 - 2026-07-26: Issues #1383/#1385/#1386 — Alarm-Zeitstempel liefen in
   mehreren Renderpfaden in UTC statt Ortszeit (Radaralarm-Ortsvergleich,
   gebündelte Mehr-Orte-Alarme, Abweichungs-Alarm-Ereigniszeit). Ursache
