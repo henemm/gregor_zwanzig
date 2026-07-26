@@ -247,12 +247,21 @@ def test_ac6_verkuerzte_stundentabellen_spalten_werden_mit_ort_kontext_gemeldet(
     mod = _load_validator()
     html = _render_v2()
 
-    # Marseilles Stundentabelle (per 'Zeit'-Header identifiziert) auf 3 statt
-    # 8 Spalten verkuerzen -- reiner String-Eingriff am echten Render-Output,
-    # kein Handbau der gesamten Mail.
+    # Marseilles Stundentabelle auf 3 statt 8 Spalten verkuerzen -- reiner
+    # String-Eingriff am echten Render-Output, kein Handbau der gesamten Mail.
+    #
+    # Die Ziel-Tabelle wird ueber den ORT-Kopf des Ortes gefunden, NICHT ueber
+    # einen festen Index: seit #1359 Scheibe 2 rendert
+    # compare_html.location_render_order() die Orte in der vom Nutzer
+    # konfigurierten Preset-Reihenfolge (frueher alphabetisch). Marseille steht
+    # hier also an Position 2, nicht 3. Ein fester Index wuerde bei jeder
+    # kuenftigen Reihenfolge-Aenderung wieder still auf den falschen Ort zeigen.
     zeit_positions = [m.start() for m in re.finditer(r">Zeit<", html)]
     assert len(zeit_positions) == 3, f"Erwartet 3 Stundentabellen, gefunden: {len(zeit_positions)}"
-    marseille_pos = zeit_positions[2]  # alphabetisch: Collobrières, Fréjus, Marseille
+    ort_kopf = re.search(r">ORT</span>\s*<span[^>]*>Marseille</span>", html)
+    assert ort_kopf is not None, "Fixture-Fehler: ORT-Kopf fuer 'Marseille' nicht im Render-Output gefunden"
+    marseille_pos = html.find(">Zeit<", ort_kopf.end())
+    assert marseille_pos != -1, "Fixture-Fehler: keine Stundentabelle nach dem ORT-Kopf 'Marseille'"
     table_start = html.rfind("<table", 0, marseille_pos)
     table_end = html.find("</table>", marseille_pos) + len("</table>")
     truncated_table = (

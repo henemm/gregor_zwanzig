@@ -102,16 +102,30 @@ class TestResolveHourlyMetrics:
         from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
 
         result = resolve_hourly_metrics(["temp_c", "wind_kmh", "thunder_level"])
-        assert result == {"t2m_c", "wind10m_kmh", "thunder_level"}, (
-            f"Erwartet {{'t2m_c', 'wind10m_kmh', 'thunder_level'}}, erhalten {result!r}"
+        assert result == ["t2m_c", "wind10m_kmh", "thunder_level"], (
+            f"Erwartet ['t2m_c', 'wind10m_kmh', 'thunder_level'] (Renderer-IDs in "
+            f"Auswahl-Reihenfolge, #1335 Scheibe 1 AC-2), erhalten {result!r}"
+        )
+
+    def test_known_frontend_ids_resolve_order_follows_selection(self):
+        """#1335 Scheibe 1 AC-2: die Rueckgabe ist eine reihenfolge-erhaltende,
+        deduplizierte Liste (erste-Vorkommen-Reihenfolge der Auswahl) statt
+        eines ungeordneten Sets -- dieselben IDs in anderer Auswahl-Reihenfolge
+        muessen auch in anderer Reihenfolge zurueckkommen."""
+        from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
+
+        result = resolve_hourly_metrics(["thunder_level", "temp_c", "wind_kmh", "temp_c"])
+        assert result == ["thunder_level", "t2m_c", "wind10m_kmh"], (
+            f"Erwartet ['thunder_level', 't2m_c', 'wind10m_kmh'] (Auswahl-Reihenfolge "
+            f"erhalten, Duplikat 'temp_c' entfernt), erhalten {result!r}"
         )
 
     def test_new_metrics_pop_und_visibility_resolve(self):
         from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
 
         result = resolve_hourly_metrics(["pop_pct", "visibility_m"])
-        assert result == {"pop_pct", "visibility_m"}, (
-            f"Erwartet {{'pop_pct', 'visibility_m'}}, erhalten {result!r}"
+        assert result == ["pop_pct", "visibility_m"], (
+            f"Erwartet ['pop_pct', 'visibility_m'], erhalten {result!r}"
         )
 
     def test_none_returns_none(self):
@@ -254,27 +268,41 @@ class TestHourMetricsRendererUnit:
             "verdrahtet vorhanden"
         )
 
-    def test_ac8_kanonische_reihenfolge_unabhaengig_von_auswahl_konstruktion(self):
+    def test_spaltenreihenfolge_folgt_der_uebergebenen_auswahl_reihenfolge(self):
+        """Der alte AC-8 aus #1106 ("kanonische Reihenfolge unabhaengig von der
+        Auswahl") ist durch #1335 Scheibe 1 / #1359 abgeloest: die
+        Spaltenreihenfolge ist heute ausdruecklich nutzerseitig einstellbar und
+        folgt der uebergebenen Reihenfolge (`_visible_hour_metrics`).
+
+        Der Vorgaenger-Test uebergab ein *Set* -- dessen Iterationsreihenfolge
+        wechselt je Prozess (PYTHONHASHSEED), womit die Spalten und damit der
+        Test zufaellig kippten (~50 % rot). Das war kein Produktfehler: der
+        Produktivpfad geht immer ueber `resolve_hourly_metrics()`
+        (compare_hourly_metric_ids.py), das Nicht-Listen defensiv zu None macht
+        und sonst eine geordnete Liste liefert -- ein Set erreicht den Renderer
+        nie. Deshalb hier eine Liste, und zwar in beiden Richtungen, damit der
+        Test nicht zufaellig gruen ist."""
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_hourly_result()
-        # Set-Konstruktion in "falscher" Reihenfolge -- kanonische Reihenfolge
-        # (Temp vor Sicht) muss trotzdem im Header erscheinen.
-        html = render_compare_html(
-            result,
-            profile=ActivityProfile.ALLGEMEIN,
-            hourly_metrics={"visibility_m", "t2m_c"},
-        )
-        temp_pos = html.find(">Temp<")
-        sicht_pos = html.find(">Sicht<")
-        assert temp_pos != -1 and sicht_pos != -1, (
-            "RED: 'Temp'/'Sicht'-Spalten nicht gefunden -- hourly_metrics-Kwarg und/oder "
-            "neue Metrik 'Sicht' existieren noch nicht im Renderer"
-        )
-        assert temp_pos < sicht_pos, (
-            "RED: kanonische Reihenfolge (Temp vor Sicht) muss unabhaengig von der "
-            "Set-Konstruktions-Reihenfolge gelten"
-        )
+        for auswahl, erste, zweite in (
+            (["t2m_c", "visibility_m"], ">Temp<", ">Sicht<"),
+            (["visibility_m", "t2m_c"], ">Sicht<", ">Temp<"),
+        ):
+            html = render_compare_html(
+                result,
+                profile=ActivityProfile.ALLGEMEIN,
+                hourly_metrics=auswahl,
+            )
+            erste_pos = html.find(erste)
+            zweite_pos = html.find(zweite)
+            assert erste_pos != -1 and zweite_pos != -1, (
+                f"'Temp'/'Sicht'-Spalten nicht gefunden bei Auswahl {auswahl}"
+            )
+            assert erste_pos < zweite_pos, (
+                f"Spaltenreihenfolge muss der Auswahl {auswahl} folgen: "
+                f"{erste} vor {zweite}"
+            )
 
     def test_ac4_gewitter_kategorial_mittel_hoch_wortlaut(self):
         """Deckt den Teil von AC-4 ab, der mit den bestehenden Offline-Fixtures
