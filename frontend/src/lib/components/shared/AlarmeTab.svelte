@@ -38,6 +38,11 @@
 	import { resolveAlertChannels, type AlertChannelState } from './alarme-tab/alertChannelState.ts';
 	import { buildAlarmeDeliveryPayload } from './alarme-tab/alarmeDeliveryPayload.ts';
 	import { deriveActiveAlertMetrics } from './alarme-tab/compareMetricMapping.ts';
+	// Issue #1366 F002 Fix-Loop 2: EINZIGE Materialisierungs-Quelle „nie
+	// eingestellt" (null) -> Vorgabemenge, geteilt mit WeatherMetricsTab.svelte/
+	// CorridorEditor(Mobile) -- sonst weicht die Empfindlichkeits-Tabelle vom
+	// Wetter-Metriken-Bereich desselben, frisch angelegten Vergleichs ab.
+	import { materializeActiveMetricKeys } from './weather-metrics-tab/compareMetricOrder.ts';
 
 	interface Props {
 		context?: AlarmeContext;
@@ -106,7 +111,9 @@
 	// Mapping-Modul compareMetricMapping.ts). route: aus Props (Ermittlung aus
 	// trip ist S3-Aufgabe, s. Context-Doc).
 	const effectiveActiveMetrics = $derived(
-		context === 'vergleich' ? deriveActiveAlertMetrics(wiz?.activeMetricKeys ?? []) : (activeMetrics ?? [])
+		context === 'vergleich'
+			? deriveActiveAlertMetrics(materializeActiveMetricKeys(wiz?.activeMetricKeys ?? null))
+			: (activeMetrics ?? [])
 	);
 	// route: lokaler State (Adversary Fix-Loop 1, F001) — Initialwert aus der
 	// metricLevels-Prop (Container leitet sie aus trip.display_config her),

@@ -1,0 +1,152 @@
+"""Leerauswahl heisst leer — Issue #1366 + #1361 Befund 3, S3 Scheibe B (#1372).
+
+Spec: docs/specs/modules/compare_empty_metric_selection.md
+Kontext: docs/context/fix-1366-leerauswahl-heisst-leer.md
+
+Kern-Tests (Test-Politik "Zwei Schichten", CLAUDE.md): kein Netz, keine echten
+Mail-Versendungen, kein Mock/patch. Der Live-Nachweis (echte Staging-Mail) ist
+nicht Teil dieser Datei (s. Spec Test Plan, Abschnitt Live-E2E).
+"""
+from __future__ import annotations
+
+import logging
+from datetime import date, datetime
+
+from app.user import ComparisonResult, LocationResult, SavedLocation
+from output.renderers.comparison import render_compare_email, render_compare_telegram
+from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
+from output.renderers.compare_metric_ids import resolve_enabled_metrics
+from services.report_config_resolver import resolve_compare_render_options
+
+
+# ---------------------------------------------------------------------------
+# Fixture (analog test_compare_metric_order.py::_result) — mind. 1 Ort reicht
+# fuer die reinen Auflöser-Tests, die Mail-Wirkung braucht keine drei Orte.
+# ---------------------------------------------------------------------------
+
+
+def _loc(loc_id: str, name: str) -> SavedLocation:
+    return SavedLocation(id=loc_id, name=name, lat=47.0, lon=11.0, elevation_m=600)
+
+
+def _loc_result(loc_id: str, name: str) -> LocationResult:
+    return LocationResult(
+        location=_loc(loc_id, name), score=1,
+        temp_max=20.0, wind_max=15.0, cloud_avg=40, sunny_hours=5,
+        official_alerts=[],
+    )
+
+
+def _result() -> ComparisonResult:
+    return ComparisonResult(
+        locations=[_loc_result("a", "Aachen"), _loc_result("b", "Bremen")],
+        time_window=(0, 23), target_date=date(2026, 7, 24),
+        created_at=datetime(2026, 7, 24, 4, 0),
+    )
+
+
+class TestUebersichtsAufloeserAC2:
+    def test_komplett_unbekannte_auswahl_ergibt_leere_liste_nicht_alle(self):
+        """AC-2: Given eine gespeicherte Auswahl, die sich auf KEINE bekannte
+        Wettergroesse mehr abbilden laesst / When resolve_enabled_metrics()
+        aufgerufen wird / Then liefert es [] (keine Zeile), nicht None (alle)."""
+        result = resolve_enabled_metrics(["voellig_unbekannte_id_xyz", "noch_eine"])
+        assert result == [], (
+            f"Komplett unmappbare, aber nicht-leere Auswahl muss [] ergeben "
+            f"(AC-2), nicht None (= alle), erhalten {result!r}"
+        )
+
+
+class TestStundenverlaufAufloeserAC5AC6:
+    def test_ac5_komplett_unbekannte_auswahl_ergibt_leere_liste(self):
+        """AC-5: Given mehrere Stundenverlauf-Kennungen, die ALLE unmappbar
+        sind / When resolve_hourly_metrics() aufgerufen wird / Then liefert
+        es [], nicht None (bisher: Rueckfall auf alle 9 Spalten)."""
+        result = resolve_hourly_metrics(["unbekannt_a", "unbekannt_b"])
+        assert result == [], (
+            f"Komplett unmappbare Stundenauswahl muss [] ergeben (AC-5), "
+            f"erhalten {result!r}"
+        )
+
+    def test_ac6_teilweise_unbekannt_behaelt_reihenfolge_und_protokolliert(self, caplog):
+        """AC-6: Given eine Stundenverlauf-Auswahl mit mind. einer mappbaren
+        und mind. einer unmappbaren Kennung / When resolve_hourly_metrics()
+        aufgerufen wird / Then enthaelt das Ergebnis nur die auflösbaren
+        Spalten in Auswahl-Reihenfolge UND es entsteht eine Protokollwarnung
+        mit den unauflösbaren Kennungen."""
+        with caplog.at_level(logging.WARNING):
+            result = resolve_hourly_metrics(["wind_kmh", "unbekannt_x", "temp_c"])
+        assert result == ["wind10m_kmh", "t2m_c"], (
+            f"Erwartet nur die auflösbaren Spalten in Auswahl-Reihenfolge, "
+            f"erhalten {result!r}"
+        )
+        warnings = [r.message for r in caplog.records if r.levelno == logging.WARNING]
+        assert any("unbekannt_x" in msg for msg in warnings), (
+            f"Erwartet eine Protokollwarnung mit der unauflösbaren Kennung "
+            f"'unbekannt_x' (#1361 Befund 3), Warnungen: {warnings!r}"
+        )
+
+
+class TestReportConfigResolverAC4AC5:
+    def test_leere_stundenauswahl_schaltet_stundenblock_ab_trotz_gespeichertem_true(self):
+        """AC-4/AC-5 auf Config-Ebene: Given ein Preset mit bewusst leerer
+        hourly_metrics-Auswahl und gespeichertem hourly_enabled=True (bzw.
+        Feld fehlt = Default True) / When resolve_compare_render_options()
+        aufgerufen wird / Then ist hourly_enabled trotzdem False."""
+        preset = {"id": "p-leer", "display_config": {"hourly_metrics": []}}
+        options = resolve_compare_render_options(preset)
+        assert options.hourly_enabled is False, (
+            "Leere Stundenauswahl muss den Stundenblock abschalten, auch "
+            "wenn hourly_enabled nicht gesetzt (Default True) ist"
+        )
+
+    def test_komplett_unbekannte_stundenauswahl_schaltet_stundenblock_ab(self):
+        preset = {
+            "id": "p-unbekannt",
+            "display_config": {"hourly_metrics": ["voellig_unbekannt"]},
+            "hourly_enabled": True,
+        }
+        options = resolve_compare_render_options(preset)
+        assert options.hourly_enabled is False, (
+            "Komplett unauflösbare Stundenauswahl muss hourly_enabled trotz "
+            "gespeichertem True auf False verunden"
+        )
+
+
+class TestMailWirkungAC1AC9:
+    def test_leere_uebersichtsauswahl_zeigt_nur_warnzeile_in_html_und_keine_zeile_in_plain_und_telegram(self):
+        """AC-1/AC-9: Given ein Ortsvergleich mit bewusst leerer Übersichts-
+        Auswahl (display_config.active_metrics: []) / When die Vergleichs-
+        Mail (HTML+Klartext) und die Telegram-Nachricht ueber
+        resolve_compare_render_options() gerendert werden / Then zeigt HTML
+        nur die Warn-Zeile, Klartext und Telegram zeigen keine
+        Wettergroessen-Zeile."""
+        preset = {"id": "p-ac1", "display_config": {"active_metrics": []}}
+        options = resolve_compare_render_options(preset)
+        assert options.enabled_metrics == [], (
+            f"Bewusste Leerauswahl muss als [] aufgeloest werden (AC-1-"
+            f"Voraussetzung), erhalten {options.enabled_metrics!r}"
+        )
+
+        result = _result()
+        html, plain = render_compare_email(
+            result,
+            enabled_metrics=options.enabled_metrics,
+            hourly_metrics=options.hourly_metrics,
+            hourly_enabled=options.hourly_enabled,
+        )
+        assert "Amtliche Warnungen" in html, "Warn-Zeile muss trotz Leerauswahl stehen bleiben"
+        for label in ("Temp max", "Wind", "Sonne", "Wolken"):
+            assert f">{label}<" not in html, (
+                f"HTML darf bei Leerauswahl keine Wettergroessen-Zeile '{label}' zeigen"
+            )
+            assert f"{label}:" not in plain, (
+                f"Klartext darf bei Leerauswahl keine Wettergroessen-Zeile '{label}' zeigen"
+            )
+
+        msg = render_compare_telegram(result, enabled_metrics=options.enabled_metrics)
+        assert " · " not in msg.split("\n")[0], "Telegram darf keine Metrik-Zellen zeigen"
+        for label in ("Temp", "Wind", "Sonne", "Wolken"):
+            assert f"{label} " not in msg, (
+                f"Telegram darf bei Leerauswahl keine Wettergroessen-Zelle '{label}' zeigen"
+            )

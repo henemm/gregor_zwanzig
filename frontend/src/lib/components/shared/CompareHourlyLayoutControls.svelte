@@ -27,8 +27,8 @@
 	import type { MetricEntry } from '../trip-detail/metricsEditor.ts';
 	import {
 		ALL_HOURLY_METRICS,
-		DEFAULT_HOURLY_METRIC_KEYS,
-		applyHourlyMetricToggle,
+		materializeHourlyMetricKeys,
+		applyHourlyMetricToggleFromState,
 		orderableHourlyMetricKeys,
 		applyHourlyReorder
 	} from '../compare/compareHourlyMetricDefs.ts';
@@ -45,13 +45,15 @@
 	}
 	let { wiz, onHourlyCommit }: Props = $props();
 
-	// Leere Auswahl = „Default aktiv" (Renderer-Default). Reine Merge-Signale
+	// „Nie eingestellt" (`null`) = „Default aktiv" (Renderer-Default). Eine
+	// bewusst geleerte Auswahl (`[]`) bleibt dagegen leer -- Issue #1366
+	// Adversary-Fund F001: Anzeige UND Umschalt-Handler nutzen ZWINGEND
+	// dieselbe Materialisierung (materializeHourlyMetricKeys), sonst driften
+	// beide auseinander (das war der Regressions-Bug). Reine Merge-Signale
 	// (defaultOff, z.B. Windrichtung) zaehlen dabei NICHT zum Default -- sonst
 	// waere die Checkbox faelschlich als aktiv dargestellt, obwohl der Merge im
 	// leeren Auswahl-Zustand serverseitig nicht greift (Issue #1335 F002).
-	const materializedHourlyKeys = $derived(
-		wiz.hourlyMetricKeys.length === 0 ? DEFAULT_HOURLY_METRIC_KEYS : wiz.hourlyMetricKeys
-	);
+	const materializedHourlyKeys = $derived(materializeHourlyMetricKeys(wiz.hourlyMetricKeys));
 
 	function isHourlyMetricActive(key: string): boolean {
 		return materializedHourlyKeys.includes(key);
@@ -59,7 +61,7 @@
 
 	function makeHourlyMetricHandler(key: string) {
 		return function handleHourlyMetric(checked: boolean): void {
-			wiz.hourlyMetricKeys = applyHourlyMetricToggle(wiz.hourlyMetricKeys, key, checked);
+			wiz.hourlyMetricKeys = applyHourlyMetricToggleFromState(wiz.hourlyMetricKeys, key, checked);
 		};
 	}
 

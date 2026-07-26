@@ -25,8 +25,6 @@ from __future__ import annotations
 import re
 from datetime import date, datetime
 
-import pytest
-
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.comparison import (
     render_comparison_text, render_compare_sms, render_compare_telegram,
@@ -406,9 +404,10 @@ class TestAC8ExplicitEmptySelection:
     aus AC-7 (`None` = alle Metriken) ueberschrieben werden. Genau das ist der
     Regressionsschutz, den die AC-7-Aenderung braucht.
 
-    Die Preset-Ebene (`display_config.active_metrics: []`) ist als eigener
-    Fehler nach **Issue #1366** ausgelagert und NICHT Teil dieser Scheibe —
-    s. `test_empty_active_metrics_preset_is_flattened_to_none_issue_1366`."""
+    Die Preset-Ebene (`display_config.active_metrics: []`) war als eigener
+    Fehler nach **Issue #1366** ausgelagert (NICHT Teil dieser Scheibe) — mit
+    S3 Scheibe B von Epic #1372 ist #1366 behoben, s.
+    `test_empty_active_metrics_preset_stays_empty`."""
 
     def test_renderer_empty_list_renders_no_overview_rows(self):
         """GRUEN (Regression): `enabled_metrics=[]` blendet alle Zeilen aus."""
@@ -423,24 +422,11 @@ class TestAC8ExplicitEmptySelection:
         msg = render_compare_telegram(_result(), enabled_metrics=[])
         assert _telegram_labels(msg) == [], f"Telegram-Zellen bei Leerauswahl:\n{msg}"
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Issue #1366: resolve_enabled_metrics([]) verflacht die bewusste "
-               "Leerauswahl zu None (= alle Metriken). Ausserhalb dieser Scheibe.",
-    )
-    def test_empty_active_metrics_preset_is_flattened_to_none_issue_1366(self):
-        """Dokumentierter Ist-Zustand der PRESET-Ebene, bewusst `xfail(strict)`.
-
-        `resolve_enabled_metrics` (compare_metric_ids.py) gibt bei einem leeren
-        `active_metrics` ``None`` zurueck — die bewusste Leerauswahl des Nutzers
-        kippt damit in die Altbestands-Regel aus AC-7 und die Mail zeigt ALLE
-        Metriken. Das ist ein eigenstaendiger Fehler (**Issue #1366**) und wird
-        in dieser Scheibe NICHT repariert.
-
-        Warum `xfail(strict=True)` und kein `skip`/keine Loeschung: der Fund
-        bleibt als ausfuehrbarer Nachweis erhalten, und sobald #1366 behoben
-        ist, schlaegt der Lauf mit XPASS fehl und erzwingt das Entfernen des
-        Markers — ein `skip` waere still und der Nachweis ginge verloren."""
+    def test_empty_active_metrics_preset_stays_empty(self):
+        """Issue #1366 (S3 Scheibe B, #1372): `resolve_enabled_metrics` gibt bei
+        einem leeren `active_metrics` jetzt `[]` zurueck statt `None` — die
+        bewusste Leerauswahl des Nutzers kippt nicht mehr in die
+        Altbestands-Regel aus AC-7, die Mail zeigt keine Wettergroessen-Zeile."""
         opts = resolve_compare_render_options({
             "id": "p-empty", "display_config": {"active_metrics": []},
         })

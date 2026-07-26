@@ -3,8 +3,13 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { weatherMetricsTabSections } from '../weather-metrics-tab/weatherMetricsTabSections.ts';
-import { toggleCompareMetricKey } from '../weather-metrics-tab/compareMetricOrder.ts';
+import {
+	toggleCompareMetricKey,
+	materializeActiveMetricKeys,
+	toggleCompareMetricKeyFromState
+} from '../weather-metrics-tab/compareMetricOrder.ts';
 import { flushPendingWeatherMetricsSave } from '../weather-metrics-tab/weatherMetricsCompareSave.ts';
+import { COMPARE_METRIC_KEYS } from '../corridor-editor/corridorEditorState.ts';
 import type { ComparePreset } from '../../../types.ts';
 
 describe('Issue #1359 Scheibe 1: Reihenfolge-Abschnitt im Vergleich', () => {
@@ -66,6 +71,34 @@ describe('Issue #1359 Scheibe 1: An-/Abwaehlen erhaelt die Reihenfolge (AC-2)', 
 		const input = [...ORDER];
 		toggleCompareMetricKey(input, 'temp_max_c');
 		assert.deepEqual(input, ORDER);
+	});
+});
+
+// Issue #1366 F002 (symmetrisch zu F001/CompareHourlyLayoutControls): echter
+// Bedienpfad ueber toggleCompareMetricKeyFromState -- genau die Funktion, die
+// WeatherMetricsTab.svelte fuer den Checkbox-Handler aufruft. Ein isolierter
+// toggleCompareMetricKey([], ...)-Aufruf haette den F002-Regress nicht
+// gefangen (Adversary-Dialog Runde 2).
+describe('toggleCompareMetricKeyFromState — echter Bedienpfad (Issue #1366 F002)', () => {
+	test('Bestandsvergleich ohne gespeicherte Auswahl (null), eine Groesse abwaehlen -> Vorgabemenge minus eine', () => {
+		const [first] = COMPARE_METRIC_KEYS;
+		const result = toggleCompareMetricKeyFromState(null, first);
+		assert.deepEqual(
+			result,
+			COMPARE_METRIC_KEYS.filter((k) => k !== first),
+			'F002-Regression: eine einzelne Abwahl aus "nie eingestellt" darf nicht in eine leere Liste kippen'
+		);
+		assert.equal(result.length, COMPARE_METRIC_KEYS.length - 1);
+	});
+
+	test('bewusste Leerauswahl ([]), eine Groesse anhaken -> genau diese eine', () => {
+		const result = toggleCompareMetricKeyFromState([], 'temp_max_c');
+		assert.deepEqual(result, ['temp_max_c']);
+	});
+
+	test('materializeActiveMetricKeys: null -> Vorgabemenge, [] bleibt leer', () => {
+		assert.deepEqual(materializeActiveMetricKeys(null), COMPARE_METRIC_KEYS);
+		assert.deepEqual(materializeActiveMetricKeys([]), []);
 	});
 });
 

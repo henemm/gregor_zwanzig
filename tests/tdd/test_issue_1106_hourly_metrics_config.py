@@ -134,21 +134,22 @@ class TestResolveHourlyMetrics:
         result = resolve_hourly_metrics(None)
         assert result is None, f"None muss None ergeben (kein Filter, alle 9 sichtbar), erhalten {result!r}"
 
-    def test_empty_list_returns_none(self):
+    def test_empty_list_returns_empty_list(self):
+        """Issue #1366: bewusste Leerauswahl bleibt leer (kein Rueckfall auf None/alle 9)."""
         from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
 
         result = resolve_hourly_metrics([])
-        assert result is None, f"Leere Liste muss None ergeben (Default alle 9), erhalten {result!r}"
+        assert result == [], f"Leere Liste muss [] ergeben (bewusst leer), erhalten {result!r}"
 
-    def test_unknown_ids_are_dropped_leads_to_none(self):
-        """Bildet eine Auswahl komplett auf nichts Mappbares ab -> None
-        (keine leere Stundentabelle statt Default 'alle')."""
+    def test_unknown_ids_are_dropped_leads_to_empty_list(self):
+        """Issue #1366 (AC-5): eine komplett unmappbare Auswahl -> [] (keine
+        Stundenspalten), nicht mehr Rueckfall auf None (= Default 'alle')."""
         from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
 
         result = resolve_hourly_metrics(["voellig_unbekannte_id_xyz"])
-        assert result is None, (
-            f"Unbekannte ID muss verworfen werden -> Ergebnis None (nicht leeres "
-            f"Set, nicht Absturz), erhalten {result!r}"
+        assert result == [], (
+            f"Unbekannte ID muss verworfen werden -> Ergebnis [] (nicht Absturz, "
+            f"nicht Rueckfall auf alle), erhalten {result!r}"
         )
 
     def test_scalar_string_input_returns_none_not_crashed(self):

@@ -50,19 +50,20 @@ export const DEFAULT_HOURLY_METRIC_KEYS: string[] = ALL_HOURLY_METRICS.filter(
 ).map((m) => m.key);
 
 /**
- * Reine Toggle-Funktion für die Stundenverlauf-Metrikauswahl. Materialisiert
- * bei leerer Auswahl NUR die Default-Menge (nicht den vollen Katalog inkl.
- * defaultOff-Einträgen) und wendet dann den Toggle an. Geteilt zwischen Hub
- * und Anlege-Seite über CompareHourlyLayoutControls.svelte (Issue #1335
- * Scheibe 1, Adversary-Fund F002).
+ * Reine Toggle-Funktion für die Stundenverlauf-Metrikauswahl. Arbeitet direkt
+ * auf der uebergebenen (ggf. leeren) Liste -- eine leere Auswahl ist seit
+ * Issue #1366 (AC-8) eine bewusste Nutzerwahl und wird NICHT mehr durch die
+ * volle Default-Menge ersetzt, bevor der Toggle greift (sonst erzeugt ein
+ * Klick aus "nichts" "Vorgabe minus eins" statt "genau die eine Spalte").
+ * Geteilt zwischen Hub und Anlege-Seite über CompareHourlyLayoutControls.svelte
+ * (Issue #1335 Scheibe 1, Adversary-Fund F002).
  */
 export function applyHourlyMetricToggle(
 	currentKeys: string[],
 	key: string,
 	checked: boolean
 ): string[] {
-	const materialized =
-		currentKeys.length === 0 ? [...DEFAULT_HOURLY_METRIC_KEYS] : [...currentKeys];
+	const materialized = [...currentKeys];
 	if (checked) {
 		if (!materialized.includes(key)) materialized.push(key);
 	} else {
@@ -70,6 +71,38 @@ export function applyHourlyMetricToggle(
 		if (idx >= 0) materialized.splice(idx, 1);
 	}
 	return materialized;
+}
+
+/**
+ * Issue #1366 Adversary-Fund F001: EINZIGE Materialisierungs-Stelle fuer
+ * "nie eingestellt" (`null`) -> Vorgabemenge. Eine bewusst geleerte Auswahl
+ * (`[]`) bleibt unveraendert leer -- nur `null` (Editor-Zustand seit dieser
+ * Aenderung, s. CompareWizardState.hourlyMetricKeys) loest die Default-Menge
+ * aus. Anzeige (isHourlyMetricActive) UND Umschalt-Handler (s.u.) muessen
+ * ZWINGEND dieselbe Funktion nutzen -- vorher wichen beide Stellen in
+ * CompareHourlyLayoutControls.svelte voneinander ab (Anzeige materialisierte,
+ * der Handler arbeitete auf der rohen Liste), was aus "eine von neun Spalten
+ * abwaehlen" faelschlich eine komplette Leerauswahl machte.
+ */
+export function materializeHourlyMetricKeys(keys: string[] | null): string[] {
+	return keys === null ? DEFAULT_HOURLY_METRIC_KEYS : keys;
+}
+
+/**
+ * Issue #1366 F001: der Umschalt-Handler-Pfad, wie ihn
+ * CompareHourlyLayoutControls.svelte tatsaechlich aufruft -- materialisiert
+ * zuerst (analog Anzeige), toggelt danach auf der materialisierten Liste.
+ * Ohne diesen Umweg ueber die materialisierte Liste erzeugte ein Klick aus
+ * "nie eingestellt" (Anzeige zeigt alle 9 an) die leere Liste statt "8 von 9"
+ * -- Regression, s. Adversary-Dialog Runde 1, docs/artifacts/
+ * fix-1366-leerauswahl-heisst-leer/adversary-dialog.md.
+ */
+export function applyHourlyMetricToggleFromState(
+	currentKeys: string[] | null,
+	key: string,
+	checked: boolean
+): string[] {
+	return applyHourlyMetricToggle(materializeHourlyMetricKeys(currentKeys), key, checked);
 }
 
 /**

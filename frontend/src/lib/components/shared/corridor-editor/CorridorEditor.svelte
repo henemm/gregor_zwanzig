@@ -29,6 +29,11 @@
 		type RouteMetricDef, type CompareMetricDef, type ProfileKey,
 	} from './corridorEditorState.ts';
 	import { loadCompareMetricCatalog } from './compareMetricCatalogLoader.ts';
+	// Issue #1366 F002: `ws.activeMetricKeys` ist jetzt `string[] | null` ("nie
+	// eingestellt" vs. "bewusst leer") -- materialisiert lesen, NIE roh
+	// spreaden/an buildCompareCorridorSavePayload durchreichen (das wuerde
+	// `null` still zu `[]` = "bewusst leer" machen).
+	import { materializeActiveMetricKeys } from '../weather-metrics-tab/compareMetricOrder.ts';
 
 	interface Props {
 		context?: 'route' | 'vergleich';
@@ -53,7 +58,8 @@
 	// active_metrics — Bestandserhalt beim "+ Metrik hinzufuegen" (s. add()).
 	// Analog originalLevels: NICHT der laufende Zwischenstand, sonst wuerde ein
 	// zweiter Hinzufuegen-Klick faelschlich wieder "neu" wirken.
-	const originalActiveMetricKeys: string[] = context === 'vergleich' ? [...(ws?.activeMetricKeys ?? [])] : [];
+	const originalActiveMetricKeys: string[] =
+		context === 'vergleich' ? [...materializeActiveMetricKeys(ws?.activeMetricKeys ?? null)] : [];
 
 	// Team-Lead-Korrektur (PO-Linie „nichts Neues erfinden — wie heute"):
 	// Wizard-Create (kein Edit, noch keine Corridors) prefillt wie das alte
@@ -138,7 +144,7 @@
 		if (!ws) return;
 		const payload = buildCompareCorridorSavePayload(rows, removedMetrics, {
 			idealRanges: ws.idealRanges,
-			activeMetricKeys: ws.activeMetricKeys,
+			activeMetricKeys: materializeActiveMetricKeys(ws.activeMetricKeys),
 			metricAlertLevels: ws.metricAlertLevels as Record<string, SensLevel | undefined>,
 		}, unknownCorridors);
 		ws.corridors = payload.corridors;

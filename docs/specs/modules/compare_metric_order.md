@@ -343,6 +343,11 @@ bleibt aber im Scope des Issues.
     verlinkt im Changelog. AC-8 schützt in dieser Scheibe nur noch die
     Renderer-Ebene, wo das Verhalten bereits korrekt ist und durch AC-7
     nicht kaputtgehen darf.
+    - **Update 2026-07-26 (Issue #1366, S3 Scheibe B von Epic #1372):** die
+      hier beschriebene vorgelagerte Verflachung ist behoben —
+      `resolve_enabled_metrics([])` liefert jetzt auch auf dem vollen Weg
+      bis zum Renderer `[]` statt `None`. Details:
+      `docs/specs/modules/compare_empty_metric_selection.md`.
 
 - **AC-10:** Given der Nutzer hat eine Metrik-Reihenfolge eingestellt und
   bekommt den Ortsvergleich zusätzlich per SMS / When die SMS erzeugt wird,
@@ -421,6 +426,9 @@ bleibt aber im Scope des Issues.
 
 ## Changelog
 
+- 2026-07-26: Die in AC-8 dokumentierte, vorgelagerte Leerauswahl-Verflachung
+  ist behoben — Issue #1366 (S3 Scheibe B von Epic #1372), siehe
+  `docs/specs/modules/compare_empty_metric_selection.md`.
 - 2026-07-24: Initial spec erstellt — Issue #1359, Scheibe 1 (Metrik-Reihenfolge)
 - 2026-07-24: AC-2 und AC-6 nach PO-Durchsicht geschärft (AC-2 schützt jetzt
   ausdrücklich die Reihenfolge der *übrigen* Metriken; AC-6 gegen

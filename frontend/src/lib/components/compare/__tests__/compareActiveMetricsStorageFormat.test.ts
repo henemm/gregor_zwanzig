@@ -153,7 +153,7 @@ describe('AC-9: Bearbeiten schreibt die Metrik-Auswahl als Groesse + Auswertung'
 	});
 });
 
-describe('AC-9: Neuanlage schreibt dasselbe Format, behaelt aber die Asymmetrie', () => {
+describe('AC-9: Neuanlage schreibt dasselbe Format wie der Edit-Pfad', () => {
 	const newFields = {
 		name: 'Neu',
 		pickedIds: ['loc-a', 'loc-b', 'loc-c'],
@@ -193,14 +193,15 @@ describe('AC-9: Neuanlage schreibt dasselbe Format, behaelt aber die Asymmetrie'
 		);
 	});
 
-	test('leere Auswahl laesst den Schluessel weg (Asymmetrie #1191/F001 bleibt)', () => {
+	test('leere Auswahl schreibt den Schluessel explizit als [] (Issue #1366: Asymmetrie behoben)', () => {
 		loadCatalog();
 		const payload = buildNewComparePresetPayload({ ...newFields, activeMetricKeys: [] });
 
-		assert.equal(
-			'active_metrics' in (payload.display_config as Record<string, unknown>),
-			false,
-			'#1191/F001: beim Anlegen bleibt der Schluessel bei leerer Auswahl weg'
+		assert.deepEqual(
+			(payload.display_config as Record<string, unknown>).active_metrics,
+			[],
+			'#1366: die Neuanlage muss eine bewusste Leerauswahl wie der Edit-Pfad als [] ' +
+				'persistieren, nicht den Schluessel weglassen (sonst kippt sie in "alle")'
 		);
 	});
 });

@@ -210,13 +210,13 @@ def test_duplicate_pair_in_selection_deduplicates_order_preserving():
 # ===========================================================================
 
 
-def test_empty_selection_returns_none_exactly_as_before():
-    """AC-3: die bewusst leere Auswahl liefert weiterhin `None` (= kein
-    Filter). Dieses Verhalten wird von dieser Lieferung NICHT geaendert
-    (compare_metric_ids.py:114-115); die Zustaendigkeit fuer die
-    `[]`-vs-`None`-Sonderbehandlung im Uebersichts-Renderer bleibt bei #1366."""
-    assert resolve_enabled_metrics([]) is None, (
-        "AC-3: leere Auswahl muss weiterhin None ergeben (kein Filter)"
+def test_empty_selection_returns_empty_list():
+    """Issue #1366: die bewusst leere Auswahl liefert `[]`, nicht mehr `None`
+    (= "leer heisst leer" statt "leer heisst alle"). Die Dual-Format-
+    Normalisierung (`_to_key`) davor bleibt unveraendert, nur der Rueckgabewert
+    aendert sich."""
+    assert resolve_enabled_metrics([]) == [], (
+        "Issue #1366: leere Auswahl muss [] ergeben (bewusst leer), nicht None"
     )
 
 
@@ -231,15 +231,15 @@ def test_non_list_input_stays_defensive_and_never_raises():
         )
 
 
-def test_selection_with_only_unresolvable_entries_returns_none():
-    """AC-3/Bestandsverhalten: bildet die Auswahl komplett auf nichts Aufloes-
-    bares ab, ist das Ergebnis `None` (kein leeres Matrix-Rendering) -- fuer
-    Neuformat-Eintraege genauso wie bisher fuer Zeichenketten."""
-    assert resolve_enabled_metrics([_pair("gibtsnicht", "max")]) is None, (
-        "Eine Auswahl nur aus unbekannten Groesse-Auswertung-Paaren muss None "
-        "ergeben (wie heute bei nur unbekannten Zeichenketten)"
+def test_selection_with_only_unresolvable_entries_returns_empty_list():
+    """Issue #1366 (AC-2): bildet die Auswahl komplett auf nichts Aufloesbares
+    ab, ist das Ergebnis `[]` (keine Zeile), nicht `None` (= alle) -- fuer
+    Neuformat-Eintraege genauso wie fuer Zeichenketten."""
+    assert resolve_enabled_metrics([_pair("gibtsnicht", "max")]) == [], (
+        "Eine Auswahl nur aus unbekannten Groesse-Auswertung-Paaren muss [] "
+        "ergeben (wie bei nur unbekannten Zeichenketten)"
     )
-    assert resolve_enabled_metrics(["gibtsnicht_auch_nicht"]) is None
+    assert resolve_enabled_metrics(["gibtsnicht_auch_nicht"]) == []
 
 
 # ===========================================================================

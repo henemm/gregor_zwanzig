@@ -102,7 +102,8 @@ export interface HubEdit {
 	telegramStyle?: 'rich' | 'kurzform';
 	// Issue #1299/C2: Stundenverlauf-Felder, bisher NIE über den Hub-Pfad
 	// geschrieben (nur über den weggeleiteten wizardState.saveComparePreset()).
-	hourlyMetricKeys?: string[];
+	// Issue #1366 F001: `null` = „nie eingestellt" (Editor-Zustand unangetastet).
+	hourlyMetricKeys?: string[] | null;
 	hourlyEnabled?: boolean;
 	// Issue #1361/#1372 S1b: gemeinsames Tagesfenster. undefined = nicht
 	// editiert -> Round-Trip via `preset.day_window_start_hour/_end_hour`.
@@ -164,7 +165,8 @@ export function buildHubPutPayload(
 		// Issue #1299/C2: Lücke geschlossen — bislang kannte buildHubPutPayload
 		// diese beiden Felder nicht, obwohl buildComparePresetSavePayload sie
 		// laengst verarbeitet (compareEditorSave.ts:104-111,142).
-		hourlyMetricKeys: edit.hourlyMetricKeys ?? (displayConfig.hourly_metrics as string[] | undefined),
+		hourlyMetricKeys:
+			edit.hourlyMetricKeys ?? (displayConfig.hourly_metrics as string[] | null | undefined),
 		hourlyEnabled: edit.hourlyEnabled ?? preset.hourly_enabled,
 		// Issue #1361/#1372 S1b: 1:1 Round-Trip wie alle anderen HubEdit-Felder.
 		dayWindowStartHour: edit.dayWindowStartHour ?? preset.day_window_start_hour ?? undefined,
@@ -433,7 +435,10 @@ export interface AlarmHydrationTarget {
 	// Issue #1320: activeMetricKeys wird sonst nur von den Hydrations-Effekten
 	// der Tabs "wetter-metriken"/"idealwerte" befuellt — fehlt Alarme als
 	// Erst-Tab (Deep-Link), zeigt AlarmeTab.svelte faelschlich "keine Metriken".
-	activeMetricKeys?: string[];
+	// Issue #1366 F002: `string[] | null`, damit `wizardState` (jetzt nullable)
+	// strukturell zuweisbar bleibt -- hydrateAlarmFieldsFromPreset schreibt hier
+	// ohnehin immer einen konkreten Wert (Zeile unten), nie `null`.
+	activeMetricKeys?: string[] | null;
 }
 
 /**
@@ -591,7 +596,10 @@ export function rollbackAlarmSnapshot(
 /** Plain-Snapshot der beiden persistenzrelevanten Layout-Tab-Felder (analog
  * `VersandSnapshot`). Issue #1299/#1291/#1287 (Scheibe C2 von Epic #1301). */
 export interface LayoutSnapshot {
-	hourlyMetricKeys: string[];
+	// Issue #1366 F001: `null` = „nie eingestellt" (Feld fehlt im Preset),
+	// `[]` = bewusste Leerauswahl -- beide muessen unterscheidbar bleiben
+	// (vorher kollabierte `?? []` beides zu derselben leeren Liste).
+	hourlyMetricKeys: string[] | null;
 	hourlyEnabled: boolean;
 }
 
@@ -603,7 +611,7 @@ export interface LayoutSnapshot {
 export function hydrateLayoutFieldsFromPreset(preset: ComparePreset): LayoutSnapshot {
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
 	return {
-		hourlyMetricKeys: (displayConfig.hourly_metrics as string[] | undefined) ?? [],
+		hourlyMetricKeys: (displayConfig.hourly_metrics as string[] | null | undefined) ?? null,
 		hourlyEnabled: preset.hourly_enabled ?? true
 	};
 }
@@ -636,7 +644,7 @@ export function flushPendingLayoutSave(
 ): { url: string; body: ComparePreset } | null {
 	const baseline = before ?? current;
 	const norm = (s: LayoutSnapshot) => ({
-		hourlyMetricKeys: [...s.hourlyMetricKeys],
+		hourlyMetricKeys: s.hourlyMetricKeys === null ? null : [...s.hourlyMetricKeys],
 		hourlyEnabled: s.hourlyEnabled
 	});
 	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;
@@ -653,7 +661,7 @@ export function flushPendingLayoutSave(
  * genuegt, kein diff-basierter Rollback noetig.
  */
 export function rollbackLayoutSnapshot(
-	state: { hourlyMetricKeys?: string[]; hourlyEnabled?: boolean },
+	state: { hourlyMetricKeys?: string[] | null; hourlyEnabled?: boolean },
 	before: LayoutSnapshot
 ): void {
 	state.hourlyMetricKeys = before.hourlyMetricKeys;

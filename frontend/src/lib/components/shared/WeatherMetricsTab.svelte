@@ -70,7 +70,12 @@
 	import { loadCompareSelectionEntries } from './corridor-editor/compareMetricCatalogLoader.ts';
 	// Issue #1359 Scheibe 1: reihenfolge-erhaltendes An-/Abwaehlen als reine,
 	// testbare Funktion (Muster: weatherMetricsTabSections.ts nebenan).
-	import { toggleCompareMetricKey } from './weather-metrics-tab/compareMetricOrder.ts';
+	// Issue #1366 F002: materializeActiveMetricKeys/toggleCompareMetricKeyFromState
+	// unterscheiden „nie eingestellt" von „bewusst leer" (analog Stundenverlauf F001).
+	import {
+		materializeActiveMetricKeys,
+		toggleCompareMetricKeyFromState
+	} from './weather-metrics-tab/compareMetricOrder.ts';
 
 	interface Template {
 		id: string;
@@ -743,8 +748,13 @@
 	// Komponenten-Mount pruefbar ist (AC-2).
 	function toggleCompareMetric(metric: string) {
 		if (!wiz) return;
-		wiz.activeMetricKeys = toggleCompareMetricKey(wiz.activeMetricKeys, metric);
+		wiz.activeMetricKeys = toggleCompareMetricKeyFromState(wiz.activeMetricKeys, metric);
 	}
+
+	// Issue #1366 F002: EINZIGE Materialisierungs-Quelle fuer Anzeige (Checkbox-
+	// Grundauswahl + Reihenfolge-Liste) -- muss mit dem Umschalt-Handler oben
+	// uebereinstimmen (F001-Regressionsmuster sonst).
+	const materializedActiveMetricKeys = $derived(materializeActiveMetricKeys(wiz?.activeMetricKeys ?? null));
 
 	// ── Issue #1359 Scheibe 1: Reihenfolge-Block im Vergleich ────────────────
 	// Label/Einheit fuer WeatherV2Reihenfolge kommen aus dem BEREITS geladenen
@@ -857,7 +867,7 @@
 						<label class="vergleich-metric-row" data-testid="weather-metrics-vergleich-row-{entry.metric}">
 							<input
 								type="checkbox"
-								checked={wiz?.activeMetricKeys.includes(entry.metric) ?? false}
+								checked={materializedActiveMetricKeys.includes(entry.metric)}
 								onchange={() => toggleCompareMetric(entry.metric)}
 							/>
 							<span>{entry.label}</span>
@@ -890,7 +900,7 @@
 					erster Stelle und sind deshalb nicht Teil der sortierbaren Liste.
 				</p>
 				<WeatherV2Reihenfolge
-					primaryColumns={wiz?.activeMetricKeys ?? []}
+					primaryColumns={materializedActiveMetricKeys}
 					metricById={compareMetricById}
 					friendlyMap={{}}
 					activeChannel="email"

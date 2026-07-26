@@ -280,7 +280,8 @@ Hub folgt seiner eigenen Konvention (`compare-detail-panel-*`,
   „Stundenverlauf"-Schalter selbst.
 - **Output:** Genau ein PUT auf `/api/compare/presets/{id}` pro
   abgeschlossener Interaktion (Bubble-Event-Guard), setzt
-  `display_config.hourly_metrics` (oder entfernt den Key bei Leerauswahl)
+  `display_config.hourly_metrics` (seit Issue #1366 unbedingt, auch als `[]`
+  bei bewusster Leerauswahl — s. Update-Hinweis bei AC-5)
   bzw. `hourly_enabled`; alle anderen Preset-Felder — insbesondere `top_n`,
   `channel_layouts`, `forecast_hours`, `hour_from`, `hour_to` — bleiben
   über den RMW-Pfad unverändert. Die nächste Vergleichs-Mail
@@ -348,6 +349,12 @@ Hub folgt seiner eigenen Konvention (`compare-detail-panel-*`,
   `[]` gesendet) — Default-Semantik „alle sichtbar" bleibt erhalten.
   - Test: `flushPendingLayoutSave` mit `hourlyMetricKeys: []` — Payload-
     Body enthält den Schlüssel `hourly_metrics` in `display_config` NICHT.
+  - **Update 2026-07-26 (Issue #1366, S3 Scheibe B von Epic #1372):**
+    dieses AC ist überholt. Eine bewusste Leerauswahl bedeutete bisher
+    versehentlich „alle Spalten" (Gegenteil der Nutzereingabe) — seither
+    wird `[]` unbedingt gesendet und bedeutet „keiner Ort bekommt einen
+    Stundenverlauf-Block". Details:
+    `docs/specs/modules/compare_empty_metric_selection.md`.
 
 - **AC-6:** Given ein PUT-Fehler beim Committen einer Layout-Änderung /
   When `handleLayoutCommit` den Fehlerpfad durchläuft / Then rollt
@@ -410,4 +417,8 @@ Hub folgt seiner eigenen Konvention (`compare-detail-panel-*`,
 
 ## Changelog
 
+- 2026-07-26: AC-5 überholt — Issue #1366 (S3 Scheibe B von Epic #1372)
+  sendet eine bewusste Leerauswahl seither unbedingt als `[]` statt den Key
+  wegzulassen; `[]` bedeutet jetzt „kein Stundenverlauf-Block" statt „alle
+  Spalten". Siehe `docs/specs/modules/compare_empty_metric_selection.md`.
 - 2026-07-18: Initial spec erstellt — Scheibe C2 von Epic #1301

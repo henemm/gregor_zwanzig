@@ -125,10 +125,12 @@ def _to_key(item: object) -> str | None:
 def resolve_enabled_metrics(
     active_metrics: list[str | dict] | None,
 ) -> list[str] | None:
-    """Rueckgabe None (= kein Filter, alle Metriken sichtbar) wenn active_metrics
-    leer/None ist -- rueckwaertskompatibler Default (AC-2/AC-4). Nicht mappbare
-    IDs werden verworfen statt zum Absturz zu fuehren; bildet die Auswahl komplett
-    auf nichts Mappbares ab -> ebenfalls None (kein leeres Matrix-Rendering).
+    """Rueckgabe None (= kein Filter, alle Metriken sichtbar) nur wenn das Feld
+    fehlt (`active_metrics is None`) -- rueckwaertskompatibler Default fuer
+    Altbestand (AC-3). Eine bewusst leere oder komplett unauflösbare Auswahl
+    liefert `[]` zurueck, nicht None (Issue #1366, AC-1/AC-2) -- "leer heisst
+    leer" statt "leer heisst alle". Nicht mappbare IDs werden verworfen statt
+    zum Absturz zu fuehren.
 
     Nicht-Listen-Input (dict/str/int) wird ebenfalls defensiv zu None -- kein
     TypeError, kein fehlerhaftes Iterieren ueber String-Zeichen oder Dict-Keys.
@@ -144,7 +146,7 @@ def resolve_enabled_metrics(
     gebliebene Browser-Sitzung). Die Normalisierung laeuft PRO ELEMENT und VOR
     dem Dedup; Dedup-Schluessel bleibt die Renderer-Kennung, die Reihenfolge
     (#1335/#1359) bleibt damit unveraendert erhalten."""
-    if not active_metrics:
+    if active_metrics is None:
         return None
     if not isinstance(active_metrics, list):
         return None
@@ -167,4 +169,4 @@ def resolve_enabled_metrics(
         for _item, key in normalized
         if key is not None and key in FRONTEND_TO_RENDERER_METRIC_ID
     ))
-    return resolved or None
+    return resolved

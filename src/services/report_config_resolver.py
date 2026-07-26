@@ -234,10 +234,20 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         except (KeyError, TypeError, ValueError, AttributeError):
             logger.warning("Compare-Preset %s: ungueltiger Korridor %r uebersprungen", preset_id, raw)
 
+    resolved_hourly_metrics = resolve_hourly_metrics(display_config.get("hourly_metrics"))
+    hourly_enabled = preset.get("hourly_enabled", True)
+    if resolved_hourly_metrics == []:
+        # Issue #1366/#1361 Befund 3: eine bewusst leere oder komplett
+        # unauflösbare Stundenauswahl schaltet den Block ab statt eine
+        # Tabelle mit nur der Zeit-Spalte zu rendern (Pflicht-Validator
+        # lehnt das ab, s. Spec). Wer hourly_enabled selbst schon aus
+        # hatte, bleibt unberuehrt.
+        hourly_enabled = False
+
     return CompareRenderOptions(
         enabled_metrics=resolve_enabled_metrics(display_config.get("active_metrics")),
-        hourly_metrics=resolve_hourly_metrics(display_config.get("hourly_metrics")),
-        hourly_enabled=preset.get("hourly_enabled", True),
+        hourly_metrics=resolved_hourly_metrics,
+        hourly_enabled=hourly_enabled,
         corridors=corridors or None,
         outlook_enabled=preset.get("outlook_enabled", True),
     )

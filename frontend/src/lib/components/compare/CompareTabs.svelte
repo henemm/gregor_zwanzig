@@ -58,6 +58,9 @@
 		hydrateDayWindowFromPreset,
 		type WeatherMetricsSnapshot
 	} from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
+	// Issue #1366 F002: EINZIGE Materialisierungs-Quelle „nie eingestellt" (null)
+	// -> Vorgabemenge, geteilt mit WeatherMetricsTab.svelte/CorridorEditor(Mobile).
+	import { materializeActiveMetricKeys } from '../shared/weather-metrics-tab/compareMetricOrder.ts';
 	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): die Metrik-Auswahl liegt im
 	// Speicherformat Größe + Auswertung — die Hydration dieses Reiters muss die
 	// Katalogantwort (Übersetzung auf Auswahl-Schlüssel) abwarten, BEVOR sie den
@@ -326,7 +329,9 @@
 	let lastPersistedCorridorSnapshot: {
 		corridors: typeof wizardState.corridors;
 		idealRanges: typeof wizardState.idealRanges;
-		activeMetricKeys: typeof wizardState.activeMetricKeys;
+		// Issue #1366 F002: CorridorSnapshot (compareHubWizardBridge.ts) erwartet
+		// weiterhin `string[]` (nicht nullable) -- materialisiert unten.
+		activeMetricKeys: string[];
 		metricAlertLevels: typeof wizardState.metricAlertLevels;
 	} | null = null;
 
@@ -334,7 +339,11 @@
 		return snapshotForRollback({
 			corridors: wizardState.corridors,
 			idealRanges: wizardState.idealRanges,
-			activeMetricKeys: wizardState.activeMetricKeys,
+			// Issue #1366 F002: `null` ("nie eingestellt") auf die Vorgabemenge
+			// materialisieren -- kein `new Set(null)`-Aufruf ueber einen ungeprueften
+			// Zwischenstand in buildCompareCorridorSavePayload (compareHubWizardBridge
+			// -> corridorEditorState.ts), konsistent mit CorridorEditor(Mobile).svelte.
+			activeMetricKeys: materializeActiveMetricKeys(wizardState.activeMetricKeys),
 			metricAlertLevels: wizardState.metricAlertLevels
 		});
 	}
@@ -670,7 +679,11 @@
 
 	function currentWetterMetrikenSnapshot(): WeatherMetricsSnapshot {
 		return {
-			activeMetricKeys: [...wizardState.activeMetricKeys],
+			// Issue #1366 F002: materialisiert `null` ("nie eingestellt") auf die
+			// Vorgabemenge -- an dieser Stelle laueft die Hydration IMMER zuerst
+			// (hydrateWetterMetrikenTab unten), zur Absicherung trotzdem konsequent
+			// dieselbe Funktion statt eines rohen Spreads (kein `[...null]`).
+			activeMetricKeys: [...materializeActiveMetricKeys(wizardState.activeMetricKeys)],
 			officialAlertsEnabled: wizardState.officialAlertsEnabled,
 			dayWindowStartHour: wizardState.dayWindowStartHour,
 			dayWindowEndHour: wizardState.dayWindowEndHour
@@ -780,7 +793,11 @@
 		saveController?.setSaving();
 		const updated = await hubPutQueue.enqueue(async () => {
 			const current: LayoutSnapshot = {
-				hourlyMetricKeys: [...wizardState.hourlyMetricKeys],
+				// Issue #1366 F001: `null` (nie eingestellt) bleibt `null`, sonst
+				// wuerde ein reiner Toggle-Wechsel ohne Metrik-Anfassen den
+				// unangetasteten Zustand faelschlich in eine Leerauswahl kippen.
+				hourlyMetricKeys:
+					wizardState.hourlyMetricKeys === null ? null : [...wizardState.hourlyMetricKeys],
 				hourlyEnabled: wizardState.hourlyEnabled
 			};
 			const before = lastPersistedLayoutSnapshot ?? current;

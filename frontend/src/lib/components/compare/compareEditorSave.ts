@@ -25,7 +25,10 @@ export interface CompareEditorEdits {
 	// Issue #680: Slice 3 — aktive Metriken (AC-10). Optional → rückwärtskompatibel.
 	activeMetricKeys?: string[];
 	// Issue #1106: Slice C — Stundenverlauf-Metriken. Optional → rückwärtskompatibel.
-	hourlyMetricKeys?: string[];
+	// Issue #1366 F001: `null` möglich (Hub reicht den unangetasteten Editor-
+	// Zustand „nie eingestellt" durch) — wird wie ein Wert behandelt (RMW-Merge
+	// überschreibt), nicht wie „Feld nicht editiert" (das ist `undefined`).
+	hourlyMetricKeys?: string[] | null;
 	// Issue #1040: amtliche Warnungen ein/aus. Optional → rückwärtskompatibel.
 	officialAlertsEnabled?: boolean;
 	// Issue #1041 Slice 2: Radar-Alarm ein/aus (Default AUS). Optional → rückwärtskompatibel.
@@ -115,8 +118,9 @@ export function buildComparePresetSavePayload(
 		// Bug #1299/C2 (Staging-Fund F005): Leere Auswahl EXPLIZIT als [] persistieren —
 		// NICHT den Key loeschen. Der Server-Merge (mergeConfigMap, config_merge.go, #1159)
 		// ueberschreibt Keys nur, loescht sie nie; ein weggelassener Key bliebe wirkungslos
-		// (alter Wert bleibt). Der Renderer resolve_hourly_metrics behandelt [] identisch
-		// zu absent -> alle 9 Spalten sichtbar. Analog active_metrics (#1191).
+		// (alter Wert bleibt). Seit Issue #1366 (F001) bedeutet [] „bewusst leer" —
+		// resolve_hourly_metrics laesst den Stundenblock dann entfallen; nur ein
+		// FEHLENDES Feld liefert weiterhin alle 9 Spalten. Analog active_metrics (#1191/#1366).
 		displayConfig.hourly_metrics = edits.hourlyMetricKeys;
 	}
 
@@ -224,8 +228,13 @@ export interface NewComparePresetFields {
 	corridors: Corridor[];
 	region: string;
 	idealRanges: Record<string, IdealRange>;
-	activeMetricKeys: string[];
-	hourlyMetricKeys: string[];
+	// Issue #1366 F002 (symmetrisch zu F001/hourlyMetricKeys): `null` = „nie
+	// eingestellt" -- der Schluessel `active_metrics` wird dann gar nicht
+	// gesendet (Default bleibt „alle").
+	activeMetricKeys: string[] | null;
+	// Issue #1366 F001: `null` = „nie eingestellt" -- der Schluessel
+	// `hourly_metrics` wird dann gar nicht gesendet (Default bleibt „alle").
+	hourlyMetricKeys: string[] | null;
 	metricAlertLevels: Record<string, string>;
 	telegramStyle: 'rich' | 'kurzform';
 }
@@ -283,14 +292,20 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 		display_config: {
 			region: fields.region,
 			...(Object.keys(fields.idealRanges).length > 0 ? { ideal_ranges: fields.idealRanges } : {}),
-			// Issue #1373 (S2 Scheibe B): Neuformat (Groesse + Auswertung). Die
-			// Asymmetrie zum Edit-Pfad bleibt bewusst erhalten (#1191/F001): bei
-			// leerer Auswahl laesst die Neuanlage den Key WEG, der Edit-Pfad
-			// schreibt ihn explizit als [].
-			...(fields.activeMetricKeys.length > 0
+			// Issue #1366 F002 (Fix-Runde 2, loest die S3B-Fassung dieses Kommentars
+			// ab): `null` ("Wetter-Metriken-Bereich nie geoeffnet/beruehrt") laesst
+			// den Schluessel ganz weg -- der Resolver erkennt "Feld fehlt" (= alle
+			// Groessen), statt einer faelschlich gesendeten Leerauswahl (Adversary
+			// F002). Eine ECHTE bewusste Leerauswahl (`[]`, Bereich geoeffnet und
+			// alles abgewaehlt) wird weiterhin unbedingt gesendet -- AC-7 bleibt gueltig.
+			...(fields.activeMetricKeys !== null
 				? { active_metrics: toStoredActiveMetrics(fields.activeMetricKeys) }
 				: {}),
-			...(fields.hourlyMetricKeys.length > 0 ? { hourly_metrics: fields.hourlyMetricKeys } : {}),
+			// Issue #1366 F001: anders als frueher NICHT unbedingt gesetzt -- `null`
+			// (Stundenverlauf-Tab nie geoeffnet/beruehrt) laesst den Schluessel ganz
+			// weg, damit der Resolver „Feld fehlt" (= alle Spalten) erkennt statt
+			// einer faelschlich gesendeten Leerauswahl.
+			...(fields.hourlyMetricKeys !== null ? { hourly_metrics: fields.hourlyMetricKeys } : {}),
 			...(Object.keys(fields.metricAlertLevels).length > 0
 				? { metric_alert_levels: fields.metricAlertLevels }
 				: {}),

@@ -41,6 +41,11 @@
 		type RouteMetricDef, type CompareMetricDef, type ProfileKey,
 	} from './corridorEditorState.ts';
 	import { loadCompareMetricCatalog } from './compareMetricCatalogLoader.ts';
+	// Issue #1366 F002: `ws.activeMetricKeys` ist jetzt `string[] | null` ("nie
+	// eingestellt" vs. "bewusst leer") -- materialisiert lesen, NIE roh
+	// spreaden/an buildCompareCorridorSavePayload durchreichen (das wuerde
+	// `null` still zu `[]` = "bewusst leer" machen).
+	import { materializeActiveMetricKeys } from '../weather-metrics-tab/compareMetricOrder.ts';
 
 	interface Props {
 		context?: 'route' | 'vergleich';
@@ -59,7 +64,8 @@
 			? (ws?.metricAlertLevels as Record<string, SensLevel> | undefined)
 			: trip?.display_config?.metric_alert_levels
 	) ?? {} as Record<string, SensLevel>;
-	const originalActiveMetricKeys: string[] = context === 'vergleich' ? [...(ws?.activeMetricKeys ?? [])] : [];
+	const originalActiveMetricKeys: string[] =
+		context === 'vergleich' ? [...materializeActiveMetricKeys(ws?.activeMetricKeys ?? null)] : [];
 
 	const isFreshCompareCreate = context === 'vergleich' && !ws?.isEditMode && (ws?.corridors ?? []).length === 0;
 	function computeInitialCompare(defs: CompareMetricDef[]): { rows: CorridorRowState[]; poolLeft: CompareMetricDef[]; unknownCorridors: Corridor[] } {
@@ -118,7 +124,7 @@
 		if (!ws) return;
 		const payload = buildCompareCorridorSavePayload(rows, removedMetrics, {
 			idealRanges: ws.idealRanges,
-			activeMetricKeys: ws.activeMetricKeys,
+			activeMetricKeys: materializeActiveMetricKeys(ws.activeMetricKeys),
 			metricAlertLevels: ws.metricAlertLevels as Record<string, SensLevel | undefined>,
 		}, unknownCorridors);
 		ws.corridors = payload.corridors;

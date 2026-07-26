@@ -51,11 +51,12 @@ class TestResolveEnabledMetrics:
             f"Erwartet ['wind_max', 'cloud_avg'], erhalten {result!r}"
         )
 
-    def test_empty_list_returns_none(self):
+    def test_empty_list_returns_empty_list(self):
+        """Issue #1366: bewusste Leerauswahl bleibt leer (kein Rueckfall auf None/alle)."""
         from output.renderers.compare_metric_ids import resolve_enabled_metrics
 
         result = resolve_enabled_metrics([])
-        assert result is None, f"Leere Liste muss None ergeben (kein Filter), erhalten {result!r}"
+        assert result == [], f"Leere Liste muss [] ergeben (bewusst leer), erhalten {result!r}"
 
     def test_none_returns_none(self):
         from output.renderers.compare_metric_ids import resolve_enabled_metrics
@@ -72,10 +73,12 @@ class TestResolveEnabledMetrics:
         # ist jetzt gemappt und taugt nicht mehr als Beispiel fuer eine UNBEKANNTE
         # ID. Die Aussage des Tests bleibt unveraendert -- geprueft mit einer ID,
         # die es wirklich nicht gibt.
+        # Issue #1366 (AC-2): Ergebnis ist seitdem [] statt None (kein
+        # Rueckfall auf "alle" bei komplett unmappbarer Auswahl).
         result = resolve_enabled_metrics(["voellig_unbekannte_metrik_xyz"])
-        assert result is None, (
-            f"Unbekannte ID muss verworfen werden -> Ergebnis None (nicht leeres "
-            f"Set, nicht Absturz), erhalten {result!r}"
+        assert result == [], (
+            f"Unbekannte ID muss verworfen werden -> Ergebnis [] (nicht "
+            f"Absturz, nicht Rueckfall auf alle), erhalten {result!r}"
         )
 
     def test_scalar_string_input_returns_none_not_crashed(self):

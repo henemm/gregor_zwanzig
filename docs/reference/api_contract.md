@@ -1574,7 +1574,13 @@ versendet für `target_date=heute`, Abend-Slot für `target_date=morgen`. Guards
     fester Codebestandteil, keine befristete Übergangshilfe.
   - Leere Liste `[]` bleibt von einem fehlenden Feld unterscheidbar (#1191):
     `[]` = bewusst alles abgewählt, fehlendes Feld = Legacy-Fallback (s.u.).
-    Dieses Verhalten ändert sich durch das neue Speicherformat nicht.
+    Dieses Verhalten ändert sich durch das neue Speicherformat nicht. **Seit
+    Issue #1366 (S3 Scheibe B von Epic #1372, 2026-07-26)** gilt das
+    einheitlich auch für den Render-/Übersichtspfad (`resolve_enabled_metrics()`
+    unten) — vorher fiel dort `[]` fälschlich auf „alle" zurück. Eine
+    Auswahl, die sich vollständig auf keine bekannte Renderer-ID abbilden
+    lässt, verhält sich seither identisch zu einer bewussten Leerauswahl
+    (`[]`), nicht mehr wie ein fehlendes Feld.
   - Zwei unabhängige Leser lösen pro Element auf: `resolve_enabled_metrics()`
     in `src/output/renderers/compare_metric_ids.py` (Render-/Übersichtspfad)
     und `_display_config_from_active_metrics()` in
@@ -1606,7 +1612,7 @@ versendet für `target_date=heute`, Abend-Slot für `target_date=morgen`. Guards
   noch `metric_alert_levels` (Alarm-Schwelle je Metrik), unverändert. Die
   Legacy-Semantik (absent = alle alarmfähigen feuern) bleibt davon unberührt.
 - `ideal_ranges`: `Record<string, IdealRange>` — Min/Max-Idealwerte pro Metrik (z.B. `{"temp_max_c": {"min": 15, "max": 35}, ...}`). Wird vom Compare-Engine zur Bewertung verwendet.
-- `hourly_metrics`: `string[]` — Ausgewählte Metrik-Keys für die STUNDEN-Sektion der Vergleichs-Mail (Katalog: `ALL_HOURLY_METRICS`, 9 Keys, eigenständiges Compare-Vokabular ohne Trip-Pendant, `frontend/src/lib/components/compare/compareHourlyMetricDefs.ts`). Leere Liste `[]`/Key absent = Default „alle sichtbar"; eine Leerauswahl im UI entfernt den Key wieder aus dem PUT-Body statt ihn als `[]` zu senden. **Schreiber seit Issue #1299 (C2 von Epic #1301):** bedienbar im Hub-Layout-Tab (`CompareTabs.svelte`, `activeTab==="layout"`, `flushPendingLayoutSave`/`hydrateLayoutFieldsFromPreset`/`rollbackLayoutSnapshot` in `compareHubWizardBridge.ts`, Muster wie die C1-Wetter-Metriken-Bridge). Vorher nur über den seit S3 weggeleiteten Legacy-`CompareEditor` (`CompareInhaltSection.svelte`) erreichbar.
+- `hourly_metrics`: `string[]` — Ausgewählte Metrik-Keys für die STUNDEN-Sektion der Vergleichs-Mail (Katalog: `ALL_HOURLY_METRICS`, 9 Keys, eigenständiges Compare-Vokabular ohne Trip-Pendant, `frontend/src/lib/components/compare/compareHourlyMetricDefs.ts`). **Seit Issue #1366 + #1361 Befund 3 (S3 Scheibe B von Epic #1372, 2026-07-26):** Key absent = Default „alle sichtbar" (Legacy-Fallback); Feld vorhanden und `[]` (bewusst leer) oder vollständig unauflösbar = „keine Spalten" — der Stundenverlauf-Block entfällt dafür ganz (nicht nur die Uhrzeit-Spalte übrig), weil der Resolver diesen Fall zusätzlich auf `hourly_enabled=False` abbildet. Eine Leerauswahl im UI wird seither unbedingt als `[]` gesendet, der Key wird beim Speichern nicht mehr weggelassen (vorher: „leer/absent → alle sichtbar", `buildComparePresetSavePayload`/`buildNewComparePresetPayload` in `compareEditorSave.ts`). Details: `docs/specs/modules/compare_empty_metric_selection.md`. **Schreiber seit Issue #1299 (C2 von Epic #1301):** bedienbar im Hub-Layout-Tab (`CompareTabs.svelte`, `activeTab==="layout"`, `flushPendingLayoutSave`/`hydrateLayoutFieldsFromPreset`/`rollbackLayoutSnapshot` in `compareHubWizardBridge.ts`, Muster wie die C1-Wetter-Metriken-Bridge). Vorher nur über den seit S3 weggeleiteten Legacy-`CompareEditor` (`CompareInhaltSection.svelte`) erreichbar.
 - `output_layout`: opaque (zukünftig) — Spalten-Reihenfolge, Formatierung per Kanal
 - `schedule_config`: opaque (zukünftig) — Wiederholungs-Details
 
@@ -3027,6 +3033,17 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-07-26: Issues #1366 + #1361 Befund 3 (S3 Scheibe B von Epic #1372) —
+  `resolve_enabled_metrics()`/`resolve_hourly_metrics()` unterscheiden jetzt
+  „Feld fehlt" (Legacy-Fallback: alle Größen/Spalten) von „Feld vorhanden und
+  leer bzw. vollständig unauflösbar" (keine Größen/Spalten) — vorher fielen
+  beide Fälle auf „alle" zurück, das genaue Gegenteil einer bewussten
+  Leerauswahl. Für den Stundenverlauf bildet `resolve_compare_render_options()`
+  eine leere/unauflösbare Auswahl zusätzlich auf `hourly_enabled=False` ab,
+  damit der Block ganz entfällt statt einer Tabelle nur mit Uhrzeit-Spalte.
+  Unauflösbare Stundenverlauf-Kennungen werden jetzt geloggt statt still
+  verworfen. Section 16 (`active_metrics`/`hourly_metrics`) aktualisiert.
+  Siehe `docs/specs/modules/compare_empty_metric_selection.md`.
 - 2026-07-26: Issue #1373 S2 Scheibe B (`1f413a54`) — Speicherformat von
   `display_config.active_metrics` (Compare-Preset, `kind=vergleich`)
   umgestellt: geschrieben wird ab dieser Lieferung ausschließlich

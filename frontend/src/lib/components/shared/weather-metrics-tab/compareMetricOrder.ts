@@ -7,6 +7,36 @@
 // testbar (AC-2 verlangt genau das).
 //
 // Spec: docs/specs/modules/compare_metric_order.md (AC-2, Known Limitations)
+//
+// Issue #1366 F002 (symmetrisch zu F001/compareHourlyMetricDefs.ts):
+// materializeActiveMetricKeys/toggleCompareMetricKeyFromState unterscheiden
+// „nie eingestellt" (`null`) von „bewusst leer" (`[]`) -- EINZIGE Quelle der
+// Wahrheit fuer Anzeige UND Umschalt-Handler in WeatherMetricsTab.svelte.
+
+import { COMPARE_METRIC_KEYS } from '../corridor-editor/corridorEditorState.ts';
+
+/**
+ * `null` (nie eingestellt) -> Vorgabemenge (COMPARE_METRIC_KEYS, dieselbe
+ * Liste wie die Legacy-Default-Ableitung in weatherMetricsCompareSave.ts).
+ * `[]` (bewusste Leerauswahl) bleibt unveraendert leer.
+ */
+export function materializeActiveMetricKeys(keys: string[] | null): string[] {
+	return keys === null ? COMPARE_METRIC_KEYS : keys;
+}
+
+/**
+ * Umschalt-Handler-Pfad wie WeatherMetricsTab.svelte ihn tatsaechlich
+ * aufruft -- materialisiert zuerst (analog Anzeige), toggelt danach. Ohne
+ * diesen Umweg erzeugte ein Klick aus "nie eingestellt" (Anzeige zeigt alle
+ * Metriken an) faelschlich eine leere Liste statt "alle minus eine" (F001-
+ * Regressionsmuster, hier fuer die Uebersichtstabelle vorab geschlossen).
+ */
+export function toggleCompareMetricKeyFromState(
+	currentKeys: string[] | null,
+	metric: string
+): string[] {
+	return toggleCompareMetricKey(materializeActiveMetricKeys(currentKeys), metric);
+}
 
 /**
  * An-/Abwaehlen einer Metrik unter ERHALT der Reihenfolge aller uebrigen.

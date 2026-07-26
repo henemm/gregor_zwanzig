@@ -18,6 +18,7 @@ import {
 	ALL_HOURLY_METRICS,
 	DEFAULT_HOURLY_METRIC_KEYS,
 	applyHourlyMetricToggle,
+	applyHourlyMetricToggleFromState,
 	orderableHourlyMetricKeys,
 	applyHourlyReorder
 } from './compareHourlyMetricDefs.ts';
@@ -97,6 +98,27 @@ describe('applyHourlyMetricToggle — kein stiller Windrichtungs-Merge (Issue #1
 		const withWindDir = applyHourlyMetricToggle([], 'wind_dir_deg', true);
 		const withoutWindDir = applyHourlyMetricToggle(withWindDir, 'wind_dir_deg', false);
 		assert.ok(!withoutWindDir.includes('wind_dir_deg'));
+	});
+});
+
+describe('applyHourlyMetricToggleFromState — echter Bedienpfad (Issue #1366 Adversary-Fund F001)', () => {
+	// Ruft denselben Pfad wie CompareHourlyLayoutControls.svelte tatsaechlich
+	// auf (Materialisierung + Toggle in einem Schritt) -- anders als ein
+	// isolierter applyHourlyMetricToggle([], ...)-Aufruf, der den Regress
+	// nicht gefangen haette (Adversary-Dialog Runde 1).
+	test('Bedienfall 1: aus "nie eingestellt" (null) eine einzelne Spalte abwaehlen laesst 8 von 9 aktiv', () => {
+		const result = applyHourlyMetricToggleFromState(null, 'gust_kmh', false);
+		assert.deepEqual(
+			result,
+			DEFAULT_HOURLY_METRIC_KEYS.filter((k) => k !== 'gust_kmh'),
+			`F001-Regression: erwartet 8 von 9 Spalten, erhalten ${JSON.stringify(result)}`
+		);
+		assert.equal(result.length, 8);
+	});
+
+	test('Bedienfall 2 (AC-8 bleibt gruen): aus bewusster Leerauswahl ([]) eine Spalte anhaken ergibt genau diese eine', () => {
+		const result = applyHourlyMetricToggleFromState([], 'temp_c', true);
+		assert.deepEqual(result, ['temp_c']);
 	});
 });
 

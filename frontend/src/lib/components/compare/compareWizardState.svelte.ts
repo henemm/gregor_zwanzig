@@ -23,13 +23,21 @@ export class CompareWizardState {
 	// Issue #441: Idealwerte pro Metrik (Step 3); leer = nicht in display_config.
 	idealRanges = $state<Record<string, IdealRange>>({});
 	// Issue #680: Slice 3 — aktive Metriken-Auswahl (aus display_config.active_metrics)
-	activeMetricKeys = $state<string[]>([]);
+	// Issue #1366 F002 (symmetrisch zu F001/hourlyMetricKeys): `null` = „nie
+	// eingestellt" (Default-Menge aktiv), `[]` = bewusste Leerauswahl. Init auf
+	// `null`, NICHT `[]` -- sonst startet ein neuer Vergleich, dessen
+	// Wetter-Metriken-Bereich nie geoeffnet wurde, bereits als „bewusst leer"
+	// (materializeActiveMetricKeys, compareMetricOrder.ts).
+	activeMetricKeys = $state<string[] | null>(null);
 	// Issue #1231 Slice 4 — Korridore (CorridorEditor context="vergleich"),
 	// TOP-LEVEL Feld (Dual-Write spiegelt zusaetzlich in idealRanges/activeMetricKeys/
 	// metricAlertLevels, s. corridorEditorState.ts::buildCompareCorridorSavePayload).
 	corridors = $state<Corridor[]>([]);
 	// Issue #1106: Slice C — Stundenverlauf-Metriken-Auswahl (aus display_config.hourly_metrics)
-	hourlyMetricKeys = $state<string[]>([]);
+	// Issue #1366 F001: `null` = „nie eingestellt" (Default-Menge aktiv),
+	// `[]` = bewusste Leerauswahl. Init auf `null`, NICHT `[]` -- sonst startet
+	// ein neuer Vergleich bereits als „bewusst leer" (materializeHourlyMetricKeys).
+	hourlyMetricKeys = $state<string[] | null>(null);
 	metricsManuallyEdited = $state(false);
 	// Issue #443 — Step 5 Versand-Felder
 	sendEmail = $state(true);
@@ -150,7 +158,11 @@ export class CompareWizardState {
 			pickedIds: this.pickedIds,
 			region: this.region,
 			idealRanges: this.idealRanges,
-			activeMetricKeys: this.activeMetricKeys,
+			// Issue #1366 F002: `CompareEditorEdits.activeMetricKeys` erwartet weiterhin
+			// `string[] | undefined` (unveraendert, Edit-Pfad nicht betroffen) --
+			// `null` ("nie eingestellt") wird hier zu `undefined` ("nicht editiert,
+			// Round-Trip"), NICHT zu `[]` (das waere "bewusst leer").
+			activeMetricKeys: this.activeMetricKeys ?? undefined,
 			hourlyMetricKeys: this.hourlyMetricKeys, // Issue #1106
 			officialAlertsEnabled: this.officialAlertsEnabled, // Issue #1040
 			radarAlertEnabled: this.radarAlertEnabled, // Issue #1041 Slice 2
