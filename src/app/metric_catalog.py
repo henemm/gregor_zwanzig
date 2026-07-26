@@ -274,7 +274,9 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("min", "max"),
         compact_label="SG", col_key="snow_limit", col_label="SnowL",
         providers={"openmeteo": False, "geosphere": True},
-        # No summary_fields: not on SegmentWeatherSummary
+        # Issue #1391: MIN -- _compute_snowfall_limit() (weather_metrics.py)
+        # rechnet das Minimum ueber die Segment-Stunden (kanonische Trip-Regel).
+        summary_fields={"min": "snowfall_limit_m"},
         default_change_threshold=200.0,
         sms_code="SL", decimals=0, cmp="unter", alert_label="0°-Grenze",
     ),
@@ -310,7 +312,8 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
         friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
-        # No summary_fields: not on SegmentWeatherSummary
+        # Issue #1392: Tages-Mittelwert (gerundet, analog cloud_total).
+        summary_fields={"avg": "cloud_low_avg_pct"},
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
     ),
@@ -322,7 +325,8 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
         friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
-        # No summary_fields: not on SegmentWeatherSummary
+        # Issue #1392: Tages-Mittelwert (gerundet, analog cloud_total).
+        summary_fields={"avg": "cloud_mid_avg_pct"},
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
     ),
@@ -334,7 +338,8 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
         friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
-        # No summary_fields: not on SegmentWeatherSummary
+        # Issue #1392: Tages-Mittelwert (gerundet, analog cloud_total).
+        summary_fields={"avg": "cloud_high_avg_pct"},
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
     ),

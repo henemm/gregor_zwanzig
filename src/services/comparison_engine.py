@@ -18,7 +18,7 @@ from app.config import Location
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from services.comparison_scoring import calculate_score
 from services.forecast import ForecastService
-from services.weather_metrics import WeatherMetricsService
+from services.weather_metrics import WeatherMetricsService, summarize_points
 from validation.ground_truth import BergfexScraper
 
 if TYPE_CHECKING:
@@ -199,16 +199,18 @@ class ComparisonEngine:
                         filtered_data, loc.elevation_m, settings=settings
                     )
 
-                    # Cloud layers for "Wolkenlage" analysis
-                    cloud_low = [dp.cloud_low_pct for dp in filtered_data if dp.cloud_low_pct is not None]
-                    cloud_mid = [dp.cloud_mid_pct for dp in filtered_data if dp.cloud_mid_pct is not None]
-                    cloud_high = [dp.cloud_high_pct for dp in filtered_data if dp.cloud_high_pct is not None]
-                    if cloud_low:
-                        metrics["cloud_low_avg"] = int(sum(cloud_low) / len(cloud_low))
-                    if cloud_mid:
-                        metrics["cloud_mid_avg"] = int(sum(cloud_mid) / len(cloud_mid))
-                    if cloud_high:
-                        metrics["cloud_high_avg"] = int(sum(cloud_high) / len(cloud_high))
+                    # Cloud layers for "Wolkenlage" analysis -- Issue #1392:
+                    # kanonische Tages-Auswertung (summarize_points(), rundet)
+                    # statt eigener Mittelung, damit Compare- und Trip-Pfad
+                    # fuer denselben Stundensatz denselben Wert liefern.
+                    cloud_layers_summary = summarize_points(filtered_data)
+                    if cloud_layers_summary is not None:
+                        if cloud_layers_summary.cloud_low_avg_pct is not None:
+                            metrics["cloud_low_avg"] = cloud_layers_summary.cloud_low_avg_pct
+                        if cloud_layers_summary.cloud_mid_avg_pct is not None:
+                            metrics["cloud_mid_avg"] = cloud_layers_summary.cloud_mid_avg_pct
+                        if cloud_layers_summary.cloud_high_avg_pct is not None:
+                            metrics["cloud_high_avg"] = cloud_layers_summary.cloud_high_avg_pct
 
                     # Issue #1285: Tages-Aggregate fuer Regen/Sicht/UV. Regeln
                     # kanonisch aus dem Trip-Pfad (WeatherMetricsService:
@@ -445,16 +447,17 @@ def fetch_forecast_for_location(
                 result["cloud_max"] = max(clouds)
                 result["cloud_avg"] = int(sum(clouds) / len(clouds))
 
-            # Cloud layers (from Open-Meteo)
-            cloud_low = [dp.cloud_low_pct for dp in forecast.data if dp.cloud_low_pct is not None]
-            cloud_mid = [dp.cloud_mid_pct for dp in forecast.data if dp.cloud_mid_pct is not None]
-            cloud_high = [dp.cloud_high_pct for dp in forecast.data if dp.cloud_high_pct is not None]
-            if cloud_low:
-                result["cloud_low_avg"] = int(sum(cloud_low) / len(cloud_low))
-            if cloud_mid:
-                result["cloud_mid_avg"] = int(sum(cloud_mid) / len(cloud_mid))
-            if cloud_high:
-                result["cloud_high_avg"] = int(sum(cloud_high) / len(cloud_high))
+            # Cloud layers (from Open-Meteo) -- Issue #1392: kanonische
+            # Tages-Auswertung statt eigener Mittelung (s. Kommentar oben in
+            # ComparisonEngine.run()).
+            cloud_layers_summary = summarize_points(forecast.data)
+            if cloud_layers_summary is not None:
+                if cloud_layers_summary.cloud_low_avg_pct is not None:
+                    result["cloud_low_avg"] = cloud_layers_summary.cloud_low_avg_pct
+                if cloud_layers_summary.cloud_mid_avg_pct is not None:
+                    result["cloud_mid_avg"] = cloud_layers_summary.cloud_mid_avg_pct
+                if cloud_layers_summary.cloud_high_avg_pct is not None:
+                    result["cloud_high_avg"] = cloud_layers_summary.cloud_high_avg_pct
 
             # Precipitation
             precips = [dp.precip_1h_mm for dp in forecast.data if dp.precip_1h_mm is not None]

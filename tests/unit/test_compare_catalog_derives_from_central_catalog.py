@@ -17,6 +17,7 @@ werden nur Kopien manipuliert, nie die echten Katalog-Listen.
 """
 from __future__ import annotations
 
+import sys
 from dataclasses import replace
 
 from app.metric_catalog import MetricDefinition, get_all_metrics
@@ -27,20 +28,12 @@ from output.renderers.compare_metric_catalog import get_compare_metric_catalog
 # Schluessel = zentrale Katalog-Kennung, Wert = Issue + Begruendung.
 # Ein NEUER Eintrag hier ist ein Befund, kein Schleichweg: er bedeutet, dass
 # eine zentrale Groesse ihr Tages-Auswertungsfeld verloren hat.
+#
+# Seit #1391/#1392 (Katalog-Korrektur: alle vier Groessen tragen jetzt
+# summary_fields) leer -- s. test_aggregation_check_exemptions_empty_after_
+# 1391_1392_fix weiter unten.
 # ---------------------------------------------------------------------------
-_NO_DAILY_FIELD = (
-    "#1392 -- kein Tages-Auswertungsfeld auf SegmentWeatherSummary vorhanden, "
-    "der Vergleich rechnet den Wert selbst aus."
-)
-AGGREGATION_CHECK_EXEMPTIONS: dict[str, str] = {
-    "cloud_low": _NO_DAILY_FIELD,
-    "cloud_mid": _NO_DAILY_FIELD,
-    "cloud_high": _NO_DAILY_FIELD,
-    "snowfall_limit": (
-        "#1391 -- summary_fields fehlt, obwohl das Feld existiert und "
-        "befuellt wird; eigener Fehler mit Trip-Alarm-Wirkung."
-    ),
-}
+AGGREGATION_CHECK_EXEMPTIONS: dict[str, str] = {}
 
 # ---------------------------------------------------------------------------
 # Festnagelung fuer die Ausnahmen (F001): die Ausnahme betrifft AUSSCHLIESSLICH
@@ -48,15 +41,12 @@ AGGREGATION_CHECK_EXEMPTIONS: dict[str, str] = {
 # zentralen `default_aggregations` sein -- und wo davon mehr als eine zur Wahl
 # steht, ist die Wahl redaktionell und wird hier NAMENTLICH festgenagelt. Ohne
 # das bliebe ein echter Bedeutungsfehler (min <-> max) von jedem Test unbemerkt.
+#
+# Seit #1391 leer (snowfall_limit traegt jetzt summary_fields={"min": ...},
+# geht damit durch den strengeren summary_fields-Abgleich, keine Ausnahme
+# mehr noetig).
 # ---------------------------------------------------------------------------
-PINNED_EXEMPT_AGGREGATIONS: dict[str, tuple[str, str]] = {
-    "snowfall_limit": (
-        "min",
-        "_compute_snowfall_limit() (src/services/weather_metrics.py:848-858) "
-        "rechnet nachweislich das MINIMUM (kanonische Trip-Regel, analog zur "
-        "Nullgradgrenze) -- 'max' waere ein Bedeutungsfehler.",
-    ),
-}
+PINNED_EXEMPT_AGGREGATIONS: dict[str, tuple[str, str]] = {}
 
 
 def _central_selectable() -> dict[str, MetricDefinition]:
@@ -251,8 +241,20 @@ def test_compare_aggregation_is_one_of_the_central_summary_fields():
 
 
 # ---------------------------------------------------------------------------
-# Ausnahmeliste: darf nur schrumpfen
+# Ausnahmeliste: darf nur schrumpfen -- und wird durch #1391/#1392 leer
 # ---------------------------------------------------------------------------
+
+
+def test_aggregation_check_exemptions_empty_after_1391_1392_fix():
+    """AC-4 (#1391/#1392, rot vor Fix): sobald ``metric_catalog.py``
+    ``summary_fields`` fuer die Schneefallgrenze und die drei
+    Bewoelkungsstufen traegt, braucht keine der vier ausgenommenen Groessen
+    mehr die Nachsicht aus ``AGGREGATION_CHECK_EXEMPTIONS`` -- die Liste wird
+    leer. Heute (vor dem Fix) enthaelt sie noch alle vier Eintraege."""
+    assert AGGREGATION_CHECK_EXEMPTIONS == {}, (
+        "AGGREGATION_CHECK_EXEMPTIONS soll nach #1391/#1392 leer sein, "
+        f"enthaelt aber noch: {sorted(AGGREGATION_CHECK_EXEMPTIONS)}"
+    )
 
 
 def test_aggregation_exemptions_only_shrink():
@@ -308,13 +310,22 @@ def test_every_exempt_metric_with_an_editorial_choice_is_pinned():
         )
 
     # Und der echte Katalog haelt sich daran -- namentlich, nicht nur generisch.
+    # Fallstrick (#1391/#1392): sobald die Ausnahme fuer 'snowfall_limit'
+    # entfernt wird (Zielzustand), verschwindet der Eintrag auch aus
+    # PINNED_EXEMPT_AGGREGATIONS -- ein harter Index wuerde dann bei einem
+    # tatsaechlichen Fehlschlag mit KeyError abstuerzen statt die Assertion
+    # sauber zu melden. Deshalb `.get()` mit Fallback-Text.
     by_metric_id = {
         e.get("metric_id"): e.get("aggregation") for e in get_compare_metric_catalog()
     }
+    _snowfall_pin = PINNED_EXEMPT_AGGREGATIONS.get("snowfall_limit")
+    _snowfall_reason = _snowfall_pin[1] if _snowfall_pin else (
+        "_compute_snowfall_limit() (src/services/weather_metrics.py) rechnet "
+        "das MINIMUM -- 'max' waere ein Bedeutungsfehler."
+    )
     assert by_metric_id.get("snowfall_limit") == "min", (
         "Die Schneefallgrenze im Ortsvergleich zeigt "
-        f"{by_metric_id.get('snowfall_limit')!r} statt 'min' -- "
-        f"{PINNED_EXEMPT_AGGREGATIONS['snowfall_limit'][1]}"
+        f"{by_metric_id.get('snowfall_limit')!r} statt 'min' -- {_snowfall_reason}"
     )
 
 
@@ -392,8 +403,8 @@ def test_guard_actually_fails_when_a_central_metric_has_no_compare_entry():
     )
 
 
-def test_aggregation_guard_actually_fails_on_a_wrong_aggregation():
-    """Wirkungsnachweis zu (c): dieselbe Pruef-Funktion laeuft gegen drei
+def test_aggregation_guard_actually_fails_on_a_wrong_aggregation(monkeypatch):
+    """Wirkungsnachweis zu (c): dieselbe Pruef-Funktion laeuft gegen
     kuenstliche Eintraege (Kopien, keine Produktivdaten):
       * korrekte Auswertung -> kein Befund,
       * erfundene Auswertung -> Befund, der Key und Auswertung nennt,
@@ -401,6 +412,15 @@ def test_aggregation_guard_actually_fails_on_a_wrong_aggregation():
         Befund (die Ausnahme wirkt gezielt auf den summary_fields-Abgleich),
       * ausgenommene Groesse mit erfundener Auswertung -> Befund (die Ausnahme
         stellt NICHT die ganze Pruefung still, F001).
+
+    Fallstrick (#1391/#1392, aus dem Kontext-Dokument): die Ausnahme-Wirkung
+    darf NICHT ueber eine Schleife ueber die ECHTE
+    ``AGGREGATION_CHECK_EXEMPTIONS`` gepruegft werden -- die wird durch die
+    Lieferung zu #1391/#1392 leer, eine solche Schleife liefe dann als
+    stiller No-Op durch (0 Iterationen, keine Assertion greift). Stattdessen
+    wird hier ein KUENSTLICH EINGESETZTER Ausnahme-Eintrag verwendet
+    (Attribut-Rebind via ``monkeypatch``, kein Mock) -- unabhaengig davon, ob
+    die reale Liste gerade vier Eintraege oder keinen enthaelt.
     """
     central = _central_selectable()
 
@@ -419,28 +439,34 @@ def test_aggregation_guard_actually_fails_on_a_wrong_aggregation():
         f"Befund nennt Eintrag und Auswertung nicht: {findings[0]}"
     )
 
-    for exempt_id, reason in AGGREGATION_CHECK_EXEMPTIONS.items():
-        pinned = PINNED_EXEMPT_AGGREGATIONS.get(exempt_id)
-        good = pinned[0] if pinned else central[exempt_id].default_aggregations[0]
-        assert not _aggregation_violations(
-            [{"key": "kunst_ausnahme", "metric_id": exempt_id, "aggregation": good}],
-            central,
-        ), f"Ausnahme fuer {exempt_id!r} greift nicht ({reason})"
+    # Kuenstliche zentrale Groesse mit >1 Auswertungen, OHNE summary_fields --
+    # strukturell wie 'snowfall_limit' heute, aber unter eigenem Namen und
+    # damit unabhaengig davon, ob 'snowfall_limit' selbst noch ausgenommen ist.
+    ghost = replace(central["snowfall_limit"], id="ghost_exempt_1391_1392", summary_fields={})
+    central_with_ghost = {**central, ghost.id: ghost}
+    assert not ghost.summary_fields and len(ghost.default_aggregations) > 1, (
+        "Vorbedingung verletzt: die kuenstliche Groesse ist nicht der Ausnahme-Fall."
+    )
+    monkeypatch.setattr(
+        sys.modules[__name__],
+        "AGGREGATION_CHECK_EXEMPTIONS",
+        {ghost.id: "test-only kuenstliche Ausnahme"},
+    )
 
-        bogus = _aggregation_violations(
-            [
-                {
-                    "key": "kunst_ausnahme_falsch",
-                    "metric_id": exempt_id,
-                    "aggregation": "erfunden",
-                }
-            ],
-            central,
-        )
-        assert len(bogus) == 1 and "kunst_ausnahme_falsch" in bogus[0], (
-            f"Ausnahme fuer {exempt_id!r} stellt die Plausibilitaet der "
-            f"Auswertung komplett still (F001): {bogus}"
-        )
+    good = ghost.default_aggregations[0]
+    assert not _aggregation_violations(
+        [{"key": "kunst_ausnahme", "metric_id": ghost.id, "aggregation": good}],
+        central_with_ghost,
+    ), f"Kuenstliche Ausnahme fuer {ghost.id!r} greift nicht"
+
+    bogus = _aggregation_violations(
+        [{"key": "kunst_ausnahme_falsch", "metric_id": ghost.id, "aggregation": "erfunden"}],
+        central_with_ghost,
+    )
+    assert len(bogus) == 1 and "kunst_ausnahme_falsch" in bogus[0], (
+        f"Kuenstliche Ausnahme fuer {ghost.id!r} stellt die Plausibilitaet "
+        f"der Auswertung komplett still (F001): {bogus}"
+    )
 
 
 def test_undeclared_metric_without_summary_fields_gets_no_leniency():
@@ -453,7 +479,12 @@ def test_undeclared_metric_without_summary_fields_gets_no_leniency():
     central = _central_selectable()
     # Strukturell wie `snowfall_limit` (kein `summary_fields`, zwei zentrale
     # Auswertungen) -- aber unter neuem Namen und damit NICHT erklaert.
-    ghost = replace(central["snowfall_limit"], id="ghost_two_agg", label_de="Geist")
+    # `summary_fields={}` explizit ueberschrieben: seit #1391 traegt
+    # `snowfall_limit` selbst `summary_fields` -- der Geist bleibt damit
+    # unabhaengig davon, welchen Zustand die reale Groesse gerade hat.
+    ghost = replace(
+        central["snowfall_limit"], id="ghost_two_agg", label_de="Geist", summary_fields={},
+    )
     assert not ghost.summary_fields and len(ghost.default_aggregations) > 1, (
         "Vorbedingung verletzt: die kuenstliche Groesse ist nicht der F003-Fall."
     )

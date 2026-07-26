@@ -18,7 +18,6 @@ from typing import Optional, Sequence
 from zoneinfo import ZoneInfo
 
 from app.models import ForecastDataPoint, NormalizedTimeseries, SegmentWeatherData
-from output.metric_format import max_thunder, thunder_ordinal
 from utils.timezone import local_hour
 
 DAY_WINDOW_START_HOUR = 4
@@ -39,6 +38,17 @@ def _merge_hour(dps: list[ForecastDataPoint]) -> ForecastDataPoint:
     """
     if len(dps) == 1:
         return dps[0]
+    # Issue #1391/#1392 F001 (Adversary): lazy statt Modulkopf-Import.
+    # `output.metric_format` importierte frueher (fuer einen inzwischen
+    # entfernten toten `tone_css`-Re-Export) die `output.renderers.email`-
+    # Paketkette, die WIEDER dieses Modul importierte -- ein Selbstbezug
+    # innerhalb des `output`-Pakets. Die eigentliche Ursache ist behoben
+    # (der Re-Export ist weg), dieser lazy Import bleibt trotzdem als
+    # zusaetzliche Absicherung: derselbe Import-Stil, den
+    # `WeatherMetricsService._compute_thunder_level` fuer `max_thunder`
+    # schon verwendet, verhindert, dass der naechste Modulkopf-Import
+    # irgendwo in der Renderer-Kette dieselbe Falle wieder aufreisst.
+    from output.metric_format import max_thunder, thunder_ordinal
     base = max(
         dps,
         key=lambda dp: (

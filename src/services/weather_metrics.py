@@ -741,6 +741,15 @@ class WeatherMetricsService:
         wind_dir_avg = self._compute_wind_direction(timeseries)
         precip_type_dom = self._compute_precip_type(timeseries)
         confidence_min = self._compute_confidence_min(timeseries)
+        # Issue #1391: Schneefallgrenze fehlte bislang im Trip-Pfad (nur
+        # summarize_points() -- Compare-Helfer -- setzte sie); ohne diesen
+        # Wert bleibt der Abweichungs-Alarm trotz Katalog-Schwelle stumm.
+        snowfall_limit = self._compute_snowfall_limit(timeseries)
+        # Issue #1392: Tages-Mittelwert je Bewoelkungsstufe, kanonisch fuer
+        # Trip- UND Compare-Pfad (s. summarize_points()).
+        cloud_low_avg = self._compute_cloud_low(timeseries)
+        cloud_mid_avg = self._compute_cloud_mid(timeseries)
+        cloud_high_avg = self._compute_cloud_high(timeseries)
 
         # Create new summary with basis + extended metrics
         extended_summary = SegmentWeatherSummary(
@@ -775,6 +784,12 @@ class WeatherMetricsService:
             precip_type_dominant=precip_type_dom,
             # Issue #121: forecast confidence aggregation
             confidence_pct_min=confidence_min,
+            # Issue #1391: Schneefallgrenze (Trip-Pfad)
+            snowfall_limit_m=snowfall_limit,
+            # Issue #1392: Bewoelkungsstufen-Tageswerte (Trip-Pfad)
+            cloud_low_avg_pct=cloud_low_avg,
+            cloud_mid_avg_pct=cloud_mid_avg,
+            cloud_high_avg_pct=cloud_high_avg,
             # Merge aggregation config
             aggregation_config={
                 **basis_summary.aggregation_config,
@@ -791,6 +806,10 @@ class WeatherMetricsService:
                 "wind_direction_avg_deg": "avg",
                 "precip_type_dominant": "max",
                 "confidence_pct_min": "min",
+                "snowfall_limit_m": "min",
+                "cloud_low_avg_pct": "avg",
+                "cloud_mid_avg_pct": "avg",
+                "cloud_high_avg_pct": "avg",
             },
         )
 
@@ -856,6 +875,27 @@ class WeatherMetricsService:
             dp.snowfall_limit_m for dp in timeseries.data if dp.snowfall_limit_m is not None
         ]
         return min(limits) if limits else None
+
+    def _compute_cloud_low(self, timeseries: NormalizedTimeseries) -> Optional[int]:
+        """Compute low-cloud-layer AVG. Returns cloud_low_avg_pct (Issue #1392).
+
+        Gerundet (nicht abgeschnitten) -- analog zur Schwester-Groesse
+        cloud_total (``_compute_cloud_cover``), damit beide Bewoelkungs-
+        Tagesfelder derselben Rundungsregel folgen. Kanonisch fuer Trip-
+        (``compute_extended_metrics``) und Compare-Pfad (``summarize_points``).
+        """
+        vals = [dp.cloud_low_pct for dp in timeseries.data if dp.cloud_low_pct is not None]
+        return round(sum(vals) / len(vals)) if vals else None
+
+    def _compute_cloud_mid(self, timeseries: NormalizedTimeseries) -> Optional[int]:
+        """Compute mid-cloud-layer AVG. Returns cloud_mid_avg_pct (Issue #1392)."""
+        vals = [dp.cloud_mid_pct for dp in timeseries.data if dp.cloud_mid_pct is not None]
+        return round(sum(vals) / len(vals)) if vals else None
+
+    def _compute_cloud_high(self, timeseries: NormalizedTimeseries) -> Optional[int]:
+        """Compute high-cloud-layer AVG. Returns cloud_high_avg_pct (Issue #1392)."""
+        vals = [dp.cloud_high_pct for dp in timeseries.data if dp.cloud_high_pct is not None]
+        return round(sum(vals) / len(vals)) if vals else None
 
     def _compute_pop(self, timeseries: NormalizedTimeseries) -> Optional[int]:
         """Compute precipitation probability MAX. Returns pop_max_pct."""
@@ -1030,6 +1070,11 @@ def summarize_points(points: list) -> Optional[SegmentWeatherSummary]:
     summary.pressure_avg_hpa = svc._compute_pressure(ts)
     summary.precip_type_dominant = svc._compute_precip_type(ts)
     summary.snowfall_limit_m = svc._compute_snowfall_limit(ts)
+    # Issue #1392: Bewoelkungsstufen-Tageswerte, kanonisch fuer Trip- UND
+    # Compare-Pfad (s. compute_extended_metrics()).
+    summary.cloud_low_avg_pct = svc._compute_cloud_low(ts)
+    summary.cloud_mid_avg_pct = svc._compute_cloud_mid(ts)
+    summary.cloud_high_avg_pct = svc._compute_cloud_high(ts)
     return summary
 
 

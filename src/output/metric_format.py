@@ -10,8 +10,6 @@ Kanal-Renderer:
   Katalog-Definition (``decimals``, ``unit``, ``display_unit``).
 - ``severity_for(metric_id, value)`` — kanonisches Ampel-Vokabular
   ``green/yellow/orange/red`` (oder ``None``) aus ``display_thresholds``.
-- ``tone_css(level)`` — re-exportiert aus ``design_tokens`` (kanonisches
-  Vokabular -> ``(bg, fg)``-Hex-Tupel).
 - ``label(metric_id, style)`` — reiner Katalog-Passthrough fuer Labels.
 
 Koexistenz-Strategie (Tech-Lead-Entscheidung, s. Spec): ``format_value`` ist
@@ -28,14 +26,9 @@ from typing import Iterable, Optional
 from app.metric_catalog import get_metric
 from app.models import ThunderLevel
 
-# tone_css lebt in design_tokens (naeher an den uebrigen Mail-Farbkonstanten),
-# wird hier nur re-exportiert, damit Konsumenten ein einziges Modul brauchen.
-from output.renderers.email.design_tokens import tone_css
-
 __all__ = [
     "format_value",
     "severity_for",
-    "tone_css",
     "label",
     "cloud_emoji",
     "thunder_ordinal",

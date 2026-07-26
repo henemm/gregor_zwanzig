@@ -602,16 +602,18 @@ class TestWeatherMetricsServiceExtendedKnownValues:
         """
         GIVEN: Basis summary with 10 config entries
         WHEN: compute_extended_metrics(timeseries, basis_summary)
-        THEN: aggregation_config has 23 entries (10 basis + 8 extended
+        THEN: aggregation_config has 27 entries (10 basis + 8 extended
               [dewpoint_avg_c, pressure_avg_hpa, wind_chill_min_c,
               wind_chill_max_c, snow_depth_cm, freezing_level_m, pop_max_pct,
               cape_max_jkg — wind_chill_max_c kam mit Issue #1135 dazu] + 4 new
               [uv_index_max, snow_new_sum_cm, wind_direction_avg_deg,
-              precip_type_dominant] + 1 confidence_pct_min from Issue #121)
+              precip_type_dominant] + 1 confidence_pct_min from Issue #121 + 4
+              from Issue #1391/#1392 [snowfall_limit_m, cloud_low_avg_pct,
+              cloud_mid_avg_pct, cloud_high_avg_pct])
         """
         result = service.compute_extended_metrics(extended_timeseries, basis_summary)
 
-        assert len(result.aggregation_config) == 23
+        assert len(result.aggregation_config) == 27
 
         # Basis config preserved
         assert result.aggregation_config["temp_min_c"] == "min"

@@ -40,15 +40,14 @@ from services.compare_alert import _SUMMARY_KEY_TO_CATALOG_ID
 # erleichtert visuellen Diff in Teil 2 (Spec "Expected Behavior").
 #
 # `metric_id`/`aggregation` (#1373): gemessen am zentralen Katalog
-# (`metric_catalog.MetricDefinition.summary_fields`), nicht geraten. Fuer 20 der
+# (`metric_catalog.MetricDefinition.summary_fields`), nicht geraten. Fuer 24 der
 # 26 Keys ist der Compare-Key woertlich der Summary-Feldname der zentralen
-# Groesse. Die sechs Abweichungen sind hier einzeln vermerkt:
+# Groesse. Die zwei verbleibenden Abweichungen sind hier einzeln vermerkt:
 #   sunny_hours_h      -> sunshine/sum       (zentral "sunny_hours", ohne _h)
 #   wind_direction_deg -> wind_direction/avg (zentral "wind_direction_avg_deg")
-#   cloud_low/mid/high -> .../avg            (kein summary_fields, #1392)
-#   snowfall_limit_m   -> snowfall_limit/min (kein summary_fields, #1391; MIN
-#                         ist die kanonische Trip-Regel, mit der der Wert
-#                         berechnet wird -- weather_metrics.py:848-858)
+# Seit #1391/#1392 tragen auch snowfall_limit_m (MIN -- kanonische Trip-Regel,
+# weather_metrics.py:_compute_snowfall_limit) und cloud_low/mid/high (AVG,
+# gerundet) `summary_fields` und sind damit keine Abweichung mehr.
 COMPARE_METRIC_CATALOG: list[dict] = [
     {"key": "snow_depth_cm", "label": "Schneehöhe", "unit": "cm", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": 0, "rangeMax": 200, "step": 5,

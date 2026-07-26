@@ -13,6 +13,7 @@ from app.models import (
     ChangeSeverity,
     ForecastMeta,
     GPXPoint,
+    MetricConfig,
     NormalizedTimeseries,
     Provider,
     SegmentWeatherData,
@@ -20,6 +21,7 @@ from app.models import (
     ThunderLevel,
     TripReportConfig,
     TripSegment,
+    UnifiedWeatherDisplayConfig,
 )
 from services.weather_change_detection import WeatherChangeDetectionService
 
@@ -382,18 +384,21 @@ class TestWeatherChangeDetectionService:
 class TestMetricCatalogIntegration:
     """v2.0: Test catalog-driven thresholds and from_trip_config()."""
 
-    def test_get_change_detection_map_returns_13_entries(self):
+    def test_get_change_detection_map_returns_14_entries(self):
         """
         GIVEN: MetricCatalog mit threshold=None für die 6 Vorboten-Metriken
         WHEN: get_change_detection_map()
-        THEN: Returns exactly 13 entries.
+        THEN: Returns exactly 14 entries.
 
         Issue #889 / ADR-0010: humidity, dewpoint, rain_probability, cloud_total,
         pressure und wind_chill tragen default_change_threshold=None und fallen
-        damit aus der Change-Detection-Map (vormals 19 Einträge).
+        damit aus der Change-Detection-Map (vormals 19 Einträge). Issue #1391:
+        snowfall_limit trägt jetzt `summary_fields` -- die Schwelle (200.0)
+        entsteht erstmals wirklich (vormals 13 Einträge trotz gesetzter
+        Schwelle, weil summary_fields fehlte).
         """
         detection_map = get_change_detection_map()
-        assert len(detection_map) == 13
+        assert len(detection_map) == 14
 
     def test_get_change_detection_map_values_match_v2(self):
         """
@@ -415,6 +420,7 @@ class TestMetricCatalogIntegration:
             "uv_index_max": 3.0,
             "snow_new_sum_cm": 5.0,
             "thunder_level_max": 1.0,
+            "snowfall_limit_m": 200.0,
         }
         detection_map = get_change_detection_map()
         assert detection_map == expected
@@ -506,3 +512,107 @@ class TestMetricCatalogIntegration:
             "cloud_avg_pct", "humidity_avg_pct", "pressure_avg_hpa", "pop_max_pct"
         ):
             assert vorbote not in service._thresholds
+
+
+class TestFromDisplayConfigSnowfallLimit:
+    """#1391 (rot vor Fix): ``snowfall_limit`` traegt im zentralen Katalog
+    kein ``summary_fields``, obwohl ``SegmentWeatherSummary.snowfall_limit_m``
+    existiert und befuellt wird (``_compute_snowfall_limit()``, MIN-Regel).
+    ``from_display_config()`` baut Schwellen ueber
+    ``metric_def.summary_fields.values()`` -- fuer die Schneefallgrenze
+    entsteht deshalb NIE eine Schwelle, der Abweichungs-Alarm kann strukturell
+    nicht feuern.
+    """
+
+    @staticmethod
+    def _segment():
+        now = datetime.now(timezone.utc)
+        return TripSegment(
+            segment_id=1,
+            start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000),
+            end_point=GPXPoint(lat=47.1, lon=11.1, elevation_m=1500),
+            start_time=now,
+            end_time=now,
+            duration_hours=2.0,
+            distance_km=5.0,
+            ascent_m=500,
+            descent_m=0,
+        )
+
+    @classmethod
+    def _data(cls, summary: SegmentWeatherSummary) -> SegmentWeatherData:
+        return SegmentWeatherData(
+            segment=cls._segment(),
+            timeseries=NormalizedTimeseries(
+                meta=ForecastMeta(
+                    provider=Provider.GEOSPHERE,
+                    model="test",
+                    run=datetime.now(timezone.utc),
+                    grid_res_km=1.0,
+                    interp="test",
+                ),
+                data=[],
+            ),
+            aggregated=summary,
+            fetched_at=datetime.now(timezone.utc),
+            provider="geosphere",
+        )
+
+    @staticmethod
+    def _display_config() -> UnifiedWeatherDisplayConfig:
+        """Trip-Display-Config mit aktivierter Schneefallgrenze, Alarm-Schwelle
+        200 m (identisch zu ``metric_catalog.snowfall_limit.default_change_threshold``)."""
+        return UnifiedWeatherDisplayConfig(
+            trip_id="tdd-1391",
+            metrics=[MetricConfig(metric_id="snowfall_limit", enabled=True, alert_threshold=200.0)],
+        )
+
+    def test_threshold_built_for_snowfall_limit_field(self):
+        """AC-1 (Teil 1): ``from_display_config()`` muss fuer die aktivierte
+        Schneefallgrenze eine Schwelle auf dem Feld ``snowfall_limit_m``
+        aufbauen."""
+        service = WeatherChangeDetectionService.from_display_config(self._display_config())
+        assert "snowfall_limit_m" in service._thresholds, (
+            "from_display_config() baut fuer 'Schneefallgrenze' keine Schwelle "
+            f"auf (Schwellen: {service._thresholds}) -- metric_catalog.snowfall_limit "
+            "traegt kein summary_fields (#1391), der Schwellenaufbau in "
+            "weather_change_detection.py iteriert aber ueber summary_fields.values()."
+        )
+        assert service._thresholds["snowfall_limit_m"] == 200.0
+
+    def test_significant_drop_is_detected_via_detect_changes(self):
+        """AC-1 (Teil 2): ein Absinken der Schneefallgrenze um mehr als 200 m
+        muss ueber den ECHTEN Vergleichsweg (detect_changes) als Abweichung
+        erkannt werden."""
+        service = WeatherChangeDetectionService.from_display_config(self._display_config())
+        old = SegmentWeatherSummary(snowfall_limit_m=2500)
+        new = SegmentWeatherSummary(snowfall_limit_m=2250)  # -250 m, > 200 m Schwelle
+
+        changes = service.detect_changes(self._data(old), self._data(new))
+
+        sl_changes = [c for c in changes if c.metric == "snowfall_limit_m"]
+        assert sl_changes, (
+            "Absinken der Schneefallgrenze um 250 m (> 200 m Schwelle) muss "
+            f"einen Change-Eintrag erzeugen, detect_changes() liefert aber: "
+            f"{changes} -- der Alarm fuer die Schneefallgrenze kann "
+            "strukturell nicht feuern (#1391)."
+        )
+        assert sl_changes[0].direction == "decrease"
+        assert sl_changes[0].delta == -250.0
+
+    def test_small_drop_below_threshold_stays_silent(self):
+        """Regressions-Absicherung (darf bereits heute gruen sein): ein
+        Absinken um weniger als 200 m darf keinen Change-Eintrag erzeugen --
+        heute trivial wahr (es entsteht nie ein Change), nach dem Fix, weil
+        die Schwelle greift, aber nicht ueberschritten wird."""
+        service = WeatherChangeDetectionService.from_display_config(self._display_config())
+        old = SegmentWeatherSummary(snowfall_limit_m=2500)
+        new = SegmentWeatherSummary(snowfall_limit_m=2400)  # -100 m, < 200 m Schwelle
+
+        changes = service.detect_changes(self._data(old), self._data(new))
+
+        sl_changes = [c for c in changes if c.metric == "snowfall_limit_m"]
+        assert sl_changes == [], (
+            f"Absinken um 100 m (< 200 m Schwelle) darf keinen Change-Eintrag "
+            f"erzeugen, erzeugt wurde aber: {sl_changes}"
+        )

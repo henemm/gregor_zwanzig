@@ -369,9 +369,17 @@ class SegmentWeatherSummary:
     wind_chill_max_c: Optional[float] = None
     snow_depth_cm: Optional[float] = None
     freezing_level_m: Optional[int] = None
-    # Issue #1324: transientes Compare-Tagesaggregat (MIN-Regel, s.
-    # weather_metrics._compute_snowfall_limit); nie persistiert.
+    # Issue #1324: Tagesaggregat (MIN-Regel, s.
+    # weather_metrics._compute_snowfall_limit). Seit #1391 auch im Trip-Pfad
+    # (compute_extended_metrics) befuellt -- damit Teil der Alarm-Vergleichsbasis
+    # und des persistierten Wetter-Schnappschusses (weather_snapshot.py).
     snowfall_limit_m: Optional[int] = None
+    # Issue #1392: Tages-Mittelwert je Bewoelkungsstufe (rundend, analog
+    # cloud_avg_pct/_compute_cloud_cover). Additiv, Default None -- bestehende
+    # Schnappschuesse laden unveraendert weiter.
+    cloud_low_avg_pct: Optional[int] = None
+    cloud_mid_avg_pct: Optional[int] = None
+    cloud_high_avg_pct: Optional[int] = None
 
     # Additional metrics (OpenMeteo)
     pop_max_pct: Optional[int] = None
