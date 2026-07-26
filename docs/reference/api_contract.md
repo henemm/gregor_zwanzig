@@ -414,6 +414,9 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | gust_max_kmh          | float \| None        | Maximale Böengeschwindigkeit [km/h]              |
 | precip_sum_mm         | float \| None        | Gesamt-Niederschlag [mm]                         |
 | cloud_avg_pct         | int \| None          | Durchschnittliche Bewölkung [%]                  |
+| cloud_low_avg_pct     | int \| None          | Durchschnittliche tiefe Bewölkung [%] (#1392)    |
+| cloud_mid_avg_pct     | int \| None          | Durchschnittliche mittelhohe Bewölkung [%] (#1392) |
+| cloud_high_avg_pct    | int \| None          | Durchschnittliche hohe Bewölkung [%] (#1392)     |
 | humidity_avg_pct      | int \| None          | Durchschnittliche Luftfeuchtigkeit [%]           |
 | thunder_level_max     | ThunderLevel \| None | Maximales Gewitter-Level (NONE, MED, HIGH)       |
 | visibility_min_m      | int \| None          | Minimale Sichtweite [m]                          |
@@ -422,6 +425,7 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | wind_chill_min_c      | float \| None        | Minimale gefühlte Temperatur [°C]                |
 | snow_depth_cm         | float \| None        | Schneehöhe [cm] (optional, Winter)               |
 | freezing_level_m      | int \| None          | Nullgradgrenze [m] (optional, Winter)            |
+| snowfall_limit_m      | int \| None          | Schneefallgrenze [m] — MIN über das Segment (#1391) |
 | aggregation_config    | dict[str, str]       | Metadata: Aggregations-Funktionen pro Metrik     |
 
 #### SegmentWeatherCache
@@ -1257,11 +1261,12 @@ stellen sicher: (a) jede wählbare Größe des zentralen Katalogs hat
 mindestens einen Compare-Eintrag, (b) jeder Compare-Eintrag verweist auf
 eine tatsächlich existierende zentrale Größe, (c) die angegebene
 `aggregation` ist eine der zentral vorgesehenen Auswertungen dieser Größe.
-Eine benannte Ausnahmeliste (`AGGREGATION_CHECK_EXEMPTIONS`) nimmt vier
-Größen von Prüfung (c) aus, weil ihnen im zentralen Katalog das
-Tages-Auswertungsfeld (`summary_fields`) fehlt: `cloud_low`/`cloud_mid`/
-`cloud_high` (#1392) und `snowfall_limit` (#1391). Die Liste darf nur
-schrumpfen — ein eigener Test erzwingt das.
+Die benannte Ausnahmeliste (`AGGREGATION_CHECK_EXEMPTIONS`) ist seit
+2026-07-26 **leer**: die vier ehemals ausgenommenen Größen haben ihr
+Tages-Auswertungsfeld bekommen — `cloud_low`/`cloud_mid`/`cloud_high` über
+neue `SegmentWeatherSummary`-Felder (#1392), `snowfall_limit` über den
+korrigierten Katalogeintrag samt Befüllung im Trip-Pfad (#1391). Die Liste
+darf nur schrumpfen — ein eigener Test erzwingt das, und er hat gehalten.
 
 **Notes:**
 
@@ -2967,6 +2972,20 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-07-26: Issues #1391/#1392 — `SegmentWeatherSummary` bekommt drei
+  additive Felder `cloud_low_avg_pct`/`cloud_mid_avg_pct`/`cloud_high_avg_pct`
+  (Optional, Default `None`; Tages-Mittel mit `round()` wie `cloud_avg_pct`).
+  Der Ortsvergleich rechnete diese Werte zuvor an zwei Stellen selbst mit
+  `int()`-Abschneiden — jetzt eine kanonische Rechnung, von Trip- und
+  Compare-Pfad genutzt; `LocationResult` und der Vergleichs-Renderer bleiben
+  unverändert (Datenmodell-Konvergenz ist #1230). Zusätzlich trägt
+  `snowfall_limit` im zentralen Katalog jetzt `summary_fields={"min":
+  "snowfall_limit_m"}`, und `compute_extended_metrics()` befüllt das bereits
+  existierende Feld auch im Trip-Pfad — vorher konnte der
+  Abweichungs-Alarm der Schneefallgrenze strukturell nie feuern. Keine
+  Persistenz-Migration nötig (additiv, Bestands-Schnappschüsse laden mit
+  `None`). Damit ist `AGGREGATION_CHECK_EXEMPTIONS` (s. #1373 Scheibe A)
+  leer. See `docs/context/fix-1391-1392-tageswerte.md`.
 - 2026-07-26: Issue #1373 S2 Scheibe A — `GET /api/compare/metrics` trägt
   pro Eintrag zusätzlich `metric_id` und `aggregation`, gebunden an die
   Größen des zentralen Wetterkatalogs (`src/app/metric_catalog.py`). Der

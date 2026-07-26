@@ -77,11 +77,11 @@ class MetricDefinition:
 | gust | `{"max":"gust_max_kmh"}` | 20.0 |
 | precipitation | `{"sum":"precip_sum_mm"}` | 10.0 |
 | thunder | `{"max":"thunder_level_max"}` | 1.0 (Enum→Ordinal: NONE=0, MED=1, HIGH=2) |
-| snowfall_limit | `{"min":"snowfall_limit_min_m","max":"snowfall_limit_max_m"}` | None (not on SegmentWeatherSummary) |
+| snowfall_limit | `{"min":"snowfall_limit_m"}` | 200.0 (seit #1391 — nimmt an der Erkennung teil) |
 | cloud_total | `{"avg":"cloud_avg_pct"}` | 30 |
-| cloud_low | `{"avg":"cloud_low_avg_pct"}` | None (not on SegmentWeatherSummary) |
-| cloud_mid | `{"avg":"cloud_mid_avg_pct"}` | None (not on SegmentWeatherSummary) |
-| cloud_high | `{"avg":"cloud_high_avg_pct"}` | None (not on SegmentWeatherSummary) |
+| cloud_low | `{"avg":"cloud_low_avg_pct"}` | None (Feld existiert seit #1392, aber keine Schwelle) |
+| cloud_mid | `{"avg":"cloud_mid_avg_pct"}` | None (Feld existiert seit #1392, aber keine Schwelle) |
+| cloud_high | `{"avg":"cloud_high_avg_pct"}` | None (Feld existiert seit #1392, aber keine Schwelle) |
 | humidity | `{"avg":"humidity_avg_pct"}` | 20 |
 | dewpoint | `{"avg":"dewpoint_avg_c"}` | 5.0 |
 | pressure | `{"avg":"pressure_avg_hpa"}` | 10.0 |
@@ -91,7 +91,9 @@ class MetricDefinition:
 | freezing_level | `{"min":"freezing_level_m"}` | 200 |
 | snow_depth | `{"max":"snow_depth_cm"}` | 10.0 |
 
-**Note:** Metrics where `default_change_threshold = None` are skipped in change detection. This covers metrics not on SegmentWeatherSummary (snowfall_limit, cloud_low/mid/high), circular metrics (wind_direction), and non-numeric Enums (precip_type). Thunder uses Enum→Ordinal conversion and participates in detection.
+**Note:** Metrics where `default_change_threshold = None` are skipped in change detection. This covers metrics without a threshold (cloud_low/mid/high — their daily fields exist since #1392, but no alert threshold is defined), circular metrics (wind_direction), and non-numeric Enums (precip_type). Thunder uses Enum→Ordinal conversion and participates in detection.
+
+**Changed 2026-07-26 (#1391):** `snowfall_limit` previously carried no `summary_fields` at all — with an incorrect comment claiming the field was not on `SegmentWeatherSummary`. It is, and it is populated (MIN over the segment). Two gaps had to be closed: the catalog entry AND the trip path (`compute_extended_metrics()` did not compute the value; only the compare path `summarize_points()` did). Before that, `from_display_config()` produced no threshold for this metric and its deviation alert could never fire, despite `default_change_threshold=200.0` being set all along.
 
 **Special case: `freezing_level`** - SegmentWeatherSummary has a single `freezing_level_m` field (not min/max split), so `summary_fields={"min": "freezing_level_m"}` maps to the actual field.
 
