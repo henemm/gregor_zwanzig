@@ -433,15 +433,17 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | ttl_seconds | int                  | Time-to-Live [s] (default: 3600)      |
 
 #### WeatherChange
-| Feld       | Typ    | Beschreibung                                      |
-|------------|--------|---------------------------------------------------|
-| metric     | str    | Metrik-Name (z.B. "temperature", "wind")           |
-| old_value  | float  | Alter Wert                                         |
-| new_value  | float  | Neuer Wert                                         |
-| delta      | float  | Absolute Änderung                                  |
-| threshold  | float  | Konfigurierbarer Schwellenwert                     |
-| severity   | str    | "minor", "moderate", "major"                       |
-| direction  | str    | "increase", "decrease"                             |
+| Feld        | Typ               | Beschreibung                                      |
+|-------------|-------------------|----------------------------------------------------|
+| metric      | str               | Metrik-Name (z.B. "temperature", "wind")           |
+| old_value   | float             | Alter Wert                                         |
+| new_value   | float             | Neuer Wert                                         |
+| delta       | float             | Absolute Änderung                                  |
+| threshold   | float             | Konfigurierbarer Schwellenwert                     |
+| severity    | str               | "minor", "moderate", "major"                       |
+| direction   | str               | "increase", "decrease"                             |
+| segment_id  | str               | ID der Etappe, in der die Änderung erkannt wurde (z.B. "1", "2", "Ziel"); Default `""`, wird vom Detector befüllt (Issue #131). |
+| occurred_at | datetime \| None  | Zeitpunkt des auslösenden Spitzenwerts, UTC-aware; `None` wenn nicht bestimmbar (Best-effort). Die Formatierung in die Ortszeit passiert erst in der Projektionsschicht (`output/renderers/alert/project.py`), nicht beim Erzeugen dieses DTOs (Issue #1386). |
 
 #### TripWeatherConfig
 | Feld            | Typ           | Beschreibung                                |
@@ -2941,6 +2943,16 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-07-26: Issues #1383/#1385/#1386 — Alarm-Zeitstempel liefen in
+  mehreren Renderpfaden in UTC statt Ortszeit (Radaralarm-Ortsvergleich,
+  gebündelte Mehr-Orte-Alarme, Abweichungs-Alarm-Ereigniszeit). Ursache
+  durchgängig: zu frühe String-Bildung, bevor die ortskennende Schicht die
+  Zeitzone auflösen konnte. `WeatherChange.occurred_at` (oben ergänzt,
+  vorher in dieser Tabelle fehlend seit #914) ist Teil des Fixes für #1386.
+  Dabei die `WeatherChange`-Tabelle auf Vollständigkeit gegen den
+  Dataclass-Ist-Stand geprüft: `segment_id` fehlte ebenfalls (seit #131) —
+  jetzt ergänzt. Tabelle deckt damit alle neun Felder von `WeatherChange`
+  (`src/app/models.py`) ab.
 - 2026-07-24: Issue #1351 (Teil 1 + Teil 2) — Zwei unabhängige Compare-
   Änderungen. **Teil 1:** Neuer Katalog-Eintrag `wind_chill_max_c`
   („Gefühlte Temp. max") im Compare-Metrik-Katalog

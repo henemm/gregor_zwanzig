@@ -5,6 +5,52 @@
 >
 > Diese Datei bleibt als Detail-Referenz fuer Root-Cause-Analysen bestehen.
 
+## BUG-1383-1385-1386-ALERT-TZ: Alarm-Uhrzeiten in drei Renderpfaden in UTC statt Ortszeit
+
+**Status:** RESOLVED (2026-07-25) | **Severity:** High (falsche Sicherheitsaussage — Zeitangabe im Wetteralarm bis zu mehrere Stunden daneben) | **GitHub Issues:** #1383, #1385, #1386
+
+### Symptom
+
+Drei unabhängige, aber wurzelverwandte Fehler in Alarm-Mails:
+
+- **#1383:** Der Radaralarm des Ortsvergleichs rendete alle Uhrzeiten in UTC statt in der Ortszeit — eine Prod-Mail meldete „Regen in 15 Min ab 20:00" für einen Ort in `Europe/Paris`, tatsächlich 2 Stunden daneben.
+- **#1385:** Bei einem gebündelten Alarm für mehrere Orte trugen ALLE Orte die Zeitzone des ersten Ortes — Zermatt und Auckland in einem Bündel zeigten beide „ab 23:18", obwohl nur einer davon stimmen konnte.
+- **#1386:** Die Ereigniszeit des Abweichungs-Alarms („Wo & wann: … · HH:MM") und das SMS-Kürzel `@HH` standen ebenfalls in UTC.
+
+### Root Cause
+
+Gemeinsamer Nenner aller drei: **Zeitstempel wurden zu früh in fertige Strings verwandelt**, an einer Stelle, die den Ort (und damit die Zeitzone) noch nicht kannte — danach war die Zeitzone nicht mehr korrigierbar.
+
+- `compare_radar_alert.py` warf das Ortsobjekt vor dem Versand weg; `send_multi_location_radar_alert` fiel dadurch still auf `ZoneInfo("UTC")` zurück (#1383).
+- `to_multi_location_onset_alert_message` formatierte `onset_time` für ALLE Gruppen mit der Zeitzone des ERSTEN Ortes, statt je Gruppe die Koordinaten der eigenen Gruppe zu nutzen (#1385).
+- `_peak_occurred_at()` in `weather_change_detection.py` lieferte bereits ein fertiges `"HH:MM"` in Weltzeit zurück — die aufrufende Detektionsschicht kennt keine Ortskoordinaten, kann die Zeitzone also strukturell nicht korrigieren (#1386).
+
+Ein vierter Befund, der die Analyse erst zusammenführte: `to_multi_point_alert_message()` nahm einen `tz`-Parameter entgegen, der **aussah, als regele er die Zeitzone**, tatsächlich aber nirgends benutzt wurde — ein Parameter, der Sicherheit vortäuschte, ohne sie zu liefern.
+
+Zwei Fallen, die beim Fix zutage traten:
+
+1. `ForecastDataPoint.__post_init__` strippt `tzinfo` grundsätzlich (Hausnorm #1345) — Zeitstempel aus Datenpunkten sind IMMER naiv. Ohne expliziten UTC-Guard deutet ein späteres `astimezone()` sie als System-Lokalzeit; auf dem UTC-Produktionsserver zufällig richtig, überall sonst falsch.
+2. Bei tz-aware Etappenfenstern warf der Fenstervergleich (naiver Datenpunkt-Zeitstempel gegen aware Segment-Start/-Ende) vorher `TypeError`, `_peak_occurred_at()` fing das in einem breiten `except Exception` ab und lieferte still `None` — der Alarm nannte dann GAR KEINE Zeit, statt einer falschen.
+
+### Fix (Committed 2026-07-25)
+
+- **#1383:** Das Ortsobjekt wird bis zum Versandbaustein durchgereicht; `send_multi_location_radar_alert` leitet die Zeitzone aus den Ortskoordinaten ab (`tz_for_coords`), `ZoneInfo("UTC")` bleibt nur noch letzter Notnagel bei fehlenden Koordinaten.
+- **#1385:** `to_multi_location_onset_alert_message` formatiert `onset_time` je Gruppe mit der Zeitzone IHRES Ortes (neuer Helfer `_tz_for_location(loc, fallback_tz)` in `src/output/renderers/alert/project.py`). `stand_at` bleibt bewusst EINE Nachrichtenzeit in der Zeitzone des ersten Ortes (Aussage über die Nachricht, nicht über einen Ort — kein Bug).
+- **#1386:** `_peak_occurred_at()` liefert jetzt ein UTC-aware `datetime` statt eines fertigen `"HH:MM"`-Strings; die Formatierung in Ortszeit passiert erst in der Projektionsschicht (`to_alert_message()` über den Segment-Startpunkt, `to_multi_point_alert_message()` über den Ort). Neuer Guard `_as_utc()` deutet naive Zeitstempel explizit als UTC, bevor der Fenstervergleich läuft. `AlertEvent.occurred_at` bleibt `str | None`, die Renderer sind unverändert.
+
+### Files Changed
+
+`src/services/compare_radar_alert.py`, `src/services/notification_service.py`, `src/output/renderers/alert/project.py`, `src/services/weather_change_detection.py` — Details/ACs: `docs/reference/api_contract.md` (WeatherChange-Tabelle), `docs/specs/modules/alert_render_foundation.md`.
+
+### Lessons Learned
+
+1. **Zeitstempel bis zu der Schicht als `datetime` führen, die den Ort kennt.** Wird eine Uhrzeit gebildet, bevor Koordinaten verfügbar sind, ist sie strukturell nicht mehr korrigierbar — egal wie sorgfältig die Formatierung selbst ist. Formatierung in Ortszeit gehört ausschließlich in die Projektionsschicht.
+2. **Kein stiller Zeitzonen-Default.** `ZoneInfo("UTC")` als Fallback ohne Log/Warnung sieht in jedem Einzeltest korrekt aus (Tests laufen meist ohnehin in UTC) und liefert erst in Produktion mit echten, nicht-UTC-Orten falsche Werte.
+3. **Ein Zeitzonen-Parameter, der nicht benutzt wird, gehört entfernt oder aktiviert.** Der ungenutzte `tz`-Parameter in `to_multi_point_alert_message` täuschte Kontrolle vor, die nicht existierte — ein Reviewer, der die Signatur liest, hätte den Fehler nicht gefunden.
+4. **Der Fehler war auf dem UTC-Produktionsserver teilweise unsichtbar**, weil naive Zeitstempel dort per Zufall dieselbe Zeitzone tragen wie das beabsichtigte UTC-Verhalten. Tests unter mehreren System-Zeitzonen (nicht nur UTC) sind der wirksame Nachweis für diese Fehlerklasse — ein grüner Test auf einer UTC-Maschine beweist hier nichts.
+
+---
+
 ## BUG-1275-TH-MISMATCH: SMS/Telegram zeigten kein Gewitterrisiko, während E-Mail-Outlook-Tabelle "hoch" zeigte
 
 **Status:** WIEDERERÖFFNET (2026-07-17) — der Fix vom 2026-07-16 behob nur einen von mehreren Defekten, s. „Zweiter Anlauf" unten | **Severity:** Critical (widersprüchliche Sicherheitsaussage zwischen Kanälen im selben Report) | **GitHub Issue:** #1275 | **Specs:** `docs/specs/_archive/bugfix/fix_1275_sms_th_mismatch.md` (1. Anlauf), `docs/specs/_archive/bugfix/fix_1275_sms_thunder_today.md` (2. Anlauf) | **ADR:** `docs/adr/0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md`
@@ -495,7 +541,7 @@ Alert checks called Open-Meteo with `lat=0.0, lon=0.0` (Gulf of Guinea) instead 
 
 ## BUG-TZ-01: Timezone Mismatch — All Trip Report Times in UTC
 
-**GitHub Issue:** #21 | **Status:** Confirmed | **Severity:** High | **Date:** 2026-03-03
+**GitHub Issue:** #21 (geschlossen) | **Status:** Erledigt (2026-07-26) — 5 Symptome behoben, 1 Symptom (Daylight-Banner) durch Feature-Entfall gegenstandslos, NICHT gefixt | **Severity:** High | **Date:** 2026-03-03
 
 ### Symptom
 
@@ -521,6 +567,62 @@ Multi-point failure across 5 files:
 
 Wird moeglicherweise durch Tech-Stack-Migration (M2, #23) direkt geloest.
 Falls vorher gefixt: `timezonefinder` + `TimezoneService` + Formatter-Anpassungen.
+
+### Nachtrag 2026-07-26 — Status-Prüfung (#1198)
+
+GitHub-Issue #21 ist geschlossen — GitHub Issues ist laut CLAUDE.md die
+Single Source of Truth für offene Arbeit, ein `Confirmed` hier daneben wäre
+selbst der Doku-Widerspruch, den #1198 sammelt. Am Code belegt: 5 der 6
+gemeldeten Symptome rechnen heute nachweislich in Ortszeit (s. u.). Das
+sechste (Daylight-Banner) ist **nicht behoben, sondern entfallen** — das
+Feature existiert seit #1224 nicht mehr (s. u.). PO-Entscheidung
+(2026-07-26): Status auf **Erledigt** gesetzt, mit dieser Unterscheidung
+Fix vs. Feature-Entfall ausdrücklich in der Statuszeile.
+
+**Verifiziert als in Ortszeit rechnend** (echter, durchgängiger Aufrufpfad
+von realen Ortskoordinaten bis zur Formatierung):
+- **Hourly Weather Table:** `TripReportFormatter._tz` (`src/output/renderers/trip_report.py:120`)
+  wird aus `tz=trip_tz` gesetzt; `trip_tz` kommt aus `tz_for_coords(...)`
+  (`src/services/trip_report_scheduler.py:755`). Stundenwert je Zeile über
+  `local_hour(dp.ts, self._tz)` (`trip_report.py:471`).
+- **Thunder Highlights:** `local_fmt(dp.ts, self._tz)` (`trip_report.py:558`)
+  sowie `local_hour(dp.ts, self._tz)` in `compact_summary.py:318,330,451` —
+  gleicher `self._tz`-Kanal.
+- **Wind Peak Labels:** `local_fmt(max_gust_ts, self._tz)` (`trip_report.py:579`),
+  `local_fmt(max_wind_ts, self._tz)` (`trip_report.py:616`).
+- **Compact Summary:** Peak-Stunde über `local_hour(dp.ts, self._tz)`
+  (`compact_summary.py:431`), `self._tz` gesetzt aus demselben `tz`-Parameter
+  (`compact_summary.py:129`), von `trip_report.py:774` mit `self._tz` (also
+  `trip_tz`) aufgerufen.
+- **SMS Trip Formatter:** `SMSTripFormatter().format_sms(..., tz=self._tz, ...)`
+  (`trip_report.py:267`), Start-Uhrzeit über `local_fmt(seg_data.segment.start_time, tz, "%Hh")`
+  (`sms_trip.py:434`) — derselbe `trip_tz`-Kanal.
+
+**NICHT verifizierbar — Feature existiert nicht mehr:** Der **Daylight-Banner
+("Ohne Stirnlampe")** wurde ersatzlos entfernt (`show_daylight` seit #790
+render-wirkungslos, das Feld selbst seit #1224 ganz aus `TripReportConfig`
+gestrichen — Beleg: `src/services/report_config_resolver.py:25-28,86-88`,
+`src/app/models.py:765-766`). `src/services/daylight_service.py` (im
+Original-Root-Cause referenziert) existiert nicht mehr, `astral` wird im
+gesamten `src/`-Baum nicht mehr importiert. Ob der Banner „heute in Ortszeit
+rechnet" lässt sich damit nicht belegen — er rechnet gar nicht mehr, weil es
+ihn nicht mehr gibt. Das ist wahrscheinlich der Grund, warum #21 geschlossen
+wurde, aber es ist keine Bestätigung des ursprünglich gemeldeten
+Zeitzonen-Verhaltens.
+
+**Root-Cause-Item 2 (`"timezone": "UTC"` in `openmeteo.py`) ist heute kein
+Bug mehr, sondern die etablierte Architektur:** Der Provider liefert bewusst
+naive UTC-Rohdaten (Hausnorm #1345), jede Umrechnung in Ortszeit passiert
+downstream über `local_hour`/`local_fmt` mit echter, koordinatenbasierter
+`tz` — s. oben.
+
+**Bezug zu BUG-1383-1385-1386-ALERT-TZ:** Die fünf oben verifizierten
+Trip-Report-Pfade sind nicht derselbe Code wie die drei 2026-07-25 gefixten
+Alert-Mail-Pfade (Radaralarm, Mehr-Orte-Bündel, Abweichungs-Alarm) — beide
+Fehlerfamilien teilen aber dasselbe Muster (zu früh gebildeter String / kein
+Ortsbezug beim Erzeugen des Zeitstempels). #1383/#1385/#1386 sind eine
+spätere Wiederkehr derselben Fehlerklasse in einem anderen Renderpfad, kein
+Regress der hier verifizierten Trip-Report-Pfade.
 
 ---
 

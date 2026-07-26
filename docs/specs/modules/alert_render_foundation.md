@@ -75,17 +75,24 @@ cmp: str = ""             # "über" | "unter" — Seite, auf der die Schwelle al
 **2. `WeatherChange` (models.py) — additives Feld:**
 
 ```
-occurred_at: str | None = None   # "HH:MM" — Stunde des auslösenden (Peak-)Werts; None erlaubt
+occurred_at: datetime | None = None   # Zeitpunkt des auslösenden (Peak-)Werts, UTC-aware; None erlaubt
 ```
 
 - Rein additiv (Default `None`), damit `alert_state`-JSON und bestehende Persistenz
   unberührt bleiben (Read-Modify-Write; keine Pflichtfeld-Migration).
+- **Seit Issue #1386:** `occurred_at` ist ein `datetime`, kein fertiger `"HH:MM"`-String.
+  Die Formatierung in Ortszeit passiert erst in der Projektionsschicht
+  (`output/renderers/alert/project.py`), nicht beim Erzeugen des `WeatherChange` —
+  vorher wurde hier bereits die Weltzeit als String eingefroren und war danach nicht
+  mehr korrigierbar.
 
 **3. `weather_change_detection.detect_changes()`:**
 
-- Beim Erzeugen eines `WeatherChange` die Stunde des Peak-Werts aus der stündlichen
-  `ForecastDataPoint`-Liste des Segments bestimmen und als `occurred_at` ("HH:MM")
-  setzen. Lässt sich die Stunde nicht eindeutig bestimmen → `None` (best-effort).
+- Beim Erzeugen eines `WeatherChange` den Zeitpunkt des Peak-Werts aus der stündlichen
+  `ForecastDataPoint`-Liste des Segments bestimmen und als UTC-aware `datetime` in
+  `occurred_at` setzen (kein fertiger `"HH:MM"`-String — die Formatierung in Ortszeit
+  passiert erst in der Projektion). Lässt sich der Zeitpunkt nicht eindeutig bestimmen
+  → `None` (best-effort).
 - Vergleichsrichtung (`cmp`) wird aus dem Katalog gelesen statt aus dem lokalen
   `_ALERT_METRIC_COMPARISON`-Dict; das Dict wird zur dünnen Ableitung aus dem Katalog
   oder entfällt (keine zweite Quelle).
@@ -123,11 +130,14 @@ occurred_at: str | None = None   # "HH:MM" — Stunde des auslösenden (Peak-)We
     Schwellseite mit der Katalog-`cmp` übereinstimmt.
 
 - **AC-3:** Given ein realer Vorhersage-Datensatz, der eine Schwelle überschreitet /
-  When die Detektion einen `WeatherChange` erzeugt / Then ist `occurred_at` als
-  plausible Stunde „HH:MM" innerhalb des Segment-Zeitfensters gesetzt (oder `None`,
-  wenn nicht bestimmbar — nie ein Fehler/Crash).
+  When die Detektion einen `WeatherChange` erzeugt / Then ist `occurred_at` ein
+  UTC-aware `datetime` innerhalb des Segment-Zeitfensters (oder `None`, wenn nicht
+  bestimmbar — nie ein Fehler/Crash). Die Formatierung in eine Uhrzeit-Darstellung
+  ("HH:MM") in der jeweiligen Ortszeit erfolgt erst in der Projektionsschicht
+  (`output/renderers/alert/project.py`), nicht in der Detektion (Issue #1386).
   - Test: Detektion mit echten/echt-strukturierten stündlichen Datenpunkten; Assert
-    `occurred_at` ist `None` **oder** matcht `^\d{2}:\d{2}$` und liegt im Fenster.
+    `occurred_at` ist `None` **oder** ein `datetime` mit `tzinfo is not None`, das
+    zwischen Segment-Start und -Ende liegt.
 
 - **AC-4:** Given das laufende Backend / When das Frontend `GET /api/metrics` aufruft /
   Then enthält jeder ausgespielte Metrik-Eintrag die Felder `sms_code`, `decimals`,
@@ -143,12 +153,19 @@ occurred_at: str | None = None   # "HH:MM" — Stunde des auslösenden (Peak-)We
 
 ## Known Limitations
 
-- `occurred_at` ist **best-effort** (Peak-Stunde); ist sie nicht eindeutig bestimmbar,
-  bleibt sie `None`. Die Renderer (Slice 2) behandeln `@hh` ohnehin als optional.
+- `occurred_at` ist **best-effort** (Peak-Zeitpunkt); ist er nicht eindeutig bestimmbar,
+  bleibt er `None`. Die Renderer (Slice 2) behandeln `@hh` ohnehin als optional.
 - Die doppelte `SMS_SYMBOL_BY_METRIC` in `sms_trip.py` bleibt in Slice 1 **noch**
   bestehen (Entfernung in Slice 2, um das Renderer-Mail-Gate gebündelt zu durchlaufen).
   Während Slice 1 sind die Codes konsistent, weil die neuen Katalog-Codes mit den
   etablierten übereinstimmen.
+- **Naive-Zeitstempel-Hausnorm (#1345, s. Issue #1386):** `ForecastDataPoint.
+  __post_init__` strippt `tzinfo` grundsätzlich — Zeitstempel aus Datenpunkten sind
+  immer naiv. Ohne expliziten UTC-Guard deutet ein späteres `astimezone()` sie als
+  System-Lokalzeit; auf dem UTC-Produktionsserver zufällig richtig, überall sonst
+  falsch. `_as_utc()` in `weather_change_detection.py` macht diesen Guard explizit,
+  bevor der Fenstervergleich (Segment-Start/-Ende können tz-aware sein) sonst mit
+  `TypeError` scheitert oder der Peak-Zeitpunkt still auf `None` fällt.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -160,3 +177,9 @@ occurred_at: str | None = None   # "HH:MM" — Stunde des auslösenden (Peak-)We
 
 - 2026-06-29: Initial spec created (Slice 1 von #914).
 - 2026-06-30: Slice 2 (#917) implementiert — kanonischer Alert-Renderer (`src/output/renderers/alert/`) mit 4 Render-Pfaden (render_subject, render_email, render_telegram, render_sms) + to_alert_message()-Projektion; `alert_compact.py` gelöscht; `trip_alert._send_alert` nutzt neuen Renderer.
+- 2026-07-26: Issue #1386 — `occurred_at` lief bisher (fälschlich dokumentiert) als
+  fertiger `"HH:MM"`-String in Weltzeit in die Mail-/SMS-Ereigniszeit ein. Fix: `_peak_occurred_at()`
+  liefert jetzt ein UTC-aware `datetime`; die Formatierung in Ortszeit passiert erst in
+  `output/renderers/alert/project.py` (`_fmt_occurred_at()`), wo die Etappen-/Ortskoordinaten
+  bekannt sind. `AlertEvent.occurred_at` (Renderer-DTO) bleibt unverändert `str | None`.
+  Diese Spec (Felddefinition, AC-3, Known Limitations) auf den Ist-Stand gezogen.
