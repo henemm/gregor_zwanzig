@@ -58,6 +58,12 @@
 		hydrateDayWindowFromPreset,
 		type WeatherMetricsSnapshot
 	} from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
+	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): die Metrik-Auswahl liegt im
+	// Speicherformat Größe + Auswertung — die Hydration dieses Reiters muss die
+	// Katalogantwort (Übersetzung auf Auswahl-Schlüssel) abwarten, BEVOR sie den
+	// Dirty-Check-Grundzustand aufnimmt. Geteilter Promise-Cache: eine Anfrage
+	// pro Seiten-Load für alle Verbraucher.
+	import { loadCompareSelectionEntries } from '../shared/corridor-editor/compareMetricCatalogLoader.ts';
 	// Issue #1299/#1291/#1287 (C2 von Epic #1301): Stundenverlauf-Steuerung im
 	// Hub-Layout-Tab — geteiltes ChannelToggle-Bedienelement + eigenstaendiges
 	// Compare-Vokabular (kein Reuse von compareMetricDefs.ts).
@@ -333,11 +339,17 @@
 		});
 	}
 
-	$effect(() => {
-		if (activeTab !== 'idealwerte' || idealwerteHydrated) return;
+	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): dritte Hydrationsstelle mit
+	// derselben Wurzel — auch hier wird die Katalogantwort abgewartet, BEVOR
+	// hydriert und der Grundzustand aufgenommen wird. Ohne Aufloesung traefe das
+	// ✕-Entfernen einer Metrik-Zeile die Auswahl nicht mehr.
+	let idealwerteHydrating = false;
+
+	async function hydrateIdealwerteTab(): Promise<void> {
+		const catalog = await loadCompareSelectionEntries().catch(() => []);
 		// Fix-Loop 2 (F005): aus currentPreset statt preset hydrieren, damit ein
 		// vorheriger Orte-Edit in derselben Sitzung nicht ueberschrieben wird.
-		const hydrated = hydrateWizardStateFromPreset(currentPreset);
+		const hydrated = hydrateWizardStateFromPreset(currentPreset, catalog);
 		wizardState.isEditMode = hydrated.isEditMode;
 		wizardState.corridors = hydrated.corridors;
 		wizardState.activityProfile = hydrated.activityProfile;
@@ -346,6 +358,14 @@
 		wizardState.metricAlertLevels = hydrated.metricAlertLevels;
 		lastPersistedCorridorSnapshot = currentCorridorSnapshot();
 		idealwerteHydrated = true;
+	}
+
+	$effect(() => {
+		if (activeTab !== 'idealwerte' || idealwerteHydrated || idealwerteHydrating) return;
+		idealwerteHydrating = true;
+		void hydrateIdealwerteTab().finally(() => {
+			idealwerteHydrating = false;
+		});
 	});
 
 	// Event-diskretisierte Persistenz (KEIN Debounce/#1234): blur an
@@ -558,15 +578,30 @@
 		});
 	}
 
-	$effect(() => {
-		if (activeTab !== 'alarme' || alarmeHydrated) return;
+	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): derselbe Grund wie beim
+	// Wetter-Metriken-Reiter unten — `hydrateAlarmFieldsFromPreset` hydriert
+	// `activeMetricKeys` mit (#1320, sonst zeigt die Empfindlichkeits-Tabelle
+	// bei Deep-Link `?tab=alarme` faelschlich "keine Metriken"), und das braucht
+	// die Katalogantwort zur Uebersetzung des Speicherformats.
+	let alarmeHydrating = false;
+
+	async function hydrateAlarmeTab(): Promise<void> {
+		const catalog = await loadCompareSelectionEntries().catch(() => []);
 		// F005-Muster: aus currentPreset hydrieren, damit ein vorheriger
 		// Orte-/Idealwerte-/Versand-Edit in derselben Sitzung nicht
 		// ueberschrieben wird (H3: eigenstaendige Hydration ALLER Alarm-Felder,
 		// setzt KEINEN vorherigen idealwerte-/versand-Effekt voraus).
-		hydrateAlarmFieldsFromPreset(wizardState, currentPreset);
+		hydrateAlarmFieldsFromPreset(wizardState, currentPreset, catalog);
 		lastPersistedAlarmSnapshot = currentAlarmSnapshot();
 		alarmeHydrated = true;
+	}
+
+	$effect(() => {
+		if (activeTab !== 'alarme' || alarmeHydrated || alarmeHydrating) return;
+		alarmeHydrating = true;
+		void hydrateAlarmeTab().finally(() => {
+			alarmeHydrating = false;
+		});
 	});
 
 	// Event-diskretisierte Persistenz (KEIN Debounce/#1234): change/focusout/
@@ -642,9 +677,23 @@
 		};
 	}
 
-	$effect(() => {
-		if (activeTab !== 'wetter-metriken' || wetterMetrikenHydrated) return;
-		wizardState.activeMetricKeys = hydrateWeatherMetricsFromPreset(currentPreset);
+	// Issue #1373 (S2 Scheibe B, Fix-Runde 1 / Adversary F001): die Hydration
+	// wartet die Katalogantwort ab. Vorher lief sie synchron und nahm den
+	// Dirty-Check-Grundzustand mit der noch UNAUFGELOESTEN Rohform der
+	// Metrik-Auswahl auf — Folge: Scheindiff bei jeder Geste, und ein
+	// fehlgeschlagenes Speichern setzte `activeMetricKeys` (Z.678 unten) auf die
+	// Rohform zurueck, wodurch kein Haekchen mehr passte. Eigener In-Flight-
+	// Merker, damit `wetterMetrikenHydrated` weiterhin "fertig hydriert"
+	// bedeutet (handleWetterMetrikenCommit haengt daran und schreibt in diesem
+	// Fenster bewusst nicht).
+	let wetterMetrikenHydrating = false;
+
+	async function hydrateWetterMetrikenTab(): Promise<void> {
+		// Katalogfehler darf den Reiter nicht unbenutzbar machen: ohne Katalog
+		// bleibt die gespeicherte Auswahl unveraendert stehen (verlustfreier
+		// Durchlauf, heutiges Verhalten fuer unbekannte Schluessel).
+		const catalog = await loadCompareSelectionEntries().catch(() => []);
+		wizardState.activeMetricKeys = hydrateWeatherMetricsFromPreset(currentPreset, catalog);
 		// D2-Fix-Loop 2 (AC-6): officialAlertsEnabled beim Erst-Oeffnen
 		// mit-hydrieren (analog hydrateAlarmFieldsFromPreset) — sonst zeigt der
 		// Toggle bei einem Deep-Link ?tab=wetter-metriken den Klassen-Default
@@ -656,8 +705,18 @@
 		const dayWindow = hydrateDayWindowFromPreset(currentPreset);
 		wizardState.dayWindowStartHour = dayWindow.dayWindowStartHour;
 		wizardState.dayWindowEndHour = dayWindow.dayWindowEndHour;
+		// Grundzustand IMMER erst nach der Auflösung — er muss bitgleich zum
+		// hydrierten Zustand sein, sonst entsteht ein PUT ohne Nutzeraenderung.
 		lastPersistedWetterMetrikenSnapshot = currentWetterMetrikenSnapshot();
 		wetterMetrikenHydrated = true;
+	}
+
+	$effect(() => {
+		if (activeTab !== 'wetter-metriken' || wetterMetrikenHydrated || wetterMetrikenHydrating) return;
+		wetterMetrikenHydrating = true;
+		void hydrateWetterMetrikenTab().finally(() => {
+			wetterMetrikenHydrating = false;
+		});
 	});
 
 	async function handleWetterMetrikenCommit(): Promise<void> {

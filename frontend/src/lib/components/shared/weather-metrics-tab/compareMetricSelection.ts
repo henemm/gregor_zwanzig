@@ -28,10 +28,106 @@ export function toCompareSelectionEntries(
 	// Laufzeit bleibt defensiv (response.metrics ?? []), obwohl der Typ das
 	// Feld als Pflicht deklariert — der Endpoint darf nie ohne `metrics`
 	// antworten, ein fehlerhafter/leerer Body darf aber trotzdem nicht crashen.
-	return (response.metrics ?? []).map((m) => ({
+	const entries = (response.metrics ?? []).map((m) => ({
 		metric: m.key,
 		label: m.label,
 		...(m.metric_id !== undefined ? { metric_id: m.metric_id } : {}),
 		...(m.aggregation !== undefined ? { aggregation: m.aggregation } : {})
 	}));
+	// Issue #1373 (S2 Scheibe B): dieselbe geladene Katalogantwort ist die
+	// EINZIGE Quelle für die Übersetzung Auswahl-Schlüssel <-> Größe+Auswertung
+	// im Browser. Hier ist der einzige Durchlauf-Punkt der Antwort — also wird
+	// der Umkehr-Index hier gefüllt, ohne eine zweite Anfrage und ohne eine
+	// zweite Tabelle im Frontend.
+	registerCompareMetricCatalog(entries);
+	return entries;
+}
+
+// ── Issue #1373 S2 Scheibe B: Speicherformat der Metrik-Auswahl ────────────
+//
+// Gespeichert wird ab dieser Lieferung Größe + Auswertung
+// (`{metric_id, aggregation}`); gelesen wird dauerhaft BEIDES (Altformat =
+// Auswahl-Schlüssel als Zeichenkette). Die Bedienoberfläche arbeitet
+// unverändert auf `string[]` (Auswahl-Schlüssel) — nur Lese-/Schreibrand
+// übersetzt.
+//
+// GRUNDREGEL: jede Übersetzung ist VERLUSTFREI. Was nicht auflösbar ist (der
+// Katalog ist noch nicht geladen oder kennt das Paar nicht), wird UNVERÄNDERT
+// durchgereicht statt verworfen — der Backend-Auflöser liest beide Formate,
+// eine unübersetzte Zeichenkette bleibt also wirksam (kein Datenverlust der
+// Klasse #102).
+
+/** Ein Eintrag in `display_config.active_metrics`: Neuformat-Objekt oder
+ *  Altformat-Zeichenkette. */
+export type StoredActiveMetric = string | { metric_id: string; aggregation: string };
+
+let registeredCatalog: CompareSelectionEntry[] = [];
+
+/** Legt die geladene Katalogantwort als Übersetzungsquelle ab. Wird von
+ *  `toCompareSelectionEntries()` aufgerufen; Tests setzen sie direkt. */
+export function registerCompareMetricCatalog(entries: CompareSelectionEntry[]): void {
+	registeredCatalog = entries ?? [];
+}
+
+/** Die aktuell bekannte Katalogantwort (leer = noch nicht geladen). */
+export function registeredCompareMetricCatalog(): CompareSelectionEntry[] {
+	return registeredCatalog;
+}
+
+/** Auswahl-Schlüssel eines gespeicherten Eintrags — `null`, wenn er (noch)
+ *  nicht auflösbar ist. */
+export function compareMetricKeyFromStored(
+	item: unknown,
+	catalog: CompareSelectionEntry[] = registeredCatalog
+): string | null {
+	if (typeof item === 'string') return item;
+	if (item && typeof item === 'object') {
+		const { metric_id, aggregation } = item as { metric_id?: unknown; aggregation?: unknown };
+		if (typeof metric_id !== 'string' || typeof aggregation !== 'string') return null;
+		const hit = catalog.find((e) => e.metric_id === metric_id && e.aggregation === aggregation);
+		return hit ? hit.metric : null;
+	}
+	return null;
+}
+
+/**
+ * Lesenormalisierung: gespeicherte Metrik-Auswahl (Alt- ODER Neuformat, auch
+ * gemischt) -> Auswahl-Schlüssel für die Oberfläche. `null` heißt „kein Array"
+ * (Feld fehlt → Profil-Defaults, #1191-Semantik unverändert).
+ *
+ * Nicht auflösbare Einträge bleiben unverändert in der Liste stehen (Cast auf
+ * `string[]`, wie bisher an dieser Naht) — genau das heutige Verhalten für
+ * unbekannte Schlüssel (Restrisiko R1 der Spec: die Auswahl zeigt sich dann als
+ * nicht angehakt, heilt sich beim nächsten Laden mit geladenem Katalog selbst),
+ * aber ohne dass ein späteres Speichern die Auswahl verliert.
+ */
+export function normalizeStoredActiveMetrics(
+	stored: unknown,
+	catalog: CompareSelectionEntry[] = registeredCatalog
+): string[] | null {
+	if (!Array.isArray(stored)) return null;
+	return stored.map((item) => compareMetricKeyFromStored(item, catalog) ?? item) as string[];
+}
+
+/**
+ * Schreibübersetzung: Auswahl-Schlüssel -> Größe + Auswertung (Neuformat).
+ * Reihenfolge positionsgetreu (#1335/#1359), keine Deduplizierung, kein `set()`
+ * — „Temperatur max" und „Temperatur min" teilen die Größe und dürfen niemals
+ * verschmelzen.
+ *
+ * Ein Schlüssel ohne Katalog-Entsprechung (unbekannt, oder Katalog noch nicht
+ * geladen) bleibt als Zeichenkette stehen; ein bereits übersetzter Eintrag
+ * wird unverändert durchgereicht.
+ */
+export function toStoredActiveMetrics(
+	keys: readonly unknown[],
+	catalog: CompareSelectionEntry[] = registeredCatalog
+): StoredActiveMetric[] {
+	return keys.map((key) => {
+		if (typeof key !== 'string') return key as StoredActiveMetric;
+		const hit = catalog.find((e) => e.metric === key);
+		return hit && hit.metric_id !== undefined && hit.aggregation !== undefined
+			? { metric_id: hit.metric_id, aggregation: hit.aggregation }
+			: key;
+	});
 }

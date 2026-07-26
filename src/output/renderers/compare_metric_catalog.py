@@ -155,6 +155,69 @@ assert _alarm_keys <= _catalog_keys, (
 )
 
 
+def duplicate_metric_aggregation_pairs(
+    entries: list[dict] | None = None,
+) -> list[tuple[str, str]]:
+    """Liefert jedes (metric_id, aggregation)-Paar, das in `entries` mehr als
+    einmal vorkommt (jedes Paar hoechstens einmal, in Fundreihenfolge). Leere
+    Liste = in Ordnung.
+
+    #1373 Scheibe B (AC-10): das Paar ist im neuen Speicherformat der
+    Metrik-Auswahl (`display_config.active_metrics`) der EINZIGE Schluessel --
+    zwei paargleiche Katalog-Zeilen wuerden unbemerkt auf denselben
+    Auswahl-Eintrag kollidieren und eine der beiden Metriken unspeicherbar
+    machen. `entries=None` prueft den echten Katalog; der Modul-Import-Assert
+    unten und der Wirkungsnachweis im Test rufen DIESELBE Funktion auf
+    (Adversary-Befund F002 aus Scheibe A: eine im Test nachgebaute Kopie der
+    Pruflogik beweist nichts)."""
+    source = COMPARE_METRIC_CATALOG if entries is None else entries
+    seen: set[tuple[str, str]] = set()
+    duplicates: list[tuple[str, str]] = []
+    for entry in source:
+        if not isinstance(entry, dict):
+            continue
+        pair = (entry.get("metric_id"), entry.get("aggregation"))
+        if pair in seen:
+            if pair not in duplicates:
+                duplicates.append(pair)  # type: ignore[arg-type]
+        else:
+            seen.add(pair)  # type: ignore[arg-type]
+    return duplicates
+
+
+# Drift-Waechter (#1373 Scheibe B, AC-10): schlaegt beim Modul-Import an, wenn
+# eine kuenftige Katalog-Zeile ein bereits belegtes Groesse-Auswertung-Paar
+# traegt -- ueber genau die Funktion oben, nicht ueber eine zweite Kopie der
+# Logik.
+_duplicate_pairs = duplicate_metric_aggregation_pairs()
+assert not _duplicate_pairs, (
+    "compare_metric_catalog.py fuehrt mehrfach dasselbe "
+    f"(metric_id, aggregation)-Paar: {_duplicate_pairs} -- im neuen "
+    "Speicherformat von display_config.active_metrics nicht unterscheidbar."
+)
+
+# Umkehr-Index (#1373 Scheibe B, Spec Punkt 1): (metric_id, aggregation) -> key.
+# KEINE fuenfte Uebersetzungstabelle, sondern ein reiner Index ueber die in
+# Scheibe A kuratierten Herkunftsfelder -- Eindeutigkeit garantiert der Assert
+# darueber.
+_KEY_BY_METRIC_AGGREGATION: dict[tuple[str, str], str] = {
+    (entry["metric_id"], entry["aggregation"]): entry["key"]
+    for entry in COMPARE_METRIC_CATALOG
+}
+
+
+def key_for(metric_id: object, aggregation: object) -> str | None:
+    """Loest ein Groesse-Auswertung-Paar (neues Speicherformat der
+    Metrik-Auswahl) auf den Compare-Auswahl-Schluessel zurueck.
+
+    Unbekannte, unvollstaendige oder falsch typisierte Paare ergeben `None`
+    (Signal "nicht aufloesbar") -- kein KeyError, keine Ausnahme; darauf beruht
+    der Verwerfungspfad in `compare_metric_ids.resolve_enabled_metrics()`."""
+    if not isinstance(metric_id, str) or not isinstance(aggregation, str):
+        return None
+    return _KEY_BY_METRIC_AGGREGATION.get((metric_id, aggregation))
+
+
 def get_compare_metric_catalog() -> list[dict]:
     """Liefert die 26 Ortsvergleich-Metriken (read-only Kopie der Katalog-Liste),
     angereichert um `alarmCapable` (Teil 3, D1 Hybrid). `metric_id`/`aggregation`

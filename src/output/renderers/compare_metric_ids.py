@@ -98,7 +98,33 @@ CORRIDOR_METRIC_TO_HOUR_KEY: dict[str, str] = {
 }
 
 
-def resolve_enabled_metrics(active_metrics: list[str] | None) -> list[str] | None:
+def _to_key(item: object) -> str | None:
+    """Normalisiert EIN Element der gespeicherten Metrik-Auswahl auf den
+    Compare-Auswahl-Schluessel (#1373 Scheibe B).
+
+    * Zeichenkette (Altformat) bleibt unveraendert -- ob sie mappbar ist,
+      entscheidet wie bisher `FRONTEND_TO_RENDERER_METRIC_ID`.
+    * Objekt (Neuformat) wird ueber den Umkehr-Index des Vergleichs-Katalogs
+      aufgeloest: `{"metric_id": ..., "aggregation": ...}` -> Schluessel.
+    * Alles andere (falscher Typ, unvollstaendiges/unbekanntes Paar) -> None,
+      wird also wie eine nicht mappbare Zeichenkette verworfen.
+
+    Der Import liegt bewusst IN der Funktion: `compare_metric_catalog`
+    importiert seinerseits `FRONTEND_TO_RENDERER_METRIC_ID` aus diesem Modul
+    (Drift-Waechter beim Modul-Import), ein Import auf Modulebene waere ein
+    Zyklus."""
+    if isinstance(item, str):
+        return item
+    if isinstance(item, dict):
+        from output.renderers.compare_metric_catalog import key_for
+
+        return key_for(item.get("metric_id"), item.get("aggregation"))
+    return None
+
+
+def resolve_enabled_metrics(
+    active_metrics: list[str | dict] | None,
+) -> list[str] | None:
     """Rueckgabe None (= kein Filter, alle Metriken sichtbar) wenn active_metrics
     leer/None ist -- rueckwaertskompatibler Default (AC-2/AC-4). Nicht mappbare
     IDs werden verworfen statt zum Absturz zu fuehren; bildet die Auswahl komplett
@@ -110,12 +136,24 @@ def resolve_enabled_metrics(active_metrics: list[str] | None) -> list[str] | Non
     Issue #1335 Scheibe 1: Rueckgabetyp ist eine reihenfolge-erhaltende,
     deduplizierte Liste (erste-Vorkommen-Reihenfolge von ``active_metrics``)
     statt eines ungeordneten ``set`` -- die Nutzer-Reihenfolge der Config
-    erreicht so den Renderer (AC-1)."""
+    erreicht so den Renderer (AC-1).
+
+    Issue #1373 Scheibe B: die Auswahl darf beide Speicherformate enthalten --
+    Zeichenketten (Altformat) UND `{"metric_id": ..., "aggregation": ...}`
+    (Neuformat), auch gemischt in derselben Liste (Restrisiko R1: stehen-
+    gebliebene Browser-Sitzung). Die Normalisierung laeuft PRO ELEMENT und VOR
+    dem Dedup; Dedup-Schluessel bleibt die Renderer-Kennung, die Reihenfolge
+    (#1335/#1359) bleibt damit unveraendert erhalten."""
     if not active_metrics:
         return None
     if not isinstance(active_metrics, list):
         return None
-    unmapped = [m for m in active_metrics if m not in FRONTEND_TO_RENDERER_METRIC_ID]
+    normalized = [(item, _to_key(item)) for item in active_metrics]
+    unmapped = [
+        item
+        for item, key in normalized
+        if key is None or key not in FRONTEND_TO_RENDERER_METRIC_ID
+    ]
     if unmapped:
         # Issue #1296: struktureller Guard (AC-6) -- sichtbares Signal statt
         # stiller Verwerfung, damit sich der #1285/#1296-Bug-Typ nicht ein
@@ -125,8 +163,8 @@ def resolve_enabled_metrics(active_metrics: list[str] | None) -> list[str] | Non
             "wird ignoriert statt angezeigt (vgl. #1285/#1296)", unmapped,
         )
     resolved = list(dict.fromkeys(
-        FRONTEND_TO_RENDERER_METRIC_ID[m]
-        for m in active_metrics
-        if m in FRONTEND_TO_RENDERER_METRIC_ID
+        FRONTEND_TO_RENDERER_METRIC_ID[key]
+        for _item, key in normalized
+        if key is not None and key in FRONTEND_TO_RENDERER_METRIC_ID
     ))
     return resolved or None

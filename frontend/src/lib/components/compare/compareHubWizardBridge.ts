@@ -17,6 +17,13 @@ import type { ActivityProfile, ComparePreset, Corridor } from '../../types.ts';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState.ts';
 import { buildComparePresetSavePayload } from './compareEditorSave.ts';
 import { rehydrateActiveMetrics } from './compareEditorLoad.ts';
+// Issue #1373 (S2 Scheibe B, AC-12): dieselbe Lesenormalisierung wie im
+// Lade-Pfad — Alt- UND Neuformat der gespeicherten Metrik-Auswahl.
+import {
+	normalizeStoredActiveMetrics,
+	registeredCompareMetricCatalog,
+	type CompareSelectionEntry
+} from '../shared/weather-metrics-tab/compareMetricSelection.ts';
 import type { CompareStatus } from './subscriptionHelpers.ts';
 import { computePauseToggle } from './subscriptionHelpers.ts';
 import { hydrateWeatherMetricsFromPreset } from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
@@ -40,9 +47,16 @@ export interface HubWizardFields {
  * Teil-Hydration der 6 CorridorEditor-Felder aus einem ComparePreset.
  * isEditMode ist immer true — der Hub mountet den Organism wie den Editor.
  */
-export function hydrateWizardStateFromPreset(preset: ComparePreset): HubWizardFields {
+export function hydrateWizardStateFromPreset(
+	preset: ComparePreset,
+	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): geladene Katalogantwort — ohne sie
+	// bliebe eine im Format Größe + Auswertung gespeicherte Auswahl unaufgelöst,
+	// und das ✕-Entfernen einer Metrik-Zeile im Idealwerte-Reiter träfe sie nicht
+	// mehr (`activeSet.delete(key)` in buildCompareCorridorSavePayload).
+	catalog: CompareSelectionEntry[] = registeredCompareMetricCatalog()
+): HubWizardFields {
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
-	const rehydrated = rehydrateActiveMetrics(displayConfig.active_metrics as string[] | undefined);
+	const rehydrated = rehydrateActiveMetrics(displayConfig.active_metrics, catalog);
 	return {
 		isEditMode: true,
 		corridors: preset.corridors ?? [],
@@ -112,7 +126,17 @@ export function buildHubPutPayload(
 		pickedIds: edit.pickedIds ?? preset.location_ids ?? [],
 		region: (displayConfig.region as string) ?? '',
 		idealRanges: edit.idealRanges ?? (displayConfig.ideal_ranges as Record<string, IdealRange>) ?? {},
-		activeMetricKeys: edit.activeMetricKeys ?? (displayConfig.active_metrics as string[] | undefined),
+		// Issue #1373 (S2 Scheibe B, AC-12 — Datenverlust-Pfad): der
+		// Bestandsrueckfall (Nutzer bearbeitet einen ANDEREN Reiter, also ist
+		// edit.activeMetricKeys undefined) reichte bisher den ROHEN gespeicherten
+		// Wert weiter. Seit dem Formatwechsel sind das Objekte, die als string[]
+		// deklariert in die Schreibfunktion laufen wuerden — Ergebnis: beschaedigte
+		// Metrik-Auswahl beim Speichern eines voellig anderen Reiters. Der Rueckfall
+		// laeuft deshalb durch DIESELBE Lesenormalisierung wie rehydrateActiveMetrics();
+		// `null` (kein Array / Feld fehlt) wird zu undefined, damit
+		// buildComparePresetSavePayload den Key wie bisher unangetastet
+		// round-trippt (#1191: fehlend != []).
+		activeMetricKeys: edit.activeMetricKeys ?? normalizeStoredActiveMetrics(displayConfig.active_metrics) ?? undefined,
 		metricAlertLevels:
 			edit.metricAlertLevels ?? (displayConfig.metric_alert_levels as Record<string, string> | undefined),
 		corridors: edit.corridors ?? preset.corridors,
@@ -427,7 +451,14 @@ export interface AlarmHydrationTarget {
  * `official_alert_triggers_enabled !== false` zurueck, wenn `official_warnings`
  * fehlt (Legacy-Kompatibilitaet).
  */
-export function hydrateAlarmFieldsFromPreset(state: AlarmHydrationTarget, preset: ComparePreset): void {
+export function hydrateAlarmFieldsFromPreset(
+	state: AlarmHydrationTarget,
+	preset: ComparePreset,
+	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): geladene Katalogantwort, nötig zum
+	// Auflösen des Speicherformats der Metrik-Auswahl (Größe + Auswertung) in
+	// der Zeile unten. Default = bereits registrierter Katalog.
+	catalog: CompareSelectionEntry[] = registeredCompareMetricCatalog()
+): void {
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
 	state.officialAlertsEnabled = preset.official_alerts_enabled ?? true;
 	state.officialWarningsEnabled =
@@ -442,7 +473,7 @@ export function hydrateAlarmFieldsFromPreset(state: AlarmHydrationTarget, preset
 	// activeMetricKeys noch keinen Hydrations-Durchlauf vom Wetter-Metriken-/
 	// Idealwerte-Tab gesehen. Ohne diese Zeile zeigt die Empfindlichkeits-
 	// Tabelle faelschlich "keine Metriken", obwohl das Preset aktive Metriken hat.
-	state.activeMetricKeys = hydrateWeatherMetricsFromPreset(preset);
+	state.activeMetricKeys = hydrateWeatherMetricsFromPreset(preset, catalog);
 	// Issue #1260: Kurzstil-Toggle aus display_config.telegram_style hydrieren,
 	// Default "rich" (analog CompareEditor). Ohne diese Zeile bliebe der Toggle
 	// im Hub-Alarme-Tab dauerhaft auf dem Klasse-Default stehen und ein

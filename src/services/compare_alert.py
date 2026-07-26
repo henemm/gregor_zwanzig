@@ -247,6 +247,11 @@ class CompareAlertService:
             konfiguriert = alles aktiv"-Heuristik (leeres `metrics[]`) NICHT mehr →
             „deaktiviert = stumm" statt „alles feuert" (Adversary F001)."""
         from app.models import MetricConfig, UnifiedWeatherDisplayConfig
+        # Issue #1373 Scheibe B: BEWUSST dieselbe Normalisierungsfunktion wie der
+        # Render-Pfad (`resolve_enabled_metrics`) — eine zweite Kopie der
+        # Format-Verzweigung waere genau die Duplikat-Falle, durch die dieser
+        # Leser bei #1191 schon einmal auseinandergelaufen ist.
+        from output.renderers.compare_metric_ids import _to_key
         from services.weather_change_detection import _ALERT_METRIC_TO_CATALOG_ID
 
         active = (preset.get("display_config") or {}).get("active_metrics")
@@ -254,7 +259,18 @@ class CompareAlertService:
             return None  # Legacy: nie migriert → konservativer None-Fallback
 
         active_catalog_ids: set[str] = set()
-        for key in active:
+        for item in active:
+            # Issue #1373 Scheibe B (AC-11): die Auswahl kann als Zeichenkette
+            # (Altformat) ODER als {"metric_id", "aggregation"} (Neuformat)
+            # gespeichert sein — hier wird jedes Element zuerst auf den
+            # Auswahl-Schluessel zurueckgenommen, damit derselbe Vergleich vor
+            # und nach der Umstellung EXAKT dieselben Groessen ueberwacht.
+            # _SUMMARY_KEY_TO_CATALOG_ID bleibt unveraendert: sie fuehrt in
+            # einen anderen Namensraum (Alarm-Engine-IDs wie
+            # "temperature_cold"), den der Katalog-Index nicht ersetzt.
+            key = _to_key(item)
+            if key is None:
+                continue
             cid = _SUMMARY_KEY_TO_CATALOG_ID.get(key)
             if cid:
                 active_catalog_ids.add(cid)

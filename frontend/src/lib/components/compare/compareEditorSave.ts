@@ -10,6 +10,11 @@
 import type { ComparePreset, ActivityProfile, Corridor } from '../../types.ts';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState.ts';
 import { toHHMMSS } from '../../utils/time.ts';
+// Issue #1373 (S2 Scheibe B): Speicherformat der Metrik-Auswahl ist Größe +
+// Auswertung. Die Übersetzung kommt aus der bereits geladenen Antwort von
+// GET /api/compare/metrics (Scheibe A liefert metric_id/aggregation je Eintrag) —
+// keine zweite Tabelle im Frontend, keine zusätzliche Anfrage.
+import { toStoredActiveMetrics } from '../shared/weather-metrics-tab/compareMetricSelection.ts';
 
 export interface CompareEditorEdits {
 	name: string;
@@ -99,7 +104,11 @@ export function buildComparePresetSavePayload(
 		// NICHT loeschen. Sonst ist "Nutzer hat alles abgewaehlt" (nichts feuert)
 		// nicht von "nie konfiguriert/migriert" (Legacy-Fallback: alles feuert)
 		// unterscheidbar. Read-Modify-Write-Merge bleibt gewahrt (Spread + Ueberschreiben).
-		displayConfig.active_metrics = edits.activeMetricKeys;
+		//
+		// Issue #1373 (S2 Scheibe B): geschrieben wird nur noch das neue Format
+		// (Groesse + Auswertung). [] bleibt [] — die Uebersetzung einer leeren
+		// Auswahl ist eine leere Liste, kein weggelassener Key.
+		displayConfig.active_metrics = toStoredActiveMetrics(edits.activeMetricKeys);
 	}
 
 	if (edits.hourlyMetricKeys !== undefined) {
@@ -274,7 +283,13 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 		display_config: {
 			region: fields.region,
 			...(Object.keys(fields.idealRanges).length > 0 ? { ideal_ranges: fields.idealRanges } : {}),
-			...(fields.activeMetricKeys.length > 0 ? { active_metrics: fields.activeMetricKeys } : {}),
+			// Issue #1373 (S2 Scheibe B): Neuformat (Groesse + Auswertung). Die
+			// Asymmetrie zum Edit-Pfad bleibt bewusst erhalten (#1191/F001): bei
+			// leerer Auswahl laesst die Neuanlage den Key WEG, der Edit-Pfad
+			// schreibt ihn explizit als [].
+			...(fields.activeMetricKeys.length > 0
+				? { active_metrics: toStoredActiveMetrics(fields.activeMetricKeys) }
+				: {}),
 			...(fields.hourlyMetricKeys.length > 0 ? { hourly_metrics: fields.hourlyMetricKeys } : {}),
 			...(Object.keys(fields.metricAlertLevels).length > 0
 				? { metric_alert_levels: fields.metricAlertLevels }

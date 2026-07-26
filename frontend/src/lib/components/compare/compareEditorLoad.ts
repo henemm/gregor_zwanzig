@@ -9,6 +9,12 @@
 // prüfte fälschlich `length > 0`, wodurch das leere Array wie „nie gesetzt"
 // behandelt und mit Profil-Defaults überschrieben wurde.
 
+import {
+	normalizeStoredActiveMetrics,
+	registeredCompareMetricCatalog,
+	type CompareSelectionEntry
+} from '../shared/weather-metrics-tab/compareMetricSelection.ts';
+
 export interface RehydratedActiveMetrics {
 	activeMetricKeys: string[];
 	metricsManuallyEdited: boolean;
@@ -22,12 +28,19 @@ export interface RehydratedActiveMetrics {
  *          (dann greifen die Profil-Defaults).
  */
 export function rehydrateActiveMetrics(
-	savedActiveMetrics: string[] | undefined | null
+	savedActiveMetrics: unknown,
+	catalog: CompareSelectionEntry[] = registeredCompareMetricCatalog()
 ): RehydratedActiveMetrics | null {
 	// #1191: Jedes VORHANDENE Array (auch []) ist eine bewusste Wahl —
 	// unabhängig von der Länge. Nur null/undefined = Legacy/nie gesetzt.
-	if (Array.isArray(savedActiveMetrics)) {
-		return { activeMetricKeys: savedActiveMetrics, metricsManuallyEdited: true };
+	//
+	// Issue #1373 (S2 Scheibe B): der gespeicherte Wert kann Auswahl-Schlüssel
+	// (Altformat) ODER Größe+Auswertung (Neuformat) enthalten — auch gemischt.
+	// normalizeStoredActiveMetrics() führt beides auf Auswahl-Schlüssel zurück
+	// und reicht nicht auflösbare Einträge unverändert durch (verlustfrei).
+	const normalized = normalizeStoredActiveMetrics(savedActiveMetrics, catalog);
+	if (normalized !== null) {
+		return { activeMetricKeys: normalized, metricsManuallyEdited: true };
 	}
 	return null;
 }

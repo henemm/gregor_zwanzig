@@ -62,11 +62,15 @@
 	// Issue #1350 Teil 2: Vergleich-Auswahlliste kommt jetzt aus GET
 	// /api/compare/metrics statt aus COMPARE_METRIC_DEFS (bleibt fuer
 	// Schwellen-Slider/Winner-Box/Save-Default-Fallback unveraendert, Teil 3).
-	import { toCompareSelectionEntries, type CompareSelectionEntry } from './weather-metrics-tab/compareMetricSelection.ts';
+	import { type CompareSelectionEntry } from './weather-metrics-tab/compareMetricSelection.ts';
+	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): geteilter Katalog-Cache — eine
+	// Anfrage pro Seiten-Load fuer Auswahlliste, Schwellen-Editor und
+	// Hub-Hydration; `toCompareSelectionEntries()` darin fuellt den Umkehr-Index
+	// Auswahl-Schluessel <-> Groesse+Auswertung.
+	import { loadCompareSelectionEntries } from './corridor-editor/compareMetricCatalogLoader.ts';
 	// Issue #1359 Scheibe 1: reihenfolge-erhaltendes An-/Abwaehlen als reine,
 	// testbare Funktion (Muster: weatherMetricsTabSections.ts nebenan).
 	import { toggleCompareMetricKey } from './weather-metrics-tab/compareMetricOrder.ts';
-	import type { CompareMetricCatalogResponse } from '$lib/types';
 
 	interface Template {
 		id: string;
@@ -375,8 +379,13 @@
 	async function loadCompareMetricCatalog() {
 		compareCatalogError = null;
 		try {
-			const res = await api.get<CompareMetricCatalogResponse>('/api/compare/metrics');
-			compareCatalog = toCompareSelectionEntries(res);
+			// Issue #1373 (S2 Scheibe B, Fix-Runde 1): geteilter Promise-Cache statt
+			// eigenem Fetch — dieselbe Antwort versorgt Auswahlliste, Schwellen-
+			// Editor UND die Hub-Hydration der Metrik-Auswahl (eine Anfrage pro
+			// Seiten-Load). Die Aufloesung des Speicherformats passiert jetzt in der
+			// Hydration (CompareTabs.svelte::hydrateWetterMetrikenTab), NICHT mehr
+			// nachtraeglich hier — ein Mechanismus, nicht zwei.
+			compareCatalog = await loadCompareSelectionEntries();
 			compareCatalogLoaded = true;
 		} catch (e: unknown) {
 			compareCatalogError = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';

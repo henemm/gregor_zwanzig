@@ -13,6 +13,13 @@
 import { api } from '$lib/api';
 import type { CompareMetricCatalogEntry, CompareMetricCatalogResponse } from '$lib/types';
 import { _COMPARE_DEFAULTS, type CompareMetricDef } from './corridorEditorState.ts';
+// Issue #1373 (S2 Scheibe B): dieselbe Antwort liefert auch die Auswahllisten-
+// Form samt Herkunftsfeldern (metric_id/aggregation) — eine Anfrage, zwei
+// Ableitungen, kein zweiter Fetch.
+import {
+	toCompareSelectionEntries,
+	type CompareSelectionEntry
+} from '../weather-metrics-tab/compareMetricSelection.ts';
 
 /**
  * Reiner, testbarer Mapper: Endpoint-Eintrag -> CompareMetricDef. `kind`
@@ -48,17 +55,41 @@ export function buildCompareMetricDefs(response: CompareMetricCatalogResponse): 
 // CorridorEditor im selben Seiten-Load beide fetchen. Ein Fehler invalidiert
 // den Cache (naechster Aufruf fetcht erneut, kein dauerhaft gecachter
 // Fehlerzustand).
-let cachedCatalog: Promise<CompareMetricDef[]> | null = null;
+//
+// Issue #1373 (S2 Scheibe B, Fix-Runde 1): gecacht wird jetzt die ROHE Antwort,
+// nicht das abgeleitete CompareMetricDef[] — damit teilen sich ALLE drei
+// Verbraucher (Schwellen-Editor, Auswahlliste im Wetter-Metriken-Reiter,
+// Hub-Hydration der Metrik-Auswahl) EINE Anfrage pro Seiten-Load.
+let cachedResponse: Promise<CompareMetricCatalogResponse> | null = null;
 
-export function loadCompareMetricCatalog(): Promise<CompareMetricDef[]> {
-	if (!cachedCatalog) {
-		cachedCatalog = api
+function fetchCompareMetricCatalogOnce(): Promise<CompareMetricCatalogResponse> {
+	if (!cachedResponse) {
+		cachedResponse = api
 			.get<CompareMetricCatalogResponse>('/api/compare/metrics')
-			.then(buildCompareMetricDefs)
 			.catch((e: unknown) => {
-				cachedCatalog = null;
+				cachedResponse = null;
 				throw e;
 			});
 	}
-	return cachedCatalog;
+	return cachedResponse;
+}
+
+export function loadCompareMetricCatalog(): Promise<CompareMetricDef[]> {
+	return fetchCompareMetricCatalogOnce().then(buildCompareMetricDefs);
+}
+
+/**
+ * Issue #1373 (S2 Scheibe B): dieselbe Antwort in der Auswahllisten-Form
+ * (`{metric, label, metric_id, aggregation}`). `toCompareSelectionEntries()`
+ * füllt dabei den Umkehr-Index Auswahl-Schlüssel <-> Größe+Auswertung, der das
+ * Lesen UND Schreiben von `display_config.active_metrics` übersetzt.
+ *
+ * Wird von der Hub-Hydration (CompareTabs.svelte) VOR dem Setzen des
+ * Dirty-Check-Grundzustands abgewartet: sonst stünde im Grundzustand die noch
+ * unaufgelöste Rohform, jede Nutzergeste erzeugte einen Scheindiff, und ein
+ * fehlgeschlagenes Speichern setzte die Auswahl auf die Rohform zurück
+ * (Adversary-Befund F001 der Fix-Runde 1).
+ */
+export function loadCompareSelectionEntries(): Promise<CompareSelectionEntry[]> {
+	return fetchCompareMetricCatalogOnce().then(toCompareSelectionEntries);
 }

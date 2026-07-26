@@ -18,7 +18,7 @@
 //   cd frontend && node --experimental-strip-types --test \
 //     src/lib/components/compare/compareEditorSlice3.test.ts
 
-import { test, describe } from 'node:test';
+import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 // ── Import: Save-Payload mit activeMetricKeys (AC-10) ────────────────────────
@@ -27,6 +27,15 @@ import type { ComparePreset } from '../../types.ts';
 
 // ── Import 4: Lade-Pfad-Rehydrierung (Issue #1191) ──────────────────────────
 import { rehydrateActiveMetrics } from './compareEditorLoad.ts';
+// Issue #1373 (S2 Scheibe B): Übersetzungsquelle für das Speicherformat der
+// Metrik-Auswahl (Größe + Auswertung) — die geladene Katalogantwort.
+import { registerCompareMetricCatalog } from '../shared/weather-metrics-tab/compareMetricSelection.ts';
+
+// Der Umkehr-Index (Modulzustand) startet in JEDEM Test dieser Datei leer —
+// kein Test haengt an der Reihenfolge eines anderen (F002, Fix-Runde 1).
+beforeEach(() => {
+	registerCompareMetricCatalog([]);
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fixture
@@ -57,6 +66,18 @@ function makePreset(): ComparePreset {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('buildComparePresetSavePayload — active_metrics (AC-10)', () => {
 	test('activeMetricKeys wird als display_config.active_metrics übergeben', () => {
+		// Issue #1373 (S2 Scheibe B): dieselbe Zusage wie bisher (die Auswahl
+		// erreicht display_config.active_metrics, in der Reihenfolge der
+		// Nutzerauswahl) — nur im neuen Speicherformat Größe + Auswertung. Die
+		// Übersetzung kommt aus der geladenen Antwort von GET /api/compare/metrics.
+		// Der Umkehr-Index ist Modulzustand — jeder Test dieser Datei startet per
+		// beforeEach leer und lädt selbst, was er braucht (keine
+		// Reihenfolge-Abhängigkeit, Adversary-Befund F002 der Fix-Runde 1).
+		registerCompareMetricCatalog([
+			{ metric: 'snow_depth_cm', label: 'Schneehöhe', metric_id: 'snow_depth', aggregation: 'max' },
+			{ metric: 'wind_max_kmh', label: 'Windspitzen', metric_id: 'wind', aggregation: 'max' },
+			{ metric: 'precip_sum_mm', label: 'Niederschlag', metric_id: 'precipitation', aggregation: 'sum' }
+		]);
 		const { body } = buildComparePresetSavePayload(makePreset(), {
 			name: 'Slice3 Test',
 			activityProfile: 'wintersport',
@@ -67,8 +88,12 @@ describe('buildComparePresetSavePayload — active_metrics (AC-10)', () => {
 		});
 		assert.deepEqual(
 			(body.display_config as Record<string, unknown>).active_metrics,
-			['snow_depth_cm', 'wind_max_kmh', 'precip_sum_mm'],
-			'active_metrics fehlt im display_config'
+			[
+				{ metric_id: 'snow_depth', aggregation: 'max' },
+				{ metric_id: 'wind', aggregation: 'max' },
+				{ metric_id: 'precipitation', aggregation: 'sum' }
+			],
+			'active_metrics fehlt im display_config (bzw. steht nicht im Format Größe+Auswertung, #1373)'
 		);
 	});
 

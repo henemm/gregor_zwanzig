@@ -10,6 +10,12 @@ import type { ComparePreset } from '../../../types.ts';
 import { buildHubPutPayload } from '../../compare/compareHubWizardBridge.ts';
 import { rehydrateActiveMetrics } from '../../compare/compareEditorLoad.ts';
 import { COMPARE_METRIC_KEYS } from '../corridor-editor/corridorEditorState.ts';
+// Issue #1373 (S2 Scheibe B): Übersetzungsquelle für das Speicherformat der
+// Metrik-Auswahl (Größe + Auswertung) — die geladene Katalogantwort.
+import {
+	registeredCompareMetricCatalog,
+	type CompareSelectionEntry
+} from './compareMetricSelection.ts';
 
 // Issue #1361/#1372 S1b — Trip-Default (day_window.py DAY_WINDOW_START_HOUR/
 // _END_HOUR), geteilt zwischen Hydration und Neuanlage.
@@ -36,10 +42,21 @@ export function hydrateDayWindowFromPreset(preset: ComparePreset): {
  * Renderpfad, der ohne Filter ALLE Metriken zeigt) — ohne das direkt zu
  * schreiben. Ein explizit gespeichertes (auch leeres) Array wird 1:1
  * uebernommen (#1191-Semantik, kein Legacy-Fallback fuer bewusste Leerauswahl).
+ *
+ * Issue #1373 (S2 Scheibe B, Fix-Runde 1): `catalog` ist die geladene Antwort
+ * von GET /api/compare/metrics — nur damit kann eine im neuen Format
+ * (Größe + Auswertung) gespeicherte Auswahl auf Auswahl-Schlüssel
+ * zurückgeführt werden. Der Aufrufer MUSS die Antwort abwarten, bevor er
+ * hydriert und den Dirty-Check-Grundzustand aufnimmt (sonst Scheindiff und
+ * Rücksetzen auf die Rohform, Adversary-Befund F001). Default = der bereits
+ * registrierte Katalog, damit bestehende Aufrufer unverändert funktionieren.
  */
-export function hydrateWeatherMetricsFromPreset(preset: ComparePreset): string[] {
+export function hydrateWeatherMetricsFromPreset(
+	preset: ComparePreset,
+	catalog: CompareSelectionEntry[] = registeredCompareMetricCatalog()
+): string[] {
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
-	const rehydrated = rehydrateActiveMetrics(displayConfig.active_metrics as string[] | undefined);
+	const rehydrated = rehydrateActiveMetrics(displayConfig.active_metrics, catalog);
 	return rehydrated ? rehydrated.activeMetricKeys : [...COMPARE_METRIC_KEYS];
 }
 
