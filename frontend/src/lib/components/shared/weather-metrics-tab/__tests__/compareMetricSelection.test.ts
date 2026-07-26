@@ -159,6 +159,116 @@ describe('AC-2: SSoT-Kern — neuer Backend-Eintrag erscheint ohne Frontend-Kons
 	});
 });
 
+// ---------------------------------------------------------------------------
+// TDD RED — #1373 (S2 Scheibe A), AC-6: der Katalog-Endpoint liefert je Eintrag
+// zusätzlich `metric_id` (zentrale Wettergröße) und `aggregation` (Auswertung).
+// `toCompareSelectionEntries()` reicht beide unverändert durch — reines
+// Durchreichen, keine neue Auswahl-Logik, keine UI-Änderung. Scheibe B baut
+// darauf auf.
+//
+// Spec: docs/specs/modules/feat_1373_s2_ein_katalog.md § AC-6, Punkt 4
+// ---------------------------------------------------------------------------
+
+// Auszug aus der Endpoint-Antwort NACH #1373 (Herkunftsfelder ergänzt, Rest
+// unverändert) — inklusive der beiden Aufspaltungen, die dieselbe zentrale
+// Größe mit unterschiedlicher Auswertung tragen.
+const CATALOG_WITH_ORIGIN_FIXTURE = {
+	metrics: [
+		{ key: 'temp_max_c', label: 'Temperatur max', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -20, rangeMax: 45, step: 1, metric_id: 'temperature', aggregation: 'max' },
+		{ key: 'temp_min_c', label: 'Temperatur min', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, metric_id: 'temperature', aggregation: 'min' },
+		{ key: 'wind_max_kmh', label: 'Windspitzen', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, metric_id: 'wind', aggregation: 'max' },
+		{ key: 'precip_sum_mm', label: 'Niederschlag', unit: 'mm', decimals: 1, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 30, step: 0.5, metric_id: 'precipitation', aggregation: 'sum' }
+	]
+};
+
+type SelectionEntryWithOrigin = {
+	metric: string;
+	label: string;
+	metric_id?: string;
+	aggregation?: string;
+};
+
+describe('#1373 AC-6: metric_id/aggregation werden unveraendert durchgereicht', () => {
+	test('jeder Auswahl-Eintrag traegt metric_id und aggregation aus der Endpoint-Antwort', async () => {
+		let mod: typeof import('../compareMetricSelection.ts');
+		try {
+			mod = await import(MODULE_SPECIFIER);
+		} catch (e) {
+			assert.fail(
+				`AC-6 FAIL: compareMetricSelection.ts kann nicht importiert werden: ${(e as Error).message}`
+			);
+			return;
+		}
+
+		const result = mod.toCompareSelectionEntries(
+			CATALOG_WITH_ORIGIN_FIXTURE as unknown as Parameters<typeof mod.toCompareSelectionEntries>[0]
+		) as unknown as SelectionEntryWithOrigin[];
+
+		assert.equal(result.length, 4, `AC-6 FAIL: erwartet 4 Eintraege, erhalten ${result.length}`);
+
+		CATALOG_WITH_ORIGIN_FIXTURE.metrics.forEach((expected, i) => {
+			const actual = result[i];
+			assert.equal(actual?.metric, expected.key, `AC-6 FAIL: key->metric an Index ${i}`);
+			assert.equal(actual?.label, expected.label, `AC-6 FAIL: label an Index ${i}`);
+			assert.equal(
+				actual?.metric_id,
+				expected.metric_id,
+				`AC-6 FAIL: metric_id an Index ${i} nicht durchgereicht — erwartet '${expected.metric_id}', erhalten '${actual?.metric_id}'`
+			);
+			assert.equal(
+				actual?.aggregation,
+				expected.aggregation,
+				`AC-6 FAIL: aggregation an Index ${i} nicht durchgereicht — erwartet '${expected.aggregation}', erhalten '${actual?.aggregation}'`
+			);
+		});
+	});
+
+	test('die beiden Aufspaltungen bleiben getrennte Eintraege derselben Groesse', async () => {
+		let mod: typeof import('../compareMetricSelection.ts');
+		try {
+			mod = await import(MODULE_SPECIFIER);
+		} catch (e) {
+			assert.fail(
+				`AC-6 FAIL: compareMetricSelection.ts kann nicht importiert werden: ${(e as Error).message}`
+			);
+			return;
+		}
+
+		const result = mod.toCompareSelectionEntries(
+			CATALOG_WITH_ORIGIN_FIXTURE as unknown as Parameters<typeof mod.toCompareSelectionEntries>[0]
+		) as unknown as SelectionEntryWithOrigin[];
+
+		const hi = result.find((e) => e.metric === 'temp_max_c');
+		const lo = result.find((e) => e.metric === 'temp_min_c');
+		assert.ok(hi && lo, 'AC-6 FAIL: temp_max_c/temp_min_c sind nicht beide vorhanden');
+		assert.equal(hi?.metric_id, 'temperature');
+		assert.equal(lo?.metric_id, 'temperature');
+		assert.equal(hi?.aggregation, 'max');
+		assert.equal(lo?.aggregation, 'min');
+	});
+
+	test('Eintrag ohne Herkunftsfelder wird weiterhin gemappt, ohne leere Schluessel zu erfinden', async () => {
+		// Vertrag (haelt den bestehenden #1350-AC-2-Test gruen): fehlen die
+		// Felder in der Antwort, darf das Mapping sie NICHT als `undefined`
+		// ergaenzen — sonst bricht der strikte deepEqual-Vergleich oben.
+		let mod: typeof import('../compareMetricSelection.ts');
+		try {
+			mod = await import(MODULE_SPECIFIER);
+		} catch (e) {
+			assert.fail(
+				`AC-6 FAIL: compareMetricSelection.ts kann nicht importiert werden: ${(e as Error).message}`
+			);
+			return;
+		}
+
+		const result = mod.toCompareSelectionEntries({
+			metrics: [{ key: 'ohne_herkunft', label: 'Ohne Herkunft' }]
+		} as unknown as Parameters<typeof mod.toCompareSelectionEntries>[0]);
+
+		assert.deepEqual(result, [{ metric: 'ohne_herkunft', label: 'Ohne Herkunft' }]);
+	});
+});
+
 describe('Robustheit: leere/fehlende metrics -> leeres Array, kein Crash', () => {
 	test('metrics: [] -> []', async () => {
 		let mod: typeof import('../compareMetricSelection.ts');

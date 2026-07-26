@@ -10,7 +10,7 @@ router = APIRouter(tags=["compare"])
 
 @router.get("/api/compare/metrics")
 def get_compare_metrics():
-    """Backend-Katalog der 25 Ortsvergleich-Metriken (Issue #1350 Teil 1).
+    """Backend-Katalog der 26 Ortsvergleich-Metriken (Issue #1350 Teil 1).
 
     Read-only, kein user_id-Bezug (statischer Katalog, analog /api/metrics).
     Teil 1 der Strangler-Migration: der Endpoint wird bereitgestellt, aber

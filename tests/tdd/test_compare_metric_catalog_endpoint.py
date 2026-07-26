@@ -16,6 +16,11 @@ frontend/src/lib/components/shared/corridor-editor/corridorEditorState.ts:273-28
 Issue #1351 Teil 1: ``wind_chill_max_c`` (Gefuehlte Temp. max, analog
 ``temp_max_c``) kommt als 26. Eintrag hinzu -- Katalog ist seit #1350 die
 SSoT, das Frontend-Fixture ist nur noch die eingefrorene Ausgangsbasis.
+
+#1373 (S2 Scheibe A, AC-6): jeder der 26 Eintraege traegt zusaetzlich
+``metric_id`` (zentrale Katalog-ID) und ``aggregation`` (Auswertung) --
+``key`` bleibt unveraendert erhalten (Rueckwaertskompatibilitaet).
+SPEC: docs/specs/modules/feat_1373_s2_ein_katalog.md
 """
 from __future__ import annotations
 
@@ -23,6 +28,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
+from app.metric_catalog import get_all_metrics
 
 
 @pytest.fixture()
@@ -94,6 +100,68 @@ EXPECTED_METRICS: list[dict] = [
 ]
 
 assert len(EXPECTED_METRICS) == 26, "Paritaets-Fixture muss exakt 26 Eintraege haben (#1351: +wind_chill_max_c)"
+
+
+# ---------------------------------------------------------------------------
+# #1373 AC-6: Herkunfts-Fixture -- welche zentrale Groesse (metric_id) und
+# welche Auswertung (aggregation) steht hinter jedem Compare-Key.
+#
+# Abgeleitet aus `metric_catalog.MetricDefinition.summary_fields` (gemessen
+# 2026-07-26): fuer 22 der 26 Keys ist der Compare-Key woertlich der
+# Summary-Feldname der zentralen Groesse (z. B. temperature/max ->
+# "temp_max_c").
+#
+# Zwei weitere Keys weichen NAMENTLICH ab, die zentrale Groesse traegt ihr
+# summary_fields aber sehr wohl -- sie sind daher KEINE Ausnahme von der
+# Auswertungs-Pruefung (Messkorrektur 2026-07-26, metric_catalog.py:368
+# bzw. :177):
+#   sunny_hours_h      -> sunshine/sum       (zentral: "sunny_hours", ohne _h)
+#   wind_direction_deg -> wind_direction/avg (zentral: "wind_direction_avg_deg")
+#
+# Nur fuer 4 Keys fehlt `summary_fields` strukturell -- ihre Herkunft ist hier
+# explizit festgehalten (eigene Tickets, s. Ausnahmeliste in
+# tests/unit/test_compare_catalog_derives_from_central_catalog.py):
+#   cloud_low/mid/high -> cloud_low|mid|high/avg (summary_fields leer, #1392)
+#   snowfall_limit_m   -> snowfall_limit/?   (summary_fields leer UND zwei
+#                                             default_aggregations min/max,
+#                                             #1391)
+# Der Wert None bedeutet: Auswertung nicht eindeutig aus den Katalogdaten
+# ableitbar -> unten wird nur auf Plausibilitaet geprueft
+# (aggregation in default_aggregations), nicht auf einen festen Wert.
+# ---------------------------------------------------------------------------
+EXPECTED_METRIC_ORIGIN: dict[str, tuple[str, str | None]] = {
+    "snow_depth_cm": ("snow_depth", "max"),
+    "snow_new_sum_cm": ("fresh_snow", "sum"),
+    "sunny_hours_h": ("sunshine", "sum"),
+    "wind_max_kmh": ("wind", "max"),
+    "cloud_avg_pct": ("cloud_total", "avg"),
+    "visibility_min_m": ("visibility", "min"),
+    "precip_sum_mm": ("precipitation", "sum"),
+    "uv_index_max": ("uv_index", "max"),
+    "temp_max_c": ("temperature", "max"),
+    "thunder_level_max": ("thunder", "max"),
+    "temp_min_c": ("temperature", "min"),
+    "gust_max_kmh": ("gust", "max"),
+    "cape_max_jkg": ("cape", "max"),
+    "freezing_level_m": ("freezing_level", "min"),
+    "pop_max_pct": ("rain_probability", "max"),
+    "wind_direction_deg": ("wind_direction", "avg"),
+    "wind_chill_min_c": ("wind_chill", "min"),
+    "wind_chill_max_c": ("wind_chill", "max"),
+    "humidity_avg_pct": ("humidity", "avg"),
+    "dewpoint_avg_c": ("dewpoint", "avg"),
+    "snowfall_limit_m": ("snowfall_limit", None),
+    "precip_type_dominant": ("precip_type", "max"),
+    "cloud_low_avg_pct": ("cloud_low", "avg"),
+    "cloud_mid_avg_pct": ("cloud_mid", "avg"),
+    "cloud_high_avg_pct": ("cloud_high", "avg"),
+    "pressure_avg_hpa": ("pressure", "avg"),
+}
+
+assert set(EXPECTED_METRIC_ORIGIN) == {m["key"] for m in EXPECTED_METRICS}, (
+    "Herkunfts-Fixture (#1373 AC-6) und Paritaets-Fixture beschreiben nicht "
+    "dieselben 26 Keys"
+)
 
 
 class TestCompareMetricCatalogEndpoint:
@@ -212,4 +280,109 @@ class TestCompareMetricCatalogEndpoint:
             expected = m["key"] in expected_alarm_keys
             assert m.get("alarmCapable") is expected, (
                 f"{m['key']}: alarmCapable erwartet {expected}, erhalten {m.get('alarmCapable')!r}"
+            )
+
+
+class TestCompareMetricOrigin:
+    """#1373 AC-6: jeder Eintrag nennt neben dem bisherigen Kurznamen (`key`)
+    auch die zugehoerige zentrale Wettergroesse (`metric_id`) und die
+    Auswertung (`aggregation`) als eigene, auslesbare Angaben.
+
+    Heute ROT -- beide Felder gibt es noch nicht.
+    """
+
+    def test_each_entry_has_metric_id_and_aggregation(self, client: TestClient) -> None:
+        """AC-6: alle 26 Eintraege tragen `metric_id` und `aggregation` als
+        nicht-leere Strings. `key` bleibt zusaetzlich erhalten
+        (Rueckwaertskompatibilitaet -- das Frontend waehlt weiterhin ueber
+        `key` aus, Scheibe B)."""
+        response = client.get("/api/compare/metrics")
+        metrics = response.json()["metrics"]
+        assert len(metrics) == 26
+
+        for entry in metrics:
+            assert "key" in entry and entry["key"], "Eintrag ohne `key`"
+            for field in ("metric_id", "aggregation"):
+                assert field in entry, f"{entry['key']}: fehlt {field}"
+                assert isinstance(entry[field], str) and entry[field], (
+                    f"{entry['key']}.{field} muss ein nicht-leerer String sein, "
+                    f"ist {entry[field]!r}"
+                )
+
+    def test_metric_id_exists_in_central_catalog(self, client: TestClient) -> None:
+        """AC-6: `metric_id` verweist auf eine tatsaechlich waehlbare Groesse
+        des zentralen Wetterkatalogs -- keine frei erfundene Kennung."""
+        response = client.get("/api/compare/metrics")
+        metrics = response.json()["metrics"]
+        central_ids = {m.id for m in get_all_metrics()}
+
+        unknown = sorted(
+            (e["key"], e.get("metric_id"))
+            for e in metrics
+            if e.get("metric_id") not in central_ids
+        )
+        assert not unknown, (
+            f"Eintraege mit unbekannter/fehlender zentraler Groesse: {unknown} "
+            f"(bekannt: {sorted(central_ids)})"
+        )
+
+    def test_metric_id_and_aggregation_are_plausible(self, client: TestClient) -> None:
+        """AC-6 (KERN): Herkunft je Eintrag stimmt mit dem zentralen Katalog
+        ueberein -- z. B. `temp_max_c` -> metric_id="temperature",
+        aggregation="max"; `temp_min_c` -> "temperature"/"min".
+
+        Fuer `snowfall_limit_m` ist die Auswertung aus den Katalogdaten nicht
+        eindeutig ableitbar (leeres `summary_fields`, zwei
+        `default_aggregations`) -- dort wird nur geprueft, dass die gewaehlte
+        Auswertung eine der zentral definierten ist.
+        """
+        response = client.get("/api/compare/metrics")
+        metrics = response.json()["metrics"]
+        central = {m.id: m for m in get_all_metrics()}
+
+        for entry in metrics:
+            key = entry["key"]
+            expected_metric_id, expected_aggregation = EXPECTED_METRIC_ORIGIN[key]
+            assert entry.get("metric_id") == expected_metric_id, (
+                f"{key}.metric_id: erwartet {expected_metric_id!r}, "
+                f"erhalten {entry.get('metric_id')!r}"
+            )
+            if expected_aggregation is not None:
+                assert entry.get("aggregation") == expected_aggregation, (
+                    f"{key}.aggregation: erwartet {expected_aggregation!r}, "
+                    f"erhalten {entry.get('aggregation')!r}"
+                )
+            else:
+                allowed = central[expected_metric_id].default_aggregations
+                assert entry.get("aggregation") in allowed, (
+                    f"{key}.aggregation: {entry.get('aggregation')!r} ist keine "
+                    f"der zentral definierten Auswertungen {allowed}"
+                )
+
+    def test_split_metrics_share_metric_id_but_differ_in_aggregation(
+        self, client: TestClient
+    ) -> None:
+        """AC-6 + AC-2 zusammen: die beiden Aufspaltungen (Temperatur,
+        Gefuehlte Temperatur) bleiben getrennte Eintraege, teilen sich aber
+        dieselbe zentrale Groesse und unterscheiden sich genau in der
+        Auswertung. Das ist der Nachweis, dass `metric_id`/`aggregation` die
+        Aufspaltung korrekt beschreiben -- Voraussetzung fuer Scheibe B."""
+        response = client.get("/api/compare/metrics")
+        by_key = {m["key"]: m for m in response.json()["metrics"]}
+
+        for max_key, min_key, metric_id in (
+            ("temp_max_c", "temp_min_c", "temperature"),
+            ("wind_chill_max_c", "wind_chill_min_c", "wind_chill"),
+        ):
+            hi, lo = by_key[max_key], by_key[min_key]
+            assert hi.get("metric_id") == metric_id, (
+                f"{max_key}.metric_id: erwartet {metric_id!r}, erhalten {hi.get('metric_id')!r}"
+            )
+            assert lo.get("metric_id") == metric_id, (
+                f"{min_key}.metric_id: erwartet {metric_id!r}, erhalten {lo.get('metric_id')!r}"
+            )
+            assert hi.get("aggregation") == "max"
+            assert lo.get("aggregation") == "min"
+            assert hi["key"] != lo["key"], (
+                f"{max_key}/{min_key} sind zu einem Eintrag zusammengefallen"
             )

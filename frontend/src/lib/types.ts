@@ -439,6 +439,11 @@ export interface CompareMetricCatalogEntry {
 	enumValues?: string[];
 	// Issue #1350 Teil 3: steuert die "Warnen"-Button-Sperre im Schwellen-Editor.
 	alarmCapable?: boolean;
+	// Issue #1373 (S2 Scheibe A): Herkunft des Eintrags im zentralen Wetterkatalog
+	// — `metric_id` = Kennung der Größe, `aggregation` = gezeigte Auswertung.
+	// Optional, weil ältere Antworten (bzw. Test-Fixtures) sie nicht tragen.
+	metric_id?: string;
+	aggregation?: string;
 }
 
 export interface CompareMetricCatalogResponse {
