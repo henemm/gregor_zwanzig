@@ -14,6 +14,7 @@ from datetime import date, datetime
 
 from app.models import ForecastDataPoint
 from app.user import ComparisonResult, LocationResult, SavedLocation
+from output.channels.email import build_mime_message
 from output.renderers.comparison import render_compare_email, render_compare_telegram
 from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
 from output.renderers.compare_metric_ids import resolve_enabled_metrics
@@ -73,14 +74,24 @@ class TestUebersichtsAufloeserAC2:
 
 
 class TestStundenverlaufAufloeserAC5AC6:
-    def test_ac5_komplett_unbekannte_auswahl_ergibt_leere_liste(self):
+    def test_ac5_komplett_unbekannte_auswahl_ergibt_leere_liste_und_nur_protokollvermerk(self, caplog):
         """AC-5: Given mehrere Stundenverlauf-Kennungen, die ALLE unmappbar
         sind / When resolve_hourly_metrics() aufgerufen wird / Then liefert
-        es [], nicht None (bisher: Rueckfall auf alle 9 Spalten)."""
-        result = resolve_hourly_metrics(["unbekannt_a", "unbekannt_b"])
+        es [], nicht None (bisher: Rueckfall auf alle 9 Spalten).
+
+        PO-Entscheidung: eine ausschliesslich unbekannte Auswahl wird wie eine
+        bewusst leere behandelt — die Mail zeigt dort nichts, der Hinweis auf
+        die verworfenen Kennungen steht NUR im Protokoll."""
+        with caplog.at_level(logging.WARNING):
+            result = resolve_hourly_metrics(["unbekannt_a", "unbekannt_b"])
         assert result == [], (
             f"Komplett unmappbare Stundenauswahl muss [] ergeben (AC-5), "
             f"erhalten {result!r}"
+        )
+        warnings = [r.message for r in caplog.records if r.levelno == logging.WARNING]
+        assert any("unbekannt_a" in msg and "unbekannt_b" in msg for msg in warnings), (
+            f"Die verworfenen Kennungen muessen im Protokoll vermerkt sein "
+            f"(einziger Ort, an dem sie noch auftauchen), Warnungen: {warnings!r}"
         )
 
     def test_ac6_teilweise_unbekannt_behaelt_reihenfolge_und_protokolliert(self, caplog):
@@ -113,6 +124,33 @@ class TestReportConfigResolverAC4AC5:
         assert options.hourly_enabled is False, (
             "Leere Stundenauswahl muss den Stundenblock abschalten, auch "
             "wenn hourly_enabled nicht gesetzt (Default True) ist"
+        )
+
+    def test_nur_windrichtung_schaltet_stundenblock_ab_statt_zeit_only_geruest(self):
+        """Nachtrag-Luecke 2: Given eine Stundenauswahl, die AUSSCHLIESSLICH
+        die Windrichtung enthaelt (aufloesbar, aber reines Merge-Signal ohne
+        eigene Spalte, s. compare_hourly_metric_ids.py:26-30) / When
+        resolve_compare_render_options() aufgerufen wird / Then ist
+        hourly_enabled False.
+
+        Die aufgeloeste Liste ist hier NICHT leer (['wind_direction_deg']) --
+        die reine Leer-Pruefung greift also nicht. Sichtbar wuerde trotzdem
+        nur eine Tabelle mit der Zeit-Spalte, was die PO-Entscheidung vom
+        2026-07-26 ausschliesst und der Pflicht-Validator zurueckweist
+        (.claude/hooks/email_spec_validator.py:379-383)."""
+        preset = {
+            "id": "p-nur-windrichtung",
+            "display_config": {"hourly_metrics": ["wind_dir_deg"]},
+            "hourly_enabled": True,
+        }
+        options = resolve_compare_render_options(preset)
+        assert options.hourly_metrics == ["wind_direction_deg"], (
+            f"Voraussetzung: die Windrichtung ist aufloesbar, die Liste also "
+            f"nicht leer — erhalten {options.hourly_metrics!r}"
+        )
+        assert options.hourly_enabled is False, (
+            "Eine Auswahl ohne jede sichtbare Wert-Spalte muss den "
+            "Stundenblock abschalten statt ein Zeit-only-Geruest zu rendern"
         )
 
     def test_komplett_unbekannte_stundenauswahl_schaltet_stundenblock_ab(self):
@@ -208,3 +246,61 @@ class TestKlartextStundenverlaufAC4:
             f"Reihenfolge der Auswahl muss die Spaltenfolge bestimmen, erhalten: {hour_line!r}"
         )
         assert "Gef." not in hour_line, "nicht gewaehlte Spalten duerfen nicht erscheinen"
+
+
+class TestNurMergeSignalGewaehlt:
+    """Nachtrag-Luecke 2 aus Nutzersicht: hakt jemand im Stundenverlauf NUR
+    die Windrichtung an, entstuende ein Geruest mit ausschliesslich der
+    Zeit-Spalte -- die Windrichtung hat keine eigene Spalte, sie wird nur in
+    die Wind-Zelle gemergt. Der Marker-Header behauptete dabei bisher eine
+    vorhandene Stundensektion."""
+
+    def test_nur_windrichtung_zeigt_keinen_stundenblock_in_html_und_klartext(self):
+        preset = {
+            "id": "p-nur-windrichtung-mail",
+            "display_config": {"hourly_metrics": ["wind_dir_deg"]},
+            "hourly_enabled": True,
+        }
+        options = resolve_compare_render_options(preset)
+
+        html, plain = render_compare_email(
+            _result_mit_stunden(),
+            hourly_metrics=options.hourly_metrics,
+            hourly_enabled=options.hourly_enabled,
+        )
+        assert "STUNDENVERLAUF" not in plain, (
+            "Klartext darf keinen Stundenverlauf-Abschnitt zeigen, wenn keine "
+            "einzige Wert-Spalte gewaehlt ist"
+        )
+        assert "STUNDEN" not in html, (
+            "HTML darf keinen STUNDEN-Sektionskopf zeigen, wenn keine einzige "
+            "Wert-Spalte gewaehlt ist (sonst Tabelle mit nur der Zeit-Spalte)"
+        )
+
+    def test_nur_windrichtung_meldet_marker_header_false(self):
+        """Der Versandweg setzt X-GZ-Compare-Hourly-Enabled aus
+        `opts.hourly_enabled` (scheduler_dispatch_service.py:399) -- derselbe
+        Aufruf hier, damit der Header nicht eine Stundensektion behauptet, die
+        die Mail gar nicht enthaelt."""
+        preset = {
+            "id": "p-nur-windrichtung-header",
+            "display_config": {"hourly_metrics": ["wind_dir_deg"]},
+            "hourly_enabled": True,
+        }
+        options = resolve_compare_render_options(preset)
+        html, plain = render_compare_email(
+            _result_mit_stunden(),
+            hourly_metrics=options.hourly_metrics,
+            hourly_enabled=options.hourly_enabled,
+        )
+        msg = build_mime_message(
+            subject="Ortsvergleich", body=html,
+            from_addr="gregor_zwanzig@henemm.com", to_header="gregor-test@henemm.com",
+            reply_to=None, html=True, plain_text_body=plain,
+            mail_type="compare",
+            compare_hourly_enabled=options.hourly_enabled,
+        )
+        assert msg["X-GZ-Compare-Hourly-Enabled"] == "false", (
+            f"Marker-Header muss die tatsaechlich gerenderte Mail beschreiben, "
+            f"erhalten {msg['X-GZ-Compare-Hourly-Enabled']!r}"
+        )

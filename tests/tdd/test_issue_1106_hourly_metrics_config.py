@@ -469,24 +469,39 @@ class TestHourMetricsE2E:
             "noch nicht (Feld wird komplett ignoriert)."
         )
 
-    def test_ac3_ausschliesslich_unbekannte_ids_faellt_real_zugestellt_auf_alle_spalten_zurueck(self):
-        """AC-3, dritter geforderter realer Versandlauf (Adversary F003): eine
-        Auswahl aus ausschliesslich nicht-mappbaren IDs darf 'Zeit' als erste
-        Spalte nicht verlieren -- resolve_hourly_metrics() bildet das komplett
-        auf None (= alle 9 Spalten) ab, echt bewiesen ueber den vollen
-        Versand-/IMAP-Pfad (nicht nur Resolver-Unit-Test)."""
+    def test_ac3_ausschliesslich_unbekannte_ids_lassen_den_stundenblock_real_entfallen(self):
+        """AC-3, dritter geforderter realer Versandlauf (Adversary F003), auf
+        das seit Issue #1366 geltende Verhalten umgeschrieben: eine Auswahl aus
+        ausschliesslich nicht-mappbaren IDs faellt NICHT mehr auf alle 9 Spalten
+        zurueck ("leer heisst leer" statt "leer heisst alles"). Da keine
+        einzige Wert-Spalte uebrig bleibt, entfaellt der Stundenblock komplett,
+        statt ein Geruest mit nur der Zeit-Spalte zu zeigen -- letzteres weist
+        der Pflicht-Validator zurueck (email_spec_validator.py).
+
+        Bis #1366 behauptete dieser Test das alte Rueckfall-Verhalten und waere
+        beim naechsten Live-Lauf hochgegangen. Die fachliche Festlegung
+        (Rueckfall vs. Entfall) haengt an Issue #1366; geprueft wird hier, was
+        der Code auf origin/main tatsaechlich zustellt -- echt ueber den vollen
+        Versand-/IMAP-Pfad, nicht nur als Resolver-Unit-Test.
+        """
         html = _send_compare_preset_and_fetch_html(
             display_config={"hourly_metrics": ["voellig_unbekannte_id_xyz", "noch_eine_unbekannte"]},
             tag="ac3unknown",
         )
-        header = _hour_header_cols(html)
-        assert header[0] == "Zeit", (
-            f"RED: 'Zeit' muss auch bei ausschliesslich unbekannten IDs die erste Spalte "
-            f"bleiben, bekommen {header}"
+        assert not re.search(r">STUNDEN<", html), (
+            "Ohne jede aufloesbare Stundenmetrik darf die zugestellte Mail keinen "
+            "STUNDEN-Sektionskopf tragen"
         )
-        assert header == _ALL_NINE_PLUS_ZEIT, (
-            f"RED: ausschliesslich unbekannte IDs muessen auf den vollen 10-Spalten-Default "
-            f"zurueckfallen (kein Absturz, keine leere Tabelle), bekommen {header}"
+        ort_marker = re.compile(
+            r">ORT</span>\s*<span[^>]*>" + re.escape(_E2E_LOCATION_NAME) + r"</span>"
+        )
+        assert ort_marker.search(html) is None, (
+            "Ohne jede aufloesbare Stundenmetrik darf keine Orts-Stundentabelle in "
+            "der zugestellten Mail stehen (bisher: Rueckfall auf alle 9 Spalten)"
+        )
+        assert "ÜBERSICHT" in html, (
+            "Die Mail muss trotz entfallenem Stundenblock zugestellt werden und "
+            "ihre Uebersichtstabelle behalten"
         )
 
     def test_ac4_regenwahrscheinlichkeit_und_sicht_real_zugestellt_plausibel(self):

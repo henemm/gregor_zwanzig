@@ -43,6 +43,23 @@ _RENDER_EFFECTIVE_EXPECTED = {
     "show_compact_summary",
     "multi_day_trend_reports",
     "show_yesterday_comparison",
+    # Herkunft Issue #1361 / ADR-0035 (S1b, gemeinsames Tagesfenster Trip +
+    # Vergleich): das konfigurierte Tagesfenster erreicht den Render-Pfad
+    # (trip_report.py:108-111 -> resolve_configured_window) und ist damit
+    # render-wirksam. Vorher war es in KEINER der beiden Kategorien
+    # deklariert und liess test_every_field_is_classified rot.
+    "day_window_start_hour",
+    "day_window_end_hour",
+}
+
+# Issue #1361 / ADR-0035: die beiden Fenster-Grenzen wirken ausschliesslich
+# als PAAR — eine halb gesetzte Grenze faellt in
+# `day_window.resolve_configured_window()` (day_window.py:90) bewusst still auf
+# den Default 4/19 zurueck. Der Effekt-Nachweis muss deshalb beide Grenzen
+# gemeinsam setzen, sonst misst er den Rueckfall statt der Einstellung.
+_FIELD_PARTNER: dict[str, tuple[str, int]] = {
+    "day_window_start_hour": ("day_window_end_hour", 18),
+    "day_window_end_hour": ("day_window_start_hour", 13),
 }
 
 
@@ -206,6 +223,10 @@ def _mutate(field: dataclasses.Field, default_value):
         return "compact" if default_value != "compact" else "full"
     if field.name == "multi_day_trend_reports":
         return [] if default_value else [_REPORT_TYPE]
+    if field.name in _FIELD_PARTNER:
+        # Fenster 13-18 statt Default 4-19: schliesst die Fixture-Stunde des
+        # Segments aus und wird damit im gerenderten Output sichtbar.
+        return 13 if field.name == "day_window_start_hour" else 18
     if isinstance(default_value, bool):
         return not default_value
     if isinstance(default_value, float):
@@ -271,7 +292,8 @@ class TestFieldClassification:
         )
 
     def test_expected_effective_set(self):
-        """Die 8 render-wirksamen Felder entsprechen der freigegebenen Spec."""
+        """Die render-wirksamen Felder entsprechen der freigegebenen Spec
+        (7 aus Spec v1.1 + das Tagesfenster-Paar aus #1361/ADR-0035)."""
         from src.services.report_config_resolver import RENDER_EFFECTIVE_FIELDS
         assert set(RENDER_EFFECTIVE_FIELDS) == _RENDER_EFFECTIVE_EXPECTED
 
@@ -297,7 +319,11 @@ def test_effective_field_changes_output(field_name):
     cfg_base = _default_cfg()
     fld = fields_by_name[field_name]
     mutated_value = _mutate(fld, getattr(cfg_base, field_name))
-    cfg_mut = dataclasses.replace(cfg_base, **{field_name: mutated_value})
+    changes = {field_name: mutated_value}
+    if field_name in _FIELD_PARTNER:
+        partner_name, partner_value = _FIELD_PARTNER[field_name]
+        changes[partner_name] = partner_value
+    cfg_mut = dataclasses.replace(cfg_base, **changes)
 
     out_base = _render_normalized(cfg_base, use_resolver_gates=True)
     out_mut = _render_normalized(cfg_mut, use_resolver_gates=True)

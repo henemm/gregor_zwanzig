@@ -329,7 +329,82 @@ Issue-Nummer im Namen (Namensregel).
   Architektur-, Datenmodell- oder Persistenzentscheidung, kein neuer Kanal,
   keine Schema-Änderung.
 
+## Nachtrag 2026-07-27 — zwei Lücken, gefunden durch eine Parallel-Sitzung
+
+Zwei Sitzungen haben diese Scheibe unabhängig voneinander gebaut. Ausgeliefert
+ist die Fassung dieser Spec (`bd8573ac`, `9aabba19`); die zweite Fassung wurde
+verworfen. Deren Gegenprüfung hat zwei Dinge gefunden, die hier offen waren.
+Beide sind mit diesem Nachtrag geschlossen.
+
+### N-1: Der Vertragstest über die report_config-Felder war weiterhin rot
+
+`tests/tdd/test_report_config_render_contract.py::TestFieldClassification::test_every_field_is_classified`
+schlug fehl, weil `day_window_start_hour`/`day_window_end_hour` in keiner der
+beiden Kategorien standen. Die Felder kamen mit #1361/ADR-0035 (S1b) und sind
+render-wirksam — sie steuern das Tagesfenster der Stundentabelle
+(`trip_report.py:108-111` → `day_window.resolve_configured_window`). Sie stehen
+jetzt in `RENDER_EFFECTIVE_FIELDS`.
+
+Der Effekt-Nachweis im Vertragstest musste dafür die **Paar-Semantik** lernen:
+eine halb gesetzte Grenze fällt in `resolve_configured_window()` bewusst still
+auf den Default 4/19 zurück — eine Einzel-Mutation hätte also den Rückfall
+gemessen statt der Einstellung und wäre falsch grün gewesen.
+
+### N-2: Zeit-only-Gerüst, wenn nur die Windrichtung angehakt ist
+
+Die Abschaltung des Stundenblocks hing an `resolved_hourly_metrics == []`. Die
+Windrichtung ist aber ein reines **Merge-Signal** ohne eigene Spalte
+(`compare_hourly_metric_ids.py:22-26`): hakt jemand nur sie an, ist die
+aufgelöste Liste **nicht** leer, die sichtbare Spaltenmenge schon.
+
+| | vorher | jetzt |
+|---|---|---|
+| aufgelöste Auswahl | `['wind_direction_deg']` | unverändert |
+| sichtbare Wert-Spalten | `[]` | `[]` |
+| `hourly_enabled` / Marker-Header | **`True`** (Lüge) | `False` |
+| Tabellenkopf | `['Zeit']` — genau das ausgeschlossene Gerüst | Block entfällt |
+
+Maßgeblich ist jetzt, ob überhaupt eine Wert-Spalte entsteht
+(`has_visible_hour_columns()`), nicht die Länge der aufgelösten Liste. Die
+Funktion antwortet aus `HOUR_METRICS` heraus, damit keine zweite, driftende
+Liste „welche Kennung hat eine Spalte" entsteht. Die Entscheidung fällt
+weiterhin an **einer** Stelle (`resolve_compare_render_options`) — keine
+konkurrierende Zweitlogik.
+
+Damit sagt auch der Mail-Header `X-GZ-Compare-Hourly-Enabled` in allen Fällen
+die Wahrheit; andernfalls hätte der Pflicht-Validator eine korrekte Mail
+beanstandet. Gemessen über alle sechs Fälle: nur Windrichtung → `False`,
+bewusst leer → `False`, nur unbekannte → `False`, nie eingestellt → `True`,
+normale Auswahl → `True`, Wind + Windrichtung → `True` (der Merge bleibt intakt,
+keine Überkorrektur).
+
+### N-3: Ein abgeklemmter Live-Test behauptete noch das alte Verhalten
+
+`test_issue_1106_hourly_metrics_config.py::test_ac3_...` sicherte weiterhin den
+Rückfall auf alle neun Spalten zu. Er trägt `@pytest.mark.email`, läuft im
+Normallauf nicht mit und wäre erst beim nächsten `/e2e-verify` hochgegangen —
+dann mit einem Folgefehler, weil es gar keinen Tabellenkopf mehr gibt.
+Umgeschrieben auf das geltende Verhalten, nicht stillgelegt.
+
+### PO-Entscheidung 2026-07-27 zum strittigen Punkt
+
+Die verworfene Fassung behandelte „Auswahl vorhanden, aber komplett
+unauflösbar" als **eigenen** Fall (weiterhin alles zeigen + Protokollmeldung).
+Dem Product Owner vorgelegt und entschieden: **es bleibt beim Verhalten dieser
+Spec** — unauflösbar wird wie bewusst leer behandelt, die Mail zeigt dort
+nichts, der Vermerk bleibt im Protokoll.
+
+Damit verbunden ist ein Risiko, das an Epic #1372 vermerkt ist: sobald dort
+Metrik-Kennungen **umbenannt** werden, degradiert ein Bestandsvergleich ohne
+Migration still zu einer Mail ohne jede Wetterzahl. Jede umbenennende Scheibe
+braucht deshalb eine Migration der gespeicherten Auswahl, eine Zählung der
+betroffenen Vergleiche vor dem Deploy und einen Nachweis an einer echt
+zugestellten Mail danach.
+
 ## Changelog
 
 - 2026-07-26: Initial spec erstellt — Issue #1366 + #1361 Befund 3, S3
   Scheibe B von Epic #1372.
+- 2026-07-27: Nachtrag N-1 bis N-3 (Vertragstest, Zeit-only-Gerüst bei reinem
+  Merge-Signal, abgeklemmter Live-Test) und PO-Entscheidung zum Umgang mit
+  unauflösbaren Kennungen.

@@ -623,6 +623,20 @@ def _visible_hour_metrics(hourly_metrics: list[str] | None) -> list[dict]:
     return [by_key[k] for k in hourly_metrics if k in by_key]
 
 
+def has_visible_hour_columns(hourly_metrics: list[str] | None) -> bool:
+    """Issue #1366 (Nachtrag): Erzeugt diese Auswahl ueberhaupt eine Wert-
+    Spalte? Antwortet aus ``HOUR_METRICS`` heraus, damit es keine zweite,
+    driftende Liste "welche Kennung hat eine Spalte" gibt.
+
+    ``False`` heisst: die Stundentabelle haette nur die fest verdrahtete
+    Zeit-Spalte. Das trifft die bewusste Leerauswahl (``[]``) ebenso wie eine
+    Auswahl aus ausschliesslich Merge-Signalen -- "wind_direction_deg" ist
+    aufloesbar, hat aber bewusst keinen ``HOUR_METRICS``-Eintrag (s.
+    ``_should_merge_wind_dir``). ``None`` (kein Filter/Altbestand) = alle 9
+    Spalten sichtbar."""
+    return bool(_visible_hour_metrics(hourly_metrics))
+
+
 def _should_merge_wind_dir(hourly_metrics: list[str] | None) -> bool:
     """Issue #1335 Scheibe 1 (AC-3/AC-4), analog Trip-Muster
     ``helpers.should_merge_wind_dir``: Windrichtung wird nur dann als
@@ -1196,5 +1210,6 @@ __all__ = [
     "render_compare_html",
     "CV2_METRICS",
     "HOUR_METRICS",
+    "has_visible_hour_columns",
     "location_render_order",
 ]

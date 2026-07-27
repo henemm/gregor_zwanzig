@@ -5,7 +5,7 @@ Spec: docs/specs/modules/report_config_resolver_slice_b.md
 
 Erweitert den Scheibe-A-Gate (`tests/tdd/test_report_config_scheduler_structure.py`,
 feste Dateiliste) auf den VOLLEN `src/services/` + `src/output/`-Baum. Geprueft
-werden AUSSCHLIESSLICH die 7 `RENDER_EFFECTIVE_FIELDS` aus
+werden AUSSCHLIESSLICH die `RENDER_EFFECTIVE_FIELDS` aus
 `services.report_config_resolver` (importiert, keine Kopie) — RENDER_NEUTRAL-
 Felder (`morning_time`, `wind_exposition_min_elevation_m`, `alert_on_changes`,
 `alert_preset` etc.) bleiben ausdruecklich unangetastet (Gegenprobe-Test).
@@ -104,10 +104,16 @@ def test_render_effective_fields_only_via_resolver():
 
 
 def test_render_effective_fields_is_exactly_seven():
-    """Selbstschutz: die gescannte Feldmenge muss den 7 dokumentierten
-    render-wirksamen Feldern entsprechen (kein stiller Drift)."""
-    assert len(RENDER_EFFECTIVE_FIELDS) == 7, (
-        f"Erwartet 7 RENDER_EFFECTIVE_FIELDS, gefunden {len(RENDER_EFFECTIVE_FIELDS)}: "
+    """Selbstschutz: die gescannte Feldmenge muss den dokumentierten
+    render-wirksamen Feldern entsprechen (kein stiller Drift).
+
+    Aus 7 wurden 9: `day_window_start_hour` und `day_window_end_hour`
+    (Herkunft Issue #1361 / ADR-0035, S1b) sind render-wirksam und waren bis
+    dahin in KEINER der beiden Kategorien deklariert. Die Zahl bleibt eine
+    exakte Gleichheit (kein `>=`), damit weiterer Drift genauso auffaellt
+    wie vorher."""
+    assert len(RENDER_EFFECTIVE_FIELDS) == 9, (
+        f"Erwartet 9 RENDER_EFFECTIVE_FIELDS, gefunden {len(RENDER_EFFECTIVE_FIELDS)}: "
         f"{RENDER_EFFECTIVE_FIELDS!r}"
     )
 

@@ -21,8 +21,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Die 7 render-wirksamen TripReportConfig-Felder (Spec v1.1 §Implementation
-# Details). PO-Entscheidung 2026-07-10 (GREEN-Review): show_daylight war hier
+# Die render-wirksamen TripReportConfig-Felder (Spec v1.1 §Implementation
+# Details: 7; seit Issue #1361/ADR-0035 zusaetzlich das Tagesfenster-Paar = 9).
+# PO-Entscheidung 2026-07-10 (GREEN-Review): show_daylight war hier
 # entfernt und nach RENDER_NEUTRAL verschoben (Toggle strukturell wirkungslos
 # seit #790). Issue #1224: das Feld selbst wurde inzwischen ganz aus
 # TripReportConfig entfernt — kein RENDER_NEUTRAL-Eintrag mehr noetig.
@@ -34,6 +35,15 @@ RENDER_EFFECTIVE_FIELDS: tuple[str, ...] = (
     "show_compact_summary",
     "show_yesterday_comparison",
     "multi_day_trend_reports",
+    # Issue #1361 / ADR-0035 (S1b, gemeinsames Tagesfenster Trip + Vergleich):
+    # das konfigurierte Tagesfenster erreicht den Render-Pfad
+    # (trip_report.py:108-111 -> day_window.resolve_configured_window) und
+    # steuert die Kurzformen bzw. die Tages-Aggregation -- render-wirksam,
+    # nicht RENDER_NEUTRAL. Beide Grenzen wirken nur als PAAR: eine halb
+    # gesetzte Grenze faellt in `resolve_configured_window()` bewusst still
+    # auf den Default 4/19 zurueck.
+    "day_window_start_hour",
+    "day_window_end_hour",
 )
 
 # Die uebrigen 19 TripReportConfig-Felder — begruendet nach Kategorie
@@ -214,6 +224,7 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
     from app.loader import _corridor_from_dict
     from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
     from output.renderers.compare_metric_ids import resolve_enabled_metrics
+    from output.renderers.email.compare_html import has_visible_hour_columns
 
     preset_id = preset.get("id", "")
     display_config = preset.get("display_config") or {}
@@ -236,12 +247,15 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
 
     resolved_hourly_metrics = resolve_hourly_metrics(display_config.get("hourly_metrics"))
     hourly_enabled = preset.get("hourly_enabled", True)
-    if resolved_hourly_metrics == []:
-        # Issue #1366/#1361 Befund 3: eine bewusst leere oder komplett
-        # unauflösbare Stundenauswahl schaltet den Block ab statt eine
-        # Tabelle mit nur der Zeit-Spalte zu rendern (Pflicht-Validator
-        # lehnt das ab, s. Spec). Wer hourly_enabled selbst schon aus
-        # hatte, bleibt unberuehrt.
+    if hourly_enabled and not has_visible_hour_columns(resolved_hourly_metrics):
+        # Issue #1366/#1361 Befund 3: eine Stundenauswahl ohne jede sichtbare
+        # Wert-Spalte schaltet den Block ab statt eine Tabelle mit nur der
+        # Zeit-Spalte zu rendern (Pflicht-Validator lehnt das ab, s. Spec).
+        # Massgeblich sind die SICHTBAREN Spalten, nicht die Laenge der
+        # aufgeloesten Liste: eine Auswahl aus reinen Merge-Signalen (nur
+        # "wind_direction_deg", ohne eigene Spalte) ist nicht leer, ergaebe
+        # aber genau dasselbe Zeit-only-Geruest. Wer hourly_enabled selbst
+        # schon aus hatte, bleibt unberuehrt.
         hourly_enabled = False
 
     return CompareRenderOptions(
