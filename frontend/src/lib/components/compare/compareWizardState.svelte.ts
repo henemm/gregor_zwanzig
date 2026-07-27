@@ -38,6 +38,11 @@ export class CompareWizardState {
 	// `[]` = bewusste Leerauswahl. Init auf `null`, NICHT `[]` -- sonst startet
 	// ein neuer Vergleich bereits als „bewusst leer" (materializeHourlyMetricKeys).
 	hourlyMetricKeys = $state<string[] | null>(null);
+	// Issue #1361 Befund 2/#1368: Spaltenauswahl des 3-Tages-Ausblicks (aus
+	// display_config.outlook_metrics, Neuformat). `null` = „nie eingestellt"
+	// (die heutigen sieben Spalten), `[]` = bewusste Leerauswahl (Block
+	// entfaellt) — dieselbe Semantik wie hourlyMetricKeys/activeMetricKeys.
+	outlookMetricKeys = $state<string[] | null>(null);
 	metricsManuallyEdited = $state(false);
 	// Issue #443 — Step 5 Versand-Felder
 	sendEmail = $state(true);
@@ -51,6 +56,9 @@ export class CompareWizardState {
 	radarAlertEnabled = $state(false);
 	// Issue #1107: Stundenverlauf-Sektion ein/aus (Default true).
 	hourlyEnabled = $state(true);
+	// Issue #1361/#1368: 3-Tages-Ausblick-Sektion ein/aus (Default true,
+	// identisch zum Python-Default in report_config_resolver.py).
+	outlookEnabled = $state(true);
 	// Issue #1216 Slice 2b: Amtliche-Warnungen-Alarm-Trigger (Default AN —
 	// sicherheitsrelevant, analog officialAlertsEnabled). Kanal-Opt-in nutzt die
 	// bestehenden Runen sendTelegram/sendSms (Versand-Tab), keine neue Kanal-Rune.
@@ -107,6 +115,7 @@ export class CompareWizardState {
 			officialAlertsEnabled: this.officialAlertsEnabled, // Issue #1040
 			radarAlertEnabled: this.radarAlertEnabled, // Issue #1041 Slice 2
 			hourlyEnabled: this.hourlyEnabled, // Issue #1107
+			outlookEnabled: this.outlookEnabled, // Issue #1361/#1368
 			officialAlertTriggersEnabled: this.officialAlertTriggersEnabled, // Issue #1216 Slice 2b
 			sendTelegram: this.sendTelegram,
 			sendSms: this.sendSms,
@@ -128,6 +137,7 @@ export class CompareWizardState {
 			idealRanges: this.idealRanges,
 			activeMetricKeys: this.activeMetricKeys,
 			hourlyMetricKeys: this.hourlyMetricKeys,
+			outlookMetricKeys: this.outlookMetricKeys, // Issue #1361/#1368
 			metricAlertLevels: this.metricAlertLevels, // Issue #1170
 			telegramStyle: this.telegramStyle // Issue #1260 S5
 		});
@@ -167,6 +177,8 @@ export class CompareWizardState {
 			officialAlertsEnabled: this.officialAlertsEnabled, // Issue #1040
 			radarAlertEnabled: this.radarAlertEnabled, // Issue #1041 Slice 2
 			hourlyEnabled: this.hourlyEnabled, // Issue #1107
+			outlookMetricKeys: this.outlookMetricKeys, // Issue #1361/#1368
+			outlookEnabled: this.outlookEnabled,
 			metricAlertLevels: this.metricAlertLevels, // Issue #1170
 			alertCooldownMinutes: this.alertCooldownMinutes,
 			alertQuietFrom: this.alertQuietFrom,

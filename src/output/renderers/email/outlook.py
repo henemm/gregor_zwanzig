@@ -21,6 +21,7 @@ die @-time-Hourly-Samples.
 """
 from __future__ import annotations
 
+import html as _html
 import re as _re
 from typing import TYPE_CHECKING, Optional
 
@@ -37,13 +38,20 @@ from utils.geo import degrees_to_compass
 # render_outlook_table — extrahiert aus html.py (Z.1116-1271, AC-1/AC-2)
 # ---------------------------------------------------------------------------
 
-def render_outlook_table(rows: list[dict], *, show_acc: bool = True) -> str:
+def render_outlook_table(
+    rows: list[dict], *, show_acc: bool = True, metrics: Optional[list] = None,
+) -> str:
     """Rendert die HTML-Ausblick-Tabelle.
 
     ``show_acc=True`` (Trip-Default) ist byte-identisch zum bisherigen
     Inline-Block in ``render_html``. ``show_acc=False`` (Compare) laesst
     die ACC-<th>-Kopfzelle und die ``_acc_dot``-<td>-Zellen vollstaendig
     entfallen -- alle uebrigen Spalten bleiben unveraendert.
+
+    ``metrics`` (#1361/#1368, nur Compare): gesetzte Auswahl im Neuformat
+    ersetzt die festen sieben Spalten durch die gewaehlten, in Auswahl-
+    Reihenfolge und mit lesbaren Katalog-Beschriftungen. ``None`` (Trip und
+    Compare-Altbestand) laesst die Ausgabe byte-identisch.
     """
 
     def _outlook_cell_bg(val, thresholds: tuple) -> str:
@@ -104,6 +112,32 @@ def render_outlook_table(rows: list[dict], *, show_acc: bool = True) -> str:
         f'padding:6px 4px;text-align:center;font-family:{FONT_DATA};'
         f'font-size:10px;font-weight:600;color:#3a3835;white-space:nowrap;"'
     )
+    if metrics is not None:
+        from output.renderers.compare_outlook_metric_ids import outlook_columns
+
+        columns = outlook_columns(metrics)
+        head = "".join(
+            f'<th {_oh_style}>{_html.escape(c["label"])}</th>' for c in columns
+        )
+        body = ""
+        for stage in rows:
+            cells = stage.get("cells") or []
+            body += (
+                '<tr>' + _otd(stage.get("weekday", "–"))
+                + "".join(
+                    _otd(_html.escape(cells[i] if i < len(cells) else "–"))
+                    for i in range(len(columns))
+                )
+                + '</tr>'
+            )
+        return (
+            '<table cellpadding="0" cellspacing="0" '
+            'style="border-collapse:collapse;width:100%;'
+            'border-top:2px solid #1d1c1a;">'
+            f'<thead><tr><th {_oh_style}>Tag</th>{head}</tr></thead>'
+            f'<tbody>{body}</tbody></table>'
+        )
+
     _acc_th = f'<th {_oh_style}>ACC</th>' if show_acc else ""
     outlook_thead = (
         f'<thead><tr>'
@@ -199,25 +233,51 @@ def render_outlook_table(rows: list[dict], *, show_acc: bool = True) -> str:
 # render_outlook_plain — extrahiert aus plain.py (ab Z.242, AC-6)
 # ---------------------------------------------------------------------------
 
-def render_outlook_plain(rows: list[dict], *, show_acc: bool = True) -> str:
+def render_outlook_plain(
+    rows: list[dict],
+    *,
+    show_acc: bool = True,
+    metrics: Optional[list] = None,
+    heading: str = "Nächste Etappen",
+    show_name: bool = True,
+) -> str:
     """Rendert den Klartext-Ausblick-Block.
 
     ``show_acc`` existiert fuer Signatur-Symmetrie mit
     ``render_outlook_table``; der Klartext-Ausblick zeigte schon im
     Ist-Zustand keine ACC-Spalte, daher ohne Effekt.
+
+    ``metrics`` (#1361): gesetzte Auswahl ersetzt die festen Wert-Tokens
+    durch die gewaehlten Groessen. ``heading`` (#1368): Compare schreibt
+    "3-Tages-Ausblick" -- im Ortsvergleich gibt es keine Etappen.
+    ``show_name=False`` (#1368): laesst das feste 26-Zeichen-Etappennamen-
+    Feld entfallen, das der Ortsvergleich nie befuellt. Alle drei sind per
+    Default abgeschirmt -- der Trip-Aufruf bleibt byte-identisch.
     """
     lines: list[str] = []
     lines.append("")
-    lines.append("Nächste Etappen")
+    lines.append(heading)
     for stage in rows:
-        tok = format_trend_tokens(stage)
         weekday = stage.get("weekday", "")
+        if metrics is not None:
+            from output.renderers.compare_outlook_metric_ids import outlook_columns
+
+            cells = stage.get("cells") or []
+            values = "  ".join(
+                f"{c['label']} {cells[i] if i < len(cells) else '–'}"
+                for i, c in enumerate(outlook_columns(metrics))
+            )
+            lines.append(f"{weekday:<3} {values}".rstrip())
+            continue
+
+        tok = format_trend_tokens(stage)
         name = stage.get("name", "")
         # Precip str — zero decision from format_trend_tokens
         precip_str = tok["precip_str"]
 
+        name_field = f"{name:<26} " if show_name else ""
         line = (
-            f"{weekday:<3} {name:<26} {tok['temp_str']:<8} "
+            f"{weekday:<3} {name_field}{tok['temp_str']:<8} "
             f"{precip_str:<5} {tok['wind_str']:<5} {tok['thunder_plain']}"
         )
         lines.append(line)
@@ -240,6 +300,7 @@ def build_outlook_row(
     tz,
     *,
     sms_thresholds: Optional[dict] = None,
+    metrics: Optional[list] = None,
 ) -> dict:
     """Baut ein Ausblick-Row-Dict aus einer SegmentWeatherSummary + Punktliste.
 
@@ -256,6 +317,13 @@ def build_outlook_row(
     ``sms_threshold_precip``/``sms_threshold_wind``/``sms_threshold_gust``/
     ``sms_threshold_thunder`` abgebildet; ``None``-Werte werden gefiltert
     (analog ``trip_report_scheduler._build_stage_trend``).
+
+    ``metrics`` (#1361, nur Compare): gesetzte Auswahl im Neuformat
+    (``{"metric_id", "aggregation"}``) ergaenzt das Dict um ``cells`` -- die
+    fertig formatierten Zellentexte der gewaehlten Groessen in Auswahl-
+    Reihenfolge, datengetrieben aus ``summary`` ueber
+    ``MetricDefinition.summary_fields``. ``None`` (Trip) laesst das Dict
+    unveraendert (rein additiv, AC-11).
     """
     from app.models import ThunderLevel as _TL
     from output.tokens.dto import HourlyValue
@@ -317,5 +385,15 @@ def build_outlook_row(
         "sms_threshold_thunder": _sms.get("thunder"),
     }
     row.update({k: v for k, v in optional.items() if v is not None})
+
+    if metrics is not None:
+        from output.renderers.compare_outlook_metric_ids import (
+            format_outlook_value, outlook_columns,
+        )
+
+        row["cells"] = [
+            format_outlook_value(getattr(summary, col["field"], None), col)
+            for col in outlook_columns(metrics)
+        ]
 
     return row

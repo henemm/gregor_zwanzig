@@ -183,6 +183,11 @@ class CompareRenderOptions:
     # fehlendem Preset-Key (PO-Entscheidung 2026-07-18: Ausblick ist sofort
     # sichtbar, kein Opt-in).
     outlook_enabled: bool = True
+    # Issue #1361/#1368: Ausblick-Spaltenauswahl aus dem display_config-Blob,
+    # Neuformat `[{"metric_id", "aggregation"}]` (dasselbe Vokabular wie
+    # `active_metrics`, #1373). `None` = Feld fehlt (Altbestand, bisherige
+    # sieben Spalten), `[]` = bewusst leer (Block entfaellt).
+    outlook_metrics: Optional[list[dict]] = None
 
 
 def resolve_compare_time_window(preset: dict) -> tuple[int, int]:
@@ -223,6 +228,7 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
     """
     from app.loader import _corridor_from_dict
     from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
+    from output.renderers.compare_outlook_metric_ids import resolve_outlook_metrics
     from output.renderers.compare_metric_ids import resolve_enabled_metrics
     from output.renderers.email.compare_html import has_visible_hour_columns
 
@@ -258,10 +264,20 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         # schon aus hatte, bleibt unberuehrt.
         hourly_enabled = False
 
+    # Issue #1361/#1368 (AC-8): eine bewusst geleerte Ausblick-Auswahl laesst
+    # den ganzen Block entfallen -- eine Tagestabelle mit nur der Wochentag-
+    # Spalte hat keinen Nutzwert (identische Kopplung wie beim Stundenverlauf
+    # daruerber). Fehlendes Feld (None) bleibt unberuehrt.
+    resolved_outlook_metrics = resolve_outlook_metrics(display_config.get("outlook_metrics"))
+    outlook_enabled = preset.get("outlook_enabled", True)
+    if outlook_enabled and resolved_outlook_metrics == []:
+        outlook_enabled = False
+
     return CompareRenderOptions(
         enabled_metrics=resolve_enabled_metrics(display_config.get("active_metrics")),
         hourly_metrics=resolved_hourly_metrics,
         hourly_enabled=hourly_enabled,
         corridors=corridors or None,
-        outlook_enabled=preset.get("outlook_enabled", True),
+        outlook_enabled=outlook_enabled,
+        outlook_metrics=resolved_outlook_metrics,
     )

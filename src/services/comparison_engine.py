@@ -146,8 +146,19 @@ class ComparisonEngine:
                 # raw_data-Fetch gerettet. Kein zusaetzlicher API-Call: die
                 # 96h liegen durch COMPARE_FORECAST_HOURS bereits vor.
                 # Issue #1378: ORTS-Kalendertag statt UTC-Kalendertag.
+                # Issue #1361 Befund 2 (PO-Vorgabe V1): der Ausblick beginnt
+                # NACH dem letzten Kalendertag, den die Stundentabelle im
+                # Detail zeigt -- bei einem Fenster ueber Mitternacht
+                # (start_hour > end_hour, ADR-0035) sind das ZWEI Tage.
+                # Fail-soft: reicht der Vorhersagehorizont nicht mehr fuer
+                # drei Folgetage, entstehen weniger Zeilen (kein Crash).
+                _last_detail_day = target_date
+                if time_window[0] > time_window[1]:
+                    from datetime import timedelta as _td
+
+                    _last_detail_day = target_date + _td(days=1)
                 _outlook_days = sorted(
-                    {d for _dp, d in _by_local_day if d >= target_date}
+                    {d for _dp, d in _by_local_day if d > _last_detail_day}
                 )[:3]
                 outlook_hourly_data = [
                     dp for dp, d in _by_local_day if d in _outlook_days

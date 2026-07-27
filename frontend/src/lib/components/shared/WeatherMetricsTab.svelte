@@ -56,6 +56,7 @@
 	// Issue #1360: geteilte Stundenverlauf-Steuerung (Hub + Anlege-Seite),
 	// unveraendert uebernommen aus dem aufgeloesten Layout-Reiter.
 	import CompareHourlyLayoutControls from '$lib/components/shared/CompareHourlyLayoutControls.svelte';
+	import CompareOutlookLayoutControls from '$lib/components/shared/CompareOutlookLayoutControls.svelte';
 	// Issue #1361/#1372 S1b: geteiltes Tagesfenster (Trip UND Vergleich),
 	// zieht beim Trip aus dem Versand-Reiter hierher (VersandTab/VTSchedulePlan).
 	import DayWindowCard from './weather-metrics-tab/DayWindowCard.svelte';
@@ -124,8 +125,12 @@
 		 *  `.hub-layout-hourly-wrap`/`handleLayoutCommit`, getrennt von
 		 *  `onCompareCommit`). Reine Weiterreichung an CompareHourlyLayoutControls. */
 		onHourlyCommit?: () => void;
+		/** Issue #1361/#1368: derselbe direkte Speicherausloeser fuer den
+		 *  Ausblick-Block (teilt sich den Layout-Speicherpfad mit dem
+		 *  Stundenverlauf). Reine Weiterreichung an CompareOutlookLayoutControls. */
+		onOutlookCommit?: () => void;
 	}
-	let { context = 'route', trip, createMode = false, onChannelsChange, onTripUpdate, saveController, wiz, onCompareCommit, onHourlyCommit }: Props = $props();
+	let { context = 'route', trip, createMode = false, onChannelsChange, onTripUpdate, saveController, wiz, onCompareCommit, onHourlyCommit, onOutlookCommit }: Props = $props();
 
 	// Issue #1311: Abschnittsreihenfolge kommt aus einer reinen Funktion, kein
 	// Duplikat der Reihenfolge im Markup (AC-1, AC-8-Attrappen-Verbot).
@@ -940,6 +945,19 @@
 		{#if sections.includes('stundenverlauf') && wiz}
 			<div data-testid="weather-metrics-stundenverlauf">
 				<CompareHourlyLayoutControls {wiz} {onHourlyCommit} />
+			</div>
+		{/if}
+		<!-- Issue #1361 Befund 2/#1368: Bedienflaeche des 3-Tages-Ausblicks.
+		     Dieselbe Bauart wie der Stundenverlauf-Block darueber (geteilte
+		     Komponente, Persistenz-Kopplung beim Aufrufer). Der Metrik-Pool ist
+		     die BEREITS geladene Katalogantwort (compareCatalog) — kein
+		     zweiter Abruf, kein zweites Vokabular. Anders als der
+		     Stundenverlauf haengt der Block damit am Katalog-Fetch; ohne
+		     Katalog bleibt wenigstens der Schalter unerreichbar statt eine
+		     leere Liste zu zeigen (bewusst, s. Spec). -->
+		{#if sections.includes('ausblick') && wiz && compareCatalogLoaded}
+			<div data-testid="weather-metrics-ausblick">
+				<CompareOutlookLayoutControls {wiz} catalog={compareCatalog} {onOutlookCommit} />
 			</div>
 		{/if}
 		<!-- Issue #1350 Teil 2: Amtliche-Warnungen-Toggle haengt nicht am

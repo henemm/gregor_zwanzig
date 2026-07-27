@@ -109,6 +109,9 @@ export interface HubEdit {
 	// editiert -> Round-Trip via `preset.day_window_start_hour/_end_hour`.
 	dayWindowStartHour?: number;
 	dayWindowEndHour?: number;
+	// Issue #1361 Befund 2/#1368: Ausblick-Auswahl + Schalter.
+	outlookMetricKeys?: string[] | null;
+	outlookEnabled?: boolean;
 }
 
 /**
@@ -168,6 +171,16 @@ export function buildHubPutPayload(
 		hourlyMetricKeys:
 			edit.hourlyMetricKeys ?? (displayConfig.hourly_metrics as string[] | null | undefined),
 		hourlyEnabled: edit.hourlyEnabled ?? preset.hourly_enabled,
+		// Issue #1361/#1368: analog hourlyMetricKeys — der Bestandsrueckfall
+		// (anderer Reiter bearbeitet) laeuft durch DIESELBE Lesenormalisierung,
+		// sonst liefen die gespeicherten Groesse-Auswertung-Objekte als
+		// string[] deklariert in die Schreibfunktion (#1373-Datenverlustpfad).
+		// `null` -> undefined, damit der Key unangetastet round-trippt.
+		outlookMetricKeys:
+			edit.outlookMetricKeys ??
+			normalizeStoredActiveMetrics(displayConfig.outlook_metrics) ??
+			undefined,
+		outlookEnabled: edit.outlookEnabled ?? preset.outlook_enabled,
 		// Issue #1361/#1372 S1b: 1:1 Round-Trip wie alle anderen HubEdit-Felder.
 		dayWindowStartHour: edit.dayWindowStartHour ?? preset.day_window_start_hour ?? undefined,
 		dayWindowEndHour: edit.dayWindowEndHour ?? preset.day_window_end_hour ?? undefined
@@ -601,6 +614,12 @@ export interface LayoutSnapshot {
 	// (vorher kollabierte `?? []` beides zu derselben leeren Liste).
 	hourlyMetricKeys: string[] | null;
 	hourlyEnabled: boolean;
+	// Issue #1361 Befund 2/#1368: der 3-Tages-Ausblick teilt sich diesen
+	// Speicherpfad mit dem Stundenverlauf (beide liegen im Reiter
+	// "Wetter-Metriken", derselbe Commit-Wrapper). `null`/`[]` tragen dieselbe
+	// Unterscheidung wie oben.
+	outlookMetricKeys: string[] | null;
+	outlookEnabled: boolean;
 }
 
 /**
@@ -608,11 +627,21 @@ export interface LayoutSnapshot {
  * `hydrateVersandFieldsFromPreset` — liest die Stundenverlauf-Felder aus
  * `preset.display_config.hourly_metrics` bzw. `preset.hourly_enabled`.
  */
-export function hydrateLayoutFieldsFromPreset(preset: ComparePreset): LayoutSnapshot {
+export function hydrateLayoutFieldsFromPreset(
+	preset: ComparePreset,
+	catalog: CompareSelectionEntry[] = registeredCompareMetricCatalog()
+): LayoutSnapshot {
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
 	return {
 		hourlyMetricKeys: (displayConfig.hourly_metrics as string[] | null | undefined) ?? null,
-		hourlyEnabled: preset.hourly_enabled ?? true
+		hourlyEnabled: preset.hourly_enabled ?? true,
+		// Issue #1361/#1368: `outlook_metrics` liegt im NEUFORMAT (Groesse +
+		// Auswertung) -- dieselbe Lesenormalisierung wie `active_metrics`
+		// (#1373), damit die Bedienflaeche Auswahl-Schluessel sieht. Der
+		// Aufrufer muss die Katalogantwort abwarten (sonst Rohform, s.
+		// hydrateWeatherMetricsFromPreset).
+		outlookMetricKeys: normalizeStoredActiveMetrics(displayConfig.outlook_metrics, catalog),
+		outlookEnabled: preset.outlook_enabled ?? true
 	};
 }
 
@@ -645,12 +674,19 @@ export function flushPendingLayoutSave(
 	const baseline = before ?? current;
 	const norm = (s: LayoutSnapshot) => ({
 		hourlyMetricKeys: s.hourlyMetricKeys === null ? null : [...s.hourlyMetricKeys],
-		hourlyEnabled: s.hourlyEnabled
+		hourlyEnabled: s.hourlyEnabled,
+		// Issue #1361/#1368: MUSS im Diff stehen — ein Waechter, der die neuen
+		// Felder nicht kennt, meldet "nichts geaendert" und der Ausblick bliebe
+		// unspeicherbar (bekannte Falle, s. Dirty-Check-Erfahrung #1373).
+		outlookMetricKeys: s.outlookMetricKeys == null ? null : [...s.outlookMetricKeys],
+		outlookEnabled: s.outlookEnabled
 	});
 	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;
 	return buildHubPutPayload(preset, {
 		hourlyMetricKeys: current.hourlyMetricKeys,
-		hourlyEnabled: current.hourlyEnabled
+		hourlyEnabled: current.hourlyEnabled,
+		outlookMetricKeys: current.outlookMetricKeys,
+		outlookEnabled: current.outlookEnabled
 	});
 }
 
@@ -661,9 +697,16 @@ export function flushPendingLayoutSave(
  * genuegt, kein diff-basierter Rollback noetig.
  */
 export function rollbackLayoutSnapshot(
-	state: { hourlyMetricKeys?: string[] | null; hourlyEnabled?: boolean },
+	state: {
+		hourlyMetricKeys?: string[] | null;
+		hourlyEnabled?: boolean;
+		outlookMetricKeys?: string[] | null;
+		outlookEnabled?: boolean;
+	},
 	before: LayoutSnapshot
 ): void {
 	state.hourlyMetricKeys = before.hourlyMetricKeys;
 	state.hourlyEnabled = before.hourlyEnabled;
+	state.outlookMetricKeys = before.outlookMetricKeys ?? null;
+	state.outlookEnabled = before.outlookEnabled ?? true;
 }

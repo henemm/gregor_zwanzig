@@ -318,6 +318,13 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if updated.HourlyEnabled == nil {
 			updated.HourlyEnabled = original.HourlyEnabled
 		}
+		// Issue #1361/#1368: outlook_enabled erhalten wenn Body es nicht
+		// trägt (nil nach Decode = Feld fehlte im Request), analog
+		// HourlyEnabled — sonst kippt der ausgeschaltete 3-Tages-Ausblick
+		// bei jedem PUT eines Clients, der das Feld nicht kennt.
+		if updated.OutlookEnabled == nil {
+			updated.OutlookEnabled = original.OutlookEnabled
+		}
 		// Issue #1361/#1372 S1b: Tagesfenster erhalten, wenn der Body es nicht
 		// traegt (nil nach Decode = Feld fehlte im Request) — analog
 		// HourlyEnabled. Ein explizit gesendetes Paar wird unten geklemmt.

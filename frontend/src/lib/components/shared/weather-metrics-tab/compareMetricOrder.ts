@@ -24,6 +24,35 @@ export function materializeActiveMetricKeys(keys: string[] | null): string[] {
 	return keys === null ? COMPARE_METRIC_KEYS : keys;
 }
 
+// Issue #1361/#1368: die sieben Groessen, die der 3-Tages-Ausblick heute fest
+// zeigt (email/outlook.py, Kopfzeile Tag/N/D/R/PR/Wind/Böen/Gew). Sie sind die
+// Anzeige-Vorgabe fuer „nie eingestellt" (`null`) — die Bedienflaeche zeigt
+// damit genau das an, was in der Mail steht, statt einer erfundenen Menge.
+export const DEFAULT_OUTLOOK_METRIC_KEYS = [
+	'temp_min_c',
+	'temp_max_c',
+	'precip_sum_mm',
+	'pop_max_pct',
+	'wind_max_kmh',
+	'gust_max_kmh',
+	'thunder_level_max'
+];
+
+/** `null` (nie eingestellt) -> die heutigen sieben Ausblick-Spalten,
+ *  `[]` (bewusste Leerauswahl) bleibt leer (Block entfaellt, AC-8). */
+export function materializeOutlookMetricKeys(keys: string[] | null): string[] {
+	return keys === null ? DEFAULT_OUTLOOK_METRIC_KEYS : keys;
+}
+
+/** Umschalt-Pfad des Ausblicks — materialisiert zuerst (analog Anzeige),
+ *  toggelt danach (F001-Regressionsmuster, s. oben). */
+export function toggleOutlookMetricKeyFromState(
+	currentKeys: string[] | null,
+	metric: string
+): string[] {
+	return toggleCompareMetricKey(materializeOutlookMetricKeys(currentKeys), metric);
+}
+
 /**
  * Umschalt-Handler-Pfad wie WeatherMetricsTab.svelte ihn tatsaechlich
  * aufruft -- materialisiert zuerst (analog Anzeige), toggelt danach. Ohne

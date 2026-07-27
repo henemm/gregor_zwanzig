@@ -714,8 +714,16 @@ def _render_hour_table(
     )
 
 
-def _location_heading(loc: LocationResult, ref_ts=None) -> str:
+def _location_heading(
+    loc: LocationResult, ref_ts=None, *, eyebrow: str = "ORT",
+    title: Optional[str] = None,
+) -> str:
     """Ort-Kopf ("ORT <Name>") MIT angeschriebener Zeitbasis.
+
+    ``eyebrow``/``title`` (#1368): derselbe Kopfbau traegt auch die eigene
+    Ausblick-Ueberschrift ("AUSBLICK 3-Tages-Ausblick (CEST)") -- kein
+    zweiter Kopfbau, damit die Zeitbasis-Anschrift aus #1378 an BEIDEN
+    Bloecken identisch entsteht. Defaults = Bestandsverhalten.
 
     Issue #1378 (Adversary F002): die Zeitzonen-Kennzeichnung darf nicht nur
     an der zentralen "Erstellt"-Kopfzeile haengen — die nennt ausschliesslich
@@ -728,7 +736,7 @@ def _location_heading(loc: LocationResult, ref_ts=None) -> str:
     zeitpunktabhaengig (CEST im Sommer, CET im Winter). Der Namens-Span bleibt
     unveraendert, damit Ableser/Validator ("ORT <Name>"-Marker) weiter greifen.
     """
-    name = _html.escape(loc.location.name)
+    name = _html.escape(title if title is not None else loc.location.name)
     tz_span = ""
     if ref_ts is not None:
         label = _html.escape(tz_abbrev(ref_ts, location_tz(loc.location)))
@@ -739,7 +747,7 @@ def _location_heading(loc: LocationResult, ref_ts=None) -> str:
     return (
         f'<div style="padding-bottom:8px;border-bottom:2px solid {G_INK};">'
         f'<span style="font-family:{FONT_DATA};font-size:11px;font-weight:600;'
-        f'color:{G_ACCENT};letter-spacing:0.1em;">ORT</span> '
+        f'color:{G_ACCENT};letter-spacing:0.1em;">{eyebrow}</span> '
         f'<span style="font-size:15px;font-weight:600;color:{G_INK};">{name}</span>'
         f'{tz_span}</div>'
     )
@@ -791,7 +799,9 @@ def _group_by_calendar_day(points: list, tz=None, cap: int = 3) -> list[tuple]:
     return [(d, by_day[d]) for d in days]
 
 
-def _build_location_outlook_rows(loc: LocationResult) -> list[dict]:
+def _build_location_outlook_rows(
+    loc: LocationResult, outlook_metrics: list[dict] | None = None,
+) -> list[dict]:
     """AC-5/AC-8: bis zu 3 Tages-Zeilen aus `outlook_hourly_data`, ueber
     denselben Aggregator (`summarize_points`) und denselben Zeilenbau
     (`build_outlook_row`) wie der Trip-Pfad (Trip/Compare-Teilungs-
@@ -803,30 +813,59 @@ def _build_location_outlook_rows(loc: LocationResult) -> list[dict]:
     gepflegtes Feld still auf Serverzeit zurueck (AC-5)."""
     from services.weather_metrics import summarize_points
 
+    # Issue #1361/#1368 (AC-8): eine bewusst geleerte Auswahl ergibt KEINE
+    # Zeilen — HTML- und Klartext-Pfad lassen den Block daraufhin beide ganz
+    # entfallen (statt einer Tagestabelle mit nur der Wochentag-Spalte). Eine
+    # Bedingung an EINER Stelle, nicht zwei Kopien in den Renderern.
+    if isinstance(outlook_metrics, list) and not outlook_metrics:
+        return []
+
     tz = location_tz(loc.location)
 
     rows = []
     for day, day_points in _group_by_calendar_day(loc.outlook_hourly_data, tz):
         summary = summarize_points(day_points)
         weekday = _WEEKDAYS_DE_OUTLOOK[day.weekday()]
-        rows.append(build_outlook_row(summary, day_points, weekday, tz))
+        rows.append(build_outlook_row(
+            summary, day_points, weekday, tz, metrics=outlook_metrics,
+        ))
     return rows
 
 
-def _render_location_outlook(loc: LocationResult, index: int) -> str:
+# Issue #1368: der Block hiess bisher wie der Stundenblock darueber ("ORT
+# <Name>") und war damit fuer den Empfaenger nicht als Ausblick erkennbar.
+OUTLOOK_HEADING = "3-Tages-Ausblick"
+
+
+def _render_location_outlook(
+    loc: LocationResult, index: int,
+    outlook_metrics: list[dict] | None = None,
+    with_location: bool = False,
+) -> str:
     """AC-5/AC-9: Ausblick-Tabelle je Ort; entfaellt fail-soft bei Fehler
     bzw. leerem `outlook_hourly_data` (kein Crash, restliche Mail
-    unveraendert)."""
+    unveraendert).
+
+    Issue #1368: eigene Ueberschrift "3-Tages-Ausblick" statt des ein
+    zweites Mal wiederholten Ortsnamens. ``with_location=True`` stellt den
+    Ortsnamen voran -- noetig, wenn der Stundenblock desselben Ortes (der
+    ihn sonst nennt) nicht gerendert wird."""
     if loc.error is not None or not loc.outlook_hourly_data:
         return ""
-    rows = _build_location_outlook_rows(loc)
+    rows = _build_location_outlook_rows(loc, outlook_metrics)
     if not rows:
         return ""
-    # Issue #1378: derselbe angeschriebene Ort-Kopf wie beim Stundenblock
-    # (geteilter Helfer, kein zweiter Kopfbau) — auch die Ausblick-Tageszeilen
+    # Issue #1378: dieselbe angeschriebene Zeitbasis wie beim Stundenblock
+    # (geteilter Kopfbau, kein zweiter) — auch die Ausblick-Tageszeilen
     # und ihre @-Stunden-Tokens stehen in dieser Zeitbasis.
-    header = _location_heading(loc, loc.outlook_hourly_data[0].ts)
-    table = render_outlook_table(rows, show_acc=False)
+    title = (
+        f"{loc.location.name} · {OUTLOOK_HEADING}" if with_location
+        else OUTLOOK_HEADING
+    )
+    header = _location_heading(
+        loc, loc.outlook_hourly_data[0].ts, eyebrow="AUSBLICK", title=title,
+    )
+    table = render_outlook_table(rows, show_acc=False, metrics=outlook_metrics)
     return (
         f'<div style="padding:{20 if index else 14}px 24px 0;">'
         f'{header}{table}</div>'
@@ -1098,6 +1137,7 @@ def render_compare_html(
     preset_weekday: Optional[int] = None,
     corridors: list[Corridor] | None = None,
     outlook_enabled: bool = False,
+    outlook_metrics: list[dict] | None = None,
 ) -> str:
     """Rendert ComparisonResult als HTML-Mail (v2-Layout, Issue #1110).
 
@@ -1140,6 +1180,11 @@ def render_compare_html(
             ADR-0005/#710). Default ``False`` (rueckwaertskompatibel; der
             Aufrufer resolved den tatsaechlichen Default ueber
             `resolve_compare_render_options`, s. `report_config_resolver.py`).
+        outlook_metrics: Issue #1361/#1368 — Auswahl der Ausblick-Spalten im
+            Neuformat (`[{"metric_id", "aggregation"}]`, dasselbe Vokabular
+            wie `active_metrics`). Filtert UND ordnet die Wert-Spalten der
+            Tagestabelle. `None` (Altbestand) = die bisherigen sieben festen
+            Spalten, unveraendert.
 
     Returns:
         HTML-String (DOCTYPE bis </html>).
@@ -1191,12 +1236,23 @@ def render_compare_html(
     # statt zwei getrennt gejointen Bloecken. Fail-soft je Ort bleibt
     # erhalten (_render_location_section/_render_location_outlook liefern
     # bei fehlenden Daten "").
-    per_location_html = "".join(
-        (
-            (_render_location_section(loc, i, hourly_metrics, corridors) if hourly_enabled else "")
-            + (_render_location_outlook(loc, i) if outlook_enabled else "")
+    def _per_location(loc, i: int) -> str:
+        section = (
+            _render_location_section(loc, i, hourly_metrics, corridors)
+            if hourly_enabled else ""
         )
-        for i, loc in enumerate(locations)
+        if not outlook_enabled:
+            return section
+        # Issue #1368: der Ausblick-Kopf nennt den Ort nur dann, wenn der
+        # Stundenblock desselben Ortes ihn nicht schon nennt (abgeschalteter
+        # Stundenverlauf, fehlende Stundendaten) — sonst waere der Block
+        # ortslos.
+        return section + _render_location_outlook(
+            loc, i, outlook_metrics, with_location=not section,
+        )
+
+    per_location_html = "".join(
+        _per_location(loc, i) for i, loc in enumerate(locations)
     )
 
     legend_html = _render_legend(hourly_metrics, hourly_enabled)

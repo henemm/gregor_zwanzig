@@ -32,7 +32,10 @@ TARGET_DATE = date(2026, 7, 20)
 _HOURLY_TABLE_MARKER = ">Zeit</th>"                     # Stundentabelle je Ort
 _OUTLOOK_TABLE_MARKER = "border-top:2px solid #1d1c1a"  # Ausblick-Tabelle je Ort
 _BUNDLE_HEAD_MARKER = "· alle Orte"                      # Sammel-Section-Head (Stunden/Ausblick)
-_PLAIN_OUTLOOK_MARKER = "Nächste Etappen"               # render_outlook_plain je Ort
+# Issue #1368: der Ortsvergleich beschriftet den Block seit S3 Scheibe A mit
+# "3-Tages-Ausblick" statt der Trip-Formulierung "Nächste Etappen" (im
+# Ortsvergleich gibt es keine Etappen) -- der Trip-Wortlaut bleibt unveraendert.
+_PLAIN_OUTLOOK_MARKER = "3-Tages-Ausblick"              # render_outlook_plain je Ort
 
 
 # ---------------------------------------------------------------------------

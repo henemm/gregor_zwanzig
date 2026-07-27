@@ -64,6 +64,11 @@ type ComparePreset struct {
 	// Go zu nil statt zum Zero-Value false. nil/true = Sektion sichtbar
 	// (Default), false = komplett weggelassen.
 	HourlyEnabled *bool `json:"hourly_enabled,omitempty"`
+	// Issue #1361/#1368 — steuert ob der 3-Tages-Ausblick je Ort gerendert
+	// wird (Python-Default true, report_config_resolver.py). Das Feld fehlte
+	// bis dahin komplett im Struct: ein Client, der es sendete, verlor es
+	// beim Decode still. Pointer-Pattern wie HourlyEnabled.
+	OutlookEnabled *bool `json:"outlook_enabled,omitempty"`
 	// Issue #1170 — Alarm-Konfiguration (Epic #1095 Scheibe 3/3). Trip-identische
 	// Pointer-Felder (vgl. internal/model/trip.go:98-100): nil = Feld fehlte
 	// (Default in compare_alert.py greift), gesetzter Wert = bewusste Wahl.

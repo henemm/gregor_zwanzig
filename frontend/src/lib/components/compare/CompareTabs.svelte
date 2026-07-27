@@ -774,13 +774,31 @@
 	let layoutHydrated = $state(false);
 	let lastPersistedLayoutSnapshot: LayoutSnapshot | null = null;
 
-	$effect(() => {
-		if (activeTab !== 'wetter-metriken' || layoutHydrated) return;
-		const hydrated = hydrateLayoutFieldsFromPreset(currentPreset);
+	// Issue #1361/#1368: die Hydration wartet jetzt auf die Katalogantwort — die
+	// Ausblick-Auswahl liegt im Neuformat (Groesse + Auswertung) und ist ohne
+	// Katalog nicht auf Auswahl-Schluessel aufloesbar. Ohne das Abwarten stuende
+	// im Dirty-Check-Grundzustand die Rohform (Scheindiff + Ruecksetzen auf die
+	// Rohform, Adversary-Befund F001 aus #1373). Die Anfrage ist geteilt
+	// zwischengespeichert (compareMetricCatalogLoader) — kein zweiter Abruf.
+	let layoutHydrating = false;
+
+	async function hydrateLayoutTab(): Promise<void> {
+		const catalog = await loadCompareSelectionEntries().catch(() => []);
+		const hydrated = hydrateLayoutFieldsFromPreset(currentPreset, catalog);
 		wizardState.hourlyMetricKeys = hydrated.hourlyMetricKeys;
 		wizardState.hourlyEnabled = hydrated.hourlyEnabled;
+		wizardState.outlookMetricKeys = hydrated.outlookMetricKeys;
+		wizardState.outlookEnabled = hydrated.outlookEnabled;
 		lastPersistedLayoutSnapshot = hydrated;
 		layoutHydrated = true;
+	}
+
+	$effect(() => {
+		if (activeTab !== 'wetter-metriken' || layoutHydrated || layoutHydrating) return;
+		layoutHydrating = true;
+		void hydrateLayoutTab().finally(() => {
+			layoutHydrating = false;
+		});
 	});
 
 	// Epic #1301 Scheibe F2a: isHourlyMetricActive/makeHourlyMetricHandler +
@@ -798,7 +816,13 @@
 				// unangetasteten Zustand faelschlich in eine Leerauswahl kippen.
 				hourlyMetricKeys:
 					wizardState.hourlyMetricKeys === null ? null : [...wizardState.hourlyMetricKeys],
-				hourlyEnabled: wizardState.hourlyEnabled
+				hourlyEnabled: wizardState.hourlyEnabled,
+				// Issue #1361/#1368: analog oben — `null` (nie eingestellt) bleibt
+				// `null`, sonst kippte ein reiner Schalter-Wechsel den
+				// unangetasteten Zustand in eine Leerauswahl.
+				outlookMetricKeys:
+					wizardState.outlookMetricKeys === null ? null : [...wizardState.outlookMetricKeys],
+				outlookEnabled: wizardState.outlookEnabled
 			};
 			const before = lastPersistedLayoutSnapshot ?? current;
 			const payload = flushPendingLayoutSave(currentPreset, current, lastPersistedLayoutSnapshot);
@@ -1348,6 +1372,7 @@
 							wiz={wizardState}
 							onCompareCommit={handleWetterMetrikenCommit}
 							onHourlyCommit={handleLayoutCommit}
+							onOutlookCommit={handleLayoutCommit}
 						/>
 					</div>
 				</div>

@@ -171,9 +171,19 @@ describe('AC-1/AC-8: weatherMetricsTabSections(context) — reine Funktion (Vorb
 			// (hourly_enabled/hourly_metrics) und ist deshalb KEINE Attrappe.
 			// Issue #1361/#1372 S1b: 'tagesfenster' kommt DAZU — geteilt mit dem
 			// Trip (AC-4), wirkt auf Stundentabelle UND Vergleichswerte.
+			// Issue #1361 Befund 2/#1368: 'ausblick' kommt DAZU — Schalter
+			// (outlook_enabled) und Spaltenauswahl (display_config.outlook_metrics)
+			// haben echte Mail-Wirkung im 3-Tages-Ausblick, also keine Attrappe.
 			assert.deepEqual(
 				sections,
-				['grundauswahl', 'reihenfolge', 'tagesfenster', 'stundenverlauf', 'official_alerts'],
+				[
+					'grundauswahl',
+					'reihenfolge',
+					'tagesfenster',
+					'stundenverlauf',
+					'ausblick',
+					'official_alerts'
+				],
 				'AC-1/AC-8/AC-6 FAIL: der vergleich-Kontext zeigt mehr/weniger als Grundauswahl+Reihenfolge+Tagesfenster+Stundenverlauf+Amtliche-Warnungen — ' +
 					`Ist: ${JSON.stringify(sections)}. Horizonte/SMS-Schwellen/Report-Config haetten ` +
 					'keine Mail-Wirkung im Vergleich und waeren Attrappen.'

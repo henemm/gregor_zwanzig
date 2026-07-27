@@ -37,7 +37,12 @@ const ROUTE_ONLY_SECTIONS = ['sms_schwellen', 'report_config'] as const;
 // Geteilt vorbereitet, in dieser Scheibe aber NUR im Vergleich aktiv: der Trip
 // hat heute keine Stundenverlauf-Steuerung, sie nachzuruesten ist nicht Teil
 // dieser Scheibe (Spec § Known Limitations).
-const COMPARE_ONLY_SECTIONS = ['stundenverlauf'] as const;
+// Issue #1361 Befund 2/#1368 (S3 Scheibe A von Epic #1372): 'ausblick' ist die
+// Bedienflaeche des 3-Tages-Ausblicks (Schalter + Spaltenauswahl +
+// Reihenfolge). Position: direkt NACH 'stundenverlauf' — beide beschreiben die
+// Ausgabe-Bloecke der Mail in ihrer Reihenfolge. Ebenfalls NUR im Vergleich:
+// der Trip bekommt bewusst keine Ausblick-Auswahlflaeche (Spec § Out of Scope).
+const COMPARE_ONLY_SECTIONS = ['stundenverlauf', 'ausblick'] as const;
 
 // Issue #1361/#1372 S1b: 'tagesfenster' ist NICHT kontext-exklusiv — beide
 // Seiten teilen sich ab jetzt EIN Tagesfenster (dieselbe Bedienfläche, gleiche

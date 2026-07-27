@@ -240,7 +240,7 @@ class TestKlartextStundenverlaufAC4:
             hourly_enabled=options.hourly_enabled,
             outlook_enabled=True,
         )
-        assert "Nächste Etappen" in plain, (
+        assert "3-Tages-Ausblick" in plain, (
             "Voraussetzung: der 3-Tages-Ausblick steht im Klartext (nur dann "
             "kann der Kopf ohne Stundenzeilen ueberhaupt haengenbleiben)"
         )
@@ -276,13 +276,13 @@ class TestKlartextStundenverlaufAC4:
             f"Reihenfolge der Auswahl muss die Spaltenfolge bestimmen, erhalten: {hour_line!r}"
         )
         assert "Gef." not in hour_line, "nicht gewaehlte Spalten duerfen nicht erscheinen"
-        assert "Nächste Etappen" in plain, (
+        assert "3-Tages-Ausblick" in plain, (
             "Der 3-Tages-Ausblick bleibt unveraendert erhalten"
         )
         # "10:00" = dieselbe Herleitung wie oben (Issue #1378, Klartext
         # beschriftet in ORTSZEIT): Fixture-Punkt ts=24.07.2026 08:00 UTC,
         # Ort lat 47.0 / lon 11.0 -> Europe/Vienna, Juli = UTC+2 -> 10:00.
-        assert plain.index("STUNDENVERLAUF") < plain.index("10:00") < plain.index("Nächste Etappen"), (
+        assert plain.index("STUNDENVERLAUF") < plain.index("10:00") < plain.index("3-Tages-Ausblick"), (
             f"Reihenfolge Kopf -> Stundenzeilen -> Ausblick muss bleiben:\n{plain}"
         )
 
@@ -299,8 +299,8 @@ class TestKlartextStundenverlaufAC4:
             hourly_enabled=options.hourly_enabled,
             outlook_enabled=True,
         )
-        assert "Nächste Etappen" in plain, f"Ausblick muss stehen bleiben:\n{plain}"
-        assert "Innsbruck" in plain.split("Nächste Etappen")[0], (
+        assert "3-Tages-Ausblick" in plain, f"Ausblick muss stehen bleiben:\n{plain}"
+        assert "Innsbruck" in plain.split("3-Tages-Ausblick")[0], (
             "Der Ausblick behaelt seinen heutigen Aufbau samt Orts-Zeile "
             "(die fehlende eigene Ausblick-Ueberschrift ist Issue #1368)"
         )

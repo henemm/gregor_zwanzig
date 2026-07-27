@@ -24,9 +24,9 @@ from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
 from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.email.compare_html import (
-    _build_location_outlook_rows, _fmt_precip_type, _fmt_thunder,
-    _fmt_visibility_overview, _metric_value, _should_merge_wind_dir,
-    _visible_hour_metrics, location_render_order,
+    OUTLOOK_HEADING, _build_location_outlook_rows, _fmt_precip_type,
+    _fmt_thunder, _fmt_visibility_overview, _metric_value,
+    _should_merge_wind_dir, _visible_hour_metrics, location_render_order,
 )
 from utils.geo import degrees_to_compass
 from utils.timezone import (
@@ -122,6 +122,7 @@ def render_comparison_text(
     enabled_metrics: list[str] | None = None,
     *,
     outlook_enabled: bool = False,
+    outlook_metrics: list[dict] | None = None,
     hourly_metrics: list[str] | None = None,
     hourly_enabled: bool = True,
 ) -> str:
@@ -234,7 +235,7 @@ def render_comparison_text(
         # haengt NICHT an dieser Bedingung (Issue #1323, bleibt unabhaengig).
         have_hourly = hourly_enabled and bool(loc_result.hourly_data)
         outlook_rows = (
-            _build_location_outlook_rows(loc_result)
+            _build_location_outlook_rows(loc_result, outlook_metrics)
             if outlook_enabled and loc_result.outlook_hourly_data else []
         )
         if not have_hourly and not outlook_rows:
@@ -269,7 +270,16 @@ def render_comparison_text(
                 section_lines.append(f"   {ts}  " + "  ".join(cells))
                 hour_rows_written = True
         if outlook_rows:
-            section_lines.append(render_outlook_plain(outlook_rows, show_acc=False).strip("\n"))
+            # Issue #1368: eigene Ueberschrift statt der Trip-Formulierung
+            # "Nächste Etappen" (im Ortsvergleich gibt es keine Etappen) und
+            # ohne das feste 26-Zeichen-Etappennamen-Feld, das der
+            # Ortsvergleich nie befuellt (der Ortsname steht in der Zeile
+            # darueber). Beides unabhaengig von einer gesetzten Auswahl --
+            # sonst blieben Bestandsnutzer auf dem Fehler sitzen.
+            section_lines.append(render_outlook_plain(
+                outlook_rows, show_acc=False, metrics=outlook_metrics,
+                heading=OUTLOOK_HEADING, show_name=False,
+            ).strip("\n"))
         section_lines.append("")
 
     if section_lines:
@@ -297,6 +307,7 @@ def render_compare_email(
     preset_weekday: Optional[int] = None,
     corridors: list[Corridor] | None = None,
     outlook_enabled: bool = False,
+    outlook_metrics: list[dict] | None = None,
 ) -> tuple[str, str]:
     """Render both HTML and plain-text parts for a compare email (v2, #1110).
 
@@ -331,10 +342,15 @@ def render_compare_email(
         preset_weekday=preset_weekday,
         corridors=corridors,
         outlook_enabled=outlook_enabled,
+        outlook_metrics=outlook_metrics,
     )
     text_body = render_comparison_text(
         result, profile=profile, enabled_metrics=enabled_metrics,
         outlook_enabled=outlook_enabled,
+        # Issue #1361/#1368: dieselbe Ausblick-Auswahl wie der HTML-Pfad --
+        # der Pflicht-Validator liest nur HTML, der Klartext braucht sie
+        # deshalb eigenstaendig (#1366-Erfahrung).
+        outlook_metrics=outlook_metrics,
         # Issue #1366 F003 (Staging-Fund, AC-4): dieselbe Quelle wie der
         # HTML-Pfad oben -- vorher kannte render_comparison_text diese beiden
         # Parameter gar nicht, der Klartext-Teil zeigte die Stundentabelle

@@ -548,6 +548,7 @@ export interface ComparePreset {
 	official_alerts_enabled?: boolean;  // Issue #1040 — amtliche Warnungen ein/aus
 	radar_alert_enabled?: boolean;  // Issue #1041 — Radar-Alarm ein/aus (Default AUS)
 	hourly_enabled?: boolean;  // Issue #1107 — Stundenverlauf-Sektion ein/aus
+	outlook_enabled?: boolean;  // Issue #1361/#1368 — 3-Tages-Ausblick ein/aus
 	// Issue #1170 — Alarm-Konfiguration (Epic #1095 Scheibe 3/3), Trip-identische Keys.
 	// metric_alert_levels lebt bewusst in display_config, nicht hier.
 	alert_cooldown_minutes?: number;

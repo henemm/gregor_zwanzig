@@ -29,6 +29,13 @@ export interface CompareEditorEdits {
 	// Zustand „nie eingestellt" durch) — wird wie ein Wert behandelt (RMW-Merge
 	// überschreibt), nicht wie „Feld nicht editiert" (das ist `undefined`).
 	hourlyMetricKeys?: string[] | null;
+	// Issue #1361/#1368: Spalten des 3-Tages-Ausblicks. Gespeichert wird das
+	// Neuformat (Größe + Auswertung) über dieselbe Katalogantwort wie
+	// active_metrics — kein viertes Vokabular. undefined = Feld nicht editiert.
+	outlookMetricKeys?: string[] | null;
+	// Issue #1361/#1368: 3-Tages-Ausblick-Sektion ein/aus (Top-Level, analog
+	// hourlyEnabled). Optional → rückwärtskompatibel.
+	outlookEnabled?: boolean;
 	// Issue #1040: amtliche Warnungen ein/aus. Optional → rückwärtskompatibel.
 	officialAlertsEnabled?: boolean;
 	// Issue #1041 Slice 2: Radar-Alarm ein/aus (Default AUS). Optional → rückwärtskompatibel.
@@ -124,6 +131,14 @@ export function buildComparePresetSavePayload(
 		displayConfig.hourly_metrics = edits.hourlyMetricKeys;
 	}
 
+	if (edits.outlookMetricKeys !== undefined && edits.outlookMetricKeys !== null) {
+		// Issue #1361/#1368: Ausblick-Auswahl im Neuformat, dieselbe Übersetzung
+		// wie active_metrics (#1373). Leere Auswahl EXPLIZIT als [] persistieren
+		// — der Server-Merge (mergeConfigMap) überschreibt Keys nur, löscht sie
+		// nie; ein weggelassener Key bliebe wirkungslos (analog #1191/#1299).
+		displayConfig.outlook_metrics = toStoredActiveMetrics(edits.outlookMetricKeys);
+	}
+
 	// Issue #1170: metric_alert_levels lebt in display_config (analog Trip).
 	if (edits.metricAlertLevels !== undefined) {
 		displayConfig.metric_alert_levels = edits.metricAlertLevels;
@@ -154,6 +169,8 @@ export function buildComparePresetSavePayload(
 			: {}),
 		// Issue #1107: analoges Round-Trip-Prinzip für hourly_enabled.
 		...(edits.hourlyEnabled !== undefined ? { hourly_enabled: edits.hourlyEnabled } : {}),
+		// Issue #1361/#1368: analoges Round-Trip-Prinzip für outlook_enabled.
+		...(edits.outlookEnabled !== undefined ? { outlook_enabled: edits.outlookEnabled } : {}),
 		// Issue #1170: analoges Round-Trip-Prinzip für die Alarm-Konfiguration.
 		...(edits.alertCooldownMinutes !== undefined
 			? { alert_cooldown_minutes: edits.alertCooldownMinutes }
@@ -209,6 +226,10 @@ export interface NewComparePresetFields {
 	officialAlertsEnabled: boolean;
 	radarAlertEnabled: boolean;
 	hourlyEnabled: boolean;
+	// Issue #1361/#1368: 3-Tages-Ausblick-Schalter, analog hourlyEnabled.
+	// Optional, damit bestehende Aufrufer/Tests ohne das Feld unveraendert
+	// funktionieren (der Wizard setzt es immer).
+	outlookEnabled?: boolean;
 	officialAlertTriggersEnabled: boolean;
 	sendTelegram: boolean;
 	sendSms: boolean;
@@ -235,6 +256,10 @@ export interface NewComparePresetFields {
 	// Issue #1366 F001: `null` = „nie eingestellt" -- der Schluessel
 	// `hourly_metrics` wird dann gar nicht gesendet (Default bleibt „alle").
 	hourlyMetricKeys: string[] | null;
+	// Issue #1361/#1368: `null` = „nie eingestellt" -- der Schluessel
+	// `outlook_metrics` wird dann gar nicht gesendet (Default bleibt „die
+	// bisherigen sieben Spalten"), analog hourlyMetricKeys.
+	outlookMetricKeys?: string[] | null;
 	metricAlertLevels: Record<string, string>;
 	telegramStyle: 'rich' | 'kurzform';
 }
@@ -260,6 +285,9 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 		official_alerts_enabled: fields.officialAlertsEnabled, // Issue #1040
 		radar_alert_enabled: fields.radarAlertEnabled, // Issue #1041 Slice 2
 		hourly_enabled: fields.hourlyEnabled, // Issue #1107
+		// Issue #1361/#1368: nur senden, wenn die Bedienflaeche einen Wert
+		// geliefert hat (undefined = Aufrufer kennt das Feld nicht).
+		...(fields.outlookEnabled !== undefined ? { outlook_enabled: fields.outlookEnabled } : {}),
 		// Issue #1216 Slice 2b: Amtliche-Warnungen-Alarm-Trigger + Kanal-Opt-in.
 		official_alert_triggers_enabled: fields.officialAlertTriggersEnabled,
 		send_telegram: fields.sendTelegram,
@@ -306,6 +334,12 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 			// weg, damit der Resolver „Feld fehlt" (= alle Spalten) erkennt statt
 			// einer faelschlich gesendeten Leerauswahl.
 			...(fields.hourlyMetricKeys !== null ? { hourly_metrics: fields.hourlyMetricKeys } : {}),
+			// Issue #1361/#1368: analog hourly_metrics -- `null` laesst den
+			// Schluessel weg (Resolver erkennt "Feld fehlt" = sieben Spalten),
+			// eine echte Leerauswahl (`[]`) wird gesendet.
+			...(fields.outlookMetricKeys != null
+				? { outlook_metrics: toStoredActiveMetrics(fields.outlookMetricKeys) }
+				: {}),
 			...(Object.keys(fields.metricAlertLevels).length > 0
 				? { metric_alert_levels: fields.metricAlertLevels }
 				: {}),

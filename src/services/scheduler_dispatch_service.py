@@ -381,6 +381,7 @@ def send_one_compare_preset(
         preset_weekday=preset.get("weekday"),
         corridors=opts.corridors,
         outlook_enabled=opts.outlook_enabled,
+        outlook_metrics=opts.outlook_metrics,
     )
     # TODO(#1207): wird durch den Versand-Orchestrator generalisiert
     # Issue #1270 (KB-3): Kanal-Fan-out ueber den geteilten NotificationService
