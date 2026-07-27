@@ -1,0 +1,162 @@
+{
+  "metadata": {
+    "page": 1,
+    "page_size": 100,
+    "total_count": 2,
+    "total_pages": 1
+  },
+  "features": [
+    {
+      "id": "2906e2bb-ed47-4dee-afdc-e2a6c012b614",
+      "links": [
+        {
+          "type": "application/xml",
+          "rel": "canonical",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/ba502feb-16f1-45ec-a97b-e1b3154afc4a.xml?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143108&Signature=v%2FE9OOMkbbghURlCMRxk7QFWDNs%3D"
+        },
+        {
+          "type": "application/json",
+          "rel": "json",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/ba502feb-16f1-45ec-a97b-e1b3154afc4a.json?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143108&Signature=GdwchE9vgARLHuZaSUDFgH5DJ7Y%3D"
+        },
+        {
+          "type": "application/xml",
+          "rel": "xml",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/ba502feb-16f1-45ec-a97b-e1b3154afc4a.xml?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143108&Signature=v%2FE9OOMkbbghURlCMRxk7QFWDNs%3D"
+        },
+        {
+          "type": "application/geo+json",
+          "rel": "geometry",
+          "href": "http://TESTSERVER/geometry/bbox-miss"
+        }
+      ],
+      "type": "Feature",
+      "properties": {
+        "supersededByAlertId": null,
+        "supersededAt": null,
+        "supersedeType": null,
+        "geometryDescription": "geometry is bbox only, link (member of the feature's links array) with type application/geo+json points to geojson describing the exact shape",
+        "geometryType": "bbox",
+        "OBJECTID": "2906e2bb-ed47-4dee-afdc-e2a6c012b614",
+        "alertId": "ba502feb-16f1-45ec-a97b-e1b3154afc4a",
+        "countryCode": "IT",
+        "featureType": "geocode",
+        "hubLanguage": "en-GB",
+        "indexArea": 0,
+        "indexFeature": 0,
+        "indexInfo": 0,
+        "hubTime": "2026-07-26T09:25:31Z",
+        "hubLink": "http://TESTSERVER/cap/bbox-miss"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              0.0,
+              40.0
+            ],
+            [
+              0.0,
+              41.0
+            ],
+            [
+              1.0,
+              41.0
+            ],
+            [
+              1.0,
+              40.0
+            ],
+            [
+              0.0,
+              40.0
+            ]
+          ]
+        ],
+        "crs": {
+          "properties": {
+            "name": "EPSG:4326"
+          },
+          "type": "name"
+        }
+      }
+    },
+    {
+      "id": "6503566b-4e64-4585-868e-425dd19ce13f",
+      "links": [
+        {
+          "type": "application/xml",
+          "rel": "canonical",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/c6d49ba7-a255-4191-b6de-68b67f418895.xml?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143108&Signature=JmggJ0YVvMHYcwXxn0bS2xVhYgk%3D"
+        },
+        {
+          "type": "application/json",
+          "rel": "json",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/c6d49ba7-a255-4191-b6de-68b67f418895.json?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143108&Signature=fM8hFZXbu6fzmmRyjupLf4w0cfg%3D"
+        },
+        {
+          "type": "application/xml",
+          "rel": "xml",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/c6d49ba7-a255-4191-b6de-68b67f418895.xml?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143108&Signature=JmggJ0YVvMHYcwXxn0bS2xVhYgk%3D"
+        },
+        {
+          "type": "application/geo+json",
+          "rel": "geometry",
+          "href": "http://TESTSERVER/geometry/bbox-edge"
+        }
+      ],
+      "type": "Feature",
+      "properties": {
+        "supersededByAlertId": null,
+        "supersededAt": null,
+        "supersedeType": null,
+        "geometryDescription": "geometry is bbox only, link (member of the feature's links array) with type application/geo+json points to geojson describing the exact shape",
+        "geometryType": "bbox",
+        "OBJECTID": "6503566b-4e64-4585-868e-425dd19ce13f",
+        "alertId": "c6d49ba7-a255-4191-b6de-68b67f418895",
+        "countryCode": "IT",
+        "featureType": "geocode",
+        "hubLanguage": "en-GB",
+        "indexArea": 0,
+        "indexFeature": 0,
+        "indexInfo": 0,
+        "hubTime": "2026-07-26T09:27:25Z",
+        "hubLink": "http://TESTSERVER/cap/bbox-edge"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              10.0,
+              44.0
+            ],
+            [
+              10.0,
+              45.0
+            ],
+            [
+              11.0,
+              45.0
+            ],
+            [
+              11.0,
+              44.0
+            ],
+            [
+              10.0,
+              44.0
+            ]
+          ]
+        ],
+        "crs": {
+          "properties": {
+            "name": "EPSG:4326"
+          },
+          "type": "name"
+        }
+      }
+    }
+  ]
+}

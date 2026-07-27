@@ -1,0 +1,86 @@
+{
+  "metadata": {
+    "page": 3,
+    "page_size": 100,
+    "total_count": 3,
+    "total_pages": 3
+  },
+  "features": [
+    {
+      "id": "cddc3c7d-c785-41ed-bffb-aeb5775b6dff",
+      "links": [
+        {
+          "type": "application/xml",
+          "rel": "canonical",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/c238aad9-58bf-46b7-a4d4-8a6a9028de40.xml?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143116&Signature=DaUsg%2F%2Frb3etvybzvF3gPKhqhVQ%3D"
+        },
+        {
+          "type": "application/json",
+          "rel": "json",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/c238aad9-58bf-46b7-a4d4-8a6a9028de40.json?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143116&Signature=RfkfVV60BHm2X1mY0Tqz5u8vAzA%3D"
+        },
+        {
+          "type": "application/xml",
+          "rel": "xml",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/c238aad9-58bf-46b7-a4d4-8a6a9028de40.xml?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143116&Signature=DaUsg%2F%2Frb3etvybzvF3gPKhqhVQ%3D"
+        },
+        {
+          "type": "application/geo+json",
+          "rel": "geometry",
+          "href": "http://TESTSERVER/geometry/trentino"
+        }
+      ],
+      "type": "Feature",
+      "properties": {
+        "supersededByAlertId": null,
+        "supersededAt": null,
+        "supersedeType": null,
+        "geometryDescription": "geometry is bbox only, link (member of the feature's links array) with type application/geo+json points to geojson describing the exact shape",
+        "geometryType": "bbox",
+        "OBJECTID": "cddc3c7d-c785-41ed-bffb-aeb5775b6dff",
+        "alertId": "c238aad9-58bf-46b7-a4d4-8a6a9028de40",
+        "countryCode": "IT",
+        "featureType": "geocode",
+        "hubLanguage": "it-IT",
+        "indexArea": 0,
+        "indexFeature": 0,
+        "indexInfo": 1,
+        "hubTime": "2026-07-26T09:25:54Z",
+        "hubLink": "http://TESTSERVER/cap/trentino"
+      },
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              6.625754939908889,
+              44.061893277406064
+            ],
+            [
+              6.625754939908889,
+              46.46437810041221
+            ],
+            [
+              9.207561747850775,
+              46.46437810041221
+            ],
+            [
+              9.207561747850775,
+              44.061893277406064
+            ],
+            [
+              6.625754939908889,
+              44.061893277406064
+            ]
+          ]
+        ],
+        "crs": {
+          "properties": {
+            "name": "EPSG:4326"
+          },
+          "type": "name"
+        },
+        "type": "Polygon"
+      }
+    }
+  ]
+}

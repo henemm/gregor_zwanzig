@@ -1,0 +1,162 @@
+{
+  "metadata": {
+    "page": 1,
+    "page_size": 100,
+    "total_count": 3,
+    "total_pages": 3
+  },
+  "features": [
+    {
+      "id": "c975f2d4-1d59-4934-a3da-a248803d92f5",
+      "links": [
+        {
+          "type": "application/xml",
+          "rel": "canonical",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/81bfb394-3061-467c-bdda-9d1dcff05730.xml?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143108&Signature=91DW7DmR%2Bk341QuECqmJmPvnKjg%3D"
+        },
+        {
+          "type": "application/json",
+          "rel": "json",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/81bfb394-3061-467c-bdda-9d1dcff05730.json?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143108&Signature=ztJuecb80LH5V%2FRDlohg8imxRnM%3D"
+        },
+        {
+          "type": "application/xml",
+          "rel": "xml",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/81bfb394-3061-467c-bdda-9d1dcff05730.xml?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143108&Signature=91DW7DmR%2Bk341QuECqmJmPvnKjg%3D"
+        },
+        {
+          "type": "application/geo+json",
+          "rel": "geometry",
+          "href": "http://TESTSERVER/geometry/should-not-be-called-p1-0"
+        }
+      ],
+      "type": "Feature",
+      "properties": {
+        "supersededByAlertId": "00000000-0000-0000-0000-000000000000",
+        "supersededAt": "2026-07-26T10:00:00Z",
+        "supersedeType": null,
+        "geometryDescription": "geometry is bbox only, link (member of the feature's links array) with type application/geo+json points to geojson describing the exact shape",
+        "geometryType": "bbox",
+        "OBJECTID": "c975f2d4-1d59-4934-a3da-a248803d92f5",
+        "alertId": "81bfb394-3061-467c-bdda-9d1dcff05730",
+        "countryCode": "IT",
+        "featureType": "geocode",
+        "hubLanguage": "it-IT",
+        "indexArea": 0,
+        "indexFeature": 0,
+        "indexInfo": 1,
+        "hubTime": "2026-07-26T09:24:57Z",
+        "hubLink": "http://TESTSERVER/cap/should-not-be-called-p1-0"
+      },
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              7.495767784625926,
+              43.77431469450655
+            ],
+            [
+              7.495767784625926,
+              44.67706722054329
+            ],
+            [
+              10.072524565869601,
+              44.67706722054329
+            ],
+            [
+              10.072524565869601,
+              43.77431469450655
+            ],
+            [
+              7.495767784625926,
+              43.77431469450655
+            ]
+          ]
+        ],
+        "crs": {
+          "properties": {
+            "name": "EPSG:4326"
+          },
+          "type": "name"
+        },
+        "type": "Polygon"
+      }
+    },
+    {
+      "id": "2906e2bb-ed47-4dee-afdc-e2a6c012b614",
+      "links": [
+        {
+          "type": "application/xml",
+          "rel": "canonical",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/ba502feb-16f1-45ec-a97b-e1b3154afc4a.xml?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143108&Signature=v%2FE9OOMkbbghURlCMRxk7QFWDNs%3D"
+        },
+        {
+          "type": "application/json",
+          "rel": "json",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/ba502feb-16f1-45ec-a97b-e1b3154afc4a.json?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143108&Signature=GdwchE9vgARLHuZaSUDFgH5DJ7Y%3D"
+        },
+        {
+          "type": "application/xml",
+          "rel": "xml",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/ba502feb-16f1-45ec-a97b-e1b3154afc4a.xml?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143108&Signature=v%2FE9OOMkbbghURlCMRxk7QFWDNs%3D"
+        },
+        {
+          "type": "application/geo+json",
+          "rel": "geometry",
+          "href": "http://TESTSERVER/geometry/should-not-be-called-p1-1"
+        }
+      ],
+      "type": "Feature",
+      "properties": {
+        "supersededByAlertId": "00000000-0000-0000-0000-000000000000",
+        "supersededAt": "2026-07-26T10:00:00Z",
+        "supersedeType": null,
+        "geometryDescription": "geometry is bbox only, link (member of the feature's links array) with type application/geo+json points to geojson describing the exact shape",
+        "geometryType": "bbox",
+        "OBJECTID": "2906e2bb-ed47-4dee-afdc-e2a6c012b614",
+        "alertId": "ba502feb-16f1-45ec-a97b-e1b3154afc4a",
+        "countryCode": "IT",
+        "featureType": "geocode",
+        "hubLanguage": "it-IT",
+        "indexArea": 0,
+        "indexFeature": 0,
+        "indexInfo": 1,
+        "hubTime": "2026-07-26T09:25:31Z",
+        "hubLink": "http://TESTSERVER/cap/should-not-be-called-p1-1"
+      },
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              13.010977992346794,
+              41.683906816505235
+            ],
+            [
+              13.010977992346794,
+              42.898726382724554
+            ],
+            [
+              14.783024320466911,
+              42.898726382724554
+            ],
+            [
+              14.783024320466911,
+              41.683906816505235
+            ],
+            [
+              13.010977992346794,
+              41.683906816505235
+            ]
+          ]
+        ],
+        "crs": {
+          "properties": {
+            "name": "EPSG:4326"
+          },
+          "type": "name"
+        },
+        "type": "Polygon"
+      }
+    }
+  ]
+}

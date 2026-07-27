@@ -1,0 +1,86 @@
+{
+  "metadata": {
+    "page": 2,
+    "page_size": 100,
+    "total_count": 3,
+    "total_pages": 3
+  },
+  "features": [
+    {
+      "id": "6503566b-4e64-4585-868e-425dd19ce13f",
+      "links": [
+        {
+          "type": "application/xml",
+          "rel": "canonical",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/470d995e-6843-45bd-9200-f20dee4fd27f.xml?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143115&Signature=Hd89cyiQ4AKnxZ4lVjiHBR6y5ec%3D"
+        },
+        {
+          "type": "application/json",
+          "rel": "json",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/470d995e-6843-45bd-9200-f20dee4fd27f.json?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143115&Signature=Bwkba%2B1i7b4QUstfa9WT9fVTHt8%3D"
+        },
+        {
+          "type": "application/xml",
+          "rel": "xml",
+          "href": "https://meteo.fra1.digitaloceanspaces.com/api/archive/warnings/470d995e-6843-45bd-9200-f20dee4fd27f.xml?AWSAccessKeyId=DO00LYPLJBWUUWC6D6NU&Expires=1785143115&Signature=Hd89cyiQ4AKnxZ4lVjiHBR6y5ec%3D"
+        },
+        {
+          "type": "application/geo+json",
+          "rel": "geometry",
+          "href": "http://TESTSERVER/geometry/should-not-be-called-p2-0"
+        }
+      ],
+      "type": "Feature",
+      "properties": {
+        "supersededByAlertId": null,
+        "supersededAt": "2026-07-26T11:00:00Z",
+        "supersedeType": null,
+        "geometryDescription": "geometry is bbox only, link (member of the feature's links array) with type application/geo+json points to geojson describing the exact shape",
+        "geometryType": "bbox",
+        "OBJECTID": "6503566b-4e64-4585-868e-425dd19ce13f",
+        "alertId": "470d995e-6843-45bd-9200-f20dee4fd27f",
+        "countryCode": "IT",
+        "featureType": "geocode",
+        "hubLanguage": "it-IT",
+        "indexArea": 0,
+        "indexFeature": 0,
+        "indexInfo": 1,
+        "hubTime": "2026-07-26T09:23:10Z",
+        "hubLink": "http://TESTSERVER/cap/should-not-be-called-p2-0"
+      },
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              14.93488143174929,
+              39.78685512569291
+            ],
+            [
+              14.93488143174929,
+              41.95096327113695
+            ],
+            [
+              18.522324031702375,
+              41.95096327113695
+            ],
+            [
+              18.522324031702375,
+              39.78685512569291
+            ],
+            [
+              14.93488143174929,
+              39.78685512569291
+            ]
+          ]
+        ],
+        "crs": {
+          "properties": {
+            "name": "EPSG:4326"
+          },
+          "type": "name"
+        },
+        "type": "Polygon"
+      }
+    }
+  ]
+}

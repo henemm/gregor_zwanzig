@@ -46,6 +46,22 @@ TIMEOUT = 8.0
 # Attributname + Rolle im Cache-Eintrag bleiben, der Wert steigt auf 1800s.
 CACHE_TTL = warn_egress.WARN_SUCCESS_TTL  # 1800.0 — Erfolgs-Fenster (30 min)
 FAILURE_CACHE_TTL = warn_egress.WARN_FAILURE_TTL  # 60.0 — kurzes Failure-Fenster
+# Issue #1397: Flaeche (geometry-Link) und CAP-Dokument einer Warnung sind
+# unveraenderlich -- Aenderungen kommen als neue alertId, keine neue Fassung
+# unter derselben OBJECTID/alertId. Lange Erfolgs-TTL (6h) statt der
+# warngerechten 30 Minuten, damit die frueher URL-basierten Caches (die bei
+# jeder Index-Erneuerung wegen rotierender Presigned-Signatur verwaisten)
+# tatsaechlich ueber mehrere Index-Zyklen hinweg greifen.
+GEOMETRY_CAP_TTL = 6 * 3600.0
+# Adversary F001 (Issue #1397 Fix-Loop): real gemessen wurden 17-21 Seiten,
+# eine aufgezeichnete Antwort (index_at.json) trug sogar total_pages=79 --
+# 50 kappte also aktiv echte Warnlagen weg. 200 gibt Luft; wird die Grenze
+# TROTZDEM ueberschritten, gilt der Index als unvollstaendig -> Ausfall
+# (s. _resolve_total_pages), NIE stilles Kappen. Seiten sind 30 Minuten
+# gecacht und werden ueber alle Punkte/Nutzer geteilt -- der Mehrverbrauch
+# bei 200 statt 50 Seiten bleibt beherrscht.
+_MAX_INDEX_PAGES = 200
+_BBOX_MARGIN_DEG = 0.01
 
 # awareness_type (führende Ganzzahl) -> App-hazard. 4 (fog), 7 (coastal-event),
 # 9 (avalanche), 11 (flood): keine App-Kategorie, bewusst NICHT gemappt ->
@@ -205,58 +221,193 @@ def _extract_alerts_from_cap(cap_source: "str | bytes") -> list[OfficialAlert]:
 
 
 def _get_cached_index(country: str) -> Optional[dict]:
-    """Liefert den Länder-Index, gecacht via ``warn_egress``. ``None`` bei Fehler."""
-    def _do_request() -> httpx.Response:
-        key = os.environ.get("GZ_METEOALARM_APIKEY")
-        now_dt = datetime.now(timezone.utc)
-        start = (now_dt - timedelta(hours=23)).strftime("%Y-%m-%dT%H:%M:%SZ")
-        end = now_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-        url = f"{METEOALARM_BASE_URL}/collections/warnings/locations/{country}"
-        return httpx.get(
-            url,
-            params={"datetime": f"{start}/{end}"},
-            headers={"Authorization": f"Bearer {key}"},
-            timeout=TIMEOUT,
+    """Liefert den VOLLSTAENDIGEN Länder-Index über alle Seiten, gecacht je
+    Seite via ``warn_egress`` (Schlüssel ``f"{country}:p{n}"``). ``None``
+    sobald IRGENDEINE Seite fehlschlägt -- kein Teilergebnis (Issue #1397:
+    die belegte Warnung lag genau auf der beim Abbruch fehlenden letzten
+    Seite). Das Zeitfenster wird EINMAL pro Aufruf eingefroren und an jede
+    Seite durchgereicht, sonst würden die Seitengrenzen zwischen den
+    Abrufen wandern (``datetime.now()`` je Seite neu ausgewertet)."""
+    now_dt = datetime.now(timezone.utc)
+    start = (now_dt - timedelta(hours=23)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    end = now_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    def _fetch_page(page: int) -> Optional[dict]:
+        def _do_request() -> httpx.Response:
+            key = os.environ.get("GZ_METEOALARM_APIKEY")
+            url = f"{METEOALARM_BASE_URL}/collections/warnings/locations/{country}"
+            return httpx.get(
+                url,
+                params={"datetime": f"{start}/{end}", "page": page},
+                headers={"Authorization": f"Bearer {key}"},
+                timeout=TIMEOUT,
+            )
+
+        def _parse(resp: httpx.Response) -> dict:
+            # 204/leerer Body ist der reguläre "keine Warnung"-Fall (z.B. Italien bei
+            # gutem Wetter), kein Fehler -- als leeres, gültiges Ergebnis behandeln.
+            if resp.status_code == 204 or not resp.content.strip():
+                return {"features": []}
+            data = resp.json()
+            if not isinstance(data, dict):
+                # Adversary F002 Runde 3: die GESAMTE Seiten-Antwort kann
+                # falsch typisiert sein (z.B. JSON-Liste/Zahl statt Objekt),
+                # nicht nur ein Unterwert. Das hier -- die EINE Stelle, durch
+                # die jede Seite (erste UND Folgeseiten) laeuft -- ist der
+                # richtige Ort dafuer, statt an jeder Zugriffsstelle
+                # (first.get(...), page.get(...), metadata.get(...)) einen
+                # eigenen isinstance-Flicken zu setzen. warn_egress.
+                # cached_fetch() faengt eine hier geworfene Exception als
+                # Parse-Fehler ab (Rueckgabe None, Failure-Marker) -- damit
+                # gilt exakt derselbe Ausfall-Pfad wie fuer jeden anderen
+                # kaputten Seiten-Abruf.
+                raise ValueError(f"Index-Antwort ist kein Objekt (type={type(data).__name__})")
+            return data
+
+        return warn_egress.cached_fetch(
+            cache=_index_cache, cache_key=f"{country}:p{page}", service="meteoalarm",
+            host="api.meteoalarm.org", request_fn=_do_request, parse_fn=_parse,
+            log=logger,
         )
 
-    def _parse(resp: httpx.Response) -> dict:
-        # 204/leerer Body ist der reguläre "keine Warnung"-Fall (z.B. Italien bei
-        # gutem Wetter), kein Fehler -- als leeres, gültiges Ergebnis behandeln.
-        if resp.status_code == 204 or not resp.content.strip():
-            return {"features": []}
-        return resp.json()
+    first = _fetch_page(1)
+    if first is None:
+        return None
+    features = list(first.get("features") or [])
+    total_pages = _resolve_total_pages(first.get("metadata"))
+    if total_pages is None:
+        # Adversary F001/F002: weder still auf _MAX_INDEX_PAGES kappen (das
+        # WAERE genau der Bug, den #1397 behebt) noch bei kaputtem
+        # total_pages werfen (reisst sonst die AT/IT-Fail-soft-Schleife in
+        # fetch() ab) -- beides ist ein nicht beurteilbarer/unvollstaendiger
+        # Index und damit ein Ausfall.
+        return None
+    for page_num in range(2, total_pages + 1):
+        page = _fetch_page(page_num)
+        if page is None:
+            return None
+        features.extend(page.get("features") or [])
+    return {"features": features}
 
-    return warn_egress.cached_fetch(
-        cache=_index_cache, cache_key=country, service="meteoalarm",
-        host="api.meteoalarm.org", request_fn=_do_request, parse_fn=_parse,
-        log=logger,
-    )
+
+def _resolve_total_pages(metadata: Optional[dict]) -> Optional[int]:
+    """Ermittelt die Gesamtseitenzahl aus der Metadata der ersten Seite.
+
+    Fehlt ``metadata`` ganz ODER fehlt ``total_pages`` darin (z.B. 204/leerer
+    Body) -> genau 1 Seite, KEIN Ausfall (Bestandsverhalten). Ist
+    ``total_pages`` gesetzt, aber nicht als positive Ganzzahl lesbar, ODER
+    ist ``metadata`` selbst vom falschen Typ (Adversary F002 Runde 2 -- z.B.
+    ein String statt eines Objekts, ``metadata.get()`` wuerde sonst mit
+    ``AttributeError`` werfen), ODER meldet die API mehr Seiten als
+    ``_MAX_INDEX_PAGES`` -> die Vollstaendigkeit ist nicht sicherzustellen ->
+    ``None`` (Ausfall, Issue #1397 Adversary F001/F002: NIE still kappen und
+    mit einem Teil-Ergebnis weitermachen, NIE werfen).
+
+    Die Typvalidierung der GESAMTEN Seiten-Antwort (Adversary F002 Runde 3:
+    z.B. eine JSON-Liste statt eines Objekts) passiert eine Ebene hoeher in
+    ``_parse()`` innerhalb von ``_get_cached_index()`` -- der ``isinstance``-
+    Schutz hier bleibt TROTZDEM bestehen, damit diese Funktion auch direkt
+    (ohne den Aufrufkontext) fuer sich robust und einzeln testbar ist."""
+    if not metadata:
+        return 1
+    if not isinstance(metadata, dict):
+        return None
+    raw = metadata.get("total_pages")
+    if raw is None:
+        return 1
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return None
+    if value < 1 or value > _MAX_INDEX_PAGES:
+        return None
+    return value
+
+
+def _feature_dedup_key(feature: dict) -> tuple:
+    props = feature.get("properties") or {}
+    return (props.get("alertId"), props.get("indexArea"), props.get("indexInfo"))
+
+
+def _is_superseded(feature: dict) -> bool:
+    """True, wenn dieses Feature durch eine neuere Fassung ersetzt wurde
+    (Issue #1397: ~98 % aller Features im 23h-Publikationsfenster sind
+    überholt -- muss VOR jedem Nachlade-Abruf geprüft werden, sonst erscheint
+    dieselbe Warnung mit leicht verschobenen Zeiträumen mehrfach)."""
+    props = feature.get("properties") or {}
+    return bool(props.get("supersededAt") or props.get("supersededByAlertId"))
+
+
+def _bbox_may_contain(lat: float, lon: float, geometry: Optional[dict]) -> bool:
+    """Garantierte OBERMENGE (Issue #1397, KEIN Ray-Casting): min/max der
+    Ring-Koordinaten der Index-bbox mit ~0,01°-Marge. Bewusst NICHT
+    ``_point_in_geometry()`` -- dessen striktes Ray-Casting schließt
+    Kantenpunkte aus und würde denselben stillen Warn-Verlust an der
+    bbox-Kante neu erzeugen. Fehlende/unparsbare Geometrie -> True
+    (fail-open, Fläche wird sicherheitshalber nachgeladen)."""
+    if not geometry:
+        return True
+    try:
+        gtype = geometry.get("type")
+        coords = geometry.get("coordinates")
+        if gtype == "Polygon":
+            rings = coords
+        elif gtype == "MultiPolygon":
+            rings = [ring for poly in coords for ring in poly]
+        else:
+            return True
+        points = [pt for ring in rings for pt in ring]
+        lons = [p[0] for p in points]
+        lats = [p[1] for p in points]
+        return (min(lons) - _BBOX_MARGIN_DEG <= lon <= max(lons) + _BBOX_MARGIN_DEG
+                and min(lats) - _BBOX_MARGIN_DEG <= lat <= max(lats) + _BBOX_MARGIN_DEG)
+    except Exception:
+        return True
 
 
 def _fetch_geometry_link(feature: dict) -> Optional[dict]:
-    """Lädt die exakte Fläche (``rel="geometry"``-Link), gecacht pro URL."""
+    """Lädt die exakte Fläche (``rel="geometry"``-Link), gecacht auf
+    ``countryCode:OBJECTID`` (Issue #1397 -- statt der presigned URL, deren
+    Signatur pro Index-Antwort rotiert und den Cache sonst nie über eine
+    Index-Erneuerung hinaus greifen ließ). Länderpräfix (Adversary F004):
+    dass ``OBJECTID`` laenderuebergreifend eindeutig ist, ist eine unbelegte
+    Annahme -- der Praefix macht sie ueberfluessig. Fläche ist pro OBJECTID
+    unveränderlich -> lange Erfolgs-TTL (``GEOMETRY_CAP_TTL``)."""
     href = next(
         (link.get("href") for link in feature.get("links") or [] if link.get("rel") == "geometry"),
         None,
     )
     if not href:
         return None
+    props = feature.get("properties") or {}
+    object_id = props.get("OBJECTID")
+    # Bekannte Grenze (F004-Rand, PO-akzeptiert): fehlt countryCode, wird der
+    # Schluessel "None:<OBJECTID>" -- kein eigener Fix, da OBJECTID laut API-
+    # Vertrag ohnehin nur zusammen mit countryCode auftritt.
+    cache_key = f"{props.get('countryCode')}:{object_id}" if object_id else href
     return warn_egress.cached_fetch(
-        cache=_geometry_cache, cache_key=href, service="meteoalarm",
-        host="api.meteoalarm.org",
+        cache=_geometry_cache, cache_key=cache_key, service="meteoalarm",
+        host="meteo.fra1.digitaloceanspaces.com",
         request_fn=lambda: httpx.get(href, timeout=TIMEOUT),
         parse_fn=lambda resp: resp.json().get("geometry"),
+        success_ttl=GEOMETRY_CAP_TTL,
         log=logger,
     )
 
 
-def _fetch_cap(url: str) -> Optional[str]:
-    """Lädt die CAP-XML (auth-frei), gecacht pro URL."""
+def _fetch_cap(url: str, alert_id: Optional[str], country_code: Optional[str] = None) -> Optional[str]:
+    """Lädt die CAP-XML (auth-frei), gecacht auf ``countryCode:alertId``
+    (Issue #1397 -- statt der presigned URL, s. ``_fetch_geometry_link``;
+    Länderpräfix analog Adversary F004). CAP-Inhalt ist pro ``alertId``
+    unveränderlich -> lange Erfolgs-TTL."""
+    # Bekannte Grenze analog _fetch_geometry_link (F004-Rand, kein Fix).
+    cache_key = f"{country_code}:{alert_id}" if alert_id else url
     return warn_egress.cached_fetch(
-        cache=_cap_cache, cache_key=url, service="meteoalarm",
-        host="api.meteoalarm.org",
+        cache=_cap_cache, cache_key=cache_key, service="meteoalarm",
+        host="meteo.fra1.digitaloceanspaces.com",
         request_fn=lambda: httpx.get(url, timeout=TIMEOUT),
         parse_fn=lambda resp: resp.text,
+        success_ttl=GEOMETRY_CAP_TTL,
         log=logger,
     )
 
@@ -318,13 +469,27 @@ class MeteoAlarmSource:
             index = _get_cached_index(country)
             if index is None:
                 continue
+            seen_keys: set[tuple] = set()
             for feature in index.get("features") or []:
                 try:
+                    # Issue #1397: überholte Fassungen VOR jedem Nachlade-Abruf
+                    # überspringen (98 % der Features im 23h-Fenster sind es).
+                    if _is_superseded(feature):
+                        continue
+                    key = _feature_dedup_key(feature)
+                    if key in seen_keys:
+                        continue
+                    seen_keys.add(key)
+                    # bbox-Obermenge zuerst (kein API-Call) -- spart den
+                    # Flächen-Nachlade-Abruf für Features, die den Punkt
+                    # garantiert nicht abdecken.
+                    if not _bbox_may_contain(lat, lon, feature.get("geometry")):
+                        continue
                     geometry = _fetch_geometry_link(feature)
                     if geometry is None or not _point_in_geometry(lat, lon, geometry):
                         continue
-                    hub_link = feature["properties"]["hubLink"]
-                    cap_text = _fetch_cap(hub_link)
+                    props = feature["properties"]
+                    cap_text = _fetch_cap(props["hubLink"], props.get("alertId"), props.get("countryCode"))
                     if cap_text is None:
                         continue
                     alerts.extend(_extract_alerts_from_cap(cap_text))
