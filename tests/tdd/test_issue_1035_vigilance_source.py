@@ -283,6 +283,31 @@ class TestIssue1035VigilanceSource:
             oa_base._REGISTERED_SOURCES.clear()
             oa_base._REGISTERED_SOURCES.extend(backup)
 
+    def test_department_none_inside_arome_bbox_returns_empty_no_french_alert(self, monkeypatch):
+        """Issue #1400: Mailand/Bern/Freiburg liegen innerhalb der AROME-Bbox
+        (covers()==True bleibt, reines Grobgatter), aber ausserhalb jedes
+        franzoesischen Départements. Vor dem Fix lieferte der bedingungslose
+        Zentroid-Notbehelf in `lookup_department()` fuer diese Punkte einen
+        (falschen) franzoesischen Code — diese Orte haetten franzoesische
+        amtliche Warnungen bekommen. `fetch()` muss [] liefern, OHNE einen
+        API-Call auszuloesen (kein API-Key noetig, `department is None`
+        greift vor jedem Netzwerkzugriff)."""
+        from services.official_alerts.vigilance import VigilanceSource
+
+        monkeypatch.setenv("GZ_METEOFRANCE_APIKEY", "dummy-fuer-diesen-test")
+        source = VigilanceSource()
+        for lat, lon, ort in (
+            (45.4642, 9.1900, "Mailand"),
+            (46.9480, 7.4474, "Bern"),
+            (47.9990, 7.8421, "Freiburg im Breisgau"),
+        ):
+            assert source.covers(lat, lon) is True, (
+                f"{ort} muss innerhalb der AROME-Bbox liegen (reines Grobgatter)"
+            )
+            assert source.fetch(lat, lon) == [], (
+                f"{ort} darf KEINE franzoesische Warnung bekommen (Issue #1400)"
+            )
+
     # Dialt real (Meteo-France Vigilance-API) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
     @pytest.mark.live
     def test_ac4_korsika_identischer_codepfad_wie_festland(self):

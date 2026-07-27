@@ -70,7 +70,23 @@ def _get_cached_warnings(lat: float, lon: float) -> Optional[dict]:
     """Liefert die koordinaten-scoped Antwort, gecacht via ``warn_egress``.
 
     30-Min-Erfolgs-Cache + 429-bewusster Rückzug + Egress-Zähler über den
-    geteilten Kern (Issue #1348). ``None`` bei Fehler."""
+    geteilten Kern (Issue #1348). ``None`` bei echtem Fehlschlag.
+
+    Issue #1397 S2a: der Endpunkt beantwortet NUR oesterreichisches
+    Staatsgebiet und liefert ausserhalb systematisch HTTP 404 (Messung
+    2026-07-27: 324 solcher Abrufe/Tag, Grobgatter INCA-Bbox schliesst u.a.
+    Suedtirol/Bayern/Slowenien/Ostschweiz mit ein). Ein 404 heisst "fuer
+    diesen Punkt nicht zustaendig", nicht "Dienst ausgefallen" -- daher
+    ``not_covered_statuses={404}``, s. ``warn_egress.cached_fetch()``.
+
+    Bekannte Grenze F002 (Adversary-Fund, dokumentiert, NICHT behoben): ein
+    ECHTER ZAMG-Eigenausfall, der sich zufaellig ebenfalls als HTTP 404
+    aeussert (statt 5xx/Timeout), wuerde ueber diesen Pfad 24h lang als
+    "nicht zustaendig" gecacht statt als Ausfall erkannt zu werden -- bis zu
+    24h stiller Datenverlust fuer einen betroffenen Punkt. Akzeptiert als
+    Kehrseite der S2a-Entscheidung (324 sinnlose Abrufe/Tag vs. ein
+    seltenes, unbeobachtetes Fehlerbild); keine Unterscheidung ueber den
+    Statuscode allein moeglich."""
     key = _round_coord(lat, lon)
 
     def _do_request() -> httpx.Response:
@@ -84,6 +100,7 @@ def _get_cached_warnings(lat: float, lon: float) -> Optional[dict]:
         cache=_cache, cache_key=key, service="geosphere_warn",
         host="warnungen.zamg.at", request_fn=_do_request,
         parse_fn=lambda resp: resp.json(), log=logger,
+        not_covered_statuses=frozenset({404}),
     )
 
 

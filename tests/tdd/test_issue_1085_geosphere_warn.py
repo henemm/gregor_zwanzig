@@ -24,6 +24,8 @@ KEINE Mocks (CLAUDE.md-Projektkonvention "KEINE MOCKED TESTS!"):
 """
 from __future__ import annotations
 
+import http.server
+import threading
 from datetime import datetime, timezone
 
 import pytest
@@ -224,3 +226,215 @@ class TestIssue1085GeosphereWarnSource:
             assert alert.region_label == "Innsbruck"
             assert alert.valid_from == expected_start
             assert alert.valid_to == expected_end
+
+
+class _Always404Handler(http.server.BaseHTTPRequestHandler):
+    """Echter lokaler HTTP-Server, der JEDE Anfrage mit 404 beantwortet --
+    analog dem echten ZAMG-Verhalten ausserhalb Oesterreichs. Kein Mock der
+    HTTP-Bibliothek, sondern ein echter Socket-Roundtrip (Muster aus
+    ``test_meteoalarm_source.py``s ``_BrokenJSONHandler``)."""
+
+    def do_GET(self) -> None:  # noqa: N802 - von BaseHTTPRequestHandler vorgegeben
+        self.send_response(404)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"Could not find municipal for coords.")
+
+    def log_message(self, format: str, *args) -> None:  # noqa: A002 - Signatur vorgegeben
+        pass  # Testlauf-Ausgabe nicht mit Server-Zugriffslogs zumuellen
+
+
+class TestIssue1397S2aZamg404IstNichtZustaendig:
+    """Issue #1397 Scheibe S2a: ein ZAMG-404 heisst "nicht zustaendig", nicht
+    "ausgefallen" -- kein lauter "amtliche Warnungen nicht abrufbar"-Hinweis
+    fuer jede Suedtirol-Etappe. Gegenprobe: HTTP 500 und Timeout bleiben
+    echte Ausfaelle (unveraendert)."""
+
+    def test_404_liefert_leere_liste_ohne_ausfall_markierung(self, monkeypatch):
+        """GIVEN ein lokaler Server antwortet mit 404 (wie ZAMG ausserhalb
+        Oesterreichs), WHEN ``fetch()`` innerhalb einer
+        ``observe_fetch_failure()``-Beobachtung aufgerufen wird, THEN liefert
+        ``fetch()`` `[]` UND der Fehlschlag-Marker bleibt False (kein
+        Ausfall) -- anders als vor der S2a-Nachbesserung."""
+        from services.official_alerts import geosphere_warn, warn_egress
+        from services.official_alerts.geosphere_warn import GeoSphereWarnSource
+
+        server = http.server.HTTPServer(("127.0.0.1", 0), _Always404Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        geosphere_warn._cache.clear()
+        try:
+            monkeypatch.setattr(
+                geosphere_warn, "GEOSPHERE_WARN_URL",
+                f"http://127.0.0.1:{server.server_port}",
+            )
+            source = GeoSphereWarnSource()
+            with warn_egress.observe_fetch_failure() as status:
+                alerts = source.fetch(46.4983, 11.3548)  # Bozen/Suedtirol
+            assert alerts == [], (
+                f"404 muss fail-soft [] liefern, erhalten: {alerts}"
+            )
+            assert status["failed"] is False, (
+                "Ein ZAMG-404 darf NICHT als Ausfall zaehlen (Issue #1397 S2a)"
+            )
+        finally:
+            server.shutdown()
+            thread.join(timeout=2)
+            geosphere_warn._cache.clear()
+
+    def test_404_wird_lang_gecacht_kein_wiederholter_call(self, monkeypatch):
+        """GIVEN der erste Abruf liefert 404, WHEN ``fetch()`` fuer denselben
+        (gerundeten) Punkt erneut aufgerufen wird, THEN wird der lokale
+        Server NICHT ein zweites Mal kontaktiert (24h-Cache statt der
+        kurzen 60s-Failure-TTL) -- ein Zaehler im Handler beweist das."""
+        from services.official_alerts import geosphere_warn
+        from services.official_alerts.geosphere_warn import GeoSphereWarnSource
+
+        call_count = {"n": 0}
+
+        class _CountingHandler(_Always404Handler):
+            def do_GET(self) -> None:  # noqa: N802
+                call_count["n"] += 1
+                super().do_GET()
+
+        server = http.server.HTTPServer(("127.0.0.1", 0), _CountingHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        geosphere_warn._cache.clear()
+        try:
+            monkeypatch.setattr(
+                geosphere_warn, "GEOSPHERE_WARN_URL",
+                f"http://127.0.0.1:{server.server_port}",
+            )
+            source = GeoSphereWarnSource()
+            assert source.fetch(46.4983, 11.3548) == []
+            assert source.fetch(46.4983, 11.3548) == []
+            assert call_count["n"] == 1, (
+                f"zweiter Abruf muss aus dem 24h-Cache kommen, kein echter "
+                f"Call, erhalten {call_count['n']} echte Calls"
+            )
+        finally:
+            server.shutdown()
+            thread.join(timeout=2)
+            geosphere_warn._cache.clear()
+
+    def test_500_bleibt_echter_ausfall(self, monkeypatch):
+        """Gegenprobe: GIVEN ein lokaler Server antwortet mit HTTP 500
+        (echter Dienstfehler, kein Zustaendigkeits-404), WHEN ``fetch()``
+        aufgerufen wird, THEN bleibt es beim bestehenden Ausfall-Verhalten
+        -- Fehlschlag-Marker True."""
+        from services.official_alerts import geosphere_warn, warn_egress
+        from services.official_alerts.geosphere_warn import GeoSphereWarnSource
+
+        class _Always500Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self) -> None:  # noqa: N802
+                self.send_response(500)
+                self.end_headers()
+
+            def log_message(self, format: str, *args) -> None:  # noqa: A002
+                pass
+
+        server = http.server.HTTPServer(("127.0.0.1", 0), _Always500Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        geosphere_warn._cache.clear()
+        try:
+            monkeypatch.setattr(
+                geosphere_warn, "GEOSPHERE_WARN_URL",
+                f"http://127.0.0.1:{server.server_port}",
+            )
+            source = GeoSphereWarnSource()
+            with warn_egress.observe_fetch_failure() as status:
+                alerts = source.fetch(46.4983, 11.3548)
+            assert alerts == []
+            assert status["failed"] is True, (
+                "Ein echter Dienstfehler (HTTP 500) MUSS weiterhin als "
+                "Ausfall zaehlen -- die S2a-Nachbesserung gilt NUR fuer 404"
+            )
+        finally:
+            server.shutdown()
+            thread.join(timeout=2)
+            geosphere_warn._cache.clear()
+
+    def test_timeout_bleibt_echter_ausfall(self, monkeypatch):
+        """Gegenprobe: GIVEN ``request_fn`` wirft (Timeout/Netzwerkfehler),
+        WHEN ``fetch()`` aufgerufen wird, THEN bleibt es beim bestehenden
+        Ausfall-Verhalten -- unveraendert durch die S2a-Nachbesserung."""
+        from services.official_alerts import geosphere_warn, warn_egress
+        from services.official_alerts.geosphere_warn import GeoSphereWarnSource
+
+        geosphere_warn._cache.clear()
+
+        def _raise_timeout(*_args, **_kwargs):
+            raise TimeoutError("simulierter Netzwerk-Timeout")
+
+        try:
+            monkeypatch.setattr(geosphere_warn.httpx, "get", _raise_timeout)
+            source = GeoSphereWarnSource()
+            with warn_egress.observe_fetch_failure() as status:
+                alerts = source.fetch(46.4983, 11.3548)
+            assert alerts == []
+            assert status["failed"] is True, (
+                "Ein Timeout MUSS weiterhin als Ausfall zaehlen"
+            )
+        finally:
+            geosphere_warn._cache.clear()
+
+    def test_ende_zu_ende_suedtirol_zamg_404_und_funktionierendes_meteoalarm_kein_unavailable(
+        self, monkeypatch
+    ):
+        """END-ZU-ENDE (Issue #1397 S2a): GIVEN ein Suedtirol-Punkt, bei dem
+        ZAMG (via lokalem 404-Server) nicht zustaendig ist UND eine zweite,
+        funktionierende Quelle (synthetisch, steht stellvertretend fuer eine
+        echte MeteoAlarmSource ohne Netzwerkabhaengigkeit) erfolgreich
+        antwortet, WHEN ``get_official_alerts_with_status()`` aufgerufen
+        wird, THEN ist ``unavailable`` False -- kein "amtliche Warnungen
+        nicht abrufbar"-Hinweis mehr fuer diese Etappe."""
+        import services.official_alerts.base as oa_base
+        from services.official_alerts import geosphere_warn
+        from services.official_alerts.base import get_official_alerts_with_status
+        from services.official_alerts.geosphere_warn import GeoSphereWarnSource
+
+        class _WorkingItalySource:
+            """Reale Objektimplementierung (kein Mock) -- steht fuer eine
+            funktionierende MeteoAlarmSource an diesem Punkt."""
+
+            @property
+            def name(self) -> str:
+                return "test-working-italy-source"
+
+            def covers(self, lat: float, lon: float) -> bool:
+                return True
+
+            def fetch(self, lat: float, lon: float):
+                return []
+
+        server = http.server.HTTPServer(("127.0.0.1", 0), _Always404Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        geosphere_warn._cache.clear()
+        backup = list(oa_base._REGISTERED_SOURCES)
+        oa_base._REGISTERED_SOURCES.clear()
+        try:
+            monkeypatch.setattr(
+                geosphere_warn, "GEOSPHERE_WARN_URL",
+                f"http://127.0.0.1:{server.server_port}",
+            )
+            oa_base._REGISTERED_SOURCES.append(GeoSphereWarnSource())
+            oa_base._REGISTERED_SOURCES.append(_WorkingItalySource())
+
+            bozen = (46.4983, 11.3548)
+            alerts, unavailable = get_official_alerts_with_status(*bozen)
+
+            assert alerts == []
+            assert unavailable is False, (
+                "Ein ZAMG-404 (nicht zustaendig) DARF NICHT mehr als Ausfall "
+                "in die unavailable-Berechnung eingehen, solange eine andere "
+                "abdeckende Quelle erfolgreich antwortet (Issue #1397 S2a)"
+            )
+        finally:
+            server.shutdown()
+            thread.join(timeout=2)
+            geosphere_warn._cache.clear()
+            oa_base._REGISTERED_SOURCES.clear()
+            oa_base._REGISTERED_SOURCES.extend(backup)

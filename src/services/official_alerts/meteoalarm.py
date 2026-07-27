@@ -27,6 +27,7 @@ from typing import Callable, Optional
 import httpx
 
 from services.official_alerts import warn_egress
+from services.official_alerts.department_mapper import lookup_department
 from services.official_alerts.meteoalarm_budget import MeteoAlarmBudgetGate
 from services.official_alerts.models import OfficialAlert
 from services.radar_service import (
@@ -720,10 +721,33 @@ class MeteoAlarmSource:
         return "meteoalarm"
 
     def covers(self, lat: float, lon: float) -> bool:
-        """AT- (INCA-Bbox) ∪ IT-Bbox (DPC) Vorfilter (kein API-Call)."""
+        """AT- (INCA-Bbox) ∪ IT-Bbox (DPC) Vorfilter (kein API-Call).
+
+        Issue #1397 S2b: die INCA-Bbox reicht rund 100 km in die Provence
+        hinein (Westkante bei lon 9,5 -- Fréjus/Saint-Tropez liegen bei
+        lon ~6,6-6,7). Ein einzelner franzoesischer Ort in der Vergleichs-
+        matrix wuerde sonst den `unavailable`-Hinweis fuer den gesamten
+        Ortsvergleich kippen. Punkte in einem franzoesischen Département
+        (`lookup_department()` liefert einen Code statt `None`) werden
+        deshalb ausgenommen. Verlaesslich erst seit Issue #1400: davor
+        lieferte `lookup_department()` fuer JEDEN Punkt der Erde einen
+        Code (Zentroid-Notbehelf ohne Bedingung) -- diese Pruefung haette
+        also JEDEN Punkt als Frankreich eingestuft und MeteoAlarm komplett
+        abgeschaltet.
+
+        Bekannte Grenze (dokumentiert, NICHT behoben, #1397): Punkte in
+        Bayern, Slowenien, der Schweiz oder Ungarn gelten weiterhin als
+        abgedeckt -- die INCA-Bbox ist ein reines Grobgatter fuer
+        Oesterreich, kein Staatsgrenzen-Polygon. Der exakte Punkt-in-
+        Flaeche-Filter laeuft ohnehin erst nach dem Abruf (s. `fetch()`);
+        Grenzunschaerfe dort kostet hoechstens einen ueberfluessigen Abruf,
+        nie eine verlorene Warnung.
+        """
         in_at = _INCA_LAT_MIN <= lat <= _INCA_LAT_MAX and _INCA_LON_MIN <= lon <= _INCA_LON_MAX
         in_it = _DPC_LAT_MIN <= lat <= _DPC_LAT_MAX and _DPC_LON_MIN <= lon <= _DPC_LON_MAX
-        return in_at or in_it
+        if not (in_at or in_it):
+            return False
+        return lookup_department(lat, lon) is None
 
     def fetch(self, lat: float, lon: float) -> list[OfficialAlert]:
         if not os.environ.get("GZ_METEOALARM_APIKEY"):

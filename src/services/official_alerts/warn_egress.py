@@ -37,6 +37,11 @@ logger = logging.getLogger("warn_egress")
 
 WARN_SUCCESS_TTL = 1800.0  # Sekunden — Erfolgs-Fenster (30 min, warngerecht)
 WARN_FAILURE_TTL = 60.0  # Sekunden — kurzes Failure-Fenster
+# Issue #1397 S2a: TTL fuer einen "nicht zustaendig"-Statuscode (s.
+# ``not_covered_statuses``). Staatsgrenzen bewegen sich nicht -- lange TTL,
+# damit ein Punkt ausserhalb des Zustaendigkeitsbereichs nicht bei jedem
+# 15-Minuten-Scheduler-Takt erneut abgefragt wird.
+WARN_NOT_COVERED_TTL = 24 * 3600.0  # Sekunden — 24h
 
 # Issue #1348 (Real-Pfad-Fix): ``cached_fetch`` faengt JEDEN Fehlschlag fail-soft
 # ab und gibt ``None`` zurueck; die Quellen wandeln ``None`` -> ``[]`` und werfen
@@ -248,6 +253,7 @@ def cached_fetch(
     log: logging.Logger = logger,
     rate_limit_retry: Optional[RateLimitRetryPolicy] = None,
     on_response: Optional[Callable[[Any], None]] = None,
+    not_covered_statuses: Optional[frozenset[int]] = None,
 ) -> Optional[Any]:
     """TTL-Cache mit 429-bewusstem Rückzug und Egress-Zähler.
 
@@ -273,6 +279,19 @@ def cached_fetch(
     ``parse_fn`` laeuft — Beobachtungshaken fuer Aufrufer, die z.B. den
     ``x-ratelimit-reset`` der letzten Antwort fuer eine vorbeugende Pause vor
     dem naechsten Aufruf mitschneiden wollen (nie ausserhalb try/except).
+
+    ``not_covered_statuses`` (Issue #1397 S2a, Standard ``None`` -- OHNE
+    dieses Argument ist ``cached_fetch()`` BIT-IDENTISCH zum Bestand): eine
+    Menge von Statuscodes, die NICHT als Fehlschlag gelten, sondern als
+    "fuer diesen Punkt/Parameter nicht zustaendig" (Vorbild: ZAMG antwortet
+    ausserhalb Oesterreichs auf den koordinaten-scoped Endpunkt mit 404).
+    Trifft ein solcher Status zu, wird ein neutraler leerer Wert (``{}``)
+    als ERFOLG mit ``WARN_NOT_COVERED_TTL`` gecacht -- kein
+    ``_record_fetch_failure()``, die Egress-Zeile traegt weiterhin den
+    echten Statuscode. ``{}`` ist bewusst kein ``None`` (der Cache-Treffer-
+    Zweig oben unterscheidet Fehlschlag von Erfolg ueber ``data is None``)
+    und wird von den bestehenden ``_extract_alerts()``-Implementierungen
+    (KeyError auf ``data["properties"]``) bereits sauber zu ``[]``.
     """
     now = clock()
     entry = cache.get(cache_key)
@@ -356,6 +375,19 @@ def cached_fetch(
                               retry_after=logged_retry_after)
         _record_fetch_failure()
         return None
+
+    if not_covered_statuses is not None and status in not_covered_statuses:
+        # Issue #1397 S2a: "nicht zustaendig" ist KEIN Ausfall -- kein
+        # _record_fetch_failure(), lange Erfolgs-TTL (Staatsgrenzen bewegen
+        # sich nicht), Egress-Zeile behaelt den echten Statuscode.
+        log.debug(
+            "%s: HTTP %s -- ausserhalb des Zustaendigkeitsbereichs, kein Ausfall",
+            service, status,
+        )
+        neutral_value: Any = {}
+        cache[cache_key] = {"data": neutral_value, "fetched_at": now, "ttl": WARN_NOT_COVERED_TTL}
+        log_warn_service_call(service, host, status=status, cache_hit=False)
+        return neutral_value
 
     if status >= 400:
         log.warning("%s-Abruf fehlgeschlagen (%s, HTTP %s)", service, host, status)

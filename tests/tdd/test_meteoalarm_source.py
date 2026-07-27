@@ -2194,3 +2194,79 @@ def test_beobachteter_daily_reset_sperrt_budget_ueber_echten_pfad(monkeypatch):
     finally:
         server.shutdown()
         thread.join(timeout=2)
+
+
+# ---------------------------------------------------------------------------
+# Issue #1397 Scheibe S2b: MeteoAlarmSource.covers() nimmt franzoesische
+# Départements aus (INCA-Bbox reicht ~100km in die Provence). Verlaesslich
+# erst seit Issue #1400 -- die gefaehrlichste Stelle dieses Auftrags: ein
+# Fehler hier wuerde MeteoAlarm komplett fuer Oesterreich/Italien abschalten.
+# ---------------------------------------------------------------------------
+
+def test_covers_schliesst_franzoesische_orte_in_der_provence_aus():
+    """GIVEN Fréjus und Saint-Tropez (Var, 83) liegen geografisch INNERHALB
+    der INCA-Bbox (Grobgatter Oesterreich reicht bis lon 9,5, diese Orte
+    liegen bei lon ~6,6-6,7), WHEN ``covers()`` aufgerufen wird, THEN
+    liefert es False -- MeteoAlarm ist fuer Frankreich nicht zustaendig
+    (Issue #1397 S2b: sonst kippt ein einzelner franzoesischer Vergleichs-Ort
+    den 'unavailable'-Hinweis fuer den gesamten Ortsvergleich)."""
+    from services.official_alerts.meteoalarm import MeteoAlarmSource
+
+    source = MeteoAlarmSource()
+    frejus = (43.4332, 6.7370)
+    saint_tropez = (43.2677, 6.6407)
+    assert source.covers(*frejus) is False, "Fréjus (FR, Var) darf nicht abgedeckt sein"
+    assert source.covers(*saint_tropez) is False, "Saint-Tropez (FR, Var) darf nicht abgedeckt sein"
+
+
+def test_covers_deckt_oesterreich_und_italien_weiterhin_ab():
+    """KRITISCHSTER Test dieses Auftrags (Team-Lead-Warnung): GIVEN echte
+    oesterreichische und italienische Orte, WHEN ``covers()`` aufgerufen
+    wird, THEN bleibt es bei True -- die franzoesische Ausnahme aus S2b darf
+    NIEMALS Oesterreich/Italien mit-treffen. Ein Fehler hier wuerde
+    MeteoAlarm komplett abschalten (dedup_id-kritischer Regressionswaechter)."""
+    from services.official_alerts.meteoalarm import MeteoAlarmSource
+
+    source = MeteoAlarmSource()
+    toblach = (46.7333, 12.2167)       # Suedtirol/Italien
+    bozen = (46.4983, 11.3548)         # Suedtirol/Italien
+    zillertal = (47.2333, 11.8500)     # Oesterreich (Tirol)
+    innsbruck = (47.2692, 11.4041)     # Oesterreich
+    milan = (45.4642, 9.1900)          # Italien (Festland, DPC-Bbox)
+
+    for lat, lon, ort in (
+        (toblach[0], toblach[1], "Toblach"),
+        (bozen[0], bozen[1], "Bozen"),
+        (zillertal[0], zillertal[1], "Zillertal"),
+        (innsbruck[0], innsbruck[1], "Innsbruck"),
+        (milan[0], milan[1], "Mailand"),
+    ):
+        assert source.covers(lat, lon) is True, (
+            f"{ort} MUSS weiterhin abgedeckt sein -- die franzoesische "
+            f"Ausnahme (#1397 S2b) darf Oesterreich/Italien nicht treffen"
+        )
+
+
+def test_covers_bekannte_grenze_bayern_slowenien_schweiz_ungarn_bleibt_abgedeckt():
+    """Dokumentierte, NICHT behobene Grenze (#1397): Punkte in Bayern,
+    Slowenien, der Schweiz oder Ungarn gelten weiterhin als abgedeckt -- die
+    INCA-Bbox ist ein reines Grobgatter fuer Oesterreich, kein
+    Staatsgrenzen-Polygon. Diese Ueberdeckung ist gewollt (folgenlos, da der
+    exakte Punkt-in-Flaeche-Filter nach dem Abruf laeuft) und wird HIER als
+    Regressionswaechter dokumentiert, nicht als Fix."""
+    from services.official_alerts.meteoalarm import MeteoAlarmSource
+
+    source = MeteoAlarmSource()
+    muenchen = (48.1351, 11.5820)      # Bayern
+    ljubljana = (46.0569, 14.5058)     # Slowenien
+    zuerich = (47.3769, 8.5417)        # Schweiz
+
+    for lat, lon, ort in (
+        (muenchen[0], muenchen[1], "Muenchen"),
+        (ljubljana[0], ljubljana[1], "Ljubljana"),
+        (zuerich[0], zuerich[1], "Zuerich"),
+    ):
+        assert source.covers(lat, lon) is True, (
+            f"{ort}: bekannte, akzeptierte Grenze -- INCA-Bbox ist ein "
+            f"Grobgatter, keine Staatsgrenze (#1397, nicht behoben)"
+        )

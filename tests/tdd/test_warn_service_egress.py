@@ -745,3 +745,183 @@ def test_long_lived_429_counter_zeigt_reset_zeitpunkt(tmp_path, monkeypatch):
     assert rec["retry_after"] == 86399.0, (
         f"Zaehler muss den ermittelten Reset-Abstand zeigen, war {rec['retry_after']!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Issue #1397 S2a — optionaler ``not_covered_statuses``-Parameter: bestimmte
+# Statuscodes (z.B. ZAMG-404 ausserhalb Oesterreichs) gelten als "nicht
+# zustaendig", nicht als Fehlschlag. OHNE das Argument (Vigilance/Massif/
+# Météo-Forêts/MeteoAlarm) bleibt cached_fetch() BIT-IDENTISCH zum Bestand.
+# ---------------------------------------------------------------------------
+
+def test_not_covered_status_is_success_not_failure(tmp_path, monkeypatch):
+    """GIVEN eine echte HTTP-404-Antwort UND ``not_covered_statuses={404}``,
+    WHEN ``cached_fetch()`` sie verarbeitet, THEN liefert sie einen neutralen
+    Wert (kein ``None``) statt eines Fehlschlags, und der Eintrag wird als
+    ERFOLG mit ``WARN_NOT_COVERED_TTL`` (24h) gecacht."""
+    from services.official_alerts import warn_egress
+
+    monkeypatch.setattr(
+        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+    )
+
+    def _request() -> httpx.Response:
+        return httpx.Response(404)
+
+    cache: dict = {}
+    result = warn_egress.cached_fetch(
+        cache=cache,
+        cache_key="46.85,9.53",
+        service="geosphere_warn",
+        host="warnungen.zamg.at",
+        request_fn=_request,
+        parse_fn=lambda r: r.json(),
+        clock=_fixed_clock(1000.0),
+        not_covered_statuses=frozenset({404}),
+    )
+    assert result is not None, (
+        "Ein 'nicht zustaendig'-Status darf NICHT wie ein Fehlschlag als "
+        "None zurueckgegeben werden"
+    )
+    entry = cache["46.85,9.53"]
+    assert entry["data"] is not None, (
+        "gecachte Daten duerfen nicht None sein, sonst gilt der naechste "
+        "Cache-Treffer faelschlich wieder als Fehlschlag"
+    )
+    assert entry["ttl"] == warn_egress.WARN_NOT_COVERED_TTL == 24 * 3600.0
+
+
+def test_not_covered_status_does_not_set_failure_marker(tmp_path, monkeypatch):
+    """GIVEN ``observe_fetch_failure()`` beobachtet den Aufruf, WHEN ein
+    'nicht zustaendig'-Status auftritt, THEN bleibt ``failed`` False -- der
+    #1348-Ausfall-Marker (der ``unavailable=True`` fuer die gesamte
+    Registry-Abfrage ausloesen wuerde) wird NICHT gesetzt."""
+    from services.official_alerts import warn_egress
+
+    monkeypatch.setattr(
+        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+    )
+
+    with warn_egress.observe_fetch_failure() as status:
+        warn_egress.cached_fetch(
+            cache={},
+            cache_key="AT",
+            service="geosphere_warn",
+            host="warnungen.zamg.at",
+            request_fn=lambda: httpx.Response(404),
+            parse_fn=lambda r: r.json(),
+            clock=_fixed_clock(1000.0),
+            not_covered_statuses=frozenset({404}),
+        )
+    assert status["failed"] is False, (
+        "Ein 'nicht zustaendig'-404 darf den Fehlschlag-Marker NICHT setzen"
+    )
+
+
+def test_not_covered_status_egress_line_keeps_real_status_code(tmp_path, monkeypatch):
+    """GIVEN ein 404 als 'nicht zustaendig' behandelt wird, WHEN die
+    Zaehler-Zeile geschrieben wird, THEN traegt sie weiterhin den ECHTEN
+    Statuscode 404 (keine Verschleierung des Egress-Nachweises) UND
+    ``cache_hit=False`` (echter Call fand statt)."""
+    from services.official_alerts import warn_egress
+
+    jsonl = tmp_path / "warn_service_calls.jsonl"
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH", jsonl)
+
+    warn_egress.cached_fetch(
+        cache={},
+        cache_key="AT",
+        service="geosphere_warn",
+        host="warnungen.zamg.at",
+        request_fn=lambda: httpx.Response(404),
+        parse_fn=lambda r: r.json(),
+        clock=_fixed_clock(1000.0),
+        not_covered_statuses=frozenset({404}),
+    )
+
+    lines = [ln for ln in jsonl.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    assert len(lines) == 1
+    rec = json.loads(lines[0])
+    assert rec["status"] == 404, "Egress-Zeile muss den echten Statuscode tragen"
+    assert rec["cache_hit"] is False
+
+
+def test_not_covered_cache_hit_stays_success_on_second_call(tmp_path, monkeypatch):
+    """GIVEN ein gecachter 'nicht zustaendig'-Eintrag, WHEN ``cached_fetch()``
+    innerhalb der 24h-TTL erneut mit demselben ``cache_key`` aufgerufen wird,
+    THEN wird ``request_fn()`` NICHT erneut aufgerufen (Netz-Sentinel) und der
+    Cache-Treffer gilt weiterhin als Erfolg, nicht als Fehlschlag."""
+    from services.official_alerts import warn_egress
+
+    monkeypatch.setattr(
+        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+    )
+    cache = {
+        "AT": {"data": {}, "fetched_at": 1000.0, "ttl": warn_egress.WARN_NOT_COVERED_TTL}
+    }
+    with warn_egress.observe_fetch_failure() as status:
+        result = warn_egress.cached_fetch(
+            cache=cache,
+            cache_key="AT",
+            service="geosphere_warn",
+            host="warnungen.zamg.at",
+            request_fn=_net_sentinel,
+            parse_fn=lambda r: r.json(),
+            clock=_fixed_clock(1000.0),
+            not_covered_statuses=frozenset({404}),
+        )
+    assert result == {}
+    assert status["failed"] is False
+
+
+def test_other_statuses_stay_real_failures_with_not_covered_param_set(tmp_path, monkeypatch):
+    """Gegenprobe: GIVEN ``not_covered_statuses={404}`` ist gesetzt, WHEN eine
+    ANDERE Fehlerantwort (HTTP 500) auftritt, THEN bleibt es beim
+    bestehenden Ausfall-Verhalten (``None``, Fehlschlag-Marker gesetzt,
+    kurze ``failure_ttl``) -- der neue Parameter darf echte Ausfaelle nicht
+    verschlucken."""
+    from services.official_alerts import warn_egress
+
+    monkeypatch.setattr(
+        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+    )
+    cache: dict = {}
+    with warn_egress.observe_fetch_failure() as status:
+        result = warn_egress.cached_fetch(
+            cache=cache,
+            cache_key="AT",
+            service="geosphere_warn",
+            host="warnungen.zamg.at",
+            request_fn=lambda: httpx.Response(500),
+            parse_fn=lambda r: r.json(),
+            clock=_fixed_clock(1000.0),
+            not_covered_statuses=frozenset({404}),
+        )
+    assert result is None
+    assert status["failed"] is True
+    assert cache["AT"]["ttl"] == warn_egress.WARN_FAILURE_TTL
+
+
+def test_without_not_covered_param_404_stays_a_failure_like_before(tmp_path, monkeypatch):
+    """Regressionsnachweis: OHNE ``not_covered_statuses`` (Standard ``None``,
+    wie Vigilance/Massif/Météo-Forêts/MeteoAlarm es weiterhin aufrufen)
+    bleibt ein 404 ein GEWOEHNLICHER Fehlschlag -- exakt wie vor #1397 S2a."""
+    from services.official_alerts import warn_egress
+
+    monkeypatch.setattr(
+        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+    )
+    cache: dict = {}
+    with warn_egress.observe_fetch_failure() as status:
+        result = warn_egress.cached_fetch(
+            cache=cache,
+            cache_key="AT",
+            service="geosphere_warn",
+            host="warnungen.zamg.at",
+            request_fn=lambda: httpx.Response(404),
+            parse_fn=lambda r: r.json(),
+            clock=_fixed_clock(1000.0),
+        )
+    assert result is None
+    assert status["failed"] is True
+    assert cache["AT"]["ttl"] == warn_egress.WARN_FAILURE_TTL
