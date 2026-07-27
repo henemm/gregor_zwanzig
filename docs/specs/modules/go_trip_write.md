@@ -31,7 +31,13 @@ Write-Operationen fuer Trips: Erstellen, Aktualisieren und Loeschen via REST API
 ### Out of Scope
 - Location Write (M1f)
 - Typisierte Configs (bleiben opaque maps)
-- Conflict Detection (kein ETag/If-Match)
+- ~~Conflict Detection (kein ETag/If-Match)~~ — **ueberholt durch Issue #1395
+  (2026-07-27).** `GET`/`PUT` liefern einen `ETag`, `PUT /api/trips/{id}` und
+  `PUT /api/trips/{id}/weather-config` pruefen `If-Match`; fehlender Header wird
+  angenommen, falscher mit `412` abgelehnt. Details:
+  `docs/specs/modules/issue_1395_s2_etag_ifmatch.md` (Server),
+  `docs/specs/modules/issue_1395_s3_etag_registry.md` (Frontend),
+  `docs/adr/0036-nebenlaeufigkeitsschutz-inhalts-fingerabdruck.md`.
 - Bulk Operations
 
 ## Architecture
@@ -185,8 +191,15 @@ go test ./internal/... -v
 
 ## Known Limitations
 
-- Keine Conflict Detection (kein ETag)
-- Keine atomaren Writes (kein Temp-File + Rename)
+- ~~Keine Conflict Detection (kein ETag)~~ — **behoben mit Issue #1395**
+  (2026-07-27), s. „Out of Scope" oben.
+- ~~Keine atomaren Writes (kein Temp-File + Rename)~~ — **behoben mit Issue #1395
+  Scheibe S1**: `writeFileLogged` schreibt seither tmp + `rename`
+  (`internal/store/write.go`). Ein Leser konnte zuvor nachweislich eine halb
+  geschriebene Datei sehen; der Reproduktions-Test dazu ist
+  `internal/store/write_atomic_test.go`. **Der Python-Kern schreibt dieselben
+  Dateien weiterhin NICHT atomar** (`src/app/loader.py`, `open(path, "w")`) —
+  diese Luecke ist offen.
 - Keine Validierung von date/start_time Format (Strings)
 - DeleteTrip ist idempotent (kein 404 bei nicht-existierend)
 
