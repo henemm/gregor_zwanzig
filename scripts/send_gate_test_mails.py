@@ -202,16 +202,35 @@ def send_briefing_mail(settings: Settings, token: str) -> bool:
 #     Renderer-Einstiegspunkt render_compare_email() (analog
 #     test_warn_block_compare_banner.py).
 # ---------------------------------------------------------------------------
+# Issue #1378: die Vergleichs-Mail beschriftet ihre Stundenzeilen in ORTSZEIT.
+# Die drei Fixture-Orte unten liegen alle in Europe/Vienna (lat/lon 47.0/11.0,
+# 47.2/11.3, 46.8/10.8), das Fixture-Datum 13.07. faellt in die Sommerzeit --
+# also UTC+2. Damit die Mail die vom Pflicht-Validator geforderten Ortsstunden
+# 09..16 zeigt, muessen die Rohpunkte bei 07:00..14:00 UTC liegen. Vorher
+# setzte diese Fixture Rohstunde und angezeigte Stunde stillschweigend gleich
+# -- eine Kombination, die es real nur an einem Ort IN UTC gibt; vor #1378 fiel
+# sie nicht auf, weil die Mail die Rohstunde anschrieb.
+_VIENNA_SUMMER_OFFSET_H = 2
+
+
 def _compare_hourly_data(base_temp: float) -> list[ForecastDataPoint]:
+    # Die Schleife laeuft ueber die ANGEZEIGTEN Ortsstunden 09..16; der
+    # Zeitstempel wird daraus zurueckgerechnet. So steht die Absicht im Code,
+    # statt dass ein roher Stundenbereich stillschweigend die Anzeige bestimmt.
     return [
         ForecastDataPoint(
-            ts=datetime(2026, 7, 13, h, 0, tzinfo=UTC),
-            t2m_c=base_temp + (h - 9) * 0.6, wind10m_kmh=12.0, gust_kmh=20.0,
-            wind_chill_c=base_temp + (h - 9) * 0.6 - 1.0,
+            ts=datetime(2026, 7, 13, local_h - _VIENNA_SUMMER_OFFSET_H, 0, tzinfo=UTC),
+            # Temperaturverlauf haengt bewusst an der ORTSSTUNDE: 09 Uhr
+            # Ortszeit = base_temp, danach +0.6 K je Stunde bis 16 Uhr. Die in
+            # der Mail sichtbaren Werte bleiben damit exakt dieselben wie vor
+            # #1378 (Plausibilitaets-Pruefung des Validators, Tagesmaximum
+            # base_temp + 4.2 K passt weiter zu `temp_max` der Ortszeile).
+            t2m_c=base_temp + (local_h - 9) * 0.6, wind10m_kmh=12.0, gust_kmh=20.0,
+            wind_chill_c=base_temp + (local_h - 9) * 0.6 - 1.0,
             precip_1h_mm=0.0, pop_pct=10, uv_index=4.0,
             thunder_level=ThunderLevel.NONE, visibility_m=20000,
         )
-        for h in range(9, 17)
+        for local_h in range(9, 17)
     ]
 
 

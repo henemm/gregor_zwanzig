@@ -53,10 +53,17 @@ TARGET_DATE = date(2026, 7, 16)
 DNI_SONNIG = 800.0
 DNI_DUNKEL = 0.0
 
-# Aufgezeichnetes Stundenprofil: Sonne AUSSCHLIESSLICH ausserhalb 9–16 Uhr
-# (frueher Morgen 6,7,8 Uhr + Abend 17,18,19 Uhr = 6 Sonnenstunden).
-# Innerhalb 9–16 Uhr ist es bedeckt (DNI 0) — dadurch trennt der Test die
-# beiden Fenster maximal scharf: (9,16) -> 0.0 h, (0,23) -> 6.0 h.
+# Aufgezeichnetes Stundenprofil: Sonne frueher Morgen 6,7,8 Uhr + Abend
+# 17,18,19 Uhr = 6 Sonnenstunden, dazwischen bedeckt (DNI 0).
+#
+# ACHTUNG Zeitbasis (Issue #1378): `ts` ist naive UTC (Hausnorm #1345), die
+# Fenster-Auswertung laeuft seit #1378 in ORTSZEIT. Der Fixture-Ort ist
+# Innsbruck (Europe/Vienna, im Juli UTC+2) — die Sonnenstunden liegen also in
+# ORTSZEIT bei 8,9,10 und 19,20,21 Uhr. Deshalb trennt das Profil die Fenster
+# weiterhin scharf, aber mit anderen Zahlen als vor #1378:
+#   Fenster (9,16) Ortszeit = UTC 7..14 -> sonnig UTC 7,8            -> 2.0 h
+#   Fenster (4,19) Ortszeit = UTC 2..17 -> sonnig UTC 6,7,8,17       -> 4.0 h
+#   Fenster (0,23) Ortszeit = UTC 0..21 -> sonnig UTC 6,7,8,17,18,19 -> 6.0 h
 SONNIGE_STUNDEN = {6, 7, 8, 17, 18, 19}
 
 
@@ -126,20 +133,31 @@ class TestSunHoursDependsOnWindow:
     """Beweist, dass das Bewertungsfenster den Sonnen-Wert bestimmt."""
 
     def test_altes_fenster_verliert_morgen_und_abendsonne(self):
-        """GIVEN: ein Ort mit Sonne nur um 6–8 und 17–19 Uhr
+        """GIVEN: ein Ort mit Sonne um 6–8 und 17–19 Uhr UTC
         WHEN: die Engine mit dem ALTEN Fenster (9, 16) rechnet
-        THEN: sunny_hours = 0.0 — die Randsonne faellt komplett unter den Tisch.
+        THEN: sunny_hours = 2.0 — vier der sechs Sonnenstunden fallen unter
+              den Tisch.
 
-        Ausgangslage-Beleg fuer AC-8 (gruen vor und nach dem Fix): dokumentiert
-        das Verhalten, das #1268 ablegt, und beweist zugleich, dass die Fixture
-        die beiden Fenster ueberhaupt unterscheidbar macht. Ohne diesen Anker
-        koennte der Test unten auch bei einer kaputten Fixture gruen werden.
+        Ausgangslage-Beleg fuer AC-8 (gruen vor und nach dem #1268-Fix):
+        dokumentiert das Verhalten, das #1268 ablegt, und beweist zugleich, dass
+        die Fixture die beiden Fenster ueberhaupt unterscheidbar macht (2.0 vs.
+        6.0). Ohne diesen Anker koennte der Test unten auch bei einer kaputten
+        Fixture gruen werden.
+
+        Erwartungswert hergeleitet (Issue #1378 — Fenster gilt in ORTSZEIT):
+          Fenster 9–16 Ortszeit, Innsbruck = Europe/Vienna, Juli = UTC+2
+            -> ausgewertet werden die Serverstunden 7..14
+          sonnige Serverstunden {6,7,8,17,18,19} ∩ [7..14] = {7, 8}
+            -> 2 Sonnenstunden (in Ortszeit: 9 und 10 Uhr)
+          neu DRIN gegenueber der Serverzeit-Auswertung: UTC 7, 8
+          neu DRAUSSEN: keine (vor #1378 lag keine Sonnenstunde im Fenster)
         """
         sunny = _run_engine_with_window((9, 16))
 
-        assert sunny == 0.0, (
-            f"Fenster (9, 16) ergab {sunny} Sonnenstunden, erwartet 0.0 — "
-            "die Fixture hat innerhalb 9–16 Uhr bewusst DNI 0."
+        assert sunny == 2.0, (
+            f"Fenster (9, 16) ergab {sunny} Sonnenstunden, erwartet 2.0 — "
+            "in Ortszeit 9–16 Uhr (= UTC 7–14) liegen genau die Sonnenstunden "
+            "UTC 7 und 8, die restlichen vier liegen ausserhalb."
         )
 
     def test_ganztags_fenster_zaehlt_morgen_und_abendsonne_mit(self):
@@ -148,6 +166,11 @@ class TestSunHoursDependsOnWindow:
         THEN: sunny_hours = 6.0 — alle sechs Randstunden zaehlen mit.
 
         AC-8, Kern-Nachweis auf der Schicht, die den Wert erzeugt.
+
+        Wert unveraendert nach Issue #1378: Fenster 0–23 Ortszeit umfasst am
+        Ortstag die Serverstunden 0..21 (Innsbruck, UTC+2 -> Ortszeit 2..23);
+        die dabei herausfallenden Serverstunden 22/23 sind in der Fixture
+        ohnehin bedeckt, alle sechs Sonnenstunden liegen in 0..21.
         """
         sunny = _run_engine_with_window((0, 23))
 
@@ -164,15 +187,31 @@ class TestSunHoursThroughDispatch:
         """GIVEN: ein Bestands-Preset mit gespeichertem Zeitfenster 9–16 Uhr und
                   ein Ort, dessen Sonne ausschliesslich um 6–8 und 17–19 Uhr scheint
         WHEN: der Dispatch das Vergleichs-Ergebnis erzeugt
-        THEN: der Sonnen-Wert der Mail-Spalte betraegt 6.0 h (ganzer Tag),
-              nicht 0.0 h (altes Preset-Fenster).
+        THEN: der Sonnen-Wert der Mail-Spalte betraegt 4.0 h (konfiguriertes
+              Tagesfenster), nicht 2.0 h (altes Preset-Fenster 9–16).
 
         AC-8 am Nutzer-Ergebnis: schliesst die Kette Preset → Dispatch →
         Fenster → sunny_hours. Dieser Test ist der ROTE — er bezieht das
         Fenster NICHT als Testparameter, sondern aus dem echten Dispatch-Code.
 
         RED vor Fix: der Dispatch reicht das Preset-Fenster (9, 16) durch →
-        sunny_hours = 0.0 statt 6.0.
+        sunny_hours 2.0 statt 4.0 (vor #1378: 0.0 statt 6.0).
+
+        Erwartungswert hergeleitet (zwei Schritte, keine Ablesung):
+          1. Fenster-Quelle: das Preset traegt KEIN
+             `day_window_start_hour`/`day_window_end_hour`, also liefert
+             `resolve_compare_time_window()` -> `resolve_configured_window(
+             None, None)` den Default (4, 19) (day_window.py) — NICHT die
+             deprecateten Preset-Felder hour_from/hour_to (9, 16).
+          2. Zeitbasis (Issue #1378): 4–19 Ortszeit, Innsbruck =
+             Europe/Vienna, Juli = UTC+2 -> Serverstunden 2..17.
+             sonnige Serverstunden {6,7,8,17,18,19} ∩ [2..17] = {6,7,8,17}
+             -> 4 Sonnenstunden (in Ortszeit: 8, 9, 10 und 19 Uhr).
+             Neu DRAUSSEN gegenueber der Serverzeit-Auswertung: UTC 18 und 19
+             (= 20/21 Uhr Ortszeit, liegen hinter dem Fensterende 19 Uhr).
+             Neu DRIN: keine.
+          Der Test bleibt damit scharf: das falsche (Preset-)Fenster ergaebe
+          2.0 h (UTC 7..14 -> sonnig 7, 8), das richtige 4.0 h.
 
         Der Test greift das ComparisonResult am Renderer-Uebergang ab: er
         laesst den echten Dispatch bis unmittelbar hinter die Engine laufen und
@@ -240,9 +279,10 @@ class TestSunHoursThroughDispatch:
             ce_mod.ComparisonEngine = original_engine
 
         sunny = result.locations[0].sunny_hours
-        assert sunny == 6.0, (
-            f"RED: der Dispatch lieferte {sunny} Sonnenstunden, erwartet 6.0. "
-            "Er reicht offenbar noch das gespeicherte Preset-Fenster (9, 16) durch, "
-            "statt den ganzen Tag (0, 23) zu bewerten — die Mail-Spalte 'Sonne' "
-            "verliert damit Morgen- und Abendsonne (Spec #1268 AC-8)."
+        assert sunny == 4.0, (
+            f"RED: der Dispatch lieferte {sunny} Sonnenstunden, erwartet 4.0 "
+            "(Tagesfenster 4–19 Ortszeit = UTC 2–17, sonnig UTC 6,7,8,17). "
+            "Bei 2.0 reicht er noch das gespeicherte Preset-Fenster (9, 16) "
+            "durch — die Mail-Spalte 'Sonne' verliert dann Morgen- und "
+            "Abendsonne (Spec #1268 AC-8)."
         )

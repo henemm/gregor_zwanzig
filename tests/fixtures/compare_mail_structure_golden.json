@@ -1,5 +1,5 @@
 {
-  "_comment": "Aufgezeichnete Soll-Struktur der Ortsvergleich-Mail (AC-7, Spec compare_layout_tab_dissolution / Issue #1360). Abgenommen VOR dem top_n-Rueckbau am 2026-07-25 aus dem versionierten Wetter-Fixture tests/fixtures/compare_mail_structure.json. Erzeugt mit extract_compare_mail_structure() aus tests/test_compare_top_n_render_invariance.py — Kopf-/Fusszeilen mit Render-Zeitstempel sind bewusst nicht enthalten.",
+  "_comment": "Aufgezeichnete Soll-Struktur der Ortsvergleich-Mail (AC-7, Spec compare_layout_tab_dissolution / Issue #1360). Abgenommen VOR dem top_n-Rueckbau am 2026-07-25 aus dem versionierten Wetter-Fixture tests/fixtures/compare_mail_structure.json. Erzeugt mit extract_compare_mail_structure() aus tests/test_compare_top_n_render_invariance.py — Kopf-/Fusszeilen mit Render-Zeitstempel sind bewusst nicht enthalten. Issue #1378 (2026-07-27): die Stunden-Beschriftungen wurden um genau +1 h verschoben — die Mail beschriftet seither in ORTSZEIT statt in Serverzeit. Herleitung: Fixture-Zeitstempel 09:00–16:00 UTC am 01.01.2026, Fixture-Orte in Europe/Vienna, Januar = CET = UTC+1 → Zeilen 10..17. Ausschliesslich die Zeit-Zellen der Stundentabellen und die Klartext-Stundenzeilen wurden abgeleitet umgerechnet; alle uebrigen Werte, Zeilen und Reihenfolgen sind unveraendert aus der Aufzeichnung vom 2026-07-25. Adversary F002 (2026-07-27): die Ortsblock-Ueberschriften des Klartext-Stundenverlaufs tragen jetzt ihre Zeitbasis (Fixture-Orte Europe/Vienna, 01.01.2026 = Winterzeit -> ' (CET)'); die Ortszeilen der Uebersicht darueber bleiben unveraendert.",
   "recorded_at": "2026-07-25",
   "structure": {
     "overview": [
@@ -41,10 +41,6 @@
           "Wind"
         ],
         [
-          "09",
-          "15"
-        ],
-        [
           "10",
           "15"
         ],
@@ -70,6 +66,10 @@
         ],
         [
           "16",
+          "15"
+        ],
+        [
+          "17",
           "15"
         ]
       ],
@@ -79,10 +79,6 @@
           "Wind"
         ],
         [
-          "09",
-          "20"
-        ],
-        [
           "10",
           "20"
         ],
@@ -108,6 +104,10 @@
         ],
         [
           "16",
+          "20"
+        ],
+        [
+          "17",
           "20"
         ]
       ],
@@ -117,10 +117,6 @@
           "Wind"
         ],
         [
-          "09",
-          "18"
-        ],
-        [
           "10",
           "18"
         ],
@@ -146,6 +142,10 @@
         ],
         [
           "16",
+          "18"
+        ],
+        [
+          "17",
           "18"
         ]
       ]
@@ -173,8 +173,7 @@
       "",
       "STUNDENVERLAUF",
       "---------------",
-      "Innsbruck",
-      "   09:00  Wind 15",
+      "Innsbruck (CET)",
       "   10:00  Wind 15",
       "   11:00  Wind 15",
       "   12:00  Wind 15",
@@ -182,9 +181,9 @@
       "   14:00  Wind 15",
       "   15:00  Wind 15",
       "   16:00  Wind 15",
+      "   17:00  Wind 15",
       "",
-      "Stubaital",
-      "   09:00  Wind 20",
+      "Stubaital (CET)",
       "   10:00  Wind 20",
       "   11:00  Wind 20",
       "   12:00  Wind 20",
@@ -192,9 +191,9 @@
       "   14:00  Wind 20",
       "   15:00  Wind 20",
       "   16:00  Wind 20",
+      "   17:00  Wind 20",
       "",
-      "Zillertal",
-      "   09:00  Wind 18",
+      "Zillertal (CET)",
       "   10:00  Wind 18",
       "   11:00  Wind 18",
       "   12:00  Wind 18",
@@ -202,6 +201,7 @@
       "   14:00  Wind 18",
       "   15:00  Wind 18",
       "   16:00  Wind 18",
+      "   17:00  Wind 18",
       "",
       "---",
       "Gregor Zwanzig"

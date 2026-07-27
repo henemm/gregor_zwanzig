@@ -25,7 +25,18 @@ TARGET_DATE = date(2026, 7, 16)
 
 
 def _location() -> SavedLocation:
-    return SavedLocation(id="loc-1361-midnight", name="Innsbruck", lat=47.27, lon=11.39, elevation_m=574)
+    """Bewusst `timezone="UTC"`: dieser Test prueft die Mitternachts-Wrap-
+    ARITHMETIK isoliert. Seit Issue #1378 wird das Tagesfenster in ORTSZEIT
+    ausgewertet (`utils.timezone.resolve_location_tz`, Vorrang auf dem
+    gespeicherten Feld) — ohne diese Festlegung laege ueber der Wrap-Logik
+    zusaetzlich der Europe/Vienna-Versatz (+2 h im Sommer), und ein Fehler in
+    der Wrap-Arithmetik waere von einem Fehler in der Zeitzonen-Umrechnung
+    nicht mehr zu unterscheiden. Die Ortszeit-Basis selbst deckt
+    `test_compare_local_time_basis.py` ab."""
+    return SavedLocation(
+        id="loc-1361-midnight", name="Innsbruck", lat=47.27, lon=11.39,
+        elevation_m=574, timezone="UTC",
+    )
 
 
 def _two_day_profile() -> list[ForecastDataPoint]:

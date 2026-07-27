@@ -267,7 +267,11 @@ class TestKlartextStundenverlaufAC4:
             outlook_enabled=True,
         )
         assert "STUNDENVERLAUF" in plain
-        hour_line = next(line for line in plain.splitlines() if "08:00" in line)
+        # Beschriftung hergeleitet (Issue #1378 -- Klartext beschriftet in
+        # ORTSZEIT): Fixture-Datenpunkt ts=24.07.2026 08:00 (naive UTC),
+        # Fixture-Ort lat 47.0 / lon 11.0 -> Europe/Vienna, Juli = UTC+2
+        # => die Stundenzeile traegt "10:00".
+        hour_line = next(line for line in plain.splitlines() if "10:00" in line)
         assert hour_line.index("Wind") < hour_line.index("Temp"), (
             f"Reihenfolge der Auswahl muss die Spaltenfolge bestimmen, erhalten: {hour_line!r}"
         )
@@ -275,7 +279,10 @@ class TestKlartextStundenverlaufAC4:
         assert "Nächste Etappen" in plain, (
             "Der 3-Tages-Ausblick bleibt unveraendert erhalten"
         )
-        assert plain.index("STUNDENVERLAUF") < plain.index("08:00") < plain.index("Nächste Etappen"), (
+        # "10:00" = dieselbe Herleitung wie oben (Issue #1378, Klartext
+        # beschriftet in ORTSZEIT): Fixture-Punkt ts=24.07.2026 08:00 UTC,
+        # Ort lat 47.0 / lon 11.0 -> Europe/Vienna, Juli = UTC+2 -> 10:00.
+        assert plain.index("STUNDENVERLAUF") < plain.index("10:00") < plain.index("Nächste Etappen"), (
             f"Reihenfolge Kopf -> Stundenzeilen -> Ausblick muss bleiben:\n{plain}"
         )
 
@@ -297,7 +304,12 @@ class TestKlartextStundenverlaufAC4:
             "Der Ausblick behaelt seinen heutigen Aufbau samt Orts-Zeile "
             "(die fehlende eigene Ausblick-Ueberschrift ist Issue #1368)"
         )
-        assert "08:00" not in plain, "keine Stundenzeilen bei leerer Auswahl"
+        # Gepruefte Beschriftung ist die, die eine Stundenzeile TATSAECHLICH
+        # traegt -- sonst waere der Waechter stumpf: seit Issue #1378
+        # beschriftet der Klartext in ORTSZEIT (Fixture-Punkt 08:00 UTC, Ort
+        # 47.0/11.0 = Europe/Vienna, Juli UTC+2 -> "10:00"), ein Test auf
+        # "08:00" bliebe auch dann gruen, wenn Stundenzeilen erschienen.
+        assert "10:00" not in plain, "keine Stundenzeilen bei leerer Auswahl"
 
 
 class TestNurMergeSignalGewaehlt:

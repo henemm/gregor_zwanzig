@@ -21,7 +21,7 @@ SPEC: docs/specs/modules/issue_1110_compare_mail_v2.md
 from __future__ import annotations
 
 import html as _html
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Optional
 
 from app.models import Corridor, ThunderLevel
@@ -40,6 +40,9 @@ from output.renderers.email.profile_signature import profile_signature
 from services.corridor_match import corridor_inside
 from output.metric_format import severity_for, thunder_ordinal
 from utils.geo import degrees_to_compass
+from utils.timezone import (
+    UTC, local_dt, local_hour, local_stamp, location_tz, tz_abbrev,
+)
 from output.renderers.alert.official_alerts import (
     _LEVEL_WORDS, OfficialAlertNotice, official_alert_source_label,
     render_official_alerts_html, render_warn_block,
@@ -652,10 +655,14 @@ def _should_merge_wind_dir(hourly_metrics: list[str] | None) -> bool:
 
 def _render_hour_row(
     dp, visible: list[dict], marks: dict, merge_wind_dir: bool = False,
+    tz=None,
 ) -> str:
     # Issue #1237 (AC-1): nur die Stunde ("07"), kein Minutenanteil -- identisch
     # zur bereits korrekten Trip-Briefing-Formatierung (helpers.dp_to_row).
-    hh = dp.ts.strftime("%H") if hasattr(dp.ts, "strftime") else str(dp.ts)
+    # Issue #1378: die Stunde ist die ORTSZEIT-Stunde des Ortes (geteilter
+    # Umrechner utils.timezone.local_hour, Trip-Vorbild helpers.py:93/142) --
+    # `dp.ts` ist naive UTC (Hausnorm #1345) und wurde bisher roh beschriftet.
+    hh = f"{local_hour(dp.ts, tz or UTC):02d}" if hasattr(dp.ts, "astimezone") else str(dp.ts)
     cells = _hour_td(hh, fg=G_INK_MUTED, align="left")
     for m in visible:
         value = getattr(dp, m["key"], None)
@@ -682,6 +689,7 @@ def _render_hour_table(
     visible = _visible_hour_metrics(hourly_metrics)
     merge_wind_dir = _should_merge_wind_dir(hourly_metrics)
     marks = _mark_lookup(corridors, CORRIDOR_METRIC_TO_HOUR_KEY)
+    tz = location_tz(loc.location)  # Issue #1378 — EIN Aufloeser (E3)
     columns = ["Zeit"] + [m["label"] for m in visible]
     ths = "".join(
         f'<th style="text-align:{"left" if col == "Zeit" else "center"};padding:6px 4px;'
@@ -690,7 +698,10 @@ def _render_hour_table(
         for col in columns
     )
     header = f'<tr style="background:{G_PAPER};border-bottom:1px solid #e6e1d3;">{ths}</tr>'
-    rows = "".join(_render_hour_row(dp, visible, marks, merge_wind_dir) for dp in loc.hourly_data)
+    rows = "".join(
+        _render_hour_row(dp, visible, marks, merge_wind_dir, tz)
+        for dp in loc.hourly_data
+    )
     table = (
         f'<table cellspacing="0" cellpadding="0" style="width:100%;'
         f'border-collapse:collapse;margin-top:12px;font-family:{FONT_DATA};'
@@ -703,6 +714,37 @@ def _render_hour_table(
     )
 
 
+def _location_heading(loc: LocationResult, ref_ts=None) -> str:
+    """Ort-Kopf ("ORT <Name>") MIT angeschriebener Zeitbasis.
+
+    Issue #1378 (Adversary F002): die Zeitzonen-Kennzeichnung darf nicht nur
+    an der zentralen "Erstellt"-Kopfzeile haengen — die nennt ausschliesslich
+    die Zone des ERSTgenannten Ortes. Zwei Ortsbloecke koennen identische
+    Stunden-Beschriftungen (09..16) tragen und trotzdem verschiedene Zonen
+    meinen (AC-6); ein nicht aufloesbarer Ort faellt sichtbar auf UTC zurueck
+    (AC-7). Deshalb schreibt JEDER Block seine eigene Zeitbasis an.
+
+    ``ref_ts`` ist der Zeitpunkt, den der Block auch zeigt — das Kuerzel ist
+    zeitpunktabhaengig (CEST im Sommer, CET im Winter). Der Namens-Span bleibt
+    unveraendert, damit Ableser/Validator ("ORT <Name>"-Marker) weiter greifen.
+    """
+    name = _html.escape(loc.location.name)
+    tz_span = ""
+    if ref_ts is not None:
+        label = _html.escape(tz_abbrev(ref_ts, location_tz(loc.location)))
+        tz_span = (
+            f'<span style="font-family:{FONT_DATA};font-size:11px;'
+            f'color:{G_INK_MUTED};"> ({label})</span>'
+        )
+    return (
+        f'<div style="padding-bottom:8px;border-bottom:2px solid {G_INK};">'
+        f'<span style="font-family:{FONT_DATA};font-size:11px;font-weight:600;'
+        f'color:{G_ACCENT};letter-spacing:0.1em;">ORT</span> '
+        f'<span style="font-size:15px;font-weight:600;color:{G_INK};">{name}</span>'
+        f'{tz_span}</div>'
+    )
+
+
 def _render_location_section(
     loc: LocationResult, index: int, hourly_metrics: list[str] | None = None,
     corridors: list[Corridor] | None = None,
@@ -711,14 +753,7 @@ def _render_location_section(
     bzw. fehlenden Stundendaten (SPEC §4)."""
     if loc.error is not None or not loc.hourly_data:
         return ""
-    name = _html.escape(loc.location.name)
-    header = (
-        f'<div style="padding-bottom:8px;border-bottom:2px solid {G_INK};">'
-        f'<span style="font-family:{FONT_DATA};font-size:11px;font-weight:600;'
-        f'color:{G_ACCENT};letter-spacing:0.1em;">ORT</span> '
-        f'<span style="font-size:15px;font-weight:600;color:{G_INK};">{name}</span>'
-        f'</div>'
-    )
+    header = _location_heading(loc, loc.hourly_data[0].ts)
     strip = ""
     if loc.official_alerts:
         # F002 (Adversary Fix-Runde): kein Ortsnamen-Praefix im Compare-Streifen
@@ -743,11 +778,15 @@ def _render_location_section(
 _WEEKDAYS_DE_OUTLOOK = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 
 
-def _group_by_calendar_day(points: list, cap: int = 3) -> list[tuple]:
-    """Gruppiert eine flache Punktliste nach Kalendertag, Cap auf `cap` Tage."""
+def _group_by_calendar_day(points: list, tz=None, cap: int = 3) -> list[tuple]:
+    """Gruppiert eine flache Punktliste nach Kalendertag, Cap auf `cap` Tage.
+
+    Issue #1378 (AC-9): Tagesgrenze ist die ORTS-Mitternacht, nicht die
+    UTC-Mitternacht -- bei UTC+2 gehoeren die Punkte 22:00-23:59 UTC bereits
+    zum FOLGENDEN Ortstag. `tz=None` -> UTC (Bestandsverhalten)."""
     by_day: dict = {}
     for dp in points:
-        by_day.setdefault(dp.ts.date(), []).append(dp)
+        by_day.setdefault(local_dt(dp.ts, tz or UTC).date(), []).append(dp)
     days = sorted(by_day)[:cap]
     return [(d, by_day[d]) for d in days]
 
@@ -756,19 +795,18 @@ def _build_location_outlook_rows(loc: LocationResult) -> list[dict]:
     """AC-5/AC-8: bis zu 3 Tages-Zeilen aus `outlook_hourly_data`, ueber
     denselben Aggregator (`summarize_points`) und denselben Zeilenbau
     (`build_outlook_row`) wie der Trip-Pfad (Trip/Compare-Teilungs-
-    Invariante)."""
-    from zoneinfo import ZoneInfo
+    Invariante).
 
+    Issue #1378: die Zeitzone kommt aus dem EINEN Aufloeser (`location_tz`,
+    Vorrang `SavedLocation.timezone`, sonst Koordinaten) statt aus der frueheren
+    Ad-hoc-Kette `location.timezone or "UTC"` -- die fiel fuer jeden Ort ohne
+    gepflegtes Feld still auf Serverzeit zurueck (AC-5)."""
     from services.weather_metrics import summarize_points
 
-    tz_name = getattr(loc.location, "timezone", None) or "UTC"
-    try:
-        tz = ZoneInfo(tz_name)
-    except Exception:
-        tz = ZoneInfo("UTC")
+    tz = location_tz(loc.location)
 
     rows = []
-    for day, day_points in _group_by_calendar_day(loc.outlook_hourly_data):
+    for day, day_points in _group_by_calendar_day(loc.outlook_hourly_data, tz):
         summary = summarize_points(day_points)
         weekday = _WEEKDAYS_DE_OUTLOOK[day.weekday()]
         rows.append(build_outlook_row(summary, day_points, weekday, tz))
@@ -784,14 +822,10 @@ def _render_location_outlook(loc: LocationResult, index: int) -> str:
     rows = _build_location_outlook_rows(loc)
     if not rows:
         return ""
-    name = _html.escape(loc.location.name)
-    header = (
-        f'<div style="padding-bottom:8px;border-bottom:2px solid {G_INK};">'
-        f'<span style="font-family:{FONT_DATA};font-size:11px;font-weight:600;'
-        f'color:{G_ACCENT};letter-spacing:0.1em;">ORT</span> '
-        f'<span style="font-size:15px;font-weight:600;color:{G_INK};">{name}</span>'
-        f'</div>'
-    )
+    # Issue #1378: derselbe angeschriebene Ort-Kopf wie beim Stundenblock
+    # (geteilter Helfer, kein zweiter Kopfbau) — auch die Ausblick-Tageszeilen
+    # und ihre @-Stunden-Tokens stehen in dieser Zeitbasis.
+    header = _location_heading(loc, loc.outlook_hourly_data[0].ts)
     table = render_outlook_table(rows, show_acc=False)
     return (
         f'<div style="padding:{20 if index else 14}px 24px 0;">'
@@ -828,7 +862,7 @@ def _render_warning_banner(warning_text: str) -> str:
     )
 
 
-def _render_header(result: ComparisonResult, sig) -> str:
+def _render_header(result: ComparisonResult, sig, tz=None) -> str:
     label_text = f"ORTS-VERGLEICH · {_html.escape(sig.eyebrow)}"
     label_style = (
         f"font-family:{FONT_DATA};font-size:10px;"
@@ -845,7 +879,13 @@ def _render_header(result: ComparisonResult, sig) -> str:
 
     profil_val = _html.escape(sig.eyebrow)
     orte_val = str(len(result.locations))
-    erstellt_val = datetime.now().strftime("%H:%M")
+    # Issue #1378 (AC-4/AC-8): Erzeugungszeit des Vergleichs (`created_at`,
+    # dieselbe Quelle wie der Klartext-Teil -- vorher `datetime.now()`, das
+    # beim Rendern erneut die Serveruhr las) in der Ortszeit des
+    # ERSTGENANNTEN Ortes, mit erkennbarem Zeitzonen-Kuerzel. Ohne
+    # aufloesbare Zeitzone steht dort sichtbar "(UTC)" statt einer
+    # vorgetaeuschten Ortszeit (AC-7).
+    erstellt_val = _html.escape(local_stamp(result.created_at, tz or UTC))
     # Issue #1305: keine Horizont-Kachel mehr — analog #1268 (Zeitfenster-Zeile
     # entfiel ersatzlos). Der Wert ist kein Nutzer-relevanter Datenpunkt.
 
@@ -1113,7 +1153,11 @@ def render_compare_html(
     sig = profile_signature(profile)
     locations = location_render_order(result.locations)
 
-    header_html = _render_header(result, sig)
+    # Issue #1378 (AC-4): Kopfzeilen-Zeitbasis = Ortszeit des ERSTGENANNTEN
+    # Ortes der konfigurierten Reihenfolge (`location_render_order`, #1359) --
+    # nicht alphabetisch, nicht Serverzeit.
+    header_tz = location_tz(locations[0].location) if locations else UTC
+    header_html = _render_header(result, sig, header_tz)
     warnings_html = "".join(_render_warning_banner(w) for w in warnings)
     warn_banner_html = _render_warn_banner(locations)
     # Issue #1349 (Scheibe 3) — geteilter Baustein aus unavailable_hint.py,

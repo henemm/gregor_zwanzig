@@ -19,10 +19,12 @@ from app.user import ComparisonResult, LocationResult, SavedLocation
 from services.comparison_scoring import calculate_score
 from services.forecast import ForecastService
 from services.weather_metrics import WeatherMetricsService, summarize_points
+from utils.timezone import local_dt, location_tz
 from validation.ground_truth import BergfexScraper
 
 if TYPE_CHECKING:
     from datetime import date
+    from zoneinfo import ZoneInfo
     from app.profile import ActivityProfile
     from app.config import Settings
 
@@ -39,25 +41,44 @@ COMPARE_FORECAST_HOURS = 96
 
 def _filter_by_target_date_and_window(
     raw_data: List["ForecastDataPoint"], target_date: "date",
-    start_hour: int, end_hour: int,
+    start_hour: int, end_hour: int, tz: Optional["ZoneInfo"] = None,
 ) -> List["ForecastDataPoint"]:
     """Filtert `raw_data` auf `target_date` + Zeitfenster — inkl. Mitternachts-
     Uebergang (Bug #399-Muster, analog `email/helpers.py::extract_hourly_rows()`,
     hier zusaetzlich mit Kalendertag-Bezug, weil `raw_data` mehrere Tage
     umfasst). `start_hour <= end_hour`: normales Fenster am `target_date`.
     `start_hour > end_hour`: das Fenster reicht von `target_date` abends bis
-    `target_date + 1 Tag` morgens (Issue #1361/#1372 S1b, AC-3)."""
+    `target_date + 1 Tag` morgens (Issue #1361/#1372 S1b, AC-3).
+
+    Issue #1378: Kalendertag UND Stunde kommen aus der ORTSZEIT des Ortes
+    (`tz`), nicht aus der rohen Serverzeit von `dp.ts` (naive UTC, Hausnorm
+    #1345) — das eingestellte Fenster "9 bis 16 Uhr" ist Ortszeit. Die
+    Fenster-Arithmetik selbst bleibt unveraendert, nur die Stunden-Quelle
+    wechselt. `tz=None` -> UTC (Bestandsverhalten fuer Aufrufer ohne Ort).
+
+    Der Trip-Zwilling `day_window.build_day_window_points()` ist hier NICHT
+    wiederverwendbar: er nimmt Segment-Zeitreihen + Nacht-Zeitreihe mit
+    Ankunfts-/Schlafplatz-Logik entgegen und liefert stunden-deduplizierte
+    Punkte, waehrend hier eine flache Mehrtages-Punktliste mit Kalendertag-
+    Bezug gefiltert wird. Geteilt wird deshalb die Ebene darunter, die beide
+    nutzen: der Aufloeser/Umrechner in `utils.timezone`.
+    """
+    from datetime import timedelta
+
+    from utils.timezone import UTC, local_dt
+
+    tz = tz or UTC
+    stamped = [(dp, local_dt(dp.ts, tz)) for dp in raw_data]
     if start_hour <= end_hour:
         return [
-            dp for dp in raw_data
-            if dp.ts.date() == target_date and start_hour <= dp.ts.hour <= end_hour
+            dp for dp, local in stamped
+            if local.date() == target_date and start_hour <= local.hour <= end_hour
         ]
-    from datetime import timedelta
     next_date = target_date + timedelta(days=1)
     return [
-        dp for dp in raw_data
-        if (dp.ts.date() == target_date and dp.ts.hour >= start_hour)
-        or (dp.ts.date() == next_date and dp.ts.hour <= end_hour)
+        dp for dp, local in stamped
+        if (local.date() == target_date and local.hour >= start_hour)
+        or (local.date() == next_date and local.hour <= end_hour)
     ]
 
 
@@ -114,15 +135,22 @@ class ComparisonEngine:
                 # Get raw data
                 raw_data = raw_result.get("raw_data", [])
 
+                # Issue #1378: EIN Aufloeser je Ort (utils.timezone), genutzt
+                # fuer Fensterauswahl UND Ausblick-Tagesgrenze. Die Renderer
+                # loesen dieselbe Zeitzone ueber dieselbe Funktion auf.
+                tz = location_tz(loc)
+                _by_local_day = [(dp, local_dt(dp.ts, tz).date()) for dp in raw_data]
+
                 # Epic #1301 B4 — Mehrtages-Slice fuer den Ausblick (bis zu 3
                 # Kalendertage ab target_date), additiv aus demselben
                 # raw_data-Fetch gerettet. Kein zusaetzlicher API-Call: die
                 # 96h liegen durch COMPARE_FORECAST_HOURS bereits vor.
+                # Issue #1378: ORTS-Kalendertag statt UTC-Kalendertag.
                 _outlook_days = sorted(
-                    {dp.ts.date() for dp in raw_data if dp.ts.date() >= target_date}
+                    {d for _dp, d in _by_local_day if d >= target_date}
                 )[:3]
                 outlook_hourly_data = [
-                    dp for dp in raw_data if dp.ts.date() in _outlook_days
+                    dp for dp, d in _by_local_day if d in _outlook_days
                 ]
 
                 # Filter by target date and time window (Issue #1361/#1372
@@ -134,7 +162,7 @@ class ComparisonEngine:
                     else (24 - start_hour) + end_hour + 1
                 )
                 filtered_data = _filter_by_target_date_and_window(
-                    raw_data, target_date, start_hour, end_hour,
+                    raw_data, target_date, start_hour, end_hour, tz,
                 )
 
                 # Calculate metrics from filtered data

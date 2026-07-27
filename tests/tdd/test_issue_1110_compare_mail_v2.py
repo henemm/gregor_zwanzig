@@ -490,7 +490,13 @@ class TestCompareMailV2HTML:
 
     def test_ac6_danger_zelle_temp_ueber_schwelle_faerbung(self):
         """AC-6: Temp >= 34 Grad wird mit Danger-Hintergrund #f6c5bf hinterlegt
-        (Collobrières, 12:00 Uhr, t2m_c=34.0)."""
+        (Collobrières, t2m_c=34.0).
+
+        Zeilen-Beschriftung hergeleitet (Issue #1378 — Beschriftung in
+        ORTSZEIT): Fixture-Datenpunkt `_dp(12, 34.0, ...)` traegt
+        ts=08.07.2026 12:00 (naive UTC); Fixture-Ort lat 43.1 / lon 6.2 =
+        Europe/Paris, Juli = UTC+2 -> die Zeile heisst "14".
+        """
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
@@ -502,13 +508,15 @@ class TestCompareMailV2HTML:
         # keinen Minutenanteil ("12:00") — reine Zeilen-Auswahl, die geprüfte
         # AC-6-Invariante (Danger-Faerbung) bleibt unveraendert.
         hour_row = next(
-            (r for r in rows_raw if r and re.sub(r"<[^>]+>", "", r[0]).strip() == "12"),
+            (r for r in rows_raw if r and re.sub(r"<[^>]+>", "", r[0]).strip() == "14"),
             None,
         )
-        assert hour_row is not None, "12-Uhr-Zeile in Collobrières' Stundentabelle nicht gefunden"
+        assert hour_row is not None, (
+            "14-Uhr-Zeile (= 12:00 UTC) in Collobrières' Stundentabelle nicht gefunden"
+        )
         temp_cell = hour_row[1]  # Temp ist die 2. Spalte
         assert "34" in re.sub(r"<[^>]+>", "", temp_cell), (
-            f"Temp-Zelle um 12:00 Uhr muss '34' zeigen, war: {temp_cell}"
+            f"Temp-Zelle um 14:00 Ortszeit muss '34' zeigen, war: {temp_cell}"
         )
         assert "#f6c5bf" in temp_cell, (
             f"Danger-Hintergrund #f6c5bf fehlt in der Temp-Zelle >= 34 Grad: {temp_cell}"
@@ -516,7 +524,13 @@ class TestCompareMailV2HTML:
 
     def test_ac7_wind_chill_none_zeigt_strich_in_gef_spalte(self):
         """AC-7: wind_chill_c=None -> Spalte 'Gef.' zeigt exakt '—' statt Fehler
-        oder leerer Zelle (Collobrières, 09:00 Uhr)."""
+        oder leerer Zelle (Collobrières).
+
+        Zeilen-Beschriftung hergeleitet (Issue #1378 — Beschriftung in
+        ORTSZEIT): Fixture-Datenpunkt `_dp(9, 27.0, None, ...)` traegt
+        ts=08.07.2026 09:00 (naive UTC); Fixture-Ort lat 43.1 / lon 6.2 =
+        Europe/Paris, Juli = UTC+2 -> die Zeile heisst "11".
+        """
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
@@ -526,8 +540,10 @@ class TestCompareMailV2HTML:
         rows = _rows(table)
         # #1237 AC-1 (angepasst): Zeit-Zelle ohne Minutenanteil — reine
         # Zeilen-Auswahl, die geprüfte AC-7-Invariante ('—') bleibt unveraendert.
-        hour_row = next((r for r in rows if r and r[0].strip() == "09"), None)
-        assert hour_row is not None, "09-Uhr-Zeile in Collobrières' Stundentabelle nicht gefunden"
+        hour_row = next((r for r in rows if r and r[0].strip() == "11"), None)
+        assert hour_row is not None, (
+            "11-Uhr-Zeile (= 09:00 UTC) in Collobrières' Stundentabelle nicht gefunden"
+        )
         assert hour_row[2] == "—", (
             f"Gef.-Spalte muss bei wind_chill_c=None exakt '—' zeigen, war: {hour_row[2]!r}"
         )

@@ -26,7 +26,16 @@ from app.user import LocationResult
 from services.weather_metrics import summarize_points
 
 TARGET_DATE = date(2026, 7, 20)
-TIME_WINDOW = (9, 11)
+
+# Das Fenster muss GENAU die drei Fixture-Stunden umfassen -- der Test
+# vergleicht den Engine-Wert mit ``summarize_points(_hourly())`` ueber
+# denselben Stundensatz; ein Fenster, das einen Punkt abschneidet, wuerde
+# statt der Rechenregel die Fensterlaenge pruefen.
+# Herleitung (Issue #1378 -- das Fenster gilt seit dem Fix in ORTSZEIT):
+#   Fixture-Datenpunkte: 09:00, 10:00, 11:00 (naive UTC, Hausnorm #1345)
+#   Fixture-Ort: lat 46.63 / lon 8.59 -> Europe/Zurich, Juli = UTC+2
+#   => Ortsstunden 11, 12, 13  =>  Fenster (11, 13)
+TIME_WINDOW = (11, 13)
 
 # Absichtlich NICHT glatt durch 3 teilbar: Abschneiden (int()) und Runden
 # (round()) ergeben fuer jede der drei Stufen eine unterschiedliche Zahl.

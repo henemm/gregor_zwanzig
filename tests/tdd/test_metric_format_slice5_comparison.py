@@ -31,6 +31,15 @@ from output.metric_format import format_value
 # ganzen Tag (0–23 Uhr) aus. Eine Zeitfenster-Angabe haette damit keinen
 # Aussagewert mehr und wurde in comparison.py ersatzlos entfernt.
 #
+# Issue #1378 (AC-4), PO-freigegeben: zweiter Ausnahmefall derselben Art. Die
+# "Erstellt"-Zeile zeigt die Erzeugungszeit jetzt in der ORTSZEIT des
+# erstgenannten Ortes plus Zeitzonen-Kuerzel statt in Serverzeit.
+# Herleitung des neuen Wertes (nicht aus dem Testlauf abgeschrieben):
+#   created_at = 12.07.2026 09:00 (naive UTC, Hausnorm #1345)
+#   erster Ort = Alpsee, lat 47.5 / lon 10.2 -> Europe/Berlin
+#   Juli = Sommerzeit, UTC+2 -> 09:00 + 2 h = 11:00, Kuerzel CEST
+#   => "Erstellt: 12.07.2026 11:00 (CEST)"
+#
 # GOLDEN neu verankert: #1285 (Regen/Gewitter/Sicht/UV/pop) + #1296
 # (temp_min/gust/cape/freezing) erweitern die Klartext-Uebersicht. Die
 # Fixture setzt weder temp_min/gust_max noch hourly_data, darum zeigen alle
@@ -41,7 +50,7 @@ GOLDEN = (
     "ORTS-VERGLEICH\n"
     "========================\n"
     "Datum: Wednesday, 15.07.2026\n"
-    "Erstellt: 12.07.2026 09:00\n"
+    "Erstellt: 12.07.2026 11:00 (CEST)\n"  # 09:00 UTC + 2 h (Europe/Berlin, #1378)
     "\n"
     "--------------------------------------------------\n"
     "Alpsee\n"

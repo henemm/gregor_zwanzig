@@ -18,7 +18,6 @@ SPEC (v2): docs/specs/modules/issue_1110_compare_mail_v2.md
 from __future__ import annotations
 
 from typing import Optional
-from zoneinfo import ZoneInfo
 
 from app.models import Corridor
 from app.profile import ActivityProfile
@@ -30,6 +29,9 @@ from output.renderers.email.compare_html import (
     _visible_hour_metrics, location_render_order,
 )
 from utils.geo import degrees_to_compass
+from utils.timezone import (
+    local_fmt, local_stamp, location_tz, resolve_location_tz, tz_abbrev,
+)
 from output.renderers.email.outlook import render_outlook_plain
 from output.metric_format import format_value
 from output.renderers.alert.official_alerts import (
@@ -172,7 +174,12 @@ def render_comparison_text(
     lines.append("=" * 24)
     lines.append(f"Datum: {target_date.strftime('%A, %d.%m.%Y')}")
     # Issue #1268: Zeitfenster-Zeile ersatzlos entfernt (Bewertung = ganzer Tag).
-    lines.append(f"Erstellt: {created_at.strftime('%d.%m.%Y %H:%M')}")
+    # Issue #1378 (AC-4/AC-8): Ortszeit des ERSTGENANNTEN Ortes plus
+    # erkennbares Zeitzonen-Kuerzel -- identische Zeitbasis und identischer
+    # Wert wie die HTML-Kopfzeile derselben Mail.
+    lines.append(
+        f"Erstellt: {local_stamp(created_at, location_tz(locations[0].location), '%d.%m.%Y %H:%M')}"
+    )
     lines.append("")
     lines.append("-" * 50)
 
@@ -232,10 +239,25 @@ def render_comparison_text(
         )
         if not have_hourly and not outlook_rows:
             continue
-        section_lines.append(loc_result.location.name)
+        # Issue #1378 (AC-3): dieselbe Ortszeit-Auflösung wie im HTML-Pfad --
+        # der Pflicht-Validator liest nur HTML, der Klartext braucht die
+        # Umstellung deshalb eigenstaendig (#1366-Erfahrung).
+        tz = location_tz(loc_result.location)
+        # Adversary F002: jeder Ortsblock schreibt seine EIGENE Zeitbasis an
+        # (analog `compare_html._location_heading`) -- die "Erstellt"-Kopfzeile
+        # nennt nur die Zone des erstgenannten Ortes und sagt ueber die
+        # uebrigen Bloecke nichts. Referenzzeitpunkt ist der erste Punkt, den
+        # der Block auch zeigt (Kuerzel ist sommer-/winterabhaengig) -- bei
+        # abgeschaltetem Stundenverlauf also der des Ausblicks, nicht der
+        # ungenutzten `hourly_data` (seit #1366/9ae845d8 ein realer Fall).
+        _points = loc_result.hourly_data if have_hourly else loc_result.outlook_hourly_data
+        _ref = _points[0].ts
+        section_lines.append(
+            f"{loc_result.location.name} ({tz_abbrev(_ref, tz)})"
+        )
         if have_hourly:
             for dp in loc_result.hourly_data:
-                ts = dp.ts.strftime("%H:%M") if hasattr(dp.ts, "strftime") else str(dp.ts)
+                ts = local_fmt(dp.ts, tz) if hasattr(dp.ts, "astimezone") else str(dp.ts)
                 cells = []
                 for m in visible_hour_metrics:
                     text = m["fmt"](getattr(dp, m["key"], None))
@@ -551,13 +573,17 @@ def _sms_location_part(loc_result, enabled_metrics: list[str] | None) -> str:
     kein zweiter Katalog). Die Zahl der Metrik-Zellen sinkt dann
     deterministisch von 2 auf 1, damit der Marker garantiert Platz hat --
     Sicherheit vor Optik (Design-Leitprinzip), statt fragiler Nachtraeglich-
-    Kuerzung. `@Stunde` erscheint nur, wenn der Ort eine Zeitzone hinterlegt
-    hat (``SavedLocation.timezone``); ohne sie entfaellt der Stunden-Teil
-    ersatzlos (Known Limitation der Spec).
+    Kuerzung.
+
+    Issue #1378 (AC-10): die Zeitzone kommt aus dem EINEN Aufloeser
+    (``resolve_location_tz``) -- ``SavedLocation.timezone`` mit Vorrang, sonst
+    aus den Koordinaten. ``@Stunde`` entfaellt weiterhin ersatzlos, wenn sich
+    ueberhaupt keine Zeitzone bestimmen laesst (bewusste SMS-Budget-Konvention,
+    140 Zeichen -- kein Platzhalter, s. Spec Known Limitations).
     """
     if loc_result.error is not None:
         return f"{loc_result.location.name} n/a"
-    tz = ZoneInfo(loc_result.location.timezone) if loc_result.location.timezone else None
+    tz = resolve_location_tz(loc_result.location)
     entries = official_alerts_to_sms_entries(loc_result.official_alerts, tz)
     limit = 1 if entries else _SMS_METRICS_PER_LOCATION
     cells = _channel_metric_cells(loc_result, enabled_metrics, limit)

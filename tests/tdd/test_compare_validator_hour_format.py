@@ -23,10 +23,19 @@ for _p in (str(ROOT), str(ROOT / "src")):
 VALIDATOR_PATH = ROOT / ".claude" / "hooks" / "email_spec_validator.py"
 
 # Das Pruef-Fenster folgt dem, was der geteilte Fixture-Helfer
-# (`_make_comparison_result`) tatsaechlich an Stunden-Datenpunkten erzeugt: 09
-# und 10. Ein weiteres Fenster wuerde nicht das Zeit-FORMAT pruefen (worum es
-# hier geht), sondern die Laenge der Fixture.
-TIME_START, TIME_END = 9, 10
+# (`_make_comparison_result`) tatsaechlich an Stunden-ZEILEN erzeugt. Ein
+# weiteres Fenster wuerde nicht das Zeit-FORMAT pruefen (worum es hier geht),
+# sondern die Laenge der Fixture.
+#
+# Herleitung (Issue #1378 — die Mail beschriftet in ORTSZEIT):
+#   Fixture-Datenpunkte: 09:00 und 10:00 (naive UTC, Hausnorm #1345)
+#   Fixture-Ort: lat 47.27 / lon 11.39 -> Europe/Vienna
+#   Fixture-Datum 08.07.2026 = Sommerzeit, UTC+2
+#   => gerenderte Zeilen "11" und "12"
+# (Der Validator selbst ist unveraendert; er bekommt hier schlicht das
+# Fenster, das die Mail auch traegt — genau wie im Versandpfad, wo das
+# Preset-Fenster ebenfalls in Ortszeit gilt.)
+TIME_START, TIME_END = 11, 12
 
 
 def _load_validator():
@@ -78,12 +87,14 @@ def test_hour_completeness_still_flags_a_genuinely_missing_hour():
     mod = _load_validator()
     html = _real_compare_html(["Ort A", "Ort B", "Ort C"])
 
-    # Genau die Datenzeile der Stunde 10 aus der ERSTEN Stundentabelle loeschen.
-    row_re = re.compile(r"<tr[^>]*>\s*<td[^>]*>\s*10\s*</td>.*?</tr>", re.S)
+    # Genau die Datenzeile der zweiten Stunde aus der ERSTEN Stundentabelle
+    # loeschen. Das ist der Datenpunkt 10:00 UTC = 12:00 Ortszeit (s.
+    # Herleitung oben), die Zeile traegt also die Beschriftung "12".
+    row_re = re.compile(r"<tr[^>]*>\s*<td[^>]*>\s*12\s*</td>.*?</tr>", re.S)
     mutilated, n = row_re.subn("", html, count=1)
-    assert n == 1, "Testaufbau: Stunden-Zeile '10' nicht gefunden — Renderer-Format geprueft?"
+    assert n == 1, "Testaufbau: Stunden-Zeile '12' nicht gefunden — Renderer-Format geprueft?"
 
     errors = mod.validate_hourly_table(mutilated, TIME_START, TIME_END)
 
     assert errors, "Eine fehlende Stunde MUSS gemeldet werden"
-    assert any("10" in e for e in errors), f"Fehlende Stunde 10 nicht benannt: {errors}"
+    assert any("12" in e for e in errors), f"Fehlende Stunde 12 nicht benannt: {errors}"
