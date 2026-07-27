@@ -10,6 +10,7 @@
 	import type { PageData } from './$types.js';
 	import type { ArchiveEntry } from './+page.server.js';
 	import { invalidateAll } from '$app/navigation';
+	import { discardEtag } from '$lib/etagRegistry';
 	import { Card, Eyebrow, Btn } from '$lib/components/atoms';
 	import { ConfirmDialog } from '$lib/components/molecules';
 
@@ -56,6 +57,9 @@
 					body: JSON.stringify({ archived: false })
 				});
 				if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+				// Issue #1395 S3: nur Touren fuehren einen Stempel — der
+				// Orts-Vergleich folgt erst mit S6 und bleibt unberuehrt.
+				if (item.type === 'trip') discardEtag(item.id);
 				await invalidateAll();
 			} catch (e: unknown) {
 				error = (e as Error).message ?? 'Fehler beim Reaktivieren';

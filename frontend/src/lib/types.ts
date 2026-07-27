@@ -334,6 +334,13 @@ export interface HealthResponse {
 export interface ApiError {
 	error: string;
 	detail?: string;
+	/**
+	 * Issue #1395 S3: HTTP-Statuscode der abgelehnten Antwort. Erlaubt es
+	 * Aufrufern, einen Nebenlaeufigkeits-Konflikt (`412`) von einem gewoehnlichen
+	 * Fehler zu unterscheiden (genutzt ab S4). `extractMessage()` bleibt
+	 * unveraendert — es liest weiterhin `detail` zuerst.
+	 */
+	status?: number;
 }
 
 export type ThunderLevel = 'NONE' | 'MED' | 'HIGH';

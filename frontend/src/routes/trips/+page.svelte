@@ -1,6 +1,10 @@
 <script lang="ts">
 	import type { Trip } from '$lib/types.js';
 	import { api } from '$lib/api.js';
+	// Issue #1395 S3: PATCH /state laeuft am Trichter vorbei und veraendert die
+	// Tourdatei, ohne einen neuen Stempel zu liefern (S2 AC-15) — danach muss der
+	// gemerkte Stand verworfen werden.
+	import { discardEtag } from '$lib/etagRegistry';
 	import { goto } from '$app/navigation';
 	import { Btn, Input, Dot, Eyebrow, Pill, Stat } from '$lib/components/atoms';
 	import { ConfirmDialog, ReportConfigDialog, TestReportDialog } from '$lib/components/molecules';
@@ -175,6 +179,7 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 				body: JSON.stringify({ archived: false })
 			});
 			if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+			discardEtag(trip.id);
 			await refetchTrips();
 		} catch (e: unknown) {
 			error = (e as Error).message ?? 'Fehler beim Statuswechsel';
@@ -193,6 +198,7 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 				body: JSON.stringify({ archived: true })
 			});
 			if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+			discardEtag(archiveTarget.id);
 			archiveTarget = null;
 			await refetchTrips();
 		} catch (e: unknown) {
@@ -210,6 +216,7 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 				body: JSON.stringify({ paused: !trip.paused_at })
 			});
 			if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+			discardEtag(trip.id);
 			await refetchTrips();
 		} catch (e: unknown) {
 			error = (e as Error).message ?? 'Fehler beim Pausieren';

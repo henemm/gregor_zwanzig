@@ -1,10 +1,59 @@
 import type { ApiError, Stage } from './types.js';
+import {
+	discardEtag,
+	enqueueTripWrite,
+	etagVersion,
+	extractTripId,
+	getKnownEtag,
+	setKnownEtag,
+	setKnownEtagIfUnchanged
+} from './etagRegistry.ts';
 
-async function request<T>(method: string, path: string, body?: unknown, extra?: RequestInit): Promise<T> {
+/**
+ * Issue #1395 S3: Header feldweise zusammenfuehren. `extra` wurde bisher per
+ * Spread NACH `headers` gemergt — wer `If-Match` ueber `extra.headers`
+ * ergaenzte, loeschte damit den `Content-Type` und der Server verschluckte sich
+ * am Rumpf.
+ */
+function headerFields(init?: HeadersInit): Record<string, string> {
+	if (!init) return {};
+	if (Array.isArray(init)) return Object.fromEntries(init);
+	if (typeof (init as Headers).forEach === 'function') {
+		const out: Record<string, string> = {};
+		(init as Headers).forEach((value, key) => {
+			out[key] = value;
+		});
+		return out;
+	}
+	return { ...(init as Record<string, string>) };
+}
+
+async function send<T>(
+	method: string,
+	path: string,
+	tripId: string | null,
+	/** true = dieser Vorgang laeuft durch die Warteschlange (serialisierter PUT). */
+	serializedWrite: boolean,
+	body?: unknown,
+	extra?: RequestInit
+): Promise<T> {
+	// Issue #1395 S3: den Stand ERST HIER nachschlagen — innerhalb der
+	// Warteschlange, also zu dem Zeitpunkt, zu dem die Anfrage tatsaechlich
+	// losgeht. Vor dem Einreihen gelesen, haetten zwei kurz hintereinander
+	// ausgeloeste Schreibvorgaenge derselben Tour beide den alten Wert
+	// eingefroren und der zweite scheiterte mit 412, obwohl er gewartet hat.
+	const ifMatch = serializedWrite && tripId ? getKnownEtag(tripId) : undefined;
+	// Stand der Registry beim Losschicken — Grundlage dafuer, einen verspaetet
+	// eintreffenden Stempel als Rueckschritt zu erkennen (F001).
+	const versionAtStart = tripId ? etagVersion(tripId) : 0;
 	const opts: RequestInit = {
 		method,
-		headers: { 'Content-Type': 'application/json' },
-		...extra
+		...extra,
+		headers: {
+			'Content-Type': 'application/json',
+			...headerFields(extra?.headers),
+			...(ifMatch ? { 'If-Match': ifMatch } : {})
+		}
 	};
 	if (body !== undefined) {
 		opts.body = JSON.stringify(body);
@@ -18,11 +67,48 @@ async function request<T>(method: string, path: string, body?: unknown, extra?: 
 			window.location.href = `/login?expired=1&redirect=${encodeURIComponent(redirectTarget)}`;
 			throw new Error('Sitzung abgelaufen — bitte neu anmelden.');
 		}
+		// Issue #1395 S3: der gemerkte Stand ist nachweislich veraltet und die
+		// 412-Antwort traegt keinen neuen. Einmal melden, dann nicht mehr im Weg
+		// stehen — der naechste Versuch laeuft ohne Vorbedingung durch.
+		if (res.status === 412 && tripId) discardEtag(tripId);
 		const err: ApiError = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-		throw err;
+		// `status` kommt ZUSAETZLICH dazu; `error`/`detail` bleiben unveraendert,
+		// damit extractMessage() weiterhin die deutsche Servermeldung findet.
+		const enriched: ApiError = { ...err, status: res.status };
+		throw enriched;
+	}
+	// Issue #1395 S3: neuen Stempel uebernehmen — bei GET wie bei PUT, und noch
+	// INNERHALB der Warteschlange, damit der naechste Wartende ihn vorfindet.
+	//
+	// Bedingungslos darf das nur ein serialisierter Schreibvorgang: er ist der
+	// letzte, der die Datei angefasst hat, und kein anderer Schreibvorgang
+	// derselben Tour lief neben ihm. Jeder Vorgang AUSSERHALB der Warteschlange
+	// (Lesevorgang, Entlade-Flush) traegt dagegen den Stand von SEINEM
+	// Anfragezeitpunkt — kommt er verspaetet an, waere sein Stempel ein
+	// Rueckschritt und der naechste Schreibvorgang bekaeme 412, obwohl niemand
+	// sonst etwas geaendert hat (F001).
+	if (tripId) {
+		const etag = res.headers.get('ETag');
+		if (etag) {
+			if (serializedWrite) setKnownEtag(tripId, etag);
+			else setKnownEtagIfUnchanged(tripId, etag, versionAtStart);
+		}
 	}
 	if (res.status === 204) return undefined as T;
 	return res.json();
+}
+
+async function request<T>(method: string, path: string, body?: unknown, extra?: RequestInit): Promise<T> {
+	const tripId = extractTripId(path);
+	// `{ keepalive: true }` setzt im gesamten Repo ausschliesslich der
+	// willUnload-Zweig beim Verlassen der Seite. Dieser Vorgang hat nur ein sehr
+	// kurzes Zeitfenster: er darf weder hinter einem laufenden Schreibvorgang
+	// warten (er ginge womoeglich nie los) noch an einem unsichtbaren 412
+	// scheitern (der Nutzer sieht die Ablehnung nie, die Seite ist schon weg).
+	const isUnloadFlush = extra?.keepalive === true;
+	const serializedWrite = method === 'PUT' && tripId !== null && !isUnloadFlush;
+	const run = () => send<T>(method, path, tripId, serializedWrite, body, extra);
+	return serializedWrite ? enqueueTripWrite(tripId as string, run) : run();
 }
 
 export const api = {
