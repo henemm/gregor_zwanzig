@@ -19,13 +19,15 @@ from __future__ import annotations
 import logging
 import os
 import re
+import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Callable, Optional
 
 import httpx
 
 from services.official_alerts import warn_egress
+from services.official_alerts.meteoalarm_budget import MeteoAlarmBudgetGate
 from services.official_alerts.models import OfficialAlert
 from services.radar_service import (
     _DPC_LAT_MAX,
@@ -62,6 +64,163 @@ GEOMETRY_CAP_TTL = 6 * 3600.0
 # bei 200 statt 50 Seiten bleibt beherrscht.
 _MAX_INDEX_PAGES = 200
 _BBOX_MARGIN_DEG = 0.01
+
+# Issue #1397 Scheibe S1b: die API bremst Index-Seiten kurzzeitig aus
+# (Messung 2026-07-27 gegen api.meteoalarm.org/edr/v1/.../AT: ~1 Anfrage/4s,
+# danach HTTP 429 ohne ``Retry-After``, aber mit ``x-ratelimit-reset`` als
+# Unix-Sekunden). Seite 2 von S1s vollstaendigem Blaettern traf das sofort
+# und liess IN PRODUKTION alle MeteoAlarm-Warnungen ausfallen (vorher kam
+# wenigstens Seite 1 durch) -- diese Konstanten steuern die zwei
+# Gegenmassnahmen: 429-Wiederholung (``_RATE_LIMIT_RETRY``) und vorbeugender
+# Abstand vor jedem Folgeseiten-Abruf (``_throttle_before_next_page``).
+# Injizierbar fuer Tests (kein echtes Warten in der Kern-Schicht).
+_SLEEP_FN: Callable[[float], None] = time.sleep
+_WALL_CLOCK_FN: Callable[[], float] = time.time
+_PAGE_THROTTLE_DEFAULT_SECONDS = 4.0  # Messung: Bremse greift ~alle 4s
+_PAGE_THROTTLE_MAX_SECONDS = 8.0  # Deckel, falls x-ratelimit-reset weit weg liegt
+
+
+def _rate_limit_retry_policy() -> warn_egress.RateLimitRetryPolicy:
+    """Baut die Policy bei JEDEM Aufruf frisch aus den aktuellen (ggf. in
+    Tests monkeygepatchten) Modul-Funktionen ``_SLEEP_FN``/``_WALL_CLOCK_FN``."""
+    return warn_egress.RateLimitRetryPolicy(
+        sleep_fn=_SLEEP_FN,
+        wall_clock_fn=_WALL_CLOCK_FN,
+    )
+
+
+def _throttle_before_next_page(last_reset_ts: Optional[float]) -> None:
+    """Vorbeugender Abstand vor dem naechsten Seiten-Abruf, damit die
+    Ratenbremse nicht bei jeder zweiten Seite ausgeloest wird. Bevorzugt aus
+    ``x-ratelimit-reset`` der letzten Antwort abgeleitet (warten bis exakt
+    dahin, gedeckelt); ohne verwertbaren Header ein fester Abstand in der
+    Groessenordnung der Messung."""
+    if last_reset_ts is not None:
+        wait = last_reset_ts - _WALL_CLOCK_FN()
+        wait = max(0.0, min(wait, _PAGE_THROTTLE_MAX_SECONDS))
+    else:
+        wait = _PAGE_THROTTLE_DEFAULT_SECONDS
+    if wait > 0:
+        _SLEEP_FN(wait)
+
+
+# ---------------------------------------------------------------------------
+# Issue #1397 Scheibe S1c: EIN Aufruf blaettert bei 17-23+ Seiten (AT) selbst
+# mit Entzerrung zu lange fuer den synchronen Sendeweg (120s-Client-Timeout
+# im Go-Scheduler, s. Bericht). Statt alles in einem Aufruf zu holen, wird
+# schrittweise ueber MEHRERE Scheduler-Aufrufe hinweg nachgeladen: das
+# Zeitfenster wird auf einen festen 30-Minuten-Rasterpunkt gerundet, damit
+# Seiten verschiedener Aufrufe DENSELBEN Cache-Schluessel-Praefix teilen und
+# sich zusammensetzen lassen; ein Zeitbudget je Aufruf begrenzt, wie viele
+# Seiten EIN Aufruf nachlaedt.
+# ---------------------------------------------------------------------------
+_SLOT_MINUTES = 30  # Rasterbreite des Abfrage-Zeitfensters.
+# Laenger als ein Zeitslot (s. _SLOT_MINUTES), damit zuerst geholte Seiten
+# noch leben, wenn ein spaeterer Aufruf im SELBEN Slot die letzten Seiten
+# nachholt (45 statt der generischen CACHE_TTL von 30 Minuten).
+INDEX_PAGE_SUCCESS_TTL = 45 * 60.0  # 2700.0s
+# Zeitbudget je Aufruf fuers Blaettern: der Abruf laeuft synchron im
+# Sendeweg. Bei ~4s Rasterabstand (Messung) schafft ein Aufruf ~5 Seiten;
+# der Scheduler ruft mehrfach pro Viertelstunde auf (mehrere Endpunkte/
+# Nutzer) -- der Rest kommt ueber die naechsten Aufrufe im selben Zeitslot
+# nach (s. Bericht: typ. 4-5 Aufrufe bis AT komplett ist).
+_PAGE_FETCH_BUDGET_SECONDS = 20.0
+
+
+class _MeteoAlarmBudgetExhausted(Exception):
+    """Internes Signal (Issue #1397 S1c-Nachbesserung, Tageskontingent-Fund):
+    das eigene Tagesbudget (``MeteoAlarmBudgetGate``) ist erschoepft -- KEIN
+    echter Netzwerk-Call wurde ausgeloest. ``warn_egress.cached_fetch()``
+    faengt das ueber den generischen Exception-Zweig ab (Fail-soft-Cache,
+    Egress-Zeile, ``observe_fetch_failure()``-Markierung) -- exakt derselbe
+    Ausfall-Pfad wie fuer jeden anderen fehlgeschlagenen Seiten-Abruf."""
+
+
+def _meteoalarm_budget_gate() -> MeteoAlarmBudgetGate:
+    """Frisch instanziiert je Aufruf (Muster ``ForecastBudgetGate``-Tests) --
+    liest/schreibt ueber ``app.loader.get_data_root()``, in Tests durch die
+    globale Autouse-Isolation (``tests/conftest.py``, Issue #1133) bereits
+    auf einen Temp-Pfad umgelenkt."""
+    return MeteoAlarmBudgetGate()
+
+
+# Issue #1397 S1c-Nachbesserung (Fensterlaenge-Fund, Team-Lead-Entscheidung
+# 2026-07-27): das urspruengliche 23h-Publikationsfenster erzeugte
+# total_pages=17-23 (~98 % davon ueberholte Fassungen, die _is_superseded()
+# ohnehin wegfiltert -- wir bezahlten 20 Seiten, um am Ende ueberwiegend
+# Muell wegzuwerfen). Gemessen an der echten API (2026-07-27): 23h ->
+# total_count 1640-2258 (17-23 Seiten), 3h -> total_count 90 (1 Seite). Die
+# Blaetter-Mechanik (S1c) bleibt VOLLSTAENDIG bestehen -- sie greift weiter,
+# wenn ein Fenster (Tage mit vielen Warnungen) doch mehr als eine Seite
+# ergibt; nur der Regelfall wird dadurch billig. Slot-Raster (30 min) UND
+# Slot-Schluessel bleiben unveraendert -- Aktualitaet ist der Punkt, den
+# die Verkuerzung schuetzen soll (ein groesseres Raster haette Aktualitaet
+# GEGEN Verfuegbarkeit eingetauscht, das war explizit NICHT gewollt).
+#
+# OFFENE FRAGE (Team-Lead, 2026-07-27, NOCH NICHT gemessen): ein 3h-Fenster
+# sieht KEINE Warnung, die vor mehr als 3h veroeffentlicht wurde, seither
+# gilt und nicht neu herausgegeben wurde. Ob es solche Faelle gibt, ist
+# UNBELEGT -- wird geprueft, sobald das Tageskontingent zurueckgesetzt ist
+# (Vergleich "nicht-ueberholte Warnungen 3h- vs. 23h-Fenster"). Bis dahin
+# ist die Verkuerzung eine begruendete UEBERGANGSLOESUNG, keine bewiesene
+# Gleichwertigkeit zum vorherigen (23h-)Zustand.
+DEFAULT_INDEX_WINDOW_HOURS = 3.0
+
+
+def _index_window_hours() -> float:
+    """``GZ_METEOALARM_WINDOW_HOURS`` (positive Zahl) > Default -- ohne
+    Deploy aenderbar, analog ``GZ_METEOALARM_DAILY_BUDGET``."""
+    raw = os.environ.get("GZ_METEOALARM_WINDOW_HOURS")
+    if raw:
+        try:
+            value = float(raw)
+        except ValueError:
+            value = 0.0
+        if value > 0:
+            return value
+    return DEFAULT_INDEX_WINDOW_HOURS
+
+
+def _current_slot_end(now_dt: datetime) -> datetime:
+    """Rundet das Fensterende auf die naechste ``_SLOT_MINUTES``-Rasterzelle
+    ab. Innerhalb DESSELBEN Slots sind alle Aufrufe parameter-gleich (Start/
+    Ende identisch) -- ihre Seiten lassen sich zusammensetzen, ueber einen
+    Slot-Wechsel hinweg NICHT (neue Rand-Warnungen faellig)."""
+    floored_minute = (now_dt.minute // _SLOT_MINUTES) * _SLOT_MINUTES
+    return now_dt.replace(minute=floored_minute, second=0, microsecond=0)
+
+
+def _slot_key(slot_end: datetime) -> str:
+    return slot_end.strftime("%Y%m%dT%H%MZ")
+
+
+def _prune_stale_slot_entries(country: str, current_slot: str) -> None:
+    """Entfernt Cache-Eintraege FREMDER Zeitslots desselben Landes -- sonst
+    waechst ``_index_cache`` bei jedem Slot-Wechsel (alle 30 min) unbegrenzt
+    weiter, weil abgelaufene Eintraege nur beim naechsten LESE-Zugriff auf
+    GENAU diesen Schluessel entdeckt wuerden (der bei einem alten Slot nie
+    wieder vorkommt).
+
+    Bekannte Grenze (dokumentiert, NICHT behoben): laeuft ein 429-Rueckzug
+    gerade, wenn der Slot wechselt, geht er mit dem alten Cache-Schluessel
+    verloren -- die erste Seite des neuen Slots wird sofort neu versucht,
+    statt den Rueckzug abzuwarten. Direkte Folge der Slot-Schluessel und
+    durch die S1b-Wiederholungslogik abgefedert (Adversary-Review #1397)."""
+    prefix = f"{country}:"
+    keep_prefix = f"{country}:{current_slot}:"
+    stale = [key for key in _index_cache if key.startswith(prefix) and not key.startswith(keep_prefix)]
+    for key in stale:
+        del _index_cache[key]
+
+
+def _index_cache_entries_for(country: str, page: int) -> list[dict]:
+    """Test-Hilfsfunktion: findet Cache-Eintraege einer Seite UNABHAENGIG vom
+    aktuellen Zeitslot (der Cache-Schluessel enthaelt den Slot, s.
+    ``_current_slot_end``/``_slot_key`` -- Tests kennen ihn nicht im Voraus)."""
+    suffix = f":p{page}"
+    prefix = f"{country}:"
+    return [v for k, v in _index_cache.items() if k.startswith(prefix) and k.endswith(suffix)]
+
 
 # awareness_type (führende Ganzzahl) -> App-hazard. 4 (fog), 7 (coastal-event),
 # 9 (avalanche), 11 (flood): keine App-Kategorie, bewusst NICHT gemappt ->
@@ -221,19 +380,72 @@ def _extract_alerts_from_cap(cap_source: "str | bytes") -> list[OfficialAlert]:
 
 
 def _get_cached_index(country: str) -> Optional[dict]:
-    """Liefert den VOLLSTAENDIGEN Länder-Index über alle Seiten, gecacht je
-    Seite via ``warn_egress`` (Schlüssel ``f"{country}:p{n}"``). ``None``
-    sobald IRGENDEINE Seite fehlschlägt -- kein Teilergebnis (Issue #1397:
-    die belegte Warnung lag genau auf der beim Abbruch fehlenden letzten
-    Seite). Das Zeitfenster wird EINMAL pro Aufruf eingefroren und an jede
-    Seite durchgereicht, sonst würden die Seitengrenzen zwischen den
-    Abrufen wandern (``datetime.now()`` je Seite neu ausgewertet)."""
+    """Liefert den Länder-Index, schrittweise ueber MEHRERE Aufrufe hinweg
+    vervollstaendigt (Issue #1397 Scheibe S1c). Das Zeitfenster wird auf
+    einen festen ``_SLOT_MINUTES``-Rasterpunkt gerundet (Start bleibt Ende
+    minus ``_index_window_hours()``, Standard 3h -- s. ``DEFAULT_INDEX_
+    WINDOW_HOURS``) -- Seiten aus verschiedenen Aufrufen INNERHALB desselben
+    Slots sind parameter-gleich und setzen sich zusammen (Cache-Schluessel
+    ``f"{country}:{slot}:p{n}"``).
+
+    ``None`` NUR, wenn schon Seite 1 fehlschlaegt oder ``total_pages`` nicht
+    beurteilbar ist (kein einziges verwertbares Feature vorhanden). Ab dann
+    gilt: ein erschoepftes Zeitbudget (``_PAGE_FETCH_BUDGET_SECONDS``) ODER
+    eine echt fehlgeschlagene Folgeseite liefern die BEREITS geholten
+    Features zurueck UND markieren den Aufruf ueber
+    ``warn_egress.mark_fetch_incomplete()`` als real fehlgeschlagen, damit
+    ``unavailable=True`` bleibt (Issue #1397 Prinzip bleibt gewahrt: verboten
+    ist das STILLE Teilergebnis, nicht das gekennzeichnete -- ein
+    Kompletter-Ausfall-durch-Zeitbudget waere an Tagen mit vielen Warnungen
+    IMMER faellig, gerade wenn sie am wichtigsten sind)."""
     now_dt = datetime.now(timezone.utc)
-    start = (now_dt - timedelta(hours=23)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    end = now_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    slot_end = _current_slot_end(now_dt)
+    slot = _slot_key(slot_end)
+    start = (slot_end - timedelta(hours=_index_window_hours())).strftime("%Y-%m-%dT%H:%M:%SZ")
+    end = slot_end.strftime("%Y-%m-%dT%H:%M:%SZ")
+    _prune_stale_slot_entries(country, slot)
+
+    # Issue #1397 S1b: haelt den x-ratelimit-reset der zuletzt empfangenen
+    # echten Antwort fest (Cache-Hits loesen ``on_response`` NICHT aus) --
+    # steuert die vorbeugende Pause vor dem naechsten Seiten-Abruf.
+    last_reset_ts: list[Optional[float]] = [None]
+    # Ob der ZULETZT ausgefuehrte Fetch ein echter Netzwerk-Call war (True)
+    # oder ein Cache-Treffer (False, ``on_response`` wird dann nicht
+    # aufgerufen) -- nur nach einem echten Call lohnt die Entzerr-Pause vor
+    # der naechsten Seite (S1c: schrittweises Nachladen liest oft laengst
+    # gecachte Seiten erneut, dafuer NIE warten).
+    was_real_call = [False]
+
+    def _capture_reset(resp: httpx.Response) -> None:
+        last_reset_ts[0] = warn_egress.parse_ratelimit_reset(resp.headers)
+        was_real_call[0] = True
+        # Adversary-Fund (Runde 2, 2026-07-27): sobald ein Tageskontingent-
+        # 429 real beobachtet wird, den ECHTEN Reset-Zeitpunkt persistieren
+        # -- das ist die einzige verlaessliche Information ueber die
+        # Gegenseite (unser eigener Zaehlerstand ist nur eine Schaetzung,
+        # s. meteoalarm_budget.py). "now" kommt bewusst aus _WALL_CLOCK_FN(),
+        # nicht aus der echten Wanduhr, damit Tests mit einer Fake-Uhr
+        # konsistent bleiben (dieselbe Zeitbasis wie reset_ts).
+        if resp.status_code == 429 and _rate_limit_retry_policy().is_long_lived(resp.headers):
+            reset_ts = last_reset_ts[0]
+            if reset_ts is not None:
+                observed_now = datetime.fromtimestamp(_WALL_CLOCK_FN(), tz=timezone.utc)
+                _meteoalarm_budget_gate().record_observed_reset(reset_ts, now=observed_now)
 
     def _fetch_page(page: int) -> Optional[dict]:
         def _do_request() -> httpx.Response:
+            # Tageskontingent-Fund (S1c-Nachbesserung): VOR jedem echten
+            # Netzwerk-Call pruefen, ob unser eigenes Tagesbudget noch Luft
+            # hat -- erschoepft heisst KEIN Abruf mehr, nicht erst nach dem
+            # naechsten 429. Faellt-offen (MeteoAlarmBudgetGate.allow()):
+            # ein kaputter Zaehler blockiert nie.
+            gate = _meteoalarm_budget_gate()
+            if not gate.allow():
+                raise _MeteoAlarmBudgetExhausted(
+                    f"MeteoAlarm-Tagesbudget erschoepft ({gate.daily_budget}/Tag) "
+                    f"-- Abruf {country} Seite {page} uebersprungen"
+                )
+            gate.record_call()
             key = os.environ.get("GZ_METEOALARM_APIKEY")
             url = f"{METEOALARM_BASE_URL}/collections/warnings/locations/{country}"
             return httpx.get(
@@ -265,9 +477,23 @@ def _get_cached_index(country: str) -> Optional[dict]:
             return data
 
         return warn_egress.cached_fetch(
-            cache=_index_cache, cache_key=f"{country}:p{page}", service="meteoalarm",
+            cache=_index_cache, cache_key=f"{country}:{slot}:p{page}",
+            # Tageskontingent-Fund Punkt 3: Land+Seite muessen im Egress-
+            # Zaehler unterscheidbar sein (nicht nur "meteoalarm" pauschal),
+            # sonst laesst sich morgen aus warn_service_calls.jsonl nicht
+            # ablesen, bei welcher Seite das Tageslimit zuschlug. Nur die
+            # Index-Seiten-Abrufe bekommen dieses feinere Label -- Geometrie-/
+            # CAP-Nachladen bleibt bei "meteoalarm" (nicht Teil des Funds).
+            service=f"meteoalarm:{country}:p{page}",
             host="api.meteoalarm.org", request_fn=_do_request, parse_fn=_parse,
             log=logger,
+            success_ttl=INDEX_PAGE_SUCCESS_TTL,
+            # Issue #1397 S1b: Index-Seiten duerfen bei 429 wiederholen statt
+            # sofort als Ausfall zu gelten (Kurzzeit-Ratenbremse, s. Konstanten
+            # oben) -- ausschliesslich hier eingeschaltet, alle vier anderen
+            # Warn-Dienste rufen cached_fetch() weiterhin ohne dieses Argument.
+            rate_limit_retry=_rate_limit_retry_policy(),
+            on_response=_capture_reset,
         )
 
     first = _fetch_page(1)
@@ -280,13 +506,50 @@ def _get_cached_index(country: str) -> Optional[dict]:
         # WAERE genau der Bug, den #1397 behebt) noch bei kaputtem
         # total_pages werfen (reisst sonst die AT/IT-Fail-soft-Schleife in
         # fetch() ab) -- beides ist ein nicht beurteilbarer/unvollstaendiger
-        # Index und damit ein Ausfall.
+        # Index und damit ein Ausfall. Anders als eine fehlgeschlagene
+        # FOLGESEITE (s.u.) gibt es hier NICHTS Verwertbares zurueckzugeben.
+        #
+        # Adversary F001 (S1c-Runde): Seite 1 selbst kam HTTP-sauber und als
+        # valides JSON-Objekt durch -- fuer cached_fetch() war das ein
+        # ERFOLG, es hat NICHTS markiert. Erst HIER, eine Ebene hoeher,
+        # entscheidet sich anhand von total_pages, dass der Index trotzdem
+        # unbrauchbar ist. Ohne den expliziten Marker waere das ein
+        # kompletter, aber STILLER Ausfall -> unavailable=False, obwohl
+        # gar keine Warnung ankam (genau die Fehlerart, gegen die #1397 laeuft).
+        warn_egress.mark_fetch_incomplete()
         return None
+
+    call_start = _WALL_CLOCK_FN()
+    incomplete = False
     for page_num in range(2, total_pages + 1):
+        # Zeitbudget VOR jedem weiteren Abruf pruefen (Issue #1397 S1c) --
+        # nicht erst nach einem Fehlschlag, sonst koennte ein einzelner
+        # Aufruf beliebig lange blaettern, solange jede Seite gelingt.
+        if _WALL_CLOCK_FN() - call_start >= _PAGE_FETCH_BUDGET_SECONDS:
+            incomplete = True
+            break
+        # Vorbeugender Abstand VOR dem Abruf (Issue #1397 S1b) -- nur nach
+        # einem echten Netzwerk-Call der Vorseite (s. was_real_call oben),
+        # nicht vor einem laengst gecachten Folgeaufruf im selben Slot.
+        if was_real_call[0]:
+            _throttle_before_next_page(last_reset_ts[0])
+        was_real_call[0] = False
         page = _fetch_page(page_num)
         if page is None:
-            return None
+            # Echt fehlgeschlagene Seite (429 nach allen Versuchen, HTTP>=400,
+            # Netz-/Parse-Fehler): cached_fetch() hat den Fehlschlag intern
+            # bereits ueber observe_fetch_failure() markiert -- bricht HIER
+            # trotzdem ab (kein sinnloses Weiterblaettern ueber eine Luecke
+            # hinweg) und gibt die bereits geholten Seiten zurueck.
+            incomplete = True
+            break
         features.extend(page.get("features") or [])
+
+    if incomplete:
+        # Zeitbudget-Abbruch macht (anders als eine fehlgeschlagene Seite)
+        # KEINEN internen cached_fetch()-Fehlschlag -- ohne diesen expliziten
+        # Marker wuerde unavailable=True hier stillschweigend verloren gehen.
+        warn_egress.mark_fetch_incomplete()
     return {"features": features}
 
 
@@ -331,9 +594,12 @@ def _feature_dedup_key(feature: dict) -> tuple:
 
 def _is_superseded(feature: dict) -> bool:
     """True, wenn dieses Feature durch eine neuere Fassung ersetzt wurde
-    (Issue #1397: ~98 % aller Features im 23h-Publikationsfenster sind
-    überholt -- muss VOR jedem Nachlade-Abruf geprüft werden, sonst erscheint
-    dieselbe Warnung mit leicht verschobenen Zeiträumen mehrfach)."""
+    (Issue #1397: ~98 % aller Features im urspruenglichen 23h-Publikations-
+    fenster waren überholt -- Grund fuer die S1c-Nachbesserung, das
+    Standardfenster auf ``DEFAULT_INDEX_WINDOW_HOURS`` zu verkuerzen. Der
+    Filter bleibt UNABHAENGIG von der Fensterlaenge noetig -- muss VOR jedem
+    Nachlade-Abruf geprüft werden, sonst erscheint dieselbe Warnung mit
+    leicht verschobenen Zeiträumen mehrfach)."""
     props = feature.get("properties") or {}
     return bool(props.get("supersededAt") or props.get("supersededByAlertId"))
 
@@ -473,7 +739,8 @@ class MeteoAlarmSource:
             for feature in index.get("features") or []:
                 try:
                     # Issue #1397: überholte Fassungen VOR jedem Nachlade-Abruf
-                    # überspringen (98 % der Features im 23h-Fenster sind es).
+                    # überspringen (Messgrundlage: 98 % im urspruenglichen
+                    # 23h-Fenster -- der Filter bleibt bei jeder Fensterlaenge noetig).
                     if _is_superseded(feature):
                         continue
                     key = _feature_dedup_key(feature)

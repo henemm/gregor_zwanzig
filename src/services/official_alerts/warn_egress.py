@@ -28,6 +28,7 @@ import json
 import logging
 import time
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterator, Optional
@@ -58,6 +59,21 @@ def _record_fetch_failure() -> None:
     sink = _fetch_failure_sink.get()
     if sink is not None:
         sink["failed"] = True
+
+
+def mark_fetch_incomplete() -> None:
+    """OEFFENTLICHER Weg, einen Fetch als real fehlgeschlagen zu markieren,
+    OHNE dass ``cached_fetch()`` selbst einen Fehlschlag gesehen hat (Issue
+    #1397 Scheibe S1c): schrittweises Blaettern kann ein Zeitbudget
+    ausschoepfen, bevor alle Seiten geholt sind — die bereits geholten Seiten
+    werden dann zurueckgegeben (kein STILLES Teilergebnis mehr, s. Spec),
+    aber der Aufruf muss trotzdem als "nicht vollstaendig abrufbar" zaehlen.
+
+    Wirkt identisch zu einem internen ``cached_fetch()``-Fehlschlag: markiert
+    den aktiven ``observe_fetch_failure()``-Kontext (falls einer aktiv ist).
+    Ausserhalb eines aktiven Kontexts ein No-Op, wie ``cached_fetch()``
+    selbst."""
+    _record_fetch_failure()
 
 
 @contextmanager
@@ -93,6 +109,99 @@ def _parse_retry_after(headers: Any) -> Optional[float]:
         return float(str(raw).strip())
     except (TypeError, ValueError):
         return None
+
+
+def parse_ratelimit_reset(headers: Any) -> Optional[float]:
+    """``x-ratelimit-reset`` als Unix-Zeitstempel (Sekunden, float) auswerten.
+
+    Issue #1397 Scheibe S1b: MeteoAlarm liefert bei 429 KEINEN ``Retry-After``,
+    aber ``x-ratelimit-reset`` mit dem Unix-Zeitpunkt, ab dem die naechste
+    Anfrage wieder durchgeht (Messung 2026-07-27). Fehlt der Header oder ist
+    er unlesbar, ``None`` — Aufrufer fallen dann auf einen festen Abstand
+    zurueck."""
+    raw = headers.get("x-ratelimit-reset") if headers is not None else None
+    if raw is None:
+        return None
+    try:
+        return float(str(raw).strip())
+    except (TypeError, ValueError):
+        return None
+
+
+@dataclass(frozen=True)
+class RateLimitRetryPolicy:
+    """Optionale 429-Wiederholung fuer ``cached_fetch`` (Issue #1397 S1b,
+    um die Kurzzeit-/Tageskontingent-Unterscheidung der S1c-Nachbesserung
+    erweitert).
+
+    OHNE dieses Objekt (Parameter ``rate_limit_retry=None``, Standard fuer
+    alle Aufrufer) verhaelt sich ``cached_fetch()`` BIT-IDENTISCH zum Bestand
+    — nur MeteoAlarms Index-Seiten-Abruf schaltet es ein.
+
+    MeteoAlarm limitiert auf ZWEI Ebenen (Messung 2026-07-27, S1c-Nach-
+    besserung): eine Kurzzeit-Ratenbremse (~1 Anfrage/4s, ``x-ratelimit-
+    reset`` wenige Sekunden in der Zukunft -- Wiederholen lohnt sich) UND ein
+    TAGESKONTINGENT (``x-ratelimit-reset`` ~86400s in der Zukunft, Body
+    "Daily rate limit exceeded"). Die Unterscheidung laeuft NICHT ueber den
+    Statuscode (immer 429), sondern ueber den Abstand des ``x-ratelimit-
+    reset`` zu jetzt: liegt er innerhalb ``short_wait_ceiling_seconds``,
+    gilt die Kurzzeit-Bremse (warten + wiederholen); liegt er darueber, gilt
+    das Tageskontingent -- dann wird NICHT wiederholt (jeder Versuch waere
+    verschenkt), sondern sofort mit einem bis zum Reset reichenden Rueckzug
+    (gedeckelt durch ``long_backoff_cap_seconds``, gegen absurde Werte)
+    aufgegeben.
+
+    ``max_attempts`` zaehlt den ERSTEN Versuch mit — bei ``max_attempts=3``
+    wird bei einer KURZZEIT-Bremse hoechstens zweimal gewartet und
+    wiederholt, danach gilt die Seite wie bisher als Fehlschlag (langer
+    Rueckzug, kein Teilergebnis, s. ``cached_fetch``-429-Zweig).
+    ``max_wait_seconds`` deckelt die Wartezeit je Versuch der Kurzzeit-
+    Bremse. ``default_wait_seconds`` greift, wenn der Header fehlt/unlesbar
+    ist (dann gilt IMMER die Kurzzeit-Annahme -- ohne Reset-Zeitpunkt ist
+    ein Tageskontingent nicht erkennbar). ``sleep_fn``/``wall_clock_fn`` sind
+    injizierbar, damit Tests nicht real warten muessen."""
+    max_attempts: int = 3
+    max_wait_seconds: float = 8.0
+    default_wait_seconds: float = 4.0
+    short_wait_ceiling_seconds: float = 60.0
+    long_backoff_cap_seconds: float = 24 * 3600.0
+    sleep_fn: Callable[[float], None] = time.sleep
+    wall_clock_fn: Callable[[], float] = time.time
+
+    def _raw_wait(self, headers: Any) -> Optional[float]:
+        reset_ts = parse_ratelimit_reset(headers)
+        if reset_ts is None:
+            return None
+        return reset_ts - self.wall_clock_fn()
+
+    def is_long_lived(self, headers: Any) -> bool:
+        """True, wenn ``x-ratelimit-reset`` weiter als
+        ``short_wait_ceiling_seconds`` in der Zukunft liegt (Tageskontingent-
+        Verdacht). Fehlt der Header, ``False`` (Kurzzeit-Annahme -- ohne
+        Reset-Zeitpunkt nicht als Tageskontingent erkennbar)."""
+        raw = self._raw_wait(headers)
+        if raw is None:
+            return False
+        return raw > self.short_wait_ceiling_seconds
+
+    def wait_seconds(self, headers: Any) -> float:
+        """Wartezeit fuer die KURZZEIT-Wiederholung (nur relevant, wenn
+        ``is_long_lived()`` ``False`` ist)."""
+        raw = self._raw_wait(headers)
+        if raw is None:
+            return self.default_wait_seconds
+        return min(max(raw, 0.0), self.max_wait_seconds)
+
+    def long_backoff_seconds(self, headers: Any) -> Optional[float]:
+        """Rueckzugsdauer bis zum Reset-Zeitpunkt fuer ein erkanntes
+        Tageskontingent, gedeckelt durch ``long_backoff_cap_seconds``.
+        ``None``, wenn kein ``x-ratelimit-reset`` auswertbar ist (Aufrufer
+        faellt dann auf die bestehende ``Retry-After``-Backoff-Formel
+        zurueck)."""
+        raw = self._raw_wait(headers)
+        if raw is None:
+            return None
+        return min(max(raw, 0.0), self.long_backoff_cap_seconds)
 
 
 def log_warn_service_call(
@@ -137,6 +246,8 @@ def cached_fetch(
     success_ttl: float = WARN_SUCCESS_TTL,
     failure_ttl: float = WARN_FAILURE_TTL,
     log: logging.Logger = logger,
+    rate_limit_retry: Optional[RateLimitRetryPolicy] = None,
+    on_response: Optional[Callable[[Any], None]] = None,
 ) -> Optional[Any]:
     """TTL-Cache mit 429-bewusstem Rückzug und Egress-Zähler.
 
@@ -150,6 +261,18 @@ def cached_fetch(
       ``None``.
     - **>=400 (außer 429) / Netzwerkfehler / Parse-Fehler:** ``failure_ttl``,
       Rückgabe ``None`` (unverändertes Fail-soft-Verhalten).
+
+    ``rate_limit_retry`` (Issue #1397 S1b, Standard ``None``): ist ein
+    ``RateLimitRetryPolicy`` gesetzt, wird ein 429 NICHT sofort als
+    Fehlschlag gewertet, solange Versuche uebrig sind — stattdessen wird laut
+    geloggt, gewartet (Policy) und ``request_fn()`` erneut aufgerufen. Erst
+    wenn die Versuche erschoepft sind, greift der unveraenderte 429-Zweig
+    oben. Ohne dieses Argument (alle Bestandsaufrufer) ist das Verhalten
+    BIT-IDENTISCH zum Vor-S1b-Stand. ``on_response`` (Standard ``None``) wird
+    bei JEDEM echten (nicht gecachten) HTTP-Response-Objekt aufgerufen, bevor
+    ``parse_fn`` laeuft — Beobachtungshaken fuer Aufrufer, die z.B. den
+    ``x-ratelimit-reset`` der letzten Antwort fuer eine vorbeugende Pause vor
+    dem naechsten Aufruf mitschneiden wollen (nie ausserhalb try/except).
     """
     now = clock()
     entry = cache.get(cache_key)
@@ -162,27 +285,75 @@ def cached_fetch(
             _record_fetch_failure()
         return entry["data"]
 
-    try:
-        resp = request_fn()
-    except Exception:
-        log.warning("%s-Abruf fehlgeschlagen (%s)", service, host, exc_info=True)
-        cache[cache_key] = {"data": None, "fetched_at": now, "ttl": failure_ttl}
-        log_warn_service_call(service, host, status=None, cache_hit=False)
-        _record_fetch_failure()
-        return None
+    attempt = 1
+    while True:
+        try:
+            resp = request_fn()
+        except Exception:
+            log.warning("%s-Abruf fehlgeschlagen (%s)", service, host, exc_info=True)
+            cache[cache_key] = {"data": None, "fetched_at": now, "ttl": failure_ttl}
+            log_warn_service_call(service, host, status=None, cache_hit=False)
+            _record_fetch_failure()
+            return None
 
-    status = resp.status_code
+        if on_response is not None:
+            try:
+                on_response(resp)
+            except Exception:
+                pass  # Beobachtungshaken darf den Abruf NIE beeintraechtigen
+
+        status = resp.status_code
+        # S1c-Nachbesserung (Tageskontingent-Fund): ein Tageskontingent
+        # (is_long_lived()) wird NIE wiederholt -- jeder Zwischenversuch
+        # waere gegen ein bereits erschoepftes Tageslimit verschenkt UND
+        # verfaelscht die Verbrauchsmessung. Nur eine erkannte KURZZEIT-
+        # Bremse (kurzer Reset-Abstand oder gar kein Reset-Header) ist
+        # wiederholungswuerdig.
+        if status == 429 and rate_limit_retry is not None \
+                and not rate_limit_retry.is_long_lived(resp.headers) \
+                and attempt < rate_limit_retry.max_attempts:
+            wait = rate_limit_retry.wait_seconds(resp.headers)
+            log.warning(
+                "%s: HTTP 429 (Ratenbremse) — warte %.1fs und wiederhole "
+                "(Versuch %d/%d)",
+                service, wait, attempt, rate_limit_retry.max_attempts,
+            )
+            # Adversary-Fund (Issue #1397 S1c-Runde): ein Zwischenversuch ist
+            # ein ECHTER Abruf gegen die API -- muss im Egress-Zaehler
+            # auftauchen, sonst ist der Zaehler kein verlaesslicher
+            # Verbrauchs-Nachweis mehr (gerade die Ratenbremse soll darin
+            # sichtbar sein). status=429/cache_hit=False wie beim finalen
+            # 429-Zweig unten, zusaetzlich der ermittelte Wartewert.
+            log_warn_service_call(service, host, status=429, cache_hit=False,
+                                  retry_after=wait)
+            rate_limit_retry.sleep_fn(wait)
+            attempt += 1
+            continue
+        break
+
     if status == 429:
         retry_after = _parse_retry_after(resp.headers)
         backoff = max(retry_after or 0.0, success_ttl)
+        # Tageskontingent-Fund (S1c-Nachbesserung): ohne diese Erweiterung
+        # wuerde ein Tageslimit (x-ratelimit-reset ~86400s entfernt, KEIN
+        # Retry-After) auf die warngerechte success_ttl (45 min) zurueckfallen
+        # -- viel zu kurz, das Kontingent waere binnen Minuten erneut leer-
+        # gefeuert. long_backoff_seconds() liefert den bis zum Reset
+        # reichenden, gedeckelten Rueckzug; er GEWINNT nur, wenn er laenger
+        # ist als die bestehende Formel (nie kuerzer als vorher).
+        reset_backoff = rate_limit_retry.long_backoff_seconds(resp.headers) \
+            if rate_limit_retry is not None else None
+        if reset_backoff is not None:
+            backoff = max(backoff, reset_backoff)
+        logged_retry_after = retry_after if retry_after is not None else reset_backoff
         log.warning(
             "%s: HTTP 429 (Kontingent erschöpft) — Rückzug für %.0fs "
             "(Retry-After=%s)",
-            service, backoff, retry_after,
+            service, backoff, logged_retry_after,
         )
         cache[cache_key] = {"data": None, "fetched_at": now, "ttl": backoff}
         log_warn_service_call(service, host, status=429, cache_hit=False,
-                              retry_after=retry_after)
+                              retry_after=logged_retry_after)
         _record_fetch_failure()
         return None
 

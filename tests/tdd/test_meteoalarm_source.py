@@ -68,6 +68,38 @@ def _read_fixture(name: str) -> str:
     return (FIXTURES_DIR / name).read_text(encoding="utf-8")
 
 
+@pytest.fixture(autouse=True)
+def _meteoalarm_index_cache_isolation(monkeypatch):
+    """Issue #1397 S1c: der Index-Cache-Schluessel enthaelt jetzt einen
+    Zeitslot (``f"{country}:{slot}:p{n}"``, s. ``_current_slot_end``) --
+    Tests koennen ihn nicht mehr vorab hardcoden, und da ALLE Tests eines
+    Laufs typischerweise im SELBEN 30-Minuten-Slot laufen, wuerde ohne
+    Reset ein Cache-Eintrag aus Test A in Test B durchschlagen (Cache-
+    Pollution). Autouse: leert ``_index_cache`` VOR und NACH jedem Test.
+
+    Setzt zugleich ``_SLEEP_FN`` auf ein No-Op (Standard fuer alle Tests
+    dieser Datei, s. Projekt-Testpolitik "kein echtes time.sleep() im
+    Test") -- einzelne Tests, die die tatsaechliche Wartezeit pruefen
+    wollen, ueberschreiben ``_SLEEP_FN``/``_WALL_CLOCK_FN`` selbst per
+    ``monkeypatch`` (wirkt NACH dieser Fixture, da im selben Testlauf)."""
+    from services.official_alerts import meteoalarm
+
+    def _clear_module_caches() -> None:
+        meteoalarm._index_cache.clear()
+        # S1c macht Nachlade-Abrufe fuer Features aus einem (jetzt moeglichen)
+        # Teilergebnis erreichbar, die vorher wegen des sofortigen ``None``
+        # nie ausgefuehrt wurden -- ohne Reset wuerde ein Geometrie-/CAP-
+        # Cache-Treffer aus einem FRUEHEREN Test einen erwarteten echten
+        # Nachlade-Abruf in einem SPAETEREN Test verdecken.
+        meteoalarm._geometry_cache.clear()
+        meteoalarm._cap_cache.clear()
+
+    _clear_module_caches()
+    monkeypatch.setattr(meteoalarm, "_SLEEP_FN", lambda _seconds: None)
+    yield
+    _clear_module_caches()
+
+
 # ---------------------------------------------------------------------------
 # AC-1: Live-Punkt Suedtirol -> struktureller Vertrag / echte Warnung
 # ---------------------------------------------------------------------------
@@ -462,7 +494,8 @@ def test_leerer_index_204_ist_kein_fehler(monkeypatch, caplog, tmp_path):
     und leerem Koerper (regulaerer "keine Warnung"-Fall bei MeteoAlarm),
     WHEN ``_get_cached_index()`` diese verarbeitet, THEN liefert es ein
     leeres, aber gueltiges Ergebnis OHNE Exception, cached es als ERFOLG
-    (300s-TTL, kein Failure-Cache) und loggt KEIN WARNING."""
+    (Issue #1397 S1c: ``INDEX_PAGE_SUCCESS_TTL``, kein Failure-Cache) und
+    loggt KEIN WARNING."""
     from services.official_alerts import meteoalarm
 
     # WARN_CALLS_PATH-Umlenkung erfolgt global via conftest-Autouse-Fixture
@@ -476,7 +509,6 @@ def test_leerer_index_204_ist_kein_fehler(monkeypatch, caplog, tmp_path):
             meteoalarm, "METEOALARM_BASE_URL",
             f"http://127.0.0.1:{server.server_port}",
         )
-        meteoalarm._index_cache.pop("IT:p1", None)
 
         with caplog.at_level("WARNING", logger="meteoalarm"):
             data = meteoalarm._get_cached_index("IT")
@@ -489,12 +521,15 @@ def test_leerer_index_204_ist_kein_fehler(monkeypatch, caplog, tmp_path):
             "fehlgeschlagen" in rec.message for rec in caplog.records
         ), "204/leerer Body ist der reguläre Fall, kein WARNING-Log erlaubt"
 
-        # Issue #1397: Index-Seiten werden je Seite gecacht (Schlüssel
-        # "{country}:p{n}"), nicht mehr unter dem blanken Ländercode.
-        cache_entry = meteoalarm._index_cache["IT:p1"]
-        assert cache_entry["ttl"] == meteoalarm.CACHE_TTL, (
-            f"204/leerer Body muss als ERFOLG gecacht werden (300s-TTL), "
-            f"nicht als Fehlschlag (60s), erhalten ttl={cache_entry['ttl']}"
+        # Issue #1397 S1c: Cache-Schluessel enthaelt zusaetzlich den
+        # Zeitslot ("{country}:{slot}:p{n}") -- Tests kennen ihn nicht im
+        # Voraus, s. ``_index_cache_entries_for()``.
+        entries = meteoalarm._index_cache_entries_for("IT", 1)
+        assert len(entries) == 1, f"genau EIN Cache-Eintrag fuer IT-Seite-1 erwartet, war {entries}"
+        cache_entry = entries[0]
+        assert cache_entry["ttl"] == meteoalarm.INDEX_PAGE_SUCCESS_TTL, (
+            f"204/leerer Body muss als ERFOLG gecacht werden "
+            f"(INDEX_PAGE_SUCCESS_TTL), nicht als Fehlschlag, erhalten ttl={cache_entry['ttl']}"
         )
 
         # Zweiter Aufruf innerhalb der TTL darf keinen erneuten HTTP-Call
@@ -505,7 +540,6 @@ def test_leerer_index_204_ist_kein_fehler(monkeypatch, caplog, tmp_path):
         data_cached = meteoalarm._get_cached_index("IT")
         assert data_cached == {"features": []}
     finally:
-        meteoalarm._index_cache.pop("IT:p1", None)
         try:
             server.shutdown()
         except Exception:
@@ -869,14 +903,14 @@ class _Http429RetryAfterHandler(http.server.BaseHTTPRequestHandler):
 
 def test_429_lokaler_server_retry_after_respektiert(monkeypatch, caplog, tmp_path):
     """AC-4/AC-6 (End-zu-Ende über den echten ``meteoalarm``-Pfad): GIVEN ein
-    echter lokaler HTTP-Server, der 429 + ``Retry-After: 120`` liefert, WHEN
-    ``_get_cached_index()`` den Index-Call macht, THEN wird der Cache-Eintrag
-    mit einem Backoff-TTL von ``max(120, 1800) = 1800`` gesetzt (statt wie
-    heute stumm 60s-Failure-Cache) UND ein WARNING-Log nennt explizit "429".
-
-    RED heute: der 429 läuft über ``raise_for_status()`` in den generischen
-    ``except`` -> Cache-TTL == 60.0 (nicht 1800) und keine 429-spezifische
-    WARNING-Meldung -> beide Kern-Assertions schlagen fehl."""
+    echter lokaler HTTP-Server, der auf JEDEN Versuch 429 + ``Retry-After:
+    120`` liefert (kein ``x-ratelimit-reset``, also erschoepft die S1b-
+    Wiederholung ihre Versuche), WHEN ``_get_cached_index()`` den Index-Call
+    macht, THEN liefert Seite 1 (== der gesamte Index, ohne sie ist
+    ``total_pages`` unbekannt) ``None`` -- der Cache-Eintrag traegt den
+    Backoff ``max(120, INDEX_PAGE_SUCCESS_TTL)`` (S1c: die Index-Seiten-TTL
+    ist laenger als die generische ``CACHE_TTL``) UND ein WARNING-Log nennt
+    explizit "429"."""
     from services.official_alerts import meteoalarm
 
     # WARN_CALLS_PATH-Umlenkung erfolgt global via conftest-Autouse-Fixture
@@ -890,7 +924,6 @@ def test_429_lokaler_server_retry_after_respektiert(monkeypatch, caplog, tmp_pat
             meteoalarm, "METEOALARM_BASE_URL",
             f"http://127.0.0.1:{server.server_port}",
         )
-        meteoalarm._index_cache.pop("AT:p1", None)
 
         with caplog.at_level("WARNING", logger="meteoalarm"):
             data = meteoalarm._get_cached_index("AT")
@@ -899,19 +932,21 @@ def test_429_lokaler_server_retry_after_respektiert(monkeypatch, caplog, tmp_pat
             f"429 ist kein Erfolg — _get_cached_index() muss None liefern, war {data!r}"
         )
 
-        cache_entry = meteoalarm._index_cache["AT:p1"]
-        assert cache_entry["ttl"] == max(120.0, meteoalarm.CACHE_TTL), (
-            f"429 mit Retry-After:120 muss Backoff max(120, 1800)=1800 als "
-            f"Cache-TTL setzen (kein 15-Minuten-Dauerfeuer), war {cache_entry['ttl']}"
+        entries = meteoalarm._index_cache_entries_for("AT", 1)
+        assert len(entries) == 1, f"genau EIN Cache-Eintrag fuer AT-Seite-1 erwartet, war {entries}"
+        cache_entry = entries[0]
+        expected_backoff = max(120.0, meteoalarm.INDEX_PAGE_SUCCESS_TTL)
+        assert cache_entry["ttl"] == expected_backoff, (
+            f"429 mit Retry-After:120 muss Backoff max(120, INDEX_PAGE_SUCCESS_TTL)="
+            f"{expected_backoff} als Cache-TTL setzen, war {cache_entry['ttl']}"
         )
-        assert cache_entry["ttl"] == 1800.0
+        assert cache_entry["ttl"] == 2700.0
 
         warnings = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
         assert any("429" in m for m in warnings), (
             f"429 muss LAUT geloggt werden (Text enthält '429'), Records: {warnings}"
         )
     finally:
-        meteoalarm._index_cache.pop("AT:p1", None)
         server.shutdown()
         thread.join(timeout=2)
 
@@ -1040,50 +1075,69 @@ def test_treffer_auf_seite_3_von_3_wird_gefunden(monkeypatch):
             meteoalarm._index_cache.pop(key, None)
 
 
-def test_fehlschlag_seite_2_von_3_ergibt_unavailable_ohne_teilergebnis(monkeypatch):
-    """GIVEN ein AT-Index mit 3 Seiten, dessen Seite 2 mit HTTP 500
-    fehlschlaegt (IT bleibt regulaer leer), WHEN
+def test_fehlschlag_seite_2_von_2_liefert_teilergebnis_mit_unavailable(monkeypatch):
+    """Issue #1397 Scheibe S1c (inhaltliche Kurskorrektur gegenueber S1):
+    GIVEN ein AT-Index mit 2 Seiten, dessen Seite 1 einen ECHTEN Treffer
+    traegt (reale Geometrie/CAP, Punkt-in-Flaeche-Match) und dessen Seite 2
+    mit HTTP 500 fehlschlaegt (IT bleibt regulaer leer), WHEN
     get_official_alerts_with_status() ueber die echte Registry aufgerufen
-    wird, THEN meldet es unavailable=True UND liefert KEIN Teilergebnis aus
-    der erfolgreich abgerufenen Seite 1 -- eine unvollstaendig geblaetterte
-    Antwort ist ein Ausfall, kein Teilerfolg (Issue #1397, Kern des Bugs:
-    die belegte Warnung lag genau auf der beim Abbruch fehlenden Seite)."""
+    wird, THEN meldet es unavailable=True UND liefert TROTZDEM den Treffer
+    von Seite 1 -- ein GEKENNZEICHNETES Teilergebnis ist besser als gar
+    keines (PO-Entscheid: verboten ist das STILLE Teilergebnis aus S1, nicht
+    das gekennzeichnete aus S1c)."""
+    from datetime import datetime, timezone
+
     import services.official_alerts.base as oa_base
     from services.official_alerts import get_official_alerts_with_status
     from services.official_alerts import meteoalarm
 
     calls: list[str] = []
     pages: dict = {}
-    handler_cls = _make_paging_handler(pages=pages, geometry_bodies={}, cap_bodies={}, calls=calls)
+    trentino_geometry = {
+        "type": "Polygon",
+        "coordinates": [[[7.5, 45.0], [7.5, 45.5], [8.5, 45.5], [8.5, 45.0], [7.5, 45.0]]],
+    }
+    handler_cls = _make_paging_handler(
+        pages=pages,
+        geometry_bodies={"/geometry/trentino-partial": trentino_geometry},
+        cap_bodies={"/cap/trentino-partial": _read_fixture("cap_villach_heat.xml")},
+        calls=calls,
+    )
     server, thread = _run_server(handler_cls)
     backup_sources = list(oa_base._REGISTERED_SOURCES)
     oa_base._REGISTERED_SOURCES.clear()
     try:
-        page3_target = _load_index_fixture("index_multipage_p3.json", server.server_port)
-        pages[("AT", 1)] = {"body": {"metadata": {"total_pages": 3}, "features": page3_target["features"]}}
+        base_url = f"http://127.0.0.1:{server.server_port}"
+        treffer_feature = _minimal_feature(
+            "AT", "PARTIAL-RESULT-TEST", "partial-alert", base_url,
+            "/geometry/trentino-partial", "/cap/trentino-partial",
+        )
+        pages[("AT", 1)] = {"body": {"metadata": {"total_pages": 2}, "features": [treffer_feature]}}
         pages[("AT", 2)] = {"status": 500}
         pages[("IT", 1)] = {"body": {"features": []}}
 
         monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-partial")
-        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
-        for key in ("AT:p1", "AT:p2", "IT:p1"):
-            meteoalarm._index_cache.pop(key, None)
+        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", base_url)
         oa_base._REGISTERED_SOURCES.append(meteoalarm.MeteoAlarmSource())
 
-        alerts, unavailable = get_official_alerts_with_status(45.263, 7.917)
+        # cap_villach_heat.xml traegt einen festen, aufgezeichneten Zeitraum
+        # (onset/expires 2026-07-15) -- ``now`` MUSS in dieses Fenster fallen,
+        # sonst filtert filter_alerts_to_window() den Treffer unabhaengig vom
+        # hier getesteten Verhalten weg.
+        fixture_now = datetime(2026, 7, 15, 10, 0, 0, tzinfo=timezone.utc)
+        alerts, unavailable = get_official_alerts_with_status(45.263, 7.917, now=fixture_now)
 
-        assert unavailable is True, "Fehlschlag auf Seite 2 von 3 muss als unavailable gemeldet werden"
-        assert alerts == [], (
-            f"Seite 1 (erfolgreich) darf NICHT als Teilergebnis erscheinen, erhalten: {alerts}"
+        assert unavailable is True, "Fehlschlag auf Seite 2 von 2 muss als unavailable gemeldet werden"
+        assert any(a.hazard == "extreme_heat" for a in alerts), (
+            f"Treffer von Seite 1 muss TROTZ Fehlschlag auf Seite 2 erscheinen (gekennzeichnetes "
+            f"Teilergebnis), erhalten: {alerts}"
         )
-        assert calls == [], "Bei verworfenem Index darf kein Nachlade-Abruf stattfinden"
+        assert "/cap/trentino-partial" in calls, "Nachlade-Abruf fuer den Seite-1-Treffer muss stattfinden"
     finally:
         server.shutdown()
         thread.join(timeout=2)
         oa_base._REGISTERED_SOURCES.clear()
         oa_base._REGISTERED_SOURCES.extend(backup_sources)
-        for key in ("AT:p1", "AT:p2", "IT:p1"):
-            meteoalarm._index_cache.pop(key, None)
 
 
 def test_is_superseded_gesetzt_leer_fehlend():
@@ -1353,6 +1407,66 @@ def test_kaputte_seiten_antwort_als_string_bricht_fail_soft_schleife_nicht_ab(mo
     _assert_fail_soft_isolation_against_broken_at_metadata(monkeypatch, "kaputt")
 
 
+def _assert_broken_total_pages_marks_unavailable(monkeypatch, at_body: dict) -> None:
+    """Adversary F001 (S1c-Runde, KRITISCH): Seite 1 kommt HTTP-sauber und
+    als valides JSON-Objekt durch -- fuer ``cached_fetch()`` ist das ein
+    ERFOLG, es markiert NICHTS. Erst ``_resolve_total_pages()`` entscheidet
+    eine Ebene hoeher, dass der Index trotzdem unbrauchbar ist.
+    ``get_official_alerts_with_status()`` MUSS das ueber ``unavailable=True``
+    sichtbar machen -- sonst wird ein kompletter Ausfall als "alles ruhig"
+    ausgeliefert (genau die Fehlerart, gegen die Issue #1397 laeuft)."""
+    import services.official_alerts.base as oa_base
+    from services.official_alerts import get_official_alerts_with_status, meteoalarm
+
+    pages: dict = {}
+    handler_cls = _make_paging_handler(pages=pages, geometry_bodies={}, cap_bodies={}, calls=[])
+    server, thread = _run_server(handler_cls)
+    backup_sources = list(oa_base._REGISTERED_SOURCES)
+    oa_base._REGISTERED_SOURCES.clear()
+    try:
+        pages[("AT", 1)] = {"body": at_body}
+        pages[("IT", 1)] = {"body": {"features": []}}
+
+        monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-f001-total-pages")
+        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
+        oa_base._REGISTERED_SOURCES.append(meteoalarm.MeteoAlarmSource())
+
+        _alerts, unavailable = get_official_alerts_with_status(45.2, 8.0)
+
+        assert unavailable is True, (
+            "unbrauchbares total_pages muss als unavailable gemeldet werden -- sonst wird ein "
+            "kompletter Ausfall stillschweigend als 'alles ruhig' ausgeliefert"
+        )
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+        oa_base._REGISTERED_SOURCES.clear()
+        oa_base._REGISTERED_SOURCES.extend(backup_sources)
+
+
+def test_total_pages_ausserhalb_bereich_markiert_unavailable(monkeypatch):
+    """Adversary F001 (KRITISCH): ``total_pages`` ausserhalb 1..
+    ``_MAX_INDEX_PAGES`` (belegter Fall: 999999) darf NICHT als stiller
+    Ausfall durchgehen -- ``unavailable`` muss ``True`` sein."""
+    _assert_broken_total_pages_marks_unavailable(
+        monkeypatch, {"metadata": {"total_pages": 999999}, "features": []}
+    )
+
+
+def test_total_pages_nicht_numerisch_markiert_unavailable(monkeypatch):
+    """Adversary F001 (KRITISCH): nicht-numerisches ``total_pages`` darf
+    NICHT als stiller Ausfall durchgehen -- ``unavailable`` muss ``True``
+    sein.
+
+    Mutationstest-Nachweis (im Entwickler-Bericht): das
+    ``warn_egress.mark_fetch_incomplete()`` vor dem ``return None`` in
+    ``_get_cached_index()`` entfernt -> dieser Test wird ROT (``unavailable``
+    faellt auf ``False`` zurueck)."""
+    _assert_broken_total_pages_marks_unavailable(
+        monkeypatch, {"metadata": {"total_pages": "viele"}, "features": []}
+    )
+
+
 def _assert_malformed_top_level_page_yields_unavailable_no_partial(monkeypatch, at_pages: dict) -> None:
     """Gemeinsamer Kern: AT liefert ueber ``at_pages`` (Seite -> Koerper)
     mindestens eine strukturell falsch typisierte Seiten-Antwort (Liste/Zahl
@@ -1471,3 +1585,612 @@ def test_geometry_cache_schluesselt_je_land_bei_gleicher_objectid(monkeypatch):
         meteoalarm._geometry_cache.clear()
         for key in ("AT:p1", "IT:p1"):
             meteoalarm._index_cache.pop(key, None)
+
+
+# ---------------------------------------------------------------------------
+# Issue #1397 Scheibe S1b -- in Produktion gemessene Kurzzeit-Ratenbremse auf
+# Index-Seiten (~1 Anfrage/4s, HTTP 429 ohne Retry-After, aber mit
+# x-ratelimit-reset als Unix-Sekunden). Vor S1b liess ein 429 auf JEDER
+# Folgeseite den GESAMTEN Index ausfallen -- selbst Seite 1 kam nicht mehr
+# an. Diese Tests belegen die Wiederholung (echter lokaler Server, kein
+# Mock) UND dass ein DAUERHAFTES 429 weiterhin ein echter Ausfall bleibt.
+# ---------------------------------------------------------------------------
+
+def _make_flaky_index_handler(pages: dict, page_hits: dict):
+    """Wie ``_make_paging_handler``, aber ``pages[(country, page)]`` ist eine
+    LISTE von Antworten -- die n-te Anfrage an dieselbe Seite bekommt den
+    n-ten Eintrag (der letzte Eintrag wiederholt sich bei weiteren
+    Anfragen). ``page_hits`` zaehlt die Treffer je Seite mit -- der Beweis,
+    WIE OFT tatsaechlich wiederholt wurde."""
+
+    class _Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802 - stdlib-Signatur
+            parsed = urllib.parse.urlparse(self.path)
+            qs = urllib.parse.parse_qs(parsed.query)
+            country = parsed.path.rsplit("/", 1)[-1]
+            page_num = int(qs.get("page", ["1"])[0])
+            key = (country, page_num)
+            hit = page_hits.get(key, 0)
+            page_hits[key] = hit + 1
+            entries = pages.get(key) or [{"body": {"features": []}}]
+            entry = entries[min(hit, len(entries) - 1)]
+            status = entry.get("status", 200)
+            self.send_response(status)
+            for header_name, header_value in entry.get("headers", {}).items():
+                self.send_header(header_name, header_value)
+            if status != 200:
+                self.end_headers()
+                return
+            body = json.dumps(entry["body"]).encode("utf-8")
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *_args):  # Testlauf-Output nicht zumuellen
+            pass
+
+    return _Handler
+
+
+def test_429_auf_folgeseite_wird_wiederholt_index_bleibt_vollstaendig(monkeypatch):
+    """S1b: GIVEN Seite 2 antwortet beim ERSTEN Versuch mit HTTP 429 +
+    ``x-ratelimit-reset`` (echter lokaler Server), WHEN
+    ``_get_cached_index()`` blaettert, THEN wird die Seite wiederholt statt
+    sofort als Ausfall zu gelten -- der Index enthaelt BEIDE Seiten, kein
+    Ausfall (Produktions-Vorfall aus dem Auftrag: vorher fiel dabei der
+    GESAMTE Index aus, obwohl Seite 1 laengst da war)."""
+    from services.official_alerts import meteoalarm
+
+    pages: dict = {}
+    page_hits: dict = {}
+    handler_cls = _make_flaky_index_handler(pages, page_hits)
+    server, thread = _run_server(handler_cls)
+    sleeps: list[float] = []
+    try:
+        pages[("AT", 1)] = [
+            {"body": {"metadata": {"total_pages": 2}, "features": [{"properties": {"alertId": "p1"}}]}}
+        ]
+        pages[("AT", 2)] = [
+            {"status": 429, "headers": {"x-ratelimit-reset": "1000"}},
+            {"body": {"features": [{"properties": {"alertId": "p2"}}]}},
+        ]
+
+        monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-flaky")
+        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
+        monkeypatch.setattr(meteoalarm, "_SLEEP_FN", sleeps.append)
+        monkeypatch.setattr(meteoalarm, "_WALL_CLOCK_FN", lambda: 1000.0)
+        for key in ("AT:p1", "AT:p2"):
+            meteoalarm._index_cache.pop(key, None)
+
+        index = meteoalarm._get_cached_index("AT")
+
+        assert index is not None, "429 auf einer Folgeseite darf NICHT sofort zum Ausfall fuehren"
+        alert_ids = {f["properties"]["alertId"] for f in index["features"]}
+        assert alert_ids == {"p1", "p2"}, f"Index muss BEIDE Seiten enthalten, erhalten: {alert_ids}"
+        assert page_hits[("AT", 2)] == 2, (
+            f"Seite 2 muss GENAU EINMAL wiederholt worden sein, Treffer: {page_hits[('AT', 2)]}"
+        )
+        # Zwei Pausen: die vorbeugende Pause VOR Seite 2 (Seite 1 lieferte
+        # keinen x-ratelimit-reset -> fester Standardabstand) und die
+        # 429-Wiederholungspause INNERHALB von cached_fetch (Reset == Fake-
+        # Uhr -> 0.0, kein reales Warten).
+        assert sleeps == [meteoalarm._PAGE_THROTTLE_DEFAULT_SECONDS, 0.0], (
+            f"erwartete Pausenfolge [Standardabstand, 0.0], war {sleeps!r}"
+        )
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+        for key in ("AT:p1", "AT:p2"):
+            meteoalarm._index_cache.pop(key, None)
+
+
+def test_429_dauerhaft_auf_folgeseite_liefert_teilergebnis_mit_fehlschlag_markierung(monkeypatch):
+    """DARF IN DER VERSUCHSZAHL NICHT AUFGEWEICHT WERDEN: haelt Seite 2
+    DURCHGEHEND (ueber alle Wiederholungsversuche) bei 429, WHEN
+    ``_get_cached_index()`` blaettert, THEN wird NICHT endlos wiederholt
+    (Versuche bleiben auf ``max_attempts`` gedeckelt). Seit Issue #1397
+    Scheibe S1c ist das Ergebnis ein GEKENNZEICHNETES Teilergebnis (Seite 1
+    kommt durch) statt eines stillen ``None`` -- nachgewiesen ueber
+    ``warn_egress.observe_fetch_failure()``, demselben Mechanismus, den
+    ``get_official_alerts_with_status()`` fuer ``unavailable=True`` nutzt."""
+    from services.official_alerts import meteoalarm, warn_egress
+
+    pages: dict = {}
+    page_hits: dict = {}
+    handler_cls = _make_flaky_index_handler(pages, page_hits)
+    server, thread = _run_server(handler_cls)
+    try:
+        pages[("AT", 1)] = [
+            {"body": {"metadata": {"total_pages": 2}, "features": [{"properties": {"alertId": "p1"}}]}}
+        ]
+        # Einziger Eintrag wiederholt sich bei JEDER weiteren Anfrage (s.
+        # ``_make_flaky_index_handler``) -- simuliert eine durchgehende Sperre.
+        pages[("AT", 2)] = [{"status": 429, "headers": {"x-ratelimit-reset": "1000"}}]
+
+        monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-flaky-persistent")
+        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
+        monkeypatch.setattr(meteoalarm, "_WALL_CLOCK_FN", lambda: 1000.0)
+
+        with warn_egress.observe_fetch_failure() as fetch_status:
+            index = meteoalarm._get_cached_index("AT")
+        expected_attempts = meteoalarm._rate_limit_retry_policy().max_attempts
+
+        assert index == {"features": [{"properties": {"alertId": "p1"}}]}, (
+            f"Seite 1 muss als gekennzeichnetes Teilergebnis durchkommen, war {index!r}"
+        )
+        assert fetch_status["failed"] is True, (
+            "eine echt fehlgeschlagene Folgeseite muss den Fetch als real fehlgeschlagen "
+            "markieren (Basis fuer unavailable=True) -- unabhaengig vom Zeitbudget"
+        )
+        assert page_hits[("AT", 2)] == expected_attempts, (
+            f"Nach Erschoepfung der Versuche darf NICHT weiter wiederholt werden -- erwartet "
+            f"{expected_attempts} Treffer, war {page_hits[('AT', 2)]}"
+        )
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+
+
+def test_throttle_before_next_page_derives_wait_from_last_reset(monkeypatch):
+    """S1b: GIVEN der letzte bekannte ``x-ratelimit-reset``, WHEN
+    ``_throttle_before_next_page()`` die vorbeugende Pause berechnet, THEN
+    wird sie aus ``reset - jetzt`` abgeleitet (gedeckelt), faellt ohne
+    bekannten Reset-Zeitpunkt auf den festen Standardabstand zurueck UND
+    deckelt einen absurd weit in der Zukunft liegenden Reset-Zeitpunkt."""
+    from services.official_alerts import meteoalarm
+
+    sleeps: list[float] = []
+    monkeypatch.setattr(meteoalarm, "_SLEEP_FN", sleeps.append)
+    monkeypatch.setattr(meteoalarm, "_WALL_CLOCK_FN", lambda: 998.0)
+
+    meteoalarm._throttle_before_next_page(1000.0)
+    assert sleeps == [2.0], f"Pause muss aus reset(1000) - jetzt(998) = 2.0s abgeleitet werden, war {sleeps!r}"
+
+    sleeps.clear()
+    meteoalarm._throttle_before_next_page(None)
+    assert sleeps == [meteoalarm._PAGE_THROTTLE_DEFAULT_SECONDS], (
+        f"ohne bekannten Reset-Zeitpunkt muss der feste Standardabstand gelten, war {sleeps!r}"
+    )
+
+    sleeps.clear()
+    monkeypatch.setattr(meteoalarm, "_WALL_CLOCK_FN", lambda: 0.0)
+    meteoalarm._throttle_before_next_page(999999.0)  # absurd weit in der Zukunft
+    assert sleeps == [meteoalarm._PAGE_THROTTLE_MAX_SECONDS], (
+        f"Pause vor der naechsten Seite muss gedeckelt werden, war {sleeps!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Issue #1397 Scheibe S1c -- schrittweises Blaettern ueber mehrere Aufrufe
+# hinweg statt "alles in einem Aufruf": Zeitfenster auf einen 30-Minuten-
+# Rasterpunkt gerundet, Cache-Schluessel traegt den Zeitslot, Zeitbudget je
+# Aufruf, unvollstaendig -> gekennzeichnetes Teilergebnis (nicht mehr
+# stilles ``None``).
+# ---------------------------------------------------------------------------
+
+class _SteppingClock:
+    """Deterministische Fake-Uhr (kein echtes Warten): gibt den aktuellen
+    Wert zurueck und ruecht danach um ``step`` weiter -- steuert, wann das
+    Zeitbudget als erschoepft gilt, ohne dass ein Test real warten muss."""
+
+    def __init__(self, start: float, step: float) -> None:
+        self.value = start
+        self.step = step
+
+    def __call__(self) -> float:
+        current = self.value
+        self.value += self.step
+        return current
+
+
+def test_budget_erschoepft_liefert_teilergebnis_zweiter_aufruf_vervollstaendigt(monkeypatch):
+    """S1c Kern-Nachweis: GIVEN ein AT-Index mit 4 Seiten UND eine Fake-Uhr,
+    die das Zeitbudget (20s) bereits nach Seite 2 erschoepft, WHEN
+    ``_get_cached_index()`` EINMAL aufgerufen wird, THEN liefert er NUR die
+    Treffer der Seiten 1+2 UND markiert den Fetch als real fehlgeschlagen
+    (Basis fuer ``unavailable=True``) -- Seiten 3+4 werden NICHT angefragt.
+    WHEN ein ZWEITER Aufruf im SELBEN Zeitslot mit ausreichendem Budget
+    folgt, THEN kommen die Seiten 1+2 aus dem Cache (kein erneuter
+    Netzwerk-Call) UND die Seiten 3+4 werden nachgeladen -- das Ergebnis ist
+    VOLLSTAENDIG und NICHT mehr als fehlgeschlagen markiert."""
+    from services.official_alerts import meteoalarm, warn_egress
+
+    pages: dict = {}
+    page_hits: dict = {}
+    handler_cls = _make_flaky_index_handler(pages, page_hits)
+    server, thread = _run_server(handler_cls)
+    try:
+        pages[("AT", 1)] = [
+            {"body": {"metadata": {"total_pages": 4}, "features": [{"properties": {"alertId": "p1"}}]}}
+        ]
+        pages[("AT", 2)] = [{"body": {"features": [{"properties": {"alertId": "p2"}}]}}]
+        pages[("AT", 3)] = [{"body": {"features": [{"properties": {"alertId": "p3"}}]}}]
+        pages[("AT", 4)] = [{"body": {"features": [{"properties": {"alertId": "p4"}}]}}]
+
+        monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-budget")
+        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
+
+        # Erster Aufruf: die Fake-Uhr schreitet so schnell voran, dass das
+        # Budget (20s) bereits VOR Seite 3 erschoepft ist.
+        monkeypatch.setattr(meteoalarm, "_WALL_CLOCK_FN", _SteppingClock(start=0.0, step=10.0))
+        with warn_egress.observe_fetch_failure() as first_status:
+            first_index = meteoalarm._get_cached_index("AT")
+
+        first_ids = {f["properties"]["alertId"] for f in first_index["features"]}
+        assert first_ids == {"p1", "p2"}, (
+            f"erster Aufruf muss NUR die vor Budget-Erschoepfung geholten Seiten liefern, war {first_ids}"
+        )
+        assert first_status["failed"] is True, (
+            "erschoepftes Budget muss den Fetch als real fehlgeschlagen markieren (unavailable=True)"
+        )
+        assert page_hits.get(("AT", 3), 0) == 0 and page_hits.get(("AT", 4), 0) == 0, (
+            "Seiten 3+4 duerfen beim ersten (budget-begrenzten) Aufruf NICHT angefragt werden"
+        )
+
+        # Zweiter Aufruf, SELBER Zeitslot (real verstreichen nur Millisekunden
+        # zwischen den beiden Aufrufen), ausreichend Budget (konstante
+        # Fake-Uhr): Seiten 1+2 kommen aus dem Cache, Seiten 3+4 werden
+        # nachgeladen -- das Ergebnis ist vollstaendig.
+        monkeypatch.setattr(meteoalarm, "_WALL_CLOCK_FN", _SteppingClock(start=0.0, step=0.0))
+        with warn_egress.observe_fetch_failure() as second_status:
+            second_index = meteoalarm._get_cached_index("AT")
+
+        second_ids = {f["properties"]["alertId"] for f in second_index["features"]}
+        assert second_ids == {"p1", "p2", "p3", "p4"}, (
+            f"zweiter Aufruf muss den Satz vervollstaendigen, war {second_ids}"
+        )
+        assert second_status["failed"] is False, (
+            "ein vollstaendiger Index darf NICHT mehr als fehlgeschlagen markiert werden"
+        )
+        assert page_hits[("AT", 1)] == 1, (
+            f"Seite 1 muss beim zweiten Aufruf aus dem Cache kommen (kein erneuter Call), "
+            f"Treffer: {page_hits[('AT', 1)]}"
+        )
+        assert page_hits[("AT", 2)] == 1, (
+            f"Seite 2 muss beim zweiten Aufruf aus dem Cache kommen (kein erneuter Call), "
+            f"Treffer: {page_hits[('AT', 2)]}"
+        )
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+
+
+def test_slot_helfer_runden_auf_raster():
+    """S1c: ``_current_slot_end()`` rundet auf die naechste 30-Minuten-
+    Rasterzelle AB (nicht auf/ab zum naechsten), ``_slot_key()`` bildet
+    daraus einen kompakten, sortierbaren Schluessel-Teil."""
+    from datetime import datetime, timezone
+
+    from services.official_alerts import meteoalarm
+
+    assert meteoalarm._current_slot_end(datetime(2026, 7, 27, 10, 17, 3, tzinfo=timezone.utc)) == \
+        datetime(2026, 7, 27, 10, 0, 0, tzinfo=timezone.utc)
+    assert meteoalarm._current_slot_end(datetime(2026, 7, 27, 10, 41, 59, tzinfo=timezone.utc)) == \
+        datetime(2026, 7, 27, 10, 30, 0, tzinfo=timezone.utc)
+    assert meteoalarm._current_slot_end(datetime(2026, 7, 27, 10, 30, 0, tzinfo=timezone.utc)) == \
+        datetime(2026, 7, 27, 10, 30, 0, tzinfo=timezone.utc)
+    assert meteoalarm._slot_key(datetime(2026, 7, 27, 10, 30, 0, tzinfo=timezone.utc)) == "20260727T1030Z"
+
+
+def test_prune_stale_slot_entries_entfernt_nur_fremde_slots_desselben_landes():
+    """S1c: GIVEN Cache-Eintraege aus einem FREMDEN und dem AKTUELLEN
+    Zeitslot desselben Landes sowie ein ANDERES Land, WHEN
+    ``_prune_stale_slot_entries()`` aufgerufen wird, THEN werden NUR die
+    fremden Slot-Eintraege DIESES Landes entfernt -- der Cache waechst bei
+    einem Slot-Wechsel nicht unbegrenzt weiter, andere Laender/der aktuelle
+    Slot bleiben unberuehrt (keine Vermischung alter/neuer Seiten)."""
+    from services.official_alerts import meteoalarm
+
+    meteoalarm._index_cache.update({
+        "AT:20260101T0000Z:p1": {"data": "alt"},
+        "AT:20260101T0000Z:p2": {"data": "alt"},
+        "AT:20260727T1000Z:p1": {"data": "aktuell"},
+        "IT:20260101T0000Z:p1": {"data": "anderes-land-bleibt"},
+    })
+
+    meteoalarm._prune_stale_slot_entries("AT", "20260727T1000Z")
+
+    assert set(meteoalarm._index_cache.keys()) == {"AT:20260727T1000Z:p1", "IT:20260101T0000Z:p1"}, (
+        f"nur fremde AT-Slots duerfen entfernt werden, verbleibend: {list(meteoalarm._index_cache.keys())}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tageskontingent-Fund (Issue #1397 S1c-Nachbesserung, Produktion 2026-07-27
+# 10:37 UTC): eigene Tagesbudget-Schranke (MeteoAlarmBudgetGate) VOR jedem
+# echten Index-Seiten-Abruf -- verhindert, dass wir ein Tageskontingent
+# selbst leerfeuern, bevor das echte Limit gemessen ist (#1329-Falle).
+# ---------------------------------------------------------------------------
+
+def test_budget_erschoepft_blockiert_index_abruf_komplett(monkeypatch):
+    """GIVEN das Tagesbudget ist bereits ausgeschoepft (Zaehler direkt
+    vorbereitet, kein Mock der Gate-Klasse), WHEN ``_get_cached_index()``
+    aufgerufen wird, THEN wird KEIN einziger echter Netzwerk-Call ausgeloest
+    (Server bekommt null Treffer auf Seite 1) UND der Fetch gilt als real
+    fehlgeschlagen."""
+    from services.official_alerts import meteoalarm, warn_egress
+
+    pages: dict = {}
+    page_hits: dict = {}
+    handler_cls = _make_flaky_index_handler(pages, page_hits)
+    server, thread = _run_server(handler_cls)
+    try:
+        pages[("AT", 1)] = [{"body": {"features": []}}]
+
+        gate = meteoalarm._meteoalarm_budget_gate()
+        for _ in range(gate.daily_budget):
+            gate.record_call()
+
+        monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-budget-exhausted")
+        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
+
+        with warn_egress.observe_fetch_failure() as fetch_status:
+            index = meteoalarm._get_cached_index("AT")
+
+        assert index is None, f"erschoepftes Budget muss Seite 1 blockieren -> None, war {index!r}"
+        assert fetch_status["failed"] is True
+        assert page_hits.get(("AT", 1), 0) == 0, (
+            f"KEIN echter Netzwerk-Call darf stattfinden, Treffer: {page_hits.get(('AT', 1), 0)}"
+        )
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+
+
+def test_budget_erschoepft_waehrend_blaetterns_liefert_teilergebnis(monkeypatch):
+    """GIVEN das Tagesbudget reicht fuer GENAU EINEN weiteren Abruf (Seite
+    1), WHEN ``_get_cached_index()`` blaettert, THEN liefert es Seite 1 als
+    Teilergebnis zurueck UND markiert den Fetch als real fehlgeschlagen --
+    Seite 2 wird gar nicht erst angefragt (kein Netzwerk-Call verschwendet).
+    Nutzt denselben Fail-soft-Pfad wie ein echter HTTP-Fehlschlag (S1c)."""
+    from services.official_alerts import meteoalarm, warn_egress
+
+    pages: dict = {}
+    page_hits: dict = {}
+    handler_cls = _make_flaky_index_handler(pages, page_hits)
+    server, thread = _run_server(handler_cls)
+    try:
+        pages[("AT", 1)] = [
+            {"body": {"metadata": {"total_pages": 2}, "features": [{"properties": {"alertId": "p1"}}]}}
+        ]
+        pages[("AT", 2)] = [{"body": {"features": [{"properties": {"alertId": "p2"}}]}}]
+
+        gate = meteoalarm._meteoalarm_budget_gate()
+        for _ in range(gate.daily_budget - 1):  # genau EIN Aufruf uebrig
+            gate.record_call()
+
+        monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-budget-midway")
+        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
+
+        with warn_egress.observe_fetch_failure() as fetch_status:
+            index = meteoalarm._get_cached_index("AT")
+
+        ids = {f["properties"]["alertId"] for f in index["features"]}
+        assert ids == {"p1"}, f"NUR Seite 1 darf im Teilergebnis stehen, war {ids}"
+        assert fetch_status["failed"] is True
+        assert page_hits.get(("AT", 2), 0) == 0, (
+            f"Seite 2 darf beim erschoepften Budget NICHT angefragt werden, Treffer: "
+            f"{page_hits.get(('AT', 2), 0)}"
+        )
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+
+
+def test_budget_gate_betrifft_nur_index_seiten_nicht_geometrie_cap(monkeypatch):
+    """Team-Lead-Vorgabe: die Budget-Schranke gilt NUR fuer Index-Seiten --
+    ein bereits (fast) ausgeschoepftes Tagesbudget darf den Nachlade-Abruf
+    (Geometrie/CAP) fuer ein bereits gefundenes Feature NICHT blockieren."""
+    from services.official_alerts import meteoalarm
+
+    calls: list[str] = []
+    pages: dict = {}
+    trentino_geometry = {
+        "type": "Polygon",
+        "coordinates": [[[7.5, 45.0], [7.5, 45.5], [8.5, 45.5], [8.5, 45.0], [7.5, 45.0]]],
+    }
+    handler_cls = _make_paging_handler(
+        pages=pages,
+        geometry_bodies={"/geometry/budget-ok": trentino_geometry},
+        cap_bodies={"/cap/budget-ok": _read_fixture("cap_villach_heat.xml")},
+        calls=calls,
+    )
+    server, thread = _run_server(handler_cls)
+    try:
+        base_url = f"http://127.0.0.1:{server.server_port}"
+        treffer_feature = _minimal_feature(
+            "AT", "BUDGET-GATE-TEST", "budget-alert", base_url,
+            "/geometry/budget-ok", "/cap/budget-ok",
+        )
+        pages[("AT", 1)] = {"body": {"metadata": {"total_pages": 1}, "features": [treffer_feature]}}
+
+        gate = meteoalarm._meteoalarm_budget_gate()
+        for _ in range(gate.daily_budget - 1):  # genau ein Index-Aufruf (Seite 1) uebrig
+            gate.record_call()
+
+        monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-budget-geometry")
+        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", base_url)
+
+        alerts = meteoalarm.MeteoAlarmSource().fetch(45.263, 7.917)
+
+        assert any(a.hazard == "extreme_heat" for a in alerts), (
+            f"Geometrie-/CAP-Nachladen darf durch das Index-Budget NICHT blockiert werden, "
+            f"erhalten: {alerts}"
+        )
+        assert "/cap/budget-ok" in calls
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+
+
+# ---------------------------------------------------------------------------
+# Fensterlaenge-Fund (Issue #1397 S1c-Nachbesserung, Team-Lead-Entscheidung
+# 2026-07-27): das Publikations-Abfragefenster ist jetzt konfigurierbar
+# (Standard 3h statt der urspruenglichen 23h), Slot-Raster/-Schluessel
+# bleiben unveraendert.
+# ---------------------------------------------------------------------------
+
+def test_index_window_hours_default_and_env_override(monkeypatch):
+    """GIVEN keine ENV gesetzt, WHEN ``_index_window_hours()`` aufgerufen
+    wird, THEN liefert es ``DEFAULT_INDEX_WINDOW_HOURS`` (3.0). Ein gueltiger
+    ``GZ_METEOALARM_WINDOW_HOURS``-Wert ueberschreibt ihn; ein unlesbarer
+    oder nicht-positiver Wert faellt fail-soft auf den Default zurueck."""
+    from services.official_alerts import meteoalarm
+
+    monkeypatch.delenv("GZ_METEOALARM_WINDOW_HOURS", raising=False)
+    assert meteoalarm.DEFAULT_INDEX_WINDOW_HOURS == 3.0
+    assert meteoalarm._index_window_hours() == 3.0
+
+    monkeypatch.setenv("GZ_METEOALARM_WINDOW_HOURS", "6")
+    assert meteoalarm._index_window_hours() == 6.0
+
+    monkeypatch.setenv("GZ_METEOALARM_WINDOW_HOURS", "nicht-lesbar")
+    assert meteoalarm._index_window_hours() == 3.0, "unlesbarer ENV-Wert faellt auf Default zurueck"
+
+    monkeypatch.setenv("GZ_METEOALARM_WINDOW_HOURS", "0")
+    assert meteoalarm._index_window_hours() == 3.0, "0 ist kein gueltiges Fenster -> Default"
+
+    monkeypatch.setenv("GZ_METEOALARM_WINDOW_HOURS", "-3")
+    assert meteoalarm._index_window_hours() == 3.0, "negativer Wert -> Default"
+
+
+def _make_window_capturing_handler(captured: list):
+    """Echter lokaler Server (kein Mock): zeichnet den ANGEFRAGTEN Pfad
+    (inkl. ``datetime``-Query) auf, statt eine feste Fixture zu spielen --
+    Beweis dafuer, welches Fenster tatsaechlich gesendet wurde."""
+
+    class _Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802 - stdlib-Signatur
+            captured.append(self.path)
+            body = json.dumps({"features": []}).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *_args):  # Testlauf-Output nicht zumuellen
+            pass
+
+    return _Handler
+
+
+def _extract_query_window(path: str) -> "tuple":
+    from datetime import datetime as _dt
+
+    qs = urllib.parse.parse_qs(urllib.parse.urlparse(path).query)
+    start_str, end_str = qs["datetime"][0].split("/")
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    return _dt.strptime(start_str, fmt), _dt.strptime(end_str, fmt)
+
+
+def test_index_window_hours_default_ist_drei_stunden(monkeypatch):
+    """S1c-Nachbesserung: OHNE ENV muss die tatsaechlich an die API gesendete
+    ``datetime``-Query GENAU 3 Stunden umfassen (Standard), nicht mehr die
+    urspruenglichen 23h."""
+    from datetime import timedelta
+
+    from services.official_alerts import meteoalarm
+
+    captured: list[str] = []
+    handler_cls = _make_window_capturing_handler(captured)
+    server, thread = _run_server(handler_cls)
+    try:
+        monkeypatch.delenv("GZ_METEOALARM_WINDOW_HOURS", raising=False)
+        monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-window-default")
+        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
+
+        meteoalarm._get_cached_index("AT")
+
+        assert len(captured) == 1
+        start_dt, end_dt = _extract_query_window(captured[0])
+        assert end_dt - start_dt == timedelta(hours=3), (
+            f"Standardfenster muss 3h betragen, war {end_dt - start_dt}"
+        )
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+
+
+def test_index_window_hours_env_override_aendert_gesendete_query(monkeypatch):
+    """S1c-Nachbesserung: GIVEN ``GZ_METEOALARM_WINDOW_HOURS=1``, WHEN
+    ``_get_cached_index()`` den Index-Call baut, THEN liegt der angefragte
+    Start-Zeitpunkt GENAU 1h vor dem (auf den Slot gerundeten) Ende --
+    ohne Deploy nachziehbar, sobald das echte Limit bekannt ist."""
+    from datetime import timedelta
+
+    from services.official_alerts import meteoalarm
+
+    captured: list[str] = []
+    handler_cls = _make_window_capturing_handler(captured)
+    server, thread = _run_server(handler_cls)
+    try:
+        monkeypatch.setenv("GZ_METEOALARM_WINDOW_HOURS", "1")
+        monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-window-override")
+        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
+
+        meteoalarm._get_cached_index("AT")
+
+        assert len(captured) == 1
+        start_dt, end_dt = _extract_query_window(captured[0])
+        assert end_dt - start_dt == timedelta(hours=1), (
+            f"ENV-Override muss die gesendete Fensterlaenge auf 1h aendern, war {end_dt - start_dt}"
+        )
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+
+
+# ---------------------------------------------------------------------------
+# Adversary-Fund (Runde 2, 2026-07-27): der beobachtete Tageskontingent-
+# Reset muss aus dem echten meteoalarm-Pfad (_get_cached_index -> on_response
+# -> _capture_reset) tatsaechlich im Budget-Gate persistiert werden, nicht
+# nur in einem isolierten Unit-Test der Gate-Klasse.
+# ---------------------------------------------------------------------------
+
+def test_beobachteter_daily_reset_sperrt_budget_ueber_echten_pfad(monkeypatch):
+    """GIVEN ein echter lokaler Server antwortet mit einem Tageskontingent-
+    429 (x-ratelimit-reset 86.399s in der Zukunft, belegte Messung), WHEN
+    ``_get_cached_index()`` diese Antwort verarbeitet, THEN persistiert der
+    ECHTE meteoalarm-Pfad (``_capture_reset`` -> ``record_observed_reset``)
+    diesen Reset-Zeitpunkt im Budget-Gate -- das Budget bleibt bis dahin
+    GESPERRT, obwohl der eigene Zaehlerstand (1 Versuch, keine Wiederholung
+    bei Tageskontingent) weit unter dem 200er-Budget liegt."""
+    from datetime import datetime, timezone
+
+    from services.official_alerts import meteoalarm
+
+    pages: dict = {}
+    page_hits: dict = {}
+    handler_cls = _make_flaky_index_handler(pages, page_hits)
+    server, thread = _run_server(handler_cls)
+    try:
+        # 1000.0 (Fake-Uhr) + 86399s = 87399.0 -- exakt die belegte Messung.
+        pages[("AT", 1)] = [{"status": 429, "headers": {"x-ratelimit-reset": "87399"}}]
+
+        monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-observed-reset")
+        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
+        monkeypatch.setattr(meteoalarm, "_WALL_CLOCK_FN", lambda: 1000.0)
+
+        index = meteoalarm._get_cached_index("AT")
+
+        assert index is None, "Tageskontingent-429 auf Seite 1 -> kein Index"
+        assert page_hits[("AT", 1)] == 1, (
+            f"Tageskontingent darf NICHT wiederholt werden, Treffer: {page_hits[('AT', 1)]}"
+        )
+
+        gate = meteoalarm._meteoalarm_budget_gate()
+        before_reset = datetime.fromtimestamp(1000.0 + 43200, tz=timezone.utc)  # 12h spaeter
+        after_reset = datetime.fromtimestamp(87400.0, tz=timezone.utc)  # kurz NACH dem Reset
+
+        assert gate.allow(now=before_reset) is False, (
+            "das Budget muss bis zum ECHTEN, ueber den meteoalarm-Pfad beobachteten "
+            "Reset-Zeitpunkt gesperrt bleiben -- auch mit nur 1 verbrauchtem Aufruf"
+        )
+        assert gate.allow(now=after_reset) is True, (
+            "nach dem beobachteten Reset-Zeitpunkt muss das Budget wieder oeffnen"
+        )
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)

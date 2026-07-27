@@ -371,3 +371,377 @@ def test_429_marked_in_jsonl(tmp_path, monkeypatch):
     assert without_header["retry_after"] is None, (
         f"429 ohne Header muss retry_after=null tragen, war {without_header['retry_after']!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Issue #1397 Scheibe S1b — optionale RateLimitRetryPolicy: MeteoAlarm bremst
+# Index-Seiten kurzzeitig aus (kein Retry-After, aber x-ratelimit-reset als
+# Unix-Sekunden). cached_fetch() bekommt eine OPT-IN-Wiederholung; OHNE das
+# neue Argument (Vigilance/GeoSphere/Météo-Forêts/Massif) bleibt das
+# Verhalten bit-identisch zum Bestand.
+# ---------------------------------------------------------------------------
+
+def test_429_retry_with_ratelimit_reset_succeeds_no_partial_outage(tmp_path, monkeypatch):
+    """GIVEN eine aktive RateLimitRetryPolicy und ein 429 mit
+    ``x-ratelimit-reset`` auf den ERSTEN Versuch, WHEN ``cached_fetch()``
+    erneut aufruft, THEN liefert der zweite (200er) Versuch das Ergebnis --
+    kein Ausfall, und die Wartezeit wird exakt aus ``reset - jetzt``
+    berechnet (injizierte Fake-Uhr/-Sleep, kein echtes Warten)."""
+    from services.official_alerts import warn_egress
+
+    monkeypatch.setattr(
+        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+    )
+    responses = [
+        httpx.Response(429, headers={"x-ratelimit-reset": "1000"}),
+        httpx.Response(200, json={"features": ["seite-2"]}),
+    ]
+    calls: list[int] = []
+
+    def _request() -> httpx.Response:
+        calls.append(1)
+        return responses[len(calls) - 1]
+
+    sleeps: list[float] = []
+    policy = warn_egress.RateLimitRetryPolicy(
+        max_attempts=3,
+        sleep_fn=sleeps.append,
+        wall_clock_fn=lambda: 998.0,  # 2s vor dem Reset-Zeitpunkt
+    )
+
+    result = warn_egress.cached_fetch(
+        cache={},
+        cache_key="AT:p2",
+        service="meteoalarm",
+        host="api.meteoalarm.org",
+        request_fn=_request,
+        parse_fn=lambda r: r.json(),
+        clock=_fixed_clock(1000.0),
+        rate_limit_retry=policy,
+    )
+
+    assert len(calls) == 2, (
+        f"429 dann 200 muss GENAU EINE Wiederholung ausloesen, war {len(calls)} Aufrufe"
+    )
+    assert result == {"features": ["seite-2"]}, (
+        f"Nach erfolgreicher Wiederholung muss die 200er-Antwort geliefert werden, war {result!r}"
+    )
+    assert sleeps == [2.0], (
+        f"Wartezeit muss aus reset(1000) - jetzt(998) = 2.0s berechnet werden, war {sleeps!r}"
+    )
+
+
+def test_429_exhaustion_all_attempts_stays_unavailable(tmp_path, monkeypatch):
+    """DARF NICHT AUFGEWEICHT WERDEN: GIVEN JEDER Versuch bis ``max_attempts``
+    liefert 429, WHEN ``cached_fetch()`` sie verarbeitet, THEN bleibt es beim
+    heutigen Ausfall-Verhalten -- ``None``, Cache-Eintrag mit dem ueblichen
+    Backoff ``max(retry_after, success_ttl)``, KEIN endloses Wiederholen."""
+    from services.official_alerts import warn_egress
+
+    monkeypatch.setattr(
+        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+    )
+    calls: list[int] = []
+
+    def _request() -> httpx.Response:
+        calls.append(1)
+        return httpx.Response(429, headers={"x-ratelimit-reset": "1000"})
+
+    sleeps: list[float] = []
+    policy = warn_egress.RateLimitRetryPolicy(
+        max_attempts=3, sleep_fn=sleeps.append, wall_clock_fn=lambda: 998.0,
+    )
+    cache: dict = {}
+    result = warn_egress.cached_fetch(
+        cache=cache,
+        cache_key="AT:p2",
+        service="meteoalarm",
+        host="api.meteoalarm.org",
+        request_fn=_request,
+        parse_fn=lambda r: r.json(),
+        clock=_fixed_clock(5000.0),
+        rate_limit_retry=policy,
+    )
+
+    assert result is None, f"Erschoepfte Versuche muessen Ausfall bleiben, war {result!r}"
+    assert len(calls) == 3, f"max_attempts=3 muss genau 3 Versuche ausloesen, war {len(calls)}"
+    assert len(sleeps) == 2, f"zwischen 3 Versuchen wird genau zweimal gewartet, war {sleeps!r}"
+    assert cache["AT:p2"]["ttl"] == warn_egress.WARN_SUCCESS_TTL, (
+        f"Backoff nach Erschoepfung bleibt der bestehende max(retry_after, success_ttl), "
+        f"war {cache['AT:p2']['ttl']}"
+    )
+
+
+def test_429_retry_attempts_each_append_jsonl_line(tmp_path, monkeypatch):
+    """Adversary-Fund (Issue #1397 S1c-Runde): ein 429-Zwischenversuch ist
+    ein ECHTER Abruf gegen die API und muss im Egress-Zaehler auftauchen --
+    sonst ist der Zaehler kein verlaesslicher Verbrauchs-Nachweis mehr.
+    GIVEN 3 Versuche liefern durchgehend 429 (kurzer Reset-Abstand, also
+    Kurzzeit-Bremse), WHEN ``cached_fetch()`` sie verarbeitet, THEN stehen
+    GENAU 3 jsonl-Zeilen (status=429, cache_hit=false) in der Zaehler-Datei
+    -- ALLE DREI mit dem aus ``x-ratelimit-reset`` ermittelten Wartewert als
+    ``retry_after`` (auch der finale, erschoepfte Versuch: Tageskontingent-
+    Fund, Punkt 3 -- der Zaehler soll den Reset-Zeitpunkt zeigen, auch ohne
+    literalen ``Retry-After``-Header)."""
+    from services.official_alerts import warn_egress
+
+    jsonl = tmp_path / "warn_service_calls.jsonl"
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH", jsonl)
+
+    def _request() -> httpx.Response:
+        return httpx.Response(429, headers={"x-ratelimit-reset": "1000"})
+
+    policy = warn_egress.RateLimitRetryPolicy(
+        max_attempts=3, sleep_fn=lambda _s: None, wall_clock_fn=lambda: 998.0,
+    )
+    warn_egress.cached_fetch(
+        cache={},
+        cache_key="AT:p2",
+        service="meteoalarm",
+        host="api.meteoalarm.org",
+        request_fn=_request,
+        parse_fn=lambda r: r.json(),
+        clock=_fixed_clock(5000.0),
+        rate_limit_retry=policy,
+    )
+
+    lines = [ln for ln in jsonl.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    assert len(lines) == 3, (
+        f"3 Versuche muessen 3 Zaehler-Zeilen ergeben (jeder Zwischenversuch ist ein "
+        f"echter Abruf), war {len(lines)}"
+    )
+    records = [json.loads(ln) for ln in lines]
+    for rec in records:
+        assert rec["status"] == 429
+        assert rec["cache_hit"] is False
+    # Alle drei Zeilen tragen den aus x-ratelimit-reset ermittelten Wartewert
+    # (reset(1000) - wall_clock(998) = 2.0s) -- auch die dritte (finaler,
+    # erschoepfter 429-Zweig ohne literalen Retry-After-Header).
+    assert records[0]["retry_after"] == 2.0
+    assert records[1]["retry_after"] == 2.0
+    assert records[2]["retry_after"] == 2.0, (
+        f"finaler 429-Zweig muss ohne Retry-After-Header auf den "
+        f"x-ratelimit-reset-Wert zurueckfallen, war {records[2]['retry_after']!r}"
+    )
+
+
+def test_ratelimit_wait_is_capped_for_far_future_reset():
+    """GIVEN ein ``x-ratelimit-reset`` absurd weit in der Zukunft, WHEN
+    ``RateLimitRetryPolicy.wait_seconds()`` die Wartezeit berechnet, THEN
+    wird sie auf ``max_wait_seconds`` gedeckelt -- der synchrone Sendeweg darf
+    dadurch nicht minutenlang haengen."""
+    from services.official_alerts import warn_egress
+
+    policy = warn_egress.RateLimitRetryPolicy(max_wait_seconds=8.0, wall_clock_fn=lambda: 1000.0)
+    headers = httpx.Headers({"x-ratelimit-reset": "999999999"})
+    wait = policy.wait_seconds(headers)
+    assert wait == 8.0, f"Wartezeit muss auf max_wait_seconds gedeckelt werden, war {wait}"
+
+
+def test_ratelimit_wait_falls_back_to_default_without_readable_header():
+    """GIVEN ``x-ratelimit-reset`` fehlt oder ist unlesbar, WHEN
+    ``RateLimitRetryPolicy.wait_seconds()`` aufgerufen wird, THEN greift ein
+    fester Abstand (``default_wait_seconds``) -- kein Absturz."""
+    from services.official_alerts import warn_egress
+
+    policy = warn_egress.RateLimitRetryPolicy(default_wait_seconds=4.0, wall_clock_fn=lambda: 1000.0)
+    assert policy.wait_seconds(httpx.Headers({})) == 4.0
+    assert policy.wait_seconds(httpx.Headers({"x-ratelimit-reset": "nicht-lesbar"})) == 4.0
+    assert policy.wait_seconds(None) == 4.0
+
+
+def test_429_without_rate_limit_retry_param_stays_unchanged_for_other_services(
+    tmp_path, monkeypatch
+):
+    """Regressionsnachweis Issue #1397 S1b: ruft ``cached_fetch()`` OHNE
+    ``rate_limit_retry`` auf -- genau wie Vigilance/GeoSphere/Météo-Forêts/
+    Massif es weiterhin tun. GIVEN eine 429-Antwort mit ``Retry-After: 45``,
+    WHEN ``cached_fetch()`` sie verarbeitet, THEN wird ``request_fn()``
+    GENAU EINMAL aufgerufen (keine Wiederholung) und der Backoff bleibt
+    ``max(retry_after, success_ttl)`` wie vor S1b."""
+    from services.official_alerts import warn_egress
+
+    monkeypatch.setattr(
+        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+    )
+    calls: list[int] = []
+
+    def _request() -> httpx.Response:
+        calls.append(1)
+        return httpx.Response(429, headers={"Retry-After": "45"})
+
+    cache: dict = {}
+    result = warn_egress.cached_fetch(
+        cache=cache,
+        cache_key="FR",
+        service="vigilance",
+        host="vigilance-api.meteofrance.fr",
+        request_fn=_request,
+        parse_fn=lambda r: r.json(),
+        clock=_fixed_clock(5000.0),
+    )
+
+    assert result is None
+    assert len(calls) == 1, (
+        f"Ohne rate_limit_retry darf request_fn() genau einmal aufgerufen werden, war {len(calls)}"
+    )
+    assert cache["FR"]["ttl"] == max(45.0, warn_egress.WARN_SUCCESS_TTL), (
+        f"Backoff-Formel fuer die anderen Dienste bleibt unveraendert, war {cache['FR']['ttl']}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tageskontingent-Fund (Issue #1397 S1c-Nachbesserung, Produktion 2026-07-27
+# 10:37 UTC): MeteoAlarm liefert bei erschoepftem TAGESKONTINGENT ebenfalls
+# 429, aber mit ``x-ratelimit-reset`` ~86400s in der Zukunft statt weniger
+# Sekunden. Wiederholen waere hier verschenkt (das Kontingent bleibt bis zum
+# Reset erschoepft) -- die Unterscheidung laeuft ueber den Abstand des
+# Reset-Zeitpunkts, NICHT ueber den Statuscode.
+# ---------------------------------------------------------------------------
+
+def test_is_long_lived_unterscheidet_kurzzeit_von_tageskontingent():
+    """GIVEN verschiedene ``x-ratelimit-reset``-Abstaende, WHEN
+    ``is_long_lived()`` sie bewertet, THEN gilt: Abstand <=
+    ``short_wait_ceiling_seconds`` -> Kurzzeit (``False``), Abstand darueber
+    -> Tageskontingent (``True``), fehlender/unlesbarer Header -> Kurzzeit-
+    Annahme (``False``, ohne Reset-Zeitpunkt nicht als Tageskontingent
+    erkennbar)."""
+    from services.official_alerts import warn_egress
+
+    policy = warn_egress.RateLimitRetryPolicy(
+        short_wait_ceiling_seconds=60.0, wall_clock_fn=lambda: 1000.0,
+    )
+
+    assert policy.is_long_lived(httpx.Headers({"x-ratelimit-reset": "1002"})) is False, (
+        "2s Abstand ist eindeutig Kurzzeit-Bremse"
+    )
+    assert policy.is_long_lived(httpx.Headers({"x-ratelimit-reset": "1060"})) is False, (
+        "genau an der Grenze (60s) gilt noch als Kurzzeit"
+    )
+    assert policy.is_long_lived(httpx.Headers({"x-ratelimit-reset": "1061"})) is True, (
+        "1s ueber der Grenze gilt als Tageskontingent"
+    )
+    assert policy.is_long_lived(httpx.Headers({"x-ratelimit-reset": str(1000 + 86399)})) is True, (
+        "belegter Produktions-Fall (86399s) muss als Tageskontingent erkannt werden"
+    )
+    assert policy.is_long_lived(httpx.Headers({})) is False, (
+        "fehlender Header -> Kurzzeit-Annahme (kein Reset-Zeitpunkt erkennbar)"
+    )
+    assert policy.is_long_lived(None) is False
+
+
+def test_long_lived_429_wird_nicht_wiederholt(tmp_path, monkeypatch):
+    """Tageskontingent-Fund: GIVEN ein 429 mit ``x-ratelimit-reset`` weit in
+    der Zukunft (belegter Fall: 86399s), WHEN ``cached_fetch()`` es
+    verarbeitet, THEN wird ``request_fn()`` GENAU EINMAL aufgerufen (KEINE
+    Wiederholung, jeder Versuch waere gegen ein erschoepftes Tageskontingent
+    verschenkt) UND der Rueckzug reicht bis zum Reset-Zeitpunkt (nicht die
+    kurze warngerechte success_ttl)."""
+    from services.official_alerts import warn_egress
+
+    monkeypatch.setattr(
+        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+    )
+    calls: list[int] = []
+
+    def _request() -> httpx.Response:
+        calls.append(1)
+        return httpx.Response(429, headers={"x-ratelimit-reset": "87399"})
+
+    sleeps: list[float] = []
+    policy = warn_egress.RateLimitRetryPolicy(
+        max_attempts=3, sleep_fn=sleeps.append, wall_clock_fn=lambda: 1000.0,
+    )
+    cache: dict = {}
+    result = warn_egress.cached_fetch(
+        cache=cache,
+        cache_key="AT:p1",
+        service="meteoalarm",
+        host="api.meteoalarm.org",
+        request_fn=_request,
+        parse_fn=lambda r: r.json(),
+        clock=_fixed_clock(5000.0),
+        rate_limit_retry=policy,
+    )
+
+    assert result is None
+    assert len(calls) == 1, (
+        f"Tageskontingent darf NICHT wiederholt werden -- request_fn() genau einmal, war {len(calls)}"
+    )
+    assert sleeps == [], "kein Zwischenversuch bedeutet keine Wartezeit vor einer Wiederholung"
+    expected_backoff = 87399.0 - 1000.0  # 86399s -- reicht bis zum Reset-Zeitpunkt
+    assert cache["AT:p1"]["ttl"] == expected_backoff, (
+        f"Rueckzug muss bis zum Reset-Zeitpunkt reichen (nicht die kurze success_ttl), "
+        f"war {cache['AT:p1']['ttl']}"
+    )
+
+
+def test_long_lived_429_backoff_wird_gedeckelt(tmp_path, monkeypatch):
+    """GIVEN ein ``x-ratelimit-reset`` absurd weit in der Zukunft (weiter
+    als 24h), WHEN ``cached_fetch()`` den Rueckzug berechnet, THEN wird er
+    auf ``long_backoff_cap_seconds`` gedeckelt -- ein einzelner falscher/
+    manipulierter Header darf den Dienst nicht tagelang lahmlegen."""
+    from services.official_alerts import warn_egress
+
+    monkeypatch.setattr(
+        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+    )
+
+    def _request() -> httpx.Response:
+        return httpx.Response(429, headers={"x-ratelimit-reset": str(10_000_000)})
+
+    policy = warn_egress.RateLimitRetryPolicy(
+        long_backoff_cap_seconds=24 * 3600.0, wall_clock_fn=lambda: 0.0,
+    )
+    cache: dict = {}
+    warn_egress.cached_fetch(
+        cache=cache,
+        cache_key="AT:p1",
+        service="meteoalarm",
+        host="api.meteoalarm.org",
+        request_fn=_request,
+        parse_fn=lambda r: r.json(),
+        clock=_fixed_clock(5000.0),
+        rate_limit_retry=policy,
+    )
+
+    assert cache["AT:p1"]["ttl"] == 24 * 3600.0, (
+        f"Rueckzug muss auf long_backoff_cap_seconds gedeckelt werden, war {cache['AT:p1']['ttl']}"
+    )
+
+
+def test_long_lived_429_counter_zeigt_reset_zeitpunkt(tmp_path, monkeypatch):
+    """Tageskontingent-Fund Punkt 3: GIVEN ein Tageskontingent-429 (kein
+    literaler ``Retry-After``-Header), WHEN die Zaehler-Zeile geschrieben
+    wird, THEN traegt sie den aus ``x-ratelimit-reset`` ermittelten
+    (gedeckelten) Wert als ``retry_after`` -- morgen muss aus dem Zaehler
+    ablesbar sein, WANN das Tageskontingent zuschlug."""
+    from services.official_alerts import warn_egress
+
+    jsonl = tmp_path / "warn_service_calls.jsonl"
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH", jsonl)
+
+    def _request() -> httpx.Response:
+        return httpx.Response(429, headers={"x-ratelimit-reset": "87399"})
+
+    policy = warn_egress.RateLimitRetryPolicy(wall_clock_fn=lambda: 1000.0)
+    warn_egress.cached_fetch(
+        cache={},
+        cache_key="AT:p1",
+        service="meteoalarm:AT:p1",
+        host="api.meteoalarm.org",
+        request_fn=_request,
+        parse_fn=lambda r: r.json(),
+        clock=_fixed_clock(5000.0),
+        rate_limit_retry=policy,
+    )
+
+    lines = [ln for ln in jsonl.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    assert len(lines) == 1
+    rec = json.loads(lines[0])
+    assert rec["service"] == "meteoalarm:AT:p1", (
+        "Land+Seite muessen im service-Feld unterscheidbar sein (Punkt 3)"
+    )
+    assert rec["retry_after"] == 86399.0, (
+        f"Zaehler muss den ermittelten Reset-Abstand zeigen, war {rec['retry_after']!r}"
+    )
