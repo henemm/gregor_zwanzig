@@ -51,10 +51,23 @@ def _result() -> ComparisonResult:
 # bislang UNABHAENGIG von Auswahl/Schalter -- kein Kern-Test deckte ihn ab,
 # weil _loc_result() oben keine hourly_data traegt. Eigene Fixture MIT
 # hourly_data fuer den Klartext-Stundenverlauf-Nachweis.
-def _result_mit_stunden() -> ComparisonResult:
+def _result_mit_stunden(*, mit_ausblick: bool = False) -> ComparisonResult:
     dp = ForecastDataPoint(ts=datetime(2026, 7, 24, 8, 0), t2m_c=18.0, wind10m_kmh=12.0)
     loc = _loc_result("a", "Innsbruck")
     loc.hourly_data = [dp]
+    if mit_ausblick:
+        # Zweiter Staging-Fund (2026-07-26): OHNE Ausblicksdaten verschwand der
+        # Abschnittskopf zusammen mit der Tabelle, die Luecke blieb unsichtbar.
+        # Drei Folgetage a zwei Punkten = genau der Ausblick, den die echte Mail
+        # traegt (_build_location_outlook_rows cappt auf 3 Kalendertage).
+        loc.outlook_hourly_data = [
+            ForecastDataPoint(
+                ts=datetime(2026, 7, 25 + tag, stunde, 0),
+                t2m_c=14.0 + stunde, wind10m_kmh=10.0,
+            )
+            for tag in range(3)
+            for stunde in (9, 15)
+        ]
     return ComparisonResult(
         locations=[loc], time_window=(0, 23), target_date=date(2026, 7, 24),
         created_at=datetime(2026, 7, 24, 4, 0),
@@ -213,21 +226,33 @@ class TestKlartextStundenverlaufAC4:
     durchlaufen wird und den kein bisheriger Kern-Test abdeckte."""
 
     def test_leere_stundenauswahl_und_abgeschalteter_schalter_zeigen_keinen_stundenblock(self):
+        """Mit Ausblicksdaten -- genau die Lage der echten Staging-Mail. Ohne
+        sie fiel der Kopf zufaellig mit der Tabelle weg (leerer
+        `section_lines`-Puffer), mit ihnen blieb er stehen und beschriftete
+        den 3-Tages-Ausblick falsch."""
         preset = {"id": "p-ac4", "display_config": {"hourly_metrics": []}}
         options = resolve_compare_render_options(preset)
         assert options.hourly_enabled is False  # Voraussetzung, s. TestReportConfigResolverAC4AC5
 
         _, plain = render_compare_email(
-            _result_mit_stunden(),
+            _result_mit_stunden(mit_ausblick=True),
             hourly_metrics=options.hourly_metrics,
             hourly_enabled=options.hourly_enabled,
+            outlook_enabled=True,
+        )
+        assert "Nächste Etappen" in plain, (
+            "Voraussetzung: der 3-Tages-Ausblick steht im Klartext (nur dann "
+            "kann der Kopf ohne Stundenzeilen ueberhaupt haengenbleiben)"
         )
         assert "STUNDENVERLAUF" not in plain, (
             "AC-4: bewusste Leerauswahl (-> hourly_enabled=False) darf im Klartext "
-            "keinen Stundenverlauf-Abschnitt zeigen"
+            "weder Ueberschrift noch Geruest zeigen -- auch dann nicht, wenn "
+            f"darunter noch der 3-Tages-Ausblick steht. Klartext:\n{plain}"
         )
 
     def test_gesetzte_auswahl_zeigt_nur_die_gewaehlten_werte_in_der_gewaehlten_reihenfolge(self):
+        """Gegenprobe: bei nicht-leerer Auswahl bleibt alles wie es war --
+        Ueberschrift, Stundenzeilen UND Ausblick."""
         preset = {
             "id": "p-ac4-auswahl",
             "display_config": {"hourly_metrics": ["wind_kmh", "temp_c"]},
@@ -236,9 +261,10 @@ class TestKlartextStundenverlaufAC4:
         options = resolve_compare_render_options(preset)
 
         _, plain = render_compare_email(
-            _result_mit_stunden(),
+            _result_mit_stunden(mit_ausblick=True),
             hourly_metrics=options.hourly_metrics,
             hourly_enabled=options.hourly_enabled,
+            outlook_enabled=True,
         )
         assert "STUNDENVERLAUF" in plain
         hour_line = next(line for line in plain.splitlines() if "08:00" in line)
@@ -246,6 +272,32 @@ class TestKlartextStundenverlaufAC4:
             f"Reihenfolge der Auswahl muss die Spaltenfolge bestimmen, erhalten: {hour_line!r}"
         )
         assert "Gef." not in hour_line, "nicht gewaehlte Spalten duerfen nicht erscheinen"
+        assert "Nächste Etappen" in plain, (
+            "Der 3-Tages-Ausblick bleibt unveraendert erhalten"
+        )
+        assert plain.index("STUNDENVERLAUF") < plain.index("08:00") < plain.index("Nächste Etappen"), (
+            f"Reihenfolge Kopf -> Stundenzeilen -> Ausblick muss bleiben:\n{plain}"
+        )
+
+    def test_ausblick_bleibt_ohne_stundenzeilen_erhalten(self):
+        """Gegenprobe zur Kopf-Bedingung: der Ausblick selbst darf NICHT mit
+        dem Kopf verschwinden -- er haengt nicht am Stundenverlauf-Schalter
+        (Issue #1323)."""
+        preset = {"id": "p-ausblick-solo", "display_config": {"hourly_metrics": []}}
+        options = resolve_compare_render_options(preset)
+
+        _, plain = render_compare_email(
+            _result_mit_stunden(mit_ausblick=True),
+            hourly_metrics=options.hourly_metrics,
+            hourly_enabled=options.hourly_enabled,
+            outlook_enabled=True,
+        )
+        assert "Nächste Etappen" in plain, f"Ausblick muss stehen bleiben:\n{plain}"
+        assert "Innsbruck" in plain.split("Nächste Etappen")[0], (
+            "Der Ausblick behaelt seinen heutigen Aufbau samt Orts-Zeile "
+            "(die fehlende eigene Ausblick-Ueberschrift ist Issue #1368)"
+        )
+        assert "08:00" not in plain, "keine Stundenzeilen bei leerer Auswahl"
 
 
 class TestNurMergeSignalGewaehlt:

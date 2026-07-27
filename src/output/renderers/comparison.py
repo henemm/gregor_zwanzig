@@ -211,6 +211,15 @@ def render_comparison_text(
     visible_hour_metrics = _visible_hour_metrics(hourly_metrics)
     merge_wind_dir = _should_merge_wind_dir(hourly_metrics)
     section_lines: list[str] = []
+    # Zweiter Staging-Fund (2026-07-26): `section_lines` ist ein GEMEINSAMER
+    # Puffer fuer Stundentabelle UND 3-Tage-Ausblick. Die Ueberschrift an ihm
+    # aufzuhaengen beschriftete bei leerer Stundenauswahl den Ausblick als
+    # "STUNDENVERLAUF". Sie haengt jetzt an tatsaechlich geschriebenen
+    # Stundenzeilen. Der HTML-Pfad hatte diese Kopplung nie: dort ist der
+    # Sektionskopf ein eigener Block direkt an `hourly_enabled`
+    # (compare_html.py:1139-1142), und der Ausblick wird getrennt davon in
+    # `per_location_html` erzeugt -- zwei Bausteine statt eines Puffers.
+    hour_rows_written = False
     for loc_result in locations:
         if loc_result.error is not None:
             continue
@@ -236,13 +245,15 @@ def render_comparison_text(
                             text = f"{text} {compass}"
                     cells.append(f"{m['label']} {text}")
                 section_lines.append(f"   {ts}  " + "  ".join(cells))
+                hour_rows_written = True
         if outlook_rows:
             section_lines.append(render_outlook_plain(outlook_rows, show_acc=False).strip("\n"))
         section_lines.append("")
 
     if section_lines:
-        lines.append("STUNDENVERLAUF")
-        lines.append("-" * 15)
+        if hour_rows_written:
+            lines.append("STUNDENVERLAUF")
+            lines.append("-" * 15)
         lines.extend(section_lines)
 
     lines.append("---")
