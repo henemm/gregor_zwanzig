@@ -98,3 +98,4 @@ bzw. in den Specs unter `docs/specs/`.
 | [0033](0033-warn-karte-nur-betroffene-segmente.md) | Amtliche Warn-Karte zeigt nur betroffene Segmente, kein Vollrouten-Gitter (löst #1233/#1216 ab) | Akzeptiert |
 | [0034](0034-herkunftsfusszeile-reale-datenquelle.md) | Herkunfts-Fußzeile zeigt die reale Datenquelle statt Renderer-Pfad + Commit-Hash (löst #1241 ab) | Akzeptiert |
 | [0035](0035-ein-tagesfenster-fuer-trip-und-ortsvergleich.md) | Ein Tagesfenster für Trip und Ortsvergleich — wirksam auf Anzeige und Bewertung (nimmt #1268 für den Vergleich zurück) | Akzeptiert |
+| [0036](0036-nebenlaeufigkeitsschutz-inhalts-fingerabdruck.md) | Nebenläufigkeitsschutz über Inhalts-Fingerabdruck statt Versionsfeld (Issue #1395 S1/S2) | Akzeptiert |

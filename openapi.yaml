@@ -219,6 +219,9 @@ paths:
       responses:
         "200":
           description: Trip found
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
           content:
             application/json:
               schema:
@@ -233,6 +236,8 @@ paths:
       summary: Update a trip
       operationId: updateTrip
       tags: [trips]
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
       requestBody:
         required: true
         content:
@@ -242,6 +247,9 @@ paths:
       responses:
         "200":
           description: Trip updated
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
           content:
             application/json:
               schema:
@@ -258,6 +266,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationError"
+        "412":
+          description: >-
+            If-Match stimmt nicht mit dem aktuellen Stand ueberein — der Trip
+            wurde zwischenzeitlich an anderer Stelle geaendert. Es wurde nichts
+            geschrieben.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreconditionFailedError"
     delete:
       summary: Delete a trip
       operationId: deleteTrip
@@ -266,7 +283,111 @@ paths:
         "204":
           description: Trip deleted (idempotent)
 
+  /api/trips/{id}/weather-config:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          example: gr221-mallorca
+    get:
+      summary: Get the weather display configuration of a trip
+      operationId: getTripWeatherConfig
+      tags: [trips]
+      responses:
+        "200":
+          description: Display configuration (opaque object)
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Weather display configuration (opaque)
+        "404":
+          description: Trip not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      summary: Update the weather display configuration of a trip
+      description: >-
+        Field-level merge (no blind replace): keys that are absent from the body
+        keep their stored value. Writes the same briefings/<id>.json file as
+        PUT /api/trips/{id} and therefore shares its ETag.
+      operationId: putTripWeatherConfig
+      tags: [trips]
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Weather display configuration (opaque)
+      responses:
+        "200":
+          description: Display configuration after the merge
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            application/json:
+              schema:
+                type: object
+        "400":
+          description: Malformed body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Trip not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "412":
+          description: >-
+            If-Match stimmt nicht mit dem aktuellen Stand ueberein — es wurde
+            nichts geschrieben.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreconditionFailedError"
+
 components:
+  headers:
+    ETag:
+      description: >-
+        Inhalts-Fingerabdruck (sha256-Hex) der gespeicherten Briefing-Datei,
+        in doppelten Anfuehrungszeichen (RFC 7232). Als If-Match an einen
+        Schreibvorgang zurueckgeben, um verlorene Aenderungen zu verhindern
+        (Issue #1395). Fehlt der Header, ist der Fingerabdruck gerade nicht
+        lesbar — der Aufruf bleibt gueltig, nur ohne Vorbedingungsschutz.
+      schema:
+        type: string
+        example: '"a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"'
+
+  parameters:
+    IfMatch:
+      name: If-Match
+      in: header
+      required: false
+      description: >-
+        Zuletzt erhaltener ETag-Wert. Optional: ohne diesen Header wird der
+        Schreibvorgang unveraendert angenommen (Rollout-Politik Issue #1395 S2).
+        Stimmt der Wert nicht mit dem aktuellen Stand ueberein, antwortet der
+        Server mit 412 und schreibt nichts. Erlaubt sind eine kommagetrennte
+        Liste (ein Treffer genuegt) und "*".
+      schema:
+        type: string
+        example: '"a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"'
+
   schemas:
     HealthResponse:
       type: object
@@ -417,3 +538,18 @@ components:
         detail:
           type: string
           example: name required
+
+    PreconditionFailedError:
+      type: object
+      required: [error, detail]
+      properties:
+        error:
+          type: string
+          enum: [precondition_failed]
+          example: precondition_failed
+        detail:
+          type: string
+          description: Nutzerlesbare deutsche Erklaerung inkl. Handlungsempfehlung
+          example: >-
+            Der Stand wurde zwischenzeitlich an anderer Stelle geaendert. Bitte
+            neu laden und die Aenderung erneut vornehmen.

@@ -14,9 +14,22 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
+// Issue #1395 S2 — WARUM ":=" und nicht "=" beim WithUser-Aufruf in jedem
+// Handler dieser Datei:
+//
+// "s = s.WithUser(...)" schreibt in die von der Closure GETEILTE Variable. Der
+// http.Server ruft denselben Handler-Wert aus einer Goroutine je Anfrage auf —
+// zwei gleichzeitige Anfragen ueberschrieben sich damit gegenseitig den Store,
+// im schlimmsten Fall ueber Nutzergrenzen hinweg (Anfrage A schreibt danach mit
+// der UserID von Anfrage B). Der Race-Detektor weist das an dieser Zeile nach,
+// sobald ein Test denselben Handler nebenlaeufig aufruft
+// (TestUpdateTripHandler_ConcurrentWritesWithoutIfMatch_FileStaysValid).
+// ":=" legt eine anfragelokale Variable an (die rechte Seite meint weiterhin
+// die aeussere) — sonst waere der Sperr-/Fingerabdruck-Schluessel dieser
+// Scheibe unter Last nicht verlaesslich.
 func TripsHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		trips, err := s.LoadTrips()
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -35,8 +48,14 @@ func TripsHandler(s *store.Store) http.HandlerFunc {
 
 func TripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+
+		// Issue #1395 S2: Sperre auch beim Lesen — sonst koennte ein
+		// gleichzeitiger PUT zwischen Fingerabdruck und Serialisierung
+		// dazwischenfunken, und der Client haelt einen Stempel, der nicht zum
+		// ausgelieferten Rumpf gehoert.
+		defer s.LockBriefing(id)()
 
 		trip, err := s.LoadTrip(id)
 		if err != nil {
@@ -56,6 +75,12 @@ func TripHandler(s *store.Store) http.HandlerFunc {
 		// Issue #1280: Read-Heilung laeuft seit dem Adversary-Nachtrag zentral
 		// in s.LoadTrip() (internal/store/trip.go) — trip kommt hier bereits
 		// geheilt an (verschachtelt + Flach-Feld), kein Handler-Heal-Call mehr.
+		//
+		// Issue #1395 S2: Stempel des ausgelieferten Standes. Der Fingerabdruck
+		// kommt aus den Bytes AUF PLATTE, nicht aus dem geheilten Objekt — er
+		// muss zu dem passen, was ein PUT spaeter als Vorbedingung prueft.
+		fp, fpErr := s.BriefingFingerprint(id)
+		setETagHeader(w, fp, fpErr)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(trip)
 	}
@@ -105,7 +130,7 @@ func ensureStageIDs(stages []model.Stage) []model.Stage {
 
 func CreateTripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		var trip model.Trip
 		if err := json.NewDecoder(r.Body).Decode(&trip); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -144,6 +169,13 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 			})
 			return
 		}
+
+		// Issue #1395 S2: Sperre um den Schreibvorgang. Die ID steht erst nach
+		// der Validierung fest (sie kommt aus dem Rumpf), darum hier und nicht
+		// am Handler-Anfang. Kein If-Match, kein ETag: beim Anlegen gibt es
+		// keinen Vorstand, gegen den geprueft werden koennte, und der Client
+		// holt danach ohnehin frisch (AC-12).
+		defer s.LockBriefing(trip.ID)()
 
 		if err := s.SaveTrip(&trip); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -194,8 +226,26 @@ type tripUpdateRequest struct {
 
 func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+
+		// Issue #1395 S2: Sperre ueber den GANZEN Lesen-Pruefen-Schreiben-Zyklus.
+		// ACHTUNG: PUT /api/briefings/{id}?kind=route reicht per ServeHTTP hierher
+		// durch (briefing_subscription.go) — dort darf KEINE zweite Sperre auf
+		// dieselbe <Nutzer, ID> genommen werden (sync.Mutex, nicht wiedereintritts-
+		// faehig -> sicherer Selbst-Blockierer).
+		defer s.LockBriefing(id)()
+
+		// Fingerabdruck des Standes VOR dem Schreiben — Bezugspunkt der
+		// If-Match-Pruefung. Ein echter Lesefehler ist ein Store-Fehler; eine
+		// fehlende Datei liefert "" ohne Fehler und faellt unten in den 404.
+		oldFp, fpErr := s.BriefingFingerprint(id)
+		if fpErr != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
 
 		existing, err := s.LoadTrip(id)
 		if err != nil {
@@ -208,6 +258,13 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(404)
 			w.Write([]byte(`{"error":"not_found"}`))
+			return
+		}
+
+		// Vorbedingung VOR dem Dekodieren des Rumpfes: stimmt sie nicht, ist der
+		// Rumpf irrelevant und es wird nichts geschrieben (AC-5).
+		if !ifMatchAllows(r.Header.Get("If-Match"), oldFp) {
+			writePreconditionFailed(w, preconditionFailedDetail)
 			return
 		}
 
@@ -326,6 +383,13 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		// Issue #1395 S2: NEUER Stempel. Der Stand kann sich hier auch dann
+		// geaendert haben, wenn der Nutzer inhaltlich nichts geaendert hat —
+		// LoadTrip heilt beim Lesen (z.B. krumme Versandzeiten) ohne
+		// Rueckschreiben, der erste SaveTrip persistiert die Heilung. Ohne
+		// diesen Rueckgabewert liefe der Client danach dauerhaft ins 412.
+		newFp, newFpErr := s.BriefingFingerprint(id)
+		setETagHeader(w, newFp, newFpErr)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(existing)
 	}
@@ -345,8 +409,14 @@ type tripStateRequest struct {
 // mutated; all other trip fields stay untouched (read-modify-write).
 func UpdateTripStateHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+
+		// Issue #1395 S2: Sperre um den Lesen-Aendern-Schreiben-Zyklus, damit
+		// dieser PATCH nicht mitten in einen laufenden PUT hineinschreibt.
+		// Bewusst OHNE If-Match-Pruefung (AC-15): eine Pruefung hier wuerde S3
+		// zwingen, auch fuer die PATCH-Pfade ETags zu fuehren — nicht beauftragt.
+		defer s.LockBriefing(id)()
 
 		existing, err := s.LoadTrip(id)
 		if err != nil {
@@ -416,9 +486,13 @@ type confirmWaypointRequest struct {
 // Naismith value stays current alongside the user override.
 func ConfirmWaypointHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		tripID := chi.URLParam(r, "id")
 		waypointID := chi.URLParam(r, "waypointId")
+
+		// Issue #1395 S2: Sperre analog UpdateTripStateHandler — kein If-Match
+		// (AC-15), aber kein Hineinschreiben in einen laufenden PUT.
+		defer s.LockBriefing(tripID)()
 
 		trip, err := s.LoadTrip(tripID)
 		if err != nil || trip == nil {
@@ -457,6 +531,13 @@ func ConfirmWaypointHandler(s *store.Store) http.HandlerFunc {
 		// Issue #802: ComputeStageArrivals wird jetzt zentral in store.SaveTrip
 		// gerufen — hier nicht mehr nötig (Doppelberechnung vermeiden).
 
+		// Issue #1395 S2 (Adversary F002, Geschwisterfall): Kennung auf den
+		// URL-Parameter setzen wie in UpdateTripHandler/UpdateTripStateHandler.
+		// Ohne das schreibt SaveTrip nach der INNEREN Kennung der geladenen
+		// Datei — die Bestaetigung landet dann in einer fremden Tour, die
+		// angefragte bleibt unveraendert, und der Nutzer bekommt 200.
+		trip.ID = tripID
+
 		if err := s.SaveTrip(trip); err != nil {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
@@ -469,8 +550,17 @@ func ConfirmWaypointHandler(s *store.Store) http.HandlerFunc {
 
 func DeleteTripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+
+		// Issue #1395 S2: Der Loeschpfad veraendert dieselbe Datei wie alle
+		// Schreibpfade und braucht darum dieselbe Sperre. Ohne sie faellt ein
+		// DELETE mitten in einen laufenden PUT: die Datei ist geloescht, der
+		// PUT schreibt sie danach aus seinem bereits geladenen Stand wieder hin
+		// — die geloeschte Tour ersteht wieder auf. Mit Sperre sind nur die
+		// beiden unbedenklichen Reihenfolgen moeglich (PUT dann DELETE = weg;
+		// DELETE dann PUT = 404, es wird nichts geschrieben).
+		defer s.LockBriefing(id)()
 
 		if err := s.DeleteTrip(id); err != nil {
 			w.Header().Set("Content-Type", "application/json")
