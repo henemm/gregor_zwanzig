@@ -6,7 +6,6 @@ der Metrik-Registry. Unicode-Pfeile NUR Email/Telegram; SMS rein ASCII/GSM-7.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
 
 from app.metric_catalog import (
     format_metric_value, get_alert_label, get_decimals, get_label_for_field,
@@ -570,9 +569,13 @@ def _legacy_line(change, segments, *, tz, stage_label=None) -> str:
 
 def render_deviation_alert(
     changes, segments, trip_name, *,
-    tz=ZoneInfo("UTC"), stage_label=None, sent_at=None,
+    tz, stage_label=None, sent_at=None,
 ) -> tuple[str, str]:
-    """Kompat: knapper #816-Abweichungs-Alert (html, plain), severity-sortiert."""
+    """Kompat: knapper #816-Abweichungs-Alert (html, plain), severity-sortiert.
+
+    Issue #1402: `tz` ist PFLICHTPARAMETER — alle drei Bestandstests
+    uebergeben bereits immer eine echte Zone.
+    """
     from utils.timezone import local_fmt
     ordered = sorted(changes, key=lambda c: abs(c.delta) / (abs(c.threshold) or 1.0), reverse=True)
     stamp = local_fmt(sent_at or datetime.now(timezone.utc), tz)

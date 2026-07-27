@@ -107,7 +107,12 @@ class NotificationResult:
 
 @dataclass
 class RadarAlertRequest:
-    """DTO für Radar-Onset-Alerts vom TripAlertService an den NotificationService."""
+    """DTO für Radar-Onset-Alerts vom TripAlertService an den NotificationService.
+
+    Issue #1402: `tz` ist PFLICHTFELD — der einzige Konstrukteur
+    (`TripAlertService.check_radar_alerts`) loest ihn immer ueber
+    `tz_for_coords()` auf (nie `None`).
+    """
     onset_minutes: int
     onset_time: str
     km_from: float
@@ -115,8 +120,8 @@ class RadarAlertRequest:
     is_convective: bool
     intensity_label: str
     source_label: str
+    tz: ZoneInfo
     briefing_context: str | None = None
-    tz: ZoneInfo | None = None
 
 
 def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
@@ -555,16 +560,21 @@ class NotificationService:
         (Pflicht-Fix, analog `send_radar_alert()`s gleichnamigem Parameter).
 
         Issue #1383: Die Zeitzone wird — wie in der Schwestermethode
-        `send_multi_location_deviation_alert()` — aus den Koordinaten des
-        ersten Ortes abgeleitet. Der frühere stille `ZoneInfo("UTC")`-Default
-        ließ jeden Aufrufer ohne `tz` alle Uhrzeiten in UTC rendern (echte
-        Prod-Mail: „Regen in 15 Min ab 20:00" für Orte in Europe/Paris = 2 h
-        daneben). `tz` bleibt als expliziter Override erhalten; UTC ist nur
-        noch letzter Notnagel bei fehlenden Koordinaten (Guard analog
+        `send_multi_location_deviation_alert()` — aus dem ersten Ort
+        abgeleitet. Der frühere stille `ZoneInfo("UTC")`-Default ließ jeden
+        Aufrufer ohne `tz` alle Uhrzeiten in UTC rendern (echte Prod-Mail:
+        „Regen in 15 Min ab 20:00" für Orte in Europe/Paris = 2 h daneben).
+        `tz` bleibt als expliziter Override erhalten; UTC ist nur noch
+        letzter Notnagel bei nicht aufloesbarem Ort (Guard analog
         `send_multi_location_official_alert()`).
+
+        Issue #1402 (entdoppelt): die Herleitung nutzt jetzt den EINEN
+        Aufloeser `resolve_location_tz()` (respektiert ein gesetztes
+        `SavedLocation.timezone`-Feld VOR den Koordinaten) statt einer
+        eigenen `tz_for_coords()`-Direktkopie.
         """
         from output.renderers.alert.project import to_multi_location_onset_alert_message
-        from utils.timezone import tz_for_coords
+        from utils.timezone import resolve_location_tz
 
         # Befund F002 (#1385): der frühere `if entities else None`-Zweig war tot
         # — der einzige Aufrufer schliesst leere Bündel aus, und der Renderer
@@ -575,12 +585,7 @@ class NotificationService:
                 "send_multi_location_radar_alert benötigt mindestens einen Ort"
             )
         first_loc = entities[0][1]
-        alert_tz = tz or (
-            tz_for_coords(first_loc.lat, first_loc.lon)
-            if getattr(first_loc, "lat", None) is not None
-            and getattr(first_loc, "lon", None) is not None
-            else ZoneInfo("UTC")
-        )
+        alert_tz = tz or resolve_location_tz(first_loc) or ZoneInfo("UTC")
         resolved_stand_at = stand_at or local_fmt(datetime.now(timezone.utc), alert_tz)
         # Issue #1385: Die Orts-Objekte werden MITGEREICHT — der Renderer
         # formatiert die Onset-Zeit je Ort in dessen eigener Zeitzone. Vorher
@@ -814,12 +819,17 @@ class NotificationService:
         (bereits vorgefiltert auf neu/eskaliert durch den Aufrufer, IDs statt
         Namen -- F006: gleichnamige Orte duerfen nicht kollabieren; Namen
         werden hier NUR zur Anzeige aufgeloest).
+
+        Issue #1402 (entdoppelt): `locations` sind `SavedLocation`-Objekte
+        (Ortsvergleich) — die Herleitung nutzt jetzt `resolve_location_tz()`
+        (respektiert ein gesetztes `.timezone`-Feld VOR den Koordinaten)
+        statt einer eigenen `tz_for_coords()`-Direktkopie.
         """
         from output.renderers.alert.official_alerts import (
             build_compare_official_alert_notices, render_official_alert_subject,
             render_warn_block,
         )
-        from utils.timezone import tz_for_coords
+        from utils.timezone import resolve_location_tz
 
         all_location_ids = [loc.id for loc in locations]
         id_to_name = {loc.id: loc.name for loc in locations}
@@ -831,8 +841,8 @@ class NotificationService:
 
         first_loc = locations[0] if locations else None
         alert_tz = (
-            tz_for_coords(first_loc.lat, first_loc.lon)
-            if first_loc is not None and first_loc.lat is not None and first_loc.lon is not None
+            (resolve_location_tz(first_loc) or ZoneInfo("UTC"))
+            if first_loc is not None
             else ZoneInfo("UTC")
         )
         source_label = _official_source_label_for(dto_notices)
@@ -953,7 +963,9 @@ class NotificationService:
             source_label=request.source_label,
             briefing_context=request.briefing_context,
         )
-        alert_tz = request.tz or ZoneInfo("UTC")
+        # Issue #1402: kein stiller Rueckfall mehr -- `request.tz` ist seit
+        # `RadarAlertRequest` ein Pflichtfeld.
+        alert_tz = request.tz
         alert_msg = AlertMessage(
             trip_short=trip.name,
             stand_at=local_fmt(datetime.now(timezone.utc), alert_tz),
@@ -981,10 +993,14 @@ class NotificationService:
         target_name: str = "",
         radar_mode: bool = False,
         official_notices: Optional[list] = None,
-        alert_tz: Optional[ZoneInfo] = None,
+        alert_tz: ZoneInfo,
         telegram_style: str = "rich",
     ) -> NotificationResult:
         """Versendet eine kanonische AlertMessage über die konfigurierten Kanäle.
+
+        Issue #1402: `alert_tz` ist PFLICHTPARAMETER — alle vier produktiven
+        Aufrufer loesen ihn bereits vorher ueber `tz_for_coords()`/das
+        `RadarAlertRequest`-Pflichtfeld auf.
 
         Issue #1260 S3: ist `telegram_style="kurzform"`, sendet der Telegram-
         Zweig den bereits gerenderten `sms_body` (Plaintext, `parse_mode=None`,

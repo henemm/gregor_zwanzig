@@ -33,7 +33,7 @@ from services.day_comparison import DayComparison
 from services.notification_service import NotificationService, TripReportRequest
 from services.user_tier import sms_allowed
 from utils.geo import haversine_km
-from utils.timezone import tz_for_coords
+from utils.timezone import local_dt, tz_for_coords
 
 if TYPE_CHECKING:
     from app.trip import Stage, Trip
@@ -1461,7 +1461,7 @@ class TripReportSchedulerService:
         self,
         trip,
         target_date: date,
-        tz=None,
+        tz: Optional[ZoneInfo],
         multi_day_trend=None,
     ) -> Optional[dict]:
         """Issue #1275: derive the +1/+2 thunder forecast from the SAME data as
@@ -1474,6 +1474,11 @@ class TripReportSchedulerService:
         Fallback — only for offsets NOT present in the trend (trend disabled,
         typically morning, or the stage is beyond the 3-row trend window): run
         the dedicated single-stage fetch + aggregation, fail-soft.
+
+        Issue #1402: `tz` ist PFLICHTPARAMETER (kein `=None`-Default mehr) --
+        beide Aufrufer (Versandpfad + Vorschau) übergeben immer eine echte,
+        aus Koordinaten aufgeloeste Zone; Tests, die den Fail-soft-Pfad ohne
+        aufloesbaren Ort pruefen, übergeben weiterhin bewusst `tz=None`.
         """
         forecast: dict = {}
         trend_by_date = {
@@ -1486,13 +1491,13 @@ class TripReportSchedulerService:
             fc_date = target_date + timedelta(days=offset)
             row = trend_by_date.get(fc_date)
             if row is not None:
-                forecast[key] = self._thunder_entry_from_trend_row(row, fc_date, tz)
+                forecast[key] = self._thunder_entry_from_trend_row(row, fc_date)
             else:
                 missing_dates.add(fc_date)
 
         if missing_dates:
             fetched = self._collect_future_stage_weather(
-                trip, target_date, tz=tz, wanted_dates=missing_dates,
+                trip, target_date, wanted_dates=missing_dates,
             )
             fetched_fc = (
                 self._build_thunder_forecast(fetched, target_date, tz=tz)
@@ -1508,7 +1513,6 @@ class TripReportSchedulerService:
         self,
         row: dict,
         fc_date: date,
-        tz=None,
     ) -> dict:
         """Map one ``multi_day_trend`` row to a thunder_forecast entry (#1275).
 
@@ -1516,6 +1520,12 @@ class TripReportSchedulerService:
         ``row["hourly_thunder"]`` (HourlyValue samples, already local hour). The
         return format matches ``_build_thunder_forecast`` so all downstream
         consumers (SMS/Telegram/E-Mail-Vorschau) stay unchanged.
+
+        Issue #1402: der frühere ``tz``-Parameter wurde entfernt — er wurde
+        nirgends im Funktionskörper gelesen (die Lokalisierung ist bereits
+        VOR dieser Stelle in ``row["hourly_thunder"]`` erfolgt, s. o.). Ein
+        ungenutzter ``tz=None``-Parameter täuschte Zeitzonen-Bezug vor, ohne
+        ihn zu haben — irreführender als ein sichtbarer Rückfall.
         """
         from app.models import ThunderLevel
 
@@ -1557,11 +1567,17 @@ class TripReportSchedulerService:
         self,
         trip,
         target_date: date,
-        tz=None,
         wanted_dates=None,
     ) -> List[SegmentWeatherData]:
         """Issue #1275: fetch weather for the actual next future stages,
         aggregated later across ALL their segments.
+
+        Issue #1402: der frühere ``tz``-Parameter wurde entfernt — er wurde
+        nirgends im Funktionskörper gelesen (diese Methode liefert rohe
+        ``SegmentWeatherData``, keine formatierten Uhrzeiten; die
+        Lokalisierung passiert erst nachgelagert). Ein ungenutzter
+        ``tz=None``-Parameter täuschte Zeitzonen-Bezug vor, ohne ihn zu
+        haben.
 
         Used only as the FALLBACK when the multi-day trend does not already
         cover a needed offset (see _build_thunder_forecast_from_trend_or_fetch).
@@ -1612,7 +1628,7 @@ class TripReportSchedulerService:
         self,
         segments,
         target_date: date,
-        tz=None,
+        tz: Optional[ZoneInfo],
     ) -> Optional[dict]:
         """
         Build thunder forecast for +1 and +2 days.
@@ -1627,10 +1643,20 @@ class TripReportSchedulerService:
             segments: A single ``SegmentWeatherData`` (back-compat) or a list
                 of them — typically the segments of the actual next stage(s).
             target_date: Base date; entries are keyed by day offset (+1/+2).
-            tz: Trip timezone for local-date/-hour resolution.
+            tz: Trip timezone for local-date/-hour resolution. Kann `None`
+                sein (s. u.), ist aber PFLICHT anzugeben -- kein stiller
+                Default mehr.
 
         Returns:
             Dict with "+1" and/or "+2" entries, or None if no thunder data.
+
+        Issue #1402: `tz` ist jetzt PFLICHTPARAMETER (kein `=None`-Default
+        mehr) -- alle Aufrufer (der interne Kettenaufruf aus
+        `_build_thunder_forecast_from_trend_or_fetch` UND alle Tests)
+        übergeben ihn bereits immer explizit, wenn auch teils bewusst als
+        `None` (fail-soft-Pfade ohne aufloesbaren Ort). Ein WEGGELASSENER
+        Aufruf faellt jetzt sofort mit `TypeError` auf, statt lautlos UTC zu
+        rendern.
         """
         from app.models import ThunderLevel
 
@@ -1645,7 +1671,10 @@ class TripReportSchedulerService:
         _ORD = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
 
         def _local(dt):
-            return dt.astimezone(tz) if tz else dt
+            # Issue #1402: NIE .astimezone(tz) direkt auf einem naiven dp.ts
+            # -- das deutet die Prozess-Zeitzone statt der Hausnorm "naiv =
+            # UTC" (#1345). local_dt() geht ueber den zentralen Naiv-Guard.
+            return local_dt(dt, tz) if tz else dt
 
         forecast = {}
         for offset, key in [(1, "+1"), (2, "+2")]:

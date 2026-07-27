@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from app.metric_catalog import _METRICS, get_cmp
-from utils.timezone import local_fmt, tz_for_coords
+from utils.timezone import local_fmt, resolve_location_tz
 from .model import AlertEvent, AlertMessage, OnsetEvent
 
 
@@ -134,17 +134,17 @@ def to_multi_point_alert_message(groups, *, tz, stand_at) -> AlertMessage:
 
 
 def _tz_for_location(loc, fallback_tz):
-    """Zeitzone DIESES Ortes aus seinen Koordinaten (Issue #1385).
+    """Zeitzone DIESES Ortes (Issue #1385, entdoppelt in #1402).
 
-    Guard: kein Ortsobjekt oder fehlende/`None`-Koordinaten → `fallback_tz`
-    (das Bündel-`tz`), niemals ein Absturz im Versandpfad.
+    Delegiert an den EINEN Aufloeser ``resolve_location_tz()`` (Issue #1378,
+    PO-Entscheidung E3) statt einer eigenen Koordinaten-Kopie -- damit
+    zieht auch hier ein gesetztes ``SavedLocation.timezone``-Feld VOR den
+    Koordinaten (vorher stumm ignoriert). Guard: kein Ortsobjekt, keine
+    Koordinaten oder nicht aufloesbar → `fallback_tz` (das Bündel-`tz`),
+    niemals ein Absturz im Versandpfad.
     """
-    lat = getattr(loc, "lat", None)
-    lon = getattr(loc, "lon", None)
-    if lat is None or lon is None:
-        return fallback_tz
     try:
-        return tz_for_coords(lat, lon)
+        return resolve_location_tz(loc) or fallback_tz
     except Exception:
         return fallback_tz
 
@@ -164,7 +164,8 @@ def to_multi_location_onset_alert_message(
     Event das `location_label` SEINER Gruppe (Renderer-Multi-Zweig).
 
     Issue #1385: `onset_time` („ab HH:MM") wird JE ORT in dessen eigener
-    Ortszeit formatiert (`tz_for_coords(loc.lat, loc.lon)`). Vorher galt das
+    Ortszeit formatiert (`resolve_location_tz(loc)`, s. `_tz_for_location`
+    oben — entdoppelt in #1402). Vorher galt das
     eine Bündel-`tz` (= Zeitzone des ERSTEN Ortes) für alle Orte — bei Orten in
     verschiedenen Zeitzonen war die Angabe für jeden weiteren Ort schlicht
     falsch. Fehlen Koordinaten (kein Ortsobjekt, `lat`/`lon` `None`), gilt für

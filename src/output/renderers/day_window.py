@@ -18,7 +18,7 @@ from typing import Optional, Sequence
 from zoneinfo import ZoneInfo
 
 from app.models import ForecastDataPoint, NormalizedTimeseries, SegmentWeatherData
-from utils.timezone import local_hour
+from utils.timezone import local_dt, local_hour
 
 DAY_WINDOW_START_HOUR = 4
 DAY_WINDOW_END_HOUR = 19
@@ -159,10 +159,14 @@ def build_day_window_points(
     if night_weather is not None and night_weather.data:
         arrival_dt = segments[-1].segment.end_time
         arrival_hour = local_hour(arrival_dt, tz)
-        arrival_date = arrival_dt.astimezone(tz).date()
+        # Issue #1402: NIE .astimezone(tz) direkt auf einem naiven dp.ts/
+        # arrival_dt aufrufen -- das deutet die Prozess-Zeitzone statt der
+        # Hausnorm "naiv = UTC" (#1345). local_dt() geht ueber den zentralen
+        # Naiv-Guard (utils.timezone._as_utc).
+        arrival_date = local_dt(arrival_dt, tz).date()
         next_date = arrival_date + timedelta(days=1)
         for dp in night_weather.data:
-            dp_date = dp.ts.astimezone(tz).date()
+            dp_date = local_dt(dp.ts, tz).date()
             h = local_hour(dp.ts, tz)
             if dp_date == arrival_date:
                 # Mitternachts-Fenster (AC-3): am Ankunftstag reicht der
@@ -209,16 +213,18 @@ def night_temp_min_c(
         return None
     arrival_dt = segments[-1].segment.end_time
     arrival_hour = local_hour(arrival_dt, tz)
-    arrival_date = arrival_dt.astimezone(tz).date()
+    # Issue #1402: local_dt() statt rohem .astimezone(tz) -- s. Begruendung
+    # oben in extract_day_window_hours().
+    arrival_date = local_dt(arrival_dt, tz).date()
     next_day = arrival_date + timedelta(days=1)
     temps: list[float] = []
     for dp in night_weather.data:
-        local_dt = dp.ts.astimezone(tz)
-        dp_date = local_dt.date()
+        dp_local_dt = local_dt(dp.ts, tz)
+        dp_date = dp_local_dt.date()
         is_same_day = dp_date == arrival_date
         is_next_day = dp_date == next_day
-        in_range = (is_same_day and local_dt.hour >= arrival_hour) or (
-            is_next_day and local_dt.hour <= 6
+        in_range = (is_same_day and dp_local_dt.hour >= arrival_hour) or (
+            is_next_day and dp_local_dt.hour <= 6
         )
         if in_range and dp.t2m_c is not None:
             temps.append(dp.t2m_c)

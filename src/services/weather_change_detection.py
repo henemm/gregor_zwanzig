@@ -9,7 +9,7 @@ SPEC: docs/specs/modules/weather_change_detection.md v2.0
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
@@ -20,6 +20,7 @@ from app.models import (
     ChangeSeverity,
     WeatherChange,
 )
+from utils.timezone import _as_utc as _as_utc_aware
 
 if TYPE_CHECKING:
     from app.models import (
@@ -226,10 +227,13 @@ def _as_utc(ts: "datetime | None") -> "datetime | None":
     aware. Ohne Normalisierung (a) sprengt der Fenstervergleich mit `TypeError`,
     (b) deutet ein späteres `astimezone()` den naiven Wert als System-Lokalzeit
     — auf einem UTC-Server zufällig richtig, überall sonst falsch.
+
+    Issue #1402 (entdoppelt): die eigentliche naiv→UTC-Deutung lebt nur noch
+    in ``utils.timezone._as_utc()`` (der EINE Naiv-Guard) — dieser Wrapper
+    reicht ausschließlich das hier gebrauchte ``None`` durch (Segment-
+    Fenstergrenzen können fehlen; der zentrale Guard verlangt ein ``datetime``).
     """
-    if ts is not None and ts.tzinfo is None:
-        return ts.replace(tzinfo=timezone.utc)
-    return ts
+    return _as_utc_aware(ts) if ts is not None else None
 
 
 def _peak_occurred_at(

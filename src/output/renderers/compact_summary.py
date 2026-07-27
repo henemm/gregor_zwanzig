@@ -13,7 +13,7 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from utils.geo import degrees_to_compass
-from utils.timezone import local_hour
+from utils.timezone import local_hour, location_tz
 
 from app.models import (
     ForecastDataPoint,
@@ -47,9 +47,9 @@ class CompactSummaryFormatter:
         segments: list[SegmentWeatherData],
         stage_name: str,
         dc: UnifiedWeatherDisplayConfig,
-        tz: Optional[ZoneInfo] = None,
         night_weather: Optional[NormalizedTimeseries] = None,
         *,
+        tz: ZoneInfo,
         has_gap: bool = False,
         day_window_start_hour: int = DAY_WINDOW_START_HOUR,
         day_window_end_hour: int = DAY_WINDOW_END_HOUR,
@@ -77,13 +77,16 @@ class CompactSummaryFormatter:
         ``t_max``, 'evening' zeigt die echte Nacht-Tiefsttemperatur am
         Schlafplatz aus ``night_temp_min_c()`` statt ``summary.temp_min_c``
         (fail-soft auf Letzteres, wenn ``night_weather`` fehlt/leer).
+
+        Issue #1402: `tz` ist PFLICHTPARAMETER — der einzige produktive
+        Aufrufer (`TripReportFormatter._generate_compact_summary`) uebergibt
+        immer `self._tz`.
         """
-        effective_tz = tz or ZoneInfo("UTC")
-        night_min_c = night_temp_min_c(night_weather, segments, effective_tz)
+        night_min_c = night_temp_min_c(night_weather, segments, tz)
         return self.format_weather_summary(
             self._aggregate(segments),
             self._collect_hourly_data(
-                segments, night_weather, effective_tz,
+                segments, night_weather, tz=tz,
                 start_hour=day_window_start_hour, end_hour=day_window_end_hour,
             ),
             self._shorten_stage_name(stage_name),
@@ -100,7 +103,7 @@ class CompactSummaryFormatter:
         hourly: list[ForecastDataPoint],
         title: str,
         dc: UnifiedWeatherDisplayConfig,
-        tz: Optional[ZoneInfo] = None,
+        tz: ZoneInfo,
         has_gap: bool = False,
         report_type: str = "evening",
         night_min_c: Optional[float] = None,
@@ -125,8 +128,13 @@ class CompactSummaryFormatter:
         ``report_type="evening"``/``night_min_c=None`` reproduziert das
         Bestandsverhalten (Bereich aus ``summary``) fuer Aufrufer ohne
         Report-Typ-Konzept (Orts-Vergleich, ``format_location_summary``).
+
+        Issue #1402: `tz` ist PFLICHTPARAMETER — beide Aufrufer loesen ihn
+        vorher explizit auf (`format_stage_summary`: `self._tz`;
+        `format_location_summary`: `utils.timezone.location_tz()`, sichtbarer
+        UTC-Rueckfall NUR wenn der Ort wirklich nicht aufloesbar ist).
         """
-        self._tz = tz or ZoneInfo("UTC")
+        self._tz = tz
         self._has_gap = has_gap
         short_name = title
         enabled = {mc.metric_id: mc for mc in dc.metrics if mc.enabled}
@@ -194,8 +202,8 @@ class CompactSummaryFormatter:
     def _collect_hourly_data(
         segments: list[SegmentWeatherData],
         night_weather: Optional[NormalizedTimeseries] = None,
-        tz: Optional[ZoneInfo] = None,
         *,
+        tz: ZoneInfo,
         start_hour: int = DAY_WINDOW_START_HOUR,
         end_hour: int = DAY_WINDOW_END_HOUR,
     ) -> list[ForecastDataPoint]:
@@ -203,9 +211,12 @@ class CompactSummaryFormatter:
 
         Ortsgenau via geteiltem ``day_window``-Modul: bis zur Ankunft aus der
         Segment-Zeitreihe, danach aus ``night_weather`` am Ziel.
+
+        Issue #1402: `tz` ist PFLICHTPARAMETER — der einzige Aufrufer
+        (`format_stage_summary`) uebergibt immer eine echte Zone.
         """
         points = build_day_window_points(
-            segments, night_weather, tz or ZoneInfo("UTC"),
+            segments, night_weather, tz,
             start_hour=start_hour, end_hour=end_hour,
         )
         points.sort(key=lambda dp: dp.ts)
@@ -482,19 +493,6 @@ class CompactSummaryFormatter:
 # Wrapper context="vergleich" (Orts-Vergleich, Issue #1278)
 # ---------------------------------------------------------------------------
 
-def _location_tz(loc) -> Optional[ZoneInfo]:
-    """``SavedLocation.timezone`` ist optional; fehlt/ungueltig -> None, der
-    Kern faellt dann wie der Trip-Pfad auf UTC zurueck (keine neue
-    Fehlerklasse, s. Spec "Known Limitations")."""
-    name = getattr(loc.location, "timezone", None)
-    if not name:
-        return None
-    try:
-        return ZoneInfo(name)
-    except Exception:
-        return None
-
-
 def format_location_summary(loc, enabled_metrics: Optional[set] = None) -> str:
     """Wrapper ``context="vergleich"``: ein ``LocationResult`` -> derselbe
     Fliesstext-Satz wie im Trip (geteilter Kern ``format_weather_summary``).
@@ -532,7 +530,10 @@ def format_location_summary(loc, enabled_metrics: Optional[set] = None) -> str:
         trip_id="vergleich",
         metrics=[MetricConfig(metric_id=m, enabled=True) for m in metric_ids],
     )
+    # Issue #1402: EIN Aufloeser (utils.timezone.location_tz, = resolve_
+    # location_tz() mit sichtbarem UTC-Rueckfall) statt der frueheren
+    # eigenen Kopie `_location_tz()` (ignorierte Koordinaten komplett).
     return CompactSummaryFormatter().format_weather_summary(
-        summary, hourly, loc.location.name, dc, _location_tz(loc),
+        summary, hourly, loc.location.name, dc, location_tz(loc.location),
     )
 

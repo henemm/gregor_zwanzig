@@ -41,7 +41,7 @@ COMPARE_FORECAST_HOURS = 96
 
 def _filter_by_target_date_and_window(
     raw_data: List["ForecastDataPoint"], target_date: "date",
-    start_hour: int, end_hour: int, tz: Optional["ZoneInfo"] = None,
+    start_hour: int, end_hour: int, tz: "ZoneInfo",
 ) -> List["ForecastDataPoint"]:
     """Filtert `raw_data` auf `target_date` + Zeitfenster — inkl. Mitternachts-
     Uebergang (Bug #399-Muster, analog `email/helpers.py::extract_hourly_rows()`,
@@ -54,7 +54,11 @@ def _filter_by_target_date_and_window(
     (`tz`), nicht aus der rohen Serverzeit von `dp.ts` (naive UTC, Hausnorm
     #1345) — das eingestellte Fenster "9 bis 16 Uhr" ist Ortszeit. Die
     Fenster-Arithmetik selbst bleibt unveraendert, nur die Stunden-Quelle
-    wechselt. `tz=None` -> UTC (Bestandsverhalten fuer Aufrufer ohne Ort).
+    wechselt. Issue #1402: `tz` ist PFLICHTPARAMETER — der einzige Aufrufer
+    (`ComparisonEngine.run()`) loest ihn immer schon ueber `location_tz()`
+    auf (nie `None`); ein stiller UTC-Rueckfall hier wuerde einen fehlenden
+    Aufloese-Schritt beim naechsten Aufrufer verstecken statt ihn auffallen
+    zu lassen.
 
     Der Trip-Zwilling `day_window.build_day_window_points()` ist hier NICHT
     wiederverwendbar: er nimmt Segment-Zeitreihen + Nacht-Zeitreihe mit
@@ -65,9 +69,8 @@ def _filter_by_target_date_and_window(
     """
     from datetime import timedelta
 
-    from utils.timezone import UTC, local_dt
+    from utils.timezone import local_dt
 
-    tz = tz or UTC
     stamped = [(dp, local_dt(dp.ts, tz)) for dp in raw_data]
     if start_hour <= end_hour:
         return [

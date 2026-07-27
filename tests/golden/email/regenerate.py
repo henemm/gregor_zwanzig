@@ -21,6 +21,7 @@ from __future__ import annotations
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 # pytest setzt pythonpath = ["src", "."] (pyproject.toml). Als Standalone-Skript
 # spiegeln wir das, damit `formatters.*` (via src/) und `src.output.*` (via Repo-
@@ -187,6 +188,12 @@ def _build_seg_weather(
 
 # --- Szenarien (identische Parameter wie die Golden-Tests) ------------------
 
+# Issue #1402: echte, zum jeweiligen Trip-Ort passende Zeitzone -- s.
+# Begruendung in test_email_html_golden.py (identische Fixture-Parameter).
+_TZ_CORSICA = ZoneInfo("Europe/Paris")
+_TZ_MALLORCA = ZoneInfo("Europe/Madrid")
+_TZ_ARLBERG = ZoneInfo("Europe/Vienna")
+
 
 def _scenarios():
     """Liefert (stem, report) je Referenz-Szenario."""
@@ -204,7 +211,7 @@ def _scenarios():
     )
     yield "gr20-summer-evening", formatter.format_email(
         [seg1, seg2], "GR20", "evening",
-        display_config=cfg(), stage_name="GR20 E3",
+        display_config=cfg(), stage_name="GR20 E3", tz=_TZ_CORSICA,
     )
 
     # 2. GR20 Frühjahr Morning — kalt + Niederschlag
@@ -215,7 +222,7 @@ def _scenarios():
     )
     yield "gr20-spring-morning", formatter.format_email(
         [seg], "GR20", "morning",
-        display_config=cfg(), stage_name="GR20 E1",
+        display_config=cfg(), stage_name="GR20 E1", tz=_TZ_CORSICA,
     )
 
     # 3. GR221 Mallorca Evening — warm, breezy, kein Regen
@@ -226,7 +233,7 @@ def _scenarios():
     )
     yield "gr221-mallorca-evening", formatter.format_email(
         [seg], "GR221 Mallorca", "evening",
-        display_config=cfg(), stage_name="GR221 Tag1",
+        display_config=cfg(), stage_name="GR221 Tag1", tz=_TZ_MALLORCA,
     )
 
     # 4. Arlberg Winter Morning — Schnee/Lawine
@@ -243,7 +250,7 @@ def _scenarios():
     yield "arlberg-winter-morning", formatter.format_email(
         [seg], "Arlberg Winter", "morning",
         display_config=cfg(), stage_name="Arlberg",
-        profile=ActivityProfile.WINTERSPORT,
+        profile=ActivityProfile.WINTERSPORT, tz=_TZ_ARLBERG,
     )
 
     # 5. Korsika Vigilance Update — mit amtlicher Warnung (Issue #1216 AC-9):
@@ -266,7 +273,7 @@ def _scenarios():
     ]
     yield "corsica-vigilance", formatter.format_email(
         [seg], "Korsika Trail", "update",
-        display_config=cfg(), stage_name="Corsica E5", changes=[],
+        display_config=cfg(), stage_name="Corsica E5", changes=[], tz=_TZ_CORSICA,
     )
 
 

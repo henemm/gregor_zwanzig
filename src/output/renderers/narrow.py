@@ -175,7 +175,7 @@ def _tg_day_footer(
     enabled_metric_ids: set[str] | list[str],
     *,
     night_weather: Optional["NormalizedTimeseries"] = None,
-    tz: ZoneInfo = ZoneInfo("UTC"),
+    tz: ZoneInfo,
     has_gap: bool = False,
     day_window_start_hour: int = DAY_WINDOW_START_HOUR,
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,

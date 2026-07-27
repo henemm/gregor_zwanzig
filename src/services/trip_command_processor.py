@@ -1111,7 +1111,12 @@ class TripCommandProcessor:
         # Issue #1329 C2: /jetzt ist eine Nutzeraktion -- explizit
         # user_briefing (Default, nie gedrosselt), zur Dokumentation der Absicht.
         result = svc.get_nowcast(wp.lat, wp.lon, priority="user_briefing")
-        body = svc.format_now_text(result)
+        # Issue #1402: ohne tz faellt format_now_text() auf das argumentlose
+        # .astimezone() zurueck -- deutet die Onset-Zeit in der PROZESS-
+        # Zeitzone des Servers statt der Ortszeit des Wegpunkts.
+        from utils.timezone import tz_for_coords
+
+        body = svc.format_now_text(result, tz=tz_for_coords(wp.lat, wp.lon))
         return CommandResult(
             success=True, command="now",
             confirmation_subject=f"[{trip.name}] Nowcast",

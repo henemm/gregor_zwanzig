@@ -263,7 +263,10 @@ def test_jetzt_command_uses_user_briefing_priority_explicitly(monkeypatch):
                 source="radar", frames=[],
             )
 
-        def format_now_text(self, result) -> str:
+        def format_now_text(self, result, *, tz=None, include_source: bool = True) -> str:
+            # Issue #1402: der echte Aufrufer (_show_now) uebergibt jetzt
+            # immer eine echte Ortszeit statt des stillen Defaults.
+            self.last_tz = tz
             return "Kein Niederschlag."
 
     import services.radar_service as radar_service_module
@@ -305,6 +308,13 @@ def test_jetzt_command_uses_user_briefing_priority_explicitly(monkeypatch):
     assert instance.calls[0] == "user_briefing", (
         "AC-6: /jetzt muss priority='user_briefing' explizit uebergeben "
         f"(Nutzeraktion, nie gedrosselt), tatsaechlich: {instance.calls[0]!r}"
+    )
+    # Issue #1402: /jetzt darf die Onset-Zeit nicht mehr in der Prozess-
+    # Zeitzone des Servers zeigen -- format_now_text() muss die echte,
+    # aus den Wegpunkt-Koordinaten aufgeloeste Ortszeit bekommen.
+    assert instance.last_tz is not None, (
+        "/jetzt uebergibt format_now_text() keine Zeitzone -- die Onset-Zeit "
+        "wuerde in der Server-Prozesszone statt der Ortszeit angezeigt (#1402)"
     )
 
 

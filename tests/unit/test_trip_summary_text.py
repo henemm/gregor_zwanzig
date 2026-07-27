@@ -24,6 +24,7 @@ echte ``ForecastDataPoint``-Objekte; das Aggregat kommt vom echten
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from app.models import (
     ForecastDataPoint, ForecastMeta, GPXPoint, MetricConfig,
@@ -95,7 +96,9 @@ def _trip_sentence(
             for m in metric_ids
         ],
     )
-    return CompactSummaryFormatter().format_stage_summary([swd], stage_name, dc)
+    return CompactSummaryFormatter().format_stage_summary(
+        [swd], stage_name, dc, tz=ZoneInfo("UTC"),
+    )
 
 
 def test_trip_summary_text_unchanged_byte_identical():

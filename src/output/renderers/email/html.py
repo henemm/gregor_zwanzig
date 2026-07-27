@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from app.models import NormalizedTimeseries, StabilityResult
     from services.day_comparison import DayComparison
 from app.profile import ActivityProfile
-from utils.timezone import local_fmt
+from utils.timezone import local_dt, local_fmt, tz_abbrev
 
 from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
 from output.renderers.email.helpers import (
@@ -840,11 +840,15 @@ def render_html(
     # Issue #890 / AC-2: Datum + Wochentag + Uhrzeit + Zeitzone.
     _WEEKDAY_ABBR = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
     if sent_at is not None:
-        local_dt = sent_at.astimezone(tz)
-        wd = _WEEKDAY_ABBR[local_dt.weekday()]
+        # Issue #1402: local_dt() statt rohem .astimezone() -- ein naives
+        # sent_at (Hausnorm UTC, #1345) wurde sonst als Prozess-Lokalzeit
+        # gedeutet. tz_abbrev() statt hartkodiertem "MESZ" -- im Winter oder
+        # außerhalb Mitteleuropas war das Kürzel schlicht falsch.
+        _sent_local = local_dt(sent_at, tz)
+        wd = _WEEKDAY_ABBR[_sent_local.weekday()]
         _date_str = (
-            f"{wd} · {local_dt.strftime('%d.%m.%Y')} · "
-            f"{local_dt.strftime('%H:%M')} MESZ"
+            f"{wd} · {_sent_local.strftime('%d.%m.%Y')} · "
+            f"{_sent_local.strftime('%H:%M')} {tz_abbrev(sent_at, tz)}"
         )
     else:
         _date_str = report_date  # Rückwärtskompatibilität
@@ -1125,7 +1129,9 @@ def render_html(
         _weekday_de_short = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
         context_label_html = ""
         if sent_at is not None:
-            local_sent = sent_at.astimezone(tz)
+            # Issue #1402: local_dt() statt rohem .astimezone() -- s.
+            # Begruendung oben bei der Kopfzeile.
+            local_sent = local_dt(sent_at, tz)
             wd_short = _weekday_de_short[local_sent.weekday()]
             time_str = local_sent.strftime("%H:%M")
             context_label_html = (

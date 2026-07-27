@@ -10,6 +10,7 @@ Key feature: Temporal qualification (peak times, rain start/end, gust peaks).
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from app.models import (
     ForecastDataPoint,
@@ -138,7 +139,7 @@ class TestBasicSummary:
         dc = _default_dc()
 
         formatter = CompactSummaryFormatter()
-        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc)
+        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc, tz=ZoneInfo("UTC"))
 
         assert "8" in result and "18" in result
         assert "°C" in result
@@ -152,7 +153,7 @@ class TestBasicSummary:
         dc = _default_dc()
 
         formatter = CompactSummaryFormatter()
-        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc)
+        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc, tz=ZoneInfo("UTC"))
 
         assert "trocken" in result.lower()
         assert "regen" not in result.lower()
@@ -179,7 +180,7 @@ class TestRainTemporal:
         dc = _default_dc()
 
         formatter = CompactSummaryFormatter()
-        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc)
+        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc, tz=ZoneInfo("UTC"))
 
         assert "11:00" in result or "11" in result
 
@@ -196,7 +197,7 @@ class TestRainTemporal:
         dc = _default_dc()
 
         formatter = CompactSummaryFormatter()
-        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc)
+        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc, tz=ZoneInfo("UTC"))
 
         assert "13:00" in result or "13" in result
 
@@ -213,7 +214,7 @@ class TestRainTemporal:
         dc = _default_dc()
 
         formatter = CompactSummaryFormatter()
-        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc)
+        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc, tz=ZoneInfo("UTC"))
 
         result_lower = result.lower()
         assert "trocken" in result_lower or "12" in result or "11" in result
@@ -238,7 +239,7 @@ class TestConfigAwareness:
                 mc.enabled = False
 
         formatter = CompactSummaryFormatter()
-        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc)
+        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc, tz=ZoneInfo("UTC"))
 
         assert "wind" not in result.lower()
         assert "km/h" not in result.lower()
@@ -255,7 +256,7 @@ class TestConfigAwareness:
                 mc.use_friendly_format = False
 
         formatter = CompactSummaryFormatter()
-        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc)
+        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc, tz=ZoneInfo("UTC"))
 
         assert "65" in result or "%" in result
 
@@ -276,7 +277,7 @@ class TestAdjectives:
         dc = _default_dc()
 
         formatter = CompactSummaryFormatter()
-        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc)
+        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc, tz=ZoneInfo("UTC"))
 
         assert "stark" in result.lower()
 
@@ -291,7 +292,7 @@ class TestAdjectives:
         dc = _default_dc()
 
         formatter = CompactSummaryFormatter()
-        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc)
+        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc, tz=ZoneInfo("UTC"))
 
         result_lower = result.lower()
         assert "sturm" in result_lower or "böen" in result_lower or "boeen" in result_lower
@@ -319,7 +320,7 @@ class TestThunder:
         dc = _default_dc()
 
         formatter = CompactSummaryFormatter()
-        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc)
+        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc, tz=ZoneInfo("UTC"))
 
         assert "⚡" in result or "gewitter" in result.lower()
         assert "15" in result
@@ -343,7 +344,7 @@ class TestGraceful:
         dc = _default_dc()
 
         formatter = CompactSummaryFormatter()
-        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc)
+        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc, tz=ZoneInfo("UTC"))
 
         assert "°C" in result
 
@@ -355,7 +356,7 @@ class TestGraceful:
         dc = _default_dc()
 
         formatter = CompactSummaryFormatter()
-        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc)
+        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc, tz=ZoneInfo("UTC"))
 
         assert "°C" in result
 
@@ -376,7 +377,9 @@ class TestStageName:
         dc = _default_dc()
 
         formatter = CompactSummaryFormatter()
-        result = formatter.format_stage_summary(segments, "Tag 1: von Valldemossa nach Deià", dc)
+        result = formatter.format_stage_summary(
+            segments, "Tag 1: von Valldemossa nach Deià", dc, tz=ZoneInfo("UTC"),
+        )
 
         assert "Valldemossa" in result
         assert "Deià" in result

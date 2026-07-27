@@ -239,9 +239,18 @@ class RadarNowcastService:
             now = datetime.now(tz=timezone.utc)
             onset_time = now + timedelta(minutes=result.onset_minutes)
             if tz is not None:
-                time_str = onset_time.astimezone(tz).strftime("%H:%M")
+                # Issue #1402: local_dt() statt rohem .astimezone(tz) --
+                # geht ueber den zentralen Naiv-Guard (hier zwar bereits
+                # aware, aber konsistent mit dem EINEN Umrechner).
+                from utils.timezone import local_dt
+
+                time_str = local_dt(onset_time, tz).strftime("%H:%M")
             else:
-                time_str = onset_time.astimezone().strftime("%H:%M")
+                # Kein tz uebergeben (Fail-soft-Pfad, Wächter-abgesichert
+                # fuer Produktivcode) -- onset_time ist bereits UTC-aware,
+                # NICHT das argumentlose .astimezone() nutzen (deutet sonst
+                # die Prozess-Zeitzone des Servers statt ehrlich UTC).
+                time_str = onset_time.strftime("%H:%M")
             lines.append(
                 f"{result.intensity_label} ab ca. {time_str}"
                 f" (in ~{result.onset_minutes} Min)."

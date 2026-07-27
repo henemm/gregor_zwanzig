@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from app.trip import Trip
     from services.day_comparison import DayComparison
 
-from utils.timezone import local_fmt, local_hour
+from utils.timezone import local_dt, local_fmt, local_hour
 
 from app.metric_catalog import build_default_display_config, get_col_defs, get_metric, get_metric_by_col_key
 from app.models import (
@@ -135,7 +135,9 @@ class TripReportFormatter:
             # Issue #1347: kanonisches Ankunftsdatum aus derselben Quelle wie
             # arrival_hour ableiten (analog day_window-Fix 0b2cc5ed) -- nicht
             # aus dem kontaminierbaren night_weather.data[0].ts.
-            arrival_date = last_seg.segment.end_time.astimezone(self._tz).date()
+            # Issue #1402: local_dt() statt rohem .astimezone() -- ein naives
+            # end_time (Hausnorm UTC, #1345) sonst als Prozess-Lokalzeit gedeutet.
+            arrival_date = local_dt(last_seg.segment.end_time, self._tz).date()
             night_rows = self._extract_night_rows(
                 night_weather, arrival_hour, dc.night_interval_hours, dc,
                 arrival_date=arrival_date,
@@ -343,15 +345,17 @@ class TripReportFormatter:
         if not night_weather.data:
             return []
 
-        first_date = arrival_date or night_weather.data[0].ts.astimezone(self._tz).date()
+        # Issue #1402: local_dt() statt rohem .astimezone() -- s. Begruendung
+        # oben bei arrival_date.
+        first_date = arrival_date or local_dt(night_weather.data[0].ts, self._tz).date()
 
         # Step 1: Filter to night range
         night_dps: list[ForecastDataPoint] = []
         for dp in night_weather.data:
-            local_dt = dp.ts.astimezone(self._tz)
-            h = local_dt.hour
-            is_same_day = local_dt.date() == first_date
-            is_next_day = local_dt.date() == first_date + timedelta(days=1)
+            dp_local_dt = local_dt(dp.ts, self._tz)
+            h = dp_local_dt.hour
+            is_same_day = dp_local_dt.date() == first_date
+            is_next_day = dp_local_dt.date() == first_date + timedelta(days=1)
             in_range = (is_same_day and h >= arrival_hour) or (is_next_day and h <= 6)
             if in_range:
                 night_dps.append(dp)
@@ -362,9 +366,9 @@ class TripReportFormatter:
         # Step 2: Group into 2h blocks
         blocks: dict[tuple, list[ForecastDataPoint]] = {}
         for dp in night_dps:
-            local_dt = dp.ts.astimezone(self._tz)
-            block_start = local_dt.hour - (local_dt.hour % interval)
-            block_key = (local_dt.date(), block_start)
+            dp_local_dt = local_dt(dp.ts, self._tz)
+            block_start = dp_local_dt.hour - (dp_local_dt.hour % interval)
+            block_key = (dp_local_dt.date(), block_start)
             blocks.setdefault(block_key, []).append(dp)
 
         # Step 3: Aggregate each block
@@ -656,7 +660,7 @@ class TripReportFormatter:
         temp_max_c: Optional[float] = None,
         wind_max_kmh: Optional[float] = None,
         gust_max_kmh: Optional[float] = None,
-        tz: Optional[ZoneInfo] = None,
+        tz: ZoneInfo,
         shortcode: Optional[str] = None,
     ) -> str:
         """Generate §11-konformes E-Mail-Subject via output.subject filter.
@@ -669,6 +673,11 @@ class TripReportFormatter:
 
         Wenn stage_name nicht gesetzt ist, wird das Datum als Stage-Substitut
         verwendet, damit Multi-Tag-Reports im Postfach unterscheidbar bleiben.
+
+        Issue #1402: `tz` ist PFLICHTPARAMETER — der einzige Aufrufer
+        (`format_email()`) uebergibt immer `self._tz` (zu diesem Zeitpunkt
+        bereits gesetzt). Der fruehere `dt.strftime()`-Rohzweig ohne `tz`
+        ist entfallen (genau der Bug #397 (F002) zugrunde liegende Fehler).
         """
         from output.subject import build_email_subject
         from output.tokens.dto import TokenLine
@@ -680,12 +689,7 @@ class TripReportFormatter:
         # Stage-Name = explizite Stage falls vorhanden, sonst Datum als Diskriminator.
         # Bug #397 (F002): Datums-Fallback in Ortszeit, nicht UTC — sonst springt
         # das Datum bei Segment-Start nahe UTC-Mitternacht auf den falschen Tag.
-        if stage_name:
-            stage = stage_name
-        elif tz is not None:
-            stage = local_fmt(dt, tz, "%d.%m.%Y")
-        else:
-            stage = dt.strftime("%d.%m.%Y")
+        stage = stage_name if stage_name else local_fmt(dt, tz, "%d.%m.%Y")
 
         # AC-2 (#799): D/W/G-Kürzel nicht im E-Mail-Betreff — lesbar für Nicht-Techniker.
         # Token-Whitelist bleibt für SMS aktiv (output/subject.py unverändert).

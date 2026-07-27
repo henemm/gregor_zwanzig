@@ -30,7 +30,7 @@ from app.models import (
     UnifiedWeatherDisplayConfig,
 )
 from utils.geo import degrees_to_compass
-from utils.timezone import local_fmt, local_hour
+from utils.timezone import local_dt, local_fmt, local_hour
 
 from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
 from output.renderers.email.design_tokens import FONT_DATA
@@ -317,16 +317,15 @@ def build_confidence_hint(
         for dp in ts.data:
             if dp.confidence_pct is None:
                 continue
-            # Normalize to tz-aware UTC for comparison with `cutoff`.
-            dp_ts = dp.ts
-            if dp_ts.tzinfo is None:
-                from datetime import timezone as _tz
-                dp_ts = dp_ts.replace(tzinfo=_tz.utc)
+            # Issue #1402: local_dt() geht ueber den EINEN zentralen
+            # Naiv-Guard (utils.timezone._as_utc) statt einer eigenen
+            # Inline-Kopie der naiv=UTC-Deutung.
+            dp_ts = local_dt(dp.ts, tz)
             if dp_ts > cutoff:
                 continue
             if dp.confidence_pct >= 60:
                 continue
-            day = dp_ts.astimezone(tz).date()
+            day = dp_ts.date()
             cur = uncertain.get(day)
             if cur is None:
                 uncertain[day] = dp.confidence_pct
@@ -923,13 +922,14 @@ def format_km_range(from_km: float, to_km: float) -> str:
     return f"km {from_km:.1f}–{to_km:.1f}"
 
 
-def build_segment_label(change, segments, *, tz: ZoneInfo = ZoneInfo("UTC"), stage_label: str | None = None) -> str:
+def build_segment_label(change, segments, *, tz: ZoneInfo, stage_label: str | None = None) -> str:
     """
     Liefert 'Segment N (HH:MM–HH:MM)' oder '🏁 Ziel (HH:MM)' aus segment_id +
     segments-Liste. Fallback ohne Match: 'Segment N' oder 'Unbekannt'.
 
-    Bug #397: Zeiten werden in Ortszeit (`tz`) gerendert; Default UTC bleibt
-    abwärtskompatibel (UTC→UTC = keine Verschiebung).
+    Bug #397: Zeiten werden in Ortszeit (`tz`) gerendert. Issue #1402: `tz`
+    ist PFLICHTPARAMETER — alle drei Aufrufer (email/plain.py, email/html.py,
+    alert/render.py) uebergeben bereits immer eine echte Zone.
 
     Issue #816: Liegt eine echte km-Angabe vor (start_km is not None and
     end_km is not None and (start_km > 0.0 or end_km > 0.0)), wird das Label

@@ -23,6 +23,7 @@ from __future__ import annotations
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -43,6 +44,12 @@ from output.renderers.trip_report import TripReportFormatter
 from services.official_alerts.models import OfficialAlert
 
 GOLDEN_DIR = Path(__file__).parent
+
+# Issue #1402: echte, zum jeweiligen Trip-Ort passende Zeitzone -- s.
+# Begruendung in test_email_html_golden.py (identische Fixture-Parameter).
+_TZ_CORSICA = ZoneInfo("Europe/Paris")
+_TZ_MALLORCA = ZoneInfo("Europe/Madrid")
+_TZ_ARLBERG = ZoneInfo("Europe/Vienna")
 
 
 def _read_golden(stem: str) -> str:
@@ -200,7 +207,7 @@ def test_email_plain_golden_gr20_summer_evening():
     report = formatter.format_email(
         [seg1, seg2], "GR20", "evening",
         display_config=build_default_display_config(),
-        stage_name="GR20 E3",
+        stage_name="GR20 E3", tz=_TZ_CORSICA,
     )
     _assert_plain_matches_golden("gr20-summer-evening", report.email_plain)
 
@@ -216,7 +223,7 @@ def test_email_plain_golden_gr20_spring_morning():
     report = formatter.format_email(
         [seg], "GR20", "morning",
         display_config=build_default_display_config(),
-        stage_name="GR20 E1",
+        stage_name="GR20 E1", tz=_TZ_CORSICA,
     )
     _assert_plain_matches_golden("gr20-spring-morning", report.email_plain)
 
@@ -232,7 +239,7 @@ def test_email_plain_golden_gr221_mallorca_evening():
     report = formatter.format_email(
         [seg], "GR221 Mallorca", "evening",
         display_config=build_default_display_config(),
-        stage_name="GR221 Tag1",
+        stage_name="GR221 Tag1", tz=_TZ_MALLORCA,
     )
     _assert_plain_matches_golden("gr221-mallorca-evening", report.email_plain)
 
@@ -252,7 +259,7 @@ def test_email_plain_golden_arlberg_winter_morning():
         [seg], "Arlberg Winter", "morning",
         display_config=build_default_display_config(),
         stage_name="Arlberg",
-        profile=ActivityProfile.WINTERSPORT,
+        profile=ActivityProfile.WINTERSPORT, tz=_TZ_ARLBERG,
     )
     _assert_plain_matches_golden("arlberg-winter-morning", report.email_plain)
 
@@ -282,6 +289,6 @@ def test_email_plain_golden_corsica_vigilance():
         [seg], "Korsika Trail", "update",
         display_config=build_default_display_config(),
         stage_name="Corsica E5",
-        changes=[],
+        changes=[], tz=_TZ_CORSICA,
     )
     _assert_plain_matches_golden("corsica-vigilance", report.email_plain)

@@ -23,6 +23,7 @@ from __future__ import annotations
 import html as _html
 from datetime import date, timedelta
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from app.models import Corridor, ThunderLevel
 from app.profile import ActivityProfile
@@ -582,6 +583,7 @@ def _render_warn_banner(locations: list[LocationResult]) -> str:
         notices, variant="embedded",
         source_label=official_alert_source_label(leading_alert.source),
         source_url=getattr(leading_alert, "url", None), count_line=count_line,
+        tz=location_tz(leading_loc.location),
     )
 
 
@@ -655,14 +657,16 @@ def _should_merge_wind_dir(hourly_metrics: list[str] | None) -> bool:
 
 def _render_hour_row(
     dp, visible: list[dict], marks: dict, merge_wind_dir: bool = False,
-    tz=None,
+    *, tz: ZoneInfo,
 ) -> str:
     # Issue #1237 (AC-1): nur die Stunde ("07"), kein Minutenanteil -- identisch
     # zur bereits korrekten Trip-Briefing-Formatierung (helpers.dp_to_row).
     # Issue #1378: die Stunde ist die ORTSZEIT-Stunde des Ortes (geteilter
     # Umrechner utils.timezone.local_hour, Trip-Vorbild helpers.py:93/142) --
     # `dp.ts` ist naive UTC (Hausnorm #1345) und wurde bisher roh beschriftet.
-    hh = f"{local_hour(dp.ts, tz or UTC):02d}" if hasattr(dp.ts, "astimezone") else str(dp.ts)
+    # Issue #1402: `tz` ist PFLICHTPARAMETER, der einzige Aufrufer
+    # (`_render_hour_table`) loest ihn immer ueber `location_tz()` auf.
+    hh = f"{local_hour(dp.ts, tz):02d}" if hasattr(dp.ts, "astimezone") else str(dp.ts)
     cells = _hour_td(hh, fg=G_INK_MUTED, align="left")
     for m in visible:
         value = getattr(dp, m["key"], None)
@@ -699,7 +703,7 @@ def _render_hour_table(
     )
     header = f'<tr style="background:{G_PAPER};border-bottom:1px solid #e6e1d3;">{ths}</tr>'
     rows = "".join(
-        _render_hour_row(dp, visible, marks, merge_wind_dir, tz)
+        _render_hour_row(dp, visible, marks, merge_wind_dir, tz=tz)
         for dp in loc.hourly_data
     )
     table = (
@@ -786,15 +790,16 @@ def _render_location_section(
 _WEEKDAYS_DE_OUTLOOK = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 
 
-def _group_by_calendar_day(points: list, tz=None, cap: int = 3) -> list[tuple]:
+def _group_by_calendar_day(points: list, tz: ZoneInfo, cap: int = 3) -> list[tuple]:
     """Gruppiert eine flache Punktliste nach Kalendertag, Cap auf `cap` Tage.
 
     Issue #1378 (AC-9): Tagesgrenze ist die ORTS-Mitternacht, nicht die
     UTC-Mitternacht -- bei UTC+2 gehoeren die Punkte 22:00-23:59 UTC bereits
-    zum FOLGENDEN Ortstag. `tz=None` -> UTC (Bestandsverhalten)."""
+    zum FOLGENDEN Ortstag. Issue #1402: `tz` ist PFLICHTPARAMETER — der
+    einzige Aufrufer loest ihn immer ueber `location_tz()` auf."""
     by_day: dict = {}
     for dp in points:
-        by_day.setdefault(local_dt(dp.ts, tz or UTC).date(), []).append(dp)
+        by_day.setdefault(local_dt(dp.ts, tz).date(), []).append(dp)
     days = sorted(by_day)[:cap]
     return [(d, by_day[d]) for d in days]
 
@@ -901,7 +906,7 @@ def _render_warning_banner(warning_text: str) -> str:
     )
 
 
-def _render_header(result: ComparisonResult, sig, tz=None) -> str:
+def _render_header(result: ComparisonResult, sig, tz: ZoneInfo) -> str:
     label_text = f"ORTS-VERGLEICH · {_html.escape(sig.eyebrow)}"
     label_style = (
         f"font-family:{FONT_DATA};font-size:10px;"
@@ -923,8 +928,10 @@ def _render_header(result: ComparisonResult, sig, tz=None) -> str:
     # beim Rendern erneut die Serveruhr las) in der Ortszeit des
     # ERSTGENANNTEN Ortes, mit erkennbarem Zeitzonen-Kuerzel. Ohne
     # aufloesbare Zeitzone steht dort sichtbar "(UTC)" statt einer
-    # vorgetaeuschten Ortszeit (AC-7).
-    erstellt_val = _html.escape(local_stamp(result.created_at, tz or UTC))
+    # vorgetaeuschten Ortszeit (AC-7) -- der Aufrufer (`render_compare_email`)
+    # entscheidet das bereits VOR dem Aufruf explizit (Issue #1402: `tz` ist
+    # hier PFLICHTPARAMETER, kein stiller Rueckfall mehr).
+    erstellt_val = _html.escape(local_stamp(result.created_at, tz))
     # Issue #1305: keine Horizont-Kachel mehr — analog #1268 (Zeitfenster-Zeile
     # entfiel ersatzlos). Der Wert ist kein Nutzer-relevanter Datenpunkt.
 

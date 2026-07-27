@@ -95,7 +95,7 @@ def _official_alert_entries(
 def _segments_to_normalized_forecast(
     segments: list[SegmentWeatherData],
     *,
-    tz: ZoneInfo = ZoneInfo("UTC"),
+    tz: ZoneInfo,
     night_weather: Optional[NormalizedTimeseries] = None,
     has_gap: bool = False,
     day_window_start_hour: int = DAY_WINDOW_START_HOUR,
@@ -119,6 +119,10 @@ def _segments_to_normalized_forecast(
     ``notification_service.compute_has_gap()`` (aus dem echten Renderer-
     Ergebnis, ``build_day_window_points``) — wird hier 1:1 durchgereicht,
     Dieser Renderer rechnet die Luecke nicht selbst nach.
+
+    Issue #1402: `tz` ist PFLICHTPARAMETER — der einzige Aufrufer
+    (`format_sms`) hat selbst schon einen echten `ZoneInfo`-Wert (nie
+    ``None``, s. dessen eigener Default).
     Ein has_error-Segment, dessen Stunden im gerenderten Fenster von
     Nachbarsegmenten gedeckt werden, fehlt in ``build_day_window_points``
     NICHT und darf deshalb auch keinen Fehlalarm ausloesen — ein echter
@@ -429,7 +433,10 @@ class SMSTripFormatter:
         label = _SMS_RISK_LABELS.get(
             (top.type, top.level), top.type.value.title()
         )
-        # Bug #398: Risiko-Stunde in Ortszeit (Default UTC im Legacy-Pfad).
-        tz = getattr(self, "_tz", ZoneInfo("UTC"))
-        time_str = local_fmt(seg_data.segment.start_time, tz, "%Hh")
+        # Bug #398: Risiko-Stunde in Ortszeit. Issue #1402: kein stiller
+        # UTC-Rueckfall mehr -- der einzige Aufrufer (`format_sms`, s.o.)
+        # setzt `self._tz` immer VOR diesem Aufruf; ein Direktaufruf ohne
+        # `format_sms()` soll jetzt sichtbar mit AttributeError scheitern
+        # statt lautlos in Weltzeit zu rendern.
+        time_str = local_fmt(seg_data.segment.start_time, self._tz, "%Hh")
         return (label, time_str)

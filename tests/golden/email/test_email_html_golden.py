@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -33,6 +34,16 @@ from output.renderers.trip_report import TripReportFormatter
 from services.official_alerts.models import OfficialAlert
 
 GOLDEN_DIR = Path(__file__).parent
+
+# Issue #1402: echte, zum jeweiligen Trip-Ort passende Zeitzone -- vorher
+# lief `format_email()` ohne `tz=` (impliziter UTC-Rueckfall), was hier NIE
+# vorkommt (beide Produktiv-Aufrufer, preview_service.py + notification_
+# service.py, liefern `tz` immer als Pflichtfeld). Golden-Fixtures ohne `tz`
+# pruefen damit einen Fall, den kein echter Nutzer je sieht -- daher pro
+# Trip-Geografie die reale Zone.
+_TZ_CORSICA = ZoneInfo("Europe/Paris")
+_TZ_MALLORCA = ZoneInfo("Europe/Madrid")
+_TZ_ARLBERG = ZoneInfo("Europe/Vienna")
 
 _GENERATED_RE = re.compile(
     r"Generated: \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC"
@@ -179,7 +190,7 @@ def test_email_html_golden_gr20_summer_evening():
     report = formatter.format_email(
         [seg1, seg2], "GR20", "evening",
         display_config=build_default_display_config(),
-        stage_name="GR20 E3",
+        stage_name="GR20 E3", tz=_TZ_CORSICA,
     )
     _assert_html_matches_golden("gr20-summer-evening", report.email_html)
 
@@ -195,7 +206,7 @@ def test_email_html_golden_gr20_spring_morning():
     report = formatter.format_email(
         [seg], "GR20", "morning",
         display_config=build_default_display_config(),
-        stage_name="GR20 E1",
+        stage_name="GR20 E1", tz=_TZ_CORSICA,
     )
     _assert_html_matches_golden("gr20-spring-morning", report.email_html)
 
@@ -211,7 +222,7 @@ def test_email_html_golden_gr221_mallorca_evening():
     report = formatter.format_email(
         [seg], "GR221 Mallorca", "evening",
         display_config=build_default_display_config(),
-        stage_name="GR221 Tag1",
+        stage_name="GR221 Tag1", tz=_TZ_MALLORCA,
     )
     _assert_html_matches_golden("gr221-mallorca-evening", report.email_html)
 
@@ -231,7 +242,7 @@ def test_email_html_golden_arlberg_winter_morning():
         [seg], "Arlberg Winter", "morning",
         display_config=build_default_display_config(),
         stage_name="Arlberg",
-        profile=ActivityProfile.WINTERSPORT,
+        profile=ActivityProfile.WINTERSPORT, tz=_TZ_ARLBERG,
     )
     _assert_html_matches_golden("arlberg-winter-morning", report.email_html)
 
@@ -262,6 +273,6 @@ def test_email_html_golden_corsica_vigilance():
         [seg], "Korsika Trail", "update",
         display_config=build_default_display_config(),
         stage_name="Corsica E5",
-        changes=[],
+        changes=[], tz=_TZ_CORSICA,
     )
     _assert_html_matches_golden("corsica-vigilance", report.email_html)

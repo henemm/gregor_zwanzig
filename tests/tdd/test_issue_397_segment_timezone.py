@@ -243,7 +243,7 @@ def test_build_segment_label_km_path_uses_segment_not_etappe():
         direction="increase", segment_id="1",
     )
 
-    label = build_segment_label(change, [seg_data])
+    label = build_segment_label(change, [seg_data], tz=ZoneInfo("UTC"))
 
     assert label.startswith("Segment "), (
         f"Label muss mit 'Segment ' beginnen, nicht 'Etappe ': {label!r}"

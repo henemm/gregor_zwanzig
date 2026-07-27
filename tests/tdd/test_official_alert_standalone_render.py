@@ -339,7 +339,13 @@ def test_ac12_subject_and_body_weekday_are_consistent():
     Body-Wochentag passen. Bug: `_typ_tag` (Betreff) nutzt `alert.valid_from`
     roh (i.d.R. UTC), `_format_validity` (Body) lokalisiert — bei einem
     Gültigkeitsbeginn kurz vor Mitternacht (lokaler Tageswechsel) zeigen beide
-    unterschiedliche Wochentage (Symptom: '(Sa)' im Betreff vs. 'So' im Body)."""
+    unterschiedliche Wochentage (Symptom: '(Sa)' im Betreff vs. 'So' im Body).
+
+    Issue #1402: beide Aufrufe übergeben `tz` jetzt explizit (wie die echten
+    Versand-Pfade in `notification_service.py` es tun) — der frühere stille
+    Rückfall des Betreffs auf ein geratenes Europe/Vienna ist entfernt
+    (fällt jetzt ehrlich auf UTC zurück statt eine plausibel aussehende,
+    aber ebenso geratene Zone vorzutäuschen)."""
     from output.renderers.alert.official_alerts import render_official_alert_subject
 
     vienna = ZoneInfo("Europe/Vienna")
@@ -352,7 +358,7 @@ def test_ac12_subject_and_body_weekday_are_consistent():
         affected_chips=["gesamte Route"], free_chips=[],
     )
 
-    subject = render_official_alert_subject([warn], prefix="KHW 403")
+    subject = render_official_alert_subject([warn], prefix="KHW 403", tz=vienna)
     html = _render([warn], tz=vienna)
 
     m_subj = re.search(r"\(([A-Za-zÄÖÜäöü]{2})\)", subject)

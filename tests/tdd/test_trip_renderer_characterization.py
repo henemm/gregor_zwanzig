@@ -99,7 +99,18 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # Arbeitsstand: einziger Unterschied ist der `source=`/`renderer_name=`-Aufruf
 # von `build_origin_footer()`, kein anderer Text-/Layout-Block hat sich
 # geaendert. Digest unten neu ermittelt fuer den ADR-0034-Stand.
-_EXPECTED_SHA256 = "78075cb3fa70f762d334f0be6b7c597b1a0cba13f3942f758d4c36c1a17a714a"
+#
+# Korrektur (Issue #1402, Scheibe D): der Kopfzeile-Fix aus dieser Datei
+# selbst dokumentiert oben (Punkt 2) den vorbestehenden Bug in `email/
+# html.py:843/1128` -- ein HARTKODIERTES "MESZ"-Literal statt der echten,
+# aus `tz`/`sent_at` abgeleiteten Zonen-Abkuerzung. Der Fix ersetzt es durch
+# `utils.timezone.tz_abbrev()` -- dieselbe Funktion, die `compare_html.py`
+# schon fuer "(CEST)"/"(CET)"-Kuerzel nutzt (etablierte App-Konvention,
+# ENGLISCHE POSIX-Abkuerzung, nicht die deutsche "MESZ"). Fuer dieses Fixture
+# (Europe/Berlin, 11.07. = Sommerzeit) aendert sich dadurch GENAU EIN
+# Vorkommen im HTML von "MESZ" zu "CEST" -- verifiziert per Diff des
+# Roh-HTML, sonst kein Unterschied. Digest unten neu ermittelt.
+_EXPECTED_SHA256 = "1ec936520af140125f8eeddd79bcd2fc36d6f43ed825f0c2a460380abe317e1f"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",

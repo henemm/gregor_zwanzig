@@ -96,7 +96,7 @@ class TestThunderForecastFailSoft:
         trip = _trip_with_unfetchable_next_stage(today)
 
         collected = TripReportSchedulerService()._collect_future_stage_weather(
-            trip, today, tz=None,
+            trip, today,
         )
 
         assert collected == [], (

@@ -348,7 +348,12 @@ def _warn_hour(alert: "OfficialAlert", tz: "ZoneInfo") -> Optional[int]:
     vf, vt = alert.valid_from, alert.valid_to
     if not vf or not vt:
         return None
-    vf_l, vt_l = vf.astimezone(tz), vt.astimezone(tz)
+    # Issue #1402: local_dt() statt rohem .astimezone() -- ein naives
+    # valid_from/valid_to (Hausnorm UTC, #1345) wurde sonst als Prozess-
+    # Lokalzeit gedeutet.
+    from utils.timezone import local_dt
+
+    vf_l, vt_l = local_dt(vf, tz), local_dt(vt, tz)
     if (vf_l.hour, vf_l.minute, vt_l.hour, vt_l.minute) == (0, 0, 23, 59):
         return None
     return vf_l.hour
@@ -485,7 +490,7 @@ def _bundle_by_hazard_level(
 
 
 def render_official_alert_notice_plain(
-    alerts: list[tuple["OfficialAlert", list[str]]], tz: "ZoneInfo | None" = None,
+    alerts: list[tuple["OfficialAlert", list[str]]], tz: "ZoneInfo",
 ) -> list[str]:
     """Standalone-Alert-Format (Issue #1172/#1200): dedupliziert die Warnungen
     (dedupe_official_alerts) und rendert pro echter Warnung einen Block mit
@@ -497,11 +502,13 @@ def render_official_alert_notice_plain(
     die "Gültig:"-Zeile GANZ, statt "Gültig: unbekannt" zu schreiben -- gilt
     fuer die ganze Mail, nicht nur den HTML-Teil (jede Mail geht multipart
     raus, der Klartext-Teil wird von manchen Clients angezeigt und von den
-    eigenen Pruef-Werkzeugen ausgewertet)."""
+    eigenen Pruef-Werkzeugen ausgewertet).
+
+    Issue #1402: `tz` ist PFLICHTPARAMETER — der einzige produktive Aufrufer
+    (`NotificationService._dispatch_alert_message`) uebergibt immer
+    `alert_tz` (selbst Pflichtparameter dort)."""
     from utils.timezone import local_fmt
 
-    if tz is None:
-        tz = ZoneInfo("UTC")
     fmt = "%a %d.%m. %H:%M"
 
     lines: list[str] = []
@@ -710,11 +717,14 @@ def render_official_alert_subject(
 
     `tz` (#1233 Nebenbefund AC-12, optional): lokalisiert den Wochentag
     konsistent mit dem Body (`_format_validity`/`render_official_alert_html`).
-    Ohne explizite `tz` faellt der Betreff auf Europe/Vienna zurueck (Bestands-
-    Default, analog `alert_daily_limit.py`), NICHT mehr auf rohes UTC -- das
-    war die Bug-Ursache. Die Versand-Pfade (`notification_service.py`) reichen
-    die tatsaechliche, aus den Trip-/Ort-Koordinaten abgeleitete `alert_tz`
-    durch, die auch der Body erhaelt.
+    Die Versand-Pfade (`notification_service.py`) reichen die tatsaechliche,
+    aus den Trip-/Ort-Koordinaten abgeleitete `alert_tz` durch, die auch der
+    Body erhaelt -- alle produktiven Aufrufer liefern `tz` also bereits immer
+    (Wächter-Test `test_output_timezone_guard.py` prueft das). Issue #1402:
+    ohne explizite `tz` faellt der Betreff auf UTC zurueck, NICHT mehr auf
+    das geratene Europe/Vienna (#1233) -- eine geratene Zone sieht plausibel
+    aus und faellt beim Lesen nicht auf, obwohl sie ebenso falsch sein kann
+    wie rohes UTC.
 
     Adversary F006 (HIGH, Staging-Fund) + Befund 3 (#1248, ADR-Bestandsschutz):
     dieselbe Fehlerklasse wie in Quelle-Box/Headline -- die Reichweite ist nur
@@ -737,7 +747,7 @@ def render_official_alert_subject(
     bisherigen Testfaelle haben einheitlichen Umfang je Notice-Liste, der neue
     Zweig greift dort nie."""
     if tz is None:
-        tz = ZoneInfo("Europe/Vienna")
+        tz = ZoneInfo("UTC")
     ordered = _sort_notices(notices)
     leading = ordered[0]
     uniform = len({n.alert.level for n in ordered}) == 1

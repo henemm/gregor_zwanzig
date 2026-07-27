@@ -25,6 +25,7 @@ import shutil
 import uuid
 from datetime import date, datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from app.models import (
     ChangeSeverity,
@@ -631,6 +632,7 @@ class TestAC7SmsWithoutParity:
                 effective_channels={"email"},
                 mail_sink=lambda subject, body: mail_calls.append((subject, body)),
                 official_notices=[(alert, [])],
+                alert_tz=ZoneInfo("UTC"),
             )
 
             assert len(mail_calls) == 1

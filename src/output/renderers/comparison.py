@@ -501,6 +501,7 @@ def render_compare_telegram(
             warn_text = render_official_alert_telegram(
                 notices, prefix=loc_result.location.name,
                 source_label=" · ".join(sources), show_scope=False,
+                tz=location_tz(loc_result.location),
             )
             block.append(f"   {warn_text}")
         blocks.append(block)
