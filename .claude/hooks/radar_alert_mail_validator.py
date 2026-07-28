@@ -30,6 +30,7 @@ from pathlib import Path
 # standalone-Aufruf, kein relativer Import noetig).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _e2e_paths  # noqa: E402
+import _validator_log  # noqa: E402  (#1408 F005: kollisionsfreie Log-Ablage)
 
 # Muster fuer Onset-Zeit (HH:MM, z.B. "14:30")
 _TIME_RE = re.compile(r"\b([01]?\d|2[0-3]):[0-5]\d\b")
@@ -149,8 +150,6 @@ def _write_validation_log(success: bool, errors: list) -> None:
         log_dir = (shared / ".claude" / "workflows" / "_log") if shared else fallback_log_dir
         log_dir.mkdir(parents=True, exist_ok=True)
         workflow_id = os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "unknown")
-        date_str = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        log_path = log_dir / f"{date_str}_{workflow_id}_radar_alert_validation.yaml"
 
         lines = [
             f"validator: radar_alert_mail_validator",
@@ -167,7 +166,10 @@ def _write_validation_log(success: bool, errors: list) -> None:
         fd, tmp = tempfile.mkstemp(dir=str(log_dir), suffix=".tmp")
         with os.fdopen(fd, "w") as f:
             f.write("\n".join(lines) + "\n")
-        os.rename(tmp, str(log_path))
+        # #1408 F005: Mikrosekunden + exklusive Ablage, Zaehler im Praefix --
+        # zwei Laeufe in derselben Sekunde duerfen einander weder
+        # ueberschreiben noch aus dem Suchmuster des Gates fallen.
+        _validator_log.place_exclusively(tmp, log_dir, workflow_id, "radar_alert_validation")
     except Exception:
         pass  # fail-soft
 

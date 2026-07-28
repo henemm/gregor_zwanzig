@@ -35,6 +35,7 @@ from typing import List, Tuple
 # standalone-Aufruf, kein relativer Import noetig).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _e2e_paths  # noqa: E402
+import _validator_log  # noqa: E402  (#1408 F005: kollisionsfreie Log-Ablage)
 
 
 def _write_validation_log(
@@ -82,8 +83,6 @@ def _write_validation_log(
         log_dir = Path(log_dir)
         log_dir.mkdir(parents=True, exist_ok=True)
 
-        date_str = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        log_path = log_dir / f"{date_str}_{workflow_id}_email_validation.yaml"
 
         # None heisst hier wie im Fetch-Pfad "Standardgrenze war aktiv".
         effective_max_age = (
@@ -114,7 +113,10 @@ def _write_validation_log(
         fd, tmp = tempfile.mkstemp(dir=str(log_dir), suffix=".tmp")
         with os.fdopen(fd, "w") as f:
             _yaml.safe_dump(data, f, allow_unicode=True)
-        os.rename(tmp, str(log_path))
+        # F005: nie ueberschreiben -- auch nicht bei parallelen Sitzungen.
+        # Der Zaehler waechst im Praefix, die Endung '_email_validation.yaml'
+        # bleibt unangetastet (danach sucht renderer_mail_gate.py).
+        _validator_log.place_exclusively(tmp, log_dir, workflow_id, "email_validation")
     except Exception as exc:
         # fail-soft — darf den Validator-Exit-Code nie kippen, aber NICHT
         # lautlos: das Log ist der Nachweis, den das Renderer-Commit-Gate

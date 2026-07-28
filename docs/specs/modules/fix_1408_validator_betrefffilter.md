@@ -381,6 +381,43 @@ bis zum Log-Aufruf durch.
 
 ## Changelog
 
+- 2026-07-28d (bei der Staging-Verifikation gefunden, Umfang bewusst
+  erweitert): **F005 — die Protokolle fraßen einander.**
+  `_write_validation_log()` baute den Dateinamen nur mit Sekundenauflösung und
+  legte per `os.rename` ab; zwei Läufe in derselben Sekunde überschrieben sich
+  lautlos. Real passiert: ein bestandener Nachweis wurde von einem
+  gescheiterten gefressen, worauf die Staging-Attestation zu Recht auf
+  AMBIGUOUS stehen blieb. Das wiegt schwer, weil das Protokoll der Nachweis
+  ist, den `renderer_mail_gate.py` liest.
+  - Fix: neuer geteilter Helfer `.claude/hooks/_validator_log.py`
+    (Mikrosekunden im Namen, `os.link` in einer Zähler-Schleife statt
+    `os.rename` — atomar, damit auch parallele Prozesse nicht dieselbe Datei
+    belegen; parallele Sitzungen sind hier der Normalfall).
+  - **Ausweitung auf alle vier Mail-Validatoren** (`email_spec`, `briefing`,
+    `radar_alert`, `official_alert`) statt nur auf den Compare-Prüfer:
+    identischer Fehler, identischer Fix. Der Briefing-Prüfer ist sogar stärker
+    betroffen — auch er ist Pflicht-Nachweis für #811, und dort wird
+    „senden → validieren" paarweise mehrfach hintereinander ausgeführt.
+    Geteilt ist ausdrücklich nur die **Ablage**, nicht die Erzeugung des
+    Inhalts (zwei der vier bauen ihr YAML von Hand — das zusammenzuführen wäre
+    eine Verhaltensänderung ohne Bezug zu F005).
+  - **Nachbesserung nach Adversary Runde 4 (BROKEN):** Der erste Fix hängte
+    den Kollisions-Zähler **hinter** die Endung (`..._email_validation_1.yaml`)
+    und fiel damit aus dem `glob("*_<kind>_validation.yaml")` der Abnehmer —
+    die ausgewichene Datei war für das Gate unsichtbar. Also dasselbe Symptom,
+    nur über Unsichtbarkeit statt Überschreiben. Der Zähler steht jetzt im
+    **Präfix**; die Endung ist der Vertrag mit dem Gate und bleibt unangetastet.
+  - **Die eigentliche Lücke war der Test:** Neun grüne Tests bestätigten
+    Eindeutigkeit, Inhalt und sogar die Endung als Zeichenkette — und
+    übersahen, dass das Gate die Datei nicht findet. Eine Endung als String zu
+    prüfen sieht wie eine Vertragsprüfung aus, bestätigt aber nur das eigene
+    Namensschema. Erst der Aufruf der **echten** Prüffunktionen des Gates
+    (`_validator_log_ok`, `_compare_validator_log_ok`,
+    `_radar_validator_log_ok`, `_official_validator_log_ok`) prüft den
+    Vertrag; der Test enthält zusätzlich die Gegenprobe, dass die alte
+    Namensform abgelehnt wird.
+  - Adversary nach **fünf Runden** VERIFIED, mit eigener Reproduktion statt
+    Übernahme der Entwickler-Tests.
 - 2026-07-28c (Adversary-Fix-Schleife, keine AC-Änderung): Vier Umgehungswege
   gefunden und geschlossen — **alle derselben Klasse: ein Wert, der
   unauffällig „keine Prüfung" bedeutet.**

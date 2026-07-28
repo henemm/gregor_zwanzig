@@ -880,3 +880,8 @@ def test_unwritable_validation_log_is_reported_not_swallowed(tmp_path, capsys):
         "Ein ausgefallenes Validator-Log muss hoerbar gemeldet werden "
         f"(stderr), bekommen: {stderr!r}"
     )
+
+
+# F005 (Protokolle duerfen einander nicht ueberschreiben) wird fuer ALLE VIER
+# Validatoren in tests/tdd/test_validator_log_unique_filenames.py geprueft --
+# der Fehler und sein Fix sind in allen vier identisch.
