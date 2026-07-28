@@ -53,6 +53,9 @@ export interface CorridorRowState {
 	// Fehlt (route-Zeilen) -> wird wie 'range' behandelt.
 	kind?: 'range' | 'ordinal';
 	ordinalLabels?: string[];
+	/** Issue #1401 (A1, nur vergleich): Auswertung als eigenes Element neben
+	 *  dem Namen. Fehlt (route-Zeilen) -> es wird nur der Name gezeigt. */
+	aggregationLabel?: string;
 	// Slice 4 Fakten-Korrektur (Team-Lead): nur die 10 Compare-Alarm-Keys haben
 	// eine notify-Bruecke zum Δ-Wächter (compare_alert.py). Die uebrigen 4
 	// reinen Vergleichs-Metriken (snow_depth_cm, sunny_hours_h, cloud_avg_pct,
@@ -240,6 +243,9 @@ export function buildCorridorSavePayload(
 export interface CompareMetricDef {
 	metric: string;
 	label: string;
+	/** Issue #1401 (A1): Auswertung (Maximum/Minimum/Mittel/Summe) als eigenes
+	 *  Element neben dem Namen — nicht Teil von `label`. */
+	aggregationLabel?: string;
 	unit: string;
 	scale: [number, number];
 	step: number;
@@ -409,6 +415,7 @@ export function buildComparePool(corridors: Corridor[], defs: CompareMetricDef[]
 				metric: def.metric, label: def.label, unit: def.unit, scale: def.scale, step: def.step,
 				min: c.range[0], max: c.range[1], notify: c.notify, mark: c.mark,
 				kind: def.kind, ordinalLabels: def.ordinalLabels, alarmCapable: def.alarmCapable,
+				aggregationLabel: def.aggregationLabel,
 			});
 			remaining.delete(def.metric);
 		} else {
@@ -448,6 +455,7 @@ export function addCompareRow(
 		min: def.defaultMin, max: def.defaultMax,
 		notify, mark: ctxDefaults.mark,
 		kind: def.kind, ordinalLabels: def.ordinalLabels, alarmCapable: def.alarmCapable,
+		aggregationLabel: def.aggregationLabel,
 	};
 	return { rows: [...rows, newRow], poolLeft: poolLeft.filter((m) => m.metric !== metric) };
 }
@@ -489,6 +497,7 @@ export function buildComparePrefillRows(profileKey: ProfileKey, defs: CompareMet
 			metric: def.metric, label: def.label, unit: def.unit, scale: def.scale, step: def.step,
 			min, max, notify: def.alarmCapable, mark: true,
 			kind: def.kind, ordinalLabels: def.ordinalLabels, alarmCapable: def.alarmCapable,
+			aggregationLabel: def.aggregationLabel,
 		});
 	}
 	return rows;

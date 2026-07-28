@@ -33,31 +33,31 @@ const MODULE_SPECIFIER = '../compareMetricSelection.ts';
 // von GET /api/compare/metrics, Teil 1).
 const REAL_CATALOG_FIXTURE = {
 	metrics: [
-		{ key: 'snow_depth_cm', label: 'Schneehöhe', unit: 'cm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 200, step: 5 },
-		{ key: 'snow_new_sum_cm', label: 'Neuschnee', unit: 'cm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 50, step: 1 },
-		{ key: 'sunny_hours_h', label: 'Sonnenstunden', unit: 'h', decimals: 1, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 12, step: 0.5 },
-		{ key: 'wind_max_kmh', label: 'Windspitzen', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5 },
-		{ key: 'cloud_avg_pct', label: 'Bewölkung Ø', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5 },
-		{ key: 'visibility_min_m', label: 'Sichtweite min', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 10000, step: 500 },
-		{ key: 'precip_sum_mm', label: 'Niederschlag', unit: 'mm', decimals: 1, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 30, step: 0.5 },
-		{ key: 'uv_index_max', label: 'UV-Index max', unit: '', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 12, step: 1 },
-		{ key: 'temp_max_c', label: 'Temperatur max', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -20, rangeMax: 45, step: 1 },
-		{ key: 'thunder_level_max', label: 'Gewitter', unit: '', decimals: 0, higherIsBetter: false, kind: 'ordinal', ordinalLabels: ['kein', 'mittel', 'hoch'] },
-		{ key: 'temp_min_c', label: 'Temperatur min', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1 },
-		{ key: 'gust_max_kmh', label: 'Böen', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 150, step: 5 },
-		{ key: 'cape_max_jkg', label: 'Gewitter-Energie (CAPE)', unit: 'J/kg', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 3000, step: 100 },
-		{ key: 'freezing_level_m', label: 'Nullgradgrenze', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 5000, step: 100 },
-		{ key: 'pop_max_pct', label: 'Regenwahrscheinlichkeit', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5 },
-		{ key: 'wind_direction_deg', label: 'Windrichtung', unit: '°', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 360, step: 10 },
-		{ key: 'wind_chill_min_c', label: 'Gefühlte Temp. min', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1 },
-		{ key: 'humidity_avg_pct', label: 'Luftfeuchtigkeit Ø', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5 },
-		{ key: 'dewpoint_avg_c', label: 'Taupunkt Ø', unit: '°C', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: -20, rangeMax: 30, step: 1 },
-		{ key: 'snowfall_limit_m', label: 'Schneefallgrenze', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 5000, step: 100 },
-		{ key: 'precip_type_dominant', label: 'Niederschlagsart', unit: '', decimals: 0, higherIsBetter: false, kind: 'enum', enumValues: ['RAIN', 'SNOW', 'MIXED', 'FREEZING_RAIN'] },
-		{ key: 'cloud_low_avg_pct', label: 'Wolken tief', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5 },
-		{ key: 'cloud_mid_avg_pct', label: 'Wolken mittel', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5 },
-		{ key: 'cloud_high_avg_pct', label: 'Wolken hoch', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5 },
-		{ key: 'pressure_avg_hpa', label: 'Luftdruck Ø', unit: 'hPa', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 950, rangeMax: 1050, step: 5 }
+		{ key: 'snow_depth_cm', label: 'Schneehöhe', aggregation_label: 'Maximum', unit: 'cm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 200, step: 5 },
+		{ key: 'snow_new_sum_cm', label: 'Neuschnee', aggregation_label: 'Summe', unit: 'cm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 50, step: 1 },
+		{ key: 'sunny_hours_h', label: 'Sonnenstunden', aggregation_label: 'Summe', unit: 'h', decimals: 1, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 12, step: 0.5 },
+		{ key: 'wind_max_kmh', label: 'Wind', aggregation_label: 'Maximum', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5 },
+		{ key: 'cloud_avg_pct', label: 'Bewölkung', aggregation_label: 'Mittel', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5 },
+		{ key: 'visibility_min_m', label: 'Sichtweite', aggregation_label: 'Minimum', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 10000, step: 500 },
+		{ key: 'precip_sum_mm', label: 'Niederschlag', aggregation_label: 'Summe', unit: 'mm', decimals: 1, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 30, step: 0.5 },
+		{ key: 'uv_index_max', label: 'UV-Index', aggregation_label: 'Maximum', unit: '', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 12, step: 1 },
+		{ key: 'temp_max_c', label: 'Temperatur', aggregation_label: 'Maximum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -20, rangeMax: 45, step: 1 },
+		{ key: 'thunder_level_max', label: 'Gewitter', aggregation_label: 'Maximum', unit: '', decimals: 0, higherIsBetter: false, kind: 'ordinal', ordinalLabels: ['kein', 'mittel', 'hoch'] },
+		{ key: 'temp_min_c', label: 'Temperatur', aggregation_label: 'Minimum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1 },
+		{ key: 'gust_max_kmh', label: 'Böen', aggregation_label: 'Maximum', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 150, step: 5 },
+		{ key: 'cape_max_jkg', label: 'Gewitterenergie (CAPE)', aggregation_label: 'Maximum', unit: 'J/kg', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 3000, step: 100 },
+		{ key: 'freezing_level_m', label: 'Nullgradgrenze', aggregation_label: 'Minimum', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 5000, step: 100 },
+		{ key: 'pop_max_pct', label: 'Regenwahrscheinlichkeit', aggregation_label: 'Maximum', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5 },
+		{ key: 'wind_direction_deg', label: 'Windrichtung', aggregation_label: 'Mittel', unit: '°', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 360, step: 10 },
+		{ key: 'wind_chill_min_c', label: 'Gefühlte Temperatur', aggregation_label: 'Minimum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1 },
+		{ key: 'humidity_avg_pct', label: 'Luftfeuchtigkeit', aggregation_label: 'Mittel', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5 },
+		{ key: 'dewpoint_avg_c', label: 'Taupunkt', aggregation_label: 'Mittel', unit: '°C', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: -20, rangeMax: 30, step: 1 },
+		{ key: 'snowfall_limit_m', label: 'Schneefallgrenze', aggregation_label: 'Minimum', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 5000, step: 100 },
+		{ key: 'precip_type_dominant', label: 'Niederschlagsart', aggregation_label: 'Maximum', unit: '', decimals: 0, higherIsBetter: false, kind: 'enum', enumValues: ['RAIN', 'SNOW', 'MIXED', 'FREEZING_RAIN'] },
+		{ key: 'cloud_low_avg_pct', label: 'Tiefe Wolken', aggregation_label: 'Mittel', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5 },
+		{ key: 'cloud_mid_avg_pct', label: 'Mittelhohe Wolken', aggregation_label: 'Mittel', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5 },
+		{ key: 'cloud_high_avg_pct', label: 'Hohe Wolken', aggregation_label: 'Mittel', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5 },
+		{ key: 'pressure_avg_hpa', label: 'Luftdruck', aggregation_label: 'Mittel', unit: 'hPa', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 950, rangeMax: 1050, step: 5 }
 	]
 };
 
@@ -174,10 +174,10 @@ describe('AC-2: SSoT-Kern — neuer Backend-Eintrag erscheint ohne Frontend-Kons
 // Größe mit unterschiedlicher Auswertung tragen.
 const CATALOG_WITH_ORIGIN_FIXTURE = {
 	metrics: [
-		{ key: 'temp_max_c', label: 'Temperatur max', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -20, rangeMax: 45, step: 1, metric_id: 'temperature', aggregation: 'max' },
-		{ key: 'temp_min_c', label: 'Temperatur min', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, metric_id: 'temperature', aggregation: 'min' },
-		{ key: 'wind_max_kmh', label: 'Windspitzen', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, metric_id: 'wind', aggregation: 'max' },
-		{ key: 'precip_sum_mm', label: 'Niederschlag', unit: 'mm', decimals: 1, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 30, step: 0.5, metric_id: 'precipitation', aggregation: 'sum' }
+		{ key: 'temp_max_c', label: 'Temperatur', aggregation_label: 'Maximum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -20, rangeMax: 45, step: 1, metric_id: 'temperature', aggregation: 'max' },
+		{ key: 'temp_min_c', label: 'Temperatur', aggregation_label: 'Minimum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, metric_id: 'temperature', aggregation: 'min' },
+		{ key: 'wind_max_kmh', label: 'Wind', aggregation_label: 'Maximum', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, metric_id: 'wind', aggregation: 'max' },
+		{ key: 'precip_sum_mm', label: 'Niederschlag', aggregation_label: 'Summe', unit: 'mm', decimals: 1, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 30, step: 0.5, metric_id: 'precipitation', aggregation: 'sum' }
 	]
 };
 

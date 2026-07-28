@@ -265,6 +265,10 @@
 				<div class="cem-head">
 					<div>
 						<span class="cem-label">{row.label}</span>
+						<!-- Issue #1401 (A1): Auswertung daneben, nicht im Namen (nur vergleich). -->
+						{#if row.aggregationLabel}
+							<span class="cem-aggregation">{row.aggregationLabel}</span>
+						{/if}
 						<span class="cem-unit">{row.unit}</span>
 					</div>
 					<span class="cem-range">{rangeLabel(row)}</span>
@@ -342,7 +346,7 @@
 				<div class="cem-pool-label">Metrik hinzufügen</div>
 				{#each poolLeft as m (m.metric)}
 					<div data-testid="corridor-editor-pool-item-{m.metric}">
-						<MBtn block variant="ghost" size="lg" onclick={() => add(m.metric)}>＋ {m.label}</MBtn>
+						<MBtn block variant="ghost" size="lg" onclick={() => add(m.metric)}>＋ {m.label}{#if 'aggregationLabel' in m && m.aggregationLabel}<span class="cem-aggregation">{m.aggregationLabel}</span>{/if}</MBtn>
 					</div>
 				{/each}
 			</div>
@@ -379,6 +383,8 @@
 	.cem-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 	.cem-label { font-size: 15px; font-weight: 600; color: var(--g-ink); }
 	.cem-unit { font-size: 10px; color: var(--g-ink-4); margin-left: 6px; }
+	/* Issue #1401: Auswertung als eigenes Element neben dem Namen. */
+	.cem-aggregation { font-size: 11px; color: var(--g-ink-3); background: var(--g-paper); border: 1px solid var(--g-rule-soft); border-radius: 3px; padding: 0 5px; margin-left: 6px; white-space: nowrap; }
 	.cem-range { font-size: 13px; font-weight: 600; color: var(--g-ink); white-space: nowrap; }
 	.cem-note { font-size: 11.5px; color: var(--g-ink-4); margin-top: 2px; font-style: italic; }
 	.cem-band-track { position: relative; height: 14px; margin-top: 22px; margin-bottom: 8px; border-radius: 7px; background: var(--g-rule-soft); }

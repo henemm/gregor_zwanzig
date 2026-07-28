@@ -11,6 +11,8 @@ export interface CompareSelectionEntry {
 	// unveraendert durchgereicht. Nur vorhanden, wenn der Endpoint sie liefert.
 	metric_id?: string;
 	aggregation?: string;
+	// Issue #1401 (A1): Auswertung als eigenes Anzeige-Element neben dem Namen.
+	aggregation_label?: string;
 }
 
 /**
@@ -32,7 +34,10 @@ export function toCompareSelectionEntries(
 		metric: m.key,
 		label: m.label,
 		...(m.metric_id !== undefined ? { metric_id: m.metric_id } : {}),
-		...(m.aggregation !== undefined ? { aggregation: m.aggregation } : {})
+		...(m.aggregation !== undefined ? { aggregation: m.aggregation } : {}),
+		...(m.aggregation_label !== undefined
+			? { aggregation_label: m.aggregation_label }
+			: {})
 	}));
 	// Issue #1373 (S2 Scheibe B): dieselbe geladene Katalogantwort ist die
 	// EINZIGE Quelle für die Übersetzung Auswahl-Schlüssel <-> Größe+Auswertung

@@ -71,6 +71,12 @@
 						{#if m.unit}
 							<span class="metric-unit mono">{m.unit}</span>
 						{/if}
+						{#if m.aggregation_label}
+							<!-- Issue #1401 (A1): Auswertung als eigenes Element neben dem
+							     Namen. Nur im Ortsvergleich gesetzt — im Trip fehlt das
+							     Feld, dort bleibt die Zeile unveraendert. -->
+							<span class="aggregation-badge" data-testid="wm2-aggregation-badge">{m.aggregation_label}</span>
+						{/if}
 						{#if m.col_label}
 							<span class="col-badge mono">{m.col_label}</span>
 						{/if}
@@ -170,6 +176,19 @@
 		font-size: 10.5px;
 		color: var(--g-ink-4);
 		margin-left: 6px;
+		white-space: nowrap;
+	}
+	/* Issue #1401: Auswertung — eigenes Element, gleiches Badge-Muster wie
+	   col-badge, aber ohne Mono (deutscher Fliesstext, kein Kuerzel). */
+	.aggregation-badge {
+		font-size: 10.5px;
+		color: var(--g-ink-3);
+		background: var(--g-paper);
+		border: 1px solid var(--g-rule-soft);
+		border-radius: 3px;
+		padding: 0 5px;
+		margin-left: 6px;
+		line-height: 1.6;
 		white-space: nowrap;
 	}
 	.col-badge {

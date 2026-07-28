@@ -62,7 +62,11 @@
 
 	const outlookMetricById = $derived.by(() => {
 		const map: Record<string, MetricEntry> = {};
-		for (const e of catalog) map[e.metric] = { id: e.metric, label: e.label } as MetricEntry;
+		// Issue #1401 (A1): Auswertung als eigenes Element mitgeben.
+		for (const e of catalog)
+			map[e.metric] = {
+				id: e.metric, label: e.label, aggregation_label: e.aggregation_label
+			} as MetricEntry;
 		return map;
 	});
 
@@ -101,6 +105,10 @@
 				onchange={makeOutlookMetricHandler(entry.metric)}
 			/>
 			<span>{entry.label}</span>
+			<!-- Issue #1401 (A1): Auswertung daneben, nicht im Namen. -->
+			{#if entry.aggregation_label}
+				<span class="outlook-aggregation" data-testid={`compare-layout-outlook-aggregation-${entry.metric}`}>{entry.aggregation_label}</span>
+			{/if}
 		</label>
 	{/each}
 </div>
@@ -140,5 +148,15 @@
 		gap: 8px;
 		font-size: var(--g-text-sm);
 		color: var(--g-ink);
+	}
+	/* Issue #1401: Auswertung als eigenes, abgesetztes Element. */
+	.outlook-aggregation {
+		font-size: 11px;
+		color: var(--g-ink-3);
+		background: var(--g-paper);
+		border: 1px solid var(--g-rule-soft);
+		border-radius: 3px;
+		padding: 0 5px;
+		white-space: nowrap;
 	}
 </style>

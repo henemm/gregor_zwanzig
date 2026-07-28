@@ -273,6 +273,10 @@
 			<div class="ce-row" data-testid="corridor-row-{row.metric}">
 				<div class="ce-info">
 					<span class="ce-label">{row.label}</span>
+					<!-- Issue #1401 (A1): Auswertung daneben, nicht im Namen (nur vergleich). -->
+					{#if row.aggregationLabel}
+						<span class="ce-aggregation">{row.aggregationLabel}</span>
+					{/if}
 					<span class="ce-unit">{row.unit}</span>
 					{#if row.note}<div class="ce-note">{row.note}</div>{/if}
 				</div>
@@ -353,7 +357,7 @@
 			<div class="ce-pool">
 				<span class="ce-pool-label">Metrik hinzufügen:</span>
 				{#each poolLeft as m (m.metric)}
-					<button type="button" class="ce-pool-btn" data-testid="corridor-editor-pool-item-{m.metric}" onclick={() => add(m.metric)}>＋ {m.label}</button>
+					<button type="button" class="ce-pool-btn" data-testid="corridor-editor-pool-item-{m.metric}" onclick={() => add(m.metric)}>＋ {m.label}{#if 'aggregationLabel' in m && m.aggregationLabel}<span class="ce-aggregation">{m.aggregationLabel}</span>{/if}</button>
 				{/each}
 			</div>
 		{/if}
@@ -395,6 +399,8 @@
 	.ce-row { display: grid; grid-template-columns: 190px 1fr 224px; gap: 22px; padding: 18px 20px; border-bottom: 1px solid var(--g-rule-soft); align-items: start; }
 	.ce-label { font-size: 14px; font-weight: 600; color: var(--g-ink); }
 	.ce-unit { font-size: 10px; color: var(--g-ink-4); margin-left: 6px; }
+	/* Issue #1401: Auswertung als eigenes Element neben dem Namen. */
+	.ce-aggregation { font-size: 10.5px; color: var(--g-ink-3); background: var(--g-paper); border: 1px solid var(--g-rule-soft); border-radius: 3px; padding: 0 5px; margin-left: 6px; white-space: nowrap; }
 	.ce-note { font-size: 11px; color: var(--g-ink-4); font-style: italic; margin-top: 2px; }
 	.ce-band-track { position: relative; height: 10px; margin: 8px 0; border-radius: 5px; background: var(--g-rule-soft); }
 	.ce-band-fill { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: var(--g-ink-3); opacity: 0.4; }

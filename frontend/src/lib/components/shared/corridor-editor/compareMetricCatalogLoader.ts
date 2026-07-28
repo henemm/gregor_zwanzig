@@ -38,6 +38,11 @@ export function buildCompareMetricDefs(response: CompareMetricCatalogResponse): 
 		return {
 			metric: entry.key,
 			label: entry.label,
+			// Issue #1401 (A1): Auswertung als eigenes Element neben dem Namen —
+			// nur wenn die Antwort sie traegt (keine erfundenen undefined-Schluessel).
+			...(entry.aggregation_label !== undefined
+				? { aggregationLabel: entry.aggregation_label }
+				: {}),
 			unit: entry.unit ?? '',
 			scale,
 			step: entry.step ?? 1,

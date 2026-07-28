@@ -169,6 +169,10 @@ export interface MetricEntry {
 	default_format_mode?: string;
 	/** Issue #849: Kurzes Spaltenkürzel für E-Mail-Tabelle (z.B. "T", "Gust"). */
 	col_label?: string;
+	/** Issue #1401 (A1): Auswertung als eigenes Element neben dem Namen
+	 *  (Maximum/Minimum/Mittel/Summe). Nur im Ortsvergleich gesetzt —
+	 *  /api/metrics (Trip) liefert sie nicht. */
+	aggregation_label?: string;
 }
 
 export interface WeatherConfigMetric {
@@ -451,6 +455,10 @@ export interface CompareMetricCatalogEntry {
 	// Optional, weil ältere Antworten (bzw. Test-Fixtures) sie nicht tragen.
 	metric_id?: string;
 	aggregation?: string;
+	// Issue #1401 (A1): deutsche Beschriftung der Auswertung (Maximum/Minimum/
+	// Mittel/Summe) — eigenes Anzeige-Element NEBEN dem Namen, nicht darin.
+	// Optional: ältere Antworten/Fixtures und der Trip-Katalog tragen sie nicht.
+	aggregation_label?: string;
 }
 
 export interface CompareMetricCatalogResponse {

@@ -768,7 +768,12 @@
 	// hier also leer.
 	const compareMetricById = $derived.by(() => {
 		const map: Record<string, MetricEntry> = {};
-		for (const e of compareCatalog) map[e.metric] = { id: e.metric, label: e.label } as MetricEntry;
+		// Issue #1401 (A1): `aggregation_label` mitgeben — die Reihenfolge-Zeile
+		// zeigt die Auswertung als eigenes Element neben dem Namen.
+		for (const e of compareCatalog)
+			map[e.metric] = {
+				id: e.metric, label: e.label, aggregation_label: e.aggregation_label
+			} as MetricEntry;
 		return map;
 	});
 
@@ -876,6 +881,11 @@
 								onchange={() => toggleCompareMetric(entry.metric)}
 							/>
 							<span>{entry.label}</span>
+							<!-- Issue #1401 (A1): Auswertung als eigenes Element neben dem
+							     Namen, nicht als zusammengesetzter String. -->
+							{#if entry.aggregation_label}
+								<span class="vergleich-aggregation" data-testid="weather-metrics-vergleich-aggregation-{entry.metric}">{entry.aggregation_label}</span>
+							{/if}
 						</label>
 					{/each}
 				</div>
@@ -1495,6 +1505,16 @@
 	.reihenfolge-hint {
 		padding: 14px 16px 0;
 		margin-bottom: 0;
+	}
+	/* Issue #1401: Auswertung optisch abgesetzt vom Namen (eigenes Element). */
+	.vergleich-aggregation {
+		font-size: 11px;
+		color: var(--g-ink-3);
+		background: var(--g-paper);
+		border: 1px solid var(--g-rule-soft);
+		border-radius: 3px;
+		padding: 0 5px;
+		white-space: nowrap;
 	}
 	.vergleich-metric-row {
 		display: flex;

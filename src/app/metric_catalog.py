@@ -361,7 +361,8 @@ _METRICS: list[MetricDefinition] = [
         sms_code="VS", decimals=1, cmp="unter", alert_label="Sicht",
     ),
     MetricDefinition(
-        id="sunshine", label_de="Sonnenschein", unit="h",
+        # #1401 A1: "Sonnenstunden" benennt die Einheit (h) korrekt (PO-Freigabe).
+        id="sunshine", label_de="Sonnenstunden", unit="h",
         dp_field="dni_wm2", category="atmosphere",
         default_aggregations=("sum",),
         compact_label="☀", col_key="sunshine", col_label="Sun",

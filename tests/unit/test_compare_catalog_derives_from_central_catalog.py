@@ -151,10 +151,14 @@ def _aggregation_violations(
 
 
 def test_temperature_and_wind_chill_stay_four_distinct_entries():
-    """AC-2: "Temperatur max"/"min" und "Gefuehlte Temp. max"/"min" bleiben vier
-    eigenstaendige Eintraege mit unterschiedlichem `key` und unterscheidbarem
-    Label -- sonst verliert der Nutzer die Wahl zwischen Hoechst- und
-    Tiefstwert. Bestandsverhalten, heute schon gruen."""
+    """AC-2: Temperatur max/min und Gefuehlte Temperatur max/min bleiben vier
+    eigenstaendige, in der Liste unterscheidbare Eintraege -- sonst verliert der
+    Nutzer die Wahl zwischen Hoechst- und Tiefstwert.
+
+    #1401 A1: unterschieden wird jetzt durch Name + eigenes Auswertungs-Element
+    (der Name allein ist seit der Ableitung aus dem zentralen Register bei
+    beiden Aufspaltungen derselbe) -- geprueft wird deshalb das ANGEZEIGTE
+    Paar, nicht mehr die Namensspalte allein."""
     by_key = {entry["key"]: entry for entry in get_compare_metric_catalog()}
 
     expected_keys = ("temp_max_c", "temp_min_c", "wind_chill_max_c", "wind_chill_min_c")
@@ -166,9 +170,11 @@ def test_temperature_and_wind_chill_stay_four_distinct_entries():
     )
     assert len({by_key[k]["key"] for k in expected_keys}) == 4
 
-    labels = [by_key[k]["label"] for k in expected_keys]
-    assert len(set(labels)) == 4, (
-        f"Die vier Eintraege tragen nicht vier unterscheidbare Labels: {labels}"
+    angezeigt = [(by_key[k]["label"], by_key[k]["aggregation_label"])
+                 for k in expected_keys]
+    assert len(set(angezeigt)) == 4, (
+        f"Die vier Eintraege sind in der Auswahlliste nicht unterscheidbar "
+        f"(Name, Auswertung): {angezeigt}"
     )
 
 

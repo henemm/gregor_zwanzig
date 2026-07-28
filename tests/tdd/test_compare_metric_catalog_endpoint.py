@@ -28,7 +28,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
-from app.metric_catalog import get_all_metrics
+from app.metric_catalog import get_all_metrics, get_metric
+from output.renderers.compare_metric_catalog import (
+    COMPARE_METRIC_CATALOG,
+    get_compare_metric_catalog,
+)
 
 
 @pytest.fixture()
@@ -43,6 +47,15 @@ def client() -> TestClient:
 # Felder: key, label, higherIsBetter, kind, rangeMin, rangeMax (None bei enum/ordinal,
 # da dort kein numerischer Wertebereich in ALL_METRICS existiert).
 # ---------------------------------------------------------------------------
+#
+# #1401 Scheibe A1 (RED): die `label`-Spalte dieses Fixtures beschreibt ab hier
+# den ZIELZUSTAND -- den Namen, wie ihn das zentrale Register
+# (`metric_catalog.MetricDefinition.label_de`) fuehrt. Die Auswertung
+# (Maximum/Minimum/Mittel/Summe) ist nicht mehr Teil des Namens, sie steht ab
+# #1401 im eigenen Feld `aggregation_label`. Gemessen 2026-07-27: 16 der 26
+# Labels weichen heute vom Register ab (8 redaktionell -- s. Namensentscheidungen
+# der Spec --, 8 weitere nur durch die angehaengte Auswertung "max"/"min"/"Ø").
+# SPEC: docs/specs/modules/fix_1401_a1_namensregister.md
 EXPECTED_METRICS: list[dict] = [
     {"key": "snow_depth_cm", "label": "Schneehöhe", "higherIsBetter": True,
      "kind": "range", "rangeMin": 0, "rangeMax": 200},
@@ -50,25 +63,25 @@ EXPECTED_METRICS: list[dict] = [
      "kind": "range", "rangeMin": 0, "rangeMax": 50},
     {"key": "sunny_hours_h", "label": "Sonnenstunden", "higherIsBetter": True,
      "kind": "range", "rangeMin": 0, "rangeMax": 12},
-    {"key": "wind_max_kmh", "label": "Windspitzen", "higherIsBetter": False,
+    {"key": "wind_max_kmh", "label": "Wind", "higherIsBetter": False,
      "kind": "range", "rangeMin": 0, "rangeMax": 100},
-    {"key": "cloud_avg_pct", "label": "Bewölkung Ø", "higherIsBetter": False,
+    {"key": "cloud_avg_pct", "label": "Bewölkung", "higherIsBetter": False,
      "kind": "range", "rangeMin": 0, "rangeMax": 100},
-    {"key": "visibility_min_m", "label": "Sichtweite min", "higherIsBetter": True,
+    {"key": "visibility_min_m", "label": "Sichtweite", "higherIsBetter": True,
      "kind": "range", "rangeMin": 0, "rangeMax": 10000},
     {"key": "precip_sum_mm", "label": "Niederschlag", "higherIsBetter": False,
      "kind": "range", "rangeMin": 0, "rangeMax": 30},
-    {"key": "uv_index_max", "label": "UV-Index max", "higherIsBetter": False,
+    {"key": "uv_index_max", "label": "UV-Index", "higherIsBetter": False,
      "kind": "range", "rangeMin": 0, "rangeMax": 12},
-    {"key": "temp_max_c", "label": "Temperatur max", "higherIsBetter": True,
+    {"key": "temp_max_c", "label": "Temperatur", "higherIsBetter": True,
      "kind": "range", "rangeMin": -20, "rangeMax": 45},
     {"key": "thunder_level_max", "label": "Gewitter", "higherIsBetter": False,
      "kind": "ordinal", "rangeMin": None, "rangeMax": None},
-    {"key": "temp_min_c", "label": "Temperatur min", "higherIsBetter": True,
+    {"key": "temp_min_c", "label": "Temperatur", "higherIsBetter": True,
      "kind": "range", "rangeMin": -30, "rangeMax": 30},
     {"key": "gust_max_kmh", "label": "Böen", "higherIsBetter": False,
      "kind": "range", "rangeMin": 0, "rangeMax": 150},
-    {"key": "cape_max_jkg", "label": "Gewitter-Energie (CAPE)", "higherIsBetter": False,
+    {"key": "cape_max_jkg", "label": "Gewitterenergie (CAPE)", "higherIsBetter": False,
      "kind": "range", "rangeMin": 0, "rangeMax": 3000},
     {"key": "freezing_level_m", "label": "Nullgradgrenze", "higherIsBetter": True,
      "kind": "range", "rangeMin": 0, "rangeMax": 5000},
@@ -76,26 +89,26 @@ EXPECTED_METRICS: list[dict] = [
      "kind": "range", "rangeMin": 0, "rangeMax": 100},
     {"key": "wind_direction_deg", "label": "Windrichtung", "higherIsBetter": False,
      "kind": "range", "rangeMin": 0, "rangeMax": 360},
-    {"key": "wind_chill_min_c", "label": "Gefühlte Temp. min", "higherIsBetter": True,
+    {"key": "wind_chill_min_c", "label": "Gefühlte Temperatur", "higherIsBetter": True,
      "kind": "range", "rangeMin": -30, "rangeMax": 30},
     # Issue #1351 Teil 1: 26. Eintrag, analog temp_max_c (Wertebereich).
-    {"key": "wind_chill_max_c", "label": "Gefühlte Temp. max", "higherIsBetter": True,
+    {"key": "wind_chill_max_c", "label": "Gefühlte Temperatur", "higherIsBetter": True,
      "kind": "range", "rangeMin": -20, "rangeMax": 45},
-    {"key": "humidity_avg_pct", "label": "Luftfeuchtigkeit Ø", "higherIsBetter": False,
+    {"key": "humidity_avg_pct", "label": "Luftfeuchtigkeit", "higherIsBetter": False,
      "kind": "range", "rangeMin": 0, "rangeMax": 100},
-    {"key": "dewpoint_avg_c", "label": "Taupunkt Ø", "higherIsBetter": False,
+    {"key": "dewpoint_avg_c", "label": "Taupunkt", "higherIsBetter": False,
      "kind": "range", "rangeMin": -20, "rangeMax": 30},
     {"key": "snowfall_limit_m", "label": "Schneefallgrenze", "higherIsBetter": True,
      "kind": "range", "rangeMin": 0, "rangeMax": 5000},
     {"key": "precip_type_dominant", "label": "Niederschlagsart", "higherIsBetter": False,
      "kind": "enum", "rangeMin": None, "rangeMax": None},
-    {"key": "cloud_low_avg_pct", "label": "Wolken tief", "higherIsBetter": False,
+    {"key": "cloud_low_avg_pct", "label": "Tiefe Wolken", "higherIsBetter": False,
      "kind": "range", "rangeMin": 0, "rangeMax": 100},
-    {"key": "cloud_mid_avg_pct", "label": "Wolken mittel", "higherIsBetter": False,
+    {"key": "cloud_mid_avg_pct", "label": "Mittelhohe Wolken", "higherIsBetter": False,
      "kind": "range", "rangeMin": 0, "rangeMax": 100},
-    {"key": "cloud_high_avg_pct", "label": "Wolken hoch", "higherIsBetter": False,
+    {"key": "cloud_high_avg_pct", "label": "Hohe Wolken", "higherIsBetter": False,
      "kind": "range", "rangeMin": 0, "rangeMax": 100},
-    {"key": "pressure_avg_hpa", "label": "Luftdruck Ø", "higherIsBetter": True,
+    {"key": "pressure_avg_hpa", "label": "Luftdruck", "higherIsBetter": True,
      "kind": "range", "rangeMin": 950, "rangeMax": 1050},
 ]
 
@@ -386,3 +399,131 @@ class TestCompareMetricOrigin:
             assert hi["key"] != lo["key"], (
                 f"{max_key}/{min_key} sind zu einem Eintrag zusammengefallen"
             )
+
+
+# ---------------------------------------------------------------------------
+# TDD RED -- #1401 Scheibe A1 (AC-2, AC-4): der Anzeigename kommt aus dem
+# zentralen Register (`metric_catalog.label_de`) statt getippt im Compare-
+# Katalog zu stehen; die Auswertung wird ein eigenes Feld `aggregation_label`.
+# SPEC: docs/specs/modules/fix_1401_a1_namensregister.md
+# ---------------------------------------------------------------------------
+
+EXPECTED_AGGREGATION_LABELS = {"max": "Maximum", "min": "Minimum",
+                               "avg": "Mittel", "sum": "Summe"}
+
+
+class TestCompareMetricLabelsComeFromCentralRegister:
+    """#1401 AC-2: derselbe Name wie im Trip-Editor, Auswertung daneben."""
+
+    def test_label_equals_central_register_label_de(self, client: TestClient) -> None:
+        """AC-2 (KERN): `label` ist fuer jeden der 26 Eintraege exakt der Name
+        der zentralen Wettergroesse -- heute ROT, der Compare-Katalog tippt
+        seine Namen selbst ("Temperatur max", "Windspitzen", "Wolken tief")."""
+        metrics = client.get("/api/compare/metrics").json()["metrics"]
+        assert len(metrics) == 26
+        abweichungen = [
+            (e["key"], e.get("label"), get_metric(e["metric_id"]).label_de)
+            for e in metrics
+            if e.get("label") != get_metric(e["metric_id"]).label_de
+        ]
+        assert not abweichungen, (
+            "Name nicht aus dem zentralen Register abgeleitet "
+            f"(key, geliefert, Register): {abweichungen}"
+        )
+
+    def test_label_carries_no_aggregation_marker(self, client: TestClient) -> None:
+        """AC-2: der Name enthaelt die Auswertung nicht mehr -- weder als
+        Suffix ("Sichtweite min") noch als Mittelwert-Zeichen ("Bewölkung Ø")
+        noch als deutsches Auswertungswort."""
+        marker = (" max", " min", " Ø", " avg", " sum",
+                  " Maximum", " Minimum", " Mittel", " Summe")
+        metrics = client.get("/api/compare/metrics").json()["metrics"]
+        treffer = [(e["key"], e["label"]) for e in metrics
+                   if str(e.get("label", "")).endswith(marker)]
+        assert not treffer, f"Auswertung steckt noch im Namen: {treffer}"
+
+    def test_each_entry_has_aggregation_label(self, client: TestClient) -> None:
+        """AC-2b (KERN): jeder der 26 Eintraege traegt `aggregation_label` und
+        bildet die Auswertung korrekt ab (max->Maximum, min->Minimum,
+        avg->Mittel, sum->Summe)."""
+        metrics = client.get("/api/compare/metrics").json()["metrics"]
+        assert len(metrics) == 26
+        fehlend = [e["key"] for e in metrics if "aggregation_label" not in e]
+        assert not fehlend, (
+            f"Eintraege ohne `aggregation_label`: {fehlend} -- die Auswertung "
+            "ist in der Auswahlliste nicht als eigenes Element anzeigbar"
+        )
+        falsch = [(e["key"], e["aggregation"], e["aggregation_label"]) for e in metrics
+                  if e["aggregation_label"] != EXPECTED_AGGREGATION_LABELS.get(e["aggregation"])]
+        assert not falsch, f"aggregation_label falsch (key, aggregation, ist): {falsch}"
+
+    def test_split_metrics_share_label_but_stay_distinguishable(
+        self, client: TestClient
+    ) -> None:
+        """AC-2 (KERN, Nutzersicht): die beiden Aufspaltungen tragen denselben
+        Namen, bleiben aber einzeln waehl- und unterscheidbar -- verschiedene
+        Auswahl-Schluessel UND verschiedenes, sichtbares `aggregation_label`."""
+        by_key = {m["key"]: m for m in client.get("/api/compare/metrics").json()["metrics"]}
+        for max_key, min_key in (("temp_max_c", "temp_min_c"),
+                                 ("wind_chill_max_c", "wind_chill_min_c")):
+            hi, lo = by_key[max_key], by_key[min_key]
+            assert hi["label"] == lo["label"], (
+                f"{max_key}/{min_key} tragen verschiedene Namen: "
+                f"{hi['label']!r} vs. {lo['label']!r}"
+            )
+            assert hi["key"] != lo["key"], f"{max_key}/{min_key} sind zusammengefallen"
+            assert (hi.get("aggregation_label"), lo.get("aggregation_label")) == (
+                "Maximum", "Minimum"), (
+                f"{max_key}/{min_key} waeren in der Liste ununterscheidbar: "
+                f"{hi.get('aggregation_label')!r} / {lo.get('aggregation_label')!r}"
+            )
+
+
+class TestUnknownMetricIdFailsVisibly:
+    """#1401 AC-4: kein stilles Verwerfen, wenn die Verbindung ins zentrale
+    Register bricht."""
+
+    def test_unknown_metric_id_fails_visibly(self) -> None:
+        """AC-4 (KERN): eine Katalogzeile mit zentral unbekannter `metric_id`
+        laesst den Katalogaufruf sichtbar scheitern -- mit der fehlenden
+        Kennung im Fehlertext -- statt eine leere oder erfundene Bezeichnung zu
+        liefern. Injizierte Testkopie (Vorbild:
+        `duplicate_metric_aggregation_pairs(entries=...)`), KEIN Monkeypatch
+        des echten Katalogs, kein Mock."""
+        kaputte_kopie = [
+            dict(COMPARE_METRIC_CATALOG[0]),
+            {**dict(COMPARE_METRIC_CATALOG[1]), "key": "erfundene_groesse_x",
+             "metric_id": "gibt_es_zentral_nicht"},
+        ]
+        with pytest.raises(Exception) as exc_info:
+            get_compare_metric_catalog(entries=kaputte_kopie)
+        assert not isinstance(exc_info.value, TypeError), (
+            "get_compare_metric_catalog() nimmt noch keinen `entries`-Parameter -- der "
+            f"Pfad 'unbekannte metric_id' ist nur per Monkeypatch pruefbar ({exc_info.value})"
+        )
+        assert "gibt_es_zentral_nicht" in str(exc_info.value), (
+            f"Der Fehler nennt die fehlende Kennung nicht: {exc_info.value!r}"
+        )
+
+    def test_real_catalog_resolves_completely(self) -> None:
+        """AC-4 (Gegenprobe): der echte Katalog laeuft ohne Ausnahme durch."""
+        assert len(get_compare_metric_catalog()) == 26
+
+
+def test_the_eight_approved_names() -> None:
+    """#1401: die mit der Spec freigegebenen Namensentscheidungen, gegen das
+    echte zentrale Register (acht Spec-Zeilen = sieben Groessen, `wind_chill`
+    steht dort zweimal). Heute ROT bei `sunshine` ("Sonnenschein"); die
+    uebrigen sind hier festgehalten, damit sie nicht still zurueckdriften."""
+    freigegeben = {
+        "wind": "Wind", "sunshine": "Sonnenstunden",
+        "cape": "Gewitterenergie (CAPE)", "wind_chill": "Gefühlte Temperatur",
+        "cloud_low": "Tiefe Wolken", "cloud_mid": "Mittelhohe Wolken",
+        "cloud_high": "Hohe Wolken",
+    }
+    abweichungen = {mid: (get_metric(mid).label_de, soll)
+                    for mid, soll in freigegeben.items()
+                    if get_metric(mid).label_de != soll}
+    assert not abweichungen, (
+        f"Register weicht von den freigegebenen Namen ab (id: (ist, soll)): {abweichungen}"
+    )

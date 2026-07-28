@@ -26,6 +26,13 @@ nachweisbar her; `tests/unit/test_compare_catalog_derives_from_central_catalog.p
 schlaegt kuenftig an, wenn eine waehlbare zentrale Groesse den Vergleich nicht
 erreicht. `key` bleibt unveraendert erhalten (Rueckwaertskompatibilitaet).
 
+#1401 Scheibe A1 (docs/specs/modules/fix_1401_a1_namensregister.md): der
+Anzeigename wird NICHT mehr getippt, sondern zur Aufrufzeit aus dem zentralen
+Register abgeleitet (`get_metric(metric_id).label_de`); die Auswertung steht
+als eigenes Feld `aggregation_label` daneben (Maximum/Minimum/Mittel/Summe)
+statt im Namen ("Temperatur max"). Wertebereiche, `kind` und `ordinalLabels`
+bleiben kuratiert -- abgeleitet wird ausschliesslich der Name.
+
 Keys sind identisch zu `compare_metric_ids.py::FRONTEND_TO_RENDERER_METRIC_ID`
 (keine sechste Kopie der Keyliste) -- der Modul-Import-Assert unten macht eine
 kuenftige Drift wie #1324 strukturell unmoeglich: fehlt ein Key im Katalog oder
@@ -33,8 +40,15 @@ im Resolver, schlaegt der Import fehl.
 """
 from __future__ import annotations
 
+from app.metric_catalog import get_metric
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from services.compare_alert import _SUMMARY_KEY_TO_CATALOG_ID
+
+# #1401 A1: deutsche Beschriftung der Auswertung -- eigenes Anzeige-Element
+# neben dem Namen, nicht Teil des Namens.
+_AGGREGATION_LABELS: dict[str, str] = {
+    "max": "Maximum", "min": "Minimum", "avg": "Mittel", "sum": "Summe",
+}
 
 # Reihenfolge = ALL_METRICS-Reihenfolge im Frontend (compareMetricDefs.ts),
 # erleichtert visuellen Diff in Teil 2 (Spec "Expected Behavior").
@@ -49,84 +63,84 @@ from services.compare_alert import _SUMMARY_KEY_TO_CATALOG_ID
 # weather_metrics.py:_compute_snowfall_limit) und cloud_low/mid/high (AVG,
 # gerundet) `summary_fields` und sind damit keine Abweichung mehr.
 COMPARE_METRIC_CATALOG: list[dict] = [
-    {"key": "snow_depth_cm", "label": "Schneehöhe", "unit": "cm", "decimals": 0,
+    {"key": "snow_depth_cm", "unit": "cm", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": 0, "rangeMax": 200, "step": 5,
      "metric_id": "snow_depth", "aggregation": "max"},
-    {"key": "snow_new_sum_cm", "label": "Neuschnee", "unit": "cm", "decimals": 0,
+    {"key": "snow_new_sum_cm", "unit": "cm", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": 0, "rangeMax": 50, "step": 1,
      "metric_id": "fresh_snow", "aggregation": "sum"},
-    {"key": "sunny_hours_h", "label": "Sonnenstunden", "unit": "h", "decimals": 1,
+    {"key": "sunny_hours_h", "unit": "h", "decimals": 1,
      "higherIsBetter": True, "kind": "range", "rangeMin": 0, "rangeMax": 12, "step": 0.5,
      "metric_id": "sunshine", "aggregation": "sum"},
-    {"key": "wind_max_kmh", "label": "Windspitzen", "unit": "km/h", "decimals": 0,
+    {"key": "wind_max_kmh", "unit": "km/h", "decimals": 0,
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 100, "step": 5,
      "metric_id": "wind", "aggregation": "max"},
-    {"key": "cloud_avg_pct", "label": "Bewölkung Ø", "unit": "%", "decimals": 0,
+    {"key": "cloud_avg_pct", "unit": "%", "decimals": 0,
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 100, "step": 5,
      "metric_id": "cloud_total", "aggregation": "avg"},
-    {"key": "visibility_min_m", "label": "Sichtweite min", "unit": "m", "decimals": 0,
+    {"key": "visibility_min_m", "unit": "m", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": 0, "rangeMax": 10000, "step": 500,
      "metric_id": "visibility", "aggregation": "min"},
-    {"key": "precip_sum_mm", "label": "Niederschlag", "unit": "mm", "decimals": 1,
+    {"key": "precip_sum_mm", "unit": "mm", "decimals": 1,
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 30, "step": 0.5,
      "metric_id": "precipitation", "aggregation": "sum"},
-    {"key": "uv_index_max", "label": "UV-Index max", "unit": "", "decimals": 0,
+    {"key": "uv_index_max", "unit": "", "decimals": 0,
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 12, "step": 1,
      "metric_id": "uv_index", "aggregation": "max"},
-    {"key": "temp_max_c", "label": "Temperatur max", "unit": "°C", "decimals": 0,
+    {"key": "temp_max_c", "unit": "°C", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": -20, "rangeMax": 45, "step": 1,
      "metric_id": "temperature", "aggregation": "max"},
-    {"key": "thunder_level_max", "label": "Gewitter", "unit": "", "decimals": 0,
+    {"key": "thunder_level_max", "unit": "", "decimals": 0,
      "higherIsBetter": False, "kind": "ordinal",
      "ordinalLabels": ["kein", "mittel", "hoch"],
      "metric_id": "thunder", "aggregation": "max"},
-    {"key": "temp_min_c", "label": "Temperatur min", "unit": "°C", "decimals": 0,
+    {"key": "temp_min_c", "unit": "°C", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": -30, "rangeMax": 30, "step": 1,
      "metric_id": "temperature", "aggregation": "min"},
-    {"key": "gust_max_kmh", "label": "Böen", "unit": "km/h", "decimals": 0,
+    {"key": "gust_max_kmh", "unit": "km/h", "decimals": 0,
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 150, "step": 5,
      "metric_id": "gust", "aggregation": "max"},
-    {"key": "cape_max_jkg", "label": "Gewitter-Energie (CAPE)", "unit": "J/kg", "decimals": 0,
+    {"key": "cape_max_jkg", "unit": "J/kg", "decimals": 0,
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 3000, "step": 100,
      "metric_id": "cape", "aggregation": "max"},
-    {"key": "freezing_level_m", "label": "Nullgradgrenze", "unit": "m", "decimals": 0,
+    {"key": "freezing_level_m", "unit": "m", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": 0, "rangeMax": 5000, "step": 100,
      "metric_id": "freezing_level", "aggregation": "min"},
-    {"key": "pop_max_pct", "label": "Regenwahrscheinlichkeit", "unit": "%", "decimals": 0,
+    {"key": "pop_max_pct", "unit": "%", "decimals": 0,
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 100, "step": 5,
      "metric_id": "rain_probability", "aggregation": "max"},
-    {"key": "wind_direction_deg", "label": "Windrichtung", "unit": "°", "decimals": 0,
+    {"key": "wind_direction_deg", "unit": "°", "decimals": 0,
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 360, "step": 10,
      "metric_id": "wind_direction", "aggregation": "avg"},
-    {"key": "wind_chill_min_c", "label": "Gefühlte Temp. min", "unit": "°C", "decimals": 0,
+    {"key": "wind_chill_min_c", "unit": "°C", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": -30, "rangeMax": 30, "step": 1,
      "metric_id": "wind_chill", "aggregation": "min"},
-    {"key": "wind_chill_max_c", "label": "Gefühlte Temp. max", "unit": "°C", "decimals": 0,
+    {"key": "wind_chill_max_c", "unit": "°C", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": -20, "rangeMax": 45, "step": 1,
      "metric_id": "wind_chill", "aggregation": "max"},
-    {"key": "humidity_avg_pct", "label": "Luftfeuchtigkeit Ø", "unit": "%", "decimals": 0,
+    {"key": "humidity_avg_pct", "unit": "%", "decimals": 0,
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 100, "step": 5,
      "metric_id": "humidity", "aggregation": "avg"},
-    {"key": "dewpoint_avg_c", "label": "Taupunkt Ø", "unit": "°C", "decimals": 0,
+    {"key": "dewpoint_avg_c", "unit": "°C", "decimals": 0,
      "higherIsBetter": False, "kind": "range", "rangeMin": -20, "rangeMax": 30, "step": 1,
      "metric_id": "dewpoint", "aggregation": "avg"},
-    {"key": "snowfall_limit_m", "label": "Schneefallgrenze", "unit": "m", "decimals": 0,
+    {"key": "snowfall_limit_m", "unit": "m", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": 0, "rangeMax": 5000, "step": 100,
      "metric_id": "snowfall_limit", "aggregation": "min"},
-    {"key": "precip_type_dominant", "label": "Niederschlagsart", "unit": "", "decimals": 0,
+    {"key": "precip_type_dominant", "unit": "", "decimals": 0,
      "higherIsBetter": False, "kind": "enum",
      "enumValues": ["RAIN", "SNOW", "MIXED", "FREEZING_RAIN"],
      "metric_id": "precip_type", "aggregation": "max"},
-    {"key": "cloud_low_avg_pct", "label": "Wolken tief", "unit": "%", "decimals": 0,
+    {"key": "cloud_low_avg_pct", "unit": "%", "decimals": 0,
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 100, "step": 5,
      "metric_id": "cloud_low", "aggregation": "avg"},
-    {"key": "cloud_mid_avg_pct", "label": "Wolken mittel", "unit": "%", "decimals": 0,
+    {"key": "cloud_mid_avg_pct", "unit": "%", "decimals": 0,
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 100, "step": 5,
      "metric_id": "cloud_mid", "aggregation": "avg"},
-    {"key": "cloud_high_avg_pct", "label": "Wolken hoch", "unit": "%", "decimals": 0,
+    {"key": "cloud_high_avg_pct", "unit": "%", "decimals": 0,
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 100, "step": 5,
      "metric_id": "cloud_high", "aggregation": "avg"},
-    {"key": "pressure_avg_hpa", "label": "Luftdruck Ø", "unit": "hPa", "decimals": 0,
+    {"key": "pressure_avg_hpa", "unit": "hPa", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": 950, "rangeMax": 1050, "step": 5,
      "metric_id": "pressure", "aggregation": "avg"},
 ]
@@ -218,11 +232,39 @@ def key_for(metric_id: object, aggregation: object) -> str | None:
     return _KEY_BY_METRIC_AGGREGATION.get((metric_id, aggregation))
 
 
-def get_compare_metric_catalog() -> list[dict]:
+def get_compare_metric_catalog(entries: list[dict] | None = None) -> list[dict]:
     """Liefert die 26 Ortsvergleich-Metriken (read-only Kopie der Katalog-Liste),
-    angereichert um `alarmCapable` (Teil 3, D1 Hybrid). `metric_id`/`aggregation`
-    (#1373) stehen bereits an den Eintraegen selbst."""
-    return [
-        {**entry, "alarmCapable": entry["key"] in _alarm_keys}
-        for entry in COMPARE_METRIC_CATALOG
-    ]
+    angereichert um `alarmCapable` (Teil 3, D1 Hybrid), `label` und
+    `aggregation_label` (#1401 A1). `metric_id`/`aggregation` (#1373) stehen
+    bereits an den Eintraegen selbst.
+
+    `label` kommt aus dem zentralen Register (`metric_catalog.label_de`) und
+    wird HIER, zur Aufrufzeit, aufgeloest -- nicht beim Modul-Import: ein
+    kuenftiger Registerfehler laesst dann den Endpoint-Aufruf sichtbar
+    scheitern statt den Serverstart. Eine `metric_id`, die das Register nicht
+    kennt, wirft `KeyError` MIT der fehlenden Kennung im Text (kein Auffangen,
+    kein Ersatzname -- #1401 AC-4).
+
+    `entries` injiziert eine Testkopie der Katalogzeilen (Vorbild:
+    `duplicate_metric_aggregation_pairs(entries=...)`), damit dieser
+    Scheiter-Pfad ohne Monkeypatch des echten Katalogs pruefbar ist."""
+    source = COMPARE_METRIC_CATALOG if entries is None else entries
+    result: list[dict] = []
+    for entry in source:
+        metric_id = entry["metric_id"]
+        try:
+            label = get_metric(metric_id).label_de
+        except KeyError as exc:
+            raise KeyError(
+                f"Compare-Katalogzeile {entry.get('key')!r} nennt die zentral "
+                f"unbekannte Groesse {metric_id!r} -- der Anzeigename ist nicht "
+                "ableitbar (src/app/metric_catalog.py)"
+            ) from exc
+        aggregation = entry["aggregation"]
+        result.append({
+            **entry,
+            "label": label,
+            "aggregation_label": _AGGREGATION_LABELS[aggregation],
+            "alarmCapable": entry["key"] in _alarm_keys,
+        })
+    return result

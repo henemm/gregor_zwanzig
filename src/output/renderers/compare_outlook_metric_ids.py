@@ -18,14 +18,17 @@ logger = logging.getLogger(__name__)
 
 def _catalog_entry(metric_id: object, aggregation: object) -> dict | None:
     """Compare-Katalog-Zeile zu einem Groesse-Auswertung-Paar (oder ``None``)."""
+    # #1401 A1: der angereicherte Katalog (Name aus dem zentralen Register,
+    # `aggregation_label` daneben) statt der rohen Tabelle -- der Name steht
+    # dort nicht mehr getippt.
     from output.renderers.compare_metric_catalog import (
-        COMPARE_METRIC_CATALOG, key_for,
+        get_compare_metric_catalog, key_for,
     )
 
     key = key_for(metric_id, aggregation)
     if key is None:
         return None
-    return next((e for e in COMPARE_METRIC_CATALOG if e["key"] == key), None)
+    return next((e for e in get_compare_metric_catalog() if e["key"] == key), None)
 
 
 def _summary_field(metric_id: object, aggregation: object) -> str | None:
@@ -80,12 +83,18 @@ def resolve_outlook_metrics(outlook_metrics: object) -> list[dict] | None:
 def outlook_columns(metrics: object) -> list[dict]:
     """Auswahl -> geordnete Spalten-Beschreibung fuer den Ausblick-Renderer.
 
-    ``label`` kommt aus dem Compare-Katalog (deutsch und eindeutig, z.B.
-    "Temperatur max"), NICHT aus ``MetricDefinition.col_label``: dessen
+    ``label`` kommt aus dem Compare-Katalog (deutsch, seit #1401 A1 der Name
+    des zentralen Registers), NICHT aus ``MetricDefinition.col_label``: dessen
     Kuerzel sind englisch ("Rain"/"Thdr"/"PType") und fuer temperature
     min/max/avg IDENTISCH ("Temp") -- zwei gewaehlte Temperatur-Auswertungen
     ergaeben zwei gleich beschriftete Spalten (Abweichung zur Spec,
-    PO-Entscheidung 2026-07-27)."""
+    PO-Entscheidung 2026-07-27).
+
+    #1401 A1: die Auswertung ist kein Namensbestandteil mehr. Eine Tabellen-
+    spalte traegt aber genau EINEN String -- waehlt der Nutzer dieselbe Groesse
+    zweimal (Temperatur max UND min), bekommen genau diese Spalten die
+    Auswertung angehaengt, damit die PO-Vorgabe "keine zwei gleich
+    beschrifteten Spalten" erhalten bleibt."""
     columns: list[dict] = []
     for entry in metrics or []:
         metric_id = entry.get("metric_id") if isinstance(entry, dict) else None
@@ -100,7 +109,13 @@ def outlook_columns(metrics: object) -> list[dict]:
             "unit": catalog.get("unit", ""),
             "decimals": catalog.get("decimals", 0),
             "kind": catalog.get("kind", "range"),
+            "aggregation_label": catalog.get("aggregation_label", ""),
         })
+    mehrfach = {c["label"] for c in columns
+                if sum(1 for other in columns if other["label"] == c["label"]) > 1}
+    for column in columns:
+        if column["label"] in mehrfach and column["aggregation_label"]:
+            column["label"] = f"{column['label']} {column['aggregation_label']}"
     return columns
 
 

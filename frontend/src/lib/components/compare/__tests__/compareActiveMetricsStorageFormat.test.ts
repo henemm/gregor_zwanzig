@@ -28,6 +28,7 @@ import {
 	normalizeStoredActiveMetrics,
 	registerCompareMetricCatalog,
 	toCompareSelectionEntries,
+	toStoredActiveMetrics,
 	type CompareSelectionEntry
 } from '../../shared/weather-metrics-tab/compareMetricSelection.ts';
 import {
@@ -42,13 +43,13 @@ import type { ComparePreset } from '../../../types.ts';
 // dieselbe Groesse in zwei Auswertungen tragen — genau die Verschmelzungsfalle.
 const CATALOG_RESPONSE = {
 	metrics: [
-		{ key: 'temp_max_c', label: 'Temperatur max', metric_id: 'temperature', aggregation: 'max' },
-		{ key: 'temp_min_c', label: 'Temperatur min', metric_id: 'temperature', aggregation: 'min' },
-		{ key: 'wind_chill_min_c', label: 'Gefühlte Temp. min', metric_id: 'wind_chill', aggregation: 'min' },
-		{ key: 'wind_chill_max_c', label: 'Gefühlte Temp. max', metric_id: 'wind_chill', aggregation: 'max' },
-		{ key: 'wind_max_kmh', label: 'Windspitzen', metric_id: 'wind', aggregation: 'max' },
-		{ key: 'snow_depth_cm', label: 'Schneehöhe', metric_id: 'snow_depth', aggregation: 'max' },
-		{ key: 'precip_sum_mm', label: 'Niederschlag', metric_id: 'precipitation', aggregation: 'sum' }
+		{ key: 'temp_max_c', label: 'Temperatur', aggregation_label: 'Maximum', metric_id: 'temperature', aggregation: 'max' },
+		{ key: 'temp_min_c', label: 'Temperatur', aggregation_label: 'Minimum', metric_id: 'temperature', aggregation: 'min' },
+		{ key: 'wind_chill_min_c', label: 'Gefühlte Temperatur', aggregation_label: 'Minimum', metric_id: 'wind_chill', aggregation: 'min' },
+		{ key: 'wind_chill_max_c', label: 'Gefühlte Temperatur', aggregation_label: 'Maximum', metric_id: 'wind_chill', aggregation: 'max' },
+		{ key: 'wind_max_kmh', label: 'Wind', aggregation_label: 'Maximum', metric_id: 'wind', aggregation: 'max' },
+		{ key: 'snow_depth_cm', label: 'Schneehöhe', aggregation_label: 'Maximum', metric_id: 'snow_depth', aggregation: 'max' },
+		{ key: 'precip_sum_mm', label: 'Niederschlag', aggregation_label: 'Summe', metric_id: 'precipitation', aggregation: 'sum' }
 	]
 };
 
@@ -499,6 +500,62 @@ describe('Vertrag: Hydration liefert Auswahl-Schluessel, Dirty-Guard schreibt nu
 			flushPendingWeatherMetricsSave(preset, current, baseline),
 			null,
 			'kein PUT ohne Nutzergeste, auch im Katalog-Fehlerfall'
+		);
+	});
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// Issue #1401 Scheibe A1 (AC-5): die Umbenennung darf die gespeicherte
+// Auswahl nicht anfassen. Der Katalog oben traegt bereits die NEUEN Namen
+// ("Temperatur" statt "Temperatur max") — beide Speicherformate muessen
+// trotzdem unveraendert geladen und zurueckgeschrieben werden, weil die
+// Aufloesung ueber den Schluessel bzw. Groesse+Auswertung laeuft, nie ueber
+// den Namen. Spec: docs/specs/modules/fix_1401_a1_namensregister.md § AC-5
+// ════════════════════════════════════════════════════════════════════════
+describe('#1401 AC-5: Umbenennung laesst beide Speicherformate unveraendert', () => {
+	test('Altformat (Zeichenketten) laedt und schreibt sich unveraendert zurueck', () => {
+		const catalog = loadCatalog();
+		const gespeichert = ['temp_max_c', 'temp_min_c', 'wind_max_kmh'];
+		const geladen = normalizeStoredActiveMetrics(gespeichert, catalog);
+		assert.deepEqual(geladen, gespeichert, 'Laden hat die Auswahl veraendert');
+		assert.deepEqual(
+			toStoredActiveMetrics(geladen!, catalog),
+			[
+				{ metric_id: 'temperature', aggregation: 'max' },
+				{ metric_id: 'temperature', aggregation: 'min' },
+				{ metric_id: 'wind', aggregation: 'max' }
+			],
+			'Zurueckschreiben trifft nicht mehr dieselben Groessen/Auswertungen'
+		);
+	});
+
+	test('Neuformat laedt und schreibt sich unveraendert zurueck', () => {
+		const catalog = loadCatalog();
+		const gespeichert = [
+			{ metric_id: 'temperature', aggregation: 'max' },
+			{ metric_id: 'temperature', aggregation: 'min' },
+			{ metric_id: 'wind_chill', aggregation: 'min' }
+		];
+		const geladen = normalizeStoredActiveMetrics(gespeichert, catalog);
+		assert.deepEqual(geladen, ['temp_max_c', 'temp_min_c', 'wind_chill_min_c']);
+		assert.deepEqual(toStoredActiveMetrics(geladen!, catalog), gespeichert,
+			'Laden+Speichern ohne Nutzergeste hat die gespeicherte Auswahl veraendert'
+		);
+	});
+
+	test('kein Anzeigename ist ein gueltiger Auswahl-Schluessel (Namen sind entkoppelt)', () => {
+		const catalog = loadCatalog();
+		const namen = catalog.map((e) => e.label);
+		// Zwei Eintraege tragen jetzt DENSELBEN Namen — waere der Name der
+		// Schluessel, verschmoelzen sie beim Speichern.
+		assert.ok(namen.filter((n) => n === 'Temperatur').length === 2);
+		const alsAuswahl = normalizeStoredActiveMetrics(namen, catalog);
+		assert.deepEqual(alsAuswahl, namen, 'Namen werden als Auswahl-Schluessel gedeutet');
+		assert.deepEqual(
+			toStoredActiveMetrics(namen, catalog),
+			namen,
+			'ein Anzeigename wurde in ein Groesse/Auswertung-Paar uebersetzt — die ' +
+				'Auswahl haengt damit am Namen statt am Schluessel'
 		);
 	});
 });

@@ -41,31 +41,31 @@ import { buildCompareMetricDefs } from './compareMetricCatalogLoader.ts';
 // alarmCapable = die 10 Keys aus compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID.
 const CATALOG_FIXTURE = {
 	metrics: [
-		{ key: 'snow_depth_cm', label: 'Schneehöhe', unit: 'cm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 200, step: 5, alarmCapable: false },
-		{ key: 'snow_new_sum_cm', label: 'Neuschnee', unit: 'cm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 50, step: 1, alarmCapable: true },
-		{ key: 'sunny_hours_h', label: 'Sonnenstunden', unit: 'h', decimals: 1, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 12, step: 0.5, alarmCapable: false },
-		{ key: 'wind_max_kmh', label: 'Windspitzen', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: true },
-		{ key: 'cloud_avg_pct', label: 'Bewölkung Ø', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
-		{ key: 'visibility_min_m', label: 'Sichtweite min', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 10000, step: 500, alarmCapable: true },
-		{ key: 'precip_sum_mm', label: 'Niederschlag', unit: 'mm', decimals: 1, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 30, step: 0.5, alarmCapable: true },
-		{ key: 'uv_index_max', label: 'UV-Index max', unit: '', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 12, step: 1, alarmCapable: false },
-		{ key: 'temp_max_c', label: 'Temperatur max', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -20, rangeMax: 45, step: 1, alarmCapable: true },
-		{ key: 'thunder_level_max', label: 'Gewitter', unit: '', decimals: 0, higherIsBetter: false, kind: 'ordinal', ordinalLabels: ['kein', 'mittel', 'hoch'], alarmCapable: true },
-		{ key: 'temp_min_c', label: 'Temperatur min', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, alarmCapable: true },
-		{ key: 'gust_max_kmh', label: 'Böen', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 150, step: 5, alarmCapable: true },
-		{ key: 'cape_max_jkg', label: 'Gewitter-Energie (CAPE)', unit: 'J/kg', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 3000, step: 100, alarmCapable: true },
-		{ key: 'freezing_level_m', label: 'Nullgradgrenze', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 5000, step: 100, alarmCapable: true },
-		{ key: 'pop_max_pct', label: 'Regenwahrscheinlichkeit', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
-		{ key: 'wind_direction_deg', label: 'Windrichtung', unit: '°', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 360, step: 10, alarmCapable: false },
-		{ key: 'wind_chill_min_c', label: 'Gefühlte Temp. min', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, alarmCapable: false },
-		{ key: 'humidity_avg_pct', label: 'Luftfeuchtigkeit Ø', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
-		{ key: 'dewpoint_avg_c', label: 'Taupunkt Ø', unit: '°C', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: -20, rangeMax: 30, step: 1, alarmCapable: false },
-		{ key: 'snowfall_limit_m', label: 'Schneefallgrenze', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 5000, step: 100, alarmCapable: false },
-		{ key: 'precip_type_dominant', label: 'Niederschlagsart', unit: '', decimals: 0, higherIsBetter: false, kind: 'enum', enumValues: ['RAIN', 'SNOW', 'MIXED', 'FREEZING_RAIN'], alarmCapable: false },
-		{ key: 'cloud_low_avg_pct', label: 'Wolken tief', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
-		{ key: 'cloud_mid_avg_pct', label: 'Wolken mittel', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
-		{ key: 'cloud_high_avg_pct', label: 'Wolken hoch', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
-		{ key: 'pressure_avg_hpa', label: 'Luftdruck Ø', unit: 'hPa', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 950, rangeMax: 1050, step: 5, alarmCapable: false },
+		{ key: 'snow_depth_cm', label: 'Schneehöhe', aggregation_label: 'Maximum', unit: 'cm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 200, step: 5, alarmCapable: false },
+		{ key: 'snow_new_sum_cm', label: 'Neuschnee', aggregation_label: 'Summe', unit: 'cm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 50, step: 1, alarmCapable: true },
+		{ key: 'sunny_hours_h', label: 'Sonnenstunden', aggregation_label: 'Summe', unit: 'h', decimals: 1, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 12, step: 0.5, alarmCapable: false },
+		{ key: 'wind_max_kmh', label: 'Wind', aggregation_label: 'Maximum', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: true },
+		{ key: 'cloud_avg_pct', label: 'Bewölkung', aggregation_label: 'Mittel', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
+		{ key: 'visibility_min_m', label: 'Sichtweite', aggregation_label: 'Minimum', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 10000, step: 500, alarmCapable: true },
+		{ key: 'precip_sum_mm', label: 'Niederschlag', aggregation_label: 'Summe', unit: 'mm', decimals: 1, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 30, step: 0.5, alarmCapable: true },
+		{ key: 'uv_index_max', label: 'UV-Index', aggregation_label: 'Maximum', unit: '', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 12, step: 1, alarmCapable: false },
+		{ key: 'temp_max_c', label: 'Temperatur', aggregation_label: 'Maximum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -20, rangeMax: 45, step: 1, alarmCapable: true },
+		{ key: 'thunder_level_max', label: 'Gewitter', aggregation_label: 'Maximum', unit: '', decimals: 0, higherIsBetter: false, kind: 'ordinal', ordinalLabels: ['kein', 'mittel', 'hoch'], alarmCapable: true },
+		{ key: 'temp_min_c', label: 'Temperatur', aggregation_label: 'Minimum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, alarmCapable: true },
+		{ key: 'gust_max_kmh', label: 'Böen', aggregation_label: 'Maximum', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 150, step: 5, alarmCapable: true },
+		{ key: 'cape_max_jkg', label: 'Gewitterenergie (CAPE)', aggregation_label: 'Maximum', unit: 'J/kg', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 3000, step: 100, alarmCapable: true },
+		{ key: 'freezing_level_m', label: 'Nullgradgrenze', aggregation_label: 'Minimum', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 5000, step: 100, alarmCapable: true },
+		{ key: 'pop_max_pct', label: 'Regenwahrscheinlichkeit', aggregation_label: 'Maximum', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
+		{ key: 'wind_direction_deg', label: 'Windrichtung', aggregation_label: 'Mittel', unit: '°', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 360, step: 10, alarmCapable: false },
+		{ key: 'wind_chill_min_c', label: 'Gefühlte Temperatur', aggregation_label: 'Minimum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, alarmCapable: false },
+		{ key: 'humidity_avg_pct', label: 'Luftfeuchtigkeit', aggregation_label: 'Mittel', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
+		{ key: 'dewpoint_avg_c', label: 'Taupunkt', aggregation_label: 'Mittel', unit: '°C', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: -20, rangeMax: 30, step: 1, alarmCapable: false },
+		{ key: 'snowfall_limit_m', label: 'Schneefallgrenze', aggregation_label: 'Minimum', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 5000, step: 100, alarmCapable: false },
+		{ key: 'precip_type_dominant', label: 'Niederschlagsart', aggregation_label: 'Maximum', unit: '', decimals: 0, higherIsBetter: false, kind: 'enum', enumValues: ['RAIN', 'SNOW', 'MIXED', 'FREEZING_RAIN'], alarmCapable: false },
+		{ key: 'cloud_low_avg_pct', label: 'Tiefe Wolken', aggregation_label: 'Mittel', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
+		{ key: 'cloud_mid_avg_pct', label: 'Mittelhohe Wolken', aggregation_label: 'Mittel', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
+		{ key: 'cloud_high_avg_pct', label: 'Hohe Wolken', aggregation_label: 'Mittel', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
+		{ key: 'pressure_avg_hpa', label: 'Luftdruck', aggregation_label: 'Mittel', unit: 'hPa', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 950, rangeMax: 1050, step: 5, alarmCapable: false },
 	],
 };
 
@@ -413,7 +413,10 @@ describe('buildComparePool', () => {
 			{ metric: 'temp_max_c', range: [null, 30], notify: false, mark: true },
 		], TEST_DEFS);
 		assert.equal(rows.length, 1);
-		assert.equal(rows[0].label, 'Temperatur max');
+		// #1401 A1: der Name kommt aus dem zentralen Register, die Auswertung
+		// steht als eigenes Feld daneben (nicht mehr im Namen).
+		assert.equal(rows[0].label, 'Temperatur');
+		assert.equal(rows[0].aggregationLabel, 'Maximum');
 		assert.equal(rows[0].unit, '°C');
 		assert.equal(rows[0].max, 30);
 		assert.equal(rows[0].mark, true);
@@ -821,5 +824,54 @@ describe('buildCompareCorridorSavePayload — F003 unknownCorridors bleiben beim
 		assert.deepEqual(fooBar, { metric: 'foo_bar', range: [1, 2], notify: false, mark: true });
 		const windMax = payload.corridors.find((c) => c.metric === 'wind_max_kmh');
 		assert.equal(windMax?.range[1], 60);
+	});
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// Issue #1401 Scheibe A1 (AC-6): der Wertebereiche-Editor fuehrt Name und
+// Auswertung GETRENNT — Zeilen wie Pool-Eintraege. Ohne das eigene Feld
+// stuende in der Liste zweimal "Temperatur" ohne Unterscheidung.
+// Spec: docs/specs/modules/fix_1401_a1_namensregister.md § AC-6
+// ════════════════════════════════════════════════════════════════════════
+describe('#1401 AC-6: Wertebereiche fuehren Name und Auswertung getrennt', () => {
+	test('Pool-Eintraege tragen den Registernamen und die Auswertung als eigenes Feld', () => {
+		const byMetric = new Map(TEST_DEFS.map((d) => [d.metric, d]));
+		for (const [metric, name, auswertung] of [
+			['temp_max_c', 'Temperatur', 'Maximum'],
+			['temp_min_c', 'Temperatur', 'Minimum'],
+			['cloud_avg_pct', 'Bewölkung', 'Mittel'],
+			['sunny_hours_h', 'Sonnenstunden', 'Summe']
+		] as const) {
+			const def = byMetric.get(metric);
+			assert.equal(def?.label, name, `${metric}: Name weicht vom Register ab`);
+			assert.equal(def?.aggregationLabel, auswertung, `${metric}: Auswertung fehlt`);
+			assert.ok(
+				!def!.label.includes(auswertung),
+				`${metric}: die Auswertung steckt im Namen statt daneben (${def?.label})`
+			);
+		}
+	});
+
+	test('hinzugefuegte Zeile und geladene Zeile fuehren beide Felder getrennt', () => {
+		const { rows, poolLeft } = buildComparePool([
+			{ metric: 'temp_min_c', range: [-5, null], notify: false, mark: true }
+		], TEST_DEFS);
+		assert.equal(rows[0].label, 'Temperatur');
+		assert.equal(rows[0].aggregationLabel, 'Minimum');
+
+		const next = addCompareRow(rows, poolLeft, 'temp_max_c', TEST_DEFS);
+		const hinzugefuegt = next.rows.find((r) => r.metric === 'temp_max_c');
+		assert.equal(hinzugefuegt?.label, 'Temperatur');
+		assert.equal(hinzugefuegt?.aggregationLabel, 'Maximum');
+		// Beide Zeilen bleiben unterscheidbar, obwohl der Name derselbe ist.
+		assert.equal(next.rows.length, 2);
+		assert.notEqual(next.rows[0].aggregationLabel, next.rows[1].aggregationLabel);
+	});
+
+	test('Prefill-Zeilen (Anlegen) fuehren die Auswertung ebenfalls mit', () => {
+		const rows = buildComparePrefillRows('WINTERSPORT', TEST_DEFS);
+		const sonne = rows.find((r) => r.metric === 'sunny_hours_h');
+		assert.equal(sonne?.label, 'Sonnenstunden');
+		assert.equal(sonne?.aggregationLabel, 'Summe');
 	});
 });
