@@ -29,6 +29,7 @@ from app.models import ThunderLevel
 __all__ = [
     "format_value",
     "severity_for",
+    "severity_from_thresholds",
     "label",
     "cloud_emoji",
     "thunder_ordinal",
@@ -103,45 +104,70 @@ def format_value(metric_id: str, value: Optional[float], style: str = "plain") -
 def severity_for(metric_id: str, value: Optional[float]) -> Optional[str]:
     """Kanonisches Ampel-Band ``green/yellow/orange/red`` (oder ``None``).
 
-    Liest ``get_metric(metric_id).display_thresholds`` (Keys ``yellow``/
-    ``orange``/``red``). ``value is None`` -> ``None``. Fehlen ALLE drei
-    Standard-Keys (z.B. ``temperature``: leeres ``display_thresholds``-Dict,
-    oder ``visibility``: nur der invertierte ``orange_lt``-Key, kein
-    ``orange``) -> ebenfalls ``None`` — es gibt schlicht keine Standard-Ampel
-    fuer diese Metrik, "green" waere hier ein irrefuehrender impliziter
-    Default (F001-Fix, s. Adversary-Fund: 100m Sicht duerfte niemals als
-    gruen/unbedenklich gelten). Invertierte Schwellen (niedriger = kritischer,
-    aktuell nur ``visibility.orange_lt``) werden in dieser Scheibe bewusst
-    NICHT unterstuetzt — das ist eine dokumentierte Known Limitation von
-    Scheibe 1+2, keine stille Luecke; vollstaendige invertierte-Schwellen-
-    Unterstuetzung waere mehr Scope als hier sinnvoll (Nachruestung: Scheibe 3+).
+    Liest ``get_metric(metric_id).display_thresholds`` und delegiert die
+    reine Band-Auswertung an ``severity_from_thresholds`` (SSoT, Issue
+    #1377 Scheibe A — auch ``helpers._level_from_thresholds`` nutzt sie).
+    """
+    thresholds = get_metric(metric_id).display_thresholds
+    return severity_from_thresholds(thresholds, value)
 
-    Ansonsten absteigend: ``value >= red`` -> "red", ``>= orange`` ->
-    "orange", ``>= yellow`` -> "yellow", sonst "green".
 
-    Bewusst eigenstaendig implementiert (kein Import/Alias von
-    ``helpers.ampel_level``), obwohl die Band-Logik identisch ist — die
-    Konsolidierung der beiden Implementierungen ist NICHT Teil von Scheibe 1+2
-    (s. Spec Known Limitations).
+def severity_from_thresholds(thresholds: dict, value: Optional[float]) -> Optional[str]:
+    """Reine Band-Auswertung eines ``display_thresholds``-Dicts.
+
+    Issue #1377 Scheibe A: SSoT fuer ``severity_for`` UND
+    ``helpers._level_from_thresholds`` — vorher implementierten beide
+    dieselbe Logik zweimal.
+
+    Aufwaerts (Keys ``yellow``/``orange``/``red``): ``value >= red`` ->
+    "red", ``>= orange`` -> "orange", ``>= yellow`` -> "yellow".
+    Abwaerts/invertiert (Keys ``yellow_lt``/``orange_lt``/``red_lt``):
+    ``value < red_lt`` -> "red", ``< orange_lt`` -> "orange",
+    ``< yellow_lt`` -> "yellow". Fuehrt eine Metrik beide Richtungen
+    (z.B. Temperatur: Hitze UND Kaelte), gewinnt die SCHAERFERE der beiden
+    ermittelten Stufen. Trifft keine Grenze: "green".
+
+    ``value is None`` -> ``None``. Fehlen ALLE SECHS Schluessel (z.B.
+    "pressure": leeres ``display_thresholds``-Dict) -> ebenfalls ``None`` —
+    es gibt schlicht keine Ampel fuer diese Metrik, "green" waere hier ein
+    irrefuehrender impliziter Default (F001-Fix, #1214: 100m Sicht duerfte
+    niemals als gruen/unbedenklich gelten).
     """
     if value is None:
         return None
-    thresholds = get_metric(metric_id).display_thresholds
     red = thresholds.get("red")
     orange = thresholds.get("orange")
     yellow = thresholds.get("yellow")
-    if red is None and orange is None and yellow is None:
-        # Keine Standard-Ampel-Schwellen fuer diese Metrik (leeres Dict oder
-        # ausschliesslich invertierte Keys wie orange_lt) -> None statt eines
-        # irrefuehrenden "green"-Defaults.
+    red_lt = thresholds.get("red_lt")
+    orange_lt = thresholds.get("orange_lt")
+    yellow_lt = thresholds.get("yellow_lt")
+    if (
+        red is None and orange is None and yellow is None
+        and red_lt is None and orange_lt is None and yellow_lt is None
+    ):
+        # Keine Schwellen in irgendeiner Richtung hinterlegt -> None statt
+        # eines irrefuehrenden "green"-Defaults.
         return None
+
+    _STAGES = ("green", "yellow", "orange", "red")
+
+    up_level = "green"
     if red is not None and value >= red:
-        return "red"
-    if orange is not None and value >= orange:
-        return "orange"
-    if yellow is not None and value >= yellow:
-        return "yellow"
-    return "green"
+        up_level = "red"
+    elif orange is not None and value >= orange:
+        up_level = "orange"
+    elif yellow is not None and value >= yellow:
+        up_level = "yellow"
+
+    down_level = "green"
+    if red_lt is not None and value < red_lt:
+        down_level = "red"
+    elif orange_lt is not None and value < orange_lt:
+        down_level = "orange"
+    elif yellow_lt is not None and value < yellow_lt:
+        down_level = "yellow"
+
+    return up_level if _STAGES.index(up_level) >= _STAGES.index(down_level) else down_level
 
 
 def label(metric_id: str, style: str = "label_de") -> str:

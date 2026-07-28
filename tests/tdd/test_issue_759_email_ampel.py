@@ -119,23 +119,29 @@ class TestWindAmpelDotFourLevels:
 # ---------------------------------------------------------------------------
 
 class TestGustAmpelRedBoundary80:
-    """AC-2: Boen-Zellen zeigen Ampelpunkt; rote Stufe beginnt bei ≥80 km/h."""
+    """AC-2: Boen-Zellen zeigen Ampelpunkt; rote Stufe beginnt bei ≥60 km/h.
+
+    #1377 (PO-Entscheidung 2026-07-28): Boeen-Schwellen im Katalog von
+    50/65/80 auf 30/45/60 geaendert (Selbstwiderspruch mit der Zellfarbe der
+    Stundentabelle, die bereits 30/50/70 nutzte, aufgehoben). Werte und
+    Klassenname hier auf die neue Staffel angepasst.
+    """
 
     def test_issue759_gust_ampel_red_boundary_80(self):
-        """AC-2: fmt_val('gust', 79, html=True) → orange-Dot; (80, html=True) → red-Dot."""
+        """AC-2: fmt_val('gust', 59, html=True) → orange-Dot; (60, html=True) → red-Dot."""
         from src.output.renderers.email.helpers import fmt_val
 
-        result_79 = fmt_val("gust", 79, html=True)
-        result_80 = fmt_val("gust", 80, html=True)
+        result_59 = fmt_val("gust", 59, html=True)
+        result_60 = fmt_val("gust", 60, html=True)
 
-        _assert_css_dot_band(result_79, "orange")
-        _assert_css_dot_band(result_80, "red")
+        _assert_css_dot_band(result_59, "orange")
+        _assert_css_dot_band(result_60, "red")
 
-        # Vier Stufen: 40→green, 55→yellow, 70→orange, 85→red
-        _assert_css_dot_band(fmt_val("gust", 40, html=True), "green")
-        _assert_css_dot_band(fmt_val("gust", 55, html=True), "yellow")
-        _assert_css_dot_band(fmt_val("gust", 70, html=True), "orange")
-        _assert_css_dot_band(fmt_val("gust", 85, html=True), "red")
+        # Vier Stufen (#1377: 30/45/60): 25→green, 35→yellow, 50→orange, 65→red
+        _assert_css_dot_band(fmt_val("gust", 25, html=True), "green")
+        _assert_css_dot_band(fmt_val("gust", 35, html=True), "yellow")
+        _assert_css_dot_band(fmt_val("gust", 50, html=True), "orange")
+        _assert_css_dot_band(fmt_val("gust", 65, html=True), "red")
 
 
 # ---------------------------------------------------------------------------

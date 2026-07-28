@@ -110,7 +110,14 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # (Europe/Berlin, 11.07. = Sommerzeit) aendert sich dadurch GENAU EIN
 # Vorkommen im HTML von "MESZ" zu "CEST" -- verifiziert per Diff des
 # Roh-HTML, sonst kein Unterschied. Digest unten neu ermittelt.
-_EXPECTED_SHA256 = "1ec936520af140125f8eeddd79bcd2fc36d6f43ed825f0c2a460380abe317e1f"
+#
+# #1377 Scheibe A (PO-Entscheidung 2026-07-28, bewusste/dokumentierte
+# Aenderung, s. Spec "Sichtbare Wirkung"): Boeen-Katalogschwellen von
+# 50/65/80 auf 30/45/60 geaendert. Dieses Fixture setzt gust_kmh=45.0 --
+# vorher unter allen Schwellen (gruen), jetzt >= orange(45). Kein anderer
+# Text-/Layout-/Farbblock hat sich geaendert (visibility_m=9000 bleibt
+# gruen). Digest unten neu ermittelt.
+_EXPECTED_SHA256 = "9d7b6dcfae43c61aa3b6c3e9952d0be4f5c6f6cfdffe08ae954ca6305e3c640d"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",

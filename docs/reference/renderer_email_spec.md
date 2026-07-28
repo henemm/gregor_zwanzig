@@ -205,16 +205,31 @@ Die **alleinige Quelle** der Anzeige-Entscheidung ist `use_friendly_format` in `
 | Metrik | 🟡 (Gelb) | 🟠 (Orange) | 🔴 (Rot) | Basis |
 |---|---|---|---|---|
 | wind (km/h) | 30 | 50 | 70 | Beaufort 5/7/8–9 |
-| gust (km/h) | 50 | 65 | 80 | Böenklassifikation |
+| gust (km/h) | 30 | 45 | 60 | PO-Entscheidung #1377: die Werte, die die Stundentabelle bereits färbte |
 | precip (mm/h) | 1 | 5 | 10 | Regenintensität leicht/mäßig/stark |
 | pop (%) | 30 | 60 | 80 | Niederschlagswahrscheinlichkeit |
-| cape (J/kg) | 1000 | 2500 | 3500 | Standard-Konvektionsskala (ersetzt seit #814 fest verdrahtete Leiter 300/1000/2000) |
+| cape (J/kg) | 300 | 800 | 1500 | Katalog-Ist-Stand (`metric_catalog.py:264`) |
+| temperature / wind_chill (°C) | ≥28 · <0 | ≥31 · <−5 | ≥34 · <−15 | PO-Entscheidung #1377, beidseitig (Hitze und Kälte) |
+| uv_index | 3 | 6 | 8 | PO-Entscheidung #1377 |
 
-### Visibility wird bewusst NICHT ampeliert
+Quelle ist immer `display_thresholds` im Metrik-Katalog; ausgewertet wird ausschließlich über
+`metric_format.severity_for` (Issue #1377). Die Tabelle hier ist Abschrift, nicht Quelle.
 
-Echte Wetterdaten zeigen: Median 16–54 km, ≥10 km in 90–100 % aller Stunden, <1 km (Nebel) ~0 %.
-Eine Ampel wäre dauergrün und wertlos. Die nackte km-Zahl trägt mehr Information.
-Ein echter Nebel-/Diesigkeits-Wächter gehört in die Alarm-Ebene (Folge-Issue nach #814).
+**Nicht verwechseln:** `risk_thresholds` (Risk Engine, `api_contract.md` §7) ist eine getrennte
+Größe mit eigener LOW/MODERATE/HIGH-Skala und wird von der Ampel nicht berührt.
+
+### Visibility: kein Ampelpunkt in der Tabelle, aber Färbung im Klartext-Block
+
+Für die **Tabellenspalte** gilt die Entscheidung aus #814 unverändert: kein Ampelpunkt. Echte
+Wetterdaten zeigen Median 16–54 km, ≥10 km in 90–100 % aller Stunden — eine Spaltenampel wäre
+dauergrün und wertlos, die nackte km-Zahl trägt mehr Information. `visibility` steht deshalb
+weiterhin nicht in `_COL_KEY_TO_METRIC_ID` (`html.py:552`).
+
+Für die **Klartext-Zeile** gilt seit #1377 das Gegenteil: Meldet sie eine Unterschreitung
+(„Sicht <2 km ab 14:00"), wird sie nach den invertierten Schwellen 2000/1000/500 m gefärbt.
+Bis #1377 war sie bei jedem Nebelwert grün, weil die halb hinterlegte Schwelle stillschweigend
+als „unbedenklich" gelesen wurde — ein Fehler, kein Feature. Der Unterschied ist konsistent:
+Die Zeile erscheint überhaupt nur bei einer Unterschreitung, sie kann also nicht dauergrün sein.
 
 ### Implementierungs-Hinweis: „Roh ist Roh"
 

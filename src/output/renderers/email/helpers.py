@@ -501,21 +501,20 @@ def _ampel_dot_css(level: str) -> str:
 def _level_from_thresholds(value, thresholds: dict) -> "Optional[str]":
     """Issue #888: shared band-level resolver for the 4-level Ampel.
 
-    Returns None for a None value; otherwise one of
-    'green'|'yellow'|'orange'|'red' based on thresholds.
+    Issue #1377 Scheibe A: delegiert an ``metric_format.severity_from_thresholds``
+    (SSoT) statt die Band-Logik ein zweites Mal zu implementieren — dadurch
+    wirken invertierte (``yellow_lt``/``orange_lt``/``red_lt``) und beidseitige
+    Baender automatisch auch hier (``ampel_dot``/``ampel_level``/
+    ``ampel_stage_tone``).
+
+    Returns None for a None value, oder wenn ``thresholds`` in keiner
+    Richtung Schwellen enthaelt; sonst eine der Stufen
+    'green'|'yellow'|'orange'|'red'.
     """
-    if value is None:
-        return None
-    red = thresholds.get("red")
-    orange = thresholds.get("orange")
-    yellow = thresholds.get("yellow")
-    if red is not None and value >= red:
-        return "red"
-    if orange is not None and value >= orange:
-        return "orange"
-    if yellow is not None and value >= yellow:
-        return "yellow"
-    return "green"
+    # Lokaler Import vermeidet einen Zirkelbezug: metric_format importiert
+    # (ueber design_tokens) das renderers-Paket, das wiederum helpers laedt.
+    from output.metric_format import severity_from_thresholds
+    return severity_from_thresholds(thresholds, value)
 
 
 def ampel_dot(value, thresholds: dict) -> str:
@@ -1057,8 +1056,15 @@ def ampel_stage_index(value, thresholds: dict) -> int:
     derselbe Spitzenwert garantiert dieselbe Stufe/Farbe ergibt.
     Issue #1222: entkoppelt von ampel_dot()/Emoji-Lookup — nutzt direkt
     _level_from_thresholds() ueber die feste Level-Reihenfolge.
+    Issue #1377 Scheibe A: _level_from_thresholds() kann seit der Delegation
+    an severity_from_thresholds() None liefern (keine Schwellen in irgendeiner
+    Richtung). An dieser Stelle bleibt das Verhalten wie vor #1377: neutrale/
+    gruene Stufe (Index 0) statt eines Fehlers aus _AMPEL_STAGE_ORDER.index(None).
     """
-    return _AMPEL_STAGE_ORDER.index(_level_from_thresholds(value, thresholds))
+    level = _level_from_thresholds(value, thresholds)
+    if level is None:
+        return 0
+    return _AMPEL_STAGE_ORDER.index(level)
 
 
 def ampel_stage_tone(value, thresholds: dict) -> str:

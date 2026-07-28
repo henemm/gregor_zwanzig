@@ -82,6 +82,13 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"min": "temp_min_c", "max": "temp_max_c", "avg": "temp_avg_c"},
         default_change_threshold=5.0,
+        # Issue #1377 Scheibe A (PO-Entscheidung 2026-07-28): beidseitige
+        # Ampel-Schwellen -- Hitze (yellow/orange/red) UND Kaelte
+        # (yellow_lt/orange_lt/red_lt). Identisch zu wind_chill (s. dort).
+        display_thresholds={
+            "yellow": 28.0, "orange": 31.0, "red": 34.0,
+            "yellow_lt": 0.0, "orange_lt": -5.0, "red_lt": -15.0,
+        },
         sms_code="D", decimals=0, cmp="über", alert_label="Temp",
     ),
     # Issue #914: Internal-only entry for AlertMetric.TEMPERATURE_MIN (Kältealarm).
@@ -108,6 +115,14 @@ _METRICS: list[MetricDefinition] = [
         # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
         # is_precursor=True verhindert Alerts in from_display_config/from_alert_rules.
         default_change_threshold=None,
+        # Issue #1377 Scheibe A (PO-Entscheidung 2026-07-28): dieselben Werte
+        # wie "temperature" -- zwei Spalten mit demselben Mass duerfen nicht
+        # verschieden faerben. risk_thresholds (Alarme) bleibt unangetastet,
+        # das ist ein anderer Zweck.
+        display_thresholds={
+            "yellow": 28.0, "orange": 31.0, "red": 34.0,
+            "yellow_lt": 0.0, "orange_lt": -5.0, "red_lt": -15.0,
+        },
         risk_thresholds={"high_lt": -20.0},
     ),
     MetricDefinition(
@@ -159,7 +174,10 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"max": "gust_max_kmh"},
         default_change_threshold=20.0,
-        display_thresholds={"yellow": 50.0, "orange": 65.0, "red": 80.0},
+        # Issue #1377 Scheibe A (PO-Entscheidung 2026-07-28): 30/45/60 statt
+        # 50/65/80 -- vormals wich der Punkt-/Klartext-Wert von der
+        # Zellfarbe derselben Mail ab, die schon 30 km/h nutzte.
+        display_thresholds={"yellow": 30.0, "orange": 45.0, "red": 60.0},
         highlight_threshold=60.0,
         risk_thresholds={"medium": 50.0, "high": 70.0},
         exposition_risk_thresholds={"medium": 40, "high": 60},
@@ -354,7 +372,12 @@ _METRICS: list[MetricDefinition] = [
         display_unit="km",
         summary_fields={"min": "visibility_min_m"},
         default_change_threshold=1000,
-        display_thresholds={"orange_lt": 500.0},
+        # Issue #1377 Scheibe A (PO-Entscheidung 2026-07-28): vollstaendig
+        # invertierte Dreier-Staffel statt bisher nur orange_lt allein --
+        # die Klartext-Zeile blieb dadurch bisher IMMER gruen (F001-artig).
+        display_thresholds={
+            "yellow_lt": 2000.0, "orange_lt": 1000.0, "red_lt": 500.0,
+        },
         risk_thresholds={"high_lt": 100.0},
         format_modes=("raw",),
         default_format_mode="raw",
@@ -385,6 +408,10 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         summary_fields={"max": "uv_index_max"},
         default_change_threshold=3.0,
+        # Issue #1377 Scheibe A (PO-Entscheidung 2026-07-28): erstmals
+        # Ampel-Schwellen -- bisher lieferte severity_for() hier "keine
+        # Aussage".
+        display_thresholds={"yellow": 3.0, "orange": 6.0, "red": 8.0},
         sms_code="UV", decimals=0, cmp="über", alert_label="UV-Index",
     ),
     MetricDefinition(

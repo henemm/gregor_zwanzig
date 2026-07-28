@@ -43,9 +43,14 @@ class TestCatalogPopulation:
     """Threshold values must match previously hardcoded values exactly."""
 
     def test_gust_display_thresholds(self) -> None:
-        """Gust: yellow >= 50, orange >= 65, red >= 80 (4-stufige Ampel seit #759)."""
+        """Gust: yellow >= 30, orange >= 45, red >= 60 (4-stufige Ampel seit #759).
+
+        #1377 (PO-Entscheidung 2026-07-28): von 50/65/80 auf 30/45/60 geaendert
+        -- die Zellfarbe der Stundentabelle nutzte bereits 30/45/60 (siehe
+        html.py-Fallback), der Punkt/die Klartext-Zeile widersprachen dem.
+        """
         md = get_metric("gust")
-        assert md.display_thresholds == {"yellow": 50.0, "orange": 65.0, "red": 80.0}
+        assert md.display_thresholds == {"yellow": 30.0, "orange": 45.0, "red": 60.0}
 
     def test_gust_highlight_threshold(self) -> None:
         """Gust highlight at > 60 km/h."""
@@ -102,9 +107,17 @@ class TestCatalogPopulation:
         assert md.risk_thresholds == {"medium": 1000.0, "high": 2000.0}
 
     def test_visibility_display_thresholds(self) -> None:
-        """Visibility: orange if < 500m (less-than condition)."""
+        """Visibility: vollstaendige invertierte Dreier-Staffel (< 2000/1000/500m).
+
+        #1377 (PO-Entscheidung 2026-07-28): vorher nur der einzelne
+        `orange_lt`-Schluessel -- severity_for()/_level_from_thresholds()
+        konnten damit nie eine Ampel liefern (immer None bzw. still "green"),
+        die Klartext-Zeile faerbte deshalb NIE. Jetzt vollstaendig hinterlegt.
+        """
         md = get_metric("visibility")
-        assert md.display_thresholds == {"orange_lt": 500.0}
+        assert md.display_thresholds == {
+            "yellow_lt": 2000.0, "orange_lt": 1000.0, "red_lt": 500.0,
+        }
 
     def test_visibility_risk_thresholds(self) -> None:
         """Visibility risk: high if < 100m."""
@@ -117,8 +130,15 @@ class TestCatalogPopulation:
         assert md.risk_thresholds == {"high_lt": -20.0}
 
     def test_metrics_without_thresholds_have_empty_dicts(self) -> None:
-        """Metrics not in threshold list should have empty defaults."""
-        md = get_metric("temperature")
+        """Metrics not in threshold list should have empty defaults.
+
+        #1377 (PO-Entscheidung 2026-07-28): "temperature" diente hier vor
+        #1377 als Beispiel, hat inzwischen aber eigene display_thresholds
+        bekommen (s. TestSeverityFor-Aequivalent in test_metric_format.py).
+        "pressure" bleibt weiterhin ganz ohne Schwellen -- das ist der
+        eigentliche Regressionsschutz dieses Tests.
+        """
+        md = get_metric("pressure")
         assert md.display_thresholds == {}
         assert md.risk_thresholds == {}
         assert md.highlight_threshold is None
