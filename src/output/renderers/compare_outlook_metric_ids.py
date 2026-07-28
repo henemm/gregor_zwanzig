@@ -34,17 +34,12 @@ def _catalog_entry(metric_id: object, aggregation: object) -> dict | None:
 def _summary_field(metric_id: object, aggregation: object) -> str | None:
     """``SegmentWeatherSummary``-Feldname der Tagesauswertung (oder ``None``).
 
-    ``selectable=False`` (``confidence``, ADR-0005/#710; ``temperature_cold``)
-    ist hier bewusst nicht aufloesbar -- der Ausblick zeigt nur waehlbare
-    Groessen."""
-    from app.metric_catalog import _METRICS_BY_ID
+    #1357: reiner Delegat auf die gehobene Katalog-Funktion -- EINE Quelle
+    fuer Ausblick (hier) und Trip-Kachel (email/helpers.py), keine zweite
+    Kopie der Aufloesungsregel."""
+    from app.metric_catalog import summary_field_for
 
-    definition = _METRICS_BY_ID.get(metric_id) if isinstance(metric_id, str) else None
-    if definition is None or not definition.selectable:
-        return None
-    if not isinstance(aggregation, str):
-        return None
-    return definition.summary_fields.get(aggregation)
+    return summary_field_for(metric_id, aggregation)
 
 
 def resolve_outlook_metrics(outlook_metrics: object) -> list[dict] | None:

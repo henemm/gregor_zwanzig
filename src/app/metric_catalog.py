@@ -442,6 +442,59 @@ _METRICS_BY_ID: dict[str, MetricDefinition] = {m.id: m for m in _METRICS}
 _METRICS_BY_COL_KEY: dict[str, MetricDefinition] = {m.col_key: m for m in _METRICS}
 
 
+# Issue #1357: feste Reihenfolge der Tagesauswertungen und ihre deutschen
+# Beschriftungen — EINE Quelle fuer Trip-Kachel (email/helpers.py) und
+# Ortsvergleich (compare_metric_catalog.py / compare_outlook_metric_ids.py).
+_AGGREGATION_ORDER: tuple[str, ...] = ("min", "max", "avg", "sum")
+_AGGREGATION_LABELS_DE: dict[str, str] = {
+    "min": "Minimum", "max": "Maximum", "avg": "Mittel", "sum": "Summe",
+}
+
+
+def summary_field_for(metric_id: object, aggregation: object) -> Optional[str]:
+    """``SegmentWeatherSummary``-Feldname der Tagesauswertung (oder ``None``).
+
+    ``selectable=False`` (``confidence``, ADR-0005/#710; ``temperature_cold``)
+    ist bewusst nicht aufloesbar — nur waehlbare Groessen werden angezeigt.
+    """
+    definition = _METRICS_BY_ID.get(metric_id) if isinstance(metric_id, str) else None
+    if definition is None or not definition.selectable:
+        return None
+    if not isinstance(aggregation, str):
+        return None
+    return definition.summary_fields.get(aggregation)
+
+
+def available_aggregations(metric_id: object) -> list[str]:
+    """Tatsaechlich anzeigbare Auswertungen einer Groesse, in fester Reihenfolge.
+
+    Quelle ist ``summary_fields`` (was berechnet wird), NICHT
+    ``default_aggregations`` (verspricht bei ``snowfall_limit``/
+    ``freezing_level`` mehr, als berechenbar ist).
+    """
+    definition = _METRICS_BY_ID.get(metric_id) if isinstance(metric_id, str) else None
+    if definition is None or not definition.selectable:
+        return []
+    return [a for a in _AGGREGATION_ORDER if a in definition.summary_fields]
+
+
+def pill_default_aggregations(metric_id: object) -> list[str]:
+    """Auswertungen ohne aktive Nutzereinschraenkung: ``{min, max}`` geschnitten
+    auf das Angebot der Groesse, sonst das gesamte Angebot.
+
+    Ergibt fuer Temperatur UND gefuehlte Temperatur ``["min", "max"]`` — die
+    Temperatur zeigt also nie unverlangt zusaetzlich den Mittelwert.
+    """
+    available = available_aggregations(metric_id)
+    preferred = [a for a in available if a in ("min", "max")]
+    return preferred or available
+
+
+def aggregation_label_de(aggregation: object) -> str:
+    """Deutsche Beschriftung einer Auswertung (``""`` wenn unbekannt)."""
+    return _AGGREGATION_LABELS_DE.get(aggregation, "") if isinstance(aggregation, str) else ""
+
+
 def get_metric(metric_id: str) -> MetricDefinition:
     """Get metric definition by ID. Raises KeyError if not found."""
     return _METRICS_BY_ID[metric_id]

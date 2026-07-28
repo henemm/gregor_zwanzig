@@ -509,7 +509,7 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 |---------------------|------------------|-------------------------------------------------------|
 | metric_id           | str              | Metrik-ID (z.B. `wind`, `cloud_total`, `sunshine`)     |
 | enabled             | bool             | Metrik aktiv im Report? (default: true)                |
-| aggregations        | list[str]        | Aggregations-Funktionen pro Segment (default: `["min","max"]`) |
+| aggregations        | list[str]        | Aggregations-Funktionen pro Segment (default: `["min","max"]`). **Seit Issue #1357** vom Renderer gelesen: bestimmt, welche Tagesauswertung in der Kachelzeile der Briefing-Mail erscheint. **Einzelwahl, keine Menge** (PO 2026-07-28: „Es gibt kein zusätzlich: entweder oder") — genau eine von vier sich ausschließenden Möglichkeiten gilt: Spanne (`["min","max"]`), nur Tiefstwert (`["min"]`), nur Höchstwert (`["max"]`), nur Mittelwert (`["avg"]`, nur bei Größen mit `avg` im Katalog, z. B. Temperatur — bei der gefühlten Temperatur entfällt diese Möglichkeit). Fehlt das Feld ⇒ Katalog-Vorgabe (`metric_catalog.pill_default_aggregations()`, `{min,max}` ∩ berechenbar); leere Liste `[]` ⇒ bewusst keine Kachel; eine gespeicherte Liste ohne Entsprechung in den vier Möglichkeiten (Altbestand, z. B. `["min","avg"]`) wird zur Anzeigezeit auf die nächstliegende Möglichkeit abgebildet und per `logger.warning` gemeldet — Ausnahme: der Katalog-Schreib-Default `["min","max","avg"]` bildet ohne Meldung auf Spanne ab. Bedienfläche (Segmented Control) nur für Größen mit mehr als einer berechenbaren Auswertung (heute Temperatur und gefühlte Temperatur); Details `docs/specs/modules/trip_aggregation_selection.md` |
 | morning_enabled     | bool \| None     | Override Morgen-Report (None = globale Einstellung)    |
 | evening_enabled     | bool \| None     | Override Abend-Report (None = globale Einstellung)     |
 | use_friendly_format | bool             | @deprecated (seit Issue #435) — nutze `format_mode`    |
@@ -1183,6 +1183,7 @@ Returns catalog of all available weather metrics with format mode options and de
 | metrics[].selectable | bool | Whether this metric appears in the user-facing selector (Wizard/Editor). Backend internal metric (`confidence`) has `selectable=false` (Issue #710) — these are never returned by `/api/metrics` but used internally for aggregation/forecast-hints (UI-Auswahl heißt heute Editor-Metrik-Auswahl, kein Wizard) |
 | metrics[].sms_code | string | GSM-7-safe short token for the metric in SMS/Subject/Telegram alert tokens (e.g., `W`, `G`, `R`, `PR`, `TH`, `CP`, `SL`, `VS`, `HU`). Single source for alert renderers (Issue #914 Slice 1); the metric catalog is the only place these are defined |
 | metrics[].decimals | int \| null | Rounding precision for display (e.g., `precipitation: 1`, `visibility: 1`, most metrics `0`). `null` ⇒ fall back to the unit-based heuristic in `format_metric_value()` |
+| metrics[].aggregations | `{id, label}[]` | **Neu Issue #1357:** die für diese Größe tatsächlich berechenbaren Tagesauswertungen in fester Reihenfolge (`min`, `max`, `avg`, `sum`), mit deutschem Label. Quelle: `metric_catalog.available_aggregations()`/`aggregation_label_de()` über `MetricDefinition.summary_fields` — **nicht** `default_aggregations` (verspricht bei `snowfall_limit`/`freezing_level` mehr, als berechenbar ist). Weniger als zwei Einträge ⇒ der Editor zeigt keine Auswahl (kein wirkungsloses Bedienelement) |
 | metrics[].cmp | string | Comparison direction: `"über"` or `"unter"`. Single source for the direction/arrow used by deviation and absolute alert detection (Issue #914 Slice 1) — replaces the former hand-coded `_ALERT_METRIC_COMPARISON` dict. **Not** a threshold comparator for the deviation-alert (live) path: per ADR-0013, an event triggers there when `abs(value_to − value_from) ≥ threshold` regardless of `cmp`; `cmp` remains a literal exceeds/falls-below comparator only for `ABSOLUTE`-kind rules (`_detect_absolute_changes()`), which is unused in the send path (`include_absolute=False`) |
 
 **Format Mode Reference:**
@@ -3076,6 +3077,14 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-07-28: Issue #1357 (Epic #1372 Scheibe S4a) — `MetricConfig.aggregations`
+  dokumentiert. Renderer liest das Feld erstmals: bestimmt, welche
+  Tagesauswertung (Spanne/Tiefst-/Höchst-/Mittelwert) in der
+  Kachelzeile der Trip-Briefing-Mail erscheint — **Einzelwahl über vier
+  sich ausschließende Möglichkeiten**, keine Mengen-Wahl (PO 2026-07-28:
+  „Es gibt kein zusätzlich: entweder oder"). Betrifft heute Temperatur und
+  gefühlte Temperatur (einzige Größen mit mehr als einer berechenbaren
+  Auswertung). Siehe `docs/specs/modules/trip_aggregation_selection.md`.
 - 2026-07-26: Issues #1366 + #1361 Befund 3 (S3 Scheibe B von Epic #1372) —
   `resolve_enabled_metrics()`/`resolve_hourly_metrics()` unterscheiden jetzt
   „Feld fehlt" (Legacy-Fallback: alle Größen/Spalten) von „Feld vorhanden und

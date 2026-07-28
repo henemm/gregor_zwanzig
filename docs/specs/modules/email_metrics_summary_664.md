@@ -69,7 +69,7 @@ Pro-Metrik-Aggregation (mirror Design `EmailMetricsSummary`):
 | Metrik-ID | Pillen-Text | Tone-Logik |
 |---|---|---|
 | `temperature` | `{min}–{max}°C · Max {hh}:00` | info |
-| `wind_chill` | `gef. min {min}°C · {hh}:00` | info |
+| `wind_chill` | `gef. min {min}°C · {hh}:00` (**seit Issue #1357** wählbar/default Spanne — s. u.) | info |
 | `wind` | crossing: `Wind >{thr} km/h ab {hh}:00 · max {max} ({hh})` / sonst `Wind max {max} km/h ({hh})` | warn / good |
 | `gust` | analog Wind | warn / good |
 | `precipitation` | `Regen ab {hh}:00 · {sum} mm` / `kein Regen` | warn / good |
@@ -146,7 +146,14 @@ else:
 - Der ⚡-Gewitter-Badge im Ausblick (#669) und die Antwort-Kommandos (#670) sind NICHT Teil dieses Issues.
 - Wind-Chill pro Stunde stammt aus den extrahierten Row-Dicts/Aggregaten; fehlt der Wert, wird die
   `wind_chill`-Pille übersprungen (kein leerer Platzhalter).
+- **Überholt seit Issue #1357:** Die Pillen-Texte für `temperature` und `wind_chill` in obiger
+  Tabelle beschreiben nur den Ausgangszustand dieses Issues. Seit #1357 ist die gezeigte
+  Tagesauswertung je Trip wählbar (Spanne/Tiefst-/Höchst-/Mittelwert, Einzelwahl) — die
+  gefühlte Temperatur zeigt ohne Nutzeraktion nun ebenfalls die Spanne, nicht mehr nur den
+  Tiefstwert. Maßgeblich ist `docs/specs/modules/trip_aggregation_selection.md`.
 
 ## Changelog
 
 - 1.0 (2026-06-08): Initiale Spec aus Design-Handoff „Mail-Vorschau" + Issue #664.
+- 2026-07-28: Known-Limitations-Hinweis auf Issue #1357 ergänzt — die
+  `wind_chill`/`temperature`-Pillen-Texte dieser Spec sind seither überholt.

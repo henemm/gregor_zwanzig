@@ -40,15 +40,14 @@ im Resolver, schlaegt der Import fehl.
 """
 from __future__ import annotations
 
-from app.metric_catalog import get_metric
+from app.metric_catalog import aggregation_label_de, get_metric
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from services.compare_alert import _SUMMARY_KEY_TO_CATALOG_ID
 
 # #1401 A1: deutsche Beschriftung der Auswertung -- eigenes Anzeige-Element
 # neben dem Namen, nicht Teil des Namens.
-_AGGREGATION_LABELS: dict[str, str] = {
-    "max": "Maximum", "min": "Minimum", "avg": "Mittel", "sum": "Summe",
-}
+# #1357: die Tabelle selbst liegt jetzt im zentralen Katalog
+# (``metric_catalog.aggregation_label_de``) -- EINE Quelle fuer beide Seiten.
 
 # Reihenfolge = ALL_METRICS-Reihenfolge im Frontend (compareMetricDefs.ts),
 # erleichtert visuellen Diff in Teil 2 (Spec "Expected Behavior").
@@ -264,7 +263,7 @@ def get_compare_metric_catalog(entries: list[dict] | None = None) -> list[dict]:
         result.append({
             **entry,
             "label": label,
-            "aggregation_label": _AGGREGATION_LABELS[aggregation],
+            "aggregation_label": aggregation_label_de(aggregation),
             "alarmCapable": entry["key"] in _alarm_keys,
         })
     return result

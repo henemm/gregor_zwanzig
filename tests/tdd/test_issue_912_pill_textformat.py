@@ -176,14 +176,41 @@ class TestAC2WindChill:
         )
 
     def test_wind_chill_format_exact(self):
-        """SOLL: Pill-Text ist EXAKT 'gef. min 6.6°C · 10:00' — kein zusaetzliches
-        'gef. max'-Segment (#1351 F001: max-Anzeige braucht Auswahl-Signal, das
-        aktuell nicht zum Renderer durchgereicht wird; reine Werteabweichung
-        darf die max-Anzeige nicht triggern)."""
+        """SOLL: Pill-Text ist EXAKT 'gef. 6.6–9.0°C · Max 08:00'.
+
+        #1357 (Spec-Abschnitt „Bewusste Golden-Fixture-Neuerzeugung"): ohne
+        Nutzereinschraenkung zeigt die gefuehlte Temperatur die SPANNE, gleiche
+        Form wie die gemessene Temperatur. Die frueher hier festgenagelte
+        Nur-Tiefstwert-Form 'gef. min 6.6°C · 10:00' gilt seither nur noch fuer
+        die ausdrueckliche Auswahl ``["min"]`` (s. Test darunter) — der
+        #1351-F001-Sperrgrund („kein Auswahl-Signal am Renderer") ist mit dem
+        Parameter ``metric_aggregations`` entfallen.
+        """
         pills = self._pills()
         texts = [t for t, _ in pills]
+        assert texts == ["gef. 6.6–9.0°C · Max 08:00"], (
+            f"AC-2: Exaktes Format 'gef. 6.6–9.0°C · Max 08:00' erwartet — "
+            f"got: {texts}"
+        )
+
+    def test_wind_chill_min_only_selection_keeps_912_format(self):
+        """SOLL: die #912-Einzelwert-Form bleibt fuer die ausdrueckliche Wahl
+        „nur Tiefstwert" woertlich erhalten."""
+        from output.renderers.email.helpers import build_metrics_summary_pills
+        dps = [
+            _dp(6, t2m_c=15.0, wind_chill_c=9.0),
+            _dp(7, t2m_c=15.0, wind_chill_c=8.0),
+            _dp(8, t2m_c=15.0, wind_chill_c=6.6),
+        ]
+        segs = [_make_segment(dps, start_h_utc=6, end_h_utc=9)]
+        pills = build_metrics_summary_pills(
+            segs, ["wind_chill"], {}, tz=TZ,
+            metric_aggregations={"wind_chill": ["min"]},
+        )
+        texts = [t for t, _ in pills]
         assert texts == ["gef. min 6.6°C · 10:00"], (
-            f"AC-2: Exaktes Format 'gef. min 6.6°C · 10:00' erwartet — got: {texts}"
+            f"AC-2: 'gef. min 6.6°C · 10:00' bei Auswahl ['min'] erwartet — "
+            f"got: {texts}"
         )
 
 

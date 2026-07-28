@@ -149,11 +149,16 @@ def render_compact(
         for mc in dc.metrics
         if mc.alert_enabled and mc.alert_threshold is not None
     }
+    # Issue #1357: gespeicherte Auswertungswahl je Groesse (sonst Katalog-Vorgabe).
+    metric_aggregations = {
+        mc.metric_id: mc.aggregations for mc in dc.metrics if mc.enabled
+    }
     pills = build_metrics_summary_pills(
         segments, metric_ids, thresholds, tz=tz,
         night_weather=night_weather, has_gap=has_gap,
         day_window_start_hour=day_window_start_hour,
         day_window_end_hour=day_window_end_hour,
+        metric_aggregations=metric_aggregations,
     )
     lines.append("== Metriken-Ueberblick ==")
     for label, tone in pills:

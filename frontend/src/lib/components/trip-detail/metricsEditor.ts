@@ -198,6 +198,8 @@ export interface BucketWeatherConfigMetric {
 	horizons: Horizons;
 	bucket?: 'primary' | 'secondary';
 	order: number;
+	/** Issue #1357: gewaehlte Tagesauswertungen fuer die Mail-Kachelzeile. */
+	aggregations?: string[];
 }
 
 /**
@@ -332,6 +334,7 @@ export function buildWeatherConfigMetrics(
 	friendlyMap: Record<string, boolean>,
 	horizonsMap: Record<string, Horizons>,
 	catalog: MetricCatalog,
+	aggregationsMap: Record<string, string[]> = {},
 ): BucketWeatherConfigMetric[] {
 	const orderOf: Record<string, number> = {};
 	const bucketOf: Record<string, 'primary' | 'secondary'> = {};
@@ -352,6 +355,12 @@ export function buildWeatherConfigMetrics(
 			horizons: horizonsMap[id] ?? { ...HORIZONS_ALL },
 			...(bucket ? { bucket } : {}),
 			order: orderOf[id] ?? 0,
+			// Issue #1357: die Auswertungswahl wird hier DURCHGEREICHT, nicht neu
+			// erfunden — ohne das ginge sie beim ersten Speichern verloren
+			// (mergeConfigMap ersetzt den Schluessel `metrics` komplett).
+			// Kein Eintrag = nie eingeschraenkt -> Feld weglassen, damit die
+			// Katalog-Vorgabe greift; eine leere Liste bleibt erhalten (AC-8).
+			...(aggregationsMap[id] !== undefined ? { aggregations: [...aggregationsMap[id]] } : {}),
 		});
 	};
 

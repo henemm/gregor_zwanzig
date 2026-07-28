@@ -38,6 +38,9 @@ describe('Issue #1359 Scheibe 1: Reihenfolge-Abschnitt im Vergleich', () => {
 			'reihenfolge',
 			'tagesfenster',
 			'sms_schwellen',
+			// Issue #1357: Auswertungswahl fuer die Mail-Kachelzeile — route-only,
+			// der Ortsvergleich zieht mit #1411 nach (Spec AC-9).
+			'auswertungen',
 			'report_config',
 			'official_alerts'
 		]);

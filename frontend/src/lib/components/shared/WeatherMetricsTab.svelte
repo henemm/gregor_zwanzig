@@ -33,6 +33,11 @@
 	import LayoutTab from '$lib/components/shared/layout-tab/LayoutTab.svelte';
 	import type { ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
 	import ThresholdMetricRow from './weather-metrics-tab/ThresholdMetricRow.svelte';
+	// Issue #1357: Auswertungswahl je Wettergroesse (Mail-Kachelzeile).
+	import AggregationMetricRow from './weather-metrics-tab/AggregationMetricRow.svelte';
+	import {
+		aggregationChoices, choiceAggregations, selectedChoiceId, showsAggregationChoice,
+	} from './weather-metrics-tab/aggregationSelection.ts';
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
 	// Issue #1117: „Amtliche Warnungen"-Checkbox auch im Inhalt-Tab (eigener Block,
 	// EditReportConfigSection bleibt unverändert).
@@ -193,6 +198,9 @@
 	// Issue #624: konfigurierbare Schwellwerte pro Metrik (nur threshold-fähige).
 	const SMS_THRESHOLD_METRIC_IDS = ['precipitation', 'rain_probability', 'wind', 'gust', 'thunder', 'snow_depth', 'snowfall_limit'];
 	let smsThresholds = $state<Record<string, string>>({});
+	// Issue #1357: gewaehlte Tagesauswertungen je Groesse. Fehlender Schluessel =
+	// nie eingeschraenkt (Katalog-Vorgabe); leere Liste = bewusst keine Kachel.
+	let aggregationsMap = $state<Record<string, string[]>>({});
 	let savedSnapshot = $state('');
 	let showSavePresetDialog = $state(false);
 	let mailSheetOpen = $state(false);
@@ -247,6 +255,15 @@
 		for (const ms of Object.values(catalog)) for (const m of ms) map[m.id] = m;
 		return map;
 	});
+	// Issue #1357 (AC-5): nur aktive Groessen mit MEHR ALS EINER berechenbaren
+	// Auswertung bekommen eine Auswahl — sonst waere sie ein wirkungsloses
+	// Bedienelement. Die Liste kommt aus dem Katalog, nicht aus einer
+	// getippten Metrik-Aufzaehlung.
+	const aggregationMetricIds = $derived(
+		allCatalogIds().filter(
+			(id) => !buckets.off.includes(id) && showsAggregationChoice(metricById[id]),
+		),
+	);
 	const shortById = $derived.by(() => {
 		const map: Record<string, string> = {};
 		for (const id of Object.keys(metricById)) {
@@ -258,15 +275,19 @@
 
 	// Issue #736: channels aus isDirty + snapshot entfernt (Kanal-Config lebt jetzt im Versand-Reiter).
 	// Issue #776/#774: reportConfig in isDirty einschliessen (Toggle-Persistenz, Checkbox-Änderung macht Tab dirty).
+	// Issue #1357: aggregationsMap gehoert in Dirty-Vergleich UND Snapshot — sonst
+	// bleibt die Auswertungswahl unspeicherbar (der Dirty-Check sieht nur, was im
+	// Snapshot steht).
 	const isDirty = $derived(
-		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled }) !== savedSnapshot,
+		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, aggregationsMap, reportConfig, officialAlertsEnabled }) !== savedSnapshot,
 	);
 
 	function snapshot(
 		b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>,
-		tk: boolean, st: Record<string, string>, rc: ReportConfig | undefined, oae: boolean
+		tk: boolean, st: Record<string, string>, rc: ReportConfig | undefined, oae: boolean,
+		ag: Record<string, string[]> = aggregationsMap
 	): string {
-		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, reportConfig: rc ?? {}, officialAlertsEnabled: oae });
+		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, aggregationsMap: ag, reportConfig: rc ?? {}, officialAlertsEnabled: oae });
 	}
 
 	function allCatalogIds(): string[] {
@@ -315,6 +336,7 @@
 		}
 
 		const thrMap: Record<string, string> = {};
+		const aggMap: Record<string, string[]> = {};
 		if (savedMetrics) {
 			for (const m of savedMetrics) {
 				fMap[m.metric_id] = m.use_friendly_format ?? true;
@@ -323,6 +345,10 @@
 				if (SMS_THRESHOLD_METRIC_IDS.includes(m.metric_id) && m.sms_threshold != null) {
 					thrMap[m.metric_id] = String(m.sms_threshold);
 				}
+				// Issue #1357: gespeicherte Auswertungswahl laden. `[]` ist ein
+				// gueltiger Wert (bewusst keine Kachel) und darf nicht wie „fehlt"
+				// behandelt werden.
+				if (m.aggregations !== undefined) aggMap[m.metric_id] = [...m.aggregations];
 			}
 		}
 
@@ -339,7 +365,8 @@
 		// Issue #736: channels nicht mehr im snapshot (Conflict 2 entfällt).
 		// Issue #774: reportConfig in snapshot aufnehmen.
 		smsThresholds = thrMap;
-		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled);
+		aggregationsMap = aggMap;
+		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled, aggMap);
 	}
 
 	// Issue #1332 F003 (Fix-Loop 2): eigener, idempotenter Ladepfad fuer die
@@ -559,6 +586,7 @@
 			telegramKurzform = snap.telegramKurzform ?? false;
 			// Issue #736: channels nicht mehr im snapshot (Conflict 3 entfällt).
 			smsThresholds = snap.smsThresholds ?? {};
+			aggregationsMap = snap.aggregationsMap ?? {};
 			// Issue #774: reportConfig wiederherstellen (sonst bleibt Tab dirty nach Verwerfen).
 			reportConfig = snap.reportConfig ?? {};
 			// Issue #1117: officialAlertsEnabled wiederherstellen (Konsistenz-Vollständigkeit).
@@ -568,13 +596,14 @@
 			initFromTrip();
 			telegramKurzform = trip!.display_config?.telegram_kurzform ?? false;
 			smsThresholds = {};
+			aggregationsMap = {};
 			reportConfig = trip!.report_config ? JSON.parse(JSON.stringify(trip!.report_config)) : {};
 			officialAlertsEnabled = trip!.official_alerts_enabled ?? true;
 		}
 	}
 
 	function buildWeatherPayload() {
-		const baseMetrics = buildWeatherConfigMetrics(buckets, friendlyMap, horizonsMap, catalog);
+		const baseMetrics = buildWeatherConfigMetrics(buckets, friendlyMap, horizonsMap, catalog, aggregationsMap);
 		const metrics = baseMetrics.map((m) => {
 			if (!SMS_THRESHOLD_METRIC_IDS.includes(m.metric_id)) return m;
 			const rawThr = smsThresholds[m.metric_id];
@@ -1231,6 +1260,43 @@
 									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, ['snowfall_limit']: String(f) }; scheduleAutoSave(); }}
 								/>
 								{/if}
+							</tbody>
+						</table>
+					</div>
+				</Card>
+				{/if}
+
+				<!-- 05 Auswertungen (Issue #1357): welche Tagesauswertung einer
+				     Wettergroesse in der Kachelzeile der Briefing-Mail erscheint.
+				     Nur Groessen mit mehr als einer berechenbaren Auswertung
+				     (AC-5); `context='vergleich'` bekommt den Abschnitt nicht
+				     (AC-9, zieht mit #1411 nach). -->
+				{#if sections.includes('auswertungen') && aggregationMetricIds.length}
+				<Card padding={18}>
+					<Eyebrow style="margin-bottom:8px">05 — Auswertungen</Eyebrow>
+					<p class="option-hint">
+						Welcher Tageswert im Überblick der E-Mail steht — genau einer je Größe.
+						Soll eine Größe dort gar nicht erscheinen, im Abschnitt oben abwählen.
+					</p>
+					<div data-testid="metric-aggregations">
+						<table class="threshold-table">
+							<tbody>
+								{#each aggregationMetricIds as id (id)}
+									<AggregationMetricRow
+										metricId={id}
+										label={metricById[id]?.label ?? id}
+										choices={aggregationChoices(metricById[id])}
+										selectedChoiceId={selectedChoiceId(metricById[id], aggregationsMap[id])}
+										onSelect={(mid, choiceId) => {
+											userTouched = true;
+											aggregationsMap = {
+												...aggregationsMap,
+												[mid]: choiceAggregations(metricById[mid], choiceId),
+											};
+											scheduleAutoSave();
+										}}
+									/>
+								{/each}
 							</tbody>
 						</table>
 					</div>

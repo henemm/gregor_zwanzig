@@ -57,7 +57,9 @@ def get_sms_symbols():
 
 @router.get("/metrics")
 def get_metrics():
-    from app.metric_catalog import get_all_metrics
+    from app.metric_catalog import (
+        aggregation_label_de, available_aggregations, get_all_metrics,
+    )
     metrics = get_all_metrics()
     result = {}
     for m in metrics:
@@ -79,5 +81,12 @@ def get_metrics():
             "sms_code": m.sms_code,
             "decimals": m.decimals,
             "cmp": m.cmp,
+            # Issue #1357: tatsaechlich berechenbare Tagesauswertungen dieser
+            # Groesse. Nur wo es mehr als eine gibt, zeigt der Editor eine
+            # Auswahl — der Katalog bleibt die einzige Quelle dafuer.
+            "aggregations": [
+                {"id": a, "label": aggregation_label_de(a)}
+                for a in available_aggregations(m.id)
+            ],
         })
     return result

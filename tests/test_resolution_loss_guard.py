@@ -632,20 +632,20 @@ KNOWN_VIOLATIONS: dict[str, str] = {
         "A4 (#1405) — render_html (_col_order): Spaltenreihenfolge und "
         "-sichtbarkeit der ganzen Mail."
     ),
-    "src/output/renderers/email/helpers.py:100": (
+    "src/output/renderers/email/helpers.py:103": (
         "A5 (#1405) — dp_to_row: Stunden-Zeile-Spalte verschwindet."
     ),
-    "src/output/renderers/email/helpers.py:152": (
+    "src/output/renderers/email/helpers.py:155": (
         "A6 (#1405) — aggregate_night_block: Nacht-Block-Spalte verschwindet."
     ),
-    "src/output/renderers/email/helpers.py:975": (
+    "src/output/renderers/email/helpers.py:978": (
         "A7 (#1405) — build_friendly_keys: Ampel-/Friendly-Format entfällt "
         "(except KeyError: pass)."
     ),
-    "src/output/renderers/email/helpers.py:992": (
+    "src/output/renderers/email/helpers.py:995": (
         "A8 (#1405) — build_format_modes: Format-Mode-Eintrag entfällt."
     ),
-    "src/output/renderers/email/helpers.py:1017": (
+    "src/output/renderers/email/helpers.py:1020": (
         "A9 (#1405) — build_html_indicator_keys: Ampel-Aktivierung entfällt."
     ),
     # --- A10–A13: Alarm- und Amtliche-Warnungen-Pfad ---
@@ -671,13 +671,13 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # Jede Zeile von Hand nachgelesen; jede ist die exakte Mechanik einer
     # bereits belegten Fundstelle an einer weiteren Stelle. Reparatur gehört
     # zur Reparatur-Scheibe S4, nicht hierher (Wächter vor Reparatur).
-    "src/output/renderers/email/helpers.py:468": (
+    "src/output/renderers/email/helpers.py:471": (
         "NEU (#1405) — build_units_legend: get_metric_by_col_key() → "
         "except KeyError: continue. Dieselbe Mechanik wie A1–A9: eine Spalte "
         "verliert wortlos ihre Einheit in der Legende."
     ),
     "src/output/renderers/trip_report.py:521": (
-        "NEU (#1405) — _build_units_legend: Trip-Zwilling von helpers.py:468, "
+        "NEU (#1405) — _build_units_legend: Trip-Zwilling von helpers.py:471, "
         "identische Mechanik."
     ),
     "src/output/renderers/email/compare_html.py:1040": (

@@ -1171,11 +1171,17 @@ def render_html(
         for mc in dc.metrics
         if mc.alert_enabled and mc.alert_threshold is not None
     }
+    # Issue #1357: die gespeicherte Auswertungswahl je Groesse mitgeben —
+    # ohne sie faellt die Kachel auf die Katalog-Vorgabe zurueck.
+    _pill_aggregations = {
+        mc.metric_id: mc.aggregations for mc in dc.metrics if mc.enabled
+    }
     _pills = build_metrics_summary_pills(
         segments, _pill_metric_ids, _pill_thresholds, tz=tz,
         night_weather=night_weather, has_gap=has_gap,
         day_window_start_hour=day_window_start_hour,
         day_window_end_hour=day_window_end_hour,
+        metric_aggregations=_pill_aggregations,
     )
     # AC-7 (#911): Abstände laut Vorlage EmailMetricsSummary
     _chips_html = "".join(pill_html(lbl, tone) for lbl, tone in _pills)

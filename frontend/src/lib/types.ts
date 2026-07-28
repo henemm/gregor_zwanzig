@@ -173,6 +173,10 @@ export interface MetricEntry {
 	 *  (Maximum/Minimum/Mittel/Summe). Nur im Ortsvergleich gesetzt —
 	 *  /api/metrics (Trip) liefert sie nicht. */
 	aggregation_label?: string;
+	/** Issue #1357: berechenbare Tagesauswertungen dieser Groesse, aus dem
+	 *  zentralen Katalog (`metric_catalog.available_aggregations`). Weniger als
+	 *  zwei Eintraege ⇒ der Editor zeigt keine Auswahl (AC-5). */
+	aggregations?: { id: string; label: string }[];
 }
 
 export interface WeatherConfigMetric {
@@ -191,6 +195,11 @@ export interface WeatherConfigMetric {
 	score_member?: boolean;
 	/** Issue #624: Konfigurierter Schwellwert für SMS-/Telegram-Kurzform (erste-Überschreitung). */
 	sms_threshold?: number;
+	/** Issue #1357: gewählte Tagesauswertungen für die Mail-Kachelzeile
+	 *  (`MetricConfig.aggregations`). Fehlt das Feld ⇒ Katalog-Vorgabe;
+	 *  leere Liste ⇒ bewusst keine Kachel. Muss hier stehen, sonst geht die
+	 *  Wahl beim nächsten Speichern über die Oberfläche verloren. */
+	aggregations?: string[];
 }
 
 export interface WeatherConfig {

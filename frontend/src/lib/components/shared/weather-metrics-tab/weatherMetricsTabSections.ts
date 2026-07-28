@@ -28,7 +28,11 @@ export type WeatherMetricsContext = 'route' | 'vergleich';
 
 // 'sms_schwellen'/'report_config' bleiben route-exklusiv: fuer sie gibt es im
 // Vergleich keine Mail-Wirkung (Attrappen-Verbot).
-const ROUTE_ONLY_SECTIONS = ['sms_schwellen', 'report_config'] as const;
+// Issue #1357: 'auswertungen' (welche Tagesauswertung in der Mail-Kachelzeile
+// erscheint) ist vorerst ebenfalls route-exklusiv — der Ortsvergleich liest
+// `display_config.metrics[].aggregations` nicht, dort waere die Flaeche also
+// eine Attrappe. Er zieht mit #1411 nach (Spec AC-9).
+const ROUTE_ONLY_SECTIONS = ['sms_schwellen', 'auswertungen', 'report_config'] as const;
 
 // Issue #1360 (Scheibe S1a von Epic #1372): 'stundenverlauf' ist die neue
 // Heimat der Stundenverlauf-Steuerung — der Reiter "Layout" des Ortsvergleichs

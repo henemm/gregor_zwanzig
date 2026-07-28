@@ -12,6 +12,7 @@ as explicit keyword args (spec §A6 "Pure Functions").
 from __future__ import annotations
 
 import html as _html
+import logging
 import math
 import os as _os
 import re
@@ -34,6 +35,8 @@ from utils.timezone import local_dt, local_fmt, local_hour
 
 from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
 from output.renderers.email.design_tokens import FONT_DATA
+
+logger = logging.getLogger(__name__)
 
 # Issue #121: German weekday names (0=Monday).
 _WEEKDAY_DE = [
@@ -1195,6 +1198,127 @@ def _range_pill(label: str, unit: str, min_v: int, max_v: int) -> str:
     return f"{label} {body}".rstrip()
 
 
+# Issue #1357: Groessen, deren Kachel aus einer waehlbaren Tagesauswertung
+# entsteht — metric_id -> (ForecastDataPoint-Feld, Label-Praefix, Nachkomma-
+# stellen). Temperatur und gefuehlte Temperatur laufen durch DIESELBE
+# Fallunterscheidung; sie unterscheiden sich nur in diesen drei Angaben.
+_AGGREGATION_PILL_METRICS: dict[str, tuple[str, str, int]] = {
+    "temperature": ("t2m_c", "", 0),
+    "wind_chill": ("wind_chill_c", "gef. ", 1),
+}
+
+
+def pill_aggregation_choices(metric_id: str) -> list[list[str]]:
+    """Die sich gegenseitig ausschliessenden Auswertungs-Moeglichkeiten (#1357).
+
+    PO 2026-07-28: „Es gibt kein zusaetzlich: entweder oder." Genau eine gilt —
+    Spanne (Tiefst- UND Hoechstwert), nur Tiefstwert, nur Hoechstwert, nur
+    Mittelwert. Abgeleitet aus ``summary_fields`` (was berechenbar ist), NIE aus
+    ``default_aggregations``: bei ``wind_chill`` entfaellt „nur Mittelwert"
+    deshalb von selbst, ohne Sonderpfad fuer diese Groesse.
+    """
+    from app.metric_catalog import available_aggregations
+
+    available = available_aggregations(metric_id)
+    choices = [["min", "max"]] if "min" in available and "max" in available else []
+    return choices + [[a] for a in available]
+
+
+def _resolve_pill_aggregations(
+    metric_id: str, chosen: Optional[list[str]],
+) -> list[str]:
+    """Gespeicherte Auswertungswahl auf genau EINE gueltige Moeglichkeit abbilden.
+
+    Issue #1357 AC-7 — zwei Faelle werden per ``logger.warning`` sichtbar
+    gemacht (Vorbild ``resolve_outlook_metrics()``, #1361 Befund 3), keiner
+    still geschluckt: (a) eine fuer diese Groesse nicht berechenbare Auswertung
+    (z.B. ``avg`` bei ``wind_chill``) faellt weg, gueltige Teile bleiben;
+    (b) eine Liste ohne Entsprechung in ``pill_aggregation_choices()`` — seit
+    der Einzelwahl nur noch aus Altbestand moeglich — wird auf die
+    naechstliegende Moeglichkeit abgebildet: min+max -> Spanne, sonst der
+    enthaltene Einzelwert.
+
+    Ausgenommen von (b) ist die vom System selbst geschriebene Katalog-Vorgabe
+    ``default_aggregations`` (Temperatur ``["min","max","avg"]``, s.
+    ``build_default_display_config()``): keine Nutzerwahl, bildet verlustfrei
+    auf die Spanne ab, darf also keinen Fehlalarm ausloesen.
+
+    ``None`` = keine Nutzereinschraenkung -> Katalog-Vorgabe. ``[]`` bleibt
+    leer (AC-8: keine Kachel).
+    """
+    from app.metric_catalog import (
+        available_aggregations, get_metric, pill_default_aggregations,
+    )
+
+    if chosen is None:
+        return pill_default_aggregations(metric_id)
+    available = available_aggregations(metric_id)
+    dropped = [a for a in chosen if a not in available]
+    if dropped:
+        logger.warning(
+            "Kachel-Auswertung %s fuer Groesse %r nicht berechenbar (moeglich: "
+            "%s) — Eintrag wird verworfen statt still ignoriert (#1357 AC-7)",
+            dropped, metric_id, available,
+        )
+    kept = [a for a in available if a in chosen]
+    choices = pill_aggregation_choices(metric_id)
+    if not kept or kept in choices:
+        return kept
+    if "min" in kept and "max" in kept:
+        resolved = ["min", "max"]
+    elif "min" in kept:
+        resolved = ["min"]
+    elif "max" in kept:
+        resolved = ["max"]
+    else:
+        resolved = kept[:1]
+    if list(get_metric(metric_id).default_aggregations) != kept:
+        logger.warning(
+            "Kachel-Auswertung %s fuer Groesse %r ist keine gueltige Wahl "
+            "(moeglich: %s) — Altbestand wird auf %s abgebildet statt Teile "
+            "still zu verschlucken (#1357 AC-7)",
+            kept, metric_id, choices, resolved,
+        )
+    return resolved
+
+
+def _aggregation_pill_text(
+    vals_ts: list, aggregations: list[str], *,
+    tz: "ZoneInfo", prefix: str, decimals: int,
+) -> Optional[str]:
+    """Kachel-Text aus der EINEN gewaehlten Auswertung und dem Werteverlauf.
+
+    Issue #1357: ``aggregations`` ist durch ``_resolve_pill_aggregations()``
+    bereits auf genau eine Moeglichkeit abgebildet, die Faelle koennen sich also
+    nicht mehr gegenseitig verdecken. ``["min","max"]`` -> Spanne mit
+    Uhrzeit-Anker · ``["min"]``/``["max"]`` -> Einzelwert mit Uhrzeit ·
+    ``["avg"]`` -> Mittelwert ohne Uhrzeit (kein Zeitpunkt-Ereignis) · ``[]``
+    -> ``None`` (AC-8). Beide Groessen laufen durch DIESELBE
+    Fallunterscheidung; ``prefix``/``decimals`` sind der einzige Unterschied.
+    """
+    def _fmt(value: float) -> str:
+        return f"{value:.{decimals}f}"
+
+    if "min" in aggregations and "max" in aggregations:
+        min_val = min(v for v, _ in vals_ts)
+        max_val, max_ts = max(vals_ts, key=lambda x: x[0])
+        max_hh = local_hour(max_ts, tz)
+        span = (_fmt(min_val) if _fmt(min_val) == _fmt(max_val)
+                else f"{_fmt(min_val)}–{_fmt(max_val)}")
+        body = f"{span}°C · Max {max_hh:02d}:00"
+    elif "max" in aggregations:
+        max_val, max_ts = max(vals_ts, key=lambda x: x[0])
+        body = f"max {_fmt(max_val)}°C · {local_hour(max_ts, tz):02d}:00"
+    elif "min" in aggregations:
+        min_val, min_ts = min(vals_ts, key=lambda x: x[0])
+        body = f"min {_fmt(min_val)}°C · {local_hour(min_ts, tz):02d}:00"
+    elif "avg" in aggregations:
+        body = f"Ø {_fmt(sum(v for v, _ in vals_ts) / len(vals_ts))}°C"
+    else:
+        return None
+    return f"{prefix}{body}"
+
+
 def _pill_for_metric(
     metric_id: str,
     thresholds: dict,
@@ -1202,6 +1326,7 @@ def _pill_for_metric(
     *,
     tz: "ZoneInfo",
     has_gap: bool = False,
+    chosen_aggregations: Optional[list[str]] = None,
 ) -> Optional[tuple[str, str]]:
     """Issue #795/RC0+RC5: (text, tone) pill je Metrik, analog SMS ausgeschrieben.
 
@@ -1215,40 +1340,23 @@ def _pill_for_metric(
     from output.metric_format import thunder_ordinal
 
     # ---- Klasse 2 — Bereichs-/Kontext-Metriken (mit Uhrzeit, neutral) ----
-    if metric_id == "temperature":
-        # AC-1: "8–11°C · Max 15:00" — kein Label-Präfix, kein Leerzeichen vor °C
-        vals_ts = [(dp.t2m_c, dp.ts) for dp in all_dps if dp.t2m_c is not None]
-        if not vals_ts:
+    # Issue #1357: Temperatur ("8–11°C · Max 15:00") und gefuehlte Temperatur
+    # ("gef. 6.6–9.0°C · Max 08:00") laufen durch DENSELBEN Auswahl- und
+    # Darstellungsweg. Der #1351-F001-Sperrgrund ("kein Auswahl-Signal am
+    # Renderer") ist mit `chosen_aggregations` aufgehoben.
+    if metric_id in _AGGREGATION_PILL_METRICS:
+        dp_field, prefix, decimals = _AGGREGATION_PILL_METRICS[metric_id]
+        aggregations = _resolve_pill_aggregations(metric_id, chosen_aggregations)
+        if not aggregations:
             return None
-        min_v = int(round(min(v for v, _ in vals_ts)))
-        max_v = int(round(max(v for v, _ in vals_ts)))
-        max_ts = max(vals_ts, key=lambda x: x[0])[1]
-        max_hh = local_hour(max_ts, tz)
-        if min_v == max_v:
-            text = f"{min_v}°C · Max {max_hh:02d}:00"
-        else:
-            text = f"{min_v}–{max_v}°C · Max {max_hh:02d}:00"
-        return (text, _PILL_NEUTRAL_TONE)
-
-    if metric_id == "wind_chill":
-        # AC-2: "gef. min 6.6°C · 13:00".
-        # #1351 F001: die gefuehlte Hoechsttemperatur (wind_chill_max_c) wird
-        # HIER bewusst NICHT zusaetzlich angezeigt — build_metrics_summary_pills
-        # bekommt nur eine Liste von metric_id-Strings (kein Auswahl-Signal
-        # dafuer, ob der Nutzer die max-Aggregation gewaehlt hat), siehe
-        # html.py:1157 (`_pill_metric_ids = [mc.metric_id for mc in dc.metrics
-        # if mc.enabled]`). Eine reine Werteabweichungs-Heuristik (max != min)
-        # wuerde ungewollt fuer JEDEN Trip die Hoechsttemperatur einblenden.
-        # AC-4 (Trip-Pill max-Anzeige) braucht dafuer eine eigene Scheibe mit
-        # echtem Aggregations-Auswahl-Pfad zum Renderer.
-        vals_ts = [(getattr(dp, "wind_chill_c", None), dp.ts) for dp in all_dps]
+        vals_ts = [(getattr(dp, dp_field, None), dp.ts) for dp in all_dps]
         vals_ts = [(v, ts) for v, ts in vals_ts if v is not None]
         if not vals_ts:
             return None
-        min_val, min_ts = min(vals_ts, key=lambda x: x[0])
-        min_hh = local_hour(min_ts, tz)
-        text = f"gef. min {min_val:.1f}°C · {min_hh:02d}:00"
-        return (text, _PILL_NEUTRAL_TONE)
+        text = _aggregation_pill_text(
+            vals_ts, aggregations, tz=tz, prefix=prefix, decimals=decimals,
+        )
+        return None if text is None else (text, _PILL_NEUTRAL_TONE)
 
     if metric_id == "cloud_total":
         # AC-7: "60–95% bewölkt · Max 12:00" — kein Label-Präfix
@@ -1510,6 +1618,7 @@ def build_metrics_summary_pills(
     has_gap: bool = False,
     day_window_start_hour: int = DAY_WINDOW_START_HOUR,
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,
+    metric_aggregations: Optional[dict[str, list[str]]] = None,
 ) -> list[tuple[str, str]]:
     """Issue #664/#795: Build one (text, tone) pill per metric from segment data.
 
@@ -1534,6 +1643,10 @@ def build_metrics_summary_pills(
         ``night_weather`` (z.B. Bestandstests mit vollstaendigen Segment-
         Daten) sollen keine Luecke unterstellt bekommen, nur weil sie den
         Nacht-Parameter nicht mitgeben. Default False = keine Luecke.
+    metric_aggregations: Issue #1357 — gespeicherte Auswertungswahl je Groesse
+        (``MetricConfig.aggregations``). Additiv: fehlt der Parameter oder ein
+        Eintrag, gilt die Katalog-Vorgabe ``pill_default_aggregations()``. Eine
+        ausdruecklich leere Liste heisst „keine Kachel" (AC-8).
     Returns list of (text, tone) tuples in catalog order.
     """
     from output.renderers.day_window import build_day_window_points
@@ -1550,7 +1663,9 @@ def build_metrics_summary_pills(
         if mid not in ids_set:
             continue
         dps = window_dps if mid in _DAY_WINDOW_PILL_IDS else hiking_dps
-        pill = _pill_for_metric(mid, thresholds, dps, tz=tz, has_gap=has_gap)
+        chosen = None if metric_aggregations is None else metric_aggregations.get(mid)
+        pill = _pill_for_metric(mid, thresholds, dps, tz=tz, has_gap=has_gap,
+                                chosen_aggregations=chosen)
         if pill is not None:
             pills.append(pill)
     return pills
