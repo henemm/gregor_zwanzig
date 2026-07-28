@@ -65,6 +65,11 @@ def _trip_result_to_normalized(result: TripForecastResult) -> NormalizedForecast
     day = DailyForecast(
         temp_min_c=s.temp_min.value,
         temp_max_c=s.temp_max.value,
+        # Issue #1410: `N` liest jetzt `night_temp_min_c`. Dieser Legacy-Pfad
+        # kennt kein Ziel-Nachtwetter -- sein N meinte immer das Tagesminimum.
+        # Fail-soft am PRODUZENTEN (wie sms_trip._segments_to_normalized_
+        # forecast), damit der Builder keinen stillen Rueckfall braucht.
+        night_temp_min_c=s.temp_min.value,
         rain_hourly=_hourly(s.precipitation.value),
         pop_hourly=(),
         wind_hourly=_hourly(s.wind.value),

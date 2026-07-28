@@ -163,7 +163,14 @@ def _build_seg_weather(
         cloud_avg_pct=60,
         humidity_avg_pct=55,
         thunder_level_max=thunder,
+        # Issue #1410 F001: BEIDE Enden der gefuehlten Temperatur setzen.
+        # Der echte Aggregationspfad (weather_metrics._compute_wind_chill /
+        # _compute_wind_chill_max ueber DIESELBE gefilterte Zeitreihe) liefert
+        # nie nur ein Ende; fehlte hier das Maximum, zeigte der
+        # Zusammenfassungssatz einen Einzelwert, waehrend die Kachelzeile
+        # derselben Mail eine Spanne zeigt.
         wind_chill_min_c=temp_min - 4.0,
+        wind_chill_max_c=temp_max - 4.0,
         snow_new_sum_cm=snow_new_cm,
         freezing_level_m=freezing_level_m,
     )

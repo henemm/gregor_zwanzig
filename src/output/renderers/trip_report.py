@@ -245,7 +245,9 @@ class TripReportFormatter:
             telegram_bubbles_result[-1].reply_markup if telegram_bubbles_result else None
         )
 
-        from output.renderers.sms_trip import SMSTripFormatter, SMS_SYMBOL_BY_METRIC
+        from output.renderers.sms_trip import (
+            SMSTripFormatter, SMS_FELT_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC,
+        )
         # Issue #624: konfigurierte Schwellwerte aus MetricConfig ableiten.
         _sms_thr = {
             SMS_SYMBOL_BY_METRIC[m.metric_id]: m.sms_threshold
@@ -260,6 +262,17 @@ class TripReportFormatter:
             MetricSpec(symbol=sym, enabled=False)
             for metric_id, sym in SMS_SYMBOL_BY_METRIC.items()
             if metric_id not in active_metric_ids
+        ]
+        # Issue #1410 §6: die drei gefuehlten Temperatur-Token erscheinen NUR
+        # bei aktivierter Metrik "Gefuehlte Temperatur" -- dasselbe
+        # Pruefmuster wie oben fuer SN/SFL. Anders als dort wird die Spec in
+        # BEIDEN Faellen mitgegeben: nur so kann der Builder "aktiviert, aber
+        # keine Daten" (Null-Form, §9) von "gar nicht gewaehlt" (kein Token)
+        # unterscheiden. K/D/N bleiben unbedingt.
+        _disabled_sms_specs += [
+            MetricSpec(symbol=sym, enabled=metric_id in active_metric_ids)
+            for metric_id, syms in SMS_FELT_SYMBOLS_BY_METRIC.items()
+            for sym in syms
         ]
         # Issue #868: SMS-Text immer erzeugen (max 160 Zeichen, Standard-SMS-Limit).
         sms_text = SMSTripFormatter().format_sms(

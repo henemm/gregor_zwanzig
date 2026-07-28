@@ -69,11 +69,21 @@ def _truncate(tokens: list[Token], stage: str, mx: int) -> tuple[list[Token], bo
         truncated = True
         if len(_draw(stage, tokens)) <= mx:
             return tokens, True
+    # Issue #1410 §3b: die gefuehlte Temperatur ist eine Komfort-Zusatzangabe
+    # und faellt deshalb noch VOR PR -- die sicherheitsrelevanten
+    # Planungsgroessen (R/PR/W/G/TH) bleiben laenger stehen.
+    for sym in ("FN", "FK", "FD"):
+        if _drop_first(tokens, sym):
+            truncated = True
+            if len(_draw(stage, tokens)) <= mx:
+                return tokens, True
     while _drop_first(tokens, "PR"):
         truncated = True
         if len(_draw(stage, tokens)) <= mx:
             return tokens, True
-    for sym in ("D", "N"):
+    # Innerhalb des gemessenen Trios faellt K zuerst (neuester Wert), dann D,
+    # dann N zuletzt (bestehende Reihenfolge unveraendert).
+    for sym in ("K", "D", "N"):
         if _drop_first(tokens, sym):
             truncated = True
             if len(_draw(stage, tokens)) <= mx:

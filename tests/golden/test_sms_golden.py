@@ -62,6 +62,9 @@ def _golden_fixtures():
     # GR20 summer evening: warm, light rain, building wind.
     gr20_summer_today = DailyForecast(
         temp_min_c=12.0, temp_max_c=24.0,
+        # Issue #1410: N liest jetzt night_temp_min_c; diese Fixture kennt
+        # kein Ziel-Nachtwetter -> Fail-soft auf den Gehzeit-Tiefstwert.
+        night_temp_min_c=12.0,
         rain_hourly=(HourlyValue(15, 0.2), HourlyValue(17, 2.5)),
         pop_hourly=(HourlyValue(11, 20.0), HourlyValue(17, 80.0)),
         wind_hourly=(HourlyValue(10, 18.0), HourlyValue(15, 28.0)),
@@ -86,6 +89,9 @@ def _golden_fixtures():
     # GR221 Mallorca evening: warm, no rain, breezy.
     gr221_today = DailyForecast(
         temp_min_c=8.0, temp_max_c=15.0,
+        # Issue #1410: N liest jetzt night_temp_min_c; diese Fixture kennt
+        # kein Ziel-Nachtwetter -> Fail-soft auf den Gehzeit-Tiefstwert.
+        night_temp_min_c=8.0,
         rain_hourly=(),
         pop_hourly=(),
         wind_hourly=(HourlyValue(12, 25.0), HourlyValue(16, 40.0)),
@@ -113,6 +119,9 @@ def _golden_fixtures():
     # Corsica vigilance: heat + thunder + Met-France warnings + fire zones.
     corsica_today = DailyForecast(
         temp_min_c=18.0, temp_max_c=32.0,
+        # Issue #1410: N liest jetzt night_temp_min_c; diese Fixture kennt
+        # kein Ziel-Nachtwetter -> Fail-soft auf den Gehzeit-Tiefstwert.
+        night_temp_min_c=18.0,
         rain_hourly=(HourlyValue(14, 0.2), HourlyValue(17, 8.0)),
         pop_hourly=(HourlyValue(11, 30.0), HourlyValue(17, 90.0)),
         wind_hourly=(HourlyValue(10, 30.0), HourlyValue(15, 55.0)),

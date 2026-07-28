@@ -47,14 +47,18 @@ der fachliche Grund hinter Issue #1317.
 Feste Reihenfolge (POSITIONAL, `sms_format.md:44`):
 
 ```
-{Name}: N D R PR W G TH: TH+: C  HR:TH:  Z: M:  [SN SN24+ SFL AV WC]  DBG
+{Name}: N K D FN FK FD R PR W G TH: TH+: C  HR:TH:  Z: M:  [SN SN24+ SFL AV WC]  DBG
 ```
 
 | Kürzel | Bedeutung | Wert-Format | Immer da? |
 |---|---|---|---|
 | `{Name}:` | Etappen-/Ortsname (max. 10 Zeichen, km-Bereich bleibt) | `Paliri:` / `GR221 km0-11:` | ja |
 | `N` | Nacht-Tief-Temperatur °C am Schlafplatz | `N8`, `N-12` | nur abends (Issue #1319 Scheibe D) — im Morgenbriefing entfällt der Token komplett |
+| `K` | Tiefst-Temperatur °C **unterwegs** (kälteste Gehzeit-Stunde) — beantwortet eine andere Frage als `N` | `K6`, `K-12`, `K-` | ja (Issue #1410, morgens **und** abends) |
 | `D` | Tag-/Höchst-Temperatur °C | `D24`, `D-` | ja |
+| `FN` | **Gefühlte** Nacht-Tief-Temperatur °C am Schlafplatz | `FN6`, `FN-` | nur abends, nur wenn die Wettergröße „Gefühlte Temperatur" im Trip aktiviert ist (Issue #1410) |
+| `FK` | **Gefühlte** Tiefst-Temperatur °C unterwegs | `FK4`, `FK-` | nur wenn „Gefühlte Temperatur" aktiviert ist |
+| `FD` | **Gefühlte** Höchst-Temperatur °C | `FD13`, `FD-` | nur wenn „Gefühlte Temperatur" aktiviert ist |
 | `R` | Regen (mm) | `R0.2@6(1.4@16)` / `R-` | ja |
 | `PR` | Regenwahrscheinlichkeit (%) | `PR20%@11(100%@17)` / `PR-` | ja |
 | `W` | Wind (km/h) | `W10@11(15@17)` / `W-` | ja |

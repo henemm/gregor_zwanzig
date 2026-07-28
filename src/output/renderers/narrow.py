@@ -29,6 +29,7 @@ from output.renderers.alert.render import _esc
 from output.renderers.channel_layout import render_for_channel
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, night_temp_min_c,
+    night_wind_chill_min_c,
 )
 from output.renderers.email.helpers import fmt_val, format_trend_tokens
 from output.renderers.email.unavailable_hint import (
@@ -368,6 +369,7 @@ def _official_alert_bubble(
 def _overview_line(
     metric_id: str, seg_tables: list[list[dict]], fkeys: set[str],
     *, report_type: str = "evening", night_min_c: Optional[float] = None,
+    night_wind_chill_min_c: Optional[float] = None,
 ) -> str:
     """Eine Kurzübersicht-Zeile ``{Kürzel} {Min}-{Max}@{Peak-Stunde}`` (oder
     Einzelwert/kategorisch).
@@ -384,11 +386,13 @@ def _overview_line(
     Fusszeile derselben Bubble). Andere nicht-numerische Metriken zeigen
     weiterhin den zuletzt beobachteten Wert ohne Uhrzeit.
 
-    ``report_type``/``night_min_c`` (Issue #1319 Scheibe D, nur
-    ``metric_id == "temperature"``): morgens nur der Max-Wert (kein
-    Min-Max-Bereich, DEC-2); abends ``night_min_c`` (echte
-    Nacht-Tiefsttemperatur am Ziel) statt des Tagessegment-Minimums aus
-    ``seg_tables`` -- fail-soft auf Letzteres, wenn ``night_min_c`` fehlt.
+    ``report_type``/``night_min_c``/``night_wind_chill_min_c``: abends steht
+    fuer ``temperature``/``wind_chill`` der echte Nachtwert am Ziel als
+    Untergrenze statt des Gehzeit-Minimums aus ``seg_tables`` -- fail-soft auf
+    Letzteres, wenn er fehlt. Issue #1410 (F1) hat den frueheren
+    Morgen-Sonderzweig (nur Max-Wert, DEC-2 aus night_temp_evening_only.md)
+    ersatzlos entfernt: morgens laeuft die Funktion in ihren generischen Pfad
+    und zeigt die Spanne ueber die Gehzeit-Stunden -- ohne neue Datenquelle.
     """
     label = _compact_label(metric_id)
     key = _col_key(metric_id)
@@ -405,11 +409,11 @@ def _overview_line(
         hi_row = hits[nums.index(max(nums))]
         lo = _cell(metric_id, lo_row, fkeys)
         hi = _cell(metric_id, hi_row, fkeys)
-        if metric_id == "temperature":
-            if report_type == "morning":
-                return f"{label} {hi}"
-            if night_min_c is not None:
-                lo = f"{night_min_c:.1f}"
+        if metric_id in ("temperature", "wind_chill") and report_type == "evening":
+            _night_val = (night_min_c if metric_id == "temperature"
+                          else night_wind_chill_min_c)
+            if _night_val is not None:
+                lo = f"{_night_val:.1f}"
         if lo == hi:
             value = lo
         else:
@@ -512,6 +516,8 @@ def render_telegram_bubbles(
     # Temperatur-Zeile durchgereicht (fail-soft None bei fehlendem
     # night_weather/leerem Nachtfenster).
     _night_min_c = night_temp_min_c(night_weather, segments, tz)
+    # Issue #1410 (F4): dieselbe Berechnung fuer die gefuehlte Temperatur.
+    _night_felt_min_c = night_wind_chill_min_c(night_weather, segments, tz)
 
     # 1. Kopf-Bubble.
     head_lines: list[str] = []
@@ -546,7 +552,9 @@ def render_telegram_bubbles(
     overview_lines: list[str] = ["Kurzübersicht"]
     for mid in dc.get_enabled_metric_ids():
         overview_lines.extend(_wrap(_esc(_overview_line(
-            mid, seg_tables, fkeys, report_type=report_type, night_min_c=_night_min_c,
+            mid, seg_tables, fkeys, report_type=report_type,
+            night_min_c=_night_min_c,
+            night_wind_chill_min_c=_night_felt_min_c,
         )), _TG_PROSE_WIDTH))
     # Issue #1331/#1334 F008: has_gap kommt als expliziter Parameter vom
     # echten Versandpfad (notification_service.compute_has_gap() aus

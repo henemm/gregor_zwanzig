@@ -49,6 +49,9 @@ def _stubaier_token_line() -> TokenLine:
     """Synthetische Stubaier-Skitour TokenLine (Wintersport)."""
     today = DailyForecast(
         temp_min_c=-15.0, temp_max_c=-5.0,
+        # Issue #1410: spiegelt _trip_result_to_normalized() -- dieser
+        # Legacy-Pfad kennt kein Ziel-Nachtwetter, sein N ist das Tagesminimum.
+        night_temp_min_c=-15.0,
         rain_hourly=(),
         pop_hourly=(),
         wind_hourly=(HourlyValue(12, 45.0),),

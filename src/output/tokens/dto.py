@@ -34,6 +34,14 @@ class DailyForecast:
     snowfall_limit_m: Optional[float] = None
     avalanche_level: Optional[int] = None
     wind_chill_c: Optional[float] = None
+    # Issue #1410: vier additive Felder (Default None -> kein Bestandsaufrufer
+    # bricht). `temp_min_c` bleibt ab jetzt IMMER der Gehzeit-Tiefstwert (K);
+    # der aufgeloeste Nachtwert am Ziel wohnt in `night_temp_min_c` (N) statt
+    # `temp_min_c` in-place zu ueberschreiben.
+    wind_chill_min_c: Optional[float] = None       # Gehzeit-Tiefst, gefuehlt (FK)
+    wind_chill_max_c: Optional[float] = None       # Gehzeit-Hoechst, gefuehlt (FD)
+    night_temp_min_c: Optional[float] = None       # Nacht-Tiefst am Ziel, gemessen (N)
+    night_wind_chill_min_c: Optional[float] = None  # Nacht-Tiefst am Ziel, gefuehlt (FN)
     confidence_pct_min: Optional[int] = None  # Issue #121: worst-case daily confidence
     has_data_gap: bool = False  # Issue #1328: True -> "-" wird zu "?" (unbekannt)
 

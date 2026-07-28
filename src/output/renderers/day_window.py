@@ -193,21 +193,18 @@ def build_day_window_points(
     return [_merge_hour(by_hour[h]) for h in sorted(by_hour)]
 
 
-def night_temp_min_c(
+def _night_min_of_field(
     night_weather: Optional[NormalizedTimeseries],
     segments: Sequence[SegmentWeatherData],
     tz: ZoneInfo,
+    field: str,
 ) -> Optional[float]:
-    """Echte Nacht-Tiefsttemperatur am Schlafplatz (Issue #1319 Scheibe D).
+    """Geteilter Kern (Issue #1410): Minimum EINES ForecastDataPoint-Feldes im
+    Nachtfenster Ankunft -> 06:00 Folgetag.
 
-    Fenster: Ankunft (Ende des letzten Segments) bis 06:00 Folgetag,
-    gefiltert wie ``trip_report.py::_extract_night_rows`` Schritt 1 (gegen
-    WeatherCacheService-"covers"-Kontamination durch Datenpunkte anderer
-    Kalendertage), dann ``min(t2m_c)`` ueber die verbleibenden Punkte.
-    ``None`` bei fehlenden Daten (fail-soft, kein Crash). Ersetzt NICHT
-    ``_extract_night_rows()`` (bleibt fuer die grosse E-Mail-Tabelle
-    unveraendert, DEC-3) -- separate, einfachere Ableitung ohne
-    2h-Block-Aggregation.
+    Fenster- und Datumsfilter sind fuer gemessene wie gefuehlte Temperatur
+    identisch -- die beiden oeffentlichen Wrapper unterscheiden sich
+    ausschliesslich im gelesenen Feld (``t2m_c`` bzw. ``wind_chill_c``).
     """
     if not night_weather or not night_weather.data or not segments:
         return None
@@ -226,6 +223,44 @@ def night_temp_min_c(
         in_range = (is_same_day and dp_local_dt.hour >= arrival_hour) or (
             is_next_day and dp_local_dt.hour <= 6
         )
-        if in_range and dp.t2m_c is not None:
-            temps.append(dp.t2m_c)
+        value = getattr(dp, field, None)
+        if in_range and value is not None:
+            temps.append(float(value))
     return min(temps) if temps else None
+
+
+def night_temp_min_c(
+    night_weather: Optional[NormalizedTimeseries],
+    segments: Sequence[SegmentWeatherData],
+    tz: ZoneInfo,
+) -> Optional[float]:
+    """Echte Nacht-Tiefsttemperatur am Schlafplatz (Issue #1319 Scheibe D).
+
+    Fenster: Ankunft (Ende des letzten Segments) bis 06:00 Folgetag,
+    gefiltert wie ``trip_report.py::_extract_night_rows`` Schritt 1 (gegen
+    WeatherCacheService-"covers"-Kontamination durch Datenpunkte anderer
+    Kalendertage), dann ``min(t2m_c)`` ueber die verbleibenden Punkte.
+    ``None`` bei fehlenden Daten (fail-soft, kein Crash). Ersetzt NICHT
+    ``_extract_night_rows()`` (bleibt fuer die grosse E-Mail-Tabelle
+    unveraendert, DEC-3) -- separate, einfachere Ableitung ohne
+    2h-Block-Aggregation.
+
+    Signatur und Verhalten unveraendert (Issue #1410: nur der Rumpf wandert
+    in den geteilten Kern ``_night_min_of_field``).
+    """
+    return _night_min_of_field(night_weather, segments, tz, "t2m_c")
+
+
+def night_wind_chill_min_c(
+    night_weather: Optional[NormalizedTimeseries],
+    segments: Sequence[SegmentWeatherData],
+    tz: ZoneInfo,
+) -> Optional[float]:
+    """Echte GEFUEHLTE Nacht-Tiefsttemperatur am Schlafplatz (Issue #1410).
+
+    Exakt dasselbe Fenster und derselbe Datumsfilter wie
+    ``night_temp_min_c()`` -- PO-Vorgabe „die gefuehlte Temperatur verhaelt
+    sich exakt wie die gemessene" (F4). Einziger Unterschied: gelesen wird
+    ``wind_chill_c`` statt ``t2m_c``.
+    """
+    return _night_min_of_field(night_weather, segments, tz, "wind_chill_c")

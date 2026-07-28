@@ -26,8 +26,9 @@ from app.models import (
 from services.weather_metrics import aggregate_stage
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, build_day_window_points,
-    night_temp_min_c,
+    night_temp_min_c, night_wind_chill_min_c,
 )
+from output.renderers.email.helpers import format_temp_span
 
 
 # Klassifikation Issue #1214 Scheibe 5, Kategorie c: KEINE Migration auf
@@ -83,6 +84,8 @@ class CompactSummaryFormatter:
         immer `self._tz`.
         """
         night_min_c = night_temp_min_c(night_weather, segments, tz)
+        # Issue #1410 (F4): dieselbe Ableitung fuer die gefuehlte Temperatur.
+        night_felt_min_c = night_wind_chill_min_c(night_weather, segments, tz)
         return self.format_weather_summary(
             self._aggregate(segments),
             self._collect_hourly_data(
@@ -95,6 +98,7 @@ class CompactSummaryFormatter:
             has_gap=has_gap,
             report_type=report_type,
             night_min_c=night_min_c,
+            night_wind_chill_min_c=night_felt_min_c,
         )
 
     def format_weather_summary(
@@ -107,6 +111,7 @@ class CompactSummaryFormatter:
         has_gap: bool = False,
         report_type: str = "evening",
         night_min_c: Optional[float] = None,
+        night_wind_chill_min_c: Optional[float] = None,
     ) -> str:
         """Kontextneutraler Kern (Issue #1278): ``(summary, hourly, titel, dc,
         tz) -> Fliesstext``.
@@ -148,6 +153,16 @@ class CompactSummaryFormatter:
             )
             if t:
                 parts.append(t)
+
+        # Issue #1410 (F2): der gefuehlte Temperaturteil steht direkt neben dem
+        # gemessenen -- nur wenn die Metrik im Trip aktiviert ist.
+        if "wind_chill" in enabled:
+            ft = self._format_felt_temperature(
+                summary, report_type=report_type,
+                night_wind_chill_min_c=night_wind_chill_min_c,
+            )
+            if ft:
+                parts.append(ft)
 
         if "cloud_total" in enabled:
             c = self._format_clouds(summary, enabled["cloud_total"].use_friendly_format)
@@ -237,17 +252,50 @@ class CompactSummaryFormatter:
         if summary is None:
             return None
         t_max = summary.temp_max_c
-        # Issue #1319 Scheibe D (DEC-1/DEC-2): morgens nur das Tagesmaximum,
-        # kein Bereich/Min-Wert.
+        # Issue #1319 Scheibe D (DEC-1) bleibt gueltig: abends ist die
+        # Untergrenze die echte Nacht-Tiefsttemperatur am Ziel.
+        # Issue #1410 (F1) loest DEC-2 ab: morgens erscheint jetzt ebenfalls
+        # eine Spanne -- Untergrenze ist die kaelteste Gehzeit-Stunde.
         if report_type == "morning":
-            return f"{int(round(t_max))}°C" if t_max is not None else None
-        t_min = night_min_c if night_min_c is not None else summary.temp_min_c
+            t_min = summary.temp_min_c
+        else:
+            t_min = night_min_c if night_min_c is not None else summary.temp_min_c
         if t_min is None and t_max is None:
             return None
         if t_min is not None and t_max is not None:
             return f"{int(round(t_min))}–{int(round(t_max))}°C"
         val = t_min if t_min is not None else t_max
         return f"{int(round(val))}°C"
+
+    @staticmethod
+    def _format_felt_temperature(
+        summary: Optional[SegmentWeatherSummary],
+        *,
+        report_type: str = "evening",
+        night_wind_chill_min_c: Optional[float] = None,
+    ) -> Optional[str]:
+        """Gefuehlter Temperaturteil ``"gef. {min}–{max}°C"`` (Issue #1410).
+
+        Parallelstruktur zu ``_format_temperature()``: morgens die kaelteste
+        Gehzeit-Stunde als Untergrenze, abends die echte gefuehlte
+        Nachttemperatur am Ziel -- fail-soft auf den Gehzeit-Tiefstwert, wenn
+        keine Nachtdaten vorliegen. Die Spannen-Formatierung selbst kommt aus
+        der geteilten ``format_temp_span()`` (kein Nachbau der Kachelzeile);
+        ``decimals=0`` haelt den Satz konsistent zum gemessenen Teil.
+        """
+        if summary is None:
+            return None
+        f_max = summary.wind_chill_max_c
+        if report_type == "morning":
+            f_min = summary.wind_chill_min_c
+        else:
+            f_min = (night_wind_chill_min_c if night_wind_chill_min_c is not None
+                     else summary.wind_chill_min_c)
+        if f_min is None and f_max is None:
+            return None
+        lo = f_min if f_min is not None else f_max
+        hi = f_max if f_max is not None else f_min
+        return f"gef. {format_temp_span(lo, hi, decimals=0)}"
 
     # ------------------------------------------------------------------
     # Clouds

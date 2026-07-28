@@ -2,9 +2,9 @@
 entity_id: night_temp_evening_only
 type: module
 created: 2026-07-23
-updated: 2026-07-23
+updated: 2026-07-28
 status: draft
-version: "1.0"
+version: "1.1"
 tags: [renderer, tokens, sms, telegram, compact-summary, night-weather, epic-1319]
 ---
 
@@ -277,6 +277,22 @@ erfolgreich war.
 
 ## Known Limitations
 
+- **Aktualisierungshinweis (2026-07-28, Issue #1410):** Die
+  Teilentscheidung **DEC-2** dieser Spec — „morgens nur der Höchstwert,
+  kein Bereich/Min-Wert" (u.a. `compact_summary.py`-Kommentar „Issue
+  #1319 Scheibe D (DEC-1/DEC-2)", `narrow.py`-Morgenzweig in
+  `_overview_line()`) — ist durch die PO-Entscheidung F1 aus
+  `docs/specs/modules/trip_min_temp_and_felt_shortforms.md` (Issue
+  #1410, 2026-07-28) **abgelöst**: alle drei Kurzformen zeigen morgens
+  künftig ebenfalls eine Tiefst-Höchst-Spanne, mit einem neuen,
+  eigenständigen Tiefstwert (kälteste Gehzeit-Stunde), der von `N`
+  unterschieden bleibt. **DEC-1** (`N` = echte
+  Nacht-Tiefsttemperatur am Ziel, ausschließlich abends sichtbar,
+  s. Purpose/AC-1/AC-2 oben) bleibt davon **unberührt und weiterhin
+  gültig** — ebenso DEC-3 (große Nachttabelle) und DEC-4 (kein
+  Persistenz-Eingriff). Dieser Hinweis ist rein verweisend; die
+  DEC-1…DEC-4-Entscheidungen und ACs dieser Spec selbst bleiben
+  unverändert.
 - `docs/reference/sms_format.md` §3.2 beschreibt `N` weiterhin als
   Pflicht-Token in der Token-Reihenfolge (§2); die Ergänzung „nur im
   Abendbriefing" ist eine reine Doku-Nachführung (Folgearbeit,
@@ -303,3 +319,7 @@ erfolgreich war.
 ## Changelog
 
 - 2026-07-23: Initial spec created — Issue #1319 Scheibe D
+- 2026-07-28: Verweis-Hinweis ergänzt (kein Inhalts-Rewrite): DEC-2
+  („morgens nur Höchstwert") durch Issue #1410 (F1) abgelöst; DEC-1
+  (`N`, nur abends) bleibt unverändert gültig. Details:
+  `docs/specs/modules/trip_min_temp_and_felt_shortforms.md`.

@@ -1282,6 +1282,19 @@ def _resolve_pill_aggregations(
     return resolved
 
 
+def format_temp_span(min_v: float, max_v: float, *, decimals: int) -> str:
+    """Reine Spannen-Formatierung ``"{min}–{max}°C"`` (Issue #1410).
+
+    Aus ``_aggregation_pill_text()`` herausgezogen, damit die
+    E-Mail-Kurzzusammenfassung dieselbe Formel benutzt statt sie nachzubauen.
+    Der Uhrzeit-Anker (``· Max HH:00``) bleibt EXKLUSIV in der Kachelzeile —
+    der Fliesstext kennt wie bisher keine Uhrzeit. ``min == max`` (nach
+    Rundung) faellt auf den Einzelwert zusammen.
+    """
+    lo, hi = f"{min_v:.{decimals}f}", f"{max_v:.{decimals}f}"
+    return f"{lo}°C" if lo == hi else f"{lo}–{hi}°C"
+
+
 def _aggregation_pill_text(
     vals_ts: list, aggregations: list[str], *,
     tz: "ZoneInfo", prefix: str, decimals: int,
@@ -1303,9 +1316,8 @@ def _aggregation_pill_text(
         min_val = min(v for v, _ in vals_ts)
         max_val, max_ts = max(vals_ts, key=lambda x: x[0])
         max_hh = local_hour(max_ts, tz)
-        span = (_fmt(min_val) if _fmt(min_val) == _fmt(max_val)
-                else f"{_fmt(min_val)}–{_fmt(max_val)}")
-        body = f"{span}°C · Max {max_hh:02d}:00"
+        span = format_temp_span(min_val, max_val, decimals=decimals)
+        body = f"{span} · Max {max_hh:02d}:00"
     elif "max" in aggregations:
         max_val, max_ts = max(vals_ts, key=lambda x: x[0])
         body = f"max {_fmt(max_val)}°C · {local_hour(max_ts, tz):02d}:00"

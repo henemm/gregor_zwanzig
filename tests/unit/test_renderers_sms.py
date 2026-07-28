@@ -27,6 +27,9 @@ from src.output.tokens.render import render_line
 def _short_token_line(stage_name: str = "GR20 E3"):
     today = DailyForecast(
         temp_min_c=12.0, temp_max_c=18.0,
+        # Issue #1410: N liest jetzt night_temp_min_c; diese Fixture kennt
+        # kein Ziel-Nachtwetter -> Fail-soft auf den Gehzeit-Tiefstwert.
+        night_temp_min_c=12.0,
         rain_hourly=(HourlyValue(15, 0.5),),
         pop_hourly=(HourlyValue(15, 30.0),),
         wind_hourly=(HourlyValue(13, 18.0),),
@@ -43,6 +46,9 @@ def _short_token_line(stage_name: str = "GR20 E3"):
 def _long_token_line(stage_name: str = "Sehr Lange Etappe"):
     today = DailyForecast(
         temp_min_c=12.0, temp_max_c=24.0,
+        # Issue #1410: N liest jetzt night_temp_min_c; diese Fixture kennt
+        # kein Ziel-Nachtwetter -> Fail-soft auf den Gehzeit-Tiefstwert.
+        night_temp_min_c=12.0,
         rain_hourly=tuple(HourlyValue(h, 1.5) for h in range(6, 18)),
         pop_hourly=tuple(HourlyValue(h, 80.0) for h in range(6, 18)),
         wind_hourly=tuple(HourlyValue(h, 30.0) for h in range(6, 18)),

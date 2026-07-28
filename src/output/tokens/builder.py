@@ -37,7 +37,12 @@ def _sanitize_stage_name(name: str) -> str:
 PRIORITY = {
     "DBG": 1, "WC": 2, "AV": 2, "SFL": 2, "SN24+": 2, "SN": 2,
     "Z:": 3, "MAX": 3, "M:": 3, "PR": 5,
-    "D": 6, "N": 6, "R": 7,
+    # Issue #1410: das gefuehlte Trio rangiert unter PR (5) -- es faellt aber
+    # ohnehin schon im dedizierten Schritt in render.py::_truncate(), bevor der
+    # Last-Resort-Pfad greift. Der Eintrag ist Pflicht, weil build_token_line()
+    # `PRIORITY[sym]` ungeschuetzt liest.
+    "FD": 4, "FK": 4, "FN": 4,
+    "D": 6, "N": 6, "K": 6, "R": 7,
     "W": 8, "G": 8, FORECAST_THP: 9, VIGI_HR: 10, FORECAST_TH: 10,
 }
 
@@ -53,7 +58,11 @@ UNAVAILABLE_PRIORITY = OFFICIAL_ALERT_PRIORITY + 1
 
 # (symbol, category) -> §2 POSITIONAL index. Vigilance shares 'TH:' symbol.
 POSITIONAL = [
-    ("N", "forecast"), ("D", "forecast"), ("R", "forecast"),
+    # Issue #1410 §3a: gemessenes Trio, dann gefuehltes Trio (Paritaet
+    # N<->FN, K<->FK, D<->FD), dann die uebrigen Vorhersage-Token unveraendert.
+    ("N", "forecast"), ("K", "forecast"), ("D", "forecast"),
+    ("FN", "forecast"), ("FK", "forecast"), ("FD", "forecast"),
+    ("R", "forecast"),
     ("PR", "forecast"), ("W", "forecast"), ("G", "forecast"),
     (FORECAST_TH, "forecast"), (FORECAST_THP, "forecast"),
     (VIGI_HR, "vigilance"), (VIGI_TH, "vigilance"),
@@ -220,12 +229,34 @@ def build_token_line(
     tomorrow = forecast.days[1] if len(forecast.days) > 1 else None
 
     tokens: list[Token] = []
-    for sym, val in (("N", today.temp_min_c), ("D", today.temp_max_c)):
+    # Issue #1410: sechs Temperatur-Token (Symbol, Wert, nur-abends,
+    # braucht-Spec). K/D/FK/FD erscheinen in beiden Report-Typen, N/FN nur
+    # abends (DEC-1 unveraendert).
+    for sym, val, evening_only, needs_spec in (
+        ("N", today.night_temp_min_c, True, False),
+        ("K", today.temp_min_c, False, False),
+        ("D", today.temp_max_c, False, False),
+        ("FN", today.night_wind_chill_min_c, True, True),
+        ("FK", today.wind_chill_min_c, False, True),
+        ("FD", today.wind_chill_max_c, False, True),
+    ):
         spec = by_sym.get(sym)
-        # Issue #1319 Scheibe D (DEC-1/DEC-2): N hat keine MetricSpec, daher
-        # ist _visible(None, ...) immer True -- hartes Zusatz-Gate, N nur im
-        # Abendbriefing (kein Platzhalter morgens).
-        if sym == "N" and report_type != "evening":
+        # Issue #1319 Scheibe D (DEC-1/DEC-2): N/FN haben ohne Trip-Kontext
+        # keine MetricSpec, _visible(None, ...) ist immer True -- hartes
+        # Zusatz-Gate, Nachtwerte nur im Abendbriefing (kein Platzhalter
+        # morgens).
+        if evening_only and report_type != "evening":
+            continue
+        # Issue #1410 §6/§9: die gefuehlten Token sind, anders als K/D/N,
+        # nicht unbedingt. Drei Faelle:
+        #   * MetricSpec vorhanden (Trip-Pfad, trip_report gibt sie IMMER mit):
+        #     enabled -> Token, bei fehlenden Daten die Null-Form "FK-" (§9);
+        #     disabled -> gar nichts (unten via _visible).
+        #   * keine MetricSpec, aber Werte da (Direktaufruf des Renderers):
+        #     Token mit Wert.
+        #   * keine MetricSpec und keine Werte (Produzent kennt die Groesse
+        #     nicht, z.B. Legacy-CLI): gar nichts -- keine Null-Form-Leiche.
+        if needs_spec and spec is None and val is None:
             continue
         if not _visible(spec, report_type):
             continue

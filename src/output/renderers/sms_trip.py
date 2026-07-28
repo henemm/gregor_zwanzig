@@ -29,7 +29,7 @@ from output.metric_format import thunder_label_value
 from output.renderers.alert.official_alerts import official_alerts_to_sms_entries
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, build_day_window_points,
-    night_temp_min_c,
+    night_temp_min_c, night_wind_chill_min_c,
 )
 from output.renderers.sms import render_sms
 from output.tokens.builder import build_token_line
@@ -59,6 +59,14 @@ SMS_SYMBOL_BY_METRIC: dict[str, str] = {
     "thunder": "TH:",
     "snow_depth": "SN",
     "snowfall_limit": "SFL",
+}
+
+# Issue #1410: metric_id -> SMS-Symbole der GEFUEHLTEN Temperatur. Eigene
+# Zuordnung, weil eine Metrik hier drei Symbole traegt (Nacht/Tiefst/Hoechst)
+# — SMS_SYMBOL_BY_METRIC bildet 1:1 ab und wird zusaetzlich fuer Schwellwerte
+# gelesen (#624), wo diese drei nichts zu suchen haben.
+SMS_FELT_SYMBOLS_BY_METRIC: dict[str, tuple[str, ...]] = {
+    "wind_chill": ("FN", "FK", "FD"),
 }
 
 # RiskType → SMS risk label (German, ultra-compact). Used by format_alert_sms.
@@ -137,13 +145,30 @@ def _segments_to_normalized_forecast(
                  if s.aggregated.temp_max_c is not None]
     day_min = min(temps_min) if temps_min else None
     day_max = max(temps_max) if temps_max else None
+    # Issue #1410: gefuehlte Gehzeit-Extrema exakt wie die gemessenen ueber die
+    # Segmente aggregiert -- dieselbe zeitgefilterte Zeitreihe, kein neuer
+    # Rechenweg (F3, services/segment_weather.py:254-281).
+    felt_min_vals = [s.aggregated.wind_chill_min_c for s in segments
+                     if s.aggregated.wind_chill_min_c is not None]
+    felt_max_vals = [s.aggregated.wind_chill_max_c for s in segments
+                     if s.aggregated.wind_chill_max_c is not None]
+    felt_min = min(felt_min_vals) if felt_min_vals else None
+    felt_max = max(felt_max_vals) if felt_max_vals else None
     # Issue #1319 Scheibe D (DEC-1): abends echte Nacht-Tiefsttemperatur am
-    # Schlafplatz statt Tagessegment-Minimum -- fail-soft auf day_min, wenn
-    # night_weather fehlt oder das Nachtfenster keine Punkte liefert (AC-6).
+    # Schlafplatz -- fail-soft auf den Gehzeit-Tiefstwert, wenn night_weather
+    # fehlt oder das Nachtfenster keine Punkte liefert (AC-6 dort).
+    # Issue #1410: der Nachtwert ueberschreibt `temp_min_c` NICHT mehr in-place
+    # (das wuerde K zerstoeren), sondern wohnt in einem eigenen Feld. Analog
+    # fuer die gefuehlte Temperatur (F4).
+    night_min = None
+    night_felt_min = None
     if report_type == "evening":
         night_min = night_temp_min_c(night_weather, segments, tz)
-        if night_min is not None:
-            day_min = night_min
+        if night_min is None:
+            night_min = day_min
+        night_felt_min = night_wind_chill_min_c(night_weather, segments, tz)
+        if night_felt_min is None:
+            night_felt_min = felt_min
 
     rain_samples: list[HourlyValue] = []
     wind_samples: list[HourlyValue] = []
@@ -219,6 +244,10 @@ def _segments_to_normalized_forecast(
     today = DailyForecast(
         temp_min_c=day_min,
         temp_max_c=day_max,
+        wind_chill_min_c=felt_min,
+        wind_chill_max_c=felt_max,
+        night_temp_min_c=night_min,
+        night_wind_chill_min_c=night_felt_min,
         rain_hourly=rain_samples_d,
         pop_hourly=pop_samples_d,
         wind_hourly=wind_samples_d,

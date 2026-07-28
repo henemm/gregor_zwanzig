@@ -235,22 +235,28 @@ class TestAC1NAbsentInAllThreeShortFormsMorning:
             f"SMS: {report.sms_text}"
         )
 
+        # Issue #1410 (F1) loest DEC-2 ab: morgens erscheint jetzt eine Spanne
+        # aus der kaeltesten Gehzeit-Stunde (3) und dem Tagesmaximum (20).
+        # Geprueft bleibt DEC-1: die NACHT-Tiefsttemperatur am Schlafplatz
+        # (11) taucht morgens in keiner Kurzform auf.
         temp_phrase = _compact_temp_phrase(report.email_plain)
-        assert temp_phrase == f"{int(_WARM_MAX_C)}°C", (
-            f"Kurzzusammenfassung zeigt morgens einen Bereich/Min-Wert "
-            f"statt ausschliesslich des Tagesmaximums ({int(_WARM_MAX_C)}°C).\n"
+        assert temp_phrase == f"{int(_COLD_C)}–{int(_WARM_MAX_C)}°C", (
+            f"Kurzzusammenfassung zeigt morgens nicht die Spanne aus "
+            f"kaeltester Wanderstunde ({int(_COLD_C)}°C) und Tagesmaximum "
+            f"({int(_WARM_MAX_C)}°C).\n"
             f"Phrase: {temp_phrase!r}\nPlain:\n{report.email_plain}"
+        )
+        assert str(int(_MILD_NIGHT_C)) not in temp_phrase, (
+            f"Kurzzusammenfassung zeigt morgens die Nacht-Tiefsttemperatur "
+            f"({int(_MILD_NIGHT_C)}°C), obwohl DEC-1 sie auf das "
+            f"Abendbriefing beschraenkt.\nPhrase: {temp_phrase!r}"
         )
 
         tg_line = _telegram_temp_line(report)
-        assert "3.0" not in tg_line, (
-            f"Telegram-Kurzuebersicht zeigt morgens noch das "
-            f"Tagessegment-Minimum (3.0) statt es wegzulassen.\n"
-            f"Zeile: {tg_line!r}"
-        )
-        assert not re.search(r"\d+\.\d+-\d+\.\d+", tg_line), (
-            f"Telegram-Kurzuebersicht zeigt morgens noch einen "
-            f"Min-Max-Bereich statt nur des Maximums.\nZeile: {tg_line!r}"
+        assert "11.0" not in tg_line, (
+            f"Telegram-Kurzuebersicht zeigt morgens die "
+            f"Nacht-Tiefsttemperatur (11.0), obwohl DEC-1 sie auf das "
+            f"Abendbriefing beschraenkt.\nZeile: {tg_line!r}"
         )
 
 
@@ -316,14 +322,16 @@ class TestAC3ShortFormsConsistentNightMinAndVisibility:
         assert _sms_n_value(morning.sms_text) is None, (
             f"SMS zeigt morgens einen N-Wert.\nSMS: {morning.sms_text}"
         )
+        # Issue #1410 (F1) loest DEC-2 ab -- geprueft bleibt DEC-1: der
+        # Nacht-Tiefstwert (11) erscheint morgens in keiner Kurzform.
         morning_compact = _compact_temp_phrase(morning.email_plain)
-        assert "–" not in morning_compact, (
-            f"Kurzzusammenfassung zeigt morgens einen Bereich (Min-Max) "
-            f"statt nur des Maximums.\nPhrase: {morning_compact!r}"
+        assert str(int(_MILD_NIGHT_C)) not in morning_compact, (
+            f"Kurzzusammenfassung zeigt morgens den Nacht-Tiefstwert.\n"
+            f"Phrase: {morning_compact!r}"
         )
         morning_tg = _telegram_temp_line(morning)
-        assert "3.0" not in morning_tg, (
-            f"Telegram zeigt morgens noch das Tagessegment-Minimum.\n"
+        assert "11.0" not in morning_tg, (
+            f"Telegram zeigt morgens den Nacht-Tiefstwert.\n"
             f"Zeile: {morning_tg!r}"
         )
 
