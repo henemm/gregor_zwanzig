@@ -403,6 +403,20 @@ nur die Beschriftung ändert sich.
   "Gust","Rain","UV","Thdr","Rain%","Visib"]`; `_OVERVIEW_METRIC_CHECKS`-
   Schlüssel: „Temp max" bleibt, „Wind" bleibt, „Sonne"→„Sun",
   „Wolken"→„Cloud", „UV max"→„UV".
+  - **Nachtrag 2026-07-28: #1404 ist geliefert** (Spec
+    `docs/specs/modules/fix_1404_validator_spaltennamen.md`). Der Validator
+    akzeptiert die Stundentabellen-Spalten jetzt in **beiden** Fassungen —
+    A2b ist damit commit-fähig. **Aber:** `_OVERVIEW_METRIC_CHECKS` blieb
+    bewusst an den heutigen deutschen Labels; sobald A2b die
+    Übersichts-Beschriftungen umstellt, greift dort keine der 24 Prüfungen
+    mehr. **A2b muss diese Tabelle mitziehen** — die Ziel-Labels sind die
+    `col_label`-Werte aus der Zieltabelle oben, samt Kollisionsvarianten
+    („Temp"/„Temp max"/„Temp min", „Feels"/„Feels max"/„Feels min").
+    `tests/unit/test_compare_mail_overview_plausibility_coverage.py` wird bei
+    A2b planmäßig rot und erzwingt genau das; das ist kein Regress.
+    Rückbau der Übergangs-Union und die aufgeschobene Verschärfung
+    („unbekannte Beschriftung = lauter Befund") gehören in eine eigene
+    Lieferung **nach** A2b.
 - **`col_label`-Werte selbst bleiben unverändert** — insbesondere die
   schwer lesbaren „Cond°" (Taupunkt) und „0°Line" (Nullgradgrenze). Eine
   Überarbeitung träfe auch die Trip-Mail (`email/helpers.py:465-473`,

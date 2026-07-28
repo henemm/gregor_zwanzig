@@ -41,12 +41,25 @@ zurück.
 
 ## Als Nächstes
 
-1. **#1404** — Pflicht-Validator lernt die neuen Spaltenüberschriften.
-   Ziel-Literale stehen in der A2-Spec und im Issue:
-   `_HOUR_COLUMNS_V2` = `["Zeit","Temp","Feels","Wind","Gust","Rain","UV","Thdr","Rain%","Visib"]`;
-   `_OVERVIEW_METRIC_CHECKS`: „Sonne"→„Sun", „Wolken"→„Cloud", „UV max"→„UV",
-   „Temp max"/„Wind" bleiben. **Eigener Workflow** — ein Validator wird nie im
-   selben Zug geändert, dessen Ergebnis er prüft.
+1. **#1404** ✅ **geliefert** (2026-07-28, eigener Workflow
+   `fix-1404-validator-spaltennamen`, Spec
+   `docs/specs/modules/fix_1404_validator_spaltennamen.md`). Der Validator
+   akzeptiert jetzt **beide** Spaltenfassungen als Übergang (`_HOUR_COLUMNS_V2`
+   um `Feels`/`Gust`/`Rain`/`Thdr`/`Rain%`/`Visib` erweitert, strikt additiv,
+   Prüfdatum 2026-10-26) und prüft die Übersichtstabelle für 24 statt 5 Zeilen.
+
+   **Was A2b daraus mitnehmen MUSS:**
+   - `_OVERVIEW_METRIC_CHECKS` ist **nicht** union-basiert — es kennt nur die
+     heutigen deutschen Labels. Sobald A2b auf die englische Kurzform umstellt,
+     greift keine der 24 Prüfungen mehr, bis die Tabelle nachgezogen ist.
+     **Das gehört in A2b hinein**, sonst reißt die eben geschlossene stille
+     Lücke sofort wieder auf.
+   - `tests/unit/test_compare_mail_overview_plausibility_coverage.py` wird bei
+     A2b **planmäßig rot**. Das ist kein Regress, sondern der Wächter, der
+     genau dieses Nachziehen erzwingt.
+   - Nach A2b: Rückbau der Übergangs-Union (alte Spaltennamen entfernen) plus
+     der aufgeschobene Schritt „unbekannte Beschriftung = lauter Befund" —
+     beides gehört in eine eigene Lieferung **nach** A2b, nicht hinein.
 2. **A2b** — Beschriftung aus `col_label` ableiten + Kollisionsregel, inkl.
    `comparison.py::_PLAIN_ROWS`/`_DAILY_PLAIN_ROWS` (vierte Namensquelle, Klartext).
    Braucht #1404 zuerst. Umfang liegt über dem Deckel, PO-Freigabe für eine

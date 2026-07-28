@@ -23,6 +23,7 @@ import sys
 import imaplib
 import email
 import re
+from datetime import date
 from pathlib import Path
 from typing import List, Tuple
 
@@ -218,9 +219,35 @@ _TABLE_RE = re.compile(r'<table[^>]*>(.*?)</table>', re.DOTALL)
 # seit #1359 ist die Spaltenreihenfolge nutzerseitig frei einstellbar.
 # Konfigurierbare Teilmengen in beliebiger Anordnung sind zulaessig,
 # s. validate_structure().
+#
+# Issue #1404: UEBERGANGS-UNION, strikt additiv. #1401 Scheibe A2b leitet die
+# Spaltenueberschriften aus dem zentralen Namensregister ab; 6 der 9
+# Wertspalten heissen danach anders (Gef.->Feels, Böen->Gust, Regen->Rain,
+# Gew.->Thdr, Regen-W.->Rain%, Sicht->Visib; Zeit/Temp/Wind/UV bleiben
+# gleich). Waere hier nur EINE Fassung gelistet, wuerde der Pruefer die
+# jeweils andere -- inhaltlich korrekte -- Mail hart ablehnen (Exit 1) und
+# ueber das Renderer-Commit-Gate #811 jeden Commit an compare_html.py
+# blockieren: A2b koennte seine eigene Aenderung nicht committen. Solange die
+# Umbenennung laeuft, gehen deshalb BEIDE Fassungen durch.
+#
+# RUECKBAU-AUFTRAG: Sobald #1401 A2b geliefert ist, fallen die 6 alten Labels
+# ("Gef.", "Böen", "Regen", "Gew.", "Regen-W.", "Sicht") wieder heraus --
+# Zielzustand sind exakt die 10 A2b-Spalten. Bis dahin erinnert
+# _HOUR_COLUMNS_V2_REVIEW_DATE an die faellige Entscheidung.
 _HOUR_COLUMNS_V2 = [
+    # heutige Fassung (10)
     "Zeit", "Temp", "Gef.", "Wind", "Böen", "Regen", "UV", "Gew.", "Regen-W.", "Sicht",
+    # Zielfassung #1401 A2b -- nur die 6 tatsaechlich abweichenden Labels
+    "Feels", "Gust", "Rain", "Thdr", "Rain%", "Visib",
 ]
+
+# Pruefdatum der Uebergangs-Union (Regel-Budget: Spec-`created` 2026-07-28 +
+# 90 Tage). REINER ERINNERUNGS-MARKER fuer eine menschliche Review -- anders
+# als bei `nebenbefund_gate.py:21` schaltet dieses Datum KEIN Verhalten um und
+# es gibt keinen Code-Zweig darauf. Eine Selbstverengung am Stichtag waere
+# falsch: verzoegert sich #1401 A2b, wuerde die dann korrekte neue Mail wieder
+# hart abgelehnt -- genau der Fehler, den diese Union verhindert.
+_HOUR_COLUMNS_V2_REVIEW_DATE = date(2026, 10, 26)
 
 # Negativ-Check: Score-/Winner-Sprache ist im v2-Vertrag ein Verstoss (kein
 # Ranking mehr, s. compare_html.py-Docstring "Kein Score/Ranking/Winner-Card").
@@ -235,14 +262,87 @@ _SCORE_WINNER_RE = re.compile(
 )
 
 # v2-Uebersichtstabellen-Metrikzeilen (CV2_METRICS-Label -> Format-Regex +
-# plausibler Wertebereich). "Amtliche Warnungen" (Warn-Zeile) hat kein
-# numerisches Format und wird hier bewusst ausgelassen.
+# plausibler Wertebereich).
+#
+# Issue #1404: von 5 auf 24 Zeilen erweitert -- 19 numerisch pruefbare Zeilen
+# liefen bis dahin durch den stillen `continue`-Pfad in
+# validate_plausibility()/validate_format(), also voellig ungeprueft.
+#
+# WAS DIESE PRUEFUNG LEISTET -- und was nicht: Sie faengt Tippfehler,
+# Einheitenverwechslungen und offensichtlichen Datenmuell (leere/kaputte
+# Zellen, Faktor-1000-Fehler, Vorzeichendreher). Sie bewertet KEINE
+# Meteorologie: die Grenzen sind bewusst weit gewaehlt und physikalisch
+# geschaetzt, nicht gegen historische Wetterdaten belegt (s. Spec
+# `fix_1404_validator_spaltennamen.md`, Known Limitations). Ein echter
+# Extremwert darf hier nie anschlagen -- ein Fehlalarm bei genau der
+# Wetterlage, fuer die dieses Produkt gebaut ist, waere schlimmer als eine
+# durchgelassene Unplausibilitaet.
+#
+# Format und Einheiten-Abstand sind AM RENDERER gemessen, nicht geraten:
+# `_fmt_metric()` (compare_html.py) haengt "°C" und "%" OHNE Leerzeichen an,
+# jede andere Einheit ("°", "hPa", "m", "km/h", "J/kg", "cm", "mm", "h") MIT.
+# Zeilen mit eigener `fmt`-Funktion (Sicht min) folgen deren Ausgabe.
 _OVERVIEW_METRIC_CHECKS = {
+    # -- bereits vor #1404 geprueft ------------------------------------------
     "Temp max": (re.compile(r'^-?\d+°C$'), (-40, 55)),
     "Wind": (re.compile(r'^\d+ km/h$'), (0, 250)),
     "Sonne": (re.compile(r'^\d+\.\d h$'), (0, 24)),
     "Wolken": (re.compile(r'^\d+%$'), (0, 100)),
     "UV max": (re.compile(r'^\d+$'), (0, 16)),
+    # -- mit #1404 ergaenzt (vorher stillschweigend ungeprueft) --------------
+    "Regen": (re.compile(r'^\d+\.\d mm$'), (0, 300)),
+    "Regenwahrscheinlichkeit": (re.compile(r'^\d+%$'), (0, 100)),
+    # Sicht: Modelle deckeln die Sichtweite meist weit darunter; 100 km ist
+    # grosszuegig, aber nicht mehr sinnfrei (#1404 PO-Vorgabe).
+    "Sicht min": (re.compile(r'^\d+\.\d km$'), (0, 100)),
+    "Schneehöhe": (re.compile(r'^\d+ cm$'), (0, 1000)),
+    "Neuschnee": (re.compile(r'^\d+ cm$'), (0, 300)),
+    "Temp min": (re.compile(r'^-?\d+°C$'), (-40, 55)),
+    "Böen": (re.compile(r'^\d+ km/h$'), (0, 300)),
+    # CAPE: Obergrenze bewusst weit (#1404 PO-Vorgabe). Extreme
+    # Superzellen-Umgebungen erreichen 6000+ J/kg -- eine engere Grenze wuerde
+    # einen ECHTEN Extremwert als unplausibel melden. Diese Schwelle soll
+    # Tippfehler und Einheitenfehler fangen, keine Gewitterlage bewerten.
+    "CAPE": (re.compile(r'^\d+ J/kg$'), (0, 10000)),
+    "Nullgradgrenze": (re.compile(r'^\d+ m$'), (0, 6000)),
+    "Windrichtung": (re.compile(r'^\d+ °$'), (0, 360)),
+    # Windchill unterschreitet die Lufttemperatur -> untere Grenze weiter als
+    # bei "Temp min".
+    "Gefühlte Temp. min": (re.compile(r'^-?\d+°C$'), (-50, 50)),
+    "Gefühlte Temp. max": (re.compile(r'^-?\d+°C$'), (-50, 55)),
+    "Wolken tief": (re.compile(r'^\d+%$'), (0, 100)),
+    "Wolken mittel": (re.compile(r'^\d+%$'), (0, 100)),
+    "Wolken hoch": (re.compile(r'^\d+%$'), (0, 100)),
+    "Luftfeuchtigkeit Ø": (re.compile(r'^\d+%$'), (0, 100)),
+    "Taupunkt Ø": (re.compile(r'^-?\d+°C$'), (-40, 35)),
+    # Luftdruck: deckt Meereshoehe UND hochalpine Stationsdruecke ab, daher
+    # breit -- entsprechend schwacher Waechter (Spec, Known Limitations).
+    "Luftdruck Ø": (re.compile(r'^\d+ hPa$'), (500, 1085)),
+    "Schneefallgrenze": (re.compile(r'^\d+ m$'), (0, 5000)),
+}
+
+# Issue #1404 (AC-4): die AUSGESPROCHENE Ausnahme-Menge. Diese drei Zeilen
+# tragen keinen Zahlenwert; "keine Pruefung" ist fuer sie richtig -- aber es
+# muss ein Wert sein, keine Folge eines fehlenden Dict-Eintrags. Sonst rutscht
+# eine kuenftig hinzugefuegte Zeile lautlos in denselben Zustand (Bug-Typ
+# #1296/#1324). Vorbild im selben Modul: _OVERVIEW_WARN_LABEL.
+#
+#   "Amtliche Warnungen"  Warn-Zeile (CV2_METRICS[0], kind="warn"): die Zelle
+#                         enthaelt gestapelte Warn-Chips bzw. "—", nie eine
+#                         Zahl -- _render_overview_row umgeht _fmt_metric
+#                         komplett.
+#   "Gewitter"            ThunderLevel-Enum, ueber _fmt_thunder als Wort
+#                         gerendert ("mittel"/"hoch"/...). Kein Zahlenformat
+#                         moeglich; f"{value:.0f}" wuerde mit TypeError krachen.
+#   "Niederschlagsart"    PrecipType-Enum, ueber _fmt_precip_type als Wort
+#                         gerendert ("Regen"/"Schnee"/...). Gleiche Lage.
+#
+# 24 geprueft + 3 ausgenommen = 27 = volle Zeilenzahl von CV2_METRICS; ein
+# Test haelt diese Rechnung fest.
+_OVERVIEW_NO_CHECK_LABELS = {
+    _OVERVIEW_WARN_LABEL,
+    "Gewitter",
+    "Niederschlagsart",
 }
 
 
@@ -449,9 +549,11 @@ def validate_location_count(body: str, min_expected: int = 3) -> List[str]:
 
 def validate_plausibility(body: str) -> List[str]:
     """v2 (Issue #1108): Wertebereichs-Pruefung der Uebersichtstabellen-
-    Metrikzeilen (Temp max/Wind/Sonne/Wolken/UV max, _OVERVIEW_METRIC_CHECKS)
-    statt String-Presence-Check der alten englischen Zeilen-Labels (Cloud
-    Cover/Sunny Hours). "—" bleibt als Fehlwert-Fallback zulaessig."""
+    Metrikzeilen (_OVERVIEW_METRIC_CHECKS -- seit #1404 alle 24 numerischen
+    Zeilen, vorher nur 5) statt String-Presence-Check der alten englischen
+    Zeilen-Labels (Cloud Cover/Sunny Hours). "—" bleibt als Fehlwert-Fallback
+    zulaessig; die 3 nicht-numerischen Zeilen (_OVERVIEW_NO_CHECK_LABELS)
+    bleiben ausdruecklich unbewertet."""
     errors = []
     rows = extract_table_rows(body)
 
@@ -483,7 +585,9 @@ def validate_plausibility(body: str) -> List[str]:
 def validate_format(body: str) -> List[str]:
     """v2 (Issue #1108): Format-Check der Uebersichtstabellen-Metrikzeilen
     (z. B. 'N°C', 'N km/h') statt der alten englischen Zeilen-Labels
-    (Wind/Gusts, Sunny Hours). "—" bleibt als Fehlwert-Fallback zulaessig."""
+    (Wind/Gusts, Sunny Hours). "—" bleibt als Fehlwert-Fallback zulaessig.
+    Issue #1404: deckt alle 24 numerischen Zeilen ab (vorher 5); die 3
+    nicht-numerischen bleiben ausdruecklich unbewertet."""
     errors = []
     rows = extract_table_rows(body)
 
