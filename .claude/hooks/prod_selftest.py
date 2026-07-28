@@ -83,6 +83,18 @@ _INTERNAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 _INTERNAL_PORTS = {8000, 8001, 8090}
 _SCHEDULER_SEND_PATH = re.compile(r"^/api/scheduler/.+/send$")
 
+# Auth-Required-Codes (#1367): der Endpoint liegt korrekt hinter der
+# Anmelde-Schranke und weist die unangemeldete Probe direkt ab (ohne
+# Redirect) — strukturell nicht per unauth-GET pruefbar, kein Defekt (analog
+# 405 -> SKIPPED_METHOD_NOT_PROBEABLE und 302->/login -> SKIPPED_AUTH_REDIRECT).
+# Die Ausnahme bleibt bewusst eng: 404/5xx bleiben FAIL.
+AUTH_REQUIRED_STATUSES = frozenset({401, 403})
+
+# Beide Auth-Skip-Arten fuer die gemeinsame Verdict-Betrachtung (#1367,
+# Spec Punkt 2): eine Mischung aus Redirect und direkter Abweisung darf nicht
+# durch die "nur REDIRECT"-Pruefung aus #1353 fallen und faelschlich PASS werden.
+AUTH_SKIP_STATUSES = frozenset({"SKIPPED_AUTH_REDIRECT", "SKIPPED_AUTH_REQUIRED"})
+
 
 def _is_internal_or_send_url(raw_url: str) -> bool:
     """True wenn `raw_url` per Konstruktion nicht öffentlich per GET probebar ist
@@ -317,6 +329,14 @@ def _probe_ac(finding: dict) -> dict:
                 prod_status = "PASS"
         elif status == 200:
             prod_status = "PASS"
+        elif status in AUTH_REQUIRED_STATUSES:
+            # Auth-Required (#1367): Der Endpoint liegt korrekt hinter der
+            # Anmelde-Schranke und weist die unangemeldete Probe direkt ab —
+            # strukturell nicht per unauth-GET pruefbar, kein Defekt (analog
+            # 405 -> SKIPPED_METHOD_NOT_PROBEABLE und 302->/login ->
+            # SKIPPED_AUTH_REDIRECT). Die Ausnahme bleibt bewusst eng: 404/5xx
+            # bleiben FAIL, damit eine weggebrochene Route auffaellt.
+            prod_status = "SKIPPED_AUTH_REQUIRED"
         else:
             prod_status = "FAIL"
         return {
@@ -460,6 +480,15 @@ def _render_full_report(
             "möglich, aber auch kein FAIL. Kein Deploy-Block — Issue-Close "
             "freigegeben (#1353)."
         )
+    elif verdict == "SKIPPED_AUTH":
+        lines.append(
+            "Alle geprobten ACs zeigten unauthentifiziert nur die "
+            "Anmelde-Schranke — teils als Weiterleitung zur Anmeldeseite "
+            "(SKIPPED_AUTH_REDIRECT), teils als direkte Abweisung "
+            "(SKIPPED_AUTH_REQUIRED). Es wurde kein inhaltlicher Prod-Nachweis "
+            "erbracht, aber auch kein FAIL. Kein Deploy-Block — Issue-Close "
+            "freigegeben (#1367)."
+        )
     elif verdict == "FAIL":
         lines.append(
             "FAIL: Regression in Produktion (Bot-Menü oder AC). Issue NICHT schließen."
@@ -531,8 +560,16 @@ def _derive_verdict(probes: list[dict]) -> str:
     # Nachweis), ist die Gesamt-Note NICHT PASS, sondern spiegelt den Skip
     # wider — sonst bliebe der Bug (blinder Gesamt-PASS) auf Verdict-Ebene
     # bestehen.
-    if all(p.get("prod_status") == "SKIPPED_AUTH_REDIRECT" for p in pass_probes):
+    #
+    # Fix #1367: dieselbe Regel muss BEIDE Auth-Skips gemeinsam abdecken.
+    # Gestaffelt, damit die Praezedenz aus #1353 bitgleich erhalten bleibt:
+    #   nur Anmelde-Weiterleitungen        -> SKIPPED_AUTH_REDIRECT (wie bisher)
+    #   sonst alles in AUTH_SKIP_STATUSES  -> SKIPPED_AUTH (neu, inkl. Mischung)
+    probe_statuses = {p.get("prod_status") for p in pass_probes}
+    if probe_statuses == {"SKIPPED_AUTH_REDIRECT"}:
         return "SKIPPED_AUTH_REDIRECT"
+    if probe_statuses <= AUTH_SKIP_STATUSES:
+        return "SKIPPED_AUTH"
 
     failed = [p for p in pass_probes if p.get("prod_status") == "FAIL"]
     if failed:
@@ -746,7 +783,7 @@ def run_selftest(
     _write_report(report_path, report_content)
 
     _log(f"Verdict={verdict} (Bericht: {report_path})")
-    return 0 if verdict in ("PASS", "SKIPPED_ALL", "SKIPPED_AUTH_REDIRECT") else 1
+    return 0 if verdict in ("PASS", "SKIPPED_ALL", "SKIPPED_AUTH_REDIRECT", "SKIPPED_AUTH") else 1
 
 
 def _check_bot_menu_prod() -> dict:

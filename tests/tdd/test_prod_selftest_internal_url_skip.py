@@ -168,9 +168,15 @@ class TestProbeAcSkipsInternalWithoutHttp:
             f"{recorder.calls}"
         )
 
-    def test_ac5_normal_public_401_stays_fail_and_http_get_called(self, monkeypatch):
-        # Nicht-Aufweichen: eine normale öffentliche URL wird NICHT übersprungen —
-        # der echte 401 an der Netz-Grenze muss weiterhin FAIL erzeugen.
+    def test_ac5_normal_public_401_is_probed_not_skipped_as_internal(self, monkeypatch):
+        # Nicht-Aufweichen: eine normale öffentliche URL wird NICHT durch die
+        # interne/send-URL-Erkennung übersprungen — der echte 401 muss an der
+        # Netz-Grenze ankommen (genau 1 _http_get-Aufruf). Die Status-Erwartung
+        # ist seit Fix #1367 SKIPPED_AUTH_REQUIRED statt FAIL (401 auf einem
+        # regulär geprobten Endpoint gilt als korrekt bewachte Route, kein
+        # Defekt) — der eigentliche Regressions-Anker dieses Tests bleibt
+        # unverändert: die interne-URL-Erkennung darf diese URL nicht
+        # überspringen.
         recorder = _HttpGetRecorder(status=401)
         monkeypatch.setattr(mod, "_http_get", recorder)
 
@@ -182,8 +188,9 @@ class TestProbeAcSkipsInternalWithoutHttp:
         }
         result = mod._probe_ac(finding)
 
-        assert result["prod_status"] == "FAIL", (
-            f"Normale öffentliche URL mit 401 muss FAIL bleiben, "
+        assert result["prod_status"] == "SKIPPED_AUTH_REQUIRED", (
+            f"Normale öffentliche URL mit 401 muss seit Fix #1367 "
+            f"SKIPPED_AUTH_REQUIRED ergeben (nicht mehr FAIL), "
             f"aber {result.get('prod_status')!r}"
         )
         assert len(recorder.calls) == 1, (

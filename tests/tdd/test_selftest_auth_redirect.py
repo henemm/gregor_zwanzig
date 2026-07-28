@@ -168,12 +168,16 @@ class TestAC3Http200StillPasses:
         )
 
 
-class TestAC4Http401StillFails:
-    """AC-4 (Regressions-Anker, darf gruen sein): 401 ohne Redirect bleibt
-    FAIL (bestehender Anker aus #1197 -- Auth-Wall ohne Redirect ist
-    weiterhin ein Fehler)."""
+class TestAC4Http401IsAuthRequiredSkip:
+    """AC-4 (Regressions-Anker, aktualisiert durch Fix #1367): 401 ohne
+    Redirect war bis #1367 ein bestehender Anker aus #1197 ("Auth-Wall ohne
+    Redirect ist weiterhin ein Fehler"). Fix #1367 aendert das bewusst: ein
+    unangemeldet mit 401 antwortender Endpoint liegt korrekt hinter der
+    Anmelde-Schranke und ist strukturell nicht per unauth-GET pruefbar ->
+    SKIPPED_AUTH_REQUIRED statt FAIL. Echte Fehler (404/5xx) bleiben
+    unveraendert FAIL (s. tests/tdd/test_selftest_auth_required.py AC-2)."""
 
-    def test_http_401_still_yields_fail(self, monkeypatch):
+    def test_http_401_yields_skipped_auth_required(self, monkeypatch):
         mod = _load_prod_selftest_module()
         handler_cls = _make_handler(401)
         with _LocalServer(handler_cls) as server:
@@ -182,13 +186,13 @@ class TestAC4Http401StillFails:
                 "ac": "AC-authwall",
                 "status": "PASS",
                 "url": "https://staging.gregor20.henemm.com/api/secret:AC-authwall",
-                "evidence": "Auth-Wall ohne Redirect (#1197)",
+                "evidence": "Auth-Wall ohne Redirect (#1197, seit #1367 SKIPPED_AUTH_REQUIRED)",
             }
             result = mod._probe_ac(finding)
 
-        assert result["prod_status"] == "FAIL", (
-            f"HTTP 401 ohne Redirect muss weiterhin FAIL liefern, bekam "
-            f"{result.get('prod_status')!r}."
+        assert result["prod_status"] == "SKIPPED_AUTH_REQUIRED", (
+            f"Seit Fix #1367 muss HTTP 401 ohne Redirect SKIPPED_AUTH_REQUIRED "
+            f"liefern (nicht mehr FAIL), bekam {result.get('prod_status')!r}."
         )
 
 
