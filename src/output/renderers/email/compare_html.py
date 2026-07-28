@@ -218,46 +218,79 @@ def _fmt_visibility_overview(v) -> str:
 # `_fmt_metric` -- noetig fuer Nicht-Zahlwerte (Gewitter ist ein
 # ThunderLevel-Enum und kracht in `f"{value:.0f}"` mit TypeError) und fuer die
 # m->km-Umrechnung der Sicht. Zeilen OHNE "fmt" verhalten sich unveraendert.
+# Issue #1401 Scheibe A2a: JEDE Metrik-Zeile nennt jetzt ihre zentrale
+# Wettergroesse ("metric_id", src/app/metric_catalog.py) UND die gezeigte
+# Auswertung ("aggregation" -- Schluessel aus deren `summary_fields`). Die
+# Paare sind aus dem bereits kuratierten Compare-Katalog
+# (output/renderers/compare_metric_catalog.py) uebernommen, nicht neu erfunden.
+# Rein additiv: kein "label" wurde angefasst, die Mail sieht unveraendert aus
+# (festgenagelt in tests/unit/test_compare_mail_labels_unchanged.py). Die
+# Ableitung der Beschriftung aus dem Register folgt in A2b; ohne diese
+# Verknuepfung waere sie nicht moeglich. Vollstaendig haelt sie der Waechter
+# tests/unit/test_compare_mail_metric_link_completeness.py -- er schlaegt an,
+# sobald eine neue Zeile ohne Verknuepfung dazukommt (Bug-Typ #1296/#1324).
 CV2_METRICS = [
     {"key": "warn", "label": "Amtliche Warnungen", "kind": "warn"},
-    {"key": "temp_max", "metric_id": "temperature", "label": "Temp max", "unit": "°C", "sev": _sev_temp},
-    {"key": "wind_max", "metric_id": "wind", "label": "Wind", "unit": "km/h", "sev": _sev_wind},
-    {"key": "precip_sum", "metric_id": "precipitation", "label": "Regen", "unit": "mm",
-     "decimals": 1, "sev": _sev_rain},
-    {"key": "pop_max", "metric_id": "rain_probability", "label": "Regenwahrscheinlichkeit",
-     "unit": "%", "sev": _sev_pop},
-    {"key": "thunder_max", "metric_id": "thunder", "label": "Gewitter",
-     "fmt": _fmt_thunder, "sev": _sev_thunder},
-    {"key": "sunny_hours", "metric_id": "sunshine", "label": "Sonne", "unit": "h", "decimals": 1},
-    {"key": "cloud_avg", "metric_id": "cloud_total", "label": "Wolken", "unit": "%"},
-    {"key": "uv_max", "metric_id": "uv_index", "label": "UV max", "unit": "", "sev": _sev_uv},
-    {"key": "visibility_min", "metric_id": "visibility", "label": "Sicht min",
-     "fmt": _fmt_visibility_overview, "sev": _sev_visibility},
-    {"key": "snow_depth_cm", "metric_id": "snow_depth", "label": "Schneehöhe", "unit": "cm"},
-    {"key": "snow_new_cm", "metric_id": "fresh_snow", "label": "Neuschnee", "unit": "cm"},
+    {"key": "temp_max", "metric_id": "temperature", "aggregation": "max",
+     "label": "Temp max", "unit": "°C", "sev": _sev_temp},
+    {"key": "wind_max", "metric_id": "wind", "aggregation": "max",
+     "label": "Wind", "unit": "km/h", "sev": _sev_wind},
+    {"key": "precip_sum", "metric_id": "precipitation", "aggregation": "sum",
+     "label": "Regen", "unit": "mm", "decimals": 1, "sev": _sev_rain},
+    {"key": "pop_max", "metric_id": "rain_probability", "aggregation": "max",
+     "label": "Regenwahrscheinlichkeit", "unit": "%", "sev": _sev_pop},
+    {"key": "thunder_max", "metric_id": "thunder", "aggregation": "max",
+     "label": "Gewitter", "fmt": _fmt_thunder, "sev": _sev_thunder},
+    {"key": "sunny_hours", "metric_id": "sunshine", "aggregation": "sum",
+     "label": "Sonne", "unit": "h", "decimals": 1},
+    {"key": "cloud_avg", "metric_id": "cloud_total", "aggregation": "avg",
+     "label": "Wolken", "unit": "%"},
+    {"key": "uv_max", "metric_id": "uv_index", "aggregation": "max",
+     "label": "UV max", "unit": "", "sev": _sev_uv},
+    {"key": "visibility_min", "metric_id": "visibility", "aggregation": "min",
+     "label": "Sicht min", "fmt": _fmt_visibility_overview, "sev": _sev_visibility},
+    {"key": "snow_depth_cm", "metric_id": "snow_depth", "aggregation": "max",
+     "label": "Schneehöhe", "unit": "cm"},
+    {"key": "snow_new_cm", "metric_id": "fresh_snow", "aggregation": "sum",
+     "label": "Neuschnee", "unit": "cm"},
     # Issue #1296: vier weitere bis 2026-07-17 STILL verworfene Zeilen (analog
     # #1285). temp_min ohne "sev" (_sev_temp ist eine Hitze-Schwelle, fachlich
     # falsch fuer eine Kaelte-Kennzahl); freezing_level ebenfalls ohne "sev"
     # (kein AC verlangt Faerbung, s. Spec Known Limitations). cape_max bekam
     # mit Issue #1298 (B2) eine Ampel-Faerbung ueber _sev_cape.
-    {"key": "temp_min", "label": "Temp min", "unit": "°C"},
-    {"key": "gust_max", "label": "Böen", "unit": "km/h", "sev": _sev_gust},
-    {"key": "cape_max", "label": "CAPE", "unit": "J/kg", "sev": _sev_cape},
-    {"key": "freezing_level", "label": "Nullgradgrenze", "unit": "m"},
+    {"key": "temp_min", "metric_id": "temperature", "aggregation": "min",
+     "label": "Temp min", "unit": "°C"},
+    {"key": "gust_max", "metric_id": "gust", "aggregation": "max",
+     "label": "Böen", "unit": "km/h", "sev": _sev_gust},
+    {"key": "cape_max", "metric_id": "cape", "aggregation": "max",
+     "label": "CAPE", "unit": "J/kg", "sev": _sev_cape},
+    {"key": "freezing_level", "metric_id": "freezing_level", "aggregation": "min",
+     "label": "Nullgradgrenze", "unit": "m"},
     # Issue #1324: zehn weitere additive Zeilen (keine Severity-Faerbung, s.
     # Spec Known Limitations). Klasse A (Renderer-ID = LocationResult-Feld):
-    {"key": "wind_direction_avg", "label": "Windrichtung", "unit": "°"},
-    {"key": "wind_chill_min", "label": "Gefühlte Temp. min", "unit": "°C"},
-    {"key": "wind_chill_max", "label": "Gefühlte Temp. max", "unit": "°C"},
-    {"key": "cloud_low_avg", "label": "Wolken tief", "unit": "%"},
-    {"key": "cloud_mid_avg", "label": "Wolken mittel", "unit": "%"},
-    {"key": "cloud_high_avg", "label": "Wolken hoch", "unit": "%"},
+    {"key": "wind_direction_avg", "metric_id": "wind_direction", "aggregation": "avg",
+     "label": "Windrichtung", "unit": "°"},
+    {"key": "wind_chill_min", "metric_id": "wind_chill", "aggregation": "min",
+     "label": "Gefühlte Temp. min", "unit": "°C"},
+    {"key": "wind_chill_max", "metric_id": "wind_chill", "aggregation": "max",
+     "label": "Gefühlte Temp. max", "unit": "°C"},
+    {"key": "cloud_low_avg", "metric_id": "cloud_low", "aggregation": "avg",
+     "label": "Wolken tief", "unit": "%"},
+    {"key": "cloud_mid_avg", "metric_id": "cloud_mid", "aggregation": "avg",
+     "label": "Wolken mittel", "unit": "%"},
+    {"key": "cloud_high_avg", "metric_id": "cloud_high", "aggregation": "avg",
+     "label": "Wolken hoch", "unit": "%"},
     # Klasse B (Live-Aggregat ueber _DAILY_AGGREGATE_FIELD):
-    {"key": "humidity_avg", "label": "Luftfeuchtigkeit Ø", "unit": "%"},
-    {"key": "dewpoint_avg", "label": "Taupunkt Ø", "unit": "°C"},
-    {"key": "pressure_avg", "label": "Luftdruck Ø", "unit": "hPa"},
-    {"key": "precip_type", "label": "Niederschlagsart", "fmt": _fmt_precip_type},
-    {"key": "snowfall_limit", "label": "Schneefallgrenze", "unit": "m"},
+    {"key": "humidity_avg", "metric_id": "humidity", "aggregation": "avg",
+     "label": "Luftfeuchtigkeit Ø", "unit": "%"},
+    {"key": "dewpoint_avg", "metric_id": "dewpoint", "aggregation": "avg",
+     "label": "Taupunkt Ø", "unit": "°C"},
+    {"key": "pressure_avg", "metric_id": "pressure", "aggregation": "avg",
+     "label": "Luftdruck Ø", "unit": "hPa"},
+    {"key": "precip_type", "metric_id": "precip_type", "aggregation": "max",
+     "label": "Niederschlagsart", "fmt": _fmt_precip_type},
+    {"key": "snowfall_limit", "metric_id": "snowfall_limit", "aggregation": "min",
+     "label": "Schneefallgrenze", "unit": "m"},
 ]
 
 
