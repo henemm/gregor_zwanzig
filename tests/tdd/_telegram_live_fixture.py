@@ -96,22 +96,79 @@ def _ensure_paced_telegram_post() -> None:
 # ---------------------------------------------------------------------------
 
 
+_STAGING_RUN_COMMAND = (
+    "sudo -n -u claude-gregor bash -c 'cd /home/hem/gregor_zwanzig_staging && \\\n"
+    "  PATH=/home/hem/.local/bin:$PATH GZ_TELEGRAM_LIVE=1 \\\n"
+    "  uv run pytest <testdatei> -p no:cacheprovider -q'"
+)
+
+
+def _stale_override_guard_message(offending_key: Optional[str], test_chat_id: Optional[str]) -> str:
+    """Baut die Abbruch-Meldung fuer einen vorgesetzten/unlesbaren Staging-Wert.
+
+    Nennt NIE den Bot-Token -- nur die (unkritische) Chat-ID, falls bekannt.
+    """
+    if offending_key:
+        problem = (
+            f"Vorgesetzter Wert aktiv: {offending_key} steht bereits in os.environ "
+            f"(z.B. aus der Worktree-.env, einer Kopie der Produktiv-Konfiguration) "
+            f"und weicht vom Wert in {_STAGING_ENV_PATH} ab -- damit sendet der "
+            "Produktiv-Bot an die Staging-Chat-ID."
+        )
+    else:
+        problem = (
+            f"{_STAGING_ENV_PATH} ist nicht lesbar (falscher Nutzer oder falsches "
+            "Verzeichnis) -- die Staging-Creds koennen nicht gesourct werden."
+        )
+    lines = [
+        problem,
+        "",
+        "Richtiger Weg -- KEINE Telegram-Zugangsdaten selbst setzen, nur "
+        "GZ_TELEGRAM_LIVE=1 (den Rest sourct die Fixture selbst):",
+        _STAGING_RUN_COMMAND,
+        "",
+        "Es gibt einen eigenen Staging-Bot (@GregorZwanzigStaging_bot) -- der "
+        "Produktiv-Bot erreicht die Staging-Chat-ID nicht.",
+    ]
+    if test_chat_id:
+        lines.append(f"Staging-Chat-ID (GZ_TELEGRAM_TEST_CHAT_ID): {test_chat_id}")
+    return "\n".join(lines)
+
+
 def load_staging_telegram_env() -> None:
-    """Sourct Staging-Telegram-Creds nach os.environ (nur fehlende Keys, nicht kopieren)."""
-    if not _STAGING_ENV_PATH.exists():
-        return
+    """Sourct Staging-Telegram-Creds nach os.environ (nur fehlende Keys, nicht kopieren).
+
+    Bricht mit RuntimeError ab, wenn ein bereits gesetzter Wert vom Staging-Wert
+    abweicht (vorgesetzte Produktiv-Creds) oder die Staging-.env nicht lesbar ist
+    -- beides fuehrt sonst zu einem irrefuehrenden Telegram-400 gegen die falsche
+    Chat-ID statt einer verstaendlichen Fehlermeldung.
+    """
     try:
         lines = _STAGING_ENV_PATH.read_text(encoding="utf-8").splitlines()
     except OSError:
-        return
+        raise RuntimeError(_stale_override_guard_message(offending_key=None, test_chat_id=None))
+
+    file_values: dict[str, str] = {}
     for line in lines:
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, _, value = line.partition("=")
         key = key.strip()
-        if key in _WANTED_KEYS and key not in os.environ:
-            os.environ[key] = value.strip()
+        if key in _WANTED_KEYS:
+            file_values[key] = value.strip()
+
+    test_chat_id = file_values.get("GZ_TELEGRAM_TEST_CHAT_ID")
+    for key, file_value in file_values.items():
+        env_value = os.environ.get(key)
+        if env_value is not None and env_value != file_value:
+            raise RuntimeError(
+                _stale_override_guard_message(offending_key=key, test_chat_id=test_chat_id)
+            )
+
+    for key, file_value in file_values.items():
+        if key not in os.environ:
+            os.environ[key] = file_value
 
 
 def live_telegram_enabled() -> bool:
