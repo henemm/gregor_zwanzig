@@ -18,12 +18,15 @@ Exit codes:
 """
 
 import argparse
+import math
 import os
 import sys
 import imaplib
 import email
 import re
+import time
 from datetime import date
+from email.header import decode_header
 from pathlib import Path
 from typing import List, Tuple
 
@@ -40,12 +43,19 @@ def _write_validation_log(
     min_locations: int,
     log_dir: "Path | None" = None,
     workflow_id: "str | None" = None,
+    max_age_minutes: "int | None" = None,
+    ignore_mail_age_reason: "str | None" = None,
 ) -> None:
     """Issue #465 (B2): Strukturiertes Validator-Log YAML.
 
     Schreibt in ``.claude/workflows/_log/<ts>_<wf>_email_validation.yaml``.
     Fail-soft: jeder Fehler wird unterdrueckt, damit der Validator-Exit-Code
     erhalten bleibt.
+
+    Issue #1408 (AC-5): ``max_age_minutes`` und ``ignore_mail_age_reason``
+    werden IMMER geschrieben -- auch bei ``passed: true``. Eine bewusst
+    abgeschaltete Altersschranke bleibt so weder unbemerkt noch unbegruendet:
+    im Log steht der Grund im Klartext, nicht nur ein ``true``.
 
     Issue #1282 AC-4: ist ``log_dir`` NICHT explizit uebergeben, wird das
     shared-repo `_log` (git-common-dir via ``_e2e_paths.shared_repo_dir``)
@@ -75,6 +85,12 @@ def _write_validation_log(
         date_str = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         log_path = log_dir / f"{date_str}_{workflow_id}_email_validation.yaml"
 
+        # None heisst hier wie im Fetch-Pfad "Standardgrenze war aktiv".
+        effective_max_age = (
+            int(max_age_minutes) if max_age_minutes is not None
+            else _DEFAULT_MAX_AGE_MINUTES
+        )
+
         data = {
             "validator": "email_spec_validator",
             "validated_at": datetime.utcnow().isoformat(),
@@ -83,6 +99,15 @@ def _write_validation_log(
             "error_count": len(errors),
             "errors": list(errors),
             "min_locations_checked": int(min_locations),
+            # Issue #1408 AC-5: Zustand der Altersschranke ist Teil jedes Laufs.
+            # Adversary F001: NICHT nur das Abschalten wird sichtbar, sondern
+            # jede Abweichung vom Standardwert -- sonst verschoebe sich die
+            # stille Umgehung bloss von "unendlich" auf "knapp unter der
+            # Obergrenze".
+            "max_age_minutes": effective_max_age,
+            "max_age_minutes_default": _DEFAULT_MAX_AGE_MINUTES,
+            "max_age_minutes_overridden": effective_max_age != _DEFAULT_MAX_AGE_MINUTES,
+            "ignore_mail_age_reason": ignore_mail_age_reason,
         }
 
         import tempfile
@@ -90,41 +115,264 @@ def _write_validation_log(
         with os.fdopen(fd, "w") as f:
             _yaml.safe_dump(data, f, allow_unicode=True)
         os.rename(tmp, str(log_path))
-    except Exception:
-        pass  # fail-soft — darf Validator nie abbrechen
+    except Exception as exc:
+        # fail-soft — darf den Validator-Exit-Code nie kippen, aber NICHT
+        # lautlos: das Log ist der Nachweis, den das Renderer-Commit-Gate
+        # (#811) liest. Ein fehlendes Log ohne Hinweis sieht aus wie ein
+        # vergessener Lauf.
+        print(
+            f"WARNUNG: Validator-Log konnte nicht geschrieben werden ({exc}) -- "
+            f"der Lauf zaehlt damit nicht als Nachweis.",
+            file=sys.stderr,
+        )
 
 
 # Issue #1124 (Teil B): Marker-Header, der eine Compare-Mail auszeichnet. Teil A
 # (live) sorgt dafuer, dass echte Ortsvergleichs-Mails diesen Header tragen.
 _COMPARE_MAIL_TYPE = "compare"
 
+# Issue #1408: Altersschranke fuer die gepruefte Mail, standardmaessig AKTIV.
+# Das geteilte Test-Postfach nimmt auch Mails paralleler Sitzungen auf -- ohne
+# Zeitgrenze kann eine beliebig alte Mail (z.B. aus einem abgebrochenen
+# Vorlauf) als frischer Nachweis in das Renderer-Commit-Gate #811 und in die
+# Staging-Attestation eingehen.
+#
+# PRUEFDATUM (Regel-Budget, CLAUDE.md): 2026-10-26. Bis dahin muss die
+# Schranke einen echten Fang vorweisen (verhinderter Falsch-Nachweis) oder sie
+# wird zurueckgebaut. Zu eng (legitime langsame Staging-Laeufe scheitern) oder
+# zu weit (faengt die #1408-Ursache nicht mehr) => Wert anpassen.
+_DEFAULT_MAX_AGE_MINUTES = 60
 
-def _no_compare_mail_error() -> ValueError:
-    """Einheitliche AC-3-Fehlermeldung (nennt den erwarteten Marker), damit die
-    reine Auswahl-Funktion und der IMAP-Fetch dieselbe Meldung erheben."""
-    return ValueError(
+# Bewusstes Abschalten verlangt einen Grund im Klartext (Vorbild
+# `qa_gate.py --no-visual "<Grund>"`). KEIN Sentinel-Zahlenwert: eine `0`, die
+# "unbegrenzt" statt "nichts erlaubt" bedeutet, wird im entscheidenden Moment
+# falsch gelesen.
+_IGNORE_AGE_HINT = (
+    'bewusstes Abschalten nur ueber --ignore-mail-age "<Grund>" '
+    "(der Grund landet im Validator-Log)"
+)
+
+
+
+# Adversary F001: Obergrenze fuer --max-age-minutes. Ohne sie liesse sich die
+# Schranke ueber einen absurd hohen Wert (999999999) faktisch abschalten --
+# dieselbe stille Umkehr ueber einen Zahlenwert, die der begruendungspflichtige
+# Schalter gerade verhindern soll, nur mit einer anderen Zahl. 24 Stunden ist
+# die Grenze dessen, was noch als "aus diesem Lauf" durchgehen kann; wer weiter
+# zurueckgreifen will, muss es begruenden.
+_MAX_AGE_CEILING_MINUTES = 1440
+
+
+def _check_selection_arguments(
+    max_age_minutes: "int | None" = None,
+    ignore_mail_age_reason: "str | None" = None,
+    subject_contains: "str | None" = None,
+) -> None:
+    """Adversary F001/F002/F003: EINE Stelle fuer alle Werte, die still "aus"
+    bedeuten koennten -- auf Funktionsebene, nicht nur in ``main()``.
+
+    - Eine Altersgrenze oberhalb von 24 Stunden wird abgelehnt und auf den
+      begruendungspflichtigen Schalter verwiesen.
+    - Ein gesetzter, aber leerer/whitespace-only Grund zaehlt NICHT als
+      Begruendung: sonst waere ``ignore_mail_age_reason=""`` ein
+      begruendungsfreier Ausschalter, waehrend das Log ein leeres Feld zeigt.
+    - Ein gesetztes, aber leeres Betreffs-Fragment steckt in JEDEM Betreff und
+      schaltet den Filter damit still ab -- der Aufrufer glaubt, seine eigene
+      Mail benannt zu haben, und prueft die fremde. Nicht filtern wollen heisst
+      Argument weglassen, nicht Argument leer setzen.
+
+    Gemeinsames Muster aller drei: ein Wert, der unauffaellig "keine Pruefung"
+    bedeutet, ist gefaehrlicher als ein fehlender Wert -- weil er wie eine
+    Pruefung aussieht.
+    """
+    if subject_contains is not None and not subject_contains.strip():
+        raise ValueError(
+            "Ein leeres Betreffs-Fragment (subject_contains / "
+            "--subject-contains) passt auf JEDE Mail und schaltet den Filter "
+            "damit still ab. Wer filtern will, muss ein Fragment nennen; wer "
+            "nicht filtern will, laesst das Argument weg."
+        )
+    if ignore_mail_age_reason is not None and not ignore_mail_age_reason.strip():
+        raise ValueError(
+            "Die Altersschranke laesst sich nur mit einem nicht-leeren Grund "
+            "abschalten (ignore_mail_age_reason / --ignore-mail-age \"<Grund>\"). "
+            "Ein leerer Grund waere eine begruendungsfreie Abschaltung mit "
+            "leerer Log-Spur -- die Schranke bleibt aktiv."
+        )
+    if max_age_minutes is not None and not math.isfinite(max_age_minutes):
+        # Adversary F004: `nan` ist der schlechteste aller Werte -- jeder
+        # Vergleich mit ihm ist falsch (`nan > 1440` UND `age > nan`), es
+        # umgeht also Obergrenze und Altersvergleich in einem Zug, und
+        # anschliessend laesst `int(nan)` auch noch das Validator-Log
+        # entfallen: Schranke weg UND Nachweis weg. `inf` faellt hier
+        # gleich mit ab (frueher ein Sonderfall beim Formatieren).
+        raise ValueError(
+            f"Die Altersgrenze muss eine endliche Zahl in Minuten sein "
+            f"(bekommen: {max_age_minutes}). Nicht-endliche Werte vergleichen "
+            f"sich mit nichts -- die Schranke waere lautlos ausgeschaltet und "
+            f"das Validator-Log bliebe leer. {_IGNORE_AGE_HINT}."
+        )
+    if max_age_minutes is not None and max_age_minutes > _MAX_AGE_CEILING_MINUTES:
+        raise ValueError(
+            f"Altersgrenze {max_age_minutes} Minuten ueberschreitet das "
+            f"Maximum von {_MAX_AGE_CEILING_MINUTES} Minuten (24 Stunden). Eine "
+            f"beliebig grosse Grenze waere eine stille Abschaltung der Schranke "
+            f"ohne Begruendung -- {_IGNORE_AGE_HINT}."
+        )
+
+
+def _decode_subject(raw: "str | None") -> str:
+    """Dekodiert ein (ggf. RFC-2047-kodiertes) Subject zu lesbarem str.
+
+    1:1 das Vorbild aus `briefing_mail_validator.py` (#780): Umlaut-/Em-Dash-
+    Subjects kommen per IMAP als ``=?utf-8?b?...?=`` zurueck."""
+    if not raw:
+        return ""
+    parts = []
+    for chunk, enc in decode_header(raw):
+        if isinstance(chunk, bytes):
+            parts.append(chunk.decode(enc or "utf-8", errors="replace"))
+        else:
+            parts.append(chunk)
+    return "".join(parts)
+
+
+def _message_matches(headers, subject_contains: "str | None" = None) -> bool:
+    """Issue #1408: EINE gemeinsame Trefferbedingung fuer die Mail-Auswahl.
+
+    Vorher stand dieselbe Marker-Pruefung zweimal im Modul (in
+    ``_select_compare_uid`` und inline in ``_fetch_latest_message``) und war
+    bereits einmal auseinandergelaufen -- die getestete Auswahlfunktion wurde
+    im echten Fetch-Pfad nie aufgerufen. Beide Stellen rufen jetzt dieses
+    Praedikat auf; zwei Kopien sind strukturell nicht mehr moeglich.
+
+    - Marker: ``X-GZ-Mail-Type`` muss ``compare`` sein (immer geprueft).
+    - ``subject_contains`` gesetzt: das dekodierte Subject muss das Fragment
+      enthalten. ``None`` => Verhalten exakt wie vor #1408 (nur Marker).
+    """
+    if headers.get("X-GZ-Mail-Type") != _COMPARE_MAIL_TYPE:
+        return False
+    if subject_contains is not None:
+        if subject_contains not in _decode_subject(headers.get("Subject")):
+            return False
+    return True
+
+
+def _no_compare_mail_error(
+    subject_contains: "str | None" = None,
+    max_age_minutes: "int | None" = None,
+) -> ValueError:
+    """Einheitliche AC-3-Fehlermeldung, damit die reine Auswahl-Funktion und der
+    IMAP-Fetch dieselbe Meldung erheben.
+
+    Issue #1408: Die Meldung nennt jetzt auch, WONACH gesucht wurde (Betreffs-
+    Fragment) und welche Altersgrenze aktiv war -- sonst tauscht man ein stilles
+    Falsch-Gruen gegen ein raetselhaftes Rot."""
+    msg = (
         f"Keine Compare-Mail (X-GZ-Mail-Type: {_COMPARE_MAIL_TYPE}) im Postfach "
         f"gefunden -- der Validator prueft nur echte Ortsvergleichs-Mails."
     )
+    if subject_contains is not None:
+        msg += (
+            f" Gesucht wurde zusaetzlich nach dem Betreffs-Fragment "
+            f"{subject_contains!r} (--subject-contains); keine Mail erfuellt "
+            f"Marker UND Betreff gleichzeitig."
+        )
+    if max_age_minutes is not None:
+        msg += f" Aktive Altersgrenze: {int(max_age_minutes)} Minuten."
+    return ValueError(msg)
 
 
-def _select_compare_uid(candidates):
+def _internaldate_line(fetch_data) -> bytes:
+    """Issue #1408: Fuegt die NICHT-Nutzlast-Teile einer Fetch-Antwort zusammen.
+
+    ``imaplib`` liefert einen kombinierten Fetch als Mischung aus Tupeln
+    ``(praefix, nutzlast)`` und losen bytes. Wo der Server ``INTERNALDATE``
+    ablegt, haengt davon ab, ob er es VOR oder NACH dem Literal ausgibt --
+    beides ist protokollkonform. Deshalb werden alle Nicht-Nutzlast-Teile
+    betrachtet; die Nutzlast (``item[1]``, der Header-Text selbst) bleibt
+    ausdruecklich aussen vor, damit kein Mail-Inhalt als Zeitstempel
+    fehlgedeutet werden kann."""
+    parts = []
+    for item in fetch_data or []:
+        if isinstance(item, tuple) and item:
+            parts.append(bytes(item[0]))
+        elif isinstance(item, (bytes, bytearray)):
+            parts.append(bytes(item))
+    return b" ".join(parts)
+
+
+def _age_minutes(fetch_response_line, subject: str = "") -> float:
+    """Issue #1408 (AC-3/AC-6): Alter der Mail in Minuten aus der serverseitig
+    vergebenen ``INTERNALDATE``.
+
+    ``fetch_response_line`` ist die PRAEFIX-Zeile der Fetch-Antwort
+    (``data[0][0]``, z.B. ``b'12 (INTERNALDATE "28-Jul-2026 09:00:00 +0000"
+    BODY[HEADER] {842}'``) -- NICHT die Nutzlast. Geparst wird mit dem dafuer
+    vorgesehenen Stdlib-Helfer ``imaplib.Internaldate2tuple()``.
+
+    AC-6: Liefert die Antwort keinen auswertbaren Zeitstempel, gibt
+    ``Internaldate2tuple`` schlicht ``None`` zurueck (keine Exception). Dieses
+    ``None`` wird hier in einen ValueError uebersetzt -- es gibt bewusst KEINEN
+    Rueckfall auf den ``Date``-Header der Mail: der ist absenderseitig gesetzt
+    und damit manipulierbar, waehrend ``INTERNALDATE`` vom Server stammt. Ein
+    stiller Rueckfall waere genau die Art Luecke, die #1408 schliesst.
+
+    ``Internaldate2tuple`` liefert LOKALZEIT als struct_time -> ``time.mktime``
+    (nicht ``calendar.timegm``, das verschoebe das Alter um den UTC-Versatz).
+    """
+    parsed = imaplib.Internaldate2tuple(fetch_response_line)
+    if parsed is None:
+        raise ValueError(
+            f"Der IMAP-Server hat fuer die gewaehlte Mail{f' ({subject!r})' if subject else ''} "
+            f"keinen auswertbaren Server-Zeitstempel (INTERNALDATE) geliefert. "
+            f"Der Validator weicht bewusst NICHT auf den Date-Header der Mail aus "
+            f"(absenderseitig gesetzt, manipulierbar) und verweigert stattdessen "
+            f"die Arbeit -- {_IGNORE_AGE_HINT}."
+        )
+    return (time.time() - time.mktime(parsed)) / 60.0
+
+
+def _too_old_error(subject: str, age: float, max_age_minutes: int) -> ValueError:
+    """Issue #1408 (AC-3): Treffer gefunden, aber zu alt. Die Meldung nennt die
+    Mail, ihr Alter, die Grenze und den bewussten Ausweg."""
+    return ValueError(
+        f"Die gefundene Compare-Mail ({subject!r}) ist {age:.0f} Minuten alt und "
+        f"damit aelter als die zulaessigen {int(max_age_minutes)} Minuten "
+        f"(--max-age-minutes). Sie stammt nicht aus diesem Lauf und taugt nicht "
+        f"als Nachweis -- {_IGNORE_AGE_HINT}."
+    )
+
+
+def _select_compare_uid(candidates, subject_contains: "str | None" = None):
     """Issue #1124 (Teil B): Rein deterministische Auswahl der zu pruefenden
     Mail. `candidates` ist eine geordnete Liste von ``(uid: bytes, header_bytes:
     bytes)`` in IMAP-Suchreihenfolge (aeltest -> neuest, wie ``imap.search``
-    liefert). Rueckgabe: die UID der NEUESTEN Mail mit
-    ``X-GZ-Mail-Type: compare``.
+    liefert). Rueckgabe: die UID der NEUESTEN Mail, die ``_message_matches``
+    erfuellt.
 
-    Faellt keine Mail unter den Marker, wird ``ValueError`` mit einer klaren
+    Issue #1408: Mit ``subject_contains`` wird die eigene Mail NAMENTLICH
+    gewaehlt -- eine juengere fremde compare-Mail aus einer parallelen Sitzung
+    verdraengt sie dann nicht mehr.
+
+    Faellt keine Mail unter die Bedingung, wird ``ValueError`` mit einer klaren
     Meldung erhoben (statt still die falsche Mail zu pruefen, AC-3)."""
+    # Adversary F003: auch der direkte Einstieg (ohne IMAP) darf sich den
+    # Filter nicht per leerem Fragment abschalten lassen.
+    _check_selection_arguments(subject_contains=subject_contains)
     for uid, header_bytes in reversed(candidates):
         headers = email.message_from_bytes(header_bytes)
-        if headers.get("X-GZ-Mail-Type") == _COMPARE_MAIL_TYPE:
+        if _message_matches(headers, subject_contains=subject_contains):
             return uid
-    raise _no_compare_mail_error()
+    raise _no_compare_mail_error(subject_contains=subject_contains)
 
 
-def _fetch_latest_message(imap=None):
+def _fetch_latest_message(
+    imap=None,
+    subject_contains: "str | None" = None,
+    max_age_minutes: "int | None" = None,
+    ignore_mail_age_reason: "str | None" = None,
+):
     """IMAP-Fetch der zu pruefenden Compare-Mail (Issue #1124 Teil B).
 
     Scannt die Mails newest-first NUR ueber ihren Header (``BODY.PEEK[HEADER]``,
@@ -138,9 +386,35 @@ def _fetch_latest_message(imap=None):
     Der Voll-Fetch der gefundenen Mail laeuft ebenfalls ueber ``BODY.PEEK[]`` --
     die gepruefte Mail bleibt im selben Gelesen-Zustand.
 
+    Issue #1408: Der Scan nutzt ``_message_matches`` -- mit ``subject_contains``
+    wird die eigene Mail namentlich gesucht. Der Treffer wird zusaetzlich auf
+    sein Alter geprueft (serverseitige ``INTERNALDATE``, im selben Fetch
+    mitgeholt, kein zusaetzlicher Roundtrip). Ist er aelter als
+    ``max_age_minutes`` (``None`` => Standardgrenze
+    ``_DEFAULT_MAX_AGE_MINUTES``), wird SOFORT abgebrochen: weiter zurueck
+    liegende Mails sind per Definition noch aelter. Abschalten geht nur bewusst
+    ueber ``ignore_mail_age_reason`` -- dann entfaellt die Zeitpruefung
+    vollstaendig (inklusive der AC-6-Pruefung auf einen ueberhaupt vorhandenen
+    Server-Zeitstempel; das ist Teil derselben bewussten Entscheidung).
+
     Ist ``imap`` (eine fertige, bereits angemeldete Verbindung) uebergeben, wird
     sie direkt genutzt -- ohne Settings/Credentials/IMAP4_SSL-Aufbau (Test-Seam).
     """
+    # None heisst "Standardgrenze anwenden", NICHT "keine Grenze": ein Aufruf
+    # ohne neue Argumente (AC-4) laeuft weiter, bleibt aber geschuetzt.
+    if max_age_minutes is None:
+        max_age_minutes = _DEFAULT_MAX_AGE_MINUTES
+
+    # Adversary F001/F002: Beide Schutzpruefungen sitzen HIER, an der Stelle,
+    # an der die Entscheidung faellt -- nicht (nur) in main(). Ein Schutz, der
+    # allein an der Kommandozeilen-Oberflaeche haengt, faellt weg, sobald ein
+    # zweiter Aufrufer die Funktion direkt benutzt.
+    _check_selection_arguments(
+        max_age_minutes=max_age_minutes,
+        ignore_mail_age_reason=ignore_mail_age_reason,
+        subject_contains=subject_contains,
+    )
+
     own_connection = imap is None
     if own_connection:
         sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
@@ -172,13 +446,28 @@ def _fetch_latest_message(imap=None):
         # (F001) -- im Normalfall (Compare = juengste Mail) genau EIN Header-Fetch.
         selected_uid = None
         for uid in reversed(all_ids):
-            _, hdr_data = imap.fetch(uid, '(BODY.PEEK[HEADER])')
+            # #1408: INTERNALDATE reist in DERSELBEN Fetch-Antwort mit (kein
+            # zusaetzlicher Roundtrip) und steht in deren Praefix-Zeile.
+            _, hdr_data = imap.fetch(uid, '(BODY.PEEK[HEADER] INTERNALDATE)')
             headers = email.message_from_bytes(hdr_data[0][1])
-            if headers.get("X-GZ-Mail-Type") == _COMPARE_MAIL_TYPE:
+            if _message_matches(headers, subject_contains=subject_contains):
                 selected_uid = uid
+                selected_subject = _decode_subject(headers.get("Subject"))
+                selected_response_line = _internaldate_line(hdr_data)
                 break
         if selected_uid is None:
-            raise _no_compare_mail_error()
+            raise _no_compare_mail_error(
+                subject_contains=subject_contains,
+                max_age_minutes=None if ignore_mail_age_reason else max_age_minutes,
+            )
+
+        # #1408 AC-3/AC-6: Zeitpruefung des Treffers. Bewusst abgeschaltet
+        # (mit Begruendung) => komplett uebersprungen, sonst muss eine
+        # belastbare Server-Zeit vorliegen UND im Fenster liegen.
+        if ignore_mail_age_reason is None:
+            age = _age_minutes(selected_response_line, subject=selected_subject)
+            if age > max_age_minutes:
+                raise _too_old_error(selected_subject, age, max_age_minutes)
 
         # Voll-Fetch der Treffer-Mail ebenfalls per BODY.PEEK[] (kein \Seen).
         _, msg_data = imap.fetch(selected_uid, '(BODY.PEEK[])')
@@ -647,10 +936,23 @@ def validate_hourly_table(body: str, time_start: int = 9, time_end: int = 16) ->
     return errors
 
 
-def run_validation(min_locations: int = 3) -> Tuple[bool, List[str]]:
-    """Run all validations and return (success, errors)."""
+def run_validation(
+    min_locations: int = 3,
+    subject_contains: "str | None" = None,
+    max_age_minutes: "int | None" = None,
+    ignore_mail_age_reason: "str | None" = None,
+) -> Tuple[bool, List[str]]:
+    """Run all validations and return (success, errors).
+
+    Issue #1408: reicht Betreffs-Filter und Altersschranke an die Mail-Auswahl
+    durch. Ohne die neuen Argumente unveraendertes Verhalten (AC-4), lediglich
+    mit aktiver Standard-Altersgrenze."""
     try:
-        msg = _fetch_latest_message()
+        msg = _fetch_latest_message(
+            subject_contains=subject_contains,
+            max_age_minutes=max_age_minutes,
+            ignore_mail_age_reason=ignore_mail_age_reason,
+        )
     except Exception as e:
         return False, [f"FEHLER: E-Mail konnte nicht geladen werden: {e}"]
 
@@ -691,7 +993,53 @@ def main():
         help="Erwarteter Mail-Typ (nur 'compare' -- dies ist der "
              "Ortsvergleichs-Validator)",
     )
+    # Issue #1408: Betreffs-Filter (Vorbild briefing_mail_validator.py, #780)
+    # und Altersschranke. Beide optional -- die dokumentierten Aufrufe ohne
+    # Argumente bleiben unveraendert lauffaehig (AC-4).
+    parser.add_argument(
+        "--subject-contains",
+        default=None,
+        help="Nur eine Mail pruefen, deren Betreff dieses Fragment enthaelt "
+             "(waehlt die EIGENE Mail auch dann, wenn eine juengere fremde "
+             "Compare-Mail daneben liegt)",
+    )
+    parser.add_argument(
+        "--max-age-minutes",
+        type=int,
+        default=_DEFAULT_MAX_AGE_MINUTES,
+        help=f"Hoechstalter der geprueften Mail in Minuten "
+             f"(default: {_DEFAULT_MAX_AGE_MINUTES})",
+    )
+    parser.add_argument(
+        "--ignore-mail-age",
+        metavar="GRUND",
+        default=None,
+        help="Altersschranke bewusst abschalten -- verlangt eine nicht-leere "
+             "Begruendung, die im Validator-Log landet",
+    )
     args = parser.parse_args()
+
+    # Fail-fast, analog `qa_gate.py --no-visual "<Grund>"`: der Schutz laesst
+    # sich nicht versehentlich (und nicht wortlos) abschalten.
+    if args.ignore_mail_age is not None and not args.ignore_mail_age.strip():
+        print(
+            "FEHLER: --ignore-mail-age verlangt eine nicht-leere Begruendung "
+            '(z.B. --ignore-mail-age "Altfall, Mail bewusst manuell geprueft"). '
+            "Ohne Grund bleibt die Altersschranke aktiv."
+        )
+        sys.exit(2)
+
+    # Adversary F001: dieselbe Grenze wie in _check_selection_arguments, hier
+    # nur fuer eine freundliche Meldung statt eines Traceback-Umwegs. Die
+    # verbindliche Pruefung sitzt in der Funktion.
+    if args.max_age_minutes > _MAX_AGE_CEILING_MINUTES:
+        print(
+            f"FEHLER: --max-age-minutes={args.max_age_minutes} ueberschreitet das "
+            f"Maximum von {_MAX_AGE_CEILING_MINUTES} Minuten (24 Stunden). Eine "
+            f"beliebig grosse Grenze waere eine stille Abschaltung der "
+            f"Altersschranke ohne Begruendung -- {_IGNORE_AGE_HINT}."
+        )
+        sys.exit(2)
 
     if args.mail_type != "compare":
         print(
@@ -707,10 +1055,22 @@ def main():
     print("=" * 70)
     print()
 
-    success, errors = run_validation(args.min_locations)
+    success, errors = run_validation(
+        args.min_locations,
+        subject_contains=args.subject_contains,
+        max_age_minutes=args.max_age_minutes,
+        ignore_mail_age_reason=args.ignore_mail_age,
+    )
 
     # Issue #465 (B2): Strukturiertes Log VOR sys.exit() schreiben (fail-soft).
-    _write_validation_log(success=success, errors=errors, min_locations=args.min_locations)
+    # Issue #1408 (AC-5): Zustand der Altersschranke immer mitschreiben.
+    _write_validation_log(
+        success=success,
+        errors=errors,
+        min_locations=args.min_locations,
+        max_age_minutes=args.max_age_minutes,
+        ignore_mail_age_reason=args.ignore_mail_age,
+    )
 
     if success:
         print("✅ ALLE SPEC-ANFORDERUNGEN ERFÜLLT!")
