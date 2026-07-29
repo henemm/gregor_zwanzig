@@ -55,12 +55,27 @@ from output.renderers.alert.official_alerts import (
 # screen-compare-email-v2.jsx uebernommen)
 # ---------------------------------------------------------------------------
 
-# Issue #1214 Scheibe 2: Compare-lokales Ampel-Vokabular (ok/caution/warn/danger)
-# ist 1:1 kompatibel zum kanonischen (green/yellow/orange/red). severity_for()
-# liefert kanonisch; die Uebersetzung erfolgt hier an der Aufrufstelle (Compare-
-# Vokabular bleibt lokal, wird nicht global umbenannt).
-_CANONICAL_TO_COMPARE = {"green": "ok", "yellow": "caution", "orange": "warn", "red": "danger"}
-_COMPARE_TO_CANONICAL = {v: k for k, v in _CANONICAL_TO_COMPARE.items()}
+# Issue #1377 Scheibe B2: Compare-lokales Ampel-Vokabular (ok/caution/warn/danger)
+# ist 1:1 kompatibel zum kanonischen (green/yellow/orange/red), das
+# `severity_for()` liefert. Die Uebersetzung geschieht direkt in jeder
+# `_sev_*`-Funktion (`_LEVEL_TO_COMPARE`, s.u.) -- ein zweiseitiges
+# Uebersetzungs-Dict an den Aufrufstellen entfaellt, weil dort inzwischen
+# ausschliesslich das kanonische Vokabular ankommt (`severity_for` direkt an
+# `tone_css` durchgereicht).
+_LEVEL_TO_COMPARE = {"green": "ok", "yellow": "caution", "orange": "warn", "red": "danger"}
+_COMPARE_TO_LEVEL = {v: k for k, v in _LEVEL_TO_COMPARE.items()}
+
+
+def _to_compare(level: str | None) -> str | None:
+    """Kanonisches `severity_for`-Level -> Compare-lokales Vokabular.
+
+    Issue #1377 Scheibe B2 (harte Vorgabe): KEIN `.get(level, "ok")`-Rueckfall
+    -- `None` ("keine Aussage", z.B. Metrik ohne Katalog-Schwellen) bleibt
+    `None` und wird NIE stillschweigend zu "ok"/gruen. Aufrufer behandeln
+    `None` wie "ok" (keine Toenung), s. `_render_overview_row`/`_render_hour_row`.
+    """
+    return _LEVEL_TO_COMPARE[level] if level is not None else None
+
 
 # Issue #1214 Scheibe 2: Zell-Toenung stammt aus der zentralen tone_css-Palette
 # (design_tokens), nicht mehr aus einem lokal duplizierten Mapping. _RISK_CELL
@@ -86,7 +101,12 @@ _ALERT_LEVEL_CELL = {
 
 
 def _sev_temp(v: float) -> str:
-    return "danger" if v >= 34 else "warn" if v >= 31 else "caution" if v >= 28 else "ok"
+    # Issue #1377 Scheibe B2: nutzt die Katalog-Schwellen (Hitze 28/31/34 UND,
+    # seit Scheibe A neu, Kaelte 0/-5/-15) via severity_for statt der
+    # bisherigen rein hitzeseitigen Handschwelle. Bewusst gewollte Folge:
+    # die Kaelte-Seite (z.B. -6°C -> "warn") wird in der Vergleichsmatrix
+    # jetzt erstmals sichtbar, identisch zum Trip-Briefing.
+    return _to_compare(severity_for("temperature", v))
 
 
 def _sev_wind(v: float) -> str:
@@ -95,32 +115,38 @@ def _sev_wind(v: float) -> str:
     # via severity_for statt der bislang hartcodierten >40/>30/>20. Sichtbare,
     # bewusst gewollte Folge: 45 km/h zeigt jetzt gelb (caution) statt rot
     # (danger) — identisch zum Trip-Briefing (helpers.ampel_level).
-    return _CANONICAL_TO_COMPARE.get(severity_for("wind", v), "ok")
+    return _to_compare(severity_for("wind", v))
 
 
 def _sev_gust(v: float) -> str:
-    return "danger" if v > 60 else "warn" if v > 45 else "caution" if v > 30 else "ok"
+    # Issue #1377 Scheibe B2: Katalog-Schwellen (30/45/60) via severity_for
+    # statt hartcodierter Handschwellen. Die drei Zahlen waren bereits
+    # deckungsgleich, aber die Grenz-Inklusivitaet nicht (Katalog wertet
+    # via `>=` ab EINSCHLIESSLICH der Schwelle, die bisherige Handschwelle
+    # war exklusiv `>`) -- genau 30 km/h faerbt jetzt "caution" statt "ok".
+    return _to_compare(severity_for("gust", v))
 
 
 def _sev_rain(v: float) -> str:
-    return "danger" if v > 8 else "warn" if v > 4 else "caution" if v > 1 else "ok"
+    return _to_compare(severity_for("precipitation", v))
 
 
 def _sev_uv(v: float) -> str:
-    return "danger" if v >= 8 else "warn" if v >= 6 else "caution" if v >= 3 else "ok"
+    return _to_compare(severity_for("uv_index", v))
 
 
 def _sev_pop(v: float) -> str:
-    return "danger" if v >= 80 else "warn" if v >= 60 else "caution" if v >= 40 else "ok"
+    return _to_compare(severity_for("rain_probability", v))
 
 
 def _sev_visibility(v: float) -> str:
-    """v in Metern -- niedrige Sicht ist kritischer."""
-    return "danger" if v < 1000 else "warn" if v < 3000 else "caution" if v < 5000 else "ok"
+    """v in Metern -- niedrige Sicht ist kritischer (Katalog-Schwellen
+    <2000/<1000/<500m via severity_for statt der bisherigen <5000/<3000/<1000m)."""
+    return _to_compare(severity_for("visibility", v))
 
 
 def _sev_cape(v: float) -> str:
-    return _CANONICAL_TO_COMPARE.get(severity_for("cape", v), "ok")
+    return _to_compare(severity_for("cape", v))
 
 
 _WEEKDAY_ABBR = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
@@ -254,12 +280,16 @@ CV2_METRICS = [
     {"key": "snow_new_cm", "metric_id": "fresh_snow", "aggregation": "sum",
      "label": "Neuschnee", "unit": "cm"},
     # Issue #1296: vier weitere bis 2026-07-17 STILL verworfene Zeilen (analog
-    # #1285). temp_min ohne "sev" (_sev_temp ist eine Hitze-Schwelle, fachlich
-    # falsch fuer eine Kaelte-Kennzahl); freezing_level ebenfalls ohne "sev"
-    # (kein AC verlangt Faerbung, s. Spec Known Limitations). cape_max bekam
-    # mit Issue #1298 (B2) eine Ampel-Faerbung ueber _sev_cape.
+    # #1285). freezing_level ohne "sev" (kein AC verlangt Faerbung, s. Spec
+    # Known Limitations). cape_max bekam mit Issue #1298 (B2) eine
+    # Ampel-Faerbung ueber _sev_cape. Issue #1377 Scheibe B2: temp_min bekommt
+    # jetzt ebenfalls "sev" (_sev_temp) -- der Katalog fuehrt fuer
+    # "temperature" seit Scheibe A beidseitige Schwellen (Hitze UND Kaelte),
+    # `severity_for` wertet beide Richtungen aus und liefert fuer einen
+    # Tiefstwert automatisch die Kaelte-Seite. Ohne diese Verdrahtung bliebe
+    # die Kaelte-Warnung in der Vergleichsmatrix unsichtbar (AC-5).
     {"key": "temp_min", "metric_id": "temperature", "aggregation": "min",
-     "label": "Temp min", "unit": "°C"},
+     "label": "Temp min", "unit": "°C", "sev": _sev_temp},
     {"key": "gust_max", "metric_id": "gust", "aggregation": "max",
      "label": "Böen", "unit": "km/h", "sev": _sev_gust},
     {"key": "cape_max", "metric_id": "cape", "aggregation": "max",
@@ -495,7 +525,7 @@ def _render_overview_row(
         if sev_level and sev_level != "ok":
             # Issue #1214 Scheibe 2: Zell-Toenung ueber die zentrale tone_css-
             # Palette (kanonisches Vokabular), Compare-lokal -> kanonisch.
-            bg, fg = tone_css(_COMPARE_TO_CANONICAL[sev_level])
+            bg, fg = tone_css(_COMPARE_TO_LEVEL[sev_level])
             weight = "700"
         fmt_fn = m.get("fmt")
         text = fmt_fn(value) if fmt_fn else _fmt_metric(value, m.get("decimals"), m.get("unit", ""))
@@ -628,7 +658,7 @@ def _sev_cell_style(level: Optional[str]) -> tuple[str, str, str]:
     if level is None or level == "ok":
         return "transparent", G_INK, "500"
     # Issue #1214 Scheibe 2: zentrale tone_css-Palette, Compare-lokal -> kanonisch.
-    bg, fg = tone_css(_COMPARE_TO_CANONICAL[level])
+    bg, fg = tone_css(_COMPARE_TO_LEVEL[level])
     return bg, fg, "700"
 
 

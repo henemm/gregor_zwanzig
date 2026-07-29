@@ -108,8 +108,15 @@ Mail-Arten in einem Schritt.
 Ergebnis über `_CANONICAL_TO_COMPARE` in das Compare-lokale Vokabular
 (`ok/caution/warn/danger`) — das ist die Vorlage. `_sev_temp`, `_sev_rain`,
 `_sev_uv`, `_sev_pop`, `_sev_visibility` werden nach demselben Muster umgestellt:
-Katalog-Werte statt hartcodierter Zahlen. `_sev_gust` bleibt unverändert (Werte
-bereits deckungsgleich zum Katalog: 30/45/60).
+Katalog-Werte statt hartcodierter Zahlen.
+
+`_sev_gust` wird **ebenfalls umgestellt** (Korrektur 2026-07-29, Adversary-Fund
+B2/F001): Die drei Zahlenwerte 30/45/60 sind zwar deckungsgleich zum Katalog, die
+**Grenz-Inklusivität** aber nicht — die Handschwelle prüfte `> 30`, der Katalog
+wertet `>= 30`. Bei genau 30 km/h liefen Trip und Ortsvergleich damit weiter
+auseinander, also genau der Fehler, den #1377 beseitigt. Betroffen ist nur der
+exakte Schwellenwert; abgesichert durch
+`test_sev_gust_exact_30_becomes_caution`.
 
 `_sev_temp` bekommt dadurch **zusätzlich zur Hitze-Seite** auch die neu im Katalog
 hinterlegte Kälte-Seite (0/−5/−15 °C) — eine über die fünf in „Sichtbare Wirkung"
