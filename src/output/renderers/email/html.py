@@ -145,17 +145,49 @@ def _safe_float(v, default: float = 0.0) -> float:
         return default
 
 
+def _thunder_risk_level(thunder) -> Optional[str]:
+    """Bestimmt den Risiko-Beitrag von Gewitter fuer `_row_risk` (Issue #1418
+    Fehler 1). `r["thunder"]` traegt in beiden Produktionspfaden
+    (`trip_report.py: _dp_to_row` / `_aggregate_night_block`) einen
+    `ThunderLevel`-Stufenwert (NONE/MED/HIGH), keinen Zahlenwert — ein reiner
+    `> 20`-Zahlenvergleich (frueher via `_safe_float`) war deshalb immer
+    falsch. `ThunderLevel` erbt von `str`, daher deckt der String-Vergleich
+    sowohl die Enum-Instanz als auch die reine String-Form ("HIGH"/"MED",
+    s. `outlook.py`/`helpers.py`: `.upper()` auf `stage.get("thunder", ...)`)
+    ab. Der historische Zahlenwert (Regressionsschutz AC-7, #1377 — Gewitter
+    war dort ausdruecklich ausgenommen) bleibt als Fallback erhalten.
+    Liefert 'risk'/'watch'/None (kein Beitrag) — nie einen Absturz.
+    """
+    if isinstance(thunder, str):
+        level = thunder.upper()
+        if level == "HIGH":
+            return "risk"
+        if level == "MED":
+            return "watch"
+        if level == "NONE":
+            return None
+
+    num = _safe_float(thunder, None)
+    if num is not None:
+        if num > 20:
+            return "risk"
+        if num > 0:
+            return "watch"
+    return None
+
+
 def _row_risk(r: dict) -> str:
     """Bestimmt Risk-Level pro Tabellenzeile aus Katalog-Schwellen (Issue #1377
-    Scheibe B, AC-10). Gewitter bleibt hartcodiert (kein `display_thresholds`
-    im Katalog, s. Spec „Known Limitations") — Wind/Böen/Regen/Regenwahrsch.
-    /Sicht fragen dieselbe `severity_for`-Quelle wie die Einzelzellen; die
-    schärfste der resultierenden Stufen entscheidet zusammen mit Gewitter.
-    Das dreiwertige Punkt-Vokabular bleibt: green→ok, yellow/orange→watch,
-    red→risk (keine vierte Punktfarbe, s. Spec).
+    Scheibe B, AC-10). Gewitter-Zellfaerbung bleibt hartcodiert (kein
+    `display_thresholds` im Katalog, s. Spec „Known Limitations") —
+    Wind/Böen/Regen/Regenwahrsch./Sicht fragen dieselbe `severity_for`-Quelle
+    wie die Einzelzellen; die schärfste der resultierenden Stufen entscheidet
+    zusammen mit Gewitter (Stufenvergleich, s. `_thunder_risk_level`, Issue
+    #1418 Fehler 1). Das dreiwertige Punkt-Vokabular bleibt: green→ok,
+    yellow/orange→watch, red→risk (keine vierte Punktfarbe, s. Spec).
     """
-    thunder = _safe_float(r.get("thunder"))
-    if thunder > 20:
+    thunder_level = _thunder_risk_level(r.get("thunder"))
+    if thunder_level == "risk":
         return "risk"
 
     vis_raw = r.get("vis")
@@ -174,7 +206,7 @@ def _row_risk(r: dict) -> str:
 
     if worst == "red":
         return "risk"
-    if worst in ("yellow", "orange") or thunder > 0:
+    if worst in ("yellow", "orange") or thunder_level == "watch":
         return "watch"
     return "ok"
 
