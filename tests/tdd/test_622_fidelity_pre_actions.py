@@ -52,9 +52,11 @@ WORKFLOW = os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "fix-622-794-mobile-fideli
 # Path(".") relativ zum cwd. Worktree-relativ hier hiesse, die Existenz von
 # Datei A zu pruefen und anschliessend Datei B zu vergleichen.
 SCREEN_STEP2 = "I-wizard-step2-etappen"
+# gz-main-path: Soll-Bild, kein Pruefling — muss aus dem cwd des Vergleichs (MAIN_REPO) kommen, s. o.
 SOLL_STEP2 = MAIN_REPO / "claude-code-handoff/current/soll" / f"{SCREEN_STEP2}.png"
 
 SCREEN_STEP3 = "I-wizard-step3-wetter"
+# gz-main-path: Soll-Bild, kein Pruefling — muss aus dem cwd des Vergleichs (MAIN_REPO) kommen, s. o.
 SOLL_STEP3 = MAIN_REPO / "claude-code-handoff/current/soll" / f"{SCREEN_STEP3}.png"
 
 # Selector für Etappen-Tab im Trip-Wizard (Step 2)

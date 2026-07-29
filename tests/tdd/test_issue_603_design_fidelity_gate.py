@@ -64,6 +64,7 @@ class TestAC1DiffToolProducesReport:
         WHEN: design_fidelity_diff.py --screen G-compare-uebersicht-kacheln ausgeführt wird
         THEN: Exit-Code ist 0 (pass) oder 1 (fail) — niemals ein Python-Traceback (Exit 2+)
         """
+        # gz-main-path: Soll-Bild, kein Pruefling — muss aus dem cwd des Vergleichs (MAIN_REPO) kommen, s. o. Z. 39-42
         assert SOLL_DIR.joinpath(f"{PILOT_SCREEN}.png").exists(), (
             f"Soll-PNG fehlt: {SOLL_DIR}/{PILOT_SCREEN}.png"
         )

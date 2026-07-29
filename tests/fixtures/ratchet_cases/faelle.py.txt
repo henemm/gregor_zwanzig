@@ -1,0 +1,186 @@
+# Fixture-Quelltexte fuer tests/tdd/test_repo_path_hardcoding_ratchet.py.
+#
+# Bewusst KEINE .py-Endung: der Waechter scannt tests/**/*.py, und diese Datei
+# enthaelt absichtlich echte Verstoesse. Laege sie als .py hier, meldete der
+# Waechter seine eigenen Fixtures. Frueher wurden diese Quelltexte im
+# Waechtermodul selbst per str.format() zusammengesetzt — genau die Luecke, die
+# der Waechter schliessen soll (Adversary F002). Mit der Auslagerung ist das
+# Modul frei von jeder Pfad-Zusammensetzung.
+#
+# Format: `# === <fall> ===` trennt die Faelle. Der Text bis zum naechsten
+# Trenner wird 1:1 als Testdatei nach tmp_path geschrieben.
+# `@WS@` wird beim Laden durch drei Leerzeichen ersetzt (haelt nachlaufenden
+# Leerraum ueber Editoren und Formatierer hinweg stabil).
+
+# === literal ===
+from pathlib import Path
+PRUEFLING = Path("/home/hem/gregor_zwanzig/.claude/hooks/briefing_mail_validator.py")
+assert PRUEFLING.exists()
+
+# === konstanten-join ===
+from pathlib import Path
+REPO = Path("/home/hem/gregor_zwanzig")
+DIFF = REPO / ".claude/hooks/design_fidelity_diff.py"
+
+# === docstring-und-kommentar ===
+"""Pruefling liegt im Hauptrepo unter
+/home/hem/gregor_zwanzig/.claude/hooks/briefing_mail_validator.py — reine Prosa."""
+# Und als Kommentar: /home/hem/gregor_zwanzig/.claude/hooks/design_fidelity_diff.py
+WERT = 1
+
+# === marker-mit-begruendung ===
+from pathlib import Path
+# gz-main-path: Zugangsdaten kommen bewusst aus der produktiven Ablage
+A = Path("/home/hem/gregor_zwanzig/.claude/hooks/briefing_mail_validator.py")
+B = Path("/home/hem/gregor_zwanzig/.claude/hooks/design_fidelity_diff.py")  # gz-main-path: geteiltes Soll-Bild aus dem Hauptrepo
+
+# === marker-ohne-begruendung ===
+from pathlib import Path
+A = Path("/home/hem/gregor_zwanzig/.claude/hooks/briefing_mail_validator.py")  # gz-main-path:
+B = Path("/home/hem/gregor_zwanzig/.claude/hooks/design_fidelity_diff.py")  # gz-main-path:@WS@
+
+# === marker-zu-kurz ===
+from pathlib import Path
+MAIN = "/home/hem/gregor_zwanzig"
+A = Path(MAIN) / ".claude/hooks/prod_selftest.py"  # gz-main-path: x
+B = Path(MAIN) / ".claude/hooks/briefing_mail_validator.py"  # gz-main-path: 👍
+
+# === marker-mehrzeilig ===
+from pathlib import Path
+MAIN = "/home/hem/gregor_zwanzig"
+A = (
+    Path(MAIN)
+    / ".claude/hooks/prod_selftest.py"
+)  # gz-main-path: Klammerausdruck, Marker steht auf der letzten Zeile
+
+# === marker-zwei-zeilen-davor ===
+from pathlib import Path
+# gz-main-path: zwei Zeilen zu frueh, das ist keine gueltige Ausnahme
+MAIN = "/home/hem/gregor_zwanzig"
+A = Path(MAIN) / ".claude/hooks/prod_selftest.py"
+
+# === f-string ===
+MAIN = "/home/hem/gregor_zwanzig"
+P = f"{MAIN}/.claude/hooks/briefing_mail_validator.py"
+
+# === plus-verkettung ===
+P = "/home/hem/gregor_zwanzig" + "/.claude/hooks/briefing_mail_validator.py"
+
+# === os-path-join ===
+import os
+P = os.path.join("/home/hem/gregor_zwanzig", ".claude/hooks/briefing_mail_validator.py")
+
+# === joinpath ===
+from pathlib import Path
+REPO = Path("/home/hem/gregor_zwanzig")
+PRUEFLING = REPO.joinpath(".claude/hooks/briefing_mail_validator.py")
+
+# === format ===
+MAIN = "/home/hem/gregor_zwanzig"
+PRUEFLING = "{}/.claude/hooks/briefing_mail_validator.py".format(MAIN)
+
+# === prozent-formatierung ===
+MAIN = "/home/hem/gregor_zwanzig"
+PRUEFLING = "%s/.claude/hooks/briefing_mail_validator.py" % MAIN
+
+# === str-join ===
+MAIN = "/home/hem/gregor_zwanzig"
+PRUEFLING = "/".join([MAIN, ".claude/hooks/briefing_mail_validator.py"])
+
+# === listen-index ===
+from pathlib import Path
+PATHS = [Path("/home/hem/gregor_zwanzig"), "other"]
+PRUEFLING = PATHS[0] / ".claude/hooks/briefing_mail_validator.py"
+
+# === dict-index ===
+D = {"main": "/home/hem/gregor_zwanzig"}
+PRUEFLING = D["main"] + "/.claude/hooks/briefing_mail_validator.py"
+
+# === tupel-entpackung ===
+from pathlib import Path
+A, B = "/home/hem/gregor_zwanzig", ".claude/hooks/briefing_mail_validator.py"
+PRUEFLING = Path(A) / B
+
+# === kettenzuweisung ===
+from pathlib import Path
+MAIN = ALIAS = "/home/hem/gregor_zwanzig"
+PRUEFLING = Path(ALIAS) / ".claude/hooks/briefing_mail_validator.py"
+
+# === kettenzuweisung-drei-ziele ===
+from pathlib import Path
+A = B = C = "/home/hem/gregor_zwanzig"
+PRUEFLING = Path(C) / ".claude/hooks/prod_selftest.py"
+
+# === kettenzuweisung-pfad-objekt ===
+from pathlib import Path
+REPO = MAIN = Path("/home/hem/gregor_zwanzig")
+PRUEFLING = REPO / ".claude/hooks/prod_selftest.py"
+
+# === kettenzuweisung-mischform ===
+from pathlib import Path
+BEIDE = MAIN, HOOK = "/home/hem/gregor_zwanzig", ".claude/hooks/design_fidelity_diff.py"
+PRUEFLING = Path(MAIN) / HOOK
+
+# === restentpackung ===
+from pathlib import Path
+MAIN, *REST = "/home/hem/gregor_zwanzig", "unbenutzt"
+PRUEFLING = Path(MAIN) / ".claude/hooks/briefing_mail_validator.py"
+
+# === restentpackung-ueberzaehlig ===
+from pathlib import Path
+MAIN, *REST = "/home/hem/gregor_zwanzig", "a", "b"
+PRUEFLING = Path(MAIN) / ".claude/hooks/briefing_mail_validator.py"
+
+# === tausch-kein-ladepfad ===
+from pathlib import Path
+MAIN = "/home/hem/gregor_zwanzig"
+OTHER = "not_repo"
+OTHER, MAIN = MAIN, OTHER
+PRUEFLING = Path(MAIN) / ".claude/hooks/briefing_mail_validator.py"
+
+# === tausch-echter-verstoss ===
+from pathlib import Path
+A = "/home/hem/gregor_zwanzig"
+B = "not_repo"
+A, B = B, A
+ECHT_VERSTOSS = Path(B) / ".claude/hooks/briefing_mail_validator.py"
+
+# === aliaskette-bis-obergrenze ===
+from pathlib import Path
+A0 = A1
+A1 = A2
+A2 = A3
+A3 = A4
+A4 = A5
+A5 = A6
+A6 = A7
+A7 = A8
+A8 = A9
+A9 = A10
+A10 = A11
+A11 = A12
+A12 = A13
+A13 = A14
+A14 = A15
+A15 = A16
+A16 = A17
+A17 = A18
+A18 = A19
+A19 = A20
+A20 = A21
+A21 = A22
+A22 = A23
+A23 = A24
+A24 = "/home/hem/gregor_zwanzig"
+PRUEFLING = Path(A0) / ".claude/hooks/prod_selftest.py"
+
+# === suchmuster-assert ===
+def test_kein_hauptrepo_bezug(tmp_path):
+    inhalt = (tmp_path / "x.txt").read_text()
+    assert "/home/hem/gregor_zwanzig/.claude/hooks/prod_selftest.py" not in inhalt
+
+# === nur-verzeichnisse ===
+from pathlib import Path
+MAIN_REPO = Path("/home/hem/gregor_zwanzig")
+HARDCODED_PREFIX = "/home/hem/gregor_zwanzig/.claude/hooks"
+REPO_DIR = Path("/home/hem/gregor_zwanzig") / "docs"
