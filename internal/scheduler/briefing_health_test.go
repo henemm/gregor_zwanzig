@@ -572,3 +572,145 @@ func writeCorruptTripsFile(t *testing.T, tmpDir, userID string, lastSkippedCount
 		t.Fatalf("write corrupt_trips.json: %v", err)
 	}
 }
+
+// Issue #1421: the real 2026-07-29 incident. providerErrorStreakGapThreshold
+// (2h) is applied when walking BACK from the newest error to find the streak
+// start, but was never checked FORWARD against "now" — so a streak that has
+// long since gone quiet keeps being reported as an ongoing outage. This test
+// reproduces the incident directly: a burst of four errors around 05:00:04
+// UTC, then silence, queried 8h later (the monitor's actual query pattern).
+//
+// AC-1: the ongoing-outage field must be empty once the newest error is
+// farther in the past than the gap threshold.
+// AC-3 (bundled): the 24h error-frequency count must be unaffected by AC-1 —
+// all four errors are still within the 24h window and must still be counted.
+//
+// Calls analyzeBriefingProviderErrors directly (not via HTTP): the function
+// already takes `now` as a parameter, so the incident's exact timestamps can
+// be reproduced without depending on wall-clock timing during the test run.
+func TestProviderErrorStreakEndsWhenQueriedLongAfterLastError(t *testing.T) {
+	tmpDir := t.TempDir()
+	incidentStart := time.Date(2026, 7, 29, 5, 0, 4, 0, time.UTC)
+	queriedAt := incidentStart.Add(8 * time.Hour)
+	writeDiagnosticsLog(t, tmpDir,
+		`{"ts":"`+incidentStart.Format(time.RFC3339)+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`,
+		`{"ts":"`+incidentStart.Add(15*time.Second).Format(time.RFC3339)+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`,
+		`{"ts":"`+incidentStart.Add(30*time.Second).Format(time.RFC3339)+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`,
+		`{"ts":"`+incidentStart.Add(45*time.Second).Format(time.RFC3339)+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`,
+	)
+
+	since, recent := analyzeBriefingProviderErrors(tmpDir, queriedAt)
+
+	if since != "" {
+		t.Errorf("streakSince: want empty (queried %v after last error, beyond the %v gap threshold), got %q",
+			queriedAt.Sub(incidentStart), providerErrorStreakGapThreshold, since)
+	}
+	if recent != 4 {
+		t.Errorf("recentCount: want 4 (all four errors still within 24h), got %d", recent)
+	}
+}
+
+// Issue #1421 AC-2 (the counter-proof — MUST stay green): a genuinely ongoing
+// outage with error gaps under the threshold, spread over several hours, must
+// keep reporting the true streak start. This guards against a fix that
+// silences real outages instead of just clearing finished ones.
+func TestProviderErrorStreakStaysOpenWhileGapsUnderThreshold(t *testing.T) {
+	tmpDir := t.TempDir()
+	now := time.Date(2026, 7, 29, 13, 0, 0, 0, time.UTC)
+	streakStart := now.Add(-6 * time.Hour)
+	writeDiagnosticsLog(t, tmpDir,
+		`{"ts":"`+streakStart.Format(time.RFC3339)+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`,
+		`{"ts":"`+streakStart.Add(90*time.Minute).Format(time.RFC3339)+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`,
+		`{"ts":"`+streakStart.Add(3*time.Hour).Format(time.RFC3339)+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`,
+		`{"ts":"`+streakStart.Add(4*time.Hour+30*time.Minute).Format(time.RFC3339)+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`,
+		// last error 90min before "now" — still within the gap threshold, so
+		// the outage must still read as ongoing.
+		`{"ts":"`+now.Add(-90*time.Minute).Format(time.RFC3339)+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`,
+	)
+
+	since, recent := analyzeBriefingProviderErrors(tmpDir, now)
+
+	want := streakStart.Format(time.RFC3339)
+	if since != want {
+		t.Errorf("streakSince: want %q (still-ongoing outage, all gaps <=90min), got %q", want, since)
+	}
+	if recent != 5 {
+		t.Errorf("recentCount: want 5, got %d", recent)
+	}
+}
+
+// Issue #1421 (adversary boundary check): the gap threshold must be applied
+// symmetrically forward and backward. A latest error just OUTSIDE the
+// threshold ends the outage; the existing backward walk
+// (briefing_health.go:242) treats a gap exactly AT the threshold as still
+// connected (">" not ">="), so the forward check must match that same
+// operator for consistency — this test picks "threshold + 1s" to stay
+// unambiguously on the "ended" side regardless of which operator is used.
+func TestProviderErrorStreakEndsJustOverGapThreshold(t *testing.T) {
+	tmpDir := t.TempDir()
+	now := time.Date(2026, 7, 29, 13, 0, 0, 0, time.UTC)
+	errAt := now.Add(-providerErrorStreakGapThreshold - time.Second)
+	writeDiagnosticsLog(t, tmpDir,
+		`{"ts":"`+errAt.Format(time.RFC3339)+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`,
+	)
+
+	if since, _ := analyzeBriefingProviderErrors(tmpDir, now); since != "" {
+		t.Errorf("gap %v (threshold+1s): want ended outage (empty streakSince), got %q", now.Sub(errAt), since)
+	}
+}
+
+// Issue #1421 (adversary boundary check, other direction): a latest error
+// just INSIDE the gap threshold must still read as an ongoing outage — the
+// fix must not shrink the threshold.
+func TestProviderErrorStreakStillOngoingJustUnderGapThreshold(t *testing.T) {
+	tmpDir := t.TempDir()
+	now := time.Date(2026, 7, 29, 13, 0, 0, 0, time.UTC)
+	errAt := now.Add(-providerErrorStreakGapThreshold + time.Second)
+	writeDiagnosticsLog(t, tmpDir,
+		`{"ts":"`+errAt.Format(time.RFC3339)+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`,
+	)
+
+	since, _ := analyzeBriefingProviderErrors(tmpDir, now)
+	want := errAt.Format(time.RFC3339)
+	if since != want {
+		t.Errorf("gap %v (threshold-1s): want ongoing outage, streakSince=%q, got %q", now.Sub(errAt), want, since)
+	}
+}
+
+// Issue #1421 AC-3 + AC-4: an outage that has ended (latest error farther in
+// the past than the gap threshold) must still surface its 24h error
+// frequency (AC-3), but the ongoing-outage field itself must be a real Go
+// nil — not the empty string — so the external monitor (which distinguishes
+// both) does not keep escalating a finished outage (AC-4).
+//
+// Calls sched.BriefingHealth() directly (not via HTTP/JSON round-trip): AC-4
+// requires the check at the map-building call site (briefing_health.go:118-121),
+// which decides whether to store the inner function's "" return value into the
+// map at all — not just at analyzeBriefingProviderErrors' return value.
+//
+// KEINE Mocks: real openmeteo_calls.jsonl in t.TempDir(), real BriefingHealth().
+func TestBriefingHealthEndedOutageKeepsCountButClearsStreakField(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newBriefingHealthTestScheduler(t, tmpDir, "tdd-1421-usera")
+
+	now := time.Now().UTC()
+	// Mirrors the real 2026-07-29 incident: a short burst of errors, then
+	// silence well beyond the 2h gap threshold (here: 8h, like the incident).
+	base := now.Add(-8 * time.Hour)
+	writeDiagnosticsLog(t, tmpDir,
+		`{"ts":"`+base.Format(time.RFC3339)+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`,
+		`{"ts":"`+base.Add(15*time.Second).Format(time.RFC3339)+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`,
+		`{"ts":"`+base.Add(30*time.Second).Format(time.RFC3339)+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`,
+		`{"ts":"`+base.Add(45*time.Second).Format(time.RFC3339)+`","endpoint":"/v1/dwd-icon","status":503,"source":"briefing","error":null}`,
+	)
+
+	bh := sched.BriefingHealth()
+
+	if got := bh["provider_errors_recent_count"]; got != 4 {
+		t.Errorf("provider_errors_recent_count: want 4 (AC-3: 24h frequency must survive), got %v", got)
+	}
+	if got := bh["provider_error_streak_since"]; got != nil {
+		t.Errorf("provider_error_streak_since: want real nil (AC-1/AC-4: outage ended 8h ago, beyond the %v gap threshold), got %#v (%T)",
+			providerErrorStreakGapThreshold, got, got)
+	}
+}

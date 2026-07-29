@@ -116,7 +116,12 @@ func (s *Scheduler) BriefingHealth() map[string]any {
 		// the intra-Open-Meteo fallback. An external monitor computes
 		// now - provider_error_streak_since to escalate with outage duration.
 		if since, recent := analyzeBriefingProviderErrors(s.store.DataDir, time.Now().UTC()); recent > 0 {
-			providerErrorStreakSince = since
+			// Issue #1421 AC-4: since is "" when the streak has ended (see
+			// analyzeBriefingProviderErrors) — only assign it when non-empty,
+			// so the map carries a real nil rather than the empty string.
+			if since != "" {
+				providerErrorStreakSince = since
+			}
 			providerErrorsRecentCount = recent
 		}
 	}
@@ -180,10 +185,16 @@ func aggregateCorruptTrips(dataDir string) (int, string) {
 
 // providerErrorStreakGapThreshold is the maximum gap between two consecutive
 // briefing provider errors that still counts as one contiguous outage streak.
-// Chosen at 2h: briefing slots fire on roughly hourly cadence, so a genuinely
-// persistent channel outage produces errors well within 2h of each other,
-// while an isolated older error starts a fresh streak rather than inflating an
-// ongoing one.
+// It marks where "ongoing outage" ends and "over" begins, both looking back
+// from the newest error (streak start) and forward to now (streak end,
+// Issue #1421). Chosen deliberately short: without it, a single brief
+// external-provider hiccup would otherwise keep reporting an outage for
+// hours (the #1421 incident). This does NOT create a monitoring gap between
+// briefing slots (which run morning/evening, ~12h apart, not hourly) —
+// check-gregor20.sh polls all weather sources directly every 5 minutes on
+// the same heartbeat, independent of this counter, so a genuinely ongoing
+// outage is still caught even while no briefing is running. This signal
+// answers a narrower question: are briefings themselves currently affected?
 const providerErrorStreakGapThreshold = 2 * time.Hour
 
 // analyzeBriefingProviderErrors scans the diagnostics log for briefing provider
@@ -235,9 +246,18 @@ func analyzeBriefingProviderErrors(dataDir string, now time.Time) (string, int) 
 		}
 	}
 
+	// Issue #1421: the gap threshold must also apply FORWARD, against "now".
+	// If the most recent error is itself further in the past than the
+	// threshold, the streak has ended — no ongoing outage to report, even
+	// though errorTimes is non-empty and recentCount may still be >0.
+	newest := errorTimes[len(errorTimes)-1]
+	if now.Sub(newest) > providerErrorStreakGapThreshold {
+		return "", recentCount
+	}
+
 	// streakSince: walk back from the most recent error while adjacent errors
 	// stay within the gap threshold — the start of the ongoing outage.
-	streakStart := errorTimes[len(errorTimes)-1]
+	streakStart := newest
 	for i := len(errorTimes) - 1; i > 0; i-- {
 		if errorTimes[i].Sub(errorTimes[i-1]) > providerErrorStreakGapThreshold {
 			break
