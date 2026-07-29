@@ -71,15 +71,25 @@ def _build_segment_with_full_day_data(start_h, end_h, peak_h, peak_val):
 
 def test_pills_respect_segment_window():
     """
-    GIVEN ein Segment von 08:00 bis 12:00 UTC.
-    AND ein Wind-Peak von 95 km/h um 02:00 UTC (außerhalb).
+    GIVEN ein Segment von 08:00 bis 12:00 UTC (= 10:00-14:00 Ortszeit CEST).
+    AND ein Wind-Peak von 95 km/h um 00:00 UTC (= 02:00 Ortszeit, echt
+    ausserhalb des Tagesfensters 04:00-19:00 Ortszeit, day_window.py).
     WHEN build_metrics_summary_pills aufgerufen wird.
     THEN darf die Pille den Peak von 95 km/h NICHT enthalten.
+
+    Nachzug zu Epic #1319 Scheibe A (`087f643f`, 2026-07-19): dort wechselte
+    die Boeen-Kachel ueber `_DAY_WINDOW_PILL_IDS` vom Gehzeit- auf das
+    Tagesfenster 04-19 Ortszeit. Der bisherige Fixture-Peak lag bei 02:00 UTC
+    = 04:00 Ortszeit, also exakt in dessen ERSTER Stunde — die Kachel nahm ihn
+    seither zu Recht auf, waehrend dieser Test auf der alten Erwartung stehen
+    blieb und rot lag. Der Nachbartest
+    `test_compact_summary_respects_segment_window` bekam denselben Nachzug
+    bereits mit #1330 (`d042e911`, 2026-07-21); dieser hier blieb liegen.
     """
     from src.output.renderers.email.helpers import build_metrics_summary_pills
     
-    # Peak 95 um 02:00 UTC, Segment ist 08:00-12:00
-    seg = _build_segment_with_full_day_data(start_h=8, end_h=12, peak_h=2, peak_val=95.0)
+    # Peak 95 um 00:00 UTC (02:00 Ortszeit), Segment ist 08:00-12:00 UTC
+    seg = _build_segment_with_full_day_data(start_h=8, end_h=12, peak_h=0, peak_val=95.0)
     
     pills = build_metrics_summary_pills([seg], ["gust"], {}, tz=TZ)
     texts = [t for t, _ in pills]
