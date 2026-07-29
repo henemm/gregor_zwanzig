@@ -1618,31 +1618,6 @@ def _pill_for_metric(
 _DAY_WINDOW_PILL_IDS = frozenset({"wind", "gust", "precipitation", "rain_probability", "thunder"})
 
 
-def _collect_hiking_window_dps(segments: list) -> list:
-    """Alte Wanderzeit-Fensterung (vor #1317/day_window) — pro Segment
-    inklusiver Start/exklusives Ende, letztes Segment inklusive Ende (Bug
-    #1146/#807). Bleibt die Quelle fuer Temperatur/gefuehlte Temperatur und
-    alle Pillen ausserhalb von ``_DAY_WINDOW_PILL_IDS``."""
-    all_dps = []
-    last_idx = len(segments) - 1
-    for idx, seg_data in enumerate(segments):
-        ts = getattr(seg_data, "timeseries", None)
-        if ts is not None:
-            s = seg_data.segment
-            s_h = s.start_time.hour
-            e_h = s.end_time.hour
-            is_last = idx == last_idx
-            for dp in ts.data:
-                h = dp.ts.hour
-                if s_h <= e_h:
-                    include = (s_h <= h <= e_h) if is_last else (s_h <= h < e_h)
-                else:
-                    include = (h >= s_h or h <= e_h) if is_last else (h >= s_h or h < e_h)
-                if include:
-                    all_dps.append(dp)
-    return all_dps
-
-
 def build_metrics_summary_pills(
     segments: list,
     metric_ids: list[str],
@@ -1669,7 +1644,7 @@ def build_metrics_summary_pills(
         Telegram-Fusszeile (ADR-0025-Konsistenz). Temperatur/gefuehlte
         Temperatur und alle uebrigen Pillen bleiben auf der Wanderzeit-Quelle
         (QA-Nachtrag: sonst widerspricht die Temperatur-Kachel den SMS-Token
-        N/D — s. ``_collect_hiking_window_dps``).
+        N/D — s. ``day_window.collect_hiking_window_points``).
     has_gap: Issue #1331/#1334 F002 — vom Aufrufer bereits per
         ``notification_service.compute_has_gap()`` (aus
         ``day_window.build_day_window_points()``) ermittelte
@@ -1684,12 +1659,16 @@ def build_metrics_summary_pills(
         ausdruecklich leere Liste heisst „keine Kachel" (AC-8).
     Returns list of (text, tone) tuples in catalog order.
     """
-    from output.renderers.day_window import build_day_window_points
+    from output.renderers.day_window import (
+        build_day_window_points, collect_hiking_window_points,
+    )
     window_dps = build_day_window_points(
         segments, night_weather, tz,
         start_hour=day_window_start_hour, end_hour=day_window_end_hour,
     )
-    hiking_dps = _collect_hiking_window_dps(segments)
+    # Issue #1417: dieselbe Quelle, aus der SMS/Telegram/Kurzzusammenfassung
+    # ihre Gehzeit-Extrema ziehen — kein zweiter Rechenweg mehr.
+    hiking_dps = collect_hiking_window_points(segments)
 
     # Render in catalog order
     ids_set = set(metric_ids)

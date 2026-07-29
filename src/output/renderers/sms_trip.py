@@ -29,6 +29,7 @@ from output.metric_format import thunder_label_value
 from output.renderers.alert.official_alerts import official_alerts_to_sms_entries
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, build_day_window_points,
+    collect_hiking_window_points, hiking_field_min_max,
     night_temp_min_c, night_wind_chill_min_c,
 )
 from output.renderers.sms import render_sms
@@ -139,21 +140,34 @@ def _segments_to_normalized_forecast(
     if not segments:
         raise ValueError("Cannot build forecast: no segments")
 
-    temps_min = [s.aggregated.temp_min_c for s in segments
-                 if s.aggregated.temp_min_c is not None]
-    temps_max = [s.aggregated.temp_max_c for s in segments
-                 if s.aggregated.temp_max_c is not None]
-    day_min = min(temps_min) if temps_min else None
-    day_max = max(temps_max) if temps_max else None
-    # Issue #1410: gefuehlte Gehzeit-Extrema exakt wie die gemessenen ueber die
-    # Segmente aggregiert -- dieselbe zeitgefilterte Zeitreihe, kein neuer
-    # Rechenweg (F3, services/segment_weather.py:254-281).
-    felt_min_vals = [s.aggregated.wind_chill_min_c for s in segments
-                     if s.aggregated.wind_chill_min_c is not None]
-    felt_max_vals = [s.aggregated.wind_chill_max_c for s in segments
-                     if s.aggregated.wind_chill_max_c is not None]
-    felt_min = min(felt_min_vals) if felt_min_vals else None
-    felt_max = max(felt_max_vals) if felt_max_vals else None
+    # Issue #1417: K/D/FK/FD kommen aus der GETEILTEN Gehzeit-Fensterung
+    # (day_window.collect_hiking_window_points) -- exakt derselben Punktliste,
+    # aus der die Mail-Kachelzeile ihre Spanne bildet. Vorher las diese Stelle
+    # `s.aggregated.*`, das die Ankunftsstunde des letzten Etappenteils
+    # ausschliesst (segment_weather.py:254-273) -- daher Mail `13-17°C` vs.
+    # SMS `K13 D16` fuer dieselbe Etappe. Issue #1410 (gefuehlt) verhaelt sich
+    # dabei weiterhin exakt wie die gemessene Temperatur (F3).
+    _hiking_points = collect_hiking_window_points(segments)
+    _temp_extrema = hiking_field_min_max(_hiking_points, "t2m_c")
+    _felt_extrema = hiking_field_min_max(_hiking_points, "wind_chill_c")
+
+    def _agg(field_min: str, field_max: str) -> tuple[Optional[float], Optional[float]]:
+        """Fail-soft: kein Etappenteil mit verwertbarer Zeitreihe (z. B. alle
+        has_error, Bug-#398-Rueckfall) -> bisheriges Segment-Aggregat."""
+        lows = [getattr(s.aggregated, field_min) for s in segments
+                if getattr(s.aggregated, field_min) is not None]
+        highs = [getattr(s.aggregated, field_max) for s in segments
+                 if getattr(s.aggregated, field_max) is not None]
+        return (min(lows) if lows else None), (max(highs) if highs else None)
+
+    if _temp_extrema is not None:
+        day_min, day_max = _temp_extrema[0], _temp_extrema[1]
+    else:
+        day_min, day_max = _agg("temp_min_c", "temp_max_c")
+    if _felt_extrema is not None:
+        felt_min, felt_max = _felt_extrema[0], _felt_extrema[1]
+    else:
+        felt_min, felt_max = _agg("wind_chill_min_c", "wind_chill_max_c")
     # Issue #1319 Scheibe D (DEC-1): abends echte Nacht-Tiefsttemperatur am
     # Schlafplatz -- fail-soft auf den Gehzeit-Tiefstwert, wenn night_weather
     # fehlt oder das Nachtfenster keine Punkte liefert (AC-6 dort).

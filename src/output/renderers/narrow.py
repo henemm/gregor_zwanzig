@@ -23,13 +23,13 @@ if TYPE_CHECKING:
 
 from app.metric_catalog import get_metric
 from app.models import SegmentWeatherData, StabilityResult, ThunderLevel, UnifiedWeatherDisplayConfig
-from utils.timezone import local_fmt
+from utils.timezone import local_fmt, local_hour
 
 from output.renderers.alert.render import _esc
 from output.renderers.channel_layout import render_for_channel
 from output.renderers.day_window import (
-    DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, night_temp_min_c,
-    night_wind_chill_min_c,
+    DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, collect_hiking_window_points,
+    hiking_field_min_max, night_temp_min_c, night_wind_chill_min_c,
 )
 from output.renderers.email.helpers import fmt_val, format_trend_tokens
 from output.renderers.email.unavailable_hint import (
@@ -370,6 +370,8 @@ def _overview_line(
     metric_id: str, seg_tables: list[list[dict]], fkeys: set[str],
     *, report_type: str = "evening", night_min_c: Optional[float] = None,
     night_wind_chill_min_c: Optional[float] = None,
+    hiking_temp_extrema: Optional[tuple[float, float, str]] = None,
+    hiking_felt_extrema: Optional[tuple[float, float, str]] = None,
 ) -> str:
     """Eine Kurzübersicht-Zeile ``{Kürzel} {Min}-{Max}@{Peak-Stunde}`` (oder
     Einzelwert/kategorisch).
@@ -393,22 +395,43 @@ def _overview_line(
     Morgen-Sonderzweig (nur Max-Wert, DEC-2 aus night_temp_evening_only.md)
     ersatzlos entfernt: morgens laeuft die Funktion in ihren generischen Pfad
     und zeigt die Spanne ueber die Gehzeit-Stunden -- ohne neue Datenquelle.
+
+    ``hiking_temp_extrema``/``hiking_felt_extrema`` (Issue #1417):
+    ``(min, max, Spitzenstunde)`` aus der geteilten Gehzeit-Quelle
+    ``day_window.collect_hiking_window_points()``, NUR fuer ``temperature``/
+    ``wind_chill``. Sie ersetzen fuer diese zwei Groessen die bisherige
+    Ableitung aus ``seg_tables`` -- die ist je Segment beidseitig inklusiv und
+    damit ein DRITTER, eigener Rechenweg fuer dieselbe Aussage. Fehlen sie
+    (keine verwertbare Zeitreihe), bleibt es fail-soft beim
+    ``seg_tables``-Weg. Alle uebrigen Metriken sind unberuehrt.
     """
     label = _compact_label(metric_id)
     key = _col_key(metric_id)
     if key is None:
         return f"{label} –"
 
+    hiking = None
+    if metric_id == "temperature":
+        hiking = hiking_temp_extrema
+    elif metric_id == "wind_chill":
+        hiking = hiking_felt_extrema
+
     hits = [r for rows in seg_tables for r in rows if r.get(key) is not None]
-    if not hits:
+    if not hits and hiking is None:
         return f"{label} –"
 
     try:
-        nums = [float(h[key]) for h in hits]
-        lo_row = hits[nums.index(min(nums))]
-        hi_row = hits[nums.index(max(nums))]
-        lo = _cell(metric_id, lo_row, fkeys)
-        hi = _cell(metric_id, hi_row, fkeys)
+        if hiking is not None:
+            lo = fmt_val(key, hiking[0], friendly_keys=fkeys)
+            hi = fmt_val(key, hiking[1], friendly_keys=fkeys)
+            peak_hour = hiking[2]
+        else:
+            nums = [float(h[key]) for h in hits]
+            lo_row = hits[nums.index(min(nums))]
+            hi_row = hits[nums.index(max(nums))]
+            lo = _cell(metric_id, lo_row, fkeys)
+            hi = _cell(metric_id, hi_row, fkeys)
+            peak_hour = hi_row.get("time", "")
         if metric_id in ("temperature", "wind_chill") and report_type == "evening":
             _night_val = (night_min_c if metric_id == "temperature"
                           else night_wind_chill_min_c)
@@ -417,7 +440,6 @@ def _overview_line(
         if lo == hi:
             value = lo
         else:
-            peak_hour = hi_row.get("time", "")
             value = f"{lo}-{hi}@{peak_hour}" if peak_hour else f"{lo}-{hi}"
     except (TypeError, ValueError):
         if metric_id == "thunder":
@@ -519,6 +541,21 @@ def render_telegram_bubbles(
     # Issue #1410 (F4): dieselbe Berechnung fuer die gefuehlte Temperatur.
     _night_felt_min_c = night_wind_chill_min_c(night_weather, segments, tz)
 
+    # Issue #1417: EINE Gehzeit-Berechnung, an die Kurzuebersicht-Zeilen fuer
+    # Temperatur/gefuehlte Temperatur durchgereicht -- dieselbe Quelle wie
+    # Mail-Kachelzeile, SMS und Kurzzusammenfassung. `max_ts` derselben
+    # Ableitung liefert die Spitzenstunde (Format wie `_dp_to_row`: `%02d`).
+    _hiking_points = collect_hiking_window_points(segments)
+
+    def _extrema(field: str) -> Optional[tuple[float, float, str]]:
+        found = hiking_field_min_max(_hiking_points, field)
+        if found is None:
+            return None
+        return found[0], found[1], f"{local_hour(found[2], tz):02d}"
+
+    _hiking_temp = _extrema("t2m_c")
+    _hiking_felt = _extrema("wind_chill_c")
+
     # 1. Kopf-Bubble.
     head_lines: list[str] = []
     if trip_name:
@@ -555,6 +592,8 @@ def render_telegram_bubbles(
             mid, seg_tables, fkeys, report_type=report_type,
             night_min_c=_night_min_c,
             night_wind_chill_min_c=_night_felt_min_c,
+            hiking_temp_extrema=_hiking_temp,
+            hiking_felt_extrema=_hiking_felt,
         )), _TG_PROSE_WIDTH))
     # Issue #1331/#1334 F008: has_gap kommt als expliziter Parameter vom
     # echten Versandpfad (notification_service.compute_has_gap() aus

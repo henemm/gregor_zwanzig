@@ -26,6 +26,7 @@ from app.models import (
 from services.weather_metrics import aggregate_stage
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, build_day_window_points,
+    collect_hiking_window_points, hiking_field_min_max,
     night_temp_min_c, night_wind_chill_min_c,
 )
 from output.renderers.email.helpers import format_temp_span
@@ -86,6 +87,14 @@ class CompactSummaryFormatter:
         night_min_c = night_temp_min_c(night_weather, segments, tz)
         # Issue #1410 (F4): dieselbe Ableitung fuer die gefuehlte Temperatur.
         night_felt_min_c = night_wind_chill_min_c(night_weather, segments, tz)
+        # Issue #1417: Temperatur/gefuehlte Temperatur des Satzes kommen aus
+        # DERSELBEN Gehzeit-Punktliste wie Mail-Kachelzeile, SMS und Telegram
+        # -- statt aus `_aggregate()`, das die Ankunftsstunde ausschliesst.
+        # `_aggregate()` bleibt unveraendert Quelle fuer Wolken/Wind/Regen/
+        # Gewitter (nur diese zwei Groessen wechseln die Quelle).
+        _points = collect_hiking_window_points(segments)
+        _temp = hiking_field_min_max(_points, "t2m_c")
+        _felt = hiking_field_min_max(_points, "wind_chill_c")
         return self.format_weather_summary(
             self._aggregate(segments),
             self._collect_hourly_data(
@@ -99,6 +108,10 @@ class CompactSummaryFormatter:
             report_type=report_type,
             night_min_c=night_min_c,
             night_wind_chill_min_c=night_felt_min_c,
+            hiking_min_c=_temp[0] if _temp else None,
+            hiking_max_c=_temp[1] if _temp else None,
+            hiking_felt_min_c=_felt[0] if _felt else None,
+            hiking_felt_max_c=_felt[1] if _felt else None,
         )
 
     def format_weather_summary(
@@ -112,9 +125,19 @@ class CompactSummaryFormatter:
         report_type: str = "evening",
         night_min_c: Optional[float] = None,
         night_wind_chill_min_c: Optional[float] = None,
+        hiking_min_c: Optional[float] = None,
+        hiking_max_c: Optional[float] = None,
+        hiking_felt_min_c: Optional[float] = None,
+        hiking_felt_max_c: Optional[float] = None,
     ) -> str:
         """Kontextneutraler Kern (Issue #1278): ``(summary, hourly, titel, dc,
         tz) -> Fliesstext``.
+
+        ``hiking_*`` (Issue #1417): Gehzeit-Extrema aus der geteilten Quelle
+        ``day_window.collect_hiking_window_points()``. Gesetzt nur im
+        Trip-Kontext (``format_stage_summary``); im Ortsvergleich
+        (``format_location_summary``) bleiben sie ``None``, wodurch dieser Pfad
+        exakt beim bisherigen ``summary.temp_min_c``/``temp_max_c`` bleibt.
 
         Kennt weder Etappen noch Orte — nur ein Aggregat, eine Stundenliste und
         einen bereits fertigen Titel. Beide Aufrufkontexte (``route`` = Etappe,
@@ -150,6 +173,7 @@ class CompactSummaryFormatter:
             t = self._format_temperature(
                 summary, enabled["temperature"].use_friendly_format,
                 report_type=report_type, night_min_c=night_min_c,
+                hiking_min_c=hiking_min_c, hiking_max_c=hiking_max_c,
             )
             if t:
                 parts.append(t)
@@ -160,6 +184,8 @@ class CompactSummaryFormatter:
             ft = self._format_felt_temperature(
                 summary, report_type=report_type,
                 night_wind_chill_min_c=night_wind_chill_min_c,
+                hiking_felt_min_c=hiking_felt_min_c,
+                hiking_felt_max_c=hiking_felt_max_c,
             )
             if ft:
                 parts.append(ft)
@@ -248,18 +274,28 @@ class CompactSummaryFormatter:
         *,
         report_type: str = "evening",
         night_min_c: Optional[float] = None,
+        hiking_min_c: Optional[float] = None,
+        hiking_max_c: Optional[float] = None,
     ) -> Optional[str]:
-        if summary is None:
-            return None
-        t_max = summary.temp_max_c
+        # Issue #1417 AC-10: die Gehzeit-Werte ueberstimmen das Etappen-Aggregat
+        # und dessen Frueh-Ausstieg. `_aggregate()` liefert ein leeres Aggregat,
+        # sobald `SegmentWeatherSummary.aggregation_config` fehlt (Default `{}`,
+        # models.py:403; nur compute_basis_/extended_metrics fuellt sie) --
+        # dann verschwand der Temperaturteil, waehrend die Kachelzeile
+        # derselben Mail eine Spanne zeigte. Fail-soft-Ruecksprung auf
+        # `summary.*`, wenn keine Gehzeit-Punkte vorliegen.
+        _agg_min = summary.temp_min_c if summary is not None else None
+        _agg_max = summary.temp_max_c if summary is not None else None
+        t_max = hiking_max_c if hiking_max_c is not None else _agg_max
+        _hike_min = hiking_min_c if hiking_min_c is not None else _agg_min
         # Issue #1319 Scheibe D (DEC-1) bleibt gueltig: abends ist die
         # Untergrenze die echte Nacht-Tiefsttemperatur am Ziel.
         # Issue #1410 (F1) loest DEC-2 ab: morgens erscheint jetzt ebenfalls
         # eine Spanne -- Untergrenze ist die kaelteste Gehzeit-Stunde.
         if report_type == "morning":
-            t_min = summary.temp_min_c
+            t_min = _hike_min
         else:
-            t_min = night_min_c if night_min_c is not None else summary.temp_min_c
+            t_min = night_min_c if night_min_c is not None else _hike_min
         if t_min is None and t_max is None:
             return None
         if t_min is not None and t_max is not None:
@@ -273,6 +309,8 @@ class CompactSummaryFormatter:
         *,
         report_type: str = "evening",
         night_wind_chill_min_c: Optional[float] = None,
+        hiking_felt_min_c: Optional[float] = None,
+        hiking_felt_max_c: Optional[float] = None,
     ) -> Optional[str]:
         """Gefuehlter Temperaturteil ``"gef. {min}–{max}°C"`` (Issue #1410).
 
@@ -283,14 +321,17 @@ class CompactSummaryFormatter:
         der geteilten ``format_temp_span()`` (kein Nachbau der Kachelzeile);
         ``decimals=0`` haelt den Satz konsistent zum gemessenen Teil.
         """
-        if summary is None:
-            return None
-        f_max = summary.wind_chill_max_c
+        # Issue #1417 AC-10: Parallelstruktur zu `_format_temperature` --
+        # Gehzeit-Werte ueberstimmen das Aggregat, Fail-soft zurueck darauf.
+        _agg_min = summary.wind_chill_min_c if summary is not None else None
+        _agg_max = summary.wind_chill_max_c if summary is not None else None
+        f_max = hiking_felt_max_c if hiking_felt_max_c is not None else _agg_max
+        _hike_min = hiking_felt_min_c if hiking_felt_min_c is not None else _agg_min
         if report_type == "morning":
-            f_min = summary.wind_chill_min_c
+            f_min = _hike_min
         else:
             f_min = (night_wind_chill_min_c if night_wind_chill_min_c is not None
-                     else summary.wind_chill_min_c)
+                     else _hike_min)
         if f_min is None and f_max is None:
             return None
         lo = f_min if f_min is not None else f_max

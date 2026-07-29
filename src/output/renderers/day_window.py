@@ -13,7 +13,7 @@ Scheibe B durch einen konfigurierbaren Wert ersetzt.
 from __future__ import annotations
 
 import dataclasses
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Optional, Sequence
 from zoneinfo import ZoneInfo
 
@@ -191,6 +191,70 @@ def build_day_window_points(
             by_hour.setdefault(h, []).append(dp)
 
     return [_merge_hour(by_hour[h]) for h in sorted(by_hour)]
+
+
+def collect_hiking_window_points(
+    segments: Sequence[SegmentWeatherData],
+) -> list[ForecastDataPoint]:
+    """Gehzeit-Fenster je Segment: inklusiver Start, EXKLUSIVES Ende — ausser
+    beim LETZTEN verwertbaren Segment eines Reports, dessen Ende INKLUSIV
+    zaehlt (Bug #1146: die Ankunftsstunde ist erlebte Gehzeit). Innere
+    Segmentgrenzen bleiben dadurch exakt einmal gezaehlt (#806/#807).
+
+    EINZIGE Quelle fuer Temperatur/gefuehlte Temperatur in Mail-Kachelzeile,
+    SMS, Telegram-Kurzuebersicht und E-Mail-Kurzzusammenfassung (Issue #1417).
+    Verschoben aus ``email/helpers.py::_collect_hiking_window_dps()``; Logik
+    unveraendert bis auf AC-9 (s.u.).
+
+    Issue #1417 AC-9: „letztes Segment" wird ueber die VERWERTBAREN Teile
+    bestimmt, nicht ueber die Rohliste. Faellt der letzte Teil aus (Provider-
+    Fehler -> ``timeseries is None``), ist der davorliegende Teil die
+    tatsaechliche Ankunft und behaelt seine Endstunde — vorher verlor er sie,
+    weil ein ausgefallener Teil hinter ihm stand.
+
+    Bewusst NICHT geaendert: die naive ``.hour``-Verwendung (kein
+    ``local_hour(dp.ts, tz)``) — bestehendes Verhalten der Mail-Kachelzeile,
+    die Funktion nimmt bis heute keinen ``tz``-Parameter (s. Spec „Known
+    Limitations").
+    """
+    usable = [s for s in segments if getattr(s, "timeseries", None) is not None]
+    all_dps: list[ForecastDataPoint] = []
+    last_idx = len(usable) - 1
+    for idx, seg_data in enumerate(usable):
+        s = seg_data.segment
+        s_h = s.start_time.hour
+        e_h = s.end_time.hour
+        is_last = idx == last_idx
+        for dp in seg_data.timeseries.data:
+            h = dp.ts.hour
+            if s_h <= e_h:
+                include = (s_h <= h <= e_h) if is_last else (s_h <= h < e_h)
+            else:
+                include = (h >= s_h or h <= e_h) if is_last else (h >= s_h or h < e_h)
+            if include:
+                all_dps.append(dp)
+    return all_dps
+
+
+def hiking_field_min_max(
+    points: Sequence[ForecastDataPoint], field: str,
+) -> Optional[tuple[float, float, datetime]]:
+    """``(min_value, max_value, max_ts)`` fuer EIN ``ForecastDataPoint``-Feld aus
+    bereits gefensterten Rohpunkten (``collect_hiking_window_points()``).
+
+    ``max_ts`` bedient sowohl den Mail-Zeitanker (``· Max HH:00``) als auch die
+    Telegram-Spitzenstunde (``@{h}``) — EINE Ableitung, zwei Verwendungen statt
+    zweier paralleler Berechnungen. ``None``, wenn kein Punkt das Feld traegt
+    (Fail-soft-Signal an den Aufrufer, der dann auf seine bisherige Quelle
+    zurueckfaellt). Muster wie ``_night_min_of_field()`` (Issue #1410).
+    """
+    vals_ts = [(getattr(dp, field, None), dp.ts) for dp in points]
+    vals_ts = [(float(v), ts) for v, ts in vals_ts if v is not None]
+    if not vals_ts:
+        return None
+    min_val = min(v for v, _ in vals_ts)
+    max_val, max_ts = max(vals_ts, key=lambda x: x[0])
+    return min_val, max_val, max_ts
 
 
 def _night_min_of_field(
