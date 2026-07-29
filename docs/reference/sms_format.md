@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.12"
+version: "2.13"
 status: active
 created: 2025-12-27
-updated: 2026-07-28
+updated: 2026-07-29
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -13,7 +13,7 @@ tags: [sms, compact, tokens, single-source-of-truth]
 - [x] Approved (v2.0 am 2026-04-25)
 - [x] Implementiert in SMS-Adapter via `src/output/renderers/sms/` (β3, 2026-04-28)
 
-# SMS / Kompakt-Format Specification (v2.12)
+# SMS / Kompakt-Format Specification (v2.13)
 
 **Single Source of Truth** für die kompakte Token-Zeile, die in allen Channels (SMS, Satellit, E-Mail-Header, Push) identisch verwendet wird. Alle anderen Repräsentationen (E-Mail-Body, Tabellen, Push-Titel) leiten sich aus dieser Token-Zeile ab.
 
@@ -97,11 +97,11 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | Token | Bedeutung | Quelle (DTO-Feld) | Beispiel |
 |-------|-----------|-------------------|----------|
 | `N{temp}` / `N-` (**nur Abendbriefing**) | Nacht-Tiefsttemperatur °C am Schlafplatz, ganzzahlig — Fenster Ankunft→06:00 Folgetag am Etappenziel, NICHT das Tagessegment-Minimum. Im Morgenbriefing entfällt der Token komplett (kein `N-`). | `night_temp_min_c()` aus `night_weather` (Fallback: Tagessegment-`temp_min_c`, wenn `night_weather` fehlt/leer) | `N9` |
-| `K{temp}` / `K-` | Tiefsttemperatur **unterwegs** °C, ganzzahlig — kälteste Stunde der Gehzeit. Erscheint in BEIDEN Report-Typen und ist von `N` (Nacht am Schlafplatz) zu unterscheiden. | Alle GEO-Punkte der Etappe, MIN über `temp_min_c` (gleiches Gehzeit-Fenster wie `D`) | `K3` |
-| `D{temp}` / `D-` | Tag-Max °C, ganzzahlig | Alle GEO-Punkte der Etappe, MAX über `temp_max_c` | `D24` |
+| `K{temp}` / `K-` | Tiefsttemperatur **unterwegs** °C, ganzzahlig — kälteste Stunde der Gehzeit. Erscheint in BEIDEN Report-Typen und ist von `N` (Nacht am Schlafplatz) zu unterscheiden. | `day_window.collect_hiking_window_points()` → `hiking_field_min_max("t2m_c")`, MIN (Issue #1417) | `K3` |
+| `D{temp}` / `D-` | Tag-Max °C, ganzzahlig — genauer: Höchstwert **während der Gehzeit**, nicht der Kalendertag (s. Hinweis unter der Tabelle) | dieselbe Quelle wie `K`, MAX | `D24` |
 | `FN{temp}` / `FN-` (**nur Abendbriefing**, nur bei aktivierter Metrik) | **Gefühlte** Nacht-Tiefsttemperatur °C am Schlafplatz — Parität zu `N`, gleiches Fenster Ankunft→06:00 Folgetag. | `night_wind_chill_min_c()` aus `night_weather` (Fallback: Gehzeit-`wind_chill_min_c`) | `FN6` |
-| `FK{temp}` / `FK-` (nur bei aktivierter Metrik) | **Gefühlte** Tiefsttemperatur unterwegs °C — Parität zu `K`, identisches Gehzeit-Fenster. | Alle GEO-Punkte der Etappe, MIN über `wind_chill_min_c` | `FK1` |
-| `FD{temp}` / `FD-` (nur bei aktivierter Metrik) | **Gefühlte** Tages-Höchsttemperatur °C — Parität zu `D`. | Alle GEO-Punkte der Etappe, MAX über `wind_chill_max_c` | `FD18` |
+| `FK{temp}` / `FK-` (nur bei aktivierter Metrik) | **Gefühlte** Tiefsttemperatur unterwegs °C — Parität zu `K`, identisches Gehzeit-Fenster. | dieselbe Quelle wie `K`, aber `hiking_field_min_max("wind_chill_c")`, MIN | `FK1` |
+| `FD{temp}` / `FD-` (nur bei aktivierter Metrik) | **Gefühlte** Höchsttemperatur während der Gehzeit °C — Parität zu `D`. | dieselbe Quelle wie `FK`, MAX | `FD18` |
 | `R{mm}@{h}({max}@{h})` / `R-` | Regen Threshold@Stunde + Peak | Hourly `precip_1h_mm`, Threshold aus `config.rain_amount_threshold` | `R0.2@6(1.4@16)` |
 | `PR{p}%@{h}({max}%@{h})` / `PR-` | Regenwahrscheinlichkeit Threshold + Peak (Issue #887: auch SMS via `pop_hourly` aus `agg.pop_max_pct` synthetisiert) | Hourly `pop_pct`, Threshold aus `config.rain_probability_threshold` | `PR20%@11(100%@17)` |
 | `W{v}@{h}({max}@{h})` / `W-` | Wind km/h Threshold + Peak | Hourly `wind10m_kmh`, Threshold aus `config.wind_speed_threshold` | `W10@11(15@17)` |
@@ -114,6 +114,26 @@ hat `N` keine feste Sichtbarkeit — es erscheint ausschließlich im Abendbriefi
 echte kommende Nacht am Schlafplatz (`night_weather`, Ankunft→06:00 Folgetag), dieselbe Quelle wie
 die große E-Mail-Tabelle „🌙 Nacht am Ziel" (die unverändert bleibt). Fällt `night_weather` aus, greift
 fail-soft der alte Tagessegment-Minimum-Wert. Spec: `docs/specs/modules/night_temp_evening_only.md`.
+
+**EINE Gehzeit-Berechnung fuer alle Kanaele (Issue #1417, 2026-07-29):** `K`, `D`,
+`FK` und `FD` stammen aus derselben Quelle wie die Mail-Kachelzeile, die
+E-Mail-Kurzzusammenfassung und die Telegram-Kurzuebersicht:
+`day_window.collect_hiking_window_points()`. Vorher existierten mehrere
+Implementierungen desselben Fensters — die Mail zaehlte die Ankunftsstunde des
+letzten Etappenteils mit (#1146), SMS und Telegram nicht (#806/#807) —, wodurch
+dieselbe Etappe je nach Kanal verschiedene Werte zeigte (`13–17°C` in der Mail
+gegen `K13 D16` in der Kurznachricht). Die geltende Regel: **Ankunftsstunde des
+letzten verwertbaren Teils inklusiv, innere Segmentgrenzen genau einmal.**
+Ausgefallene Etappenteile werden bei der Bestimmung des „letzten" Teils
+uebersprungen.
+
+**`D` ist NICHT das Tagesmaximum.** Trotz des Namens „Tag-Max" bezieht sich `D`
+— wie `K`/`FK`/`FD` — ausschliesslich auf die **Gehzeit**. Die tatsaechliche
+Tageshoechsttemperatur am Ziel kann deutlich hoeher liegen (belegtes Beispiel:
+`D16` bei realen 18,8 °C um 15:00). Das ist so gewollt (ADR-0025: die Temperatur
+zaehlt, was der Wanderer unterwegs erlebt); nur die Benennung ist historisch
+irrefuehrend. Regen/Gewitter/Wind zaehlen dagegen zusaetzlich die Stunden nach
+der Ankunft (Tagesfenster 04–19, s. `sms_daywindow_aggregation.md`).
 
 **Report-relativ, nicht kalender-relativ (Issue #1275):** `TH:` und `TH+:` beziehen sich auf die
 Etappe, über die der Report spricht — nicht auf „heute"/„morgen" im Kalendersinn. Im
@@ -487,6 +507,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.10 | 2026-07-23 | Compare-SMS zeigt jetzt denselben `!`-Warn-Block (Issue #1332, Bugfix) — `render_compare_sms` (`src/output/renderers/comparison.py`) nutzt `official_alerts_to_sms_entries`/`sms_symbol_for` aus demselben Katalog wie die Trip-Briefing-SMS; vorher zeigte die Compare-SMS gar keine amtlichen Warnungen |
 | 2.11 | 2026-07-23 | `N` (Nacht-Tiefsttemperatur) nur noch im Abendbriefing (Issue #1319 Scheibe D) — Morgenbriefing lässt den Token komplett weg (kein `N-`); Wert-Quelle wechselt abends von `SegmentWeatherSummary.temp_min_c` (Tagessegment) auf `night_weather` (Ankunft→06:00 Folgetag am Ziel), Fallback aufs alte Verhalten wenn `night_weather` fehlt; große E-Mail-Tabelle „🌙 Nacht am Ziel" bleibt unverändert. Spec: `docs/specs/modules/night_temp_evening_only.md` |
 | 2.12 | 2026-07-28 | Tiefsttemperatur unterwegs + gefühlte Temperatur in der SMS (Issue #1410, Epic #1372) — neue Token `K` (kälteste Gehzeit-Stunde, immer, neben `N`) sowie `FN`/`FK`/`FD` (gefühlte Parität zu `N`/`K`/`D`, nur bei aktivierter Metrik `wind_chill`); `N` liest jetzt das eigene DTO-Feld `night_temp_min_c` statt `temp_min_c` in-place zu überschreiben (`K` bleibt dadurch abends erhalten); Kürzungsreihenfolge um den Felt-Schritt VOR `PR` erweitert und der im Code seit jeher vorhandene Last-Resort-Schritt nachgetragen (Doku-Drift §6); `WC` als Legacy-CLI-only gekennzeichnet (§3.6/§9). Löst DEC-2 aus `night_temp_evening_only.md` ab (morgens jetzt Spanne statt Einzelwert). Spec: `docs/specs/modules/trip_min_temp_and_felt_shortforms.md` |
+| 2.13 | 2026-07-29 | EINE Gehzeit-Berechnung fuer alle Kanaele (Issue #1417) — `K`/`D`/`FK`/`FD` stammen jetzt aus `day_window.collect_hiking_window_points()`, derselben Quelle wie Mail-Kachelzeile, E-Mail-Kurzzusammenfassung und Telegram-Kurzuebersicht. Vorher unterschiedliche Fenster je Kanal (Ankunftsstunde in der Mail inklusiv, in SMS/Telegram nicht) — dieselbe Etappe zeigte je nach Kanal verschiedene Werte. Geltende Regel: Ankunftsstunde des letzten VERWERTBAREN Teils inklusiv, innere Grenzen genau einmal; ausgefallene Teile werden uebersprungen. Quellenspalten in §3.2 entsprechend praezisiert; Klarstellung ergaenzt, dass `D` trotz des Namens „Tag-Max" die Gehzeit meint und nicht den Kalendertag. Spec: `docs/specs/modules/hiking_window_single_source.md` |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

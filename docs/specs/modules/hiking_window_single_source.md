@@ -14,7 +14,9 @@ tags: [renderer, sms, telegram, compact_summary, email-pillen, hiking-window, is
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe 2026-07-29 (nach Praezisierung von AC-6:
+      „Teilausfall verschlechtert sich nicht" statt der urspruenglichen,
+      unzutreffenden Formulierung „zeigt weiterhin einen Wert")
 
 ## Purpose
 

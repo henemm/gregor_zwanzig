@@ -14,7 +14,21 @@ tags: [renderer, tokens, sms, telegram, compact-summary, epic-1372, issue-1410]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe 2026-07-28 (12 Acceptance Criteria, PO-Entscheidungen
+      F1 „morgens und abends" und F2 „gefuehlte Temperatur in den
+      Zusammenfassungssatz")
+
+> **Nachtrag 2026-07-29 (Issue #1417):** Die unter F3 und in den Dependencies
+> getroffene Aussage, `segment_weather.py::_aggregate_for_segment()` sei „die"
+> Gehzeit-Berechnung, war unvollstaendig — es existierten mehrere
+> Implementierungen desselben Fensters, die sich in der Ankunftsstunde
+> unterschieden. Die hier eingefuehrten Token `K`/`FK`/`FD` erbten dadurch
+> anfangs dieselbe Divergenz zur Mail-Kachelzeile wie `D`. Seit #1417 stammen
+> sie aus der einzigen geteilten Quelle
+> `day_window.collect_hiking_window_points()`; die fachliche Aussage von F3
+> („Rechenfenster = Gehzeit, exakt wie die gemessene Temperatur, keine neue
+> Berechnung") bleibt unveraendert gueltig — nur der Bezugspunkt hat sich
+> praezisiert. Spec: `docs/specs/modules/hiking_window_single_source.md`.
 
 ## Purpose
 
