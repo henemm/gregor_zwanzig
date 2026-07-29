@@ -2,7 +2,11 @@
 
 This document defines how E-Mail reports are generated in Gregor Zwanzig.
 
-**Last Updated:** 2026-06-26 (Issue #884 — HTML-Mail vollständige Fidelity: 8-Sektion-Layout mit Header-Stats-Grid, Ziel-Sektion, Ausblick mit Risk-Dot, Kommandos-Sektion, zweigeteilt Footer)
+**Last Updated:** 2026-07-29 (Issue #1377 Scheibe B1, `506c25f4` — Zell-Tönung/`_row_risk`
+lesen den zentralen Ampel-Katalog statt hartcodierter Schwellen; Sicht bekommt erstmals
+eine Zellhintergrund-Tönung)
+
+**Vorherige Aktualisierung:** 2026-06-26 (Issue #884 — HTML-Mail vollständige Fidelity: 8-Sektion-Layout mit Header-Stats-Grid, Ziel-Sektion, Ausblick mit Risk-Dot, Kommandos-Sektion, zweigeteilt Footer)
 
 **Acceptance Validators (seit Issue #733):**
 - **Trip-Briefing-Mail** (beide Formate: `full` HTML / `compact` Nur-Text): `.claude/hooks/briefing_mail_validator.py` (dispatcht auf `X-GZ-Mail-Type` + `X-GZ-Format` Header)
@@ -54,7 +58,13 @@ Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_8
 - **Desktop-Tabelle:** zwei Ebenen
   - Gruppen-Row: Hintergrund `#fbfaf6`, Spaltenkopfgruppen (TEMP, WIND, NIEDERSCHLAG, SICHT/UV, HÖHE) mit Colspan
   - Einheiten-Row: Spalten-Labels mit Einheiten
-  - Datenzellen: kritische Werte **fett + Farbe** (`#c2410c` bei Wind >20 km/h, `#0e6fb8` bei Regen >1 mm, `#b91c1c` bei Gewitter >0)
+  - Datenzellen: kritische Werte bekommen einen getönten Zellhintergrund (gelb `#fbeeb8` /
+    orange `#fad6b8` / rot `#f6c5bf`), nicht farbigen Fettdruck. Seit Issue #1377 Scheibe B1
+    (`506c25f4`) stammt die Stufe für Wind/Böen/Regen/Regenwahrscheinlichkeit/Sicht
+    einheitlich aus `severity_for`/`ampel_level` und den Katalog-Schwellen der
+    „Best-Practice-Schwellen"-Tabelle unten (Wind z.B. 30/50/70 km/h, nicht mehr die alte
+    fixe 20-km/h-Grenze). Gewitter bleibt ausdrücklich hartcodiert (kein `display_thresholds`
+    im Katalog): rot ab >30, orange >20-30, gelb >0-20 (`html.py:658-659`).
 - **Mobile-Tabelle:** `EmailHourList` zwei-Zeilen-Format (neu ab Issue #884; ersetzt `_render_mobile_compact_rows`)
   - Hauptzeile: Zeit (mono bold, 26px breit) · Wetter-Glyph · Temp · gefühlte Temp · Risk-Dot
   - Detailzeile: Wind/Regen/Sicht/UV/Höhe komprimiert
@@ -218,12 +228,21 @@ Quelle ist immer `display_thresholds` im Metrik-Katalog; ausgewertet wird aussch
 **Nicht verwechseln:** `risk_thresholds` (Risk Engine, `api_contract.md` §7) ist eine getrennte
 Größe mit eigener LOW/MODERATE/HIGH-Skala und wird von der Ampel nicht berührt.
 
-### Visibility: kein Ampelpunkt in der Tabelle, aber Färbung im Klartext-Block
+### Visibility: kein Ampelpunkt in der Tabelle, aber Zellhintergrund und Klartext-Block
 
-Für die **Tabellenspalte** gilt die Entscheidung aus #814 unverändert: kein Ampelpunkt. Echte
-Wetterdaten zeigen Median 16–54 km, ≥10 km in 90–100 % aller Stunden — eine Spaltenampel wäre
-dauergrün und wertlos, die nackte km-Zahl trägt mehr Information. `visibility` steht deshalb
-weiterhin nicht in `_COL_KEY_TO_METRIC_ID` (`html.py:552`).
+Für die **Tabellenspalte** gilt die Entscheidung aus #814 unverändert: kein Ampelpunkt/-Emoji.
+Echte Wetterdaten zeigen Median 16–54 km, ≥10 km in 90–100 % aller Stunden — eine Spaltenampel
+wäre dauergrün und wertlos, die nackte km-Zahl trägt mehr Information. `visibility` steht
+deshalb weiterhin nicht in `_COL_KEY_TO_METRIC_ID` (`html.py:565`, das Mapping für den
+Ampelpunkt der fünf Ampel-fähigen Metriken wind/gust/precip/pop/cape).
+
+**Seit Issue #1377 Scheibe B1 (`506c25f4`) bekommt die Sicht-Zelle aber einen getönten
+Hintergrund:** Der Roh-Modus-Fallback in `_render_html_table` fragt für `vis`/`visibility`
+`_FALLBACK_COL_KEY_TO_METRIC_ID` (`html.py:576`) und darüber `severity_for("visibility", …)`
+mit den Katalog-Schwellen (2000/1000/500 m) — der Wert wird dafür auf Meter normalisiert
+(`html.py:644-649`). Die vorherige Aussage „Sicht bekommt in der Tabelle nie eine Färbung"
+gilt also nicht mehr uneingeschränkt: kein Ampelpunkt, aber seit B1 eine Zellhintergrund-
+Tönung wie bei den übrigen Ampel-Metriken.
 
 Für die **Klartext-Zeile** gilt seit #1377 das Gegenteil: Meldet sie eine Unterschreitung
 („Sicht <2 km ab 14:00"), wird sie nach den invertierten Schwellen 2000/1000/500 m gefärbt.

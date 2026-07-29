@@ -24,7 +24,9 @@ Ortsvergleichs-Mail benötigen — mit den vom PO am 2026-07-28 festgelegten Wer
 dort Temperatur und UV-Index ganz, die Sichtweite ist nur halb hinterlegt, und die Böen-Werte
 weichen von dem ab, was die Mails tatsächlich zeigen.
 
-Scheibe A schafft die Grundlage. Die Umstellung der Renderer auf diese Quelle ist Scheibe B.
+Scheibe A schafft die Grundlage. Die Umstellung der Renderer auf diese Quelle ist Scheibe B —
+aufgeteilt in B1 (Trip-intern + gemeinsamer Ausblick, **erledigt** mit `506c25f4`) und B2
+(Ortsvergleichs-Matrix, **offen**). Details: `docs/specs/modules/ampel_schwellen_renderer.md`.
 
 ## Source
 
@@ -88,10 +90,11 @@ Richtungen: „keine Aussage" (`None`).
 ### 3. Doppelung auflösen
 
 `_level_from_thresholds` (`helpers.py:498-515`) und `severity_for`
-(`metric_format.py:103-144`) implementieren dieselbe Band-Logik zweimal. `severity_for`
-wird die einzige Implementierung; `_level_from_thresholds` delegiert an sie und entfällt
-in Scheibe B vollständig. Damit wirken invertierte Bänder automatisch auch dort, wo heute
-über `helpers` gefärbt wird (`ampel_dot`, `ampel_level`, `ampel_stage_tone`).
+(`metric_format.py:103-144`) implementierten dieselbe Band-Logik zweimal. `severity_for`
+ist die einzige Implementierung; `_level_from_thresholds` ist seit Scheibe B1 (`506c25f4`)
+vollständig entfernt — die verbleibenden Aufrufer (`ampel_dot`, `ampel_stage_index`) rufen
+seitdem direkt `severity_from_thresholds` auf. Damit wirken invertierte Bänder automatisch
+auch dort, wo über `helpers` gefärbt wird (`ampel_dot`, `ampel_level`, `ampel_stage_tone`).
 
 ## Expected Behavior
 
@@ -127,9 +130,10 @@ Der PO-Befund „die gefühlte Temperatur wird gar nicht eingefärbt" hat **zwei
    Katalog überhaupt zu fragen. Das ist eine bewusste Entscheidung aus #795.
 
 Nach Scheibe A kann der Katalog die Frage beantworten — gefragt wird er für diese beiden
-Größen aber noch nicht. Die Einfärbung wird erst sichtbar, wenn Scheibe B die
-Neutral-Einstufung aufhebt. Das ist eine Produktentscheidung, keine Aufräumarbeit, und
-gehört deshalb ausdrücklich in Scheibe B statt hierher.
+Größen aber noch nicht. Scheibe B1 (`506c25f4`) hebt die Neutral-Einstufung für genau
+diese beiden Größen auf; die Kachel färbt seitdem sichtbar (die übrigen sechs neutralen
+Klartext-Kacheln bleiben bewusst unverändert). Das war eine Produktentscheidung, keine
+Aufräumarbeit, und stand deshalb ausdrücklich in Scheibe B statt hier.
 
 ## Acceptance Criteria
 
@@ -185,11 +189,17 @@ gehört deshalb ausdrücklich in Scheibe B statt hierher.
   Stufen mittel/hoch. Das ist eine Datenform-Divergenz, keine Schwellenfrage — gehört zu
   Epic #1372, nicht hierher.
 - **Die Renderer bleiben in Scheibe A unangetastet.** Stundentabelle, Ausblick und
-  Ortsvergleich führen weiterhin ihre eigenen Schwellen; sie werden in Scheibe B umgestellt.
-  Bis dahin bestehen die im Issue beschriebenen Abweichungen zwischen den Mail-Arten fort.
-- **Temperatur und gefühlte Temperatur bekommen in Scheibe A noch keine Farbe in der Mail** —
-  der Klartext-Block fragt den Katalog für sie gar nicht (Klasse-2-Neutralität aus #795).
-  Scheibe B hebt das auf. Ohne Scheibe B bleibt der PO-Befund vom 2026-07-28 sichtbar bestehen.
+  Ortsvergleich führten zum Zeitpunkt von Scheibe A weiterhin ihre eigenen Schwellen; die
+  Umstellung ist Scheibe B. **Update:** Trip-Stundentabelle und der von Trip und
+  Ortsvergleich gemeinsam genutzte Ausblick sind seit Scheibe B1 (`506c25f4`) umgestellt
+  (`html.py`, `outlook.py`). Die Ortsvergleichs-Matrix (`compare_html.py`) folgt erst mit
+  Scheibe B2 — bis dahin bestehen die im Issue beschriebenen Abweichungen zwischen
+  Trip-Mail und Ortsvergleich für Regen/Wind/Sicht/Temperatur in der Matrix fort. Details:
+  `docs/specs/modules/ampel_schwellen_renderer.md`.
+- **Temperatur und gefühlte Temperatur bekamen in Scheibe A noch keine Farbe in der Mail** —
+  der Klartext-Block fragte den Katalog für sie gar nicht (Klasse-2-Neutralität aus #795).
+  **Update:** Scheibe B1 (`506c25f4`) hebt das für diese beiden Größen auf — der PO-Befund
+  vom 2026-07-28 ist damit behoben.
 - **Überlappende Bänder** (eine Hitze- und eine Kältegrenze, die sich überschneiden) werden
   nicht erkannt; die Auswertung liefert dann schlicht die schärfere Stufe. Für die hier
   hinterlegten Werte kann der Fall nicht auftreten.
@@ -215,3 +225,7 @@ gehört deshalb ausdrücklich in Scheibe B statt hierher.
 ## Changelog
 
 - 2026-07-28: Initial spec created (Scheibe A von #1377)
+- 2026-07-29: Scheibe-B-Ausblick nach B1-Deploy (`506c25f4`) präzisiert —
+  Trip-Stundentabelle/`_row_risk`/Ausblick/Klartext-Kachel (Temperatur, gefühlte
+  Temperatur) umgestellt und `_level_from_thresholds` entfernt; Ortsvergleichs-Matrix
+  (Scheibe B2, `compare_html.py`) bleibt offen. Details: `docs/specs/modules/ampel_schwellen_renderer.md`.
