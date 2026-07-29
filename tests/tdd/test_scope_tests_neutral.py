@@ -159,3 +159,50 @@ def test_ac5_both_hooks_consistent_for_tests_only(tmp_path, monkeypatch):
         ["tests/tdd/test_x.py"],
     )
     assert staged == committed == "docs-only"
+
+
+# ----------------------------------------------------------------------------
+# `openspec.yaml` neutral klassifizieren — Werkzeugkonfiguration, kein Dienst
+#
+# Belegt: kein produktiv laufender Teil (src/, api/, internal/, cmd/,
+# frontend/) liest openspec.yaml; einzige Leser sind .claude/-Werkzeuge
+# (output_validator.py, e2e_test_harness.py) — analog zu .claude/ selbst,
+# das bereits neutral ist. Vorher fiel die Datei in den else-Zweig und ein
+# reiner Werkzeug-Commit wurde als "backend" eingestuft, worauf das
+# Deploy-Gate volle Staging-Verifikation verlangte.
+# ----------------------------------------------------------------------------
+
+
+def test_openspec_yaml_only_is_docs_only(tmp_path, monkeypatch):
+    """Nur openspec.yaml im Commit → docs-only (vorher fälschlich backend)."""
+    assert _committed_scope(
+        tmp_path, monkeypatch,
+        ["openspec.yaml"],
+    ) == "docs-only"
+
+
+def test_openspec_yaml_plus_src_stays_backend(tmp_path, monkeypatch):
+    """Wichtigster Wächter: openspec.yaml darf echten Code NICHT verdecken.
+    openspec.yaml + src/ → weiterhin backend."""
+    assert _committed_scope(
+        tmp_path, monkeypatch,
+        ["openspec.yaml", "src/app/cli.py"],
+    ) == "backend"
+
+
+def test_other_root_yaml_stays_backend(tmp_path, monkeypatch):
+    """Kein Pauschal-Ausschluss für YAML: eine beliebige andere .yaml-Datei
+    im Wurzelverzeichnis bleibt konservativ backend."""
+    assert _committed_scope(
+        tmp_path, monkeypatch,
+        ["docker-compose.yaml"],
+    ) == "backend"
+
+
+def test_nested_openspec_yaml_stays_backend(tmp_path, monkeypatch):
+    """Die Ausnahme gilt exakt der Wurzeldatei — eine gleichnamige Datei
+    unterhalb von src/ bleibt backend (kein Suffix-/Basename-Match)."""
+    assert _committed_scope(
+        tmp_path, monkeypatch,
+        ["src/config/openspec.yaml"],
+    ) == "backend"

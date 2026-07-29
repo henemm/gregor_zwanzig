@@ -154,6 +154,11 @@ def _detect_scope_from_git_diff(base, target, repo_dir) -> str:
             or path.startswith("README")
             or path == ".gitignore"
             or path.startswith("tests/")
+            # Werkzeugkonfiguration der Entwicklungs-Kette (Gates, LoC-Limit,
+            # Workflow-Phasen) — von keinem laufenden Dienst gelesen, analog
+            # .claude/. Bewusst exakte Gleichheit statt *.yaml: jede andere
+            # YAML-Datei bleibt konservativ backend.
+            or path == "openspec.yaml"
         ):
             pass
         else:
