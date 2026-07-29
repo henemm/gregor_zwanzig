@@ -30,7 +30,7 @@ from zoneinfo import ZoneInfo
 from bs4 import BeautifulSoup
 
 from app.metric_catalog import get_metric
-from app.models import ForecastDataPoint
+from app.models import ForecastDataPoint, ThunderLevel
 from output.metric_format import severity_for
 from src.output.renderers.email.helpers import (
     _PILL_NEUTRAL_TONE,
@@ -253,14 +253,39 @@ def test_ac7_thunder_row_risk_unchanged():
     assert _row_risk({}) == "ok"
 
 
-def test_ac7_thunder_cell_tint_unchanged():
-    """AC-7 (Regressionsschutz): Given eine Gewitter-Zelle bei Wert 25 / When
-    die Trip-Stundentabelle im Roh-Modus gerendert wird / Then bleibt die
-    Toenung orange (hartcodierte Schwelle >20, unveraendert von der
-    Katalog-Umstellung ausgenommen)."""
-    rows = [{"time": "08:00", "thunder": 25.0}]
-    html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set())
-    assert _cell_level(html, "Thdr") == "orange"
+def test_ac7_thunder_cell_tint_follows_level():
+    """AC-7 (Regressionsschutz), Datenform korrigiert mit Issue #1418.
+
+    Herkunft/Grund: Der Vorgaenger `test_ac7_thunder_cell_tint_unchanged`
+    fuetterte `{"thunder": 25.0}` und erwartete orange. Diese Datenform kommt
+    im Produktivpfad nicht vor — `r["thunder"]` traegt dort immer einen
+    `ThunderLevel`-Stufenwert (`trip_report._dp_to_row` /
+    `_aggregate_night_block`), fuer den `float(...)` scheitert. Der alte Test
+    zementierte damit genau die Fehlannahme, die #1418 ausmacht: Die Zelle
+    blieb im echten Betrieb IMMER ungefaerbt, waehrend der Test gruen war.
+    Ersetzt durch dieselbe Aussage (Gewitterstufe steuert die Zell-Toenung)
+    in der richtigen Datenform — plus die Namen-String-Form, die Etappen-/
+    Trend-Zeilen liefern (`outlook.py`/`helpers.py`: `.upper()` auf
+    `stage.get("thunder")`).
+
+    Given eine Gewitter-Zelle mit Stufenwert / When die Trip-Stundentabelle im
+    Roh-Modus gerendert wird / Then folgt die Toenung der Stufe: HIGH rot,
+    MED orange, NONE ungefaerbt (Gewitter kennt nur zwei Warnstufen, kein
+    Gelb).
+    """
+    def _thunder_level(value) -> str:
+        rows = [{"time": "08:00", "thunder": value}]
+        html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set())
+        return _cell_level(html, "Thdr")
+
+    assert _thunder_level(ThunderLevel.HIGH) == "red"
+    assert _thunder_level(ThunderLevel.MED) == "orange"
+    assert _thunder_level(ThunderLevel.NONE) == "green"
+
+    # Namen-String-Form (nicht-Enum) muss identisch faerben.
+    assert _thunder_level("HIGH") == "red"
+    assert _thunder_level("MED") == "orange"
+    assert _thunder_level("NONE") == "green"
 
 
 # ===========================================================================

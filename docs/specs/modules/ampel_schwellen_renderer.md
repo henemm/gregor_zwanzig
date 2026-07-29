@@ -69,11 +69,22 @@ Zeilen 604-612 lesen bereits den Katalog (`ampel_level`) für Metriken, die in
 `indicator_keys` stehen — das ist der „freundliche" Anzeigemodus. Der elif-Block
 615-628 ist der Fallback für den Roh-Modus sowie für Sichtweite und Gewitter, die
 `_COL_KEY_TO_METRIC_ID` heute gar nicht kennt. Er wird auf `severity_for` umgestellt,
-mit EINER Ausnahme: `thunder` bleibt unangetastet (kein `display_thresholds` im
-Katalog, siehe „Feste Vorgaben"). `vis`/`visibility` erhält damit erstmals die
-Katalog-Werte 2000/1000/500 m statt der bisherigen 2/1/0,5 km (rechnerisch identisch,
-aber jetzt über dieselbe Funktion wie der Ortsvergleich ausgewertet statt über einen
-eigenen Kilometer-Umrechnungspfad).
+mit EINER Ausnahme: `thunder` bleibt außerhalb des Katalogwegs (kein
+`display_thresholds` im Katalog, siehe „Feste Vorgaben"). **Nachtrag 2026-07-29
+(#1418/S1):** Der `thunder`-Zweig blieb zunächst wörtlich unangetastet und war
+dadurch wirkungslos — er las weiterhin `float(raw_val)`, was für das
+`ThunderLevel`-Enum immer `None` ergab, die Zelle blieb also ungefärbt. Seit
+`docs/specs/modules/fix_1418_gewitter_risikopunkt.md` liest dieser Zweig
+stattdessen `_thunder_risk_level(raw_val)` (Helfer in `html.py`, direkt über
+`_row_risk`) und färbt `'risk'` rot (`#f6c5bf`) bzw. `'watch'` orange
+(`#fad6b8`) — weiterhin ohne den Katalog zu nutzen, `thunder` führt nach wie
+vor kein `display_thresholds`. Diese Zell-Umstellung ist Teil dieses
+Workflows (noch nicht committet); der Risiko-Punkt (`_row_risk`, s.u.) nutzt
+denselben Helfer bereits seit Commit `659ada95`. `vis`/`visibility` erhält damit
+erstmals die Katalog-Werte 2000/1000/500 m statt der bisherigen 2/1/0,5 km
+(rechnerisch identisch, aber jetzt über dieselbe Funktion wie der
+Ortsvergleich ausgewertet statt über einen eigenen
+Kilometer-Umrechnungspfad).
 
 ### 2. `_row_risk` (`html.py:147-161`)
 
@@ -81,6 +92,24 @@ Bestimmt den Risiko-Punkt am Zeilenende aus fünf hartcodierten Schwellen
 (`thunder>20`, `gust>30`, `wind>20`, `precip>1`, `pop>50`, `vis<2`). Wird auf
 `severity_for` je Metrik umgestellt (Gewitter bleibt hartcodiert, s.u.); aus den
 resultierenden Stufen `green/yellow/orange/red` wird die schärfste genommen.
+
+**Nachtrag 2026-07-29 (#1418/S1):** „Gewitter bleibt hartcodiert" hieß zum
+Zeitpunkt dieser Spec, dass die alte Zahl-Schwelle `thunder>20` unverändert
+bestehen blieb. Sie war jedoch wirkungslos: `thunder` trägt im Produktivpfad
+ein `ThunderLevel`-Enum (NONE/MED/HIGH), keine Zahl, und `float("HIGH")`
+schlägt fehl und fällt still auf `0.0` zurück — der Punkt blieb bei Gewitter
+immer grün. Issue #1418 (Fehler 1, Scheibe S1 von Epic #1419,
+`docs/specs/modules/fix_1418_gewitter_risikopunkt.md`, geliefert mit Commit
+`659ada95`) ersetzt die reine Zahl-Schwelle durch den neuen Helfer
+`_thunder_risk_level()` direkt über `_row_risk`: Er vergleicht die Stufe als
+String (`ThunderLevel` erbt von `str`, deckt Enum- und Namen-String-Form ab)
+— HIGH trägt direkt zu `"risk"` bei, MED zu `"watch"` — und behält den
+historischen Zahlenvergleich (`> 20` → `"risk"`, `> 0` → `"watch"`) als
+Fallback, weil der AC-7-Regressionsschutz aus #1377 rohe Zahlen übergibt und
+genau deshalb unverändert grün bleiben muss. Gewitter bleibt damit weiterhin
+außerhalb des Katalogwegs (`severity_for`/`display_thresholds`) — nur die
+frühere, wirkungslose Zahl-Schwelle wurde durch den funktionierenden
+Stufenvergleich ersetzt.
 
 Der Punkt selbst zeigt weiterhin nur drei Farben (`_RISK_DOT_COLORS`:
 `ok`/`watch`/`risk` — grün/orange/rot, **kein** eigenes Gelb). Das bleibt so:
@@ -283,13 +312,32 @@ im Ortsvergleich bzw. unverändert), Gewitter (bewusst ausgenommen, s.
   - Test: `render_outlook_table`-Aufruf mit precip_mm=1.5; Zellhintergrund ist
     nicht mehr leer
 
-- **AC-7 (Gewitter unverändert):** Given ein Trip-Briefing und ein Ortsvergleich
-  mit identischer Gewitterlage (z.B. Stufe „hoch") / When beide Mails gerendert
-  werden / Then ist die Gewitter-Färbung in beiden exakt wie vor dieser Änderung —
-  Gewitter ist ausdrücklich nicht Teil dieser Umstellung. Dieser AC ist bereits vor
-  der Umstellung erfüllt (Regressionsschutz, kein Bugfix-Nachweis).
-  - Test: Golden-Vergleich der Gewitter-Zeilen/-Zellen vor und nach der Änderung;
-    keine Abweichung erlaubt
+- **AC-7 (Gewitter unverändert durch diese Umstellung):** Given ein
+  Trip-Briefing und ein Ortsvergleich mit identischer Gewitterlage (z.B. Stufe
+  „hoch") / When beide Mails gerendert werden / Then ist die Gewitter-Färbung
+  in beiden exakt wie vor dieser Änderung — Gewitter ist ausdrücklich nicht
+  Teil dieser Umstellung (Scheibe B). Dieser AC war zum Zeitpunkt der
+  Umstellung bereits erfüllt (Regressionsschutz, kein Bugfix-Nachweis für
+  Scheibe B).
+  - Test: Golden-Vergleich der Gewitter-Zeilen/-Zellen vor und nach der
+    Änderung; keine Abweichung erlaubt.
+  - **Nachtrag 2026-07-29 (#1418/S1):** Von den beiden für diesen AC
+    ursprünglich genutzten Unit-Tests in
+    `tests/tdd/test_renderer_katalog_schwellen.py` bleibt
+    `test_ac7_thunder_row_risk_unchanged` **unverändert grün** — der neue
+    Helfer `_thunder_risk_level()` (s. Implementation Details Punkt 2) behält
+    den historischen Zahlenvergleich als Fallback genau zu diesem Zweck, der
+    Test wurde nicht ersetzt. Nur `test_ac7_thunder_cell_tint_unchanged`
+    wurde ersetzt durch `test_ac7_thunder_cell_tint_follows_level` (Spec:
+    `docs/specs/modules/fix_1418_gewitter_risikopunkt.md`), weil die Zelle
+    jetzt tatsächlich gefärbt wird (zuvor strukturell nie, s.
+    Implementation Details Punkt 1) und der alte Testname „unchanged" nicht
+    mehr zutrifft. Die AC-7-Aussage „Gewitter ist nicht Teil dieser
+    Umstellung (Scheibe B)" bleibt davon unberührt — sie bezieht sich auf den
+    Katalogweg (`severity_for`/`display_thresholds`), nicht auf die
+    Testbenennung. Lieferung verteilt auf zwei Commits: `659ada95` für
+    `_row_risk` (Punkt), dieser Workflow für die Zell-Tönung (noch nicht
+    committet).
 
 - **AC-8 (Metriken ohne Schwellen bleiben neutral — Regressionsschutz):** Given
   eine Größe ohne hinterlegte Warnschwellen im Katalog (z.B. Taupunkt oder
@@ -327,11 +375,20 @@ im Ortsvergleich bzw. unverändert), Gewitter (bewusst ausgenommen, s.
 
 ## Known Limitations
 
-- **Gewitter bleibt außen vor.** Der Katalog führt für `thunder` keine
-  `display_thresholds` — die Datenform-Divergenz (Prozentwert vs. Stufen
-  MED/HIGH) ist Gegenstand von Epic #1372, nicht dieser Spec. Alle drei
-  bestehenden hartcodierten Gewitter-Färbungen (`html.py`, `outlook.py`,
-  `compare_html.py`) bleiben unangetastet.
+- **Gewitter bleibt außerhalb des Katalogwegs.** Der Katalog führt für
+  `thunder` weiterhin keine `display_thresholds` — die Datenform-Divergenz
+  (Prozentwert vs. Stufen MED/HIGH) ist Gegenstand von Epic #1372, ergänzt
+  seit 2026-07-29 um Epic #1419, das die Gewitter-Datenform als eigenes
+  Vorhaben führt (nicht Gegenstand dieser Spec). Von den drei bestehenden
+  hartcodierten Gewitter-Färbungen bleiben `outlook.py` und `compare_html.py`
+  unangetastet; `html.py` färbt Gewitter seit #1418/S1 (2026-07-29,
+  `docs/specs/modules/fix_1418_gewitter_risikopunkt.md`) über den neuen
+  Helfer `_thunder_risk_level()` statt über die zuvor wirkungslose
+  Zahl-Schwelle — weiterhin nicht über den Katalog, `thunder` führt nach wie
+  vor kein `display_thresholds`. Geliefert in zwei Commits: `_row_risk`
+  (Risiko-Punkt) mit `659ada95`, die Zell-Tönung mit diesem Workflow (noch
+  nicht committet) — beide nutzen bewusst denselben Helfer statt einer
+  zweiten Stufenquelle direkt daneben.
 - **Verlässlichkeits-Anzeigen bleiben draußen.** `_confidence_dot_color`
   (`html.py:1091-1107`) und `outlook._acc_dot` (`outlook.py:87-107`) zeigen die
   Vorhersage-SICHERHEIT (Ensemble-Divergenz), keine Wetterlage — sie dürfen laut
@@ -423,3 +480,16 @@ vollständig — B1 kann seinen Teil der Golden-Diffs bereits isoliert zeigen.
   jetzt klar, dass die Neutralität nur für `temperature`/`wind_chill` aufgehoben
   wird, die übrigen sechs Größen (`cloud_total`, `cloud_low`, `freezing_level`,
   `dewpoint`, `uv_index`, `sunshine`) bleiben neutral
+- 2026-07-29: Nachtrag aus Issue #1418/S1 (Epic #1419) — `html.py` färbt
+  Gewitter jetzt über den neuen Helfer `_thunder_risk_level()` (direkt über
+  `_row_risk`) statt über die zuvor wirkungslose Zahl-Schwelle (`float("HIGH")`
+  fiel still auf `0.0` zurück); der Katalogweg bleibt für `thunder` weiterhin
+  ungenutzt. Der Helfer behält den historischen Zahlenvergleich als Fallback,
+  deshalb bleibt `test_ac7_thunder_row_risk_unchanged` unverändert grün — nur
+  `test_ac7_thunder_cell_tint_unchanged` wurde durch
+  `test_ac7_thunder_cell_tint_follows_level` ersetzt. Lieferung auf zwei
+  Commits verteilt: `659ada95` (Risiko-Punkt, `_row_risk`, live), dieser
+  Workflow (Zell-Tönung, noch nicht committet). AC-7, Implementation Details
+  Punkt 1 (Zell-Tönung) und Punkt 2 (`_row_risk`) sowie „Known Limitations"
+  entsprechend nachgezogen. Details:
+  `docs/specs/modules/fix_1418_gewitter_risikopunkt.md`

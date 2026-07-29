@@ -590,8 +590,6 @@ def _render_html_table(
     thead = f'<thead><tr>{ths}</tr></thead>'
 
     # Data rows with highlighting
-    _THUNDER_THRESHOLD = 0.0
-
     # Issue #888: col_key → Katalog-metric_id für die Ampel-Level-Tönung
     # (analog build_html_indicator_keys / _AMPEL_KEY_TO_METRIC_ID, inkl. cape).
     _COL_KEY_TO_METRIC_ID = {
@@ -684,11 +682,22 @@ def _render_html_table(
                     "orange": "#fad6b8",
                     "red": "#f6c5bf",
                 }.get(level)
-            # Gewitter bleibt ausdrücklich hartcodiert (Issue #1377: Datenform-
-            # Divergenz Prozentwert vs. Stufen, kein `display_thresholds` im
-            # Katalog — s. Spec „Known Limitations").
-            elif key == "thunder" and numeric is not None and numeric > _THUNDER_THRESHOLD:
-                cell_bg = "#f6c5bf" if numeric > 30 else ("#fad6b8" if numeric > 20 else "#fbeeb8")
+            # Gewitter bleibt ausdrücklich außerhalb des Katalogs (Issue #1377:
+            # Datenform-Divergenz Prozentwert vs. Stufen, kein
+            # `display_thresholds` — s. Spec „Known Limitations").
+            # Issue #1418: Der Zellwert ist ein Stufenwert (`ThunderLevel`),
+            # `float(...)` scheitert daran → `numeric` war hier immer None und
+            # der Zweig strukturell nie erfüllt (Spalte nie gefärbt, obwohl der
+            # Punkt rot wurde). Gefragt wird jetzt dieselbe Stufenquelle wie für
+            # den Risiko-Punkt (`_thunder_risk_level`, inkl. Zahlen-Fallback) —
+            # zwei Stufenquellen nebeneinander wären die Doppelung, die #1418
+            # überhaupt erst erzeugt hat. Gewitter kennt nur zwei Warnstufen,
+            # deshalb rot/orange ohne Gelb.
+            elif key == "thunder":
+                cell_bg = {
+                    "risk": "#f6c5bf",
+                    "watch": "#fad6b8",
+                }.get(_thunder_risk_level(raw_val))
 
             # Issue #995 (Gruppe B): Zell-Tönung + Padding direkt inline auf das
             # <td> selbst (Vorbild _otd()-Muster), kein Span/Negativ-Margin-Trick
