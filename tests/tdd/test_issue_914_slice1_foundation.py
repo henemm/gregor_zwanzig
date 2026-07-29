@@ -27,9 +27,13 @@ class TestAC1AlertMetricSMSCodes:
         WHEN: I iterate all selectable metrics that have a default_change_threshold set
               (alert-capable) and read their sms_code field
         THEN: each sms_code is non-empty, ASCII-only, and globally unique among
-              the set; concrete new codes cape→CP, fresh_snow→SN, snowfall_limit→SL,
+              the set; concrete new codes cape→CP, fresh_snow→NS, snowfall_limit→SL,
               visibility→VS are present; established codes for
               precipitation→R, rain_probability→PR, wind→W, gust→G are unchanged.
+              (fresh_snow: PO-Korrektur 2026-07-29, Issue #1362 S5b-Adversary --
+              "SN" kollidierte semantisch mit dem Trip-SMS-Symbol fuer
+              Schneehoehe; "NS" = derselbe Wert wie der bestehende
+              compact_label dieser Metrik.)
         """
         from app.metric_catalog import get_all_metrics
 
@@ -61,7 +65,11 @@ class TestAC1AlertMetricSMSCodes:
 
         # --- Assert new codes ---
         assert by_id["cape"].sms_code == "CP", "new code cape→CP"
-        assert by_id["fresh_snow"].sms_code == "SN", "new code fresh_snow→SN"
+        # PO-Korrektur 2026-07-29 (Issue #1362 S5b-Adversary): "SN" kollidierte
+        # semantisch mit dem Trip-SMS-Symbol fuer Schneehoehe (sms_trip.py,
+        # tokens/builder.py) -- Neuschnee bekommt jetzt "NS" (= bestehender
+        # compact_label dieser Metrik).
+        assert by_id["fresh_snow"].sms_code == "NS", "new code fresh_snow→NS"
         assert by_id["snowfall_limit"].sms_code == "SL", "new code snowfall_limit→SL"
         assert by_id["visibility"].sms_code == "VS", "new code visibility→VS"
 

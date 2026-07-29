@@ -25,6 +25,7 @@ Mail-Validator in der Deploy-Phase gegen eine echt zugestellte Staging-Mail):
 """
 from __future__ import annotations
 
+import re
 from datetime import date, datetime, timezone
 
 from app.models import ForecastDataPoint
@@ -302,13 +303,19 @@ def _sms_result(names: list[str]) -> ComparisonResult:
     )
 
 
+# Issue #1362 Scheibe S5b (Adversary-Fund): der Orts-Ueberlauf traegt seither
+# den Wortzusatz "Orte" (` +k Orte` statt blossem ` +k`), damit er sich vom
+# neuen, wortlosen Metrik-Ueberlauf je Ortsblock (`+N`) unterscheiden laesst
+# -- ein blindes `rsplit("+", 1)` traefe sonst irrtuemlich den METRIK-
+# Ueberlauf, falls einer im letzten Ortsblock auftritt.
+_LOCATION_OVERFLOW_RE = re.compile(r" \+(\d+) Orte$")
+
+
 def _sms_named_and_plus(msg: str, names: list[str]) -> tuple[list[str], int]:
-    """(genannte Orte in Render-Reihenfolge, k aus dem '+k'-Suffix)."""
+    """(genannte Orte in Render-Reihenfolge, k aus dem ' +k Orte'-Suffix)."""
     named = _order_of(msg, names)
-    plus = 0
-    marker = msg.rsplit("+", 1)
-    if len(marker) == 2 and marker[1].strip().isdigit():
-        plus = int(marker[1].strip())
+    match = _LOCATION_OVERFLOW_RE.search(msg)
+    plus = int(match.group(1)) if match else 0
     return named, plus
 
 

@@ -18,7 +18,8 @@ AC-Zuordnung:
 - AC-7: Altbestand ohne gespeicherte Auswahl rendert unveraendert   -> GRUEN (Charakterisierung)
 - AC-8: bewusste Leerauswahl zeigt keine Uebersichtszeilen
         (auf RENDERER-Ebene, s. Klasse)                             -> GRUEN (Regression)
-- AC-10: die SMS zeigt die zwei VORDERSTEN Metriken der Reihenfolge  -> RED
+- AC-10: die SMS folgt derselben Reihenfolge (Issue #1362 Scheibe S5b:
+  seit der Zeichen-Budget-Kuerzung keine feste Zwei-Metriken-Grenze mehr)
 """
 from __future__ import annotations
 
@@ -111,10 +112,14 @@ def _html_labels(html: str) -> list[str]:
     return _HTML_LABEL_RE.findall(html)
 
 
-# Kurz-Labels der SMS-Zellen (= dieselben wie Telegram, gemeinsamer Helfer
-# `_channel_metric_cells`). Die SMS ist flach ("Ort Label Wert Label Wert"),
+# Issue #1362 Scheibe S5b: die SMS traegt seit der Kuerzel-Umstellung
+# Katalog-Kuerzel (`metric_catalog.get_sms_code`) statt der Telegram-Vollform
+# ("D" statt "Temp"). Die SMS ist flach ("Ort Kuerzel Wert Kuerzel Wert"),
 # deshalb wird ueber Tokens statt ueber ein Trennzeichen ausgelesen.
-_SMS_LABEL_TOKENS = {"Temp", "Wind", "Sonne", "Wolken", "Schnee", "Neuschnee"}
+_SMS_CODE = {
+    "temp_max": "D", "wind_max": "W", "sunny_hours": "SU", "cloud_avg": "CT",
+}
+_SMS_LABEL_TOKENS = set(_SMS_CODE.values())
 
 
 def _sms_labels(msg: str) -> list[str]:
@@ -264,23 +269,23 @@ class TestAC5TelegramFollowsMetricOrder:
         assert [_TELEGRAM_LABEL[m] for m in ORDER_B] == tg_labels
 
 
-class TestAC10SmsShowsTopTwoMetricsOfUserOrder:
-    """AC-10 — RED: die SMS hat Platz fuer genau zwei Metriken je Ort
-    (`_SMS_METRICS_PER_LOCATION`). Welche zwei das sind, entscheidet heute die
-    feste Tupel-Konstante `_CHANNEL_METRICS` (comparison.py:314-321) statt der
-    Nutzer-Reihenfolge — `_channel_metric_cells` bricht nach `limit` Zellen ab,
-    nachdem es in Konstanten-Reihenfolge iteriert hat.
+class TestAC10SmsFollowsUserOrder:
+    """AC-10, Nachfolger nach Scheibe S5b (#1362): die frueher feste
+    Zwei-Metriken-Grenze (`_SMS_METRICS_PER_LOCATION`) ist mit der
+    Zeichen-Budget-Kuerzung entfallen (s. Spec
+    docs/specs/modules/compare_kanal_metriken.md). Mit nur vier kurzen
+    Groessen passen jetzt ALLE vier ins 140-Zeichen-Budget -- die
+    Kern-Aussage von AC-10 (Nutzer-Reihenfolge bestimmt die SMS mit) bleibt
+    unveraendert gueltig und wird hier weiterhin geprueft, jetzt ueber die
+    volle Auswahl statt nur die ersten zwei. SMS-Kurz-Labels sind seit S5b
+    Katalog-Kuerzel (`get_sms_code`), nicht mehr die Telegram-Vollform,
+    deshalb `_SMS_CODE` statt `_TELEGRAM_LABEL`."""
 
-    PO-Entscheidung 2026-07-24: die Nutzer-Reihenfolge SOLL die SMS
-    mitbestimmen (vormals als unbenannter Nebeneffekt in den Known
-    Limitations gefuehrt). SMS-Kurz-Labels sind dieselben wie im Telegram-Pfad
-    (gemeinsamer Helfer), deshalb `_TELEGRAM_LABEL`."""
-
-    def test_sms_shows_first_two_metrics_of_order_a(self):
+    def test_sms_shows_all_four_metrics_of_order_a(self):
         msg = render_compare_sms(_result(), enabled_metrics=list(ORDER_A))
-        assert _sms_labels(msg) == [_TELEGRAM_LABEL[m] for m in ORDER_A[:2]], (
-            "Die SMS muss die zwei VORDERSTEN Metriken der Nutzer-Reihenfolge "
-            f"zeigen.\nSMS:\n{msg}"
+        assert _sms_labels(msg) == [_SMS_CODE[m] for m in ORDER_A], (
+            "Die SMS muss alle ausgewaehlten Groessen in Nutzer-Reihenfolge "
+            f"zeigen (sie passen ins Budget).\nSMS:\n{msg}"
         )
 
     def test_sms_selection_flips_with_reversed_order(self):
@@ -289,10 +294,10 @@ class TestAC10SmsShowsTopTwoMetricsOfUserOrder:
         labels_a, labels_b = _sms_labels(msg_a), _sms_labels(msg_b)
         assert labels_a != labels_b, (
             "Dieselbe Metrik-MENGE in zwei Reihenfolgen muss zwei verschiedene "
-            f"SMS-Metrikpaare ergeben, ergab aber beide Male {labels_a}."
+            f"SMS-Metrikfolgen ergeben, ergab aber beide Male {labels_a}."
         )
-        assert labels_b == [_TELEGRAM_LABEL[m] for m in ORDER_B[:2]], (
-            f"Erwartet {[_TELEGRAM_LABEL[m] for m in ORDER_B[:2]]}, war {labels_b}.\n"
+        assert labels_b == [_SMS_CODE[m] for m in ORDER_B], (
+            f"Erwartet {[_SMS_CODE[m] for m in ORDER_B]}, war {labels_b}.\n"
             f"SMS:\n{msg_b}"
         )
 

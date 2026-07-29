@@ -31,8 +31,12 @@ TARGET_DATE = date(2026, 7, 8)
 SMS_LIMIT = CHANNEL_LIMITS["sms"]["max_chars"]            # 140
 TELEGRAM_LIMIT = CHANNEL_LIMITS["telegram"]["max_chars"]  # 4096
 
-# ` +k` am Textende, k = Anzahl weggelassener Orte.
-_OVERFLOW_MARKER = re.compile(r" \+(\d+)$")
+# ` +k Orte` am Textende, k = Anzahl weggelassener Orte. Der Wortzusatz
+# "Orte" kam mit Issue #1362 Scheibe S5b (Adversary-Fund): seit die SMS auch
+# einen METRIK-Ueberlauf je Ortsblock kennt (eigenes `+N` OHNE Wortzusatz,
+# s. comparison.py:_sms_location_part), waeren zwei blanke `+k +N`-Zahlen ohne
+# Wort nicht mehr unterscheidbar (welche Zahl zaehlt Orte, welche Groessen?).
+_OVERFLOW_MARKER = re.compile(r" \+(\d+) Orte$")
 
 
 def _loc(loc_id: str, name: str) -> SavedLocation:

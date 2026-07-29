@@ -124,6 +124,9 @@ _METRICS: list[MetricDefinition] = [
             "yellow_lt": 0.0, "orange_lt": -5.0, "red_lt": -15.0,
         },
         risk_thresholds={"high_lt": -20.0},
+        # Issue #1362 Scheibe S5b: sms_code = bestehender compact_label (keine
+        # neue Abkuerzungsregel, s. Spec compare_kanal_metriken.md Punkt 3).
+        sms_code="TF",
     ),
     MetricDefinition(
         id="humidity", label_de="Luftfeuchtigkeit", unit="%",
@@ -148,6 +151,8 @@ _METRICS: list[MetricDefinition] = [
         summary_fields={"avg": "dewpoint_avg_c"},
         # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
         default_change_threshold=None,
+        # Issue #1362 Scheibe S5b: sms_code = bestehender compact_label.
+        sms_code="DP",
     ),
     # === WIND ===
     MetricDefinition(
@@ -197,6 +202,8 @@ _METRICS: list[MetricDefinition] = [
         # Circular mean: no numeric delta comparison for alerts
         format_modes=("raw", "scale"),
         default_format_mode="scale",
+        # Issue #1362 Scheibe S5b: sms_code = bestehender compact_label.
+        sms_code="WD",
     ),
     # === PRECIPITATION ===
     MetricDefinition(
@@ -307,6 +314,8 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         summary_fields={"max": "precip_type_dominant"},
         # Enum type: no numeric delta comparison for alerts
+        # Issue #1362 Scheibe S5b: sms_code = bestehender compact_label.
+        sms_code="PT",
     ),
     # === ATMOSPHERE ===
     MetricDefinition(
@@ -321,6 +330,10 @@ _METRICS: list[MetricDefinition] = [
         default_change_threshold=None,
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
+        # Issue #1362 Scheibe S5b: eigener sms_code "CT" (NICHT der eigene
+        # compact_label "C" -- zu generisch neben CL/CM/CH, s. Spec
+        # compare_kanal_metriken.md Punkt 3).
+        sms_code="CT",
     ),
     MetricDefinition(
         id="cloud_low", label_de="Tiefe Wolken", unit="%",
@@ -334,6 +347,8 @@ _METRICS: list[MetricDefinition] = [
         summary_fields={"avg": "cloud_low_avg_pct"},
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
+        # Issue #1362 Scheibe S5b: sms_code = bestehender compact_label.
+        sms_code="CL",
     ),
     MetricDefinition(
         id="cloud_mid", label_de="Mittelhohe Wolken", unit="%",
@@ -347,6 +362,8 @@ _METRICS: list[MetricDefinition] = [
         summary_fields={"avg": "cloud_mid_avg_pct"},
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
+        # Issue #1362 Scheibe S5b: sms_code = bestehender compact_label.
+        sms_code="CM",
     ),
     MetricDefinition(
         id="cloud_high", label_de="Hohe Wolken", unit="%",
@@ -360,6 +377,8 @@ _METRICS: list[MetricDefinition] = [
         summary_fields={"avg": "cloud_high_avg_pct"},
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
+        # Issue #1362 Scheibe S5b: sms_code = bestehender compact_label.
+        sms_code="CH",
     ),
     MetricDefinition(
         id="visibility", label_de="Sichtweite", unit="m",
@@ -398,6 +417,10 @@ _METRICS: list[MetricDefinition] = [
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
         decimals=1,
+        # Issue #1362 Scheibe S5b: eigener sms_code "SU" -- der eigene
+        # compact_label ist das Emoji "☀", nicht GSM-7/ASCII-tauglich
+        # (s. Spec compare_kanal_metriken.md Punkt 3).
+        sms_code="SU",
     ),
     MetricDefinition(
         id="uv_index", label_de="UV-Index", unit="",
@@ -424,6 +447,10 @@ _METRICS: list[MetricDefinition] = [
         summary_fields={"avg": "pressure_avg_hpa"},
         # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
         default_change_threshold=None,
+        # Issue #1362 Scheibe S5b: eigener sms_code "HP" (Hektopascal) --
+        # der eigene compact_label ist "P", zu dicht an "R"/"PR"
+        # (Niederschlag/Regenwahrscheinlichkeit), s. Spec Punkt 3.
+        sms_code="HP",
     ),
     # === WINTER ===
     MetricDefinition(
@@ -458,7 +485,13 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         summary_fields={"sum": "snow_new_sum_cm"},
         default_change_threshold=5.0,
-        sms_code="SN", decimals=0, cmp="über", alert_label="Schnee",
+        # PO-Korrektur 2026-07-29 (Adversary-Fund #1362 S5b): "SN" kollidierte
+        # semantisch mit dem Trip-SMS-Symbol fuer Schneehoehe (sms_trip.py:61,
+        # tokens/builder.py:186 -- eigenes, hartcodiertes Trip-Token-Vokabular,
+        # nicht ueber get_sms_code()). Neuschnee != Altschnee fuer eine
+        # Tourenentscheidung. "NS" = derselbe Wert wie der bestehende
+        # compact_label dieser Metrik (kollisionsfrei, mnemonisch).
+        sms_code="NS", decimals=0, cmp="über", alert_label="Schnee",
     ),
 ]
 
