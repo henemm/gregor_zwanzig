@@ -27,6 +27,7 @@ node_modules/
 .claude/workflow_state.json
 .claude/workflow_state.json.bak
 .claude/workflows/
+.claude/active_workflow
 .claude/validator.env
 
 # Claude Code (transient)

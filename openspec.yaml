@@ -179,7 +179,15 @@ spec_validation:
 # blockiert bei Überschreitung mit Exit 2. Override pro Workflow via
 # `workflow.py set-field loc_limit_override <N>`. Pfade die zu einem
 # Pattern in loc_exclude_patterns matchen, werden NICHT mitgezählt
-# (Übersetzungen, Lockfiles, Archive, Log-Verzeichnisse).
+# (Übersetzungen, Lockfiles, Archive, Log-Verzeichnisse, Dokumentation).
+#
+# Doku-Ausschluss (#1409, 2026-07-29): CLAUDE.md sagt seit Epic #191
+# „Generierte Dateien + docs//*.md/.gitignore zählen nicht" — hier fehlten
+# die Muster, weshalb Spec + Kontextdokument einer spec-getriebenen
+# Lieferung (400+ Zeilen) das Limit allein aufbrauchten und zweimal einen
+# Override erzwangen, bei ~250 Zeilen echter Arbeit. Das ist die Angleichung
+# der Config an die dokumentierte Regel, keine Aufweichung: max_loc_delta
+# bleibt 250, Code zählt unverändert voll.
 scope_guard:
   max_loc_delta: 250
   loc_exclude_patterns:
@@ -192,6 +200,9 @@ scope_guard:
     - "/_archive/"
     - "/_log/"
     - "/\\.claude/workflows/"
+    - "^docs/"
+    - "\\.md$"
+    - "^\\.gitignore$"
 
 # Bash Gate — Projekt-spezifische Whitelist
 # Tools die legitimate Artefakte schreiben (nicht Workflow-State)
