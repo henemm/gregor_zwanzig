@@ -21,6 +21,8 @@ import httpx as _httpx
 
 TEST_USER_ID = "tg-live-e2e"
 
+# Fester Pfad bewusst (#1409, Klasse B): die Staging-Installation liegt ausserhalb
+# dieses Repos und existiert je Host genau einmal.
 _STAGING_ENV_PATH = Path("/home/hem/gregor_zwanzig_staging/.env")
 _WANTED_KEYS = {"GZ_TELEGRAM_BOT_TOKEN", "GZ_TELEGRAM_CHAT_ID", "GZ_TELEGRAM_TEST_CHAT_ID"}
 
@@ -96,6 +98,8 @@ def _ensure_paced_telegram_post() -> None:
 # ---------------------------------------------------------------------------
 
 
+# Kein Dateizugriff (#1409, Klasse B): Beispiel-Kommandostring fuer die Staging-
+# Installation, die je Host einmal ausserhalb dieses Repos liegt.
 _STAGING_RUN_COMMAND = (
     "sudo -n -u claude-gregor bash -c 'cd /home/hem/gregor_zwanzig_staging && \\\n"
     "  PATH=/home/hem/.local/bin:$PATH GZ_TELEGRAM_LIVE=1 \\\n"

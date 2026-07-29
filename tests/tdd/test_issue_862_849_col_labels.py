@@ -11,15 +11,24 @@ Expected at RED-time:
 from __future__ import annotations
 
 import importlib.util
+from pathlib import Path
 
 import httpx
 import pytest
+
+# Issue #1409: Der Pruefling wird repo-relativ aufgeloest, nicht hartkodiert auf
+# den Hauptrepo-Pfad. Aus einem Worktree wuerde ein fester Hauptrepo-Pfad die
+# UNVERAENDERTE Hauptrepo-Kopie des Validators pruefen und falsches Gruen melden,
+# obwohl die hier bearbeitete Datei kaputt sein kann. Muster:
+# test_prod_selftest_564.py:40-45, test_staging_gate.py:32-36.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+BRIEFING_MAIL_VALIDATOR = _REPO_ROOT / ".claude" / "hooks" / "briefing_mail_validator.py"
 
 
 # ─── Helper: Validator aus .claude/hooks/ importieren ────────────────────────
 
 def _load_validator():
-    path = "/home/hem/gregor_zwanzig/.claude/hooks/briefing_mail_validator.py"
+    path = str(BRIEFING_MAIL_VALIDATOR)
     spec = importlib.util.spec_from_file_location("briefing_mail_validator", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

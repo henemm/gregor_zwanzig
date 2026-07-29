@@ -34,6 +34,8 @@ from services.trip_segments import convert_trip_to_segments
 from utils.timezone import tz_for_coords
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+# Kein Bug (#1409, Klasse C): nur FALLBACK nach _REPO_ROOT (s. Schleife unten) --
+# der Worktree gewinnt bereits.
 _MAIN_REPO = Path("/home/hem/gregor_zwanzig")
 _REFERENCE_REL = "data/users/henning/trips/74de939c.json"
 

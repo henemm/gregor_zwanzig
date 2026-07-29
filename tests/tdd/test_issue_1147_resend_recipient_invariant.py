@@ -51,6 +51,8 @@ from output.channels.email import EmailOutput  # noqa: E402
 # passiert (Allowlist-Treffer) UND real smtp.resend.com/Stalwart dialt,
 # tragen @pytest.mark.email direkt an Klasse/Funktion.
 
+# Hauptrepo-Pfad bewusst fest (#1409, Klasse B): geprueft werden soll die PRODUKTIVE
+# Konfiguration, nicht eine inhaltsgleiche Kopie im Arbeitsordner.
 _MAIN_ENV = Path("/home/hem/gregor_zwanzig/.env")
 
 

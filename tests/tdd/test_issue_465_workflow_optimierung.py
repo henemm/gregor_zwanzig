@@ -1,85 +1,35 @@
 """TDD RED: Tests für Issue #465 — Workflow-Optimierung: Typen, Auto-Advance, Observability.
 
-Alle Tests nutzen subprocess gegen echte On-Disk-Workflow-JSON-Files in tmp_path.
-Keine Mocks.
-
 Spec: docs/specs/modules/issue_465_workflow_optimierung.md
 Test-Manifest: docs/specs/tests/issue_465_workflow_optimierung_tests.md
 
 Hinweis (Rot-Triage #1211b, Batch 1): 7 der ursprünglich 9 Tests wurden
 gelöscht — sie prüften `workflow.py`, das inzwischen ins Plugin-Repo
 `henemm/agent-os-openspec` migriert wurde (Commits `33da201c`/`465380c1`/
-`f1e3acc1`) und unter dem alten Pfad nicht mehr existiert. test_ac3 und
-test_ac10 bleiben (weiterhin grün) — siehe docs/specs/modules/
-rework_1211b_rot_triage.md, Gruppe K1-Ausnahme.
+`f1e3acc1`) und unter dem alten Pfad nicht mehr existiert.
+
+Nachtrag (#1409, Lieferung A): Auch `test_ac3_start_type_invalid_exits_with_error`
+samt der zugehörigen Pfad-Konstante ist ersatzlos entfallen. Der dort geprüfte
+Workflow-Treiber existiert nach der Plugin-Migration unter KEINEM Pfad mehr; der
+Test assertete `returncode != 0` und verbuchte damit den Interpreter-Exit 2
+(„can't open file") als Erfolg — strukturell falsch grün, der Prüfling lief nie.
+Heilbar ist er nicht: Plugin-Code wird hier bewusst nicht geprüft (Präzedenz:
+tests/tdd/test_code_gate_allowed_dirs.py:5-11). Verbleibend ist
+`test_ac10_email_validator_creates_yaml_log`, das echtes Verhalten prüft.
 """
 
 from __future__ import annotations
 
-import os
-import subprocess
-import sys
 from pathlib import Path
 
 import yaml
 
-WORKFLOW_PY = Path("/home/hem/gregor_zwanzig/.claude/hooks/workflow.py")
-EMAIL_VALIDATOR_PY = Path("/home/hem/gregor_zwanzig/.claude/hooks/email_spec_validator.py")
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _run(args: list[str], cwd: Path, extra_env: dict | None = None) -> subprocess.CompletedProcess:
-    """Spawn workflow.py mit den gegebenen Args im isolierten tmp-Repo."""
-    env = os.environ.copy()
-    for k in ("GZ_ACTIVE_WORKFLOW", "GZ_HOOK_SESSION_ID", "CLAUDE_CODE_SESSION_ID"):
-        env.pop(k, None)
-    if extra_env:
-        env.update(extra_env)
-    return subprocess.run(
-        [sys.executable, str(WORKFLOW_PY)] + args,
-        cwd=str(cwd),
-        capture_output=True,
-        text=True,
-        timeout=15,
-        env=env,
-    )
-
-
-def _setup_repo(tmp_path: Path, spec_auto_advance: bool = True) -> Path:
-    """Minimales Fake-Repo mit .git + .claude/workflows/_log/ + openspec.yaml."""
-    (tmp_path / ".git").mkdir()
-    (tmp_path / ".claude" / "workflows" / "_log").mkdir(parents=True)
-    openspec = (
-        f"project:\n  name: test\n"
-        f"workflow:\n  spec_auto_advance: {str(spec_auto_advance).lower()}\n"
-        f"protected_paths: []\n"
-    )
-    (tmp_path / "openspec.yaml").write_text(openspec)
-    return tmp_path
-
-
-def _start_workflow(tmp_path: Path, name: str, extra_args: list[str] | None = None,
-                    session_id: str = "test-session-001") -> subprocess.CompletedProcess:
-    args = ["start", name] + (extra_args or [])
-    return _run(args, tmp_path, extra_env={"CLAUDE_CODE_SESSION_ID": session_id})
-
-
-# ---------------------------------------------------------------------------
-# AC-3: --type invalid → Exit-Code != 0
-# ---------------------------------------------------------------------------
-
-def test_ac3_start_type_invalid_exits_with_error(tmp_path):
-    """AC-3: workflow.py start <name> --type invalid endet mit Exit-Code != 0."""
-    _setup_repo(tmp_path)
-    result = _start_workflow(tmp_path, "my-bad", ["--type", "invalid_type"])
-
-    assert result.returncode != 0, (
-        f"Erwarte Exit-Code != 0 bei ungültigem Typ, got 0.\n"
-        f"stdout: {result.stdout}\nstderr: {result.stderr}"
-    )
+# Issue #1409: Der Pruefling wird repo-relativ aufgeloest, nicht hartkodiert auf
+# den Hauptrepo-Pfad — aus einem Worktree pruefte der Test sonst die
+# unveraenderte Hauptrepo-Kopie des Validators und meldete falsches Gruen.
+# Muster: test_prod_selftest_564.py:40-45, test_staging_gate.py:32-36.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+EMAIL_VALIDATOR_PY = _REPO_ROOT / ".claude" / "hooks" / "email_spec_validator.py"
 
 
 # ---------------------------------------------------------------------------

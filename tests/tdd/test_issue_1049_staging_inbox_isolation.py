@@ -15,6 +15,8 @@ from pathlib import Path
 
 import pytest
 
+# Beide Pfade bewusst fest (#1409, Klasse B): geprueft wird die Trennung der beiden
+# PRODUKTIVEN Konfigurationen (Prod vs. Staging), nicht die von Arbeitsordner-Kopien.
 PROD_ENV_PATH = Path("/home/hem/gregor_zwanzig/.env")
 STAGING_ENV_PATH = Path("/home/hem/gregor_zwanzig_staging/.env")
 

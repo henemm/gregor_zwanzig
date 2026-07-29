@@ -121,6 +121,8 @@ def test_without_optin_all_live_tests_skip_and_env_unchanged(monkeypatch):
 
 
 def test_with_optin_gate_returns_true_and_sources_env(monkeypatch):
+    # Fester Pfad bewusst (#1409, Klasse B): die Staging-Installation liegt ausserhalb
+    # dieses Repos und existiert je Host genau einmal.
     staging_env_path = Path("/home/hem/gregor_zwanzig_staging/.env")
     if not staging_env_path.exists():
         pytest.skip("gregor_zwanzig_staging/.env nicht vorhanden auf diesem Host")

@@ -34,6 +34,8 @@ from playwright.sync_api import expect, sync_playwright
 # Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
 pytestmark = [pytest.mark.timeout(180), pytest.mark.staging]
 
+# Hauptrepo-Pfad bewusst fest (#1409, Klasse B): Zugangsdaten kommen aus EINER Quelle,
+# der produktiven Konfiguration -- nicht aus einer Worktree-Kopie.
 _VALIDATOR_ENV = Path("/home/hem/gregor_zwanzig/.claude/validator.env")
 
 

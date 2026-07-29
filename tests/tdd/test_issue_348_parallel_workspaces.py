@@ -28,6 +28,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SETTINGS_JSON = REPO_ROOT / ".claude" / "settings.json"
 GZ_WORKSPACE = REPO_ROOT / ".claude" / "tools" / "gz-workspace"
 
+# Kein Ladepfad (#1409, Klasse C): reines SUCHMUSTER -- der Test assertet, dass dieser
+# String NICHT in settings.json steht; worktree-relativ waere die Aussage entwertet.
 HARDCODED_PREFIX = "/home/hem/gregor_zwanzig/.claude/hooks"
 PROJECT_DIR_VAR = "${CLAUDE_PROJECT_DIR}"
 MQ_COMMAND = "bash /home/hem/claude-mq/check-messages.sh"

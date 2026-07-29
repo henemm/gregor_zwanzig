@@ -31,6 +31,8 @@ BASE = "https://staging.gregor20.henemm.com"
 # Credentials: laden aus .claude/validator.env (gleiche Quelle wie design_fidelity_diff.py).
 # Fallback auf den bekannten tdd-702-User (hat Trips mit Metriken, ideal für CSS-Test).
 def _load_credentials() -> tuple[str, str]:
+    # Hauptrepo-Pfad bewusst fest (#1409, Klasse B): Zugangsdaten kommen aus EINER
+    # Quelle, der produktiven Konfiguration -- nicht aus einer Worktree-Kopie.
     env_file = Path("/home/hem/gregor_zwanzig/.claude/validator.env")
     user = os.environ.get("GZ_VALIDATOR_USER", "")
     pw = os.environ.get("GZ_VALIDATOR_PASS", "")

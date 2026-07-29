@@ -30,15 +30,32 @@ import pytest
 # test_issue_1010_1006_stille_fehler.py).
 pytestmark = pytest.mark.timeout(180)
 
-REPO = Path("/home/hem/gregor_zwanzig")
-DIFF_TOOL = REPO / ".claude/hooks/design_fidelity_diff.py"
+# Issue #1409: Die frühere Einzel-Konstante REPO trug zwei Rollen; sie ist in
+# zwei benannte Konstanten aufgeteilt.
+#   _REPO_ROOT  = dieser Checkout (Worktree). Trägt den PRÜFLING — geprüft werden
+#                 soll die hier bearbeitete Fassung, nicht die unveränderte
+#                 Hauptrepo-Kopie (sonst falsches Grün).
+#   MAIN_REPO   = Hauptrepo. Trägt Soll-Bilder, Artefakt-Ablage (docs/artifacts)
+#                 und ist cwd der Subprozess-Aufrufe: design_fidelity_diff.py löst
+#                 seine Datenpfade über Path(".") relativ zum cwd auf (Z. 292-294)
+#                 und liest .claude/validator.env von dort — welcher CODE läuft,
+#                 entscheidet der Prüfling-Pfad; welche DATEN er sieht, das cwd.
+# Muster: test_prod_selftest_564.py:31-43.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+MAIN_REPO = Path("/home/hem/gregor_zwanzig")
+
+DIFF_TOOL = _REPO_ROOT / ".claude/hooks/design_fidelity_diff.py"
 WORKFLOW = os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "fix-622-794-mobile-fidelity")
 
+# Soll-Bilder folgen bewusst dem cwd des Vergleichs (MAIN_REPO), nicht dem Ort
+# dieser Testdatei: der Bildvergleich in design_fidelity_diff.py liest sie über
+# Path(".") relativ zum cwd. Worktree-relativ hier hiesse, die Existenz von
+# Datei A zu pruefen und anschliessend Datei B zu vergleichen.
 SCREEN_STEP2 = "I-wizard-step2-etappen"
-SOLL_STEP2 = REPO / "claude-code-handoff/current/soll" / f"{SCREEN_STEP2}.png"
+SOLL_STEP2 = MAIN_REPO / "claude-code-handoff/current/soll" / f"{SCREEN_STEP2}.png"
 
 SCREEN_STEP3 = "I-wizard-step3-wetter"
-SOLL_STEP3 = REPO / "claude-code-handoff/current/soll" / f"{SCREEN_STEP3}.png"
+SOLL_STEP3 = MAIN_REPO / "claude-code-handoff/current/soll" / f"{SCREEN_STEP3}.png"
 
 # Selector für Etappen-Tab im Trip-Wizard (Step 2)
 ETAPPEN_TAB_SELECTOR = 'button:has-text("Etappen")'
@@ -136,14 +153,14 @@ class TestAC4WizardStep2EtappenPreAction:
         """
         assert SOLL_STEP2.exists(), f"SOLL-PNG fehlt: {SOLL_STEP2}"
 
-        artifact_dir = REPO / "docs/artifacts" / WORKFLOW
+        artifact_dir = MAIN_REPO / "docs/artifacts" / WORKFLOW
         artifact_dir.mkdir(parents=True, exist_ok=True)
         report_path = artifact_dir / f"design-diff-{SCREEN_STEP2}.json"
         report_path.unlink(missing_ok=True)
 
         result = subprocess.run(
             [sys.executable, str(DIFF_TOOL), "--screen", SCREEN_STEP2, "--threshold", "12.0"],
-            capture_output=True, text=True, cwd=str(REPO),
+            capture_output=True, text=True, cwd=str(MAIN_REPO),
             env={**os.environ, "OPENSPEC_ACTIVE_WORKFLOW": WORKFLOW,
                  "GZ_ACTIVE_WORKFLOW": WORKFLOW},
             timeout=120
@@ -246,14 +263,14 @@ class TestAC5WizardStep3WegpunktePreAction:
         """
         assert SOLL_STEP3.exists(), f"SOLL-PNG fehlt: {SOLL_STEP3}"
 
-        artifact_dir = REPO / "docs/artifacts" / WORKFLOW
+        artifact_dir = MAIN_REPO / "docs/artifacts" / WORKFLOW
         artifact_dir.mkdir(parents=True, exist_ok=True)
         report_path = artifact_dir / f"design-diff-{SCREEN_STEP3}.json"
         report_path.unlink(missing_ok=True)
 
         result = subprocess.run(
             [sys.executable, str(DIFF_TOOL), "--screen", SCREEN_STEP3, "--threshold", "10.0"],
-            capture_output=True, text=True, cwd=str(REPO),
+            capture_output=True, text=True, cwd=str(MAIN_REPO),
             env={**os.environ, "OPENSPEC_ACTIVE_WORKFLOW": WORKFLOW,
                  "GZ_ACTIVE_WORKFLOW": WORKFLOW},
             timeout=120

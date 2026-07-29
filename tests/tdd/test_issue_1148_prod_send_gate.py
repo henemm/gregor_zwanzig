@@ -287,6 +287,8 @@ def test_grep_dash_F_and_tail_F_allowed(tmp_path):
     cmd_grep = (
         'grep -F "localhost:8000/api/scheduler/trips/1/send" src/routes.py'
     )
+    # Kein Dateizugriff (#1409, Klasse C): Beispiel-Kommandostring fuer das Deploy-Binary,
+    # das je Host einmal ausserhalb des Repos liegt -- hier nur Eingabe fuer den Hook.
     cmd_strings = (
         "strings /home/hem/gregor_zwanzig/gregor-api | grep -F "
         '"trips/1/send"'

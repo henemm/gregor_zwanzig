@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+# Hauptrepo-Pfad bewusst fest (#1409, Klasse B): Zugangsdaten kommen aus EINER Quelle,
+# der produktiven Konfiguration -- nicht aus einer Worktree-Kopie.
 _VALIDATOR_ENV = Path("/home/hem/gregor_zwanzig/.claude/validator.env")
 
 

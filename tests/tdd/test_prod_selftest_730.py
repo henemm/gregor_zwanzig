@@ -27,7 +27,15 @@ import pytest
 # Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
 pytestmark = pytest.mark.staging
 
-PROD_SELFTEST = Path("/home/hem/gregor_zwanzig/.claude/hooks/prod_selftest.py")
+# Issue #1409: Der Pruefling wird repo-relativ aufgeloest — ausgefuehrt wird die
+# Kopie aus dem AKTUELLEN Arbeitsverzeichnis (Worktree), sonst pruefte der Test
+# aus einem Worktree heraus die unveraenderte Hauptrepo-Kopie (falsches Gruen).
+# REPO_DIR bleibt dagegen bewusst der Hauptrepo-Pfad: es ist die GETEILTE Ablage
+# (HEAD-Ermittlung, Attestation) — prod_selftest.py verdrahtet sein eigenes
+# REPO_DIR ohnehin fest dorthin, weil Produktion nur vom Hauptrepo deployt wird.
+# Muster: test_prod_selftest_564.py:31-43.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+PROD_SELFTEST = _REPO_ROOT / ".claude" / "hooks" / "prod_selftest.py"
 REPO_DIR = Path("/home/hem/gregor_zwanzig")
 
 

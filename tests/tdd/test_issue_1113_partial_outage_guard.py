@@ -61,6 +61,8 @@ pytestmark = pytest.mark.email
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _LOCAL_ENV = _REPO_ROOT / ".env"
+# Hauptrepo-Pfad bewusst fest (#1409, Klasse B): geprueft werden soll die PRODUKTIVE
+# Konfiguration, nicht eine inhaltsgleiche Kopie im Arbeitsordner.
 _MAIN_ENV = Path("/home/hem/gregor_zwanzig/.env")
 _TEST_MAILBOX = "gregor-test@henemm.com"
 

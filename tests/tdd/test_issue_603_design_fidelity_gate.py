@@ -20,10 +20,27 @@ import pytest
 # (Direktlauf ohne Timeout-Limit: 10/11 gruen). Datei-lokaler Override.
 pytestmark = pytest.mark.timeout(180)
 
-REPO = Path("/home/hem/gregor_zwanzig")
-DIFF_TOOL = REPO / ".claude/hooks/design_fidelity_diff.py"
-GATE_HOOK = REPO / ".claude/hooks/pre_issue_close_design_gate.py"
-SOLL_DIR = REPO / "claude-code-handoff/current/soll"
+# Issue #1409: Die frühere Einzel-Konstante REPO trug zwei Rollen; sie ist in
+# zwei benannte Konstanten aufgeteilt.
+#   _REPO_ROOT  = dieser Checkout (Worktree). Trägt den PRÜFLING — geprüft werden
+#                 soll die hier bearbeitete Fassung, nicht die unveränderte
+#                 Hauptrepo-Kopie (sonst falsches Grün).
+#   MAIN_REPO   = Hauptrepo. Trägt Soll-Bilder, Artefakt-Ablage (docs/artifacts)
+#                 und ist cwd der Subprozess-Aufrufe: design_fidelity_diff.py löst
+#                 seine Datenpfade über Path(".") relativ zum cwd auf (Z. 292-294)
+#                 und liest .claude/validator.env von dort — welcher CODE läuft,
+#                 entscheidet der Prüfling-Pfad; welche DATEN er sieht, das cwd.
+# Muster: test_prod_selftest_564.py:31-43.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+MAIN_REPO = Path("/home/hem/gregor_zwanzig")
+
+DIFF_TOOL = _REPO_ROOT / ".claude/hooks/design_fidelity_diff.py"
+GATE_HOOK = _REPO_ROOT / ".claude/hooks/pre_issue_close_design_gate.py"
+# Soll-Bilder folgen bewusst dem cwd des Vergleichs (MAIN_REPO), nicht dem Ort
+# dieser Testdatei: der Bildvergleich in design_fidelity_diff.py liest sie über
+# Path(".") relativ zum cwd. Worktree-relativ hier hiesse, die Existenz von
+# Datei A zu pruefen und anschliessend Datei B zu vergleichen.
+SOLL_DIR = MAIN_REPO / "claude-code-handoff/current/soll"
 PILOT_SCREEN = "G-compare-uebersicht-kacheln"
 
 
@@ -52,7 +69,7 @@ class TestAC1DiffToolProducesReport:
         )
         result = subprocess.run(
             [sys.executable, str(DIFF_TOOL), "--screen", PILOT_SCREEN],
-            capture_output=True, text=True, cwd=str(REPO)
+            capture_output=True, text=True, cwd=str(MAIN_REPO)
         )
         assert result.returncode in [0, 1], (
             f"Unerwarteter Exit-Code {result.returncode} — Tool muss 0 (pass) oder 1 (fail) liefern.\n"
@@ -66,7 +83,7 @@ class TestAC1DiffToolProducesReport:
         THEN: JSON-Report existiert und enthält diff_pct, passed, screen
         """
         workflow = os.environ.get("GZ_ACTIVE_WORKFLOW", "issue-603-design-fidelity-gate")
-        report_dir = REPO / "docs/artifacts" / workflow
+        report_dir = MAIN_REPO / "docs/artifacts" / workflow
         report_path = report_dir / f"design-diff-{PILOT_SCREEN}.json"
 
         # Löschen falls Altlast
@@ -74,7 +91,7 @@ class TestAC1DiffToolProducesReport:
 
         result = subprocess.run(
             [sys.executable, str(DIFF_TOOL), "--screen", PILOT_SCREEN],
-            capture_output=True, text=True, cwd=str(REPO),
+            capture_output=True, text=True, cwd=str(MAIN_REPO),
             env={**os.environ, "GZ_ACTIVE_WORKFLOW": workflow}
         )
 
@@ -96,14 +113,14 @@ class TestAC1DiffToolProducesReport:
         THEN: Diff-PNG liegt neben dem JSON-Report
         """
         workflow = os.environ.get("GZ_ACTIVE_WORKFLOW", "issue-603-design-fidelity-gate")
-        report_dir = REPO / "docs/artifacts" / workflow
+        report_dir = MAIN_REPO / "docs/artifacts" / workflow
         diff_png = report_dir / f"design-diff-{PILOT_SCREEN}-diff.png"
 
         diff_png.unlink(missing_ok=True)
 
         subprocess.run(
             [sys.executable, str(DIFF_TOOL), "--screen", PILOT_SCREEN],
-            capture_output=True, text=True, cwd=str(REPO),
+            capture_output=True, text=True, cwd=str(MAIN_REPO),
             env={**os.environ, "GZ_ACTIVE_WORKFLOW": workflow}
         )
 
@@ -119,13 +136,13 @@ class TestAC1DiffToolProducesReport:
         THEN: Exit 0 ↔ passed=true, Exit 1 ↔ passed=false
         """
         workflow = os.environ.get("GZ_ACTIVE_WORKFLOW", "issue-603-design-fidelity-gate")
-        report_dir = REPO / "docs/artifacts" / workflow
+        report_dir = MAIN_REPO / "docs/artifacts" / workflow
         report_path = report_dir / f"design-diff-{PILOT_SCREEN}.json"
         report_path.unlink(missing_ok=True)
 
         result = subprocess.run(
             [sys.executable, str(DIFF_TOOL), "--screen", PILOT_SCREEN],
-            capture_output=True, text=True, cwd=str(REPO),
+            capture_output=True, text=True, cwd=str(MAIN_REPO),
             env={**os.environ, "GZ_ACTIVE_WORKFLOW": workflow}
         )
 
@@ -165,7 +182,7 @@ class TestAC2GateBlocksWithoutArtefact:
         )
         workflow = "issue-603-design-fidelity-gate"
         # Artefakt-Verzeichnis leer halten
-        artefact_dir = REPO / "docs/artifacts" / workflow
+        artefact_dir = MAIN_REPO / "docs/artifacts" / workflow
         artefact_dir.mkdir(parents=True, exist_ok=True)
         for f in artefact_dir.glob("design-diff-*.json"):
             f.unlink()
@@ -177,7 +194,7 @@ class TestAC2GateBlocksWithoutArtefact:
         }
         result = subprocess.run(
             [sys.executable, str(GATE_HOOK)],
-            capture_output=True, text=True, env=env, cwd=str(REPO)
+            capture_output=True, text=True, env=env, cwd=str(MAIN_REPO)
         )
         assert result.returncode == 2, (
             f"Gate muss bei fehlendem Pass-Artefakt Exit 2 liefern, "
@@ -192,7 +209,7 @@ class TestAC2GateBlocksWithoutArtefact:
         THEN: Exit-Code 0 (erlaubt)
         """
         workflow = "issue-603-design-fidelity-gate"
-        artefact_dir = REPO / "docs/artifacts" / workflow
+        artefact_dir = MAIN_REPO / "docs/artifacts" / workflow
         artefact_dir.mkdir(parents=True, exist_ok=True)
 
         # Valides Pass-Artefakt anlegen
@@ -211,7 +228,7 @@ class TestAC2GateBlocksWithoutArtefact:
         }
         result = subprocess.run(
             [sys.executable, str(GATE_HOOK)],
-            capture_output=True, text=True, env=env, cwd=str(REPO)
+            capture_output=True, text=True, env=env, cwd=str(MAIN_REPO)
         )
 
         pass_artefact.unlink(missing_ok=True)
@@ -235,7 +252,7 @@ class TestAC2GateBlocksWithoutArtefact:
         }
         result = subprocess.run(
             [sys.executable, str(GATE_HOOK)],
-            capture_output=True, text=True, env=env, cwd=str(REPO)
+            capture_output=True, text=True, env=env, cwd=str(MAIN_REPO)
         )
         assert result.returncode == 0, (
             f"Gate darf normale Issues nicht blockieren, got Exit {result.returncode}"

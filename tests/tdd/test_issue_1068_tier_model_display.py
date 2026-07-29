@@ -45,6 +45,8 @@ pytestmark = pytest.mark.staging
 
 STAGING = os.environ.get("GZ_SVELTE_BASE", "https://staging.gregor20.henemm.com")
 API = STAGING  # Go-API laeuft hinter SvelteKit-Proxy auf /api/
+# Fester Pfad bewusst (#1409, Klasse B): die Staging-Installation liegt ausserhalb
+# dieses Repos und existiert je Host genau einmal.
 STAGING_DATA_DIR = Path("/home/hem/gregor_zwanzig_staging/data")
 
 
