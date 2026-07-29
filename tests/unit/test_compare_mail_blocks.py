@@ -361,12 +361,18 @@ def test_telegram_and_sms_output_unchanged_by_summary_block_removal():
     Issue #1362 (Scheibe S5b) UMSTELLUNG SMS: dieselbe Begruendung gilt jetzt
     auch fuer die SMS -- ``precip_sum`` war bisher NICHT Teil der Ausgabe
     (Scheibe S5b stand noch aus), erscheint jetzt aber ebenfalls, UND die
-    Zellen tragen das Katalog-Kuerzel statt der Telegram-Vollform ("D 16°C"
+    Zellen tragen das Katalog-Kuerzel statt der Telegram-Vollform ("D+ 16°C"
     statt "Temp 16°C", "R 3.0 mm" statt "Regen 3.0 mm") -- s. Spec
     docs/specs/modules/compare_kanal_metriken.md Implementation Details
     Punkt 3. Der Test wurde NICHT "passend gemacht": er spiegelt die vom PO
     freigegebene Spec (AC-1/AC-3/AC-8), nicht ein zurechtgebogenes
     Testergebnis.
+
+    Adversary-Fund Runde 3 (PO-Entscheidung 2026-07-29): ``temp_max`` bietet
+    im Ortsvergleich mehr als eine Auswertung (Hoechst-/Tiefstwert, ``D``
+    wird sonst fuer beide vergeben) -- das Kuerzel traegt deshalb IMMER das
+    Auswertungszeichen ("D+"), auch wenn hier nur der Hoechstwert gewaehlt
+    ist.
     """
     hourly = _hourly()
     result = _comparison_result([
@@ -384,7 +390,7 @@ def test_telegram_and_sms_output_unchanged_by_summary_block_removal():
         "Zermatt\n   Temp max 16°C · Regen 3.0 mm"
     )
     recorded_sms = (
-        "Vergleich 08.07.: Andermatt D 16°C R 3.0 mm; Zermatt D 16°C R 3.0 mm"
+        "Vergleich 08.07.: Andermatt D+ 16°C R 3.0 mm; Zermatt D+ 16°C R 3.0 mm"
     )
 
     assert telegram == recorded_telegram, (

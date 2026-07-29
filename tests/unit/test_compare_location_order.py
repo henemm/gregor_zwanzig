@@ -279,8 +279,21 @@ class TestAC6AlphabeticalPresetUnchanged:
         assert _order_of(render_compare_telegram(result), self.FROZEN) == self.FROZEN
 
     def test_sms_alphabetical_input_frozen(self):
+        """Nebenwirkung (Issue #1362 S5b, Adversary-Fund Runde 3, PO-Entscheidung
+        2026-07-29): das neue Auswertungszeichen ('+' beim Hoechstwert von
+        Groessen mit mehreren Auswertungen, hier `temp_max`) kostet 1 Zeichen
+        je Ort -- genug, um diese Drei-Orte-Fixture (vorher 138/140 Zeichen)
+        ueber das 140-Zeichen-Budget zu schieben. Der dritte Ort entfaellt
+        jetzt korrekt in den bestehenden Orts-Ueberlauf (` +1 Orte`) statt
+        stillschweigend abgeschnitten zu werden -- die Kern-Aussage dieses
+        Tests (Reihenfolge bleibt alphabetisch, kein Umsortieren) bleibt fuer
+        die GEZEIGTEN Orte gueltig, deshalb Praefix- statt Mengenvergleich."""
         msg = render_compare_sms(self._alpha_result())
-        assert _order_of(msg, self.FROZEN) == self.FROZEN
+        shown = _order_of(msg, self.FROZEN)
+        assert shown == self.FROZEN[: len(shown)], (
+            f"Gezeigte Orte {shown} weichen von der alphabetischen "
+            f"Reihenfolge {self.FROZEN} ab. SMS: {msg!r}"
+        )
         assert len(msg) <= 140
 
 

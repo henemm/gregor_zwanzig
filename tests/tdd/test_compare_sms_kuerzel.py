@@ -34,7 +34,9 @@ from app.metric_catalog import get_sms_code
 from app.models import ForecastDataPoint, ThunderLevel
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.metric_format import format_value
-from output.renderers.comparison import _PLAIN_ROWS_BY_ID, render_compare_sms
+from output.renderers.comparison import (
+    _PLAIN_ROWS_BY_ID, _sms_aggregation_sign, render_compare_sms,
+)
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from output.renderers.email.compare_html import _metric_value
@@ -103,12 +105,17 @@ def _result(locations: list[LocationResult]) -> ComparisonResult:
 
 
 def _sms_cell_text(loc_result: LocationResult, renderer_id: str) -> str | None:
-    """Erwartete SMS-Zelle ("Kuerzel Wert") fuer `renderer_id`, berechnet ueber
-    DIESELBEN Bausteine, die die Spec (Implementation Details Punkt 3) fuer
-    die Implementierung vorschreibt: `get_sms_code()` fuer das Kuerzel,
+    """Erwartete SMS-Zelle ("Kuerzel[+/-] Wert") fuer `renderer_id`, berechnet
+    ueber DIESELBEN Bausteine, die die Spec (Implementation Details Punkt 3)
+    fuer die Implementierung vorschreibt: `get_sms_code()` fuer das Kuerzel,
     `_PLAIN_ROWS`/`_metric_value` fuer Wert+Formatierung (identisch zum
     Klartext-Teil derselben Mail -- keine zweite Werte-/Formatierungsquelle).
-    `None` = kein Wert ODER kein Kuerzel vorhanden (Zelle entfaellt)."""
+    Das Auswertungszeichen (Adversary-Fund Runde 3, PO-Entscheidung
+    2026-07-29: `+`/`-` bei Groessen mit mehr als einer Auswertung im
+    Ortsvergleich, z.B. `temp_max`/`temp_min`) kommt ueber die PRODUKTIONS-
+    Funktion `_sms_aggregation_sign` -- kein zweites, im Test erratenes
+    Zeichen-Vokabular. `None` = kein Wert ODER kein Kuerzel vorhanden (Zelle
+    entfaellt)."""
     metric_id = RENDERER_TO_METRIC_ID[renderer_id]
     code = get_sms_code(metric_id)
     if not code:
@@ -117,7 +124,8 @@ def _sms_cell_text(loc_result: LocationResult, renderer_id: str) -> str | None:
     value = _metric_value(loc_result, renderer_id)
     if value is None:
         return None
-    return f"{code} {fmt(value)}"
+    sign = _sms_aggregation_sign(renderer_id)
+    return f"{code}{sign} {fmt(value)}"
 
 
 def _location_part(sms: str, name: str) -> str:
@@ -485,4 +493,87 @@ def test_every_compare_metric_has_nonempty_sms_code():
         f"IDs liefern kein Katalog-Kuerzel ueber get_sms_code(): {missing!r} "
         "-- jede der 26 Groessen muss ein nicht-leeres Kuerzel liefern "
         "(AC-8)."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Adversary-Fund (Runde 3, #1362 S5b): dieselbe Katalog-Groesse in MEHREREN
+# Auswertungen (Hoechst-/Tiefstwert) teilt sich sonst ein Kuerzel -- "D 33°C
+# D 17°C" ist ohne Zeichen nicht unterscheidbar (im Staging-Nachweis gefunden,
+# echte Innsbruck-SMS). PO-Entscheidung 2026-07-29: `+` fuer Hoechst-, `-` fuer
+# Tiefstwert, IMMER wenn die Groesse im Ortsvergleich mehr als eine Auswertung
+# anbietet -- nicht nur bei gleichzeitiger Auswahl beider.
+# ---------------------------------------------------------------------------
+
+def test_max_and_min_of_same_metric_carry_distinguishing_sign():
+    """Auswahl mit Hoechst- UND Tiefsttemperatur -> beide Zellen tragen
+    dasselbe Kuerzel ('D'), aber unterscheidbare Zeichen ('D+'/'D-') --
+    RED-Grund: ohne Zeichen waeren beide Zellen identisch ('D 33°C D 17°C'),
+    der Empfaenger kann nicht erkennen, welcher Wert welcher ist."""
+    name = "Innsbruck"
+    loc = LocationResult(
+        location=_loc("a", name), temp_max=33.0, temp_min=17.0,
+    )
+    sms = render_compare_sms(
+        _result([loc]), enabled_metrics=["temp_max", "temp_min"],
+    )
+    part = _location_part(sms, name)
+
+    cell_max = _sms_cell_text(loc, "temp_max")
+    cell_min = _sms_cell_text(loc, "temp_min")
+    assert cell_max and cell_min, "Testaufbau defekt: beide Zellen brauchen Werte+Kuerzel"
+
+    assert cell_max != cell_min, (
+        f"Hoechst- und Tiefstwert-Zelle sind identisch ({cell_max!r}) -- nicht "
+        f"unterscheidbar. Ortsteil: {part!r}"
+    )
+    assert cell_max.startswith("D+ "), (
+        f"Hoechstwert-Zelle muss mit 'D+ ' beginnen, war {cell_max!r}."
+    )
+    assert cell_min.startswith("D- "), (
+        f"Tiefstwert-Zelle muss mit 'D- ' beginnen, war {cell_min!r}."
+    )
+    assert cell_max in part and cell_min in part, (
+        f"Ortsteil {part!r} enthaelt nicht beide unterscheidbaren Zellen "
+        f"({cell_max!r}, {cell_min!r})."
+    )
+
+
+def test_single_aggregation_metrics_carry_no_sign():
+    """Regressionsschutz: Groessen mit GENAU EINER Auswertung im Ortsvergleich
+    (z.B. UV-Index, Regensumme, CAPE) bleiben ohne Zeichen -- dort ist nichts
+    mehrdeutig, jedes Zeichen kostet SMS-Budget."""
+    name = "Andermatt"
+    loc = LocationResult(
+        location=_loc("a", name), uv_index_max=7.0, precip_sum_mm=0.3,
+        hourly_data=_daily_points(cape_jkg=820.0),
+    )
+    enabled = ["uv_max", "precip_sum", "cape_max"]
+    cells = [_sms_cell_text(loc, mid) for mid in enabled]
+    assert all(cells), f"Testaufbau defekt: erwartet Werte fuer alle drei Groessen ({cells!r})"
+
+    sms = render_compare_sms(_result([loc]), enabled_metrics=enabled)
+    part = _location_part(sms, name)
+
+    for cell in cells:
+        assert "+" not in cell and "-" not in cell, (
+            f"Groesse mit nur einer Auswertung traegt faelschlich ein "
+            f"Auswertungszeichen: {cell!r}."
+        )
+        assert cell in part, f"Ortsteil {part!r} enthaelt {cell!r} nicht."
+
+
+def test_ambiguous_metrics_derived_from_catalog_are_exactly_temperature_and_wind_chill():
+    """Dokumentiert den Code-ermittelten Befund (PO-Auftrag: 'ermittle am Code,
+    nicht aus meiner Aufzaehlung'): genau die Katalog-Groessen, die im
+    Ortsvergleich MEHR ALS EINE Auswertung anbieten, brauchen ein
+    Auswertungszeichen. Bricht laut, wenn eine zukuenftige Katalog-Erweiterung
+    eine dritte mehrdeutige Groesse einfuehrt, ohne dass das bewusst
+    entschieden wurde."""
+    from output.renderers.comparison import _AMBIGUOUS_CATALOG_METRIC_IDS
+
+    assert _AMBIGUOUS_CATALOG_METRIC_IDS == frozenset({"temperature", "wind_chill"}), (
+        f"Erwartet genau {{'temperature', 'wind_chill'}} als Katalog-Groessen mit "
+        f"mehreren Ortsvergleich-Auswertungen, gefunden: "
+        f"{sorted(_AMBIGUOUS_CATALOG_METRIC_IDS)}."
     )

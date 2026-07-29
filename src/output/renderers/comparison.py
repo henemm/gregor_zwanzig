@@ -17,6 +17,7 @@ SPEC (v2): docs/specs/modules/issue_1110_compare_mail_v2.md
 """
 from __future__ import annotations
 
+from collections import Counter
 from typing import Optional
 
 from app.metric_catalog import get_sms_code
@@ -406,16 +407,58 @@ _RENDERER_TO_CATALOG_METRIC_ID: dict[str, str] = {
     for frontend_key, renderer_id in FRONTEND_TO_RENDERER_METRIC_ID.items()
 }
 
+# Issue #1362 S5b, Adversary-Fund Runde 3 (PO-Entscheidung 2026-07-29): der
+# Katalog fuehrt EINE Groesse mit EINEM Kuerzel, der Ortsvergleich zeigt
+# manche Groessen aber in MEHREREN Auswertungen (Hoechst-/Tiefstwert) --
+# "D 33°C D 17°C" waere ohne Zusatz nicht unterscheidbar. Ermittelt aus dem
+# Katalog SELBST (``COMPARE_METRIC_CATALOG``), nicht aus einer Aufzaehlung:
+# jede ``metric_id``, die dort mit mehr als einem Eintrag (verschiedene
+# ``aggregation``) vorkommt.
+_AGGREGATION_BY_FRONTEND_KEY = {
+    entry["key"]: entry["aggregation"] for entry in COMPARE_METRIC_CATALOG
+}
+_RENDERER_TO_AGGREGATION: dict[str, str] = {
+    renderer_id: _AGGREGATION_BY_FRONTEND_KEY[frontend_key]
+    for frontend_key, renderer_id in FRONTEND_TO_RENDERER_METRIC_ID.items()
+}
+_metric_id_occurrences = Counter(
+    entry["metric_id"] for entry in COMPARE_METRIC_CATALOG
+)
+_AMBIGUOUS_CATALOG_METRIC_IDS = frozenset(
+    mid for mid, count in _metric_id_occurrences.items() if count > 1
+)
+
+
+def _sms_aggregation_sign(metric_id: str) -> str:
+    """PO-Vorgabe 2026-07-29 (Adversary-Fund Runde 3): ``+`` fuer den
+    Hoechstwert, ``-`` fuer den Tiefstwert -- IMMER, wenn die zugrundeliegende
+    Katalog-Groesse im Ortsvergleich MEHR ALS EINE Auswertung anbietet, nicht
+    nur wenn der Nutzer gerade beide gewaehlt hat (ein Kuerzel darf nicht je
+    nach Auswahl etwas anderes bedeuten -- dieselbe Regel wie die
+    ``fresh_snow``-Kuerzel-Korrektur). Groessen mit genau einer Auswertung
+    bleiben ohne Zeichen: nichts mehrdeutig, jedes Zeichen kostet SMS-Budget."""
+    catalog_id = _RENDERER_TO_CATALOG_METRIC_ID.get(metric_id)
+    if catalog_id not in _AMBIGUOUS_CATALOG_METRIC_IDS:
+        return ""
+    aggregation = _RENDERER_TO_AGGREGATION.get(metric_id)
+    if aggregation == "max":
+        return "+"
+    if aggregation == "min":
+        return "-"
+    return ""
+
 
 def _sms_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None:
-    """"Kuerzel Wert"-Zelle fuer ``metric_id`` (Issue #1362 Scheibe S5b,
+    """"Kuerzel[+/-] Wert"-Zelle fuer ``metric_id`` (Issue #1362 Scheibe S5b,
     Spec Implementation Details Punkt 3). Wert+Formatierung kommen aus
     derselben Quelle wie der Klartext-Teil (``_PLAIN_ROWS``/``_metric_value``);
     das Kuerzel AUSSCHLIESSLICH aus dem zentralen Katalog
-    (``metric_catalog.get_sms_code``), nie zur Laufzeit abgeleitet. ``None`` =
-    kein Wert an diesem Ort ODER keine ``metric_id``/kein Kuerzel bekannt --
-    die Zelle entfaellt dann, ohne Platz oder einen Zaehler zu belegen
-    (analog ``_plain_metric_cell``/Telegram-Pfad)."""
+    (``metric_catalog.get_sms_code``), nie zur Laufzeit abgeleitet; das
+    Auswertungszeichen (``+``/``-``) ausschliesslich ueber
+    ``_sms_aggregation_sign``. ``None`` = kein Wert an diesem Ort ODER keine
+    ``metric_id``/kein Kuerzel bekannt -- die Zelle entfaellt dann, ohne Platz
+    oder einen Zaehler zu belegen (analog ``_plain_metric_cell``/
+    Telegram-Pfad)."""
     row = _PLAIN_ROWS_BY_ID.get(metric_id)
     if row is None:
         return None
@@ -427,6 +470,7 @@ def _sms_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None:
     code = get_sms_code(catalog_id) if catalog_id else ""
     if not code:
         return None
+    code = f"{code}{_sms_aggregation_sign(metric_id)}"
     return f"{code} {fmt(value)}"
 
 
