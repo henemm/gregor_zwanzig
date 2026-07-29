@@ -726,7 +726,10 @@ class TestAC10CellBackgroundHighlighting:
         dp = ForecastDataPoint(
             ts=datetime(2026, 7, 11, 9, 0, tzinfo=timezone.utc),
             t2m_c=12.0,
-            wind10m_kmh=22.0,  # >20 → caution für wind
+            # Issue #1377 Scheibe B: Katalog-Schwelle fuer Wind beginnt jetzt
+            # bei 30 km/h (statt der frueheren renderer-eigenen >20) — 32 km/h
+            # ist der neue Caution-Ausloeser (AC-3).
+            wind10m_kmh=32.0,  # >=30 → caution für wind (Katalog)
             gust_kmh=28.0,
             precip_1h_mm=0.0,
             cloud_total_pct=60,

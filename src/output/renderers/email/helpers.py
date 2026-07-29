@@ -498,25 +498,6 @@ def _ampel_dot_css(level: str) -> str:
     )
 
 
-def _level_from_thresholds(value, thresholds: dict) -> "Optional[str]":
-    """Issue #888: shared band-level resolver for the 4-level Ampel.
-
-    Issue #1377 Scheibe A: delegiert an ``metric_format.severity_from_thresholds``
-    (SSoT) statt die Band-Logik ein zweites Mal zu implementieren — dadurch
-    wirken invertierte (``yellow_lt``/``orange_lt``/``red_lt``) und beidseitige
-    Baender automatisch auch hier (``ampel_dot``/``ampel_level``/
-    ``ampel_stage_tone``).
-
-    Returns None for a None value, oder wenn ``thresholds`` in keiner
-    Richtung Schwellen enthaelt; sonst eine der Stufen
-    'green'|'yellow'|'orange'|'red'.
-    """
-    # Lokaler Import vermeidet einen Zirkelbezug: metric_format importiert
-    # (ueber design_tokens) das renderers-Paket, das wiederum helpers laedt.
-    from output.metric_format import severity_from_thresholds
-    return severity_from_thresholds(thresholds, value)
-
-
 def ampel_dot(value, thresholds: dict) -> str:
     """Return 4-level traffic-light CSS-dot (HTML span) for a metric value.
 
@@ -533,7 +514,10 @@ def ampel_dot(value, thresholds: dict) -> str:
         '–' for None; otherwise a CSS-Dot `<span>` (border-radius:50%) based
         on thresholds.
     """
-    level = _level_from_thresholds(value, thresholds)
+    # Lokaler Import vermeidet einen Zirkelbezug: metric_format importiert
+    # (ueber design_tokens) das renderers-Paket, das wiederum helpers laedt.
+    from output.metric_format import severity_from_thresholds
+    level = severity_from_thresholds(thresholds, value)
     if level is None:
         return "–"
     return _ampel_dot_css(level)
@@ -572,7 +556,10 @@ def ampel_level(metric_id: str, value) -> "Optional[str]":
         thresholds = get_metric(metric_id).display_thresholds
     except Exception:
         return None
-    return _level_from_thresholds(value, thresholds)
+    # Lokaler Import vermeidet einen Zirkelbezug: metric_format importiert
+    # (ueber design_tokens) das renderers-Paket, das wiederum helpers laedt.
+    from output.metric_format import severity_from_thresholds
+    return severity_from_thresholds(thresholds, value)
 
 
 # Mapping: fmt_val col_key → metric catalog id fuer Ampel-Lookup
@@ -1055,13 +1042,18 @@ def ampel_stage_index(value, thresholds: dict) -> int:
     Issue #795/AC-9: Pill und Tabelle teilen sich diese Funktion, damit
     derselbe Spitzenwert garantiert dieselbe Stufe/Farbe ergibt.
     Issue #1222: entkoppelt von ampel_dot()/Emoji-Lookup — nutzt direkt
-    _level_from_thresholds() ueber die feste Level-Reihenfolge.
-    Issue #1377 Scheibe A: _level_from_thresholds() kann seit der Delegation
-    an severity_from_thresholds() None liefern (keine Schwellen in irgendeiner
-    Richtung). An dieser Stelle bleibt das Verhalten wie vor #1377: neutrale/
-    gruene Stufe (Index 0) statt eines Fehlers aus _AMPEL_STAGE_ORDER.index(None).
+    severity_from_thresholds() ueber die feste Level-Reihenfolge.
+    Issue #1377 Scheibe B: `_level_from_thresholds()` (reiner Argument-
+    vertauschender Wrapper) entfaellt — direkter Aufruf von
+    ``severity_from_thresholds`` (SSoT). Kann None liefern (keine Schwellen
+    in irgendeiner Richtung); an dieser Stelle bleibt das Verhalten wie vor
+    #1377: neutrale/gruene Stufe (Index 0) statt eines Fehlers aus
+    _AMPEL_STAGE_ORDER.index(None).
     """
-    level = _level_from_thresholds(value, thresholds)
+    # Lokaler Import vermeidet einen Zirkelbezug: metric_format importiert
+    # (ueber design_tokens) das renderers-Paket, das wiederum helpers laedt.
+    from output.metric_format import severity_from_thresholds
+    level = severity_from_thresholds(thresholds, value)
     if level is None:
         return 0
     return _AMPEL_STAGE_ORDER.index(level)
@@ -1337,6 +1329,22 @@ def _aggregation_pill_text(
     return f"{prefix}{body}"
 
 
+def _extreme_ampel_tone(metric_id: str, vals_ts: list) -> str:
+    """Issue #1377 Scheibe B (AC-5): Ampel-Toenung fuer zweiseitig gebaenderte
+    Klasse-1-Metriken (Temperatur/gefuehlte Temperatur) aus dem jeweils
+    massgeblichen Extremwert — Hitze-Seite aus dem Hoechstwert, Kaelte-Seite
+    aus dem Tiefstwert, analog zur bereits bestehenden zweiseitigen
+    Bandauswertung aus Scheibe A (`severity_from_thresholds`). Liefert die
+    schaerfere der beiden Stufen (``ampel_stage_tone`` teilt sich dieselbe
+    Reihenfolge mit der Stundentabelle, Issue #795/AC-9).
+    """
+    thresholds = get_metric(metric_id).display_thresholds
+    values = [v for v, _ in vals_ts]
+    hi_idx = ampel_stage_index(max(values), thresholds)
+    lo_idx = ampel_stage_index(min(values), thresholds)
+    return _AMPEL_STAGE_TONES[max(hi_idx, lo_idx)]
+
+
 def _pill_for_metric(
     metric_id: str,
     thresholds: dict,
@@ -1374,7 +1382,16 @@ def _pill_for_metric(
         text = _aggregation_pill_text(
             vals_ts, aggregations, tz=tz, prefix=prefix, decimals=decimals,
         )
-        return None if text is None else (text, _PILL_NEUTRAL_TONE)
+        if text is None:
+            return None
+        # Issue #1377 Scheibe B (AC-5, PO-Befund 2026-07-28): Temperatur und
+        # gefuehlte Temperatur sind hier die einzigen zwei Metriken (s.
+        # _AGGREGATION_PILL_METRICS) — sie verlieren als Klasse 1 ihre bisherige
+        # Neutralitaet und bekommen wie Wind/Boeen eine Ampel-Toenung aus dem
+        # jeweils massgeblichen Extremwert (Hitze: Hoechstwert, Kaelte:
+        # Tiefstwert — schaerfere der beiden Stufen gewinnt).
+        tone = _extreme_ampel_tone(metric_id, vals_ts)
+        return (text, tone)
 
     if metric_id == "cloud_total":
         # AC-7: "60–95% bewölkt · Max 12:00" — kein Label-Präfix

@@ -17,6 +17,7 @@ from app.models import (
     SegmentWeatherData, ThunderLevel, UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
+from output.metric_format import severity_for
 
 if TYPE_CHECKING:
     from app.models import NormalizedTimeseries, StabilityResult
@@ -145,18 +146,35 @@ def _safe_float(v, default: float = 0.0) -> float:
 
 
 def _row_risk(r: dict) -> str:
-    """Bestimmt Risk-Level pro Tabellenzeile aus Schwellwerten."""
+    """Bestimmt Risk-Level pro Tabellenzeile aus Katalog-Schwellen (Issue #1377
+    Scheibe B, AC-10). Gewitter bleibt hartcodiert (kein `display_thresholds`
+    im Katalog, s. Spec „Known Limitations") — Wind/Böen/Regen/Regenwahrsch.
+    /Sicht fragen dieselbe `severity_for`-Quelle wie die Einzelzellen; die
+    schärfste der resultierenden Stufen entscheidet zusammen mit Gewitter.
+    Das dreiwertige Punkt-Vokabular bleibt: green→ok, yellow/orange→watch,
+    red→risk (keine vierte Punktfarbe, s. Spec).
+    """
     thunder = _safe_float(r.get("thunder"))
     if thunder > 20:
         return "risk"
-    gust = _safe_float(r.get("gust"))
-    wind = _safe_float(r.get("wind"))
-    precip = _safe_float(r.get("precip"))
-    pop = _safe_float(r.get("pop"))
+
     vis_raw = r.get("vis")
     vis_num = _safe_float(vis_raw, 99.0)
-    vis = vis_num / 1000 if vis_num > 100 else vis_num
-    if thunder > 0 or gust > 30 or wind > 20 or precip > 1 or pop > 50 or vis < 2:
+    vis_m = vis_num if vis_num > 100 else vis_num * 1000
+
+    _STAGES = ("green", "yellow", "orange", "red")
+    levels = [
+        severity_for("gust", _safe_float(r.get("gust"))),
+        severity_for("wind", _safe_float(r.get("wind"))),
+        severity_for("precipitation", _safe_float(r.get("precip"))),
+        severity_for("rain_probability", _safe_float(r.get("pop"))),
+        severity_for("visibility", vis_m),
+    ]
+    worst = max((lvl for lvl in levels if lvl is not None), default="green", key=_STAGES.index)
+
+    if worst == "red":
+        return "risk"
+    if worst in ("yellow", "orange") or thunder > 0:
         return "watch"
     return "ok"
 
@@ -540,12 +558,7 @@ def _render_html_table(
     thead = f'<thead><tr>{ths}</tr></thead>'
 
     # Data rows with highlighting
-    _WIND_THRESHOLD = 20.0
-    _GUST_THRESHOLD = 30.0
-    _PRECIP_THRESHOLD = 1.0
-    _RAINP_THRESHOLD = 50.0
     _THUNDER_THRESHOLD = 0.0
-    _VIS_THRESHOLD = 2.0  # km — below is critical
 
     # Issue #888: col_key → Katalog-metric_id für die Ampel-Level-Tönung
     # (analog build_html_indicator_keys / _AMPEL_KEY_TO_METRIC_ID, inkl. cape).
@@ -555,6 +568,18 @@ def _render_html_table(
         "precip": "precipitation",
         "pop": "rain_probability",
         "cape": "cape",
+    }
+
+    # Issue #1377 Scheibe B: Fallback-Mapping (Roh-Modus / nicht in
+    # indicator_keys) auf denselben Katalog wie oben — Gewitter bleibt
+    # ausdrücklich hartcodiert (kein `display_thresholds` im Katalog).
+    _FALLBACK_COL_KEY_TO_METRIC_ID = {
+        "wind": "wind",
+        "gust": "gust",
+        "precip": "precipitation",
+        "pop": "rain_probability",
+        "vis": "visibility",
+        "visibility": "visibility",
     }
 
     _dcstyle_base = (
@@ -610,22 +635,28 @@ def _render_html_table(
                     "orange": "#fad6b8",
                     "red": "#f6c5bf",
                 }.get(level)
-            # col_keys from metric catalog (not metric_ids)
-            # AC-10: caution=#fbeeb8, warn=#fad6b8, danger=#f6c5bf
-            elif key == "wind" and numeric is not None and numeric > _WIND_THRESHOLD:
-                cell_bg = "#fad6b8" if numeric > 30 else "#fbeeb8"
-            elif key == "gust" and numeric is not None and numeric > _GUST_THRESHOLD:
-                cell_bg = "#f6c5bf" if numeric > 60 else ("#fad6b8" if numeric > 45 else "#fbeeb8")
-            elif key == "precip" and numeric is not None and numeric > _PRECIP_THRESHOLD:
-                cell_bg = "#f6c5bf" if numeric > 8 else ("#fad6b8" if numeric > 4 else "#fbeeb8")
-            elif key == "pop" and numeric is not None and numeric > _RAINP_THRESHOLD:
-                cell_bg = "#f6c5bf" if numeric > 85 else ("#fad6b8" if numeric > 70 else "#fbeeb8")
+            # Issue #1377 Scheibe B: Roh-Modus-Fallback (key nicht in
+            # indicator_keys) fragt denselben Katalog wie der freundliche
+            # Modus oben (severity_for statt eigener hartcodierter Schwellen).
+            # Sichtweite kommt teils in Metern (>100), teils bereits in km
+            # (<=100, ältere Rows/Tests) an — auf Meter normalisieren, weil
+            # der Katalog dort seine Schwellen führt (2000/1000/500 m).
+            elif key in _FALLBACK_COL_KEY_TO_METRIC_ID and numeric is not None:
+                metric_id = _FALLBACK_COL_KEY_TO_METRIC_ID[key]
+                value = numeric
+                if key in ("vis", "visibility"):
+                    value = numeric if numeric > 100 else numeric * 1000
+                level = severity_for(metric_id, value)
+                cell_bg = {
+                    "yellow": "#fbeeb8",
+                    "orange": "#fad6b8",
+                    "red": "#f6c5bf",
+                }.get(level)
+            # Gewitter bleibt ausdrücklich hartcodiert (Issue #1377: Datenform-
+            # Divergenz Prozentwert vs. Stufen, kein `display_thresholds` im
+            # Katalog — s. Spec „Known Limitations").
             elif key == "thunder" and numeric is not None and numeric > _THUNDER_THRESHOLD:
                 cell_bg = "#f6c5bf" if numeric > 30 else ("#fad6b8" if numeric > 20 else "#fbeeb8")
-            elif key in ("vis", "visibility") and numeric is not None:
-                vis_km = numeric / 1000 if numeric > 100 else numeric
-                if 0 < vis_km < _VIS_THRESHOLD:
-                    cell_bg = "#f6c5bf" if vis_km < 0.5 else ("#fad6b8" if vis_km < 1 else "#fbeeb8")
 
             # Issue #995 (Gruppe B): Zell-Tönung + Padding direkt inline auf das
             # <td> selbst (Vorbild _otd()-Muster), kein Span/Negativ-Margin-Trick

@@ -135,12 +135,23 @@ def test_ac1_wind_75_red_tint():
 # AC-2 (Negativ, Invariante): Roh-Modus behaelt bestehende Toenung
 # ---------------------------------------------------------------------------
 
-def test_ac2_wind_25_raw_mode_keeps_existing_tint():
-    """AC-2 (Negativ): GIVEN Wind=25.0 km/h im Roh-Modus (kein Ampel-Indikator),
-    WHEN die HTML-Tabelle gerendert wird,
-    THEN behaelt die Zelle die bestehende Warn-Toenung background:#fbeeb8
-    unveraendert (Roh-Modus-Verhalten bleibt exakt wie vor dem Fix).
+def test_ac2_wind_25_raw_mode_matches_catalog():
+    """AC-2 (Negativ, aktualisiert Issue #1377 Scheibe B): GIVEN Wind=25.0
+    km/h im Roh-Modus (kein Ampel-Indikator), WHEN die HTML-Tabelle
+    gerendert wird, THEN bleibt die Zelle UNGETOENT — der Roh-Modus-
+    Fallback fragt seit #1377 Scheibe B denselben Katalog wie der
+    freundliche Modus (Katalog-Gelbschwelle fuer Wind erst ab 30 km/h,
+    s. `severity_for("wind", 25.0) == "green"`); die vormals eigene,
+    strengere Roh-Modus-Schwelle (>20 km/h) und die damit verbundene
+    Invariante „Roh-Modus behaelt seine bestehende Toenung" (#888/#896/
+    #902) sind mit dieser Umstellung bewusst aufgehoben (AC-3 der Spec
+    `ampel_schwellen_renderer.md`: 35 km/h wechselt in der Trip-Zelle von
+    orange auf gelb; 25 km/h liegt jetzt unter jeder Schwelle).
     """
+    from output.metric_format import severity_for
+    assert severity_for("wind", 25.0) == "green", (
+        "Erwartungs-Grundlage: Katalog-Gelbschwelle fuer Wind liegt bei 30 km/h"
+    )
     rows = [{"time": "08:00", "wind": 25.0}]
     html = _render_html_table(
         rows,
@@ -149,8 +160,9 @@ def test_ac2_wind_25_raw_mode_keeps_existing_tint():
         indicator_keys=set(),
     )
     cell = _cell_for_label(html, "Wind")
-    assert "background:#fbeeb8" in cell, (
-        f"AC-2: raw-mode wind=25 must keep existing #fbeeb8 tint, got: {cell}"
+    assert "background:" not in cell, (
+        f"AC-2: raw-mode wind=25 muss seit #1377 Scheibe B UNGETOENT bleiben "
+        f"(Katalog-Schwelle 30/50/70 km/h), got: {cell}"
     )
 
 

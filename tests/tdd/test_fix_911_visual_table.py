@@ -170,6 +170,24 @@ class TestAC1LineColor:
 # AC-2 — Risk-Hintergrund je Schweregrad (getönte Zelle, nicht weiß)
 # ===========================================================================
 class TestAC2RiskBackground:
+    # Issue #1377 Scheibe B: die Werte in `_warn_row()` waren gegen die alten,
+    # renderer-eigenen Schwellen kalibriert ("Design-Schwellen" oben) — die
+    # Zell-Tönung fragt jetzt denselben Katalog wie der Ortsvergleich. Wind 35
+    # km/h liegt in der Katalog-Staffel (30/50/70) auf der GELBEN statt der
+    # ORANGEN Stufe (AC-3), Regenwahrscheinlichkeit 80 % erreicht mit der
+    # Katalog-Staffel (30/60/80) bereits die ROTE statt der orangen Stufe
+    # (Konsequenz aus der Katalog-Uebernahme, nicht Teil der explizit
+    # benannten "Sichtbare Wirkung"-Beispiele, aber derselbe Mechanismus).
+    # Gust/Rain/Visib bleiben unveraendert auf "warn" (Katalog-Schwellen dort
+    # bereits deckungsgleich bzw. rechnerisch identisch).
+    _EXPECTED_TONE = {
+        "Wind": "caution",
+        "Gust": "warn",
+        "Rain": "warn",
+        "Rain%": "danger",
+        "Visib": "warn",
+    }
+
     @pytest.mark.parametrize("label", ["Wind", "Gust", "Rain", "Rain%", "Visib"])
     def test_warn_cell_has_tinted_background(self, label):
         html = _render_full_html([_warn_row()])
@@ -179,10 +197,11 @@ class TestAC2RiskBackground:
         assert match, f"Spalte {label!r} nicht in Tabelle (labels: {[c['label'] for c in cells]})"
         c = match[0]
         bg = c["bgTd"] if c["bgTd"] not in WHITE_OR_TRANSPARENT else c["bgInner"]
-        assert bg == RISK_CELL["warn"], (
-            f"Zelle {label!r} (Wert {c['text']!r}) muss WARN-Tönung "
-            f"{RISK_CELL['warn']} (#fad6b8) tragen, hat aber {bg!r}. "
-            "Vorlage sevCellStyle → RISK_CELL.warn.bg."
+        expected_key = self._EXPECTED_TONE[label]
+        assert bg == RISK_CELL[expected_key], (
+            f"Zelle {label!r} (Wert {c['text']!r}) muss {expected_key.upper()}-Tönung "
+            f"{RISK_CELL[expected_key]} tragen, hat aber {bg!r}. "
+            "Vorlage sevCellStyle → RISK_CELL, jetzt aus dem zentralen Katalog (#1377 Scheibe B)."
         )
 
 

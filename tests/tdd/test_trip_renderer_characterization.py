@@ -117,7 +117,19 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # vorher unter allen Schwellen (gruen), jetzt >= orange(45). Kein anderer
 # Text-/Layout-/Farbblock hat sich geaendert (visibility_m=9000 bleibt
 # gruen). Digest unten neu ermittelt.
-_EXPECTED_SHA256 = "9d7b6dcfae43c61aa3b6c3e9952d0be4f5c6f6cfdffe08ae954ca6305e3c640d"
+#
+# #1377 Scheibe B (PO-Entscheidung 2026-07-29, AC-5): Temperatur/gefuehlte
+# Temperatur verlieren ihre bisherige Klasse-2-Neutralitaet in der Klartext-
+# Kachel (`_pill_for_metric`) -- verifiziert per Byte-Diff des Roh-HTML
+# gegen den Stand vor dieser Scheibe: GENAU EIN Unterschied, die
+# Temperatur-Kachel wechselt von der neutralen "info"-Farbe (bg #dde8f3) auf
+# die gruene Ampel-Farbe (bg #dcf2e1, "ok"), weil 22 °C (`_make_dp` oben)
+# unter der Katalog-Hitzeschwelle (28 °C) liegt. `wind_chill` ist in diesem
+# Fixture nicht aktiviert (s. `_ENABLED_METRICS`) und daher ohne Wirkung
+# hier. Kein anderer Text-/Layout-/Farbblock hat sich geaendert (Wind 35/
+# Boeen 45/Regen 2,0 mm/PR 40 % liefen bereits vor dieser Scheibe ueber den
+# Katalog, s. Scheibe A). Digest unten neu ermittelt.
+_EXPECTED_SHA256 = "adc39a439ee8632e88b4bb5a24371a14f6cbc1480bce736adf85cd09e057a00a"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",

@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from datetime import tzinfo
     from app.models import SegmentWeatherSummary, ForecastDataPoint
 
+from app.metric_catalog import get_metric
 from output.renderers.email.helpers import format_trend_tokens
 from output.renderers.email.design_tokens import FONT_DATA
 from utils.geo import degrees_to_compass
@@ -70,6 +71,14 @@ def render_outlook_table(
         if c is not None and v >= c:
             return "background:#fbeeb8;"
         return ""
+
+    def _catalog_thresholds(metric_id: str) -> tuple:
+        """Issue #1377 Scheibe B: (caution, warn, danger)-Tupel aus dem
+        zentralen Katalog statt hartcodierter Zahlen — derselbe Renderer
+        rendert Trip UND Ortsvergleich, diese eine Umstellung schliesst die
+        Ausblick-Luecke zwischen beiden Mail-Arten in einem Schritt."""
+        t = get_metric(metric_id).display_thresholds
+        return (t.get("yellow"), t.get("orange"), t.get("red"))
 
     def _otd(content: str, *, bg: str = "", align: str = "center") -> str:
         """Outlook-Table-Datenzelle (kompakte inline-styles für Outlook).
@@ -194,10 +203,10 @@ def render_outlook_table(
         tag_bg = ""
         n_bg = ""
         d_bg = ""
-        r_bg = _outlook_cell_bg(precip_mm, (2, 5, 8))
-        pr_bg = _outlook_cell_bg(pr_pct, (50, 70, 85))
-        wind_bg = _outlook_cell_bg(wind_kmh, (20, 30, None))
-        gust_bg = _outlook_cell_bg(gust_kmh, (30, 45, 60))
+        r_bg = _outlook_cell_bg(precip_mm, _catalog_thresholds("precipitation"))
+        pr_bg = _outlook_cell_bg(pr_pct, _catalog_thresholds("rain_probability"))
+        wind_bg = _outlook_cell_bg(wind_kmh, _catalog_thresholds("wind"))
+        gust_bg = _outlook_cell_bg(gust_kmh, _catalog_thresholds("gust"))
         gew_bg = _THUNDER_LEVEL_BG.get(thunder_level, "")
         acc_bg = ""
 

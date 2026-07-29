@@ -238,21 +238,23 @@ class TestAC3HelperValues:
         # Pille enthält Maximaltemperatur: max(8, 9, 11, 12) = 12 (15 fällt weg, da 15 Uhr außerhalb des Fensters)
         assert any("12" in t for t in texts), f"12°C (max) nicht in Pillen: {texts}"
 
-    def test_temperature_tone_is_info(self):
-        """Issue #795: temperature ist Klasse 2 (Bereich) → neutraler Tone.
-
-        Frueher 'info'; seit #795 trägt jede Bereichs-Metrik den neutralen
-        Tone (kein Schweregrad — die Ampelstufen sind den Ereignis-Metriken
-        vorbehalten, AC-9).
+    def test_temperature_tone_is_ampel_colored(self):
+        """Issue #1377 Scheibe B (AC-5, PO-Befund 2026-07-28): temperature ist
+        seit dieser Umstellung keine neutrale Bereichs-Metrik mehr — sie
+        bekommt wie Wind/Böen (Klasse 1) eine Ampel-Tönung aus dem
+        Katalog. Bei 12 °C (weit unter Hitze- UND Kälteschwelle, s.
+        Fixture-Docstring oben) ist das 'ampel_green', nicht mehr der
+        vormals immer neutrale Tone (frueher 'info', seit #795 neutral;
+        diese Ausnahme gilt jetzt NUR noch fuer die uebrigen sechs
+        Bereichs-Metriken, s. AC-8).
         """
-        from output.renderers.email.helpers import (
-            _PILL_NEUTRAL_TONE, build_metrics_summary_pills,
-        )
+        from output.renderers.email.helpers import build_metrics_summary_pills
         segs = _build_segments()
         pills = build_metrics_summary_pills(segs, ["temperature"], {}, tz=TZ)
         tones = [tone for _, tone in pills]
-        assert any(tone == _PILL_NEUTRAL_TONE for tone in tones), (
-            f"neutraler Tone erwartet, got: {tones}"
+        assert any(tone == "ampel_green" for tone in tones), (
+            f"ampel_green Tone erwartet (12 °C liegt unter allen Katalog-"
+            f"Schwellen), got: {tones}"
         )
 
     def test_precipitation_pill_with_rain(self):
