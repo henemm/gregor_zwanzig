@@ -19,10 +19,10 @@ from __future__ import annotations
 
 from typing import Optional
 
-from app.models import Corridor
+from app.models import Corridor, MetricConfig, UnifiedWeatherDisplayConfig
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
-from output.renderers.channel_layout import CHANNEL_LIMITS
+from output.renderers.channel_layout import CHANNEL_LIMITS, render_for_channel
 from output.renderers.email.compare_html import (
     OUTLOOK_HEADING, _build_location_outlook_rows, _fmt_precip_type,
     _fmt_thunder, _fmt_visibility_overview, _metric_value,
@@ -390,6 +390,52 @@ _CHANNEL_METRICS: tuple[tuple[str, str], ...] = (
 # nur die zwei wichtigsten Metriken je Ort.
 _SMS_METRICS_PER_LOCATION = 2
 
+# Issue #1362 (Scheibe S5a): Label+Formatierung fuer ALLE 26 Compare-Groessen
+# ueber dieselbe Tabelle wie der Klartext-Teil (_PLAIN_ROWS) -- ersetzt die
+# alte 6-Groessen-if-Kette (_format_channel_metric) fuer den Telegram-Pfad.
+_PLAIN_ROWS_BY_ID = {row[0]: row for row in _PLAIN_ROWS}
+
+
+def _plain_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None:
+    """"Label Wert"-Zelle fuer ``metric_id``, aus derselben Quelle wie der
+    Klartext-Teil derselben Mail (``_PLAIN_ROWS``/``_metric_value``, Issue
+    #1362 -- keine zweite Werte-/Formatierungsquelle). ``None`` = Wert nicht
+    vorhanden ODER ``metric_id`` unbekannt (Zelle entfaellt)."""
+    row = _PLAIN_ROWS_BY_ID.get(metric_id)
+    if row is None:
+        return None
+    _, label, fmt = row
+    value = _metric_value(loc_result, metric_id)
+    if value is None:
+        return None
+    return f"{label} {fmt(value)}"
+
+
+def _channel_layout_for_metrics(channel: str, metric_ids: list[str]):
+    """Baut aus einer bereits ORTS-GEFILTERTEN, nutzergeordneten Metrik-ID-
+    Liste (``metric_ids`` -- seit #1359 Listenposition = Reihenfolge) eine
+    ``UnifiedWeatherDisplayConfig`` und delegiert Priorisierung/Abschneiden an
+    ``channel_layout.render_for_channel()`` -- dieselbe Logik wie der
+    Trip-Kanal-Renderer (Issue #1362, Spec 'Die Naht'). Alle gewaehlten
+    Groessen werden ``bucket="primary"`` (Compare kennt keine
+    primary/secondary-Unterscheidung); ``order`` ist die Listenposition.
+
+    Adversary-Korrektur (Gegenpruefung #1362): der Aufrufer MUSS
+    ``metric_ids`` bereits auf die an diesem Ort tatsaechlich vorhandenen
+    Werte gefiltert haben -- diese Funktion selbst kennt keine Orte/Werte
+    mehr und darf deshalb je Ort mit unterschiedlichen Listen aufgerufen
+    werden (s. ``render_compare_telegram``). Der fruehere ``None``-Fallback
+    auf die alte Sechserliste ist in den Aufrufer gewandert (dort steht auch
+    die Ortsabhaengigkeit). KEIN ``auto_distribute()`` -- das schluesselt auf
+    Trip-Metrik-IDs, ein zu Compare inkompatibles Vokabular (s. Spec
+    Implementation Details Punkt 1)."""
+    metrics = [
+        MetricConfig(metric_id=mid, bucket="primary", order=i)
+        for i, mid in enumerate(metric_ids)
+    ]
+    dc = UnifiedWeatherDisplayConfig(metrics=metrics)
+    return render_for_channel(channel, dc, report_type="evening")
+
 
 def _format_channel_metric(metric_id: str, loc_result: LocationResult) -> str | None:
     """Formatiert einen Uebersichtswert ueber die zentrale Metrik-Formatierung.
@@ -450,8 +496,20 @@ def render_compare_telegram(
     ``max_chars`` = 4096 begrenzt die Gesamtnachricht.
     """
     limits = CHANNEL_LIMITS["telegram"]
-    max_cols = limits["max_table_cols"]
-    metric_slots = None if max_cols is None else max(1, max_cols - 1)
+    # Issue #1362: die feste Sechserliste verliert ihre Torwaechter-Rolle --
+    # die Nutzerauswahl (dedupliziert, in ihrer Reihenfolge; `None` faellt
+    # auf die alte Sechserliste zurueck, AC-7) geht in ein Layout ueber
+    # channel_layout.render_for_channel() (Spec 'Die Naht').
+    # Adversary-Korrektur (Gegenpruefung #1362): Werte sind ORTSABHAENGIG
+    # (z.B. fehlende hourly_data bei Fallback-Ausfall) -- das Layout wird
+    # deshalb JE ORT innerhalb der Schleife gebaut, NICHT einmal vorab. Eine
+    # Groesse ohne Wert an diesem Ort wird VOR dem Aufruf von
+    # `_channel_layout_for_metrics` herausgefiltert, damit sie keinen der 7
+    # Plaetze belegen und keine andere, gueltige Groesse verdraengen kann.
+    dedup_ids = list(dict.fromkeys(
+        enabled_metrics if enabled_metrics is not None
+        else [mid for mid, _ in _CHANNEL_METRICS]
+    ))
 
     locations = location_render_order(result.locations)
     if not locations:
@@ -474,8 +532,24 @@ def render_compare_telegram(
             block.append(f"   Fehler: {loc_result.error}")
             blocks.append(block)
             continue
-        cells = _channel_metric_cells(loc_result, enabled_metrics, metric_slots)
+        # Werte sind ortsabhaengig -- Verfuegbarkeit VOR der Prioritaets-/
+        # Slot-Kappung pruefen (Adversary-Korrektur), nicht erst beim
+        # Zellenbau. `cell_values` haelt jede Zelle nur einmal vor (keine
+        # doppelte `_metric_value`/`_daily_summary`-Berechnung).
+        cell_values = {mid: _plain_metric_cell(loc_result, mid) for mid in dedup_ids}
+        available_ids = [mid for mid in dedup_ids if cell_values[mid] is not None]
+        no_data_count = len(dedup_ids) - len(available_ids)
+        layout = _channel_layout_for_metrics("telegram", available_ids)
+        cells = [cell_values[mid] for mid in layout.table_columns]
         block.append("   " + (" · ".join(cells) if cells else "keine Werte"))
+        # Zwei getrennt zaehlbare Ausfaelle (Invariante: sichtbare Zellen +
+        # Platzmangel-Zaehler + Ohne-Daten-Zaehler == Anzahl gewaehlter
+        # Groessen). Je eigene Zeile INNERHALB dieses Ortsblocks, weil beide
+        # Zahlen ortsabhaengig sind.
+        if layout.demoted_count > 0:
+            block.append("   " + _telegram_metric_notice(layout.demoted_count))
+        if no_data_count > 0:
+            block.append("   " + _telegram_no_data_notice(no_data_count))
         # Issue #1332 (PO-Korrektur 2026-07-23): Sicherheits-Filter ab orange
         # (`MIN_SMS_LEVEL`, wie Compare-SMS und der Trip-Pfad) + geteilte,
         # kontext-agnostische Bausteine (`build_official_alert_notices`/
@@ -507,6 +581,10 @@ def render_compare_telegram(
         blocks.append(block)
 
     max_chars = limits["max_chars"]
+    # Metrik-Platzmangel-/Ohne-Daten-Hinweise stecken bereits als Zeilen IN
+    # den jeweiligen `blocks` (s.o.) -- die folgende Ueberlauf-Logik behandelt
+    # Ortsbloecke deshalb wieder atomar wie vor #1362, ohne einen separaten
+    # Metrik-Hinweis mitzurechnen.
     text = _join_telegram(header, blocks)
     if max_chars is None or len(text) <= max_chars:
         return text
@@ -546,6 +624,40 @@ def _telegram_notice(omitted: int) -> str:
     if omitted <= 0:
         return ""
     return f"\n… +{omitted} weitere Orte (Telegram-Limit) — vollständig per E-Mail"
+
+
+def _telegram_metric_notice(demoted_count: int) -> str:
+    """Ehrlicher Kuerzungs-Hinweis fuer Metrik-PLATZMANGEL (#1362, AC-2): eine
+    Groesse HAT einen Wert an diesem Ort, passt aber wegen der 7-Zellen-
+    Grenze nicht mehr (``ChannelLayout.demoted_count`` -- Gegenstueck zum
+    Ohne-Daten-Fall, s. ``_telegram_no_data_notice``). Wird als eigene Zeile
+    INNERHALB des jeweiligen Ortsblocks angehaengt (Adversary-Korrektur:
+    Platzverfuegbarkeit ist ortsabhaengig, s. ``render_compare_telegram``) --
+    deshalb OHNE fuehrenden Zeilenumbruch (anders als ``_telegram_notice``,
+    das direkt an den Gesamttext angehaengt wird). Leer, wenn nichts
+    verdraengt wurde."""
+    if demoted_count <= 0:
+        return ""
+    return (
+        f"… +{demoted_count} weitere Wettergrößen je Ort (Telegram-Limit) "
+        "— vollständig per E-Mail"
+    )
+
+
+def _telegram_no_data_notice(no_data_count: int) -> str:
+    """Ehrlicher Hinweis fuer OHNE-DATEN (#1362, Adversary-Fund/Gegenpruefung):
+    eine ausgewaehlte Groesse hat an DIESEM Ort keinen Wert (z.B. Ausfall der
+    Fallback-Kette) -- anders als der Platzmangel-Fall
+    (``_telegram_metric_notice``) ist das KEIN Verdraengungs-Effekt der
+    7-Zellen-Grenze. Beide Faelle bleiben getrennt zaehlbar (Invariante:
+    sichtbare Zellen + Platzmangel-Zaehler + Ohne-Daten-Zaehler == Anzahl
+    gewaehlter Groessen). Bewusst OHNE "vollstaendig per E-Mail": die Mail
+    zeigt fuer diese Groesse ebenfalls keinen Wert (nur einen "-"-Platzhalter,
+    s. ``render_comparison_text``), das waere also ein falsches Versprechen.
+    Leer, wenn nichts fehlt."""
+    if no_data_count <= 0:
+        return ""
+    return f"… +{no_data_count} gewählte Wettergrößen ohne Wert an diesem Ort"
 
 
 def _official_alert_sms_marker(

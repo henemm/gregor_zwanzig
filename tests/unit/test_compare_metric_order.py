@@ -358,7 +358,15 @@ class TestAC7LegacyDefaultOrderUnchanged:
         "Luftdruck Ø", "Niederschlagsart", "Schneefallgrenze",
         "Sonne", "Wolken", "Schneehöhe", "Neuschnee",
     ]
-    FROZEN_TELEGRAM_ORDER = ["Temp", "Wind", "Sonne", "Wolken", "Schnee", "Neuschnee"]
+    # Issue #1362 (Scheibe S5a): Telegram-Zellen kommen jetzt aus _PLAIN_ROWS
+    # (derselben Quelle wie der Klartext-Teil) statt der alten eigenen
+    # Kurz-Label-Tabelle. Die Werte/Reihenfolge bleiben unveraendert (AC-7);
+    # das Zell-Label selbst wechselt fuer `snow_depth_cm` von "Schnee" auf
+    # "Schneehöhe" (s. Spec 'Sichtbare Wirkung'). `_telegram_labels()` liest
+    # nur das ERSTE WORT jeder Zelle -- bei den mehrwortigen Labels ("Temp
+    # max") bleibt dieses erste Wort ("Temp") unveraendert, nur das
+    # einwortige "Schnee"-Label aendert sich vollstaendig zu "Schneehöhe".
+    FROZEN_TELEGRAM_ORDER = ["Temp", "Wind", "Sonne", "Wolken", "Schneehöhe", "Neuschnee"]
     FROZEN_HTML_ORDER = [
         "Amtliche Warnungen", "Temp max", "Wind", "Regen",
         "Regenwahrscheinlichkeit", "Gewitter", "Sonne", "Wolken", "UV max",

@@ -348,6 +348,17 @@ def test_telegram_and_sms_output_unchanged_by_summary_block_removal():
     Erwartungswerte sind eine VORHER (vor Beginn dieser Arbeit, Commit
     6910853b) aufgezeichnete echte Ausgabe -- kein ausgedachter Wert. Dieser
     Test ist absichtlich schon jetzt gruen und muss gruen bleiben.
+
+    Issue #1362 (Scheibe S5a) UMSTELLUNG (nur Telegram-Teil, SMS ist
+    Scheibe S5b und bleibt unveraendert): die alte ``recorded_telegram``-
+    Erwartung zementierte genau das Fehlverhalten, das #1362 behebt --
+    ``precip_sum_mm`` war in der festen Sechserliste (``_CHANNEL_METRICS``)
+    nicht enthalten und verschwand deshalb ersatzlos aus der Telegram-Zelle,
+    obwohl es Teil der Auswahl war. Seit #1362 kommen Telegram-Zellen aus der
+    vollen ``_PLAIN_ROWS``-Tabelle (wie der Klartext-Teil derselben Mail) --
+    ``precip_sum`` muss deshalb jetzt erscheinen. Der Test wurde NICHT
+    "passend gemacht": er spiegelt die vom PO freigegebene Spec (AC-1),
+    nicht ein zurechtgebogenes Testergebnis.
     """
     hourly = _hourly()
     result = _comparison_result([
@@ -361,17 +372,18 @@ def test_telegram_and_sms_output_unchanged_by_summary_block_removal():
 
     recorded_telegram = (
         "ORTS-VERGLEICH — Test-Preset\nDatum: 08.07.2026\n\n"
-        "Andermatt\n   Temp 16°C\nZermatt\n   Temp 16°C"
+        "Andermatt\n   Temp max 16°C · Regen 3.0 mm\n"
+        "Zermatt\n   Temp max 16°C · Regen 3.0 mm"
     )
     recorded_sms = "Vergleich 08.07.: Andermatt Temp 16°C; Zermatt Temp 16°C"
 
     assert telegram == recorded_telegram, (
-        "Telegram-Ausgabe hat sich veraendert (Regression). "
-        f"vorher: {recorded_telegram!r} / jetzt: {telegram!r}"
+        "Telegram-Ausgabe weicht von der #1362-Erwartung ab (precip_sum muss "
+        f"jetzt erscheinen). erwartet: {recorded_telegram!r} / jetzt: {telegram!r}"
     )
     assert sms == recorded_sms, (
-        "SMS-Ausgabe hat sich veraendert (Regression). "
-        f"vorher: {recorded_sms!r} / jetzt: {sms!r}"
+        "SMS-Ausgabe hat sich veraendert (Regression, SMS ist NICHT Teil von "
+        f"Scheibe S5a). vorher: {recorded_sms!r} / jetzt: {sms!r}"
     )
     for name in ("Andermatt", "Zermatt"):
         pattern = _SUMMARY_SENTENCE_RE.format(name=re.escape(name))

@@ -69,6 +69,14 @@ def _result(names: list[str], errors: set[str] | None = None) -> ComparisonResul
             gust_max=None if name in errors else 15.0,
             cloud_avg=None if name in errors else 30,
             sunny_hours=None if name in errors else 5,
+            # Issue #1362 Adversary-Korrektur: eine gewaehlte Groesse OHNE
+            # Wert an diesem Ort erzeugt jetzt einen eigenen "ohne Wert"-
+            # Hinweis (s. comparison.py `_telegram_no_data_notice`) -- diese
+            # Datei testet Orts-/Zeichen-Ueberlauf, nicht Metrik-
+            # Vollstaendigkeit, daher hier reale Werte statt der bisherigen
+            # Default-Luecke (Schnee war nie gesetzt).
+            snow_depth_cm=None if name in errors else 20.0,
+            snow_new_cm=None if name in errors else 2.0,
             official_alerts=[],
             hourly_data=[] if name in errors else [_dp(9), _dp(12), _dp(15)],
             error="API-Fehler" if name in errors else None,
