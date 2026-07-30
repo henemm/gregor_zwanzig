@@ -16,6 +16,14 @@
 	// (Default) bleibt fuer den Trip bitidentisch zum bisherigen Verhalten.
 	// Spec: docs/specs/modules/feat_1411_s4b_grundauswahl.md § Implementation
 	// Details 2, AC-2, AC-3
+	//
+	// Issue #1406 Scheibe A (Epic #1372 S4b Scheibe 2): optionaler
+	// `testidPrefix` — der Ausblick wird der zweite `mode='multiple'`-Aufrufer
+	// (neben der Uebersicht) auf derselben Editor-Seite; ohne Praefix wuerden
+	// beide dieselben `data-testid`s tragen. Ohne Angabe bleiben Zeilen- und
+	// Kaestchen-Testid bitidentisch zu vorher (Uebersicht ruft ohne Praefix
+	// auf). Spec: docs/specs/modules/feat_1406a_ausblick_geteiltes_element.md
+	// § Implementation Details 2, AC-8
 
 	import type { AggregationChoice } from './aggregationSelection.ts';
 	import type { CompareAggregationOption } from './compareAggregationGrouping.ts';
@@ -34,18 +42,27 @@
 		options?: CompareAggregationOption[];
 		selectedChoiceIds?: string[];
 		onToggle?: (metricId: string, key: string) => void;
+		// Ohne Angabe: heutige Testids unveraendert (Uebersicht, #1411-Default).
+		testidPrefix?: string;
 	}
 
 	let {
 		metricId, label, mode = 'single',
 		choices = [], selectedChoiceId = null, onSelect,
-		options = [], selectedChoiceIds = [], onToggle
+		options = [], selectedChoiceIds = [], onToggle,
+		testidPrefix
 	}: Props = $props();
 </script>
 
-<tr data-testid="aggregation-metric-row-{metricId}" data-metric={metricId}>
+<tr
+	data-testid={testidPrefix ? `${testidPrefix}-metric-row-${metricId}` : `aggregation-metric-row-${metricId}`}
+	data-metric={metricId}
+>
 	<td class="metric-label">{label}</td>
-	<td class="segmented-control" data-testid="aggregation-choices-{metricId}">
+	<td
+		class="segmented-control"
+		data-testid={testidPrefix ? `${testidPrefix}-choices-${metricId}` : `aggregation-choices-${metricId}`}
+	>
 		{#if mode === 'single'}
 			{#each choices as c (c.id)}
 				<button
@@ -53,7 +70,7 @@
 					class:active={selectedChoiceId === c.id}
 					aria-pressed={selectedChoiceId === c.id}
 					onclick={() => onSelect?.(metricId, c.id)}
-					data-testid="aggregation-option-{metricId}-{c.id}"
+					data-testid={testidPrefix ? `${testidPrefix}-option-${metricId}-${c.id}` : `aggregation-option-${metricId}-${c.id}`}
 				>
 					{c.label}
 				</button>
@@ -62,7 +79,7 @@
 			{#each options as o (o.key)}
 				<label
 					class="multi-option"
-					data-testid="weather-metrics-vergleich-option-{metricId}-{o.aggregation}"
+					data-testid={testidPrefix ? `${testidPrefix}-option-${metricId}-${o.aggregation}` : `weather-metrics-vergleich-option-${metricId}-${o.aggregation}`}
 				>
 					<input
 						type="checkbox"

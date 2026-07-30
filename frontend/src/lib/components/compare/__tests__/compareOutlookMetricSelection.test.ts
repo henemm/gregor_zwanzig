@@ -34,6 +34,10 @@ import type { ComparePreset } from '../../../types.ts';
 // (compare_metric_catalog.py) — dieselbe Quelle, die der Editor bereits laedt.
 const CATALOG: CompareSelectionEntry[] = [
 	{ metric: 'temp_max_c', label: 'Temperatur max', metric_id: 'temperature', aggregation: 'max' },
+	// Issue #1406 Scheibe A (AC-6): zweite Temperatur-Auswertung ergaenzt, damit
+	// die Mehrfachauswahl-Roundtrip-Tests unten (Hoechst- UND Tiefstwert
+	// gleichzeitig) beide Katalog-Eintraege real auflösen koennen.
+	{ metric: 'temp_min_c', label: 'Temperatur min', metric_id: 'temperature', aggregation: 'min' },
 	{ metric: 'precip_sum_mm', label: 'Niederschlag', metric_id: 'precipitation', aggregation: 'sum' },
 	{ metric: 'gust_max_kmh', label: 'Böen', metric_id: 'gust', aggregation: 'max' }
 ];
@@ -167,6 +171,56 @@ describe('AC-12 — Ausblick-Metriken: Roundtrip Speichern → Neuladen', () => 
 
 		assert.deepEqual(dc.hourly_metrics, ['temp_c', 'wind_kmh']);
 		assert.deepEqual(dc.outlook_metrics, [{ metric_id: 'temperature', aggregation: 'max' }]);
+	});
+});
+
+// ─── AC-6 (Issue #1406 Scheibe A) — Persistenz zeichengleich vor/nach dem ────
+// Auswahl-Block-Umbau: buildComparePresetSavePayload/normalizeStoredActiveMetrics
+// sind Pure-Functions auf outlookMetricKeys, unabhaengig von der Svelte-Markup-
+// Form des Auswahl-Blocks (flache Liste vs. gruppiertes AggregationMetricRow-
+// Muster). Der deterministische Nachweisweg fuer AC-6 (PO-informierte
+// Tech-Lead-Entscheidung, Kontingent-Schonung #1329, s. Spec § AC-6): dieselbe
+// Auswahl liefert vor UND nach dem Umbau exakt dasselbe display_config.
+// outlook_metrics — insbesondere die Temperatur-Mehrfachauswahl (Hoechst- UND
+// Tiefstwert gleichzeitig aktiv), die im Ausblick nach diesem Umbau erstmals
+// ueber ein AggregationMetricRow-Kaestchenpaar statt zwei flacher Checkboxen
+// bedient wird.
+//
+// Spec: docs/specs/modules/feat_1406a_ausblick_geteiltes_element.md § AC-6, Test-Plan
+
+describe('AC-6 — Persistenz-Roundtrip bleibt zeichengleich, unabhaengig von der Auswahl-Block-Markup-Form', () => {
+	test('Temperatur Hoechst- UND Tiefstwert gleichzeitig aktiv: display_config.outlook_metrics exakt wie vor dem Auswahl-Block-Umbau', () => {
+		const { body } = buildComparePresetSavePayload(
+			makePreset(),
+			baseEdits({ outlookMetricKeys: ['temp_max_c', 'temp_min_c', 'precip_sum_mm'] })
+		);
+
+		assert.deepEqual(
+			displayConfigOf(body).outlook_metrics,
+			[
+				{ metric_id: 'temperature', aggregation: 'max' },
+				{ metric_id: 'temperature', aggregation: 'min' },
+				{ metric_id: 'precipitation', aggregation: 'sum' }
+			],
+			'AC-6 FAIL: display_config.outlook_metrics weicht bei gleichzeitig aktivem Hoechst- UND ' +
+				`Tiefstwert der Temperatur ab (erhalten: ${JSON.stringify(displayConfigOf(body).outlook_metrics)}). ` +
+				'Ein reiner Auswahl-Block-Markup-Umbau (Issue #1406 Scheibe A) darf dieses Format nicht aendern — ' +
+				'weicht es doch ab, ist AC-6 nicht mehr deterministisch belegbar und die Staging-Mail-Verifikation ' +
+				'(email_spec_validator.py) muss nachgeholt werden.'
+		);
+	});
+
+	test('Roundtrip: dieselbe Mehrfachauswahl geladen -> dieselben Auswahl-Schluessel, keine Verschmelzung von max/min', () => {
+		const gewaehlt = ['temp_max_c', 'temp_min_c'];
+		const { body } = buildComparePresetSavePayload(makePreset(), baseEdits({ outlookMetricKeys: gewaehlt }));
+		const wiederGeladen = normalizeStoredActiveMetrics(displayConfigOf(body).outlook_metrics, CATALOG);
+
+		assert.deepEqual(
+			wiederGeladen,
+			gewaehlt,
+			'AC-6 FAIL: nach Speichern und Neuladen der Temperatur-Mehrfachauswahl (max+min) zeigt die ' +
+				`Bedienflaeche nicht mehr dieselben zwei Auswahl-Schluessel (erhalten: ${JSON.stringify(wiederGeladen)}).`
+		);
 	});
 });
 

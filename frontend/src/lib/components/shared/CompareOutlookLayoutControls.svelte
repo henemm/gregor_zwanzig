@@ -20,6 +20,8 @@
 	import { SectionH, Card } from '$lib/components/atoms';
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
 	import WeatherV2Reihenfolge from './weather-metrics-tab/WeatherV2Reihenfolge.svelte';
+	import AggregationMetricRow from './weather-metrics-tab/AggregationMetricRow.svelte';
+	import { groupCompareCatalog } from './weather-metrics-tab/compareAggregationGrouping.ts';
 	import type { MetricEntry } from '../trip-detail/metricsEditor.ts';
 	import type { CompareSelectionEntry } from './weather-metrics-tab/compareMetricSelection.ts';
 	import {
@@ -97,19 +99,44 @@
 	data-testid="compare-layout-outlook-metrics"
 	style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px"
 >
-	{#each catalog as entry (entry.metric)}
-		<label class="outlook-metric-row" data-testid={`compare-layout-outlook-metric-${entry.metric}`}>
-			<input
-				type="checkbox"
-				checked={isOutlookMetricActive(entry.metric)}
-				onchange={makeOutlookMetricHandler(entry.metric)}
-			/>
-			<span>{entry.label}</span>
-			<!-- Issue #1401 (A1): Auswertung daneben, nicht im Namen. -->
-			{#if entry.aggregation_label}
-				<span class="outlook-aggregation" data-testid={`compare-layout-outlook-aggregation-${entry.metric}`}>{entry.aggregation_label}</span>
-			{/if}
-		</label>
+	<!-- Issue #1406 Scheibe A (Epic #1372 S4b Scheibe 2): eine Zeile je
+	     Wettergroesse (24 statt 26) — analog zur Vergleichs-Uebersicht seit
+	     #1411 (WeatherMetricsTab.svelte:918-948). Groessen mit nur einer
+	     Auswertung (22 von 24) bleiben die einfache Checkbox-Zeile von heute;
+	     Groessen mit mehreren Auswertungen (Temperatur, gefuehlte Temperatur)
+	     bekommen je Auswertung ein unabhaengiges Kaestchen ueber
+	     AggregationMetricRow mode='multiple'. Jedes Kaestchen ruft weiterhin
+	     denselben Umschalt-Pfad (makeOutlookMetricHandler) mit dem jeweiligen
+	     einzelnen Katalog-key auf — Speicherformat/Reihenfolge unveraendert. -->
+	{#each groupCompareCatalog(catalog) as group (group.metric_id)}
+		{#if group.options.length === 1}
+			<label class="outlook-metric-row" data-testid={`compare-layout-outlook-metric-${group.metric_id}`}>
+				<input
+					type="checkbox"
+					checked={isOutlookMetricActive(group.options[0].key)}
+					onchange={makeOutlookMetricHandler(group.options[0].key)}
+				/>
+				<span>{group.label}</span>
+				<!-- Issue #1401 (A1): Auswertung daneben, nicht im Namen. -->
+				{#if group.options[0].aggregation_label}
+					<span class="outlook-aggregation" data-testid={`compare-layout-outlook-aggregation-${group.metric_id}`}>{group.options[0].aggregation_label}</span>
+				{/if}
+			</label>
+		{:else}
+			<table class="outlook-metric-row-multi">
+				<tbody>
+					<AggregationMetricRow
+						metricId={group.metric_id}
+						label={group.label}
+						mode="multiple"
+						options={group.options}
+						selectedChoiceIds={materializedOutlookKeys}
+						onToggle={(_mid, key) => makeOutlookMetricHandler(key)()}
+						testidPrefix="compare-layout-outlook"
+					/>
+				</tbody>
+			</table>
+		{/if}
 	{/each}
 </div>
 
@@ -148,6 +175,15 @@
 		gap: 8px;
 		font-size: var(--g-text-sm);
 		color: var(--g-ink);
+	}
+	/* Issue #1406 Scheibe A: Mehrfach-Options-Zeile (Temperatur/gefuehlte
+	   Temperatur) nutzt AggregationMetricRow (threshold-table-Machform)
+	   statt der einfachen Label-Zeile — analog WeatherMetricsTab.svelte
+	   .vergleich-metric-row-multi. */
+	.outlook-metric-row-multi {
+		width: 100%;
+		border-collapse: collapse;
+		margin: 0;
 	}
 	/* Issue #1401: Auswertung als eigenes, abgesetztes Element. */
 	.outlook-aggregation {
