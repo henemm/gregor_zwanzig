@@ -73,25 +73,23 @@ describe('buildCompareCorridorSavePayload — AC-3 Entkopplung notify <-> active
 		);
 	});
 
-	// Regressions-Anker (muss GRUEN bleiben): notify steuert weiterhin die
-	// Alarm-Stufe (metric_alert_levels) — nur die active_metrics-Kopplung entfaellt.
-	test('Regressions-Anker: notify steuert weiterhin metricAlertLevels (Δ-Wächter-Alarm bleibt aktiv)', () => {
+	// Issue #1371 AC-2/AC-3: "Warnen" ist aus dem Reiter Wertebereiche entfernt —
+	// der Save-Pfad darf metricAlertLevels ab sofort gar nicht mehr aus notify
+	// ableiten (auch nicht "off" fuer entfernte Zeilen). Ersetzt den alten
+	// Regressions-Anker "notify steuert weiterhin metricAlertLevels".
+	test('#1371 AC-2: notify=true veraendert metricAlertLevels NICHT (reiner Pass-Through von original)', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: true, mark: false },
 		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: {},
 			activeMetricKeys: [],
-			metricAlertLevels: {},
+			metricAlertLevels: { wind_max_kmh: 'sensibel' },
 		});
-		assert.equal(
-			payload.metricAlertLevels.wind_max_kmh,
-			'standard',
-			'Regression: notify=true muss weiterhin metric_alert_levels != "off" setzen (Alarm-Funktion bleibt erhalten)'
-		);
+		assert.deepEqual(payload.metricAlertLevels, { wind_max_kmh: 'sensibel' }, '#1371 FAIL: metricAlertLevels veraendert');
 	});
 
-	test('Regressions-Anker: notify=false setzt metricAlertLevels weiterhin auf "off"', () => {
+	test('#1371 AC-2/AC-3: notify=false setzt metricAlertLevels NICHT mehr auf "off"', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: false, mark: true },
 		], TEST_DEFS);
@@ -100,11 +98,7 @@ describe('buildCompareCorridorSavePayload — AC-3 Entkopplung notify <-> active
 			activeMetricKeys: ['wind_max_kmh'],
 			metricAlertLevels: { wind_max_kmh: 'sensibel' },
 		});
-		assert.equal(
-			payload.metricAlertLevels.wind_max_kmh,
-			'off',
-			'Regression: notify=false muss weiterhin metric_alert_levels="off" setzen'
-		);
+		assert.equal(payload.metricAlertLevels.wind_max_kmh, 'sensibel', '#1371 FAIL: auf "off" gesetzt');
 	});
 
 	// Regressions-Anker (F003, AC-7-Kern): unknownCorridors-Pass-Through darf

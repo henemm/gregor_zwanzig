@@ -21,8 +21,9 @@
 	//  - kein profileLabel (JSX-Zeile 245, 280) — Desktop hat kein Pendant.
 	//  - CompareEndDateControlMobile (JSX-Zeilen 326-372) nicht verdrahtet —
 	//    laut Spec Phase-2/Epic #29.
-	//  - Warnen-Sperre fuer alarmCapable===false (Effekt-Buttons) ist NICHT im
-	//    JSX enthalten, aber bindende Team-Lead-Vorgabe (Desktop-Praezedenz).
+	//  - Issue #1371: das "Warnen"-Bedienelement (Effekt-Buttons) ist entfernt —
+	//    der Reiter markiert nur noch, die Alarm-Empfindlichkeit setzt
+	//    ausschliesslich der Reiter Alarme.
 	import { getContext } from 'svelte';
 	import { Eyebrow, Dot } from '$lib/components/atoms';
 	import ScreenScroll from '$lib/components/mobile/ScreenScroll.svelte';
@@ -107,15 +108,18 @@
 	});
 
 	const validation = $derived(validateCorridorRows(rows));
-	const notifyN = $derived(rows.filter((r) => r.notify).length);
 	const markN = $derived(rows.filter((r) => r.mark).length);
 
+	// Issue #1371: der PUT ueberschreibt `display_config.metric_alert_levels`
+	// nicht mehr explizit — `trip!.display_config` wird unveraendert
+	// durchgereicht, die Alarm-Empfindlichkeit bleibt exklusiv beim Reiter
+	// Alarme (AC-2/AC-3).
 	function buildSaveFn() {
-		const payload = buildCorridorSavePayload(rows, originalLevels, removedMetrics);
+		const payload = buildCorridorSavePayload(rows, originalLevels);
 		return async () => {
 			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, {
 				corridors: payload.corridors,
-				display_config: { ...trip!.display_config, metric_alert_levels: payload.metric_alert_levels },
+				display_config: trip!.display_config,
 			});
 			onTripUpdate?.(updated);
 		};
@@ -327,11 +331,9 @@
 				</div>
 
 				<div class="cem-effects">
-					{#if row.alarmCapable === false}
-						<button type="button" class="cem-effect notify disabled" disabled title="nur Markieren – für diese Metrik gibt es keinen Alarm-Abgleich">Warnen</button>
-					{:else}
-						<button type="button" class="cem-effect notify" class:on={row.notify} aria-pressed={row.notify} onclick={() => patch(row.metric, { notify: !row.notify })}>Warnen</button>
-					{/if}
+					<!-- Issue #1371: "Warnen" entfernt — der Reiter Wertebereiche markiert
+					     nur noch; die Alarm-Empfindlichkeit setzt ausschliesslich der
+					     Reiter Alarme (AlertMetricLevelTable). -->
 					<button type="button" class="cem-effect mark" class:on={row.mark} aria-pressed={row.mark} onclick={() => patch(row.metric, { mark: !row.mark })}>Markieren</button>
 				</div>
 
@@ -353,7 +355,6 @@
 		{/if}
 
 		<div class="cem-summary">
-			<span class="cem-summary-item"><Dot tone="warn" /> {notifyN} × Warnen</span>
 			<span class="cem-summary-item"><Dot tone="good" /> {markN} × Markieren</span>
 		</div>
 		{#if context === 'vergleich'}

@@ -457,7 +457,9 @@ export interface CompareMetricCatalogEntry {
 	step?: number;
 	ordinalLabels?: string[];
 	enumValues?: string[];
-	// Issue #1350 Teil 3: steuert die "Warnen"-Button-Sperre im Schwellen-Editor.
+	// Issue #1350 Teil 3: Katalog-Feld, ob die Metrik alarmfaehig ist. Issue
+	// #1371: ohne sichtbare Wirkung mehr im Wertebereiche-Editor (kein
+	// "Warnen"-Bedienelement) — bleibt bestehen, kein Vorgriff auf #1384.
 	alarmCapable?: boolean;
 	// Issue #1373 (S2 Scheibe A): Herkunft des Eintrags im zentralen Wetterkatalog
 	// — `metric_id` = Kennung der Größe, `aggregation` = gezeigte Auswertung.

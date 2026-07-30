@@ -461,8 +461,8 @@ export interface AlarmHydrationTarget {
  * oder `hydrateVersandFieldsFromPreset`-Hydration vorauszusetzen. Der Alarme-
  * Tab kann als ERSTER Tab geoeffnet werden (Deep-Link `?tab=alarme`) — deshalb
  * hydriert diese Funktion ALLE alarm-relevanten Felder eigenstaendig, inkl.
- * `corridors` (H4: `notifyCount` braucht Korridore auch ohne vorherigen
- * idealwerte-Effekt).
+ * `corridors` (H4: der Idealwerte-Tab braucht bereits geladene Korridore,
+ * falls er NACH Alarme als zweiter Tab geoeffnet wird).
  *
  * Fallbacks 1:1 analog `AlarmeTab.svelte:80-90` bzw. Trip-Pipeline
  * (trip_alert.py): `officialWarningsEnabled` faellt auf
@@ -502,7 +502,8 @@ export function hydrateAlarmFieldsFromPreset(
 /** Plain-Snapshot der 6 persistenzrelevanten Alarme-Tab-Felder (analog
  * `VersandSnapshot`). `corridors` ist bewusst NICHT Teil des Snapshots — die
  * Korridor-Persistenz bleibt exklusiv beim Idealwerte-Tab (`CorridorSnapshot`),
- * der Alarme-Tab liest `corridors` nur lesend fuer `notifyCount` (H4). */
+ * der Alarme-Tab liest `corridors` seit #1371 gar nicht mehr (kein
+ * "Korridor-Auslöser"-Block mehr). */
 export interface AlarmSnapshot {
 	officialAlertsEnabled: boolean;
 	officialWarningsEnabled: boolean;

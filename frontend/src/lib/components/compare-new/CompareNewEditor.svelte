@@ -107,7 +107,6 @@
 
 	const canContinue = $derived(wiz.name.trim().length > 0);
 	const orteContinueReady = $derived(wiz.pickedIds.length >= 2);
-	const alarmeNotifyCount = $derived(wiz.corridors.filter((c) => c.notify).length);
 
 	// ── Gruppen (App-Group-Entity #301) — lazy beim ERSTEN Orte-Besuch ─────────
 	let ceGroups = $state<Group[]>(groups ?? []);
@@ -149,10 +148,6 @@
 	function makeContinueHandler(id: CompareNewTabId) {
 		return () => switchTab(id);
 	}
-	function jumpToWertebereiche() {
-		switchTab('idealwerte');
-	}
-
 	function selectProfile(value: ActivityProfile) {
 		wiz.activityProfile = value;
 	}
@@ -388,7 +383,7 @@
 			</div>
 		</div>
 	{:else if activeTab === 'alarme'}
-		<AlarmeTab context="vergleich" {wiz} notifyCount={alarmeNotifyCount} onJumpToWertebereiche={jumpToWertebereiche} />
+		<AlarmeTab context="vergleich" {wiz} />
 		<div class="ce-cta-foot" style:max-width="1100px">
 			<div class="ce-cta-row">
 				<Btn data-testid="compare-editor-continue-versand" variant="accent" size="md" onclick={makeContinueHandler('versand')}>Versand einrichten →</Btn>
@@ -473,7 +468,7 @@
 				<CorridorEditorMobile context="vergleich" />
 			{/if}
 		{:else if activeTab === 'alarme'}
-			<AlarmeTab context="vergleich" {wiz} notifyCount={alarmeNotifyCount} onJumpToWertebereiche={jumpToWertebereiche} />
+			<AlarmeTab context="vergleich" {wiz} />
 		{:else if activeTab === 'versand'}
 			<VersandTab context="vergleich" {wiz} activation={versandActivationBanner} />
 		{/if}

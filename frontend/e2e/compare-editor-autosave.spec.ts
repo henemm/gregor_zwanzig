@@ -376,34 +376,55 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 	// ── AC-14: Wertebereich-Tab löst unabhängig einen Auto-Save aus ─────────
 	// (Orte-Tab bereits durch AC-5 belegt; Versand-Tab durch AC-6 und den
 	// separaten Test unten.)
-	test('AC-14 (Wertebereich): Warnen-Toggle im Wertebereich-Tab speichert automatisch', async ({ page }) => {
+	// Issue #1371: Auslöser "Warnen" entfernt — "Markieren" bleibt ein echter
+	// `<button>` in derselben Zeile und schreibt über denselben Autosave-Pfad.
+	test('AC-14 (Wertebereich): Markieren-Toggle im Wertebereich-Tab speichert automatisch', async ({ page }) => {
 		const suffix = Date.now();
 		const locA = await createLocation(page, `E2E 1261 AC14w A ${suffix}`, 48.3, 12.3);
 		// Der Hub-CorridorEditor (vergleich) kennt nur Compare-Metrik-Keys, nicht
-		// Route-Keys — gust_max_kmh ist alarm-fähig + Range (Warnen + Slider).
+		// Route-Keys — gust_max_kmh ist Range-fähig (Markieren + Slider).
 		const id = await createPresetWithLocations(page, `E2E 1261 AC14w ${suffix}`, [locA], {
-			corridors: [{ metric: 'gust_max_kmh', range: [null, 40], notify: true, mark: false }]
+			corridors: [{ metric: 'gust_max_kmh', range: [null, 40], notify: false, mark: false }]
 		});
 
 		await openEditor(page, id);
 		await page.getByTestId('compare-detail-tab-idealwerte').click();
 		await expect(page.getByTestId('corridor-editor-vergleich')).toBeVisible({ timeout: 10_000 });
 
-		const notifyToggle = page.getByTestId('corridor-row-gust_max_kmh').getByRole('button', { name: 'Warnen' });
-		await expect(notifyToggle).toHaveAttribute('aria-pressed', 'true');
+		const markToggle = page.getByTestId('corridor-row-gust_max_kmh').getByRole('button', { name: 'Markieren' });
+		await expect(markToggle).toHaveAttribute('aria-pressed', 'false');
 
 		const put = page.waitForResponse(
 			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
 			{ timeout: 5_000 }
 		);
-		await notifyToggle.click();
+		await markToggle.click();
 		const putRes = await put;
 		expect(putRes.ok(), 'PUT (Wertebereich) fehlgeschlagen: ' + putRes.status()).toBeTruthy();
 
 		const res = await page.request.get(`/api/compare/presets/${id}`);
 		const preset = await res.json();
 		const corridor = (preset.corridors ?? []).find((c: { metric: string }) => c.metric === 'gust_max_kmh');
-		expect(corridor?.notify).toBe(false);
+		expect(corridor?.mark).toBe(true);
+	});
+
+	// Issue #1371 AC-1 (Live-Nachweis Ortsvergleich): Trip-Pendant s.
+	// issue-953-alerts-autosave-tabswitch.spec.ts.
+	test('AC-1 (Ortsvergleich): kein "Warnen"-Bedienelement mehr in der Wertebereich-Zeile', async ({ page }) => {
+		const suffix = Date.now();
+		const locA = await createLocation(page, `E2E 1371 AC1 A ${suffix}`, 48.32, 12.32);
+		const id = await createPresetWithLocations(page, `E2E 1371 AC1 ${suffix}`, [locA], {
+			corridors: [{ metric: 'gust_max_kmh', range: [null, 40], notify: false, mark: true }]
+		});
+
+		await openEditor(page, id);
+		await page.getByTestId('compare-detail-tab-idealwerte').click();
+		const row = page.getByTestId('corridor-row-gust_max_kmh');
+		await expect(row).toBeVisible({ timeout: 10_000 });
+
+		await expect(row.getByRole('button', { name: 'Warnen' })).toHaveCount(0);
+		await expect(row.getByRole('button', { name: 'Markieren' })).toBeVisible();
+		await expect(row.getByRole('button', { name: '✕ entfernen' })).toBeVisible();
 	});
 
 	// ── F003-Regression (Adversary CRITICAL): Slider-GRIFF ziehen (nicht Button-Klick) ──
@@ -411,7 +432,7 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 	// CorridorEditor.svelte) ist ein plain `<div onpointerdown>`, kein
 	// Standard-Formularelement — der Gesten-Gate-Selector matchte ihn nicht,
 	// `userTouched`/`editTick` blieben unverändert, Autosave feuerte nie. Der
-	// Button-Test oben ("Warnen") deckt F003 NICHT ab, weil "Warnen" ein
+	// Button-Test oben ("Markieren") deckt F003 NICHT ab, weil "Markieren" ein
 	// echter `<button>` ist (bereits vom Selector erkannt) — nur der Drag am
 	// Griff selbst reproduziert den Bug.
 	test('F003-Regression (Wertebereich): Slider-Griff ZIEHEN speichert automatisch (kein Button-Klick)', async ({

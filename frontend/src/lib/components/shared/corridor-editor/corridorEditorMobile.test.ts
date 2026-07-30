@@ -1,4 +1,6 @@
 // TDD — Issue #1231, Slice 5: CorridorEditorMobile — Struktur-Nachweise.
+// Issue #1371 F001 (Adversary HIGH): Datei prueft seither BEIDE Varianten
+// (Mobile UND Desktop, s. Block ganz unten) — Name bleibt aus Historie.
 //
 // Source-Inspection-Tests (kein DOM-Rendering, keine Mocks, kein Playwright —
 // Praezedenz: lib/components/edit/issue_542_mobile_editor.test.ts). Reine
@@ -20,6 +22,7 @@ import { openBoundValue } from './corridorEditorState.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const MOBILE = join(here, 'CorridorEditorMobile.svelte');
+const DESKTOP = join(here, 'CorridorEditor.svelte');
 const TRIP_TABS = join(here, '..', '..', 'trip-detail', 'TripTabs.svelte');
 // Migriert (Epic #1273 Scheibe S4b): CompareEditor.svelte ist seit S3 nur noch
 // vom Create-Wizard erreichbar und wird in S5 geloescht. Der Hub
@@ -90,8 +93,9 @@ describe('AC-15: CorridorEditorMobile importiert aus corridorEditorState.ts/corr
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-// AC-14 (Struktur-Teil): beide notify/mark-Effekt-Buttons min-height 44px,
-// alarmCapable===false sperrt "Warnen" (Team-Lead-Vorgabe, Desktop-Praezedenz).
+// AC-14 (Struktur-Teil): der mark-Effekt-Button erfuellt min-height 44px.
+// Issue #1371: der frueher hier ebenfalls gepruefte "Warnen"-Effekt-Button
+// (inkl. alarmCapable===false-Sperr-Variante) ist komplett entfernt.
 // ────────────────────────────────────────────────────────────────────────────
 
 describe('AC-14: Effekt-Buttons erfuellen 44px-Touch-Mindestmass (Struktur)', () => {
@@ -137,10 +141,43 @@ describe('AC-14: Effekt-Buttons erfuellen 44px-Touch-Mindestmass (Struktur)', ()
 		assert.match(src, /\.cem-handle::before\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/, '.cem-handle::before muss 44x44 Trefffläche haben');
 	});
 
-	test('alarmCapable===false sperrt den Warnen-Button (disabled + Hinweistext)', () => {
+	// Issue #1371 AC-1: das "Warnen"-Bedienelement ist komplett entfernt.
+	test('#1371 AC-1: kein "Warnen"-Button mehr (weder aktiv noch alarmCapable-gesperrt)', () => {
 		const src = readFileSync(MOBILE, 'utf-8');
-		assert.ok(src.includes("row.alarmCapable === false"), 'muss alarmCapable===false pruefen');
-		assert.ok(src.includes('nur Markieren'), 'muss den Sperr-Hinweistext zeigen');
+		assert.ok(!src.includes('cem-effect notify'), '#1371 FAIL: cem-effect notify darf nicht mehr existieren');
+		assert.ok(!/>\s*Warnen\s*<\/button>/.test(src), '#1371 FAIL: ein Warnen-Button-Label existiert noch');
+		assert.ok(!src.includes('row.alarmCapable === false'), '#1371 FAIL: die alarmCapable-Sperr-Variante des Warnen-Buttons existiert noch');
+	});
+
+	// Issue #1371 A4: die Korridor-Editor-Zusammenfassung "N × Warnen" entfaellt
+	// ersatzlos — markN/"N × Markieren" bleibt unveraendert bestehen.
+	test('#1371: notifyN-Zaehler ("N × Warnen") entfaellt, markN bleibt erhalten', () => {
+		const src = readFileSync(MOBILE, 'utf-8');
+		assert.ok(!src.includes('notifyN'), '#1371 FAIL: notifyN darf nicht mehr existieren');
+		assert.ok(!src.includes('× Warnen'), '#1371 FAIL: "× Warnen"-Text darf nicht mehr vorkommen');
+		assert.ok(src.includes('markN'), 'markN muss weiterhin existieren');
+		assert.ok(src.includes('× Markieren'), '"N × Markieren" muss weiterhin existieren');
+	});
+});
+
+// Issue #1371 F001 (Adversary HIGH): Desktop-Pendant zur Mobile-Pruefung oben
+// — sonst bliebe `npm test` bei einem Desktop-Regress gruen.
+describe('#1371 F001: CorridorEditor.svelte (Desktop) hat kein "Warnen"-Bedienelement mehr', () => {
+	test('kein "Warnen"-Effekt-Button, keine alarmCapable-Sperrvariante, kein notifyN-Zaehler', () => {
+		const src = readFileSync(DESKTOP, 'utf-8');
+		assert.ok(!src.includes('ce-effect notify'), '#1371 FAIL: ce-effect notify darf nicht mehr existieren');
+		assert.ok(!src.includes('row.alarmCapable === false'), '#1371 FAIL: alarmCapable-Sperrvariante existiert noch');
+		assert.ok(!src.includes('notifyN'), '#1371 FAIL: notifyN darf nicht mehr existieren');
+		assert.ok(!src.includes('× Warnen'), '#1371 FAIL: "× Warnen"-Text darf nicht mehr vorkommen');
+	});
+
+	// Gegengewicht (sonst waere die Abwesenheits-Pruefung wertlos, sobald die
+	// Datei umbenannt/geleert wuerde): Markieren + "✕ entfernen" bleiben da.
+	test('Markieren-Button und "✕ entfernen" bleiben vorhanden', () => {
+		const src = readFileSync(DESKTOP, 'utf-8');
+		assert.ok(src.includes('ce-effect mark'), 'ce-effect mark (Markieren-Button) muss weiterhin existieren');
+		assert.ok(src.includes('>Markieren<'), 'Markieren-Button-Label muss weiterhin existieren');
+		assert.ok(src.includes('✕ entfernen'), '"✕ entfernen"-Button muss weiterhin existieren');
 	});
 });
 

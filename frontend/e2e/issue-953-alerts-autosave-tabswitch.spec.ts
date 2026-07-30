@@ -3,8 +3,12 @@
 // ist echte Nutzer-Interaktion, keine Verhaltens-Simulation).
 // Issue #1231 Slice 6 (Adversary F001): AlertsTab/AlertMetricLevelTable wurden in
 // Slice 5 durch CorridorEditor(Mobile) ersetzt — Selektoren/Datenmodell auf den
-// neuen Warnen-Toggle (Corridor.notify) migriert, fachlicher Kern (Autosave
+// Warnen-Toggle (Corridor.notify) migriert, fachlicher Kern (Autosave
 // überlebt echten Tab-Klick) unverändert gegenüber der Original-Reproduktion.
+// Issue #1371: "Warnen" entfernt — "Markieren" bleibt ein echter `<button>`
+// in derselben Zeile, schreibt über denselben Autosave-Pfad, trägt denselben
+// #953-Kern. Zusätzlich AC-1-Live-Nachweis: kein "Warnen"-Bedienelement mehr
+// (Ortsvergleich-Pendant: compare-editor-autosave.spec.ts).
 // Ausführen: cd frontend && npx playwright test e2e/issue-953-alerts-autosave-tabswitch.spec.ts \
 //   --config=playwright.953.staging.config.ts --reporter=list
 
@@ -44,17 +48,17 @@ const seedBody = {
 	},
 	// Issue #1231: Corridor bereits gesetzt (wie in einem real konfigurierten Trip)
 	// → die Gewitter-Zeile erscheint direkt im CorridorEditor, kein Pool-Zustand.
-	corridors: [{ metric: 'thunder_level', range: [null, 40], notify: true, mark: false }]
+	corridors: [{ metric: 'thunder_level', range: [null, 40], notify: false, mark: false }]
 };
 
 function thunderRow(page: Page) {
 	return page.getByTestId('corridor-row-thunder_level');
 }
-function notifyToggle(page: Page) {
-	return thunderRow(page).getByRole('button', { name: 'Warnen' });
+function markToggle(page: Page) {
+	return thunderRow(page).getByRole('button', { name: 'Markieren' });
 }
 
-test.describe('issue_953 — Wertebereiche-Empfindlichkeit überlebt Tab-Klick', () => {
+test.describe('issue_953 — Wertebereiche-Einstellung überlebt Tab-Klick', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
 		const res = await page.request.post('/api/trips', { data: seedBody });
@@ -65,34 +69,48 @@ test.describe('issue_953 — Wertebereiche-Empfindlichkeit überlebt Tab-Klick',
 		await page.request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
 	});
 
-	// KERN: Warnen-Toggle bleibt nach echtem Tab-Klick sichtbar (Issue #953-Regression,
-	// migriert auf CorridorEditor, da AlertsTab in Slice 5 entfernt wurde).
-	test('KERN: Warnen-Toggle überlebt Tab-Wechsel in der Anzeige', async ({ page }) => {
+	// KERN: Markieren-Toggle bleibt nach echtem Tab-Klick sichtbar (Issue #953-
+	// Regression; Issue #1371: Auslöser von "Warnen" auf "Markieren" umgestellt,
+	// da "Warnen" entfernt ist — derselbe Autosave-Pfad, derselbe Button-Typ).
+	test('KERN: Markieren-Toggle überlebt Tab-Wechsel in der Anzeige', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}?tab=alerts`);
 		await expect(page.getByTestId('corridor-editor-route')).toBeVisible();
 
-		// Ausgangszustand: Warnen aktiv (aus dem Seed-Corridor).
-		await expect(notifyToggle(page)).toHaveAttribute('aria-pressed', 'true');
+		// Ausgangszustand: Markieren inaktiv (aus dem Seed-Corridor).
+		await expect(markToggle(page)).toHaveAttribute('aria-pressed', 'false');
 
-		// Auf "aus" klicken → lokal sofort sichtbar.
-		await notifyToggle(page).click();
-		await expect(notifyToggle(page)).toHaveAttribute('aria-pressed', 'false');
+		// Auf "an" klicken → lokal sofort sichtbar.
+		await markToggle(page).click();
+		await expect(markToggle(page)).toHaveAttribute('aria-pressed', 'true');
 
 		// Echter Nutzer-Pfad: Tab-BUTTON klicken (nicht goto/Reload — der Bug tritt
 		// nur beim Klick-Pfad auf).
 		await page.getByTestId('trip-detail-tab-preview').click();
 		await page.getByTestId('trip-detail-tab-alerts').click();
 
-		// HAUPT-ASSERTION: Der Toggle zeigt weiterhin "aus".
-		await expect(notifyToggle(page)).toHaveAttribute('aria-pressed', 'false');
+		// HAUPT-ASSERTION: Der Toggle zeigt weiterhin "an".
+		await expect(markToggle(page)).toHaveAttribute('aria-pressed', 'true');
 
 		// Trennt UI-Bug von Save-Bug: die DB ist korrekt (Wert wurde gespeichert,
-		// Δ-Wächter-Level entsprechend "off", Bereich unverändert — analog AC-10).
+		// Bereich unverändert). Issue #1371: metric_alert_levels bleibt vom
+		// Markieren-Save unangetastet (AC-2/AC-3 — keine zweite Alarmquelle mehr).
 		const check = await page.request.get(`/api/trips/${TRIP_ID}`);
 		expect(check.ok(), `GET trip HTTP ${check.status()}`).toBeTruthy();
 		const trip = await check.json();
 		const corridor = (trip.corridors ?? []).find((c: { metric: string }) => c.metric === 'thunder_level');
-		expect(corridor?.notify).toBe(false);
-		expect(trip.display_config?.metric_alert_levels?.thunder_level).toBe('off');
+		expect(corridor?.mark).toBe(true);
+		expect(trip.display_config?.metric_alert_levels?.thunder_level).toBe('standard');
+	});
+
+	// Issue #1371 AC-1 (Live-Nachweis Trip-Kontext): in der Wertebereiche-Zeile
+	// existiert kein "Warnen"-Bedienelement mehr — nur Markieren + "✕ entfernen"
+	// bleiben. Ortsvergleich-Pendant: compare-editor-autosave.spec.ts.
+	test('AC-1 (Trip): kein "Warnen"-Bedienelement mehr in der Wertebereiche-Zeile', async ({ page }) => {
+		await page.goto(`/trips/${TRIP_ID}?tab=alerts`);
+		await expect(page.getByTestId('corridor-editor-route')).toBeVisible();
+
+		await expect(thunderRow(page).getByRole('button', { name: 'Warnen' })).toHaveCount(0);
+		await expect(markToggle(page)).toBeVisible();
+		await expect(thunderRow(page).getByRole('button', { name: '✕ entfernen' })).toBeVisible();
 	});
 });

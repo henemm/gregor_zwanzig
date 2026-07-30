@@ -31,7 +31,6 @@
 	import AlertChannelPicker from './AlertChannelPicker.svelte';
 	import {
 		alarmeTabSections,
-		notifySummaryLabel,
 		triggerGroupHeading,
 		type AlarmeContext
 	} from './alarme-tab/alarmeTabSections.ts';
@@ -56,8 +55,6 @@
 		// vergleich
 		wiz?: CompareWizardState;
 		// beide Kontexte
-		notifyCount?: number;
-		onJumpToWertebereiche?: () => void;
 		existingChannels?: Partial<AlertChannelState> | null;
 		onChannelToggle?: (kind: 'telegram' | 'sms' | 'email') => void;
 	}
@@ -70,14 +67,11 @@
 		metricLevels,
 		onMetricLevelChange,
 		wiz,
-		notifyCount = 0,
-		onJumpToWertebereiche,
 		existingChannels,
 		onChannelToggle
 	}: Props = $props();
 
 	const sections = $derived(alarmeTabSections(context));
-	const summaryLabel = $derived(notifySummaryLabel(notifyCount));
 
 	// ── (b) Amtliche Warnungen — scharfer Trigger (S1; Inhalt-Schalter s.u.) ───
 	// route: lokaler State (Grundlage fuer den EINEN $effect unten).
@@ -229,20 +223,7 @@
 			class="alarme-section{id === 'radar' ? ' alarme-section--tight' : ''}"
 			data-testid="alarme-section-{id}"
 		>
-			{#if id === 'korridor-summary'}
-				<div class="alarme-korridor-summary">
-					<Eyebrow style="margin-bottom: 6px;">Korridor-Auslöser</Eyebrow>
-					<p class="alarme-korridor-text">{summaryLabel ?? 'Keine Warn-Schwellen aktiv'}</p>
-					<button
-						type="button"
-						class="alarme-korridor-jump"
-						data-testid="alarme-korridor-jump"
-						onclick={() => onJumpToWertebereiche?.()}
-					>
-						Wertebereiche öffnen →
-					</button>
-				</div>
-			{:else if id === 'official-warnings'}
+			{#if id === 'official-warnings'}
 				<div class="alarme-official-warnings">
 					<Eyebrow style="margin-bottom: 10px;">{triggerGroupHeading(context)}</Eyebrow>
 					<div class="alarme-official-toggles">
@@ -336,27 +317,6 @@
 	   zu aendern. */
 	.alarme-section--tight {
 		margin-top: -14px;
-	}
-	.alarme-korridor-summary {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-	}
-	.alarme-korridor-text {
-		margin: 0;
-		font-size: 14px;
-		color: var(--g-ink);
-	}
-	.alarme-korridor-jump {
-		align-self: flex-start;
-		background: none;
-		border: none;
-		padding: 0;
-		cursor: pointer;
-		font-size: 12px;
-		font-weight: 600;
-		color: var(--g-accent-deep);
-		font-family: var(--g-font-sans);
 	}
 	.alarme-official-toggles {
 		display: flex;

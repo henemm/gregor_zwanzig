@@ -379,7 +379,7 @@
 
 	// Event-diskretisierte Persistenz (KEIN Debounce/#1234): blur an
 	// Zahlenfeldern (onfocusout bubbelt, blur nicht), click an
-	// ✕/Warnen/Markieren/+Metrik, pointerup nach Slider-Drag — je EIN PUT,
+	// ✕/Markieren/+Metrik, pointerup nach Slider-Drag — je EIN PUT,
 	// nur wenn sich der persistenzrelevante Ausschnitt tatsächlich geändert hat.
 	//
 	// Fix-Loop 1 (F002, Adversary HIGH): Diff-/Payload-Entscheidung liegt in
@@ -847,12 +847,6 @@
 			saveController?.markPristine();
 		}
 	}
-
-	// Issue #1258 S5 (H4): notifyCount fuer den AlarmeTab-Kopf — Korridore
-	// kommen normalerweise aus dem idealwerte-Hydrat, der alarme-Effekt
-	// hydriert `corridors` aber selbst mit (s. hydrateAlarmFieldsFromPreset),
-	// damit die Zahl auch korrekt ist, wenn Alarme der erste geoeffnete Tab ist.
-	const notifyCount = $derived((wizardState.corridors ?? []).filter((c) => c.notify).length);
 
 	const idealRanges = $derived(
 		preset.display_config?.ideal_ranges as
@@ -1419,12 +1413,7 @@
 					onfocusout={handleAlarmeCommit}
 					onclick={handleAlarmeCommit}
 				>
-					<AlarmeTab
-						context="vergleich"
-						wiz={wizardState}
-						{notifyCount}
-						onJumpToWertebereiche={() => handleValueChange('idealwerte')}
-					/>
+					<AlarmeTab context="vergleich" wiz={wizardState} />
 				</div>
 			{/if}
 		</div>

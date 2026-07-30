@@ -15,7 +15,6 @@ import {
 	removeRow,
 	patchRow,
 	validateCorridorRows,
-	deriveMetricAlertLevel,
 	buildCorridorSavePayload,
 	valueAtPointer,
 	clampDragValue,
@@ -225,61 +224,45 @@ describe('validateCorridorRows — AC-11 keine Blockade bei notify+mark', () => 
 	});
 });
 
-// --- Sync-Bruecke notify <-> metric_alert_levels (AC-10) ---
-describe('deriveMetricAlertLevel', () => {
-	test('notify=false -> immer "off"', () => {
-		assert.equal(deriveMetricAlertLevel(false, 'wind_gust', { wind_gust: 'sensibel' }), 'off');
-	});
-
-	test('notify=true + zuvor bekannte Stufe -> Stufe wird restauriert', () => {
-		assert.equal(deriveMetricAlertLevel(true, 'wind_gust', { wind_gust: 'sensibel' }), 'sensibel');
-	});
-
-	test('notify=true + nie gesetzt -> Default "standard"', () => {
-		assert.equal(deriveMetricAlertLevel(true, 'wind_gust', {}), 'standard');
-	});
-
-	test('notify=true + zuvor "off" -> Default "standard" (kein Off-Zombie)', () => {
-		assert.equal(deriveMetricAlertLevel(true, 'wind_gust', { wind_gust: 'off' }), 'standard');
-	});
-});
-
-// --- Save-Payload: RMW, nur route-Metriken werden ueberschrieben ---
-describe('buildCorridorSavePayload', () => {
-	test('baut corridors[] + merged metric_alert_levels (RMW, fremde Metriken bleiben)', () => {
+// --- Save-Payload: RMW, metric_alert_levels bleibt seit #1371 ein reiner
+// Pass-Through — der Reiter Wertebereiche setzt keine Alarm-Stufen mehr. ---
+describe('buildCorridorSavePayload — #1371: metric_alert_levels ist reiner Pass-Through', () => {
+	test('baut corridors[] + gibt metric_alert_levels unveraendert zurueck (RMW, kein notify-Einfluss)', () => {
 		const { rows } = buildRoutePool([
 			{ metric: 'wind_gust', range: [null, 55], notify: false, mark: false },
 		]);
-		const payload = buildCorridorSavePayload(rows, {
-			wind_gust: 'sensibel',
-			temperature_change: 'standard', // nicht route-Pool -> muss erhalten bleiben
-		});
+		const original = {
+			wind_gust: 'sensibel' as const,
+			temperature_change: 'standard' as const, // nicht route-Pool -> muss erhalten bleiben
+		};
+		const payload = buildCorridorSavePayload(rows, original);
 		assert.deepEqual(payload.corridors, [
 			{ metric: 'wind_gust', range: [null, 55], notify: false, mark: false },
 		]);
-		assert.equal(payload.metric_alert_levels.wind_gust, 'off');
-		assert.equal(payload.metric_alert_levels.temperature_change, 'standard');
+		assert.deepEqual(payload.metric_alert_levels, original, '#1371 FAIL: metric_alert_levels wurde veraendert');
 	});
 
-	// F002 (Adversary, HIGH): "✕ entfernen" darf keinen Geister-Alert hinterlassen —
-	// eine entfernte Zeile muss im Payload explizit auf "off" gesetzt werden,
-	// sonst warnt der Δ-Wächter unsichtbar weiter mit der alten Stufe.
-	test('entfernte Zeile -> Level wird explizit auf "off" gesetzt (F002)', () => {
+	// AC-3 (ex-F002): "✕ entfernen" darf metric_alert_levels seit #1371 nicht
+	// mehr auf "off" setzen — die Empfindlichkeit bleibt exklusiv beim Reiter Alarme.
+	test('AC-3: entfernte Zeile veraendert metric_alert_levels NICHT (kein stilles "off")', () => {
 		const { rows } = buildRoutePool([
 			{ metric: 'wind_gust', range: [null, 55], notify: true, mark: false },
 		]);
 		const afterRemove = removeRow(rows, 'wind_gust');
-		const payload = buildCorridorSavePayload(afterRemove, { wind_gust: 'sensibel' }, ['wind_gust']);
-		assert.equal(payload.metric_alert_levels.wind_gust, 'off');
+		const payload = buildCorridorSavePayload(afterRemove, { wind_gust: 'sensibel' });
+		assert.equal(payload.metric_alert_levels.wind_gust, 'sensibel', '#1371 AC-3 FAIL: auf "off" gesetzt');
 		assert.equal(payload.corridors.length, 0);
 	});
 
-	test('removedMetrics, die weiterhin in rows sind (erneut hinzugefuegt), werden NICHT ueberschrieben', () => {
+	// AC-2: nur die Grenze (min/max) aendern darf die Alarm-Stufe nicht anfassen.
+	test('AC-2: Grenze aendern laesst metric_alert_levels unveraendert (notify=true wirkungslos)', () => {
 		const { rows } = buildRoutePool([
 			{ metric: 'wind_gust', range: [null, 55], notify: true, mark: false },
 		]);
-		const payload = buildCorridorSavePayload(rows, { wind_gust: 'sensibel' }, ['wind_gust']);
+		const changed = patchRow(rows, 'wind_gust', { max: 80 });
+		const payload = buildCorridorSavePayload(changed, { wind_gust: 'sensibel' });
 		assert.equal(payload.metric_alert_levels.wind_gust, 'sensibel');
+		assert.equal(payload.corridors[0].range[1], 80);
 	});
 });
 
@@ -575,24 +558,26 @@ describe('buildCompareCorridorSavePayload — Dual-Write (mark -> ideal_ranges)'
 
 // Issue #1311 (C1 von Epic #1301): notify steuert NICHT MEHR active_metrics —
 // das gehoert seit C1 exklusiv dem Wetter-Metriken-Tab (Spec Implementation
-// Details Abschnitt 3). notify behaelt seine Alarm-Funktion (metric_alert_levels).
-// Ersetzt die vor C1 gueltigen "Dual-Write (notify -> active_metrics/#1191)"-
-// Erwartungen (aktueller Verhaltensnachweis: weatherMetricsTabCorridorCoupling.test.ts AC-3).
-describe('buildCompareCorridorSavePayload — C1 Entkopplung notify <-> active_metrics', () => {
-	test('notify=true veraendert activeMetricKeys NICHT MEHR, metric_alert_levels != off', () => {
+// Details Abschnitt 3).
+// Issue #1371: notify steuert seither AUCH NICHT MEHR metric_alert_levels —
+// der Reiter Wertebereiche markiert nur noch, die Alarm-Empfindlichkeit setzt
+// exklusiv der Reiter Alarme. Ersetzt die vor #1371 gueltigen
+// "notify -> metric_alert_levels"-Erwartungen.
+describe('buildCompareCorridorSavePayload — #1371: notify <-> active_metrics UND metric_alert_levels entkoppelt', () => {
+	test('AC-2: notify=true veraendert weder activeMetricKeys noch metricAlertLevels (reiner Pass-Through)', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: true, mark: false },
 		], TEST_DEFS);
 		const payload = buildCompareCorridorSavePayload(rows, [], {
 			idealRanges: {},
 			activeMetricKeys: [],
-			metricAlertLevels: {},
+			metricAlertLevels: { wind_max_kmh: 'sensibel' },
 		});
 		assert.deepEqual(payload.activeMetricKeys, []);
-		assert.equal(payload.metricAlertLevels.wind_max_kmh, 'standard');
+		assert.equal(payload.metricAlertLevels.wind_max_kmh, 'sensibel');
 	});
 
-	test('notify=false entfernt die Metrik NICHT MEHR aus activeMetricKeys, metric_alert_levels="off"', () => {
+	test('AC-2: notify=false veraendert weder activeMetricKeys noch metricAlertLevels (kein stilles "off")', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: false, mark: true },
 		], TEST_DEFS);
@@ -602,7 +587,7 @@ describe('buildCompareCorridorSavePayload — C1 Entkopplung notify <-> active_m
 			metricAlertLevels: { wind_max_kmh: 'sensibel' },
 		});
 		assert.deepEqual(payload.activeMetricKeys, ['wind_max_kmh']);
-		assert.equal(payload.metricAlertLevels.wind_max_kmh, 'off');
+		assert.equal(payload.metricAlertLevels.wind_max_kmh, 'sensibel');
 	});
 
 	// #1191-Erhalt: alle Zeilen notify=false -> bewusst leeres [] bleibt leer,
@@ -633,9 +618,9 @@ describe('buildCompareCorridorSavePayload — C1 Entkopplung notify <-> active_m
 		assert.equal(payload.activeMetricKeys.includes('wind_max_kmh'), false);
 	});
 
-	// F002-Analogon (Slice 3): entfernte Zeile hinterlaesst keinen Geister-Alert
-	// UND keinen verwaisten ideal_ranges-Eintrag.
-	test('removedMetrics -> Level explizit "off", aus active_metrics UND ideal_ranges entfernt', () => {
+	// AC-3 (ex-F002): entfernte Zeile hinterlaesst weder einen verwaisten
+	// active_metrics-/ideal_ranges-Eintrag NOCH eine veraenderte Alarm-Stufe.
+	test('AC-3: removedMetrics entfernen aus active_metrics UND ideal_ranges, metricAlertLevels bleibt unveraendert', () => {
 		const { rows } = buildComparePool([
 			{ metric: 'wind_max_kmh', range: [0, 50], notify: true, mark: true },
 		], TEST_DEFS);
@@ -645,7 +630,7 @@ describe('buildCompareCorridorSavePayload — C1 Entkopplung notify <-> active_m
 			activeMetricKeys: ['wind_max_kmh'],
 			metricAlertLevels: { wind_max_kmh: 'sensibel' },
 		});
-		assert.equal(payload.metricAlertLevels.wind_max_kmh, 'off');
+		assert.equal(payload.metricAlertLevels.wind_max_kmh, 'sensibel', '#1371 AC-3 FAIL: metricAlertLevels veraendert');
 		assert.equal(payload.activeMetricKeys.includes('wind_max_kmh'), false);
 		assert.equal('wind_max_kmh' in payload.idealRanges, false);
 		assert.equal(payload.corridors.length, 0);

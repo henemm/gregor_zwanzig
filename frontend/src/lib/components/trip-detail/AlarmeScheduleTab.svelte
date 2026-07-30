@@ -29,19 +29,14 @@
 		trip: Trip;
 		onTripUpdate?: (updated: Trip) => void;
 		saveController?: SaveStatus;
-		/** Tab-Wechsel (analog BriefingScheduleTab onJump). "Wertebereiche öffnen →" springt in 'alerts'. */
-		onJump?: (tab: string) => void;
 	}
-	let { trip, onTripUpdate, saveController, onJump }: Props = $props();
+	let { trip, onTripUpdate, saveController }: Props = $props();
 
 	// ── (c) Metrik-Level-Tabelle: Initialwert aus display_config.metric_alert_levels ──
 	const metricLevels = $derived(
 		(trip.display_config?.metric_alert_levels ?? {}) as Record<AlertMetric, SensLevel>
 	);
 	const activeMetrics = $derived(Object.keys(metricLevels) as AlertMetric[]);
-
-	// ── (a) Korridor-Zusammenfassung: notify-Zaehler (Toggles bleiben im CorridorEditor) ──
-	const notifyCount = $derived((trip.corridors ?? []).filter((c) => c.notify).length);
 
 	// ── (d) Kanaele: AC-15 Ist-Zustand-Rekonstruktion als Initialwert ──────────
 	const existingChannels = $derived(reconstructTripAlertChannels(trip));
@@ -55,8 +50,6 @@
 		{saveController}
 		{activeMetrics}
 		{metricLevels}
-		{notifyCount}
-		onJumpToWertebereiche={() => onJump?.('alerts')}
 		{existingChannels}
 	/>
 </div>

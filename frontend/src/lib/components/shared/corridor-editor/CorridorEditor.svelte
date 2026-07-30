@@ -122,15 +122,18 @@
 	});
 
 	const validation = $derived(validateCorridorRows(rows));
-	const notifyN = $derived(rows.filter((r) => r.notify).length);
 	const markN = $derived(rows.filter((r) => r.mark).length);
 
+	// Issue #1371: der PUT ueberschreibt `display_config.metric_alert_levels`
+	// nicht mehr explizit — `trip!.display_config` wird unveraendert
+	// durchgereicht, die Alarm-Empfindlichkeit bleibt exklusiv beim Reiter
+	// Alarme (AC-2/AC-3).
 	function buildSaveFn() {
-		const payload = buildCorridorSavePayload(rows, originalLevels, removedMetrics);
+		const payload = buildCorridorSavePayload(rows, originalLevels);
 		return async () => {
 			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, {
 				corridors: payload.corridors,
-				display_config: { ...trip!.display_config, metric_alert_levels: payload.metric_alert_levels },
+				display_config: trip!.display_config,
 			});
 			onTripUpdate?.(updated);
 		};
@@ -341,13 +344,9 @@
 					</div>
 				</div>
 				<div class="ce-effects">
-					<!-- Team-Lead-Korrektur: nicht-alarmfaehige Metriken (alarmCapable===false)
-					     haben keine Δ-Wächter-Bruecke — "Warnen" deaktiviert statt vorzutaeuschen. -->
-					{#if row.alarmCapable === false}
-						<button type="button" class="ce-effect notify disabled" disabled title="nur Markieren – für diese Metrik gibt es keinen Alarm-Abgleich">Warnen</button>
-					{:else}
-						<button type="button" class="ce-effect notify" class:on={row.notify} aria-pressed={row.notify} onclick={() => patch(row.metric, { notify: !row.notify })}>Warnen</button>
-					{/if}
+					<!-- Issue #1371: "Warnen" entfernt — der Reiter Wertebereiche markiert
+					     nur noch; die Alarm-Empfindlichkeit setzt ausschliesslich der
+					     Reiter Alarme (AlertMetricLevelTable). -->
 					<button type="button" class="ce-effect mark" class:on={row.mark} aria-pressed={row.mark} onclick={() => patch(row.metric, { mark: !row.mark })}>Markieren</button>
 					<button type="button" class="ce-remove" onclick={() => remove(row.metric)}>✕ entfernen</button>
 				</div>
@@ -364,7 +363,6 @@
 	</div>
 
 	<div class="ce-summary">
-		<span>{notifyN} × Warnen</span>
 		<span>{markN} × Markieren</span>
 		{#if context === 'vergleich'}
 			<!-- AC-13: Neutralitäts-Hinweis — keine Sortierung/Rang anhand der Wertebereiche (C1). -->

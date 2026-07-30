@@ -8,10 +8,13 @@
 
 export type AlarmeContext = 'route' | 'vergleich';
 
-// Abschnitte a-f + h. 'radar' (g) kommt nur bei vergleich dazu, direkt
-// hinter 'official-warnings' (Epic #1301 D3).
+// Abschnitte b-f + h. 'radar' (g) kommt nur bei vergleich dazu, direkt
+// hinter 'official-warnings' (Epic #1301 D3). Issue #1371: Abschnitt (a)
+// 'korridor-summary' ("Korridor-Auslöser") entfaellt ersatzlos — der Reiter
+// Wertebereiche setzt keine Warn-Schwellen mehr, die Aussage waere sachlich
+// falsch. Die metric-levels-Sektion zeigt die tatsaechliche Alarm-Konfiguration
+// bereits vollstaendig.
 const BASE_SECTIONS = [
-	'korridor-summary',
 	'official-warnings',
 	'metric-levels',
 	'channels',
@@ -33,11 +36,6 @@ export function alarmeTabSections(context: AlarmeContext): string[] {
 // (official-warnings + radar), kontextabhaengig.
 export function triggerGroupHeading(context: AlarmeContext): string {
 	return context === 'vergleich' ? 'Amtliche & Radar-Warnungen' : 'Amtliche Warnungen';
-}
-
-export function notifySummaryLabel(notifyCount: number): string | null {
-	if (notifyCount === 0) return null;
-	return `${notifyCount} × Warnen aktiv`;
 }
 
 export function wertebereicheTabId(context: AlarmeContext): string {

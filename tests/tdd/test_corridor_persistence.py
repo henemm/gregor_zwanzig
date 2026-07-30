@@ -207,6 +207,50 @@ def test_unknown_legacy_fields_and_corridors_survive_roundtrip_together(tmp_path
     assert len(resaved["alert_rules"]) == 1
 
 
+# --- Issue #1371 AC-4: Reiter Wertebereiche darf notify/metric_alert_levels
+# beim Speichern nicht antasten (nur die Bedienung ist weg, nicht die
+# Persistenz). Simuliert corridors[]/display_config unveraendert weiterreichen,
+# nur die Grenze (range) aendert sich.
+#
+# Adversary F002 (MEDIUM, ehrlicher Geltungsbereich): dieser Test setzt notify
+# von Hand und ruft _trip_to_dict/load_trip direkt auf -- er belegt NUR das
+# Modell-/Loader-Roundtrip (schon vor #1371 garantiert, kann durch einen
+# Frontend-Regress allein nicht rot werden), NICHT die Frontend-Payload-
+# Konstruktion selbst. Komplementaerer Beleg dafuer (echte Gegenprobe
+# rot/gruen): corridorEditorState.test.ts, weatherMetricsTabCorridorCoupling.test.ts.
+
+def test_corridor_notify_and_metric_alert_levels_survive_wertebereiche_range_only_save(tmp_path: Path) -> None:
+    """AC-4: Laden -> nur die Grenze eines Korridors aendern -> Speichern ->
+    Laden: notify UND die im Reiter Alarme gesetzte metric_alert_levels-Stufe
+    bleiben exakt wie vor dem Speichern."""
+    from app.models import Corridor, UnifiedWeatherDisplayConfig  # Corridor noch nicht vorhanden -> ImportError (ROT)
+
+    corridor = Corridor(metric="wind_gust", range=[None, 45.0], notify=True, mark=False)
+    trip = Trip(
+        id="t10", name="Wertebereiche-RMW-Test", stages=[_make_stage()], corridors=[corridor],
+        display_config=UnifiedWeatherDisplayConfig(trip_id="t10", metric_alert_levels={"wind_gust": "sensibel"}),
+    )
+    trip_path = tmp_path / "trip.json"
+    trip_path.write_text(json.dumps(_trip_to_dict(trip), indent=2))
+
+    loaded = load_trip(trip_path)
+    assert loaded.corridors[0].notify is True
+    assert loaded.display_config.metric_alert_levels["wind_gust"] == "sensibel"
+
+    # r.notify unveraendert aus der geladenen Zeile, nur range aendert sich.
+    loaded.corridors[0] = Corridor(
+        metric="wind_gust", range=[None, 80.0], notify=loaded.corridors[0].notify, mark=loaded.corridors[0].mark,
+    )
+    trip_path.write_text(json.dumps(_trip_to_dict(loaded), indent=2))
+    reloaded = load_trip(trip_path)
+
+    assert reloaded.corridors[0].range == [None, 80.0], "die Grenzaenderung muss ankommen"
+    assert reloaded.corridors[0].notify is True, "#1371 AC-4 FAIL: notify hat sich veraendert"
+    assert reloaded.display_config.metric_alert_levels["wind_gust"] == "sensibel", (
+        "#1371 AC-4 FAIL: metric_alert_levels wurde durch den Wertebereiche-Save veraendert"
+    )
+
+
 # --- AC-1d (Adversary F001/F002): malformed range degradiert statt crasht ---
 # Datenverlust-Klasse BUG-DATALOSS-GR221: ein einzelner malformter Corridor
 # darf NIE den gesamten Trip unladbar machen. Go verarbeitet dieselben

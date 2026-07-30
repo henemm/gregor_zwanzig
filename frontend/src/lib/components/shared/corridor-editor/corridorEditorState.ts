@@ -176,45 +176,20 @@ export function validateCorridorRows(rows: CorridorRowState[]): { valid: boolean
 }
 
 /**
- * Sync-Bruecke notify <-> metric_alert_levels (PO-A, AC-10): `notify` ist nur
- * ein an/aus-Schalter auf den bestehenden Δ-Wächter. `false` setzt "off";
- * `true` restauriert die zuletzt bekannte Stufe aus den ORIGINAL geladenen
- * Levels (nicht aus einem laufenden Zwischenstand), Default "standard".
- */
-export function deriveMetricAlertLevel(
-	notify: boolean,
-	metric: string,
-	originalLevels: Record<string, SensLevel | undefined>
-): SensLevel {
-	if (!notify) return 'off';
-	const prev = originalLevels[metric];
-	return prev && prev !== 'off' ? prev : 'standard';
-}
-
-/**
- * Read-Modify-Write-Payload fuer den Save: corridors[] + gemergte
- * metric_alert_levels. `removedMetrics` (F002-Fix, Adversary-Finding): Zeilen,
- * die in dieser Session per "✕ entfernen" entfernt wurden — deren Level muss
- * explizit auf "off" gesetzt werden (Zeile entfernen = Warnung aus), sonst
- * warnt der Δ-Wächter unsichtbar mit der alten Stufe weiter. Ist die Metrik
- * inzwischen wieder als Zeile vorhanden (erneut hinzugefuegt), gewinnt die
- * normale Ableitung ueber `rows`.
+ * Read-Modify-Write-Payload fuer den Save: corridors[] + `metric_alert_levels`
+ * als reiner Pass-Through von `originalLevels`. Issue #1371: leitete
+ * `metric_alert_levels` frueher aus `row.notify` ab (inkl. `'off'` fuer
+ * entfernte Zeilen) — eine zweite, redundante Bedienung derselben Einstellung,
+ * die der Reiter *Alarme* bereits vollwertig anbietet. Ein Speichern hier
+ * laesst die dort gesetzte Empfindlichkeit exakt unveraendert (AC-2/AC-3).
  */
 export function buildCorridorSavePayload(
 	rows: CorridorRowState[],
-	originalLevels: Record<string, SensLevel | undefined> | undefined,
-	removedMetrics: string[] = []
+	originalLevels: Record<string, SensLevel | undefined> | undefined
 ): { corridors: Corridor[]; metric_alert_levels: Record<string, SensLevel> } {
-	const merged: Record<string, SensLevel> = { ...(originalLevels as Record<string, SensLevel>) };
-	for (const m of removedMetrics) {
-		if (!rows.some((r) => r.metric === m)) merged[m] = 'off';
-	}
-	for (const r of rows) {
-		merged[r.metric] = deriveMetricAlertLevel(r.notify, r.metric, originalLevels ?? {});
-	}
 	return {
 		corridors: rows.map((r) => ({ metric: r.metric, range: [r.min, r.max], notify: r.notify, mark: r.mark })),
-		metric_alert_levels: merged,
+		metric_alert_levels: { ...(originalLevels as Record<string, SensLevel>) },
 	};
 }
 
@@ -507,17 +482,19 @@ export function buildComparePrefillRows(profileKey: ProfileKey, defs: CompareMet
  * Dual-Write-Save-Payload (Kern von Slice 4): `mark` spiegelt in
  * `display_config.ideal_ranges` (heutiges Format je Metrik-Kind unveraendert:
  * {min?,max?} fuer Zahlen, {max:'NONE'|'MED'|'HIGH'} fuer Gewitter — offene
- * Seite wird weggelassen wie heute). `notify` spiegelt in
- * `display_config.active_metrics`/`metric_alert_levels` (Sync-Bruecke analog
- * `buildCorridorSavePayload` oben, wiederverwendet via `deriveMetricAlertLevel`).
+ * Seite wird weggelassen wie heute).
  *
- * #1191 HART: `activeMetricKeys` ist die pure Ableitung aus `rows.notify` —
- * wenn ALLE Zeilen notify=false sind, bleibt das Ergebnis `[]` (bewusst leer,
- * keine Heuristik reaktiviert etwas). Eintraege ohne Zeile in DIESER Session
- * (z.B. noch nicht geladen) bleiben per RMW erhalten — nur Metriken mit einer
- * `rows`-Zeile werden ueberschrieben/entfernt, und `notify` wirkt sich NUR bei
- * `alarmCapable!==false` auf active_metrics/metric_alert_levels aus (die 4
- * reinen Vergleichs-Metriken kennt die Δ-Wächter-Bruecke nicht).
+ * Issue #1311 (C1): `notify` steuert NICHT MEHR `active_metrics` — reiner
+ * Pass-Through von `original.activeMetricKeys`, nur `removedMetrics` bereinigt.
+ * Issue #1371: `notify` steuert seither AUCH NICHT MEHR `metric_alert_levels`
+ * — ebenfalls reiner Pass-Through von `original.metricAlertLevels`. Der Reiter
+ * *Wertebereiche* markiert nur noch (mark -> ideal_ranges); die
+ * Alarm-Empfindlichkeit liegt exklusiv im Reiter *Alarme* (AC-2/AC-3).
+ *
+ * #1191 HART: `activeMetricKeys` ist die pure Ableitung aus `original` —
+ * wenn ALLE Zeilen notify=false sind, bleibt das Ergebnis unveraendert
+ * (bewusst leer, keine Heuristik reaktiviert etwas). Eintraege ohne Zeile in
+ * DIESER Session (z.B. noch nicht geladen) bleiben per RMW erhalten.
  *
  * F003-Fix (Adversary CRITICAL): `unknownCorridors` (aus `buildComparePool`)
  * werden unveraendert an `corridors[]` angehaengt — Pass-Through fuer
@@ -545,10 +522,9 @@ export function buildCompareCorridorSavePayload(
 	};
 
 	for (const m of removedMetrics) {
-		if (rows.some((r) => r.metric === m)) continue; // erneut hinzugefuegt -> normale Ableitung gewinnt
+		if (rows.some((r) => r.metric === m)) continue; // erneut hinzugefuegt -> Zeile bleibt bestehen
 		delete idealRanges[m];
 		activeSet.delete(m);
-		metricAlertLevels[m] = 'off';
 	}
 
 	for (const r of rows) {
@@ -564,15 +540,6 @@ export function buildCompareCorridorSavePayload(
 			if (r.max != null) range.max = r.max;
 			idealRanges[r.metric] = range;
 		}
-		// Issue #1311 (C1): notify steuert NICHT MEHR active_metrics — das
-		// gehoert seit C1 exklusiv dem Wetter-Metriken-Tab (activeSet bleibt
-		// unveraendert, reiner Pass-Through von original.activeMetricKeys minus
-		// removedMetrics-Bereinigung oben). notify behaelt seine Alarm-Funktion
-		// (metric_alert_levels) unveraendert — NUR fuer die 10 alarmfaehigen
-		// Metriken (defensiv: r.alarmCapable===false ignoriert notify komplett,
-		// die Alarm-Bruecke kennt diese Metriken nicht).
-		if (r.alarmCapable === false) continue;
-		metricAlertLevels[r.metric] = deriveMetricAlertLevel(r.notify, r.metric, original.metricAlertLevels ?? {});
 	}
 
 	return {
