@@ -56,6 +56,16 @@ Test-Postfach (`mail.henemm.com`). `fetch_latest_email()` priorisiert seit #972
 verlässlich gegen das Test-Postfach geprüft wird. Credentials aus den Settings —
 niemals im Klartext. Kein Gmail.
 
+**Übergangs-Union der Übersichts-Beschriftungen (#1420, Prüfdatum 2026-10-27):**
+`_OVERVIEW_METRIC_CHECKS` kennt 46 statt 24 Beschriftungen — die heutigen
+deutschen **und** die englischen Kurzformen, auf die #1401 A2b umstellt (samt
+den auswahlabhängigen Formen „Temp"/„Temp max"/„Temp min", analog „Feels").
+Strikt additiv, damit A2b die Mail umstellen kann, ohne dass die 24
+Plausibilitätsprüfungen still in den `continue`-Pfad zurückfallen. Dasselbe
+Muster wie `_HOUR_COLUMNS_V2` (#1404). Das Prüfdatum ist ein reiner
+Erinnerungsmarker **ohne** Verhaltenszweig — eine Selbstverengung am Stichtag
+würde die dann korrekte Mail ablehnen. Rückbau nach A2b.
+
 **Nur bei Exit 0** darfst du „E2E Test bestanden" sagen. Einfache String-Checks
 beweisen NICHTS — sie prüfen nicht, ob Daten SINNVOLL sind.
 
