@@ -33,7 +33,7 @@ import {
 // src/output/renderers/compare_metric_catalog.py, identisch zur Fixture in
 // __tests__/compareMetricCatalogParity.test.ts). Testet damit gegen den
 // echten Produktionscode statt eine zweite Erwartung zu erfinden.
-import { buildCompareMetricDefs } from './compareMetricCatalogLoader.ts';
+import { buildCompareMetricDefs, buildRouteMetricDefsFromCatalog } from './compareMetricCatalogLoader.ts';
 
 // Endpoint-Antwort-Fixture: 25 Eintraege 1:1 aus
 // src/output/renderers/compare_metric_catalog.py::COMPARE_METRIC_CATALOG,
@@ -154,6 +154,30 @@ describe('buildRoutePool — Katalog-Filter (Issue #1387)', () => {
 	});
 });
 
+// --- Issue #1429: Min/Max-Unterscheidung bei geteiltem Katalog-Label ---
+// (AC-1/AC-2) buildRouteMetricDefsFromCatalog mappt entry.aggregation_label
+// nach RouteMetricDef.aggregationLabel — exakt wie buildCompareMetricDefs es
+// bereits fuer CompareMetricDef tut.
+describe('buildRouteMetricDefsFromCatalog — Issue #1429 aggregationLabel', () => {
+	test('AC-1: Katalog-Eintrag mit aggregation_label liefert aggregationLabel im RouteMetricDef', () => {
+		const defs = buildRouteMetricDefsFromCatalog(CATALOG_FIXTURE.metrics);
+		const windChillMin = defs.find((d) => d.metric === 'wind_chill_min_c');
+		const windChillMax = defs.find((d) => d.metric === 'wind_chill_max_c');
+		assert.equal(windChillMin?.aggregationLabel, 'Minimum');
+		assert.equal(windChillMax?.aggregationLabel, 'Maximum');
+	});
+
+	test('AC-2: Katalog-Eintrag ohne aggregation_label liefert aggregationLabel===undefined, kein erfundener Key', () => {
+		const defs = buildRouteMetricDefsFromCatalog([
+			{ key: 'wind_max_kmh', label: 'Wind', unit: 'km/h', rangeMin: 0, rangeMax: 100, step: 5 },
+		]);
+		const def = defs.find((d) => d.metric === 'wind_max_kmh');
+		assert.ok(def);
+		assert.equal(def?.aggregationLabel, undefined);
+		assert.equal('aggregationLabel' in (def as object), false);
+	});
+});
+
 // --- addRow / removeRow / patchRow — Reducer ---
 describe('addRow / removeRow / patchRow', () => {
 	test('addRow uebernimmt Default-Range + Kontext-Defaults der Metrik', () => {
@@ -183,6 +207,41 @@ describe('addRow / removeRow / patchRow', () => {
 		assert.equal(next.find((r) => r.metric === 'wind_gust')?.max, 70);
 		assert.equal(next.find((r) => r.metric === 'wind_gust')?.mark, true);
 		assert.equal(next.find((r) => r.metric === 'snow_line')?.max, null);
+	});
+});
+
+// --- Issue #1429 (AC-3/AC-4): aggregationLabel-Durchreichung fuer bereits
+// gespeicherte UND neu hinzugefuegte route-Zeilen (extraDefs aus dem
+// zentralen Katalog, #1425 S2 Teil 1). ---
+describe('buildRoutePool — Issue #1429 aggregationLabel bei gespeicherter Zeile', () => {
+	test('AC-3: gespeicherte wind_chill_min_c-Zeile traegt aggregationLabel aus extraDefs', () => {
+		const extraDefs = buildRouteMetricDefsFromCatalog(CATALOG_FIXTURE.metrics);
+		const { rows } = buildRoutePool(
+			[{ metric: 'wind_chill_min_c', range: [-5, null], notify: false, mark: true }],
+			undefined,
+			extraDefs
+		);
+		const row = rows.find((r) => r.metric === 'wind_chill_min_c');
+		assert.equal(row?.aggregationLabel, 'Minimum');
+	});
+
+	// Nicht-Regression: eine der fest verdrahteten 6 route-Metriken (kein
+	// Katalog-Kollisions-Label) bleibt ohne aggregationLabel.
+	test('Nicht-Regression: wind_gust (fest verdrahtete Route-Metrik) bleibt ohne aggregationLabel', () => {
+		const { rows } = buildRoutePool([
+			{ metric: 'wind_gust', range: [null, 55], notify: true, mark: false },
+		]);
+		assert.equal(rows[0].aggregationLabel, undefined);
+	});
+});
+
+describe('addRow — Issue #1429 aggregationLabel bei neu hinzugefuegter Zeile', () => {
+	test('AC-4: addRow uebernimmt aggregationLabel der aus poolLeft gefundenen Def', () => {
+		const extraDefs = buildRouteMetricDefsFromCatalog(CATALOG_FIXTURE.metrics);
+		const { poolLeft } = buildRoutePool([], undefined, extraDefs);
+		const next = addRow([], poolLeft, 'wind_chill_max_c', ROUTE_CTX_DEFAULTS);
+		const row = next.rows.find((r) => r.metric === 'wind_chill_max_c');
+		assert.equal(row?.aggregationLabel, 'Maximum');
 	});
 });
 

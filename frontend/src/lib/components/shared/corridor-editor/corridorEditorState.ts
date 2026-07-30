@@ -22,6 +22,9 @@ export interface RouteMetricDef {
 	note?: string;
 	defaultMin: number | null;
 	defaultMax: number | null;
+	/** Issue #1429: Auswertung als eigenes Element neben dem Namen, wenn der
+	 *  Katalog-Eintrag sie liefert — analog `CompareMetricDef`/#1401 A1. */
+	aggregationLabel?: string;
 }
 
 // Reihenfolge = Anzeige-Reihenfolge (deterministisch, C1: nur Anzeige, kein Rang).
@@ -158,6 +161,7 @@ export function buildRoutePool(
 			rows.push({
 				metric: def.metric, label: def.label, unit: def.unit, scale: def.scale, step: def.step, note: def.note,
 				min: c.range[0], max: c.range[1], notify: c.notify, mark: c.mark,
+				aggregationLabel: def.aggregationLabel,
 			});
 			// gematcht -> keine "unbekannte" Metrik mehr (F001).
 			present.delete(def.metric);
@@ -188,6 +192,7 @@ export function addRow(
 	const newRow: CorridorRowState = {
 		metric: def.metric, label: def.label, unit: def.unit, scale: def.scale, step: def.step, note: def.note,
 		min: def.defaultMin, max: def.defaultMax, notify: ctxDefaults.notify, mark: ctxDefaults.mark,
+		aggregationLabel: def.aggregationLabel,
 	};
 	return { rows: [...rows, newRow], poolLeft: poolLeft.filter((m) => m.metric !== metric) };
 }
