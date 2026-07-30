@@ -274,20 +274,25 @@ func TestSend_ControlCharRealRecipientNot1147Guard(t *testing.T) {
 	}
 }
 
-// AC-5: SendWithFallback — primary=Resend+gregor-test@ liefert einen
-// #1147-Fehler ohne "535" im Text, daher versucht SendWithFallback
-// automatisch die Fallback-Config. Der zurückkommende Fehler muss vom
-// Fallback-Versuch stammen (beweist: der Guard-Error führte zum
-// Fallback-Versuch, nicht zum sofortigen Abbruch).
-func TestSendWithFallback_RecipientGuardTriggersFallbackAttempt(t *testing.T) {
+// AC-3 (Issue #1412 S1): primary=Resend+gregor-test@ wird vom
+// #1147/#1219-Fangnetz blockiert — dieser Guard-Block darf KEINEN zweiten
+// Sendeversuch über den Ersatzweg auslösen. Vor #1412 stand hier wörtlich
+// das Gegenteil (R1-Fehlverhalten als gewollt festgeschrieben): jeder
+// Fehler ohne "535" im Text löste automatisch den Fallback-Versuch aus —
+// SendWithFallback konnte einen bewusst blockierten Empfänger also über
+// den Ersatzweg doch noch zustellen. Fix: der zurückgegebene Fehler ist
+// jetzt der reine Guard-Fehler, ohne Fallback-Anteil.
+func TestSendWithFallback_RecipientGuardBlocksWithoutFallbackAttempt(t *testing.T) {
 	primary := MailConfig{Host: "smtp.resend.com", Port: 587, User: "resend", Pass: "re_x"}
 	fallback := MailConfig{Host: "127.0.0.1", Port: 1, User: "u", Pass: "p"}
 	err := SendWithFallback(primary, fallback, "gregor-test@henemm.com", resendTestMail())
 	if err == nil {
-		t.Fatal("SendWithFallback muss fehlschlagen (primary blockiert, fallback unerreichbar)")
+		t.Fatal("SendWithFallback muss fehlschlagen (primary blockiert)")
 	}
-	if !strings.Contains(err.Error(), "fallback") {
-		t.Errorf("Fehler muss den Fallback-Versuch erkennen lassen, war: %v", err)
+	if strings.Contains(err.Error(), "fallback") {
+		t.Errorf(
+			"AC-3: ein Guard-Block darf KEINEN zweiten Sendeversuch über den "+
+				"Ersatzweg auslösen, Fehler enthält aber einen Fallback-Anteil: %v", err)
 	}
 	if !strings.Contains(err.Error(), "1147") {
 		t.Errorf("Fehler muss den primären #1147-Guard-Fehler enthalten, war: %v", err)

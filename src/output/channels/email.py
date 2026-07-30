@@ -366,6 +366,26 @@ class EmailOutput:
         """Channel identifier."""
         return "email"
 
+    def _fallback_recipients_blocked(self, recipients: list[str]) -> bool:
+        """Guard-Wiederholung gegen den Ersatz-Postausgang (`self._fallback_host`,
+        Issue #1412 S1): erlaubt ist die VEREINIGUNG aus Allowlist der
+        bestätigten Profil-Adressen UND lokaler Zustellbarkeit — lockerer als
+        die primäre, host-abhängige Regel, aber reservierte Test-Domains
+        bleiben bedingungslos gesperrt. Heute verhaltensneutral (jeder primär
+        durchgekommene Empfänger erfüllt bereits eine Teilmenge dieser Regel);
+        schließt die Lücke dauerhaft, falls `_fallback_host` künftig auf
+        einen externen Relay zeigt (Spec „Scope-Korrektur nach RED")."""
+        from app.loader import get_data_root
+
+        allowlist = _load_resend_allowlist(data_dir=str(get_data_root()))
+        for r in recipients:
+            candidates = [a for a in _normalized_addrs_for_guard(r) if "@" in a]
+            if not candidates or any(_is_reserved_test_domain(a) for a in candidates):
+                return True
+            if any(a not in allowlist and not _is_local_mail_domain(a) for a in candidates):
+                return True
+        return False
+
     def send(
         self,
         subject: str,
@@ -577,7 +597,10 @@ class EmailOutput:
                     )
                     time.sleep(wait)
                 else:
-                    if self._fallback_host:
+                    # Issue #1412 S1: Empfänger-Guard erneut gegen den
+                    # Ersatz-Postausgang auswerten, bevor auf ihn ausgewichen
+                    # wird — nicht bloß gegen self._host (Primärhost).
+                    if self._fallback_host and not self._fallback_recipients_blocked(recipients):
                         try:
                             with smtplib.SMTP(self._fallback_host, 587) as fb_server:
                                 fb_server.starttls()
@@ -619,7 +642,9 @@ class EmailOutput:
                 else:
                     # Last attempt failed — try fallback SMTP if configured
                     logger.error(f"Email send failed after {max_attempts} attempts: {e}")
-                    if self._fallback_host:
+                    # Issue #1412 S1: s.o. — Guard erneut gegen den
+                    # Ersatz-Postausgang auswerten.
+                    if self._fallback_host and not self._fallback_recipients_blocked(recipients):
                         try:
                             with smtplib.SMTP(self._fallback_host, 587) as fb_server:
                                 fb_server.starttls()

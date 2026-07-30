@@ -5,6 +5,7 @@ package mail
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"mime"
@@ -21,6 +22,14 @@ import (
 	"github.com/henemm/gregor-api/internal/egress"
 	"github.com/henemm/gregor-api/internal/model"
 )
+
+// ErrGuardBlocked ist die Wurzel aller Empfänger-/Resend-Guard-Fehler
+// (recipientBlocked, resendBlocked, recipientBlockedForVerification) — Fix
+// #1412 S1. SendWithFallback prüft mit errors.Is(err, ErrGuardBlocked)
+// zuerst auf diesen Typ und bricht ohne zweiten Sendeversuch ab, statt wie
+// bisher fälschlich auf den Ersatzweg auszuweichen (R1: ein bewusst
+// blockierter Empfänger ging bisher ungeprüft über den Fallback-Host raus).
+var ErrGuardBlocked = errors.New("mail: recipient/host guard blocked send (#1412)")
 
 // encodeMailHeader serialisiert einen Header-Wert RFC-2047-konform als
 // Quoted-Printable Encoded-Word (=?utf-8?q?...?=) bei Non-ASCII-Input.
@@ -67,13 +76,13 @@ func resendBlocked(host string) error {
 	}
 	if testing.Testing() {
 		return fmt.Errorf(
-			"mail.Send: Resend-Host %q unter go test gesperrt (#1122) — "+
-				"Test-Mails gehen über Stalwart; GZ_RESEND_ALLOWED gilt hier nicht", host)
+			"%w: mail.Send: Resend-Host %q unter go test gesperrt (#1122) — "+
+				"Test-Mails gehen über Stalwart; GZ_RESEND_ALLOWED gilt hier nicht", ErrGuardBlocked, host)
 	}
 	if os.Getenv("GZ_RESEND_ALLOWED") != "1" {
 		return fmt.Errorf(
-			"mail.Send: Resend-Host %q ohne GZ_RESEND_ALLOWED=1 gesperrt (#1122) — "+
-				"Token setzen nur die Prod-Units (henemm-infra)", host)
+			"%w: mail.Send: Resend-Host %q ohne GZ_RESEND_ALLOWED=1 gesperrt (#1122) — "+
+				"Token setzen nur die Prod-Units (henemm-infra)", ErrGuardBlocked, host)
 	}
 	return nil
 }
@@ -340,8 +349,8 @@ func recipientBlocked(host, to string) error {
 			"mail.Send: Resend-Allowlist-Guard (Fangnetz) blockiert Empfänger bei Host %q (#1147/#1219)",
 			host)
 		return fmt.Errorf(
-			"mail.Send: Test-Postfach in Empfänger-Rohstring bei Resend-Host %q blockiert (#1147/#1219) — "+
-				"Test-Postfächer dürfen nie über Resend versendet werden", host)
+			"%w: mail.Send: Test-Postfach in Empfänger-Rohstring bei Resend-Host %q blockiert (#1147/#1219) — "+
+				"Test-Postfächer dürfen nie über Resend versendet werden", ErrGuardBlocked, host)
 	}
 
 	allowlist := loadResendAllowlist(resendAllowlistDataDir())
@@ -359,9 +368,9 @@ func recipientBlocked(host, to string) error {
 				"kein echtes Nutzerprofil gefunden (#1147/#1219): %v",
 			len(blocked), host, blocked)
 		return fmt.Errorf(
-			"mail.Send: Empfänger nicht in der Resend-Allowlist bei Host %q blockiert (#1147/#1219) — "+
+			"%w: mail.Send: Empfänger nicht in der Resend-Allowlist bei Host %q blockiert (#1147/#1219) — "+
 				"nur mail_to/email echter, angelegter (Nicht-Test-)Nutzerprofile dürfen über Resend erreicht werden",
-			host)
+			ErrGuardBlocked, host)
 	}
 	return nil
 }
@@ -466,8 +475,8 @@ func recipientBlockedForVerification(host, to string) error {
 			"mail.SendVerificationMail: Test-Postfach-Fangnetz blockiert Empfänger bei Host %q (#1219)",
 			host)
 		return fmt.Errorf(
-			"mail.SendVerificationMail: Test-Postfach in Empfänger-Rohstring bei Host %q blockiert (#1219) — "+
-				"Test-Postfächer dürfen nie Bestätigungsmails empfangen", host)
+			"%w: mail.SendVerificationMail: Test-Postfach in Empfänger-Rohstring bei Host %q blockiert (#1219) — "+
+				"Test-Postfächer dürfen nie Bestätigungsmails empfangen", ErrGuardBlocked, host)
 	}
 
 	trimmed := strings.TrimSpace(to)
@@ -479,28 +488,28 @@ func recipientBlockedForVerification(host, to string) error {
 		// Scan wären sie ein unsichtbarer Garbage-Injection-Weg.
 		if unicode.IsControl(r) || unicode.IsSpace(r) || unicode.Is(unicode.Cf, r) {
 			return fmt.Errorf(
-				"mail.SendVerificationMail: Steuer-/Whitespace-/Format-Zeichen im Empfänger blockiert bei Host %q (#1219 F001b)",
-				host)
+				"%w: mail.SendVerificationMail: Steuer-/Whitespace-/Format-Zeichen im Empfänger blockiert bei Host %q (#1219 F001b)",
+				ErrGuardBlocked, host)
 		}
 	}
 
 	addr, err := mail.ParseAddress(trimmed)
 	if err != nil {
 		return fmt.Errorf(
-			"mail.SendVerificationMail: Empfänger ist keine gültige Einzeladresse bei Host %q (#1219 F001): %w",
-			host, err)
+			"%w: mail.SendVerificationMail: Empfänger ist keine gültige Einzeladresse bei Host %q (#1219 F001): %w",
+			ErrGuardBlocked, host, err)
 	}
 	if !strings.EqualFold(addr.Address, trimmed) {
 		return fmt.Errorf(
-			"mail.SendVerificationMail: Empfänger muss eine nackte Adresse ohne Anzeigename/Klammern sein "+
-				"bei Host %q (#1219 F001)", host)
+			"%w: mail.SendVerificationMail: Empfänger muss eine nackte Adresse ohne Anzeigename/Klammern sein "+
+				"bei Host %q (#1219 F001)", ErrGuardBlocked, host)
 	}
 
 	normalized := normalizedAddrForGuard(addr.Address)
 	if isReservedTestDomain(normalized) {
 		return fmt.Errorf(
-			"mail.SendVerificationMail: reservierte Test-Domain bei Host %q blockiert (#1219): %s",
-			host, maskAddrForLog(addr.Address))
+			"%w: mail.SendVerificationMail: reservierte Test-Domain bei Host %q blockiert (#1219): %s",
+			ErrGuardBlocked, host, maskAddrForLog(addr.Address))
 	}
 	return nil
 }
@@ -530,6 +539,15 @@ func SendWithFallback(primaryCfg, fallbackCfg MailConfig, to string, msg Mail) e
 	err := Send(primaryCfg, to, msg)
 	if err == nil {
 		return nil
+	}
+	// Fix #1412 S1: ein Guard-Fehler (Empfänger-/Resend-Sperre, s.
+	// ErrGuardBlocked) heißt "dieser Empfänger darf hier nicht hin" — keine
+	// flüchtige Störung, die einen zweiten Versuch über den Ersatzweg
+	// rechtfertigt (R1: bisher wich ein bewusst blockierter Empfänger
+	// fälschlich auf den Fallback-Host aus, weil sein Fehlertext kein "535"
+	// enthielt). Geprüft VOR dem bestehenden Auth-Fehler-Check.
+	if errors.Is(err, ErrGuardBlocked) {
+		return err
 	}
 	// Auth-Fehler sind permanent — kein Fallback
 	if strings.Contains(err.Error(), "535") {
