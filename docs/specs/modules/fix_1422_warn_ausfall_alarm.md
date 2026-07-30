@@ -300,29 +300,63 @@ beauftragt. Erwartete Schnittstelle, ohne Rückfragen umsetzbar:
 
 - **Endpunkt:** `GET http://localhost:8090/api/scheduler/status` (bereits
   heute von `check-gregor20.sh` ohne Login abgefragt).
-- **Neues Feld `warn_service_health`** (Objekt, Schlüssel = kanonischer
-  Dienstname, z.B. `meteoalarm`, `geosphere_warn`, `vigilance`,
-  `meteo_forets`, `massif_closure` — **nur vorhanden, wenn der Dienst
-  mindestens einmal aufgerufen wurde**):
-  - `last_success_at` (RFC3339-String oder `null`)
-  - `last_attempt_at` (RFC3339-String oder `null`)
-  - `self_throttled` (bool) — `true`, wenn der jüngste Fehlschlag ein
-    selbst auferlegter Rückzug war (kein Anbieter-Problem)
-  - `journal_read_error` (bool, nur vorhanden wenn `true`) — Journal-Datei
+- **Neues Feld `warn_service_health`** (EIN Objekt — Implementierung
+  (Commit `21bb90d5`) bündelt darin ALLES, s. korrigiertes Beispiel unten;
+  eine frühere Fassung dieses Abschnitts beschrieb `meteoalarm_budget`
+  fälschlich als eigenes Geschwister-Feld auf oberster Ebene neben
+  `warn_service_health` — das stimmt nicht mit dem Code überein und wurde
+  hier korrigiert, um Rückfragen/Ping-Pong zu vermeiden):
+  - **Pro kanonischem Dienstnamen als Schlüssel** (`meteoalarm`,
+    `geosphere_warn`, `vigilance`, `meteo_forets`, `massif_closure` — **nur
+    vorhanden, wenn der Dienst mindestens einmal aufgerufen wurde**):
+    - `last_success_at` (RFC3339-String oder `null`)
+    - `last_attempt_at` (RFC3339-String oder `null`)
+    - `self_throttled` (bool) — `true`, wenn der jüngste Fehlschlag ein
+      selbst auferlegter Rückzug war (kein Anbieter-Problem)
+  - `journal_read_error` (bool, **eigener Schlüssel INNERHALB
+    `warn_service_health`**, nur vorhanden wenn `true`) — Journal-Datei
     existiert, ist aber nicht lesbar; **als eigener Fehlerfall behandeln**
-    (Datei fehlt hingegen komplett → normaler, unauffälliger Zustand)
-- **Neues Feld `meteoalarm_budget`** (Objekt, Passthrough von
-  `MeteoAlarmBudgetGate.snapshot()`): `calls_today`, `daily_budget`,
-  `usage_ratio`, `observed_reset_ts`, `status` (`"ok"`/`"unavailable"`).
+    (Datei fehlt hingegen komplett → normaler, unauffälliger Zustand, Feld
+    fehlt)
+  - `meteoalarm_budget` (Objekt, **ebenfalls eigener Schlüssel INNERHALB
+    `warn_service_health`**, NICHT auf oberster Ebene von `Status()`;
+    Passthrough von `MeteoAlarmBudgetGate.snapshot()`): `calls_today`,
+    `daily_budget`, `usage_ratio`, `observed_reset_ts`, `status`
+    (`"ok"`/`"unavailable"`)
+
+  Beispiel (gekürzt):
+  ```json
+  {
+    "briefing_health": { "...": "..." },
+    "warn_service_health": {
+      "meteoalarm": {
+        "last_success_at": null,
+        "last_attempt_at": "2026-07-30T09:15:00Z",
+        "self_throttled": false
+      },
+      "journal_read_error": true,
+      "meteoalarm_budget": {
+        "calls_today": 84,
+        "daily_budget": 200,
+        "usage_ratio": 0.42,
+        "observed_reset_ts": null,
+        "status": "ok"
+      }
+    }
+  }
+  ```
 - **Erwartete Auswertung in `check-gregor20.sh`:** analog Abschnitt 2c
-  (`provider_error_streak_since`) — für jeden vorhandenen Schlüssel in
-  `warn_service_health`: fehlt `last_success_at` ODER liegt er mehr als 3
-  Stunden zurück, UND `last_attempt_at` liegt selbst nicht mehr als 3
-  Stunden zurück (sonst: Dienst aktuell nicht in Gebrauch, kein Alarm) →
-  ERROR. `self_throttled=true` bzw. `meteoalarm_budget.status` erschöpft →
-  eigener, unterscheidbarer Hinweistext (andere Gegenmaßnahme: eigenen
-  Verbrauch senken statt auf den Anbieter warten). `journal_read_error=true`
-  → eigener ERROR, unabhängig vom Rest.
+  (`provider_error_streak_since`) — für jeden Dienst-Schlüssel innerhalb
+  `warn_service_health` (also alles außer den beiden Sonderschlüsseln
+  `journal_read_error` und `meteoalarm_budget`): fehlt `last_success_at`
+  ODER liegt er mehr als 3 Stunden zurück, UND `last_attempt_at` liegt
+  selbst nicht mehr als 3 Stunden zurück (sonst: Dienst aktuell nicht in
+  Gebrauch, kein Alarm) → ERROR. `self_throttled=true` bzw.
+  `warn_service_health.meteoalarm_budget.status` erschöpft → eigener,
+  unterscheidbarer Hinweistext (andere Gegenmaßnahme: eigenen Verbrauch
+  senken statt auf den Anbieter warten).
+  `warn_service_health.journal_read_error=true` → eigener ERROR,
+  unabhängig vom Rest.
 - Kein neuer BetterStack-Heartbeat — Einhängung in den bestehenden
   Gregor20-CORE- bzw. EXT-Heartbeat (Quote ist mit 10/10 voll).
 
