@@ -29,7 +29,6 @@ from __future__ import annotations
 import ast
 import json
 import re
-import subprocess
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -643,7 +642,7 @@ def test_ac7_fehlende_ast_region_bricht_laut_ab():
 
 
 # -----------------------------------------------------------------------
-# Regel-Budget + AC-10 (keine Produktivzeile geaendert)
+# Regel-Budget
 # -----------------------------------------------------------------------
 
 
@@ -658,18 +657,3 @@ def test_regelbudget_pruefdatum_ist_maschinell_auffindbar():
         "Das ISO-Datum des Pruefdatums muss zusaetzlich als Text in der Datei "
         "stehen, damit es maschinell auffindbar bleibt (Regel-Budget, CLAUDE.md)."
     )
-
-
-def test_ac10_keine_produktivzeile_geaendert():
-    """AC-10: git diff zeigt keine Aenderung an email.py/sender.go gegenueber
-    HEAD -- diese Scheibe ist ein reines Pruefwerkzeug ohne Produktivaenderung."""
-    for pfad in (EMAIL_PY, GO_SENDER):
-        ergebnis = subprocess.run(
-            ["git", "diff", "--quiet", "HEAD", "--", str(pfad)],
-            cwd=REPO_ROOT,
-            check=False,
-        )
-        assert ergebnis.returncode == 0, (
-            f"{pfad.relative_to(REPO_ROOT)} weicht von HEAD ab -- diese Scheibe "
-            "darf KEINE Produktivzeile aendern (Spec-Vorgabe S2a, AC-10)."
-        )

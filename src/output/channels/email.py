@@ -57,18 +57,29 @@ def _extract_addr(recipient: str) -> str:
     return addr or recipient
 
 
-def _normalize_addr_for_guard(raw: str) -> str:
-    """Reduziert `raw` auf eine lowercased, plus-adressierungs-gekappte
-    Adresse (`gregor-test+foo@…` -> `gregor-test@…`), fuer den Vergleich
-    gegen TEST_MAILBOXES."""
-    addr = _extract_addr(raw).lower()
+def _normalize_addr_for_guard(raw: str, cap_plus: bool = True) -> str:
+    """Reduziert `raw` auf eine lowercased, getrimmte Adresse -- per Default
+    zusaetzlich plus-adressierungs-gekappt (`gregor-test+foo@…` ->
+    `gregor-test@…`), fuer den Vergleich gegen TEST_MAILBOXES.
+
+    Issue #1412 S2b (N1): der Strip MUSS nach `_extract_addr` stehen --
+    `parseaddr("henning@henemm.com ")` liefert die Adresse MIT Randzeichen
+    (z.B. NBSP) zurueck, ein Strip davor wuerde eingeholt.
+
+    Issue #1412 S2b (D5, Variante C): `cap_plus=False` liefert die
+    ungekappte, aber weiterhin getrimmte Form -- fuer den zusaetzlichen
+    Allowlist-Vergleich im Resend-Guard, OHNE die gespeicherte Allowlist
+    selbst zu veraendern."""
+    addr = _extract_addr(raw).strip().lower()
+    if not cap_plus:
+        return addr
     local, sep, domain = addr.partition("@")
     if sep:
         addr = local.split("+", 1)[0] + sep + domain
     return addr
 
 
-def _normalized_addrs_for_guard(recipient: str) -> list[str]:
+def _normalized_addrs_for_guard(recipient: str, cap_plus: bool = True) -> list[str]:
     """Issue #1147 Fix-Loop 1 (F001/F002a) + Fix-Loop 2 (F003): zerlegt einen
     Empfänger-Eintrag an der TRENNZEICHEN-KLASSE Komma UND Semikolon (nicht
     nur Komma — ein Frontend-Freitextfeld splittet selbst nur an Komma, ein
@@ -104,7 +115,7 @@ def _normalized_addrs_for_guard(recipient: str) -> list[str]:
     # Komma-Listen korrekt, auch mit Semikolon im Anzeigenamen.
     for _, addr in getaddresses([recipient]):
         if addr:
-            normalized.append(_normalize_addr_for_guard(addr))
+            normalized.append(_normalize_addr_for_guard(addr, cap_plus=cap_plus))
 
     for part in re.split(r"[,;]", recipient):
         part = part.strip()
@@ -112,13 +123,15 @@ def _normalized_addrs_for_guard(recipient: str) -> list[str]:
             continue
         _, addr = parseaddr(part)
         if addr:
-            normalized.append(_normalize_addr_for_guard(part))
+            normalized.append(_normalize_addr_for_guard(part, cap_plus=cap_plus))
             continue
         whitespace_parts = [p for p in part.split() if "@" in p]
         if whitespace_parts:
-            normalized.extend(_normalize_addr_for_guard(p) for p in whitespace_parts)
+            normalized.extend(
+                _normalize_addr_for_guard(p, cap_plus=cap_plus) for p in whitespace_parts
+            )
         else:
-            normalized.append(_normalize_addr_for_guard(part))
+            normalized.append(_normalize_addr_for_guard(part, cap_plus=cap_plus))
     return normalized
 
 
@@ -141,6 +154,12 @@ def _raw_contains_test_mailbox(raw: str) -> bool:
 
 
 _RESERVED_TEST_DOMAINS = frozenset({"example.com", "example.net", "example.org"})
+# Issue #1412 S2b (D3): faengt Subdomains der reservierten Second-Level-
+# Domains ab (analog Go reservedTestDomainSuffixes, sender.go:122) --
+# sub.example.com ist ebenso reserviert wie example.com selbst. Fuehrender
+# Punkt ist Absicht -- "myexample.com" endet NICHT auf ".example.com" und
+# bleibt daher unblockiert.
+_RESERVED_TEST_DOMAIN_SUFFIXES = (".example.com", ".example.net", ".example.org")
 _RESERVED_TEST_TLDS = (".test", ".invalid", ".localhost", ".example")
 _RESERVED_BARE_TLDS = frozenset({"test", "invalid", "localhost", "example"})
 
@@ -162,6 +181,8 @@ def _is_reserved_test_domain(addr: str) -> bool:
     if not domain:
         return False
     if domain in _RESERVED_TEST_DOMAINS or domain in _RESERVED_BARE_TLDS:
+        return True
+    if domain.endswith(_RESERVED_TEST_DOMAIN_SUFFIXES):
         return True
     return domain.endswith(_RESERVED_TEST_TLDS)
 
@@ -469,9 +490,21 @@ class EmailOutput:
                 candidates = [
                     a for a in _normalized_addrs_for_guard(r) if "@" in a
                 ]
+                # Issue #1412 S2b (D5, Variante C): zusaetzlich zur
+                # plus-gekappten Form wird die ungekappte, getrimmte Form
+                # gegen dieselbe, UNVERAENDERTE Allowlist geprueft (ODER,
+                # nicht UND) -- eine bestaetigte Plus-Adresse erreicht sich
+                # selbst, ohne dass Basisadresse oder ein anderer Zusatz
+                # derselben Basisadresse dadurch mit-freigeschaltet wird.
+                uncapped_candidates = [
+                    a for a in _normalized_addrs_for_guard(r, cap_plus=False) if "@" in a
+                ]
                 if (
                     not candidates
-                    or any(a not in allowlist for a in candidates)
+                    or any(
+                        a not in allowlist and u not in allowlist
+                        for a, u in zip(candidates, uncapped_candidates)
+                    )
                     or any(_is_reserved_test_domain(a) for a in candidates)
                     or _raw_contains_test_mailbox(r)
                 ):

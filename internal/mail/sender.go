@@ -144,7 +144,18 @@ var (
 // gesperrt werden.
 func isReservedTestDomain(addr string) bool {
 	normalized := normalizedAddrForGuard(addr)
-	_, domain, found := strings.Cut(normalized, "@")
+	// Issue #1412 S2b (D4): Domain am LETZTEN "@" bestimmen (analog Pythons
+	// rpartition, email.py:160) statt am ersten -- strings.Cut schneidet am
+	// ERSTEN "@" und liefert bei mehr als einem "@" (a@b@example.com) die
+	// falsche, zu lange Domain "b@example.com" statt "example.com". Wirkt
+	// ausschliesslich auf Adressen mit >=2 "@"; bei genau einem "@" sind
+	// erstes und letztes identisch (bitgleiches Ergebnis).
+	idx := strings.LastIndex(normalized, "@")
+	found := idx >= 0
+	var domain string
+	if found {
+		domain = normalized[idx+1:]
+	}
 	domain = strings.TrimRight(domain, ".")
 	if !found || domain == "" {
 		return false
@@ -290,6 +301,17 @@ func normalizedAddrForGuard(addr string) string {
 	return lower
 }
 
+// normalizedAddrForGuardUncapped ist das Gegenstueck zu normalizedAddrForGuard
+// OHNE das Kappen am "+" -- Issue #1412 S2b (D5, Variante C): fuer den
+// zusaetzlichen Allowlist-Vergleich in der ungekappten, aber getrimmten Form.
+func normalizedAddrForGuardUncapped(addr string) string {
+	lower := strings.ToLower(strings.TrimSpace(addr))
+	if parsed, err := mail.ParseAddress(addr); err == nil {
+		lower = strings.ToLower(parsed.Address)
+	}
+	return lower
+}
+
 // splitRecipientField zerlegt ein Empfänger-Feld an der TRENNZEICHEN-KLASSE
 // Komma UND Semikolon (Fix-Loop 2, Issue #1147, Finding F003) — ein
 // Frontend-Freitextfeld splittet selbst nur an Komma, ein Element mit
@@ -301,6 +323,21 @@ func normalizedAddrForGuard(addr string) string {
 // selbst ein "@" enthalten, damit `"Name" <addr>`-Formen (die
 // mail.ParseAddress weiterhin korrekt auflöst) nicht zerrissen werden.
 func splitRecipientField(to string) []string {
+	// Issue #1412 S2b (D2, Variante A): erst das GANZE Feld per
+	// mail.ParseAddressList versuchen -- RFC5322-konform, respektiert
+	// Quotes (loest z.B. `"Nachname, Vorname" <addr>` korrekt als EINE
+	// Adresse auf, wo der reine Komma-Split unten faelschlich am Komma im
+	// Anzeigenamen trennen wuerde). TrimSpace ist NICHT optional: ohne ihn
+	// liefert mail.ParseAddressList Adressen mit Rand-Whitespace (z.B.
+	// NBSP) zurueck, und normalizedAddrForGuard (parst per mail.ParseAddress
+	// erneut) hebt einen zuvor getrimmten Wert wieder auf.
+	if parsed, err := mail.ParseAddressList(to); err == nil {
+		out := make([]string, 0, len(parsed))
+		for _, addr := range parsed {
+			out = append(out, strings.TrimSpace(addr.Address))
+		}
+		return out
+	}
 	var out []string
 	for _, part := range strings.FieldsFunc(to, func(r rune) bool { return r == ',' || r == ';' }) {
 		part = strings.TrimSpace(part)
@@ -358,7 +395,14 @@ func recipientBlocked(host, to string) error {
 	var blocked []string
 	for _, part := range parts {
 		normalized := normalizedAddrForGuard(part)
-		if !allowlist[normalized] || isReservedTestDomain(normalized) {
+		// Issue #1412 S2b (D5, Variante C): zusaetzlich zur plus-gekappten
+		// Form wird die ungekappte, getrimmte Form gegen dieselbe,
+		// UNVERAENDERTE Allowlist geprueft (ODER, nicht UND) -- eine
+		// bestaetigte Plus-Adresse erreicht sich selbst, ohne dass
+		// Basisadresse oder ein anderer Zusatz derselben Basisadresse
+		// dadurch mit-freigeschaltet wird.
+		uncapped := normalizedAddrForGuardUncapped(part)
+		if (!allowlist[normalized] && !allowlist[uncapped]) || isReservedTestDomain(normalized) {
 			blocked = append(blocked, maskAddrForLog(part))
 		}
 	}

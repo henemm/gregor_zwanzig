@@ -37,6 +37,24 @@
       "soll": "allow"
     },
     {
+      "id": "plus-adresse-basis-bleibt-blockiert",
+      "host": "smtp.resend-fixture.test",
+      "to": "name@gmail.com",
+      "soll": "block"
+    },
+    {
+      "id": "plus-adresse-fremdzusatz-bleibt-blockiert",
+      "host": "smtp.resend-fixture.test",
+      "to": "name+andere@gmail.com",
+      "soll": "block"
+    },
+    {
+      "id": "plus-adresse-gegenrichtung-erreichbar",
+      "host": "smtp.resend-fixture.test",
+      "to": "henning+tag@henemm.com",
+      "soll": "allow"
+    },
+    {
       "id": "N2a",
       "host": "smtp.resend-fixture.test",
       "to": "henning@henemm.com.",
@@ -107,49 +125,9 @@
       "scheibe": "S5",
       "frist": "2026-10-28",
       "grund": "Go blockt nur Resend-Hosts; auf dem Stalwart-Pfad greift der Guard nicht, daher wird die fremde Adresse durchgelassen. Aufloesung braucht den Zweck-Begriff aus S4."
-    },
-    {
-      "fall": "D2",
-      "seite": "go",
-      "ist": "block",
-      "scheibe": "S2b",
-      "frist": "2026-10-28",
-      "grund": "Go's Erkennung des Anzeigenamens scheitert am Komma vor dem Nachnamen und blockt die sonst bestaetigte Adresse faelschlich. Wird in S2b behoben."
-    },
-    {
-      "fall": "D3",
-      "seite": "python",
-      "ist": "allow",
-      "scheibe": "S2b",
-      "frist": "2026-10-28",
-      "grund": "Python's Guard prueft reservierte Testdomains nur exakt, nicht als Unterdomaenen-Suffix - x@sub.example.com rutscht durch die Allowlist. Wird in S2b behoben."
-    },
-    {
-      "fall": "D4",
-      "seite": "go",
-      "ist": "allow",
-      "scheibe": "S2b",
-      "frist": "2026-10-28",
-      "grund": "Go's Adress-Zerlegung erkennt die doppelte @-Adresse nicht als ungueltig und laesst sie durch die Allowlist-Pruefung. Wird in S2b behoben."
-    },
-    {
-      "fall": "D5",
-      "seite": "beide",
-      "ist": "block",
-      "scheibe": "S2b",
-      "frist": "2026-10-28",
-      "grund": "Beide Seiten blocken Plus-Adressen heute noch, weil die Allowlist-Normalisierung das Pluszeichen nicht toleriert. Sollwert allow ist PO-Entscheidung, Umsetzung folgt in S2b."
-    },
-    {
-      "fall": "N1",
-      "seite": "python",
-      "ist": "block",
-      "scheibe": "S2b",
-      "frist": "2026-10-28",
-      "grund": "Python's Guard trimmt das unsichtbare Randzeichen NBSP nicht vor dem Allowlist-Abgleich und blockt die sonst bestaetigte Adresse. Wird in S2b behoben."
     }
   ],
-  "ausnahmen_hoechstzahl": 6,
-  "verzweigungen_python": 13,
-  "verzweigungen_go": 31
+  "ausnahmen_hoechstzahl": 1,
+  "verzweigungen_python": 15,
+  "verzweigungen_go": 34
 }
