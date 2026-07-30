@@ -29,7 +29,7 @@ zentraler Interceptor) wird in `/20-analyse` begründet entschieden.
 | `src/services/official_alerts/massif_closure.py:104` | risque-prevention-incendie | hart codiert (:34) | ungeschützt |
 | `src/output/channels/sms.py:41` | seven.io SMS | Config `sms_gateway_url` (:155) | **0 Guards — Scheibe B** |
 | `src/output/channels/email.py:536,582,624` | Resend/SMTP + Fallback-Host | Config `smtp_host`/`imap_host` | 4 Guards; Fallback-Host ohne erneuten Guard |
-| `src/app/core.py:20` | SMTP (Legacy-Pfad) | env `SMTP_HOST` | Alt-Pfad, ungeschützt |
+| ~~`src/app/core.py:20`~~ | SMTP (Legacy-Pfad) | env `SMTP_HOST` | **ENTFÄLLT — Datei mit #1412 S3a (`e9cb8e4a`, 2026-07-30) ersatzlos gelöscht.** Der Weg hatte keinen Aufrufer; ein AST-Struktur-Test (`tests/tdd/test_egress_single_dial_point.py`) verbietet seine Wiederkehr |
 | `src/output/channels/telegram.py:197…399` | Telegram Bot (senden) | hart codiert `TELEGRAM_API_BASE` (:13) | nur `send()` geguardet — Scheibe C |
 | `src/services/inbound_email_reader.py:65` | Stalwart IMAP | Config `imap_host` | Test-Postfach via `for_testing()` |
 | `src/services/inbound_telegram_reader.py:128,397` | Telegram getUpdates + localhost Go-Backend | hart codiert | intern/inbound |

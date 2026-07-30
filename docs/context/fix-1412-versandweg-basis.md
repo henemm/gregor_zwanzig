@@ -35,7 +35,7 @@ Der Issue-Text nimmt „vier Inseln mit demselben Schutz" an. Die Erhebung wider
 | Kanal-Test („Test-Mail senden") | `src/services/channel_test_service.py:33-34, 38-39` | direkt |
 | Bot-Menü beim Start | `api/main.py:33` → `telegram.py:523` | umgeht `send()` |
 | **Sinks** (Mail/SMS/Telegram-Abfang für Tests) | `notification_service.py:663, 751, 883, 1069` / `701, 789, 939` / `771, 909, 920` | ersetzen den Transport vollständig |
-| **Eigener SMTP-Weg** | `src/app/core.py:20-23` | umgeht Kanäle und alle Guards |
+| ~~**Eigener SMTP-Weg**~~ | ~~`src/app/core.py:20-23`~~ | **ERLEDIGT mit S3a** (`e9cb8e4a`, 2026-07-30) — Datei ersatzlos gelöscht, Wiederkehr durch Struktur-Test verhindert |
 | MQ-Nachricht an Claude-Instanzen | `src/lib/mq_notify.py:45` | kein Endnutzer-Empfänger |
 
 Sink-Herkunft: `src/services/trip_alert.py:783, 890, 1013`, `compare_alert.py:135`, `compare_radar_alert.py:117`, `compare_official_alert.py:134`, `scheduler_dispatch_service.py:295 ff.`
@@ -246,7 +246,7 @@ Jede für sich prüfbar und ausrollbar; zu keinem Zeitpunkt weniger Schutz als v
 |---|---|---|---|---|
 | **S1** | **Guard an den tatsächlich benutzten Postausgang binden.** Python: `_dial_and_send(host, …)`, Primär- und **beide** Fallback-Zweige darauf (`email.py:536, 580, 622`). Go: Guard-Fehler als eigener Typ, `SendWithFallback` (`:529-547`) bricht bei diesem Typ ab statt am `535`-Stringvergleich. Schließt die live Python-Lücke **und** den inerten Go-Pfad. | Fallback-Dial an eine auf dem Fallback-Host unerlaubte Adresse wird geblockt (Sink am Transportrand); Go-Test über den vollen `SendWithFallback`-Pfad: kein zweiter Sendeversuch | nein | 2 Quell- + 2 Testdateien, ~120 LoC |
 | **S2** | Fall-Tabelle + zwei Paritäts-Läufer + die vier Divergenzen auflösen | Tabelle rot vor Fix, grün nach Fix; Gegenprobe: eine Regel-ID einseitig entfernen ⇒ beide Suiten rot | nein | ~5 Dateien, ~200-250 LoC |
-| **S3** | Transport-Kapselung vervollständigen: `sms.py::_post`, Telegram-Guards nach `_post` (Docstring `:272-278` anpassen), AST-Struktur-Test, `src/app/core.py` + `tests/test_core.py` entfernen | Sentinel-Sink je Kanal (`test_telegram_test_isolation.py:78-89`) | nein | ~4 Quelldateien, ~150 LoC · **Gate #811 greift** |
+| ~~**S3**~~ → **S3a (erledigt) + S3b (offen)** | Zuschnitt geteilt (PO-go 2026-07-30, ~332 LoC über dem Limit). **S3a live (`e9cb8e4a`):** `email.py::_dial_and_send`, `core.py`+`test_core.py` gelöscht, Struktur-Test `smtplib`-Teil. **S3b offen:** Telegram-Guards nach `_post`, `sms.py::_post`, Struktur-Test `httpx`-Teil | Sentinel-Sink je Kanal (`test_telegram_test_isolation.py:78-89`) | nein | S3a ~221, S3b ~111 LoC · **Gate #811 nur bei S3a** |
 | **S4a/b** | Empfängervertrag scharf: `Settings.user_id`, Zweck-Parameter an allen Aufrufstellen, Herkunftsprüfung im Transport. Telegram (a), dann SMS (b). Zwingend mit gemeinsamem Test-Helper. | Staging: Versand an fremde Chat-ID geblockt, echtes Briefing kommt an (Telegram-Kurzstil als billiger Beleg) | nein | ~300-500 LoC → **LoC-Override nötig, PO-Freigabe** |
 | **S5** | Go zieht den Vertrag nach (R2), PUT-Härtung `telegram_chat_id` (`auth.go:587-589`), **ADR „Empfängerschutz"** (fehlt komplett), die vier ins Leere zeigenden Spec-Verweise in den Testköpfen | Go-Paritätsläufer grün, ADR-Index-Drift-Test grün | nur evtl. `account/+page.svelte:246` | ~200 LoC |
 
