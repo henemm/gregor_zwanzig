@@ -215,4 +215,4 @@ uv run python3 .claude/hooks/email_spec_validator.py
 
 - Email Spec: `docs/reference/renderer_email_spec.md`
 - Real E2E Tests: `tests/tdd/test_html_email.py`
-- SMTP Mailer Spec: `docs/specs/modules/smtp_mailer.md`
+- SMTP Mailer Spec: `docs/specs/_archive/modules/smtp_mailer.md` (archiviert mit #1412 S3a; der aktive Mailversand liegt in `src/output/channels/email.py`)

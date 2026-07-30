@@ -28,7 +28,6 @@ Einstiegspunkt der Anwendung. Parst CLI-Argumente, laedt Konfiguration und orche
 | Entity | Type | Purpose |
 |--------|------|---------|
 | DebugBuffer | class | Debug-Informationen sammeln |
-| send_mail | function | E-Mail-Versand |
 
 ## Implementation Details
 

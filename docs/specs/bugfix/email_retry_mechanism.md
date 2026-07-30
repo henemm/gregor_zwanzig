@@ -151,4 +151,4 @@ def send(self, subject: str, body: str, ...) -> None:
 
 - Monitoring Log: `/opt/gregor_zwanziger/subscription_monitor.log`
 - Error Log: `journalctl -u gregor-zwanzig.service`
-- Spec: `docs/specs/modules/smtp_mailer.md` (update needed)
+- Spec: `docs/specs/_archive/modules/smtp_mailer.md` (archiviert mit #1412 S3a — der dort beschriebene Sendeweg `src/app/core.py` wurde ersatzlos entfernt)

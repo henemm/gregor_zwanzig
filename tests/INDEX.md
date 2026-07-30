@@ -8,7 +8,6 @@ This folder contains all test suites for the project.
 
 ## Test Suites
 
-- `test_core.py` → Tests for core logic and mailer functions.
 - `test_debug.py` → Tests for DebugBuffer consistency and debug output.
 - `conftest.py` → Shared pytest configuration and fixtures.
 
@@ -25,7 +24,7 @@ uv run pytest
 Run a specific test file:
 
 ```bash
-uv run pytest tests/test_core.py
+uv run pytest tests/test_debug.py
 ```
 
 Run with verbose output:

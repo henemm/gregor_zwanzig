@@ -8,6 +8,8 @@ version: "1.0"
 tags: [email, smtp, channel]
 ---
 
+> **Archiviert 2026-07-30 (#1412 S3a):** der beschriebene Sendeweg `src/app/core.py` wurde ersatzlos entfernt — er hatte keinen Aufrufer und keine Schutzprüfungen.
+
 # SMTP Mailer
 
 ## Approval

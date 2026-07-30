@@ -407,6 +407,46 @@ class EmailOutput:
                 return True
         return False
 
+    def _dial_and_send(
+        self,
+        host: str,
+        port: int,
+        user: str,
+        password: str,
+        recipients: list[str],
+        msg,
+        from_addr: str,
+        isolate_per_recipient: bool,
+    ) -> None:
+        """Issue #1412 S3a: der EINE Ort, an dem eine SMTP-Verbindung entsteht.
+
+        Reiner Transport — die Empfänger-Guards bleiben in `send()`, vor der
+        Retry-Schleife (Spec, Entscheidung E1: `_dial_and_send` hat genau
+        einen Aufrufer-Kontext, der bereits einmal prüft).
+
+        `isolate_per_recipient` konserviert die heutige Asymmetrie zwischen
+        Primär- und Ersatzweg (Spec, Entscheidung E2): nur der Primärweg fasst
+        jeden Empfänger einzeln ein, beide Ersatzwege brechen beim ersten
+        abgelehnten Empfänger ab. Der zusammengesetzte Defekt dahinter ist als
+        #1426 erfasst und wird NACH dieser Scheibe behoben.
+        """
+        with smtplib.SMTP(host, port) as server:
+            server.starttls()
+            server.login(user, password)
+            if len(recipients) == 1:
+                server.sendmail(from_addr, recipients, msg.as_string())
+            else:
+                for recipient in recipients:
+                    if isolate_per_recipient:
+                        try:
+                            server.sendmail(from_addr, [recipient], msg.as_string())
+                        except smtplib.SMTPException as exc:
+                            logger.error(
+                                "SMTP-Fehler für Empfänger %s: %s", recipient, exc
+                            )
+                    else:
+                        server.sendmail(from_addr, [recipient], msg.as_string())
+
     def send(
         self,
         subject: str,
@@ -586,19 +626,16 @@ class EmailOutput:
 
         for attempt in range(max_attempts):
             try:
-                with smtplib.SMTP(self._host, self._port) as server:
-                    server.starttls()
-                    server.login(self._user, self._password)
-                    if len(recipients) == 1:
-                        server.sendmail(from_addr, recipients, msg.as_string())
-                    else:
-                        for recipient in recipients:
-                            try:
-                                server.sendmail(from_addr, [recipient], msg.as_string())
-                            except smtplib.SMTPException as exc:
-                                logger.error(
-                                    "SMTP-Fehler für Empfänger %s: %s", recipient, exc
-                                )
+                self._dial_and_send(
+                    self._host,
+                    self._port,
+                    self._user,
+                    self._password,
+                    recipients,
+                    msg,
+                    from_addr,
+                    isolate_per_recipient=True,
+                )
 
                 # Success - log if this was after retry
                 if attempt > 0:
@@ -635,14 +672,16 @@ class EmailOutput:
                     # wird — nicht bloß gegen self._host (Primärhost).
                     if self._fallback_host and not self._fallback_recipients_blocked(recipients):
                         try:
-                            with smtplib.SMTP(self._fallback_host, 587) as fb_server:
-                                fb_server.starttls()
-                                fb_server.login(self._fallback_user, self._fallback_pass)
-                                if len(recipients) == 1:
-                                    fb_server.sendmail(from_addr, recipients, msg.as_string())
-                                else:
-                                    for recipient in recipients:
-                                        fb_server.sendmail(from_addr, [recipient], msg.as_string())
+                            self._dial_and_send(
+                                self._fallback_host,
+                                587,
+                                self._fallback_user,
+                                self._fallback_pass,
+                                recipients,
+                                msg,
+                                from_addr,
+                                isolate_per_recipient=False,
+                            )
                             logger.info("[SMTP-FALLBACK] sent via fallback SMTP")
                             return
                         except Exception as fb_err:
@@ -679,14 +718,16 @@ class EmailOutput:
                     # Ersatz-Postausgang auswerten.
                     if self._fallback_host and not self._fallback_recipients_blocked(recipients):
                         try:
-                            with smtplib.SMTP(self._fallback_host, 587) as fb_server:
-                                fb_server.starttls()
-                                fb_server.login(self._fallback_user, self._fallback_pass)
-                                if len(recipients) == 1:
-                                    fb_server.sendmail(from_addr, recipients, msg.as_string())
-                                else:
-                                    for recipient in recipients:
-                                        fb_server.sendmail(from_addr, [recipient], msg.as_string())
+                            self._dial_and_send(
+                                self._fallback_host,
+                                587,
+                                self._fallback_user,
+                                self._fallback_pass,
+                                recipients,
+                                msg,
+                                from_addr,
+                                isolate_per_recipient=False,
+                            )
                             logger.info("[SMTP-FALLBACK] sent via fallback SMTP")
                             return
                         except Exception as fb_err:
