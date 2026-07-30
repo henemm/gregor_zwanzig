@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<!-- Neuere Fassung der aufgezeichneten Villach-Hitzewarnung (cap_villach_heat.xml,
+     GeoSphere Austria via api.meteoalarm.org, aufgezeichnet 2026-07-14). Gleiche
+     Struktur, gleiches Gebiet, gleicher Zeitraum; angehobene Warnstufe
+     (2 gelb auf 3 orange) und angepasster Text, wie ihn die Behoerde bei einer
+     Nachfuehrung herausgibt. Dient dazu, im Test die GUELTIGE von der
+     UEBERHOLTEN Fassung unterscheidbar zu machen (Issue #1397 AC-5). -->
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+  <identifier>2.49.0.0.40.0.AT.-20260715061200_d1_202</identifier>
+  <sender>cap@zamg.ac.at</sender>
+  <sent>2026-07-15T08:12:00+02:00</sent>
+  <status>Actual</status>
+  <msgType>Update</msgType>
+  <scope>Public</scope>
+  <info>
+    <language>de-DE</language>
+    <category>Met</category>
+    <event>Starke Hitzewarnung</event>
+    <responseType>Monitor</responseType>
+    <urgency>Immediate</urgency>
+    <severity>Severe</severity>
+    <certainty>Likely</certainty>
+    <effective>2026-07-15T08:12:00+02:00</effective>
+    <onset>2026-07-15T00:00:00+02:00</onset>
+    <expires>2026-07-15T23:59:59+02:00</expires>
+    <senderName>GeoSphere Austria</senderName>
+    <headline>Starke Hitzewarnung</headline>
+    <description>Es ist mit starker Hitzebelastung zu rechnen.</description>
+    <instruction>VORSICHT, sehr hohe Temperaturen sind zu erwarten. Auswirkungen auf die Gesundheit sind wahrscheinlich, vor allem bei alten Menschen, Kranken und bei Kindern.</instruction>
+    <web>http://warnungen.zamg.at/html/de/morgen/hitze/at/kaernten/</web>
+    <parameter>
+      <valueName>awareness_level</valueName>
+      <value>3; orange; Severe</value>
+    </parameter>
+    <parameter>
+      <valueName>awareness_type</valueName>
+      <value>5; high-temperature</value>
+    </parameter>
+    <area>
+      <areaDesc>Villach (Stadt)</areaDesc>
+      <geocode>
+        <valueName>EMMA_ID</valueName>
+        <value>AT202</value>
+      </geocode>
+    </area>
+  </info>
+  <info>
+    <language>en-GB</language>
+    <category>Met</category>
+    <event>Severe heatwarning</event>
+    <responseType>Monitor</responseType>
+    <urgency>Immediate</urgency>
+    <severity>Severe</severity>
+    <certainty>Likely</certainty>
+    <effective>2026-07-15T08:12:00+02:00</effective>
+    <onset>2026-07-15T00:00:00+02:00</onset>
+    <expires>2026-07-15T23:59:59+02:00</expires>
+    <senderName>GeoSphere Austria</senderName>
+    <headline>Severe heatwarning</headline>
+    <description>Severe heat stress must be expected.</description>
+    <instruction>BE AWARE that very high temperatures are expected. Health risks amongst vulnerable people e.g. the elderly and very young are likely.</instruction>
+    <web>http://warnungen.zamg.at/html/de/morgen/hitze/at/kaernten/</web>
+    <parameter>
+      <valueName>awareness_level</valueName>
+      <value>3; orange; Severe</value>
+    </parameter>
+    <parameter>
+      <valueName>awareness_type</valueName>
+      <value>5; high-temperature</value>
+    </parameter>
+    <area>
+      <areaDesc>Villach (Stadt)</areaDesc>
+      <geocode>
+        <valueName>EMMA_ID</valueName>
+        <value>AT202</value>
+      </geocode>
+    </area>
+  </info>
+</alert>

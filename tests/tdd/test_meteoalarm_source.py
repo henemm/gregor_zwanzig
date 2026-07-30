@@ -940,7 +940,13 @@ def test_429_lokaler_server_retry_after_respektiert(monkeypatch, caplog, tmp_pat
             f"429 mit Retry-After:120 muss Backoff max(120, INDEX_PAGE_SUCCESS_TTL)="
             f"{expected_backoff} als Cache-TTL setzen, war {cache_entry['ttl']}"
         )
-        assert cache_entry["ttl"] == 2700.0
+        # Konkreter Wert (Gegenprobe zur symbolischen Zusicherung oben):
+        # Issue #1397 S1 hob INDEX_PAGE_SUCCESS_TTL von 2700s (45 min, passend
+        # zum alten 30-Minuten-Raster) auf 5400s (90 min) an -- die Seiten-TTL
+        # muss laenger sein als ein Zeitslot, und der Slot ist jetzt 60 statt
+        # 30 Minuten breit. Geprueftes Verhalten unveraendert: der 429-Rueckzug
+        # ist nie kuerzer als die Erfolgs-TTL der Index-Seiten.
+        assert cache_entry["ttl"] == 5400.0
 
         warnings = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
         assert any("429" in m for m in warnings), (
@@ -1857,9 +1863,15 @@ def test_budget_erschoepft_liefert_teilergebnis_zweiter_aufruf_vervollstaendigt(
 
 
 def test_slot_helfer_runden_auf_raster():
-    """S1c: ``_current_slot_end()`` rundet auf die naechste 30-Minuten-
-    Rasterzelle AB (nicht auf/ab zum naechsten), ``_slot_key()`` bildet
-    daraus einen kompakten, sortierbaren Schluessel-Teil."""
+    """``_current_slot_end()`` rundet auf die aktuelle Rasterzelle AB (nicht
+    auf zur naechsten), ``_slot_key()`` bildet daraus einen kompakten,
+    sortierbaren Schluessel-Teil.
+
+    Issue #1397 S1: Rasterbreite 30 -> 60 Minuten. Die frueher geprueften
+    Halbstunden-Grenzen (10:41 -> 10:30) sind damit hinfaellig -- ersetzende
+    Aussage: JEDE Minute einer Stunde faellt auf denselben Slot (die volle
+    Stunde), denn die Rueckschau haengt jetzt am kumulierten Bestand und
+    nicht mehr an der Auffrischungs-Rasterbreite."""
     from datetime import datetime, timezone
 
     from services.official_alerts import meteoalarm
@@ -1867,10 +1879,12 @@ def test_slot_helfer_runden_auf_raster():
     assert meteoalarm._current_slot_end(datetime(2026, 7, 27, 10, 17, 3, tzinfo=timezone.utc)) == \
         datetime(2026, 7, 27, 10, 0, 0, tzinfo=timezone.utc)
     assert meteoalarm._current_slot_end(datetime(2026, 7, 27, 10, 41, 59, tzinfo=timezone.utc)) == \
-        datetime(2026, 7, 27, 10, 30, 0, tzinfo=timezone.utc)
-    assert meteoalarm._current_slot_end(datetime(2026, 7, 27, 10, 30, 0, tzinfo=timezone.utc)) == \
-        datetime(2026, 7, 27, 10, 30, 0, tzinfo=timezone.utc)
-    assert meteoalarm._slot_key(datetime(2026, 7, 27, 10, 30, 0, tzinfo=timezone.utc)) == "20260727T1030Z"
+        datetime(2026, 7, 27, 10, 0, 0, tzinfo=timezone.utc)
+    assert meteoalarm._current_slot_end(datetime(2026, 7, 27, 10, 0, 0, tzinfo=timezone.utc)) == \
+        datetime(2026, 7, 27, 10, 0, 0, tzinfo=timezone.utc)
+    assert meteoalarm._current_slot_end(datetime(2026, 7, 27, 11, 0, 0, tzinfo=timezone.utc)) == \
+        datetime(2026, 7, 27, 11, 0, 0, tzinfo=timezone.utc)
+    assert meteoalarm._slot_key(datetime(2026, 7, 27, 10, 0, 0, tzinfo=timezone.utc)) == "20260727T1000Z"
 
 
 def test_prune_stale_slot_entries_entfernt_nur_fremde_slots_desselben_landes():
@@ -1893,6 +1907,40 @@ def test_prune_stale_slot_entries_entfernt_nur_fremde_slots_desselben_landes():
 
     assert set(meteoalarm._index_cache.keys()) == {"AT:20260727T1000Z:p1", "IT:20260101T0000Z:p1"}, (
         f"nur fremde AT-Slots duerfen entfernt werden, verbleibend: {list(meteoalarm._index_cache.keys())}"
+    )
+
+
+def test_prune_stale_slot_entries_laesst_bestand_und_fortschrittsmarke_stehen():
+    """Adversary F002 (Fix-Loop 1): GIVEN neben Seiten-Cache-Eintraegen liegt
+    der kumulierte Bestand samt Fortschrittsmarke unter dem reservierten
+    Schluessel ``AT:bestand`` im selben Dict, WHEN der Aufraeumlauf beim
+    Slot-Wechsel laeuft, THEN bleiben Bestand UND Fortschrittsmarke
+    unveraendert erhalten -- sonst faellt der Dienst bei jedem Slot-Wechsel
+    auf Kaltstart zurueck und verliert alle bereits gesehenen Warnungen
+    (genau die Kopplung, die Issue #1397 S1 aufgeloest hat)."""
+    from services.official_alerts import meteoalarm
+
+    bestand = meteoalarm._country_store("AT")
+    bestand["features"]["schluessel-einer-warnung"] = {"feature": {"x": 1}, "seen_at": 123.0}
+    bestand["last_complete"] = "marke-bleibt"
+    meteoalarm._index_cache.update({
+        "AT:20260101T0000Z:p1": {"data": "alt"},
+        "AT:20260727T1000Z:p1": {"data": "aktuell"},
+    })
+
+    meteoalarm._prune_stale_slot_entries("AT", "20260727T1000Z")
+
+    assert "AT:bestand" in meteoalarm._index_cache, (
+        f"der kumulierte Bestand darf beim Slot-Aufraeumen NIE mitgeloescht werden, "
+        f"verbleibend: {list(meteoalarm._index_cache.keys())}"
+    )
+    danach = meteoalarm._country_store("AT")
+    assert danach["features"] == {"schluessel-einer-warnung": {"feature": {"x": 1}, "seen_at": 123.0}}, (
+        f"gesehene Warnungen muessen den Slot-Wechsel ueberleben, erhalten: {danach['features']}"
+    )
+    assert danach["last_complete"] == "marke-bleibt", (
+        "die Fortschrittsmarke ueberlebt den Slot-Wechsel -- sonst waere jeder "
+        "Zyklus wieder ein Kaltstart-Breitband-Abruf"
     )
 
 
@@ -2025,34 +2073,41 @@ def test_budget_gate_betrifft_nur_index_seiten_nicht_geometrie_cap(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Fensterlaenge-Fund (Issue #1397 S1c-Nachbesserung, Team-Lead-Entscheidung
-# 2026-07-27): das Publikations-Abfragefenster ist jetzt konfigurierbar
-# (Standard 3h statt der urspruenglichen 23h), Slot-Raster/-Schluessel
-# bleiben unveraendert.
+# Fensterlaenge (Issue #1397 S1c-Nachbesserung, mit S1 vom 2026-07-30
+# neu gefasst): das Publikations-Abfragefenster ist konfigurierbar; ohne ENV
+# gilt beim KALTSTART DEFAULT_INDEX_WINDOW_HOURS (23h), im Dauerbetrieb der
+# Abstand zur letzten vollstaendigen Auffrischung plus Ueberlappung.
 # ---------------------------------------------------------------------------
 
 def test_index_window_hours_default_and_env_override(monkeypatch):
     """GIVEN keine ENV gesetzt, WHEN ``_index_window_hours()`` aufgerufen
-    wird, THEN liefert es ``DEFAULT_INDEX_WINDOW_HOURS`` (3.0). Ein gueltiger
+    wird, THEN liefert es ``DEFAULT_INDEX_WINDOW_HOURS``. Ein gueltiger
     ``GZ_METEOALARM_WINDOW_HOURS``-Wert ueberschreibt ihn; ein unlesbarer
-    oder nicht-positiver Wert faellt fail-soft auf den Default zurueck."""
+    oder nicht-positiver Wert faellt fail-soft auf den Default zurueck.
+
+    Issue #1397 S1: der Default ist von 3.0 auf 23.0 gestiegen UND hat eine
+    engere Bedeutung -- er ist die Breite des KALTSTART-Fensters (Rueckschau-
+    Tiefe nach einem Neustart), nicht mehr die Breite JEDES Zyklus. Im
+    Dauerbetrieb bestimmt ``_index_query_window()`` die Breite aus dem
+    Abstand zur letzten vollstaendigen Auffrischung. Fail-soft-Verhalten der
+    ENV-Auswertung (die eigentliche Aussage dieses Tests) unveraendert."""
     from services.official_alerts import meteoalarm
 
     monkeypatch.delenv("GZ_METEOALARM_WINDOW_HOURS", raising=False)
-    assert meteoalarm.DEFAULT_INDEX_WINDOW_HOURS == 3.0
-    assert meteoalarm._index_window_hours() == 3.0
+    assert meteoalarm.DEFAULT_INDEX_WINDOW_HOURS == 23.0
+    assert meteoalarm._index_window_hours() == 23.0
 
     monkeypatch.setenv("GZ_METEOALARM_WINDOW_HOURS", "6")
     assert meteoalarm._index_window_hours() == 6.0
 
     monkeypatch.setenv("GZ_METEOALARM_WINDOW_HOURS", "nicht-lesbar")
-    assert meteoalarm._index_window_hours() == 3.0, "unlesbarer ENV-Wert faellt auf Default zurueck"
+    assert meteoalarm._index_window_hours() == 23.0, "unlesbarer ENV-Wert faellt auf Default zurueck"
 
     monkeypatch.setenv("GZ_METEOALARM_WINDOW_HOURS", "0")
-    assert meteoalarm._index_window_hours() == 3.0, "0 ist kein gueltiges Fenster -> Default"
+    assert meteoalarm._index_window_hours() == 23.0, "0 ist kein gueltiges Fenster -> Default"
 
     monkeypatch.setenv("GZ_METEOALARM_WINDOW_HOURS", "-3")
-    assert meteoalarm._index_window_hours() == 3.0, "negativer Wert -> Default"
+    assert meteoalarm._index_window_hours() == 23.0, "negativer Wert -> Default"
 
 
 def _make_window_capturing_handler(captured: list):
@@ -2085,10 +2140,13 @@ def _extract_query_window(path: str) -> "tuple":
     return _dt.strptime(start_str, fmt), _dt.strptime(end_str, fmt)
 
 
-def test_index_window_hours_default_ist_drei_stunden(monkeypatch):
-    """S1c-Nachbesserung: OHNE ENV muss die tatsaechlich an die API gesendete
-    ``datetime``-Query GENAU 3 Stunden umfassen (Standard), nicht mehr die
-    urspruenglichen 23h."""
+def test_kaltstart_fenster_ist_dreiundzwanzig_stunden(monkeypatch):
+    """Issue #1397 S1 (ersetzt ``..._default_ist_drei_stunden``): OHNE ENV und
+    OHNE vorherigen Zyklus (Kaltstart -- genau die Lage nach einem Neustart)
+    muss die tatsaechlich an die API gesendete ``datetime``-Query 23 Stunden
+    umfassen, damit die Rueckschau sofort steht. Die alte Aussage ("genau 3h
+    in JEDEM Zyklus") ist hinfaellig: das schmale Fenster gilt jetzt nur noch
+    fuer die Auffrischung eines bereits gefuellten Bestands."""
     from datetime import timedelta
 
     from services.official_alerts import meteoalarm
@@ -2105,8 +2163,8 @@ def test_index_window_hours_default_ist_drei_stunden(monkeypatch):
 
         assert len(captured) == 1
         start_dt, end_dt = _extract_query_window(captured[0])
-        assert end_dt - start_dt == timedelta(hours=3), (
-            f"Standardfenster muss 3h betragen, war {end_dt - start_dt}"
+        assert end_dt - start_dt == timedelta(hours=23), (
+            f"Kaltstart-Fenster muss 23h betragen, war {end_dt - start_dt}"
         )
     finally:
         server.shutdown()

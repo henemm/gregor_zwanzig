@@ -115,11 +115,16 @@ def _throttle_before_next_page(last_reset_ts: Optional[float]) -> None:
 # sich zusammensetzen lassen; ein Zeitbudget je Aufruf begrenzt, wie viele
 # Seiten EIN Aufruf nachlaedt.
 # ---------------------------------------------------------------------------
-_SLOT_MINUTES = 30  # Rasterbreite des Abfrage-Zeitfensters.
+# Issue #1397 Scheibe S1: Rasterbreite 30 -> 60 Minuten. Bei 30 Minuten wurde
+# dasselbe Fenster sechsfach ueberlappend neu geholt (3h-Fenster alle 30 min);
+# stuendlich reicht, weil die Rueckschau jetzt aus dem kumulierten Bestand
+# kommt und nicht mehr aus der Fensterbreite (s. Block unten).
+_SLOT_MINUTES = 60  # Rasterbreite des Auffrischungs-Zeitfensters.
 # Laenger als ein Zeitslot (s. _SLOT_MINUTES), damit zuerst geholte Seiten
 # noch leben, wenn ein spaeterer Aufruf im SELBEN Slot die letzten Seiten
-# nachholt (45 statt der generischen CACHE_TTL von 30 Minuten).
-INDEX_PAGE_SUCCESS_TTL = 45 * 60.0  # 2700.0s
+# nachholt (Slot 60 min + 30 min Reserve; mit dem alten 30-min-Raster waren
+# es 45 min aus demselben Grund).
+INDEX_PAGE_SUCCESS_TTL = 90 * 60.0  # 5400.0s
 # Zeitbudget je Aufruf fuers Blaettern: der Abruf laeuft synchron im
 # Sendeweg. Bei ~4s Rasterabstand (Messung) schafft ein Aufruf ~5 Seiten;
 # der Scheduler ruft mehrfach pro Viertelstunde auf (mehrere Endpunkte/
@@ -145,32 +150,71 @@ def _meteoalarm_budget_gate() -> MeteoAlarmBudgetGate:
     return MeteoAlarmBudgetGate()
 
 
-# Issue #1397 S1c-Nachbesserung (Fensterlaenge-Fund, Team-Lead-Entscheidung
-# 2026-07-27): das urspruengliche 23h-Publikationsfenster erzeugte
-# total_pages=17-23 (~98 % davon ueberholte Fassungen, die _is_superseded()
-# ohnehin wegfiltert -- wir bezahlten 20 Seiten, um am Ende ueberwiegend
-# Muell wegzuwerfen). Gemessen an der echten API (2026-07-27): 23h ->
-# total_count 1640-2258 (17-23 Seiten), 3h -> total_count 90 (1 Seite). Die
-# Blaetter-Mechanik (S1c) bleibt VOLLSTAENDIG bestehen -- sie greift weiter,
-# wenn ein Fenster (Tage mit vielen Warnungen) doch mehr als eine Seite
-# ergibt; nur der Regelfall wird dadurch billig. Slot-Raster (30 min) UND
-# Slot-Schluessel bleiben unveraendert -- Aktualitaet ist der Punkt, den
-# die Verkuerzung schuetzen soll (ein groesseres Raster haette Aktualitaet
-# GEGEN Verfuegbarkeit eingetauscht, das war explizit NICHT gewollt).
+# Issue #1397 Scheibe S1 (2026-07-30): Rueckschau und Abrufaufwand sind
+# ENTKOPPELT. Vorher war beides dieselbe Stellschraube -- das Abfragefenster
+# war zugleich der gesamte sichtbare Bestand, weil ``_prune_stale_slot_
+# entries()`` bei jedem Slot-Wechsel alles bisher Gesehene verwarf. Beide
+# Enden dieser Kopplung sind gemessen (tests/tdd/test_meteoalarm_index_
+# coverage.py, Profil des Gewittertags 29.07.): 23h-Fenster alle 30 min =
+# 844 echte Abrufe/24h (Kontingent gesprengt), 3h-Fenster = 156 Abrufe/24h,
+# aber jede laenger als 3h zurueckliegende, weiter gueltige Veroeffentlichung
+# fiel aus dem Briefing. Die im S1c-Kommentar offengebliebene Frage ("gibt es
+# solche Faelle ueberhaupt?") ist damit beantwortet: der Verlust tritt real
+# ein, reproduziert in AC-1.
 #
-# OFFENE FRAGE (Team-Lead, 2026-07-27, NOCH NICHT gemessen): ein 3h-Fenster
-# sieht KEINE Warnung, die vor mehr als 3h veroeffentlicht wurde, seither
-# gilt und nicht neu herausgegeben wurde. Ob es solche Faelle gibt, ist
-# UNBELEGT -- wird geprueft, sobald das Tageskontingent zurueckgesetzt ist
-# (Vergleich "nicht-ueberholte Warnungen 3h- vs. 23h-Fenster"). Bis dahin
-# ist die Verkuerzung eine begruendete UEBERGANGSLOESUNG, keine bewiesene
-# Gleichwertigkeit zum vorherigen (23h-)Zustand.
-DEFAULT_INDEX_WINDOW_HOURS = 3.0
+# Jetzt zwei getrennte Groessen:
+#   * BESTAND (``_country_store``): kumuliert ueber Zyklen hinweg, ein Eintrag
+#     bleibt bis zum Ablauf SEINER GUELTIGKEIT (Rueckfall ohne bekannte
+#     Gueltigkeit: ``_STORE_RETENTION_HOURS``) -- das ist, was der Nutzer sieht.
+#   * AUFFRISCH-FENSTER (``_index_query_window``): nur der Abstand zur letzten
+#     VOLLSTAENDIGEN Auffrischung plus ``_REFRESH_OVERLAP_HOURS`` -- das ist,
+#     was wir bezahlen (stuendlich ~2h = doppelte statt sechsfacher
+#     Ueberlappung).
+# Kaltstart (Neustart/Deploy, keine Fortschrittsmarke): einmalig
+# ``DEFAULT_INDEX_WINDOW_HOURS`` breit, damit die Rueckschau sofort steht
+# statt sich erst ueber einen Tag aufzubauen.
+DEFAULT_INDEX_WINDOW_HOURS = 23.0  # Kaltstart-Breitband (= Rueckschau-Tiefe)
+# ACHTUNG, NICHT "mal eben" anheben: die 23 sind keine Vorsichtsmarge, sondern
+# die harte Anbieter-Grenze -- der ``datetime``-Bereich ist bei der EDR-API
+# Pflicht und MUSS unter 24 Stunden liegen, sonst wird die Anfrage abgelehnt
+# (Live-Messung 2026-07-15, Issue #1086). Gilt fuer JEDEN Zweig, auch fuer den
+# ENV-Override ``GZ_METEOALARM_WINDOW_HOURS``.
+# Ueberlappung im Regelbetrieb: MINDESTENS eine volle Slot-Breite, damit jeder
+# Veroeffentlichungszeitpunkt -- auch einer exakt auf der Fenstergrenze -- von
+# zwei aufeinanderfolgenden Fenstern erfasst wird (eine spaeter nachgetragene
+# Aenderung an einer Warnung, z.B. der Ueberholt-Vermerk, kommt so noch mit).
+_REFRESH_OVERLAP_HOURS = 1.0
+# Verfall des Bestands -- RUECKFALL fuer Eintraege, deren Gueltigkeit UNBEKANNT
+# ist: so lange bleibt ein einmal gesehenes, nicht ueberholtes Feature, ohne in
+# einer frischen Antwort erneut aufzutauchen. Fuer Eintraege MIT bekannter
+# Gueltigkeit ist nicht mehr der Zeitpunkt des Sehens maßgeblich, sondern der
+# Ablauf der Warnung selbst (Adversary F004, Fix-Loop 2 -- s.
+# ``_entry_verfallen``).
+_STORE_RETENTION_HOURS = 23.0
+# Deckel gegen einen Eintrag, der den Bestand wegen einer absurd weit in der
+# Zukunft liegenden (fehlerhaften) ``expires``-Angabe dauerhaft belegt --
+# grosszuegig ueber der laengsten realen amtlichen Warndauer (mehrtaegige
+# Hitze-/Kaeltewarnungen laufen 2-5 Tage).
+_STORE_MAX_VALIDITY_HOURS = 7 * 24.0
+_STORE_KEY_SUFFIX = ":bestand"
+# BEWUSST KEINE "Bestaetigungsfrist" und kein daraus abgeleitetes Ausfall-
+# Signal (Fix-Loop 5, ersetzt Fix-Loop 3 UND 4): das Ausfall-Signal
+# ("amtliche Warnungen aktuell nicht abrufbar") bleibt echten Stoerungen
+# vorbehalten -- fehlgeschlagener Abruf, unvollstaendiger Zyklus, gekappte
+# Rueckschau, Ratenbremse. Gemessen: an eine laenger nicht mehr frisch
+# gesehene Warnung gekoppelt, stand der Hinweis in 81,9 % aller Zyklen eines
+# 3-Tage-Laufs OHNE jede Stoerung -- ein Sicherheitshinweis, der fast immer
+# dasteht, wird ueberlesen, und sein Wortlaut waere hier sachlich falsch (die
+# Warnung IST abrufbar und wird gezeigt, wir koennen sie nur nicht erneut
+# bestaetigen). Was ein Rueckzug ausserhalb des schmalen Auffrisch-Fensters
+# kostet, steht als bewusste Abwaegung in den Known Limitations der Spec.
 
 
-def _index_window_hours() -> float:
-    """``GZ_METEOALARM_WINDOW_HOURS`` (positive Zahl) > Default -- ohne
-    Deploy aenderbar, analog ``GZ_METEOALARM_DAILY_BUDGET``."""
+def _window_override_hours() -> Optional[float]:
+    """``GZ_METEOALARM_WINDOW_HOURS`` (positive Zahl): erzwingt EINE feste
+    Fensterbreite fuer JEDEN Zyklus (Kaltstart wie Auffrischung) -- ohne
+    Deploy nachziehbar, analog ``GZ_METEOALARM_DAILY_BUDGET``. Nicht gesetzt,
+    unlesbar oder nicht-positiv -> ``None`` (kein Override, fail-soft)."""
     raw = os.environ.get("GZ_METEOALARM_WINDOW_HOURS")
     if raw:
         try:
@@ -179,7 +223,26 @@ def _index_window_hours() -> float:
             value = 0.0
         if value > 0:
             return value
-    return DEFAULT_INDEX_WINDOW_HOURS
+    return None
+
+
+def _index_window_hours() -> float:
+    """Fensterbreite, wenn KEIN Fortschritt bekannt ist (Kaltstart):
+    ENV-Override > ``DEFAULT_INDEX_WINDOW_HOURS``."""
+    return _window_override_hours() or DEFAULT_INDEX_WINDOW_HOURS
+
+
+def _store_retention_hours() -> float:
+    """Rueckfall-Aufbewahrung fuer Eintraege ohne bekannte Gueltigkeit
+    (Adversary F005, Fix-Loop 2 -- vorher behauptete der Docstring von
+    ``_index_query_window()`` "derselbe Wert" wie die Abfragebreite, obwohl
+    ``_STORE_RETENTION_HOURS`` ein davon unabhaengiges Literal war und ein
+    gesetztes ``GZ_METEOALARM_WINDOW_HOURS`` nur die Abfragebreite verschob).
+
+    Jetzt eine echte Kopplung mit klarer Richtung: MINDESTENS so breit wie das
+    Abfragefenster. Kuerzer waere widersinnig -- der Bestand wuerde wegwerfen,
+    was ein Zyklus gerade erst geholt hat."""
+    return max(_STORE_RETENTION_HOURS, _index_window_hours())
 
 
 def _current_slot_end(now_dt: datetime) -> datetime:
@@ -195,12 +258,184 @@ def _slot_key(slot_end: datetime) -> str:
     return slot_end.strftime("%Y%m%dT%H%MZ")
 
 
+def _country_store(country: str) -> dict:
+    """Kumulierter Bestand + Fortschrittsmarke eines Landes (Issue #1397 S1).
+
+    Liegt bewusst IM ``_index_cache``-Dict unter einem reservierten
+    Schluessel (``AT:bestand``, ohne ``:p<n>``-Endung): Bestand und
+    Seiten-Cache haben damit GENAU denselben Lebenszyklus -- ein
+    Prozess-Neustart und jedes ``_index_cache.clear()`` leeren beides
+    zusammen. Zwei getrennte Modul-Dicts waeren zwei Stellen, die man beim
+    Leeren vergessen kann, und genau daran haengt die Kaltstart-Erkennung.
+
+    ``features``: Dedup-Schluessel (s. ``_feature_dedup_key``) ->
+    ``{"feature": <rohes Index-Feature>, "seen_at": <Wanduhr-Sekunden>,
+    "valid_until": <Wanduhr-Sekunden oder None>}``. ``valid_until`` traegt die
+    aus dem CAP-Dokument aufgeloeste Gueltigkeit, sofern sie bekannt ist
+    (s. ``_remember_validity``); ``None`` = unbekannt.
+    ``last_complete``: Slot-Ende des letzten VOLLSTAENDIG geholten Zyklus
+    (``None`` = Kaltstart)."""
+    return _index_cache.setdefault(
+        f"{country}{_STORE_KEY_SUFFIX}", {"features": {}, "last_complete": None}
+    )
+
+
+def _merge_into_store(country: str, features: list[dict], now_ts: float) -> list[dict]:
+    """Mischt frisch geholte Features in den Bestand und liefert den GESAMTEN
+    gueltigen Bestand zurueck (Issue #1397 S1 -- vorher war das Ergebnis auf
+    das Abfragefenster beschraenkt, weshalb die Rueckschau nie weiter reichte
+    als eine Fensterbreite).
+
+    Die Aufraeum-Absicht der frueheren Slot-Loeschung bleibt, die Grenze
+    wandert von "fremder Slot" auf "ueberholt oder abgelaufen":
+    * **ueberholt:** taucht ein Feature mit ``supersededAt``/
+      ``supersededByAlertId`` auf, fliegt SEIN Bestands-Eintrag raus (gleicher
+      Dedup-Schluessel). Gemessen waren ~98 % aller Features eines
+      23h-Fensters ueberholte Fassungen -- ohne dieses sofortige Entfernen
+      waere der Bestand fast vollstaendig Ballast. Der Filter in ``fetch()``
+      bleibt trotzdem stehen (ein Feature kann bereits ueberholt herein-
+      kommen, ohne je unueberholt im Bestand gewesen zu sein).
+    * **abgelaufen/zu alt:** die Gueltigkeit der Warnung ist vorbei -- bzw.,
+      wo sie unbekannt ist, greift die alte Zeitgrenze als Rueckfall (s.
+      ``_entry_verfallen``). Das bleibt die Obergrenze gegen unbegrenztes
+      Wachstum."""
+    store = _country_store(country)["features"]
+    for feature in features:
+        key = _feature_dedup_key(feature)
+        if _is_superseded(feature):
+            store.pop(key, None)
+            continue
+        # Read-Modify-Write (Projektregel): eine bereits aufgeloeste
+        # Gueltigkeit MUSS das Wiedersehen ueberleben -- sonst faellt die
+        # Aufbewahrung beim naechsten Zyklus still auf die Zeitgrenze zurueck
+        # und der Fund waere nur scheinbar behoben.
+        bekannt = store.get(key) or {}
+        store[key] = {
+            "feature": feature,
+            "seen_at": now_ts,
+            "valid_until": bekannt.get("valid_until"),
+        }
+    for key in [k for k, entry in store.items() if _entry_verfallen(entry, now_ts)]:
+        del store[key]
+    return [entry["feature"] for entry in store.values()]
+
+
+def _entry_verfallen(entry: dict, now_ts: float) -> bool:
+    """Wann ein Bestands-Eintrag den Bestand verlaesst (Adversary F004,
+    Fix-Loop 2).
+
+    Maßgeblich ist die **Gueltigkeit** der Warnung, nicht der Zeitpunkt, an dem
+    wir sie zuletzt **gesehen** haben. Der Anbieter filtert seinen Index nach
+    dem VEROEFFENTLICHUNGS-Zeitpunkt in einem Bereich von unter 24 Stunden (s.
+    ``DEFAULT_INDEX_WINDOW_HOURS``) -- "seit 23h nicht mehr im Abfragefenster
+    aufgetaucht" heisst deshalb NIE "gilt nicht mehr". Genau daran hing der
+    Fund: nach einem Ausfall laenger als 23h verschwand eine VOR dem Ausfall
+    gesehene, weiterhin gueltige Warnung lautlos aus dem Bestand und konnte
+    ueber den Index nie wieder hereinkommen -- ab dem zweiten Zyklus nach dem
+    Wiederanlauf meldete das Briefing wieder "keine Warnung" (unavailable=
+    False) bei bestehender Gefahr. Fuer Italien besonders schwer, weil
+    MeteoAlarm dort die einzige amtliche Quelle ist.
+
+    Rueckfall auf die Zeitgrenze (``_store_retention_hours()``), wenn die
+    Gueltigkeit UNBEKANNT ist: die Index-Features tragen sie nicht (nur
+    ``hubTime`` = Veroeffentlichung), sie steht erst im CAP-Dokument -- und das
+    wird nur fuer Features geholt, die den bbox-Vorfilter eines echten Ortes
+    passieren (s. ``fetch()``). Fuer alles, was nie ueber den Vorfilter hinaus
+    aufgeloest wurde, bleibt es damit beim bisherigen Verhalten.
+
+    ``_STORE_MAX_VALIDITY_HOURS`` deckelt eine absurd weit in der Zukunft
+    liegende Gueltigkeit, damit ein einzelner Eintrag den Bestand nicht
+    unbegrenzt belegen kann."""
+    valid_until = entry.get("valid_until")
+    if valid_until is not None:
+        deckel = entry["seen_at"] + _STORE_MAX_VALIDITY_HOURS * 3600.0
+        return now_ts >= min(valid_until, deckel)
+    return entry["seen_at"] < now_ts - _store_retention_hours() * 3600.0
+
+
+def _as_utc(value: datetime) -> datetime:
+    """Naiven (tz-losen) CAP-Zeitstempel als UTC lesen -- analog
+    ``base._as_aware_utc``, damit ``.timestamp()`` nicht auf die Zeitzone des
+    Servers ausweicht und die Aufbewahrung dadurch um Stunden verrutscht."""
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+
+
+def _remember_validity(country: str, feature: dict, alerts: list[OfficialAlert]) -> None:
+    """Haelt die aus dem CAP-Dokument aufgeloeste Gueltigkeit am Bestands-
+    Eintrag fest (Adversary F004, Fix-Loop 2). Das ist die EINZIGE Stelle, an
+    der sie ueberhaupt bekannt wird: der Laender-Index kennt nur den
+    Veroeffentlichungs-Zeitpunkt, das Ende steht im CAP (``expires``). Ohne
+    diesen Vermerk faellt die Aufbewahrung auf die Zeitgrenze zurueck (s.
+    ``_entry_verfallen``).
+
+    Genommen wird das SPAETESTE ``expires`` aller Warnungen des Dokuments (ein
+    CAP kann mehrere ``<info>``-Bloecke tragen) -- der Eintrag darf erst gehen,
+    wenn die letzte davon abgelaufen ist. Fehlt jedes ``expires`` (oder ist das
+    Feature nicht mehr im Bestand), bleibt die Gueltigkeit unbekannt und der
+    Rueckfall greift -- fail-soft, nie ein Fehler."""
+    entry = _country_store(country)["features"].get(_feature_dedup_key(feature))
+    enden = [a.valid_to for a in alerts if a.valid_to is not None]
+    if entry is None or not enden:
+        return
+    entry["valid_until"] = max(_as_utc(ende) for ende in enden).timestamp()
+
+
+def _index_query_window(country: str, slot_end: datetime) -> tuple[datetime, datetime, bool]:
+    """Zeitfenster EINES Auffrischungs-Zyklus (Issue #1397 S1) plus die Angabe,
+    ob die Rueckschau dabei GEKAPPT wurde.
+
+    Regelfall: vom Ende der letzten VOLLSTAENDIGEN Auffrischung minus
+    ``_REFRESH_OVERLAP_HOURS`` bis zum aktuellen Slot-Ende. Das deckt jede
+    Luecke seit dem letzten Erfolg ab (auch mehrere ausgefallene Zyklen --
+    das Fenster waechst dann von selbst mit) plus eine volle Slot-Breite
+    Ueberlappung. Kaltstart (keine Fortschrittsmarke) ODER gesetzter
+    ENV-Override: feste Breite (s. ``_index_window_hours``). ``min()``
+    schuetzt gegen eine rueckwaerts gestellte Uhr -- das Fenster darf nie
+    leer oder negativ werden.
+
+    Adversary F001 (Fix-Loop 1): das mitwachsende Fenster hatte KEINE
+    Obergrenze. Bleibt die Fortschrittsmarke haengen (kein Zyklus wird je
+    vollstaendig -- laut Messung im Modulkopf durch die Ratenbremse real
+    moeglich), wuchs es unbegrenzt weiter (gemessen 1057h Breite bei 44 Tagen
+    Stillstand) und zog immer mehr Seiten pro Zyklus nach sich, bis KEIN
+    Zyklus mehr in ein Zeitbudget passte -- ein sich selbst verstaerkender
+    Zustand. Beide Zweige haengen jetzt an DERSELBEN Obergrenze
+    (``_index_window_hours()``, ENV-Override eingeschlossen): breiter zu fragen
+    holt ohnehin nur Veroeffentlichungen nach, deren Eintrag der Bestand ohne
+    bekannte Gueltigkeit nicht laenger haelt (``_store_retention_hours()`` --
+    MINDESTENS diese Breite, im ENV-Override-Fall NICHT derselbe Wert, s.
+    Adversary F005), und die 23 statt 24 Stunden im Default stehen genau
+    dafuer, dass die API den Abfragebereich ihrerseits auf einen Tag begrenzt.
+
+    Drittes Rueckgabefeld ``gekappt``: True, wenn der Rueckstand GROESSER war
+    als die Obergrenze -- dann fehlt dem Zyklus ein Stueck Rueckschau, das er
+    nie nachholt. Der Aufrufer muss das wie einen abgebrochenen Zyklus
+    behandeln (``mark_fetch_incomplete()``), sonst waere genau das der stille
+    Ausfall, gegen den #1397 laeuft."""
+    override = _window_override_hours()
+    last_complete = _country_store(country)["last_complete"]
+    frueheste = slot_end - timedelta(hours=_index_window_hours())
+    if override is not None or last_complete is None:
+        return frueheste, slot_end, False
+    gewuenscht = min(last_complete, slot_end) - timedelta(hours=_REFRESH_OVERLAP_HOURS)
+    if gewuenscht < frueheste:
+        return frueheste, slot_end, True
+    return gewuenscht, slot_end, False
+
+
 def _prune_stale_slot_entries(country: str, current_slot: str) -> None:
-    """Entfernt Cache-Eintraege FREMDER Zeitslots desselben Landes -- sonst
-    waechst ``_index_cache`` bei jedem Slot-Wechsel (alle 30 min) unbegrenzt
-    weiter, weil abgelaufene Eintraege nur beim naechsten LESE-Zugriff auf
-    GENAU diesen Schluessel entdeckt wuerden (der bei einem alten Slot nie
-    wieder vorkommt).
+    """Entfernt SEITEN-Cache-Eintraege fremder Zeitslots desselben Landes --
+    sonst waechst ``_index_cache`` bei jedem Slot-Wechsel unbegrenzt weiter,
+    weil abgelaufene Eintraege nur beim naechsten LESE-Zugriff auf GENAU
+    diesen Schluessel entdeckt wuerden (der bei einem alten Slot nie wieder
+    vorkommt).
+
+    Der kumulierte Bestand (reservierter Schluessel ``<Land>:bestand``, s.
+    ``_country_store``) ist ausgenommen: er ist kein Transport-Cache, sondern
+    die Datenschicht, und verfaellt nach Gueltigkeit/Ueberholung statt nach
+    Slot (s. ``_merge_into_store``). Genau diese Trennung ist der Kern von S1 --
+    die geholten SEITEN duerfen beim Slot-Wechsel weg, die gesehenen
+    WARNUNGEN nicht.
 
     Bekannte Grenze (dokumentiert, NICHT behoben): laeuft ein 429-Rueckzug
     gerade, wenn der Slot wechselt, geht er mit dem alten Cache-Schluessel
@@ -209,7 +444,12 @@ def _prune_stale_slot_entries(country: str, current_slot: str) -> None:
     durch die S1b-Wiederholungslogik abgefedert (Adversary-Review #1397)."""
     prefix = f"{country}:"
     keep_prefix = f"{country}:{current_slot}:"
-    stale = [key for key in _index_cache if key.startswith(prefix) and not key.startswith(keep_prefix)]
+    stale = [
+        key for key in _index_cache
+        if key.startswith(prefix)
+        and not key.startswith(keep_prefix)
+        and not key.endswith(_STORE_KEY_SUFFIX)
+    ]
     for key in stale:
         del _index_cache[key]
 
@@ -381,13 +621,21 @@ def _extract_alerts_from_cap(cap_source: "str | bytes") -> list[OfficialAlert]:
 
 
 def _get_cached_index(country: str) -> Optional[dict]:
-    """Liefert den Länder-Index, schrittweise ueber MEHRERE Aufrufe hinweg
-    vervollstaendigt (Issue #1397 Scheibe S1c). Das Zeitfenster wird auf
-    einen festen ``_SLOT_MINUTES``-Rasterpunkt gerundet (Start bleibt Ende
-    minus ``_index_window_hours()``, Standard 3h -- s. ``DEFAULT_INDEX_
-    WINDOW_HOURS``) -- Seiten aus verschiedenen Aufrufen INNERHALB desselben
-    Slots sind parameter-gleich und setzen sich zusammen (Cache-Schluessel
-    ``f"{country}:{slot}:p{n}"``).
+    """Liefert den KUMULIERTEN Länder-Bestand (Issue #1397 S1), aufgefrischt
+    durch einen schrittweise ueber MEHRERE Aufrufe hinweg vervollstaendigten
+    Zyklus (S1c). Das Fensterende wird auf einen festen ``_SLOT_MINUTES``-
+    Rasterpunkt gerundet, der Start kommt aus ``_index_query_window()``
+    (Abstand zur letzten vollstaendigen Auffrischung + Ueberlappung, beim
+    Kaltstart breit) -- Seiten aus verschiedenen Aufrufen INNERHALB desselben
+    Slots teilen den Cache-Schluessel ``f"{country}:{slot}:p{n}"`` und setzen
+    sich zusammen. Der Schluessel enthaelt bewusst NUR den Slot, nicht die
+    Fensterbreite: aendert sich die Breite innerhalb eines Slots (erster
+    Zyklus Kaltstart-breit, danach schmal), sind die gecachten Seiten eine
+    Obermenge des schmaleren Fensters -- brauchbar, kein erneuter Abruf.
+
+    Zurueckgegeben wird IMMER der gesamte Bestand (s. ``_merge_into_store``),
+    nicht nur das frisch geholte Fenster -- genau darin liegt die von der
+    Fensterbreite entkoppelte Rueckschau.
 
     ``None`` NUR, wenn schon Seite 1 fehlschlaegt oder ``total_pages`` nicht
     beurteilbar ist (kein einziges verwertbares Feature vorhanden). Ab dann
@@ -402,8 +650,9 @@ def _get_cached_index(country: str) -> Optional[dict]:
     now_dt = datetime.now(timezone.utc)
     slot_end = _current_slot_end(now_dt)
     slot = _slot_key(slot_end)
-    start = (slot_end - timedelta(hours=_index_window_hours())).strftime("%Y-%m-%dT%H:%M:%SZ")
-    end = slot_end.strftime("%Y-%m-%dT%H:%M:%SZ")
+    window_start, window_end, lookback_gekappt = _index_query_window(country, slot_end)
+    start = window_start.strftime("%Y-%m-%dT%H:%M:%SZ")
+    end = window_end.strftime("%Y-%m-%dT%H:%M:%SZ")
     _prune_stale_slot_entries(country, slot)
 
     # Issue #1397 S1b: haelt den x-ratelimit-reset der zuletzt empfangenen
@@ -434,6 +683,9 @@ def _get_cached_index(country: str) -> Optional[dict]:
                 _meteoalarm_budget_gate().record_observed_reset(reset_ts, now=observed_now)
 
     def _fetch_page(page: int) -> Optional[dict]:
+        # Die EINE Stelle, durch die jeder Index-Abruf laeuft (Tagesbudget-Gate,
+        # Typpruefung der Antwort, 429-Wiederholung, Egress-Zeile) -- ein
+        # zweiter, eigener Abrufpfad waere ein zweiter, ungehaerteter Pfad.
         def _do_request() -> httpx.Response:
             # Tageskontingent-Fund (S1c-Nachbesserung): VOR jedem echten
             # Netzwerk-Call pruefen, ob unser eigenes Tagesbudget noch Luft
@@ -546,12 +798,32 @@ def _get_cached_index(country: str) -> Optional[dict]:
             break
         features.extend(page.get("features") or [])
 
-    if incomplete:
+    if incomplete or lookback_gekappt:
         # Zeitbudget-Abbruch macht (anders als eine fehlgeschlagene Seite)
         # KEINEN internen cached_fetch()-Fehlschlag -- ohne diesen expliziten
         # Marker wuerde unavailable=True hier stillschweigend verloren gehen.
+        # Dasselbe gilt fuer eine gekappte Rueckschau (Adversary F001,
+        # Fix-Loop 1): der Zyklus hat sauber alles geholt, was er GEFRAGT hat,
+        # aber weniger gefragt, als sein Rueckstand verlangt haette -- ein
+        # Stueck Vergangenheit bleibt ungeprueft. Das Briefing muss dafuer
+        # "nicht abrufbar" sagen, nie "keine Warnung".
         warn_egress.mark_fetch_incomplete()
-    return {"features": features}
+    if not incomplete:
+        # Fortschrittsmarke NUR nach einem vollstaendig geholten Zyklus
+        # (Issue #1397 S1): nach einem Teil-Zyklus bleibt das naechste Fenster
+        # bewusst breit bzw. der Kaltstart offen -- sonst wuerde die Luecke,
+        # die der Abbruch hinterlassen hat, dauerhaft unsichtbar bleiben.
+        # Eine GEKAPPTE Rueckschau zaehlt hier bewusst als vollstaendig: das
+        # gekappte Fenster wurde luecklos geholt, und wuerde die Marke stehen
+        # bleiben, fragte jeder Folgezyklus dasselbe gekappte Fenster erneut
+        # ab und meldete dauerhaft "nicht abrufbar" -- eine Sackgasse, die
+        # nichts zurueckholt (aelter als die Obergrenze faellt ohnehin aus dem
+        # Bestand, s. _STORE_RETENTION_HOURS). So bleibt es bei genau EINEM
+        # als unvollstaendig gekennzeichneten Zyklus, danach faengt sich der
+        # Dienst von selbst.
+        _country_store(country)["last_complete"] = slot_end
+    _merge_into_store(country, features, _WALL_CLOCK_FN())
+    return {"features": [e["feature"] for e in _country_store(country)["features"].values()]}
 
 
 def _resolve_total_pages(metadata: Optional[dict]) -> Optional[int]:
@@ -783,7 +1055,13 @@ class MeteoAlarmSource:
                     cap_text = _fetch_cap(props["hubLink"], props.get("alertId"), props.get("countryCode"))
                     if cap_text is None:
                         continue
-                    alerts.extend(_extract_alerts_from_cap(cap_text))
+                    cap_alerts = _extract_alerts_from_cap(cap_text)
+                    # Adversary F004 (Fix-Loop 2): hier -- und nur hier -- ist
+                    # die Gueltigkeit der Warnung bekannt. Am Bestands-Eintrag
+                    # vermerken, damit seine Aufbewahrung an ihrem Ablauf haengt
+                    # und nicht daran, wann wir sie zuletzt im Index sahen.
+                    _remember_validity(country, feature, cap_alerts)
+                    alerts.extend(cap_alerts)
                 except Exception:
                     logger.warning(
                         "MeteoAlarm-Feature-Verarbeitung fehlgeschlagen", exc_info=True

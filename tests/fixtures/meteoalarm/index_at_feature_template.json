@@ -1,0 +1,62 @@
+{
+ "_recorded_from": "api.meteoalarm.org/edr/v1/collections/warnings/locations/AT, aufgezeichnet 2026-07-14 (identisch zu index_at.json, Feature 0 -- bbox Villach/Kaernten). Presigned-URLs durch TESTSERVER-Platzhalter ersetzt, Platzhalter {ALERT_ID}/{OBJECT_ID}/{HUB_TIME}/{GEOMETRY_KEY}/{CAP_KEY} fuer die Zeitachse der Tests.",
+ "id": "{OBJECT_ID}",
+ "type": "Feature",
+ "links": [
+  {
+   "type": "application/geo+json",
+   "rel": "geometry",
+   "href": "http://TESTSERVER/geometry/{GEOMETRY_KEY}"
+  }
+ ],
+ "properties": {
+  "supersededByAlertId": null,
+  "supersededAt": null,
+  "supersedeType": null,
+  "geometryDescription": "geometry is bbox only, link (member of the feature's links array) with type application/geo+json points to geojson describing the exact shape",
+  "geometryType": "bbox",
+  "OBJECTID": "{OBJECT_ID}",
+  "alertId": "{ALERT_ID}",
+  "countryCode": "{COUNTRY}",
+  "featureType": "geocode",
+  "hubLanguage": "en-GB",
+  "indexArea": 0,
+  "indexFeature": 0,
+  "indexInfo": 1,
+  "hubTime": "{HUB_TIME}",
+  "hubLink": "http://TESTSERVER/cap/{CAP_KEY}"
+ },
+ "geometry": {
+  "coordinates": [
+   [
+    [
+     13.69370772031781,
+     46.55853912021487
+    ],
+    [
+     13.69370772031781,
+     46.66836256555433
+    ],
+    [
+     13.978659323965665,
+     46.66836256555433
+    ],
+    [
+     13.978659323965665,
+     46.55853912021487
+    ],
+    [
+     13.69370772031781,
+     46.55853912021487
+    ]
+   ]
+  ],
+  "crs": {
+   "properties": {
+    "name": "EPSG:4326"
+   },
+   "type": "name"
+  },
+  "type": "Polygon"
+ }
+}
