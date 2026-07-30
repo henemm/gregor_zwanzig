@@ -1,0 +1,155 @@
+{
+  "faelle": [
+    {
+      "id": "D1",
+      "host": "mail.henemm.com",
+      "to": "fremd@gmail.com",
+      "soll": "block"
+    },
+    {
+      "id": "D2",
+      "host": "smtp.resend-fixture.test",
+      "to": "\"Emmrich, Henning\" <henning@henemm.com>",
+      "soll": "allow"
+    },
+    {
+      "id": "D3",
+      "host": "smtp.resend-fixture.test",
+      "to": "x@sub.example.com",
+      "soll": "block"
+    },
+    {
+      "id": "D4",
+      "host": "smtp.resend-fixture.test",
+      "to": "a@b@example.com",
+      "soll": "block"
+    },
+    {
+      "id": "D5",
+      "host": "smtp.resend-fixture.test",
+      "to": "name+gz@gmail.com",
+      "soll": "allow"
+    },
+    {
+      "id": "N1",
+      "host": "smtp.resend-fixture.test",
+      "to": "henning@henemm.com\u00a0",
+      "soll": "allow"
+    },
+    {
+      "id": "N2a",
+      "host": "smtp.resend-fixture.test",
+      "to": "henning@henemm.com.",
+      "soll": "block"
+    },
+    {
+      "id": "N2b",
+      "host": "mail.henemm.com",
+      "to": "henning@henemm.com.",
+      "soll": "allow"
+    },
+    {
+      "id": "N3",
+      "host": "smtp.resend-fixture.test",
+      "to": "a@b.de",
+      "soll": "block"
+    },
+    {
+      "id": "leerer-empfaenger",
+      "host": "smtp.resend-fixture.test",
+      "to": "",
+      "soll": "block"
+    },
+    {
+      "id": "schlichte-adresse",
+      "host": "smtp.resend-fixture.test",
+      "to": "henning@henemm.com",
+      "soll": "allow"
+    },
+    {
+      "id": "fixture-erreichbarkeit",
+      "host": "smtp.resend-fixture.test",
+      "to": "paritaet-fixture@henemm.com",
+      "soll": "allow"
+    }
+  ],
+  "profile": {
+    "henning": {
+      "mail_to": "henning@henemm.com",
+      "email_verified_at": "2026-01-01T00:00:00Z"
+    },
+    "sub-example-verifiziert": {
+      "mail_to": "x@sub.example.com",
+      "email_verified_at": "2026-01-01T00:00:00Z"
+    },
+    "doppel-at-verifiziert": {
+      "mail_to": "a@b@example.com",
+      "email_verified_at": "2026-01-01T00:00:00Z"
+    },
+    "plus-adresse-verifiziert": {
+      "mail_to": "name+gz@gmail.com",
+      "email_verified_at": "2026-01-01T00:00:00Z"
+    },
+    "mehrfach-adresse-verifiziert": {
+      "email": "a@b.de, c@d.de",
+      "email_verified_at": "2026-01-01T00:00:00Z"
+    },
+    "paritaet-fixture-nutzer": {
+      "mail_to": "paritaet-fixture@henemm.com",
+      "email_verified_at": "2026-01-01T00:00:00Z"
+    }
+  },
+  "ausnahmen": [
+    {
+      "fall": "D1",
+      "seite": "go",
+      "ist": "allow",
+      "scheibe": "S5",
+      "frist": "2026-10-28",
+      "grund": "Go blockt nur Resend-Hosts; auf dem Stalwart-Pfad greift der Guard nicht, daher wird die fremde Adresse durchgelassen. Aufloesung braucht den Zweck-Begriff aus S4."
+    },
+    {
+      "fall": "D2",
+      "seite": "go",
+      "ist": "block",
+      "scheibe": "S2b",
+      "frist": "2026-10-28",
+      "grund": "Go's Erkennung des Anzeigenamens scheitert am Komma vor dem Nachnamen und blockt die sonst bestaetigte Adresse faelschlich. Wird in S2b behoben."
+    },
+    {
+      "fall": "D3",
+      "seite": "python",
+      "ist": "allow",
+      "scheibe": "S2b",
+      "frist": "2026-10-28",
+      "grund": "Python's Guard prueft reservierte Testdomains nur exakt, nicht als Unterdomaenen-Suffix - x@sub.example.com rutscht durch die Allowlist. Wird in S2b behoben."
+    },
+    {
+      "fall": "D4",
+      "seite": "go",
+      "ist": "allow",
+      "scheibe": "S2b",
+      "frist": "2026-10-28",
+      "grund": "Go's Adress-Zerlegung erkennt die doppelte @-Adresse nicht als ungueltig und laesst sie durch die Allowlist-Pruefung. Wird in S2b behoben."
+    },
+    {
+      "fall": "D5",
+      "seite": "beide",
+      "ist": "block",
+      "scheibe": "S2b",
+      "frist": "2026-10-28",
+      "grund": "Beide Seiten blocken Plus-Adressen heute noch, weil die Allowlist-Normalisierung das Pluszeichen nicht toleriert. Sollwert allow ist PO-Entscheidung, Umsetzung folgt in S2b."
+    },
+    {
+      "fall": "N1",
+      "seite": "python",
+      "ist": "block",
+      "scheibe": "S2b",
+      "frist": "2026-10-28",
+      "grund": "Python's Guard trimmt das unsichtbare Randzeichen NBSP nicht vor dem Allowlist-Abgleich und blockt die sonst bestaetigte Adresse. Wird in S2b behoben."
+    }
+  ],
+  "ausnahmen_hoechstzahl": 6,
+  "verzweigungen_python": 13,
+  "verzweigungen_go": 31
+}
