@@ -5,6 +5,39 @@
 >
 > Diese Datei bleibt als Detail-Referenz fuer Root-Cause-Analysen bestehen.
 
+## BUG-1428-PREFLIGHT-SCOPE: staging_gate.py widersprach sich zwischen Preflight und Post-Reset-Check
+
+**Status:** RESOLVED (2026-07-30) | **Severity:** High (Ursache eines Produktionsausfalls) | **GitHub Issue:** #1428 (henemm-infra#148)
+
+### Symptom
+
+`deploy-gregor-prod.sh` stufte denselben Ziel-Commit im Preflight (vor dem Sync) als `docs-only` (übersprungen) ein, im regulären Check nach dem Reset (identischer Commit, jetzt HEAD) aber als `backend`/gate-pflichtig — blockierte dort. Da das Script `gregor-python` bereits vor diesem zweiten Check gestoppt hatte, blieb der Dienst nach dem Abbruch offline (henemm-infra#148, Produktionsausfall 2026-07-29 ~19:38 UTC, separat infra-seitig durch einen trap-Handler gefixt).
+
+### Root Cause
+
+Zwei verschiedene Diff-Basen für dieselbe Scope-Frage: Der Preflight (`expected_commit` bekannt) diffte eng `HEAD..expected_commit`, schrieb dabei aber bewusst keinen Scope-Cache-Marker (Cache-Poisoning eines noch nicht ausgerollten Zustands wäre die Folge gewesen). Der reguläre Check nach dem Reset (`expected_commit=None`) fand deshalb keinen Cache-Treffer für den neuen HEAD und fiel auf den Marker des letzten ERFOLGREICHEN Gate-Laufs zurück — potenziell mehrere Commits alt, und damit ein deutlich breiterer, andere Frage beantwortender Diff-Bereich als der Preflight.
+
+Ein erster Lösungsvorschlag (Scope-Wert unter der Ziel-SHA cachen) hätte NICHT funktioniert: `cached_scope_for_sha()` verwirft gecachte `docs-only`-Werte grundsätzlich (Schutzregel aus #1096/F001) — und `docs-only` war genau der im Vorfall betroffene Wert.
+
+### Fix (Committed 2026-07-30, `e77a3c6e`)
+
+Der Preflight hinterlegt jetzt seine Diff-**Basis** (den alten, noch live laufenden Commit) für den Ziel-Commit — nicht den Scope-Wert. `_scope_diff_base()` nutzt diesen Hint, sofern die hinterlegte SHA noch auflösbar ist und zum tatsächlichen Ziel-Commit passt, statt auf den möglicherweise veralteten Marker zurückzufallen. Der Scope wird weiterhin bei jedem Lauf frisch aus dem echten `git diff` berechnet — die #1096-Schutzregel bleibt unberührt, da nichts mehr als fertiger Scope-WERT gecacht wird.
+
+Diagnose und Fix-Design stammen von der `henemm-infra`-Claude-Instanz (inkl. Selbstkorrektur ihres ersten, unzureichenden Vorschlags); die `gregor_zwanzig`-Instanz hat den fertigen Entwurf eingespielt, um einen Editier-Konflikt mit einer parallel laufenden Session zu vermeiden.
+
+### Files Changed
+
+- `.claude/hooks/_e2e_paths.py` (neu: `last_preflight_base_path`, `write_preflight_base`, `read_preflight_base`)
+- `.claude/hooks/staging_gate.py` (`_scope_diff_base()` Hint-Vorrang, `gate_check()` schreibt die Basis im Preflight-Zweig)
+- `tests/tdd/test_fix_1428_preflight_scope_base.py` (neu, End-to-End-Reproduktion des Vorfalls + zwei Unit-Tests)
+
+### Lessons Learned
+
+1. **Eine Diff-BASIS zu hinterlegen ist robuster als einen fertigen Scope-WERT zu cachen**, wenn eine bereits bestehende Schutzregel (hier #1096/F001) genau diesen Wert-Cache für einen bestimmten Ergebnistyp (`docs-only`) grundsätzlich verwirft — der erste, naheliegende Lösungsansatz hätte an der eigenen Schutzregel scheitern müssen.
+2. **Cross-Repo-Root-Cause-Analyse funktioniert**, wenn die diagnostizierende Instanz keinen Schreibzugriff auf das betroffene Repo braucht, um trotzdem den vollständigen Fix (inkl. Code) zu liefern — die Umsetzung bleibt dann bei der zuständigen Instanz.
+
+---
+
 ## BUG-1383-1385-1386-ALERT-TZ: Alarm-Uhrzeiten in drei Renderpfaden in UTC statt Ortszeit
 
 **Status:** RESOLVED (2026-07-25) | **Severity:** High (falsche Sicherheitsaussage — Zeitangabe im Wetteralarm bis zu mehrere Stunden daneben) | **GitHub Issues:** #1383, #1385, #1386
