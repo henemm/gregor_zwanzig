@@ -418,9 +418,14 @@ def _render_warn_cell(alerts: list) -> str:
     if not alerts:
         return '<span style="color:#b8b4a8;font-size:12px;">—</span>'
     chips = []
+    seen: set[tuple[str, str, str]] = set()
     for alert in alerts:
         short, _sev = _warn_short(alert)
         bg, fg = _ALERT_LEVEL_CELL.get(alert.level, _ALERT_LEVEL_CELL[4])
+        visual_key = (short, bg, fg)
+        if visual_key in seen:
+            continue
+        seen.add(visual_key)
         chips.append(
             f'<div style="display:inline-block;font-size:9.5px;font-weight:700;'
             f'letter-spacing:0.01em;padding:2px 6px;margin:1px auto;white-space:nowrap;'
