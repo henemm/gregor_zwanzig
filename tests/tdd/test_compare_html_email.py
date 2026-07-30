@@ -11,10 +11,8 @@ SMTP/IMAP wird in TestCompareEmailE2E genutzt.
 
 Klassen:
 - TestCompareHTMLRenderer   -- schnell, kein SMTP, prueft Renderer-Output (v2)
-- TestHeartbeatIntegration  -- prueft Heartbeat-Verhalten im Scheduler
 - TestCompareEmailE2E       -- echter SMTP-Send + IMAP-Verifikation (@pytest.mark.email)
 """
-import os
 import pytest
 from datetime import date, datetime
 
@@ -242,29 +240,12 @@ class TestCompareHTMLRenderer:
             mod.render_compare_html(result, profile=ActivityProfile.WINTERSPORT, winner_tags=[])
 
 
-# ---------------------------------------------------------------------------
-# AC-3, AC-4, AC-7 -- Heartbeat / Scheduler-Tests
-# ---------------------------------------------------------------------------
-
-class TestHeartbeatIntegration:
-    """
-    Prueft Heartbeat-Verhalten in api/routers/scheduler.py.
-    SPEC: docs/specs/modules/issue_253_compare_email.md §3
-    """
-
-    def test_ac7_kein_heartbeat_ohne_env_var(self):
-        """
-        AC-7: Given GZ_HEARTBEAT_COMPARE nicht gesetzt /
-        When _ping_heartbeat_compare() / Then keine Exception, kein Error-Log.
-        """
-        from api.routers.scheduler import _ping_heartbeat_compare
-
-        env_backup = os.environ.pop("GZ_HEARTBEAT_COMPARE", None)
-        try:
-            _ping_heartbeat_compare()  # Darf keine Exception werfen
-        finally:
-            if env_backup is not None:
-                os.environ["GZ_HEARTBEAT_COMPARE"] = env_backup
+# Issue #1407: TestHeartbeatIntegration (AC-7) entfernt — pruefte
+# _ping_heartbeat_compare() in api/routers/scheduler.py isoliert, nie den
+# echten Aufrufpfad. Die Funktion war fuer den mit #1131 entfernten
+# Legacy-Versandpfad (compare_subscription.py) gebaut, hatte danach null
+# Aufrufer und ist mit #1407 ersatzlos entfernt. Der aktive Compare-Versand
+# haengt seit #1346 an der gemeinsamen Trip/Vergleich-Ueberwachung.
 
 
 # Issue #1250 Scheibe 0: TestCompareEmailE2E (AC-8) entfernt — basierte auf dem

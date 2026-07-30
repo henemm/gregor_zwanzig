@@ -1398,47 +1398,48 @@ def _finding_location_counts(found: dict[str, str]) -> dict[str, int]:
 # meldet die Zeile des `return`, Klasse 2 die der Iteration, Klasse 3 und 4
 # die der `def`-Anweisung (die Spec-Tabelle nennt teils die `def`-Zeile).
 #
-# 47 Einträge für 39 Funktionsschlüssel — gegenüber der Spec-Erwartung (38
-# Schlüssel, 45 Treffer, plus Webhook-Ack in INTENTIONAL_CONSTANT_SUCCESS) zwei
+# 46 Einträge für 38 Funktionsschlüssel — gegenüber der Spec-Erwartung (37
+# Schlüssel, 44 Treffer, plus Webhook-Ack in INTENTIONAL_CONSTANT_SUCCESS) zwei
 # von Hand nachgelesene Zuwächse mit je derselben Mechanik wie eine belegte
 # Fundstelle (Begründung steht beim jeweiligen Eintrag). Keine Verbreiterung
 # der Signatur; die Bestandsaufnahme war unvollständig wie in Hälfte A.
+# (B13 mit #1407 aus der Restliste entfernt: die Funktion wurde geloescht,
+# der Scanner findet dort nichts mehr — die Ratsche ist entsprechend kleiner.)
 # ---------------------------------------------------------------------------
 KNOWN_VIOLATIONS: dict[str, str] = {
     # --- B2–B8: acht Trigger-Endpunkte, ein Muster. Fällt der Service für
     # ALLE Vorgänge durch, meldet der Endpunkt "ok" mit count=0 — von einem
     # ruhigen Tag ohne Alarme nicht zu unterscheiden (#1290).
-    "api/routers/scheduler.py:54": (
+    # Zeilennummern hier (und bei B1 unten) mit #1407 um den Löschbetrag von
+    # _ping_heartbeat_compare (25 Zeilen, s. o.) verschoben — die Funde selbst
+    # sind unverändert dieselben Stellen, nur weiter oben im File.
+    "api/routers/scheduler.py:52": (
         "B2 (#1405) — trigger_alert_checks: status fest 'ok', count ignoriert."
     ),
-    "api/routers/scheduler.py:64": (
+    "api/routers/scheduler.py:62": (
         "B3 (#1405) — trigger_compare_alert_checks: dito (Deviation)."
     ),
-    "api/routers/scheduler.py:74": (
+    "api/routers/scheduler.py:72": (
         "B4 (#1405) — trigger_radar_alert_checks: dito (Radar)."
     ),
-    "api/routers/scheduler.py:84": (
+    "api/routers/scheduler.py:82": (
         "B5 (#1405) — trigger_compare_radar_alert_checks: dito."
     ),
-    "api/routers/scheduler.py:94": (
+    "api/routers/scheduler.py:92": (
         "B6 (#1405) — trigger_compare_official_alert_checks: dito."
     ),
-    "api/routers/scheduler.py:111": (
+    "api/routers/scheduler.py:109": (
         "B7 (#1405) — trigger_inbound: dito; der 'skipped'-Zweig ist korrekt."
     ),
-    "api/routers/scheduler.py:126": (
+    "api/routers/scheduler.py:124": (
         "B8 (#1405) — trigger_inbound_telegram: dito, Feld heißt 'processed'."
     ),
-    # --- B13: Klasse 3, toter Compare-Heartbeat. MELDEN ja, REPARIEREN nein:
-    # der Fix läuft ausschließlich in Issue #1407, nicht in S4.
-    "api/routers/scheduler.py:147": (
-        "B13 (#1405) — _ping_heartbeat_compare: null Aufrufer in der "
-        "Scanfläche; trigger_compare_presets_daily ruft ihn NICHT. Reparatur "
-        "in #1407, nicht in S4."
-    ),
+    # --- B13 entfernt (#1407): die Funktion war toter Code (Legacy-Pfad
+    # #1131) und wurde ersatzlos geloescht statt angeschlossen — der Scanner
+    # findet an dieser Stelle nichts mehr, der Eintrag entfaellt mit ihr.
     # --- B1: der #1403-Fall. Der Nutzer liest "Testmail verschickt", obwohl
     # nie etwas losgeschickt wurde ("no_channels" fällt bis zu sent=True durch).
-    "api/routers/scheduler.py:217": (
+    "api/routers/scheduler.py:192": (
         "B1 (#1403/#1405) — send_test_trip_report: 'sent': True trotz outcome."
     ),
     # --- B11/B11b/B11c: die drei Compare-Alarmprüfer. Bei allen dreien heißt
@@ -1614,12 +1615,13 @@ INTENTIONAL_CONSTANT_SUCCESS: dict[str, str] = {
 
 
 # ---------------------------------------------------------------------------
-# AC-1: die 23 in der Spec namentlich gelisteten Fundstellen B1–B21, als
-# "pfad::funktion" → MINDEST-TREFFERZAHL — bewusst OHNE Zeilennummern, damit
-# spätere Codeverschiebungen sie nicht brechen.
+# AC-1: die 22 in der Spec namentlich gelisteten Fundstellen B1–B21 (B13 mit
+# #1407 entfernt — s. u.), als "pfad::funktion" → MINDEST-TREFFERZAHL —
+# bewusst OHNE Zeilennummern, damit spätere Codeverschiebungen sie nicht
+# brechen.
 #
-# 38 Funktionsschlüssel für 23 Ticket-Fundstellen, Summe der Mindest-Treffer
-# = 45 (35×1 + 2×3 + 1×4). Die Zahlen weichen auseinander, weil ein
+# 37 Funktionsschlüssel für 22 Ticket-Fundstellen, Summe der Mindest-Treffer
+# = 44 (34×1 + 2×3 + 1×4). Die Zahlen weichen auseinander, weil ein
 # Ticket-Punkt mehrere Funktionen und eine Funktion mehrere Treffer haben
 # kann:
 #
@@ -1644,6 +1646,11 @@ INTENTIONAL_CONSTANT_SUCCESS: dict[str, str] = {
 #   + 2 Schlüssel / + 2 Treffer (B19/B20, die beiden Inbound-Reader)
 #   + 3 Schlüssel / + 3 Treffer (B21, Klasse 4 im Versandkontext)
 #   = +15 Schlüssel / +18 Treffer  ->  38 Schlüssel, Summe 45.
+#
+# #1407: B13 (toter Compare-Heartbeat) repariert durch Löschen statt
+# Anschließen — der einzige hier zulässige Fall, in dem eine Fundstelle ohne
+# neue Spec-Version verschwindet (s. u., "Einzige zugelassene Änderung").
+#   - 1 Schlüssel / - 1 Treffer (B13)  ->  37 Schlüssel, Summe 44.
 #
 # ACHTUNG: Diese Liste stammt wörtlich aus der Spec
 # (docs/specs/modules/waechter_1405_erfolg_wirkung.md Version 1.2, Tabelle
@@ -1687,8 +1694,8 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     "src/services/compare_official_alert.py::check_all_compare_presets": 1,
     # B12 — top_ort/actual_empfaenger zugewiesen, "status" trotzdem festes "ok"
     "src/services/scheduler_dispatch_service.py::send_compare_preset": 1,
-    # B13 — toter Compare-Heartbeat, null Aufrufer
-    "api/routers/scheduler.py::_ping_heartbeat_compare": 1,
+    # B13 entfernt (#1407) — toter Compare-Heartbeat wurde geloescht statt
+    # angeschlossen, der Scanner findet dort nichts mehr.
     # B14a — sent_channels.append() vor dem try, DREI Kanäle (email/telegram/sms)
     "src/services/notification_service.py::send_official_alert": 3,
     # B14c — dito, DREI Kanäle; genutzt von Änderungs-, Radar- und amtlichen Alarmen
@@ -1773,12 +1780,12 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
 
 
 def test_scanner_finds_every_spec_listed_finding():
-    """AC-1 (+ AC-17 und AC-18): GIVEN die 23 in der Spec gelisteten
-    Fundstellen B1–B21
+    """AC-1 (+ AC-17 und AC-18): GIVEN die 22 in der Spec gelisteten
+    Fundstellen B1–B21 (B13 mit #1407 entfernt)
     WHEN der Wächter über die Scanfläche läuft
-    THEN schlägt er in JEDER der 38 zugehörigen Funktionen mindestens so oft
-    an wie in der Mindestzahl-Tabelle festgelegt (35 Funktionen mit 1, 2
-    Funktionen mit 3, 1 Funktion mit 4), Summe 45.
+    THEN schlägt er in JEDER der 37 zugehörigen Funktionen mindestens so oft
+    an wie in der Mindestzahl-Tabelle festgelegt (34 Funktionen mit 1, 2
+    Funktionen mit 3, 1 Funktion mit 4), Summe 44.
 
     Gemessen an SPEC_LISTED_FINDINGS — einer fest verdrahteten Erwartung aus
     der Spec (``pfad::funktion`` → Mindest-Trefferzahl), NICHT aus
@@ -1803,9 +1810,9 @@ def test_scanner_finds_every_spec_listed_finding():
     # gekürzte Tabelle würde sonst hinter einem grünen Scan verschwinden,
     # und genau das ist der Weg, auf dem Wächter still ihre Schärfe
     # verlieren (Test-Politik: Schwellen nie anpassen, damit etwas grün wird).
-    assert len(SPEC_LISTED_FINDINGS) == 38 and sum(SPEC_LISTED_FINDINGS.values()) == 45, (
-        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 38 "
-        "Funktionsschlüssel, Summe 45 — Version 1.2). Ist: "
+    assert len(SPEC_LISTED_FINDINGS) == 37 and sum(SPEC_LISTED_FINDINGS.values()) == 44, (
+        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 37 "
+        "Funktionsschlüssel, Summe 44 — Version 1.2 minus B13, #1407). Ist: "
         f"{len(SPEC_LISTED_FINDINGS)} Schlüssel, Summe "
         f"{sum(SPEC_LISTED_FINDINGS.values())}"
     )

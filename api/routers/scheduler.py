@@ -8,7 +8,6 @@ SPEC: docs/specs/modules/go_scheduler.md v1.0 (Step 2)
 """
 from __future__ import annotations
 
-import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
@@ -20,7 +19,6 @@ from services.scheduler_dispatch_service import (
 )
 
 router = APIRouter(prefix="/api/scheduler", tags=["scheduler"])
-logger = logging.getLogger("scheduler.trigger")
 
 _telegram_reader = None
 
@@ -142,29 +140,6 @@ def trigger_compare_presets_daily(hour: Optional[int] = None, user_id: str = Que
     sent, failed = run_compare_presets_daily(user_id, hour=hour)
     status = "partial" if failed > 0 else "ok"
     return {"status": status, "count": sent, "failed": failed}
-
-
-def _ping_heartbeat_compare() -> None:
-    """Fail-soft: Heartbeat-Ping wenn GZ_HEARTBEAT_COMPARE gesetzt.
-
-    Wird ausschliesslich aufgerufen wenn mindestens ein Compare-Versand
-    erfolgreich war (Readiness statt Liveness, siehe globale Heartbeat-Regel).
-
-    SPEC: docs/specs/modules/issue_253_compare_email.md §3
-    """
-    import os
-
-    url = os.getenv("GZ_HEARTBEAT_COMPARE", "")
-    if not url:
-        logger.debug("GZ_HEARTBEAT_COMPARE nicht gesetzt — kein Heartbeat-Ping")
-        return
-    try:
-        import httpx
-
-        httpx.get(url, timeout=5)
-        logger.info("Heartbeat-Ping Compare OK")
-    except Exception as e:
-        logger.warning("Heartbeat-Ping Compare fehlgeschlagen: %s", e)
 
 
 @router.post("/trips/{trip_id}/send")
