@@ -502,17 +502,15 @@ test.describe('Ortsvergleich-Ausblick — Runde 2: Adversary-Grenzfaelle (#1406 
 	// darf den Auswahl-Block selbst nicht zum Verschwinden bringen (nur der
 	// Reihenfolge-Block darunter entfaellt, Zeile 147 der Komponente) — sonst
 	// gaebe es keinen Weg zurueck zur Auswahl.
-	// STILLGELEGT (Issue #1423): dieser Test belegt einen echten,
-	// vorbestehenden Race im Speicherpfad (zwei verschachtelte Commit-Handler
-	// in CompareTabs.svelte:1350-1361 feuern je Checkbox-Klick, betrifft auch
-	// die Uebersichts-Auswahl) — 20-30% Fehlschlagrate ueber ~15 Laeufe, dabei
-	// DREI Haertungsstufen probiert (keine Wartezeit / 400ms pro Klick /
-	// explizites Warten auf jede PUT-Response + Server-Poll). Stufe (c)
-	// schliesst Test-Timing als Ursache aus — der Server zeigt nach
-	// bestaetigten PUTs trotzdem 1-2 faelschlich weiter angehakte Metriken.
-	// NICHT loeschen: ist der fertige Nachweis fuer #1423. Nach Fix von #1423
-	// reaktivieren (test.fixme -> test).
-	test.fixme('Adversary (#1406 A): alle Ausblick-Kaestchen abgewaehlt — Auswahl-Block bleibt bedienbar', async ({ page }) => {
+	// WICHTIG: der Ausblick-Block fehlt komplett im DOM, solange der Katalog
+	// laedt (`WeatherMetricsTab.svelte:1026`, bewusst so gebaut,
+	// `compareCatalogLoaded`-Gate). JEDE Existenzpruefung eines einzelnen
+	// Kaestchens muss deshalb auf das Element WARTEN, nie per Sofort-`count()`
+	// entscheiden — ein zu frueher `count()===0` liest "noch nicht da" als
+	// "gibt es nicht" und ueberspringt das Kaestchen dauerhaft (Ex-Befund
+	// #1423, tatsaechlich ein Test-Bug, kein Produktfehler — root-caused
+	// durch das Team, s. Wait + `existsSoon` unten).
+	test('Adversary (#1406 A): alle Ausblick-Kaestchen abgewaehlt — Auswahl-Block bleibt bedienbar', async ({ page }) => {
 		const suffix = Date.now();
 		const locA = await createLocation(page, `1406a-ADV2-A-${suffix}`);
 		const locB = await createLocation(page, `1406a-ADV2-B-${suffix}`);
@@ -541,6 +539,14 @@ test.describe('Ortsvergleich-Ausblick — Runde 2: Adversary-Grenzfaelle (#1406 
 
 		const panel = await openMetricsTab(page, id);
 		const outlook = outlookContainer(panel);
+		// WURZEL-FIX: der Ausblick-Block existiert erst NACH Katalog-Ladeende
+		// im DOM (`compareCatalogLoaded`-Gate, s. Kommentar oben). Ohne diesen
+		// Wait koennte eine Existenzpruefung auf das erste Kaestchen treffen,
+		// waehrend der Block noch gar nicht gemountet ist, und es fuer immer
+		// als "gibt es nicht" ueberspringen. `compare-layout-outlook-metrics`
+		// ist genau der Container, der erst nach dem Laden erscheint.
+		await expect(outlook.getByTestId('compare-layout-outlook-metrics')).toBeVisible({ timeout: 10000 });
+
 		const defaultKeys = [
 			{ metricId: 'temperature', aggregation: 'min' },
 			{ metricId: 'temperature', aggregation: 'max' },
@@ -550,18 +556,6 @@ test.describe('Ortsvergleich-Ausblick — Runde 2: Adversary-Grenzfaelle (#1406 
 			{ metricId: 'gust', aggregation: 'max' },
 			{ metricId: 'thunder', aggregation: 'max' }
 		];
-		// WICHTIGER BEFUND (Runde 2, #1406 A, an Team/PO gemeldet — s.
-		// Validator-Report): sieben Kaestchen nacheinander abzuwaehlen ist
-		// intermittierend flaky (~25-40 % der Laeufe, beobachtet SOWOHL mit
-		// `null`- als auch mit explizitem Start-Array, SOWOHL ohne als auch mit
-		// 400ms-Wartezeit pro Klick) — reproduzierbar bleibt IMMER dasselbe
-		// Kaestchen (das ERSTE der Sequenz, hier Temperatur-Minimum) faelschlich
-		// angehakt. Das ist kein Zeitproblem dieses Tests, sondern deutet auf
-		// einen Race im Commit-Pfad hin, der NICHT durch laengeres Warten
-		// behoben werden konnte. Deshalb hier der robusteste verfuegbare
-		// Nachweis: nach JEDEM Klick explizit auf die Server-Bestaetigung
-		// (PUT-Response) warten UND danach den tatsaechlich gespeicherten
-		// Stand per GET gegenlesen, statt nur auf eine Wartezeit zu vertrauen.
 		async function uncheckAndConfirm(box: Locator): Promise<void> {
 			const putPromise = page.waitForResponse(
 				(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
@@ -571,17 +565,28 @@ test.describe('Ortsvergleich-Ausblick — Runde 2: Adversary-Grenzfaelle (#1406 
 			await putPromise;
 			await page.waitForLoadState('networkidle');
 		}
+		// Existenzpruefung WARTET (statt einer Sofort-`count()`-Momentaufnahme)
+		// — auch als zweite Verteidigungslinie hinter dem Wait oben: "noch
+		// nicht da" darf nie mit "gibt es nicht" verwechselt werden.
+		async function existsSoon(locator: Locator, timeoutMs = 3000): Promise<boolean> {
+			try {
+				await locator.waitFor({ state: 'attached', timeout: timeoutMs });
+				return true;
+			} catch {
+				return false;
+			}
+		}
 		for (const k of defaultKeys) {
 			const box = outlook
 				.getByTestId(`compare-layout-outlook-option-${k.metricId}-${k.aggregation}`)
 				.locator('input');
-			if (await box.count() === 0) continue; // Einzel-Options-Gruppe -> andere Zeilenform
+			if (!(await existsSoon(box))) continue; // Einzel-Options-Gruppe -> andere Zeilenform
 			if (await box.isChecked()) await uncheckAndConfirm(box);
 		}
 		// Einzel-Options-Zeilen unter denselben Groessen (falls vorhanden) separat.
 		for (const mid of ['precipitation', 'rain_probability', 'wind', 'gust', 'thunder']) {
 			const single = outlook.getByTestId(`compare-layout-outlook-metric-${mid}`).locator('input');
-			if ((await single.count()) > 0 && (await single.isChecked())) await uncheckAndConfirm(single);
+			if ((await existsSoon(single)) && (await single.isChecked())) await uncheckAndConfirm(single);
 		}
 
 		// Server-Stand ist die eigentliche Aussage (nicht nur der DOM) — s.
