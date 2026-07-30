@@ -41,7 +41,7 @@
 		buildCompareCorridorSavePayload, buildComparePrefillRows,
 		type RouteMetricDef, type CompareMetricDef, type ProfileKey,
 	} from './corridorEditorState.ts';
-	import { loadCompareMetricCatalog } from './compareMetricCatalogLoader.ts';
+	import { loadCompareMetricCatalog, loadRouteExtraMetricDefs } from './compareMetricCatalogLoader.ts';
 	// Issue #1366 F002: `ws.activeMetricKeys` ist jetzt `string[] | null` ("nie
 	// eingestellt" vs. "bewusst leer") -- materialisiert lesen, NIE roh
 	// spreaden/an buildCompareCorridorSavePayload durchreichen (das wuerde
@@ -79,9 +79,13 @@
 	// Issue #1311 (C1, #1293-Wurzelfix): Pool folgt der Metrik-Auswahl des
 	// Wetter-Metriken-Tabs (trip.display_config.metrics) statt grundsaetzlich
 	// alle 6 anzubieten.
-	const initialRoute = context === 'route' ? buildRoutePool(trip?.corridors ?? [], trip?.display_config?.metrics) : null;
-	let rows = $state<CorridorRowState[]>(initialRoute?.rows ?? []);
-	let poolLeft = $state<(RouteMetricDef | CompareMetricDef)[]>(initialRoute?.poolLeft ?? []);
+	// Issue #1425 (S2 Teil 1, AC-6): analog Desktop — der route-Pool entsteht
+	// erst nach dem Katalog-Laden (kein Nachpoppen der Zusatz-Metriken).
+	function computeInitialRoute(extra: RouteMetricDef[]) {
+		return buildRoutePool(trip?.corridors ?? [], trip?.display_config?.metrics, extra);
+	}
+	let rows = $state<CorridorRowState[]>([]);
+	let poolLeft = $state<(RouteMetricDef | CompareMetricDef)[]>([]);
 	let unknownCorridors = $state<Corridor[]>([]);
 	let removedMetrics = $state<string[]>([]);
 
@@ -107,6 +111,36 @@
 			});
 	});
 
+	// Issue #1425 (S2 Teil 1): route-Zweig laedt die Zusatz-Metriken aus dem
+	// geteilten Promise-Cache; scheitert der Abruf, bleiben die 6 fest
+	// verdrahteten Metriken bedienbar (kein blockierender Fehlerzustand).
+	let routeExtraDefs = $state<RouteMetricDef[] | null>(null);
+	let routeDefsFailed = $state(false);
+	// F001-Fix (Adversary HIGH, #1425 S2): analog Desktop — Pass-Through fuer
+	// gespeicherte Korridore mit unbekannter Metrik-ID (kein Datenverlust).
+	let routeUnknownCorridors = $state<Corridor[]>([]);
+
+	$effect(() => {
+		if (context !== 'route' || routeExtraDefs !== null) return;
+		loadRouteExtraMetricDefs()
+			.then((defs) => {
+				routeExtraDefs = defs;
+				routeDefsFailed = false;
+				const initial = computeInitialRoute(defs);
+				rows = initial.rows;
+				poolLeft = initial.poolLeft;
+				routeUnknownCorridors = initial.unknownCorridors;
+			})
+			.catch(() => {
+				routeDefsFailed = true;
+				routeExtraDefs = [];
+				const initial = computeInitialRoute([]);
+				rows = initial.rows;
+				poolLeft = initial.poolLeft;
+				routeUnknownCorridors = initial.unknownCorridors;
+			});
+	});
+
 	const validation = $derived(validateCorridorRows(rows));
 	const markN = $derived(rows.filter((r) => r.mark).length);
 
@@ -115,7 +149,7 @@
 	// durchgereicht, die Alarm-Empfindlichkeit bleibt exklusiv beim Reiter
 	// Alarme (AC-2/AC-3).
 	function buildSaveFn() {
-		const payload = buildCorridorSavePayload(rows, originalLevels);
+		const payload = buildCorridorSavePayload(rows, originalLevels, routeUnknownCorridors);
 		return async () => {
 			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, {
 				corridors: payload.corridors,
@@ -239,6 +273,10 @@
 		{:else if context === 'vergleich' && compareDefs === null}
 			<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
 			<div class="cem-lead" aria-busy="true" data-testid="corridor-editor-mobile-vergleich-loading">Lade Metriken…</div>
+		{:else if context === 'route' && routeExtraDefs === null}
+			<!-- Issue #1425 (AC-6): Ladezustand statt Nachpoppen der Zusatz-Metriken. -->
+			<Eyebrow>Wertebereiche · Warn-Schwellen</Eyebrow>
+			<div class="cem-lead" aria-busy="true" data-testid="corridor-editor-mobile-route-loading">Lade Metriken…</div>
 		{:else}
 		{#if context === 'vergleich'}
 			<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
@@ -248,6 +286,15 @@
 			<Eyebrow>Wertebereiche · Warn-Schwellen</Eyebrow>
 			<div class="cem-title">Sag mir, wenn das Wetter aus dem Rahmen läuft</div>
 			<div class="cem-lead">Ein Wertebereich je Metrik legt fest, welche Werte du auf der Tour noch akzeptierst. Verlässt ein Wert den Bereich, bekommst du zwischen den Briefings eine Sofort-Meldung.</div>
+		{/if}
+
+		{#if context === 'route' && routeDefsFailed}
+			<!-- Issue #1425: Rueckfall auf die 6 Standard-Metriken statt blockierendem
+			     Fehlerzustand — bestehende Wertebereiche bleiben bearbeitbar. -->
+			<p class="cem-error" role="alert" data-testid="corridor-editor-mobile-route-load-warning">
+				Zusätzliche Metriken konnten nicht geladen werden — es stehen nur die Standard-Metriken zur Auswahl.
+			</p>
+			<MBtn block variant="ghost" size="lg" onclick={() => { routeDefsFailed = false; routeExtraDefs = null; }}>Wiederholen</MBtn>
 		{/if}
 
 		<div class="cem-legend">

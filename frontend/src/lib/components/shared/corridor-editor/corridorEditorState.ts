@@ -87,7 +87,12 @@ export interface CorridorRowState {
 // automatische Pruefung — dort muss weiterhin manuell nachgezogen werden.
 // Einzige zugelassene Abweichung: "temperature_cold" (selectable=false im
 // Katalog, im Wetter-Metriken-Tab nie aktivierbar) fehlt hier bewusst.
-const ROUTE_CORRIDOR_CATALOG_IDS: Record<string, string[]> = {
+// Issue #1425 (S2 Teil 1): jetzt exportiert — compareMetricCatalogLoader.ts
+// leitet aus den SCHLUESSELN dieser Tabelle den Duplikat-Filter fuer die
+// Zusatz-Metriken aus dem zentralen Katalog ab (keine zweite, driftende
+// Kopie derselben Katalog-ID-Liste). Struktur/Inhalt bleiben unveraendert —
+// der Drift-Waechter test_alert_metric_mapping_parity.py parst sie weiterhin.
+export const ROUTE_CORRIDOR_CATALOG_IDS: Record<string, string[]> = {
 	gust: ['wind_gust'],
 	precipitation: ['precipitation_sum'],
 	temperature: ['temperature_min', 'temperature_max'],
@@ -105,13 +110,31 @@ const ROUTE_CORRIDOR_CATALOG_IDS: Record<string, string[]> = {
  * weitere Aufrufer erhalten. `rows` (bereits als Korridor gespeicherte
  * Zeilen) werden NIE gefiltert (AC-9: kein stiller Datenverlust bei
  * De-Selektion einer bereits konfigurierten Metrik).
+ *
+ * Issue #1425 (S2 Teil 1): `extraDefs` haengt die uebrigen Groessen des
+ * zentralen Katalogs an (compareMetricCatalogLoader.ts::
+ * buildRouteMetricDefsFromCatalog). Ohne den Parameter bleibt das bisherige
+ * 6er-Verhalten unveraendert. Fuer `extraDefs` gilt das
+ * `activeCatalogMetrics`-Gating NICHT — diese Groessen haben (noch) keinen
+ * Eintrag in der Namensraum-Bruecke ROUTE_CORRIDOR_CATALOG_IDS, ein Gating
+ * wuerde sie deshalb pauschal aussperren.
+ *
+ * F001-Fix (Adversary HIGH, #1425 S2; Spec § Implementation Details Punkt 4):
+ * gespeicherte Korridore mit einer Metrik-ID AUSSERHALB von
+ * `ROUTE_METRIC_DEFS ∪ extraDefs` werden NICHT verworfen, sondern in
+ * `unknownCorridors` gesammelt — reiner Pass-Through, keine UI-Zeile, aber
+ * `buildCorridorSavePayload` haengt sie unveraendert an `corridors[]` an.
+ * Exakt dasselbe Muster wie `buildComparePool` (kein stiller Datenverlust,
+ * BUG-DATALOSS-Klasse).
  */
 export function buildRoutePool(
 	corridors: Corridor[],
-	activeCatalogMetrics?: WeatherConfigMetric[]
+	activeCatalogMetrics?: WeatherConfigMetric[],
+	extraDefs: RouteMetricDef[] = []
 ): {
 	rows: CorridorRowState[];
 	poolLeft: RouteMetricDef[];
+	unknownCorridors: Corridor[];
 } {
 	const present = new Map(corridors.map((c) => [c.metric, c]));
 	const allowed = activeCatalogMetrics
@@ -123,28 +146,44 @@ export function buildRoutePool(
 		: null;
 	const rows: CorridorRowState[] = [];
 	const poolLeft: RouteMetricDef[] = [];
-	for (const def of ROUTE_METRIC_DEFS) {
+	const seen = new Set<string>();
+	for (const def of [...ROUTE_METRIC_DEFS, ...extraDefs]) {
+		// Duplikat-Schutz (AC-2): jede Metrik-ID erscheint hoechstens einmal —
+		// auch wenn ein Aufrufer eine bereits fest verdrahtete ID nachreicht.
+		if (seen.has(def.metric)) continue;
+		seen.add(def.metric);
+		const gated = ROUTE_METRIC_DEF_BY_ID.has(def.metric);
 		const c = present.get(def.metric);
 		if (c) {
 			rows.push({
 				metric: def.metric, label: def.label, unit: def.unit, scale: def.scale, step: def.step, note: def.note,
 				min: c.range[0], max: c.range[1], notify: c.notify, mark: c.mark,
 			});
-		} else if (allowed === null || allowed.has(def.metric)) {
+			// gematcht -> keine "unbekannte" Metrik mehr (F001).
+			present.delete(def.metric);
+		} else if (!gated || allowed === null || allowed.has(def.metric)) {
 			poolLeft.push(def);
 		}
 	}
-	return { rows, poolLeft };
+	return { rows, poolLeft, unknownCorridors: [...present.values()] };
 }
 
-/** Fuegt eine Zeile aus dem Pool hinzu, mit Kontext-Defaults fuer notify/mark. */
+/**
+ * Fuegt eine Zeile aus dem Pool hinzu, mit Kontext-Defaults fuer notify/mark.
+ *
+ * Issue #1425 (S2 Teil 1): die Definition wird zuerst im uebergebenen
+ * `poolLeft` gesucht — dort stehen seit der Katalog-Erweiterung auch die
+ * Zusatz-Metriken, die ROUTE_METRIC_DEF_BY_ID (die fest verdrahteten 6) nicht
+ * kennt. Ohne diesen Zweig waere jeder Klick auf eine neue Metrik ein
+ * lautloser Nulleffekt.
+ */
 export function addRow(
 	rows: CorridorRowState[],
 	poolLeft: RouteMetricDef[],
 	metric: string,
 	ctxDefaults: { notify: boolean; mark: boolean } = ROUTE_CTX_DEFAULTS
 ): { rows: CorridorRowState[]; poolLeft: RouteMetricDef[] } {
-	const def = ROUTE_METRIC_DEF_BY_ID.get(metric);
+	const def = poolLeft.find((m) => m.metric === metric) ?? ROUTE_METRIC_DEF_BY_ID.get(metric);
 	if (!def) return { rows, poolLeft };
 	const newRow: CorridorRowState = {
 		metric: def.metric, label: def.label, unit: def.unit, scale: def.scale, step: def.step, note: def.note,
@@ -182,13 +221,22 @@ export function validateCorridorRows(rows: CorridorRowState[]): { valid: boolean
  * entfernte Zeilen) — eine zweite, redundante Bedienung derselben Einstellung,
  * die der Reiter *Alarme* bereits vollwertig anbietet. Ein Speichern hier
  * laesst die dort gesetzte Empfindlichkeit exakt unveraendert (AC-2/AC-3).
+ *
+ * F001-Fix (Adversary HIGH, #1425 S2): `unknownCorridors` (aus
+ * `buildRoutePool`) werden unveraendert an `corridors[]` angehaengt — analog
+ * `buildCompareCorridorSavePayload`. Ohne Parameter (Alt-Aufrufer) bleibt das
+ * Verhalten unveraendert.
  */
 export function buildCorridorSavePayload(
 	rows: CorridorRowState[],
-	originalLevels: Record<string, SensLevel | undefined> | undefined
+	originalLevels: Record<string, SensLevel | undefined> | undefined,
+	unknownCorridors: Corridor[] = []
 ): { corridors: Corridor[]; metric_alert_levels: Record<string, SensLevel> } {
 	return {
-		corridors: rows.map((r) => ({ metric: r.metric, range: [r.min, r.max], notify: r.notify, mark: r.mark })),
+		corridors: [
+			...rows.map((r): Corridor => ({ metric: r.metric, range: [r.min, r.max], notify: r.notify, mark: r.mark })),
+			...unknownCorridors,
+		],
 		metric_alert_levels: { ...(originalLevels as Record<string, SensLevel>) },
 	};
 }

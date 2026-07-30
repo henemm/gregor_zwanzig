@@ -12,7 +12,12 @@
 
 import { api } from '$lib/api';
 import type { CompareMetricCatalogEntry, CompareMetricCatalogResponse } from '$lib/types';
-import { _COMPARE_DEFAULTS, type CompareMetricDef } from './corridorEditorState.ts';
+import {
+	_COMPARE_DEFAULTS,
+	ROUTE_CORRIDOR_CATALOG_IDS,
+	type CompareMetricDef,
+	type RouteMetricDef
+} from './corridorEditorState.ts';
 // Issue #1373 (S2 Scheibe B): dieselbe Antwort liefert auch die Auswahllisten-
 // Form samt Herkunftsfeldern (metric_id/aggregation) — eine Anfrage, zwei
 // Ableitungen, kein zweiter Fetch.
@@ -94,6 +99,61 @@ function fetchCompareMetricCatalogOnce(): Promise<CompareMetricCatalogResponse> 
 
 export function loadCompareMetricCatalog(): Promise<CompareMetricDef[]> {
 	return fetchCompareMetricCatalogOnce().then(buildCompareMetricDefs);
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// Issue #1425 (Schritt 2, Teil 1): derselbe Katalog speist jetzt auch den
+// Trip-Reiter "Wertebereiche" (context="route"). Spec:
+// docs/specs/modules/fix_1425_s2_corridor_pool.md.
+// ════════════════════════════════════════════════════════════════════════
+
+// Die SCHLUESSEL der Namensraum-Bruecke sind exakt die Katalog-IDs, die die
+// fest verdrahteten ROUTE_METRIC_DEFS bereits abdecken (gust, precipitation,
+// temperature, thunder, snowfall_limit, freezing_level). Abgeleitet statt
+// dupliziert — sonst driftet die Liste beim naechsten Bruecken-Eintrag.
+// "thunder" faellt dadurch automatisch mit heraus: die Gewitter-Skala bleibt
+// die alte Prozent-Definition, die Ordinal-Vereinheitlichung ist ein
+// separater Folge-Workflow (AC-3).
+const _ROUTE_COVERED_METRIC_IDS = new Set(Object.keys(ROUTE_CORRIDOR_CATALOG_IDS));
+
+/**
+ * Reiner, testbarer Mapper: Katalog-Eintraege -> die ZUSAETZLICHEN
+ * Trip-Wertebereichs-Definitionen (RouteMetricDef), also alles ausser
+ *  - was die alten 6 ROUTE_METRIC_DEFS ueber `metric_id` schon abdecken (AC-2/AC-3),
+ *  - was als Von/Bis-Bereich nicht darstellbar ist (_COMPARE_RANGE_UNSUPPORTED).
+ *
+ * Katalog-Reihenfolge bleibt erhalten (keine eigene Sortierung).
+ * `defaultMin`/`defaultMax` kommen aus derselben `_COMPARE_DEFAULTS`-Tabelle
+ * wie im Ortsvergleich — verhindert strukturell den #1424-Fehler (beidseitig
+ * offene Zeile blockt validateCorridorRows direkt nach dem Hinzufuegen).
+ */
+export function buildRouteMetricDefsFromCatalog(
+	entries: CompareMetricCatalogEntry[]
+): RouteMetricDef[] {
+	return (entries ?? [])
+		.filter((entry: CompareMetricCatalogEntry) =>
+			!_ROUTE_COVERED_METRIC_IDS.has(entry.metric_id ?? '')
+			&& !_COMPARE_RANGE_UNSUPPORTED.has(entry.key))
+		.map((entry: CompareMetricCatalogEntry) => {
+			const defaults = _COMPARE_DEFAULTS[entry.key] ?? { defaultMin: null, defaultMax: null };
+			return {
+				metric: entry.key,
+				label: entry.label,
+				unit: entry.unit ?? '',
+				scale: [entry.rangeMin ?? 0, entry.rangeMax ?? 100] as [number, number],
+				step: entry.step ?? 1,
+				defaultMin: defaults.defaultMin,
+				defaultMax: defaults.defaultMax,
+			};
+		});
+}
+
+/** Katalog laden (geteilter Promise-Cache, kein zweiter Request) und als
+ *  Zusatz-Definitionen fuer buildRoutePool(..., extraDefs) abbilden. */
+export function loadRouteExtraMetricDefs(): Promise<RouteMetricDef[]> {
+	return fetchCompareMetricCatalogOnce().then((r) =>
+		buildRouteMetricDefsFromCatalog(r.metrics ?? [])
+	);
 }
 
 /**

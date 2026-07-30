@@ -2997,7 +2997,7 @@ wenn ein Wert den Bereich verlässt — steuert weiterhin ausschließlich den be
 ```go
 // internal/model/trip.go + internal/model/compare_preset.go (Go)
 type Corridor struct {
-    Metric string     `json:"metric"`           // kontextabhängige Metrik-ID (route: AlertableMetrics; vergleich: Compare-Summary-Keys)
+    Metric string     `json:"metric"`           // kontextabhängige Metrik-ID (route: seit #1425 S2 die 6 AlertableMetrics + 17 weitere Katalog-Größen aus GET /api/compare/metrics, thunder_level ausgenommen; vergleich: Compare-Summary-Keys)
     Range  [2]*float64 `json:"range"`            // [min, max]; nil-Seite = offen (einseitig erlaubt)
     Notify bool       `json:"notify"`
     Mark   bool       `json:"mark"`
@@ -3031,7 +3031,7 @@ export interface Corridor {
 
 | Feld | Typ | Beschreibung |
 |------|-----|------------|
-| metric | string | Metrik-ID, kontextabhängig: `route` nutzt die 6 `AlertableMetrics` (`wind_gust`, `precipitation_sum`, `temperature_min`, `temperature_max`, `thunder_level`, `snow_line`), `vergleich` nutzt die 10 Compare-Summary-Keys (`temp_max_c`, `temp_min_c`, `wind_max_kmh`, `gust_max_kmh`, `precip_sum_mm`, `thunder_level_max`, `visibility_min_m`, `snow_new_sum_cm`, `cape_max_jkg`, `freezing_level_m`). Beide Räume bleiben in Phase 1 getrennt, keine Vereinheitlichung. `confidence_pct` (`selectable=false`, #710) darf in keinem der beiden Pools erscheinen. |
+| metric | string | Metrik-ID, kontextabhängig: `route` bot ursprünglich (Issue #1231) nur die 6 `AlertableMetrics` (`wind_gust`, `precipitation_sum`, `temperature_min`, `temperature_max`, `thunder_level`, `snow_line`) — seit #1425 S2 kommen 17 weitere Größen aus dem zentralen Katalog (`GET /api/compare/metrics`) hinzu (23 insgesamt), `thunder_level` bleibt bewusst ausgenommen (weiterhin Prozent-Skala statt Katalog-Ordinalskala; Vereinheitlichung ist ein separater Folge-Workflow). `vergleich` nutzt die 10 Compare-Summary-Keys (`temp_max_c`, `temp_min_c`, `wind_max_kmh`, `gust_max_kmh`, `precip_sum_mm`, `thunder_level_max`, `visibility_min_m`, `snow_new_sum_cm`, `cape_max_jkg`, `freezing_level_m`) für `notify`; darüber hinaus stehen beiden Kontexten inzwischen dieselben Katalog-Größen als `mark`-fähige Wertebereiche zur Verfügung. `confidence_pct` (`selectable=false`, #710) darf in keinem der beiden Pools erscheinen. |
 | range | `[min\|null, max\|null]` | Wertebereich; jede Seite unabhängig auf `null` (offen) setzbar, mind. eine Seite muss gesetzt sein (Editor-Validierung, UI-seitig — Slice 3+). `corridorInside(v, min, max)`: `v==null → null`; `v<min → false`; `v>max → false`; sonst `true` (`<`/`>` exklusiv geprüft, Grenzwert exakt gilt als „innen"). |
 | notify | bool | Reiner an/aus-Schalter auf den bestehenden Δ-Wächter — **keine neue Trigger-Schwelle**. `true` → `display_config.metric_alert_levels[metric]` wird auf die zuletzt bekannte Stufe zurückgesetzt (Default `"standard"`); `false` → auf `"off"`. Die Stufen-Feinwahl (entspannt/standard/sensibel) ist im CorridorEditor nicht einzeln wählbar (Known Limitation, gespeicherter Wert bleibt erhalten). |
 | mark | bool | Markiert im Compare-Mail-Renderer (`compare_html.py`) die Zelle grün, solange `corridorInside(value)===true` — additiv zur bestehenden Severity-Färbung, ohne Einfluss auf `comparison_scoring.py::calculate_score()`. |
