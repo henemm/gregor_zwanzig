@@ -269,6 +269,98 @@ describe('#1373 AC-6: metric_id/aggregation werden unveraendert durchgereicht', 
 	});
 });
 
+// ---------------------------------------------------------------------------
+// TDD RED-Begleitung — Issue #1411 (Epic #1372 S4b Scheibe 1), AC-5/AC-6.
+//
+// compareMetricSelection.ts selbst ist von #1411 UNVERAENDERT (s. Spec §
+// Dependencies: "unverändert, nur als Beleg, dass ... Speicherformat von
+// dieser Änderung nicht berührt werden"). Diese beiden Tests sind deshalb
+// bewusst KEIN RED-Nachweis fuer neuen Code, sondern der geforderte Beleg,
+// dass der Persistenzpfad die Mengen-Wahl schon heute verlustfrei traegt —
+// sie duerfen bereits GRUEN sein (Team-Lead-Auftrag: "AC-5/AC-6 -> Roundtrip
+// ueber den echten Persistenzpfad, Neuformat-Fixture").
+//
+// Spec: docs/specs/modules/feat_1411_s4b_grundauswahl.md § AC-5, AC-6
+// ---------------------------------------------------------------------------
+
+describe('#1411 AC-5: Speichern-Laden-Roundtrip — nur Tiefstwert aktiv bleibt nur Tiefstwert', () => {
+	test('temp_min_c aktiv, temp_max_c aus: Roundtrip ueber toStoredActiveMetrics/normalizeStoredActiveMetrics haelt genau das', async () => {
+		let mod: typeof import('../compareMetricSelection.ts');
+		try {
+			mod = await import(MODULE_SPECIFIER);
+		} catch (e) {
+			assert.fail(`AC-5 FAIL: compareMetricSelection.ts kann nicht importiert werden: ${(e as Error).message}`);
+			return;
+		}
+		const catalog = mod.toCompareSelectionEntries(CATALOG_WITH_ORIGIN_FIXTURE as unknown as Parameters<typeof mod.toCompareSelectionEntries>[0]);
+
+		const activeKeysBeforeSave = ['temp_min_c'];
+		const stored = mod.toStoredActiveMetrics(activeKeysBeforeSave, catalog);
+		assert.deepEqual(
+			stored,
+			[{ metric_id: 'temperature', aggregation: 'min' }],
+			'AC-5 FAIL: Schreibuebersetzung erzeugt nicht das erwartete Neuformat-Objekt fuer den Tiefstwert'
+		);
+
+		// "Neu laden": derselbe Speicherwert kommt als display_config.active_metrics zurueck.
+		const activeKeysAfterReload = mod.normalizeStoredActiveMetrics(stored, catalog);
+		assert.deepEqual(
+			activeKeysAfterReload,
+			['temp_min_c'],
+			'AC-5 FAIL: nach dem Roundtrip ist nicht mehr ausschliesslich der Tiefstwert aktiv'
+		);
+		assert.ok(
+			!activeKeysAfterReload?.includes('temp_max_c'),
+			'AC-5 FAIL: der Hoechstwert wurde durch den Roundtrip faelschlich mit-aktiviert (Datenverlust-Gegenstueck)'
+		);
+	});
+});
+
+describe('#1411 AC-6: bestehender Vergleich im Neuformat wird ohne Migration korrekt angezeigt', () => {
+	test('display_config.active_metrics bereits {metric_id, aggregation} -> beide Kaestchen der Temperatur-Gruppe korrekt angehakt, kein Schreibvorgang noetig', async () => {
+		let mod: typeof import('../compareMetricSelection.ts');
+		try {
+			mod = await import(MODULE_SPECIFIER);
+		} catch (e) {
+			assert.fail(`AC-6 FAIL: compareMetricSelection.ts kann nicht importiert werden: ${(e as Error).message}`);
+			return;
+		}
+		const catalog = mod.toCompareSelectionEntries(CATALOG_WITH_ORIGIN_FIXTURE as unknown as Parameters<typeof mod.toCompareSelectionEntries>[0]);
+
+		// Regelfall seit #1373: bereits im Zielformat gespeichert (keine Migration).
+		const storedActiveMetrics: Array<{ metric_id: string; aggregation: string }> = [
+			{ metric_id: 'temperature', aggregation: 'max' },
+			{ metric_id: 'temperature', aggregation: 'min' },
+		];
+
+		const displayedKeys = mod.normalizeStoredActiveMetrics(storedActiveMetrics, catalog);
+		assert.deepEqual(
+			displayedKeys,
+			['temp_max_c', 'temp_min_c'],
+			'AC-6 FAIL: das bereits im Zielformat gespeicherte Paar wird nicht korrekt auf beide Kaestchen abgebildet'
+		);
+	});
+
+	test('keine Schreiboperation: dieselbe Eingabe liefert bei zweitem Aufruf dasselbe Ergebnis (rein lesend)', async () => {
+		let mod: typeof import('../compareMetricSelection.ts');
+		try {
+			mod = await import(MODULE_SPECIFIER);
+		} catch (e) {
+			assert.fail(`AC-6 FAIL: compareMetricSelection.ts kann nicht importiert werden: ${(e as Error).message}`);
+			return;
+		}
+		const catalog = mod.toCompareSelectionEntries(CATALOG_WITH_ORIGIN_FIXTURE as unknown as Parameters<typeof mod.toCompareSelectionEntries>[0]);
+		const storedActiveMetrics: Array<{ metric_id: string; aggregation: string }> = [
+			{ metric_id: 'temperature', aggregation: 'min' },
+		];
+
+		const first = mod.normalizeStoredActiveMetrics(storedActiveMetrics, catalog);
+		const second = mod.normalizeStoredActiveMetrics(storedActiveMetrics, catalog);
+		assert.deepEqual(first, second, 'AC-6 FAIL: wiederholtes Laden liefert unterschiedliche Ergebnisse — kein reiner Lesepfad');
+		assert.deepEqual(storedActiveMetrics, [{ metric_id: 'temperature', aggregation: 'min' }], 'AC-6 FAIL: die Eingabe wurde mutiert');
+	});
+});
+
 describe('Robustheit: leere/fehlende metrics -> leeres Array, kein Crash', () => {
 	test('metrics: [] -> []', async () => {
 		let mod: typeof import('../compareMetricSelection.ts');

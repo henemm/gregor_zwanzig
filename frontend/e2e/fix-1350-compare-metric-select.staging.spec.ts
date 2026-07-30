@@ -29,13 +29,35 @@ function collectPutRequests(page: Page, urlSubstring: string): Request[] {
 	return puts;
 }
 
+// Issue #1411 (Epic #1372 S4b Scheibe 1): der Katalog-Endpoint liefert weiterhin
+// 26 flache Zeilen; die Grundauswahl-Karte gruppiert sie seit #1411 nach
+// `metric_id` zu 24 Zeilen (eine je Wettergroesse, s.
+// compareAggregationGrouping.ts). Lokale Nachbildung derselben Gruppierung
+// unabhaengig vom Frontend-Modul — der Test soll das SICHTBARE Ergebnis gegen
+// den echten Endpoint pruefen, nicht gegen eine importierte Implementierung.
+type CatalogEntry = { key: string; label: string; metric_id: string; aggregation: string };
+function groupByMetricId(metrics: CatalogEntry[]) {
+	const groups: { metric_id: string; label: string; options: CatalogEntry[] }[] = [];
+	const byId = new Map<string, (typeof groups)[number]>();
+	for (const m of metrics) {
+		let g = byId.get(m.metric_id);
+		if (!g) {
+			g = { metric_id: m.metric_id, label: m.label, options: [] };
+			byId.set(m.metric_id, g);
+			groups.push(g);
+		}
+		g.options.push(m);
+	}
+	return groups;
+}
+
 test.describe('Issue #1350 Teil 2 AC-1: Compare-Auswahlliste aus GET /api/compare/metrics (Staging)', () => {
 	test.beforeEach(async ({ page, baseURL }) => {
 		assertNotProdBaseURL(baseURL ?? '');
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 
-	test('AC-1: Auswahlliste zeigt so viele Zeilen wie der Endpoint liefert, in Endpoint-Reihenfolge', async ({
+	test('AC-1: Auswahlliste zeigt eine Zeile je Wettergroesse, gruppiert wie der Endpoint sie liefert (Issue #1411)', async ({
 		page,
 		request
 	}) => {
@@ -53,21 +75,27 @@ test.describe('Issue #1350 Teil 2 AC-1: Compare-Auswahlliste aus GET /api/compar
 			// nicht die alte COMPARE_METRIC_DEFS-Konstante.
 			const metricsRes = await request.get('/api/compare/metrics');
 			expect(metricsRes.ok(), `GET /api/compare/metrics HTTP ${metricsRes.status()}`).toBeTruthy();
-			const catalog = (await metricsRes.json()) as { metrics: Array<{ key: string; label: string }> };
+			const catalog = (await metricsRes.json()) as { metrics: CatalogEntry[] };
+			const groups = groupByMetricId(catalog.metrics);
 
 			await page.goto(`/compare/${preset.id}?tab=wetter-metriken`);
 			const list = page.locator('[data-testid="weather-metrics-vergleich-list"]');
 			await list.waitFor({ state: 'visible', timeout: 15000 });
 
 			const rows = list.locator('[data-testid^="weather-metrics-vergleich-row-"]');
-			await expect(rows).toHaveCount(catalog.metrics.length, { timeout: 10000 });
+			await expect(rows).toHaveCount(groups.length, { timeout: 10000 });
 
-			for (let i = 0; i < catalog.metrics.length; i++) {
-				const row = page.locator(
-					`[data-testid="weather-metrics-vergleich-row-${catalog.metrics[i].key}"]`
-				);
+			for (const group of groups) {
+				const row = page.locator(`[data-testid="weather-metrics-vergleich-row-${group.metric_id}"]`);
 				await expect(row).toBeVisible();
-				await expect(row).toContainText(catalog.metrics[i].label);
+				await expect(row).toContainText(group.label);
+				if (group.options.length > 1) {
+					for (const o of group.options) {
+						await expect(
+							row.locator(`[data-testid="weather-metrics-vergleich-option-${group.metric_id}-${o.aggregation}"]`)
+						).toBeVisible();
+					}
+				}
 			}
 
 			await page.screenshot({
@@ -101,9 +129,13 @@ test.describe('Issue #1350 Teil 2 AC-1: Compare-Auswahlliste aus GET /api/compar
 				.locator('[data-testid="weather-metrics-vergleich-list"]')
 				.waitFor({ state: 'visible', timeout: 15000 });
 
-			const row = page.locator('[data-testid="weather-metrics-vergleich-row-temp_max_c"]');
-			await expect(row).toBeVisible({ timeout: 10000 });
-			const checkbox = row.locator('input');
+			// Issue #1411: temp_max_c liegt seit der Gruppierung in der Zeile
+			// "temperature" (zwei unabhaengige Kaestchen statt zwei Zeilen) —
+			// das Options-Test-ID adressiert genau das Hoechstwert-Kaestchen.
+			const checkbox = page.locator(
+				'[data-testid="weather-metrics-vergleich-option-temperature-max"] input'
+			);
+			await expect(checkbox).toBeVisible({ timeout: 10000 });
 			const wasChecked = await checkbox.isChecked();
 
 			const puts = collectPutRequests(page, `/api/compare/presets/${preset.id}`);
@@ -147,10 +179,9 @@ test.describe('Issue #1350 Teil 2 AC-1: Compare-Auswahlliste aus GET /api/compar
 			await page
 				.locator('[data-testid="weather-metrics-vergleich-list"]')
 				.waitFor({ state: 'visible', timeout: 15000 });
-			const rowAfterReload = page.locator(
-				'[data-testid="weather-metrics-vergleich-row-temp_max_c"]'
+			const checkboxAfterReload = page.locator(
+				'[data-testid="weather-metrics-vergleich-option-temperature-max"] input'
 			);
-			const checkboxAfterReload = rowAfterReload.locator('input');
 			await expect(checkboxAfterReload).toHaveJSProperty('checked', !wasChecked, { timeout: 8000 });
 
 			await page.screenshot({

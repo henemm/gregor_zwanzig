@@ -219,4 +219,57 @@ test.describe('F2a: /compare/new Aktivieren-Gate + Create-POST', () => {
 		await expect(page.locator('[data-testid="channel-tab-email"]')).toHaveCount(0);
 		await expect(page.locator('[data-testid="compare-step4-layout-preview"]')).toHaveCount(0);
 	});
+
+	// ── AC-8 (Issue #1411, Epic #1372 S4b Scheibe 1): die Grundauswahl-Karte
+	// zeigt Temperatur seit dieser Lieferung als EINE Zeile mit zwei
+	// unabhängigen Kästchen (Höchst-/Tiefstwert) — die Reihenfolge-Liste
+	// darunter bleibt davon unberührt: zwei getrennte, unabhängig sortierbare
+	// Zeilen "Temperatur / Maximum" und "Temperatur / Minimum" (bewusster
+	// Bruch in der 1:1-Beziehung, s. Spec § Known Limitations).
+	test('AC-8 (#1411): Temperatur Höchst- und Tiefstwert bleiben in der Reihenfolge-Liste zwei getrennte Zeilen', async ({
+		page
+	}) => {
+		const [nameA, nameB] = await makeTwoLocations(page);
+		await page.goto('/compare/new');
+		await page.waitForLoadState('networkidle');
+		await page.locator('[data-testid="compare-editor-name"]').fill('Slice4-AC8-1411 ' + Date.now());
+
+		await page.locator('[data-testid="compare-editor-tab-orte"]:visible').first().click();
+		const lib = page.locator('[data-testid="compare-step2-library"]:visible').first();
+		await lib.waitFor({ timeout: 8_000 });
+		for (const n of [nameA, nameB]) {
+			await lib.getByText(n, { exact: true }).click();
+		}
+
+		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').first().click();
+		const maxBox = page
+			.locator('.cm-desktop [data-testid="weather-metrics-vergleich-option-temperature-max"] input')
+			.first();
+		const minBox = page
+			.locator('.cm-desktop [data-testid="weather-metrics-vergleich-option-temperature-min"] input')
+			.first();
+		await expect(maxBox).toBeVisible({ timeout: 10_000 });
+		await expect(minBox).toBeVisible({ timeout: 10_000 });
+
+		// Beide unabhängig anhaken (AC-2/AC-3-Verhalten der Grundauswahl).
+		if (!(await maxBox.isChecked())) await maxBox.click();
+		if (!(await minBox.isChecked())) await minBox.click();
+		await expect(maxBox).toBeChecked();
+		await expect(minBox).toBeChecked();
+
+		// Reihenfolge-Liste der Grundauswahl (NICHT die Stundenverlauf-
+		// Reihenfolge im selben Tab — deshalb Scoping auf den eigenen
+		// Container `weather-metrics-vergleich-reihenfolge`).
+		const reihenfolge = page
+			.locator('.cm-desktop [data-testid="weather-metrics-vergleich-reihenfolge"]')
+			.first();
+		const maxRow = reihenfolge.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="temp_max_c"]');
+		const minRow = reihenfolge.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="temp_min_c"]');
+		await expect(maxRow).toBeVisible({ timeout: 8_000 });
+		await expect(minRow).toBeVisible({ timeout: 8_000 });
+		expect(await maxRow.count(), 'Höchstwert bleibt eine eigenständige Zeile').toBe(1);
+		expect(await minRow.count(), 'Tiefstwert bleibt eine eigenständige Zeile').toBe(1);
+		await expect(maxRow).toContainText('Maximum');
+		await expect(minRow).toContainText('Minimum');
+	});
 });

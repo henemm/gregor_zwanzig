@@ -149,19 +149,31 @@ async function openMetricsTab(page: Page, id: string): Promise<Locator> {
 
 /** Die tatsächlich ANGEHAKTEN Metriken der Grundauswahl — aus dem DOM-Zustand
  *  der Checkboxen, nicht aus einer Datenquelle (genau das, was der Nutzer
- *  sieht). */
+ *  sieht).
+ *
+ *  Issue #1411 (Epic #1372 S4b Scheibe 1): die Grundauswahl gruppiert seit
+ *  dieser Lieferung nach `metric_id` — eine Zeile kann mehrere unabhängige
+ *  Kästchen tragen (Temperatur, gefühlte Temperatur). Jedes Kästchen trägt
+ *  `data-metric-key` mit dem echten Katalog-Schlüssel (z.B. `temp_max_c`),
+ *  unabhängig davon, ob es das einzige Kästchen der Zeile ist oder eines von
+ *  mehreren — der Helper liest deshalb direkt diese Kästchen statt den
+ *  Zeilen-Test-ID zu parsen (der jetzt `metric_id` statt `key` trägt). */
 async function checkedMetrics(panel: Locator): Promise<string[]> {
 	return panel
-		.locator('[data-testid^="weather-metrics-vergleich-row-"]')
-		.evaluateAll((els) =>
-			els
-				.filter((el) => (el.querySelector('input[type="checkbox"]') as HTMLInputElement)?.checked)
-				.map((el) => (el.getAttribute('data-testid') ?? '').replace('weather-metrics-vergleich-row-', ''))
+		.locator('[data-testid^="weather-metrics-vergleich-row-"] input[type="checkbox"]')
+		.evaluateAll((inputs) =>
+			(inputs as HTMLInputElement[])
+				.filter((el) => el.checked)
+				.map((el) => el.getAttribute('data-metric-key') ?? '')
+				.filter(Boolean)
 		);
 }
 
-function metricRow(panel: Locator, key: string): Locator {
-	return panel.getByTestId(`weather-metrics-vergleich-row-${key}`);
+/** Zeile ueber die (seit #1411) `metric_id`-basierte Test-ID adressieren —
+ *  fuer Groessen mit genau einer Auswertung (hier: `wind`) ist die ganze
+ *  Zeile weiterhin klickbar (Label-wrapped Checkbox, unveraendertes Verhalten). */
+function metricRow(panel: Locator, metricId: string): Locator {
+	return panel.getByTestId(`weather-metrics-vergleich-row-${metricId}`);
 }
 
 test.describe('Issue #1373 S2 Scheibe B: umgestellte Metrik-Auswahl im Hub', () => {
@@ -205,7 +217,7 @@ test.describe('Issue #1373 S2 Scheibe B: umgestellte Metrik-Auswahl im Hub', () 
 
 		// (3) EINE echte Geste: eine weitere Größe anhaken → genau EIN PUT, und
 		// der Payload trägt die vollständige Auswahl im neuen Format.
-		await metricRow(panel, 'wind_max_kmh').click();
+		await metricRow(panel, 'wind').click();
 
 		await expect
 			.poll(() => puts.length, {
@@ -281,7 +293,7 @@ test.describe('Issue #1373 S2 Scheibe B: umgestellte Metrik-Auswahl im Hub', () 
 			await route.continue();
 		});
 
-		await metricRow(panel, 'wind_max_kmh').click();
+		await metricRow(panel, 'wind').click();
 		// Fehlerhinweis abwarten, damit der Rücksetzpfad sicher gelaufen ist.
 		await page.waitForTimeout(2_000);
 

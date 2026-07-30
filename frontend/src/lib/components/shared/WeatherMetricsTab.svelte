@@ -82,6 +82,9 @@
 		materializeActiveMetricKeys,
 		toggleCompareMetricKeyFromState
 	} from './weather-metrics-tab/compareMetricOrder.ts';
+	// Issue #1411 (Epic #1372 S4b Scheibe 1): flache Katalogantwort -> eine
+	// Zeile je Wettergroesse (24 statt 26 Zeilen).
+	import { groupCompareCatalog } from './weather-metrics-tab/compareAggregationGrouping.ts';
 
 	interface Template {
 		id: string;
@@ -902,20 +905,46 @@
 				<Eyebrow style="margin-bottom:4px">Wetter-Metriken</Eyebrow>
 				<p class="option-hint">Nur angewählte Metriken erscheinen in der Vergleichs-Mail.</p>
 				<div class="vergleich-metric-list" data-testid="weather-metrics-vergleich-list">
-					{#each compareCatalog as entry (entry.metric)}
-						<label class="vergleich-metric-row" data-testid="weather-metrics-vergleich-row-{entry.metric}">
-							<input
-								type="checkbox"
-								checked={materializedActiveMetricKeys.includes(entry.metric)}
-								onchange={() => toggleCompareMetric(entry.metric)}
-							/>
-							<span>{entry.label}</span>
-							<!-- Issue #1401 (A1): Auswertung als eigenes Element neben dem
-							     Namen, nicht als zusammengesetzter String. -->
-							{#if entry.aggregation_label}
-								<span class="vergleich-aggregation" data-testid="weather-metrics-vergleich-aggregation-{entry.metric}">{entry.aggregation_label}</span>
-							{/if}
-						</label>
+					<!-- Issue #1411 (Epic #1372 S4b Scheibe 1): eine Zeile je
+					     Wettergroesse (24 statt 26) — Groessen mit nur einer
+					     Auswertung (22 von 24) bleiben die einfache Checkbox-Zeile
+					     von heute (kein wirkungsloses Bedienelement, AC-4); Groessen
+					     mit mehreren Auswertungen (Temperatur, gefuehlte Temperatur)
+					     bekommen je Auswertung ein unabhaengiges Kaestchen (AC-2/
+					     AC-3, ueber AggregationMetricRow mode='multiple'). Jedes
+					     Kaestchen ruft weiterhin denselben Umschalt-Pfad mit dem
+					     jeweiligen einzelnen Katalog-key auf — Speicherformat/
+					     Reihenfolge unveraendert. -->
+					{#each groupCompareCatalog(compareCatalog) as group (group.metric_id)}
+						{#if group.options.length === 1}
+							<label class="vergleich-metric-row" data-testid="weather-metrics-vergleich-row-{group.metric_id}">
+								<input
+									type="checkbox"
+									checked={materializedActiveMetricKeys.includes(group.options[0].key)}
+									onchange={() => toggleCompareMetric(group.options[0].key)}
+									data-metric-key={group.options[0].key}
+								/>
+								<span>{group.label}</span>
+								<!-- Issue #1401 (A1): Auswertung als eigenes Element neben dem
+								     Namen, nicht als zusammengesetzter String. -->
+								{#if group.options[0].aggregation_label}
+									<span class="vergleich-aggregation" data-testid="weather-metrics-vergleich-aggregation-{group.metric_id}">{group.options[0].aggregation_label}</span>
+								{/if}
+							</label>
+						{:else}
+							<table class="threshold-table vergleich-metric-row-multi" data-testid="weather-metrics-vergleich-row-{group.metric_id}">
+								<tbody>
+									<AggregationMetricRow
+										metricId={group.metric_id}
+										label={group.label}
+										mode="multiple"
+										options={group.options}
+										selectedChoiceIds={materializedActiveMetricKeys}
+										onToggle={(_mid, key) => toggleCompareMetric(key)}
+									/>
+								</tbody>
+							</table>
+						{/if}
 					{/each}
 				</div>
 			</Card>
@@ -938,7 +967,7 @@
 			     echte Werte); eine trip-geformte Beispieltabelle waere hier eine
 			     Attrappe (AC-8). -->
 			{#if sections.includes('reihenfolge')}
-			<Card padding={0}>
+			<Card padding={0} data-testid="weather-metrics-vergleich-reihenfolge">
 				<p class="option-hint reihenfolge-hint" data-testid="weather-metrics-vergleich-warn-hint">
 					Amtliche Warnungen stehen unabhängig von dieser Reihenfolge immer an
 					erster Stelle und sind deshalb nicht Teil der sortierbaren Liste.
@@ -1269,8 +1298,10 @@
 				<!-- 05 Auswertungen (Issue #1357): welche Tagesauswertung einer
 				     Wettergroesse in der Kachelzeile der Briefing-Mail erscheint.
 				     Nur Groessen mit mehr als einer berechenbaren Auswertung
-				     (AC-5); `context='vergleich'` bekommt den Abschnitt nicht
-				     (AC-9, zieht mit #1411 nach). -->
+				     (AC-5); `context='vergleich'` bekommt diesen Abschnitt
+				     dauerhaft nicht — die Compare-Mengen-Wahl entsteht mit #1411
+				     im bestehenden Abschnitt 'grundauswahl' (AC-9, PO-Entscheidung
+				     2026-07-29, s. weatherMetricsTabSections.ts). -->
 				{#if sections.includes('auswertungen') && aggregationMetricIds.length}
 				<Card padding={18}>
 					<Eyebrow style="margin-bottom:8px">05 — Auswertungen</Eyebrow>
@@ -1589,6 +1620,14 @@
 		font-size: 14px;
 		color: var(--g-ink);
 		cursor: pointer;
+	}
+	/* Issue #1411: Mehrfach-Options-Zeile (Temperatur/gefuehlte Temperatur)
+	   nutzt AggregationMetricRow (threshold-table-Machform) statt der
+	   einfachen Label-Zeile — braucht dieselbe Aussenabstand-Optik wie die
+	   einfachen Zeilen darueber/darunter. */
+	.vergleich-metric-row-multi {
+		width: 100%;
+		margin: 0;
 	}
 	@media (max-width: 899px) {
 		.metrics-tab-vergleich {
