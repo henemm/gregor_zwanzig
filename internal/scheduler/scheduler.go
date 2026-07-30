@@ -526,10 +526,11 @@ func (s *Scheduler) Status() map[string]any {
 		jobs = append(jobs, job)
 	}
 	return map[string]any{
-		"running":         true,
-		"jobs":            jobs,
-		"timezone":        s.cron.Location().String(),
-		"briefing_health": s.BriefingHealth(),
+		"running":             true,
+		"jobs":                jobs,
+		"timezone":            s.cron.Location().String(),
+		"briefing_health":     s.BriefingHealth(),
+		"warn_service_health": s.WarnServiceHealth(),
 	}
 }
 
