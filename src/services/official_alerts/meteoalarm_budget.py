@@ -15,11 +15,12 @@ blockieren). Anders als dort KEINE Prioritaetsstufen: ein einfaches An/Aus
 -- erschoepft heisst KEIN Index-Abruf mehr (der Index gilt dann als
 unvollstaendig, s. ``meteoalarm._get_cached_index``).
 
-``DEFAULT_DAILY_BUDGET`` ist ein KONSERVATIVER Schaetzwert, bis das echte
-Tageslimit morgen aus dem Egress-Zaehler
-(``data/diagnostics/warn_service_calls.jsonl``) abgelesen werden kann --
-ueber die Umgebungsvariable ``GZ_METEOALARM_DAILY_BUDGET`` OHNE Deploy
-aenderbar.
+``DEFAULT_DAILY_BUDGET`` ist der von der PO belegte GEMESSENE Wert (Issue
+#1397, Entscheidung 2026-07-30: reales Tageskontingent ~160 Abrufe/
+rollierendem 24h-Fenster, Default konservativ auf 100 gesetzt statt des
+frueheren Schaetzwerts 200) -- ueber die Umgebungsvariable
+``GZ_METEOALARM_DAILY_BUDGET`` OHNE Deploy aenderbar, falls sich der reale
+Wert weiter praezisiert.
 
 Adversary-Fund (Runde 2, 2026-07-27): das Tageskontingent laeuft NICHT auf
 einer UTC-Kalendertagsgrenze, sondern in einem ROLLIERENDEN 24h-Fenster ab
@@ -61,7 +62,7 @@ class MeteoAlarmBudgetGate:
     """Ein einfaches Tagesbudget UEBER ALLE Laender (AT+IT gemeinsam) --
     kein pro-Land-Zaehler, das Tageskontingent ist ein Konto der API."""
 
-    DEFAULT_DAILY_BUDGET = 200  # konservativ, s. Modul-Docstring
+    DEFAULT_DAILY_BUDGET = 100  # PO-belegter, gemessener Wert, s. Modul-Docstring
     # Deckel gegen einen absurden/manipulierten x-ratelimit-reset -- ein
     # einzelner falscher Header darf den Dienst nicht tagelang lahmlegen.
     # 48h statt 24h, damit der belegte reale Wert (86.399s ~ 24h) sicher

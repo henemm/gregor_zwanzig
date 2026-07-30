@@ -100,7 +100,7 @@ func aggregateWarnServiceCalls(path string) (map[string]*warnServiceAgg, bool) {
 
 // meteoalarmDefaultDailyBudget mirrors MeteoAlarmBudgetGate.DEFAULT_DAILY_BUDGET
 // (src/services/official_alerts/meteoalarm_budget.py).
-const meteoalarmDefaultDailyBudget = 200
+const meteoalarmDefaultDailyBudget = 100
 
 // meteoalarmDailyBudget mirrors MeteoAlarmBudgetGate.daily_budget: the
 // GZ_METEOALARM_DAILY_BUDGET env var (positive integer) overrides the

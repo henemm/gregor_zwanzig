@@ -215,7 +215,7 @@ def test_observed_reset_locks_even_far_below_own_call_counter():
     observed_at = datetime(2026, 7, 27, 10, 37, 0, tzinfo=timezone.utc)
     reset_at = observed_at + timedelta(seconds=86399)
 
-    _write_budget(calls=1)  # weit unter dem Budget (200)
+    _write_budget(calls=1)  # weit unter dem Budget (DEFAULT_DAILY_BUDGET)
     gate = MeteoAlarmBudgetGate()
     gate.record_observed_reset(reset_at.timestamp(), now=observed_at)
 
