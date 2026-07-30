@@ -373,4 +373,5 @@ beauftragt. Erwartete Schnittstelle, ohne Rückfragen umsetzbar:
 
 ## Changelog
 
+- 2026-07-30 (S2 live, `21bb90d5`): `WarnServiceHealth()` geliefert und in Prod verifiziert (AC-4 bis AC-8 gegen echte Daten, kein Mock). Ein vorangegangener Issue-Kommentar hatte S2 zwischenzeitlich für unnötig erklärt (direkter Cron-Journal-Read statt Go-Endpunkt) — diese Spec-Datei wurde dabei nicht entsprechend gekürzt. Nach Rücksprache mit `infra` (die den vereinfachten Weg bewusst abgelehnt hatten) wurde S2 wie ursprünglich hier beschrieben gebaut. Die "Schnittstelle für Teil B" war zusätzlich fehlerhaft (`meteoalarm_budget` als eigenes Geschwister-Feld statt verschachtelt in `warn_service_health`) — korrigiert, Commit `21dc3a21`. Teil B (henemm-infra#150) ist seither live, Issue #1422 geschlossen.
 - 2026-07-30: Initial spec erstellt — Issue #1422
