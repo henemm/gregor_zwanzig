@@ -33,8 +33,13 @@ import pytest
 
 from app.models import ForecastDataPoint, ThunderLevel
 from app.user import ComparisonResult, LocationResult, SavedLocation
+from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.comparison import render_compare_email, render_compare_sms
 from services.official_alerts.models import OfficialAlert
+
+# Issue #1362 S5b, Adversary-Fund Runde 5 (PO-Entscheidung 2026-07-30): gegen
+# die KONSTANTE pruefen, nicht gegen den alten Literalwert 140.
+_SMS_LIMIT = CHANNEL_LIMITS["sms"]["max_chars"]
 
 # 2026-07-27 ist ein Montag; Europe/Vienna liegt dann auf UTC+2 (Sommerzeit),
 # America/Denver auf UTC-6. Beide Versaetze sind != 0 -- ein UTC+0-Ort wuerde
@@ -788,4 +793,4 @@ def test_compare_sms_warn_marker_hour_uses_coordinate_resolved_timezone():
     assert "@12" not in sms, (
         f"Compare-SMS = {sms!r} zeigt die Serverzeit-Stunde '@12' statt der Ortszeit '@14'."
     )
-    assert len(sms) <= 140, f"SMS-Budget verletzt ({len(sms)} Zeichen): {sms!r}"
+    assert len(sms) <= _SMS_LIMIT, f"SMS-Budget verletzt ({len(sms)} Zeichen): {sms!r}"

@@ -27,12 +27,17 @@ import re
 from datetime import date, datetime
 
 from app.user import ComparisonResult, LocationResult, SavedLocation
+from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.comparison import (
     render_comparison_text, render_compare_sms, render_compare_telegram,
 )
 from output.renderers.email.compare_html import render_compare_html
 from services.official_alerts.models import OfficialAlert
 from services.report_config_resolver import resolve_compare_render_options
+
+# Issue #1362 S5b, Adversary-Fund Runde 5 (PO-Entscheidung 2026-07-30): gegen
+# die KONSTANTE pruefen, nicht gegen den alten Literalwert 140.
+_SMS_LIMIT = CHANNEL_LIMITS["sms"]["max_chars"]
 
 # ---------------------------------------------------------------------------
 # Fixtures (fest, ohne Netz) — Werte sind bewusst unspektakulaer; geprueft wird
@@ -307,13 +312,13 @@ class TestAC10SmsFollowsUserOrder:
         )
 
     def test_sms_stays_within_budget(self):
-        """Begleitschutz: die Reihenfolge-Aenderung darf das 140-Zeichen-Budget
-        nicht sprengen (Endgarantie von `render_compare_sms`)."""
+        """Begleitschutz: die Reihenfolge-Aenderung darf das SMS_LIMIT-
+        Zeichen-Budget nicht sprengen (Endgarantie von `render_compare_sms`)."""
         for order in (ORDER_A, ORDER_B, None):
             msg = render_compare_sms(
                 _result(), enabled_metrics=None if order is None else list(order)
             )
-            assert len(msg) <= 140, f"SMS zu lang ({len(msg)}):\n{msg}"
+            assert len(msg) <= _SMS_LIMIT, f"SMS zu lang ({len(msg)}):\n{msg}"
 
 
 class TestAC6OfficialAlertsStayFirst:

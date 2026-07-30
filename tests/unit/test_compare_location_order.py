@@ -30,9 +30,17 @@ from datetime import date, datetime, timezone
 
 from app.models import ForecastDataPoint
 from app.user import ComparisonResult, LocationResult, SavedLocation
+from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.comparison import (
     render_comparison_text, render_compare_sms, render_compare_telegram,
 )
+
+# Issue #1362 S5b, Adversary-Fund Runde 5 (PO-Entscheidung 2026-07-30): das
+# SMS-Zeichenbudget stieg von 140 (Byte-Grenze, faelschlich als Zeichengrenze
+# genutzt) auf 153 (verkettungssicherer GSM-7-Wert, s. channel_layout.py fuer
+# die Herleitung) -- gegen die KONSTANTE pruefen, nicht gegen den alten
+# Literalwert 140.
+SMS_LIMIT = CHANNEL_LIMITS["sms"]["max_chars"]
 from output.renderers.email.compare_html import render_compare_html
 
 # ---------------------------------------------------------------------------
@@ -282,19 +290,21 @@ class TestAC6AlphabeticalPresetUnchanged:
         """Nebenwirkung (Issue #1362 S5b, Adversary-Fund Runde 3, PO-Entscheidung
         2026-07-29): das neue Auswertungszeichen ('+' beim Hoechstwert von
         Groessen mit mehreren Auswertungen, hier `temp_max`) kostet 1 Zeichen
-        je Ort -- genug, um diese Drei-Orte-Fixture (vorher 138/140 Zeichen)
-        ueber das 140-Zeichen-Budget zu schieben. Der dritte Ort entfaellt
-        jetzt korrekt in den bestehenden Orts-Ueberlauf (` +1 Orte`) statt
-        stillschweigend abgeschnitten zu werden -- die Kern-Aussage dieses
-        Tests (Reihenfolge bleibt alphabetisch, kein Umsortieren) bleibt fuer
-        die GEZEIGTEN Orte gueltig, deshalb Praefix- statt Mengenvergleich."""
+        je Ort -- genug, um diese Drei-Orte-Fixture (damals 138/140 Zeichen)
+        ueber das damalige 140-Zeichen-Budget zu schieben. Praefix- statt
+        Mengenvergleich blieb seither bewusst bestehen: Runde 5
+        (PO-Entscheidung 2026-07-30, SMS_LIMIT 140 -> 153) UND die
+        Grad-Zeichen-Entfernung (Runde 4) sparen wieder genug Platz, dass
+        alle drei Orte erneut passen -- der Praefix-Vergleich deckt beide
+        Faelle (mit UND ohne Orts-Ueberlauf) korrekt ab, ohne bei der naechsten
+        Budget-Verschiebung erneut angefasst werden zu muessen."""
         msg = render_compare_sms(self._alpha_result())
         shown = _order_of(msg, self.FROZEN)
         assert shown == self.FROZEN[: len(shown)], (
             f"Gezeigte Orte {shown} weichen von der alphabetischen "
             f"Reihenfolge {self.FROZEN} ab. SMS: {msg!r}"
         )
-        assert len(msg) <= 140
+        assert len(msg) <= SMS_LIMIT
 
 
 # ---------------------------------------------------------------------------
@@ -363,7 +373,7 @@ class TestAC8SmsFollowsLocationOrder:
 
     def test_sms_stays_within_budget(self):
         """Begleitschutz (bleibt GRUEN): die Reihenfolge-Aenderung darf das
-        140-Zeichen-Budget in keinem Fall sprengen."""
+        SMS_LIMIT-Zeichen-Budget in keinem Fall sprengen."""
         for names in (SMS_ORDER_A, SMS_ORDER_B, NAMES_A):
             msg = render_compare_sms(_sms_result(names))
-            assert len(msg) <= 140, f"SMS zu lang ({len(msg)}):\n{msg}"
+            assert len(msg) <= SMS_LIMIT, f"SMS zu lang ({len(msg)}):\n{msg}"

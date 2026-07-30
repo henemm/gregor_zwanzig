@@ -448,11 +448,44 @@ def _sms_aggregation_sign(metric_id: str) -> str:
     return ""
 
 
+# Issue #1362 S5b, Adversary-Fund Runde 4 (PO-Entscheidung 2026-07-30, echter
+# Staging-Nachweis): das Grad-Zeichen `°` gehoert NICHT zum GSM-7-Zeichensatz
+# (GSM 03.38) -- sobald es in der SMS steht, kodiert der Betreiber die GANZE
+# Nachricht in UCS-2 (67 statt 153 Zeichen je Teil bei Verkettung), eine
+# STILLE Kostenverdopplung. Nur der SMS-Pfad ist betroffen: `unit="°C"/"°"`
+# bleibt im Katalog (`metric_catalog.py`) unveraendert -- Mail und Telegram
+# lesen es weiterhin korrekt ueber `format_value`/`_PLAIN_ROWS` direkt. Die
+# Umwandlung sitzt bewusst NUR hier, wo die SMS-Zelle gebaut wird.
+#
+# Zweiter, beim Bau des GSM-7-Waechters gefundener Fall (nicht Teil der
+# PO-Meldung, gleiche Fehlerklasse): `ThunderLevel.NONE` ist ein echter Wert
+# (kein fehlender, der schon vorher herausgefiltert wuerde) und formatiert
+# ueber `_THUNDER_LEVEL_LABEL` auf den Halbgeviertstrich "—" (U+2014) --
+# ebenfalls GSM-7-fremd. Ersetzt durch den GSM-7-eigenen Bindestrich "-"
+# (0x2D), der optisch denselben Platzhalter-Charakter traegt.
+_SMS_GSM7_UNSAFE_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    ("°", ""),
+    ("—", "-"),
+)
+
+
+def _sms_gsm7_safe(text: str) -> str:
+    """Ersetzt bekannte GSM-7-fremde Zeichen aus den geteilten
+    Werte-Formatierungsfunktionen (``_PLAIN_ROWS``) durch GSM-7-taugliche
+    Entsprechungen -- ausschliesslich fuer den SMS-Zellwert, NICHT fuer
+    Telegram/Mail (die denselben ``fmt``/``format_value`` unveraendert
+    nutzen)."""
+    for bad, good in _SMS_GSM7_UNSAFE_REPLACEMENTS:
+        text = text.replace(bad, good)
+    return text
+
+
 def _sms_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None:
     """"Kuerzel[+/-] Wert"-Zelle fuer ``metric_id`` (Issue #1362 Scheibe S5b,
     Spec Implementation Details Punkt 3). Wert+Formatierung kommen aus
-    derselben Quelle wie der Klartext-Teil (``_PLAIN_ROWS``/``_metric_value``);
-    das Kuerzel AUSSCHLIESSLICH aus dem zentralen Katalog
+    derselben Quelle wie der Klartext-Teil (``_PLAIN_ROWS``/``_metric_value``),
+    GSM-7-saniert ueber ``_sms_gsm7_safe`` (Adversary-Fund Runde 4); das
+    Kuerzel AUSSCHLIESSLICH aus dem zentralen Katalog
     (``metric_catalog.get_sms_code``), nie zur Laufzeit abgeleitet; das
     Auswertungszeichen (``+``/``-``) ausschliesslich ueber
     ``_sms_aggregation_sign``. ``None`` = kein Wert an diesem Ort ODER keine
@@ -471,7 +504,7 @@ def _sms_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None:
     if not code:
         return None
     code = f"{code}{_sms_aggregation_sign(metric_id)}"
-    return f"{code} {fmt(value)}"
+    return f"{code} {_sms_gsm7_safe(fmt(value))}"
 
 
 def _plain_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None:
@@ -726,8 +759,9 @@ def _sms_location_part(
     noch im ``+k`` gezaehlt — die SMS behauptete dann einen vollstaendigen
     Vergleich ueber weniger Orte, als er hat (#1269). ``render_compare_telegram``
     haelt Fehler-Orte aus demselben Grund als "Fehler: …"-Block sichtbar; die
-    SMS-Form ist nur knapper (140 Zeichen). Die Fehlerursache selbst traegt die
-    SMS bewusst nicht — sie steht in der E-Mail/Telegram-Fassung.
+    SMS-Form ist nur knapper (``CHANNEL_LIMITS["sms"]["max_chars"]``). Die
+    Fehlerursache selbst traegt die SMS bewusst nicht — sie steht in der
+    E-Mail/Telegram-Fassung.
 
     ASCII "n/a" statt eines Gedankenstrichs, weil ein Ort ohne Werte sonst wie
     ein Ort mit leerem Wert aussieht.
@@ -756,7 +790,8 @@ def _sms_location_part(
     (``resolve_location_tz``) -- ``SavedLocation.timezone`` mit Vorrang, sonst
     aus den Koordinaten. ``@Stunde`` entfaellt weiterhin ersatzlos, wenn sich
     ueberhaupt keine Zeitzone bestimmen laesst (bewusste SMS-Budget-Konvention,
-    140 Zeichen -- kein Platzhalter, s. Spec Known Limitations).
+    ``CHANNEL_LIMITS["sms"]["max_chars"]`` -- kein Platzhalter, s. Spec Known
+    Limitations).
     """
     name = loc_result.location.name
     if loc_result.error is not None:
@@ -800,14 +835,16 @@ def render_compare_sms(
 
     Reine Funktion, kein Score/Rang (AC-3). Budget aus
     ``CHANNEL_LIMITS["sms"]``: ``max_table_cols`` = 0 (keine Tabelle, flache
-    Zeile), ``max_chars`` = 140.
+    Zeile), ``max_chars`` (verkettungssicherer GSM-7-Wert -- Herleitung s.
+    Konstante in ``channel_layout.py``, Adversary-Fund #1362 S5b Runde 5).
 
     Ueberlauf folgt der Hauskonvention aus ``alert/render.py:507-535``
     (ADR-0011:42, "SMS-Laengen-Budget mit `+k`-Ueberlauf"): Kopf immer; Orte
     solange, wie das Ergebnis INKL. des dann noetigen ` +k`-Suffixes ins Budget
     passt; die restlichen Orte werden als ` +k` AUSGEWIESEN. Ein stiller Abbruch
     waere eine luegende Ausgabe (vgl. #1269) — die SMS behauptete sonst einen
-    vollstaendigen Vergleich, den sie nicht zeigt. Endgarantie: ``len <= 140``.
+    vollstaendigen Vergleich, den sie nicht zeigt. Endgarantie:
+    ``len <= CHANNEL_LIMITS["sms"]["max_chars"]``.
     """
     max_chars = CHANNEL_LIMITS["sms"]["max_chars"]
     locations = location_render_order(result.locations)
@@ -815,14 +852,14 @@ def render_compare_sms(
         return "Vergleich: keine Daten"
 
     # Issue #1268: Stundenfenster-Angabe ersatzlos entfernt (Bewertung = ganzer
-    # Tag). Sie waere dauerhaft "00-23h" — eine Nicht-Information, die 8 der 140
-    # Zeichen belegt, die hier fuer echte Messwerte gebraucht werden.
+    # Tag). Sie waere dauerhaft "00-23h" — eine Nicht-Information, die 8 von
+    # `max_chars` Zeichen belegt, die hier fuer echte Messwerte gebraucht werden.
     head = f"Vergleich {result.target_date.strftime('%d.%m.')}:"
     # Issue #1362 Scheibe S5b: Budget je Ortsteil, ALS OB dieser Ort der
     # einzige in der Nachricht waere (Kopf + ein Trennzeichen abgezogen) --
     # eine konservative, aber sichere obere Schranke: der bestehende
-    # Orts-Ueberlauf (unten) haelt die GESAMTLAENGE unabhaengig davon <=140,
-    # indem er im Zweifel ganze Ortsbloecke weglaesst.
+    # Orts-Ueberlauf (unten) haelt die GESAMTLAENGE unabhaengig davon
+    # <=max_chars, indem er im Zweifel ganze Ortsbloecke weglaesst.
     #
     # Adversary-Fund (#1362 S5b, Runde 2): OHNE Reserve konnte ein einzelner,
     # bereits metrik-gekuerzter Ortsteil das GESAMTBUDGET so knapp ausschoepfen,

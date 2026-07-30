@@ -34,8 +34,9 @@ from app.metric_catalog import get_sms_code
 from app.models import ForecastDataPoint, ThunderLevel
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.metric_format import format_value
+from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.comparison import (
-    _PLAIN_ROWS_BY_ID, _sms_aggregation_sign, render_compare_sms,
+    _PLAIN_ROWS_BY_ID, _sms_aggregation_sign, _sms_gsm7_safe, render_compare_sms,
 )
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
@@ -43,6 +44,13 @@ from output.renderers.email.compare_html import _metric_value
 
 TARGET_DATE = date(2026, 7, 27)
 CREATED_AT = datetime(2026, 7, 27, 8, 0)
+# Issue #1362 S5b, Adversary-Fund Runde 5 (PO-Entscheidung 2026-07-30): das
+# SMS-Zeichenbudget ist von 140 (Byte-Grenze, verwechselt mit Zeichengrenze)
+# auf 153 (verkettungssicherer GSM-7-Wert) gestiegen -- gegen die KONSTANTE
+# pruefen, nicht gegen den alten Literalwert 140 (sonst faellt genau diese
+# Anhebung unbemerkt durch, s. test_compare_sms_gsm7_charset.py::
+# test_sms_char_budget_matches_gsm7_concatenated_derivation fuer die Herleitung).
+SMS_LIMIT = CHANNEL_LIMITS["sms"]["max_chars"]
 
 # ---------------------------------------------------------------------------
 # Renderer-ID (Compare-Vokabular, wie in enabled_metrics) -> zentrale
@@ -113,9 +121,11 @@ def _sms_cell_text(loc_result: LocationResult, renderer_id: str) -> str | None:
     Das Auswertungszeichen (Adversary-Fund Runde 3, PO-Entscheidung
     2026-07-29: `+`/`-` bei Groessen mit mehr als einer Auswertung im
     Ortsvergleich, z.B. `temp_max`/`temp_min`) kommt ueber die PRODUKTIONS-
-    Funktion `_sms_aggregation_sign` -- kein zweites, im Test erratenes
-    Zeichen-Vokabular. `None` = kein Wert ODER kein Kuerzel vorhanden (Zelle
-    entfaellt)."""
+    Funktion `_sms_aggregation_sign`. Der Wert wird ueber die PRODUKTIONS-
+    Funktion `_sms_gsm7_safe` GSM-7-saniert (Adversary-Fund Runde 4,
+    PO-Entscheidung 2026-07-30: kein Grad-Zeichen im SMS-Pfad) -- kein
+    zweites, im Test erratenes Zeichen-/Sanitierungs-Vokabular. `None` = kein
+    Wert ODER kein Kuerzel vorhanden (Zelle entfaellt)."""
     metric_id = RENDERER_TO_METRIC_ID[renderer_id]
     code = get_sms_code(metric_id)
     if not code:
@@ -125,7 +135,7 @@ def _sms_cell_text(loc_result: LocationResult, renderer_id: str) -> str | None:
     if value is None:
         return None
     sign = _sms_aggregation_sign(renderer_id)
-    return f"{code}{sign} {fmt(value)}"
+    return f"{code}{sign} {_sms_gsm7_safe(fmt(value))}"
 
 
 def _location_part(sms: str, name: str) -> str:
@@ -168,20 +178,25 @@ def _valid_prefix_candidates(name: str, cells: list[str]) -> set[str]:
 # ---------------------------------------------------------------------------
 
 def test_sms_cuts_whole_metrics_not_mid_token_when_selection_exceeds_budget():
-    """AC-3: eine grosse Metrik-Auswahl (alle 14 Groessen, die HEUTE bereits
-    ein Katalog-Kuerzel haben -- die 10 AC-8-Fund-Luecken bewusst aussen vor,
-    um AC-3 unabhaengig von AC-8 zu pruefen) fuer EINEN Ort ergibt zusammen
-    mit dem Ortsnamen weit mehr als die 140 Zeichen der ganzen SMS. Erwartet:
-    die SMS bleibt <=140 Zeichen UND der Ortsteil ist irgendein STRUKTURELL
-    gueltiger Praefix der Zellenliste (s. `_valid_prefix_candidates`).
+    """AC-3: eine grosse Metrik-Auswahl (16 Groessen, die HEUTE bereits ein
+    Katalog-Kuerzel haben -- die 10 AC-8-Fund-Luecken bewusst aussen vor, um
+    AC-3 unabhaengig von AC-8 zu pruefen) fuer EINEN Ort ergibt zusammen mit
+    dem Ortsnamen weit mehr als das SMS_LIMIT-Budget der ganzen SMS. Erwartet:
+    die SMS bleibt <=SMS_LIMIT Zeichen UND der Ortsteil ist irgendein
+    STRUKTURELL gueltiger Praefix der Zellenliste (s.
+    `_valid_prefix_candidates`).
 
     Ist-Zustand: `_SMS_METRICS_PER_LOCATION = 2` kappt hart auf zwei Zellen,
     unabhaengig vom Zeichenbudget, UND die Zellen tragen noch die alte
     Telegram-Vollform-Bezeichnung statt des Katalog-Kuerzels -- der Ortsteil
     matcht deshalb heute KEINEN der konstruierten Kandidaten."""
     # Etwas laengerer Ortsname (statt "Andermatt") -- reine Budget-Reserve,
-    # damit die volle, ungekuerzte Darstellung sicher > 140 Zeichen ergibt
-    # (mit "Andermatt" allein waeren es nur 134, s. Testaufbau-Guard unten).
+    # damit die volle, ungekuerzte Darstellung sicher > SMS_LIMIT Zeichen
+    # ergibt (s. Testaufbau-Guard unten). Adversary-Fund Runde 5 (PO-
+    # Entscheidung 2026-07-30): SMS_LIMIT stieg von 140 auf 153 -- die
+    # urspruenglichen 14 Groessen reichten dafuer nicht mehr (145 Zeichen,
+    # unter dem neuen Budget), deshalb zwei weitere (dewpoint_avg,
+    # pressure_avg) ergaenzt.
     name = "Andermatt Talstation"
     loc = LocationResult(
         location=_loc("a", name),
@@ -191,14 +206,14 @@ def test_sms_cuts_whole_metrics_not_mid_token_when_selection_exceeds_budget():
         uv_index_max=5.0,
         hourly_data=_daily_points(
             humidity_pct=70, cape_jkg=1500.0, freezing_level_m=1200,
-            snowfall_limit_m=1300,
+            snowfall_limit_m=1300, dewpoint_c=8.0, pressure_msl_hpa=1013.0,
         ),
     )
     enabled = [
         "temp_max", "wind_max", "gust_max", "precip_sum", "pop_max",
         "thunder_max", "visibility_min", "uv_max", "snow_depth_cm",
         "snow_new_cm", "humidity_avg", "cape_max", "freezing_level",
-        "snowfall_limit",
+        "snowfall_limit", "dewpoint_avg", "pressure_avg",
     ]
     cells = [c for c in (_sms_cell_text(loc, mid) for mid in enabled) if c is not None]
     assert len(cells) == len(enabled), (
@@ -207,7 +222,7 @@ def test_sms_cuts_whole_metrics_not_mid_token_when_selection_exceeds_budget():
         "Fixture pruefen (fehlt ein sms_code oder ein Wert?)."
     )
     full_length_estimate = len(name) + sum(len(c) + 1 for c in cells)
-    assert full_length_estimate > 140, (
+    assert full_length_estimate > SMS_LIMIT, (
         f"Testaufbau defekt: die volle, ungekuerzte Darstellung waere nur "
         f"{full_length_estimate} Zeichen lang -- das erzwingt keinen "
         "Ueberlauf. Mehr/laengere Groessen waehlen, damit AC-3 echt greift."
@@ -215,9 +230,9 @@ def test_sms_cuts_whole_metrics_not_mid_token_when_selection_exceeds_budget():
 
     sms = render_compare_sms(_result([loc]), enabled_metrics=enabled)
 
-    assert len(sms) <= 140, (
-        f"Compare-SMS ueberschreitet das 140-Zeichen-Budget: {len(sms)} "
-        f"Zeichen ({sms!r})."
+    assert len(sms) <= SMS_LIMIT, (
+        f"Compare-SMS ueberschreitet das {SMS_LIMIT}-Zeichen-Budget: "
+        f"{len(sms)} Zeichen ({sms!r})."
     )
     part = _location_part(sms, name)
     candidates = _valid_prefix_candidates(name, cells)
@@ -245,10 +260,13 @@ def test_metric_overflow_and_location_overflow_are_both_present_and_distinguisha
     `"...+3 +4"` zwei Zahlen ohne erkennbaren Bezug. Der Orts-Ueberlauf
     traegt deshalb den Wortzusatz " Orte"; der Metrik-Ueberlauf bleibt ohne.
 
-    Fixture: zwei Orte mit derselben grossen 14-Groessen-Auswahl aus AC-3 --
-    der erste Ortsteil allein braucht bereits Metrik-Kuerzung (AC-3), UND der
-    zweite Ort passt daneben nicht mehr ins 140-Zeichen-Budget (Orts-
-    Ueberlauf). Zusaetzliche Regressionsschutz-Absicherung (Runde-2-Fund):
+    Fixture: zwei Orte mit einer grossen 14-Groessen-Auswahl (Vorlaeufer der
+    AC-3-Auswahl, absichtlich VOR deren Runde-5-Erweiterung eingefroren --
+    diese Kombination braucht bereits bei 14 Groessen beide Ueberlaeufe
+    gleichzeitig, s. Testaufbau-Guard unten) -- der erste Ortsteil allein
+    braucht bereits Metrik-Kuerzung, UND der zweite Ort passt daneben nicht
+    mehr ins SMS_LIMIT-Zeichen-Budget (Orts-Ueberlauf). Zusaetzliche
+    Regressionsschutz-Absicherung (Runde-2-Fund):
     OHNE Budget-Reserve fuer den Orts-Ueberlauf-Hinweis wurde der bereits
     sauber gekuerzte erste Ortsteil verworfen und stattdessen per
     Wortgrenzen-Kuerzung MITTEN in einer Kuerzel/Wert-Zelle abgeschnitten
@@ -288,7 +306,9 @@ def test_metric_overflow_and_location_overflow_are_both_present_and_distinguisha
 
     sms = render_compare_sms(_result([loc_a, loc_b]), enabled_metrics=enabled)
 
-    assert len(sms) <= 140, f"SMS-Budget verletzt: {len(sms)} Zeichen ({sms!r})."
+    assert len(sms) <= SMS_LIMIT, (
+        f"SMS-Budget verletzt: {len(sms)} Zeichen ({sms!r})."
+    )
 
     # Der zweite Ort muss vollstaendig entfallen sein -- sonst greift dieser
     # Test den Doppel-Ueberlauf-Fall nicht (Testaufbau-Guard).
@@ -327,6 +347,15 @@ def test_metric_overflow_and_location_overflow_are_both_present_and_distinguisha
         f"Metrik-Ueberlauf im Ortsteil {part!r} traegt faelschlich den "
         "Orts-Ueberlauf-Wortzusatz -- beide Zaehler waeren dann nicht mehr "
         f"unterscheidbar. Ganze SMS: {sms!r}"
+    )
+    # Testaufbau-Guard (robust gegen kuenftige SMS_LIMIT-Aenderungen, s.
+    # Adversary-Fund Runde 5): der Metrik-Ueberlauf selbst MUSS auftreten --
+    # sonst prueft dieser Test nur noch den Orts-Ueberlauf allein, nicht mehr
+    # das Zusammentreffen beider Zaehler.
+    assert re.search(r" \+\d+$", part), (
+        f"Testaufbau defekt: Ortsteil {part!r} zeigt keinen Metrik-Ueberlauf "
+        "mehr -- die Fixture braucht mehr/laengere Groessen, damit dieser "
+        f"Test beide Ueberlaeufe gleichzeitig pruefen kann. Ganze SMS: {sms!r}"
     )
 
 
@@ -452,7 +481,10 @@ def test_regression_original_six_metrics_values_unchanged_in_sms():
     part = _location_part(sms, name)
 
     expected_values = [
-        format_value("temperature", 16.4, style="plain"),
+        # Adversary-Fund Runde 4 (PO-Entscheidung 2026-07-30): der SMS-Pfad
+        # gibt kein Grad-Zeichen aus (GSM-7) -- _sms_gsm7_safe() ist dieselbe
+        # Produktionsfunktion, die auch die Implementierung anwendet.
+        _sms_gsm7_safe(format_value("temperature", 16.4, style="plain")),
         format_value("wind", 12.0, style="plain"),
         f"{format_value('sunshine', 5, style='bare')}h",
         format_value("cloud_total", 42, style="plain"),

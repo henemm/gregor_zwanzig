@@ -17,10 +17,35 @@ if TYPE_CHECKING:  # pragma: no cover - nur fuer Typannotation
 
 # Kanal-Constraints. ``max_table_cols`` zaehlt die GESAMT-Spalten inkl. der
 # impliziten Zeit-Spalte (Telegram 8 = Zeit + 7 Metriken).
+#
+# Issue #1362 S5b, Adversary-Fund Runde 4/5 (PO-Entscheidung 2026-07-30): SMS
+# ``max_chars`` stand bislang bei 140 -- das ist die BYTE-Grenze einer
+# SMS-PDU (3GPP TS 23.038/23.040), KEINE Zeichengrenze. Beides faellt nur bei
+# 8-Bit-Kodierung zusammen; GSM-7 packt 7 Bit je Zeichen in ein Byte.
+#
+# Herleitung des verkettungssicheren Werts (gilt sobald 2+ SMS-Teile noetig
+# werden, nicht nur beim Einzel-Teil):
+#   SMS_PDU_PAYLOAD_BYTES   = 140  (3GPP TS 23.038/23.040)
+#   CONCAT_UDH_HEADER_BYTES = 6    (User-Data-Header je Teil bei Verkettung)
+#   GSM7_BITS_PER_CHAR      = 7
+#   nutzbare Zeichen/Teil   = floor((140 - 6) * 8 / 7) = 153
+#
+# Gilt NUR unter der Bedingung, dass der Text GSM-7-kodierbar bleibt (sonst
+# UCS-2: 140/2=70 Einzel-/(140-6)/2=67 Teil-Zeichen, ein Vielfaches
+# schlechter). Der Compare-SMS-Zellbau (comparison.py:_sms_metric_cell/
+# _sms_gsm7_safe) und sein Waechter (tests/tdd/test_compare_sms_gsm7_
+# charset.py) garantieren GSM-7-Reinheit fuer den GESAMTEN renderer-erzeugten
+# Text; Ortsnamen (Freitext-Nutzerdaten, SavedLocation.name) bleiben eine
+# bewusst nicht geschlossene Ausnahme (s. dortiger Moduldocstring). 153 statt
+# der optimistischeren Einzel-SMS-Grenze (160) traegt genau diesem Restrisiko
+# Rechnung: bleibt korrekt, selbst wenn eine Nachricht durch einen
+# untypischen Ortsnamen doch verkettet wird. Test gegen diese Herleitung
+# (nicht gegen sich selbst): test_compare_sms_gsm7_charset.py::
+# test_sms_char_budget_matches_gsm7_concatenated_derivation.
 CHANNEL_LIMITS = {
     "email":    {"max_table_cols": None, "max_chars": None},   # unbegrenzt
     "telegram": {"max_table_cols": 8,    "max_chars": 4096},
-    "sms":      {"max_table_cols": 0,    "max_chars": 140},
+    "sms":      {"max_table_cols": 0,    "max_chars": 153},
 }
 
 

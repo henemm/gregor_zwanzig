@@ -373,6 +373,13 @@ def test_telegram_and_sms_output_unchanged_by_summary_block_removal():
     wird sonst fuer beide vergeben) -- das Kuerzel traegt deshalb IMMER das
     Auswertungszeichen ("D+"), auch wenn hier nur der Hoechstwert gewaehlt
     ist.
+
+    Adversary-Fund Runde 4 (PO-Entscheidung 2026-07-30, echter Staging-
+    Nachweis): das Grad-Zeichen `°` gehoert nicht zum GSM-7-Zeichensatz --
+    sobald es in der SMS steht, kodiert der Betreiber die GANZE Nachricht in
+    UCS-2 (67 statt 153 Zeichen je Teil bei Verkettung), eine stille
+    Kostenverdopplung. Der SMS-Pfad zeigt deshalb "16C" statt "16°C" -- NUR
+    dort; Telegram (oben) behaelt das Grad-Zeichen unveraendert.
     """
     hourly = _hourly()
     result = _comparison_result([
@@ -390,7 +397,7 @@ def test_telegram_and_sms_output_unchanged_by_summary_block_removal():
         "Zermatt\n   Temp max 16°C · Regen 3.0 mm"
     )
     recorded_sms = (
-        "Vergleich 08.07.: Andermatt D+ 16°C R 3.0 mm; Zermatt D+ 16°C R 3.0 mm"
+        "Vergleich 08.07.: Andermatt D+ 16C R 3.0 mm; Zermatt D+ 16C R 3.0 mm"
     )
 
     assert telegram == recorded_telegram, (
