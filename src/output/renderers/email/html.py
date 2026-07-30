@@ -14,10 +14,13 @@ from zoneinfo import ZoneInfo
 
 from app.metric_catalog import get_metric
 from app.models import (
-    SegmentWeatherData, ThunderLevel, UnifiedWeatherDisplayConfig,
+    Corridor, SegmentWeatherData, ThunderLevel, UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
 from output.metric_format import severity_for
+from output.renderers.email.corridor_mark import (
+    is_marked_any, mark_cell_style, mark_lookup_multi,
+)
 
 if TYPE_CHECKING:
     from app.models import NormalizedTimeseries, StabilityResult
@@ -549,6 +552,23 @@ def _render_footer(
 # Core table renderers (existing, unchanged)
 # ---------------------------------------------------------------------------
 
+# Issue #1425 Schritt 1 (Uebergangs-Zuordnung -- faellt mit dem Pool-Umzug auf
+# Katalog-IDs in #1372/#1425 Schritt 2): Trip-Korridore tragen Route-Keys
+# (AlertMetric-Werte aus corridorEditorState.ts::ROUTE_METRIC_DEFS), die
+# Stundentabelle eigene Spalten-Keys (MetricDefinition.col_key). Analog
+# CORRIDOR_METRIC_TO_HOUR_KEY im Vergleich (compare_metric_ids.py):
+# precipitation_sum fehlt bewusst -- Tages-Summe hat keine 1:1-Stundenspalte
+# (fachlich falsch, Adversary F003 dort); AC-5 deckt "nicht angezeigt" als
+# stilles Ignorieren ab.
+TRIP_CORRIDOR_METRIC_TO_COL_KEY: dict[str, str] = {
+    "wind_gust": "gust",
+    "temperature_min": "temp",
+    "temperature_max": "temp",
+    "thunder_level": "thunder",
+    "snow_line": "snow_limit",
+}
+
+
 def _render_html_table(
     rows: list[dict],
     *,
@@ -557,6 +577,7 @@ def _render_html_table(
     format_modes: Optional[dict[str, str]] = None,
     indicator_keys: Optional[set[str]] = None,
     col_order: Optional[list[str]] = None,
+    marks: Optional[dict[str, list[Corridor]]] = None,
 ) -> str:
     if not rows:
         # Empty rows: render a minimal table skeleton so callers can still
@@ -699,17 +720,30 @@ def _render_html_table(
                     "watch": "#fad6b8",
                 }.get(_thunder_risk_level(raw_val))
 
+            # Issue #1425 Schritt 1: Korridor-mark-Markierung, geteilter
+            # Baustein mit dem Compare-Renderer (corridor_mark.py). Trip-
+            # eigene Kollisionsfaelle (temperature_min/temperature_max ->
+            # dieselbe "temp"-Spalte) sind bereits in `marks` (Liste je Key)
+            # abgebildet; is_marked_any() markiert, sobald EIN Corridor
+            # passt. `raw_val` (nicht `numeric`) traegt bei Gewitter das
+            # ThunderLevel-Enum unveraendert weiter.
+            marked = is_marked_any((marks or {}).get(key), raw_val)
+            mark_cls = ' class="corridor-mark"' if marked else ""
+            cell_bg, mark_extra = mark_cell_style(cell_bg or "transparent", marked)
+            if cell_bg == "transparent":
+                cell_bg = None
+
             # Issue #995 (Gruppe B): Zell-Tönung + Padding direkt inline auf das
             # <td> selbst (Vorbild _otd()-Muster), kein Span/Negativ-Margin-Trick
             # mehr — füllt die Zelle auch in Clients ohne <style>-Block vollflächig.
             # Issue #902: Inline-Border (Outlook-fest), identisch zur Time-Zelle.
             if cell_bg:
                 tds += (
-                    f'<td style="{_td_grid}background:{cell_bg};padding:6px;" '
+                    f'<td{mark_cls} style="{_td_grid}{mark_extra}background:{cell_bg};padding:6px;" '
                     f'data-label="{label}">{cell}</td>'
                 )
             else:
-                tds += f'<td style="{_td_grid}" data-label="{label}">{cell}</td>'
+                tds += f'<td{mark_cls} style="{_td_grid}{mark_extra}" data-label="{label}">{cell}</td>'
         # Issue #890 / AC-4: RiskDot-Spalte am Zeilenende (keine border-right — letzte Spalte).
         _dot_color = _RISK_DOT_COLORS[_row_risk(r)][0]
         tds += (
@@ -736,6 +770,7 @@ def _render_mobile_compact_rows(
     include_header: bool = False,
     indicator_keys: Optional[set[str]] = None,
     col_order: Optional[list[str]] = None,
+    marks: Optional[dict[str, list[Corridor]]] = None,
 ) -> str:
     """fix-mobile-grid-decouple-ampel: Handy-Stundentabelle rendert IMMER als
     bordierte <table> (via _render_html_table), in overflow-x:auto gewickelt —
@@ -763,6 +798,7 @@ def _render_mobile_compact_rows(
         format_modes=format_modes,
         indicator_keys=indicator_keys,
         col_order=col_order,
+        marks=marks,
     )
     return (
         '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0;">'
@@ -828,6 +864,7 @@ def render_html(
     day_comparison: Optional["DayComparison"] = None,
     stage_total: Optional[int] = None,
     trip_url: Optional[str] = None,
+    corridors: Optional[list[Corridor]] = None,
     **_ignored,
 ) -> str:
     """Render full HTML e-mail body. Pure function.
@@ -842,11 +879,20 @@ def render_html(
     ermittelt die Luecke einmal zentral via
     ``notification_service.compute_has_gap()`` (aus
     ``day_window.build_day_window_points()``).
+
+    Issue #1425 Schritt 1: ``corridors`` (``trip.corridors``, Route-
+    Namensraum) markiert Stundentabellen-Zellen additiv zur Severity-
+    Faerbung — analog `compare_html.render_compare_html(corridors=...)`,
+    geteilter Baustein in `corridor_mark.py`. `None`/`[]` = HTML
+    unveraendert (Baseline-Schutz).
     """
     # Bug #397: Datums-Header in Ortszeit (passt zu lokalen Segment-Zeiten).
     report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")
     # Issue #342: Tages-Basis für Pro-Metrik-Horizont-Filter.
     report_date_obj = segments[0].segment.start_time.date()
+    # Issue #1425 Schritt 1: EIN Lookup fuer alle Zellen dieses Emails (Route-
+    # Korridor-Key -> Renderer-col_key -> Liste passender Corridors).
+    _marks = mark_lookup_multi(corridors, TRIP_CORRIDOR_METRIC_TO_COL_KEY)
 
     # AC-3 (#911): Spalten-Reihenfolge aus konfiguriertem dc.metrics (links→rechts).
     # Zeit/Temp bleiben implizit vorn; col_order bestimmt nur Metrik-Spalten.
@@ -1040,6 +1086,7 @@ def render_html(
                     format_modes=format_modes,
                     indicator_keys=indicator_keys,
                     col_order=_col_order,
+                    marks=_marks,
                 )
                 + "</div>"
             )
@@ -1050,6 +1097,7 @@ def render_html(
                 include_header=True,
                 indicator_keys=indicator_keys,
                 col_order=_col_order,
+                marks=_marks,
             )
             mobile_div = (
                 f'<div class="mobile-compact" style="padding:0 16px;">'
@@ -1090,6 +1138,7 @@ def render_html(
                     format_modes=format_modes,
                     indicator_keys=indicator_keys,
                     col_order=_col_order,
+                    marks=_marks,
                 )
                 + "</div>"
             )
@@ -1106,6 +1155,7 @@ def render_html(
                 include_header=True,
                 indicator_keys=indicator_keys,
                 col_order=_col_order,
+                marks=_marks,
             )
             mobile_div = (
                 '<div class="mobile-compact" style="padding:0 16px;">'
@@ -1124,13 +1174,13 @@ def render_html(
             night_hint = f'<p style="color:{G_INK_FAINT};font-size:11px;margin-top:4px">* Temperatur/Nullgradgrenze: Minimum im 2h-Block</p>'
         night_elev = int(last_seg.end_point.elevation_m or 0)
         night_header = f"🌙 Nacht am Ziel ({night_elev}m)"
-        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, include_header=True, indicator_keys=indicator_keys, col_order=_col_order)
+        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, include_header=True, indicator_keys=indicator_keys, col_order=_col_order, marks=_marks)
         night_html = (
             '<div class="section desktop-only">'
             "<h3>" + night_header + "</h3>"
             '<p style="color:' + G_INK_MUTED + ';font-size:13px">Ankunft '
             + local_fmt(last_seg.end_time, tz) + " → Morgen 06:00</p>"
-            + _render_html_table(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, indicator_keys=indicator_keys, col_order=_col_order)
+            + _render_html_table(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, indicator_keys=indicator_keys, col_order=_col_order, marks=_marks)
             + night_hint
             + "</div>"
             '<div class="mobile-compact" style="padding:0 16px">'

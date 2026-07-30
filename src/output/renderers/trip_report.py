@@ -208,6 +208,10 @@ class TripReportFormatter:
             trip_url=trip_url,
             email_format=options.email_format,
             show_outlook=options.show_outlook,
+            # Issue #1425 Schritt 1: trip.corridors markiert Stundentabellen-
+            # Zellen im HTML-Teil (Durchreichweg trip.py:193 -> render_email
+            # -> render_html, geteilter Baustein mit dem Compare-Renderer).
+            corridors=trip.corridors if trip is not None else None,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(

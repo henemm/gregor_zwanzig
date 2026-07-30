@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
 from app.models import (
-    ExposedSection, NormalizedTimeseries, SegmentWeatherData,
+    Corridor, ExposedSection, NormalizedTimeseries, SegmentWeatherData,
     UnifiedWeatherDisplayConfig, WeatherChange,
 )
 from app.profile import ActivityProfile
@@ -60,6 +60,7 @@ def render_email(
     day_comparison: Optional["DayComparison"] = None,
     stage_total: Optional[int] = None,
     trip_url: Optional[str] = None,
+    corridors: Optional[list[Corridor]] = None,
     **_ignored,
 ) -> tuple[str, str]:
     """Returns (html_body, plain_body). Pure function.
@@ -70,6 +71,13 @@ def render_email(
     explicit kwargs (spec §A6).
 
     Determinism: identical inputs → bit-identical (html, plain) tuple.
+
+    Issue #1425 Schritt 1: ``corridors`` (``trip.corridors``) markiert nur den
+    HTML-Teil (Stundentabellen-Zellen); der Klartext-Teil (``email/plain.py``)
+    kennt keine Tabellenzellen und bleibt strukturell unberuehrt (s. Spec
+    „Was NICHT Teil von Schritt 1 ist"). ``email_format="compact"`` rendert
+    ebenfalls keine Stundentabelle -- der fruehe Return oben laesst
+    ``corridors`` dort folgenlos.
 
     Issue #1331/#1334 F002: ``has_gap`` (Ziel-Datenluecke, ermittelt von
     ``notification_service.compute_has_gap()`` aus
@@ -142,6 +150,7 @@ def render_email(
         day_comparison=day_comparison,
         stage_total=stage_total,
         trip_url=trip_url,
+        corridors=corridors,
     )
     plain_body = render_plain(
         segments=segments,

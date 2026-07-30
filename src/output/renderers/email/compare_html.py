@@ -25,11 +25,15 @@ from datetime import date, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from app.models import Corridor, ThunderLevel
+from app.models import Corridor
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
 from output.renderers.compare_metric_ids import (
     CORRIDOR_METRIC_TO_HOUR_KEY, FRONTEND_TO_RENDERER_METRIC_ID,
+)
+from output.renderers.email.corridor_mark import (
+    MARK_BORDER as _MARK_BORDER, is_marked as _is_marked,
+    mark_cell_style as _mark_cell_style, mark_lookup as _mark_lookup,
 )
 from output.renderers.email.design_tokens import (
     FONT_DATA, FONT_UI, G_ACCENT, G_ALERT_L2, G_ALERT_L3, G_ALERT_L4,
@@ -38,8 +42,7 @@ from output.renderers.email.design_tokens import (
 )
 from output.renderers.email.outlook import build_outlook_row, render_outlook_table
 from output.renderers.email.profile_signature import profile_signature
-from services.corridor_match import corridor_inside
-from output.metric_format import severity_for, thunder_ordinal
+from output.metric_format import severity_for
 from utils.geo import degrees_to_compass
 from utils.timezone import (
     UTC, local_dt, local_hour, local_stamp, location_tz, tz_abbrev,
@@ -344,45 +347,10 @@ HOUR_METRICS = [
 # Korridor-mark-Markierung (Issue #1231, Slice 7, AC-19) — rein additive
 # Anzeige-Signatur neben der bestehenden Severity-Faerbung. AC-20: wirkt
 # ausschliesslich hier im Renderer, calculate_score() bleibt unberuehrt.
+# Issue #1425 Schritt 1: die Bausteine (_mark_lookup/_is_marked/_MARK_BORDER/
+# _mark_cell_style) liegen jetzt in corridor_mark.py (s. Modul-Import oben) --
+# geteilt mit dem Trip-Renderer, kein zweiter Nachbau.
 # ---------------------------------------------------------------------------
-
-def _mark_lookup(corridors: list[Corridor] | None, id_map: dict[str, str]) -> dict[str, Corridor]:
-    """`corridors` (nur mark=True) ueber `id_map` (vergleich-Namensraum ->
-    Renderer-Zeilen-Key) aufgeloest. notify-only-Corridors (mark=False) und
-    nicht mappbare Metriken fallen raus."""
-    if not corridors:
-        return {}
-    return {id_map[c.metric]: c for c in corridors if c.mark and c.metric in id_map}
-
-
-def _is_marked(corridor: Optional[Corridor], value) -> bool:
-    """corridor_inside() (C5, src/services/corridor_match.py) ist die
-    einzige Match-Quelle. Gewitter-Werte (ThunderLevel-Enum) werden vorab per
-    thunder_ordinal() in ihr Ordinal uebersetzt -- Corridor.range traegt fuer
-    diese Metrik Ordinalwerte, keine Enum-Instanzen."""
-    if corridor is None:
-        return False
-    v = thunder_ordinal(value) if isinstance(value, ThunderLevel) else value
-    return bool(corridor_inside(v, corridor.range[0], corridor.range[1]))
-
-
-# Adversary F001 (Fix-Loop): class="corridor-mark" allein ist unsichtbar (keine
-# <style>-Regel referenziert sie) -- die eigentliche Sichtbarkeits-Signatur ist
-# ein additiver gruener Border-Balken (Inline-Style, E-Mail-tauglich). Der
-# gruene Hintergrund-Tint (tone_css("green")) wird NUR gesetzt, wenn die Zelle
-# noch keinen eigenen Severity-Hintergrund traegt -- sonst wuerde er die
-# Severity-Farbe verdecken (Design-Prinzip Lesbarkeit, CLAUDE.md).
-_MARK_BORDER = f"border-left:3px solid {G_SUCCESS};"
-
-
-def _mark_cell_style(bg: str, marked: bool) -> tuple[str, str]:
-    """(bg, extra_style) fuer eine Zelle -- `extra_style` wird VOR `background:`
-    in den style-String eingefuegt, `bg` ist ggf. auf den gruenen Tint
-    umgeschrieben (nur wenn zuvor transparent, s.o.)."""
-    if not marked:
-        return bg, ""
-    mark_bg = tone_css("green")[0] if bg == "transparent" else bg
-    return mark_bg, _MARK_BORDER
 
 
 # ---------------------------------------------------------------------------
