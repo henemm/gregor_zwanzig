@@ -287,8 +287,11 @@ class TestHourMetricsRendererUnit:
 
         result = _make_hourly_result()
         for auswahl, erste, zweite in (
-            (["t2m_c", "visibility_m"], ">Temp<", ">Sicht<"),
-            (["visibility_m", "t2m_c"], ">Sicht<", ">Temp<"),
+            # #1401 A2b: `</th>` mitgesucht -- seit die Uebersichtstabelle
+            # dieselbe Kurzform als ZEILEN-Label (`<td>`) fuehrt, traefe ein
+            # blosses ">Visib<" die frueher stehende Uebersichtszeile.
+            (["t2m_c", "visibility_m"], ">Temp</th>", ">Visib</th>"),
+            (["visibility_m", "t2m_c"], ">Visib</th>", ">Temp</th>"),
         ):
             html = render_compare_html(
                 result,
@@ -433,7 +436,7 @@ def _send_compare_preset_and_fetch_html(display_config, tag: str) -> str:
 
 
 _ALL_NINE_PLUS_ZEIT = [
-    "Zeit", "Temp", "Gef.", "Wind", "Böen", "Regen", "UV", "Gew.", "Regen-W.", "Sicht",
+    "Zeit", "Temp", "Feels", "Wind", "Gust", "Rain", "UV", "Thdr", "Rain%", "Visib",
 ]
 
 
@@ -514,7 +517,7 @@ class TestHourMetricsE2E:
             tag="ac4",
         )
         header = _hour_header_cols(html)
-        assert header == ["Zeit", "Regen-W.", "Sicht"], (
+        assert header == ["Zeit", "Rain%", "Visib"], (
             f"RED: erwartet ['Zeit','Regen-W.','Sicht'], bekommen {header} -- "
             "hourly_metrics wird im Versandpfad noch nicht verarbeitet."
         )

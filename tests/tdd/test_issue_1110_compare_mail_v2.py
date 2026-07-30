@@ -338,7 +338,7 @@ class TestCompareMailV2HTML:
         assert any("Wind" in lbl for lbl in labels), (
             "Wind-Zeile muss sichtbar sein (in enabled_metrics enthalten)"
         )
-        for hidden in ("Temp max", "Sonne", "Wolken", "UV max"):
+        for hidden in ("Temp max", "Sun", "Cloud", "UV"):
             assert not any(hidden in lbl for lbl in labels), (
                 f"'{hidden}'-Zeile darf NICHT erscheinen, da nicht in enabled_metrics, "
                 f"gefundene Zeilen-Labels: {labels}"
@@ -356,7 +356,7 @@ class TestCompareMailV2HTML:
         assert table, "Uebersichtstabelle nicht gefunden"
         labels = [row[0] for row in _rows(table) if row]
 
-        for expected in ("Amtliche Warnungen", "Temp max", "Wind", "Sonne", "Wolken", "UV max"):
+        for expected in ("Amtliche Warnungen", "Temp max", "Wind", "Sun", "Cloud", "UV"):
             assert any(expected in lbl for lbl in labels), (
                 f"'{expected}'-Zeile muss ohne enabled_metrics-Filter sichtbar sein, "
                 f"gefundene Zeilen-Labels: {labels}"
@@ -479,7 +479,7 @@ class TestCompareMailV2HTML:
         n = len(result.locations)
 
         expected = [
-            "Zeit", "Temp", "Gef.", "Wind", "Böen", "Regen", "UV", "Gew.", "Regen-W.", "Sicht",
+            "Zeit", "Temp", "Feels", "Wind", "Gust", "Rain", "UV", "Thdr", "Rain%", "Visib",
         ]
         for idx in range(n):
             table = _location_hour_table(html, idx, n)

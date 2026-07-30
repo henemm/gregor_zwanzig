@@ -28,9 +28,10 @@ from output.renderers.channel_layout import CHANNEL_LIMITS, render_for_channel
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from output.renderers.email.compare_html import (
-    OUTLOOK_HEADING, _build_location_outlook_rows, _fmt_precip_type,
-    _fmt_thunder, _fmt_visibility_overview, _metric_value,
-    _should_merge_wind_dir, _visible_hour_metrics, location_render_order,
+    CV2_METRICS, OUTLOOK_HEADING, _build_location_outlook_rows,
+    _fmt_precip_type, _fmt_thunder, _fmt_visibility_overview, _metric_value,
+    _should_merge_wind_dir, _visible_hour_metrics, derive_row_labels,
+    location_render_order,
 )
 from utils.geo import degrees_to_compass
 from utils.timezone import (
@@ -53,6 +54,12 @@ from output.tokens.hazard_symbols import MIN_SMS_LEVEL
 # BEWUSST die des HTML-Pfads (`compare_html._metric_value` / `_fmt_*`) statt
 # einer Klartext-Kopie -- sonst beschreibt dieselbe Wetterlage in HTML und
 # Klartext derselben Mail verschiedene Zahlen.
+# Issue #1401 Scheibe A2b: das zweite Tupel-Element ist NICHT mehr die
+# Mail-Beschriftung -- die leitet der Mail-Klartext jetzt aus dem zentralen
+# Register ab (`compare_html.derive_row_labels`, dieselbe Quelle wie der
+# HTML-Teil). Es bleibt ausschliesslich das DEUTSCHE Kanal-Label des
+# Telegram-Pfads (`_plain_metric_cell`), der bewusst deutsch bleibt (Spec
+# "Known Limitations": drei Namens-Vokabulare parallel, Bestandsschutz).
 _DAILY_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
     ("precip_sum", "Regen", lambda v: f"{v:.1f} mm"),
     ("pop_max", "Regenwahrscheinlichkeit", lambda v: f"{v:.0f}%"),
@@ -64,7 +71,7 @@ _DAILY_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
     ("cape_max", "CAPE", lambda v: f"{v:.0f} J/kg"),
     ("freezing_level", "Nullgradgrenze", lambda v: f"{v:.0f} m"),
     # Issue #1324, Klasse B (kein LocationResult-Feld, Live-Ableitung ueber
-    # _metric_value -> _daily_summary). HTML-Parität: dieselben Werte/Labels.
+    # _metric_value -> _daily_summary). HTML-Parität: dieselben Werte.
     ("humidity_avg", "Luftfeuchtigkeit Ø", lambda v: f"{v:.0f}%"),
     ("dewpoint_avg", "Taupunkt Ø", lambda v: format_value("temperature", v, style="plain")),
     ("pressure_avg", "Luftdruck Ø", lambda v: f"{v:.0f} hPa"),
@@ -102,6 +109,10 @@ _PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
     ("snow_depth_cm", "Schneehöhe", lambda v: format_value("snow_depth", v, style="plain")),
     ("snow_new_cm", "Neuschnee", lambda v: f"{v:.0f} cm"),
 )
+
+# Beschriftungs-Quelle des Klartext-Zwillings: dieselben Register-Verknuepfungen
+# wie im HTML-Pfad, nach Zeilen-Key ansprechbar (Issue #1401 A2b).
+_CV2_BY_KEY: dict[str, dict] = {m["key"]: m for m in CV2_METRICS}
 
 
 def _ordered_rows(rows, enabled_metrics: list[str] | None) -> list | tuple:
@@ -200,9 +211,14 @@ def render_comparison_text(
         # Werte kommen weiterhin aus DERSELBEN Quelle wie die HTML-Matrix
         # (`_metric_value` -> Engine-Feld bzw. live aus hourly_data), damit
         # HTML und Klartext derselben Mail nie auseinanderlaufen.
-        for metric_id, label, fmt in _ordered_rows(_PLAIN_ROWS, enabled_metrics):
+        # Issue #1401 A2b: die Beschriftung kommt aus derselben Ableitung wie
+        # der HTML-Tabellenkopf -- der Kollisions-Zusatz ("Temp max"/"Temp
+        # min") richtet sich damit nach genau denselben sichtbaren Zeilen.
+        ordered = _ordered_rows(_PLAIN_ROWS, enabled_metrics)
+        labelled = derive_row_labels([_CV2_BY_KEY[key] for key, _de, _fmt in ordered])
+        for (metric_id, _de_label, fmt), row in zip(ordered, labelled):
             value = _metric_value(loc_result, metric_id)
-            lines.append(f"   {label}: {fmt(value) if value is not None else '-'}")
+            lines.append(f"   {row['label']}: {fmt(value) if value is not None else '-'}")
 
         # Amtliche Warnungen, eine Zeile pro Warnung (Epic #1073 Punkt 6,
         # gemeinsamer Renderer statt Copy-Paste).

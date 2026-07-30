@@ -130,11 +130,12 @@ def _find_row(html: str, predicate) -> dict | None:
     return None
 
 
-_IS_RAIN = lambda l: "regen" in l and "wahrschein" not in l  # noqa: E731
-_IS_POP = lambda l: "wahrschein" in l  # noqa: E731
-_IS_THUNDER = lambda l: "gewitter" in l  # noqa: E731
-_IS_VISIBILITY = lambda l: "sicht" in l  # noqa: E731
-_IS_UV = lambda l: "uv" in l  # noqa: E731
+# #1401 A2b: englische Kurzform aus dem zentralen Namensregister.
+_IS_RAIN = lambda l: l == "rain"  # noqa: E731
+_IS_POP = lambda l: l == "rain%"  # noqa: E731
+_IS_THUNDER = lambda l: l == "thdr"  # noqa: E731
+_IS_VISIBILITY = lambda l: l == "visib"  # noqa: E731
+_IS_UV = lambda l: l == "uv"  # noqa: E731
 
 _EMPTY = {"—", "-", "·", ""}
 
@@ -177,7 +178,7 @@ def test_selected_rain_metric_appears_in_overview_matrix():
     )
 
     text = render_comparison_text(result, enabled_metrics=enabled)
-    assert re.search(r"Regen[^\n]*:", text), (
+    assert re.search(r"Rain[^\n%]*:", text), (
         "Klartext-Uebersicht hat keine Regen-Zeile, obwohl Regen gewaehlt ist."
     )
 
@@ -439,26 +440,32 @@ def test_engine_built_result_renders_all_five_rows():
 
 
 # ===========================================================================
-# AC-16 — Bestandsschutz (GRUEN by design, kein RED-Kandidat)
+# AC-16 — Bestandsschutz Werte + AC-5 (#1401 A2b) — Beschriftung wechselt auf
+# die Register-Kurzform
 # ===========================================================================
 
 def test_unselected_new_metrics_leave_existing_matrix_unchanged():
     """AC-16: Bestehende Auswahl ohne die fuenf neuen Metriken -> Matrix
-    inhaltlich unveraendert.
+    WERTMAESSIG unveraendert (Zellen, Zeilenzahl, Reihenfolge).
 
-    Der Erwartungswert ist die VORHER (Commit d32bd0a5) aufgezeichnete
-    Zeilen-Liste des heutigen Renderers. Dieser Test ist absichtlich schon
-    jetzt gruen und muss gruen bleiben — er ist der Bestandsschutz.
+    AC-5 (#1401 A2b): die Beschriftung selbst wechselt auf die `col_label`-
+    Kurzform aus dem zentralen Register ("Temp max"->"Temp", da hier nur eine
+    Auswertung gewaehlt ist; "Wolken"->"Cloud") -- nur die Ueberschrift
+    aendert sich, niemals der Wert (Spec fix_1401_a2_mailtabellen.md, AC-5).
+    Dieser Test war vor A2b bewusst gruen (Bestandsschutz); mit A2b wird er
+    RED, bis die Ableitung aus dem Register steht -- das ist kein Regress,
+    sondern der geforderte Nachweis.
     """
     result = _result()
     enabled = resolve_enabled_metrics(["temp_max_c", "wind_max_kmh", "cloud_avg_pct"])
 
     html = render_compare_html(result, enabled_metrics=enabled)
 
-    assert _labels(html) == ["Amtliche Warnungen", "Temp max", "Wind", "Wolken"], (
-        "Bestehende Auswahl zeigt ploetzlich andere Zeilen als vor der Aenderung."
+    assert _labels(html) == ["Amtliche Warnungen", "Temp", "Wind", "Cloud"], (
+        "Bestehende Auswahl zeigt nicht die aus dem zentralen Register "
+        f"abgeleitete Kurzform (#1401 A2b): {_labels(html)}"
     )
     rows = {r["label"]: r["cells"] for r in _overview_rows(html)}
-    assert rows["Temp max"] == ["16°C", "16°C"]
+    assert rows["Temp"] == ["16°C", "16°C"]
     assert rows["Wind"] == ["20 km/h", "20 km/h"]
-    assert rows["Wolken"] == ["50%", "50%"]
+    assert rows["Cloud"] == ["50%", "50%"]

@@ -206,18 +206,20 @@ def _plain_row_value(text: str, *keywords: str) -> str | None:
     return None
 
 
-# Label-Prädikate — folgen den in der Spec (Implementation Details 1)
-# vorgeschlagenen deutschen Bezeichnungen.
-_IS_WIND_DIR = lambda l: "windrichtung" in l  # noqa: E731
-_IS_WIND_CHILL_MIN = lambda l: "gefühlte" in l and "min" in l  # noqa: E731
-_IS_HUMIDITY = lambda l: "luftfeuchtigkeit" in l  # noqa: E731
-_IS_DEWPOINT = lambda l: "taupunkt" in l  # noqa: E731
-_IS_SNOWFALL_LIMIT = lambda l: "schneefallgrenze" in l  # noqa: E731
-_IS_PRECIP_TYPE = lambda l: "niederschlagsart" in l  # noqa: E731
-_IS_CLOUD_LOW = lambda l: "wolken" in l and "tief" in l  # noqa: E731
-_IS_CLOUD_MID = lambda l: "wolken" in l and "mittel" in l  # noqa: E731
-_IS_CLOUD_HIGH = lambda l: "wolken" in l and "hoch" in l  # noqa: E731
-_IS_PRESSURE = lambda l: "luftdruck" in l  # noqa: E731
+# Label-Prädikate — seit #1401 A2b die englische Kurzform aus dem zentralen
+# Namensregister (`col_label`), nicht mehr die frueher getippten deutschen
+# Bezeichnungen. Ist nur EINE Auswertung einer Groesse gewaehlt, steht die
+# Kurzform ohne Auswertungs-Zusatz ("Feels" statt "Feels min").
+_IS_WIND_DIR = lambda l: l == "wdir"  # noqa: E731
+_IS_WIND_CHILL_MIN = lambda l: l == "feels"  # noqa: E731
+_IS_HUMIDITY = lambda l: l == "humid"  # noqa: E731
+_IS_DEWPOINT = lambda l: l == "cond°"  # noqa: E731
+_IS_SNOWFALL_LIMIT = lambda l: l == "snowl"  # noqa: E731
+_IS_PRECIP_TYPE = lambda l: l == "ptype"  # noqa: E731
+_IS_CLOUD_LOW = lambda l: l == "cldlow"  # noqa: E731
+_IS_CLOUD_MID = lambda l: l == "cldmid"  # noqa: E731
+_IS_CLOUD_HIGH = lambda l: l == "cldhi"  # noqa: E731
+_IS_PRESSURE = lambda l: l == "hpa"  # noqa: E731
 
 
 # ===========================================================================
@@ -457,70 +459,70 @@ def test_plaintext_shows_all_ten_new_rows():
     ts = _timeseries(hourly)
     basis = svc.compute_basis_metrics(ts)
 
-    wind_dir_line = _plain_row_value(text, "windrichtung")
+    wind_dir_line = _plain_row_value(text, "wdir")
     assert wind_dir_line is not None, (
         f"Klartext hat keine 'Windrichtung'-Zeile, obwohl wind_direction_deg "
         f"gewaehlt ist:\n{text}"
     )
     assert _number(wind_dir_line) == WIND_DIRECTION_AVG_DEG
 
-    wind_chill_line = _plain_row_value(text, "gefühlte", "min")
+    wind_chill_line = _plain_row_value(text, "feels")
     assert wind_chill_line is not None, (
         f"Klartext hat keine Wind-Chill-min-Zeile, obwohl wind_chill_min_c "
         f"gewaehlt ist:\n{text}"
     )
     assert _number(wind_chill_line) == _wind_chill_min(hourly)
 
-    cloud_low_line = _plain_row_value(text, "wolken", "tief")
+    cloud_low_line = _plain_row_value(text, "cldlow")
     assert cloud_low_line is not None, (
         f"Klartext hat keine 'Wolken tief'-Zeile, obwohl cloud_low_avg_pct "
         f"gewaehlt ist:\n{text}"
     )
     assert _number(cloud_low_line) == CLOUD_LOW_AVG_PCT
 
-    cloud_mid_line = _plain_row_value(text, "wolken", "mittel")
+    cloud_mid_line = _plain_row_value(text, "cldmid")
     assert cloud_mid_line is not None, (
         f"Klartext hat keine 'Wolken mittel'-Zeile, obwohl cloud_mid_avg_pct "
         f"gewaehlt ist:\n{text}"
     )
     assert _number(cloud_mid_line) == CLOUD_MID_AVG_PCT
 
-    cloud_high_line = _plain_row_value(text, "wolken", "hoch")
+    cloud_high_line = _plain_row_value(text, "cldhi")
     assert cloud_high_line is not None, (
         f"Klartext hat keine 'Wolken hoch'-Zeile, obwohl cloud_high_avg_pct "
         f"gewaehlt ist:\n{text}"
     )
     assert _number(cloud_high_line) == CLOUD_HIGH_AVG_PCT
 
-    humidity_line = _plain_row_value(text, "luftfeuchtigkeit")
+    humidity_line = _plain_row_value(text, "humid")
     assert humidity_line is not None, (
         f"Klartext hat keine 'Luftfeuchtigkeit'-Zeile, obwohl "
         f"humidity_avg_pct gewaehlt ist:\n{text}"
     )
     assert _number(humidity_line) == basis.humidity_avg_pct
 
-    dewpoint_line = _plain_row_value(text, "taupunkt")
+    dewpoint_line = _plain_row_value(text, "cond°")
     assert dewpoint_line is not None, (
         f"Klartext hat keine 'Taupunkt'-Zeile, obwohl dewpoint_avg_c "
         f"gewaehlt ist:\n{text}"
     )
     assert _number(dewpoint_line) == svc._compute_dewpoint(ts)
 
-    pressure_line = _plain_row_value(text, "luftdruck")
+    pressure_line = _plain_row_value(text, "hpa")
     assert pressure_line is not None, (
         f"Klartext hat keine 'Luftdruck'-Zeile, obwohl pressure_avg_hpa "
         f"gewaehlt ist:\n{text}"
     )
     assert _number(pressure_line) == svc._compute_pressure(ts)
 
-    precip_type_line = _plain_row_value(text, "niederschlagsart")
+    precip_type_line = _plain_row_value(text, "ptype")
     assert precip_type_line is not None, (
         f"Klartext hat keine 'Niederschlagsart'-Zeile, obwohl "
         f"precip_type_dominant gewaehlt ist:\n{text}"
     )
     assert "schnee" in precip_type_line.lower()
 
-    snowfall_line = _plain_row_value(text, "schneefallgrenze")
+    snowfall_line = _plain_row_value(text, "snowl")
     assert snowfall_line is not None, (
         f"Klartext hat keine 'Schneefallgrenze'-Zeile, obwohl "
         f"snowfall_limit_m gewaehlt ist:\n{text}"
@@ -544,10 +546,10 @@ def test_existing_fifteen_metrics_unchanged_after_addition():
 
     html = render_compare_html(result, enabled_metrics=enabled)
 
-    assert _labels(html) == ["Amtliche Warnungen", "Temp max", "Wind", "Wolken"], (
+    assert _labels(html) == ["Amtliche Warnungen", "Temp", "Wind", "Cloud"], (
         "Bestehende Auswahl zeigt ploetzlich andere Zeilen als vor der Aenderung."
     )
     rows = {r["label"]: r["cells"] for r in _overview_rows(html)}
-    assert rows["Temp max"] == ["16°C", "16°C"]
+    assert rows["Temp"] == ["16°C", "16°C"]
     assert rows["Wind"] == ["20 km/h", "20 km/h"]
-    assert rows["Wolken"] == ["50%", "50%"]
+    assert rows["Cloud"] == ["50%", "50%"]

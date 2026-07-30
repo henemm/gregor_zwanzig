@@ -1,5 +1,5 @@
 {
-  "_comment": "Aufgezeichnete Soll-Struktur der Ortsvergleich-Mail (AC-7, Spec compare_layout_tab_dissolution / Issue #1360). Abgenommen VOR dem top_n-Rueckbau am 2026-07-25 aus dem versionierten Wetter-Fixture tests/fixtures/compare_mail_structure.json. Erzeugt mit extract_compare_mail_structure() aus tests/test_compare_top_n_render_invariance.py — Kopf-/Fusszeilen mit Render-Zeitstempel sind bewusst nicht enthalten. Issue #1378 (2026-07-27): die Stunden-Beschriftungen wurden um genau +1 h verschoben — die Mail beschriftet seither in ORTSZEIT statt in Serverzeit. Herleitung: Fixture-Zeitstempel 09:00–16:00 UTC am 01.01.2026, Fixture-Orte in Europe/Vienna, Januar = CET = UTC+1 → Zeilen 10..17. Ausschliesslich die Zeit-Zellen der Stundentabellen und die Klartext-Stundenzeilen wurden abgeleitet umgerechnet; alle uebrigen Werte, Zeilen und Reihenfolgen sind unveraendert aus der Aufzeichnung vom 2026-07-25. Adversary F002 (2026-07-27): die Ortsblock-Ueberschriften des Klartext-Stundenverlaufs tragen jetzt ihre Zeitbasis (Fixture-Orte Europe/Vienna, 01.01.2026 = Winterzeit -> ' (CET)'); die Ortszeilen der Uebersicht darueber bleiben unveraendert.",
+  "_comment": "Aufgezeichnete Soll-Struktur der Ortsvergleich-Mail (AC-7, Spec compare_layout_tab_dissolution / Issue #1360). Abgenommen VOR dem top_n-Rueckbau am 2026-07-25 aus dem versionierten Wetter-Fixture tests/fixtures/compare_mail_structure.json. Erzeugt mit extract_compare_mail_structure() aus tests/test_compare_top_n_render_invariance.py — Kopf-/Fusszeilen mit Render-Zeitstempel sind bewusst nicht enthalten. Issue #1378 (2026-07-27): die Stunden-Beschriftungen wurden um genau +1 h verschoben — die Mail beschriftet seither in ORTSZEIT statt in Serverzeit. Herleitung: Fixture-Zeitstempel 09:00–16:00 UTC am 01.01.2026, Fixture-Orte in Europe/Vienna, Januar = CET = UTC+1 → Zeilen 10..17. Ausschliesslich die Zeit-Zellen der Stundentabellen und die Klartext-Stundenzeilen wurden abgeleitet umgerechnet; alle uebrigen Werte, Zeilen und Reihenfolgen sind unveraendert aus der Aufzeichnung vom 2026-07-25. Adversary F002 (2026-07-27): die Ortsblock-Ueberschriften des Klartext-Stundenverlaufs tragen jetzt ihre Zeitbasis (Fixture-Orte Europe/Vienna, 01.01.2026 = Winterzeit -> ' (CET)'); die Ortszeilen der Uebersicht darueber bleiben unveraendert. Issue #1401 Scheibe A2b (2026-07-30): die Beschriftungen der Uebersichtsmatrix und der Klartext-Uebersicht stammen jetzt aus dem zentralen Wetter-Namensregister (col_label) statt aus getippten Zeichenketten — 'Temp max'->'Temp' (nur EINE Auswertung gewaehlt, deshalb ohne Kollisions-Zusatz) und 'Sonne'->'Sun'. Ausschliesslich Beschriftungen wurden abgeleitet; jeder Zahlenwert, jede Zeilen- und Spaltenfolge und alle Stundentabellen sind Zeichen fuer Zeichen unveraendert.",
   "recorded_at": "2026-07-25",
   "structure": {
     "overview": [
@@ -16,7 +16,7 @@
         "—"
       ],
       [
-        "Temp max",
+        "Temp",
         "2°C",
         "-5°C",
         "1°C"
@@ -28,7 +28,7 @@
         "18 km/h"
       ],
       [
-        "Sonne",
+        "Sun",
         "8.0 h",
         "0.0 h",
         "0.0 h"
@@ -157,19 +157,19 @@
       "",
       "--------------------------------------------------",
       "Innsbruck",
-      "   Temp max: 2°C",
+      "   Temp: 2°C",
       "   Wind: 15 km/h",
-      "   Sonne: 8.0h",
+      "   Sun: 8.0h",
       "",
       "Stubaital",
-      "   Temp max: -5°C",
+      "   Temp: -5°C",
       "   Wind: 20 km/h",
-      "   Sonne: 0.0h",
+      "   Sun: 0.0h",
       "",
       "Zillertal",
-      "   Temp max: 1°C",
+      "   Temp: 1°C",
       "   Wind: 18 km/h",
-      "   Sonne: 0.0h",
+      "   Sun: 0.0h",
       "",
       "STUNDENVERLAUF",
       "---------------",

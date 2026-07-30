@@ -141,11 +141,11 @@ class TestAC1SchneeZeilenOhneFilter:
         html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics=None)
 
         labels = _overview_labels(html)
-        assert any("Schneehöhe" in lbl for lbl in labels), (
+        assert any("SnowH" in lbl for lbl in labels), (
             f"'Schneehöhe'-Zeile muss in der Uebersichtstabelle erscheinen (enabled_metrics=None), "
             f"gefundene Zeilen-Labels: {labels}"
         )
-        assert any("Neuschnee" in lbl for lbl in labels), (
+        assert any("NewSn" in lbl for lbl in labels), (
             f"'Neuschnee'-Zeile muss in der Uebersichtstabelle erscheinen (enabled_metrics=None), "
             f"gefundene Zeilen-Labels: {labels}"
         )
@@ -166,18 +166,18 @@ class TestAC2GuardEnabledMetricsOhneSchnee:
         )
 
         labels = _overview_labels(html)
-        assert not any("Schneehöhe" in lbl for lbl in labels), (
+        assert not any("SnowH" in lbl for lbl in labels), (
             f"'Schneehöhe'-Zeile darf NICHT erscheinen, da nicht in enabled_metrics, "
             f"gefundene Zeilen-Labels: {labels}"
         )
-        assert not any("Neuschnee" in lbl for lbl in labels), (
+        assert not any("NewSn" in lbl for lbl in labels), (
             f"'Neuschnee'-Zeile darf NICHT erscheinen, da nicht in enabled_metrics, "
             f"gefundene Zeilen-Labels: {labels}"
         )
         assert any("Amtliche Warnungen" in lbl for lbl in labels), (
             "Warn-Zeile muss unabhaengig von enabled_metrics immer sichtbar sein"
         )
-        assert any("Temp max" in lbl for lbl in labels), (
+        assert any("Temp" in lbl for lbl in labels), (
             f"'Temp max'-Zeile muss sichtbar sein (in enabled_metrics enthalten), Labels: {labels}"
         )
         assert any("Wind" in lbl for lbl in labels), (
@@ -203,7 +203,7 @@ class TestAC3SchneehoeheGezieltAusgewaehlt:
         assert table, "Uebersichtstabelle nicht gefunden"
         rows = _rows(table)
 
-        schnee_row = next((r for r in rows if r and "Schneehöhe" in r[0]), None)
+        schnee_row = next((r for r in rows if r and "SnowH" in r[0]), None)
         assert schnee_row is not None, (
             f"'Schneehöhe'-Zeile muss erscheinen, wenn enabled_metrics={{'snow_depth_cm'}}, "
             f"gefundene Zeilen: {rows}"
@@ -234,7 +234,7 @@ class TestAC4KlartextSchneeKonsistenz:
         result = _make_snow_result()
         text_body = render_comparison_text(result, profile=ActivityProfile.ALLGEMEIN)
 
-        assert "Schneehöhe" in text_body, (
+        assert "SnowH" in text_body, (
             "Klartext muss eine 'Schneehöhe'-Zeile fuer Chamonix zeigen, "
             f"Text war:\n{text_body}"
         )
@@ -242,7 +242,7 @@ class TestAC4KlartextSchneeKonsistenz:
         chamonix_idx = text_body.index("Chamonix")
         nizza_idx = text_body.index("Nizza")
         chamonix_section = text_body[chamonix_idx:nizza_idx]
-        assert "Schneehöhe" in chamonix_section, (
+        assert "SnowH" in chamonix_section, (
             f"Die 'Schneehöhe'-Zeile muss im Chamonix-Abschnitt stehen, gefunden: {chamonix_section!r}"
         )
         assert "45" in chamonix_section, (
@@ -264,7 +264,7 @@ class TestAC4KlartextSchneeKonsistenz:
         table = _find_overview_table(html)
         assert table, "Uebersichtstabelle nicht gefunden"
         rows = _rows(table)
-        schnee_row = next((r for r in rows if r and "Schneehöhe" in r[0]), None)
+        schnee_row = next((r for r in rows if r and "SnowH" in r[0]), None)
         assert schnee_row is not None, "'Schneehöhe'-Zeile im HTML nicht gefunden"
         html_value_match = re.search(r"(\d+)", schnee_row[1])
         assert html_value_match, f"Kein numerischer Wert in der HTML-Schneezelle: {schnee_row[1]!r}"
@@ -272,7 +272,7 @@ class TestAC4KlartextSchneeKonsistenz:
         chamonix_idx = text_body.index("Chamonix")
         nizza_idx = text_body.index("Nizza")
         chamonix_section = text_body[chamonix_idx:nizza_idx]
-        text_value_match = re.search(r"Schneehöhe[^\d]*(\d+)", chamonix_section)
+        text_value_match = re.search(r"SnowH[^\d]*(\d+)", chamonix_section)
         assert text_value_match, (
             f"Kein numerischer Schneehoehe-Wert im Klartext-Abschnitt gefunden: {chamonix_section!r}"
         )

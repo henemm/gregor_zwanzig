@@ -160,7 +160,7 @@ class TestAC6SunshineCatalogAndMigration:
             created_at=datetime(2026, 7, 12, 9, 0),
         )
         text = render_comparison_text(result)
-        assert "   Sonne: 4.7h\n" in text, (
+        assert "   Sun: 4.7h\n" in text, (
             "AC-6: die Sonne-Zeile folgt nicht mehr der zentralen Formatierung "
             f"(sunshine.decimals=1).\nText:\n{text}"
         )

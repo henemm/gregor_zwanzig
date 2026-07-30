@@ -32,7 +32,15 @@ from pathlib import Path
 
 import pytest
 
-from output.renderers.email.compare_html import CV2_METRICS, _fmt_metric
+from output.renderers.email.compare_html import (
+    CV2_METRICS, _fmt_metric, derive_row_labels,
+)
+
+# #1401 A2b: die Beschriftung steht nicht mehr in `CV2_METRICS`, sie wird aus
+# dem zentralen Register abgeleitet. Der Pruefling wird deshalb gegen die
+# Beschriftung gefahren, die der Renderer bei sichtbaren ALLEN Zeilen wirklich
+# ausgibt (inkl. Kollisions-Zusatz "Temp max"/"Feels min").
+CV2_ROWS = derive_row_labels(CV2_METRICS)
 
 VALIDATOR_PATH = (
     Path(__file__).resolve().parents[2] / ".claude" / "hooks" / "email_spec_validator.py"
@@ -49,7 +57,7 @@ VALIDATOR_PATH = (
 _NEW_EXEMPT_LABELS_A2B = {"Thdr", "PType"}
 EXEMPT_LABELS = {"Amtliche Warnungen", "Gewitter", "Niederschlagsart"} | _NEW_EXEMPT_LABELS_A2B
 
-NUMERIC_LABELS = [m["label"] for m in CV2_METRICS if m["label"] not in EXEMPT_LABELS]
+NUMERIC_LABELS = [m["label"] for m in CV2_ROWS if m["label"] not in EXEMPT_LABELS]
 
 # Plausible Rohwerte je Zeilen-Key -- Eingang der echten Formatierer, nicht
 # deren Ergebnis (das leitet `_cell_text()` ab).
@@ -98,7 +106,7 @@ def _overview_mail(overrides: dict[str, str] | None = None) -> str:
     overrides = overrides or {}
     head = "".join(f"<th>{n}</th>" for n in ("Metrik",) + LOCATIONS)
     rows = ""
-    for m in CV2_METRICS:
+    for m in CV2_ROWS:
         value = overrides.get(m["label"], _cell_text(m))
         cells = f"<td>{m['label']}</td>" + f"<td>{value}</td>" * len(LOCATIONS)
         rows += f"<tr>{cells}</tr>"
@@ -158,14 +166,14 @@ def test_ac3_out_of_range_value_is_reported_per_location(validator):
     Plausibilitaets-Check laeuft / THEN meldet der Pruefer den Wert je Ort --
     und der Format-Check bleibt still, weil nur der Wert unplausibel ist, nicht
     seine Schreibweise."""
-    body = _overview_mail({"Windrichtung": _fmt_metric(450, None, "°")})
+    body = _overview_mail({"WDir": _fmt_metric(450, None, "°")})
 
     findings = validator.validate_plausibility(body)
 
     assert len(findings) == len(LOCATIONS), (
         f"Erwartet ein Befund je Ort ({len(LOCATIONS)}), bekommen: {findings}"
     )
-    assert all("Windrichtung" in f and "450" in f for f in findings), (
+    assert all("WDir" in f and "450" in f for f in findings), (
         f"Der Befund muss Zeile und Wert benennen: {findings}"
     )
     assert validator.validate_format(body) == [], (
@@ -200,7 +208,7 @@ def test_ac4_exemption_set_is_declared_and_complete(validator):
     )
     exempt = set(exempt)
     checked = set(validator._OVERVIEW_METRIC_CHECKS)
-    all_labels = {m["label"] for m in CV2_METRICS}
+    all_labels = {m["label"] for m in CV2_ROWS}
 
     assert exempt == EXEMPT_LABELS, f"Erwartete Ausnahme-Zeilen: {EXEMPT_LABELS}"
     assert checked.isdisjoint(exempt), (
@@ -225,7 +233,7 @@ def test_ac4_exemption_set_is_declared_and_complete(validator):
     # der echten Renderer-Ausgabe: heute die alten 3, nach A2b automatisch
     # "Thdr"/"PType" -- ohne dass dieser Test dafuer nochmal angefasst werden
     # muss.
-    "label", sorted(EXEMPT_LABELS & {m["label"] for m in CV2_METRICS})
+    "label", sorted(EXEMPT_LABELS & {m["label"] for m in CV2_ROWS})
 )
 def test_ac4_exempt_rows_stay_unevaluated(validator, label):
     """AC-4: GIVEN eine der drei nicht-numerischen Zeilen traegt einen Wert,

@@ -2,10 +2,10 @@
 entity_id: fix_1401_a2_mailtabellen
 type: bugfix
 created: 2026-07-28
-updated: 2026-07-28
+updated: 2026-07-29
 status: draft
 workflow: fix-1401-a2-mailtabellen
-version: "1.0"
+version: "1.1"
 tags: [compare, metric-catalog, naming, mail-renderer, trip-compare-sharing]
 ---
 
@@ -61,10 +61,17 @@ Verknüpfung auf (dort bereits für die vier Auswahlflächen genutzt) und
 
 - **File:** `src/output/renderers/email/compare_html.py`
 - **Identifier:** `CV2_METRICS` (Zeilen ~221-261), `HOUR_METRICS` (Zeilen
-  ~267-277)
+  ~267-277), `_units_legend_text` (Zeilen ~1032-1046, aufgerufen von
+  `_render_units_legend`, Zeilen ~1049-1054) — liest `m["label"]` für die
+  Einheiten-Legende **unter** der Stundentabelle, unabhängig vom
+  Tabellenkopf; übersehene fünfte Lesestelle, ergänzt A2b-Nachtrag
+  2026-07-29
 - **File:** `src/output/renderers/comparison.py`
 - **Identifier:** `_DAILY_PLAIN_ROWS` (Zeilen ~52-69), `_PLAIN_ROWS`
-  (Zeilen ~82-100)
+  (Zeilen ~82-100), Klartext-Stundenzeile (Zeile ~273,
+  `cells.append(f"{m['label']} {text}")`) — vierte Konsumstelle von
+  `m["label"]`, relevant für AC-2 (HTML/Klartext-Parität); übersehen,
+  ergänzt A2b-Nachtrag 2026-07-29
 
 > Schicht-Hinweis: reine Python-Core-Änderung
 > (`src/output/renderers/email/`, `src/output/renderers/`), keine
@@ -168,7 +175,7 @@ dazwischen ein neuer Bug entsteht).
 |---|---|---|
 | `src/output/renderers/email/compare_html.py` — `CV2_METRICS` | 15 Zeilen bekommen `metric_id`+`aggregation`; 11 bestehende bekommen zusätzlich `aggregation` (Feld existiert dort noch nicht); alle 26 verlieren das getippte `"label"` | ~40-55 |
 | `src/output/renderers/email/compare_html.py` — `HOUR_METRICS` | 9 Zeilen verlieren das getippte `"label"` (kein `aggregation`, s. Implementation Details 1) | ~10 |
-| `src/output/renderers/email/compare_html.py` — neue Ableitungsfunktion | Beschriftung = `get_metric(metric_id).col_label`, Kollisions-Suffix = roher `aggregation`-Wert, wenn `col_label` innerhalb der **aktuell sichtbaren** Zeilenmenge mehrfach vorkommt — Mechanik analog `compare_outlook_metric_ids.py::outlook_columns()` (dortiges `mehrfach`-Set), nachgenutzt statt neu gebaut; Verdrahtung in den Renderpfad der Übersichts- und Stundentabelle | ~30-45 |
+| `src/output/renderers/email/compare_html.py` — neue Ableitungsfunktion | Beschriftung = `get_metric(metric_id).col_label`, Kollisions-Suffix = roher `aggregation`-Wert, wenn `col_label` innerhalb der **aktuell sichtbaren** Zeilenmenge mehrfach vorkommt — Mechanik analog `compare_outlook_metric_ids.py::outlook_columns()` (dortiges `mehrfach`-Set), nachgenutzt statt neu gebaut; Verdrahtung in den Renderpfad der Übersichts- und Stundentabelle **sowie** der Einheiten-Legende (`_units_legend_text`) | ~30-45 |
 | `src/output/renderers/comparison.py` — `_DAILY_PLAIN_ROWS`/`_PLAIN_ROWS` | getippte Labels entfernt, Beschriftung über dieselbe Ableitungsfunktion aus `compare_html.py` bezogen (keine fünfte Kopie) | ~20-30 |
 | Docstrings/Kommentare (beide Dateien) | Herkunfts-Hinweis analog A1s `#1401 A1`-Kommentaren | ~10-15 |
 
@@ -179,10 +186,11 @@ dazwischen ein neuer Bug entsteht).
 | Test | Inhalt | Netto-Zeilen |
 |---|---|---|
 | Vollständigkeits-Wächter (neu, `tests/unit/test_compare_mail_metric_link_completeness.py`) | Jede CV2_METRICS-/HOUR_METRICS-Zeile (außer `warn`) trägt ein auflösbares `metric_id`+`aggregation`-Paar; Wirkungsnachweis über künstlich reduzierte Kopie (Vorbild: `test_compare_metric_catalog_consistency.py::test_guard_actually_fails_when_a_catalog_metric_has_no_cv2_row`) | ~90-130 |
-| Beschriftungs-Herkunft (neu, `tests/unit/test_compare_mail_label_source_catalog.py`) | Übersichts- und Stundentabelle zeigen `col_label` statt getippter Strings, für eine Auswahl ohne Kollisionsfall | ~40-60 |
+| Beschriftungs-Herkunft (neu, `tests/unit/test_compare_mail_label_source_catalog.py`) | Übersichts- und Stundentabelle **sowie deren Einheiten-Legende** zeigen `col_label` statt getippter Strings, für eine Auswahl ohne Kollisionsfall | ~40-60 |
 | Kollisionsregel (neu, `tests/unit/test_compare_mail_label_collision_suffix.py`) | Nur temperature/max gewählt → "Temp"; beide gewählt → "Temp max"/"Temp min" (analog für Feels) | ~40-60 |
-| HTML/Klartext-Parität (neu, `tests/unit/test_compare_mail_plaintext_html_label_parity.py`) | Dieselbe Auswahl, dieselbe Beschriftung in beiden Fassungen derselben Mail | ~30-50 |
-| Bestehende, auf feste Label-Strings assertierende Tests | Grep auf die Ziel-Strings (s. Tabellen oben) findet mindestens 12 Compare-relevante Treffer (`test_compare_metric_catalog_endpoint.py`, `test_compare_empty_metric_selection.py`, `test_compare_outlook_metric_selection.py`, `test_compare_metric_order.py`, `test_compare_mail_blocks.py`, `test_compare_mail_validator_column_order.py`, `test_compare_matrix_metric_selection.py`, `test_compare_extra_daily_metrics.py`, `test_day_comparison_integration.py`, `test_compare_metric_order_and_wind_direction.py`, `test_issue_1106_hourly_metrics_config.py`, `tests/fixtures/compare_mail_structure_golden.json`); eine breitere Suche traf 30 Dateien — der Rest sind vermutlich Trip- oder unabhängige Docstring-Treffer und müssen bei der Umsetzung einzeln triagiert werden, nicht blind mitgezählt | ~190-300 |
+| HTML/Klartext-Parität (neu, `tests/unit/test_compare_mail_plaintext_html_label_parity.py`) | Dieselbe Auswahl, dieselbe Beschriftung in beiden Fassungen derselben Mail, inkl. Klartext-Stundenzeile (`comparison.py:273`) | ~30-50 |
+| Bestehende, auf feste Label-Strings assertierende Tests | Grep auf die Ziel-Strings (s. Tabellen oben) findet mindestens 12 Compare-relevante Treffer (`test_compare_metric_catalog_endpoint.py`, `test_compare_empty_metric_selection.py`, `test_compare_outlook_metric_selection.py`, `test_compare_metric_order.py`, `test_compare_mail_blocks.py`, `test_compare_mail_validator_column_order.py`, `test_compare_matrix_metric_selection.py`, `test_compare_extra_daily_metrics.py`, `test_day_comparison_integration.py`, `test_compare_metric_order_and_wind_direction.py`, `test_issue_1106_hourly_metrics_config.py`, `tests/fixtures/compare_mail_structure_golden.json`); eine breitere Suche traf 30 Dateien — der Rest sind vermutlich Trip- oder unabhängige Docstring-Treffer und müssen bei der Umsetzung einzeln triagiert werden, nicht blind mitgezählt |  ~190-300 |
+| `tests/fixtures/compare_mail_structure_golden.json` (Golden-Fixture, 4 Zeilen) | Enthält bislang nur „Sonne"→„Sun"; muss um die übrigen 25 Übersichts- und 9 Stundenzeilen-Umbenennungen ergänzt werden, sonst deckt das Golden-File den A2b-Umfang nicht ab | ~8 |
 
 **Test-Summe:** ~390-600 Netto-Zeilen (die vorab genannte Grobschätzung von
 ~190-360 Zeilen erwies sich bei genauerer Aufschlüsselung des
@@ -230,6 +238,20 @@ dort ggf. erneut nach Umfang fragen (Override oder weiterer Schnitt).
 - **Effort:** medium (A2a) bis high (A2b, wegen Testvolumen und
   #1404-Abhängigkeit).
 
+## PO-Scope-Entscheidung A2b (2026-07-29)
+
+PO hat am 2026-07-29 entschieden: **A2b wird als ein Stück geliefert, mit
+angehobenem LoC-Limit — kein weiterer Zwischenschnitt.** Begründung: jeder
+Zwischenschnitt würde in derselben Mail zeitweise oben "Böen" und unten
+"Gust" zeigen — genau die Uneinheitlichkeit, die #1401 abschafft. Präzedenz:
+A1 (dort ebenfalls Override statt Split) und #1404. Die aktualisierte
+Rechnung aus der Analyse-Phase: **121 zu ändernde Zeilen** (≈242 LoC nach
+Gate-Zählung) plus Renderer-Änderungen ~116 und Fixture-Ergänzung ~8 ≈ 370
+Zeilen, mit veralteten Assertion-Meldungen ≈ **480 Netto-Zeilen für A2b
+allein** (Limit 250 → Override nötig, Risk MEDIUM). Das ist präziser als die
+alte Grobschätzung „~500-760" oben, die sich auf A2a+A2b zusammen bezog —
+A2a ist inzwischen geliefert und verbraucht kein Budget mehr.
+
 ## Dependencies
 
 | Entity | Type | Purpose |
@@ -237,8 +259,8 @@ dort ggf. erneut nach Umfang fragen (Override oder weiterer Schnitt).
 | `src/app/metric_catalog.py` (`get_metric`, `col_label`) | READ | Zielquelle der Kurzform-Beschriftung |
 | `src/output/renderers/compare_metric_catalog.py` (`aggregation`-Werte je `metric_id`) | READ (Referenz) | liefert die bereits kuratierten, testgesicherten `aggregation`-Rohwerte ("max"/"min"/"avg"/"sum") — dieselben Werte werden in `CV2_METRICS`/`HOUR_METRICS` eingetragen, keine neue Quelle |
 | `src/output/renderers/compare_outlook_metric_ids.py` (`outlook_columns`) | READ (Vorbild) | liefert das bereits produktiv laufende Kollisions-Muster ("mehrfach"-Set über sichtbare Spalten) — wird nachgenutzt, nicht neu gebaut |
-| `src/output/renderers/email/compare_html.py` (`CV2_METRICS`, `HOUR_METRICS`, `_visible_metrics`) | MODIFY | Kernänderung dieser Lieferung |
-| `src/output/renderers/comparison.py` (`_DAILY_PLAIN_ROWS`, `_PLAIN_ROWS`) | MODIFY | Klartext-Zwilling zieht über dieselbe Ableitungsfunktion nach |
+| `src/output/renderers/email/compare_html.py` (`CV2_METRICS`, `HOUR_METRICS`, `_visible_metrics`, `_units_legend_text`) | MODIFY | Kernänderung dieser Lieferung |
+| `src/output/renderers/comparison.py` (`_DAILY_PLAIN_ROWS`, `_PLAIN_ROWS`, Klartext-Stundenzeile) | MODIFY | Klartext-Zwilling zieht über dieselbe Ableitungsfunktion nach |
 | **Issue #1404** (`.claude/hooks/email_spec_validator.py`) | **BLOCKIERT A2b** | Der Pflicht-Validator kennt die alten Spaltenüberschriften wörtlich (`_HOUR_COLUMNS_V2`, `_OVERVIEW_METRIC_CHECKS`). Sobald A2b die Beschriftung ändert, lehnt der unveränderte Validator die korrekte Mail ab — als Pflichtteil des Renderer-Commit-Gates (#811) verhindert das jeden Commit. **A2b ist erst commit-fähig, wenn #1404 geliefert ist.** A2a ändert keine Beschriftung und ist von #1404 unabhängig. |
 | Renderer-Commit-Gate #811 (`renderer_mail_gate.py`) | PROZESS | `compare_html.py` liegt unter dem geschützten Pfad `src/output/renderers/email/*.py` — jeder Commit braucht zusätzlich einen frischen grünen Lauf von `tests/tdd/test_issue_811_mode_matrix.py` sowie einen erfolgreichen `briefing_mail_validator.py`-Lauf (Trip-Pfad-Validator). Das ist unabhängig vom compare-spezifischen `email_spec_validator.py`/#1404 — **zwei getrennte Nachweise**, weil das Gate pfadbasiert und nicht inhaltsbasiert greift. |
 | `docs/specs/modules/fix_1401_a1_namensregister.md` | REFERENZ | Vorgänger-Scheibe, liefert `metric_id`/`aggregation`-Muster und die acht Namensentscheidungen (dort für `label_de`, hier für `col_label` — unabhängige Entscheidungsräume) |
@@ -306,7 +328,13 @@ strukturell identisch zum bereits produktiven `mehrfach`-Muster in
 ist der in der Analyse geforderte, nachgenutzte Mechanismus, keine zweite
 Kollisionslogik.** Die Stundentabelle durchläuft dieselbe Funktion, auch
 wenn dort strukturell nie eine Kollision auftreten kann (alle 9 `metric_id`
-sind paarweise verschieden) — kein Sonderfall im Code nötig.
+sind paarweise verschieden) — kein Sonderfall im Code nötig. Die
+Einheiten-Legende **unter** der Stundentabelle (`_units_legend_text`,
+`compare_html.py:1032-1046`, aufgerufen von `_render_units_legend`) liest
+`m["label"]` unabhängig vom Tabellenkopf und muss deshalb **dieselbe**
+Ableitungsfunktion konsumieren wie der Kopf — sonst zeigt derselbe
+Mail-Block widersprüchlich oben "Gust" im Tabellenkopf und unten "Böen" in
+der Legende.
 
 **4. Klartext-Zwilling (A2b):** `_DAILY_PLAIN_ROWS`/`_PLAIN_ROWS` verlieren
 ihr getipptes zweites Tupel-Element. Beide Fassungen der Mail (HTML,
@@ -315,7 +343,17 @@ das ist nur garantiert, wenn `comparison.py` dieselbe Funktion aus
 `compare_html.py` importiert und aufruft, statt eine eigene Kopie zu
 pflegen (Purpose: „keine fünfte Kopie"). Wertquelle und Formatierung bleiben
 unverändert (`_metric_value`/`_fmt_*`, bereits HTML-parallel seit #1359) —
-nur die Beschriftung ändert sich.
+nur die Beschriftung ändert sich. Eine vierte Konsumstelle zieht dabei
+automatisch mit: die Klartext-Stundenzeile (`comparison.py:273`,
+`cells.append(f"{m['label']} {text}")`) liest dieselben
+`visible_hour_metrics`-Dicts wie die HTML-Stundentabelle — keine eigene
+Änderungsstelle, aber Bestandteil des AC-2-Nachweises. Strukturell gilt:
+`_PLAIN_ROWS`/`_DAILY_PLAIN_ROWS` sind 3-Tupel `(key, label, fmt)` mit
+genau einer Zerlegungsstelle (`comparison.py:203`,
+`for metric_id, label, fmt in _ordered_rows(...)`); `_ordered_rows`
+(`comparison.py:107`) selbst ist arity-agnostisch — es indiziert nur
+`row[0]` (`comparison.py:119`) — eine Verkürzung auf 2-Tupel ist damit eine
+einzige Änderungsstelle, keine Kaskade.
 
 ## Expected Behavior
 
@@ -343,7 +381,9 @@ nur die Beschriftung ändert sich.
   Stundentabelle ansieht / Then zeigen beide Tabellen für jede Größe die
   englische Kurzform aus dem zentralen Register (z. B. "Wind" statt
   redaktionell unabhängig getippter Varianten), nicht mehr eine pro Tabelle
-  eigenständig gepflegte Beschriftung.
+  eigenständig gepflegte Beschriftung. Die Einheiten-Legende unter der
+  Stundentabelle wird dabei mitgeprüft — sie darf nicht von der
+  Tabellenkopf-Beschriftung abweichen.
   - Test: `tests/unit/test_compare_mail_label_source_catalog.py` (neu) —
     rendert Übersichts- und Stundentabelle für eine Auswahl ohne
     Kollisionsfall und prüft, dass jede Spaltenüberschrift dem
@@ -353,7 +393,8 @@ nur die Beschriftung ändert sich.
   dieselbe Vergleichs-Mail als HTML **und** als Klartext gerendert wird /
   Then zeigen beide Fassungen für dieselbe Zeile dieselbe Beschriftung —
   keine Abweichung zwischen gestalteter Tabelle und ihrem
-  Klartext-Zwilling.
+  Klartext-Zwilling. Die Klartext-Stundenzeile (`comparison.py:273`) wird
+  dabei mitgeprüft, nicht nur die Klartext-Übersichtstabelle.
   - Test: `tests/unit/test_compare_mail_plaintext_html_label_parity.py`
     (neu) — rendert `render_compare_html()` und `render_comparison_text()`
     aus demselben `ComparisonResult` und derselben Auswahl, vergleicht die
@@ -417,6 +458,14 @@ nur die Beschriftung ändert sich.
     Rückbau der Übergangs-Union und die aufgeschobene Verschärfung
     („unbekannte Beschriftung = lauter Befund") gehören in eine eigene
     Lieferung **nach** A2b.
+  - **Nachtrag 2026-07-29: #1420 ist geliefert** (Commit `8a20e611`, auf
+    `main`). `_OVERVIEW_METRIC_CHECKS` trägt jetzt **46 statt 24**
+    Beschriftungen (24 heutige deutsche + 20 A2b-Umbenennungen +
+    Kollisionsformen „Temp"/„Feels"), `_OVERVIEW_NO_CHECK_LABELS` **5 statt
+    3** — strikt additiv, keine bestehende Prüfung entfällt. **A2b ist
+    damit vollständig commit-fähig** — die oben stehende Formulierung
+    „muss vor A2b geliefert sein" ist jetzt eine erledigte Voraussetzung,
+    keine offene Bedingung mehr.
 - **`col_label`-Werte selbst bleiben unverändert** — insbesondere die
   schwer lesbaren „Cond°" (Taupunkt) und „0°Line" (Nullgradgrenze). Eine
   Überarbeitung träfe auch die Trip-Mail (`email/helpers.py:465-473`,
@@ -428,6 +477,17 @@ nur die Beschriftung ändert sich.
   `briefing_mail_validator.py`) auch dann aus, wenn inhaltlich nur die
   Compare-Tabellen betroffen sind. Beide Nachweise sind unabhängig vom
   compare-spezifischen `email_spec_validator.py`/#1404 zu erbringen.
+- **`_CHANNEL_METRICS`-Kommentar wird bewusst nicht korrigiert**
+  (`comparison.py:380-387`, Telegram/SMS-Pfad) — der dortige Kommentar
+  behauptet „deckungsgleich mit den Uebersichts-Zeilen"; nach A2b stimmt
+  das nicht mehr wörtlich (Mail-Übersicht wird englisch, Telegram/SMS
+  bleibt deutsch). Das ist außerhalb dieser Lieferung und bekommt kein
+  eigenes Ticket/AC (Nebenbefund-Triage, CLAUDE.md: kein nutzersichtbares
+  Fehlverhalten, kein Datenverlust-/Sicherheitsrisiko) — die
+  Kommentar-Korrektur wird als Sammel-Eintrag in #1199 nachgetragen.
+  Ergebnis dieser Lieferung: drei Namens-Vokabulare bestehen parallel
+  (Mail englisch, Telegram/SMS deutsch, 3-Tage-Ausblick deutsch) — das ist
+  Bestandsschutz, keine Regression durch A2b.
 - **Frontend-Listen Stundenverlauf/Alarme** bleiben unverändert — Scheibe
   B. **Begründung statt Leerstelle bei fehlenden Größen** — Scheibe C.
 - **Kein neues Persistenzformat, keine Migration** — `active_metrics`
@@ -437,7 +497,8 @@ nur die Beschriftung ändert sich.
 - **Split A2a/A2b ist eine Liefer-, keine Scope-Entscheidung** (s.
   Estimated Scope) — beide Teile sind inhaltlich Bestandteil dieser Spec;
   ob sie als ein oder zwei Commits/Workflows geliefert werden, entscheidet
-  der PO bei der Freigabe.
+  der PO bei der Freigabe. **Für A2b konkret entschieden 2026-07-29:** ein
+  Stück, LoC-Limit angehoben (s. „PO-Scope-Entscheidung A2b" oben).
 
 ## ADR-Bezug
 
@@ -454,6 +515,22 @@ nur die Beschriftung ändert sich.
 
 ## Changelog
 
+- 2026-07-29: Analyse-Nachtrag zu A2b (keine neue AC, keine neue
+  PO-Freigabe nötig) — zwei übersehene Lesestellen ergänzt (Einheiten-
+  Legende `_units_legend_text` in `compare_html.py`, Klartext-Stundenzeile
+  in `comparison.py:273`), Validator-Stand auf #1420 (Commit `8a20e611`)
+  aktualisiert, Golden-Fixture `tests/fixtures/compare_mail_structure_golden.json`
+  in der Testaufzählung ergänzt, `_CHANNEL_METRICS`-Abgrenzung
+  (`comparison.py:380-387`) als bewusst außerhalb dieser Lieferung
+  dokumentiert (Nebenbefund → #1199). PO-Scope-Entscheidung 2026-07-29
+  vermerkt: A2b als ein Stück mit angehobenem LoC-Limit statt weiterem
+  Schnitt (Begründung: Zwischenschnitt erzeugt in derselben Mail
+  gleichzeitig "Böen" und "Gust" — Präzedenz A1/#1404); aktualisierte
+  Rechnung 121 zu ändernde Zeilen (≈242 LoC-Gate) + Renderer ~116 +
+  Fixture ~8 ≈ 370, mit veralteten Assertion-Meldungen ≈ 480 Netto-Zeilen
+  für A2b allein (Limit 250, Risk MEDIUM) — präziser als die alte
+  Grobschätzung „~500-760" (bezog sich auf A2a+A2b zusammen; A2a ist
+  geliefert und verbraucht kein Budget mehr).
 - 2026-07-28b (Tech-Lead-Korrektur während TDD RED, keine AC-Erweiterung):
   Die 9 `HOUR_METRICS`-Zeilen bekommen **kein** `aggregation` — die
   ursprüngliche Fassung verlangte es pauschal für alle 35 Zeilen. Auslöser:

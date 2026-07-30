@@ -291,7 +291,7 @@ def test_kern_pop_35_pct_full_matrix_render_shows_yellow_not_green():
     result = _result(pop_pct=35)
     enabled = resolve_enabled_metrics(["pop_max_pct"])
     html = render_compare_html(result, enabled_metrics=enabled)
-    row_html = _overview_row_html(html, "Regenwahrscheinlichkeit")
+    row_html = _overview_row_html(html, "Rain%")
 
     assert "#fbeeb8" in row_html, (
         f"Regenwahrscheinlichkeits-Zeile zeigt fuer 35% (Katalog-Schwelle "
@@ -309,7 +309,7 @@ def test_kern_visibility_4000m_full_matrix_render_shows_no_tint():
     result = _result(visibility_m=4000)
     enabled = resolve_enabled_metrics(["visibility_min_m"])
     html = render_compare_html(result, enabled_metrics=enabled)
-    row_html = _overview_row_html(html, "Sicht min")
+    row_html = _overview_row_html(html, "Visib")
 
     assert "#fbeeb8" not in row_html and "#fad6b8" not in row_html and "#f6c5bf" not in row_html, (
         f"'Sicht min'-Zeile zeigt fuer 4000m noch eine Ampel-Faerbung, "

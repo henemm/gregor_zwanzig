@@ -25,6 +25,7 @@ from datetime import date, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+from app.metric_catalog import get_metric
 from app.models import Corridor
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
@@ -252,36 +253,37 @@ def _fmt_visibility_overview(v) -> str:
 # Auswertung ("aggregation" -- Schluessel aus deren `summary_fields`). Die
 # Paare sind aus dem bereits kuratierten Compare-Katalog
 # (output/renderers/compare_metric_catalog.py) uebernommen, nicht neu erfunden.
-# Rein additiv: kein "label" wurde angefasst, die Mail sieht unveraendert aus
-# (festgenagelt in tests/unit/test_compare_mail_labels_unchanged.py). Die
-# Ableitung der Beschriftung aus dem Register folgt in A2b; ohne diese
-# Verknuepfung waere sie nicht moeglich. Vollstaendig haelt sie der Waechter
+# Vollstaendig haelt die Verknuepfung der Waechter
 # tests/unit/test_compare_mail_metric_link_completeness.py -- er schlaegt an,
 # sobald eine neue Zeile ohne Verknuepfung dazukommt (Bug-Typ #1296/#1324).
+# Issue #1401 Scheibe A2b: das getippte "label" ist ENTFALLEN -- die
+# Beschriftung wird zur Renderzeit aus dem Register abgeleitet
+# (`derive_row_labels`, s.u.). Nur die Warn-Zeile traegt weiter einen festen
+# Text, weil sie keine Wettergroesse ist.
 CV2_METRICS = [
     {"key": "warn", "label": "Amtliche Warnungen", "kind": "warn"},
     {"key": "temp_max", "metric_id": "temperature", "aggregation": "max",
-     "label": "Temp max", "unit": "°C", "sev": _sev_temp},
+     "unit": "°C", "sev": _sev_temp},
     {"key": "wind_max", "metric_id": "wind", "aggregation": "max",
-     "label": "Wind", "unit": "km/h", "sev": _sev_wind},
+     "unit": "km/h", "sev": _sev_wind},
     {"key": "precip_sum", "metric_id": "precipitation", "aggregation": "sum",
-     "label": "Regen", "unit": "mm", "decimals": 1, "sev": _sev_rain},
+     "unit": "mm", "decimals": 1, "sev": _sev_rain},
     {"key": "pop_max", "metric_id": "rain_probability", "aggregation": "max",
-     "label": "Regenwahrscheinlichkeit", "unit": "%", "sev": _sev_pop},
+     "unit": "%", "sev": _sev_pop},
     {"key": "thunder_max", "metric_id": "thunder", "aggregation": "max",
-     "label": "Gewitter", "fmt": _fmt_thunder, "sev": _sev_thunder},
+     "fmt": _fmt_thunder, "sev": _sev_thunder},
     {"key": "sunny_hours", "metric_id": "sunshine", "aggregation": "sum",
-     "label": "Sonne", "unit": "h", "decimals": 1},
+     "unit": "h", "decimals": 1},
     {"key": "cloud_avg", "metric_id": "cloud_total", "aggregation": "avg",
-     "label": "Wolken", "unit": "%"},
+     "unit": "%"},
     {"key": "uv_max", "metric_id": "uv_index", "aggregation": "max",
-     "label": "UV max", "unit": "", "sev": _sev_uv},
+     "unit": "", "sev": _sev_uv},
     {"key": "visibility_min", "metric_id": "visibility", "aggregation": "min",
-     "label": "Sicht min", "fmt": _fmt_visibility_overview, "sev": _sev_visibility},
+     "fmt": _fmt_visibility_overview, "sev": _sev_visibility},
     {"key": "snow_depth_cm", "metric_id": "snow_depth", "aggregation": "max",
-     "label": "Schneehöhe", "unit": "cm"},
+     "unit": "cm"},
     {"key": "snow_new_cm", "metric_id": "fresh_snow", "aggregation": "sum",
-     "label": "Neuschnee", "unit": "cm"},
+     "unit": "cm"},
     # Issue #1296: vier weitere bis 2026-07-17 STILL verworfene Zeilen (analog
     # #1285). freezing_level ohne "sev" (kein AC verlangt Faerbung, s. Spec
     # Known Limitations). cape_max bekam mit Issue #1298 (B2) eine
@@ -292,55 +294,85 @@ CV2_METRICS = [
     # Tiefstwert automatisch die Kaelte-Seite. Ohne diese Verdrahtung bliebe
     # die Kaelte-Warnung in der Vergleichsmatrix unsichtbar (AC-5).
     {"key": "temp_min", "metric_id": "temperature", "aggregation": "min",
-     "label": "Temp min", "unit": "°C", "sev": _sev_temp},
+     "unit": "°C", "sev": _sev_temp},
     {"key": "gust_max", "metric_id": "gust", "aggregation": "max",
-     "label": "Böen", "unit": "km/h", "sev": _sev_gust},
+     "unit": "km/h", "sev": _sev_gust},
     {"key": "cape_max", "metric_id": "cape", "aggregation": "max",
-     "label": "CAPE", "unit": "J/kg", "sev": _sev_cape},
+     "unit": "J/kg", "sev": _sev_cape},
     {"key": "freezing_level", "metric_id": "freezing_level", "aggregation": "min",
-     "label": "Nullgradgrenze", "unit": "m"},
+     "unit": "m"},
     # Issue #1324: zehn weitere additive Zeilen (keine Severity-Faerbung, s.
     # Spec Known Limitations). Klasse A (Renderer-ID = LocationResult-Feld):
     {"key": "wind_direction_avg", "metric_id": "wind_direction", "aggregation": "avg",
-     "label": "Windrichtung", "unit": "°"},
+     "unit": "°"},
     {"key": "wind_chill_min", "metric_id": "wind_chill", "aggregation": "min",
-     "label": "Gefühlte Temp. min", "unit": "°C"},
+     "unit": "°C"},
     {"key": "wind_chill_max", "metric_id": "wind_chill", "aggregation": "max",
-     "label": "Gefühlte Temp. max", "unit": "°C"},
+     "unit": "°C"},
     {"key": "cloud_low_avg", "metric_id": "cloud_low", "aggregation": "avg",
-     "label": "Wolken tief", "unit": "%"},
+     "unit": "%"},
     {"key": "cloud_mid_avg", "metric_id": "cloud_mid", "aggregation": "avg",
-     "label": "Wolken mittel", "unit": "%"},
+     "unit": "%"},
     {"key": "cloud_high_avg", "metric_id": "cloud_high", "aggregation": "avg",
-     "label": "Wolken hoch", "unit": "%"},
+     "unit": "%"},
     # Klasse B (Live-Aggregat ueber _DAILY_AGGREGATE_FIELD):
     {"key": "humidity_avg", "metric_id": "humidity", "aggregation": "avg",
-     "label": "Luftfeuchtigkeit Ø", "unit": "%"},
+     "unit": "%"},
     {"key": "dewpoint_avg", "metric_id": "dewpoint", "aggregation": "avg",
-     "label": "Taupunkt Ø", "unit": "°C"},
+     "unit": "°C"},
     {"key": "pressure_avg", "metric_id": "pressure", "aggregation": "avg",
-     "label": "Luftdruck Ø", "unit": "hPa"},
+     "unit": "hPa"},
     {"key": "precip_type", "metric_id": "precip_type", "aggregation": "max",
-     "label": "Niederschlagsart", "fmt": _fmt_precip_type},
+     "fmt": _fmt_precip_type},
     {"key": "snowfall_limit", "metric_id": "snowfall_limit", "aggregation": "min",
-     "label": "Schneefallgrenze", "unit": "m"},
+     "unit": "m"},
 ]
 
 
 # Issue #1106: ersetzt _HOUR_COLUMNS -- 9 konfigurierbare Wert-Spalten,
 # kanonische Reihenfolge (AC-8). "Zeit" ist keine Metrik hier, sondern fest
 # verdrahtete erste Spalte in _render_hour_row/_render_hour_table.
+#
+# Issue #1401 Scheibe A2b: kein getipptes "label" mehr -- die Spaltenueberschrift
+# UND die Einheiten-Legende darunter kommen aus `derive_row_labels()`.
 HOUR_METRICS = [
-    {"key": "t2m_c", "metric_id": "temperature", "label": "Temp", "fmt": _fmt_deg, "sev": _sev_temp},
-    {"key": "wind_chill_c", "metric_id": "wind_chill", "label": "Gef.", "fmt": _fmt_deg},
-    {"key": "wind10m_kmh", "metric_id": "wind", "label": "Wind", "fmt": _fmt_kmh, "sev": _sev_wind},
-    {"key": "gust_kmh", "metric_id": "gust", "label": "Böen", "fmt": _fmt_kmh, "sev": _sev_gust},
-    {"key": "precip_1h_mm", "metric_id": "precipitation", "label": "Regen", "fmt": _fmt_rain, "sev": _sev_rain_safe},
-    {"key": "uv_index", "metric_id": "uv_index", "label": "UV", "fmt": _fmt_uv, "sev": _sev_uv},
-    {"key": "thunder_level", "metric_id": "thunder", "label": "Gew.", "fmt": _fmt_thunder, "sev": _sev_thunder},
-    {"key": "pop_pct", "metric_id": "rain_probability", "label": "Regen-W.", "fmt": _fmt_pop, "sev": _sev_pop},
-    {"key": "visibility_m", "metric_id": "visibility", "label": "Sicht", "fmt": _fmt_visibility, "sev": _sev_visibility},
+    {"key": "t2m_c", "metric_id": "temperature", "fmt": _fmt_deg, "sev": _sev_temp},
+    {"key": "wind_chill_c", "metric_id": "wind_chill", "fmt": _fmt_deg},
+    {"key": "wind10m_kmh", "metric_id": "wind", "fmt": _fmt_kmh, "sev": _sev_wind},
+    {"key": "gust_kmh", "metric_id": "gust", "fmt": _fmt_kmh, "sev": _sev_gust},
+    {"key": "precip_1h_mm", "metric_id": "precipitation", "fmt": _fmt_rain, "sev": _sev_rain_safe},
+    {"key": "uv_index", "metric_id": "uv_index", "fmt": _fmt_uv, "sev": _sev_uv},
+    {"key": "thunder_level", "metric_id": "thunder", "fmt": _fmt_thunder, "sev": _sev_thunder},
+    {"key": "pop_pct", "metric_id": "rain_probability", "fmt": _fmt_pop, "sev": _sev_pop},
+    {"key": "visibility_m", "metric_id": "visibility", "fmt": _fmt_visibility, "sev": _sev_visibility},
 ]
+
+
+def derive_row_labels(rows: list[dict]) -> list[dict]:
+    """Issue #1401 Scheibe A2b: Beschriftung der Mail-Tabellenzeilen aus dem
+    zentralen Wetter-Namensregister ableiten statt sie zu tippen.
+
+    Grundform ist die englische Kurzform ``col_label`` der in ``metric_id``
+    genannten Wettergroesse. Kommt dieselbe Kurzform innerhalb der uebergebenen
+    (= aktuell sichtbaren) Zeilenmenge mehrfach vor, waeren die Zeilen
+    ununterscheidbar -- dann haengt jede betroffene Zeile ihren rohen
+    Auswertungswert an ("Temp max"/"Temp min"). Die Mehrfach-Erkennung ist
+    dieselbe wie in ``compare_outlook_metric_ids.outlook_columns()``.
+
+    Zeilen ohne ``metric_id`` (Warn-Zeile) behalten ihren festen Text.
+    Rueckgabe sind KOPIEN -- die Modul-Konstanten bleiben unberuehrt.
+    """
+    labels = [
+        get_metric(row["metric_id"]).col_label if row.get("metric_id") else row.get("label", "")
+        for row in rows
+    ]
+    mehrfach = {label for label in labels if labels.count(label) > 1}
+    out = []
+    for row, label in zip(rows, labels):
+        if label in mehrfach and row.get("aggregation"):
+            label = f"{label} {row['aggregation']}"
+        out.append({**row, "label": label})
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -526,10 +558,10 @@ def _visible_metrics(enabled_metrics: list[str] | None) -> list[dict]:
     Deklarationsreihenfolge."""
     warn_row = [m for m in CV2_METRICS if m["key"] == "warn"]
     if enabled_metrics is None:
-        return CV2_METRICS
+        return derive_row_labels(CV2_METRICS)
     by_key = {m["key"]: m for m in CV2_METRICS}
     ordered = [by_key[k] for k in enabled_metrics if k in by_key and k != "warn"]
-    return warn_row + ordered
+    return derive_row_labels(warn_row + ordered)
 
 
 def _render_overview_table(
@@ -659,9 +691,9 @@ def _visible_hour_metrics(hourly_metrics: list[str] | None) -> list[dict]:
     ``HOUR_METRICS``-Key (reines Merge-Signal, s. ``_should_merge_wind_dir``)
     -- es erzeugt hier nie eine eigene Spalte."""
     if hourly_metrics is None:
-        return HOUR_METRICS
+        return derive_row_labels(HOUR_METRICS)
     by_key = {m["key"]: m for m in HOUR_METRICS}
-    return [by_key[k] for k in hourly_metrics if k in by_key]
+    return derive_row_labels([by_key[k] for k in hourly_metrics if k in by_key])
 
 
 def has_visible_hour_columns(hourly_metrics: list[str] | None) -> bool:
@@ -1353,6 +1385,7 @@ __all__ = [
     "render_compare_html",
     "CV2_METRICS",
     "HOUR_METRICS",
+    "derive_row_labels",
     "has_visible_hour_columns",
     "location_render_order",
 ]

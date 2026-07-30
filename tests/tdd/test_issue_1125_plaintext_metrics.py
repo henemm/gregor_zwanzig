@@ -94,10 +94,10 @@ class TestAC1FilteredMetricsHideOtherLines:
         result = _make_result()
         text_body = render_comparison_text(result, enabled_metrics={"temp_max"})
 
-        assert "Temp max" in text_body, f"Temp-max-Zeile muss sichtbar sein, Text:\n{text_body}"
+        assert "Temp:" in text_body, f"Temp-max-Zeile muss sichtbar sein, Text:\n{text_body}"
         assert "Wind:" not in text_body, f"Wind-Zeile darf nicht erscheinen, Text:\n{text_body}"
-        assert "Sonne:" not in text_body, f"Sonne-Zeile darf nicht erscheinen, Text:\n{text_body}"
-        assert "Wolken:" not in text_body, f"Wolken-Zeile darf nicht erscheinen, Text:\n{text_body}"
+        assert "Sun:" not in text_body, f"Sonne-Zeile darf nicht erscheinen, Text:\n{text_body}"
+        assert "Cloud:" not in text_body, f"Wolken-Zeile darf nicht erscheinen, Text:\n{text_body}"
         assert "Schneehöhe:" not in text_body, f"Schneehöhe-Zeile darf nicht erscheinen, Text:\n{text_body}"
         assert "Neuschnee:" not in text_body, f"Neuschnee-Zeile darf nicht erscheinen, Text:\n{text_body}"
 
@@ -107,7 +107,7 @@ class TestAC2NoneShowsAllSixLines:
         result = _make_result()
         text_body = render_comparison_text(result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics=None)
 
-        for label in ("Temp max", "Wind:", "Sonne:", "Wolken:", "Schneehöhe:", "Neuschnee:"):
+        for label in ("Temp max", "Wind:", "Sun:", "Cloud:", "SnowH:", "NewSn:"):
             assert label in text_body, f"'{label}'-Zeile muss bei enabled_metrics=None sichtbar sein, Text:\n{text_body}"
 
 

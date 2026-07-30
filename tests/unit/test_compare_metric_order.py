@@ -155,17 +155,20 @@ def _telegram_labels(msg: str) -> list[str]:
 ORDER_A = ["cloud_avg", "temp_max", "sunny_hours", "wind_max"]
 ORDER_B = ["wind_max", "sunny_hours", "temp_max", "cloud_avg"]
 
+# #1401 A2b: Mail-Teile (Klartext UND HTML) zeigen die englische Kurzform aus
+# dem zentralen Namensregister; der Telegram-Pfad bleibt bewusst deutsch.
+# Keine der vier Groessen kollidiert -> Kurzform ohne Auswertungs-Zusatz.
 _TEXT_LABEL = {
-    "temp_max": "Temp max", "wind_max": "Wind",
-    "sunny_hours": "Sonne", "cloud_avg": "Wolken",
+    "temp_max": "Temp", "wind_max": "Wind",
+    "sunny_hours": "Sun", "cloud_avg": "Cloud",
 }
 _TELEGRAM_LABEL = {
     "temp_max": "Temp", "wind_max": "Wind",
     "sunny_hours": "Sonne", "cloud_avg": "Wolken",
 }
 _HTML_LABEL = {
-    "temp_max": "Temp max", "wind_max": "Wind",
-    "sunny_hours": "Sonne", "cloud_avg": "Wolken",
+    "temp_max": "Temp", "wind_max": "Wind",
+    "sunny_hours": "Sun", "cloud_avg": "Cloud",
 }
 
 
@@ -221,7 +224,7 @@ class TestAC4PlainTextFollowsMetricOrder:
         }
         opts = resolve_compare_render_options(preset)
         text = render_comparison_text(_result(), enabled_metrics=opts.enabled_metrics)
-        assert _text_labels(text) == ["Wolken", "Temp max", "Sonne", "Wind"], (
+        assert _text_labels(text) == ["Cloud", "Temp", "Sun", "Wind"], (
             "Die im Vergleich gespeicherte Reihenfolge muss bis in den Klartext "
             f"durchschlagen.\nText:\n{text}"
         )
@@ -339,7 +342,7 @@ class TestAC6OfficialAlertsStayFirst:
         labels = _html_labels(
             render_compare_html(_result(_alert()), enabled_metrics=order)
         )
-        assert labels == ["Amtliche Warnungen", "Wolken", "Temp max"], (
+        assert labels == ["Amtliche Warnungen", "Cloud", "Temp"], (
             f"'warn' mitten in der Auswahl darf die Warn-Zeile nicht verschieben "
             f"oder verdoppeln, Reihenfolge war {labels}."
         )
@@ -364,14 +367,17 @@ class TestAC7LegacyDefaultOrderUnchanged:
     abgenommen und ist bewusst eingefroren — schlaegt sie fehl, hat sich die
     Mail eines Altbestands ungefragt geaendert."""
 
+    # #1401 A2b: die Beschriftung ist jetzt die Kurzform aus dem zentralen
+    # Namensregister -- die REIHENFOLGE (der eigentliche Gegenstand von AC-7)
+    # ist unveraendert, Zeile fuer Zeile dieselbe Groesse wie zuvor.
     FROZEN_PLAIN_ORDER = [
-        "Temp max", "Wind", "Temp min", "Böen", "Windrichtung",
-        "Gefühlte Temp. min", "Gefühlte Temp. max",
-        "Wolken tief", "Wolken mittel", "Wolken hoch",
-        "Regen", "Regenwahrscheinlichkeit", "Gewitter", "UV max", "Sicht min",
-        "CAPE", "Nullgradgrenze", "Luftfeuchtigkeit Ø", "Taupunkt Ø",
-        "Luftdruck Ø", "Niederschlagsart", "Schneefallgrenze",
-        "Sonne", "Wolken", "Schneehöhe", "Neuschnee",
+        "Temp max", "Wind", "Temp min", "Gust", "WDir",
+        "Feels min", "Feels max",
+        "CldLow", "CldMid", "CldHi",
+        "Rain", "Rain%", "Thdr", "UV", "Visib",
+        "CAPE", "0°Line", "Humid", "Cond°",
+        "hPa", "PType", "SnowL",
+        "Sun", "Cloud", "SnowH", "NewSn",
     ]
     # Issue #1362 (Scheibe S5a): Telegram-Zellen kommen jetzt aus _PLAIN_ROWS
     # (derselben Quelle wie der Klartext-Teil) statt der alten eigenen
@@ -383,13 +389,13 @@ class TestAC7LegacyDefaultOrderUnchanged:
     # einwortige "Schnee"-Label aendert sich vollstaendig zu "Schneehöhe".
     FROZEN_TELEGRAM_ORDER = ["Temp", "Wind", "Sonne", "Wolken", "Schneehöhe", "Neuschnee"]
     FROZEN_HTML_ORDER = [
-        "Amtliche Warnungen", "Temp max", "Wind", "Regen",
-        "Regenwahrscheinlichkeit", "Gewitter", "Sonne", "Wolken", "UV max",
-        "Sicht min", "Schneehöhe", "Neuschnee", "Temp min", "Böen", "CAPE",
-        "Nullgradgrenze", "Windrichtung", "Gefühlte Temp. min",
-        "Gefühlte Temp. max", "Wolken tief", "Wolken mittel", "Wolken hoch",
-        "Luftfeuchtigkeit Ø", "Taupunkt Ø", "Luftdruck Ø", "Niederschlagsart",
-        "Schneefallgrenze",
+        "Amtliche Warnungen", "Temp max", "Wind", "Rain",
+        "Rain%", "Thdr", "Sun", "Cloud", "UV",
+        "Visib", "SnowH", "NewSn", "Temp min", "Gust", "CAPE",
+        "0°Line", "WDir", "Feels min",
+        "Feels max", "CldLow", "CldMid", "CldHi",
+        "Humid", "Cond°", "hPa", "PType",
+        "SnowL",
     ]
 
     def test_plaintext_default_order_frozen(self):

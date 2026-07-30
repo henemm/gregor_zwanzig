@@ -136,7 +136,7 @@ class TestOverviewRowOrder:
             f"immer erste Zeile sein, war: {labels}"
         )
         numeric_labels = labels[1:]
-        assert numeric_labels == ["Regen", "Wind", "Temp max"], (
+        assert numeric_labels == ["Rain", "Wind", "Temp"], (
             f"RED (AC-1): erwartet Config-Reihenfolge ['Regen','Wind','Temp max'] "
             f"(entspricht enabled_metrics=['precip_sum','wind_max','temp_max']), "
             f"erhalten {numeric_labels} -- _visible_metrics() ignoriert heute die "
@@ -161,7 +161,7 @@ class TestHourColumnOrder:
 
         table = _hour_table_html(html)
         header = _rows(table)[0]
-        assert header == ["Zeit", "Regen", "Temp", "Wind"], (
+        assert header == ["Zeit", "Rain", "Temp", "Wind"], (
             f"RED (AC-2): erwartet Spaltenreihenfolge ['Zeit','Regen','Temp','Wind'] "
             f"(entspricht hourly_metrics=['precip_1h_mm','t2m_c','wind10m_kmh']), "
             f"erhalten {header} -- _visible_hour_metrics() ignoriert heute die "
@@ -180,7 +180,7 @@ class TestHourColumnOrder:
 
         table = _hour_table_html(html)
         header = _rows(table)[0]
-        assert header[:4] == ["Zeit", "Temp", "Gef.", "Wind"], (
+        assert header[:4] == ["Zeit", "Temp", "Feels", "Wind"], (
             f"Default-Reihenfolge (hourly_metrics=None) muss unveraendert HOUR_METRICS-"
             f"Deklarationsreihenfolge zeigen, erhalten {header}"
         )
@@ -277,7 +277,7 @@ class TestOverviewWindDirectionRegress:
 
         table = _find_overview_table(html)
         rows = _rows(table)
-        wind_row = next((r for r in rows if r and r[0] == "Windrichtung"), None)
+        wind_row = next((r for r in rows if r and r[0] == "WDir"), None)
         assert wind_row is not None, "Windrichtungs-Zeile nicht gefunden"
         assert "225" in wind_row[1], (
             f"Windrichtungs-Zelle muss weiterhin den korrekten Gradwert (225) zeigen, "

@@ -143,7 +143,7 @@ def test_ac2_visibility_cell_without_unit():
     Werten / When die Mail gerendert wird / Then steht in der Sicht-Zelle nur
     der Zahlenwert ohne Einheit."""
     html = _render()
-    idx = _column_index(html, "Sicht")
+    idx = _column_index(html, "Visib")
     seen = 0
     for rows in _hour_tables(html):
         for row in rows:
@@ -167,7 +167,7 @@ def test_ac2_units_legend_names_units_of_all_unit_bearing_columns():
     Einheit aller einheitentragenden sichtbaren Spalten benennt (Sicht km,
     Temp °C, Wind km/h)."""
     legend = _units_legend_text(_render())
-    assert re.search(r"Sicht[^·]*\bkm\b", legend), (
+    assert re.search(r"Visib[^·]*\bkm\b", legend), (
         f"Einheiten-Legende nennt die Sicht-Einheit 'km' nicht: {legend!r}"
     )
     assert "°C" in legend, f"Einheiten-Legende nennt '°C' nicht: {legend!r}"

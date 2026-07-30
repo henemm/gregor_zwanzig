@@ -60,10 +60,12 @@ zurück.
    - Nach A2b: Rückbau der Übergangs-Union (alte Spaltennamen entfernen) plus
      der aufgeschobene Schritt „unbekannte Beschriftung = lauter Befund" —
      beides gehört in eine eigene Lieferung **nach** A2b, nicht hinein.
-2. **A2b** — Beschriftung aus `col_label` ableiten + Kollisionsregel, inkl.
-   `comparison.py::_PLAIN_ROWS`/`_DAILY_PLAIN_ROWS` (vierte Namensquelle, Klartext).
-   Braucht #1404 zuerst. Umfang liegt über dem Deckel, PO-Freigabe für eine
-   angehobene Grenze einholen, sobald die echte Zahl feststeht.
+2. **A2b** ✅ **erledigt** (Stand 2026-07-30, implementiert + validiert, Commit
+   steht aus) — Beschriftung wird über `derive_row_labels()` in
+   `compare_html.py` aus `col_label` abgeleitet (Kollisions-Suffix roher
+   Auswertungswert), `comparison.py` zieht `_units_legend_text`/
+   `_render_units_legend` und die Klartext-Stundenzeile darüber nach. Details:
+   `docs/context/fix-1401-a2b.md`, Spec `docs/specs/modules/fix_1401_a2_mailtabellen.md`.
 3. **Scheibe B** (Stundenverlauf `compareHourlyMetricDefs.ts`, Alarme
    `AlertMetricLevelTable.svelte` + divergente Zweitkopie `alertMetricLabels.ts`),
    dann **Scheibe C** (Begründung statt Leerstelle).
@@ -105,10 +107,10 @@ reine Absicherung gegen Rückfall.
 
 ## Offene Tickets
 
-- **#1401** bleibt offen bis A2b/B/C geliefert sind.
-- **#1404** Validator-Härtung, angelegt 2026-07-28.
+- **#1401** bleibt offen bis B/C geliefert sind (A2a/A2b erledigt).
+- **#1404** Validator-Härtung, geliefert 2026-07-28.
 - Nebenbefunde sind in **#1199** eingetragen (SMS-Kürzel-Widerspruch,
   `PROFILE_METRICS_WITH_SCALES`, `LTComparePreview.svelte`, Staging-Preset,
-  Validator-Kennung, Umfangszähler).
-- Epic **#1372**: Fortschrittstabelle ist auf Stand (S1–S3 ✅, S2 mit A1 sichtbar
-  abgeschlossen, Restarbeit von #1401 als eigene Zeile).
+  Validator-Kennung, Umfangszähler, `_CHANNEL_METRICS`-Kommentar aus A2b).
+- Epic **#1372**: Fortschrittstabelle steht im Issue-Body (SSoT, nicht in
+  `docs/`) — dort nachziehen, nicht hier.
