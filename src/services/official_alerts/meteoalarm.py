@@ -141,6 +141,12 @@ class _MeteoAlarmBudgetExhausted(Exception):
     Egress-Zeile, ``observe_fetch_failure()``-Markierung) -- exakt derselbe
     Ausfall-Pfad wie fuer jeden anderen fehlgeschlagenen Seiten-Abruf."""
 
+    # Issue #1422 S1: markiert die Journal-Zeile als SELBST auferlegten Rueckzug
+    # (``warn_egress.cached_fetch`` liest das Attribut von der Ausnahme). Ohne
+    # Marker sieht das eigene erschoepfte Tageskontingent von aussen aus wie
+    # eine Stoerung beim Anbieter -- die Gegenmassnahme ist aber eine andere.
+    self_throttled = True
+
 
 def _meteoalarm_budget_gate() -> MeteoAlarmBudgetGate:
     """Frisch instanziiert je Aufruf (Muster ``ForecastBudgetGate``-Tests) --

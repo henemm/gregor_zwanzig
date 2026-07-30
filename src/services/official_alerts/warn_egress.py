@@ -215,12 +215,25 @@ def log_warn_service_call(
     status: Optional[int],
     cache_hit: bool,
     retry_after: Optional[float] = None,
+    ok: bool = False,
+    self_throttled: bool = False,
 ) -> None:
     """Einen Warn-Dienst-Egress protokollieren (fail-soft, analog ``log_api_call``).
 
-    Hängt eine JSONL-Zeile (``ts, service, host, status, cache_hit, retry_after``)
-    an ``WARN_CALLS_PATH`` an. Jeder Fehler wird geschluckt — Observability darf
-    den Abruf NIE beeinträchtigen.
+    Hängt eine JSONL-Zeile (``ts, service, host, status, cache_hit, retry_after,
+    ok, self_throttled``) an ``WARN_CALLS_PATH`` an. Jeder Fehler wird geschluckt
+    — Observability darf den Abruf NIE beeinträchtigen.
+
+    ``ok`` (Issue #1422 S1) trägt den TATSAECHLICHEN Ausgang: ``True`` bei
+    Erfolg — auch bei "nicht zustaendig" (fachlich gueltige Antwort) und bei
+    Cache-Treffern auf gute Daten; ``False`` bei jedem Fehlschlag, auch beim
+    Cache-Treffer auf einen GECACHTEN Fehlschlag (bisher von aussen nicht von
+    einem Treffer auf gute Daten unterscheidbar: ``status=null,
+    cache_hit=true``). ``self_throttled`` ist nur ``True``, wenn der Fehlschlag
+    ein SELBST auferlegter Rueckzug war (eigenes Tageskontingent erschoepft) —
+    andere Gegenmassnahme als ein Anbieter-Ausfall. Beide Felder sind rein
+    additiv; bestehende Leser (z.B. #1397-Verbrauchsmessung ueber
+    ``cache_hit``) bleiben unberuehrt.
     """
     try:
         path = WARN_CALLS_PATH
@@ -232,6 +245,8 @@ def log_warn_service_call(
             "status": status,
             "cache_hit": cache_hit,
             "retry_after": retry_after,
+            "ok": bool(ok),
+            "self_throttled": bool(self_throttled),
         })
         with path.open("a") as fh:
             fh.write(line + "\n")
@@ -297,10 +312,13 @@ def cached_fetch(
     entry = cache.get(cache_key)
     if entry is not None and entry.get("fetched_at") is not None \
             and (now - entry["fetched_at"]) < entry["ttl"]:
-        log_warn_service_call(service, host, status=None, cache_hit=True)
         # Ein gecachter Fehlschlag (data=None, z.B. waehrend 429-Backoff) ist
-        # weiterhin "nicht abrufbar" — nicht "erfolgreich leer" (Issue #1348).
-        if entry["data"] is None:
+        # weiterhin "nicht abrufbar" — nicht "erfolgreich leer" (Issue #1348)
+        # — und traegt genau das jetzt auch im Journal (Issue #1422 S1: sonst
+        # sieht er von aussen aus wie ein Treffer auf gute Daten).
+        cached_ok = entry["data"] is not None
+        log_warn_service_call(service, host, status=None, cache_hit=True, ok=cached_ok)
+        if not cached_ok:
             _record_fetch_failure()
         return entry["data"]
 
@@ -308,10 +326,16 @@ def cached_fetch(
     while True:
         try:
             resp = request_fn()
-        except Exception:
+        except Exception as exc:
+            # Issue #1422 S1: ein selbst auferlegter Rueckzug (eigenes
+            # Tageskontingent erschoepft, KEIN Netzwerk-Call) meldet sich ueber
+            # ein Attribut an der Ausnahme — keine Exception-Hierarchie noetig,
+            # jede fremde Ausnahme bleibt ein echter Anbieter-Ausfall.
+            self_throttled = bool(getattr(exc, "self_throttled", False))
             log.warning("%s-Abruf fehlgeschlagen (%s)", service, host, exc_info=True)
             cache[cache_key] = {"data": None, "fetched_at": now, "ttl": failure_ttl}
-            log_warn_service_call(service, host, status=None, cache_hit=False)
+            log_warn_service_call(service, host, status=None, cache_hit=False,
+                                  ok=False, self_throttled=self_throttled)
             _record_fetch_failure()
             return None
 
@@ -344,7 +368,7 @@ def cached_fetch(
             # sichtbar sein). status=429/cache_hit=False wie beim finalen
             # 429-Zweig unten, zusaetzlich der ermittelte Wartewert.
             log_warn_service_call(service, host, status=429, cache_hit=False,
-                                  retry_after=wait)
+                                  retry_after=wait, ok=False)
             rate_limit_retry.sleep_fn(wait)
             attempt += 1
             continue
@@ -372,7 +396,7 @@ def cached_fetch(
         )
         cache[cache_key] = {"data": None, "fetched_at": now, "ttl": backoff}
         log_warn_service_call(service, host, status=429, cache_hit=False,
-                              retry_after=logged_retry_after)
+                              retry_after=logged_retry_after, ok=False)
         _record_fetch_failure()
         return None
 
@@ -386,13 +410,15 @@ def cached_fetch(
         )
         neutral_value: Any = {}
         cache[cache_key] = {"data": neutral_value, "fetched_at": now, "ttl": WARN_NOT_COVERED_TTL}
-        log_warn_service_call(service, host, status=status, cache_hit=False)
+        # Issue #1422 S1: "nicht zustaendig" ist fachlich ein ERFOLG (ok=True),
+        # auch wenn der Statuscode 404 sonst ein Fehlschlag waere.
+        log_warn_service_call(service, host, status=status, cache_hit=False, ok=True)
         return neutral_value
 
     if status >= 400:
         log.warning("%s-Abruf fehlgeschlagen (%s, HTTP %s)", service, host, status)
         cache[cache_key] = {"data": None, "fetched_at": now, "ttl": failure_ttl}
-        log_warn_service_call(service, host, status=status, cache_hit=False)
+        log_warn_service_call(service, host, status=status, cache_hit=False, ok=False)
         _record_fetch_failure()
         return None
 
@@ -401,10 +427,10 @@ def cached_fetch(
     except Exception:
         log.warning("%s-Abruf fehlgeschlagen (%s, Parse)", service, host, exc_info=True)
         cache[cache_key] = {"data": None, "fetched_at": now, "ttl": failure_ttl}
-        log_warn_service_call(service, host, status=status, cache_hit=False)
+        log_warn_service_call(service, host, status=status, cache_hit=False, ok=False)
         _record_fetch_failure()
         return None
 
     cache[cache_key] = {"data": data, "fetched_at": now, "ttl": success_ttl}
-    log_warn_service_call(service, host, status=status, cache_hit=False)
+    log_warn_service_call(service, host, status=status, cache_hit=False, ok=True)
     return data
