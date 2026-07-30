@@ -271,6 +271,25 @@ export const _COMPARE_DEFAULTS: Record<string, { defaultMin: number | null; defa
 	cloud_avg_pct: { defaultMin: 0, defaultMax: 60 }, // WINTERSPORT-Default
 	uv_index_max: { defaultMin: 0, defaultMax: 8 }, // SUMMER_TREKKING-Default
 	sunny_hours_h: { defaultMin: 4, defaultMax: null }, // kein Profil-Default vorhanden — Sinnwert
+	// Issue #1424 (S6 von #1372/#1374): die restlichen zehn Groessen hatten
+	// bisher KEINEN Eintrag -> defaultMin/defaultMax=null,null -> beidseitig
+	// offene Zeile -> validateCorridorRows blockt -> saveGateDecision liefert
+	// "dirty" statt "schedule" (Spec docs/specs/modules/fix_1424_wertebereiche_startwerte.md
+	// § Die zehn Startwerte, PO-freigegeben, nicht "verbessern"). Zwei weitere
+	// zuvor luecken-behaftete Groessen (precip_type_dominant, wind_direction_deg)
+	// bekommen bewusst KEINEN Eintrag — sie werden stattdessen in
+	// compareMetricCatalogLoader.ts::buildCompareMetricDefs aus dem
+	// Wertebereichs-Angebot gefiltert (M2).
+	pop_max_pct: { defaultMin: null, defaultMax: 30 },
+	humidity_avg_pct: { defaultMin: 30, defaultMax: 70 },
+	dewpoint_avg_c: { defaultMin: null, defaultMax: 16 },
+	pressure_avg_hpa: { defaultMin: 1010, defaultMax: null },
+	cloud_low_avg_pct: { defaultMin: null, defaultMax: 50 },
+	cloud_mid_avg_pct: { defaultMin: null, defaultMax: 50 },
+	cloud_high_avg_pct: { defaultMin: null, defaultMax: 70 },
+	wind_chill_min_c: { defaultMin: -5, defaultMax: null },
+	wind_chill_max_c: { defaultMin: null, defaultMax: 30 },
+	snowfall_limit_m: { defaultMin: 1500, defaultMax: null },
 };
 
 // Issue #1350 Teil 3 (Spec Punkt 6, weatherMetricsCompareSave.ts): Legacy-

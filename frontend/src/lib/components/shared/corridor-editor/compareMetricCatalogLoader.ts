@@ -21,6 +21,17 @@ import {
 	type CompareSelectionEntry
 } from '../weather-metrics-tab/compareMetricSelection.ts';
 
+// Issue #1424 (M2, PO-Entscheidung 2026-07-30): diese zwei Groessen taugen
+// nicht als Von/Bis-Bereich und werden im Wertebereichs-Angebot nicht mehr
+// gefuehrt — precip_type_dominant ist ein Enum (RAIN/SNOW/MIXED/
+// FREEZING_RAIN) ohne Zahlenskala, wind_direction_deg ist zyklisch (0-360°,
+// "von 350° bis 10°" ist mit einem Von/Bis-Paar nicht ausdrueckbar). Beide
+// bleiben normale Wettergroessen im Reiter Wetter-Metriken —
+// COMPARE_METRIC_KEYS (corridorEditorState.ts) und der Katalog-Endpoint sind
+// unveraendert. Die Entfernung sitzt bewusst NUR hier (einziger Ort, an dem
+// Katalog-Eintraege zu Editor-Definitionen werden).
+const _COMPARE_RANGE_UNSUPPORTED = new Set(['precip_type_dominant', 'wind_direction_deg']);
+
 /**
  * Reiner, testbarer Mapper: Endpoint-Eintrag -> CompareMetricDef. `kind`
  * (Plattdrücken von 'enum' auf 'range', wie heute — precip_type_dominant
@@ -29,7 +40,9 @@ import {
  * FE-UX-Tabelle `_COMPARE_DEFAULTS` (D1 Hybrid), nicht aus dem Endpoint.
  */
 export function buildCompareMetricDefs(response: CompareMetricCatalogResponse): CompareMetricDef[] {
-	return (response.metrics ?? []).map((entry: CompareMetricCatalogEntry) => {
+	return (response.metrics ?? [])
+		.filter((entry: CompareMetricCatalogEntry) => !_COMPARE_RANGE_UNSUPPORTED.has(entry.key))
+		.map((entry: CompareMetricCatalogEntry) => {
 		const kind: 'range' | 'ordinal' = entry.kind === 'ordinal' ? 'ordinal' : 'range';
 		const scale: [number, number] = kind === 'ordinal'
 			? [0, (entry.ordinalLabels?.length ?? 1) - 1]

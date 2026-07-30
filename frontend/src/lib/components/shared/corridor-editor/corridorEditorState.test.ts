@@ -57,6 +57,8 @@ const CATALOG_FIXTURE = {
 		{ key: 'pop_max_pct', label: 'Regenwahrscheinlichkeit', aggregation_label: 'Maximum', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
 		{ key: 'wind_direction_deg', label: 'Windrichtung', aggregation_label: 'Mittel', unit: '°', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 360, step: 10, alarmCapable: false },
 		{ key: 'wind_chill_min_c', label: 'Gefühlte Temperatur', aggregation_label: 'Minimum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, alarmCapable: false },
+		// Issue #1424: fehlte hier bislang (Fixture war 25 statt 26 Eintraege).
+		{ key: 'wind_chill_max_c', label: 'Gefühlte Temperatur', aggregation_label: 'Maximum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -20, rangeMax: 45, step: 1, alarmCapable: false },
 		{ key: 'humidity_avg_pct', label: 'Luftfeuchtigkeit', aggregation_label: 'Mittel', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
 		{ key: 'dewpoint_avg_c', label: 'Taupunkt', aggregation_label: 'Mittel', unit: '°C', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: -20, rangeMax: 30, step: 1, alarmCapable: false },
 		{ key: 'snowfall_limit_m', label: 'Schneefallgrenze', aggregation_label: 'Minimum', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 5000, step: 100, alarmCapable: false },
@@ -360,12 +362,20 @@ describe('saveGateDecision — F005', () => {
 // Editor beim Speichern Corridor-Eintraege realer Nutzer (Slice-2-Migration
 // hat ALLE ideal_ranges-Metriken migriert, nicht nur die 10 Alarm-Keys).
 describe('TEST_DEFS (buildCompareMetricDefs) — AC-3 confidence_pct-Ausschluss + alle Katalog-Keys', () => {
-	test('enthaelt exakt alle Endpoint-Katalog-Keys, kein confidence_pct, nie leer (Vakuum-Schutz)', () => {
+	// Issue #1424 (AC-3): precip_type_dominant + wind_direction_deg taugen nicht
+	// als Von/Bis-Bereich und sind seither aus dem Angebot gefiltert — sie
+	// bleiben normale Wettergroessen (COMPARE_METRIC_KEYS), nur hier nicht mehr.
+	test('enthaelt alle Endpoint-Katalog-Keys ausser den zwei AC-3-Ausnahmen, kein confidence_pct, nie leer (Vakuum-Schutz)', () => {
 		const ids = TEST_DEFS.map((m) => m.metric).sort();
-		const expected = CATALOG_FIXTURE.metrics.map((m) => m.key).sort();
+		const expected = CATALOG_FIXTURE.metrics
+			.map((m) => m.key)
+			.filter((k) => k !== 'precip_type_dominant' && k !== 'wind_direction_deg')
+			.sort();
 		assert.ok(expected.length > 0, 'Vorbedingung verletzt: CATALOG_FIXTURE ist leer');
 		assert.deepEqual(ids, expected);
 		assert.equal(ids.includes('confidence_pct'), false);
+		assert.equal(ids.includes('precip_type_dominant'), false, 'AC-3 FAIL: precip_type_dominant noch im Angebot');
+		assert.equal(ids.includes('wind_direction_deg'), false, 'AC-3 FAIL: wind_direction_deg noch im Angebot');
 	});
 
 	test('thunder_level_max ist kind "ordinal" mit 3 Stufen (kein/mittel/hoch)', () => {
@@ -858,5 +868,95 @@ describe('#1401 AC-6: Wertebereiche fuehren Name und Auswertung getrennt', () =>
 		const sonne = rows.find((r) => r.metric === 'sunny_hours_h');
 		assert.equal(sonne?.label, 'Sonnenstunden');
 		assert.equal(sonne?.aggregationLabel, 'Summe');
+	});
+});
+
+// Issue #1424 (S6 von #1372/#1374, Spec: fix_1424_wertebereiche_startwerte.md)
+// AC-1 + AC-6: die zehn zuvor luecken-behafteten Groessen bekommen eine
+// PO-freigegebene Vorgabe; saveGateDecision() muss "schedule" liefern (statt
+// "dirty" wie vorher bei defaultMin/defaultMax=null,null).
+describe('Issue #1424 AC-1/AC-6: die zehn neuen Startwerte', () => {
+	const EXPECTED: Record<string, { min: number | null; max: number | null }> = {
+		pop_max_pct: { min: null, max: 30 },
+		humidity_avg_pct: { min: 30, max: 70 },
+		dewpoint_avg_c: { min: null, max: 16 },
+		pressure_avg_hpa: { min: 1010, max: null },
+		cloud_low_avg_pct: { min: null, max: 50 },
+		cloud_mid_avg_pct: { min: null, max: 50 },
+		cloud_high_avg_pct: { min: null, max: 70 },
+		wind_chill_min_c: { min: -5, max: null },
+		wind_chill_max_c: { min: null, max: 30 },
+		snowfall_limit_m: { min: 1500, max: null },
+	};
+
+	for (const [metric, expected] of Object.entries(EXPECTED)) {
+		test(`${metric}: addCompareRow uebernimmt die Vorgabe, saveGateDecision -> "schedule" (nicht "dirty")`, () => {
+			const { rows, poolLeft } = buildComparePool([], TEST_DEFS);
+			const next = addCompareRow(rows, poolLeft, metric, TEST_DEFS);
+			const row = next.rows.find((r) => r.metric === metric);
+			assert.ok(row, `${metric}: keine Zeile erzeugt (fehlt in TEST_DEFS?)`);
+			assert.equal(row!.min, expected.min, `AC-1 FAIL ${metric}.min weicht ab`);
+			assert.equal(row!.max, expected.max, `AC-1 FAIL ${metric}.max weicht ab`);
+			assert.equal(
+				saveGateDecision(next.rows),
+				'schedule',
+				`AC-1 FAIL ${metric}: saveGateDecision liefert "dirty" — beidseitig offen, Speichern bleibt aus`
+			);
+			// AC-6: jeder gesetzte Wert liegt innerhalb der Skala und auf der Schrittweite.
+			for (const bound of [row!.min, row!.max]) {
+				if (bound == null) continue;
+				assert.ok(
+					bound >= row!.scale[0] && bound <= row!.scale[1],
+					`AC-6 FAIL ${metric}: ${bound} ausserhalb der Skala [${row!.scale}]`
+				);
+				assert.equal(
+					(bound - row!.scale[0]) % row!.step,
+					0,
+					`AC-6 FAIL ${metric}: ${bound} liegt nicht auf der Schrittweite ${row!.step}`
+				);
+			}
+		});
+	}
+});
+
+// AC-4 (Datenerhalt, BUG-DATALOSS-GR221/#102): ein frueher gespeicherter
+// precip_type_dominant-Korridor (seit AC-3 nicht mehr im Angebot) muss ueber
+// unknownCorridors erhalten bleiben, nicht verworfen werden.
+describe('Issue #1424 AC-4: alter precip_type_dominant-Korridor bleibt beim Speichern erhalten', () => {
+	test('buildComparePool sammelt ihn in unknownCorridors, buildCompareCorridorSavePayload haengt ihn unveraendert an', () => {
+		const savedCorridor = { metric: 'precip_type_dominant', range: [1, 2] as [number, number], notify: false, mark: true };
+		const { rows, poolLeft, unknownCorridors } = buildComparePool(
+			[
+				savedCorridor,
+				{ metric: 'wind_max_kmh', range: [0, 50], notify: false, mark: true },
+			],
+			TEST_DEFS
+		);
+		assert.equal(
+			rows.some((r) => r.metric === 'precip_type_dominant'),
+			false,
+			'AC-4 FAIL: precip_type_dominant taucht als Zeile auf, obwohl es nicht mehr im Angebot ist'
+		);
+		assert.equal(
+			poolLeft.some((m) => m.metric === 'precip_type_dominant'),
+			false,
+			'AC-4 FAIL: precip_type_dominant taucht im "+ Metrik"-Pool auf'
+		);
+		assert.deepEqual(unknownCorridors, [savedCorridor], 'AC-4 FAIL: unknownCorridors-Weg greift nicht');
+
+		// Nutzer aendert nur die bekannte Zeile (wind_max_kmh) und speichert.
+		const changedRows = patchRow(rows, 'wind_max_kmh', { max: 60 });
+		const payload = buildCompareCorridorSavePayload(
+			changedRows,
+			[],
+			{ idealRanges: {}, activeMetricKeys: [], metricAlertLevels: {} },
+			unknownCorridors
+		);
+		const preserved = payload.corridors.find((c) => c.metric === 'precip_type_dominant');
+		assert.deepEqual(
+			preserved,
+			savedCorridor,
+			'AC-4 FAIL: der alte precip_type_dominant-Korridor wurde beim Speichern veraendert/verworfen'
+		);
 	});
 });

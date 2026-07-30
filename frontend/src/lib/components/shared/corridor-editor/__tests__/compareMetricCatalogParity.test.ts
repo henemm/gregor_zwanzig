@@ -20,8 +20,9 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 
 const MODULE_FILE = join(
 	dirname(fileURLToPath(import.meta.url)),
@@ -29,6 +30,25 @@ const MODULE_FILE = join(
 	'compareMetricCatalogLoader.ts'
 );
 const MODULE_SPECIFIER = '../compareMetricCatalogLoader.ts';
+
+// Issue #1424 F001 (Adversary): hartkodierte Erwartungsliste ist kein echter
+// Drift-Waechter (analog #1351 F003/F003b, s. compareMetricKeysParity.test.ts)
+// -- AC-2 liest daher den LIVE-Backend-Katalog per `uv run python3`.
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), ...Array(7).fill('..'));
+const PY_SCRIPT =
+	'import sys, json\n' +
+	"sys.path.insert(0, 'src')\n" +
+	'from output.renderers.compare_metric_catalog import get_compare_metric_catalog\n' +
+	"print(json.dumps({'metrics': get_compare_metric_catalog()}))\n";
+
+/** Liest die LIVE-Katalog-Antwort via `uv run python3` (echte Quelle, kein Fixture). */
+function fetchLiveCatalogResponse(): { metrics: Array<Record<string, unknown>> } {
+	const stdout = execFileSync('uv', ['run', 'python3', '-c', PY_SCRIPT], {
+		cwd: REPO_ROOT,
+		encoding: 'utf-8'
+	});
+	return JSON.parse(stdout.trim());
+}
 
 // Endpoint-Antwort-Fixture: 25 Einträge 1:1 aus
 // src/output/renderers/compare_metric_catalog.py::COMPARE_METRIC_CATALOG,
@@ -56,6 +76,10 @@ const ENDPOINT_FIXTURE = {
 		{ key: 'pop_max_pct', label: 'Regenwahrscheinlichkeit', aggregation_label: 'Maximum', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
 		{ key: 'wind_direction_deg', label: 'Windrichtung', aggregation_label: 'Mittel', unit: '°', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 360, step: 10, alarmCapable: false },
 		{ key: 'wind_chill_min_c', label: 'Gefühlte Temperatur', aggregation_label: 'Minimum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, alarmCapable: false },
+		// Issue #1424: fehlte hier bislang (Fixture war 25 statt 26 Eintraege) —
+		// ergaenzt, damit die Fixture die echte Katalog-Struktur (26 Eintraege,
+		// src/output/renderers/compare_metric_catalog.py) tatsaechlich abbildet.
+		{ key: 'wind_chill_max_c', label: 'Gefühlte Temperatur', aggregation_label: 'Maximum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -20, rangeMax: 45, step: 1, alarmCapable: false },
 		{ key: 'humidity_avg_pct', label: 'Luftfeuchtigkeit', aggregation_label: 'Mittel', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
 		{ key: 'dewpoint_avg_c', label: 'Taupunkt', aggregation_label: 'Mittel', unit: '°C', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: -20, rangeMax: 30, step: 1, alarmCapable: false },
 		{ key: 'snowfall_limit_m', label: 'Schneefallgrenze', aggregation_label: 'Minimum', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 5000, step: 100, alarmCapable: false },
@@ -101,20 +125,19 @@ const GOLDEN_DEFS: Array<{
 	{ metric: 'gust_max_kmh', label: 'Böen', unit: 'km/h', scale: [0, 150], step: 5, kind: 'range', defaultMin: null, defaultMax: 70, alarmCapable: true },
 	{ metric: 'cape_max_jkg', label: 'Gewitterenergie (CAPE)', unit: 'J/kg', scale: [0, 3000], step: 100, kind: 'range', defaultMin: null, defaultMax: 500, alarmCapable: true },
 	{ metric: 'freezing_level_m', label: 'Nullgradgrenze', unit: 'm', scale: [0, 5000], step: 100, kind: 'range', defaultMin: 1500, defaultMax: null, alarmCapable: true },
-	{ metric: 'pop_max_pct', label: 'Regenwahrscheinlichkeit', unit: '%', scale: [0, 100], step: 5, kind: 'range', defaultMin: null, defaultMax: null, alarmCapable: false },
-	{ metric: 'wind_direction_deg', label: 'Windrichtung', unit: '°', scale: [0, 360], step: 10, kind: 'range', defaultMin: null, defaultMax: null, alarmCapable: false },
-	{ metric: 'wind_chill_min_c', label: 'Gefühlte Temperatur', unit: '°C', scale: [-30, 30], step: 1, kind: 'range', defaultMin: null, defaultMax: null, alarmCapable: false },
-	{ metric: 'humidity_avg_pct', label: 'Luftfeuchtigkeit', unit: '%', scale: [0, 100], step: 5, kind: 'range', defaultMin: null, defaultMax: null, alarmCapable: false },
-	{ metric: 'dewpoint_avg_c', label: 'Taupunkt', unit: '°C', scale: [-20, 30], step: 1, kind: 'range', defaultMin: null, defaultMax: null, alarmCapable: false },
-	{ metric: 'snowfall_limit_m', label: 'Schneefallgrenze', unit: 'm', scale: [0, 5000], step: 100, kind: 'range', defaultMin: null, defaultMax: null, alarmCapable: false },
-	// precip_type_dominant: MetricDef.kind='enum' wird im Editor wie heute auf
-	// 'range' plattgedrückt (kein numerisches Backing in ALL_METRICS -> Default-
-	// Fallback scale=[0,100], step=1).
-	{ metric: 'precip_type_dominant', label: 'Niederschlagsart', unit: '', scale: [0, 100], step: 1, kind: 'range', defaultMin: null, defaultMax: null, alarmCapable: false },
-	{ metric: 'cloud_low_avg_pct', label: 'Tiefe Wolken', unit: '%', scale: [0, 100], step: 5, kind: 'range', defaultMin: null, defaultMax: null, alarmCapable: false },
-	{ metric: 'cloud_mid_avg_pct', label: 'Mittelhohe Wolken', unit: '%', scale: [0, 100], step: 5, kind: 'range', defaultMin: null, defaultMax: null, alarmCapable: false },
-	{ metric: 'cloud_high_avg_pct', label: 'Hohe Wolken', unit: '%', scale: [0, 100], step: 5, kind: 'range', defaultMin: null, defaultMax: null, alarmCapable: false },
-	{ metric: 'pressure_avg_hpa', label: 'Luftdruck', unit: 'hPa', scale: [950, 1050], step: 5, kind: 'range', defaultMin: null, defaultMax: null, alarmCapable: false }
+	// Issue #1424: die zehn PO-freigegebenen Startwerte (vorher ueberall
+	// null,null) + AC-3-Entfernung von precip_type_dominant/wind_direction_deg
+	// (beide taugen nicht als Von/Bis-Bereich, s. compareMetricCatalogLoader.ts).
+	{ metric: 'pop_max_pct', label: 'Regenwahrscheinlichkeit', unit: '%', scale: [0, 100], step: 5, kind: 'range', defaultMin: null, defaultMax: 30, alarmCapable: false },
+	{ metric: 'wind_chill_min_c', label: 'Gefühlte Temperatur', unit: '°C', scale: [-30, 30], step: 1, kind: 'range', defaultMin: -5, defaultMax: null, alarmCapable: false },
+	{ metric: 'wind_chill_max_c', label: 'Gefühlte Temperatur', unit: '°C', scale: [-20, 45], step: 1, kind: 'range', defaultMin: null, defaultMax: 30, alarmCapable: false },
+	{ metric: 'humidity_avg_pct', label: 'Luftfeuchtigkeit', unit: '%', scale: [0, 100], step: 5, kind: 'range', defaultMin: 30, defaultMax: 70, alarmCapable: false },
+	{ metric: 'dewpoint_avg_c', label: 'Taupunkt', unit: '°C', scale: [-20, 30], step: 1, kind: 'range', defaultMin: null, defaultMax: 16, alarmCapable: false },
+	{ metric: 'snowfall_limit_m', label: 'Schneefallgrenze', unit: 'm', scale: [0, 5000], step: 100, kind: 'range', defaultMin: 1500, defaultMax: null, alarmCapable: false },
+	{ metric: 'cloud_low_avg_pct', label: 'Tiefe Wolken', unit: '%', scale: [0, 100], step: 5, kind: 'range', defaultMin: null, defaultMax: 50, alarmCapable: false },
+	{ metric: 'cloud_mid_avg_pct', label: 'Mittelhohe Wolken', unit: '%', scale: [0, 100], step: 5, kind: 'range', defaultMin: null, defaultMax: 50, alarmCapable: false },
+	{ metric: 'cloud_high_avg_pct', label: 'Hohe Wolken', unit: '%', scale: [0, 100], step: 5, kind: 'range', defaultMin: null, defaultMax: 70, alarmCapable: false },
+	{ metric: 'pressure_avg_hpa', label: 'Luftdruck', unit: 'hPa', scale: [950, 1050], step: 5, kind: 'range', defaultMin: 1010, defaultMax: null, alarmCapable: false }
 ];
 
 const moduleExists = () => existsSync(MODULE_FILE);
@@ -171,7 +194,7 @@ describe('AC-2: compareMetricCatalogLoader.ts existiert und exportiert buildComp
 // GOLDEN_DEFS) deckt die Paritaet jetzt vollstaendig ab, dieser Block entfaellt.
 
 describe('AC-2 (Charakterisierung, Parität): buildCompareMetricDefs(endpointFixture) === GOLDEN_DEFS', () => {
-	test('liefert 25 CompareMetricDef-Objekte, feldweise bitgleich zur Golden-Fixture', async () => {
+	test('liefert 24 CompareMetricDef-Objekte (Katalog 26 minus 2 aus AC-3), feldweise bitgleich zur Golden-Fixture', async () => {
 		let mod: typeof import('../compareMetricCatalogLoader.ts');
 		try {
 			mod = await import(MODULE_SPECIFIER);
@@ -186,8 +209,8 @@ describe('AC-2 (Charakterisierung, Parität): buildCompareMetricDefs(endpointFix
 
 		assert.equal(
 			result.length,
-			25,
-			`AC-2 FAIL: erwartet 25 CompareMetricDef-Objekte, erhalten ${result.length}`
+			24,
+			`AC-2 FAIL: erwartet 24 CompareMetricDef-Objekte (Katalog bleibt bei 26, AC-3 filtert precip_type_dominant + wind_direction_deg), erhalten ${result.length}`
 		);
 		GOLDEN_DEFS.forEach((expected, i) => {
 			assertDefMatches(
@@ -200,7 +223,7 @@ describe('AC-2 (Charakterisierung, Parität): buildCompareMetricDefs(endpointFix
 });
 
 describe('AC-1 (SSoT-Kern): ein synthetischer neuer Katalog-Eintrag erscheint im Pool ohne Frontend-Code-Änderung', () => {
-	test('erweiterte Endpoint-Fixture -> Zusatz-Def erscheint zusätzlich zu den 25 bekannten', async () => {
+	test('erweiterte Endpoint-Fixture -> Zusatz-Def erscheint zusätzlich zu den 24 bekannten', async () => {
 		let mod: typeof import('../compareMetricCatalogLoader.ts');
 		try {
 			mod = await import(MODULE_SPECIFIER);
@@ -231,12 +254,12 @@ describe('AC-1 (SSoT-Kern): ein synthetischer neuer Katalog-Eintrag erscheint im
 
 		assert.equal(
 			result.length,
-			26,
-			'AC-1 FAIL: der synthetische neue Eintrag muss zusätzlich zu den 25 bekannten erscheinen — ' +
+			25,
+			'AC-1 FAIL: der synthetische neue Eintrag muss zusätzlich zu den 24 bekannten erscheinen — ' +
 				'ohne jede Frontend-Code-Änderung (SSoT-Eigenschaft)'
 		);
 		assertDefMatches(
-			result[25] as unknown as Record<string, unknown>,
+			result[24] as unknown as Record<string, unknown>,
 			{
 				metric: 'foo_new_metric',
 				label: 'Testmetrik Neu',
@@ -248,7 +271,44 @@ describe('AC-1 (SSoT-Kern): ein synthetischer neuer Katalog-Eintrag erscheint im
 				defaultMax: null,
 				alarmCapable: false
 			},
-			'AC-1[25] (foo_new_metric)'
+			'AC-1[24] (foo_new_metric)'
 		);
+	});
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// Issue #1424 (Fix Wertebereiche-Startwerte, S6 von #1372/#1374)
+// ════════════════════════════════════════════════════════════════════════
+
+describe('AC-2 (Issue #1424): jede angebotene Groesse hat mindestens eine Grenze (LIVE-Katalog)', () => {
+	test('buildCompareMetricDefs(LIVE-Katalog) liefert fuer JEDEN Eintrag defaultMin oder defaultMax — der eigentliche Wert des Tickets: verhindert Rueckfall, sobald der Katalog waechst', async () => {
+		const mod: typeof import('../compareMetricCatalogLoader.ts') = await import(MODULE_SPECIFIER);
+		const liveResponse = fetchLiveCatalogResponse();
+		const result = mod.buildCompareMetricDefs(liveResponse);
+		const missing = result.filter((d) => d.defaultMin == null && d.defaultMax == null);
+		assert.deepEqual(
+			missing.map((d) => d.metric),
+			[],
+			'AC-2 FAIL: diese angebotenen Groessen haben KEINE Von/Bis-Vorgabe (beidseitig offen -> ' +
+				'validateCorridorRows blockt -> Speichern des gesamten Reiters bleibt aus): ' +
+				missing.map((d) => d.metric).join(', ')
+		);
+	});
+});
+
+describe('AC-3 (Issue #1424): precip_type_dominant + wind_direction_deg nicht mehr im Wertebereichs-Angebot', () => {
+	test('buildCompareMetricDefs(ENDPOINT_FIXTURE) enthaelt die zwei Groessen nicht mehr, alle uebrigen 24 weiterhin', async () => {
+		const mod: typeof import('../compareMetricCatalogLoader.ts') = await import(MODULE_SPECIFIER);
+		const result = mod.buildCompareMetricDefs(ENDPOINT_FIXTURE);
+		const ids = result.map((d) => d.metric);
+		assert.equal(ids.includes('precip_type_dominant'), false, 'AC-3 FAIL: precip_type_dominant noch im Angebot');
+		assert.equal(ids.includes('wind_direction_deg'), false, 'AC-3 FAIL: wind_direction_deg noch im Angebot');
+		const expectedRemaining = ENDPOINT_FIXTURE.metrics
+			.map((m) => m.key)
+			.filter((k) => k !== 'precip_type_dominant' && k !== 'wind_direction_deg');
+		assert.deepEqual([...ids].sort(), [...expectedRemaining].sort());
+		// AC-5: GOLDEN_DEFS oben behaelt thunder_level_max (kind 'ordinal') unveraendert —
+		// die Entfernung trifft nur die zwei hier geprueften Groessen, s. auch
+		// corridorEditorState.test.ts "thunder_level_max ist kind ordinal".
 	});
 });
