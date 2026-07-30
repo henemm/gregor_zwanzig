@@ -121,7 +121,27 @@ def _scope_diff_base() -> str:
     Marker im alten #916-Format ohne gate_last_scope, der dadurch keinen
     Cache-Treffer liefert. In diesem Fall bewusst auf HEAD~1 ausweichen statt
     den Marker (Selbstreferenz vermeiden).
+
+    henemm-infra#148 / #1428: Vorrang hat die vom Preflight (Issue #1130)
+    tatsächlich verwendete Diff-Basis für genau diesen HEAD (den Ziel-Commit,
+    der per `git reset --hard` gerade ausgecheckt wurde) — sofern hinterlegt
+    und im Repo auflösbar. Das behebt den Widerspruch, dass der Preflight vor
+    dem Reset gegen den alten Commit diffte, der reguläre Check danach aber
+    gegen einen älteren Marker-Stand (der den zwischenzeitlich live gegangenen
+    Backend-Commit fälschlich mit in den Diff zog). Es wird NUR die Basis
+    übernommen, nie ein gecachter Scope-WERT — der Scope wird weiterhin immer
+    frisch aus dem echten git-diff berechnet (F001 bleibt unberührt).
     """
+    head = _head_sha()
+    preflight_base = _e2e_paths.read_preflight_base(_shared_repo_dir(), head)
+    if preflight_base is not None:
+        resolvable = subprocess.run(
+            ["git", "cat-file", "-e", preflight_base],
+            capture_output=True, text=True, cwd=str(_verified_repo_dir()),
+        )
+        if resolvable.returncode == 0:
+            return preflight_base
+
     marker_sha = _e2e_paths.read_last_gate_scope(_shared_repo_dir())
     if marker_sha and marker_sha != _head_sha():
         resolvable = subprocess.run(
@@ -393,6 +413,12 @@ def gate_check(e2e_path: Path | None, scope_override: str | None,
         # Nachweis-Pfad, der nie existieren kann (schreibt wird immer mit der
         # vollen SHA benannt).
         expected_commit = resolved.stdout.strip()
+        # henemm-infra#148 / #1428: Diff-BASIS (der alte, noch live laufende
+        # Commit) fuer den Ziel-Commit hinterlegen -- kein Scope-Cache, siehe
+        # _scope_diff_base(). Muss VOR der Scope-Berechnung stehen, damit ein
+        # nachfolgender regulaerer --check (nach git reset --hard auf diesen
+        # Ziel-Commit) dieselbe Basis wie der Preflight verwendet.
+        _e2e_paths.write_preflight_base(_shared_repo_dir(), expected_commit, _head_sha())
     scope = scope_override or _detect_committed_scope(expected_commit)
     if scope == "docs-only":
         _log(f"Scope '{scope}' — Staging-Gate übersprungen (kein UI/Backend-Change).")

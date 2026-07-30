@@ -100,6 +100,50 @@ def cached_scope_for_sha(repo_dir, sha) -> "str | None":
     return None
 
 
+def last_preflight_base_path(repo_dir) -> Path:
+    """Marker-Pfad fuer die Preflight-Diff-Basis (henemm-infra#148 / #1428):
+    <repo_dir>/.claude/last_preflight_base.json.
+    """
+    return Path(repo_dir) / ".claude" / "last_preflight_base.json"
+
+
+def write_preflight_base(repo_dir, target_sha, base_sha) -> None:
+    """Hinterlegt {"target_sha": target_sha, "base_sha": base_sha} -- die vom
+    Preflight (Issue #1130) tatsaechlich verwendete Diff-Basis (der alte, noch
+    live laufende Commit) fuer den angegebenen Ziel-Commit.
+
+    KEIN Scope-Cache (im Unterschied zu write_last_gate_scope/gate_last_scope):
+    nur die Diff-BASIS wird hinterlegt, der Scope wird vom Aufrufer immer neu
+    aus dem echten git-diff berechnet -- die F001-Schutzregel in
+    cached_scope_for_sha() (docs-only-Werte nie blind uebernehmen) bleibt
+    davon unberuehrt. Ein einzelner Eintrag genuegt (wird bei jedem Preflight
+    ueberschrieben). Schreibfehler werden geschluckt.
+    """
+    path = last_preflight_base_path(repo_dir)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"target_sha": target_sha, "base_sha": base_sha}))
+    except OSError:
+        pass
+
+
+def read_preflight_base(repo_dir, target_sha) -> "str | None":
+    """Liefert die vom Preflight hinterlegte Diff-Basis fuer GENAU target_sha,
+    oder None (Datei fehlt/kaputt/Ziel-Commit stimmt nicht ueberein --
+    Aufrufer faellt dann auf die bestehende Marker-/HEAD~1-Logik zurueck)."""
+    path = last_preflight_base_path(repo_dir)
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    if data.get("target_sha") != target_sha:
+        return None
+    base = data.get("base_sha")
+    return base if base else None
+
+
 def _git_diff_names(base, target, repo_dir) -> "list[str] | None":
     """git diff --name-only <base> <target> in repo_dir.
 
