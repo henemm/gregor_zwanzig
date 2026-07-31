@@ -266,7 +266,7 @@
 	// Der Deckel sitzt bewusst am Schreibvorgang selbst (AbortController) statt nur
 	// an der Sperre: so hängt danach auch kein Request mehr im Hintergrund, der
 	// später doch noch einschlägt und einen inzwischen überholten Stand festschreibt.
-	// 15 s liegt weit über jeder normalen Antwortzeit und über SETTLE_TIMEOUT_MS (8 s).
+	// 15 s liegt weit über jeder normalen Antwortzeit.
 	const CASCADE_WRITE_TIMEOUT_MS = 15_000;
 	// Bug #1390: sichtbar, solange es die auslösende Etappe noch gibt — unabhängig
 	// davon, an welcher Position sie steht und welche Etappe gerade aktiv ist. Eine
@@ -377,8 +377,7 @@
 	async function applyCascade(): Promise<void> {
 		// Bug #1389 Adversary F004: Reentrancy-Riegel, synchron VOR jedem `await`.
 		// `cascade.done` fällt erst nach dem ersten `await` — zwei Tipps im selben
-		// Tick kamen beide durch und verschoben ZWEIMAL (s2 auf +42 statt +21). Seit
-		// `settle()` klafft das Fenster bis SETTLE_TIMEOUT_MS, nicht nur einen PUT.
+		// Tick kamen beide durch und verschoben ZWEIMAL (s2 auf +42 statt +21).
 		if (cascadeBusy) return;
 		if (!cascade || cascade.done) return;
 		// Adversary MEDIUM: Zustand festhalten. `dismissCascade()` kann im selben Tick
@@ -404,10 +403,9 @@
 			// zurückzunehmen: was nicht bestätigt ist, wurde nie angezeigt.
 			//
 			// Bug #1393 R5-F001: die Zieldaten werden auf die LEBENDE Liste angewandt,
-			// nicht auf einen vorab eingefrorenen Rumpf. Der frühere `nextStages`
-			// entstand VOR `settle()` (bis 8 s Wartezeit) — was der Nutzer in dieser
-			// Zeit an der Liste änderte, machte die Zuweisung danach wieder zunichte
-			// (eine gelöschte Etappe kehrte zurück, im Backend wie in der Anzeige).
+			// nicht auf einen vorab eingefrorenen Rumpf — sonst machte eine Änderung
+			// des Nutzers an der Liste die Zuweisung danach wieder zunichte (eine
+			// gelöschte Etappe kehrte zurück, im Backend wie in der Anzeige).
 			const withTargets = (list: Stage[]): Stage[] =>
 				list.map((s) => (targets[s.id] ? { ...s, date: targets[s.id], dateOverridden: true } : s));
 			if (saveController) {
@@ -415,14 +413,8 @@
 				// trägt einen veralteten Schnappschuss und überschriebe sonst das gleich
 				// folgende Kaskaden-Ergebnis.
 				saveController.cancel();
-				// Bug #1389: `cancel()` stoppt nur Noch-nicht-Abgeschicktes; auf einen
-				// bereits laufenden Request muss GEWARTET werden, sonst entscheidet die
-				// Netz-Laufzeit. Adversary F002: `setSaving()` bewusst VOR dem Warten,
-				// sonst wirkte die Oberfläche während des gedeckelten Wartens eingefroren.
 				saveController.setSaving();
-				await saveController.settle();
 				// Flush immediately (cascade = user intent, no debounce needed).
-				// R5-F001: Rumpf ERST JETZT bauen — nach dem Warten, aus dem aktuellen Stand.
 				const ctrl = new AbortController();
 				const capTimer = setTimeout(() => ctrl.abort(), CASCADE_WRITE_TIMEOUT_MS);
 				try {

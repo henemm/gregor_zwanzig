@@ -912,7 +912,7 @@ Auf schnellem Netz gewinnt zufällig der richtige. Der Fehler braucht **asymmetr
 
 ### Fix (live 2026-07-26, Commits `920cc99c` … `d38740c2`)
 - **Kein zweiter Schreibvorgang:** `SaveStatus.defer()` stellt zurück, statt zu takten, solange die Rückfrage offen ist. Genau ein PUT je Entscheidung.
-- **Reihenfolge nicht dem Netz überlassen:** `SaveStatus.settle()` wartet auf einen dennoch laufenden Schreibvorgang, gedeckelt auf `SETTLE_TIMEOUT_MS`.
+- **Reihenfolge nicht dem Netz überlassen:** `SaveStatus.settle()` wartet auf einen dennoch laufenden Schreibvorgang, gedeckelt auf `SETTLE_TIMEOUT_MS`. *(Seit #1395 S5, 2026-07-31, ersetzt durch die zentrale Schreib-Warteschlange in `api.ts` (`enqueueTripWrite`, Issue #1395 S3) — `settle()` und `SETTLE_TIMEOUT_MS` sind entfernt.)*
 - **Idempotenz:** Die Zieldaten werden aus einer beim Aufstellen der Rückfrage festgehaltenen Grundlage (`baseFirstDate`/`baseDates`, nach `id` geschlüsselt) berechnet — nicht aus dem laufend veränderten Zustand. Wiederholung nach Fehlschlag verdoppelt dadurch nichts.
 - **Reentrancy-Riegel** vor dem ersten `await`; Knöpfe während der Verarbeitung gesperrt.
 - **`dismissCascade()` speichert unbedingt**, statt sich auf einen möglicherweise abgeräumten Speichervorgang zu verlassen; im Fehlerfall wird die geäußerte Absicht neu vorgemerkt, damit `beforeNavigate` sie retten kann.

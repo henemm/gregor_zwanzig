@@ -50,7 +50,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { SaveStatus, SETTLE_TIMEOUT_MS } from '../saveStatusStore.svelte.ts';
+import { SaveStatus } from '../saveStatusStore.svelte.ts';
+import * as saveStatusStoreModule from '../saveStatusStore.svelte.ts';
 import { weatherSaveGate } from '../../components/trip-detail/weatherSaveGate.ts';
 import { reportConfigChangedByUser } from '../../components/shared/reportConfigDirty.ts';
 
@@ -269,75 +270,9 @@ describe('Bug #1389: Kaskaden-Rückfrage darf keinen zweiten Speichervorgang erz
 		assert.equal(calls, 0, 'nach cancel() darf der zurückgestellte Stand nicht mehr geschrieben werden');
 	});
 
-	test('settle() wartet auf einen bereits laufenden Speichervorgang — die Reihenfolge hängt nicht mehr am Netz', async () => {
-		const c = createTestInstance();
-		const order: string[] = [];
-
-		// Ein bereits abgeschickter Request mit dem VERALTETEN Stand, der lange
-		// unterwegs ist (schlechte Mobilverbindung).
-		let release!: () => void;
-		const onTheWire = new Promise<void>((r) => {
-			release = r;
-		});
-		const stale = c.doSave(async () => {
-			await onTheWire;
-			order.push('veraltet');
-		});
-
-		// Die Kaskaden-Bestätigung muss darauf WARTEN statt ihn nur abbestellen
-		// zu wollen (cancel() erwischt einen laufenden Request nicht).
-		const cascade = (async () => {
-			c.cancel();
-			await c.settle();
-			order.push('kaskade');
-		})();
-
-		setTimeout(() => release(), 50);
-		await Promise.all([stale, cascade]);
-
-		assert.deepEqual(
-			order,
-			['veraltet', 'kaskade'],
-			'der Kaskaden-Schreibvorgang darf erst starten, wenn der veraltete Request abgeschlossen ist — ' +
-				'sonst entscheidet die Netz-Laufzeit, welcher Stand am Ende in der Datenbank liegt (Bug #1389)'
-		);
-	});
-
-	test('settle() ist ein No-Op, wenn nichts unterwegs ist (kein künstliches Warten)', async () => {
-		const c = createTestInstance();
-		const t0 = Date.now();
-		await c.settle();
-		assert.ok(Date.now() - t0 < 100, 'settle() darf ohne laufenden Request nicht blockieren');
-	});
 });
 
 describe('Bug #1389 Fix-Loop 1 (Adversary F002/F003)', () => {
-	test('F002: settle() wartet nicht ewig — ein hängender Request friert die Oberfläche nicht ein', async () => {
-		const c = createTestInstance();
-		// Ein Request, der NIE antwortet (Funkloch — genau die Zielgruppe).
-		// Bewusst nicht awaited: doSave() kehrt hier nie zurück.
-		void c.doSave(() => new Promise<void>(() => {}));
-
-		const t0 = Date.now();
-		await c.settle();
-		const waited = Date.now() - t0;
-
-		assert.ok(
-			waited >= SETTLE_TIMEOUT_MS - 500,
-			`settle() muss auf den laufenden Request warten (gewartet: ${waited}ms)`
-		);
-		assert.ok(
-			waited < SETTLE_TIMEOUT_MS + 2000,
-			`settle() muss nach ${SETTLE_TIMEOUT_MS}ms aufgeben und den Aufrufer fortfahren lassen — ` +
-				`sonst wäre die Race gegen einen unbegrenzten Hänger getauscht (gewartet: ${waited}ms)`
-		);
-		assert.equal(
-			c.state,
-			'saving',
-			'während der Wartezeit muss die Anzeige „Speichere …" zeigen, nicht „Gespeichert ✓"'
-		);
-	});
-
 	test('F003: cancel() eines zurückgestellten Saves lässt kein falsches „Nicht gespeichert" stehen', () => {
 		const c = createTestInstance();
 		c.defer(async () => {});
@@ -404,5 +339,39 @@ describe('Bug #1389 Fix-Loop 2 (Adversary F004): Doppeltipp darf nicht doppelt s
 				'bevor es das erste Mal wartet (Bug #1389 F004)'
 		);
 		assert.equal(c.hasPending, false);
+	});
+});
+
+// TDD RED — Issue #1395 S5: Rückbau settle()/SETTLE_TIMEOUT_MS/Wartblock in
+// applyCascade(). Reiner Dead-Code-Rückbau (kein neues Verhalten) — laut
+// Kontext-Memo "Bei reinen Refactors/Dead-Code-Removals (kein natürlicher
+// Verhaltens-RED): trotzdem die Skill nutzen; eine echte
+// Behavior-Preservation- oder Struktur-Assertion als realer Testlauf, dessen
+// Ausgabe das Artefakt bildet." Die beiden Tests unten prüfen die ECHTE
+// Modul-/Prototype-API zur Laufzeit (kein Mock, keine Datei-Inhalt-Prüfung).
+// Sie MÜSSEN jetzt fehlschlagen, weil settle()/SETTLE_TIMEOUT_MS noch
+// existieren, und werden nach dem Rückbau grün.
+//
+// Spec: docs/specs/modules/issue_1395_s5_settle_rueckbau.md
+//   § Acceptance Criteria AC-4
+describe('Issue #1395 S5 (RED): settle()/SETTLE_TIMEOUT_MS sind zurückgebaut', () => {
+	test('AC-4: SaveStatus.prototype hat keine settle()-Methode mehr', () => {
+		const proto = SaveStatus.prototype as unknown as Record<string, unknown>;
+		assert.equal(
+			typeof proto.settle,
+			'undefined',
+			'settle() muss nach dem Rückbau von S3/S4 aus SaveStatus entfernt sein — ' +
+				'die Warteschlange in api.ts/etagRegistry.ts (Issue #1395 S3) trägt die ' +
+				'Ordnungsgarantie jetzt allein'
+		);
+	});
+
+	test('AC-4: SETTLE_TIMEOUT_MS wird nicht mehr aus saveStatusStore.svelte.ts exportiert', () => {
+		assert.equal(
+			'SETTLE_TIMEOUT_MS' in saveStatusStoreModule,
+			false,
+			'SETTLE_TIMEOUT_MS war nur für settle() da — mit der Methode muss auch die ' +
+				'Konstante weg'
+		);
 	});
 });

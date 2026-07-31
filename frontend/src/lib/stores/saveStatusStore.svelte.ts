@@ -16,17 +16,6 @@ export type SaveState = 'idle' | 'dirty' | 'saving' | 'error' | 'conflict';
  */
 export type SaveFn = (init?: RequestInit) => Promise<void>;
 
-/**
- * Bug #1389 (Adversary F002): Obergrenze für `settle()`. Unbegrenztes Warten
- * legte die Kaskaden-Bestätigung im Funkloch für immer still (Zielgruppe:
- * Weitwanderer mit Netzabbrüchen). Nach Ablauf wird bewusst TROTZDEM
- * geschrieben — unbedenklich, weil bei offener Rückfrage ohnehin `defer()`
- * statt `schedule()` läuft und `settle()` nur Rückfallschutz ist. 8 s liegt
- * weit über jeder normalen Antwortzeit (Staging < 20 ms) und unter der
- * Geduldsgrenze nach einem Klick auf „Alle mitverschieben".
- */
-export const SETTLE_TIMEOUT_MS = 8000;
-
 export function extractMessage(e: unknown): string {
 	if (e && typeof e === 'object') {
 		const obj = e as Record<string, unknown>;
@@ -47,8 +36,8 @@ export class SaveStatus {
 	private _timer: ReturnType<typeof setTimeout> | null = null;
 	private _pendingFn: SaveFn | null = null;
 	// Bug #1389: der gerade im Netz laufende Speichervorgang. `cancel()` kann ihn
-	// nicht mehr stoppen — wer ihn überschreiben will, muss auf ihn WARTEN
-	// (`settle()`), sonst entscheidet die Netz-Laufzeit, welcher Stand gewinnt.
+	// nicht mehr stoppen — der Merker dient `cancel()`s Guard als Grundlage, damit
+	// dort nichts zurückgesetzt wird, solange ein Request noch unterwegs ist.
 	private _inflight: Promise<void> | null = null;
 	// Issue #1395 S4: der bei einem 412 abgelehnte Speichervorgang, damit
 	// `retryConflict()` ihn unveraendert wiederholen kann.
@@ -137,32 +126,6 @@ export class SaveStatus {
 			return;
 		}
 		await this.doSave(fn, init);
-	}
-
-	/**
-	 * Bug #1389: wartet auf einen bereits abgeschickten Speichervorgang (ohne
-	 * laufenden Request sofortige Rückkehr). Sonst könnte ein danach gestarteter
-	 * Schreibvorgang FRÜHER ankommen und der veraltete Stand lautlos gewinnen —
-	 * das Backend ersetzt die Etappen komplett und kennt keine Reihenfolge.
-	 * Adversary F002: gedeckelt auf `SETTLE_TIMEOUT_MS` (Begründung s. Konstante),
-	 * der Aufrufer hält die Anzeige derweil auf `saving`.
-	 */
-	async settle(): Promise<void> {
-		const deadline = Date.now() + SETTLE_TIMEOUT_MS;
-		// Schleife: `doSave()` kann während des Wartens erneut gefeuert haben.
-		for (let i = 0; i < 5; i++) {
-			const inflight = this._inflight;
-			if (!inflight) return;
-			const remaining = deadline - Date.now();
-			if (remaining <= 0) return;
-			let timer: ReturnType<typeof setTimeout> | undefined;
-			const capped = new Promise<'timeout'>((resolve) => {
-				timer = setTimeout(() => resolve('timeout'), remaining);
-			});
-			const outcome = await Promise.race([inflight.then(() => 'done' as const), capped]);
-			if (timer !== undefined) clearTimeout(timer);
-			if (outcome === 'timeout') return;
-		}
 	}
 
 	/** Returns true if a save is pending (debounced or deferred, not yet flushed).
