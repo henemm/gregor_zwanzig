@@ -38,6 +38,15 @@ class MetricDefinition:
     friendly_label: str = ""
     summary_fields: dict[str, str] = field(default_factory=dict)
     default_change_threshold: Optional[float] = None
+    # #1435 E1a: Alarmfaehigkeit haengt am Paar (Groesse, Auswertung).
+    # alert_metrics: Auswertung -> Alarm-Identitaet (AlertMetric-Wert), strukturell
+    # parallel zu summary_fields. Nur Identitaeten, die die Auswertungskette
+    # (weather_change_detection._ALERT_METRIC_TO_CATALOG_ID) auch erreichen kann --
+    # sonst waere es ein Bedienelement ohne Wirkung (Epic #1374 Invariante 1).
+    alert_metrics: dict[str, str] = field(default_factory=dict)
+    # Aenderungsraten-Alarm: KEINE Auswertung, deshalb orthogonal zu alert_metrics
+    # (dessen Schluessel muessen echte Auswertungen aus _AGGREGATION_ORDER sein).
+    change_alert_metric: Optional[str] = None
     display_unit: str = ""  # Unit for legend if different from `unit` (e.g. "km" for visibility)
     # RISK-04: Configurable display/risk thresholds (catalog defaults)
     display_thresholds: dict[str, float] = field(default_factory=dict)
@@ -82,6 +91,10 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"min": "temp_min_c", "max": "temp_max_c", "avg": "temp_avg_c"},
         default_change_threshold=5.0,
+        # #1435 E1a: beide Richtungen haengen an der SICHTBAREN Groesse; die
+        # interne Pseudo-Groesse temperature_cold bleibt ohne Deklaration.
+        alert_metrics={"min": "temperature_min", "max": "temperature_max"},
+        change_alert_metric="temperature_change",
         # Issue #1377 Scheibe A (PO-Entscheidung 2026-07-28): beidseitige
         # Ampel-Schwellen -- Hitze (yellow/orange/red) UND Kaelte
         # (yellow_lt/orange_lt/red_lt). Identisch zu wind_chill (s. dort).
@@ -163,6 +176,9 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"max": "wind_max_kmh"},
         default_change_threshold=20.0,
+        # #1435 E1a: Wind hat KEINEN absoluten Alarm -- "wind_gust" gehoert
+        # ausschliesslich zu "gust" (Entkreuzung, AC-1).
+        change_alert_metric="wind_change",
         display_thresholds={"yellow": 30.0, "orange": 50.0, "red": 70.0},
         highlight_threshold=50.0,
         risk_thresholds={"medium": 50.0, "high": 70.0},
@@ -179,6 +195,7 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"max": "gust_max_kmh"},
         default_change_threshold=20.0,
+        alert_metrics={"max": "wind_gust"},  # #1435 E1a
         # Issue #1377 Scheibe A (PO-Entscheidung 2026-07-28): 30/45/60 statt
         # 50/65/80 -- vormals wich der Punkt-/Klartext-Wert von der
         # Zellfarbe derselben Mail ab, die schon 30 km/h nutzte.
@@ -214,6 +231,8 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"sum": "precip_sum_mm"},
         default_change_threshold=10.0,
+        alert_metrics={"sum": "precipitation_sum"},  # #1435 E1a
+        change_alert_metric="precipitation_change",
         display_thresholds={"yellow": 1.0, "orange": 5.0, "red": 10.0},
         risk_thresholds={"medium": 20.0},
         format_modes=("raw", "simplified"),
@@ -260,6 +279,7 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": False},
         summary_fields={"max": "thunder_level_max"},
         default_change_threshold=1.0,
+        alert_metrics={"max": "thunder_level"},  # #1435 E1a
         friendly_label="⚡",
         # Issue #814 AC-6: "raw" in format_modes erlaubt explizites format_mode="raw"
         # im Renderer (matrix test setzt mc.format_mode="raw"). Der #435-Fallback-Test
@@ -279,6 +299,7 @@ _METRICS: list[MetricDefinition] = [
         friendly_label="\U0001f7e2\U0001f7e1\U0001f534",
         summary_fields={"max": "cape_max_jkg"},
         default_change_threshold=500.0,
+        alert_metrics={"max": "cape"},  # #1435 E1a
         # Workflow fix-briefing-grid-and-summary (PO-go 2026-07-22, CAPE-
         # Bergkalibrierung): Berg-Gewitter triggern orographisch bei deutlich
         # niedrigerem CAPE als die Flachland-Konvektionsskala (vormals
@@ -391,6 +412,7 @@ _METRICS: list[MetricDefinition] = [
         display_unit="km",
         summary_fields={"min": "visibility_min_m"},
         default_change_threshold=1000,
+        alert_metrics={"min": "visibility"},  # #1435 E1a
         # Issue #1377 Scheibe A (PO-Entscheidung 2026-07-28): vollstaendig
         # invertierte Dreier-Staffel statt bisher nur orange_lt allein --
         # die Klartext-Zeile blieb dadurch bisher IMMER gruen (F001-artig).
@@ -463,6 +485,7 @@ _METRICS: list[MetricDefinition] = [
         # Single field on SegmentWeatherSummary (not min/max split)
         summary_fields={"min": "freezing_level_m"},
         default_change_threshold=200,
+        alert_metrics={"min": "freezing_level"},  # #1435 E1a
         sms_code="NL", decimals=0, cmp="unter", alert_label="Nullgradgrenze",
     ),
     MetricDefinition(
@@ -485,6 +508,7 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         summary_fields={"sum": "snow_new_sum_cm"},
         default_change_threshold=5.0,
+        alert_metrics={"sum": "fresh_snow"},  # #1435 E1a
         # PO-Korrektur 2026-07-29 (Adversary-Fund #1362 S5b): "SN" kollidierte
         # semantisch mit dem Trip-SMS-Symbol fuer Schneehoehe (sms_trip.py:61,
         # tokens/builder.py:186 -- eigenes, hartcodiertes Trip-Token-Vokabular,
@@ -523,6 +547,37 @@ def summary_field_for(metric_id: object, aggregation: object) -> Optional[str]:
     if not isinstance(aggregation, str):
         return None
     return definition.summary_fields.get(aggregation)
+
+
+def alert_metric_for(metric_id: object, aggregation: object) -> Optional[str]:
+    """Alarm-Identitaet eines Groesse-Auswertung-Paares (oder ``None``).
+
+    #1435 E1a: absolute Alarme haengen an der Auswertung (``alert_metrics``);
+    hat die gewaehlte Auswertung keinen absoluten Alarm, greift der
+    Aenderungsraten-Alarm der Groesse (``change_alert_metric``). Genau dieser
+    Rueckfall entkreuzt Wind/Boeen: ``("wind","max")`` loest auf
+    ``"wind_change"`` auf, ``"wind_gust"`` bleibt ``("gust","max")`` vorbehalten.
+
+    Adversary-Fund F001 (#1435 E1a-1): der Rueckfall darf NICHT blind fuer
+    jede uebergebene Auswertung greifen. Wahrheitsquelle fuer "gueltig" ist
+    ``summary_fields`` (dieselbe Quelle wie ``available_aggregations()`` --
+    was tatsaechlich berechnet wird). Deklariert eine Groesse ausserdem
+    EIGENE, auswertungsspezifische Identitaeten (``alert_metrics`` nicht
+    leer, z. B. Temperatur min/max), gilt der pauschale Change-Rueckfall nur
+    fuer die Groesse als Ganzes, solange KEINE solcher Deklarationen
+    existieren (z. B. Wind) -- sonst wuerde eine nicht abgedeckte, aber
+    valide Auswertung (Temperatur/avg) stillschweigend die
+    Aenderungsraten-Identitaet einer ANDEREN Auswertung erben.
+    """
+    if not isinstance(metric_id, str) or not isinstance(aggregation, str):
+        return None
+    definition = _METRICS_BY_ID.get(metric_id)
+    if definition is None or aggregation not in definition.summary_fields:
+        return None
+    direct = definition.alert_metrics.get(aggregation)
+    if direct or definition.alert_metrics:
+        return direct
+    return definition.change_alert_metric
 
 
 def available_aggregations(metric_id: object) -> list[str]:

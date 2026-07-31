@@ -81,11 +81,23 @@ def get_metrics():
             "sms_code": m.sms_code,
             "decimals": m.decimals,
             "cmp": m.cmp,
+            # #1435 E1a: Aenderungsraten-Alarm der Groesse (keine Auswertung),
+            # `null` wenn die Groesse keinen kennt.
+            "change_alert_metric": m.change_alert_metric,
             # Issue #1357: tatsaechlich berechenbare Tagesauswertungen dieser
             # Groesse. Nur wo es mehr als eine gibt, zeigt der Editor eine
             # Auswahl — der Katalog bleibt die einzige Quelle dafuer.
+            # #1435 E1a: `alert_metric` = absolute Alarm-Identitaet DIESER
+            # Auswertung (`null` wenn keine). Bewusst ohne den
+            # change_alert_metric-Rueckfall aus `alert_metric_for()` -- der gehoert
+            # zur Groesse, nicht zu einer einzelnen Auswertung, und steht als
+            # eigenes Feld daneben.
             "aggregations": [
-                {"id": a, "label": aggregation_label_de(a)}
+                {
+                    "id": a,
+                    "label": aggregation_label_de(a),
+                    "alert_metric": m.alert_metrics.get(a),
+                }
                 for a in available_aggregations(m.id)
             ],
         })

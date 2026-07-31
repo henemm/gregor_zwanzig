@@ -16,6 +16,14 @@ Eintrag traegt zusaetzlich `alarmCapable: bool` -- `True` fuer genau die 10
 Keys aus `compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID` (semantisches
 Alarm-Engine-Wissen gehoert ins Backend), sonst `False`.
 
+#1435 E1a (docs/specs/modules/feat_1435_e1a_alarmfaehigkeit_register.md): jeder
+Eintrag traegt zusaetzlich `alertMetric` -- die Alarm-Identitaet des Paares
+(Groesse, Auswertung) aus dem zentralen Register, `None` wenn die Zeile keinen
+Alarm ausloesen kann. `alarmCapable` wird ab jetzt daraus abgeleitet
+(`is not None`) statt aus `_SUMMARY_KEY_TO_CATALOG_ID.keys()`; die Menge bleibt
+dieselben 10 Keys (verhaltensneutral, nachgewiesen in
+`tests/unit/test_alert_metric_identity_delivery.py`).
+
 #1373 (S2 Scheibe A, docs/specs/modules/feat_1373_s2_ein_katalog.md): jeder
 Eintrag traegt zusaetzlich `metric_id` (Kennung der zentralen Katalog-Groesse
 in `src/app/metric_catalog.py`) und `aggregation` (die Auswertung, die dieser
@@ -40,7 +48,7 @@ im Resolver, schlaegt der Import fehl.
 """
 from __future__ import annotations
 
-from app.metric_catalog import aggregation_label_de, get_metric
+from app.metric_catalog import aggregation_label_de, alert_metric_for, get_metric
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from services.compare_alert import _SUMMARY_KEY_TO_CATALOG_ID
 
@@ -260,10 +268,17 @@ def get_compare_metric_catalog(entries: list[dict] | None = None) -> list[dict]:
                 "ableitbar (src/app/metric_catalog.py)"
             ) from exc
         aggregation = entry["aggregation"]
+        # #1435 E1a: die Alarm-Identitaet kommt aus dem zentralen Register
+        # (Paar Groesse+Auswertung); `alarmCapable` ist ab jetzt nur noch ihre
+        # Boolean-Sicht statt einer zweiten, handgepflegten Liste. Die Menge ist
+        # verhaltensneutral identisch zu _SUMMARY_KEY_TO_CATALOG_ID (10 Keys),
+        # bewiesen in tests/unit/test_alert_metric_identity_delivery.py.
+        alert_metric = alert_metric_for(metric_id, aggregation)
         result.append({
             **entry,
             "label": label,
             "aggregation_label": aggregation_label_de(aggregation),
-            "alarmCapable": entry["key"] in _alarm_keys,
+            "alertMetric": alert_metric,
+            "alarmCapable": alert_metric is not None,
         })
     return result
