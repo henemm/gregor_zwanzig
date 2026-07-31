@@ -214,15 +214,47 @@ deshalb ohne Rauschsorge laut sein.
 ## Schnittstelle für Teil B (henemm-infra, NICHT Gegenstand dieser Spec)
 
 Nach S2-Deploy per Inter-Instanz-Nachricht an `infra` zu beauftragen — analog #1422 Teil B
-(henemm-infra#150):
+(henemm-infra#150). Die tatsächliche Ausgabeform (Quelle: `WarnServiceHealth()` in
+`internal/scheduler/warn_service_health.go`, Schlüssel `zone_drift`):
+
+```json
+"warn_service_health": {
+  "dpc": {
+    "last_attempt_at": "...", "last_success_at": "...", "self_throttled": false,
+    "zone_drift": {
+      "unmapped_with_warning": 2,
+      "unmapped_without_warning": 0,
+      "last_with_warning_at": "2026-07-31T10:00:00+00:00",
+      "last_without_warning_at": null
+    }
+  }
+}
+```
 
 - **Quelle:** `GET http://localhost:8090/api/scheduler/status`, Feld `warn_service_health`
   (ohne Anmeldung erreichbar, wird von `check-gregor20.sh` bereits abgefragt).
-- **Neue Teilstruktur:** je Warndienst die Zahl nicht zuordenbarer Gebiete, getrennt nach
-  „mit Warnung" / „ohne Warnung", plus Zeitstempel des jüngsten Vorkommens.
-- **Erwartete Auswertung:** mindestens ein Vorkommen **mit** Warnung → ERROR („amtliche
-  Warnung nicht zuordenbar — Gebietskarte veraltet"); nur Vorkommen ohne Warnung → WARN.
-  Fehlendes Feld → keine Evidenz, kein Alarm (nie als Fehler werten).
+- **Neue Teilstruktur `zone_drift`:** je Warndienst die Zahl nicht zuordenbarer Gebiete,
+  getrennt nach „mit Warnung" (`unmapped_with_warning`) / „ohne Warnung"
+  (`unmapped_without_warning`), **je Kategorie ein eigener** Zeitstempel des jüngsten
+  Vorkommens (`last_with_warning_at` / `last_without_warning_at`) — **kein** gemeinsamer
+  Zeitstempel über beide Kategorien hinweg.
+- **Der `zone_drift`-Block fehlt vollständig**, wenn im gesamten Journal noch kein einziges
+  Vorkommen aufgetreten ist. Fehlender Block bedeutet Ruhe, niemals einen Fehler — analog zur
+  bestehenden Regel „keine Aktivität ist kein Ausfall" (AC-6).
+- **Die Zähler sind kumulativ über das gesamte Journal** (`warn_service_calls.jsonl` rotiert
+  nicht und kennt kein Zeitfenster). Ein Zähler > 0 bedeutet daher nur „ist irgendwann
+  passiert", nicht „ist gerade Lage" — die Frische-Entscheidung MUSS über den jeweiligen
+  Zeitstempel laufen, sonst bleibt der Alarm nach dem ersten Vorfall für immer scharf.
+- **Deshalb sind die Zeitstempel je Kategorie getrennt geführt:** ein gemeinsamer Zeitstempel
+  würde einen alten, längst behobenen kritischen Fall durch ein frisches harmloses Vorkommen
+  fälschlich als aktuell erscheinen lassen (Fehlalarm) und umgekehrt einen frischen kritischen
+  Fall hinter einem alten harmlosen verstecken.
+- Ein Zeitstempel ist `null`, wenn die zugehörige Kategorie kein Vorkommen hatte — erkennbar
+  auch am Zähler `0` daneben.
+- **Erwartete Auswertung:** mindestens ein Vorkommen **mit** Warnung, dessen
+  `last_with_warning_at` hinreichend frisch ist → ERROR („amtliche Warnung nicht zuordenbar —
+  Gebietskarte veraltet"); nur Vorkommen ohne Warnung (bzw. `last_with_warning_at` veraltet) →
+  WARN. Fehlendes `zone_drift`-Feld → keine Evidenz, kein Alarm (nie als Fehler werten).
 - **Behebung im Alarmfall:** Gebietskarte `dpc_zones.json` neu erzeugen und einchecken —
   ein bewusster, manueller Wartungsschritt in diesem Repo.
 
@@ -257,3 +289,6 @@ Nach S2-Deploy per Inter-Instanz-Nachricht an `infra` zu beauftragen — analog 
 
 - 2026-07-31: Initial spec created (Issue #1434, Scheiben S1/S2, PO-Entscheide V2 +
   nutzersichtbarer Hinweis)
+- 2026-07-31: S2 umgesetzt. Schnittstelle für Teil B auf den gebauten Stand nachgezogen:
+  Zeitstempel je Kategorie getrennt (`last_with_warning_at` / `last_without_warning_at`) statt
+  einem gemeinsamen Zeitstempel — Adversary-Befund F001.

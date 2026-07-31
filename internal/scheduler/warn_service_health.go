@@ -15,12 +15,18 @@ import (
 // decoded. Ok is a pointer so older, pre-#1422-S1 lines (no "ok" key) are
 // distinguishable from an explicit false and can be skipped (s. spec Known
 // Limitations "Übergangsfenster nach Deploy").
+// Drift/HasWarning belong to the zone-drift event lines written by
+// warn_egress.py's log_zone_drift() (Issue #1434 S1): those carry no "ok" but
+// a non-empty "drift" — that pair is what tells them apart from pre-#1422-S1
+// lines, which also lack "ok" and must stay silently skipped.
 type warnServiceCallEntry struct {
 	Service       string `json:"service"`
 	CacheHit      bool   `json:"cache_hit"`
 	Ok            *bool  `json:"ok"`
 	SelfThrottled bool   `json:"self_throttled"`
 	Ts            string `json:"ts"`
+	Drift         string `json:"drift"`
+	HasWarning    bool   `json:"has_warning"`
 }
 
 // canonicalWarnServiceName returns the prefix before the first ':' in a warn
@@ -41,6 +47,21 @@ type warnServiceAgg struct {
 	lastAttemptAt string
 	haveAttempt   bool
 	selfThrottled bool
+
+	// Zone-drift counters (Issue #1434 S2), fed by a separate line kind and
+	// deliberately kept apart from the outage fields above: a drift line is
+	// neither an attempt nor a success.
+	//
+	// One timestamp PER category, never a shared maximum (F001): the counters
+	// are cumulative and the journal never rotates, so check-gregor20.sh can
+	// only escape a permanently hot ERROR threshold via a freshness check —
+	// and a shared maximum would make a long-fixed occurrence with warning
+	// look fresh as soon as a harmless one without warning arrives.
+	driftWithWarning     int
+	driftWithoutWarning  int
+	lastWithWarningAt    string
+	lastWithoutWarningAt string
+	haveDrift            bool
 }
 
 // aggregateWarnServiceCalls scans path (data/diagnostics/warn_service_calls.jsonl)
@@ -53,6 +74,10 @@ type warnServiceAgg struct {
 // Only lines with cache_hit=false AND a present "ok" field count (a cache hit
 // is not a new answer from the provider; pre-#1422-S1 lines without "ok" are
 // skipped entirely — s. spec "Übergangsfenster nach Deploy").
+//
+// The same single scan also picks up the zone-drift event lines of Issue #1434
+// S1 (no "ok", but a "drift" direction) into separate counters; they never
+// touch the outage fields (s. AC-7).
 func aggregateWarnServiceCalls(path string) (map[string]*warnServiceAgg, bool) {
 	aggs := map[string]*warnServiceAgg{}
 
@@ -62,23 +87,58 @@ func aggregateWarnServiceCalls(path string) (map[string]*warnServiceAgg, bool) {
 	}
 	defer f.Close()
 
+	aggFor := func(service string) *warnServiceAgg {
+		name := canonicalWarnServiceName(service)
+		agg, ok := aggs[name]
+		if !ok {
+			agg = &warnServiceAgg{}
+			aggs[name] = agg
+		}
+		return agg
+	}
+
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		var entry warnServiceCallEntry
 		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
 			continue // skip corrupt line, keep scanning
 		}
+		// Zone-drift event line (Issue #1434 S2): no "ok" AND a "drift"
+		// direction. Counted separately and never as attempt/success — a
+		// pre-#1422-S1 line (no "ok", no "drift") still falls through to
+		// the skip below.
+		if entry.Ok == nil && entry.Drift != "" {
+			// No usable ts — missing, empty or whitespace only — drops the
+			// line like a corrupt one (F004/F005). It is not producible via
+			// log_zone_drift() at all (ts is mandatory there), so this only
+			// happens on journal corruption — and of the two possible states,
+			// "no finding" is the honest one: a count without a point in time
+			// is a call to action a freshness filter cannot act on, so the
+			// finding would vanish silently. Whitespace would even sort as
+			// "ancient" in the lexicographic comparisons below.
+			if strings.TrimSpace(entry.Ts) == "" {
+				continue
+			}
+			agg := aggFor(entry.Service)
+			if entry.HasWarning {
+				agg.driftWithWarning++
+				if entry.Ts > agg.lastWithWarningAt {
+					agg.lastWithWarningAt = entry.Ts
+				}
+			} else {
+				agg.driftWithoutWarning++
+				if entry.Ts > agg.lastWithoutWarningAt {
+					agg.lastWithoutWarningAt = entry.Ts
+				}
+			}
+			agg.haveDrift = true
+			continue
+		}
 		if entry.CacheHit || entry.Ok == nil {
 			continue
 		}
 
-		name := canonicalWarnServiceName(entry.Service)
-		agg, ok := aggs[name]
-		if !ok {
-			agg = &warnServiceAgg{}
-			aggs[name] = agg
-		}
-
+		agg := aggFor(entry.Service)
 		if !agg.haveAttempt || entry.Ts > agg.lastAttemptAt {
 			agg.lastAttemptAt = entry.Ts
 			agg.haveAttempt = true
@@ -96,6 +156,15 @@ func aggregateWarnServiceCalls(path string) (map[string]*warnServiceAgg, bool) {
 		return aggs, true
 	}
 	return aggs, false
+}
+
+// nilIfEmpty renders an unset timestamp as JSON null instead of "", which
+// would read like a timestamp to a consumer.
+func nilIfEmpty(ts string) any {
+	if ts == "" {
+		return nil
+	}
+	return ts
 }
 
 // meteoalarmDefaultDailyBudget mirrors MeteoAlarmBudgetGate.DEFAULT_DAILY_BUDGET
@@ -183,6 +252,13 @@ func meteoalarmBudgetSnapshot(path string) map[string]any {
 // yields an empty map (s. AC-... legitimate fresh-deploy state); an
 // existing-but-unreadable journal additionally sets "journal_read_error":
 // true (s. AC-7) — explicitly distinct from "never written".
+//
+// Issue #1434 S2 adds, per service and only when at least one occurrence was
+// observed, "zone_drift": {unmapped_with_warning, unmapped_without_warning,
+// last_with_warning_at, last_without_warning_at} — raw counters again, the
+// ERROR/WARN threshold stays in henemm-infra's check-gregor20.sh. The
+// timestamps are per category so that side can tell a stale finding from a
+// fresh one (F001).
 func (s *Scheduler) WarnServiceHealth() map[string]any {
 	result := map[string]any{}
 
@@ -198,13 +274,31 @@ func (s *Scheduler) WarnServiceHealth() map[string]any {
 	}
 	for name, agg := range aggs {
 		entry := map[string]any{
-			"last_attempt_at": agg.lastAttemptAt,
+			"last_attempt_at": nil,
 			"self_throttled":  agg.selfThrottled,
+			"last_success_at": nil,
+		}
+		if agg.haveAttempt {
+			// A service known only from drift lines has no attempt at all;
+			// nil says so honestly instead of an empty string that reads
+			// like a timestamp.
+			entry["last_attempt_at"] = agg.lastAttemptAt
 		}
 		if agg.haveSuccess {
 			entry["last_success_at"] = agg.lastSuccessAt
-		} else {
-			entry["last_success_at"] = nil
+		}
+		if agg.haveDrift {
+			// The whole block is absent without a single occurrence (s. AC-6):
+			// a zero would be indistinguishable from a real finding. INSIDE
+			// the block, a category without occurrence is nil next to its 0 —
+			// unambiguous, and it keeps a freshness check from reading a
+			// stamp that belongs to the other category (F001).
+			entry["zone_drift"] = map[string]any{
+				"unmapped_with_warning":    agg.driftWithWarning,
+				"unmapped_without_warning": agg.driftWithoutWarning,
+				"last_with_warning_at":     nilIfEmpty(agg.lastWithWarningAt),
+				"last_without_warning_at":  nilIfEmpty(agg.lastWithoutWarningAt),
+			}
 		}
 		result[name] = entry
 	}
