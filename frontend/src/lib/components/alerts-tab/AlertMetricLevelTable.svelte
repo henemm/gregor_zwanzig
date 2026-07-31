@@ -3,6 +3,10 @@
 	// Spec: docs/specs/modules/feat_864_859_alert_presets.md
 	import type { AlertMetric, SensLevel } from '$lib/types';
 	import AlertMetricLevelRow from './AlertMetricLevelRow.svelte';
+	// #1401 Scheibe B: die Beschriftungen kommen aus dem geteilten Register.
+	// Eine zweite Liste hier hatte davon abweichende Namen gefuehrt
+	// ("Temperatursturz"/"Regenänderung") — sichtbar in Trip UND Vergleich.
+	import { ALERT_METRIC_LABELS } from '$lib/utils/alertMetricLabels';
 
 	interface Props {
 		activeMetrics: AlertMetric[];
@@ -18,24 +22,6 @@
 		entspannt: 'Entspannt',
 		standard: 'Standard',
 		sensibel: 'Sensibel'
-	};
-
-	// Metrik-Labels (aus alertMetricLabels-Konvention, hier lokal für die Tabelle).
-	const METRIC_LABELS: Record<AlertMetric, string> = {
-		wind_gust: 'Böen',
-		precipitation_sum: 'Niederschlag',
-		thunder_level: 'Gewitter',
-		snow_line: 'Schneefallgrenze',
-		temperature_min: 'Tiefsttemperatur',
-		temperature_max: 'Höchsttemperatur',
-		temperature_change: 'Temperatursturz',
-		wind_change: 'Windänderung',
-		precipitation_change: 'Regenänderung',
-		fresh_snow: 'Neuschnee',
-		cape: 'CAPE',
-		visibility: 'Sichtweite',
-		humidity: 'Luftfeuchtigkeit',
-		freezing_level: 'Nullgradgrenze'
 	};
 
 	const allSameLevel = $derived(
@@ -93,7 +79,7 @@
 				{#each activeMetrics as metric (metric)}
 					<AlertMetricLevelRow
 						{metric}
-						label={METRIC_LABELS[metric] ?? metric}
+						label={ALERT_METRIC_LABELS[metric]?.label_de ?? metric}
 						level={levels[metric] ?? 'standard'}
 						onChange={onLevelChange}
 					/>

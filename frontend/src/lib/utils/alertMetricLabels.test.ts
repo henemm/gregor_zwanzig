@@ -16,6 +16,7 @@ import {
 	thunderLevelLabel,
 	normalizeAlertMetric,
 } from './alertMetricLabels.ts';
+import type { AlertMetric } from '$lib/types';
 
 test('thunderLevelLabel: threshold 2.0 → HOCH (AC-6)', () => {
 	assert.equal(thunderLevelLabel(2.0), 'HOCH');
@@ -48,6 +49,62 @@ test('ALERT_METRIC_LABELS: thunder_level hat comparison ≥', () => {
 test('ALERT_METRIC_LABELS: wind_gust hat unit km/h und comparison >', () => {
 	assert.equal(ALERT_METRIC_LABELS['wind_gust'].unit, 'km/h');
 	assert.equal(ALERT_METRIC_LABELS['wind_gust'].comparison, '>');
+});
+
+// =============================================================================
+// #1401 Scheibe B, Teil 2 — AC-3/AC-4: die Alarm-Beschriftungen folgen dem
+// zentralen Metrik-Register (src/app/metric_catalog.py, label_de).
+// Spec: docs/specs/modules/fix_1401b_register_stundenverlauf_alarme.md
+// =============================================================================
+
+// AC-3: sichtbare Aenderung — bisher "CAPE" (blosses Kuerzel), jetzt der
+// Register-Wortlaut (metric_catalog.py:273).
+test('#1401b AC-3: cape heisst "Gewitterenergie (CAPE)" wie im Register', () => {
+	assert.equal(ALERT_METRIC_LABELS['cape'].label_de, 'Gewitterenergie (CAPE)');
+});
+
+// AC-3 Regressionsschutz: die uebrigen 8 Metriken mit 1:1-Register-Entsprechung
+// stimmten schon vorher ueberein und duerfen sich NICHT mitverschieben.
+test('#1401b AC-3: die 8 uebrigen 1:1-Metriken bleiben unveraendert', () => {
+	const unchanged: Partial<Record<AlertMetric, string>> = {
+		wind_gust: 'Böen',                  // metric_catalog.py:175 (gust)
+		precipitation_sum: 'Niederschlag',  // :210 (precipitation)
+		thunder_level: 'Gewitter',          // :256 (thunder)
+		snow_line: 'Schneefallgrenze',      // :297 (snowfall_limit)
+		visibility: 'Sichtweite',           // :384
+		humidity: 'Luftfeuchtigkeit',       // :132
+		freezing_level: 'Nullgradgrenze',   // :457
+		fresh_snow: 'Neuschnee',            // :480
+	};
+	for (const [metric, label] of Object.entries(unchanged)) {
+		assert.equal(
+			ALERT_METRIC_LABELS[metric as AlertMetric].label_de,
+			label,
+			`${metric} unerwartet geaendert`
+		);
+	}
+});
+
+// AC-4: sichtbare Aenderung — beide Temperatur-Auswertungen tragen jetzt den
+// Register-Namen der Groesse ("Temperatur", :78) plus die Auswertung als
+// festen Zusatz. Vorher: "Tiefsttemperatur" / "Höchsttemperatur".
+test('#1401b AC-4: temperature_min/max heissen "Temperatur (Minimum)"/"(Maximum)"', () => {
+	assert.equal(ALERT_METRIC_LABELS['temperature_min'].label_de, 'Temperatur (Minimum)');
+	assert.equal(ALERT_METRIC_LABELS['temperature_max'].label_de, 'Temperatur (Maximum)');
+});
+
+test('#1401b AC-4: beide Temperatur-Zeilen bleiben unterscheidbar (kein Doppeltext)', () => {
+	assert.notEqual(
+		ALERT_METRIC_LABELS['temperature_min'].label_de,
+		ALERT_METRIC_LABELS['temperature_max'].label_de
+	);
+});
+
+// Einheit/Vergleichsoperator sind KEINE Register-Felder und bleiben lokal.
+test('#1401b: Einheit und Vergleichsoperator der geaenderten Eintraege bleiben', () => {
+	assert.equal(ALERT_METRIC_LABELS['cape'].unit, 'J/kg');
+	assert.equal(ALERT_METRIC_LABELS['temperature_min'].comparison, '<');
+	assert.equal(ALERT_METRIC_LABELS['temperature_max'].comparison, '>');
 });
 
 // =============================================================================

@@ -32,10 +32,16 @@
 		orderableHourlyMetricKeys,
 		applyHourlyReorder
 	} from '../compare/compareHourlyMetricDefs.ts';
+	import { resolveHourlyMetricLabel } from '../compare/compareHourlyCatalogIds.ts';
 	import type { CompareWizardState } from '../compare/compareWizardState.svelte';
 
 	interface Props {
 		wiz: CompareWizardState;
+		/** #1401 Scheibe B: Metrik-Register (GET /api/metrics), aus dem die
+		 *  Beschriftungen kommen. Ohne Uebergabe bzw. bei fehlgeschlagenem Abruf
+		 *  bleibt der bisherige Text aus ALL_HOURLY_METRICS stehen — der Block
+		 *  bleibt in jedem Fall bedienbar (Spec AC-7). */
+		catalog?: Record<string, MetricEntry>;
 		/** Issue #1361 Befund 4: direkter Speicherausloeser nach einer
 		 *  Ziehgeste in der Reihenfolge-Liste -- analog `onCompareCommit` in
 		 *  WeatherMetricsTab (#1359). Ohne Uebergabe (z.B. Anlege-Seite) bleibt
@@ -43,7 +49,7 @@
 		 *  `saveNewPreset()`. */
 		onHourlyCommit?: () => void;
 	}
-	let { wiz, onHourlyCommit }: Props = $props();
+	let { wiz, onHourlyCommit, catalog = {} }: Props = $props();
 
 	// „Nie eingestellt" (`null`) = „Default aktiv" (Renderer-Default). Eine
 	// bewusst geleerte Auswahl (`[]`) bleibt dagegen leer -- Issue #1366
@@ -77,7 +83,11 @@
 
 	const hourlyMetricById = $derived.by(() => {
 		const map: Record<string, MetricEntry> = {};
-		for (const m of ALL_HOURLY_METRICS) map[m.key] = { id: m.key, label: m.label } as MetricEntry;
+		for (const m of ALL_HOURLY_METRICS)
+			map[m.key] = {
+				id: m.key,
+				label: resolveHourlyMetricLabel(m.key, catalog, m.label)
+			} as MetricEntry;
 		return map;
 	});
 
@@ -112,7 +122,7 @@
 >
 	{#each ALL_HOURLY_METRICS as metric (metric.key)}
 		<ChannelToggle
-			label={metric.label}
+			label={resolveHourlyMetricLabel(metric.key, catalog, metric.label)}
 			checked={isHourlyMetricActive(metric.key)}
 			onchange={makeHourlyMetricHandler(metric.key)}
 			testid={`compare-layout-hourly-metric-${metric.key}`}

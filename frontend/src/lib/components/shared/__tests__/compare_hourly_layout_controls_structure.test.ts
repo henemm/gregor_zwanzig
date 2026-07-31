@@ -196,3 +196,83 @@ describe('F2a AC-7: CompareHourlyLayoutControls extrahiert den Stundenverlauf ge
 		);
 	});
 });
+
+// #1401 Scheibe B, Teil 1, AC-2: die Stundenverlauf-Checkboxen sollen ihr
+// Label nicht mehr aus dem eigenstaendigen `compareHourlyMetricDefs.ts`-Text
+// beziehen, sondern aus dem zentralen Metrik-Katalog (`GET /api/metrics`),
+// den WeatherMetricsTab.svelte kuenftig auch im Vergleich-Kontext laedt und
+// als `catalog`-Prop durchreicht. Spec:
+//   docs/specs/modules/fix_1401b_register_stundenverlauf_alarme.md AC-2
+//
+// RED heute: die Komponente kennt keine `catalog`-Prop, das Label im
+// `{#each}`-Block ist die rohe MemberExpression `metric.label`.
+describe('#1401b AC-2: Stundenverlauf-Labels kommen aus dem Katalog, nicht aus eigenem Text', () => {
+	test('Props deklarieren eine `catalog`-Prop (Destrukturierung aus $props())', () => {
+		const src = readFileSync(COMPONENT, 'utf-8');
+		const ast = parse(src, { modern: true }) as any;
+		const instanceBody = ast.instance?.content?.body ?? [];
+		const propsDeclarator = instanceBody
+			.flatMap((stmt: any) => (stmt.type === 'VariableDeclaration' ? stmt.declarations : []))
+			.find(
+				(decl: any) =>
+					decl.init?.type === 'CallExpression' && decl.init.callee?.name === '$props'
+			);
+		assert.ok(propsDeclarator, 'Keine `let {...} = $props()`-Destrukturierung im Instance-Script gefunden.');
+		const patternProps = (propsDeclarator.id?.properties ?? [])
+			.map((p: any) => p.key?.name)
+			.filter(Boolean);
+		assert.ok(
+			patternProps.includes('catalog'),
+			`CompareHourlyLayoutControls.svelte destrukturiert keine \`catalog\`-Prop aus $props(). ` +
+				`Gefundene Props: ${patternProps.join(', ')}`
+		);
+	});
+
+	test('Label je Metrik-Checkbox wird ueber einen Katalog-Resolver aufgeloest, nicht ueber die rohe `metric.label`', () => {
+		const ast = parseComponent();
+		const eachBlocks = findEachBlocksOverIdentifier(ast.fragment, 'ALL_HOURLY_METRICS');
+		assert.ok(eachBlocks.length >= 1, 'Kein `{#each ALL_HOURLY_METRICS as ...}`-Block gefunden.');
+
+		function findLabelExpressions(subtree: unknown): any[] {
+			const found: any[] = [];
+			function visit(node: unknown): void {
+				if (node === null || typeof node !== 'object') return;
+				if (Array.isArray(node)) {
+					node.forEach(visit);
+					return;
+				}
+				const n = node as Record<string, any>;
+				if (n.type === 'Component' || n.type === 'RegularElement') {
+					for (const attr of n.attributes ?? []) {
+						if (attr.type !== 'Attribute' || attr.name !== 'label') continue;
+						const value = attr.value;
+						const expr = Array.isArray(value) ? value[0]?.expression : value?.expression;
+						if (expr) found.push(expr);
+					}
+				}
+				for (const key of Object.keys(n)) {
+					if (key === 'parent') continue;
+					visit(n[key]);
+				}
+			}
+			visit(subtree);
+			return found;
+		}
+
+		const labelExprs = eachBlocks.flatMap((block) => findLabelExpressions(block.body));
+		assert.ok(labelExprs.length >= 1, 'Keine `label={...}`-Attribute im Schleifenkoerper gefunden.');
+
+		const resolvesViaCatalog = labelExprs.some((expr) => {
+			if (expr.type !== 'CallExpression') return false;
+			return (expr.arguments ?? []).some(
+				(arg: any) => arg.type === 'Identifier' && arg.name === 'catalog'
+			);
+		});
+		assert.ok(
+			resolvesViaCatalog,
+			'Kein `label={...}`-Ausdruck im ALL_HOURLY_METRICS-Schleifenkoerper ruft einen Resolver mit ' +
+				'`catalog` als Argument auf — das Label kommt vermutlich noch direkt aus `metric.label` ' +
+				'statt aus dem zentralen Katalog (#1401b AC-2).'
+		);
+	});
+});

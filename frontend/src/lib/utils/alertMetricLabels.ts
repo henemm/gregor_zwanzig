@@ -17,14 +17,19 @@ export const ALERT_METRIC_LABELS: Record<
 	precipitation_sum: { label_de: 'Niederschlag', unit: 'mm', comparison: '>' },
 	thunder_level: { label_de: 'Gewitter', unit: '', comparison: '≥' },
 	snow_line: { label_de: 'Schneefallgrenze', unit: 'm', comparison: '>' },
-	temperature_min: { label_de: 'Tiefsttemperatur', unit: '°C', comparison: '<' },
-	temperature_max: { label_de: 'Höchsttemperatur', unit: '°C', comparison: '>' },
+	// #1401 Scheibe B: Wortlaut aus dem Register (metric_catalog.py, label_de).
+	// Beide Eintraege sind Auswertungen derselben Register-Groesse
+	// "Temperatur" (:78) und tragen sie fest im Text — kein Kollisions-Suffix
+	// zur Laufzeit noetig, da es zwei getrennte AlertMetric-Schluessel sind.
+	temperature_min: { label_de: 'Temperatur (Minimum)', unit: '°C', comparison: '<' },
+	temperature_max: { label_de: 'Temperatur (Maximum)', unit: '°C', comparison: '>' },
 	temperature_change: { label_de: 'Temperaturänderung', unit: '°C', comparison: '>' },
 	wind_change: { label_de: 'Windänderung', unit: 'km/h', comparison: '>' },
 	precipitation_change: { label_de: 'Niederschlagsänderung', unit: 'mm', comparison: '>' },
 	// Issue #846: 4 neue Metriken (Epic #813 Slice 3)
 	fresh_snow: { label_de: 'Neuschnee', unit: 'cm', comparison: '>' },
-	cape: { label_de: 'CAPE', unit: 'J/kg', comparison: '>' },
+	// #1401 Scheibe B: Register-Wortlaut (metric_catalog.py:273) statt Kuerzel.
+	cape: { label_de: 'Gewitterenergie (CAPE)', unit: 'J/kg', comparison: '>' },
 	visibility: { label_de: 'Sichtweite', unit: 'm', comparison: '<' },
 	humidity: { label_de: 'Luftfeuchtigkeit', unit: '%', comparison: '>' },
 	// Issue #946: Nullgradgrenze

@@ -46,6 +46,18 @@ Frühstückstisch in Ruhe gelesen wird, nicht unter Zeitdruck unterwegs.
 > Scopes, nicht optional — ohne Anpassung ist jeder E2E-Test mit gefiltertem Stundenverlauf
 > strukturell nicht bestehbar.
 
+> **Nachtrag 2026-07-31 (Fix #1401 Scheibe B):** Die hier getroffene Prämisse
+> "eigenständiges Vokabular, kein Reuse" bezog sich auf die **ID-Ebene**
+> (Stunden-Rohwerte vs. Übersicht-Aggregate, s. `resolve_hourly_metrics()`-
+> Docstring oben) — diese ID-Trennung bleibt unverändert bestehen. Was sich
+> geändert hat: die **Beschriftungen** (`label`-Werte in
+> `compareHourlyMetricDefs.ts`) werden seit #1401b nicht mehr redaktionell
+> eigenständig gepflegt, sondern zur Laufzeit aus dem zentralen
+> Wetter-Namensregister (`src/app/metric_catalog.py`) über einen neuen
+> ID-Crosswalk (`compareHourlyCatalogIds.ts`) aufgelöst; die hier gelisteten
+> `label`-Werte bleiben nur noch als Fail-Soft-Fallback erhalten. Details:
+> `docs/specs/modules/fix_1401b_register_stundenverlauf_alarme.md`.
+
 ## Estimated Scope
 
 - **LoC:** ~380-450 (Implementierung ~200-240: Renderer-Loop-Umbau + 3 neue Formatier-/

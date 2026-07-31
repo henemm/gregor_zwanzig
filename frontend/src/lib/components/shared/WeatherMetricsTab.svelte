@@ -463,6 +463,26 @@
 		if (context === 'vergleich' && !smsSymbols) loadSmsSymbols();
 	});
 
+	$effect(() => {
+		// #1401 Scheibe B: der Stundenverlauf beschriftet seine Groessen aus dem
+		// zentralen Register (/api/metrics), das im Vergleich sonst ungeladen
+		// bleibt. Guard analog dem Route-Effect oben (Object.keys(catalog)) —
+		// nach Erfolg feuert der Effect ein zweites Mal und faellt durch, nach
+		// Fehlschlag aendert sich keine Dependency (kein Retry-Loop).
+		// Bewusst OHNE catalogLoaded: dieses Flag steuert den route-eigenen
+		// Speicher-Gate (weatherSaveGate) und darf im Vergleich nicht kippen.
+		// Fail-soft: catalog bleibt {}, der Stundenverlauf zeigt dann seinen
+		// bisherigen Text (Spec AC-7) und bleibt voll bedienbar.
+		if (context === 'vergleich' && Object.keys(catalog).length === 0) {
+			api
+				.get<MetricCatalog>('/api/metrics')
+				.then((c) => {
+					catalog = c;
+				})
+				.catch(() => {});
+		}
+	});
+
 	// Issue #932: Activity-Typ → Template vorauswählen (nur createMode, einmalig).
 	const ACTIVITY_TO_TEMPLATE: Record<string, string> = {
 		trekking: 'alpen-trekking',
@@ -795,9 +815,10 @@
 
 	// ── Issue #1359 Scheibe 1: Reihenfolge-Block im Vergleich ────────────────
 	// Label/Einheit fuer WeatherV2Reihenfolge kommen aus dem BEREITS geladenen
-	// Compare-Katalog (GET /api/compare/metrics) — der route-`catalog`
-	// (/api/metrics) wird im Vergleich nie geladen, `metricById` oben waere
-	// hier also leer.
+	// Compare-Katalog (GET /api/compare/metrics) — das ist das Vokabular der
+	// Uebersichtsgroessen und bleibt hier massgeblich. (Der route-`catalog`
+	// /api/metrics wird seit #1401 Scheibe B zwar auch im Vergleich geladen,
+	// aber ausschliesslich fuer die Stundenverlauf-Beschriftungen.)
 	const compareMetricById = $derived.by(() => {
 		const map: Record<string, MetricEntry> = {};
 		// Issue #1401 (A1): `aggregation_label` mitgeben — die Reihenfolge-Zeile
@@ -1012,7 +1033,7 @@
 		     die Stundenverlauf-Steuerung nicht unerreichbar machen. -->
 		{#if sections.includes('stundenverlauf') && wiz}
 			<div data-testid="weather-metrics-stundenverlauf">
-				<CompareHourlyLayoutControls {wiz} {onHourlyCommit} />
+				<CompareHourlyLayoutControls {wiz} {onHourlyCommit} catalog={metricById} />
 			</div>
 		{/if}
 		<!-- Issue #1361 Befund 2/#1368: Bedienflaeche des 3-Tages-Ausblicks.
