@@ -23,9 +23,12 @@ export const ALERT_METRIC_LABELS: Record<
 	// zur Laufzeit noetig, da es zwei getrennte AlertMetric-Schluessel sind.
 	temperature_min: { label_de: 'Temperatur (Minimum)', unit: '°C', comparison: '<' },
 	temperature_max: { label_de: 'Temperatur (Maximum)', unit: '°C', comparison: '>' },
-	temperature_change: { label_de: 'Temperaturänderung', unit: '°C', comparison: '>' },
-	wind_change: { label_de: 'Windänderung', unit: 'km/h', comparison: '>' },
-	precipitation_change: { label_de: 'Niederschlagsänderung', unit: 'mm', comparison: '>' },
+	// #1435 E1a-2 AC-9 (PO-Entscheidung 2026-07-31): einheitlicher Stil wie
+	// "Temperatur (Minimum)" — diese Zeilen warnen bei starker AENDERUNG,
+	// nicht bei hohem Absolutwert. Nur der Wortlaut aendert sich.
+	temperature_change: { label_de: 'Temperatur (Änderung)', unit: '°C', comparison: '>' },
+	wind_change: { label_de: 'Wind (Änderung)', unit: 'km/h', comparison: '>' },
+	precipitation_change: { label_de: 'Niederschlag (Änderung)', unit: 'mm', comparison: '>' },
 	// Issue #846: 4 neue Metriken (Epic #813 Slice 3)
 	fresh_snow: { label_de: 'Neuschnee', unit: 'cm', comparison: '>' },
 	// #1401 Scheibe B: Register-Wortlaut (metric_catalog.py:273) statt Kuerzel.

@@ -94,15 +94,18 @@ describe('#1401b AC-5: vereinheitlichte Aenderungs-Beschriftungen', () => {
 	// Bisher zeigte die Alarme-Tabelle hier eigene, abweichende Texte
 	// ("Temperatursturz" / "Regenänderung") — nach dem Wegfall der lokalen
 	// Zweitquelle gilt ueberall dieser eine Wortlaut.
-	test('temperature_change heisst "Temperaturänderung"', () => {
-		assert.equal(ALERT_METRIC_LABELS['temperature_change'].label_de, 'Temperaturänderung');
+	// #1435 E1a-2 AC-9 (PO-Entscheidung 2026-07-31): dieselbe Eigenschaft
+	// (EIN Wortlaut je Aenderungs-Alarm), nachgezogen auf den neuen Stil
+	// "Temperatur (Minimum)".
+	test('temperature_change heisst "Temperatur (Änderung)"', () => {
+		assert.equal(ALERT_METRIC_LABELS['temperature_change'].label_de, 'Temperatur (Änderung)');
 	});
 
-	test('precipitation_change heisst "Niederschlagsänderung"', () => {
-		assert.equal(ALERT_METRIC_LABELS['precipitation_change'].label_de, 'Niederschlagsänderung');
+	test('precipitation_change heisst "Niederschlag (Änderung)"', () => {
+		assert.equal(ALERT_METRIC_LABELS['precipitation_change'].label_de, 'Niederschlag (Änderung)');
 	});
 
-	test('wind_change heisst "Windänderung"', () => {
-		assert.equal(ALERT_METRIC_LABELS['wind_change'].label_de, 'Windänderung');
+	test('wind_change heisst "Wind (Änderung)"', () => {
+		assert.equal(ALERT_METRIC_LABELS['wind_change'].label_de, 'Wind (Änderung)');
 	});
 });

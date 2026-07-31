@@ -1,7 +1,8 @@
 // #1401 Scheibe B, Teil 1 — Crosswalk Stundenverlauf-Key → Metrik-Register-ID.
 // Spec: docs/specs/modules/fix_1401b_register_stundenverlauf_alarme.md
 //
-// Muster: shared/alarme-tab/compareMetricMapping.ts::COMPARE_TO_ALERT_METRIC.
+// Muster: shared/alarme-tab/activeAlertMetricsFromCatalog.ts (#1435 E1a-2;
+// die frueher hier genannte Liste COMPARE_TO_ALERT_METRIC ist entfallen).
 // Der Stundenverlauf hat ein eigenstaendiges Key-Vokabular (Rohwerte pro
 // Stunde, s. compareHourlyMetricDefs.ts); die ANZEIGE folgt trotzdem dem
 // zentralen Register (src/app/metric_catalog.py via GET /api/metrics).

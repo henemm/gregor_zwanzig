@@ -470,6 +470,10 @@ export interface CompareMetricCatalogEntry {
 	// Mittel/Summe) — eigenes Anzeige-Element NEBEN dem Namen, nicht darin.
 	// Optional: ältere Antworten/Fixtures und der Trip-Katalog tragen sie nicht.
 	aggregation_label?: string;
+	// Issue #1435 (E1a-1, live): Alarm-Identität der Größe aus dem zentralen
+	// Register — `null`, wenn sie nicht alarmfähig ist. E1a-2 macht sie zur
+	// EINZIGEN Quelle dafür, welche Alarm-Zeilen der Alarme-Reiter zeigt.
+	alertMetric?: string | null;
 }
 
 export interface CompareMetricCatalogResponse {

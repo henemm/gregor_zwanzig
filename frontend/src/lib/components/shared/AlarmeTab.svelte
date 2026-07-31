@@ -36,7 +36,11 @@
 	} from './alarme-tab/alarmeTabSections.ts';
 	import { resolveAlertChannels, type AlertChannelState } from './alarme-tab/alertChannelState.ts';
 	import { buildAlarmeDeliveryPayload } from './alarme-tab/alarmeDeliveryPayload.ts';
-	import { deriveActiveAlertMetrics } from './alarme-tab/compareMetricMapping.ts';
+	// Feature #1435 E1a-2: die Alarm-Zeilen kommen aus dem zentralen Register
+	// (Katalog-Feld `alertMetric`), nicht mehr aus der geloeschten Frontend-
+	// Liste compareMetricMapping.ts.
+	import { deriveActiveAlertMetricsFromCatalog } from './alarme-tab/activeAlertMetricsFromCatalog.ts';
+	import type { CompareSelectionEntry } from './weather-metrics-tab/compareMetricSelection.ts';
 	// Issue #1366 F002 Fix-Loop 2: EINZIGE Materialisierungs-Quelle „nie
 	// eingestellt" (null) -> Vorgabemenge, geteilt mit WeatherMetricsTab.svelte/
 	// CorridorEditor(Mobile) -- sonst weicht die Empfindlichkeits-Tabelle vom
@@ -54,6 +58,10 @@
 		onMetricLevelChange?: (metric: AlertMetric, level: SensLevel) => void;
 		// vergleich
 		wiz?: CompareWizardState;
+		// #1435 E1a-2: geladener Compare-Katalog als UEBERGABEWERT — der
+		// Modul-Getter registeredCompareMetricCatalog() ist nicht reaktiv und
+		// wuerde ein $derived nach spaeterem Laden nicht neu rechnen lassen.
+		catalog?: CompareSelectionEntry[];
 		// beide Kontexte
 		existingChannels?: Partial<AlertChannelState> | null;
 		onChannelToggle?: (kind: 'telegram' | 'sms' | 'email') => void;
@@ -67,6 +75,7 @@
 		metricLevels,
 		onMetricLevelChange,
 		wiz,
+		catalog,
 		existingChannels,
 		onChannelToggle
 	}: Props = $props();
@@ -101,12 +110,15 @@
 	}
 
 	// ── (c) Metrik-Level-Tabelle ────────────────────────────────────────────────
-	// vergleich: Ableitung aus wiz.activeMetricKeys (Compare-Metrik-Namensraum,
-	// Mapping-Modul compareMetricMapping.ts). route: aus Props (Ermittlung aus
-	// trip ist S3-Aufgabe, s. Context-Doc).
+	// vergleich: Ableitung aus wiz.activeMetricKeys (Compare-Metrik-Namensraum)
+	// gegen den durchgereichten Register-Katalog (#1435 E1a-2). route: aus Props
+	// (Ermittlung aus trip ist S3-Aufgabe, s. Context-Doc).
 	const effectiveActiveMetrics = $derived(
 		context === 'vergleich'
-			? deriveActiveAlertMetrics(materializeActiveMetricKeys(wiz?.activeMetricKeys ?? null))
+			? deriveActiveAlertMetricsFromCatalog(
+					materializeActiveMetricKeys(wiz?.activeMetricKeys ?? null),
+					catalog ?? []
+				)
 			: (activeMetrics ?? [])
 	);
 	// route: lokaler State (Adversary Fix-Loop 1, F001) — Initialwert aus der

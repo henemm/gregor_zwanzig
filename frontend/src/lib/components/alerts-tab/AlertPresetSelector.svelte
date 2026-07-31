@@ -19,9 +19,11 @@
 		{ label: 'Schneefallgrenze',    unit: 'm',     entspannt: 600,  standard: 400,  sensibel: 200  },
 		{ label: 'Tiefsttemperatur',    unit: '°C',    entspannt: 8,    standard: 5,    sensibel: 3    },
 		{ label: 'Höchsttemperatur',    unit: '°C',    entspannt: 10,   standard: 6,    sensibel: 4    },
-		{ label: 'Temperaturänderung',  unit: '°C',    entspannt: 14,   standard: 10,   sensibel: 6    },
-		{ label: 'Windänderung',        unit: 'km/h',  entspannt: 35,   standard: 25,   sensibel: 15   },
-		{ label: 'Niederschlagsänd.',   unit: 'mm',    entspannt: 15,   standard: 7,    sensibel: 3    },
+		// #1435 E1a-2 AC-9: Wortlaut identisch zu ALERT_METRIC_LABELS (Gleichlauf
+		// per Test gesichert); die Zusammenfuehrung beider Tabellen gehoert zu E4.
+		{ label: 'Temperatur (Änderung)', unit: '°C',  entspannt: 14,   standard: 10,   sensibel: 6    },
+		{ label: 'Wind (Änderung)',     unit: 'km/h',  entspannt: 35,   standard: 25,   sensibel: 15   },
+		{ label: 'Niederschlag (Änderung)', unit: 'mm', entspannt: 15,  standard: 7,    sensibel: 3    },
 		{ label: 'Neuschnee',           unit: 'cm',    entspannt: 20,   standard: 8,    sensibel: 2    },
 		{ label: 'CAPE',                unit: 'J/kg',  entspannt: 1200, standard: 600,  sensibel: 200  },
 		{ label: 'Sichtweite',          unit: 'm',     entspannt: 500,  standard: 1000, sensibel: 3000 },

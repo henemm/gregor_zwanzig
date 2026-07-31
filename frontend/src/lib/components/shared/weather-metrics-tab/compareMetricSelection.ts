@@ -13,6 +13,9 @@ export interface CompareSelectionEntry {
 	aggregation?: string;
 	// Issue #1401 (A1): Auswertung als eigenes Anzeige-Element neben dem Namen.
 	aggregation_label?: string;
+	// Issue #1435 (E1a-2): Alarm-Identitaet aus dem zentralen Register (`null` =
+	// nicht alarmfaehig) — Quelle der Alarm-Zeilen im Alarme-Reiter.
+	alertMetric?: string | null;
 }
 
 /**
@@ -37,7 +40,8 @@ export function toCompareSelectionEntries(
 		...(m.aggregation !== undefined ? { aggregation: m.aggregation } : {}),
 		...(m.aggregation_label !== undefined
 			? { aggregation_label: m.aggregation_label }
-			: {})
+			: {}),
+		...(m.alertMetric !== undefined ? { alertMetric: m.alertMetric } : {})
 	}));
 	// Issue #1373 (S2 Scheibe B): dieselbe geladene Katalogantwort ist die
 	// EINZIGE Quelle für die Übersetzung Auswahl-Schlüssel <-> Größe+Auswertung

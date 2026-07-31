@@ -42,6 +42,11 @@
 	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
 	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
+	// #1435 E1a-2: der Alarme-Reiter leitet seine Zeilen aus dem Register-Katalog
+	// ab — die Anlege-Seite muss ihn deshalb ebenfalls laden (geteilter
+	// Promise-Cache, kein zweiter Netzwerk-Request) und durchreichen.
+	import { loadCompareSelectionEntries } from '$lib/components/shared/corridor-editor/compareMetricCatalogLoader';
+	import type { CompareSelectionEntry } from '$lib/components/shared/weather-metrics-tab/compareMetricSelection';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
@@ -55,6 +60,26 @@
 	let { locations = [], groups }: Props = $props();
 
 	const wiz = getContext<CompareWizardState>('compare-wizard-state');
+
+	// #1435 E1a-2: Register-Katalog fuer die Empfindlichkeits-Tabelle des
+	// Alarme-Reiters. Ohne ihn zeigte der Reiter hier null Zeilen.
+	//
+	// Fix-Loop 1 (Adversary F001): der Reiter wird — wie in CompareTabs.svelte
+	// (:597-607, 1407) — erst hinter `{#if alarmeHydrated}` gemountet. Ohne
+	// dieses Gatter rendert er waehrend des laufenden Fetches mit leerem
+	// Katalog und behauptet faelschlich "keine Metriken" (AC-5, #1320).
+	let alarmeCatalog = $state<CompareSelectionEntry[]>([]);
+	let alarmeHydrated = $state(false);
+	async function hydrateAlarmeTab(): Promise<void> {
+		// Fehlerfall gibt den Reiter ebenfalls frei (identisch CompareTabs:
+		// `.catch(() => [])`) — sonst bliebe er nach einem misslungenen Laden
+		// dauerhaft unerreichbar.
+		alarmeCatalog = await loadCompareSelectionEntries().catch(() => []);
+		alarmeHydrated = true;
+	}
+	onMount(() => {
+		void hydrateAlarmeTab();
+	});
 
 	// ── Tab-Definitionen (6 Tabs, Spec-Tabelle) ───────────────────────────────
 	// Issue #1360 (Scheibe S1a von Epic #1372): der Reiter 'layout' ist aufgeloest,
@@ -383,7 +408,9 @@
 			</div>
 		</div>
 	{:else if activeTab === 'alarme'}
-		<AlarmeTab context="vergleich" {wiz} />
+		{#if alarmeHydrated}
+			<AlarmeTab context="vergleich" {wiz} catalog={alarmeCatalog} />
+		{/if}
 		<div class="ce-cta-foot" style:max-width="1100px">
 			<div class="ce-cta-row">
 				<Btn data-testid="compare-editor-continue-versand" variant="accent" size="md" onclick={makeContinueHandler('versand')}>Versand einrichten →</Btn>
@@ -468,7 +495,9 @@
 				<CorridorEditorMobile context="vergleich" />
 			{/if}
 		{:else if activeTab === 'alarme'}
-			<AlarmeTab context="vergleich" {wiz} />
+			{#if alarmeHydrated}
+				<AlarmeTab context="vergleich" {wiz} catalog={alarmeCatalog} />
+			{/if}
 		{:else if activeTab === 'versand'}
 			<VersandTab context="vergleich" {wiz} activation={versandActivationBanner} />
 		{/if}

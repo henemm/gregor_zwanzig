@@ -67,6 +67,7 @@
 	// Dirty-Check-Grundzustand aufnimmt. Geteilter Promise-Cache: eine Anfrage
 	// pro Seiten-Load für alle Verbraucher.
 	import { loadCompareSelectionEntries } from '../shared/corridor-editor/compareMetricCatalogLoader.ts';
+	import type { CompareSelectionEntry } from '../shared/weather-metrics-tab/compareMetricSelection.ts';
 	// Issue #1299/#1291/#1287 (C2 von Epic #1301): Stundenverlauf-Steuerung im
 	// Hub-Layout-Tab — geteiltes ChannelToggle-Bedienelement + eigenstaendiges
 	// Compare-Vokabular (kein Reuse von compareMetricDefs.ts).
@@ -593,9 +594,14 @@
 	// bei Deep-Link `?tab=alarme` faelschlich "keine Metriken"), und das braucht
 	// die Katalogantwort zur Uebersetzung des Speicherformats.
 	let alarmeHydrating = false;
+	// #1435 E1a-2: derselbe geladene Katalog speist die Empfindlichkeits-Tabelle
+	// (Alarm-Zeilen aus dem Register). Als $state festgehalten und als Prop
+	// durchgereicht — der Modul-Getter waere nicht reaktiv.
+	let alarmeCatalog = $state<CompareSelectionEntry[]>([]);
 
 	async function hydrateAlarmeTab(): Promise<void> {
 		const catalog = await loadCompareSelectionEntries().catch(() => []);
+		alarmeCatalog = catalog;
 		// F005-Muster: aus currentPreset hydrieren, damit ein vorheriger
 		// Orte-/Idealwerte-/Versand-Edit in derselben Sitzung nicht
 		// ueberschrieben wird (H3: eigenstaendige Hydration ALLER Alarm-Felder,
@@ -1413,7 +1419,7 @@
 					onfocusout={handleAlarmeCommit}
 					onclick={handleAlarmeCommit}
 				>
-					<AlarmeTab context="vergleich" wiz={wizardState} />
+					<AlarmeTab context="vergleich" wiz={wizardState} catalog={alarmeCatalog} />
 				</div>
 			{/if}
 		</div>
