@@ -43,11 +43,14 @@ describe('etagRegistry — Stand je Tour', () => {
 	});
 
 	test('test_extractTripId_matchesOnlyTripAndWeatherConfigPaths', () => {
-		// GIVEN/WHEN/THEN: genau zwei Pfadformen tragen laut S2 einen ETag.
+		// GIVEN/WHEN/THEN: drei Pfadformen tragen einen ETag — die Tour und ihre
+		// Wetter-Konfiguration (S2), seit S6 zusaetzlich der Ortsvergleich.
 		assert.equal(extractTripId('/api/trips/gr20'), 'gr20');
 		assert.equal(extractTripId('/api/trips/gr20/weather-config'), 'gr20');
 		assert.equal(extractTripId('/api/trips/gr20?force=1'), 'gr20');
 		assert.equal(extractTripId('/api/trips/gr20/weather-config?x=1'), 'gr20');
+		assert.equal(extractTripId('/api/compare/presets/cp-abc'), 'cp-abc');
+		assert.equal(extractTripId('/api/compare/presets/cp-abc?x=1'), 'cp-abc');
 
 		// Alle uebrigen Unterpfade duerfen NICHT matchen — der Server prueft dort
 		// kein If-Match (S2 AC-15) und liefert keinen ETag.
@@ -56,10 +59,15 @@ describe('etagRegistry — Stand je Tour', () => {
 		assert.equal(extractTripId('/api/trips/gr20/preview'), null);
 		assert.equal(extractTripId('/api/trips'), null);
 		assert.equal(extractTripId('/api/trips/'), null);
+		assert.equal(extractTripId('/api/compare/presets'), null);
+		assert.equal(extractTripId('/api/compare/presets/cp-abc/state'), null);
+		assert.equal(extractTripId('/api/compare/presets/cp-abc/send'), null);
 
-		// Fremde Ressourcen bleiben unberuehrt (Orte, Orts-Vergleiche → S6).
+		// Fremde Ressourcen bleiben unberuehrt (Orte). Der zweite Server-seitige
+		// Schreibweg /api/briefings/{id}?kind=vergleich ist zwar ebenfalls
+		// abgesichert (S6 AC-9), wird vom Frontend aber nicht benutzt und bleibt
+		// darum bewusst ausserhalb des Trichters.
 		assert.equal(extractTripId('/api/locations/korsika'), null);
-		assert.equal(extractTripId('/api/compare/presets/abc'), null);
 		assert.equal(extractTripId('/api/briefings/abc?kind=vergleich'), null);
 	});
 

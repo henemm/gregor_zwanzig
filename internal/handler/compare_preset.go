@@ -160,10 +160,20 @@ func findComparePresetIdx(presets []model.ComparePreset, id string) int {
 	return -1
 }
 
-// GET /api/compare/presets
+// Issue #1395 S6 — WARUM ":=" und nicht "=" beim WithUser-Aufruf in jedem
+// Handler dieser Datei: "s = s.WithUser(...)" schreibt in die von der Closure
+// GETEILTE Variable; zwei gleichzeitige Anfragen ueberschreiben sich damit den
+// Store, im schlimmsten Fall ueber Nutzergrenzen hinweg. Hier ist das direkt
+// sicherheitsrelevant, weil der Sperrschluessel (LockBriefing: UserID + ID)
+// von s.UserID abhaengt — gesperrt wuerde sonst unter der falschen Kennung.
+// Gleiche Korrektur wie S2 in trip.go (Issue #1396).
+//
+// GET /api/compare/presets — die Liste traegt bewusst KEINEN ETag: sie hat
+// keinen einzelnen Fingerabdruck, auf den sich ein If-Match beziehen koennte
+// (identisch zu TripsHandler seit S2).
 func ListComparePresetsHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		presets, err := s.LoadComparePresets()
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
@@ -180,7 +190,7 @@ func ListComparePresetsHandler(s *store.Store) http.HandlerFunc {
 func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())
-		s = s.WithUser(userID)
+		s := s.WithUser(userID)
 
 		var preset model.ComparePreset
 		if err := json.NewDecoder(r.Body).Decode(&preset); err != nil {
@@ -247,6 +257,11 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		// Issue #1395 S6: Sperre um den Schreibvorgang — erst hier moeglich, die
+		// ID entsteht oben im Handler (analog CreateTripHandler). Kein If-Match
+		// und kein ETag in der Antwort: der Client holt nach dem Anlegen frisch.
+		defer s.LockBriefing(preset.ID)()
+
 		// Issue #1250 Scheibe 7b: per-Datei-Save — nur die eigene Datei
 		// briefings/<id>.json schreiben (SaveComparePreset setzt kind=vergleich),
 		// kein Laden+Zurueckschreiben des ganzen Arrays mehr.
@@ -261,8 +276,22 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 // PUT /api/compare/presets/{id}
 func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+
+		// Issue #1395 S6: Sperre ueber den GANZEN Lesen-Pruefen-Schreiben-Zyklus.
+		// Dieselbe Sperre nimmt der zweite Schreibweg
+		// (PUT /api/briefings/{id}?kind=vergleich) auf dieselbe Datei.
+		defer s.LockBriefing(id)()
+
+		// Fingerabdruck des Standes VOR dem Schreiben — Bezugspunkt der
+		// If-Match-Pruefung. Ein echter Lesefehler ist ein Store-Fehler; eine
+		// fehlende Datei liefert "" ohne Fehler und faellt unten in den 404.
+		oldFp, fpErr := s.BriefingFingerprint(id)
+		if fpErr != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			return
+		}
 
 		presets, err := s.LoadComparePresets()
 		if err != nil {
@@ -277,6 +306,14 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		original := presets[idx]
+
+		// Vorbedingung VOR dem Dekodieren des Rumpfes: stimmt sie nicht, ist der
+		// Rumpf irrelevant und es wird nichts geschrieben (AC-5).
+		if !ifMatchAllows(r.Header.Get("If-Match"), oldFp) {
+			writePreconditionFailed(w, preconditionFailedDetail)
+			return
+		}
+
 		var updated model.ComparePreset
 		if err := json.NewDecoder(r.Body).Decode(&updated); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
@@ -454,6 +491,11 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
 			return
 		}
+		// Issue #1395 S6: Stempel des soeben geschriebenen Standes — ohne ihn
+		// liefe der Client mit dem naechsten Schreibvorgang ins 412, obwohl
+		// niemand sonst etwas geaendert hat.
+		newFp, newFpErr := s.BriefingFingerprint(id)
+		setETagHeader(w, newFp, newFpErr)
 		writeJSON(w, http.StatusOK, updated)
 	}
 }
@@ -461,8 +503,14 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 // DELETE /api/compare/presets/{id}
 func DeleteComparePresetHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+
+		// Issue #1395 S6: dieselbe Sperre wie die Schreibpfade — ein DELETE, das
+		// mitten in einen laufenden PUT faellt, wuerde sonst die Datei entfernen
+		// und der PUT sie danach wieder hinschreiben (Wiederauferstehen).
+		// KEIN If-Match: der Loeschpfad prueft keine Vorbedingung (analog Trip).
+		defer s.LockBriefing(id)()
 
 		presets, err := s.LoadComparePresets()
 		if err != nil {
@@ -499,8 +547,13 @@ type comparePresetStateRequest struct {
 // (read-modify-write), analog zu UpdateTripStateHandler (Issue #611).
 func UpdateComparePresetStateHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+
+		// Issue #1395 S6: Sperre wie bei den Schreibpfaden, aber KEIN If-Match
+		// (analog UpdateTripStateHandler, AC-15) — der Zustandswechsel ist kein
+		// inhaltliches Bearbeiten und darf nicht an einem Stempel scheitern.
+		defer s.LockBriefing(id)()
 
 		presets, err := s.LoadComparePresets()
 		if err != nil {
@@ -540,8 +593,15 @@ func UpdateComparePresetStateHandler(s *store.Store) http.HandlerFunc {
 // GET /api/compare/presets/{id}
 func GetComparePresetHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+
+		// Issue #1395 S6: Sperre auch beim Lesen — sonst koennte ein
+		// gleichzeitiger PUT zwischen Fingerabdruck und Serialisierung
+		// dazwischenfunken, und der Client haelt einen Stempel, der nicht zum
+		// ausgelieferten Rumpf gehoert (analog TripHandler).
+		defer s.LockBriefing(id)()
+
 		presets, err := s.LoadComparePresets()
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
@@ -553,6 +613,12 @@ func GetComparePresetHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		// Issue #1280: Read-Heilung (siehe ListComparePresetsHandler oben).
+		//
+		// Issue #1395 S6: Stempel des ausgelieferten Standes. Der Fingerabdruck
+		// kommt aus den Bytes AUF PLATTE, nicht aus dem geheilten Objekt — er
+		// muss zu dem passen, was ein PUT spaeter als Vorbedingung prueft.
+		fp, fpErr := s.BriefingFingerprint(id)
+		setETagHeader(w, fp, fpErr)
 		writeJSON(w, http.StatusOK, presets[idx])
 	}
 }

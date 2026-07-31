@@ -137,17 +137,98 @@ describe('Trichter: Pfadfilter', () => {
 		// GIVEN: irgendein Stand ist bekannt
 		setKnownEtag('gr20', '"irgendwas"');
 
-		// WHEN: fremde Ressourcen angesprochen werden (Orte, Orts-Vergleiche → S6)
+		// WHEN: eine echt fremde Ressource angesprochen wird (Orte — Issue #1395
+		// betrifft sie nie). Orts-Vergleiche sind seit S6 KEIN Fremdpfad mehr
+		// (siehe Block "Trichter: Ortsvergleich (S6)" unten) — hier wird nur
+		// noch geprueft, dass ein UNBEKANNTER Compare-Preset-Stand (kein
+		// vorheriges GET fuer 'abc') ebenfalls kein If-Match traegt, exakt wie
+		// bei einer unbekannten Tour (AC-7-Analogon).
 		await api.put('/api/locations/korsika', { name: 'Korsika' });
 		assert.equal(lastCall().ifMatch, null);
 
 		await api.put('/api/compare/presets/abc', { name: 'Vergleich' });
 
-		// THEN: kein If-Match, und die Registry bleibt unberuehrt
+		// THEN: kein If-Match, und die Eintraege fremder Ressourcen bleiben
+		// unberuehrt. Der Orts-Vergleich selbst fuehrt seit S6 einen Eintrag —
+		// aus der Schreib-Antwort, exakt wie eine Tour (siehe
+		// test_put_capturesNewEtagFromWriteResponse oben).
 		assert.equal(lastCall().ifMatch, null);
 		assert.equal(getKnownEtag('gr20'), '"irgendwas"');
 		assert.equal(getKnownEtag('korsika'), undefined);
-		assert.equal(getKnownEtag('abc'), undefined);
+		assert.equal(getKnownEtag('abc'), server.etagOf('abc'));
+	});
+});
+
+// TDD RED — Issue #1395 S6: Der Trichter (`api.ts`/`etagRegistry.ts`) muss
+// Compare-Preset-Pfade (`/api/compare/presets/{id}`) genauso behandeln wie
+// Trip-Pfade — GET nimmt den Stempel auf, PUT traegt ihn automatisch mit.
+// `fakeTripServer.ts` bildet den ZIEL-Serververtrag bereits ab (S6 generalisiert
+// dort `TRIP_PATH_RE` mit); diese Tests beweisen die noch fehlende FRONTEND-Seite
+// (`etagRegistry.ts`s `TRIP_PATH_RE`/`extractTripId` matchen Compare-Preset-Pfade
+// noch nicht) — MUESSEN jetzt rot sein, werden nach der Implementierung gruen.
+//
+// Spec: docs/specs/modules/issue_1395_s6_ortsvergleich_etag.md § AC-17
+describe('Trichter: Ortsvergleich (S6)', () => {
+	test('test_get_capturesEtagFromComparePresetResponse', async () => {
+		// GIVEN: der (Ziel-)Server liefert bei GET auf ein Compare-Preset einen ETag
+		// WHEN: das Preset ueber den Trichter geladen wird
+		await api.get('/api/compare/presets/cp-abc');
+
+		// THEN: hat sich das Frontend den Stand gemerkt — exakt wie bei einer Tour
+		assert.equal(getKnownEtag('cp-abc'), server.etagOf('cp-abc'));
+	});
+
+	test('test_put_attachesIfMatch_whenComparePresetStampKnown', async () => {
+		// GIVEN: ein Compare-Preset wurde geladen, der Stand ist bekannt
+		await api.get('/api/compare/presets/cp-abc');
+		const stampFromGet = getKnownEtag('cp-abc');
+		assert.ok(stampFromGet, 'Vorbedingung: GET muss einen Stand hinterlassen');
+
+		// WHEN: danach gespeichert wird
+		await api.put('/api/compare/presets/cp-abc', { name: 'Vergleich' });
+
+		// THEN: traegt die Anfrage diesen Stand als If-Match — ohne dass der
+		// Compare-Editor davon etwas wissen muss (AC-17)
+		assert.equal(lastCall().method, 'PUT');
+		assert.equal(lastCall().ifMatch, stampFromGet);
+		assert.equal(lastCall().status, 200);
+	});
+
+	test('test_put_omitsIfMatch_whenComparePresetStampUnknown', async () => {
+		// GIVEN: fuer dieses Preset ist in dieser Sitzung kein Stand bekannt
+		assert.equal(getKnownEtag('cp-unbekannt'), undefined);
+
+		// WHEN: gespeichert wird (z. B. direkt nach dem Anlegen)
+		await api.put('/api/compare/presets/cp-unbekannt', { name: 'X' });
+
+		// THEN: geht die Anfrage OHNE Vorbedingung raus und wird angenommen
+		assert.equal(lastCall().ifMatch, null);
+		assert.equal(lastCall().status, 200);
+	});
+
+	test('test_tripAndComparePresetStamps_doNotCollide_evenWithSameSuffix', async () => {
+		// GIVEN: eine Tour und ein Compare-Preset, deren IDs sich nur im
+		// `cp-`-Praefix unterscheiden (echter Namensraum, kein Test-Artefakt —
+		// `newComparePresetID()` erzeugt IDs immer mit diesem Praefix)
+		await api.get('/api/trips/abc');
+		await api.get('/api/compare/presets/cp-abc');
+		const tripStamp = getKnownEtag('abc');
+		const presetStamp = getKnownEtag('cp-abc');
+
+		// THEN: getrennte Registry-Eintraege, kein gegenseitiges Ueberschreiben
+		assert.ok(tripStamp, 'Vorbedingung: Trip-Stand bekannt');
+		assert.ok(presetStamp, 'Vorbedingung: Preset-Stand bekannt');
+
+		// WHEN: beide gespeichert werden
+		await api.put('/api/trips/abc', { name: 'Trip' });
+		await api.put('/api/compare/presets/cp-abc', { name: 'Preset' });
+
+		// THEN: jede Schreibanfrage traegt AUSSCHLIESSLICH ihren eigenen Stand
+		const tripCall = server.calls[server.calls.length - 2];
+		const presetCall = lastCall();
+		assert.equal(tripCall.ifMatch, tripStamp);
+		assert.equal(presetCall.ifMatch, presetStamp);
+		assert.notEqual(tripStamp, presetStamp);
 	});
 });
 

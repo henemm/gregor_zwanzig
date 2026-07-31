@@ -34,9 +34,11 @@ export interface FakeTripServer {
 	restore(): void;
 }
 
-// Dieselbe Pfad-Definition wie der echte Server: nur die Tour-Ressource selbst
-// und ihre Wetter-Konfiguration tragen einen ETag.
-const TRIP_PATH_RE = /^\/api\/trips\/([^/?#]+)(\/weather-config)?(?:[?#]|$)/;
+// Dieselbe Pfad-Definition wie der echte Server: Tour-Ressource, ihre
+// Wetter-Konfiguration und (Issue #1395 S6) der Ortsvergleich-Preset tragen
+// einen ETag. `id` liefert match[1] (Trip) oder match[2] (Compare-Preset).
+const TRIP_PATH_RE =
+	/^\/api\/(?:trips\/([^/?#]+)(?:\/weather-config)?|compare\/presets\/([^/?#]+))(?:[?#]|$)/;
 
 /** Spiegelbild von `ifMatchAllows` in `internal/handler/etag.go` (S2). */
 function ifMatchAllows(header: string, current: string): boolean {
@@ -95,7 +97,7 @@ export function createFakeTripServer(options: { latencyMs?: Latency } = {}): Fak
 		const reqHeaders = new Headers((init?.headers ?? {}) as HeadersInit);
 		const ifMatch = reqHeaders.get('If-Match');
 		const match = TRIP_PATH_RE.exec(path);
-		const tripId = match ? decodeURIComponent(match[1]) : null;
+		const tripId = match ? decodeURIComponent(match[1] ?? match[2]) : null;
 
 		// Der Eintrag entsteht bei ANKUNFT, nicht beim Abschluss — wie ein echtes
 		// Zugriffsprotokoll. Nur so kann ein Test feststellen, dass eine Anfrage
@@ -124,7 +126,7 @@ export function createFakeTripServer(options: { latencyMs?: Latency } = {}): Fak
 		let body: unknown;
 
 		if (tripId === null) {
-			// Nicht-Trip-Pfad (z. B. /api/locations/..., /api/compare/...,
+			// Nicht-Trip-/Nicht-Compare-Preset-Pfad (z. B. /api/locations/...,
 			// /api/trips/{id}/state): kein ETag, keine Vorbedingung.
 			body = { ok: true, path };
 		} else if (method === 'GET') {

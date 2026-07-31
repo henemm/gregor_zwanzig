@@ -33,21 +33,32 @@ export function etagVersion(tripId: string): number {
 }
 
 /**
- * Nur exakt `/api/trips/{id}` und `/api/trips/{id}/weather-config` tragen laut
- * S2 einen ETag. `/state`, `/waypoints/{wp}/confirm` und alle uebrigen
- * Unterpfade matchen bewusst NICHT — dort prueft der Server kein `If-Match`
- * (S2 AC-15) und liefert keinen Stempel.
+ * Einen ETag tragen laut Server-Vertrag genau drei Pfade: `/api/trips/{id}`,
+ * `/api/trips/{id}/weather-config` (S2) und `/api/compare/presets/{id}` (S6).
+ * `/state`, `/waypoints/{wp}/confirm` und alle uebrigen Unterpfade matchen
+ * bewusst NICHT — dort prueft der Server kein `If-Match` (S2 AC-15, S6 AC-15)
+ * und liefert keinen Stempel.
+ *
+ * Beide Ressourcenarten teilen sich EINE Registry: Preset-Kennungen tragen
+ * immer das Praefix `cp-` (`newComparePresetID()`), eine Verwechslung mit einer
+ * Tour-Kennung ist damit ausgeschlossen.
  */
-const TRIP_PATH_RE = /^\/api\/trips\/([^/?#]+)(?:\/weather-config)?(?:[?#]|$)/;
+const RESOURCE_PATH_RE =
+	/^\/api\/(?:trips\/([^/?#]+)(?:\/weather-config)?|compare\/presets\/([^/?#]+))(?:[?#]|$)/;
 
-/** Tour-Kennung eines Pfades, oder `null` fuer alle uebrigen Pfade. */
+/**
+ * Ressourcen-Kennung eines Pfades (Tour oder Ortsvergleich), oder `null` fuer
+ * alle uebrigen Pfade. Der Name stammt aus S3 und bleibt bewusst unveraendert —
+ * ein Umbenennen beruehrte alle Aufrufer ohne Verhaltensgewinn.
+ */
 export function extractTripId(path: string): string | null {
-	const match = TRIP_PATH_RE.exec(path);
+	const match = RESOURCE_PATH_RE.exec(path);
 	if (!match) return null;
+	const id = match[1] ?? match[2];
 	try {
-		return decodeURIComponent(match[1]);
+		return decodeURIComponent(id);
 	} catch {
-		return match[1];
+		return id;
 	}
 }
 

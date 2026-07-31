@@ -47,7 +47,10 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 			writeBriefingKindRequired(w)
 			return
 		}
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		// Issue #1395 S6: ":=" statt "=" — die Closure-Variable ist zwischen
+		// allen gleichzeitigen Anfragen geteilt, und der Sperrschluessel
+		// (LockBriefing) haengt an s.UserID. Siehe compare_preset.go.
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 
 		if kind == briefingKindRoute {
@@ -63,6 +66,12 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		// Issue #1395 S6: Sperre beim Lesen — nur so gehoert der ausgelieferte
+		// Stempel zum ausgelieferten Rumpf (analog GetComparePresetHandler).
+		// Ausschliesslich im vergleich-Zweig: der route-Zweig oben laedt selbst
+		// und ist nicht Teil dieser Scheibe.
+		defer s.LockBriefing(id)()
+
 		// Issue #1250 Scheibe 7b: per-Datei-Read ueber die neue Store-API
 		// (kind-Guard inklusive) statt Array-Scan.
 		preset, err := s.LoadComparePreset(id)
@@ -73,6 +82,8 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		preset.Kind = briefingKindVergleich
+		fp, fpErr := s.BriefingFingerprint(id)
+		setETagHeader(w, fp, fpErr)
 		writeJSON(w, http.StatusOK, preset)
 	}
 }
@@ -80,7 +91,7 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 // GET /api/briefings — Aggregat aus beiden Alt-Stores, kind-getaggt.
 func ListBriefingsHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		trips, err := s.LoadTrips()
 		if bailIf(w, err != nil, http.StatusInternalServerError, "store_error") {
 			return
@@ -186,13 +197,29 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 			writeBriefingKindRequired(w)
 			return
 		}
+		// Issue #1395 S6: KEINE Sperre vor dieser Weiche. UpdateTripHandler nimmt
+		// fuer dieselbe <Nutzer, ID> bereits dieselbe Sperre (S2), und
+		// LockBriefing ist eine sync.Mutex-Sperre — nicht wiedereintrittsfaehig.
+		// Eine Sperre hier waere fuer jeden kind=route-Aufruf ein sicherer
+		// Selbst-Blockierer (AC-11).
 		if kind == briefingKindRoute {
 			UpdateTripHandler(s).ServeHTTP(w, r)
 			return
 		}
 
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+
+		// Ab hier gilt der volle Nebenlaeufigkeitsschutz des Preset-Schreibwegs:
+		// dieselbe Sperre und derselbe Fingerabdruck wie
+		// UpdateComparePresetHandler — sonst waere dieser Weg dessen Umgehung.
+		defer s.LockBriefing(id)()
+
+		oldFp, fpErr := s.BriefingFingerprint(id)
+		if bailIf(w, fpErr != nil, http.StatusInternalServerError, "store_error") {
+			return
+		}
+
 		patch, err := io.ReadAll(r.Body)
 		if bailIf(w, err != nil, http.StatusBadRequest, "bad_request") {
 			return
@@ -207,6 +234,13 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		original := presets[idx]
+
+		// Vorbedingung VOR dem Merge: stimmt sie nicht, wird nichts geschrieben.
+		if !ifMatchAllows(r.Header.Get("If-Match"), oldFp) {
+			writePreconditionFailed(w, preconditionFailedDetail)
+			return
+		}
+
 		merged, err := mergeBriefingPatch(original, patch)
 		if bailIf(w, err != nil, http.StatusBadRequest, "bad_request") {
 			return
@@ -239,6 +273,8 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 		if bailIf(w, s.SaveComparePreset(preset) != nil, http.StatusInternalServerError, "store_error") {
 			return
 		}
+		newFp, newFpErr := s.BriefingFingerprint(id)
+		setETagHeader(w, newFp, newFpErr)
 		writeJSON(w, http.StatusOK, preset)
 	}
 }
