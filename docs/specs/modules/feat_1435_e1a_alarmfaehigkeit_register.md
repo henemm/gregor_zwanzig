@@ -491,12 +491,14 @@ unbekannte Identität erreicht die UI).
   (analog `fix_1401b`s Teil 2, dort ebenfalls ohne automatisierten
   Cross-Language-Guard). Ändert sich `ALERTABLE_METRICS` künftig, muss der
   Python-Wächter von Hand nachgezogen werden.
-- **E1b (Erklärsatz + Leerzustand-Hinweis) ist NICHT Teil dieser Lieferung.**
-  Der Hinweis „Wähle im Tab „Wertebereiche" Metriken aus…"
-  (`AlarmeTab.svelte:241`) verweist weiterhin auf den falschen Reiter
-  (richtig wäre „Wetter-Metriken") — eigene, spätere Etappe. Luftfeuchtigkeit
-  ist nach E1a der erste konkrete Kandidat für den dort vorgesehenen
-  Erklärsatz.
+- **E1b (Erklärsatz + Leerzustand-Hinweis):** erledigt in Etappe E1b
+  (2026-07-31, Spec `feat_1435_e1b_alarm_erklaersatz.md`). Der
+  Leerzustand-Hinweis nennt jetzt den
+  korrekten Reiter-Namen „Wetter-Metriken" statt „Wertebereiche"; zusätzlich
+  erscheint ein Erklärsatz, der namentlich aufzählt, welche gewählten Größen
+  keinen Alarm auslösen können, statt sie kommentarlos wegzulassen. Im
+  Tour-Kontext bleibt die Funktionalität begrenzt (dort gibt es keine
+  Metrik-Auswahl als Datengrundlage).
 
 ## Architektur-Entscheidung (ADR)
 

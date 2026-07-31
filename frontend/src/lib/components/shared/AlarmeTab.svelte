@@ -39,7 +39,12 @@
 	// Feature #1435 E1a-2: die Alarm-Zeilen kommen aus dem zentralen Register
 	// (Katalog-Feld `alertMetric`), nicht mehr aus der geloeschten Frontend-
 	// Liste compareMetricMapping.ts.
-	import { deriveActiveAlertMetricsFromCatalog } from './alarme-tab/activeAlertMetricsFromCatalog.ts';
+	// Feature #1435 E1b: gewaehlte Groessen ohne Alarm werden benannt statt
+	// kommentarlos weggelassen — dieselbe Quelle, derselbe Katalog-Prop.
+	import {
+		deriveActiveAlertMetricsFromCatalog,
+		deriveUnalertableSelectedMetricNames
+	} from './alarme-tab/activeAlertMetricsFromCatalog.ts';
 	import type { CompareSelectionEntry } from './weather-metrics-tab/compareMetricSelection.ts';
 	// Issue #1366 F002 Fix-Loop 2: EINZIGE Materialisierungs-Quelle „nie
 	// eingestellt" (null) -> Vorgabemenge, geteilt mit WeatherMetricsTab.svelte/
@@ -120,6 +125,19 @@
 					catalog ?? []
 				)
 			: (activeMetrics ?? [])
+	);
+	// #1435 E1b: die gewaehlten Groessen, die keinen Alarm ausloesen koennen —
+	// DIESELBE Materialisierung wie oben, damit die Leerauswahl-Kante (`null` =
+	// nie geoeffnet = Vorgabemenge, `[]` = bewusst leer) konsistent bleibt.
+	// route liefert strukturell immer [] (dort gibt es keine Metrik-Auswahl,
+	// jeder daraus gebildete Satz waere sachlich falsch — AC-7).
+	const unalertableSelectedMetricNames = $derived(
+		context === 'vergleich'
+			? deriveUnalertableSelectedMetricNames(
+					materializeActiveMetricKeys(wiz?.activeMetricKeys ?? null),
+					catalog ?? []
+				)
+			: []
 	);
 	// route: lokaler State (Adversary Fix-Loop 1, F001) — Initialwert aus der
 	// metricLevels-Prop (Container leitet sie aus trip.display_config her),
@@ -248,9 +266,17 @@
 					</div>
 				</div>
 			{:else if id === 'metric-levels'}
-				{#if effectiveActiveMetrics.length === 0}
+				{#if effectiveActiveMetrics.length === 0 && unalertableSelectedMetricNames.length === 0}
 					<p class="alarme-no-metrics-hint" data-testid="alarme-no-metrics">
-						Wähle im Tab „Wertebereiche" Metriken aus, um Alarm-Schwellen zu konfigurieren.
+						Wähle im Tab „Wetter-Metriken" Metriken aus, um Alarm-Schwellen zu konfigurieren.
+					</p>
+				{:else if effectiveActiveMetrics.length === 0}
+					<!-- #1435 E1b: der Nutzer HAT gewaehlt, nur eben nichts Alarmfaehiges —
+					     „nichts gewaehlt" waere hier sachlich falsch (AC-9). -->
+					<p class="alarme-no-metrics-hint" data-testid="alarme-only-unalertable-hint">
+						Keine der gewählten Größen kann einen Alarm auslösen: {unalertableSelectedMetricNames.join(
+							', '
+						)}. Sie erscheinen weiterhin im Briefing, lösen aber keine Warnung aus.
 					</p>
 				{:else}
 					<AlertMetricLevelTable
@@ -258,6 +284,12 @@
 						levels={effectiveMetricLevels}
 						onLevelChange={handleMetricLevelChange}
 					/>
+					{#if context === 'vergleich' && unalertableSelectedMetricNames.length > 0}
+						<p class="option-hint alarme-unalertable-hint" data-testid="alarme-unalertable-metrics-hint">
+							Für diese Größen gibt es keinen Alarm: {unalertableSelectedMetricNames.join(', ')}. Sie
+							erscheinen weiterhin im Briefing, lösen aber keine Warnung aus.
+						</p>
+					{/if}
 				{/if}
 			{:else if id === 'channels'}
 				<AlertChannelPicker channels={displayChannelState} onToggle={handleChannelToggle} />
@@ -338,6 +370,15 @@
 	.alarme-telegram-style {
 		margin-top: 12px;
 	}
+	/* #1435 E1b: Fussnote unter der Empfindlichkeits-Tabelle — Vorbild
+	   WeatherMetricsTab.svelte `.option-hint` (gleiche Gattung Hinweis). */
+	.alarme-unalertable-hint {
+		margin: var(--g-s-3) 0 0;
+		font-size: var(--g-text-sm);
+		color: var(--g-ink-muted);
+		line-height: 1.5;
+	}
+
 	.alarme-no-metrics-hint {
 		margin: 0;
 		padding: 24px;
