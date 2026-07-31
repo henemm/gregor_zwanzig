@@ -109,11 +109,12 @@ export function loadCompareMetricCatalog(): Promise<CompareMetricDef[]> {
 
 // Die SCHLUESSEL der Namensraum-Bruecke sind exakt die Katalog-IDs, die die
 // fest verdrahteten ROUTE_METRIC_DEFS bereits abdecken (gust, precipitation,
-// temperature, thunder, snowfall_limit, freezing_level). Abgeleitet statt
-// dupliziert — sonst driftet die Liste beim naechsten Bruecken-Eintrag.
-// "thunder" faellt dadurch automatisch mit heraus: die Gewitter-Skala bleibt
-// die alte Prozent-Definition, die Ordinal-Vereinheitlichung ist ein
-// separater Folge-Workflow (AC-3).
+// temperature, snowfall_limit, freezing_level). Abgeleitet statt dupliziert —
+// sonst driftet die Liste beim naechsten Bruecken-Eintrag.
+// Issue #1425 (S2 Teil 2, Scheibe B): "thunder" ist seither KEIN
+// Bruecken-Schluessel mehr — der Katalog-Eintrag `thunder_level_max` (ordinal,
+// kein/mittel/hoch) laeuft deshalb hier DURCH und ersetzt die alte
+// Trip-eigene Prozent-Definition.
 const _ROUTE_COVERED_METRIC_IDS = new Set(Object.keys(ROUTE_CORRIDOR_CATALOG_IDS));
 
 /**
@@ -136,6 +137,15 @@ export function buildRouteMetricDefsFromCatalog(
 			&& !_COMPARE_RANGE_UNSUPPORTED.has(entry.key))
 		.map((entry: CompareMetricCatalogEntry) => {
 			const defaults = _COMPARE_DEFAULTS[entry.key] ?? { defaultMin: null, defaultMax: null };
+			// Issue #1425 (S2 Teil 2, Scheibe B): `kind`/`ordinalLabels` werden jetzt
+			// uebernommen und die Skala ordinal-bewusst abgeleitet — identisch zu
+			// buildCompareMetricDefs() oben. Ohne das bekaeme `thunder_level_max`
+			// (kein rangeMin/rangeMax im Katalog) den irrefuehrenden Zahlen-Fallback
+			// [0,100] — wieder die Prozent-Falle.
+			const kind: 'range' | 'ordinal' = entry.kind === 'ordinal' ? 'ordinal' : 'range';
+			const scale: [number, number] = kind === 'ordinal'
+				? [0, (entry.ordinalLabels?.length ?? 1) - 1]
+				: [entry.rangeMin ?? 0, entry.rangeMax ?? 100];
 			return {
 				metric: entry.key,
 				label: entry.label,
@@ -145,8 +155,10 @@ export function buildRouteMetricDefsFromCatalog(
 					? { aggregationLabel: entry.aggregation_label }
 					: {}),
 				unit: entry.unit ?? '',
-				scale: [entry.rangeMin ?? 0, entry.rangeMax ?? 100] as [number, number],
+				scale,
 				step: entry.step ?? 1,
+				kind,
+				ordinalLabels: entry.ordinalLabels,
 				defaultMin: defaults.defaultMin,
 				defaultMax: defaults.defaultMax,
 			};

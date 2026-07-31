@@ -34,6 +34,17 @@ def _tr_containing(html: str, time_label: str) -> str:
     return html[start:end]
 
 
+def _cell_in(tr_html: str, data_label: str) -> str:
+    """Wie ``_cell``, aber innerhalb EINER bereits isolierten Tabellenzeile --
+    noetig, sobald eine Fixture mehrere Stunden rendert (``_cell`` trifft sonst
+    immer die erste Stunde und koennte eine Umkehrung nicht sehen)."""
+    marker = f'data-label="{data_label}"'
+    idx = tr_html.index(marker)
+    start = tr_html.rindex("<td", 0, idx)
+    end = tr_html.index("</td>", idx) + len("</td>")
+    return tr_html[start:end]
+
+
 def _cell(html: str, data_label: str) -> str:
     """Isoliert genau die Zelle einer Spalte ueber ihr ``data-label``
     (Mobile-Beschriftung, vom Renderer je <td> gesetzt) -- damit beweist eine
@@ -178,6 +189,25 @@ def _render(*, corridors, enabled: set[str], dp: ForecastDataPoint) -> str:
     tl = TokenLine(trip_name="Test-Trip", report_type="evening", stage_name="Etappe 1")
     html, _plain = render_email(
         tl, segments=[_seg_data(dp)], seg_tables=[[row]], display_config=dc,
+        tz=tz, friendly_keys=set(), corridors=corridors,
+    )
+    return html
+
+
+def _render_hours(*, corridors, enabled: set[str], dps: list[ForecastDataPoint]) -> str:
+    """Wie ``_render``, aber mit MEHREREN Stunden in einer Etappen-Tabelle --
+    nur so laesst sich beweisen, dass eine Marke genau eine der beiden Stunden
+    trifft (eine Ein-Stunden-Fixture kann eine Umkehrung nicht zeigen)."""
+    from output.renderers.email import render_email
+    from output.renderers.email.helpers import dp_to_row
+    from output.tokens.dto import TokenLine
+
+    dc = _dc(enabled)
+    tz = ZoneInfo("Europe/Berlin")
+    rows = [dp_to_row(dp, dc, tz=tz) for dp in dps]
+    tl = TokenLine(trip_name="Test-Trip", report_type="evening", stage_name="Etappe 1")
+    html, _plain = render_email(
+        tl, segments=[_seg_data(dps[0])], seg_tables=[rows], display_config=dc,
         tz=tz, friendly_keys=set(), corridors=corridors,
     )
     return html
@@ -396,3 +426,212 @@ class TestTripMailCatalogMetricCorridorMark:
 
         cell = _cell(html, "CAPE")
         assert _MARK in cell, "Katalog-Korridor muss auch neben einer unbekannten Metrik-ID markieren"
+
+
+# ===========================================================================
+# Issue #1425 Schritt 2, Teil 2, Scheibe B -- Gewitter zieht vom Trip-eigenen
+# Prozent-Schluessel `thunder_level` (0-100) auf den ordinalen Katalog-Eintrag
+# `thunder_level_max` (0/1/2) um.
+# SPEC: docs/specs/modules/fix_1425_s2b_gewitter_skala.md
+#
+# Warum der komplette Weg (render_email): der Fehler sitzt in der Aufloesung
+# Korridor-Metrik -> Spalten-Key (html.py::TRIP_CORRIDOR_METRIC_TO_COL_KEY /
+# build_trip_corridor_id_map) UND in der Skala des gespeicherten Bereichs.
+# Wer `marks` von Hand baut, prueft an beidem vorbei.
+#
+# Stunden-Fixture: 10 Uhr Ortszeit = gewitterfrei (ThunderLevel.NONE),
+# 11 Uhr Ortszeit = Gewitter (ThunderLevel.HIGH) -- beide in EINER Tabelle,
+# damit eine Umkehrung ueberhaupt sichtbar werden kann.
+# ===========================================================================
+
+_THUNDER_COL = "Thdr"  # MetricDefinition('thunder').col_label
+
+
+def _thunder_hours() -> list[ForecastDataPoint]:
+    return [
+        _dp(ts=datetime(2026, 7, 30, 8, 0, tzinfo=timezone.utc), t2m_c=10.0,
+            thunder_level=ThunderLevel.NONE),
+        _dp(ts=datetime(2026, 7, 30, 9, 0, tzinfo=timezone.utc), t2m_c=10.0,
+            thunder_level=ThunderLevel.HIGH),
+    ]
+
+
+class TestTripThunderOrdinalCorridor:
+    def test_ac1_ordinal_korridor_markiert_nur_die_gewitterfreie_stunde(self):
+        """AC-1 (Kern-Nachweis): Korridor `thunder_level_max` mit Bereich
+        [None, 0] ("bis kein Gewitter") markiert die NONE-Stunde und NICHT die
+        HIGH-Stunde.
+
+        Der Backend-Teil dieser Aussage steht bereits seit Scheibe A
+        (build_trip_corridor_id_map loest `thunder_level_max` ueber die
+        Katalog-Route auf) -- dieser Test friert ihn ein, damit der
+        Schluesselwechsel in Scheibe B die einzige noch richtige
+        Wirkungsrichtung nicht versehentlich mitreisst."""
+        html = _render_hours(
+            corridors=[Corridor(metric="thunder_level_max", range=[None, 0], mark=True)],
+            enabled={"temperature", "thunder"}, dps=_thunder_hours(),
+        )
+
+        frei = _cell_in(_tr_containing(html, "10"), _THUNDER_COL)
+        gewitter = _cell_in(_tr_containing(html, "11"), _THUNDER_COL)
+
+        assert _MARK in frei, "kein Gewitter (Ordinal 0) liegt in [offen, kein] -- muss markiert sein"
+        assert _MARK_STYLE in frei, "die gewitterfreie Stunde braucht den sichtbaren gruenen Balken"
+        assert _MARK not in gewitter, (
+            "Gewitter (Ordinal 2) liegt NICHT in [offen, kein] -- die Stunde darf "
+            "keine Marken-Signatur tragen (das ist die behobene Umkehrung)"
+        )
+        assert _MARK_STYLE not in gewitter, "die Gewitterstunde darf keinen gruenen Balken tragen"
+
+    def test_ac1_ordinal_korridor_bis_mittel_markiert_kein_und_mittel_nicht_hoch(self):
+        """AC-1 (Gegenprobe zur Stufigkeit): [None, 1] ("bis mittel") -- das
+        Ergebnis der Migration der alten Vorgabe "bis 40" -- schliesst MED ein,
+        HIGH aber nicht. Verhindert, dass die GREEN-Umsetzung pauschal "nur
+        NONE" oder "alles" markiert."""
+        dps = [
+            _dp(ts=datetime(2026, 7, 30, 8, 0, tzinfo=timezone.utc), t2m_c=10.0,
+                thunder_level=ThunderLevel.MED),
+            _dp(ts=datetime(2026, 7, 30, 9, 0, tzinfo=timezone.utc), t2m_c=10.0,
+                thunder_level=ThunderLevel.HIGH),
+        ]
+        html = _render_hours(
+            corridors=[Corridor(metric="thunder_level_max", range=[None, 1], mark=True)],
+            enabled={"temperature", "thunder"}, dps=dps,
+        )
+
+        assert _MARK in _cell_in(_tr_containing(html, "10"), _THUNDER_COL), \
+            "mittleres Gewitter (Ordinal 1) liegt in [offen, mittel]"
+        assert _MARK not in _cell_in(_tr_containing(html, "11"), _THUNDER_COL), \
+            "hohes Gewitter (Ordinal 2) liegt ausserhalb [offen, mittel]"
+
+    def test_umkehrung_prozentschwelle_schliesst_jeden_gewittergrad_ein(self):
+        """Wurzel des Fehlers, dauerhaft festgehalten (bleibt auch nach dem Fix
+        wahr): Der Stundenwert ist IMMER ein Ordinal 0/1/2
+        (metric_format.thunder_ordinal), der alte Trip-Korridor trug aber eine
+        PROZENT-Obergrenze. `corridor_inside(<ordinal>, None, 40)` ist deshalb
+        fuer JEDEN Gewittergrad wahr -- die Markierung sagte "im Wunschbereich"
+        gerade dann, wenn Gewitter herrschte. Der Fehler ist damit eine
+        Umkehrung, kein wirkungsloser Schalter."""
+        from output.metric_format import thunder_ordinal
+
+        assert corridor_inside(thunder_ordinal(ThunderLevel.NONE), None, 40) is True
+        assert corridor_inside(thunder_ordinal(ThunderLevel.MED), None, 40) is True
+        assert corridor_inside(thunder_ordinal(ThunderLevel.HIGH), None, 40) is True, (
+            "die Umkehrung: auch hohes Gewitter gilt gegen eine Prozent-Schwelle als "
+            "'innerhalb' -- genau deshalb zieht Scheibe B den Bereich auf die "
+            "Ordinalskala um"
+        )
+        # Gegenprobe: auf der Ordinalskala trennt derselbe Vergleich sauber.
+        assert corridor_inside(thunder_ordinal(ThunderLevel.NONE), None, 0) is True
+        assert corridor_inside(thunder_ordinal(ThunderLevel.HIGH), None, 0) is False
+
+    # ── UMKEHRUNG BEHOBEN (war bis zur GREEN-Phase der IST-Fixpunkt) ─────
+    # Vorher hielt dieser Test die Umkehrung am gerenderten Briefing fest: der
+    # Alt-Korridor `thunder_level`/[None,40] markierte BEIDE Stunden, auch die
+    # mit hohem Gewitter. Mit Scheibe B faellt "thunder_level" aus
+    # TRIP_CORRIDOR_METRIC_TO_COL_KEY und loest gar nicht mehr auf -> ein nie
+    # durch den Editor gelaufener Alt-Korridor markiert NICHTS mehr (statt
+    # falsch). Durch den Editor gelaufene Alt-Korridore sind zu diesem
+    # Zeitpunkt bereits auf `thunder_level_max` umgeschluesselt
+    # (buildRoutePool, AC-3).
+    # ─────────────────────────────────────────────────────────────────────
+    def test_alter_prozent_korridor_markiert_keine_stunde_mehr(self):
+        """Die Umkehrung ist behoben: der gespeicherte Alt-Korridor
+        `thunder_level` mit der Vorgabe "bis 40" loest nicht mehr auf die
+        Gewitter-Spalte auf und markiert deshalb KEINE Stunde -- insbesondere
+        nicht mehr die mit hohem Gewitter."""
+        html = _render_hours(
+            corridors=[Corridor(metric="thunder_level", range=[None, 40], mark=True)],
+            enabled={"temperature", "thunder"}, dps=_thunder_hours(),
+        )
+
+        frei = _cell_in(_tr_containing(html, "10"), _THUNDER_COL)
+        gewitter = _cell_in(_tr_containing(html, "11"), _THUNDER_COL)
+
+        assert _MARK not in frei, (
+            "der Prozent-Schluessel loest nicht mehr auf -- auch die gewitterfreie "
+            "Stunde traegt keine Marke mehr"
+        )
+        assert _MARK not in gewitter, (
+            "die behobene Umkehrung: die Gewitterstunde darf keine Marke mehr "
+            "tragen, nur weil Ordinal 2 <= Prozent-Schwelle 40 waere"
+        )
+
+
+class TestTripThunderKeyMigrationBackend:
+    def test_ac6_alter_prozentschluessel_ist_aus_der_uebergangs_zuordnung_entfernt(self):
+        """AC-6 (RED): nach dem Umzug traegt kein Wertebereich mehr den
+        Prozent-Schluessel `thunder_level` -- der explizite Uebergangs-Eintrag
+        faellt, damit ein nie durch den Editor gelaufener Alt-Korridor nicht
+        weiter mit der falschen Skala markiert. Die vier uebrigen Route-Keys
+        bleiben, weil sie keinen 1:1-Katalog-Ersatz haben."""
+        from output.renderers.email.html import TRIP_CORRIDOR_METRIC_TO_COL_KEY
+
+        assert "thunder_level" not in TRIP_CORRIDOR_METRIC_TO_COL_KEY, (
+            "AC-6 FAIL: der Prozent-Schluessel steht noch in der Uebergangs-Zuordnung "
+            "-- ein Alt-Korridor wuerde weiterhin invertiert markieren"
+        )
+        assert set(TRIP_CORRIDOR_METRIC_TO_COL_KEY) == {
+            "wind_gust", "temperature_min", "temperature_max", "snow_line",
+        }, "nur der Gewitter-Eintrag darf fallen (die vier uebrigen haben keinen Katalog-Ersatz)"
+
+    def test_ac6_ordinaler_katalogschluessel_loest_weiterhin_auf_spalte_thunder_auf(self):
+        """AC-6 (Kehrseite): die katalogbasierte Route in
+        build_trip_corridor_id_map() bildet `thunder_level_max` weiterhin auf
+        die Stundenspalte "thunder" ab -- der Wegfall des expliziten Eintrags
+        darf die Aufloesung nicht mitnehmen."""
+        from output.renderers.email.html import build_trip_corridor_id_map
+
+        id_map = build_trip_corridor_id_map()
+        assert id_map.get("thunder_level_max") == "thunder", (
+            "AC-6 FAIL: der ordinale Katalog-Schluessel loest nicht mehr auf die "
+            "Gewitter-Spalte auf -- die Markierung waere komplett wirkungslos"
+        )
+
+    def test_ac6_unaufloesbarer_korridor_neben_gewitter_korridor_bricht_nichts(self):
+        """AC-6 (Absturzschutz): eine Korridor-Liste mit einer nicht
+        aufloesbaren Metrik-Kennung neben dem gueltigen Gewitter-Korridor
+        rendert durch; der gueltige Korridor markiert weiterhin richtig."""
+        corridors = [
+            Corridor(metric="voellig_unbekannte_groesse_xyz", range=[0, 1], mark=True),
+            Corridor(metric="thunder_level_max", range=[None, 0], mark=True),
+        ]
+        html = _render_hours(
+            corridors=corridors, enabled={"temperature", "thunder"}, dps=_thunder_hours(),
+        )
+
+        assert isinstance(html, str) and len(html) > 0, "Rendern darf nicht scheitern"
+        assert _MARK in _cell_in(_tr_containing(html, "10"), _THUNDER_COL), \
+            "der gueltige Gewitter-Korridor muss trotz Nachbar-Muell markieren"
+        assert _MARK not in _cell_in(_tr_containing(html, "11"), _THUNDER_COL), \
+            "und die Gewitterstunde weiterhin nicht"
+
+
+class TestTripLegacyRouteKeysStillMark:
+    """Scheibe-A-Regression (muss durchgehend GRUEN bleiben): die vier
+    UEBRIGEN alten Route-Kennungen markieren unveraendert weiter -- nur
+    Gewitter zieht um."""
+
+    def test_wind_gust_markiert_weiterhin(self):
+        dp = _dp(t2m_c=10.0, gust_kmh=80.0)
+        html = _render(corridors=[Corridor(metric="wind_gust", range=[None, 90], mark=True)],
+                       enabled={"temperature", "gust"}, dp=dp)
+        assert _MARK in _cell(html, "Gust")
+
+    def test_temperature_min_markiert_weiterhin(self):
+        dp = _dp(t2m_c=10.0)
+        html = _render(corridors=[Corridor(metric="temperature_min", range=[5, None], mark=True)],
+                       enabled={"temperature"}, dp=dp)
+        assert _MARK in _cell(html, "Temp")
+
+    def test_temperature_max_markiert_weiterhin(self):
+        dp = _dp(t2m_c=10.0)
+        html = _render(corridors=[Corridor(metric="temperature_max", range=[None, 20], mark=True)],
+                       enabled={"temperature"}, dp=dp)
+        assert _MARK in _cell(html, "Temp")
+
+    def test_snow_line_markiert_weiterhin(self):
+        dp = _dp(t2m_c=10.0, snowfall_limit_m=2000)
+        html = _render(corridors=[Corridor(metric="snow_line", range=[1500, None], mark=True)],
+                       enabled={"temperature", "snowfall_limit"}, dp=dp)
+        assert _MARK in _cell(html, "SnowL")

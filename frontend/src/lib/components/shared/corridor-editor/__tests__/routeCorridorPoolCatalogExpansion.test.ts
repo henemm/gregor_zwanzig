@@ -26,6 +26,8 @@ import {
 	buildRoutePool,
 	buildCorridorSavePayload,
 	patchRow,
+	addRow,
+	ROUTE_CTX_DEFAULTS,
 	ROUTE_METRIC_DEFS,
 	type RouteMetricDef,
 } from '../corridorEditorState.ts';
@@ -70,7 +72,9 @@ const CATALOG_ENTRIES_FIXTURE: Array<Record<string, unknown>> = [
 	{ key: 'uv_index_max', label: 'UV-Index', unit: '', kind: 'range', rangeMin: 0, rangeMax: 12, step: 1, metric_id: 'uv_index' },
 	// Duplikat: "temperature" (temperature_max/_min existieren schon in ROUTE_METRIC_DEFS).
 	{ key: 'temp_max_c', label: 'Temperatur', unit: '°C', kind: 'range', rangeMin: -20, rangeMax: 45, step: 1, metric_id: 'temperature' },
-	// Duplikat + AUSGEKLAMMERT (Gewitter-Skalen-Migration ist Folge-Workflow): metric_id "thunder".
+	// Issue #1425 S2 Teil 2 Scheibe B: NICHT mehr ausgeklammert — Gewitter zieht
+	// auf genau diesen ordinalen Katalog-Eintrag um (metric_id "thunder" ist
+	// seither KEIN Bruecken-Schluessel mehr).
 	{ key: 'thunder_level_max', label: 'Gewitter', unit: '', kind: 'ordinal', ordinalLabels: ['kein', 'mittel', 'hoch'], metric_id: 'thunder' },
 	{ key: 'temp_min_c', label: 'Temperatur', unit: '°C', kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, metric_id: 'temperature' },
 	// Duplikat: "gust".
@@ -95,18 +99,20 @@ const CATALOG_ENTRIES_FIXTURE: Array<Record<string, unknown>> = [
 	{ key: 'pressure_avg_hpa', label: 'Luftdruck', unit: 'hPa', kind: 'range', rangeMin: 950, rangeMax: 1050, step: 5, metric_id: 'pressure' },
 ];
 
-// Erwartete 17 neuen Metriken, Katalog-Reihenfolge (PO-Entscheidung).
+// Erwartete 18 neuen Metriken, Katalog-Reihenfolge (PO-Entscheidung).
+// Issue #1425 S2 Teil 2 Scheibe B: thunder_level_max kommt hinzu (Gewitter zieht
+// von der Trip-eigenen Prozent-Definition auf den Katalog-Eintrag um).
 const EXPECTED_NEW_KEYS = [
 	'snow_depth_cm', 'snow_new_sum_cm', 'sunny_hours_h', 'wind_max_kmh', 'cloud_avg_pct',
-	'visibility_min_m', 'uv_index_max', 'cape_max_jkg', 'pop_max_pct', 'wind_chill_min_c',
-	'wind_chill_max_c', 'humidity_avg_pct', 'dewpoint_avg_c', 'cloud_low_avg_pct',
-	'cloud_mid_avg_pct', 'cloud_high_avg_pct', 'pressure_avg_hpa',
+	'visibility_min_m', 'uv_index_max', 'thunder_level_max', 'cape_max_jkg', 'pop_max_pct',
+	'wind_chill_min_c', 'wind_chill_max_c', 'humidity_avg_pct', 'dewpoint_avg_c',
+	'cloud_low_avg_pct', 'cloud_mid_avg_pct', 'cloud_high_avg_pct', 'pressure_avg_hpa',
 ];
 
-// Ausgeschlossen: 7 Duplikate (metric_id deckt sich mit ROUTE_CORRIDOR_CATALOG_IDS)
+// Ausgeschlossen: 6 Duplikate (metric_id deckt sich mit ROUTE_CORRIDOR_CATALOG_IDS)
 // + 2 _COMPARE_RANGE_UNSUPPORTED (kein Von/Bis-Bereich darstellbar).
 const EXPECTED_EXCLUDED_KEYS = [
-	'precip_sum_mm', 'temp_max_c', 'thunder_level_max', 'temp_min_c', 'gust_max_kmh',
+	'precip_sum_mm', 'temp_max_c', 'temp_min_c', 'gust_max_kmh',
 	'freezing_level_m', 'snowfall_limit_m', 'wind_direction_deg', 'precip_type_dominant',
 ];
 
@@ -143,11 +149,11 @@ describe('AC-1/AC-2/AC-3: buildRouteMetricDefsFromCatalog() existiert und filter
 		assert.deepEqual(
 			result.map((d) => d.metric),
 			EXPECTED_NEW_KEYS,
-			'AC-1 FAIL: erwartet exakt die 17 neuen Metriken in Katalog-Reihenfolge'
+			'AC-1 FAIL: erwartet exakt die 18 neuen Metriken in Katalog-Reihenfolge'
 		);
 	});
 
-	test('schliesst alle 7 Duplikate + 2 unterstuetzungslose Groessen aus (AC-2 + AC-3)', async () => {
+	test('schliesst alle 6 Duplikate + 2 unterstuetzungslose Groessen aus (AC-2 + AC-3)', async () => {
 		const mod = await loadCatalogLoaderModule();
 		const buildRouteMetricDefsFromCatalog = (mod as Record<string, unknown>)
 			.buildRouteMetricDefsFromCatalog as ((entries: unknown[]) => RouteMetricDef[]) | undefined;
@@ -165,18 +171,51 @@ describe('AC-1/AC-2/AC-3: buildRouteMetricDefsFromCatalog() existiert und filter
 		}
 	});
 
-	test('thunder_level_max erscheint NICHT in den Zusatz-Defs — Gewitter bleibt exklusiv die alte Prozent-Definition (AC-3)', async () => {
+	// Issue #1425 S2 Teil 2, Scheibe B: DIESE BEHAUPTUNG KEHRT SICH UM. In Teil 1
+	// war Gewitter absichtlich ausgeklammert (die Prozent-Definition blieb
+	// exklusiv in ROUTE_METRIC_DEFS). Ab Scheibe B ist genau das der Fehler:
+	// Prozent-Bereich gegen Ordinal-Stundenwert markierte gerade DANN, wenn
+	// Gewitter herrschte.
+	test('thunder_level_max erscheint als ORDINALE Zusatz-Def — die alte Prozent-Definition faellt (Scheibe B, AC-2)', async () => {
 		const mod = await loadCatalogLoaderModule();
 		const buildRouteMetricDefsFromCatalog = (mod as Record<string, unknown>)
 			.buildRouteMetricDefsFromCatalog as ((entries: unknown[]) => RouteMetricDef[]) | undefined;
 		assert.ok(buildRouteMetricDefsFromCatalog, 'buildRouteMetricDefsFromCatalog fehlt noch');
 
 		const result = buildRouteMetricDefsFromCatalog!(CATALOG_ENTRIES_FIXTURE);
+		const thunder = result.find((d) => d.metric === 'thunder_level_max');
+		assert.ok(
+			thunder,
+			'Scheibe B FAIL: Gewitter fehlt in den Zusatz-Defs — der Trip-Wertebereich ' +
+				'haengt weiter an der Prozent-Skala und markiert invertiert'
+		);
 		assert.equal(
-			result.some((d) => d.metric === 'thunder_level_max' || d.metric === 'thunder_level'),
+			(thunder as RouteMetricDef & { kind?: string }).kind,
+			'ordinal',
+			'Scheibe B FAIL: die Zusatz-Def traegt kein kind="ordinal" — der bereits ' +
+				'vorhandene Ordinal-Zweig des Editors kann so nie greifen'
+		);
+		assert.deepEqual(
+			(thunder as RouteMetricDef & { ordinalLabels?: string[] }).ordinalLabels,
+			['kein', 'mittel', 'hoch'],
+			'Scheibe B FAIL: ohne ordinalLabels haette der Editor keine Stufen-Beschriftungen'
+		);
+		assert.deepEqual(
+			thunder!.scale,
+			[0, 2],
+			'Scheibe B FAIL: die Skala muss aus den Stufen abgeleitet werden ([0, labels-1]); ' +
+				'der Zahlen-Fallback [0,100] waere wieder die Prozent-Falle'
+		);
+		assert.equal(
+			result.some((d) => d.metric === 'thunder_level'),
 			false,
-			'AC-3 FAIL: eine Gewitter-Variante ist in den Zusatz-Defs aufgetaucht — sie muss ' +
-				'ausschliesslich ueber ROUTE_METRIC_DEFS (Prozent-Skala) kommen, nicht dupliziert werden'
+			'Scheibe B FAIL: der alte Prozent-Schluessel darf nirgends mehr angeboten werden'
+		);
+		// Die alte Prozent-Definition ist aus der fest verdrahteten Liste raus.
+		assert.equal(
+			ROUTE_METRIC_DEFS.some((d) => d.metric === 'thunder_level'),
+			false,
+			'Scheibe B FAIL: ROUTE_METRIC_DEFS fuehrt Gewitter weiterhin als Prozent 0-100'
 		);
 	});
 
@@ -199,12 +238,14 @@ describe('AC-1/AC-2/AC-3: buildRouteMetricDefsFromCatalog() existiert und filter
 });
 
 describe('buildRoutePool — extraDefs-Parameter (AC-1, AC-4 Datenerhalt)', () => {
-	test('ohne extraDefs bleibt das Verhalten byte-identisch zu heute (Testschutz test_alert_metric_mapping_parity.py)', () => {
+	// Scheibe B: 6 -> 5 fest verdrahtete Route-Groessen (thunder_level faellt).
+	test('ohne extraDefs bleiben genau die 5 fest verdrahteten Groessen im Pool', () => {
 		const { poolLeft } = buildRoutePool([]);
-		assert.equal(poolLeft.length, 6, 'Regressions-FAIL: ohne extraDefs muessen weiterhin genau 6 Metriken im Pool stehen');
+		assert.equal(poolLeft.length, 5, 'Regressions-FAIL: ohne extraDefs muessen genau 5 Metriken im Pool stehen (Gewitter ist Katalog-Groesse)');
+		assert.equal(poolLeft.some((m) => m.metric === 'thunder_level'), false);
 	});
 
-	test('mit extraDefs erscheinen die neuen Metriken zusaetzlich zu den 6 alten (23 insgesamt, AC-1)', () => {
+	test('mit extraDefs erscheinen die neuen Metriken zusaetzlich zu den 5 alten (AC-1)', () => {
 		const extraDefs: RouteMetricDef[] = [
 			{ metric: 'cape_max_jkg', label: 'Gewitterenergie (CAPE)', unit: 'J/kg', scale: [0, 3000], step: 100, defaultMin: null, defaultMax: 500 },
 			{ metric: 'pressure_avg_hpa', label: 'Luftdruck', unit: 'hPa', scale: [950, 1050], step: 5, defaultMin: 1010, defaultMax: null },
@@ -212,7 +253,7 @@ describe('buildRoutePool — extraDefs-Parameter (AC-1, AC-4 Datenerhalt)', () =
 		const { poolLeft } = buildRoutePool([], undefined, extraDefs);
 		assert.equal(
 			poolLeft.length,
-			8,
+			7,
 			'AC-1 FAIL: buildRoutePool nimmt den dritten Parameter extraDefs noch nicht entgegen'
 		);
 		assert.ok(poolLeft.some((m) => m.metric === 'cape_max_jkg'));
@@ -231,11 +272,15 @@ describe('buildRoutePool — extraDefs-Parameter (AC-1, AC-4 Datenerhalt)', () =
 		assert.equal(rows.length, 1, 'AC-4 FAIL: gespeicherter Korridor fehlt, sobald extraDefs gesetzt ist');
 		assert.equal(rows[0].min, null);
 		assert.equal(rows[0].max, 5);
-		assert.equal(poolLeft.length, 6, 'AC-4 FAIL: die uebrigen 5 alten + 1 neue Metrik muessen im Pool stehen');
+		assert.equal(poolLeft.length, 5, 'AC-4 FAIL: die uebrigen 4 alten + 1 neue Metrik muessen im Pool stehen');
 	});
 
-	test('ROUTE_METRIC_DEFS bleibt byte-identisch (6 Eintraege, Testschutz)', () => {
-		assert.equal(ROUTE_METRIC_DEFS.length, 6, 'Testschutz-FAIL: ROUTE_METRIC_DEFS darf nicht wachsen/schrumpfen');
+	test('ROUTE_METRIC_DEFS fuehrt nach Scheibe B genau 5 Eintraege, kein Gewitter mehr', () => {
+		assert.equal(ROUTE_METRIC_DEFS.length, 5, 'Scheibe B FAIL: ROUTE_METRIC_DEFS muss auf 5 Eintraege schrumpfen');
+		assert.deepEqual(
+			ROUTE_METRIC_DEFS.map((d) => d.metric).sort(),
+			['precipitation_sum', 'snow_line', 'temperature_max', 'temperature_min', 'wind_gust']
+		);
 	});
 });
 
@@ -385,7 +430,7 @@ describe('F002: buildRouteMetricDefsFromCatalog gegen den LIVE-Backend-Katalog',
 		);
 	});
 
-	test('LIVE-Katalog: keine Duplikate und keine der 6 fest verdrahteten Groessen (AC-2/AC-3)', async () => {
+	test('LIVE-Katalog: keine Duplikate und keine der fest verdrahteten Groessen (AC-2/AC-3)', async () => {
 		const mod: typeof import('../compareMetricCatalogLoader.ts') = await import(MODULE_SPECIFIER);
 		const liveResponse = fetchLiveCatalogResponse();
 		const result = mod.buildRouteMetricDefsFromCatalog(liveResponse.metrics as never);
@@ -398,12 +443,217 @@ describe('F002: buildRouteMetricDefsFromCatalog gegen den LIVE-Backend-Katalog',
 				`F002 FAIL: "${hardwired.metric}" kommt doppelt (fest verdrahtet + Katalog)`
 			);
 		}
-		// Gewitter bleibt exklusiv die alte Prozent-Definition (AC-3).
-		assert.equal(ids.includes('thunder_level_max'), false, 'F002 FAIL: Gewitter-Ordinalvariante im Angebot');
+		// Scheibe B: Gewitter kommt jetzt AUS dem Katalog (ordinal), nicht mehr
+		// als Trip-eigene Prozent-Definition.
+		assert.equal(
+			ids.includes('thunder_level_max'),
+			true,
+			'Scheibe B FAIL: der LIVE-Katalog liefert Gewitter nicht als Zusatz-Groesse — ' +
+				'im echten Betrieb bliebe der Trip-Wertebereich auf der Prozent-Skala'
+		);
 		// Der erweiterte Pool bleibt duplikatfrei, wenn beide Quellen zusammenkommen.
 		const { poolLeft } = buildRoutePool([], undefined, result);
 		const poolIds = poolLeft.map((m) => m.metric);
 		assert.equal(new Set(poolIds).size, poolIds.length, 'F002 FAIL: Duplikat im erweiterten Pool');
 		assert.equal(poolIds.length, ROUTE_METRIC_DEFS.length + result.length);
+	});
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// Issue #1425 Schritt 2, Teil 2, SCHEIBE B — Gewitter-Skala vereinheitlichen.
+// Spec: docs/specs/modules/fix_1425_s2b_gewitter_skala.md
+//
+// Der Trip fuehrte Gewitter als Prozent 0-100 ("bis 40"), der Stundenwert ist
+// aber immer ein Ordinal 0/1/2 — jeder Prozent-Bereich schloss deshalb JEDEN
+// Gewittergrad ein und markierte gerade dann, wenn Gewitter herrschte
+// (Umkehrung, nicht bloss Wirkungslosigkeit).
+//
+// Die Zusatz-Defs kommen hier bewusst aus dem ECHTEN Mapper
+// (buildRouteMetricDefsFromCatalog gegen die Katalog-Fixture) statt aus einer
+// handgetippten Def — sonst pruefte der Test seine eigene Annahme.
+// ════════════════════════════════════════════════════════════════════════
+
+async function routeExtraDefs(): Promise<RouteMetricDef[]> {
+	const mod = await loadCatalogLoaderModule();
+	return mod.buildRouteMetricDefsFromCatalog(CATALOG_ENTRIES_FIXTURE as never);
+}
+
+describe('Scheibe B / AC-2: der Zeilenzustand traegt kind + ordinalLabels (Ordinal-Zweig wird erreichbar)', () => {
+	test('gespeicherter Gewitter-Wertebereich wird als ordinale Zeile gebaut, nicht als Zahlen-Zeile', async () => {
+		const extraDefs = await routeExtraDefs();
+		const { rows } = buildRoutePool(
+			[{ metric: 'thunder_level_max', range: [null, 0], notify: true, mark: true }],
+			undefined,
+			extraDefs
+		);
+		const row = rows.find((r) => r.metric === 'thunder_level_max');
+		assert.ok(row, 'AC-2 FAIL: die Gewitter-Zeile fehlt komplett');
+		assert.equal(
+			row!.kind,
+			'ordinal',
+			'AC-2 FAIL: buildRoutePool reicht kind nicht in den Zeilenzustand durch — der ' +
+				'Ordinal-Zweig (CorridorEditor.svelte, row.kind === "ordinal") kann im Trip ' +
+				'strukturell nie greifen, der Nutzer sieht weiterhin ein Zahlenfeld'
+		);
+		assert.deepEqual(
+			row!.ordinalLabels,
+			['kein', 'mittel', 'hoch'],
+			'AC-2 FAIL: ohne ordinalLabels rendert der Ordinal-Zweig eine LEERE Schaltflaechen-Gruppe'
+		);
+		assert.deepEqual(row!.scale, [0, 2], 'AC-2 FAIL: die Zeile traegt weiterhin eine Prozent-Skala');
+	});
+
+	test('eine gewoehnliche Zahlen-Groesse bekommt KEIN kind="ordinal" (Gegenprobe)', async () => {
+		const extraDefs = await routeExtraDefs();
+		const { rows } = buildRoutePool(
+			[{ metric: 'cape_max_jkg', range: [1000, null], notify: false, mark: true }],
+			undefined,
+			extraDefs
+		);
+		const row = rows.find((r) => r.metric === 'cape_max_jkg');
+		assert.ok(row);
+		assert.notEqual(row!.kind, 'ordinal', 'CAPE ist eine Zahlen-Groesse und darf keine Stufen-Buttons bekommen');
+	});
+
+	test('addRow uebernimmt kind/ordinalLabels ebenfalls (frisch hinzugefuegte Zeile)', async () => {
+		const extraDefs = await routeExtraDefs();
+		const { rows, poolLeft } = buildRoutePool([], undefined, extraDefs);
+		const next = addRow(rows, poolLeft, 'thunder_level_max', ROUTE_CTX_DEFAULTS);
+		const row = next.rows.find((r) => r.metric === 'thunder_level_max');
+		assert.ok(row, 'AC-2 FAIL: "+ Metrik" legt keine Gewitter-Zeile an');
+		assert.equal(row!.kind, 'ordinal', 'AC-2 FAIL: frisch hinzugefuegte Gewitter-Zeile zeigt ein Zahlenfeld');
+		assert.deepEqual(row!.ordinalLabels, ['kein', 'mittel', 'hoch']);
+	});
+});
+
+describe('Scheibe B / AC-4: Standardwert einer neu hinzugefuegten Gewitter-Zeile', () => {
+	test('addRow(thunder_level_max) liefert min=null, max=0 ("bis kein Gewitter")', async () => {
+		const extraDefs = await routeExtraDefs();
+		const { rows, poolLeft } = buildRoutePool([], undefined, extraDefs);
+		const next = addRow(rows, poolLeft, 'thunder_level_max', ROUTE_CTX_DEFAULTS);
+		const row = next.rows.find((r) => r.metric === 'thunder_level_max');
+		assert.ok(row, 'AC-4 FAIL: Gewitter steht nicht im "+ Metrik"-Pool');
+		assert.equal(row!.min, null, 'AC-4 FAIL: die Untergrenze muss offen bleiben');
+		assert.equal(
+			row!.max,
+			0,
+			'AC-4 FAIL: Standardwert ist "bis kein Gewitter" (Ordinal 0) — identisch zum ' +
+				'Ortsvergleich (_COMPARE_DEFAULTS.thunder_level_max)'
+		);
+		assert.equal(next.poolLeft.some((m) => m.metric === 'thunder_level_max'), false);
+	});
+});
+
+describe('Scheibe B / AC-3: Alt-Korridore werden beim Laden umgeschluesselt und umgerechnet', () => {
+	// Prozent -> Stufe (Spec § Implementation Details Punkt 3):
+	//   null -> null · 0|1|2 unveraendert · 0-33 -> 0 · 34-66 -> 1 · 67-100 -> 2
+	const MIGRATION_CASES: Array<{ from: [number | null, number | null]; to: [number | null, number | null]; why: string }> = [
+		{ from: [null, 40], to: [null, 1], why: 'die alte Vorgabe "bis 40 %" wird "bis mittel"' },
+		{ from: [null, 0], to: [null, 0], why: '0 ist bereits ordinal (kein) und bleibt' },
+		{ from: [null, 1], to: [null, 1], why: '1 ist bereits ordinal (mittel) und bleibt' },
+		{ from: [null, 2], to: [null, 2], why: '2 ist bereits ordinal (hoch) und bleibt' },
+		{ from: [null, 33], to: [null, 0], why: 'oberes Ende des ersten Drittels -> kein' },
+		{ from: [null, 34], to: [null, 1], why: 'unteres Ende des zweiten Drittels -> mittel' },
+		{ from: [null, 66], to: [null, 1], why: 'oberes Ende des zweiten Drittels -> mittel' },
+		{ from: [null, 67], to: [null, 2], why: 'unteres Ende des dritten Drittels -> hoch' },
+		{ from: [null, 100], to: [null, 2], why: 'Prozent-Maximum -> hoch' },
+		{ from: [null, null], to: [null, null], why: 'beidseitig offen bleibt beidseitig offen' },
+		{ from: [50, null], to: [1, null], why: 'auch die Untergrenze wird umgerechnet' },
+		{ from: [0, 100], to: [0, 2], why: 'beide Grenzen unabhaengig voneinander' },
+	];
+
+	for (const c of MIGRATION_CASES) {
+		test(`gespeichert {thunder_level, [${c.from[0]}, ${c.from[1]}]} -> {thunder_level_max, [${c.to[0]}, ${c.to[1]}]} — ${c.why}`, async () => {
+			const extraDefs = await routeExtraDefs();
+			const result = buildRoutePool(
+				[{ metric: 'thunder_level', range: c.from, notify: true, mark: true }],
+				undefined,
+				extraDefs
+			);
+			const row = result.rows.find((r) => r.metric === 'thunder_level_max');
+			assert.ok(
+				row,
+				'AC-3 FAIL: der gespeicherte Alt-Korridor erscheint nicht als ordinale Zeile — ' +
+					'er verschwindet damit lautlos aus dem Editor UND aus der Markierung'
+			);
+			assert.equal(row!.min, c.to[0], `AC-3 FAIL (Untergrenze): ${c.why}`);
+			assert.equal(row!.max, c.to[1], `AC-3 FAIL (Obergrenze): ${c.why}`);
+			assert.equal(
+				result.rows.some((r) => r.metric === 'thunder_level'),
+				false,
+				'AC-3 FAIL: die Zeile traegt noch den alten Prozent-Schluessel'
+			);
+		});
+	}
+
+	// Risiko #2 der Spec / F001-Analogie aus Teil 1: die Umschluesselung muss VOR
+	// der present-Map-Bildung laufen. Sonst gilt "thunder_level" als unbekannt,
+	// landet im Pass-Through und wird beim naechsten Speichern ZUSAETZLICH zur
+	// neuen Zeile persistiert (Doppel-Speicherung).
+	test('der Alt-Korridor landet NICHT zusaetzlich in unknownCorridors (keine Doppel-Speicherung)', async () => {
+		const extraDefs = await routeExtraDefs();
+		const result = buildRoutePool(
+			[{ metric: 'thunder_level', range: [null, 40], notify: true, mark: true }],
+			undefined,
+			extraDefs
+		);
+		assert.deepEqual(
+			result.unknownCorridors,
+			[],
+			'AC-3 FAIL: der migrierte Alt-Korridor wird als "unbekannt" durchgereicht — beim ' +
+				'naechsten Speichern staende er ein zweites Mal in corridors[]'
+		);
+	});
+
+	test('Speichern nach der Migration schreibt genau EINEN Gewitter-Eintrag, unter dem neuen Schluessel', async () => {
+		const extraDefs = await routeExtraDefs();
+		const loaded = buildRoutePool(
+			[
+				{ metric: 'wind_gust', range: [null, 70], notify: true, mark: false },
+				{ metric: 'thunder_level', range: [null, 40], notify: true, mark: true },
+			],
+			undefined,
+			extraDefs
+		);
+		const payload = buildCorridorSavePayload(loaded.rows, {}, loaded.unknownCorridors);
+		const gewitter = payload.corridors.filter(
+			(c) => c.metric === 'thunder_level' || c.metric === 'thunder_level_max'
+		);
+		assert.equal(gewitter.length, 1, `AC-3 FAIL: ${gewitter.length} Gewitter-Eintraege gespeichert statt genau einem`);
+		assert.equal(gewitter[0].metric, 'thunder_level_max');
+		assert.deepEqual(gewitter[0].range, [null, 1]);
+		assert.equal(gewitter[0].notify, true, 'notify/mark der Alt-Zeile muessen erhalten bleiben');
+		assert.equal(gewitter[0].mark, true);
+		// Die Nachbar-Zeile bleibt unberuehrt.
+		assert.deepEqual(
+			payload.corridors.find((c) => c.metric === 'wind_gust'),
+			{ metric: 'wind_gust', range: [null, 70], notify: true, mark: false }
+		);
+	});
+
+	test('ein bereits migrierter Korridor bleibt beim erneuten Laden unveraendert (idempotent)', async () => {
+		const extraDefs = await routeExtraDefs();
+		const result = buildRoutePool(
+			[{ metric: 'thunder_level_max', range: [null, 1], notify: true, mark: true }],
+			undefined,
+			extraDefs
+		);
+		const row = result.rows.find((r) => r.metric === 'thunder_level_max');
+		assert.ok(row);
+		assert.equal(row!.min, null);
+		assert.equal(row!.max, 1, 'ein zweiter Ladevorgang darf den Wert nicht erneut umrechnen');
+		assert.deepEqual(result.unknownCorridors, []);
+	});
+
+	test('andere Metriken werden von der Umschluesselung nicht angefasst (Gegenprobe)', async () => {
+		const extraDefs = await routeExtraDefs();
+		const result = buildRoutePool(
+			[{ metric: 'wind_gust', range: [null, 40], notify: true, mark: false }],
+			undefined,
+			extraDefs
+		);
+		const row = result.rows.find((r) => r.metric === 'wind_gust');
+		assert.ok(row);
+		assert.equal(row!.max, 40, 'die 40 km/h Boeen-Grenze darf nicht zu einer Stufe verrechnet werden');
 	});
 });

@@ -161,9 +161,14 @@ describe('buildComparePresetSavePayload — AC-4 Regressions-Anker (bereits heut
 // AC-5 / #1293-Wurzelfix: buildRoutePool folgt der Tab-Auswahl.
 // ════════════════════════════════════════════════════════════════════════
 describe('buildRoutePool — AC-5 #1293 Wurzelfix: Pool folgt der Wetter-Tab-Auswahl', () => {
-	test('ohne zweiten Parameter -> Alt-Verhalten bleibt erhalten (alle 6 im poolLeft, Regressions-Anker)', () => {
+	// Issue #1425 S2 Teil 2 Scheibe B: 6 -> 5. Gewitter ist keine fest
+	// verdrahtete Route-Groesse mehr, sondern kommt ordinal aus dem Katalog
+	// (ueber den dritten Parameter extraDefs, fuer den dieses Gating bewusst
+	// NICHT gilt).
+	test('ohne zweiten Parameter -> Alt-Verhalten bleibt erhalten (alle 5 im poolLeft, Regressions-Anker)', () => {
 		const { poolLeft } = buildRoutePool([]);
-		assert.equal(poolLeft.length, 6, 'Regression: buildRoutePool(corridors) ohne Filter muss weiterhin alle 6 Metriken anbieten');
+		assert.equal(poolLeft.length, 5, 'Regression: buildRoutePool(corridors) ohne Filter muss weiterhin alle fest verdrahteten Metriken anbieten');
+		assert.equal(poolLeft.some((m) => m.metric === 'thunder_level'), false, 'Scheibe B: die Prozent-Gewitter-Zeile ist ausgezogen');
 	});
 
 	test('activeCatalogMetrics filtert poolLeft auf die aus dem Wetter-Tab aktiven Metriken', () => {

@@ -2,14 +2,19 @@
 // CorridorEditor context="route" (Trip-Editor · Alerts-Tab-Ersatz).
 //
 // Spec: docs/specs/modules/issue_1231_korridor_editor.md
-// Metrik-Pool route = die 6 AlertableMetrics (internal/model/trip.go).
+// Metrik-Pool route = die AlertableMetrics (internal/model/trip.go).
 // Labels/Einheiten/Skalen aus der JSX-Referenz (CORRIDOR_SEED/POOL.route),
 // verbindlich per Spec § "CorridorEditor / CorridorEditorMobile". Zwei
 // Metriken haben dort kein Route-Pendant (temperature_max, snow_line) — s.
 // Deviations im Rueckmeldungs-Text des Slice-3-Auftrags.
 //
+// Issue #1425 (S2 Teil 2, Scheibe B): Gewitter ist aus dieser Liste ausgezogen
+// (5 statt 6 fest verdrahtete Groessen) — es kommt jetzt ordinal aus dem
+// zentralen Katalog (`thunder_level_max`, kein/mittel/hoch). Spec:
+// docs/specs/modules/fix_1425_s2b_gewitter_skala.md.
+//
 // AC-3: confidence_pct (selectable=false) darf hier nie auftauchen — trivial
-// erfuellt, da ROUTE_METRIC_DEFS eine fest verdrahtete 6er-Liste ist.
+// erfuellt, da ROUTE_METRIC_DEFS eine fest verdrahtete Liste ist.
 
 import type { Corridor, SensLevel, WeatherConfigMetric } from '$lib/types';
 
@@ -25,6 +30,10 @@ export interface RouteMetricDef {
 	/** Issue #1429: Auswertung als eigenes Element neben dem Namen, wenn der
 	 *  Katalog-Eintrag sie liefert — analog `CompareMetricDef`/#1401 A1. */
 	aggregationLabel?: string;
+	/** Issue #1425 (S2 Teil 2, Scheibe B): 'ordinal' = 3-Stufen-Band statt
+	 *  Zahlen-Slider — analog `CompareMetricDef`. Fehlt -> wie 'range'. */
+	kind?: 'range' | 'ordinal';
+	ordinalLabels?: string[];
 }
 
 // Reihenfolge = Anzeige-Reihenfolge (deterministisch, C1: nur Anzeige, kein Rang).
@@ -33,7 +42,12 @@ export const ROUTE_METRIC_DEFS: RouteMetricDef[] = [
 	{ metric: 'precipitation_sum', label: 'Niederschlag', unit: 'mm/h', scale: [0, 20], step: 1, note: 'Nässe / Rutschgefahr', defaultMin: null, defaultMax: 5 },
 	{ metric: 'temperature_min', label: 'Temperatur Min', unit: '°C', scale: [-20, 20], step: 1, note: 'Frost-Grenze', defaultMin: -5, defaultMax: null },
 	{ metric: 'temperature_max', label: 'Temperatur Max', unit: '°C', scale: [-20, 30], step: 1, note: 'Hitze-Grenze', defaultMin: null, defaultMax: 28 },
-	{ metric: 'thunder_level', label: 'Gewitter', unit: '%', scale: [0, 100], step: 5, note: 'Abbruch bei Gewitter', defaultMin: null, defaultMax: 40 },
+	// Issue #1425 (S2 Teil 2, Scheibe B): der Gewitter-Eintrag stand hier als
+	// Prozent 0-100 ("bis 40"). Der Stundenwert ist aber immer ein Ordinal
+	// 0/1/2 — jeder Prozent-Bereich schloss damit JEDEN Gewittergrad ein und
+	// markierte gerade dann, wenn Gewitter herrschte (Umkehrung). Gewitter
+	// kommt jetzt als ordinaler Katalog-Eintrag `thunder_level_max` aus
+	// compareMetricCatalogLoader.ts::buildRouteMetricDefsFromCatalog.
 	{ metric: 'snow_line', label: 'Schneefallgrenze', unit: 'm', scale: [500, 3000], step: 100, note: 'Schnee statt Regen', defaultMin: 1500, defaultMax: null },
 ];
 
@@ -95,14 +109,59 @@ export interface CorridorRowState {
 // Zusatz-Metriken aus dem zentralen Katalog ab (keine zweite, driftende
 // Kopie derselben Katalog-ID-Liste). Struktur/Inhalt bleiben unveraendert —
 // der Drift-Waechter test_alert_metric_mapping_parity.py parst sie weiterhin.
+// Issue #1425 (S2 Teil 2, Scheibe B): "thunder" ist hier ABSICHTLICH nicht
+// mehr gefuehrt — die Wertebereiche-Zeile fuer Gewitter zieht auf den ordinalen
+// Katalog-Eintrag `thunder_level_max` um und braucht keine Bruecke auf einen
+// fest verdrahteten Route-Key mehr. Die ALARM-Seite fuehrt Gewitter unveraendert
+// unter `thunder_level` (metric_alert_levels, seit #1371 von trip.corridors[]
+// entkoppelt) — beide Bruecken laufen hier bewusst auseinander, abgesichert
+// durch die benannte Ausnahme in tests/tdd/test_alert_metric_mapping_parity.py
+// (test_thunder_exception_is_still_justified).
 export const ROUTE_CORRIDOR_CATALOG_IDS: Record<string, string[]> = {
 	gust: ['wind_gust'],
 	precipitation: ['precipitation_sum'],
 	temperature: ['temperature_min', 'temperature_max'],
-	thunder: ['thunder_level'],
 	snowfall_limit: ['snow_line'],
 	freezing_level: ['snow_line'],
 };
+
+/**
+ * Issue #1425 (S2 Teil 2, Scheibe B): eine Grenze des alten Prozent-Gewitter-
+ * Korridors auf die Ordinalskala umrechnen. Beide Grenzen unabhaengig
+ * voneinander (Spec § Implementation Details Punkt 3):
+ *   null -> null · 0|1|2 -> unveraendert (schon ordinal) ·
+ *   >2 als Prozent gedeutet: 0-33 -> 0 (kein), 34-66 -> 1 (mittel),
+ *   67-100 -> 2 (hoch).
+ */
+function percentBoundToOrdinal(v: number | null): number | null {
+	if (v == null) return null;
+	if (v === 0 || v === 1 || v === 2) return v;
+	if (v <= 33) return 0;
+	if (v <= 66) return 1;
+	return 2;
+}
+
+/**
+ * Schluesselt gespeicherte Gewitter-Korridore vom Trip-eigenen Prozent-Key
+ * `thunder_level` auf den ordinalen Katalog-Key `thunder_level_max` um —
+ * verlustfrei (notify/mark bleiben) und idempotent (bereits migrierte Zeilen
+ * tragen den neuen Key und werden nicht angefasst). Sicherheitsnetz fuer
+ * Bestandsdaten; alle uebrigen Korridore bleiben unveraendert.
+ */
+function migrateLegacyThunderCorridors(corridors: Corridor[]): Corridor[] {
+	return corridors.map((c) =>
+		c.metric === 'thunder_level'
+			? {
+					...c,
+					metric: 'thunder_level_max',
+					range: [percentBoundToOrdinal(c.range[0]), percentBoundToOrdinal(c.range[1])] as [
+						number | null,
+						number | null
+					],
+				}
+			: c
+	);
+}
 
 /**
  * Baut Zeilen aus trip.corridors[] (route-Namensraum) + verbleibenden Pool fuer "+ Metrik".
@@ -129,6 +188,10 @@ export const ROUTE_CORRIDOR_CATALOG_IDS: Record<string, string[]> = {
  * `buildCorridorSavePayload` haengt sie unveraendert an `corridors[]` an.
  * Exakt dasselbe Muster wie `buildComparePool` (kein stiller Datenverlust,
  * BUG-DATALOSS-Klasse).
+ *
+ * Issue #1425 (S2 Teil 2, Scheibe B): gespeicherte Gewitter-Korridore mit dem
+ * alten Prozent-Schluessel werden VOR dem Pool-Aufbau umgeschluesselt (s.
+ * `migrateLegacyThunderCorridors`).
  */
 export function buildRoutePool(
 	corridors: Corridor[],
@@ -139,7 +202,12 @@ export function buildRoutePool(
 	poolLeft: RouteMetricDef[];
 	unknownCorridors: Corridor[];
 } {
-	const present = new Map(corridors.map((c) => [c.metric, c]));
+	// MUSS vor der present-Map stehen: sonst gilt der alte Prozent-Schluessel
+	// als unbekannte Metrik, landet im unknownCorridors-Pass-Through und wuerde
+	// beim naechsten Speichern ZUSAETZLICH zur neuen Zeile persistiert.
+	const present = new Map(
+		migrateLegacyThunderCorridors(corridors).map((c) => [c.metric, c])
+	);
 	const allowed = activeCatalogMetrics
 		? new Set(
 				activeCatalogMetrics
@@ -161,6 +229,7 @@ export function buildRoutePool(
 			rows.push({
 				metric: def.metric, label: def.label, unit: def.unit, scale: def.scale, step: def.step, note: def.note,
 				min: c.range[0], max: c.range[1], notify: c.notify, mark: c.mark,
+				kind: def.kind, ordinalLabels: def.ordinalLabels,
 				aggregationLabel: def.aggregationLabel,
 			});
 			// gematcht -> keine "unbekannte" Metrik mehr (F001).
@@ -192,6 +261,7 @@ export function addRow(
 	const newRow: CorridorRowState = {
 		metric: def.metric, label: def.label, unit: def.unit, scale: def.scale, step: def.step, note: def.note,
 		min: def.defaultMin, max: def.defaultMax, notify: ctxDefaults.notify, mark: ctxDefaults.mark,
+		kind: def.kind, ordinalLabels: def.ordinalLabels,
 		aggregationLabel: def.aggregationLabel,
 	};
 	return { rows: [...rows, newRow], poolLeft: poolLeft.filter((m) => m.metric !== metric) };

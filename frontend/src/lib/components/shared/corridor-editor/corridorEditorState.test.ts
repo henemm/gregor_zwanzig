@@ -74,17 +74,21 @@ const TEST_DEFS: CompareMetricDef[] = buildCompareMetricDefs(CATALOG_FIXTURE);
 
 // --- AC-3: confidence_pct darf im route-Metrikpool nie auftauchen ---
 describe('ROUTE_METRIC_DEFS — AC-3 confidence_pct-Ausschluss', () => {
-	test('enthaelt genau die 6 AlertableMetrics, kein confidence_pct', () => {
+	// Issue #1425 (S2 Teil 2, Scheibe B): 6 -> 5. Gewitter ist keine fest
+	// verdrahtete Route-Groesse mehr, sondern kommt ordinal aus dem zentralen
+	// Katalog (thunder_level_max) — die alte Prozent-Definition markierte
+	// invertiert.
+	test('enthaelt genau die 5 fest verdrahteten Route-Groessen, kein confidence_pct', () => {
 		const ids = ROUTE_METRIC_DEFS.map((m) => m.metric).sort();
 		assert.deepEqual(ids, [
 			'precipitation_sum',
 			'snow_line',
 			'temperature_max',
 			'temperature_min',
-			'thunder_level',
 			'wind_gust',
 		]);
 		assert.equal(ids.includes('confidence_pct'), false);
+		assert.equal(ids.includes('thunder_level'), false);
 	});
 });
 
@@ -100,14 +104,14 @@ describe('buildRoutePool', () => {
 		assert.equal(rows[0].min, null);
 		assert.equal(rows[0].max, 55);
 		assert.equal(rows[0].notify, true);
-		assert.equal(poolLeft.length, 5);
+		assert.equal(poolLeft.length, 4);
 		assert.equal(poolLeft.some((m) => m.metric === 'wind_gust'), false);
 	});
 
-	test('leere corridors -> alle 6 Metriken im poolLeft, keine rows', () => {
+	test('leere corridors -> alle 5 Metriken im poolLeft, keine rows', () => {
 		const { rows, poolLeft } = buildRoutePool([]);
 		assert.equal(rows.length, 0);
-		assert.equal(poolLeft.length, 6);
+		assert.equal(poolLeft.length, 5);
 	});
 });
 
@@ -180,14 +184,19 @@ describe('buildRouteMetricDefsFromCatalog — Issue #1429 aggregationLabel', () 
 
 // --- addRow / removeRow / patchRow — Reducer ---
 describe('addRow / removeRow / patchRow', () => {
+	// Issue #1425 (S2 Teil 2, Scheibe B): frueher an 'thunder_level' gezeigt —
+	// diese Groesse ist aus ROUTE_METRIC_DEFS ausgezogen; 'wind_gust' belegt
+	// dieselbe Aussage (Default-Range + Kontext-Defaults) unveraendert.
 	test('addRow uebernimmt Default-Range + Kontext-Defaults der Metrik', () => {
 		const { rows, poolLeft } = buildRoutePool([]);
-		const next = addRow(rows, poolLeft, 'thunder_level', ROUTE_CTX_DEFAULTS);
+		const next = addRow(rows, poolLeft, 'wind_gust', ROUTE_CTX_DEFAULTS);
 		assert.equal(next.rows.length, 1);
-		assert.equal(next.rows[0].metric, 'thunder_level');
+		assert.equal(next.rows[0].metric, 'wind_gust');
+		assert.equal(next.rows[0].min, null);
+		assert.equal(next.rows[0].max, 70);
 		assert.equal(next.rows[0].notify, true); // route default
 		assert.equal(next.rows[0].mark, false);
-		assert.equal(next.poolLeft.some((m) => m.metric === 'thunder_level'), false);
+		assert.equal(next.poolLeft.some((m) => m.metric === 'wind_gust'), false);
 	});
 
 	test('removeRow entfernt die Zeile', () => {

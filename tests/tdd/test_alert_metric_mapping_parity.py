@@ -126,6 +126,82 @@ _FE_BRIDGE = (
 # Wird er je selectable, schlaegt test_frontend_exception_is_still_justified an.
 _FE_BRIDGE_EXCEPTIONS = {"temperature_cold"}
 
+# Zweite, eigens begruendete Ausnahme (Issue #1425 S2 Teil 2, Scheibe B; die
+# obige passt NICHT, denn sie verlangt "nicht selectable" — Gewitter bleibt im
+# Wetter-Metriken-Reiter waehlbar):
+#
+# Fuer Gewitter laufen die beiden Bruecken ab dieser Scheibe bewusst
+# auseinander. Die Wertebereiche-Zeile zieht auf den ordinalen Katalog-Eintrag
+# `thunder_level_max` (kein/mittel/hoch) um — ein Prozent-Bereich 0-100 gegen
+# einen Ordinal-Stundenwert 0/1/2 markierte vorher gerade DANN, wenn Gewitter
+# herrschte (Umkehrung). Die Alarm-Empfindlichkeit bleibt unveraendert unter
+# `thunder_level` in `metric_alert_levels` — einer seit #1371 von
+# `trip.corridors[]` vollstaendig entkoppelten Persistenz.
+#
+# Eine Ausnahme ohne Waechter waere ein Freifahrtschein: sobald eine der drei
+# Bedingungen unten kippt, ist sie hinfaellig bzw. zu breit und
+# test_thunder_exception_is_still_justified schlaegt an.
+_FE_BRIDGE_THUNDER_EXCEPTION = {"thunder"}
+
+_ALL_FE_BRIDGE_EXCEPTIONS = _FE_BRIDGE_EXCEPTIONS | _FE_BRIDGE_THUNDER_EXCEPTION
+
+# Namentliches Register: Ausnahme-Menge -> der Waechter, der ihre Begruendung
+# prueft. Nur was hier steht, darf in _ALL_FE_BRIDGE_EXCEPTIONS landen.
+_GUARDED_FE_BRIDGE_EXCEPTIONS = {
+    "_FE_BRIDGE_EXCEPTIONS": (
+        _FE_BRIDGE_EXCEPTIONS,
+        "test_frontend_exception_is_still_justified",
+    ),
+    "_FE_BRIDGE_THUNDER_EXCEPTION": (
+        _FE_BRIDGE_THUNDER_EXCEPTION,
+        "test_thunder_exception_is_still_justified",
+    ),
+}
+
+
+def _fe_bridge_exceptions() -> set[str]:
+    """Gibt die Bruecken-Ausnahmen NUR heraus, wenn jede aus einer bewachten
+    Menge stammt (Adversary-Befund F002, MEDIUM).
+
+    Platzierung, bewusst KEIN eigener Test: ein eigener Test liesse sich
+    abwaehlen (`-k`, `-m`, Skip) oder schlicht loeschen, waehrend die Ausnahme
+    in test_frontend_bridge_matches_python_forward_mapping weiterwirkt und dort
+    Drift verdeckt — genau die Luecke, um die es geht. Als einziger Zugriffsweg
+    auf die Ausnahmen laeuft die Pruefung dagegen immer dann, wenn die Ausnahme
+    ueberhaupt Wirkung entfaltet: Wer ausnimmt, hat das Register passiert.
+    """
+    registered: set[str] = set().union(
+        *(ids for ids, _ in _GUARDED_FE_BRIDGE_EXCEPTIONS.values())
+    )
+    hint = (
+        "Jede von der Frontend-Bruecke ausgenommene Katalog-ID verdeckt fuer "
+        "diese ID JEDE kuenftige Drift. Darum sind drei Schritte Pflicht — "
+        "Vorbild ist der Gewitter-Fall:\n"
+        "  1. eigene Ausnahme-Menge mit Begruendungs-Kommentar anlegen "
+        "(Vorbild: _FE_BRIDGE_THUNDER_EXCEPTION),\n"
+        "  2. eigenen Rechtfertigungs-Waechter schreiben, der rot wird, sobald "
+        "der Grund entfaellt (Vorbild: "
+        "test_thunder_exception_is_still_justified),\n"
+        "  3. Menge UND Waechter in _GUARDED_FE_BRIDGE_EXCEPTIONS eintragen — "
+        "erst dann darf die ID in _ALL_FE_BRIDGE_EXCEPTIONS stehen.\n"
+        f"Bewacht sind derzeit: "
+        f"{ {n: g for n, (_, g) in _GUARDED_FE_BRIDGE_EXCEPTIONS.items()} }"
+    )
+    assert _ALL_FE_BRIDGE_EXCEPTIONS == registered, (
+        "_ALL_FE_BRIDGE_EXCEPTIONS ist nicht mehr exakt die Vereinigung der "
+        "bewachten Ausnahme-Mengen.\n"
+        f"  unbewacht ausgenommen: {sorted(_ALL_FE_BRIDGE_EXCEPTIONS - registered)}\n"
+        f"  bewacht, aber nicht angewandt: {sorted(registered - _ALL_FE_BRIDGE_EXCEPTIONS)}\n"
+        + hint
+    )
+    for name, (_, guard) in _GUARDED_FE_BRIDGE_EXCEPTIONS.items():
+        assert guard in globals(), (
+            f"Das Register nennt fuer {name} den Waechter '{guard}' — den gibt "
+            "es in dieser Datei nicht (umbenannt oder geloescht?). Eine "
+            "Ausnahme ohne lebenden Waechter ist ein Freifahrtschein.\n" + hint
+        )
+    return _ALL_FE_BRIDGE_EXCEPTIONS
+
 
 def _read_ts_block(name: str) -> str:
     src = _FE_BRIDGE.read_text(encoding="utf-8")
@@ -157,15 +233,16 @@ def test_frontend_bridge_matches_python_forward_mapping():
     (Go bleibt eine handgespiegelte Kopie ohne automatische Pruefung — s.
     Block-Kommentar oben.)
     """
+    exceptions = _fe_bridge_exceptions()
     expected = {
         cid: metrics
         for cid, metrics in catalog_id_to_alert_metrics().items()
-        if cid not in _FE_BRIDGE_EXCEPTIONS
+        if cid not in exceptions
     }
     actual = {
         cid: metrics
         for cid, metrics in _frontend_bridge().items()
-        if cid not in _FE_BRIDGE_EXCEPTIONS
+        if cid not in exceptions
     }
     assert actual == expected, (
         "ROUTE_CORRIDOR_CATALOG_IDS (corridorEditorState.ts) weicht von "
@@ -185,8 +262,96 @@ def test_frontend_bridge_targets_exist_in_route_metric_defs():
 
 def test_frontend_exception_is_still_justified():
     """Die Ausnahme gilt nur, solange sie im Katalog nicht waehlbar ist."""
+    assert _FE_BRIDGE_EXCEPTIONS == {"temperature_cold"}, (
+        "_FE_BRIDGE_EXCEPTIONS wurde erweitert auf "
+        f"{sorted(_FE_BRIDGE_EXCEPTIONS)}. Diese Menge traegt GENAU EINE "
+        "Begruendung: 'temperature_cold' ist nicht selectable. Wer eine weitere "
+        "Katalog-ID von der Frontend-Bruecke ausnimmt, verdeckt damit fuer diese "
+        "ID jede kuenftige Drift — deshalb sind drei Schritte Pflicht:\n"
+        "  1. eigene Ausnahme-Menge anlegen (Vorbild: "
+        "_FE_BRIDGE_THUNDER_EXCEPTION) statt diese hier aufzublaehen,\n"
+        "  2. den Grund als Kommentar darueber schreiben (warum die Bruecke "
+        "fuer genau diese ID entfallen darf),\n"
+        "  3. einen eigenen Rechtfertigungs-Waechter schreiben, der rot wird, "
+        "sobald der Grund entfaellt (Vorbild: "
+        "test_thunder_exception_is_still_justified).\n"
+        "Danach diese Zusicherung UNVERAENDERT lassen."
+    )
     for catalog_id in _FE_BRIDGE_EXCEPTIONS:
         assert not get_metric(catalog_id).selectable, (
             f"'{catalog_id}' ist jetzt selectable — die Ausnahme in "
             "_FE_BRIDGE_EXCEPTIONS ist hinfaellig, Frontend-Bruecke ergaenzen."
         )
+
+
+def _route_metric_def_ids() -> set[str]:
+    return set(re.findall(r"metric:\s*'([^']+)'", _read_ts_block("ROUTE_METRIC_DEFS")))
+
+
+def test_thunder_exception_is_still_justified():
+    """Waechter zur Gewitter-Ausnahme (Issue #1425 S2 Teil 2, Scheibe B).
+
+    Sie ist NUR gerechtfertigt, solange alle drei Bedingungen gelten:
+
+    1. Die Wertebereiche-Seite fuehrt Gewitter nicht mehr ueber die Bruecke —
+       weder als Bruecken-Schluessel `thunder` noch als fest verdrahtete
+       Zeilen-Definition `thunder_level` (sonst waere die Ausnahme UNNOETIG und
+       wuerde echte Drift verdecken).
+    2. Es gibt tatsaechlich den ordinalen Katalog-Ersatz, auf den die Zeile
+       umgezogen ist: `thunder_level_max` mit `metric_id == "thunder"` und
+       `kind == "ordinal"` (sonst zeigte die Zeile ins Leere).
+    3. Die Alarm-Seite fuehrt Gewitter unveraendert unter `thunder_level`
+       (sonst waere die Ausnahme ZU BREIT und verdeckte eine Alarm-Drift).
+    """
+    # (0) Die Ausnahme deckt GENAU 'thunder' — die drei Bedingungen unten
+    #     begruenden nichts anderes. Jede weitere ID braucht ihre eigene Menge,
+    #     ihre eigene Begruendung und ihren eigenen Waechter.
+    assert _FE_BRIDGE_THUNDER_EXCEPTION == {"thunder"}, (
+        "_FE_BRIDGE_THUNDER_EXCEPTION wurde erweitert auf "
+        f"{sorted(_FE_BRIDGE_THUNDER_EXCEPTION)}. Die Bedingungen (1)-(3) "
+        "dieses Waechters pruefen ausschliesslich Gewitter — eine zusaetzliche "
+        "ID waere hier ungeprueft und ihre Drift bliebe lautlos. Deshalb sind "
+        "drei Schritte Pflicht:\n"
+        "  1. eigene Ausnahme-Menge anlegen statt diese hier zu erweitern,\n"
+        "  2. den Grund als Kommentar darueber schreiben (warum die Bruecke "
+        "fuer genau diese ID entfallen darf),\n"
+        "  3. einen eigenen Rechtfertigungs-Waechter nach dem Muster dieses "
+        "Tests schreiben, der rot wird, sobald der Grund entfaellt.\n"
+        "Danach diese Zusicherung UNVERAENDERT lassen."
+    )
+
+    # (1) Wertebereiche-Seite: Gewitter ist aus der Bruecke ausgezogen.
+    bridge = _frontend_bridge()
+    assert "thunder" not in bridge, (
+        "'thunder' steht wieder in ROUTE_CORRIDOR_CATALOG_IDS — dann ist die "
+        "Ausnahme _FE_BRIDGE_THUNDER_EXCEPTION hinfaellig und muss ENTFERNT "
+        "werden, sonst verdeckt sie echte Drift."
+    )
+    assert "thunder_level" not in _route_metric_def_ids(), (
+        "ROUTE_METRIC_DEFS fuehrt wieder eine Gewitter-Zeile unter dem "
+        "Prozent-Schluessel 'thunder_level' — die Begruendung der Ausnahme "
+        "(Umzug auf den ordinalen Katalog-Eintrag) gilt dann nicht mehr."
+    )
+
+    # (2) Der Ersatz existiert und ist ordinal.
+    from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
+
+    ersatz = [e for e in COMPARE_METRIC_CATALOG if e["key"] == "thunder_level_max"]
+    assert ersatz, (
+        "Der Katalog-Eintrag 'thunder_level_max' fehlt — die Wertebereiche-Zeile "
+        "fuer Gewitter haette gar kein Ziel mehr."
+    )
+    assert ersatz[0].get("metric_id") == "thunder", (
+        "'thunder_level_max' zeigt nicht mehr auf die Katalog-Groesse 'thunder' "
+        "— die Zuordnung Wertebereich -> Spalte waere gebrochen."
+    )
+    assert ersatz[0].get("kind") == "ordinal", (
+        "'thunder_level_max' ist nicht mehr ordinal — der ganze Grund fuer die "
+        "Namensraum-Trennung (Prozent vs. Stufen) faellt damit weg."
+    )
+
+    # (3) Alarm-Seite unveraendert.
+    assert catalog_id_to_alert_metrics()["thunder"] == {"thunder_level"}, (
+        "Die Alarm-Seite fuehrt Gewitter nicht mehr unter 'thunder_level' — die "
+        "Ausnahme ist damit zu breit und verdeckt eine echte Alarm-Drift."
+    )

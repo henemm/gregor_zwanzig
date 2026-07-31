@@ -560,11 +560,17 @@ def _render_footer(
 # precipitation_sum fehlt bewusst -- Tages-Summe hat keine 1:1-Stundenspalte
 # (fachlich falsch, Adversary F003 dort); AC-5 deckt "nicht angezeigt" als
 # stilles Ignorieren ab.
+#
+# Issue #1425 Schritt 2, Teil 2, Scheibe B: "thunder_level" (Prozent 0-100) ist
+# hier entfallen. Der Stundenwert ist immer ein Ordinal 0/1/2 -- ein
+# Prozent-Bereich schloss deshalb JEDEN Gewittergrad ein und markierte gerade
+# dann, wenn Gewitter herrschte (Umkehrung). Gewitter laeuft jetzt ueber den
+# ordinalen Katalog-Schluessel "thunder_level_max", den
+# build_trip_corridor_id_map() unten automatisch aufloest.
 TRIP_CORRIDOR_METRIC_TO_COL_KEY: dict[str, str] = {
     "wind_gust": "gust",
     "temperature_min": "temp",
     "temperature_max": "temp",
-    "thunder_level": "thunder",
     "snow_line": "snow_limit",
 }
 
@@ -574,7 +580,7 @@ def build_trip_corridor_id_map() -> dict[str, str]:
     (Issue #1425 Schritt 2, Teil 2, Scheibe A).
 
     Zwei Quellen, additiv:
-    1. die 5 expliziten Route-Keys oben (Bestandsdaten tragen genau diese
+    1. die 4 expliziten Route-Keys oben (Bestandsdaten tragen genau diese
        Keys -- sie sind KEINE Katalog-Keys und bleiben woertlich),
     2. die Katalog-Groessen, zweistufig aufgeloest:
        Compare-Katalog-`key` -> `metric_id` -> `get_metric(metric_id).col_key`.
