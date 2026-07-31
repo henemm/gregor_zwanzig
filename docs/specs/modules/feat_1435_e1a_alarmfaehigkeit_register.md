@@ -3,7 +3,7 @@ entity_id: feat_1435_e1a_alarmfaehigkeit_register
 type: feature
 created: 2026-07-31
 updated: 2026-07-31
-status: draft
+status: implemented
 version: "1.1"
 tags: [metric-catalog, alerts, compare, trip, trip-compare-sharing, naming]
 workflow: feat-1435-e1a-alarmfaehigkeit-register
@@ -166,12 +166,28 @@ Limitations.
 Neue Resolver-Funktion (parallel zu `summary_field_for`):
 
 ```python
-def alert_metric_for(metric_id: str, aggregation: str) -> Optional[str]:
-    m = _METRICS_BY_ID.get(metric_id)
-    if m is None:
+def alert_metric_for(metric_id: object, aggregation: object) -> Optional[str]:
+    if not isinstance(metric_id, str) or not isinstance(aggregation, str):
         return None
-    return m.alert_metrics.get(aggregation) or m.change_alert_metric
+    definition = _METRICS_BY_ID.get(metric_id)
+    if definition is None or aggregation not in definition.summary_fields:
+        return None
+    direct = definition.alert_metrics.get(aggregation)
+    if direct or definition.alert_metrics:
+        return direct
+    return definition.change_alert_metric
 ```
+
+> **Nachtrag 2026-07-31 (Adversary-Fund F001, in derselben Lieferung geschlossen).**
+> Der ursprünglich hier stehende Entwurf war `return m.alert_metrics.get(aggregation)
+> or m.change_alert_metric` — ein **blinder** Rückfall. Er lieferte für
+> `("temperature", "avg")` die Änderungsraten-Identität `"temperature_change"`,
+> obwohl für diese Auswertung gar kein Alarm vorgesehen ist. Heute noch folgenlos
+> (der einzige Aufrufer übergibt nur kuratierte Paare), aber ein künftiger zweiter
+> Aufrufer hätte still eine falsche Alarm-Identität ausgeliefert — und der Wächter
+> prüft Deklarationen, nicht Aufrufe. Der obige Code ist der ausgelieferte Stand:
+> Rückfall nur, wenn die Auswertung in `summary_fields` steht **und** die Größe
+> keine eigenen auswertungsspezifischen Identitäten deklariert hat.
 
 Der `or`-Fallback auf `change_alert_metric` ist absichtlich: er löst die
 Kreuz-Verdrahtung strukturell auf. `wind_max_kmh` (Katalog-Paar
@@ -500,6 +516,21 @@ unbekannte Identität erreicht die UI).
 
 ## Changelog
 
+- 2026-07-31: **E1a-1 ausgeliefert** (Commit `98d1a1f6`, Adversary VERIFIED
+  über 2 Runden, auf Staging verifiziert). Umfang wie unten spezifiziert
+  implementiert: `MetricDefinition.alert_metrics`/`change_alert_metric`,
+  Resolver `alert_metric_for()`, Auslieferung über `GET /api/metrics` und
+  `GET /api/compare/metrics`, zweiteiliger Wächter
+  (`tests/unit/test_alert_metric_register_declaration.py`). Verhaltensneutral
+  bestätigt: register-abgeleitete `alarmCapable`-Menge = dieselben 10
+  Compare-Keys wie vor der Änderung. Adversary-Befund F001 im selben Zug
+  geschlossen: `alert_metric_for()` fiel bei einer nicht deklarierten
+  Auswertung still auf die Änderungsraten-Identität der Größe zurück — der
+  Rückfall greift jetzt nur noch, wenn die Auswertung in `summary_fields`
+  steht **und** die Größe keine eigenen, auswertungsspezifischen
+  Alarm-Identitäten deklariert hat (Details: Docstring
+  `metric_catalog.alert_metric_for()`). Doku nachgezogen in
+  `docs/reference/api_contract.md` (Section 15/15.1 + Changelog).
 - 2026-07-31 (v1.1): Tech-Lead-Korrektur eingearbeitet. Der Wächter prüft ab
   jetzt zusätzlich Auswertbarkeit (nicht nur Vollständigkeit) — `humidity`
   wird deshalb in E1a NICHT registriert (Epic #1374 Invariante 1, „kein
