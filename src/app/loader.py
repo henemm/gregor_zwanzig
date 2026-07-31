@@ -789,15 +789,17 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
             sms_threshold=mc_data.get("sms_threshold"),
         ))
 
-    # Issue #429: kanal-spezifische Layouts laden (optional, backward-compat).
-    # Wenn channel_layouts fehlt ODER alle Kanal-Listen leer sind → None,
-    # damit get_metrics_for_channel auf die globale Liste zurückfällt.
+    # Issue #429/#1394 (T4): kanal-spezifische Layouts laden (optional,
+    # backward-compat). Wenn channel_layouts fehlt → None, damit
+    # get_metrics_for_channel auf die globale Liste zurückfällt. Eine
+    # bewusst vollstaendig geleerte Kanal-Konfiguration (alle Kanal-Listen
+    # []) wird seit #1394 NICHT mehr auf None zurueckgefallen (AC-7,
+    # models.py:603-606 dokumentiert diesen Vertrag bereits).
     per_channel_layouts: Optional[Dict[str, List[MetricConfig]]] = None
     raw_channel_layouts = data.get("channel_layouts")
     if (
         raw_channel_layouts
         and isinstance(raw_channel_layouts, dict)
-        and any(raw_channel_layouts.values())
     ):
         per_channel_layouts = {}
         for ch, ch_metrics in raw_channel_layouts.items():

@@ -136,8 +136,13 @@ def test_ac1_loader_reads_channel_layouts():
     assert email_layout[5].bucket == "secondary"
 
 
-def test_ac1_all_empty_channel_layouts_treated_as_none():
-    """AC-1 Invariante: alle Kanal-Listen leer → per_channel_layouts = None."""
+def test_all_empty_channel_layouts_kept_as_dict_not_none():
+    """Issue #1394 (T4, AC-7): alle Kanal-Listen leer -> per_channel_layouts
+    bleibt ein Dict mit leeren Listen je Kanal, faellt NICHT mehr auf None
+    (globaler Rueckfall) zurueck. Revidiert bewusst die urspruengliche
+    #429-Erwartung (siehe Spec docs/specs/modules/trip_empty_metric_selection.md
+    'Bestandstests, die angepasst werden müssen') -- eine bewusst geleerte
+    Kanal-Konfiguration ist eine Nutzerwahl, kein 'nicht gesetzt'."""
     data = {
         "trip_id": "all-empty",
         "metrics": [
@@ -147,8 +152,10 @@ def test_ac1_all_empty_channel_layouts_treated_as_none():
         "updated_at": "2026-05-28T10:00:00",
     }
     dc = _parse(data)
-    # Wenn ALLE Kanal-Listen leer sind, ist channel_layouts effektiv „nicht gesetzt" → None.
-    assert dc.per_channel_layouts is None
+    assert dc.per_channel_layouts is not None
+    assert dc.per_channel_layouts == {
+        "email": [], "telegram": [], "signal": [], "sms": [],
+    }
 
 
 # ---------------------------------------------------------------------------

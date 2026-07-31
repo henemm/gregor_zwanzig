@@ -111,6 +111,12 @@ class TripReportFormatter:
         )
 
         dc = display_config or build_default_display_config()
+        # Issue #1394 (T0): Altbestand-Signal VOR der Kanal-Kollabierung
+        # messen -- der einzige Zeitpunkt, an dem die Original-Konfiguration
+        # Fall A (Feld fehlt/leer) noch von Fall B (bewusste Leerauswahl,
+        # alle enabled=False) unterscheidet. Die Kollabierung unten filtert
+        # in beiden Faellen auf eine leere Liste (Kritischer Befund, Spec).
+        _trip_metrics_altbestand = len(dc.metrics) == 0
         if report_type in ("morning", "evening"):
             # Issue #434: kanal-bewusste Auflösung (per_report > per_channel > global).
             active_metrics = dc.get_metrics_for_channel("email", report_type)
@@ -208,6 +214,7 @@ class TripReportFormatter:
             trip_url=trip_url,
             email_format=options.email_format,
             show_outlook=options.show_outlook,
+            trip_metrics_altbestand=_trip_metrics_altbestand,
             # Issue #1425 Schritt 1: trip.corridors markiert Stundentabellen-
             # Zellen im HTML-Teil (Durchreichweg trip.py:193 -> render_email
             # -> render_html, geteilter Baustein mit dem Compare-Renderer).

@@ -367,8 +367,13 @@ class TestAC7VortagOneLine:
         assert "Vortag: heute" in plain
         assert "Vortag-Vergleich" not in plain
 
-    def test_empty_metrics_list_falls_back_to_legacy(self):
-        """Bug #800: selected_metrics=[] darf NICHT 'ähnliches Wetter' liefern wenn echte Deltas existieren."""
+    def test_empty_metrics_list_returns_no_line_not_legacy_text(self):
+        """Bug #800 / Issue #1394 (T3): selected_metrics=[] (bewusste
+        Leerauswahl) liefert seit #1394 '' statt Legacy-Text — die
+        Kern-Garantie aus Bug #800 bleibt erhalten: niemals 'ähnliches
+        Wetter' behaupten, wenn reale Deltas bestehen. Nur der konkrete
+        Rueckgabewert aendert sich (Legacy-Text → keine Zeile,
+        Spec-Invariante 6)."""
         from services.day_comparison import summarize_day_comparison
         today = [_seg_for_compare(1, temp_min_c=14.0, temp_max_c=28.0,
                                   wind_max_kmh=20.0, precip_sum_mm=0.0)]
@@ -376,9 +381,9 @@ class TestAC7VortagOneLine:
                                  wind_max_kmh=20.0, precip_sum_mm=18.0)]
         comp = _comparison(today, yday)
         line_empty = summarize_day_comparison(comp, selected_metrics=[])
-        line_none = summarize_day_comparison(comp, selected_metrics=None)
-        assert line_empty == line_none, (
-            f"Bug #800: [] muss identisch zu None sein — leere Liste gab: '{line_empty}'"
+        assert line_empty == "", (
+            f"Issue #1394: selected_metrics=[] muss '' liefern (nicht "
+            f"Legacy-Text), got: {line_empty!r}"
         )
         assert "ähnliches Wetter" not in line_empty, (
             f"Bug #800: große Deltas aber Fallback liefert 'ähnliches Wetter': '{line_empty}'"

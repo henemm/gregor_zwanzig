@@ -29,6 +29,7 @@ from app.profile import ActivityProfile
 from utils.timezone import local_dt, local_fmt, tz_abbrev
 
 from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
+from output.renderers.trip_metric_ids import resolve_trip_active_metrics
 from output.renderers.email.helpers import (
     ampel_level,
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
@@ -916,6 +917,7 @@ def render_html(
     stage_total: Optional[int] = None,
     trip_url: Optional[str] = None,
     corridors: Optional[list[Corridor]] = None,
+    trip_metrics_altbestand: bool = True,
     **_ignored,
 ) -> str:
     """Render full HTML e-mail body. Pure function.
@@ -1334,45 +1336,59 @@ def render_html(
             + "</div>"
         )
 
-    # Issue #790: Metriken-Überblick
-    _pill_metric_ids = [mc.metric_id for mc in dc.metrics if mc.enabled]
-    if not _pill_metric_ids:
-        _pill_metric_ids = [
-            "temperature", "wind", "gust", "precipitation",
-            "thunder", "freezing_level", "visibility",
-        ]
-    _pill_thresholds = {
-        mc.metric_id: mc.alert_threshold
-        for mc in dc.metrics
-        if mc.alert_enabled and mc.alert_threshold is not None
-    }
-    # Issue #1357: die gespeicherte Auswertungswahl je Groesse mitgeben —
-    # ohne sie faellt die Kachel auf die Katalog-Vorgabe zurueck.
-    _pill_aggregations = {
-        mc.metric_id: mc.aggregations for mc in dc.metrics if mc.enabled
-    }
-    _pills = build_metrics_summary_pills(
-        segments, _pill_metric_ids, _pill_thresholds, tz=tz,
-        night_weather=night_weather, has_gap=has_gap,
-        day_window_start_hour=day_window_start_hour,
-        day_window_end_hour=day_window_end_hour,
-        metric_aggregations=_pill_aggregations,
+    # Issue #790/#1394: Metriken-Überblick. Issue #1394 (T1): gemeinsamer
+    # Resolver statt eigener Ersatzliste — Fall A (Altbestand) faellt weiter
+    # auf den Standard-Satz zurueck, Fall B (bewusste Leerauswahl) bleibt []
+    # und der Block entfaellt vollstaendig (AC-1).
+    _pill_metric_ids = resolve_trip_active_metrics(
+        dc.metrics, altbestand=trip_metrics_altbestand,
     )
-    # AC-7 (#911): Abstände laut Vorlage EmailMetricsSummary
-    _chips_html = "".join(pill_html(lbl, tone) for lbl, tone in _pills)
-    metrics_summary_html = (
-        f'<div style="padding:14px 28px 18px;background:#fdfcf8;border-bottom:1px solid #e6e1d3;">'
-        f'<p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;'
-        f'color:{G_INK_MUTED};margin:0">Metriken-Überblick</p>'
-        f'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">{_chips_html}</div>'
-        f'</div>'
-    )
+    if _pill_metric_ids:
+        _pill_thresholds = {
+            mc.metric_id: mc.alert_threshold
+            for mc in dc.metrics
+            if mc.alert_enabled and mc.alert_threshold is not None
+        }
+        # Issue #1357: die gespeicherte Auswertungswahl je Groesse mitgeben —
+        # ohne sie faellt die Kachel auf die Katalog-Vorgabe zurueck.
+        _pill_aggregations = {
+            mc.metric_id: mc.aggregations for mc in dc.metrics if mc.enabled
+        }
+        _pills = build_metrics_summary_pills(
+            segments, _pill_metric_ids, _pill_thresholds, tz=tz,
+            night_weather=night_weather, has_gap=has_gap,
+            day_window_start_hour=day_window_start_hour,
+            day_window_end_hour=day_window_end_hour,
+            metric_aggregations=_pill_aggregations,
+        )
+        # AC-7 (#911): Abstände laut Vorlage EmailMetricsSummary
+        _chips_html = "".join(pill_html(lbl, tone) for lbl, tone in _pills)
+        metrics_summary_html = (
+            f'<div style="padding:14px 28px 18px;background:#fdfcf8;border-bottom:1px solid #e6e1d3;">'
+            f'<p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;'
+            f'color:{G_INK_MUTED};margin:0">Metriken-Überblick</p>'
+            f'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">{_chips_html}</div>'
+            f'</div>'
+        )
+    else:
+        # AC-1: bewusste Leerauswahl (Fall B) -> weder Standard-Satz noch
+        # leere Ueberschrift.
+        metrics_summary_html = ""
 
-    # Issue #790/#795/RC4/AC-6: Vortag-Einordnung
+    # Issue #790/#795/RC4/AC-6: Vortag-Einordnung. Issue #1394 (T1): die
+    # ROHE aktive Liste (ohne Default-Auffuellung) wird uebergeben und nur
+    # bei Altbestand+leer als None weitergereicht — der Default-Satz darf
+    # hier nicht einfliessen (siehe Spec, `summarize_day_comparison()` hat
+    # einen eigenen Legacy-Pfad fuer None).
     from services.day_comparison import summarize_day_comparison
+    _raw_active_metric_ids = [mc.metric_id for mc in dc.metrics if mc.enabled]
+    _selected_metrics_for_vortag = (
+        None if (not _raw_active_metric_ids and trip_metrics_altbestand)
+        else _raw_active_metric_ids
+    )
     _day_comparison_line = summarize_day_comparison(
         day_comparison,
-        selected_metrics=[mc.metric_id for mc in dc.metrics if mc.enabled],
+        selected_metrics=_selected_metrics_for_vortag,
     )
 
     # Issue #890 / B1-B3 + AC-5/AC-6: Ein Tageslage-Lead statt zwei Kästen.

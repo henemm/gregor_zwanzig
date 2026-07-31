@@ -161,6 +161,11 @@ def summarize_day_comparison(
     """Issue #790: Natursprachliche Vortag-Einordnungszeile.
 
     selected_metrics=None  → Backward-Compat (AC-4): temp_max + precip, ohne Schwellen.
+    selected_metrics=[]    → Issue #1394 (T3): bewusste Leerauswahl (Fall B)
+                             → "" (keine Zeile). Weder die generische
+                             "ähnliches Wetter"-Aussage noch eine auf
+                             abgewaehlte Groessen gestuetzte Legacy-Aussage
+                             (Bug-#800-Garantie bleibt erhalten, siehe Spec).
     selected_metrics=[...] → AC-3: nur ausgewählte Metriken über Spürbarkeitsschwelle,
                              max. 4–6 Treffer nach |avg_delta| absteigend sortiert.
                              wind_chill verdrängt temperature wenn beide über Schwelle (AC-5).
@@ -175,8 +180,10 @@ def summarize_day_comparison(
     if not comparison.entries:
         return ""
 
-    if not selected_metrics:
+    if selected_metrics is None:
         return _summarize_legacy(comparison)
+    if not selected_metrics:
+        return ""
 
     return _summarize_metric_driven(comparison, selected_metrics)
 

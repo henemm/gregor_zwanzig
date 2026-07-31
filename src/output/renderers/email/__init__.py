@@ -61,6 +61,7 @@ def render_email(
     stage_total: Optional[int] = None,
     trip_url: Optional[str] = None,
     corridors: Optional[list[Corridor]] = None,
+    trip_metrics_altbestand: bool = True,
     **_ignored,
 ) -> tuple[str, str]:
     """Returns (html_body, plain_body). Pure function.
@@ -85,6 +86,12 @@ def render_email(
     Durchreich-Parameter (Default False) — der Caller
     (``TripReportFormatter.format_email``) berechnet ihn einmal und reicht
     ihn hier nur weiter.
+
+    Issue #1394 (T0): ``trip_metrics_altbestand`` (Default True,
+    rueckwaertskompatibel) unterscheidet Fall A (Altbestand -- Feld fehlt
+    ganz) von Fall B (bewusste Leerauswahl) fuer den Metriken-Ueberblick.
+    Der Caller misst es VOR der kanal-bewussten Kollabierung, weil danach
+    beide Faelle als ``dc.metrics == []`` ununterscheidbar ankommen.
     """
     # token_line carries trip_name and report_type — read from there with
     # graceful fallback to keep tests calling minimal-TokenLines working.
@@ -109,6 +116,7 @@ def render_email(
             has_gap=has_gap,
             day_window_start_hour=day_window_start_hour,
             day_window_end_hour=day_window_end_hour,
+            trip_metrics_altbestand=trip_metrics_altbestand,
         )
         return "", compact_text
 
@@ -151,6 +159,7 @@ def render_email(
         stage_total=stage_total,
         trip_url=trip_url,
         corridors=corridors,
+        trip_metrics_altbestand=trip_metrics_altbestand,
     )
     plain_body = render_plain(
         segments=segments,
@@ -178,6 +187,7 @@ def render_email(
         show_stability=show_stability,
         show_outlook=show_outlook,
         day_comparison=day_comparison,
+        trip_metrics_altbestand=trip_metrics_altbestand,
     )
     return html_body, plain_body
 

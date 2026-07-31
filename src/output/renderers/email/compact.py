@@ -18,6 +18,7 @@ from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt
 
 from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
+from output.renderers.trip_metric_ids import resolve_trip_active_metrics
 from output.renderers.email.helpers import (
     _AMPEL_STAGE_TONES, build_confidence_hint, build_metrics_summary_pills,
     build_origin_footer, format_trend_tokens, render_origin_footer_text,
@@ -100,6 +101,7 @@ def render_compact(
     has_gap: bool = False,
     day_window_start_hour: int = DAY_WINDOW_START_HOUR,
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,
+    trip_metrics_altbestand: bool = True,
     **_ignored,
 ) -> str:
     """Render compact plain-text e-mail body. Pure function.
@@ -142,8 +144,13 @@ def render_compact(
             lines.append(" | ".join(parts))
     lines.append("")
 
-    # --- Metriken-Ueberblick ---
-    metric_ids = [mc.metric_id for mc in dc.metrics if mc.enabled]
+    # --- Metriken-Ueberblick --- Issue #1394 (T2b): gemeinsamer Resolver
+    # statt eigener Ersatzliste. Ueberschrift + Pillen-Schleife entfallen,
+    # wenn keine Pillen entstehen (AC-3; Fall A gewinnt erstmals den
+    # Standard-Satz statt einer leeren Ueberschrift, AC-6).
+    metric_ids = resolve_trip_active_metrics(
+        dc.metrics, altbestand=trip_metrics_altbestand,
+    )
     thresholds = {
         mc.metric_id: mc.alert_threshold
         for mc in dc.metrics
@@ -159,16 +166,17 @@ def render_compact(
         day_window_start_hour=day_window_start_hour,
         day_window_end_hour=day_window_end_hour,
         metric_aggregations=metric_aggregations,
-    )
-    lines.append("== Metriken-Ueberblick ==")
-    for label, tone in pills:
-        # Issue #795/AC-10: dezentes ASCII-Schwerezeichen aus der Ampelstufe
-        # statt rohem [AMPEL_*]/[TONE]-Marker (gruen→kein, gelb→!, orange→!!,
-        # rot→!!!; Klasse 2/neutral→kein).
-        prefix = _severity_prefix(tone)
-        lead = f"{prefix} " if prefix else ""
-        lines.append(f"  {lead}{label}")
-    lines.append("")
+    ) if metric_ids else []
+    if pills:
+        lines.append("== Metriken-Ueberblick ==")
+        for label, tone in pills:
+            # Issue #795/AC-10: dezentes ASCII-Schwerezeichen aus der Ampelstufe
+            # statt rohem [AMPEL_*]/[TONE]-Marker (gruen→kein, gelb→!, orange→!!,
+            # rot→!!!; Klasse 2/neutral→kein).
+            prefix = _severity_prefix(tone)
+            lead = f"{prefix} " if prefix else ""
+            lines.append(f"  {lead}{label}")
+        lines.append("")
 
     # Issue #1087: amtliche Warnungen — kurze Textzeile je Eintrag
     # (Sicherheitsrelevanz, gemeinsamer Renderer, Epic #1073 Punkt 6).

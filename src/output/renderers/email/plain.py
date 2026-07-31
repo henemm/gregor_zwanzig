@@ -23,6 +23,7 @@ from app.profile import ActivityProfile
 from utils.timezone import local_fmt
 
 from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
+from output.renderers.trip_metric_ids import resolve_trip_active_metrics
 from output.renderers.email.helpers import (
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
     build_segment_label,
@@ -102,6 +103,7 @@ def render_plain(
     show_stability: bool = True,
     show_outlook: bool = True,
     day_comparison: Optional["DayComparison"] = None,
+    trip_metrics_altbestand: bool = True,
     **_ignored,
 ) -> str:
     """Render full plain-text e-mail body. Pure function.
@@ -142,43 +144,48 @@ def render_plain(
     # Issue #790/#795/RC4: Vortag-Einordnung — eigene abgesetzte Zeile oben,
     # genau EINE Zeile (kein Block, keine graue Fußnote).
     from services.day_comparison import summarize_day_comparison
+    _raw_active_metric_ids = [mc.metric_id for mc in dc.metrics if mc.enabled]
+    _selected_metrics_for_vortag = (
+        None if (not _raw_active_metric_ids and trip_metrics_altbestand)
+        else _raw_active_metric_ids
+    )
     _day_comparison_line = summarize_day_comparison(
         day_comparison,
-        selected_metrics=[mc.metric_id for mc in dc.metrics if mc.enabled],
+        selected_metrics=_selected_metrics_for_vortag,
     )
     if _day_comparison_line:
         lines.append(_day_comparison_line)
         lines.append("")
 
-    # Issue #795/RC2/AC-1: Metriken-Überblick VOR den Segment-Tabellen
-    # (Hierarchie HTML==Plain). Der EINE feste Wetterblock, immer sichtbar.
-    _pill_metric_ids = [mc.metric_id for mc in dc.metrics if mc.enabled]
-    if not _pill_metric_ids:
-        _pill_metric_ids = [
-            "temperature", "wind", "gust", "precipitation",
-            "thunder", "freezing_level", "visibility",
-        ]
-    _pill_thresholds = {
-        mc.metric_id: mc.alert_threshold
-        for mc in dc.metrics
-        if mc.alert_enabled and mc.alert_threshold is not None
-    }
-    # Issue #1357: gespeicherte Auswertungswahl je Groesse (sonst Katalog-Vorgabe).
-    _pill_aggregations = {
-        mc.metric_id: mc.aggregations for mc in dc.metrics if mc.enabled
-    }
-    _plain_pills = build_metrics_summary_pills(
-        segments, _pill_metric_ids, _pill_thresholds, tz=tz,
-        night_weather=night_weather, has_gap=has_gap,
-        day_window_start_hour=day_window_start_hour,
-        day_window_end_hour=day_window_end_hour,
-        metric_aggregations=_pill_aggregations,
+    # Issue #795/RC2/AC-1/#1394 (T2): Metriken-Überblick VOR den
+    # Segment-Tabellen (Hierarchie HTML==Plain). Gemeinsamer Resolver statt
+    # eigener Ersatzliste — Fall B (bewusste Leerauswahl) laesst den Block
+    # vollstaendig entfallen (AC-2).
+    _pill_metric_ids = resolve_trip_active_metrics(
+        dc.metrics, altbestand=trip_metrics_altbestand,
     )
-    lines.append("━━ Metriken-Überblick ━━")
-    for _lbl, _tone in _plain_pills:
-        _sym = tone_symbol(_tone)
-        lines.append(f"  {_sym + ' ' if _sym else ''}{_lbl}")
-    lines.append("")
+    if _pill_metric_ids:
+        _pill_thresholds = {
+            mc.metric_id: mc.alert_threshold
+            for mc in dc.metrics
+            if mc.alert_enabled and mc.alert_threshold is not None
+        }
+        # Issue #1357: gespeicherte Auswertungswahl je Groesse (sonst Katalog-Vorgabe).
+        _pill_aggregations = {
+            mc.metric_id: mc.aggregations for mc in dc.metrics if mc.enabled
+        }
+        _plain_pills = build_metrics_summary_pills(
+            segments, _pill_metric_ids, _pill_thresholds, tz=tz,
+            night_weather=night_weather, has_gap=has_gap,
+            day_window_start_hour=day_window_start_hour,
+            day_window_end_hour=day_window_end_hour,
+            metric_aggregations=_pill_aggregations,
+        )
+        lines.append("━━ Metriken-Überblick ━━")
+        for _lbl, _tone in _plain_pills:
+            _sym = tone_symbol(_tone)
+            lines.append(f"  {_sym + ' ' if _sym else ''}{_lbl}")
+        lines.append("")
 
     # Issue #122 / F12: Stabilitäts-Label (vor dem Konfidenz-Hinweis).
     # Issue #721: show_outlook gates the entire outlook block (stability + trend).
