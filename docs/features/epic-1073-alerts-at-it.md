@@ -1,8 +1,10 @@
 # Epic 1073: Amtliche Warnungen für Österreich & Italien + querschnittliche Nutzung
 
-**Status:** Geplant (2026-07-07); Slice 1 (#1085), Slice 3 (#1087) und Slice 4 (#1088)
-implementiert; Slice 5 (#1089) über die Kind-Issues #1161 (AT) und #1162 (IT) inhaltlich
+**Status:** Geplant (2026-07-07); Slice 1 (#1085), Slice 2 (#1086), Slice 3 (#1087) und Slice 4
+(#1088) implementiert; Slice 5 (#1089) über die Kind-Issues #1161 (AT) und #1162 (IT) inhaltlich
 umgesetzt, Epic-Issue #1089 selbst zum Zeitpunkt dieser Doku noch offen (siehe Slice-Tabelle).
+Fortsetzung 2026-07-31: Issue #1427 (S1+S2 live) — zweite amtliche IT-Warnquelle (DPC/Zivilschutz)
+additiv neben MeteoAlarm, siehe eigener Abschnitt unten.
 Baut direkt auf Epic #1033 (amtliche Alerts Frankreich) auf.
 **Priorität:** hoch.
 
@@ -35,6 +37,7 @@ automatisch auch in Trips (als verbindliches AC in #1087 verankert).
 |---|---|---|---|---|
 | **GeoSphere Warn API** | AT | auth-frei, CC-BY | REST/JSON, koordinatenbasiert (`getWarningsForCoords?lat=&lon=`) | ⭐ ideal für `fetch(lat,lon)`, keine Registrierung |
 | **MeteoAlarm (MeteoGate/OGC-EDR)** | EU (AT+IT) | kostenlos, **Registrierung nötig** | REST/GeoJSON (kein MQTT nötig) | deckt IT + EU-weit in einer Quelle |
+| **DPC-Bollettini di Criticità (Zivilschutz)** | IT | auth-frei, CC-BY | Zip (Shapefile+DBF) von GitHub, kein Live-Endpunkt, 1×/Tag aktualisiert | zweite, additive IT-Warnquelle für Gewitter/Hochwasser/Erdrutsch — **Warnquelle, nicht Nowcast**, siehe #1427 unten; zu unterscheiden von Radar-DPC (nächste Zeile, anderes Produkt) |
 | Radar-DPC | IT | frei | WebSocket/Nowcast | → Punkt 5 (Nowcast), NICHT Warnungen |
 | ARPA Veneto | IT (Veneto) | frei | regional | optional/später |
 
@@ -130,6 +133,49 @@ umgesetzt; das Epic-Issue #1089 selbst war zum Zeitpunkt dieser Doku noch offen:
   werden können — reale Radarbeobachtung hat Vorrang. Spec:
   `docs/specs/_archive/modules/issue_1162_radar_dpc.md`.
 
+### Fortsetzung: #1427 — DPC (Zivilschutz) als zweite, additive IT-Warnquelle (2026-07-31)
+
+Nach Slice 2 (#1086) hatte Italien nur MeteoAlarm als amtliche Warnquelle. Issue #1427
+ergänzt den italienischen Zivilschutz (Dipartimento della Protezione Civile, DPC) als
+**eigenständige zweite Quelle** im selben `official_alerts`-Registry-Muster:
+
+- **Widerlegte Annahme:** Die ursprüngliche Annahme des Issues — MeteoAlarm-Italien sei
+  nur eine Zweitschrift des Zivilschutzes, DPC also nur als Fallback bei
+  MeteoAlarm-Ausfall sinnvoll — ist **live widerlegt** (398 IT-Warnungen ausgewertet,
+  31.07.2026). MeteoAlarm-Italien kommt vom **Wetterdienst der italienischen Luftwaffe**
+  (`senderName: "Italian Air Force National Meteorological Service"`) und warnt vor
+  Wind/Gewitter/Hitze/Regen — er beurteilt die *Intensität der Phänomene*. Alle
+  MeteoAlarm-IT-Meldungen tragen wörtlich den Disclaimer, dass sie **nicht** die
+  amtlichen Meldungen des Zivilschutzes sind. DPC (Zivilschutz) warnt vor
+  Gewitter/Hochwasser/hydrogeologischem Risiko und beurteilt die *Auswirkung auf das
+  Gelände*. Überschneidung besteht ausschließlich bei Gewitter.
+- **PO-Entscheid 2026-07-31:** DPC läuft **dauerhaft additiv** mit, nicht nur bei
+  MeteoAlarm-Ausfall — sonst wären Hochwasser-/Erdrutschwarnungen nur während einer
+  MeteoAlarm-Störung sichtbar. Kein neues ADR nötig: ADR-0016 deckt additive
+  Warnquellen bereits ab (Präzedenz GeoSphere+MeteoAlarm für Österreich seit #1086).
+- **Neue Gefahrenart `flood`** (SMS-Kürzel `FL`, Anzeige „Hochwasser/Erdrutsch") im
+  SSOT-Katalog `src/output/tokens/hazard_symbols.py` (S1). MeteoAlarm-`awareness_type`
+  11, 12 und 13 bilden jetzt darauf ab (`meteoalarm.py::_TYPE_HAZARD_MAP`) — Typ 12
+  (`flooding`) war zuvor **fälschlich auf `rain`** abgebildet, Typ 13 (`rain-flood`) war
+  gar nicht abgebildet.
+- **`DpcSource`** (`src/services/official_alerts/dpc.py`, S2), registriert **nach**
+  `MeteoAlarmSource` (Tie-Break bei Stufengleichstand über die bestehende „beste Quelle
+  je Gefahr"-Partitionierung, `base.py:153-176`, unverändert seit #1086/#1245).
+  Herkunfts-Label „Protezione Civile (DPC)". Datenweg: Tagesbulletin als Zip (Shapefile
+  + DBF) von `raw.githubusercontent.com/pcm-dpc/DPC-Bollettini-Criticita-Idrogeologica-Idraulica`,
+  auth-frei. Stufen aus italienischem Freitext `<Kritikalität> / ALLERTA <FARBE>`
+  (GIALLA=2, ARANCIONE=3, ROSSA=4; `Temporali` kennt kein ROSSA). `Idrogeo`/`Idraulico`
+  → `flood`, `Temporali` → `thunderstorm`.
+- **Zonen-Geometrie:** 187 Zonen einmalig offline extrahiert und als
+  `src/services/official_alerts/data/dpc_zones.json` eingecheckt (Muster
+  `massif_polygons.json`), Punkt-in-Fläche über das vorhandene `geo_ray_cast`. **Keine
+  neue Fremdbibliothek.**
+- **Grenzen:** DPC ersetzt MeteoAlarm nicht — Hitze, Wind, Schnee und Waldbrand kommen im
+  Zivilschutz-Bulletin gar nicht vor. DPC deckt nur „heute + morgen", 1×/Tag
+  aktualisiert. Fällt MeteoAlarm aus, bleibt der Hinweis „amtliche Warnungen nicht
+  abrufbar" deshalb bewusst bestehen — DPC nimmt ihn nicht zurück.
+- Spec: `docs/specs/modules/feat_1427_dpc_warn_fallback.md`.
+
 ## Betreiber-Voraussetzung (kein Code)
 
 MeteoGate/MeteoAlarm-Account registrieren (für Slice 2) — analog zum Météo-France-Portal-Account
@@ -154,3 +200,4 @@ MeteoGate/MeteoAlarm-Account registrieren (für Slice 2) — analog zum Météo-
 | 2026-07-08 | Slice 5 (#1089) AT-Teil implementiert: Issue #1161 (GeoSphere-INCA-Nowcast für Gewitter/Hagel in Österreich). |
 | 2026-07-09 | Slice 5 (#1089) IT-Teil implementiert: Issue #1162 (Radar-DPC für Italien inkl. Korsika, PO-Entscheidung Korsika-Umstellung von AROME-FR). |
 | 2026-07-12 | Dokumentation aktualisiert (Issue #1232 Scheibe 1): die beiden Checkboxen „Amtliche Warnungen" und „Amtliche Warnungen lösen Alert aus" sind aus dem Alerts-Tab in den neuen Versand-Tab (`VersandTab.svelte`, context="route") umgezogen — Speicherpfad/Feldnamen unverändert. |
+| 2026-07-31 | Issue #1427 (S1+S2) implementiert: neue Gefahrenart `flood` (MeteoAlarm-Typen 11/12/13, Typ-12-Fehlabbildung auf `rain` korrigiert), neue additive IT-Warnquelle `DpcSource` (Zivilschutz/Protezione Civile) neben MeteoAlarm — Annahme „MeteoAlarm-IT = DPC-Zweitschrift" live widerlegt (unterschiedliche Herausgeber und Bewertungsmaßstab). Eigener Abschnitt „Fortsetzung: #1427" ergänzt, API-Landschaft-Tabelle um DPC-Bollettini als Warnquelle erweitert. |

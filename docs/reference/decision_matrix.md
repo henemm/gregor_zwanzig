@@ -25,8 +25,13 @@ Wetterdaten über `get_provider("openmeteo")` — Registry in
 | `fr_direct` | Météo-France AROME-WCS (Direktanbindung, FR-Fallback, #1143) |
 | `de_direct` | DWD ICON-D2 Open Data (GRIB2-Direktanbindung, DE-Fallback, #1144) |
 | `brightsky` | DWD-Daten via BrightSky — genutzt im Radar-Pfad (`src/services/radar_service.py`) |
-| `radar_dpc` | Radar-Nowcast Italien (DPC) |
+| `radar_dpc` | Radar-Nowcast Italien (DPC) — Wetter-Provider, kein Warndienst; nicht zu verwechseln mit der amtlichen DPC-Warnquelle `DpcSource` (`src/services/official_alerts/dpc.py`, Issue #1427), die nicht in dieser Tabelle geführt wird (s.u.) |
 | `fixture` | Offline-Testmodus: aktiv wenn `GZ_TEST_FIXTURE_DIR` gesetzt (#346) — bedient `openmeteo`-Anfragen aus versionierten Fixtures |
+
+Amtliche Warnquellen (`official_alerts`-Registry: GeoSphere, MeteoAlarm, DPC, Vigilance,
+Météo des forêts, Massiv-Sperren) sind **nicht** Teil dieser Tabelle — sie sind kein
+Wetter-Provider im Sinne von `get_provider()`, sondern ein eigenständiges,
+länderneutrales Warnungs-System. Details: `docs/features/epic-1073-alerts-at-it.md`.
 
 ## Kontingent-Regeln (Open-Meteo)
 
