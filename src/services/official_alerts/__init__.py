@@ -11,6 +11,7 @@ from services.official_alerts.base import (
     get_official_alerts_with_status,
     register_official_alert_source,
 )
+from services.official_alerts.dpc import DpcSource
 from services.official_alerts.geosphere_warn import GeoSphereWarnSource
 from services.official_alerts.massif_closure import MassifClosureSource
 from services.official_alerts.meteo_forets import MeteoForetsSource
@@ -18,14 +19,18 @@ from services.official_alerts.meteoalarm import MeteoAlarmSource
 from services.official_alerts.models import OfficialAlert
 from services.official_alerts.vigilance import VigilanceSource
 
-# Lazy-Registration bei Modul-Import (analog Provider-Pattern), Issue #1035/#1036/#1037/#1085/#1086.
+# Lazy-Registration bei Modul-Import (analog Provider-Pattern), Issue #1035/#1036/#1037/#1085/#1086/#1427.
 # Reihenfolge verbindlich: MeteoAlarmSource NACH GeoSphereWarnSource (Label-Tie-Break
-# bei gleicher Stufe im Cross-Source-Dedup, s. Spec #1086).
+# bei gleicher Stufe im Cross-Source-Dedup, s. Spec #1086). DpcSource NACH
+# MeteoAlarmSource -- eine ganz normale additive sechste Quelle, kein
+# fallback_for (Issue #1427 S2, Gewitter-Tie-Break bei Ueberschneidung: bei
+# gleicher Stufe gewinnt MeteoAlarm als zuerst registrierte Quelle).
 register_official_alert_source(VigilanceSource())
 register_official_alert_source(MeteoForetsSource())
 register_official_alert_source(MassifClosureSource())
 register_official_alert_source(GeoSphereWarnSource())
 register_official_alert_source(MeteoAlarmSource())
+register_official_alert_source(DpcSource())
 
 __all__ = [
     "OfficialAlert",
@@ -39,4 +44,5 @@ __all__ = [
     "MassifClosureSource",
     "GeoSphereWarnSource",
     "MeteoAlarmSource",
+    "DpcSource",
 ]

@@ -103,6 +103,9 @@ _SOURCE_LABELS: dict[str, str] = {
     "massif_closure": "Präfektur (Zugangssperre)",
     # Amtliche OGC-EDR-API api.meteoalarm.org (Österreich + Italien, Issue #1086).
     "meteoalarm": "MeteoAlarm",
+    # Italienischer Zivilschutz, additive Quelle fuer Gewitter/Hochwasser/
+    # Erdrutsch (services/official_alerts/dpc.py, Issue #1427 S2).
+    "dpc": "Protezione Civile (DPC)",
 }
 
 

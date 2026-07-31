@@ -334,6 +334,18 @@ Aufzeichnung mehr.
 - Ist DPC selbst nicht erreichbar (Netzfehler, HTTP-Fehler), liefert es
   fail-soft keine Warnung — es entsteht keine Fehlermeldung, aber auch kein
   Ersatz für einen gleichzeitigen MeteoAlarm-Ausfall.
+- **🔴 Zonen-Neuschnitt (Adversary-Fund F002, ausgelagert nach #1434):** Die
+  Zuordnung Ort → Warnzone läuft gegen die **eingecheckte** Geometrie
+  (`data/dpc_zones.json`, Stand Juli 2026). Trägt ein Bulletin einen Zonencode,
+  den diese Geometrie nicht kennt, wird er geloggt und verworfen — eine
+  tatsächlich **gewarnte** Zone kann dadurch lautlos aus dem Ergebnis fallen,
+  denn kein Punkt kann sie erreichen. Das ist real: Der DPC hat Venetien
+  zwischen Januar und Juli 2026 von 8 (`Vene-A`…`Vene-H`) auf 25 Zonen
+  (`Vene-A1`…`Vene-H6`) umgeschnitten. Im geprüften Fall ging nichts verloren
+  (alle 29 gewarnten Zonen des Januar-Bulletins sind in der Juli-Geometrie
+  auffindbar), aber die Umkehrung ist möglich. AC-5 ist wörtlich erfüllt
+  (Protokollierung), es fehlt die **Betriebs-Sichtbarkeit** — bewusst als
+  eigene Arbeit ausgelagert, s. #1434.
 
 ## Architektur-Entscheidung (ADR)
 
