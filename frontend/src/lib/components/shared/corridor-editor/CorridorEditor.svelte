@@ -23,7 +23,7 @@
 	import {
 		buildRoutePool, addRow, removeRow, patchRow, validateCorridorRows,
 		buildCorridorSavePayload, ROUTE_CTX_DEFAULTS, valueAtPointer, clampDragValue, clampBoundInput,
-		saveGateDecision, type CorridorRowState,
+		saveGateDecision, supportsMark, type CorridorRowState,
 		buildComparePool, addCompareRow, VERGLEICH_CTX_DEFAULTS,
 		buildCompareCorridorSavePayload, buildComparePrefillRows,
 		type RouteMetricDef, type CompareMetricDef, type ProfileKey,
@@ -405,8 +405,13 @@
 				<div class="ce-effects">
 					<!-- Issue #1371: "Warnen" entfernt — der Reiter Wertebereiche markiert
 					     nur noch; die Alarm-Empfindlichkeit setzt ausschliesslich der
-					     Reiter Alarme (AlertMetricLevelTable). -->
-					<button type="button" class="ce-effect mark" class:on={row.mark} aria-pressed={row.mark} onclick={() => patch(row.metric, { mark: !row.mark })}>Markieren</button>
+					     Reiter Alarme (AlertMetricLevelTable).
+					     Issue #1425 (S2 Teil 2, Scheibe A): supportsMark() ist die EINE
+					     geteilte Entscheidung (corridorEditorState.ts) — im Trip haben
+					     Tages-Summen keine Stundenzelle zum Markieren. -->
+					{#if supportsMark(row.metric, context)}
+						<button type="button" class="ce-effect mark" class:on={row.mark} aria-pressed={row.mark} onclick={() => patch(row.metric, { mark: !row.mark })}>Markieren</button>
+					{/if}
 					<button type="button" class="ce-remove" onclick={() => remove(row.metric)}>✕ entfernen</button>
 				</div>
 			</div>

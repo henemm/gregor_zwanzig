@@ -197,6 +197,43 @@ export function addRow(
 	return { rows: [...rows, newRow], poolLeft: poolLeft.filter((m) => m.metric !== metric) };
 }
 
+/**
+ * Issue #1425 (S2 Teil 2, Scheibe A): Bietet diese Groesse in DIESEM Kontext
+ * einen "Markieren"-Schalter an?
+ *
+ * Im TRIP (`context='route'`) markiert eine Auszeichnung immer eine
+ * Stundenzelle der Briefing-Tabelle — fuer die drei Tages-Summen gibt es dort
+ * keine Zeile, an der sie andocken koennte (28 mm Tagessumme ist nicht der
+ * 3,5-mm-Stundenwert). Der Schalter waere ein Bedienelement ohne Wirkung
+ * (Fehlerklasse #1384), deshalb blendet ihn die Anzeige aus. Der Backend-
+ * Gegenpart schliesst dieselben Groessen strukturell ueber
+ * `aggregation == "sum"` aus (html.py::build_trip_corridor_id_map).
+ *
+ * Im ORTSVERGLEICH (`context='vergleich'`) bleibt der Schalter fuer ALLE
+ * Groessen sichtbar — dort markiert die Uebersichtszeile Tages-Aggregate
+ * korrekt (compare_metric_ids.CORRIDOR_METRIC_TO_HOUR_KEY unberuehrt).
+ *
+ * Bereits gespeicherte `mark=true`-Flags auf einer Summen-Zeile werden dadurch
+ * NICHT geloescht (Read-Modify-Write, CLAUDE.md/#102) — sie sind nur nicht mehr
+ * bedienbar und in der Trip-Mail ohnehin wirkungslos.
+ *
+ * `precipitation_sum` ist der Route-Key derselben Tages-Summe wie der
+ * Katalog-Key `precip_sum_mm` (aggregation='sum'), steht aber nicht im
+ * Katalog — deshalb hier namentlich gefuehrt. Dass diese Liste sich mit der
+ * Auswertung im LIVE-Katalog deckt, prueft der Drift-Waechter in
+ * __tests__/corridorMarkSupport.test.ts (er liest den echten Katalog).
+ */
+const TRIP_SUM_METRICS_WITHOUT_MARK = new Set([
+	'precipitation_sum',
+	'snow_new_sum_cm',
+	'sunny_hours_h'
+]);
+
+export function supportsMark(metric: string, context: 'route' | 'vergleich'): boolean {
+	if (context !== 'route') return true;
+	return !TRIP_SUM_METRICS_WITHOUT_MARK.has(metric);
+}
+
 export function removeRow(rows: CorridorRowState[], metric: string): CorridorRowState[] {
 	return rows.filter((r) => r.metric !== metric);
 }

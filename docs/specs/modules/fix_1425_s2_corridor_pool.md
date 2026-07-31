@@ -226,4 +226,5 @@ Schritt 2, Teil 1 von Issue #1425 (Kind von Epic #1372, Dach-Epic #1374).
 
 ## Changelog
 
+- 2026-07-31: Nachtrag: Markier-Wirkung für 20 von 23 Metriken nachgeliefert via `fix_1425_s2b_markier_wirkung.md`; die 3 Tages-Summen bleiben ohne Wirkung und zeigen keinen Markieren-Schalter im Trip-Kontext
 - 2026-07-30: Initial spec created

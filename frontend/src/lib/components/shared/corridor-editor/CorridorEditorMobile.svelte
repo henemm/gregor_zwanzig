@@ -36,7 +36,7 @@
 	import {
 		buildRoutePool, addRow, removeRow, patchRow, validateCorridorRows,
 		buildCorridorSavePayload, ROUTE_CTX_DEFAULTS, valueAtPointer, clampDragValue, clampBoundInput,
-		saveGateDecision, openBoundValue, type CorridorRowState,
+		saveGateDecision, openBoundValue, supportsMark, type CorridorRowState,
 		buildComparePool, addCompareRow, VERGLEICH_CTX_DEFAULTS,
 		buildCompareCorridorSavePayload, buildComparePrefillRows,
 		type RouteMetricDef, type CompareMetricDef, type ProfileKey,
@@ -380,8 +380,13 @@
 				<div class="cem-effects">
 					<!-- Issue #1371: "Warnen" entfernt — der Reiter Wertebereiche markiert
 					     nur noch; die Alarm-Empfindlichkeit setzt ausschliesslich der
-					     Reiter Alarme (AlertMetricLevelTable). -->
-					<button type="button" class="cem-effect mark" class:on={row.mark} aria-pressed={row.mark} onclick={() => patch(row.metric, { mark: !row.mark })}>Markieren</button>
+					     Reiter Alarme (AlertMetricLevelTable).
+					     Issue #1425 (S2 Teil 2, Scheibe A): dieselbe geteilte Entscheidung
+					     wie im Desktop-Editor (corridorEditorState.ts::supportsMark) —
+					     kein zweiter Nachbau je Komponente. -->
+					{#if supportsMark(row.metric, context)}
+						<button type="button" class="cem-effect mark" class:on={row.mark} aria-pressed={row.mark} onclick={() => patch(row.metric, { mark: !row.mark })}>Markieren</button>
+					{/if}
 				</div>
 
 				<div class="cem-remove-row">

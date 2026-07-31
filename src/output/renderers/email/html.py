@@ -569,6 +569,51 @@ TRIP_CORRIDOR_METRIC_TO_COL_KEY: dict[str, str] = {
 }
 
 
+def build_trip_corridor_id_map() -> dict[str, str]:
+    """Korridor-Metrik -> Stundentabellen-Spalte fuer die Markierung
+    (Issue #1425 Schritt 2, Teil 2, Scheibe A).
+
+    Zwei Quellen, additiv:
+    1. die 5 expliziten Route-Keys oben (Bestandsdaten tragen genau diese
+       Keys -- sie sind KEINE Katalog-Keys und bleiben woertlich),
+    2. die Katalog-Groessen, zweistufig aufgeloest:
+       Compare-Katalog-`key` -> `metric_id` -> `get_metric(metric_id).col_key`.
+
+    Strukturell ausgeschlossen (keine handgepflegte Liste):
+    - `aggregation == "sum"` -- Tages-Summen (precip_sum_mm, snow_new_sum_cm,
+      sunny_hours_h) haben keine 1:1-Stundenspalte; 28 mm Tagessumme gegen
+      3,5 mm Stundenwert zu pruefen waere fachlich falsch (analog
+      compare_metric_ids.CORRIDOR_METRIC_TO_HOUR_KEY, PO-Entscheidung).
+    - `kind == "enum"` -- der Wert der Stundenspalte ist eine Enum-Instanz
+      (precip_type_dominant -> PrecipType), die `corridor_inside()` gegen die
+      Zahlengrenzen des Korridors nicht vergleichen kann
+      (`TypeError: '<' not supported between instances of 'PrecipType' and
+      'int'`, im RED-Lauf belegt -- die Trip-Mail wuerde abstuerzen). Fuer
+      Enums braucht es eine eigene Vergleichsregel; sie ist nicht Teil dieser
+      Scheibe (PO informiert).
+
+    Nicht aufloesbare Eintraege (unbekannte `metric_id`, fehlende `col_key`)
+    werden still uebersprungen -- analog `mark_lookup_multi()`, das Metriken
+    ausserhalb der id_map ebenfalls stillschweigend ignoriert (AC-5).
+    """
+    # Import bewusst lokal: `compare_metric_catalog` zieht ueber
+    # `services.compare_alert` genau dieses Modul wieder herein -- ein
+    # Kopf-Import waere ein Zyklus.
+    from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
+
+    id_map = dict(TRIP_CORRIDOR_METRIC_TO_COL_KEY)
+    for entry in COMPARE_METRIC_CATALOG:
+        if entry.get("aggregation") == "sum" or entry.get("kind") == "enum":
+            continue
+        try:
+            col_key = get_metric(entry["metric_id"]).col_key
+        except (KeyError, TypeError):
+            continue
+        if col_key:
+            id_map.setdefault(entry["key"], col_key)
+    return id_map
+
+
 def _render_html_table(
     rows: list[dict],
     *,
@@ -892,7 +937,9 @@ def render_html(
     report_date_obj = segments[0].segment.start_time.date()
     # Issue #1425 Schritt 1: EIN Lookup fuer alle Zellen dieses Emails (Route-
     # Korridor-Key -> Renderer-col_key -> Liste passender Corridors).
-    _marks = mark_lookup_multi(corridors, TRIP_CORRIDOR_METRIC_TO_COL_KEY)
+    # Schritt 2, Teil 2, Scheibe A: die id_map umfasst zusaetzlich die per
+    # Katalog aufgeloesten Groessen (build_trip_corridor_id_map()).
+    _marks = mark_lookup_multi(corridors, build_trip_corridor_id_map())
 
     # AC-3 (#911): Spalten-Reihenfolge aus konfiguriertem dc.metrics (links→rechts).
     # Zeit/Temp bleiben implizit vorn; col_order bestimmt nur Metrik-Spalten.

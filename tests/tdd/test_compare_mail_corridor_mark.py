@@ -300,3 +300,108 @@ class TestCorridorScoreIndependence:
             "Score muss bytegleich sein -- mark/corridors duerfen calculate_score() "
             "nicht beeinflussen (AC-20)"
         )
+
+
+# ---------------------------------------------------------------------------
+# Issue #1425 Schritt 2, Teil 2, Scheibe A -- AC-6: die Vergleichs-Mail bleibt
+# byte-identisch, waehrend der Trip-Pfad die Katalog-Aufloesung bekommt.
+# corridor_mark.py ist der GETEILTE Baustein (Trip + Vergleich); ein Eingriff
+# dort statt in html.py wuerde hier sofort auffallen.
+#
+# SPEC: docs/specs/modules/fix_1425_s2b_markier_wirkung.md
+# ---------------------------------------------------------------------------
+
+# Feste Referenz-Pruefsummen, erzeugt am 2026-07-31 gegen den Stand VOR
+# Scheibe A (Worktree salvage-audit-0728, HEAD 796eb79b) mit exakt der
+# Fixture aus `_byte_identity_fixture()` unten -- reproduzierbar via
+#   uv run pytest tests/tdd/test_compare_mail_corridor_mark.py -k byte_identisch
+# Aendert sich eine der beiden Summen, hat die Aenderung die Vergleichs-Mail
+# angefasst (HTML oder Klartext) -- genau das verbietet AC-6.
+_COMPARE_HTML_SHA256_BEFORE = "4001968bb9c71c5a9ba41b09a27d8eda8d95af43f92e43568fb6d943730506f3"
+_COMPARE_TEXT_SHA256_BEFORE = "9e976252f847f89263e6d2f3721f13d3c94ae2a1b1db80fe5c61103ae87ae68d"
+
+
+def _byte_identity_fixture():
+    """Deterministische Vergleichs-Fixture (feste target_date/created_at, kein
+    preset_schedule -> kein `date.today()`-Pfad im Abo-Fuss). Die Korridore
+    sind genau die Metriken, um die Scheibe A den TRIP-Pfad erweitert -- greift
+    die Implementierung faelschlich in corridor_mark.py/compare_html.py ein,
+    aendert sich die Pruefsumme."""
+    from app.user import ComparisonResult, LocationResult
+
+    hour = datetime(2026, 7, 13, 12, 0)
+    locations = [
+        LocationResult(
+            location=_loc("a", "Ort A"), temp_max=20.0,
+            hourly_data=[ForecastDataPoint(
+                ts=hour, thunder_level=ThunderLevel.NONE, cape_jkg=1500.0, humidity_pct=55)],
+        ),
+        LocationResult(
+            location=_loc("b", "Ort B"), temp_max=40.0,
+            hourly_data=[ForecastDataPoint(
+                ts=hour, thunder_level=ThunderLevel.MED, cape_jkg=200.0, humidity_pct=90)],
+        ),
+        LocationResult(
+            location=_loc("c", "Ort C"), temp_max=28.0,
+            hourly_data=[ForecastDataPoint(
+                ts=hour, thunder_level=ThunderLevel.HIGH, cape_jkg=800.0, humidity_pct=30)],
+        ),
+    ]
+    result = ComparisonResult(
+        locations=locations, time_window=(9, 16),
+        target_date=date(2026, 7, 13), created_at=datetime(2026, 7, 13, 6, 0),
+    )
+    corridors = [
+        Corridor(metric="temp_max_c", range=[15, 35], mark=True),
+        Corridor(metric="cape_max_jkg", range=[1000, None], mark=True),
+        Corridor(metric="humidity_avg_pct", range=[40, 70], mark=True),
+        Corridor(metric="sunny_hours_h", range=[0, 1000], mark=True),
+        Corridor(metric="thunder_level_max", range=[None, 0], mark=True),
+    ]
+    return result, corridors
+
+
+class TestCompareMailByteIdentity:
+    def test_ac6_vergleichsmail_bleibt_byte_identisch(self):
+        """AC-6: HTML- UND Klartext-Teil der Vergleichs-Mail sind gegenueber
+        dem Stand vor Scheibe A unveraendert (sha256). Echter Renderer-Aufruf
+        ueber den gemeinsamen Einstieg render_compare_email()."""
+        import hashlib
+
+        from app.profile import ActivityProfile
+        from output.renderers.comparison import render_compare_email
+
+        result, corridors = _byte_identity_fixture()
+        html, text = render_compare_email(
+            result, profile=ActivityProfile.ALLGEMEIN,
+            hourly_metrics={"thunder_level"}, corridors=corridors,
+        )
+
+        assert hashlib.sha256(html.encode("utf-8")).hexdigest() == _COMPARE_HTML_SHA256_BEFORE, (
+            "AC-6 verletzt: der HTML-Teil der Vergleichs-Mail hat sich geaendert -- "
+            "die Trip-Aenderung darf compare_html.py/corridor_mark.py nicht anfassen"
+        )
+        assert hashlib.sha256(text.encode("utf-8")).hexdigest() == _COMPARE_TEXT_SHA256_BEFORE, (
+            "AC-6 verletzt: der Klartext-Teil der Vergleichs-Mail hat sich geaendert"
+        )
+
+    def test_ac6_fixture_markiert_ueberhaupt_etwas(self):
+        """Wirkungsnachweis zur Pruefsumme: eine Fixture, die gar nichts
+        markiert, wuerde AC-6 trivial erfuellen und den geteilten Baustein
+        nicht abdecken. Der Vergleichs-Pfad markiert hier nachweislich Zellen
+        (u.a. ueber cape_max_jkg/humidity_avg_pct -- dieselben Metriken, die
+        der Trip-Pfad neu bekommt)."""
+        from app.profile import ActivityProfile
+        from output.renderers.comparison import render_compare_email
+
+        result, corridors = _byte_identity_fixture()
+        html, _text = render_compare_email(
+            result, profile=ActivityProfile.ALLGEMEIN,
+            hourly_metrics={"thunder_level"}, corridors=corridors,
+        )
+
+        assert html.count(_MARK) >= 3, (
+            "Die Byte-Identitaets-Fixture muss echte Markierungen enthalten -- "
+            f"gefunden: {html.count(_MARK)}"
+        )
+        assert _MARK_STYLE in html, "Markierungen muessen den sichtbaren Border-Balken tragen"

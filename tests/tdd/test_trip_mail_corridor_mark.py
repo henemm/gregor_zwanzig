@@ -20,12 +20,28 @@ from app.models import Corridor, ForecastDataPoint, ThunderLevel
 from services.corridor_match import corridor_inside
 
 _MARK = 'class="corridor-mark"'
+# Adversary F001 (Fix-Loop, #1231 Slice 7 / #1425 S1): die Klassen-Signatur
+# allein ist unsichtbar (der Trip-<style>-Block referenziert sie nicht) -- die
+# eigentliche Sichtbarkeit ist der additive gruene Border-Balken
+# (corridor_mark.MARK_BORDER, G_SUCCESS aus design_tokens).
+_MARK_STYLE = "border-left:3px solid #3a7d44"
 
 
 def _tr_containing(html: str, time_label: str) -> str:
     marker = f'data-label="Time">{time_label}</td>'
     start = html.rindex("<tr", 0, html.index(marker))
     end = html.index("</tr>", html.index(marker)) + len("</tr>")
+    return html[start:end]
+
+
+def _cell(html: str, data_label: str) -> str:
+    """Isoliert genau die Zelle einer Spalte ueber ihr ``data-label``
+    (Mobile-Beschriftung, vom Renderer je <td> gesetzt) -- damit beweist eine
+    Marken-Signatur die Markierung DIESER Spalte, nicht irgendeiner."""
+    marker = f'data-label="{data_label}"'
+    idx = html.index(marker)
+    start = html.rindex("<td", 0, idx)
+    end = html.index("</td>", idx) + len("</td>")
     return html[start:end]
 
 
@@ -209,3 +225,174 @@ class TestTripMailCorridorMarkWiring:
 
         assert isinstance(html, str) and len(html) > 0
         assert _MARK not in html, "snow_line ohne sichtbare Spalte darf nichts markieren"
+
+
+# ===========================================================================
+# Issue #1425 Schritt 2, Teil 2, Scheibe A -- die 15 nicht-summen
+# Katalog-Groessen muessen im Trip-Briefing genauso markieren wie die 5 alten
+# Route-Keys. SPEC: docs/specs/modules/fix_1425_s2b_markier_wirkung.md
+#
+# Warum der komplette Weg (render_email) und nicht _render_html_table: der
+# Fehler sitzt genau in der Aufloesung Korridor-Metrik -> Spalten-Key
+# (html.py::TRIP_CORRIDOR_METRIC_TO_COL_KEY), die _render_html_table gar nicht
+# durchlaeuft -- wer `marks` von Hand baut, prueft am Fehler vorbei.
+# ===========================================================================
+
+class TestTripMailCatalogMetricCorridorMark:
+    def test_ac1_cape_korridor_markiert_cape_zelle(self):
+        """AC-1 (Extremum-Vertreter, Audit-Fall aus dem Issue-Kommentar
+        2026-07-31): Korridor cape_max_jkg [1000, offen] + aktive CAPE-Spalte
+        + Stundenwert 1500 J/kg. RED: die Zelle wird gerendert, traegt aber
+        keine Marken-Signatur -- 'cape_max_jkg' fehlt in
+        TRIP_CORRIDOR_METRIC_TO_COL_KEY, mark_lookup_multi() ueberspringt den
+        Korridor still (corridor_mark.py:43)."""
+        dp = _dp(t2m_c=10.0, cape_jkg=1500.0)
+        corridors = [Corridor(metric="cape_max_jkg", range=[1000, None], mark=True)]
+        html = _render(corridors=corridors, enabled={"temperature", "cape"}, dp=dp)
+
+        cell = _cell(html, "CAPE")
+        assert _MARK in cell, (
+            "1500 J/kg liegt in [1000, offen] -- die CAPE-Zelle muss die "
+            "Marken-Signatur tragen (heute wirkungsloser Schalter)"
+        )
+        assert _MARK_STYLE in cell, "CAPE-Zelle muss den sichtbaren gruenen Border-Balken tragen"
+
+    def test_ac1_cape_korridor_ausserhalb_markiert_nicht(self):
+        """Gegenprobe zu AC-1: 500 J/kg liegt UNTER der Untergrenze 1000 --
+        die Zelle darf nicht markiert werden. Verhindert, dass die
+        GREEN-Implementierung pauschal jede Zelle einer Korridor-Spalte
+        markiert."""
+        dp = _dp(t2m_c=10.0, cape_jkg=500.0)
+        corridors = [Corridor(metric="cape_max_jkg", range=[1000, None], mark=True)]
+        html = _render(corridors=corridors, enabled={"temperature", "cape"}, dp=dp)
+
+        cell = _cell(html, "CAPE")
+        assert _MARK not in cell, "500 J/kg liegt ausserhalb [1000, offen] -- keine Markierung"
+        assert _MARK_STYLE not in cell, "500 J/kg darf keinen Border-Balken tragen"
+
+    def test_ac1_cape_korridor_mit_mark_false_markiert_nichts(self):
+        """Gegenprobe zu AC-1: derselbe Korridor als reiner Alarm-Korridor
+        (mark=False) darf auch nach der Katalog-Aufloesung nichts markieren."""
+        dp = _dp(t2m_c=10.0, cape_jkg=1500.0)
+        corridors = [Corridor(metric="cape_max_jkg", range=[1000, None], notify=True, mark=False)]
+        html = _render(corridors=corridors, enabled={"temperature", "cape"}, dp=dp)
+
+        assert _MARK not in html, "mark=False (notify-only) darf keine Markierung erzeugen"
+
+    def test_ac2_humidity_korridor_markiert_humidity_zelle(self):
+        """AC-2 (Mittelwert-Vertreter): Korridor {metric='humidity_avg_pct',
+        range=[40, 70], mark=True} + aktive Feuchte-Spalte + Stundenwert 55 %.
+
+        Ist-Zustand (RED): keine Marken-Signatur -- selbe Wurzel wie AC-1."""
+        dp = _dp(t2m_c=10.0, humidity_pct=55)
+        corridors = [Corridor(metric="humidity_avg_pct", range=[40, 70], mark=True)]
+        html = _render(corridors=corridors, enabled={"temperature", "humidity"}, dp=dp)
+
+        cell = _cell(html, "Humid")
+        assert _MARK in cell, "55 % liegt in [40, 70] -- die Feuchte-Zelle muss markiert sein"
+        assert _MARK_STYLE in cell, "Feuchte-Zelle muss den sichtbaren gruenen Border-Balken tragen"
+
+    def test_ac2_humidity_korridor_ausserhalb_markiert_nicht(self):
+        """Gegenprobe zu AC-2: 90 % liegt ueber der Obergrenze 70."""
+        dp = _dp(t2m_c=10.0, humidity_pct=90)
+        corridors = [Corridor(metric="humidity_avg_pct", range=[40, 70], mark=True)]
+        html = _render(corridors=corridors, enabled={"temperature", "humidity"}, dp=dp)
+
+        cell = _cell(html, "Humid")
+        assert _MARK not in cell, "90 % liegt ausserhalb [40, 70] -- keine Markierung"
+        assert _MARK_STYLE not in cell, "90 % darf keinen Border-Balken tragen"
+
+    def test_ac3_snow_line_markiert_weiterhin_die_schneegrenzen_spalte(self):
+        """AC-3 (Regressionsschutz Schritt 1, muss von Anfang an GRUEN sein):
+        'snow_line' ist einer der 5 alten Route-Keys und mappt auf die
+        Spalte 'snow_limit' (col_label 'SnowL'). Die zentrale Registry fuehrt
+        'snowfall_limit' UND 'freezing_level' getrennt -- die Katalog-
+        Aufloesung darf diese Zuordnung nicht verbiegen."""
+        dp = _dp(t2m_c=10.0, snowfall_limit_m=2000)
+        corridors = [Corridor(metric="snow_line", range=[1500, None], mark=True)]
+        html = _render(corridors=corridors, enabled={"temperature", "snowfall_limit"}, dp=dp)
+
+        cell = _cell(html, "SnowL")
+        assert _MARK in cell, "snow_line muss weiterhin die Schneefallgrenzen-Spalte markieren"
+        assert _MARK_STYLE in cell, "snow_line-Markierung muss sichtbar bleiben"
+
+    def test_ac4_sunny_hours_korridor_markiert_keine_stundenzelle(self):
+        """AC-4 Backend-Teil (muss von Anfang an GRUEN sein und es bleiben):
+        'sunny_hours_h' ist eine TAGES-Summe (aggregation='sum'). Der
+        Stundenwert der Sonnen-Spalte ist eine ganz andere Groesse
+        (Strahlung), der eingestellte Bereich [0, 1000] wuerde ihn
+        rechnerisch einschliessen -- markiert werden darf trotzdem nichts."""
+        dp = _dp(t2m_c=10.0, dni_wm2=500.0)
+        corridors = [Corridor(metric="sunny_hours_h", range=[0, 1000], mark=True)]
+        html = _render(corridors=corridors, enabled={"temperature", "sunshine"}, dp=dp)
+
+        assert _MARK not in html, (
+            "Tages-Summe sunny_hours_h darf NIE gegen einen Stundenwert gematcht "
+            "werden -- sonst markiert der Trip eine fachlich falsche Zelle"
+        )
+        assert _MARK_STYLE not in html, "kein Border-Balken fuer eine Tages-Summe"
+
+    def test_ac4_neuschnee_summen_korridor_markiert_keine_stundenzelle(self):
+        """AC-4 Backend-Teil, zweite Summe: 'snow_new_sum_cm'
+        (aggregation='sum') -- Stundenwert 3 cm laege in [0, 50], darf aber
+        nicht markieren."""
+        dp = _dp(t2m_c=-2.0, snow_new_24h_cm=3.0)
+        corridors = [Corridor(metric="snow_new_sum_cm", range=[0, 50], mark=True)]
+        html = _render(corridors=corridors, enabled={"temperature", "fresh_snow"}, dp=dp)
+
+        assert _MARK not in html, "Tages-Summe snow_new_sum_cm darf keine Stundenzelle markieren"
+
+    def test_ac5_unbekannte_metrik_id_neben_gueltigem_korridor(self):
+        """AC-5 (muss von Anfang an GRUEN sein): eine Korridor-Liste mit einer
+        unbekannten/nicht aufloesbaren Metrik-ID (Freitext, Go kennt kein Enum
+        fuer Corridor.Metric) rendert ohne Absturz, und der gueltige Korridor
+        derselben Liste markiert weiterhin."""
+        dp = _dp(t2m_c=10.0, gust_kmh=80.0)
+        corridors = [
+            Corridor(metric="voellig_unbekannte_groesse_xyz", range=[0, 1], mark=True),
+            Corridor(metric="", range=[0, 1], mark=True),
+            Corridor(metric="wind_gust", range=[None, 90], mark=True),
+        ]
+        html = _render(corridors=corridors, enabled={"temperature", "gust"}, dp=dp)
+
+        assert isinstance(html, str) and len(html) > 0, "Rendern darf nicht scheitern"
+        cell = _cell(html, "Gust")
+        assert _MARK in cell, "der gueltige wind_gust-Korridor muss trotz Nachbar-Muell markieren"
+        assert _MARK_STYLE in cell, "Markierung des gueltigen Korridors muss sichtbar bleiben"
+
+    def test_ac5_enum_korridor_stuerzt_nicht_ab_und_markiert_nicht(self):
+        """AC-5 (Absturzschutz, Adversary-Fund F001): 'precip_type_dominant'
+        ist die einzige Katalog-Groesse mit kind='enum'. Ihr Stundenwert ist
+        eine Enum-Instanz (PrecipType), die corridor_inside() nicht gegen die
+        Zahlengrenzen eines Korridors vergleichen kann. Wuerde die Aufloesung
+        (build_trip_corridor_id_map) diese Groesse aufnehmen, stuerzte die
+        komplette Trip-Mail ab:
+        ``TypeError: '<' not supported between instances of 'PrecipType' and
+        'int'`` -- per Hand belegt durch Entfernen des kind=='enum'-Astes.
+
+        Erwartung: rendert durch, PType-Zelle bleibt unmarkiert."""
+        from app.models import PrecipType
+
+        dp = _dp(t2m_c=10.0, precip_type=PrecipType.RAIN)
+        corridors = [Corridor(metric="precip_type_dominant", range=[0, 1], mark=True)]
+        html = _render(corridors=corridors, enabled={"temperature", "precip_type"}, dp=dp)
+
+        assert isinstance(html, str) and len(html) > 0, "Enum-Korridor darf die Trip-Mail nicht sprengen"
+        cell = _cell(html, "PType")
+        assert _MARK not in cell, "Enum-Spalte darf (noch) nicht markiert werden"
+        assert _MARK_STYLE not in cell, "Enum-Spalte darf keinen Border-Balken tragen"
+
+    def test_ac5_unbekannte_metrik_id_neben_katalog_korridor(self):
+        """AC-5 fuer den NEUEN Aufloesungsweg (RED bis Scheibe A steht): auch
+        neben einer unbekannten Metrik-ID muss ein Katalog-Korridor
+        (cape_max_jkg) markieren -- der Ueberspring-Pfad darf die Aufloesung
+        nicht abbrechen."""
+        dp = _dp(t2m_c=10.0, cape_jkg=1500.0)
+        corridors = [
+            Corridor(metric="voellig_unbekannte_groesse_xyz", range=[0, 1], mark=True),
+            Corridor(metric="cape_max_jkg", range=[1000, None], mark=True),
+        ]
+        html = _render(corridors=corridors, enabled={"temperature", "cape"}, dp=dp)
+
+        cell = _cell(html, "CAPE")
+        assert _MARK in cell, "Katalog-Korridor muss auch neben einer unbekannten Metrik-ID markieren"

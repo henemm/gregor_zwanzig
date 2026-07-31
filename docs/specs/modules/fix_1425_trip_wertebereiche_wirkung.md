@@ -64,3 +64,7 @@ Diese Änderung fasst Mail-Inhalts-Dateien an (`src/output/renderers/email/*.py`
 ## Budget
 
 Geschätzt **200–280 Zeilen** (Code + Tests): geteilte Extraktion der drei Bausteine, Durchreichweg über zwei Ebenen, Übergangs-Zuordnung, sechs AC-Tests. Das Standardlimit 250 ist knapp. **Kein Override im Vorgriff** — erst messen, dann bei Bedarf mit Zahlen vorlegen.
+
+## Changelog
+
+- 2026-07-31: Markier-Wirkung jetzt für 20 von 23 Metriken implementiert (Spec `fix_1425_s2b_markier_wirkung.md`, S2 Teil 2 Scheibe A); ausgenommen bleiben die 3 Tages-Summen, da Trip-Briefing keine Übersichtszeile für Tages-Aggregate hat
