@@ -21,6 +21,9 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
+// Issue #1396 S1: ":=" statt "=" beim WithUser-Aufruf — Begruendung
+// ausfuehrlich in trip.go:10-28 (Kommentar ueber TripsHandler).
+
 // createPresetRequest akzeptiert sowohl Legacy- (Metrics []string +
 // FriendlyIDs []string) als auch Neu-Schema-Payloads (Metrics []DisplayMetric).
 // Beide werden via json.RawMessage entgegengenommen und in
@@ -119,7 +122,7 @@ func normalizeMetricsPayload(raw json.RawMessage, friendlyIDs []string) []model.
 // GET /api/metric-presets
 func ListMetricPresetsHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		presets, err := s.LoadMetricPresets()
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -134,7 +137,7 @@ func ListMetricPresetsHandler(s *store.Store) http.HandlerFunc {
 // POST /api/metric-presets
 func CreateMetricPresetHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 
 		var req createPresetRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -190,7 +193,7 @@ func CreateMetricPresetHandler(s *store.Store) http.HandlerFunc {
 // DELETE /api/metric-presets/{id}
 func DeleteMetricPresetHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 
 		presets, err := s.LoadMetricPresets()
@@ -228,7 +231,7 @@ func DeleteMetricPresetHandler(s *store.Store) http.HandlerFunc {
 // auf is_default=false zurueckgesetzt.
 func PatchMetricPresetHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 
 		presets, err := s.LoadMetricPresets()

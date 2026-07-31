@@ -16,6 +16,9 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
+// Issue #1396 S1: ":=" statt "=" beim WithUser-Aufruf — Begruendung
+// ausfuehrlich in trip.go:10-28 (Kommentar ueber TripsHandler).
+
 const (
 	briefingKindRoute     = "route"
 	briefingKindVergleich = "vergleich"

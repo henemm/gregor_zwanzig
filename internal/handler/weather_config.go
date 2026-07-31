@@ -125,9 +125,12 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 
 // --- Location Weather Config ---
 
+// Issue #1396 S1: ":=" statt "=" beim WithUser-Aufruf in den beiden
+// Location-Handlern unten — Begruendung ausfuehrlich in trip.go:10-28
+// (Kommentar ueber TripsHandler).
 func GetLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 		loc, err := s.LoadLocation(id)
 		if err != nil {
@@ -149,7 +152,7 @@ func GetLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 
 func PutLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 		loc, err := s.LoadLocation(id)
 		if err != nil {

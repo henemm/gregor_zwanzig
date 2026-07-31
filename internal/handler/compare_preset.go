@@ -29,6 +29,9 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
+// Issue #1396 S1: ":=" statt "=" beim WithUser-Aufruf — Begruendung
+// ausfuehrlich in trip.go:10-28 (Kommentar ueber TripsHandler).
+
 // Issue #1232 Scheibe 2a: Validierungs-Pattern fuer die Slot-Zeitfelder.
 // timePattern erlaubt sowohl "HH:MM" als auch "HH:MM:SS" (Spec: intern wird
 // bei fehlenden Sekunden ":00" ergaenzt); datePattern verlangt ISO-Datum.

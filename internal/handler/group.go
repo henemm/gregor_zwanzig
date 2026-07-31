@@ -10,11 +10,14 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
+// Issue #1396 S1: ":=" statt "=" beim WithUser-Aufruf — Begruendung
+// ausfuehrlich in trip.go:10-28 (Kommentar ueber TripsHandler).
+
 // GroupsHandler — GET /api/groups → 200, list sorted by order (LoadGroups
 // already returns sorted). Issue #341 §5.
 func GroupsHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		groups, err := s.LoadGroups()
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -32,7 +35,7 @@ func GroupsHandler(s *store.Store) http.HandlerFunc {
 // name required, order = max(order)+1 when 0/unset. Issue #341 §5.
 func CreateGroupHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		var g model.Group
 		if err := json.NewDecoder(r.Body).Decode(&g); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -90,7 +93,7 @@ func CreateGroupHandler(s *store.Store) http.HandlerFunc {
 // (name, default_profile, order). 404 if group missing. Issue #341 §5.
 func UpdateGroupHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 
 		groups, err := s.LoadGroups()
@@ -171,7 +174,7 @@ func UpdateGroupHandler(s *store.Store) http.HandlerFunc {
 // group_id on all member locations (Read-Modify-Write). 204. Issue #341 §5.
 func DeleteGroupHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 
 		if err := s.DeleteGroup(id); err != nil {
