@@ -38,6 +38,12 @@
 	{:else if controller.state === 'saving'}
 		<span class="save-indicator__spinner" aria-hidden="true"></span>
 		<span>Speichere …</span>
+	{:else if controller.state === 'conflict'}
+		<span class="save-indicator__icon" aria-hidden="true">!</span>
+		<span>{controller.error ?? 'Konflikt beim Speichern'}</span>
+		<button type="button" class="save-indicator__retry" onclick={() => controller.retryConflict()}>
+			Nochmal speichern
+		</button>
 	{:else if controller.state === 'error'}
 		<span class="save-indicator__icon" aria-hidden="true">!</span>
 		<span>Fehler beim Speichern{controller.error ? ': ' + controller.error : ''}</span>
@@ -107,6 +113,24 @@
 		background: rgba(179, 74, 42, 0.09);
 		animation: none;
 		opacity: 1;
+	}
+
+	/* Konflikt-Zustand: gleiche Signalfarbe wie der Fehler, dauerhaft sichtbar. */
+	.save-indicator[data-state='conflict'] {
+		color: var(--g-danger, #b34a2a);
+		background: rgba(179, 74, 42, 0.09);
+		animation: none;
+		opacity: 1;
+	}
+
+	.save-indicator__retry {
+		font: inherit;
+		color: inherit;
+		background: transparent;
+		border: 1px solid currentColor;
+		border-radius: 3px;
+		padding: 1px 6px;
+		cursor: pointer;
 	}
 
 	.save-indicator__icon {

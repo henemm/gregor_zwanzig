@@ -478,6 +478,7 @@ interne Logik ergaenzt:
   Fehler" — unterscheidbar am neuen `status`-Feld dieser Scheibe (`412` vs.
   `400`/`500`). Braucht einen Reload-und-Retry-Mechanismus, der den Nutzer
   entscheiden laesst, ob sein Stand verworfen oder erneut versucht wird.
+  **Umgesetzt** — siehe `docs/specs/modules/issue_1395_s4_conflict_retry.md`.
 - **S5 (Rueckbau der clientseitigen Warteschutz-Konstruktionen):** kann erst
   beginnen, wenn diese Scheibe produktiv gelaufen ist und die Registry sich
   als zuverlaessig erwiesen hat. Betrifft `settle()`, `SETTLE_TIMEOUT_MS`,

@@ -2,7 +2,10 @@
 // KEINE modul-globalen $state-Exporte (das wäre ein geteilter Singleton → bricht AC-6).
 // Jede Editor-Oberfläche erzeugt eine eigene Instanz via createSaveStatus().
 
-export type SaveState = 'idle' | 'dirty' | 'saving' | 'error';
+import { refreshTripEtag } from '../api.ts';
+import type { ApiError } from '../types.js';
+
+export type SaveState = 'idle' | 'dirty' | 'saving' | 'error' | 'conflict';
 
 /**
  * Issue #1376: die Speicher-Funktion darf optional Fetch-Optionen entgegennehmen.
@@ -47,6 +50,15 @@ export class SaveStatus {
 	// nicht mehr stoppen — wer ihn überschreiben will, muss auf ihn WARTEN
 	// (`settle()`), sonst entscheidet die Netz-Laufzeit, welcher Stand gewinnt.
 	private _inflight: Promise<void> | null = null;
+	// Issue #1395 S4: der bei einem 412 abgelehnte Speichervorgang, damit
+	// `retryConflict()` ihn unveraendert wiederholen kann.
+	private _lastFailed: { fn: SaveFn; init?: RequestInit } | null = null;
+
+	private _tripId?: string;
+
+	constructor(tripId?: string) {
+		this._tripId = tripId;
+	}
 
 	setSaving(): void {
 		this.state = 'saving';
@@ -90,12 +102,41 @@ export class SaveStatus {
 				await saveFn(init);
 				this.setSaved();
 			} catch (e) {
-				this.setError(extractMessage(e));
+				// Issue #1395 S4: nur ein echter Nebenlaeufigkeits-Konflikt auf einer
+				// bekannten Tour bekommt den eigenen Zustand mit Wiederholen-Knopf.
+				if ((e as ApiError)?.status === 412 && this._tripId) {
+					this._lastFailed = { fn: saveFn, init };
+					this.state = 'conflict';
+					this.error = extractMessage(e);
+				} else {
+					this.setError(extractMessage(e));
+				}
 			}
 		})();
 		this._inflight = run;
 		await run;
 		if (this._inflight === run) this._inflight = null;
+	}
+
+	/**
+	 * Issue #1395 S4: frischt den bekannten Stand auf und wiederholt danach genau
+	 * den Speichervorgang, der am Konflikt gescheitert ist. `setSaving()` steht
+	 * bewusst VOR dem Refresh — ein zweiter Klick trifft dann auf `'saving'` und
+	 * bricht am Guard ab, statt einen zweiten Refresh samt zweitem Sendevorgang
+	 * loszuschicken.
+	 */
+	async retryConflict(): Promise<void> {
+		if (this.state !== 'conflict' || !this._lastFailed || !this._tripId) return;
+		const { fn, init } = this._lastFailed;
+		this._lastFailed = null;
+		this.setSaving();
+		try {
+			await refreshTripEtag(this._tripId);
+		} catch (e) {
+			this.setError(extractMessage(e));
+			return;
+		}
+		await this.doSave(fn, init);
 	}
 
 	/**
@@ -213,6 +254,6 @@ export class SaveStatus {
 	}
 }
 
-export function createSaveStatus(): SaveStatus {
-	return new SaveStatus();
+export function createSaveStatus(tripId?: string): SaveStatus {
+	return new SaveStatus(tripId);
 }

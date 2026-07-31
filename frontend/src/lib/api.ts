@@ -119,6 +119,17 @@ export const api = {
 	del: (path: string) => request<void>('DELETE', path)
 };
 
+/**
+ * Issue #1395 S4: laedt eine Tour ausschliesslich, um den bestehenden
+ * ETag-Seiteneffekt von `send()` auszuloesen. Der Trip-Datensatz wird bewusst
+ * NICHT zurueckgegeben — sonst entstuende die Versuchung, ihn dem sichtbaren
+ * Seitenzustand zuzuweisen und ungespeicherte Aenderungen anderer Tabs zu
+ * ueberschreiben.
+ */
+export async function refreshTripEtag(tripId: string): Promise<void> {
+	await api.get(`/api/trips/${tripId}`);
+}
+
 export async function uploadGpx(
 	file: File,
 	stageDate: string,

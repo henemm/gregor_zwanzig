@@ -436,6 +436,7 @@ See `docs/design-system/COMPONENTS.md` for the canonical component catalog.
 - Trip: `TripHeader.svelte`; Ortsvergleich: der Compare-Editor-Header — beide rendern einen `SaveIndicator` (zentral sichtbar über allen Tabs)
 - Alle Änderungen triggern **Auto-Save** mit Debounce (~700 ms): Trip (Name, Etappen, Briefing, Metriken), Ortsvergleich (Orte, Wertebereich, Layout, Versand, Alarme)
 - Zustände: `idle` (sauber) → `dirty` → `saving` (API-Call läuft) → `idle` (erfolgreich, `savedAt` gesetzt) oder `error` (Fehler)
+- Seit #1395 S4 (Trip, `createSaveStatus(tripId)`): bei einem `412`-ETag-Konflikt zusätzlicher Zustand `conflict` statt generischem `error` — der `SaveIndicator` zeigt „Nochmal speichern"; der Klick frischt den ETag-Stand still auf (`refreshTripEtag()`) und wiederholt danach automatisch den abgelehnten Speichervorgang (`retryConflict()`). Ortsvergleich (`createSaveStatus()` ohne `tripId`, vor S6) bleibt bei `error`. Siehe `docs/specs/modules/issue_1395_s4_conflict_retry.md`.
 - Flush vor Navigation: `beforeNavigate` leert die Debounce-Queue (Datenverlust-Schutz)
 - **Store:** `saveStatusStore.svelte.ts` (Klasse `SaveStatus`) — pro Editor-Instanz ein eigenes Objekt, kein globales Sharing
 
