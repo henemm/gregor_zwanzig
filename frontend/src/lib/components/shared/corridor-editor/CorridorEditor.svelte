@@ -23,7 +23,7 @@
 	import {
 		buildRoutePool, addRow, removeRow, patchRow, validateCorridorRows,
 		buildCorridorSavePayload, ROUTE_CTX_DEFAULTS, valueAtPointer, clampDragValue, clampBoundInput,
-		saveGateDecision, supportsMark, type CorridorRowState,
+		saveGateDecision, supportsMark, countEffectiveMarks, type CorridorRowState,
 		buildComparePool, addCompareRow, VERGLEICH_CTX_DEFAULTS,
 		buildCompareCorridorSavePayload, buildComparePrefillRows,
 		type RouteMetricDef, type CompareMetricDef, type ProfileKey,
@@ -161,7 +161,10 @@
 	});
 
 	const validation = $derived(validateCorridorRows(rows));
-	const markN = $derived(rows.filter((r) => r.mark).length);
+	// Issue #1425 (S2 Teil 2, Scheibe C, AC-3): zaehlt nur Marken, deren Schalter
+	// im aktuellen Kontext ueberhaupt sichtbar ist (geteilte Entscheidung
+	// countEffectiveMarks -> supportsMark).
+	const markN = $derived(countEffectiveMarks(rows, context));
 
 	// Issue #1371: der PUT ueberschreibt `display_config.metric_alert_levels`
 	// nicht mehr explizit — `trip!.display_config` wird unveraendert
@@ -280,7 +283,7 @@
 	{:else if context === 'route' && routeExtraDefs === null}
 		<!-- Issue #1425 (AC-6): erkennbarer Ladezustand, statt kurz nur die alten
 		     6 Metriken zu zeigen und die uebrigen nachpoppen zu lassen. -->
-		<Eyebrow>Wertebereiche · Warn-Schwellen</Eyebrow>
+		<Eyebrow>Wertebereiche</Eyebrow>
 		<p class="ce-lead" aria-busy="true" data-testid="corridor-editor-route-loading">Lade Metriken…</p>
 	{:else}
 	{#if context === 'vergleich'}
@@ -291,11 +294,16 @@
 			Briefing pro Ort grün markiert — kein Score, kein Ranking, nur eine Lese-Hilfe.
 		</p>
 	{:else}
-		<Eyebrow>Wertebereiche · Warn-Schwellen</Eyebrow>
-		<h2 class="ce-h2">Sag mir, wenn das Wetter aus dem Rahmen läuft</h2>
+		<!-- Issue #1425 (S2 Teil 2, Scheibe C, AC-1): der Reiter versprach eine
+		     Sofort-Meldung, die er nicht ausloest — `corridor.notify` hat keinen
+		     Leser, die Alarme kommen ausschliesslich aus
+		     display_config.metric_alert_levels (Reiter Alarme, seit #1371). -->
+		<Eyebrow>Wertebereiche</Eyebrow>
+		<h2 class="ce-h2">Sag mir, welche Werte für dich passen</h2>
 		<p class="ce-lead">
-			Ein Wertebereich je Metrik legt fest, welche Werte du auf der Tour noch akzeptierst. Verlässt
-			ein Wert den Bereich, bekommst du zwischen den Briefings eine Sofort-Meldung.
+			Ein Wertebereich je Metrik legt fest, welche Werte du auf der Tour noch akzeptierst. Werte im
+			Bereich werden im Briefing hervorgehoben. Warnungen zwischen den Briefings stellst du im
+			Reiter Alarme ein.
 		</p>
 	{/if}
 
@@ -316,9 +324,9 @@
 
 	<div class="ce-legend">
 		<span class="ce-legend-title">So liest sich ein Wertebereich</span>
+		<!-- Issue #1425 (Scheibe C, AC-2): "außerhalb = Warnung" entfaellt ersatzlos —
+		     der Reiter hat nur EINE Wirkung (markieren). -->
 		<span class="ce-legend-item"><span class="ce-swatch mark"></span> im Bereich = <strong class="ce-good">markiert</strong></span>
-		<span class="ce-legend-item"><span class="ce-swatch warn"></span> außerhalb = <strong class="ce-warn">Warnung</strong></span>
-		<span class="ce-legend-note">Beide Wirkungen je Metrik frei kombinierbar.</span>
 	</div>
 
 	{#if !validation.valid}
@@ -450,12 +458,11 @@
 	.ce-lead { font-size: 13.5px; color: var(--g-ink-2); line-height: 1.55; max-width: 680px; margin-bottom: 20px; }
 	.ce-legend { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; padding: 12px 16px; margin-bottom: 20px; background: var(--g-card-alt); border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-3, 10px); font-size: 12.5px; color: var(--g-ink-2); }
 	.ce-legend-title { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-4); }
-	.ce-legend-note { font-size: 12px; color: var(--g-ink-3); }
+	/* Issue #1425 (Scheibe C): .ce-legend-note, .ce-swatch.warn und .ce-warn sind
+	   mit der Warn-Zeile der Legende entfallen (kein Verwender mehr). */
 	.ce-swatch { width: 22px; height: 8px; border-radius: 4px; display: inline-block; }
 	.ce-swatch.mark { background: var(--g-good); opacity: 0.85; }
-	.ce-swatch.warn { background: rgba(192, 138, 26, 0.28); }
 	.ce-good { color: var(--g-good); }
-	.ce-warn { color: #8a6210; }
 	.ce-error { color: #8a6210; background: rgba(192, 138, 26, 0.12); border: 1px solid rgba(192, 138, 26, 0.35); border-radius: var(--g-r-2, 6px); padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
 	.ce-table { background: var(--g-card); border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-3, 10px); overflow: hidden; }
 	.ce-row { display: grid; grid-template-columns: 190px 1fr 224px; gap: 22px; padding: 18px 20px; border-bottom: 1px solid var(--g-rule-soft); align-items: start; }

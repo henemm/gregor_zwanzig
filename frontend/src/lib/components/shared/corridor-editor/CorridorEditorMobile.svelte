@@ -36,7 +36,7 @@
 	import {
 		buildRoutePool, addRow, removeRow, patchRow, validateCorridorRows,
 		buildCorridorSavePayload, ROUTE_CTX_DEFAULTS, valueAtPointer, clampDragValue, clampBoundInput,
-		saveGateDecision, openBoundValue, supportsMark, type CorridorRowState,
+		saveGateDecision, openBoundValue, supportsMark, countEffectiveMarks, type CorridorRowState,
 		buildComparePool, addCompareRow, VERGLEICH_CTX_DEFAULTS,
 		buildCompareCorridorSavePayload, buildComparePrefillRows,
 		type RouteMetricDef, type CompareMetricDef, type ProfileKey,
@@ -142,7 +142,9 @@
 	});
 
 	const validation = $derived(validateCorridorRows(rows));
-	const markN = $derived(rows.filter((r) => r.mark).length);
+	// Issue #1425 (S2 Teil 2, Scheibe C, AC-3): identisch zum Desktop-Editor —
+	// gezaehlt wird nur, was countEffectiveMarks/supportsMark zulaesst.
+	const markN = $derived(countEffectiveMarks(rows, context));
 
 	// Issue #1371: der PUT ueberschreibt `display_config.metric_alert_levels`
 	// nicht mehr explizit — `trip!.display_config` wird unveraendert
@@ -275,7 +277,7 @@
 			<div class="cem-lead" aria-busy="true" data-testid="corridor-editor-mobile-vergleich-loading">Lade Metriken…</div>
 		{:else if context === 'route' && routeExtraDefs === null}
 			<!-- Issue #1425 (AC-6): Ladezustand statt Nachpoppen der Zusatz-Metriken. -->
-			<Eyebrow>Wertebereiche · Warn-Schwellen</Eyebrow>
+			<Eyebrow>Wertebereiche</Eyebrow>
 			<div class="cem-lead" aria-busy="true" data-testid="corridor-editor-mobile-route-loading">Lade Metriken…</div>
 		{:else}
 		{#if context === 'vergleich'}
@@ -283,9 +285,11 @@
 			<div class="cem-title">Sag mir, welche Werte dir ideal sind</div>
 			<div class="cem-lead">Ein Wertebereich je Metrik legt deinen Idealbereich fest. Werte im Bereich werden im Briefing pro Ort grün markiert — kein Score, kein Ranking, nur eine Lese-Hilfe.</div>
 		{:else}
-			<Eyebrow>Wertebereiche · Warn-Schwellen</Eyebrow>
-			<div class="cem-title">Sag mir, wenn das Wetter aus dem Rahmen läuft</div>
-			<div class="cem-lead">Ein Wertebereich je Metrik legt fest, welche Werte du auf der Tour noch akzeptierst. Verlässt ein Wert den Bereich, bekommst du zwischen den Briefings eine Sofort-Meldung.</div>
+			<!-- Issue #1425 (S2 Teil 2, Scheibe C, AC-1): wortgleich zum Desktop-Editor —
+			     keine Sofort-Meldung mehr versprechen, Verweis auf den Reiter Alarme. -->
+			<Eyebrow>Wertebereiche</Eyebrow>
+			<div class="cem-title">Sag mir, welche Werte für dich passen</div>
+			<div class="cem-lead">Ein Wertebereich je Metrik legt fest, welche Werte du auf der Tour noch akzeptierst. Werte im Bereich werden im Briefing hervorgehoben. Warnungen zwischen den Briefings stellst du im Reiter Alarme ein.</div>
 		{/if}
 
 		{#if context === 'route' && routeDefsFailed}
@@ -298,8 +302,8 @@
 		{/if}
 
 		<div class="cem-legend">
+			<!-- Issue #1425 (Scheibe C, AC-2): "außerhalb = Warnung" entfaellt ersatzlos. -->
 			<span><span class="cem-swatch mark"></span> im Bereich = <strong class="cem-good">markiert</strong></span>
-			<span><span class="cem-swatch warn"></span> außerhalb = <strong class="cem-warn">Warnung</strong></span>
 		</div>
 
 		{#if !validation.valid}
@@ -427,10 +431,10 @@
 	.cem-lead { font-size: 13px; color: var(--g-ink-2); line-height: 1.5; margin-bottom: 14px; }
 	.cem-legend { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; margin-bottom: 14px; background: var(--g-card-alt); border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-3, 10px); font-size: 12.5px; color: var(--g-ink-2); }
 	.cem-swatch { width: 22px; height: 8px; border-radius: 4px; display: inline-block; vertical-align: middle; margin-right: 6px; }
+	/* Issue #1425 (Scheibe C): .cem-swatch.warn und .cem-warn sind mit der
+	   Warn-Zeile der Legende entfallen (kein Verwender mehr). */
 	.cem-swatch.mark { background: var(--g-good); opacity: 0.85; }
-	.cem-swatch.warn { background: rgba(192, 138, 26, 0.28); }
 	.cem-good { color: var(--g-good); }
-	.cem-warn { color: #8a6210; }
 	.cem-error { color: #8a6210; background: rgba(192, 138, 26, 0.12); border: 1px solid rgba(192, 138, 26, 0.35); border-radius: var(--g-r-2, 6px); padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
 	.cem-card { background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3, 10px); padding: 14px 14px 12px; margin-bottom: 10px; }
 	.cem-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }

@@ -234,6 +234,21 @@ export function supportsMark(metric: string, context: 'route' | 'vergleich'): bo
 	return !TRIP_SUM_METRICS_WITHOUT_MARK.has(metric);
 }
 
+/**
+ * Issue #1425 (S2 Teil 2, Scheibe C, AC-3): Zaehler unter der Tabelle. Gezaehlt
+ * wird nur, was der Nutzer auch sieht und was wirkt — auf den Trip-Tages-Summen
+ * ist der Markieren-Schalter seit Scheibe A ausgeblendet. Eine dort frueher
+ * gespeicherte Marke bleibt erhalten (Read-Modify-Write, #102), taucht aber
+ * nicht mehr in der Zahl auf. EINE geteilte Entscheidung fuer Desktop + Mobil
+ * (Teilungs-Invariante CLAUDE.md) — dieselbe Quelle wie die Schalter-Sichtbarkeit.
+ */
+export function countEffectiveMarks(
+	rows: ReadonlyArray<Pick<CorridorRowState, 'metric' | 'mark'>>,
+	context: 'route' | 'vergleich'
+): number {
+	return rows.filter((r) => r.mark && supportsMark(r.metric, context)).length;
+}
+
 export function removeRow(rows: CorridorRowState[], metric: string): CorridorRowState[] {
 	return rows.filter((r) => r.metric !== metric);
 }
