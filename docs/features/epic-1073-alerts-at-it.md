@@ -170,6 +170,25 @@ ergänzt den italienischen Zivilschutz (Dipartimento della Protezione Civile, DP
   `src/services/official_alerts/data/dpc_zones.json` eingecheckt (Muster
   `massif_polygons.json`), Punkt-in-Fläche über das vorhandene `geo_ray_cast`. **Keine
   neue Fremdbibliothek.**
+- **Zonen-Drift (#1434, S1 live):** Die Geometrie ist statisch, die Warnstufen sind
+  tagesaktuell — schneidet der DPC seine Zonen neu (Venetien Januar→Juli 2026: 8→25
+  Zonen), driften beide auseinander. Zwei Richtungen, beide werden jetzt als eigene
+  Ereigniszeile in `data/diagnostics/warn_service_calls.jsonl` vermerkt
+  (`zone_code`/`has_warning`/`drift`, bewusst **ohne** `ok`-Feld, damit die bestehende
+  Go-Aggregation sie überspringt):
+  - `bulletin_only` — das Bulletin nennt eine der Geometrie unbekannte Zone. Betrifft
+    keinen Ort, ist reines Frühwarnsignal; getrennt danach, ob die verworfene Zeile eine
+    echte Warnstufe trug.
+  - `geometry_only` — die Geometrie ordnet einen Ort einer Zone zu, die das Bulletin
+    nicht mehr führt. **Nutzerwirksam:** statt stillem „keine Warnung" wird der Abruf
+    über `warn_egress.mark_fetch_incomplete()` als unvollständig markiert, wodurch der
+    bestehende Hinweis „amtliche Warnungen nicht abrufbar" (#1348) erscheint. Belegt:
+    das echte Bulletin führt stets alle 187 Zonen, ein fehlender Eintrag ist also eine
+    Anomalie und kein normales Schweigen.
+  - Behebung im Ernstfall bleibt ein **manueller** Wartungsschritt: `dpc_zones.json` neu
+    erzeugen und einchecken. Laufzeit-Geometrie ist bewusst ausgeschlossen.
+  - Spec: `docs/specs/modules/fix_1434_dpc_zonen_drift.md`. Die betriebliche Anzeige im
+    Status-Endpunkt und die Alarmschwelle in `check-gregor20.sh` sind Scheibe S2.
 - **Grenzen:** DPC ersetzt MeteoAlarm nicht — Hitze, Wind, Schnee und Waldbrand kommen im
   Zivilschutz-Bulletin gar nicht vor. DPC deckt nur „heute + morgen", 1×/Tag
   aktualisiert. Fällt MeteoAlarm aus, bleibt der Hinweis „amtliche Warnungen nicht

@@ -254,6 +254,34 @@ def log_warn_service_call(
         pass  # Observability darf den Abruf NIE beeinträchtigen
 
 
+def log_zone_drift(service: str, zone_code: str, has_warning: bool, drift: str) -> None:
+    """Additive Ereigniszeile fuer einen Zonen-Drift zwischen Bulletin und
+    eingecheckter Geometrie (Issue #1434) -- bewusst NEBEN
+    ``log_warn_service_call()`` und nicht als Erweiterung davon, weil beide
+    Zeilenarten unterschiedlich oft entstehen (je echtem Abruf vs. je
+    betroffenem Zonencode/Ort).
+
+    Traegt BEWUSST KEIN ``ok``-Feld: die bestehende Go-Aggregation
+    (``entry.Ok == nil -> continue``) ueberspringt diese Zeilen dadurch
+    automatisch und meldet keinen falschen Ausfall (Spec fix_1434, Implementation
+    Details Punkt 3). Jeder Fehler beim Schreiben wird geschluckt -- Beobachtung
+    darf den Abruf nie beeintraechtigen (analog ``log_warn_service_call``)."""
+    try:
+        path = WARN_CALLS_PATH
+        path.parent.mkdir(parents=True, exist_ok=True)
+        line = json.dumps({
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "service": service,
+            "zone_code": zone_code,
+            "has_warning": bool(has_warning),
+            "drift": drift,
+        })
+        with path.open("a") as fh:
+            fh.write(line + "\n")
+    except Exception:
+        pass  # Beobachtung darf den Abruf NIE beeintraechtigen
+
+
 def cached_fetch(
     *,
     cache: dict,

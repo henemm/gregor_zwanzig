@@ -115,6 +115,18 @@ def _records_by_zone(records: list[dict]) -> dict[str, dict]:
         code = row.get("Zona_all", "")
         if code not in _KNOWN_ZONE_CODES:
             logger.warning("dpc: unbekannter Zonencode %r im Bulletin (keine Geometrie)", code)
+            # Issue #1434 Pfad A: trennen, ob die verworfene Zeile eine ECHTE
+            # Warnstufe traegt (tatsaechlicher Verlust) oder nur NESSUNA
+            # ALLERTA (harmlos) -- additive Ereigniszeile im Diagnose-Journal.
+            # Laeuft innerhalb von warn_egress.cached_fetch(parse_fn=...) --
+            # bei einem Cache-Treffer wird dieser Parse NICHT erneut
+            # ausgefuehrt, es entsteht also eine Zeile je echtem Abruf, nicht
+            # je Ort (gewollt, s. Spec Implementation Details Punkt 2).
+            has_warning = any(
+                _level_from_text(row.get(field, "")) is not None
+                for field in ("Temporali", "Idrogeo", "Idraulico")
+            )
+            warn_egress.log_zone_drift("dpc", code, has_warning, "bulletin_only")
             continue
         by_zone[code] = row
     return by_zone
@@ -226,5 +238,20 @@ class DpcSource:
             return []
         row = day_records.get(zone_code)
         if row is None:
+            # Issue #1434 Pfad B: die eingecheckte Geometrie kennt die Zone,
+            # das tagesaktuelle Bulletin fuehrt sie aber nicht mehr (Zonen-
+            # Neuschnitt-Verdacht) -- das ist KEIN "keine Warnung", sondern
+            # "fuer diesen Ort nicht abrufbar". Markiert den Abruf ueber den
+            # bereits vorhandenen Haken als unvollstaendig; die Wirkung
+            # (unavailable=True) entsteht in
+            # base.py::get_official_alerts_with_status() ueber den
+            # observe_fetch_failure()-Kontext -- kein neuer Mechanismus, kein
+            # Raise (ADR-0018 Fail-soft). has_warning=True: ob die fehlende
+            # Zeile eine Warnstufe getragen haette, ist unbekannt -- ein
+            # fehlender Bulletin-Eintrag ist nachweislich eine Anomalie
+            # (Spec Messung 2026-07-31), daher bewusst konservativ als
+            # relevant markiert statt als Rauschen kleingerechnet.
+            warn_egress.mark_fetch_incomplete()
+            warn_egress.log_zone_drift("dpc", zone_code, True, "geometry_only")
             return []
         return _alerts_for_zone(row)
