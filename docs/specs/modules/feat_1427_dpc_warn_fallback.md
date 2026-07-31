@@ -337,6 +337,9 @@ Aufzeichnung mehr.
 
 ## Architektur-Entscheidung (ADR)
 
+- **ADR-Nr.:** keine — kein neues ADR nötig (Begründung unten); einzuhalten
+  bleiben ADR-0016, ADR-0018, ADR-0034.
+
 **Kein neues ADR nötig.** DPC als zusätzliche additive Quelle ist genau das
 Modell, das **ADR-0016** bereits für amtliche Warnungen festlegt: jede
 registrierte, abdeckende Quelle wird abgefragt, Konkurrenz wird erst
