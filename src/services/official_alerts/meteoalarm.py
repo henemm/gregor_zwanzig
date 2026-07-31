@@ -469,9 +469,12 @@ def _index_cache_entries_for(country: str, page: int) -> list[dict]:
     return [v for k, v in _index_cache.items() if k.startswith(prefix) and k.endswith(suffix)]
 
 
-# awareness_type (führende Ganzzahl) -> App-hazard. 4 (fog), 7 (coastal-event),
-# 9 (avalanche), 11 (flood): keine App-Kategorie, bewusst NICHT gemappt ->
-# wird uebersprungen (analog unbekannter warntypid bei GeoSphere, kein Crash).
+# awareness_type (führende Ganzzahl) -> App-hazard. 11 (flood), 12 (flooding),
+# 13 (rain-flood) sind Ueberschwemmungs-Warnarten und werden auf "flood"
+# abgebildet (Issue #1427 S1; 12 war zuvor faelschlich "rain", 13 unabgebildet).
+# 4 (fog), 7 (coastal-event), 9 (avalanche, s. Issue #1430): keine App-
+# Kategorie, bewusst NICHT gemappt -> wird uebersprungen (analog unbekannter
+# warntypid bei GeoSphere, kein Crash).
 _TYPE_HAZARD_MAP: dict[int, str] = {
     1: "wind_gust",
     2: "snow",
@@ -480,7 +483,9 @@ _TYPE_HAZARD_MAP: dict[int, str] = {
     6: "extreme_cold",
     8: "wildfire_risk",
     10: "rain",
-    12: "rain",
+    11: "flood",
+    12: "flood",
+    13: "flood",
 }
 
 # Modul-Level-Caches: Index pro Land, geometry-/CAP-Inhalte pro URL.

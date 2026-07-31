@@ -1,0 +1,829 @@
+{
+  "alert": {
+    "identifier": "2.49.0.0.642.0.RO.2607301003.7960fc8e523e6de2",
+    "incidents": "Alert",
+    "info": [
+      {
+        "area": [
+          {
+            "areaDesc": "Alba",
+            "geocode": [
+              {
+                "value": "RO121",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Arad",
+            "geocode": [
+              {
+                "value": "RO421",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Argeș",
+            "geocode": [
+              {
+                "value": "RO311",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Bacău",
+            "geocode": [
+              {
+                "value": "RO211",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Bihor",
+            "geocode": [
+              {
+                "value": "RO111",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Bistrița-Năsăud",
+            "geocode": [
+              {
+                "value": "RO112",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Botoșani",
+            "geocode": [
+              {
+                "value": "RO212",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Brașov",
+            "geocode": [
+              {
+                "value": "RO122",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Brăila",
+            "geocode": [
+              {
+                "value": "RO221",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "București",
+            "geocode": [
+              {
+                "value": "RO321",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Buzău",
+            "geocode": [
+              {
+                "value": "RO222",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Caraș-Severin",
+            "geocode": [
+              {
+                "value": "RO422",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Călărași",
+            "geocode": [
+              {
+                "value": "RO312",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Cluj",
+            "geocode": [
+              {
+                "value": "RO113",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Constanța",
+            "geocode": [
+              {
+                "value": "RO223",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Covasna",
+            "geocode": [
+              {
+                "value": "RO123",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Dâmbovița",
+            "geocode": [
+              {
+                "value": "RO313",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Dolj",
+            "geocode": [
+              {
+                "value": "RO411",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Galați",
+            "geocode": [
+              {
+                "value": "RO224",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Giurgiu",
+            "geocode": [
+              {
+                "value": "RO314",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Gorj",
+            "geocode": [
+              {
+                "value": "RO412",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Harghita",
+            "geocode": [
+              {
+                "value": "RO124",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Hunedoara",
+            "geocode": [
+              {
+                "value": "RO423",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Ialomița",
+            "geocode": [
+              {
+                "value": "RO315",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Iași",
+            "geocode": [
+              {
+                "value": "RO213",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Ilfov",
+            "geocode": [
+              {
+                "value": "RO322",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Maramureș",
+            "geocode": [
+              {
+                "value": "RO114",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Mehedinți",
+            "geocode": [
+              {
+                "value": "RO413",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Mureș",
+            "geocode": [
+              {
+                "value": "RO125",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Neamț",
+            "geocode": [
+              {
+                "value": "RO214",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Olt",
+            "geocode": [
+              {
+                "value": "RO414",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Prahova",
+            "geocode": [
+              {
+                "value": "RO316",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Satu Mare",
+            "geocode": [
+              {
+                "value": "RO115",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Sălaj",
+            "geocode": [
+              {
+                "value": "RO116",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Sibiu",
+            "geocode": [
+              {
+                "value": "RO126",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Suceava",
+            "geocode": [
+              {
+                "value": "RO215",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Teleorman",
+            "geocode": [
+              {
+                "value": "RO317",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Timiș",
+            "geocode": [
+              {
+                "value": "RO424",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Tulcea",
+            "geocode": [
+              {
+                "value": "RO225",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Vaslui",
+            "geocode": [
+              {
+                "value": "RO216",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Vâlcea",
+            "geocode": [
+              {
+                "value": "RO415",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Vrancea",
+            "geocode": [
+              {
+                "value": "RO226",
+                "valueName": "NUTS3"
+              }
+            ]
+          }
+        ],
+        "category": [
+          "Met"
+        ],
+        "certainty": "Unknown",
+        "description": "N/A",
+        "effective": "2026-07-30T10:03:00+03:00",
+        "event": "awareness_type=13, awareness_level=1",
+        "expires": "2026-08-01T23:59:00+03:00",
+        "headline": "N/A",
+        "language": "ro-RO",
+        "onset": "2026-07-30T00:00:00+03:00",
+        "parameter": [
+          {
+            "value": "1; green; Minor",
+            "valueName": "awareness_level"
+          },
+          {
+            "value": "13; rain-flood",
+            "valueName": "awareness_type"
+          }
+        ],
+        "senderName": "Administrația Națională de Meteorologie",
+        "severity": "Minor",
+        "urgency": "Future",
+        "web": "http://www.meteoromania.ro"
+      },
+      {
+        "area": [
+          {
+            "areaDesc": "Alba",
+            "geocode": [
+              {
+                "value": "RO121",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Arad",
+            "geocode": [
+              {
+                "value": "RO421",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Argeș",
+            "geocode": [
+              {
+                "value": "RO311",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Bacău",
+            "geocode": [
+              {
+                "value": "RO211",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Bihor",
+            "geocode": [
+              {
+                "value": "RO111",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Bistrița-Năsăud",
+            "geocode": [
+              {
+                "value": "RO112",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Botoșani",
+            "geocode": [
+              {
+                "value": "RO212",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Brașov",
+            "geocode": [
+              {
+                "value": "RO122",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Brăila",
+            "geocode": [
+              {
+                "value": "RO221",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "București",
+            "geocode": [
+              {
+                "value": "RO321",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Buzău",
+            "geocode": [
+              {
+                "value": "RO222",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Caraș-Severin",
+            "geocode": [
+              {
+                "value": "RO422",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Călărași",
+            "geocode": [
+              {
+                "value": "RO312",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Cluj",
+            "geocode": [
+              {
+                "value": "RO113",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Constanța",
+            "geocode": [
+              {
+                "value": "RO223",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Covasna",
+            "geocode": [
+              {
+                "value": "RO123",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Dâmbovița",
+            "geocode": [
+              {
+                "value": "RO313",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Dolj",
+            "geocode": [
+              {
+                "value": "RO411",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Galați",
+            "geocode": [
+              {
+                "value": "RO224",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Giurgiu",
+            "geocode": [
+              {
+                "value": "RO314",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Gorj",
+            "geocode": [
+              {
+                "value": "RO412",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Harghita",
+            "geocode": [
+              {
+                "value": "RO124",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Hunedoara",
+            "geocode": [
+              {
+                "value": "RO423",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Ialomița",
+            "geocode": [
+              {
+                "value": "RO315",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Iași",
+            "geocode": [
+              {
+                "value": "RO213",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Ilfov",
+            "geocode": [
+              {
+                "value": "RO322",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Maramureș",
+            "geocode": [
+              {
+                "value": "RO114",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Mehedinți",
+            "geocode": [
+              {
+                "value": "RO413",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Mureș",
+            "geocode": [
+              {
+                "value": "RO125",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Neamț",
+            "geocode": [
+              {
+                "value": "RO214",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Olt",
+            "geocode": [
+              {
+                "value": "RO414",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Prahova",
+            "geocode": [
+              {
+                "value": "RO316",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Satu Mare",
+            "geocode": [
+              {
+                "value": "RO115",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Sălaj",
+            "geocode": [
+              {
+                "value": "RO116",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Sibiu",
+            "geocode": [
+              {
+                "value": "RO126",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Suceava",
+            "geocode": [
+              {
+                "value": "RO215",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Teleorman",
+            "geocode": [
+              {
+                "value": "RO317",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Timiș",
+            "geocode": [
+              {
+                "value": "RO424",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Tulcea",
+            "geocode": [
+              {
+                "value": "RO225",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Vaslui",
+            "geocode": [
+              {
+                "value": "RO216",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Vâlcea",
+            "geocode": [
+              {
+                "value": "RO415",
+                "valueName": "NUTS3"
+              }
+            ]
+          },
+          {
+            "areaDesc": "Vrancea",
+            "geocode": [
+              {
+                "value": "RO226",
+                "valueName": "NUTS3"
+              }
+            ]
+          }
+        ],
+        "category": [
+          "Met"
+        ],
+        "certainty": "Unknown",
+        "description": "N/A",
+        "effective": "2026-07-30T10:03:00+03:00",
+        "event": "awareness_type=13, awareness_level=1",
+        "expires": "2026-08-01T23:59:00+03:00",
+        "headline": "N/A",
+        "language": "en-GB",
+        "onset": "2026-07-30T00:00:00+03:00",
+        "parameter": [
+          {
+            "value": "1; green; Minor",
+            "valueName": "awareness_level"
+          },
+          {
+            "value": "13; rain-flood",
+            "valueName": "awareness_type"
+          }
+        ],
+        "senderName": "National Meteorological Administration",
+        "severity": "Minor",
+        "urgency": "Future",
+        "web": "http://www.meteoromania.ro"
+      }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "http://www.meteoromania.ro",
+    "sent": "2026-07-30T10:04:16+03:00",
+    "source": "ANM",
+    "status": "Actual"
+  },
+  "uuid": "462ab828-5d3b-4057-8651-07d963e9db10"
+}

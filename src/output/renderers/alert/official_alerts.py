@@ -70,6 +70,9 @@ _HAZARD_LABELS: dict[str, str] = {
     # Compare-Aggregat-Banner) -- die vier Anzeige-Stellen waren nur Symptome
     # dieser einen fehlenden Zeile.
     "wildfire_risk": "Waldbrand-Gefahr",
+    # Issue #1427 S1: MeteoAlarm-Typen 11/12/13 (flood/flooding/rain-flood)
+    # bzw. DPC Idrogeo/Idraulico -- Hochwasser- und Erdrutschwarnungen.
+    "flood": "Hochwasser/Erdrutsch",
 }
 
 # hazard -> (Anzeige, SMS-Kuerzel). Issue #1318 Abschnitt 1b: die Anzeige-Labels

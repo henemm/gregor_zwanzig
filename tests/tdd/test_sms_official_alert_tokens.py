@@ -47,11 +47,13 @@ WARN_TO = datetime(_YEAR, _MONTH, _DAY, 18, 0, tzinfo=UTC)
 ALLDAY_FROM = datetime(_YEAR, _MONTH, _DAY, 0, 0, tzinfo=UTC)
 ALLDAY_TO = datetime(_YEAR, _MONTH, _DAY, 23, 59, tzinfo=UTC)
 
-# Die 9 Gefahrenarten mit ihrem Kuerzel laut Spec Abschnitt 1 (Reihenfolge =
+# Die 10 Gefahrenarten mit ihrem Kuerzel laut Spec Abschnitt 1 (Reihenfolge =
 # Katalog-Reihenfolge). Bewusst hier NICHT aus `hazard_symbols.py` importiert:
 # die Tabelle ist die Zusage der Spec, gegen die der Katalog geprueft wird.
 SPEC_SYMBOLS: list[tuple[str, str]] = [
     ("thunderstorm", "TH"),
+    # Issue #1427 S1: "flood" (Hochwasser/Erdrutsch), Kuerzel "FL".
+    ("flood", "FL"),
     ("rain", "HR"),
     ("wind_gust", "W"),
     ("snow", "SN"),

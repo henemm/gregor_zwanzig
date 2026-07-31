@@ -12,9 +12,25 @@ from __future__ import annotations
 
 from pathlib import Path
 
-_SPECS = Path(__file__).resolve().parents[2] / "docs" / "specs" / "modules"
-_ISSUE_1216 = _SPECS / "issue_1216_official_alert_template.md"
-_FIX_1249 = _SPECS / "fix_1249_sms_telegram_scope.md"
+_DOCS = Path(__file__).resolve().parents[2] / "docs" / "specs"
+
+
+def _spec(name: str) -> Path:
+    """Loest eine Alt-Spec auf, egal ob sie noch unter modules/ liegt oder
+    bereits nach _archive/modules/ verschoben wurde.
+
+    Beide hier geprueften Specs wurden mit Commit a5fcfcc0 (#1340,
+    "Doku-Ballast entfernt") archiviert; der feste modules/-Pfad liess diesen
+    Doku-Konformitaetstest seitdem mit FileNotFoundError scheitern, ohne dass
+    sich an der geprueften Aussage etwas geaendert hatte. Die Aussage bleibt
+    pruefbar — nur der Ablageort hat gewechselt.
+    """
+    live = _DOCS / "modules" / name
+    return live if live.exists() else _DOCS / "_archive" / "modules" / name
+
+
+_ISSUE_1216 = _spec("issue_1216_official_alert_template.md")
+_FIX_1249 = _spec("fix_1249_sms_telegram_scope.md")
 
 _NEW_SYMBOLS = ["HT", "TH", "CD", "W", "HR", "SN", "IC", "CL", "FR"]
 

@@ -58,8 +58,8 @@ function backendHazardCatalog(): Record<string, string> {
 		catalog[m[1]] = m[2];
 	}
 	assert.equal(
-		Object.keys(catalog).length, 9,
-		`Backend-Katalog muss 9 Gefahrenarten führen, gelesen: ${JSON.stringify(catalog)}`
+		Object.keys(catalog).length, 10,
+		`Backend-Katalog muss 10 Gefahrenarten führen, gelesen: ${JSON.stringify(catalog)}`
 	);
 	return catalog;
 }

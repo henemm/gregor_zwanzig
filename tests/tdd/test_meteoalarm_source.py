@@ -2328,3 +2328,86 @@ def test_covers_bekannte_grenze_bayern_slowenien_schweiz_ungarn_bleibt_abgedeckt
             f"{ort}: bekannte, akzeptierte Grenze -- INCA-Bbox ist ein "
             f"Grobgatter, keine Staatsgrenze (#1397, nicht behoben)"
         )
+
+
+# ---------------------------------------------------------------------------
+# Issue #1427 S1: awareness_type 12 (flooding) und 13 (rain-flood) muessen
+# auf die neue Gefahrenart "flood" abbilden (heute: 12 faelschlich "rain",
+# 13 unabgebildet -> None). Fixtures sind ECHTE, unveraenderte Aufzeichnungen
+# vom oeffentlichen Feed https://feeds.meteoalarm.org/api/v1/warnings/
+# feeds-romania (2026-07-31), s. tests/fixtures/meteoalarm/
+# README_flood_type12_13.md. Beide tragen awareness_level=1 (gruen) -- der
+# volle _extract_alerts_from_cap()-Pfad filtert level<2 vor jeder
+# Nutzeranzeige, ein Nachweis DURCH den Level-Filter ist mit diesen Fixtures
+# strukturell nicht moeglich (Spec Test Plan, "Verbleibende Einschraenkung").
+# Der Nachweis sitzt deshalb an der Abbildungsstelle selbst: die echten
+# Modul-Funktionen _find_parameter()/_leading_int() lesen den rohen
+# awareness_type-Wert aus der aufgezeichneten CAP-XML, _TYPE_HAZARD_MAP
+# (die echte Zuordnungstabelle des Moduls) bildet ihn ab.
+# ---------------------------------------------------------------------------
+
+def test_awareness_type_12_flooding_mappt_auf_flood_nicht_rain():
+    """S1/AC-1: GIVEN die echte, aufgezeichnete MeteoAlarm-Warnung vom
+    awareness_type 12 ('flooding', RO/Alba, 2026-07-31), WHEN die echte
+    Gefahren-Zuordnung des Moduls (_TYPE_HAZARD_MAP ueber _leading_int()) auf
+    den aus der CAP-XML gelesenen awareness_type-Rohwert angewendet wird,
+    THEN ergibt sich hazard == 'flood' -- heute (RED) liefert die Abbildung
+    faelschlich 'rain'."""
+    import xml.etree.ElementTree as ET
+
+    from services.official_alerts.meteoalarm import (
+        _TYPE_HAZARD_MAP,
+        _find_parameter,
+        _leading_int,
+        _local_tag,
+    )
+
+    cap_text = _read_fixture("cap_flooding_type12_ro.xml")
+    root = ET.fromstring(cap_text)
+    info = next(child for child in root if _local_tag(child) == "info")
+    type_raw = _find_parameter(info, "awareness_type")
+
+    assert type_raw == "12; flooding", (
+        f"Fixture muss den echten awareness_type-Rohwert '12; flooding' "
+        f"tragen, gelesen: {type_raw!r}"
+    )
+
+    hazard = _TYPE_HAZARD_MAP.get(_leading_int(type_raw))
+
+    assert hazard == "flood", (
+        f"awareness_type 12 (flooding) muss auf hazard 'flood' abbilden "
+        f"(bisherige Fehlabbildung: 'rain'), erhalten: {hazard!r}"
+    )
+
+
+def test_awareness_type_13_rainflood_mappt_auf_flood_nicht_unabgebildet():
+    """S1/AC-1: GIVEN die echte, aufgezeichnete MeteoAlarm-Warnung vom
+    awareness_type 13 ('rain-flood', RO/Alba, 2026-07-31), WHEN dieselbe
+    echte Gefahren-Zuordnung des Moduls angewendet wird, THEN ergibt sich
+    hazard == 'flood' -- heute (RED) ist Typ 13 in _TYPE_HAZARD_MAP gar nicht
+    enthalten (Ergebnis None, die Warnung faellt komplett weg)."""
+    import xml.etree.ElementTree as ET
+
+    from services.official_alerts.meteoalarm import (
+        _TYPE_HAZARD_MAP,
+        _find_parameter,
+        _leading_int,
+        _local_tag,
+    )
+
+    cap_text = _read_fixture("cap_rainflood_type13_ro.xml")
+    root = ET.fromstring(cap_text)
+    info = next(child for child in root if _local_tag(child) == "info")
+    type_raw = _find_parameter(info, "awareness_type")
+
+    assert type_raw == "13; rain-flood", (
+        f"Fixture muss den echten awareness_type-Rohwert '13; rain-flood' "
+        f"tragen, gelesen: {type_raw!r}"
+    )
+
+    hazard = _TYPE_HAZARD_MAP.get(_leading_int(type_raw))
+
+    assert hazard == "flood", (
+        f"awareness_type 13 (rain-flood) muss auf hazard 'flood' abbilden "
+        f"(heute unabgebildet, faellt ganz weg), erhalten: {hazard!r}"
+    )

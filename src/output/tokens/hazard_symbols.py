@@ -14,6 +14,7 @@ from __future__ import annotations
 # Sortier-Reihenfolge bei gleicher Warnstufe (Spec Abschnitt 2).
 HAZARD_SMS_SYMBOLS: dict[str, str] = {
     "thunderstorm": "TH",
+    "flood": "FL",
     "rain": "HR",
     "wind_gust": "W",
     "snow": "SN",
