@@ -46,17 +46,39 @@ class OnsetEvent:
 
 
 @dataclass(frozen=True)
+class CorridorEvent:
+    """Ein Schwellen-Treffer (Issue #1444 S1) -- eigener Render-Vertrag
+    (ADR-0013): KEIN `WeatherChange`-Missbrauch mit erfundenem
+    `old_value=0.0`. Kennt bewusst KEIN "vorher" -- nur den Ist-Wert gegen
+    die vom Nutzer gesetzte Grenze."""
+    metric_id: str           # catalog metric_id (NICHT summary_field)
+    value: float              # Ist-Wert
+    bound: float               # die TATSAECHLICH gerissene Grenze
+    direction: str            # "above" | "below"
+    occurred_at: str | None   # "HH:MM"
+    km_from: float
+    km_to: float
+    location_label: str | None = None
+
+
+@dataclass(frozen=True)
 class AlertMessage:
     """Kanonische Alert-Nachricht über alle vier Kanäle."""
     trip_short: str
     stand_at: str                              # "HH:MM"
-    events: tuple[AlertEvent | OnsetEvent, ...]  # ≥1
+    events: tuple[AlertEvent | OnsetEvent, ...]  # ≥1 bei Deviation ODER Onset;
+    # leer, wenn ausschliesslich Korridor-Treffer vorliegen (s.u.)
     source: str | None = None                  # Radar (#919): source != None → Onset-Zweig; Deviation → None
     cooldown_display: str | None = None        # Radar (#919): Pflichttext Cooldown-Hinweis
     # Issue #1169: additiv, optional. Gesetzt nur vom Compare-Punkt-Pfad
     # (to_point_alert_message) — zeigt Ortsname statt km-Spanne. Trip-Pfad
     # (to_alert_message) setzt dieses Feld NIE (Regressions-Invariante, AC-7).
     location_label: str | None = None
+    # Issue #1444 S1: additiv, optional. Schwellen-Treffer desselben Laufs --
+    # werden zusaetzlich zu (oder anstelle von) `events` in dieselbe Nachricht
+    # gebuendelt (Muster #1088). Bestehende Aufrufer setzen dieses Feld nie
+    # (Default leer, Regressions-Invariante).
+    corridor_events: tuple[CorridorEvent, ...] = ()
 
 
 def direction(e: AlertEvent) -> str:

@@ -449,12 +449,14 @@ class NotificationService:
         official_notices: Optional[list] = None,
         mail_sink: Optional[object] = None,
         telegram_style: str = "rich",
+        corridor_hits: Optional[list] = None,
     ) -> NotificationResult:
         """Wetter-Änderungs-Alert: rendern und über konfigurierte Kanäle versenden.
 
         Issue #1023: Der AlertService kennt keine Renderer-/Transport-Details mehr.
         Issue #1088: optionale amtliche Warnungen werden in dieselbe Nachricht
-        gebündelt (kein zweiter Versand).
+        gebündelt (kein zweiter Versand). Issue #1444 S1: `corridor_hits`
+        (Schwellen-Treffer) buendeln sich genauso in dieselbe Nachricht.
         """
         from utils.timezone import tz_for_coords
 
@@ -465,6 +467,7 @@ class NotificationService:
         stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
         alert_msg = to_alert_message(
             changes, weather, trip.name, tz=alert_tz, stand_at=stand_at,
+            corridor_hits=corridor_hits,
         )
         return self._dispatch_alert_message(
             alert_msg=alert_msg,

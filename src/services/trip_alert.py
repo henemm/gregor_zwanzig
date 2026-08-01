@@ -22,9 +22,13 @@ from services import alert_daily_limit
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService, RadarAlertRequest
 from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
+from services.corridor_threshold import CorridorHit, evaluate_corridor_thresholds
 from services.throttle_store import ThrottleStore
 from services.user_tier import sms_allowed
-from services.weather_change_detection import WeatherChangeDetectionService
+from services.weather_change_detection import (
+    _ALERT_METRIC_TO_SUMMARY_FIELD,
+    WeatherChangeDetectionService,
+)
 from utils.timezone import tz_for_coords
 
 if TYPE_CHECKING:
@@ -38,6 +42,15 @@ logger = logging.getLogger("trip_alert")
 # 90s Reserve gegenueber diesen 120s, analog FETCH_DEADLINE_SECONDS in
 # providers/meteofrance.py und providers/dwd.py.
 ALERT_RUN_DEADLINE_SECONDS = 90.0
+
+# Issue #1444 S1: eigener Schluesselraum im Melde-Gedaechtnis fuer
+# Schwellen-Treffer -- der bestehende Delta-Zweig (`<metrik>:<etappe>`)
+# bleibt unberuehrt.
+_CORRIDOR_STATE_PREFIX = "corridor:"
+# Ordinale Groessen (Gewitter): "verschaerft" = naechsthoehere Stufe
+# erreicht. Stetige Groessen (Regen, Boeen, Temperatur) nutzen stattdessen
+# den Katalog-Aenderungsschwellwert (siehe _evaluate_corridors()).
+_ORDINAL_CORRIDOR_METRICS = frozenset({"thunder_level"})
 
 
 @dataclass(frozen=True)
@@ -167,9 +180,14 @@ class TripAlertService:
             trip.display_config
             and getattr(trip.display_config, "metric_alert_levels", None)
         )
+        # Issue #1444 S1: Wertebereiche mit notify=True sind eine eigene
+        # aktive Alarmquelle -- sonst faellt eine Tour, deren EINZIGE
+        # eingestellte Quelle Korridore sind, hier durch (AC-5).
+        has_corridors = any(c.notify for c in (trip.corridors or []))
         has_active_rules = (
             has_preset
             or has_metric_levels
+            or has_corridors
             or any(r.enabled for r in (trip.alert_rules or []))
         )
         if (
@@ -213,6 +231,21 @@ class TripAlertService:
         from services.alert_state import AlertStateService
         state_svc = AlertStateService(user_id=self._user_id)
         alert_state = state_svc.load(trip.id)
+
+        # Issue #1444 S1: Schwellen-Auswertung -- unabhaengig vom
+        # Aenderungs-Waechter (AC-1: feuert auch bei unveraenderter
+        # Vorhersage GEGENUEBER DEM SCHNAPPSCHUSS). Wertet aber gegen die
+        # FRISCHE Vorhersage (`fresh_weather`), NICHT gegen den potenziell
+        # Stunden alten Schnappschuss (`cached_weather`) -- sonst kippt der
+        # Zweck der Funktion in beide Richtungen: ein seit dem Briefing NEU
+        # aufgezogenes Gewitter bliebe stumm, ein bereits abgezogenes wuerde
+        # weiter Falschalarm ausloesen (Team-Lead-Befund, s. Tests
+        # `test_neu_aufgezogenes_gewitter_...`/`test_abgezogenes_gewitter_...`).
+        # Geheilte Eintraege werden hier SOFORT geraeumt (state_svc.save
+        # unten), unabhaengig davon, ob dieser Lauf ueberhaupt etwas versendet.
+        corridor_to_report = self._evaluate_corridors(trip, fresh_weather, alert_state)
+        state_svc.save(trip.id, alert_state)
+
         cached_points = TripSegmentWeatherAdapter.to_points(cached_weather)
         fresh_points = TripSegmentWeatherAdapter.to_points(fresh_weather)
         eval_config = AlertEvaluationConfig(
@@ -233,21 +266,25 @@ class TripAlertService:
             config=eval_config,
             alert_state=alert_state,
         )
-        if not eval_result.triggered:
+        to_report = list(eval_result.changes) if eval_result.triggered else []
+        if not to_report and not corridor_to_report:
             logger.debug(
-                f"Engine suppressed alert for trip {trip.id}: "
+                f"No changes/corridor hits for trip {trip.id}: "
                 f"{eval_result.suppressed_reason}"
             )
             return False
 
-        to_report = eval_result.changes
         logger.info(
-            f"Detected {len(to_report)} significant changes for trip {trip.id}"
+            f"Detected {len(to_report)} significant changes and "
+            f"{len(corridor_to_report)} corridor hits for trip {trip.id}"
         )
 
         # 5. Send alert; guard: only record throttle/log when at least one
         # configured channel was reachable (AC-1 symmetry with Telegram/Radar).
-        delivered = self._send_alert(trip, fresh_weather, to_report, official_notices=official_notices)
+        delivered = self._send_alert(
+            trip, fresh_weather, to_report,
+            corridor_hits=corridor_to_report, official_notices=official_notices,
+        )
         if not delivered:
             logger.warning(
                 f"Alert not deliverable on any effective channel for trip "
@@ -257,11 +294,19 @@ class TripAlertService:
 
         # 6. Issue #816 (B): Melde-Gedächtnis fortschreiben (kein Snapshot-Write
         # mehr — die Briefing-Referenz bleibt stabil bis zum nächsten Briefing).
+        # Issue #1444 S1: der Korridor-Zweig schreibt in denselben Zyklus,
+        # eigener Schluesselraum (`corridor:...`).
         now_iso = datetime.now(timezone.utc).isoformat()
         for change in to_report:
             key = f"{change.metric}:{change.segment_id}"
             alert_state[key] = {
                 "last_reported_value": float(change.new_value),
+                "reported_at": now_iso,
+            }
+        for hit in corridor_to_report:
+            key = f"{_CORRIDOR_STATE_PREFIX}{hit.metric}:{hit.segment_id}"
+            alert_state[key] = {
+                "last_reported_value": hit.value,
                 "reported_at": now_iso,
             }
         state_svc.save(trip.id, alert_state)
@@ -273,8 +318,11 @@ class TripAlertService:
 
         # 8. Issue #393: Alert-Log für Cockpit-Kachel "Alarme · letzte 24 h".
         # Nur nach erfolgreichem Versand; höchste Severity der gemeldeten Changes
-        # (bereits von der Engine bestimmt, Issue #1168).
-        self._append_alert_log(trip.id, len(to_report), eval_result.severity)
+        # (bereits von der Engine bestimmt, Issue #1168). Issue #1444 S1:
+        # Korridor-Treffer zaehlen mit.
+        self._append_alert_log(
+            trip.id, len(to_report) + len(corridor_to_report), eval_result.severity,
+        )
 
         return True
 
@@ -294,6 +342,77 @@ class TripAlertService:
             display_config=trip.display_config,
         )
         return DeviationAlertEngine._select_detector(config)
+
+    def _evaluate_corridors(
+        self,
+        trip: "Trip",
+        fresh_weather: List[SegmentWeatherData],
+        alert_state: dict,
+    ) -> List[CorridorHit]:
+        """Issue #1444 S1: Schwellen-Treffer der Tour ermitteln und gegen das
+        Melde-Gedaechtnis entprellen (eigener Schluesselraum
+        `corridor:<metrik>:<etappe>` -- der Delta-Zweig `<metrik>:<etappe>`
+        bleibt unberuehrt).
+
+        Wertet gegen `fresh_weather` (die FRISCH nachgeladene Vorhersage),
+        NICHT gegen den (potenziell Stunden alten) Schnappschuss des letzten
+        Briefings -- sonst dreht sich der Zweck der Funktion in beide
+        Richtungen um: ein neu aufgezogenes Gewitter bliebe stumm, ein
+        abgezogenes wuerde weiter Falschalarm ausloesen.
+
+        Geheilte Eintraege (Grenze wieder eingehalten) werden SOFORT aus
+        `alert_state` geraeumt (mutiert in place) -- unabhaengig davon, ob
+        dieser Lauf ueberhaupt etwas versendet, sonst verhindert ein
+        stehengebliebener Eintrag einen spaeteren erneuten Alarm (AC-4).
+        Eintraege fuer TATSAECHLICH gemeldete Treffer schreibt der Aufrufer
+        erst nach erfolgreichem Versand (Symmetrie zum Delta-Zweig).
+
+        "Verschaerft" (F4): ordinal (Gewitter) = naechsthoehere Stufe;
+        stetig = der Wert hat sich um mindestens den Katalog-
+        Aenderungsschwellwert (`get_change_detection_map()`) weiter von der
+        Grenze entfernt.
+        """
+        from app.metric_catalog import get_change_detection_map
+
+        corridors = [c for c in (trip.corridors or []) if c.notify]
+        if not corridors:
+            return []
+
+        now_utc = datetime.now(timezone.utc)
+        today = now_utc.date()
+        active = [
+            p for p in fresh_weather
+            if p.segment.end_time >= now_utc and p.segment.start_time.date() <= today
+        ]
+        hits = evaluate_corridor_thresholds(active, corridors)
+        hit_by_key = {
+            f"{_CORRIDOR_STATE_PREFIX}{h.metric}:{h.segment_id}": h for h in hits
+        }
+
+        candidate_keys = {
+            f"{_CORRIDOR_STATE_PREFIX}{c.metric}:{p.segment.segment_id}"
+            for c in corridors for p in active
+        }
+        for key in candidate_keys - hit_by_key.keys():
+            alert_state.pop(key, None)
+
+        change_map = get_change_detection_map()
+        to_report: List[CorridorHit] = []
+        for key, hit in hit_by_key.items():
+            prev = alert_state.get(key)
+            last = prev.get("last_reported_value") if prev else None
+            if last is None:
+                to_report.append(hit)
+                continue
+            if hit.metric in _ORDINAL_CORRIDOR_METRICS:
+                escalated = hit.value > last
+            else:
+                field = _ALERT_METRIC_TO_SUMMARY_FIELD.get(hit.metric)
+                step = change_map.get(field, 0.0) if field else 0.0
+                escalated = (abs(hit.value - hit.bound) - abs(last - hit.bound)) >= step
+            if escalated:
+                to_report.append(hit)
+        return to_report
 
     def check_all_trips(self) -> AlertCheckRunResult:
         """
@@ -348,9 +467,14 @@ class TripAlertService:
                 trip.display_config
                 and getattr(trip.display_config, "metric_alert_levels", None)
             )
+            # Issue #1444 S1: Wertebereiche mit notify=True sind eine eigene
+            # aktive Alarmquelle -- sonst faellt eine Tour, deren EINZIGE
+            # eingestellte Quelle Korridore sind, hier durch (AC-5).
+            has_corridors = any(c.notify for c in (trip.corridors or []))
             has_active_rules = (
                 has_preset
                 or has_metric_levels
+                or has_corridors
                 or any(r.enabled for r in (trip.alert_rules or []))
             )
             # Issue #1088 F001: der amtliche Alert-Trigger ist ein eigenständiger,
@@ -926,6 +1050,7 @@ class TripAlertService:
         weather: List[SegmentWeatherData],
         changes: List[WeatherChange],
         official_notices: Optional[list] = None,
+        corridor_hits: Optional[List[CorridorHit]] = None,
     ) -> bool:
         """
         Format and send alert via all configured effective channels.
@@ -933,7 +1058,8 @@ class TripAlertService:
         Issue #1023: Rendering und Versand werden an den NotificationService
         delegiert; TripAlertService kennt keine Renderer-/Transport-Details mehr.
         Issue #1088: liegen `official_notices` vor, werden sie in dieselbe
-        Nachricht gebündelt (kein zweiter Versand).
+        Nachricht gebündelt (kein zweiter Versand). Issue #1444 S1: dasselbe
+        gilt fuer `corridor_hits` (Schwellen-Treffer, Muster #1088).
 
         Returns:
             True if at least one configured channel was reachable (deliverable),
@@ -952,6 +1078,7 @@ class TripAlertService:
             official_notices=official_notices or [],
             mail_sink=self._mail_sink,
             telegram_style=_trip_telegram_style(trip),
+            corridor_hits=corridor_hits or [],
         )
 
         if result.sent:

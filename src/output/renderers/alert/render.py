@@ -17,8 +17,8 @@ from output.renderers.email.design_tokens import (
 from utils.ascii_fold import fold_ascii
 
 from .model import (
-    AlertEvent, AlertMessage, OnsetEvent, arrow, delta_pct, km_span, over_thr,
-    severity, side_label,
+    AlertEvent, AlertMessage, CorridorEvent, OnsetEvent, arrow, delta_pct,
+    km_span, over_thr, severity, side_label,
 )
 
 
@@ -107,6 +107,34 @@ def _km_str(msg: AlertMessage) -> str:
 
 def _km_str_onset(e: OnsetEvent) -> str:
     return f"km {int(round(e.km_from))}–{int(round(e.km_to))}"
+
+
+# --- Schwellen-Treffer (Issue #1444 S1, ADR-0013: eigener Render-Vertrag,
+# KEIN "vorher", KEIN "von A auf B") -----------------------------------------
+
+def _corridor_when(ce: CorridorEvent) -> str:
+    when = ce.location_label or f"km {int(round(ce.km_from))}–{int(round(ce.km_to))}"
+    if ce.occurred_at:
+        when += f" · {ce.occurred_at}"
+    return when
+
+
+def _corridor_value_str(ce: CorridorEvent) -> str:
+    return f"Grenze {_val(ce, ce.bound)} · jetzt {_val(ce, ce.value)}"
+
+
+def _corridor_line(ce: CorridorEvent) -> str:
+    """Eigener Wortlaut: NIE 'vorher', NIE 'von A auf B' -- nur Groesse,
+    Grenze, Ist-Wert, Etappe (Issue #1444 S1, ADR-0013)."""
+    return (
+        f"{_label(ce)}: deine Grenze {_val(ce, ce.bound)} ist gerissen — "
+        f"jetzt {_val(ce, ce.value)} ({_corridor_when(ce)})"
+    )
+
+
+def _sms_corridor_token(ce: CorridorEvent) -> str:
+    tok = f"!{_code(ce)}{int(round(ce.value))}"
+    return tok + f"@{ce.occurred_at[:2]}" if ce.occurred_at else tok
 
 
 def _render_subject_onset(msg: AlertMessage) -> str:
@@ -264,6 +292,13 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
 def render_subject(msg: AlertMessage) -> str:
     if msg.source is not None:
         return _render_subject_onset(msg)
+    if not msg.events and msg.corridor_events:
+        # Issue #1444 S1 (AC-1/2/5): reiner Schwellen-Alarm ohne Aenderungs-Anteil.
+        n = len(msg.corridor_events)
+        if n == 1:
+            ce = msg.corridor_events[0]
+            return f"[{msg.trip_short}] {_corridor_when(ce)} · Grenze gerissen: {_label(ce)}"
+        return f"[{msg.trip_short}] {n} Grenzen gerissen"
     evs = _sorted(msg)
     km = _km_str(msg)
     if len(evs) == 1:
@@ -383,12 +418,41 @@ def _with_origin(html: str, plain: str, mail_type: str, source: str) -> tuple[st
     return html, plain
 
 
+def _render_email_corridor_only(msg: AlertMessage) -> tuple[str, str]:
+    """Reiner Schwellen-Alarm ohne Aenderungs-Anteil (Issue #1444 S1,
+    AC-1/AC-2/AC-5) -- eigener Render-Pfad, kein `WeatherChange`-Missbrauch,
+    kein erfundenes "vorher" (ADR-0013)."""
+    n = len(msg.corridor_events)
+    h1 = (
+        f"{_label(msg.corridor_events[0])}: Grenze gerissen" if n == 1
+        else f"{n} Grenzen gerissen"
+    )
+    footer = f"Stand: heute {msg.stand_at}"
+    plain = "\n".join(
+        [h1, "", *[_corridor_line(ce) for ce in msg.corridor_events], "", footer]
+    )
+    rows = [
+        _datarow_html(_label(ce), _corridor_value_str(ce), G_DANGER, i == 0)
+        for i, ce in enumerate(msg.corridor_events)
+    ]
+    html = (
+        "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
+        f"<h1 style=\"margin:0 0 12px;font-family:{FONT_UI};color:{G_INK};\">{_esc(h1)}</h1>"
+        f"<div style=\"border-bottom:1px solid #d8d5c9;\">{''.join(rows)}</div>"
+        f"<p style=\"color:{G_INK_MUTED};margin-top:16px;font-family:{FONT_UI};\">{_esc(footer)}</p>"
+        "</body></html>"
+    )
+    return _with_origin(html, plain, "deviation-alert", "Open-Meteo")
+
+
 def render_email(msg: AlertMessage) -> tuple[str, str]:
     if msg.source is not None:
         html, plain = _render_email_onset(msg)
         # AC-5 (Befund 4a): reale Quelle des ersten (fuehrenden) Onset-Events.
         onset_source = getattr(msg.events[0], "source_label", None) or "Open-Meteo"
         return _with_origin(html, plain, "radar-alert", onset_source)
+    if not msg.events and msg.corridor_events:
+        return _render_email_corridor_only(msg)
     evs = _sorted(msg)
     h1 = _h1(msg)
     single = len(evs) == 1
@@ -445,7 +509,14 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         plain_data = [f"{k}: {v}" for k, v in data_rows]
 
     verdict_bg = G_DANGER if any_over else G_SUCCESS
-    plain = "\n".join([h1, "", verdict_text, ""] + plain_data + ["", footer])
+    # Issue #1444 S1 (AC-6): Schwellen-Treffer desselben Laufs in dieselbe
+    # Nachricht buendeln -- eigener Wortlaut, kein erfundenes "vorher".
+    corridor_lines = [_corridor_line(ce) for ce in msg.corridor_events]
+    plain_parts = [h1, "", verdict_text, ""] + plain_data
+    if corridor_lines:
+        plain_parts += ["", *corridor_lines]
+    plain_parts += ["", footer]
+    plain = "\n".join(plain_parts)
 
     rows = []
     if single:
@@ -457,6 +528,8 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         for e, (label, value) in zip(evs, data_rows):
             value_color = G_DANGER if over_thr(e) else G_INK_MUTED
             rows.append(_datarow_html(label, value, value_color, not rows))
+    for ce in msg.corridor_events:
+        rows.append(_datarow_html(_label(ce), _corridor_value_str(ce), G_DANGER, not rows))
 
     html = (
         "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
@@ -476,6 +549,11 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
 def render_telegram(msg: AlertMessage) -> str:
     if msg.source is not None:
         return _render_telegram_onset(msg)
+    if not msg.events and msg.corridor_events:
+        # Issue #1444 S1 (AC-1/2/5): reiner Schwellen-Alarm.
+        lines = [f"<b>{_esc(msg.trip_short)}</b>"]
+        lines += [_corridor_line(ce) for ce in msg.corridor_events]
+        return "\n".join(lines)
     evs = _sorted(msg)
     km = _km_str(msg)
     if len(evs) == 1:
@@ -499,6 +577,8 @@ def render_telegram(msg: AlertMessage) -> str:
             for e in evs
         )
         lines = [f"<b>{_esc(verdict)}</b>", metric_line]
+    # Issue #1444 S1 (AC-6): Schwellen-Treffer desselben Laufs anhaengen.
+    lines += [_corridor_line(ce) for ce in msg.corridor_events]
     return "\n".join(lines)
 
 
@@ -508,11 +588,26 @@ def _sms_token(e: AlertEvent) -> str:
     return tok + f"@{e.occurred_at[:2]}" if e.occurred_at else tok
 
 
+def _render_sms_corridor_only(msg: AlertMessage, limit: int) -> str:
+    """Reiner Schwellen-Alarm ohne Aenderungs-Anteil (Issue #1444 S1)."""
+    trip = _ascii(msg.trip_short)[:16].rstrip(" (-_")
+    if msg.location_label:
+        head = f"{trip} {_ascii(msg.location_label)[:24]}: "
+    else:
+        a = min(ce.km_from for ce in msg.corridor_events)
+        b = max(ce.km_to for ce in msg.corridor_events)
+        head = f"{trip} km{int(round(a))}-{int(round(b))}: "
+    body = head + " ".join(_sms_corridor_token(ce) for ce in msg.corridor_events)
+    return body if len(body) <= limit else body[:limit]
+
+
 def render_sms(msg: AlertMessage, limit: int = 140) -> str:
     """Längenbasierte Kürzung: Kopf immer; Tokens nach severity, solange das
     Ergebnis inkl. evtl. ' +k'-Suffix ≤limit bleibt; Rest → ' +k'."""
     if msg.source is not None:
         return _render_sms_onset(msg, limit)
+    if not msg.events and msg.corridor_events:
+        return _render_sms_corridor_only(msg, limit)
     evs = _sorted(msg)
     trip = _ascii(msg.trip_short)[:16].rstrip(" (-_")
     if msg.location_label:
@@ -520,7 +615,10 @@ def render_sms(msg: AlertMessage, limit: int = 140) -> str:
     else:
         a, b = km_span(msg.events)
         head = f"{trip} km{int(round(a))}-{int(round(b))}: "
-    tokens = [_sms_token(e) for e in evs]
+    # Issue #1444 S1 (AC-6): Schwellen-Treffer-Tokens desselben Laufs mit.
+    tokens = [_sms_token(e) for e in evs] + [
+        _sms_corridor_token(ce) for ce in msg.corridor_events
+    ]
 
     kept: list[str] = []
     for tok in tokens:

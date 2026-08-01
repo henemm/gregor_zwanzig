@@ -6,11 +6,14 @@ Disambiguierung mehrdeutiger Felder (`temp_min_c` → `temperature` *und*
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 
 from app.metric_catalog import _METRICS, get_cmp
 from utils.timezone import local_fmt, resolve_location_tz
-from .model import AlertEvent, AlertMessage, OnsetEvent
+from .model import AlertEvent, AlertMessage, CorridorEvent, OnsetEvent
+
+logger = logging.getLogger("alert_project")
 
 
 def _resolve_metric_id(field: str, direction: str) -> str:
@@ -59,12 +62,18 @@ def _fmt_occurred_at(value, tz) -> str | None:
     return local_fmt(value, tz)
 
 
-def to_alert_message(changes, segments, trip_name, *, tz, stand_at) -> AlertMessage:
+def to_alert_message(
+    changes, segments, trip_name, *, tz, stand_at, corridor_hits=None,
+) -> AlertMessage:
     """WeatherChange-Events → kanonische AlertMessage. source bei Deviation = None.
 
     Issue #1386: die Ereigniszeit („Wo & wann … · HH:MM", SMS `@HH`) wird HIER
     in ORTSZEIT formatiert — je Event aus den Koordinaten SEINER Etappe
     (`TripSegment.start_point`), `tz` ist Fallback ohne Koordinaten.
+
+    Issue #1444 S1: `corridor_hits` (optional, `list[CorridorHit]`) buendelt
+    Schwellen-Treffer desselben Laufs in DIESELBE Nachricht (Muster #1088) --
+    `changes` kann dabei leer sein (Korridor als einzige Alarmquelle, AC-5).
     """
     events: list[AlertEvent] = []
     for ch in changes:
@@ -83,9 +92,83 @@ def to_alert_message(changes, segments, trip_name, *, tz, stand_at) -> AlertMess
             ),
             km_from=km_from, km_to=km_to,
         ))
+    corridor_events = (
+        to_corridor_events(corridor_hits, segments, tz=tz) if corridor_hits else ()
+    )
     return AlertMessage(
         trip_short=trip_name, stand_at=stand_at, events=tuple(events), source=None,
+        corridor_events=corridor_events,
     )
+
+
+def _resolve_corridor_metric_id(alert_metric: str, direction: str) -> str:
+    """Korridor-Metrik (AlertMetric-Namensraum) → Katalog metric_id fuer
+    Beschriftung/Einheit/Kuerzel (Issue #1444 S1, F001-Fix).
+
+    Loest ueber das SUMMARY-FIELD auf (wie `_resolve_metric_id()` fuer den
+    Delta-Pfad) statt ueber `_ALERT_METRIC_TO_CATALOG_ID` -- das Feld ist die
+    praezisere Quelle: `SNOW_LINE` mappt dort auf ZWEI Katalog-IDs
+    (`snowfall_limit`/`freezing_level`, Issue #961 OR-Policy fuer die
+    Wetter-Tab-Aktivierung, BEIDE mit cmp='unter'), obwohl die
+    Korridor-Auswertung ausschliesslich `freezing_level_m` liest (Issue #959).
+    Ueber das Feld ist das unzweideutig EIN Treffer -- der alte Weg ueber die
+    AlertMetric-Enum-Mehrdeutigkeit warf hier `ValueError` (F001, GEFUNDEN
+    von der Adversary-Pruefung: stiller Total-Ausfall der Tour in JEDEM Lauf).
+
+    Bleibt ein Feld dennoch mehrdeutig (nur `temp_min_c` ->
+    temperature/temperature_cold), bevorzugt eine cmp-Uebereinstimmung die
+    Beschriftung -- NUR ein Label-Tie-Break, NIE eine Fehlerquelle: ohne
+    Treffer faellt die Funktion auf den ERSTEN Kandidaten zurueck statt zu
+    werfen. Die tatsaechliche Richtung der Meldung kommt beim Rendern aus
+    `CorridorHit.direction`, NICHT aus dieser Katalog-cmp (die beschreibt die
+    STANDARDRICHTUNG DER METRIK, nicht die Richtung EINES EINZELNEN Treffers).
+    """
+    from services.weather_change_detection import _ALERT_METRIC_TO_SUMMARY_FIELD
+
+    field = _ALERT_METRIC_TO_SUMMARY_FIELD.get(alert_metric)
+    if not field:
+        raise KeyError(f"Unbekannte Korridor-Metrik: {alert_metric!r}")
+    candidates = [m for m in _METRICS if field in m.summary_fields.values()]
+    if not candidates:
+        raise KeyError(f"Unbekanntes summary_field für Korridor-Projektion: {field!r}")
+    if len(candidates) == 1:
+        return candidates[0].id
+    want = "über" if direction == "above" else "unter"
+    for m in candidates:
+        if m.cmp == want:
+            return m.id
+    return candidates[0].id
+
+
+def to_corridor_events(hits, segments, *, tz) -> tuple[CorridorEvent, ...]:
+    """`CorridorHit`-Liste (`services.corridor_threshold`) → `CorridorEvent`-Tupel
+    (Issue #1444 S1). Eigener Render-Vertrag, kein `WeatherChange`-Umweg.
+
+    F001-Haertung: ein einzelner nicht projizierbarer Treffer darf die ganze
+    Nachricht nicht verschlucken (ADR-0018: ausweichen ja, kaschieren nein --
+    sichtbar protokolliert, aber der Rest der Nachricht inkl. eines
+    gleichzeitig vorliegenden Aenderungs-Alarms wird trotzdem zugestellt).
+    """
+    events: list[CorridorEvent] = []
+    for hit in hits:
+        try:
+            metric_id = _resolve_corridor_metric_id(hit.metric, hit.direction)
+            match = _find_segment(segments, hit.segment_id)
+            events.append(CorridorEvent(
+                metric_id=metric_id, value=hit.value, bound=hit.bound,
+                direction=hit.direction,
+                occurred_at=_fmt_occurred_at(
+                    hit.occurred_at, _tz_for_location(match.segment.start_point, tz)
+                ),
+                km_from=match.segment.start_point.distance_from_start_km,
+                km_to=match.segment.end_point.distance_from_start_km,
+            ))
+        except Exception as e:
+            logger.warning(
+                "Korridor-Treffer nicht projizierbar, uebersprungen: "
+                "metric=%r segment_id=%r: %s", hit.metric, hit.segment_id, e,
+            )
+    return tuple(events)
 
 
 def to_multi_point_alert_message(groups, *, tz, stand_at) -> AlertMessage:
