@@ -6,12 +6,22 @@
 	import ChannelDot from './ChannelDot.svelte';
 	import type { Trip } from '$lib/types';
 	import { fetchStageRisk, type StageRisk } from '$lib/utils/stageRisk';
+	// Feature #1435 Etappe E3a: Wetter-Metriken-Block. `metricsCatalog` kommt
+	// ausschließlich als Prop aus der Server-Naht (+page.server.ts) — kein
+	// eigener Fetch, kein $effect (AC-5, Fehlerklasse #1320).
+	import { resolveTripMetricsOverviewState } from '$lib/components/shared/trip-metrics/tripActiveMetricNames';
+	import type { MetricCatalog } from './metricsEditor.ts';
 
 	interface Props {
 		trip: Trip;
 		onJump?: (tab: string) => void;
+		metricsCatalog?: MetricCatalog | null;
 	}
-	let { trip, onJump }: Props = $props();
+	let { trip, onJump, metricsCatalog = null }: Props = $props();
+
+	const metricsState = $derived(
+		metricsCatalog ? resolveTripMetricsOverviewState(trip.display_config?.metrics, metricsCatalog) : null
+	);
 
 	let selectedStageId = $state<string | null>(trip.stages?.[0]?.id ?? null);
 
@@ -66,6 +76,36 @@
 
 	<!-- Right column -->
 	<div style="display: flex; flex-direction: column; gap: 20px;">
+		<!-- Feature #1435 Etappe E3a: Wetter-Metriken-Block — die inhaltlich
+		     wichtigste Einstellung einer Tour, deshalb erste Karte. Vier sich
+		     ausschließende Zweige in dieser Prüfreihenfolge: Katalog-Fehler ->
+		     Altbestand -> Leerauswahl -> Auswahl (AC-4). -->
+		<Card padding={18}>
+			<Eyebrow style="margin-bottom: 10px;">Wetter-Metriken</Eyebrow>
+			{#if !metricsCatalog}
+				<p data-testid="hub-metrics-catalog-error" class="hub-metrics-text">
+					Wetter-Metriken konnten nicht geladen werden.
+				</p>
+			{:else if metricsState?.kind === 'altbestand'}
+				<p data-testid="hub-metrics-altbestand" class="hub-metrics-text">
+					Noch nicht eingestellt — es gilt der Standardsatz.
+				</p>
+			{:else if metricsState?.kind === 'empty'}
+				<p data-testid="hub-metrics-empty" class="hub-metrics-text">
+					Keine Wettergrößen ausgewählt — das Briefing enthält keine Wettertabelle.
+				</p>
+			{:else}
+				<p data-testid="hub-metrics-selected" class="hub-metrics-text hub-metrics-names">
+					{metricsState?.names.join(', ')}{#if (metricsState?.unknownCount ?? 0) > 0}
+						<span class="hub-metrics-unknown">
+							· {metricsState?.unknownCount} {metricsState?.unknownCount === 1 ? 'Größe unbekannt' : 'Größen unbekannt'}
+						</span>
+					{/if}
+				</p>
+			{/if}
+			<Btn variant="ghost" size="sm" onclick={makeJumpHandler('weather')}>Wetter-Metriken bearbeiten →</Btn>
+		</Card>
+
 		<Card padding={18}>
 			<Eyebrow style="margin-bottom: 10px;">Briefings laufen</Eyebrow>
 			<ReportLine kind="morning" time="06:00" channels={['email', 'telegram']} active />
@@ -101,6 +141,22 @@
 	}
 	.hub-overview > :global(*) {
 		min-width: 0;
+	}
+	/* Feature #1435 Etappe E3a (AC-12, Fehlerklasse #1446): die Namensliste
+	   bricht um, statt am Handy abgeschnitten zu werden — bewusst KEIN
+	   viewport-abhaengiges display:none auf diesem Container. */
+	.hub-metrics-text {
+		font-size: 13px;
+		color: var(--g-ink-2);
+		margin: 0 0 12px;
+		word-break: break-word;
+		overflow-wrap: break-word;
+	}
+	.hub-metrics-names {
+		white-space: normal;
+	}
+	.hub-metrics-unknown {
+		color: var(--g-ink-3);
 	}
 	/* Mobile/Tablet: eine Spalte, kompakteres Padding — feste 380px-Spalte
 	   sprengt sonst den Viewport (Höhenprofil + Etappenliste unlesbar). */

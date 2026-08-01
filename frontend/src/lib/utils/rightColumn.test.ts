@@ -2,10 +2,11 @@
 //
 // Spec: docs/specs/modules/epic_135_step5_right_column.md
 //
-// Diese Tests scheitern absichtlich (RED-Phase):
-//   - `$lib/utils/rightColumn` existiert noch nicht
-//   - Erwartete Funktionen: getPresetLabel, getDefaultMetricsForProfile,
-//     getActiveMetrics, getReportSchedule (+ prettyLabel)
+// Feature #1435 Etappe E3a: `getDefaultMetricsForProfile`, `getActiveMetrics`
+// und `prettyLabel` wurden entfernt — ihr einziger Aufrufer war die seit
+// Issue #487 tote rechte Vorschau-Karte. `getReportSchedule`/`getActivePreset`/
+// `getPresetLabel` bleiben produktiv (TripHeader.svelte, BriefingPreviewCard.svelte,
+// TripEditView.svelte) und sind hier unveraendert.
 //
 // Ausfuehrung:
 //   cd frontend && node --experimental-strip-types --test \
@@ -16,15 +17,12 @@ import assert from 'node:assert/strict';
 
 import {
 	getPresetLabel,
-	getDefaultMetricsForProfile,
-	getActiveMetrics,
 	getActivePreset,
 	getReportSchedule,
-	prettyLabel,
 	type ReportSchedule
 } from './rightColumn.ts';
 
-import type { Aggregation, ReportConfig, Trip, WeatherConfigMetric } from '../types.ts';
+import type { Aggregation, ReportConfig, Trip } from '../types.ts';
 
 // =============================================================================
 // Helpers
@@ -84,103 +82,6 @@ test('getPresetLabel > AC-13f: profile = undefined → "Standard-Metriken"', () 
 test('getPresetLabel > Trip ohne aggregation → "Standard-Metriken"', () => {
 	const trip = tripWith({});
 	assert.equal(getPresetLabel(trip), 'Standard-Metriken');
-});
-
-// =============================================================================
-// getDefaultMetricsForProfile
-// =============================================================================
-
-// getDefaultMetricsForProfile
-
-test('getDefaultMetricsForProfile > "wintersport" enthält snow_new, snow_depth, thunder_level', () => {
-	const metrics = getDefaultMetricsForProfile('wintersport');
-	assert.ok(metrics.includes('snow_new'));
-	assert.ok(metrics.includes('snow_depth'));
-	assert.ok(metrics.includes('thunder_level'));
-});
-
-test('getDefaultMetricsForProfile > "wandern" enthält precip_sum + cloud_avg und keine snow_*-Metrik', () => {
-	const metrics = getDefaultMetricsForProfile('wandern');
-	assert.ok(metrics.includes('precip_sum'));
-	assert.ok(metrics.includes('cloud_avg'));
-	assert.equal(metrics.some((m) => m.startsWith('snow_')), false);
-});
-
-test('getDefaultMetricsForProfile > "allgemein" → genau ["temp_min","temp_max","wind_max","precip_sum"]', () => {
-	assert.deepEqual(getDefaultMetricsForProfile('allgemein'), [
-		'temp_min',
-		'temp_max',
-		'wind_max',
-		'precip_sum'
-	]);
-});
-
-test('getDefaultMetricsForProfile > unbekanntes Profile → []', () => {
-	assert.deepEqual(getDefaultMetricsForProfile('mountainbike'), []);
-});
-
-test('getDefaultMetricsForProfile > null → []', () => {
-	assert.deepEqual(getDefaultMetricsForProfile(null), []);
-});
-
-test('getDefaultMetricsForProfile > undefined → []', () => {
-	assert.deepEqual(getDefaultMetricsForProfile(undefined), []);
-});
-
-// =============================================================================
-// getActiveMetrics
-// =============================================================================
-
-// getActiveMetrics
-
-test('getActiveMetrics > AC-14a: display_config.metrics gesetzt → genau diese Werte', () => {
-	const trip = tripWith({
-		display_config: { metrics: ['temp_min', 'wind_max'] as unknown as WeatherConfigMetric[] }
-	});
-	assert.deepEqual(getActiveMetrics(trip), ['temp_min', 'wind_max']);
-});
-
-test('getActiveMetrics > AC-14b: kein weather_config.metrics, profile = "wandern" → Wandern-Default-Set', () => {
-	const trip = tripWith({
-		aggregation: { profile: 'wandern' }
-	});
-	assert.deepEqual(getActiveMetrics(trip), [
-		'temp_min',
-		'temp_max',
-		'wind_max',
-		'precip_sum',
-		'thunder_level',
-		'cloud_avg'
-	]);
-});
-
-test('getActiveMetrics > Trip ohne weather_config und ohne aggregation → []', () => {
-	const trip = tripWith({});
-	assert.deepEqual(getActiveMetrics(trip), []);
-});
-
-test('getActiveMetrics > display_config.metrics leer ([]) → leeres Array', () => {
-	const trip = tripWith({
-		display_config: { metrics: [] },
-		aggregation: { profile: 'wandern' }
-	});
-	assert.deepEqual(getActiveMetrics(trip), []);
-});
-
-test('getActiveMetrics > display_config.metrics ist kein Array → Fallback auf profile', () => {
-	const trip = tripWith({
-		display_config: { metrics: 'temp_min' } as unknown as import('../types.ts').DisplayConfig,
-		aggregation: { profile: 'allgemein' }
-	});
-	assert.deepEqual(getActiveMetrics(trip), ['temp_min', 'temp_max', 'wind_max', 'precip_sum']);
-});
-
-test('getActiveMetrics > display_config.metrics mit Non-String → Fallback auf Profile-Default', () => {
-	const trip = tripWith({
-		display_config: { metrics: ['temp_min', 42] } as unknown as import('../types.ts').DisplayConfig,
-		aggregation: { profile: 'allgemein' }
-	});
-	assert.deepEqual(getActiveMetrics(trip), ['temp_min', 'temp_max', 'wind_max', 'precip_sum']);
 });
 
 // =============================================================================
@@ -278,64 +179,10 @@ test('getPresetLabel > AC-13g: profile = "summer_trekking" → "Sommer-Trekking-
 	assert.equal(getPresetLabel(trip), 'Sommer-Trekking-Standard');
 });
 
-test('getDefaultMetricsForProfile > AC-19: "summer_trekking" → wandern-Basis + gust_max + uv_index', () => {
-	assert.deepEqual(getDefaultMetricsForProfile('summer_trekking'), [
-		'temp_min',
-		'temp_max',
-		'wind_max',
-		'gust_max',
-		'precip_sum',
-		'thunder_level',
-		'cloud_avg',
-		'uv_index'
-	]);
-});
-
-test('getActiveMetrics > AC-20: kein weather_config.metrics, profile = "summer_trekking" → Default-Set', () => {
-	const trip = tripWith({
-		aggregation: { profile: 'summer_trekking' }
-	});
-	assert.deepEqual(getActiveMetrics(trip), [
-		'temp_min',
-		'temp_max',
-		'wind_max',
-		'gust_max',
-		'precip_sum',
-		'thunder_level',
-		'cloud_avg',
-		'uv_index'
-	]);
-});
-
-test('prettyLabel > AC-21: "uv_index" → "UV-Index"', () => {
-	assert.equal(prettyLabel('uv_index'), 'UV-Index');
-});
-
-test('getActiveMetrics > WeatherConfigMetric-Objekte → nur enabled=true als string[]', () => {
-	const trip = tripWith({
-		display_config: {
-			metrics: [
-				{ metric_id: 'temp_min', enabled: true },
-				{ metric_id: 'wind_max', enabled: false },
-				{ metric_id: 'precip_sum', enabled: true },
-			] as unknown as WeatherConfigMetric[]
-		}
-	});
-	assert.deepEqual(getActiveMetrics(trip), ['temp_min', 'precip_sum']);
-});
-
 // =============================================================================
 // Issue #206 — preset_name in display_config
 // Spec: docs/specs/modules/issue_206_weather_config_preset_name.md
 // =============================================================================
-
-test('getActiveMetrics > #206 AC-7: display_config.metrics gesetzt → diese Metriken zurück', () => {
-	const trip = tripWith({
-		display_config: { metrics: ['temp_max', 'wind_max'] as unknown as WeatherConfigMetric[] },
-	});
-	const result = getActiveMetrics(trip);
-	assert.deepEqual(result, ['temp_max', 'wind_max']);
-});
 
 test('getPresetLabel > #206 AC-3: display_config.preset_name="wandern" → "Wandern" (nicht "Wandern-Standard")', () => {
 	const trip = tripWith({

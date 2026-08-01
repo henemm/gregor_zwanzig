@@ -19,6 +19,7 @@
 		type ReportType
 	} from '$lib/components/preview';
 	import type { Trip, Stage } from '$lib/types';
+	import type { MetricCatalog } from './metricsEditor.ts';
 	import EditStagesSection from '../edit/EditStagesSection.svelte';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { api } from '$lib/api.js';
@@ -42,9 +43,19 @@
 		onTripUpdate?: (updated: Trip) => void;
 		/** Issue #758: SaveStatus controller from +page.svelte — shared across all tabs. */
 		saveController?: SaveStatus;
+		/** Feature #1435 Etappe E3a: aus +page.server.ts durchgereicht, nur an
+		 *  HubOverview weitergegeben — keine eigene Logik hier. */
+		metricsCatalog?: MetricCatalog | null;
 	}
 
-	let { initialTab = 'overview', badges: badgesProp = {}, trip, onTripUpdate, saveController }: Props = $props();
+	let {
+		initialTab = 'overview',
+		badges: badgesProp = {},
+		trip,
+		onTripUpdate,
+		saveController,
+		metricsCatalog = null
+	}: Props = $props();
 
 	// Lokale Kopie der Etappen für den Stages-Tab (EditStagesSection braucht $bindable).
 	let localStages = $state<Stage[]>(trip?.stages ?? []);
@@ -185,7 +196,7 @@
 		{#if activeTab === tab.value}
 			<div data-testid="trip-detail-panel-{tab.value}">
 				{#if tab.value === 'overview' && trip}
-					<HubOverview {trip} onJump={handleValueChange} />
+					<HubOverview {trip} onJump={handleValueChange} {metricsCatalog} />
 				{:else if tab.value === 'stages'}
 					{#if trip}
 						<div style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--g-rule-soft);">

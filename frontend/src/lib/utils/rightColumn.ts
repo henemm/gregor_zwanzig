@@ -50,43 +50,6 @@ export function getActivePreset(trip: Trip): string | null {
 	return typeof key === 'string' && key.length > 0 ? key : null;
 }
 
-export function getDefaultMetricsForProfile(profile: unknown): string[] {
-	if (profile === 'wintersport')
-		return ['temp_min', 'temp_max', 'wind_max', 'snow_new', 'snow_depth', 'thunder_level'];
-	if (profile === 'wandern')
-		return ['temp_min', 'temp_max', 'wind_max', 'precip_sum', 'thunder_level', 'cloud_avg'];
-	if (profile === 'summer_trekking')
-		return ['temp_min', 'temp_max', 'wind_max', 'gust_max', 'precip_sum', 'thunder_level', 'cloud_avg', 'uv_index'];
-	if (profile === 'allgemein') return ['temp_min', 'temp_max', 'wind_max', 'precip_sum'];
-	return [];
-}
-
-export function getActiveMetrics(trip: Trip): string[] {
-	// Backend liefert `metrics` als unstrukturiertes JSON-Array — Off-Spec-Werte
-	// (Non-Array, Non-String-Elemente) sind moeglich. Wir greifen ueber `unknown`
-	// zu, damit die defensiven Branches kompilieren, ohne dass wir das Interface
-	// aufweichen muessen.
-	const metrics: unknown = trip.display_config?.metrics;
-	if (Array.isArray(metrics)) {
-		// WeatherConfigMetric-Objekte: { metric_id, enabled, use_friendly_format }
-		// Real production data from WeatherMetricsTab
-		if (metrics.length > 0 && typeof (metrics[0] as { metric_id?: unknown })?.metric_id === 'string') {
-			return (metrics as Array<{ metric_id: string; enabled: boolean }>)
-				.filter(m => m.enabled)
-				.map(m => m.metric_id);
-		}
-		// String array (test compatibility)
-		if (metrics.every((m): m is string => typeof m === 'string')) {
-			return metrics;
-		}
-		// Non-string, non-object → fallback auf Profile-Default
-		const profile = trip.aggregation?.profile;
-		return getDefaultMetricsForProfile(profile);
-	}
-	const profile = trip.aggregation?.profile;
-	return getDefaultMetricsForProfile(profile);
-}
-
 export interface ReportSchedule {
 	morning?: string;
 	evening?: string;
@@ -112,20 +75,3 @@ export function getReportSchedule(trip: Trip): ReportSchedule {
 	};
 }
 
-const METRIC_LABELS: Record<string, string> = {
-	temp_min: 'Min-Temp',
-	temp_max: 'Max-Temp',
-	wind_max: 'Wind',
-	gust_max: 'Böen',
-	precip_sum: 'Niederschlag',
-	thunder_level: 'Gewitter',
-	cloud_avg: 'Bewölkung',
-	humidity_avg: 'Feuchte',
-	snow_new: 'Neuschnee',
-	snow_depth: 'Schneehöhe',
-	uv_index: 'UV-Index'
-};
-
-export function prettyLabel(metricKey: string): string {
-	return METRIC_LABELS[metricKey] ?? metricKey;
-}

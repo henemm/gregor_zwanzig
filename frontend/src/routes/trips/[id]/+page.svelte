@@ -312,7 +312,14 @@
 		</div>
 	</div>
 	<TripHeader {trip} {now} onStatusChange={handleStatusChange} onTripUpdate={handleTripUpdate} saveController={tripSaveCtl} />
-	<TripTabs {initialTab} badges={{}} {trip} onTripUpdate={handleTripUpdate} saveController={tripSaveCtl} />
+	<TripTabs
+		{initialTab}
+		badges={{}}
+		{trip}
+		onTripUpdate={handleTripUpdate}
+		saveController={tripSaveCtl}
+		metricsCatalog={data.metricsCatalog}
+	/>
 </main>
 
 <ConfirmDialog
