@@ -48,12 +48,16 @@ from app.egress_guard import (
     uninstall_egress_guard,
 )
 
-# Die vier amtlichen Warn-Host, die von Test/Staging isoliert werden sollen.
+# Die amtlichen Warn-Host, die von Test/Staging isoliert werden sollen. Issue
+# #1445 S1: der neue kontingentfreie Feed-Host muss GENAUSO deklariert BLOCKED
+# sein wie die kontingentierten Warn-APIs -- Test/Staging duerfen auch den
+# neuen Host nie real erreichen.
 WARN_HOSTS = [
     "api.meteoalarm.org",
     "warnungen.zamg.at",
     "public-api.meteofrance.fr",
     "www.risque-prevention-incendie.fr",
+    "feeds.meteoalarm.org",
 ]
 
 # Wetter-/Radar-Host: bleiben bewusst TEST_ACCESS (dürfen NICHT mitblockiert

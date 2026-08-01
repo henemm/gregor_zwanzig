@@ -1,0 +1,594 @@
+{
+  "warnings": [
+    {
+      "alert": {
+        "identifier": "2.49.0.0.40.0.AT.-20260731095118_d1_707",
+        "incidents": "Alert",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Lienz",
+                "geocode": [
+                  {
+                    "value": "AT707",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Es ist mit erhöhter Hitzebelastung zu rechnen.",
+            "effective": "2026-07-31T09:51:18+02:00",
+            "event": "Hitzewarnung",
+            "expires": "2026-08-01T23:59:59+02:00",
+            "headline": "Hitzewarnung",
+            "instruction": "VORSICHT, große Hitze ist zu erwarten. Auswirkungen auf die Gesundheit sind nicht auszuschließen, vor allem bei alten Menschen, Kranken und bei Kindern.",
+            "language": "de-DE",
+            "onset": "2026-08-01T00:00:00+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "5; high-temperature",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "GeoSphere Austria",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "http://warnungen.zamg.at/html/de/morgen/hitze/at/tirol/"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Lienz",
+                "geocode": [
+                  {
+                    "value": "AT707",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Enhanced heat stress must be expected.",
+            "effective": "2026-07-31T09:51:18+02:00",
+            "event": "Heatwarning",
+            "expires": "2026-08-01T23:59:59+02:00",
+            "headline": "Heatwarning",
+            "instruction": "BE AWARE that high temperatures are expected. Some health risks amongst vulnerable people e.g. the elderly and very young are possible.",
+            "language": "en-GB",
+            "onset": "2026-08-01T00:00:00+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "5; high-temperature",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "GeoSphere Austria",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "http://warnungen.zamg.at/html/de/morgen/hitze/at/tirol/"
+          }
+        ],
+        "msgType": "Alert",
+        "scope": "Public",
+        "sender": "cap@zamg.ac.at",
+        "sent": "2026-07-31T09:51:18+02:00",
+        "status": "Actual"
+      },
+      "uuid": "e009f61f-18cf-49df-9e62-a8d1f620ff31"
+    },
+    {
+      "alert": {
+        "identifier": "2.49.0.0.40.0.AT.20260726094324.4824_2_707",
+        "incidents": "Update",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Lienz",
+                "geocode": [
+                  {
+                    "value": "AT707",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Gewitter mit Sturmböen sind zu erwarten.",
+            "effective": "2026-07-26T09:43:24+02:00",
+            "event": "Gewitterwarnung",
+            "expires": "2026-07-26T20:00:00+02:00",
+            "headline": "Gewitterwarnung",
+            "instruction": "VORSICHT bei Aktivitäten im Freien, Gewitter sind möglich. Achtung an exponierten Stellen, wie auf Bergen und freien Flächen sowie im Wald.",
+            "language": "de-DE",
+            "onset": "2026-07-26T12:00:00+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "3; Thunderstorm",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "GeoSphere Austria",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "http://warnungen.zamg.at/html/de/heute/Gewitter/at/tirol/"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Lienz",
+                "geocode": [
+                  {
+                    "value": "AT707",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Thunderstorms with gusts are expected.",
+            "effective": "2026-07-26T09:43:24+02:00",
+            "event": "Thunderstormwarning",
+            "expires": "2026-07-26T20:00:00+02:00",
+            "headline": "Thunderstormwarning",
+            "instruction": "BE AWARE that thunderstorms may occur. Take extra care in exposed areas, like mountains, forest and open terrain. Disruption to outdoor activities is possible.",
+            "language": "en-GB",
+            "onset": "2026-07-26T12:00:00+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "3; Thunderstorm",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "GeoSphere Austria",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "http://warnungen.zamg.at/html/de/heute/Gewitter/at/tirol/"
+          }
+        ],
+        "msgType": "Update",
+        "references": "cap@zamg.ac.at,2.49.0.0.40.0.AT.20260725132523.4824_1_707,2026-07-25T13:25:23+02:00",
+        "scope": "Public",
+        "sender": "cap@zamg.ac.at",
+        "sent": "2026-07-26T09:43:24+02:00",
+        "status": "Actual"
+      },
+      "uuid": "569f1a8d-a528-448c-905a-f83bce95977e"
+    },
+    {
+      "alert": {
+        "identifier": "2.49.0.0.40.0.AT.-20260726034825_ATNT_505",
+        "incidents": "Alert",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Tamsweg",
+                "geocode": [
+                  {
+                    "value": "AT505",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Ab sofort (26.07.2026 03:48) ist mit Gewittern zu rechnen.",
+            "effective": "2026-07-26T03:48:25+02:00",
+            "event": "Gewitterwarnung",
+            "expires": "2026-07-26T04:48:24+02:00",
+            "headline": "Gewitterwarnung",
+            "instruction": "VORSICHT bei Aktivitäten im Freien, Gewitter sind möglich. Achtung an exponierten Stellen, wie auf Bergen und freien Flächen sowie im Wald.",
+            "language": "de-DE",
+            "onset": "2026-07-26T03:48:24+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "3; Thunderstorm",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "GeoSphere Austria",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "http://warnungen.zamg.at/html/de/heute/Gewitter/at/salzburg/"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Tamsweg",
+                "geocode": [
+                  {
+                    "value": "AT505",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Henceforth (26.07.2026 03:48) thunderstorms are possible.",
+            "effective": "2026-07-26T03:48:25+02:00",
+            "event": "Thunderstormwarning",
+            "expires": "2026-07-26T04:48:24+02:00",
+            "headline": "Thunderstormwarning",
+            "instruction": "BE AWARE that thunderstorms may occur. Take extra care in exposed areas, like mountains, forest and open terrain. Disruption to outdoor activities is possible.",
+            "language": "en-GB",
+            "onset": "2026-07-26T03:48:24+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "3; Thunderstorm",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "GeoSphere Austria",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "http://warnungen.zamg.at/html/de/heute/Gewitter/at/salzburg/"
+          }
+        ],
+        "msgType": "Alert",
+        "scope": "Public",
+        "sender": "cap@zamg.ac.at",
+        "sent": "2026-07-26T03:48:25+02:00",
+        "status": "Actual"
+      },
+      "uuid": "e42df823-c175-4bc7-952b-46c136056024"
+    },
+    {
+      "alert": {
+        "identifier": "2.49.0.0.40.0.AT.-20260731095118_d1_901",
+        "incidents": "Alert",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Wien Innere Stadt",
+                "geocode": [
+                  {
+                    "value": "AT901",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Es ist mit starker Hitzebelastung zu rechnen.",
+            "effective": "2026-07-31T09:51:18+02:00",
+            "event": "Hitzewarnung",
+            "expires": "2026-08-01T23:59:59+02:00",
+            "headline": "Hitzewarnung",
+            "instruction": "ACHTUNG, extreme Hitze erhöht das Risiko von gesundheitlichen Beeinträchtigungen besonders bei alten Menschen, Kranken und Kindern. Folgen Sie den Hinweisen von Behörden.",
+            "language": "de-DE",
+            "onset": "2026-08-01T00:00:00+02:00",
+            "parameter": [
+              {
+                "value": "3; orange; Severe",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "5; high-temperature",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "GeoSphere Austria",
+            "severity": "Severe",
+            "urgency": "Future",
+            "web": "http://warnungen.zamg.at/html/de/morgen/hitze/at/wien/"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Wien Innere Stadt",
+                "geocode": [
+                  {
+                    "value": "AT901",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Intense heat stress must be expected.",
+            "effective": "2026-07-31T09:51:18+02:00",
+            "event": "Heatwarning",
+            "expires": "2026-08-01T23:59:59+02:00",
+            "headline": "Heatwarning",
+            "instruction": "BE PREPARED that high temperatures will lead to health risks amongst vulnerable people e.g. the elderly and very young. Listen to and act upon advice from the authorities.",
+            "language": "en-GB",
+            "onset": "2026-08-01T00:00:00+02:00",
+            "parameter": [
+              {
+                "value": "3; orange; Severe",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "5; high-temperature",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "GeoSphere Austria",
+            "severity": "Severe",
+            "urgency": "Future",
+            "web": "http://warnungen.zamg.at/html/de/morgen/hitze/at/wien/"
+          }
+        ],
+        "msgType": "Alert",
+        "scope": "Public",
+        "sender": "cap@zamg.ac.at",
+        "sent": "2026-07-31T09:51:18+02:00",
+        "status": "Actual"
+      },
+      "uuid": "bc0d1289-5c22-48af-b4ab-7e0eb8a6ac7a"
+    },
+    {
+      "alert": {
+        "identifier": "2.49.0.0.40.0.AT.20260727081958.4825_2_304",
+        "incidents": "Update",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Wiener Neustadt (Stadt)",
+                "geocode": [
+                  {
+                    "value": "AT304",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Starker Wind mit Spitzen bis 80 km/h ist zu erwarten.",
+            "effective": "2026-07-27T08:19:58+02:00",
+            "event": "Windwarnung",
+            "expires": "2026-07-27T18:00:00+02:00",
+            "headline": "Windwarnung",
+            "instruction": "VORSICHT, durch den starken Wind können lose Gegenstände herumfliegen. Tätigkeiten im Freien können beeinträchtigt sein.",
+            "language": "de-DE",
+            "onset": "2026-07-27T08:00:00+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "1; Wind",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "GeoSphere Austria",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "http://warnungen.zamg.at/html/de/heute/wind/at/niederoesterreich/"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Wiener Neustadt (Stadt)",
+                "geocode": [
+                  {
+                    "value": "AT304",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Gusts of 80 kph are possible.",
+            "effective": "2026-07-27T08:19:58+02:00",
+            "event": "Stormwarning",
+            "expires": "2026-07-27T18:00:00+02:00",
+            "headline": "Stormwarning",
+            "instruction": "BE AWARE of debris being blown around. Localised outdoor activity disruption is possible due to debris.",
+            "language": "en-GB",
+            "onset": "2026-07-27T08:00:00+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "1; Wind",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "GeoSphere Austria",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "http://warnungen.zamg.at/html/de/heute/wind/at/niederoesterreich/"
+          }
+        ],
+        "msgType": "Update",
+        "references": "cap@zamg.ac.at,2.49.0.0.40.0.AT.20260726084118.4825_1_304,2026-07-26T08:41:18+02:00",
+        "scope": "Public",
+        "sender": "cap@zamg.ac.at",
+        "sent": "2026-07-27T08:19:58+02:00",
+        "status": "Actual"
+      },
+      "uuid": "963f7782-d3d3-404a-9047-df0d885e367b"
+    },
+    {
+      "alert": {
+        "identifier": "2.49.0.0.40.0.AT.-20260731095116_d1_601",
+        "incidents": "Alert",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Graz (Stadt)",
+                "geocode": [
+                  {
+                    "value": "AT601",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Es ist mit starker Hitzebelastung zu rechnen.",
+            "effective": "2026-07-31T09:51:16+02:00",
+            "event": "Hitzewarnung",
+            "expires": "2026-08-01T23:59:59+02:00",
+            "headline": "Hitzewarnung",
+            "instruction": "ACHTUNG, extreme Hitze erhöht das Risiko von gesundheitlichen Beeinträchtigungen besonders bei alten Menschen, Kranken und Kindern. Folgen Sie den Hinweisen von Behörden.",
+            "language": "de-DE",
+            "onset": "2026-08-01T00:00:00+02:00",
+            "parameter": [
+              {
+                "value": "3; orange; Severe",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "5; high-temperature",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "GeoSphere Austria",
+            "severity": "Severe",
+            "urgency": "Future",
+            "web": "http://warnungen.zamg.at/html/de/morgen/hitze/at/steiermark/"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Graz (Stadt)",
+                "geocode": [
+                  {
+                    "value": "AT601",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Intense heat stress must be expected.",
+            "effective": "2026-07-31T09:51:16+02:00",
+            "event": "Heatwarning",
+            "expires": "2026-08-01T23:59:59+02:00",
+            "headline": "Heatwarning",
+            "instruction": "BE PREPARED that high temperatures will lead to health risks amongst vulnerable people e.g. the elderly and very young. Listen to and act upon advice from the authorities.",
+            "language": "en-GB",
+            "onset": "2026-08-01T00:00:00+02:00",
+            "parameter": [
+              {
+                "value": "3; orange; Severe",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "5; high-temperature",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "GeoSphere Austria",
+            "severity": "Severe",
+            "urgency": "Future",
+            "web": "http://warnungen.zamg.at/html/de/morgen/hitze/at/steiermark/"
+          }
+        ],
+        "msgType": "Alert",
+        "scope": "Public",
+        "sender": "cap@zamg.ac.at",
+        "sent": "2026-07-31T09:51:16+02:00",
+        "status": "Actual"
+      },
+      "uuid": "e94496d9-59c0-4743-9bae-0c2aac042c70"
+    }
+  ]
+}

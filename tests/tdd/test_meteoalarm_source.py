@@ -1027,11 +1027,14 @@ def _run_server(handler_cls):
 
 
 def test_treffer_auf_seite_3_von_3_wird_gefunden(monkeypatch):
-    """GIVEN ein IT-Index mit 3 Seiten (echte, aufgezeichnete Daten), dessen
-    einzige NICHT ueberholte Warnung auf Seite 3 liegt (Seite 1+2 bestehen
-    aus ueberholten Fassungen), WHEN fetch() aufgerufen wird, THEN wird die
-    Warnung gefunden -- vor Issue #1397 (nur Seite 1 abgerufen) waere das
-    Ergebnis leer geblieben (Nachweis: Bericht an den Product Owner)."""
+    """GIVEN ein Index mit 3 Seiten (echte, aufgezeichnete Daten -- Issue
+    #1445 S1: ueber den AT-Pfad abgerufen, da MeteoAlarmSource IT nicht mehr
+    bedient, die Feature-Verarbeitung selbst ist laenderunabhaengig),
+    dessen einzige NICHT ueberholte Warnung auf Seite 3 liegt (Seite 1+2
+    bestehen aus ueberholten Fassungen), WHEN fetch() aufgerufen wird, THEN
+    wird die Warnung gefunden -- vor Issue #1397 (nur Seite 1 abgerufen)
+    waere das Ergebnis leer geblieben (Nachweis: Bericht an den Product
+    Owner)."""
     from services.official_alerts import meteoalarm
 
     calls: list[str] = []
@@ -1050,18 +1053,19 @@ def test_treffer_auf_seite_3_von_3_wird_gefunden(monkeypatch):
     )
     server, thread = _run_server(handler_cls)
     try:
-        pages[("IT", 1)] = {"body": _load_index_fixture("index_multipage_p1.json", server.server_port)}
-        pages[("IT", 2)] = {"body": _load_index_fixture("index_multipage_p2.json", server.server_port)}
-        pages[("IT", 3)] = {"body": _load_index_fixture("index_multipage_p3.json", server.server_port)}
-        pages[("AT", 1)] = {"body": {"features": []}}
+        pages[("AT", 1)] = {"body": _load_index_fixture("index_multipage_p1.json", server.server_port)}
+        pages[("AT", 2)] = {"body": _load_index_fixture("index_multipage_p2.json", server.server_port)}
+        pages[("AT", 3)] = {"body": _load_index_fixture("index_multipage_p3.json", server.server_port)}
 
         monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-paging")
         monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
-        for key in ("AT:p1", "IT:p1", "IT:p2", "IT:p3"):
+        for key in ("AT:p1", "AT:p2", "AT:p3"):
             meteoalarm._index_cache.pop(key, None)
 
         # Zielpunkt: Mittelpunkt der bbox des Seite-3-Treffer-Features
-        # (echte, aufgezeichnete Trentino-Region).
+        # (echte, aufgezeichnete Region -- direkter fetch()-Aufruf prueft
+        # nicht covers(), die Koordinate muss dafuer nicht in Oesterreich
+        # liegen).
         alerts = meteoalarm.MeteoAlarmSource().fetch(45.263, 7.917)
 
         assert any(a.hazard == "extreme_heat" for a in alerts), (
@@ -1077,7 +1081,7 @@ def test_treffer_auf_seite_3_von_3_wird_gefunden(monkeypatch):
     finally:
         server.shutdown()
         thread.join(timeout=2)
-        for key in ("AT:p1", "IT:p1", "IT:p2", "IT:p3"):
+        for key in ("AT:p1", "AT:p2", "AT:p3"):
             meteoalarm._index_cache.pop(key, None)
 
 
@@ -1085,12 +1089,13 @@ def test_fehlschlag_seite_2_von_2_liefert_teilergebnis_mit_unavailable(monkeypat
     """Issue #1397 Scheibe S1c (inhaltliche Kurskorrektur gegenueber S1):
     GIVEN ein AT-Index mit 2 Seiten, dessen Seite 1 einen ECHTEN Treffer
     traegt (reale Geometrie/CAP, Punkt-in-Flaeche-Match) und dessen Seite 2
-    mit HTTP 500 fehlschlaegt (IT bleibt regulaer leer), WHEN
-    get_official_alerts_with_status() ueber die echte Registry aufgerufen
-    wird, THEN meldet es unavailable=True UND liefert TROTZDEM den Treffer
-    von Seite 1 -- ein GEKENNZEICHNETES Teilergebnis ist besser als gar
-    keines (PO-Entscheid: verboten ist das STILLE Teilergebnis aus S1, nicht
-    das gekennzeichnete aus S1c)."""
+    mit HTTP 500 fehlschlaegt, WHEN get_official_alerts_with_status() ueber
+    die echte Registry aufgerufen wird, THEN meldet es unavailable=True UND
+    liefert TROTZDEM den Treffer von Seite 1 -- ein GEKENNZEICHNETES
+    Teilergebnis ist besser als gar keines (PO-Entscheid: verboten ist das
+    STILLE Teilergebnis aus S1, nicht das gekennzeichnete aus S1c). Issue
+    #1445 S1: der Testpunkt muss innerhalb der AT-Bbox liegen, sonst
+    ueberspringt covers() die Quelle bereits vor fetch()."""
     from datetime import datetime, timezone
 
     import services.official_alerts.base as oa_base
@@ -1099,14 +1104,15 @@ def test_fehlschlag_seite_2_von_2_liefert_teilergebnis_mit_unavailable(monkeypat
 
     calls: list[str] = []
     pages: dict = {}
-    trentino_geometry = {
+    # Innerhalb der AT-INCA-Bbox (46.3-49.1 lat, 9.5-17.2 lon).
+    tirol_geometry = {
         "type": "Polygon",
-        "coordinates": [[[7.5, 45.0], [7.5, 45.5], [8.5, 45.5], [8.5, 45.0], [7.5, 45.0]]],
+        "coordinates": [[[10.5, 46.5], [10.5, 47.0], [11.5, 47.0], [11.5, 46.5], [10.5, 46.5]]],
     }
     handler_cls = _make_paging_handler(
         pages=pages,
-        geometry_bodies={"/geometry/trentino-partial": trentino_geometry},
-        cap_bodies={"/cap/trentino-partial": _read_fixture("cap_villach_heat.xml")},
+        geometry_bodies={"/geometry/tirol-partial": tirol_geometry},
+        cap_bodies={"/cap/tirol-partial": _read_fixture("cap_villach_heat.xml")},
         calls=calls,
     )
     server, thread = _run_server(handler_cls)
@@ -1116,11 +1122,10 @@ def test_fehlschlag_seite_2_von_2_liefert_teilergebnis_mit_unavailable(monkeypat
         base_url = f"http://127.0.0.1:{server.server_port}"
         treffer_feature = _minimal_feature(
             "AT", "PARTIAL-RESULT-TEST", "partial-alert", base_url,
-            "/geometry/trentino-partial", "/cap/trentino-partial",
+            "/geometry/tirol-partial", "/cap/tirol-partial",
         )
         pages[("AT", 1)] = {"body": {"metadata": {"total_pages": 2}, "features": [treffer_feature]}}
         pages[("AT", 2)] = {"status": 500}
-        pages[("IT", 1)] = {"body": {"features": []}}
 
         monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-partial")
         monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", base_url)
@@ -1131,14 +1136,14 @@ def test_fehlschlag_seite_2_von_2_liefert_teilergebnis_mit_unavailable(monkeypat
         # sonst filtert filter_alerts_to_window() den Treffer unabhaengig vom
         # hier getesteten Verhalten weg.
         fixture_now = datetime(2026, 7, 15, 10, 0, 0, tzinfo=timezone.utc)
-        alerts, unavailable = get_official_alerts_with_status(45.263, 7.917, now=fixture_now)
+        alerts, unavailable = get_official_alerts_with_status(46.75, 11.0, now=fixture_now)
 
         assert unavailable is True, "Fehlschlag auf Seite 2 von 2 muss als unavailable gemeldet werden"
         assert any(a.hazard == "extreme_heat" for a in alerts), (
             f"Treffer von Seite 1 muss TROTZ Fehlschlag auf Seite 2 erscheinen (gekennzeichnetes "
             f"Teilergebnis), erhalten: {alerts}"
         )
-        assert "/cap/trentino-partial" in calls, "Nachlade-Abruf fuer den Seite-1-Treffer muss stattfinden"
+        assert "/cap/tirol-partial" in calls, "Nachlade-Abruf fuer den Seite-1-Treffer muss stattfinden"
     finally:
         server.shutdown()
         thread.join(timeout=2)
@@ -1225,13 +1230,14 @@ def test_bbox_vorfilter_ueberspringt_treffer_ausserhalb_laedt_kantenfall(monkeyp
     handler_cls = _make_paging_handler(pages=pages, geometry_bodies={}, cap_bodies={}, calls=calls)
     server, thread = _run_server(handler_cls)
     try:
-        pages[("IT", 1)] = {"body": _load_index_fixture("index_bbox_prefilter.json", server.server_port)}
-        pages[("AT", 1)] = {"body": {"features": []}}
+        # Issue #1445 S1: ueber den AT-Pfad abgerufen (direkter fetch()-Aufruf
+        # prueft nicht covers(), die Koordinate muss dafuer nicht in
+        # Oesterreich liegen -- die bbox-Vorfilterlogik ist laenderunabhaengig).
+        pages[("AT", 1)] = {"body": _load_index_fixture("index_bbox_prefilter.json", server.server_port)}
 
         monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-bbox")
         monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
-        for key in ("AT:p1", "IT:p1"):
-            meteoalarm._index_cache.pop(key, None)
+        meteoalarm._index_cache.pop("AT:p1", None)
 
         # Testpunkt liegt exakt auf minLon/maxLat der "edge"-bbox (10.0/45.0).
         meteoalarm.MeteoAlarmSource().fetch(45.0, 10.0)
@@ -1241,8 +1247,7 @@ def test_bbox_vorfilter_ueberspringt_treffer_ausserhalb_laedt_kantenfall(monkeyp
     finally:
         server.shutdown()
         thread.join(timeout=2)
-        for key in ("AT:p1", "IT:p1"):
-            meteoalarm._index_cache.pop(key, None)
+        meteoalarm._index_cache.pop("AT:p1", None)
 
 
 def test_gleiches_objectid_wird_nur_einmal_geladen(monkeypatch):
@@ -1269,13 +1274,14 @@ def test_gleiches_objectid_wird_nur_einmal_geladen(monkeypatch):
     )
     server, thread = _run_server(handler_cls)
     try:
-        pages[("IT", 1)] = {"body": _load_index_fixture("index_objectid_reuse.json", server.server_port)}
-        pages[("AT", 1)] = {"body": {"features": []}}
+        # Issue #1445 S1: ueber den AT-Pfad abgerufen (direkter fetch()-Aufruf
+        # prueft nicht covers(), die OBJECTID-Dedup-Logik ist
+        # laenderunabhaengig).
+        pages[("AT", 1)] = {"body": _load_index_fixture("index_objectid_reuse.json", server.server_port)}
 
         monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-objectid")
         monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
-        for key in ("AT:p1", "IT:p1"):
-            meteoalarm._index_cache.pop(key, None)
+        meteoalarm._index_cache.pop("AT:p1", None)
         meteoalarm._geometry_cache.clear()
 
         alerts = meteoalarm.MeteoAlarmSource().fetch(44.2, 8.7)
@@ -1289,8 +1295,7 @@ def test_gleiches_objectid_wird_nur_einmal_geladen(monkeypatch):
         server.shutdown()
         thread.join(timeout=2)
         meteoalarm._geometry_cache.clear()
-        for key in ("AT:p1", "IT:p1"):
-            meteoalarm._index_cache.pop(key, None)
+        meteoalarm._index_cache.pop("AT:p1", None)
 
 
 # ---------------------------------------------------------------------------
@@ -1336,50 +1341,43 @@ def _minimal_feature(country: str, object_id: str, alert_id: str, base_url: str,
     }
 
 
-def _assert_fail_soft_isolation_against_broken_at_metadata(monkeypatch, at_body: dict) -> None:
-    """Gemeinsamer Kern fuer beide F002-Malformationsvarianten (Wert- und
-    Typ-Fehler): AT liefert ``at_body`` (kaputt), IT einen intakten Index --
-    ``fetch()`` darf NICHT werfen und muss den IT-Treffer trotzdem liefern
-    (Fail-soft-Vertrag, Modul-Docstring Zeile 11-13)."""
+def _assert_at_malformed_index_faelt_soft_ohne_wurf(monkeypatch, at_body) -> None:
+    """Gemeinsamer Kern fuer alle drei F002-Malformationsvarianten (Wert-,
+    Metadata- und Ganz-Antwort-Typ-Fehler). Issue #1445 S1: MeteoAlarmSource
+    deckt nur noch AT ab, ein zweites Land zur Isolationsprobe ("AT kaputt,
+    IT liefert trotzdem") steht nicht mehr zur Verfuegung -- der eigentliche
+    Kern-Nachweis bleibt aber direkt pruefbar: ``fetch()`` darf bei kaputter
+    AT-Seite-1-Antwort NICHT werfen und muss fail-soft ``[]`` liefern (kein
+    Teilergebnis, kein Crash, Modul-Docstring Zeile 11-13)."""
     from services.official_alerts import meteoalarm
 
-    calls: list[str] = []
     pages: dict = {}
-    geometry = {"type": "Polygon", "coordinates": [[[7.5, 45.0], [7.5, 45.5], [8.5, 45.5], [8.5, 45.0], [7.5, 45.0]]]}
-    handler_cls = _make_paging_handler(
-        pages=pages, geometry_bodies={"/geometry/ok": geometry},
-        cap_bodies={"/cap/ok": _read_fixture("cap_villach_heat.xml")}, calls=calls,
-    )
+    handler_cls = _make_paging_handler(pages=pages, geometry_bodies={}, cap_bodies={}, calls=[])
     server, thread = _run_server(handler_cls)
     try:
-        base_url = f"http://127.0.0.1:{server.server_port}"
         pages[("AT", 1)] = {"body": at_body}
-        it_feature = _minimal_feature("IT", "ok-objectid", "ok-alert", base_url, "/geometry/ok", "/cap/ok")
-        pages[("IT", 1)] = {"body": {"metadata": {"total_pages": 1}, "features": [it_feature]}}
 
         monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-broken-total-pages")
-        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", base_url)
-        for key in ("AT:p1", "IT:p1"):
-            meteoalarm._index_cache.pop(key, None)
+        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
+        meteoalarm._index_cache.pop("AT:p1", None)
 
-        alerts = meteoalarm.MeteoAlarmSource().fetch(45.2, 8.0)
+        alerts = meteoalarm.MeteoAlarmSource().fetch(*VILLACH)
 
-        assert any(a.hazard == "extreme_heat" for a in alerts), (
-            f"IT muss trotz kaputtem AT-total_pages abgefragt werden, erhalten: {alerts}"
+        assert alerts == [], (
+            f"kaputte AT-Seite-1-Antwort darf fetch() weder werfen noch ein "
+            f"Teilergebnis entlocken, erhalten: {alerts}"
         )
     finally:
         server.shutdown()
         thread.join(timeout=2)
-        for key in ("AT:p1", "IT:p1"):
-            meteoalarm._index_cache.pop(key, None)
+        meteoalarm._index_cache.pop("AT:p1", None)
 
 
 def test_kaputtes_total_pages_bricht_fail_soft_schleife_nicht_ab(monkeypatch):
-    """F002 (Wert-Malformation): ein nicht-numerisches ``total_pages`` fuer
-    AT darf NICHT die AT/IT-Schleife in ``fetch()`` abbrechen -- IT (intakt)
-    muss trotzdem abgefragt werden. Vor der Korrektur wirft ``int("viele")``
-    und reisst die ganze Schleife ab."""
-    _assert_fail_soft_isolation_against_broken_at_metadata(
+    """F002 (Wert-Malformation): ein nicht-numerisches ``total_pages`` darf
+    ``fetch()`` NICHT crashen lassen. Vor der Korrektur wirft ``int("viele")``
+    und reisst die Verarbeitung ab -- direkter Nachweis auf Methodenebene."""
+    _assert_at_malformed_index_faelt_soft_ohne_wurf(
         monkeypatch, {"metadata": {"total_pages": "viele"}, "features": []}
     )
 
@@ -1388,14 +1386,13 @@ def test_kaputte_metadata_als_string_bricht_fail_soft_schleife_nicht_ab(monkeypa
     """F002 Runde 2 (Typ-Malformation): ``metadata`` selbst ist kein Objekt
     (z.B. ein String), nicht nur ``total_pages`` unlesbar. Belegter
     Adversary-Fall: ``{"metadata": "kaputt", "features": []}`` liess
-    ``metadata.get("total_pages")`` mit ``AttributeError`` werfen und riss
-    die AT/IT-Schleife ab, bevor Italien versucht wurde -- ``fetch()`` darf
-    NICHT werfen, IT muss trotzdem abgefragt werden.
+    ``metadata.get("total_pages")`` mit ``AttributeError`` werfen -- ``fetch()``
+    darf NICHT werfen.
 
     Mutationstest-Nachweis (im Entwickler-Bericht): die ``isinstance``-Pruefung
     in ``_resolve_total_pages()`` entfernt -> dieser Test wird ROT
     (``AttributeError`` statt Ergebnis)."""
-    _assert_fail_soft_isolation_against_broken_at_metadata(
+    _assert_at_malformed_index_faelt_soft_ohne_wurf(
         monkeypatch, {"metadata": "kaputt", "features": []}
     )
 
@@ -1405,12 +1402,11 @@ def test_kaputte_seiten_antwort_als_string_bricht_fail_soft_schleife_nicht_ab(mo
     sondern die GANZE Seiten-Antwort (z.B. ``"kaputt"`` statt eines Objekts).
     Belegter Adversary-Fall (sinngemaess, hier als String statt JSON-Liste
     reproduziert -- ``json.dumps("kaputt")`` liefert ein valides JSON, dessen
-    oberste Ebene trotzdem kein Objekt ist): ``fetch()`` darf NICHT werfen,
-    IT muss trotzdem abgefragt werden.
+    oberste Ebene trotzdem kein Objekt ist): ``fetch()`` darf NICHT werfen.
 
     Mutationstest-Nachweis (im Entwickler-Bericht): die ``isinstance``-Pruefung
     in ``_parse()`` entfernt -> dieser Test wird ROT (``AttributeError``)."""
-    _assert_fail_soft_isolation_against_broken_at_metadata(monkeypatch, "kaputt")
+    _assert_at_malformed_index_faelt_soft_ohne_wurf(monkeypatch, "kaputt")
 
 
 def _assert_broken_total_pages_marks_unavailable(monkeypatch, at_body: dict) -> None:
@@ -1420,7 +1416,9 @@ def _assert_broken_total_pages_marks_unavailable(monkeypatch, at_body: dict) -> 
     eine Ebene hoeher, dass der Index trotzdem unbrauchbar ist.
     ``get_official_alerts_with_status()`` MUSS das ueber ``unavailable=True``
     sichtbar machen -- sonst wird ein kompletter Ausfall als "alles ruhig"
-    ausgeliefert (genau die Fehlerart, gegen die Issue #1397 laeuft)."""
+    ausgeliefert (genau die Fehlerart, gegen die Issue #1397 laeuft). Issue
+    #1445 S1: der Testpunkt muss innerhalb der AT-Bbox liegen, sonst
+    ueberspringt covers() die Quelle bereits vor fetch()."""
     import services.official_alerts.base as oa_base
     from services.official_alerts import get_official_alerts_with_status, meteoalarm
 
@@ -1431,13 +1429,12 @@ def _assert_broken_total_pages_marks_unavailable(monkeypatch, at_body: dict) -> 
     oa_base._REGISTERED_SOURCES.clear()
     try:
         pages[("AT", 1)] = {"body": at_body}
-        pages[("IT", 1)] = {"body": {"features": []}}
 
         monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-f001-total-pages")
         monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
         oa_base._REGISTERED_SOURCES.append(meteoalarm.MeteoAlarmSource())
 
-        _alerts, unavailable = get_official_alerts_with_status(45.2, 8.0)
+        _alerts, unavailable = get_official_alerts_with_status(*VILLACH)
 
         assert unavailable is True, (
             "unbrauchbares total_pages muss als unavailable gemeldet werden -- sonst wird ein "
@@ -1480,7 +1477,9 @@ def _assert_malformed_top_level_page_yields_unavailable_no_partial(monkeypatch, 
     ``fetch()``-Aufruf darf NICHT werfen und muss KEIN Teilergebnis liefern
     (das ist der eigentliche Mutationsnachweis: eine fehlende Validierung
     wirft hier direkt, statt fail-soft [] zu liefern); zusaetzlich meldet
-    ``get_official_alerts_with_status()`` ueber die Registry ``unavailable=True``."""
+    ``get_official_alerts_with_status()`` ueber die Registry ``unavailable=True``.
+    Issue #1445 S1: der Testpunkt muss innerhalb der AT-Bbox liegen, sonst
+    ueberspringt covers() die Quelle bereits vor fetch() im Registry-Teil."""
     import services.official_alerts.base as oa_base
     from services.official_alerts import get_official_alerts_with_status, meteoalarm
 
@@ -1493,22 +1492,20 @@ def _assert_malformed_top_level_page_yields_unavailable_no_partial(monkeypatch, 
     try:
         for page_num, body in at_pages.items():
             pages[("AT", page_num)] = {"body": body}
-        pages[("IT", 1)] = {"body": {"features": []}}
 
         monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-malformed-toplevel")
         monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{server.server_port}")
-        for page_num in list(at_pages) + [1]:
+        for page_num in at_pages:
             meteoalarm._index_cache.pop(f"AT:p{page_num}", None)
-        meteoalarm._index_cache.pop("IT:p1", None)
 
-        direct_alerts = meteoalarm.MeteoAlarmSource().fetch(45.263, 7.917)
+        direct_alerts = meteoalarm.MeteoAlarmSource().fetch(*VILLACH)
         assert direct_alerts == [], (
             f"direkter fetch()-Aufruf darf bei kaputter Seiten-Antwort kein Teilergebnis liefern, "
             f"erhalten: {direct_alerts}"
         )
 
         oa_base._REGISTERED_SOURCES.append(meteoalarm.MeteoAlarmSource())
-        alerts, unavailable = get_official_alerts_with_status(45.263, 7.917)
+        alerts, unavailable = get_official_alerts_with_status(*VILLACH)
 
         assert unavailable is True, "strukturell falsch typisierte Seiten-Antwort muss als unavailable gelten"
         assert alerts == [], f"kein Teilergebnis aus bereits erfolgreichen Seiten erlaubt, erhalten: {alerts}"
@@ -1518,9 +1515,8 @@ def _assert_malformed_top_level_page_yields_unavailable_no_partial(monkeypatch, 
         thread.join(timeout=2)
         oa_base._REGISTERED_SOURCES.clear()
         oa_base._REGISTERED_SOURCES.extend(backup_sources)
-        for page_num in list(at_pages) + [1]:
+        for page_num in at_pages:
             meteoalarm._index_cache.pop(f"AT:p{page_num}", None)
-        meteoalarm._index_cache.pop("IT:p1", None)
 
 
 def test_seite_1_als_json_liste_ergibt_unavailable_kein_wurf(monkeypatch):
@@ -1540,29 +1536,29 @@ def test_folgeseite_als_zahl_ergibt_unavailable_kein_teilergebnis(monkeypatch):
     )
 
 
-def test_geometry_cache_schluesselt_je_land_bei_gleicher_objectid(monkeypatch):
+def test_geometry_cache_schluesselt_je_land_bei_gleicher_objectid():
     """F004: OBJECTID ist NICHT nachweislich laenderuebergreifend eindeutig
-    -- zwei Features mit IDENTISCHER OBJECTID, eines in AT, eines in IT,
-    muessen UNABHAENGIG voneinander nachgeladen werden (Cache-Schluessel
-    enthaelt ``countryCode``, sonst wuerde das zweite Land die Flaeche des
-    ersten aus dem Cache serviert bekommen)."""
+    -- zwei Features mit IDENTISCHER OBJECTID, aber unterschiedlichem
+    ``countryCode``, muessen UNABHAENGIG voneinander nachgeladen werden
+    (Cache-Schluessel enthaelt ``countryCode``, sonst wuerde das zweite Land
+    die Flaeche des ersten aus dem Cache serviert bekommen). Issue #1445 S1:
+    ``MeteoAlarmSource.fetch()`` durchlaeuft nur noch AT, der Laender-Praefix
+    in ``_fetch_geometry_link()`` selbst ist davon unabhaengig (er liest
+    ``countryCode`` direkt aus den Feature-``properties``) -- direkter
+    Nachweis an der Funktion statt ueber die (jetzt einlaendrige)
+    ``fetch()``-Schleife."""
     from services.official_alerts import meteoalarm
 
     calls: list[str] = []
-    pages: dict = {}
-    # Beide Flaechen decken denselben Testpunkt (46.0, 9.0) ab -- es geht
-    # hier NICHT um geografische Plausibilitaet, sondern ausschliesslich
-    # darum, dass beide Cache-Eintraege unabhaengig getroffen werden.
+    # Beide Flaechen decken denselben Testpunkt ab -- es geht hier NICHT um
+    # geografische Plausibilitaet, sondern ausschliesslich darum, dass beide
+    # Cache-Eintraege unabhaengig getroffen werden.
     geo_at = {"type": "Polygon", "coordinates": [[[8.5, 45.5], [8.5, 46.5], [9.5, 46.5], [9.5, 45.5], [8.5, 45.5]]]}
     geo_it = {"type": "Polygon", "coordinates": [[[8.5, 45.5], [8.5, 46.5], [9.5, 46.5], [9.5, 45.5], [8.5, 45.5]]]}
     handler_cls = _make_paging_handler(
-        pages=pages,
+        pages={},
         geometry_bodies={"/geometry/shared-oid-at": geo_at, "/geometry/shared-oid-it": geo_it},
-        cap_bodies={
-            "/cap/shared-at": _read_fixture("cap_villach_heat.xml"),
-            "/cap/shared-it": _read_fixture("cap_villach_heat.xml"),
-        },
-        calls=calls,
+        cap_bodies={}, calls=calls,
     )
     server, thread = _run_server(handler_cls)
     try:
@@ -1570,27 +1566,20 @@ def test_geometry_cache_schluesselt_je_land_bei_gleicher_objectid(monkeypatch):
         shared_oid = "SHARED-OBJECTID-COLLISION-TEST"
         at_feature = _minimal_feature("AT", shared_oid, "at-alert", base_url, "/geometry/shared-oid-at", "/cap/shared-at")
         it_feature = _minimal_feature("IT", shared_oid, "it-alert", base_url, "/geometry/shared-oid-it", "/cap/shared-it")
-        pages[("AT", 1)] = {"body": {"metadata": {"total_pages": 1}, "features": [at_feature]}}
-        pages[("IT", 1)] = {"body": {"metadata": {"total_pages": 1}, "features": [it_feature]}}
-
-        monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-country-scoped-cache")
-        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", base_url)
-        for key in ("AT:p1", "IT:p1"):
-            meteoalarm._index_cache.pop(key, None)
         meteoalarm._geometry_cache.clear()
 
-        alerts = meteoalarm.MeteoAlarmSource().fetch(46.0, 9.0)
+        geo_result_at = meteoalarm._fetch_geometry_link(at_feature)
+        geo_result_it = meteoalarm._fetch_geometry_link(it_feature)
 
         assert "/geometry/shared-oid-at" in calls and "/geometry/shared-oid-it" in calls, (
             f"beide Laender muessen ihre eigene Flaeche nachladen trotz gleicher OBJECTID, erhalten: {calls}"
         )
-        assert len(alerts) == 2, f"beide Features muessen unabhaengig ihren Alert liefern, erhalten: {alerts}"
+        assert geo_result_at == geo_at, "AT muss seine EIGENE Flaeche zurueckbekommen, nicht die von IT"
+        assert geo_result_it == geo_it, "IT muss seine EIGENE Flaeche zurueckbekommen, nicht die von AT"
     finally:
         server.shutdown()
         thread.join(timeout=2)
         meteoalarm._geometry_cache.clear()
-        for key in ("AT:p1", "IT:p1"):
-            meteoalarm._index_cache.pop(key, None)
 
 
 # ---------------------------------------------------------------------------
@@ -2278,19 +2267,27 @@ def test_covers_schliesst_franzoesische_orte_in_der_provence_aus():
 
 
 def test_covers_deckt_oesterreich_und_italien_weiterhin_ab():
-    """KRITISCHSTER Test dieses Auftrags (Team-Lead-Warnung): GIVEN echte
-    oesterreichische und italienische Orte, WHEN ``covers()`` aufgerufen
-    wird, THEN bleibt es bei True -- die franzoesische Ausnahme aus S2b darf
-    NIEMALS Oesterreich/Italien mit-treffen. Ein Fehler hier wuerde
-    MeteoAlarm komplett abschalten (dedup_id-kritischer Regressionswaechter)."""
+    """KRITISCHSTER Test dieses Auftrags (Team-Lead-Warnung), Issue #1445 S1
+    umformuliert: GIVEN echte oesterreichische und italienische Orte, WHEN
+    ``covers()`` BEIDER aktiven Quellen (``MeteoAlarmSource`` fuer AT-Index,
+    ``MeteoAlarmFeedSource`` fuer IT-Feed) geprueft wird, THEN deckt
+    MINDESTENS EINE der beiden Quellen jeden Ort ab -- das ist die fachlich
+    zaehlende Eigenschaft, seit Italien nicht mehr ueber den AT-Index laeuft,
+    sondern ueber eine eigene Quelle (kein Ort verliert Abdeckung gegenueber
+    dem alten Einzel-Quellen-Stand). Die franzoesische Ausnahme aus S2b darf
+    NIEMALS Oesterreich/Italien mit-treffen -- ein Fehler hier wuerde
+    MeteoAlarm faktisch komplett abschalten (dedup_id-kritischer
+    Regressionswaechter)."""
     from services.official_alerts.meteoalarm import MeteoAlarmSource
+    from services.official_alerts.meteoalarm_feed import MeteoAlarmFeedSource
 
-    source = MeteoAlarmSource()
-    toblach = (46.7333, 12.2167)       # Suedtirol/Italien
-    bozen = (46.4983, 11.3548)         # Suedtirol/Italien
-    zillertal = (47.2333, 11.8500)     # Oesterreich (Tirol)
-    innsbruck = (47.2692, 11.4041)     # Oesterreich
-    milan = (45.4642, 9.1900)          # Italien (Festland, DPC-Bbox)
+    at_source = MeteoAlarmSource()
+    it_source = MeteoAlarmFeedSource("IT")
+    toblach = (46.7333, 12.2167)       # Suedtirol/Italien -> IT-Feed
+    bozen = (46.4983, 11.3548)         # Suedtirol/Italien -> IT-Feed
+    zillertal = (47.2333, 11.8500)     # Oesterreich (Tirol) -> AT-Index
+    innsbruck = (47.2692, 11.4041)     # Oesterreich -> AT-Index
+    milan = (45.4642, 9.1900)          # Italien (Festland, DPC-Bbox) -> IT-Feed
 
     for lat, lon, ort in (
         (toblach[0], toblach[1], "Toblach"),
@@ -2299,33 +2296,43 @@ def test_covers_deckt_oesterreich_und_italien_weiterhin_ab():
         (innsbruck[0], innsbruck[1], "Innsbruck"),
         (milan[0], milan[1], "Mailand"),
     ):
-        assert source.covers(lat, lon) is True, (
-            f"{ort} MUSS weiterhin abgedeckt sein -- die franzoesische "
-            f"Ausnahme (#1397 S2b) darf Oesterreich/Italien nicht treffen"
+        assert at_source.covers(lat, lon) or it_source.covers(lat, lon), (
+            f"{ort} MUSS von mindestens einer der beiden Quellen abgedeckt "
+            f"sein (AT-Index ODER IT-Feed) -- die franzoesische Ausnahme "
+            f"(#1397 S2b) darf Oesterreich/Italien nicht treffen"
         )
+
+    # Gegenprobe (PO-Auftrag Fix-Runde 1): Fréjus muss nach der uebernommenen
+    # franzoesischen Ausnahme in BEIDEN Quellen als nicht abgedeckt gelten.
+    frejus = (43.4330, 6.7370)
+    assert at_source.covers(*frejus) is False, "Fréjus darf ueber den AT-Index nicht abgedeckt sein"
+    assert it_source.covers(*frejus) is False, "Fréjus darf ueber den IT-Feed nicht abgedeckt sein"
 
 
 def test_covers_bekannte_grenze_bayern_slowenien_schweiz_ungarn_bleibt_abgedeckt():
-    """Dokumentierte, NICHT behobene Grenze (#1397): Punkte in Bayern,
-    Slowenien, der Schweiz oder Ungarn gelten weiterhin als abgedeckt -- die
-    INCA-Bbox ist ein reines Grobgatter fuer Oesterreich, kein
-    Staatsgrenzen-Polygon. Diese Ueberdeckung ist gewollt (folgenlos, da der
-    exakte Punkt-in-Flaeche-Filter nach dem Abruf laeuft) und wird HIER als
-    Regressionswaechter dokumentiert, nicht als Fix."""
+    """Dokumentierte, NICHT behobene Grenze (#1397), Issue #1445 S1
+    umformuliert: Punkte in Bayern, Slowenien, der Schweiz oder Ungarn gelten
+    weiterhin als abgedeckt -- ueber MINDESTENS EINE der beiden aktiven
+    Quellen (AT-Index ODER IT-Feed). Beide Bboxen sind reine Grobgatter,
+    keine Staatsgrenzen-Polygone. Diese Ueberdeckung ist gewollt (folgenlos,
+    da der exakte Punkt-in-Flaeche- bzw. Zonen-Filter nach dem Abruf laeuft)
+    und wird HIER als Regressionswaechter dokumentiert, nicht als Fix."""
     from services.official_alerts.meteoalarm import MeteoAlarmSource
+    from services.official_alerts.meteoalarm_feed import MeteoAlarmFeedSource
 
-    source = MeteoAlarmSource()
-    muenchen = (48.1351, 11.5820)      # Bayern
-    ljubljana = (46.0569, 14.5058)     # Slowenien
-    zuerich = (47.3769, 8.5417)        # Schweiz
+    at_source = MeteoAlarmSource()
+    it_source = MeteoAlarmFeedSource("IT")
+    muenchen = (48.1351, 11.5820)      # Bayern -> AT-Index
+    ljubljana = (46.0569, 14.5058)     # Slowenien -> IT-Feed (ausserhalb AT-Bbox)
+    zuerich = (47.3769, 8.5417)        # Schweiz -> IT-Feed (ausserhalb AT-Lon-Bereich)
 
     for lat, lon, ort in (
         (muenchen[0], muenchen[1], "Muenchen"),
         (ljubljana[0], ljubljana[1], "Ljubljana"),
         (zuerich[0], zuerich[1], "Zuerich"),
     ):
-        assert source.covers(lat, lon) is True, (
-            f"{ort}: bekannte, akzeptierte Grenze -- INCA-Bbox ist ein "
+        assert at_source.covers(lat, lon) or it_source.covers(lat, lon), (
+            f"{ort}: bekannte, akzeptierte Grenze -- beide Bboxen sind "
             f"Grobgatter, keine Staatsgrenze (#1397, nicht behoben)"
         )
 

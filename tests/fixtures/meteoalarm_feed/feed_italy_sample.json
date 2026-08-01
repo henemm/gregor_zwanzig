@@ -1,0 +1,1013 @@
+{
+  "warnings": [
+    {
+      "alert": {
+        "identifier": "2.49.0.0.380.3.IT.260731115902.089",
+        "incidents": "Update",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Lazio",
+                "geocode": [
+                  {
+                    "value": "IT012",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Private",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Severe weather expected INLAND AREAS.\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-31T11:00:00+02:00",
+            "event": "Orange High-temperature Warning",
+            "expires": "2026-08-02T01:59:00+02:00",
+            "headline": "Orange High-temperature Warning for Italy - Lazio",
+            "instruction": "BE PREPARED. Take precautions and keep up to date with the latest weather forecast. Expect some disruption to daily routines and BE PREPARED for disruption to outdoor activities.",
+            "language": "en-GB",
+            "onset": "2026-07-31T11:00:00+02:00",
+            "parameter": [
+              {
+                "value": "3; orange; Severe",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "5; High-temperature",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Italian Air Force National Meteorological Service",
+            "severity": "Severe",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/en/live/region/IT?s=lazio"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Lazio",
+                "geocode": [
+                  {
+                    "value": "IT012",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Privato",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Sono previsti fenomeni meteorologici intensi AREE INTERNE. \n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-31T11:00:00+02:00",
+            "event": "Arancione Onda Di Calore Allerta",
+            "expires": "2026-08-02T01:59:00+02:00",
+            "headline": "Allerta Onda Di Calore Arancione per l'Italia - Lazio",
+            "instruction": "ESSERE PREPARATI. Prendere le dovute precauzioni e tenersi aggiornati sulle ultime previsioni del tempo. Aspettarsi qualche disgio durante le normali attività quotidiane ed essere pronti ad interrompere le attività all'aria aperta.",
+            "language": "it-IT",
+            "onset": "2026-07-31T11:00:00+02:00",
+            "parameter": [
+              {
+                "value": "3; orange; Severe",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "5; High-temperature",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+            "severity": "Severe",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/it/live/region/IT?s=lazio"
+          }
+        ],
+        "msgType": "Update",
+        "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.260730104551.067,2026-07-30T10:45:52+02:00",
+        "scope": "Public",
+        "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+        "sent": "2026-07-31T11:59:03+02:00",
+        "status": "Actual"
+      },
+      "uuid": "0fcf6f1c-c7f4-4ef7-9a0e-579ef8f4ebfa"
+    },
+    {
+      "alert": {
+        "identifier": "2.49.0.0.380.3.IT.260726112159.099",
+        "incidents": "Update",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Lazio",
+                "geocode": [
+                  {
+                    "value": "IT012",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Private",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Severe weather expected\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-26T10:00:00+02:00",
+            "event": "Orange Thunderstorm Warning",
+            "expires": "2026-07-26T19:59:00+02:00",
+            "headline": "Orange Thunderstorm Warning for Italy - Lazio",
+            "instruction": "BE PREPARED. Take precautions and keep up to date with the latest weather forecast. Expect some disruption to daily routines and BE PREPARED for disruption to outdoor activities.",
+            "language": "en-GB",
+            "onset": "2026-07-26T10:00:00+02:00",
+            "parameter": [
+              {
+                "value": "3; orange; Severe",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "3; Thunderstorm",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Italian Air Force National Meteorological Service",
+            "severity": "Severe",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/en/live/region/IT?s=lazio"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Lazio",
+                "geocode": [
+                  {
+                    "value": "IT012",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Privato",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Sono previsti fenomeni meteorologici intensi\n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-26T10:00:00+02:00",
+            "event": "Arancione Temporali Allerta",
+            "expires": "2026-07-26T19:59:00+02:00",
+            "headline": "Allerta Temporali Arancione per l'Italia - Lazio",
+            "instruction": "ESSERE PREPARATI. Prendere le dovute precauzioni e tenersi aggiornati sulle ultime previsioni del tempo. Aspettarsi qualche disgio durante le normali attività quotidiane ed essere pronti ad interrompere le attività all'aria aperta.",
+            "language": "it-IT",
+            "onset": "2026-07-26T10:00:00+02:00",
+            "parameter": [
+              {
+                "value": "3; orange; Severe",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "3; Thunderstorm",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+            "severity": "Severe",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/it/live/region/IT?s=lazio"
+          }
+        ],
+        "msgType": "Update",
+        "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.260725111639.068,2026-07-25T11:16:40+02:00",
+        "scope": "Public",
+        "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+        "sent": "2026-07-26T11:21:59+02:00",
+        "status": "Actual"
+      },
+      "uuid": "4f12b0ee-7eb3-40f1-aebe-9498fff2c455"
+    },
+    {
+      "alert": {
+        "identifier": "2.49.0.0.380.3.IT.260726112159.105",
+        "incidents": "Update",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Lazio",
+                "geocode": [
+                  {
+                    "value": "IT012",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Private",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Severe weather expected APENNINES\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-26T14:00:00+02:00",
+            "event": "Orange Wind Warning",
+            "expires": "2026-07-26T19:59:00+02:00",
+            "headline": "Orange Wind Warning for Italy - Lazio",
+            "instruction": "BE PREPARED. Take precautions and keep up to date with the latest weather forecast. Expect some disruption to daily routines and BE PREPARED for disruption to outdoor activities.",
+            "language": "en-GB",
+            "onset": "2026-07-26T14:00:00+02:00",
+            "parameter": [
+              {
+                "value": "3; orange; Severe",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "1; Wind",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Italian Air Force National Meteorological Service",
+            "severity": "Severe",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/en/live/region/IT?s=lazio"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Lazio",
+                "geocode": [
+                  {
+                    "value": "IT012",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Privato",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Sono previsti fenomeni meteorologici intensi APPENNINO\n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-26T14:00:00+02:00",
+            "event": "Arancione Vento Allerta",
+            "expires": "2026-07-26T19:59:00+02:00",
+            "headline": "Allerta Vento Arancione per l'Italia - Lazio",
+            "instruction": "ESSERE PREPARATI. Prendere le dovute precauzioni e tenersi aggiornati sulle ultime previsioni del tempo. Aspettarsi qualche disgio durante le normali attività quotidiane ed essere pronti ad interrompere le attività all'aria aperta.",
+            "language": "it-IT",
+            "onset": "2026-07-26T14:00:00+02:00",
+            "parameter": [
+              {
+                "value": "3; orange; Severe",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "1; Wind",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+            "severity": "Severe",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/it/live/region/IT?s=lazio"
+          }
+        ],
+        "msgType": "Update",
+        "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.260725111639.072,2026-07-25T11:16:40+02:00",
+        "scope": "Public",
+        "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+        "sent": "2026-07-26T11:21:59+02:00",
+        "status": "Actual"
+      },
+      "uuid": "8c5f92fe-330a-45e6-81bf-ea5fae6522ab"
+    },
+    {
+      "alert": {
+        "identifier": "2.49.0.0.380.3.IT.260731115902.047",
+        "incidents": "Update",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Valle d'Aosta",
+                "geocode": [
+                  {
+                    "value": "IT004",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Private",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Moderate intensity weather phenomena expected\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-31T14:00:00+02:00",
+            "event": "Yellow Thunderstorm Warning",
+            "expires": "2026-07-31T19:59:00+02:00",
+            "headline": "Yellow Thunderstorm Warning for Italy - Valle d'Aosta",
+            "instruction": "BE AWARE, keep up to date with the latest weather forecast. Expect some minor disruption to outdoor activities",
+            "language": "en-GB",
+            "onset": "2026-07-31T14:00:00+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "3; Thunderstorm",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Italian Air Force National Meteorological Service",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/en/live/region/IT?s=valle"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Valle d'Aosta",
+                "geocode": [
+                  {
+                    "value": "IT004",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Privato",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Sono previsti fenomeni meteorologici di moderata intensità\n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-31T14:00:00+02:00",
+            "event": "Giallo Temporali Allerta",
+            "expires": "2026-07-31T19:59:00+02:00",
+            "headline": "Allerta Temporali Giallo per l'Italia - Valle d'Aosta",
+            "instruction": "STARE (RIMANERE) ATTENTI. Tenersi aggiornati con le previsioni del tempo più recenti. Aspettarsi alcuni disagi minori per le attività all'aria aperta.",
+            "language": "it-IT",
+            "onset": "2026-07-31T14:00:00+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "3; Thunderstorm",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/it/live/region/IT?s=valle"
+          }
+        ],
+        "msgType": "Update",
+        "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.260730104551.043,2026-07-30T10:45:51+02:00",
+        "scope": "Public",
+        "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+        "sent": "2026-07-31T11:59:02+02:00",
+        "status": "Actual"
+      },
+      "uuid": "f5216f1c-bcde-4b71-9bea-ce35e9f36f10"
+    },
+    {
+      "alert": {
+        "identifier": "2.49.0.0.380.3.IT.260726112159.001",
+        "incidents": "Update",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Valle d'Aosta",
+                "geocode": [
+                  {
+                    "value": "IT004",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Private",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "No Special Awareness Required\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-26T11:21:00+02:00",
+            "event": "Green Thunderstorm Warning",
+            "expires": "2026-07-28T23:59:00+02:00",
+            "headline": "Green Thunderstorm Warning for Italy - Valle d'Aosta",
+            "instruction": "The weather is not expected to cause significant impacts but there may be some minor, localized issues",
+            "language": "en-GB",
+            "onset": "2026-07-26T11:21:00+02:00",
+            "parameter": [
+              {
+                "value": "1; green; Minor",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "3; Thunderstorm",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "None"
+            ],
+            "senderName": "Italian Air Force National Meteorological Service",
+            "severity": "Minor",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/en/live/region/IT?s=valle"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Valle d'Aosta",
+                "geocode": [
+                  {
+                    "value": "IT004",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Privato",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Nessun Avviso\n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-26T11:21:00+02:00",
+            "event": "Verde Temporali Allerta",
+            "expires": "2026-07-28T23:59:00+02:00",
+            "headline": "Allerta Temporali Verde per l'Italia - Valle d'Aosta",
+            "instruction": "Non ci si aspetta che il tempo possa causare impatti significativi, ma potrebbero verificarsi alcuni locali, minori problemi.",
+            "language": "it-IT",
+            "onset": "2026-07-26T11:21:00+02:00",
+            "parameter": [
+              {
+                "value": "1; green; Minor",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "3; Thunderstorm",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "None"
+            ],
+            "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+            "severity": "Minor",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/it/live/region/IT?s=valle"
+          }
+        ],
+        "msgType": "Update",
+        "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.260725111639.058,2026-07-25T11:16:40+02:00",
+        "scope": "Public",
+        "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+        "sent": "2026-07-26T11:21:59+02:00",
+        "status": "Actual"
+      },
+      "uuid": "229e0f57-4763-4ea9-8ec2-aa84dba1cba5"
+    },
+    {
+      "alert": {
+        "identifier": "2.49.0.0.380.3.IT.260731115902.048",
+        "incidents": "Alert",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Piemonte",
+                "geocode": [
+                  {
+                    "value": "IT005",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Private",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Moderate intensity weather phenomena expected PLAINS.\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-31T10:00:00+02:00",
+            "event": "Yellow Rain Warning",
+            "expires": "2026-08-01T01:59:00+02:00",
+            "headline": "Yellow Rain Warning for Italy - Piemonte",
+            "instruction": "BE AWARE, keep up to date with the latest weather forecast. Expect some minor disruption to outdoor activities",
+            "language": "en-GB",
+            "onset": "2026-07-31T10:00:00+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "10; Rain",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Italian Air Force National Meteorological Service",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/en/live/region/IT?s=piemonte"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Piemonte",
+                "geocode": [
+                  {
+                    "value": "IT005",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Privato",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Sono previsti fenomeni meteorologici di moderata intensità PIANURE. \n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-31T10:00:00+02:00",
+            "event": "Giallo Pioggia Allerta",
+            "expires": "2026-08-01T01:59:00+02:00",
+            "headline": "Allerta Pioggia Giallo per l'Italia - Piemonte",
+            "instruction": "STARE (RIMANERE) ATTENTI. Tenersi aggiornati con le previsioni del tempo più recenti. Aspettarsi alcuni disagi minori per le attività all'aria aperta.",
+            "language": "it-IT",
+            "onset": "2026-07-31T10:00:00+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "10; Rain",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/it/live/region/IT?s=piemonte"
+          }
+        ],
+        "msgType": "Alert",
+        "scope": "Public",
+        "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+        "sent": "2026-07-31T11:59:02+02:00",
+        "status": "Actual"
+      },
+      "uuid": "c9d29bc0-8dca-43b8-917c-a0ce5b3ffec9"
+    },
+    {
+      "alert": {
+        "identifier": "2.49.0.0.380.3.IT.260731115902.058",
+        "incidents": "Update",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Lombardia",
+                "geocode": [
+                  {
+                    "value": "IT003",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Private",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Severe weather expected PLAINS.\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-31T11:00:00+02:00",
+            "event": "Orange High-temperature Warning",
+            "expires": "2026-08-02T01:59:00+02:00",
+            "headline": "Orange High-temperature Warning for Italy - Lombardia",
+            "instruction": "BE PREPARED. Take precautions and keep up to date with the latest weather forecast. Expect some disruption to daily routines and BE PREPARED for disruption to outdoor activities.",
+            "language": "en-GB",
+            "onset": "2026-07-31T11:00:00+02:00",
+            "parameter": [
+              {
+                "value": "3; orange; Severe",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "5; High-temperature",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Italian Air Force National Meteorological Service",
+            "severity": "Severe",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/en/live/region/IT?s=lombardia"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Lombardia",
+                "geocode": [
+                  {
+                    "value": "IT003",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Privato",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Sono previsti fenomeni meteorologici intensi PIANURA. \n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-31T11:00:00+02:00",
+            "event": "Arancione Onda Di Calore Allerta",
+            "expires": "2026-08-02T01:59:00+02:00",
+            "headline": "Allerta Onda Di Calore Arancione per l'Italia - Lombardia",
+            "instruction": "ESSERE PREPARATI. Prendere le dovute precauzioni e tenersi aggiornati sulle ultime previsioni del tempo. Aspettarsi qualche disgio durante le normali attività quotidiane ed essere pronti ad interrompere le attività all'aria aperta.",
+            "language": "it-IT",
+            "onset": "2026-07-31T11:00:00+02:00",
+            "parameter": [
+              {
+                "value": "3; orange; Severe",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "5; High-temperature",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+            "severity": "Severe",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/it/live/region/IT?s=lombardia"
+          }
+        ],
+        "msgType": "Update",
+        "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.260730104551.047,2026-07-30T10:45:51+02:00",
+        "scope": "Public",
+        "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+        "sent": "2026-07-31T11:59:02+02:00",
+        "status": "Actual"
+      },
+      "uuid": "129a6f1c-a0a6-41f8-8828-773800fd230f"
+    },
+    {
+      "alert": {
+        "identifier": "2.49.0.0.380.3.IT.260731115902.060",
+        "incidents": "Update",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Trentino Alto Adige",
+                "geocode": [
+                  {
+                    "value": "IT002",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Private",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Moderate intensity weather phenomena expected\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-31T11:00:00+02:00",
+            "event": "Yellow Thunderstorm Warning",
+            "expires": "2026-08-01T01:59:00+02:00",
+            "headline": "Yellow Thunderstorm Warning for Italy - Trentino Alto Adige",
+            "instruction": "BE AWARE, keep up to date with the latest weather forecast. Expect some minor disruption to outdoor activities",
+            "language": "en-GB",
+            "onset": "2026-07-31T11:00:00+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "3; Thunderstorm",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Italian Air Force National Meteorological Service",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/en/live/region/IT?s=trentino"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Trentino Alto Adige",
+                "geocode": [
+                  {
+                    "value": "IT002",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Privato",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Sono previsti fenomeni meteorologici di moderata intensità\n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-31T11:00:00+02:00",
+            "event": "Giallo Temporali Allerta",
+            "expires": "2026-08-01T01:59:00+02:00",
+            "headline": "Allerta Temporali Giallo per l'Italia - Trentino Alto Adige",
+            "instruction": "STARE (RIMANERE) ATTENTI. Tenersi aggiornati con le previsioni del tempo più recenti. Aspettarsi alcuni disagi minori per le attività all'aria aperta.",
+            "language": "it-IT",
+            "onset": "2026-07-31T11:00:00+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "3; Thunderstorm",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/it/live/region/IT?s=trentino"
+          }
+        ],
+        "msgType": "Update",
+        "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.260730104551.051,2026-07-30T10:45:51+02:00",
+        "scope": "Public",
+        "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+        "sent": "2026-07-31T11:59:02+02:00",
+        "status": "Actual"
+      },
+      "uuid": "8fbb6169-1536-43ee-b74d-10f3fe5c0760"
+    },
+    {
+      "alert": {
+        "identifier": "2.49.0.0.380.3.IT.260729113318.097",
+        "incidents": "Update",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Sicilia",
+                "geocode": [
+                  {
+                    "value": "IT018",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Private",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Moderate intensity weather phenomena expected Southwestern Sector.\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-29T11:00:00+02:00",
+            "event": "Yellow Thunderstorm Warning",
+            "expires": "2026-07-30T01:59:00+02:00",
+            "headline": "Yellow Thunderstorm Warning for Italy - Sicilia",
+            "instruction": "BE AWARE, keep up to date with the latest weather forecast. Expect some minor disruption to outdoor activities",
+            "language": "en-GB",
+            "onset": "2026-07-29T11:00:00+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "3; Thunderstorm",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Italian Air Force National Meteorological Service",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/en/live/region/IT?s=sicilia"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Sicilia",
+                "geocode": [
+                  {
+                    "value": "IT018",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Privato",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Sono previsti fenomeni meteorologici di moderata intensità SETT. OVEST MERIDIONALE. \n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+            "effective": "2026-07-29T11:00:00+02:00",
+            "event": "Giallo Temporali Allerta",
+            "expires": "2026-07-30T01:59:00+02:00",
+            "headline": "Allerta Temporali Giallo per l'Italia - Sicilia",
+            "instruction": "STARE (RIMANERE) ATTENTI. Tenersi aggiornati con le previsioni del tempo più recenti. Aspettarsi alcuni disagi minori per le attività all'aria aperta.",
+            "language": "it-IT",
+            "onset": "2026-07-29T11:00:00+02:00",
+            "parameter": [
+              {
+                "value": "2; yellow; Moderate",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "3; Thunderstorm",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+            "severity": "Moderate",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/it/live/region/IT?s=sicilia"
+          }
+        ],
+        "msgType": "Update",
+        "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.260728102951.071,2026-07-28T10:29:52+02:00",
+        "scope": "Public",
+        "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+        "sent": "2026-07-29T11:33:19+02:00",
+        "status": "Actual"
+      },
+      "uuid": "8690072a-5976-4c83-a751-9e75a0186e8f"
+    },
+    {
+      "alert": {
+        "identifier": "2.49.0.0.380.3.IT.260731115902.080",
+        "incidents": "Update",
+        "info": [
+          {
+            "area": [
+              {
+                "areaDesc": "Basilicata",
+                "geocode": [
+                  {
+                    "value": "IT017",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Private",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Extreme weather events expected PLAINS.\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+            "effective": "2026-08-02T02:00:00+02:00",
+            "event": "Red High-temperature Warning",
+            "expires": "2026-08-02T23:59:00+02:00",
+            "headline": "Red High-temperature Warning for Italy - Basilicata",
+            "instruction": "TAKE precautionary ACTION, remain vigilant and act on advice given by authorities. Keep up to date with the latest weather forecast, and expect significant disruption to daily routines. Only travel if your journey is essential.",
+            "language": "en-GB",
+            "onset": "2026-08-02T02:00:00+02:00",
+            "parameter": [
+              {
+                "value": "4; red; Extreme",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "5; High-temperature",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Italian Air Force National Meteorological Service",
+            "severity": "Extreme",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/en/live/region/IT?s=basilicata"
+          },
+          {
+            "area": [
+              {
+                "areaDesc": "Basilicata",
+                "geocode": [
+                  {
+                    "value": "IT017",
+                    "valueName": "EMMA_ID"
+                  }
+                ]
+              }
+            ],
+            "audience": "Privato",
+            "category": [
+              "Met"
+            ],
+            "certainty": "Likely",
+            "description": "Sono previsti eventi meteorologici estremi PIANURA. \n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+            "effective": "2026-08-02T02:00:00+02:00",
+            "event": "Rosso Onda Di Calore Allerta",
+            "expires": "2026-08-02T23:59:00+02:00",
+            "headline": "Allerta Onda Di Calore Rosso per l'Italia - Basilicata",
+            "instruction": "INTRAPRENDERE AZIONI CAUTELATIVE. Rimanere vigili e agire in accordo con i consigli (gli ordini) emessi da parte delle autorità. Tenersi aggiornati con le previsioni del tempo più recenti, ed aspettarsi significativi disagi per le normali attività quotidiane. Intraprendere un viaggio solo se indispensabile.",
+            "language": "it-IT",
+            "onset": "2026-08-02T02:00:00+02:00",
+            "parameter": [
+              {
+                "value": "4; red; Extreme",
+                "valueName": "awareness_level"
+              },
+              {
+                "value": "5; High-temperature",
+                "valueName": "awareness_type"
+              }
+            ],
+            "responseType": [
+              "Monitor"
+            ],
+            "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+            "severity": "Extreme",
+            "urgency": "Future",
+            "web": "https://meteoalarm.org/it/live/region/IT?s=basilicata"
+          }
+        ],
+        "msgType": "Update",
+        "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.260730104551.076,2026-07-30T10:45:52+02:00",
+        "scope": "Public",
+        "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+        "sent": "2026-07-31T11:59:03+02:00",
+        "status": "Actual"
+      },
+      "uuid": "dcf4f5f5-ed2e-49e8-8c80-9056f6305f77"
+    }
+  ]
+}

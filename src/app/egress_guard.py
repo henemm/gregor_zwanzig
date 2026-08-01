@@ -39,6 +39,9 @@ INVENTORY: dict[str, IsolationKind] = {
     "radar-api.protezionecivile.it": IsolationKind.TEST_ACCESS,
     # Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
     "api.meteoalarm.org": IsolationKind.BLOCKED,
+    # Issue #1445 S1: derselbe Anbieter, kontingentfreier Feed-Transport --
+    # Test/Staging duerfen auch diesen Warn-Host nicht real erreichen.
+    "feeds.meteoalarm.org": IsolationKind.BLOCKED,
     # Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
     "public-api.meteofrance.fr": IsolationKind.BLOCKED,
     # Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr

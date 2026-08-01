@@ -31,10 +31,6 @@ from services.official_alerts.department_mapper import lookup_department
 from services.official_alerts.meteoalarm_budget import MeteoAlarmBudgetGate
 from services.official_alerts.models import OfficialAlert
 from services.radar_service import (
-    _DPC_LAT_MAX,
-    _DPC_LAT_MIN,
-    _DPC_LON_MAX,
-    _DPC_LON_MIN,
     _INCA_LAT_MAX,
     _INCA_LAT_MIN,
     _INCA_LON_MAX,
@@ -562,45 +558,62 @@ def _pick_preferred_entry(entries: list[dict]) -> dict:
     return entries[0]
 
 
-def _extract_alerts_from_cap(cap_source: "str | bytes") -> list[OfficialAlert]:
-    """Wandelt eine CAP-XML-Antwort in eine Liste von ``OfficialAlert`` um.
-
-    Gruppiert die ``<info>``-Sprachvarianten (identische ``awareness_type``/
-    ``awareness_level``/``onset``/``expires``/``areaDesc``) zu je EINER
-    Warnung, wählt daraus den bevorzugten Sprachblock für den Text. Kaputtes
-    XML oder unbekannte/gefilterte Warnungen führen NIE zu einem Crash der
-    gesamten Antwort — betroffene Warnungen werden übersprungen.
-    """
+def _collect_cap_info_entries(cap_source: "str | bytes") -> list[dict]:
+    """Sammelt jeden ``<info>``-Block einer CAP-XML-Antwort als normalisiertes
+    Dict (Issue #1445 S1: XML-spezifische Haelfte des ehemaligen
+    ``_extract_alerts_from_cap`` -- ``_group_and_map_info_entries`` uebernimmt
+    danach den formatunabhaengigen Teil, gemeinsam mit dem JSON-Feed-Weg in
+    ``meteoalarm_feed.py``). Kaputtes XML liefert ``[]``, ein defekter
+    einzelner ``<info>``-Block wird uebersprungen -- unveraendertes
+    Fail-soft-Verhalten."""
     text = cap_source.decode("utf-8", errors="replace") if isinstance(cap_source, bytes) else cap_source
     try:
         root = ET.fromstring(text)
     except ET.ParseError:
         return []
 
-    groups: dict[tuple, list[dict]] = {}
-    order: list[tuple] = []
+    entries: list[dict] = []
     for info in root:
         if _local_tag(info) != "info":
             continue
         try:
-            lang = _child_text(info, "language") or ""
-            event = _child_text(info, "event")
-            headline = _child_text(info, "headline")
-            onset = _child_text(info, "onset")
-            expires = _child_text(info, "expires")
-            area_desc = _find_area_desc(info)
-            level_raw = _find_parameter(info, "awareness_level")
-            type_raw = _find_parameter(info, "awareness_type")
+            entries.append({
+                "lang": _child_text(info, "language") or "",
+                "event": _child_text(info, "event"),
+                "headline": _child_text(info, "headline"),
+                "onset": _child_text(info, "onset"),
+                "expires": _child_text(info, "expires"),
+                "area_desc": _find_area_desc(info),
+                "level_raw": _find_parameter(info, "awareness_level"),
+                "type_raw": _find_parameter(info, "awareness_type"),
+            })
         except Exception:
             continue
+    return entries
+
+
+def _group_and_map_info_entries(entries: list[dict]) -> list[OfficialAlert]:
+    """Gruppiert normalisierte Info-Eintraege (identische ``type_raw``/
+    ``level_raw``/``onset``/``expires``/``area_desc``) zu je EINER Warnung,
+    waehlt daraus den bevorzugten Sprachblock fuer den Text (Issue #1445 S1:
+    formatunabhaengige Haelfte -- gemeinsam genutzt vom XML-Sammelweg
+    (``_collect_cap_info_entries``) UND dem JSON-Feed-Sammelweg
+    (``meteoalarm_feed._info_entries_from_alert``)). Eintraege ohne
+    ``level_raw``/``type_raw`` oder mit unbekanntem/gefiltertem Typ/Level
+    werden uebersprungen -- nie ein Crash der gesamten Antwort."""
+    groups: dict[tuple, list[dict]] = {}
+    order: list[tuple] = []
+    for entry in entries:
+        level_raw = entry.get("level_raw")
+        type_raw = entry.get("type_raw")
         if not level_raw or not type_raw:
             continue
-        key = (type_raw, level_raw, onset, expires, area_desc)
-        entry = {"lang": lang, "event": event, "headline": headline}
+        key = (type_raw, level_raw, entry.get("onset"), entry.get("expires"), entry.get("area_desc"))
+        lang_entry = {"lang": entry.get("lang") or "", "event": entry.get("event"), "headline": entry.get("headline")}
         if key not in groups:
             groups[key] = []
             order.append(key)
-        groups[key].append(entry)
+        groups[key].append(lang_entry)
 
     alerts: list[OfficialAlert] = []
     for key in order:
@@ -629,6 +642,17 @@ def _extract_alerts_from_cap(cap_source: "str | bytes") -> list[OfficialAlert]:
             logger.warning("MeteoAlarm-CAP-Mapping fehlgeschlagen", exc_info=True)
             continue
     return alerts
+
+
+def _extract_alerts_from_cap(cap_source: "str | bytes") -> list[OfficialAlert]:
+    """Wandelt eine CAP-XML-Antwort in eine Liste von ``OfficialAlert`` um.
+
+    Duenner Wrapper (Issue #1445 S1) um die zwei getrennten Haelften: XML
+    sammeln (``_collect_cap_info_entries``), dann formatunabhaengig
+    gruppieren/mappen (``_group_and_map_info_entries``) -- unveraendertes
+    Verhalten (Regressionsschutz: ``tests/tdd/test_meteoalarm.py``).
+    """
+    return _group_and_map_info_entries(_collect_cap_info_entries(cap_source))
 
 
 def _get_cached_index(country: str) -> Optional[dict]:
@@ -997,14 +1021,35 @@ def _point_in_geometry(lat: float, lon: float, geometry: dict) -> bool:
 
 
 class MeteoAlarmSource:
-    """MeteoAlarm-Quelle (AT + IT) für die Official-Alerts-Registry (#1086)."""
+    """MeteoAlarm-Quelle (AT) für die Official-Alerts-Registry (#1086).
+
+    Issue #1445 S1: Italien laeuft nicht mehr ueber diese Quelle -- der
+    kontingentierte EDR-Index-Weg entfaellt fuer IT vollstaendig, ersetzt
+    durch ``meteoalarm_feed.MeteoAlarmFeedSource`` (kontingentfreier CAP-Feed).
+
+    RUHEND seit Issue #1445 S3: Oesterreich laeuft jetzt ebenfalls ueber
+    ``meteoalarm_feed.MeteoAlarmFeedSource("AT")`` -- diese Klasse wird in
+    ``services/official_alerts/__init__.py`` NICHT MEHR registriert und
+    liefert damit im Produktivpfad keine Warnungen mehr. Der Code bleibt
+    vollstaendig erhalten (kein Rueckbau, s. S3-Spec "Known Limitations")
+    -- sie dient weiterhin dem einmaligen Aequivalenznachweis (AC-5) und
+    ist ueber ihren eigenen Modulpfad
+    ``services.official_alerts.meteoalarm.MeteoAlarmSource`` erreichbar."""
 
     @property
     def name(self) -> str:
         return "meteoalarm"
 
     def covers(self, lat: float, lon: float) -> bool:
-        """AT- (INCA-Bbox) ∪ IT-Bbox (DPC) Vorfilter (kein API-Call).
+        """AT-Bbox (INCA) Vorfilter (kein API-Call).
+
+        Issue #1445 S1 (Randbedingung 3): die vormalige IT-Bbox-Pruefung
+        (DPC) ist entfernt -- bliebe sie stehen, wuerde ein italienischer
+        Punkt weiterhin als von dieser Quelle "abgedeckt" zaehlen, obwohl
+        ihr `fetch()` fuer IT nie mehr etwas liefert. Ein fehlgeschlagener
+        AT-Indexabruf wuerde dann faelschlich `unavailable=True` fuer
+        italienische Punkte ausloesen, obwohl die neue Feed-Quelle ihre
+        Daten unabhaengig davon liefert.
 
         Issue #1397 S2b: die INCA-Bbox reicht rund 100 km in die Provence
         hinein (Westkante bei lon 9,5 -- Fréjus/Saint-Tropez liegen bei
@@ -1027,8 +1072,7 @@ class MeteoAlarmSource:
         nie eine verlorene Warnung.
         """
         in_at = _INCA_LAT_MIN <= lat <= _INCA_LAT_MAX and _INCA_LON_MIN <= lon <= _INCA_LON_MAX
-        in_it = _DPC_LAT_MIN <= lat <= _DPC_LAT_MAX and _DPC_LON_MIN <= lon <= _DPC_LON_MAX
-        if not (in_at or in_it):
+        if not in_at:
             return False
         return lookup_department(lat, lon) is None
 
@@ -1038,7 +1082,7 @@ class MeteoAlarmSource:
             return []
 
         alerts: list[OfficialAlert] = []
-        for country in ("AT", "IT"):
+        for country in ("AT",):  # Issue #1445 S1: IT laeuft ueber den Feed
             index = _get_cached_index(country)
             if index is None:
                 continue
