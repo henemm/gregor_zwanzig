@@ -101,3 +101,4 @@ bzw. in den Specs unter `docs/specs/`.
 | [0036](0036-nebenlaeufigkeitsschutz-inhalts-fingerabdruck.md) | Nebenläufigkeitsschutz über Inhalts-Fingerabdruck statt Versionsfeld (Issue #1395 S1/S2) | Akzeptiert |
 | [0037](0037-datengetriebener-ausblick-aus-metrik-katalog.md) | 3-Tages-Ausblick der Vergleichs-Mail datengetrieben aus dem Metrik-Katalog statt fester Sieben-Spalten-Liste (Issue #1361 Befund 2 + #1368, S3 Scheibe A von Epic #1372) | Akzeptiert |
 | [0038](0038-zeitgrenze-je-nutzerlauf-unter-aufrufer-wartezeit.md) | Jeder wiederkehrende Job-Lauf bekommt eine Zeitgrenze unter der Wartezeit seines Aufrufers (Issue #1447) | Akzeptiert |
+| [0039](0039-amtliche-warnungen-aus-kontingentfreiem-feed.md) | Amtliche Warnungen kommen aus dem kontingentfreien MeteoAlarm-Feed statt aus der mengenbegrenzten EDR-Index-API (Issues #1445, #1397) | Akzeptiert |

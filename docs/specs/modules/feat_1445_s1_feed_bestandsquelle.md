@@ -316,8 +316,8 @@ in `docs/specs/data_sources.md`.
 
 ## Architektur-Entscheidung (ADR)
 
-- **ADR-Nr.:** keine.
-- **Rationale:** Der Transportweg wechselt (EDR-Index mit Auth/Kontingent → öffentlicher
+- **ADR-Nr.:** ADR-0039 (`docs/adr/0039-amtliche-warnungen-aus-kontingentfreiem-feed.md`) — nachgetragen 2026-08-01, nachdem S3 den Wechsel auf **beide** Länder ausgedehnt und die EDR-Quelle vollständig aus der Registrierung genommen hat. Die ursprüngliche Einschätzung dieser Spec („keine", siehe unten) galt für den Zwischenstand mit nur einem Land und bleibt als Begründung dokumentiert.
+- **Ursprüngliche Rationale (Stand S1, überholt):** Der Transportweg wechselt (EDR-Index mit Auth/Kontingent → öffentlicher
   CAP-Feed ohne Auth/Kontingent), der Datenlieferant (MeteoAlarm/MeteoGate) und die
   Architektur-Rolle bleiben identisch — weiterhin eine additive externe Alert-Quelle in der
   bestehenden `official_alerts`-Registry (ADR-0016 bleibt gültig), weiterhin fail-soft ohne

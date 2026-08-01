@@ -184,6 +184,7 @@ Die folgenden Quellen sind NICHT genehmigt:
 |-------|---------|-----------|-----------------|
 | 2025-12-31 | 1.0 | Initial: GeoSphere, Open-Meteo (cloud layers), Bergfex | Henning |
 | 2026-01-24 | 1.1 | Open-Meteo erweitert: Wetter-Parameter + Regional Models (AROME, ICON-D2, MetNo, ECMWF). Bedingung: ZWINGEND Modellauswahl fuer alle Regionen. | Henning |
+| 2026-08-01 | 1.2 | Amtliche Warnungen nachgetragen: MeteoAlarm (Bestand, war nie eingetragen) + Wechsel des Bezugswegs auf den kontingentfreien Feed `feeds.meteoalarm.org`. Siehe ADR-0039. | Henning (PO-Entscheidung 2026-08-01) |
 
 ---
 
@@ -198,6 +199,31 @@ Die folgenden Quellen sind NICHT genehmigt:
 Keine offenen Antraege.
 
 ### Genehmigte Antraege
+
+#### Antrag #2: MeteoAlarm — amtliche Unwetterwarnungen ueber den kontingentfreien Feed
+
+**Datum:** 2026-08-01
+**Status:** ✅ APPROVED (2026-08-01, Henning)
+**Antragsteller:** Claude (Issue #1445, ausgeloest durch #1397)
+**Spec:** `docs/specs/modules/feat_1445_s1_feed_bestandsquelle.md`, `feat_1445_s3_oesterreich_feed.md`
+**ADR:** [ADR-0039](../adr/0039-amtliche-warnungen-aus-kontingentfreiem-feed.md)
+
+**Zusammenfassung:** MeteoAlarm (EUMETNET) war als Quelle amtlicher Unwetterwarnungen fuer
+Oesterreich und Italien seit Issue #1086 im Einsatz, aber in dieser Spec **nie eingetragen** —
+das wird hier nachgeholt. Zugleich wechselt der Bezugsweg.
+
+| Daten | Status | Bemerkung |
+|-------|--------|-----------|
+| Amtliche Warnungen AT/IT (Ereignis, Warnstufe, Gefahrenart, Gueltigkeit, Gebiet) | approved | Quelle: `feeds.meteoalarm.org/api/v1/warnings/feeds-<land>`, ohne Auth, **ohne Mengenbegrenzung**, ein Abruf je Land und Auffrischung |
+| Zonen-Geometrie (Punkt-in-Flaeche) | approved | IT ueber eingecheckte DPC-Zonen, AT ueber die Gemeindenummer aus der ohnehin abgerufenen ZAMG-Antwort — keine zusaetzlichen Abrufe |
+| `api.meteoalarm.org` (EDR-Index, authentifiziert) | **abgeloest** | Mengenbegrenzt und nicht stationaer (durchgelassene Menge sank 138 → 95 → 64). Nicht mehr registriert; Code bleibt bis zum Aequivalenznachweis erhalten |
+| CAP-XML / Geometrie-Nachladen (`meteo.fra1.digitaloceanspaces.com`) | approved | praesigniert, auth-frei, zaehlt nicht gegen ein Kontingent |
+| MQTT-Echtzeitkanal (`mqtt.meteoalarm.org:8883`) | **noch nicht genutzt** | Zugang verifiziert, liefert aber keinen Bestand (keine Retained Messages). Als spaetere Ergaenzung vorgesehen, nicht als Ersatz |
+
+**Begruendung:** Gleicher Anbieter, gleiche Daten, anderer Transport. Der bisherige Weg sperrte
+uns taeglich fuer 24 h aus; amtliche Warnungen waren dadurch den groessten Teil des Tages
+veraltet — bei einem Sicherheitswerkzeug fuer Weitwanderungen nicht hinnehmbar. Der Feed liefert
+zusaetzlich eine laengere Rueckschau (5,8 Tage statt 23 h) und deutschsprachige Texte fuer AT.
 
 #### Antrag #1: Open-Meteo Wetter-Parameter (Regional Models)
 

@@ -357,7 +357,7 @@ AC-1/AC-2 als Pflicht-Gate.
 
 ## Architektur-Entscheidung (ADR)
 
-- **ADR-Nr.:** noch nicht vergeben — **Empfehlung dieser Spec: JA, jetzt ADR-würdig.**
+- **ADR-Nr.:** ADR-0039 — „Amtliche Warnungen kommen aus dem kontingentfreien MeteoAlarm-Feed statt aus der mengenbegrenzten EDR-Index-API", geschrieben am 2026-08-01, Status Akzeptiert. Datei: `docs/adr/0039-amtliche-warnungen-aus-kontingentfreiem-feed.md`. Die Empfehlung dieser Spec ist damit umgesetzt.
 - **Rationale:** S1 hatte "ADR-Nr.: keine" begründet, weil der Wechsel damals nur einen von
   zwei Ländern und nur den Transportweg betraf, während Provider und Architektur-Rolle
   unverändert blieben (ADR-0016, ADR-0018 weiter gültig). Mit dieser Scheibe ändert sich die
