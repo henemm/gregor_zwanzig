@@ -2309,31 +2309,39 @@ def test_covers_deckt_oesterreich_und_italien_weiterhin_ab():
     assert it_source.covers(*frejus) is False, "Fréjus darf ueber den IT-Feed nicht abgedeckt sein"
 
 
-def test_covers_bekannte_grenze_bayern_slowenien_schweiz_ungarn_bleibt_abgedeckt():
-    """Dokumentierte, NICHT behobene Grenze (#1397), Issue #1445 S1
-    umformuliert: Punkte in Bayern, Slowenien, der Schweiz oder Ungarn gelten
-    weiterhin als abgedeckt -- ueber MINDESTENS EINE der beiden aktiven
-    Quellen (AT-Index ODER IT-Feed). Beide Bboxen sind reine Grobgatter,
-    keine Staatsgrenzen-Polygone. Diese Ueberdeckung ist gewollt (folgenlos,
-    da der exakte Punkt-in-Flaeche- bzw. Zonen-Filter nach dem Abruf laeuft)
-    und wird HIER als Regressionswaechter dokumentiert, nicht als Fix."""
+# ERWARTUNG GEDREHT (SPEC: docs/specs/modules/fix_1397_s4_it_grenze.md,
+# 2026-08-01). Dieser Test hiess ``test_covers_bekannte_grenze_bayern_
+# slowenien_schweiz_ungarn_bleibt_abgedeckt`` und verlangte, dass Slowenien und
+# die Schweiz WEITERHIN von der italienischen Quelle abgedeckt sind -- als
+# Waechter ueber eine damals bewusst NICHT behobene Grobgatter-Grenze. Warum
+# die alte Erwartung faellt: ihre Begruendung ("folgenlos, da der exakte
+# Zonen-Filter nach dem Abruf laeuft") war falsch. Genau dieser Filter findet
+# fuer solche Punkte keine Zone und meldet ueber ``mark_fetch_incomplete()``
+# "nicht abrufbar" (Prod 2026-08-01: 39 Punkte EINER Tour, fortlaufend,
+# irrefuehrender Betriebszustand #1434). S4 stellt die IT-Zustaendigkeit auf
+# die echte Zonen-Geometrie um; SI/CH sind damit korrekt nicht mehr abgedeckt.
+
+def test_covers_nachbarlaender_ausserhalb_italiens_sind_nicht_it_abgedeckt():
+    """Issue #1397 S4: Punkte in Slowenien und der Schweiz liegen zwar in der
+    groben DPC-Radar-Bbox, aber in keiner der 187 italienischen Warnzonen --
+    die italienische Quelle ist fuer sie NICHT zustaendig und schweigt, statt
+    einen Ausfall zu melden, den es nicht gibt. Bayern bleibt ueber den
+    unveraenderten AT-Weg abgedeckt (Invariante 2 der S4-Spec)."""
     from services.official_alerts.meteoalarm import MeteoAlarmSource
     from services.official_alerts.meteoalarm_feed import MeteoAlarmFeedSource
 
-    at_source = MeteoAlarmSource()
     it_source = MeteoAlarmFeedSource("IT")
-    muenchen = (48.1351, 11.5820)      # Bayern -> AT-Index
-    ljubljana = (46.0569, 14.5058)     # Slowenien -> IT-Feed (ausserhalb AT-Bbox)
-    zuerich = (47.3769, 8.5417)        # Schweiz -> IT-Feed (ausserhalb AT-Lon-Bereich)
-
+    assert MeteoAlarmSource().covers(48.1351, 11.5820) is True, (
+        "Bayern (Muenchen) bleibt ueber den AT-Weg abgedeckt -- S4 aendert "
+        "nichts an der INCA-Bbox (Invariante 2)"
+    )
     for lat, lon, ort in (
-        (muenchen[0], muenchen[1], "Muenchen"),
-        (ljubljana[0], ljubljana[1], "Ljubljana"),
-        (zuerich[0], zuerich[1], "Zuerich"),
+        (46.0569, 14.5058, "Ljubljana"),   # Slowenien, in der DPC-Bbox
+        (47.3769, 8.5417, "Zuerich"),      # Schweiz, in der DPC-Bbox
     ):
-        assert at_source.covers(lat, lon) or it_source.covers(lat, lon), (
-            f"{ort}: bekannte, akzeptierte Grenze -- beide Bboxen sind "
-            f"Grobgatter, keine Staatsgrenze (#1397, nicht behoben)"
+        assert it_source.covers(lat, lon) is False, (
+            f"{ort} liegt ausserhalb Italiens und in keiner der 187 Warnzonen -- "
+            f"die italienische Quelle darf sich dafuer nicht zustaendig halten"
         )
 
 

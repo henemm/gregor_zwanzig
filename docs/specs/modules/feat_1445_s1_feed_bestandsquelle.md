@@ -240,6 +240,15 @@ italienische Warnung seltener oder unvollständiger sieht als heute.
   Betrieb zählbar nachvollziehbar.
   - Test: Test 5 oben — `unavailable=True` plus additive Diagnose-Zeile bei nicht auflösbarem
     Punkt.
+  - **Teilweise abgelöst durch `docs/specs/modules/fix_1397_s4_it_grenze.md` (2026-08-01,
+    AC-4) für den Fall „Punkt außerhalb Italiens".** Grund: die Zuständigkeit wurde in `covers()`
+    über die grobe DPC-Radar-Bbox entschieden, in der auch Österreich, die Schweiz, Slowenien,
+    Kroatien und offenes Meer liegen. Für diese Punkte war der Hinweis „nicht abrufbar" sachlich
+    falsch (Prod-Messung 2026-08-01: 39 Punkte einer einzigen Tour, fortlaufend). Seit S4 ist die
+    Zuständigkeit geometriebasiert: nicht einer der 187 Warnzonen zuordenbar ⇒ nicht zuständig ⇒
+    schweigen, kein Hinweis, keine Diagnose-Zeile. **Unverändert gültig bleibt AC-5 für echte
+    Ausfälle** eines tatsächlich zuständigen italienischen Orts (fehlgeschlagener Abruf,
+    strukturell kaputte Antwort) — dort meldet die Quelle weiterhin „nicht abrufbar".
 
 - **AC-6:** Given eine zuvor gültige italienische Warnung ist inzwischen abgelaufen oder durch
   eine neuere Fassung ersetzt, When die amtlichen Warnungen für den betroffenen Ort ermittelt

@@ -36,10 +36,6 @@ from services.official_alerts.dpc import _zone_at
 from services.official_alerts.meteoalarm import _group_and_map_info_entries
 from services.official_alerts.models import OfficialAlert
 from services.radar_service import (
-    _DPC_LAT_MAX,
-    _DPC_LAT_MIN,
-    _DPC_LON_MAX,
-    _DPC_LON_MIN,
     _INCA_LAT_MAX,
     _INCA_LAT_MIN,
     _INCA_LON_MAX,
@@ -290,8 +286,8 @@ class MeteoAlarmFeedSource:
         return "meteoalarm_feed"
 
     def covers(self, lat: float, lon: float) -> bool:
-        """Grober Laender-Bbox-Vorfilter (kein Netzabruf, wie DpcSource) --
-        die feine Zonen-Zuordnung laeuft erst in ``fetch()``.
+        """Zustaendigkeits-Vorfilter, rein lokal (kein Netzabruf, wie
+        DpcSource).
 
         AT (S3 Implementation Details Punkt 5): INCA-Bbox reicht, KEIN
         Grenz-Ausschluss noetig -- ein Punkt innerhalb der Bbox, aber real
@@ -299,21 +295,28 @@ class MeteoAlarmFeedSource:
         Fall 1 (ZAMG 404) sauber als "nicht zustaendig" behandelt, ohne
         einen Ausfallhinweis auszuloesen.
 
-        IT: DPC-Bbox PLUS franzoesische Ausnahme (Fix-Runde 1, analog
-        ``MeteoAlarmSource.covers()`` in ``meteoalarm.py`` -- Issue #1397
-        S2b): die DPC-Bbox reicht wie die INCA-Bbox rund 100 km in die
-        Provence hinein (Fréjus/Saint-Tropez liegen bei lon ~6,6-6,7,
-        innerhalb der Bbox). Ohne die Ausnahme wuerde ``_zone_for_point()``
-        fuer einen franzoesischen Punkt ``None`` liefern, ``fetch()``
-        markiert das ueber ``mark_fetch_incomplete()`` als Ausfall, und ein
-        einzelner franzoesischer Ort in der Vergleichsmatrix wuerde den
-        ``unavailable``-Hinweis fuer den gesamten Ortsvergleich kippen."""
+        IT (SPEC: docs/specs/modules/fix_1397_s4_it_grenze.md): ECHTE
+        ZONEN-GEOMETRIE statt der groben DPC-Radar-Bbox -- Vorbild
+        ``massif_closure.covers()``. Die Bbox (lat 36,0-47,5 / lon 6,5-19,0)
+        enthaelt weite Teile Oesterreichs, der Schweiz, Sloweniens und
+        Kroatiens; ein Punkt dort galt als zustaendig, fand in ``fetch()``
+        keine Zone und loeste ueber ``mark_fetch_incomplete()`` einen falschen
+        "nicht abrufbar"-Hinweis aus (Prod: 39 Punkte EINER Tour, fortlaufend).
+        ``_zone_for_point()`` ist dieselbe rein lokale Funktion, die ``fetch()``
+        ohnehin zur Zonenaufloesung nutzt -- kein Netzabruf, kein neuer Zustand.
+        Semantik (Spec "Abwaegung"): nicht zuordenbar => nicht zustaendig =>
+        schweigen; real italienische Punkte, die die vereinfachten Polygone
+        knapp verfehlen, schweigen mit -- geometrisch nicht unterscheidbar
+        (Known Limitation). Die franzoesische Ausnahme bleibt EIGENER,
+        expliziter Schritt (S4 Punkt 2, #1397 S2b) und wird NICHT durch die
+        Geometrie ersetzt: an der Grenze koennen die Polygone ungenau sein,
+        ``lookup_department()`` ist bewaehrt -- beide Pruefungen zusammen sind
+        strenger als jede einzelne."""
         if self.country == "AT":
             return _INCA_LAT_MIN <= lat <= _INCA_LAT_MAX and _INCA_LON_MIN <= lon <= _INCA_LON_MAX
-        in_dpc_bbox = _DPC_LAT_MIN <= lat <= _DPC_LAT_MAX and _DPC_LON_MIN <= lon <= _DPC_LON_MAX
-        if not in_dpc_bbox:
+        if lookup_department(lat, lon) is not None:
             return False
-        return lookup_department(lat, lon) is None
+        return _zone_for_point(lat, lon) is not None
 
     def fetch(self, lat: float, lon: float) -> list[OfficialAlert]:
         if self.country == "AT":
@@ -331,9 +334,15 @@ class MeteoAlarmFeedSource:
         else:
             zone = _zone_for_point(lat, lon)
             if zone is None:
-                # Spec Implementation Details Punkt 4 (S1): kein
-                # Kilometer-Rueckfall -- explizit "nicht abrufbar" statt
-                # einer geratenen Nachbarzone.
+                # SICHERHEITSNETZ, KEIN AKTIVER WAECHTER (#1397 S4 Punkt 4):
+                # ueber den Registry-Pfad NICHT MEHR ERREICHBAR -- base.py
+                # ruft immer erst ``covers()``, das seit S4 mit DERSELBEN
+                # Geometrie genau die Punkte ausfiltert, die hier auf ``None``
+                # traefen. Wer ihn fuer eine laufende Drift-Ueberwachung haelt,
+                # irrt. Er bleibt fuer DIREKTE ``fetch()``-Aufrufe ausserhalb
+                # der Registry (Tests, kuenftige Aufrufer) stehen, damit dort
+                # keine leere Liste still als "keine Warnung" durchgeht.
+                # Unveraendert (S1 Punkt 4): kein Kilometer-Rueckfall.
                 warn_egress.log_zone_drift("meteoalarm_feed", None, True, "point_unmapped")
                 warn_egress.mark_fetch_incomplete()
                 return []

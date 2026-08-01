@@ -63,6 +63,19 @@ AOSTA = (45.7372, 7.3201)  # VDAo-A -> IT004 (Valle d'Aosta)
 MILAN = (45.4642, 9.1900)  # Lomb-09 -> IT003 (Lombardia)
 MEER_UNMAPPED = (37.0, 13.5)  # in der DPC-Bbox, ausserhalb aller 187 Zonen-Polygone
 
+# Issue #1397 S4 (SPEC: docs/specs/modules/fix_1397_s4_it_grenze.md): reale
+# Punkte des Karnischen Hoehenwegs, einer Tour auf der Staatsgrenze IT/AT.
+# Zonen gegen die EINGECHECKTE Geometrie (``dpc._zone_at``) verifiziert,
+# Abstaende aus der Prod-Messung 2026-08-01 (Spec "Der Befund").
+AT_JENSEITS = (46.7061, 12.4063)  # Oesterreich, 2,08 km zur naechsten IT-Zonengrenze
+AT_GRENZNAH = (46.6561, 12.6044)  # 0,05 km -- geometrisch nicht entscheidbar
+IT_VENETO = (46.6508, 12.6476)  # Vene-A1 -> IT006
+IT_TRENTINO = (46.7248, 12.2254)  # Tren-A -> IT002 (Fixture traegt eine echte Warnung)
+IT_FRIAUL = (46.6283, 12.8023)  # Friu-B -> IT020
+# Im Gueltigkeitsfenster der aufgezeichneten Trentino-Gewitterwarnung
+# (onset 2026-07-31T11:00+02:00, expires 2026-08-01T01:59+02:00).
+TEST_NOW_TRENTINO = datetime(2026, 7, 31, 18, 0, tzinfo=timezone.utc)
+
 # Referenzzeitpunkt fuer "aktuell gueltig" (Fixture aufgezeichnet 2026-07-31).
 TEST_NOW = datetime(2026, 8, 1, 12, 0, tzinfo=timezone.utc)
 
@@ -265,6 +278,150 @@ def test_covers_ausschluss_loest_keinen_ausfallhinweis_fuer_frejus_aus():
             "bevor fetch() ueberhaupt aufgerufen wird"
         )
     finally:
+        oa_base._REGISTERED_SOURCES.clear()
+        oa_base._REGISTERED_SOURCES.extend(backup)
+
+
+# Issue #1397 S4 (SPEC: docs/specs/modules/fix_1397_s4_it_grenze.md):
+# ``covers()`` entschied die Zustaendigkeit ueber die grobe DPC-Radar-Bbox plus
+# EINER Frankreich-Ausnahme. AT/CH/SI/HR liegen ebenfalls weit in dieser Bbox
+# -- fuer einen Punkt dort galt die italienische Quelle als zustaendig, fand in
+# ``fetch()`` keine Zone und loeste ueber ``mark_fetch_incomplete()`` einen
+# falschen "nicht abrufbar"-Hinweis aus (Prod 2026-08-01: 39 Punkte EINER Tour).
+
+def _drift_zeilen_anzahl(warn_egress) -> int:
+    """``point_unmapped``-Zeilen des Feed-Dienstes im (append-only)
+    Diagnose-Journal -- VOR und NACH einem Aufruf gemessen, damit Zeilen
+    frueherer Tests derselben Sitzung nicht mitzaehlen."""
+    if not warn_egress.WARN_CALLS_PATH.exists():
+        return 0
+    zeilen = warn_egress.WARN_CALLS_PATH.read_text(encoding="utf-8").splitlines()
+    eintraege = [json.loads(z) for z in zeilen if '"drift"' in z]
+    return len([e for e in eintraege if e.get("service") == "meteoalarm_feed"
+                and e.get("drift") == "point_unmapped"])
+
+
+def test_ac1_oesterreichischer_grenzpunkt_loest_keinen_ausfallhinweis_aus(monkeypatch):
+    """AC-1 (der Nutzerbefund, End-zu-End): GIVEN zwei reale Punkte des
+    Karnischen Hoehenwegs liegen jenseits der italienischen Staatsgrenze (2,08
+    km bzw. 0,05 km zur naechsten italienischen Zonengrenze) und damit -- hier
+    gegen die eingecheckte Geometrie belegt -- in KEINER der 187 italienischen
+    Warnzonen, waehrend die oesterreichische Quelle sie regulaer bedient (ZAMG
+    ordnet sie der Gemeinde Sillian/70728 zu, der aufgezeichnete AT-Feed traegt
+    fuer AT707 eine aktuell gueltige Hitzewarnung), WHEN beide Quellen
+    registriert sind und die amtlichen Warnungen ueber die echte Registry
+    ermittelt werden, THEN gilt die italienische Quelle als nicht zustaendig,
+    die oesterreichische Warnung kommt normal an, KEINE der beiden Quellen
+    meldet 'nicht abrufbar' UND es entsteht keine neue ``point_unmapped``-Zeile
+    im Diagnose-Journal. Vor dem Fix genuegte die grobe DPC-Bbox (in der ganz
+    Osttirol/Kaernten liegt), und der Nutzer bekam seine Warnung samt einem
+    Ausfallhinweis, den allein die italienische Quelle beisteuerte -- samt
+    fortlaufender Drift-Zeilen, die den Betriebszustand (#1434) mit dem
+    irrefuehrenden Text 'Gebietskarte veraltet' rot zogen."""
+    import services.official_alerts.base as oa_base
+    from services.official_alerts import (
+        dpc, geosphere_warn, get_official_alerts_with_status, meteoalarm_feed, warn_egress,
+    )
+
+    _assert_pruefling_aus_diesem_baum()
+    it_source = meteoalarm_feed.MeteoAlarmFeedSource("IT")
+    for punkt in (AT_JENSEITS, AT_GRENZNAH):
+        assert dpc._zone_at(*punkt) is None, (
+            f"Aufbaupruefung: {punkt} darf in der eingecheckten Geometrie keiner "
+            f"italienischen Zone zugeordnet sein, gefunden: {dpc._zone_at(*punkt)!r}"
+        )
+        assert it_source.covers(*punkt) is False, (
+            f"{punkt} liegt jenseits der Staatsgrenze und darf nicht als "
+            f"italienisch zustaendig gelten -- sonst folgt ein grundloser 'nicht "
+            f"abrufbar'-Hinweis (Spec: nicht zuordenbar => nicht zustaendig)"
+        )
+
+    at_feed = json.loads((_FIXTURES / "feed_austria_sample.json").read_text(encoding="utf-8"))
+    feed_server = _JsonServer(at_feed)
+    # ZAMG-Erfolgsantwort in der live verifizierten Form (2026-08-01, identisch
+    # zu ``test_meteoalarm_feed_oesterreich.py``): gemeindenr als GANZZAHL.
+    zamg_server = _JsonServer({"type": "Feature", "properties": {
+        "location": {"properties": {"gemeindenr": 70728, "name": "Sillian"}},
+        "warnings": []}})
+    backup = list(oa_base._REGISTERED_SOURCES)
+    oa_base._REGISTERED_SOURCES.clear()
+    geosphere_warn._cache.clear()
+    try:
+        monkeypatch.setattr(meteoalarm_feed, "FEED_BASE_URL", f"http://127.0.0.1:{feed_server.port}")
+        monkeypatch.setattr(
+            geosphere_warn, "GEOSPHERE_WARN_URL", f"http://127.0.0.1:{zamg_server.port}")
+        oa_base._REGISTERED_SOURCES.append(meteoalarm_feed.MeteoAlarmFeedSource("AT"))
+        oa_base._REGISTERED_SOURCES.append(it_source)
+        drift_vorher = _drift_zeilen_anzahl(warn_egress)
+
+        alerts, unavailable = get_official_alerts_with_status(*AT_JENSEITS, now=TEST_NOW)
+
+        assert any(a.hazard == "extreme_heat" for a in alerts), (
+            f"Aufbaupruefung: die oesterreichische Hitzewarnung fuer AT707 muss "
+            f"ankommen. Erhalten: {alerts}"
+        )
+        assert unavailable is False, (
+            f"solange die zustaendige oesterreichische Quelle normal liefert, darf "
+            f"kein Ausfallhinweis erscheinen. Erhalten: unavailable={unavailable}"
+        )
+        assert _drift_zeilen_anzahl(warn_egress) == drift_vorher, (
+            "fuer einen Ort ausserhalb Italiens darf keine neue "
+            "'point_unmapped'-Zeile mehr entstehen"
+        )
+    finally:
+        feed_server.shutdown()
+        zamg_server.shutdown()
+        geosphere_warn._cache.clear()
+        oa_base._REGISTERED_SOURCES.clear()
+        oa_base._REGISTERED_SOURCES.extend(backup)
+
+
+def test_ac3_grenznahe_italienische_orte_behalten_ihre_warnungen(monkeypatch):
+    """AC-3 (wichtigste Gegenprobe): GIVEN drei reale, grenznahe Punkte
+    DERSELBEN Tour liegen tatsaechlich in italienischen Warnzonen (Vene-A1,
+    Tren-A, Friu-B -- gegen die eingecheckte Geometrie belegt), WHEN
+    ``covers()`` geprueft wird und fuer Tren-A/IT002 (die aufgezeichnete
+    Fixture traegt dort eine echte Gewitterwarnung) zusaetzlich der volle
+    Ermittlungsweg laeuft, THEN bleiben alle drei abgedeckt UND die Warnung
+    kommt weiterhin an -- die Korrektur darf keinen funktionierenden Ort
+    verlieren. Mailand als Kontrollpunkt im Landesinneren bleibt abgedeckt."""
+    import services.official_alerts.base as oa_base
+    from services.official_alerts import dpc, get_official_alerts_with_status, meteoalarm_feed
+
+    _assert_pruefling_aus_diesem_baum()
+    source = meteoalarm_feed.MeteoAlarmFeedSource("IT")
+    assert source.covers(*MILAN) is True
+    for punkt, zone, emma in (
+        (IT_VENETO, "Vene-A1", "IT006"),
+        (IT_TRENTINO, "Tren-A", "IT002"),
+        (IT_FRIAUL, "Friu-B", "IT020"),
+    ):
+        assert dpc._zone_at(*punkt) == zone, (
+            f"Aufbaupruefung: {punkt} muss in der eingecheckten Geometrie auf "
+            f"{zone} fallen, gefunden: {dpc._zone_at(*punkt)!r}"
+        )
+        assert meteoalarm_feed._zone_for_point(*punkt) == emma
+        assert source.covers(*punkt) is True, (
+            f"{punkt} liegt in der echten italienischen Zone {zone} und MUSS "
+            f"abgedeckt bleiben -- sonst verliert der Fix funktionierende Orte"
+        )
+
+    server = _JsonServer(_load_sample_feed())
+    backup = list(oa_base._REGISTERED_SOURCES)
+    oa_base._REGISTERED_SOURCES.clear()
+    try:
+        monkeypatch.setattr(meteoalarm_feed, "FEED_BASE_URL", f"http://127.0.0.1:{server.port}")
+        oa_base._REGISTERED_SOURCES.append(source)
+
+        alerts, unavailable = get_official_alerts_with_status(*IT_TRENTINO, now=TEST_NOW_TRENTINO)
+
+        assert unavailable is False, f"Erhalten: unavailable={unavailable}"
+        assert any(a.hazard == "thunderstorm" for a in alerts), (
+            f"der grenznahe italienische Ort muss seine echte, aufgezeichnete "
+            f"Gewitterwarnung fuer Tren-A/IT002 weiterhin bekommen. Erhalten: {alerts}"
+        )
+    finally:
+        server.shutdown()
         oa_base._REGISTERED_SOURCES.clear()
         oa_base._REGISTERED_SOURCES.extend(backup)
 
@@ -914,48 +1071,50 @@ def test_f005_kaputter_eintrag_ohne_jede_zonenangabe_bleibt_f003_geschuetzt(monk
 
 
 # ---------------------------------------------------------------------------
-# AC-5: Punkt ohne auflösbare Zone -> unavailable=True + zaehlbarer Drift.
+# ERWARTUNG GEDREHT (SPEC: docs/specs/modules/fix_1397_s4_it_grenze.md, AC-4).
+# Dieser Test hiess bis 2026-08-01 ``test_ac5_punkt_ohne_zone_meldet_nicht_
+# abrufbar_und_zaehlbaren_drift`` und verlangte fuer den Meer-Punkt
+# ``unavailable=True`` plus eine ``point_unmapped``-Drift-Zeile (AC-5 der
+# Schwester-Spec ``feat_1445_s1_feed_bestandsquelle.md``). Warum die alte
+# Erwartung faellt: sie beschreibt exakt den Fehler, den S4 beseitigt, nur an
+# einem anderen Ort -- "in der groben DPC-Bbox, aber keiner der 187 Zonen
+# zuordenbar" trifft auf offenes Meer genauso zu wie auf AT/CH/SI/HR. Ein Ort,
+# fuer den die Quelle erkennbar nicht zustaendig ist, darf keinen Ausfall
+# melden, den es nicht gibt -- derselbe Mechanismus, keine stille
+# Abschwaechung. Echte italienische Ausfaelle bleiben gemeldet, s.
+# ``test_ac4_fehlgeschlagener_feed_abruf_meldet_nicht_abrufbar``.
 # ---------------------------------------------------------------------------
 
-def test_ac5_punkt_ohne_zone_meldet_nicht_abrufbar_und_zaehlbaren_drift(monkeypatch):
-    """AC-5: GIVEN ein Punkt liegt innerhalb der DPC-Bbox, aber ausserhalb aller
-    187 bekannten Zonenpolygone (Meer zwischen Sizilien und dem Festland), WHEN
-    die amtlichen Warnungen fuer diesen Punkt ermittelt werden, THEN liefert
-    der Aufruf unavailable=True UND im Diagnose-Journal erscheint eine
-    zaehlbare log_zone_drift-Zeile mit drift='point_unmapped' (Spec
-    Implementation Details Punkt 4: exakt
-    ``log_zone_drift("meteoalarm_feed", None, True, "point_unmapped")``)."""
+def test_ac4_punkt_ohne_zone_gilt_nicht_als_italienisch_zustaendig():
+    """AC-4: GIVEN ein Punkt liegt innerhalb der groben DPC-Bbox, aber
+    ausserhalb aller 187 bekannten Zonenpolygone (offenes Meer zwischen
+    Sizilien und dem Festland), WHEN die amtlichen Warnungen fuer diesen Punkt
+    ermittelt werden, THEN gilt die italienische Quelle als nicht zustaendig,
+    ``unavailable`` bleibt ``False`` UND es entsteht keine neue
+    ``point_unmapped``-Zeile im Diagnose-Journal. Kein Feed-Server noetig: eine
+    korrekt schweigende Quelle ruft ``fetch()`` gar nicht erst auf."""
     import services.official_alerts.base as oa_base
     from services.official_alerts import get_official_alerts_with_status, meteoalarm_feed, warn_egress
 
     _assert_pruefling_aus_diesem_baum()
-    server = _JsonServer(_load_sample_feed())
     backup = list(oa_base._REGISTERED_SOURCES)
     oa_base._REGISTERED_SOURCES.clear()
     try:
-        monkeypatch.setattr(meteoalarm_feed, "FEED_BASE_URL", f"http://127.0.0.1:{server.port}")
         oa_base._REGISTERED_SOURCES.append(meteoalarm_feed.MeteoAlarmFeedSource("IT"))
+        drift_vorher = _drift_zeilen_anzahl(warn_egress)
 
         alerts, unavailable = get_official_alerts_with_status(*MEER_UNMAPPED, now=TEST_NOW)
 
-        assert unavailable is True, (
-            f"ein Punkt ohne aufloesbare Zone MUSS 'nicht abrufbar' melden, nie "
-            f"'keine Warnung'. Erhalten: alerts={alerts}, unavailable={unavailable}"
+        assert unavailable is False, (
+            f"ein Punkt ohne jede aufloesbare italienische Zone darf keinen "
+            f"'nicht abrufbar'-Hinweis der italienischen Quelle ausloesen. "
+            f"Erhalten: alerts={alerts}, unavailable={unavailable}"
         )
-        journal = warn_egress.WARN_CALLS_PATH.read_text(encoding="utf-8") \
-            if warn_egress.WARN_CALLS_PATH.exists() else ""
-        drift_zeilen = [json.loads(z) for z in journal.splitlines() if '"drift"' in z]
-        treffer = [
-            z for z in drift_zeilen
-            if z.get("service") == "meteoalarm_feed" and z.get("drift") == "point_unmapped"
-        ]
-        assert treffer, (
-            f"es muss eine zaehlbare log_zone_drift-Zeile mit "
-            f"service='meteoalarm_feed', drift='point_unmapped' stehen. "
-            f"Journal-Drift-Zeilen: {drift_zeilen}"
+        assert _drift_zeilen_anzahl(warn_egress) == drift_vorher, (
+            "fuer einen Punkt ohne italienische Zustaendigkeit darf keine neue "
+            "'point_unmapped'-Zeile mehr entstehen"
         )
     finally:
-        server.shutdown()
         oa_base._REGISTERED_SOURCES.clear()
         oa_base._REGISTERED_SOURCES.extend(backup)
 
