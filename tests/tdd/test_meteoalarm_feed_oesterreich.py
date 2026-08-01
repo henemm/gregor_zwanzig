@@ -69,6 +69,15 @@ HAMBURG = (53.55, 9.99)  # ausserhalb der INCA-Bbox
 
 TEST_NOW = datetime(2026, 8, 1, 12, 0, tzinfo=timezone.utc)
 
+# Aufnahmezeitpunkt der AC-5-Aequivalenz-Aufzeichnung: ALLE DREI Seiten wurden
+# zu dieser Minute ueber den echten Produktivcode gezogen -- die EDR-Seite nach
+# ``edr_snapshot_at.json``, der zugehoerige Feed-Bestand nach
+# ``feed_austria_equivalence.json``, die Zonenzuordnung nach
+# ``zamg_snapshot_at.json``. Bewusst NICHT ``TEST_NOW``: das ist auf die
+# aeltere, kuratierte ``feed_austria_sample.json`` (2026-07-31) abgestimmt und
+# haette mit dieser Aufzeichnung nichts zu tun.
+AUFNAHME_UTC = datetime(2026, 8, 1, 16, 19, 43, tzinfo=timezone.utc)
+
 
 def _assert_pruefling_aus_diesem_baum() -> None:
     """#1409: der importierte Pruefling MUSS aus dem Baum DIESER Testdatei
@@ -109,6 +118,19 @@ def _caches_leeren():
 
 def _load_sample_feed() -> dict:
     return json.loads((_FIXTURES / "feed_austria_sample.json").read_text(encoding="utf-8"))
+
+
+def _load_equivalence_feed() -> dict:
+    """AUSSCHLIESSLICH fuer das AC-5-Aequivalenz-Gate: der Feed-Bestand DERSELBEN
+    Minute wie ``edr_snapshot_at.json``/``zamg_snapshot_at.json``
+    (2026-08-01T16:19:43Z), Eintraege 1:1 aus dem Vollabruf.
+    ``feed_austria_sample.json`` taugt dafuer NICHT -- das ist eine fuer
+    Testabdeckung kuratierte Auswahl von 6 aus 1220 Eintraegen, und ein
+    Bruchteil kann strukturell nie Obermenge eines vollstaendigen EDR-Index
+    sein (gemessen 2026-08-01 mit der Sample-Fixture: alle 8 Tourpunkte
+    meldeten Abweichungen). Alle uebrigen Tests dieser Datei benutzen
+    weiterhin ``feed_austria_sample.json``."""
+    return json.loads((_FIXTURES / "feed_austria_equivalence.json").read_text(encoding="utf-8"))
 
 
 def _zamg_body(gemeindenr: int, name: str) -> dict:
@@ -829,13 +851,19 @@ def test_ac4_mehrere_punkte_loesen_nur_einen_feedabruf_und_keine_zusaetzlichen_z
 
 # ---------------------------------------------------------------------------
 # AC-5: Aequivalenz-Pflicht-Gate gegen einen zeitgleich aufgezeichneten
-# EDR-Snapshot (Oesterreich). Die EDR-Seite kostet 17-21 Abrufe und ist erst
-# nach Ablauf der Anbietersperre moeglich -- der Test schlaegt deshalb BEWUSST
-# fehl statt zu skippen (Praezedenz S1: ein uebersprungener
-# Sicherheits-Pflichttest waere ein getarnter Erfolg). Die Vergleichslogik
-# selbst (F002-Lehre aus S1: NICHT nur eine Existenzpruefung) ist vollstaendig
-# ausprogrammiert und per Gegenprobe (kuenstliche tmp_path-Datei) in BEIDE
-# Richtungen bewiesen.
+# EDR-Snapshot (Oesterreich). Die Aufzeichnung liegt seit
+# ``AUFNAHME_UTC`` (2026-08-01T16:19:43Z) vor -- alle drei Seiten zur selben
+# Minute ueber den Produktivcode gezogen: ``edr_snapshot_at.json`` (EDR-Index,
+# lueckenlos ueber 38 Seiten geblaettert), ``feed_austria_equivalence.json``
+# (Feed-Bestand) und ``zamg_snapshot_at.json`` (Zonenzuordnung je Tourpunkt),
+# Herkunft s. README im Fixture-Verzeichnis. Das Gate laeuft seither scharf,
+# die frueher noetige ``xfail``-Markierung ist ersatzlos entfallen.
+#
+# Die Vergleichslogik selbst (F002-Lehre aus S1: NICHT nur eine
+# Existenzpruefung) bleibt zusaetzlich per Gegenprobe
+# (``test_pruefe_obermenge_...``, kuenstliche tmp_path-Datei, NICHT die echten
+# Fixtures) in BEIDE Richtungen bewiesen -- sie belegt die Vergleichslogik
+# unabhaengig davon, was die echten Fixtures gerade enthalten.
 # ---------------------------------------------------------------------------
 
 def _alert_identitaet(alert: "OfficialAlert") -> tuple:
@@ -945,39 +973,22 @@ def test_pruefe_obermenge_erkennt_fehlende_edr_warnung_im_feed(tmp_path):
     assert "extreme_heat" in abweichungen[0]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "PO-Entscheidung 2026-08-01: Auslieferung erfolgt VOR diesem "
-        "Nachweis. Grundlage: das EDR-Anbieter-Tageskontingent ist bis "
-        "2026-08-01T15:45 UTC gesperrt, der Aequivalenz-Vergleich gegen "
-        "edr_snapshot_at.json/zamg_snapshot_at.json kann bis dahin nicht "
-        "gefuehrt werden. Als Ersatznachweis liegt ein am 2026-08-01 "
-        "gefuehrter Kreuzvergleich gegen die Ursprungsquelle (GeoSphere "
-        "Austria, acht reale Orte, darunter Sillian und Lienz am "
-        "Karnischen Hoehenweg) vor: keine einzige fehlende Warnung, dazu "
-        "117 gruene Tests und zwei bestandene Gegenproben "
-        "(test_pruefe_obermenge_...). strict=True ist Absicht: sobald "
-        "beide Aufzeichnungen vorliegen und der Test besteht, MUSS diese "
-        "Markierung entfernt werden -- ein stiller Uebergang in 'gruen, "
-        "aber nie geprueft' waere sonst moeglich (Adversary-Fund F002 "
-        "der Schwesterscheibe S1)."
-    ),
-)
 def test_ac5_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkeypatch):
     """AC-5 (Pflicht-Gate vor Freigabe): GIVEN ein zur selben Minute
     aufgezeichneter EDR-Ausschnitt, der Feed-Ausschnitt UND die ZAMG-Antwort
     fuer dieselbe Liste realer oesterreichischer Tourpunkte (inkl. Karnischer
     Hoehenweg), WHEN beide Ergebnismengen ueber ``_pruefe_obermenge``
     gegenuebergestellt werden, THEN ist die Feed-Menge fuer JEDEN Tourpunkt
-    eine Obermenge der EDR-Menge.
+    eine Obermenge der EDR-Menge (Vergleichs-Kennung: ``_alert_identitaet`` --
+    Gefahrenart + Stufe + Region + Gueltigkeitszeitraum, s. Docstring dort).
 
-    NOCH OFFEN: ``tests/fixtures/meteoalarm_feed/edr_snapshot_at.json`` UND
-    ``tests/fixtures/meteoalarm_feed/zamg_snapshot_at.json`` sind noch nicht
-    aufgezeichnet (Anbieter-Tageskontingent, Kosten fuer Oesterreich
-    17-21 Abrufe). Der Fehlschlag hier belegt NUR das Fehlen des
-    Sicherheitsnachweises -- die Vergleichslogik selbst ist bereits
-    vollstaendig ausprogrammiert und per Gegenprobe bewiesen (s. oben).
+    Aufzeichnung: ``AUFNAHME_UTC`` (2026-08-01T16:19:43Z), alle drei Seiten
+    zur selben Minute ueber den Produktivcode gezogen --
+    ``edr_snapshot_at.json`` (8 reale Tourpunkte, EDR-Index lueckenlos ueber
+    38 Seiten geblaettert) gegen ``feed_austria_equivalence.json``
+    (Feed-Bestand derselben Minute), Zonenzuordnung aus
+    ``zamg_snapshot_at.json``. Herkunft und Auswahlkriterium: README im
+    Fixture-Verzeichnis.
 
     Adversary-Fund F2 (Issue #1445 S3 Fix-Loop): dieser Test MUSS wie alle
     anderen ueber ``_ZamgServer`` gegen einen lokalen Server laufen, NIE
@@ -986,29 +997,28 @@ def test_ac5_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkey
     eine Stoerung/Ratenbremse dort erzeugte irrefuehrende Fehlschlaege, und
     er verletzte die Kern-Testschicht-Regel 'kein Netz'."""
     edr_path = _FIXTURES / "edr_snapshot_at.json"
-    assert edr_path.exists(), (
-        f"Aequivalenz-Pflicht-Gate (AC-5) kann noch nicht gefuehrt werden: "
-        f"{edr_path} fehlt. Die EDR-Vergleichsaufzeichnung kostet fuer "
-        f"Oesterreich 17-21 Abrufe und ist erst nach Ablauf der Anbietersperre "
-        f"moeglich. Dieser Test MUSS solange rot bleiben -- ein pytest.skip "
-        f"wuerde den fehlenden Sicherheitsnachweis als Erfolg tarnen."
-    )
+    feed_path = _FIXTURES / "feed_austria_equivalence.json"
     zamg_path = _FIXTURES / "zamg_snapshot_at.json"
-    assert zamg_path.exists(), (
-        f"Aequivalenz-Pflicht-Gate (AC-5) kann noch nicht gefuehrt werden: "
-        f"{zamg_path} fehlt. Diese Aufzeichnung muss zur SELBEN Minute wie "
-        f"der EDR-Snapshot gezogen werden (echte ZAMG-Antwort je Tourpunkt, "
-        f"Schema s. README.md) -- ohne sie duerfte dieser Test NICHT gegen "
-        f"das echte 'warnungen.zamg.at' laufen (Adversary-Fund F2). Dieser "
-        f"Test MUSS solange rot bleiben -- ein pytest.skip wuerde den "
-        f"fehlenden Sicherheitsnachweis als Erfolg tarnen."
-    )
+    for pfad in (edr_path, feed_path, zamg_path):
+        assert pfad.exists(), (
+            f"Aequivalenz-Pflicht-Gate (AC-5) kann ohne alle drei Seiten der "
+            f"Aufzeichnung nicht gefuehrt werden: {pfad} fehlt. Dieser Test MUSS "
+            f"dann rot bleiben -- ein pytest.skip wuerde den fehlenden "
+            f"Sicherheitsnachweis als Erfolg tarnen."
+        )
 
     import services.official_alerts.base as oa_base
-    from services.official_alerts import geosphere_warn, get_official_alerts_with_status, meteoalarm_feed
+    from services.official_alerts import geosphere_warn, meteoalarm_feed
 
+    _assert_pruefling_aus_diesem_baum()
     edr_je_punkt = _lade_alert_liste_aus_json(json.loads(edr_path.read_text(encoding="utf-8")))
     tourpunkte = list(edr_je_punkt.keys())
+    assert len(tourpunkte) == 8 and all(edr_je_punkt[p] for p in tourpunkte), (
+        f"Aufbaupruefung: die Aufzeichnung muss 8 Tourpunkte mit JE mindestens "
+        f"einer EDR-Warnung tragen -- gegen leere EDR-Mengen ist jede "
+        f"Obermengen-Pruefung trivial erfuellt und beweist nichts. Erhalten: "
+        f"{[(p, len(edr_je_punkt[p])) for p in tourpunkte]}"
+    )
     zamg_eintraege = json.loads(zamg_path.read_text(encoding="utf-8"))
     zamg_antworten = {
         _round4(eintrag["lat"], eintrag["lon"]): (
@@ -1016,28 +1026,72 @@ def test_ac5_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkey
         )
         for eintrag in zamg_eintraege
     }
+    assert all(_round4(*punkt) in zamg_antworten for punkt in tourpunkte), (
+        f"Aufbaupruefung: die ZAMG-Aufzeichnung muss JEDEN Tourpunkt des "
+        f"EDR-Snapshots abdecken -- ein fehlender Punkt liefe sonst in den "
+        f"404-Zweig des lokalen Servers und meldete faelschlich 'nicht "
+        f"zustaendig'. Fehlend: "
+        f"{[p for p in tourpunkte if _round4(*p) not in zamg_antworten]}"
+    )
 
-    server = _JsonServer(_load_sample_feed())
+    # Gleichbehandlung beider Seiten -- dieselbe Entscheidung wie im
+    # IT-Pendant (``test_ac3_...`` in test_meteoalarm_feed_italien.py) und aus
+    # demselben Grund uebernommen: verglichen wird auf BEIDEN Seiten die ROHE
+    # Quellenausgabe zum Aufnahmezeitpunkt -- die EDR-Seite so, wie
+    # ``MeteoAlarmSource.fetch()`` sie lieferte, die Feed-Seite ueber
+    # ``MeteoAlarmFeedSource.fetch()`` statt ueber
+    # ``get_official_alerts_with_status(now=...)``. Zwei Gruende:
+    # (1) Zeitfenster: filtert man nur die Feed-Seite auf ``now``, verschwinden
+    #     dort zum Aufnahmezeitpunkt bereits abgelaufene Warnungen, waehrend sie
+    #     auf der EDR-Seite stehenbleiben -- gemeldet wuerde eine Luecke, die
+    #     allein aus der ungleichen Behandlung stammt. Die Fensterfilterung
+    #     sitzt ohnehin in ``base.py`` HINTER beiden Quellen und kann in
+    #     Produktion keinen Unterschied ZWISCHEN ihnen erzeugen -- sie gehoert
+    #     damit nicht in einen Quellen-Aequivalenzbeweis.
+    # (2) Der Zwei-Pass-Dedup in ``base.py`` kollabiert Warnungen mit gleichem
+    #     ``(hazard, valid_from, valid_to)`` auf die hoechste Stufe. Eine im EDR
+    #     vorhandene, im Feed fehlende Warnung koennte dadurch MASKIERT werden --
+    #     genau die Richtung, die dieses Gate ausschliessen soll.
+    # Anders als in Italien ist Grund (1) hier nicht theoretisch, sondern
+    # gemessen: die oesterreichische EDR-Aufzeichnung traegt Warnungen, die zum
+    # Aufnahmezeitpunkt bereits abgelaufen sind (Stand der Aufzeichnung: 24 von
+    # 118). Eine einseitige ``now``-Filterung der Feed-Seite haette genau diese
+    # als vermeintliche Luecken gemeldet. Der Rohvergleich ist damit zugleich
+    # die STRENGERE Variante -- er verlangt vom Feed auch die abgelaufenen
+    # Warnungen, und der Feed liefert sie (er reicht weiter zurueck als der
+    # EDR-Index).
+    alle_edr = [a for punkt in tourpunkte for a in edr_je_punkt[punkt]]
+    gefiltert = oa_base.filter_alerts_to_window(alle_edr, AUFNAHME_UTC, None)
+    assert len(gefiltert) < len(alle_edr), (
+        f"Aufbaupruefung: die EDR-Aufzeichnung muss zum Aufnahmezeitpunkt "
+        f"bereits abgelaufene Warnungen enthalten -- genau sie belegen, dass "
+        f"eine einseitige now-Filterung der Feed-Seite unzulaessig waere. "
+        f"Erhalten: {len(gefiltert)} von {len(alle_edr)} ueberleben die "
+        f"Filterung. Sind es alle, ist der Rohvergleich zwar weiterhin korrekt, "
+        f"aber diese Begruendung muss dann neu belegt werden."
+    )
+
+    server = _JsonServer(_load_equivalence_feed())
     zamg = _ZamgServer(zamg_antworten)
-    backup = list(oa_base._REGISTERED_SOURCES)
-    oa_base._REGISTERED_SOURCES.clear()
     try:
         monkeypatch.setattr(meteoalarm_feed, "FEED_BASE_URL", f"http://127.0.0.1:{server.port}")
         monkeypatch.setattr(geosphere_warn, "GEOSPHERE_WARN_URL", f"http://127.0.0.1:{zamg.port}")
-        oa_base._REGISTERED_SOURCES.append(meteoalarm_feed.MeteoAlarmFeedSource("AT"))
+        quelle = meteoalarm_feed.MeteoAlarmFeedSource("AT")
 
         feed_je_punkt = {}
         for punkt in tourpunkte:
-            alerts, _unavailable = get_official_alerts_with_status(*punkt, now=TEST_NOW)
-            feed_je_punkt[punkt] = alerts
+            assert quelle.covers(*punkt) is True, (
+                f"Aufbaupruefung: {punkt} muss von der Feed-Quelle abgedeckt sein "
+                f"-- sonst vergleicht das Gate einen Punkt, den die Quelle in "
+                f"Produktion gar nicht bedient"
+            )
+            feed_je_punkt[punkt] = quelle.fetch(*punkt)
 
         abweichungen = _pruefe_obermenge(tourpunkte, feed_je_punkt, edr_je_punkt)
         assert not abweichungen, "\n".join(abweichungen)
     finally:
         server.shutdown()
         zamg.shutdown()
-        oa_base._REGISTERED_SOURCES.clear()
-        oa_base._REGISTERED_SOURCES.extend(backup)
 
 
 # ---------------------------------------------------------------------------

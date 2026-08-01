@@ -1,0 +1,994 @@
+[
+ {
+  "lat": 46.7597,
+  "lon": 12.4177,
+  "alerts": [
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-07-31T15:00:00+02:00",
+    "valid_to": "2026-07-31T23:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-07-31T15:00:00+02:00",
+    "valid_to": "2026-07-31T23:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-07-31T21:29:10+02:00",
+    "valid_to": "2026-07-31T22:29:10+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-07-31T21:29:10+02:00",
+    "valid_to": "2026-07-31T22:29:10+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-01T00:31:51+02:00",
+    "valid_to": "2026-08-01T01:31:51+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-01T00:31:51+02:00",
+    "valid_to": "2026-08-01T01:31:51+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-01T00:00:00+02:00",
+    "valid_to": "2026-08-01T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-01T00:00:00+02:00",
+    "valid_to": "2026-08-01T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-01T13:00:00+02:00",
+    "valid_to": "2026-08-02T00:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-01T13:00:00+02:00",
+    "valid_to": "2026-08-02T00:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-02T13:00:00+02:00",
+    "valid_to": "2026-08-02T21:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-02T13:00:00+02:00",
+    "valid_to": "2026-08-02T21:00:00+02:00"
+   }
+  ]
+ },
+ {
+  "lat": 46.8296,
+  "lon": 12.7698,
+  "alerts": [
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-07-31T15:00:00+02:00",
+    "valid_to": "2026-07-31T23:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-07-31T15:00:00+02:00",
+    "valid_to": "2026-07-31T23:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-07-31T21:29:10+02:00",
+    "valid_to": "2026-07-31T22:29:10+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-07-31T21:29:10+02:00",
+    "valid_to": "2026-07-31T22:29:10+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-01T00:31:51+02:00",
+    "valid_to": "2026-08-01T01:31:51+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-01T00:31:51+02:00",
+    "valid_to": "2026-08-01T01:31:51+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-01T00:00:00+02:00",
+    "valid_to": "2026-08-01T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-01T00:00:00+02:00",
+    "valid_to": "2026-08-01T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-01T13:00:00+02:00",
+    "valid_to": "2026-08-02T00:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-01T13:00:00+02:00",
+    "valid_to": "2026-08-02T00:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-02T13:00:00+02:00",
+    "valid_to": "2026-08-02T21:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Lienz",
+    "valid_from": "2026-08-02T13:00:00+02:00",
+    "valid_to": "2026-08-02T21:00:00+02:00"
+   }
+  ]
+ },
+ {
+  "lat": 47.323,
+  "lon": 12.7951,
+  "alerts": [
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-07-31T19:35:24+02:00",
+    "valid_to": "2026-07-31T20:35:24+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-07-31T19:35:24+02:00",
+    "valid_to": "2026-07-31T20:35:24+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-07-31T15:00:00+02:00",
+    "valid_to": "2026-07-31T23:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-07-31T15:00:00+02:00",
+    "valid_to": "2026-07-31T23:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-02T13:00:00+02:00",
+    "valid_to": "2026-08-02T21:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-02T13:00:00+02:00",
+    "valid_to": "2026-08-02T21:00:00+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-01T00:00:00+02:00",
+    "valid_to": "2026-08-01T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-01T00:00:00+02:00",
+    "valid_to": "2026-08-01T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-01T13:00:00+02:00",
+    "valid_to": "2026-08-02T00:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-01T13:00:00+02:00",
+    "valid_to": "2026-08-02T00:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-01T17:48:39+02:00",
+    "valid_to": "2026-08-01T18:48:39+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Zell am See",
+    "valid_from": "2026-08-01T17:48:39+02:00",
+    "valid_to": "2026-08-01T18:48:39+02:00"
+   }
+  ]
+ },
+ {
+  "lat": 48.2082,
+  "lon": 16.3738,
+  "alerts": [
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Wien Innere Stadt",
+    "valid_from": "2026-08-01T00:00:00+02:00",
+    "valid_to": "2026-08-01T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Wien Innere Stadt",
+    "valid_from": "2026-08-01T00:00:00+02:00",
+    "valid_to": "2026-08-01T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Wien Innere Stadt",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Wien Innere Stadt",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Wien Innere Stadt",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Wien Innere Stadt",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Wien Innere Stadt",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Wien Innere Stadt",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Wien Innere Stadt",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Wien Innere Stadt",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Wien Innere Stadt",
+    "valid_from": "2026-08-01T15:53:18+02:00",
+    "valid_to": "2026-08-01T16:53:18+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Wien Innere Stadt",
+    "valid_from": "2026-08-01T15:53:18+02:00",
+    "valid_to": "2026-08-01T16:53:18+02:00"
+   }
+  ]
+ },
+ {
+  "lat": 47.2692,
+  "lon": 11.4041,
+  "alerts": [
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-07-31T15:00:00+02:00",
+    "valid_to": "2026-07-31T23:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-07-31T15:00:00+02:00",
+    "valid_to": "2026-07-31T23:00:00+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-01T00:00:00+02:00",
+    "valid_to": "2026-08-01T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-01T00:00:00+02:00",
+    "valid_to": "2026-08-01T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 2,
+    "label": "Hitzewarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-01T13:00:00+02:00",
+    "valid_to": "2026-08-02T00:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-01T13:00:00+02:00",
+    "valid_to": "2026-08-02T00:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-02T13:00:00+02:00",
+    "valid_to": "2026-08-02T21:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-02T13:00:00+02:00",
+    "valid_to": "2026-08-02T21:00:00+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-01T14:32:03+02:00",
+    "valid_to": "2026-08-01T15:32:03+02:00"
+   },
+   {
+    "hazard": "thunderstorm",
+    "level": 2,
+    "label": "Gewitterwarnung",
+    "region_label": "Innsbruck (Stadt)",
+    "valid_from": "2026-08-01T14:32:03+02:00",
+    "valid_to": "2026-08-01T15:32:03+02:00"
+   }
+  ]
+ },
+ {
+  "lat": 47.0707,
+  "lon": 15.4395,
+  "alerts": [
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Graz (Stadt)",
+    "valid_from": "2026-08-01T00:00:00+02:00",
+    "valid_to": "2026-08-01T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Graz (Stadt)",
+    "valid_from": "2026-08-01T00:00:00+02:00",
+    "valid_to": "2026-08-01T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Graz (Stadt)",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Graz (Stadt)",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Graz (Stadt)",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Graz (Stadt)",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Graz (Stadt)",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Graz (Stadt)",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Graz (Stadt)",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Graz (Stadt)",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   }
+  ]
+ },
+ {
+  "lat": 47.8457,
+  "lon": 16.5237,
+  "alerts": [
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Eisenstadt (Stadt)",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Eisenstadt (Stadt)",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Eisenstadt (Stadt)",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Eisenstadt (Stadt)",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Eisenstadt (Stadt)",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Eisenstadt (Stadt)",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Eisenstadt (Stadt)",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Eisenstadt (Stadt)",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   }
+  ]
+ },
+ {
+  "lat": 48.2047,
+  "lon": 15.6256,
+  "alerts": [
+   {
+    "hazard": "wind_gust",
+    "level": 2,
+    "label": "Windwarnung",
+    "region_label": "Sankt Pölten (Stadt)",
+    "valid_from": "2026-07-31T21:00:00+02:00",
+    "valid_to": "2026-08-01T02:00:00+02:00"
+   },
+   {
+    "hazard": "wind_gust",
+    "level": 2,
+    "label": "Windwarnung",
+    "region_label": "Sankt Pölten (Stadt)",
+    "valid_from": "2026-07-31T21:00:00+02:00",
+    "valid_to": "2026-08-01T02:00:00+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Sankt Pölten (Stadt)",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Sankt Pölten (Stadt)",
+    "valid_from": "2026-08-02T00:00:00+02:00",
+    "valid_to": "2026-08-02T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Sankt Pölten (Stadt)",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Sankt Pölten (Stadt)",
+    "valid_from": "2026-08-03T00:00:00+02:00",
+    "valid_to": "2026-08-03T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Sankt Pölten (Stadt)",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Sankt Pölten (Stadt)",
+    "valid_from": "2026-08-04T00:00:00+02:00",
+    "valid_to": "2026-08-04T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Sankt Pölten (Stadt)",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   },
+   {
+    "hazard": "extreme_heat",
+    "level": 3,
+    "label": "Hitzewarnung",
+    "region_label": "Sankt Pölten (Stadt)",
+    "valid_from": "2026-08-05T00:00:00+02:00",
+    "valid_to": "2026-08-05T23:59:59+02:00"
+   }
+  ]
+ }
+]

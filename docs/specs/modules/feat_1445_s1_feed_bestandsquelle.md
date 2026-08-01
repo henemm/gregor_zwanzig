@@ -218,15 +218,24 @@ italienische Warnung seltener oder unvollständiger sieht als heute.
   Warnungen, die der bisherige Weg für dieselben Punkte lieferte.
   - Test: Test 3 oben — Obermengen-Vergleich gegen die aufgezeichneten Fixtures (Pflicht-Gate
     vor Freigabe, Randbedingung 1).
-  - **PO-Entscheidung 2026-08-01:** Der Product Owner hat die Auslieferung freigegeben, bevor
-    dieser Nachweis (`edr_snapshot_it.json`) vorliegt — Grundlage ist ein am selben Tag geführter
-    Kreuzvergleich gegen die Ursprungsquelle GeoSphere Austria an acht realen Orten (darunter
-    Sillian und Lienz am Karnischen Höhenweg), der keine einzige fehlende Warnung zeigte, dazu
-    117 grüne Tests und zwei bestandene Gegenproben. Der zugehörige Test
-    (`test_ac3_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte`) bleibt
-    `@pytest.mark.xfail(strict=True, ...)`, bis das eigentliche Anbieter-Tageskontingent
-    (gesperrt bis 2026-08-01T15:45 UTC) wieder verfügbar ist und der Vergleich nachgezogen wird —
-    danach wird die Markierung entfernt.
+  - **✅ NACHGEZOGEN 2026-08-01, 16:06:28 UTC — AC-3 ist erfüllt.** Nach Ablauf der
+    Anbieter-Tagessperre (Reset 15:45 UTC) wurden beide Seiten im selben Skriptlauf und
+    damit zur selben Minute aufgezeichnet: `edr_snapshot_it.json` (EDR-Weg über den echten
+    Produktivcode, 8 reale Tourpunkte) und `feed_italy_equivalence.json` (Feed-Bestand
+    derselben Minute, unverändert, reduziert auf die 8 betroffenen EMMA-Zonen).
+    **Ergebnis: null fehlende Warnungen**, der Feed ist für jeden Punkt eine echte Obermenge
+    und trägt an zwei Punkten sogar eine zusätzliche Warnung. Die `xfail`-Markierung ist
+    ersatzlos entfallen, der Test läuft regulär grün.
+  - **Historie (überholt):** Die Auslieferung war zuvor vom Product Owner freigegeben worden,
+    bevor dieser Nachweis vorlag — Grundlage war ein Kreuzvergleich gegen die Ursprungsquelle
+    GeoSphere Austria an acht realen Orten. Dieser Ersatznachweis ist durch die echte
+    Vergleichsaufnahme abgelöst.
+  - **Zur Belastbarkeit:** Das Gate war in der ursprünglichen Umsetzung **strukturell nicht
+    bestehbar** — es verglich gegen `feed_italy_sample.json` (kuratierte Auswahl von 10 aus
+    457 Einträgen) statt gegen eine eigene Äquivalenz-Aufzeichnung, wie Zeile 61 dieser Spec
+    sie vorsieht, und die Ladefunktion verwarf `region_label`, obwohl die Vergleichskennung es
+    heranzieht. Beides ist behoben; die Schärfe des Gates ist per Mutation belegt
+    (eingeschleuste Warnung wird gemeldet, Fixture danach bitweise identisch).
 
 - **AC-4:** Given die neue Quelle ist zum Abrufzeitpunkt nicht erreichbar, When die amtlichen
   Warnungen für einen betroffenen italienischen Ort ermittelt werden, Then meldet das Ergebnis

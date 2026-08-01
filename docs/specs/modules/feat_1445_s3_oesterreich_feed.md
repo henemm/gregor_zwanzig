@@ -265,15 +265,26 @@ allein noch nicht erreicht hat.
   Tourpunkte vor, When beide Ergebnismengen gegenübergestellt werden, Then enthält die neue
   Quelle mindestens alle Warnungen, die der bisherige Weg für dieselben Punkte lieferte.
   - Test: Test 5 oben — Obermengen-Vergleich gegen aufgezeichnete Fixtures (Pflicht-Gate).
-  - **PO-Entscheidung 2026-08-01:** Der Product Owner hat die Auslieferung freigegeben, bevor
-    dieser Nachweis (`edr_snapshot_at.json`/`zamg_snapshot_at.json`) vorliegt — Grundlage ist ein
-    am selben Tag geführter Kreuzvergleich gegen die Ursprungsquelle GeoSphere Austria an acht
-    realen Orten (darunter Sillian und Lienz am Karnischen Höhenweg), der keine einzige fehlende
-    Warnung zeigte, dazu 117 grüne Tests und zwei bestandene Gegenproben. Der zugehörige Test
-    (`test_ac5_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte`) bleibt
-    `@pytest.mark.xfail(strict=True, ...)`, bis das eigentliche Anbieter-Tageskontingent
-    (gesperrt bis 2026-08-01T15:45 UTC) wieder verfügbar ist und der Vergleich nachgezogen wird —
-    danach wird die Markierung entfernt.
+  - **✅ NACHGEZOGEN 2026-08-01, 16:19:43 UTC — AC-5 ist erfüllt.** Nach Ablauf der
+    Anbieter-Tagessperre wurden alle **drei** Seiten im selben Skriptlauf und damit zur selben
+    Minute aufgezeichnet: `edr_snapshot_at.json`, `feed_austria_equivalence.json` und
+    `zamg_snapshot_at.json` (letztere erfüllt Adversary-Fund F2 — der Test läuft über den
+    lokalen `_ZamgServer` statt gegen das echte `warnungen.zamg.at`).
+    Der EDR-Index wurde dafür **lückenlos** geblättert: Seiten 1–38, im Egress-Journal belegt,
+    3678 Roheinträge → 1536 nach Entduplizierung. Ein Teilabruf hätte die zu übertreffende
+    Menge künstlich verkleinert und die Aussage wertlos gemacht.
+    **Ergebnis: null fehlende Warnungen**, der Feed ist für jeden Punkt eine echte Obermenge
+    und reicht sogar weiter zurück. Die `xfail`-Markierung ist ersatzlos entfallen.
+  - **Historie (überholt):** Die Auslieferung war zuvor auf Basis eines Kreuzvergleichs gegen
+    GeoSphere Austria freigegeben worden. Dieser Ersatznachweis ist abgelöst.
+  - **Ehrlich zur Aussagekraft:** Sillian (`gemeindenr` 70728) und Lienz (70716) fallen beide
+    auf EMMA-Zone `AT707` und liefern identische Mengen — die acht Tourpunkte sind **sieben
+    unabhängige Zonen**, nicht acht unabhängige Prüfungen.
+  - **Warum roh statt zeitgefiltert verglichen wird:** 24 der 118 EDR-Warnungen waren zum
+    Aufnahmezeitpunkt bereits abgelaufen. Eine einseitige `now`-Filterung der Feed-Seite hätte
+    genau diese 24 als vermeintliche Lücken gemeldet — ein Fehlalarm, der wie ein
+    Sicherheitsproblem ausgesehen hätte. Der Rohvergleich ist die strengere Variante: er
+    verlangt vom Feed auch die abgelaufenen Warnungen, und der Feed liefert sie.
 
 - **AC-6:** Given die neue Quelle liefert eine syntaktisch gültige, aber strukturell
   unbrauchbare Antwort (kein auswertbarer Warnungsbestand), When die amtlichen Warnungen für

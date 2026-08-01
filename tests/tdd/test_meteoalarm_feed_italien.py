@@ -79,6 +79,14 @@ TEST_NOW_TRENTINO = datetime(2026, 7, 31, 18, 0, tzinfo=timezone.utc)
 # Referenzzeitpunkt fuer "aktuell gueltig" (Fixture aufgezeichnet 2026-07-31).
 TEST_NOW = datetime(2026, 8, 1, 12, 0, tzinfo=timezone.utc)
 
+# Aufnahmezeitpunkt der AC-3-Aequivalenz-Aufzeichnung: BEIDE Seiten wurden zu
+# dieser Minute ueber den echten Produktivcode gezogen -- die EDR-Seite nach
+# ``edr_snapshot_it.json``, der zugehoerige Feed-Bestand nach
+# ``feed_italy_equivalence.json``. Bewusst NICHT ``TEST_NOW``: das ist auf die
+# aeltere, kuratierte ``feed_italy_sample.json`` (2026-07-31) abgestimmt und
+# haette mit dieser Aufzeichnung nichts zu tun.
+AUFNAHME_UTC = datetime(2026, 8, 1, 16, 6, 28, tzinfo=timezone.utc)
+
 # Identifier der Lazio-Hitzewarnung in der Fixture (fuer den AC-6-Test).
 _LAZIO_HITZE_ID = "2.49.0.0.380.3.IT.260731115902.089"
 
@@ -126,6 +134,16 @@ def _feed_cache_leeren():
 
 def _load_sample_feed() -> dict:
     return json.loads((_FIXTURES / "feed_italy_sample.json").read_text(encoding="utf-8"))
+
+
+def _load_equivalence_feed() -> dict:
+    """AUSSCHLIESSLICH fuer das AC-3-Aequivalenz-Gate: der Feed-Bestand DERSELBEN
+    Minute wie ``edr_snapshot_it.json`` (2026-08-01T16:06:28Z), Eintraege 1:1 aus
+    dem Vollabruf. ``feed_italy_sample.json`` taugt dafuer NICHT -- das ist eine
+    fuer Testabdeckung kuratierte Auswahl von 10 aus 457 Eintraegen, und ein
+    Bruchteil kann strukturell nie Obermenge eines vollstaendigen EDR-Index sein
+    (gemessen 2026-08-01: alle 8 Tourpunkte meldeten Abweichungen)."""
+    return json.loads((_FIXTURES / "feed_italy_equivalence.json").read_text(encoding="utf-8"))
 
 
 class _Zaehler:
@@ -497,11 +515,11 @@ def test_ac2_mehrere_punkte_im_selben_fenster_loesen_nur_einen_abruf_aus(monkeyp
 
 # ---------------------------------------------------------------------------
 # AC-3: Aequivalenz-Pflicht-Gate gegen einen zeitgleich aufgezeichneten
-# EDR-Snapshot. Die EDR-Seite steht noch aus (Anbieter-Tageskontingent
-# gesperrt bis 2026-08-01T15:45 UTC laut
-# docs/context/fix-1397-wiederanlauf-ausbruch.md) -- der Test schlaegt deshalb
-# BEWUSST fehl statt zu skippen (ein uebersprungener Sicherheits-Pflichttest
-# waere ein getarnter Erfolg ohne Nachweis).
+# EDR-Snapshot. Die Aufzeichnung liegt seit 2026-08-01T16:06:28Z vor (beide
+# Seiten zur selben Minute ueber den Produktivcode gezogen:
+# ``edr_snapshot_it.json`` + ``feed_italy_equivalence.json``, Herkunft s.
+# README im Fixture-Verzeichnis) -- das Gate laeuft seither scharf, die
+# frueher noetige ``xfail``-Markierung ist ersatzlos entfallen.
 #
 # Adversary-Fund F002 (Fix-Loop): die Obermengen-Pruefung war bisher nur ein
 # Docstring-Versprechen -- der Test pruefte ausschliesslich ``edr_path.
@@ -510,8 +528,8 @@ def test_ac2_mehrere_punkte_im_selben_fenster_loesen_nur_einen_abruf_aus(monkeyp
 # per Gegenprobe (``test_pruefe_obermenge_...``, kuenstliche tmp_path-Datei,
 # NICHT die echte Fixture) in beide Richtungen bewiesen: Obermenge erfuellt
 # => gruen, eine im EDR vorhandene Warnung fehlt im Feed => rot. Der
-# eigentliche ``test_ac3_...`` bleibt UNVERAENDERT rot, solange
-# ``edr_snapshot_it.json`` fehlt (kein Skip, kein getarnter Erfolg).
+# Diese Gegenprobe bleibt auch nach der Aufzeichnung stehen: sie beweist die
+# Vergleichslogik unabhaengig davon, was die echten Fixtures gerade enthalten.
 # ---------------------------------------------------------------------------
 
 def _alert_identitaet(alert: "OfficialAlert") -> tuple:
@@ -581,6 +599,13 @@ def _lade_alert_liste_aus_json(eintraege: list[dict]) -> dict:
                 hazard=a["hazard"],
                 level=a["level"],
                 label=a.get("label", ""),
+                # PFLICHTFELD, nicht optional: ``_alert_identitaet`` zieht
+                # ``region_label`` als Vergleichsmerkmal heran (F004-Fix). Wurde
+                # es hier verschwiegen, trug JEDE EDR-Warnung ``None``, jede
+                # Feed-Warnung ihren echten Wert -- dieselbe Warnung galt dann
+                # als fehlend und das Aequivalenz-Gate meldete flaechendeckend
+                # falsche Abweichungen (gemessen 2026-08-01: alle 8 Tourpunkte).
+                region_label=a.get("region_label"),
                 valid_from=datetime.fromisoformat(a["valid_from"]) if a.get("valid_from") else None,
                 valid_to=datetime.fromisoformat(a["valid_to"]) if a.get("valid_to") else None,
             )
@@ -662,8 +687,8 @@ def test_alert_identitaet_gleicher_zeitpunkt_verschiedene_notation_gilt_als_glei
 
 def test_pruefe_obermenge_erkennt_fehlende_edr_warnung_im_feed(tmp_path):
     """Gegenprobe fuer die AC-3-Vergleichslogik (F002-Fix): eine kleine,
-    KUENSTLICH konstruierte Vergleichsdatei in ``tmp_path`` (NICHT die echte
-    Fixture, die weiterhin fehlt) beweist beide Richtungen der
+    KUENSTLICH konstruierte Vergleichsdatei in ``tmp_path`` (bewusst NICHT die
+    echte Aufzeichnung) beweist beide Richtungen der
     Obermengen-Pruefung -- Obermenge erfuellt => gruen, eine im EDR
     vorhandene Warnung fehlt im Feed => rot. Ohne diese Gegenprobe waere die
     Vergleichslogik selbst wieder nur eine unbewiesene Behauptung."""
@@ -708,24 +733,6 @@ def test_pruefe_obermenge_erkennt_fehlende_edr_warnung_im_feed(tmp_path):
     assert "extreme_heat" in abweichungen[0]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "PO-Entscheidung 2026-08-01: Auslieferung erfolgt VOR diesem "
-        "Nachweis. Grundlage: das EDR-Anbieter-Tageskontingent ist bis "
-        "2026-08-01T15:45 UTC gesperrt, der Aequivalenz-Vergleich gegen "
-        "edr_snapshot_it.json kann bis dahin nicht gefuehrt werden. Als "
-        "Ersatznachweis liegt ein am 2026-08-01 gefuehrter Kreuzvergleich "
-        "gegen die Ursprungsquelle (Meteoalarm-Ursprungsdaten, acht reale "
-        "Orte, darunter Sillian und Lienz am Karnischen Hoehenweg) vor: "
-        "keine einzige fehlende Warnung, dazu 117 gruene Tests und zwei "
-        "bestandene Gegenproben (test_pruefe_obermenge_...). strict=True "
-        "ist Absicht: sobald edr_snapshot_it.json aufgezeichnet ist und "
-        "der Test besteht, MUSS diese Markierung entfernt werden -- ein "
-        "stiller Uebergang in 'gruen, aber nie geprueft' waere sonst "
-        "moeglich (Adversary-Fund F002 der Schwesterscheibe)."
-    ),
-)
 def test_ac3_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkeypatch):
     """AC-3 (Pflicht-Gate vor Freigabe, Spec Implementation Details Punkt 3 /
     Randbedingung 1): GIVEN ein zur selben Minute aufgezeichneter EDR-Ausschnitt
@@ -733,47 +740,82 @@ def test_ac3_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkey
     Ergebnismengen ueber ``_pruefe_obermenge`` gegenuebergestellt werden, THEN
     ist die Feed-Menge fuer JEDEN Tourpunkt eine Obermenge der EDR-Menge
     (Vergleichs-Kennung: ``_alert_identitaet`` -- Gefahrenart + Stufe +
-    Gueltigkeitszeitraum, s. Docstring dort).
+    Region + Gueltigkeitszeitraum, s. Docstring dort).
 
-    NOCH OFFEN: ``tests/fixtures/meteoalarm_feed/edr_snapshot_it.json`` ist
-    noch nicht aufgezeichnet (EDR-Tageskontingent gesperrt, Reset
-    2026-08-01T15:45 UTC). Der Fehlschlag hier belegt NUR das Fehlen des
-    Sicherheitsnachweises -- die Vergleichslogik selbst ist bereits
-    vollstaendig ausprogrammiert und per ``test_pruefe_obermenge_...``
-    (kuenstliche tmp_path-Datei) bewiesen, s. Kommentarblock oben."""
+    Aufzeichnung: ``AUFNAHME_UTC`` (2026-08-01T16:06:28Z), beide Seiten zur
+    selben Minute ueber den Produktivcode gezogen --
+    ``edr_snapshot_it.json`` (8 reale Tourpunkte) gegen
+    ``feed_italy_equivalence.json`` (Feed-Bestand derselben Minute). Herkunft
+    und Auswahlkriterium: README im Fixture-Verzeichnis."""
     edr_path = _FIXTURES / "edr_snapshot_it.json"
-    assert edr_path.exists(), (
-        f"Aequivalenz-Pflicht-Gate (AC-3) kann noch nicht gefuehrt werden: "
-        f"{edr_path} fehlt. Die EDR-Vergleichsaufzeichnung steht aus (Anbieter-"
-        f"Tageskontingent gesperrt bis 2026-08-01T15:45 UTC). Dieser Test MUSS "
-        f"solange rot bleiben -- ein pytest.skip wuerde den fehlenden "
-        f"Sicherheitsnachweis als Erfolg tarnen."
-    )
+    feed_path = _FIXTURES / "feed_italy_equivalence.json"
+    for pfad in (edr_path, feed_path):
+        assert pfad.exists(), (
+            f"Aequivalenz-Pflicht-Gate (AC-3) kann ohne beide Seiten der "
+            f"Aufzeichnung nicht gefuehrt werden: {pfad} fehlt. Dieser Test MUSS "
+            f"dann rot bleiben -- ein pytest.skip wuerde den fehlenden "
+            f"Sicherheitsnachweis als Erfolg tarnen."
+        )
 
     import services.official_alerts.base as oa_base
-    from services.official_alerts import get_official_alerts_with_status, meteoalarm_feed
+    from services.official_alerts import meteoalarm_feed
 
+    _assert_pruefling_aus_diesem_baum()
     edr_je_punkt = _lade_alert_liste_aus_json(json.loads(edr_path.read_text(encoding="utf-8")))
     tourpunkte = list(edr_je_punkt.keys())
+    assert len(tourpunkte) == 8 and all(edr_je_punkt[p] for p in tourpunkte), (
+        f"Aufbaupruefung: die Aufzeichnung muss 8 Tourpunkte mit JE mindestens "
+        f"einer EDR-Warnung tragen -- gegen leere EDR-Mengen ist jede "
+        f"Obermengen-Pruefung trivial erfuellt und beweist nichts. Erhalten: "
+        f"{[(p, len(edr_je_punkt[p])) for p in tourpunkte]}"
+    )
 
-    server = _JsonServer(_load_sample_feed())
-    backup = list(oa_base._REGISTERED_SOURCES)
-    oa_base._REGISTERED_SOURCES.clear()
+    # Gleichbehandlung beider Seiten (sonst misst das Gate nur die eigene
+    # Filterung): verglichen wird auf BEIDEN Seiten die ROHE Quellenausgabe zum
+    # Aufnahmezeitpunkt -- die EDR-Seite so, wie ``MeteoAlarmSource.fetch()`` sie
+    # lieferte, die Feed-Seite ueber ``MeteoAlarmFeedSource.fetch()`` statt ueber
+    # ``get_official_alerts_with_status(now=...)``. Zwei Gruende:
+    # (1) Zeitfenster: die EDR-Aufzeichnung enthaelt Warnungen, deren
+    #     Gueltigkeit erst spaeter beginnt (bis 2026-08-03). Filtert man nur die
+    #     Feed-Seite auf ``now``, verschwinden dort zum Aufnahmezeitpunkt
+    #     abgelaufene Warnungen, waehrend sie auf der EDR-Seite stehenbleiben --
+    #     gemeldet wuerde eine Luecke, die allein aus der ungleichen Behandlung
+    #     stammt. Die Fensterfilterung sitzt ohnehin in ``base.py`` HINTER beiden
+    #     Quellen und kann in Produktion keinen Unterschied ZWISCHEN ihnen
+    #     erzeugen -- sie gehoert damit nicht in einen Quellen-Aequivalenzbeweis.
+    # (2) Der Zwei-Pass-Dedup in ``base.py`` kollabiert Warnungen mit gleichem
+    #     ``(hazard, valid_from, valid_to)`` auf die hoechste Stufe. Eine im EDR
+    #     vorhandene, im Feed fehlende Warnung koennte dadurch MASKIERT werden --
+    #     genau die Richtung, die dieses Gate ausschliessen soll.
+    # Belegt statt behauptet: eine Filterung auf ``AUFNAHME_UTC`` aendert an der
+    # EDR-Seite nichts (sie traegt keine dort bereits abgelaufene Warnung), auf
+    # der Feed-Seite dagegen schon -- die Aufzeichnungen sind also zeitgleich,
+    # und der Rohvergleich ist die strengere der beiden Varianten.
+    alle_edr = [a for punkt in tourpunkte for a in edr_je_punkt[punkt]]
+    assert len(oa_base.filter_alerts_to_window(alle_edr, AUFNAHME_UTC, None)) == len(alle_edr), (
+        "Aufbaupruefung: die EDR-Aufzeichnung darf zum Aufnahmezeitpunkt keine "
+        "bereits abgelaufene Warnung enthalten -- sonst waeren die beiden Seiten "
+        "nicht zur selben Minute gezogen und der Rohvergleich unzulaessig"
+    )
+
+    server = _JsonServer(_load_equivalence_feed())
     try:
         monkeypatch.setattr(meteoalarm_feed, "FEED_BASE_URL", f"http://127.0.0.1:{server.port}")
-        oa_base._REGISTERED_SOURCES.append(meteoalarm_feed.MeteoAlarmFeedSource("IT"))
+        quelle = meteoalarm_feed.MeteoAlarmFeedSource("IT")
 
         feed_je_punkt = {}
         for punkt in tourpunkte:
-            alerts, _unavailable = get_official_alerts_with_status(*punkt, now=TEST_NOW)
-            feed_je_punkt[punkt] = alerts
+            assert quelle.covers(*punkt) is True, (
+                f"Aufbaupruefung: {punkt} muss von der Feed-Quelle abgedeckt sein "
+                f"-- sonst vergleicht das Gate einen Punkt, den die Quelle in "
+                f"Produktion gar nicht bedient"
+            )
+            feed_je_punkt[punkt] = quelle.fetch(*punkt)
 
         abweichungen = _pruefe_obermenge(tourpunkte, feed_je_punkt, edr_je_punkt)
         assert not abweichungen, "\n".join(abweichungen)
     finally:
         server.shutdown()
-        oa_base._REGISTERED_SOURCES.clear()
-        oa_base._REGISTERED_SOURCES.extend(backup)
 
 
 # ---------------------------------------------------------------------------
