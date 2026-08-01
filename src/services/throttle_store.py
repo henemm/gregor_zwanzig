@@ -17,9 +17,12 @@ import json
 import logging
 import os
 import tempfile
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Optional
+
+from services.file_lock import LOCK_TIMEOUT_SECONDS, acquire_exclusive
 
 logger = logging.getLogger("throttle_store")
 
@@ -107,12 +110,32 @@ class ThrottleStore:
         tauscht deren Inode per `os.replace`, ein Lock darauf würde nach dem
         Replace nichts mehr serialisieren. Reload + Mutate + Write finden
         komplett innerhalb der Sperre statt, damit kein zweiter Aufrufer
-        dazwischen liest."""
+        dazwischen liest.
+
+        Fail-open GEZIELT nur für den Sperren-Timeout (`acquire_exclusive`,
+        #1448 S2): wird die Sperre nicht innerhalb `LOCK_TIMEOUT_SECONDS`
+        erworben, wird eine WARNING geloggt und der Schreibvorgang
+        übersprungen, ohne zu werfen. Alle anderen Fehler (z.B. `mkdir`
+        auf einem blockierten Pfad, IO-/JSON-Fehler) bleiben unverändert
+        unbehandelt und propagieren wie vor dieser Scheibe — kein neues
+        blanket `except Exception`."""
         self._dir.mkdir(parents=True, exist_ok=True)
         lock_path = str(self._path) + _LOCK_SUFFIX
         fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
         try:
-            fcntl.flock(fd, fcntl.LOCK_EX)
+            start = time.monotonic()
+            if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
+                # F003 (Adversary #1448 S2): geloggt wird die TATSAECHLICH
+                # gewartete Zeit (`time.monotonic()`-Differenz), nicht die
+                # konfigurierte Zeitgrenze -- sonst waere die Diagnosezeile
+                # z.B. in Tests mit geschrumpfter Frist schlicht falsch.
+                elapsed = time.monotonic() - start
+                logger.warning(
+                    "Dateisperre %s nicht innerhalb %.2fs erhalten -- "
+                    "Schreibvorgang uebersprungen",
+                    lock_path, elapsed,
+                )
+                return
             try:
                 data = self._load()
                 mutate(data)

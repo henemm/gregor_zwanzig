@@ -17,11 +17,17 @@ from __future__ import annotations
 
 import fcntl
 import json
+import logging
 import os
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
+
+from services.file_lock import LOCK_TIMEOUT_SECONDS, acquire_exclusive
+
+logger = logging.getLogger("forecast_budget")
 
 PROVIDER = "openmeteo"
 _LOCK_SUFFIX = ".lock"
@@ -168,14 +174,27 @@ class ForecastBudgetGate:
 
     def _safe_update(self, mutate: Callable[[dict], None]) -> None:
         """Reload-merge-write unter Dateisperre (Muster `ThrottleStore`).
-        Fail-open: JEDER Fehler (Lock, IO, kaputtes JSON) wird geschluckt --
-        ein Zaehl-Defekt darf nie einen Versand verhindern."""
+        Fail-open: JEDER Fehler (Lock-Timeout, IO, kaputtes JSON) wird
+        geschluckt -- ein Zaehl-Defekt darf nie einen Versand verhindern.
+        Ein Sperren-Timeout wirft dabei NICHT (`acquire_exclusive`, #1448
+        S2) -- die WARNING wird explizit VOR dem `return` geloggt, damit
+        sie nicht von diesem `except Exception: pass` erfasst werden kann."""
         try:
             self._dir.mkdir(parents=True, exist_ok=True)
             lock_path = str(self._path) + _LOCK_SUFFIX
             fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
             try:
-                fcntl.flock(fd, fcntl.LOCK_EX)
+                start = time.monotonic()
+                if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
+                    # F003 (Adversary #1448 S2): tatsaechlich gewartete Zeit
+                    # loggen, nicht die konfigurierte Zeitgrenze.
+                    elapsed = time.monotonic() - start
+                    logger.warning(
+                        "Dateisperre %s nicht innerhalb %.2fs erhalten -- "
+                        "Schreibvorgang uebersprungen",
+                        lock_path, elapsed,
+                    )
+                    return
                 try:
                     try:
                         data = self._load_for_today()
