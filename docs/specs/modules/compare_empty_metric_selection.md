@@ -238,7 +238,8 @@ Nicht in dieser Scheibe:
 - **#1378** (zwei Zeitbasen) → Scheibe C.
 - **Trip-Seite**, gleiche Fehlerklasse, anderes Speicherformat (Auswahl =
   Liste mit `enabled`-Flags, fällt auf eine fest verdrahtete Siebener-Liste
-  zurück) → eigenes Ticket **#1394**.
+  zurück) → eigenes Ticket **#1394**, **erledigt 2026-07-31** (Commit
+  `a23a8b7e`, Spec `trip_empty_metric_selection.md`).
 - **Sammel-Einträge aus dem Aufmaß** (Kommentar an #1199): `corridors or
   None` (`report_config_resolver.py:241`, gleiche Bauart bei den
   Wertebereichen), der tote Prüfzweig im Mail-Validator (`:339-343`), zwei
@@ -318,7 +319,15 @@ Issue-Nummer im Namen (Namensregel).
   bewusste PO-Entscheidung vom 2026-07-26 (eine Tabelle nur mit
   Uhrzeit-Spalte hat keinen Nutzwert und wäre durch den Pflicht-Validator
   ohnehin nie zustellbar).
-- Trip-Seite bleibt bis Ticket #1394 in derselben Fehlerklasse.
+- ~~Trip-Seite bleibt bis Ticket #1394 in derselben Fehlerklasse.~~
+  **Erledigt 2026-07-31 mit #1394** (Commit `a23a8b7e`, Spec
+  `trip_empty_metric_selection.md`). Dort kam als Zusatzbefund heraus, dass
+  `TripReportFormatter.format_email()` (`trip_report.py:113-119`) die
+  Metrik-Liste über `get_metrics_for_channel()` zusammenfaltet, **bevor** die
+  Renderer laufen — „Feld fehlt" und „bewusst leer" sind dort nicht mehr
+  unterscheidbar. Das Altbestand-Signal muss deshalb vor dieser Stelle
+  gemessen werden; ein Fix allein in den Renderern wirkt nur in Tests, nicht
+  in der zugestellten Mail.
 
 ## Architektur-Entscheidung (ADR)
 
