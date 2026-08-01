@@ -266,6 +266,15 @@ def test_selection_covers_every_row_of_both_tables():
         f"(nicht gewaehlt: {sorted(set(cv2_keys) - set(resolved))}, "
         f"unbekannt: {sorted(set(resolved) - set(cv2_keys))})."
     )
-    assert ALL_HOUR_SELECTION == [m["key"] for m in HOUR_METRICS], (
-        "Die Stunden-Auswahl deckt nicht alle Spalten der Stundentabelle ab."
+    # Issue #1406 Scheibe B: die Stundentabelle bietet seit der Katalog-
+    # Umstellung 22 Wert-Spalten an; diese Datei prueft die HTML/Klartext-
+    # PARITAET der Beschriftungen an den neun historischen Spalten. Die
+    # Forderung ist deshalb -- wie schon in der Schwesterdatei
+    # test_compare_mail_labels_from_register.py -- eine Teilmengen-Forderung.
+    # Die Vollstaendigkeit gegen das Register prueft
+    # tests/unit/test_compare_hourly_catalog_columns.py.
+    hour_keys = [m["key"] for m in HOUR_METRICS]
+    assert set(ALL_HOUR_SELECTION) <= set(hour_keys), (
+        "Die Stunden-Auswahl nennt Spalten, die die Stundentabelle gar nicht "
+        f"fuehrt: {sorted(set(ALL_HOUR_SELECTION) - set(hour_keys))}"
     )

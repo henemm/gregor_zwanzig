@@ -1,0 +1,216 @@
+cape	None	–	–	None
+cape	-12.5	-12 J/kg	-12	green
+cape	0	0 J/kg	0	green
+cape	0.4	0 J/kg	0	green
+cape	7.5	8 J/kg	8	green
+cape	42	42 J/kg	42	green
+cape	137.0	137 J/kg	137	green
+cape	1013.0	1013 J/kg	1013	orange
+cape	20000	20000 J/kg	20000	red
+cloud_high	None	–	–	None
+cloud_high	-12.5	-12%	-12	None
+cloud_high	0	0%	0	None
+cloud_high	0.4	0%	0	None
+cloud_high	7.5	8%	8	None
+cloud_high	42	42%	42	None
+cloud_high	137.0	137%	137	None
+cloud_high	1013.0	1013%	1013	None
+cloud_high	20000	20000%	20000	None
+cloud_low	None	–	–	None
+cloud_low	-12.5	-12%	-12	None
+cloud_low	0	0%	0	None
+cloud_low	0.4	0%	0	None
+cloud_low	7.5	8%	8	None
+cloud_low	42	42%	42	None
+cloud_low	137.0	137%	137	None
+cloud_low	1013.0	1013%	1013	None
+cloud_low	20000	20000%	20000	None
+cloud_mid	None	–	–	None
+cloud_mid	-12.5	-12%	-12	None
+cloud_mid	0	0%	0	None
+cloud_mid	0.4	0%	0	None
+cloud_mid	7.5	8%	8	None
+cloud_mid	42	42%	42	None
+cloud_mid	137.0	137%	137	None
+cloud_mid	1013.0	1013%	1013	None
+cloud_mid	20000	20000%	20000	None
+cloud_total	None	–	–	None
+cloud_total	-12.5	-12%	-12	None
+cloud_total	0	0%	0	None
+cloud_total	0.4	0%	0	None
+cloud_total	7.5	8%	8	None
+cloud_total	42	42%	42	None
+cloud_total	137.0	137%	137	None
+cloud_total	1013.0	1013%	1013	None
+cloud_total	20000	20000%	20000	None
+dewpoint	None	–	–	None
+dewpoint	-12.5	-12°C	-12	None
+dewpoint	0	0°C	0	None
+dewpoint	0.4	0°C	0	None
+dewpoint	7.5	8°C	8	None
+dewpoint	42	42°C	42	None
+dewpoint	137.0	137°C	137	None
+dewpoint	1013.0	1013°C	1013	None
+dewpoint	20000	20000°C	20000	None
+freezing_level	None	–	–	None
+freezing_level	-12.5	-12 m	-12	None
+freezing_level	0	0 m	0	None
+freezing_level	0.4	0 m	0	None
+freezing_level	7.5	8 m	8	None
+freezing_level	42	42 m	42	None
+freezing_level	137.0	137 m	137	None
+freezing_level	1013.0	1013 m	1013	None
+freezing_level	20000	20000 m	20000	None
+fresh_snow	None	–	–	None
+fresh_snow	-12.5	-12 cm	-12	None
+fresh_snow	0	0 cm	0	None
+fresh_snow	0.4	0 cm	0	None
+fresh_snow	7.5	8 cm	8	None
+fresh_snow	42	42 cm	42	None
+fresh_snow	137.0	137 cm	137	None
+fresh_snow	1013.0	1013 cm	1013	None
+fresh_snow	20000	20000 cm	20000	None
+gust	None	–	–	None
+gust	-12.5	-12 km/h	-12	green
+gust	0	0 km/h	0	green
+gust	0.4	0 km/h	0	green
+gust	7.5	8 km/h	8	green
+gust	42	42 km/h	42	yellow
+gust	137.0	137 km/h	137	red
+gust	1013.0	1013 km/h	1013	red
+gust	20000	20000 km/h	20000	red
+humidity	None	–	–	None
+humidity	-12.5	-12%	-12	None
+humidity	0	0%	0	None
+humidity	0.4	0%	0	None
+humidity	7.5	8%	8	None
+humidity	42	42%	42	None
+humidity	137.0	137%	137	None
+humidity	1013.0	1013%	1013	None
+humidity	20000	20000%	20000	None
+precip_type	None	–	–	None
+precip_type	-12.5	-12	-12	None
+precip_type	0	0	0	None
+precip_type	0.4	0	0	None
+precip_type	7.5	8	8	None
+precip_type	42	42	42	None
+precip_type	137.0	137	137	None
+precip_type	1013.0	1013	1013	None
+precip_type	20000	20000	20000	None
+precipitation	None	–	–	None
+precipitation	-12.5	-12.5 mm	-12.5	green
+precipitation	0	0.0 mm	0.0	green
+precipitation	0.4	0.4 mm	0.4	green
+precipitation	7.5	7.5 mm	7.5	orange
+precipitation	42	42.0 mm	42.0	red
+precipitation	137.0	137.0 mm	137.0	red
+precipitation	1013.0	1013.0 mm	1013.0	red
+precipitation	20000	20000.0 mm	20000.0	red
+pressure	None	–	–	None
+pressure	-12.5	-12 hPa	-12	None
+pressure	0	0 hPa	0	None
+pressure	0.4	0 hPa	0	None
+pressure	7.5	8 hPa	8	None
+pressure	42	42 hPa	42	None
+pressure	137.0	137 hPa	137	None
+pressure	1013.0	1013 hPa	1013	None
+pressure	20000	20000 hPa	20000	None
+rain_probability	None	–	–	None
+rain_probability	-12.5	-12%	-12	green
+rain_probability	0	0%	0	green
+rain_probability	0.4	0%	0	green
+rain_probability	7.5	8%	8	green
+rain_probability	42	42%	42	yellow
+rain_probability	137.0	137%	137	red
+rain_probability	1013.0	1013%	1013	red
+rain_probability	20000	20000%	20000	red
+snow_depth	None	–	–	None
+snow_depth	-12.5	-12 cm	-12	None
+snow_depth	0	0 cm	0	None
+snow_depth	0.4	0 cm	0	None
+snow_depth	7.5	8 cm	8	None
+snow_depth	42	42 cm	42	None
+snow_depth	137.0	137 cm	137	None
+snow_depth	1013.0	1013 cm	1013	None
+snow_depth	20000	20000 cm	20000	None
+snowfall_limit	None	–	–	None
+snowfall_limit	-12.5	-12 m	-12	None
+snowfall_limit	0	0 m	0	None
+snowfall_limit	0.4	0 m	0	None
+snowfall_limit	7.5	8 m	8	None
+snowfall_limit	42	42 m	42	None
+snowfall_limit	137.0	137 m	137	None
+snowfall_limit	1013.0	1013 m	1013	None
+snowfall_limit	20000	20000 m	20000	None
+sunshine	None	–	–	None
+sunshine	-12.5	-12.5 h	-12.5	None
+sunshine	0	0.0 h	0.0	None
+sunshine	0.4	0.4 h	0.4	None
+sunshine	7.5	7.5 h	7.5	None
+sunshine	42	42.0 h	42.0	None
+sunshine	137.0	137.0 h	137.0	None
+sunshine	1013.0	1013.0 h	1013.0	None
+sunshine	20000	20000.0 h	20000.0	None
+temperature	None	–	–	None
+temperature	-12.5	-12°C	-12	orange
+temperature	0	0°C	0	green
+temperature	0.4	0°C	0	green
+temperature	7.5	8°C	8	green
+temperature	42	42°C	42	red
+temperature	137.0	137°C	137	red
+temperature	1013.0	1013°C	1013	red
+temperature	20000	20000°C	20000	red
+thunder	None	–	–	None
+thunder	-12.5	-12	-12	None
+thunder	0	0	0	None
+thunder	0.4	0	0	None
+thunder	7.5	8	8	None
+thunder	42	42	42	None
+thunder	137.0	137	137	None
+thunder	1013.0	1013	1013	None
+thunder	20000	20000	20000	None
+uv_index	None	–	–	None
+uv_index	-12.5	-12	-12	green
+uv_index	0	0	0	green
+uv_index	0.4	0	0	green
+uv_index	7.5	8	8	orange
+uv_index	42	42	42	red
+uv_index	137.0	137	137	red
+uv_index	1013.0	1013	1013	red
+uv_index	20000	20000	20000	red
+visibility	None	–	–	None
+visibility	-12.5	-0.0 km	-0.0	red
+visibility	0	0.0 km	0.0	red
+visibility	0.4	0.0 km	0.0	red
+visibility	7.5	0.0 km	0.0	red
+visibility	42	0.0 km	0.0	red
+visibility	137.0	0.1 km	0.1	red
+visibility	1013.0	1.0 km	1.0	yellow
+visibility	20000	20.0 km	20.0	green
+wind	None	–	–	None
+wind	-12.5	-12 km/h	-12	green
+wind	0	0 km/h	0	green
+wind	0.4	0 km/h	0	green
+wind	7.5	8 km/h	8	green
+wind	42	42 km/h	42	yellow
+wind	137.0	137 km/h	137	red
+wind	1013.0	1013 km/h	1013	red
+wind	20000	20000 km/h	20000	red
+wind_chill	None	–	–	None
+wind_chill	-12.5	-12°C	-12	orange
+wind_chill	0	0°C	0	green
+wind_chill	0.4	0°C	0	green
+wind_chill	7.5	8°C	8	green
+wind_chill	42	42°C	42	red
+wind_chill	137.0	137°C	137	red
+wind_chill	1013.0	1013°C	1013	red
+wind_chill	20000	20000°C	20000	red
+wind_direction	None	–	–	None
+wind_direction	-12.5	-12 °	-12	None
+wind_direction	0	0 °	0	None
+wind_direction	0.4	0 °	0	None
+wind_direction	7.5	8 °	8	None
+wind_direction	42	42 °	42	None
+wind_direction	137.0	137 °	137	None
+wind_direction	1013.0	1013 °	1013	None
+wind_direction	20000	20000 °	20000	None

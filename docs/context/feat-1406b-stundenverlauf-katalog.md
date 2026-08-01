@@ -220,3 +220,104 @@ svelte`, falls doch parallel gebaut.
    Scheibe A).
 4. **open-meteo-Kontingent** (#1329) bei Staging-Mail-Nachweis — ein
    Testversand reicht, danach IMAP-Verifikation (siehe Referenz-Memory).
+
+---
+
+# Nachtrag 2026-08-01 — Analyse gegen HEAD `1863e6c1` nachgeprüft
+
+Die Analyse oben stammt vom 2026-07-30. Seither gelandet: `8a20e611` (#1420),
+`386bbdba` (#1401 **A2b**), `eecb10e7`/`2f8b2426` (#1401 Scheibe B), die
+#1435-Etappen E1a-2/E1b/E3a/E3b, `a23a8b7e` (#1394), `9c20f482` (#1445).
+Jede Behauptung wurde gegen den heutigen Code geprüft. Ergebnis: **im Kern
+gültig**, an vier Stellen zu korrigieren.
+
+## Weiterhin gültig (nachgerechnet, nicht übernommen)
+
+- **Befund 1:** `get_all_metrics()` → 24 wählbare Größen, **keine ohne
+  `dp_field`**. Die Kategorie „technisch nicht darstellbar" existiert hier nicht.
+- **Kein Go-Eingriff:** `hourly_metrics` liegt unter `display_config`;
+  `internal/model/compare_preset.go:48` führt nur `DisplayConfig map[string]interface{}`,
+  `config_merge.go:11-22` merged generisch. Belegt durch
+  `internal/handler/compare_preset_hourly_roundtrip_test.go`.
+- **Kein zweiter blinder Fleck HTML/Klartext:** `comparison.py:30-35` importiert
+  `_visible_hour_metrics`, `_should_merge_wind_dir` **und** `derive_row_labels`
+  aus `compare_html.py`. Seit A2b stammen auch die Klartext-Beschriftungen aus dem
+  Register; abgesichert durch `tests/unit/test_compare_mail_plaintext_html_label_parity.py`.
+- **Prüfer-Blockade aufgelöst:** #1420 (`8a20e611`) hat `_OVERVIEW_METRIC_CHECKS`
+  erweitert, `_HOUR_COLUMNS_V2` (`email_spec_validator.py:528-533`, 16 Einträge)
+  **nicht angefasst**. Risiko 2 der Analyse ist erledigt; der Erweiterungsauftrag
+  um die ~14 neuen `col_label` steht unverändert offen.
+
+## Einbindung — ausdrücklich belegt
+
+Lehre aus #1435 E3a/E3b (zweimal wurde Arbeit an Code geplant, den kein Nutzer
+sieht). Für diese Scheibe ist der Weg **lückenlos nachgewiesen**:
+
+- **Frontend:** `WeatherMetricsTab.svelte:63` importiert, `:1034-1037` rendert
+  unter `{#if sections.includes('stundenverlauf') && wiz}`.
+  `weatherMetricsTabSections.ts:56` führt `stundenverlauf` in
+  `COMPARE_ONLY_SECTIONS`. Bewusst **nicht** am Katalog-Abruf aufgehängt
+  (`:1029-1033`), anders als der Ausblick.
+- **Mail:** `compare_html.py:853` → `:1305-1320` (`if hourly_enabled`) →
+  `render_compare_html` (`:1205-1219`) → `comparison.py:352-366` →
+  `scheduler_dispatch_service.py:373-378` (Versand) bzw.
+  `compare_preview_service.py:175-180` (Vorschau) →
+  `report_config_resolver.py:230,254,278`. Keine fehlende Durchreichung.
+- Einzige Überspring-Bedingung, gewollt: `report_config_resolver.py:256-261`
+  setzt `hourly_enabled=False`, wenn `has_visible_hour_columns()` falsch ist
+  (leere Auswahl oder nur Merge-Signale).
+
+## Vier Korrekturen
+
+### 1. Ein VIERTER Ort mit derselben Zuordnung ist entstanden
+
+`frontend/src/lib/components/compare/compareHourlyCatalogIds.ts` (42 Zeilen, neu
+mit `eecb10e7`) führt in `:10-21` **zeichengleich die Alias-Tabelle, die diese
+Analyse erst noch bauen wollte** (Abschnitt „Speicherformat / Migration",
+Zeilen 126-130) — nur im Frontend und nur für Beschriftungen.
+
+Dieselbe Zuordnung wird damit heute an **vier** Stellen gepflegt:
+`compareHourlyCatalogIds.ts` (Frontend-Übersetzung) · `compare_hourly_metric_ids.py`
+(Backend-Auflösung, bildet noch auf `dp_field`-Namen ab) · `HOUR_METRICS[].metric_id`
+(`compare_html.py:338-347`) · `ALL_HOURLY_METRICS`
+(`compareHourlyMetricDefs.ts:29-44`).
+
+**Konsequenz für den Zuschnitt:** Die Scheibe darf nicht nur die Zehnerliste
+ersetzen, sie muss diese vier zu einer zusammenführen — sonst wächst genau das
+Muster, gegen das #1435 antritt.
+
+### 2. Die Beschriftungen kommen bereits aus dem Register
+
+`HOUR_METRICS` (`compare_html.py:338-347`) trägt **kein getipptes `label` mehr**;
+die Spaltenüberschrift liefert `derive_row_labels()` (`:350-372`) aus `col_label`.
+Geliefert mit #1401 A2b am Abend nach der Analyse. Der Abschnitt „Mail-Wirkung"
+oben beschreibt die Umbenennung der neun bestehenden Spalten deshalb als Zukunft —
+sie ist **bereits erfolgt**. Neu kommen nur die ~14 Spalten der fehlenden Größen.
+
+### 3. Die Ampel-Logik ist schon generisch — die Schätzung war zu günstig
+
+`_sev_temp`/`_sev_wind`/`_sev_gust`/`_sev_rain`/`_sev_uv`/`_sev_pop`/
+`_sev_visibility`/`_sev_cape` sind seit #1377 B2 Ein-Zeilen-Wrapper um
+`severity_for()` (`compare_html.py:46,71-79,113-153`). Der Posten `~+50/−90`
+unterstellte, hier sei noch eigene Ampel-Logik abzulösen. Realistisch entfällt
+nur die `_fmt_*`-Hälfte (`:164-232`); die Netto-Reduktion fällt kleiner aus.
+
+### 4. Neue Lücke, die den Nachweis verfälschen kann
+
+`src/services/validator_render_service.py:169-172` ruft `render_compare_html(...)`
+**ohne `hourly_metrics`**. Der Prüf-/Vorschau-Endpunkt rendert dadurch immer die
+vollen neun Spalten, unabhängig von der Auswahl.
+
+Für die ausgelieferte Mail folgenlos (der Versandpfad reicht den Parameter durch,
+s.o.), **für den E2E-Nachweis nicht**: Wer die Wirkung der Auswahl über diesen
+Endpunkt prüft, sieht sie nicht und hält die Scheibe für kaputt — oder schlimmer,
+für heil. Nachweise ausschließlich über den echten Versandpfad führen, oder die
+Lücke in dieser Scheibe mitschließen. Das Muster ist dasselbe wie bei #1435 E3b
+(`build_token_line()` ohne `profile=`).
+
+## Überholt
+
+Der Abschnitt „Überschneidung mit #1401 Scheibe B" nennt
+`shared/alarme-tab/compareMetricMapping.ts` — **existiert nicht mehr** (mit #1435
+E1a-2 gelöscht, ersetzt durch `activeAlertMetricsFromCatalog.ts`). #1401 Scheibe B
+ist geliefert. Für Scheibe C bleibt `alerts-tab/AlertMetricLevelTable.svelte`.

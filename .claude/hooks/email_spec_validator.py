@@ -505,7 +505,9 @@ _OVERVIEW_WARN_LABEL = "Amtliche Warnungen"
 _TABLE_RE = re.compile(r'<table[^>]*>(.*?)</table>', re.DOTALL)
 
 # v2-Stunden-Spaltenvertrag (compare_html.py:HOUR_METRICS), Issue #1106:
-# 10-Spalten-Superset-Liste ("Zeit" + 9 konfigurierbare Wert-Spalten).
+# Superset-Liste ("Zeit" + die konfigurierbaren Wert-Spalten). Seit #1406
+# Scheibe B sind das 22 Wert-Spalten (zentraler Wetterkatalog abzueglich
+# Merge-Signal Windrichtung und der ausgenommenen Sonnenstunden), vorher 9.
 # Issue #1381: Diese Liste ist eine ALLOWLIST, KEINE Reihenfolge-Vorgabe --
 # seit #1359 ist die Spaltenreihenfolge nutzerseitig frei einstellbar.
 # Konfigurierbare Teilmengen in beliebiger Anordnung sind zulaessig,
@@ -523,13 +525,67 @@ _TABLE_RE = re.compile(r'<table[^>]*>(.*?)</table>', re.DOTALL)
 #
 # RUECKBAU-AUFTRAG: Sobald #1401 A2b geliefert ist, fallen die 6 alten Labels
 # ("Gef.", "Böen", "Regen", "Gew.", "Regen-W.", "Sicht") wieder heraus --
-# Zielzustand sind exakt die 10 A2b-Spalten. Bis dahin erinnert
+# Zielzustand sind exakt die A2b-Spalten. Bis dahin erinnert
 # _HOUR_COLUMNS_V2_REVIEW_DATE an die faellige Entscheidung.
+#
+# Issue #1406 Scheibe B (PO-Override 2026-08-01): der Stundenverlauf schoepft
+# ab jetzt aus dem zentralen Wetterregister (22 Wert-Spalten statt 9). Die
+# Registerfassung wird deshalb ABGELEITET (`metric_catalog.col_label`) statt
+# abgeschrieben -- eine getippte Zweitliste waere genau der Vokabular-Ort, den
+# diese Scheibe abschafft, und liesse den Pruefer bei der naechsten neuen
+# Groesse wieder eine inhaltlich korrekte Mail hart ablehnen (Muster
+# #1381/#1404/#1420). Ein kuenftiger Katalog-Zuwachs kostet hier keinen
+# Eingriff mehr.
+#
+# BEWUSST OHNE AUFFANGZWEIG: ein stiller Rueckfall auf eine Ersatzliste
+# erzeugte genau die harte Fehlablehnung, gegen die diese Ableitung antritt.
+# Scheitert der Import, soll der Pruefer laut abbrechen statt leise falsch zu
+# urteilen (Exit 2 "technischer Fehler" ist die ehrliche Antwort).
+#
+# WICHTIG -- die Allowlist wird dadurch NICHT stumpf: sie bleibt eine
+# geschlossene Menge aus dem Register. Eine Spalte, die es im Register nicht
+# gibt ("Mondphase"), wird weiterhin abgelehnt UND benannt (validate_structure
+# unten, Nachweis in tests/unit/test_compare_validator_hour_columns_from_catalog
+# .py::test_invented_column_is_still_rejected_and_named).
+#
+# Pfadregel #1409: relativ zur eigenen Datei aufgeloest, nie ueber einen festen
+# Hauptrepo-Pfad -- sonst laese eine Worktree-Sitzung den Katalog des
+# Hauptrepos.
+_REPO_SRC = Path(__file__).resolve().parents[2] / "src"
+if str(_REPO_SRC) not in sys.path:
+    sys.path.insert(0, str(_REPO_SRC))
+from app.metric_catalog import get_metric as _get_metric  # noqa: E402
+from output.renderers.compare_hourly_metric_ids import (  # noqa: E402
+    HOURLY_MERGE_ONLY_METRIC_IDS as _HOURLY_MERGE_ONLY,
+    hourly_selectable_metric_ids as _hourly_selectable_metric_ids,
+)
+
+# Genau die Groessen, die der Renderer als Stundenspalte ueberhaupt erzeugen
+# kann -- dieselbe Rechnung wie `compare_html._build_hour_metrics()`: Register
+# minus ausgenommene Groessen (Sonnenstunden, AC-11) minus Merge-Signal
+# (Windrichtung, wandert in die Wind-Zelle). BEWUSST nicht der volle Katalog:
+# "Sun" und "WDir" kann keine Stundentabelle zeigen, sie zuzulassen machte die
+# Allowlist breiter als vorher -- die Ableitung soll den Pruefer aktuell
+# halten, nicht nachgiebiger.
+_HOUR_VALUE_COLUMN_LABELS = sorted({
+    _get_metric(mid).col_label
+    for mid in _hourly_selectable_metric_ids()
+    if mid not in _HOURLY_MERGE_ONLY
+})
+
 _HOUR_COLUMNS_V2 = [
-    # heutige Fassung (10)
-    "Zeit", "Temp", "Gef.", "Wind", "Böen", "Regen", "UV", "Gew.", "Regen-W.", "Sicht",
-    # Zielfassung #1401 A2b -- nur die 6 tatsaechlich abweichenden Labels
-    "Feels", "Gust", "Rain", "Thdr", "Rain%", "Visib",
+    # Feste erste Spalte der Stundentabelle (keine Wettergroesse).
+    "Zeit",
+    # Registerfassung (#1406 B): die Kurzform jeder Groesse, die eine
+    # Wert-Spalte bekommen kann. Deckt die 9 bisherigen Spalten (Temp/Feels/
+    # Wind/Gust/Rain/UV/Thdr/Rain%/Visib) und die 13 neu waehlbaren (Humid,
+    # Cond°, CAPE, SnowL, PType, Cloud, CldLow, CldMid, CldHi, hPa, 0°Line,
+    # SnowH, NewSn) in einem Zug ab.
+    *_HOUR_VALUE_COLUMN_LABELS,
+    # Uebergangs-Union #1404: die 6 Beschriftungen VOR #1401 A2b. Nicht im
+    # Register -- deshalb weiterhin von Hand und weiterhin Gegenstand des
+    # RUECKBAU-AUFTRAGS oben (#1420), nicht von #1406 B miterledigt.
+    "Gef.", "Böen", "Regen", "Gew.", "Regen-W.", "Sicht",
 ]
 
 # Pruefdatum der Uebergangs-Union (Regel-Budget: Spec-`created` 2026-07-28 +
@@ -538,6 +594,14 @@ _HOUR_COLUMNS_V2 = [
 # es gibt keinen Code-Zweig darauf. Eine Selbstverengung am Stichtag waere
 # falsch: verzoegert sich #1401 A2b, wuerde die dann korrekte neue Mail wieder
 # hart abgelehnt -- genau der Fehler, den diese Union verhindert.
+#
+# #1406 Scheibe B hat die Union AUSDRUECKLICH NICHT abgeraeumt: die 6 alten
+# deutschen Beschriftungen stehen unveraendert oben. Sie sind der faellige
+# Rueckbau aus #1420 und haengen am selben Test
+# (test_compare_mail_overview_plausibility_coverage.py::
+# test_ac4_exemption_set_is_declared_and_complete), der dafuer vorbestehend
+# rot ist -- das ist eine eigene Entscheidung, keine Nebenwirkung dieser
+# Scheibe. Pruefdatum bleibt unveraendert.
 _HOUR_COLUMNS_V2_REVIEW_DATE = date(2026, 10, 26)
 
 # Negativ-Check: Score-/Winner-Sprache ist im v2-Vertrag ein Verstoss (kein

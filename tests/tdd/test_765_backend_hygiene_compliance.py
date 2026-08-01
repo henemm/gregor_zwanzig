@@ -56,6 +56,12 @@ _SELF_EXEMPT = {
     # Werkzeug-Klasse wie test_report_config_scheduler_structure.py.
     # Spec: docs/specs/modules/dispatch_orchestrator.md
     "test_dispatch_orchestrator.py",
+    # #1406 Scheibe B AC-7: Paritaets-Waechter liest die drei Vergleichs-Renderer
+    # als DATEN fuer eine AST-Strukturregel (importiert der Vergleich die
+    # Tour-Orchestrierung?) — kein Verhaltensnachweis auf Code-Strings, gleiche
+    # Werkzeug-Klasse wie die beiden Gates darueber; # doc-compliance-test.
+    # Spec: docs/specs/modules/feat_1406b_stundenverlauf_katalog.md
+    "test_compare_hourly_trip_parity.py",
 }
 
 

@@ -16,6 +16,13 @@ export interface CompareSelectionEntry {
 	// Issue #1435 (E1a-2): Alarm-Identitaet aus dem zentralen Register (`null` =
 	// nicht alarmfaehig) — Quelle der Alarm-Zeilen im Alarme-Reiter.
 	alertMetric?: string | null;
+	// Issue #1406 Scheibe B: Stundenverlauf-Angaben, unveraendert aus der
+	// Katalogantwort durchgereicht (s. types.ts CompareMetricCatalogEntry).
+	hourlySelectable?: boolean;
+	hourlyNotSelectableReason?: string;
+	hourlyDefault?: boolean;
+	hourlyMergeOnly?: boolean;
+	hourly_legacy_keys?: string[];
 }
 
 /**
@@ -41,7 +48,18 @@ export function toCompareSelectionEntries(
 		...(m.aggregation_label !== undefined
 			? { aggregation_label: m.aggregation_label }
 			: {}),
-		...(m.alertMetric !== undefined ? { alertMetric: m.alertMetric } : {})
+		...(m.alertMetric !== undefined ? { alertMetric: m.alertMetric } : {}),
+		// #1406 B: nur ergaenzen, wenn der Endpoint sie liefert — sonst braechen
+		// die strikten deepEqual-Vergleiche aus #1350 (AC-2).
+		...(m.hourlySelectable !== undefined ? { hourlySelectable: m.hourlySelectable } : {}),
+		...(m.hourlyNotSelectableReason !== undefined
+			? { hourlyNotSelectableReason: m.hourlyNotSelectableReason }
+			: {}),
+		...(m.hourlyDefault !== undefined ? { hourlyDefault: m.hourlyDefault } : {}),
+		...(m.hourlyMergeOnly !== undefined ? { hourlyMergeOnly: m.hourlyMergeOnly } : {}),
+		...(m.hourly_legacy_keys !== undefined
+			? { hourly_legacy_keys: m.hourly_legacy_keys }
+			: {})
 	}));
 	// Issue #1373 (S2 Scheibe B): dieselbe geladene Katalogantwort ist die
 	// EINZIGE Quelle für die Übersetzung Auswahl-Schlüssel <-> Größe+Auswertung

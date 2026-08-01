@@ -206,7 +206,15 @@ def test_units_legend_matches_catalog_label_not_table_header_typed_string():
     result = _result()
     enabled = resolve_enabled_metrics(NO_COLLISION_SELECTION)
 
-    html = render_compare_html(result, enabled_metrics=enabled, hourly_metrics=None)
+    # Issue #1406 Scheibe B: `hourly_metrics=None` heisst nicht mehr "alle
+    # Spalten", sondern "die neun Spalten eines nie eingestellten Vergleichs"
+    # (AC-4). Dieser Test prueft die HERKUNFT der Beschriftung, nicht die
+    # Vorgabemenge -- er waehlt die Spalten deshalb jetzt ausdruecklich, damit
+    # er weiterhin ALLE Spalten gegen `col_label` haelt.
+    html = render_compare_html(
+        result, enabled_metrics=enabled,
+        hourly_metrics=[m["key"] for m in HOUR_METRICS],
+    )
 
     assert _legend_text(html) == _expected_legend_text(), (
         "Die Einheiten-Legende unter der Stundentabelle weicht von der "

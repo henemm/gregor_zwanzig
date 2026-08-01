@@ -12,6 +12,16 @@ tags: [compare, hub, layout, hourly-metrics, persist-bridge]
 
 # Stundenverlauf-Steuerung im Hub (C2 — Layout-Tab bekommt die einzige wirksame Einstellung)
 
+> **Teilweise ueberholt seit 2026-08-01 (Issue #1406 Scheibe B).** Der
+> Ortsvergleich-Stundenverlauf hat kein eigenes Zehner-Vokabular mehr: der
+> Vorrat kommt aus dem zentralen Wetterkatalog (22 Wert-Spalten), die einzige
+> Zuordnung liegt in `src/output/renderers/compare_hourly_metric_ids.py`. Die
+> Frontend-Bezeichner `ALL_HOURLY_METRICS`, `HOURLY_KEY_TO_CATALOG_ID` und
+> `resolveHourlyMetricLabel` sowie die Datei `compareHourlyCatalogIds.ts` gibt
+> es nicht mehr. Wo dieses Dokument sie als Ist-Stand nennt, gilt
+> `docs/specs/modules/feat_1406b_stundenverlauf_katalog.md`.
+
+
 ## Approval
 
 - [x] Approved

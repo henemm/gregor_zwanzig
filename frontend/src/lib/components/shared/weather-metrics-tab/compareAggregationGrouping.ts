@@ -24,6 +24,15 @@ export interface CompareAggregationGroup {
 	metric_id: string;
 	label: string;
 	options: CompareAggregationOption[];
+	// Issue #1406 Scheibe B: Stundenverlauf-Angaben der Groesse, 1:1 aus der
+	// Katalogantwort (kein Frontend-Wissen, kein zweites Vokabular — AC-10).
+	// Defaults sind bewusst gutmuetig: eine aeltere Antwort ohne diese Felder
+	// laesst die Zeile anwaehlbar statt sie stumm zu sperren.
+	hourly_selectable: boolean;
+	hourly_not_selectable_reason: string;
+	hourly_default: boolean;
+	hourly_merge_only: boolean;
+	hourly_legacy_keys: string[];
 }
 
 /**
@@ -43,7 +52,16 @@ export function groupCompareCatalog(catalog: CompareSelectionEntry[]): CompareAg
 		const metricId = entry.metric_id ?? entry.metric;
 		let group = byMetricId.get(metricId);
 		if (!group) {
-			group = { metric_id: metricId, label: entry.label, options: [] };
+			group = {
+				metric_id: metricId,
+				label: entry.label,
+				options: [],
+				hourly_selectable: entry.hourlySelectable !== false,
+				hourly_not_selectable_reason: entry.hourlyNotSelectableReason ?? '',
+				hourly_default: entry.hourlyDefault === true,
+				hourly_merge_only: entry.hourlyMergeOnly === true,
+				hourly_legacy_keys: entry.hourly_legacy_keys ?? []
+			};
 			byMetricId.set(metricId, group);
 			groups.push(group);
 		}

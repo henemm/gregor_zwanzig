@@ -1,31 +1,38 @@
-"""Festnagelung der heutigen Vergleichs-Mail-Beschriftungen (#1401 A2a).
+"""Beschriftungen der Vergleichs-Mail stammen aus dem zentralen Namensregister.
 
-Scheibe A2a traegt nur die fehlenden Verknuepfungen ins zentrale
-Namensregister nach (``metric_id``/``aggregation`` an ``CV2_METRICS`` und
-``HOUR_METRICS``). Sie darf **keine einzige sichtbare Beschriftung** aendern --
-die Ableitung der Namen aus dem Register ist Scheibe A2b und braucht zuvor
-#1404 (der Pflicht-Pruefer kennt die alten Ueberschriften woertlich).
+Vorgeschichte: Diese Datei hiess ``test_compare_mail_labels_unchanged.py`` und
+nagelte den Stand VOR #1401 Scheibe A2b fest ("Gef.", "Böen", "Regen", …) —
+ausdruecklich als Nachweis, dass Scheibe A2a keine sichtbare Beschriftung
+anfasst. **A2b hat die Beschriftungen dann absichtlich umgestellt** (sie kommen
+seither ueber ``derive_row_labels()`` aus ``metric_catalog.col_label``), diese
+Datei aber nicht mitgezogen; ihre vier Festnagelungen waren seitdem rot und
+hielten veraltetes Verhalten fest.
 
-Dieser Test ist deshalb bewusst SCHON JETZT GRUEN und muss nach der
-Implementierung von A2a GRUEN BLEIBEN -- er ist der Nachweis fuer "keine
-sichtbare Wirkung" (Spec, "Zusaetzliche Auflage fuer A2a"), nicht der
-RED-Nachweis. Erst A2b darf ihn erklaertermassen umschreiben.
-
-Geprueft wird die GERENDERTE Ausgabe (nicht die Datenstruktur), damit auch der
-Renderpfad abgedeckt ist, und zwar in BEIDEN Fassungen derselben Mail:
-gestaltetes HTML (``render_compare_html``) und Klartext-Zwilling
-(``render_comparison_text``) -- der Pflicht-Pruefer liest nur HTML, der
-Klartext braucht die eigene Absicherung.
+Nachgeprueft im Zuge von #1406 Scheibe B: die HEUTIGE Ausgabe ist korrekt —
+jede Beschriftung ist die ``col_label``-Kurzform der jeweiligen Groesse aus dem
+Register, mit Auswertungs-Zusatz nur bei Namensgleichheit ("Temp max"/"Temp
+min"). Es steckt kein Fehler dahinter. Die Erwartungswerte wurden deshalb auf
+den heutigen Stand gezogen und die Datei umbenannt: sie behauptet nicht mehr
+"unveraendert", sondern was sie wirklich prueft — dass die gerenderte Ausgabe
+in BEIDEN Fassungen derselben Mail (gestaltetes HTML und Klartext-Zwilling)
+genau die Registernamen zeigt.
 
 Die Erwartungswerte stehen als woertliche Literale im Test (aufgezeichnet vom
-heutigen Stand), NICHT als Vergleich der Datenstruktur mit sich selbst -- ein
-solcher Vergleich waere immer gruen und wuerde nichts festnageln.
+heutigen Stand), NICHT als Vergleich der Datenstruktur mit sich selbst — ein
+solcher Vergleich waere immer gruen und wuerde nichts festnageln. Die
+Herkunfts-Aussage selbst ("kommt aus dem Register") prueft daneben
+``test_compare_mail_label_source_catalog.py``.
+
+Abgrenzung zu #1406 Scheibe B: die Stundenauswahl unten ist bewusst die feste
+Menge der neun HISTORISCHEN Wert-Spalten. Dass die Stundentabelle nach Scheibe
+B jede Katalog-Groesse anbieten kann, prueft
+``test_compare_hourly_catalog_columns.py`` — nicht diese Festnagelung.
 
 Kern-Schicht, deterministisch: echte ``ForecastDataPoint``-Objekte, echte
-Renderer-Aufrufe, keine Mocks, kein ``patch()``, kein Netz. Fixture-Muster
-uebernommen aus ``tests/unit/test_compare_matrix_metric_selection.py``.
+Renderer-Aufrufe, keine Mocks, kein ``patch()``, kein Netz.
 
-SPEC: docs/specs/modules/fix_1401_a2_mailtabellen.md
+SPEC: docs/specs/modules/fix_1401_a2_mailtabellen.md (A2b),
+      docs/specs/modules/feat_1406b_stundenverlauf_katalog.md (Sanierung)
 """
 from __future__ import annotations
 
@@ -61,43 +68,43 @@ ALL_OVERVIEW_SELECTION = [
     "snowfall_limit_m",
 ]
 
-# Alle 9 Wert-Spalten der Stundentabelle (Renderer-Keys, wie sie die
-# Stundenverlauf-Auswahl liefert).
-ALL_HOUR_SELECTION = [
+# Die neun historischen Wert-Spalten der Stundentabelle (Renderer-Keys, wie sie
+# die Stundenverlauf-Auswahl liefert).
+HISTORISCHE_STUNDEN_AUSWAHL = [
     "t2m_c", "wind_chill_c", "wind10m_kmh", "gust_kmh", "precip_1h_mm",
     "uv_index", "thunder_level", "pop_pct", "visibility_m",
 ]
 
-# --- Erwartungswerte: woertlich der heutige Stand (Commit 21a82c12) ---------
+# --- Erwartungswerte: woertlich der heutige Stand (HEAD 1863e6c1) -----------
 
 EXPECTED_OVERVIEW_LABELS = [
     "Amtliche Warnungen",
     "Temp max",
     "Wind",
-    "Regen",
-    "Regenwahrscheinlichkeit",
-    "Gewitter",
-    "Sonne",
-    "Wolken",
-    "UV max",
-    "Sicht min",
-    "Schneehöhe",
-    "Neuschnee",
+    "Rain",
+    "Rain%",
+    "Thdr",
+    "Sun",
+    "Cloud",
+    "UV",
+    "Visib",
+    "SnowH",
+    "NewSn",
     "Temp min",
-    "Böen",
+    "Gust",
     "CAPE",
-    "Nullgradgrenze",
-    "Windrichtung",
-    "Gefühlte Temp. min",
-    "Gefühlte Temp. max",
-    "Wolken tief",
-    "Wolken mittel",
-    "Wolken hoch",
-    "Luftfeuchtigkeit Ø",
-    "Taupunkt Ø",
-    "Luftdruck Ø",
-    "Niederschlagsart",
-    "Schneefallgrenze",
+    "0°Line",
+    "WDir",
+    "Feels min",
+    "Feels max",
+    "CldLow",
+    "CldMid",
+    "CldHi",
+    "Humid",
+    "Cond°",
+    "hPa",
+    "PType",
+    "SnowL",
 ]
 
 # Klartext-Zwilling: dieselben Zeilen ohne die Warn-Zeile (die amtlichen
@@ -107,8 +114,8 @@ EXPECTED_OVERVIEW_LABELS_PLAIN = [
 ]
 
 EXPECTED_HOUR_HEADER = [
-    "Zeit", "Temp", "Gef.", "Wind", "Böen", "Regen", "UV", "Gew.",
-    "Regen-W.", "Sicht",
+    "Zeit", "Temp", "Feels", "Wind", "Gust", "Rain", "UV", "Thdr",
+    "Rain%", "Visib",
 ]
 
 # Klartext-Stundenzeile beschriftet jede Zelle einzeln ("Temp 8°") -- ohne die
@@ -232,13 +239,21 @@ def _plain_hour_labels(text: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Vorbedingung: die Auswahl macht wirklich ALLE Zeilen sichtbar
+# Vorbedingung: die Auswahl macht wirklich alle gemeinten Zeilen sichtbar
 # ---------------------------------------------------------------------------
 
-def test_selection_covers_every_row_of_both_tables():
+def test_selection_covers_every_overview_row_and_the_historic_hour_columns():
     """Ohne diese Vorbedingung nagelten die Tests unten nur einen Teil der
-    Beschriftungen fest -- und eine kuenftig neu hinzukommende Zeile bliebe
-    ungeprueft."""
+    Beschriftungen fest -- und eine kuenftig neu hinzukommende Uebersichts-
+    zeile bliebe ungeprueft.
+
+    Fuer die Stundentabelle wird bewusst NUR verlangt, dass die neun
+    historischen Spalten existieren (Teilmenge). Die Vollstaendigkeit der
+    Stundenspalten gegenueber dem Register ist Sache von
+    ``test_compare_hourly_catalog_columns.py`` -- #1406 Scheibe B erweitert
+    ``HOUR_METRICS``, und eine Gleichheitsforderung hier haette diese
+    Festnagelung mit erlegt, ohne etwas ueber Beschriftungen auszusagen.
+    """
     resolved = resolve_enabled_metrics(ALL_OVERVIEW_SELECTION)
     cv2_keys = [m["key"] for m in CV2_METRICS if m["key"] != "warn"]
 
@@ -248,50 +263,53 @@ def test_selection_covers_every_row_of_both_tables():
         f"unbekannt: {sorted(set(resolved) - set(cv2_keys))}) -- die "
         "Festnagelung waere unvollstaendig."
     )
-    assert ALL_HOUR_SELECTION == [m["key"] for m in HOUR_METRICS], (
-        "Die Stunden-Auswahl deckt nicht alle Spalten der Stundentabelle ab."
+    hour_keys = {m["key"] for m in HOUR_METRICS}
+    assert set(HISTORISCHE_STUNDEN_AUSWAHL) <= hour_keys, (
+        "Historische Stundenspalten fehlen in HOUR_METRICS: "
+        f"{sorted(set(HISTORISCHE_STUNDEN_AUSWAHL) - hour_keys)}"
     )
 
 
 # ---------------------------------------------------------------------------
-# Festnagelung
+# Festnagelung der Registernamen
 # ---------------------------------------------------------------------------
 
-def test_html_overview_labels_are_unchanged():
-    """Uebersichtstabelle (HTML): Zeichen fuer Zeichen der heutige Stand."""
+def test_html_overview_labels_are_the_register_names():
+    """Uebersichtstabelle (HTML): Zeichen fuer Zeichen die Kurzformen aus dem
+    zentralen Namensregister, mit Auswertungs-Zusatz nur bei Namensgleichheit.
+    """
     html = render_compare_html(
         _result(),
         enabled_metrics=resolve_enabled_metrics(ALL_OVERVIEW_SELECTION),
-        hourly_metrics=ALL_HOUR_SELECTION,
+        hourly_metrics=HISTORISCHE_STUNDEN_AUSWAHL,
     )
 
     assert _html_overview_labels(html) == EXPECTED_OVERVIEW_LABELS, (
-        "Die Beschriftung der Uebersichtstabelle hat sich geaendert -- "
-        "Scheibe A2a darf keine sichtbare Beschriftung anfassen (die "
-        "Ableitung aus dem Register ist A2b und braucht #1404)."
+        "Die Beschriftung der Uebersichtstabelle weicht von den aufgezeichneten "
+        "Registernamen ab."
     )
 
 
-def test_html_hour_table_header_is_unchanged():
-    """Stundentabelle (HTML): Spaltenueberschriften unveraendert."""
+def test_html_hour_table_header_are_the_register_names():
+    """Stundentabelle (HTML): Spaltenueberschriften sind die Registernamen der
+    gewaehlten Groessen."""
     html = render_compare_html(
         _result(),
         enabled_metrics=resolve_enabled_metrics(ALL_OVERVIEW_SELECTION),
-        hourly_metrics=ALL_HOUR_SELECTION,
+        hourly_metrics=HISTORISCHE_STUNDEN_AUSWAHL,
     )
     headers = _html_hour_headers(html)
 
     assert headers, "Keine Stundentabelle in der Mail gefunden."
     for head in headers:
         assert head == EXPECTED_HOUR_HEADER, (
-            "Die Spaltenueberschriften der Stundentabelle haben sich "
-            "geaendert -- Scheibe A2a darf keine sichtbare Beschriftung "
-            "anfassen (A2b, nach #1404)."
+            "Die Spaltenueberschriften der Stundentabelle weichen von den "
+            "aufgezeichneten Registernamen ab."
         )
 
 
-def test_plaintext_overview_labels_are_unchanged():
-    """Klartext-Zwilling der Uebersicht: dieselben Beschriftungen wie heute.
+def test_plaintext_overview_labels_are_the_register_names():
+    """Klartext-Zwilling der Uebersicht: dieselben Registernamen.
 
     Der Pflicht-Pruefer liest nur den HTML-Teil -- ohne diesen Test bliebe
     eine Aenderung im Klartext unbemerkt.
@@ -299,24 +317,24 @@ def test_plaintext_overview_labels_are_unchanged():
     text = render_comparison_text(
         _result(),
         enabled_metrics=resolve_enabled_metrics(ALL_OVERVIEW_SELECTION),
-        hourly_metrics=ALL_HOUR_SELECTION,
+        hourly_metrics=HISTORISCHE_STUNDEN_AUSWAHL,
     )
 
     assert _plain_overview_labels(text) == EXPECTED_OVERVIEW_LABELS_PLAIN, (
-        "Die Beschriftung der Klartext-Uebersicht hat sich geaendert -- "
-        "Scheibe A2a darf keine sichtbare Beschriftung anfassen."
+        "Die Beschriftung der Klartext-Uebersicht weicht von den "
+        "aufgezeichneten Registernamen ab."
     )
 
 
-def test_plaintext_hour_row_labels_are_unchanged():
-    """Klartext-Stundenzeile: dieselben Zell-Beschriftungen wie heute."""
+def test_plaintext_hour_row_labels_are_the_register_names():
+    """Klartext-Stundenzeile: dieselben Zell-Beschriftungen wie im HTML."""
     text = render_comparison_text(
         _result(),
         enabled_metrics=resolve_enabled_metrics(ALL_OVERVIEW_SELECTION),
-        hourly_metrics=ALL_HOUR_SELECTION,
+        hourly_metrics=HISTORISCHE_STUNDEN_AUSWAHL,
     )
 
     assert _plain_hour_labels(text) == EXPECTED_HOUR_LABELS_PLAIN, (
-        "Die Beschriftung der Klartext-Stundenzeile hat sich geaendert -- "
-        "Scheibe A2a darf keine sichtbare Beschriftung anfassen."
+        "Die Beschriftung der Klartext-Stundenzeile weicht von den "
+        "aufgezeichneten Registernamen ab."
     )

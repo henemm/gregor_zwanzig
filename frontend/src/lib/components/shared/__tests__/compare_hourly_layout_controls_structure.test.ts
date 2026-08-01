@@ -1,23 +1,31 @@
-// TDD RED — Epic #1301 Scheibe F2a: geteilte Stundenverlauf-Steuerung.
+// TDD RED — Issue #1406 Scheibe B (Epic #1372 / Etappe E2 von #1435).
 //
-// Die neue Anlege-Seite (`/compare/new`) und der Hub teilen sich EINE extrahierte
-// Komponente `shared/CompareHourlyLayoutControls.svelte` (Layout-Tab = NUR
-// Stundenverlauf-Toggle + Metrik-Auswahl). Spec:
-//   docs/specs/modules/feat_1301_f2a_compare_new_trip_pattern.md
-//   § "Neue Dateien" / § "Design-Entscheidung" / AC-7
+// Der Stundenverlauf-Auswahlblock (`CompareHourlyLayoutControls.svelte`) zeigt
+// heute die flache Zehnerliste `{#each ALL_HOURLY_METRICS as metric}` aus dem
+// Compare-eigenen Vokabular. Er soll dieselbe Bauart bekommen wie Uebersicht
+// (#1411) und Ausblick (#1406 Scheibe A): eine Zeile je Wettergroesse aus
+// `groupCompareCatalog(catalog)`, gespeist aus derselben Katalogantwort
+// (GET /api/compare/metrics).
 //
-// Struktur-/AST-Test (Anti-Hand-Kopie), Vorbild-Muster:
-//   compare/__tests__/compare_hub_layout_hourly_access.test.ts (C2-Kern)
-// Grund für AST statt DOM: dieses Repo hat kein vitest/jsdom (package.json
-// "test": node --test). Statt eines verbotenen Dateiinhalt-Greps parst der Test
-// die Komponente mit dem ECHTEN Svelte-5-Compiler und inspiziert den Template-AST.
+// Spec: docs/specs/modules/feat_1406b_stundenverlauf_katalog.md
+//   § Implementation Details 2+4, AC-1
+// Vorbild dieses Umschriebs: compare_outlook_metric_selection_structure.test.ts
+// (Scheibe A). Die Vorfassung dieser Datei (Epic #1301 F2a AC-7 + #1401b AC-2)
+// wies die alte Schleife nach und bricht mit dieser Scheibe strukturell — sie
+// wird umgeschrieben, nicht geloescht (Spec Known Limitations).
 //
-// RED heute: die Datei `shared/CompareHourlyLayoutControls.svelte` existiert noch
-// nicht → readFileSync/parse schlägt fehl. Nach der Extraktion muss die Schleife
-// `{#each ALL_HOURLY_METRICS as metric}` mit `metric.key`-Testids + Enabled-Toggle
-// strukturell nachweisbar sein.
+// Grund fuer AST statt DOM: dieses Repo hat kein vitest/jsdom (package.json
+// "test": node --test). Der Test parst die Komponenten mit dem ECHTEN
+// Svelte-5-Compiler und inspiziert Template-/Instance-Script-AST statt eines
+// verbotenen Dateiinhalt-Vergleichs.
 //
-// Ausführung:
+// Die Zahl der Zeilen (24 Wettergroessen aus 26 Katalog-Eintraegen) ist hier
+// strukturell nicht beweisbar — der Katalog kommt zur Laufzeit vom Server.
+// Sie wird in der Python-Haelfte behauptet und geprueft
+// (tests/unit/test_compare_hourly_catalog_columns.py::
+// test_hour_columns_cover_every_catalog_metric_except_the_merge_signal).
+//
+// Ausfuehrung:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test \
 //     src/lib/components/shared/__tests__/compare_hourly_layout_controls_structure.test.ts
 
@@ -28,16 +36,19 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'svelte/compiler';
 
-import { ALL_HOURLY_METRICS } from '../../compare/compareHourlyMetricDefs.ts';
-
 const here = dirname(fileURLToPath(import.meta.url));
 const COMPONENT = join(here, '..', 'CompareHourlyLayoutControls.svelte');
+const OVERVIEW_COMPONENT = join(here, '..', 'WeatherMetricsTab.svelte');
 
-/** Sammelt alle im Template-AST-Subtree vergebenen Testids (data-testid an
- *  Elementen, testid-Prop an Svelte-Komponenten). Template-Literale werden als
- *  Roh-String mit `{expr}`-Platzhaltern serialisiert (Präfix-Vergleich). */
-function renderedTestids(subtree: unknown): string[] {
-	const found: string[] = [];
+function parseComponent(path: string): any {
+	const src = readFileSync(path, 'utf-8');
+	return parse(src, { modern: true });
+}
+
+// ─── generische AST-Helfer (uebernommen aus compare_outlook_metric_selection_structure.test.ts) ───
+
+function findEachBlocksOverCall(subtree: unknown, calleeName: string, argName: string): any[] {
+	const found: any[] = [];
 	function visit(node: unknown): void {
 		if (node === null || typeof node !== 'object') return;
 		if (Array.isArray(node)) {
@@ -45,14 +56,17 @@ function renderedTestids(subtree: unknown): string[] {
 			return;
 		}
 		const n = node as Record<string, any>;
-		if (n.type === 'RegularElement' || n.type === 'Component') {
-			for (const attr of n.attributes ?? []) {
-				if (attr.type !== 'Attribute') continue;
-				if (attr.name !== 'data-testid' && attr.name !== 'testid') continue;
-				const raw = Array.isArray(attr.value)
-					? attr.value.map((v: any) => v.raw ?? '{expr}').join('')
-					: (attr.value?.raw ?? '{expr}');
-				found.push(raw);
+		if (n.type === 'EachBlock' && n.expression?.type === 'CallExpression') {
+			const callee = n.expression.callee;
+			const args = n.expression.arguments ?? [];
+			if (
+				callee?.type === 'Identifier' &&
+				callee.name === calleeName &&
+				args.length >= 1 &&
+				args[0]?.type === 'Identifier' &&
+				args[0].name === argName
+			) {
+				found.push(n);
 			}
 		}
 		for (const key of Object.keys(n)) {
@@ -64,8 +78,6 @@ function renderedTestids(subtree: unknown): string[] {
 	return found;
 }
 
-/** Findet jeden `EachBlock`, dessen Iterations-Ausdruck EXAKT der Identifier
- *  `identifierName` ist (kein Zwischen-Array/Filter — 1:1-Bezug zum Katalog). */
 function findEachBlocksOverIdentifier(subtree: unknown, identifierName: string): any[] {
 	const found: any[] = [];
 	function visit(node: unknown): void {
@@ -91,103 +103,388 @@ function findEachBlocksOverIdentifier(subtree: unknown, identifierName: string):
 	return found;
 }
 
-/** Prüft, ob im Subtree IRGENDEIN Element/Komponente ein `testid`/`data-testid`
- *  als Template-Literal trägt, das mit `prefix` beginnt und `metric.key`
- *  interpoliert (AST-Beweis für `` `compare-layout-hourly-metric-${metric.key}` ``). */
-function hasKeyedTestidTemplate(
-	subtree: unknown,
-	prefix: string,
-	memberObjectName: string,
-	memberPropertyName: string
-): boolean {
-	let hit = false;
+function findComponentsNamed(subtree: unknown, name: string): any[] {
+	const found: any[] = [];
 	function visit(node: unknown): void {
-		if (hit) return;
 		if (node === null || typeof node !== 'object') return;
 		if (Array.isArray(node)) {
 			node.forEach(visit);
 			return;
 		}
 		const n = node as Record<string, any>;
-		if (n.type === 'RegularElement' || n.type === 'Component') {
-			for (const attr of n.attributes ?? []) {
-				if (attr.type !== 'Attribute') continue;
-				if (attr.name !== 'testid' && attr.name !== 'data-testid') continue;
-				const value = attr.value;
-				const expr = Array.isArray(value) ? value[0]?.expression : value?.expression;
-				if (!expr || expr.type !== 'TemplateLiteral') continue;
-				const startsWithPrefix = expr.quasis?.[0]?.value?.raw === prefix;
-				const hasMemberExpr = (expr.expressions ?? []).some(
-					(e: any) =>
-						e.type === 'MemberExpression' &&
-						e.object?.type === 'Identifier' &&
-						e.object.name === memberObjectName &&
-						e.property?.type === 'Identifier' &&
-						e.property.name === memberPropertyName &&
-						!e.computed
-				);
-				if (startsWithPrefix && hasMemberExpr) {
-					hit = true;
-					return;
-				}
-			}
-		}
+		if (n.type === 'Component' && n.name === name) found.push(n);
 		for (const key of Object.keys(n)) {
 			if (key === 'parent') continue;
 			visit(n[key]);
 		}
 	}
 	visit(subtree);
+	return found;
+}
+
+function findAllAttributesNamed(subtree: unknown, name: string): any[] {
+	const found: any[] = [];
+	function visit(node: unknown): void {
+		if (node === null || typeof node !== 'object') return;
+		if (Array.isArray(node)) {
+			node.forEach(visit);
+			return;
+		}
+		const n = node as Record<string, any>;
+		if (n.type === 'Attribute' && n.name === name) found.push(n);
+		for (const key of Object.keys(n)) {
+			if (key === 'parent') continue;
+			visit(n[key]);
+		}
+	}
+	visit(subtree);
+	return found;
+}
+
+function findAttr(node: any, name: string): any {
+	return (node?.attributes ?? []).find((a: any) => a.type === 'Attribute' && a.name === name);
+}
+
+/** Sucht rekursiv im Ausdruck eines Attributwerts. */
+function visitAttributeExpressions(attr: any, visitor: (node: unknown) => void): void {
+	if (!attr) return;
+	const value = attr.value;
+	if (Array.isArray(value)) {
+		for (const part of value) if (part?.type === 'ExpressionTag') visitor(part.expression);
+	} else if (value?.type === 'ExpressionTag') {
+		visitor(value.expression);
+	}
+}
+
+/** Referenziert der Attributwert (in welcher Notation auch immer) den Zugriff
+ *  `objectName.propertyName`? */
+function attributeReferencesMember(attr: any, objectName: string, propertyName: string): boolean {
+	let hit = false;
+	function visitExpr(node: unknown): void {
+		if (hit || node === null || typeof node !== 'object') return;
+		if (Array.isArray(node)) {
+			node.forEach(visitExpr);
+			return;
+		}
+		const n = node as Record<string, any>;
+		if (
+			n.type === 'MemberExpression' &&
+			n.object?.type === 'Identifier' &&
+			n.object.name === objectName &&
+			n.property?.type === 'Identifier' &&
+			n.property.name === propertyName &&
+			!n.computed
+		) {
+			hit = true;
+			return;
+		}
+		for (const key of Object.keys(n)) {
+			if (key === 'parent' || key === 'loc') continue;
+			visitExpr(n[key]);
+		}
+	}
+	visitAttributeExpressions(attr, visitExpr);
 	return hit;
 }
 
-function parseComponent(): any {
-	// RED: Datei fehlt heute → readFileSync wirft ENOENT.
-	const src = readFileSync(COMPONENT, 'utf-8');
-	return parse(src, { modern: true });
+function attributeReferencesIdentifier(attr: any, identifierName: string): boolean {
+	let hit = false;
+	function visitExpr(node: unknown): void {
+		if (hit || node === null || typeof node !== 'object') return;
+		if (Array.isArray(node)) {
+			node.forEach(visitExpr);
+			return;
+		}
+		const n = node as Record<string, any>;
+		if (n.type === 'Identifier' && n.name === identifierName) {
+			hit = true;
+			return;
+		}
+		for (const key of Object.keys(n)) {
+			if (key === 'parent' || key === 'loc') continue;
+			visitExpr(n[key]);
+		}
+	}
+	visitAttributeExpressions(attr, visitExpr);
+	return hit;
 }
 
-describe('F2a AC-7: CompareHourlyLayoutControls extrahiert den Stundenverlauf geteilt', () => {
-	test('Katalog ALL_HOURLY_METRICS hat mindestens 1 Eintrag (Vakuum-Schutz)', () => {
-		assert.ok(ALL_HOURLY_METRICS.length >= 1);
-	});
+function renderedTestids(subtree: unknown): string[] {
+	return findAllAttributesNamed(subtree, 'data-testid')
+		.concat(findAllAttributesNamed(subtree, 'testid'))
+		.map((attr: any) => {
+			const value = attr.value;
+			return Array.isArray(value)
+				? value.map((v: any) => v.raw ?? v.data ?? '{expr}').join('')
+				: (value?.raw ?? '{expr}');
+		});
+}
 
-	test('Komponente iteriert `{#each ALL_HOURLY_METRICS as metric}` (Anti-Hand-Kopie)', () => {
-		// GIVEN: die neu extrahierte geteilte Komponente
-		// WHEN: sie mit dem echten Svelte-Compiler geparst wird
-		// THEN: es existiert eine Schleife über EXAKT den Katalog-Identifier —
-		// keine hart kopierte Metrik-Liste, die still von Hub/Anlege divergieren kann.
-		const ast = parseComponent();
-		const eachBlocks = findEachBlocksOverIdentifier(ast.fragment, 'ALL_HOURLY_METRICS');
+function instanceBody(ast: any): any[] {
+	return (ast?.instance?.content?.body as any[]) ?? [];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AC-1: Der Auswahl-Block iteriert den Katalog, nicht die eigene Zehnerliste
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('AC-1: Stundenverlauf-Auswahl kommt aus groupCompareCatalog(catalog)', () => {
+	test('CompareHourlyLayoutControls.svelte enthaelt `{#each groupCompareCatalog(catalog) as group}`', () => {
+		const ast = parseComponent(COMPONENT);
+		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
 		assert.ok(
 			eachBlocks.length >= 1,
-			'CompareHourlyLayoutControls.svelte enthält keinen `{#each ALL_HOURLY_METRICS as ...}`-Block ' +
-				'(Spec F2a AC-7 / Anti-Hand-Kopie).'
+			'AC-1 FAIL (RED): CompareHourlyLayoutControls.svelte iteriert noch nicht ueber ' +
+				'`groupCompareCatalog(catalog)` — der Auswahl-Block zeigt weiterhin die flache ' +
+				'Zehnerliste aus dem Compare-eigenen Vokabular.'
 		);
 	});
 
-	test('Je Katalog-Eintrag eine Metrik-Checkbox mit `compare-layout-hourly-metric-${metric.key}`-Testid', () => {
-		// GIVEN: der Schleifenkörper über ALL_HOURLY_METRICS
-		// WHEN: geparst
-		// THEN: darin trägt ein Element/eine Komponente ein testid-Template-Literal
-		// mit Präfix `compare-layout-hourly-metric-` + interpoliertem `metric.key`.
-		const ast = parseComponent();
-		const eachBlocks = findEachBlocksOverIdentifier(ast.fragment, 'ALL_HOURLY_METRICS');
-		const matchFound = eachBlocks.some((block) =>
-			hasKeyedTestidTemplate(block.body, 'compare-layout-hourly-metric-', 'metric', 'key')
+	test('die alte flache Zehnerliste `{#each ALL_HOURLY_METRICS}` ist verschwunden', () => {
+		const ast = parseComponent(COMPONENT);
+		const alt = findEachBlocksOverIdentifier(ast.fragment, 'ALL_HOURLY_METRICS');
+		assert.equal(
+			alt.length,
+			0,
+			'AC-1 FAIL (RED): die Komponente iteriert weiterhin ueber `ALL_HOURLY_METRICS` — ' +
+				'das eigenstaendige Zehner-Vokabular lebt neben dem Katalog weiter.'
+		);
+	});
+
+	test('Anti-Hand-Kopie: der Instance-Script importiert groupCompareCatalog statt eigener Gruppierung', () => {
+		const ast = parseComponent(COMPONENT);
+		const imports = instanceBody(ast).filter((stmt) => stmt.type === 'ImportDeclaration');
+		const hit = imports.some(
+			(imp) =>
+				String(imp.source?.value ?? '').includes('compareAggregationGrouping') &&
+				(imp.specifiers ?? []).some(
+					(s: any) =>
+						s.imported?.name === 'groupCompareCatalog' ||
+						s.local?.name === 'groupCompareCatalog'
+				)
 		);
 		assert.ok(
-			matchFound,
-			'CompareHourlyLayoutControls.svelte: keine Metrik-Checkbox mit `testid` ' +
-				'`compare-layout-hourly-metric-${metric.key}` im ALL_HOURLY_METRICS-Schleifenkörper.'
+			hit,
+			'AC-1 FAIL (RED): kein Import von `groupCompareCatalog` aus `compareAggregationGrouping.ts` ' +
+				'— Gefahr eines zweiten, eigenen Gruppierungs-Codes statt Wiederverwendung des ' +
+				'#1411-Bausteins.'
 		);
 	});
 
-	test('Komponente rendert den "Stundenverlauf ein/aus"-Schalter (compare-layout-hourly-enabled-toggle)', () => {
-		// GIVEN: die Komponente
-		// WHEN: geparst
-		// THEN: das Enabled-Toggle-Testid existiert im AST.
-		const ast = parseComponent();
+	test('je Gruppe eine Zeile, die an `group.metric_id` haengt (nicht am Auswertungs-Schluessel)', () => {
+		// Der Stundenverlauf speichert die WETTERGROESSE, nicht eine Tages-
+		// Auswertung: `group.options[0].key` waere `temp_max_c` und damit ein
+		// Schluessel, den der Stunden-Aufloeser gar nicht kennt (Spec
+		// Implementation Details 1: alter Kurzschluessel ODER Katalog-ID).
+		const ast = parseComponent(COMPONENT);
+		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
+		assert.ok(eachBlocks.length >= 1, 'AC-1 FAIL (RED): kein groupCompareCatalog-Block (s.o.).');
+		if (eachBlocks.length === 0) return;
+
+		const testids = eachBlocks.flatMap((block) =>
+			findAllAttributesNamed(block.body, 'data-testid').concat(
+				findAllAttributesNamed(block.body, 'testid')
+			)
+		);
+		assert.ok(testids.length >= 1, 'AC-1 FAIL (RED): keine Testids im Gruppierungs-Block.');
+		assert.ok(
+			testids.some((attr) => attributeReferencesMember(attr, 'group', 'metric_id')),
+			'AC-1 FAIL (RED): keine Metrik-Zeile im Gruppierungs-Block, deren Testid auf ' +
+				'`group.metric_id` verweist.'
+		);
+	});
+
+	test('die Beschriftung kommt aus `group.label` (Registername des Katalogs)', () => {
+		const ast = parseComponent(COMPONENT);
+		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
+		assert.ok(eachBlocks.length >= 1, 'AC-1 FAIL (RED): kein groupCompareCatalog-Block (s.o.).');
+		if (eachBlocks.length === 0) return;
+
+		const labelAttrs = eachBlocks.flatMap((block) => findAllAttributesNamed(block.body, 'label'));
+		const labelTags: any[] = [];
+		(function collectExpressionTags(node: unknown): void {
+			if (node === null || typeof node !== 'object') return;
+			if (Array.isArray(node)) {
+				node.forEach(collectExpressionTags);
+				return;
+			}
+			const n = node as Record<string, any>;
+			if (n.type === 'ExpressionTag') labelTags.push(n);
+			for (const key of Object.keys(n)) {
+				if (key === 'parent') continue;
+				collectExpressionTags(n[key]);
+			}
+		})(eachBlocks.map((b) => b.body));
+
+		const viaAttribut = labelAttrs.some((attr) =>
+			attributeReferencesMember(attr, 'group', 'label')
+		);
+		const viaText = labelTags.some(
+			(tag) =>
+				tag.expression?.type === 'MemberExpression' &&
+				tag.expression.object?.name === 'group' &&
+				tag.expression.property?.name === 'label'
+		);
+		assert.ok(
+			viaAttribut || viaText,
+			'AC-1 FAIL (RED): die Zeilenbeschriftung im Gruppierungs-Block kommt nicht aus ' +
+				'`group.label` — sie stammt vermutlich noch aus einer eigenen Uebersetzungstabelle ' +
+				'(compareHourlyCatalogIds.ts).'
+		);
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AC-11: „Sonnenstunden" steht sichtbar und begruendet als nicht anwaehlbar da
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('AC-11: ausgenommene Groesse ist sichtbar, nicht anwaehlbar und begruendet', () => {
+	test('die Zeile wird nicht weggefiltert — es gibt keinen Filter vor dem Gruppierungs-Block', () => {
+		// AC-11 verlangt ausdruecklich "nicht kommentarlos fehlend". Ein
+		// `.filter(...)` zwischen `groupCompareCatalog(catalog)` und der
+		// Schleife wuerde die Zeile verschwinden lassen; der EachBlock-Test
+		// oben verlangt deshalb bereits den EXAKTEN Aufruf ohne Zwischenschritt.
+		// Hier zusaetzlich die Gegenprobe auf ein `{#if}` im Schleifenkoerper,
+		// das die ganze Zeile unterdrueckt.
+		const ast = parseComponent(COMPONENT);
+		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
+		assert.ok(eachBlocks.length >= 1, 'AC-11 FAIL (RED): kein groupCompareCatalog-Block (s. AC-1).');
+		if (eachBlocks.length === 0) return;
+
+		// Jede Gruppe muss eine Zeile ergeben: es gibt mindestens ein Testid im
+		// Schleifenkoerper, das NICHT in einem IfBlock steckt.
+		let ausserhalbIf = 0;
+		function visit(node: unknown, imIf: boolean): void {
+			if (node === null || typeof node !== 'object') return;
+			if (Array.isArray(node)) {
+				node.forEach((n) => visit(n, imIf));
+				return;
+			}
+			const n = node as Record<string, any>;
+			const jetztImIf = imIf || n.type === 'IfBlock';
+			if (n.type === 'Attribute' && (n.name === 'data-testid' || n.name === 'testid') && !jetztImIf) {
+				ausserhalbIf += 1;
+			}
+			for (const key of Object.keys(n)) {
+				if (key === 'parent') continue;
+				visit(n[key], jetztImIf);
+			}
+		}
+		eachBlocks.forEach((block) => visit(block.body, false));
+		assert.ok(
+			ausserhalbIf >= 1,
+			'AC-11 FAIL (RED): jede Zeile des Gruppierungs-Blocks steckt in einem `{#if}` — ' +
+				'eine ausgenommene Groesse wuerde dadurch kommentarlos fehlen statt sichtbar ' +
+				'und begruendet nicht anwaehlbar zu sein.'
+		);
+	});
+
+	test('der Zustand „nicht anwaehlbar" kommt je Gruppe aus den Katalogdaten', () => {
+		const ast = parseComponent(COMPONENT);
+		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
+		assert.ok(eachBlocks.length >= 1, 'AC-11 FAIL (RED): kein groupCompareCatalog-Block (s. AC-1).');
+		if (eachBlocks.length === 0) return;
+
+		const disabledAttrs = eachBlocks.flatMap((block) =>
+			findAllAttributesNamed(block.body, 'disabled').concat(
+				findAllAttributesNamed(block.body, 'aria-disabled')
+			)
+		);
+		assert.ok(
+			disabledAttrs.length >= 1,
+			'AC-11 FAIL (RED): keine Zeile im Gruppierungs-Block traegt einen ' +
+				'`disabled`/`aria-disabled`-Zustand — „Sonnenstunden" waere anwaehlbar.'
+		);
+		assert.ok(
+			disabledAttrs.some((attr) => attributeReferencesIdentifier(attr, 'group')),
+			'AC-11 FAIL (RED): der `disabled`-Zustand haengt nicht an `group` (den ' +
+				'Katalogdaten) — er waere entweder pauschal oder im Frontend hartcodiert. ' +
+				'Die Ausnahme gehoert ins Register, nicht in die Komponente (AC-10).'
+		);
+	});
+
+	test('die Begruendung wird je Gruppe aus den Katalogdaten gerendert', () => {
+		const ast = parseComponent(COMPONENT);
+		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
+		assert.ok(eachBlocks.length >= 1, 'AC-11 FAIL (RED): kein groupCompareCatalog-Block (s. AC-1).');
+		if (eachBlocks.length === 0) return;
+
+		// Ein Ausdruck irgendwo im Schleifenkoerper, der eine ANDERE
+		// group-Eigenschaft als metric_id/label/options ausgibt — das ist der
+		// Begruendungstext aus der Katalogantwort.
+		const bekannt = new Set(['metric_id', 'label', 'options']);
+		let begruendung: string | null = null;
+		function visit(node: unknown): void {
+			if (begruendung || node === null || typeof node !== 'object') return;
+			if (Array.isArray(node)) {
+				node.forEach(visit);
+				return;
+			}
+			const n = node as Record<string, any>;
+			if (
+				n.type === 'MemberExpression' &&
+				n.object?.type === 'Identifier' &&
+				n.object.name === 'group' &&
+				n.property?.type === 'Identifier' &&
+				!n.computed &&
+				!bekannt.has(n.property.name)
+			) {
+				begruendung = n.property.name;
+				return;
+			}
+			for (const key of Object.keys(n)) {
+				if (key === 'parent') continue;
+				visit(n[key]);
+			}
+		}
+		eachBlocks.forEach((block) => visit(block.body));
+
+		assert.ok(
+			begruendung !== null,
+			'AC-11 FAIL (RED): im Gruppierungs-Block wird ausser metric_id/label/options ' +
+				'keine weitere `group`-Eigenschaft gelesen — es gibt also weder Zustand noch ' +
+				'Begruendungstext aus der Katalogantwort. AC-11 verlangt einen sichtbaren, ' +
+				'nicht leeren Hinweis („stuendlich nur als Einstrahlung verfuegbar", Verweis ' +
+				'auf Bewoelkung und UV-Index).'
+		);
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AC-1: Die Katalogantwort ist DIESELBE wie bei Uebersicht und Ausblick
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('AC-1: der Stundenverlauf wird aus derselben Katalogantwort gespeist', () => {
+	test('WeatherMetricsTab.svelte uebergibt CompareHourlyLayoutControls den Compare-Katalog', () => {
+		// Heute steht dort `catalog={metricById}` — die Register-Antwort von
+		// GET /api/metrics als Objekt, NICHT die flache Compare-Katalogliste,
+		// ueber die `groupCompareCatalog()` gruppiert. Ohne diese Umstellung
+		// gruppierte der Block ueber die falsche Datenform.
+		const ast = parseComponent(OVERVIEW_COMPONENT);
+		const mounts = findComponentsNamed(ast.fragment, 'CompareHourlyLayoutControls');
+		assert.equal(
+			mounts.length,
+			1,
+			`Erwartet genau eine Einbettung von CompareHourlyLayoutControls, gefunden ${mounts.length}.`
+		);
+		const catalogAttr = findAttr(mounts[0], 'catalog');
+		assert.ok(catalogAttr, 'AC-1 FAIL (RED): der Aufruf uebergibt gar keine `catalog`-Prop.');
+		assert.ok(
+			attributeReferencesIdentifier(catalogAttr, 'compareCatalog'),
+			'AC-1 FAIL (RED): CompareHourlyLayoutControls bekommt nicht `compareCatalog` ' +
+				'(GET /api/compare/metrics) uebergeben — dieselbe Quelle, aus der sich Uebersicht ' +
+				'und Ausblick speisen.'
+		);
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// REGRESSIONSSCHUTZ — heute gruen, muss gruen bleiben
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('[REGRESSIONSSCHUTZ] Umgebung des Auswahl-Blocks bleibt unberuehrt', () => {
+	test('der "Stundenverlauf ein/aus"-Schalter bleibt erhalten', () => {
+		const ast = parseComponent(COMPONENT);
 		const ids = renderedTestids(ast.fragment);
 		assert.ok(
 			ids.includes('compare-layout-hourly-enabled-toggle'),
@@ -195,84 +492,26 @@ describe('F2a AC-7: CompareHourlyLayoutControls extrahiert den Stundenverlauf ge
 				`Gefundene Testids: ${ids.join(', ')}`
 		);
 	});
-});
 
-// #1401 Scheibe B, Teil 1, AC-2: die Stundenverlauf-Checkboxen sollen ihr
-// Label nicht mehr aus dem eigenstaendigen `compareHourlyMetricDefs.ts`-Text
-// beziehen, sondern aus dem zentralen Metrik-Katalog (`GET /api/metrics`),
-// den WeatherMetricsTab.svelte kuenftig auch im Vergleich-Kontext laedt und
-// als `catalog`-Prop durchreicht. Spec:
-//   docs/specs/modules/fix_1401b_register_stundenverlauf_alarme.md AC-2
-//
-// RED heute: die Komponente kennt keine `catalog`-Prop, das Label im
-// `{#each}`-Block ist die rohe MemberExpression `metric.label`.
-describe('#1401b AC-2: Stundenverlauf-Labels kommen aus dem Katalog, nicht aus eigenem Text', () => {
-	test('Props deklarieren eine `catalog`-Prop (Destrukturierung aus $props())', () => {
-		const src = readFileSync(COMPONENT, 'utf-8');
-		const ast = parse(src, { modern: true }) as any;
-		const instanceBody = ast.instance?.content?.body ?? [];
-		const propsDeclarator = instanceBody
-			.flatMap((stmt: any) => (stmt.type === 'VariableDeclaration' ? stmt.declarations : []))
-			.find(
-				(decl: any) =>
-					decl.init?.type === 'CallExpression' && decl.init.callee?.name === '$props'
-			);
-		assert.ok(propsDeclarator, 'Keine `let {...} = $props()`-Destrukturierung im Instance-Script gefunden.');
-		const patternProps = (propsDeclarator.id?.properties ?? [])
-			.map((p: any) => p.key?.name)
-			.filter(Boolean);
-		assert.ok(
-			patternProps.includes('catalog'),
-			`CompareHourlyLayoutControls.svelte destrukturiert keine \`catalog\`-Prop aus $props(). ` +
-				`Gefundene Props: ${patternProps.join(', ')}`
+	test('der geteilte Reihenfolge-Baustein (WeatherV2Reihenfolge) bleibt genau einmal eingebettet', () => {
+		// Spec Implementation Details 4: der Reihenfolge-Block ist ausdruecklich
+		// NICHT-UMFANG dieser Scheibe (ADR-0024, bereits geteilt).
+		const ast = parseComponent(COMPONENT);
+		const rows = findComponentsNamed(ast.fragment, 'WeatherV2Reihenfolge');
+		assert.equal(
+			rows.length,
+			1,
+			`REGRESSION: erwartet genau einen WeatherV2Reihenfolge-Aufruf, gefunden ${rows.length}.`
 		);
 	});
 
-	test('Label je Metrik-Checkbox wird ueber einen Katalog-Resolver aufgeloest, nicht ueber die rohe `metric.label`', () => {
-		const ast = parseComponent();
-		const eachBlocks = findEachBlocksOverIdentifier(ast.fragment, 'ALL_HOURLY_METRICS');
-		assert.ok(eachBlocks.length >= 1, 'Kein `{#each ALL_HOURLY_METRICS as ...}`-Block gefunden.');
-
-		function findLabelExpressions(subtree: unknown): any[] {
-			const found: any[] = [];
-			function visit(node: unknown): void {
-				if (node === null || typeof node !== 'object') return;
-				if (Array.isArray(node)) {
-					node.forEach(visit);
-					return;
-				}
-				const n = node as Record<string, any>;
-				if (n.type === 'Component' || n.type === 'RegularElement') {
-					for (const attr of n.attributes ?? []) {
-						if (attr.type !== 'Attribute' || attr.name !== 'label') continue;
-						const value = attr.value;
-						const expr = Array.isArray(value) ? value[0]?.expression : value?.expression;
-						if (expr) found.push(expr);
-					}
-				}
-				for (const key of Object.keys(n)) {
-					if (key === 'parent') continue;
-					visit(n[key]);
-				}
-			}
-			visit(subtree);
-			return found;
-		}
-
-		const labelExprs = eachBlocks.flatMap((block) => findLabelExpressions(block.body));
-		assert.ok(labelExprs.length >= 1, 'Keine `label={...}`-Attribute im Schleifenkoerper gefunden.');
-
-		const resolvesViaCatalog = labelExprs.some((expr) => {
-			if (expr.type !== 'CallExpression') return false;
-			return (expr.arguments ?? []).some(
-				(arg: any) => arg.type === 'Identifier' && arg.name === 'catalog'
-			);
-		});
+	test('der Hinweis "Erscheint nur in der E-Mail" bleibt stehen', () => {
+		const ast = parseComponent(COMPONENT);
+		const ids = renderedTestids(ast.fragment);
 		assert.ok(
-			resolvesViaCatalog,
-			'Kein `label={...}`-Ausdruck im ALL_HOURLY_METRICS-Schleifenkoerper ruft einen Resolver mit ' +
-				'`catalog` als Argument auf — das Label kommt vermutlich noch direkt aus `metric.label` ' +
-				'statt aus dem zentralen Katalog (#1401b AC-2).'
+			ids.includes('compare-layout-hourly-email-only-hint'),
+			'REGRESSION: der E-Mail-only-Hinweis ist verschwunden (Stundenverlauf erreicht ' +
+				'weiterhin nur die E-Mail, Spec Known Limitations).'
 		);
 	});
 });

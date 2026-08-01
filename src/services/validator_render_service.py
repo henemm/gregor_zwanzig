@@ -166,8 +166,15 @@ def render_compare_email_preview(body: Any) -> str:
         time_window=(body.time_window[0], body.time_window[1]),
         target_date=target_date,
     )
+    # Issue #1406 Scheibe B (AC-8): die Stundenverlauf-Auswahl wird
+    # durchgereicht -- bis dahin zeigte die Vorschau immer die volle
+    # Spaltenmenge und ein Nachweis ueber diesen Endpunkt sah die Wirkung der
+    # Auswahl gar nicht (Muster #1435 E3b: `build_token_line()` ohne
+    # `profile=`). `getattr` statt `body.hourly_metrics`, damit auch aeltere
+    # Aufrufer ohne das Feld weiterhin durchlaufen.
     return render_compare_html(
         result,
         profile=profile_enum,
         hourly_enabled=body.hourly_enabled,
+        hourly_metrics=getattr(body, "hourly_metrics", None),
     )

@@ -308,6 +308,9 @@ class CompareEmailPreviewBody(BaseModel):
     target_date: str                          # ISO-8601, z. B. "2026-05-31"
     winner_tags: list[WinnerTag] = []
     hourly_enabled: bool = True                # Issue #1107
+    # Issue #1406 Scheibe B (AC-8): Stundenverlauf-Auswahl (Renderer-Feldnamen
+    # wie "t2m_c"). `None` = nie eingestellt -> Vorgabemenge des Renderers.
+    hourly_metrics: list[str] | None = None
 
 
 @router.post("/api/_validator/compare-email-preview")

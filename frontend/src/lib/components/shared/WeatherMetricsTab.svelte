@@ -1033,7 +1033,12 @@
 		     die Stundenverlauf-Steuerung nicht unerreichbar machen. -->
 		{#if sections.includes('stundenverlauf') && wiz}
 			<div data-testid="weather-metrics-stundenverlauf">
-				<CompareHourlyLayoutControls {wiz} {onHourlyCommit} catalog={metricById} />
+				<!-- #1406 B: dieselbe Katalogantwort (GET /api/compare/metrics) wie
+				     Uebersicht und Ausblick — bis dahin bekam der Block hier das
+				     Register-Objekt `metricById` (GET /api/metrics) und damit eine
+				     andere Datenform als die, ueber die groupCompareCatalog()
+				     gruppiert. -->
+				<CompareHourlyLayoutControls {wiz} {onHourlyCommit} catalog={compareCatalog} />
 			</div>
 		{/if}
 		<!-- Issue #1361 Befund 2/#1368: Bedienflaeche des 3-Tages-Ausblicks.

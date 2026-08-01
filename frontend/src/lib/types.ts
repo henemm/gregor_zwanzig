@@ -474,6 +474,19 @@ export interface CompareMetricCatalogEntry {
 	// Register — `null`, wenn sie nicht alarmfähig ist. E1a-2 macht sie zur
 	// EINZIGEN Quelle dafür, welche Alarm-Zeilen der Alarme-Reiter zeigt.
 	alertMetric?: string | null;
+	// Issue #1406 Scheibe B: alles, was die Stundenverlauf-Grundauswahl über
+	// eine Größe wissen muss — aus `compare_hourly_metric_ids.py` abgeleitet,
+	// damit im Browser keine zweite Zuordnungstabelle entsteht (AC-10).
+	// `hourlySelectable=false` + Begründung = sichtbar, aber nicht anwählbar
+	// (AC-11, „Sonnenstunden"). `hourlyDefault` = Teil der Vorgabemenge eines
+	// nie eingestellten Vergleichs. `hourlyMergeOnly` = erzeugt nie eine
+	// eigene Spalte (Windrichtung). `hourly_legacy_keys` = die historischen
+	// Kurzschlüssel, unter denen Altbestand gespeichert sein kann (AC-4).
+	hourlySelectable?: boolean;
+	hourlyNotSelectableReason?: string;
+	hourlyDefault?: boolean;
+	hourlyMergeOnly?: boolean;
+	hourly_legacy_keys?: string[];
 }
 
 export interface CompareMetricCatalogResponse {

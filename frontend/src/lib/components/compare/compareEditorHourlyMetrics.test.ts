@@ -15,14 +15,27 @@ import assert from 'node:assert/strict';
 
 import { buildComparePresetSavePayload } from './compareEditorSave.ts';
 import {
-	ALL_HOURLY_METRICS,
-	DEFAULT_HOURLY_METRIC_KEYS,
 	applyHourlyMetricToggle,
 	applyHourlyMetricToggleFromState,
 	orderableHourlyMetricKeys,
 	applyHourlyReorder
 } from './compareHourlyMetricDefs.ts';
 import type { ComparePreset } from '../../types.ts';
+
+// Issue #1406 Scheibe B: Vorrat, Vorgabemenge und Merge-only-Eigenschaft
+// stehen nicht mehr im Frontend, sondern kommen aus der Katalogantwort
+// (GET /api/compare/metrics, Felder `hourlyDefault`/`hourlyMergeOnly`). Die
+// frueheren Bloecke „ALL_HOURLY_METRICS — Katalog" und die Laengen-Zusicherung
+// auf DEFAULT_HOURLY_METRIC_KEYS sind deshalb entfallen; ihre Aussage prueft
+// jetzt die Backend-Seite (tests/unit/test_compare_hourly_catalog_columns.py
+// bzw. HOURLY_DEFAULT_METRIC_IDS in compare_hourly_metric_ids.py).
+// Hier bleibt die reine Umschalt-/Reihenfolge-Mechanik — sie bekommt Vorgabe
+// und Merge-Signale ab jetzt als Parameter.
+const SERVER_DEFAULT_KEYS = [
+	'temp_c', 'wind_chill_c', 'wind_kmh', 'gust_kmh', 'precip_mm',
+	'uv_index', 'thunder_level', 'pop_pct', 'visibility_m'
+];
+const SERVER_MERGE_ONLY_KEYS = ['wind_dir_deg'];
 
 function makePreset(): ComparePreset {
 	return {
@@ -44,36 +57,9 @@ function makePreset(): ComparePreset {
 	};
 }
 
-describe('ALL_HOURLY_METRICS — Katalog (Issue #1106)', () => {
-	test('enthaelt genau 10 Eintraege, "Zeit" nicht dabei', () => {
-		// Issue #1335 Scheibe 1: 9 -> 10 (neuer Windrichtungs-Eintrag, AC-8).
-		assert.equal(ALL_HOURLY_METRICS.length, 10);
-		assert.ok(!ALL_HOURLY_METRICS.some((m) => m.label === 'Zeit'));
-	});
-
-	test('jede Metrik hat key + label', () => {
-		for (const m of ALL_HOURLY_METRICS) {
-			assert.ok(typeof m.key === 'string' && m.key.length > 0);
-			assert.ok(typeof m.label === 'string' && m.label.length > 0);
-		}
-	});
-
-	test('keine doppelten keys', () => {
-		const keys = ALL_HOURLY_METRICS.map((m) => m.key);
-		assert.equal(new Set(keys).size, keys.length);
-	});
-
-	test('Issue #1335 Scheibe 1 (AC-8): Windrichtungs-Eintrag wind_dir_deg vorhanden', () => {
-		const entry = ALL_HOURLY_METRICS.find((m) => m.key === 'wind_dir_deg');
-		assert.ok(entry, 'ALL_HOURLY_METRICS enthaelt keinen Eintrag mit key "wind_dir_deg"');
-		assert.equal(entry?.label, 'Windrichtung');
-	});
-});
-
 describe('applyHourlyMetricToggle — kein stiller Windrichtungs-Merge (Issue #1335 Adversary F002)', () => {
-	test('DEFAULT_HOURLY_METRIC_KEYS enthaelt wind_dir_deg NICHT (9 von 10 Katalog-Eintraegen)', () => {
-		assert.equal(DEFAULT_HOURLY_METRIC_KEYS.length, 9);
-		assert.ok(!DEFAULT_HOURLY_METRIC_KEYS.includes('wind_dir_deg'));
+	test('die Vorgabemenge des Servers enthaelt wind_dir_deg NICHT', () => {
+		assert.ok(!SERVER_DEFAULT_KEYS.includes('wind_dir_deg'));
 	});
 
 	test('Toggle einer ANDEREN Metrik aus Leer-Auswahl materialisiert wind_dir_deg NICHT mit', () => {
@@ -107,65 +93,76 @@ describe('applyHourlyMetricToggleFromState — echter Bedienpfad (Issue #1366 Ad
 	// isolierter applyHourlyMetricToggle([], ...)-Aufruf, der den Regress
 	// nicht gefangen haette (Adversary-Dialog Runde 1).
 	test('Bedienfall 1: aus "nie eingestellt" (null) eine einzelne Spalte abwaehlen laesst 8 von 9 aktiv', () => {
-		const result = applyHourlyMetricToggleFromState(null, 'gust_kmh', false);
+		const result = applyHourlyMetricToggleFromState(
+			null, 'gust_kmh', false, SERVER_DEFAULT_KEYS
+		);
 		assert.deepEqual(
 			result,
-			DEFAULT_HOURLY_METRIC_KEYS.filter((k) => k !== 'gust_kmh'),
+			SERVER_DEFAULT_KEYS.filter((k) => k !== 'gust_kmh'),
 			`F001-Regression: erwartet 8 von 9 Spalten, erhalten ${JSON.stringify(result)}`
 		);
 		assert.equal(result.length, 8);
 	});
 
 	test('Bedienfall 2 (AC-8 bleibt gruen): aus bewusster Leerauswahl ([]) eine Spalte anhaken ergibt genau diese eine', () => {
-		const result = applyHourlyMetricToggleFromState([], 'temp_c', true);
+		const result = applyHourlyMetricToggleFromState(
+			[], 'temp_c', true, SERVER_DEFAULT_KEYS
+		);
 		assert.deepEqual(result, ['temp_c']);
 	});
 });
 
 describe('orderableHourlyMetricKeys — Merge-only Metriken raus aus der Reihenfolge-Liste (Issue #1361 Befund 4/5)', () => {
 	test('wind_dir_deg wird aus einer Auswahl herausgefiltert', () => {
-		const result = orderableHourlyMetricKeys(['temp_c', 'wind_dir_deg', 'wind_kmh']);
+		const result = orderableHourlyMetricKeys(['temp_c', 'wind_dir_deg', 'wind_kmh'], SERVER_MERGE_ONLY_KEYS);
 		assert.deepEqual(result, ['temp_c', 'wind_kmh']);
 	});
 
 	test('Reihenfolge der verbleibenden Keys bleibt erhalten', () => {
-		const result = orderableHourlyMetricKeys(['visibility_m', 'temp_c', 'wind_dir_deg', 'uv_index']);
+		const result = orderableHourlyMetricKeys(
+			['visibility_m', 'temp_c', 'wind_dir_deg', 'uv_index'], SERVER_MERGE_ONLY_KEYS
+		);
 		assert.deepEqual(result, ['visibility_m', 'temp_c', 'uv_index']);
 	});
 
 	test('leere Auswahl bleibt leer', () => {
-		assert.deepEqual(orderableHourlyMetricKeys([]), []);
+		assert.deepEqual(orderableHourlyMetricKeys([], SERVER_MERGE_ONLY_KEYS), []);
 	});
 
 	test('Auswahl ohne wind_dir_deg bleibt unveraendert', () => {
-		const result = orderableHourlyMetricKeys(['temp_c', 'wind_kmh']);
+		const result = orderableHourlyMetricKeys(['temp_c', 'wind_kmh'], SERVER_MERGE_ONLY_KEYS);
 		assert.deepEqual(result, ['temp_c', 'wind_kmh']);
 	});
 });
 
 describe('applyHourlyReorder — Ziehgeste baut die vollstaendige Liste neu (Issue #1361 Befund 4)', () => {
 	test('ohne Merge-only-Metrik: neue Reihenfolge wird 1:1 uebernommen', () => {
-		const result = applyHourlyReorder(['temp_c', 'wind_kmh', 'uv_index'], ['uv_index', 'temp_c', 'wind_kmh']);
+		const result = applyHourlyReorder(
+			['temp_c', 'wind_kmh', 'uv_index'], ['uv_index', 'temp_c', 'wind_kmh'],
+			SERVER_MERGE_ONLY_KEYS
+		);
 		assert.deepEqual(result, ['uv_index', 'temp_c', 'wind_kmh']);
 	});
 
 	test('aktive wind_dir_deg bleibt erhalten und wandert ans Ende', () => {
 		const materialized = ['temp_c', 'wind_dir_deg', 'wind_kmh'];
 		// Ziehgeste betrifft nur die orderable Teilmenge (ohne wind_dir_deg).
-		const newOrder = orderableHourlyMetricKeys(materialized).reverse();
-		const result = applyHourlyReorder(materialized, newOrder);
+		const newOrder = orderableHourlyMetricKeys(materialized, SERVER_MERGE_ONLY_KEYS).reverse();
+		const result = applyHourlyReorder(materialized, newOrder, SERVER_MERGE_ONLY_KEYS);
 		assert.deepEqual(result, ['wind_kmh', 'temp_c', 'wind_dir_deg']);
 	});
 
 	test('inaktive wind_dir_deg (nicht im Bestand) taucht auch danach nicht auf', () => {
-		const result = applyHourlyReorder(['temp_c', 'wind_kmh'], ['wind_kmh', 'temp_c']);
+		const result = applyHourlyReorder(['temp_c', 'wind_kmh'], ['wind_kmh', 'temp_c'], SERVER_MERGE_ONLY_KEYS);
 		assert.deepEqual(result, ['wind_kmh', 'temp_c']);
 		assert.ok(!result.includes('wind_dir_deg'));
 	});
 
 	test('Round-Trip: das Ergebnis landet unveraendert im Save-Payload (hourly_metrics)', () => {
 		const materialized = ['temp_c', 'wind_dir_deg', 'wind_kmh', 'uv_index'];
-		const reordered = applyHourlyReorder(materialized, ['uv_index', 'wind_kmh', 'temp_c']);
+		const reordered = applyHourlyReorder(
+			materialized, ['uv_index', 'wind_kmh', 'temp_c'], SERVER_MERGE_ONLY_KEYS
+		);
 		const { body } = buildComparePresetSavePayload(makePreset(), {
 			name: 'Hourly Metrics Test',
 			activityProfile: 'wintersport',

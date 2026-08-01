@@ -49,6 +49,10 @@ im Resolver, schlaegt der Import fehl.
 from __future__ import annotations
 
 from app.metric_catalog import aggregation_label_de, alert_metric_for, get_metric
+from output.renderers.compare_hourly_metric_ids import (
+    HOURLY_DEFAULT_METRIC_IDS, HOURLY_EXCLUDED_METRIC_IDS, HOURLY_EXCLUSION_REASON,
+    HOURLY_LEGACY_KEYS_BY_METRIC_ID, HOURLY_MERGE_ONLY_METRIC_IDS,
+)
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from services.compare_alert import _SUMMARY_KEY_TO_CATALOG_ID
 
@@ -274,11 +278,24 @@ def get_compare_metric_catalog(entries: list[dict] | None = None) -> list[dict]:
         # verhaltensneutral identisch zu _SUMMARY_KEY_TO_CATALOG_ID (10 Keys),
         # bewiesen in tests/unit/test_alert_metric_identity_delivery.py.
         alert_metric = alert_metric_for(metric_id, aggregation)
+        # #1406 Scheibe B: der Stundenverlauf speist seine Grundauswahl aus
+        # DIESER Antwort. Damit die Bedienflaeche keine eigene Alias-Tabelle,
+        # keine eigene Vorgabemenge und kein eigenes Wissen ueber Ausnahmen
+        # braucht (das waere der fuenfte Vokabular-Ort, AC-10), reist alles
+        # Noetige hier mit -- abgeleitet aus compare_hourly_metric_ids.py,
+        # nicht zweitgepflegt.
         result.append({
             **entry,
             "label": label,
             "aggregation_label": aggregation_label_de(aggregation),
             "alertMetric": alert_metric,
             "alarmCapable": alert_metric is not None,
+            "hourlySelectable": metric_id not in HOURLY_EXCLUDED_METRIC_IDS,
+            "hourlyNotSelectableReason": HOURLY_EXCLUSION_REASON.get(metric_id, ""),
+            "hourlyDefault": metric_id in HOURLY_DEFAULT_METRIC_IDS,
+            "hourlyMergeOnly": metric_id in HOURLY_MERGE_ONLY_METRIC_IDS,
+            "hourly_legacy_keys": list(
+                HOURLY_LEGACY_KEYS_BY_METRIC_ID.get(metric_id, [])
+            ),
         })
     return result

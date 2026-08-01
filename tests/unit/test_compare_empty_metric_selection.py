@@ -166,6 +166,36 @@ class TestReportConfigResolverAC4AC5:
             "Stundenblock abschalten statt ein Zeit-only-Geruest zu rendern"
         )
 
+    def test_nur_eine_neue_katalog_groesse_laesst_den_stundenblock_an(self):
+        """#1406 Scheibe B, AC-3 (Gegenrichtung zur Leerauswahl-Regel): Given
+        ein Preset waehlt im Stundenverlauf AUSSCHLIESSLICH eine der 14 neu
+        waehlbaren Katalog-Groessen (hier Luftfeuchtigkeit) / When
+        resolve_compare_render_options() aufgerufen wird / Then bleibt der
+        Stundenblock an und die Groesse kommt beim Renderer an.
+
+        Die drei Tests darueber schalten den Block ab, wenn nichts Sichtbares
+        gewaehlt ist. Ohne diesen Gegenfall wuerde eine unvollstaendige
+        Umstellung -- Bedienflaeche bietet die Groesse an, der Aufloeser kennt
+        sie nicht -- als "leere Auswahl" durchgehen und den Block lautlos
+        abschalten (stiller Verlust, Invariante 2 aus Epic #1372)."""
+        from app.metric_catalog import get_metric
+
+        preset = {
+            "id": "p-nur-feuchte",
+            "display_config": {"hourly_metrics": ["humidity"]},
+            "hourly_enabled": True,
+        }
+        options = resolve_compare_render_options(preset)
+
+        assert options.hourly_metrics == [get_metric("humidity").dp_field], (
+            "Die neu waehlbare Groesse kommt nicht beim Renderer an: "
+            f"{options.hourly_metrics!r}"
+        )
+        assert options.hourly_enabled is True, (
+            "Eine Auswahl mit genau einer sichtbaren Wert-Spalte darf den "
+            "Stundenblock nicht abschalten"
+        )
+
     def test_komplett_unbekannte_stundenauswahl_schaltet_stundenblock_ab(self):
         preset = {
             "id": "p-unbekannt",

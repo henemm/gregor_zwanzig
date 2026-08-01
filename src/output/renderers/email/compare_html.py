@@ -29,6 +29,10 @@ from app.metric_catalog import get_metric
 from app.models import Corridor
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
+from output.renderers.compare_hourly_metric_ids import (
+    HOURLY_DEFAULT_METRIC_IDS, HOURLY_MERGE_ONLY_METRIC_IDS,
+    hourly_selectable_metric_ids,
+)
 from output.renderers.compare_metric_ids import (
     CORRIDOR_METRIC_TO_HOUR_KEY, FRONTEND_TO_RENDERER_METRIC_ID,
 )
@@ -43,7 +47,7 @@ from output.renderers.email.design_tokens import (
 )
 from output.renderers.email.outlook import build_outlook_row, render_outlook_table
 from output.renderers.email.profile_signature import profile_signature
-from output.metric_format import severity_for
+from output.metric_format import format_value, severity_for
 from utils.geo import degrees_to_compass
 from utils.timezone import (
     UTC, local_dt, local_hour, local_stamp, location_tz, tz_abbrev,
@@ -335,17 +339,87 @@ CV2_METRICS = [
 #
 # Issue #1401 Scheibe A2b: kein getipptes "label" mehr -- die Spaltenueberschrift
 # UND die Einheiten-Legende darunter kommen aus `derive_row_labels()`.
-HOUR_METRICS = [
-    {"key": "t2m_c", "metric_id": "temperature", "fmt": _fmt_deg, "sev": _sev_temp},
-    {"key": "wind_chill_c", "metric_id": "wind_chill", "fmt": _fmt_deg},
-    {"key": "wind10m_kmh", "metric_id": "wind", "fmt": _fmt_kmh, "sev": _sev_wind},
-    {"key": "gust_kmh", "metric_id": "gust", "fmt": _fmt_kmh, "sev": _sev_gust},
-    {"key": "precip_1h_mm", "metric_id": "precipitation", "fmt": _fmt_rain, "sev": _sev_rain_safe},
-    {"key": "uv_index", "metric_id": "uv_index", "fmt": _fmt_uv, "sev": _sev_uv},
-    {"key": "thunder_level", "metric_id": "thunder", "fmt": _fmt_thunder, "sev": _sev_thunder},
-    {"key": "pop_pct", "metric_id": "rain_probability", "fmt": _fmt_pop, "sev": _sev_pop},
-    {"key": "visibility_m", "metric_id": "visibility", "fmt": _fmt_visibility, "sev": _sev_visibility},
-]
+#
+# Issue #1406 Scheibe B: die Spaltenliste wird nicht mehr getippt, sondern aus
+# dem zentralen Register ABGELEITET (`hourly_selectable_metric_ids()`) --
+# abzueglich des Merge-Signals Windrichtung (keine eigene Spalte) und der
+# ausdruecklich ausgenommenen Groessen (AC-11, `HOURLY_EXCLUDED_METRIC_IDS`).
+# Damit gibt es keine zehnte Handkopie des Vokabulars mehr.
+#
+# Formatierung: Standard ist der geteilte, katalog-getriebene
+# `format_value(metric_id, wert, style="bare")` -- reine Zahl ohne Einheit,
+# weil die Einheit in der Legende unter der Tabelle steht. Die
+# `_HOUR_FMT_OVERRIDES` unten halten NUR die Faelle, in denen die
+# Compare-Stundendarstellung bewusst abweicht: die beiden Enum-Groessen
+# (Gewitter/Niederschlagsart lassen sich nicht runden) und die sechs
+# historischen Darstellungen der Bestandsspalten, die zeichengleich bleiben
+# muessen (AC-4).
+_HOUR_FMT_OVERRIDES = {
+    "temperature": _fmt_deg,
+    "wind_chill": _fmt_deg,
+    "wind": _fmt_kmh,
+    "gust": _fmt_kmh,
+    "precipitation": _fmt_rain,
+    "uv_index": _fmt_uv,
+    "rain_probability": _fmt_pop,
+    "visibility": _fmt_visibility,
+    "thunder": _fmt_thunder,       # Enum -- nicht generisch rundbar
+    "precip_type": _fmt_precip_type,  # Enum -- dito
+}
+# Ampel-Ausnahmen. ``None`` heisst AUSDRUECKLICH "keine Faerbung" -- die
+# gefuehlte Temperatur traegt zwar Katalog-Schwellen, blieb in der
+# Stundentabelle aber seit jeher ungetoent; das bleibt so (AC-4, kein stiller
+# Anzeigewechsel fuer Bestands-Vergleiche).
+_HOUR_SEV_OVERRIDES: dict[str, object] = {
+    "wind_chill": None,
+    "precipitation": _sev_rain_safe,  # None/0 sollen dieselbe Stufe liefern
+    "thunder": _sev_thunder,          # Enum statt Zahl
+}
+
+
+def _make_hour_fmt(metric_id: str):
+    """Generischer Zellen-Formatierer einer Stundenspalte (Named Factory statt
+    Inline-Closure -- eine Funktion je Groesse, kein Spaetbindungs-Fehler)."""
+    def fmt(value) -> str:
+        return format_value(metric_id, value, style="bare")
+    return fmt
+
+
+def _make_hour_sev(metric_id: str):
+    """Generische Ampel einer Stundenspalte -- dieselbe Formel wie im Trip
+    (`severity_for`), uebersetzt ins Compare-Vokabular."""
+    def sev(value):
+        return _to_compare(severity_for(metric_id, value))
+    return sev
+
+
+_UNSET = object()  # "nicht in den Ausnahmen genannt" != "ausdruecklich keine Ampel"
+
+
+def _build_hour_metrics() -> list[dict]:
+    rows: list[dict] = []
+    for metric_id in hourly_selectable_metric_ids():
+        if metric_id in HOURLY_MERGE_ONLY_METRIC_IDS:
+            continue
+        metric = get_metric(metric_id)
+        row = {
+            "key": metric.dp_field,
+            "metric_id": metric_id,
+            "fmt": _HOUR_FMT_OVERRIDES.get(metric_id) or _make_hour_fmt(metric_id),
+        }
+        sev = _HOUR_SEV_OVERRIDES.get(metric_id, _UNSET)
+        if sev is _UNSET and metric.display_thresholds:
+            # Ohne Katalog-Schwellen KEINE Ampel verdrahten -- sonst uebersetzte
+            # "keine Aussage" in ein stilles Gruen (tests/tdd/
+            # test_compare_katalog_schwellen.py).
+            sev = _make_hour_sev(metric_id)
+        if sev is not None and sev is not _UNSET:
+            row["sev"] = sev
+        rows.append(row)
+    return rows
+
+
+HOUR_METRICS = _build_hour_metrics()
 
 
 def derive_row_labels(rows: list[dict]) -> list[dict]:
@@ -685,17 +759,27 @@ def _hour_td(
 
 def _visible_hour_metrics(hourly_metrics: list[str] | None) -> list[dict]:
     """Issue #1106: filtert ``HOUR_METRICS`` auf ``hourly_metrics`` (Liste von
-    Renderer-Metrik-IDs wie "t2m_c"). ``None`` = kein Filter (alle 9 Spalten,
-    Default).
+    Renderer-Metrik-IDs wie "t2m_c").
 
-    Issue #1335 Scheibe 1 (AC-2): die sichtbaren Spalten folgen jetzt der
-    Reihenfolge von ``hourly_metrics`` statt der festen ``HOUR_METRICS``-
-    Deklarationsreihenfolge. "wind_direction_deg" ist bewusst KEIN
-    ``HOUR_METRICS``-Key (reines Merge-Signal, s. ``_should_merge_wind_dir``)
-    -- es erzeugt hier nie eine eigene Spalte."""
-    if hourly_metrics is None:
-        return derive_row_labels(HOUR_METRICS)
+    Issue #1406 Scheibe B: ``None`` heisst "nie eingestellt" und liefert die
+    ausgesprochene Vorgabemenge ``HOURLY_DEFAULT_METRIC_IDS`` -- exakt die neun
+    Spalten von vor der Katalog-Umstellung, in genau ihrer Reihenfolge. Vorher
+    hiess ``None`` "alle Spalten"; mit 22 waehlbaren Wert-Spalten waere daraus
+    ein ungefragter Sprung fuer jeden Bestands-Vergleich geworden (AC-4: kein
+    automatisches Hinzufuegen der neuen Groessen).
+
+    Issue #1335 Scheibe 1 (AC-2): die sichtbaren Spalten folgen der Reihenfolge
+    von ``hourly_metrics`` statt der festen ``HOUR_METRICS``-Deklarations-
+    reihenfolge. "wind_direction_deg" ist bewusst KEIN ``HOUR_METRICS``-Key
+    (reines Merge-Signal, s. ``_should_merge_wind_dir``) -- es erzeugt hier nie
+    eine eigene Spalte."""
     by_key = {m["key"]: m for m in HOUR_METRICS}
+    if hourly_metrics is None:
+        by_metric_id = {m["metric_id"]: m for m in HOUR_METRICS}
+        return derive_row_labels([
+            by_metric_id[mid] for mid in HOURLY_DEFAULT_METRIC_IDS
+            if mid in by_metric_id
+        ])
     return derive_row_labels([by_key[k] for k in hourly_metrics if k in by_key])
 
 
