@@ -3,7 +3,7 @@ entity_id: fix_1396_s2_store_scope_guard
 type: module
 created: 2026-08-01
 updated: 2026-08-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [go-api, multi-user, tenant-isolation, ratchet, regression-guard]
 ---

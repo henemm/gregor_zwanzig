@@ -2,13 +2,15 @@
 entity_id: fix_1396_store_scope_race
 type: module
 created: 2026-07-31
-updated: 2026-07-31
-status: draft
+updated: 2026-08-01
+status: implemented
 version: "1.0"
 tags: [go-api, multi-user, tenant-isolation, concurrency, bug]
 ---
 
-<!-- Issue #1396 — Scheibe S1 von 2. S2 (Wächter) folgt als eigener Workflow. -->
+<!-- Issue #1396 — Scheibe S1 von 2. S2 (Wächter) ist seit 2026-08-01 ebenfalls
+     ausgeliefert (68bac9c3), Spec: fix_1396_s2_store_scope_guard.md.
+     Issue #1396 ist damit komplett geschlossen. -->
 
 # Fix #1396 S1 — Nutzerkennung je Anfrage statt geteilt
 
@@ -155,8 +157,11 @@ nicht als alleiniger Beleg.
 
 - **Vollständigkeit ist in dieser Scheibe nicht strukturell abgesichert.** AC-1
   belegt das Verhalten an 6 repräsentativen Routen, nicht an allen 25. Dass
-  keine Stelle vergessen wurde und keine neue entsteht, leistet erst der
-  Wächter aus **S2**. Bis dahin schützt nur die Sorgfalt dieser Umstellung.
+  keine Stelle vergessen wurde und keine neue entsteht, leistet der Wächter aus
+  **S2** — seit 2026-08-01 ausgeliefert (`68bac9c3`,
+  `internal/handler/store_scope_guard_test.go`, Spec
+  `fix_1396_s2_store_scope_guard.md`). Diese Einschränkung gilt damit **nicht
+  mehr**; sie bleibt hier nur als Beschreibung des Standes von S1 stehen.
 - **Der Fehler ist heute schwer auszulösen.** Er braucht zwei angemeldete
   Nutzer im selben Sekundenbruchteil auf derselben Route. Bei aktuellem
   Nutzungsstand ist das unwahrscheinlich — die Reparatur erfolgt, weil es sich
@@ -178,3 +183,7 @@ nicht als alleiniger Beleg.
 ## Changelog
 
 - 2026-07-31: Initial spec created (Scheibe S1 von 2 zu Issue #1396)
+- 2026-08-01: Status auf `implemented`. Scheibe S2 (Wächter) ist mit `68bac9c3`
+  ausgeliefert, Issue #1396 geschlossen. Die Einschränkung „Vollständigkeit
+  nicht strukturell abgesichert" unter Known Limitations gilt seither nicht
+  mehr und ist entsprechend gekennzeichnet.

@@ -219,5 +219,10 @@ Regel-Budget (CLAUDE.md): S2 ist ein neuer Pflicht-Wächter ⇒ **Prüfdatum
       Closure-Rumpf, je Handler genau eine.
 - [x] Wie ohne 25 Tests beweisen? → Verhalten repräsentativ, Vollständigkeit
       über den Wächter.
-- [ ] **Für den PO:** zwei Scheiben (Empfehlung, kein Override nötig) oder ein
-      Zug mit Budget-Ausnahme auf 400?
+- [x] **Für den PO:** zwei Scheiben oder ein Zug mit Budget-Ausnahme? → **Zwei
+      Scheiben** (PO-go 2026-07-31). Nachtrag: Die Annahme „kein Override nötig"
+      hat nicht gehalten — S1 blieb im Rahmen, S2 brauchte drei Anhebungen
+      (250 → 500 → 700 → 750). Ursache waren nicht die Wächter-Logik selbst,
+      sondern die drei Adversary-Runden: jede fand einen echten Befund, dessen
+      Behebung Logik **und** Abgrenzungs-Testfälle kostete. Für vergleichbare
+      Wächter-Scheiben realistisch ab ~700 planen, nicht ab ~110.
