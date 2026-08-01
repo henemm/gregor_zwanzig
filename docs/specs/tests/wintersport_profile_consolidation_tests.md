@@ -50,7 +50,7 @@ Spec §5.1, §A1, §A4. Adapter `_trip_result_to_normalized` und Helper.
 | `waypoint_to_detail_extracts_id_name_elevation_timewindow` | `_waypoint_to_detail(wf)` liefert `WaypointDetail` mit `id`, `name`, `elevation_m`, `time_window` |
 | `summary_to_rows_formats_temperature_range` | `_summary_to_rows(summary)` produziert Zeile `("Temperatur", "-15.0 bis -5.0°C (Gipfel)")` für temp_min=-15 (source=Gipfel), temp_max=-5 (source=Start) |
 | `summary_to_rows_omits_none_fields` | `summary.snow_depth.value=None` → keine "Schneehöhe"-Zeile in der Ausgabe |
-| `wintersport_default_config_enables_av_wc_sn_sn24_sfl` | `_wintersport_default_config()` liefert `MetricSpec`-Liste mit Symbolen `AV`, `WC`, `SN`, `SN24+`, `SFL` und allen `enabled=True` |
+| `wintersport_default_config_enables_av_wc_snow_symbols` | `_wintersport_default_config()` liefert `MetricSpec`-Liste mit Symbolen `AV`, `WC`, `SD`, `NS24+`, `SL` und allen `enabled=True` (Testname und Symbole seit #1435 E3b; vorher `…_sn_sn24_sfl` mit `SN`/`SN24+`/`SFL`) |
 
 ### Long-Report-Renderer-Tests (`tests/unit/test_renderers_text_report.py`)
 
@@ -81,7 +81,7 @@ Spec §A3, §A4. End-to-end durch die CLI-Bahnen `--compact` und Long-Report.
 
 | Test | Asserts |
 |---|---|
-| `cli_compact_uses_pipeline` | CLI-Aufruf mit `--trip <wintersport-fixture> --compact` produziert Output mit Stage-Prefix `Stubaier:`, enthält Wintersport-Tokens (`AV…`, `WC…`, `SN…`, `SN24+…`, `SFL…` falls Fixture-Daten verfügbar), Länge ≤160, **niemals** Legacy-Form `T-15/-5` (das alte `format_compact()`-Format) |
+| `cli_compact_uses_pipeline` | CLI-Aufruf mit `--trip <wintersport-fixture> --compact` produziert Output mit Stage-Prefix `Stubaier:`, enthält Wintersport-Tokens (`AV…`, `WC…`, `SD…`, `NS24+…`, `SL…` falls Fixture-Daten verfügbar), Länge ≤160, **niemals** Legacy-Form `T-15/-5` (das alte `format_compact()`-Format) |
 | `cli_long_report_contains_all_sections` | CLI-Aufruf ohne `--compact` produziert Output mit "ZUSAMMENFASSUNG", "WEGPUNKT-DETAILS"; bei `avalanche_regions` zusätzlich "LAWINENREGIONEN"; Trip-Name in UPPERCASE; Token-Zeile sichtbar |
 | `cli_no_wintersport_formatter_import` | `grep -r "from formatters.wintersport" src tests` liefert null Treffer (Adversary-Test, prüft Big-Bang-Streichung §A1) |
 | `cli_long_report_subject_unchanged` | Subject im Long-Report-Pfad bleibt `f"GZ {report_type.title()} - {trip.name}"` (wie heute) |

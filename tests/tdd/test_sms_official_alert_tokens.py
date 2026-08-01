@@ -102,6 +102,14 @@ def _dp(hour: int, *, rain: float = 0.0, wind: float = 0.0, gust: float = 0.0,
     )
 
 
+_THUNDER_ORDER = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
+
+
+def _max_thunder(data: list[ForecastDataPoint]) -> ThunderLevel:
+    return max((dp.thunder_level or ThunderLevel.NONE for dp in data),
+               key=lambda lvl: _THUNDER_ORDER[lvl], default=ThunderLevel.NONE)
+
+
 def _meta() -> ForecastMeta:
     return ForecastMeta(
         provider=Provider.OPENMETEO, model="test",
@@ -133,13 +141,21 @@ def _segment(
     return SegmentWeatherData(
         segment=seg,
         timeseries=NormalizedTimeseries(meta=_meta(), data=data),
+        # Alle Aggregat-Felder werden AUS `data` abgeleitet, damit die Fixture
+        # genau eine Wahrheit hat. Wichtig fuer Temperatur/Gewitter: der
+        # SMS-Pfad liest diese Felder seit #1319/#1410/#1417 nicht mehr (er
+        # aggregiert selbst ueber das Gehzeit-/Tagesfenster der Stundenwerte
+        # aus `_dp()`); frei gewaehlte Werte waeren hier also wirkungslos und
+        # wuerden der Fixture nur eine zweite, widersprechende Temperatur
+        # andichten. Die Wahrheit steht in `_dp()`.
         aggregated=SegmentWeatherSummary(
-            temp_min_c=9.0, temp_max_c=24.0,
+            temp_min_c=min(dp.t2m_c for dp in data),
+            temp_max_c=max(dp.t2m_c for dp in data),
             wind_max_kmh=max((dp.wind10m_kmh or 0.0) for dp in data),
             gust_max_kmh=max((dp.gust_kmh or 0.0) for dp in data),
             precip_sum_mm=sum((dp.precip_1h_mm or 0.0) for dp in data),
             pop_max_pct=max((dp.pop_pct or 0.0) for dp in data),
-            thunder_level_max=ThunderLevel.NONE,
+            thunder_level_max=_max_thunder(data),
         ),
         fetched_at=datetime(_YEAR, _MONTH, _DAY, 6, 0, tzinfo=UTC),
         provider="openmeteo",
@@ -217,9 +233,15 @@ def test_ac3_yellow_and_green_warnings_are_filtered(level: int):
 # Eingefrorener Ist-Stand vor #1318 (erzeugt mit demselben Fixture, leerer
 # official_alerts-Liste). Aendert sich dieser String, hat #1318 eine
 # bestehende Token-Zeile verschoben — genau das darf nicht passieren.
-GOLDEN_NO_ALERTS = "E5: N18 D24 R- PR- W- G- TH:- TH+:-"
+#
+# Issue #1449: Die Temperatur-Token folgen den Stundenwerten aus `_dp()`
+# (konstant 18 °C) -- seit #1319/#1410/#1417 aggregiert der SMS-Pfad selbst
+# ueber Gehzeit-/Tagesfenster statt `aggregated.temp_*` zu lesen. Die frueher
+# hier eingefrorenen `N9 D24` stammten aus wirkungslosen Fixture-Feldern und
+# waren nie eine Renderer-Zusage.
+GOLDEN_NO_ALERTS = "E5: N18 K18 D18 R- PR- W- G- TH:- TH+:-"
 GOLDEN_WET_NO_ALERTS = (
-    "E5: N9 D24 R0.4@11(2.5@16) PR60%@11(80%@16) W18@11(28@16) "
+    "E5: N18 K18 D18 R0.4@11(2.5@16) PR60%@11(80%@16) W18@11(28@16) "
     "G30@11(45@16) TH:M@16 TH+:-"
 )
 
@@ -539,7 +561,7 @@ def test_f002_colliding_unknown_same_symbol_in_both_sms_paths(hazard: str):
 # ein Byte veraendern (AC-3).
 # ---------------------------------------------------------------------------
 GOLDEN_TWO_ALERTS_MIXED_LEVEL = (
-    "E5: N9 D24 R- PR- W- G- TH:- TH+:- !TH:H@14 W:M@14"
+    "E5: N18 K18 D18 R- PR- W- G- TH:- TH+:- !TH:H@14 W:M@14"
 )
 
 

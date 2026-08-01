@@ -245,6 +245,13 @@ Wortlaut (fix, nicht konfigurierbar):
 {Name}: N D R PR W G TH: TH+: C WL HR:TH: Z: M: [SN SN24+ SFL AV WC] DBG
 ```
 
+> **Historischer Stand (2026-05-30, #122) — nicht mehr die geltende Reihenfolge.**
+> Zwei Änderungen sind seither eingetreten: Der `WL`-Token wurde 2026-05-31 wieder
+> aus der SMS entfernt (Issue #479, `sms_format.md` v2.3), und die Schnee-Kürzel
+> heißen seit 2026-08-01 `SD NS24+ SL` statt `SN SN24+ SFL` (Issue #1435 E3b,
+> `docs/specs/modules/fix_1435_e3b_sms_kuerzel.md`). Die geltende Reihenfolge steht
+> ausschließlich in `docs/reference/sms_format.md` §2.
+
 **Builder-Code:**
 ```python
 if stability_result is not None:

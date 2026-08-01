@@ -266,7 +266,7 @@ class TripReportFormatter:
             if m.metric_id in SMS_SYMBOL_BY_METRIC and m.sms_threshold is not None
         }
         # Bug #944: SMS-Symbole ohne aktive Metrik als deaktivierte Specs führen,
-        # damit SN/SFL nicht erscheinen, wenn die Metrik im Trip nicht gewählt ist —
+        # damit SD/SL nicht erscheinen, wenn die Metrik im Trip nicht gewählt ist —
         # unabhängig davon, ob Schneedaten in der Vorhersage vorhanden sind.
         active_metric_ids = {m.metric_id for m in dc.metrics}
         _disabled_sms_specs = [
@@ -276,7 +276,7 @@ class TripReportFormatter:
         ]
         # Issue #1410 §6: die drei gefuehlten Temperatur-Token erscheinen NUR
         # bei aktivierter Metrik "Gefuehlte Temperatur" -- dasselbe
-        # Pruefmuster wie oben fuer SN/SFL. Anders als dort wird die Spec in
+        # Pruefmuster wie oben fuer SD/SL. Anders als dort wird die Spec in
         # BEIDEN Faellen mitgegeben: nur so kann der Builder "aktiviert, aber
         # keine Daten" (Null-Form, §9) von "gar nicht gewaehlt" (kein Token)
         # unterscheiden. K/D/N bleiben unbedingt.

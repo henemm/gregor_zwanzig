@@ -623,11 +623,16 @@ class TestAC8F003Residual:
 
 class TestAC9RegressionGuard:
     """
-    AC-9: Guard — SMS_SYMBOL_BY_METRIC["thunder"] == "TH:" (Briefing-Kürzel sind Gesetz).
+    AC-9: Guard — SMS_SYMBOL_BY_METRIC["thunder"] == "TH:" (Grammatikform).
 
     # doc-compliance-test
-    Dieser Test ist ein Regressions-Guard. Er darf GRÜN sein (kein RED erwartet).
-    Briefing-SMS-Kürzel sind bewusst getrennt von Alert-sms_code.
+    TEILWEISE AUFGEHOBEN (PO-Entscheid 2026-08-01, #1435 E3b): die
+    ursprüngliche Fassung dieser AC-9 fror ZUSÄTZLICH 'SFL' (und implizit
+    'SN'/'SN24+') als "unveränderliche Briefing-Kürzel" ein. Für die drei
+    Schnee-Größen gilt das nicht mehr — sie folgen dem zentralen Register.
+    Bestehen bleibt die Ausnahme für 'TH:' (Doppelpunkt = Grammatik, keine
+    Register-ID) und für das WC/FN/FK/FD-Quartett.
+    Quelle: docs/specs/modules/fix_1435_e3b_sms_kuerzel.md.
     """
 
     def test_thunder_symbol_unchanged(self):
@@ -637,10 +642,45 @@ class TestAC9RegressionGuard:
             f"TH: wurde verändert! Aktuell: {SMS_SYMBOL_BY_METRIC['thunder']!r}"
         )
 
-    def test_sfl_symbol_unchanged(self):
-        """SMS_SYMBOL_BY_METRIC['snowfall_limit'] == 'SFL' — unveränderlich."""
+    def test_snowfall_limit_symbol_follows_register(self):
+        """SMS_SYMBOL_BY_METRIC['snowfall_limit'] == 'SL' — Registerwert.
+
+        AUFGEHOBEN: die ursprüngliche AC-9 dieser Spec fror 'SFL' als
+        "unveränderliches Briefing-Kürzel" ein. Diese Festlegung ist durch
+        PO-Entscheid vom 2026-08-01 widerrufen (#1435 E3b,
+        docs/specs/modules/fix_1435_e3b_sms_kuerzel.md, Abschnitt
+        "Aufgehobene Festlegungen"): die Schnee-Kürzel folgen jetzt dem
+        zentralen Register (metric_catalog: snowfall_limit -> 'SL').
+
+        Der Test wird bewusst NICHT gelöscht, sondern auf die neue Invariante
+        umgestellt — die Ausnahme für 'TH:' (Grammatikform, Test oben) bleibt
+        ausdrücklich bestehen.
+        """
+        from src.app.metric_catalog import get_sms_code
         from src.output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC
-        assert SMS_SYMBOL_BY_METRIC["snowfall_limit"] == "SFL"
+        assert SMS_SYMBOL_BY_METRIC["snowfall_limit"] == "SL", (
+            "#1435 E3b: snowfall_limit muss das Registerkürzel 'SL' tragen, "
+            f"gefunden: {SMS_SYMBOL_BY_METRIC['snowfall_limit']!r}"
+        )
+        assert SMS_SYMBOL_BY_METRIC["snowfall_limit"] == get_sms_code("snowfall_limit"), (
+            "#1435 E3b: das Briefing-Kürzel darf nicht mehr vom Register "
+            f"abweichen (Register: {get_sms_code('snowfall_limit')!r}, "
+            f"Briefing: {SMS_SYMBOL_BY_METRIC['snowfall_limit']!r})"
+        )
+
+    def test_snow_depth_symbol_follows_register(self):
+        """SMS_SYMBOL_BY_METRIC['snow_depth'] == 'SD' — Registerwert (#1435 E3b).
+
+        'SN' bleibt allein der amtlichen Schneewarnung vorbehalten
+        (HAZARD_SMS_SYMBOLS['snow']); die Schneehöhe heißt 'SD'.
+        """
+        from src.app.metric_catalog import get_sms_code
+        from src.output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC
+        assert SMS_SYMBOL_BY_METRIC["snow_depth"] == "SD", (
+            "#1435 E3b: snow_depth muss das Registerkürzel 'SD' tragen, "
+            f"gefunden: {SMS_SYMBOL_BY_METRIC['snow_depth']!r}"
+        )
+        assert SMS_SYMBOL_BY_METRIC["snow_depth"] == get_sms_code("snow_depth")
 
 
 # ---------------------------------------------------------------------------

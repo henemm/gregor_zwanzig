@@ -19,10 +19,13 @@ RED-Zustand (jetzt):
   -> TypeError: format_sms() got an unexpected keyword argument 'disabled_specs'.
 
 GREEN-Zustand (nach Implementation):
-  `format_sms(..., disabled_specs=[MetricSpec("SN", enabled=False),
-   MetricSpec("SFL", enabled=False)])` hängt die deaktivierten Specs an die
+  `format_sms(..., disabled_specs=[MetricSpec("SD", enabled=False),
+   MetricSpec("SL", enabled=False)])` hängt die deaktivierten Specs an die
   Config an; `_visible(spec_with_enabled_false)` -> False unterdrückt die
-  SN/SFL-Token. Der SMS-Text enthält weder "SN" noch "SFL".
+  Schnee-Token. Der SMS-Text enthält weder "SD" noch "SL".
+
+#1435 E3b: die Kürzel heißen jetzt SD (Schneehöhe) / SL (Schneefallgrenze),
+nicht mehr SN / SFL — Registerwerte aus metric_catalog.
 
 KEIN Mock — echte SegmentWeatherData, echter SMSTripFormatter, echter Call.
 """
@@ -70,7 +73,7 @@ def _snow_segment(
         wind_max_kmh=wind_max,
         precip_sum_mm=precip_sum,
         thunder_level_max=ThunderLevel.NONE,
-        # Schneedaten in der Vorhersage — löst SN/SFL-Token aus, solange die
+        # Schneedaten in der Vorhersage — löst SD/SL-Token aus, solange die
         # Metrik nicht explizit deaktiviert wird (das ist der Bug).
         snow_depth_cm=snow_depth_cm,
     )
@@ -89,7 +92,7 @@ def _snow_segment(
 
 def test_disabled_snow_metrics_not_in_sms():
     """
-    AC-4: SN/SFL-Token dürfen im SMS-Text NICHT erscheinen, wenn die Metriken
+    AC-4: SD/SL-Token dürfen im SMS-Text NICHT erscheinen, wenn die Metriken
     per disabled_specs deaktiviert sind — selbst wenn Schneedaten vorliegen.
 
     RED: `format_sms()` akzeptiert den `disabled_specs`-Parameter (noch) nicht
@@ -104,17 +107,48 @@ def test_disabled_snow_metrics_not_in_sms():
         segments,
         stage_name="Etappe 1",
         disabled_specs=[
-            MetricSpec(symbol="SN", enabled=False),
-            MetricSpec(symbol="SFL", enabled=False),
+            MetricSpec(symbol="SD", enabled=False),
+            MetricSpec(symbol="SL", enabled=False),
         ],
     )
 
-    assert "SN" not in sms, (
-        f"AC-4: 'SN'-Token darf bei deaktivierter Schneehöhe NICHT erscheinen: {sms!r}"
+    assert "SD" not in sms, (
+        f"AC-4: 'SD'-Token darf bei deaktivierter Schneehöhe NICHT erscheinen: {sms!r}"
     )
-    assert "SFL" not in sms, (
-        f"AC-4: 'SFL'-Token darf bei deaktivierter Schneefallgrenze NICHT erscheinen: {sms!r}"
+    assert "SL" not in sms, (
+        f"AC-4: 'SL'-Token darf bei deaktivierter Schneefallgrenze NICHT erscheinen: {sms!r}"
     )
+
+
+def test_disabled_snow_metrics_use_register_symbols():
+    """
+    #1435 E3b: die Abwahl (#944) im echten Trip-Pfad wird über
+    `SMS_SYMBOL_BY_METRIC` gebildet (`trip_report.py:270-276`). Zieht die
+    Konstante nicht auf die Register-Kürzel mit, entstehen dort
+    `MetricSpec(symbol="SN"/"SFL")` — Symbole, die der Builder nach der
+    Umstellung gar nicht mehr kennt, und die Abwahl greift LAUTLOS nicht mehr.
+
+    Deshalb wird die Kopplung hier direkt geprüft: die aus der Konstante
+    abgeleiteten Symbole müssen genau die sein, die der Builder auch führt.
+    """
+    from output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC
+    from output.tokens.builder import PRIORITY
+
+    assert SMS_SYMBOL_BY_METRIC["snow_depth"] == "SD", (
+        "Abwahl-Quelle liefert für snow_depth "
+        f"{SMS_SYMBOL_BY_METRIC['snow_depth']!r}, erwartet 'SD'"
+    )
+    assert SMS_SYMBOL_BY_METRIC["snowfall_limit"] == "SL", (
+        "Abwahl-Quelle liefert für snowfall_limit "
+        f"{SMS_SYMBOL_BY_METRIC['snowfall_limit']!r}, erwartet 'SL'"
+    )
+    for metric_id in ("snow_depth", "snowfall_limit"):
+        sym = SMS_SYMBOL_BY_METRIC[metric_id]
+        assert sym in PRIORITY, (
+            f"Abwahl-Symbol {sym!r} (aus {metric_id!r}) ist dem Token-Builder "
+            f"unbekannt — die Abwahl liefe ins Leere. Bekannt: "
+            f"{sorted(PRIORITY)!r}"
+        )
 
 
 if __name__ == "__main__":

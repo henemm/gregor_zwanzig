@@ -127,9 +127,10 @@ def _build_default_line(
         MetricSpec(symbol="DRZ", enabled=True,
                    use_friendly_format=True, friendly_label="Niesel"),
         # Wintersport metrics for the wintersport profile path.
-        MetricSpec(symbol="SN", enabled=True),
-        MetricSpec(symbol="SN24+", enabled=True),
-        MetricSpec(symbol="SFL", enabled=True),
+        # #1435 E3b: Register-Kuerzel (SD/NS24+/SL) statt SN/SN24+/SFL.
+        MetricSpec(symbol="SD", enabled=True),
+        MetricSpec(symbol="NS24+", enabled=True),
+        MetricSpec(symbol="SL", enabled=True),
         MetricSpec(symbol="AV", enabled=True),
         MetricSpec(symbol="WC", enabled=True),
     ]
@@ -228,16 +229,22 @@ def test_morning_filter_excludes_evening_only():
     )
 
 
-def test_wintersport_profile_adds_sn_token():
+def test_wintersport_profile_adds_snow_depth_token():
     """
-    profile='wintersport' must inject the SN token. Per §2 POSITIONAL,
-    SN appears in the wintersport block AFTER the forecast/risk blocks.
+    profile='wintersport' must inject the snow-depth token. Per §2 POSITIONAL,
+    it appears in the wintersport block AFTER the forecast/risk blocks.
+
+    #1435 E3b: das Kuerzel ist 'SD' (Register-Wert), nicht mehr 'SN' — 'SN'
+    ist ausschliesslich die amtliche Schneewarnung.
     """
     line = _build_default_line(profile="wintersport")
     rendered = line.render(160)
     import re
-    assert re.search(r"(?:(?<=\s)|^)SN\d", rendered), (
-        f"Wintersport profile did not inject SN token: {rendered!r}"
+    assert re.search(r"(?:(?<=\s)|^)SD\d", rendered), (
+        f"Wintersport profile did not inject SD token: {rendered!r}"
+    )
+    assert not re.search(r"(?:(?<=\s)|^)SN\d", rendered), (
+        f"#1435 E3b: Alt-Kuerzel 'SN' fuer Schneehoehe noch vorhanden: {rendered!r}"
     )
 
 
@@ -260,7 +267,10 @@ def test_render_truncation_priority():
     DBG -> Wintersport -> Fire -> Peak-values -> PR -> D, N.
 
     Thunderstorm and Vigilance (TH:, HR:) survive longest (Risk-Priority
-    applies only here). Temperature/SN tokens drop first.
+    applies only here). Temperature/snow tokens drop first.
+
+    #1435 E3b: Kuerzel SD/NS24+/SL statt SN/SN24+/SFL — die Drop-Reihenfolge
+    (AC-6) bleibt identisch, nur die Namen aendern sich.
     """
     line = _build_default_line()
     rendered = line.render(80)  # very tight budget forces truncation
@@ -268,10 +278,10 @@ def test_render_truncation_priority():
     assert ("TH:" in rendered) or ("HR:" in rendered), (
         "Risk-Priority truncation removed Thunder/Vigilance — forbidden by §6."
     )
-    # Wintersport SN tokens drop early — must NOT appear under tight budget
+    # Wintersport snow tokens drop early — must NOT appear under tight budget
     import re
-    assert not re.search(r"(?:(?<=\s)|^)SN\d", rendered), (
-        "Wintersport SN token survived tight truncation — wrong §6 priority."
+    assert not re.search(r"(?:(?<=\s)|^)SD\d", rendered), (
+        "Wintersport SD token survived tight truncation — wrong §6 priority."
     )
 
 

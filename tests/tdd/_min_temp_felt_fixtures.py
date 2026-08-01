@@ -208,7 +208,8 @@ def sms_token_value(sms: str, symbol: str) -> Optional[str]:
     """Wert eines Temperatur-Tokens aus der gerenderten SMS.
 
     ``fullmatch`` auf dem einzelnen Token schliesst Praefix-Verwechslungen
-    strukturell aus: 'SN12' ist kein 'N'-Token, 'FK1' kein 'K'-Token.
+    strukturell aus: 'SD12' ist kein 'D'-Token, 'FK1' kein 'K'-Token
+    (#1435 E3b: das frühere Beispiel hieß 'SN12').
     ``None`` = Symbol kommt in der Zeile nicht vor.
     """
     pattern = re.compile(rf"{re.escape(symbol)}(-?\d+|-|\?)$")

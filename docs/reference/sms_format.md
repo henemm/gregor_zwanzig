@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.13"
+version: "2.14"
 status: active
 created: 2025-12-27
-updated: 2026-07-29
+updated: 2026-08-01
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -13,7 +13,7 @@ tags: [sms, compact, tokens, single-source-of-truth]
 - [x] Approved (v2.0 am 2026-04-25)
 - [x] Implementiert in SMS-Adapter via `src/output/renderers/sms/` (β3, 2026-04-28)
 
-# SMS / Kompakt-Format Specification (v2.13)
+# SMS / Kompakt-Format Specification (v2.14)
 
 **Single Source of Truth** für die kompakte Token-Zeile, die in allen Channels (SMS, Satellit, E-Mail-Header, Push) identisch verwendet wird. Alle anderen Repräsentationen (E-Mail-Body, Tabellen, Push-Titel) leiten sich aus dieser Token-Zeile ab.
 
@@ -42,7 +42,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 ## 2. Token-Reihenfolge (fix)
 
 ```
-{Name}: N K D FN FK FD R PR W G TH: TH+: C HR:TH: !{Warn-Block} Z: M: [SN SN24+ SFL AV WC] W? DBG
+{Name}: N K D FN FK FD R PR W G TH: TH+: C HR:TH: !{Warn-Block} Z: M: [SD NS24+ SL AV WC] W? DBG
 ```
 
 | Block | Tokens | Pflicht? |
@@ -57,7 +57,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | Risks (Vigilance) | `HR:TH:` (zusammenhängend, kein Leerzeichen zwischen den beiden) | nur bei FR-Provider |
 | Amtliche Warnungen | `!{Kürzel}:{Stufe}[@{h}]` … (Warn-Block, Marker `!` genau einmal) | nur bei aktiver amtlicher Warnung ab Stufe ORANGE (§3.4c) |
 | Fire-Zonen | `Z: M:` | nur Korsika, weglassen wenn leer |
-| Wintersport | `SN SN24+ SFL AV WC` | optional |
+| Wintersport | `SD NS24+ SL AV WC` | optional (Kürzel seit #1435 E3b aus dem Wetter-Register, vorher `SN SN24+ SFL`) |
 | Nicht abrufbar | `W?` | nur wenn ≥1 abdeckende amtliche Warn-Quelle beim Fetch ausgefallen ist (§3.4d, Issue #1349) |
 | Debug | `DBG[...]` | nur Dry-Run / Debug-Modus |
 
@@ -289,11 +289,19 @@ Wenn keine relevanten Zonen/Massifs aktiv sind: **Block komplett weglassen** (ke
 
 | Token | Bedeutung | Quelle |
 |-------|-----------|--------|
-| `SN{cm}` | Schneehöhe gesamt | `snow_depth_cm` |
-| `SN24+{cm}` | Neuschnee 24h | `snow_new_24h_cm` |
-| `SFL{m}` | Schneefallgrenze | `snowfall_limit_m` |
+| `SD{cm}` | Schneehöhe gesamt | `snow_depth_cm` |
+| `NS24+{cm}` | Neuschnee 24h | `snow_new_24h_cm` |
+| `SL{m}` | Schneefallgrenze | `snowfall_limit_m` |
 | `AV{1-5}` | Lawinenstufe | `AvalancheReport.danger.level` |
 | `WC{temp}` | Wind Chill | `wind_chill_c` |
+
+> **Kürzel-Umstellung 2026-08-01 (#1435 E3b).** Schneehöhe hieß bis dahin `SN`,
+> Neuschnee `SN24+`, Schneefallgrenze `SFL`. Die drei Kürzel stammen jetzt aus
+> dem zentralen Wetter-Register (`metric_catalog.sms_code`: `SD`/`NS`/`SL`);
+> das `24+`-Suffix beim Neuschnee bleibt Grammatik (24-Stunden-Fenster). Grund:
+> `SN` bezeichnet in derselben Zeile die **amtliche Schneewarnung** (§3.4c,
+> `hazard_symbols.py`) — diese bleibt unverändert `SN`, und kein Vorhersage-Token
+> beginnt mehr so. Spec: `docs/specs/modules/fix_1435_e3b_sms_kuerzel.md`.
 
 Nur ausgeben wenn der Trip als Wintersport markiert ist (`trip.profile == "wintersport"`). Details siehe `docs/specs/wintersport_extension.md`.
 
@@ -328,7 +336,7 @@ Nur in Dry-Run / Debug-Modus angehängt, ansonsten weggelassen.
 | `TH` / `TH+` | `TH:-` / `TH+:-` | Bei fehlendem oder Sub-Threshold-Gewitter |
 | `HR` / `TH` (Vigilance) | `HR:-TH:-` | Bei keiner Vigilance-Warnung; immer paarweise |
 | `Z` / `M` (Fire) | komplett weglassen | Kein `Z:-`, einfach Block entfernen |
-| `SN`/`SN24`/`SFL`/`AV`/`WC` | komplett weglassen | Wintersport-Tokens nicht zwingend |
+| `SD`/`NS24+`/`SL`/`AV`/`WC` | komplett weglassen | Wintersport-Tokens nicht zwingend |
 | `DBG` | komplett weglassen | Nur Debug-Modus |
 
 ---
@@ -362,7 +370,7 @@ Nur in Dry-Run / Debug-Modus angehängt, ansonsten weggelassen.
 Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, werden Tokens in dieser **Reihenfolge** entfernt:
 
 1. `DBG[...]`
-2. Wintersport-Tokens (`WC`, `AV`, `SFL`, `SN24+`, `SN`)
+2. Wintersport-Tokens (`WC`, `AV`, `SL`, `NS24+`, `SD`)
 3. Fire-Block komplett (`Z:HIGH...`, `MAX...`, `M:...`)
 4. Peak-Werte `(max@h)` (Threshold-Werte bleiben erhalten)
 5. `FN`, `FK`, `FD` (gefühlte Temperaturen — Komfortangabe, fällt VOR den sicherheitsrelevanten Planungsgrössen, Issue #1410)
@@ -416,7 +424,7 @@ Paliri: D24 G35@14(58@17) TH:H@15 HR:-TH:H@15
 
 ### 8.5 Wintersport
 ```
-Arlberg: N-12 D-5 SN180 SN24+25 SFL1800 AV3 W45@12 G78@14(85@16) WC-22
+Arlberg: N-12 D-5 SD180 NS24+25 SL1800 AV3 W45@12 G78@14(85@16) WC-22
 ```
 **Länge:** 70 Zeichen.
 
@@ -450,7 +458,7 @@ Ballone: N9 D16 R- PR- W- G- TH:- TH+:-
 | `TH` (Vigilance) | Météo France `get_warning_full()` | offizielle Warnung | ⚠️ Provider TODO |
 | `!`-Warn-Block (§3.4c) | `SegmentWeatherData.official_alerts` (`official_alerts`-Dienst, alle Provider, 9 hazards) | Dedup (`dedupe_official_alerts`) + Filter Stufe ≥ orange, Kürzel aus `hazard_symbols.py` | ✅ vorhanden (Issue #1318) — **andere Quelle** als die beiden Vigilance-Zeilen darüber, die weiterhin am alten `get_warning_full()`-Pfad hängen |
 | `Z`/`M` | `risque-prevention-incendie.fr` | tagesaktueller JSON | ⚠️ Provider TODO |
-| `SN`/`SN24`/`SFL` | GeoSphere/SLF | siehe Wintersport-Spec | ⚠️ teilweise vorhanden |
+| `SD`/`NS24+`/`SL` | GeoSphere/SLF | siehe Wintersport-Spec | ⚠️ teilweise vorhanden |
 | `AV` | `AvalancheReport.danger.level` | aus Lawinenbericht | ⚠️ Provider TODO |
 | `WC` | `wind_chill_c` | berechnet | ⚠️ nur Legacy-CLI (`profile="wintersport"`), im Produktivpfad nie erreichbar — s. §3.6 |
 | `FN` / `FK` / `FD` | `night_wind_chill_min_c` / `wind_chill_min_c` / `wind_chill_max_c` | Open-Meteo `apparent_temperature`, GeoSphere | ✅ vorhanden (Issue #1410) |
@@ -468,7 +476,7 @@ Markierte TODOs sind separate Issues, nicht Teil dieser Spec.
 | Forecast (N…TH+) | global | immer ausgeben |
 | Vigilance (`HR`/`TH`) | nur Frankreich | komplett weglassen (kein `-`) |
 | Fire (`Z`/`M`) | nur Korsika (FR) | komplett weglassen |
-| Wintersport (SN…WC) | AT/CH/Tirol/Südtirol/Trentino | komplett weglassen, wenn Provider fehlt |
+| Wintersport (SD…WC) | AT/CH/Tirol/Südtirol/Trentino | komplett weglassen, wenn Provider fehlt |
 
 ---
 
@@ -508,6 +516,8 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.11 | 2026-07-23 | `N` (Nacht-Tiefsttemperatur) nur noch im Abendbriefing (Issue #1319 Scheibe D) — Morgenbriefing lässt den Token komplett weg (kein `N-`); Wert-Quelle wechselt abends von `SegmentWeatherSummary.temp_min_c` (Tagessegment) auf `night_weather` (Ankunft→06:00 Folgetag am Ziel), Fallback aufs alte Verhalten wenn `night_weather` fehlt; große E-Mail-Tabelle „🌙 Nacht am Ziel" bleibt unverändert. Spec: `docs/specs/modules/night_temp_evening_only.md` |
 | 2.12 | 2026-07-28 | Tiefsttemperatur unterwegs + gefühlte Temperatur in der SMS (Issue #1410, Epic #1372) — neue Token `K` (kälteste Gehzeit-Stunde, immer, neben `N`) sowie `FN`/`FK`/`FD` (gefühlte Parität zu `N`/`K`/`D`, nur bei aktivierter Metrik `wind_chill`); `N` liest jetzt das eigene DTO-Feld `night_temp_min_c` statt `temp_min_c` in-place zu überschreiben (`K` bleibt dadurch abends erhalten); Kürzungsreihenfolge um den Felt-Schritt VOR `PR` erweitert und der im Code seit jeher vorhandene Last-Resort-Schritt nachgetragen (Doku-Drift §6); `WC` als Legacy-CLI-only gekennzeichnet (§3.6/§9). Löst DEC-2 aus `night_temp_evening_only.md` ab (morgens jetzt Spanne statt Einzelwert). Spec: `docs/specs/modules/trip_min_temp_and_felt_shortforms.md` |
 | 2.13 | 2026-07-29 | EINE Gehzeit-Berechnung fuer alle Kanaele (Issue #1417) — `K`/`D`/`FK`/`FD` stammen jetzt aus `day_window.collect_hiking_window_points()`, derselben Quelle wie Mail-Kachelzeile, E-Mail-Kurzzusammenfassung und Telegram-Kurzuebersicht. Vorher unterschiedliche Fenster je Kanal (Ankunftsstunde in der Mail inklusiv, in SMS/Telegram nicht) — dieselbe Etappe zeigte je nach Kanal verschiedene Werte. Geltende Regel: Ankunftsstunde des letzten VERWERTBAREN Teils inklusiv, innere Grenzen genau einmal; ausgefallene Teile werden uebersprungen. Quellenspalten in §3.2 entsprechend praezisiert; Klarstellung ergaenzt, dass `D` trotz des Namens „Tag-Max" die Gehzeit meint und nicht den Kalendertag. Spec: `docs/specs/modules/hiking_window_single_source.md` |
+
+| 2.14 | 2026-08-01 | Schnee-Kürzel folgen dem Wetter-Register (Issue #1435 Etappe E3b) — Schneehöhe `SN`→`SD`, Neuschnee `SN24+`→`NS24+`, Schneefallgrenze `SFL`→`SL` (`metric_catalog.sms_code`). Grund: `SN` bezeichnete in derselben Zeile zugleich die **amtliche Schneewarnung** (§3.4c, `hazard_symbols.py`) — diese bleibt unverändert `SN`, kein Vorhersage-Token beginnt mehr so. Position im Format, Kürzungs-Rangfolge (§6) und die inverse Schwellwertlogik der Schneefallgrenze (#873) unverändert; gespeicherte Nutzereinstellungen liegen als `metric_id` vor und bleiben wirksam. `TH:` (Grammatik) und `WC`/`FN`/`FK`/`FD` bleiben bewusste Ausnahmen. Spec: `docs/specs/modules/fix_1435_e3b_sms_kuerzel.md` |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

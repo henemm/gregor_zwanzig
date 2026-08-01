@@ -54,3 +54,23 @@ den das Frontend Metrik-Stammdaten bezieht.
 - **Folgepflichten:** Neue alert-fähige Metriken bekommen ihren `sms_code`/`cmp`/
   `decimals` **im Katalog** (nicht im Renderer); Frontend rendert Alert-/Kanal-Inhalte
   nicht eigenständig nach, sondern zeigt Backend-Ergebnisse an.
+
+## Nachtrag 2026-08-01 (#1435 E3b)
+
+Die am 2026-06-30 gewährte Ausnahme, wonach Ziel 3 („doppelte Mappings entfernen")
+nur für den Alert-`sms_code` gilt und **nicht** für die Briefing-SMS-Token-Grammatik
+(festgehalten in `docs/specs/_archive/modules/issue_917_alert_renderer.md`, Abschnitt
+„Architektur-Entscheidung (ADR)", samt der dortigen AC-9), ist **widerrufen**. Ziel 3
+gilt ab sofort auch für Schneehöhe, Schneefallgrenze und Neuschnee im
+Briefing-SMS-Pfad: Diese Kürzel stammen jetzt aus `metric_catalog.sms_code`
+(`SD`/`SL`/`NS`) statt aus einem eigenen Trip-Vokabular (`SN`/`SFL`/`SN24+`).
+
+Bewusst **nicht** widerrufen bleiben zwei Sonderfälle: `TH:` (Grammatikform mit
+Doppelpunkt; das Register kennt nur `TH`) und das Quartett `WC`/`FN`/`FK`/`FD` für
+die gefühlte Temperatur (eine Registergröße, vier Kürzel — strukturell nicht aus
+einem einzelnen `sms_code`-Feld ableitbar). `AV` (Lawinenstufe) bleibt außerhalb,
+weil das Register dafür keine Größe führt.
+
+Der Status dieses ADR bleibt **Akzeptiert** und unverändert — E3b nimmt keine
+Entscheidung zurück, sondern erfüllt Ziel 3 vollständiger. Spec:
+`docs/specs/modules/fix_1435_e3b_sms_kuerzel.md`.

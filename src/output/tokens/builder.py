@@ -35,7 +35,10 @@ def _sanitize_stage_name(name: str) -> str:
 
 # Truncation priority §6: lower drops first.
 PRIORITY = {
-    "DBG": 1, "WC": 2, "AV": 2, "SFL": 2, "SN24+": 2, "SN": 2,
+    # Issue #1435 E3b: Schnee-Kuerzel folgen dem Wetter-Register
+    # (SL/NS24+/SD statt SFL/SN24+/SN) -- 'SN' bezeichnet ausschliesslich die
+    # amtliche Schneewarnung (hazard_symbols.py).
+    "DBG": 1, "WC": 2, "AV": 2, "SL": 2, "NS24+": 2, "SD": 2,
     "Z:": 3, "MAX": 3, "M:": 3, "PR": 5,
     # Issue #1410: das gefuehlte Trio rangiert unter PR (5) -- es faellt aber
     # ohnehin schon im dedizierten Schritt in render.py::_truncate(), bevor der
@@ -67,8 +70,9 @@ POSITIONAL = [
     (FORECAST_TH, "forecast"), (FORECAST_THP, "forecast"),
     (VIGI_HR, "vigilance"), (VIGI_TH, "vigilance"),
     ("Z:", "fire"), ("MAX", "fire"), ("M:", "fire"),
-    ("SN", "wintersport"), ("SN24+", "wintersport"),
-    ("SFL", "wintersport"), ("AV", "wintersport"), ("WC", "wintersport"),
+    # Issue #1435 E3b: Register-Kuerzel, Reihenfolge unveraendert.
+    ("SD", "wintersport"), ("NS24+", "wintersport"),
+    ("SL", "wintersport"), ("AV", "wintersport"), ("WC", "wintersport"),
     (UNAVAILABLE_SYMBOL, "unavailable"),
     ("DBG", "debug"),
 ]
@@ -183,9 +187,11 @@ def _fire(fc: NormalizedForecast) -> list[Token]:
 def _wintersport(day: DailyForecast, by_sym: dict[str, MetricSpec],
                  rt: ReportType) -> list[Token]:
     pairs = [
-        ("SN", day.snow_depth_cm),
-        ("SN24+", day.snow_new_24h_cm),
-        ("SFL", day.snowfall_limit_m),
+        # Issue #1435 E3b: Kuerzel aus dem Wetter-Register (SD/NS/SL); das
+        # '24+'-Suffix beim Neuschnee bleibt Grammatik (24-Stunden-Fenster).
+        ("SD", day.snow_depth_cm),
+        ("NS24+", day.snow_new_24h_cm),
+        ("SL", day.snowfall_limit_m),
         ("AV", float(day.avalanche_level) if day.avalanche_level is not None else None),
         ("WC", day.wind_chill_c),
     ]
@@ -195,7 +201,9 @@ def _wintersport(day: DailyForecast, by_sym: dict[str, MetricSpec],
             continue
         spec = by_sym.get(sym)
         if spec and spec.threshold is not None:
-            if sym == "SFL":
+            # Issue #873: Schneefallgrenze ist INVERS -- hoch = irrelevant.
+            # Issue #1435 E3b: Kuerzel 'SFL' -> 'SL', Logik unveraendert.
+            if sym == "SL":
                 if val > spec.threshold:
                     continue
             else:

@@ -2,9 +2,9 @@
 entity_id: output_token_builder
 type: module
 created: 2026-04-25
-updated: 2026-06-12
+updated: 2026-08-01
 status: draft
-version: "1.2"
+version: "1.3"
 tags: [output, pipeline, refactor, epic-render-pipeline, shortcode]
 epic: render-pipeline-consolidation (#96)
 phase: β1
@@ -57,7 +57,7 @@ In v1.0 forderte die Spec einen byte-Equal-Cross-Check `new == old` gegen `src/f
 `sms_format.md` §2 schreibt eine **feste Token-Reihenfolge** vor:
 
 ```
-{Name}: N D R PR W G TH: TH+: HR:TH: Z: M: [SN SN24+ SFL AV WC] DBG
+{Name}: N D R PR W G TH: TH+: HR:TH: Z: M: [SD NS24+ SL AV WC] DBG
 ```
 
 Diese Reihenfolge ist **statisch in der Render-Phase**. Risk-Priority (Thunderstorm > Wind/Gusts > Rain > Temperatur) gilt **ausschließlich für Truncation gemäß §6** (welche Tokens fliegen zuerst raus). Sie steuert **nicht** die Anzeige-Reihenfolge.
@@ -79,7 +79,7 @@ Diese Reihenfolge ist **statisch in der Render-Phase**. Risk-Priority (Thunderst
 | `HR` | Heavy Rain Vigilance (FR-only, direkt vor `TH:`-Vigilance, **kein Space** dazwischen) |
 | `TH:` (Vigilance) | Thunderstorm Vigilance (FR-only, direkt nach `HR`, **kein Space**) |
 | `Z`/`M` | Fire-Zonen (Korsika) |
-| `SN` / `SN24+` / `SFL` / `AV` / `WC` | Wintersport (nur bei `profile == "wintersport"`) |
+| `SD` / `NS24+` / `SL` / `AV` / `WC` | Wintersport (nur bei `profile == "wintersport"`) — Kürzel seit #1435 E3b aus dem Wetter-Register, vorher `SN`/`SN24+`/`SFL` |
 | `DBG` | Debug, nur Dry-Run |
 
 **Hartes Verbot:** `T` als alleinstehendes Token (Legacy-Form `T12/18`) ist **niemals** zu erzeugen.
@@ -135,7 +135,7 @@ from typing import Literal
 @dataclass(frozen=True)
 class Token:
     """Ein einzelner Token in der Token-Zeile."""
-    symbol: str               # "N", "D", "R", "W", "G", "TH", "TH+", "HR", "SN", ...
+    symbol: str               # "N", "D", "R", "W", "G", "TH", "TH+", "HR", "SD", ...
     value: str                # "0.2@6(1.4@16)" oder "" für Pflicht-Null-Tokens
     category: Literal["forecast", "vigilance", "fire", "wintersport", "debug"]
     priority: int             # NUR für Truncation §6: 1=TH, 2=W/G, 3=R/PR, 4=N/D, 5=other
@@ -210,7 +210,7 @@ def build_token_line(
    - **Threshold==Max-Optimierung:** wenn Threshold-Wert UND Threshold-Stunde dem Tagesmax entsprechen → `(max@h)`-Block weglassen.
    - **Null-Werte:** `{symbol}-` (kein `@hour`).
 4. **M/A-Filter:** Tokens mit `morning_enabled=False` werden im Morning-Report weggelassen, analog Evening.
-5. **Profil-Tokens** (Wintersport): Wenn `profile == "wintersport"`, zusätzliche Tokens `SN`, `SN24+`, `SFL`, `AV`, `WC` gemäß §3.6 injizieren.
+5. **Profil-Tokens** (Wintersport): Wenn `profile == "wintersport"`, zusätzliche Tokens `SD`, `NS24+`, `SL`, `AV`, `WC` gemäß §3.6 injizieren.
 6. **HR/TH-Fusion (Vigilance, A5):**
    - Nur wenn `provider == "meteofrance"`. Außerhalb FR: beide Tokens **komplett weglassen**.
    - HR und Vigilance-TH paarweise erzeugen, Reihenfolge `HR` vor `TH`.
@@ -218,7 +218,7 @@ def build_token_line(
 7. **Fire-Tokens** `Z:`/`M:` (§3.5) — nur wenn `trip.country == "FR"` und Zonen aktiv. Sonst Block komplett weglassen.
 8. **Render in §2-POSITIONAL-Reihenfolge** (kein Sortieren nach Priority — A2):
    ```
-   {Name}: N D R PR W G TH: TH+: HR:TH: Z: M: [SN SN24+ SFL AV WC] DBG
+   {Name}: N D R PR W G TH: TH+: HR:TH: Z: M: [SD NS24+ SL AV WC] DBG
    ```
 9. **Ggf. Truncation gemäß §6** — hier (und **nur hier**) wird `Token.priority` konsultiert: Reihenfolge der Entfernung ist `DBG → Wintersport → Fire → Peak-Werte → PR → D, N`. `{Name}:` plus mindestens ein Wert-/Risk-Token bleibt Pflicht (sonst `ValueError`).
 
@@ -250,7 +250,7 @@ def build_token_line(
 | `test_friendly_format_uses_friendly_label` | `use_friendly_format=True` + Metric mit `friendly_label="Niesel"` | Token enthält "Niesel" statt "R" |
 | `test_threshold_peak_format` | R-Metric mit Threshold 0.2, Tagesmax 1.4@16h, Erst-Threshold 0.6h | `value == "0.2@6(1.4@16)"` (Stunde ohne führende Null, Threshold==Max-Optimierung greift hier nicht, da unterschiedlich) |
 | `test_morning_filter_excludes_evening_only` | Token mit `morning_enabled=False` | Nicht im Output bei `report_type=morning` |
-| `test_wintersport_profile_adds_sn_token` | `profile="wintersport"` | `SN`-Token im Output, an Position gemäß §2 |
+| `test_wintersport_profile_adds_sn_token` | `profile="wintersport"` | `SD`-Token im Output, an Position gemäß §2 |
 | `test_render_max_length_truncates` | TokenLine mit 200 Zeichen Roh-Länge | `result.render(160) <= 160 chars` und `truncated=True` |
 | `test_render_truncation_priority` | Forecast mit allen Tokens + max_length=80 | §6-Reihenfolge: `DBG → Wintersport → Fire → Peaks → PR → D/N`. Risk-Priority bestimmt **welcher Wert-Token** zuerst geht (TH bleibt am längsten). |
 | `test_empty_forecast_raises` | `forecast.days == []` | `ValueError` |
@@ -294,7 +294,7 @@ def test_render_conforms_to_sms_format_v2():
 | GR20 Sommer | (synthetisch, Korsika Sommer-Forecast) | `tests/golden/sms/gr20-summer-evening.txt` | `GR20 E3: N12 D24 R0.2@15(2.5@17) W18@10(28@15) G25@10(40@15) TH:M@16(H@18)` |
 | GR20 Frühjahr | (synthetisch, kalt + Niederschlag) | `tests/golden/sms/gr20-spring-morning.txt` | `GR20 E1: N2 D9 R0.2@4(18.5@11) W35@5(60@10) G55@5(85@10) TH:M@8(H@11)` |
 | GR221 Mallorca | `data/users/default/trips/gr221-mallorca.json` | `tests/golden/sms/gr221-mallorca-evening.txt` | `GR221 Tag1: N8 D15 W25@12(40@16) G35@12(55@16)` |
-| Wintersport Arlberg | (synthetisch, profile=wintersport) | `tests/golden/sms/arlberg-winter-morning.txt` | `Arlberg: N-12 D-4 W45@8(75@13) G70@8(110@13) WC-22 SN180 SN24+25 SFL1800 AV3` |
+| Wintersport Arlberg | (synthetisch, profile=wintersport) | `tests/golden/sms/arlberg-winter-morning.txt` | `Arlberg: N-12 D-4 W45@8(75@13) G70@8(110@13) WC-22 SD180 NS24+25 SL1800 AV3` |
 | Vigilance Korsika | (Forecast mit MétéoFrance Vigilance=high) | `tests/golden/sms/corsica-vigilance.txt` | `Corsica E5: N18 D32 R0.2@14(8@17) W30@10(55@15) G45@10(85@15) TH:H@13(H@17) HR:M@14TH:H@17 Z:HIGH208` |
 
 > **Hinweis:** Die obigen Werte sind **Beispiele für die Spec**. Die exakten Golden-Strings werden vom Developer Agent in Phase 5/6 aus den realen Forecasts generiert und gefroren.
@@ -373,6 +373,10 @@ Kein Feature-Flag nötig, da kein Caller umgestellt wird.
 
 ## Changelog
 
+### v1.3 (2026-08-01)
+
+- **Wintersport-Kürzel folgen dem Wetter-Register** (Issue #1435 Etappe E3b) — `SN`→`SD` (Schneehöhe), `SN24+`→`NS24+` (Neuschnee), `SFL`→`SL` (Schneefallgrenze) in `PRIORITY`, `POSITIONAL`, `_wintersport()` und `DROP_ORDER`. Position im Format und Kürzungs-Rangfolge unverändert. `SN` bezeichnet ab jetzt ausschliesslich die amtliche Schneewarnung (`hazard_symbols.py`). `TH:` bleibt als Grammatikform ausgenommen. Spec: `docs/specs/modules/fix_1435_e3b_sms_kuerzel.md`.
+
 ### v1.2 (2026-06-12)
 
 - **TokenLine erweitert um `shortcode` Feld** (Bug #775) — neuer `shortcode: str | None`-Feld für Trip-Shortcode im Format `GZ#XXXX`. Der Builder füllt dieses Feld, damit `build_email_subject()` das Shortcode-Präfix im Subject nutzen kann. Shortcode hat Priorität über `trip_name` beim Subject-Bau.
@@ -381,7 +385,7 @@ Kein Feature-Flag nötig, da kein Caller umgestellt wird.
 ### v1.1 (2026-04-26)
 
 - **Cross-Check gegen Legacy entfernt** — `sms_format.md` v2.0 ist alleinige Authority. Legacy `sms_trip.py` ist deprecated dead code (`sms_text=None`), byte-Equal hätte β1 gezwungen v2.0 zu verletzen. Erste β1-Implementierung wurde aus diesem Grund verworfen (Adversary-Verdict BROKEN, F001-F005).
-- **Token-Reihenfolge fixiert auf §2 POSITIONAL** (`N D R PR W G TH: TH+: HR:TH: Z: M: [SN…] DBG`). Algorithmus-Schritt "Sortierung nach priority" entfernt — Risk-Priority gilt nur noch für Truncation §6.
+- **Token-Reihenfolge fixiert auf §2 POSITIONAL** (`N D R PR W G TH: TH+: HR:TH: Z: M: [SN…] DBG` — Wintersport-Kürzel damals noch `SN`, s. v1.3). Algorithmus-Schritt "Sortierung nach priority" entfernt — Risk-Priority gilt nur noch für Truncation §6.
 - **Token-Symbole explizit auf §3.2** — `N` (Nacht-Min) und `D` (Tag-Max), nicht `T`. `T` alleinstehend ist verboten. `D` in `filter_for_subject` als "Tag-Max" geklärt (nicht "Debug").
 - **`@hour`-Pflicht** für R, PR, W, G, TH, TH+, HR explizit verankert. Stunde 0–23 ohne führende Null. Threshold==Max-Optimierung definiert.
 - **HR/TH-Fusion** als eigener Algorithmus-Schritt: `HR:{l}@{h}TH:{l}@{h}` ohne Space, paarweise, FR-only. Außerhalb FR beide Tokens komplett weggelassen.

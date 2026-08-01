@@ -7,7 +7,9 @@ from dataclasses import replace
 from output.tokens.dto import Token, TokenLine
 
 # §6 removal order (one symbol at a time, repeated until budget met).
-DROP_ORDER = ["DBG", "WC", "AV", "SFL", "SN24+", "SN", "Z:", "MAX", "M:"]
+# Issue #1435 E3b: Schnee-Kuerzel folgen dem Wetter-Register (SL/NS24+/SD);
+# die Rangfolge selbst ist unveraendert.
+DROP_ORDER = ["DBG", "WC", "AV", "SL", "NS24+", "SD", "Z:", "MAX", "M:"]
 
 
 def _fuse(tokens: list[Token]) -> list[str]:

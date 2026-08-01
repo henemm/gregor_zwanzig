@@ -244,11 +244,19 @@ Sicherheitsformat. Gewählt wurde stattdessen:
 
 | Domäne | Geprüfte Werte | Treffer bei `K`/`FN`/`FK`/`FD`? |
 |---|---|---|
-| `PRIORITY`/`POSITIONAL` (`builder.py:37-69`) | `DBG, WC, AV, SFL, SN24+, SN, Z:, MAX, M:, PR, D, N, R, W, G, TH+:, HR:, TH:` | keiner |
+| `PRIORITY`/`POSITIONAL` (`builder.py:37-69`) | `DBG, WC, AV, SL, NS24+, SD, Z:, MAX, M:, PR, D, N, R, W, G, TH+:, HR:, TH:` | keiner |
 | Amtliche Warn-Kürzel (`hazard_symbols.py:15-25`) | `TH, HR, W, SN, IC, HT, CD, FR, CL` | keiner |
-| `sms_code` in `metric_catalog.py` | `D, N, HU, PR, TH, CP, SL, VS, UV, NL, SD, SN` | keiner |
+| `sms_code` in `metric_catalog.py` | `D, N, HU, PR, TH, CP, SL, VS, UV, NL, SD, NS` | keiner |
 
 Alle vier Symbole sind kollisionsfrei in allen drei Domänen.
+
+> **Nachtrag 2026-08-01 (#1435 E3b).** Die Momentaufnahme oben stammt vom
+> 2026-07-28. Zwei Werte haben sich seither geändert, ohne die Aussage zu
+> berühren: die Wintersport-Kürzel heissen jetzt `SD`/`NS24+`/`SL` (vorher
+> `SN`/`SN24+`/`SFL`), und der `sms_code` für Neuschnee ist seit der
+> PO-Korrektur vom 2026-07-29 `NS` (vorher `SN`). Beides ist oben bereits
+> eingesetzt. `K`/`FN`/`FK`/`FD` bleiben kollisionsfrei. Spec:
+> `docs/specs/modules/fix_1435_e3b_sms_kuerzel.md`.
 
 ### 2. Beispielzeilen mit Zeichenzählung
 
@@ -403,7 +411,7 @@ SMS_FELT_SYMBOLS_BY_METRIC = {"wind_chill": ("FN", "FK", "FD")}
 ```
 Fehlt `"wind_chill"` in `active_metric_ids`, werden alle drei Symbole
 als `enabled=False`-Specs angehängt (exakt dasselbe Prüfmuster wie für
-SN/SFL — bewusst bug-kompatibel, keine neue Gating-Semantik).
+SD/SL — bewusst bug-kompatibel, keine neue Gating-Semantik).
 `default_enabled` von `wind_chill` im Katalog ist `True` — bestehende
 Trips zeigen die Felt-Token also ab dieser Auslieferung, sofern sie die
 Metrik nicht aktiv deaktiviert haben (analog zur Mail-Pille seit #1357).

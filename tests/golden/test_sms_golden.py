@@ -49,9 +49,11 @@ def _default_specs():
         MetricSpec(symbol="G", enabled=True, threshold=20.0),
         MetricSpec(symbol="TH:", enabled=True, threshold=1.0),
         MetricSpec(symbol="TH+:", enabled=True, threshold=1.0),
-        MetricSpec(symbol="SN", enabled=True),
-        MetricSpec(symbol="SN24+", enabled=True),
-        MetricSpec(symbol="SFL", enabled=True),
+        # #1435 E3b: Register-Kuerzel (SD/NS24+/SL) statt der frueheren
+        # Trip-Eigennamen SN/SN24+/SFL.
+        MetricSpec(symbol="SD", enabled=True),
+        MetricSpec(symbol="NS24+", enabled=True),
+        MetricSpec(symbol="SL", enabled=True),
         MetricSpec(symbol="AV", enabled=True),
         MetricSpec(symbol="WC", enabled=True),
     ]

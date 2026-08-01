@@ -344,12 +344,15 @@ def test_summary_to_rows_omits_none_fields():
     )
 
 
-def test_wintersport_default_config_enables_av_wc_sn_sn24_sfl():
+def test_wintersport_default_config_enables_av_wc_snow_symbols():
     """
     GIVEN: Aufruf von _wintersport_default_config().
     WHEN:  Rückgabewert inspiziert.
-    THEN:  Liste enthält MetricSpec für AV, WC, SN, SN24+, SFL — alle
+    THEN:  Liste enthält MetricSpec für AV, WC, SD, NS24+, SL — alle
            enabled=True.
+
+    #1435 E3b: die Schnee-Kürzel folgen dem Register (SD/NS24+/SL); die
+    früheren Trip-Eigennamen SN/SN24+/SFL dürfen nicht mehr vorkommen.
 
     Spec §4.1 Compact-Pfad: 'config = _wintersport_default_config()
     produziert die Standard-MetricSpec-Liste für Wintersport (alle
@@ -360,7 +363,7 @@ def test_wintersport_default_config_enables_av_wc_sn_sn24_sfl():
     specs = _wintersport_default_config()
     assert isinstance(specs, list)
     by_sym = {s.symbol: s for s in specs}
-    for required in ("AV", "WC", "SN", "SN24+", "SFL"):
+    for required in ("AV", "WC", "SD", "NS24+", "SL"):
         assert required in by_sym, (
             f"Wintersport-Default-Config muss Symbol {required!r} enthalten: "
             f"{sorted(by_sym.keys())!r}"
@@ -369,3 +372,9 @@ def test_wintersport_default_config_enables_av_wc_sn_sn24_sfl():
             f"Wintersport-Default-Config: {required!r} muss enabled=True haben."
         )
         assert isinstance(by_sym[required], MetricSpec)
+    for forbidden in ("SN", "SN24+", "SFL"):
+        assert forbidden not in by_sym, (
+            f"#1435 E3b: Alt-Kuerzel {forbidden!r} darf in der "
+            f"Wintersport-Default-Config nicht mehr vorkommen: "
+            f"{sorted(by_sym.keys())!r}"
+        )

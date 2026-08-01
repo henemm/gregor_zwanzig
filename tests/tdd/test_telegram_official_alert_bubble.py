@@ -98,8 +98,15 @@ def _segment(
             run=datetime(_YEAR, _MONTH, _DAY, 0, 0, tzinfo=UTC),
             grid_res_km=1.0, interp="point_grid",
         ), data=data),
+        # Issue #1449: Temperatur-Aggregat AUS `data` ableiten -- die
+        # Trip-Renderer aggregieren seit #1319/#1410/#1417 selbst ueber die
+        # Stundenwerte aus `_dp()`; frei gewaehlte Werte waeren hier
+        # wirkungslos und wuerden der Fixture eine zweite, widersprechende
+        # Temperatur andichten. Die Wahrheit steht in `_dp()`.
         aggregated=SegmentWeatherSummary(
-            temp_min_c=9.0, temp_max_c=24.0, wind_max_kmh=0.0, gust_max_kmh=0.0,
+            temp_min_c=min(dp.t2m_c for dp in data),
+            temp_max_c=max(dp.t2m_c for dp in data),
+            wind_max_kmh=0.0, gust_max_kmh=0.0,
             precip_sum_mm=0.0, pop_max_pct=0.0,
             thunder_level_max=ThunderLevel.NONE,
         ),

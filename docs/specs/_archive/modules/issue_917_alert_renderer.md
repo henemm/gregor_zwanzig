@@ -173,12 +173,20 @@ aber **nicht** verdrahtet (`known_channels` bleibt `{email, telegram}`).
 - **AC-9:** Given der Briefing-SMS-Pfad (`SMS_SYMBOL_BY_METRIC`, Token-Builder) / When dieser Slice gebaut ist / Then sind die stehenden Briefing-Kürzel (`TH:`, `TH+`, `SFL`, …) unverändert und die bestehenden Briefing-SMS-Tests bleiben grün.
   - Test: `SMS_SYMBOL_BY_METRIC["thunder"] == "TH:"` (unverändert); `tests/tdd/test_issue_624_metric_thresholds.py` + `test_issue_872_threshold_ux.py` laufen grün.
 
+  > **⚠️ AC-9 TEILWEISE AUFGEHOBEN — 2026-08-01, Issue #1435 Etappe E3b (PO-Entscheid).**
+  > Die Festschreibung der Schnee-Kürzel gilt **nicht mehr**: Schneehöhe `SN`→`SD`,
+  > Neuschnee `SN24+`→`NS24+`, Schneefallgrenze `SFL`→`SL` (Quelle jetzt
+  > `metric_catalog.sms_code`). Grund: `SN` bezeichnete zugleich die amtliche
+  > Schneewarnung. **Weiterhin gültig** bleibt AC-9 für `TH:`/`TH+` (Grammatikform)
+  > und für `WC`/`FN`/`FK`/`FD`. Neue Spec:
+  > `docs/specs/modules/fix_1435_e3b_sms_kuerzel.md`.
+
 ## Known Limitations
 
 - **SMS-Versand bleibt out-of-scope:** `render_sms` wird gebaut + Fixture-getestet, aber nicht zugestellt (`known_channels={email,telegram}`).
 - **Radar-/Nowcast-Alert** ~~bleibt vorerst auf eigenem Pfad (`outputs/radar_alert.py`)~~ — **erledigt durch Issue #919** (2026-06-30): `OnsetEvent` + `cooldown_display` in `model.py`, Onset-Zweige in alle vier `render_*`-Funktionen, `radar_alert.py` gelöscht.
 - **`delta_pct` bei `value_from == 0`:** kein sinnvoller Prozentwert → definierter Sonderfall (kein `%`, kein Crash).
-- **Briefing-SMS-Konsolidierung** (ADR-0011 Ziel-3) bleibt für den Briefing-Pfad bewusst offen (PO: „stehende Kürzel sind Gesetz").
+- **Briefing-SMS-Konsolidierung** (ADR-0011 Ziel-3) ~~bleibt für den Briefing-Pfad bewusst offen (PO: „stehende Kürzel sind Gesetz")~~ — **teilweise aufgehoben durch Issue #1435 Etappe E3b** (2026-08-01, PO-Entscheid): Schneehöhe, Neuschnee und Schneefallgrenze im Briefing-SMS-Pfad fallen jetzt unter Ziel 3 und heissen `SD`/`NS24+`/`SL` (Quelle `metric_catalog.sms_code`) statt `SN`/`SN24+`/`SFL`. Weiterhin bewusst offen bleiben `TH:` (Grammatikform) und `WC`/`FN`/`FK`/`FD` (vier Kürzel, eine Größe). S. Notizen an AC-9 und am ADR-Abschnitt oben; neue Spec: `docs/specs/modules/fix_1435_e3b_sms_kuerzel.md`.
 
 ## Onset-Format (dokumentiertes Ziel für #919 — in #917 NICHT implementiert)
 
@@ -213,6 +221,16 @@ Offen für #919: Convective-Kennzeichnung im SMS-Token (z.B. `TH!15` reicht, da 
 Gewitter); finale Quelle-Labels via `radar_service.source_label`.
 
 ## Architektur-Entscheidung (ADR)
+
+> **⚠️ Präzisierung vom 2026-06-30 TEILWEISE AUFGEHOBEN — 2026-08-01, Issue #1435
+> Etappe E3b (PO-Entscheid).** Die unten festgehaltene Ausnahme, wonach ADR-0011
+> Ziel-3 nicht für die Briefing-SMS-Token-Grammatik gilt, ist für die drei
+> Schnee-Größen **widerrufen** — sie fallen jetzt unter Ziel 3. Bestehen bleibt die
+> Ausnahme für `TH:` (Grammatikform) und `WC`/`FN`/`FK`/`FD` (vier Kürzel, eine
+> Größe). Nachtrag im ADR selbst:
+> `docs/adr/0011-alert-render-single-backend-renderer.md`, Abschnitt „Nachtrag
+> 2026-08-01 (#1435 E3b)". Neue Spec:
+> `docs/specs/modules/fix_1435_e3b_sms_kuerzel.md`.
 
 - **ADR-Nr.:** ADR-0011 (bestehend) + Präzisierungs-Notiz
 - **Rationale:** Umsetzung von ADR-0011 (ein Backend-Renderer, Registry als Single Source). **Präzisierung (PO 2026-06-30):** ADR-0011 Ziel-3 („doppelte Mappings entfernen") gilt für den **Alert-`sms_code`**, **nicht** für die Briefing-SMS-Token-Grammatik (`SMS_SYMBOL_BY_METRIC` mit `:`/`+`-Suffixen) — diese ist eine bewusst getrennte Verantwortung und bleibt unangetastet. Zudem: `AlertMessage` ist **kanonisch** (nicht deviation-only), mit reserviertem `source`-Feld, damit der Radar-Pfad (#919) ohne Modell-Bruch konvergieren kann. ADR-0011 erhält eine entsprechende Konsequenz-Notiz.

@@ -104,7 +104,7 @@ Unterscheidung, weil jetzt mehr als zwei Tokens dasselbe Kürzel teilen können.
 | `thunderstorm` | `TH` | identisch zum Forecast-Token |
 | `rain` | `HR` | identisch zum (strukturell toten) Vigilance-Token §3.3 |
 | `wind_gust` | `W` | identisch zum Forecast-Token |
-| `snow` | `SN` | identisch zum Forecast-Token |
+| `snow` | `SN` | war 2026-07-20 identisch zum damaligen Forecast-Token `SN` (Schneehöhe); seit #1435 E3b heisst die Schneehöhe `SD`, das Warn-Kürzel bleibt `SN` und ist damit eindeutig |
 | `black_ice` | `IC` | neu (ICe) |
 | `extreme_heat` | `HT` | neu (HeaT) |
 | `extreme_cold` | `CD` | neu (ColD) |
@@ -237,7 +237,9 @@ Tabelle oben) — deterministisch, keine Abhängigkeit von `valid_from`.
 "vergleich"` — CLAUDE.md-Invariante beachten):
 
 - (a) Je Metrik in `ThresholdMetricRow` (die 7 SMS-schwellenwertfähigen Metriken) wird das
-  zugehörige SMS-Kürzel (`R`, `PR`, `W`, `G`, `TH`, `SN`, `SFL`) neben dem Label angezeigt.
+  zugehörige SMS-Kürzel (`R`, `PR`, `W`, `G`, `TH`, `SD`, `SL`) neben dem Label angezeigt
+  (Schneehöhe/Schneefallgrenze hiessen bis #1435 E3b `SN`/`SFL`; die Werte kommen zur
+  Laufzeit aus `/api/sms-symbols`, es gibt keine gepflegte Liste im Frontend).
 - (b) Beim Schalter „Amtliche Warnungen im Bericht" (`officialAlertsToggle`-Snippet, bereits
   geteilt zwischen Trip und Vergleich) erscheint eine Legende: `!`-Block-Erklärung, die 9
   Kürzel mit Klartext-Bezeichnung, L/M/H = gelb/orange/rot.

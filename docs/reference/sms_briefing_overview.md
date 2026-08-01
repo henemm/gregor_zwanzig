@@ -47,7 +47,7 @@ der fachliche Grund hinter Issue #1317.
 Feste Reihenfolge (POSITIONAL, `sms_format.md:44`):
 
 ```
-{Name}: N K D FN FK FD R PR W G TH: TH+: C  HR:TH:  Z: M:  [SN SN24+ SFL AV WC]  DBG
+{Name}: N K D FN FK FD R PR W G TH: TH+: C  HR:TH:  Z: M:  [SD NS24+ SL AV WC]  DBG
 ```
 
 | Kürzel | Bedeutung | Wert-Format | Immer da? |
@@ -68,7 +68,7 @@ Feste Reihenfolge (POSITIONAL, `sms_format.md:44`):
 | `C` | Vorhersage-Verlässlichkeit | `C+` / `C~` / `C?` | nur wenn Provider Konfidenz liefert |
 | `HR:` `TH:` | Amtliche Warnungen Frankreich (Starkregen / Gewitter) | `HR:M@17TH:H@17` | nur FR-Provider |
 | `Z:` `M:` | Feuerzonen / gesperrte Masslive (Korsika) | `Z:HIGH208 M:24` | nur Korsika |
-| `SN SN24+ SFL AV WC` | Wintersport (Schnee, Neuschnee, Schneefallgrenze, Lawine, Wind Chill) | `SN180 …` | nur Wintersport-Profil |
+| `SD NS24+ SL AV WC` | Wintersport (Schneehöhe, Neuschnee, Schneefallgrenze, Lawine, Wind Chill) — Kürzel seit #1435 E3b aus dem Wetter-Register, vorher `SN SN24+ SFL` | `SD180 …` | nur Wintersport-Profil |
 | `DBG[...]` | Debug (Provider, Konfidenz) | `DBG[MET MED]` | nur Testlauf |
 
 **Das Wert-Format `X@h(Y@h)` lesen als:** „Wert X ab Stunde h, Spitzenwert Y um Stunde h."

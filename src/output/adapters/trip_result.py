@@ -203,9 +203,10 @@ def _wintersport_default_config() -> list[MetricSpec]:
         MetricSpec(symbol="D", enabled=True),
         MetricSpec(symbol="W", enabled=True, threshold=10.0),
         MetricSpec(symbol="G", enabled=True, threshold=20.0),
-        MetricSpec(symbol="SN", enabled=True),
-        MetricSpec(symbol="SN24+", enabled=True),
-        MetricSpec(symbol="SFL", enabled=True),
+        # Issue #1435 E3b: Register-Kuerzel SD/NS24+/SL.
+        MetricSpec(symbol="SD", enabled=True),
+        MetricSpec(symbol="NS24+", enabled=True),
+        MetricSpec(symbol="SL", enabled=True),
         MetricSpec(symbol="AV", enabled=True),
         MetricSpec(symbol="WC", enabled=True),
     ]

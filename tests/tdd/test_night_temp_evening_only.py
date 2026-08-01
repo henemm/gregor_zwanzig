@@ -197,8 +197,10 @@ def _compact_temp_phrase(email_plain: str) -> str:
 
 def _sms_n_value(sms: str) -> str | None:
     """Extrahiert den N-Token-Wert aus der SMS (z.B. 'N11' -> '11'), oder
-    None wenn kein N-Token vorkommt. Lookbehind schliesst Symbole wie 'SN'/
-    'SN24+' aus (kein Buchstabe direkt vor dem 'N')."""
+    None wenn kein N-Token vorkommt. Lookbehind schliesst Symbole wie 'SN'
+    (amtliche Schneewarnung) aus (kein Buchstabe direkt vor dem 'N'); der
+    Neuschnee-Token 'NS24+' (#1435 E3b) faellt heraus, weil auf das 'N' ein
+    Buchstabe statt einer Ziffer folgt."""
     m = re.search(r"(?<![A-Za-z])N(-?\d+)", sms)
     return m.group(1) if m else None
 

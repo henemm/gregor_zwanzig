@@ -3,35 +3,43 @@
 ## Ziel
 
 Nutzer können in den Wetter-Metriken → Schwellwerte einstellen, ab welchem Wert der
-Schneehöhe-Token (SN) bzw. der Schneefallgrenze-Token (SFL) in SMS/Telegram-Kurzform erscheinen soll.
+Schneehöhe-Token (SD) bzw. der Schneefallgrenze-Token (SL) in SMS/Telegram-Kurzform erscheinen soll.
+
+> **Kürzel-Umstellung 2026-08-01 (#1435 Etappe E3b).** Diese Spec wurde mit den
+> damaligen Kürzeln `SN` (Schneehöhe), `SN24+` (Neuschnee) und `SFL`
+> (Schneefallgrenze) geschrieben. Sie heissen jetzt `SD`, `NS24+` und `SL`
+> (Wetter-Register, `metric_catalog.sms_code`); `SN` bezeichnet ausschliesslich
+> die amtliche Schneewarnung. **Die Filter-Logik dieser Spec ist unverändert** —
+> nur die Kürzel wurden ersetzt. Spec:
+> `docs/specs/modules/fix_1435_e3b_sms_kuerzel.md`.
 
 ## Kontext
 
-SN und SFL werden in `_wintersport()` als einfache Tageswerte gerendert — ohne
+SD und SL werden in `_wintersport()` als einfache Tageswerte gerendert — ohne
 Threshold-Filterung. Das bestehende Threshold-System (Issue #624) funktioniert nur
-für `R`, `PR`, `W`, `G`, `TH:` (via `_mk_metric()`). Diese Spec erweitert es um SN
-und SFL mit einer Sonderregel für SFL (inverse Logik).
+für `R`, `PR`, `W`, `G`, `TH:` (via `_mk_metric()`). Diese Spec erweitert es um SD
+und SL mit einer Sonderregel für SL (inverse Logik).
 
 ## Acceptance Criteria
 
 **AC-1:** Given der Nutzer hat für Schneehöhe einen Schwellwert S konfiguriert und der
 Tages-Schneehöhenwert ist **unter** S, When SMS/Telegram-Kurzform generiert wird,
-Then erscheint **kein SN-Token** in der Ausgabe.
+Then erscheint **kein SD-Token** in der Ausgabe.
 
 **AC-2:** Given der Nutzer hat für Schneehöhe einen Schwellwert S konfiguriert und der
 Tages-Schneehöhenwert ist **≥ S**, When SMS/Telegram-Kurzform generiert wird,
-Then erscheint **SN-Token** wie bisher (z.B. `SN15`).
+Then erscheint **SD-Token** wie bisher (z.B. `SD15`).
 
 **AC-3:** Given der Nutzer hat für Schneefallgrenze einen Schwellwert S konfiguriert und
 die Schneefallgrenze liegt **über** S (höhere Schneefallgrenze = weniger relevant),
-When SMS generiert wird, Then erscheint **kein SFL-Token** in der Ausgabe.
+When SMS generiert wird, Then erscheint **kein SL-Token** in der Ausgabe.
 
 **AC-4:** Given der Nutzer hat für Schneefallgrenze einen Schwellwert S konfiguriert und
 die Schneefallgrenze liegt **≤ S** (niedrige Schneefallgrenze = relevant),
-When SMS generiert wird, Then erscheint **SFL-Token** wie bisher (z.B. `SFL1200`).
+When SMS generiert wird, Then erscheint **SL-Token** wie bisher (z.B. `SL1200`).
 
-**AC-5:** Given **kein** Schwellwert für SN oder SFL konfiguriert ist,
-When SMS generiert wird, Then erscheinen SN- und SFL-Tokens unverändert
+**AC-5:** Given **kein** Schwellwert für SD oder SL konfiguriert ist,
+When SMS generiert wird, Then erscheinen SD- und SL-Tokens unverändert
 (kein Verhalten-Regress gegenüber Ist-Zustand).
 
 **AC-6:** Given der Nutzer öffnet Wetter-Metriken → Abschnitt 04 — Schwellwerte,
@@ -50,8 +58,8 @@ sichtbar und speicherbar.
 
 `SMS_SYMBOL_BY_METRIC` um zwei Einträge ergänzen:
 ```python
-"snow_depth": "SN",
-"snowfall_limit": "SFL",
+"snow_depth": get_sms_code("snow_depth"),        # -> "SD"
+"snowfall_limit": get_sms_code("snowfall_limit"),  # -> "SL"
 ```
 
 → Damit werden per `MetricConfig.sms_threshold` gespeicherte Werte automatisch
@@ -68,16 +76,16 @@ for sym, val in pairs:
         continue
     spec = by_sym.get(sym)
     if spec and spec.threshold is not None:
-        if sym == "SFL":
-            if val > spec.threshold:   # inverse: hohe SFL = irrelevant
+        if sym == "SL":
+            if val > spec.threshold:   # inverse: hohe Schneefallgrenze = irrelevant
                 continue
         else:
-            if val < spec.threshold:   # normal: SN < Schwelle = irrelevant
+            if val < spec.threshold:   # normal: SD < Schwelle = irrelevant
                 continue
     out.append(Token(sym, render_int(val), "wintersport", PRIORITY[sym]))
 ```
 
-Nur SN und SN24+ werden mit dem normalen `val < threshold` gefiltert. SFL verwendet
+Nur SD und NS24+ werden mit dem normalen `val < threshold` gefiltert. SL verwendet
 die inverse Logik. AV und WC bleiben unverändert (kein threshold-Feld).
 
 ### 3. `frontend/.../WeatherMetricsTab.svelte`
@@ -93,6 +101,6 @@ b) Im Threshold-Block nach dem Thunder-Row zwei neue `ThresholdMetricRow`-Eintr�
 
 ## Nicht in dieser Spec
 
-- SN24+ bekommt keinen eigenen Frontend-Row (ist kein eigenständiger metric_id im Katalog)
+- NS24+ bekommt keinen eigenen Frontend-Row (ist kein eigenständiger metric_id im Katalog)
 - AV, WC: kein Threshold (Lawinenstufe und Windchill haben anderen Charakter)
 - Kein Regress bei bestehenden Threshold-Metriken (R, PR, W, G, TH:)

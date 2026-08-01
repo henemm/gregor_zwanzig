@@ -19,6 +19,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
+from app.metric_catalog import get_sms_code
 from app.models import (
     ExposedSection, NormalizedTimeseries, RiskLevel, RiskType, SegmentWeatherData,
 )
@@ -52,14 +53,32 @@ if TYPE_CHECKING:
     from app.models import WeatherChange
 
 # Issue #624: metric_id -> SMS-Symbol für threshold-fähige Metriken.
+#
+# Issue #1435 E3b: keine gepflegte Kürzel-Liste mehr, sondern eine ABLEITUNG
+# aus dem zentralen Wetter-Register (`metric_catalog.sms_code`). Damit kann
+# diese Tabelle nicht mehr vom Register abdriften. Die Renderer-Schicht darf
+# das Register lesen und tut es bereits (alert/render.py, comparison.py); die
+# app-freie Formatschicht `output/tokens/` darf es nicht und führt die Kürzel
+# dort weiterhin als Literale (Schichtgrenze, abgesichert durch die Ratsche
+# tests/unit/test_sms_token_symbol_register_ratchet.py).
+_SMS_SYMBOL_METRIC_IDS: tuple[str, ...] = (
+    "precipitation",
+    "rain_probability",
+    "wind",
+    "gust",
+    "thunder",
+    "snow_depth",
+    "snowfall_limit",
+)
+
+# Benannte Ausnahme von der Register-Ableitung: 'TH:' ist Grammatikform (der
+# Doppelpunkt trennt die Gewitter-Stufe vom Kürzel ab, builder.py:16), das
+# Register kennt nur 'TH'. Ausdrücklich NICHT durch #1435 E3b aufgehoben.
+_SMS_SYMBOL_GRAMMAR: dict[str, str] = {"thunder": "TH:"}
+
 SMS_SYMBOL_BY_METRIC: dict[str, str] = {
-    "precipitation": "R",
-    "rain_probability": "PR",
-    "wind": "W",
-    "gust": "G",
-    "thunder": "TH:",
-    "snow_depth": "SN",
-    "snowfall_limit": "SFL",
+    metric_id: _SMS_SYMBOL_GRAMMAR.get(metric_id) or get_sms_code(metric_id)
+    for metric_id in _SMS_SYMBOL_METRIC_IDS
 }
 
 # Issue #1410: metric_id -> SMS-Symbole der GEFUEHLTEN Temperatur. Eigene
@@ -409,7 +428,8 @@ class SMSTripFormatter:
 
         # Bug #944: explizit deaktivierte Metriken (enabled=False) ans Config-Ende
         # hängen. _visible(spec_with_enabled_false) -> False unterdrückt die Token
-        # (z.B. SN/SFL) auch wenn Schneedaten in der Vorhersage vorhanden sind.
+        # (z.B. SD/SL, #1435 E3b) auch wenn Schneedaten in der Vorhersage
+        # vorhanden sind.
         if disabled_specs:
             existing_syms = {s.symbol for s in config}
             config.extend(s for s in disabled_specs if s.symbol not in existing_syms)

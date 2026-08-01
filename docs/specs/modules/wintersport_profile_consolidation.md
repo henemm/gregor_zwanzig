@@ -40,10 +40,16 @@ Wintersport ist nach β4 **kein eigener Formatter-Zweig mehr**, sondern ein Prof
 Sportarten (Bergsteigen, Klettern, MTB) als zusätzliche `Profile`-Werte ohne neue
 Renderer-Dateien (siehe §A6).
 
+> **Kürzel-Hinweis (2026-08-01, #1435 E3b).** Diese Spec wurde mit den damaligen
+> Wintersport-Kürzeln `SN`/`SN24+`/`SFL` geschrieben. Sie heissen jetzt `SD`,
+> `NS24+` und `SL` (Wetter-Register); die Kürzel sind unten bereits ersetzt, der
+> beschriebene Umbau selbst ist unverändert. Spec:
+> `docs/specs/modules/fix_1435_e3b_sms_kuerzel.md`.
+
 **Hard Constraints (User-Vorgabe 2026-04-28):**
 
 1. **Keine Information geht verloren.** Alle Inhalte aus `format_compact()` und `format()`
-   müssen in den neuen Pfaden weiterhin produzierbar sein (Compact: AV/WC/SFL/SN/SN24+ +
+   müssen in den neuen Pfaden weiterhin produzierbar sein (Compact: AV/WC/SL/SD/NS24+ +
    Standard-Forecast-Tokens; Long-Report: Header, Zusammenfassung, Wegpunkt-Details,
    Lawinenregionen).
 2. **Architektur muss erweiterbar sein.** Neue Sportarten ergänzen das `Profile`-Literal +
@@ -366,7 +372,7 @@ Verifikation: Implementation-Validator-Agent erhält den Auftrag,
 - **Neuer Test:** Ein Integration-Test prüft, dass der CLI-Compact-Pfad
   (`_trip_result_to_normalized` + `build_token_line` + `render_sms`) gegen einen
   äquivalenten synthetischen Trip ein Output liefert, das die Wintersport-Tokens
-  enthält (`AV…`, `SN…`, `WC…`, `SFL…`, `SN24+…`) und ≤160 Zeichen ist.
+  enthält (`AV…`, `SD…`, `WC…`, `SL…`, `NS24+…`) und ≤160 Zeichen ist.
 
 ### §A4 — Long-Report-Pfad: alle Wintersport-Informationen verfügbar
 

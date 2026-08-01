@@ -37,8 +37,8 @@ from src.output.tokens.dto import (
 def _wintersport_token_line(stage_name: str = "Stubaier") -> TokenLine:
     """Build a TokenLine via build_token_line(profile='wintersport').
 
-    Synthetic forecast mit AV+WC+SN+SN24++SFL — entspricht heutigem
-    WintersportFormatter-Output.
+    Synthetic forecast mit AV+WC+SD+NS24++SL — entspricht heutigem
+    WintersportFormatter-Output (#1435 E3b: Register-Kuerzel).
     """
     today = DailyForecast(
         temp_min_c=-15.0, temp_max_c=-5.0,
@@ -59,9 +59,9 @@ def _wintersport_token_line(stage_name: str = "Stubaier") -> TokenLine:
         MetricSpec(symbol="D", enabled=True),
         MetricSpec(symbol="W", enabled=True, threshold=10.0),
         MetricSpec(symbol="G", enabled=True, threshold=20.0),
-        MetricSpec(symbol="SN", enabled=True),
-        MetricSpec(symbol="SN24+", enabled=True),
-        MetricSpec(symbol="SFL", enabled=True),
+        MetricSpec(symbol="SD", enabled=True),
+        MetricSpec(symbol="NS24+", enabled=True),
+        MetricSpec(symbol="SL", enabled=True),
         MetricSpec(symbol="AV", enabled=True),
         MetricSpec(symbol="WC", enabled=True),
     ]

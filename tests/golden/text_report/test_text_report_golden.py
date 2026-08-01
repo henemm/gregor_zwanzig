@@ -69,9 +69,10 @@ def _stubaier_token_line() -> TokenLine:
         MetricSpec(symbol="D", enabled=True),
         MetricSpec(symbol="W", enabled=True, threshold=10.0),
         MetricSpec(symbol="G", enabled=True, threshold=20.0),
-        MetricSpec(symbol="SN", enabled=True),
-        MetricSpec(symbol="SN24+", enabled=True),
-        MetricSpec(symbol="SFL", enabled=True),
+        # #1435 E3b: Register-Kuerzel (SD/NS24+/SL) statt SN/SN24+/SFL.
+        MetricSpec(symbol="SD", enabled=True),
+        MetricSpec(symbol="NS24+", enabled=True),
+        MetricSpec(symbol="SL", enabled=True),
         MetricSpec(symbol="AV", enabled=True),
         MetricSpec(symbol="WC", enabled=True),
     ]

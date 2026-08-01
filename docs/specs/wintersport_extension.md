@@ -2,9 +2,9 @@
 entity_id: wintersport_extension
 type: feature
 created: 2025-12-27
-updated: 2025-12-27
+updated: 2026-08-01
 status: draft
-version: "1.0"
+version: "1.1"
 tags: [wintersport, snow, avalanche, skiing]
 ---
 
@@ -227,19 +227,23 @@ TA_30MIN_MEAN (°C) -> t2m_c
 > Truncation-Strategie und Datenquellen-Mapping sind ausschließlich in der
 > zentralen Spec geregelt.
 
-Wintersport-spezifische Tokens (optional, nur bei `trip.profile == "wintersport"`):
+Wintersport-spezifische Tokens (optional, nur bei `trip.profile == "wintersport"`).
+Die Kürzel stammen seit **2026-08-01 / #1435 E3b** aus dem zentralen Wetter-Register
+(`metric_catalog.sms_code`); vorher hiessen sie `SN`/`SN24+`/`SFL`. `SN` bezeichnet
+seitdem ausschliesslich die amtliche Schneewarnung
+(`docs/specs/modules/fix_1435_e3b_sms_kuerzel.md`):
 
 ```
-SN{cm}         # Schneehoehe gesamt
-SN24+{cm}      # Neuschnee 24h
-SFL{m}         # Schneefallgrenze
+SD{cm}         # Schneehoehe gesamt
+NS24+{cm}      # Neuschnee 24h
+SL{m}          # Schneefallgrenze
 AV{1-5}        # Lawinenstufe
 WC{temp}       # Wind Chill
 ```
 
 **Beispiel (gemäß sms_format.md v2.0 Reihenfolge):**
 ```
-Arlberg: N-12 D-5 SN180 SN24+25 SFL1800 AV3 W45@12 G78@14(85@16) WC-22
+Arlberg: N-12 D-5 SD180 NS24+25 SL1800 AV3 W45@12 G78@14(85@16) WC-22
 ```
 
 ---

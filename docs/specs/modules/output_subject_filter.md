@@ -106,7 +106,7 @@ Aus der `TokenLine.tokens` werden für das Subject **nur** folgende Tokens über
 | `TH:` (Vigilance) | optional | Thunderstorm-Vigilance, FR-only |
 | `HR:` (Vigilance) | optional | Heavy-Rain-Vigilance, FR-only — paarweise mit `TH:`, gefused (`HR:...TH:...`) |
 
-Alle anderen Tokens (`N`, `R`, `PR`, `TH+`, `Z:`, `M:`, `SN`, `SN24+`, `SFL`, `AV`, `WC`, `DBG`) werden **explizit weggelassen**. Begründung: Das Subject ist ein "Vorschau-Slot" mit ~78 Zeichen — es muss die wichtigsten Tageskennzahlen plus Risk vermitteln, nicht den vollständigen Forecast.
+Alle anderen Tokens (`N`, `R`, `PR`, `TH+`, `Z:`, `M:`, `SD`, `NS24+`, `SL`, `AV`, `WC`, `DBG`) werden **explizit weggelassen** (die drei Schnee-Kürzel hiessen bis #1435 E3b `SN`, `SN24+`, `SFL`; die Auswahl selbst ist unverändert). Begründung: Das Subject ist ein "Vorschau-Slot" mit ~78 Zeichen — es muss die wichtigsten Tageskennzahlen plus Risk vermitteln, nicht den vollständigen Forecast.
 
 Reihenfolge im Subject-Output entspricht der Whitelist (D → W → G → TH:/HR:).
 
