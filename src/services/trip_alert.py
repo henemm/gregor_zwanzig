@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 import logging
+import time
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import TYPE_CHECKING, List, Optional
 
@@ -29,6 +31,27 @@ if TYPE_CHECKING:
     from app.trip import Trip
 
 logger = logging.getLogger("trip_alert")
+
+# Gesamt-Zeitbudget je check_all_trips()-Lauf (Issue #1447): der
+# Go-Scheduler wartet pro Nutzer maximal 120s (scheduler.go:82) und bricht
+# danach die HTTP-Verbindung ab, ohne dass der Python-Lauf davon erfaehrt.
+# 90s Reserve gegenueber diesen 120s, analog FETCH_DEADLINE_SECONDS in
+# providers/meteofrance.py und providers/dwd.py.
+ALERT_RUN_DEADLINE_SECONDS = 90.0
+
+
+@dataclass(frozen=True)
+class AlertCheckRunResult:
+    """Ergebnis eines check_all_trips()-Laufs (Issue #1447 Teil A) statt des
+    frueheren blossen int-Rueckgabewerts -- macht Teilerfolg (Deadline-
+    Abbruch) explizit sichtbar statt ihn in einer einzelnen Zahl zu
+    verstecken."""
+
+    alerts_sent: int
+    checked: int
+    skipped: int
+    duration_s: float
+    hit_deadline: bool
 
 
 def radar_alert_due(result: object, threshold_min: int) -> bool:
@@ -272,15 +295,24 @@ class TripAlertService:
         )
         return DeviationAlertEngine._select_detector(config)
 
-    def check_all_trips(self) -> int:
+    def check_all_trips(self) -> AlertCheckRunResult:
         """
         Check all active trips for weather changes and send alerts.
 
         Called by scheduler every 30 minutes.
         Only checks trips that have at least one stage today or in the future.
 
+        Issue #1447 (Teil A): begrenzt die Gesamtlaufzeit eines Laufs auf
+        ALERT_RUN_DEADLINE_SECONDS — deutlich unter den 120s, die der
+        Go-Scheduler pro Nutzer wartet, bevor er die HTTP-Verbindung abbricht.
+        Wird die Obergrenze vor der naechsten Tour bereits ueberschritten,
+        endet der Lauf sofort; bereits geprüfte Touren bleiben unveraendert,
+        die verbleibenden zaehlen als uebersprungen.
+
         Returns:
-            Number of alerts sent
+            AlertCheckRunResult mit Anzahl versendeter Alarme, geprueften
+            und uebersprungenen Touren, Gesamtlaufzeit und ob die
+            Zeitobergrenze den Lauf beendet hat.
         """
         from datetime import date as date_type
 
@@ -288,7 +320,17 @@ class TripAlertService:
 
         today = date_type.today()
         alerts_sent = 0
-        for trip in load_all_trips(user_id=self._user_id):
+        checked = 0
+        hit_deadline = False
+        run_started_at = time.monotonic()
+        deadline_at = run_started_at + ALERT_RUN_DEADLINE_SECONDS
+        trips = list(load_all_trips(user_id=self._user_id))
+
+        for trip in trips:
+            if time.monotonic() > deadline_at:
+                hit_deadline = True
+                break
+            checked += 1
             # Issue #222 W1: Trips with active alert_rules must be checked even if
             # report_config is missing or alert_on_changes=False — alert_rules is the
             # new source-of-truth (disable via rule.enabled=False).
@@ -359,7 +401,28 @@ class TripAlertService:
             except Exception as e:
                 logger.error(f"Alert check failed for trip {trip.id}: {e}")
 
-        return alerts_sent
+        skipped = len(trips) - checked
+        duration_s = time.monotonic() - run_started_at
+        if hit_deadline:
+            # Kein stilles Weglassen (ADR-0018 sinngemaess): der Abbruch
+            # muss sichtbar sein, inklusive Obergrenze und geprueft/uebersprungen.
+            logger.warning(
+                f"check_all_trips: Zeitobergrenze ({ALERT_RUN_DEADLINE_SECONDS}s) "
+                f"ueberschritten fuer user_id={self._user_id} — "
+                f"checked={checked} skipped={skipped}"
+            )
+        logger.info(
+            f"check_all_trips: Lauf beendet nach {duration_s:.3f}s fuer "
+            f"user_id={self._user_id} (checked={checked} skipped={skipped} "
+            f"alerts_sent={alerts_sent})"
+        )
+        return AlertCheckRunResult(
+            alerts_sent=alerts_sent,
+            checked=checked,
+            skipped=skipped,
+            duration_s=duration_s,
+            hit_deadline=hit_deadline,
+        )
 
     def _get_cached_weather(self, trip: "Trip") -> Optional[List[SegmentWeatherData]]:
         """

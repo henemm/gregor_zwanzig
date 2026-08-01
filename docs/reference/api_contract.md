@@ -1141,6 +1141,89 @@ Triggers immediate test briefing send for one trip. Returns success/failure base
 
 ---
 
+## 14.6) Alert-Checks Trigger Endpoint (Issue #1447 Scheibe S1)
+
+Triggers `TripAlertService.check_all_trips()` for one user. Called by the Go
+scheduler every 30 minutes. Since Issue #1447 (S1), the run is bounded by a
+hard time budget (`ALERT_RUN_DEADLINE_SECONDS = 90.0`, `src/services/trip_alert.py`)
+— well under the 120s the Go scheduler's shared `http.Client` waits per user
+before aborting the request. The response now reflects whether the run
+completed fully or was cut off by that budget.
+
+**Handler:** `api/routers/scheduler.py::trigger_alert_checks`
+
+### POST /api/scheduler/alert-checks
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `user_id` | string | yes | User identifier (multi-tenant scoping) |
+
+**Response 200 — full run:**
+
+```json
+{
+  "status": "ok",
+  "count": 2,
+  "checked": 5,
+  "skipped": 0,
+  "duration_s": 1.34
+}
+```
+
+**Response 200 — run aborted by the time budget:**
+
+```json
+{
+  "status": "partial",
+  "count": 1,
+  "checked": 3,
+  "skipped": 2,
+  "duration_s": 90.02,
+  "reason": "deadline"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | `"ok"` (full run) or `"partial"` (deadline hit) |
+| `count` | int | Alerts actually sent (`AlertCheckRunResult.alerts_sent`) |
+| `checked` | int | Trips actually checked before the run ended |
+| `skipped` | int | Trips not reached because the deadline was hit (0 on a full run) |
+| `duration_s` | float | Actual wall-clock runtime of this run |
+| `reason` | string | Present only when `status: "partial"` — currently always `"deadline"` |
+
+**Known limitation (documented, not fixed by this endpoint):** the Go
+scheduler (`internal/scheduler/scheduler.go`) only evaluates the `failed`
+field of this response, which this endpoint never sets. A `"partial"`
+response therefore still records as `Status: "ok"` in
+`/api/scheduler/status` — the Go-side evaluation of `status`/`reason` is
+Scheibe S2 (separate spec), not part of S1. Until then, the WARNING/INFO
+log lines from `configure_logging()` (see below) are the only visible
+signal of a deadline abort.
+
+**Root-Logger configuration (Issue #1447 Teil B):** `api/main.py::configure_logging()`
+now configures the Python-Core root logger at import time (previously
+unconfigured — every `logger.info`/`.warning` call from `src/` was silently
+dropped). Minimum visible level is controlled via the `GZ_LOG_LEVEL`
+environment variable (default `INFO`); format includes timestamp, level and
+module name. Does not affect uvicorn's own `uvicorn`/`uvicorn.error`/
+`uvicorn.access` loggers (configured separately by uvicorn, `propagate=False`).
+
+**Side effect and mitigation (Adversary finding F001):** activating the root
+logger also makes third-party library INFO/DEBUG lines visible. `httpx`
+logs the full request URL on every call, and the Telegram Bot API encodes
+the access token as a URL path segment (`.../bot{token}/sendMessage`) — the
+Telegram bot token would otherwise have leaked in cleartext into the process
+log (`journalctl -u gregor-python`) on every alert and every briefing.
+`configure_logging()` therefore pins `httpx` and `httpcore` to `WARNING`
+unconditionally, regardless of `GZ_LOG_LEVEL` (including `DEBUG`). Covered by
+`tests/unit/test_logging_configuration.py` (real Telegram API call against a
+local test socket, asserts a placeholder token never appears in captured log
+output).
+
+---
+
 ## 15) Metric Catalog Endpoint (Issue #435)
 
 Provides metadata about available weather metrics, including per-metric format modes.
@@ -3109,6 +3192,19 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-08-01: Issue #1447 Scheibe S1 — `POST /api/scheduler/alert-checks`
+  (Section 14.6, neu dokumentiert) bekommt eine harte Zeitobergrenze
+  (`ALERT_RUN_DEADLINE_SECONDS = 90.0`, deutlich unter den 120s des
+  Go-Client-Timeouts) und meldet einen Deadline-Abbruch jetzt als
+  `status: "partial"` mit `checked`/`skipped`/`reason` statt unverändert
+  `status: "ok"`. `TripAlertService.check_all_trips()` liefert dafür ein
+  `AlertCheckRunResult` statt eines blossen `int`. Zusätzlich konfiguriert
+  `api/main.py::configure_logging()` erstmals den Python-Core-Root-Logger
+  (Stufe über `GZ_LOG_LEVEL`) — vorher wurden alle `logger.info`/`.warning`-
+  Zeilen aus `src/` verworfen. `httpx`/`httpcore` fest auf `WARNING`
+  gehalten (Adversary-Befund F001 — sonst Telegram-Bot-Token im Log, s.
+  Section 14.6). ADR-0038. Der Go-Scheduler wertet die neuen
+  Felder noch nicht aus (Scheibe S2, separate Spec).
 - 2026-07-31: Issue #1435 Etappe E1a-1 — Alarmfähigkeit wird eine
   Eigenschaft des zentralen Wetter-Namensregisters. `MetricDefinition`
   bekommt zwei neue Felder, `alert_metrics` (Auswertung → absolute

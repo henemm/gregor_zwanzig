@@ -274,5 +274,5 @@ def test_trip_alert_check_all_trips_handles_stageless_trip_without_crash(tmp_pat
     service = TripAlertService(user_id="testuser-1250-s4-stageless")
     # Darf keine Exception werfen (insbesondere kein
     # TypeError: '<' not supported between instances of 'NoneType' and 'date').
-    sent = service.check_all_trips()
-    assert sent == 0
+    result = service.check_all_trips()
+    assert result.alerts_sent == 0

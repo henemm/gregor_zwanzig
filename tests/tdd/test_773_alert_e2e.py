@@ -276,7 +276,7 @@ def test_ac3_change_alert_real_e2e_imap(caplog):
         service.clear_throttle(trip_id)
 
         with caplog.at_level(logging.ERROR, logger="trip_alert"):
-            sent = service.check_all_trips()
+            sent = service.check_all_trips().alerts_sent
         assert sent >= 1, (
             "Reale Alert-Kette hat keinen Alert versendet — Snapshot-Delta wurde "
             "nicht als signifikant erkannt oder Versand schlug fehl."

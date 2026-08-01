@@ -562,7 +562,8 @@ class TestF001OfficialTriggerViaCheckAllTrips:
                 mail_sink=lambda subject, body: mail_calls.append((subject, body)),
             )
 
-            alerts_sent = svc.check_all_trips()
+            result = svc.check_all_trips()
+            alerts_sent = result.alerts_sent
 
             assert counting_source.fetch_calls >= 1, (
                 "check_official_alert_triggers() wurde nie erreicht — der "

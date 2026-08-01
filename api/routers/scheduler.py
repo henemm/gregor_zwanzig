@@ -44,12 +44,27 @@ def trigger_trip_reports(hour: Optional[int] = None, user_id: str = Query(...)):
 
 @router.post("/alert-checks")
 def trigger_alert_checks(user_id: str = Query(...)):
-    """Trigger weather change alert checks."""
+    """Trigger weather change alert checks.
+
+    Issue #1447 (S1): ``check_all_trips()`` liefert seit dieser Scheibe ein
+    ``AlertCheckRunResult`` statt eines blossen ``int`` — bei Abbruch durch
+    die Zeitobergrenze meldet die Antwort ``status: "partial"`` inkl.
+    ``checked``/``skipped``/``reason``, ansonsten unveraendert ``status: "ok"``.
+    """
     from services.trip_alert import TripAlertService
 
     service = TripAlertService(user_id=user_id)
-    count = service.check_all_trips()
-    return {"status": "ok", "count": count}
+    result = service.check_all_trips()
+    response = {
+        "status": "partial" if result.hit_deadline else "ok",
+        "count": result.alerts_sent,
+        "checked": result.checked,
+        "skipped": result.skipped,
+        "duration_s": result.duration_s,
+    }
+    if result.hit_deadline:
+        response["reason"] = "deadline"
+    return response
 
 
 @router.post("/compare-alert-checks")
