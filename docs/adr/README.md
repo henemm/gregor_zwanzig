@@ -103,3 +103,4 @@ bzw. in den Specs unter `docs/specs/`.
 | [0038](0038-zeitgrenze-je-nutzerlauf-unter-aufrufer-wartezeit.md) | Jeder wiederkehrende Job-Lauf bekommt eine Zeitgrenze unter der Wartezeit seines Aufrufers (Issue #1447) | Akzeptiert |
 | [0039](0039-amtliche-warnungen-aus-kontingentfreiem-feed.md) | Amtliche Warnungen kommen aus dem kontingentfreien MeteoAlarm-Feed statt aus der mengenbegrenzten EDR-Index-API (Issues #1445, #1397) | Akzeptiert |
 | [0040](0040-schwellen-alarm-additiver-alarm-typ.md) | Der nutzerkonfigurierte Schwellen-Alarm ist ein additiver zweiter Alarm-Typ neben dem Abweichungs-Wächter (Issue #1444) | Akzeptiert |
+| [0041](0041-zustaendigkeit-warn-quellen-drei-muster.md) | Zuständigkeit einer Warn-Quelle wird nach Art des Endpunkts bestimmt — drei Muster statt einheitlicher Geometrie (Issues #1397 Defekt 2, #1400, #1445) | Akzeptiert |
