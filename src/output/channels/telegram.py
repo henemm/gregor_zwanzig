@@ -18,6 +18,13 @@ MAX_MESSAGE_LENGTH = 4096
 # Issue #1370: Fallback-Wartezeit, wenn eine 429-Antwort keinen lesbaren
 # `parameters.retry_after` mitliefert. Wird ebenfalls gedeckelt.
 DEFAULT_RETRY_AFTER_SECONDS = 1.0
+# Fix #1448 S3: harte Wall-Clock-Obergrenze fuer _reserve_send_slot() --
+# analog FETCH_DEADLINE_SECONDS (dwd.py:69): im Normalfall wartet die Bremse
+# GAR NICHT (unter telegram_rate_limit_max_per_window Nachrichten wird
+# sofort gesendet). 30s treffen nur den echten Stau und bleiben deutlich
+# unter dem 90s-Alarm-Lauf-Budget (ALERT_RUN_DEADLINE_SECONDS,
+# trip_alert.py:40, #1447 S1).
+SEND_SLOT_MAX_WAIT_SECONDS = 30.0
 # Kleinste Schlafdauer im Warteschleifen-Durchlauf — verhindert Busy-Waiting,
 # ohne den Normalfall (kein Warten) zu beruehren.
 _MIN_SLEEP_SECONDS = 0.005
@@ -217,11 +224,25 @@ class TelegramOutput:
         Thread-Sicherheit: der Lock schuetzt ausschliesslich die Buchfuehrung;
         geschlafen wird ausserhalb der kritischen Sektion, danach wird erneut
         geprueft. Sonst blockierte ein wartender Chat alle anderen.
+
+        Fix #1448 S3: harte Wall-Clock-Obergrenze ``SEND_SLOT_MAX_WAIT_SECONDS``
+        — ohne sie koennte die Schleife bei anhaltendem Stau unbegrenzt weiter
+        schlafen. Jede geplante Schlafdauer wird auf die verbleibende Zeit bis
+        zur Frist gedeckelt, damit der Deadline-Check vor dem NAECHSTEN
+        ``time.sleep`` tatsaechlich greift, statt von einem einzelnen, zu
+        langen Schlaf ueberrannt zu werden.
+
+        Raises:
+            OutputError: wenn die Frist ueberschritten wird, BEVOR ein Slot
+                frei wurde — die betroffene Nachricht wird nicht gesendet.
         """
         max_per_window = int(getattr(self._settings, "telegram_rate_limit_max_per_window", 18))
         window = float(getattr(self._settings, "telegram_rate_limit_window_seconds", 60))
         if max_per_window <= 0 or window <= 0:
             return
+
+        start = time.monotonic()
+        deadline_at = start + SEND_SLOT_MAX_WAIT_SECONDS
 
         while True:
             with TelegramOutput._rate_limit_lock:
@@ -243,11 +264,26 @@ class TelegramOutput:
                     stamps.append(now)
                     return
                 wait = window - (now - stamps[0])
+
+            remaining = deadline_at - time.monotonic()
+            if remaining <= 0:
+                waited = time.monotonic() - start
+                logger.warning(
+                    "Telegram-Drossel: Abbruch nach %.2fs Wartezeit (chat=%s) "
+                    "-- SEND_SLOT_MAX_WAIT_SECONDS (%.0fs) ueberschritten, "
+                    "Nachricht wird NICHT gesendet",
+                    waited, chat_key, SEND_SLOT_MAX_WAIT_SECONDS,
+                )
+                raise OutputError(
+                    "telegram",
+                    f"_reserve_send_slot timed out after {waited:.2f}s "
+                    f"(chat={chat_key})",
+                )
             logger.info(
                 "Telegram-Drossel: warte %.2fs vor dem naechsten Schreibzugriff "
                 "(chat=%s, %d/%ds)", wait, chat_key, max_per_window, window,
             )
-            time.sleep(max(wait, _MIN_SLEEP_SECONDS))
+            time.sleep(max(min(wait, remaining), _MIN_SLEEP_SECONDS))
 
     def _retry_after_seconds(self, response: httpx.Response) -> float:
         """Wartezeit aus einer 429-Antwort (Issue #1370). Gelesen wird der

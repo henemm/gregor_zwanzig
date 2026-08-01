@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import logging
 import statistics
+import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
@@ -60,6 +61,17 @@ AIR_QUALITY_HOST = "https://air-quality-api.open-meteo.com"
 ENSEMBLE_BASE_HOST = "https://ensemble-api.open-meteo.com"
 TIMEOUT = 30.0
 ENSEMBLE_TIMEOUT = 15.0  # Issue #121: shorter timeout for ensemble (best-effort)
+
+# Fix #1448 S3: Gesamt-Zeitbudget je _request()-Aufruf (analog dwd.py:69 /
+# meteofrance.py:85), aber bewusst NICHT 180s: open-meteo ist die Hauptquelle
+# und wird JE SEGMENT aufgerufen (nicht selten wie ein Fallback); der
+# Normalfall liegt unter 1s (#1447-Analyse: hunderte Laeufe, Ausreisser
+# 27s/49s), 60s sind ~60-fache Reserve und bleiben unter den 90s des
+# Alarm-Laufs (ALERT_RUN_DEADLINE_SECONDS, trip_alert.py:40). Greift bereits
+# INNERHALB der tenacity-Wiederholkette eines einzelnen _request-Aufrufs,
+# nicht erst zwischen Modell-Kandidaten (PO-Vorgabe #1448, s.
+# _resolve_request_deadline/_stop_at_request_deadline unten).
+FETCH_DEADLINE_SECONDS = 60.0
 
 # Issue #338: Diagnose-Zähler — append-only JSONL für jeden ausgehenden Abruf.
 # Reine Observability, fail-soft. In .gitignore (data/diagnostics/).
@@ -227,6 +239,36 @@ def _is_retryable_error(exception: Exception) -> bool:
         if isinstance(exception.__cause__, (httpx.ConnectError, httpx.ReadTimeout)):
             return True
     return False
+
+
+def _resolve_request_deadline(retry_state) -> None:
+    """tenacity ``before``-Hook (Fix #1448 S3): fixiert ``deadline_at`` fuer
+    die GESAMTE Wiederholkette EINES ``_request``-Aufrufs, nicht nur den
+    ersten Versuch. ``before`` feuert vor JEDEM Versuch (auch dem ersten) und
+    ``retry_state.kwargs`` ist dieselbe dict-Instanz, mit der tenacity jeden
+    weiteren Versuch aufruft — eine hier vorgenommene Mutation bleibt ueber
+    die ganze Kette hinweg stabil.
+
+    Team-Lead-Praezisierung (Spec Implementation Details B): fehlt
+    ``deadline_at`` (None), wird die Ersatzfrist ``time.monotonic() +
+    FETCH_DEADLINE_SECONDS`` GENAU EINMAL gebildet — wuerde sie bei jedem
+    Versuch neu berechnet, waere die Deadline eine rollende Frist statt einer
+    festen Obergrenze und damit wirkungslos.
+    """
+    if retry_state.kwargs.get("deadline_at") is None:
+        retry_state.kwargs["deadline_at"] = time.monotonic() + FETCH_DEADLINE_SECONDS
+
+
+def _stop_at_request_deadline(retry_state) -> bool:
+    """Zeitbasierte Stop-Bedingung (Fix #1448 S3), per ``|`` mit
+    ``stop_after_attempt(RETRY_ATTEMPTS)`` zu ``stop_any`` kombiniert (Spec
+    Implementation Details B, Punkt 2). Liest dieselbe von
+    ``_resolve_request_deadline`` fixierte ``deadline_at`` — Versuchszahl UND
+    verstrichene Zeit begrenzen die Kette gemeinsam, nicht nur die
+    Versuchszahl allein.
+    """
+    deadline_at = retry_state.kwargs.get("deadline_at")
+    return deadline_at is not None and time.monotonic() >= deadline_at
 
 
 class OpenMeteoProvider:
@@ -503,14 +545,16 @@ class OpenMeteoProvider:
             call_log.DIAGNOSTICS_PATH = prev
 
     @retry(
-        stop=stop_after_attempt(RETRY_ATTEMPTS),
+        stop=stop_after_attempt(RETRY_ATTEMPTS) | _stop_at_request_deadline,
         wait=wait_exponential(multiplier=1, min=RETRY_WAIT_MIN, max=RETRY_WAIT_MAX),
         retry=retry_if_exception(_is_retryable_error),
+        before=_resolve_request_deadline,
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
     def _request(
-        self, endpoint: str, params: Dict[str, Any], base_host: Optional[str] = None
+        self, endpoint: str, params: Dict[str, Any], base_host: Optional[str] = None,
+        deadline_at: Optional[float] = None,
     ) -> Dict[str, Any]:
         """
         Make HTTP request to Open-Meteo API with retry logic.
@@ -520,21 +564,44 @@ class OpenMeteoProvider:
         - Connection errors
         - Read timeouts
 
+        Fix #1448 S3: begrenzt durch ``FETCH_DEADLINE_SECONDS`` — sowohl der
+        HTTP-Timeout jedes einzelnen Versuchs als auch die gesamte
+        Wiederholkette dieses Aufrufs sind auf die Restzeit bis
+        ``deadline_at`` gedeckelt (kombinierte tenacity-``stop``-Bedingung,
+        ``_stop_at_request_deadline``).
+
         Args:
             endpoint: API endpoint path (e.g., "/v1/meteofrance")
             params: Query parameters
             base_host: Override BASE_HOST (e.g., AIR_QUALITY_HOST)
+            deadline_at: Absolute monotone Frist. Fehlt sie, bildet der
+                ``before``-Hook ``_resolve_request_deadline`` intern
+                ``time.monotonic() + FETCH_DEADLINE_SECONDS`` — dient dazu,
+                EINE gemeinsame Frist ueber mehrere Kandidaten hinweg
+                durchzureichen (s. ``fetch_forecast``), ist aber NICHT der
+                Schalter, der die Absicherung ueberhaupt erst einschaltet
+                (PO-Vorgabe #1448): sie greift auch bei Aufrufen ohne
+                explizites ``deadline_at``.
 
         Returns:
             JSON response as dict
 
         Raises:
-            ProviderRequestError: On non-retryable errors or after max retries
+            ProviderRequestError: On non-retryable errors, after max retries,
+                or after FETCH_DEADLINE_SECONDS is exceeded
         """
+        restzeit = deadline_at - time.monotonic() if deadline_at is not None else None
+        if restzeit is not None and restzeit <= 0:
+            raise ProviderRequestError(
+                "openmeteo",
+                f"Zeitbudget (FETCH_DEADLINE_SECONDS={FETCH_DEADLINE_SECONDS:.0f}s) "
+                "vor diesem Versuch bereits aufgebraucht",
+            )
+        request_timeout = TIMEOUT if restzeit is None else min(TIMEOUT, restzeit)
         host = base_host or BASE_HOST
         url = f"{host}{endpoint}"  # host+path ohne Query (params separat)
         try:
-            response = self._client.get(url, params=params)
+            response = self._client.get(url, params=params, timeout=request_timeout)
             # Issue #338: Genau eine Zeile pro get() — der echte Status (inkl.
             # 429) ist hier bekannt; im HTTPStatusError-Zweig NICHT erneut loggen.
             self._log_api_call(url, response.status_code)
@@ -826,6 +893,10 @@ class OpenMeteoProvider:
             # original select_model semantics (raises ProviderError).
             candidates = [self.select_model(location.latitude, location.longitude)]
         primary_id = candidates[0][0]
+        # Fix #1448 S3: EINE gemeinsame Frist ueber die gesamte
+        # Kandidaten-Schleife (PO-Vorgabe), statt dass jeder Kandidat seine
+        # eigene volle FETCH_DEADLINE_SECONDS-Frist neu beginnt.
+        deadline_at = time.monotonic() + FETCH_DEADLINE_SECONDS
 
         # Build request parameters (no "model" param needed — endpoint determines model)
         params = {
@@ -893,7 +964,9 @@ class OpenMeteoProvider:
             try:
                 if first_request:
                     first_request = False
-                    response_data = self._request(cand_endpoint, params)
+                    response_data = self._request(
+                        cand_endpoint, params, deadline_at=deadline_at
+                    )
                 else:
                     # `retry_with()` on a bound method proxies to the
                     # underlying (unbound) decorated function, so `self`
@@ -901,7 +974,7 @@ class OpenMeteoProvider:
                     response_data = self._request.retry_with(
                         stop=stop_after_attempt(FALLBACK_RETRY_ATTEMPTS),
                         wait=wait_none(),
-                    )(self, cand_endpoint, params)
+                    )(self, cand_endpoint, params, deadline_at=deadline_at)
             except ProviderRequestError as e:
                 status = e.status_code
                 if status is not None and 400 <= status < 500:
