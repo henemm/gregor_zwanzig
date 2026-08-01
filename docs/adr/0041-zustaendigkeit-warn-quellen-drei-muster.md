@@ -50,6 +50,15 @@ Die Rechteck-Konstanten aus `radar_service.py` bleiben als **Vorfilter** erlaubt
 
 - **#1397 Defekt 2 gilt über Muster B als erfüllt.** Die wörtliche Forderung „`covers()` bildet das echte Staatsgebiet ab" wird damit **bewusst nicht** umgesetzt; `geosphere_warn.covers()` behält die INCA-Bbox als Vorfilter. Nutzersichtbar ist der Defekt behoben (kein falscher Ausfallhinweis), der Fehlverbrauch fiel von 308 auf 23 Abrufe/Tag gegen einen Dienst **ohne** Mengenbegrenzung.
 - **Der Restverbrauch ist akzeptiert, nicht übersehen.** Muster B verhindert Fehlabrufe nicht vollständig, es dämpft sie über den Cache der „nicht zuständig"-Antwort. Wird dieser Rest je teuer — etwa weil ein Dienst kontingentiert wird —, ist das ein neuer Befund, kein Rückfall.
-- **Zwei Quellen sind noch ungeprüft:** `vigilance` und `meteo_forets` benutzen weiterhin AROME-Rechtecke. In #1397 ausdrücklich als „mitprüfen, nicht zwingend mitfixen" geführt; nach diesem ADR ist die offene Frage konkret: Können sie für einen nicht-französischen Punkt einen Ausfall-Hinweis auslösen? Wird als eigener Befund verfolgt, nicht in #1397.
+- **`vigilance` und `meteo_forets` fallen unter Muster C — am 2026-08-01 nachgemessen, kein Handlungsbedarf.** Beide behalten ihr AROME-Rechteck (`covers()` = `True` für Mailand, Genf, Turin, Barcelona), lösen aber für keinen dieser Punkte einen Ausfall-Hinweis aus. Messung über den vollen Produktivpfad mit echtem Schlüssel:
+
+  ```
+  Mailand (IT)    5 Warnungen, unavailable=False, Quellen: [meteoalarm]
+  Barcelona (ES)  0 Warnungen, unavailable=False, Quellen: []
+  Genf (CH)       3 Warnungen, unavailable=False, Quellen: [meteo_forets, meteofrance_vigilance]
+  Nizza (FR)      5 Warnungen, unavailable=False, Quellen: [meteo_forets, meteofrance_vigilance]  (Kontrolle)
+  ```
+
+  Mailand und Barcelona bekommen **keine** französischen Warnungen mehr — der #1400-Fix an `lookup_department()` hält. Dass Genf welche bekommt, ist die dort **dokumentierte** PO-Entscheidung (5-km-Grenzpuffer, `_NEAR_BORDER_THRESHOLD_KM`, namentlich mit Basel 1,81 km / Genf 4,33 km / Saarbrücken 3,27 km als vertretbar festgehalten — „Wetter hält sich nicht an Staatsgrenzen"), kein Rückfall. Die in #1397 als „mitprüfen, nicht zwingend mitfixen" geführte Frage ist damit erledigt.
 - **Jeder neue Warn-Quellen-Adapter** beantwortet die Prüffrage oben in seiner Spec. Das ist die Gegenmaßnahme gegen den in #1397 S4 belegten Rückfall.
 - ADR-0018 (Fail-soft) bleibt unberührt: Auch unter Muster B wirft `fetch()` nie, sondern liefert `[]`.
