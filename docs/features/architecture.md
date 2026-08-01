@@ -271,9 +271,14 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
 
 7. **Wertebereiche-Editor Single-Source `corridorInside()` (Issue #1231 Slice 1, C5)**
    - Vereint Trip-Alert-Schwellwerte (`AlertRule`) und Compare-Idealbereiche
-     (`display_config["ideal_ranges"]`) auf einer gemeinsamen `Corridor`-Datenstruktur; `notify`
-     bleibt reiner an/aus-Schalter auf `metric_alert_levels`, greift nicht in den
-     Δ-Wächter-Mechanismus selbst ein.
+     (`display_config["ideal_ranges"]`) auf einer gemeinsamen `Corridor`-Datenstruktur.
+   - **Seit #1444 S1 (2026-08-01) steuert `notify` einen eigenen Wächter** (ADR-0040):
+     `services/corridor_threshold.py::evaluate_corridor_thresholds()` prüft die
+     Korridore je Alarm-Lauf gegen die frische Vorhersage und meldet, sobald eine
+     Grenze im aktiven Etappenfenster gerissen ist — unabhängig davon, ob sich die
+     Vorhersage geändert hat. Der Δ-Wächter bleibt davon unberührt; beide Treffer
+     desselben Laufs gehen gebündelt in EINE Nachricht. Vorher war `notify` ein
+     reiner an/aus-Schalter auf `metric_alert_levels` ohne eigene Wirkung.
    - Match-Logik `corridorInside(value, min, max)` wortgleich an zwei Stellen: TS
      `frontend/src/lib/shared/corridor-editor/corridorMatch.ts` und Python
      `src/services/corridor_match.py::corridor_inside()` (Consumer:

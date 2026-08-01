@@ -3131,9 +3131,22 @@ die Python-`RiskEngine` — künftige Single Source of Truth der Cockpit-Risiko-
 Section 22) und Compare-Idealbereiche (`display_config["ideal_ranges"]`, Section 16) auf **einer**
 gemeinsamen, rein additiven Datenstruktur. User-facing Label: „Wertebereich(e)"; Code-/Datenterm
 bleibt `corridor`. Ein `Corridor` trägt zwei unabhängig kombinierbare Wirkungen: `notify` (warnen,
-wenn ein Wert den Bereich verlässt — steuert weiterhin ausschließlich den bestehenden
-Δ-Wächter-Mechanismus, `AlertRule`/`metric_alert_levels` bleiben technische Wahrheit) und `mark`
-(im Briefing markieren, solange ein Wert im Bereich liegt).
+wenn ein Wert den Bereich verlässt) und `mark` (im Briefing markieren, solange ein Wert im
+Bereich liegt).
+
+**`notify` ist seit #1444 S1 (2026-08-01) wirksam — ADR-0040.** Bis dahin las den Schalter
+kein Dienst; er steuerte nur mittelbar `metric_alert_levels`. Jetzt speist er einen eigenen,
+zweiten Alarm-Typ neben dem Δ-Wächter: `services/corridor_threshold.py::evaluate_corridor_thresholds()`
+prüft je Alarm-Lauf die Korridore mit `notify: true` gegen die **frische** Vorhersage der Etappen
+im aktiven Zeitfenster (`end_time >= jetzt` und `start_time.date() <= heute`) und meldet eine
+gerissene Grenze **auch bei unveränderter Vorhersage**. Entprellt über einen eigenen
+Melde-Gedächtnis-Schlüsselraum `corridor:<metrik>:<etappe>` (erneute Meldung nur bei Verschärfung
+oder nach zwischenzeitlicher Entspannung); Ruhezeiten, Cooldown und Tages-Obergrenze gelten
+unverändert. Schwellen- und Δ-Treffer desselben Laufs gehen in EINE Nachricht. Eine Tour, deren
+einzige Alarmquelle Korridore mit `notify` sind, wird seither vom Lauf geprüft (vorher fiel sie
+durch den `has_active_rules`-Gate). Darstellung über einen eigenen Render-Vertrag
+(`CorridorEvent`, ADR-0013-Auflage) — kein `WeatherChange` mit `old_value=0.0`.
+Spec: `docs/specs/modules/feat_1444_s1_schwellen_alarm.md`.
 
 ```go
 // internal/model/trip.go + internal/model/compare_preset.go (Go)
