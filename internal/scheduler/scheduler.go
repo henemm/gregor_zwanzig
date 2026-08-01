@@ -8,6 +8,7 @@ import (
 	_ "time/tzdata" // Embed timezone data for portability
 
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -29,9 +30,27 @@ type Notifier func(sender, recipient, priority, subject, body string) error
 // jobResult tracks the last execution of a scheduled job.
 type jobResult struct {
 	Time   time.Time `json:"time"`
-	Status string    `json:"status"` // "ok" or "error"
+	Status string    `json:"status"` // "ok", "partial" (Issue #1447 S2a) or "error"
 	Error  string    `json:"error,omitempty"`
 }
+
+// jobOverlapState zaehlt Ticks, die wegen eines noch laufenden Vorgaengers
+// uebersprungen wurden — seit dem letzten TATSAECHLICH ausgefuehrten Lauf
+// dieses Jobs (Issue #1447 S2a). Waechst mit jedem weiteren Skip, wird bei
+// jedem echten Lauf (ok, partial ODER error) auf 0 zurueckgesetzt. Analog zu
+// zone_drift in #1434: kumulativer Zaehler + eigener Zeitstempel, damit
+// "einmal kurz uebersprungen" von "haengt seit N Ticks" unterscheidbar bleibt.
+type jobOverlapState struct {
+	SkippedSinceLastRun int        `json:"skipped_since_last_run"`
+	LastSkippedAt       *time.Time `json:"last_skipped_at,omitempty"`
+}
+
+// partialRunError signalisiert, dass ein Job-Lauf teilweise erfolgreich war
+// (status: "partial" ohne failed > 0 aus der Python-Antwort, Issue #1447 S1)
+// — recordRun verbucht das als jobResult.Status "partial", nicht "error".
+type partialRunError struct{ msg string }
+
+func (e *partialRunError) Error() string { return e.msg }
 
 // jobMeta holds the human-readable identity of a cron job.
 //
@@ -58,6 +77,20 @@ type Scheduler struct {
 	lastRuns                map[string]*jobResult
 	entryMap                map[cron.EntryID]jobMeta // maps cron EntryID → job identity
 
+	// overlapState verzeichnet uebersprungene Ticks je Job GETRENNT von
+	// lastRuns (Issue #1447 S2a): ein Skip darf den Zeitpunkt/Ausgang des
+	// zuletzt tatsaechlich ausgefuehrten Laufs nicht ueberschreiben, sonst
+	// verdeckt ein Dauerhaenger sich selbst hinter einem immer frischen
+	// "skipped"-Zeitstempel. Geschuetzt durch s.mu wie lastRuns.
+	overlapState map[string]*jobOverlapState
+
+	// jobLocksMu/jobLocks: lazy-initialisierte Sperren je jobID (Issue #1447
+	// S2a), analog zum onceMissingHB-Muster unten. TryLock() statt Lock() —
+	// ein blockierendes Lock() wuerde die Cron-Goroutine des zweiten Ticks
+	// anhalten statt den Tick zu ueberspringen.
+	jobLocksMu sync.Mutex
+	jobLocks   map[string]*sync.Mutex
+
 	// notifier delivers MQ messages (e.g. heartbeat-URL missing). Defaults to
 	// notify.SendMQ; tests inject their own.
 	notifier Notifier
@@ -83,6 +116,8 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		store:                   st,
 		lastRuns:                make(map[string]*jobResult),
 		entryMap:                make(map[cron.EntryID]jobMeta),
+		overlapState:            make(map[string]*jobOverlapState),
+		jobLocks:                make(map[string]*sync.Mutex),
 		notifier: func(sender, recipient, priority, subject, body string) error {
 			return notify.SendMQ(sender, recipient, priority, subject, body)
 		},
@@ -169,17 +204,33 @@ func (s *Scheduler) runForAllUsers(jobID, path string) error {
 		return nil
 	}
 
-	var firstErr error
+	// Issue #1447 S2a: Rangfolge error > partial > ok bei gemischten
+	// Nutzer-Ergebnissen — ein einzelner echter Fehler macht den gesamten
+	// Job-Lauf "error", auch wenn andere Nutzer nur "partial" waren.
+	var firstHardErr, firstPartialErr error
 	for _, uid := range userIDs {
-		if err := s.triggerEndpointForUser(path, uid); err != nil {
-			log.Printf("[scheduler] %s: user %s failed: %v", jobID, uid, err)
-			if firstErr == nil {
-				firstErr = err
-			}
-			// continue — do not stop other users
+		err := s.triggerEndpointForUser(path, uid)
+		if err == nil {
+			continue
 		}
+		var pe *partialRunError
+		if errors.As(err, &pe) {
+			log.Printf("[scheduler] %s: user %s partial: %v", jobID, uid, err)
+			if firstPartialErr == nil {
+				firstPartialErr = err
+			}
+			continue
+		}
+		log.Printf("[scheduler] %s: user %s failed: %v", jobID, uid, err)
+		if firstHardErr == nil {
+			firstHardErr = err
+		}
+		// continue — do not stop other users
 	}
-	return firstErr
+	if firstHardErr != nil {
+		return firstHardErr
+	}
+	return firstPartialErr // nil, falls kein Nutzer partial war -> "ok"
 }
 
 // briefingDispatch ist der vereinheitlichte stündliche Briefing-Einstieg
@@ -338,16 +389,71 @@ func (s *Scheduler) comparePresetsDaily() {
 	})
 }
 
+// jobLock returns the lazily-initialized per-jobID mutex (Issue #1447 S2a),
+// analog to the onceMissingHB lazy-init pattern above.
+func (s *Scheduler) jobLock(jobID string) *sync.Mutex {
+	s.jobLocksMu.Lock()
+	defer s.jobLocksMu.Unlock()
+	l, ok := s.jobLocks[jobID]
+	if !ok {
+		l = &sync.Mutex{}
+		s.jobLocks[jobID] = l
+	}
+	return l
+}
+
 // recordRun executes a job function and stores the result.
+//
+// Issue #1447 S2a: recordRun is the shared bottleneck of all nine scheduled
+// jobs. A per-jobID TryLock() prevents a job from overlapping with its own
+// still-running previous execution — a skipped tick is verbucht as a
+// separate, cumulative overlapState (NOT written into lastRuns[jobID]), so a
+// job that hangs indefinitely never looks "fresh" behind an always-recent
+// skip timestamp (#1434 pattern). TryLock (not Lock) is deliberate: a
+// blocking Lock() would stall the cron goroutine of the second tick instead
+// of skipping it, and robfig/cron would stack goroutines under frequent
+// overlap.
 func (s *Scheduler) recordRun(jobID string, fn func() error) {
+	lock := s.jobLock(jobID)
+	if !lock.TryLock() {
+		now := time.Now().In(s.cron.Location())
+		s.mu.Lock()
+		st, ok := s.overlapState[jobID]
+		if !ok {
+			st = &jobOverlapState{}
+			s.overlapState[jobID] = st
+		}
+		st.SkippedSinceLastRun++
+		st.LastSkippedAt = &now
+		n := st.SkippedSinceLastRun
+		s.mu.Unlock()
+		log.Printf("[scheduler] %s: previous run still in progress, "+
+			"skipping this tick (%d skipped since last executed run)", jobID, n)
+		return // lastRuns[jobID] bewusst NICHT angefasst
+	}
+	defer lock.Unlock()
+
 	err := fn()
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// Der Job lief gerade tatsaechlich (egal mit welchem Ausgang) — die
+	// Overlap-Zaehlung seit dem letzten ausgefuehrten Lauf beginnt neu.
+	if st, ok := s.overlapState[jobID]; ok {
+		st.SkippedSinceLastRun = 0
+	}
+
 	if err != nil {
-		log.Printf("[scheduler] %s failed: %v", jobID, err)
+		var pe *partialRunError
+		status := "error"
+		if errors.As(err, &pe) {
+			status = "partial"
+		} else {
+			log.Printf("[scheduler] %s failed: %v", jobID, err)
+		}
 		s.lastRuns[jobID] = &jobResult{
 			Time:   time.Now().In(s.cron.Location()),
-			Status: "error",
+			Status: status,
 			Error:  err.Error(),
 		}
 	} else {
@@ -361,7 +467,9 @@ func (s *Scheduler) recordRun(jobID string, fn func() error) {
 // triggerResponseBody mirrors the JSON body returned by Python trigger
 // endpoints. Issue #1012 (AC-5): only /api/scheduler/trip-reports currently
 // populates "failed" (> 0 on partial send failures); other endpoints omit it
-// or leave it at 0, so they are unaffected by the check below.
+// or leave it at 0, so they are unaffected by the check below. Issue #1447
+// S2a: "status" is now also read — "partial" without "failed" (today only
+// /api/scheduler/alert-checks, Scheibe S1) is classified as a partialRunError.
 type triggerResponseBody struct {
 	Status string `json:"status"`
 	Count  int    `json:"count"`
@@ -387,11 +495,23 @@ func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
 	// zählt das in "failed". Ohne diese Auswertung meldet recordRun() den
 	// Job fälschlich als "ok", obwohl kein Briefing zugestellt wurde.
 	var parsed triggerResponseBody
-	if jsonErr := json.Unmarshal(body, &parsed); jsonErr == nil && parsed.Failed > 0 {
-		return fmt.Errorf(
-			"%s?user_id=%s reported %d failed (status=%s, count=%d): %s",
-			path, userID, parsed.Failed, parsed.Status, parsed.Count, string(body),
-		)
+	if jsonErr := json.Unmarshal(body, &parsed); jsonErr == nil {
+		if parsed.Failed > 0 {
+			return fmt.Errorf(
+				"%s?user_id=%s reported %d failed (status=%s, count=%d): %s",
+				path, userID, parsed.Failed, parsed.Status, parsed.Count, string(body),
+			)
+		}
+		// Issue #1447 S2a: status="partial" ohne failed (Scheibe S1 —
+		// Alarm-Lauf durch die Zeitobergrenze abgebrochen) ist ein
+		// Teilerfolg, kein harter Fehler — recordRun() verbucht das als
+		// jobResult.Status "partial", nicht "error".
+		if parsed.Status == "partial" {
+			return &partialRunError{msg: fmt.Sprintf(
+				"%s?user_id=%s reported partial status (count=%d): %s",
+				path, userID, parsed.Count, string(body),
+			)}
+		}
 	}
 
 	log.Printf("[scheduler] %s?user_id=%s → %d", path, userID, resp.StatusCode)
@@ -469,6 +589,24 @@ func (s *Scheduler) warnMissingHeartbeatOnce(jobName string) {
 	})
 }
 
+// overlapField builds the "overlap" sibling field for a job (Issue #1447
+// S2a), or nil if no tick has been skipped since the last executed run —
+// "fehlender Block bedeutet Ruhe", analog zur zone_drift-Konvention aus
+// #1434. Caller must already hold s.mu (RLock or Lock).
+func (s *Scheduler) overlapField(jobID string) map[string]any {
+	st, ok := s.overlapState[jobID]
+	if !ok || st.SkippedSinceLastRun <= 0 {
+		return nil
+	}
+	overlap := map[string]any{
+		"skipped_since_last_run": st.SkippedSinceLastRun,
+	}
+	if st.LastSkippedAt != nil {
+		overlap["last_skipped_at"] = st.LastSkippedAt.Format(time.RFC3339)
+	}
+	return overlap
+}
+
 // Status returns current scheduler state for API exposure.
 func (s *Scheduler) Status() map[string]any {
 	s.mu.RLock()
@@ -499,6 +637,9 @@ func (s *Scheduler) Status() map[string]any {
 				} else {
 					subJob["last_run"] = nil
 				}
+				if overlap := s.overlapField(sub.id); overlap != nil {
+					subJob["overlap"] = overlap
+				}
 				jobs = append(jobs, subJob)
 			}
 			continue
@@ -518,6 +659,9 @@ func (s *Scheduler) Status() map[string]any {
 				}
 			} else {
 				job["last_run"] = nil
+			}
+			if overlap := s.overlapField(meta.id); overlap != nil {
+				job["overlap"] = overlap
 			}
 		} else {
 			job["id"] = int(e.ID)

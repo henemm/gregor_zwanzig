@@ -979,6 +979,20 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
         "status": "error",
         "error": "forecast_api_timeout"
       }
+    },
+    {
+      "id": "alert_checks",
+      "name": "Alert Checks (every 15 min)",
+      "next_run": "2026-08-01T13:15:00Z",
+      "last_run": {
+        "time": "2026-08-01T12:00:00Z",
+        "status": "ok",
+        "error": null
+      },
+      "overlap": {
+        "skipped_since_last_run": 3,
+        "last_skipped_at": "2026-08-01T13:00:00Z"
+      }
     }
   ]
 }
@@ -995,9 +1009,12 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
 | jobs[].name | string | Human-readable job name |
 | jobs[].next_run | datetime \| null | ISO-8601 UTC datetime of next scheduled run |
 | jobs[].last_run | object \| null | Metadata of last execution (null if never run) |
-| jobs[].last_run.time | datetime | ISO-8601 UTC timestamp of execution |
-| jobs[].last_run.status | enum | 'ok' or 'error' |
-| jobs[].last_run.error | string \| null | Error code/message if status='error' |
+| jobs[].last_run.time | datetime | ISO-8601 UTC timestamp of the last **actually executed** run — never overwritten by a skipped (overlapping) tick |
+| jobs[].last_run.status | enum | `ok`, `partial` (Issue #1447 S2a — a per-user run reported `status: "partial"` without `failed`, e.g. the alert-run deadline from S1) or `error` |
+| jobs[].last_run.error | string \| null | Error code/message if status='error' or 'partial' |
+| jobs[].overlap | object \| null (Issue #1447 S2a) | Present **only** when at least one tick has been skipped since the last executed run of this job, because the previous run of the same job ID was still in progress (`sync.Mutex.TryLock()` in `recordRun`). Absent field means no overlap is occurring — never an error signal. |
+| jobs[].overlap.skipped_since_last_run | int | Number of consecutive ticks skipped since the last executed run; resets to 0 (and the `overlap` field disappears) the next time the job actually runs, regardless of outcome |
+| jobs[].overlap.last_skipped_at | datetime | ISO-8601 UTC timestamp of the most recently skipped tick |
 
 **Error Responses:**
 
@@ -1193,7 +1210,16 @@ completed fully or was cut off by that budget.
 | `duration_s` | float | Actual wall-clock runtime of this run |
 | `reason` | string | Present only when `status: "partial"` — currently always `"deadline"` |
 
-**Known limitation (documented, not fixed by this endpoint):** the Go
+**Resolved by Scheibe S2a (Issue #1447):** the limitation described below no
+longer applies — `internal/scheduler/scheduler.go::triggerEndpointForUser`
+now also evaluates `status`. A `"partial"` response (without `failed`) is
+classified as a `partialRunError` and recorded as `Status: "partial"` in
+`/api/scheduler/status` (see §12). S2a additionally adds a per-job
+overlap-skip guard covering all nine scheduler jobs, not just
+`alert_checks` — see §12 for the `jobs[].overlap` field. Kept below for
+historical context (S1 was written and shipped before S2a).
+
+**Known limitation of S1 alone (superseded by S2a, see above):** the Go
 scheduler (`internal/scheduler/scheduler.go`) only evaluates the `failed`
 field of this response, which this endpoint never sets. A `"partial"`
 response therefore still records as `Status: "ok"` in
