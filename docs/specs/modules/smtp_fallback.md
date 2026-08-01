@@ -107,7 +107,7 @@ In `auth.go` und `auth_magic.go` wird `mail.Send(c, to, msg)` ersetzt durch `mai
 
 ## Acceptance Criteria
 
-- **AC-1:** Given GZ_SMTP_HOST=smtp.resend.com (nicht erreichbar) und GZ_IMAP_HOST=mail.henemm.com (erreichbar) / When EmailOutput.send() aufgerufen wird und alle 4 Resend-Versuche mit OSError fehlschlagen / Then wird die Mail trotzdem via Stalwart zugestellt und das Log enthält den Eintrag "[SMTP-FALLBACK]"
+- **AC-1:** Given GZ_SMTP_HOST=smtp.resend.com (nicht erreichbar) und GZ_IMAP_HOST=mail.henemm.com (erreichbar) / When EmailOutput.send() aufgerufen wird und die Resend-Versuche entweder alle 4 mit OSError fehlgeschlagen sind **oder** wegen knapper Restzeit vorzeitig übersprungen wurden (#1448 S1) / Then wird die Mail trotzdem via Stalwart zugestellt und das Log enthält den Eintrag "[SMTP-FALLBACK]"
   - Test: `tests/tdd/test_927_smtp_fallback.py` — echter SMTP-Verbindungsversuch auf ungültigem Primary-Host, echter Stalwart als Fallback, IMAP-Abholung beweist Zustellung
 
 - **AC-2:** Given GZ_SMTP_HOST=smtp.resend.com mit falschem SMTP-Passwort / When EmailOutput.send() aufgerufen wird und Resend mit SMTPAuthenticationError (535) antwortet / Then wird sofort OutputError geworfen, kein Fallback-Versuch findet statt
@@ -128,7 +128,7 @@ In `auth.go` und `auth_magic.go` wird `mail.Send(c, to, msg)` ersetzt durch `mai
 ## Known Limitations
 
 - Go-Pfad erkennt Auth-Fehler nur via Fehler-String-Matching ("535"), da `net/smtp` keinen strukturierten Error-Typ für SMTP-Antwortcodes zurückgibt.
-- Der Python-Fallback erhöht die maximale Gesamtwartezeit einer Send-Operation: 4 Retries (5 + 15 + 30 s Backoff) + Fallback-Verbindungsversuch. Bei komplettem Ausfall beider SMTP-Server verlängert sich der Timeout entsprechend.
+- ~~Der Python-Fallback erhöht die maximale Gesamtwartezeit einer Send-Operation: 4 Retries (5 + 15 + 30 s Backoff) + Fallback-Verbindungsversuch. Bei komplettem Ausfall beider SMTP-Server verlängert sich der Timeout entsprechend.~~ **Überholt durch #1448 S1 (2026-08-01):** Die Gesamtwartezeit ist seither hart begrenzt auf `SEND_BUDGET_SECONDS + FALLBACK_RESERVE_SECONDS` (50 s + 12 s, `src/output/channels/email.py:32-37`). Die Wartepausen wurden dabei auf 2/4/8 s verkürzt, und dem Ersatzweg bleibt über `FALLBACK_RESERVE_SECONDS` eine garantierte Restzeit — er kann jetzt also auch **vor** dem vierten Versuch greifen, wenn die Zeit knapp wird. Details: `docs/specs/modules/fix_1448_s1_mail_zeitgrenze.md`.
 - Kein Fallback-Retry: Der Fallback-Versuch läuft einmalig ohne eigene Retry-Logik.
 
 ## Architektur-Entscheidung (ADR)

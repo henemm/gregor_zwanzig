@@ -23,6 +23,39 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Issue #1448 S1: Zeitgrenzen fuer den SMTP-Versand -- Vorbild
+# FETCH_DEADLINE_SECONDS in src/providers/dwd.py/meteofrance.py. Ohne
+# Grenze blockiert ein haengender Postausgang (egal ob bei connect,
+# starttls(), login() oder sendmail()) unbegrenzt, ebenso die
+# Wiederhol-Schleife in send(). Belegrechnung/Details: Spec
+# docs/specs/modules/fix_1448_s1_mail_zeitgrenze.md.
+SMTP_OP_TIMEOUT_SECONDS = 10.0
+SEND_BUDGET_SECONDS = 50.0
+FALLBACK_RESERVE_SECONDS = 12.0
+# Ersetzt die bisher an zwei Stellen (Ersatzweg-Aufrufe) nackte Zahl 587
+# (Fund aus der RED-Phase, s. Spec) -- Verhalten identisch.
+FALLBACK_SMTP_PORT = 587
+
+
+def _phase_timeout_or_raise(deadline_at: float) -> float:
+    """Issue #1448 S1: Restzeit bis `deadline_at`, gekappt auf
+    `SMTP_OP_TIMEOUT_SECONDS` -- fuer `smtplib.SMTP(..., timeout=...)` bzw.
+    `server.sock.settimeout(...)` vor jeder Phase (Verbindungsaufbau samt
+    Begruessung, starttls, login, sendmail).
+
+    Ist die Restzeit bereits <= 0, wird direkt ein `TimeoutError` geworfen,
+    OHNE `settimeout(0)` zu versuchen -- das schaltet den Socket laut
+    `socket`-Doku in den nicht-blockierenden statt in den sofort-
+    abbrechenden Modus (Spec, "Wichtiger Randfall"). `TimeoutError` ist
+    Unterklasse von `OSError` und faellt damit ohne neuen except-Zweig in
+    die bestehende Behandlung in `send()` (`:702`).
+    """
+    remaining = deadline_at - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError("SMTP-Zeitbudget vor Phasenbeginn erschöpft")
+    return min(SMTP_OP_TIMEOUT_SECONDS, remaining)
+
+
 # Issue #1147 (historisch): dritte, empfängerseitige Guard-Linie. Seit Issue
 # #1219 funktional durch eine positive Allowlist (_load_resend_allowlist)
 # ABGELÖST: gregor-test@/gregor-staging@henemm.com gehören zu keinem echten
@@ -417,6 +450,7 @@ class EmailOutput:
         msg,
         from_addr: str,
         isolate_per_recipient: bool,
+        deadline_at: float,
     ) -> None:
         """Issue #1412 S3a: der EINE Ort, an dem eine SMTP-Verbindung entsteht.
 
@@ -429,23 +463,123 @@ class EmailOutput:
         jeden Empfänger einzeln ein, beide Ersatzwege brechen beim ersten
         abgelehnten Empfänger ab. Der zusammengesetzte Defekt dahinter ist als
         #1426 erfasst und wird NACH dieser Scheibe behoben.
+
+        Issue #1448 S1: `deadline_at` (`time.monotonic()`-Zeitpunkt) begrenzt
+        jede Phase -- Verbindungsaufbau samt Begrüßung, `starttls()`,
+        `login()`, jeder `sendmail()`-Aufruf -- auf
+        `min(SMTP_OP_TIMEOUT_SECONDS, Restzeit)`. `_phase_timeout_or_raise()`
+        wirft `TimeoutError` statt `settimeout(0)`, falls die Restzeit vor
+        Erreichen einer Phase bereits erschöpft ist.
         """
-        with smtplib.SMTP(host, port) as server:
+        with smtplib.SMTP(
+            host, port, timeout=_phase_timeout_or_raise(deadline_at)
+        ) as server:
+            server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
             server.starttls()
+            server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
             server.login(user, password)
             if len(recipients) == 1:
+                server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
                 server.sendmail(from_addr, recipients, msg.as_string())
             else:
                 for recipient in recipients:
+                    server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
                     if isolate_per_recipient:
                         try:
                             server.sendmail(from_addr, [recipient], msg.as_string())
+                        except smtplib.SMTPServerDisconnected:
+                            # Adversary-Fund F001 zu #1448 S1: ein
+                            # Transportabbruch (z.B. weil die neue
+                            # Zeitgrenze waehrend DIESES sendmail()
+                            # zuschlaegt, s. `_phase_timeout_or_raise()`)
+                            # ist KEIN empfaengerspezifisches Problem wie
+                            # `SMTPRecipientsRefused` -- der Socket ist tot,
+                            # ein weiterer Versuch beim naechsten Empfaenger
+                            # waere sinnlos und wuerde denselben Fehler
+                            # erneut (still) verschlucken. Deshalb NICHT wie
+                            # eine Empfaenger-Ablehnung schlucken, sondern
+                            # durchreichen -- landet in send()s eigenem
+                            # `SMTPServerDisconnected`-Zweig (Retry +
+                            # Ersatzweg, s.u.). Muss VOR dem generischen
+                            # `SMTPException`-Zweig stehen (dessen Oberklasse).
+                            raise
                         except smtplib.SMTPException as exc:
                             logger.error(
                                 "SMTP-Fehler für Empfänger %s: %s", recipient, exc
                             )
                     else:
                         server.sendmail(from_addr, [recipient], msg.as_string())
+
+    def _handle_transient_dial_failure(
+        self,
+        e: BaseException,
+        attempt: int,
+        max_attempts: int,
+        versuch_dauer: float,
+        primaer_deadline: float,
+        backoff_base: float,
+        recipients: list[str],
+        msg,
+        from_addr: str,
+    ) -> bool:
+        """Issue #1448 S1: gemeinsame Behandlung für vorübergehende
+        Transportfehler (`OSError`, `smtplib.SMTPServerDisconnected`) in
+        `send()`s Wiederhol-Schleife -- beide Aufrufer (s. dort) unterscheiden
+        sich nur in der Exception-Klasse, nicht in der Reaktion.
+
+        `primaer_deadline` ist bereits um `FALLBACK_RESERVE_SECONDS`
+        VERKÜRZT (s. `send()`, Team-Lead-Entscheidung 2026-08-01) -- die
+        Reserve ist damit STRUKTURELL geschützt: der Primärweg kann sie
+        gar nicht mehr anknabbern, unabhängig davon, wie das Gate unten
+        schätzt. Das Gate ist deshalb reine OPTIMIERUNG ("keinen
+        aussichtslosen Versuch mehr starten"), keine Sicherheitsgrenze --
+        als Schätzwert für die Kosten eines weiteren Versuchs dient die
+        GEMESSENE Dauer des gerade gescheiterten Versuchs (nicht die
+        pessimistische `SMTP_OP_TIMEOUT_SECONDS`-Konstante, die bei knapp
+        bemessenem Gesamtbudget das Gate nie öffnen würde, s. AC-5).
+
+        Rückgabe `True`: der Ersatzweg hat zugestellt, der Aufrufer soll aus
+        `send()` zurückkehren. Rückgabe `False`: entweder wurde geschlafen
+        (Aufrufer macht mit dem nächsten Schleifendurchlauf weiter) oder es
+        wurde bereits `OutputError` geworfen.
+        """
+        restzeit_primaer = primaer_deadline - time.monotonic()
+        if attempt < max_attempts - 1 and restzeit_primaer > versuch_dauer:
+            # Retry with exponential backoff: 2s, 4s, 8s
+            # Formula: backoff_base * (1, 2, 4) = (2, 4, 8)
+            wait_multiplier = [1, 2, 4][attempt]
+            wait = min(backoff_base * wait_multiplier, max(restzeit_primaer, 0))
+            logger.warning(
+                f"Email send failed (attempt {attempt + 1}/{max_attempts}): {e}. "
+                f"Retrying in {wait}s..."
+            )
+            time.sleep(wait)
+            return False
+
+        # Last attempt failed — try fallback SMTP if configured
+        logger.error(f"Email send failed after {max_attempts} attempts: {e}")
+        # Issue #1412 S1: Empfänger-Guard erneut gegen den Ersatz-Postausgang
+        # auswerten, bevor auf ihn ausgewichen wird.
+        if self._fallback_host and not self._fallback_recipients_blocked(recipients):
+            try:
+                self._dial_and_send(
+                    self._fallback_host,
+                    FALLBACK_SMTP_PORT,
+                    self._fallback_user,
+                    self._fallback_pass,
+                    recipients,
+                    msg,
+                    from_addr,
+                    isolate_per_recipient=False,
+                    # Issue #1448 S1: eigene, garantierte Deadline statt des
+                    # (evtl. bereits aufgebrauchten) Rests des Primärbudgets.
+                    deadline_at=time.monotonic() + FALLBACK_RESERVE_SECONDS,
+                )
+                logger.info("[SMTP-FALLBACK] sent via fallback SMTP")
+                return True
+            except Exception as fb_err:
+                raise OutputError("email", f"Connection error: {e} (fallback also failed: {fb_err})")
+        raise OutputError("email", f"Connection error: {e}")
 
     def send(
         self,
@@ -622,9 +756,48 @@ class EmailOutput:
         # Retry logic with exponential backoff
         # max_attempts includes the first try, so 4 attempts = 3 retries
         max_attempts = 4
-        backoff_base = 5
+        # Issue #1448 S1: 2s/4s/8s statt bisher 5s/15s/30s -- kuerzere
+        # Wartepausen, damit realistisch mehrere Versuche plus Ersatzweg ins
+        # Gesamtbudget SEND_BUDGET_SECONDS passen (Belegrechnung s. Spec).
+        backoff_base = 2
+
+        # Issue #1448 S1: Gesamtbudget der gesamten send()-Operation, einmalig
+        # gesetzt (Vorbild ALERT_RUN_DEADLINE_SECONDS, #1447 S1).
+        deadline_at = time.monotonic() + SEND_BUDGET_SECONDS
+
+        # Team-Lead-Entscheidung 2026-08-01 (Runde 2, Fix zur AC-5/AC-2-
+        # Gate-Lücke): der Primärweg bekommt eine EIGENE, um
+        # FALLBACK_RESERVE_SECONDS VERKÜRZTE Deadline -- damit kann er die
+        # Ersatzweg-Reserve strukturell nicht mehr anknabbern, unabhängig
+        # davon, wie gut/schlecht das Gate unten schätzt (s.
+        # `_handle_transient_dial_failure()`). Der Ersatzweg selbst nutzt
+        # weiterhin seine eigene, frische Deadline (`FALLBACK_RESERVE_SECONDS`
+        # ab dem Zeitpunkt seines Aufrufs, s.u.).
+        primaer_deadline = deadline_at - FALLBACK_RESERVE_SECONDS
+        # Randfall (nur in stark geschrumpften Testkonfigurationen denkbar,
+        # FALLBACK_RESERVE_SECONDS >= SEND_BUDGET_SECONDS): ohne diese
+        # Untergrenze bekäme der Primärweg gar keine reale Chance mehr --
+        # `primaer_deadline` läge bereits in der Vergangenheit, und der
+        # allererste Phasen-Timeout würde sofort mit Restzeit <= 0 abbrechen.
+        # Bewusst NUR bei ECHTER Erschöpfung (<=jetzt) greifend, NICHT schon
+        # wenn die verkürzte Deadline unter SMTP_OP_TIMEOUT_SECONDS liegt --
+        # sonst würde ein groß bemessenes SMTP_OP_TIMEOUT_SECONDS bei knapp
+        # geschrumpftem Testbudget die Deadline wieder aufblähen (genau der
+        # Fehler, der AC-5 zuvor brach). Ein einzelner voller
+        # SMTP_OP_TIMEOUT_SECONDS-Versuch ist in diesem Rand fall garantiert,
+        # auch wenn das die Reserve knapp anschneidet -- besser als ein
+        # Postausgang, der nie probiert wird.
+        if primaer_deadline <= time.monotonic():
+            primaer_deadline = time.monotonic() + SMTP_OP_TIMEOUT_SECONDS
 
         for attempt in range(max_attempts):
+            # Issue #1448 S1: tatsächlich gemessene Dauer DIESES Versuchs --
+            # dient in den Fehlerzweigen unten als realistischer Schätzwert
+            # dafür, wie teuer ein weiterer Versuch würde (statt pessimistisch
+            # immer mit dem vollen SMTP_OP_TIMEOUT_SECONDS zu rechnen, das ein
+            # sofort scheiternder Versuch, z.B. ein 4xx-Gruß, gar nicht
+            # verbraucht hat).
+            versuch_start = time.monotonic()
             try:
                 self._dial_and_send(
                     self._host,
@@ -635,6 +808,7 @@ class EmailOutput:
                     msg,
                     from_addr,
                     isolate_per_recipient=True,
+                    deadline_at=primaer_deadline,
                 )
 
                 # Success - log if this was after retry
@@ -657,9 +831,26 @@ class EmailOutput:
                         f"SMTP permanent error {e.smtp_code}: {e.smtp_error}",
                     )
                 # 4xx = temporary — retry with the same backoff schedule as OSError.
-                if attempt < max_attempts - 1:
-                    wait_multiplier = [1, 3, 6][attempt]
-                    wait = backoff_base * wait_multiplier
+                # Issue #1448 S1 (AC-2/AC-5): `primaer_deadline` ist bereits um
+                # FALLBACK_RESERVE_SECONDS verkürzt (s.o.) -- die Reserve ist
+                # damit strukturell geschützt, das Gate hier ist reine
+                # Optimierung ("keinen aussichtslosen Versuch mehr starten").
+                # Als Schätzwert für die Kosten eines weiteren Versuchs dient
+                # die GEMESSENE Dauer des gerade gescheiterten Versuchs (nicht
+                # die pessimistische SMTP_OP_TIMEOUT_SECONDS-Konstante) -- ein
+                # sofort abgelehnter Versuch (wie hier ein 4xx-Gruß) hat kaum
+                # Budget verbraucht.
+                versuch_dauer = time.monotonic() - versuch_start
+                restzeit_primaer = primaer_deadline - time.monotonic()
+                if (
+                    attempt < max_attempts - 1
+                    and restzeit_primaer > versuch_dauer
+                ):
+                    wait_multiplier = [1, 2, 4][attempt]
+                    wait = min(
+                        backoff_base * wait_multiplier,
+                        max(restzeit_primaer, 0),
+                    )
                     logger.warning(
                         f"SMTP temporary error {e.smtp_code} "
                         f"(attempt {attempt + 1}/{max_attempts}): "
@@ -674,13 +865,17 @@ class EmailOutput:
                         try:
                             self._dial_and_send(
                                 self._fallback_host,
-                                587,
+                                FALLBACK_SMTP_PORT,
                                 self._fallback_user,
                                 self._fallback_pass,
                                 recipients,
                                 msg,
                                 from_addr,
                                 isolate_per_recipient=False,
+                                # Issue #1448 S1: eigene, garantierte Deadline
+                                # statt des (evtl. bereits aufgebrauchten)
+                                # Rests des Primärbudgets.
+                                deadline_at=time.monotonic() + FALLBACK_RESERVE_SECONDS,
                             )
                             logger.info("[SMTP-FALLBACK] sent via fallback SMTP")
                             return
@@ -695,43 +890,60 @@ class EmailOutput:
                         f"{max_attempts} attempts: {e.smtp_error}",
                     )
 
+            except smtplib.SMTPServerDisconnected as e:
+                # RED-Phase-Fund (Issue #1448 S1): `smtplib.SMTP(...,
+                # timeout=...)` wandelt einen bei der Begrüßung
+                # (`getreply()` in `connect()`) zeitüberschrittenen
+                # Verbindungsaufbau NICHT in ein `OSError` um, sondern in
+                # `smtplib.SMTPServerDisconnected` -- smtplib-internes
+                # Verhalten (`getreply()` fängt jedes `OSError` beim Lesen
+                # ab und wirft stattdessen `SMTPServerDisconnected`, eine
+                # reine `SMTPException`-Unterklasse, KEINE `OSError`-
+                # Unterklasse trotz des Namens). Ohne einen eigenen,
+                # spezifischeren Zweig VOR dem generischen
+                # `smtplib.SMTPException`-Zweig würde ein hängender Primär-
+                # Postausgang dort landen (kein Retry, kein Ersatzweg) --
+                # AC-3/AC-4 verlangen aber genau hier Retry+Ersatzweg. Die
+                # vom Team-Lead benannte Reihenfolge (Auth vor Response,
+                # 5xx vor 4xx) bleibt davon unberührt; dies ist ein
+                # zusätzlicher, spezifischerer Zweig für einen bislang
+                # unerreichbaren Fall, kein Umbau bestehender Zweige.
+                #
+                # WICHTIG: `smtplib.SMTPException` selbst ist eine
+                # `OSError`-Unterklasse (u.a. `SMTPRecipientsRefused` wäre
+                # sonst faelschlich hier gelandet) -- deshalb NICHT einfach
+                # mit dem `OSError`-Zweig zusammenlegen, sondern beide über
+                # denselben Helper `_handle_transient_dial_failure()` an
+                # ihrer jeweils korrekten Position aufrufen.
+                #
+                # Verhaltensänderung (Team-Lead-Hinweis 2026-08-01): dieser
+                # Fall war VORHER schon erreichbar (ein Postausgang, der die
+                # Verbindung ohne Timeout-Ursache abbricht), landete aber im
+                # generischen "kein Retry"-Zweig. Jetzt wird er wiederholt --
+                # sachlich richtig (ein vorübergehender Netzwerkfehler wie
+                # jeder andere) und durch `primaer_deadline`/
+                # FALLBACK_RESERVE_SECONDS gedeckelt statt unbegrenzt.
+                versuch_dauer = time.monotonic() - versuch_start
+                if self._handle_transient_dial_failure(
+                    e, attempt, max_attempts, versuch_dauer, primaer_deadline,
+                    backoff_base, recipients, msg, from_addr,
+                ):
+                    return
+
             except smtplib.SMTPException as e:
                 # Other SMTP errors (e.g. SMTPRecipientsRefused) - no retry
                 raise OutputError("email", f"SMTP error: {e}")
 
             except OSError as e:
-                # Temporary network error
-                if attempt < max_attempts - 1:
-                    # Retry with exponential backoff: 5s, 15s, 30s
-                    # Formula: backoff_base * (1, 3, 6) = (5, 15, 30)
-                    wait_multiplier = [1, 3, 6][attempt]
-                    wait = backoff_base * wait_multiplier
-                    logger.warning(
-                        f"Email send failed (attempt {attempt + 1}/{max_attempts}): {e}. "
-                        f"Retrying in {wait}s..."
-                    )
-                    time.sleep(wait)
-                else:
-                    # Last attempt failed — try fallback SMTP if configured
-                    logger.error(f"Email send failed after {max_attempts} attempts: {e}")
-                    # Issue #1412 S1: s.o. — Guard erneut gegen den
-                    # Ersatz-Postausgang auswerten.
-                    if self._fallback_host and not self._fallback_recipients_blocked(recipients):
-                        try:
-                            self._dial_and_send(
-                                self._fallback_host,
-                                587,
-                                self._fallback_user,
-                                self._fallback_pass,
-                                recipients,
-                                msg,
-                                from_addr,
-                                isolate_per_recipient=False,
-                            )
-                            logger.info("[SMTP-FALLBACK] sent via fallback SMTP")
-                            return
-                        except Exception as fb_err:
-                            raise OutputError("email", f"Connection error: {e} (fallback also failed: {fb_err})")
-                    raise OutputError("email", f"Connection error: {e}")
+                # Temporary network error (Issue #1448 S1: inkl. TimeoutError
+                # aus _phase_timeout_or_raise()/_dial_and_send(), Unterklasse
+                # von OSError -- kein neuer except-Zweig nötig für DIESEN
+                # Fall). AC-2/AC-5: s. `_handle_transient_dial_failure()`.
+                versuch_dauer = time.monotonic() - versuch_start
+                if self._handle_transient_dial_failure(
+                    e, attempt, max_attempts, versuch_dauer, primaer_deadline,
+                    backoff_base, recipients, msg, from_addr,
+                ):
+                    return
 
 # test

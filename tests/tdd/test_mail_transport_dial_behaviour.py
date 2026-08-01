@@ -88,10 +88,24 @@ def _installiere_transport(
     verbindungsfehler = dict(verbindungsfehler or {})
     sendefehler = dict(sendefehler or {})
 
+    class _FakeSocket:
+        """Issue #1448 S1: `_dial_and_send()` ruft `server.sock.settimeout(...)`
+        vor jeder Phase -- die Attrappe braucht dafuer ein Attribut mit einer
+        No-Op-Methode (kein echter Socket, keine echte Verbindung)."""
+
+        def settimeout(self, timeout: float) -> None:
+            pass
+
     class _SMTPAttrappe:
-        def __init__(self, host, port):
+        def __init__(self, host, port, timeout=None):
+            # `timeout` (Issue #1448 S1: Verbindungs-Timeout) wird von der
+            # Attrappe entgegengenommen, aber bewusst NICHT aufgezeichnet --
+            # `verlauf` bleibt unverändert nur ("dial", host, port), die
+            # bestehenden Tupel-Assertions messen weiterhin Host/Port/
+            # Reihenfolge, nicht den Timeout-Wert.
             verlauf.append(("dial", host, port))
             self._host = host
+            self.sock = _FakeSocket()
             fehler = verbindungsfehler.get(host)
             if fehler is not None:
                 raise fehler()
@@ -240,6 +254,66 @@ def test_ac3_ersatzweg_bricht_beim_ersten_abgelehnten_empfaenger_ab(
     assert ("dial", ERSATZ_HOST, ERSATZ_PORT) in verlauf
     assert len([e for e in verlauf if e[0] == "dial" and e[1] == PRIMAER_HOST]) == 4, (
         f"{weg}: der Ersatzweg ist erst nach vier gescheiterten Versuchen dran"
+    )
+
+
+# -----------------------------------------------------------------------
+# F001 (#1448 S1 Adversary) -- Transportabbruch darf NICHT wie eine
+# Empfaenger-Ablehnung verschluckt werden
+# -----------------------------------------------------------------------
+
+
+def test_f001_primaerweg_reicht_transportabbruch_durch_statt_ihn_zu_verschlucken(
+    monkeypatch,
+):
+    """F001 (Adversary-Fund zu #1448 S1): bricht der Transport WAEHREND der
+    Empfaenger-Schleife mit `SMTPServerDisconnected` ab (z.B. weil die neue
+    Zeitgrenze aus S1 waehrend eines `sendmail()`-Aufrufs zuschlaegt --
+    CPython wandelt einen Timeout dort in genau diese, rein von
+    `SMTPException` abgeleitete Ausnahme um, s. email.py `_dial_and_send()`),
+    darf die Empfaenger-Isolierung (`isolate_per_recipient=True`, #1412 S3a)
+    sie NICHT wie eine normale Empfaenger-Ablehnung (z.B.
+    `SMTPRecipientsRefused`) schlucken und mit dem naechsten Empfaenger
+    weitermachen -- der Socket ist tot, ein weiterer Versuch darauf ist
+    sinnlos, und `send()` wuerde sonst nach aussen stillschweigend Erfolg
+    melden, obwohl ab dem Abbruch niemand mehr die Mail bekommen hat.
+
+    Erwartung NACH dem Fix: der Abbruch verlaesst die Empfaenger-Schleife
+    sofort (kein Zustellversuch fuer den DRITTEN Empfaenger auf DERSELBEN
+    Verbindung) und landet in `send()`s eigenem
+    `SMTPServerDisconnected`-Zweig, der wiederholt und am Ende (hier: kein
+    Ersatzweg konfiguriert) `OutputError` wirft -- `send()` darf NICHT
+    normal zurueckkehren.
+    """
+    verlauf = _installiere_transport(
+        monkeypatch,
+        sendefehler={
+            EMPFAENGER[1]: lambda: smtplib.SMTPServerDisconnected(
+                "Verbindung waehrend sendmail() verloren"
+            )
+        },
+    )
+
+    with pytest.raises(OutputError):
+        _sende(_postausgang(), EMPFAENGER)
+
+    dial_indices = [i for i, e in enumerate(verlauf) if e[0] == "dial"]
+    assert len(dial_indices) >= 2, (
+        "der Transportabbruch haette send()s eigene "
+        "SMTPServerDisconnected-Behandlung (Retry) ausloesen muessen -- "
+        f"nur {len(dial_indices)} Verbindungsversuch(e) im Verlauf"
+    )
+    erster_versuch = verlauf[dial_indices[0]:dial_indices[1]]
+    zustellungen_erster_versuch = [
+        e[2] for e in erster_versuch if e[0] == "sendmail"
+    ]
+    assert zustellungen_erster_versuch == [
+        (EMPFAENGER[0],),
+        (EMPFAENGER[1],),
+    ], (
+        "nach dem Transportabbruch bei EMPFAENGER[1] darf auf DERSELBEN "
+        "Verbindung kein weiterer Zustellversuch (EMPFAENGER[2]) mehr "
+        f"folgen -- tatsaechlich: {zustellungen_erster_versuch}"
     )
 
 

@@ -12,7 +12,7 @@ from output.channels.base import (
     get_channel,
 )
 from output.channels.console import ConsoleOutput
-from output.channels.email import EmailOutput
+from output.channels.email import EmailOutput, SMTP_OP_TIMEOUT_SECONDS
 
 
 class TestOutputChannelProtocol:
@@ -114,7 +114,13 @@ class TestEmailOutput:
 
         output.send("Test Subject", "Test body")
 
-        mock_smtp.assert_called_once_with("smtp.example.com", 587)
+        # Issue #1448 S1: Primärverbindung bekommt seither ein Verbindungs-
+        # Timeout (SMTP_OP_TIMEOUT_SECONDS, ggf. durch die kürzere
+        # primaer_deadline gekappt -- hier greift der volle Wert, da das
+        # Test-Budget nicht künstlich verkürzt ist).
+        mock_smtp.assert_called_once_with(
+            "smtp.example.com", 587, timeout=SMTP_OP_TIMEOUT_SECONDS
+        )
         mock_server.starttls.assert_called_once()
         mock_server.login.assert_called_once()
         mock_server.sendmail.assert_called_once()

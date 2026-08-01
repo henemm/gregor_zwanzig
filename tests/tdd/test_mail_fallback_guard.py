@@ -68,12 +68,22 @@ FAILING_LOCAL_PRIMARY = "primary-stalwart-fake.invalid"
 # Sink am Transportrand auf smtplib.SMTP
 # ---------------------------------------------------------------------------
 
+class _FakeSocket:
+    """Issue #1448 S1: `_dial_and_send()` ruft `server.sock.settimeout(...)`
+    vor jeder Phase -- die Attrappe braucht dafuer ein Attribut mit einer
+    No-Op-Methode (kein echter Socket, keine echte Verbindung)."""
+
+    def settimeout(self, timeout: float) -> None:
+        pass
+
+
 class _FakeSMTPConnection:
     """Ersetzt eine echte SMTP-Verbindung vollständig — kein Netz."""
 
     def __init__(self, calls: list[dict], host: str) -> None:
         self._calls = calls
         self._host = host
+        self.sock = _FakeSocket()
 
     def __enter__(self) -> "_FakeSMTPConnection":
         return self
