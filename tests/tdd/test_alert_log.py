@@ -1,8 +1,11 @@
 """
-TDD RED Tests für Issue #393 — Cockpit-Kacheln: Alarm-Historie.
+TDD Tests für Issue #393 — Cockpit-Kacheln: Alarm-Historie.
 
-Testet _append_alert_log() auf TripAlertService.
-Diese Methode existiert noch nicht → Tests MÜSSEN ROT sein.
+Testet die Schreibfunktion des Alarm-Protokolls. Issue #1459 hat sie aus
+`TripAlertService._append_alert_log()` in das geteilte Modul
+`services.alert_log.append_entry()` gezogen (der Ortsvergleich schreibt jetzt
+in dieselbe Datei) — der geprüfte Vertrag (Datei anlegen, Read-Modify-Write,
+kein Purge, die vier Altfelder) ist unverändert.
 
 Spec: docs/specs/modules/issue_393_cockpit_kacheln.md (AC-2, AC-9)
 Test-Manifest: docs/specs/tests/issue_393_cockpit_kacheln_tests.md
@@ -17,14 +20,19 @@ from datetime import datetime, timedelta, timezone
 
 
 
-def _make_alert_service(user_id: str = "test-user"):
-    """Erstellt TripAlertService ohne SMTP-Abhängigkeit."""
-    from services.trip_alert import TripAlertService
+def _append(trip_id: str, changes_count: int, severity: str, user_id: str = "test-user"):
+    """Issue #1459: derselbe Schreibvorgang wie früher `_append_alert_log()`.
 
-    svc = TripAlertService.__new__(TripAlertService)
-    svc._user_id = user_id
-    svc._last_alert_times = {}
-    return svc
+    Ein erfolgreich zugestellter Kanal ⇒ der Eintrag landet in `entries`,
+    genau wie im bisherigen Verhalten.
+    """
+    from services import alert_log
+
+    alert_log.append_entry(
+        user_id, trip_id=trip_id, changes_count=changes_count, severity=severity,
+        reason=alert_log.REASON_FORECAST_CHANGE,
+        effective_channels={"email"}, sent_channels=["email"],
+    )
 
 
 # --- AC-2: _append_alert_log schreibt Eintrag in alert_log.json ---
@@ -32,10 +40,10 @@ def _make_alert_service(user_id: str = "test-user"):
 def test_append_alert_log_creates_file_with_entry():
     """
     GIVEN: Kein alert_log.json existiert
-    WHEN: _append_alert_log("trip-123", 2, "MODERATE") aufgerufen
+    WHEN: append_entry(trip_id="trip-123", changes_count=2, severity="MODERATE")
     THEN: alert_log.json wird erstellt mit trip_id, sent_at, changes_count, severity
 
-    Issue #1133-Fixture-Kollision: _append_alert_log() schreibt ueber
+    Issue #1133-Fixture-Kollision: append_entry() schreibt ueber
     get_data_dir(), das von der autouse-Isolationsfixture auf einen
     eigenen isolierten Root umgebogen wird -- der Test muss denselben
     Pfad benutzen statt einen eigenen tmp_path-Baum zu bauen.
@@ -45,8 +53,7 @@ def test_append_alert_log_creates_file_with_entry():
     user_dir = get_data_dir("test-user")
     user_dir.mkdir(parents=True, exist_ok=True)
 
-    svc = _make_alert_service("test-user")
-    svc._append_alert_log("trip-123", 2, "MODERATE")
+    _append("trip-123", 2, "MODERATE")
 
     log_file = user_dir / "alert_log.json"
     assert log_file.exists(), "alert_log.json wurde nicht erstellt"
@@ -89,8 +96,7 @@ def test_append_alert_log_appends_to_existing():
     }
     (user_dir / "alert_log.json").write_text(json.dumps(existing))
 
-    svc = _make_alert_service("test-user")
-    svc._append_alert_log("trip-abc", 3, "HIGH")
+    _append("trip-abc", 3, "HIGH")
 
     data = json.loads((user_dir / "alert_log.json").read_text())
     assert len(data["entries"]) == 2
@@ -132,8 +138,7 @@ def test_append_alert_log_purges_entries_older_than_48h():
     }
     (user_dir / "alert_log.json").write_text(json.dumps(existing))
 
-    svc = _make_alert_service("test-user")
-    svc._append_alert_log("trip-abc", 3, "HIGH")
+    _append("trip-abc", 3, "HIGH")
 
     data = json.loads((user_dir / "alert_log.json").read_text())
     # Kein Purge mehr seit #396 — alle Einträge bleiben erhalten
@@ -174,8 +179,7 @@ def test_append_alert_log_retains_fresh_entries():
     }
     (user_dir / "alert_log.json").write_text(json.dumps(existing))
 
-    svc = _make_alert_service("test-user")
-    svc._append_alert_log("trip-abc", 3, "HIGH")
+    _append("trip-abc", 3, "HIGH")
 
     data = json.loads((user_dir / "alert_log.json").read_text())
     assert len(data["entries"]) == 3, "Alle frischen Einträge + neuer Eintrag sollen vorhanden sein"

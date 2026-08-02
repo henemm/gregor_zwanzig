@@ -20,7 +20,7 @@ from typing import Optional
 
 from app.config import Settings
 from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
-from services import alert_daily_limit
+from services import alert_daily_limit, alert_log
 from services.alert_preset import _PRESET_TABLE
 from services.alert_state import AlertStateService
 from services.compare_location_weather_source import CompareLocationWeatherSource
@@ -133,6 +133,21 @@ class CompareAlertService:
                 entities=entities,
                 effective_channels=config.channels,
                 mail_sink=self._mail_sink,
+            )
+            # Issue #1459: der Ortsvergleich protokollierte bisher gar nicht
+            # (B1). Vergleichs-Eintraege tragen ein LEERES `trip_id` und
+            # stattdessen `preset_id` (D3) — sonst zaehlte die Archiv-Statistik
+            # sie als Tour-Alarme.
+            alle_changes = [c for t in triggered for c in t["changes"]]
+            alert_log.append_entry(
+                self._user_id, preset_id=preset_id,
+                changes_count=len(alle_changes),
+                severity=DeviationAlertEngine._highest_severity(alle_changes),
+                metrics=alert_log.register_pairs_from_changes(alle_changes),
+                reason=alert_log.REASON_FORECAST_CHANGE,
+                effective_channels=config.channels,
+                sent_channels=notif_result.delivered_channels,
+                reachable_channels=notif_result.sent_channels,
             )
             if not notif_result.sent:
                 continue

@@ -1398,14 +1398,20 @@ def _finding_location_counts(found: dict[str, str]) -> dict[str, int]:
 # meldet die Zeile des `return`, Klasse 2 die der Iteration, Klasse 3 und 4
 # die der `def`-Anweisung (die Spec-Tabelle nennt teils die `def`-Zeile).
 #
-# 45 Einträge für 37 Funktionsschlüssel — gegenüber der Spec-Erwartung (36
-# Schlüssel, 43 Treffer, plus Webhook-Ack in INTENTIONAL_CONSTANT_SUCCESS) zwei
+# 45 Einträge für 37 Funktionsschlüssel — gegenüber der Spec-Erwartung (33
+# Schlüssel, 40 Treffer, plus Webhook-Ack in INTENTIONAL_CONSTANT_SUCCESS) zwei
 # von Hand nachgelesene Zuwächse mit je derselben Mechanik wie eine belegte
 # Fundstelle (Begründung steht beim jeweiligen Eintrag). Keine Verbreiterung
 # der Signatur; die Bestandsaufnahme war unvollständig wie in Hälfte A.
 # (B13 mit #1407 und B2 mit #1447 aus der Restliste entfernt: beide Funde
 # wurden repariert (B13 geloescht, B2 leitet den Status jetzt ab) — der
-# Scanner findet dort nichts mehr, die Ratsche ist entsprechend kleiner.)
+# Scanner findet dort nichts mehr, die Ratsche ist entsprechend kleiner.
+# B14b mit #1459 aus SPEC_LISTED_FINDINGS entfernt (drei Schlüssel, Soll 36/43
+# -> 33/40): _dispatch_compare_official_{email,telegram,sms} liefern jetzt
+# `bool` statt gar keinen Rückgabewert, und send_compare_official_alert()
+# WERTET ihn aus — er füllt `failed_channels`. Vorher wurde das `False`
+# weggeworfen, ein gescheiterter Ortsvergleich-Versand galt als Erfolg; genau
+# das war der Mangel. Der Scanner findet dort nichts mehr.)
 # ---------------------------------------------------------------------------
 KNOWN_VIOLATIONS: dict[str, str] = {
     # --- B3–B8: sieben Trigger-Endpunkte, ein Muster. Fällt der Service für
@@ -1708,12 +1714,13 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     "src/services/notification_service.py::send_official_alert": 3,
     # B14c — dito, DREI Kanäle; genutzt von Änderungs-, Radar- und amtlichen Alarmen
     "src/services/notification_service.py::_dispatch_alert_message": 3,
-    # B14b (email) — Klasse 4: try/except, Handler nur logger.error, kein return
-    "src/services/notification_service.py::_dispatch_compare_official_email": 1,
-    # B14b (telegram) — dito, Telegram-Kanal
-    "src/services/notification_service.py::_dispatch_compare_official_telegram": 1,
-    # B14b (sms) — dito, SMS-Kanal
-    "src/services/notification_service.py::_dispatch_compare_official_sms": 1,
+    # B14b entfernt (#1459, 2026-08-02) — die drei Helfer
+    # _dispatch_compare_official_{email,telegram,sms} liefern jetzt `bool`, und
+    # send_compare_official_alert() WERTET den Rueckgabewert aus (fuellt daraus
+    # `failed_channels` fuer das Alarm-Protokoll). Vorher wurde das `False`
+    # weggeworfen: ein gescheiterter Ortsvergleich-Versand galt als Erfolg —
+    # genau der Mangel, den diese drei Eintraege gefuehrt haben. Der Scanner
+    # findet dort nichts mehr, die Ratsche ist entsprechend kleiner.
     # B15 — send_test_report() unzugewiesen, danach bedingungslos success=True
     "src/services/trip_command_processor.py::_trigger_report": 1,
     # B16 — outcome geprüft, Text variiert korrekt, success=True aber nicht
@@ -1791,9 +1798,9 @@ def test_scanner_finds_every_spec_listed_finding():
     """AC-1 (+ AC-17 und AC-18): GIVEN die 22 in der Spec gelisteten
     Fundstellen B1–B21 (B13 mit #1407, B2 mit #1447 entfernt)
     WHEN der Wächter über die Scanfläche läuft
-    THEN schlägt er in JEDER der 36 zugehörigen Funktionen mindestens so oft
-    an wie in der Mindestzahl-Tabelle festgelegt (33 Funktionen mit 1, 2
-    Funktionen mit 3, 1 Funktion mit 4), Summe 43.
+    THEN schlägt er in JEDER der 33 zugehörigen Funktionen mindestens so oft
+    an wie in der Mindestzahl-Tabelle festgelegt (30 Funktionen mit 1, 2
+    Funktionen mit 3, 1 Funktion mit 4), Summe 40.
 
     Gemessen an SPEC_LISTED_FINDINGS — einer fest verdrahteten Erwartung aus
     der Spec (``pfad::funktion`` → Mindest-Trefferzahl), NICHT aus
@@ -1818,10 +1825,10 @@ def test_scanner_finds_every_spec_listed_finding():
     # gekürzte Tabelle würde sonst hinter einem grünen Scan verschwinden,
     # und genau das ist der Weg, auf dem Wächter still ihre Schärfe
     # verlieren (Test-Politik: Schwellen nie anpassen, damit etwas grün wird).
-    assert len(SPEC_LISTED_FINDINGS) == 36 and sum(SPEC_LISTED_FINDINGS.values()) == 43, (
-        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 36 "
-        "Funktionsschlüssel, Summe 43 — Version 1.2 minus B13, #1407, minus "
-        "B2, #1447). Ist: "
+    assert len(SPEC_LISTED_FINDINGS) == 33 and sum(SPEC_LISTED_FINDINGS.values()) == 40, (
+        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 33 "
+        "Funktionsschlüssel, Summe 40 — Version 1.2 minus B13, #1407, minus "
+        "B2, #1447, minus B14b (drei Schlüssel), #1459). Ist: "
         f"{len(SPEC_LISTED_FINDINGS)} Schlüssel, Summe "
         f"{sum(SPEC_LISTED_FINDINGS.values())}"
     )

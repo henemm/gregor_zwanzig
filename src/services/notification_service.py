@@ -103,6 +103,16 @@ class NotificationResult:
     telegram_fully_sent: bool = True
     no_channel_configured: bool = False
     error: str | None = None
+    # Issue #1459: `sent_channels` bedeutet "Kanal wurde betreten" (Best-Effort,
+    # Anti-Pattern #656) -- ein gescheiterter Transport bleibt darin stehen.
+    # `failed_channels` haelt zusaetzlich fest, welche davon technisch NICHT
+    # angekommen sind, ohne diese bewusste Semantik zu veraendern.
+    failed_channels: list[str] = field(default_factory=list)
+
+    @property
+    def delivered_channels(self) -> list[str]:
+        """Kanaele, die den Versand ohne Fehler abgeschlossen haben."""
+        return [c for c in self.sent_channels if c not in self.failed_channels]
 
 
 @dataclass
@@ -658,6 +668,7 @@ class NotificationService:
         )
 
         sent_channels: list[str] = []
+        failed_channels: list[str] = []  # Issue #1459: Alarm-Protokoll
 
         if "email" in effective_channels and self._settings.can_send_email():
             sent_channels.append("email")
@@ -669,6 +680,7 @@ class NotificationService:
                         subject=subject, body=html, html=True, mail_type="official-alert",
                     )
             except Exception as e:
+                failed_channels.append("email")
                 logger.error(f"Official alert email failed for {trip.name}: {e}")
 
         if "telegram" in effective_channels and self._settings.can_send_telegram():
@@ -691,6 +703,7 @@ class NotificationService:
                         parse_mode="HTML", suppress_subject_line=True,
                     )
             except Exception as e:
+                failed_channels.append("telegram")
                 logger.error(f"Official alert telegram failed for {trip.name}: {e}")
 
         if "sms" in effective_channels and self._settings.can_send_sms():
@@ -705,9 +718,13 @@ class NotificationService:
                 else:
                     SMSOutput(self._settings).send(subject="", body=sms_text)
             except Exception as e:
+                failed_channels.append("sms")
                 logger.error(f"Official alert sms failed for {trip.name}: {e}")
 
-        return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
+        return NotificationResult(
+            sent=bool(sent_channels), sent_channels=sent_channels,
+            failed_channels=failed_channels,
+        )
 
     # TODO(#1207): wird durch den Versand-Orchestrator generalisiert
     def send_compare_report(
@@ -863,24 +880,36 @@ class NotificationService:
         )
 
         sent_channels: list[str] = []
+        failed_channels: list[str] = []  # Issue #1459: Alarm-Protokoll
         if "email" in effective_channels and self._settings.can_send_email():
-            self._dispatch_compare_official_email(preset_name, subject, html, mail_sink)
+            if not self._dispatch_compare_official_email(
+                preset_name, subject, html, mail_sink
+            ):
+                failed_channels.append("email")
             sent_channels.append("email")
         if "telegram" in effective_channels and self._settings.can_send_telegram():
-            self._dispatch_compare_official_telegram(
+            if not self._dispatch_compare_official_telegram(
                 preset_name, subject, dto_notices, source_label, alert_tz, telegram_sink,
                 telegram_style=telegram_style,
-            )
+            ):
+                failed_channels.append("telegram")
             sent_channels.append("telegram")
         if "sms" in effective_channels and self._settings.can_send_sms():
-            self._dispatch_compare_official_sms(preset_name, dto_notices, alert_tz, sms_sink)
+            if not self._dispatch_compare_official_sms(
+                preset_name, dto_notices, alert_tz, sms_sink
+            ):
+                failed_channels.append("sms")
             sent_channels.append("sms")
 
-        return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
+        return NotificationResult(
+            sent=bool(sent_channels), sent_channels=sent_channels,
+            failed_channels=failed_channels,
+        )
 
     def _dispatch_compare_official_email(
         self, preset_name: str, subject: str, html: str, mail_sink: Optional[object],
-    ) -> None:
+    ) -> bool:
+        """Issue #1459: `True`, wenn der Transport ohne Fehler durchlief."""
         try:
             if mail_sink is not None:
                 mail_sink(subject=subject, body=html)
@@ -890,12 +919,15 @@ class NotificationService:
                 )
         except Exception as e:
             logger.error(f"Compare official alert email failed for {preset_name}: {e}")
+            return False
+        return True
 
     def _dispatch_compare_official_telegram(
         self, preset_name: str, subject: str, dto_notices: list, source_label: str,
         alert_tz: ZoneInfo, telegram_sink: Optional[object],
         telegram_style: str = "rich",
-    ) -> None:
+    ) -> bool:
+        """Issue #1459: `True`, wenn der Transport ohne Fehler durchlief."""
         from output.renderers.alert.official_alerts import (
             render_official_alert_sms, render_official_alert_telegram,
         )
@@ -915,7 +947,7 @@ class NotificationService:
                         subject=subject, body=kurz_body,
                         parse_mode=None, suppress_subject_line=True,
                     )
-                return
+                return True
             telegram_text = render_official_alert_telegram(
                 dto_notices, prefix=preset_name, source_label=source_label, tz=alert_tz,
             )
@@ -928,11 +960,14 @@ class NotificationService:
                 )
         except Exception as e:
             logger.error(f"Compare official alert telegram failed for {preset_name}: {e}")
+            return False
+        return True
 
     def _dispatch_compare_official_sms(
         self, preset_name: str, dto_notices: list, alert_tz: ZoneInfo,
         sms_sink: Optional[object],
-    ) -> None:
+    ) -> bool:
+        """Issue #1459: `True`, wenn der Transport ohne Fehler durchlief."""
         from output.renderers.alert.official_alerts import render_official_alert_sms
 
         try:
@@ -944,6 +979,8 @@ class NotificationService:
                 SMSOutput(self._settings).send(subject="", body=sms_text)
         except Exception as e:
             logger.error(f"Compare official alert sms failed for {preset_name}: {e}")
+            return False
+        return True
 
     def send_radar_alert(
         self,
@@ -1055,8 +1092,10 @@ class NotificationService:
             telegram_body += "\n\n" + extra_text
 
         sent_channels: list[str] = []
+        failed_channels: list[str] = []
 
         def _log_error(channel: str, e: Exception) -> None:
+            failed_channels.append(channel)  # Issue #1459: Alarm-Protokoll
             label = {"email": "Email", "telegram": "Telegram", "sms": "SMS"}[channel]
             if radar_mode:
                 logger.error(f"Radar alert {channel} failed for {target_name}: {e}")
@@ -1109,7 +1148,10 @@ class NotificationService:
             except Exception as e:
                 _log_error("sms", e)
 
-        return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
+        return NotificationResult(
+            sent=bool(sent_channels), sent_channels=sent_channels,
+            failed_channels=failed_channels,
+        )
 
     # ------------------------------------------------------------------
     # Inbound command replies (Issue #1024)

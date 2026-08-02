@@ -30,7 +30,7 @@ from output.renderers.alert.official_alerts import (
     dedupe_official_alerts,
     official_alert_state_key,
 )
-from services import alert_daily_limit
+from services import alert_daily_limit, alert_log
 from services.alert_state import AlertStateService
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
@@ -127,12 +127,26 @@ class CompareOfficialAlertService:
             return False
 
         notification_service = self._notification_service_for(preset)
+        effective_channels = self._effective_channels(preset)
         result = notification_service.send_multi_location_official_alert(
             preset.get("name", preset_id), locs, tagged_alerts,
-            self._effective_channels(preset),
+            effective_channels,
             _effective_telegram_style(preset),
             mail_sink=self._mail_sink, sms_sink=self._sms_sink,
             telegram_sink=self._telegram_sink,
+        )
+        # Issue #1459: Vergleichs-Eintrag mit leerem `trip_id` + `preset_id`
+        # (D3); die Gefahrenart steht in `hazards`, nicht in `metrics` (O1).
+        alert_log.append_entry(
+            self._user_id, preset_id=preset_id, changes_count=len(tagged_alerts),
+            severity="MODERATE",
+            hazards=alert_log.hazards_from_official_alerts(
+                [a for a, _loc_ids in tagged_alerts]
+            ),
+            reason=alert_log.REASON_OFFICIAL_ALERT,
+            effective_channels=effective_channels,
+            sent_channels=result.delivered_channels,
+            reachable_channels=result.sent_channels,
         )
         if not result.sent:
             return False

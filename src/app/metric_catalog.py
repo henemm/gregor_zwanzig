@@ -12,9 +12,12 @@ Defines all available weather metrics with:
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from app.models import UnifiedWeatherDisplayConfig
@@ -824,6 +827,51 @@ def get_label_for_field(summary_field: str) -> tuple[str, str, str] | None:
         for agg, field in m.summary_fields.items():
             if field == summary_field:
                 return (m.label_de, agg, m.unit)
+    return None
+
+
+def metric_and_aggregation_for_field(
+    summary_field: str, *, _registry: Optional[list] = None,
+) -> Optional[tuple[str, str]]:
+    """Reverse-lookup: summary_field -> (metric_id, aggregation).
+
+    Issue #1459 (O1): liefert die Register-Kennung selbst -- das, was
+    get_label_for_field()/get_compact_label_for_field() nicht tun.
+
+    Anders als die beiden Vorbilder NICHT "erstes Treffer-Item gewinnt": bei
+    mehreren Treffern entscheidet inhaltlich, welcher `selectable=True` ist
+    (die nutzersichtbare Groesse; interne Pseudo-Groessen wie
+    "temperature_cold" verlieren). Bleiben danach 0 oder >=2 Kandidaten, ist
+    das Feld echt mehrdeutig -- das wird geloggt, NICHT stillschweigend ueber
+    die Listenposition entschieden (Praezedenzfaelle #1257, #1444 S2a).
+
+    Fail-soft per `None` statt Exception: die Funktion laeuft innerhalb eines
+    Alarm-Laufs; eine Katalog-Inkonsistenz darf keine Gewitter- oder
+    Amtswarnung scheitern lassen.
+
+    `_registry` ist ein Test-Seam fuer den Reihenfolge-Unabhaengigkeits-
+    Nachweis (Issue #1459 AC-5) -- Default ist die echte `_METRICS`.
+    """
+    registry = _registry if _registry is not None else _METRICS
+    matches = [
+        (m, agg)
+        for m in registry
+        for agg, field in m.summary_fields.items()
+        if field == summary_field
+    ]
+    if len(matches) == 1:
+        return (matches[0][0].id, matches[0][1])
+    if not matches:
+        return None
+    selectable_matches = [(m, agg) for m, agg in matches if m.selectable]
+    if len(selectable_matches) == 1:
+        return (selectable_matches[0][0].id, selectable_matches[0][1])
+    logger.warning(
+        "metric_and_aggregation_for_field: mehrdeutiges Summary-Feld %r "
+        "(%d Treffer, %d davon selectable) -- Register-Paar im Alarm-Protokoll "
+        "ausgelassen",
+        summary_field, len(matches), len(selectable_matches),
+    )
     return None
 
 

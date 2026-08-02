@@ -21,6 +21,7 @@ from typing import Optional
 
 from app.config import Settings
 from app.loader import compare_preset_to_dict, get_data_dir, load_all_locations, load_compare_presets
+from services import alert_log
 from services.alert_state import AlertStateService
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
@@ -116,6 +117,20 @@ class CompareRadarAlertService:
         notif_result = notification_service.send_multi_location_radar_alert(
             entities=entities, effective_channels={"email"}, mail_sink=self._mail_sink,
             cooldown_display=_format_cooldown_display(cooldown_minutes),
+        )
+        # Issue #1459: Vergleichs-Eintrag mit leerem `trip_id` + `preset_id`
+        # (D3). Gemischt konvektive/nicht-konvektive Orte ergeben BEIDE
+        # Register-Paare in EINEM Eintrag.
+        alert_log.append_entry(
+            self._user_id, preset_id=preset_id, changes_count=len(triggered),
+            severity="HIGH",
+            metrics=alert_log.register_pairs_for_nowcast(
+                [nowcast.is_convective for _name, _loc, nowcast in triggered]
+            ),
+            reason=alert_log.REASON_NOWCAST,
+            effective_channels={"email"},
+            sent_channels=notif_result.delivered_channels,
+            reachable_channels=notif_result.sent_channels,
         )
         if not notif_result.sent:
             return False

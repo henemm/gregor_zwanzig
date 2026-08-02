@@ -8,7 +8,6 @@ SPEC: docs/specs/modules/trip_alert.md v2.0
 """
 from __future__ import annotations
 
-import json
 import logging
 import time
 from dataclasses import dataclass
@@ -16,11 +15,14 @@ from datetime import date, datetime, timedelta, timezone
 from typing import TYPE_CHECKING, List, Optional
 
 from app.config import Settings
-from app.loader import get_data_dir
 from app.models import SegmentWeatherData, WeatherChange
-from services import alert_daily_limit
+from services import alert_daily_limit, alert_log
 from services.deviation_alert_engine import DeviationAlertEngine
-from services.notification_service import NotificationService, RadarAlertRequest
+from services.notification_service import (
+    NotificationResult,
+    NotificationService,
+    RadarAlertRequest,
+)
 from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
 from services.corridor_threshold import CorridorHit, evaluate_corridor_thresholds
 from services.throttle_store import ThrottleStore
@@ -281,10 +283,28 @@ class TripAlertService:
 
         # 5. Send alert; guard: only record throttle/log when at least one
         # configured channel was reachable (AC-1 symmetry with Telegram/Radar).
-        delivered = self._send_alert(
+        notif_result = self._send_alert(
             trip, fresh_weather, to_report,
             corridor_hits=corridor_to_report, official_notices=official_notices,
         )
+        # Issue #1459: Alarm-Protokoll VOR dem Zustellbarkeits-Guard — die
+        # Funktion entscheidet selbst, ob der Eintrag nach `entries` (mindestens
+        # ein Kanal kam an, Ist-Verhalten) oder nach `not_delivered` geht (D4).
+        alert_log.append_entry(
+            self._user_id,
+            trip_id=trip.id,
+            changes_count=len(to_report) + len(corridor_to_report),
+            severity=eval_result.severity,
+            metrics=(
+                alert_log.register_pairs_from_changes(to_report)
+                + alert_log.register_pairs_from_corridor_hits(corridor_to_report)
+            ),
+            reason=alert_log.REASON_FORECAST_CHANGE,
+            effective_channels=eval_config.channels,
+            sent_channels=notif_result.delivered_channels,
+            reachable_channels=notif_result.sent_channels,
+        )
+        delivered = notif_result.sent
         if not delivered:
             logger.warning(
                 f"Alert not deliverable on any effective channel for trip "
@@ -315,14 +335,6 @@ class TripAlertService:
         self._throttle_store.record("trip", trip.id, datetime.now(timezone.utc))
         # Issue #1070: nur bei tatsaechlichem Versand zaehlen (F001-Symmetrie)
         alert_daily_limit.increment(self._user_id, datetime.now(timezone.utc))
-
-        # 8. Issue #393: Alert-Log für Cockpit-Kachel "Alarme · letzte 24 h".
-        # Nur nach erfolgreichem Versand; höchste Severity der gemeldeten Changes
-        # (bereits von der Engine bestimmt, Issue #1168). Issue #1444 S1:
-        # Korridor-Treffer zaehlen mit.
-        self._append_alert_log(
-            trip.id, len(to_report) + len(corridor_to_report), eval_result.severity,
-        )
 
         return True
 
@@ -718,26 +730,6 @@ class TripAlertService:
         """
         return list(changes)
 
-    def _append_alert_log(self, trip_id: str, changes_count: int, severity: str) -> None:
-        """Issue #393: Hängt einen Alert-Versand-Eintrag an alert_log.json an.
-
-        Issue #396: Keine Retention mehr — Einträge bleiben dauerhaft erhalten,
-        damit die Archiv-Statistik (Alarme pro Tour) alle historischen Alerts
-        zählen kann. Der Cockpit-Endpoint filtert weiterhin Go-seitig auf 24 h.
-        Wird von Go (GET /api/cockpit/status, GET /api/archive/stats) read-only gelesen.
-        """
-        # Issue #1265: get_data_dir() statt hartkodiertem "data/users/..." --
-        # respektiert die pytest-Isolation (tests/conftest.py, #1133).
-        path = get_data_dir(self._user_id) / "alert_log.json"
-        data = json.loads(path.read_text()) if path.exists() else {"entries": []}
-        data["entries"].append({
-            "trip_id": trip_id,
-            "sent_at": datetime.now(tz=timezone.utc).isoformat(),
-            "changes_count": changes_count,
-            "severity": severity,
-        })
-        path.write_text(json.dumps(data, indent=2))
-
     # --- Radar Nowcast ---
 
     def _get_radar_service(self):
@@ -969,13 +961,26 @@ class TripAlertService:
                 effective_channels=effective_channels,
                 mail_sink=self._mail_sink,
             )
+            # Issue #1459: Protokoll VOR dem Zustellbarkeits-Guard; die
+            # Ziel-Liste (`entries` vs. `not_delivered`) entscheidet
+            # `append_entry()` selbst (D4). `result` traegt hier bereits die
+            # NotificationResult — die Nowcast-Auswertung steckt im Request.
+            alert_log.append_entry(
+                self._user_id, trip_id=trip.id, changes_count=1, severity="HIGH",
+                metrics=alert_log.register_pairs_for_nowcast(
+                    _radar_request.is_convective
+                ),
+                reason=alert_log.REASON_NOWCAST,
+                effective_channels=effective_channels,
+                sent_channels=result.delivered_channels,
+                reachable_channels=result.sent_channels,
+            )
             delivered = result.sent
             if not delivered:
                 logger.info(f"Radar alert: kein zustellbarer Kanal für {trip.id}")
                 continue
 
             # Recording nach Best-Effort-Zustellung (F001-Semantik)
-            self._append_alert_log(trip.id, 1, "HIGH")
             # Issue #1070: nur bei tatsaechlichem Versand zaehlen (F001-Symmetrie)
             alert_daily_limit.increment(self._user_id, datetime.now(timezone.utc))
             # Issue #1213: alleinige Radar-Throttle-Quelle ist jetzt der Store —
@@ -1051,7 +1056,7 @@ class TripAlertService:
         changes: List[WeatherChange],
         official_notices: Optional[list] = None,
         corridor_hits: Optional[List[CorridorHit]] = None,
-    ) -> bool:
+    ) -> "NotificationResult":
         """
         Format and send alert via all configured effective channels.
 
@@ -1062,10 +1067,12 @@ class TripAlertService:
         gilt fuer `corridor_hits` (Schwellen-Treffer, Muster #1088).
 
         Returns:
-            True if at least one configured channel was reachable (deliverable),
-            False if no effective channel has a working configuration.
-            Send errors on a configured channel are logged but do NOT suppress
-            recording (best-effort, Anti-Pattern #656).
+            Die volle `NotificationResult`. `result.sent` ist True, sobald
+            mindestens ein konfigurierter Kanal erreichbar war; Sendefehler auf
+            einem konfigurierten Kanal werden geloggt, unterdruecken das
+            Recording aber NICHT (Best-Effort, Anti-Pattern #656). Issue #1459:
+            der Aufrufer braucht zusaetzlich `sent_channels`/`failed_channels`
+            fuers Alarm-Protokoll, deshalb die volle Ruecksage statt nur `bool`.
         """
         # Issue #638: Effective channels — per-alert override beats briefing channels.
         effective_channels = self._effective_alert_channels(trip)
@@ -1088,7 +1095,7 @@ class TripAlertService:
             )
             self._record_official_alert_state(trip.id, official_notices or [])
 
-        return result.sent
+        return result
 
     def check_official_alert_triggers(self, trip: "Trip") -> list:
         """Issue #1088/#1200: liefert amtliche Warnungen, die NEU sind oder deren
@@ -1203,11 +1210,23 @@ class TripAlertService:
             mail_sink=self._mail_sink,
             telegram_style=_trip_telegram_style(trip),
         )
+        # Issue #1459: amtliche Warnungen tragen ihre Gefahrenart in `hazards`,
+        # NICHT als Register-Kennung in `metrics` (eigenes Vokabular, O1).
+        alert_log.append_entry(
+            self._user_id, trip_id=trip.id, changes_count=len(official_notices),
+            severity="MODERATE",
+            hazards=alert_log.hazards_from_official_alerts(
+                [a for a, _segment_ids in official_notices]
+            ),
+            reason=alert_log.REASON_OFFICIAL_ALERT,
+            effective_channels=effective_channels,
+            sent_channels=result.delivered_channels,
+            reachable_channels=result.sent_channels,
+        )
         if result.sent:
             self._record_official_alert_state(trip.id, official_notices)
             self._throttle_store.record("trip", trip.id, datetime.now(timezone.utc))
             alert_daily_limit.increment(self._user_id, datetime.now(timezone.utc))
-            self._append_alert_log(trip.id, len(official_notices), "MODERATE")
         return result.sent
 
     def _effective_alert_channels(self, trip: "Trip") -> set[str]:
