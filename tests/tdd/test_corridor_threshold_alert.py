@@ -666,3 +666,367 @@ def test_ac4_verschaerfung_bei_stetiger_groesse_meldet_erneut_geringfuegig_nicht
         )
     finally:
         _clean_user(user_id)
+
+
+# ==========================================================================
+# Scheibe 2a — Schwellen-Waechter erreicht BEIDE Metrik-Namensraeume
+# SPEC: docs/specs/modules/feat_1444_s2a_schwellen_namensraum.md AC-1..AC-7
+#
+# Der Kern des Bugs: die Tests der Scheibe 1 oben benutzen durchgaengig die
+# ALTEN `AlertMetric`-Kennungen (`thunder_level`, `precipitation_sum`). Der
+# Korridor-Editor schreibt seit der #1425-Migration aber die
+# Katalog-Kennungen (`thunder_level_max`, `precip_sum_mm`, ...) -- und die
+# loest `_ALERT_METRIC_TO_SUMMARY_FIELD` nicht auf, der Korridor wird still
+# uebersprungen.
+#
+# RED-Lage bei Abgabe (gemessen, nicht behauptet):
+#   rot   AC-1, AC-2, AC-3, AC-7 -- beweisen den Bug
+#   gruen AC-4, AC-5, AC-6       -- Regression bzw. Gegenproben, muessen
+#                                   VOR und NACH der Implementierung gruen sein
+# ==========================================================================
+
+
+def test_ac1_gewitter_grenze_im_katalog_namensraum_meldet():
+    """AC-1 (ROT vor der Implementierung).
+
+    GIVEN eine Tour mit dem Gewitter-Wertebereich unter der KATALOG-Kennung
+    `thunder_level_max` (genau so, wie der Korridor-Editor seit #1425
+    speichert -- NICHT die alte Kennung `thunder_level`) und einer
+    Vorhersage, die im aktiven Etappenfenster Gewitter zeigt
+    WHEN der Alarm-Lauf prueft
+    THEN geht genau eine Sofort-Meldung raus, die Groesse, Ist-Wert und
+    Etappe nennt.
+
+    Heute still uebersprungen: `_ALERT_METRIC_TO_SUMMARY_FIELD` kennt nur den
+    alten Namensraum, `evaluate_corridor_thresholds()` verlaesst den Korridor
+    per `continue`."""
+    user_id = _fresh_user("s2ac1")
+    _clean_user(user_id)
+    try:
+        trip = _corridor_trip(
+            "trip-s2ac1",
+            [Corridor(metric="thunder_level_max", range=[None, 0], notify=True)],
+        )
+        stand = [_data(1, thunder_level_max=ThunderLevel.MED)]
+
+        mail_calls: list = []
+        sent = _service(user_id, mail_calls).check_and_send_alerts(
+            trip, stand, fresh_weather=stand,
+        )
+
+        assert sent is True, (
+            "Ein Gewitter-Wertebereich unter der Katalog-Kennung "
+            "'thunder_level_max' loest heute KEINE Meldung aus -- der "
+            "Waechter loest nur den alten AlertMetric-Namensraum auf"
+        )
+        assert len(mail_calls) == 1, (
+            f"Erwartet genau 1 Meldung, erhalten: {len(mail_calls)}"
+        )
+        _, body = mail_calls[0]
+        assert "Gewitter" in body, (
+            f"Die Wettergroesse fehlt in der Meldung: {body[:400]!r}"
+        )
+        assert "km " in body, (
+            f"Die Etappe (km-Angabe) fehlt in der Meldung: {body[:400]!r}"
+        )
+    finally:
+        _clean_user(user_id)
+
+
+def test_ac2_regen_grenze_im_katalog_namensraum_meldet():
+    """AC-2 (ROT vor der Implementierung).
+
+    GIVEN eine Tour mit dem Regen-Wertebereich unter der KATALOG-Kennung
+    `precip_sum_mm` (NICHT die alte Kennung `precipitation_sum`) und einer
+    Vorhersage, die die Grenze reisst
+    WHEN der Alarm-Lauf prueft
+    THEN geht genau eine Sofort-Meldung raus, die Groesse, Ist-Wert und
+    Etappe nennt.
+
+    Derselbe Bug wie AC-1, hier an einer STETIGEN Groesse -- damit der
+    Nachweis nicht an der Gewitter-Sonderbehandlung (Ordinalwandlung) haengt."""
+    user_id = _fresh_user("s2ac2")
+    _clean_user(user_id)
+    try:
+        trip = _corridor_trip(
+            "trip-s2ac2",
+            [Corridor(metric="precip_sum_mm", range=[None, 1], notify=True)],
+        )
+        stand = [_data(1, precip_sum_mm=9.0)]
+
+        mail_calls: list = []
+        sent = _service(user_id, mail_calls).check_and_send_alerts(
+            trip, stand, fresh_weather=stand,
+        )
+
+        assert sent is True, (
+            "Ein Regen-Wertebereich unter der Katalog-Kennung 'precip_sum_mm' "
+            "loest heute KEINE Meldung aus -- der Waechter loest nur den "
+            "alten AlertMetric-Namensraum auf"
+        )
+        assert len(mail_calls) == 1, (
+            f"Erwartet genau 1 Meldung, erhalten: {len(mail_calls)}"
+        )
+        _, body = mail_calls[0]
+        # "Niedersch" = alert_label der Katalog-Metrik `precipitation`
+        # (gegen die Wirklichkeit geprueft, nicht geraten).
+        assert "Niedersch" in body, (
+            f"Die Wettergroesse fehlt in der Meldung: {body[:400]!r}"
+        )
+        assert "9" in body, (
+            f"Der Ist-Wert (9.0 mm) fehlt in der Meldung: {body[:400]!r}"
+        )
+    finally:
+        _clean_user(user_id)
+
+
+def test_ac3_nicht_alarmfaehige_groesse_schneehoehe_meldet():
+    """AC-3 (ROT vor der Implementierung).
+
+    GIVEN eine Tour mit einem Wertebereich auf der Schneehoehe
+    (`snow_depth_cm`) -- eine Groesse, die das Register NICHT als
+    alarmfaehig fuehrt (`alarmCapable: false`) und die im alten Namensraum
+    gar nicht existiert -- und einer Vorhersage, die die Grenze reisst
+    WHEN der Alarm-Lauf prueft
+    THEN geht eine Sofort-Meldung raus.
+
+    Belegt die Korrektur an der Ticket-Skizze: massgeblich ist NICHT
+    `alarm_capable` (die Frage des Aenderungs-Waechters), sondern ob ein
+    Zahlenwert je Etappe existiert."""
+    user_id = _fresh_user("s2ac3")
+    _clean_user(user_id)
+    try:
+        trip = _corridor_trip(
+            "trip-s2ac3",
+            [Corridor(metric="snow_depth_cm", range=[None, 20], notify=True)],
+        )
+        stand = [_data(1, snow_depth_cm=80.0)]
+
+        mail_calls: list = []
+        sent = _service(user_id, mail_calls).check_and_send_alerts(
+            trip, stand, fresh_weather=stand,
+        )
+
+        assert sent is True, (
+            "Ein Wertebereich auf der Schneehoehe loest heute KEINE Meldung "
+            "aus, obwohl je Etappe ein Zahlenwert vorliegt"
+        )
+        assert len(mail_calls) == 1, (
+            f"Erwartet genau 1 Meldung, erhalten: {len(mail_calls)}"
+        )
+        # "Schnee" = alert_label der Katalog-Metrik `snow_depth`
+        # (gegen die Wirklichkeit geprueft, nicht geraten).
+        assert "Schnee" in mail_calls[0][1], (
+            f"Die Wettergroesse fehlt in der Meldung: {mail_calls[0][1][:400]!r}"
+        )
+    finally:
+        _clean_user(user_id)
+
+
+def test_ac4_alte_kennungen_snow_line_obere_grenze_und_wind_gust_melden_weiter():
+    """AC-4 (GRUEN vor UND nach der Implementierung -- Regressionsschutz,
+    KEIN RED-Nachweis).
+
+    GIVEN eine Tour mit Wertebereichen unter den ALTEN AlertMetric-Kennungen
+    `snow_line` (mit OBERER Grenze -- der Fall, dessen Mehrdeutigkeit in
+    Scheibe 1 den CRITICAL ausgeloest hat) und `wind_gust` (stetige Groesse,
+    haeufigster Realfall), beide gerissen
+    WHEN der Alarm-Lauf prueft
+    THEN melden beide unveraendert weiter -- der additive Rueckfall auf den
+    Katalog-Namensraum darf den bestehenden Weg weder ueberschreiben noch
+    verschieben."""
+    user_id = _fresh_user("s2ac4")
+    _clean_user(user_id)
+    try:
+        trip = _corridor_trip(
+            "trip-s2ac4",
+            [
+                Corridor(metric="snow_line", range=[1500, 2500], notify=True),
+                Corridor(metric="wind_gust", range=[None, 60], notify=True),
+            ],
+        )
+        stand = [_data(1, freezing_level_m=3200, gust_max_kmh=95.0)]
+
+        mail_calls: list = []
+        sent = _service(user_id, mail_calls).check_and_send_alerts(
+            trip, stand, fresh_weather=stand,
+        )
+
+        assert sent is True, (
+            "Die alten Kennungen snow_line/wind_gust muessen unveraendert "
+            "weiter melden"
+        )
+        assert len(mail_calls) == 1, (
+            f"Beide gerissenen Grenzen gehoeren in EINE Nachricht, "
+            f"erhalten: {len(mail_calls)} Meldung(en)"
+        )
+        body = mail_calls[0][1]
+        assert "Nullgradgrenze" in body, (
+            f"Der snow_line-Anteil (obere Grenze, F001-Fall) fehlt: {body[:500]!r}"
+        )
+        assert "Böen" in body, (
+            f"Der wind_gust-Anteil fehlt in der Meldung: {body[:500]!r}"
+        )
+    finally:
+        _clean_user(user_id)
+
+
+def test_ac5_eingehaltene_grenze_im_katalog_namensraum_meldet_nicht():
+    """AC-5 (GRUEN vor UND nach der Implementierung).
+
+    GIVEN eine Tour mit einem Wertebereich im Katalog-Namensraum
+    (`thunder_level_max`) und einer Vorhersage, die die Grenze EINHAELT
+    WHEN der Alarm-Lauf prueft
+    THEN geht keine Meldung raus.
+
+    ACHTUNG -- dieser Test ist heute aus dem FALSCHEN Grund gruen: der
+    Korridor wird derzeit ueberhaupt nicht ausgewertet (unbekannte Kennung),
+    also kann auch nichts melden. Er ist damit KEIN Nachweis fuer den
+    RED-Zustand, sondern die Absicherung, dass die Implementierung nicht ins
+    Gegenteil kippt und ab jetzt bei eingehaltener Grenze faelschlich meldet."""
+    user_id = _fresh_user("s2ac5")
+    _clean_user(user_id)
+    try:
+        trip = _corridor_trip(
+            "trip-s2ac5",
+            [Corridor(metric="thunder_level_max", range=[None, 0], notify=True)],
+        )
+        stand = [_data(1, thunder_level_max=ThunderLevel.NONE)]
+
+        mail_calls: list = []
+        sent = _service(user_id, mail_calls).check_and_send_alerts(
+            trip, stand, fresh_weather=stand,
+        )
+
+        assert sent is False, (
+            "Eine eingehaltene Grenze darf auch im Katalog-Namensraum keine "
+            "Meldung ausloesen"
+        )
+        assert mail_calls == [], f"Unerwartete Meldung: {mail_calls!r}"
+    finally:
+        _clean_user(user_id)
+
+
+def test_ac6_aenderungs_waechter_bleibt_fuer_katalog_kennungen_wirkungslos():
+    """AC-6 (GRUEN vor UND nach der Implementierung -- Gegenprobe).
+
+    GIVEN eine AlertRule des AENDERUNGS-Waechters mit einer Kennung, die es
+    nur im Katalog-Namensraum gibt (`thunder_level_max`)
+    WHEN die Aenderungs-Erkennung darueber laeuft (echter Aufruf von
+    `detect_changes()` mit einem Sprung von KEIN auf HOCH -- kein blosser
+    Konstanten-Check)
+    THEN bleibt sie wirkungslos wie vor dieser Scheibe: der additive
+    Rueckfall gehoert ausschliesslich in den Schwellen-Pfad.
+
+    Zusatz-Assert in derselben Funktion (kein eigenes Gate): die beiden
+    Namensraeume sind kollisionsfrei. Nur dann kann der Rueckfall keinen
+    bestehenden Fall ueberschreiben; bricht ein kuenftiger Katalog-Eintrag
+    die Kollisionsfreiheit, schlaegt dieser Test an, statt das Verhalten
+    still zu verschieben."""
+    from app.models import AlertRule, AlertRuleKind, AlertSeverity
+    from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
+    from services.weather_change_detection import (
+        _ALERT_METRIC_TO_SUMMARY_FIELD,
+        WeatherChangeDetectionService,
+    )
+
+    assert _ALERT_METRIC_TO_SUMMARY_FIELD.get("thunder_level_max") is None, (
+        "Die Katalog-Kennung darf im Register des Aenderungs-Waechters NICHT "
+        "auftauchen -- der Rueckfall gehoert allein in den Schwellen-Pfad"
+    )
+
+    regeln = [
+        AlertRule(
+            id="r-abs", kind=AlertRuleKind.ABSOLUTE, metric="thunder_level_max",
+            threshold=1.0, severity=AlertSeverity.WARNING, enabled=True,
+        ),
+        AlertRule(
+            id="r-delta", kind=AlertRuleKind.DELTA, metric="thunder_level_max",
+            threshold=0.5, severity=AlertSeverity.WARNING, enabled=True,
+        ),
+    ]
+    svc = WeatherChangeDetectionService.from_alert_rules(regeln)
+    changes = svc.detect_changes(
+        _data(1, thunder_level_max=ThunderLevel.NONE),
+        _data(1, thunder_level_max=ThunderLevel.HIGH),
+    )
+
+    assert changes == [], (
+        "Der Aenderungs-Waechter darf Katalog-Kennungen weiterhin NICHT "
+        f"aufloesen, erhalten: {changes!r}"
+    )
+
+    katalog_keys = {eintrag["key"] for eintrag in COMPARE_METRIC_CATALOG}
+    alt_keys = {
+        getattr(k, "value", k) for k in _ALERT_METRIC_TO_SUMMARY_FIELD
+    }
+    kollision = katalog_keys & alt_keys
+    assert kollision == set(), (
+        "Die beiden Metrik-Namensraeume muessen kollisionsfrei bleiben, "
+        f"sonst ueberschreibt der Rueckfall bestehende Faelle -- "
+        f"kollidierende Kennungen: {sorted(kollision)!r}"
+    )
+
+
+def test_ac7_niederschlagsart_meldet_nicht_und_stoppt_den_lauf_nicht():
+    """AC-7 (ROT vor der Implementierung -- wegen des zweiten Korridors).
+
+    GIVEN eine Tour mit ZWEI Wertebereichen: einem auf der Niederschlagsart
+    (`precip_type_dominant`, eine Aufzaehlung OHNE Ordinalskala) und daneben
+    einem auf Gewitter im Katalog-Namensraum, dessen Grenze gerissen ist
+    WHEN der Alarm-Lauf prueft
+    THEN kommt die Gewitter-Meldung an, und fuer die Niederschlagsart geht
+    KEINE Meldung raus -- der Lauf bricht nicht ab.
+
+    Der Bereich der Niederschlagsart ist bewusst "mindestens 1" gewaehlt:
+    eine Implementierung, die den Katalog-Rueckfall einbaut, ohne die
+    Enum-Erkennung auf `ThunderLevel` zu verengen, wandelt `PrecipType.SNOW`
+    ueber `thunder_ordinal()` still in die 0 (gemessen: kein ValueError,
+    sondern der Default-Rueckgabewert) -- 0 liegt unter 1, es entstuende ein
+    FALSCHALARM auf einer Groesse ohne Ordinalskala. Genau den faengt dieser
+    Test."""
+    from app.models import PrecipType
+    from services.corridor_threshold import evaluate_corridor_thresholds
+
+    korridore = [
+        Corridor(metric="precip_type_dominant", range=[1, None], notify=True),
+        Corridor(metric="thunder_level_max", range=[None, 0], notify=True),
+    ]
+    stand = [_data(1, precip_type_dominant=PrecipType.SNOW,
+                   thunder_level_max=ThunderLevel.MED)]
+
+    treffer = evaluate_corridor_thresholds(stand, korridore)
+    assert [h.metric for h in treffer] == ["thunder_level_max"], (
+        "Die Niederschlagsart darf keinen Treffer erzeugen (keine "
+        "Ordinalskala), das Gewitter daneben schon -- erhalten: "
+        f"{[(h.metric, h.value) for h in treffer]!r}"
+    )
+
+    user_id = _fresh_user("s2ac7")
+    _clean_user(user_id)
+    try:
+        trip = _corridor_trip("trip-s2ac7", korridore)
+
+        mail_calls: list = []
+        sent = _service(user_id, mail_calls).check_and_send_alerts(
+            trip, stand, fresh_weather=stand,
+        )
+
+        assert sent is True, (
+            "Der Lauf muss die uebrigen Groessen weiter melden, auch wenn ein "
+            "Korridor auf einer nicht ordinalen Groesse liegt"
+        )
+        assert len(mail_calls) == 1, (
+            f"Erwartet genau 1 Meldung, erhalten: {len(mail_calls)}"
+        )
+        body = mail_calls[0][1]
+        assert "Gewitter" in body, (
+            f"Der Gewitter-Anteil fehlt in der Meldung: {body[:400]!r}"
+        )
+        # "Niederschlagsart" = label_de der Katalog-Metrik `precip_type`
+        # (alert_label ist leer, get_alert_label() faellt darauf zurueck).
+        assert "Niederschlagsart" not in body, (
+            f"Fuer die Niederschlagsart darf keine Meldung entstehen: {body[:400]!r}"
+        )
+    finally:
+        _clean_user(user_id)

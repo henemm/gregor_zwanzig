@@ -3148,6 +3148,20 @@ durch den `has_active_rules`-Gate). Darstellung über einen eigenen Render-Vertr
 (`CorridorEvent`, ADR-0013-Auflage) — kein `WeatherChange` mit `old_value=0.0`.
 Spec: `docs/specs/modules/feat_1444_s1_schwellen_alarm.md`.
 
+**`corridors[].metric` trägt zwei Namensräume** (#1444 S2a): eine `AlertMetric`-Kennung
+(die 5 fest verdrahteten Zeilen, z.B. `wind_gust`, `snow_line`) ODER einen Katalog-`key`
+(die 18 seit #1425 aus dem Katalog gespeisten Zeilen, z.B. `thunder_level_max`,
+`snow_depth_cm`). Beide Mengen sind **kollisionsfrei** und werden über
+`corridor_threshold.resolve_corridor_summary_field()` aufgelöst — erst
+`_ALERT_METRIC_TO_SUMMARY_FIELD`, dann additiv über `COMPARE_METRIC_CATALOG` →
+`metric_catalog.summary_field_for(metric_id, aggregation)`. Der Δ-Wächter kennt weiterhin
+**nur** den ersten Namensraum; die Erweiterung ist ausschließlich auf dem Schwellen-Pfad
+verdrahtet. Aufzählungen ohne Ordinalskala (`precip_type_dominant`) werden übersprungen.
+**Bekannte Grenze:** Zeigen zwei Kennungen auf dasselbe Summary-Feld (z.B. `snow_line` und
+`freezing_level` → `freezing_level_m`), erzeugt der Melde-Gedächtnis-Schlüsselraum
+`corridor:<metrik>:<etappe>` zwei unabhängige Meldungen für denselben Wert — #1455.
+Spec: `docs/specs/modules/feat_1444_s2a_schwellen_namensraum.md`.
+
 ```go
 // internal/model/trip.go + internal/model/compare_preset.go (Go)
 type Corridor struct {

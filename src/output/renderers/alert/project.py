@@ -102,8 +102,13 @@ def to_alert_message(
 
 
 def _resolve_corridor_metric_id(alert_metric: str, direction: str) -> str:
-    """Korridor-Metrik (AlertMetric-Namensraum) → Katalog metric_id fuer
-    Beschriftung/Einheit/Kuerzel (Issue #1444 S1, F001-Fix).
+    """Korridor-Metrik (BEIDE Namensraeume) → Katalog metric_id fuer
+    Beschriftung/Einheit/Kuerzel (Issue #1444 S1, F001-Fix; S2a Namensraum).
+
+    Die Aufloesung des Summary-Felds kommt aus
+    `services.corridor_threshold.resolve_corridor_summary_field()` -- DIESELBE
+    Funktion, die der Waechter benutzt. Zwei Kopien wuerden bedeuten, dass ein
+    im Waechter erkannter Treffer bei der Projektion erneut verschluckt wird.
 
     Loest ueber das SUMMARY-FIELD auf (wie `_resolve_metric_id()` fuer den
     Delta-Pfad) statt ueber `_ALERT_METRIC_TO_CATALOG_ID` -- das Feld ist die
@@ -123,9 +128,9 @@ def _resolve_corridor_metric_id(alert_metric: str, direction: str) -> str:
     `CorridorHit.direction`, NICHT aus dieser Katalog-cmp (die beschreibt die
     STANDARDRICHTUNG DER METRIK, nicht die Richtung EINES EINZELNEN Treffers).
     """
-    from services.weather_change_detection import _ALERT_METRIC_TO_SUMMARY_FIELD
+    from services.corridor_threshold import resolve_corridor_summary_field
 
-    field = _ALERT_METRIC_TO_SUMMARY_FIELD.get(alert_metric)
+    field = resolve_corridor_summary_field(alert_metric)
     if not field:
         raise KeyError(f"Unbekannte Korridor-Metrik: {alert_metric!r}")
     candidates = [m for m in _METRICS if field in m.summary_fields.values()]

@@ -15,12 +15,42 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
-from app.models import Corridor, SegmentWeatherData
+from app.metric_catalog import summary_field_for
+from app.models import Corridor, SegmentWeatherData, ThunderLevel
+from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
 from services.corridor_match import corridor_inside
 from services.weather_change_detection import (
     _ALERT_METRIC_TO_SUMMARY_FIELD,
     _peak_occurred_at,
 )
+
+# Einmalige Indizierung des Compare-Katalogs nach `key` (Vorbild:
+# `_KEY_BY_METRIC_AGGREGATION` in `compare_metric_catalog.py`).
+_CATALOG_BY_KEY: dict[str, dict] = {e["key"]: e for e in COMPARE_METRIC_CATALOG}
+
+
+def resolve_corridor_summary_field(metric: str) -> Optional[str]:
+    """Korridor-Metrik -> `SegmentWeatherSummary`-Feld, ueber BEIDE Namensraeume
+    (Issue #1444 S2a).
+
+    Primaer der alte `AlertMetric`-Namensraum (10 Kennungen,
+    `_ALERT_METRIC_TO_SUMMARY_FIELD` -- unveraendert und exklusive Grundlage des
+    Aenderungs-Waechters). Bei Fehlschlag additiver Rueckfall ueber den
+    Compare-Katalog (`key` -> `(metric_id, aggregation)`) und
+    `summary_field_for()`. Die Rueckwaerts-Funktion `alert_metric_for()` ist
+    hier tabu -- sie traegt die S1-CRITICAL-Mehrdeutigkeit (`SNOW_LINE` ->
+    zwei Katalog-IDs).
+
+    Beide Namensraeume sind kollisionsfrei, der Rueckfall kann also keinen
+    bestehenden Fall ueberschreiben.
+    """
+    field = _ALERT_METRIC_TO_SUMMARY_FIELD.get(metric)
+    if field:
+        return field
+    entry = _CATALOG_BY_KEY.get(metric)
+    if entry is None:
+        return None
+    return summary_field_for(entry.get("metric_id"), entry.get("aggregation"))
 
 
 @dataclass(frozen=True)
@@ -58,15 +88,17 @@ def evaluate_corridor_thresholds(
         for corridor in corridors:
             if not corridor.notify:
                 continue
-            field = _ALERT_METRIC_TO_SUMMARY_FIELD.get(corridor.metric)
+            field = resolve_corridor_summary_field(corridor.metric)
             if not field:
                 continue
             value = getattr(point.aggregated, field, None)
             if value is None:
                 continue
-            if isinstance(value, Enum):
+            if isinstance(value, ThunderLevel):
                 from output.metric_format import thunder_ordinal
                 value = thunder_ordinal(value)
+            elif isinstance(value, Enum):
+                continue  # Aufzaehlung ohne Ordinalskala (z.B. Niederschlagsart)
             value = float(value)
             min_bound, max_bound = corridor.range[0], corridor.range[1]
             if corridor_inside(value, min_bound, max_bound) is not False:

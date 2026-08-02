@@ -279,6 +279,18 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      Vorhersage geändert hat. Der Δ-Wächter bleibt davon unberührt; beide Treffer
      desselben Laufs gehen gebündelt in EINE Nachricht. Vorher war `notify` ein
      reiner an/aus-Schalter auf `metric_alert_levels` ohne eigene Wirkung.
+   - **Seit #1444 S2a (2026-08-02) erreicht der Wächter BEIDE Metrik-Namensräume:**
+     `corridor.metric` trägt je nach Herkunft eine `AlertMetric`-Kennung (die 5 fest
+     verdrahteten Zeilen, z.B. `wind_gust`, `snow_line`) ODER einen Katalog-`key` (die 18
+     seit #1425 aus dem Katalog gespeisten Zeilen, z.B. `thunder_level_max`). Bis S2a löste
+     nur der erste Namensraum auf — Gewitter & Co. fielen still durch.
+     `resolve_corridor_summary_field(metric)` (`corridor_threshold.py`) fragt jetzt zuerst
+     `_ALERT_METRIC_TO_SUMMARY_FIELD` (unverändert, exklusive Grundlage des Δ-Wächters) und
+     fällt additiv über `COMPARE_METRIC_CATALOG` → `metric_catalog.summary_field_for()`
+     zurück. `alert/project.py::_resolve_corridor_metric_id()` nutzt dieselbe Funktion, damit
+     ein erkannter Treffer nicht bei der Projektion erneut verschluckt wird. Folge: von 23
+     Trip-Wertebereichs-Zeilen sind jetzt alle 23 auswertbar statt 5.
+     Spec: `docs/specs/modules/feat_1444_s2a_schwellen_namensraum.md`.
    - Match-Logik `corridorInside(value, min, max)` wortgleich an zwei Stellen: TS
      `frontend/src/lib/shared/corridor-editor/corridorMatch.ts` und Python
      `src/services/corridor_match.py::corridor_inside()` (Consumer:
