@@ -161,9 +161,11 @@
 			flex: 1;
 			font-size: 16px;
 		}
-		table,
+		table {
+			display: block; /* Zeilen werden in AlertMetricLevelRow als Block gerendert */
+		}
 		thead {
-			display: none; /* Zeilen werden in AlertMetricLevelRow als Block gerendert */
+			display: none;
 		}
 		tbody {
 			display: block;
