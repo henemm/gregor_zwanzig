@@ -99,7 +99,7 @@ class TestCompareMailCorridorMarkOverview:
 
         html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, corridors=corridors)
 
-        cells = _overview_row_cells(html, "Temp max")
+        cells = _overview_row_cells(html, "Temperatur Maximum")
         assert _MARK in cells[1], "Ort A (20, im Korridor) muss die mark-Signatur tragen"
         assert _MARK_STYLE in cells[1], "Ort A muss den sichtbaren gruenen Border-Balken tragen"
         assert _MARK not in cells[2], "Ort B (40, ausserhalb) darf NICHT markiert sein"
@@ -120,7 +120,7 @@ class TestCompareMailCorridorMarkOverview:
 
         html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, corridors=corridors)
 
-        cells = _overview_row_cells(html, "Temp max")
+        cells = _overview_row_cells(html, "Temperatur Maximum")
         assert _MARK in cells[1], "Zelle muss trotz Severity-Faerbung markiert sein"
         assert _MARK_STYLE in cells[1], "Border-Balken muss trotz Severity-Faerbung sichtbar sein"
         assert "background:transparent" not in cells[1], (
@@ -138,7 +138,7 @@ class TestCompareMailCorridorMarkOverview:
 
         html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, corridors=corridors)
 
-        cells = _overview_row_cells(html, "Temp max")
+        cells = _overview_row_cells(html, "Temperatur Maximum")
         assert _MARK not in cells[1], "notify-only-Corridor (mark=False) darf keine Markierung setzen"
         assert _MARK_STYLE not in cells[1], "notify-only-Corridor darf keinen Border-Balken setzen"
 
@@ -154,7 +154,7 @@ class TestCompareMailCorridorMarkOverview:
 
         html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, corridors=corridors)
 
-        cells = _overview_row_cells(html, "Temp max")
+        cells = _overview_row_cells(html, "Temperatur Maximum")
         assert _MARK in cells[1], "10 (nur Obergrenze 35, keine Untergrenze) muss markiert sein"
         assert _MARK_STYLE in cells[1], "10 muss den sichtbaren Border-Balken tragen"
         assert _MARK not in cells[2], "40 (ueber der offenen Obergrenze) darf nicht markiert sein"
@@ -174,7 +174,7 @@ class TestCompareMailCorridorMarkOverview:
 
         html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, corridors=corridors)
 
-        cells = _overview_row_cells(html, "Temp max")
+        cells = _overview_row_cells(html, "Temperatur Maximum")
         assert _MARK in cells[1], "Ort A (20, im Korridor) muss trotzdem markiert sein"
         assert _MARK_STYLE in cells[1], "Ort A muss den sichtbaren Border-Balken tragen"
         assert _MARK not in cells[2], "Fehlerhafter Ort darf nicht markiert sein"
@@ -317,8 +317,16 @@ class TestCorridorScoreIndependence:
 #   uv run pytest tests/tdd/test_compare_mail_corridor_mark.py -k byte_identisch
 # Aendert sich eine der beiden Summen, hat die Aenderung die Vergleichs-Mail
 # angefasst (HTML oder Klartext) -- genau das verbietet AC-6.
-_COMPARE_HTML_SHA256_BEFORE = "4001968bb9c71c5a9ba41b09a27d8eda8d95af43f92e43568fb6d943730506f3"
-_COMPARE_TEXT_SHA256_BEFORE = "9e976252f847f89263e6d2f3721f13d3c94ae2a1b1db80fe5c61103ae87ae68d"
+#
+# NEU AUFGENOMMEN 2026-08-02 (Issue #1453): diese Lieferung aendert die
+# Vergleichs-Mail AUSDRUECKLICH -- die Uebersichtstabelle traegt ab jetzt den
+# ausgeschriebenen deutschen Registernamen statt der englischen Kurzform. Die
+# alten Summen (HTML 4001968b…, Klartext 9e976252…) beschreiben einen Stand,
+# den es nicht mehr gibt; sie hier stehen zu lassen haette diesen Waechter
+# dauerhaft rot gehalten. Der Waechter selbst bleibt in Kraft: er bewacht
+# weiterhin, dass eine TRIP-Aenderung die Vergleichs-Mail nicht anfasst.
+_COMPARE_HTML_SHA256_BEFORE = "db0991d9a6b59901f11de55ddd2699b64ef39b34506981674b23cd88c85b3667"
+_COMPARE_TEXT_SHA256_BEFORE = "6971eab436654e1751049731afecad7c362352537a0c72ec3bccbf681dc732cd"
 
 
 def _byte_identity_fixture():

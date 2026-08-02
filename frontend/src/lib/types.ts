@@ -169,6 +169,10 @@ export interface MetricEntry {
 	default_format_mode?: string;
 	/** Issue #849: Kurzes Spaltenkürzel für E-Mail-Tabelle (z.B. "T", "Gust"). */
 	col_label?: string;
+	/** Issue #1453 (AC-7): SMS-Kürzel derselben Größe (z.B. "DP"). Dritte und
+	 *  letzte Namensform; /api/metrics liefert sie längst mit, der Editor zeigt
+	 *  sie seit #1453 auch an. */
+	sms_code?: string;
 	/** Issue #1401 (A1): Auswertung als eigenes Element neben dem Namen
 	 *  (Maximum/Minimum/Mittel/Summe). Nur im Ortsvergleich gesetzt —
 	 *  /api/metrics (Trip) liefert sie nicht. */
@@ -470,6 +474,12 @@ export interface CompareMetricCatalogEntry {
 	// Mittel/Summe) — eigenes Anzeige-Element NEBEN dem Namen, nicht darin.
 	// Optional: ältere Antworten/Fixtures und der Trip-Katalog tragen sie nicht.
 	aggregation_label?: string;
+	// Issue #1453 (AC-7): die beiden übrigen Namensformen derselben Größe —
+	// englische Fachkurzform (Stundentabelle) und SMS-Kürzel. Aus DEMSELBEN
+	// zentralen Register wie `label`, damit der Editor alle drei zeigen kann,
+	// ohne sie im Browser ein zweites Mal zu führen.
+	col_label?: string;
+	sms_code?: string;
 	// Issue #1435 (E1a-1, live): Alarm-Identität der Größe aus dem zentralen
 	// Register — `null`, wenn sie nicht alarmfähig ist. E1a-2 macht sie zur
 	// EINZIGEN Quelle dafür, welche Alarm-Zeilen der Alarme-Reiter zeigt.

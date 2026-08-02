@@ -131,11 +131,11 @@ def _find_row(html: str, predicate) -> dict | None:
 
 
 # #1401 A2b: englische Kurzform aus dem zentralen Namensregister.
-_IS_RAIN = lambda l: l == "rain"  # noqa: E731
-_IS_POP = lambda l: l == "rain%"  # noqa: E731
-_IS_THUNDER = lambda l: l == "thdr"  # noqa: E731
-_IS_VISIBILITY = lambda l: l == "visib"  # noqa: E731
-_IS_UV = lambda l: l == "uv"  # noqa: E731
+_IS_RAIN = lambda l: l == "niederschlag"  # noqa: E731
+_IS_POP = lambda l: l == "regenwahrscheinlichkeit"  # noqa: E731
+_IS_THUNDER = lambda l: l == "gewitter"  # noqa: E731
+_IS_VISIBILITY = lambda l: l == "sichtweite"  # noqa: E731
+_IS_UV = lambda l: l == "uv-index"  # noqa: E731
 
 _EMPTY = {"—", "-", "·", ""}
 
@@ -178,7 +178,7 @@ def test_selected_rain_metric_appears_in_overview_matrix():
     )
 
     text = render_comparison_text(result, enabled_metrics=enabled)
-    assert re.search(r"Rain[^\n%]*:", text), (
+    assert re.search(r"Niederschlag[^\n]*:", text), (
         "Klartext-Uebersicht hat keine Regen-Zeile, obwohl Regen gewaehlt ist."
     )
 
@@ -448,24 +448,22 @@ def test_unselected_new_metrics_leave_existing_matrix_unchanged():
     """AC-16: Bestehende Auswahl ohne die fuenf neuen Metriken -> Matrix
     WERTMAESSIG unveraendert (Zellen, Zeilenzahl, Reihenfolge).
 
-    AC-5 (#1401 A2b): die Beschriftung selbst wechselt auf die `col_label`-
-    Kurzform aus dem zentralen Register ("Temp max"->"Temp", da hier nur eine
-    Auswertung gewaehlt ist; "Wolken"->"Cloud") -- nur die Ueberschrift
-    aendert sich, niemals der Wert (Spec fix_1401_a2_mailtabellen.md, AC-5).
-    Dieser Test war vor A2b bewusst gruen (Bestandsschutz); mit A2b wird er
-    RED, bis die Ableitung aus dem Register steht -- das ist kein Regress,
-    sondern der geforderte Nachweis.
+    #1453: die Beschriftung selbst ist der ausgeschriebene deutsche
+    Registername ("Temperatur", da hier nur eine Auswertung gewaehlt ist;
+    "Bewölkung") -- nur die Ueberschrift aendert sich, niemals der Wert.
     """
     result = _result()
     enabled = resolve_enabled_metrics(["temp_max_c", "wind_max_kmh", "cloud_avg_pct"])
 
     html = render_compare_html(result, enabled_metrics=enabled)
 
-    assert _labels(html) == ["Amtliche Warnungen", "Temp", "Wind", "Cloud"], (
-        "Bestehende Auswahl zeigt nicht die aus dem zentralen Register "
-        f"abgeleitete Kurzform (#1401 A2b): {_labels(html)}"
+    assert _labels(html) == [
+        "Amtliche Warnungen", "Temperatur", "Wind", "Bewölkung",
+    ], (
+        "Bestehende Auswahl zeigt nicht den aus dem zentralen Register "
+        f"abgeleiteten deutschen Namen (#1453): {_labels(html)}"
     )
     rows = {r["label"]: r["cells"] for r in _overview_rows(html)}
-    assert rows["Temp"] == ["16°C", "16°C"]
+    assert rows["Temperatur"] == ["16°C", "16°C"]
     assert rows["Wind"] == ["20 km/h", "20 km/h"]
-    assert rows["Cloud"] == ["50%", "50%"]
+    assert rows["Bewölkung"] == ["50%", "50%"]

@@ -3,11 +3,12 @@ AC-4).
 
 Zwei Wettergroessen im Ortsvergleich fuehren zwei mit dem Frontend waehlbare
 Auswertungen: Temperatur (max/min) und Gefuehlte Temperatur (max/min). Beide
-teilen sich denselben `col_label` ("Temp"/"Feels"). Ist nur EINE der beiden
-Auswertungen gleichzeitig sichtbar, zeigt die Mail die reine Kurzform ohne
-Zusatz; sind BEIDE gleichzeitig sichtbar, wuerden sie ohne Zusatz
-ununterscheidbar -- dann bekommt jede Zeile den rohen, kleingeschriebenen
-Auswertungswert angehaengt ("Temp max"/"Temp min", "Feels max"/"Feels min").
+teilen sich denselben Registernamen ("Temperatur"/"Gefühlte Temperatur").
+Ist nur EINE der beiden Auswertungen gleichzeitig sichtbar, zeigt die Mail den
+blanken Namen ohne Zusatz; sind BEIDE gleichzeitig sichtbar, wuerden sie ohne
+Zusatz ununterscheidbar -- dann bekommt jede Zeile die deutsche Auswertung
+angehaengt ("Temperatur Maximum"/"Temperatur Minimum"). #1453: der Zusatz ist
+die deutsche Auswertungsbezeichnung, nicht mehr der rohe Schluessel.
 
 Kern-Schicht, deterministisch: echte ``ForecastDataPoint``-Objekte, echte
 Renderer-Aufrufe, keine Mocks, kein ``patch()``, kein Netz.
@@ -107,35 +108,35 @@ def _html_overview_labels(html: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def test_temperature_max_alone_shows_plain_short_form():
-    """Nur Temperatur max gewaehlt -> reine Kurzform 'Temp', kein Zusatz."""
+    """Nur Temperatur max gewaehlt -> blanker Name 'Temperatur', kein Zusatz."""
     result = _result()
     enabled = resolve_enabled_metrics(["temp_max_c"])
 
     html = render_compare_html(result, enabled_metrics=enabled)
 
-    assert _html_overview_labels(html) == ["Amtliche Warnungen", "Temp"], (
-        "Nur Temperatur max gewaehlt -- die Zeile muss 'Temp' ohne Zusatz "
-        f"zeigen: {_html_overview_labels(html)}"
+    assert _html_overview_labels(html) == ["Amtliche Warnungen", "Temperatur"], (
+        "Nur Temperatur max gewaehlt -- die Zeile muss 'Temperatur' ohne "
+        f"Zusatz zeigen: {_html_overview_labels(html)}"
     )
 
 
 def test_temperature_min_alone_shows_plain_short_form():
-    """Nur Temperatur min gewaehlt -> reine Kurzform 'Temp', kein Zusatz."""
+    """Nur Temperatur min gewaehlt -> blanker Name 'Temperatur', kein Zusatz."""
     result = _result()
     enabled = resolve_enabled_metrics(["temp_min_c"])
 
     html = render_compare_html(result, enabled_metrics=enabled)
 
-    assert _html_overview_labels(html) == ["Amtliche Warnungen", "Temp"], (
-        "Nur Temperatur min gewaehlt -- die Zeile muss 'Temp' ohne Zusatz "
-        f"zeigen: {_html_overview_labels(html)}"
+    assert _html_overview_labels(html) == ["Amtliche Warnungen", "Temperatur"], (
+        "Nur Temperatur min gewaehlt -- die Zeile muss 'Temperatur' ohne "
+        f"Zusatz zeigen: {_html_overview_labels(html)}"
     )
 
 
 def test_temperature_max_and_min_together_get_the_evaluation_suffix():
     """Beide Temperatur-Auswertungen gleichzeitig gewaehlt -> jede Zeile
-    bekommt den rohen Auswertungs-Zusatz, sonst waeren beide Zeilen
-    ununterscheidbar 'Temp'.
+    bekommt den deutschen Auswertungs-Zusatz, sonst waeren beide Zeilen
+    ununterscheidbar 'Temperatur'.
 
     Hinweis RED-Phase: dieser Einzeltest ist SCHON JETZT gruen -- die heute
     noch getippten CV2_METRICS-Labels fuer temp_max/temp_min lauten bereits
@@ -151,9 +152,12 @@ def test_temperature_max_and_min_together_get_the_evaluation_suffix():
 
     html = render_compare_html(result, enabled_metrics=enabled)
 
-    assert _html_overview_labels(html) == ["Amtliche Warnungen", "Temp max", "Temp min"], (
+    assert _html_overview_labels(html) == [
+        "Amtliche Warnungen", "Temperatur Maximum", "Temperatur Minimum",
+    ], (
         "Beide Temperatur-Auswertungen gleichzeitig gewaehlt -- die Zeilen "
-        f"muessen 'Temp max'/'Temp min' zeigen: {_html_overview_labels(html)}"
+        "muessen 'Temperatur Maximum'/'Temperatur Minimum' zeigen: "
+        f"{_html_overview_labels(html)}"
     )
 
 
@@ -168,9 +172,11 @@ def test_wind_chill_min_alone_shows_plain_short_form():
 
     html = render_compare_html(result, enabled_metrics=enabled)
 
-    assert _html_overview_labels(html) == ["Amtliche Warnungen", "Feels"], (
-        "Nur Gefuehlte Temp. min gewaehlt -- die Zeile muss 'Feels' ohne "
-        f"Zusatz zeigen: {_html_overview_labels(html)}"
+    assert _html_overview_labels(html) == [
+        "Amtliche Warnungen", "Gefühlte Temperatur",
+    ], (
+        "Nur Gefuehlte Temp. min gewaehlt -- die Zeile muss 'Gefühlte "
+        f"Temperatur' ohne Zusatz zeigen: {_html_overview_labels(html)}"
     )
 
 
@@ -181,25 +187,28 @@ def test_wind_chill_max_alone_shows_plain_short_form():
 
     html = render_compare_html(result, enabled_metrics=enabled)
 
-    assert _html_overview_labels(html) == ["Amtliche Warnungen", "Feels"], (
-        "Nur Gefuehlte Temp. max gewaehlt -- die Zeile muss 'Feels' ohne "
-        f"Zusatz zeigen: {_html_overview_labels(html)}"
+    assert _html_overview_labels(html) == [
+        "Amtliche Warnungen", "Gefühlte Temperatur",
+    ], (
+        "Nur Gefuehlte Temp. max gewaehlt -- die Zeile muss 'Gefühlte "
+        f"Temperatur' ohne Zusatz zeigen: {_html_overview_labels(html)}"
     )
 
 
 def test_wind_chill_min_and_max_together_get_the_evaluation_suffix():
     """Beide Gefuehlte-Temperatur-Auswertungen gleichzeitig gewaehlt -> jede
-    Zeile bekommt den rohen Auswertungs-Zusatz."""
+    Zeile bekommt den deutschen Auswertungs-Zusatz."""
     result = _result()
     enabled = resolve_enabled_metrics(["wind_chill_min_c", "wind_chill_max_c"])
 
     html = render_compare_html(result, enabled_metrics=enabled)
 
     assert _html_overview_labels(html) == [
-        "Amtliche Warnungen", "Feels min", "Feels max",
+        "Amtliche Warnungen",
+        "Gefühlte Temperatur Minimum", "Gefühlte Temperatur Maximum",
     ], (
         "Beide Gefuehlte-Temperatur-Auswertungen gleichzeitig gewaehlt -- die "
-        f"Zeilen muessen 'Feels min'/'Feels max' zeigen: "
+        "Zeilen muessen 'Gefühlte Temperatur Minimum'/'... Maximum' zeigen: "
         f"{_html_overview_labels(html)}"
     )
 
@@ -222,7 +231,8 @@ def test_temperature_and_wind_chill_collisions_are_independent():
     html = render_compare_html(result, enabled_metrics=enabled)
 
     assert _html_overview_labels(html) == [
-        "Amtliche Warnungen", "Temp max", "Temp min", "Feels min", "Feels max",
+        "Amtliche Warnungen", "Temperatur Maximum", "Temperatur Minimum",
+        "Gefühlte Temperatur Minimum", "Gefühlte Temperatur Maximum",
     ], (
         "Die beiden Kollisionspaare (Temperatur, Gefuehlte Temperatur) "
         f"beeinflussen sich gegenseitig: {_html_overview_labels(html)}"

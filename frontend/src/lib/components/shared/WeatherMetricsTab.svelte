@@ -823,9 +823,14 @@
 		const map: Record<string, MetricEntry> = {};
 		// Issue #1401 (A1): `aggregation_label` mitgeben — die Reihenfolge-Zeile
 		// zeigt die Auswertung als eigenes Element neben dem Namen.
+		// Issue #1453 (AC-7): `col_label`/`sms_code` reisen aus derselben
+		// Katalogantwort mit — ohne sie koennte die Zeile die beiden anderen
+		// Namensformen nur leer lassen (fehlende Datengrundlage, nicht nur
+		// fehlende Anzeige).
 		for (const e of compareCatalog)
 			map[e.metric] = {
-				id: e.metric, label: e.label, aggregation_label: e.aggregation_label
+				id: e.metric, label: e.label, aggregation_label: e.aggregation_label,
+				col_label: e.col_label, sms_code: e.sms_code
 			} as MetricEntry;
 		return map;
 	});

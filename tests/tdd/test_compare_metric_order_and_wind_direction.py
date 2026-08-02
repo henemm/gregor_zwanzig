@@ -136,8 +136,9 @@ class TestOverviewRowOrder:
             f"immer erste Zeile sein, war: {labels}"
         )
         numeric_labels = labels[1:]
-        assert numeric_labels == ["Rain", "Wind", "Temp"], (
-            f"RED (AC-1): erwartet Config-Reihenfolge ['Regen','Wind','Temp max'] "
+        assert numeric_labels == ["Niederschlag", "Wind", "Temperatur"], (
+            f"RED (AC-1): erwartet Config-Reihenfolge "
+            f"['Niederschlag','Wind','Temperatur'] "
             f"(entspricht enabled_metrics=['precip_sum','wind_max','temp_max']), "
             f"erhalten {numeric_labels} -- _visible_metrics() ignoriert heute die "
             f"Eingabe-Reihenfolge und nutzt die feste CV2_METRICS-Deklarationsreihenfolge "
@@ -277,7 +278,7 @@ class TestOverviewWindDirectionRegress:
 
         table = _find_overview_table(html)
         rows = _rows(table)
-        wind_row = next((r for r in rows if r and r[0] == "WDir"), None)
+        wind_row = next((r for r in rows if r and r[0] == "Windrichtung"), None)
         assert wind_row is not None, "Windrichtungs-Zeile nicht gefunden"
         assert "225" in wind_row[1], (
             f"Windrichtungs-Zelle muss weiterhin den korrekten Gradwert (225) zeigen, "

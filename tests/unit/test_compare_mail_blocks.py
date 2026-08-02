@@ -313,23 +313,23 @@ def test_matrix_five_1285_metrics_stay_live_derived_from_daily_summary():
     html = render_compare_html(result, enabled_metrics=enabled)
     region = _matrix_region(html)
 
-    assert _cell_value_for_label(region, "Rain") == f"{summary.precip_sum_mm:.1f} mm", (
+    assert _cell_value_for_label(region, "Niederschlag") == f"{summary.precip_sum_mm:.1f} mm", (
         "Regen-Matrixzelle weicht von der Live-Ableitung ab -- #1285-"
         "Regression."
     )
-    assert _cell_value_for_label(region, "Rain%") == f"{summary.pop_max_pct:.0f}%", (
+    assert _cell_value_for_label(region, "Regenwahrscheinlichkeit") == f"{summary.pop_max_pct:.0f}%", (
         "Regenwahrscheinlichkeit-Matrixzelle weicht von der Live-Ableitung "
         "ab -- #1285-Regression."
     )
-    assert _cell_value_for_label(region, "Thdr") == "mittel", (
+    assert _cell_value_for_label(region, "Gewitter") == "mittel", (
         "Gewitter-Matrixzelle weicht von der Live-Ableitung ab -- "
         "#1285-Regression."
     )
-    assert _cell_value_for_label(region, "UV") == f"{summary.uv_index_max:.0f}", (
+    assert _cell_value_for_label(region, "UV-Index") == f"{summary.uv_index_max:.0f}", (
         "UV-max-Matrixzelle weicht von der Live-Ableitung ab -- "
         "#1285-Regression."
     )
-    assert _cell_value_for_label(region, "Visib") == f"{summary.visibility_min_m / 1000:.1f} km", (
+    assert _cell_value_for_label(region, "Sichtweite") == f"{summary.visibility_min_m / 1000:.1f} km", (
         "Sicht-min-Matrixzelle weicht von der Live-Ableitung ab -- "
         "#1285-Regression."
     )

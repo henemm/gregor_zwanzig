@@ -25,7 +25,6 @@ import imaplib
 import email
 import re
 import time
-from datetime import date
 from email.header import decode_header
 from pathlib import Path
 from typing import List, Tuple
@@ -513,20 +512,18 @@ _TABLE_RE = re.compile(r'<table[^>]*>(.*?)</table>', re.DOTALL)
 # Konfigurierbare Teilmengen in beliebiger Anordnung sind zulaessig,
 # s. validate_structure().
 #
-# Issue #1404: UEBERGANGS-UNION, strikt additiv. #1401 Scheibe A2b leitet die
-# Spaltenueberschriften aus dem zentralen Namensregister ab; 6 der 9
-# Wertspalten heissen danach anders (Gef.->Feels, Böen->Gust, Regen->Rain,
-# Gew.->Thdr, Regen-W.->Rain%, Sicht->Visib; Zeit/Temp/Wind/UV bleiben
-# gleich). Waere hier nur EINE Fassung gelistet, wuerde der Pruefer die
-# jeweils andere -- inhaltlich korrekte -- Mail hart ablehnen (Exit 1) und
-# ueber das Renderer-Commit-Gate #811 jeden Commit an compare_html.py
-# blockieren: A2b koennte seine eigene Aenderung nicht committen. Solange die
-# Umbenennung laeuft, gehen deshalb BEIDE Fassungen durch.
+# Issue #1404 fuehrte hier eine befristete UEBERGANGS-UNION: die 6
+# handgetippten Beschriftungen VOR #1401 A2b ("Gef.", "Böen", "Regen", "Gew.",
+# "Regen-W.", "Sicht") galten neben der Registerfassung, damit waehrend der
+# Umbenennung keine inhaltlich korrekte Mail hart abgelehnt wird -- sonst haette
+# das Renderer-Commit-Gate #811 A2b den eigenen Commit verwehrt.
 #
-# RUECKBAU-AUFTRAG: Sobald #1401 A2b geliefert ist, fallen die 6 alten Labels
-# ("Gef.", "Böen", "Regen", "Gew.", "Regen-W.", "Sicht") wieder heraus --
-# Zielzustand sind exakt die A2b-Spalten. Bis dahin erinnert
-# _HOUR_COLUMNS_V2_REVIEW_DATE an die faellige Entscheidung.
+# Issue #1453 (PO-Override 2026-08-02): die Uebergangszeit ist BEENDET. A2b ist
+# geliefert, die Stundentabelle traegt genau EINE Namensform -- die aus dem
+# Register abgeleitete englische Kurzform. Die 6 Alt-Literale und ihr
+# Pruefdatum sind ersatzlos entfallen; eine Mail mit alter Spaltenbeschriftung
+# wird ab jetzt benannt abgelehnt, genau wie eine erfundene Spalte
+# (Nachweis: tests/unit/test_compare_validator_single_name_form.py).
 #
 # Issue #1406 Scheibe B (PO-Override 2026-08-01): der Stundenverlauf schoepft
 # ab jetzt aus dem zentralen Wetterregister (22 Wert-Spalten statt 9). Die
@@ -579,30 +576,14 @@ _HOUR_COLUMNS_V2 = [
     # Registerfassung (#1406 B): die Kurzform jeder Groesse, die eine
     # Wert-Spalte bekommen kann. Deckt die 9 bisherigen Spalten (Temp/Feels/
     # Wind/Gust/Rain/UV/Thdr/Rain%/Visib) und die 13 neu waehlbaren (Humid,
-    # Cond°, CAPE, SnowL, PType, Cloud, CldLow, CldMid, CldHi, hPa, 0°Line,
-    # SnowH, NewSn) in einem Zug ab.
+    # Dew, CAPE, SnowL, PType, Cloud, CldLow, CldMid, CldHi, Press, 0°Line,
+    # SnowH, NewSn) in einem Zug ab. #1453: "Cond°"->"Dew" und "hPa"->"Press"
+    # ziehen ueber genau diese Ableitung nach, ohne Eingriff hier.
+    #
+    # #1453: KEINE Zweitfassung mehr. Diese Liste ist damit wieder das, was sie
+    # sein soll -- eine geschlossene Menge aus dem Register.
     *_HOUR_VALUE_COLUMN_LABELS,
-    # Uebergangs-Union #1404: die 6 Beschriftungen VOR #1401 A2b. Nicht im
-    # Register -- deshalb weiterhin von Hand und weiterhin Gegenstand des
-    # RUECKBAU-AUFTRAGS oben (#1420), nicht von #1406 B miterledigt.
-    "Gef.", "Böen", "Regen", "Gew.", "Regen-W.", "Sicht",
 ]
-
-# Pruefdatum der Uebergangs-Union (Regel-Budget: Spec-`created` 2026-07-28 +
-# 90 Tage). REINER ERINNERUNGS-MARKER fuer eine menschliche Review -- anders
-# als bei `nebenbefund_gate.py:21` schaltet dieses Datum KEIN Verhalten um und
-# es gibt keinen Code-Zweig darauf. Eine Selbstverengung am Stichtag waere
-# falsch: verzoegert sich #1401 A2b, wuerde die dann korrekte neue Mail wieder
-# hart abgelehnt -- genau der Fehler, den diese Union verhindert.
-#
-# #1406 Scheibe B hat die Union AUSDRUECKLICH NICHT abgeraeumt: die 6 alten
-# deutschen Beschriftungen stehen unveraendert oben. Sie sind der faellige
-# Rueckbau aus #1420 und haengen am selben Test
-# (test_compare_mail_overview_plausibility_coverage.py::
-# test_ac4_exemption_set_is_declared_and_complete), der dafuer vorbestehend
-# rot ist -- das ist eine eigene Entscheidung, keine Nebenwirkung dieser
-# Scheibe. Pruefdatum bleibt unveraendert.
-_HOUR_COLUMNS_V2_REVIEW_DATE = date(2026, 10, 26)
 
 # Negativ-Check: Score-/Winner-Sprache ist im v2-Vertrag ein Verstoss (kein
 # Ranking mehr, s. compare_html.py-Docstring "Kein Score/Ranking/Winner-Card").
@@ -638,100 +619,77 @@ _SCORE_WINNER_RE = re.compile(
 # jede andere Einheit ("°", "hPa", "m", "km/h", "J/kg", "cm", "mm", "h") MIT.
 # Zeilen mit eigener `fmt`-Funktion (Sicht min) folgen deren Ausgabe.
 #
-# Issue #1420: UEBERGANGS-UNION, strikt additiv (Muster _HOUR_COLUMNS_V2,
-# #1404). #1401 Scheibe A2b stellt alle 26 Metrik-Zeilen der
-# Uebersichtstabelle auf die englische Kurzform aus dem zentralen
-# Namensregister um. Die 20 betroffenen Zeilen bekommen hier ihre
-# A2b-Zielbeschriftung als ZUSAETZLICHEN Schluessel -- Regex und
-# Wertebereich unveraendert vom jeweils alten Eintrag uebernommen (Quelle:
-# `fix_1420_validator_uebersichtslabels.md`, "Ziel-Abbildung"). Zusaetzlich
-# zwei Kollisionsformen ("Temp"/"Feels" ohne Auswertungs-Zusatz): A2b haengt
-# den Zusatz nur an, wenn zwei Zeilen mit demselben `col_label` gleichzeitig
-# sichtbar sind -- ist nur eine Auswertung gewaehlt, heisst die Zeile
-# "Temp" bzw. "Feels". Von 24 auf 46 Zeilen erweitert.
+# Issue #1420 fuehrte hier eine befristete UEBERGANGS-UNION (Muster
+# _HOUR_COLUMNS_V2, #1404): alte deutsche UND kuenftige englische
+# A2b-Kurzformen galten gleichzeitig, damit waehrend der Umbenennung keine
+# inhaltlich korrekte Mail hart abgelehnt wird. 46 Schluessel fuer 24 Zeilen.
 #
-# RUECKBAU-AUFTRAG: Sobald #1401 A2b geliefert ist, fallen die 20 alten
-# deutschen Schluessel wieder heraus -- Zielzustand sind exakt die 26
-# A2b-Beschriftungen. Bis dahin erinnert
-# _OVERVIEW_METRIC_CHECKS_REVIEW_DATE an die faellige Entscheidung.
+# Issue #1453 (PO-Override 2026-08-02): die Uebergangszeit ist BEENDET. Die
+# Uebersichtstabelle hat praktisch unbegrenzt Platz und traegt deshalb genau
+# EINE Namensform -- den ausgeschriebenen deutschen Registernamen
+# (`metric_catalog.label_de`), bei zwei gleichzeitig sichtbaren Auswertungen
+# derselben Groesse mit der deutschen Auswertungs-Ergaenzung ("Temperatur
+# Maximum"). Die englischen A2b-Kurzformen UND die alten abgekuerzten deutschen
+# Formen sind ersatzlos entfallen; Regex und Wertebereich sind unveraendert vom
+# jeweils alten Eintrag uebernommen, es hat sich NUR der Schluessel geaendert.
+#
+# Merke (Befund 6 des Kontexts, in der RED-Phase widerlegt): die alten
+# deutschen Schluessel waren dem Registernamen nur AEHNLICH, nicht gleich --
+# 9 von 24 weichen ab ("Sonne"/"Sonnenstunden", "Regen"/"Niederschlag",
+# "Sicht min"/"Sichtweite", "Taupunkt Ø"/"Taupunkt", "Luftdruck Ø"/
+# "Luftdruck", "UV max"/"UV-Index", "Wolken"/"Bewölkung", "CAPE"/
+# "Gewitterenergie (CAPE)", "Temp max"/"Temperatur Maximum").
+#
+# 26 Schluessel = 24 numerische Zeilen des Renderers + 2 kollisionsfreie Formen
+# ("Temperatur"/"Gefühlte Temperatur", wenn nur EINE der beiden Auswertungen
+# gewaehlt ist). Die exakte Mengengleichung gegen die tatsaechliche
+# Renderer-Ausgabe haelt tests/unit/
+# test_compare_mail_overview_plausibility_coverage.py::
+# test_ac4_exemption_set_is_declared_and_complete fest -- sie faellt sowohl bei
+# einem fehlenden als auch bei einem ueberzaehligen Schluessel.
 _OVERVIEW_METRIC_CHECKS = {
-    # -- bereits vor #1404 geprueft ------------------------------------------
-    "Temp max": (re.compile(r'^-?\d+°C$'), (-40, 55)),
+    "Temperatur Maximum": (re.compile(r'^-?\d+°C$'), (-40, 55)),
+    "Temperatur Minimum": (re.compile(r'^-?\d+°C$'), (-40, 55)),
+    # Kollisionsfreie Form: nur EINE der beiden Auswertungen gewaehlt -> die
+    # Zeile traegt den blanken Namen. Bereich = Vereinigung beider (identisch).
+    "Temperatur": (re.compile(r'^-?\d+°C$'), (-40, 55)),
     "Wind": (re.compile(r'^\d+ km/h$'), (0, 250)),
-    "Sonne": (re.compile(r'^\d+\.\d h$'), (0, 24)),
-    "Wolken": (re.compile(r'^\d+%$'), (0, 100)),
-    "UV max": (re.compile(r'^\d+$'), (0, 16)),
-    # -- mit #1404 ergaenzt (vorher stillschweigend ungeprueft) --------------
-    "Regen": (re.compile(r'^\d+\.\d mm$'), (0, 300)),
+    "Böen": (re.compile(r'^\d+ km/h$'), (0, 300)),
+    "Windrichtung": (re.compile(r'^\d+ °$'), (0, 360)),
+    "Niederschlag": (re.compile(r'^\d+\.\d mm$'), (0, 300)),
     "Regenwahrscheinlichkeit": (re.compile(r'^\d+%$'), (0, 100)),
+    "Sonnenstunden": (re.compile(r'^\d+\.\d h$'), (0, 24)),
+    "Bewölkung": (re.compile(r'^\d+%$'), (0, 100)),
+    "Tiefe Wolken": (re.compile(r'^\d+%$'), (0, 100)),
+    "Mittelhohe Wolken": (re.compile(r'^\d+%$'), (0, 100)),
+    "Hohe Wolken": (re.compile(r'^\d+%$'), (0, 100)),
+    "UV-Index": (re.compile(r'^\d+$'), (0, 16)),
     # Sicht: Modelle deckeln die Sichtweite meist weit darunter; 100 km ist
     # grosszuegig, aber nicht mehr sinnfrei (#1404 PO-Vorgabe).
-    "Sicht min": (re.compile(r'^\d+\.\d km$'), (0, 100)),
+    "Sichtweite": (re.compile(r'^\d+\.\d km$'), (0, 100)),
     "Schneehöhe": (re.compile(r'^\d+ cm$'), (0, 1000)),
     "Neuschnee": (re.compile(r'^\d+ cm$'), (0, 300)),
-    "Temp min": (re.compile(r'^-?\d+°C$'), (-40, 55)),
-    "Böen": (re.compile(r'^\d+ km/h$'), (0, 300)),
+    "Schneefallgrenze": (re.compile(r'^\d+ m$'), (0, 5000)),
     # CAPE: Obergrenze bewusst weit (#1404 PO-Vorgabe). Extreme
     # Superzellen-Umgebungen erreichen 6000+ J/kg -- eine engere Grenze wuerde
     # einen ECHTEN Extremwert als unplausibel melden. Diese Schwelle soll
     # Tippfehler und Einheitenfehler fangen, keine Gewitterlage bewerten.
-    "CAPE": (re.compile(r'^\d+ J/kg$'), (0, 10000)),
+    "Gewitterenergie (CAPE)": (re.compile(r'^\d+ J/kg$'), (0, 10000)),
     "Nullgradgrenze": (re.compile(r'^\d+ m$'), (0, 6000)),
-    "Windrichtung": (re.compile(r'^\d+ °$'), (0, 360)),
     # Windchill unterschreitet die Lufttemperatur -> untere Grenze weiter als
-    # bei "Temp min".
-    "Gefühlte Temp. min": (re.compile(r'^-?\d+°C$'), (-50, 50)),
-    "Gefühlte Temp. max": (re.compile(r'^-?\d+°C$'), (-50, 55)),
-    "Wolken tief": (re.compile(r'^\d+%$'), (0, 100)),
-    "Wolken mittel": (re.compile(r'^\d+%$'), (0, 100)),
-    "Wolken hoch": (re.compile(r'^\d+%$'), (0, 100)),
-    "Luftfeuchtigkeit Ø": (re.compile(r'^\d+%$'), (0, 100)),
-    "Taupunkt Ø": (re.compile(r'^-?\d+°C$'), (-40, 35)),
+    # bei der Lufttemperatur.
+    "Gefühlte Temperatur Minimum": (re.compile(r'^-?\d+°C$'), (-50, 50)),
+    "Gefühlte Temperatur Maximum": (re.compile(r'^-?\d+°C$'), (-50, 55)),
+    # Kollisionsfreie Form: zur Pruefzeit ist nicht bekannt, welche der beiden
+    # Auswertungen hinter der zusatzlosen Zeile steckt -> untere Grenze von
+    # Minimum (-50), obere von Maximum (55).
+    "Gefühlte Temperatur": (re.compile(r'^-?\d+°C$'), (-50, 55)),
+    "Luftfeuchtigkeit": (re.compile(r'^\d+%$'), (0, 100)),
+    "Taupunkt": (re.compile(r'^-?\d+°C$'), (-40, 35)),
     # Luftdruck: deckt Meereshoehe UND hochalpine Stationsdruecke ab, daher
     # breit -- entsprechend schwacher Waechter (Spec, Known Limitations).
-    "Luftdruck Ø": (re.compile(r'^\d+ hPa$'), (500, 1085)),
-    "Schneefallgrenze": (re.compile(r'^\d+ m$'), (0, 5000)),
-    # -- mit #1420 ergaenzt: 20 A2b-Zielbeschriftungen, Regex/Bereich ---------
-    #    unveraendert vom jeweils alten Eintrag oben uebernommen -------------
-    "Sun": (re.compile(r'^\d+\.\d h$'), (0, 24)),
-    "Cloud": (re.compile(r'^\d+%$'), (0, 100)),
-    "UV": (re.compile(r'^\d+$'), (0, 16)),
-    "Rain": (re.compile(r'^\d+\.\d mm$'), (0, 300)),
-    "Rain%": (re.compile(r'^\d+%$'), (0, 100)),
-    "Visib": (re.compile(r'^\d+\.\d km$'), (0, 100)),
-    "SnowH": (re.compile(r'^\d+ cm$'), (0, 1000)),
-    "NewSn": (re.compile(r'^\d+ cm$'), (0, 300)),
-    "Gust": (re.compile(r'^\d+ km/h$'), (0, 300)),
-    "0°Line": (re.compile(r'^\d+ m$'), (0, 6000)),
-    "WDir": (re.compile(r'^\d+ °$'), (0, 360)),
-    "Feels min": (re.compile(r'^-?\d+°C$'), (-50, 50)),
-    "Feels max": (re.compile(r'^-?\d+°C$'), (-50, 55)),
-    "CldLow": (re.compile(r'^\d+%$'), (0, 100)),
-    "CldMid": (re.compile(r'^\d+%$'), (0, 100)),
-    "CldHi": (re.compile(r'^\d+%$'), (0, 100)),
-    "Humid": (re.compile(r'^\d+%$'), (0, 100)),
-    "Cond°": (re.compile(r'^-?\d+°C$'), (-40, 35)),
-    "hPa": (re.compile(r'^\d+ hPa$'), (500, 1085)),
-    "SnowL": (re.compile(r'^\d+ m$'), (0, 5000)),
-    # -- mit #1420 ergaenzt: 2 Kollisionsformen ohne Auswertungs-Zusatz ------
-    #    (nur eine der beiden Auswertungen gleichzeitig sichtbar) -----------
-    # "Temp": weiterer der beiden Einzelbereiche von "Temp max"/"Temp min"
-    # (beide bereits -40-55, also unveraendert).
-    "Temp": (re.compile(r'^-?\d+°C$'), (-40, 55)),
-    # "Feels": untere Grenze von "Feels min" (-50), obere Grenze von
-    # "Feels max" (55) -- zur Pruefzeit ist nicht bekannt, welche Auswertung
-    # hinter der zusatzlosen Zeile steckt.
-    "Feels": (re.compile(r'^-?\d+°C$'), (-50, 55)),
+    "Luftdruck": (re.compile(r'^\d+ hPa$'), (500, 1085)),
 }
-
-# Pruefdatum der Uebersichtstabellen-Uebergangs-Union (Regel-Budget:
-# Spec-`created` 2026-07-29 + 90 Tage). REINER ERINNERUNGS-MARKER fuer eine
-# menschliche Review -- anders als bei `nebenbefund_gate.py:21` schaltet
-# dieses Datum KEIN Verhalten um und es gibt keinen Code-Zweig darauf. Eine
-# Selbstverengung am Stichtag waere falsch: verzoegert sich #1401 A2b, wuerde
-# die dann korrekte, bereits umgestellte Mail wieder abgelehnt (Vorbild:
-# _HOUR_COLUMNS_V2_REVIEW_DATE, #1404).
-_OVERVIEW_METRIC_CHECKS_REVIEW_DATE = date(2026, 10, 27)
 
 # Issue #1404 (AC-4): die AUSGESPROCHENE Ausnahme-Menge. Diese Zeilen tragen
 # keinen Zahlenwert; "keine Pruefung" ist fuer sie richtig -- aber es muss
@@ -748,20 +706,19 @@ _OVERVIEW_METRIC_CHECKS_REVIEW_DATE = date(2026, 10, 27)
 #                         moeglich; f"{value:.0f}" wuerde mit TypeError krachen.
 #   "Niederschlagsart"    PrecipType-Enum, ueber _fmt_precip_type als Wort
 #                         gerendert ("Regen"/"Schnee"/...). Gleiche Lage.
-#   "Thdr"/"PType"        #1420: A2b-Gegenformen von "Gewitter"/
-#                         "Niederschlagsart" -- dieselbe Enum-Lage, nur die
-#                         kuenftige englische Kurzbeschriftung.
 #
-# 46 geprueft + 5 ausgenommen = 51 = 27 (heutige CV2_METRICS-Zeilen) + 24
-# (A2b-Zielmenge ZIEL_LABELS_A2B, s. Test); ein Test haelt diese Rechnung
-# fest ("Amtliche Warnungen" bleibt allein -- die Warn-Zeile ist keine
-# metric_id-Zeile und hat keine A2b-Gegenform).
+# Issue #1453: die zwei A2b-Gegenformen "Thdr"/"PType" sind mit der
+# Uebergangs-Union entfallen. Die beiden Enum-Zeilen heissen im Register
+# woertlich "Gewitter"/"Niederschlagsart" -- deshalb bleiben genau die
+# stehen, ohne Zweitform.
+#
+# 26 geprueft + 3 ausgenommen = 29 = 27 Renderer-Zeilen + 2 kollisionsfreie
+# Formen; ein Test haelt diese Rechnung EXAKT fest (nicht als Teilmenge), er
+# faellt also auch bei einem ueberzaehligen Schluessel.
 _OVERVIEW_NO_CHECK_LABELS = {
     _OVERVIEW_WARN_LABEL,
     "Gewitter",
     "Niederschlagsart",
-    "Thdr",
-    "PType",
 }
 
 

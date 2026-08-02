@@ -214,8 +214,13 @@ def render_comparison_text(
         # Issue #1401 A2b: die Beschriftung kommt aus derselben Ableitung wie
         # der HTML-Tabellenkopf -- der Kollisions-Zusatz ("Temp max"/"Temp
         # min") richtet sich damit nach genau denselben sichtbaren Zeilen.
+        # Issue #1453: derselbe Uebersichtsblock wie im HTML-Teil -> dieselbe
+        # Namensform (ausgeschriebener deutscher Registername). Ohne `form`
+        # liefen HTML- und Klartext-Teil derselben Mail auseinander.
         ordered = _ordered_rows(_PLAIN_ROWS, enabled_metrics)
-        labelled = derive_row_labels([_CV2_BY_KEY[key] for key, _de, _fmt in ordered])
+        labelled = derive_row_labels(
+            [_CV2_BY_KEY[key] for key, _de, _fmt in ordered], form="long"
+        )
         for (metric_id, _de_label, fmt), row in zip(ordered, labelled):
             value = _metric_value(loc_result, metric_id)
             lines.append(f"   {row['label']}: {fmt(value) if value is not None else '-'}")

@@ -61,16 +61,20 @@ ALL_HOUR_SELECTION = [
     "uv_index", "thunder_level", "pop_pct", "visibility_m",
 ]
 
-# Ziel-Beschriftung (Spec "Ziel-Beschriftung je Zeile") -- `col_label`,
-# Kollisions-Zusatz nur bei Temperatur/Gefuehlte Temperatur (beide
-# Auswertungen gleichzeitig gewaehlt). Reihenfolge = CV2_METRICS-
-# Deklarationsreihenfolge (identisch zu ALL_OVERVIEW_SELECTION).
+# Ziel-Beschriftung der Uebersicht seit #1453: ausgeschriebener deutscher
+# Registername (`label_de`), Kollisions-Zusatz (deutsche Auswertung) nur bei
+# Temperatur/Gefuehlte Temperatur (beide Auswertungen gleichzeitig gewaehlt).
+# Reihenfolge = CV2_METRICS-Deklarationsreihenfolge (identisch zu
+# ALL_OVERVIEW_SELECTION).
 EXPECTED_OVERVIEW_LABELS = [
     "Amtliche Warnungen",
-    "Temp max", "Wind", "Rain", "Rain%", "Thdr", "Sun", "Cloud", "UV",
-    "Visib", "SnowH", "NewSn", "Temp min", "Gust", "CAPE", "0°Line", "WDir",
-    "Feels min", "Feels max", "CldLow", "CldMid", "CldHi", "Humid", "Cond°",
-    "hPa", "PType", "SnowL",
+    "Temperatur Maximum", "Wind", "Niederschlag", "Regenwahrscheinlichkeit",
+    "Gewitter", "Sonnenstunden", "Bewölkung", "UV-Index",
+    "Sichtweite", "Schneehöhe", "Neuschnee", "Temperatur Minimum", "Böen",
+    "Gewitterenergie (CAPE)", "Nullgradgrenze", "Windrichtung",
+    "Gefühlte Temperatur Minimum", "Gefühlte Temperatur Maximum",
+    "Tiefe Wolken", "Mittelhohe Wolken", "Hohe Wolken", "Luftfeuchtigkeit",
+    "Taupunkt", "Luftdruck", "Niederschlagsart", "Schneefallgrenze",
 ]
 EXPECTED_OVERVIEW_LABELS_PLAIN = [
     label for label in EXPECTED_OVERVIEW_LABELS if label != "Amtliche Warnungen"
@@ -194,8 +198,8 @@ def _plain_hour_labels(text: str) -> list[str]:
 
 def test_overview_html_and_plaintext_show_the_same_catalog_derived_labels():
     """AC-2: HTML- und Klartext-Uebersicht zeigen Zeile fuer Zeile dieselbe
-    Beschriftung -- UND diese Beschriftung ist die aus dem Register
-    abgeleitete Kurzform, nicht nur zwei manuell synchron gehaltene Kopien."""
+    Beschriftung -- UND diese Beschriftung ist der aus dem Register
+    abgeleitete Name, nicht nur zwei manuell synchron gehaltene Kopien."""
     result = _result()
     enabled = resolve_enabled_metrics(ALL_OVERVIEW_SELECTION)
 
@@ -213,12 +217,12 @@ def test_overview_html_and_plaintext_show_the_same_catalog_derived_labels():
         f"HTML: {html_labels[1:]}, Klartext: {plain_labels}"
     )
     assert html_labels == EXPECTED_OVERVIEW_LABELS, (
-        f"HTML-Uebersicht zeigt nicht die aus dem Register abgeleitete "
-        f"Kurzform: {html_labels}"
+        f"HTML-Uebersicht zeigt nicht den aus dem Register abgeleiteten "
+        f"Namen: {html_labels}"
     )
     assert plain_labels == EXPECTED_OVERVIEW_LABELS_PLAIN, (
-        f"Klartext-Uebersicht zeigt nicht die aus dem Register abgeleitete "
-        f"Kurzform: {plain_labels}"
+        f"Klartext-Uebersicht zeigt nicht den aus dem Register abgeleiteten "
+        f"Namen: {plain_labels}"
     )
 
 

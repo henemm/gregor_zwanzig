@@ -77,8 +77,20 @@
 							     Feld, dort bleibt die Zeile unveraendert. -->
 							<span class="aggregation-badge" data-testid="wm2-aggregation-badge">{m.aggregation_label}</span>
 						{/if}
+						<!-- Issue #1453 (AC-7): alle DREI Namensformen nebeneinander —
+						     ausgeschriebener deutscher Name (oben), englische
+						     Fachkurzform (Mail-Stundentabelle) und SMS-Kuerzel.
+						     Damit ist ein Kuerzel aus einer Mail ("Dew") oder einer
+						     SMS ("DP") im Editor aufloesbar. -->
 						{#if m.col_label}
-							<span class="col-badge mono">{m.col_label}</span>
+							<span class="col-badge mono" title="Kurzform in der Mail-Stundentabelle">
+								{m.col_label}
+							</span>
+						{/if}
+						{#if m.sms_code}
+							<span class="sms-badge mono" title="Kürzel in der SMS">
+								SMS {m.sms_code}
+							</span>
 						{/if}
 					{:else}
 						<span class="metric-label">{id}</span>
@@ -193,13 +205,26 @@
 	}
 	.col-badge {
 		font-size: 10px;
-		color: var(--g-ink-4);
+		color: var(--g-ink-3);
 		background: var(--g-paper);
 		border: 1px solid var(--g-rule-soft);
 		border-radius: 3px;
 		padding: 0 4px;
 		margin-left: 6px;
 		line-height: 1.6;
+	}
+	/* Issue #1453: dritte Namensform. Gleiches Badge-Muster wie col-badge, mit
+	   vorangestelltem "SMS", damit die beiden Kuerzel nicht verwechselbar sind. */
+	.sms-badge {
+		font-size: 10px;
+		color: var(--g-ink-3);
+		background: var(--g-paper);
+		border: 1px solid var(--g-rule-soft);
+		border-radius: 3px;
+		padding: 0 4px;
+		margin-left: 4px;
+		line-height: 1.6;
+		white-space: nowrap;
 	}
 	.controls {
 		display: flex;

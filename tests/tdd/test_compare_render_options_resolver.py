@@ -208,13 +208,17 @@ def test_disabled_metric_absent_from_rendered_compare_mail_html_and_plain():
         hourly_enabled=options.hourly_enabled,
     )
 
-    assert ">Temp<" in html, "Aktivierte Metrik 'Temp max' muss im HTML sichtbar sein"
+    assert ">Temperatur<" in html, (
+        "Aktivierte Metrik 'Temperatur' muss im HTML sichtbar sein"
+    )
     assert ">Wind<" not in html, (
         "AC-2: deaktivierte Metrik 'Wind' (wind_max_kmh nicht in active_metrics) "
         "darf NICHT in der Uebersichtstabelle der gerenderten Compare-Mail (HTML) "
         "erscheinen."
     )
-    assert "Temp:" in plain, "Aktivierte Metrik 'Temp max' muss im Klartext sichtbar sein"
+    assert "Temperatur:" in plain, (
+        "Aktivierte Metrik 'Temperatur' muss im Klartext sichtbar sein"
+    )
     assert "Wind:" not in plain, (
         "AC-2: deaktivierte Metrik 'Wind' (wind_max_kmh nicht in active_metrics) "
         "darf NICHT in der Uebersichtszeile der gerenderten Compare-Mail (Plain) "

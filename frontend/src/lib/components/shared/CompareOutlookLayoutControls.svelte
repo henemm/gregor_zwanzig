@@ -65,9 +65,11 @@
 	const outlookMetricById = $derived.by(() => {
 		const map: Record<string, MetricEntry> = {};
 		// Issue #1401 (A1): Auswertung als eigenes Element mitgeben.
+		// Issue #1453 (AC-7): alle drei Namensformen mitgeben.
 		for (const e of catalog)
 			map[e.metric] = {
-				id: e.metric, label: e.label, aggregation_label: e.aggregation_label
+				id: e.metric, label: e.label, aggregation_label: e.aggregation_label,
+				col_label: e.col_label, sms_code: e.sms_code
 			} as MetricEntry;
 		return map;
 	});

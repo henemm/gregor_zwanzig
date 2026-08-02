@@ -47,14 +47,17 @@ NO_COLLISION_SELECTION = [
     "snowfall_limit_m",
 ]
 
-# Erwartete Beschriftung je gewaehlter Zeile: reine `col_label`-Kurzform aus
-# dem zentralen Register, ohne Auswertungs-Zusatz (Spec "Ziel-Beschriftung je
-# Zeile", Spalten `metric_id`/`col_label`). Reihenfolge = Auswahl-Reihenfolge.
+# Erwartete Beschriftung je gewaehlter Zeile: seit #1453 der ausgeschriebene
+# deutsche Registername (`label_de`), ohne Auswertungs-Zusatz (kollisionsfreie
+# Auswahl). Reihenfolge = Auswahl-Reihenfolge.
 EXPECTED_OVERVIEW_LABELS = [
     "Amtliche Warnungen",
-    "Temp", "Wind", "Rain", "Rain%", "Thdr", "Sun", "Cloud", "UV", "Visib",
-    "SnowH", "NewSn", "Gust", "CAPE", "0°Line", "WDir", "Feels", "CldLow",
-    "CldMid", "CldHi", "Humid", "Cond°", "hPa", "PType", "SnowL",
+    "Temperatur", "Wind", "Niederschlag", "Regenwahrscheinlichkeit",
+    "Gewitter", "Sonnenstunden", "Bewölkung", "UV-Index", "Sichtweite",
+    "Schneehöhe", "Neuschnee", "Böen", "Gewitterenergie (CAPE)",
+    "Nullgradgrenze", "Windrichtung", "Gefühlte Temperatur", "Tiefe Wolken",
+    "Mittelhohe Wolken", "Hohe Wolken", "Luftfeuchtigkeit", "Taupunkt",
+    "Luftdruck", "Niederschlagsart", "Schneefallgrenze",
 ]
 
 # Kanonische Stundentabellen-Reihenfolge (Spec "Ziel-Beschriftung
@@ -167,8 +170,8 @@ def _expected_legend_text() -> str:
 # ---------------------------------------------------------------------------
 
 def test_overview_header_uses_catalog_label_without_collision():
-    """AC-1: Uebersichtstabelle zeigt je gewaehlter Zeile die `col_label`-
-    Kurzform des zentralen Registers, nicht die redaktionell getippte
+    """AC-1: Uebersichtstabelle zeigt je gewaehlter Zeile den `label_de`-Namen
+    des zentralen Registers (#1453), nicht die redaktionell getippte
     Zeichenkette -- fuer eine Auswahl ohne Kollisionsfall."""
     result = _result()
     enabled = resolve_enabled_metrics(NO_COLLISION_SELECTION)
@@ -176,8 +179,8 @@ def test_overview_header_uses_catalog_label_without_collision():
     html = render_compare_html(result, enabled_metrics=enabled)
 
     assert _html_overview_labels(html) == EXPECTED_OVERVIEW_LABELS, (
-        "Die Uebersichtstabelle zeigt nicht die aus dem zentralen Register "
-        "abgeleitete Kurzform (`col_label`) -- Beschriftung wird noch "
+        "Die Uebersichtstabelle zeigt nicht den aus dem zentralen Register "
+        "abgeleiteten Namen (`label_de`) -- Beschriftung wird noch "
         "redaktionell getippt statt aus dem Katalog abgeleitet."
     )
 

@@ -49,9 +49,16 @@ class TestColLabelUpdates:
         m = get_metric("cloud_high")
         assert m.col_label == "CldHi", f"Expected 'CldHi', got '{m.col_label}'"
 
-    def test_dewpoint_label_cond(self):
+    def test_dewpoint_label_dew(self):
+        # Issue #1453: "Cond°" benannte keine Groesse (Kondensation ist kein
+        # Messwert in °) -- der Taupunkt heisst in der Kurzform "Dew".
         m = get_metric("dewpoint")
-        assert m.col_label == "Cond°", f"Expected 'Cond°', got '{m.col_label}'"
+        assert m.col_label == "Dew", f"Expected 'Dew', got '{m.col_label}'"
+
+    def test_pressure_label_press(self):
+        # Issue #1453: "hPa" war die EINHEIT, nicht der Name der Groesse.
+        m = get_metric("pressure")
+        assert m.col_label == "Press", f"Expected 'Press', got '{m.col_label}'"
 
     def test_visibility_label_visib(self):
         m = get_metric("visibility")
@@ -80,7 +87,6 @@ class TestColLabelUpdates:
         assert get_metric("gust").col_label == "Gust"
         assert get_metric("precipitation").col_label == "Rain"
         assert get_metric("humidity").col_label == "Humid"
-        assert get_metric("pressure").col_label == "hPa"
 
     def test_col_defs_contain_new_labels(self):
         """get_col_defs() should return the new labels."""

@@ -466,8 +466,12 @@ class TestHourMetricsE2E:
             tag="ac2",
         )
         header = _hour_header_cols(html)
-        assert header == ["Zeit", "Temp", "Wind", "Gew."], (
-            f"RED: erwartet exakt ['Zeit','Temp','Wind','Gew.'] bei Teilauswahl, bekommen "
+        # #1453: Registerfassung "Thdr" statt der alten Beschriftung "Gew."
+        # (der Nachbar-Anker _ALL_NINE_PLUS_ZEIT oben fuehrt sie seit #1401 A2b
+        # bereits). Live-Schicht (@pytest.mark.email) -- laeuft nur bei
+        # /e2e-verify, deshalb blieb die Alt-Beschriftung hier stehen.
+        assert header == ["Zeit", "Temp", "Wind", "Thdr"], (
+            f"RED: erwartet exakt ['Zeit','Temp','Wind','Thdr'] bei Teilauswahl, bekommen "
             f"{header} -- send_one_compare_preset() liest display_config.hourly_metrics "
             "noch nicht (Feld wird komplett ignoriert)."
         )
@@ -600,8 +604,13 @@ class TestValidatorHourlyColumns:
 
     def test_ac7_gueltige_teilmenge_mit_neuer_gewitter_spalte_passiert_gate(self):
         mod = _load_validator()
+        # #1453: die Gewitter-Spalte heisst in der Registerfassung "Thdr" --
+        # die alte Beschriftung "Gew." war Teil der Uebergangs-Union aus #1404
+        # und gilt seit dem Rueckbau nicht mehr. Gegenstand dieses Tests ist
+        # unveraendert, dass eine gueltige TEILMENGE das Gate passiert (AC-7),
+        # nicht die Schreibweise der Spalte.
         subset_table = (
-            "<table><tr><th>Zeit</th><th>Temp</th><th>Wind</th><th>Gew.</th></tr>"
+            "<table><tr><th>Zeit</th><th>Temp</th><th>Wind</th><th>Thdr</th></tr>"
             "<tr><td>09:00</td><td>20°</td><td>10</td><td>—</td></tr></table>"
         )
         html = _real_html_with_spliced_hour_table(subset_table)

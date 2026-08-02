@@ -158,7 +158,9 @@ _METRICS: list[MetricDefinition] = [
         id="dewpoint", label_de="Taupunkt", unit="°C",
         dp_field="dewpoint_c", category="temperature",
         default_aggregations=("avg",),
-        compact_label="DP", col_key="dewpoint", col_label="Cond°",
+        # Issue #1453: "Cond°" benannte keine Groesse (Taupunkt ist kein
+        # Kondensationsgrad) -- die Kurzform nennt jetzt die Groesse selbst.
+        compact_label="DP", col_key="dewpoint", col_label="Dew",
         providers={"openmeteo": True, "geosphere": True},
         default_enabled=False,
         summary_fields={"avg": "dewpoint_avg_c"},
@@ -463,7 +465,8 @@ _METRICS: list[MetricDefinition] = [
         id="pressure", label_de="Luftdruck", unit="hPa",
         dp_field="pressure_msl_hpa", category="atmosphere",
         default_aggregations=("avg",),
-        compact_label="P", col_key="pressure", col_label="hPa",
+        # Issue #1453: "hPa" war die Einheit, nicht der Name der Groesse.
+        compact_label="P", col_key="pressure", col_label="Press",
         providers={"openmeteo": True, "geosphere": True},
         default_enabled=False,
         summary_fields={"avg": "pressure_avg_hpa"},

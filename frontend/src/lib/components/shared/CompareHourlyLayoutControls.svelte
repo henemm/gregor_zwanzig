@@ -115,10 +115,23 @@
 	// Alt-Vergleich vor dem ersten Speichern keine nackten Kennungen zeigt.
 	const hourlyMetricById = $derived.by(() => {
 		const map: Record<string, MetricEntry> = {};
+		// Issue #1453 (AC-7): die beiden uebrigen Namensformen stehen an den
+		// flachen Katalog-Eintraegen, nicht an der nach Groesse gruppierten
+		// Sicht — deshalb hier ueber `metric_id` zurueckgeschlagen statt
+		// `CompareAggregationGroup` um zwei Felder zu erweitern, die die
+		// Gruppierung selbst nicht braucht.
+		const formsByMetricId = new Map(catalog.map((e) => [e.metric_id ?? e.metric, e]));
 		for (const group of hourlyGroups) {
-			map[group.metric_id] = { id: group.metric_id, label: group.label } as MetricEntry;
+			const forms = formsByMetricId.get(group.metric_id);
+			const col_label = forms?.col_label;
+			const sms_code = forms?.sms_code;
+			map[group.metric_id] = {
+				id: group.metric_id, label: group.label, col_label, sms_code
+			} as MetricEntry;
 			for (const legacy of group.hourly_legacy_keys)
-				map[legacy] = { id: legacy, label: group.label } as MetricEntry;
+				map[legacy] = {
+					id: legacy, label: group.label, col_label, sms_code
+				} as MetricEntry;
 		}
 		return map;
 	});

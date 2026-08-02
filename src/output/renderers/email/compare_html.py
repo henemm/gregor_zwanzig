@@ -25,7 +25,7 @@ from datetime import date, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from app.metric_catalog import get_metric
+from app.metric_catalog import aggregation_label_de, get_metric
 from app.models import Corridor
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
@@ -422,29 +422,66 @@ def _build_hour_metrics() -> list[dict]:
 HOUR_METRICS = _build_hour_metrics()
 
 
-def derive_row_labels(rows: list[dict]) -> list[dict]:
+def derive_row_labels(rows: list[dict], form: str = "short") -> list[dict]:
     """Issue #1401 Scheibe A2b: Beschriftung der Mail-Tabellenzeilen aus dem
     zentralen Wetter-Namensregister ableiten statt sie zu tippen.
 
-    Grundform ist die englische Kurzform ``col_label`` der in ``metric_id``
-    genannten Wettergroesse. Kommt dieselbe Kurzform innerhalb der uebergebenen
-    (= aktuell sichtbaren) Zeilenmenge mehrfach vor, waeren die Zeilen
-    ununterscheidbar -- dann haengt jede betroffene Zeile ihren rohen
-    Auswertungswert an ("Temp max"/"Temp min"). Die Mehrfach-Erkennung ist
-    dieselbe wie in ``compare_outlook_metric_ids.outlook_columns()``.
+    Issue #1453 (PO-Regel "Form folgt Platz"): dieselbe Ableitung liefert ZWEI
+    Formen, je nachdem wieviel Platz die Zielstelle hat --
+
+    * ``form="short"`` (Vorgabe): die englische Fachkurzform ``col_label``.
+      Das ist die Stundentabelle (bis 22 Spalten, harte Platzgrenze) und die
+      Einheiten-Legende darunter.
+    * ``form="long"``: der ausgeschriebene deutsche Registername ``label_de``.
+      Das ist die Uebersichtstabelle (Zeilenkopf, praktisch unbegrenzt Platz)
+      -- im HTML-Teil wie im Klartext-Teil derselben Mail.
+
+    Kommt dieselbe Form innerhalb der uebergebenen (= aktuell sichtbaren)
+    Zeilenmenge mehrfach vor, waeren die Zeilen ununterscheidbar -- dann haengt
+    jede betroffene Zeile ihre Auswertung an. Der Zusatz folgt der Form: kurz
+    der rohe Auswertungsschluessel ("Temp max"), lang die deutsche Auswertung
+    ``aggregation_label_de`` ("Temperatur Maximum") -- genau wie im bereits
+    deutschen 3-Tages-Ausblick (``compare_outlook_metric_ids.py:110-115``).
 
     Zeilen ohne ``metric_id`` (Warn-Zeile) behalten ihren festen Text.
     Rueckgabe sind KOPIEN -- die Modul-Konstanten bleiben unberuehrt.
+
+    Ein unbekannter ``form``-Wert ist ein ``ValueError``, KEIN stiller Rueckfall
+    auf die Kurzform (Adversary F001, #1453). Begruendung ist ein Muster, das in
+    dieser Sitzung viermal auftrat: ein fehlender oder unbekannter Parameter
+    faellt lautlos auf einen Standardwert zurueck, und die Mail sieht danach
+    plausibel aus, obwohl sie das Falsche zeigt -- ``build_token_line()`` ohne
+    ``profile`` (Wintersport-Token erschienen nie, #1450),
+    ``render_compare_html()`` ohne ``hourly_metrics`` (Vorschau zeigte immer
+    alle Spalten), ``_visible_hour_metrics(None)`` als "alle Spalten" (haette
+    Bestandsvergleiche ungefragt von 9 auf 22 Spalten springen lassen). Ein
+    Tippfehler ("Long", "lang") wuerde hier die ganze Uebersichtstabelle
+    unbemerkt wieder englisch beschriften -- genau die Regression, die diese
+    Lieferung behebt. Deshalb laut scheitern.
     """
-    labels = [
-        get_metric(row["metric_id"]).col_label if row.get("metric_id") else row.get("label", "")
-        for row in rows
-    ]
+    if form not in ("short", "long"):
+        raise ValueError(
+            f"derive_row_labels: unbekannte Namensform {form!r} -- zulaessig "
+            f"sind nur 'short' (englische Kurzform, Stundentabelle) und 'long' "
+            f"(ausgeschriebener deutscher Registername, Uebersichtstabelle)"
+        )
+    lang = form == "long"
+
+    def _base(row: dict) -> str:
+        if not row.get("metric_id"):
+            return row.get("label", "")
+        metric = get_metric(row["metric_id"])
+        return metric.label_de if lang else metric.col_label
+
+    labels = [_base(row) for row in rows]
     mehrfach = {label for label in labels if labels.count(label) > 1}
     out = []
     for row, label in zip(rows, labels):
         if label in mehrfach and row.get("aggregation"):
-            label = f"{label} {row['aggregation']}"
+            zusatz = row["aggregation"]
+            if lang:
+                zusatz = aggregation_label_de(zusatz) or zusatz
+            label = f"{label} {zusatz}"
         out.append({**row, "label": label})
     return out
 
@@ -643,13 +680,19 @@ def _visible_metrics(enabled_metrics: list[str] | None) -> list[dict]:
 
     Issue #1335 Scheibe 1 (AC-1): die uebrigen Zeilen folgen der Reihenfolge
     von ``enabled_metrics`` statt der festen ``CV2_METRICS``-
-    Deklarationsreihenfolge."""
+    Deklarationsreihenfolge.
+
+    Issue #1453: der Zeilenkopf der Uebersicht hat praktisch unbegrenzt Platz
+    und traegt deshalb den ausgeschriebenen deutschen Registernamen
+    (``form="long"``). Die Stundentabelle (``_visible_hour_metrics``) bleibt
+    bei der englischen Kurzform -- beide Formen kommen aus derselben
+    Ableitung, es gibt keine zweite Namensliste."""
     warn_row = [m for m in CV2_METRICS if m["key"] == "warn"]
     if enabled_metrics is None:
-        return derive_row_labels(CV2_METRICS)
+        return derive_row_labels(CV2_METRICS, form="long")
     by_key = {m["key"]: m for m in CV2_METRICS}
     ordered = [by_key[k] for k in enabled_metrics if k in by_key and k != "warn"]
-    return derive_row_labels(warn_row + ordered)
+    return derive_row_labels(warn_row + ordered, form="long")
 
 
 def _render_overview_table(

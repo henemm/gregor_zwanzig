@@ -16,6 +16,10 @@ export interface CompareSelectionEntry {
 	// Issue #1435 (E1a-2): Alarm-Identitaet aus dem zentralen Register (`null` =
 	// nicht alarmfaehig) — Quelle der Alarm-Zeilen im Alarme-Reiter.
 	alertMetric?: string | null;
+	// Issue #1453 (AC-7): englische Fachkurzform und SMS-Kuerzel derselben
+	// Groesse, unveraendert aus der Katalogantwort durchgereicht.
+	col_label?: string;
+	sms_code?: string;
 	// Issue #1406 Scheibe B: Stundenverlauf-Angaben, unveraendert aus der
 	// Katalogantwort durchgereicht (s. types.ts CompareMetricCatalogEntry).
 	hourlySelectable?: boolean;
@@ -49,6 +53,11 @@ export function toCompareSelectionEntries(
 			? { aggregation_label: m.aggregation_label }
 			: {}),
 		...(m.alertMetric !== undefined ? { alertMetric: m.alertMetric } : {}),
+		// #1453 (AC-7): die beiden uebrigen Namensformen derselben Groesse —
+		// unveraendert durchgereicht, damit der Editor alle drei zeigen kann.
+		// Nur ergaenzen, wenn der Endpoint sie liefert (deepEqual-Vertrag #1350).
+		...(m.col_label !== undefined ? { col_label: m.col_label } : {}),
+		...(m.sms_code !== undefined ? { sms_code: m.sms_code } : {}),
 		// #1406 B: nur ergaenzen, wenn der Endpoint sie liefert — sonst braechen
 		// die strikten deepEqual-Vergleiche aus #1350 (AC-2).
 		...(m.hourlySelectable !== undefined ? { hourlySelectable: m.hourlySelectable } : {}),

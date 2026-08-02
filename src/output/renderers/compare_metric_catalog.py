@@ -284,9 +284,17 @@ def get_compare_metric_catalog(entries: list[dict] | None = None) -> list[dict]:
         # braucht (das waere der fuenfte Vokabular-Ort, AC-10), reist alles
         # Noetige hier mit -- abgeleitet aus compare_hourly_metric_ids.py,
         # nicht zweitgepflegt.
+        # #1453 (AC-7): jede Groesse traegt DREI Namensformen -- der Editor
+        # soll alle drei zeigen, damit ein Kuerzel aus Mail ("Dew") oder SMS
+        # ("DP") an einer Stelle aufloesbar ist. Die beiden fehlenden reisen
+        # hier aus DEMSELBEN Register mit, statt im Browser ein zweites Mal
+        # getippt zu werden (kein fuenfter Vokabular-Ort).
+        metric = get_metric(metric_id)
         result.append({
             **entry,
             "label": label,
+            "col_label": metric.col_label,
+            "sms_code": metric.sms_code,
             "aggregation_label": aggregation_label_de(aggregation),
             "alertMetric": alert_metric,
             "alarmCapable": alert_metric is not None,

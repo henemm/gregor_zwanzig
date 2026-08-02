@@ -30,7 +30,6 @@ Die Spaltenfolge ist je Test frei setzbar; das ist der Punkt des Fixes.
 from __future__ import annotations
 
 import importlib.util
-from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -41,14 +40,14 @@ VALIDATOR_PATH = REPO_ROOT / ".claude" / "hooks" / "email_spec_validator.py"
 # Der real belegte Fall aus #1361 (Staging-Preset cp-21e198c1b74020dd, 3 Orte):
 # dieselben zehn Spalten wie der Kanon, nur "UV" ans Ende sortiert.
 ORDER_1361 = [
-    "Zeit", "Temp", "Gef.", "Wind", "Böen", "Regen", "Gew.", "Regen-W.", "Sicht", "UV",
+    "Zeit", "Temp", "Feels", "Wind", "Gust", "Rain", "Thdr", "Rain%", "Visib", "UV",
 ]
 
 # Beispiel-Zellwerte je Spalten-Label, exakt in den Formaten, die die
 # `fmt`-Funktionen von HOUR_METRICS erzeugen (_fmt_deg/_fmt_kmh/_fmt_rain/...).
 _HOUR_CELL_VALUES = {
-    "Temp": "21°", "Gef.": "19°", "Wind": "10", "Böen": "18", "Regen": "·",
-    "UV": "4", "Gew.": "—", "Regen-W.": "15%", "Sicht": "9.0",
+    "Temp": "21°", "Feels": "19°", "Wind": "10", "Gust": "18", "Rain": "·",
+    "UV": "4", "Thdr": "—", "Rain%": "15%", "Visib": "9.0",
 }
 
 
@@ -126,8 +125,8 @@ def _overview_table(names: list[str]) -> str:
     )
     body_rows = ""
     for label, value in (
-        ("Amtliche Warnungen", "—"), ("Temp max", "21°C"), ("Wind", "10 km/h"),
-        ("Sonne", "5.0 h"), ("Wolken", "30%"), ("UV max", "4"),
+        ("Amtliche Warnungen", "—"), ("Temperatur", "21°C"), ("Wind", "10 km/h"),
+        ("Sonnenstunden", "5.0 h"), ("Bewölkung", "30%"), ("UV-Index", "4"),
     ):
         cells = f'<td style="text-align:left;padding:8px 5px;">{label}</td>'
         cells += "".join(
@@ -152,7 +151,7 @@ def compare_mail(locations: list[tuple[str, list[str]]]) -> str:
         '<p style="font-size:12px;">Mittwoch, 8. Juli 2026 · Zeitfenster 09-16 Uhr</p>'
         f'{_overview_table(names)}{sections}'
         '<p style="font-size:11px;color:#6b6b63;">Einheiten: Temp °C · Wind km/h · '
-        'Regen mm · Sicht km</p></div></body></html>'
+        'Rain mm · Visib km</p></div></body></html>'
     )
 
 
@@ -194,9 +193,9 @@ def test_ac2_unknown_column_is_rejected_and_named():
     Fremdspalten durchlassen."""
     mod = _load_validator()
     body = compare_mail([
-        ("Ort A", ["Zeit", "Temp", "Wind", "Böen"]),
-        ("Ort B", ["Zeit", "Temp", "Mond", "Wind", "Böen"]),
-        ("Ort C", ["Zeit", "Temp", "Wind", "Böen"]),
+        ("Ort A", ["Zeit", "Temp", "Wind", "Gust"]),
+        ("Ort B", ["Zeit", "Temp", "Mond", "Wind", "Gust"]),
+        ("Ort C", ["Zeit", "Temp", "Wind", "Gust"]),
     ])
 
     errors = mod.validate_structure(body, hourly_enabled=True)
@@ -212,7 +211,7 @@ def test_ac2_unknown_column_is_rejected_and_named():
     # Cross-Location-Regel nicht mehr aushelfen (alle Kopfzeilen sind
     # identisch). Nur eine eigenstaendige Unbekannte-Spalte-Pruefung faengt
     # diesen Fall -- ohne sie waere die Mail nach dem Umbau still gueltig.
-    all_bad = ["Zeit", "Temp", "Mond", "Wind", "Böen"]
+    all_bad = ["Zeit", "Temp", "Mond", "Wind", "Gust"]
     errors_all = mod.validate_structure(
         compare_mail([("Ort A", all_bad), ("Ort B", all_bad), ("Ort C", all_bad)]),
         hourly_enabled=True,
@@ -250,7 +249,7 @@ def test_ac3_duplicate_column_is_rejected_and_named():
     Mindestspalten-Regel den Fall auffangen -- nur eine echte
     Duplikat-Pruefung."""
     mod = _load_validator()
-    dup = ["Zeit", "Temp", "Wind", "Böen", "Wind"]
+    dup = ["Zeit", "Temp", "Wind", "Gust", "Wind"]
     body = compare_mail([("Ort A", dup), ("Ort B", dup), ("Ort C", dup)])
 
     errors = mod.validate_structure(body, hourly_enabled=True)
@@ -320,9 +319,9 @@ def test_ac5_differing_column_set_across_locations_is_rejected():
     Struktur-Check laeuft / THEN wird ein Fehler gemeldet, der den
     abweichenden Ort benennt -- mail-weit gilt genau eine Konfiguration."""
     mod = _load_validator()
-    full = ["Zeit", "Temp", "Wind", "Böen", "Regen"]
+    full = ["Zeit", "Temp", "Wind", "Gust", "Rain"]
     body = compare_mail([
-        ("Ort A", full), ("Ort B", ["Zeit", "Temp", "Wind", "Böen"]), ("Ort C", full),
+        ("Ort A", full), ("Ort B", ["Zeit", "Temp", "Wind", "Gust"]), ("Ort C", full),
     ])
 
     errors = mod.validate_structure(body, hourly_enabled=True)
@@ -379,7 +378,7 @@ def test_ac7_uniform_non_canonical_order_across_locations_is_accepted():
     Cross-Location-Fehler (und ueberhaupt keinen Fehler) -- die mail-weite
     Konsistenz ist erfuellt, die Kanon-Reihenfolge ist kein Massstab mehr."""
     mod = _load_validator()
-    order = ["Zeit", "Sicht", "Regen-W.", "Temp", "Wind"]
+    order = ["Zeit", "Visib", "Rain%", "Temp", "Wind"]
     body = compare_mail([("Ort A", order), ("Ort B", order), ("Ort C", order)])
 
     errors = mod.validate_structure(body, hourly_enabled=True)
@@ -391,85 +390,58 @@ def test_ac7_uniform_non_canonical_order_across_locations_is_accepted():
 
 
 # ===========================================================================
-# #1404 -- Uebergangs-Union der Spaltenbeschriftungen (AC-1, AC-2, AC-5)
+# #1453 -- die Stundentabelle fuehrt GENAU EINE Spaltenbeschriftung
 #
-# #1401 Scheibe A2b leitet die Spaltenueberschriften aus dem zentralen
-# Namensregister ab; 6 der 9 Wertspalten heissen danach anders. Der Pruefer
-# kennt sie woertlich und wuerde die dann korrekte Mail hart ablehnen (Exit 1
-# ueber das Renderer-Commit-Gate #811) -- A2b koennte seinen eigenen Commit
-# nicht abschliessen. Bis A2b geliefert ist, muessen BEIDE Fassungen
-# durchgehen; danach faellt die alte Haelfte wieder raus (AC-5).
+# #1404 hatte hier eine befristete Uebergangs-Union gepflegt: die 6 alten
+# deutschen Beschriftungen ("Gef./Böen/Regen/Gew./Regen-W./Sicht") galten
+# neben der Registerfassung, damit #1401 A2b waehrend der Umbenennung nicht
+# an seinem eigenen Pflicht-Pruefer haengenblieb.
 #
-# SPEC: docs/specs/modules/fix_1404_validator_spaltennamen.md
+# Mit #1453 ist die Uebergangszeit beendet: gueltig ist allein die aus dem
+# Register abgeleitete englische Kurzform. Die Union-Konstante ORDER_TODAY,
+# der Misch-Fall und das Pruefdatum (`test_1404_ac5_transition_union_carries_
+# a_review_date`) sind damit ersatzlos entfallen -- die Bewachung der
+# Uebergangsregelung endet mit der Regelung selbst. Die Gegenrichtung ("alte
+# Spalte wird benannt abgelehnt") steht in
+# tests/unit/test_compare_validator_single_name_form.py.
+#
+# SPEC: docs/specs/modules/fix_1453_namensformen.md (AC-6)
 # ===========================================================================
 
-# Zielfassung nach #1401 A2b (dort "Ziel-Beschriftung Stundentabelle",
-# kanonische Reihenfolge). Gegenueber heute geaendert: Gef.->Feels,
-# Böen->Gust, Regen->Rain, Gew.->Thdr, Regen-W.->Rain%, Sicht->Visib.
-ORDER_A2B = [
+# Registerfassung der Stundenspalten (kanonische Reihenfolge).
+ORDER_REGISTER = [
     "Zeit", "Temp", "Feels", "Wind", "Gust", "Rain", "UV", "Thdr", "Rain%", "Visib",
 ]
-
-# Heutige Fassung (kanonische Reihenfolge, `_HOUR_COLUMNS_V2`).
-ORDER_TODAY = [
-    "Zeit", "Temp", "Gef.", "Wind", "Böen", "Regen", "UV", "Gew.", "Regen-W.", "Sicht",
-]
-
-# Spec-Datum der Uebergangsregelung + projektuebliche 90-Tage-Spanne
-# (Regel-Budget, Vorbild `nebenbefund_gate.py:21`).
-SPEC_CREATED = date(2026, 7, 28)
 
 
 def _uniform_mail(columns: list[str]) -> str:
     return compare_mail([("Ort A", columns), ("Ort B", columns), ("Ort C", columns)])
 
 
-def test_1404_ac1_both_column_namings_are_accepted():
-    """AC-1: GIVEN eine Vergleichs-Mail zeigt ihre Stundentabellen entweder in
-    der heutigen oder in der kuenftigen A2b-Beschriftung (oder mail-weit
-    einheitlich gemischt) / WHEN der Struktur-Check laeuft / THEN meldet der
-    Pruefer keinen Fehler wegen unbekannter Spalten.
-
-    Solange die Umbenennung laeuft, sind beide Fassungen inhaltlich korrekt --
-    der Pruefer darf keine davon abweisen, sonst blockiert er die Lieferung,
-    die er absichern soll."""
+def test_register_column_naming_is_accepted():
+    """GIVEN eine Vergleichs-Mail zeigt ihre Stundentabellen in der aus dem
+    Register abgeleiteten Beschriftung / WHEN der Struktur-Check laeuft / THEN
+    meldet der Pruefer keinen Fehler wegen unbekannter Spalten."""
     mod = _load_validator()
 
-    errors_new = mod.validate_structure(_uniform_mail(ORDER_A2B), hourly_enabled=True)
-    assert errors_new == [], (
-        "Die kuenftige A2b-Spaltenfassung muss angenommen werden, sonst kann "
-        f"#1401 A2b nicht committen. Pruefer meldet: {errors_new}"
-    )
-
-    errors_old = mod.validate_structure(_uniform_mail(ORDER_TODAY), hourly_enabled=True)
-    assert errors_old == [], (
-        f"Die heutige Spaltenfassung muss weiterhin angenommen werden: {errors_old}"
-    )
-
-    mixed = ["Zeit", "Temp", "Gef.", "Wind", "Gust", "Rain"]
-    errors_mixed = mod.validate_structure(_uniform_mail(mixed), hourly_enabled=True)
-    assert errors_mixed == [], (
-        f"Mail-weit einheitliche Mischung aus beiden Fassungen: {errors_mixed}"
+    errors = mod.validate_structure(_uniform_mail(ORDER_REGISTER), hourly_enabled=True)
+    assert errors == [], (
+        f"Die Registerfassung der Spalten muss angenommen werden: {errors}"
     )
 
 
-def test_1404_ac2_unknown_column_is_still_rejected_and_named():
-    """AC-2: GIVEN eine Stundentabellen-Spalte, die weder zur heutigen noch zur
-    kuenftigen Beschriftung gehoert ("Mond") / WHEN der Struktur-Check laeuft /
-    THEN meldet der Pruefer weiterhin einen Fehler, der die Spalte benennt --
-    die Uebergangsfassung ist eine erweiterte Pruefung, keine Durchreiche.
-
-    Bestandsschutz-Nachweis, heute schon gruen: die Erweiterung der Allowlist
-    darf die Allowlist nicht wirkungslos machen. Die Befunde werden bewusst auf
-    "Mond" eingegrenzt -- ob die uebrigen, KNOWN Spalten der Mischung
-    durchgehen, ist Gegenstand von AC-1 und heute noch offen."""
+def test_unknown_column_is_still_rejected_and_named_in_register_naming():
+    """GIVEN eine Stundentabellen-Spalte, die es im Register nicht gibt
+    ("Mond") / WHEN der Struktur-Check laeuft / THEN meldet der Pruefer einen
+    Fehler, der die Spalte benennt -- der Rueckbau der Union darf die Allowlist
+    nicht wirkungslos machen."""
     mod = _load_validator()
-    old_mix = ["Zeit", "Temp", "Gef.", "Wind", "Böen"]
+    ok_cols = ["Zeit", "Temp", "Feels", "Wind", "Gust"]
 
     body = compare_mail([
-        ("Ort A", old_mix),
-        ("Ort B", ["Zeit", "Temp", "Gef.", "Mond", "Wind", "Böen"]),
-        ("Ort C", old_mix),
+        ("Ort A", ok_cols),
+        ("Ort B", ["Zeit", "Temp", "Feels", "Mond", "Wind", "Gust"]),
+        ("Ort C", ok_cols),
     ])
     errors = mod.validate_structure(body, hourly_enabled=True)
     assert len(errors) == 1, (
@@ -479,61 +451,10 @@ def test_1404_ac2_unknown_column_is_still_rejected_and_named():
         f"Der Befund muss Spalte und Ort benennen: {errors[0]}"
     )
 
-    # Mischung aus alter und neuer Beschriftung (Spec-Fassung von AC-2): die
-    # Fremdspalte bleibt EIN benannter Befund am richtigen Ort.
-    mixed = ["Zeit", "Temp", "Gef.", "Wind", "Gust"]
-    mixed_errors = mod.validate_structure(
-        compare_mail([
-            ("Ort A", mixed),
-            ("Ort B", ["Zeit", "Temp", "Gef.", "Mond", "Wind", "Gust"]),
-            ("Ort C", mixed),
-        ]),
-        hourly_enabled=True,
-    )
-    mond_errors = [e for e in mixed_errors if "Mond" in e]
-    assert len(mond_errors) == 1 and "Ort B" in mond_errors[0], (
-        f"Erwartet genau einen Mond-Befund bei 'Ort B': {mixed_errors}"
-    )
-
     # Erosionsschutz: traegt JEDER Ort dieselbe Fremdspalte, kann die
     # Cross-Location-Regel nicht aushelfen -- nur die Allowlist selbst.
-    all_bad = ["Zeit", "Temp", "Mond", "Wind", "Böen"]
+    all_bad = ["Zeit", "Temp", "Mond", "Wind", "Gust"]
     errors_all = mod.validate_structure(_uniform_mail(all_bad), hourly_enabled=True)
     assert errors_all and all("Mond" in e for e in errors_all), (
         f"Eine mail-weit einheitliche Fremdspalte MUSS abgelehnt werden: {errors_all}"
-    )
-
-
-def test_1404_ac5_transition_union_carries_a_review_date():
-    """AC-5: GIVEN die Spalten-Union aus alter und neuer Beschriftung ist eine
-    bewusst befristete Zwischenloesung / WHEN das Pruefer-Modul geladen wird /
-    THEN traegt es ein maschinenlesbares Datum, bis zu dem entschieden sein
-    muss, ob die alten Beschriftungen wieder herausfallen.
-
-    Das Datum ist nur ein Erinnerungs-Marker fuer eine menschliche Review -- es
-    darf KEIN Verhalten umschalten (anders als `nebenbefund_gate.py`): ein
-    Pruefer, der sich am Stichtag selbst verengt, wuerde eine dann korrekte
-    Mail wieder ablehnen, falls sich A2b verzoegert. Dieser Test verlangt
-    deshalb ausdruecklich keine Selbstabschaltung."""
-    mod = _load_validator()
-
-    review = None
-    for name in (
-        "_HOUR_COLUMNS_V2_REVIEW_DATE", "_HOUR_COLUMNS_V2_EXPIRY",
-        "_HOUR_COLUMNS_V2_PRUEFDATUM",
-    ):
-        review = getattr(mod, name, None)
-        if review is not None:
-            break
-    assert review is not None, (
-        "Der Pruefer nennt kein Pruefdatum fuer die Spalten-Uebergangs-Union "
-        "(erwartet z. B. _HOUR_COLUMNS_V2_REVIEW_DATE) -- die Uebergangsregelung "
-        "wuerde stillschweigend fuer immer gelten"
-    )
-    if isinstance(review, str):
-        review = date.fromisoformat(review)
-    assert isinstance(review, date), f"Pruefdatum muss ein Datum sein, ist: {review!r}"
-    assert SPEC_CREATED < review <= SPEC_CREATED + timedelta(days=90), (
-        f"Pruefdatum {review} liegt ausserhalb der projektueblichen 90-Tage-Spanne "
-        f"ab {SPEC_CREATED} (Regel-Budget)"
     )

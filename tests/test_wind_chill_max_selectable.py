@@ -184,10 +184,15 @@ def test_compare_plain_renderer_shows_wind_chill_max_value():
 
     text = render_comparison_text(result, enabled_metrics={"wind_chill_max"})
 
-    line = _plain_row_value(text, "gefühlte", "max")
+    # #1453: die Uebersichts-Beschriftung ist der ausgeschriebene deutsche
+    # Registername. Ist nur EINE der beiden Auswertungen gewaehlt, traegt die
+    # Zeile KEINEN Auswertungs-Zusatz -- sie heisst schlicht "Gefühlte
+    # Temperatur". Unterschieden wird deshalb ueber den WERT (11.0 unten),
+    # nicht ueber ein Suffix im Namen; das ist der schaerfere Nachweis.
+    line = _plain_row_value(text, "gefühlte temperatur")
     assert line is not None, (
-        "Klartext zeigt keine 'Gefühlte ... max'-Zeile, obwohl 'wind_chill_max' "
-        f"in enabled_metrics steht (comparison.py kennt nur den min-Zweig):\n{text}"
+        "Klartext zeigt keine 'Gefühlte Temperatur'-Zeile, obwohl "
+        f"'wind_chill_max' in enabled_metrics steht:\n{text}"
     )
     assert _number(line) == 11.0, f"Falscher/kein Wert in der Zeile: {line!r}"
 
@@ -206,10 +211,13 @@ def test_compare_html_renderer_shows_wind_chill_max_value():
 
     html = render_compare_html(result, enabled_metrics=["wind_chill_max"])
 
-    row = _find_row(html, lambda l: "gefühlte" in l and "max" in l)
+    # #1453: kein Auswertungs-Zusatz bei nur EINER gewaehlten Auswertung
+    # (s. Kommentar im Klartext-Zwilling oben) -- der Nachweis laeuft ueber
+    # den Wert 13.0 in der Zelle.
+    row = _find_row(html, lambda l: l == "gefühlte temperatur")
     assert row is not None, (
-        "HTML-Übersicht zeigt keine 'Gefühlte Temp. max'-Zeile (CV2_METRICS "
-        f"kennt nur wind_chill_min):\n{html}"
+        "HTML-Übersicht zeigt keine 'Gefühlte Temperatur'-Zeile, obwohl "
+        f"'wind_chill_max' in enabled_metrics steht:\n{html}"
     )
     assert any(_number(c) == 13.0 for c in row["cells"]), (
         f"Zeile gefunden, aber kein Wert 13.0 in den Zellen: {row['cells']!r}"
@@ -232,11 +240,11 @@ def test_compare_renderers_show_wind_chill_min_only_selection_unchanged():
     result = _result(loc)
 
     text = render_comparison_text(result, enabled_metrics={"wind_chill_min"})
-    plain_line = _plain_row_value(text, "gefühlte", "min")
+    plain_line = _plain_row_value(text, "gefühlte temperatur")
     assert plain_line is not None, f"Klartext-Regression: keine min-Zeile mehr:\n{text}"
     assert _number(plain_line) == -3.0
 
     html = render_compare_html(result, enabled_metrics=["wind_chill_min"])
-    html_row = _find_row(html, lambda l: "gefühlte" in l and "min" in l)
+    html_row = _find_row(html, lambda l: l == "gefühlte temperatur")
     assert html_row is not None, f"HTML-Regression: keine min-Zeile mehr:\n{html}"
     assert any(_number(c) == -3.0 for c in html_row["cells"])

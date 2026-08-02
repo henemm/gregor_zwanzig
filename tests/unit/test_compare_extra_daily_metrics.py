@@ -146,12 +146,12 @@ def _find_row(html: str, predicate) -> dict | None:
     return None
 
 
-_IS_TEMP_MIN = lambda l: l == "temp"  # noqa: E731
-_IS_GUST = lambda l: l == "gust"  # noqa: E731
+_IS_TEMP_MIN = lambda l: l == "temperatur"  # noqa: E731
+_IS_GUST = lambda l: l == "böen"  # noqa: E731
 _IS_CAPE = lambda l: "cape" in l  # noqa: E731
 # Issue #1298 (PO-Entscheid 2026-07-17): Label "Frostgrenze" -> "Nullgradgrenze"
 # ueberall, nur die Anzeige -- die Daten-ID freezing_level_m bleibt unveraendert.
-_IS_FREEZING = lambda l: l == "0°line"  # noqa: E731
+_IS_FREEZING = lambda l: l == "nullgradgrenze"  # noqa: E731
 
 _EMPTY = {"—", "-", "·", ""}
 
@@ -192,7 +192,7 @@ def test_selected_temp_min_metric_appears_in_overview_matrix():
     enabled = resolve_enabled_metrics(["temp_min_c"])
 
     html = render_compare_html(result, enabled_metrics=enabled)
-    row = _assert_row_with_values(html, _IS_TEMP_MIN, "Temp min")
+    row = _assert_row_with_values(html, _IS_TEMP_MIN, "Temperatur (Minimum)")
 
     expected = WeatherMetricsService().compute_basis_metrics(_timeseries(_hourly())).temp_min_c
     assert _number(row["cells"][0]) == expected, (
@@ -309,28 +309,28 @@ def test_plaintext_shows_all_four_new_rows():
     expected_cape = svc._compute_cape(ts)
     expected_freezing = svc._compute_freezing_level(ts)
 
-    temp_min_line = _plain_value(text, "Temp")
+    temp_min_line = _plain_value(text, "Temperatur")
     assert temp_min_line is not None, (
         f"Klartext hat keine 'Temp min'-Zeile, obwohl temp_min_c gewaehlt "
         f"ist:\n{text}"
     )
     assert _number(temp_min_line) == expected_temp_min
 
-    gust_line = _plain_value(text, "Gust")
+    gust_line = _plain_value(text, "Böen")
     assert gust_line is not None, (
         f"Klartext hat keine 'Böen'-Zeile, obwohl gust_max_kmh gewaehlt "
         f"ist:\n{text}"
     )
     assert _number(gust_line) == expected_gust_max
 
-    cape_line = _plain_value(text, "CAPE")
+    cape_line = _plain_value(text, "Gewitterenergie (CAPE)")
     assert cape_line is not None, (
         f"Klartext hat keine 'CAPE'-Zeile, obwohl cape_max_jkg gewaehlt "
         f"ist:\n{text}"
     )
     assert _number(cape_line) == expected_cape
 
-    freezing_line = _plain_value(text, "0°Line")
+    freezing_line = _plain_value(text, "Nullgradgrenze")
     assert freezing_line is not None, (
         f"Klartext hat keine 'Nullgradgrenze'-Zeile, obwohl freezing_level_m "
         f"gewaehlt ist:\n{text}"
@@ -347,9 +347,9 @@ def test_existing_eleven_metrics_unchanged_after_fix():
     Drei-Metriken-Auswahl bleibt nach Ergaenzung der vier neuen
     Mapping-Eintraege wertmaessig unveraendert -- weder verschwindet eine
     bestehende Zeile, noch aendert sich ihr Wert. Die Beschriftung selbst
-    wechselt mit A2b auf die `col_label`-Kurzform aus dem zentralen Register
-    ("Temp max"->"Temp", da hier nur eine Auswertung gewaehlt ist; "Wolken"->
-    "Cloud") -- die Werte-Zellen bleiben dabei Zeichen fuer Zeichen dieselben
+    ist seit #1453 der ausgeschriebene deutsche Registername ("Temperatur",
+    da hier nur eine Auswertung gewaehlt ist; "Bewölkung")
+    -- die Werte-Zellen bleiben dabei Zeichen fuer Zeichen dieselben
     (Spec fix_1401_a2_mailtabellen.md, AC-5: "kein Wert-Regressionstest wird
     durch diese Lieferung entwertet").
 
@@ -361,11 +361,13 @@ def test_existing_eleven_metrics_unchanged_after_fix():
 
     html = render_compare_html(result, enabled_metrics=enabled)
 
-    assert _labels(html) == ["Amtliche Warnungen", "Temp", "Wind", "Cloud"], (
-        "Bestehende Auswahl zeigt nicht die aus dem zentralen Register "
-        f"abgeleitete Kurzform (#1401 A2b): {_labels(html)}"
+    assert _labels(html) == [
+        "Amtliche Warnungen", "Temperatur", "Wind", "Bewölkung",
+    ], (
+        "Bestehende Auswahl zeigt nicht den aus dem zentralen Register "
+        f"abgeleiteten deutschen Namen (#1453): {_labels(html)}"
     )
     rows = {r["label"]: r["cells"] for r in _overview_rows(html)}
-    assert rows["Temp"] == ["16°C", "16°C"]
+    assert rows["Temperatur"] == ["16°C", "16°C"]
     assert rows["Wind"] == ["20 km/h", "20 km/h"]
-    assert rows["Cloud"] == ["50%", "50%"]
+    assert rows["Bewölkung"] == ["50%", "50%"]

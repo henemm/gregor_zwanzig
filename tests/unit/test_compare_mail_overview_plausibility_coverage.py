@@ -22,25 +22,36 @@ Format-Regex des Pruefers zu dem passt, was der Renderer wirklich ausgibt.
 Kern-Schicht: deterministisch, kein Netz, kein IMAP, keine Mocks/`patch()` --
 der Pruefling wird echt geladen und ausgefuehrt.
 
+#1453: die Uebergangs-Union aus #1420 (alte deutsche UND englische
+A2b-Beschriftungen gleichzeitig gueltig) ist zurueckgebaut -- gueltig ist
+allein der ausgeschriebene deutsche Registername. Weil `CV2_ROWS` unten der
+ECHTEN Renderer-Ableitung folgt, ziehen die Pruefungen dieser Datei
+automatisch auf die neue Form um; festgenagelt wird sie von der exakten
+Mengengleichung in `test_ac4_exemption_set_is_declared_and_complete`.
+
 SPEC: docs/specs/modules/fix_1404_validator_spaltennamen.md (AC-3, AC-4)
+      docs/specs/modules/fix_1453_namensformen.md (AC-6, Rueckbau)
 """
 from __future__ import annotations
 
 import importlib.util
-from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
 
-from output.renderers.email.compare_html import (
-    CV2_METRICS, _fmt_metric, derive_row_labels,
-)
+from output.renderers.email.compare_html import _fmt_metric, _visible_metrics
 
 # #1401 A2b: die Beschriftung steht nicht mehr in `CV2_METRICS`, sie wird aus
 # dem zentralen Register abgeleitet. Der Pruefling wird deshalb gegen die
-# Beschriftung gefahren, die der Renderer bei sichtbaren ALLEN Zeilen wirklich
-# ausgibt (inkl. Kollisions-Zusatz "Temp max"/"Feels min").
-CV2_ROWS = derive_row_labels(CV2_METRICS)
+# Beschriftung gefahren, die der Renderer bei ALLEN sichtbaren Zeilen wirklich
+# ausgibt (inkl. Auswertungs-Zusatz bei zwei Auswertungen derselben Groesse).
+#
+# #1453: bewusst ueber die Zeilenquelle der UEBERSICHTSTABELLE
+# (`_visible_metrics(None)` = kein Filter, alle Zeilen) statt ueber die
+# allgemeine Beschriftungs-Ableitung. Uebersicht (deutsch) und Stundentabelle
+# (englisch) tragen seit dieser Lieferung verschiedene Formen -- wer hier die
+# allgemeine Ableitung befragt, prueft womoeglich die Form der anderen Tabelle.
+CV2_ROWS = _visible_metrics(None)
 
 VALIDATOR_PATH = (
     Path(__file__).resolve().parents[2] / ".claude" / "hooks" / "email_spec_validator.py"
@@ -51,13 +62,22 @@ VALIDATOR_PATH = (
 # aber es muss ausgesprochen sein, nicht aus einem fehlenden Dict-Eintrag
 # folgen (AC-4).
 #
-# #1420/AC-5: "Thdr"/"PType" sind die A2b-Gegenformen von "Gewitter"/
-# "Niederschlagsart" -- separat benannt (_NEW_EXEMPT_LABELS_A2B), damit der
-# Ursprung sichtbar bleibt, auch wenn EXEMPT_LABELS additiv waechst.
-_NEW_EXEMPT_LABELS_A2B = {"Thdr", "PType"}
-EXEMPT_LABELS = {"Amtliche Warnungen", "Gewitter", "Niederschlagsart"} | _NEW_EXEMPT_LABELS_A2B
+# #1453: die Uebergangs-Union ist zurueckgebaut -- die Uebersichtstabelle
+# fuehrt genau EINE Namensform (den ausgeschriebenen deutschen Registernamen).
+# Die zwei A2b-Gegenformen "Thdr"/"PType" sind damit entfallen; ausgenommen
+# bleiben die Warn-Zeile und die zwei kategorialen Enum-Zeilen, deren
+# Registername woertlich "Gewitter"/"Niederschlagsart" lautet.
+EXEMPT_LABELS = {"Amtliche Warnungen", "Gewitter", "Niederschlagsart"}
 
 NUMERIC_LABELS = [m["label"] for m in CV2_ROWS if m["label"] not in EXEMPT_LABELS]
+
+# Zwei Groessen fuehren zwei waehlbare Auswertungen (Temperatur, Gefuehlte
+# Temperatur). `CV2_ROWS` zeigt sie beide gleichzeitig -- dann traegt jede
+# Zeile die Auswertungs-Ergaenzung. Waehlt der Nutzer nur EINE Auswertung,
+# steht dort der blanke Name; auch der ist eine gueltige Zeilenbeschriftung
+# und muss dem Pruefer bekannt sein. Woertlich getippt (Registernamen der
+# beiden Groessen), nicht aus dem Pruefling abgeleitet.
+KOLLISIONSFREIE_FORMEN = {"Temperatur", "Gefühlte Temperatur"}
 
 # Plausible Rohwerte je Zeilen-Key -- Eingang der echten Formatierer, nicht
 # deren Ergebnis (das leitet `_cell_text()` ab).
@@ -166,14 +186,14 @@ def test_ac3_out_of_range_value_is_reported_per_location(validator):
     Plausibilitaets-Check laeuft / THEN meldet der Pruefer den Wert je Ort --
     und der Format-Check bleibt still, weil nur der Wert unplausibel ist, nicht
     seine Schreibweise."""
-    body = _overview_mail({"WDir": _fmt_metric(450, None, "°")})
+    body = _overview_mail({"Windrichtung": _fmt_metric(450, None, "°")})
 
     findings = validator.validate_plausibility(body)
 
     assert len(findings) == len(LOCATIONS), (
         f"Erwartet ein Befund je Ort ({len(LOCATIONS)}), bekommen: {findings}"
     )
-    assert all("WDir" in f and "450" in f for f in findings), (
+    assert all("Windrichtung" in f and "450" in f for f in findings), (
         f"Der Befund muss Zeile und Wert benennen: {findings}"
     )
     assert validator.validate_format(body) == [], (
@@ -187,19 +207,22 @@ def test_ac3_out_of_range_value_is_reported_per_location(validator):
 
 
 def test_ac4_exemption_set_is_declared_and_complete(validator):
-    """AC-4 (Basis) + AC-5 (#1420): GIVEN `_OVERVIEW_METRIC_CHECKS`/
-    `_OVERVIEW_NO_CHECK_LABELS` sind jetzt eine auf Alt+Neu erweiterte
-    Uebergangs-Union / WHEN man geprueft und ausgenommen zusammenzaehlt / THEN
-    ergibt sich exakt die erweiterte Soll-Menge: die 27 heutigen
-    `CV2_METRICS`-Zeilen VEREINIGT mit den 24 A2b-Zielbeschriftungen
-    (`ZIEL_LABELS_A2B`), ueberschneidungsfrei zwischen geprueft und
-    ausgenommen. Die Gleichung bleibt exakt (nicht nur Teilmenge) -- ein
-    Tippfehler, der NEBEN einem korrekten neuen Schluessel steht (z. B.
-    "Gsut" neben "Gust"), muss auffallen (Spec: Implementation Details 4,
-    "Der heikelste Punkt"). Vor #1420 (nur die alten 27 Zeilen) ist dieser
-    Test rot, weil die rechte Seite (`all_labels | ZIEL_LABELS_A2B`) 24
-    Labels enthaelt, die im heutigen Pruefer weder geprueft noch ausgenommen
-    sind."""
+    """AC-4 (Basis) + #1453/AC-6 (Rueckbau): GIVEN die Uebergangs-Union ist
+    beendet / WHEN man geprueft und ausgenommen zusammenzaehlt / THEN ergibt
+    sich EXAKT die Menge der Beschriftungen, die der Renderer heute erzeugt --
+    ueberschneidungsfrei zwischen geprueft und ausgenommen, keine
+    zusaetzliche Zweitform.
+
+    Die Gleichung ist bewusst exakt (nicht nur Teilmenge) und traegt damit
+    beide Richtungen von #1453/AC-6: die neue Form MUSS drin sein, jede alte
+    Form (englische A2b-Kurzform wie "Gust", alte abgekuerzte deutsche Form
+    wie "Temp max"/"Sonne") darf NICHT mehr drin sein. Ein Tippfehler, der
+    NEBEN einem korrekten Schluessel steht, faellt genauso auf.
+
+    Vorgeschichte: dieser Test war seit #1420 vorbestehend rot -- der Pruefer
+    fuehrte die Uebergangs-Union aus alten deutschen UND englischen
+    A2b-Formen, der Renderer lieferte nur die englische. #1453 loest genau
+    diesen Widerspruch auf; der Test nagelt jetzt den Zielzustand fest."""
     exempt = getattr(validator, "_OVERVIEW_NO_CHECK_LABELS", None)
     assert exempt is not None, (
         "Der Pruefer nennt keine ausgesprochene Ausnahme-Menge "
@@ -214,25 +237,20 @@ def test_ac4_exemption_set_is_declared_and_complete(validator):
     assert checked.isdisjoint(exempt), (
         f"Eine Zeile kann nicht geprueft UND ausgenommen sein: {checked & exempt}"
     )
-    soll = all_labels | ZIEL_LABELS_A2B
+    soll = all_labels | KOLLISIONSFREIE_FORMEN
     assert checked | exempt == soll, (
         f"Weder geprueft noch ausgenommen: {sorted(soll - checked - exempt)}; "
-        f"unbekannte Beschriftung im Pruefer: {sorted((checked | exempt) - soll)}"
+        f"Zweitform/unbekannte Beschriftung im Pruefer: "
+        f"{sorted((checked | exempt) - soll)}"
     )
 
 
 @pytest.mark.parametrize(
-    # #1420-Korrektur: NICHT ueber ganz EXEMPT_LABELS parametrisieren. Von den
-    # 5 Ausnahme-Labels kommen heute nur die alten 3 in einer echten
-    # `CV2_METRICS`-Zeile vor -- "Thdr"/"PType" existieren erst nach #1401
-    # A2b im Renderer. Ein Parametrize-Fall fuer ein Label, das in keiner
-    # Zeile von `_overview_mail()` steht, kann gar nicht greifen (der
-    # `overrides`-Override in `_overview_mail()` findet nie eine passende
-    # Zeile) und waere damit wirkungslos GRUEN, ohne etwas zu pruefen. Der
-    # Schnitt mit den tatsaechlichen `CV2_METRICS`-Labels haelt den Test an
-    # der echten Renderer-Ausgabe: heute die alten 3, nach A2b automatisch
-    # "Thdr"/"PType" -- ohne dass dieser Test dafuer nochmal angefasst werden
-    # muss.
+    # NICHT ueber ganz EXEMPT_LABELS parametrisieren: ein Parametrize-Fall fuer
+    # ein Label, das in keiner Zeile von `_overview_mail()` steht, kann gar
+    # nicht greifen (der `overrides`-Override findet nie eine passende Zeile)
+    # und waere wirkungslos GRUEN. Der Schnitt mit den tatsaechlichen
+    # Renderer-Labels haelt den Test an der echten Ausgabe.
     "label", sorted(EXEMPT_LABELS & {m["label"] for m in CV2_ROWS})
 )
 def test_ac4_exempt_rows_stay_unevaluated(validator, label):
@@ -249,63 +267,26 @@ def test_ac4_exempt_rows_stay_unevaluated(validator, label):
 
 
 # ===========================================================================
-# #1420 -- Uebergangs-Union der Uebersichtstabellen-Beschriftungen
-#          (AC-1, AC-2, AC-3, AC-5, AC-6, AC-7)
+# #1453 -- die Uebersichtstabelle fuehrt GENAU EINE Namensform
+#          (ausgeschriebener deutscher Registername), AC-6
 #
-# #1401 Scheibe A2b stellt alle 26 Metrik-Zeilen der Uebersichtstabelle auf
-# die englische Kurzform aus dem zentralen Namensregister um. Ohne
-# Vorarbeit wuerden 24 der 24 Plausibilitaets-/Format-Pruefungen mit A2b
-# sofort wieder lautlos in den stillen `continue`-Pfad zurueckfallen --
-# dieselbe Luecke, die #1404 gerade erst fuer die Stundentabelle geschlossen
-# hat, nur diesmal fuer die Uebersichtstabelle.
+# #1420 hatte hier eine befristete Uebergangs-Union gepflegt: alte deutsche
+# UND kuenftige englische A2b-Kurzformen galten gleichzeitig, damit waehrend
+# der Umbenennung keine inhaltlich korrekte Mail hart abgelehnt wird. Mit
+# #1453 ist die Uebergangszeit beendet -- gueltig ist allein der
+# ausgeschriebene deutsche Name aus dem Register, bei zwei gleichzeitig
+# sichtbaren Auswertungen derselben Groesse mit deutscher Ergaenzung
+# ("Temperatur Maximum"). Die Union-Konstanten (A2B_RENAMED_LABELS,
+# COLLISION_LABELS, ZIEL_LABELS_A2B) und die daran haengenden Testfaelle sind
+# damit ersatzlos entfallen; die exakte Mengengleichung oben
+# (test_ac4_exemption_set_is_declared_and_complete) traegt beide Richtungen.
 #
-# SPEC: docs/specs/modules/fix_1420_validator_uebersichtslabels.md
+# Was bleibt: der Adversary-gehaertete Bereichsnachweis. "kaputt" faengt nur
+# das Format-Regex -- ohne einen formal KORREKT geschriebenen Wert ausserhalb
+# des zulaessigen Bereichs waere jeder Wertebereich unbewiesen.
+#
+# SPEC: docs/specs/modules/fix_1453_namensformen.md (AC-6)
 # ===========================================================================
-
-# Ziel-Beschriftung je Zeile (aus `fix_1401_a2_mailtabellen.md`,
-# PO-freigegeben 2026-07-28, hier uebernommen aus
-# `fix_1420_validator_uebersichtslabels.md`, "Ziel-Abbildung"). Regex/Bereich
-# unveraendert vom jeweils alten Eintrag uebernommen -- die Werte hier sind
-# NICHT die Zellwerte, sondern plausible, renderer-typisch formatierte
-# Beispielwerte je NEUER Beschriftung (die Zeile existiert vor #1401 A2b in
-# keiner echten Renderer-Ausgabe, s. Spec Implementation Details 5).
-A2B_RENAMED_LABELS: dict[str, str] = {
-    "Sun": "5.0 h",
-    "Cloud": "30%",
-    "UV": "4",
-    "Rain": "3.4 mm",
-    "Rain%": "80%",
-    "Visib": "9.0 km",
-    "SnowH": "12 cm",
-    "NewSn": "5 cm",
-    "Gust": "45 km/h",
-    "0°Line": "3200 m",
-    "WDir": "180 °",
-    "Feels min": "-5°C",
-    "Feels max": "19°C",
-    "CldLow": "40%",
-    "CldMid": "20%",
-    "CldHi": "10%",
-    "Humid": "65%",
-    "Cond°": "8°C",
-    "hPa": "1013 hPa",
-    "SnowL": "1800 m",
-}
-
-# Kollisionsvarianten (Spec, "Der heikelste Punkt" 1.): A2b haengt den
-# Auswertungs-Zusatz nur an, wenn zwei Zeilen mit demselben `col_label`
-# gleichzeitig sichtbar sind. Ist nur eine Auswertung gewaehlt, heisst die
-# Zeile "Temp" bzw. "Feels" -- ohne Zusatz.
-COLLISION_LABELS: dict[str, str] = {"Temp": "21°C", "Feels": "19°C"}
-
-# `ZIEL_LABELS_A2B` (Testkonstante, AC-5/Implementation Details 4): die 20
-# Umbenennungen + 2 Kollisionsformen (22 Pruef-Labels) plus die 2 neuen
-# Ausnahme-Labels "Thdr"/"PType" -- zusammen genau die 24 Labels, die mit
-# #1420 neu in die Union von `_OVERVIEW_METRIC_CHECKS`/
-# `_OVERVIEW_NO_CHECK_LABELS` wandern. Quelle: `fix_1401_a2_mailtabellen.md`.
-ZIEL_LABELS_A2B: set[str] = (
-    set(A2B_RENAMED_LABELS) | set(COLLISION_LABELS) | _NEW_EXEMPT_LABELS_A2B
-)
 
 
 def _overview_mail_from_rows(rows: list[tuple[str, str]]) -> str:
@@ -328,157 +309,68 @@ def _overview_mail_from_rows(rows: list[tuple[str, str]]) -> str:
     )
 
 
-# ---------------------------------------------------------------------------
-# AC-1/AC-2 -- die 20 A2b-Kurzbeschriftungen werden schon vor A2b geprueft
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize("label,plausible_value", sorted(A2B_RENAMED_LABELS.items()))
-def test_ac1_ac2_a2b_renamed_label_is_actually_checked(validator, label, plausible_value):
-    """AC-1: GIVEN eine Uebersichtstabellen-Zeile traegt eine der 20
-    kuenftigen A2b-Kurzbeschriftungen mit einem renderer-typisch
-    formatierten, plausiblen Wert / WHEN Plausibilitaets- und Format-Check
-    laufen / THEN meldet der Pruefer keinen Befund -- die Pruefung wirkt
-    bereits, bevor #1401 A2b selbst ausgeliefert ist.
-
-    AC-2: GIVEN dieselbe Beschriftung traegt stattdessen einen kaputten Wert
-    / WHEN dieselben Pruefungen laufen / THEN meldet der Pruefer einen
-    Befund, der genau diese Zeile benennt -- keine der 20 neuen Zeilen faellt
-    durch den stillen `continue`-Pfad, obwohl sie in der echten
-    Renderer-Ausgabe heute noch gar nicht vorkommt."""
-    good_body = _overview_mail_from_rows([(label, plausible_value)])
-    assert validator.validate_plausibility(good_body) == [], (
-        f"Plausibler Wert '{plausible_value}' fuer '{label}' darf keinen "
-        f"Plausibilitaets-Befund erzeugen"
-    )
-    assert validator.validate_format(good_body) == [], (
-        f"Plausibler Wert '{plausible_value}' fuer '{label}' darf keinen "
-        f"Format-Befund erzeugen"
-    )
-
-    broken_body = _overview_mail_from_rows([(label, "kaputt")])
-    findings = (
-        validator.validate_plausibility(broken_body) + validator.validate_format(broken_body)
-    )
-    assert findings, (
-        f"Zeile '{label}' laeuft ungeprueft durch: ein unbrauchbarer Zellwert "
-        f"erzeugt keinen Befund"
-    )
-    assert all(label in f for f in findings), (
-        f"Jeder Befund muss die betroffene Zeile '{label}' benennen: {findings}"
-    )
-
 
 # ---------------------------------------------------------------------------
-# AC-3 -- Kollisionsformen "Temp"/"Feels" ohne Auswertungs-Zusatz
+# Bereichsnachweis je numerischer Zeile: formal korrekt geschrieben, aber
+# ausserhalb des zulaessigen Bereichs (Adversary-Muster aus #1420)
 # ---------------------------------------------------------------------------
 
-
-@pytest.mark.parametrize("label,plausible_value", sorted(COLLISION_LABELS.items()))
-def test_ac3_collision_label_without_suffix_is_actually_checked(validator, label, plausible_value):
-    """AC-3: GIVEN eine der beiden Kollisionsformen "Temp"/"Feels" (ohne
-    Auswertungs-Zusatz), die A2b genau dann zeigt, wenn nur eine der beiden
-    moeglichen Auswertungen gleichzeitig sichtbar ist / WHEN ein kaputter
-    Wert in dieser Zeile steht / THEN meldet der Pruefer einen benannten
-    Befund fuer genau diese Zeile. Ein plausibler Wert bleibt unbeanstandet."""
-    good_body = _overview_mail_from_rows([(label, plausible_value)])
-    assert validator.validate_plausibility(good_body) == []
-    assert validator.validate_format(good_body) == []
-
-    broken_body = _overview_mail_from_rows([(label, "kaputt")])
-    findings = (
-        validator.validate_plausibility(broken_body) + validator.validate_format(broken_body)
-    )
-    assert findings, f"Kollisionsform '{label}' laeuft ungeprueft durch"
-    assert all(label in f for f in findings), (
-        f"Jeder Befund muss die betroffene Zeile '{label}' benennen: {findings}"
-    )
-
-
-# ---------------------------------------------------------------------------
-# AC-2 (Nachtrag, Adversary-Befund) -- unplausibler, aber KORREKT
-# formatierter Wert je neuem Pruef-Eintrag
-#
-# `test_ac1_ac2_a2b_renamed_label_is_actually_checked` oben prueft den
-# Fehlerfall nur mit dem Zellwert "kaputt" -- ein FORMATFEHLER, den der Regex
-# abfaengt, BEVOR die Bereichspruefung ueberhaupt greift. Die Wertebereiche
-# aller 22 neuen Eintraege (20 Umbenennungen + die 2 Kollisionsformen
-# "Temp"/"Feels") sind damit unbewiesen: AC-2 verlangt "einen unplausiblen
-# ODER falsch formatierten Wert" -- nur die zweite Haelfte war belegt.
-# Vorbild fuer "formal korrekt, aber ausserhalb des Bereichs":
-# `test_ac3_out_of_range_value_is_reported_per_location` ("Windrichtung" mit
-# 450 Grad bei zulaessigen 0-360).
-# ---------------------------------------------------------------------------
-
-# Bewusst KEINE Ableitung aus `_OVERVIEW_METRIC_CHECKS` (auch nicht ueber eine
-# andere Zeile desselben Dicts) -- eine Ableitung, die den Pruefling selbst
-# befragt, macht den Nachweis strukturell wirkungslos: verfaelscht man die
-# vom Pruefling hinterlegte Obergrenze, verschiebt sich der daraus berechnete
-# Testwert automatisch mit, und der Test bleibt tautologisch gruen ("Zahl
-# groesser als die (verfaelschte) Obergrenze" ist immer wahr). Belegt durch
-# eine echte Gegenprobe: `_OVERVIEW_METRIC_CHECKS["Gust"]`-Bereich auf
-# (0, 999999) gesetzt, Testlauf blieb 76/76 gruen.
-#
-# Die Werte hier sind deshalb WOERTLICH aus der Spec abgetippt
-# (`fix_1420_validator_uebersichtslabels.md`, Tabellen "Ziel-Abbildung" und
-# "Kollisionsvarianten") -- eine zweite, vom Code komplett unabhaengige
-# Quelle. Jeder Wert ist knapp oberhalb der dort dokumentierten Obergrenze
-# und erfuellt zugleich das dort dokumentierte Format-Regex.
+# Bewusst KEINE Ableitung aus `_OVERVIEW_METRIC_CHECKS` -- eine Ableitung, die
+# den Pruefling selbst befragt, macht den Nachweis strukturell wirkungslos:
+# verfaelscht man die hinterlegte Obergrenze, verschiebt sich der daraus
+# berechnete Testwert mit, und der Test bleibt tautologisch gruen. Die Werte
+# sind deshalb woertlich getippt, je knapp oberhalb der Obergrenze, die der
+# Pruefer fuer diese Groesse fuehrt (uebernommen aus dem jeweils alten
+# Eintrag, #1404/#1420) -- und jeder Wert erfuellt das Format-Regex.
 _OUT_OF_RANGE_VALUES: dict[str, str] = {
-    "Sun": "30.0 h",         # Spec: 0-24
-    "Cloud": "150%",         # Spec: 0-100
-    "UV": "20",              # Spec: 0-16
-    "Rain": "350.0 mm",      # Spec: 0-300
-    "Rain%": "150%",         # Spec: 0-100
-    "Visib": "150.0 km",     # Spec: 0-100
-    "SnowH": "1200 cm",      # Spec: 0-1000
-    "NewSn": "350 cm",       # Spec: 0-300
-    "Gust": "350 km/h",      # Spec: 0-300
-    "0°Line": "6500 m",      # Spec: 0-6000
-    "WDir": "400 °",         # Spec: 0-360
-    "Feels min": "65°C",     # Spec: -50-50
-    "Feels max": "70°C",     # Spec: -50-55
-    "CldLow": "150%",        # Spec: 0-100
-    "CldMid": "150%",        # Spec: 0-100
-    "CldHi": "150%",         # Spec: 0-100
-    "Humid": "150%",         # Spec: 0-100
-    "Cond°": "50°C",         # Spec: -40-35
-    "hPa": "1200 hPa",       # Spec: 500-1085
-    "SnowL": "5500 m",       # Spec: 0-5000
-    "Temp": "70°C",          # Spec-Kollisionsvariante: -40-55
-    "Feels": "70°C",         # Spec-Kollisionsvariante: -50-55
+    "Temperatur Maximum": "70°C",           # Bereich -40..55
+    "Temperatur Minimum": "70°C",           # Bereich -40..55
+    "Wind": "350 km/h",                     # Bereich 0..250
+    "Niederschlag": "350.0 mm",             # Bereich 0..300
+    "Regenwahrscheinlichkeit": "150%",      # Bereich 0..100
+    "Sonnenstunden": "30.0 h",              # Bereich 0..24
+    "Bewölkung": "150%",                    # Bereich 0..100
+    "UV-Index": "20",                       # Bereich 0..16
+    "Sichtweite": "150.0 km",               # Bereich 0..100
+    "Schneehöhe": "1200 cm",                # Bereich 0..1000
+    "Neuschnee": "350 cm",                  # Bereich 0..300
+    "Böen": "350 km/h",                     # Bereich 0..300
+    "Gewitterenergie (CAPE)": "20000 J/kg",  # Bereich 0..10000
+    "Nullgradgrenze": "6500 m",             # Bereich 0..6000
+    "Windrichtung": "400 °",                # Bereich 0..360
+    "Gefühlte Temperatur Minimum": "65°C",  # Bereich -50..50
+    "Gefühlte Temperatur Maximum": "70°C",  # Bereich -50..55
+    "Tiefe Wolken": "150%",                 # Bereich 0..100
+    "Mittelhohe Wolken": "150%",            # Bereich 0..100
+    "Hohe Wolken": "150%",                  # Bereich 0..100
+    "Luftfeuchtigkeit": "150%",             # Bereich 0..100
+    "Taupunkt": "50°C",                     # Bereich -40..35
+    "Luftdruck": "1200 hPa",                # Bereich 500..1085
+    "Schneefallgrenze": "5500 m",           # Bereich 0..5000
 }
 
 
-@pytest.mark.parametrize(
-    "label", sorted(set(A2B_RENAMED_LABELS) | set(COLLISION_LABELS))
-)
-def test_ac2_a2b_label_out_of_range_value_is_actually_checked(validator, label):
-    """AC-2 (zweite Haelfte, Adversary-Befund): GIVEN eine der 22 neuen
-    Pruef-Eintraege (20 Umbenennungen + Kollisionsformen "Temp"/"Feels")
-    traegt einen Wert, der das Format-Regex ERFUELLT (kein Formatfehler),
-    aber laut Spec AUSSERHALB des vorgesehenen Wertebereichs liegt / WHEN
-    Plausibilitaets- und Format-Check laufen / THEN meldet
-    `validate_plausibility()` einen Befund, der die Zeile benennt, und
-    `validate_format()` bleibt still -- exakt das Muster von
-    'Windrichtung'/450° oben, jetzt fuer jeden der 22 neuen Eintraege.
+@pytest.mark.parametrize("label,value", sorted(_OUT_OF_RANGE_VALUES.items()))
+def test_out_of_range_value_is_reported_for_every_numeric_row(validator, label, value):
+    """GIVEN eine Uebersichtszeile traegt unter ihrem ausgeschriebenen
+    deutschen Namen einen Wert, der das Format-Regex ERFUELLT, aber ausserhalb
+    des vorgesehenen Wertebereichs liegt / WHEN Plausibilitaets- und
+    Format-Check laufen / THEN meldet `validate_plausibility()` einen Befund,
+    der die Zeile benennt, und `validate_format()` bleibt still.
 
-    Der Testwert stammt aus `_OUT_OF_RANGE_VALUES` (Spec-Abschrift), NICHT
-    aus dem Pruefling -- sonst waere der Test gegen eine Verfaelschung der
-    Bereichsgrenze blind (s. Kommentar dort)."""
-    value = _OUT_OF_RANGE_VALUES[label]
-
+    Deckt zugleich AC-6 (Richtung "neue Form wird wirklich geprueft"): kennt
+    der Pruefer die Beschriftung nicht, faellt sie in den stillen
+    `continue`-Pfad und dieser Test ist rot."""
     body = _overview_mail_from_rows([(label, value)])
 
-    plausibility_findings = validator.validate_plausibility(body)
-    assert plausibility_findings, (
-        f"Wert '{value}' fuer '{label}' liegt laut Spec ausserhalb des "
-        f"Wertebereichs, wird aber nicht gemeldet -- der Wertebereich ist "
-        f"unbewiesen"
+    findings = validator.validate_plausibility(body)
+
+    assert findings, (
+        f"Wert '{value}' fuer '{label}' liegt ausserhalb des Wertebereichs, "
+        f"wird aber nicht gemeldet -- der Wertebereich ist unbewiesen"
     )
-    assert all(label in f for f in plausibility_findings), (
-        f"Der Befund muss die betroffene Zeile '{label}' benennen: "
-        f"{plausibility_findings}"
+    assert all(label in f for f in findings), (
+        f"Der Befund muss die betroffene Zeile '{label}' benennen: {findings}"
     )
     assert validator.validate_format(body) == [], (
         f"Wert '{value}' ist formal korrekt geschrieben -- ein Format-Befund "
@@ -486,54 +378,14 @@ def test_ac2_a2b_label_out_of_range_value_is_actually_checked(validator, label):
     )
 
 
-def test_ac2_out_of_range_values_cover_exactly_the_22_new_check_entries(validator):
-    """Erosionsschutz fuer `_OUT_OF_RANGE_VALUES` selbst: die hinterlegte
-    Spec-Abschrift muss exakt die 22 neuen Pruef-Labels abdecken (20
-    Umbenennungen + 2 Kollisionsformen) -- weder mehr (totes Label) noch
-    weniger (ein neues Label liefe ungeprueft durch, ohne dass ein
-    Parametrize-Fall das auffangen wuerde)."""
-    expected = set(A2B_RENAMED_LABELS) | set(COLLISION_LABELS)
-    assert set(_OUT_OF_RANGE_VALUES) == expected, (
-        f"_OUT_OF_RANGE_VALUES weicht von den 22 neuen Pruef-Labels ab: "
-        f"fehlt {expected - set(_OUT_OF_RANGE_VALUES)}, ueberzaehlig "
-        f"{set(_OUT_OF_RANGE_VALUES) - expected}"
-    )
-
-
-# ---------------------------------------------------------------------------
-# AC-6 -- Uebergangs-Union traegt ein Pruefdatum ohne Verhaltenszweig
-# ---------------------------------------------------------------------------
-
-
-def test_ac6_transition_union_carries_a_review_date(validator):
-    """AC-6: GIVEN die Uebergangs-Union der Uebersichtstabellen-
-    Beschriftungen ist eine bewusst befristete Zwischenloesung (Muster
-    `_HOUR_COLUMNS_V2`, #1404) / WHEN das Validator-Modul geladen wird /
-    THEN traegt es ein maschinenlesbares Pruefdatum, das innerhalb der
-    projektueblichen 90-Tage-Spanne ab `created` (2026-07-29) liegt und KEIN
-    Verhalten umschaltet (Vorbild:
-    `test_1404_ac5_transition_union_carries_a_review_date`)."""
-    spec_created = date(2026, 7, 29)
-
-    review = None
-    for name in (
-        "_OVERVIEW_METRIC_CHECKS_REVIEW_DATE", "_OVERVIEW_METRIC_CHECKS_EXPIRY",
-        "_OVERVIEW_METRIC_CHECKS_PRUEFDATUM",
-    ):
-        review = getattr(validator, name, None)
-        if review is not None:
-            break
-    assert review is not None, (
-        "Der Pruefer nennt kein Pruefdatum fuer die Uebersichtstabellen-"
-        "Uebergangs-Union (erwartet z. B. _OVERVIEW_METRIC_CHECKS_REVIEW_DATE) "
-        "-- die Uebergangsregelung wuerde stillschweigend fuer immer gelten"
-    )
-    if isinstance(review, str):
-        review = date.fromisoformat(review)
-    assert isinstance(review, date), f"Pruefdatum muss ein Datum sein, ist: {review!r}"
-    assert spec_created < review <= spec_created + timedelta(days=90), (
-        f"Pruefdatum {review} liegt ausserhalb der projektueblichen 90-Tage-Spanne "
-        f"ab {spec_created} (Regel-Budget)"
+def test_out_of_range_values_cover_exactly_the_numeric_rows(validator):
+    """Erosionsschutz fuer `_OUT_OF_RANGE_VALUES` selbst: die getippte Tabelle
+    muss exakt die numerisch pruefbaren Zeilen abdecken, die der Renderer
+    erzeugt -- weder mehr (totes Label) noch weniger (eine Zeile liefe ohne
+    Bereichsnachweis durch, ohne dass ein Parametrize-Fall das auffinge)."""
+    assert set(_OUT_OF_RANGE_VALUES) == set(NUMERIC_LABELS), (
+        f"fehlt: {sorted(set(NUMERIC_LABELS) - set(_OUT_OF_RANGE_VALUES))}, "
+        f"ueberzaehlig: {sorted(set(_OUT_OF_RANGE_VALUES) - set(NUMERIC_LABELS))}"
     )
 
 
@@ -544,19 +396,23 @@ def test_ac6_transition_union_carries_a_review_date(validator):
 # ---------------------------------------------------------------------------
 
 
-def test_ac7_unknown_label_outside_both_versions_stays_unevaluated(validator):
+def test_ac7_unknown_label_stays_unevaluated(validator):
     """AC-7: GIVEN eine Uebersichtszeile traegt eine Beschriftung, die weder
-    in der heutigen noch in der A2b-Zielfassung noch in der Ausnahme-Menge
-    vorkommt (Tippfehler, z. B. "Mond") / WHEN Plausibilitaets- und
-    Format-Check laufen / THEN bleibt diese Zeile unbewertet -- die Union
-    veraendert den heutigen Status quo fuer echte Fremd-Beschriftungen nicht.
+    zur gueltigen Namensform noch zur Ausnahme-Menge gehoert (Tippfehler,
+    z. B. "Mond") / WHEN Plausibilitaets- und Format-Check laufen / THEN
+    bleibt diese Zeile unbewertet.
 
-    Dieser Test ist bewusst ein Regressionsnachweis, kein Wirkungsnachweis:
-    er darf schon VOR dieser Lieferung gruen sein (der stille `continue`-Pfad
-    existiert unveraendert seit #1404) -- entscheidend ist, dass er es auch
-    NACH der Erweiterung bleibt. Ausdruecklich befristet (Spec Known
-    Limitations): faellt mit dem Folge-Ticket "unbekannte Beschriftung =
-    lauter Befund" ersatzlos weg."""
+    Regressionsnachweis, kein Wirkungsnachweis: gruen vor UND nach dieser
+    Lieferung (der stille `continue`-Pfad existiert unveraendert seit #1404).
+
+    WICHTIG fuer #1453/AC-6: genau deshalb kann die Gegenrichtung "alte
+    Uebersichtsform wird ABGELEHNT" verhaltensseitig nicht nachgewiesen
+    werden -- eine unbekannte Uebersichtsbeschriftung wird stillschweigend
+    uebersprungen, nicht gemeldet. Nachweisbar ist sie nur an der bekannten
+    Menge selbst (s. `test_ac4_exemption_set_is_declared_and_complete` und
+    `test_compare_validator_single_name_form.py`). Ausdruecklich befristet
+    (Known Limitations #1420): faellt mit dem Folge-Ticket "unbekannte
+    Beschriftung = lauter Befund" ersatzlos weg."""
     body = _overview_mail_from_rows([("Mond", "kaputt")])
 
     assert validator.validate_plausibility(body) == []
