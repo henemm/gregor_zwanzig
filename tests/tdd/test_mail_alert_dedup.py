@@ -326,3 +326,21 @@ def test_ac8_region_label_equal_to_other_label_not_collapsed():
         f"Zufällige region_label==label-Kollision darf zwei verschiedene "
         f"Warnungen NICHT kollabieren, bekommen {len(result)} statt 2"
     )
+
+
+def test_ac8_region_label_collision_not_collapsed_in_overview_chip():
+    """F002 am Render-Layer (#1451): dieselbe Kollision wie oben, aber durch
+    `_render_overview_row`/`_render_warn_cell`. Der Chip-Schlüssel muss die
+    Identität NAMESPACED tragen ('region' vs. 'label') wie
+    `dedupe_official_alerts` — eine rohe OR-Kette kollabiert beide zu einem
+    Chip und unterschlägt dem Nutzer eine Warnung."""
+    a = OfficialAlert(source="s-a", hazard="access_ban", level=3,
+                      label="Massiv X gesperrt", region_label=None)
+    b = OfficialAlert(source="s-b", hazard="access_ban", level=3,
+                      label="Zugang Massiv X eingeschränkt", region_label="Massiv X gesperrt")
+    loc = _loc_with_alerts("l8", "O", [a, b])
+    row = _render_overview_row(WARN_METRIC, [loc])
+    assert row.count(CHIP_SIG) == 2, (
+        f"region_label==label-Kollision darf im Übersichts-Chip nicht "
+        f"kollabieren, gefunden {row.count(CHIP_SIG)} statt 2"
+    )

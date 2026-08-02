@@ -45,12 +45,17 @@ def _heat_alert(region: str, level: int, day: int, label: str) -> OfficialAlert:
 
 
 def test_ac1_two_extreme_heat_same_level_different_window_collapse_to_one_chip():
-    """AC-1: zwei extreme_heat-Alerts gleicher Stufe, unterschiedliches
-    Zeitfenster/Ort-Label -- _render_warn_cell darf nur EINEN 'Hitze'-Chip
-    rendern (aktuell: zwei, weil _warn_short kein unterscheidendes Detail
-    traegt)."""
+    """AC-1: zwei extreme_heat-Alerts gleicher Stufe und gleicher Regions-
+    Identitaet, aber unterschiedlichem Zeitfenster -- _render_warn_cell darf
+    nur EINEN 'Hitze'-Chip rendern.
+
+    Issue #1451: die Fixture nutzte urspruenglich zwei VERSCHIEDENE Regionen
+    ("Nord"/"Sued"). Deren Kollaps war kein gewuenschtes Verhalten, sondern
+    der Bug #1451 (eine Warnung wurde unterschlagen) -- Spec AC-1 verlangt
+    seit v1.1 ausdruecklich dieselbe Regions-Identitaet, AC-6 verlangt fuer
+    verschiedene Regionen ZWEI Chips."""
     alert1 = _heat_alert("Nord", level=3, day=20, label="Hitzewarnung Nord")
-    alert2 = _heat_alert("Sued", level=3, day=21, label="Hitzewarnung Sued")
+    alert2 = _heat_alert("Nord", level=3, day=21, label="Hitzewarnung Nord")
 
     # Sanity: die Datenebene-Dedup (#1245/#1134) darf die beiden Alerts NICHT
     # zusammenfassen -- sonst waere dies kein echter Bug-Repro auf Render-Ebene.

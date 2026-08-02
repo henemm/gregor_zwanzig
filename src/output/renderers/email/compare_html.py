@@ -495,11 +495,22 @@ def _render_warn_cell(alerts: list) -> str:
     if not alerts:
         return '<span style="color:#b8b4a8;font-size:12px;">—</span>'
     chips = []
-    seen: set[tuple[str, str, str]] = set()
+    seen: set[tuple[str, str, str, tuple[str, str]]] = set()
     for alert in alerts:
         short, _sev = _warn_short(alert)
         bg, fg = _ALERT_LEVEL_CELL.get(alert.level, _ALERT_LEVEL_CELL[4])
-        visual_key = (short, bg, fg)
+        # Issue #1451: NAMESPACED Identitaet wie `dedupe_official_alerts` --
+        # ohne sie kollabieren Warnungen VERSCHIEDENER Regionen zu einem Chip.
+        # Der Namespace-Tag ist Pflicht (F002): ein zufaellig gleicher String
+        # zwischen `region_label` der einen und `label` der anderen Warnung
+        # darf nicht kollabieren.
+        if alert.dedup_id:
+            region_ident = ("id", alert.dedup_id)
+        elif alert.region_label:
+            region_ident = ("region", alert.region_label)
+        else:
+            region_ident = ("label", alert.label)
+        visual_key = (short, bg, fg, region_ident)
         if visual_key in seen:
             continue
         seen.add(visual_key)
