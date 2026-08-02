@@ -57,6 +57,7 @@ from tenacity import (
 
 from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
 from providers.base import ProviderRequestError
+from providers.region_routing import direct_provider_for
 
 if TYPE_CHECKING:
     from app.config import Location
@@ -84,6 +85,27 @@ RETRY_STATUS_CODES = {500, 502, 503, 504}
 # endlos weiterer Calls.
 FETCH_DEADLINE_SECONDS = 180.0
 
+# Eigenes Zeitbudget der Gewitter-Anreicherung (#1457 S2a, AC-4). BEWUSST
+# getrennt von FETCH_DEADLINE_SECONDS: die Anreicherung ist best-effort und
+# darf das Budget der Grundvorhersage weder teilen noch anknabbern — ein
+# fehlendes Gewittersignal ist harmlos, eine fehlende Grundvorhersage nicht.
+#
+# Herleitung der 45s:
+# - gegen die 180s der Grundvorhersage (oben): dort 96 Calls, also ~1,9s je
+#   Call. Dieselbe Zuteilung fuer die 24 zusaetzlichen Calls ergibt 45s. Die
+#   Worst-Case-Gesamtlaufzeit waechst damit um hoechstens ein Viertel.
+# - gegen die 90s des Alarm-Laufs (ALERT_RUN_DEADLINE_SECONDS,
+#   services/trip_alert.py:44): dort ist dieser Provider NICHT der Regelweg,
+#   sondern nur der Totalausfall-Fallback (der Regelweg openmeteo.py:74 hat
+#   60s und bleibt unter den 90s). Wird der Fallback im Alarm-Lauf
+#   ueberhaupt erreicht, sprengt bereits die Grundvorhersage mit ihren 180s
+#   das Alarm-Budget — ein Bestandszustand, den diese Scheibe weder
+#   verursacht noch behebt. Die 45s sind bewusst KEIN weiterer Aufschlag auf
+#   einen ohnehin zu grossen Wert, sondern greifen unabhaengig davon.
+# Zeitgrenze fest, nicht rollend (Lehre #1448): sie wird EINMAL je Abruf
+# gebildet und dann vor jedem Einzel-Call geprueft.
+THUNDER_FETCH_DEADLINE_SECONDS = 45.0
+
 # Bounded, konstante Anzahl Zeitschritte je Parameter (siehe Modul-Docstring
 # zur "nur ein Zeitwert pro Call"-Einschränkung der Live-API). 24h-Horizont
 # (PO-Entscheidung 2026-07-23, Nachfolger von zuvor 1..6).
@@ -93,6 +115,15 @@ TEMPERATURE_COVERAGE = "TEMPERATURE__SPECIFIC_HEIGHT_LEVEL_ABOVE_GROUND"
 U_WIND_COVERAGE = "U_COMPONENT_OF_WIND__SPECIFIC_HEIGHT_LEVEL_ABOVE_GROUND"
 V_WIND_COVERAGE = "V_COMPONENT_OF_WIND__SPECIFIC_HEIGHT_LEVEL_ABOVE_GROUND"
 PRECIP_COVERAGE = "TOTAL_PRECIPITATION__GROUND_OR_WATER_SURFACE"
+# #1457 S2a: erwartete Blitzdichte, Bodenniveau — daher KEIN height-Subset,
+# wie beim Niederschlag. Die vollstaendige Coverage-ID ist
+# `LITOTA3__GROUND___<lauf>` OHNE Perioden-Suffix: anders als beim
+# Niederschlag (`_PT1H`) steckt die 3-Stunden-Mittelung bereits im Namen der
+# Groesse. Live gegen die API verifiziert (2026-08-02, GR20 42.22/9.07,
+# Lauf 00Z: +12h=0.0, +14h=0.1, +16h=0.2, +18h=0.0). `DescribeCoverage`
+# bestaetigt "Average lightning strike density over 3 hours", uom `km-3` —
+# eine DICHTE, keine Potenzialgroesse; daher das eigene Feld (s. #1419).
+LIGHTNING_COVERAGE = "LITOTA3__GROUND"
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
@@ -166,6 +197,19 @@ class MeteoFranceDirectProvider:
     ) -> bytes:
         """GetCoverage-Request mit Retry-Logik (SPEC: api_retry.md-Muster,
         502/503/504 + Connection-Errors, 5 Versuche, 2-60s Backoff)."""
+        return self._request_once(coverage_id, lat, lon, height, time_str)
+
+    def _request_once(
+        self, coverage_id: str, lat: float, lon: float,
+        height: Optional[int], time_str: str,
+    ) -> bytes:
+        """Ein einzelner GetCoverage-Request OHNE Retry.
+
+        #1457 S2a: die Gewitter-Anreicherung ruft diesen Weg direkt auf. Mit
+        Retry wuerde eine einzige 5xx-Stunde bis zu 5 Versuche x 2-60s Backoff
+        kosten und das Anreicherungs-Budget (45s) sofort sprengen — nach
+        wenigen Stunden waere die ganze Reihe leer statt nur einer. Die
+        Grundvorhersage nutzt unveraendert den geretryten `_request`."""
         params: list[tuple[str, str]] = [
             ("service", "WCS"),
             ("version", "2.0.1"),
@@ -209,6 +253,58 @@ class MeteoFranceDirectProvider:
             values[offset] = _read_point_value(raw, lat, lon)
         return values
 
+    def fetch_thunder_signals(
+        self,
+        location: "Location",
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ) -> Dict[int, Optional[float]]:
+        """#1457 S2a: erwartete Blitzdichte je Stunden-Offset (Blitze je km^2
+        und 3h, Coverage `LITOTA3`). Best effort, fail-soft — wirft NIE.
+
+        Muster: `openmeteo._fetch_ensemble_spread` (openmeteo.py:640-680).
+
+        AC-6: Liegt der Ort nicht im AROME-Gebiet, wird gar nicht erst
+        abgerufen — sonst entstuenden sinnlose Abrufe ausserhalb des Modells.
+
+        AC-2: Fehlt der Wert einer Stunde, bleibt der Eintrag `None` und wird
+        NIE 0 — "keine Aussage" ist nicht "keine Gefahr" (#1419 Abs. 5). Eine
+        einzelne gescheiterte Stunde kippt die Reihe daher nicht.
+        """
+        lat, lon = location.latitude, location.longitude
+        if direct_provider_for(lat, lon) != "fr_direct":
+            return {}
+
+        values: Dict[int, Optional[float]] = {}
+        try:
+            run = _latest_run(datetime.now(timezone.utc))
+            coverage_id = f"{LIGHTNING_COVERAGE}___{_run_str(run)}"
+            deadline_at = time.monotonic() + THUNDER_FETCH_DEADLINE_SECONDS
+            for offset in FORECAST_HOURS:
+                # Zeitgrenze im INNERSTEN Schritt (Lehre #1448): vor JEDEM
+                # Einzelabruf geprueft, nicht nur einmal um die Schleife herum.
+                if time.monotonic() > deadline_at:
+                    logger.warning(
+                        "Blitzdichte-Budget (%.0fs) nach %d Stunden erschoepft — "
+                        "Anreicherung bricht ab, Grundvorhersage unberuehrt",
+                        THUNDER_FETCH_DEADLINE_SECONDS, len(values),
+                    )
+                    break
+                time_str = (run + timedelta(hours=offset)).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+                try:
+                    raw = self._request_once(coverage_id, lat, lon, None, time_str)
+                except Exception as e:
+                    logger.warning("Blitzdichte +%dh nicht abrufbar: %s", offset, e)
+                    values[offset] = None
+                    continue
+                values[offset] = _read_point_value(raw, lat, lon)
+        except Exception:
+            logger.warning("Blitzdichte-Abruf fehlgeschlagen", exc_info=True)
+            return {}
+        return values
+
     def fetch_forecast(
         self,
         location: "Location",
@@ -216,6 +312,7 @@ class MeteoFranceDirectProvider:
         end: Optional[datetime] = None,
         enrich_ensemble: bool = True,  # ignored, AROME hat kein Ensemble-API
         enrich_snow: bool = True,  # ignored, kein Snow-Datensatz in diesem Slice
+        enrich_thunder: bool = True,  # #1457 S2a AC-5: Default schaltet EIN
     ) -> NormalizedTimeseries:
         """SPEC AC-1/AC-3/AC-4: liefert NormalizedTimeseries oder wirft
         ProviderRequestError (httpx-Fehler werden hier uebersetzt, analog
@@ -238,6 +335,11 @@ class MeteoFranceDirectProvider:
         except httpx.RequestError as e:
             raise ProviderRequestError(self.name, f"Request failed: {e}")
 
+        # AC-3/AC-4/AC-5: erst NACH den vollstaendigen Grunddaten und mit
+        # eigenem Budget — scheitert die Anreicherung, bleibt die Vorhersage
+        # unversehrt und nur das Blitzfeld leer.
+        thunder = self.fetch_thunder_signals(location, start, end) if enrich_thunder else {}
+
         data_points: List[ForecastDataPoint] = []
         for offset in FORECAST_HOURS:
             t = temps.get(offset)
@@ -255,6 +357,8 @@ class MeteoFranceDirectProvider:
                     t2m_c=round(t, 1) if t is not None else None,
                     wind10m_kmh=wind_kmh,
                     precip_1h_mm=precip_mm,
+                    # AC-2: fehlender Wert -> None, NIEMALS 0.
+                    lightning_density_per_km2_3h=thunder.get(offset),
                 )
             )
 
