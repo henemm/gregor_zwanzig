@@ -108,9 +108,9 @@ gemeinsamer Mechanismus: die eine prüft den Datenfluss INNERHALB einer
 Funktion, die andere die Abwesenheit eines Aufrufers über die GANZE
 Scanfläche (Spec „Geklärte Punkte" 1).
 
-**Mehrfachtreffer auf derselben ``pfad:zeile`` (S-6):** kollidieren zwei
-Detektoren auf demselben Schlüssel, gewinnt KEINER still — GREEN führt
-beide Arten im Wert (``"heartbeat_unwired+unacknowledged_dispatch::f"``)
+**Mehrfachtreffer auf derselben Codestelle (S-6):** kollidieren zwei
+Detektoren auf derselben Datei+Zeile, gewinnt KEINER still — GREEN führt
+beide Arten im Wert (``"heartbeat_unwired+unacknowledged_dispatch"``)
 statt eine zu überschreiben. Das gilt auch über mehrere Detektor-DURCHLÄUFE
 hinweg (dateiweise Detektoren PLUS Klasse-3-Lauf), nicht nur innerhalb
 eines Detektors. Ein Fund, der beim Zusammenführen verschwindet, wäre genau
@@ -124,9 +124,12 @@ ein Kommentar erreicht den Betrieb nicht, ein geprüfter Listen-Eintrag schon.
 
 Bauform + Ratsche 1:1 nach ``tests/test_resolution_loss_guard.py`` (Hälfte A,
 #1405): Scanfläche als Glob, ``ast.parse`` je Datei, Verstöße als
-``{"pfad:zeile": "art::funktion"}``, zwei gekoppelte Ratschen-Tests (neuer
-Fund → rot; erledigter Eintrag noch gelistet → rot), synthetische
-Wirkungsnachweise je Bugmuster UND je Ausnahmeklasse.
+``{"pfad::funktion::ordinal": "art"}`` (Issue #1466 AP2 — vorher
+``{"pfad:zeile": "art::funktion"}``, was bei jeder eingefügten Zeile wanderte
+und zuletzt 13 unveränderte Stellen gleichzeitig als "behoben" und als "neuer
+Verstoß" führte), zwei gekoppelte Ratschen-Tests (neuer Fund → rot; erledigter
+Eintrag noch gelistet → rot), synthetische Wirkungsnachweise je Bugmuster UND
+je Ausnahmeklasse.
 
 Bekannte Grenzen (Scope, keine Ausnahme):
 - **Vollständigkeit einer Werteprüfung ist nicht entscheidbar:** ob eine
@@ -194,9 +197,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 _ROUTERS_DIR = REPO_ROOT / "api" / "routers"
 _SERVICES_DIR = REPO_ROOT / "src" / "services"
 
-# Art-Kennung im Verstoß-Wert. Der Wert hat die Form "<art>::<funktionsname>"
-# — der Funktionsname trägt AC-1 (Erwartungsmenge ohne Zeilennummern) und
-# überlebt Codeverschiebungen, anders als der "pfad:zeile"-Schlüssel.
+# Art-Kennung. INTERN (in den einzelnen Detektoren) hat der Wert weiter die
+# Form "<art>::<funktionsname>"; nach außen steht der Funktionsname seit
+# Issue #1466 AP2 im SCHLÜSSEL ("pfad::funktion::ordinal", s.
+# _number_findings) und im Wert nur noch die Art.
 KIND_CONSTANT_SUCCESS = "constant_success"
 KIND_PRE_TRY_SUCCESS_MARKER = "pre_try_success_marker"
 KIND_PARTIAL_SUCCESS_BLIND = "partial_success_blind"
@@ -265,7 +269,7 @@ _MODULE_SCOPE = "<module>"
 # — Begründung als Datenstruktur"). Als Konstanten hier oben, damit AC-14
 # gegen denselben Wortlaut prüft, den GREEN einträgt, statt gegen eine
 # Abschrift.
-_WEBHOOK_ACK_LOCATION = "api/routers/webhook.py:72"
+_WEBHOOK_ACK_LOCATION = "api/routers/webhook.py::telegram_webhook::0"
 _WEBHOOK_ACK_JUSTIFICATION = (
     "Protokoll-Empfangsbestätigung an Telegram, kein fachlicher Erfolgsstatus "
     "— verhindert Retry-Sturm (dokumentiert im Docstring, Z. 54f.)"
@@ -1049,6 +1053,18 @@ def _value_is_reported(node: ast.AST, scope: ast.AST, returned: set[str]) -> boo
 
 
 def _find_unwired_heartbeat_violations(paths: Iterable[Path]) -> dict[str, str]:
+    """Klasse 3 über die GANZE Scanfläche, geschlüsselt wie alle anderen
+    Detektoren (``{"pfad::funktion::ordinal": "heartbeat_unwired"}``, #1466 AP2).
+
+    Dünner Mantel um ``_unwired_heartbeat_raw()``; ``_all_violations()``
+    braucht die ROHE, zeilenbezogene Fassung, weil das Ordinal erst NACH dem
+    Zusammenführen mit den vier dateiweisen Detektoren vergeben werden darf —
+    sonst bekämen zwei verschiedene Funde derselben Funktion beide die 0.
+    """
+    return _number_findings(_unwired_heartbeat_raw(paths))
+
+
+def _unwired_heartbeat_raw(paths: Iterable[Path]) -> dict[str, str]:
     """Klasse 3 über die GANZE Scanfläche als ``{"pfad:zeile": "heartbeat_unwired::funktion"}``.
 
     Einziger Detektor, der nicht dateiweise arbeiten kann: „wird nirgends
@@ -1170,13 +1186,16 @@ def _find_unacknowledged_dispatch_violations(path: Path) -> dict[str, str]:
       ANDERES Problem — dieses Ticket zielt auf Erfolgs*meldungen*, nicht auf
       Persistenz (AC-13b prüft die Abgrenzung, Sammel-Eintrag #1199).
 
-    Trifft (nach der E2-Einschränkung, verifiziert gegen ``0627612d``)
-    **SECHS** Funktionen, alle in ``notification_service.py``:
+    Traf (nach der E2-Einschränkung, verifiziert gegen ``0627612d``) SECHS
+    Funktionen, alle in ``notification_service.py``; seit #1459 sind es
+    **DREI**:
 
-    * **B14b** — die drei Compare-Versandhelfer
-      ``_dispatch_compare_official_email`` (Z. 878),
-      ``_dispatch_compare_official_telegram`` (Z. 891) und
-      ``_dispatch_compare_official_sms`` (Z. 929);
+    * **B14b — seit #1459 (``161db8bb``) BEHOBEN, kein Fund mehr:** die drei
+      Compare-Versandhelfer ``_dispatch_compare_official_email``,
+      ``_dispatch_compare_official_telegram`` und
+      ``_dispatch_compare_official_sms`` liefern jetzt ``bool``, und
+      ``send_compare_official_alert()`` verwertet es zu ``failed_channels``.
+      Damit greift der Ausschluss ``_returns_a_value()`` (AC-13).
     * **B21** (NEU Version 1.2) — ``_send_telegram_incomplete_hint``
       (Z. 385, ruft ``TelegramOutput(...).send(...)``),
       ``send_command_reply_email`` (Z. 1115, ruft
@@ -1290,6 +1309,41 @@ def _dispatches_on_a_channel(scope: ast.AST) -> bool:
     return False
 
 
+def _number_findings(raw: dict[str, str]) -> dict[str, str]:
+    """Rohfunde ``{"pfad:zeile": "art::funktion"}`` → ``{"pfad::funktion::ordinal": "art"}``.
+
+    Issue #1466 AP2: der zeilenbasierte Schlüssel wanderte bei JEDER
+    eingefügten Zeile. Zuletzt galten hier 13 Stellen gleichzeitig als behoben
+    (alter Schlüssel) und als neuer Verstoß (neuer Schlüssel), mit
+    UNTERSCHIEDLICHEM Versatz je Datei (+3 in notification_service.py,
+    +119/+124 in trip_alert.py) — von Hand nicht mit einer Zahl nachzuziehen.
+
+    Der neue Schlüssel nennt Datei, umschließende Funktion und die Position
+    des Fundes INNERHALB dieser Funktion (0-basiert, nach Zeilennummer
+    sortiert — dieselbe Zählweise in allen drei Wächtern). Der Funktionsname
+    wandert damit vom WERT in den SCHLÜSSEL; im Wert bleibt allein die Art
+    (bei einer Kollision zweier Detektoren auf derselben Zeile weiterhin
+    ``"art_a+art_b"``, S-6).
+
+    Das Ordinal ist Pflicht: ohne es fielen die Mehrfachfunde derselben
+    Funktion zusammen (``_handle_query`` ×4, ``send_official_alert`` ×3,
+    ``_dispatch_alert_message`` ×3, ``_trigger_on_demand`` ×2) und AC-1/AC-17
+    wären strukturell unerfüllbar. Die Grenzen des Schlüssels stehen in der
+    Spec zu #1466 unter „Bekannte Grenzen": eine Umbenennung/Aufteilung der
+    Funktion bricht ihn weiterhin.
+    """
+    by_scope: dict[tuple[str, str], dict[int, str]] = {}
+    for location, kind in raw.items():
+        path, _, lineno = location.rpartition(":")
+        kinds, _, scope_name = kind.partition("::")
+        by_scope.setdefault((path, scope_name), {})[int(lineno)] = kinds
+    numbered: dict[str, str] = {}
+    for (path, scope_name), by_line in by_scope.items():
+        for ordinal, lineno in enumerate(sorted(by_line)):
+            numbered[f"{path}::{scope_name}::{ordinal}"] = by_line[lineno]
+    return numbered
+
+
 def _find_violations(path: Path) -> dict[str, str]:
     """Die vier dateiweisen Detektoren (Klasse 1, 1c, 2, 4) für EINE Datei.
 
@@ -1318,7 +1372,10 @@ def _find_violations(path: Path) -> dict[str, str]:
     _merge_findings(found, _find_pre_try_success_marker_violations(path))
     _merge_findings(found, _find_partial_success_blind_violations(path))
     _merge_findings(found, _find_unacknowledged_dispatch_violations(path))
-    return found
+    # Die Detektoren arbeiten intern weiter zeilenbezogen (S-6-Merge braucht
+    # die Zeile als Kollisionsmerkmal); nach außen gilt seit #1466 AP2 der
+    # verschiebungsfeste Schlüssel.
+    return _number_findings(found)
 
 
 def _all_violations() -> dict[str, str]:
@@ -1329,10 +1386,11 @@ def _all_violations() -> dict[str, str]:
     * ``_find_violations(path)`` für jede Datei aus ``_scan_files()``,
     * PLUS ``_find_unwired_heartbeat_violations(_scan_files())`` einmal über
       die ganze Liste,
-    * zusammengeführt in ein Dict ``{"pfad:zeile": "art::funktion"}``.
+    * zusammengeführt und ERST DANACH nummeriert (#1466 AP2) zu einem Dict
+      ``{"pfad::funktion::ordinal": "art"}``.
 
     Die Mehrfachtreffer-Regel (S-6) gilt AUCH HIER, über die Detektor-
-    DURCHLÄUFE hinweg: trifft der Klasse-3-Lauf dieselbe ``pfad:zeile`` wie
+    DURCHLÄUFE hinweg: trifft der Klasse-3-Lauf dieselbe Datei+Zeile wie
     ein dateiweiser Detektor, führt ``_merge_findings`` beide Arten im Wert.
 
     Das Ergebnis ist ROH: Einträge aus ``INTENTIONAL_CONSTANT_SUCCESS`` sind
@@ -1344,48 +1402,57 @@ def _all_violations() -> dict[str, str]:
     paths = _scan_files()
     found: dict[str, str] = {}
     for path in paths:
-        _merge_findings(found, _find_violations(path))
-    _merge_findings(found, _find_unwired_heartbeat_violations(paths))
-    return found
+        _merge_findings(found, _find_constant_success_violations(path))
+        _merge_findings(found, _find_pre_try_success_marker_violations(path))
+        _merge_findings(found, _find_partial_success_blind_violations(path))
+        _merge_findings(found, _find_unacknowledged_dispatch_violations(path))
+    _merge_findings(found, _unwired_heartbeat_raw(paths))
+    # Erst NACH dem Zusammenführen ALLER fünf Detektoren nummerieren (#1466
+    # AP2): das Ordinal ist die Position innerhalb der Funktion über alle
+    # Fundarten hinweg. Würde jeder Detektor für sich nummerieren, trügen zwei
+    # verschiedene Funde derselben Funktion beide die 0 und einer verschwände.
+    return _number_findings(found)
 
 
 def _finding_locations(found: dict[str, str]) -> set[str]:
-    """Scan-Ergebnis → Menge aus ``"pfad::funktion"`` (ohne Zeilennummern).
+    """Scan-Ergebnis → Menge aus ``"pfad::funktion"`` (ohne Ordinal).
 
     Reine Umformung des Scanner-Ergebnisses (kein Stub, keine Erkennung),
-    damit die synthetischen Nachweise gegen einen zeilenstabilen Namen prüfen
-    können.
+    damit die synthetischen Nachweise gegen einen zeilen- UND ordinalstabilen
+    Namen prüfen können.
     """
-    locations: set[str] = set()
-    for location, kind in found.items():
-        path = location.rsplit(":", 1)[0]
-        function = kind.split("::", 1)[1] if "::" in kind else ""
-        locations.add(f"{path}::{function}")
-    return locations
+    return {location.rsplit("::", 1)[0] for location in found}
 
 
 def _finding_location_counts(found: dict[str, str]) -> dict[str, int]:
     """Scan-Ergebnis → ``"pfad::funktion"`` mit der ZAHL der Treffer darin.
 
-    Gezählt wird über das ROHE Scan-Ergebnis, in dem der Zeilenbezug noch
-    steckt — nur so bleiben drei Kanal-Vorkommen derselben Funktion drei
-    Treffer. ``_finding_locations()`` wirft die Zeile weg und lässt sie zu
-    einem Eintrag zusammenfallen; AC-1 wäre damit blind dafür, ob der Scanner
-    alle drei ``sent_channels.append()``-Stellen in
-    ``_dispatch_alert_message`` sieht oder nur eine.
+    Gezählt wird über das Ordinal, das seit #1466 im Schlüssel steckt — nur so
+    bleiben drei Kanal-Vorkommen derselben Funktion drei Treffer.
+    ``_finding_locations()`` wirft das Ordinal weg und lässt sie zu einem
+    Eintrag zusammenfallen; AC-1 wäre damit blind dafür, ob der Scanner alle
+    drei ``sent_channels.append()``-Stellen in ``_dispatch_alert_message``
+    sieht oder nur eine.
     """
     counts: Counter[str] = Counter()
-    for location, kind in found.items():
-        path = location.rsplit(":", 1)[0]
-        function = kind.split("::", 1)[1] if "::" in kind else ""
-        counts[f"{path}::{function}"] += 1
+    for location in found:
+        counts[location.rsplit("::", 1)[0]] += 1
     return dict(counts)
 
 
 # ---------------------------------------------------------------------------
 # Restliste aus der #1405-Bestandsaufnahme (B1–B21) — DARF NUR SCHRUMPFEN.
-# Schlüssel = "pfad:zeile" (wie vom Scanner geliefert), Wert = Begründung +
-# Issue-Bezug. Ein NEUER, hier nicht gelisteter Fund ist ein echter Rückfall
+# Schlüssel = "pfad::funktion::ordinal" (wie vom Scanner geliefert, s.
+# _number_findings), Wert = Begründung + Issue-Bezug.
+#
+# UMSCHLÜSSELUNG (#1466 AP2, 2026-08-02): früher "pfad:zeile". Dieser
+# Schlüssel wanderte bei jeder eingefügten Zeile, zuletzt mit
+# UNTERSCHIEDLICHEM Versatz je Datei (+3 in notification_service.py,
+# +119/+124 in trip_alert.py) — 13 unveränderte Stellen galten gleichzeitig
+# als behoben und als neuer Verstoß. Die Einträge selbst sind UNVERÄNDERT:
+# dieselben 45 Codestellen, dieselben Begründungen, keine gestrichen. Die
+# alte Zeilennummer steht nicht mehr im Schlüssel; die Funktion, die sie
+# meinte, nennt jede Begründung ohnehin. Ein NEUER, hier nicht gelisteter Fund ist ein echter Rückfall
 # (test_no_unlisted_success_status_findings schlägt fehl). Ein hier gelisteter
 # Fund, den der Scanner nicht mehr findet, MUSS entfernt werden
 # (test_known_violations_only_shrink schlägt sonst fehl, "veraltet").
@@ -1398,13 +1465,14 @@ def _finding_location_counts(found: dict[str, str]) -> dict[str, int]:
 # meldet die Zeile des `return`, Klasse 2 die der Iteration, Klasse 3 und 4
 # die der `def`-Anweisung (die Spec-Tabelle nennt teils die `def`-Zeile).
 #
-# 45 Einträge für 37 Funktionsschlüssel — gegenüber der Spec-Erwartung (33
+# 42 Einträge für 34 Funktionsschlüssel — gegenüber der Spec-Erwartung (33
 # Schlüssel, 40 Treffer, plus Webhook-Ack in INTENTIONAL_CONSTANT_SUCCESS) zwei
 # von Hand nachgelesene Zuwächse mit je derselben Mechanik wie eine belegte
 # Fundstelle (Begründung steht beim jeweiligen Eintrag). Keine Verbreiterung
 # der Signatur; die Bestandsaufnahme war unvollständig wie in Hälfte A.
-# (B13 mit #1407 und B2 mit #1447 aus der Restliste entfernt: beide Funde
-# wurden repariert (B13 geloescht, B2 leitet den Status jetzt ab) — der
+# (B13 mit #1407, B2 mit #1447 und B14b — drei Schlüssel — mit #1459 aus der
+# Restliste entfernt: alle Funde wurden repariert (B13 geloescht, B2 leitet
+# den Status jetzt ab, B14b liefert und verwertet jetzt `bool`) — der
 # Scanner findet dort nichts mehr, die Ratsche ist entsprechend kleiner.
 # B14b mit #1459 aus SPEC_LISTED_FINDINGS entfernt (drei Schlüssel, Soll 36/43
 # -> 33/40): _dispatch_compare_official_{email,telegram,sms} liefern jetzt
@@ -1424,22 +1492,22 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # aus AlertCheckRunResult.hit_deadline ab (status="partial" bei
     # Zeitobergrenze, sonst "ok") statt ihn fest zu setzen — der Scanner
     # findet an dieser Stelle nichts mehr, der Eintrag entfaellt mit ihr.
-    "api/routers/scheduler.py:77": (
+    "api/routers/scheduler.py::trigger_compare_alert_checks::0": (
         "B3 (#1405) — trigger_compare_alert_checks: dito (Deviation)."
     ),
-    "api/routers/scheduler.py:87": (
+    "api/routers/scheduler.py::trigger_radar_alert_checks::0": (
         "B4 (#1405) — trigger_radar_alert_checks: dito (Radar)."
     ),
-    "api/routers/scheduler.py:97": (
+    "api/routers/scheduler.py::trigger_compare_radar_alert_checks::0": (
         "B5 (#1405) — trigger_compare_radar_alert_checks: dito."
     ),
-    "api/routers/scheduler.py:107": (
+    "api/routers/scheduler.py::trigger_compare_official_alert_checks::0": (
         "B6 (#1405) — trigger_compare_official_alert_checks: dito."
     ),
-    "api/routers/scheduler.py:124": (
+    "api/routers/scheduler.py::trigger_inbound::0": (
         "B7 (#1405) — trigger_inbound: dito; der 'skipped'-Zweig ist korrekt."
     ),
-    "api/routers/scheduler.py:139": (
+    "api/routers/scheduler.py::trigger_inbound_telegram::0": (
         "B8 (#1405) — trigger_inbound_telegram: dito, Feld heißt 'processed'."
     ),
     # --- B13 entfernt (#1407): die Funktion war toter Code (Legacy-Pfad
@@ -1447,145 +1515,155 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # findet an dieser Stelle nichts mehr, der Eintrag entfaellt mit ihr.
     # --- B1: der #1403-Fall. Der Nutzer liest "Testmail verschickt", obwohl
     # nie etwas losgeschickt wurde ("no_channels" fällt bis zu sent=True durch).
-    "api/routers/scheduler.py:207": (
+    "api/routers/scheduler.py::send_test_trip_report::0": (
         "B1 (#1403/#1405) — send_test_trip_report: 'sent': True trotz outcome."
     ),
     # --- B11/B11b/B11c: die drei Compare-Alarmprüfer. Bei allen dreien heißt
     # eine 0 "nichts zu melden" ODER "alles kaputt" — kein Fehlerzähler.
-    "src/services/compare_alert.py:98": (
+    "src/services/compare_alert.py::check_all_compare_presets::0": (
         "B11 (#1405) — check_all_compare_presets: sent gezaehlt, kein Gegenzähler."
     ),
-    "src/services/compare_official_alert.py:77": (
+    "src/services/compare_official_alert.py::check_all_compare_presets::0": (
         "B11c (#1405) — check_all_compare_presets: sum(genexp) ohne try/except."
     ),
-    "src/services/compare_radar_alert.py:76": (
+    "src/services/compare_radar_alert.py::check_all_compare_presets::0": (
         "B11b (#1405) — check_all_compare_presets: über _check_one_preset(...)."
     ),
     # --- B19/B20: die beiden Inbound-Reader. In Spec-Version 1.1 fälschlich
     # als "kein Fund" geführt (E4).
-    "src/services/inbound_email_reader.py:77": (
+    "src/services/inbound_email_reader.py::poll_and_process::0": (
         "B19 (#1405) — poll_and_process: processed hoch, except nur logger.error."
     ),
-    "src/services/inbound_telegram_reader.py:107": (
+    "src/services/inbound_telegram_reader.py::poll_and_process::0": (
         "B20 (#1405) — poll_and_process: dito über _process_update(...)."
     ),
     # --- B21: Klasse 4 im Versandkontext, bei der E2-Verifikation gefunden.
     # Strukturell nicht von B14b zu unterscheiden.
-    "src/services/notification_service.py:385": (
+    "src/services/notification_service.py::_send_telegram_incomplete_hint::0": (
         "B21 (#1405) — _send_telegram_incomplete_hint: TelegramOutput, kein Signal."
     ),
     # --- B14a: Marker vor der Tat, drei Kanäle. NotificationResult.sent=True
     # heißt damit "konfiguriert", nicht "zugestellt" (#684 AC-3, #656).
-    "src/services/notification_service.py:660": (
+    "src/services/notification_service.py::send_official_alert::0": (
         "B14a (#1405/#684) — send_official_alert: append('email') vor dem try."
     ),
-    "src/services/notification_service.py:672": (
+    "src/services/notification_service.py::send_official_alert::1": (
         "B14a (#1405/#684) — send_official_alert: dito, Telegram."
     ),
-    "src/services/notification_service.py:694": (
+    "src/services/notification_service.py::send_official_alert::2": (
         "B14a (#1405/#684) — send_official_alert: dito, SMS."
     ),
-    # --- B14b: drei Compare-Versandhelfer ohne Rückmeldung. Der Aufrufer
-    # bucht den Erfolg auf den bloßen Umstand, dass er sie GERUFEN hat.
-    "src/services/notification_service.py:878": (
-        "B14b (#1405) — _dispatch_compare_official_email: kein return-Wert."
-    ),
-    "src/services/notification_service.py:891": (
-        "B14b (#1405) — _dispatch_compare_official_telegram: nacktes return (S-9)."
-    ),
-    "src/services/notification_service.py:929": (
-        "B14b (#1405) — _dispatch_compare_official_sms: dito, SMS-Kanal."
-    ),
+    # --- B14b ENTFERNT (#1459, 2026-08-02): die drei Compare-Versandhelfer
+    # _dispatch_compare_official_{email,telegram,sms} hatten keine Rückmeldung —
+    # der Aufrufer buchte den Erfolg auf den bloßen Umstand, dass er sie
+    # GERUFEN hatte. Seit `161db8bb` liefern alle drei `bool`, und
+    # send_compare_official_alert() WERTET den Rückgabewert aus: aus einem
+    # `False` wird ein Eintrag in `failed_channels`, der in
+    # NotificationResult.failed_channels beim Aufrufer ankommt
+    # (notification_service.py:882-906). Damit trifft die Klasse-4-Signatur
+    # ("kein Erfolgssignal an den Aufrufer") strukturell nicht mehr zu; der
+    # Scanner findet dort nichts mehr.
+    #
+    # Dritter Fall derselben Mechanik wie B13 (#1407) und B2 (#1447): eine
+    # Fundstelle verschwindet, WEIL sie repariert wurde. Geprüft wurde beides
+    # — die drei Funktionen existieren unverändert unter denselben Namen
+    # (keine Umbenennung/Auflösung, die den Verstoß nur verschoben hätte), und
+    # die "unlisted"-Hälfte des Wächters ist leer (kein Fund unter einem
+    # anderen Namen wieder aufgetaucht). Die Spec-Gegenprobe
+    # SPEC_LISTED_FINDINGS war mit #1459 bereits nachgezogen; NUR diese
+    # Restliste blieb stehen, weil ihr zeilenbasierter Schlüssel damals
+    # ohnehin schon 13-fach rot war und der echte Fortschritt darin unterging.
+    # Genau dagegen ist #1466 gebaut.
     # --- B14c: dasselbe Marker-vor-der-Tat-Muster im gemeinsamen
     # Alarm-Versandweg (Änderungs-, Radar- und amtliche Alarme).
-    "src/services/notification_service.py:1066": (
+    "src/services/notification_service.py::_dispatch_alert_message::0": (
         "B14c (#1405/#684) — _dispatch_alert_message: append('email') vor dem try."
     ),
-    "src/services/notification_service.py:1082": (
+    "src/services/notification_service.py::_dispatch_alert_message::1": (
         "B14c (#1405/#684) — _dispatch_alert_message: dito, Telegram."
     ),
-    "src/services/notification_service.py:1103": (
+    "src/services/notification_service.py::_dispatch_alert_message::2": (
         "B14c (#1405/#684) — _dispatch_alert_message: dito, SMS."
     ),
-    "src/services/notification_service.py:1115": (
+    "src/services/notification_service.py::send_command_reply_email::0": (
         "B21 (#1405) — send_command_reply_email: EmailOutput, keine Rückmeldung."
     ),
-    "src/services/notification_service.py:1293": (
+    "src/services/notification_service.py::_send_service_error_email::0": (
         "B21 (#1405) — _send_service_error_email: EmailOutput, nacktes return (S-9)."
     ),
     # --- B12: top_ort/actual_empfaenger sind abgeleitet und stehen im selben
     # Dict — der Erfolgs-Schlüssel daneben ist trotzdem hartkodiert.
-    "src/services/scheduler_dispatch_service.py:443": (
+    "src/services/scheduler_dispatch_service.py::send_compare_preset::0": (
         "B12 (#1405) — send_compare_preset: 'status': 'ok' fest."
     ),
     # --- B9/B10: die beiden Trip-Alarmprüfer.
-    "src/services/trip_alert.py:329": (
+    "src/services/trip_alert.py::check_all_trips::0": (
         "B9 (#1405) — check_all_trips: alerts_sent ohne Gegenzähler, return int."
     ),
-    "src/services/trip_alert.py:692": (
+    "src/services/trip_alert.py::check_radar_alerts::0": (
         "B10 (#1405) — check_radar_alerts: sent ohne Gegenzähler."
     ),
     # --- B18: dateiweites Muster, zehn Funktionen, 13 Treffer. Reparatur (S4)
     # am Stück: EINE Entscheidung darüber, was CommandResult.success bedeutet
     # (Antwort verfasst vs. zugrundeliegende Aktion erfolgreich).
-    "src/services/trip_command_processor.py:470": (
+    "src/services/trip_command_processor.py::_handle_query::0": (
         "B18 (#1405) — _handle_query (glance): nach self._fmt_glance(...)."
     ),
-    "src/services/trip_command_processor.py:479": (
+    "src/services/trip_command_processor.py::_handle_query::1": (
         "B18 (#1405) — _handle_query (heute_gewitter): nach _fmt_gewitter(...)."
     ),
-    "src/services/trip_command_processor.py:487": (
+    "src/services/trip_command_processor.py::_handle_query::2": (
         "B18 (#1405) — _handle_query (timeline_heute): nach _fmt_timeline(...)."
     ),
-    "src/services/trip_command_processor.py:496": (
+    "src/services/trip_command_processor.py::_handle_query::3": (
         "B18 (#1405) — _handle_query (timeline_morgen): dito."
     ),
     # --- B16: outcome wird geprüft, der Text variiert korrekt — nur `success`
     # bleibt in BEIDEN Ausgängen True (zweiter Treffer: s. Kopfkommentar).
-    "src/services/trip_command_processor.py:527": (
+    "src/services/trip_command_processor.py::_trigger_on_demand::0": (
         "B16 (#1405) — _trigger_on_demand: success=True trotz outcome != 'sent'."
     ),
-    "src/services/trip_command_processor.py:534": (
+    "src/services/trip_command_processor.py::_trigger_on_demand::1": (
         "B16 (#1405) — _trigger_on_demand: Erfolgsausgang, ohne Bezug auf outcome."
     ),
-    "src/services/trip_command_processor.py:595": (
+    "src/services/trip_command_processor.py::_handle_drilldown::0": (
         "B18 (#1405) — _handle_drilldown: nach WeatherExtractor(...).drilldown()."
     ),
-    "src/services/trip_command_processor.py:677": (
+    "src/services/trip_command_processor.py::_handle_hours_drilldown::0": (
         "B18 (#1405) — _handle_hours_drilldown: nach vier drilldown(...)-Abrufen."
     ),
-    "src/services/trip_command_processor.py:866": (
+    "src/services/trip_command_processor.py::_apply_ruhetag::0": (
         "B18 (#1405) — _apply_ruhetag: nach unzugewiesenem save_trip(...)."
     ),
     # --- B15: das Ergebnis wird nicht einmal entgegengenommen.
-    "src/services/trip_command_processor.py:890": (
+    "src/services/trip_command_processor.py::_trigger_report::0": (
         "B15 (#1405) — _trigger_report: send_test_report(...) unzugewiesen."
     ),
-    "src/services/trip_command_processor.py:950": (
+    "src/services/trip_command_processor.py::_show_status::0": (
         "B18 (#1405) — _show_status: matcht über das triviale date.today(). "
         "Bewusst aufgenommen (Arbeitsvorrat, keine Vorab-Filterung) — die "
         "Signatur ist syntaktisch, nicht risikobewusst (Spec 'Offene Punkte' 3)."
     ),
-    "src/services/trip_command_processor.py:1047": (
+    "src/services/trip_command_processor.py::_apply_pause::0": (
         "B18 (#1405) — _apply_pause: nach unzugewiesenem save_trip(...)."
     ),
-    "src/services/trip_command_processor.py:1070": (
+    "src/services/trip_command_processor.py::_apply_skip::0": (
         "B18 (#1405) — _apply_skip: dito."
     ),
-    "src/services/trip_command_processor.py:1120": (
+    "src/services/trip_command_processor.py::_show_now::0": (
         "B18 (#1405) — _show_now: nach svc.get_nowcast(...)/format_now_text(...)."
     ),
-    "src/services/trip_command_processor.py:1135": (
+    "src/services/trip_command_processor.py::_cancel_trip::0": (
         "B18 (#1405) — _cancel_trip: nach bedingtem, unzugewiesenem save_trip(...)."
     ),
-    "src/services/trip_command_processor.py:1149": (
+    "src/services/trip_command_processor.py::_resume_trip::0": (
         "B18 (#1405) — _resume_trip: dito."
     ),
     # --- B17 + der eine neue Fundort: beide zählen ohne Gegenzähler.
-    "src/services/trip_report_scheduler.py:258": (
+    "src/services/trip_report_scheduler.py::send_reports::0": (
         "B17 (#1405) — send_reports: sent_count ohne Gegenzähler, return int."
     ),
-    "src/services/trip_report_scheduler.py:356": (
+    "src/services/trip_report_scheduler.py::_process_pending_markers::0": (
         "NEU (#1405, beim Bau des Wächters nachgelesen) — "
         "_process_pending_markers: delivered += 1 nur bei outcome == 'sent', "
         "kein Gegenzähler, return delivered. Der Wert fließt in "
@@ -3267,7 +3345,7 @@ def test_scanner_ignores_pure_liveness_endpoint(tmp_path):
         f"werden. Code reference: {real_found}"
     )
     assert str(_relative_path(health_file)) not in {
-        location.rsplit(":", 1)[0] for location in INTENTIONAL_CONSTANT_SUCCESS
+        location.split("::", 1)[0] for location in INTENTIONAL_CONSTANT_SUCCESS
     }, (
         "health.py steht auf der Ausnahmeliste — damit wäre der bequeme Weg "
         "eröffnet, jeden künftigen Fund per Listeneintrag stillzustellen."

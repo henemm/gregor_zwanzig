@@ -20,10 +20,10 @@ from app.loader import _trip_to_dict, load_trip, load_trip_from_dict, save_trip
 def _trip_dict(**stage_overrides) -> dict:
     """Vollständiges Trip-Fixture-Dict mit `report_config` (Vorbild
     tests/tdd/test_bug_805_789_roundtrip.py::_TRIP_FULL, ohne das Legacy-Feld
-    `send_signal`, damit `_trip_to_dict(load_trip_from_dict(d))["report_config"]`
-    byte-identisch zum Original ist — `send_signal` ist in `TripReportConfig`
-    nicht modelliert und würde nur über den Datei-RMW-Pfad in `save_trip`
-    erhalten bleiben, nicht über den reinen Modell-Roundtrip).
+    `send_signal`: es ist in `TripReportConfig` nicht modelliert und bliebe nur
+    über den Datei-RMW-Pfad in `save_trip` erhalten, nicht über den reinen
+    Modell-Roundtrip — im Fixture würde es sonst als scheinbarer
+    Informationsverlust erscheinen, der keiner ist).
     """
     return {
         "id": "trip-1250-s4",
@@ -109,21 +109,161 @@ def test_ac13_flat_slot_channel_fields_derived_from_report_config():
     assert trip.send_telegram == rc["send_telegram"]
 
 
-def test_ac13_report_config_byte_identical_after_roundtrip():
+def test_report_config_roundtrip_loses_nothing_and_adds_only_absence():
     """
     GIVEN denselben Trip-Dict mit `report_config`
     WHEN er geladen und wieder in ein Dict serialisiert wird
       (`_trip_to_dict(load_trip_from_dict(d))`)
-    THEN bleibt `report_config` byte-identisch zum Original — die additiven
-      flachen Felder verändern die bestehende Map NICHT (Invariante, darf
-      bereits jetzt grün sein).
+    THEN geht kein Schlüssel verloren, kein vorhandener Wert ändert sich, und
+      hinzukommende Schlüssel tragen ausschließlich `None` — also exakt die
+      Bedeutung, die ihre Abwesenheit im Original hatte.
+
+    Issue #1466 AP3 (Spec `fix_1466_kern_suite_gruen.md`, "Warum AP3 den Test
+    ändert und nicht den Code"): dieser Test forderte bis dahin
+    Byte-Identität des ganzen `report_config`-Blocks. Diese Invariante ist
+    strukturell unerreichbar und war zugleich zu schwach:
+
+    * unerreichbar, weil `updated_at` bei jedem Laden ohne eigenen Wert auf
+      `datetime.now()` gesetzt wird (`loader.py:604`);
+    * zu schwach, weil sie die eigentlich relevante Aussage — ein GESETZTES
+      Tagesfenster übersteht den Zyklus, und es lässt sich wieder löschen —
+      gar nicht prüfte (die beiden Tests unten holen das nach).
+
+    Der naheliegende "Fix" am Produktivcode (leere Schlüssel weglassen, dann
+    wäre der Block byte-identisch) wäre ein Datenverlust-Bug: `save_trip()`
+    mergt per `_deep_merge_preserve_unknown()` gegen die Datei auf Platte und
+    rekursiert in `report_config` hinein — ein fehlender Schlüssel ließe den
+    ALTEN Plattenwert stehen. Ein einmal gesetztes Tagesfenster wäre nie
+    wieder löschbar (#1250 Scheibe 4 F002). Deshalb bleibt `loader.py`
+    unangetastet und die Erwartung des Tests wird korrigiert.
     """
     d = _trip_dict()
 
     trip = load_trip_from_dict(d)
     rt = _trip_to_dict(trip)
 
-    assert rt["report_config"] == d["report_config"]
+    original = d["report_config"]
+    roundtripped = rt["report_config"]
+
+    lost = sorted(set(original) - set(roundtripped))
+    assert not lost, (
+        f"Diese report_config-Schlüssel sind im Roundtrip verschwunden: {lost}"
+    )
+
+    # `updated_at` ist per Konstruktion nicht reproduzierbar (datetime.now()
+    # beim Laden) — ausgenommen, nicht ignoriert: der Schlüssel MUSS oben
+    # weiterhin vorhanden sein.
+    changed = {
+        key: (original[key], roundtripped[key])
+        for key in original
+        if key != "updated_at" and roundtripped[key] != original[key]
+    }
+    assert not changed, (
+        "Ein vorhandener report_config-Wert hat sich im Roundtrip verändert "
+        f"(vorher, nachher): {changed}"
+    )
+
+    added_with_meaning = {
+        key: roundtripped[key]
+        for key in set(roundtripped) - set(original)
+        if roundtripped[key] is not None
+    }
+    assert not added_with_meaning, (
+        "Der Roundtrip hat Schlüssel mit einem echten Wert hinzugefügt — "
+        "hinzukommen darf nur `None`, weil das exakt dasselbe bedeutet wie "
+        f"'Schlüssel fehlte': {added_with_meaning}"
+    )
+
+
+def test_set_day_window_survives_the_report_config_roundtrip():
+    """
+    GIVEN einen Trip mit einem GESETZTEN Tagesfenster (8–18, beides gültige
+      und verschiedene Stunden)
+    WHEN er geladen und wieder serialisiert wird
+    THEN stehen exakt diese beiden Stunden danach unverändert im
+      `report_config` — Issue #1466 AC-6.
+
+    Das ist die Aussage, die die alte Byte-Identitäts-Prüfung verdeckt hat:
+    sie scheiterte an den beiden Feldern, die im Fixture FEHLTEN, und prüfte
+    den befüllten Fall deshalb nie.
+    """
+    d = _trip_dict()
+    d["report_config"]["day_window_start_hour"] = 8
+    d["report_config"]["day_window_end_hour"] = 18
+
+    trip = load_trip_from_dict(d)
+    rt = _trip_to_dict(trip)
+
+    assert rt["report_config"]["day_window_start_hour"] == 8, (
+        "Der Beginn des gesetzten Tagesfensters hat den Roundtrip nicht "
+        f"überlebt: {rt['report_config']['day_window_start_hour']!r}"
+    )
+    assert rt["report_config"]["day_window_end_hour"] == 18, (
+        "Das Ende des gesetzten Tagesfensters hat den Roundtrip nicht "
+        f"überlebt: {rt['report_config']['day_window_end_hour']!r}"
+    )
+
+
+def test_set_day_window_can_be_reset_and_the_reset_reaches_disk(tmp_path):
+    """
+    GIVEN einen GESPEICHERTEN Trip mit gesetztem Tagesfenster (8–18) auf der
+      Platte
+    WHEN dasselbe Fenster zurückgesetzt wird — hier über ein ungültiges Paar
+      (19/19, `start == end`), das `_clamped_day_window()` beim Laden auf
+      `(None, None)` klemmt — und der Trip erneut gespeichert wird
+    THEN steht auf der Platte `null`, NICHT der alte Wert 8/18, und ein Reload
+      liefert `None`.
+
+    Issue #1466 AC-7, Python-Hälfte. Dieser Test ist der Grund, warum der
+    Produktivcode in AP3 unangetastet bleibt: `save_trip()` mergt per
+    `_deep_merge_preserve_unknown()` gegen die vorhandene Datei und rekursiert
+    in `report_config` hinein. Würde `_trip_to_dict()` die beiden Felder bei
+    `None` weglassen (der naheliegende Weg zu einem byte-identischen Block),
+    bliebe der alte Plattenwert stehen und ein einmal gesetztes Tagesfenster
+    wäre nie wieder löschbar.
+
+    Der reale Auslöser dafür ist der Schreibpfad der API — Go-Gegenstück:
+    `internal/handler/trip_day_window_write_seam_test.go:48-80`
+    (`TestUpdateTripHandler_ClampsInvalidDayWindowPairOnWrite`), unverändert.
+    """
+    user_id = "testuser-1466-daywindow-reset"
+    d = _trip_dict()
+    d["report_config"]["day_window_start_hour"] = 8
+    d["report_config"]["day_window_end_hour"] = 18
+
+    trip = load_trip_from_dict(d)
+    save_trip(trip, user_id=user_id, data_dir=tmp_path)
+
+    trip_file = tmp_path / "users" / user_id / "briefings" / f"{trip.id}.json"
+    seeded = json.loads(trip_file.read_text())["report_config"]
+    assert (seeded["day_window_start_hour"], seeded["day_window_end_hour"]) == (8, 18), (
+        f"Sanity: das gesetzte Fenster steht nicht auf der Platte: {seeded}"
+    )
+
+    # Zurücksetzen auf demselben Weg, den auch der Schreib-Seam nimmt: ein
+    # ungültiges Paar wird beim Laden geklemmt (kein Modell-Handstreich).
+    reset_dict = _trip_dict()
+    reset_dict["report_config"]["day_window_start_hour"] = 19
+    reset_dict["report_config"]["day_window_end_hour"] = 19
+    reset_trip = load_trip_from_dict(reset_dict)
+    assert reset_trip.report_config.day_window_start_hour is None, (
+        "Sanity: _clamped_day_window() hat das ungültige Paar nicht geklemmt."
+    )
+    save_trip(reset_trip, user_id=user_id, data_dir=tmp_path)
+
+    after_reset = json.loads(trip_file.read_text())["report_config"]
+    assert after_reset["day_window_start_hour"] is None, (
+        "Das zurückgesetzte Tagesfenster ist auf der Platte stale (alter Wert "
+        f"konserviert): {after_reset['day_window_start_hour']!r} — der "
+        "RMW-Merge hat den Löschvorgang verschluckt."
+    )
+    assert after_reset["day_window_end_hour"] is None, (
+        f"Ende des Tagesfensters stale: {after_reset['day_window_end_hour']!r}"
+    )
+
+    reloaded = load_trip(trip.id, data_dir=tmp_path, user_id=user_id)
+    assert reloaded.report_config.day_window_start_hour is None
+    assert reloaded.report_config.day_window_end_hour is None
 
 
 # --- AC-14: end_date wird serverseitig materialisiert (max(stage.date)) -----

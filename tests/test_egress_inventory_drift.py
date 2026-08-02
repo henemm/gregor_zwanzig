@@ -1,4 +1,11 @@
+# doc-compliance-test
 """Inventar-Drift-Waechter Python <-> Go (Issue #1337, Scheibe Go-Prozess).
+
+Werkzeug-Klasse (CLAUDE.md-Ausnahme `# doc-compliance-test`, nachgetragen mit
+#1466 AP4): dieser Laeufer liest `internal/egress/inventory.go` als DATEN fuer
+eine Inventar-Regel (decken sich die beiden Hostlisten?), nicht als
+Verhaltensnachweis auf Code-Strings. Aus Python ist ein Go-Inventar nur als
+Text erreichbar; die Python-Seite kommt bewusst ueber den echten Import.
 
 Spec: docs/specs/modules/egress_guard_go.md ("## Test Plan" Test 10; AC-10).
 

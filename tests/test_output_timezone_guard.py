@@ -99,6 +99,12 @@ _MESSAGING_SERVICE_FILES = [
 _ZONE_ABBR_RE = re.compile(r"\b(MESZ|MEZ|CEST|CET)\b")
 _TZ_NAMES = {"tz", "_tz", "alert_tz"}
 
+# Platzhalter für Funde außerhalb jeder Funktion (Modulebene, Klassenrumpf) —
+# wörtlich derselbe wie in test_success_status_guard.py /
+# test_resolution_loss_guard.py, damit ein Schlüssel aus allen drei Wächtern
+# gleich zu lesen ist.
+_MODULE_SCOPE = "<module>"
+
 
 def _scan_files() -> list[Path]:
     files = sorted(_OUTPUT_DIR.rglob("*.py"))
@@ -172,12 +178,65 @@ def _bare_string_statement_ids(tree: ast.AST) -> set[int]:
     return ids
 
 
+def _scopes(tree: ast.AST) -> dict[int, str]:
+    """``id(knoten)`` → Name des umschließenden Funktionsraums.
+
+    Nachgerüstete Bereichsverfolgung (Issue #1466 AP2/AC-5). Semantik wörtlich
+    wie die ``_scopes()``-Generatoren der beiden anderen Wächter: Modulraum
+    (``_MODULE_SCOPE``) plus JEDER Funktionsraum, verschachtelte Funktionen als
+    EIGENER Raum (ein Fund in ``inner`` gehört zu ``inner``, nicht zu
+    ``outer``). Ein Klassenrumpf ist kein eigener Raum — er gehört zum
+    Modulraum, genau wie dort.
+
+    Bewusst eine Zuordnungstabelle statt eines Generators: die Fund-Logik
+    unten läuft flach über ``ast.walk(tree)``, und daran wird NICHTS geändert
+    (die sieben Fundarten bleiben Zeichen für Zeichen dieselben). Die Tabelle
+    hängt den Funktionsnamen nachträglich an, statt die Suche umzubauen — so
+    kann diese Umschlüsselung keine Fundstelle verlieren.
+
+    Eine ``FunctionDef`` selbst trägt IHREN eigenen Namen, nicht den des
+    umgebenden Raums: der Fund ``silent_tz_default`` hängt am
+    Parameter-Default, und der gehört fachlich zu genau dieser Funktion
+    (Bestandsbeleg: ``trip_report.py::format_email``).
+    """
+    scopes: dict[int, str] = {id(tree): _MODULE_SCOPE}
+    stack: list[tuple[ast.AST, str]] = [(tree, _MODULE_SCOPE)]
+    while stack:
+        node, scope_name = stack.pop()
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                scopes[id(child)] = child.name
+                stack.append((child, child.name))
+            else:
+                scopes[id(child)] = scope_name
+                stack.append((child, scope_name))
+    return scopes
+
+
+def _number_findings(raw: dict[tuple[str, str], dict[int, str]]) -> dict[str, str]:
+    """Rohfunde je Funktionsraum → Schlüssel ``"pfad::funktion::ordinal"``.
+
+    Issue #1466 AP2: der frühere Schlüssel ``"pfad:zeile"`` wanderte bei JEDER
+    eingefügten Zeile — dieselbe Stelle galt danach gleichzeitig als behoben
+    (alter Schlüssel) und als neuer Verstoß (neuer Schlüssel). Das Ordinal ist
+    die 0-basierte Position des Fundes INNERHALB seiner Funktion, nach
+    Zeilennummer sortiert — dieselbe Zählweise wie in den beiden anderen
+    Wächtern. Ohne es fielen die 22 Funde dieses Wächters auf 14 Einträge
+    zusammen (AC-4).
+    """
+    numbered: dict[str, str] = {}
+    for (rel, scope_name), by_line in raw.items():
+        for ordinal, lineno in enumerate(sorted(by_line)):
+            numbered[f"{rel}::{scope_name}::{ordinal}"] = by_line[lineno]
+    return numbered
+
+
 def _find_violations(path: Path) -> dict[str, str]:
-    """Verstöße in EINER Datei, als ``{"pfad:zeile": "art"}``.
+    """Verstöße in EINER Datei, als ``{"pfad::funktion::ordinal": "art"}``.
 
     ``relative_to`` scheitert für Pfade außerhalb des Repos (Wirkungsnachweis-
     Tests scannen synthetische Dateien in ``tmp_path``) — dann bleibt der
-    absolute Pfad als Schlüssel, das Format ist nur für Menschenlesbarkeit
+    absolute Pfad im Schlüssel, das Format ist nur für Menschenlesbarkeit
     relevant.
     """
     try:
@@ -186,7 +245,17 @@ def _find_violations(path: Path) -> dict[str, str]:
         rel = str(path)
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     skip_ids = _bare_string_statement_ids(tree)
-    found: dict[str, str] = {}
+    scopes = _scopes(tree)
+    raw: dict[tuple[str, str], dict[int, str]] = {}
+
+    def record(node: ast.AST, lineno: int, kind: str) -> None:
+        """Einen Fund unter seinem Funktionsraum ablegen.
+
+        Zwei Funde auf DERSELBEN Zeile desselben Raums fallen weiterhin
+        zusammen (letzter gewinnt) — genau wie beim alten ``"pfad:zeile"``-
+        Schlüssel; die Umschlüsselung soll die Fundzahl nicht verändern.
+        """
+        raw.setdefault((rel, scopes.get(id(node), _MODULE_SCOPE)), {})[lineno] = kind
 
     for node in ast.walk(tree):
         if (
@@ -194,27 +263,27 @@ def _find_violations(path: Path) -> dict[str, str]:
             and isinstance(node.func, ast.Attribute)
             and node.func.attr == "astimezone"
         ):
-            found[f"{rel}:{node.lineno}"] = "raw_astimezone"
+            record(node, node.lineno, "raw_astimezone")
         elif (
             isinstance(node, ast.Constant)
             and isinstance(node.value, str)
             and id(node) not in skip_ids
             and _ZONE_ABBR_RE.search(node.value)
         ):
-            found[f"{rel}:{node.lineno}"] = "hardcoded_zone_abbrev"
+            record(node, node.lineno, "hardcoded_zone_abbrev")
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             a = node.args
             posargs = a.posonlyargs + a.args
             pad = [None] * (len(posargs) - len(a.defaults))
             for arg, default in zip(posargs, pad + list(a.defaults)):
                 if arg.arg in _TZ_NAMES and default is not None and _is_silent_default(default):
-                    found[f"{rel}:{arg.lineno}"] = "silent_tz_default"
+                    record(node, arg.lineno, "silent_tz_default")
             for arg, default in zip(a.kwonlyargs, a.kw_defaults):
                 if arg.arg in _TZ_NAMES and default is not None and _is_silent_default(default):
-                    found[f"{rel}:{arg.lineno}"] = "silent_tz_default"
+                    record(node, arg.lineno, "silent_tz_default")
         elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             if node.target.id in _TZ_NAMES and node.value is not None and _is_zoneinfo_utc_call(node.value):
-                found[f"{rel}:{node.lineno}"] = "silent_tz_default"
+                record(node, node.lineno, "silent_tz_default")
         elif (
             isinstance(node, ast.BoolOp)
             and isinstance(node.op, ast.Or)
@@ -223,7 +292,7 @@ def _find_violations(path: Path) -> dict[str, str]:
             and _is_utc_ish(node.values[1])
         ):
             # z.B. ``effective_tz = tz or ZoneInfo("UTC")``
-            found[f"{rel}:{node.lineno}"] = "silent_tz_or_fallback"
+            record(node, node.lineno, "silent_tz_or_fallback")
         elif (
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Name)
@@ -234,7 +303,7 @@ def _find_violations(path: Path) -> dict[str, str]:
             and _is_utc_ish(node.args[2])
         ):
             # z.B. ``getattr(self, "_tz", ZoneInfo("UTC"))``
-            found[f"{rel}:{node.lineno}"] = "silent_tz_getattr_fallback"
+            record(node, node.lineno, "silent_tz_getattr_fallback")
         elif (
             isinstance(node, ast.If)
             and isinstance(node.test, ast.Compare)
@@ -253,16 +322,16 @@ def _find_violations(path: Path) -> dict[str, str]:
                     and _is_tz_like(stmt.targets[0])
                     and _is_utc_ish(stmt.value)
                 ):
-                    found[f"{rel}:{node.lineno}"] = "silent_tz_none_guard"
+                    record(node, node.lineno, "silent_tz_none_guard")
         elif isinstance(node, ast.IfExp):
             # z.B. ``tz if tz is not None else ZoneInfo("UTC")`` (und die
             # gespiegelte Reihenfolge).
             if _is_tz_like(node.body) and _is_utc_ish(node.orelse):
-                found[f"{rel}:{node.lineno}"] = "silent_tz_ternary"
+                record(node, node.lineno, "silent_tz_ternary")
             elif _is_tz_like(node.orelse) and _is_utc_ish(node.body):
-                found[f"{rel}:{node.lineno}"] = "silent_tz_ternary"
+                record(node, node.lineno, "silent_tz_ternary")
 
-    return found
+    return _number_findings(raw)
 
 
 def _all_violations() -> dict[str, str]:
@@ -372,11 +441,18 @@ def _all_missing_tz_callsites() -> dict[str, str]:
 
 # ---------------------------------------------------------------------------
 # Restliste aus der #1402-Bestandsaufnahme (Scheiben B/C/D) — DARF NUR
-# SCHRUMPFEN. Schlüssel = "pfad:zeile" (wie vom Scanner geliefert), Wert =
-# kurze Einordnung. Ein NEUER, hier nicht gelisteter Fund ist ein echter
-# Rückfall (Test 1 schlägt fehl). Ein hier gelisteter Fund, den der Scanner
-# nicht mehr findet, MUSS entfernt werden (Test 2 schlägt sonst fehl,
-# "veraltet") -- das ist der Schrumpf-Nachweis.
+# SCHRUMPFEN. Schlüssel = "pfad::funktion::ordinal" (wie vom Scanner geliefert,
+# s. _number_findings), Wert = kurze Einordnung. Ein NEUER, hier nicht
+# gelisteter Fund ist ein echter Rückfall (Test 1 schlägt fehl). Ein hier
+# gelisteter Fund, den der Scanner nicht mehr findet, MUSS entfernt werden
+# (Test 2 schlägt sonst fehl, "veraltet") -- das ist der Schrumpf-Nachweis.
+#
+# UMSCHLÜSSELUNG (#1466 AP2, 2026-08-02): früher "pfad:zeile". Dieser
+# Schlüssel wanderte bei jeder eingefügten Zeile; zuletzt galten 16 der 22
+# Einträge gleichzeitig als "behoben" und als "neuer Verstoß", ohne dass sich
+# eine einzige Codestelle geändert hätte. Die Einträge selbst sind
+# UNVERÄNDERT: dieselben Codestellen, dieselben Begründungen, nichts
+# gestrichen. Die alte Zeilennummer steht jeweils in der Begründung.
 # ---------------------------------------------------------------------------
 KNOWN_VIOLATIONS: dict[str, str] = {
     # --- Bewusste, dauerhafte Ausnahmen (keine Scheibe schliesst diese) ---
@@ -386,14 +462,14 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # (dokumentiert im jeweiligen Docstring), statt eine falsche Ortszeit
     # vorzutaeuschen. Analog `resolve_location_tz()`s eigenem `Optional`-
     # Rueckgabetyp.
-    "src/output/renderers/alert/official_alerts.py:363": (
-        "DAUERHAFT — official_alerts_to_sms_entries: tz=None heisst "
-        "'Compare-Ort ohne SavedLocation.timezone', Stunde entfaellt "
+    "src/output/renderers/alert/official_alerts.py::official_alerts_to_sms_entries::0": (
+        "DAUERHAFT (vormals :363) — official_alerts_to_sms_entries: tz=None "
+        "heisst 'Compare-Ort ohne SavedLocation.timezone', Stunde entfaellt "
         "ersatzlos (dokumentiert im Docstring), kein Bug."
     ),
-    "src/services/notification_service.py:546": (
-        "DAUERHAFT — send_multi_location_radar_alert: tz bleibt bewusster "
-        "Override-Parameter; die Herleitung selbst wurde entdoppelt "
+    "src/services/notification_service.py::send_multi_location_radar_alert::0": (
+        "DAUERHAFT (vormals :546) — send_multi_location_radar_alert: tz bleibt "
+        "bewusster Override-Parameter; die Herleitung selbst wurde entdoppelt "
         "(resolve_location_tz() statt eigener tz_for_coords()-Kopie, #1402 "
         "Auflage 2/Task 8)."
     ),
@@ -409,26 +485,31 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # deckte er bereits 3 echte fehlende Aufrufe auf (comparison.py:501,
     # compare_html.py Warn-Banner, trip_command_processor.py "/jetzt") —
     # sofort gefixt, s. Commit-Historie.
-    "src/output/renderers/sms_trip.py:258": "Aufrufseite abgesichert — format_sms (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/output/renderers/trip_report.py:55": "Aufrufseite abgesichert — TripReportFormatter._tz Klassenattribut, an format_email gekoppelt.",
-    "src/output/renderers/trip_report.py:70": "Aufrufseite abgesichert — format_email (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/output/renderers/trip_report.py:120": "Aufrufseite abgesichert — Mid-Body-Rückfall zu :70, an format_email gekoppelt.",
-    "src/output/renderers/alert/official_alerts.py:636": "Aufrufseite abgesichert — _format_validity (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/output/renderers/alert/official_alerts.py:642": "Aufrufseite abgesichert — '… if tz else roh'-Zweig zu :636.",
-    "src/output/renderers/alert/official_alerts.py:643": "Aufrufseite abgesichert — '… if tz else roh'-Zweig zu :636.",
-    "src/output/renderers/alert/official_alerts.py:666": "Aufrufseite abgesichert — _typ_tag (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/output/renderers/alert/official_alerts.py:676": "Aufrufseite abgesichert — '… if tz else roh'-Zweig zu :666.",
-    "src/output/renderers/alert/official_alerts.py:713": "Aufrufseite abgesichert — render_official_alert_subject (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/output/renderers/alert/official_alerts.py:749": "Aufrufseite abgesichert — if-None-Guard zu :713. Fällt jetzt ehrlich auf UTC zurück (war Europe/Vienna geraten, PO-Fund).",
-    "src/output/renderers/alert/official_alerts.py:1473": "Aufrufseite abgesichert — render_warn_block (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/output/renderers/alert/official_alerts.py:1505": "Aufrufseite abgesichert — render_official_alert_telegram (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/output/renderers/alert/official_alerts.py:1565": "Aufrufseite abgesichert — _tag_time (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/output/renderers/alert/official_alerts.py:1580": "Aufrufseite abgesichert — roher .astimezone() in render_warn_block (:1473).",
-    "src/output/renderers/alert/official_alerts.py:1581": "Aufrufseite abgesichert — roher .astimezone() in render_warn_block (:1473).",
-    "src/output/renderers/alert/official_alerts.py:1690": "Aufrufseite abgesichert — render_official_alert_sms (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/services/radar_service.py:219": "Aufrufseite abgesichert — format_now_text (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/services/trip_report_scheduler.py:1365": "Aufrufseite abgesichert — _build_stage_trend (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/services/trip_report_scheduler.py:1427": "Aufrufseite abgesichert — Ternary-Rückfall zu :1365, an _build_stage_trend gekoppelt.",
+    "src/output/renderers/sms_trip.py::format_sms::0": "Aufrufseite abgesichert (vormals :258) — format_sms (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/trip_report.py::<module>::0": "Aufrufseite abgesichert (vormals :55) — TripReportFormatter._tz Klassenattribut (Klassenrumpf = Modulraum), an format_email gekoppelt.",
+    "src/output/renderers/trip_report.py::format_email::0": "Aufrufseite abgesichert (vormals :70) — format_email (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/trip_report.py::format_email::1": "Aufrufseite abgesichert (vormals :120) — Mid-Body-Rückfall zum Default von format_email, daran gekoppelt.",
+    "src/output/renderers/alert/official_alerts.py::_format_validity::0": "Aufrufseite abgesichert (vormals :636) — _format_validity (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/alert/official_alerts.py::_format_validity::1": "Aufrufseite abgesichert (vormals :642) — '… if tz else roh'-Zweig zum Default von _format_validity.",
+    "src/output/renderers/alert/official_alerts.py::_format_validity::2": "Aufrufseite abgesichert (vormals :643) — '… if tz else roh'-Zweig zum Default von _format_validity.",
+    "src/output/renderers/alert/official_alerts.py::_typ_tag::0": "Aufrufseite abgesichert (vormals :666) — _typ_tag (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/alert/official_alerts.py::_typ_tag::1": "Aufrufseite abgesichert (vormals :676) — '… if tz else roh'-Zweig zum Default von _typ_tag.",
+    "src/output/renderers/alert/official_alerts.py::render_official_alert_subject::0": "Aufrufseite abgesichert (vormals :713) — render_official_alert_subject (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/alert/official_alerts.py::render_official_alert_subject::1": "Aufrufseite abgesichert (vormals :749) — if-None-Guard zum Default von render_official_alert_subject. Fällt jetzt ehrlich auf UTC zurück (war Europe/Vienna geraten, PO-Fund).",
+    "src/output/renderers/alert/official_alerts.py::render_warn_block::0": "Aufrufseite abgesichert (vormals :1473) — render_warn_block (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/alert/official_alerts.py::render_official_alert_telegram::0": "Aufrufseite abgesichert (vormals :1505) — render_official_alert_telegram (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/alert/official_alerts.py::_tag_time::0": "Aufrufseite abgesichert (vormals :1565) — _tag_time (Wächter: test_production_callsites_pass_tz_explicitly).",
+    # Die zwei rohen .astimezone() standen bis #1466 als ':1580'/':1581' mit
+    # dem Vermerk 'in render_warn_block' in der Liste — der Vermerk war durch
+    # die Zeilendrift falsch geworden: beide stehen im Rumpf von _tag_time
+    # (heute :1586/:1587). Der funktionsbezogene Schlüssel korrigiert die
+    # Zuordnung; es sind unverändert dieselben zwei Codestellen.
+    "src/output/renderers/alert/official_alerts.py::_tag_time::1": "Aufrufseite abgesichert (vormals :1580) — roher .astimezone() im Rumpf von _tag_time, an dessen Default gekoppelt.",
+    "src/output/renderers/alert/official_alerts.py::_tag_time::2": "Aufrufseite abgesichert (vormals :1581) — roher .astimezone() im Rumpf von _tag_time, an dessen Default gekoppelt.",
+    "src/output/renderers/alert/official_alerts.py::render_official_alert_sms::0": "Aufrufseite abgesichert (vormals :1690) — render_official_alert_sms (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/services/radar_service.py::format_now_text::0": "Aufrufseite abgesichert (vormals :219) — format_now_text (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/services/trip_report_scheduler.py::_build_stage_trend::0": "Aufrufseite abgesichert (vormals :1365) — _build_stage_trend (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/services/trip_report_scheduler.py::_build_stage_trend::1": "Aufrufseite abgesichert (vormals :1427) — Ternary-Rückfall zum Default von _build_stage_trend, daran gekoppelt.",
 }
 
 

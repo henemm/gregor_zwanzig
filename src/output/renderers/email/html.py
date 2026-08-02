@@ -7,6 +7,7 @@ Bit-identical to TripReportFormatter._render_html() pre-β3.
 from __future__ import annotations
 
 import html as _html
+import logging
 import re as _re
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
@@ -52,6 +53,8 @@ from output.renderers.alert.official_alerts import (
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable, render_official_alerts_unavailable_html,
 )
+
+logger = logging.getLogger(__name__)
 
 # Issue #1135: Plausibilitaets-Gate fuer amtliche Hitzewarnungen. Unter dieser
 # gefuehlt-max-Schwelle widerspricht die Warnung klar der eigenen Segment-
@@ -599,9 +602,12 @@ def build_trip_corridor_id_map() -> dict[str, str]:
       Enums braucht es eine eigene Vergleichsregel; sie ist nicht Teil dieser
       Scheibe (PO informiert).
 
-    Nicht aufloesbare Eintraege (unbekannte `metric_id`, fehlende `col_key`)
-    werden still uebersprungen -- analog `mark_lookup_multi()`, das Metriken
-    ausserhalb der id_map ebenfalls stillschweigend ignoriert (AC-5).
+    Nicht aufloesbare Eintraege (unbekannte `metric_id`, unbrauchbarer
+    Schluesseltyp) werden uebersprungen, aber seit Issue #1466 AP1 NICHT mehr
+    still: die betroffene Kennung wird nach dem Hausmuster
+    ("Sammeln-und-melden", s. `compare_metric_ids.resolve_enabled_metrics`)
+    per `logger.warning` genannt. Ein Eintrag ohne `col_key` bleibt dagegen
+    unauffaellig -- er ist aufgeloest, hat nur keine Stundenspalte.
     """
     # Import bewusst lokal: `compare_metric_catalog` zieht ueber
     # `services.compare_alert` genau dieses Modul wieder herein -- ein
@@ -609,15 +615,24 @@ def build_trip_corridor_id_map() -> dict[str, str]:
     from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
 
     id_map = dict(TRIP_CORRIDOR_METRIC_TO_COL_KEY)
+    dropped: list[object] = []
     for entry in COMPARE_METRIC_CATALOG:
         if entry.get("aggregation") == "sum" or entry.get("kind") == "enum":
             continue
         try:
             col_key = get_metric(entry["metric_id"]).col_key
         except (KeyError, TypeError):
+            dropped.append(entry.get("metric_id"))
             continue
         if col_key:
             id_map.setdefault(entry["key"], col_key)
+    if dropped:
+        logger.warning(
+            "build_trip_corridor_id_map: %s ohne Eintrag im zentralen Register "
+            "— Korridor-Markierung dieser Groesse entfaellt in der Trip-Mail "
+            "(vgl. #1466 AP1)",
+            dropped,
+        )
     return id_map
 
 

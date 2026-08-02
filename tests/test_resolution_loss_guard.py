@@ -46,9 +46,11 @@ Fünf strukturelle Ausschlüsse (harmlos, dürfen NICHT als Fund zählen):
 
 Bauform + Ratsche 1:1 nach ``tests/test_output_timezone_guard.py`` (#1402):
 Scanfläche als Glob, ``ast.parse`` je Datei, Verstöße als
-``{"pfad:zeile": "art::funktion"}``, zwei gekoppelte Ratschen-Tests (neuer
-Fund → rot; erledigter Eintrag noch gelistet → rot), synthetische
-Wirkungsnachweise je Bugmuster UND je Ausnahmeklasse.
+``{"pfad::funktion::ordinal": "art"}`` (Issue #1466 AP2 — vorher
+``{"pfad:zeile": "art::funktion"}``, was bei jeder eingefügten Zeile wanderte),
+zwei gekoppelte Ratschen-Tests (neuer Fund → rot; erledigter Eintrag noch
+gelistet → rot), synthetische Wirkungsnachweise je Bugmuster UND je
+Ausnahmeklasse.
 
 Bekannte Grenzen (Scope, keine Ausnahme):
 - **Nur Protokoll, nicht Sichtbarkeit:** der Wächter kann erzwingen, dass
@@ -489,8 +491,52 @@ def _loop_finding_lines(
     return lines
 
 
+def _number_findings(raw: dict[tuple[str, str], list[int]]) -> dict[str, str]:
+    """Rohfunde je Funktionsraum → Schlüssel ``"pfad::funktion::ordinal"``.
+
+    Issue #1466 AP2: der frühere Schlüssel ``"pfad:zeile"`` wanderte bei JEDER
+    eingefügten Zeile — dieselbe Stelle galt danach gleichzeitig als behoben
+    (alter Schlüssel) und als neuer Verstoß (neuer Schlüssel), im Bestand 13×
+    mit unterschiedlichem Versatz. Der neue Schlüssel nennt stattdessen Datei,
+    umschließende Funktion und die Position des Fundes INNERHALB dieser
+    Funktion (0-basiert, nach Zeilennummer sortiert — über alle drei Wächter
+    dieselbe Zählweise).
+
+    Das Ordinal ist Pflicht, nicht Kür: ohne es fielen die Mehrfachfunde
+    derselben Funktion (z. B. A12/A13 in ``meteoalarm.py``) auf EINEN Eintrag
+    zusammen, und die Ratsche sähe einen Teil der Verstöße nicht mehr
+    (AC-4). Die Grenzen des Schlüssels stehen in der Spec unter „Bekannte
+    Grenzen": eine Umbenennung/Aufteilung der Funktion bricht ihn weiterhin.
+
+    **Zwei Funde in DERSELBEN Quellzeile bleiben zwei Einträge** (#1466 F001).
+    Die Zeilenliste wird bewusst NICHT dedupliziert: eine Comprehension mit
+    zwei unabhängigen Lookup-Filtern und ein ``try`` mit zwei schluckenden
+    ``except``-Zweigen melden beide Funde unter der Zeile des UMFASSENDEN
+    Knotens. Ein ``set()`` davor ließe einen von beiden still verschwinden —
+    genau der Fehler, gegen den dieser Wächter gebaut ist (Hausregel S-6 aus
+    ``test_success_status_guard.py``: beim Zusammenführen darf kein Fund
+    verlorengehen).
+
+    Der ``"+"``-Merge des Erfolgs-Wächters ist hier bewusst NICHT das Mittel:
+    er unterscheidet zwei Funde über ihre ARTEN (``"art_a+art_b"``), und
+    dieser Wächter kennt nur eine einzige Art — ``silent_lookup_miss +
+    silent_lookup_miss`` fiele wieder auf einen Eintrag zusammen. Das Ordinal
+    trennt sie dagegen unabhängig von der Art und ist damit die stärkere
+    Fassung derselben Regel; es ist genau der Zweck, für den es eingeführt
+    wurde. Nachweis samt Mutations-Gegenprobe:
+    ``tests/test_guard_findings_survive_line_shifts.py``
+    (``test_two_findings_in_one_source_line_stay_two_entries`` und
+    ``test_reintroducing_line_dedup_loses_one_of_the_two_findings``).
+    """
+    numbered: dict[str, str] = {}
+    for (rel, scope_name), lines in raw.items():
+        for ordinal, lineno in enumerate(sorted(lines)):
+            numbered[f"{rel}::{scope_name}::{ordinal}"] = KIND_SILENT_LOOKUP_MISS
+    return numbered
+
+
 def _find_violations(path: Path) -> dict[str, str]:
-    """Stille Auflösungsverluste in EINER Datei als ``{"pfad:zeile": "art::funktion"}``.
+    """Stille Auflösungsverluste in EINER Datei als ``{"pfad::funktion::ordinal": "art"}``.
 
     GREEN muss liefern — je ``ast``-Knoten einer ``for``-Schleife oder
     Comprehension in der Scandatei:
@@ -515,18 +561,20 @@ def _find_violations(path: Path) -> dict[str, str]:
       (``row[key] = None; continue``) ODER ein Funktionsname nach dem Muster
       ``_col_key``/``_cell``/``fmt_*`` → kein Fund.
 
-    Schlüssel ist ``"<pfad relativ zum Repo>:<zeile>"``; ``relative_to``
-    scheitert für Pfade außerhalb des Repos (die Wirkungsnachweise scannen
-    synthetische Dateien in ``tmp_path``) — dann bleibt der absolute Pfad
-    stehen, das Format ist nur für Menschenlesbarkeit relevant. Wert ist
-    ``f"{KIND_SILENT_LOOKUP_MISS}::{name der umschließenden Funktion}"``.
+    Schlüssel ist ``"<pfad relativ zum Repo>::<funktion>::<ordinal>"``
+    (Issue #1466 AP2, s. ``_number_findings``); ``relative_to`` scheitert für
+    Pfade außerhalb des Repos (die Wirkungsnachweise scannen synthetische
+    Dateien in ``tmp_path``) — dann bleibt der absolute Pfad stehen, das
+    Format ist nur für Menschenlesbarkeit relevant. Wert ist
+    ``KIND_SILENT_LOOKUP_MISS``; der Funktionsname steht seit #1466 im
+    SCHLÜSSEL statt im Wert.
     """
     try:
         rel = path.relative_to(REPO_ROOT).as_posix()
     except ValueError:
         rel = str(path)
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    found: dict[str, str] = {}
+    raw: dict[tuple[str, str], list[int]] = {}
 
     for scope, scope_name in _scopes(tree):
         if _is_placeholder_scope(scope_name):
@@ -536,7 +584,7 @@ def _find_violations(path: Path) -> dict[str, str]:
         for node in _walk_local(*scope.body):
             if isinstance(node, (ast.For, ast.AsyncFor)):
                 for lineno in _loop_finding_lines(node, logger_names, local_names):
-                    found[f"{rel}:{lineno}"] = f"{KIND_SILENT_LOOKUP_MISS}::{scope_name}"
+                    raw.setdefault((rel, scope_name), []).append(lineno)
             elif isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp)):
                 # Der Comprehension-Wert IST die Ausgabesammlung — Bedingung 1
                 # ist damit erfüllt. Ein ``GeneratorExp`` bleibt bewusst außen
@@ -548,10 +596,8 @@ def _find_violations(path: Path) -> dict[str, str]:
                         if _is_comprehension_lookup_filter(
                             condition, looked_up, local_names
                         ):
-                            found[f"{rel}:{node.lineno}"] = (
-                                f"{KIND_SILENT_LOOKUP_MISS}::{scope_name}"
-                            )
-    return found
+                            raw.setdefault((rel, scope_name), []).append(node.lineno)
+    return _number_findings(raw)
 
 
 def _all_violations() -> dict[str, str]:
@@ -563,48 +609,50 @@ def _all_violations() -> dict[str, str]:
 
 
 def _finding_locations(found: dict[str, str]) -> set[str]:
-    """Scan-Ergebnis → Menge aus ``"pfad::funktion"`` (ohne Zeilennummern).
+    """Scan-Ergebnis → Menge aus ``"pfad::funktion"`` (ohne Ordinal).
 
     Reine Umformung des Scanner-Ergebnisses, damit AC-1 gegen eine
-    zeilenstabile Erwartungsmenge prüfen kann.
+    zeilen- UND ordinalstabile Erwartungsmenge prüfen kann.
     """
-    locations: set[str] = set()
-    for location, kind in found.items():
-        path = location.rsplit(":", 1)[0]
-        function = kind.split("::", 1)[1] if "::" in kind else ""
-        locations.add(f"{path}::{function}")
-    return locations
+    return {location.rsplit("::", 1)[0] for location in found}
 
 
 def _finding_location_counts(found: dict[str, str]) -> dict[str, int]:
     """Scan-Ergebnis → ``"pfad::funktion"`` mit der ZAHL der Treffer darin.
 
-    Gezählt wird über das ROHE Scan-Ergebnis, in dem der Zeilenbezug noch
-    steckt — nur so bleiben zwei Abbruchpfade derselben Funktion zwei Treffer.
-    ``_finding_locations()`` wirft die Zeile weg und lässt sie zu einem Eintrag
-    zusammenfallen; AC-1 wäre damit blind dafür, ob der Scanner beide oder nur
-    einen der beiden Pfade sieht (A12/A13 in ``_extract_alerts_from_cap``).
+    Gezählt wird über das Ordinal, das seit #1466 im Schlüssel steckt — nur so
+    bleiben zwei Abbruchpfade derselben Funktion zwei Treffer.
+    ``_finding_locations()`` wirft das Ordinal weg und lässt sie zu einem
+    Eintrag zusammenfallen; AC-1 wäre damit blind dafür, ob der Scanner beide
+    oder nur einen der beiden Pfade sieht (A12/A13, s. SPEC_LISTED_FINDINGS).
     """
     counts: Counter[str] = Counter()
-    for location, kind in found.items():
-        path = location.rsplit(":", 1)[0]
-        function = kind.split("::", 1)[1] if "::" in kind else ""
-        counts[f"{path}::{function}"] += 1
+    for location in found:
+        counts[location.rsplit("::", 1)[0]] += 1
     return dict(counts)
 
 
 # ---------------------------------------------------------------------------
 # Restliste aus der #1405-Bestandsaufnahme (A1–A13) — DARF NUR SCHRUMPFEN.
-# Schlüssel = "pfad:zeile" (wie vom Scanner geliefert), Wert = Begründung +
-# Issue-Bezug. Ein NEUER, hier nicht gelisteter Fund ist ein echter Rückfall
-# (test_no_unlisted_resolution_drops schlägt fehl). Ein hier gelisteter Fund,
-# den der Scanner nicht mehr findet, MUSS entfernt werden
-# (test_known_violations_only_shrink schlägt sonst fehl, "veraltet").
+# Schlüssel = "pfad::funktion::ordinal" (wie vom Scanner geliefert, s.
+# _number_findings), Wert = Begründung + Issue-Bezug. Ein NEUER, hier nicht
+# gelisteter Fund ist ein echter Rückfall (test_no_unlisted_resolution_drops
+# schlägt fehl). Ein hier gelisteter Fund, den der Scanner nicht mehr findet,
+# MUSS entfernt werden (test_known_violations_only_shrink schlägt sonst fehl,
+# "veraltet").
 #
-# Alle Zeilennummern hier stammen aus dem ECHTEN Scan-Lauf, nicht aus der
+# Alle Schlüssel hier stammen aus dem ECHTEN Scan-Lauf, nicht aus der
 # Spec — sonst prüfte die Ratsche eine Abschrift statt den Code. Die
 # Spec-Tabelle A1–A13 ist die unabhängige Gegenprobe dazu
 # (SPEC_LISTED_FINDINGS unten, AC-1).
+#
+# UMSCHLÜSSELUNG (#1466 AP2, 2026-08-02): früher "pfad:zeile", jetzt
+# "pfad::funktion::ordinal". Der alte Schlüssel wanderte bei JEDER eingefügten
+# Zeile — dieselbe Stelle galt danach gleichzeitig als behoben und als neuer
+# Verstoß. Die Einträge selbst sind UNVERÄNDERT: dieselben Codestellen,
+# dieselben Begründungen, nichts gestrichen und nichts hinzugefügt. Die alte
+# Zeilennummer steht jeweils in der Begründung, damit die Historie lesbar
+# bleibt.
 #
 # 22 Einträge: die 13 aus der Spec-Bestandsaufnahme (A1–A13) + 9 beim Bau des
 # Wächters NEU entdeckte Stellen. Die neun sind von Hand nachgelesen und
@@ -612,106 +660,125 @@ def _finding_location_counts(found: dict[str, str]) -> dict[str, int]:
 # Bestandsaufnahme war schlicht unvollständig. Sie sind KEINE Verbreiterung
 # der Signatur: der Scanner meldet nach der Schärfung nichts, was nicht ein
 # Auflösungs-Fehltreffer gegen einen von außen kommenden Katalog wäre.
+#
+# NICHT mehr hier (mit #1466 AP1 REPARIERT, nicht eingetragen):
+# compare_hourly_metric_ids.py::normalize_hourly_metrics und
+# email/html.py::build_trip_corridor_id_map melden ihre verworfenen Kennungen
+# jetzt per logger.warning.
 # ---------------------------------------------------------------------------
 KNOWN_VIOLATIONS: dict[str, str] = {
     # --- A1–A9: derselbe Mechanismus (get_metric() → except KeyError →
     # weiter ohne Spalte) neunfach. Die Compare-Seite ist gehärtet, die
     # Trip-/HTML-Seite nicht — dieselbe Asymmetrie, die #1262 auslöste.
-    "src/output/renderers/trip_report.py:400": (
-        "A1 (#1405) — _aggregate_night_block: Nacht-Block-Spalte einer "
-        "aktivierten Metrik verschwindet bei unbekannter metric_id."
+    "src/output/renderers/trip_report.py::_aggregate_night_block::0": (
+        "A1 (#1405, vormals :400) — _aggregate_night_block: Nacht-Block-Spalte "
+        "einer aktivierten Metrik verschwindet bei unbekannter metric_id."
     ),
-    "src/output/renderers/trip_report.py:482": (
-        "A2 (#1405) — _dp_to_row: Stunden-Zeile-Spalte verschwindet."
+    "src/output/renderers/trip_report.py::_dp_to_row::0": (
+        "A2 (#1405, vormals :482) — _dp_to_row: Stunden-Zeile-Spalte verschwindet."
     ),
-    "src/output/renderers/email/html.py:721": (
-        "A3 (#1405) — _allowed_col_keys_for_horizon: Spalte fällt aus dem "
-        "Horizont-Filter."
+    "src/output/renderers/email/html.py::_allowed_col_keys_for_horizon::0": (
+        "A3 (#1405, vormals :721) — _allowed_col_keys_for_horizon: Spalte "
+        "fällt aus dem Horizont-Filter."
     ),
-    "src/output/renderers/email/html.py:785": (
-        "A4 (#1405) — render_html (_col_order): Spaltenreihenfolge und "
-        "-sichtbarkeit der ganzen Mail."
+    "src/output/renderers/email/html.py::render_html::0": (
+        "A4 (#1405, vormals :785) — render_html (_col_order): "
+        "Spaltenreihenfolge und -sichtbarkeit der ganzen Mail."
     ),
-    "src/output/renderers/email/helpers.py:103": (
-        "A5 (#1405) — dp_to_row: Stunden-Zeile-Spalte verschwindet."
+    "src/output/renderers/email/helpers.py::dp_to_row::0": (
+        "A5 (#1405, vormals :103) — dp_to_row: Stunden-Zeile-Spalte verschwindet."
     ),
-    "src/output/renderers/email/helpers.py:155": (
-        "A6 (#1405) — aggregate_night_block: Nacht-Block-Spalte verschwindet."
+    "src/output/renderers/email/helpers.py::aggregate_night_block::0": (
+        "A6 (#1405, vormals :155) — aggregate_night_block: Nacht-Block-Spalte "
+        "verschwindet."
     ),
-    "src/output/renderers/email/helpers.py:978": (
-        "A7 (#1405) — build_friendly_keys: Ampel-/Friendly-Format entfällt "
-        "(except KeyError: pass)."
+    "src/output/renderers/email/helpers.py::build_friendly_keys::0": (
+        "A7 (#1405, vormals :978) — build_friendly_keys: Ampel-/Friendly-Format "
+        "entfällt (except KeyError: pass)."
     ),
-    "src/output/renderers/email/helpers.py:995": (
-        "A8 (#1405) — build_format_modes: Format-Mode-Eintrag entfällt."
+    "src/output/renderers/email/helpers.py::build_format_modes::0": (
+        "A8 (#1405, vormals :995) — build_format_modes: Format-Mode-Eintrag "
+        "entfällt."
     ),
-    "src/output/renderers/email/helpers.py:1020": (
-        "A9 (#1405) — build_html_indicator_keys: Ampel-Aktivierung entfällt."
+    "src/output/renderers/email/helpers.py::build_html_indicator_keys::0": (
+        "A9 (#1405, vormals :1020) — build_html_indicator_keys: "
+        "Ampel-Aktivierung entfällt."
     ),
     # --- A10–A13: Alarm- und Amtliche-Warnungen-Pfad ---
-    "src/services/alert_preset.py:198": (
-        "A10 (#1405) — expand_per_metric_levels (Spec-Tabelle: "
+    "src/services/alert_preset.py::expand_per_metric_levels::0": (
+        "A10 (#1405, vormals :198) — expand_per_metric_levels (Spec-Tabelle: "
         "'resolve_alert_rules'): Direction-Feld-Optout verschwindet."
     ),
-    "src/services/compare_official_alert.py:115": (
-        "A11 (#1405) — _check_one_preset: ein Ort fällt per "
+    "src/services/compare_official_alert.py::_check_one_preset::0": (
+        "A11 (#1405, vormals :115) — _check_one_preset: ein Ort fällt per "
         "Comprehension-Filter aus der Alarm-Prüfung. Die zwei Geschwister "
         "(compare_alert.py, compare_radar_alert.py) melden bereits korrekt."
     ),
-    "src/services/official_alerts/meteoalarm.py:334": (
-        "A12 (#1405) — _extract_alerts_from_cap (Spec-Tabelle: '_parse_cap'): "
-        "ganze CAP-Warnung fällt weg, except ohne Log. Der logger.warning in "
-        "derselben Funktion (:378) hat mit diesem Zweig nichts zu tun."
+    # A12/A13 lagen bis #1445 BEIDE in meteoalarm.py::_extract_alerts_from_cap.
+    # Diese Funktion wurde dort in _collect_cap_info_entries (XML-Sammeln) +
+    # _group_and_map_info_entries (Gruppieren/Abbilden) zerlegt; der neue
+    # Schlüssel kann eine Aufteilung nicht automatisch nachziehen (Spec
+    # "Bekannte Grenzen"), deshalb ist er hier VON HAND auf die beiden neuen
+    # Funktionsnamen umgeschrieben. Es sind dieselben zwei Abbruchpfade wie
+    # zuvor — kein Eintrag ist dabei entfallen oder hinzugekommen.
+    "src/services/official_alerts/meteoalarm.py::_collect_cap_info_entries::0": (
+        "A12 (#1405, vormals _extract_alerts_from_cap:334; Funktion mit #1445 "
+        "aufgeteilt) — ganzer <info>-Block fällt weg, except Exception ohne "
+        "Log. Der logger.warning der Nachbarhälfte hat mit diesem Zweig nichts "
+        "zu tun."
     ),
-    "src/services/official_alerts/meteoalarm.py:362": (
-        "A13 (#1405) — _extract_alerts_from_cap: ganze Warnung fällt weg bei "
-        "unbekanntem awareness_type (_TYPE_HAZARD_MAP-Fehltreffer)."
+    "src/services/official_alerts/meteoalarm.py::_group_and_map_info_entries::0": (
+        "A13 (#1405, vormals _extract_alerts_from_cap:362; Funktion mit #1445 "
+        "aufgeteilt) — ganze Warnung fällt weg bei unbekanntem awareness_type "
+        "(_TYPE_HAZARD_MAP-Fehltreffer)."
     ),
     # --- Beim Bau des Wächters NEU gefunden (nicht in der Bestandsaufnahme).
     # Jede Zeile von Hand nachgelesen; jede ist die exakte Mechanik einer
     # bereits belegten Fundstelle an einer weiteren Stelle. Reparatur gehört
     # zur Reparatur-Scheibe S4, nicht hierher (Wächter vor Reparatur).
-    "src/output/renderers/email/helpers.py:471": (
-        "NEU (#1405) — build_units_legend: get_metric_by_col_key() → "
-        "except KeyError: continue. Dieselbe Mechanik wie A1–A9: eine Spalte "
-        "verliert wortlos ihre Einheit in der Legende."
+    "src/output/renderers/email/helpers.py::build_units_legend::0": (
+        "NEU (#1405, vormals :471) — build_units_legend: "
+        "get_metric_by_col_key() → except KeyError: continue. Dieselbe "
+        "Mechanik wie A1–A9: eine Spalte verliert wortlos ihre Einheit in der "
+        "Legende."
     ),
-    "src/output/renderers/trip_report.py:521": (
-        "NEU (#1405) — _build_units_legend: Trip-Zwilling von helpers.py:471, "
-        "identische Mechanik."
+    "src/output/renderers/trip_report.py::_build_units_legend::0": (
+        "NEU (#1405, vormals :521) — _build_units_legend: Trip-Zwilling von "
+        "helpers.py::build_units_legend, identische Mechanik."
     ),
-    "src/output/renderers/email/compare_html.py:1040": (
-        "NEU (#1405) — _units_legend_text: _METRICS_BY_ID.get() → is None → "
-        "continue. Katalog-Fehltreffer wie A13; die Metrik verschwindet aus "
-        "der Einheiten-Legende der Vergleichs-Mail."
+    "src/output/renderers/email/compare_html.py::_units_legend_text::0": (
+        "NEU (#1405, vormals :1040) — _units_legend_text: _METRICS_BY_ID.get() "
+        "→ is None → continue. Katalog-Fehltreffer wie A13; die Metrik "
+        "verschwindet aus der Einheiten-Legende der Vergleichs-Mail."
     ),
-    "src/services/day_comparison.py:271": (
-        "NEU (#1405) — _summarize_metric_driven: "
+    "src/services/day_comparison.py::_summarize_metric_driven::0": (
+        "NEU (#1405, vormals :271) — _summarize_metric_driven: "
         "_METRIC_ID_TO_ENTRY_ATTR.get() → is None → continue. Eine vom Nutzer "
         "gewählte Metrik fällt wortlos aus dem Tagesvergleich."
     ),
-    "src/services/weather_change_detection.py:429": (
-        "NEU (#1405) — from_display_config: get_metric() → except KeyError → "
-        "continue. A1–A9-Mechanik im ALARM-Pfad: eine veraltete metric_id im "
-        "display_config entschärft die Regel still (genau der #1262-Fall)."
+    "src/services/weather_change_detection.py::from_display_config::0": (
+        "NEU (#1405, vormals :429) — from_display_config: get_metric() → "
+        "except KeyError → continue. A1–A9-Mechanik im ALARM-Pfad: eine "
+        "veraltete metric_id im display_config entschärft die Regel still "
+        "(genau der #1262-Fall)."
     ),
-    "src/services/official_alerts/geosphere_warn.py:122": (
-        "NEU (#1405) — _extract_alerts: except (KeyError, TypeError, "
-        "ValueError): continue ohne Log. Zwilling von A12 beim "
+    "src/services/official_alerts/geosphere_warn.py::_extract_alerts::0": (
+        "NEU (#1405, vormals :122) — _extract_alerts: except (KeyError, "
+        "TypeError, ValueError): continue ohne Log. Zwilling von A12 beim "
         "österreichischen Anbieter."
     ),
-    "src/services/official_alerts/geosphere_warn.py:130": (
-        "NEU (#1405) — _extract_alerts: _HAZARD_MAP-Fehltreffer → continue. "
-        "Zwilling von A13; unbekannter Warntyp fällt wortlos weg."
+    "src/services/official_alerts/geosphere_warn.py::_extract_alerts::1": (
+        "NEU (#1405, vormals :130) — _extract_alerts: _HAZARD_MAP-Fehltreffer "
+        "→ continue. Zwilling von A13; unbekannter Warntyp fällt wortlos weg."
     ),
-    "src/services/official_alerts/vigilance.py:118": (
-        "NEU (#1405) — _extract_alerts: _PHENOMENON_MAP-Fehltreffer → "
-        "continue. Zwilling von A13 beim französischen Anbieter."
+    "src/services/official_alerts/vigilance.py::_extract_alerts::0": (
+        "NEU (#1405, vormals :118) — _extract_alerts: _PHENOMENON_MAP-"
+        "Fehltreffer → continue. Zwilling von A13 beim französischen Anbieter."
     ),
-    "src/services/gpx_processing.py:297": (
-        "NEU (#1405) — process_bulk_gpx_uploads: except Exception: continue "
-        "ohne Log. Wer fünf GPX-Dateien hochlädt, bekommt bei einer kaputten "
-        "vier Etappen und keinerlei Hinweis darauf."
+    "src/services/gpx_processing.py::process_bulk_gpx_uploads::0": (
+        "NEU (#1405, vormals :297) — process_bulk_gpx_uploads: except "
+        "Exception: continue ohne Log. Wer fünf GPX-Dateien hochlädt, bekommt "
+        "bei einer kaputten vier Etappen und keinerlei Hinweis darauf."
     ),
 }
 
@@ -771,11 +838,17 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     "src/services/alert_preset.py::expand_per_metric_levels": 1,
     # A11 — Ort aus der Alarm-Prüfung (Comprehension-Filter)
     "src/services/compare_official_alert.py::_check_one_preset": 1,
-    # A12 + A13 — ZWEI Abbruchpfade in DERSELBEN Funktion, daher Erwartung 2:
-    # ganze CAP-Warnung (except ohne Log) UND unbekannter awareness_type.
-    # (Spec-Tabelle nennt "_parse_cap" — existiert nicht, die Funktion heißt
-    # "_extract_alerts_from_cap".)
-    "src/services/official_alerts/meteoalarm.py::_extract_alerts_from_cap": 2,
+    # A12 + A13 — bis #1445 ZWEI Abbruchpfade in DERSELBEN Funktion
+    # (_extract_alerts_from_cap, Erwartung 2). Diese Funktion wurde mit #1445
+    # in _collect_cap_info_entries (XML-Sammeln) + _group_and_map_info_entries
+    # (Gruppieren/Abbilden) zerlegt; jeder der beiden Abbruchpfade liegt jetzt
+    # in einer eigenen Funktion, daher zwei Schlüssel mit Erwartung 1 statt
+    # einem mit Erwartung 2. Summe UNVERÄNDERT 13 — die Erwartung ist von Hand
+    # nachgezogen, nicht gekürzt (Aufteilungen kann kein Schlüssel automatisch
+    # nachziehen, s. Spec #1466 "Known Limitations").
+    # (Die Spec-Tabelle nennt "_parse_cap" — dieser Name existiert nicht.)
+    "src/services/official_alerts/meteoalarm.py::_collect_cap_info_entries": 1,
+    "src/services/official_alerts/meteoalarm.py::_group_and_map_info_entries": 1,
 }
 
 

@@ -62,6 +62,42 @@ _SELF_EXEMPT = {
     # Werkzeug-Klasse wie die beiden Gates darueber; # doc-compliance-test.
     # Spec: docs/specs/modules/feat_1406b_stundenverlauf_katalog.md
     "test_compare_hourly_trip_parity.py",
+    # --- #1466 AP4 (2026-08-02) ---------------------------------------------
+    # #1342: Drift-Waechter api_contract.md <-> Go. Liest router.go und die
+    # Model-Structs als DATEN fuer eine Inventar-Regel (steht jede registrierte
+    # Route / jedes json-Tag in der Doku?) — kein Verhaltensnachweis auf
+    # Code-Strings. Traegt # doc-compliance-test seit seiner Einfuehrung;
+    # gleiche Werkzeug-Klasse wie die Gates darueber.
+    "test_api_contract_drift.py",
+    # #1337: Inventar-Drift-Waechter Python <-> Go. Liest
+    # internal/egress/inventory.go als DATEN, um die Go-Hostliste gegen die
+    # per echtem Import geladene Python-Liste zu stellen. Ein Go-Inventar ist
+    # aus Python nur als Text erreichbar (kein Go-Toolchain-Aufruf im
+    # Kernlauf); geprueft wird Deckungsgleichheit zweier Listen, nicht das
+    # Vorkommen eines Code-Strings. Spec: docs/specs/modules/egress_guard_go.md
+    "test_egress_inventory_drift.py",
+    # #1412 S2a: Empfaenger-Regelwerk-Paritaet Python <-> Go. Zwei
+    # Strukturregeln auf Quelltext-als-Daten — die Konstantenmengen aus
+    # internal/mail/sender.go (Go aus Python nur als Text erreichbar) und eine
+    # AST-Verzweigungsratsche auf der Guard-Region in
+    # src/output/channels/email.py. Der Verhaltensteil desselben Laeufers ruft
+    # den echten Guard auf (Sentinel statt SMTP) und haengt an keinem
+    # Dateiinhalt. Spec: docs/specs/modules/fix_1412_s2a_regelwerk_paritaet.md
+    "test_mail_recipient_parity.py",
+    # #1408 F005: KEIN Gate und KEINE Werkzeug-Klasse, sondern ein
+    # FEHLALARM der Heuristik oben — der Test liest ueberhaupt keinen
+    # Produkt-Quelltext. Seine `read_text()`-Ziele sind YAML-Protokolle unter
+    # `tmp_path`; die vier Produktpfade in `_GATE_CASES` sind reine NAMENS-
+    # Daten (der Test LEGT unter tmp_path gleichnamige Attrappen an und
+    # uebergibt den Namen an renderer_mail_gate). Weil ein `read_text()`-Ziel
+    # eine Schleifen-/Comprehension-Variable ist, erntet
+    # `_collect_listed_product_paths()` jedes Listen-/Tupel-Literal der Datei —
+    # auch solche, die gar keine Dateiliste sind. Die Heuristik gehoert
+    # praeziser gefasst (nur homogene Pfadlisten); das ist eine Aenderung AM
+    # GATE und bewusst nicht Teil dieser Lieferung (#1466 AP4, im Bericht
+    # benannt). Bis dahin steht die Datei hier — mit dem ausdruecklichen
+    # Vermerk, dass sie NICHT als Werkzeug-Klasse gilt.
+    "test_validator_log_unique_filenames.py",
 }
 
 

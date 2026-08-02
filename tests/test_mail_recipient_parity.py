@@ -1,4 +1,12 @@
+# doc-compliance-test
 """Empfaenger-Regelwerk-Paritaet Python <-> Go (Issue #1412, Scheibe S2a).
+
+Teilweise Werkzeug-Klasse (CLAUDE.md-Ausnahme `# doc-compliance-test`,
+nachgetragen mit #1466 AP4): zwei Strukturregeln lesen Quelltext als DATEN --
+die Konstantenmengen aus `internal/mail/sender.go` (aus Python nur als Text
+erreichbar) und die AST-Verzweigungsratsche auf der Guard-Region in
+`src/output/channels/email.py`. Der Verhaltensteil desselben Laeufers ruft den
+ECHTEN Guard auf (Sentinel statt SMTP) und haengt an keinem Dateiinhalt.
 
 Spec: docs/specs/modules/fix_1412_s2a_regelwerk_paritaet.md
 Analyse: docs/context/fix-1412-s2-regelwerk-paritaet.md, Abschnitt "Analysis (S2a)"

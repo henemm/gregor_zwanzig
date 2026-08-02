@@ -99,10 +99,18 @@ def normalize_hourly_metrics(hourly_metrics: list[str] | None) -> list[str] | No
     (``temp_c``) oder Katalog-ID (``temperature``). Ausgenommene und
     unbekannte Werte fallen heraus. ``None`` bleibt ``None`` ("nie
     eingestellt").
+
+    Issue #1466 AP1: eine Kennung, die das zentrale Register NICHT kennt, wird
+    nicht mehr kommentarlos verworfen, sondern nach dem Hausmuster
+    ("Sammeln-und-melden", s. ``resolve_enabled_metrics``) mit ihrem Namen
+    protokolliert. Ausgenommene Groessen (AC-11) sind dagegen eine bewusste
+    Auswahlregel und bleiben still — sonst entstuende eine Dauerwarnung ueber
+    korrektes Verhalten.
     """
     if not isinstance(hourly_metrics, list):
         return None
     out: list[str] = []
+    dropped: list[object] = []
     for raw in hourly_metrics:
         metric_id = FRONTEND_TO_HOURLY_METRIC_ID.get(raw, raw)
         if not isinstance(metric_id, str):
@@ -112,9 +120,17 @@ def normalize_hourly_metrics(hourly_metrics: list[str] | None) -> list[str] | No
         try:
             get_metric(metric_id)
         except KeyError:
+            dropped.append(metric_id)
             continue
         if metric_id not in out:
             out.append(metric_id)
+    if dropped:
+        logger.warning(
+            "normalize_hourly_metrics: %s ohne Eintrag im zentralen Register — "
+            "Groesse wird aus der Stundenauswahl verworfen statt angezeigt "
+            "(vgl. #1466 AP1, #1361 Befund 3)",
+            dropped,
+        )
     return out
 
 
