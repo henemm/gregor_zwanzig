@@ -169,9 +169,12 @@ test('presetChannels: NIEMALS "Signal" — auch bei signal-Key im Layout (PO #61
 	);
 });
 
-test('presetChannels: leere Empfänger + keine Layouts → []', () => {
+// fix-1452 (AC-7): Der alte Assert ("leere empfaenger → []") prüfte die
+// "@"-Heuristik auf preset.empfaenger. Das Feld ist ab #1452 inert; E-Mail hat
+// für Compare-Presets kein Opt-out (KL-6) und ist damit immer aktiv.
+test('presetChannels: leere Empfänger + keine Opt-ins → ["Email"] (E-Mail ohne Opt-out)', () => {
 	const channels = presetChannels(makePreset({ empfaenger: [], display_config: {} }));
-	assert.deepEqual(channels, []);
+	assert.deepEqual(channels, ['Email'], `erhielt ${JSON.stringify(channels)}`);
 });
 
 // F003-Fix (Adversary): signal@firma.com ist eine legitime E-Mail-Adresse → "Email"

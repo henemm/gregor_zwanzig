@@ -71,24 +71,28 @@ describe('AC-6: channelNamesLabel — Kanal-Namen statt Kanal-Anzahl', () => {
 		assert.equal(label, 'Email');
 	});
 
-	test('keine Kanäle (leere empfaenger, keine Layouts) → "—" (Soll-Leerfall aus JSX)', () => {
+	// fix-1452 (AC-7): `empfaenger` ist ab #1452 inert — E-Mail hat für
+	// Compare-Presets kein Opt-out (KL-6) und bleibt darum auch ohne
+	// Empfänger-Einträge aktiv. Die beiden folgenden Fälle prüften vorher
+	// genau die entfallende "@"-Heuristik und sind hier nachgezogen.
+	test('leere empfaenger, keine Opt-ins → "Email" (kein Leerfall mehr)', () => {
 		const preset = makePreset({ empfaenger: [], display_config: {} });
 		const label = channelNamesLabel(preset);
 		assert.equal(
 			label,
-			'—',
-			`bei 0 Kanälen muss "—" erscheinen (JSX: sub.channels.length === 0 ? "—" : …), war aber "${label}"`
+			'Email',
+			`E-Mail ist ohne Opt-out immer aktiv (KL-6), war aber "${label}"`
 		);
 	});
 
-	test('SMS-Opt-in ohne E-Mail-Empfänger → "SMS" (kein führender/verwaister Trennpunkt)', () => {
+	test('SMS-Opt-in ohne E-Mail-Empfänger → "Email · SMS"', () => {
 		const preset = makePreset({
 			empfaenger: [],
 			send_sms: true,
 			display_config: { channel_layouts: { sms: { columns: [] } } }
 		});
 		const label = channelNamesLabel(preset);
-		assert.equal(label, 'SMS');
+		assert.equal(label, 'Email · SMS', `war "${label}"`);
 	});
 
 	test('delegiert an presetChannels — Signal-Key im Layout taucht NIEMALS im Label auf (PO #610)', () => {

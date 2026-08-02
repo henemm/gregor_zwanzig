@@ -42,16 +42,21 @@ test('AC-1: homeCompareTimeline liefert Zuletzt+Nächster wenn letzter_versand g
 
 	assert.strictEqual(rows.length, 2, 'muss genau zwei Zeilen liefern');
 
+	// fix-1452 (AC-8): `channels` führt seit #1452 Kanal-LABEL aus
+	// presetChannels() statt der rohen `empfaenger`-Einträge. Das Fixture hat
+	// kein send_telegram/send_sms → nur der Opt-out-freie E-Mail-Kanal (KL-6).
+	const KANAELE = ['Email'];
+
 	const sent = rows[0];
 	assert.ok(sent.when.startsWith('Zuletzt · '), 'erste Zeile beginnt mit "Zuletzt · "');
 	assert.strictEqual(sent.status, 'sent', 'erste Zeile status=sent');
-	assert.deepStrictEqual(sent.channels, preset.empfaenger, 'channels = empfaenger');
+	assert.deepStrictEqual(sent.channels, KANAELE, 'channels = Kanal-Label aus presetChannels');
 	assert.ok(sent.etappe && sent.etappe.includes('3 Orte'), 'etappe nennt Orte-Anzahl');
 
 	const next = rows[1];
 	assert.ok(next.when.startsWith('Nächster · '), 'zweite Zeile beginnt mit "Nächster · "');
 	assert.strictEqual(next.status, 'planned', 'zweite Zeile status=planned');
-	assert.deepStrictEqual(next.channels, preset.empfaenger, 'channels = empfaenger');
+	assert.deepStrictEqual(next.channels, KANAELE, 'channels = Kanal-Label aus presetChannels');
 });
 
 // ─── AC-2: Preset OHNE letzter_versand → keine Zuletzt-Zeile, keine Fake-Daten ─────────

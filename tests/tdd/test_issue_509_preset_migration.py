@@ -52,7 +52,12 @@ def _minimal_preset(preset_id: str = "p1", schedule: str = "daily", empfaenger=N
 
 class TestEmpfaengerFallback:
     """
-    AC-2: Leere empfaenger fallen auf settings.mail_to zurück.
+    AC-2 (bis #1452): Leere empfaenger fallen auf settings.mail_to zurück.
+
+    fix-1452: `preset.empfaenger` ist inert — `settings.mail_to` ist nicht mehr
+    Fallback, sondern die EINZIGE Empfängerquelle. Die geprüfte Invariante
+    bleibt: ohne mail_to wird das Preset mit Warnung übersprungen, mit mail_to
+    blockiert die Empfängerprüfung den Versand nicht mehr.
     """
 
     def test_empty_empfaenger_skipped_without_mail_to(self, tmp_path, monkeypatch, caplog):
@@ -80,15 +85,20 @@ class TestEmpfaengerFallback:
         skip_msgs = [r.message for r in caplog.records if "empfaenger" in r.message.lower()]
         assert len(skip_msgs) >= 1, "Erwartet Warnung wegen leerem empfaenger ohne mail_to"
 
-    def test_empty_empfaenger_uses_mail_to_fallback(self, tmp_path, monkeypatch, caplog):
+    def test_empty_empfaenger_does_not_block_dispatch_when_mail_to_set(
+        self, tmp_path, monkeypatch, caplog
+    ):
         """
         GIVEN: Preset mit empfaenger=[] UND GZ_MAIL_TO gesetzt
         WHEN: _run_compare_presets_daily aufgerufen
-        THEN: Log enthält "mail_to"-Fallback-Meldung — Preset nicht wegen empfaenger=[] übersprungen
+        THEN: Der Lauf scheitert erst an den unaufloesbaren Orten — NICHT an den
+        Empfaengern. Ein leeres `empfaenger` ist seit #1452 kein Skip-Grund mehr.
 
-        Schlägt FEHL weil Fallback noch nicht implementiert.
-        Nach Fix wird empfaenger-Check VOR location-Resolution ausgeführt und
-        die Fallback-Meldung (Info-Level) geloggt.
+        Vorher (bis #1452) prüfte dieser Test die INFO-Meldung des
+        `empfaenger`-leer-Fallbacks ("nutze mail_to=..."). Diesen Fallback gibt
+        es nicht mehr: `settings.mail_to` ist die einzige Empfaengerquelle, also
+        gibt es nichts mehr zurückzufallen. Geprüft wird jetzt die dahinter
+        liegende Absicht — die Empfaengerprüfung blockiert den Versand nicht.
         """
         from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
@@ -102,12 +112,12 @@ class TestEmpfaengerFallback:
             # hour=6: deterministischer Morgen-Slot (s.o.).
             _run_compare_presets_daily(user_id="fallback-user2", data_root=str(tmp_path), hour=6)
 
-        # Nach Fix: INFO-Meldung "nutze mail_to=..." erscheint (empfaenger-Check vor location-Resolution)
-        fallback_msgs = [
-            r.message for r in caplog.records
-            if "mail_to" in r.message.lower() and r.levelno <= logging.INFO
-        ]
-        assert len(fallback_msgs) >= 1, (
-            f"mail_to-Fallback nicht implementiert — keine Meldung mit 'mail_to' im Log. "
-            f"Alle Log-Meldungen: {[r.message for r in caplog.records]}"
+        msgs = [r.message for r in caplog.records]
+        assert any("nicht aufloesbar" in m for m in msgs), (
+            f"Erwartet Abbruch an der Orts-Aufloesung (der einzige echte Fehler). "
+            f"Alle Log-Meldungen: {msgs}"
+        )
+        assert not any("kein Empfaenger" in m for m in msgs), (
+            f"Mit gesetztem mail_to darf die Empfaengerpruefung NICHT greifen "
+            f"(empfaenger=[] ist seit #1452 bedeutungslos). Log: {msgs}"
         )

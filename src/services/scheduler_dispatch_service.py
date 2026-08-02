@@ -329,14 +329,15 @@ def send_one_compare_preset(
     preset_id = preset.get("id", "")
     location_ids = preset.get("location_ids") or []
 
-    # Empfaenger-Check + mail_to-Fallback
-    empfaenger = preset.get("empfaenger") or []
-    if not empfaenger:
-        default_to = getattr(settings, "mail_to", None)
-        if not default_to:
-            raise ValueError(f"Preset {preset_id}: keine empfaenger und kein mail_to-Fallback")
-        empfaenger = [default_to]
-        logger.info("Preset %s: empfaenger leer, nutze mail_to=%s", preset_id, default_to)
+    # Empfaenger-Check: Issue #1452 — ausschliesslich die Konto-Settings des
+    # Nutzers, `preset.empfaenger` ist inert (kein Preset-Override mehr).
+    # Fehlerverhalten bewusst unveraendert laut (KL-3): ValueError statt Skip.
+    default_to = getattr(settings, "mail_to", None)
+    if not default_to:
+        raise ValueError(
+            f"Preset {preset_id}: kein Empfaenger — mail_to fehlt in den Konto-Settings"
+        )
+    empfaenger = [default_to]
 
     if all_locations_cache is None:
         all_locations_cache = load_all_locations(user_id=user_id)

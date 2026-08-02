@@ -233,7 +233,13 @@ export function relativeLastSent(iso: string | undefined): string {
 }
 
 /**
- * Kanal-Keys aus empfaenger + Opt-in-Feldern. Signal NIEMALS (PO #610).
+ * Kanal-Keys aus den Opt-in-Feldern. Signal NIEMALS (PO #610).
+ *
+ * Issue #1452 (AC-7): E-Mail wird NICHT mehr über eine "@"-Heuristik auf
+ * `preset.empfaenger` abgeleitet. Compare-Presets kennen kein E-Mail-Opt-out
+ * (KL-6 in `versand_tab_vergleich.md`) und senden immer an die Konto-Settings
+ * des Nutzers — der E-Mail-Kanal ist damit unbedingt aktiv. `empfaenger` ist
+ * seit #1452 inert und darf die Kanal-Anzeige nicht mehr beeinflussen.
  *
  * Issue #1270 (AC-8, KB-6): Telegram/SMS werden aus den Opt-in-Feldern
  * `send_telegram`/`send_sms` abgeleitet — NICHT mehr aus den Keys von
@@ -244,13 +250,8 @@ export function relativeLastSent(iso: string | undefined): string {
  * nicht mehr auftauchen (statt über eine Allowlist gefiltert zu werden).
  */
 export function presetChannels(preset: ComparePreset): string[] {
-	const result: string[] = [];
-	// E-Mail: mind. ein Eintrag mit "@".
-	// Jede Adresse mit "@" gilt als E-Mail — kein Substring-Match auf Adressen,
-	// der legitime Adressen wie signal@firma.com sperren würde.
-	if (preset.empfaenger.some((e) => e.includes('@'))) {
-		result.push('Email');
-	}
+	// E-Mail ohne Opt-out (KL-6) → immer aktiv, unabhängig von `empfaenger`.
+	const result: string[] = ['Email'];
 	if (preset.send_telegram === true) result.push('Telegram');
 	if (preset.send_sms === true) result.push('SMS');
 	return result;

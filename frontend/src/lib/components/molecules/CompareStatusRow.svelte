@@ -8,7 +8,7 @@
 	import type { ComparePreset } from '$lib/types.js';
 	import { Dot } from '$lib/components/atoms';
 	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
-	import { formatNextSend } from '$lib/components/compare/subscriptionHelpers.js';
+	import { formatNextSend, presetChannels } from '$lib/components/compare/subscriptionHelpers.js';
 
 	interface Props {
 		preset: ComparePreset;
@@ -19,6 +19,9 @@
 
 	const now = new Date();
 	const nextSend = $derived(deriveNextSend(preset, now));
+	// Issue #1452 (AC-8): Chips zeigen Kanal-Label ("Email"/"Telegram"/"SMS")
+	// aus der zentralen Ableitung — nie mehr die rohe Empfaenger-Adresse.
+	const channels = $derived(presetChannels(preset));
 </script>
 
 <a
@@ -60,18 +63,16 @@
 	</span>
 
 	<!-- Kanal-Chips -->
-	{#if preset.empfaenger && preset.empfaenger.length > 0}
-		{#each preset.empfaenger as emp (emp)}
-			<span
-				style:font-size="11px"
-				style:padding="2px 6px"
-				style:background="var(--g-card-alt)"
-				style:border="1px solid var(--g-rule-soft)"
-				style:border-radius="3px"
-				style:white-space="nowrap"
-			>{emp}</span>
-		{/each}
-	{/if}
+	{#each channels as channel (channel)}
+		<span
+			style:font-size="11px"
+			style:padding="2px 6px"
+			style:background="var(--g-card-alt)"
+			style:border="1px solid var(--g-rule-soft)"
+			style:border-radius="3px"
+			style:white-space="nowrap"
+		>{channel}</span>
+	{/each}
 
 	<!-- Pfeil -->
 	<span style:color="var(--g-ink-3)" style:font-size="14px">→</span>

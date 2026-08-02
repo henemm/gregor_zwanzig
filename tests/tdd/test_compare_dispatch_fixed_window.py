@@ -83,7 +83,17 @@ def _capture_engine_call(preset: dict, location, tmp_path) -> _EngineCallRecorde
     from app.config import Settings
 
     user_id = preset.pop("_user_id")
-    settings = Settings().with_user_profile(user_id)
+    # Empfaenger explizit setzen (#1452): seit der Umstellung auf die Konto-
+    # Settings ist `mail_to` eine harte Vorbedingung von send_one_compare_preset.
+    # Frische Test-User haben keine user.json, und Tests, die per chdir in einen
+    # tmp_path wechseln, sehen auch die Projekt-.env nicht mehr -> `mail_to` waere
+    # None und der Dispatch bräche ab, bevor die hier geprueften Engine-Argumente
+    # entstehen. Der Wert selbst ist fuer diesen Helper irrelevant (die Recording-
+    # Engine bricht vor jedem Versand ab) — er macht die Vorbedingung nur
+    # deterministisch statt von der Umgebung abhaengig.
+    settings = Settings().with_user_profile(user_id).model_copy(
+        update={"mail_to": "gregor-test@henemm.com"}
+    )
 
     original_engine = ce_mod.ComparisonEngine
 

@@ -30,7 +30,9 @@
 	const locationCount = $derived((preset.location_ids ?? []).length);
 	const schedule = $derived(preset.schedule ?? '—');
 	const nextSend = $derived(preset.nextSend ?? '—');
-	const channels = $derived(preset.channels ?? preset.empfaenger ?? []);
+	// Issue #1452 (AC-9): kein Rückfall mehr auf `preset.empfaenger` — das Feld
+	// ist inert und enthält Adressen, keine Kanäle.
+	const channels = $derived(preset.channels ?? []);
 	const profileLabel = $derived(preset.profileLabel ?? '');
 	const region = $derived((preset.display_config?.region as string) ?? preset.region ?? '');
 </script>

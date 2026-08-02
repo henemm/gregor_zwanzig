@@ -18,7 +18,10 @@ import type {
 import { computeHeaderStats } from '../../lib/components/email-preview/headerStats.ts';
 import { tripStatus } from '../../lib/utils/tripStatus.ts';
 import { deriveNextSend } from '../../lib/utils/cockpitHelpers568.ts';
-import { formatNextSend } from '../../lib/components/compare/subscriptionHelpers.ts';
+import {
+	formatNextSend,
+	presetChannels
+} from '../../lib/components/compare/subscriptionHelpers.ts';
 
 /** Höhen-Array (number[]) einer Etappe für ElevSparkline. Leer wenn keine Wegpunkte. */
 export function stageProfile(stage: Stage | null | undefined): number[] {
@@ -217,12 +220,15 @@ export function homeCompareTimeline(preset: ComparePreset, now: Date): CompareTi
 	const place = `${preset.location_ids.length} Orte` + (region ? ` · ${region}` : '');
 
 	const rows: CompareTimelineRow[] = [];
+	// Issue #1452 (AC-8): Kanal-LABEL aus der zentralen Ableitung, nicht die
+	// rohen `empfaenger`-Adressen (Feld ist seit #1452 inert).
+	const channels = presetChannels(preset);
 
 	if (preset.letzter_versand) {
 		rows.push({
 			when: `Zuletzt · ${formatNextSend(new Date(preset.letzter_versand))}`,
 			kind: 'Vergleich',
-			channels: preset.empfaenger,
+			channels,
 			status: 'sent',
 			etappe: place
 		});
@@ -233,7 +239,7 @@ export function homeCompareTimeline(preset: ComparePreset, now: Date): CompareTi
 		rows.push({
 			when: `Nächster · ${formatNextSend(next)}`,
 			kind: 'Vergleich',
-			channels: preset.empfaenger,
+			channels,
 			status: 'planned',
 			etappe: place
 		});

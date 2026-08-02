@@ -120,7 +120,6 @@ class CompareAlertService:
                 continue
 
             config = self._build_eval_config(preset, cooldown_minutes)
-            notification_service = self._notification_service_for(preset)
 
             triggered = self._detect_triggered_locations(
                 preset_id, location_ids, all_locations, config
@@ -128,6 +127,10 @@ class CompareAlertService:
             if not triggered:
                 continue
 
+            # Issue #1452: Versandobjekt erst NACH der Detect-Phase bauen — die
+            # Warnung bei fehlendem `mail_to` gehört an die Stelle, an der ein
+            # Versand tatsächlich anstünde (sonst Log-Rauschen je Leerlauf).
+            notification_service = self._notification_service_for(preset)
             entities = [(t["loc"].name, [t["fresh_point"]], t["changes"]) for t in triggered]
             notif_result = notification_service.send_multi_location_deviation_alert(
                 entities=entities,
@@ -307,15 +310,20 @@ class CompareAlertService:
         )
 
     def _notification_service_for(self, preset: dict) -> NotificationService:
-        """Preset-Empfänger (`preset.empfaenger`, Fallback `settings.mail_to`)."""
-        empfaenger = preset.get("empfaenger") or (
-            [self._settings.mail_to] if self._settings.mail_to else []
-        )
-        preset_settings = (
-            self._settings.model_copy(update={"mail_to": ", ".join(empfaenger)})
-            if empfaenger else self._settings
-        )
-        return NotificationService(preset_settings, self._user_id)
+        """Empfänger kommen AUSSCHLIESSLICH aus den Konto-Settings des Nutzers
+        (Muster `trip_alert.py:125`). Issue #1452: `preset.empfaenger` ist inert —
+        ein preset-eigenes Override stellte an eine Adresse zu, die der Nutzer
+        in seinem Konto nie hinterlegt hat.
+
+        Fehlt `mail_to`, wird das laut gemeldet (statt stillem Skip); der Lauf
+        läuft für die übrigen Presets weiter (Spec AC-4)."""
+        if not self._settings.mail_to:
+            logger.warning(
+                "Compare-Alert: Nutzer %s hat keine Empfaenger-Adresse (mail_to) "
+                "in den Konto-Settings — Preset %s kann keine E-Mail zustellen.",
+                self._user_id, preset.get("id", ""),
+            )
+        return NotificationService(self._settings, self._user_id)
 
     def _load_presets(self) -> list[dict]:
         # Issue #1250 Scheibe 1: zentraler Loader statt rohem json.loads.

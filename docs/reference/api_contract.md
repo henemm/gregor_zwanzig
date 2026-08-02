@@ -1678,7 +1678,7 @@ type ComparePreset struct {
     HourFrom             int                    `json:"hour_from"`                             // @deprecated Issue #1268: nicht mehr vom Dispatch/Editor gelesen; bleibt in der Persistenz zur Bestandssicherung. Neue Presets erhalten 0 (Go Zero-Value). Der Versand rechnet fest über den ganzen Tag (0–23).
     HourTo               int                    `json:"hour_to"`                               // @deprecated Issue #1268: nicht mehr vom Dispatch/Editor gelesen; bleibt in der Persistenz zur Bestandssicherung. Der Versand rechnet fest über den ganzen Tag (0–23).
     ForecastHours        int                    `json:"forecast_hours"`                        // @deprecated Issue #1268: nicht mehr vom Dispatch gelesen; bleibt in der Persistenz zur Bestandssicherung. Der Dispatch verwendet fest 96 h (Issue #1305, zuvor 48 h). Legacy-Erklärung: 24 | 48 | 72 — Vorhersage-Horizont für Compare-Versand (Issue #764, default 48)
-    Empfaenger           []string               `json:"empfaenger"`                            // Email addresses for delivery
+    Empfaenger           []string               `json:"empfaenger"`                            // @deprecated Issue #1452 (2026-08-02): inert für den Versand — bleibt persistiert (Read-Modify-Write-Pflicht, Bestandsschutz), wird aber weder von den drei Alert-Services noch vom regulären Compare-Dispatch mehr gelesen. Einzige Empfänger-Quelle ist seither `Settings().with_user_profile(user_id)` (`mail_to`/`telegram_chat_id`/`sms_to`), analog `trip_alert.py:125`.
     LetzterVersand       *time.Time             `json:"letzter_versand,omitempty"`             // last send timestamp (server-managed)
     TopOrtLetzterVersand *string                `json:"top_ort_letzter_versand,omitempty"`     // highest-ranked location from last send (server-managed)
     DisplayConfig        map[string]interface{} `json:"display_config,omitempty"`              // opaque config (Issue #680: active_metrics, ideal_ranges, etc.)
@@ -1840,7 +1840,7 @@ versendet für `target_date=heute`, Abend-Slot für `target_date=morgen`. Guards
 - **Server-Managed Fields:** On CREATE, `id` is auto-generated (`cp-{hex}`) and `user_id` is set from context. On UPDATE, `user_id` and `created_at` are never overwritten from request body. `letzter_versand`, `top_ort_letzter_versand`, and `previous_schedule` are server-managed (not client-writable).
 - **forecast_hours (Issue #764, @deprecated #1268):** Vorhersage-Horizont — Legacy-Erklärung: (24|48|72 Stunden) wurde beim Orts-Vergleich-Versand verwendet. **Seit Issue #1268:** Das Feld ist deprecated und wird vom Dispatch nicht mehr gelesen. Der Versand verwendet fest 96 h (Issue #1305, zuvor 48 h — geteilte Konstante `COMPARE_FORECAST_HOURS` in `src/services/comparison_engine.py`). Beim Bearbeiten wird der Wert aus dem Preset nicht mehr hydratisiert und nicht mehr in den Request-Body geschrieben. Die Go-API akzeptiert den Wert bei PUT zum Bestandsschutz (RMW-Spread), schreibt ihn aber nicht selbst. Neue Presets erhalten 0 (Go Zero-Value, keine Editor-Eingabe). Bekannte Limitation #1280 (s. Spec #1268): Versandzeit-Genauigkeit (Minuten vs. Stunden) sichtbar geworden; **PO-Entscheid liegt vor** (2026-07-16: Eingabe auf volle Stunden begrenzen), Umsetzung in #1280.
 - **display_config (Issue #680):** Opaque JSON object stored as `map[string]interface{}` (no server-side schema validation). Contains `active_metrics` (persisted Metrik-Auswahl), `ideal_ranges` (Bewertungs-Schwellwerte), und zukünftig `output_layout` + `schedule_config`. Round-Trip beim Update: Server gibt `display_config` unverändert zurück, Frontend reicht nur geänderte Felder. Bestandsfelder erhalten sich automatisch (RMW-Semantik). **Fix #1191:** `CompareAlertService._build_eval_config` reicht `display_config` seither auch in die Δ-Alarm-Auswertung durch (vorher immer `None`, wodurch der #961-Deaktivierungs-Filter für Compare-Presets wirkungslos blieb — analog zum Trip-Pfad in `trip_alert.py`). Migrations-Skript `scripts/migrate_1191_compare_active_metrics.py` setzt auf Bestands-Presets ohne `active_metrics` einmalig den vollen Metrik-Satz (bewahrt „alles feuert", jetzt explizit + abschaltbar).
-- **POST /api/compare/presets/{id}/send:** Immediate send endpoint (Issue #627). Executes comparison engine and emails all configured `empfaenger` immediately, regardless of `schedule` value (bypasses time-based gating). If no recipients configured, returns HTTP 400. Returns HTTP 200 with `{"status":"ok","winner":"<top_location>","empfaenger_count":N}` on success. Updates `letzter_versand` and `top_ort_letzter_versand` server-side.
+- **POST /api/compare/presets/{id}/send:** Immediate send endpoint (Issue #627). Executes comparison engine and emails `settings.mail_to` immediately, regardless of `schedule` value (bypasses time-based gating). **Seit Issue #1452 (2026-08-02):** `empfaenger` wird für die Empfängerermittlung nicht mehr gelesen — s. Section 18 für Details. If `mail_to` is missing, the send fails. Returns HTTP 200 with `{"status":"ok","winner":"<top_location>","empfaenger_count":N}` on success (`empfaenger_count` ist seit #1452 stets 1). Updates `letzter_versand` and `top_ort_letzter_versand` server-side.
 - **previous_schedule Field (Issue #631):** When a preset is paused (`schedule='manual'`), the frontend sets `previous_schedule` to the prior schedule value (`"daily"` or `"weekly"`). On reactivation, `schedule` is restored from `previous_schedule`. This field is preserved across reloads (backend-persistent); altdata without this field remain unaffected (omitempty).
 - **LocationIDs Validation:** Backend does not validate that referenced location IDs exist in `data/users/{userID}/locations.json`. Invalid IDs cause errors only during send.
 - **official_warnings (Issue #1258):** Identische Semantik wie beim Trip — s. Section 10.5 „official_warnings (Issue #1258)" für Feld-Format, Legacy-Fallback (`official_alert_triggers_enabled`), Migration und PUT-RMW-Verhalten (inkl. Feld-Level-Preserve von `sources`).
@@ -2116,7 +2116,7 @@ Bei mindestens einem fehlgeschlagenen fälligen Preset (seit Issue #1290, identi
    - Convert `preset["profil"]` (Uppercase Go string → lowercase Python enum, fallback ALLGEMEIN)
    - Call Compare Engine with `target_date` (s. o.), `forecast_hours=COMPARE_FORECAST_HOURS` (feste geteilte Konstante, 96 h — Issue #1305, zuvor 48 h seit #1268; `preset["forecast_hours"]` wird nicht gelesen), `hour_from`, `hour_to`, `activity_profile`
    - Render Compare-Email template
-   - Send via Resend to all `preset["empfaenger"]`
+   - Send via Resend to `settings.mail_to` (**seit Issue #1452, 2026-08-02:** ausschließlich die Konto-Settings des Users; `preset["empfaenger"]` wird nicht mehr gelesen — fehlt `mail_to`, wird das Preset mit `ValueError` übersprungen, s. `error_count`/Notes)
    - Call `_save_preset_status(user_id, preset_id, top_ort)` to update JSON
    - On any error: log warning, increment `error_count`, continue (no job abort)
 5. Go scheduler (Cron `0 * * * *`, stündlich statt vormals einmal täglich 06:00 UTC) pingt den BetterStack Heartbeat (`GZ_HEARTBEAT_COMPARE_PRESETS` / Go `HeartbeatComparePresets`). Seit **Issue #1346** ist dieser Ping in `briefingDispatch()` **konsolidiert** und deckt den gesamten stündlichen Briefing-Versand ab: er feuert nur, wenn im selben Tick **beide** Teil-Jobs erfolgreich sind — `compare_presets_daily` (`error_count == 0`) **und** `trip_reports_hourly` (Status `ok`). Ein Trip-Briefing-Totalausfall unterdrückt den Ping (früher verdeckt) und löst zusätzlich einen edge-getriggerten MQ-Alarm an `infra` aus.
@@ -2132,7 +2132,7 @@ Bei mindestens einem fehlgeschlagenen fälligen Preset (seit Issue #1290, identi
 **Side Effects:**
 
 - `data/users/{user_id}/briefings/{id}.json` (kind=vergleich) per-Datei-RMW via `save_compare_preset_status` updated with `letzter_versand` (ISO-datetime UTC) and `top_ort_letzter_versand` (string or null) for each successfully sent preset (unbekannte Felder bleiben erhalten; Issue #1250 S7b — Legacy `compare_presets.json` wird nicht mehr geschrieben)
-- Email sent to all recipients in `preset["empfaenger"]`
+- Email sent to `settings.mail_to` (seit Issue #1452, 2026-08-02 — nicht mehr `preset["empfaenger"]`)
 - Log entries on WARNING for each failed preset
 
 **Notes:**
@@ -2165,7 +2165,7 @@ Executes comparison and sends report for a single preset immediately (regardless
 {
   "status": "ok",
   "winner": "Säntis",
-  "empfaenger_count": 2
+  "empfaenger_count": 1
 }
 ```
 
@@ -2175,7 +2175,7 @@ Executes comparison and sends report for a single preset immediately (regardless
 |-------|------|-------------|
 | status | enum | `"ok"` on success |
 | winner | string | Highest-ranked location name from comparison |
-| empfaenger_count | int | Number of recipients the email was sent to |
+| empfaenger_count | int | Number of recipients the email was sent to — **seit Issue #1452 (2026-08-02) stets `1`**, da `mail_to` ein einzelnes Settings-Feld ist (kein Preset-`empfaenger`-Array mehr als Quelle) |
 
 **Behavior:**
 
@@ -2184,7 +2184,7 @@ Executes comparison and sends report for a single preset immediately (regardless
 3. Python endpoint:
    - Loads über `load_compare_presets(strict=True)` (Issue #1250 Scheibe 1) — liest seit Issue #1250 S7b per-Datei `data/users/{user_id}/briefings/*.json` mit `kind == "vergleich"` statt der alten Single-File `compare_presets.json` (nur noch Migrations-Quelle/Rollback)
    - Finds preset by `id` (404 if not found)
-   - Validates `empfaenger[]` exists and is non-empty; falls back to `mail_to` from user profile (400 if neither)
+   - Validates `settings.mail_to` is non-empty (**seit Issue #1452, 2026-08-02:** `preset["empfaenger"]` ist inert — keine Lese-Quelle mehr für den Versand, ausschließlich die Konto-Settings des Users zählen)
    - Calls Compare Engine with `target_date=today`, `forecast_hours=COMPARE_FORECAST_HOURS` (feste geteilte Konstante, 96 h — Issue #1305, zuvor 48 h seit #1268; `preset["forecast_hours"]` wird nicht gelesen; uses preset's `hour_from`, `hour_to`, `profil`)
    - Renders Compare-Email template and sends via Resend to all recipients
    - Updates `letzter_versand` (current ISO-datetime UTC) and `top_ort_letzter_versand` (winner) in preset
@@ -2194,13 +2194,13 @@ Executes comparison and sends report for a single preset immediately (regardless
 
 | Status | Body | Scenario |
 |--------|------|----------|
-| 400 | `{"error":"no_recipients"}` | No `empfaenger` configured and no user `mail_to` fallback |
+| 422 | `{"detail":"Preset <id>: kein Empfaenger — mail_to fehlt in den Konto-Settings"}` | Keine `mail_to`-Adresse in den Konto-Settings des Users (dokumentierte Korrektur 2026-08-02, Issue #1452 — vorheriger Stand dieser Zeile beschrieb einen `400`/`no_recipients`-Fehlerkörper, der im Code nicht mehr existiert) |
 | 404 | `{"error":"not_found"}` | Preset ID not found in user's preset list |
 | 500 | `{"error":"send_failed","detail":"..."}` | Email dispatch failed (network/Resend error) |
 
 **Side Effects:**
 
-- Email sent to all recipients in `preset["empfaenger"]` (or user's `mail_to` fallback)
+- Email sent to `settings.mail_to` (seit Issue #1452, 2026-08-02 — nicht mehr `preset["empfaenger"]` oder ein Fallback darauf)
 - `data/users/{user_id}/briefings/{id}.json` (kind=vergleich) per-Datei-RMW via `save_compare_preset_status` updated with `letzter_versand` (ISO-datetime) and `top_ort_letzter_versand` (location name) — Issue #1250 S7b
 - No effect on `schedule` — paused presets (`schedule='manual'`) can still be sent immediately
 
@@ -2208,7 +2208,7 @@ Executes comparison and sends report for a single preset immediately (regardless
 
 - Ignores `schedule` value entirely (sends even if `schedule='manual'` or `'weekly'`)
 - User isolation enforced via Go proxy's `appendUserID()` function — client cannot spoof another user's `user_id`
-- Idempotent for recipients (same email list re-sent on retry), but updates `letzter_versand` each time
+- Idempotent for recipients (same `mail_to` re-sent on retry), but updates `letzter_versand` each time
 
 ---
 

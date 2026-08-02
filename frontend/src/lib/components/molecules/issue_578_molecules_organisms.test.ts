@@ -172,12 +172,19 @@ describe('AC-5: CompareStatusRow — konsistente Empfänger-Pille', () => {
 	test('CompareStatusRow.svelte existiert', () => {
 		assert.ok(hasMol('CompareStatusRow.svelte'), 'molecules/CompareStatusRow.svelte fehlt');
 	});
-	test('CompareStatusRow Empfänger-Chip nur wenn preset.empfaenger gesetzt', () => {
+	// fix-1452 (AC-8): Der Chip zeigt seit #1452 das Kanal-LABEL aus
+	// presetChannels() statt der rohen `empfaenger`-Adresse. Der alte Assert
+	// forderte genau die entfallene `{#if ... empfaenger ...}`-Bedingung und
+	// prüfte damit veraltetes Verhalten — hier auf die Kanal-Quelle nachgezogen.
+	test('CompareStatusRow Kanal-Chip stammt aus presetChannels, nie aus empfaenger', () => {
 		const src = readMol('CompareStatusRow.svelte');
-		// Muss conditional rendern: {#if ... empfaenger ...}
 		assert.ok(
-			/\{#if.*empfaenger|empfaenger.*\{#if/.test(src),
-			'CompareStatusRow: Empfänger-Chip muss conditional gerendert werden ({#if empfaenger...})'
+			/presetChannels\(preset\)/.test(src),
+			'CompareStatusRow: Kanal-Chips müssen aus presetChannels(preset) stammen'
+		);
+		assert.ok(
+			!/\{#each\s+preset\.empfaenger/.test(src),
+			'CompareStatusRow: rohe empfaenger-Adressen dürfen nicht mehr als Chip gerendert werden'
 		);
 	});
 	test('CompareStatusRow hat white-space: nowrap für Spalten-Konsistenz', () => {

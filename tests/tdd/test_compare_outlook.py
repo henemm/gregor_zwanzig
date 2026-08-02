@@ -283,7 +283,16 @@ def _dispatch_kwargs(preset, location, user_id, tmp_path):
     from app.config import Settings
     from services.scheduler_dispatch_service import send_one_compare_preset
 
-    settings = Settings().with_user_profile(user_id)
+    # Empfaenger explizit setzen (#1452): seit der Umstellung auf die Konto-
+    # Settings ist `mail_to` eine harte Vorbedingung von send_one_compare_preset.
+    # Die compare_env-Fixture wechselt per chdir in einen tmp_path, der frische
+    # Test-User hat keine user.json und die Projekt-.env ist nicht mehr sichtbar
+    # -> `mail_to` waere None und der Dispatch bräche ab, bevor die hier
+    # geprueften Render-Kwargs entstehen. Fuer den Ausblick-Schalter (AC-7) ist
+    # der Empfaenger irrelevant; der Aufzeichner bricht vor jedem Versand ab.
+    settings = Settings().with_user_profile(user_id).model_copy(
+        update={"mail_to": "gregor-test@henemm.com"}
+    )
     return _capture_render_compare_email_kwargs(
         lambda: send_one_compare_preset(
             preset, settings, user_id, str(tmp_path), all_locations_cache=[location],

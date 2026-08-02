@@ -182,16 +182,18 @@ class CompareRadarAlertService:
             state_svc.save(entity_id, state)
 
     def _notification_service_for(self, preset: dict) -> NotificationService:
-        """Preset-Empfänger (`preset.empfaenger`, Fallback `settings.mail_to`) —
-        Muster `compare_alert.py::_notification_service_for`."""
-        empfaenger = preset.get("empfaenger") or (
-            [self._settings.mail_to] if self._settings.mail_to else []
-        )
-        preset_settings = (
-            self._settings.model_copy(update={"mail_to": ", ".join(empfaenger)})
-            if empfaenger else self._settings
-        )
-        return NotificationService(preset_settings, self._user_id)
+        """Empfänger ausschliesslich aus den Konto-Settings — Muster
+        `compare_alert.py::_notification_service_for`. Issue #1452:
+        `preset.empfaenger` ist inert; fehlt `mail_to`, wird laut gemeldet, der
+        Lauf bricht aber nicht ab (Spec AC-4)."""
+        if not self._settings.mail_to:
+            logger.warning(
+                "Compare-Alert (Radar): Nutzer %s hat keine Empfaenger-Adresse "
+                "(mail_to) in den Konto-Settings — Preset %s kann keine E-Mail "
+                "zustellen.",
+                self._user_id, preset.get("id", ""),
+            )
+        return NotificationService(self._settings, self._user_id)
 
     def _get_radar_service(self):
         if self._radar_service is None:
