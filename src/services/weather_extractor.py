@@ -7,11 +7,29 @@ Issue #652, Epic #639 Teil 3/6
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 
 from app.models import SegmentWeatherSummary
 from services.weather_snapshot import WeatherSnapshotService
+
+
+def _to_naive_utc(dt: datetime) -> datetime:
+    """Hausnorm "naive UTC" (Issue #1345) auf einen EINGEHENDEN Zeitstempel.
+
+    Gegenstueck zu ``ForecastDataPoint.__post_init__`` (``src/app/models.py``):
+    dort wird `ts` an der Provider-Grenze auf naives UTC gezogen, hier der
+    Fenster-Anfang an der Grenze dieser Datenschicht. Ohne das treffen im
+    Vergleich zwei Welten aufeinander — die Aufrufer (Telegram-/Mail-Empfaenger)
+    liefern `from_time` aus ``datetime.now(tz=timezone.utc)``, also
+    zeitzonenbehaftet, waehrend `ts` per Norm zeitzonenlos ist.
+
+    Beide Richtungen sind abgedeckt: ein bereits naiver Zeitstempel gilt per
+    Norm schon als UTC und bleibt unveraendert.
+    """
+    if dt.tzinfo is None:
+        return dt
+    return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 # ---------------------------------------------------------------------------
@@ -95,6 +113,13 @@ class WeatherExtractor:
         from_time: Optional[datetime] = None,
         hours: int = 12,
     ) -> DrilldownResult:
+        # Normalisierung an der GRENZE, nicht am Vergleich: `from_time` kommt
+        # von aussen (Aufrufer bauen es aus `received_at`) und wird hier einmal
+        # auf die Hausnorm gezogen. Ein `if ts.tzinfo` unten in der Fenster-
+        # Schleife wuerde die Naht verstecken statt sie zu schliessen.
+        if from_time is not None:
+            from_time = _to_naive_utc(from_time)
+
         segments = self._snapshots.load(trip_id)
 
         # Alle Stundenpunkte aus allen Segmenten sammeln

@@ -20,6 +20,7 @@ from typing import Optional
 
 from app.loader import get_data_dir, get_snapshots_dir, load_all_trips, save_trip
 from app.trip import Stage, Trip
+from utils.timezone import UTC, local_fmt, local_hour, tz_for_coords
 
 logger = logging.getLogger(__name__)
 
@@ -565,6 +566,7 @@ class TripCommandProcessor:
         if day_token == "today":
             from_time = received_at
             hours = 12
+            day_date = received_at.date()
         else:  # tomorrow
             # Morgen ab 00:00 in der Sende-Zeitzone, 24h Fenster
             tomorrow = (received_at + timedelta(days=1)).date()
@@ -573,6 +575,7 @@ class TripCommandProcessor:
                 tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, tzinfo=tz
             )
             hours = 24
+            day_date = tomorrow
 
         res = WeatherExtractor(user_id).drilldown(
             trip.id, field, from_time=from_time, hours=hours
@@ -589,7 +592,9 @@ class TripCommandProcessor:
                 trip_name=trip.name,
             )
 
-        body = self._format_drilldown(res, header, fmt, with_emoji=with_emoji)
+        body = self._format_drilldown(
+            res, header, fmt, self._display_tz(trip, day_date), with_emoji=with_emoji
+        )
         back = "tl_today" if day_token == "today" else "tl_tomorrow"
         markup = {"inline_keyboard": [[{"text": "⬅️ Zurück", "callback_data": back}]]}
         return CommandResult(
@@ -656,9 +661,10 @@ class TripCommandProcessor:
         rain_map  = {p.ts: p.value for p in r_rain.points}  if r_rain.available  else {}
         thund_map = {p.ts: p.value for p in r_thund.points} if r_thund.available else {}
 
+        tz = self._display_tz(trip, today_date)
         lines = [f"📅 Stunden · {label} ({today_date:%d.%m})", ""]
         for pt in r_temp.points:
-            h = pt.ts.astimezone().strftime("%H")
+            h = f"{local_hour(pt.ts, tz):02d}"
             temp = f"{pt.value:.0f}°C" if pt.value is not None else "?°C"
             wind_val = wind_map.get(pt.ts)
             wind = f"{wind_val:.0f}km/h" if wind_val is not None else "?"
@@ -683,11 +689,34 @@ class TripCommandProcessor:
             trip_name=trip.name,
         )
 
-    def _format_drilldown(self, res, header: str, fmt, with_emoji: bool = True) -> str:
-        """Formatiert DrilldownResult als stündliche Liste."""
+    def _display_tz(self, trip: Trip, day_date: date):
+        """Anzeige-Zeitzone = ORTSzeit des Wegpunkts, nicht Prozess-Zeitzone.
+
+        Issue #1402: ein naiver Zeitstempel ist per Hausnorm (#1345) UTC. Ein
+        argumentloses ``.astimezone()`` deutet ihn als PROZESS-Zeitzone — auf
+        dem UTC-Server zufaellig unauffaellig, auf jedem anderen Host falsch.
+        Deshalb dieselbe Aufloesung wie im ``/jetzt``-Pfad weiter unten:
+        Koordinaten des Wegpunkts -> Zone. Ohne Wegpunkt bleibt nur UTC (die
+        Zeitstempel SIND UTC) — dann stimmt die Anzeige wenigstens mit den
+        Daten ueberein, statt die Serverzone zu raten.
+        """
+        stage = trip.get_stage_for_date(day_date)
+        if stage is None or not stage.waypoints:
+            stage = next((s for s in trip.stages if s.waypoints), None)
+        if stage is None or not stage.waypoints:
+            return UTC
+        wp = stage.waypoints[0]
+        return tz_for_coords(wp.lat, wp.lon)
+
+    def _format_drilldown(self, res, header: str, fmt, tz, with_emoji: bool = True) -> str:
+        """Formatiert DrilldownResult als stündliche Liste.
+
+        ``tz`` ist Pflicht (Issue #1402): ein Default wuerde die Ortszeit
+        wieder still gegen die Prozess-Zeitzone tauschen.
+        """
         lines = [f"{header} — stündlich"]
         for pt in res.points:
-            time_str = pt.ts.astimezone().strftime("%H:%M")
+            time_str = local_fmt(pt.ts, tz)
             lines.append(f"{time_str}  {fmt(pt.value, with_emoji=with_emoji)}")
         return "\n".join(lines)
 

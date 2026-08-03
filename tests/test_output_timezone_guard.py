@@ -87,7 +87,13 @@ SRC = REPO_ROOT / "src"
 # ist seine Aufgabe.
 _OUTPUT_DIR = SRC / "output"
 _MESSAGING_SERVICE_FILES = [
-    SRC / "app" / "trip_command_processor.py",
+    # Issue #1465: stand hier als SRC/"app"/... — diesen Pfad gibt es nicht,
+    # die Datei liegt unter services/. `_scan_files()` filtert mit
+    # `if p.exists()` und liess ihn deshalb WORTLOS fallen: der Waechter hat
+    # den Drilldown-Formatter nie gesehen, obwohl sein Detektor beide
+    # `raw_astimezone`-Funde dort sofort findet. Neue Eintraege deshalb immer
+    # gegen `test_scan_list_paths_all_exist()` unten pruefen.
+    SRC / "services" / "trip_command_processor.py",
     SRC / "app" / "cli.py",
     SRC / "services" / "radar_service.py",
     SRC / "services" / "notification_service.py",
@@ -511,6 +517,27 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/trip_report_scheduler.py::_build_stage_trend::0": "Aufrufseite abgesichert (vormals :1365) — _build_stage_trend (Wächter: test_production_callsites_pass_tz_explicitly).",
     "src/services/trip_report_scheduler.py::_build_stage_trend::1": "Aufrufseite abgesichert (vormals :1427) — Ternary-Rückfall zum Default von _build_stage_trend, daran gekoppelt.",
 }
+
+
+def test_scan_list_paths_all_exist():
+    """GIVEN die feste Dateiliste des Wächters
+    WHEN ein Eintrag auf einen Pfad zeigt, den es nicht (mehr) gibt
+    THEN ist das ein blinder Fleck, KEIN grüner Wächter.
+
+    Issue #1465: ``SRC/"app"/"trip_command_processor.py"`` existierte nie (die
+    Datei liegt unter ``services/``). ``_scan_files()`` filtert mit
+    ``if p.exists()`` und liess den Eintrag wortlos fallen — die Datei wurde
+    nie gescannt, der Wächter blieb grün, und zwei ``raw_astimezone``-Stellen
+    im Telegram-Drilldown schliefen dort monatelang. Ein Wächter, der nichts
+    findet, weil er nichts ansieht, ist immer grün.
+    """
+    missing = [str(p.relative_to(REPO_ROOT)) for p in _MESSAGING_SERVICE_FILES
+               if not p.exists()]
+    assert not missing, (
+        "Diese Einträge in _MESSAGING_SERVICE_FILES zeigen ins Leere und "
+        f"werden still uebersprungen: {missing} — Pfad korrigieren oder "
+        "Eintrag entfernen (verschoben/geloescht), nie einfach stehenlassen."
+    )
 
 
 def test_no_unlisted_output_timezone_violations():

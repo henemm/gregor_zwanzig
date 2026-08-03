@@ -13,6 +13,7 @@ Diese Tests MÜSSEN initial fehlschlagen:
 """
 from __future__ import annotations
 
+import time
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -35,7 +36,16 @@ from services.weather_snapshot import WeatherSnapshotService
 # ---------------------------------------------------------------------------
 
 def _hours(*specs: tuple[int, ThunderLevel | None, float | None]) -> list[ForecastDataPoint]:
-    """Baue stündliche ForecastDataPoints: (hour, thunder_level, temp)."""
+    """Baue stündliche ForecastDataPoints: (hour, thunder_level, temp).
+
+    ACHTUNG Hausnorm "naive UTC" (Issue #1345, src/app/models.py __post_init__):
+    Der hier aware uebergebene `ts` wird vom ForecastDataPoint SOFORT nach UTC
+    konvertiert und auf naiv gestrippt — schon vor dem Speichern. Erwartungen
+    gegen `ForecastDataPoint.ts` (und alles, was daraus entsteht, z.B.
+    DrilldownPoint.ts) muessen daher ZEITZONENLOS formuliert werden.
+    Nicht betroffen: TripSegment.start_time/end_time — die bleiben aware
+    (siehe TestTimeline.arrival_time).
+    """
     return [
         ForecastDataPoint(
             ts=datetime(2026, 2, 14, h, 0, tzinfo=timezone.utc),
@@ -164,7 +174,8 @@ class TestDrilldown:
         # chronologisch sortiert
         ts = [p.ts for p in result.points]
         assert ts == sorted(ts)
-        assert result.points[0].ts == datetime(2026, 2, 14, 10, 0, tzinfo=timezone.utc)
+        # Hausnorm #1345: ts ist naive UTC (Wanduhrzeit unveraendert 10:00)
+        assert result.points[0].ts == datetime(2026, 2, 14, 10, 0)
 
         # Enum-Wert je Stunde erhalten
         assert result.points[0].value == ThunderLevel.NONE
@@ -193,7 +204,63 @@ class TestDrilldown:
         assert result.available is True
         # Fenster [10:00, 13:00) -> 3 Stunden
         assert len(result.points) == 3
-        assert result.points[-1].ts < datetime(2026, 2, 14, 13, 0, tzinfo=timezone.utc)
+        # Hausnorm #1345: ts ist naive UTC; Fenstergrenze bleibt 13:00
+        assert result.points[-1].ts < datetime(2026, 2, 14, 13, 0)
+
+    def test_drilldown_naive_from_time_is_treated_as_utc(self, tmp_path: Path) -> None:
+        """
+        GIVEN eine 6-stündige Reihe,
+        WHEN drilldown() ein ZEITZONENLOSES `from_time` bekommt,
+        THEN gilt es per Hausnorm (#1345) unveraendert als UTC und liefert
+             genau dieselben Punkte wie das zeitzonenbehaftete Gegenstueck.
+
+        Gegenrichtung zur Normalisierung an der Grenze (`_to_naive_utc`): die
+        aware-Richtung ist durch die Drilldown-Tests des Telegram-Pfads
+        abgedeckt, die naive war es nicht. Deutete die Grenze einen naiven Wert
+        als PROZESS-Zeitzone (die spiegelverkehrte Falle), verschoebe sich das
+        Fenster um den UTC-Versatz des Hosts. Deshalb prueft dieser Test feste
+        Wanduhrzeiten — und nur deshalb faellt der Fehler ueberhaupt auf: der
+        Root-Conftest nagelt die Prozess-Zone auf ``America/St_Johns`` (#1402).
+        Auf einem UTC-Prozess waere die Falle unsichtbar, der Test also leer.
+        """
+        # Vorbedingung, nicht Beiwerk: ohne Versatz zur Weltzeit koennte dieser
+        # Test die spiegelverkehrte Falle gar nicht sehen (er waere still gruen).
+        assert time.tzname[0] != "UTC", (
+            "Prozess-Zeitzone ist UTC — der Zeitzonen-Anker aus conftest.py "
+            "(#1402) fehlt, dieser Test kann so nichts mehr beweisen."
+        )
+        svc = _snapshot_service(tmp_path)
+        hourly = _hours(
+            (10, ThunderLevel.NONE, 9.0),
+            (11, ThunderLevel.NONE, 9.0),
+            (12, ThunderLevel.MED, 10.0),
+            (13, ThunderLevel.MED, 10.0),
+            (14, ThunderLevel.HIGH, 11.0),
+            (15, ThunderLevel.HIGH, 11.0),
+        )
+        seg = _segment_weather(1, 10, 16, end_elevation_m=1500.0, hourly=hourly)
+        svc.save("gr20", [seg], date(2026, 2, 14))
+
+        ex = _extractor(tmp_path)
+        naive = ex.drilldown(
+            "gr20", "thunder_level",
+            from_time=datetime(2026, 2, 14, 12, 0), hours=3,
+        )
+        aware = ex.drilldown(
+            "gr20", "thunder_level",
+            from_time=datetime(2026, 2, 14, 12, 0, tzinfo=timezone.utc), hours=3,
+        )
+
+        assert naive.available is True
+        # Fenster [12:00, 15:00) — kein Versatz durch die Host-Zeitzone
+        assert [p.ts for p in naive.points] == [
+            datetime(2026, 2, 14, 12, 0),
+            datetime(2026, 2, 14, 13, 0),
+            datetime(2026, 2, 14, 14, 0),
+        ]
+        # ... und beide Schreibweisen meinen denselben Zeitpunkt
+        assert [p.ts for p in naive.points] == [p.ts for p in aware.points]
+        assert [p.value for p in naive.points] == [p.value for p in aware.points]
 
 
 # ---------------------------------------------------------------------------
