@@ -333,7 +333,7 @@ def _full_disabled_specs_like_trip_report(
     Issue #1410 §6) -- BEIDE Quellen, nicht nur SMS_SYMBOL_BY_METRIC. Der
     Adversary-Repro (F001) nutzte exakt diese Verdrahtung."""
     from output.renderers.sms_trip import (
-        SMS_FELT_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC,
+        SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC,
     )
 
     specs = [
@@ -343,7 +343,7 @@ def _full_disabled_specs_like_trip_report(
     ]
     specs += [
         MetricSpec(symbol=sym, enabled=metric_id in active_metric_ids)
-        for metric_id, syms in SMS_FELT_SYMBOLS_BY_METRIC.items()
+        for metric_id, syms in SMS_MULTI_SYMBOLS_BY_METRIC.items()
         for sym in syms
     ]
     return specs

@@ -257,7 +257,7 @@ class TripReportFormatter:
         )
 
         from output.renderers.sms_trip import (
-            SMSTripFormatter, SMS_FELT_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC,
+            SMSTripFormatter, SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC,
         )
         # Issue #624: konfigurierte Schwellwerte aus MetricConfig ableiten.
         _sms_thr = {
@@ -274,15 +274,17 @@ class TripReportFormatter:
             for metric_id, sym in SMS_SYMBOL_BY_METRIC.items()
             if metric_id not in active_metric_ids
         ]
-        # Issue #1410 §6: die drei gefuehlten Temperatur-Token erscheinen NUR
-        # bei aktivierter Metrik "Gefuehlte Temperatur" -- dasselbe
-        # Pruefmuster wie oben fuer SD/SL. Anders als dort wird die Spec in
-        # BEIDEN Faellen mitgegeben: nur so kann der Builder "aktiviert, aber
-        # keine Daten" (Null-Form, §9) von "gar nicht gewaehlt" (kein Token)
-        # unterscheiden. K/D/N bleiben unbedingt.
+        # Issue #1410 §6: die Temperatur-Token erscheinen NUR bei aktivierter
+        # Metrik -- dasselbe Pruefmuster wie oben fuer SD/SL. Anders als dort
+        # wird die Spec in BEIDEN Faellen mitgegeben: nur so kann der Builder
+        # "aktiviert, aber keine Daten" (Null-Form, §9) von "gar nicht
+        # gewaehlt" (kein Token) unterscheiden.
+        # Issue #1415: gilt jetzt auch fuer die GEMESSENE Temperatur (N/K/D);
+        # sie war bis dahin unbedingt und blieb als einzige Groesse auch nach
+        # Abwahl in der SMS stehen.
         _disabled_sms_specs += [
             MetricSpec(symbol=sym, enabled=metric_id in active_metric_ids)
-            for metric_id, syms in SMS_FELT_SYMBOLS_BY_METRIC.items()
+            for metric_id, syms in SMS_MULTI_SYMBOLS_BY_METRIC.items()
             for sym in syms
         ]
         # Issue #868: SMS-Text immer erzeugen (max 160 Zeichen, Standard-SMS-Limit).

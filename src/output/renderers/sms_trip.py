@@ -88,7 +88,7 @@ SMS_SYMBOL_BY_METRIC: dict[str, str] = {
     for metric_id in _SMS_SYMBOL_METRIC_IDS
 }
 
-# Issue #1410: metric_id -> SMS-Symbole der GEFUEHLTEN Temperatur. Eigene
+# Issue #1410: metric_id -> MEHRERE SMS-Kuerzel derselben Metrik. Eigene
 # Zuordnung, weil eine Metrik hier mehrere Symbole traegt (Nacht/Tiefst/
 # Hoechst) — SMS_SYMBOL_BY_METRIC bildet 1:1 ab und wird zusaetzlich fuer
 # Schwellwerte gelesen (#624), wo diese Symbole nichts zu suchen haben.
@@ -96,7 +96,18 @@ SMS_SYMBOL_BY_METRIC: dict[str, str] = {
 # _wintersport) ergaenzt -- ohne diesen Eintrag baut trip_report.py:283-287
 # keinen disabled_specs-Eintrag fuer WC, und die Abwahl von "Gefuehlte
 # Temperatur" im Trip-Editor wirkt sich nicht auf WC aus.
-SMS_FELT_SYMBOLS_BY_METRIC: dict[str, tuple[str, ...]] = {
+# Fix #1415 (PO-Entscheidung 2026-08-03): die GEMESSENE Temperatur folgt
+# derselben Regel -- 'N'/'K'/'D' hingen an keinem Eintrag und erschienen
+# deshalb auch bei abgewaehlter Metrik "Temperatur" (Beleg: Trip KHW 403,
+# "K13 D16 FK13 FD16 ..." bei ausgeschalteter Temperatur). Register-Kuerzel
+# taugen dafuer nicht: get_sms_code("temperature") == 'D' waere nur eines von
+# dreien, get_sms_code("temperature_cold") == 'N' gehoert zur internen
+# Alarm-Pseudogroesse (selectable=False), und ein Eintrag in
+# SMS_SYMBOL_BY_METRIC wuerde zusaetzlich einen Schwellwert auf 'D' legen
+# (#624), den es fuer Temperatur-Token gar nicht gibt. Daher hier, in der
+# frueher 'FELT' benannten Mehrfach-Tabelle.
+SMS_MULTI_SYMBOLS_BY_METRIC: dict[str, tuple[str, ...]] = {
+    "temperature": ("N", "K", "D"),
     "wind_chill": ("FN", "FK", "FD", "WC"),
 }
 
