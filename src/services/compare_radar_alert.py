@@ -118,12 +118,11 @@ class CompareRadarAlertService:
             entities=entities, effective_channels={"email"}, mail_sink=self._mail_sink,
             cooldown_display=_format_cooldown_display(cooldown_minutes),
         )
-        # Issue #1459: Vergleichs-Eintrag mit leerem `trip_id` + `preset_id`
-        # (D3). Gemischt konvektive/nicht-konvektive Orte ergeben BEIDE
+        # Issue #1459: gemischt konvektive/nicht-konvektive Orte ergeben BEIDE
         # Register-Paare in EINEM Eintrag.
         alert_log.append_entry(
-            self._user_id, preset_id=preset_id, changes_count=len(triggered),
-            severity="HIGH",
+            self._user_id, entity_id=preset_id, entity_type="compare",
+            changes_count=len(triggered), severity="HIGH",
             metrics=alert_log.register_pairs_for_nowcast(
                 [nowcast.is_convective for _name, _loc, nowcast in triggered]
             ),

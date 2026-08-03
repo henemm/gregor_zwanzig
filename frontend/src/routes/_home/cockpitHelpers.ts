@@ -9,6 +9,7 @@ import type {
 	Stage,
 	ReportConfig,
 	StageWeatherResult,
+	AlertLogEntry,
 	BriefingLogEntry,
 	ComparePreset
 } from '$lib/types';
@@ -164,6 +165,23 @@ export function plannedBriefings(
 		});
 	}
 	return rows;
+}
+
+/**
+ * Alarm-Einträge EINER Tour (Issue #1467 S1).
+ *
+ * Seit der Zusammenlegung von `trip_id`/`preset_id` liegen Tour- und
+ * Ortsvergleichs-Kennungen im selben Feld `entity_id` — ein Gleichheits-
+ * Vergleich allein wäre nicht mehr eindeutig, deshalb zählt der Typ mit.
+ * Ohne Alarm-Liste oder ohne Tour-Kennung: leere Liste (fail-soft), nicht
+ * „alles durchlassen".
+ */
+export function alertsForTrip(
+	alerts: AlertLogEntry[] | undefined,
+	tripId: string | undefined
+): AlertLogEntry[] {
+	if (!alerts || !tripId) return [];
+	return alerts.filter((a) => a.entity_type === 'trip' && a.entity_id === tripId);
 }
 
 export interface ArchiveCard {

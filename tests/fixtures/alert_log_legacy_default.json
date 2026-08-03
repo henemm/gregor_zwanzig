@@ -1,0 +1,478 @@
+{
+  "entries": [
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-27T07:08:24.841872+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-27T09:18:17.895054+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-27T12:09:35.062371+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-27T14:51:38.841309+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-27T19:14:42.168326+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-28T04:07:56.766944+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-29T05:00:42.599740+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-29T07:00:57.230771+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-29T09:02:06.782240+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-29T13:00:56.221010+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-29T15:08:38.264599+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-29T17:09:06.368884+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-30T04:32:47.341616+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-30T15:57:06.572208+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-30T18:14:56.967922+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-31T05:13:13.186395+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-31T08:10:25.971425+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-31T10:20:57.025475+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-31T12:28:29.040066+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-31T15:05:26.336850+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-31T17:48:36.013048+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-05-31T20:11:01.779254+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-01T05:01:45.008303+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-01T07:01:55.053995+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-01T10:30:25.558759+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-01T13:55:09.250082+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-01T15:55:47.907928+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-01T18:19:47.617362+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-02T04:45:58.547803+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-02T06:47:17.505044+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-02T09:16:47.940414+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-02T12:28:03.024538+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-02T16:11:18.556803+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-02T18:11:35.367438+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-02T20:13:11.436914+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-03T04:44:27.639563+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-03T06:57:21.283599+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-03T09:20:50.427375+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-03T11:57:02.824866+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-03T14:01:14.370532+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-03T17:03:06.239420+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-04T05:40:45.129638+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-04T07:46:35.251754+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-04T11:33:47.543896+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-04T13:46:10.437126+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-04T16:21:23.222926+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-05T05:37:07.626236+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-05T08:31:38.078425+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-05T12:19:11.350547+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-06T08:21:44.698279+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-06T10:40:55.375468+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-06T20:44:27.095679+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-07T05:33:23.594304+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-07T08:14:09.532866+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-07T11:14:21.696567+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-08T06:46:36.097948+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-08T15:35:06.342150+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-08T20:21:04.942337+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-09T07:48:35.262772+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-09T15:32:39.472015+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-10T05:21:10.273615+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-10T07:22:01.272168+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-10T11:00:23.256601+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-10T13:30:57.711855+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-10T15:47:34.953849+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-10T17:50:50.359083+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-10T20:26:41.932082+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-11T05:38:44.074753+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-11T08:49:04.818004+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-11T11:22:33.485400+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-11T16:54:35.913729+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-11T20:16:50.216707+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-12T06:05:53.277068+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-12T08:15:20.455925+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "test-trip",
+      "sent_at": "2026-06-14T21:11:11.031107+00:00",
+      "changes_count": 3,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "adv-test-707",
+      "sent_at": "2026-06-20T09:00:37.086952+00:00",
+      "changes_count": 8,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "adv-test-707",
+      "sent_at": "2026-07-09T05:30:00.852472+00:00",
+      "changes_count": 4,
+      "severity": "MODERATE"
+    },
+    {
+      "trip_id": "e2e-radar-nowcast",
+      "sent_at": "2026-07-12T05:44:29.747357+00:00",
+      "changes_count": 1,
+      "severity": "HIGH"
+    },
+    {
+      "trip_id": "e2e-radar-convective",
+      "sent_at": "2026-07-12T05:44:29.772082+00:00",
+      "changes_count": 1,
+      "severity": "HIGH"
+    }
+  ]
+}

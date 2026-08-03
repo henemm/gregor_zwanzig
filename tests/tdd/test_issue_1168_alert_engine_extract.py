@@ -233,7 +233,7 @@ def test_ac1_trip_alarm_fires_identically_after_extraction(telegram_sink, clean_
     log_path = get_data_dir(user_id) / "alert_log.json"
     log = json.loads(log_path.read_text())
     last_entry = log["entries"][-1]
-    assert last_entry["trip_id"] == trip.id
+    assert last_entry["entity_id"] == trip.id
     assert last_entry["changes_count"] == 1
     assert last_entry["severity"] == "MODERATE", (
         f"erwartete Severity MODERATE (Δ=16 ist 60% über Schwelle 10, "

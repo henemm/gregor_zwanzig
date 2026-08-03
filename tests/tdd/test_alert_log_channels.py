@@ -180,9 +180,9 @@ def test_ac10_kein_konfigurierbarer_kanal_landet_in_not_delivered():
     assert entry.get("channels_sent") == [], (
         f"Kein Kanal kam an: {entry.get('channels_sent')!r}"
     )
-    assert entry.get("trip_id") == "trip-ac10", (
+    assert entry.get("entity_id") == "trip-ac10", (
         "Die Nicht-Zustellung muss der Tour zuordenbar bleiben: "
-        f"{entry.get('trip_id')!r}"
+        f"{entry.get('entity_id')!r}"
     )
 
 
@@ -217,8 +217,8 @@ def test_ac15_konfiguriert_aber_nichts_zugestellt_bleibt_in_entries():
             f"Kanal {kanal!r} war aktiv und ist gescheitert — erwartet "
             f"'delivery_failed', erhalten: {reason_for_channel(entry, kanal)!r}"
         )
-    assert entry.get("trip_id") == "trip-ac15", (
-        f"Der Eintrag muss der Tour zuordenbar bleiben: {entry.get('trip_id')!r}"
+    assert entry.get("entity_id") == "trip-ac15", (
+        f"Der Eintrag muss der Tour zuordenbar bleiben: {entry.get('entity_id')!r}"
     )
 
 
@@ -230,7 +230,7 @@ def test_ac11_fehlgeschlagener_versand_veraendert_die_angezeigte_zahl_nicht():
     WHEN zusaetzlich ein komplett fehlgeschlagener Versand derselben Tour
     protokolliert wird
     THEN bleibt die Zahl der ``entries``-Eintraege dieser Tour bei zwei — das
-    ist bit-genau das, was die Archiv-Statistik (``AlertCountByTrip``) und die
+    ist bit-genau das, was die Archiv-Statistik (``AlertCountByEntity``) und die
     Cockpit-Kachel lesen."""
     from services import alert_log
 
@@ -246,11 +246,16 @@ def test_ac11_fehlgeschlagener_versand_veraendert_die_angezeigte_zahl_nicht():
     (user_dir / "alert_log.json").write_text(json.dumps(bestand))
 
     def _zaehle_x() -> int:
-        return sum(1 for e in read_log(uid)["entries"] if e.get("trip_id") == "X")
+        # Bestand traegt die Kennung noch als `trip_id` (#1467 S1: keine
+        # Datei-Migration), neue Eintraege als `entity_id` — beide zaehlen.
+        return sum(
+            1 for e in read_log(uid)["entries"]
+            if (e.get("entity_id") or e.get("trip_id")) == "X"
+        )
 
     vorher = _zaehle_x()
     alert_log.append_entry(
-        uid, trip_id="X", changes_count=1, severity="MODERATE",
+        uid, entity_id="X", entity_type="trip", changes_count=1, severity="MODERATE",
         metrics=[("gust", "max")], reason="forecast_change",
         effective_channels={"email"}, sent_channels=[],
     )

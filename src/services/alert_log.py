@@ -9,10 +9,17 @@ die Gefahrenart amtlicher Warnungen als eigenes Feld `hazards`, den Ausloese-
 Grund `reason` und die Kanal-Aufschluesselung (zugestellt / nicht zugestellt
 mit Begruendung).
 
+Seit #1467 S1 traegt jeder Eintrag GENAU EINE Kennung: `entity_id` plus das
+Typfeld `entity_type` (`"trip"` | `"compare"`). Die frueheren Doppelfelder
+`trip_id`/`preset_id` — von denen immer eins leer war — werden nicht mehr
+geschrieben. Bestandsdateien bleiben unangetastet; Go setzt beim LESEN
+`entity_id := trip_id` und `entity_type := "trip"`, wenn die neuen Felder
+fehlen (`internal/store/log.go LoadAlertLog()`).
+
 Zwei harte Nebenbedingungen bestimmen den Aufbau:
 
 * **D1** — EIN Eintrag je Meldung, Kanaele als Listen INNERHALB des Eintrags.
-  `internal/store/log.go AlertCountByTrip()` zaehlt Eintraege, nicht Kanaele.
+  `internal/store/log.go AlertCountByEntity()` zaehlt Eintraege, nicht Kanaele.
 * **D4** — komplett fehlgeschlagene Zustellungen landen im zweiten Top-Level-
   Schluessel `not_delivered`, den Go nie liest. Cockpit-Kachel und
   Archiv-Statistik aendern sich fuer Bestandstouren dadurch um keine Zahl.
@@ -117,8 +124,8 @@ def _channels_not_sent(effective: set[str], delivered: list[str]) -> list[dict]:
 def append_entry(
     user_id: str,
     *,
-    trip_id: str = "",
-    preset_id: str = "",
+    entity_id: str,
+    entity_type: str,
     changes_count: int,
     severity: str,
     metrics: Iterable = (),
@@ -129,6 +136,10 @@ def append_entry(
     reachable_channels: Optional[Iterable[str]] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag an das Alarm-Protokoll des Nutzers an.
+
+    `entity_id` + `entity_type` sind PFLICHT und ohne Vorgabewert (#1467 S1):
+    eine vergessene Aufrufstelle soll knallen statt still einen Eintrag ohne
+    Kennung zu schreiben.
 
     Wird an jeder Aufrufstelle einmal nach dem Versandversuch gerufen -- egal
     ob er gelang. Die Ziel-Liste entscheidet diese Funktion selbst (O3/D4):
@@ -169,13 +180,14 @@ def append_entry(
         if c in effective
     }
     entry = {
-        # Die vier Altfelder -- Name, Typ und Bedeutung unveraendert (D2).
-        "trip_id": trip_id,
+        # EINE Kennung plus Typ (#1467 S1). Kein Doppelschreiben: `trip_id` und
+        # `preset_id` kommen in neuen Eintraegen nicht mehr vor -- sonst erbten
+        # die Folge-Scheiben genau den Zustand, den S1 beseitigt.
+        "entity_id": entity_id,
+        "entity_type": entity_type,
         "sent_at": datetime.now(tz=timezone.utc).isoformat(),
         "changes_count": changes_count,
         "severity": severity,
-        # Neu, rein additiv.
-        "preset_id": preset_id,
         "metrics": [
             {"metric_id": metric_id, "aggregation": aggregation}
             for metric_id, aggregation in _norm_pairs(metrics)

@@ -135,11 +135,10 @@ class CompareOfficialAlertService:
             mail_sink=self._mail_sink, sms_sink=self._sms_sink,
             telegram_sink=self._telegram_sink,
         )
-        # Issue #1459: Vergleichs-Eintrag mit leerem `trip_id` + `preset_id`
-        # (D3); die Gefahrenart steht in `hazards`, nicht in `metrics` (O1).
+        # Issue #1459: die Gefahrenart steht in `hazards`, nicht in `metrics` (O1).
         alert_log.append_entry(
-            self._user_id, preset_id=preset_id, changes_count=len(tagged_alerts),
-            severity="MODERATE",
+            self._user_id, entity_id=preset_id, entity_type="compare",
+            changes_count=len(tagged_alerts), severity="MODERATE",
             hazards=alert_log.hazards_from_official_alerts(
                 [a for a, _loc_ids in tagged_alerts]
             ),

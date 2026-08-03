@@ -91,6 +91,14 @@ verdrei­fachen. Kanaele werden deshalb als **Listen innerhalb EINES Eintrags** 
 
 ### D2 — additiv, vier Altfelder unangetastet (Tech-Lead-Vorgabe, uebernommen)
 
+> ⚠️ **Ueberholt seit Issue #1467 Scheibe S1** (2026-08-03). D2 und D3 galten fuer
+> #1459; seither tragen neue Eintraege **eine** Kennung `entity_id` plus das Typfeld
+> `entity_type` (`"trip"` | `"compare"`), und `trip_id`/`preset_id` werden nicht mehr
+> geschrieben. Bestandsdateien bleiben unveraendert — Go leitet beim Lesen
+> `entity_id := trip_id` und `entity_type := "trip"` ab. Massgeblich ist
+> `docs/specs/modules/rework_1467_s1_alarm_kennung.md`. Der folgende Abschnitt
+> beschreibt den Stand von #1459 und bleibt als Historie stehen.
+
 `trip_id`, `sent_at`, `changes_count`, `severity` bleiben in Name/Typ/Bedeutung exakt
 wie heute. `encoding/json` in Go ignoriert unbekannte Felder — keine Go-Aenderung
 noetig oder gewuenscht in dieser Scheibe.

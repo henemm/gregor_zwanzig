@@ -108,9 +108,9 @@ def test_ac12_ortsvergleich_protokolliert_alle_drei_ausloeser():
     """AC-12 GIVEN ein Vergleichs-Preset loest je einmal einen Δ-, einen
     Radar- und einen amtlichen Alarm aus (jeweils erfolgreich)
     WHEN die drei Alarme versendet werden
-    THEN entstehen drei Eintraege in ``entries`` mit LEEREM ``trip_id`` und
-    gesetztem ``preset_id`` — je mit dem passenden Grund. Heute (B1)
-    protokolliert der Ortsvergleich gar nicht."""
+    THEN entstehen drei Eintraege in ``entries`` mit ``entity_type ==
+    "compare"`` und der Preset-Kennung in ``entity_id`` (#1467 S1) — je mit dem
+    passenden Grund. Heute (B1) protokolliert der Ortsvergleich gar nicht."""
     from services.compare_alert import CompareAlertService
     from services.compare_official_alert import CompareOfficialAlertService
     from services.compare_radar_alert import CompareRadarAlertService
@@ -157,12 +157,12 @@ def test_ac12_ortsvergleich_protokolliert_alle_drei_ausloeser():
             "Der Ortsvergleich protokolliert seine Alarme nicht — erwartet 3 "
             f"Eintraege, erhalten {len(entries)}."
         )
-        assert all(e.get("trip_id") == "" for e in entries), (
-            "Vergleichs-Eintraege muessen ein LEERES trip_id tragen, sonst "
+        assert all(e.get("entity_type") == "compare" for e in entries), (
+            "Vergleichs-Eintraege muessen den Typ 'compare' tragen, sonst "
             f"zaehlt die Archiv-Statistik sie als Tour-Alarme: {entries!r}"
         )
-        assert all(e.get("preset_id") == _PRESET_ID for e in entries), (
-            f"preset_id fehlt oder ist falsch: {entries!r}"
+        assert all(e.get("entity_id") == _PRESET_ID for e in entries), (
+            f"entity_id fehlt oder ist falsch: {entries!r}"
         )
         assert sorted(e.get("reason") for e in entries) == [
             "forecast_change", "nowcast", "official_alert",
@@ -198,7 +198,7 @@ def test_ac13_zwei_nutzer_protokollieren_streng_getrennt():
                               (bob, "trip-bob", "trip-alice")):
         log = read_log(uid)
         alle = log["entries"] + log["not_delivered"]
-        touren = {e.get("trip_id") for e in alle}
+        touren = {e.get("entity_id") for e in alle}
         assert touren == {eigen}, (
             f"Das Protokoll von {uid} enthaelt {touren!r} statt nur {eigen!r} — "
             f"Fremd-Eintrag {fremd!r} waere ein Datenleck zwischen Nutzern."
@@ -226,7 +226,8 @@ def test_ac14_alt_eintrag_ohne_neue_felder_bleibt_unveraendert_lesbar():
     (user_dir / "alert_log.json").write_text(json.dumps({"entries": [dict(alt)]}))
 
     alert_log.append_entry(
-        uid, trip_id="trip-neu", changes_count=1, severity="MODERATE",
+        uid, entity_id="trip-neu", entity_type="trip", changes_count=1,
+        severity="MODERATE",
         metrics=[("gust", "max")], reason="forecast_change",
         effective_channels={"email"}, sent_channels=["email"],
     )

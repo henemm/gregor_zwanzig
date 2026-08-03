@@ -29,7 +29,8 @@ def _append(trip_id: str, changes_count: int, severity: str, user_id: str = "tes
     from services import alert_log
 
     alert_log.append_entry(
-        user_id, trip_id=trip_id, changes_count=changes_count, severity=severity,
+        user_id, entity_id=trip_id, entity_type="trip",
+        changes_count=changes_count, severity=severity,
         reason=alert_log.REASON_FORECAST_CHANGE,
         effective_channels={"email"}, sent_channels=["email"],
     )
@@ -40,8 +41,8 @@ def _append(trip_id: str, changes_count: int, severity: str, user_id: str = "tes
 def test_append_alert_log_creates_file_with_entry():
     """
     GIVEN: Kein alert_log.json existiert
-    WHEN: append_entry(trip_id="trip-123", changes_count=2, severity="MODERATE")
-    THEN: alert_log.json wird erstellt mit trip_id, sent_at, changes_count, severity
+    WHEN: append_entry(entity_id="trip-123", entity_type="trip", changes_count=2, …)
+    THEN: alert_log.json wird erstellt mit entity_id, sent_at, changes_count, severity
 
     Issue #1133-Fixture-Kollision: append_entry() schreibt ueber
     get_data_dir(), das von der autouse-Isolationsfixture auf einen
@@ -63,7 +64,7 @@ def test_append_alert_log_creates_file_with_entry():
     assert len(data["entries"]) == 1
 
     entry = data["entries"][0]
-    assert entry["trip_id"] == "trip-123"
+    assert entry["entity_id"] == "trip-123"
     assert entry["changes_count"] == 2
     assert entry["severity"] == "MODERATE"
     assert "sent_at" in entry

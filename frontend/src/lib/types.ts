@@ -555,8 +555,13 @@ export interface BriefingLogEntry {
 	channels: string[];
 }
 
+// Issue #1467 S1: EINE Kennung + Typfeld statt trip_id/preset_id. `trip_id` ist
+// nur noch optionales Altfeld — Bestandsdateien tragen es weiter, die Go-Seite
+// leitet daraus beim Lesen entity_id/entity_type ab.
 export interface AlertLogEntry {
-	trip_id: string;
+	entity_id: string;
+	entity_type: string;
+	trip_id?: string;
 	sent_at: string;
 	changes_count: number;
 	severity: 'LOW' | 'MODERATE' | 'HIGH';

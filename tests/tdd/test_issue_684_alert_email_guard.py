@@ -143,7 +143,8 @@ def _alert_log_count(trip_id: str) -> int:
     if not path.exists():
         return 0
     data = json.loads(path.read_text())
-    return sum(1 for e in data.get("entries", []) if e.get("trip_id") == trip_id)
+    # #1467 S1: die Kennung steht jetzt in `entity_id`.
+    return sum(1 for e in data.get("entries", []) if e.get("entity_id") == trip_id)
 
 
 @pytest.fixture(autouse=True)

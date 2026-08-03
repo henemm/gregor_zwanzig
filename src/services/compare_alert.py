@@ -138,12 +138,11 @@ class CompareAlertService:
                 mail_sink=self._mail_sink,
             )
             # Issue #1459: der Ortsvergleich protokollierte bisher gar nicht
-            # (B1). Vergleichs-Eintraege tragen ein LEERES `trip_id` und
-            # stattdessen `preset_id` (D3) — sonst zaehlte die Archiv-Statistik
-            # sie als Tour-Alarme.
+            # (B1). Seit #1467 S1 traegt der Eintrag die Preset-Kennung im
+            # gemeinsamen Feld `entity_id`, unterschieden durch `entity_type`.
             alle_changes = [c for t in triggered for c in t["changes"]]
             alert_log.append_entry(
-                self._user_id, preset_id=preset_id,
+                self._user_id, entity_id=preset_id, entity_type="compare",
                 changes_count=len(alle_changes),
                 severity=DeviationAlertEngine._highest_severity(alle_changes),
                 metrics=alert_log.register_pairs_from_changes(alle_changes),

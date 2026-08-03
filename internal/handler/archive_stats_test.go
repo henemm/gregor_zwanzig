@@ -58,11 +58,14 @@ func TestArchiveStatsHandler_ReturnsCountsJson(t *testing.T) {
 	if briefings["trip-B"] != 1 {
 		t.Errorf("expected briefings trip-B=1, got %v", briefings["trip-B"])
 	}
-	if alerts["trip-A"] != 1 {
-		t.Errorf("expected alerts trip-A=1, got %v", alerts["trip-A"])
+	// #1467 S1: Alarm-Schluessel ist "<typ>:<kennung>"; Altbestand ohne
+	// entity_type wird beim Lesen als Typ "trip" gefuehrt. Briefing-Schluessel
+	// bleiben unveraendert die blosse Tour-Kennung.
+	if alerts["trip:trip-A"] != 1 {
+		t.Errorf("expected alerts trip:trip-A=1, got %v", alerts["trip:trip-A"])
 	}
-	if alerts["trip-B"] != 2 {
-		t.Errorf("expected alerts trip-B=2, got %v", alerts["trip-B"])
+	if alerts["trip:trip-B"] != 2 {
+		t.Errorf("expected alerts trip:trip-B=2, got %v", alerts["trip:trip-B"])
 	}
 }
 
@@ -132,13 +135,13 @@ func TestArchiveStatsHandler_IsolatedPerUser(t *testing.T) {
 	if aBrief["trip-A1"] != 2 {
 		t.Errorf("userA: expected briefings trip-A1=2, got %v", aBrief["trip-A1"])
 	}
-	if aAlert["trip-A1"] != 1 {
-		t.Errorf("userA: expected alerts trip-A1=1, got %v", aAlert["trip-A1"])
+	if aAlert["trip:trip-A1"] != 1 {
+		t.Errorf("userA: expected alerts trip:trip-A1=1, got %v", aAlert["trip:trip-A1"])
 	}
 	if _, leaked := aBrief["trip-B1"]; leaked {
 		t.Errorf("cross-user leak: userB trip-B1 in userA briefings: %v", aBrief)
 	}
-	if _, leaked := aAlert["trip-B1"]; leaked {
+	if _, leaked := aAlert["trip:trip-B1"]; leaked {
 		t.Errorf("cross-user leak: userB trip-B1 in userA alerts: %v", aAlert)
 	}
 
@@ -153,13 +156,13 @@ func TestArchiveStatsHandler_IsolatedPerUser(t *testing.T) {
 	if bBrief["trip-B1"] != 1 {
 		t.Errorf("userB: expected briefings trip-B1=1, got %v", bBrief["trip-B1"])
 	}
-	if bAlert["trip-B1"] != 2 {
-		t.Errorf("userB: expected alerts trip-B1=2, got %v", bAlert["trip-B1"])
+	if bAlert["trip:trip-B1"] != 2 {
+		t.Errorf("userB: expected alerts trip:trip-B1=2, got %v", bAlert["trip:trip-B1"])
 	}
 	if _, leaked := bBrief["trip-A1"]; leaked {
 		t.Errorf("cross-user leak: userA trip-A1 in userB briefings: %v", bBrief)
 	}
-	if _, leaked := bAlert["trip-A1"]; leaked {
+	if _, leaked := bAlert["trip:trip-A1"]; leaked {
 		t.Errorf("cross-user leak: userA trip-A1 in userB alerts: %v", bAlert)
 	}
 }

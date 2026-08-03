@@ -276,7 +276,8 @@ class TripAlertService:
         # ein Kanal kam an, Ist-Verhalten) oder nach `not_delivered` geht (D4).
         alert_log.append_entry(
             self._user_id,
-            trip_id=trip.id,
+            entity_id=trip.id,
+            entity_type="trip",
             changes_count=len(to_report),
             severity=eval_result.severity,
             metrics=alert_log.register_pairs_from_changes(to_report),
@@ -866,7 +867,8 @@ class TripAlertService:
             # `append_entry()` selbst (D4). `result` traegt hier bereits die
             # NotificationResult — die Nowcast-Auswertung steckt im Request.
             alert_log.append_entry(
-                self._user_id, trip_id=trip.id, changes_count=1, severity="HIGH",
+                self._user_id, entity_id=trip.id, entity_type="trip",
+                changes_count=1, severity="HIGH",
                 metrics=alert_log.register_pairs_for_nowcast(
                     _radar_request.is_convective
                 ),
@@ -1134,8 +1136,8 @@ class TripAlertService:
         # Issue #1459: amtliche Warnungen tragen ihre Gefahrenart in `hazards`,
         # NICHT als Register-Kennung in `metrics` (eigenes Vokabular, O1).
         alert_log.append_entry(
-            self._user_id, trip_id=trip.id, changes_count=len(official_notices),
-            severity="MODERATE",
+            self._user_id, entity_id=trip.id, entity_type="trip",
+            changes_count=len(official_notices), severity="MODERATE",
             hazards=alert_log.hazards_from_official_alerts(
                 [a for a, _segment_ids in official_notices]
             ),

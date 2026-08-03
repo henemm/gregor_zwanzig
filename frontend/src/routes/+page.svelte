@@ -15,7 +15,12 @@
 		formatNextSend
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { tripStatus, activeOrNextTrip, todayStageIndex } from '$lib/utils/tripStatus.js';
-	import { plannedBriefings, archivedTrips, homeCompareTimeline } from './_home/cockpitHelpers.js';
+	import {
+		plannedBriefings,
+		archivedTrips,
+		homeCompareTimeline,
+		alertsForTrip
+	} from './_home/cockpitHelpers.js';
 	import {
 		dayProgress,
 		setupStepTrip,
@@ -105,9 +110,7 @@
 	const briefings = $derived(
 		hero ? plannedBriefings(hero.report_config, cockpitStatus?.briefings, hero.id) : []
 	);
-	const heroAlerts = $derived(
-		(cockpitStatus?.alerts ?? []).filter((a) => a.trip_id === hero?.id)
-	);
+	const heroAlerts = $derived(alertsForTrip(cockpitStatus?.alerts, hero?.id));
 	const archive = $derived(archivedTrips(trips, now, 4));
 
 	// AC-9: fertig-Trips aus otherTrips ausschließen
