@@ -10,13 +10,14 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
 from app.config import Settings
 from output.renderers.trip_report import TripReportFormatter
 from output.renderers.alert.model import AlertMessage, OnsetEvent
-from output.renderers.alert.project import to_alert_message
+from output.renderers.alert.project import to_alert_message, to_multi_point_alert_message
 from output.renderers.alert.render import (
     render_email as render_alert_email,
     render_sms as render_alert_sms,
@@ -529,7 +530,6 @@ class NotificationService:
 
         `entities`: `list[(location_name, points, changes)]`.
         """
-        from output.renderers.alert.project import to_multi_point_alert_message
         from utils.timezone import tz_for_coords
 
         first_points = entities[0][1]
@@ -541,6 +541,12 @@ class NotificationService:
         ]
         alert_msg = to_multi_point_alert_message(groups, tz=alert_tz, stand_at=stand_at)
         target_name = ", ".join(name for name, _points, _changes in entities)
+        # Issue #1467 S2 AG3a: NUR dieser Aufrufer (Ortsvergleich-
+        # Aenderungsalarm) reicht `telegram_groups` durch -- damit faechert
+        # `_dispatch_alert_message()` Telegram je Ort auf (PO E2, „eine
+        # Sprechblase je Ort"). Die drei anderen Aufrufer (Trip-Delta,
+        # Trip-Radar, Compare-Radar) uebergeben den Parameter nicht und
+        # bleiben unveraendert bei EINER gebuendelten Telegram-Nachricht.
         return self._dispatch_alert_message(
             alert_msg=alert_msg,
             effective_channels=effective_channels,
@@ -549,6 +555,7 @@ class NotificationService:
             target_name=target_name,
             radar_mode=False,
             alert_tz=alert_tz,
+            telegram_groups=groups,
         )
 
     def send_multi_location_radar_alert(
@@ -1035,6 +1042,7 @@ class NotificationService:
         official_notices: Optional[list] = None,
         alert_tz: ZoneInfo,
         telegram_style: str = "rich",
+        telegram_groups: Optional[list[tuple[str, list, object]]] = None,
     ) -> NotificationResult:
         """Versendet eine kanonische AlertMessage über die konfigurierten Kanäle.
 
@@ -1051,6 +1059,14 @@ class NotificationService:
         Issue #1088: liegen `official_notices` vor, wird ein Text-Block an
         html/plain/telegram_body angehängt — SMS bewusst OHNE Zusatz
         (Nicht-Parität, analog Slice-3-AC-6).
+
+        Issue #1467 S2 AG3a: `telegram_groups` (`list[(location_name,
+        changes, point)]`) ist ein NEUER, defaultierter Parameter —
+        ausschließlich `send_multi_location_deviation_alert()` setzt ihn.
+        Ist er gesetzt, faechert der Telegram-Zweig in EINE Sprechblase je
+        Ort auf (PO E2), statt der einen gebuendelten Nachricht. Alle
+        anderen Aufrufer (Trip-Δ, Trip-Radar, Compare-Radar) lassen den
+        Parameter auf `None` — ihr Verhalten bleibt unveraendert (AC-26).
         """
         subject = render_alert_subject(alert_msg)
         html, plain = render_alert_email(alert_msg)
@@ -1093,6 +1109,10 @@ class NotificationService:
 
         sent_channels: list[str] = []
         failed_channels: list[str] = []
+        # Issue #1467 S2 AG3a: bleibt True fuer alle Aufrufer ohne
+        # `telegram_groups` (unveraendertes Verhalten). Nur der Fan-out-Zweig
+        # unten setzt ihn bei einer Teilzustellung auf False (AC-25c).
+        telegram_fully_sent = True
 
         def _log_error(channel: str, e: Exception) -> None:
             failed_channels.append(channel)  # Issue #1459: Alarm-Protokoll
@@ -1123,7 +1143,57 @@ class NotificationService:
         if "telegram" in effective_channels and self._settings.can_send_telegram():
             sent_channels.append("telegram")
             try:
-                if telegram_style == "kurzform":
+                if telegram_groups:
+                    # Issue #1467 S2 AG3a: EINE Sprechblase je Ort statt
+                    # einer gebuendelten Nachricht (PO E2). `to_multi_point_
+                    # alert_message()` mit GENAU einer Gruppe liefert
+                    # byte-identisch die bereits erprobte Einzel-Ort-Form
+                    # (project.py:193-195). Kein Abbruch der Serie bei einem
+                    # Teilfehler (#1370-Muster) -- jeder Ort bekommt seinen
+                    # eigenen try/except.
+                    #
+                    # Issue #1467 S2 AG3 Haertung (Adversary F002): der
+                    # try/except umschliesst AUCH das Aufbereiten
+                    # (`to_multi_point_alert_message()`/`render_alert_
+                    # telegram()`), nicht nur `.send()`. Diese Fehlerklasse
+                    # -- eine Ausnahme in einer Schleife reisst alle
+                    # UEBRIGEN Einheiten mit -- hat in dieser Scheibe bereits
+                    # zweimal zugeschlagen (#1467 S2 AG2, F001 und F003: ein
+                    # kaputter Ruhezeit-Wert brachte den kompletten
+                    # Alarm-Lauf zum Absturz und schaltete alle weiteren
+                    # Ortsvergleiche still). Ohne dieses Haertung wuerde ein
+                    # Rendering-Fehler bei EINEM Ort die gesamte Serie
+                    # abbrechen: 0 statt N-1 Nachrichten kommen an, kein
+                    # Hinweis geht raus, und `telegram_fully_sent` bleibt
+                    # faelschlich True trotz `failed_channels=['telegram']`.
+                    failed_count = 0
+                    for group in telegram_groups:
+                        try:
+                            single_msg = to_multi_point_alert_message(
+                                [group], tz=alert_tz, stand_at=alert_msg.stand_at,
+                            )
+                            single_body = render_alert_telegram(single_msg)
+                            TelegramOutput(self._settings).send(
+                                subject=subject,
+                                body=single_body,
+                                parse_mode="HTML",
+                                suppress_subject_line=True,
+                            )
+                        except Exception as e:
+                            logger.error(
+                                f"Telegram alert (Ort {group[0]!r}) failed "
+                                f"for {target_name}: {e}"
+                            )
+                            telegram_fully_sent = False
+                            failed_count += 1
+                    if failed_count:
+                        failed_channels.append("telegram")
+                        # #1370-Muster: Teilzustellung wird gemeldet statt
+                        # still verschluckt.
+                        self._send_telegram_incomplete_hint(
+                            SimpleNamespace(email_subject=subject), failed_count,
+                        )
+                elif telegram_style == "kurzform":
                     TelegramOutput(self._settings).send(
                         subject=subject,
                         body=sms_body,
@@ -1151,6 +1221,7 @@ class NotificationService:
         return NotificationResult(
             sent=bool(sent_channels), sent_channels=sent_channels,
             failed_channels=failed_channels,
+            telegram_fully_sent=telegram_fully_sent,
         )
 
     # ------------------------------------------------------------------

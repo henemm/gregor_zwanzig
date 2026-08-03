@@ -418,6 +418,30 @@ dupliziert).
   - Test: Golden-Vergleich der gerenderten E-Mail-Struktur (Anzahl Ortsblöcke, keine
     Aufsplittung) vor/nach dem Umbau.
 
+- **AC-24:** Given ein gebündelter Änderungsalarm für zehn Orte, When der Telegram-Versand
+  läuft, Then kommen zehn einzelne Nachrichten an der Senke an — es gibt **keine** Obergrenze,
+  ab der wieder gebündelt wird (PO-Entscheidung E-AG3-1, Kontingent-Risiko benannt und
+  angenommen).
+  - Test: zehn Orte, `telegram_sink.send_count() == 10`.
+
+- **AC-25:** Given einen Telegram-Fan-out über drei Orte, bei dem die **zweite** Zustellung
+  fehlschlägt, When der Versand läuft, Then wird die dritte Nachricht trotzdem zugestellt
+  (kein Abbruch der Serie), der Nutzer erhält einen Hinweis auf die unvollständige Zustellung,
+  und das Alarm-Protokoll weist Telegram NICHT als vollständig zugestellt aus.
+  - Test: Senke, die beim zweiten Aufruf wirft; danach 2 erfolgreiche Zustellungen + 1 Hinweis;
+    `notif_result.telegram_fully_sent is False`; Protokolleintrag entsprechend.
+    Muster: `notification_service.py:359-382` + `_send_telegram_incomplete_hint()` `:395` (#1370).
+
+- **AC-26:** Given einen Trip-Änderungsalarm, einen Trip-Radar-Alarm und einen
+  Ortsvergleich-Radar-Alarm, When sie nach dem Umbau versendet werden, Then bleibt es bei
+  jeweils EINER Telegram-Nachricht — der Fan-out greift ausschließlich im
+  Ortsvergleich-Änderungs-Pfad.
+  - Test: je ein Versand über die drei anderen Einstiege, `telegram_sink.send_count() == 1`.
+    Begründung: alle vier Pfade laufen durch dieselbe `_dispatch_alert_message()`
+    (`notification_service.py:1026`), es gibt kein Feld, das „Ortsvergleich" markiert —
+    der Fan-out muss über einen neuen, defaultierten Parameter laufen, gesetzt nur in
+    `send_multi_location_deviation_alert()` (`:544-552`).
+
 **AG4 — Telegram/SMS für Ortsvergleich scharf schalten**
 
 - **AC-10:** Given ein Compare-Preset mit `send_telegram: true` und telegramfähigen
