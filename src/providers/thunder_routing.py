@@ -1,0 +1,58 @@
+"""Gebiet -> zustaendige GEWITTER-Quelle (#1457 S2a, Konzept #1419).
+
+WARUM eine ZWEITE Tabelle neben `providers.region_routing`?
+Weil die Zustaendigkeit **groessenabhaengig** ist: Ein Dienst kann fuer
+Temperatur, Wind und Schnee die beste Quelle sein und trotzdem ueberhaupt
+kein Gewittersignal liefern. Konkreter Fall Oesterreich: Schnee kommt von
+GeoSphere (`at_direct`, SNOWGRID), ein Blitz-/Gewittersignal hat GeoSphere
+aber nicht — dort wird in S2b der DWD zustaendig. Wuerde man beides in EINE
+Tabelle zwingen, muesste der Anreicherungsweg Sonderfaelle je Groesse
+kennen; genau das verbietet Spec AC-8. Verwandtes Muster: ADR-0041
+(Zustaendigkeit einer Warn-Quelle wird nach Endpunkt-Art bestimmt).
+
+Stand dieser Scheibe (S2a): NUR der FR-Eintrag. Folge-Scheiben tragen hier
+je EINE Zeile nach und implementieren `fetch_thunder_signals` in ihrem
+Provider — mehr nicht:
+  - S2b: DWD fuer DE + Alpenraum
+  - S2c: Lueckenfueller fuer den Rest
+
+Import-Regel (Zyklus-Vermeidung, wie `region_routing`): dieses Modul darf
+`providers.openmeteo` NICHT importieren.
+"""
+from __future__ import annotations
+
+from typing import NamedTuple, Optional
+
+
+class _ThunderRegion(NamedTuple):
+    name: str
+    min_lat: float
+    max_lat: float
+    min_lon: float
+    max_lon: float
+    provider: str
+
+
+# Erste treffende Region gewinnt. Das FR-Rechteck ist bewusst identisch zu
+# `region_routing._REGIONS` gewaehlt (Frankreich inkl. Korsika); es ist
+# trotzdem eine EIGENE Zeile, damit S2b die Gewitter-Zustaendigkeit
+# verschieben kann, ohne die Grundvorhersage-Zustaendigkeit anzufassen.
+# Bekannte Grenze (Spec "Known Limitations" 3): die Ostgrenze 9,7 O laesst
+# fuer Korsika (9,07 O) nur eine kleine Marge.
+_REGIONS: tuple[_ThunderRegion, ...] = (
+    _ThunderRegion("FR", 41.3, 51.1, -5.2, 9.7, "fr_direct"),
+)
+
+
+def thunder_provider_for(lat: float, lon: float) -> Optional[str]:
+    """Name der fuer Gewittersignale zustaendigen Quelle, oder None.
+
+    None heisst: fuer dieses Gebiet ist (noch) keine Gewitterquelle
+    eingetragen — dann wird gar nicht erst abgerufen, statt sinnlose Last
+    ausserhalb eines Modellgebiets zu erzeugen (Spec AC-6).
+    """
+    for region in _REGIONS:
+        if (region.min_lat <= lat <= region.max_lat
+                and region.min_lon <= lon <= region.max_lon):
+            return region.provider
+    return None

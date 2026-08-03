@@ -27,7 +27,13 @@ from app.config import Location  # noqa: E402
 from providers import meteofrance as mf  # noqa: E402
 
 _FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "meteofrance"
-_FIXTURE_GRIB = _FIXTURE_DIR / "arome_paris_20260722.grib2"
+# Aufzeichnung ueber GANZ Korsika (41,30-43,11 N / 8,39-9,60 O) — der Ort unten
+# liegt DARIN. Zuvor stand hier die Paris-Aufzeichnung (2,30-2,41 O), die den
+# Korsika-Ort ueberhaupt nicht abdeckt; gruen war das nur, weil Koordinaten
+# ausserhalb des Gitters auf den Randbildpunkt geklemmt wurden — der Wert kam
+# also vom falschen Ort (Adversary-Befund F001). Mit AC-11 (verwerfen statt
+# klemmen) muss die Aufzeichnung den geprueften Ort wirklich enthalten.
+_FIXTURE_GRIB = _FIXTURE_DIR / "arome_korsika_litota3_20260802.grib2"
 
 # GR20, Refuge de Petra Piana — der Ort aus der Messung vom 2026-08-02
 _KORSIKA = Location(latitude=42.22, longitude=9.07, name="GR20 Petra Piana")

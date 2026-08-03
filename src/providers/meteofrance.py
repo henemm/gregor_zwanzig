@@ -56,8 +56,15 @@ from tenacity import (
 )
 
 from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
+from providers import thunder_routing
 from providers.base import ProviderRequestError
-from providers.region_routing import direct_provider_for
+# Zustaendigkeit der GRUNDVORHERSAGE. Fuer die Gewitter-Anreicherung BEWUSST
+# NICHT mehr befragt (Spec AC-12): dort entscheidet `thunder_routing`, weil die
+# Zustaendigkeit groessenabhaengig ist (Oesterreich: Schnee von GeoSphere,
+# Gewitter vom DWD). Der Import bleibt als Anker der Gegenprobe: der Test setzt
+# ihn auf "nirgends zustaendig" und weist nach, dass trotzdem abgerufen wird.
+from providers.region_routing import direct_provider_for  # noqa: F401
+from providers.thunder_window_cache import get_shared_thunder_window_cache
 
 if TYPE_CHECKING:
     from app.config import Location
@@ -111,6 +118,61 @@ THUNDER_FETCH_DEADLINE_SECONDS = 45.0
 # (PO-Entscheidung 2026-07-23, Nachfolger von zuvor 1..6).
 FORECAST_HOURS: List[int] = list(range(1, 25))
 
+# Groesste erlaubte Kantenlaenge des GEMEINSAMEN Abfrage-Rechtecks der
+# Gewitter-Anreicherung, in Grad (#1457 S2a, AC-9).
+#
+# Warum es das Rechteck ueberhaupt gibt: Meteo-France begrenzt pro MINUTE
+# (Annahme 100/min seit Januar 2026, Ueberschreitung -> HTTP 429). Ein Abruf
+# je Ort und Stunde (8 Orte x 24 Stunden = 192) sprengt das Limit um das
+# Doppelte. Die WCS-Schnittstelle nimmt aber ein beliebig grosses Rechteck
+# entgegen, aus dem alle Orte gelesen werden koennen.
+#
+# Warum genau 8 Grad (live gemessen 2026-08-02 gegen die API):
+#   0,1° (ein Punkt) 0,49 s / 445 B  ·  2° (Korsika ganz) 0,43 s / 81 KB
+#   8° (Suedost-FR)  0,65 s / 1,3 MB ·  18° (ganz FR)     0,91 s / 3,9 MB
+# 8° deckt jedes reale Wandergebiet in einem Stueck ab (Korsika ~1,5°, GR20
+# ~0,9°, Pyrenaeen ~5°) — echte Laeufe brauchen also nie mehr als eine
+# Gruppe. Die Antwort bleibt bei 1,3 MB, ueber 24 Stunden ~31 MB je Lauf.
+# Ganz Frankreich waere mit 3,9 MB das Dreifache (~94 MB je Lauf) fuer einen
+# Fall, den es praktisch nicht gibt: Orte 18° auseinander sind keine Tour.
+# Ueberschreitung fuehrt daher NICHT zum Abbruch, sondern zur Aufteilung in
+# mehrere Gruppen — lieber ein zweiter Satz Abrufe als ein Datenverlust.
+#
+# Gilt fuer die Orte einer Gruppe. Das tatsaechlich abgefragte Rechteck wird
+# anschliessend auf das Kachelgitter unten aufgerundet und kann dadurch je
+# Achse um bis zu eine Kachel groesser ausfallen. Bewusst in Kauf genommen:
+# der Zugewinn (Orte fallen ueber Aufrufe hinweg auf dasselbe Rechteck) wiegt
+# schwerer als ein Rechteck am oberen Rand der gemessenen Groessen.
+THUNDER_BOX_MAX_DEGREES = 8.0
+
+# Kleiner Rand um das Rechteck, damit ein Ort nie genau auf der Kante liegt
+# (identisch zum bisherigen Punkt-Kaestchen von ±0,05°).
+THUNDER_BOX_MARGIN_DEGREES = 0.05
+
+# Kantenlaenge des gemeinsamen KACHELGITTERS, auf das jedes Abfrage-Rechteck
+# aufgerundet wird (#1457 S2a, AC-9 neu gefasst).
+#
+# Warum ueberhaupt gerundet wird: Trip und Ortsvergleich rufen beide Ort fuer
+# Ort ab. Ein Rechteck, das nur den einen Ort umschliesst, nuetzt dem naechsten
+# nichts. Erst ein GEMEINSAMES Gitter macht zwei benachbarte Orte zu demselben
+# Abfrage-Rechteck — und damit zum selben Schluessel im geteilten
+# Zwischenspeicher (`thunder_window_cache`). Kein Aufrufer muss dafuer geaendert
+# werden; das ist der Punkt (PO-Richtlinie "Trip/Ortsvergleich-Teilung").
+#
+# Warum 2°: live gemessen 2026-08-02 kostet ein 2°-Rechteck 0,43 s / 81 KB
+# gegen 0,49 s / 445 B fuer einen einzelnen Punkt — die Antwortzeit ist also
+# praktisch gleich, nur das Volumen waechst. 2° deckt ein Wandergebiet
+# typischerweise in einer einzigen Kachel ab (Korsika ~1,5°, GR20 ~0,9°) und
+# haelt den Speicherbedarf bei 24 Stunden im einstelligen MB-Bereich. Groesser
+# waere in beide Richtungen schlechter: mehr Volumen je Abruf, ohne dass mehr
+# Orte zusammenfielen.
+#
+# Bekannte Grenze: eine Kachel kann ueber den Rand des Modellgebiets
+# hinausragen. Das ist unkritisch — der WCS-Dienst schneidet ein Subset auf
+# seine Abdeckung zu, und schlaegt ein einzelner Abruf doch fehl, bleibt es bei
+# der Regel "fehlender Wert = None, nie 0" fuer genau diese Stunde.
+THUNDER_TILE_DEGREES = 2.0
+
 TEMPERATURE_COVERAGE = "TEMPERATURE__SPECIFIC_HEIGHT_LEVEL_ABOVE_GROUND"
 U_WIND_COVERAGE = "U_COMPONENT_OF_WIND__SPECIFIC_HEIGHT_LEVEL_ABOVE_GROUND"
 V_WIND_COVERAGE = "V_COMPONENT_OF_WIND__SPECIFIC_HEIGHT_LEVEL_ABOVE_GROUND"
@@ -151,6 +213,14 @@ def _latest_run(now: datetime) -> datetime:
     return run - timedelta(hours=3)
 
 
+def _as_utc(ts: datetime) -> datetime:
+    """Zeitstempel auf UTC-bewusst bringen; naive Werte gelten als UTC (so
+    liefert Open-Meteo sie)."""
+    if ts.tzinfo is None:
+        return ts.replace(tzinfo=timezone.utc)
+    return ts.astimezone(timezone.utc)
+
+
 def _run_str(run: datetime) -> str:
     """Coverage-ID-Zeitformat, z.B. '2026-07-22T18.00.00Z'."""
     return run.strftime("%Y-%m-%dT%H.%M.%SZ")
@@ -167,6 +237,129 @@ def _read_point_value(raw: bytes, lat: float, lon: float) -> Optional[float]:
     except Exception:
         logger.warning("GRIB2-Parsing fehlgeschlagen", exc_info=True)
         return None
+
+
+def _read_window_values(
+    raw: bytes, gruppe: List["Location"]
+) -> Dict[str, Optional[float]]:
+    """Punktwerte ALLER Orte einer Gruppe aus EINER Fenster-Antwort.
+
+    AC-11: Liegt ein Ort AUSSERHALB der Abdeckung der Antwort, bleibt sein
+    Wert `None` — er wird NICHT auf den naechstgelegenen Randbildpunkt
+    geklemmt. Genau das tut `_read_point_value` (Adversary-Befund F001): dort
+    ist es bei einem 0,1°-Kaestchen um EINEN Ort ein harmloses Auffangnetz, bei
+    einem gemeinsamen Fenster ueber viele Orte aber Datenfaelschung — alle acht
+    Korsika-Orte trugen so denselben Randbildpunkt einer Paris-Antwort. Werte
+    waren da, aber vom falschen Ort.
+
+    Die Abdeckung kommt aus der ANTWORT (`dataset.bounds`), nicht aus dem
+    angefragten Rechteck: der Dienst darf ein Subset auf seine eigene
+    Abdeckung zuschneiden, und dann gilt sein Zuschnitt.
+
+    Die Antwort wird EINMAL geoeffnet und fuer alle Orte gelesen — bei acht
+    Orten x 24 Stunden waeren es sonst 192 Parse-Vorgaenge derselben Daten.
+    """
+    werte: Dict[str, Optional[float]] = {
+        _ort_schluessel(loc): None for loc in gruppe
+    }
+    try:
+        with MemoryFile(raw) as memfile, memfile.open() as dataset:
+            links, unten, rechts, oben = dataset.bounds
+            band = dataset.read(1)
+            for loc in gruppe:
+                lat, lon = loc.latitude, loc.longitude
+                if not (links <= lon <= rechts and unten <= lat <= oben):
+                    continue  # AC-11: verwerfen statt klemmen
+                row, col = dataset.index(lon, lat)
+                if 0 <= row < dataset.height and 0 <= col < dataset.width:
+                    werte[_ort_schluessel(loc)] = float(band[row, col])
+    except Exception:
+        logger.warning("GRIB2-Parsing fehlgeschlagen", exc_info=True)
+    return werte
+
+
+def _ort_schluessel(location: "Location") -> str:
+    """Schluessel eines Ortes im Sammelergebnis.
+
+    Der Name ist der Vertrag (Spec AC-9); fehlt er, treten die Koordinaten an
+    seine Stelle, damit ein namenloser Ort nicht still unter `None`
+    verschwindet oder mit einem zweiten namenlosen Ort kollidiert.
+    """
+    return location.name or f"{location.latitude:.4f},{location.longitude:.4f}"
+
+
+def _thunder_gruppen(locations: List["Location"]) -> List[List["Location"]]:
+    """Orte so gruppieren, dass das umschliessende Rechteck je Gruppe
+    `THUNDER_BOX_MAX_DEGREES` in keiner Richtung ueberschreitet (AC-9).
+
+    Bewusst einfach gehalten: nach Breite/Laenge sortieren und gierig
+    auffuellen, bis die naechste Aufnahme das Rechteck zu gross machen wuerde.
+    Das ist nicht die minimale Gruppenzahl, aber es haelt benachbarte Orte
+    zusammen — und der Regelfall (alle Orte einer Tour) ergibt genau eine
+    Gruppe.
+    """
+    gruppen: List[List["Location"]] = []
+    aktuell: List["Location"] = []
+    for loc in sorted(locations, key=lambda x: (x.latitude, x.longitude)):
+        kandidat = aktuell + [loc]
+        lats = [x.latitude for x in kandidat]
+        lons = [x.longitude for x in kandidat]
+        zu_gross = (
+            max(lats) - min(lats) > THUNDER_BOX_MAX_DEGREES
+            or max(lons) - min(lons) > THUNDER_BOX_MAX_DEGREES
+        )
+        if aktuell and zu_gross:
+            gruppen.append(aktuell)
+            aktuell = [loc]
+        else:
+            aktuell = kandidat
+    if aktuell:
+        gruppen.append(aktuell)
+    return gruppen
+
+
+def _thunder_rechteck(
+    gruppe: List["Location"],
+) -> tuple[float, float, float, float]:
+    """Umschliessendes Rechteck (min_lat, max_lat, min_lon, max_lon), auf das
+    gemeinsame Kachelgitter aufgerundet (AC-9).
+
+    Erst der Rand (damit kein Ort auf der Kante liegt), dann die Rundung auf
+    `THUNDER_TILE_DEGREES`. Die Rundung ist das, was zwei nacheinander
+    abgerufene Nachbarorte auf DASSELBE Rechteck bringt — und damit auf
+    denselben Schluessel im geteilten Zwischenspeicher.
+    """
+    lats = [x.latitude for x in gruppe]
+    lons = [x.longitude for x in gruppe]
+    m = THUNDER_BOX_MARGIN_DEGREES
+    t = THUNDER_TILE_DEGREES
+    return (
+        math.floor((min(lats) - m) / t) * t,
+        math.ceil((max(lats) + m) / t) * t,
+        math.floor((min(lons) - m) / t) * t,
+        math.ceil((max(lons) + m) / t) * t,
+    )
+
+
+def _thunder_offsets(base: datetime, end: Optional[datetime]) -> List[int]:
+    """Abzurufende Stunden-Offsets aus dem gewuenschten Zeitraum (AC-10).
+
+    Ohne `end` bleibt es beim bisherigen Verhalten (voller 24h-Horizont) —
+    das ist der Fall der Grundvorhersage, die alle 24 Stunden bestueckt. Mit
+    `end` (z. B. das Ein-Stunden-Fenster des Ortsvergleichs) werden nur die
+    tatsaechlich benoetigten Stunden geholt; zuvor waren rund 13 von 24
+    Abrufen je Ort verworfene Arbeit.
+
+    Liegt `end` vor dem Bezugszeitpunkt, ist nichts abzurufen: fuer
+    vergangene Stunden gibt es keine Vorhersage.
+    """
+    if end is None:
+        return list(FORECAST_HOURS)
+    spanne_h = (_as_utc(end) - base).total_seconds() / 3600.0
+    if spanne_h <= 0:
+        return []
+    letzter = min(math.ceil(spanne_h), FORECAST_HOURS[-1])
+    return list(range(1, letzter + 1))
 
 
 class MeteoFranceDirectProvider:
@@ -202,6 +395,8 @@ class MeteoFranceDirectProvider:
     def _request_once(
         self, coverage_id: str, lat: float, lon: float,
         height: Optional[int], time_str: str,
+        bbox: Optional[tuple[float, float, float, float]] = None,
+        timeout: Optional[float] = None,
     ) -> bytes:
         """Ein einzelner GetCoverage-Request OHNE Retry.
 
@@ -209,20 +404,40 @@ class MeteoFranceDirectProvider:
         Retry wuerde eine einzige 5xx-Stunde bis zu 5 Versuche x 2-60s Backoff
         kosten und das Anreicherungs-Budget (45s) sofort sprengen — nach
         wenigen Stunden waere die ganze Reihe leer statt nur einer. Die
-        Grundvorhersage nutzt unveraendert den geretryten `_request`."""
+        Grundvorhersage nutzt unveraendert den geretryten `_request`.
+
+        Args:
+            bbox: (min_lat, max_lat, min_lon, max_lon). Ohne Angabe gilt das
+                bisherige 0,1°-Kaestchen um (lat, lon). Mit Angabe wird EIN
+                Rechteck ueber mehrere Orte geholt (AC-9); `lat`/`lon`
+                bestimmen dann nur noch nichts mehr am Ausschnitt.
+            timeout: Deckel fuer diesen einen Abruf. Ohne Angabe gilt
+                `TIMEOUT`. Die Anreicherung reicht hier ihre RESTZEIT durch
+                (Muster #1448 S3, openmeteo.py:600) — sonst koennte ein Abruf,
+                der kurz vor der Zeitgrenze startet, noch volle 30s laufen und
+                die 45s-Grenze faktisch auf ~75s dehnen.
+        """
+        if bbox is None:
+            min_lat, max_lat = lat - 0.05, lat + 0.05
+            min_lon, max_lon = lon - 0.05, lon + 0.05
+        else:
+            min_lat, max_lat, min_lon, max_lon = bbox
         params: list[tuple[str, str]] = [
             ("service", "WCS"),
             ("version", "2.0.1"),
             ("coverageId", coverage_id),
             ("format", "application/wmo-grib"),
-            ("subset", f"long({lon - 0.05:.4f},{lon + 0.05:.4f})"),
-            ("subset", f"lat({lat - 0.05:.4f},{lat + 0.05:.4f})"),
+            ("subset", f"long({min_lon:.4f},{max_lon:.4f})"),
+            ("subset", f"lat({min_lat:.4f},{max_lat:.4f})"),
         ]
         if height is not None:
             params.append(("subset", f"height({height})"))
         params.append(("subset", f"time({time_str})"))
 
-        response = self._client.get(f"{BASE_URL}GetCoverage", params=params)
+        request_timeout = TIMEOUT if timeout is None else min(TIMEOUT, timeout)
+        response = self._client.get(
+            f"{BASE_URL}GetCoverage", params=params, timeout=request_timeout
+        )
         if response.status_code in RETRY_STATUS_CODES:
             response.raise_for_status()  # loest Retry via HTTPStatusError aus
         response.raise_for_status()  # nicht-retryable Fehler (4xx)
@@ -270,40 +485,120 @@ class MeteoFranceDirectProvider:
         AC-2: Fehlt der Wert einer Stunde, bleibt der Eintrag `None` und wird
         NIE 0 — "keine Aussage" ist nicht "keine Gefahr" (#1419 Abs. 5). Eine
         einzelne gescheiterte Stunde kippt die Reihe daher nicht.
-        """
-        lat, lon = location.latitude, location.longitude
-        if direct_provider_for(lat, lon) != "fr_direct":
-            return {}
 
-        values: Dict[int, Optional[float]] = {}
+        Protokoll (`base.ThunderSignalProvider`): Der Schluessel ist der
+        Stunden-Offset ab `start`. Ohne `start` gilt der juengste Modell-Lauf
+        als Bezug — nur so kann `fetch_forecast` unten seine eigenen,
+        lauf-bezogenen Datenpunkte treffen. Der Bezug wird nie VOR den Lauf
+        gelegt: Zeitpunkte vor dem Lauf gibt es in der Coverage nicht.
+
+        Fuehrt den Sammelabruf mit einem einzigen Ort aus (AC-9): EIN
+        Abrufweg, der nicht auseinanderdriften kann.
+        """
+        alle = self.fetch_thunder_signals_multi([location], start, end)
+        return alle.get(_ort_schluessel(location), {})
+
+    def fetch_thunder_signals_multi(
+        self,
+        locations: List["Location"],
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ) -> Dict[str, Dict[int, Optional[float]]]:
+        """#1457 S2a AC-9: Blitzdichte fuer MEHRERE Orte aus EINEM gemeinsamen
+        Abfragefenster. Best effort, fail-soft — wirft NIE.
+
+        Warum sammeln (Regelkonformitaet, nicht Geschwindigkeit): Meteo-France
+        begrenzt pro Minute (Annahme 100/min, Ueberschreitung -> HTTP 429).
+        Ein Abruf je Ort und Stunde ergibt beim 8-Orte-Vergleich 192 Abrufe in
+        gut einer Minute — das Doppelte des Erlaubten. Die WCS-Schnittstelle
+        nimmt stattdessen ein Rechteck ueber alle Orte entgegen (bei nahezu
+        gleicher Antwortzeit), aus dem jeder Ort seinen eigenen Punktwert
+        liest. Die Grenzkosten je weiterem Ort sind damit null.
+
+        Das gilt AUCH ueber Aufrufe hinweg (AC-9 neu gefasst): Trip und
+        Ortsvergleich rufen beide Ort fuer Ort ab, ein Sammelaufruf mit vielen
+        Orten kommt im Produktivcode gar nicht vor. Deshalb wird das Rechteck
+        auf ein gemeinsames Kachelgitter gerundet und die Antwort im geteilten
+        Zwischenspeicher (`thunder_window_cache`) abgelegt — der naechste Ort
+        derselben Kachel wird daraus bedient, ohne dass ein Aufrufer etwas
+        davon wissen oder dafuer geaendert werden muss.
+
+        Returns:
+            `{Ortsname: {Stunden-Offset ab `start`: Blitzdichte oder None}}`.
+            Jeder uebergebene Ort kommt vor — Orte ausserhalb des
+            AROME-Gebiets mit leerer Reihe (AC-6: fuer sie wird nicht
+            abgerufen). Fehlender Wert bleibt `None`, NIE 0 (AC-2).
+        """
+        ergebnis: Dict[str, Dict[int, Optional[float]]] = {}
+        zustaendig: List["Location"] = []
+        for loc in locations:
+            ergebnis.setdefault(_ort_schluessel(loc), {})
+            # AC-12: die GEWITTER-Tabelle entscheidet, nicht die der
+            # Grundvorhersage. Ueber das Modul aufgerufen (nicht als importierter
+            # Name), damit die Zustaendigkeit an EINER Stelle bestimmt wird und
+            # nicht in einer Kopie im Modul-Namensraum einfriert.
+            if thunder_routing.thunder_provider_for(
+                loc.latitude, loc.longitude
+            ) == self.name:
+                zustaendig.append(loc)
+        if not zustaendig:
+            return ergebnis
+
         try:
             run = _latest_run(datetime.now(timezone.utc))
+            base = run if start is None else max(_as_utc(start), run)
             coverage_id = f"{LIGHTNING_COVERAGE}___{_run_str(run)}"
+            offsets = _thunder_offsets(base, end)
+            # Zeitgrenze fest, nicht rollend (Lehre #1448): EINMAL je Abruf
+            # gebildet, dann vor jedem Einzel-Call geprueft.
             deadline_at = time.monotonic() + THUNDER_FETCH_DEADLINE_SECONDS
-            for offset in FORECAST_HOURS:
-                # Zeitgrenze im INNERSTEN Schritt (Lehre #1448): vor JEDEM
-                # Einzelabruf geprueft, nicht nur einmal um die Schleife herum.
-                if time.monotonic() > deadline_at:
-                    logger.warning(
-                        "Blitzdichte-Budget (%.0fs) nach %d Stunden erschoepft — "
-                        "Anreicherung bricht ab, Grundvorhersage unberuehrt",
-                        THUNDER_FETCH_DEADLINE_SECONDS, len(values),
+            speicher = get_shared_thunder_window_cache()
+            for gruppe in _thunder_gruppen(zustaendig):
+                bbox = _thunder_rechteck(gruppe)
+                for offset in offsets:
+                    time_str = (base + timedelta(hours=offset)).strftime(
+                        "%Y-%m-%dT%H:%M:%SZ"
                     )
-                    break
-                time_str = (run + timedelta(hours=offset)).strftime(
-                    "%Y-%m-%dT%H:%M:%SZ"
-                )
-                try:
-                    raw = self._request_once(coverage_id, lat, lon, None, time_str)
-                except Exception as e:
-                    logger.warning("Blitzdichte +%dh nicht abrufbar: %s", offset, e)
-                    values[offset] = None
-                    continue
-                values[offset] = _read_point_value(raw, lat, lon)
+                    # AC-9: Fenster, das ein frueherer Abruf (anderer Ort,
+                    # anderer Aufrufer) schon geladen hat, wird wiederverwendet.
+                    # Deshalb liegt die Zeitgrenzen-Pruefung UNTER dem
+                    # Speicher-Treffer: ein Treffer kostet keine Zeit und darf
+                    # den Abbruch nicht ausloesen.
+                    raw = speicher.get(coverage_id, time_str, bbox)
+                    if raw is None:
+                        # Zeitgrenze im INNERSTEN Schritt (Lehre #1448): vor
+                        # JEDEM Einzelabruf, nicht nur um die Schleife herum.
+                        restzeit = deadline_at - time.monotonic()
+                        if restzeit <= 0:
+                            logger.warning(
+                                "Blitzdichte-Budget (%.0fs) erschoepft — "
+                                "Anreicherung bricht ab, Grundvorhersage "
+                                "unberuehrt",
+                                THUNDER_FETCH_DEADLINE_SECONDS,
+                            )
+                            return ergebnis
+                        try:
+                            raw = self._request_once(
+                                coverage_id, gruppe[0].latitude,
+                                gruppe[0].longitude, None, time_str,
+                                bbox=bbox, timeout=restzeit,
+                            )
+                        except Exception as e:
+                            logger.warning(
+                                "Blitzdichte +%dh nicht abrufbar: %s", offset, e
+                            )
+                            for loc in gruppe:
+                                ergebnis[_ort_schluessel(loc)][offset] = None
+                            continue
+                        speicher.put(coverage_id, time_str, bbox, raw)
+                    werte = _read_window_values(raw, gruppe)
+                    for loc in gruppe:
+                        schluessel = _ort_schluessel(loc)
+                        ergebnis[schluessel][offset] = werte[schluessel]
         except Exception:
             logger.warning("Blitzdichte-Abruf fehlgeschlagen", exc_info=True)
-            return {}
-        return values
+            return {schluessel: {} for schluessel in ergebnis}
+        return ergebnis
 
     def fetch_forecast(
         self,
@@ -338,7 +633,11 @@ class MeteoFranceDirectProvider:
         # AC-3/AC-4/AC-5: erst NACH den vollstaendigen Grunddaten und mit
         # eigenem Budget — scheitert die Anreicherung, bleibt die Vorhersage
         # unversehrt und nur das Blitzfeld leer.
-        thunder = self.fetch_thunder_signals(location, start, end) if enrich_thunder else {}
+        # BEWUSST ohne `start`: die Datenpunkte unten zaehlen ab `run`, also
+        # muessen es die Gewitter-Offsets auch — sonst laege der Wert einer
+        # Stunde an einer anderen. `start`/`end` wirken in dieser Klasse
+        # ohnehin nicht auf den Zeitraster der Grundvorhersage.
+        thunder = self.fetch_thunder_signals(location) if enrich_thunder else {}
 
         data_points: List[ForecastDataPoint] = []
         for offset in FORECAST_HOURS:

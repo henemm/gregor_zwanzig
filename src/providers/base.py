@@ -67,6 +67,53 @@ class WeatherProvider(Protocol):
         ...
 
 
+@runtime_checkable
+class ThunderSignalProvider(Protocol):
+    """Optionales Zusatz-Protokoll: Gewittersignale je Stunde (#1457 S2a).
+
+    BEWUSST getrennt von `WeatherProvider`: Wer diese Methode nicht hat,
+    liefert eben keine Gewittersignale — das ist KEIN Fehler, sondern der
+    Normalfall fuer die meisten Quellen. Nur so kann ein neuer Dienst allein
+    dadurch wirksam werden, dass er (a) diese Methode erfuellt und (b) in
+    `providers.thunder_routing` als zustaendig eingetragen wird; der
+    Anreicherungsweg (`providers.thunder_enrichment`) wird dabei NIE
+    angefasst (Spec AC-8, PO-Vorgabe "keine Einzelloesungen").
+    """
+
+    def fetch_thunder_signals(
+        self,
+        location: "Location",
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ) -> dict[int, Optional[float]]:
+        """Erwartete Blitzdichte je Stunden-Offset.
+
+        Args:
+            location: Ort
+            start: Bezugszeitpunkt der Offsets. None -> quelleneigener Bezug
+                (z. B. der juengste Modell-Lauf).
+            end: Ende des gewuenschten Zeitraums (Quellen duerfen es ignorieren).
+
+        Returns:
+            `{Stunden-Offset ab `start`: Blitzdichte oder None}`. Ein fehlender
+            Wert ist `None` und NIEMALS 0 — "keine Aussage" ist nicht "keine
+            Gefahr" (#1419 Abschnitt 5).
+
+        Vertrag: best effort, fail-soft — wirft NIE. Ein Ausfall der
+        Gewitterquelle darf die Grundvorhersage nicht kippen.
+
+        FREIWILLIGE ERWEITERUNG `fetch_thunder_signals_multi(locations, start,
+        end) -> dict[str, dict[int, Optional[float]]]` (#1457 S2a, Spec AC-9):
+        Quellen, die mehrere Orte aus EINEM Abfragefenster bedienen koennen,
+        bieten sie zusaetzlich an; Schluessel ist der Ortsname. Der
+        Anreicherungsweg nutzt sie, wenn es sie gibt. BEWUSST kein Pflichtteil
+        dieses Protokolls: eine Quelle, die nur einzeln kann, bleibt damit
+        vollwertig — sonst waere die Huerde fuer eine neue Quelle hoeher als
+        noetig (Spec AC-8).
+        """
+        ...
+
+
 class ProviderError(Exception):
     """Base exception for provider errors."""
 

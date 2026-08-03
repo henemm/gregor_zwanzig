@@ -219,6 +219,20 @@ def _reset_shared_radar_cache():
 
 
 @pytest.fixture(autouse=True)
+def _reset_thunder_window_cache():
+    """Issue #1457 S2a (AC-9): der geteilte Gewitter-Fensterspeicher
+    (`providers.thunder_window_cache`) ist ein Prozess-Singleton mit 600s-TTL.
+    Ohne Reset zwischen Testfaellen wuerde ein Test die Abrufe eines frueheren
+    Tests erben — Abrufzaehler messen dann nicht mehr den eigenen Lauf, und ein
+    Test mit anderer Aufzeichnung bekaeme die Daten des vorherigen. Analog
+    `_reset_shared_radar_cache`."""
+    from providers.thunder_window_cache import reset_thunder_window_cache_for_tests
+    reset_thunder_window_cache_for_tests()
+    yield
+    reset_thunder_window_cache_for_tests()
+
+
+@pytest.fixture(autouse=True)
 def _reset_telegram_rate_limit():
     """Issue #1370: die Telegram-Sende-Drossel fuehrt ihre Zeitstempel je Chat
     prozessweit auf Klassenebene (fuer JEDE Bubble wird eine frische

@@ -1009,6 +1009,13 @@ class OpenMeteoProvider:
                     ts.meta.fallback_reason = "cross_provider_total_outage"
                     ts.meta.fallback_model = direct_name
                     self._enrich_snow(ts, location.latitude, location.longitude, enrich_snow)
+                    # #1457 S2a: auch im Totalausfall gilt der GEMEINSAME Weg —
+                    # die Gewitter-Zustaendigkeit kann eine andere sein als die
+                    # fuer die Grundvorhersage (Beispiel Alpen: Schnee von der
+                    # einen, Gewitter von der anderen Quelle). `direct_name`
+                    # sagt der Anreicherung, wen sie NICHT nochmals fragen
+                    # muss — dieser Provider hat seine Reihe selbst angereichert.
+                    self._enrich_thunder(ts, location, bereits_befragt=direct_name)
                     return ts
                 except (ProviderNotImplementedError, ProviderRequestError, ProviderNotFoundError):
                     pass  # Stub noch nicht angebunden ODER Direktprovider
@@ -1122,4 +1129,24 @@ class OpenMeteoProvider:
         # Epic #1301 A3: SNOWGRID fill-only enrichment for Alpen-Orte.
         self._enrich_snow(timeseries, location.latitude, location.longitude, enrich_snow)
 
+        # #1457 S2a AC-7: Gewittersignale auf dem REGULAEREN Rueckgabeweg — also
+        # bei funktionierender Hauptquelle, dem Weg jedes echten Briefing-Laufs.
+        # BEWUSST ohne eigenen Schalter (#1448-Lehre: ein Schutz, der am
+        # Durchreichen eines Parameters haengt, ist keiner) und BEWUSST nicht an
+        # `enrich_ensemble` gekoppelt — Alarm-Laeufe schalten das Ensemble ab
+        # (Bug #288) und brauchen das Gewittersignal trotzdem.
+        self._enrich_thunder(timeseries, location)
+
         return timeseries
+
+    def _enrich_thunder(
+        self, timeseries: "NormalizedTimeseries", location: "Location",
+        bereits_befragt: Optional[str] = None,
+    ) -> None:
+        """Duenner Aufruf des gemeinsamen Anschlusses (#1457 S2a).
+
+        Der Vertrag lebt in `providers/thunder_enrichment.py`; diese Klasse
+        kennt weder eine Gewitterquelle noch deren Groessen-Kennungen."""
+        from providers.thunder_enrichment import enrich_thunder
+
+        enrich_thunder(timeseries, location, bereits_befragt=bereits_befragt)
