@@ -233,18 +233,40 @@ def _night_weather(
     return NormalizedTimeseries(meta=_meta(), data=points)
 
 
-def _dc(*, rain_probability: bool = False):
-    """UnifiedWeatherDisplayConfig — Default-Metriken (temperature/wind/gust/
-    precipitation/thunder aktiv), optional rain_probability zusaetzlich (fuer
-    AC-3, per Default deaktiviert)."""
+def _dc(*, rain_probability: bool = False, wind_chill: bool = True):
+    """UnifiedWeatherDisplayConfig mit AUSDRUECKLICHER Metrik-Auswahl.
+
+    ``build_default_display_config()`` liefert (gemessen 2026-08-03) aktiv:
+    temperature, temperature_cold, **wind_chill**, wind, gust, precipitation,
+    thunder, snowfall_limit, cloud_total, sunshine — ``rain_probability`` ist
+    AUS. Die beiden Schalter hier drehen genau je eine dieser Metriken:
+
+    * ``rain_probability=True`` schaltet das PR-Symbol zu (AC-3/AC-4 pruefen es).
+    * ``wind_chill=False`` waehlt die gefuehlte Temperatur ab; ihre SMS-Token
+      FN/FK/FD verschwinden dann (#1410 §6, ``trip_report.py:277-287``). Tests,
+      deren Gegenstand die gefuehlte Temperatur NICHT ist, schalten sie ab —
+      der erwartete SMS-Text zeigt dann genau das, was konfiguriert wurde, und
+      belegt nebenbei die Abwahl-Wirkung.
+
+    NICHT abschaltbar sind K/D (Tiefst-/Hoechsttemperatur): sie erscheinen
+    unbedingt, auch bei abgewaehlter Metrik ``temperature`` — bekannter,
+    offener Stand (#1415, ``tokens/builder.py:242-249`` needs_spec=False, und
+    ``sms_trip.SMS_SYMBOL_BY_METRIC`` fuehrt ``temperature`` gar nicht).
+    Erwartungsstrings enthalten K/D deshalb immer.
+    """
     dc = build_default_display_config()
+    metrics = list(dc.metrics)
     if rain_probability:
         metrics = [
             dataclasses.replace(mc, enabled=True) if mc.metric_id == "rain_probability" else mc
-            for mc in dc.metrics
+            for mc in metrics
         ]
-        dc = dataclasses.replace(dc, metrics=metrics)
-    return dc
+    if not wind_chill:
+        metrics = [
+            dataclasses.replace(mc, enabled=False) if mc.metric_id == "wind_chill" else mc
+            for mc in metrics
+        ]
+    return dataclasses.replace(dc, metrics=metrics)
 
 
 def _report(segments, night_weather, *, report_type: str = "morning", dc=None, has_gap: bool = False):
@@ -760,11 +782,12 @@ class TestAC4TargetWindowGapShowsUnknownInSms:
     def test_sms_shows_unknown_for_all_five_window_symbols(self):
         segments = [_segment(day=20)]  # Wanderzeit 08-12, Ankunft 12:00
         report = _report(
-            segments, None, report_type="morning", dc=_dc(rain_probability=True), has_gap=True,
+            segments, None, report_type="morning",
+            dc=_dc(rain_probability=True, wind_chill=False), has_gap=True,
         )
         sms = report.sms_text
 
-        assert "E7: D20 R? PR? W? G? TH:? TH+:-" in sms, (
+        assert "E7: K15 D15 R? PR? W? G? TH:? TH+:-" in sms, (
             f"Erwartet, dass die Ziel-Datenluecke (Ankunft 12:00, "
             f"night_weather=None, Fenster 12-19 unbeobachtet) alle fuenf "
             f"Fenster-Symbole R/PR/W/G/TH: von `-` auf `?` umstellt -- "
@@ -873,11 +896,12 @@ class TestAC5FoundValueStaysVisibleDespiteGap:
             overrides={10: {"precip": 0.5}},
         )]
         report = _report(
-            segments, None, report_type="morning", dc=_dc(rain_probability=True), has_gap=True,
+            segments, None, report_type="morning",
+            dc=_dc(rain_probability=True, wind_chill=False), has_gap=True,
         )
         sms = report.sms_text
 
-        assert "E7: D20 R0.5@10 PR? W? G? TH:? TH+:-" in sms, (
+        assert "E7: K15 D15 R0.5@10 PR? W? G? TH:? TH+:-" in sms, (
             f"Erwartet: gefundener Regen (10:00, vor Ankunft) bleibt "
             f"sichtbar (`R0.5@10`), waehrend PR/W/G/TH: ohne Fund im "
             f"unbeobachteten Zielfenster auf `?` wechseln.\nSMS: {sms}"
@@ -942,7 +966,10 @@ class TestAC6ArrivalAfter19NoOverFlagging:
 
     def test_sms_stays_dash_when_arrival_after_window_end(self):
         segments = [_segment(day=20, start_h=15, end_h=20)]  # Ankunft 20:00
-        report = _report(segments, None, report_type="morning", dc=_dc(rain_probability=True))
+        report = _report(
+            segments, None, report_type="morning",
+            dc=_dc(rain_probability=True, wind_chill=False),
+        )
         sms = report.sms_text
 
         assert "TH:?" not in sms and "R?" not in sms and "PR?" not in sms, (
@@ -950,7 +977,7 @@ class TestAC6ArrivalAfter19NoOverFlagging:
             f"Tagesfenster-Ende 19:00, es sind keine Nach-Ankunft-Stunden "
             f"im Fenster erwartet (Ueber-Flagging-Schutz).\nSMS: {sms}"
         )
-        assert "E7: D20 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
+        assert "E7: K15 D15 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
 
     def test_no_channel_shows_unknown_marker_when_arrival_after_window_end(self):
         segments = [_segment(day=20, start_h=15, end_h=20)]  # Ankunft 20:00
@@ -971,14 +998,17 @@ class TestAC7CompleteDataNoNewUnknown:
     def test_sms_stays_dash_with_complete_night_weather(self):
         segments = [_segment(day=20)]
         night = _night_weather(day=20, event_hour=None)  # kein Ereignis, aber VORHANDEN
-        report = _report(segments, night, report_type="morning", dc=_dc(rain_probability=True))
+        report = _report(
+            segments, night, report_type="morning",
+            dc=_dc(rain_probability=True, wind_chill=False),
+        )
         sms = report.sms_text
 
         assert "?" not in sms, (
             f"Kein `?` erwartet -- night_weather ist vollstaendig vorhanden "
             f"(nur ereignislos), keine Datenluecke.\nSMS: {sms}"
         )
-        assert "E7: D20 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
+        assert "E7: K15 D15 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
 
     def test_no_channel_shows_unknown_marker_with_complete_night_weather(self):
         segments = [_segment(day=20)]

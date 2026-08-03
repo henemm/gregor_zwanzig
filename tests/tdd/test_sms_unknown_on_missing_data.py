@@ -34,6 +34,7 @@ from src.app.models import (
     TripSegment,
 )
 from src.output.renderers.sms_trip import SMSTripFormatter
+from src.output.tokens.dto import MetricSpec
 from src.services.notification_service import compute_has_gap
 
 _YEAR, _MONTH, _DAY = 2026, 7, 20
@@ -118,18 +119,39 @@ def _regular_segment(
     )
 
 
+# Ausdrueckliche Abwahl von Temperatur (K/D) und gefuehlter Temperatur
+# (FN/FK/FD/WC) fuer die Direktaufrufe unten. ``format_sms()`` ist die
+# Low-Level-API: sie kennt vertragsgemaess KEINE ``display_config``, die
+# Metrik-Auswahl wird ihr als ``disabled_specs`` uebergeben (genau so baut
+# ``trip_report.py:272-287`` sie aus der Nutzer-Konfiguration). Gegenstand
+# dieser Suite ist ausschliesslich die Datenluecken-Kennzeichnung
+# (`?` statt `-`) der Fenster-Symbole R/PR/W/G/TH: — die Temperatur-Token
+# gehoeren nicht dazu und werden deshalb abgewaehlt, statt den erwarteten
+# Text um sie zu verlaengern.
+_TEMPERATURE_OFF: list[MetricSpec] = [
+    MetricSpec(symbol=sym, enabled=False)
+    for sym in ("N", "K", "D", "FN", "FK", "FD", "WC")
+]
+
+
 def _format(
     segments: list[SegmentWeatherData],
     night_weather: NormalizedTimeseries | None = None,
+    *,
+    disabled_specs: list[MetricSpec] | None = None,
 ) -> str:
     """Issue #1331/#1334 F008: die Ziel-Datenluecke wird nicht mehr in
     ``format_sms()`` selbst berechnet (einziger Berechnungspunkt ist jetzt
     ``notification_service.compute_has_gap()``) -- dieser Helper bildet
-    genau den echten Versandpfad nach, statt eine feste Konstante zu raten."""
+    genau den echten Versandpfad nach, statt eine feste Konstante zu raten.
+
+    ``disabled_specs`` reicht die Metrik-Auswahl durch (Default: keine
+    Abwahl, also alle Kuerzel, die der Renderer aus den Daten bilden kann)."""
     has_gap = compute_has_gap(segments, night_weather, _TZ)
     return SMSTripFormatter().format_sms(
         segments, stage_name="E1", report_type="morning", tz=_TZ,
         night_weather=night_weather, has_gap=has_gap,
+        disabled_specs=disabled_specs,
     )
 
 
@@ -151,8 +173,18 @@ class TestAC1ShowsUnknownTokenOnSegmentError:
     Stichprobe -> auch `R?`/`PR?`/`W?`/`G?` erwartet."""
 
     def test_sms_shows_unknown_token_when_segment_has_error(self):
+        # Vollstaendige Nacht-Zeitreihe: damit ist der Segment-Fehler die
+        # EINZIGE Luecken-Quelle. Ohne sie waere (Ankunft 17:00 <= Fensterende
+        # 19:00, night_weather=None) bereits das unbeobachtete Zielfenster eine
+        # Luecke -- der Test waere auch mit zwei fehlerfreien Segmenten gruen
+        # und wuerde `has_error` gar nicht pruefen (Mutations-Gegenprobe
+        # 2026-08-03: Ersetzen des Fehler-Segments blieb unbemerkt).
         segments = [_error_segment(), _regular_segment()]
-        sms = _format(segments)
+        sms = _format(
+            segments,
+            night_weather=_complete_night_weather(),
+            disabled_specs=_TEMPERATURE_OFF,
+        )
 
         assert "TH:?" in sms, (
             f"Erwartet `TH:?` (unbekannt, weil eine Etappe wegen "
@@ -160,9 +192,11 @@ class TestAC1ShowsUnknownTokenOnSegmentError:
             f"faelschliche Entwarnung.\nSMS: {sms}"
         )
         assert "TH:-" not in sms, f"Fehl-Entwarnung `TH:-` darf nicht erscheinen.\nSMS: {sms}"
-        assert "E1: D20 R? PR? W? G? TH:? TH+:-" in sms, (
+        assert sms == "E1: R? PR? W? G? TH:? TH+:-", (
             f"Erwartet, dass die verschaerfte Regel jede Entwarnung im "
-            f"lueckenhaften Fenster zu `?` macht (R/PR/W/G/TH:).\nSMS: {sms}"
+            f"lueckenhaften Fenster zu `?` macht (R/PR/W/G/TH:) -- und dass "
+            f"ausser den abgewaehlten Temperatur-Token nichts sonst in der "
+            f"SMS steht.\nSMS: {sms}"
         )
 
 
