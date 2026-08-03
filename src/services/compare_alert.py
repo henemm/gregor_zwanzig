@@ -121,6 +121,68 @@ class CompareAlertService:
 
             config = self._build_eval_config(preset, cooldown_minutes)
 
+            # Issue #1467 S2 AG2: Ruhezeit VOR den Wetterabruf ziehen — bisher
+            # prüfte nur die Engine (`DeviationAlertEngine.evaluate()`), NACH
+            # dem Fetch in `_evaluate_one_location()`. Muster übernommen aus
+            # `compare_official_alert.py:105-113`. Dieselbe geteilte Funktion
+            # wie dort (`DeviationAlertEngine.is_quiet_hours`) — keine zweite
+            # Fassung. Sperrzeit/Tageslimit oben wurden nur GELESEN, hier wird
+            # ebenfalls nur gelesen: kein Zähler wird durch den Riegel veraendert.
+            #
+            # Fix-Loop F001 (Adversary): der Riegel stand außerhalb jeder
+            # Fehlerbehandlung — ein kaputt formatierter Ruhezeit-Wert (z. B.
+            # "25:00") ließ `time.fromisoformat()`
+            # (`deviation_alert_engine.py:95-96`) einen `ValueError` werfen,
+            # der VOR AG2 vom Ort-try/except in `_detect_triggered_locations`
+            # (:189-191) abgefangen wurde, jetzt aber den gesamten Lauf
+            # abbrach — alle weiteren Presets desselben Nutzers, auch
+            # auslösende, wurden übersprungen. Ein unbrauchbarer Wert wird wie
+            # "keine Ruhezeit gesetzt" behandelt (dieselbe Richtung wie AC-5
+            # fürs halb ausgefüllte Fenster: lieber eine Meldung zu viel als
+            # eine verschluckte) und laut protokolliert statt still zu bleiben.
+            #
+            # Fix-Loop F003 (Adversary): `except ValueError` allein reichte
+            # nicht — steht in `alert_quiet_from`/`alert_quiet_to` gar kein
+            # String (z. B. `int` 2200, `float` 22.5, `list`, `bool`, `dict`
+            # aus einer manipulierten `briefings/<id>.json`; weder Go
+            # `internal/model/compare_preset.go:78-79` noch Python
+            # `src/app/models.py:947-948` erzwingen zur Laufzeit einen
+            # String), wirft `time.fromisoformat()` stattdessen `TypeError` —
+            # derselbe Absturz wie F001 kam zurück. Absichtlich breit auf
+            # `Exception` gefangen: der Wert stammt aus einer Nutzerdatei,
+            # nicht aus Programmlogik. Schaden bei zu enger Klausel (Alarm
+            # bleibt für ALLE Ortsvergleiche des Kontos aus) wiegt schwerer
+            # als der Schaden bei zu breiter Klausel (ein Programmfehler
+            # landet als Warnung im Protokoll statt abzustürzen — die
+            # Meldung geht trotzdem raus). Deshalb MUSS die Protokollzeile
+            # den Ausnahmetyp mitschreiben (`type(e).__name__`), damit ein
+            # echter Programmfehler dort auffindbar bleibt und nicht als
+            # "kaputter Nutzerwert" durchgeht.
+            try:
+                quiet_hours_active = DeviationAlertEngine.is_quiet_hours(
+                    now, config.quiet_from, config.quiet_to
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Compare-Alert: unbrauchbarer Ruhezeit-Wert fuer Preset {preset_id} "
+                    f"(alert_quiet_from={config.quiet_from!r}, alert_quiet_to={config.quiet_to!r}): "
+                    f"{type(e).__name__}: {e} — wird wie 'keine Ruhezeit gesetzt' behandelt."
+                )
+                quiet_hours_active = False
+                # `config` wird weiter unten an `_evaluate_one_location()` ->
+                # `DeviationAlertEngine.evaluate()` gereicht, die intern
+                # DENSELBEN `is_quiet_hours()`-Aufruf wiederholt
+                # (`deviation_alert_engine.py:243`). Ohne dieses Neutralisieren
+                # wuerde der kaputte Wert dort ERNEUT werfen — dort zwar vom
+                # Ort-try/except abgefangen (`_detect_triggered_locations`,
+                # :189-191), aber als stiller "kein Treffer" statt der
+                # geforderten Zustellung.
+                config.quiet_from = None
+                config.quiet_to = None
+            if quiet_hours_active:
+                logger.debug(f"Compare-Alert quiet hours active for preset {preset_id}")
+                continue
+
             triggered = self._detect_triggered_locations(
                 preset_id, location_ids, all_locations, config
             )

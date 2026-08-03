@@ -531,3 +531,13 @@ dupliziert).
 - 2026-08-03: Initiale Spec. Sechs Arbeitsgänge nach PO-Entscheidungen E2–E5
   (`docs/context/rework-1467-s2-aenderungsalarm.md`) zugeschnitten, jeder für sich
   auslieferbar. Zeilenangaben gegen den Ist-Stand vom 2026-08-03 verifiziert.
+- 2026-08-03: **AG2 umgesetzt** (AC-4/5/6, `src/services/compare_alert.py`). Ruhezeit-Prüfung
+  vor den Wetterabruf gezogen (Muster `compare_official_alert.py:105-113`), dieselbe geteilte
+  Funktion `DeviationAlertEngine.is_quiet_hours()`. Adversary (4 Runden, VERIFIED) fand und
+  behob zwei Befunde: (1) ein unbrauchbarer Ruhezeit-Wert (z. B. `"25:00"`) ließ den neuen
+  Riegel ungefangen werfen und brach den gesamten Preset-Lauf des Nutzers ab statt nur den
+  einen Ort zu überspringen — jetzt `try/except`, unbrauchbarer Wert gilt als „keine Ruhezeit
+  gesetzt" (sichere Richtung: lieber eine Meldung zu viel als eine verschluckte) und wird per
+  `logger.warning` inkl. Ausnahmetyp protokolliert; (2) `except ValueError` allein reichte
+  nicht — Nicht-String-Werte (Zahl, Liste, Bool, Dict) werfen `TypeError` und kamen weiterhin
+  durch, jetzt `except Exception`.
