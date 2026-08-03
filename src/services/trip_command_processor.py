@@ -20,7 +20,7 @@ from typing import Optional
 
 from app.loader import get_data_dir, get_snapshots_dir, load_all_trips, save_trip
 from app.trip import Stage, Trip
-from utils.timezone import UTC, local_fmt, local_hour, tz_for_coords
+from utils.timezone import UTC, local_dt, local_fmt, local_hour, tz_for_coords
 
 logger = logging.getLogger(__name__)
 
@@ -172,6 +172,38 @@ def _thunder_fmt(value, *, with_emoji: bool = True) -> str:
     key = value.value if hasattr(value, "value") else str(value)
     _map = _MAP_EMOJI if with_emoji else _MAP_PLAIN
     return _map.get(key, "· keine Daten")
+
+
+def _local_midnight(day: date, tz) -> datetime:
+    """Mitternacht des Ortstages ``day`` in der Zone ``tz``."""
+    return datetime(day.year, day.month, day.day, 0, 0, tzinfo=tz)
+
+
+def _hours_between(start: datetime, end: datetime) -> float:
+    """Echte Stunden zwischen zwei Ortszeitpunkten — Differenz UEBER UTC.
+
+    Issue #1470 Adversary-Fund F002: ein Ortstag hat NICHT immer 24 Stunden.
+    Am Sommerzeit-Ende (Europe/Paris 2026-10-25) sind es 25, am Anfang
+    (2026-03-29) nur 23. Ein festes ``hours=24`` liess deshalb die Stunde 23
+    aus der Tabelle fallen bzw. eine Zeile des Folgetages hereinbluten.
+
+    Die Umrechnung nach UTC ist PFLICHT und kein Zierrat: haben beide
+    Zeitpunkte DASSELBE ``tzinfo``-Objekt, ignoriert Python die Zone und
+    rechnet auf den naiven Werten — dann kommt an JEDEM Tag 24.0 heraus, auch
+    an den Wechseltagen. Gemessen: naive Subtraktion 24.0/24.0/24.0, ueber UTC
+    23.0/25.0/24.0 fuer den 29.03./25.10./21.08.2026.
+
+    Rueckgabe bewusst ``float``: Zonen mit halbstuendigem Wechsel (z.B.
+    Lord Howe Island, 30 Minuten) ergeben 23.5 — ein ``int`` wuerde das
+    stillschweigend abschneiden.
+
+    Die Umrechnung laeuft ueber ``local_dt`` (den EINEN Naiv-Guard aus
+    ``utils.timezone``), nicht ueber ein rohes ``.astimezone`` — so wie es der
+    Zeitzonen-Waechter fuer diese Datei verlangt.
+    """
+    return (
+        local_dt(end, UTC) - local_dt(start, UTC)
+    ).total_seconds() / 3600
 
 
 def _num_fmt(unit: str):
@@ -563,19 +595,7 @@ class TripCommandProcessor:
         from services.weather_extractor import WeatherExtractor
         field, header, fmt = _DRILLDOWN_METRICS[metric]
 
-        if day_token == "today":
-            from_time = received_at
-            hours = 12
-            day_date = received_at.date()
-        else:  # tomorrow
-            # Morgen ab 00:00 in der Sende-Zeitzone, 24h Fenster
-            tomorrow = (received_at + timedelta(days=1)).date()
-            tz = received_at.tzinfo
-            from_time = datetime(
-                tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, tzinfo=tz
-            )
-            hours = 24
-            day_date = tomorrow
+        from_time, hours, day_date, tz = self._day_window(trip, day_token, received_at)
 
         res = WeatherExtractor(user_id).drilldown(
             trip.id, field, from_time=from_time, hours=hours
@@ -592,9 +612,7 @@ class TripCommandProcessor:
                 trip_name=trip.name,
             )
 
-        body = self._format_drilldown(
-            res, header, fmt, self._display_tz(trip, day_date), with_emoji=with_emoji
-        )
+        body = self._format_drilldown(res, header, fmt, tz, with_emoji=with_emoji)
         back = "tl_today" if day_token == "today" else "tl_tomorrow"
         markup = {"inline_keyboard": [[{"text": "⬅️ Zurück", "callback_data": back}]]}
         return CommandResult(
@@ -622,22 +640,11 @@ class TripCommandProcessor:
         with_emoji = channel == "telegram"
         from services.weather_extractor import WeatherExtractor
 
+        from_time, hours, today_date, tz = self._day_window(trip, day_token, received_at)
         if day_token == "today":
-            from_time = received_at
-            hours = 12
-            back_btn = "⬅️ /heute"
-            back_cb = "heute"
-            label = "Heute"
-            today_date = received_at.date()
+            back_btn, back_cb, label = "⬅️ /heute", "heute", "Heute"
         else:
-            tomorrow = (received_at + timedelta(days=1)).date()
-            tz = received_at.tzinfo
-            from_time = datetime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, tzinfo=tz)
-            hours = 24
-            back_btn = "⬅️ /morgen"
-            back_cb = "morgen"
-            label = "Morgen"
-            today_date = tomorrow
+            back_btn, back_cb, label = "⬅️ /morgen", "morgen", "Morgen"
 
         ex = WeatherExtractor(user_id)
         r_temp  = ex.drilldown(trip.id, "t2m_c",        from_time=from_time, hours=hours)
@@ -661,7 +668,6 @@ class TripCommandProcessor:
         rain_map  = {p.ts: p.value for p in r_rain.points}  if r_rain.available  else {}
         thund_map = {p.ts: p.value for p in r_thund.points} if r_thund.available else {}
 
-        tz = self._display_tz(trip, today_date)
         lines = [f"📅 Stunden · {label} ({today_date:%d.%m})", ""]
         for pt in r_temp.points:
             h = f"{local_hour(pt.ts, tz):02d}"
@@ -689,6 +695,80 @@ class TripCommandProcessor:
             trip_name=trip.name,
         )
 
+    def _day_window(self, trip: Trip, day_token: str, received_at: datetime):
+        """Tagesfenster fuer "heute"/"morgen" — in der ORTSzeit der Tour.
+
+        Issue #1470 (PO-Entscheidung "Ja, Ortszeit."): vorher hingen BEIDE
+        Zweige an der Weltzeit. ``received_at`` traegt immer UTC (beide
+        Inbound-Reader setzen ``datetime.now(tz=timezone.utc)``) — auf Korsika
+        begann "morgen" dadurch um 02:00 Ortszeit, und zwischen Orts- und
+        Weltzeit-Mitternacht trug "heute" das Datum von GESTERN.
+
+        Das Morgen-Fenster reicht von Ortsmitternacht bis zur NAECHSTEN
+        Ortsmitternacht — nicht feste 24 Stunden (Adversary-Fund F002, s.
+        ``_hours_between``). "Heute" bleibt bewusst bei 12 Stunden: das ist
+        eine DAUER ab jetzt ("die naechsten 12 Stunden") und keine
+        Kalendertags-Grenze; eine Dauer ist sommerzeit-immun, wenn sie in UTC
+        addiert wird. Sie an der Ortsmitternacht zu kappen wuerde die Vorschau
+        kurz vor Mitternacht still auf Minuten zusammenschrumpfen — eine
+        Produktaenderung, die niemand bestellt hat.
+
+        Reihenfolge-Falle: ``_display_tz(trip, day_date)`` braucht den Tag,
+        aber welcher Tag "heute" ist, entscheidet erst die Zone. Aufgeloest in
+        zwei Schritten — die Zone des WELTZEIT-Tages (``_anchor_tz``) bestimmt
+        den Kalendertag, die etappengenaue Zone genau dieses Tages danach
+        Fensterbeginn UND Beschriftung. ``tz`` wird ZURUECKGEGEBEN und vom
+        Aufrufer durchgereicht, nicht dort ein zweites Mal geholt: so koennen
+        Fenstergrenze und Uhrzeitspalte konstruktiv nicht auseinanderlaufen
+        (AC-4).
+
+        Rueckgabe: ``(from_time, hours, day_date, tz)``.
+        """
+        local_now = local_dt(received_at, self._anchor_tz(trip, received_at))
+        if day_token == "today":
+            day_date = local_now.date()
+            return received_at, 12, day_date, self._display_tz(trip, day_date)
+        day_date = (local_now + timedelta(days=1)).date()
+        next_date = day_date + timedelta(days=1)
+        tz = self._display_tz(trip, day_date)
+        from_time = _local_midnight(day_date, tz)
+        hours = _hours_between(from_time, _local_midnight(next_date, tz))
+        return from_time, hours, day_date, tz
+
+    def _anchor_tz(self, trip: Trip, received_at: datetime):
+        """Zone, die entscheidet WELCHER Kalendertag gerade ist (#1470 F003).
+
+        Genommen wird die Etappe des WELTZEIT-Tages. Der liegt hoechstens
+        einen Tag neben dem Ortstag, trifft also praktisch immer die Etappe,
+        auf der der Nutzer gerade steht. Der frueher benutzte Anker "erste
+        Etappe der Tour" war bei einer Tour ueber mehrere Zonen grob daneben:
+        gemessen an einer Tour Neuseeland -> Korsika lag der Tageswechsel
+        ZEHN Stunden falsch (12:00-22:00 UTC meldete bereits den Folgetag,
+        waehrend es am Ort erst 14:00-23:00 war). Mit diesem Anker bleibt als
+        Restfehler nur die Zonendifferenz zweier BENACHBARTER Etappen — null,
+        ausser der Wanderer wechselt an genau diesem Tag die Zone.
+
+        ``local_dt(..., UTC)`` statt ``received_at.date()``: der Weltzeit-Tag
+        soll aus der Weltzeit kommen, auch wenn ein Aufrufer den Zeitstempel
+        einmal in einer anderen Zone hereinreicht.
+        """
+        return self._display_tz(trip, local_dt(received_at, UTC).date())
+
+    def _trip_tz(self, trip: Trip):
+        """Ortszone der Tour OHNE Tagesbezug — erste Etappe, die Wegpunkte hat.
+
+        Beantwortet allein die Frage "welcher Kalendertag ist gerade?"
+        (#1470). Es ist derselbe Weg, den ``_display_tz`` schon als Rueckfall
+        geht, nur ohne das Tagesargument — keine zweite Aufloesung. Ohne
+        Wegpunkt bleibt die importierte UTC-Konstante (Hausnorm #1345), nie
+        ein hartverdrahtetes ``ZoneInfo("UTC")``.
+        """
+        stage = next((s for s in trip.stages if s.waypoints), None)
+        if stage is None:
+            return UTC
+        wp = stage.waypoints[0]
+        return tz_for_coords(wp.lat, wp.lon)
+
     def _display_tz(self, trip: Trip, day_date: date):
         """Anzeige-Zeitzone = ORTSzeit des Wegpunkts, nicht Prozess-Zeitzone.
 
@@ -702,9 +782,7 @@ class TripCommandProcessor:
         """
         stage = trip.get_stage_for_date(day_date)
         if stage is None or not stage.waypoints:
-            stage = next((s for s in trip.stages if s.waypoints), None)
-        if stage is None or not stage.waypoints:
-            return UTC
+            return self._trip_tz(trip)
         wp = stage.waypoints[0]
         return tz_for_coords(wp.lat, wp.lon)
 

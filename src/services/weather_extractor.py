@@ -111,8 +111,12 @@ class WeatherExtractor:
         trip_id: str,
         metric: str,
         from_time: Optional[datetime] = None,
-        hours: int = 12,
+        hours: float = 12,
     ) -> DrilldownResult:
+        # ``hours`` ist float, seit das Tagesfenster ein ORTSTAG ist (#1470):
+        # der hat an Sommerzeit-Wechseln 23 oder 25 Stunden, in Zonen mit
+        # halbstuendigem Wechsel auch 23.5. ``timedelta(hours=...)`` kann das,
+        # ein ``int`` haette es abgeschnitten.
         # Normalisierung an der GRENZE, nicht am Vergleich: `from_time` kommt
         # von aussen (Aufrufer bauen es aus `received_at`) und wird hier einmal
         # auf die Hausnorm gezogen. Ein `if ts.tzinfo` unten in der Fenster-
