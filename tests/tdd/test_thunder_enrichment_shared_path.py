@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import sys
 import threading
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -80,6 +81,29 @@ def _valide_openmeteo_antwort() -> dict:
             "is_day": [1 for _ in range(n)],
         },
     }
+
+
+@contextmanager
+def _registered_test_thunder_provider(name: str, factory):
+    """Registriert `factory` temporaer unter `name` in der echten Provider-
+    Registry (`providers.base`) und stellt den Vorzustand danach wieder her —
+    kein dauerhafter Seiteneffekt auf andere Tests. Laedt zuerst die echten
+    Quellen nach, falls die Registry noch leer ist (Muster:
+    test_meteofrance_direct_fallback.py:_registered_test_direct_provider)."""
+    import providers.base as base_module
+
+    if not base_module._PROVIDER_FACTORIES:
+        base_module._load_providers()
+    had_key = name in base_module._PROVIDER_FACTORIES
+    previous = base_module._PROVIDER_FACTORIES.get(name)
+    base_module.register_provider(name, factory)
+    try:
+        yield
+    finally:
+        if had_key:
+            base_module._PROVIDER_FACTORIES[name] = previous
+        else:
+            base_module._PROVIDER_FACTORIES.pop(name, None)
 
 
 @pytest.fixture
@@ -184,10 +208,9 @@ def test_ac8_zweite_quelle_wirkt_ohne_aenderung_am_anschluss(
         thunder_routing, "thunder_provider_for",
         lambda lat, lon: "test_zweite_quelle", raising=True,
     )
-    from providers.base import register_provider
-    register_provider("test_zweite_quelle", _ZweiteQuelle)
 
-    reihe = om.OpenMeteoProvider().fetch_forecast(_KARNISCHER, enrich_ensemble=False)
+    with _registered_test_thunder_provider("test_zweite_quelle", _ZweiteQuelle):
+        reihe = om.OpenMeteoProvider().fetch_forecast(_KARNISCHER, enrich_ensemble=False)
 
     assert any(dp.lightning_density_per_km2_3h == 7.5 for dp in reihe.data), (
         "Die zweite Quelle wurde nicht wirksam. Der Anreicherungsweg muss jede "
@@ -217,7 +240,6 @@ def test_ac2_leere_stunde_bleibt_am_anschlussweg_leer_und_wird_nie_null(
     der Anschlussweg beide bedient und sie in dieselbe Fuell-Schleife muenden.
     """
     from providers import thunder_routing
-    from providers.base import register_provider
 
     # Drei Stunden mit Wert, drei ohne — die Quelle sagt fuer sie ausdruecklich
     # „keine Aussage" (None), nicht „keine Gefahr" (0).
@@ -242,12 +264,12 @@ def test_ac2_leere_stunde_bleibt_am_anschlussweg_leer_und_wird_nie_null(
         thunder_routing, "thunder_provider_for",
         lambda lat, lon: "test_lueckenhafte_quelle", raising=True,
     )
-    register_provider(
+
+    with _registered_test_thunder_provider(
         "test_lueckenhafte_quelle",
         _LueckenhafteQuelle if protokoll == "einzeln" else _LueckenhafteSammelQuelle,
-    )
-
-    reihe = om.OpenMeteoProvider().fetch_forecast(_KORSIKA, enrich_ensemble=False)
+    ):
+        reihe = om.OpenMeteoProvider().fetch_forecast(_KORSIKA, enrich_ensemble=False)
 
     werte = [dp.lightning_density_per_km2_3h for dp in reihe.data]
     gefuellt = [v for v in werte if v is not None]

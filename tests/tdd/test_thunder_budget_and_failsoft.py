@@ -31,6 +31,7 @@ import json
 import sys
 import threading
 import time
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -76,6 +77,29 @@ def _om_antwort() -> dict:
             "cape": [0.0] * n, "is_day": [1] * n,
         },
     }
+
+
+@contextmanager
+def _registered_test_thunder_provider(name: str, factory):
+    """Registriert `factory` temporaer unter `name` in der echten Provider-
+    Registry (`providers.base`) und stellt den Vorzustand danach wieder her —
+    kein dauerhafter Seiteneffekt auf andere Tests. Laedt zuerst die echten
+    Quellen nach, falls die Registry noch leer ist (Muster:
+    test_meteofrance_direct_fallback.py:_registered_test_direct_provider)."""
+    import providers.base as base_module
+
+    if not base_module._PROVIDER_FACTORIES:
+        base_module._load_providers()
+    had_key = name in base_module._PROVIDER_FACTORIES
+    previous = base_module._PROVIDER_FACTORIES.get(name)
+    base_module.register_provider(name, factory)
+    try:
+        yield
+    finally:
+        if had_key:
+            base_module._PROVIDER_FACTORIES[name] = previous
+        else:
+            base_module._PROVIDER_FACTORIES.pop(name, None)
 
 
 @pytest.fixture
@@ -206,7 +230,6 @@ def test_f004_werfende_gewitterquelle_kippt_die_vorhersage_nicht(
     kaputte Gewitterquelle die ganze Vorhersage mit.
     """
     from providers import thunder_routing
-    from providers.base import register_provider
 
     class _WerfendeQuelle:
         """Erfuellt das Protokoll formal, haelt seine Zusage aber nicht ein."""
@@ -225,9 +248,9 @@ def test_f004_werfende_gewitterquelle_kippt_die_vorhersage_nicht(
         thunder_routing, "thunder_provider_for",
         lambda lat, lon: "test_werfende_quelle", raising=True,
     )
-    register_provider("test_werfende_quelle", _WerfendeQuelle)
 
-    reihe = om.OpenMeteoProvider().fetch_forecast(_KORSIKA, enrich_ensemble=False)
+    with _registered_test_thunder_provider("test_werfende_quelle", _WerfendeQuelle):
+        reihe = om.OpenMeteoProvider().fetch_forecast(_KORSIKA, enrich_ensemble=False)
 
     assert reihe.data, (
         "Die Vorhersage ist leer — der Fehler der Gewitterquelle hat sie "
