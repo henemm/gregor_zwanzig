@@ -1,4 +1,4 @@
-# Mini-Spec: Wintersport-Werte in der Touren-SMS anschließen (#1450)
+# Mini-Spec: Wintersport-Werte in der Trip-Briefing-SMS anschließen (#1450)
 
 ## Was ändert sich
 - `build_token_line()` (`src/output/tokens/builder.py`): das Profil-Gate vor dem Wintersport-Block entfällt. Schneehöhe (SD), Neuschnee (NS24+), Schneefallgrenze (SL), Lawinenstufe (AV) und gefühlte Temperatur (WC) werden künftig für **jeden** Trip erzeugt — genau wie Regen, Wind, Gewitter usw. Sichtbarkeit steuert allein die normale Metrik-Auswahl im Editor (aktiviert/deaktiviert, Schwellwert). Keine Sonderbedingung "nur bei Wintersport-Trip".
