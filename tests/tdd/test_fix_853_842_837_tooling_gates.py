@@ -19,6 +19,21 @@ from pathlib import Path
 
 import pytest
 
+# Wegwerf-Repo-Isolationshelfer wiederverwendet (Issue #1196 S1 AC-10, PO-
+# Korrektur 2026-08-03, zweite Runde): der Test MUSS in dieser Datei
+# bleiben, weil test_prod_selftest_564.py modulweit
+# `pytestmark = pytest.mark.staging` traegt und damit im Standardlauf
+# (`addopts = -m 'not ... staging'`) komplett deselektiert waere -- ein
+# Umzug dorthin macht den Test nicht gruen, sondern unsichtbar. Die Helfer
+# selbst liegen in tests/tdd/conftest.py (geteilter Ort, ein Ort statt
+# Duplikat) und werden hier wie auch in test_prod_selftest_564.py von dort
+# importiert -- kein Cross-Import zwischen den beiden Testdateien mehr.
+from tests.tdd.conftest import (
+    _init_evidence_free_repo,
+    _load_prod_selftest_module,
+    _make_e2e_verified,
+)
+
 ROOT = Path(__file__).parent.parent.parent
 
 # prod_selftest importierbar machen
@@ -80,13 +95,32 @@ class TestAC2AC3ProdSelftestAncestor:
             "erwartet: 0 (PASS). Strict-Equality-Bug noch nicht behoben."
         )
 
-    def test_ac3_fail_when_not_ancestor(self):
-        """GREEN (Regression): prod_selftest gibt 1 für ungültigen Commit.
+    def test_ac3_fail_when_not_ancestor(self, tmp_path, monkeypatch):
+        """AC-3: ein erfundener, garantiert ungueltiger Commit darf NIE als
+        Vorfahre durchgehen -- rc muss 1 sein, unabhaengig vom
+        Attestations-Bestand irgendeines echten Repos.
 
-        Dieser Test muss sowohl in RED als auch in GREEN bestehen.
-        """
-        fake = "deadbeef" * 5  # 40 Zeichen, definitiv kein gültiger Ancestor
-        rc = self._run_with_verified_commit(fake)
+        Issue #1196 S1 AC-10 (PO-Korrektur 2026-08-03): urspruenglich rief
+        dieser Test run_selftest() OHNE Isolation gegen das im Skript fest
+        verdrahtete REPO_DIR (echtes Hauptrepo) auf -- das Ergebnis hing
+        damit vom dortigen Attestations-Bestand ab (Zufallsrauschen,
+        PO-Befund 2026-07-26) UND schrieb einen Bericht ins Hauptrepo. Ein
+        Umzug nach test_prod_selftest_564.py (Versuch #1) machte den Test
+        NICHT gruen, sondern unsichtbar -- jene Datei traegt modulweit
+        `pytest.mark.staging` und wird im Standardlauf komplett deselektiert
+        (PO-Korrektur 2026-08-03). Jetzt: Test bleibt HIER (laeuft im
+        Standardlauf), nur die Wegwerf-Repo-Isolationshelfer sind von dort
+        importiert (Muster von TestAC5NoE2EFile, EIN Ort statt Duplikat)."""
+        mod = _load_prod_selftest_module()
+        root = tmp_path / "repo"
+        _init_evidence_free_repo(root)
+        monkeypatch.setattr(mod, "REPO_DIR", root)
+
+        fake = "deadbeef" * 5  # 40 Zeichen, definitiv kein gueltiger Ancestor
+        e2e_path = _make_e2e_verified(tmp_path, verified_commit=fake)
+
+        rc = mod.run_selftest(e2e_path, "test-tooling-853", scope="backend")
         assert rc == 1, (
-            f"prod_selftest gibt {rc} für ungültigen Commit — erwartet: 1 (FAIL)"
+            f"prod_selftest gibt {rc} fuer ungueltigen Commit {fake[:8]} -- "
+            "erwartet: 1 (FAIL), unabhaengig vom Hauptrepo-Attestationsbestand"
         )

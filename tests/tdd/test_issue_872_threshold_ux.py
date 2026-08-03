@@ -3,18 +3,20 @@
 SPEC: docs/specs/modules/issue_872_threshold_ux.md (AC-1..AC-6)
 
 AC-6 (Backend): SMS_SYMBOL_BY_METRIC muss "thunder" -> "TH:" enthalten.
-AC-4 (Backend): trip_report_scheduler muss sms_threshold_thunder im Trend-Dict übergeben.
+AC-4 (Backend): eine gesetzte Gewitterschwelle muss tatsaechlich als
+  row["sms_threshold_thunder"] ankommen -- geprueft am geteilten
+  Ausblick-Renderer build_outlook_row() (src/output/renderers/email/outlook.py),
+  wo der Schlüssel seit #1301 gesetzt wird (Issue #1196 S1 AC-7: der alte
+  Quelltext-Textprüfer zeigte auf einen laengst umgezogenen Ort im Scheduler).
 
 AC-1/2/3/5 sind Frontend-E2E-ACs → frontend/e2e/issue-872-threshold-ux.spec.ts
 
-RED-Erwartung:
-  AC-6: AssertionError — "thunder" fehlt in SMS_SYMBOL_BY_METRIC (nur R/PR/W/G)
-  AC-4: AssertionError — Scheduler baut sms_threshold_thunder nicht in Trend-Dict
-
-KEINE Mocks — echter Import von sms_trip, echter Scheduler-Pfad.
+KEINE Mocks — echter Import von sms_trip, echter Aufruf von build_outlook_row.
 """
 
 from __future__ import annotations
+
+from zoneinfo import ZoneInfo
 
 
 
@@ -35,20 +37,38 @@ def test_ac6_sms_symbol_by_metric_contains_thunder():
     )
 
 
-# ── AC-4: Scheduler-Quellcode enthält sms_threshold_thunder ──────────────
-def test_ac4_scheduler_source_contains_sms_threshold_thunder():
+# ── AC-4: gesetzte Gewitterschwelle kommt in build_outlook_row() an ──────
+def test_ac4_gesetzte_sms_schwelle_thunder_kommt_in_row_an():
     """
-    GIVEN: trip_report_scheduler.py (Trend-Dict-Aufbau ~Z.1064-1069)
-    WHEN:  Quellcode-Inspektion des Scheduler-Moduls
-    THEN:  Der String "sms_threshold_thunder" ist im Quellcode vorhanden,
-           was beweist dass der Scheduler diesen Key in den Trend-Dict schreibt
+    GIVEN: build_outlook_row(..., sms_thresholds={"thunder": X})
+    WHEN:  die Zeile gebaut wird
+    THEN:  row["sms_threshold_thunder"] == X (Positivfall -- die Negation
+           bei None/leerem Dict prüft bereits test_shared_outlook_renderer.py
+           test_build_outlook_row_pure_function, Zeile 260)
     """
-    import inspect
-    from src.services import trip_report_scheduler
+    from app.models import SegmentWeatherSummary, ThunderLevel
+    from output.renderers.email.outlook import build_outlook_row
 
-    scheduler_src = inspect.getsource(trip_report_scheduler)
+    summary = SegmentWeatherSummary(
+        temp_min_c=9.0, temp_max_c=21.0, precip_sum_mm=3.5,
+        wind_max_kmh=28.0, thunder_level_max=ThunderLevel.MED,
+        pop_max_pct=60,
+    )
+    tz = ZoneInfo("Europe/Vienna")
 
-    assert "sms_threshold_thunder" in scheduler_src, (
-        "trip_report_scheduler.py enthält 'sms_threshold_thunder' noch nicht. "
-        "Erwartet: Zeile ~1067 'sms_threshold_thunder': _sms_thr.get('thunder')"
+    row = build_outlook_row(
+        summary, [], "Mo", tz, sms_thresholds={"thunder": 3.0},
+    )
+    assert row["sms_threshold_thunder"] == 3.0, (
+        f"Gesetzte Gewitterschwelle muss ankommen, erhalten: {row.get('sms_threshold_thunder')!r}"
+    )
+
+    row_empty = build_outlook_row(summary, [], "Mo", tz, sms_thresholds={})
+    assert "sms_threshold_thunder" not in row_empty, (
+        f"Ohne gesetzte Schwelle darf der Schlüssel nicht auftauchen, erhalten: {row_empty}"
+    )
+
+    row_none = build_outlook_row(summary, [], "Mo", tz, sms_thresholds={"thunder": None})
+    assert "sms_threshold_thunder" not in row_none, (
+        f"None-Schwelle muss gefiltert werden, erhalten: {row_none}"
     )

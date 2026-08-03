@@ -12,13 +12,11 @@ ACs abgedeckt:
   AC-6: Report-Format + <60s Laufzeit
 """
 
-import importlib.util as _importlib_util
 import json
 import os
 import subprocess
 import threading
 import time
-from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -38,33 +36,22 @@ pytestmark = pytest.mark.staging
 # (Attestation/Report-Ablage, HEAD-Ermittlung) fest auf den Hauptrepo verdrahtet
 # (geteilte Attestation, Produktion wird nur von dort deployt), unabhängig
 # davon, welche Dateikopie ausgeführt wird.
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-PROD_SELFTEST = _REPO_ROOT / ".claude" / "hooks" / "prod_selftest.py"
-REPO_DIR = Path("/home/hem/gregor_zwanzig")
+#
+# _load_prod_selftest_module/_head_sha/_make_e2e_verified/
+# _init_evidence_free_repo sind seit Issue #1196 S1 AC-10 (PO-Korrektur
+# 2026-08-03) nach tests/tdd/conftest.py verschoben (geteilter Ort mit
+# tests/tdd/test_fix_853_842_837_tooling_gates.py, das dieselben Helfer ohne
+# den `staging`-Modul-Marker dieser Datei braucht) und werden von dort
+# zurückimportiert -- keine Neudefinition, ein Ort.
+from tests.tdd.conftest import (  # noqa: E402
+    PROD_SELFTEST,
+    REPO_DIR,
+    _init_evidence_free_repo,
+    _load_prod_selftest_module,
+    _make_e2e_verified,
+)
+
 PROD_BASE = "https://gregor20.henemm.com"
-
-
-def _load_prod_selftest_module():
-    """Laedt prod_selftest.py frisch per importlib (Muster
-    test_staging_gate_verdict_merge.py) -- fuer Direktaufrufe von `_probe_ac`
-    ohne Subprocess/echten Netzwerk-Rundlauf (Fix 1/Fix 2, #1327/#1228)."""
-    spec = _importlib_util.spec_from_file_location(
-        "prod_selftest_direct_1327", str(PROD_SELFTEST)
-    )
-    assert spec is not None and spec.loader is not None
-    mod = _importlib_util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-def _head_sha() -> str:
-    result = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        capture_output=True,
-        text=True,
-        cwd=str(REPO_DIR),
-    )
-    return result.stdout.strip()
 
 
 def _run_selftest(e2e_path=None, workflow=None, extra_args=None, env_override=None):
@@ -86,43 +73,6 @@ def _run_selftest(e2e_path=None, workflow=None, extra_args=None, env_override=No
         cmd, capture_output=True, text=True, cwd=str(REPO_DIR), env=run_env
     )
     return result.returncode, result.stdout, result.stderr
-
-
-def _make_e2e_verified(
-    tmp_path,
-    verified_commit=None,
-    staging_verdict="VERIFIED: 2/2 ACs grün",
-    findings=None,
-):
-    """Schreibt eine e2e_verified.json mit kontrollierten Inhalten."""
-    if verified_commit is None:
-        verified_commit = _head_sha()
-    if findings is None:
-        findings = [
-            {
-                "ac": "AC-1",
-                "status": "PASS",
-                "url": "https://staging.gregor20.henemm.com/:AC-1",
-                "evidence": "Root-Route ok",
-            },
-            {
-                "ac": "AC-2",
-                "status": "PASS",
-                "url": "https://staging.gregor20.henemm.com/trips/new:AC-2",
-                "evidence": "Form-Route ok",
-            },
-        ]
-    data = {
-        "verified_commit": verified_commit,
-        "staging_verdict": staging_verdict,
-        "findings": findings,
-        "verified_at": datetime.now(timezone.utc).isoformat(),
-        "scope": "frontend-only",
-        "environment": "staging",
-    }
-    json_file = tmp_path / "e2e_verified.json"
-    json_file.write_text(json.dumps(data, indent=2))
-    return json_file
 
 
 class TestScriptExists:
@@ -348,35 +298,6 @@ class TestAC4SkippedFindings:
         assert rc == 0, (
             f"Nur SKIPPED-Findings → Exit 0 (SKIPPED_ALL) erwartet, aber Exit {rc}\n{out}\n{err}"
         )
-
-
-def _init_evidence_free_repo(root: Path) -> str:
-    """Erzeugt ein isoliertes, echtes Git-Repo OHNE JEDE Attestation.
-
-    Für die 'kein Nachweis'-Fälle unten reicht ein Direktaufruf mit
-    explizitem ``scope=`` allein NICHT: run_selftest() sucht bei
-    Nicht-Exakt-Treffer über ``_e2e_paths._nearest_verified_ancestor`` im
-    Git-Verlauf von ``REPO_DIR`` nach einem Vorfahren mit gültiger
-    Attestation. Bliebe ``REPO_DIR`` auf dem echten Hauptrepo verdrahtet,
-    fände dieser Scan reale, dort tatsächlich vorhandene Attestationen für
-    Vorfahren des aktuellen HEAD und der Test würde fälschlich PASS liefern
-    — abhängig vom Zufallszustand des Hauptrepos (genau der vom PO
-    gemeldete Fehlerklasse, 2026-07-26). Ein `.gitignore` analog dem echten
-    Projekt (.gitignore:42-43) verhindert zusätzlich, dass eine versehentlich
-    geschriebene Attestations-Datei durch `git add -A` eingecheckt wird.
-    """
-    root.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=root, check=True)
-    subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=root, check=True)
-    subprocess.run(["git", "config", "user.name", "Tester"], cwd=root, check=True)
-    (root / ".gitignore").write_text(".claude/e2e_verified/\n.claude/e2e_verified.json\n")
-    (root / "src").mkdir()
-    (root / "src" / "a.py").write_text("a = 1\n")
-    subprocess.run(["git", "add", "-A"], cwd=root, check=True)
-    subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=root, check=True)
-    return subprocess.run(
-        ["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True
-    ).stdout.strip()
 
 
 class TestAC5NoE2EFile:

@@ -8,11 +8,12 @@ pro Empfänger einen individuellen sendmail()-Call ausführt und ein
 SMTP-Fehler bei einem Empfänger die anderen nicht blockiert.
 
 Keine Mocks erlaubt (CLAUDE.md). Tests nutzen:
-- Strukturanalyse via inspect.getsource (schnelle Verifikation der Schleife)
+- Protocol-Konformitätsprüfung (Signatur)
 - @pytest.mark.email für echte SMTP-Verifikation
 
+Issue #1196 S1 AC-6: Die frueheren Quelltext-Strukturtests (`inspect.getsource`)
+sind entfernt, s. Klassen-Docstring unten.
 """
-import inspect
 import pytest
 
 
@@ -20,50 +21,16 @@ class TestPerRecipientSend:
     """
     AC-5: Fehler beim Versand einzelner Empfänger blockieren nicht die anderen.
     SPEC §4: Per-Empfänger-Loop mit individuellem try/except.
+
+    Issue #1196 S1 AC-6: Die zwei ehemaligen Quelltext-Textprüfungen
+    (`inspect.getsource(EmailOutput.send)` auf Teilstrings) wurden entfernt —
+    verbotene Verhaltensnachweisform (CLAUDE.md „Zwei Schichten"), und das
+    Verhalten selbst ist laengst umgezogen nach
+    `src/output/channels/email.py::_dial_and_send` (isolate_per_recipient).
+    Der echte Verhaltensnachweis existiert bereits:
+    `tests/tdd/test_mail_transport_dial_behaviour.py::
+    test_ac2_primaerweg_stellt_trotz_einer_ablehnung_an_die_uebrigen_zu`.
     """
-
-    def test_ac5_source_enthält_per_recipient_loop(self):
-        """
-        Strukturtest: send()-Quellcode enthält eine for-Schleife über recipients
-        und einen individuellen sendmail()-Call pro Empfänger.
-
-        SPEC §4: "Mehrere Empfänger: pro Empfänger individueller Call"
-        Dies scheitert solange die Schleife nicht implementiert ist.
-        """
-        from output.channels.email import EmailOutput
-
-        src = inspect.getsource(EmailOutput.send)
-
-        assert "for recipient in recipients" in src, (
-            "send() muss eine 'for recipient in recipients'-Schleife enthalten "
-            "(SPEC §4 Per-Empfänger-Loop)"
-        )
-        assert "sendmail(from_addr, [recipient]" in src, (
-            "sendmail() muss pro Empfänger mit [recipient] als Liste aufgerufen werden, "
-            "nicht mit der gesamten recipients-Liste"
-        )
-
-    def test_ac5_source_enthält_per_recipient_try_except(self):
-        """
-        Strukturtest: send()-Quellcode enthält try/except innerhalb der recipients-Schleife
-        mit logger.error-Aufruf bei Fehler.
-
-        SPEC §4: "SMTP-Fehler einzelner Empfänger werden per logger.error() protokolliert
-        und unterbrechen die Schleife für diesen Empfänger nicht die restlichen Empfänger."
-        """
-        from output.channels.email import EmailOutput
-
-        src = inspect.getsource(EmailOutput.send)
-
-        assert "logger.error" in src, (
-            "send() muss logger.error() für SMTP-Fehler pro Empfänger aufrufen "
-            "(SPEC §4 Fehler-Logging)"
-        )
-        # Kein Re-raise nach SMTPException in der inneren Schleife
-        # Strukturell: try/except ohne raise
-        assert "except smtplib.SMTPException" in src, (
-            "send() muss smtplib.SMTPException in der Empfänger-Schleife abfangen"
-        )
 
     def test_ac5_return_type_none_unveraendert(self):
         """

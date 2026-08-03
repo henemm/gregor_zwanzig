@@ -1,7 +1,7 @@
 # Frontend Components Reference
 
-**Updated:** 2026-07-21 (Doku-Audit #1341 — Wizard-Sektionen und Datei-Inventar entfernt, Anlege-Editoren dokumentiert); 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
-**Version:** 1.10
+**Updated:** 2026-08-03 (Issue #1196 S1 — Wordmark-Props + 10 real existierende Komponenten ergänzt: MapCanvas, WaypointPin, ProfileEditor, StageCard, WaypointCard, PauseStageView, AlertRulesEditor, AlertRuleRow, ModeCard, LocationPreviewMap); 2026-07-21 (Doku-Audit #1341 — Wizard-Sektionen und Datei-Inventar entfernt, Anlege-Editoren dokumentiert); 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
+**Version:** 1.11
 
 ## Overview
 
@@ -324,6 +324,29 @@ interface ElevSparklineProps {
 - `data-active={active}` (for conditional styling if needed)
 - `viewBox="0 0 {width} {height}"` — responsive scaling
 - `aria-hidden="true"` — decorative, not announced
+
+---
+
+### Wordmark Component
+
+**File:** `frontend/src/lib/components/ui/wordmark/Wordmark.svelte` (thin
+wrapper, delegiert an `lib/brand/BrandWordmark.svelte` — die kanonische
+Brand-Bibliothek, Issue #370). Rendert das Gregor-Zwanzig-Logo, Standard-
+Inhalt der `TopAppBar` (s. "App-Shell Navigation" unten), solange keine
+Seite per `topAppBarStore` einen `title` setzt.
+
+**Props:**
+```typescript
+interface WordmarkProps {
+  size?: 'sm' | 'md' | 'lg';  // default: 'md' — 'sm' zeigt keinen Untertitel
+  href?: string;              // default: '/'
+}
+```
+
+**Example:**
+```svelte
+<Wordmark size="sm" href="/" />
+```
 
 ---
 
@@ -679,6 +702,45 @@ Persistenz: Auto-Save gegen `/api/trips` bzw. `/api/compare/presets` — nicht
 `/api/subscriptions` (entfernt, liefert 404).
 
 ---
+
+## Trip-Detail Wegpunkt-Editor (`trip-detail/waypoints/`)
+
+Rechte-Spalte-Bausteine des Wegpunkt-Editors (Epic #137), gemeinsam genutzt
+von Trip-Editor und Trip-Detail-Ansicht:
+
+- **`MapCanvas.svelte`** — Leaflet-Kartenfläche einer Etappe; Pin-Klick ruft
+  `onWaypointActivate(waypointId)`, optionaler `onMapClick(lat, lon)` zum
+  Einfügen neuer Wegpunkte, `fillHeight` für den mobilen Vollbild-Container
+  (Issue #963).
+- **`WaypointPin.svelte`** — SVG-Pin-Marker (Kreis + Nummer + Spitze) für
+  Karte und Höhenprofil; Props `index`, `active`, `onclick`, `size`.
+- **`ProfileEditor.svelte`** — SVG-Höhenprofil (360×140) mit klickbaren Pins;
+  analog `ProfileChart.svelte`, erweitert um Gridlines + `onWaypointActivate`.
+- **`StageCard.svelte`** — kompakte Etappen-Karte (Mini-Höhenprofil, Distanz)
+  für die Etappenliste; Design-Fidelity 1:1 (Issue #585).
+- **`WaypointCard.svelte`** — Listeneintrag für einen Wegpunkt (Name, Typ,
+  Höhe, Ankunftszeit); aktiver Zustand zeigt Umbenennen/Verschieben/Löschen.
+- **`PauseStageView.svelte`** — Ansicht für einen Pausentag (editierbares
+  Datum via `StageDateField`, Standort aus Vorgänger-/Folge-Etappe).
+
+## Alert-Rules-Editor (`alert-rules-editor/`)
+
+Liste-basierter Editor für `Trip.alert_rules` (Issue #223/#179):
+
+- **`AlertRulesEditor.svelte`** — Container: Empty-State, Liste, Add-Button;
+  `updateRules(index, updated[])` ersetzt eine Regel durch 1 oder 2 (Modus
+  „Beides").
+- **`AlertRuleRow.svelte`** — eine Zeile pro `AlertRule` mit View- und
+  Edit-Modus (Modus-Toggle Δ/Absolut/Beides, Metric-Select, Severity,
+  Kanäle).
+- **`ModeCard.svelte`** — eine anklickbare Radio-Karte je Modus
+  (`'absolute' | 'delta' | 'both'`), Eyebrow/Titel/Beschreibung/Beispiel.
+
+## Compare Components (`compare/`)
+
+- **`LocationPreviewMap.svelte`** — Mini-Karten-Vorschau (Topo-Hintergrund +
+  zentrierter Pin) für einen Ort im Ortsvergleich-Anlege-Fluss; Props `lat`,
+  `lon`.
 
 ## Komponenten-Inventar: Dateisystem ist die Wahrheit
 

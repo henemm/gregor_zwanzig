@@ -35,7 +35,11 @@ NAMED_COMPONENTS = [
     "StageCard",
     "WaypointCard",
     "LocationPreviewMap",
-    "NewLocationWizard",
+    # "NewLocationWizard" entfernt (Issue #1196 S1 AC-4): die Wizards sind
+    # abgeschafft (CLAUDE.md "Wizards existieren nicht mehr"),
+    # `find frontend/src -iname "*NewLocationWizard*"` liefert keinen Treffer
+    # mehr; Nachweis der Abschaffung in
+    # frontend/src/lib/components/shared/__tests__/legacy_wizard_removed.test.ts.
     "AlertRulesEditor",
     "AlertRuleRow",
     "ModeCard",
@@ -109,10 +113,21 @@ def test_ac4_no_dangling_nicegui_link_in_live_tooling(tooling_file: Path):
 # --- AC-5: Stand-Datum + Wordmark-Props -------------------------------------
 
 def test_ac5_updated_date_bumped():
-    """AC-5: Header traegt das aktuelle Stand-Datum 2026-05-25."""
+    """AC-5: Header traegt mindestens das Stand-Datum 2026-05-25.
+
+    Monotone Pruefung statt festem Teilstring (Issue #1196 S1 AC-4): jede
+    legitime Folge-Doku-Pflege bumpt das Datum weiter nach vorn und wuerde
+    einen festen "**Updated:** 2026-05-25"-Teilstring sonst erneut brechen.
+    """
+    import re
+    from datetime import date
+
     text = _doc_text()
-    assert "**Updated:** 2026-05-25" in text, (
-        "Stand-Datum nicht auf 2026-05-25 aktualisiert."
+    match = re.search(r"\*\*Updated:\*\*\s*(\d{4}-\d{2}-\d{2})", text)
+    assert match, "Kein '**Updated:** <Datum>'-Header im Doc gefunden."
+    updated = date.fromisoformat(match.group(1))
+    assert updated >= date(2026, 5, 25), (
+        f"Stand-Datum {updated} liegt vor dem geforderten Mindeststand 2026-05-25."
     )
 
 

@@ -492,11 +492,14 @@ def test_ac6_reale_paket_registrierungsreihenfolge_meteoalarm_vor_dpc(monkeypatc
         importlib.reload(oa_package)  # fuehrt die ECHTEN __init__.py-Registrierungszeilen erneut aus
 
         names = [s.name for s in oa_base._REGISTERED_SOURCES]
-        assert "meteoalarm" in names and "dpc" in names, (
+        # Seit Issue #1445 S3 heisst die registrierte Quelle "meteoalarm_feed"
+        # (MeteoAlarmFeedSource, country-unabhaengiges .name-Property) -- die
+        # alte MeteoAlarmSource ("meteoalarm") wird nicht mehr registriert.
+        assert "meteoalarm_feed" in names and "dpc" in names, (
             f"Nach frischem Paket-Reload muessen beide Quellen registriert "
             f"sein, erhalten: {names}"
         )
-        assert names.index("meteoalarm") < names.index("dpc"), (
+        assert names.index("meteoalarm_feed") < names.index("dpc"), (
             "MeteoAlarmSource muss in __init__.py VOR DpcSource registriert "
             "werden -- AC-6 verlangt bei GLEICHER Warnstufe (Stufengleichstand) "
             "den Sieg der zuerst registrierten Quelle (Zwei-Pass-Partitionierung, "

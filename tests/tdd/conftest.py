@@ -4,7 +4,11 @@ TDD Test Fixtures.
 Provides ground truth fetcher for TDD tests.
 """
 
+import importlib.util as _importlib_util
+import json
+import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -17,6 +21,109 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 from validation import GroundTruthFetcher
+
+# ---------------------------------------------------------------------------
+# prod_selftest.py Testhelfer -- geteilter Ort (Issue #1196 S1 AC-10, PO-
+# Korrektur 2026-08-03): verschoben aus test_prod_selftest_564.py, damit
+# tests/tdd/test_fix_853_842_837_tooling_gates.py sie importieren kann, ohne
+# dass eine Testdatei die andere importiert. test_prod_selftest_564.py holt
+# sie von hier zurück (import statt Neudefinition).
+# ---------------------------------------------------------------------------
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+PROD_SELFTEST = _REPO_ROOT / ".claude" / "hooks" / "prod_selftest.py"
+# REPO_DIR bleibt bewusst der Hauptrepo-Pfad (Pfadregel #1409: geteilte
+# Ablage, HEAD-Ermittlung/Attestation) -- unabhaengig davon, welche
+# Dateikopie (Worktree oder Hauptrepo) den Testcode tatsaechlich ausfuehrt.
+REPO_DIR = Path("/home/hem/gregor_zwanzig")
+
+
+def _load_prod_selftest_module():
+    """Laedt prod_selftest.py frisch per importlib (Muster
+    test_staging_gate_verdict_merge.py) -- fuer Direktaufrufe ohne
+    Subprocess/echten Netzwerk-Rundlauf (Fix 1/Fix 2, #1327/#1228)."""
+    spec = _importlib_util.spec_from_file_location(
+        "prod_selftest_direct_1327", str(PROD_SELFTEST)
+    )
+    assert spec is not None and spec.loader is not None
+    mod = _importlib_util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _head_sha() -> str:
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO_DIR),
+    )
+    return result.stdout.strip()
+
+
+def _make_e2e_verified(
+    tmp_path,
+    verified_commit=None,
+    staging_verdict="VERIFIED: 2/2 ACs grün",
+    findings=None,
+):
+    """Schreibt eine e2e_verified.json mit kontrollierten Inhalten."""
+    if verified_commit is None:
+        verified_commit = _head_sha()
+    if findings is None:
+        findings = [
+            {
+                "ac": "AC-1",
+                "status": "PASS",
+                "url": "https://staging.gregor20.henemm.com/:AC-1",
+                "evidence": "Root-Route ok",
+            },
+            {
+                "ac": "AC-2",
+                "status": "PASS",
+                "url": "https://staging.gregor20.henemm.com/trips/new:AC-2",
+                "evidence": "Form-Route ok",
+            },
+        ]
+    data = {
+        "verified_commit": verified_commit,
+        "staging_verdict": staging_verdict,
+        "findings": findings,
+        "verified_at": datetime.now(timezone.utc).isoformat(),
+        "scope": "frontend-only",
+        "environment": "staging",
+    }
+    json_file = tmp_path / "e2e_verified.json"
+    json_file.write_text(json.dumps(data, indent=2))
+    return json_file
+
+
+def _init_evidence_free_repo(root: Path) -> str:
+    """Erzeugt ein isoliertes, echtes Git-Repo OHNE JEDE Attestation.
+
+    Fuer 'kein Nachweis'-Faelle reicht ein Direktaufruf mit explizitem
+    ``scope=`` allein NICHT: run_selftest() sucht bei Nicht-Exakt-Treffer
+    ueber ``_e2e_paths._nearest_verified_ancestor`` im Git-Verlauf von
+    ``REPO_DIR`` nach einem Vorfahren mit gueltiger Attestation. Bliebe
+    ``REPO_DIR`` auf dem echten Hauptrepo verdrahtet, faende dieser Scan
+    reale, dort tatsaechlich vorhandene Attestationen fuer Vorfahren des
+    aktuellen HEAD und der Test wuerde faelschlich PASS liefern -- abhaengig
+    vom Zufallszustand des Hauptrepos (genau die vom PO gemeldete
+    Fehlerklasse, 2026-07-26). Ein `.gitignore` analog dem echten Projekt
+    verhindert zusaetzlich, dass eine versehentlich geschriebene
+    Attestations-Datei durch `git add -A` eingecheckt wird.
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.name", "Tester"], cwd=root, check=True)
+    (root / ".gitignore").write_text(".claude/e2e_verified/\n.claude/e2e_verified.json\n")
+    (root / "src").mkdir()
+    (root / "src" / "a.py").write_text("a = 1\n")
+    subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=root, check=True)
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True
+    ).stdout.strip()
 
 
 def pytest_configure(config: pytest.Config) -> None:

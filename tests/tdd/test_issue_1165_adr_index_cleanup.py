@@ -79,7 +79,15 @@ def test_adr_index_is_bijective_with_files():  # doc-compliance-test
 # Nummern als Teil der Migrationsbeschreibung, sind keine echten Cross-Referenzen.
 _SELF_REFERENTIAL_EXCLUDES = (
     _REPO_ROOT / "docs" / "context" / "fix-1165-adr-index-cleanup.md",
-    _REPO_ROOT / "docs" / "specs" / "modules" / "issue_1165_adr_index_cleanup.md",
+    # Datei archiviert seit dem #1165-Umbau (liegt nicht mehr unter
+    # docs/specs/modules/) -- Issue #1196 S1, gemessen: der alte Pfad-Literal
+    # zeigte ins Leere, wodurch die 5 Selbstzitate in der archivierten Spec
+    # wieder als echte Treffer zaehlten.
+    _REPO_ROOT / "docs" / "specs" / "_archive" / "modules" / "issue_1165_adr_index_cleanup.md",
+    # Context-Doku DIESER #1196-S1-Scheibe zitiert den alten Dateinamen als
+    # Teil ihrer eigenen Analyse (Beschreibung des hier reparierten Tests) --
+    # gleiche Kategorie "Meta-Dokument ueber den Fix selbst" wie oben.
+    _REPO_ROOT / "docs" / "context" / "fix-1196-s1-testnetz-entrauschen.md",
 )
 _SELF_REFERENTIAL_EXCLUDE_DIRS = (_REPO_ROOT / "docs" / "artifacts",)
 

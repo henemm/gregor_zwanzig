@@ -221,7 +221,10 @@ def test_build_outlook_row_pure_function():
     """
     from app.models import ForecastDataPoint, SegmentWeatherSummary, ThunderLevel
     from output.renderers.email.outlook import build_outlook_row
-    from src.output.tokens.dto import HourlyValue
+    # Produktpfad (nicht "src."-Praefix) -- pyproject.toml pythonpath=["src", "."]
+    # loest beide Praefixe auf und erzeugt sonst ZWEI getrennte Klassenobjekte,
+    # wodurch isinstance() ueber die Grenze immer False liefert (Issue #1196 S1 AC-8).
+    from output.tokens.dto import HourlyValue
 
     summary = SegmentWeatherSummary(
         temp_min_c=9.0, temp_max_c=21.0, precip_sum_mm=3.5,

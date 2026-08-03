@@ -98,7 +98,14 @@ def test_ac5_timestamps_restamped_to_today():
     loc = Location(latitude=47.2692, longitude=11.4041, name="Innsbruck")
     ts = provider.fetch_forecast(loc)
 
-    today0 = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    # Naives UTC, kein tzinfo: Hausnorm seit #1345 (src/app/models.py:151-158,
+    # ForecastDataPoint.__post_init__) strippt an der Provider-Grenze bewusst
+    # jede Zonenangabe, damit ts provider-uebergreifend vergleichbar bleibt
+    # (Issue #1196 S1 AC-9 -- der Sollwert war noch aware, das Produkt ist es
+    # absichtlich nicht).
+    today0 = datetime.now(timezone.utc).replace(
+        tzinfo=None, hour=0, minute=0, second=0, microsecond=0
+    )
     assert ts.data[0].ts == today0, \
         f"data[0].ts soll heute 00:00 UTC sein, sah {ts.data[0].ts}"
     assert ts.data[1].ts == today0 + timedelta(hours=1), \

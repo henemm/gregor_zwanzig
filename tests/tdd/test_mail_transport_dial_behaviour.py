@@ -193,7 +193,13 @@ def test_ac2_primaerweg_stellt_trotz_einer_ablehnung_an_die_uebrigen_zu(
     monkeypatch,
 ):
     """AC-2: drei Empfaenger, genau einer wird abgelehnt -- die anderen zwei
-    bekommen die Mail trotzdem, und send() wirft nicht."""
+    bekommen die Mail trotzdem, und send() wirft nicht.
+
+    Traegt seit Issue #1196 S1 (AC-6) zugleich die Verhaltensabdeckung von
+    #457 (Per-Empfaenger-Fehlerbehandlung): die zwei frueheren Quelltext-
+    Textprueferstests in test_issue_457_email_per_recipient.py wurden
+    geloescht, weil dieser Test dieselbe Aussage bereits verhaltensbasiert
+    beweist (kein Verlust an Abdeckung)."""
     verlauf = _installiere_transport(
         monkeypatch,
         sendefehler={
