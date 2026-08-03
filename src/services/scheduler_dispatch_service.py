@@ -19,6 +19,7 @@ from app.loader import (
     load_all_locations,
     load_compare_presets,
 )
+from services.compare_alert_channels import effective_compare_channels
 
 logger = logging.getLogger("scheduler.dispatch")
 
@@ -273,23 +274,18 @@ def build_compare_preset_subject(name: str, target_date: date) -> str:
 
 
 def _effective_compare_channels(preset: dict, settings: Settings, user_id: str) -> set[str]:
-    """E-Mail immer; Telegram/SMS nur bei Preset-Opt-in UND globaler
-    User-Faehigkeit (bei SMS zusaetzlich Tier-Gate) — identisches Muster wie
-    `compare_official_alert._effective_channels` (Alarm-Pfad), jetzt auch fuer
-    den Briefing-Pfad (Issue #1270, KB-3).
+    """Duenner Wrapper (Issue #1467 S2 AG1) — delegiert an den geteilten
+    Resolver `services.compare_alert_channels.effective_compare_channels`
+    (identisches Muster wie `compare_official_alert._effective_channels`,
+    Alarm-Pfad, jetzt auch fuer den Briefing-Pfad, Issue #1270 KB-3). Aufruf
+    ueber den Modul-Namensraum, damit Tests das importierte Symbol im
+    VERBRAUCHENDEN Modul patchen koennen (AC-3b).
 
     `send_email` ist auf Preset-Ebene bewusst NICHT beruecksichtigt: es wird gar
     nicht persistiert (vorbestehende Altlast, `versand_tab_vergleich.md` KL-6) —
     E-Mail bleibt daher wie bisher immer aktiv.
     """
-    from services.user_tier import sms_allowed
-
-    channels = {"email"}
-    if preset.get("send_telegram") and settings.can_send_telegram():
-        channels.add("telegram")
-    if preset.get("send_sms") and settings.can_send_sms() and sms_allowed(user_id):
-        channels.add("sms")
-    return channels
+    return effective_compare_channels(preset, settings, user_id)
 
 
 def send_one_compare_preset(

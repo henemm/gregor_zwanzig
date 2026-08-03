@@ -32,10 +32,10 @@ from output.renderers.alert.official_alerts import (
 )
 from services import alert_daily_limit, alert_log
 from services.alert_state import AlertStateService
+from services.compare_alert_channels import effective_compare_channels
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
 from services.official_alerts import get_official_alerts_for_location
-from services.user_tier import sms_allowed
 
 logger = logging.getLogger("compare_official_alert")
 
@@ -248,14 +248,12 @@ class CompareOfficialAlertService:
             state_svc.save(entity_id, state)
 
     def _effective_channels(self, preset: dict) -> set[str]:
-        """E-Mail immer; Telegram/SMS nur bei Preset-Opt-in UND globaler
-        User-Faehigkeit (wie Trip). Ohne Opt-in bleibt es E-Mail-only."""
-        channels = {"email"}
-        if preset.get("send_telegram") and self._settings.can_send_telegram():
-            channels.add("telegram")
-        if preset.get("send_sms") and self._settings.can_send_sms() and sms_allowed(self._user_id):
-            channels.add("sms")
-        return channels
+        """Duenner Wrapper (Issue #1467 S2 AG1) — delegiert an den geteilten
+        Resolver `services.compare_alert_channels.effective_compare_channels`.
+        Aufruf ueber den Modul-Namensraum (`coa_module.effective_compare_channels`
+        entspricht hier dem Modulattribut), damit Tests das Symbol im
+        VERBRAUCHENDEN Modul patchen koennen (AC-3a)."""
+        return effective_compare_channels(preset, self._settings, self._user_id)
 
     def _notification_service_for(self, preset: dict) -> NotificationService:
         """Empfaenger ausschliesslich aus den Konto-Settings (Muster
