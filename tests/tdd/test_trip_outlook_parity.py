@@ -145,7 +145,12 @@ def test_build_outlook_row_without_selection_is_unchanged():
                         HourlyValue(hour=15, value=18.0)),
         "hourly_gust": (HourlyValue(hour=14, value=42.0),
                         HourlyValue(hour=15, value=38.0)),
-        "hourly_thunder": (HourlyValue(hour=14, value=1.0),
+        # Issue #1474: hourly_thunder-Samples kommen jetzt aus der geteilten
+        # Render-Skala thunder_label_value() statt einer lokalen
+        # {NONE:0,MED:1,HIGH:2}-Kopie (die nach der LOW-Erweiterung fuer
+        # MED/HIGH stillschweigend falsch gewesen waere, s.
+        # helpers._TREND_THUNDER_LABELS) -- MED liefert jetzt render-Wert 2.
+        "hourly_thunder": (HourlyValue(hour=14, value=2.0),
                            HourlyValue(hour=15, value=0.0)),
         "rain_probability_pct": 60,
     }

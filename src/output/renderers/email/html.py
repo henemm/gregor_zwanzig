@@ -156,7 +156,8 @@ def _thunder_risk_level(thunder) -> Optional[str]:
     """Bestimmt den Risiko-Beitrag von Gewitter fuer `_row_risk` (Issue #1418
     Fehler 1). `r["thunder"]` traegt in beiden Produktionspfaden
     (`trip_report.py: _dp_to_row` / `_aggregate_night_block`) einen
-    `ThunderLevel`-Stufenwert (NONE/MED/HIGH), keinen Zahlenwert — ein reiner
+    `ThunderLevel`-Stufenwert (NONE/LOW/MED/HIGH, Issue #1474), keinen
+    Zahlenwert — ein reiner
     `> 20`-Zahlenvergleich (frueher via `_safe_float`) war deshalb immer
     falsch. `ThunderLevel` erbt von `str`, daher deckt der String-Vergleich
     sowohl die Enum-Instanz als auch die reine String-Form ("HIGH"/"MED",
@@ -169,7 +170,9 @@ def _thunder_risk_level(thunder) -> Optional[str]:
         level = thunder.upper()
         if level == "HIGH":
             return "risk"
-        if level == "MED":
+        if level in ("MED", "LOW"):
+            # Issue #1474: LOW ("leicht") bekommt dieselbe Dringlichkeit wie
+            # MED -- die Funktion kennt nur zwei Nicht-Null-Stufen (risk/watch).
             return "watch"
         if level == "NONE":
             return None

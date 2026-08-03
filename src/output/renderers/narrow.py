@@ -31,6 +31,7 @@ from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, collect_hiking_window_points,
     hiking_field_min_max, night_temp_min_c, night_wind_chill_min_c,
 )
+from output.metric_format import THUNDER_LABEL_DE
 from output.renderers.email.helpers import fmt_val, format_trend_tokens
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable,
@@ -171,6 +172,14 @@ def _thunder_severity(level: Optional[ThunderLevel]) -> int:
     return thunder_ordinal(level)
 
 
+# Issue #1474 (F003-Nachbesserung): Inverse der kanonischen Ordinalskala
+# (thunder_ordinal() -> {NONE:0, LOW:1, MED:2, HIGH:3}), NUR fuer die
+# Ruecklookup-Stelle in _tg_day_footer -- Index == thunder_ordinal(Level).
+_SEV_TO_THUNDER_LEVEL: tuple[ThunderLevel, ...] = (
+    ThunderLevel.NONE, ThunderLevel.LOW, ThunderLevel.MED, ThunderLevel.HIGH,
+)
+
+
 def _tg_day_footer(
     segments: list[SegmentWeatherData],
     enabled_metric_ids: set[str] | list[str],
@@ -181,7 +190,7 @@ def _tg_day_footer(
     day_window_start_hour: int = DAY_WINDOW_START_HOUR,
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,
 ) -> Optional[str]:
-    """Fußzeile mit Tageswerten (AC-6): ⚡ kein|MED|HIGH · Sicht gut|… · 0°C-Grenze N m.
+    """Fußzeile mit Tageswerten (AC-6): ⚡ kein|leicht|mittel|hoch · Sicht gut|… · 0°C-Grenze N m.
 
     Issue #954: jeder Teil erscheint nur, wenn die zugehörige Metrik in
     ``enabled_metric_ids`` aktiviert ist.
@@ -222,15 +231,21 @@ def _tg_day_footer(
     parts: list[str] = []
 
     # Gewitter
+    # Issue #1474 (F002/F003, Adversary-Nachbesserung): geteilte Quelle
+    # THUNDER_LABEL_DE (metric_format.py) statt einer vierten eigenen
+    # Wortliste -- vorher stand hier "MED"/"HIGH" (Englisch), waehrend
+    # outlook.py und helpers.py bereits "mittel"/"hoch" (Deutsch) zeigten:
+    # derselbe Sprachwechsel in derselben Nachricht, je nach Ausgabeteil.
+    # Ordinal->ThunderLevel ueber die kanonische Ordnung (thunder_ordinal()),
+    # NONE bewusst mit eigenem Zweig (Datenluecke "?" statt Fehl-Entwarnung,
+    # Issue #1331).
     if "thunder" in enabled:
         if max_thunder_sev == 0:
             # Issue #1331: Ziel-Datenluecke darf keine positive Entwarnung
             # "kein" vortaeuschen -- Unsicherheitsmarker statt Fehl-Entwarnung.
-            thunder_word = "?" if has_gap else "kein"
-        elif max_thunder_sev == 1:
-            thunder_word = "MED"
+            thunder_word = "?" if has_gap else THUNDER_LABEL_DE[ThunderLevel.NONE]
         else:
-            thunder_word = "HIGH"
+            thunder_word = THUNDER_LABEL_DE[_SEV_TO_THUNDER_LEVEL[max_thunder_sev]]
         parts.append(f"⚡ {thunder_word}")
 
     # Sicht

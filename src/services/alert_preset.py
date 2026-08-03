@@ -28,7 +28,7 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, Final
 
-from app.models import AlertMetric, AlertRule, AlertRuleKind, AlertSeverity
+from app.models import AlertMetric, AlertRule, AlertRuleKind, AlertSeverity, ThunderLevel
 
 if TYPE_CHECKING:
     from app.models import UnifiedWeatherDisplayConfig
@@ -82,10 +82,19 @@ _COL: Final[dict[str, int]] = {
 # Bewusst KEINE generische "welche Felder sind ordinal"-Registry (ADR-0043,
 # Known Limitations der Spec): mit genau einer betroffenen Groesse waere das
 # Struktur ohne zweiten Anwendungsfall.
-ORDINAL_LEVEL_BOUNDS: Final[dict[str, tuple[int, int]]] = {
-    "entspannt": (2, 0),
-    "standard":  (2, 2),
-    "sensibel":  (1, 2),
+#
+# Issue #1474: auf benannte ThunderLevel-Tupel umgestellt (vorher rohe
+# Ordinalzahlen 2/0/1). Grund: ThunderLevel.LOW schiebt sich additiv
+# UNTERHALB von MED ein -- MED wandert von Ordinal 1 auf 2, HIGH von 2 auf 3
+# (metric_format._THUNDER_ORDER). Rohe Zahlen wuerden nach der Erweiterung
+# etwas anderes meinen als vorher ("standard" alarmierte sonst kuenftig schon
+# bei MED statt erst bei HIGH). Dieselbe Bedeutung wie vorher, jetzt
+# namentlich -- aufgeloest zu Ordinalen erst zur Auswertungszeit
+# (``weather_change_detection._ordinal_change_triggers``).
+ORDINAL_LEVEL_BOUNDS: Final[dict[str, tuple[ThunderLevel, ThunderLevel]]] = {
+    "entspannt": (ThunderLevel.HIGH, ThunderLevel.NONE),
+    "standard":  (ThunderLevel.HIGH, ThunderLevel.HIGH),
+    "sensibel":  (ThunderLevel.MED, ThunderLevel.HIGH),
 }
 
 # Metriken, fuer die die Stufe als Niveau statt als Sprunggroesse gilt.

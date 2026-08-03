@@ -618,7 +618,7 @@ class OpenMeteoProvider:
             self._log_api_call(url, None, error=str(e))
             raise ProviderRequestError("openmeteo", f"Request failed: {e}") from e
 
-    def _parse_thunder_level(self, weather_code: Optional[int]) -> ThunderLevel:
+    def _parse_thunder_level(self, weather_code: Optional[int]) -> Optional[ThunderLevel]:
         """
         Parse WMO weather code to thunder level.
 
@@ -631,8 +631,13 @@ class OpenMeteoProvider:
             weather_code: WMO weather code (0-99)
 
         Returns:
-            ThunderLevel.HIGH if thunderstorm, else ThunderLevel.NONE
+            ThunderLevel.HIGH if thunderstorm, ThunderLevel.NONE if a
+            non-thunder code is present (geprueft, unauffaellig). Issue #1474
+            AC-4: fehlt der Wettercode (``None``) ist das "keine Aussage",
+            NICHT die gepruefte Entwarnung -- liefert ``None``.
         """
+        if weather_code is None:
+            return None
         if weather_code in THUNDER_CODES:
             return ThunderLevel.HIGH
         return ThunderLevel.NONE

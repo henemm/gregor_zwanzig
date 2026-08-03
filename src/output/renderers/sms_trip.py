@@ -104,6 +104,9 @@ SMS_FELT_SYMBOLS_BY_METRIC: dict[str, tuple[str, ...]] = {
 _SMS_RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
     (RiskType.THUNDERSTORM, RiskLevel.HIGH): "Gewitter",
     (RiskType.THUNDERSTORM, RiskLevel.MODERATE): "Gewitter",
+    # Issue #1474 (AC-12): deutsches Wort statt generischem englischen
+    # Fallback ("Thunderstorm").
+    (RiskType.THUNDERSTORM, RiskLevel.LOW): "Gewitter leicht",
     (RiskType.WIND, RiskLevel.HIGH): "Sturm",
     (RiskType.WIND, RiskLevel.MODERATE): "Wind",
     (RiskType.RAIN, RiskLevel.HIGH): "Regen",

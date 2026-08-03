@@ -185,31 +185,45 @@ class TestFormatTrendTokensTimestamps:
 
     def test_thunder_token_level(self):
         """AC-1/F001: Thunder MED at h14 (erst), HIGH at h16 (peak) →
-        thunder_token='MED@14(HIGH@16)'. Must NOT use L/M (SMS vigilance scale)."""
+        thunder_token='mittel@14(hoch@16)'. Must NOT use L/M (SMS vigilance scale).
+
+        Issue #1474 (Adversary F002): Rohwerte kommen jetzt aus der geteilten
+        Render-Skala thunder_label_value() ({NONE:0, LOW:1, MED:2, HIGH:3}) --
+        MED liefert Render-Wert 2, HIGH Render-Wert 3 (vorher, VOR der
+        LOW-Erweiterung: 1/2). Die Wortlabels selbst sind laut Spec Abschnitt 4
+        (_TREND_THUNDER_LABELS) planmaessig auf Deutsch umgestellt worden
+        ("mittel"/"hoch" statt "MED"/"HIGH") -- die gepruefte fachliche Aussage
+        (eigenes Wortlabel je Stufe, klar unterscheidbar von der einbuchstabigen
+        SMS-Vigilanzskala L/M/H, mit korrekter erst-/peak-Stunde) bleibt
+        identisch, nur die Sprache des Worts wechselt."""
         from src.output.renderers.email.helpers import format_trend_tokens
         stage = _trend_stage_with_hourly(
-            hourly_thunder=(_hv(14, 1.0), _hv(16, 2.0)),  # MED=1, HIGH=2
+            hourly_thunder=(_hv(14, 2.0), _hv(16, 3.0)),  # MED=2, HIGH=3
             thunder="HIGH",
         )
         tok = format_trend_tokens(stage)
         tt = tok["thunder_token"]
         assert "@14" in tt, f"Missing erst hour @14: {tt}"
         assert "@16" in tt, f"Missing peak hour @16: {tt}"
-        assert "MED" in tt, f"Expected 'MED' label, got: {tt!r}"
-        assert "HIGH" in tt, f"Expected 'HIGH' label, got: {tt!r}"
+        assert "mittel" in tt, f"Expected 'mittel' label, got: {tt!r}"
+        assert "hoch" in tt, f"Expected 'hoch' label, got: {tt!r}"
         # Explicitly exclude SMS vigilance labels
-        assert tt != "L@14(M@16)", f"Got SMS vigilance labels instead of MED/HIGH: {tt!r}"
+        assert tt != "L@14(M@16)", f"Got SMS vigilance labels instead of mittel/hoch: {tt!r}"
 
     def test_thunder_token_med_only(self):
-        """F001: Single MED sample → thunder_token='MED@14' (not 'L@14')."""
+        """F001: Single MED sample → thunder_token='mittel@14' (not 'L@14').
+
+        Issue #1474 (Adversary F002): Rohwert MED=2 (statt vor der
+        LOW-Erweiterung 1), Wortlabel deutsch ("mittel") gemaess Spec
+        Abschnitt 4 -- s. test_thunder_token_level fuer Details."""
         from src.output.renderers.email.helpers import format_trend_tokens
         stage = _trend_stage_with_hourly(
-            hourly_thunder=(_hv(14, 1.0),),  # MED=1
+            hourly_thunder=(_hv(14, 2.0),),  # MED=2
             thunder="MED",
         )
         tok = format_trend_tokens(stage)
         tt = tok["thunder_token"]
-        assert tt == "MED@14", f"Expected 'MED@14', got: {tt!r}"
+        assert tt == "mittel@14", f"Expected 'mittel@14', got: {tt!r}"
         assert "L" not in tt, f"SMS label 'L' must not appear: {tt!r}"
 
     def test_thunder_token_none_returns_dash(self):
@@ -387,16 +401,22 @@ class TestTelegramInlineTokens:
             assert len(line) <= 56, f"Line too long ({len(line)}): {line!r}"
 
     def test_telegram_thunder_token_uses_med_high_labels(self):
-        """F001/F002: Telegram trend line uses MED/HIGH labels, not L/M (vigilance scale)."""
+        """F001/F002: Telegram trend line uses mittel/hoch labels, not L/M (vigilance scale).
+
+        Issue #1474 (Adversary F002): Rohwerte MED=2/HIGH=3 (geteilte
+        Render-Skala thunder_label_value(), s. test_thunder_token_level).
+        Wortlabels deutsch gemaess Spec Abschnitt 4 (_TREND_THUNDER_LABELS) --
+        die gepruefte Aussage (eigenes Wortlabel, nicht die
+        SMS-Vigilanzskala) bleibt unveraendert."""
         trend = [_trend_stage_with_hourly(
             weekday="Di",
-            hourly_thunder=(_hv(14, 1.0), _hv(16, 2.0)),  # MED→1, HIGH→2
+            hourly_thunder=(_hv(14, 2.0), _hv(16, 3.0)),  # MED→2, HIGH→3
             thunder="HIGH",
         )]
         body = _render_narrow("telegram", trend=trend)
         trend_section = body.split("Nächste Etappen")[-1] if "Nächste Etappen" in body else body
-        assert "MED" in trend_section or "HIGH" in trend_section, (
-            f"Expected MED/HIGH in telegram trend, got:\n{trend_section!r}"
+        assert "mittel" in trend_section or "hoch" in trend_section, (
+            f"Expected mittel/hoch in telegram trend, got:\n{trend_section!r}"
         )
         # SMS vigilance labels must not appear for thunder in trend
         assert "⚡L@" not in trend_section, f"SMS vigilance label 'L' found: {trend_section!r}"

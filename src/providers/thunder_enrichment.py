@@ -56,6 +56,25 @@ def _bezugszeitpunkt(reihe: "NormalizedTimeseries") -> datetime:
     return max(erster, jetzt_volle_stunde) - timedelta(hours=1)
 
 
+def _fuse_thunder_levels(data: list) -> None:
+    """Issue #1474 Abschnitt 3: ergaenzt ``dp.thunder_level`` je Datenpunkt um
+    Blitzdichte- und CAPE-Signale (``thunder_level_from_signals()``,
+    ``metric_format.py`` -- dort wohnt die Skala, ADR-0025).
+
+    Ueberschreibt NUR, wenn die Fusion ein Ergebnis liefert -- liefert sie
+    ``None`` ("keine Aussage"), bleibt ein bereits vorhandener Wert an
+    ``dp.thunder_level`` erhalten (s. Spec Abschnitt 3, letzter Absatz).
+    """
+    from output.metric_format import thunder_level_from_signals
+
+    for dp in data:
+        fused = thunder_level_from_signals(
+            dp.thunder_level, dp.lightning_density_per_km2_3h, dp.cape_jkg,
+        )
+        if fused is not None:
+            dp.thunder_level = fused
+
+
 def enrich_thunder(
     reihe: "NormalizedTimeseries",
     location: "Location",
@@ -77,67 +96,92 @@ def enrich_thunder(
 
     Fehlender Wert bleibt `None` und wird NIE 0 (Spec AC-2): "keine Aussage"
     ist nicht "keine Gefahr".
+
+    Issue #1474 (AC-9): nach dem Fuellen von ``lightning_density_per_km2_3h``
+    wird zusaetzlich ``dp.thunder_level`` mit dem ueber Wettercode, Blitzdichte
+    UND CAPE fusionierten Ergebnis ueberschrieben -- EIN gemeinsamer
+    Anschluss, kein Sonderweg je Aufrufer (Trip/Ortsvergleich). Die Fusion
+    laeuft auch, wenn kein Gewitter-Anbieter fuer diesen Ort zustaendig ist
+    (dann bleibt die Blitzdichte leer, CAPE kann trotzdem "leicht" ausloesen).
     """
     if not reihe.data:
         return
     # Fill-only (Muster `_enrich_snow`): traegt die Reihe schon Gewittersignale,
-    # gibt es nichts zu holen.
+    # gibt es nichts zu holen -- die Fusion lief dann bereits in einem
+    # frueheren Aufruf.
     if any(dp.lightning_density_per_km2_3h is not None for dp in reihe.data):
         return
 
     try:
-        from providers.thunder_routing import thunder_provider_for
-
-        quelle = thunder_provider_for(location.latitude, location.longitude)
-        if quelle is None:
-            return  # Spec AC-6: kein Abruf ausserhalb eines Zustaendigkeitsgebiets
-        if quelle == bereits_befragt:
-            return
-
-        from providers.base import ThunderSignalProvider, get_provider
-
-        provider = get_provider(quelle)
-        if not isinstance(provider, ThunderSignalProvider):
-            # Wer das Protokoll nicht erfuellt, liefert nichts — kein Fehler.
-            logger.debug("Quelle '%s' liefert keine Gewittersignale", quelle)
-            return
-
-        basis = _bezugszeitpunkt(reihe)
-        letzter = max(_naiv_utc(dp.ts) for dp in reihe.data)
-        von = basis.replace(tzinfo=timezone.utc)
-        bis = letzter.replace(tzinfo=timezone.utc)
-        # Sammelabruf bevorzugt (Spec AC-9): Quellen, die mehrere Orte aus EINEM
-        # gemeinsamen Abfragefenster bedienen koennen, werden auch hier darueber
-        # gerufen — auch bei nur einem Ort. So gibt es genau EINEN Abrufweg
-        # statt zweier, die auseinanderdriften. Wer den Sammelweg nicht hat,
-        # wird unveraendert einzeln gefragt; das bleibt Teil des Protokolls und
-        # nennt weiterhin keine Quelle beim Namen (AC-8).
-        sammeln = getattr(provider, "fetch_thunder_signals_multi", None)
-        if callable(sammeln):
-            gesammelt = sammeln([location], von, bis) or {}
-            # Ein Ort rein, ein Eintrag raus — der Schluessel gehoert der
-            # Quelle, deshalb wird er hier nicht nachgebaut.
-            signale: Dict[int, Optional[float]] = (
-                next(iter(gesammelt.values())) if len(gesammelt) == 1 else {}
-            )
-        else:
-            signale = provider.fetch_thunder_signals(location, von, bis)
-        if not signale:
-            return
-
-        nach_ts = {_naiv_utc(dp.ts): dp for dp in reihe.data}
-        gefuellt = 0
-        for offset, wert in signale.items():
-            if wert is None:
-                continue  # AC-2: leer bleibt leer, nie 0
-            dp = nach_ts.get(basis + timedelta(hours=offset))
-            if dp is None:
-                continue
-            dp.lightning_density_per_km2_3h = wert
-            gefuellt += 1
-        if gefuellt:
-            logger.info(
-                "Gewittersignale von '%s': %d Zeitpunkte gefuellt", quelle, gefuellt
-            )
+        _fetch_lightning_density(reihe, location, bereits_befragt)
     except Exception:
         logger.warning("Gewitter-Anreicherung fehlgeschlagen", exc_info=True)
+
+    # Laeuft IMMER (auch ausserhalb eines Zustaendigkeitsgebiets oder bei
+    # Abruf-Fehlschlag) -- CAPE steht unabhaengig von der Blitzdichte-Quelle
+    # an jedem Datenpunkt und kann allein schon "leicht" ausloesen.
+    _fuse_thunder_levels(reihe.data)
+
+
+def _fetch_lightning_density(
+    reihe: "NormalizedTimeseries",
+    location: "Location",
+    bereits_befragt: Optional[str],
+) -> None:
+    """Ruft die zustaendige Quelle ab und fuellt ``dp.lightning_density_per_km2_3h``
+    (in-place). Extrahiert aus ``enrich_thunder()``, damit dessen frueher
+    ``return`` bei fehlender Zustaendigkeit/leerer Antwort die nachfolgende
+    Fusion (``_fuse_thunder_levels``) nicht mehr uebersprungen wird."""
+    from providers.thunder_routing import thunder_provider_for
+
+    quelle = thunder_provider_for(location.latitude, location.longitude)
+    if quelle is None:
+        return  # Spec AC-6: kein Abruf ausserhalb eines Zustaendigkeitsgebiets
+    if quelle == bereits_befragt:
+        return
+
+    from providers.base import ThunderSignalProvider, get_provider
+
+    provider = get_provider(quelle)
+    if not isinstance(provider, ThunderSignalProvider):
+        # Wer das Protokoll nicht erfuellt, liefert nichts — kein Fehler.
+        logger.debug("Quelle '%s' liefert keine Gewittersignale", quelle)
+        return
+
+    basis = _bezugszeitpunkt(reihe)
+    letzter = max(_naiv_utc(dp.ts) for dp in reihe.data)
+    von = basis.replace(tzinfo=timezone.utc)
+    bis = letzter.replace(tzinfo=timezone.utc)
+    # Sammelabruf bevorzugt (Spec AC-9): Quellen, die mehrere Orte aus EINEM
+    # gemeinsamen Abfragefenster bedienen koennen, werden auch hier darueber
+    # gerufen — auch bei nur einem Ort. So gibt es genau EINEN Abrufweg
+    # statt zweier, die auseinanderdriften. Wer den Sammelweg nicht hat,
+    # wird unveraendert einzeln gefragt; das bleibt Teil des Protokolls und
+    # nennt weiterhin keine Quelle beim Namen (AC-8).
+    sammeln = getattr(provider, "fetch_thunder_signals_multi", None)
+    if callable(sammeln):
+        gesammelt = sammeln([location], von, bis) or {}
+        # Ein Ort rein, ein Eintrag raus — der Schluessel gehoert der
+        # Quelle, deshalb wird er hier nicht nachgebaut.
+        signale: Dict[int, Optional[float]] = (
+            next(iter(gesammelt.values())) if len(gesammelt) == 1 else {}
+        )
+    else:
+        signale = provider.fetch_thunder_signals(location, von, bis)
+    if not signale:
+        return
+
+    nach_ts = {_naiv_utc(dp.ts): dp for dp in reihe.data}
+    gefuellt = 0
+    for offset, wert in signale.items():
+        if wert is None:
+            continue  # AC-2: leer bleibt leer, nie 0
+        dp = nach_ts.get(basis + timedelta(hours=offset))
+        if dp is None:
+            continue
+        dp.lightning_density_per_km2_3h = wert
+        gefuellt += 1
+    if gefuellt:
+        logger.info(
+            "Gewittersignale von '%s': %d Zeitpunkte gefuellt", quelle, gefuellt
+        )

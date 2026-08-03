@@ -277,8 +277,15 @@ class ComparisonEngine:
                 # Thunder/CAPE/PoP for wandern scoring
                 thunder_levels = [dp.thunder_level for dp in filtered_data if dp.thunder_level is not None]
                 if thunder_levels:
-                    level_rank = {"NONE": 0, "MED": 1, "HIGH": 2}
-                    metrics["thunder_level"] = max(thunder_levels, key=lambda x: level_rank.get(x, 0))
+                    # Issue #1474 Adversary-Folgeaudit: die vormals lokale
+                    # {NONE,MED,HIGH}-Kopie kannte LOW nicht -- ``.get(x, 0)``
+                    # gab LOW denselben Rang wie NONE. Bei gemischten Punkten
+                    # (NONE + LOW im selben Fenster) gewann bei Gleichstand der
+                    # chronologisch ERSTE Punkt -- meldete je nach Datenlage
+                    # NONE statt LOW. thunder_ordinal() ist die geteilte
+                    # Sortier-Skala (NONE=0 < LOW=1 < MED=2 < HIGH=3).
+                    from output.metric_format import thunder_ordinal
+                    metrics["thunder_level"] = max(thunder_levels, key=thunder_ordinal)
                 pops = [dp.pop_pct for dp in filtered_data if dp.pop_pct is not None]
                 if pops:
                     metrics["pop_max_pct"] = max(pops)

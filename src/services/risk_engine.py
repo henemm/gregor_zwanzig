@@ -128,6 +128,11 @@ class RiskEngine:
             risks.append(Risk(type=RiskType.THUNDERSTORM, level=RiskLevel.HIGH))
         elif agg.thunder_level_max == ThunderLevel.MED:
             risks.append(Risk(type=RiskType.THUNDERSTORM, level=RiskLevel.MODERATE))
+        elif agg.thunder_level_max == ThunderLevel.LOW:
+            # Issue #1474 (Spec Abschnitt 4): dritter Zweig -- ohne ihn faellt
+            # "leicht" bei den direkten Konsumenten (trip_report.py,
+            # sms_trip.py) auf den generischen englischen Fallback zurueck.
+            risks.append(Risk(type=RiskType.THUNDERSTORM, level=RiskLevel.LOW))
 
     def _check_catalog_metric(
         self,

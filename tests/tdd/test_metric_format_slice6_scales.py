@@ -73,13 +73,18 @@ class TestAC4CanonicalThunderOrder:
     def test_thunder_ordinal_and_max(self):
         """AC-4: GIVEN ThunderLevel als str-Enum ohne eigene Ordnung / WHEN
         thunder_ordinal/max_thunder genutzt werden / THEN gilt kanonisch
-        NONE<MED<HIGH und max_thunder liefert das jeweils höchste Level."""
+        NONE<LOW<MED<HIGH und max_thunder liefert das jeweils höchste Level.
+
+        Issue #1474: die konkreten Ordinalzahlen fuer MED/HIGH sind additiv
+        auf 2/3 verschoben (LOW schiebt sich bei 1 dazwischen, s.
+        metric_format._THUNDER_ORDER) -- die kanonische ORDNUNG NONE<MED<HIGH
+        bleibt unveraendert, nur die Werte selbst wandern."""
         from app.models import ThunderLevel
         from src.output.metric_format import max_thunder, thunder_ordinal
 
         assert thunder_ordinal(ThunderLevel.NONE) == 0
-        assert thunder_ordinal(ThunderLevel.MED) == 1
-        assert thunder_ordinal(ThunderLevel.HIGH) == 2
+        assert thunder_ordinal(ThunderLevel.MED) == 2
+        assert thunder_ordinal(ThunderLevel.HIGH) == 3
         assert max_thunder([ThunderLevel.NONE, ThunderLevel.HIGH,
                             ThunderLevel.MED]) == ThunderLevel.HIGH
         assert max_thunder([ThunderLevel.MED, ThunderLevel.NONE]) == ThunderLevel.MED

@@ -1526,27 +1526,36 @@ class TripReportSchedulerService:
         VOR dieser Stelle in ``row["hourly_thunder"]`` erfolgt, s. o.). Ein
         ungenutzter ``tz=None``-Parameter täuschte Zeitzonen-Bezug vor, ohne
         ihn zu haben — irreführender als ein sichtbarer Rückfall.
+
+        Issue #1474 Adversary F004: die vormals lokale ``{NONE:0,MED:1,HIGH:2}``-
+        Kopie kannte ``LOW`` nicht -- Lookup warf ``KeyError`` und riss den
+        Versandpfad mit. ``thunder_label_value()`` ist die geteilte Render-
+        Skala (auch ``hourly_thunder`` selbst wird darüber gebaut, s.
+        ``outlook.py::build_outlook_row``), also bleibt der Werte-Vergleich
+        konsistent statt einer zweiten, driftenden Kopie.
         """
         from app.models import ThunderLevel
+        from output.metric_format import thunder_label_value
 
         try:
             level = ThunderLevel[row.get("thunder") or "NONE"]
         except KeyError:
             level = ThunderLevel.NONE
-        _NUM = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
         when = None
         hour = None
         if level != ThunderLevel.NONE:
             hours = [
                 int(hv.hour)
                 for hv in (row.get("hourly_thunder") or ())
-                if hv.value == _NUM[level]
+                if hv.value == thunder_label_value(level)
             ]
             if hours:
                 hour = min(hours)
                 when = f"{hour:02d}:00"
         if level == ThunderLevel.NONE:
             text = "Kein Gewitter erwartet"
+        elif level == ThunderLevel.LOW:
+            text = f"Leichtes Gewitter möglich ab {when}" if when else "Leichtes Gewitter möglich"
         elif level == ThunderLevel.MED:
             text = f"Gewitter möglich ab {when}" if when else "Gewitter möglich"
         else:
@@ -1657,8 +1666,16 @@ class TripReportSchedulerService:
         `None` (fail-soft-Pfade ohne aufloesbaren Ort). Ein WEGGELASSENER
         Aufruf faellt jetzt sofort mit `TypeError` auf, statt lautlos UTC zu
         rendern.
+
+        Issue #1474 Adversary F005: die vormals lokale ``{NONE:0,MED:1,HIGH:2}``-
+        Kopie kannte ``LOW`` nicht -- ``_ORD.get(lv, 0)`` gab LOW denselben
+        Rang wie NONE (konnte gegen NONE verlieren) UND der Text-Zweig fiel
+        mangels eigenem LOW-Fall in den ELSE-Zweig ("Starkes Gewitter
+        erwartet"), das genaue Gegenteil der AC-6-Deckelung. ``thunder_ordinal()``
+        ist die geteilte Sortier-Skala -- kein zweites, driftendes Ordinal.
         """
         from app.models import ThunderLevel
+        from output.metric_format import thunder_ordinal
 
         # Back-compat: accept a single SegmentWeatherData. Duck-typed rather
         # than isinstance() to survive the app.models / src.app.models
@@ -1667,8 +1684,6 @@ class TripReportSchedulerService:
             segments = [segments]
         if not segments:
             return None
-
-        _ORD = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
 
         def _local(dt):
             # Issue #1402: NIE .astimezone(tz) direkt auf einem naiven dp.ts
@@ -1695,7 +1710,7 @@ class TripReportSchedulerService:
             # earlier hour). Mirrors _thunder_entry_from_trend_row's min()-logic.
             level = max(
                 (dp.thunder_level for dp in thunder_dps),
-                key=lambda lv: _ORD.get(lv, 0),
+                key=thunder_ordinal,
             )
             earliest_ts = min(
                 dp.ts for dp in thunder_dps if dp.thunder_level == level
@@ -1704,6 +1719,8 @@ class TripReportSchedulerService:
             when = earliest_local.strftime("%H:%M")
             if level == ThunderLevel.NONE:
                 text = "Kein Gewitter erwartet"
+            elif level == ThunderLevel.LOW:
+                text = f"Leichtes Gewitter möglich ab {when}"
             elif level == ThunderLevel.MED:
                 text = f"Gewitter möglich ab {when}"
             else:

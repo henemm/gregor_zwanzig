@@ -33,6 +33,9 @@ __all__ = [
     "label",
     "cloud_emoji",
     "thunder_ordinal",
+    "thunder_label_value",
+    "thunder_level_from_signals",
+    "THUNDER_LABEL_DE",
     "max_thunder",
 ]
 
@@ -212,14 +215,23 @@ def cloud_emoji(pct: Optional[float]) -> str:
 
 
 # Kanonische Ordnungsquelle fuer ThunderLevel (str-Enum ohne eigene Ordnung,
-# app/models.py:33-37). ThunderLevel(str, Enum) hasht/vergleicht identisch zu
+# app/models.py). ThunderLevel(str, Enum) hasht/vergleicht identisch zu
 # seinem rohen String-Wert, daher funktioniert dieses Dict transparent auch
-# mit rohen "NONE"/"MED"/"HIGH"-Strings als Key (day_comparison.py).
-_THUNDER_ORDER = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
+# mit rohen "NONE"/"LOW"/"MED"/"HIGH"-Strings als Key (day_comparison.py).
+#
+# Issue #1474: LOW ist additiv UNTERHALB von MED eingefuegt -- MED wandert von
+# Ordinal 1 auf 2, HIGH von 2 auf 3. Jede Stelle, die diese Skala ueber eine
+# rohe Zahl anspricht (statt ueber thunder_ordinal(ThunderLevel.X)), meint nach
+# dieser Erweiterung etwas anderes als vorher (Spec Abschnitt 1/2).
+_THUNDER_ORDER = {
+    ThunderLevel.NONE: 0, ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2, ThunderLevel.HIGH: 3,
+}
 
 
 def thunder_ordinal(level: Optional[ThunderLevel]) -> int:
-    """Kanonisches Sortier-Ordinal fuer ``ThunderLevel`` (NONE=0 < MED=1 < HIGH=2).
+    """Kanonisches Sortier-Ordinal fuer ``ThunderLevel``
+    (NONE=0 < LOW=1 < MED=2 < HIGH=3).
 
     ``None`` sowie unbekannte Werte liefern 0. Nimmt sowohl ``ThunderLevel``-
     Instanzen als auch rohe Strings entgegen (str-Enum-Hash-Aequivalenz).
@@ -231,41 +243,111 @@ def thunder_ordinal(level: Optional[ThunderLevel]) -> int:
 
 # Render-Skala fuer ThunderLevel — zielt exakt auf
 # ``src/output/tokens/metrics.LEVELS = {0:'-', 1:'L', 2:'M', 3:'H'}``.
-# Die 1 ist bewusst unbesetzt: ``ThunderLevel`` (app/models.py:33-37) kennt kein
-# LOW, das Label 'L' ist damit unerreichbar.
-_THUNDER_LABEL_VALUE = {ThunderLevel.NONE: 0, ThunderLevel.MED: 2, ThunderLevel.HIGH: 3}
+# Issue #1474: LOW belegt endlich den bisher unerreichbaren Render-Platz 1.
+# MED/HIGH behalten ihre bisherigen Render-Werte 2/3 (additiv, kein
+# Render-Sprung fuer Bestandswerte, Spec AC-1).
+_THUNDER_LABEL_VALUE = {
+    ThunderLevel.NONE: 0, ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2, ThunderLevel.HIGH: 3,
+}
 
 
 def thunder_label_value(level: Optional[ThunderLevel]) -> int:
-    """Kanonischer Render-Wert fuer ``ThunderLevel`` (NONE=0, MED=2, HIGH=3).
+    """Kanonischer Render-Wert fuer ``ThunderLevel`` (NONE=0, LOW=1, MED=2, HIGH=3).
 
     ``None`` sowie unbekannte Werte liefern 0. Nimmt sowohl ``ThunderLevel``-
     Instanzen als auch rohe Strings entgegen (str-Enum-Hash-Aequivalenz).
 
-    ACHTUNG — zwei Skalen, die NIE vermischt werden duerfen (ADR-0025,
-    Entscheidung 3):
+    Seit Issue #1474 sind Sortier- und Render-Skala fuer alle vier Werte
+    zahlenmaessig deckungsgleich ({0,1,2,3} in beiden) — bleiben aber zwei
+    separate, benannte Funktionen (ADR-0025, Entscheidung 3). Eine kuenftige
+    Aenderung an einer der beiden darf sich nicht auf die andere verlassen:
 
-    * ``thunder_ordinal()``    -> {NONE:0, MED:1, HIGH:2} — **Sortier-/Vergleichs-
-      ordnung**. Nur fuer max()/Vergleiche/Peak-Ermittlung. Niemals in ein Feld
-      schreiben, das gerendert wird.
-    * ``thunder_label_value()`` -> {NONE:0, MED:2, HIGH:3} — **Render-Skala** fuer
-      ``tokens/metrics.LEVELS = {0:'-', 1:'L', 2:'M', 3:'H'}``. Nur diese Funktion
-      darf Werte fuer ``DailyForecast.thunder_hourly`` bzw. ``HourlyValue.value``
-      auf dem SMS-Token-Pfad erzeugen.
-
-    Die Verwechslung ist ein **stiller** Fehler: Wer MED ueber ``thunder_ordinal()``
-    (=1) in ``thunder_hourly`` schreibt, bekommt ``L`` statt ``M`` gerendert — und
-    aus HIGH (=2) wird ``M``. Kein Golden-Snapshot faengt das, weil die Fixtures
-    bereits auf die {0,2,3}-Skala kalibriert sind.
+    * ``thunder_ordinal()``    -> {NONE:0, LOW:1, MED:2, HIGH:3} — **Sortier-/
+      Vergleichsordnung**. Nur fuer max()/Vergleiche/Peak-Ermittlung.
+    * ``thunder_label_value()`` -> {NONE:0, LOW:1, MED:2, HIGH:3} — **Render-
+      Skala** fuer ``tokens/metrics.LEVELS = {0:'-', 1:'L', 2:'M', 3:'H'}``. Nur
+      diese Funktion darf Werte fuer ``DailyForecast.thunder_hourly`` bzw.
+      ``HourlyValue.value`` auf dem SMS-Token-Pfad erzeugen.
     """
     if level is None:
         return 0
     return _THUNDER_LABEL_VALUE.get(level, 0)
 
 
+# Geteilte deutsche Beschriftung (Issue #1474, "geteilte Quelle statt Kopien"
+# statt fuenffach dupliziertem Label). NONE fehlt bewusst nicht -- Konsumenten
+# mit abweichender NONE-Darstellung (z.B. compare_html.py "—" statt "kein")
+# ueberschreiben nur diesen einen Eintrag lokal.
+THUNDER_LABEL_DE: dict[ThunderLevel, str] = {
+    ThunderLevel.NONE: "kein",
+    ThunderLevel.LOW: "leicht",
+    ThunderLevel.MED: "mittel",
+    ThunderLevel.HIGH: "hoch",
+}
+
+
 def max_thunder(levels: Iterable[ThunderLevel]) -> ThunderLevel:
     """Liefert das hoechste ``ThunderLevel`` aus ``levels`` (kanonische Ordnung).
 
-    Nacktes ``max()`` waere alphabetisch falsch (``"NONE" > "MED" > "HIGH"``).
+    Nacktes ``max()`` waere alphabetisch falsch (``"NONE" > "MED" > "LOW" > "HIGH"``).
     """
     return max(levels, key=thunder_ordinal)
+
+
+# Blitzdichte-Schwellen (Blitze/km²/3h), Beleg: ECMWF Forecast User Guide
+# §8.1.13 Lightning (https://confluence.ecmwf.int/spaces/FUG/pages/673550914/
+# Section+8.1.13+Lightning). 0,075 ("mittel"->"schwer") ist NICHT publiziert,
+# s. Spec Known Limitations.
+_LIGHTNING_LOW_MIN = 0.003
+_LIGHTNING_MED_MIN = 0.015
+_LIGHTNING_HIGH_MIN = 0.075
+
+def _cape_low_min_jkg() -> float:
+    """CAPE-Schwelle fuer die Fusion — bewusst ENTKOPPELT von
+    ``display_thresholds["cape"]`` (Anzeige-Ampel, Berg-kalibriert). Liest
+    ``risk_thresholds["cape"]["medium"]`` (metric_catalog.py, bereits
+    produktentschieden) direkt aus dem Katalog statt den Wert zu duplizieren
+    -- dieselbe Schwelle, die bereits von der allgemeinen Risiko-Uebersicht
+    (``RiskEngine._check_thunder``) genutzt wird.
+    """
+    return get_metric("cape").risk_thresholds["medium"]
+
+
+def thunder_level_from_signals(
+    wettercode_level: Optional[ThunderLevel],
+    lightning_density: Optional[float],
+    cape_jkg: Optional[float],
+) -> Optional[ThunderLevel]:
+    """Fusioniert Gewittersignale zu EINEM ``ThunderLevel`` (Issue #1474 Abschnitt 3).
+
+    Jedes Signal wird EIGENSTAENDIG uebersetzt (keine Sonderlogik fuer die
+    Blitzdichte, damit ein kuenftiges Signal mit derselben Struktur andockt).
+    Die Fusion liefert das schaerfste vorhandene Signal (``max_thunder()``
+    ueber die NICHT-``None``-Einzelsignale). Sind ALLE drei Signale ``None``,
+    liefert sie ``None`` ("keine Aussage" != "keine Gefahr", Spec AC-7).
+
+    CAPE ist bei ``LOW`` gedeckelt und eskaliert NIE auf ``MED``/``HIGH``
+    (misst Energie, kein Ereignis, Spec AC-6).
+    """
+    signals: list[ThunderLevel] = []
+
+    if wettercode_level is not None:
+        signals.append(wettercode_level)
+
+    if lightning_density is not None:
+        if lightning_density >= _LIGHTNING_HIGH_MIN:
+            signals.append(ThunderLevel.HIGH)
+        elif lightning_density >= _LIGHTNING_MED_MIN:
+            signals.append(ThunderLevel.MED)
+        elif lightning_density >= _LIGHTNING_LOW_MIN:
+            signals.append(ThunderLevel.LOW)
+        else:
+            signals.append(ThunderLevel.NONE)
+
+    if cape_jkg is not None:
+        signals.append(ThunderLevel.LOW if cape_jkg >= _cape_low_min_jkg() else ThunderLevel.NONE)
+
+    if not signals:
+        return None
+    return max_thunder(signals)

@@ -286,7 +286,9 @@ class TestAC1RenderedOutputsAgree:
                  temp_lo=10, temp_hi=20, precip_mm=0.0, wind_dir="N", wind_kmh=15,
                  thunder=agg_level.name, note="",
                  hourly_precip=(), hourly_wind=(), hourly_gust=(),
-                 hourly_thunder=(HourlyValue(hour=4, value=2.0),)),
+                 # Issue #1474: Render-Skala additiv um LOW erweitert
+                 # (thunder_label_value: NONE=0, LOW=1, MED=2, HIGH=3).
+                 hourly_thunder=(HourlyValue(hour=4, value=3.0),)),
             dict(weekday="Fr", date=date(2026, 7, 17), name="Etappe 3",
                  temp_lo=10, temp_hi=20, precip_mm=0.0, wind_dir="N", wind_kmh=15,
                  thunder="NONE", note="",

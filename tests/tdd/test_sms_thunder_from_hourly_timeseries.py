@@ -261,7 +261,7 @@ class TestAllChannelsAgree:
         telegram = self._telegram_footer(segments, night_weather=night)
 
         assert "TH:-" in sms, f"Vorbedingung: SMS muss schweigen.\nSMS: {sms}"
-        assert "⚡ HIGH" not in telegram and "⚡ MED" not in telegram, (
+        assert "⚡ hoch" not in telegram and "⚡ mittel" not in telegram, (
             f"Telegram meldet ein Gewitter um 02:00, das ausserhalb der Wanderzeit "
             f"(07-17) liegt — die SMS schweigt zu Recht. Die Kanaele widersprechen "
             f"sich.\nSMS: {sms}\nTelegram:\n{telegram}"
@@ -280,7 +280,7 @@ class TestAllChannelsAgree:
         telegram = self._telegram_footer(segments)
 
         assert "TH:H@8" in sms, f"SMS muss das Gewitter melden.\nSMS: {sms}"
-        assert "⚡ HIGH" in telegram, (
+        assert "⚡ hoch" in telegram, (
             f"Telegram muss dasselbe Gewitter melden wie die SMS.\n"
             f"SMS: {sms}\nTelegram:\n{telegram}"
         )

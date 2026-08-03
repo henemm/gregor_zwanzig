@@ -162,8 +162,21 @@ def render_outlook_table(
         f'</tr></thead>'
     )
 
-    _THUNDER_LEVEL_LABEL = {"MED": "mittel", "HIGH": "hoch"}
-    _THUNDER_LEVEL_BG = {"MED": "background:#fad6b8;", "HIGH": "background:#f6c5bf;"}
+    # Issue #1474: LOW ("leicht") ergaenzt -- Wort aus der geteilten Quelle
+    # (metric_format.THUNDER_LABEL_DE, "geteilte Quelle statt Kopien").
+    # Str-Enum-Hash-Aequivalenz (s. metric_format.py): der rohe String-Key
+    # findet denselben Eintrag wie die ThunderLevel-Instanz.
+    from output.metric_format import THUNDER_LABEL_DE as _THUNDER_LABEL_DE
+    _THUNDER_LEVEL_LABEL = {
+        "LOW": _THUNDER_LABEL_DE["LOW"],
+        "MED": _THUNDER_LABEL_DE["MED"],
+        "HIGH": _THUNDER_LABEL_DE["HIGH"],
+    }
+    _THUNDER_LEVEL_BG = {
+        "LOW": "background:#fbe6c3;",
+        "MED": "background:#fad6b8;",
+        "HIGH": "background:#f6c5bf;",
+    }
 
     outlook_rows = ""
     for stage in rows:
@@ -184,7 +197,7 @@ def render_outlook_table(
                         for g in hourly_gust if g is not None), default=None)
         # F002: Gew = Stufe + Uhrzeit (kein Fake-%), Hintergrund nach Level
         thunder_level = (stage.get("thunder", "NONE") or "NONE").upper()
-        if thunder_level in ("MED", "HIGH"):
+        if thunder_level in ("LOW", "MED", "HIGH"):
             gew_str = _THUNDER_LEVEL_LABEL[thunder_level]
             t_tok = tokens.get("thunder_token", "-")
             _at = _re.search(r"@(\d+)", t_tok) if t_tok and t_tok != "-" else None
@@ -334,7 +347,7 @@ def build_outlook_row(
     ``MetricDefinition.summary_fields``. ``None`` (Trip) laesst das Dict
     unveraendert (rein additiv, AC-11).
     """
-    from app.models import ThunderLevel as _TL
+    from output.metric_format import thunder_label_value
     from output.tokens.dto import HourlyValue
     from utils.timezone import local_hour as _lh
 
@@ -353,7 +366,6 @@ def build_outlook_row(
     _hourly_wind: list = []
     _hourly_gust: list = []
     _hourly_thunder: list = []
-    _THUNDER_NUM = {_TL.NONE: 0, _TL.MED: 1, _TL.HIGH: 2}
     for dp in points:
         lh = _lh(dp.ts, tz)
         if dp.precip_1h_mm is not None:
@@ -363,8 +375,11 @@ def build_outlook_row(
         if dp.gust_kmh is not None:
             _hourly_gust.append(HourlyValue(hour=lh, value=dp.gust_kmh))
         if dp.thunder_level is not None:
+            # Issue #1474: geteilte Render-Skala statt lokaler Kopie -- eine
+            # lokale {NONE:0,MED:1,HIGH:2}-Kopie waere nach der LOW-Erweiterung
+            # (Skala jetzt {0,1,2,3}) fuer MED/HIGH stillschweigend falsch.
             _hourly_thunder.append(HourlyValue(
-                hour=lh, value=float(_THUNDER_NUM.get(dp.thunder_level, 0))
+                hour=lh, value=float(thunder_label_value(dp.thunder_level))
             ))
 
     row = dict(

@@ -34,10 +34,13 @@ def _trend_rows() -> list[dict]:
             "weekday": "Do",
             "name": "Morgige Etappe",
             "thunder": "HIGH",
+            # Issue #1474: die Render-Skala ist additiv um LOW erweitert
+            # (thunder_label_value: NONE=0, LOW=1, MED=2, HIGH=3) -- HIGH
+            # traegt seither den Wert 3, nicht mehr 2.
             "hourly_thunder": (
                 HourlyValue(hour=2, value=0.0),
-                HourlyValue(hour=4, value=2.0),
-                HourlyValue(hour=6, value=2.0),
+                HourlyValue(hour=4, value=3.0),
+                HourlyValue(hour=6, value=3.0),
             ),
         },
         {

@@ -273,18 +273,24 @@ class TestAbsoluteThunderLevelDetection:
 
     def test_ac9_thunder_level_high_with_threshold_2_fires(self):
         """
-        AC-9 (Folge): Schwelle 2.0 fasst HIGH (ordinal 2 >= 2.0), nicht MED.
+        AC-9 (Folge): Schwelle 3.0 fasst HIGH (ordinal 3 >= 3.0), nicht MED.
+
+        Issue #1474: der Schwellwert wandert additiv von 2.0 auf 3.0 -- die
+        Ordinalskala verschiebt sich (LOW schiebt sich additiv UNTERHALB von
+        MED ein, MED wandert von Ordinal 1 auf 2, HIGH von 2 auf 3, s.
+        metric_format._THUNDER_ORDER). Die fachliche Aussage "nur HIGH loest
+        aus" bleibt unveraendert, nur der Rohwert wandert mit der Skala.
         """
         service = WeatherChangeDetectionService.from_alert_rules(
-            [_rule(AlertRuleKind.ABSOLUTE, AlertMetric.THUNDER_LEVEL, 2.0,
+            [_rule(AlertRuleKind.ABSOLUTE, AlertMetric.THUNDER_LEVEL, 3.0,
                    severity=AlertSeverity.CRITICAL)]
         )
-        # MED with threshold 2.0 must NOT fire
+        # MED with threshold 3.0 must NOT fire
         assert service.detect_changes(
             _data(thunder_level_max=ThunderLevel.NONE),
             _data(thunder_level_max=ThunderLevel.MED),
         ) == []
-        # HIGH with threshold 2.0 fires
+        # HIGH with threshold 3.0 fires
         changes = service.detect_changes(
             _data(thunder_level_max=ThunderLevel.NONE),
             _data(thunder_level_max=ThunderLevel.HIGH),
@@ -350,10 +356,13 @@ class TestIssue821AbsoluteDeltaDedup:
         assert changes[0].severity == ChangeSeverity.MAJOR
 
     def test_ac2_absolute_thunder_below_threshold_no_fire(self):
-        """AC-2: absolute THUNDER_LEVEL=2.0, NONE→MED (1<2), include_absolute=True →
-        KEIN Change (auch der geseedete Δ darf nicht feuern)."""
+        """AC-2: absolute THUNDER_LEVEL=3.0, NONE→MED (2<3), include_absolute=True →
+        KEIN Change (auch der geseedete Δ darf nicht feuern).
+
+        Issue #1474: Schwellwert 2.0->3.0, s. Begruendung bei
+        test_ac9_thunder_level_high_with_threshold_2_fires."""
         service = WeatherChangeDetectionService.from_alert_rules(
-            [_rule(AlertRuleKind.ABSOLUTE, AlertMetric.THUNDER_LEVEL, 2.0,
+            [_rule(AlertRuleKind.ABSOLUTE, AlertMetric.THUNDER_LEVEL, 3.0,
                    severity=AlertSeverity.CRITICAL)]
         )
         changes = service.detect_changes(

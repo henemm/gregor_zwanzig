@@ -670,13 +670,18 @@ class WeatherChangeDetectionService:
         Verschaerfung: neu > alt AND neu >= reach_min AND alt <= from_max
         Entwarnung:    neu < alt AND alt >= reach_min AND neu <= from_max
         Unveraenderter Wert meldet nie.
+
+        Issue #1474: `ORDINAL_LEVEL_BOUNDS` traegt benannte `ThunderLevel`-
+        Werte statt roher Ordinalzahlen -- die Aufloesung zu Ordinalen
+        geschieht erst hier, zur Auswertungszeit, ueber `thunder_ordinal()`.
         """
+        from output.metric_format import thunder_ordinal
         from services.alert_preset import ORDINAL_LEVEL_BOUNDS
 
         bounds = ORDINAL_LEVEL_BOUNDS.get(level)
         if bounds is None:
             return False
-        reach_min, from_max = bounds
+        reach_min, from_max = thunder_ordinal(bounds[0]), thunder_ordinal(bounds[1])
         if new_value > old_value:
             return new_value >= reach_min and old_value <= from_max
         if new_value < old_value:

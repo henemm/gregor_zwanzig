@@ -30,7 +30,7 @@ export interface RouteMetricDef {
 	/** Issue #1429: Auswertung als eigenes Element neben dem Namen, wenn der
 	 *  Katalog-Eintrag sie liefert — analog `CompareMetricDef`/#1401 A1. */
 	aggregationLabel?: string;
-	/** Issue #1425 (S2 Teil 2, Scheibe B): 'ordinal' = 3-Stufen-Band statt
+	/** Issue #1425 (S2 Teil 2, Scheibe B): 'ordinal' = 4-Stufen-Band statt
 	 *  Zahlen-Slider — analog `CompareMetricDef`. Fehlt -> wie 'range'. */
 	kind?: 'range' | 'ordinal';
 	ordinalLabels?: string[];
@@ -66,7 +66,7 @@ export interface CorridorRowState {
 	max: number | null;
 	notify: boolean;
 	mark: boolean;
-	// Slice 4 (vergleich): 'ordinal' = 3-Stufen-Band (Gewitter) statt Zahlen-Slider.
+	// Slice 4 (vergleich): 'ordinal' = 4-Stufen-Band (Gewitter) statt Zahlen-Slider.
 	// Fehlt (route-Zeilen) -> wird wie 'range' behandelt.
 	kind?: 'range' | 'ordinal';
 	ordinalLabels?: string[];
@@ -413,7 +413,7 @@ export interface CompareMetricDef {
 // Katalog (compare_metric_catalog.py) statt aus einer FE-Liste — die
 // ehemalige _COMPARE_ALARM_KEYS-Konstante entfaellt ersatzlos.
 
-export const ORDINAL_ENUM = ['NONE', 'MED', 'HIGH'] as const;
+export const ORDINAL_ENUM = ['NONE', 'LOW', 'MED', 'HIGH'] as const;
 
 /** Inverse von ORDINAL_ENUM — fuer den Wizard-Prefill (IDEAL_DEFAULTS.thunder_level_max ist ein Enum-String). */
 function enumToOrdinal(s: string): number | null {

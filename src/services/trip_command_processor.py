@@ -133,6 +133,9 @@ _MORGEN_BUTTONS = {
 
 _THUNDER_LABEL = {
     "NONE": "kein",
+    # Issue #1474 Adversary-Folgeaudit: LOW fehlte -- fiel auf den
+    # Unbekannt-Fallback "?" zurueck, obwohl LOW ein bekannter Wert ist.
+    "LOW": "leicht",
     "MED": "mäßig",
     "HIGH": "hoch",
 }
@@ -165,8 +168,12 @@ def _thunder_fmt(value, *, with_emoji: bool = True) -> str:
     Issue #1222 AC-6: E-Mail/SMS bekommen KEIN Kreis-Emoji (nur das Wort),
     Telegram bleibt byte-identisch mit Emoji.
     """
-    _MAP_EMOJI = {"NONE": "⚪ keins", "MED": "🟡 mäßig", "HIGH": "🔴 hoch"}
-    _MAP_PLAIN = {"NONE": "keins", "MED": "mäßig", "HIGH": "hoch"}
+    # Issue #1474 Adversary-Folgeaudit: LOW fehlte in beiden Karten -- fiel
+    # auf "· keine Daten" zurueck, obwohl LOW ein bekannter Wert ist.
+    _MAP_EMOJI = {
+        "NONE": "⚪ keins", "LOW": "🟢 leicht", "MED": "🟡 mäßig", "HIGH": "🔴 hoch",
+    }
+    _MAP_PLAIN = {"NONE": "keins", "LOW": "leicht", "MED": "mäßig", "HIGH": "hoch"}
     if value is None:
         return "· keine Daten"
     key = value.value if hasattr(value, "value") else str(value)
@@ -679,6 +686,11 @@ class TripCommandProcessor:
             thund_val = thund_map.get(pt.ts)
             if thund_val is None or str(thund_val) in ("NONE", "ThunderLevel.NONE"):
                 t_sym = "—"
+            # Issue #1474 Adversary-Folgeaudit: LOW fiel bisher mangels
+            # eigenem Zweig in den ELSE-Fall und wurde faelschlich als
+            # starkes Gewitter (🔴/hoch) angezeigt.
+            elif str(thund_val) in ("LOW", "ThunderLevel.LOW"):
+                t_sym = "🟢" if with_emoji else "leicht"
             elif str(thund_val) in ("MED", "ThunderLevel.MED"):
                 t_sym = "🟡" if with_emoji else "mäßig"
             else:
@@ -801,15 +813,18 @@ class TripCommandProcessor:
     def _aggregate_day(self, timeline, target_date) -> Optional[dict]:
         """Aggregiere Timeline-Punkte für target_date. None wenn keine Punkte."""
         from app.models import ThunderLevel as TL
+        from output.metric_format import thunder_ordinal
         points = [p for p in timeline.points if p.arrival_time.date() == target_date]
         if not points:
             return None
         temp_max = max((p.metrics.temp_max_c for p in points if p.metrics.temp_max_c is not None), default=None)
         temp_min = min((p.metrics.temp_min_c for p in points if p.metrics.temp_min_c is not None), default=None)
         wind_max = max((p.metrics.wind_max_kmh for p in points if p.metrics.wind_max_kmh is not None), default=None)
-        thunder_order = [TL.NONE, TL.MED, TL.HIGH]
+        # Issue #1474 Adversary-Folgeaudit: die vormals lokale
+        # {NONE,MED,HIGH}-Liste kannte LOW nicht -- .index() warf ValueError.
+        # thunder_ordinal() ist die geteilte Sortier-Skala.
         thunder_vals = [p.metrics.thunder_level_max for p in points if p.metrics.thunder_level_max is not None]
-        thunder = max(thunder_vals, key=lambda t: thunder_order.index(t)) if thunder_vals else TL.NONE
+        thunder = max(thunder_vals, key=thunder_ordinal) if thunder_vals else TL.NONE
         precip = sum(p.metrics.precip_sum_mm for p in points if p.metrics.precip_sum_mm is not None)
         pop = max((p.metrics.pop_max_pct for p in points if p.metrics.pop_max_pct is not None), default=None)
         return {"temp_max": temp_max, "temp_min": temp_min, "wind_max": wind_max,
@@ -895,15 +910,18 @@ class TripCommandProcessor:
     def _timeline_buttons(self, timeline, target_date, day_token: str) -> dict:
         """Drilldown-Buttons je kritischer Metrik + immer Zurück."""
         from app.models import ThunderLevel
+        from output.metric_format import thunder_ordinal
         back = {"text": "⬅️ Zurück", "callback_data": "glance"}
         agg = self._aggregate_day(timeline, target_date) if timeline.available else None
         if not agg:
             return {"inline_keyboard": [[back]]}
 
         drilldown: list[dict] = []
-        thunder_order = [ThunderLevel.NONE, ThunderLevel.MED, ThunderLevel.HIGH]
+        # Issue #1474 Adversary-Folgeaudit: zweite lokale Kopie derselben
+        # {NONE,MED,HIGH}-Liste wie _aggregate_day() -- kannte LOW ebenfalls
+        # nicht. thunder_ordinal() statt eigener Liste.
         thunder = agg["thunder"]
-        if thunder is not None and thunder_order.index(thunder) >= thunder_order.index(ThunderLevel.MED):
+        if thunder is not None and thunder_ordinal(thunder) >= thunder_ordinal(ThunderLevel.MED):
             drilldown.append({"text": "🔍 Gewitter", "callback_data": f"dd_thunder_{day_token}"})
         if agg["wind_max"] is not None and agg["wind_max"] >= 40:
             drilldown.append({"text": "🔍 Wind", "callback_data": f"dd_wind_{day_token}"})

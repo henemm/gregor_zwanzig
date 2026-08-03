@@ -47,7 +47,7 @@ from output.renderers.email.design_tokens import (
 )
 from output.renderers.email.outlook import build_outlook_row, render_outlook_table
 from output.renderers.email.profile_signature import profile_signature
-from output.metric_format import format_value, severity_for
+from output.metric_format import THUNDER_LABEL_DE, format_value, severity_for
 from utils.geo import degrees_to_compass
 from utils.timezone import (
     UTC, local_dt, local_hour, local_stamp, location_tz, tz_abbrev,
@@ -161,8 +161,17 @@ _WEEKDAY_ABBR = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 
 # Format-Vorbild html.py:1160-1161 -- lokale Kopie statt Import (eigenstaendiges
 # Compare-Vokabular, s. Spec-Modul-Docstring), NONE rendert als "—" (kein Wert).
-_THUNDER_LEVEL_LABEL = {"NONE": "—", "MED": "mittel", "HIGH": "hoch"}
-_THUNDER_SEV = {"MED": "warn", "HIGH": "danger"}
+# Issue #1474: LOW-Zeile ergaenzt; MED/HIGH-Woerter aus der geteilten Quelle
+# (metric_format.THUNDER_LABEL_DE) -- NUR NONE bleibt lokal ("—" statt "kein").
+_THUNDER_LEVEL_LABEL = {
+    "NONE": "—",
+    "LOW": THUNDER_LABEL_DE["LOW"],
+    "MED": THUNDER_LABEL_DE["MED"],
+    "HIGH": THUNDER_LABEL_DE["HIGH"],
+}
+# LOW = "caution" -- naechstschwaechere Stufe unter warn/danger, passend zum
+# bestehenden Vier-Ampel-Vokabular ok/caution/warn/danger.
+_THUNDER_SEV = {"LOW": "caution", "MED": "warn", "HIGH": "danger"}
 
 
 def _fmt_deg(v) -> str:

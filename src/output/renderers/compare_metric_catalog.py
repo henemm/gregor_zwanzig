@@ -103,7 +103,12 @@ COMPARE_METRIC_CATALOG: list[dict] = [
      "metric_id": "temperature", "aggregation": "max"},
     {"key": "thunder_level_max", "unit": "", "decimals": 0,
      "higherIsBetter": False, "kind": "ordinal",
-     "ordinalLabels": ["kein", "mittel", "hoch"],
+     # Issue #1474 F001: vier Eintraege, deckungsgleich mit ThunderLevel/
+     # thunder_ordinal() ({NONE:0, LOW:1, MED:2, HIGH:3}) -- der
+     # Schieberegler-Bereich im Frontend wird aus len(ordinalLabels) abgeleitet
+     # (compareMetricCatalogLoader.ts::buildCompareMetricDefs), eine dritte
+     # Stelle hier war seit der Ordinalverschiebung um eine Stufe zu kurz.
+     "ordinalLabels": ["kein", "leicht", "mittel", "hoch"],
      "metric_id": "thunder", "aggregation": "max"},
     {"key": "temp_min_c", "unit": "°C", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": -30, "rangeMax": 30, "step": 1,

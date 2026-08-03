@@ -36,6 +36,8 @@ import logging
 
 import pytest
 
+from app.models import ThunderLevel
+from output.metric_format import thunder_ordinal
 from output.renderers.compare_metric_catalog import get_compare_metric_catalog
 from output.renderers.compare_metric_ids import (
     FRONTEND_TO_RENDERER_METRIC_ID,
@@ -137,4 +139,75 @@ def test_guard_actually_fails_when_a_catalog_metric_has_no_cv2_row():
         assert not missing, (
             f"Katalog-Metriken ohne CV2_METRICS-Zeile (werden in der Mail "
             f"still verworfen statt angezeigt): {sorted(missing)}"
+        )
+
+
+def _thunder_catalog_entry() -> dict:
+    return next(
+        e for e in get_compare_metric_catalog() if e["key"] == "thunder_level_max"
+    )
+
+
+def test_thunder_ordinal_labels_cover_every_thunder_level():
+    """Struktureller Guard (#1474 Adversary-Fund F001): die Beschriftungsliste
+    des Ortsvergleichs-Schiebereglers fuer ``thunder_level_max`` (kind=
+    "ordinal") muss GENAUSO viele Eintraege haben wie ``ThunderLevel`` Werte
+    UND ihre Reihenfolge muss der Ordinalreihenfolge aus ``thunder_ordinal()``
+    entsprechen -- sonst leitet das Frontend
+    (compareMetricCatalogLoader.ts::buildCompareMetricDefs, Scale =
+    ``[0, len(ordinalLabels) - 1]``) eine zu kurze Schieberegler-Spanne ab:
+    die hoechste Stufe waere nicht waehlbar, eine mittlere loest zu frueh aus.
+
+    Erwartung wird AUS ``ThunderLevel``/``thunder_ordinal()`` abgeleitet, NICHT
+    aus einer zweiten hartcodierten Liste -- sonst prueft der Test nur sich
+    selbst und faengt keine zukuenftige neue Stufe.
+    """
+    entry = _thunder_catalog_entry()
+    assert entry["kind"] == "ordinal"
+
+    all_levels = list(ThunderLevel)
+    expected_count = len(all_levels)
+    labels = entry["ordinalLabels"]
+
+    assert len(labels) == expected_count, (
+        f"ordinalLabels hat {len(labels)} Eintraege, ThunderLevel kennt aber "
+        f"{expected_count} Werte {all_levels} -- der Schieberegler kann nicht "
+        f"jede Stufe erreichen (F001)."
+    )
+
+    # thunder_ordinal() muss jeden ThunderLevel-Wert luecken- und
+    # ueberschneidungsfrei auf genau einen Index 0..expected_count-1 abbilden
+    # -- das IST die Reihenfolge, der ordinalLabels folgen muss (Index i ==
+    # das Level mit thunder_ordinal(level) == i).
+    ordinals = sorted(thunder_ordinal(level) for level in all_levels)
+    assert ordinals == list(range(expected_count)), (
+        f"thunder_ordinal() liefert keine lueckenfreie 0..{expected_count - 1}"
+        f"-Ordnung ueber alle ThunderLevel-Werte: "
+        f"{[(l, thunder_ordinal(l)) for l in all_levels]}"
+    )
+
+
+def test_guard_actually_fails_when_ordinal_labels_are_too_short():
+    """Wirkungsnachweis (analog #1298 B3 / #1350): haelt den Kern-Vergleich aus
+    ``test_thunder_ordinal_labels_cover_every_thunder_level`` gegen eine
+    kuenstlich um einen Eintrag verkuerzte Kopie -- simuliert exakt den
+    Adversary-Fund F001 (drei Labels statt vier nach der Ordinalverschiebung
+    durch ThunderLevel.LOW). Mutiert keine Produktivdaten.
+    """
+    all_levels = list(ThunderLevel)
+    expected_count = len(all_levels)
+
+    # Vorbedingung: die echten Daten sind heute konsistent.
+    real_labels = _thunder_catalog_entry()["ordinalLabels"]
+    assert len(real_labels) == expected_count, (
+        "Vorbedingung verletzt: der echte Katalog-Eintrag ist bereits "
+        "inkonsistent -- Wirkungsnachweis nicht aussagekraeftig."
+    )
+
+    truncated_labels = real_labels[:-1]
+    with pytest.raises(AssertionError):
+        assert len(truncated_labels) == expected_count, (
+            f"ordinalLabels hat {len(truncated_labels)} Eintraege, "
+            f"ThunderLevel kennt aber {expected_count} Werte -- der "
+            f"Schieberegler kann nicht jede Stufe erreichen (F001)."
         )

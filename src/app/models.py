@@ -33,8 +33,13 @@ class Provider(str, Enum):
 
 
 class ThunderLevel(str, Enum):
-    """Thunderstorm risk level."""
+    """Thunderstorm risk level (Staerke-Skala).
+
+    Issue #1474 (S3 zu #1419): `LOW` ("leicht") besetzt den seit jeher
+    unerreichbaren Render-Platz `L` (`output/metric_format.py`). `MED`/`HIGH`
+    behalten Name UND Bedeutung -- additive Erweiterung, keine Umdeutung."""
     NONE = "NONE"
+    LOW = "LOW"
     MED = "MED"
     HIGH = "HIGH"
 
@@ -144,6 +149,13 @@ class ForecastDataPoint:
     # das ist eine andere Groesse auf einer anderen Skala (Messwert 88), s.
     # #1419 Abs. 3.1.
     lightning_density_per_km2_3h: Optional[float] = None
+
+    # Gewitter-Wahrscheinlichkeit (Issue #1474 Abschnitt 5, getrennte Achse von
+    # thunder_level/"Staerke"): vorbereitetes, in dieser Scheibe von KEINER
+    # Quelle befuelltes Feld, kein Renderer-Anschluss. Befuellung ist #1419 S6
+    # (Ensemble-Wettercode, braucht vorherige Kontingent-Messung). `None`
+    # bedeutet "keine Aussage", nie "0%".
+    thunder_probability_pct: Optional[int] = None
 
     # Issue #435: Test-helper alias — some test helpers init with
     # `wind_dir_deg=` instead of `wind_direction_deg=`. We accept both;

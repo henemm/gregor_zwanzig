@@ -75,7 +75,7 @@ const CATALOG_ENTRIES_FIXTURE: Array<Record<string, unknown>> = [
 	// Issue #1425 S2 Teil 2 Scheibe B: NICHT mehr ausgeklammert — Gewitter zieht
 	// auf genau diesen ordinalen Katalog-Eintrag um (metric_id "thunder" ist
 	// seither KEIN Bruecken-Schluessel mehr).
-	{ key: 'thunder_level_max', label: 'Gewitter', unit: '', kind: 'ordinal', ordinalLabels: ['kein', 'mittel', 'hoch'], metric_id: 'thunder' },
+	{ key: 'thunder_level_max', label: 'Gewitter', unit: '', kind: 'ordinal', ordinalLabels: ['kein', 'leicht', 'mittel', 'hoch'], metric_id: 'thunder' },
 	{ key: 'temp_min_c', label: 'Temperatur', unit: '°C', kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, metric_id: 'temperature' },
 	// Duplikat: "gust".
 	{ key: 'gust_max_kmh', label: 'Böen', unit: 'km/h', kind: 'range', rangeMin: 0, rangeMax: 150, step: 5, metric_id: 'gust' },
@@ -197,12 +197,12 @@ describe('AC-1/AC-2/AC-3: buildRouteMetricDefsFromCatalog() existiert und filter
 		);
 		assert.deepEqual(
 			(thunder as RouteMetricDef & { ordinalLabels?: string[] }).ordinalLabels,
-			['kein', 'mittel', 'hoch'],
+			['kein', 'leicht', 'mittel', 'hoch'],
 			'Scheibe B FAIL: ohne ordinalLabels haette der Editor keine Stufen-Beschriftungen'
 		);
 		assert.deepEqual(
 			thunder!.scale,
-			[0, 2],
+			[0, 3],
 			'Scheibe B FAIL: die Skala muss aus den Stufen abgeleitet werden ([0, labels-1]); ' +
 				'der Zahlen-Fallback [0,100] waere wieder die Prozent-Falle'
 		);
@@ -497,10 +497,10 @@ describe('Scheibe B / AC-2: der Zeilenzustand traegt kind + ordinalLabels (Ordin
 		);
 		assert.deepEqual(
 			row!.ordinalLabels,
-			['kein', 'mittel', 'hoch'],
+			['kein', 'leicht', 'mittel', 'hoch'],
 			'AC-2 FAIL: ohne ordinalLabels rendert der Ordinal-Zweig eine LEERE Schaltflaechen-Gruppe'
 		);
-		assert.deepEqual(row!.scale, [0, 2], 'AC-2 FAIL: die Zeile traegt weiterhin eine Prozent-Skala');
+		assert.deepEqual(row!.scale, [0, 3], 'AC-2 FAIL: die Zeile traegt weiterhin eine Prozent-Skala');
 	});
 
 	test('eine gewoehnliche Zahlen-Groesse bekommt KEIN kind="ordinal" (Gegenprobe)', async () => {
@@ -522,7 +522,7 @@ describe('Scheibe B / AC-2: der Zeilenzustand traegt kind + ordinalLabels (Ordin
 		const row = next.rows.find((r) => r.metric === 'thunder_level_max');
 		assert.ok(row, 'AC-2 FAIL: "+ Metrik" legt keine Gewitter-Zeile an');
 		assert.equal(row!.kind, 'ordinal', 'AC-2 FAIL: frisch hinzugefuegte Gewitter-Zeile zeigt ein Zahlenfeld');
-		assert.deepEqual(row!.ordinalLabels, ['kein', 'mittel', 'hoch']);
+		assert.deepEqual(row!.ordinalLabels, ['kein', 'leicht', 'mittel', 'hoch']);
 	});
 });
 

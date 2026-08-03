@@ -42,7 +42,7 @@ const REAL_CATALOG_FIXTURE = {
 		{ key: 'precip_sum_mm', label: 'Niederschlag', aggregation_label: 'Summe', unit: 'mm', decimals: 1, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 30, step: 0.5 },
 		{ key: 'uv_index_max', label: 'UV-Index', aggregation_label: 'Maximum', unit: '', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 12, step: 1 },
 		{ key: 'temp_max_c', label: 'Temperatur', aggregation_label: 'Maximum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -20, rangeMax: 45, step: 1 },
-		{ key: 'thunder_level_max', label: 'Gewitter', aggregation_label: 'Maximum', unit: '', decimals: 0, higherIsBetter: false, kind: 'ordinal', ordinalLabels: ['kein', 'mittel', 'hoch'] },
+		{ key: 'thunder_level_max', label: 'Gewitter', aggregation_label: 'Maximum', unit: '', decimals: 0, higherIsBetter: false, kind: 'ordinal', ordinalLabels: ['kein', 'leicht', 'mittel', 'hoch'] },
 		{ key: 'temp_min_c', label: 'Temperatur', aggregation_label: 'Minimum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1 },
 		{ key: 'gust_max_kmh', label: 'Böen', aggregation_label: 'Maximum', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 150, step: 5 },
 		{ key: 'cape_max_jkg', label: 'Gewitterenergie (CAPE)', aggregation_label: 'Maximum', unit: 'J/kg', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 3000, step: 100 },

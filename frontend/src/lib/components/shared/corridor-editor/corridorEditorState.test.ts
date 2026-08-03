@@ -49,7 +49,7 @@ const CATALOG_FIXTURE = {
 		{ key: 'precip_sum_mm', label: 'Niederschlag', aggregation_label: 'Summe', unit: 'mm', decimals: 1, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 30, step: 0.5, alarmCapable: true },
 		{ key: 'uv_index_max', label: 'UV-Index', aggregation_label: 'Maximum', unit: '', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 12, step: 1, alarmCapable: false },
 		{ key: 'temp_max_c', label: 'Temperatur', aggregation_label: 'Maximum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -20, rangeMax: 45, step: 1, alarmCapable: true },
-		{ key: 'thunder_level_max', label: 'Gewitter', aggregation_label: 'Maximum', unit: '', decimals: 0, higherIsBetter: false, kind: 'ordinal', ordinalLabels: ['kein', 'mittel', 'hoch'], alarmCapable: true },
+		{ key: 'thunder_level_max', label: 'Gewitter', aggregation_label: 'Maximum', unit: '', decimals: 0, higherIsBetter: false, kind: 'ordinal', ordinalLabels: ['kein', 'leicht', 'mittel', 'hoch'], alarmCapable: true },
 		{ key: 'temp_min_c', label: 'Temperatur', aggregation_label: 'Minimum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, alarmCapable: true },
 		{ key: 'gust_max_kmh', label: 'Böen', aggregation_label: 'Maximum', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 150, step: 5, alarmCapable: true },
 		{ key: 'cape_max_jkg', label: 'Gewitterenergie (CAPE)', aggregation_label: 'Maximum', unit: 'J/kg', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 3000, step: 100, alarmCapable: true },
@@ -446,11 +446,11 @@ describe('TEST_DEFS (buildCompareMetricDefs) — AC-3 confidence_pct-Ausschluss 
 		assert.equal(ids.includes('wind_direction_deg'), false, 'AC-3 FAIL: wind_direction_deg noch im Angebot');
 	});
 
-	test('thunder_level_max ist kind "ordinal" mit 3 Stufen (kein/mittel/hoch)', () => {
+	test('thunder_level_max ist kind "ordinal" mit 4 Stufen (kein/leicht/mittel/hoch)', () => {
 		const thunder = TEST_DEFS.find((m) => m.metric === 'thunder_level_max');
 		assert.equal(thunder?.kind, 'ordinal');
-		assert.deepEqual(thunder?.ordinalLabels, ['kein', 'mittel', 'hoch']);
-		assert.deepEqual(thunder?.scale, [0, 2]);
+		assert.deepEqual(thunder?.ordinalLabels, ['kein', 'leicht', 'mittel', 'hoch']);
+		assert.deepEqual(thunder?.scale, [0, 3]);
 	});
 
 	// notify-Bruecke (compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID) kennt nur
@@ -619,6 +619,62 @@ describe('buildCompareCorridorSavePayload — Dual-Write (mark -> ideal_ranges)'
 			metricAlertLevels: {},
 		});
 		assert.deepEqual(payload.idealRanges.thunder_level_max, { max: 'NONE' });
+	});
+
+	// Adversary Runde 3, F009 (#1474): der Katalog fuehrt Gewitter seit F001 mit
+	// 4 Stufen (kein/leicht/mittel/hoch, Skala [0,3]), ORDINAL_ENUM kannte aber
+	// weiterhin nur 3 Eintraege — Reglerposition 3 ("hoch") landete beim
+	// Speichern als {max: undefined} statt {max: 'HIGH'} (Key faellt beim
+	// JSON.stringify weg, die Auswahl geht lautlos verloren).
+	test('Gewitter-Ordinal mark=true, Reglerposition 3 ("hoch") -> ideal_ranges.thunder_level_max = {max:"HIGH"} (F009-Regression)', () => {
+		const { rows } = buildComparePool([
+			{ metric: 'thunder_level_max', range: [null, 3], notify: false, mark: true },
+		], TEST_DEFS);
+		const payload = buildCompareCorridorSavePayload(rows, [], {
+			idealRanges: {},
+			activeMetricKeys: [],
+			metricAlertLevels: {},
+		});
+		assert.deepEqual(payload.idealRanges.thunder_level_max, { max: 'HIGH' });
+	});
+
+	// Adversary Runde 4, F012 (#1474): der F009-Test oben prueft NUR Position 3
+	// ("hoch" -> undefined statt HIGH). Eine vertauschte, aber weiterhin
+	// VOLLSTAENDIGE Zuordnung (z.B. Position 1<->2) faellt beim F009-Test nicht
+	// auf, weil dort kein anderer Rang geprueft wird. Diese Ergaenzung prueft
+	// ALLE vier Reglerpositionen einzeln gegen eine hier fest hingeschriebene
+	// Erwartung (NICHT von ORDINAL_ENUM abgeleitet, sonst prueft der Test die
+	// Produktionstabelle nur gegen sich selbst) — Position N muss auf den N-ten
+	// Katalog-Eintrag (TEST_DEFS.thunder_level_max.ordinalLabels, Zeile 52:
+	// kein/leicht/mittel/hoch) passen.
+	test('Gewitter-Ordinal mark=true, ALLE 4 Reglerpositionen -> jede landet auf dem korrekten Enum-Rang (F012-Regression)', () => {
+		const thunderDef = TEST_DEFS.find((m) => m.metric === 'thunder_level_max');
+		assert.ok(thunderDef, 'thunder_level_max fehlt in TEST_DEFS');
+		const labels = thunderDef!.ordinalLabels ?? [];
+		// Aufsteigende ThunderLevel-Skala (types.ts:363), positionsweise fest
+		// hingeschrieben — bewusst NICHT ORDINAL_ENUM importiert/gelesen.
+		const EXPECTED_LEVEL_AT_POSITION: readonly string[] = ['NONE', 'LOW', 'MED', 'HIGH'];
+		assert.equal(
+			labels.length,
+			EXPECTED_LEVEL_AT_POSITION.length,
+			'Katalog-Stufenzahl (ordinalLabels) weicht von der erwarteten 4er-Skala ab'
+		);
+
+		for (let position = 0; position < labels.length; position++) {
+			const { rows } = buildComparePool([
+				{ metric: 'thunder_level_max', range: [null, position], notify: false, mark: true },
+			], TEST_DEFS);
+			const payload = buildCompareCorridorSavePayload(rows, [], {
+				idealRanges: {},
+				activeMetricKeys: [],
+				metricAlertLevels: {},
+			});
+			assert.deepEqual(
+				payload.idealRanges.thunder_level_max,
+				{ max: EXPECTED_LEVEL_AT_POSITION[position] },
+				`Reglerposition ${position} ("${labels[position]}") muss auf ${EXPECTED_LEVEL_AT_POSITION[position]} abbilden`
+			);
+		}
 	});
 
 	test('Gewitter-Ordinal ohne max (nur min gesetzt) -> keine Legacy-Repraesentation, Key entfernt', () => {

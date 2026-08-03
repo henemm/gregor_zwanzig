@@ -340,7 +340,7 @@ class TestAC3ConfiguredWindowAppliesToAllFourChannelsAndGapCheck:
         assert "Gewitter ab 16:00 · stärkste 16:00" in report.email_plain, (
             f"Plain:\n{report.email_plain}"
         )
-        assert "⚡ HIGH" in telegram, f"Telegram:\n{telegram}"
+        assert "⚡ hoch" in telegram, f"Telegram:\n{telegram}"
 
         has_gap = compute_has_gap(segments, night, _TZ, start_hour=6, end_hour=16)
         assert has_gap is False, (

@@ -360,7 +360,7 @@ export interface ApiError {
 	status?: number;
 }
 
-export type ThunderLevel = 'NONE' | 'MED' | 'HIGH';
+export type ThunderLevel = 'NONE' | 'LOW' | 'MED' | 'HIGH';
 
 export interface ForecastDataPoint {
 	ts: string;

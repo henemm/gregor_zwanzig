@@ -734,6 +734,10 @@ class TripReportFormatter:
     _RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
         (RiskType.THUNDERSTORM, RiskLevel.HIGH): "⚠️ Thunder",
         (RiskType.THUNDERSTORM, RiskLevel.MODERATE): "⚠️ Thunder Risk",
+        # Issue #1474 (AC-12): deutsches Wort statt generischem englischen
+        # Fallback ("Thunderstorm") -- die einzige LOW-Instanz im ganzen
+        # System (s. Spec Known Limitations).
+        (RiskType.THUNDERSTORM, RiskLevel.LOW): "⚠️ Gewitter leicht",
         (RiskType.WIND, RiskLevel.HIGH): "⚠️ Storm",
         (RiskType.WIND, RiskLevel.MODERATE): "⚠️ High Wind",
         (RiskType.RAIN, RiskLevel.HIGH): "⚠️ Heavy Rain",

@@ -741,6 +741,14 @@ _THUNDER_MAP = {
         "plain": "⚡–",
         "sms": None,
     },
+    # Issue #1474: neue Stufe "leicht" (LOW), Farbe zwischen NONE und MED.
+    "LOW": {
+        "word": "leicht",
+        "sq_color": "#c9a45a",
+        "word_color": "#8c6d2a",
+        "plain": "⚡leicht",
+        "sms": "GEW-LOW",
+    },
     "MED": {
         "word": "MED",
         "sq_color": "#c08a1a",
@@ -784,7 +792,7 @@ def format_trend_tokens(stage: dict) -> dict:
             wind_str        — 'W20' / '20'
             wind_highlight  — bool (wind_kmh > 30)
             wind_risk       — bool (wind_kmh >= 50)
-            thunder_word    — 'kein' / 'MED' / 'HIGH'
+            thunder_word    — 'kein' / 'leicht' / 'MED' / 'HIGH'
             thunder_sq_color — HTML hex for ampel square
             thunder_word_color — HTML hex for word text
             thunder_plain   — '⚡–' / '⚡MED' / '⚡HIGH'
@@ -844,10 +852,15 @@ def format_trend_tokens(stage: dict) -> dict:
     precip_token = render_threshold_peak_value("R", hourly_precip, precip_thr)
     wind_token = render_threshold_peak_value("W", hourly_wind, wind_thr)
     gust_token = render_threshold_peak_value("G", hourly_gust, gust_thr)
-    # Thunder: is_level=True, threshold=1 (MED is the first notable level).
+    # Thunder: is_level=True, threshold=1 (jede Stufe ab LOW ist meldenswert).
     # Issue #640 F001: use MED/HIGH labels (not the SMS L/M/H vigilance scale).
     # _TREND_THUNDER_LABELS aligns with _THUNDER_MAP above and #623 plain tokens.
-    _TREND_THUNDER_LABELS = {1: "MED", 2: "HIGH"}
+    # Issue #1474: ordinal-indiziert -- LOW schiebt sich additiv UNTERHALB von
+    # MED ein, Ordinal 1 ist jetzt LOW statt MED (thunder_ordinal()/
+    # thunder_label_value() sind seither zahlenmaessig deckungsgleich, s.
+    # metric_format.py). Ohne diese Korrektur zeigte der Mail-Trend-Block
+    # "mittel", wo tatsaechlich nur "leicht" vorliegt.
+    _TREND_THUNDER_LABELS = {1: "leicht", 2: "mittel", 3: "hoch"}
     thunder_token = render_threshold_peak_value(
         "TH", hourly_thunder, threshold=1.0, is_level=True,
         level_labels=_TREND_THUNDER_LABELS,
@@ -1546,7 +1559,11 @@ def _pill_for_metric(
             lvl = dp.thunder_level
             if lvl is None:
                 continue
-            if thunder_ordinal(lvl) >= 1 and first_thunder_ts is None:
+            # Issue #1474: an die benannte Stufe MED gebunden, nicht mehr an
+            # den Rohwert 1 (der bedeutet seit LOW nicht mehr "MED", sondern
+            # "LOW"). Produktentscheidung (Spec Abschnitt 2): der Satz bleibt
+            # bei MED gebunden, "leicht" (nur ueber CAPE) loest ihn NICHT aus.
+            if thunder_ordinal(lvl) >= thunder_ordinal(ThunderLevel.MED) and first_thunder_ts is None:
                 first_thunder_ts = dp.ts
             if thunder_ordinal(lvl) > thunder_ordinal(max_lvl):
                 max_lvl = lvl

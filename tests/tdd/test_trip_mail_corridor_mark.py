@@ -484,10 +484,15 @@ class TestTripThunderOrdinalCorridor:
         assert _MARK_STYLE not in gewitter, "die Gewitterstunde darf keinen gruenen Balken tragen"
 
     def test_ac1_ordinal_korridor_bis_mittel_markiert_kein_und_mittel_nicht_hoch(self):
-        """AC-1 (Gegenprobe zur Stufigkeit): [None, 1] ("bis mittel") -- das
+        """AC-1 (Gegenprobe zur Stufigkeit): [None, 2] ("bis mittel") -- das
         Ergebnis der Migration der alten Vorgabe "bis 40" -- schliesst MED ein,
         HIGH aber nicht. Verhindert, dass die GREEN-Umsetzung pauschal "nur
-        NONE" oder "alles" markiert."""
+        NONE" oder "alles" markiert.
+
+        Issue #1474: die Obergrenze wandert additiv von 1 auf 2 -- die
+        Ordinalskala verschiebt sich (LOW schiebt sich bei 1 dazwischen), die
+        fachliche Bedeutung "bis mittel" bleibt dieselbe (s.
+        metric_format._THUNDER_ORDER, alert_preset.py ORDINAL_LEVEL_BOUNDS)."""
         dps = [
             _dp(ts=datetime(2026, 7, 30, 8, 0, tzinfo=timezone.utc), t2m_c=10.0,
                 thunder_level=ThunderLevel.MED),
@@ -495,14 +500,14 @@ class TestTripThunderOrdinalCorridor:
                 thunder_level=ThunderLevel.HIGH),
         ]
         html = _render_hours(
-            corridors=[Corridor(metric="thunder_level_max", range=[None, 1], mark=True)],
+            corridors=[Corridor(metric="thunder_level_max", range=[None, 2], mark=True)],
             enabled={"temperature", "thunder"}, dps=dps,
         )
 
         assert _MARK in _cell_in(_tr_containing(html, "10"), _THUNDER_COL), \
-            "mittleres Gewitter (Ordinal 1) liegt in [offen, mittel]"
+            "mittleres Gewitter (Ordinal 2) liegt in [offen, mittel]"
         assert _MARK not in _cell_in(_tr_containing(html, "11"), _THUNDER_COL), \
-            "hohes Gewitter (Ordinal 2) liegt ausserhalb [offen, mittel]"
+            "hohes Gewitter (Ordinal 3) liegt ausserhalb [offen, mittel]"
 
     def test_umkehrung_prozentschwelle_schliesst_jeden_gewittergrad_ein(self):
         """Wurzel des Fehlers, dauerhaft festgehalten (bleibt auch nach dem Fix
