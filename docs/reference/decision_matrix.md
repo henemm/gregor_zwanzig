@@ -56,6 +56,45 @@ Für Météo-France erledigt das ab jetzt automatisch der Live-Test
 **aus dem Produktivcode** und prüft ihn gegen `GetCapabilities`. **S2b braucht ein
 Gegenstück für den DWD** — sonst wiederholt sich der Fehler dort.
 
+## Gewitter-Stufen: EINE Fusion, je Signal eine eigene Schwellentabelle (#1474)
+
+Seit #1474 ist die Gewitter-**Stärke** vierstufig — **kein · leicht · mittel · hoch**
+(`ThunderLevel`, `NONE/LOW/MED/HIGH`). Sie entsteht **nicht** mehr aus einem einzigen
+Wettercode, sondern aus allen vorhandenen Signalen: `output/metric_format.py::thunder_level_from_signals()`
+übersetzt **jedes Signal einzeln** über seine **eigene** Schwellentabelle und nimmt dann
+das schärfste vorhandene Ergebnis (`max_thunder()`).
+
+| Signal | leicht | mittel | hoch | Gebiet | Quelle der Schwellen |
+|---|---|---|---|---|---|
+| Blitzdichte `lightning_density_per_km2_3h` | > 0,003 | ≥ 0,015 | ≥ 0,075 | FR/Korsika | ECMWF Forecast User Guide 8.1.13 (0,1 bzw. 0,5 Blitze/100 km²/h über 3 h) — 🔴 **die oberste Grenze ist NICHT publiziert**, dokumentierte Fortschreibung |
+| Gewitterenergie `cape_jkg` | ≥ 1000 | — **deckelt** | — | überall | `metric_catalog.py` `risk_thresholds["cape"]["medium"]`, deckt sich mit der NWS-Grenze zur „mäßigen Instabilität" |
+| Wettercode (WMO 95/96/99) | — | — | ✓ | überall | unverändert |
+| **DWD-Blitzpotenzial `lpi`** (J/kg) | **> 1** | **≥ 30** | **≥ 50** | DE/Alpen/AT | ⬜ **noch nicht angebunden** — #1457 S2b. COSMO-D2/ICON-D2-Verifikation (LPI > 1 trennt Blitz von kein Blitz), Prüfschwellen der Fachliteratur 30/40/50. 🔴 Nur die untere Grenze ist belastbar — an echten Messwerten gegenprüfen |
+
+🔴 **CAPE deckelt bei „leicht" und eskaliert nie.** Es misst *verfügbare Energie*, kein
+Ereignis — ohne Auslöser passiert trotz hoher Werte nichts. „mittel"/„hoch" bleiben
+Signalen vorbehalten, die tatsächliche Blitzaktivität vorhersagen. CAPE ist zugleich die
+einzige Größe, die „leicht" **außerhalb Frankreichs** überhaupt erreichbar macht.
+
+**Für S2b und jede weitere Quelle:** Eine neue Größe dockt mit **einer Tabellenzeile**
+an — Provider füllt nur Felder, die Einstufung liest nur Felder (Konzept #1419
+Abschnitt 5). **Keine eigene Gewitter-Einstufung im Provider bauen.**
+
+**`None` ≠ `NONE`:** Liegt **kein** Signal vor, liefert die Fusion `None` („keine
+Aussage"). `ThunderLevel.NONE` bedeutet „mindestens ein Signal geprüft, unauffällig".
+Leer darf nie als Entwarnung gelesen werden.
+
+🔴 **Die Zuordnung Stufe→Zahl/Text NIE lokal nachbauen.** Über vier Prüfrunden kamen
+**neun** solcher Kopien ans Licht — drei mit Absturz (Briefing-Versand, Telegram
+`/glance`, Telegram-Tagesleiste), drei mit falscher Aussage (u.a. „leicht" → „Starkes
+Gewitter erwartet"). Kanonische Quellen sind ausschließlich `thunder_ordinal()`,
+`thunder_label_value()` und `THUNDER_LABEL_DE` (`output/metric_format.py`), für den
+Ortsvergleich-Editor `compare_metric_catalog.py::ordinalLabels`. Wächter dagegen: #1480.
+
+**Zweite Achse, vorbereitet:** `thunder_probability_pct` (Wahrscheinlichkeit, 0–100 %)
+liegt im Datenmodell, ist aber von **keiner** Quelle befüllt — kein Dienst liefert sie
+fertig, ableitbar allein aus dem Open-Meteo-Ensemble (#1419 S6, Kontingent #1329).
+
 ## Gewitter-Zuständigkeit: eigene Tabelle, getrennt von der Grundvorhersage (#1457 S2a)
 
 Seit #1457 S2a gibt es **zwei** Zuständigkeitstabellen, und das ist Absicht:
