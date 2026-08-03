@@ -158,6 +158,11 @@ def _settings(chat_id: str) -> Settings:
     return Settings(
         telegram_bot_token=f"bot-{chat_id}",
         telegram_chat_id=chat_id,
+        # Issue #1476: die Herkunftssperre schaltet aus einem Testlauf sonst
+        # auf die GLOBAL konfigurierte Test-Chat-ID um -- hier soll die
+        # jeweils EIGENE chat_id unverändert bleiben, um Nutzer-Isolation
+        # zu pruefen.
+        telegram_test_chat_id=chat_id,
     )
 
 

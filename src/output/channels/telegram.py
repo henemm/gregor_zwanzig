@@ -4,10 +4,12 @@ import logging
 import re
 import threading
 import time
+from pathlib import Path
 
 import httpx
 
 from app.config import Settings
+from app.origin_guard import running_origin
 from output.channels.base import OutputConfigError, OutputError
 
 logger = logging.getLogger(__name__)
@@ -156,6 +158,41 @@ class TelegramOutput:
     @property
     def name(self) -> str:
         return "telegram"
+
+    def _guard_code_origin(self, chat_id):
+        """Herkunftssperre (Issue #1476): haengt NICHT an is_test_mode/env,
+        sondern am Ort, von dem dieser Code laeuft (`running_origin()` --
+        `Path(__file__).resolve()`, von einem aufrufenden Skript nicht
+        abschaltbar). Faengt genau den Fall, den die drei bestehenden
+        Waechter (unten) NICHT abdecken: ein Skript, das `Settings()`
+        normal laedt (is_test_mode=False, env='production'), aus einem
+        Arbeitsordner/Worktree heraus.
+
+        Bei Herkunft='test': ist eine Test-Chat-ID konfiguriert, wird
+        DARAUF umgeschaltet (mit Protokollzeile) -- fehlt sie, harter
+        Abbruch. Herkunft='production'/'staging' bleibt unangetastet (der
+        Produktivbetrieb und Staging laufen unveraendert weiter).
+
+        Gibt die tatsaechlich zu verwendende chat_id zurueck.
+        """
+        if running_origin(Path(__file__)) != "test":
+            return chat_id
+        test_chat_id = self._settings.telegram_test_chat_id
+        if not test_chat_id:
+            raise OutputConfigError(
+                "telegram",
+                "Herkunftssperre (Issue #1476): Code laeuft aus einem "
+                "Testlauf-Verzeichnis (nicht Prod-/Staging-Checkout), aber "
+                "keine Test-Chat-ID konfiguriert (GZ_TELEGRAM_TEST_CHAT_ID) "
+                f"-- Versand an chat_id={chat_id!r} abgebrochen.",
+            )
+        if str(chat_id) != str(test_chat_id):
+            logger.warning(
+                "Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt "
+                "-- Ziel-Chat von %r auf Test-Chat-ID %r umgeschaltet.",
+                chat_id, test_chat_id,
+            )
+        return test_chat_id
 
     def _guard_test_mode_chat_id(self) -> None:
         """Bedingungsloser Guard (Issue #1288, Vorbild email.py #1219): im
@@ -363,10 +400,10 @@ class TelegramOutput:
             OutputConfigError: Test-Modus mit fehlender/abweichender
                 Test-Chat-ID (Issue #1288) — VOR jedem httpx.post.
         """
+        chat_id = self._guard_code_origin(self._settings.telegram_chat_id)
         self._guard_test_mode_bot_token()
         self._guard_test_mode_chat_id()
         token = self._settings.telegram_bot_token
-        chat_id = self._settings.telegram_chat_id
         url = f"{TELEGRAM_API_BASE}/bot{token}/sendMessage"
 
         message = body if suppress_subject_line else f"[{subject}]\n\n{body}"
@@ -428,6 +465,7 @@ class TelegramOutput:
         OHNE `parse_mode`, mit gestrippten HTML-Tags UND `html.unescape()`ten
         Entities — sonst wuerde der Fallback "&amp;" statt "&" zeigen, ein
         kosmetischer Fehler gegen einen anderen getauscht."""
+        chat_id = self._guard_code_origin(chat_id)
         self._guard_test_mode_bot_token()
         self._guard_test_mode_target_chat(chat_id)
         token = self._settings.telegram_bot_token
@@ -471,6 +509,7 @@ class TelegramOutput:
         Returns:
             True on HTTP 200 + ok:true, False otherwise.
         """
+        chat_id = self._guard_code_origin(chat_id)
         self._guard_test_mode_bot_token()
         self._guard_test_mode_target_chat(chat_id)
         token = self._settings.telegram_bot_token
@@ -508,6 +547,7 @@ class TelegramOutput:
         fail-soft: a non-200 / HTTPError / Timeout is only logged, never raised —
         "message is not modified" and stale messages must not crash the webhook.
         """
+        chat_id = self._guard_code_origin(chat_id)
         self._guard_test_mode_bot_token()
         self._guard_test_mode_target_chat(chat_id)
         token = self._settings.telegram_bot_token

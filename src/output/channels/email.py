@@ -16,6 +16,7 @@ from email.utils import formatdate, getaddresses, parseaddr
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from app.origin_guard import running_origin
 from output.channels.base import OutputConfigError, OutputError
 
 if TYPE_CHECKING:
@@ -64,6 +65,11 @@ def _phase_timeout_or_raise(deadline_at: float) -> float:
 # direkt. Konstante bleibt zu Dokumentationszwecken/für ältere Kommentare
 # erhalten.
 TEST_MAILBOXES = frozenset({"gregor-test@henemm.com", "gregor-staging@henemm.com"})
+
+# Issue #1476 (AC-6): Ziel der Herkunftssperre bei Testlauf-Herkunft --
+# Mitglied von TEST_MAILBOXES, hier als eigene Konstante fuer eine
+# DETERMINISTISCHE Umschaltung (kein iter() ueber ein frozenset).
+_ORIGIN_GUARD_TEST_RECIPIENT = "gregor-test@henemm.com"
 
 # Issue #1235: Domains, die Stalwart LOKAL zustellt (kein Relay an Resend).
 # henemm.com ist die einzige von Stalwart bediente Domain -- Empfaenger
@@ -625,6 +631,19 @@ class EmailOutput:
             recipients: list[str] = [to] if to else [self._to]
         else:
             recipients = list(to) if to else [self._to]
+
+        # Issue #1476 (AC-6, Vorbild telegram.py::_guard_code_origin): dieselbe
+        # Herkunftssperre wie beim Telegram-Kanal. Bei Testlauf-Herkunft wird
+        # auf eine Test-Mailbox umgeschaltet -- der bestehende #1219-Allowlist-
+        # Guard (unten) blockiert sie zusaetzlich auf dem Resend-Pfad, auf
+        # Stalwart wirkt die Umschaltung.
+        if running_origin(Path(__file__)) == "test" and recipients != [_ORIGIN_GUARD_TEST_RECIPIENT]:
+            logger.warning(
+                "Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- "
+                "E-Mail-Empfaenger von %s auf %s umgeschaltet.",
+                [_mask_addr_for_log(r) for r in recipients], _ORIGIN_GUARD_TEST_RECIPIENT,
+            )
+            recipients = [_ORIGIN_GUARD_TEST_RECIPIENT]
         to_header = ", ".join(recipients)
 
         # Issue #1219 (löst die #1147-Denylist ab): dritte Guard-Linie —

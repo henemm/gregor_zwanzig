@@ -1,9 +1,11 @@
 """SMS output channel via seven.io HTTP API."""
 import logging
+from pathlib import Path
 
 import httpx
 
 from app.config import Settings
+from app.origin_guard import running_origin
 from output.channels.base import OutputConfigError, OutputError
 
 logger = logging.getLogger(__name__)
@@ -48,9 +50,34 @@ class SMSOutput:
                 "(Issue #1336).",
             )
 
+    def _guard_code_origin(self) -> str:
+        """Herkunftssperre (Issue #1476, AC-6 — Vorbild
+        telegram.py::_guard_code_origin): bei Testlauf-Herkunft ist der
+        Prod-API-Key unzulaessig. Der Sandbox-Key sendet laut seven.io-Doku
+        NIE eine echte SMS ("sendet nie, kostet nie") und ist damit der
+        sichere Ersatz -- keine Rufnummer muss umgeschaltet werden.
+        """
+        if running_origin(Path(__file__)) != "test":
+            return self._settings.seven_api_key
+        sandbox_key = self._settings.seven_sandbox_key
+        if not sandbox_key:
+            raise OutputConfigError(
+                "sms",
+                "Herkunftssperre (Issue #1476): Code laeuft aus einem "
+                "Testlauf-Verzeichnis, aber kein Sandbox-Key konfiguriert "
+                "(GZ_SEVEN_SANDBOX_KEY) -- Versand abgebrochen.",
+            )
+        if self._settings.seven_api_key != sandbox_key:
+            logger.warning(
+                "Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt "
+                "-- SMS-Key auf den Sandbox-Key umgeschaltet.",
+            )
+        return sandbox_key
+
     def send(self, subject: str, body: str) -> None:
         """Send body as SMS via seven.io. subject is ignored."""
         self._guard_test_mode_sandbox_key()
+        api_key = self._guard_code_origin()
         payload: dict[str, str] = {
             "to": self._settings.sms_to,
             "text": body,
@@ -60,7 +87,7 @@ class SMSOutput:
 
         response = httpx.post(
             self._settings.sms_gateway_url,
-            headers={"X-Api-Key": self._settings.seven_api_key},
+            headers={"X-Api-Key": api_key},
             data=payload,
             timeout=10,
         )

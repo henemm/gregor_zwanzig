@@ -224,10 +224,15 @@ def _require_pacing_settings(s: Settings) -> None:
 
 
 def _settings(chat_id: str, **pacing) -> Settings:
-    """Nicht gesetzte Drossel-Werte bleiben auf den Produktiv-Defaults."""
+    """Nicht gesetzte Drossel-Werte bleiben auf den Produktiv-Defaults.
+
+    Issue #1476: telegram_test_chat_id == chat_id, sonst schaltet die
+    Herkunftssperre aus einem Testlauf auf eine andere ID um und die
+    Drossel-Tests zaehlen am falschen Chat.
+    """
     return Settings(
         telegram_bot_token="stub-bot-token", telegram_chat_id=chat_id,
-        telegram_test_chat_id="", is_test_mode=False,
+        telegram_test_chat_id=chat_id, is_test_mode=False,
         **{k: v for k, v in pacing.items() if v is not None}, _env_file=None,
     )
 

@@ -46,6 +46,7 @@ import httpx
 import pytest
 
 from app.config import Settings
+from output.channels import telegram as telegram_mod
 from output.channels.base import OutputConfigError
 from output.channels.telegram import TelegramOutput
 
@@ -214,9 +215,15 @@ def test_chat_argument_guard_blocks_wrong_target_chat(method_name, monkeypatch):
 
     RED: heute existiert kein Chat-Argument-Guard fuer diese 3 Methoden --
     sie lesen `chat_id` nur als Payload-Wert und laufen ungebremst in den
-    Sentinel."""
+    Sentinel.
+
+    Issue #1476: Herkunft wird auf 'production' gefaked, damit die NEUE,
+    vorgeschaltete Herkunftssperre die abweichende chat_id nicht schon
+    VORHER auf telegram_test_chat_id umschaltet -- dieser Test isoliert
+    weiterhin ausschliesslich den ALTEN, argument-basierten Guard (#1363)."""
     calls: list = []
     monkeypatch.setattr(httpx, "post", _make_sentinel(calls))
+    monkeypatch.setattr(telegram_mod, "running_origin", lambda module_file: "production")
 
     settings = _telegram_settings(
         is_test_mode=True,
@@ -340,9 +347,16 @@ def test_guards_are_noop_in_production_mode(method_name, monkeypatch):
     RED: die Guard-Methoden _guard_test_mode_bot_token und
     _guard_test_mode_target_chat existieren noch nicht auf TelegramOutput --
     der direkte No-Op-Beweis-Aufruf wirft AttributeError, bevor irgendetwas
-    anderes geprueft wird."""
+    anderes geprueft wird.
+
+    Issue #1476: Herkunft wird auf 'production' gefaked -- dieser Test
+    prueft weiterhin ausschliesslich, dass die ALTEN (#1363) Guards in Prod
+    No-Ops sind. Der reale, ungefakte Fall (Prod-Settings aus einem
+    Testlauf-Verzeichnis) ist genau die Luecke, die die NEUE
+    Herkunftssperre schliesst -- siehe test_telegram_origin_guard.py."""
     calls: list = []
     monkeypatch.setattr(httpx, "post", _make_sentinel(calls))
+    monkeypatch.setattr(telegram_mod, "running_origin", lambda module_file: "production")
 
     settings = _telegram_settings(
         is_test_mode=False,
