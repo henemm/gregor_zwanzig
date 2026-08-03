@@ -51,6 +51,57 @@ For each changed file, systematically check:
 4. **State transitions** — What about init → first-use → restart?
 5. **Error propagation** — What if an upstream dependency fails?
 
+### Step 3b: Mutations-Gegenprobe — PFLICHT, kein optionaler Zusatz
+
+**Verfaelsche die Implementierung gezielt und melde, welche Verfaelschung KEIN Test faengt.**
+
+Ein gruener Testlauf beweist nur, dass die Tests durchlaufen — nicht, dass sie etwas
+bewachen. Ein Test, der gruen bleibt, waehrend man die zugehoerige Schutzmassnahme
+entfernt, ist wertlos und muss als Finding gemeldet werden.
+
+**Ablauf je Mutation:**
+1. Eine einzelne Verfaelschung per **String-Ersetzung** einbauen (nie `git checkout`,
+   `git stash` oder `git reset` — eine Runde hat damit die gesamte unkommittete Arbeit
+   geloescht). Vorher eine **externe Sicherungskopie** ausserhalb von git anlegen.
+2. Zielsuite laufen lassen. Welcher Test wird rot?
+3. Mutation zuruecknehmen, per Diff gegen die Sicherungskopie auf **identisch** pruefen.
+4. **Wird kein Test rot ⇒ Finding.**
+
+**Mindestens diese Familien durchspielen** (was zutrifft, ergibt sich aus der Spec):
+- Jeder `None`/Leerwert → `0` bzw. Default (verwandelt „keine Aussage" in „keine Gefahr")
+- Jedes fail-soft → werfen, und jedes werfen → still verschlucken
+- Jede Zeitgrenze entfernen oder auf die naechstgroessere umstellen
+- Jeden Default-Schalter umdrehen
+- Jede Zustaendigkeits-/Routing-Abfrage auf einen festen Wert verdrahten
+- Jeden Sammel-/Cache-Pfad umgehen, jedes Limit entfernen
+- Jeden neu eingefuegten Aufruf **entfernen** (prueft, ob er ueberhaupt wirkt)
+
+**🔴 Die wichtigste Frage — sie hat in #1457 dreimal denselben Fehler aufgedeckt:**
+
+> **Ist die Zusicherung an der Stelle geprueft, an der sie WIRKT — oder nur dort, wo der
+> Code steht?**
+
+Belegte Faelle aus einer einzigen Scheibe: (1) Ein Provider war vollstaendig getestet und
+wurde im Produktivcode nur bei Totalausfall aufgerufen — das Feature erreichte nie einen
+Nutzer. (2) Eine Sammel-Methode konnte mehrere Orte, wurde aber nur mit Ein-Element-Listen
+gerufen — Ersparnis null. (3) Die Regel „`None` statt `0`" war am Provider geprueft, nicht
+am gemeinsamen Weg, ueber den die Werte tatsaechlich ankommen.
+
+Alle drei Male: **AC erfuellt, Testlauf gruen, Wirkung null.** Alle drei Male hat es die
+Mutations-Gegenprobe gefunden und der regulaere Testlauf nicht. Mutiere deshalb **immer
+auch an der Stelle, die der Nutzer erreicht**, nicht nur in der geaenderten Datei.
+
+**Zweite Pflichtfrage — pruefen die Tests, was sie behaupten?**
+Stimmen Testdaten und Pruefling ueberein (liegt der Testort im Gitter der verwendeten
+Aufzeichnung)? Prueft ein Test **Verschiedenheit**, wo er sie im Docstring behauptet, oder
+nur Vorhandensein? Laeuft ein `monkeypatch` ins Leere (bei `from x import y` muss im
+**verbrauchenden** Modul gepatcht werden)? In #1457 waren **4 von 12 Tests nur deshalb
+gruen, weil der Fehler existierte** — sie fielen rot, sobald er behoben war.
+
+> **Regel-Budget (`CLAUDE.md`): Pruefdatum 2026-11-01.** Bis dahin nachweisen, dass diese
+> Pflicht echte Fehler gefangen hat, sonst Rueckbau. Bereits belegte Faenge zum Zeitpunkt
+> der Einfuehrung: #1448 (2 von 3 Scheiben), #1457 (F001, F002, F-ADV1 und drei weitere).
+
 ### Step 4: Check for Regressions
 
 ```

@@ -25,6 +25,8 @@ OpenSpec-Workflow mit Adversary Verification (Commands sind zweistellig; Einstie
 
 **Adversary Verification:** Nach Implementation führt ein unabhängiger `implementation-validator` Agent (Sonnet) einen strukturierten Dialog, um die Implementierung aktiv zu brechen. Tri-State Verdict: VERIFIED / BROKEN / AMBIGUOUS. Details: `docs/features/openspec_workflow.md`
 
+**🔴 Mutations-Gegenprobe ist PFLICHT, keine Kür (PO-Vorgabe 2026-08-03).** Der Adversary muss die Implementierung gezielt verfälschen und melden, **welche Verfälschung KEIN Test fängt** — wird kein Test rot, ist das ein Finding. Ein grüner Testlauf beweist nur, dass die Tests durchlaufen, nicht dass sie etwas bewachen. Leitfrage, die in #1457 dreimal denselben Fehler aufdeckte: **Ist die Zusicherung an der Stelle geprüft, an der sie WIRKT — oder nur dort, wo der Code steht?** (Dreimal war ein AC erfüllt, der Testlauf grün und die Wirkung null.) Ablauf, Mutations-Familien und die Pflichtfrage „prüfen die Tests, was sie behaupten?": `.claude/agents/implementation-validator.md` Sektion „Step 3b". **Mutationen nur per String-Ersetzung mit externer Sicherungskopie — nie `git checkout/stash/reset`** (hat einmal die gesamte unkommittete Arbeit gelöscht). *Regel-Budget: Prüfdatum 2026-11-01; belegte Fänge bei Einführung: #1448 (2 von 3 Scheiben), #1457 (6 Findings).*
+
 **Fresh Eyes:** Bei UI-Änderungen prüft zusätzlich ein `fresh-eyes-inspector` Agent Screenshots OHNE Bug-Kontext (verhindert Confirmation Bias).
 
 **Hooks erzwingen diesen Workflow!** Edit/Write auf geschützte Dateien ist blockiert.
