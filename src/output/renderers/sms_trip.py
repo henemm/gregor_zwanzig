@@ -69,12 +69,19 @@ _SMS_SYMBOL_METRIC_IDS: tuple[str, ...] = (
     "thunder",
     "snow_depth",
     "snowfall_limit",
+    "fresh_snow",
 )
 
 # Benannte Ausnahme von der Register-Ableitung: 'TH:' ist Grammatikform (der
 # Doppelpunkt trennt die Gewitter-Stufe vom Kürzel ab, builder.py:16), das
 # Register kennt nur 'TH'. Ausdrücklich NICHT durch #1435 E3b aufgehoben.
-_SMS_SYMBOL_GRAMMAR: dict[str, str] = {"thunder": "TH:"}
+# Fix #1450/Adversary-F001: 'fresh_snow' ebenso -- das Register-Kuerzel ist
+# 'NS' (metric_catalog.py:524), der tatsaechlich gerenderte Wintersport-Token
+# ist 'NS24+' (builder.py::_wintersport, '24+'-Suffix ist Grammatik fuer das
+# 24-Stunden-Fenster). Ohne diese Ausnahme wuerde SMS_SYMBOL_BY_METRIC das
+# falsche Symbol 'NS' fuehren, das nirgends mit dem gerenderten Token
+# uebereinstimmt -- die Abwahl (#944) griffe dadurch weiterhin nicht.
+_SMS_SYMBOL_GRAMMAR: dict[str, str] = {"thunder": "TH:", "fresh_snow": "NS24+"}
 
 SMS_SYMBOL_BY_METRIC: dict[str, str] = {
     metric_id: _SMS_SYMBOL_GRAMMAR.get(metric_id) or get_sms_code(metric_id)
@@ -82,11 +89,15 @@ SMS_SYMBOL_BY_METRIC: dict[str, str] = {
 }
 
 # Issue #1410: metric_id -> SMS-Symbole der GEFUEHLTEN Temperatur. Eigene
-# Zuordnung, weil eine Metrik hier drei Symbole traegt (Nacht/Tiefst/Hoechst)
-# — SMS_SYMBOL_BY_METRIC bildet 1:1 ab und wird zusaetzlich fuer Schwellwerte
-# gelesen (#624), wo diese drei nichts zu suchen haben.
+# Zuordnung, weil eine Metrik hier mehrere Symbole traegt (Nacht/Tiefst/
+# Hoechst) — SMS_SYMBOL_BY_METRIC bildet 1:1 ab und wird zusaetzlich fuer
+# Schwellwerte gelesen (#624), wo diese Symbole nichts zu suchen haben.
+# Fix #1450/Adversary-F001: 'WC' (Wintersport-Tageskennzahl, builder.py::
+# _wintersport) ergaenzt -- ohne diesen Eintrag baut trip_report.py:283-287
+# keinen disabled_specs-Eintrag fuer WC, und die Abwahl von "Gefuehlte
+# Temperatur" im Trip-Editor wirkt sich nicht auf WC aus.
 SMS_FELT_SYMBOLS_BY_METRIC: dict[str, tuple[str, ...]] = {
-    "wind_chill": ("FN", "FK", "FD"),
+    "wind_chill": ("FN", "FK", "FD", "WC"),
 }
 
 # RiskType → SMS risk label (German, ultra-compact). Used by format_alert_sms.
@@ -274,6 +285,28 @@ def _segments_to_normalized_forecast(
              if s.aggregated.confidence_pct_min is not None]
     day_confidence = min(confs) if confs else None
 
+    # Issue #1450: Tages-Aggregat der Wintersport-Groessen aus den Segmenten
+    # ableiten. Ohne dies blieb `today.snow_depth_cm`/`snowfall_limit_m`/
+    # `snow_new_24h_cm` IMMER None und der Wintersport-Block lief leer --
+    # unabhaengig vom (inzwischen entfernten) Profil-Gate im Token-Builder.
+    # AV (Lawinenstufe) hat in SegmentWeatherSummary keine Entsprechung --
+    # bleibt unveraendert None (kein Provider liefert Lawinenbulletins, s.
+    # trip_result.py:54). WC (gefuehlte Einzeltemperatur) nutzt denselben
+    # bereits berechneten Gehzeit-Extremwert wie FK (`felt_min`) -- fuer
+    # eine einzelne Tageskennzahl ist der Tiefstwert die konservativere,
+    # sicherheitsrelevantere Wahl (analog zur Schneefallgrenze, die ebenfalls
+    # MIN aggregiert, s. Kommentar oben).
+    _snow_depths = [s.aggregated.snow_depth_cm for s in segments
+                    if s.aggregated.snow_depth_cm is not None]
+    # Issue #1391: Schneefallgrenze ist die kanonische Trip-Regel MIN.
+    _snowfall_limits = [s.aggregated.snowfall_limit_m for s in segments
+                         if s.aggregated.snowfall_limit_m is not None]
+    _snow_new = [s.aggregated.snow_new_sum_cm for s in segments
+                 if s.aggregated.snow_new_sum_cm is not None]
+    day_snow_depth = max(_snow_depths) if _snow_depths else None
+    day_snowfall_limit = float(min(_snowfall_limits)) if _snowfall_limits else None
+    day_snow_new = sum(_snow_new) if _snow_new else None
+
     today = DailyForecast(
         temp_min_c=day_min,
         temp_max_c=day_max,
@@ -288,6 +321,10 @@ def _segments_to_normalized_forecast(
         thunder_hourly=thunder_samples_d,
         confidence_pct_min=day_confidence,
         has_data_gap=has_gap,
+        snow_depth_cm=day_snow_depth,
+        snowfall_limit_m=day_snowfall_limit,
+        snow_new_24h_cm=day_snow_new,
+        wind_chill_c=felt_min,
     )
     # Issue #1349: Flag ueber die Segmente aggregieren (Muster identisch zum
     # E-Mail-Renderer, output/renderers/email/unavailable_hint.py) — die
@@ -427,9 +464,10 @@ class SMSTripFormatter:
                     config.append(MetricSpec(symbol=sym, threshold=thr))
 
         # Bug #944: explizit deaktivierte Metriken (enabled=False) ans Config-Ende
-        # hängen. _visible(spec_with_enabled_false) -> False unterdrückt die Token
-        # (z.B. SD/SL, #1435 E3b) auch wenn Schneedaten in der Vorhersage
-        # vorhanden sind.
+        # hängen. Seit #1450 entstehen Wintersport-Token (SD/SL/NS24+/AV/WC)
+        # regulär wie jeder andere Metrik-Block -- ohne diesen Eintrag würden
+        # sie bei vorhandenen Schneedaten erscheinen. _visible(spec_with_
+        # enabled_false) -> False unterdrückt sie genau wie jede andere Metrik.
         if disabled_specs:
             existing_syms = {s.symbol for s in config}
             config.extend(s for s in disabled_specs if s.symbol not in existing_syms)

@@ -17,8 +17,14 @@ echter render_line(), echter FastAPI-Router.
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import pytest
 
+from app.models import (
+    GPXPoint, NormalizedTimeseries, SegmentWeatherData, SegmentWeatherSummary,
+    ThunderLevel, TripSegment,
+)
 from output.tokens.builder import build_token_line
 from output.tokens.dto import (
     DailyForecast, HourlyValue, MetricSpec, NormalizedForecast,
@@ -65,7 +71,6 @@ def _line(
         forecast, config,
         report_type=report_type,  # type: ignore[arg-type]
         stage_name="Arlberg",
-        profile="wintersport",
     )
 
 
@@ -261,6 +266,138 @@ def test_ac4_selected_snow_depth_shows_token():
     assert "SD" in _symbols_of(line) and "SL" in _symbols_of(line), (
         "AC-4 Gegenprobe: beide Schnee-Metriken sind gewaehlt — die Token "
         f"MUESSEN erscheinen. Symbole: {_symbols_of(line)!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Adversary-Befund F001 (BROKEN-Verdict fix-1450-sms-wintersport-tokens):
+# WC (wind_chill) und NS24+ (fresh_snow) hingen an KEINEM Eintrag der
+# Abwahl-Tabellen (SMS_SYMBOL_BY_METRIC / SMS_FELT_SYMBOLS_BY_METRIC) --
+# `disabled_specs` aus trip_report.py:262-287 enthielt fuer diese beiden
+# Symbole nie einen MetricSpec, `_visible(None, rt)` liefert immer True ->
+# die Token erschienen unabhaengig von der Abwahl im Trip-Editor. Getestet
+# ueber den ECHTEN Versandpfad (SMSTripFormatter.format_sms() mit
+# disabled_specs), nicht ueber einen direkten _wintersport()-Aufruf.
+# ---------------------------------------------------------------------------
+
+def _winter_segment(
+    segment_id: int = 1,
+    temp_min: float = -5.0,
+    temp_max: float = 1.0,
+    wind_max: float = 30.0,
+    precip_sum: float = 0.0,
+    wind_chill_min: float = -12.0,
+    wind_chill_max: float = -4.0,
+    snow_new_sum_cm: float = 18.0,
+) -> SegmentWeatherData:
+    """Echtes SegmentWeatherData mit gefuehlter Temperatur UND Neuschnee
+    (leere Stunden-Zeitreihe -> fail-soft-Aggregation, analog
+    test_sms_wintersport_tokens.py::_felt_temp_segment)."""
+    segment = TripSegment(
+        segment_id=segment_id,
+        start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1500),
+        end_point=GPXPoint(lat=47.1, lon=11.1, elevation_m=2100),
+        start_time=datetime(2026, 1, 15, 8, 0, tzinfo=timezone.utc),
+        end_time=datetime(2026, 1, 15, 12, 0, tzinfo=timezone.utc),
+        duration_hours=4.0,
+        distance_km=6.0,
+        ascent_m=600,
+        descent_m=0,
+    )
+
+    summary = SegmentWeatherSummary(
+        temp_min_c=temp_min,
+        temp_max_c=temp_max,
+        temp_avg_c=(temp_min + temp_max) / 2,
+        wind_max_kmh=wind_max,
+        precip_sum_mm=precip_sum,
+        thunder_level_max=ThunderLevel.NONE,
+        wind_chill_min_c=wind_chill_min,
+        wind_chill_max_c=wind_chill_max,
+        snow_new_sum_cm=snow_new_sum_cm,
+    )
+
+    return SegmentWeatherData(
+        segment=segment,
+        timeseries=NormalizedTimeseries(data=[], meta=None),
+        aggregated=summary,
+        fetched_at=datetime.now(timezone.utc),
+        provider="test",
+    )
+
+
+def _full_disabled_specs_like_trip_report(
+    active_metric_ids: set[str],
+) -> list[MetricSpec]:
+    """Abwahl-Ableitung GENAU wie `trip_report.py:268-287` (Bug #944 +
+    Issue #1410 §6) -- BEIDE Quellen, nicht nur SMS_SYMBOL_BY_METRIC. Der
+    Adversary-Repro (F001) nutzte exakt diese Verdrahtung."""
+    from output.renderers.sms_trip import (
+        SMS_FELT_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC,
+    )
+
+    specs = [
+        MetricSpec(symbol=sym, enabled=False)
+        for metric_id, sym in SMS_SYMBOL_BY_METRIC.items()
+        if metric_id not in active_metric_ids
+    ]
+    specs += [
+        MetricSpec(symbol=sym, enabled=metric_id in active_metric_ids)
+        for metric_id, syms in SMS_FELT_SYMBOLS_BY_METRIC.items()
+        for sym in syms
+    ]
+    return specs
+
+
+def test_f001_deselected_wind_chill_has_no_wc_token():
+    """Adversary F001: 'Gefuehlte Temperatur' (wind_chill) abgewaehlt ->
+    kein WC-Token trotz vorhandener Gefuehlt-Daten im Segment."""
+    from output.renderers.sms_trip import SMSTripFormatter
+
+    disabled = _full_disabled_specs_like_trip_report(
+        active_metric_ids={"precipitation", "wind"}
+    )
+    segments = [_winter_segment()]
+
+    # Nicht-Leerlauf-Nachweis: ohne Abwahl erscheint WC.
+    unfiltered = SMSTripFormatter().format_sms(segments, stage_name="Etappe 1")
+    assert "WC" in unfiltered, (
+        "F001 Vorbedingung: ohne Abwahl MUSS WC erscheinen — sonst misst "
+        f"dieser Test nichts: {unfiltered!r}"
+    )
+
+    sms = SMSTripFormatter().format_sms(
+        segments, stage_name="Etappe 1", disabled_specs=disabled,
+    )
+    assert "WC" not in sms, (
+        "F001: wind_chill ist nicht in active_metric_ids — der WC-Token darf "
+        f"trotz vorhandener gefuehlter Temperatur nicht erscheinen: {sms!r}"
+    )
+
+
+def test_f001_deselected_fresh_snow_has_no_ns24_token():
+    """Adversary F001: 'Neuschnee' (fresh_snow) abgewaehlt -> kein
+    NS24+-Token trotz vorhandener Neuschnee-Daten im Segment."""
+    from output.renderers.sms_trip import SMSTripFormatter
+
+    disabled = _full_disabled_specs_like_trip_report(
+        active_metric_ids={"precipitation", "wind"}
+    )
+    segments = [_winter_segment()]
+
+    # Nicht-Leerlauf-Nachweis: ohne Abwahl erscheint NS24+.
+    unfiltered = SMSTripFormatter().format_sms(segments, stage_name="Etappe 1")
+    assert "NS24+" in unfiltered, (
+        "F001 Vorbedingung: ohne Abwahl MUSS NS24+ erscheinen — sonst misst "
+        f"dieser Test nichts: {unfiltered!r}"
+    )
+
+    sms = SMSTripFormatter().format_sms(
+        segments, stage_name="Etappe 1", disabled_specs=disabled,
+    )
+    assert "NS24+" not in sms, (
+        "F001: fresh_snow ist nicht in active_metric_ids — der NS24+-Token "
+        f"darf trotz vorhandener Neuschnee-Daten nicht erscheinen: {sms!r}"
     )
 
 

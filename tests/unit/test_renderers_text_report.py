@@ -69,7 +69,6 @@ def _wintersport_token_line(stage_name: str = "Stubaier") -> TokenLine:
         forecast, config,
         report_type="evening",
         stage_name=stage_name,
-        profile="wintersport",
     )
 
 
@@ -89,7 +88,6 @@ def _standard_token_line(stage_name: str = "GR20") -> TokenLine:
         forecast, None,
         report_type="evening",
         stage_name=stage_name,
-        profile="standard",
     )
 
 

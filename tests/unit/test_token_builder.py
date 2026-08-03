@@ -62,7 +62,6 @@ def _build_default_line(
         forecast = NormalizedForecast(days=())
         return build_token_line(
             forecast, [], report_type=report_type, stage_name=stage_name,
-            profile=profile,
         )
 
     today = DailyForecast(
@@ -136,7 +135,6 @@ def _build_default_line(
     ]
     return build_token_line(
         forecast, config, report_type=report_type, stage_name=stage_name,
-        profile=profile,
     )
 
 

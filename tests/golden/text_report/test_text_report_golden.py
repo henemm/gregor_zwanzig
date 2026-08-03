@@ -80,7 +80,6 @@ def _stubaier_token_line() -> TokenLine:
         forecast, config,
         report_type="evening",
         stage_name="Stubaier",
-        profile="wintersport",
     )
 
 

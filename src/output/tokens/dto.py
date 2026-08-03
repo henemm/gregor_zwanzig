@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 from typing import Literal, Optional
 
 ReportType = Literal["morning", "evening", "update", "compare"]
-Profile = Literal["standard", "wintersport"]
 TokenCategory = Literal[
     "forecast", "vigilance", "official_alert", "fire", "wintersport", "debug",
     "unavailable",

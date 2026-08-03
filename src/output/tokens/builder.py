@@ -6,7 +6,7 @@ from typing import Iterable, Optional
 from utils.ascii_fold import fold_ascii
 
 from output.tokens.dto import (
-    DailyForecast, MetricSpec, NormalizedForecast, Profile, ReportType,
+    DailyForecast, MetricSpec, NormalizedForecast, ReportType,
     Token, TokenLine,
 )
 from output.tokens.metrics import (
@@ -219,7 +219,6 @@ def build_token_line(
     *,
     report_type: ReportType,
     stage_name: str,
-    profile: Profile = "standard",
     risk_engine: object | None = None,
 ) -> TokenLine:
     """Build the canonical TokenLine per sms_format.md v2.3.
@@ -299,8 +298,9 @@ def build_token_line(
     tokens.extend(_official_alerts(forecast))
     tokens.extend(_unavailable(forecast))
     tokens.extend(_fire(forecast))
-    if profile == "wintersport":
-        tokens.extend(_wintersport(today, by_sym, report_type))
+    # Issue #1450: kein Profil-Gate mehr -- Wintersport-Token entstehen wie
+    # jeder andere Block, Sichtbarkeit steuert allein _visible() je Symbol.
+    tokens.extend(_wintersport(today, by_sym, report_type))
 
     # Friendly-format companion tokens (custom symbols only).
     handled = {t.symbol for t in tokens}

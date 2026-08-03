@@ -230,7 +230,6 @@ def _run_trip_report(args, settings: Settings, provider, debug: DebugBuffer) -> 
         config,
         report_type=settings.report_type,
         stage_name=trip.name,
-        profile="wintersport",
     )
 
     if args.compact:

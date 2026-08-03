@@ -208,14 +208,13 @@ def _read_golden(stem: str) -> str:
 
 def _build_golden_line(stem: str) -> TokenLine:
     """Build the TokenLine for a given golden profile from synthetic fixtures."""
-    forecast, config, extra = _FIXTURES[stem]
+    forecast, config, _extra = _FIXTURES[stem]
     meta = GOLDENS[stem]
     return build_token_line(
         forecast,
         config,
         report_type=meta["report_type"],
         stage_name=meta["stage_name"],
-        profile=extra.get("profile", "standard"),
     )
 
 
