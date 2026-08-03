@@ -139,9 +139,10 @@ class ForecastDataPoint:
     spread_precip_mm: Optional[float] = None   # Ensemble sigma Niederschlag, in mm
 
     # Gewittersignal Météo-France (#1457 S2a): erwartete Blitzdichte, Blitze
-    # je km^2 und 3h (`LITOTA3`, Messwerte 0,1-0,2). BEWUSST ein eigenes Feld
-    # und NICHT mit einem DWD-Blitzpotenzial zusammengelegt — das ist eine
-    # andere Groesse auf einer anderen Skala (Messwert 88), s. #1419 Abs. 3.1.
+    # je km^2 und 3h (`LIGHTNING_COVERAGE`, Messwerte 0,1-0,2). BEWUSST ein
+    # eigenes Feld und NICHT mit einem DWD-Blitzpotenzial zusammengelegt —
+    # das ist eine andere Groesse auf einer anderen Skala (Messwert 88), s.
+    # #1419 Abs. 3.1.
     lightning_density_per_km2_3h: Optional[float] = None
 
     # Issue #435: Test-helper alias — some test helpers init with

@@ -178,14 +178,36 @@ U_WIND_COVERAGE = "U_COMPONENT_OF_WIND__SPECIFIC_HEIGHT_LEVEL_ABOVE_GROUND"
 V_WIND_COVERAGE = "V_COMPONENT_OF_WIND__SPECIFIC_HEIGHT_LEVEL_ABOVE_GROUND"
 PRECIP_COVERAGE = "TOTAL_PRECIPITATION__GROUND_OR_WATER_SURFACE"
 # #1457 S2a: erwartete Blitzdichte, Bodenniveau — daher KEIN height-Subset,
-# wie beim Niederschlag. Die vollstaendige Coverage-ID ist
-# `LITOTA3__GROUND___<lauf>` OHNE Perioden-Suffix: anders als beim
-# Niederschlag (`_PT1H`) steckt die 3-Stunden-Mittelung bereits im Namen der
-# Groesse. Live gegen die API verifiziert (2026-08-02, GR20 42.22/9.07,
-# Lauf 00Z: +12h=0.0, +14h=0.1, +16h=0.2, +18h=0.0). `DescribeCoverage`
-# bestaetigt "Average lightning strike density over 3 hours", uom `km-3` —
-# eine DICHTE, keine Potenzialgroesse; daher das eigene Feld (s. #1419).
-LIGHTNING_COVERAGE = "LITOTA3__GROUND"
+# wie beim Niederschlag. Die 3-Stunden-Mittelung steckt bereits im Namen der
+# Groesse, kein separates Perioden-Suffix wie beim Niederschlag (`_PT1H`).
+# Live gegen die API verifiziert (2026-08-02, GR20 42.22/9.07, Lauf 00Z:
+# +12h=0.0, +14h=0.1, +16h=0.2, +18h=0.0). `DescribeCoverage` bestaetigt
+# "Average lightning strike density over 3 hours", uom `km-3` — eine DICHTE,
+# keine Potenzialgroesse; daher das eigene Feld (s. #1419).
+#
+# #1457 S2a FIX (2026-08-03, docs/specs/fast/fix-1457-s2a-echte-abrufnamen.md,
+# AC-2): der zuvor hier eingetragene Name `LITOTA3__GROUND` existiert beim
+# Dienst NICHT — 0 Treffer in `GetCapabilities`, live geprueft. Jeder Abruf
+# endete deshalb lautlos in 404 (fail-soft schluckte es). Der Dienst fuehrt
+# die Groesse unter der ausgeschriebenen Form unten, OHNE separates
+# Hoehen-/Boden-Suffix (das steckt bereits im Namen selbst).
+LIGHTNING_COVERAGE = (
+    "AVERAGE_LIGHTNING_STRIKE_DENSITY_OVER_3HOURS__GROUND_OR_WATER_SURFACE"
+)
+
+# #1457 S2a FIX, AC-3/AC-4: der Sicherheitsabstand fuer die GRUNDVORHERSAGE
+# (Temperatur/Wind/Niederschlag, `_latest_run`-Default unten) bleibt bei 3h —
+# dafuer war er nie das Problem. Fuer die Blitzdichte-Coverage reichten 3h
+# NICHT: live gemessen war um 09:27Z erst der Lauf 03:00Z veroeffentlicht
+# (6,5h alt), der nach der alten 3h-Regel errechnete Lauf 06:00Z existierte
+# noch nicht. Deshalb ein EIGENER, groesserer Abstand nur fuer die WAHL DES
+# GRIB-LAUFS bei der Blitzdichte (s. `_thunder_run_candidates`) — der
+# Nullpunkt der Stunden-Offsets bleibt unveraendert der 3h-Lauf, sonst
+# driftete die Blitzdichte-Zeitachse relativ zur Grundvorhersage auseinander.
+THUNDER_RUN_SAFETY_HOURS = 6
+# Rueckfall auf hoechstens zwei aeltere Laeufe bei 404 (je 3h aelter), macht
+# bis zu 12h zurueck ab dem geflooreten `now`.
+THUNDER_RUN_FALLBACK_STAGES = 2
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
@@ -204,13 +226,32 @@ def _vector_to_speed_kmh(u: float, v: float) -> float:
     return round(speed_ms * 3.6, 1)
 
 
-def _latest_run(now: datetime) -> datetime:
+def _latest_run(now: datetime, safety_hours: int = 3) -> datetime:
     """Jüngster AROME-Lauf (alle 3h) mit Sicherheitsabstand, damit die
     WCS-Antwort tatsächlich veröffentlicht ist (empirisch verifiziert
-    2026-07-22: ein ~4-5h alter Lauf war verfügbar)."""
+    2026-07-22: ein ~4-5h alter Lauf war verfügbar).
+
+    Default `safety_hours=3` gilt fuer die GRUNDVORHERSAGE
+    (Temperatur/Wind/Niederschlag, unveraendert seit #1143). Fuer die
+    Blitzdichte-Coverage reicht das NICHT (#1457 S2a Fix) — dort wird
+    `safety_hours=THUNDER_RUN_SAFETY_HOURS` uebergeben, s.
+    `_thunder_run_candidates`."""
     floored_hour = (now.hour // 3) * 3
     run = now.replace(hour=floored_hour, minute=0, second=0, microsecond=0)
-    return run - timedelta(hours=3)
+    return run - timedelta(hours=safety_hours)
+
+
+def _thunder_run_candidates(now: datetime) -> List[datetime]:
+    """Kandidaten-Laeufe fuer die Blitzdichte-Coverage, juengster zuerst
+    (#1457 S2a Fix, AC-3/AC-4). Index 0 traegt den groesseren
+    Sicherheitsabstand `THUNDER_RUN_SAFETY_HOURS`; antwortet er mit 404, wird
+    auf bis zu `THUNDER_RUN_FALLBACK_STAGES` weitere, je 3h aeltere Laeufe
+    zurueckgefallen."""
+    primaer = _latest_run(now, safety_hours=THUNDER_RUN_SAFETY_HOURS)
+    return [
+        primaer - timedelta(hours=3 * stufe)
+        for stufe in range(THUNDER_RUN_FALLBACK_STAGES + 1)
+    ]
 
 
 def _as_utc(ts: datetime) -> datetime:
@@ -475,7 +516,7 @@ class MeteoFranceDirectProvider:
         end: Optional[datetime] = None,
     ) -> Dict[int, Optional[float]]:
         """#1457 S2a: erwartete Blitzdichte je Stunden-Offset (Blitze je km^2
-        und 3h, Coverage `LITOTA3`). Best effort, fail-soft — wirft NIE.
+        und 3h, Coverage `LIGHTNING_COVERAGE`). Best effort, fail-soft — wirft NIE.
 
         Muster: `openmeteo._fetch_ensemble_spread` (openmeteo.py:640-680).
 
@@ -545,10 +586,20 @@ class MeteoFranceDirectProvider:
             return ergebnis
 
         try:
-            run = _latest_run(datetime.now(timezone.utc))
+            now = datetime.now(timezone.utc)
+            # `run` bleibt der 3h-Lauf (unveraendert) und damit der Nullpunkt
+            # der Stunden-Offsets — aligned mit der Grundvorhersage, die
+            # denselben `_latest_run(now)` nutzt. Nur WELCHER Lauf tatsaechlich
+            # abgefragt wird (`lauf_kandidaten` unten), verschiebt sich; die
+            # abgefragten absoluten Zeitstempel (`time_str`) bleiben an `base`
+            # und damit unberuehrt (#1457 S2a Fix, AC-3/AC-4).
+            run = _latest_run(now)
             base = run if start is None else max(_as_utc(start), run)
-            coverage_id = f"{LIGHTNING_COVERAGE}___{_run_str(run)}"
             offsets = _thunder_offsets(base, end)
+            lauf_kandidaten = _thunder_run_candidates(now)
+            lauf_index = 0
+            coverage_id = f"{LIGHTNING_COVERAGE}___{_run_str(lauf_kandidaten[0])}"
+            rueckfall_protokolliert = False  # AC-7: einmal je Lauf, nicht je Stunde
             # Zeitgrenze fest, nicht rollend (Lehre #1448): EINMAL je Abruf
             # gebildet, dann vor jedem Einzel-Call geprueft.
             deadline_at = time.monotonic() + THUNDER_FETCH_DEADLINE_SECONDS
@@ -563,7 +614,10 @@ class MeteoFranceDirectProvider:
                     # anderer Aufrufer) schon geladen hat, wird wiederverwendet.
                     # Deshalb liegt die Zeitgrenzen-Pruefung UNTER dem
                     # Speicher-Treffer: ein Treffer kostet keine Zeit und darf
-                    # den Abbruch nicht ausloesen.
+                    # den Abbruch nicht ausloesen. Der Lauf steckt IM
+                    # Schluessel (`coverage_id`) — ein Rueckfall auf einen
+                    # aelteren Lauf kann nie einen Treffer eines anderen Laufs
+                    # liefern (AC-8).
                     raw = speicher.get(coverage_id, time_str, bbox)
                     if raw is None:
                         # Zeitgrenze im INNERSTEN Schritt (Lehre #1448): vor
@@ -577,16 +631,61 @@ class MeteoFranceDirectProvider:
                                 THUNDER_FETCH_DEADLINE_SECONDS,
                             )
                             return ergebnis
-                        try:
-                            raw = self._request_once(
-                                coverage_id, gruppe[0].latitude,
-                                gruppe[0].longitude, None, time_str,
-                                bbox=bbox, timeout=restzeit,
-                            )
-                        except Exception as e:
-                            logger.warning(
-                                "Blitzdichte +%dh nicht abrufbar: %s", offset, e
-                            )
+                        while True:
+                            try:
+                                raw = self._request_once(
+                                    coverage_id, gruppe[0].latitude,
+                                    gruppe[0].longitude, None, time_str,
+                                    bbox=bbox, timeout=restzeit,
+                                )
+                                break
+                            except httpx.HTTPStatusError as e:
+                                # #1457 S2a Fix, AC-4: der gewaehlte Lauf
+                                # existiert (noch) nicht (404) — naechstaelteren
+                                # Lauf versuchen, hoechstens
+                                # THUNDER_RUN_FALLBACK_STAGES Stufen weit.
+                                weiterer_kandidat = (
+                                    e.response.status_code == 404
+                                    and lauf_index < len(lauf_kandidaten) - 1
+                                )
+                                if not weiterer_kandidat:
+                                    logger.warning(
+                                        "Blitzdichte +%dh nicht abrufbar: %s",
+                                        offset, e,
+                                    )
+                                    raw = None
+                                    break
+                                if not rueckfall_protokolliert:  # AC-7
+                                    logger.warning(
+                                        "Lauf %s nicht verfuegbar (404) — "
+                                        "Rueckfall bis zu %s",
+                                        _run_str(lauf_kandidaten[lauf_index]),
+                                        _run_str(lauf_kandidaten[-1]),
+                                    )
+                                    rueckfall_protokolliert = True
+                                lauf_index += 1
+                                coverage_id = (
+                                    f"{LIGHTNING_COVERAGE}___"
+                                    f"{_run_str(lauf_kandidaten[lauf_index])}"
+                                )
+                                restzeit = deadline_at - time.monotonic()
+                                if restzeit <= 0:
+                                    logger.warning(
+                                        "Blitzdichte-Budget (%.0fs) "
+                                        "erschoepft — Anreicherung bricht "
+                                        "ab, Grundvorhersage unberuehrt",
+                                        THUNDER_FETCH_DEADLINE_SECONDS,
+                                    )
+                                    return ergebnis
+                                continue
+                            except Exception as e:
+                                logger.warning(
+                                    "Blitzdichte +%dh nicht abrufbar: %s",
+                                    offset, e,
+                                )
+                                raw = None
+                                break
+                        if raw is None:
                             for loc in gruppe:
                                 ergebnis[_ort_schluessel(loc)][offset] = None
                             continue

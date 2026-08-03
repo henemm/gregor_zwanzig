@@ -94,7 +94,7 @@ def zaehler(monkeypatch):
 
 
 def _blitz_abrufe(abrufe):
-    return [a for a in abrufe if "LITOTA3" in a["coverage"]]
+    return [a for a in abrufe if mf.LIGHTNING_COVERAGE in a["coverage"]]
 
 
 def test_ac9_acht_orte_kosten_nicht_mehr_abrufe_als_einer(zaehler):

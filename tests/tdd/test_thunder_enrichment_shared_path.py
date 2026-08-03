@@ -306,14 +306,21 @@ def test_ac8_anschlussweg_kennt_keinen_providernamen():
 
     quelle = Path(thunder_enrichment.__file__).read_text(encoding="utf-8")
 
-    # Positivprobe: im Provider-Modul MUESSEN diese Begriffe vorkommen.
+    # Positivprobe: im Provider-Modul MUESSEN diese Begriffe vorkommen. Aus der
+    # Konstante gelesen (nicht hart hineingeschrieben) — #1457 S2a Fix hat den
+    # Namen bereits einmal geaendert (LITOTA3 -> ausgeschriebene Form), ein
+    # zweiter fest eingetragener Vergleichsstring wuerde die naechste
+    # Umbenennung erneut verpassen.
     mf_quelle = Path(mf.__file__).read_text(encoding="utf-8")
-    assert "LITOTA3" in mf_quelle, (
+    assert mf.LIGHTNING_COVERAGE in mf_quelle, (
         "Positivprobe fehlgeschlagen — der Suchbegriff kommt nicht einmal dort "
         "vor, wo er hingehoert. Der Waechter wuerde nichts pruefen"
     )
 
-    verboten = ["LITOTA3", "fr_direct", "MeteoFranceDirect", "de_direct", "lpi_con_max"]
+    verboten = [
+        mf.LIGHTNING_COVERAGE, "fr_direct", "MeteoFranceDirect",
+        "de_direct", "lpi_con_max",
+    ]
     treffer = [w for w in verboten if w in quelle]
     assert not treffer, (
         f"Der gemeinsame Anreicherungsweg kennt {treffer} — das ist ein "

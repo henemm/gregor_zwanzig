@@ -116,7 +116,7 @@ def dienste(monkeypatch):
 
 
 def _blitz(abrufe):
-    return [a for a in abrufe if "LITOTA3" in a]
+    return [a for a in abrufe if mf.LIGHTNING_COVERAGE in a]
 
 
 def test_ac9_zweiter_ort_in_der_naehe_kostet_keine_zusaetzlichen_abrufe(dienste):

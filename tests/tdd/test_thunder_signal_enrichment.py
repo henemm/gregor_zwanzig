@@ -61,7 +61,7 @@ def server(monkeypatch):
             q = parse_qs(urlparse(self.path).query)
             coverage = (q.get("coverageId") or [""])[0]
             aufz.pfade.append(coverage)
-            ist_blitz = "LITOTA3" in coverage
+            ist_blitz = mf.LIGHTNING_COVERAGE in coverage
             if ist_blitz and aufz.verzoegerung:
                 time.sleep(aufz.verzoegerung)
             if ist_blitz and aufz.blitz_status != 200:
@@ -95,8 +95,8 @@ def test_ac1_blitzdichte_kommt_am_korsika_punkt_an(server):
     assert werte, "Keine Gewittersignale geliefert"
     gefuellt = [v for v in werte.values() if v is not None]
     assert gefuellt, "Alle Blitzdichte-Werte leer — Signal kommt nicht an"
-    assert any("LITOTA3" in p for p in server.pfade), (
-        "Die Blitzdichte-Groesse LITOTA3 wurde gar nicht abgerufen"
+    assert any(mf.LIGHTNING_COVERAGE in p for p in server.pfade), (
+        f"Die Blitzdichte-Groesse {mf.LIGHTNING_COVERAGE} wurde gar nicht abgerufen"
     )
 
 
@@ -149,7 +149,7 @@ def test_ac4_eigenes_zeitbudget_schuetzt_die_grundvorhersage(server, monkeypatch
     assert any(dp.t2m_c is not None for dp in reihe.data), (
         "Temperatur fehlt — der Abbruch der Anreicherung hat die Grunddaten getroffen"
     )
-    blitz_abrufe = [p for p in server.pfade if "LITOTA3" in p]
+    blitz_abrufe = [p for p in server.pfade if mf.LIGHTNING_COVERAGE in p]
     assert blitz_abrufe, (
         "Die Anreicherung wurde gar nicht erst versucht — der Test wuerde sonst "
         "ein Zeitbudget bescheinigen, das nie zur Anwendung kam"
@@ -194,7 +194,7 @@ def test_ac6_ausserhalb_frankreichs_kein_abruf(server):
 
     werte = provider.fetch_thunder_signals(_ALPEN)
 
-    assert not any("LITOTA3" in p for p in server.pfade), (
+    assert not any(mf.LIGHTNING_COVERAGE in p for p in server.pfade), (
         "Ausserhalb des AROME-Gebiets wurde trotzdem abgerufen — sinnlose Last"
     )
     assert werte == {} or all(v is None for v in werte.values())
