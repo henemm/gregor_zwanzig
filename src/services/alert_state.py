@@ -30,6 +30,11 @@ from pathlib import Path
 
 logger = logging.getLogger("alert_state")
 
+# Issue #1460 (P2): Schlüsselraum der amtlichen Warnungen. Einzige Quelle für
+# das Präfix — `official_alert_state_key()` (output/renderers/alert/
+# official_alerts.py) baut seine Schlüssel damit, `reset()` schneidet daran.
+OFFICIAL_ALERT_KEY_PREFIX = "official_alert:"
+
 
 class AlertStateService:
     """Lädt/speichert/löscht das Alert-Melde-Gedächtnis pro Trip (mandantengetrennt)."""
@@ -66,10 +71,30 @@ class AlertStateService:
             logger.error(f"Failed to save alert_state for {entity_id}: {e}")
 
     def reset(self, entity_id: str) -> None:
-        """Clear the alert-state for an entity (remove file). Idempotent."""
+        """Setzt den ÄNDERUNGS-Raum des Melde-Gedächtnisses zurück. Idempotent.
+
+        Issue #1460 (P2): Die amtlichen Warnungen (Schlüssel-Präfix
+        ``official_alert:``, s. ``official_alert_state_key()``) haben ihre
+        EIGENE Entprellung — sie überleben den Briefing-Versand. Vorher löschte
+        der Reset die ganze Datei und damit auch sie; dieselbe, unveränderte
+        amtliche Warnung galt danach wieder als „neu" und wurde nach jedem
+        Briefing erneut gemeldet (B1).
+
+        Bleibt nach dem Schnitt kein amtlicher Eintrag übrig, verschwindet die
+        Datei wie bisher vollständig.
+        """
         path = self._path(entity_id)
         try:
-            if path.exists():
+            if not path.exists():
+                return
+            kept = {
+                key: value
+                for key, value in self.load(entity_id).items()
+                if key.startswith(OFFICIAL_ALERT_KEY_PREFIX)
+            }
+            if kept:
+                self.save(entity_id, kept)
+            else:
                 path.unlink()
         except OSError as e:
             logger.warning(f"Failed to reset alert_state for {entity_id}: {e}")

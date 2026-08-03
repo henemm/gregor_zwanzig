@@ -72,10 +72,14 @@ def _fresh_user(prefix: str) -> str:
 
 
 def _segment(idx: int | str = 1, *, lat: float = LAT, lon: float = LON) -> TripSegment:
-    from datetime import datetime, timezone
+    from datetime import datetime, timedelta, timezone
 
-    start = datetime(2026, 7, 8, 8, 0, tzinfo=timezone.utc)
-    end = datetime(2026, 7, 8, 12, 0, tzinfo=timezone.utc)
+    # Issue #1460 (P4): RELATIVE Etappenzeiten statt fixer Kalenderdaten -- eine
+    # bereits beendete Etappe wird seit dem Etappen-Zeitfenster nicht mehr auf
+    # amtliche Warnungen geprueft; ein fixes Datum laesst den Test still altern.
+    now = datetime.now(timezone.utc)
+    start = now - timedelta(hours=1)
+    end = now + timedelta(hours=3)
     return TripSegment(
         segment_id=idx,
         start_point=GPXPoint(lat=lat, lon=lon, elevation_m=1000, distance_from_start_km=12.0),

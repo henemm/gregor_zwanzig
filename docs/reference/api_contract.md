@@ -3134,32 +3134,40 @@ bleibt `corridor`. Ein `Corridor` trägt zwei unabhängig kombinierbare Wirkunge
 wenn ein Wert den Bereich verlässt) und `mark` (im Briefing markieren, solange ein Wert im
 Bereich liegt).
 
-**`notify` ist seit #1444 S1 (2026-08-01) wirksam — ADR-0040.** Bis dahin las den Schalter
-kein Dienst; er steuerte nur mittelbar `metric_alert_levels`. Jetzt speist er einen eigenen,
-zweiten Alarm-Typ neben dem Δ-Wächter: `services/corridor_threshold.py::evaluate_corridor_thresholds()`
-prüft je Alarm-Lauf die Korridore mit `notify: true` gegen die **frische** Vorhersage der Etappen
-im aktiven Zeitfenster (`end_time >= jetzt` und `start_time.date() <= heute`) und meldet eine
-gerissene Grenze **auch bei unveränderter Vorhersage**. Entprellt über einen eigenen
-Melde-Gedächtnis-Schlüsselraum `corridor:<metrik>:<etappe>` (erneute Meldung nur bei Verschärfung
-oder nach zwischenzeitlicher Entspannung); Ruhezeiten, Cooldown und Tages-Obergrenze gelten
-unverändert. Schwellen- und Δ-Treffer desselben Laufs gehen in EINE Nachricht. Eine Tour, deren
-einzige Alarmquelle Korridore mit `notify` sind, wird seither vom Lauf geprüft (vorher fiel sie
-durch den `has_active_rules`-Gate). Darstellung über einen eigenen Render-Vertrag
-(`CorridorEvent`, ADR-0013-Auflage) — kein `WeatherChange` mit `old_value=0.0`.
-Spec: `docs/specs/modules/feat_1444_s1_schwellen_alarm.md`.
+**`notify` löst seit #1460 T1 (2026-08-03, ADR-0043) KEINEN Alarm mehr aus.** Zwischen #1444 S1
+(2026-08-01) und #1460 T1 gab es kurzzeitig einen eigenen, additiven Schwellen-Alarm
+(ADR-0040): `services/corridor_threshold.py::evaluate_corridor_thresholds()` prüfte je
+Alarm-Lauf die Korridore mit `notify: true` gegen die frische Vorhersage und meldete eine
+gerissene Grenze auch bei unveränderter Vorhersage, unabhängig von der Empfindlichkeitsstufe.
+Das widersprach ADR-0009 (Alarme sind Abweichungs-Wächter, keine absolute Grenze) und ist mit
+#1460 T1 zurückgebaut: Die Empfindlichkeitsstufe (`metric_alert_levels`) ist wieder der
+**einzige** Alarm-Regler. Der Aufruf von `_evaluate_corridors()` in `trip_alert.py` ist
+entfernt; `corridor_hits` ist strukturell immer eine leere Liste. `services/corridor_threshold.py`
+(`evaluate_corridor_thresholds()`, `resolve_corridor_summary_field()`, `CorridorHit`) bleibt
+unverändert im Repo bestehen, hat aber keinen Aufrufer mehr — ebenso der Render-Vertrag
+(`CorridorEvent`, `to_corridor_events()`) und `alert_log.register_pairs_from_corridor_hits()`.
+Eine Tour, deren einzige Alarmquelle Korridore mit `notify` waren, alarmiert seither wieder
+gar nicht mehr, bis eine Empfindlichkeitsstufe gesetzt wird — beabsichtigt, nicht stillschweigend
+in Kauf genommen. `corridors[].notify` bleibt Feld in Datenmodell und Persistenz (kein
+Datenverlust), nur wirkungslos. `corridors[].mark` (Anzeige-Markierung) ist davon unberührt.
+Spec: `docs/specs/modules/rework_1460_t1_relevanzfilter.md`, ADR: `docs/adr/0043-empfindlichkeitsstufe-als-niveau-statt-zweiter-alarm-typ.md`.
 
-**`corridors[].metric` trägt zwei Namensräume** (#1444 S2a): eine `AlertMetric`-Kennung
-(die 5 fest verdrahteten Zeilen, z.B. `wind_gust`, `snow_line`) ODER einen Katalog-`key`
-(die 18 seit #1425 aus dem Katalog gespeisten Zeilen, z.B. `thunder_level_max`,
-`snow_depth_cm`). Beide Mengen sind **kollisionsfrei** und werden über
-`corridor_threshold.resolve_corridor_summary_field()` aufgelöst — erst
-`_ALERT_METRIC_TO_SUMMARY_FIELD`, dann additiv über `COMPARE_METRIC_CATALOG` →
-`metric_catalog.summary_field_for(metric_id, aggregation)`. Der Δ-Wächter kennt weiterhin
-**nur** den ersten Namensraum; die Erweiterung ist ausschließlich auf dem Schwellen-Pfad
-verdrahtet. Aufzählungen ohne Ordinalskala (`precip_type_dominant`) werden übersprungen.
-**Bekannte Grenze:** Zeigen zwei Kennungen auf dasselbe Summary-Feld (z.B. `snow_line` und
-`freezing_level` → `freezing_level_m`), erzeugt der Melde-Gedächtnis-Schlüsselraum
-`corridor:<metrik>:<etappe>` zwei unabhängige Meldungen für denselben Wert — #1455.
+**Bei Gefahrenstufen-Größen (aktuell: Gewitter/`thunder_level_max`) wirkt die
+Empfindlichkeitsstufe seit #1460 T1 über das erreichte Niveau, nicht über die Sprunggröße**
+(löst den Rest des ADR-0040-Anliegens auf, ohne einen zweiten Alarm-Typ zu brauchen):
+„sensibel" meldet jeden Stufenwechsel, „standard" das Erreichen/Verlassen der höchsten Stufe,
+„entspannt" nur den vollen Sprung zwischen „kein Gewitter" und der höchsten Stufe — **symmetrisch
+für Verschärfung UND Entwarnung**. `weather_change_detection.py::detect_changes()` vergleicht für
+alle anderen (stetigen) Größen unverändert `abs(delta) > threshold`. Details: ADR-0043.
+
+**`corridors[].metric` trug zwei Namensräume** (#1444 S2a, aus `resolve_corridor_summary_field()`
+in `corridor_threshold.py`): eine `AlertMetric`-Kennung (die 5 fest verdrahteten Zeilen, z.B.
+`wind_gust`, `snow_line`) ODER einen Katalog-`key` (die 18 seit #1425 aus dem Katalog gespeisten
+Zeilen, z.B. `thunder_level_max`, `snow_depth_cm`). Seit #1460 T1 ist dieser Auflösungspfad ohne
+Aufrufer aus `trip_alert.py` (s. o.) — die Beschreibung bleibt als Code-Doku für
+`corridor_threshold.py` gültig, betrifft aber keinen Alarm-Auslöser mehr. Die doppelte
+`corridor:<metrik>:<etappe>`-Namensraum-Problematik (#1455) betraf ausschließlich diesen nun
+unerreichbaren Melde-Gedächtnis-Schlüsselraum.
 Spec: `docs/specs/modules/feat_1444_s2a_schwellen_namensraum.md`.
 
 ```go
@@ -3201,7 +3209,7 @@ export interface Corridor {
 |------|-----|------------|
 | metric | string | Metrik-ID, kontextabhängig: `route` bot ursprünglich (Issue #1231) nur die 6 `AlertableMetrics` (`wind_gust`, `precipitation_sum`, `temperature_min`, `temperature_max`, `thunder_level`, `snow_line`) — seit #1425 S2 kommen 17 weitere Größen aus dem zentralen Katalog (`GET /api/compare/metrics`) hinzu (23 insgesamt), `thunder_level` bleibt bewusst ausgenommen (weiterhin Prozent-Skala statt Katalog-Ordinalskala; Vereinheitlichung ist ein separater Folge-Workflow). `vergleich` nutzt die 10 Compare-Summary-Keys (`temp_max_c`, `temp_min_c`, `wind_max_kmh`, `gust_max_kmh`, `precip_sum_mm`, `thunder_level_max`, `visibility_min_m`, `snow_new_sum_cm`, `cape_max_jkg`, `freezing_level_m`) für `notify` — diese Liste selbst ist unverändert, ihre Herkunft im Backend seit #1435 E1a-1 aber nicht mehr die eigenständige `alarmCapable`-Prüfung des Compare-Katalogs, sondern dessen register-abgeleitetes `alertMetric` (s. Section 15.1); darüber hinaus stehen beiden Kontexten inzwischen dieselben Katalog-Größen als `mark`-fähige Wertebereiche zur Verfügung. `confidence_pct` (`selectable=false`, #710) darf in keinem der beiden Pools erscheinen. |
 | range | `[min\|null, max\|null]` | Wertebereich; jede Seite unabhängig auf `null` (offen) setzbar, mind. eine Seite muss gesetzt sein (Editor-Validierung, UI-seitig — Slice 3+). `corridorInside(v, min, max)`: `v==null → null`; `v<min → false`; `v>max → false`; sonst `true` (`<`/`>` exklusiv geprüft, Grenzwert exakt gilt als „innen"). |
-| notify | bool | Reiner an/aus-Schalter auf den bestehenden Δ-Wächter — **keine neue Trigger-Schwelle**. `true` → `display_config.metric_alert_levels[metric]` wird auf die zuletzt bekannte Stufe zurückgesetzt (Default `"standard"`); `false` → auf `"off"`. Die Stufen-Feinwahl (entspannt/standard/sensibel) ist im CorridorEditor nicht einzeln wählbar (Known Limitation, gespeicherter Wert bleibt erhalten). |
+| notify | bool | Seit #1460 T1 (ADR-0043) **ohne Alarm-Wirkung** — verbleibt aus Bestandsschutz im Datenmodell (kein Feld-Entfernen), wird aber von keiner Auswertung mehr gelesen. Alarme laufen ausschließlich über `display_config.metric_alert_levels[metric]` (entspannt/standard/sensibel), unabhängig von diesem Schalter. Die Stufen-Feinwahl ist im CorridorEditor nicht einzeln wählbar (Known Limitation, gespeicherter Wert bleibt erhalten). |
 | mark | bool | Markiert im Compare-Mail-Renderer (`compare_html.py`) die Zelle grün, solange `corridorInside(value)===true` — additiv zur bestehenden Severity-Färbung, ohne Einfluss auf `comparison_scoring.py::calculate_score()`. |
 | prio | enum \| optional | `"hoch"` \| `"mittel"` \| `"niedrig"` — **nur** Anzeige-Reihenfolge im Editor, kein Rang-/Score-Einfluss. |
 
@@ -3245,6 +3253,17 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-08-03: Issue #1460 Teil 1 (Epic #1458 Scheibe 2, ADR-0043 löst ADR-0040 ab) —
+  `corridors[].notify` fällt als Alarm-Auslöser weg; die Empfindlichkeitsstufe
+  (`metric_alert_levels`) ist wieder der einzige Regler. Bei Gefahrenstufen-Größen
+  (aktuell Gewitter/`thunder_level_max`) wirkt sie über das erreichte Niveau statt die
+  Sprunggröße, symmetrisch für Verschärfung und Entwarnung. `AlertStateService.reset()`
+  löscht beim Briefing-Versand nur noch den Änderungs-Schlüsselraum, der amtliche Raum
+  (Präfix `official_alert:`) bleibt erhalten. Amtliche Warnungen bekommen für Trip und
+  Ortsvergleich ein eigenes Zeitfenster je Ort/Etappe statt jede irgendwann gültige
+  Warnung an jeder Koordinate der Restroute zu melden. Reiner Python-Kern-Umbau, kein
+  DTO-Feld entfernt/hinzugefügt. Section 24 aktualisiert. Siehe
+  `docs/specs/modules/rework_1460_t1_relevanzfilter.md`.
 - 2026-08-01: Issue #1406 Scheibe B (E2 von #1435, Epic #1372) — der
   Ortsvergleich-Stundenverlauf schöpft aus dem zentralen Wetterkatalog statt aus
   einem eigenen Zehner-Vokabular. Die Zuordnung Stundenverlaufs-Kennung →

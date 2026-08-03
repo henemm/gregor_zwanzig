@@ -340,6 +340,7 @@ class WeatherChangeDetectionService:
         severity_overrides: Optional[dict[str, AlertSeverity]] = None,
         absolute_seeded_fields: Optional[set[str]] = None,
         threshold_crossing_rules: Optional[list["AlertRule"]] = None,
+        ordinal_levels: Optional[dict[str, str]] = None,
     ):
         """
         Initialize with thresholds.
@@ -356,6 +357,10 @@ class WeatherChangeDetectionService:
                                     entstanden ist (kein expliziter DELTA-Eintrag). Bei
                                     include_absolute=True übernimmt der Absolut-Pfad das
                                     Feld → Δ-Pfad wird übersprungen (kein Doppel-Change).
+            ordinal_levels: Issue #1460 (P1b) — {summary-field → Empfindlichkeitsstufe}
+                            für Gefahrenstufen-Größen (aktuell nur thunder_level_max).
+                            Für diese Felder entscheidet das erreichte/verlassene NIVEAU
+                            statt der Sprunggröße (`abs(delta) > threshold`).
         """
         if thresholds is None:
             from app.metric_catalog import get_change_detection_map
@@ -370,6 +375,8 @@ class WeatherChangeDetectionService:
         self._absolute_seeded_fields: set[str] = set(absolute_seeded_fields or set())
         # Issue #846: Threshold-Crossing-Regeln (Sichtweite: feuert nur beim erstmaligen Unterschreiten)
         self._threshold_crossing_rules: list["AlertRule"] = list(threshold_crossing_rules) if threshold_crossing_rules else []
+        # Issue #1460 (P1b): Felder mit Niveau- statt Delta-Semantik
+        self._ordinal_levels: dict[str, str] = dict(ordinal_levels) if ordinal_levels else {}
 
     @classmethod
     def from_trip_config(cls, config: "TripReportConfig") -> "WeatherChangeDetectionService":
@@ -468,6 +475,8 @@ class WeatherChangeDetectionService:
         absolute_seeded: set[str] = set()
         # Issue #846: Threshold-Crossing-Regeln (Sichtweite: feuert nur beim erstmaligen Unterschreiten)
         threshold_crossing_rules: list["AlertRule"] = []
+        # Issue #1460 (P1b): {summary-field → Empfindlichkeitsstufe} für ordinale Größen
+        ordinal_levels: dict[str, str] = {}
 
         for rule in rules:
             if not rule.enabled:
@@ -525,6 +534,12 @@ class WeatherChangeDetectionService:
                 for field_name in fields:
                     thresholds[field_name] = rule.threshold
                     severity_overrides[field_name] = rule.severity
+                    # Issue #1460 (P1b): Gefahrenstufen-Groessen tragen die
+                    # gewaehlte Empfindlichkeitsstufe mit — fuer diese Felder
+                    # entscheidet das Niveau, nicht die Sprunggroesse.
+                    level = getattr(rule, "sensitivity_level", None)
+                    if level:
+                        ordinal_levels[field_name] = level
                     # Issue #821: Explizite DELTA-Regel überschreibt Seed — das Feld
                     # ist nicht mehr rein-geseedet, darf nicht unterdrückt werden.
                     absolute_seeded.discard(field_name)
@@ -533,6 +548,7 @@ class WeatherChangeDetectionService:
             thresholds=thresholds,
             absolute_rules=absolute_rules,
             severity_overrides=severity_overrides,
+            ordinal_levels=ordinal_levels,
             absolute_seeded_fields=absolute_seeded,
             threshold_crossing_rules=threshold_crossing_rules,
         )
@@ -598,8 +614,18 @@ class WeatherChangeDetectionService:
             # Calculate delta
             delta = new_value - old_value
 
-            # Check if exceeds threshold
-            if abs(delta) > threshold:
+            # Issue #1460 (P1b): Gefahrenstufen-Groessen (aktuell nur
+            # thunder_level_max) entscheiden ueber das erreichte bzw.
+            # verlassene NIVEAU, nicht ueber die Sprunggroesse — beide
+            # Richtungen symmetrisch (Verschaerfung UND Entwarnung).
+            # Fuer alle anderen Felder bleibt `abs(delta) > threshold`.
+            level = self._ordinal_levels.get(metric)
+            if level is not None:
+                triggered = self._ordinal_change_triggers(old_value, new_value, level)
+            else:
+                triggered = abs(delta) > threshold
+
+            if triggered:
                 # Issue #222: Rule-driven severity override (delta-rules from from_alert_rules)
                 if metric in self._severity_overrides:
                     severity = _RULE_SEVERITY_TO_CHANGE_SEVERITY[
@@ -634,6 +660,28 @@ class WeatherChangeDetectionService:
         changes.extend(self._detect_threshold_crossing_changes(old_summary, new_summary, new_data))
 
         return changes
+
+    @staticmethod
+    def _ordinal_change_triggers(old_value, new_value, level: str) -> bool:
+        """Issue #1460 (P1b): meldet ein Stufenwechsel bei dieser
+        Empfindlichkeit? Grenzen je Stufe stehen in
+        `alert_preset.ORDINAL_LEVEL_BOUNDS` (dort auch die Herleitung).
+
+        Verschaerfung: neu > alt AND neu >= reach_min AND alt <= from_max
+        Entwarnung:    neu < alt AND alt >= reach_min AND neu <= from_max
+        Unveraenderter Wert meldet nie.
+        """
+        from services.alert_preset import ORDINAL_LEVEL_BOUNDS
+
+        bounds = ORDINAL_LEVEL_BOUNDS.get(level)
+        if bounds is None:
+            return False
+        reach_min, from_max = bounds
+        if new_value > old_value:
+            return new_value >= reach_min and old_value <= from_max
+        if new_value < old_value:
+            return old_value >= reach_min and new_value <= from_max
+        return False
 
     def _detect_absolute_changes(
         self,

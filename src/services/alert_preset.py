@@ -63,6 +63,36 @@ _COL: Final[dict[str, int]] = {
     "sensibel":  4,
 }
 
+# ─────────────── Issue #1460 (P1b): Niveau statt Sprunggroesse ──────────────
+#
+# Gefahrenstufen-Groessen (aktuell nur THUNDER_LEVEL, Skala NONE=0/MED=1/
+# HIGH=2) lassen sich nicht ueber eine Delta-Zahl steuern: "Mittelstufe
+# erreicht" und "Hoechststufe von der Mittelstufe erreicht" sind derselbe
+# Sprung (1), sollen aber unterschiedlich melden. Massgeblich ist deshalb das
+# erreichte (Verschaerfung) bzw. verlassene (Entwarnung) NIVEAU.
+#
+# Je Empfindlichkeitsstufe: (reach_min, from_max) — gemeldet wird
+#   Verschaerfung: neu > alt AND neu >= reach_min AND alt <= from_max
+#   Entwarnung:    neu < alt AND alt >= reach_min AND neu <= from_max
+#
+#   sensibel  (1, 2): jeder Stufenwechsel
+#   standard  (2, 2): die Hoechststufe wird erreicht bzw. verlassen
+#   entspannt (2, 0): nur der volle Sprung "kein Gewitter" <-> Hoechststufe
+#
+# Bewusst KEINE generische "welche Felder sind ordinal"-Registry (ADR-0043,
+# Known Limitations der Spec): mit genau einer betroffenen Groesse waere das
+# Struktur ohne zweiten Anwendungsfall.
+ORDINAL_LEVEL_BOUNDS: Final[dict[str, tuple[int, int]]] = {
+    "entspannt": (2, 0),
+    "standard":  (2, 2),
+    "sensibel":  (1, 2),
+}
+
+# Metriken, fuer die die Stufe als Niveau statt als Sprunggroesse gilt.
+ORDINAL_LEVEL_METRICS: Final[frozenset[str]] = frozenset({
+    AlertMetric.THUNDER_LEVEL.value,
+})
+
 
 def expand_preset(name: str) -> list[AlertRule]:
     """Expandiert einen Preset-Namen in eine AlertRule-Liste.
@@ -163,7 +193,7 @@ def expand_per_metric_levels(
         _metric, kind, *thresholds = row
         threshold = float(thresholds[col - 2])
         # metric_str direkt speichern: str(rule.metric) == "wind_gust" (Test-Erwartung)
-        return AlertRule(
+        rule = AlertRule(
             id=str(uuid.uuid4()),
             kind=kind,
             metric=metric_str,  # type: ignore[arg-type]
@@ -171,6 +201,11 @@ def expand_per_metric_levels(
             severity=AlertSeverity.WARNING,
             enabled=True,
         )
+        # Issue #1460 (P1b): Gefahrenstufen-Groessen tragen die gewaehlte Stufe
+        # mit — der Detektor wertet sie als Niveau, nicht als Sprunggroesse.
+        if metric_str in ORDINAL_LEVEL_METRICS:
+            rule.sensitivity_level = level
+        return rule
 
     # Bug #1191 (Adversary F002): explizit ab-gewählte Direction-Felder.
     # Eine SYNTHETISCHE, richtungs-spezifische Katalog-Metrik (selectable=False —

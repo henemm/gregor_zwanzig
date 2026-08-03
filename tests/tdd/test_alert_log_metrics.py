@@ -220,25 +220,30 @@ def test_ac4_amtliche_warnung_protokolliert_gefahrenart_statt_register_paar():
 
 # ───────────────────────────────── AC-7 ────────────────────────────────────
 
-def test_ac7_aenderung_und_grenzwert_ergeben_genau_einen_eintrag():
-    """AC-7 GIVEN in EINEM Lauf feuern eine Boeen-Aenderung UND ein
-    Gewitter-Grenzwert
+def test_ac7_zwei_ausloeser_ergeben_genau_einen_eintrag():
+    """AC-7 GIVEN in EINEM Lauf feuern ZWEI Ausloeser — eine Boeen-Aenderung
+    (20 -> 60 km/h) UND ein Gewitter-Stufenwechsel (kein Gewitter -> hoch)
     WHEN die gebuendelte Meldung versendet wird
     THEN entsteht GENAU EIN Protokoll-Eintrag, dessen ``metrics`` BEIDE
     Register-Paare traegt (nicht zwei Eintraege — sonst verdoppelt sich die
-    im Cockpit gezeigte Alarm-Zahl)."""
+    im Cockpit gezeigte Alarm-Zahl).
+
+    Issue #1460: Der zweite Ausloeser war bis dahin ein gerissener
+    Wertebereich (``corridors[].notify``). Der ist seit P1a kein
+    Alarm-Ausloeser mehr (ADR-0043); die gepruefte Zusicherung — mehrere
+    gleichzeitige Ausloeser, EIN Eintrag, ALLE Register-Paare darin — bleibt
+    wortgleich, sie wird nur ueber den heute gueltigen zweiten Ausloeger
+    gefuehrt: die Gewitter-Empfindlichkeitsstufe (P1b).
+    """
     uid = fresh_user("ac7")
-    trip = gust_alert_trip(
-        "trip-ac7",
-        corridors=[Corridor(metric="thunder_level", range=[None, 0], notify=True)],
-    )
+    trip = gust_alert_trip("trip-ac7", with_thunder=True)
     vorher = len(read_log(uid)["entries"])
     mails: list = []
 
     sent = _service(uid, mails).check_and_send_alerts(
         trip,
-        [weather(1, gust_max_kmh=20.0, thunder_level_max=ThunderLevel.MED)],
-        fresh_weather=[weather(1, gust_max_kmh=60.0, thunder_level_max=ThunderLevel.MED)],
+        [weather(1, gust_max_kmh=20.0, thunder_level_max=ThunderLevel.NONE)],
+        fresh_weather=[weather(1, gust_max_kmh=60.0, thunder_level_max=ThunderLevel.HIGH)],
     )
 
     assert sent is True and len(mails) == 1, (

@@ -1,6 +1,6 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-07-21 (Doku-Audit #1341 — Frontend-Sektionen auf Ist-Stand: Wizards entfernt, Organisms-Barrel korrigiert, /api/subscriptions → /api/compare/presets + /api/briefings); 2026-07-03 (Issue #1001 — Telegram-Ausgabe neu gebaut: `render_telegram_bubbles()` ersetzt `render_narrow()` für den Telegram-Kanal, Multi-Bubble-Versand statt Prosa-Nachricht, echte Monospace-Segment-Tabellen, Inline-Keyboard-Aktionen-Bubble); 2026-06-30 (Issue #919 — Radar-Alert auf kanonischen Renderer migriert: `OnsetEvent`-Datenklasse + `cooldown_display` in `model.py`, Onset-Zweige in alle vier `render_*`-Funktionen, `check_radar_alerts` baut jetzt `AlertMessage(OnsetEvent(...))`, `src/outputs/radar_alert.py` gelöscht); 2026-06-26 (Issue #887 — SMS/Telegram Report-Konsistenz: SMS `pop_hourly` aus `agg.pop_max_pct`, Telegram Detail-Zeile mit config-gesteuerten Metriken; Issue #884 — HTML-Mail Fidelity: 8-Sektion-Layout mit zweispaltigem Header + Stats-Grid, Ziel-Sektion, Ausblick mit Risk-Dot, Kommandos-Sektion, zweigeteilt Footer); 2026-06-15 (Issue #822 — Radar-/Regen-Nowcast-Alert segmentbewusst: gemeinsamer Segment-Helfer, aktives/nächstes Segment nach Tageszeit, Ort-Label via build_segment_label, Tour-TZ via tz_for_coords, dynamischer Cooldown-Text); 2026-06-14 (Issue #816 — Alert-Abweichungs-Kern: read-only Snapshot, alert_state Melde-Gedächtnis, knapper Render-Pfad); 2026-06-12 (Issue #758 — Einheitlicher Speicher-Status-Indikator + Trip-Editor Auto-Save; #733 Briefing-Mail-Validator Marker-Header); 2026-06-11 (Issue #749 — Day Comparison Renderer: render_day_comparison_html/plain für Vortag-Vergleich-Sektion); 2026-06-09 (Issue #675 — Etappen-Startzeiten Editor-Widget; Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
+**Updated:** 2026-08-03 (Issue #1460 Teil 1, ADR-0043 löst ADR-0040 ab — Wertebereich (`corridors[].notify`) fällt als Alarm-Auslöser weg, Empfindlichkeitsstufe bleibt einziger Regler und wirkt bei Gewitter über das erreichte Niveau statt die Sprunggröße, symmetrisch für Verschärfung und Entwarnung; Melde-Gedächtnis-Reset löscht beim Briefing nur noch den Änderungs-Raum, der amtliche Raum bleibt erhalten); 2026-07-21 (Doku-Audit #1341 — Frontend-Sektionen auf Ist-Stand: Wizards entfernt, Organisms-Barrel korrigiert, /api/subscriptions → /api/compare/presets + /api/briefings); 2026-07-03 (Issue #1001 — Telegram-Ausgabe neu gebaut: `render_telegram_bubbles()` ersetzt `render_narrow()` für den Telegram-Kanal, Multi-Bubble-Versand statt Prosa-Nachricht, echte Monospace-Segment-Tabellen, Inline-Keyboard-Aktionen-Bubble); 2026-06-30 (Issue #919 — Radar-Alert auf kanonischen Renderer migriert: `OnsetEvent`-Datenklasse + `cooldown_display` in `model.py`, Onset-Zweige in alle vier `render_*`-Funktionen, `check_radar_alerts` baut jetzt `AlertMessage(OnsetEvent(...))`, `src/outputs/radar_alert.py` gelöscht); 2026-06-26 (Issue #887 — SMS/Telegram Report-Konsistenz: SMS `pop_hourly` aus `agg.pop_max_pct`, Telegram Detail-Zeile mit config-gesteuerten Metriken; Issue #884 — HTML-Mail Fidelity: 8-Sektion-Layout mit zweispaltigem Header + Stats-Grid, Ziel-Sektion, Ausblick mit Risk-Dot, Kommandos-Sektion, zweigeteilt Footer); 2026-06-15 (Issue #822 — Radar-/Regen-Nowcast-Alert segmentbewusst: gemeinsamer Segment-Helfer, aktives/nächstes Segment nach Tageszeit, Ort-Label via build_segment_label, Tour-TZ via tz_for_coords, dynamischer Cooldown-Text); 2026-06-14 (Issue #816 — Alert-Abweichungs-Kern: read-only Snapshot, alert_state Melde-Gedächtnis, knapper Render-Pfad); 2026-06-12 (Issue #758 — Einheitlicher Speicher-Status-Indikator + Trip-Editor Auto-Save; #733 Briefing-Mail-Validator Marker-Header); 2026-06-11 (Issue #749 — Day Comparison Renderer: render_day_comparison_html/plain für Vortag-Vergleich-Sektion); 2026-06-09 (Issue #675 — Etappen-Startzeiten Editor-Widget; Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
 
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separatem Frontend (SvelteKit) und einem Dual-Stack-Backend (Go + Python):
@@ -221,11 +221,20 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      - Neu (kein Eintrag): Alert sent, Eintrag angelegt
      - Stagnation (`|current - last| < threshold`): unterdrückt
      - Eskalation (`|current - last| >= threshold`): erneut Alert, Wert aktualisiert
-   - **Reset:** beim Briefing-Versand komplette Datei löschen
+   - **Reset seit #1460 T1 (2026-08-03, ADR-0043):** beim Briefing-Versand wird nur noch der
+     Änderungs-Raum (`<feld>:<segment>`) gelöscht — der amtliche Raum (Präfix `official_alert:`,
+     s. u.) überlebt den Reset, damit dessen Entprellung nicht bei jedem Briefing verlorengeht.
+     Vorher löschte `AlertStateService.reset()` die komplette Datei.
 
 3. **Symmetrische Δ-Erkennung**
    - `WeatherChangeDetectionService.detect_changes(cached, fresh, include_absolute=False)` — nur Δ, keine absoluten Regeln im Alert-Pfad
-   - Schwellen Slice 1 (MetricCatalog-Defaults): Temp ±5°C, Wind/Böen ±20 km/h, Regen ±10 mm, Nullgradgrenze ±200 m, Gewitter ±1 (Issue #959/ADR-0019: einzige Winter-Alert-Metrik ist `freezing_level`)
+   - Schwellen Slice 1 (MetricCatalog-Defaults): Temp ±5°C, Wind/Böen ±20 km/h, Regen ±10 mm, Nullgradgrenze ±200 m (Issue #959/ADR-0019: einzige Winter-Alert-Metrik ist `freezing_level`)
+   - **Gewitter (`thunder_level_max`) ist seit #1460 T1 (ADR-0043) kein Δ-Schwellenwert mehr,
+     sondern eine Niveau-Prüfung:** einzige Gefahrenstufen-Größe (`ThunderLevel` NONE/MED/HIGH),
+     die Empfindlichkeitsstufe (`entspannt`/`standard`/`sensibel`) entscheidet, welches Niveau
+     erreicht bzw. verlassen werden muss — symmetrisch für Verschärfung UND Entwarnung. Vorher
+     trug die Stufen-Tabelle für alle drei Stufen denselben Delta-Wert `1`, wodurch kein
+     Stufensprung um genau eine Stufe meldete (löst ADR-0040 ab).
    - `AlertEvent.threshold` ist immer die Δ-Auslöseschwelle, nie ein Absolut-Referenzwert — „über/unter Schwelle" heißt `abs(value_to − value_from) ≥ threshold` (ADR-0013)
 
 4. **Kanonischer Alert-Render-Pfad (Issue #917)**
@@ -272,29 +281,26 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
 7. **Wertebereiche-Editor Single-Source `corridorInside()` (Issue #1231 Slice 1, C5)**
    - Vereint Trip-Alert-Schwellwerte (`AlertRule`) und Compare-Idealbereiche
      (`display_config["ideal_ranges"]`) auf einer gemeinsamen `Corridor`-Datenstruktur.
-   - **Seit #1444 S1 (2026-08-01) steuert `notify` einen eigenen Wächter** (ADR-0040):
-     `services/corridor_threshold.py::evaluate_corridor_thresholds()` prüft die
-     Korridore je Alarm-Lauf gegen die frische Vorhersage und meldet, sobald eine
-     Grenze im aktiven Etappenfenster gerissen ist — unabhängig davon, ob sich die
-     Vorhersage geändert hat. Der Δ-Wächter bleibt davon unberührt; beide Treffer
-     desselben Laufs gehen gebündelt in EINE Nachricht. Vorher war `notify` ein
-     reiner an/aus-Schalter auf `metric_alert_levels` ohne eigene Wirkung.
-   - **Seit #1444 S2a (2026-08-02) erreicht der Wächter BEIDE Metrik-Namensräume:**
-     `corridor.metric` trägt je nach Herkunft eine `AlertMetric`-Kennung (die 5 fest
-     verdrahteten Zeilen, z.B. `wind_gust`, `snow_line`) ODER einen Katalog-`key` (die 18
-     seit #1425 aus dem Katalog gespeisten Zeilen, z.B. `thunder_level_max`). Bis S2a löste
-     nur der erste Namensraum auf — Gewitter & Co. fielen still durch.
-     `resolve_corridor_summary_field(metric)` (`corridor_threshold.py`) fragt jetzt zuerst
-     `_ALERT_METRIC_TO_SUMMARY_FIELD` (unverändert, exklusive Grundlage des Δ-Wächters) und
-     fällt additiv über `COMPARE_METRIC_CATALOG` → `metric_catalog.summary_field_for()`
-     zurück. `alert/project.py::_resolve_corridor_metric_id()` nutzt dieselbe Funktion, damit
-     ein erkannter Treffer nicht bei der Projektion erneut verschluckt wird. Folge: von 23
-     Trip-Wertebereichs-Zeilen sind jetzt alle 23 auswertbar statt 5.
-     Spec: `docs/specs/modules/feat_1444_s2a_schwellen_namensraum.md`.
+   - **Seit #1460 T1 (2026-08-03, ADR-0043) löst `notify` KEINEN Alarm mehr aus.**
+     Zwischen #1444 S1 (2026-08-01) und #1460 T1 gab es kurzzeitig einen eigenen
+     Korridor-Wächter (`services/corridor_threshold.py::evaluate_corridor_thresholds()`,
+     ADR-0040), der eine gerissene Grenze unabhängig von der Empfindlichkeitsstufe meldete.
+     Das ist zurückgebaut: Die Empfindlichkeitsstufe (`metric_alert_levels`: entspannt/
+     standard/sensibel) ist wieder der EINZIGE Alarm-Regler (ADR-0009/ADR-0013 bestätigt).
+     Der Aufruf von `_evaluate_corridors()` in `trip_alert.py` ist entfernt; `corridor_hits`
+     ist strukturell immer leer, der Render-Vertrag (`CorridorEvent`) bleibt bestehen, wird
+     aber nie mehr gefüttert. `corridor_threshold.py` selbst bleibt unverändert im Repo,
+     nur ohne Aufrufer. Ein Trip, der bisher AUSSCHLIESSLICH über Korridore alarmiert wurde,
+     alarmiert seither gar nicht mehr — das ist beabsichtigt, nicht stillschweigend in Kauf
+     genommen. `Corridor.notify` bleibt Feld in Datenmodell/Persistenz (kein Datenverlust),
+     nur wirkungslos. `Corridor.range`/`.mark` (Anzeige-Markierung) sind davon unberührt —
+     sie waren nie ein Alarm-Auslöser.
+     Spec: `docs/specs/modules/rework_1460_t1_relevanzfilter.md`.
    - Match-Logik `corridorInside(value, min, max)` wortgleich an zwei Stellen: TS
      `frontend/src/lib/shared/corridor-editor/corridorMatch.ts` und Python
      `src/services/corridor_match.py::corridor_inside()` (Consumer:
      `src/output/renderers/email/compare_html.py`, Slice 7) — darf nur einmal implementiert sein.
+     Diese Anzeige-Markierung ist von der oben beschriebenen Alarm-Abschaltung unberührt.
 
 **Datenfluss:**
 ```

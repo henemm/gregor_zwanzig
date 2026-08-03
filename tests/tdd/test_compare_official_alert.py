@@ -351,7 +351,7 @@ def test_f005_duplicate_location_names_state_attributed_to_correct_id():
 
 
 # ═══════════ F001 — Zeitzone: Compare-Alarm lokalisiert (kein UTC-Bug) ═════════
-def test_f001_compare_alert_localizes_validity_to_location_timezone():
+def test_f001_compare_alert_localizes_validity_to_location_timezone(monkeypatch):
     """F001 (CRITICAL, Adversary): `send_multi_location_official_alert` darf die
     Gültigkeitszeiten NICHT roh in UTC rendern. Hermagor (46.62,13.68) →
     Europe/Vienna (+2 im Sommer): 12:00 UTC → 14:00 lokal."""
@@ -365,13 +365,18 @@ def test_f001_compare_alert_localizes_validity_to_location_timezone():
     try:
         save_location(_location("loc-a", "Hermagor", LAT_A, LON_A), user_id=uid)
         _write_presets(uid, [_preset("p1", ["loc-a"], ["e@x.invalid"])])
-        # Issue #1316 (AC-8): relativer statt fixer Tag (der neue Default-
-        # Zeitfenster-Filter wuerde ein Vergangenheitsdatum ausfiltern) -- Stunde
-        # bleibt exakt 12:00/18:00 UTC, damit die 14:00/20:00-Lokalisierungs-
-        # Assertion (Europe/Vienna, +2 im Sommer) unveraendert gilt.
-        tomorrow = datetime.now(timezone.utc).date() + timedelta(days=1)
-        vf = datetime(tomorrow.year, tomorrow.month, tomorrow.day, 12, 0, tzinfo=timezone.utc)
-        vt = datetime(tomorrow.year, tomorrow.month, tomorrow.day, 18, 0, tzinfo=timezone.utc)
+        # Issue #1460 (P4): Die Warnung liegt jetzt am SELBEN Tag im
+        # Tagesfenster statt am Folgetag -- eine erst morgen gueltige Warnung
+        # wird heute nicht mehr gemeldet (AC-31). Damit das Ergebnis nicht von
+        # der Uhrzeit des Testlaufs abhaengt, wird die Uhr ueber den
+        # vorhandenen Seam eingefroren; die Stunden bleiben exakt 12:00/18:00
+        # UTC, damit die 14:00/20:00-Lokalisierungs-Assertion (Europe/Vienna,
+        # +2 im Sommer) unveraendert gilt.
+        _freeze_compare_official_alert_now(
+            monkeypatch, datetime(2026, 7, 12, 8, 0, tzinfo=timezone.utc)
+        )
+        vf = datetime(2026, 7, 12, 12, 0, tzinfo=timezone.utc)
+        vt = datetime(2026, 7, 12, 18, 0, tzinfo=timezone.utc)
         register_official_alert_source(
             _FakeOfficialAlertSource(LAT_A, LON_A, [_alert(vf=vf, vt=vt)])
         )
@@ -660,7 +665,17 @@ def test_ac2_quiet_hour_suppression_does_not_permanently_swallow_warning(monkeyp
             "p1", ["loc-a"], ["e@x.invalid"],
             alert_quiet_from="22:00", alert_quiet_to="06:00",
         )])
-        register_official_alert_source(_FakeOfficialAlertSource(LAT_A, LON_A, [_alert()]))
+        # Issue #1460 (P4): Die Warnzeiten muessen zur EINGEFRORENEN Uhr passen.
+        # Vorher trug die Warnung real-jetzt-relative Zeiten (`_alert()`-Default),
+        # waehrend die Uhr des Dienstes auf den 12.07. gestellt wurde -- solange
+        # es kein Zeitfenster gab, fiel das nicht auf. Die Warnung gilt hier ab
+        # der Nacht (Runde 1, Ruhezeit) bis in den Nachmittag hinein und ist in
+        # Runde 2 unveraendert gueltig: genau die Lage, in der die Ruhezeit sie
+        # nicht dauerhaft verschlucken darf.
+        register_official_alert_source(_FakeOfficialAlertSource(LAT_A, LON_A, [_alert(
+            vf=datetime(2026, 7, 11, 23, 0, tzinfo=timezone.utc),
+            vt=datetime(2026, 7, 12, 14, 0, tzinfo=timezone.utc),
+        )]))
 
         def _svc(mail_calls):
             return CompareOfficialAlertService(

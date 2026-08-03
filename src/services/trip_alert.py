@@ -24,13 +24,10 @@ from services.notification_service import (
     RadarAlertRequest,
 )
 from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
-from services.corridor_threshold import CorridorHit, evaluate_corridor_thresholds
+from services.corridor_threshold import CorridorHit
 from services.throttle_store import ThrottleStore
 from services.user_tier import sms_allowed
-from services.weather_change_detection import (
-    _ALERT_METRIC_TO_SUMMARY_FIELD,
-    WeatherChangeDetectionService,
-)
+from services.weather_change_detection import WeatherChangeDetectionService
 from utils.timezone import tz_for_coords
 
 if TYPE_CHECKING:
@@ -45,14 +42,20 @@ logger = logging.getLogger("trip_alert")
 # providers/meteofrance.py und providers/dwd.py.
 ALERT_RUN_DEADLINE_SECONDS = 90.0
 
-# Issue #1444 S1: eigener Schluesselraum im Melde-Gedaechtnis fuer
-# Schwellen-Treffer -- der bestehende Delta-Zweig (`<metrik>:<etappe>`)
-# bleibt unberuehrt.
-_CORRIDOR_STATE_PREFIX = "corridor:"
-# Ordinale Groessen (Gewitter): "verschaerft" = naechsthoehere Stufe
-# erreicht. Stetige Groessen (Regen, Boeen, Temperatur) nutzen stattdessen
-# den Katalog-Aenderungsschwellwert (siehe _evaluate_corridors()).
-_ORDINAL_CORRIDOR_METRICS = frozenset({"thunder_level"})
+# Issue #1460 (P1a, loest #1444 S1 ab): der Wertebereich (`corridors[].notify`)
+# ist KEIN Alarm-Ausloeser mehr -- eine absolute Grenze widerspricht ADR-0009
+# (Alarme sind Abweichungs-Waechter). Der frueher hier gefuehrte
+# `corridor:`-Schluesselraum im Melde-Gedaechtnis entfaellt damit ersatzlos;
+# einziger Regler ist die Empfindlichkeitsstufe (s. ADR-0043).
+
+
+def _as_aware_utc(value: Optional[datetime]) -> Optional[datetime]:
+    """Naive Zeitangaben als UTC lesen (Issue #1460, P4). Segment-Zeiten aus
+    Alt-Schnappschuessen koennen tz-los sein; ein Vergleich naiv-vs-aware
+    wuerde sonst mit TypeError den gesamten amtlichen Check kippen."""
+    if value is not None and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
 
 
 @dataclass(frozen=True)
@@ -182,14 +185,12 @@ class TripAlertService:
             trip.display_config
             and getattr(trip.display_config, "metric_alert_levels", None)
         )
-        # Issue #1444 S1: Wertebereiche mit notify=True sind eine eigene
-        # aktive Alarmquelle -- sonst faellt eine Tour, deren EINZIGE
-        # eingestellte Quelle Korridore sind, hier durch (AC-5).
-        has_corridors = any(c.notify for c in (trip.corridors or []))
+        # Issue #1460 (P1a): Wertebereiche zaehlen NICHT mehr als aktive
+        # Alarmquelle -- eine Tour, deren einzige Einstellung ein Wertebereich
+        # ist, gilt wieder als "keine aktive Alarmquelle" (Zustand vor #1444 S1).
         has_active_rules = (
             has_preset
             or has_metric_levels
-            or has_corridors
             or any(r.enabled for r in (trip.alert_rules or []))
         )
         if (
@@ -234,20 +235,6 @@ class TripAlertService:
         state_svc = AlertStateService(user_id=self._user_id)
         alert_state = state_svc.load(trip.id)
 
-        # Issue #1444 S1: Schwellen-Auswertung -- unabhaengig vom
-        # Aenderungs-Waechter (AC-1: feuert auch bei unveraenderter
-        # Vorhersage GEGENUEBER DEM SCHNAPPSCHUSS). Wertet aber gegen die
-        # FRISCHE Vorhersage (`fresh_weather`), NICHT gegen den potenziell
-        # Stunden alten Schnappschuss (`cached_weather`) -- sonst kippt der
-        # Zweck der Funktion in beide Richtungen: ein seit dem Briefing NEU
-        # aufgezogenes Gewitter bliebe stumm, ein bereits abgezogenes wuerde
-        # weiter Falschalarm ausloesen (Team-Lead-Befund, s. Tests
-        # `test_neu_aufgezogenes_gewitter_...`/`test_abgezogenes_gewitter_...`).
-        # Geheilte Eintraege werden hier SOFORT geraeumt (state_svc.save
-        # unten), unabhaengig davon, ob dieser Lauf ueberhaupt etwas versendet.
-        corridor_to_report = self._evaluate_corridors(trip, fresh_weather, alert_state)
-        state_svc.save(trip.id, alert_state)
-
         cached_points = TripSegmentWeatherAdapter.to_points(cached_weather)
         fresh_points = TripSegmentWeatherAdapter.to_points(fresh_weather)
         eval_config = AlertEvaluationConfig(
@@ -269,23 +256,20 @@ class TripAlertService:
             alert_state=alert_state,
         )
         to_report = list(eval_result.changes) if eval_result.triggered else []
-        if not to_report and not corridor_to_report:
+        if not to_report:
             logger.debug(
-                f"No changes/corridor hits for trip {trip.id}: "
-                f"{eval_result.suppressed_reason}"
+                f"No changes for trip {trip.id}: {eval_result.suppressed_reason}"
             )
             return False
 
         logger.info(
-            f"Detected {len(to_report)} significant changes and "
-            f"{len(corridor_to_report)} corridor hits for trip {trip.id}"
+            f"Detected {len(to_report)} significant changes for trip {trip.id}"
         )
 
         # 5. Send alert; guard: only record throttle/log when at least one
         # configured channel was reachable (AC-1 symmetry with Telegram/Radar).
         notif_result = self._send_alert(
-            trip, fresh_weather, to_report,
-            corridor_hits=corridor_to_report, official_notices=official_notices,
+            trip, fresh_weather, to_report, official_notices=official_notices,
         )
         # Issue #1459: Alarm-Protokoll VOR dem Zustellbarkeits-Guard — die
         # Funktion entscheidet selbst, ob der Eintrag nach `entries` (mindestens
@@ -293,12 +277,9 @@ class TripAlertService:
         alert_log.append_entry(
             self._user_id,
             trip_id=trip.id,
-            changes_count=len(to_report) + len(corridor_to_report),
+            changes_count=len(to_report),
             severity=eval_result.severity,
-            metrics=(
-                alert_log.register_pairs_from_changes(to_report)
-                + alert_log.register_pairs_from_corridor_hits(corridor_to_report)
-            ),
+            metrics=alert_log.register_pairs_from_changes(to_report),
             reason=alert_log.REASON_FORECAST_CHANGE,
             effective_channels=eval_config.channels,
             sent_channels=notif_result.delivered_channels,
@@ -314,19 +295,11 @@ class TripAlertService:
 
         # 6. Issue #816 (B): Melde-Gedächtnis fortschreiben (kein Snapshot-Write
         # mehr — die Briefing-Referenz bleibt stabil bis zum nächsten Briefing).
-        # Issue #1444 S1: der Korridor-Zweig schreibt in denselben Zyklus,
-        # eigener Schluesselraum (`corridor:...`).
         now_iso = datetime.now(timezone.utc).isoformat()
         for change in to_report:
             key = f"{change.metric}:{change.segment_id}"
             alert_state[key] = {
                 "last_reported_value": float(change.new_value),
-                "reported_at": now_iso,
-            }
-        for hit in corridor_to_report:
-            key = f"{_CORRIDOR_STATE_PREFIX}{hit.metric}:{hit.segment_id}"
-            alert_state[key] = {
-                "last_reported_value": hit.value,
                 "reported_at": now_iso,
             }
         state_svc.save(trip.id, alert_state)
@@ -354,77 +327,6 @@ class TripAlertService:
             display_config=trip.display_config,
         )
         return DeviationAlertEngine._select_detector(config)
-
-    def _evaluate_corridors(
-        self,
-        trip: "Trip",
-        fresh_weather: List[SegmentWeatherData],
-        alert_state: dict,
-    ) -> List[CorridorHit]:
-        """Issue #1444 S1: Schwellen-Treffer der Tour ermitteln und gegen das
-        Melde-Gedaechtnis entprellen (eigener Schluesselraum
-        `corridor:<metrik>:<etappe>` -- der Delta-Zweig `<metrik>:<etappe>`
-        bleibt unberuehrt).
-
-        Wertet gegen `fresh_weather` (die FRISCH nachgeladene Vorhersage),
-        NICHT gegen den (potenziell Stunden alten) Schnappschuss des letzten
-        Briefings -- sonst dreht sich der Zweck der Funktion in beide
-        Richtungen um: ein neu aufgezogenes Gewitter bliebe stumm, ein
-        abgezogenes wuerde weiter Falschalarm ausloesen.
-
-        Geheilte Eintraege (Grenze wieder eingehalten) werden SOFORT aus
-        `alert_state` geraeumt (mutiert in place) -- unabhaengig davon, ob
-        dieser Lauf ueberhaupt etwas versendet, sonst verhindert ein
-        stehengebliebener Eintrag einen spaeteren erneuten Alarm (AC-4).
-        Eintraege fuer TATSAECHLICH gemeldete Treffer schreibt der Aufrufer
-        erst nach erfolgreichem Versand (Symmetrie zum Delta-Zweig).
-
-        "Verschaerft" (F4): ordinal (Gewitter) = naechsthoehere Stufe;
-        stetig = der Wert hat sich um mindestens den Katalog-
-        Aenderungsschwellwert (`get_change_detection_map()`) weiter von der
-        Grenze entfernt.
-        """
-        from app.metric_catalog import get_change_detection_map
-
-        corridors = [c for c in (trip.corridors or []) if c.notify]
-        if not corridors:
-            return []
-
-        now_utc = datetime.now(timezone.utc)
-        today = now_utc.date()
-        active = [
-            p for p in fresh_weather
-            if p.segment.end_time >= now_utc and p.segment.start_time.date() <= today
-        ]
-        hits = evaluate_corridor_thresholds(active, corridors)
-        hit_by_key = {
-            f"{_CORRIDOR_STATE_PREFIX}{h.metric}:{h.segment_id}": h for h in hits
-        }
-
-        candidate_keys = {
-            f"{_CORRIDOR_STATE_PREFIX}{c.metric}:{p.segment.segment_id}"
-            for c in corridors for p in active
-        }
-        for key in candidate_keys - hit_by_key.keys():
-            alert_state.pop(key, None)
-
-        change_map = get_change_detection_map()
-        to_report: List[CorridorHit] = []
-        for key, hit in hit_by_key.items():
-            prev = alert_state.get(key)
-            last = prev.get("last_reported_value") if prev else None
-            if last is None:
-                to_report.append(hit)
-                continue
-            if hit.metric in _ORDINAL_CORRIDOR_METRICS:
-                escalated = hit.value > last
-            else:
-                field = _ALERT_METRIC_TO_SUMMARY_FIELD.get(hit.metric)
-                step = change_map.get(field, 0.0) if field else 0.0
-                escalated = (abs(hit.value - hit.bound) - abs(last - hit.bound)) >= step
-            if escalated:
-                to_report.append(hit)
-        return to_report
 
     def check_all_trips(self) -> AlertCheckRunResult:
         """
@@ -479,14 +381,12 @@ class TripAlertService:
                 trip.display_config
                 and getattr(trip.display_config, "metric_alert_levels", None)
             )
-            # Issue #1444 S1: Wertebereiche mit notify=True sind eine eigene
-            # aktive Alarmquelle -- sonst faellt eine Tour, deren EINZIGE
-            # eingestellte Quelle Korridore sind, hier durch (AC-5).
-            has_corridors = any(c.notify for c in (trip.corridors or []))
+            # Issue #1460 (P1a): Wertebereiche sind keine aktive Alarmquelle
+            # mehr -- eine Tour, die nur Wertebereiche gesetzt hat, wird hier
+            # wieder uebersprungen (Zustand vor #1444 S1).
             has_active_rules = (
                 has_preset
                 or has_metric_levels
-                or has_corridors
                 or any(r.enabled for r in (trip.alert_rules or []))
             )
             # Issue #1088 F001: der amtliche Alert-Trigger ist ein eigenständiger,
@@ -1127,28 +1027,49 @@ class TripAlertService:
         if not cached:
             return []
 
-        # Issue #1200: Coord->Segment-Mapping VOR dem Coord-Dedup aufbauen,
-        # sonst geht die Segment-Info verloren, wenn zwei Segmente dieselbe
-        # Koordinate teilen.
-        coord_to_segments: dict[tuple[float, float], list[str]] = {}
+        # Issue #1460 (P4): Ort UND Zeit gehoeren zusammen. Jedes Segment der
+        # Restroute bekommt sein EIGENES Zeitfenster `[max(jetzt, Start), Ende]`
+        # -- eine Warnung, die erst in drei Tagen gilt, gehoert nicht zur
+        # heutigen Etappe, sondern zu der, auf der der Nutzer dann steht.
+        # Bereits vollstaendig vergangene Segmente werden nicht mehr abgefragt.
+        #
+        # Die Pruefreichweite bleibt bewusst die GESAMTE Restroute (anders als
+        # der Nowcast-Pfad `check_radar_alerts()`, der nur ein Segment waehlt):
+        # amtliche Warnungen haben Tage Vorlauf, eine Verengung auf ein Segment
+        # wuerde genau die Vorwarnung fuer spaetere Etappen verschlucken.
+        #
+        # Issue #1200: Segment-Zuordnung VOR dem Dedup aufbauen. Der
+        # Dedup-Schluessel ist seit #1460 `(Koordinate, Fenster)` statt der
+        # blossen Koordinate -- sonst fallen zwei Etappen an DERSELBEN
+        # Koordinate zu VERSCHIEDENEN Zeiten zusammen und eine der beiden
+        # verliert ihre Warnzeit still.
+        now_utc = datetime.now(timezone.utc)
+        group_segments: dict[tuple, list[str]] = {}
+        group_order: list[tuple] = []
         for sw in cached:
             if sw.has_error:
                 continue
-            coord = (round(sw.segment.start_point.lat, 3), round(sw.segment.start_point.lon, 3))
-            coord_to_segments.setdefault(coord, []).append(str(sw.segment.segment_id))
+            segment = sw.segment
+            end_time = _as_aware_utc(segment.end_time)
+            start_time = _as_aware_utc(segment.start_time)
+            if end_time is None or end_time < now_utc:
+                continue  # Etappe vorbei -- ihre Warnzeit ist um
+            coord = (round(segment.start_point.lat, 3), round(segment.start_point.lon, 3))
+            window_start = max(now_utc, start_time) if start_time else now_utc
+            key = (coord, window_start, end_time)
+            if key not in group_segments:
+                group_segments[key] = []
+                group_order.append(key)
+            group_segments[key].append(str(segment.segment_id))
 
-        seen: set[tuple[float, float]] = set()
         tagged_alerts: list[tuple] = []
-        for sw in cached:
-            if sw.has_error:
-                continue
-            coord = (round(sw.segment.start_point.lat, 3), round(sw.segment.start_point.lon, 3))
-            if coord in seen:
-                continue
-            seen.add(coord)
-            segment_ids = coord_to_segments.get(coord, [])
+        for key in group_order:
+            coord, window_start, window_end = key
+            segment_ids = group_segments[key]
             try:
-                for alert in get_official_alerts_for_location(*coord):
+                for alert in get_official_alerts_for_location(
+                    *coord, window_start=window_start, window_end=window_end, now=now_utc,
+                ):
                     tagged_alerts.append((alert, segment_ids))
             except Exception as e:
                 logger.warning(f"official_alert_triggers: Quelle fehlgeschlagen fuer {trip.id}: {e}")

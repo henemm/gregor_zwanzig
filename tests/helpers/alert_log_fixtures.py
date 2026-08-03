@@ -105,19 +105,29 @@ def weather(segment_id: int | str = 1, **summary_kwargs) -> SegmentWeatherData:
 
 def gust_alert_trip(
     trip_id: str, *, corridors: list | None = None, alert_channels: dict | None = None,
+    with_thunder: bool = False,
 ) -> Trip:
-    """Tour, deren Boeen-Delta-Regel scharf ist (Standard-Schwelle 20 km/h)."""
+    """Tour, deren Boeen-Delta-Regel scharf ist (Standard-Schwelle 20 km/h).
+
+    ``with_thunder`` schaltet zusaetzlich die Gewitter-Empfindlichkeit scharf --
+    seit Issue #1460 (P1b) meldet die Stufe "standard" das Erreichen der
+    hoechsten Gefahrenstufe, sodass eine Tour ZWEI gleichzeitige Ausloeser
+    haben kann (gebraucht fuer AC-7: mehrere Ausloeser, EIN Protokoll-Eintrag).
+    """
     stage = Stage(
         id="T1", name="Tag 1", date=date.today(),
         waypoints=[Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0)],
     )
+    metrics = [MetricConfig(metric_id="gust", enabled=True)]
+    levels = {"wind_gust": "standard"}
+    if with_thunder:
+        metrics.append(MetricConfig(metric_id="thunder", enabled=True))
+        levels["thunder_level"] = "standard"
     trip = Trip(
         id=trip_id, name="Protokoll-Trip", stages=[stage],
         official_warnings=None, corridors=corridors or [],
         display_config=UnifiedWeatherDisplayConfig(
-            trip_id=trip_id,
-            metrics=[MetricConfig(metric_id="gust", enabled=True)],
-            metric_alert_levels={"wind_gust": "standard"},
+            trip_id=trip_id, metrics=metrics, metric_alert_levels=levels,
         ),
     )
     trip.report_config = TripReportConfig(trip_id=trip_id, send_email=True, alert_on_changes=True)

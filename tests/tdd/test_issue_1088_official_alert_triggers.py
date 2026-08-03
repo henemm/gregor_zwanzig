@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import shutil
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -59,8 +59,13 @@ def _fresh_user(prefix: str) -> str:
 
 
 def _segment(segment_id: int | str = 1, *, lat: float = LAT, lon: float = LON) -> TripSegment:
-    start = datetime(2026, 7, 8, 8, 0, tzinfo=timezone.utc)
-    end = datetime(2026, 7, 8, 12, 0, tzinfo=timezone.utc)
+    # Issue #1460 (P4): RELATIVE Etappenzeiten statt fixer Kalenderdaten. Seit
+    # dem Etappen-Zeitfenster wird eine bereits beendete Etappe nicht mehr
+    # ausgewertet -- ein fixes Datum laesst diese Tests still altern, sobald es
+    # in der Vergangenheit liegt (genau das war hier passiert: 2026-07-08).
+    now = datetime.now(timezone.utc)
+    start = now - timedelta(hours=1)
+    end = now + timedelta(hours=3)
     return TripSegment(
         segment_id=segment_id,
         start_point=GPXPoint(lat=lat, lon=lon, elevation_m=1000, distance_from_start_km=12.0),

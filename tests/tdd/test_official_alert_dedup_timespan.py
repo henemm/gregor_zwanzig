@@ -82,9 +82,14 @@ def _massif_alert(level: int, *, dedup_id: str = "ESTEREL-MASSIF-ID") -> Officia
     )
 
 
-def _segment(segment_id: int | str = 1, *, lat: float = LAT, lon: float = LON) -> TripSegment:
-    start = datetime(2026, 7, 8, 8, 0, tzinfo=timezone.utc)
-    end = datetime(2026, 7, 8, 12, 0, tzinfo=timezone.utc)
+def _segment(segment_id: int | str = 1, *, lat: float = LAT, lon: float = LON,
+             start: datetime | None = None, end: datetime | None = None) -> TripSegment:
+    # Issue #1460 (P4): RELATIVE Etappenzeiten statt fixer Kalenderdaten -- ein
+    # fixes Datum laesst den Test still altern, sobald es vorbei ist (die
+    # beendete Etappe wird gar nicht mehr abgefragt).
+    now = datetime.now(timezone.utc)
+    start = start or (now - timedelta(hours=1))
+    end = end or (now + timedelta(hours=3))
     return TripSegment(
         segment_id=segment_id,
         start_point=GPXPoint(lat=lat, lon=lon, elevation_m=1000, distance_from_start_km=12.0),
@@ -98,9 +103,11 @@ def _segment(segment_id: int | str = 1, *, lat: float = LAT, lon: float = LON) -
     )
 
 
-def _data(segment_id: int | str = 1, *, lat: float = LAT, lon: float = LON, **summary_kwargs) -> SegmentWeatherData:
+def _data(segment_id: int | str = 1, *, lat: float = LAT, lon: float = LON,
+          start: datetime | None = None, end: datetime | None = None,
+          **summary_kwargs) -> SegmentWeatherData:
     return SegmentWeatherData(
-        segment=_segment(segment_id, lat=lat, lon=lon),
+        segment=_segment(segment_id, lat=lat, lon=lon, start=start, end=end),
         timeseries=NormalizedTimeseries(
             meta=ForecastMeta(provider=Provider.OPENMETEO, model="test", grid_res_km=1.0),
             data=[],
@@ -276,8 +283,6 @@ class TestAC4TriggerNewPeriodFiresIndependently:
         oa_base._REGISTERED_SOURCES.clear()
         try:
             trip = _minimal_trip("trip-1245-ac4")
-            _save_cached(user_id, trip.id, [_data(1, precip_sum_mm=2.0)])
-
             region = "Cevennes-1245-AC4"
             hazard = "extreme_heat"
             # Issue #1316 (AC-8): relative statt fixer Kalenderdaten -- der neue
@@ -288,6 +293,18 @@ class TestAC4TriggerNewPeriodFiresIndependently:
             period_a_to = now + timedelta(hours=18)
             period_b_from = period_a_to
             period_b_to = period_a_to + timedelta(hours=24)
+
+            # Issue #1460 (P4): Die Tour muss BEIDE Perioden ueberhaupt
+            # abdecken -- seit dem Etappen-Zeitfenster gehoert eine Warnung
+            # zu der Etappe, auf der der Nutzer zu ihrer Gueltigkeitszeit
+            # steht. Eine Zwei-Tages-Hitzewelle braucht deshalb auch eine
+            # zweitaegige Tour; mit nur einer heute endenden Etappe waere
+            # Periode B (ab morgen) zu Recht nicht mehr zu melden.
+            _save_cached(user_id, trip.id, [
+                _data(1, precip_sum_mm=2.0),
+                _data(2, start=period_b_from - timedelta(hours=1),
+                      end=period_b_to, precip_sum_mm=2.0),
+            ])
 
             alert_a = OfficialAlert(
                 source="test-1245-ac4", hazard=hazard, level=3,

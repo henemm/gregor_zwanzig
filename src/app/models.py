@@ -870,6 +870,13 @@ class AlertRule:
     # Rein transient (nur für Backfill-Regeln aus expand_per_metric_levels gesetzt) —
     # wird NICHT persistiert (loader.py serialisiert nur die expliziten Felder).
     suppressed_fields: set[str] = field(default_factory=set)
+    # Issue #1460 (P1b): gewaehlte Empfindlichkeitsstufe ("entspannt" |
+    # "standard" | "sensibel") fuer Gefahrenstufen-Groessen (aktuell nur
+    # thunder_level). Der Detektor wertet sie als NIVEAU (erreichte bzw.
+    # verlassene Stufe) statt als Sprunggroesse — `threshold` allein kann das
+    # nicht ausdruecken. Rein transient wie `suppressed_fields` (nur von
+    # `alert_preset._make_rule()` gesetzt, wird NICHT persistiert).
+    sensitivity_level: Optional[str] = None
 
 
 @dataclass

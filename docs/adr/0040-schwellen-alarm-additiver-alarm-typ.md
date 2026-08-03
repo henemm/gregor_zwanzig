@@ -1,6 +1,6 @@
 # ADR-0040: Der nutzerkonfigurierte Schwellen-Alarm ist ein additiver zweiter Alarm-Typ neben dem Abweichungs-Wächter
 
-- **Status:** Akzeptiert
+- **Status:** Abgelöst durch [ADR-0043](0043-empfindlichkeitsstufe-als-niveau-statt-zweiter-alarm-typ.md) (2026-08-03, Issue #1460)
 - **Datum:** 2026-08-01
 - **Bezug:** GitHub-Issue #1444 (Scheibe 1), Spec `docs/specs/modules/feat_1444_s1_schwellen_alarm.md`; berührt ADR-0009 (Alerts als Abweichungs-Wächter), ADR-0013 (`threshold` ist Δ-Sensitivität), ADR-0016 (amtliche Warnungen als additiver Typ), ADR-0021 (geteilte `DeviationAlertEngine`)
 

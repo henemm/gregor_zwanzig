@@ -21,7 +21,7 @@ Features (rechtzeitige Warnung vor Verschaerfung). Das Tageslimit
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from app.config import Settings
@@ -169,11 +169,23 @@ class CompareOfficialAlertService:
 
         Issue #1258 (AC-7/AC-8): `sources` (aus `official_warnings.sources`)
         filtert NACH dem Fetch, VOR der Neu/Eskalations-Entscheidung — leer/
-        None laesst alle Quellen unveraendert durch (Ist-Verhalten)."""
+        None laesst alle Quellen unveraendert durch (Ist-Verhalten).
+
+        Issue #1460 (P4): Jeder Ort wird mit dem Zeitfenster „jetzt bis Ende
+        des heutigen Tagesfensters in seiner ORTSZEIT" abgefragt (ADR-0035-
+        Default 4-19 Uhr, wenn das Preset nichts anderes sagt). Orte haben
+        keine Etappen — die Menge der geprueften Orte bleibt deshalb
+        unveraendert die des Presets (AC-33), nur die Zeit kommt hinzu."""
+        now = datetime.now(timezone.utc)
         raw = [
             (alert, [loc.id])
             for loc in locs
-            for alert in get_official_alerts_for_location(loc.lat, loc.lon)
+            for alert in get_official_alerts_for_location(
+                loc.lat, loc.lon,
+                window_start=now,
+                window_end=self._day_window_end(preset_id, loc, now),
+                now=now,
+            )
         ]
         if sources:
             raw = [(alert, loc_ids) for alert, loc_ids in raw if alert.source in sources]
@@ -197,6 +209,33 @@ class CompareOfficialAlertService:
             if is_new:
                 new_or_escalated.append((alert, loc_ids))
         return new_or_escalated, per_location_new
+
+    def _day_window_end(self, preset_id: str, loc, now: datetime) -> datetime:
+        """Issue #1460 (P4): Ende des HEUTIGEN Tagesfensters dieses Ortes, in
+        dessen ORTSZEIT (ADR-0035-Default 4-19 Uhr, wenn das Preset nichts
+        anderes gesetzt hat).
+
+        Ein Fenster ueber Mitternacht (`start > end`, seit #1361/#1372 S1b
+        gueltig) endet am FOLGETAG zur Endstunde. Liegt das Fensterende bereits
+        hinter uns (Abruf nach Feierabend), wird auf `now` geklemmt statt ein
+        rueckwaerts laufendes Fenster zu bilden -- dann bleiben genau die
+        gerade gueltigen Warnungen sichtbar, statt dass der Ortsvergleich
+        abends taub wird."""
+        from output.renderers.day_window import resolve_configured_window
+        from utils.timezone import tz_for_coords
+
+        preset = next(
+            (p for p in self._load_presets() if p.get("id") == preset_id), {}
+        )
+        start_hour, end_hour = resolve_configured_window(
+            preset.get("day_window_start_hour"), preset.get("day_window_end_hour")
+        )
+        tz = tz_for_coords(loc.lat, loc.lon) or timezone.utc
+        local_now = now.astimezone(tz)
+        end_local = local_now.replace(hour=end_hour, minute=0, second=0, microsecond=0)
+        if start_hour > end_hour and end_local <= local_now:
+            end_local += timedelta(days=1)
+        return max(end_local.astimezone(timezone.utc), now)
 
     def _record_state(self, preset_id: str, per_location_new: dict) -> None:
         now_iso = datetime.now(timezone.utc).isoformat()
