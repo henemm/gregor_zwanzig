@@ -17,9 +17,21 @@ tags: [gewitter, provider, meteofrance, s2a]
 ## Purpose
 
 Météo-France sagt für Frankreich und Korsika die **erwartete Blitzdichte** voraus
-(`LITOTA3`, „Average lightning strike density over 3 hours"). Dieser Wert wird
+(„Average lightning strike density over 3 hours"). Dieser Wert wird
 abgerufen und in ein **eigenes Feld** des gemeinsamen Datenmodells gelegt — regulär
 bei jeder Vorhersage, nicht nur bei Ausfall der Hauptquelle.
+
+> ⚠️ **Nachtrag 2026-08-03 (`c33e7b28`), gilt für diese ganze Spec:** Die hier
+> durchgängig verwendete Kurzform **`LITOTA3` ist kein Abrufname** — sie kommt im
+> Angebot des Dienstes (`GetCapabilities`) **0-mal** vor. Der Dienst führt die Größe
+> als `AVERAGE_LIGHTNING_STRIKE_DENSITY_OVER_3HOURS__GROUND_OR_WATER_SURFACE`
+> (Konstante `providers.meteofrance.LIGHTNING_COVERAGE`). Solange die Kurzform
+> eingetragen war, endete **jeder** Abruf in 404 — lautlos, weil fail-soft griff; das
+> Feld blieb dauerhaft leer, obwohl alle 24 Tests grün waren (sie lesen eine
+> aufgezeichnete Datei, der Name steckt im Abruf-, nicht im Lesepfad). Ebenfalls
+> korrigiert: der Sicherheitsabstand zur Wahl des GRIB-Laufs, siehe
+> `docs/specs/fast/fix-1457-s2a-echte-abrufnamen.md`. Die folgenden Erwähnungen von
+> `LITOTA3` sind als **historisch** zu lesen.
 
 Erste Scheibe von S2 (#1457) aus dem Gewitter-Konzept #1419. **Für Korsika ist das
 die beste verfügbare Gewitterquelle** (1,3 km Maschenweite, direkte Blitzvorhersage

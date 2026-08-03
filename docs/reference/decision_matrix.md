@@ -33,6 +33,29 @@ Météo des forêts, Massiv-Sperren) sind **nicht** Teil dieser Tabelle — sie 
 Wetter-Provider im Sinne von `get_provider()`, sondern ein eigenständiges,
 länderneutrales Warnungs-System. Details: `docs/features/epic-1073-alerts-at-it.md`.
 
+## 🔴 Abrufnamen IMMER gegen das Angebot des Dienstes prüfen (Lehre aus #1457, 2026-08-03)
+
+**Bevor** eine neue Wettergröße angebunden wird — S2b (DWD), S2c, #1474, #1475 —
+gilt: den Namen, unter dem sie abgerufen wird, gegen die Auskunftsschnittstelle des
+Zielsystems prüfen (`GetCapabilities` bei WCS, Verzeichnislisting bei `opendata.dwd.de`).
+
+Grund: Die Namen in der Konzept-Tabelle von #1419 (`lpi`, `lpi_con_max`, `grau_gsp`,
+`cape_ml`, `DIAG_GRELE`, `LITOTA3`) sind **Kurzformen aus der Fachliteratur, keine
+Abrufnamen**. Météo-France führt seine 46 Größen ausschließlich unter ausgeschriebenen
+Namen. Die Kurzform `LITOTA3` stand bis `c33e7b28` im Code — sie kommt im Angebot des
+Dienstes **0-mal** vor, jeder Abruf endete in 404, und weil fail-soft korrekt griff,
+blieb das Feld **lautlos** leer. 24 grüne Tests haben es nicht bemerkt: Sie lesen eine
+aufgezeichnete Datei, der Name steckt im **Abruf**pfad, nicht im **Lese**pfad.
+
+Dieselbe Prüfung hat nebenbei geklärt, dass Hagel regulär verfügbar ist
+(`HAIL__GROUND_OR_WATER_SURFACE`, `GRAUPEL__GROUND_OR_WATER_SURFACE`) — die als
+ungeklärt geführte Kurzform `DIAG_GRELE` existiert dort ebenfalls nicht (#1475).
+
+Für Météo-France erledigt das ab jetzt automatisch der Live-Test
+`tests/tdd/test_thunder_coverage_name_live.py` (Marker `live`): Er liest den Namen
+**aus dem Produktivcode** und prüft ihn gegen `GetCapabilities`. **S2b braucht ein
+Gegenstück für den DWD** — sonst wiederholt sich der Fehler dort.
+
 ## Gewitter-Zuständigkeit: eigene Tabelle, getrennt von der Grundvorhersage (#1457 S2a)
 
 Seit #1457 S2a gibt es **zwei** Zuständigkeitstabellen, und das ist Absicht:
