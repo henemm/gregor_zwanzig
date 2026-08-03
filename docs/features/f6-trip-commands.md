@@ -206,6 +206,23 @@ Diese Befehle gibst du direkt als Telegram-Nachricht ein oder tappst sie aus dem
 
 **Wichtig:** Telegram sendet getappte Menü-Befehle immer mit führendem Slash (z.B. `/glance`). Gregor kennt sowohl die kurzen Varianten (`/s`) als auch die vollständigen Menü-Namen (`/glance`) — beide funktionieren.
 
+### Welcher Tag ist „heute"? (ADR-0044)
+
+**Kalendertage bestimmen sich nach der Ortszeit der Tour**, nicht nach Weltzeit. Wer um
+00:30 Ortszeit „heute" abfragt, bekommt seinen Tag — nicht den, der in Greenwich gerade
+gilt. Die Zone wird aus den Koordinaten des Wegpunkts aufgelöst.
+
+Ein Ortstag hat dabei nicht immer 24 Stunden: an den Umstellungstagen 23 oder 25. Die
+Stundentabelle bildet das ab.
+
+**Nicht betroffen sind Dauern.** „Die nächsten zwölf Stunden" (Drilldown „heute") ist eine
+Spanne ab jetzt, keine Tagesgrenze — sie läuft über Mitternacht hinaus weiter.
+
+⚠️ **Stand 2026-08-03 gilt das für den Drilldown** (Stunden-/Gewitter-Ansichten, Tier 3).
+Die Befehle `/heute`, `/morgen` und `/glance` folgen noch der Weltzeit — sie lösen einen
+**Versand** aus und brauchen deshalb eine eigene Abwägung. Ebenso `### ruhetag`,
+`/status` und `/jetzt`. Siehe ADR-0044, Abschnitt „Noch nicht umgesetzt".
+
 ### Zoom-Navigation (via Button-Klicks)
 
 Die Tier-1-Glance (`/s`) und Tier-2-Timeline (`/th`, `/tm`) enthalten Buttons:

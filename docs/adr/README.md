@@ -106,3 +106,4 @@ bzw. in den Specs unter `docs/specs/`.
 | [0041](0041-zustaendigkeit-warn-quellen-drei-muster.md) | Zuständigkeit einer Warn-Quelle wird nach Art des Endpunkts bestimmt — drei Muster statt einheitlicher Geometrie (Issues #1397 Defekt 2, #1400, #1445) | Akzeptiert |
 | [0042](0042-namensform-folgt-der-platzgrenze.md) | Die Namensform einer Wettergröße folgt der Platzgrenze, nicht einer pauschalen Sprachpräferenz — Protokoll-Token nie übersetzen, Anzeige-Namen nach Platz (Issues #1453, #862/#849 bestätigt) | Akzeptiert |
 | [0043](0043-empfindlichkeitsstufe-als-niveau-statt-zweiter-alarm-typ.md) | Die Empfindlichkeitsstufe ist der einzige Alarm-Regler — bei Gefahrenstufen-Größen wirkt sie über das erreichte Niveau (löst 0040 ab, Issue #1460) | Akzeptiert |
+| [0044](0044-kalendertage-folgen-der-ortszeit.md) | „Heute" und „morgen" bestimmen sich nach der Ortszeit der Tour, nicht nach Weltzeit — Dauern bleiben davon unberührt (ergänzt 0035, Issue #1470) | Akzeptiert |
