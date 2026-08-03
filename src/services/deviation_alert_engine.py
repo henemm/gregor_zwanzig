@@ -16,6 +16,7 @@ Reihenfolge und Bedingungen sind 1:1 aus `TripAlertService` übernommen
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, time as time_type, timedelta, timezone
 from typing import List, Optional, Set
@@ -24,6 +25,8 @@ from zoneinfo import ZoneInfo
 from app.models import ChangeSeverity, WeatherChange
 from services.point_weather import AlertEvaluationConfig, PointWeatherData
 from services.weather_change_detection import WeatherChangeDetectionService
+
+logger = logging.getLogger(__name__)
 
 VIENNA = ZoneInfo("Europe/Vienna")  # Vorbild alert_daily_limit.py:21
 
@@ -73,7 +76,10 @@ class DeviationAlertEngine:
 
     @staticmethod
     def is_quiet_hours(
-        now: datetime, quiet_from: Optional[str], quiet_to: Optional[str]
+        now: datetime,
+        quiet_from: Optional[str],
+        quiet_to: Optional[str],
+        context_label: str = "",
     ) -> bool:
         """Prüft, ob `now` (in Europe/Vienna-Lokalzeit) innerhalb des
         konfigurierten Ruhezeit-Fensters liegt — inkl. Mitternachts-Wrap.
@@ -87,13 +93,44 @@ class DeviationAlertEngine:
         `alert_daily_limit.py` (dieselbe Konvention für den
         Tageszähler-Reset). Mitternachts-Wrap-Logik unverändert aus
         `TripAlertService._is_quiet_hours()` übernommen.
+
+        Issue #1479 (Wurzel-Härtung): ein unbrauchbarer Ruhezeit-Wert gilt als
+        „keine Ruhezeit gesetzt" (`False`) statt eine Ausnahme an den Aufrufer
+        durchzureichen. `context_label` ist die Kennung des betroffenen
+        Ortsvergleichs/Trips und macht die Protokollzeile im Betrieb
+        zuordenbar.
         """
         if not quiet_from or not quiet_to:
             return False
         aware_now = now if now.tzinfo is not None else now.replace(tzinfo=timezone.utc)
         local_now = aware_now.astimezone(VIENNA)
-        from_time = time_type.fromisoformat(quiet_from)
-        to_time = time_type.fromisoformat(quiet_to)
+        try:
+            from_time = time_type.fromisoformat(quiet_from)
+            to_time = time_type.fromisoformat(quiet_to)
+        except Exception as e:
+            # Issue #1479 (Wurzel-Fix, Begründung 1:1 aus #1467 S2 AG2 F001/F003):
+            # absichtlich breit auf `Exception`, weil der Wert aus einer
+            # Nutzerdatei stammt (`briefings/<id>.json`), nicht aus
+            # Programmlogik — weder Go (`internal/model/compare_preset.go`)
+            # noch Python erzwingen zur Laufzeit einen "HH:MM"-String. Ein
+            # kaputter String wirft `ValueError`, ein Nicht-String
+            # (`int`/`float`/`list`/`bool`/`dict`) `TypeError`. Der Schaden bei
+            # zu enger Klausel (Alarm bleibt für ALLE Ortsvergleiche/Trips des
+            # Kontos aus — laut #1467 der gefährlichste Fehlerfall) wiegt
+            # schwerer als der Schaden bei zu breiter Klausel (ein echter
+            # Programmfehler landet als Warnung im Protokoll statt
+            # abzustürzen; die Meldung geht trotzdem raus). Deshalb ist der
+            # Ausnahmetyp (`type(e).__name__`) in dieser Zeile PFLICHT, damit
+            # ein echter Programmfehler auffindbar bleibt und nicht als
+            # "kaputter Nutzerwert" durchgeht. Der `try` umschliesst bewusst
+            # NUR die beiden `fromisoformat`-Zeilen — die Zeitzonen-Umrechnung
+            # darüber darf weiter laut scheitern.
+            logger.warning(
+                f"Unbrauchbarer Ruhezeit-Wert{f' fuer {context_label}' if context_label else ''} "
+                f"(alert_quiet_from={quiet_from!r}, alert_quiet_to={quiet_to!r}): "
+                f"{type(e).__name__}: {e} — wird wie 'keine Ruhezeit gesetzt' behandelt."
+            )
+            return False
         current = local_now.time()
         if from_time > to_time:
             return current >= from_time or current < to_time

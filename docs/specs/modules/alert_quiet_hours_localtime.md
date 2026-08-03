@@ -2,7 +2,7 @@
 entity_id: alert_quiet_hours_localtime
 type: module
 created: 2026-07-18
-updated: 2026-07-18
+updated: 2026-08-03
 status: draft
 version: "1.0"
 tags: [alerts, quiet-hours, timezone, bugfix, issue-1312, epic-1301]
@@ -238,4 +238,11 @@ werden bestehende, heute grüne Tests durch D1 rot.
 
 ## Changelog
 
+- 2026-08-03: **Nachtrag Issue #1479** — `is_quiet_hours()` reicht seit der
+  Wurzel-Härtung keine Ausnahme mehr an den Aufrufer durch: ein unbrauchbarer
+  Wert (kaputter String oder Nicht-String) gilt als „keine Ruhezeit gesetzt"
+  und wird mit Ausnahmetyp, Rohwerten und der Kennung des betroffenen
+  Ortsvergleichs/Trips protokolliert. Der neue optionale Parameter
+  `context_label` trägt diese Kennung. Die hier beschriebene Zeitzonen- und
+  Wrap-Logik bleibt unverändert. Spec: `fix_1479_ruhezeit_wurzel.md`.
 - 2026-07-18: Initial spec erstellt — Issue #1312, Scheibe D1 von Epic #1301

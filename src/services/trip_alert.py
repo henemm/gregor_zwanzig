@@ -508,7 +508,8 @@ class TripAlertService:
             True if alerts should be suppressed (quiet hours active)
         """
         return DeviationAlertEngine.is_quiet_hours(
-            now, trip.alert_quiet_from, trip.alert_quiet_to
+            now, trip.alert_quiet_from, trip.alert_quiet_to,
+            context_label=trip.id,
         )
 
     def _is_throttled_with_cooldown(self, trip: "Trip") -> bool:

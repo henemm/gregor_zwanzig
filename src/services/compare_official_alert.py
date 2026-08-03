@@ -108,6 +108,7 @@ class CompareOfficialAlertService:
             datetime.now(timezone.utc),
             preset.get("alert_quiet_from"),
             preset.get("alert_quiet_to"),
+            context_label=preset_id,
         ):
             logger.debug(f"Compare official alert quiet hours active for preset {preset_id}")
             return False
