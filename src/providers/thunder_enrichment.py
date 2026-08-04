@@ -28,6 +28,31 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("thunder_enrichment")
 
+# Signalname -> Modellfeld (#1457 S2b). Das EINZIGE Vokabular, das dieser
+# Anschluss kennt: keine Quelle, kein Providername, nur Signale. Eine neue
+# Quelle wird dadurch wirksam, dass sie das Protokoll erfuellt, in der
+# Zustaendigkeitstabelle steht und ihr Signal hier EINE Zeile bekommt — der
+# Dispatch unten wird dabei nie angefasst (Spec AC-9).
+_SIGNAL_ZU_FELD: Dict[str, str] = {
+    "lpi": "lightning_potential_lpi_jkg",
+    "grau_gsp": "hail_potential_grau_gsp",
+}
+
+# Feld der bestehenden Einzelwert-Quelle (S2a). Es steht NICHT in der Tabelle
+# oben, weil jene Quelle ihr Signal nicht benennt.
+_EINZELWERT_FELD = "lightning_density_per_km2_3h"
+
+
+def _bekannte_felder() -> tuple:
+    """Alle Felder, die dieser Anschluss ueberhaupt befuellen kann.
+
+    Wird bei JEDEM Aufruf frisch aus der Tabelle abgeleitet, damit eine neue
+    Zeile dort automatisch auch vom Fuell-Waechter gesehen wird — sonst muesste
+    beim Eintragen einer neuen Quelle daran gedacht werden, und genau das wird
+    vergessen (Spec AC-5).
+    """
+    return (_EINZELWERT_FELD, *_SIGNAL_ZU_FELD.values())
+
 
 def _naiv_utc(ts: datetime) -> datetime:
     """Zeitstempel auf naive UTC bringen — Vorhersagereihen mischen naive
@@ -97,6 +122,11 @@ def enrich_thunder(
     Fehlender Wert bleibt `None` und wird NIE 0 (Spec AC-2): "keine Aussage"
     ist nicht "keine Gefahr".
 
+    Issue #1457 S2b: Quellen, die mehrere Signale getrennt und benannt liefern
+    (DWD: Blitzpotenzial/Hagel), fuellen ueber ``_SIGNAL_ZU_FELD`` eigene
+    Rohwert-Felder. Diese Rohwerte gehen BEWUSST nicht in die Stufen-Fusion
+    unten ein (S2b AC-8: keine Stufenbildung in dieser Scheibe).
+
     Issue #1474 (AC-9): nach dem Fuellen von ``lightning_density_per_km2_3h``
     wird zusaetzlich ``dp.thunder_level`` mit dem ueber Wettercode, Blitzdichte
     UND CAPE fusionierten Ergebnis ueberschrieben -- EIN gemeinsamer
@@ -106,10 +136,16 @@ def enrich_thunder(
     """
     if not reihe.data:
         return
-    # Fill-only (Muster `_enrich_snow`): traegt die Reihe schon Gewittersignale,
-    # gibt es nichts zu holen -- die Fusion lief dann bereits in einem
-    # frueheren Aufruf.
-    if any(dp.lightning_density_per_km2_3h is not None for dp in reihe.data):
+    # Fill-only (Muster `_enrich_snow`): traegt die Reihe schon IRGENDEIN
+    # bekanntes Gewittersignal, gibt es nichts zu holen -- die Fusion lief dann
+    # bereits in einem frueheren Aufruf. Bewusst ueber ALLE bekannten Felder
+    # (#1457 S2b, Spec AC-5) — waere der Waechter auf das Feld der
+    # Einzelwert-Quelle festgenagelt, griffe er fuer jede Quelle, die dieses
+    # Feld nie befuellt, ueberhaupt nicht: ein zweiter Aufruf auf dieselbe
+    # Reihe loeste dann unbemerkt einen zweiten vollstaendigen Abruf aus.
+    felder = _bekannte_felder()
+    if any(getattr(dp, feld, None) is not None
+           for dp in reihe.data for feld in felder):
         return
 
     try:
@@ -128,10 +164,12 @@ def _fetch_lightning_density(
     location: "Location",
     bereits_befragt: Optional[str],
 ) -> None:
-    """Ruft die zustaendige Quelle ab und fuellt ``dp.lightning_density_per_km2_3h``
-    (in-place). Extrahiert aus ``enrich_thunder()``, damit dessen frueher
-    ``return`` bei fehlender Zustaendigkeit/leerer Antwort die nachfolgende
-    Fusion (``_fuse_thunder_levels``) nicht mehr uebersprungen wird."""
+    """Ruft die zustaendige Quelle ab und fuellt deren Signalfelder in-place:
+    ``dp.lightning_density_per_km2_3h`` (Einzelwert-Quelle) bzw. die Felder aus
+    ``_SIGNAL_ZU_FELD`` (benannte Quelle, #1457 S2b). Extrahiert aus
+    ``enrich_thunder()``, damit dessen frueher ``return`` bei fehlender
+    Zustaendigkeit/leerer Antwort die nachfolgende Fusion
+    (``_fuse_thunder_levels``) nicht mehr uebersprungen wird."""
     from providers.thunder_routing import thunder_provider_for
 
     quelle = thunder_provider_for(location.latitude, location.longitude)
@@ -158,29 +196,45 @@ def _fetch_lightning_density(
     # statt zweier, die auseinanderdriften. Wer den Sammelweg nicht hat,
     # wird unveraendert einzeln gefragt; das bleibt Teil des Protokolls und
     # nennt weiterhin keine Quelle beim Namen (AC-8).
+    #
+    # Benannter Abruf hat Vorrang (Spec AC-9, #1457 S2b): Quellen, die
+    # MEHRERE Signale getrennt liefern, sagen selbst, wie ihre Signale
+    # heissen; welches Modellfeld dazu gehoert, steht allein in der Tabelle
+    # oben. Wer den benannten Weg nicht hat, bleibt unveraendert auf dem
+    # Einzelwert-/Sammelweg vollwertig.
+    benannt = getattr(provider, "fetch_thunder_signals_named", None)
     sammeln = getattr(provider, "fetch_thunder_signals_multi", None)
-    if callable(sammeln):
-        gesammelt = sammeln([location], von, bis) or {}
-        # Ein Ort rein, ein Eintrag raus — der Schluessel gehoert der
-        # Quelle, deshalb wird er hier nicht nachgebaut.
-        signale: Dict[int, Optional[float]] = (
-            next(iter(gesammelt.values())) if len(gesammelt) == 1 else {}
-        )
+    if callable(benannt):
+        benannte = benannt(location, von, bis) or {}
+        eintraege = [
+            (feld, benannte.get(signalname) or {})
+            for signalname, feld in _SIGNAL_ZU_FELD.items()
+        ]
     else:
-        signale = provider.fetch_thunder_signals(location, von, bis)
-    if not signale:
+        if callable(sammeln):
+            gesammelt = sammeln([location], von, bis) or {}
+            # Ein Ort rein, ein Eintrag raus — der Schluessel gehoert der
+            # Quelle, deshalb wird er hier nicht nachgebaut.
+            signale: Dict[int, Optional[float]] = (
+                next(iter(gesammelt.values())) if len(gesammelt) == 1 else {}
+            )
+        else:
+            signale = provider.fetch_thunder_signals(location, von, bis)
+        eintraege = [(_EINZELWERT_FELD, signale or {})]
+    if not any(werte for _feld, werte in eintraege):
         return
 
     nach_ts = {_naiv_utc(dp.ts): dp for dp in reihe.data}
     gefuellt = 0
-    for offset, wert in signale.items():
-        if wert is None:
-            continue  # AC-2: leer bleibt leer, nie 0
-        dp = nach_ts.get(basis + timedelta(hours=offset))
-        if dp is None:
-            continue
-        dp.lightning_density_per_km2_3h = wert
-        gefuellt += 1
+    for feld, werte in eintraege:
+        for offset, wert in werte.items():
+            if wert is None:
+                continue  # AC-2: leer bleibt leer, nie 0
+            dp = nach_ts.get(basis + timedelta(hours=offset))
+            if dp is None:
+                continue
+            setattr(dp, feld, wert)
+            gefuellt += 1
     if gefuellt:
         logger.info(
             "Gewittersignale von '%s': %d Zeitpunkte gefuellt", quelle, gefuellt

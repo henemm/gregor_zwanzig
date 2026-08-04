@@ -150,6 +150,16 @@ class ForecastDataPoint:
     # #1419 Abs. 3.1.
     lightning_density_per_km2_3h: Optional[float] = None
 
+    # Gewittersignale DWD ICON-D2 (#1457 S2b): Blitzpotenzial (energiebasiert,
+    # J/kg, Messwerte bis ~225) und Hagelsignal (Graupel-Niederschlag, aus dem
+    # seit Laufbeginn kumulierten Rohwert auf ein Stunden-Signal
+    # zurueckgerechnet). BEWUSST zwei getrennte Felder und BEWUSST getrennt vom
+    # Blitzdichte-Feld oben: andere Groessen, andere Skalen (#1419 Abs. 3.1).
+    # Diese Scheibe reicht nur Rohwerte durch — keine Stufenbildung (AC-8),
+    # die baut #1474.
+    lightning_potential_lpi_jkg: Optional[float] = None
+    hail_potential_grau_gsp: Optional[float] = None
+
     # Gewitter-Wahrscheinlichkeit (Issue #1474 Abschnitt 5, getrennte Achse von
     # thunder_level/"Staerke"): vorbereitetes, in dieser Scheibe von KEINER
     # Quelle befuelltes Feld, kein Renderer-Anschluss. Befuellung ist #1419 S6

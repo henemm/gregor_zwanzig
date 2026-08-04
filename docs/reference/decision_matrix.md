@@ -23,7 +23,7 @@ Wetterdaten über `get_provider("openmeteo")` — Registry in
 |---|---|
 | `geosphere` | GeoSphere Austria (Direktanbindung, AT-Fallback-Basis) |
 | `fr_direct` | Météo-France AROME-WCS (Direktanbindung, FR-Fallback, #1143) — liefert seit #1457 S2a zusätzlich zu Temperatur/Wind/Niederschlag die erwartete Blitzdichte (`lightning_density_per_km2_3h`, nur Frankreich/Korsika; eigenes Feld, nicht mit dem DWD-Blitzpotenzial vermischt); Gewitter-Zuständigkeit läuft über eine eigene Tabelle, s. u. |
-| `de_direct` | DWD ICON-D2 Open Data (GRIB2-Direktanbindung, DE-Fallback, #1144) |
+| `de_direct` | DWD ICON-D2 Open Data (GRIB2-Direktanbindung, DE-Fallback, #1144) — liefert seit #1457 S2b zusätzlich zu Temperatur/Wind/Niederschlag Blitzpotenzial und Hagel-Potenzial (`lightning_potential_lpi_jkg` und `hail_potential_grau_gsp`, nur Deutschland/Alpen/Österreich; eigene Felder, nicht mit der Météo-France Blitzdichte vermischt); Gewitter-Zuständigkeit läuft über eine eigene Tabelle, s. u. |
 | `brightsky` | DWD-Daten via BrightSky — genutzt im Radar-Pfad (`src/services/radar_service.py`) |
 | `radar_dpc` | Radar-Nowcast Italien (DPC) — Wetter-Provider, kein Warndienst; nicht zu verwechseln mit der amtlichen DPC-Warnquelle `DpcSource` (`src/services/official_alerts/dpc.py`, Issue #1427), die nicht in dieser Tabelle geführt wird (s.u.) |
 | `fixture` | Offline-Testmodus: aktiv wenn `GZ_TEST_FIXTURE_DIR` gesetzt (#346) — bedient `openmeteo`-Anfragen aus versionierten Fixtures |
@@ -102,7 +102,7 @@ Seit #1457 S2a gibt es **zwei** Zuständigkeitstabellen, und das ist Absicht:
 | Tabelle | Zweck | Datei |
 |---|---|---|
 | `region_routing.direct_provider_for` | Zuständigkeit für die **Grundvorhersage** (Temperatur/Wind/Schnee) im Cross-Provider-Fallback | `src/providers/region_routing.py` |
-| `thunder_routing.thunder_provider_for` | Zuständigkeit für **Gewittersignale** (`lightning_density_per_km2_3h`) | `src/providers/thunder_routing.py` |
+| `thunder_routing.thunder_provider_for` | Zuständigkeit für **Gewittersignale** (`lightning_density_per_km2_3h`, `lightning_potential_lpi_jkg`, `hail_potential_grau_gsp`) | `src/providers/thunder_routing.py` |
 
 Grund für die Trennung: Die Zuständigkeit ist **größenabhängig** — ein Dienst
 kann für Temperatur/Wind/Schnee die beste Quelle sein und trotzdem kein
@@ -119,8 +119,8 @@ nur in `thunder_routing.py` nach und ruft das optionale Protokoll
 `ThunderSignalProvider` (`src/providers/base.py`). Ein neuer Dienst wird
 wirksam, indem er das Protokoll erfüllt und eine Zeile in `thunder_routing.py`
 bekommt; die Anreicherungsstelle wird dabei nie angefasst. Heute trägt die
-Tabelle nur `fr_direct` (Frankreich/Korsika) ein; S2b (DWD) und S2c
-(Lückenfüller) ergänzen weitere Zeilen. Fehlt ein Wert, bleibt das Feld
+Tabelle zwei Provider ein: `fr_direct` (Frankreich/Korsika, S2a) und `de_direct` (Deutschland/Alpen/Österreich, S2b). S2c
+(Lückenfüller) ergänzt weitere Zeilen. Fehlt ein Wert, bleibt das Feld
 `None` — „keine Aussage" ist nicht „keine Gefahr".
 
 ## Kontingent-Regeln (Open-Meteo)

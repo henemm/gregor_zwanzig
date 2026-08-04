@@ -39,8 +39,20 @@ class _ThunderRegion(NamedTuple):
 # verschieben kann, ohne die Grundvorhersage-Zustaendigkeit anzufassen.
 # Bekannte Grenze (Spec "Known Limitations" 3): die Ostgrenze 9,7 O laesst
 # fuer Korsika (9,07 O) nur eine kleine Marge.
+# #1457 S2b: Das ICON-D2-Gitter (Rechteck der ausgelieferten
+# `regular-lat-lon`-Dateien, gemessen 2026-08-03 an einer echten Antwort:
+# left=-3,95 bottom=43,17 right=20,35 top=58,09) deckt DE, den Alpenraum und
+# Oesterreich ab — und damit auch den Karnischen Hoehenweg, dessen
+# Grundvorhersage von GeoSphere kommt, das kein Gewittersignal hat.
+# REIHENFOLGE IST TRAGEND: das ICON-D2-Rechteck reicht bis -3,95 O und
+# ueberdeckt damit halb Frankreich. Stuende diese Zeile VOR der FR-Zeile,
+# verloere Korsika seine bereits produktive Blitzdichte.
+# Bekannte Grenze: das Rechteck ist rund 17 % groesser als das eigentliche
+# Modellgebiet; ausserhalb davon liefert der Dienst einen Fuellwert, den der
+# Provider auf "keine Aussage" abbildet (Spec AC-2).
 _REGIONS: tuple[_ThunderRegion, ...] = (
     _ThunderRegion("FR", 41.3, 51.1, -5.2, 9.7, "fr_direct"),
+    _ThunderRegion("DE_ALPEN", 43.17, 58.09, -3.95, 20.35, "de_direct"),
 )
 
 

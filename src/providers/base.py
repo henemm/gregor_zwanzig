@@ -110,6 +110,18 @@ class ThunderSignalProvider(Protocol):
         dieses Protokolls: eine Quelle, die nur einzeln kann, bleibt damit
         vollwertig — sonst waere die Huerde fuer eine neue Quelle hoeher als
         noetig (Spec AC-8).
+
+        FREIWILLIGE ERWEITERUNG `fetch_thunder_signals_named(location, start,
+        end) -> dict[str, dict[int, Optional[float]]]` (#1457 S2b, Spec AC-9):
+        Quellen, die MEHRERE benannte Gewittersignale liefern (z. B.
+        Blitzpotenzial und Hagel getrennt), bieten sie zusaetzlich an;
+        Schluessel der aeusseren Ebene ist der Signalname, den die Quelle
+        vergibt. Der Anreicherungsweg nutzt sie, wenn es sie gibt, und schlaegt
+        Signalname -> Modellfeld in seiner eigenen kleinen Tabelle nach — die
+        Quelle kennt kein Modellfeld, der Anreicherungsweg keine Quelle.
+        BEWUSST kein Pflichtteil dieses Protokolls: die bestehende
+        Einzelwert-Signatur zu aendern braeche jede heutige Quelle ohne
+        fachlichen Gewinn.
         """
         ...
 

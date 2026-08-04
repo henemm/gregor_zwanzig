@@ -74,6 +74,51 @@ FORECAST_HOURS: List[int] = list(range(1, 25))
 
 PARAMS = ("t_2m", "u_10m", "v_10m", "tot_prec")
 
+# --- Gewittersignale (#1457 S2b) ------------------------------------------
+# Abrufnamen beim echten Dienst verifiziert (2026-08-03): unter
+# `.../icon-d2/grib/<HH>/` existieren die Ordner `lpi` und `grau_gsp`, das
+# Dateinamensmuster ist identisch zu den vier Basis-Parametern oben. Sie
+# stehen bewusst als KONSTANTE hier, damit der Live-Test (Spec AC-6) sie von
+# hier liest, statt sie zu wiederholen — genau diese Naht fehlte bei S2a
+# (`LITOTA3` existierte beim Dienst nicht, jeder Abruf lief lautlos in 404).
+# Reihenfolge = Reihenfolge der Signale; Index 0 ist das Signal, das der
+# Einzelwert-Pflichtteil des Protokolls liefert.
+THUNDER_PARAMS = ("lpi", "grau_gsp")
+
+# `grau_gsp` ist seit Laufbeginn KUMULIERT (empirisch 2026-08-03, Zelle
+# 45,94N/7,86O: ab +8h konstant 3,3035 ueber +12/+16/+20/+24h) — exakt wie
+# `tot_prec`. Der Rohwert ist damit kein Stunden-Signal und wird ueber
+# `_precip_series_from_cumulative` zurueckgerechnet. `lpi` ist ein
+# Momentanwert und bleibt unveraendert.
+THUNDER_CUMULATIVE_PARAMS = ("grau_gsp",)
+
+# Fuellwert ausserhalb des Modellgebiets, gemessen (rasterio `dataset.nodata`)
+# — 9999.0, NICHT -999.0 (der `echotop`-Analogieschluss traegt hier nicht).
+# Das ausgelieferte `regular-lat-lon`-Rechteck ist rund 17 % groesser als das
+# Modellgebiet; ohne diese Abbildung stuende 9999 als Blitzpotenzial in der
+# Vorhersage — eine erfundene Extremlage (Spec AC-2).
+THUNDER_FILL_VALUE = 9999.0
+
+# Eigenes Zeitbudget der Gewitter-Anreicherung (Spec AC-4), BEWUSST getrennt
+# von FETCH_DEADLINE_SECONDS: die Anreicherung ist best effort und darf das
+# Budget der Grundvorhersage weder teilen noch anknabbern. Herleitung analog
+# meteofrance.py:114 — dort 180s fuer 96 Calls, also ~1,9s je Call; fuer die
+# bis zu 48 zusaetzlichen Calls hier ergibt das 90s. Fest, nicht rollend
+# (Lehre #1448): EINMAL je Abruf gebildet, dann vor jedem Einzel-Call geprueft.
+THUNDER_FETCH_DEADLINE_SECONDS = 90.0
+
+# Rueckfall auf hoechstens zwei aeltere Laeufe (je 3h), macht bis zu 6h
+# zurueck ab dem bereits 3h zurueckgesetzten `_latest_run` (Spec AC-7). Ein
+# GROESSERER Grundabstand ist beim DWD nicht noetig (gemessen 2026-08-03: der
+# Lauf 15:00Z war um 16:22 UTC vollstaendig veroeffentlicht, ~1h22); der
+# Rueckfall federt aber den unguenstigsten Fall ab, in dem `_latest_run` nur
+# 3h Abstand haelt und eine Verzoegerung beim DWD ihn aufzehrt.
+THUNDER_RUN_FALLBACK_STAGES = 2
+
+# Groesster Zeitschritt, den ICON-D2 je Lauf veroeffentlicht (gemessen:
+# 000..048, stuendlich). Darueber hinaus wird gar nicht erst abgerufen.
+THUNDER_MAX_TIMESTEP = 48
+
 
 def _is_retryable_error(exception: BaseException) -> bool:
     """1:1-Muster meteofrance.py: retryable bei 500/502/503/504 +
@@ -98,6 +143,41 @@ def _latest_run(now: datetime) -> datetime:
     floored_hour = (now.hour // 3) * 3
     run = now.replace(hour=floored_hour, minute=0, second=0, microsecond=0)
     return run - timedelta(hours=3)
+
+
+def _thunder_run_candidates(now: datetime) -> List[datetime]:
+    """Kandidaten-Laeufe fuer die Gewittersignale, juengster zuerst (Spec
+    AC-7). Index 0 ist derselbe Lauf wie fuer die Grundvorhersage; antwortet
+    er mit 404, wird auf bis zu `THUNDER_RUN_FALLBACK_STAGES` weitere, je 3h
+    aeltere Laeufe zurueckgefallen. Der Nullpunkt der Stunden-Offsets bleibt
+    davon unberuehrt — er haengt am gewuenschten Zeitfenster, nicht am Lauf
+    (sonst stuende ein Gewitter beim Rueckfall drei Stunden zu frueh)."""
+    primaer = _latest_run(now)
+    return [
+        primaer - timedelta(hours=3 * stufe)
+        for stufe in range(THUNDER_RUN_FALLBACK_STAGES + 1)
+    ]
+
+
+def _as_utc(ts: datetime) -> datetime:
+    """Zeitstempel auf UTC-bewusst bringen; naive Werte gelten als UTC."""
+    if ts.tzinfo is None:
+        return ts.replace(tzinfo=timezone.utc)
+    return ts.astimezone(timezone.utc)
+
+
+def _thunder_offsets(base: datetime, end: Optional[datetime]) -> List[int]:
+    """Abzurufende Stunden-Offsets ab `base` (Muster meteofrance).
+
+    Ohne `end` bleibt es beim vollen 24h-Horizont. Liegt `end` vor `base`,
+    ist nichts abzurufen — fuer vergangene Stunden gibt es keine Vorhersage."""
+    if end is None:
+        return list(FORECAST_HOURS)
+    spanne_h = (_as_utc(end) - base).total_seconds() / 3600.0
+    if spanne_h <= 0:
+        return []
+    letzter = min(math.ceil(spanne_h), FORECAST_HOURS[-1])
+    return list(range(1, letzter + 1))
 
 
 def _build_url(run: datetime, offset: int, param: str) -> str:
@@ -128,20 +208,60 @@ def _read_point_value(compressed: bytes, lat: float, lon: float) -> Optional[flo
         return None
 
 
-def _precip_series_from_cumulative(raw_by_offset: Dict[int, Optional[float]]) -> Dict[int, Optional[float]]:
+def _precip_series_from_cumulative(
+    raw_by_offset: Dict[int, Optional[float]],
+    ndigits: int = 1,
+    vorwert: Optional[float] = 0.0,
+) -> Dict[int, Optional[float]]:
     """AC-5: `tot_prec` ist seit Laufbeginn kumuliert — precip_1h_mm[t] ist
-    die Differenz zum vorherigen Zeitschritt, precip_1h_mm[erster
-    Zeitschritt] entspricht dem Rohwert direkt (Laufbeginn implizit 0)."""
+    die Differenz zum vorherigen Zeitschritt.
+
+    `vorwert` ist der kumulierte Stand UNMITTELBAR VOR dem ersten Eintrag in
+    `raw_by_offset`. Fuer die Grundvorhersage (`fetch_forecast`) ist das der
+    Laufbeginn selbst, also 0.0 — dort faengt die Reihe immer bei Zeitschritt
+    1 an. Fuer den Gewitterpfad stimmt diese Annahme NICHT: dort haengt der
+    Nullpunkt am gewuenschten Zeitfenster, der erste abgerufene Zeitschritt
+    liegt in der Praxis mehrere Stunden nach dem Lauf und traegt schon die
+    Kumulation dieser Stunden. Deshalb wird der Anker dort echt abgerufen
+    (s. `fetch_thunder_signals_named`).
+
+    `vorwert=None` heisst "der Stand davor ist unbekannt": dann bleibt der
+    erste Eintrag `None`, statt eine falsche Differenz zu behaupten (AC-2 —
+    keine Aussage ist nicht keine Gefahr). Ab dem zweiten Eintrag rechnet die
+    Reihe wieder normal weiter.
+
+    #1457 S2b: dieselbe Rechnung gilt fuer das Hagelsignal `grau_gsp`, das
+    ebenfalls seit Laufbeginn kumuliert ist. `ndigits` steuert nur die
+    Rundung — der Default 1 haelt das Verhalten fuer den Niederschlag
+    unveraendert, das Hagelsignal braucht mehr Stellen, weil dort schon
+    Hundertstel eine Aussage tragen und auf eine Stelle gerundet still
+    verschwaenden."""
     result: Dict[int, Optional[float]] = {}
-    prev_cumulative = 0.0
+    prev_cumulative = vorwert
     for offset in sorted(raw_by_offset):
         raw = raw_by_offset[offset]
         if raw is None:
             result[offset] = None
             continue
-        result[offset] = max(0.0, round(raw - prev_cumulative, 1))
+        result[offset] = (
+            None if prev_cumulative is None
+            else max(0.0, round(raw - prev_cumulative, ndigits))
+        )
         prev_cumulative = raw
     return result
+
+
+def _thunder_budget_erschoepft(deadline_at: float) -> bool:
+    """Zeitgrenze der Gewitter-Anreicherung (Spec AC-4), fest gebildet und vor
+    JEDEM Einzel-Call geprueft — auch vor dem Anker-Abruf."""
+    if time.monotonic() <= deadline_at:
+        return False
+    logger.warning(
+        "Gewitter-Budget (%.0fs) erschoepft — Anreicherung bricht ab, "
+        "Grundvorhersage unberuehrt",
+        THUNDER_FETCH_DEADLINE_SECONDS,
+    )
+    return True
 
 
 class DwdDirectProvider:
@@ -191,6 +311,146 @@ class DwdDirectProvider:
             raw = self._request(url)
             values[offset] = _read_point_value(raw, lat, lon)
         return values
+
+    def _thunder_point(
+        self, param: str, lat: float, lon: float, ziel: datetime,
+        kandidaten: List[datetime], zustand: Dict[str, object],
+    ) -> Optional[float]:
+        """EIN Punktwert eines Gewittersignals zum absoluten Zeitpunkt `ziel`.
+
+        Rueckfall auf einen aelteren Lauf (Spec AC-7) NUR, solange noch kein
+        Lauf durch eine erfolgreiche Antwort bestaetigt ist. Danach ist ein
+        404 kein "Lauf fehlt", sondern eine einzelne fehlende Stunde — die
+        bleibt `None` und darf nicht die ganze Reihe auf einen anderen Lauf
+        verschieben (Spec AC-2).
+        """
+        while True:
+            lauf = kandidaten[int(zustand["index"])]
+            ttt = int((ziel - lauf).total_seconds() // 3600)
+            if ttt < 0 or ttt > THUNDER_MAX_TIMESTEP:
+                return None
+            try:
+                raw = self._request(_build_url(lauf, ttt, param))
+            except httpx.HTTPStatusError as e:
+                weiterer_kandidat = (
+                    e.response.status_code == 404
+                    and not zustand["bestaetigt"]
+                    and int(zustand["index"]) < len(kandidaten) - 1
+                )
+                if not weiterer_kandidat:
+                    logger.warning(
+                        "Gewittersignal '%s' +%dh nicht abrufbar: %s",
+                        param, ttt, e,
+                    )
+                    return None
+                zustand["index"] = int(zustand["index"]) + 1
+                logger.warning(
+                    "ICON-D2-Lauf %s nicht verfuegbar (404) — Rueckfall auf %s",
+                    lauf.strftime("%Y%m%d%H"),
+                    kandidaten[int(zustand["index"])].strftime("%Y%m%d%H"),
+                )
+                continue
+            except Exception as e:
+                logger.warning(
+                    "Gewittersignal '%s' +%dh nicht abrufbar: %s", param, ttt, e
+                )
+                return None
+            zustand["bestaetigt"] = True
+            wert = _read_point_value(raw, lat, lon)
+            # AC-2: "keine Aussage" ist nicht "keine Gefahr" — der Fuellwert
+            # ausserhalb des Modellgebiets wird NIE durchgereicht und NIE 0.
+            if wert is None or wert >= THUNDER_FILL_VALUE:
+                return None
+            return wert
+
+    def fetch_thunder_signals_named(
+        self,
+        location: "Location",
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ) -> Dict[str, Dict[int, Optional[float]]]:
+        """#1457 S2b: Blitzpotenzial und Hagel je Stunden-Offset, getrennt
+        unter ihrem eigenen Signalnamen. Best effort, fail-soft — wirft NIE
+        (Spec AC-3): ein Ausfall der Gewitterquelle darf die Grundvorhersage
+        nicht kippen.
+
+        Returns:
+            `{Signalname: {Stunden-Offset ab `start`: Wert oder None}}`. Ohne
+            `start` gilt der Lauf der Grundvorhersage als Bezug. Fehlender
+            Wert bleibt `None`, NIE 0 (Spec AC-2).
+
+        Ein Request je Signal und Zeitschritt — ICON-D2 kennt keinen
+        serverseitigen Punkt-Query (s. Modul-Docstring). Ein Sammelabruf ueber
+        mehrere Orte braucht es hier nicht: jede Datei deckt ohnehin das ganze
+        Modellgebiet ab.
+        """
+        ergebnis: Dict[str, Dict[int, Optional[float]]] = {
+            param: {} for param in THUNDER_PARAMS
+        }
+        try:
+            now = datetime.now(timezone.utc)
+            # Nullpunkt der Offsets: das gewuenschte Zeitfenster, nie vor dem
+            # Lauf (davor gibt es keine Vorhersage). Bleibt beim Rueckfall auf
+            # einen aelteren Lauf unveraendert (Spec AC-7).
+            run = _latest_run(now)
+            base = run if start is None else max(_as_utc(start), run)
+            offsets = _thunder_offsets(base, end)
+            kandidaten = _thunder_run_candidates(now)
+            lat, lon = location.latitude, location.longitude
+            zustand: Dict[str, object] = {"index": 0, "bestaetigt": False}
+            # Zeitgrenze fest, nicht rollend (Lehre #1448): EINMAL je Abruf
+            # gebildet, dann vor JEDEM Einzel-Call geprueft.
+            deadline_at = time.monotonic() + THUNDER_FETCH_DEADLINE_SECONDS
+            for param in THUNDER_PARAMS:
+                kumuliert = param in THUNDER_CUMULATIVE_PARAMS
+                # Anker der Differenzbildung: der kumulierte Stand eine Stunde
+                # VOR dem ersten angefragten Zeitschritt. Nur wenn `base`
+                # tatsaechlich auf dem Lauf sitzt, ist dieser Stand 0 (nichts
+                # kumuliert). Sonst — dem Regelfall, weil der Bezugszeitpunkt
+                # praktisch immer Stunden nach dem Lauf liegt — wird er echt
+                # abgerufen: EIN zusaetzlicher Call je kumuliertem Signal.
+                # Ohne ihn traegt die erste gelieferte Stunde die gesamte
+                # Kumulation seit Laufbeginn und ist systematisch zu hoch.
+                anker: Optional[float] = 0.0
+                if kumuliert and offsets and base > run:
+                    if _thunder_budget_erschoepft(deadline_at):
+                        break
+                    anker = self._thunder_point(
+                        param, lat, lon, base, kandidaten, zustand,
+                    )
+                roh: Dict[int, Optional[float]] = {}
+                erschoepft = False
+                for offset in offsets:
+                    if _thunder_budget_erschoepft(deadline_at):
+                        erschoepft = True
+                        break
+                    roh[offset] = self._thunder_point(
+                        param, lat, lon, base + timedelta(hours=offset),
+                        kandidaten, zustand,
+                    )
+                ergebnis[param] = (
+                    _precip_series_from_cumulative(roh, ndigits=4, vorwert=anker)
+                    if kumuliert else roh
+                )
+                if erschoepft:
+                    break
+        except Exception:
+            logger.warning("Gewitter-Abruf fehlgeschlagen", exc_info=True)
+        return ergebnis
+
+    def fetch_thunder_signals(
+        self,
+        location: "Location",
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ) -> Dict[int, Optional[float]]:
+        """Pflichtteil des Protokolls `base.ThunderSignalProvider`: EIN Signal
+        je Stunden-Offset. Duenner Griff in das benannte Ergebnis — EIN
+        Abrufweg, der nicht auseinanderdriften kann (Muster
+        meteofrance.fetch_thunder_signals)."""
+        return self.fetch_thunder_signals_named(location, start, end).get(
+            THUNDER_PARAMS[0], {}
+        )
 
     def fetch_forecast(
         self,
