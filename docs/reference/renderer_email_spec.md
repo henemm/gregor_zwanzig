@@ -207,7 +207,7 @@ Die **alleinige Quelle** der Anzeige-Entscheidung ist `use_friendly_format` in `
 |---|---|---|---|---|---|---|
 | **Severity-Ampel** 🟢🟡🟠🔴 | wind, gust, precip, pop, cape | Ampelpunkt nach `display_thresholds` | Zahl + Einheit | Zahl + Einheit, **keine Markierung** | Zahl + Einheit | Nur HTML hat Ampel; Plain & Roh immer numerisch |
 | **Wetterbild-Piktogramm** | cloud_total, cloud_low, cloud_mid, cloud_high, sunshine | Emoji (☀️🌤️⛅🌥️☁️) | Emoji (gleich) | Zahl | Zahl | Emoji in Einfach (HTML+Plain), Zahl in Roh — unverändert seit #435 |
-| **Gewitter-Symbol** | thunder | ⚡ (MED=„⚡ mögl.", HIGH=„⚡⚡", NONE=„–") | ⚡ (gleiche Symbole) | deutsches Wort (kein / mögl. / hoch) | deutsches Wort (kein / mögl. / hoch) | ⚡-Symbol in Einfach (HTML+Plain); Roh immer deutsches Wort |
+| **Severity-Ampel** 🟢🟡🟠🔴 | thunder | Ampelpunkt (NONE=grün, LOW=gelb, MED=orange, HIGH=rot); **keine Aussage (`None`) = „–"** | deutsches Wort (kein / leicht / mittel / hoch) | deutsches Wort | deutsches Wort | Seit #1491 reguläre Ampel-Spalte: kein ⚡, kein „mögl." mehr. „–" heißt ausschließlich „keine Aussage", nie „keine Gefahr" (`thunder_ampel_band()` liefert für `None` bewusst `None`). Die Gewitter-Pille im Prosa-Block (Zeile 87) behält ihr ⚡ — sie ist nicht Teil der Spalte |
 | **Zahl (kein Modus-Unterschied)** | visibility, temperature, wind_chill, dewpoint, humidity, pressure, uv_index, freezing_level, snowfall_limit, snow_depth, fresh_snow, precip_type | Zahl + Einheit | Zahl + Einheit | Zahl + Einheit | Zahl + Einheit | Unverändert in beiden Modi |
 
 ### Best-Practice-Schwellen (Ampelpunkte für Severity-Metriken)
