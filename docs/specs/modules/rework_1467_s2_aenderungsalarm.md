@@ -536,6 +536,20 @@ dupliziert).
   - Test: Snapshot- und Zustandsdatei vor/nach Handversand vergleichen (unverändert), danach
     Δ über Schwelle simulieren, Alarm muss ausgelöst werden.
 
+- **AC-27:** Given einen Trip mit vorbelegtem Melde-Gedächtnis und gesetztem Δ-Anker, When ein
+  geplantes Briefing (`on_demand=False`) über den neuen geteilten Baustein läuft, Then sind
+  Anker und Gedächtnis danach in **exakt** demselben Zustand wie vor dem Umbau — Reset für
+  genau **eine** Kennung (`trip.id`, nicht mehr und nicht weniger), `official_alert:`-Schlüssel
+  erhalten, Anker vor Reset geschrieben. Und bei `on_demand=True` bleibt beides unangetastet.
+  - Test: die sieben Bestandstests aus `tests/tdd/test_alert_state_briefing_reset.py` bleiben
+    **unverändert** grün (keine Zeile angefasst) — plus ein neuer Test, der den Datei-Zustand
+    nach dem geplanten Briefing gegen einen an `f938159b` gemessenen Goldwert vergleicht und
+    die Zahl der Reset-Aufrufe zählt. Ohne die Zählung bliebe unbemerkt, wenn der Baustein den
+    Trip versehentlich wie ein Preset über mehrere Kennungen zurücksetzt.
+  - Mutations-Gegenprobe (Pflicht): Reset **vor** den Anker ziehen · zweite Kennung
+    hinzufügen · `on_demand` beim Trip-Aufruf hart auf `False` verdrahten — jede dieser drei
+    Verfälschungen MUSS mindestens einen Test rot machen.
+
 **AG6 — Pausierte und archivierte Ortsvergleiche schweigen**
 
 - **AC-20:** Given ein Ortsvergleichs-Preset mit `schedule: "manual"` (pausiert) und einer

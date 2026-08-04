@@ -19,6 +19,7 @@ from app.loader import (
     load_all_locations,
     load_compare_presets,
 )
+from services.alert_briefing_anchor import write_anchor_and_reset_memory
 from services.compare_alert_channels import effective_compare_channels
 
 logger = logging.getLogger("scheduler.dispatch")
@@ -298,6 +299,7 @@ def send_one_compare_preset(
     mail_sink=None,
     sms_sink=None,
     telegram_sink=None,
+    on_demand: bool = False,
 ) -> tuple:
     """Fuehrt den Versand fuer ein einzelnes Compare-Preset durch.
 
@@ -308,6 +310,8 @@ def send_one_compare_preset(
     Daily-Loops uebergibt heute+1.
     `mail_sink`/`sms_sink`/`telegram_sink` (#1270): deterministische
     Transport-Naht, 1:1 durchgereicht an `NotificationService.send_compare_report`.
+    `on_demand` (#1467 S2 AG5): Handversand — dann bleiben Δ-Anker UND
+    Melde-Gedaechtnis unangetastet, genau wie beim Trip-Ad-hoc-Abruf (#1007).
     Gibt (top_ort, empfaenger) zurueck. Wirft ValueError wenn kein Empfaenger konfiguriert.
     """
     if target_date is None:
@@ -403,7 +407,15 @@ def send_one_compare_preset(
     # Issue #1169: Δ-Anker je Ort schreiben (ADR-0009 — Abweichung vom zuletzt
     # gemeldeten Stand). Best-effort: ein fehlgeschlagener Snapshot-Write darf
     # den bereits erfolgten Report-Versand nicht rückwirkend als Fehler zaehlen.
-    _write_compare_alert_snapshots(preset_id, locations, user_id)
+    # Issue #1467 S2 AG5: Anker und Melde-Gedaechtnis haengen an EINER Bedingung,
+    # im selben geteilten Baustein, den auch der Trip benutzt. Der Reset laeuft
+    # ueber ALLE Orte des Presets (R3), nicht nur die getriggerten.
+    write_anchor_and_reset_memory(
+        user_id=user_id,
+        entity_ids=[f"{preset_id}:{loc.id}" for loc in locations],
+        write_anchor=lambda: _write_compare_alert_snapshots(preset_id, locations, user_id),
+        on_demand=on_demand,
+    )
 
     save_compare_preset_status(user_id, preset_id, top_ort, data_root=data_root)
     logger.info("Compare preset %s sent to %s (top_ort=%s)", preset_id, empfaenger, top_ort)
@@ -419,6 +431,10 @@ def send_compare_preset(
 
     Endpoint: POST /api/scheduler/compare-presets/{id}/send (#627).
     Wirft KeyError wenn Preset nicht gefunden, ValueError wenn kein Empfaenger.
+
+    Issue #1467 S2 AG5: Handversand ⇒ `on_demand=True` — weder Δ-Anker noch
+    Melde-Gedaechtnis werden angefasst. Sonst verschoebe ein Handversand den
+    Vergleichspunkt und der naechste echte Ausschlag ginge still verloren.
     """
     if data_root is None:
         data_root = "data"
@@ -436,7 +452,9 @@ def send_compare_preset(
     preset = compare_preset_to_dict(preset_obj)
 
     settings = Settings().with_user_profile(user_id)
-    top_ort, actual_empfaenger = send_one_compare_preset(preset, settings, user_id, data_root)
+    top_ort, actual_empfaenger = send_one_compare_preset(
+        preset, settings, user_id, data_root, on_demand=True,
+    )
     return {"status": "ok", "winner": top_ort or "", "empfaenger_count": len(actual_empfaenger)}
 
 

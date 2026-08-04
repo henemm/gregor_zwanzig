@@ -29,6 +29,7 @@ from app.models import (
     StabilityResult,
     TripSegment,
 )
+from services.alert_briefing_anchor import reset_alert_memory, write_anchor_and_reset_memory
 from services.day_comparison import DayComparison
 from services.notification_service import NotificationService, TripReportRequest
 from services.user_tier import sms_allowed
@@ -956,7 +957,12 @@ class TripReportSchedulerService:
         # sonst die kombinierte Momentaufnahme (heute+morgen) mit dem einen
         # Zieltag überschreiben und Alerts/Vortag-Vergleich für den jeweils
         # anderen Tag verfälschen.
-        if not on_demand:
+        # Issue #816 (B): Briefing = neue, stabile Alert-Referenz → das
+        # Melde-Gedächtnis des Trips zurücksetzen, damit der nächste Alert
+        # wieder gegen das frische Briefing vergleicht.
+        # Issue #1467 S2 AG5: Anker und Gedächtnis hängen an EINER Bedingung,
+        # in EINEM geteilten Baustein, den auch der Ortsvergleich benutzt.
+        def _write_briefing_anchor() -> None:
             try:
                 from services.weather_snapshot import WeatherSnapshotService
                 _snapshot_svc = WeatherSnapshotService(self._user_id)
@@ -965,11 +971,13 @@ class TripReportSchedulerService:
             except Exception as e:
                 logger.warning(f"Failed to save weather snapshot for {trip.id}: {e}")
 
-            # 10. Issue #816 (B): Briefing = neue, stabile Alert-Referenz → das
-            # Melde-Gedächtnis des Trips zurücksetzen, damit der nächste Alert
-            # wieder gegen das frische Briefing vergleicht. Issue #1007: nicht
-            # bei On-Demand-Abruf (s.o.).
-            self._reset_alert_state_after_briefing(trip.id)
+        write_anchor_and_reset_memory(
+            user_id=self._user_id,
+            entity_ids=[trip.id],
+            write_anchor=_write_briefing_anchor,
+            on_demand=on_demand,
+            reset_memory=self._reset_alert_state_after_briefing,
+        )
 
         return "no_channels" if result.no_channel_configured else "sent"
 
@@ -1034,12 +1042,13 @@ class TripReportSchedulerService:
         )
 
     def _reset_alert_state_after_briefing(self, trip_id: str) -> None:
-        """Issue #816 (B): Alert-Melde-Gedächtnis nach Briefing-Versand löschen."""
-        try:
-            from services.alert_state import AlertStateService
-            AlertStateService(user_id=self._user_id).reset(trip_id)
-        except Exception as e:
-            logger.warning(f"Failed to reset alert_state for {trip_id}: {e}")
+        """Issue #816 (B): Alert-Melde-Gedächtnis nach Briefing-Versand löschen.
+
+        Issue #1467 S2 AG5: nur noch überschreibbare Naht — die Reset-Logik
+        (inkl. fail-soft und Log) liegt in `reset_alert_memory()`, der EINEN
+        Fassung für Trip und Ortsvergleich. Kein Nachbau hier.
+        """
+        reset_alert_memory(user_id=self._user_id, entity_id=trip_id)
 
     def _append_briefing_log(self, trip_id: str, kind: str, channels: List[str]) -> None:
         """Issue #393: Hängt einen Briefing-Versand-Eintrag an briefing_log.json an.

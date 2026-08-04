@@ -317,3 +317,29 @@ Richtung: **weniger** Meldungen — ausdrücklich gewollt, deshalb mit eigenem A
 Reihenfolge-Begründung: AG3 **vor** AG4, damit die allererste echte Telegram-/SMS-Meldung
 bereits lesbar ist. AG5 und AG6 zuletzt, weil sie Daten bzw. Meldungsmenge berühren und
 einzeln zurücknehmbar bleiben müssen.
+
+---
+
+## Nachtrag AG5 — Ist-Stand am 2026-08-04 nachgemessen
+
+Vor dem Start von AG5 gegen `main` (`f938159b`) neu gemessen, weil die Zeilenangaben oben
+vom 2026-08-03 stammen und AG3b/AG4 seither vier Commits hinzugefügt haben.
+
+**Struktur unverändert, Zeilennummern verschoben:**
+
+| Zusicherung | Stand 03.08. | gemessen 04.08. |
+|---|---|---|
+| Einziger `AlertStateService.reset()`-Aufruf im Produktivcode ist der des Trips | ja | **bestätigt** — `trip_report_scheduler.py:1040`, repo-weit sonst nur `warn_egress.py:96` (anderes Objekt, `_fetch_failure_sink`) |
+| Trip koppelt Anker + Reset unter `if not on_demand` | `:959-972` | **unverändert** `:959` / `:972` |
+| Ortsvergleich schreibt den Anker bedingungslos | `:410` / `:443` / `:447-468` | verschoben auf `:406` / `:413` / `:443` |
+| `send_one_compare_preset` kennt kein `on_demand` | ja | **bestätigt** — kein Treffer im Modul |
+
+⇒ Die Analyse aus dem Hauptteil gilt unverändert; AG3b/AG4 haben den AG5-Bereich nicht
+berührt. Der einzige Unterschied sind die Zeilennummern — die Implementierung muss sich an
+den **Funktionsnamen** orientieren, nicht an den Zeilenangaben der Spec.
+
+**Zusätzlicher Befund: die Abnahmekriterien AC-14..AC-19 decken den Trip-Pfad nicht ab.**
+AG5 baut `trip_report_scheduler.py` um (Delegation an den neuen Baustein), aber alle sechs
+Kriterien prüfen ausschließlich den Ortsvergleich. Damit fehlt genau die Invariante, die
+AG3b als AC-26 gebraucht hat („die anderen Pfade bleiben byte-identisch"). Ergänzt als
+**AC-27**, PO-Freigabe 2026-08-04.
