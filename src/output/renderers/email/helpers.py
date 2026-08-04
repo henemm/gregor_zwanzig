@@ -861,8 +861,12 @@ def format_trend_tokens(stage: dict) -> dict:
     # metric_format.py). Ohne diese Korrektur zeigte der Mail-Trend-Block
     # "mittel", wo tatsaechlich nur "leicht" vorliegt.
     _TREND_THUNDER_LABELS = {1: "leicht", 2: "mittel", 3: "hoch"}
+    # Issue #1474b: liest die laengst vorhandene, bisher ignorierte
+    # Verdrahtung `sms_threshold_thunder` (outlook.py:409,
+    # trip_report_scheduler.py:1433-1443) statt eines fest verdrahteten 1.0.
+    thunder_thr = stage.get("sms_threshold_thunder", 1.0)
     thunder_token = render_threshold_peak_value(
-        "TH", hourly_thunder, threshold=1.0, is_level=True,
+        "TH", hourly_thunder, threshold=thunder_thr, is_level=True,
         level_labels=_TREND_THUNDER_LABELS,
     )
 
@@ -1138,14 +1142,25 @@ _PILL_CLASS2 = {
 }
 
 
-def _sms_mention_threshold(metric_id: str) -> Optional[float]:
-    """Issue #795/RC0: SMS-identische Erwaehnungsschwelle aus EINER Quelle.
+def _sms_mention_threshold(
+    metric_id: str, configured: Optional[dict[str, float]] = None,
+) -> Optional[float]:
+    """Issue #795/RC0, Issue #1474b: SMS-identische Erwaehnungsschwelle aus
+    EINER Quelle.
 
     Wind/Boen/Regen/Regenwahrsch./Gewitter teilen sich die SMS-DEFAULTS aus
     builder.DEFAULTS (kein zweites Hardcoding). Sicht (2 km) und Luftfeuchte
     (90 %) sind in der SMS keine POSITIONAL-Tokens und behalten ihre eigene,
     hier zentral gepflegte Schwelle.
+
+    `configured` (Issue #1474b): optionale, pro Trip eingestellte
+    Erwaehnungsschwellen im `metric_id`-Raum (aus `MetricConfig.sms_threshold`).
+    Ist ein Wert fuer `metric_id` gesetzt, hat er Vorrang vor `DEFAULTS`. Nur
+    diese Funktion uebersetzt intern auf das SMS-Symbol fuer den
+    `DEFAULTS`-Fallback -- exakt EINE Uebersetzungsstelle.
     """
+    if configured is not None and configured.get(metric_id) is not None:
+        return configured[metric_id]
     from output.tokens.builder import DEFAULTS
     _id_to_sms_symbol = {
         "wind": "W", "gust": "G", "precipitation": "R",
@@ -1360,7 +1375,7 @@ def _extreme_ampel_tone(metric_id: str, vals_ts: list) -> str:
 
 def _pill_for_metric(
     metric_id: str,
-    thresholds: dict,
+    sms_mention_thresholds: dict,
     all_dps: list,
     *,
     tz: "ZoneInfo",
@@ -1555,15 +1570,22 @@ def _pill_for_metric(
         max_lvl = ThunderLevel.NONE
         first_thunder_ts = None
         peak_ts = None
+        # Issue #1474b: die Erwaehnungsschwelle kommt aus derselben Quelle
+        # wie SMS/Telegram (Trip-Einstellung ?? DEFAULTS["TH:"] = 1.0, "ab
+        # leicht") -- nicht mehr fest an ThunderLevel.MED gebunden.
+        _mention_thr = _sms_mention_threshold("thunder", sms_mention_thresholds)
         for dp in all_dps:
             lvl = dp.thunder_level
             if lvl is None:
                 continue
-            # Issue #1474: an die benannte Stufe MED gebunden, nicht mehr an
-            # den Rohwert 1 (der bedeutet seit LOW nicht mehr "MED", sondern
-            # "LOW"). Produktentscheidung (Spec Abschnitt 2): der Satz bleibt
-            # bei MED gebunden, "leicht" (nur ueber CAPE) loest ihn NICHT aus.
-            if thunder_ordinal(lvl) >= thunder_ordinal(ThunderLevel.MED) and first_thunder_ts is None:
+            # Adversary-Befund F002 (Nachbesserung #1474b, PO-Freigabe
+            # 2026-08-04): eine Schwelle 0.0 ("ab kein") darf den Satz
+            # trotzdem niemals fuer ThunderLevel.NONE (Ordinal 0) ausloesen
+            # -- zusaetzlich zur Schwellenbedingung verlangen, dass
+            # ueberhaupt eine Gewitterstufe >= LOW vorliegt.
+            if (_mention_thr is not None and thunder_ordinal(lvl) >= _mention_thr
+                    and thunder_ordinal(lvl) >= thunder_ordinal(ThunderLevel.LOW)
+                    and first_thunder_ts is None):
                 first_thunder_ts = dp.ts
             if thunder_ordinal(lvl) > thunder_ordinal(max_lvl):
                 max_lvl = lvl
@@ -1638,7 +1660,7 @@ _DAY_WINDOW_PILL_IDS = frozenset({"wind", "gust", "precipitation", "rain_probabi
 def build_metrics_summary_pills(
     segments: list,
     metric_ids: list[str],
-    thresholds: dict,
+    sms_mention_thresholds: dict,
     *,
     tz: "ZoneInfo",
     night_weather: Optional[NormalizedTimeseries] = None,
@@ -1650,9 +1672,11 @@ def build_metrics_summary_pills(
     """Issue #664/#795: Build one (text, tone) pill per metric from segment data.
 
     metric_ids: list of metric IDs to render (from display_config, E-Mail enabled).
-    thresholds: dict[metric_id -> float] (unbenutzt seit #795 — Erwaehnungs-
-        schwellen kommen SMS-identisch aus _sms_mention_threshold; bleibt im
-        Signatur-Vertrag fuer Rueckwaertskompatibilitaet).
+    sms_mention_thresholds: dict[metric_id -> float] (Issue #1474b) —
+        pro Trip eingestellte Erwaehnungsschwellen (aus `MetricConfig.
+        sms_threshold`), im `metric_id`-Raum. Nur der `"thunder"`-Zweig in
+        `_pill_for_metric` liest sie derzeit; die uebrigen Metriken bleiben
+        auf `_sms_mention_threshold`s `DEFAULTS`-Fallback (Known Limitation).
     tz: local timezone for hour formatting.
     night_weather: Issue #1317 / Epic #1319 — Rohdaten Ankunft→06:00 am Ziel;
         None = fail-soft, reine Segment-Fensterung (AC-9). Nur die Wert-Pillen
@@ -1695,7 +1719,7 @@ def build_metrics_summary_pills(
             continue
         dps = window_dps if mid in _DAY_WINDOW_PILL_IDS else hiking_dps
         chosen = None if metric_aggregations is None else metric_aggregations.get(mid)
-        pill = _pill_for_metric(mid, thresholds, dps, tz=tz, has_gap=has_gap,
+        pill = _pill_for_metric(mid, sms_mention_thresholds, dps, tz=tz, has_gap=has_gap,
                                 chosen_aggregations=chosen)
         if pill is not None:
             pills.append(pill)

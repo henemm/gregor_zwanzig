@@ -130,6 +130,30 @@ def _shared_repo_root() -> Path:
     return _repo_root()
 
 
+def _is_commit_command(command: str) -> bool:
+    """Echter `git commit`-Aufruf? (Issue #1431 — Aufrufform statt Teilstring)
+
+    Die alte Pruefung `"git commit" not in command` war in beide Richtungen
+    falsch: `git -C /pfad commit` (und jede Form mit etwas zwischen `git` und
+    dem Unterbefehl) umging die Nachweispflicht still, waehrend ein
+    `grep -rn "git commit" ...` faelschlich blockiert wurde.
+
+    UEBERGANGS-RUECKFALL — NACH AUSLIEFERUNG DES PLUGINS ENTFERNEN (#1431).
+    Der `detect is None`-Zweig ist eine ZWEITFASSUNG GENAU DES DEFEKTS, den
+    #1431 beseitigt: er erkennt `git -C /pfad commit` nicht. Er existiert nur,
+    solange eine Plugin-Fassung OHNE `is_git_subcommand` installiert sein kann
+    (hook_utils ist hier ein Shim auf die ausgelieferte Cache-Fassung). Sobald
+    die neue Fassung ausgeliefert ist: Zweig loeschen und direkt
+    `hook_utils.is_git_subcommand(command, "commit")` aufrufen. Bis dahin ist
+    der Rueckfall die ALTE, engere Pruefung — er blockt nie mehr als vorher,
+    nur weniger, als er sollte.
+    """
+    detect = getattr(hook_utils, "is_git_subcommand", None)
+    if detect is None:
+        return "git commit" in command
+    return detect(command, "commit")
+
+
 def _is_mail_file(name: str) -> bool:
     return any(p.search(name) for p in _MAIL_PATTERNS)
 
@@ -551,7 +575,7 @@ def main() -> None:
     else:
         tool_input = _read_tool_input()
         command = tool_input.get("command", "")
-        if "git commit" not in command:
+        if not _is_commit_command(command):
             sys.exit(0)
         _do_hook(repo, shared, name)
 

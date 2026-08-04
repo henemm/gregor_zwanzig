@@ -1285,8 +1285,9 @@
 									smsSymbol={metricSymbols['thunder']}
 									label="Gewitter"
 									levels={[
-										{ id: 'med', label: 'MED', float: 1.0 },
-										{ id: 'high', label: 'HIGH', float: 2.0 }
+										{ id: 'leicht', label: 'Leicht', float: 1.0 },
+										{ id: 'mittel', label: 'Mittel', float: 2.0 },
+										{ id: 'hoch', label: 'Hoch', float: 3.0 }
 									]}
 									currentFloat={smsThresholds['thunder'] !== undefined && smsThresholds['thunder'] !== '' ? parseFloat(smsThresholds['thunder']) : null}
 									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}

@@ -74,10 +74,15 @@ Feste Reihenfolge (POSITIONAL, `sms_format.md:44`):
 **Das Wert-Format `X@h(Y@h)` lesen als:** „Wert X ab Stunde h, Spitzenwert Y um Stunde h."
 Beispiel `TH:M@16(H@18)` = Gewitter mittlerer Stufe ab 16 Uhr, steigt auf hohe Stufe um 18 Uhr.
 Ein `-` (z. B. `TH:-`) heißt „nichts über der Schwelle / keine Daten". Uhrzeiten sind Ortszeit,
-ohne führende Null. Gewitter-Stufen: `M` = mittel, `H` = hoch (kein „L").
+ohne führende Null. Gewitter-Stufen seit Issue #1474 vierstufig: `L` = leicht, `M` = mittel,
+`H` = hoch (vorher gab es kein „L" — der Token-Platz war unerreichbar, s.
+`docs/reference/decision_matrix.md`).
 
 **Auslöse-Schwellen** (unterhalb → `-`): Regen 0,2 mm · Regenwahrscheinlichkeit 20 % · Wind 10 km/h ·
-Böen 20 km/h · Gewitter ab mittlerer Stufe. Pro Trip/Metrik überschreibbar.
+Böen 20 km/h · Gewitter ab leichter Stufe (`DEFAULTS["TH:"] = 1.0` in `tokens/builder.py`, seit der
+Ordinalverschiebung in #1474 Ordinal 1 = „leicht", vorher „mittel" — derselbe Zahlenwert, andere
+Bedeutung; Doku-Korrektur im Zuge von Issue #1474 Folge-Scheibe `fix-1474-gewitterschwelle-cockpit`,
+2026-08-04). Pro Trip/Metrik überschreibbar.
 
 **Beispiele (aus `sms_format.md` §8):**
 - Alles ruhig: `Ballone: N9 D16 R- PR- W- G- TH:- TH+:-`

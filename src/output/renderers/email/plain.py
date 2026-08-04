@@ -165,17 +165,19 @@ def render_plain(
         dc.metrics, altbestand=trip_metrics_altbestand,
     )
     if _pill_metric_ids:
-        _pill_thresholds = {
-            mc.metric_id: mc.alert_threshold
+        # Issue #1474b: die Erwaehnungsschwelle (nicht die Alarm-Schwelle,
+        # ADR-0043 -- andere Achse) treibt die Mail-Pillen, SMS-identisch.
+        _sms_mention_thresholds = {
+            mc.metric_id: mc.sms_threshold
             for mc in dc.metrics
-            if mc.alert_enabled and mc.alert_threshold is not None
+            if mc.sms_threshold is not None
         }
         # Issue #1357: gespeicherte Auswertungswahl je Groesse (sonst Katalog-Vorgabe).
         _pill_aggregations = {
             mc.metric_id: mc.aggregations for mc in dc.metrics if mc.enabled
         }
         _plain_pills = build_metrics_summary_pills(
-            segments, _pill_metric_ids, _pill_thresholds, tz=tz,
+            segments, _pill_metric_ids, _sms_mention_thresholds, tz=tz,
             night_weather=night_weather, has_gap=has_gap,
             day_window_start_hour=day_window_start_hour,
             day_window_end_hour=day_window_end_hour,

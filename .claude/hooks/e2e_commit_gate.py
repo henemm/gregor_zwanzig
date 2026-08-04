@@ -18,6 +18,22 @@ Exit Codes:
 import json
 import os
 import sys
+from pathlib import Path
+
+# Issue #1431: gemeinsame, tokenbasierte git-Aufrufform-Erkennung aus hook_utils.
+#
+# UEBERGANGS-RUECKFALL — NACH AUSLIEFERUNG DES PLUGINS ENTFERNEN (Issue #1431).
+# Der except-Zweig ist eine ZWEITFASSUNG GENAU DES DEFEKTS, den #1431 beseitigt:
+# er erkennt `git -C /pfad commit` nicht. Er existiert nur, solange eine
+# Plugin-Fassung OHNE `is_git_subcommand` installiert sein kann (der Shim
+# .claude/hooks/hook_utils.py laedt die ausgelieferte Cache-Fassung). Sobald die
+# neue Fassung ausgeliefert ist: try/except loeschen, Import direkt stellen.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+try:
+    from hook_utils import is_git_subcommand
+except Exception:  # noqa: BLE001 — Plugin fehlt/veraltet: alte, engere Pruefung
+    def is_git_subcommand(command: str, subcommand: str) -> bool:
+        return f"git {subcommand}" in command
 
 
 def get_tool_input() -> dict:
@@ -38,7 +54,9 @@ def get_tool_input() -> dict:
 def is_git_commit(tool_input: dict) -> bool:
     """Check if this is a git commit command (not amend)."""
     command = tool_input.get("command", "")
-    if "git commit" not in command:
+    # Issue #1431: Aufrufform statt Teilstring — `git -C /pfad commit` zaehlt,
+    # `grep -rn "git commit" ...` nicht.
+    if not is_git_subcommand(command, "commit"):
         return False
     if "--amend" in command:
         return False
