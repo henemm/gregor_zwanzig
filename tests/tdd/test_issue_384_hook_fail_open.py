@@ -33,7 +33,19 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SETTINGS_PATH = REPO_ROOT / ".claude" / "settings.json"
 
 # Relativer Hook-Pfad innerhalb eines Command-Strings, z. B. ".claude/hooks/secrets_guard.py"
+# NUR fuer Test-IDs und den Sandbox-Pfad der Laufzeit-Tests — NIE als Filter, ob ein
+# Eintrag geprueft wird (genau das war Befund F003: `new-risky-gate.py` matcht nicht).
 _HOOK_RE = re.compile(r"\.claude/hooks/[A-Za-z0-9_]+\.py")
+
+# Ausdrueckliche Ausnahmen von der Fail-open-Pflicht. Greift NUR bei exakter
+# Uebereinstimmung des ganzen Command-Strings — Teilstring-Vergleich wuerde die
+# Umgehung sofort wieder oeffnen. Die Ausnahme verhindert nichts, sie macht die
+# Entscheidung zitierbar (Muster: `gz-main-path`, #1409).
+_GUARD_EXEMPT_COMMANDS = frozenset({
+    # Externes Skript ausserhalb .claude/hooks/, kein Waechter dieses Repos: es kann
+    # nichts blockieren, sein Fehlen loest keinen Tool-Lockout aus (#1307 A).
+    "bash /home/hem/claude-mq/check-messages.sh",
+})
 
 
 # --------------------------------------------------------------------------- #
@@ -43,28 +55,75 @@ def _load_settings() -> dict:
     return json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
 
 
-def _project_dir_commands() -> list[dict]:
-    """Alle Hook-Command-Strings, die ${CLAUDE_PROJECT_DIR} referenzieren.
-
-    Das externe `bash /home/hem/claude-mq/check-messages.sh` (absoluter Pfad,
-    kein CLAUDE_PROJECT_DIR) wird bewusst NICHT erfasst — es ist nicht die
-    Fehlerquelle und nicht Teil des Fixes.
-    """
+def _hook_groups() -> list[dict]:
+    """Alle Gruppen unter hooks.<Ereignis>[] mit ihrer Position."""
     settings = _load_settings()
-    out: list[dict] = []
-    for event, groups in settings.get("hooks", {}).items():
-        for gi, group in enumerate(groups):
-            for hi, hook in enumerate(group.get("hooks", [])):
-                cmd = hook.get("command", "")
-                if "CLAUDE_PROJECT_DIR" in cmd:
-                    out.append({"event": event, "gi": gi, "hi": hi, "cmd": cmd})
-    return out
+    return [
+        {"event": event, "gi": gi, "group": group}
+        for event, groups in settings.get("hooks", {}).items()
+        for gi, group in enumerate(groups)
+    ]
+
+
+def _iter_hook_entries():
+    """Alle Hook-Eintraege der settings.json mit ihrer Position.
+
+    Eine Gruppe ohne `hooks`-Schluessel liefert hier nichts — das bleibt aber NICHT
+    unsichtbar: `test_every_hook_group_is_wellformed` macht genau diesen Fall zu
+    einem eigenen roten Testfall (Befund F004).
+    """
+    for g in _hook_groups():
+        for hi, hook in enumerate(g["group"].get("hooks", [])):
+            yield {
+                "event": g["event"], "gi": g["gi"], "hi": hi,
+                "cmd": hook.get("command", ""),
+            }
+
+
+def _hook_commands() -> list[dict]:
+    """JEDER Hook-Eintrag der settings.json — ohne jeden Muster-Filter.
+
+    Die Frage ist bewusst umgedreht: NICHT "erkenne ich hier einen Wächter-Aufruf?"
+    (dann rutscht jede unerkannte Schreibweise durch — Befund F002: absoluter Pfad
+    statt ${CLAUDE_PROJECT_DIR}; Befund F003: Bindestrich im Dateinamen), sondern
+    "bin ich sicher, dass dieser Eintrag KEINEN Wächter aufruft?". Sicher ist das
+    nur bei den ausdruecklich aufgelisteten Ausnahmen in `_GUARD_EXEMPT_COMMANDS`.
+    Alles andere wird geprueft. Vorbild: `hook_utils.is_git_subcommand` (#1431) und
+    die `gz-main-path`-Ausnahmen (#1409).
+    """
+    return list(_iter_hook_entries())
+
+
+def _project_dir_commands() -> list[dict]:
+    """Teilmenge der Hook-Eintraege: nur Commands mit ${CLAUDE_PROJECT_DIR}.
+
+    Diese Einschraenkung gilt ausschliesslich fuer die drei Laufzeit-Tests, die
+    den Command wirklich ausfuehren. Sie steuern die An-/Abwesenheit der
+    Hook-Datei ueber eine tmp-Sandbox, auf die ${CLAUDE_PROJECT_DIR} zeigt — ein
+    absolut ausgeschriebener Pfad ignoriert die Variable und liesse sich von der
+    Sandbox nicht kontrollieren (der Test wuerde die echte Datei am echten Ort
+    treffen). Fachlich begruendete Grenze, keine Nachlaessigkeit: die FORM jedes
+    Eintrags prueft `test_every_hook_is_fail_open_guarded` ueber `_hook_commands()`.
+    """
+    return [c for c in _hook_commands() if "CLAUDE_PROJECT_DIR" in c["cmd"]]
 
 
 def _hook_relpath(cmd: str) -> str:
     m = _HOOK_RE.search(cmd)
     assert m, f"Kein .claude/hooks/<name>.py im Command gefunden: {cmd!r}"
     return m.group(0)
+
+
+def _param_id(c: dict) -> str:
+    """Test-ID; benennt den Eintrag auch dann, wenn kein Hook-Pfad erkennbar ist.
+
+    Ohne Rueckfall wuerde ein Eintrag in unbekannter Schreibweise beim Sammeln
+    knallen, statt als benannter Testfall aufzutauchen — AC-5 verlangt aber, dass
+    der betroffene Eintrag benannt wird.
+    """
+    m = _HOOK_RE.search(c["cmd"])
+    name = m.group(0).split("/")[-1] if m else "kein-erkannter-hook-pfad"
+    return f"{name}-{c['event']}-{c['gi']}{c['hi']}"
 
 
 def _is_fail_open_guarded(cmd: str) -> bool:
@@ -100,35 +159,26 @@ def _sandbox(tmp_path: Path, hook_relpath: str, stub_exit: int | None) -> Path:
     return tmp_path
 
 
-# Parametrisierung über alle echten ${CLAUDE_PROJECT_DIR}-Commands der settings.json
-_COMMANDS = _project_dir_commands()
+def _build_params(commands: list[dict]) -> list:
+    """Baut die Parameter-Liste aus echten Command-Strings der settings.json.
+
+    Ohne Ausnahme-Mechanik (#1307 Scheibe A): ein ungeschuetzt eingetragener
+    Hook macht die Form-Pruefung sofort rot, statt als "bekannt offen" gruen
+    durchzulaufen."""
+    return [pytest.param(c["cmd"], id=_param_id(c)) for c in commands]
 
 
-def _build_params(mark_unguarded_xfail: bool) -> list:
-    """Baut die Parameter-Liste; optional mit xfail(#1307) auf den 5 Hooks
-    ohne Fail-open-Wrapping (renderer_mail_gate, prod_send_gate,
-    nebenbefund_gate, test_naming_gate, track_token_usage — echter Befund,
-    Bundle 2 der Rot-Triage #1211b). Nur fuer die zwei Tests genutzt, die
-    genau diese Guard-Eigenschaft pruefen — test_present_blocking_hook_still_blocks
-    und test_present_ok_hook_allows bleiben ungemarkt (aktuell gruen)."""
-    params = []
-    for c in _COMMANDS:
-        marks = []
-        if mark_unguarded_xfail and not _is_fail_open_guarded(c["cmd"]):
-            marks.append(pytest.mark.xfail(
-                reason="#1307: Hook ohne Fail-open-Wrapping — fehlende Datei blockiert (Lockout-Falle)",
-                strict=False,
-            ))
-        params.append(pytest.param(
-            c["cmd"],
-            id=f"{_hook_relpath(c['cmd']).split('/')[-1]}-{c['event']}-{c['gi']}{c['hi']}",
-            marks=marks,
-        ))
-    return params
+# Form-Pruefung: JEDER Hook-Eintrag, ohne Ausnahme-Filter beim Sammeln.
+_PARAMS_ALL = _build_params(_hook_commands())
+# Laufzeit-Tests: nur was die tmp-Sandbox ueber ${CLAUDE_PROJECT_DIR} steuern kann.
+_PARAMS_SANDBOX = _build_params(_project_dir_commands())
+# Struktur-Pruefung: jede Gruppe, damit kein Eintrag unbemerkt ins Leere laeuft.
+_GROUP_PARAMS = [
+    pytest.param(g, id=f"{g['event']}-{g['gi']}") for g in _hook_groups()
+]
 
-
-_PARAMS = _build_params(mark_unguarded_xfail=False)
-_PARAMS_GUARD_CHECK = _build_params(mark_unguarded_xfail=True)
+# Schluessel, die eine Hook-Gruppe tragen darf.
+_ERLAUBTE_GRUPPEN_SCHLUESSEL = {"matcher", "hooks"}
 
 
 # --------------------------------------------------------------------------- #
@@ -141,22 +191,59 @@ def test_settings_json_is_valid_json():
     assert "hooks" in data
 
 
-@pytest.mark.parametrize("cmd", _PARAMS_GUARD_CHECK)
-def test_every_hook_is_fail_open_guarded(cmd):
-    """AC-5: JEDER ${CLAUDE_PROJECT_DIR}-Hook-Command muss fail-open-gewrappt sein.
+@pytest.mark.parametrize("g", _GROUP_PARAMS)
+def test_every_hook_group_is_wellformed(g):
+    """AC-5 auf Struktur-Ebene: eine Gruppe darf nicht ins Leere laufen.
 
-    GIVEN ein in settings.json registrierter Hook-Command
-    WHEN sein Command-String geprüft wird
-    THEN entspricht er dem Muster `if [ -f … ]; then python3 … ; fi`
-         (Schutz gegen erneutes Aufreißen des Lockout-Lochs).
+    GIVEN eine Gruppe unter hooks.<Ereignis>[]
+    WHEN ihre Schluessel geprüft werden
+    THEN traegt sie einen `hooks`-Schluessel und keine unbekannten Schluessel.
+
+    Schadensbild (Befund F004): Bei `"hook"` statt `"hooks"` fuehrt Claude Code den
+    enthaltenen Eintrag NICHT aus. Es entsteht keine Totalblockade — es entsteht das
+    Gegenteil und fuer dieses Ticket Schlimmere: ein Waechter, den jemand eintraegt
+    und fuer aktiv haelt, tut stillschweigend nichts. Eine Regel, die dasteht und
+    nicht beisst. Ohne diesen Test faellt der Eintrag aus JEDER Pruefung heraus,
+    weil er gar nicht erst eingesammelt wird.
     """
-    assert _is_fail_open_guarded(cmd), (
-        "Hook-Command ist NICHT fail-open-gewrappt — fehlende Datei würde das "
-        f"Tool blockieren (Lockout): {cmd!r}"
+    ort = f"hooks.{g['event']}[{g['gi']}]"
+    unbekannt = set(g["group"]) - _ERLAUBTE_GRUPPEN_SCHLUESSEL
+    assert "hooks" in g["group"], (
+        f"Hook-Gruppe {ort} hat keinen 'hooks'-Schlüssel (vorhanden: "
+        f"{sorted(g['group'])}). Claude Code ignoriert diese Gruppe stillschweigend "
+        "— jeder darin eingetragene Wächter läuft NIE, ohne dass es auffällt. "
+        "Vermutlich ein Tippfehler, z.B. 'hook' statt 'hooks'."
+    )
+    assert not unbekannt, (
+        f"Hook-Gruppe {ort} hat unbekannte Schlüssel {sorted(unbekannt)} — erlaubt "
+        f"sind nur {sorted(_ERLAUBTE_GRUPPEN_SCHLUESSEL)}. Was Claude Code nicht "
+        "kennt, wertet es nicht aus; der Inhalt wirkt dann nur scheinbar."
     )
 
 
-@pytest.mark.parametrize("cmd", _PARAMS_GUARD_CHECK)
+@pytest.mark.parametrize("cmd", _PARAMS_ALL)
+def test_every_hook_is_fail_open_guarded(cmd):
+    """AC-5: JEDER Hook-Eintrag muss fail-open-gewrappt sein — oder ausgenommen.
+
+    GIVEN ein in settings.json registrierter Hook-Eintrag, gleich in welcher
+          Schreibweise (${CLAUDE_PROJECT_DIR}, absoluter Pfad, Bindestrich im
+          Dateinamen, Zwischenschale …)
+    WHEN sein Command-String geprüft wird
+    THEN entspricht er dem Muster `if [ -f … ]; then python3 … ; fi` — es sei denn,
+         er steht wortgleich in `_GUARD_EXEMPT_COMMANDS`
+         (Schutz gegen erneutes Aufreißen des Lockout-Lochs).
+    """
+    if cmd.strip() in _GUARD_EXEMPT_COMMANDS:
+        return  # ausdrueckliche, im Code sichtbare Ausnahme
+    assert _is_fail_open_guarded(cmd), (
+        "Hook-Command ist NICHT fail-open-gewrappt — fehlende Datei würde das "
+        f"Tool blockieren (Lockout): {cmd!r}. Entweder in die Form "
+        "`if [ -f \"<pfad>\" ]; then python3 \"<pfad>\"; fi` bringen ODER wortgleich "
+        "in _GUARD_EXEMPT_COMMANDS eintragen (mit Begründung)."
+    )
+
+
+@pytest.mark.parametrize("cmd", _PARAMS_SANDBOX)
 def test_missing_hook_file_allows_tool(cmd, tmp_path):
     """AC-1 / AC-3: fehlende Hook-Datei -> Tool erlaubt (Exit 0), kein Lockout.
 
@@ -173,7 +260,7 @@ def test_missing_hook_file_allows_tool(cmd, tmp_path):
     )
 
 
-@pytest.mark.parametrize("cmd", _PARAMS)
+@pytest.mark.parametrize("cmd", _PARAMS_SANDBOX)
 def test_present_blocking_hook_still_blocks(cmd, tmp_path):
     """AC-2: vorhandener Hook, der mit Exit 2 blockt -> Block bleibt wirksam.
 
@@ -190,7 +277,7 @@ def test_present_blocking_hook_still_blocks(cmd, tmp_path):
     )
 
 
-@pytest.mark.parametrize("cmd", _PARAMS)
+@pytest.mark.parametrize("cmd", _PARAMS_SANDBOX)
 def test_present_ok_hook_allows(cmd, tmp_path):
     """AC-4: vorhandener Hook mit Exit 0 -> Tool erlaubt, unverändertes Verhalten.
 

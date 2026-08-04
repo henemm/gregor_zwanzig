@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/renderer_mail_gate.py\"",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/renderer_mail_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/renderer_mail_gate.py\"; fi",
             "timeout": 60
           }
         ]
@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/prod_send_gate.py\"",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/prod_send_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/prod_send_gate.py\"; fi",
             "timeout": 60
           }
         ]
@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/nebenbefund_gate.py\"",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/nebenbefund_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/nebenbefund_gate.py\"; fi",
             "timeout": 10
           }
         ]
@@ -48,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/broad_test_run_gate.py\"",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/broad_test_run_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/broad_test_run_gate.py\"; fi",
             "timeout": 10
           }
         ]
@@ -58,7 +58,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/touched_tests_gate.py\"",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/touched_tests_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/touched_tests_gate.py\"; fi",
             "timeout": 600
           }
         ]
@@ -78,7 +78,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/test_naming_gate.py\"",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/test_naming_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/test_naming_gate.py\"; fi",
             "timeout": 10
           }
         ]
@@ -104,12 +104,12 @@
           },
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/track_token_usage.py\"",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/track_token_usage.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/track_token_usage.py\"; fi",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/terminology_gate.py\"",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/terminology_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/terminology_gate.py\"; fi",
             "timeout": 10
           }
         ]
