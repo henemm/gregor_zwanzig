@@ -2,9 +2,9 @@
 entity_id: multi_day_trend
 type: module
 created: 2026-02-16
-updated: 2026-06-02
+updated: 2026-08-04
 status: implementing
-version: "4.0"
+version: "5.0"
 tags: [weather-metrics, aggregation, trip-reports, trend, email-rendering]
 extends: trip_report_scheduler, output_channel_renderers
 ---
@@ -34,8 +34,12 @@ Folge-Etappen (niemals mehr als 3, egal wie viele existieren).
 Etappenname; Zeile 2 = fluchtende Spalten Temp (Lo–Hi °C) · Regen (mm oder –) · Wind (Richtung + km/h) ·
 Gewitter-Ampel (Farb-Quadrat + Wort: kein/MED/HIGH).
 
-**AC-3:** Given eine Tour deren letzte Etappe morgen ist / Then erscheint kein Trend-Block
-(kein leeres Heading, kein leerer Block).
+**AC-3 (v5.0, ersetzt v4.0-Fassung — Fix #1486):** Given eine Tour deren letzte Etappe morgen ist
+(keine weiteren Etappen nach dem Zieldatum) / When das Briefing gerendert wird / Then erscheint
+statt des leeren, kommentarlosen Nichts der Hinweissatz „Keine weiteren Etappen — kein Ausblick."
+(neutraler Fließtext, KEIN Warn-/Danger-Styling, KEIN Logging — normaler Tourabschluss ist kein
+Fehler). Details, weitere Zustände (außerhalb Vorhersagehorizont / Störung) und die Herleitung:
+`docs/specs/modules/fix_1486_outlook_silent_exit.md`.
 
 **AC-4:** Given der Trend-Block / Then stammen die Werte aus echten API-Calls gegen die
 konfigurierten Etappen-Koordinaten — keine statischen Demo-Daten.
@@ -106,7 +110,10 @@ Gewitter = Farb-Quadrat (8×8px) + Wort-Text.
 - C2: `table-layout:fixed` mit festen Spaltenbreiten
 - C3: Max 3 Etappen — hart begrenzt in `_build_stage_trend()`
 - C4: Optimiert für 600 px
-- C5: Leerer Trend (0 Etappen) → Block entfällt komplett
+- C5 (v5.0, ersetzt v4.0-Fassung — Fix #1486): Leerer Trend (0 Etappen, Klasse „keine weiteren
+  Etappen") → Block entfällt NICHT mehr komplett, sondern zeigt den Hinweissatz „Keine weiteren
+  Etappen — kein Ausblick." (neutral, kein Heading-Wechsel nötig). Details:
+  `docs/specs/modules/fix_1486_outlook_silent_exit.md`.
 - C6: Plain-Text für Signal/Telegram (Mono, fluchtend)
 - C7: Gewitter-Ampel: Farb-Quadrat + Wort, nie Farbe allein
 - C8: Keine Wetter-Emoji in den fluchtenden Spalten
@@ -115,7 +122,7 @@ Gewitter = Farb-Quadrat (8×8px) + Wort-Text.
 
 | Fall | Verhalten |
 |------|-----------|
-| 0 Etappen | Block entfällt (kein Heading) |
+| 0 Etappen | (v5.0, Fix #1486) Hinweissatz „Keine weiteren Etappen — kein Ausblick." statt Block-Entfall — Details: `docs/specs/modules/fix_1486_outlook_silent_exit.md` |
 | nur 1 Folge-Etappe | Block mit 1 Zeile |
 | > 3 Etappen | auf 3 begrenzen |
 | precip_mm == 0 | zeigt `–` in ink-4 |
@@ -127,3 +134,6 @@ Gewitter = Farb-Quadrat (8×8px) + Wort-Text.
 - 2026-02-17: v2.0 spec — Stage-basiert, aggregate_stage()
 - 2026-02-18: v3.0 spec — CompactSummaryFormatter, Summary-String, 2-Zeilen-Layout
 - 2026-06-02: v4.0 spec — Spalten-Layout (Design-Handoff #561), max 3, neue Dict-Struktur
+- 2026-08-04 (Fix #1486): v5.0 — AC-3/C5 umgekehrt — PO-Entscheidung, Ausblick benennt seinen
+  Zustand statt zu schweigen. Vormals implizite Stille war fünf nicht unterscheidbare stille
+  Ausstiege, siehe #1486.
