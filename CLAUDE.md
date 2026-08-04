@@ -246,6 +246,17 @@ Globale Server-Infos und Monitoring: `~/.claude/CLAUDE.md`.
 
 **Ausnahme reine Doku-/Tooling-Änderungen** (nur `.md`/`docs/`/`.claude/`/`.gitignore`, kein Code in `src/`/`api/`/`internal/`/`frontend/`/`cmd/`): Schritt 3 entfällt, Schritt 4 entfällt solange Drift-Monitor ruhig ist. Im Zweifel trotzdem deployen. Volle Definitionen: **`docs/reference/operations_playbook.md`**.
 
+### CI-Ampel & Merge-Regel (Tech-Lead-Entscheid 2026-08-04, #1196)
+
+Die 5 GitHub-Actions-Checks (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test`) sind die **CI-Ampel**. Seit PR #1497 ist sie vollständig grün bei ehrlichem Umfang (`test`-Job: 5837 Tests inkl. `tests/tdd/` + pytest-socket-Egress-Wächter).
+
+- **Merge-Regel (PFLICHT):** Ein PR wird nur gemerged, wenn alle 5 Checks auf seinem letzten Stand grün sind. Fremde Rote auf der Basis: erst die Basis grün ziehen oder den Befund belegt (Commit-/Log-Nachweis) einer anderen Session zuordnen und in #1196 buchen — nie stillschweigend „auf Rot obendrauf" mergen.
+- **Wird `main` trotzdem rot** (z.B. Direkt-Push einer Server-Session): Drive-to-green hat Vorrang vor neuer Feature-Arbeit — wer es findet, fixt es oder ordnet es belegt zu.
+- **tdd-Ratsche:** `.github/ci_tdd_excludes.txt` listet die offline-roten `tests/tdd/`-Dateien. Nur ENTFERNEN erlaubt (Datei grün gemacht → Zeile raus); neue tdd-Dateien laufen automatisch auf CI. Ergänzen einer Zeile nur mit Begründung im PR.
+- **Branch-Protection** (mechanisches Gate in den GitHub-Settings) ist geplant, aber ERST nach Umstellung aller Direkt-Push-Abläufe auf PRs — vorher einschalten bricht den dokumentierten Post-Push-Workflow der Server-Sessions. Umsetzung koordiniert der Tech-Lead mit dem PO; nicht eigenmächtig aktivieren.
+
+*Regel-Budget: Prüfdatum 2026-11-02. Fang-Beleg bei Einführung: 6 wochenlang unbemerkte test-Rote + ~5000 unbewachte tdd-Tests (#1196, PRs #1494/#1496/#1497).*
+
 ## Monitoring
 
 Externes Monitoring über `henemm-infra/check-gregor20.sh`. Interner Heartbeat vom Scheduler an BetterStack ist optional (fail-soft bei leeren `GZ_HEARTBEAT_*`-Vars) — dann geht einmalig eine MQ-Nachricht an `infra`.
