@@ -37,6 +37,11 @@ from tests.tdd._dwd_eu_fixtures import (  # noqa: E402
     kunst_raster, rohwert_an,
 )
 
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.live
+
 
 # ---------------------------------------------------------------------------
 # AC-8 — die Catch-all-Zeile steht ZULETZT: FR und DE_ALPEN bleiben unberuehrt.

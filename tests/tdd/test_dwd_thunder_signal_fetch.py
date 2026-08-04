@@ -111,6 +111,11 @@ if str(_SRC) not in sys.path:
 from app.config import Location  # noqa: E402
 from providers import dwd  # noqa: E402
 
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.live
+
 _FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "dwd"
 _FIXTURE_LPI = _FIXTURE_DIR / "icon_d2_alpen_lpi_2026080315_024.grib2.bz2"
 _FIXTURE_GRAU = _FIXTURE_DIR / "icon_d2_alpen_grau_gsp_2026080315_024.grib2.bz2"

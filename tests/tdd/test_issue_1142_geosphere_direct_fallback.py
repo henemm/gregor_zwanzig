@@ -64,6 +64,11 @@ from providers.base import ProviderNotFoundError, ProviderRequestError
 from providers.geosphere import RETRY_ATTEMPTS, GeoSphereProvider
 from providers.openmeteo import OpenMeteoProvider
 
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.live
+
 # Innsbruck (47.26, 11.39): bekannte AT-Koordinate, empirisch bestaetigt
 # (2026-07-09, echter Diagnose-Call gegen
 # dataset.api.hub.geosphere.at/v1/timeseries/forecast/nwp-v1-1h-2500m):

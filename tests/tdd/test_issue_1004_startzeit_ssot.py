@@ -33,6 +33,11 @@ from app.trip import Stage, TimeWindow, Trip, Waypoint
 from services.trip_segments import convert_trip_to_segments
 from utils.timezone import tz_for_coords
 
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.live
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 # Kein Bug (#1409, Klasse C): nur FALLBACK nach _REPO_ROOT (s. Schleife unten) --
 # der Worktree gewinnt bereits.

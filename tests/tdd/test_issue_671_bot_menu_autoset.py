@@ -40,6 +40,11 @@ from output.channels.telegram import BOT_COMMANDS, TelegramOutput
 
 from tests.tdd._telegram_live_fixture import live_telegram_enabled, staging_live_settings
 
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.live
+
 EXPECTED_COMMANDS = [c["command"] for c in BOT_COMMANDS]
 
 

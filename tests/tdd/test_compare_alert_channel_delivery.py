@@ -76,6 +76,13 @@ from app.models import SegmentWeatherSummary
 from app.user import SavedLocation
 
 from tests.helpers.compare_briefings import write_compare_briefings
+import pytest
+
+
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.live
 
 # Pfadregel #1409: relativ zur Testdatei. `load_compare_presets()` liest
 # ComparePresets ueber `data_root="data"` RELATIV zum Arbeitsverzeichnis

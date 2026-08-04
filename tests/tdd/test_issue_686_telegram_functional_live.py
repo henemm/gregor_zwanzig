@@ -29,6 +29,11 @@ import pytest
 
 from tests.tdd._telegram_live_fixture import live_telegram_enabled
 
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.live
+
 # Die 7 Menü-Befehle (= BOT_COMMANDS in src/outputs/telegram.py)
 SEVEN_COMMANDS = [
     "glance", "heute", "morgen", "heute_gewitter",

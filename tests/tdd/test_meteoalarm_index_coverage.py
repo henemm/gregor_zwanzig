@@ -41,6 +41,11 @@ from pathlib import Path
 
 import pytest
 
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.live
+
 _FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "meteoalarm"
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 

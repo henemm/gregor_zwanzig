@@ -41,6 +41,11 @@ from app.models import (
 )
 from app.trip import Stage, TimeWindow, Trip, Waypoint
 
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.email
+
 # Issue #1210 Fix-Loop 1 (F002, Adversary): KEIN modul-weiter Marker mehr --
 # AC-1/AC-3/AC-4 dialen kein echtes Netz (AC-3 nur 127.0.0.1-Socket, AC-4 nur
 # lokaler HTTP-Stub). Nur AC-2 (echter SMTP-Versand) traegt den Marker.

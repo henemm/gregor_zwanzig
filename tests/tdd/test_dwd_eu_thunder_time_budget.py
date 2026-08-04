@@ -23,6 +23,13 @@ from tests.tdd._dwd_eu_fixtures import (  # noqa: E402
     ABRUZZEN, dwd_eu, eu_server, hauptquelle_laeuft,
 )
 
+import pytest  # noqa: E402
+
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.live
+
 
 # Volles Vorhersagefenster (24 h, deckungsgleich mit `dwd_eu.FORECAST_HOURS`).
 # NICHT beliebig kuerzbar: der Anschluss leitet das Abruffenster aus der Reihe

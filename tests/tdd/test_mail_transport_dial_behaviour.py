@@ -33,6 +33,11 @@ import pytest
 from output.channels import email as email_module
 from output.channels.base import OutputError
 
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.email
+
 PRIMAER_HOST = "mail.henemm.com"
 # Bewusst NICHT 587: der Primaerweg muss nachweislich `self._port` benutzen und
 # nicht den im Ersatzweg fest verdrahteten Port.
