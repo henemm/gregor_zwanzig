@@ -233,6 +233,44 @@ Muster-Mails unter `tests/golden/email/` sowie veraltete Erwartungen in
 wurden nach dem Erneuern maschinell gegengeprüft: außerhalb der Gewitter-Zelle sind sie
 zeichengleich.
 
+## Nachtrag 2 — drei CI-Wächter nach dem Prod-Deploy (2026-08-04, Commit `99da3131`)
+
+Drei Wächter liefen durch den #1196-Ratschen-Ausbau **erstmals auf CI** und schlugen erst
+**nach** der Auslieferung an. Alle drei per A/B gegen `c31f777c` gemessen: gegen den
+Ausgangsstand grün, mit dieser Arbeit rot — also echte Rückschritte.
+
+**1. Der Ortsvergleich war doch nicht unverändert (AC-7 verletzt).**
+`compare_html._sev_thunder(ThunderLevel.NONE)` lieferte `'ok'` statt `None`. Vorher hatte
+`_THUNDER_SEV` schlicht **keinen** `NONE`-Eintrag, `.get()` gab `None` → keine Markierung.
+Über die neue geteilte Zuordnung lief `NONE` → `"green"` → `"ok"`, wodurch **jede ruhige
+Vergleichszelle** eine grüne Markierung bekommen hätte.
+
+🔴 **Warum es niemand fand:** Adversary, Spec-Prüfung und der AC-7-Test prüften alle nur
+`leicht`/`mittel`/`hoch`. Den mit Abstand **häufigsten** Fall — „kein Gewitter" — prüfte
+keiner. Ein AC, das nur die Ausnahmefälle abdeckt, deckt das Normalverhalten nicht ab.
+
+**Festlegung, damit sie nicht wieder verlorengeht:** Die Stundentabelle des Trips zeigt bei
+„kein Gewitter" einen **grünen Kreis** (PO-Entscheidung, s.o. AC-2); der Ortsvergleich lässt
+dieselbe Stufe **unmarkiert**. Das ist eine bewusste Unterscheidung, kein Versehen, und
+steht als Kommentar an der Stelle im Code.
+
+**2. Gefahren-Zelle konnte ihren Warnhintergrund verlieren (#911 AC-10).**
+Trägt eine Zeile statt der Stufe einen **Zahlenwert** (#1425), lieferte
+`thunder_ampel_band()` `None` → gar kein Hintergrund. Der alte Zweig hatte über
+`_thunder_risk_level()` einen Zahlen-Rückfall (`> 20` → rot). Eine Gefahren-Zelle ohne
+Warnfarbe verletzt das Design-Leitprinzip „Kontrast vor Optik". Der Zweig unterscheidet
+jetzt Stufe (vierstufig) von Zahl (bisheriger Rückfall) — **ein** Dispatch.
+
+**3. Golden-Wächter kannte die alten Prüfsummen.**
+`test_compare_hourly_trip_parity.GOLDEN_HASHES` auf die berechtigt erneuerten Muster-Mails
+nachgezogen, mit Datum und Grund im Kommentar. Der Wächter bleibt scharf. Vor dem
+Nachziehen zeichenweise geprüft: in allen zehn Dateien weicht **ausschließlich** die
+`Thdr`-Spalte ab.
+
+**Lehre für den nächsten Umbau einer Darstellungsskala:** Der Normalfall („nichts los")
+gehört genauso in die Prüfung wie die Warnfälle — er ist der Fall, den der Nutzer fast
+immer sieht.
+
 ## Known Limitations
 
 - **Frontend nicht Teil dieser Arbeit.** #1488 behandelt dieselbe Stufen-Verschiebung in der

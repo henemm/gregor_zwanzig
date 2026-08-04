@@ -451,7 +451,7 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | cloud_mid_avg_pct     | int \| None          | Durchschnittliche mittelhohe Bewölkung [%] (#1392) |
 | cloud_high_avg_pct    | int \| None          | Durchschnittliche hohe Bewölkung [%] (#1392)     |
 | humidity_avg_pct      | int \| None          | Durchschnittliche Luftfeuchtigkeit [%]           |
-| thunder_level_max     | ThunderLevel \| None | Maximales Gewitter-Level (NONE, MED, HIGH)       |
+| thunder_level_max     | ThunderLevel \| None | Maximale Gewitter-**Stärke** (NONE, LOW, MED, HIGH — seit #1474 vierstufig) |
 | visibility_min_m      | int \| None          | Minimale Sichtweite [m]                          |
 | dewpoint_avg_c        | float \| None        | Durchschnittlicher Taupunkt [°C]                 |
 | pressure_avg_hpa      | float \| None        | Durchschnittlicher Luftdruck [hPa]               |
