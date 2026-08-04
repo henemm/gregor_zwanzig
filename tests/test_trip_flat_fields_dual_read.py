@@ -12,7 +12,6 @@ from __future__ import annotations
 import dataclasses
 import json
 
-import pytest
 
 from app.loader import _trip_to_dict, load_trip, load_trip_from_dict, save_trip
 

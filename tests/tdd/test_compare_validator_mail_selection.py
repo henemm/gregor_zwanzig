@@ -29,7 +29,6 @@ Seam/Interface, das diese Tests vom kuenftigen Code erzwingen:
 
 from __future__ import annotations
 
-import email
 import imaplib
 import importlib.util
 import re

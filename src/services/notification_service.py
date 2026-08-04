@@ -47,6 +47,7 @@ if TYPE_CHECKING:
     )
     from app.profile import ActivityProfile
     from app.trip import Trip
+    from services.radar_service import NowcastResult
     from services.report_config_resolver import ReportRenderOptions
 
 logger = logging.getLogger(__name__)

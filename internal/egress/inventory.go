@@ -23,6 +23,10 @@ var Inventory = map[string]Kind{
 	"api.open-meteo.com":             TestAccess,
 	"air-quality-api.open-meteo.com": TestAccess,
 	"dataset.api.hub.geosphere.at":   TestAccess,
+	// #1457 S2b: DWD-opendata (ICON-D2 Gewittersignale) — kostenlos und
+	// kontingentfrei; Staging braucht den Host fuer den Gewitter-Nachweis
+	// (Python-Seite seit 9f57ae16, hier nachgezogen gegen Inventar-Drift).
+	"opendata.dwd.de": TestAccess,
 	// Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
 	"warnungen.zamg.at":             Blocked,
 	"api.brightsky.dev":             TestAccess,

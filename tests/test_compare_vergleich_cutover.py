@@ -215,6 +215,13 @@ def test_migrate_refresh_kind_scoped_preserves_route(tmp_path):
 # AC-37 — Guard-Inversion Validator: vergleich-Briefing nicht mehr verworfen
 # ---------------------------------------------------------------------------
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="Zukunfts-Test fuer #1250 S7b (AC-37): der S7a-Zaun in "
+    "api/routers/validator.py verwirft kind==vergleich noch absichtlich. "
+    "strict=True: sobald S7b die Guard-Inversion liefert, wird dieser Marker "
+    "als XPASS rot und MUSS entfernt werden (kein liegengebliebener xfail).",
+)
 def test_validator_loads_vergleich_briefing(tmp_path, monkeypatch):
     """GIVEN ein vergleich-Briefing in briefings/ / WHEN der Validator-Pfad
     `api/routers/validator.py::_load_trip_raw` es liest / THEN wird es NICHT

@@ -35,7 +35,6 @@ from pathlib import Path
 import pytest
 
 from app.models import ForecastDataPoint, ThunderLevel
-from app.user import SavedLocation
 from tests.helpers.compare_briefings import write_compare_briefings
 
 TARGET_DATE = date(2026, 7, 18)

@@ -52,7 +52,11 @@ _cache: dict = {}
 
 # Injizierbarer Uhr-Haken (Konvention analog meteoalarm._WALL_CLOCK_FN) --
 # Default echte Wanduhr, Tests stellen ihn deterministisch.
-_NOW_FN: Callable[[], datetime] = lambda: datetime.now(timezone.utc)
+def _default_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+_NOW_FN: Callable[[], datetime] = _default_now
 
 _ZONES_PATH = Path(__file__).resolve().parent / "data" / "dpc_zones.json"
 _FILENAME_RE = re.compile(r"(\d{8})_(\d{4})_(today|tomorrow)\.dbf$", re.IGNORECASE)

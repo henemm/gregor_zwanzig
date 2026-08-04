@@ -18,7 +18,7 @@ Spec: docs/specs/modules/feat_1474_gewitter_befund_stufen.md v2.4
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 
 from app.models import ForecastDataPoint, ThunderLevel
 from app.user import SavedLocation

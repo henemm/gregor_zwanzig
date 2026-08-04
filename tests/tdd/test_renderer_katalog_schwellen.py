@@ -35,7 +35,6 @@ from output.metric_format import severity_for
 from src.output.renderers.email.helpers import (
     _PILL_NEUTRAL_TONE,
     _pill_for_metric,
-    ampel_level,
     ampel_stage_tone,
 )
 from src.output.renderers.email.html import _render_html_table, _row_risk

@@ -25,7 +25,6 @@ Der Kontroll-Test (nicht abgelaufenes Preset) darf bereits gruen sein.
 """
 from __future__ import annotations
 
-import json
 from datetime import date, timedelta
 from pathlib import Path
 from tests.helpers.compare_briefings import read_compare_briefings, write_compare_briefings

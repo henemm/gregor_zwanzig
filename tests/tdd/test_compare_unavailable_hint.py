@@ -19,7 +19,7 @@ ComparisonResult) + tests/tdd/test_issue_1034_official_alerts_foundation.py
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 
 _HINT = "nicht abrufbar"
 
@@ -66,8 +66,8 @@ def test_ac1_flag_gesetzt_zeigt_banner():
     Nicht-abrufbar-Hinweis."""
     html = _render([_loc("Nizza", unavailable=True), _loc("Cannes")])
     assert _HINT in html.lower(), (
-        f"AC-1: Bei ≥1 Ort mit Ausfall MUSS die Compare-Mail den Nicht-abrufbar-"
-        f"Hinweis zeigen (gerendertes HTML)."
+        "AC-1: Bei ≥1 Ort mit Ausfall MUSS die Compare-Mail den Nicht-abrufbar-"
+        "Hinweis zeigen (gerendertes HTML)."
     )
 
 

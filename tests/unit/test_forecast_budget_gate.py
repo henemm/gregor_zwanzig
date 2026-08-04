@@ -40,7 +40,6 @@ from app.models import (
 from services.forecast_budget import ForecastBudgetGate
 from services.segment_weather import SegmentWeatherService
 from services.weather_cache import (
-    get_shared_weather_cache,
     reset_shared_weather_cache_for_tests,
 )
 

@@ -18,7 +18,6 @@ import shutil
 import threading
 from datetime import datetime, time, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from pathlib import Path
 
 import pytest
 

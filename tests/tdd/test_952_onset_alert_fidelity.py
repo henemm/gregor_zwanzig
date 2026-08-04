@@ -31,7 +31,6 @@ from datetime import date as date_type
 from datetime import datetime, timedelta
 from datetime import time as time_type
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from pathlib import Path
 
 import pytest
 
