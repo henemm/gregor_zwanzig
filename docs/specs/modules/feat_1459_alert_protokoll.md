@@ -511,6 +511,14 @@ immer (leere Liste, wenn nicht zutreffend) fuer ein einheitliches Eintrags-Schem
 ### Verdrahtung je Aufrufstelle (alle sechs bereits vorhandene `NotificationResult`/
 `effective_channels`-Werte im Scope, kein Zusatz-Fetch noetig)
 
+> ⚠️ **Überholt durch #1461 S3a (2026-08-04):** Die `severity`-Angaben in der rechten Spalte
+> beschreiben den Stand von #1459. Seit S3a wird die Dringlichkeit **abgeleitet** statt
+> konstant gesetzt — die hier genannten festen Werte `"HIGH"` (Radar) und `"MODERATE"`
+> (amtlich) gelten nicht mehr. Maßgeblich ist
+> `docs/specs/modules/feat_1461_s3a_alarm_dringlichkeit.md`. Alles Übrige in dieser Tabelle
+> (`reason`, `metrics`/`hazards`, `changes_count`, Ziel-Liste) bleibt gültig, ebenso die
+> Zusicherung D4.
+
 | Aufrufstelle | `reason` | `metrics`/`hazards` | `changes_count`/`severity` |
 |---|---|---|---|
 | `trip_alert.py:323` | `forecast_change` | `metrics = register_pairs_from_changes(to_report) + register_pairs_from_corridor_hits(corridor_to_report)`, dedupliziert; `hazards = []` | unveraendert (`len(to_report)+len(corridor_to_report)`, `eval_result.severity`) |

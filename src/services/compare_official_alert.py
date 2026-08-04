@@ -31,6 +31,7 @@ from output.renderers.alert.official_alerts import (
     official_alert_state_key,
 )
 from services import alert_daily_limit, alert_log
+import services.alert_urgency as alert_urgency
 from services.alert_state import AlertStateService
 from services.compare_alert_channels import (
     effective_compare_channels,
@@ -148,7 +149,11 @@ class CompareOfficialAlertService:
         # Issue #1459: die Gefahrenart steht in `hazards`, nicht in `metrics` (O1).
         alert_log.append_entry(
             self._user_id, entity_id=preset_id, entity_type="compare",
-            changes_count=len(tagged_alerts), severity="MODERATE",
+            changes_count=len(tagged_alerts),
+            severity=alert_urgency.highest_urgency(*[
+                alert_urgency.urgency_from_official_level(a.level)
+                for a, _loc_ids in tagged_alerts
+            ]),
             hazards=alert_log.hazards_from_official_alerts(
                 [a for a, _loc_ids in tagged_alerts]
             ),

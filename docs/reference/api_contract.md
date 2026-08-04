@@ -1,7 +1,27 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-08-04 (Issue #1457 S2c, `feat-1457-s2c-icon-eu-luekenfueller` — DWD ICON-EU (~6,5 km) schließt die Landkarte der Gewittersignal-Beschaffung: neuer Provider `DwdEuDirectProvider` (`src/providers/dwd_eu.py`, registriert als `eu_direct`) liefert Blitzpotenzial (`lpi_con_max`, extern verifiziert gegen `opendata.dwd.de`) für alle europäischen Orte, die weder Météo-France (FR/Korsika, S2a) noch ICON-D2 (DE/Alpen/Österreich, S2b) abdecken. **Kein neues Feld** — `lightning_potential_lpi_jkg` wird jetzt aus zwei Quellen befüllt (ICON-D2 für DE/Alpen/AT, ICON-EU für den Rest), unterscheidbar über die Position, nicht über das Feld. Neue Catch-all-Zeile `EU_REST` (first-match-wins, letzte Zeile) in `providers/thunder_routing.py`. **Kein Hagel-Signal bei ICON-EU** — `hail_potential_grau_gsp` bleibt für Rest-Europa dauerhaft `None`, beabsichtigt. Fehlwert-Behandlung unterscheidet sich von ICON-D2: ICON-EU trägt **keinen** festen Sentinel (9999.0 gilt dort nicht), stattdessen wird die Fehlwert-Markierung der GRIB2-Antwort selbst geprüft. `thunder_enrichment.py` und `models.py` unverändert — nutzt die bestehende S2b-Struktur (Signal-Key `"lpi"`) direkt weiter. Damit ist #1457 (Konzept #1419 Schritt S2) vollständig. Spec: `docs/specs/modules/feat_1457_s2c_icon_eu_luekenfueller.md`);; 2026-08-04 (Issue #1474, Folge-Scheibe `fix-1474-gewitterschwelle-cockpit` — zwei
+**Updated:** 2026-08-04 (Issue #1461 Scheibe S3a, `feat-1461-s3a-kanal-dringlichkeit` — die
+Antworten von `GET /api/cockpit/status` (Feld `alerts[]`) und `GET /api/archive/stats`
+tragen je Alarm-Eintrag weiterhin ein Feld `severity` — **Form unverändert, Bedeutung
+korrigiert:** `severity` wird jetzt aus den tatsächlich vorliegenden Werten **abgeleitet**
+(`src/services/alert_urgency.py`) statt konstant gesetzt. Vorher schrieb Radar/Nowcast
+immer `"HIGH"`, eine amtliche Warnung immer `"MODERATE"` — unabhängig vom Sachverhalt
+(leichter Nieselregen in 19 Minuten stand als `HIGH` im Protokoll, eine rote amtliche
+Unwetterwarnung als `MODERATE`). Amtliche Warnung: `OfficialAlert.level` über die
+bestehende Abbildung `hazard_symbols.LEVEL_LETTERS` ({2:"L"→LOW, 3:"M"→MODERATE,
+4:"H"→HIGH}, unbekannte Stufe konservativ → `HIGH`, nie leiser als die Wirklichkeit);
+Radar: konvektiv oder starker Regen → `HIGH`, mäßiger Regen → `MODERATE`, leichter →
+`LOW`; Vorhersage-Änderung bleibt inhaltlich unverändert (weiterhin über
+`DeviationAlertEngine._highest_severity()`). Werden mehrere Quellen im selben Lauf in
+einem Eintrag gebündelt (z.B. Δ-Änderung + amtliche Warnung, mehrere Orte im
+Ortsvergleich), gewinnt die höchste beteiligte Dringlichkeit (`highest_urgency()`).
+**Keine Versand-Wirkung:** kein Alarm wird anders gesendet, weder ob noch über welchen
+Kanal noch wann; `AlertCountByTrip()` und die Cockpit-Kachel „Alarme · letzte 24h" zählen
+unverändert nur `entries` (D4 aus #1459 bleibt gewahrt) — einzige nutzersichtbare Wirkung
+ist die Farbe des Alarm-Punkts im Cockpit (`frontend/src/routes/+page.svelte:400-404`),
+die jetzt zum tatsächlichen Sachverhalt passt statt dagegen. Spec:
+`docs/specs/modules/feat_1461_s3a_alarm_dringlichkeit.md`); 2026-08-04 (Issue #1457 S2c, `feat-1457-s2c-icon-eu-luekenfueller` — DWD ICON-EU (~6,5 km) schließt die Landkarte der Gewittersignal-Beschaffung: neuer Provider `DwdEuDirectProvider` (`src/providers/dwd_eu.py`, registriert als `eu_direct`) liefert Blitzpotenzial (`lpi_con_max`, extern verifiziert gegen `opendata.dwd.de`) für alle europäischen Orte, die weder Météo-France (FR/Korsika, S2a) noch ICON-D2 (DE/Alpen/Österreich, S2b) abdecken. **Kein neues Feld** — `lightning_potential_lpi_jkg` wird jetzt aus zwei Quellen befüllt (ICON-D2 für DE/Alpen/AT, ICON-EU für den Rest), unterscheidbar über die Position, nicht über das Feld. Neue Catch-all-Zeile `EU_REST` (first-match-wins, letzte Zeile) in `providers/thunder_routing.py`. **Kein Hagel-Signal bei ICON-EU** — `hail_potential_grau_gsp` bleibt für Rest-Europa dauerhaft `None`, beabsichtigt. Fehlwert-Behandlung unterscheidet sich von ICON-D2: ICON-EU trägt **keinen** festen Sentinel (9999.0 gilt dort nicht), stattdessen wird die Fehlwert-Markierung der GRIB2-Antwort selbst geprüft. `thunder_enrichment.py` und `models.py` unverändert — nutzt die bestehende S2b-Struktur (Signal-Key `"lpi"`) direkt weiter. Damit ist #1457 (Konzept #1419 Schritt S2) vollständig. Spec: `docs/specs/modules/feat_1457_s2c_icon_eu_luekenfueller.md`);; 2026-08-04 (Issue #1474, Folge-Scheibe `fix-1474-gewitterschwelle-cockpit` — zwei
 Lücken geschlossen, die die vorherige Scheibe bewusst offen ließ: **(1)** Drei Stellen
 beantworteten bisher getrennt, ab welcher Gewitter-**Stärke** gemeldet wird (SMS-Kürzel `TH:`
 folgte der pro Trip einstellbaren `MetricConfig.sms_threshold`, Mail-Trend-Block und

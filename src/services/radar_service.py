@@ -61,6 +61,15 @@ _ICON_D2_LON_MAX = 19.0
 _NOWCAST_HORIZON_MIN = 60
 _DRY_THRESHOLD_MM_H = 0.1
 
+# Issue #1461 S3a: benannte Intensitaets-Label-Konstanten statt Inline-Strings
+# in intensity_to_text() -- alert_urgency.py vergleicht gegen diese Konstanten
+# statt gegen Zeichenketten-Duplikate (E3). Wortlaut unveraendert.
+INTENSITY_CONVECTIVE = "Starker Hagel/Gewitter"
+INTENSITY_HEAVY = "Starker Regen"
+INTENSITY_MODERATE = "Mäßiger Regen"
+INTENSITY_LIGHT = "Leichter Regen"
+INTENSITY_DRY = "Kein Niederschlag"
+
 HTTPX_TIMEOUT = 8.0
 
 
@@ -127,17 +136,17 @@ class RadarNowcastService:
         stages — even at very low precipitation rates.
         """
         if is_convective:
-            return "Starker Hagel/Gewitter"
+            return INTENSITY_CONVECTIVE
         # Guard: NaN or non-numeric input → treat as dry
         if not isinstance(mm_per_h, (int, float)) or mm_per_h != mm_per_h:
-            return "Kein Niederschlag"
+            return INTENSITY_DRY
         if mm_per_h < _DRY_THRESHOLD_MM_H:
-            return "Kein Niederschlag"
+            return INTENSITY_DRY
         if mm_per_h < 1.0:
-            return "Leichter Regen"
+            return INTENSITY_LIGHT
         if mm_per_h < 4.0:
-            return "Mäßiger Regen"
-        return "Starker Regen"
+            return INTENSITY_MODERATE
+        return INTENSITY_HEAVY
 
     def _is_convective_weathercode(self, code) -> bool:
         """Return True if WMO weather code indicates convective activity (thunderstorm/hail)."""

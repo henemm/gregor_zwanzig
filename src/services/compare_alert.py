@@ -21,6 +21,7 @@ from typing import Optional
 from app.config import Settings
 from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
 from services import alert_daily_limit, alert_log
+import services.alert_urgency as alert_urgency
 from services.alert_preset import _PRESET_TABLE
 from services.alert_state import AlertStateService
 from services.compare_alert_channels import (
@@ -191,7 +192,7 @@ class CompareAlertService:
             alert_log.append_entry(
                 self._user_id, entity_id=preset_id, entity_type="compare",
                 changes_count=len(alle_changes),
-                severity=DeviationAlertEngine._highest_severity(alle_changes),
+                severity=alert_urgency.urgency_from_changes(alle_changes),
                 metrics=alert_log.register_pairs_from_changes(alle_changes),
                 reason=alert_log.REASON_FORECAST_CHANGE,
                 effective_channels=config.channels,

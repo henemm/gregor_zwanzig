@@ -22,6 +22,7 @@ from typing import Optional
 from app.config import Settings
 from app.loader import compare_preset_to_dict, get_data_dir, load_all_locations, load_compare_presets
 from services import alert_log
+import services.alert_urgency as alert_urgency
 from services.alert_state import AlertStateService
 from services.compare_alert_guard import is_silenced
 from services.deviation_alert_engine import DeviationAlertEngine
@@ -134,7 +135,14 @@ class CompareRadarAlertService:
         # Register-Paare in EINEM Eintrag.
         alert_log.append_entry(
             self._user_id, entity_id=preset_id, entity_type="compare",
-            changes_count=len(triggered), severity="HIGH",
+            changes_count=len(triggered),
+            severity=alert_urgency.highest_urgency(*[
+                alert_urgency.urgency_from_radar(
+                    is_convective=nowcast.is_convective,
+                    intensity_label=nowcast.intensity_label,
+                )
+                for _name, _loc, nowcast in triggered
+            ]),
             metrics=alert_log.register_pairs_for_nowcast(
                 [nowcast.is_convective for _name, _loc, nowcast in triggered]
             ),

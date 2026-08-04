@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, List, Optional
 from app.config import Settings
 from app.models import SegmentWeatherData, WeatherChange
 from services import alert_daily_limit, alert_log
+import services.alert_urgency as alert_urgency
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import (
     NotificationResult,
@@ -279,7 +280,13 @@ class TripAlertService:
             entity_id=trip.id,
             entity_type="trip",
             changes_count=len(to_report),
-            severity=eval_result.severity,
+            severity=alert_urgency.highest_urgency(
+                alert_urgency.urgency_from_changes(to_report),
+                *[
+                    alert_urgency.urgency_from_official_level(a.level)
+                    for a, _segment_ids in (official_notices or [])
+                ],
+            ),
             metrics=alert_log.register_pairs_from_changes(to_report),
             reason=alert_log.REASON_FORECAST_CHANGE,
             effective_channels=eval_config.channels,
@@ -869,7 +876,11 @@ class TripAlertService:
             # NotificationResult — die Nowcast-Auswertung steckt im Request.
             alert_log.append_entry(
                 self._user_id, entity_id=trip.id, entity_type="trip",
-                changes_count=1, severity="HIGH",
+                changes_count=1,
+                severity=alert_urgency.urgency_from_radar(
+                    is_convective=_radar_request.is_convective,
+                    intensity_label=_radar_request.intensity_label,
+                ),
                 metrics=alert_log.register_pairs_for_nowcast(
                     _radar_request.is_convective
                 ),
@@ -1138,7 +1149,11 @@ class TripAlertService:
         # NICHT als Register-Kennung in `metrics` (eigenes Vokabular, O1).
         alert_log.append_entry(
             self._user_id, entity_id=trip.id, entity_type="trip",
-            changes_count=len(official_notices), severity="MODERATE",
+            changes_count=len(official_notices),
+            severity=alert_urgency.highest_urgency(*[
+                alert_urgency.urgency_from_official_level(a.level)
+                for a, _segment_ids in official_notices
+            ]),
             hazards=alert_log.hazards_from_official_alerts(
                 [a for a, _segment_ids in official_notices]
             ),
