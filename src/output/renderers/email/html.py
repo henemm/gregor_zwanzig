@@ -35,6 +35,7 @@ from output.renderers.trip_metric_ids import resolve_trip_active_metrics
 from output.renderers.email.helpers import (
     ampel_level,
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
+    build_column_legend,
     build_segment_label, build_units_legend,
     derive_horizon, fmt_val, format_change_line, format_km_range,
     format_trend_tokens, pill_html,
@@ -470,6 +471,7 @@ def _render_footer(
     report_type: str,
     sent_at: Optional[datetime] = None,
     legend_text: str = "",
+    column_legend_text: str = "",
     ampel_legend_html: str = "",
     trip_url: Optional[str] = None,
 ) -> str:
@@ -533,10 +535,15 @@ def _render_footer(
         )
 
     extras = ""
-    if legend_text:
+    # Issue #1472: Einheiten-Zeile UND die neue Spalten-Zeile, die die
+    # englischen Kuerzel aufloest (ADR-0042-Bedingung) -- gleiche Optik,
+    # zwei getrennte Zeilen (Spec: verschiedene Fragen).
+    for _line in (legend_text, column_legend_text):
+        if not _line:
+            continue
         extras += (
             f'<div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:8px;">'
-            f'{legend_text}</div>'
+            f'{_line}</div>'
         )
     if ampel_legend_html:
         extras += ampel_legend_html
@@ -1579,6 +1586,7 @@ def render_html(
 
     all_rows = [r for tbl in seg_tables for r in tbl]
     legend_text = build_units_legend(all_rows) if all_rows else ""
+    column_legend_text = build_column_legend(all_rows) if all_rows else ""
 
     # AC-11 (#911): RISK-Legende als eigene Section vor dem Footer (helles #fbfaf6),
     # RISK-Präfix + CSS-Dots (border-radius:50%) statt Emoji-Kreise im dunklen Footer.
@@ -1611,6 +1619,7 @@ def render_html(
         report_type=report_type,
         sent_at=sent_at,
         legend_text=legend_text,
+        column_legend_text=column_legend_text,
         ampel_legend_html="",
         trip_url=trip_url,
     )

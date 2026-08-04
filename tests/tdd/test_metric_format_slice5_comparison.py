@@ -109,6 +109,18 @@ GOLDEN = (
     "   Schneehöhe: -\n"
     "   Neuschnee: -\n"
     "\n"
+    # Issue #1472 (2026-08-04): der Klartext-Teil der Vergleichs-Mail hatte bis
+    # hierher GAR KEINE Legende -- weder Einheiten noch Aufloesung der
+    # englischen Kuerzel (ADR-0042-Bedingung unerfuellt). Beide Zeilen kommen
+    # aus derselben Ableitung wie im HTML-Teil und erscheinen unter derselben
+    # Bedingung (`hourly_enabled`), damit die beiden Mail-Teile nicht
+    # auseinanderlaufen. Dieses Fixture hat bewusst keine `hourly_data` -- die
+    # Zeilen stehen hier also ohne Stundentabelle, exakt wie im HTML-Teil seit
+    # #1237.
+    "Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · Rain% % · Visib km\n"
+    "Spalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Gust = Böen · "
+    "Rain = Niederschlag · UV = UV-Index · Thdr = Gewitter · "
+    "Rain% = Regenwahrscheinlichkeit · Visib = Sichtweite\n"
     "---\n"
     "Gregor Zwanzig"
 )

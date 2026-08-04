@@ -28,6 +28,7 @@ from output.renderers.trip_metric_ids import resolve_trip_active_metrics
 from output.renderers.email.helpers import (
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
     build_segment_label,
+    build_column_legend,
     build_units_legend, fmt_val, format_change_line, format_km_range,
     render_origin_footer_text, tone_symbol, visible_cols,
 )
@@ -331,6 +332,11 @@ def render_plain(
     legend_text = build_units_legend(all_rows) if all_rows else ""
     if legend_text:
         lines.append(legend_text)
+    # Issue #1472: zweite Legenden-Zeile, die die englischen Spaltenkuerzel
+    # aufloest (ADR-0042-Bedingung an der Stelle, an der gelesen wird).
+    column_legend_text = build_column_legend(all_rows) if all_rows else ""
+    if column_legend_text:
+        lines.append(column_legend_text)
     lines.append("-" * 60)
     lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
     model_name = segments[0].timeseries.meta.model if segments[0].timeseries else "n/a"

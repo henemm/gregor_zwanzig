@@ -41,6 +41,7 @@ Corsica E5: 18–20°C, gef. 12–13°C, ⛅, mäßiger Regen max 12:00, mäßig
   HILFE / HELP         – Alle Befehle anzeigen
 
 Einheiten: Temp, TmpMin, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
+Spalten: Temp = Temperatur · TmpMin = Tiefsttemperatur-Alarm · Feels = Gefühlte Temperatur · Gust = Böen · Rain = Niederschlag · Thdr = Gewitter · SnowL = Schneefallgrenze · Cloud = Bewölkung · Sun = Sonnenstunden
 ------------------------------------------------------------
 Generated: 2026-04-28 12:00 UTC
 Data: openmeteo (arome_france)

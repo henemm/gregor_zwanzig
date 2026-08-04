@@ -358,6 +358,38 @@ def format_units_legend(label_units: list[tuple[str, str]]) -> str:
     return "Einheiten: " + " · ".join(parts)
 
 
+def format_column_legend(label_pairs: list[tuple[str, str]]) -> str:
+    """Gemeinsamer Formatierer der Spalten-Legende (#1472, ADR-0042-Bedingung):
+    'Spalten: Thdr = Gewitter · Visib = Sichtweite'.
+
+    Analog `format_units_legend` die EINZIGE Formatierstelle -- Trip-Briefing
+    (`build_column_legend`) UND Ortsvergleich (`compare_html._column_legend_text`)
+    rufen sie auf, damit die vier Ausgaben nicht auseinanderlaufen.
+
+    `label_pairs` sind (Kuerzel, ausgeschriebener Name)-Paare in
+    Sichtbarkeits-Reihenfolge; das Kuerzel ist der TATSAECHLICH gerenderte
+    Spaltenkopf (AC-8), nicht die Registerform. Paare, deren beide Seiten
+    identisch sind (Vergleich ohne Gross-/Kleinschreibung, z.B. 'Wind'/'Wind'),
+    entfallen -- sie erklaeren nichts. Bleibt nichts uebrig, ist der Rueckgabe-
+    wert leer und der Aufrufer rendert keine Zeile."""
+    parts: list[str] = []
+    gesehen: set[str] = set()
+    for short, long in label_pairs:
+        kurz = (short or "").strip()
+        lang = (long or "").strip()
+        if not kurz or not lang:
+            continue
+        if kurz.lower() == lang.lower():
+            continue
+        if kurz in gesehen:
+            continue
+        gesehen.add(kurz)
+        parts.append(f"{kurz} = {lang}")
+    if not parts:
+        return ""
+    return "Spalten: " + " · ".join(parts)
+
+
 # ----------------------------------------------------------------------
 # Issue #1241: Herkunfts-Footer — EIN geteilter Baustein für alle Mail-Renderer
 # ----------------------------------------------------------------------
@@ -474,6 +506,30 @@ def build_units_legend(rows: list[dict]) -> str:
             continue
         pairs.append((col_label, m.display_unit if m.display_unit else m.unit))
     return format_units_legend(pairs)
+
+
+def build_column_legend(rows: list[dict]) -> str:
+    """Trip-Weg zur Spalten-Legende (#1472): 'Spalten: Feels = Gefuehlte
+    Temperatur · Dew = Taupunkt'.
+
+    Kuerzel ist das `label` aus `visible_cols(rows)` -- also GENAU der
+    gerenderte Spaltenkopf der Stundentabelle (AC-8), nicht eine zweite
+    Ableitung aus dem Register. Der ausgeschriebene Name kommt aus derselben
+    `MetricDefinition` (`label_de`) wie ueberall sonst; es entsteht keine
+    zweite Namensquelle.
+
+    KEIN `try/except KeyError` um den Register-Zugriff (Issue #1405,
+    `test_resolution_loss_guard`): `visible_cols()` zieht seine `col_key`s aus
+    `get_col_defs()`, das aus `_METRICS` gebaut wird -- derselben Liste, aus
+    der auch `_METRICS_BY_COL_KEY` entsteht. Ein Fehltreffer ist damit
+    unmoeglich; ein stiller `continue` wuerde nur einen unerreichbaren Zweig
+    vortaeuschen und eine Spalte im Fehlerfall wortlos verschlucken. Der
+    Zwilling `build_units_legend()` (daruber) traegt die alte Form noch als
+    Altlast in `KNOWN_VIOLATIONS`."""
+    pairs: list[tuple[str, str]] = []
+    for col_key, col_label in visible_cols(rows):
+        pairs.append((col_label, get_metric_by_col_key(col_key).label_de))
+    return format_column_legend(pairs)
 
 
 # Issue #759: 4-stufiger Ampelpunkt fuer Wind/Boen/Regen/Regenwahrscheinlichkeit.

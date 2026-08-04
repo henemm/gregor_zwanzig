@@ -1235,16 +1235,40 @@ def _units_legend_text(visible: list[dict]) -> str:
     return format_units_legend(pairs)
 
 
+def _column_legend_text(visible: list[dict]) -> str:
+    """Issue #1472 (AC-1/AC-8): Spalten-Zeile fuer die sichtbaren Stunden-
+    Spalten -- 'Spalten: Thdr = Gewitter · Visib = Sichtweite'.
+
+    Beide Seiten des Paares stammen aus DERSELBEN Ableitung wie der
+    Tabellenkopf (`derive_row_labels`), positionsgleich gezippt: kurz = der
+    gerenderte Spaltenkopf, lang = der ausgeschriebene deutsche Registername.
+    Damit traegt die Legende bei gleichlautender Kurzform denselben
+    Auswertungs-Zusatz wie der Kopf ('Temp max = Temperatur Maximum') statt
+    ein Kuerzel zu erklaeren, das in der Tabelle gar nicht vorkommt.
+    Formatiert vom geteilten Helfer `helpers.format_column_legend` -- dieselbe
+    Quelle wie die Trip-Briefing-Legende (keine Kopie)."""
+    from output.renderers.email.helpers import format_column_legend
+
+    kurz = derive_row_labels(visible, form="short")
+    lang = derive_row_labels(visible, form="long")
+    pairs = [(k["label"], lng["label"]) for k, lng in zip(kurz, lang)]
+    return format_column_legend(pairs)
+
+
 def _render_units_legend(hourly_metrics: list[str] | None) -> str:
     """Einheiten-Legende UNTER der Stundentabelle (nicht im Spaltenkopf) --
-    die Spaltenkoepfe bleiben 'Zeit'/'Sicht' (AC-2)."""
-    text = _units_legend_text(_visible_hour_metrics(hourly_metrics))
-    if not text:
-        return ""
-    return (
-        f'<div style="margin-top:8px;font-family:{FONT_DATA};font-size:10px;'
-        f'color:{G_INK_MUTED};">{_html.escape(text)}</div>'
-    )
+    die Spaltenkoepfe bleiben 'Zeit'/'Sicht' (AC-2). Issue #1472: darunter die
+    zweite Zeile, die die englischen Kuerzel aufloest (ADR-0042-Bedingung)."""
+    visible = _visible_hour_metrics(hourly_metrics)
+    blocks = ""
+    for text in (_units_legend_text(visible), _column_legend_text(visible)):
+        if not text:
+            continue
+        blocks += (
+            f'<div style="margin-top:8px;font-family:{FONT_DATA};font-size:10px;'
+            f'color:{G_INK_MUTED};">{_html.escape(text)}</div>'
+        )
+    return blocks
 
 
 def _render_legend(hourly_metrics: list[str] | None = None, hourly_enabled: bool = True) -> str:

@@ -29,8 +29,9 @@ from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from output.renderers.email.compare_html import (
     CV2_METRICS, OUTLOOK_HEADING, _build_location_outlook_rows,
-    _fmt_precip_type, _fmt_thunder, _fmt_visibility_overview, _metric_value,
-    _should_merge_wind_dir, _visible_hour_metrics, derive_row_labels,
+    _column_legend_text, _fmt_precip_type, _fmt_thunder,
+    _fmt_visibility_overview, _metric_value, _should_merge_wind_dir,
+    _units_legend_text, _visible_hour_metrics, derive_row_labels,
     location_render_order,
 )
 from utils.geo import degrees_to_compass
@@ -312,6 +313,22 @@ def render_comparison_text(
             lines.append("STUNDENVERLAUF")
             lines.append("-" * 15)
         lines.extend(section_lines)
+
+    # Issue #1472: Einheiten- UND Spalten-Legende. Der Klartext-Teil hatte
+    # bisher GAR KEINE Legende (auch keine Einheiten-Zeile) -- die englischen
+    # Kuerzel der Stundenzeilen waren hier nirgends aufloesbar (ADR-0042).
+    # Beide Zeilen entstehen aus derselben Ableitung wie im HTML-Teil
+    # (`_units_legend_text`/`_column_legend_text` mit denselben sichtbaren
+    # Spalten), damit HTML und Klartext derselben Mail nie auseinanderlaufen.
+    # Bedingung identisch zum HTML-Pfad (`_render_legend`): nur bei
+    # eingeschalteter Stundentabelle.
+    if hourly_enabled:
+        for _legend in (
+            _units_legend_text(visible_hour_metrics),
+            _column_legend_text(visible_hour_metrics),
+        ):
+            if _legend:
+                lines.append(_legend)
 
     lines.append("---")
     lines.append("Gregor Zwanzig")

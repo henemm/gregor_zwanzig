@@ -492,3 +492,101 @@ def test_ac7_all_four_outputs_name_identical_pairs():
         f"AC-7: die gemeinsame Legende weicht von der erwarteten Aufloesung "
         f"ab (Wind faellt als identisches Paar weg): {ausgaben['Trip HTML']!r}"
     )
+
+
+# ===========================================================================
+# AC-8 — die Legende erklaert GENAU die Kuerzel, die im Tabellenkopf stehen
+# ===========================================================================
+
+def _header_shorts(rendered_html: str, *, zeitspalte: str, weglassen: set[str]) -> list[str]:
+    """Kuerzel aus dem gerenderten Tabellenkopf der Stundentabelle.
+
+    Ausgewertet wird die Kopfzeile, die die fest verdrahtete Zeitspalte
+    ('Zeit' im Vergleich, 'Time' im Trip) enthaelt — damit nicht die
+    Uebersichtsmatrix (Kopf = Ortsnamen) mitgezaehlt wird. Mehrere Ortsbloecke
+    liefern dieselbe Kopfzeile mehrfach; die erste genuegt.
+    """
+    soup = BeautifulSoup(rendered_html, "html.parser")
+    for tr in soup.find_all("tr"):
+        zellen = [th.get_text().strip() for th in tr.find_all("th")]
+        if zeitspalte in zellen:
+            return [z for z in zellen if z and z not in weglassen]
+    raise AssertionError(
+        f"keine Stundentabellen-Kopfzeile mit Spalte {zeitspalte!r} gefunden"
+    )
+
+
+# Auswahl OHNE identisches Paar (kein "Wind"): so ist jede Kopfspalte auch ein
+# Legenden-Eintrag, und Mengengleichheit ist die richtige Behauptung. Mit Wind
+# waere die Legende bewusst kleiner (AC-4) — das prueft dieser Test nicht.
+_AC8_COMPARE = ["t2m_c", "wind_chill_c", "dewpoint_c", "thunder_level", "visibility_m"]
+_AC8_TRIP = ["temperature", "wind_chill", "dewpoint", "thunder", "visibility"]
+
+
+def test_ac8_legend_names_exactly_the_abbreviations_of_the_table_head():
+    """AC-8: Kein Kuerzel steht in der Legende, das im Tabellenkopf fehlt —
+    und keines im Kopf, das die Legende verschweigt. Geprueft an der wirklich
+    gerenderten Kopfzeile beider HTML-Ausgaben, als Mengen-GLEICHHEIT."""
+    faelle = (
+        ("Vergleich HTML", _render_compare(_AC8_COMPARE)[0], "Zeit", {"Zeit"}),
+        ("Trip HTML", _render_trip_html(_AC8_TRIP), "Time", {"Time", "Risk"}),
+    )
+    geprueft = 0
+    for pfad, html, zeitspalte, weglassen in faelle:
+        kopf = _header_shorts(html, zeitspalte=zeitspalte, weglassen=weglassen)
+        legende = _shorts(_column_pairs(html, is_html=True, where=pfad))
+        assert kopf, f"AC-8 ({pfad}): der Tabellenkopf nennt keine Wert-Spalte"
+        assert set(legende) == set(kopf), (
+            f"AC-8 ({pfad}): Legende und Tabellenkopf nennen verschiedene "
+            f"Kuerzel — Kopf {sorted(set(kopf))!r}, Legende "
+            f"{sorted(set(legende))!r}. Nur in der Legende: "
+            f"{sorted(set(legende) - set(kopf))!r}; nur im Kopf: "
+            f"{sorted(set(kopf) - set(legende))!r}"
+        )
+        assert len(set(kopf)) >= 5, (
+            f"AC-8 ({pfad}): nur {len(set(kopf))} Kuerzel geprueft — bei zu "
+            f"kleiner Auswahl waere die Gleichheit trivial wahr: {kopf!r}"
+        )
+        geprueft += 1
+    assert geprueft == 2, f"AC-8: nur {geprueft} von 2 HTML-Ausgaben geprueft"
+
+
+def test_ac8_collision_legend_carries_the_aggregation_suffix():
+    """AC-8 (Kollisionsfall): Given zwei Auswertungen derselben Groesse, sodass
+    die Beschriftung den Auswertungs-Zusatz traegt ('Temp max'/'Temp min') /
+    When die Legende gebaut wird / Then nennt sie GENAU diese Kuerzel — nicht
+    die zusatzlose Registerform 'Temp'.
+
+    Gespeist aus den echten Produktivzeilen (`CV2_METRICS`), nicht aus
+    getippten Testdaten. Naehme die Legende `col_label` direkt aus dem
+    Register, stuende hier 'Temp = Temperatur' — ein Kuerzel, das so in keiner
+    Tabelle vorkommt.
+    """
+    from output.renderers.email.compare_html import (
+        CV2_METRICS, _column_legend_text, derive_row_labels,
+    )
+
+    rows = [m for m in CV2_METRICS if m.get("key") in ("temp_max", "temp_min")]
+    assert len(rows) == 2, (
+        f"AC-8-Voraussetzung: temp_max und temp_min muessen als echte "
+        f"Produktivzeilen existieren, gefunden: {rows!r}"
+    )
+
+    kopf = [r["label"] for r in derive_row_labels(rows, form="short")]
+    assert kopf == ["Temp max", "Temp min"], (
+        f"AC-8-Voraussetzung: die Ableitung erzeugt keinen Auswertungs-Zusatz "
+        f"— dann prueft dieser Test nichts: {kopf!r}"
+    )
+
+    text = _column_legend_text(rows)
+    pairs = _column_pairs(text, is_html=False, where="Kollisionsfall")
+    assert pairs == [
+        ("Temp max", "Temperatur Maximum"),
+        ("Temp min", "Temperatur Minimum"),
+    ], (
+        f"AC-8: die Legende folgt nicht der Beschriftungs-Ableitung, sondern "
+        f"vermutlich dem Register: {pairs!r}"
+    )
+    assert set(_shorts(pairs)) == set(kopf), (
+        f"AC-8: Legende {_shorts(pairs)!r} und Beschriftung {kopf!r} weichen ab"
+    )

@@ -325,8 +325,18 @@ class TestCorridorScoreIndependence:
 # den es nicht mehr gibt; sie hier stehen zu lassen haette diesen Waechter
 # dauerhaft rot gehalten. Der Waechter selbst bleibt in Kraft: er bewacht
 # weiterhin, dass eine TRIP-Aenderung die Vergleichs-Mail nicht anfasst.
-_COMPARE_HTML_SHA256_BEFORE = "db0991d9a6b59901f11de55ddd2699b64ef39b34506981674b23cd88c85b3667"
-_COMPARE_TEXT_SHA256_BEFORE = "6971eab436654e1751049731afecad7c362352537a0c72ec3bccbf681dc732cd"
+#
+# ERNEUT AUFGENOMMEN 2026-08-04 (Issue #1472): dieselbe Lage wie bei #1453 --
+# die Lieferung aendert die Vergleichs-Mail AUSDRUECKLICH (unter der
+# Stundentabelle steht ab jetzt eine zweite Legenden-Zeile "Spalten: Thdr =
+# Gewitter", die die englischen Kuerzel aufloest; ADR-0042-Bedingung). Der
+# Klartext-Teil bekommt zusaetzlich die Einheiten-Zeile, die es dort nie gab.
+# Byte-Diff gegen den Vorstand geprueft: GENAU diese Zeilen, sonst nichts.
+# Alte Summen (HTML db0991d9…, Klartext 6971eab4…). Der Waechter bleibt in
+# Kraft und bewacht weiterhin, dass eine TRIP-Aenderung die Vergleichs-Mail
+# nicht anfasst.
+_COMPARE_HTML_SHA256_BEFORE = "a6bd956e592e32d210e5012c776ed3b17481ea24d2951374b6204ce6c1e76902"
+_COMPARE_TEXT_SHA256_BEFORE = "b7d76e21e6569040d3d020a9de12f1753f0ab9c384033d26f8559d4814b58926"
 
 
 def _byte_identity_fixture():

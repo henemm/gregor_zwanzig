@@ -129,7 +129,16 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # hier. Kein anderer Text-/Layout-/Farbblock hat sich geaendert (Wind 35/
 # Boeen 45/Regen 2,0 mm/PR 40 % liefen bereits vor dieser Scheibe ueber den
 # Katalog, s. Scheibe A). Digest unten neu ermittelt.
-_EXPECTED_SHA256 = "adc39a439ee8632e88b4bb5a24371a14f6cbc1480bce736adf85cd09e057a00a"
+#
+# #1472 (2026-08-04): die Trip-Mail bekommt ABSICHTLICH eine zweite
+# Legenden-Zeile unter der bestehenden Einheiten-Zeile ("Spalten: Temp =
+# Temperatur · ..."), die die englischen Spaltenkuerzel aufloest
+# (ADR-0042-Bedingung, bisher nur im Editor erfuellt). Byte-Diff gegen den
+# Vorstand geprueft: HTML genau EIN zusaetzliches <div> im Footer, Klartext
+# genau EINE zusaetzliche Zeile -- sonst nichts. Alter Digest adc39a43….
+# Der Waechter bleibt in Kraft; nur der Anker ist auf den neuen Sollstand
+# gesetzt.
+_EXPECTED_SHA256 = "142624b11edfcf19bc63c89d375b79bb8227dbc49992101d22803c25f5a6e235"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",
