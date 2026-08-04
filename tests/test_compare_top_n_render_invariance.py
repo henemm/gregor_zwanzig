@@ -344,12 +344,19 @@ def test_scheduler_dispatch_path_renders_without_top_n_details(tmp_path):
     def _recording_render_compare_email(*args, **kwargs):
         raise _RenderCallRecorded(dict(kwargs))
 
+    # Empfaenger explizit setzen (#1452): seit der Umstellung auf die Konto-
+    # Settings ist `mail_to` eine harte Vorbedingung von send_one_compare_preset;
+    # das Preset-Feld `empfaenger` ist inert. Muster wie in
+    # tests/tdd/test_compare_outlook.py::_dispatch_kwargs.
+    settings = Settings().with_user_profile(user_id).model_copy(
+        update={"mail_to": "gregor-test@henemm.com"}
+    )
     compare_render_mod.render_compare_email = _recording_render_compare_email
     try:
         with pytest.raises(_RenderCallRecorded) as exc:
             send_one_compare_preset(
                 preset,
-                Settings().with_user_profile(user_id),
+                settings,
                 user_id,
                 str(tmp_path),
                 all_locations_cache=[location],
