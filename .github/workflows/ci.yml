@@ -63,7 +63,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run frontend unit tests
-        run: npm test
+        # Kurzliste der Fehlschlaege ans Log-ENDE — das 17k-Zeilen-TAP-Log
+        # begraebt "not ok" sonst in der Mitte (#1196).
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee /tmp/fe-test.log || {
+            echo "=== FEHLGESCHLAGENE TESTS (Kurzliste) ==="
+            grep -nE "^\s*not ok" /tmp/fe-test.log | head -40
+            exit 1
+          }
 
   svelte-check:
     # Baseline-Gate (Issue #1018): darf nur "nicht schlechter werden".
