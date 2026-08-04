@@ -3,7 +3,9 @@
 Kern-Schicht (deterministisch, kein Netz/Mail): prueft die Renderer-SSoT direkt
 und ueber einen echten render_email-Durchlauf. Die Kreis-Emojis duerfen weder im
 HTML (dort CSS-Dot mit Ring) noch im Plain-Text (dort ersatzlos entfernt)
-erscheinen. Wetter-Symbole (z.B. Blitz) bleiben erhalten.
+erscheinen. Wetter-Symbole (z.B. Bewoelkung) bleiben erhalten -- Gewitter (vormals
+das Beispiel hier) traegt seit Issue #1491 selbst keinen Symbol-/Emoji-Wert mehr,
+sondern eine reguläre Ampel-Kreis/Wort-Darstellung.
 
 RED-Erwartung vor dem Fix: ampel_dot()/fmt_val() liefern heute Emoji, die
 official-Notice und Plain-Pills tragen heute Emoji → alle Assertions unten
@@ -146,9 +148,16 @@ class TestNoCircleEmojiAnywhere:
             assert not found, f"{label} enthaelt Kreis-Emoji {found!r}"
 
     def test_weather_symbols_are_not_stripped(self):
-        """Regressionsschutz: Blitz-Symbol darf weiter erscheinen (nicht Teil des Fix)."""
-        from src.output.renderers.email.helpers import fmt_val
-        from app.models import ThunderLevel
+        """Regressionsschutz: die #1222-Umstellung von Kreis-Emoji auf CSS-Punkte
+        darf echte Wetter-Symbole nicht mitfressen.
 
-        out = fmt_val("thunder", ThunderLevel.HIGH, html=True)
-        assert "⚡" in out, f"Wetter-Symbol faelschlich entfernt: {out!r}"
+        Vormals Blitz (thunder) als Beispiel -- seit Issue #1491 ist die
+        Gewitter-Spalte selbst eine reguläre Ampel-Spalte geworden und traegt
+        bewusst KEIN Symbol mehr (Ampel-Kreis/Wort statt ⚡). Bewoelkung
+        (cloud_emoji) bleibt ein Wetter-Symbol im klassischen Sinn und dient
+        hier als Ersatzbeispiel fuer dieselbe Zusicherung.
+        """
+        from src.output.renderers.email.helpers import fmt_val
+
+        out = fmt_val("cloud", 95, html=True, friendly_keys={"cloud"})
+        assert "☁️" in out, f"Wetter-Symbol faelschlich entfernt: {out!r}"

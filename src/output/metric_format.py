@@ -48,6 +48,7 @@ __all__ = [
     "thunder_label_value",
     "thunder_level_from_signals",
     "THUNDER_LABEL_DE",
+    "thunder_ampel_band",
     "max_thunder",
 ]
 
@@ -238,6 +239,30 @@ THUNDER_LABEL_DE: dict[ThunderLevel, str] = {
     ThunderLevel.MED: "mittel",
     ThunderLevel.HIGH: "hoch",
 }
+
+
+# Einzige Quelle Stufe -> Ampelband (Issue #1491, ADR-0025). Konsumenten
+# (Trip-Stundentabelle und Ortsvergleich) leiten Kreisfarbe UND Zell-Toenung
+# aus dieser einen Zuordnung ab statt eigener Kopien.
+_THUNDER_AMPEL_BAND: dict[ThunderLevel, str] = {
+    ThunderLevel.NONE: "green",
+    ThunderLevel.LOW: "yellow",
+    ThunderLevel.MED: "orange",
+    ThunderLevel.HIGH: "red",
+}
+
+
+def thunder_ampel_band(level: Optional[ThunderLevel]) -> Optional[str]:
+    """Ordnet eine ``ThunderLevel``-Stufe ihrem Ampelband zu
+    (``green``/``yellow``/``orange``/``red``).
+
+    ``None`` (keine Gewitteraussage) liefert ``None`` — Aufrufer zeigen dafuer
+    einen Strich, NIEMALS ein Ampelband ("keine Aussage" != "keine Gefahr",
+    Issue #1491 AC-1).
+    """
+    if level is None:
+        return None
+    return _THUNDER_AMPEL_BAND.get(level)
 
 
 def max_thunder(levels: Iterable[ThunderLevel]) -> ThunderLevel:

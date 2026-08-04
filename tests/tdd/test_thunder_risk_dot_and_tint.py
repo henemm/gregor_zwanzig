@@ -85,6 +85,20 @@ def _thunder_cell_bg(html: str):
     return match.group(1).lower() if match else None
 
 
+def _thunder_cell_dot_fill(html: str):
+    """Fuellfarbe des Ampel-Kreises IN der Gewitterzelle (Issue #1491: die
+    Zelle traegt seit der Ampel-Umstellung einen CSS-Dot-Span, kein
+    Blitzsymbol mehr). `None`, wenn kein Kreis vorhanden ist."""
+    td = _single_row(html).find("td", attrs={"data-label": _THUNDER_LABEL})
+    if td is None:
+        return None
+    span = td.find("span")
+    if span is None:
+        return None
+    match = _BG_HEX.search(span.get("style", ""))
+    return match.group(1).lower() if match else None
+
+
 def _row(**overrides) -> dict:
     """Stundenzeile mit durchweg unauffaelligen Werten (alle unterhalb jeder
     Katalog-Warnschwelle) — auffaellig ist nur, was der Test setzt."""
@@ -108,12 +122,14 @@ def test_ac1_thunder_high_makes_risk_dot_red():
     """AC-1: GIVEN eine Stundenzeile mit Gewitterstufe HIGH und sonst
     unauffaelligen Werten / WHEN die Briefing-Stundentabelle gerendert wird /
     THEN zeigt der Risiko-Punkt am Zeilenende Rot — heute bleibt er gruen,
-    obwohl das Gewittersymbol ⚡⚡ bereits korrekt in der Zelle erscheint."""
+    obwohl die Gewitterzelle (seit Issue #1491 ein roter Ampel-Kreis statt
+    des vormaligen Blitzsymbols ⚡⚡) bereits korrekt erscheint."""
     html = _render_one(_row(thunder=ThunderLevel.HIGH))
 
-    assert "⚡⚡" in html, (
-        "Erwartungs-Grundlage: Der Zelltext zeigt bei HIGH bereits korrekt ⚡⚡ "
-        "— genau diese Diskrepanz zum gruenen Punkt ist der Fehler."
+    assert _thunder_cell_dot_fill(html) == "#b91c1c", (
+        "Erwartungs-Grundlage: Die Gewitterzelle zeigt bei HIGH bereits "
+        "korrekt den roten Ampel-Kreis (#b91c1c, Issue #1491) — genau diese "
+        "Diskrepanz zum gruenen Risiko-Punkt ist der Fehler."
     )
 
     color = _risk_dot_color(html)

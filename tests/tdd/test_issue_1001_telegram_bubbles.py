@@ -727,15 +727,18 @@ class TestF001OverviewThunderMatchesFooterWorstValue:
         assert thunder_lines, f"Keine Gewitter-Zeile (⚡) in der Kurzübersicht-Bubble:\n{overview_text}"
 
         # Die ERSTE ⚡-Zeile ist die _overview_line("thunder", ...)-Zeile — genau
-        # die Stelle des F001-Bugs (`hits[-1]` statt Tages-Schlimmstwert). Bei
-        # Symbol-Modus (Default, kein format_mode="raw") rendert HIGH als "⚡⚡"
-        # (siehe email/helpers.py fmt_val key=="thunder"), NONE als "–".
+        # die Stelle des F001-Bugs (`hits[-1]` statt Tages-Schlimmstwert).
+        # Issue #1491: Gewitter ist eine reguläre Ampel-Spalte geworden --
+        # HIGH rendert als deutsches Wort "hoch" (THUNDER_LABEL_DE), nicht
+        # mehr als Blitzsymbol "⚡⚡" (siehe email/helpers.py fmt_val
+        # key=="thunder"). NONE als "–".
         overview_thunder_line = thunder_lines[0]
-        assert "⚡⚡" in overview_thunder_line, (
+        assert "hoch" in overview_thunder_line, (
             f"F001-Regression: Kurzübersicht-Gewitterzeile zeigt nicht das "
-            f"HIGH-Symbol '⚡⚡' (Tages-Schlimmstwert), sondern {overview_thunder_line!r} "
-            f"(vermutlich den zuletzt beobachteten Wert 'NONE'/'–' des letzten "
-            f"Segments statt des Tages-Schlimmstwerts). Ganze Bubble:\n{overview_text}"
+            f"Wort 'hoch' (Tages-Schlimmstwert, Issue #1491), sondern "
+            f"{overview_thunder_line!r} (vermutlich den zuletzt beobachteten "
+            f"Wert 'NONE'/'–' des letzten Segments statt des "
+            f"Tages-Schlimmstwerts). Ganze Bubble:\n{overview_text}"
         )
         assert overview_thunder_line.strip() != "⚡ –", (
             f"Widerspruch (F001): Kurzübersicht zeigt 'kein Gewitter' (–), "
@@ -745,10 +748,13 @@ class TestF001OverviewThunderMatchesFooterWorstValue:
         # Widerspruchsfreiheit: Fußzeile (dritte ⚡-Zeile, _tg_day_footer) UND
         # Kurzübersicht-Zeile müssen dieselbe Tagesaussage treffen — beide
         # "etwas" (nicht "kein Gewitter") melden, nicht eine "kein" und die
-        # andere "HIGH" (die ursprüngliche Adversary-Klage).
+        # andere "hoch" (die ursprüngliche Adversary-Klage). Die Fußzeile
+        # zeigt seit jeher das deutsche Wort (THUNDER_LABEL_DE, #1474b), nicht
+        # den englischen Enum-Namen "HIGH" — diese Erwartung war bereits vor
+        # #1491 veraltet, nur von der frueheren "⚡⚡"-Assertion maskiert.
         footer_thunder_line = next((ln for ln in thunder_lines if "Sicht" in ln), None)
         assert footer_thunder_line is not None, f"Keine Fußzeile mit ⚡ gefunden: {thunder_lines}"
-        assert "HIGH" in footer_thunder_line, f"Fußzeile zeigt nicht HIGH: {footer_thunder_line!r}"
+        assert "hoch" in footer_thunder_line, f"Fußzeile zeigt nicht 'hoch': {footer_thunder_line!r}"
         overview_says_none = overview_thunder_line.strip() == "⚡ –"
         footer_says_none = "kein" in footer_thunder_line
         assert not (overview_says_none and not footer_says_none), (

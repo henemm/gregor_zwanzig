@@ -308,15 +308,20 @@ class TestHTMLColorCoding:
             or "ffebee" in report.email_html
         )
 
-    def test_html_has_thunder_icon(self):
-        """GIVEN thunder_level=MED, THEN ⚡ emoji in HTML output."""
+    def test_html_has_thunder_ampel_dot(self):
+        """GIVEN thunder_level=MED, THEN orangener Ampel-Kreis im HTML-Output.
+
+        Issue #1491: die Gewitterspalte ist eine reguläre Ampel-Spalte
+        geworden -- MED zeigt den orangenen CSS-Dot (fill #c2410c) statt des
+        vormaligen Blitzsymbols ⚡.
+        """
         seg = _make_segment_weather(1, thunder=ThunderLevel.MED)
         for dp in seg.timeseries.data:
             if 8 <= dp.ts.hour <= 10:
                 dp.thunder_level = ThunderLevel.MED
         formatter = TripReportFormatter()
         report = formatter.format_email([seg], "Test", "morning")
-        assert "⚡" in report.email_html
+        assert "#c2410c" in report.email_html
 
 
 class TestPlainTextParity:

@@ -618,22 +618,21 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
     )
 
     if key == "thunder":
-        # Issue #814 AC-6: Roh → kurzes deutsches Wort, Einfach → Blitzsymbol.
-        # Thunder nutzt format_modes: mode=="raw" → Roh-Wort; mode=="symbol"/None → Blitzsymbol.
-        if mode == "raw":
-            if val == ThunderLevel.HIGH:
-                return "hoch"
-            if val == ThunderLevel.MED:
-                return "mögl."
-            return "kein"  # Issue #814 AC-6: NONE im Roh-Modus = deutsches Wort
-        # Einfach (mode=="symbol" oder Legacy mode==None): Blitzsymbol.
-        if val == ThunderLevel.HIGH:
-            t = "⚡⚡"
-            return f'<span style="color:#c62828;font-weight:600">{t}</span>' if html else t
-        if val == ThunderLevel.MED:
-            t = "⚡ mögl."
-            return f'<span style="color:#f57f17">{t}</span>' if html else t
-        return "–"
+        # Issue #1491: Gewitter ist eine reguläre Ampel-Spalte wie Wind/Böen/
+        # Regen/Regenwahrscheinlichkeit/CAPE. Roh-Modus UND die Text-Fassung
+        # (html=False, unabhaengig vom Modus) zeigen das deutsche Wort aus
+        # THUNDER_LABEL_DE -- kein Blitzsymbol, kein 'mögl.' mehr (Wort der
+        # Wahrscheinlichkeits-Achse, hier fuer eine Staerke-Stufe missbraucht,
+        # #1419). Die einfache HTML-Ansicht zeigt den Ampel-Kreis aus
+        # derselben Quelle (thunder_ampel_band), die auch die Zell-Toenung
+        # in html.py speist (EINE Quelle fuer Kreis und Toenung, #888).
+        from output.metric_format import THUNDER_LABEL_DE, thunder_ampel_band
+        if mode == "raw" or not html:
+            return THUNDER_LABEL_DE.get(val, "–")
+        band = thunder_ampel_band(val)
+        if band is None:
+            return "–"
+        return _ampel_dot_css(band)
     if key in ("temp", "felt", "dewpoint"):
         return f"{val:.1f}"
     if key in ("wind", "gust"):

@@ -387,6 +387,7 @@ def _overview_line(
     night_wind_chill_min_c: Optional[float] = None,
     hiking_temp_extrema: Optional[tuple[float, float, str]] = None,
     hiking_felt_extrema: Optional[tuple[float, float, str]] = None,
+    has_gap: bool = False,
 ) -> str:
     """Eine Kurzübersicht-Zeile ``{Kürzel} {Min}-{Max}@{Peak-Stunde}`` (oder
     Einzelwert/kategorisch).
@@ -419,6 +420,14 @@ def _overview_line(
     damit ein DRITTER, eigener Rechenweg fuer dieselbe Aussage. Fehlen sie
     (keine verwertbare Zeitreihe), bleibt es fail-soft beim
     ``seg_tables``-Weg. Alle uebrigen Metriken sind unberuehrt.
+
+    ``has_gap`` (Issue #1491 Adversary-Nachbesserung F001): dieselbe vom
+    Aufrufer ermittelte Ziel-Datenluecke wie ``_tg_day_footer`` (Zeile
+    ~242-248) -- NUR fuer die Gewitter-Metrik relevant. Ist der ueber alle
+    ``hits`` schlimmste beobachtete Wert ``NONE`` UND liegt eine Luecke vor,
+    darf diese Zeile keine positive Entwarnung "kein" zeigen (das waere eine
+    Aussage ueber ein unbeobachtetes Zeitfenster) -- sie zeigt stattdessen
+    den Unsicherheitsmarker "?", identisch zur Fusszeile derselben Bubble.
     """
     label = _compact_label(metric_id)
     key = _col_key(metric_id)
@@ -459,7 +468,14 @@ def _overview_line(
     except (TypeError, ValueError):
         if metric_id == "thunder":
             worst_row = max(hits, key=lambda h: _thunder_severity(h.get(key)))
-            value = _cell(metric_id, worst_row, fkeys)
+            # Issue #1491 F001: schlimmster BEOBACHTETER Wert ist NONE, aber
+            # das Zielfenster ist (teilweise) unbeobachtet -- "kein" waere
+            # hier eine Fehl-Entwarnung ueber die Luecke hinweg (analog
+            # _tg_day_footer, Zeile ~242-248).
+            if _thunder_severity(worst_row.get(key)) == 0 and has_gap:
+                value = "?"
+            else:
+                value = _cell(metric_id, worst_row, fkeys)
         else:
             value = _cell(metric_id, hits[-1], fkeys)
     return f"{label} {value}"
@@ -609,6 +625,7 @@ def render_telegram_bubbles(
             night_wind_chill_min_c=_night_felt_min_c,
             hiking_temp_extrema=_hiking_temp,
             hiking_felt_extrema=_hiking_felt,
+            has_gap=has_gap,
         )), _TG_PROSE_WIDTH))
     # Issue #1331/#1334 F008: has_gap kommt als expliziter Parameter vom
     # echten Versandpfad (notification_service.compute_has_gap() aus

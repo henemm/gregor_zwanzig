@@ -385,7 +385,9 @@ def test_visibility_roh_html_no_inline_style():
 
 
 # ---------------------------------------------------------------------------
-# AC-6: Gewitter — Einfach = Blitzsymbol, Roh = deutsches Wort
+# AC-6: Gewitter ist seit Issue #1491 eine reguläre Ampel-Spalte —
+# Einfach = Ampel-Kreis (CSS-Dot), Roh = deutsches Wort. Blitzsymbole (⚡)
+# und 'mögl.' sind vollständig entfallen (Spec fix_1491_gewitter_ampelkreis).
 # ---------------------------------------------------------------------------
 
 def _render_thunder_full(*, raw: bool, thunder_level):
@@ -401,65 +403,64 @@ def _render_thunder_full(*, raw: bool, thunder_level):
     return _render_one_metric("thunder", raw=raw, dp=dp)
 
 
-def test_thunder_einfach_med_has_lightning_symbol():
-    """AC-6 GREEN-Sicherung: Gewitter Einfach MED zeigt Blitzsymbol in HTML."""
+def test_thunder_einfach_med_has_orange_ampel_dot():
+    """Issue #1491: Gewitter Einfach MED zeigt den orangen Ampel-Kreis, kein Blitzsymbol."""
     from app.models import ThunderLevel
     html, _plain = _render_thunder_full(raw=False, thunder_level=ThunderLevel.MED)
     cells = _data_cells(html)
-    lightning_cells = [c for c in cells if "⚡" in c]
-    assert lightning_cells, (
-        f"AC-6: Einfach MED muss Blitzsymbol zeigen. Daten-Zellen: {cells!r}"
+    ampel_cells = [c for c in cells if "border-radius:50%" in c and "#c2410c" in c]
+    assert ampel_cells, (
+        f"Issue #1491: Einfach MED muss den orangen Ampel-Kreis zeigen. "
+        f"Daten-Zellen: {cells!r}"
+    )
+    assert "⚡" not in html and "mögl" not in html, (
+        f"Issue #1491: kein Blitzsymbol/'mögl.' mehr erlaubt. HTML: {html!r}"
     )
 
 
-def test_thunder_einfach_high_has_double_lightning():
-    """AC-6 GREEN-Sicherung: Gewitter Einfach HIGH zeigt doppeltes Blitzsymbol."""
+def test_thunder_einfach_high_has_red_ampel_dot():
+    """Issue #1491: Gewitter Einfach HIGH zeigt den roten Ampel-Kreis, kein Blitzsymbol."""
     from app.models import ThunderLevel
     html, _plain = _render_thunder_full(raw=False, thunder_level=ThunderLevel.HIGH)
     cells = _data_cells(html)
-    double_lightning = [c for c in cells if "⚡⚡" in c]
-    assert double_lightning, (
-        f"AC-6: Einfach HIGH muss doppeltes Blitzsymbol zeigen. Daten-Zellen: {cells!r}"
+    ampel_cells = [c for c in cells if "border-radius:50%" in c and "#b91c1c" in c]
+    assert ampel_cells, (
+        f"Issue #1491: Einfach HIGH muss den roten Ampel-Kreis zeigen. "
+        f"Daten-Zellen: {cells!r}"
+    )
+    assert "⚡⚡" not in html and "mögl" not in html, (
+        f"Issue #1491: kein doppeltes Blitzsymbol/'mögl.' mehr erlaubt. HTML: {html!r}"
     )
 
 
 def test_thunder_roh_med_german_word_no_lightning():
-    """AC-6 RED: Gewitter Roh MED zeigt deutsches Wort, kein Blitzsymbol.
-
-    Heute: fmt_val('thunder', MED) gibt 'Blitz mögl.' unabhaengig vom raw-Modus (FAIL).
-    """
+    """Issue #1491: Gewitter Roh MED zeigt das deutsche Wort 'mittel', kein Blitzsymbol."""
     from app.models import ThunderLevel
     html, plain = _render_thunder_full(raw=True, thunder_level=ThunderLevel.MED)
     cells = _data_cells(html)
     lightning_cells = [c for c in cells if "⚡" in c]
     assert not lightning_cells, (
-        f"AC-6 RED: Gewitter Roh MED darf kein Blitzsymbol zeigen. "
-        f"Gefunden: {lightning_cells!r}. "
-        f"(Bug: fmt_val ignoriert raw-Modus fuer thunder)"
+        f"Gewitter Roh MED darf kein Blitzsymbol zeigen. Gefunden: {lightning_cells!r}"
     )
     full_text = html + plain
-    assert any(w in full_text for w in ("mögl", "kein", "hoch")), (
-        f"AC-6 RED: Gewitter Roh MED muss deutsches Wort enthalten. "
+    assert "mittel" in full_text, (
+        f"Issue #1491: Gewitter Roh MED muss das Wort 'mittel' enthalten. "
         f"HTML-Zellen: {cells!r}"
     )
 
 
 def test_thunder_roh_high_german_word_no_lightning():
-    """AC-6 RED: Gewitter Roh HIGH zeigt deutsches Wort 'hoch', kein Blitzsymbol.
-
-    Heute: fmt_val gibt doppeltes Blitzsymbol unabhaengig vom raw-Modus (FAIL).
-    """
+    """Issue #1491: Gewitter Roh HIGH zeigt das deutsche Wort 'hoch', kein Blitzsymbol."""
     from app.models import ThunderLevel
     html, plain = _render_thunder_full(raw=True, thunder_level=ThunderLevel.HIGH)
     cells = _data_cells(html)
     lightning_cells = [c for c in cells if "⚡" in c]
     assert not lightning_cells, (
-        f"AC-6 RED: Gewitter Roh HIGH darf kein Blitzsymbol zeigen. "
-        f"Gefunden: {lightning_cells!r}"
+        f"Gewitter Roh HIGH darf kein Blitzsymbol zeigen. Gefunden: {lightning_cells!r}"
     )
     full_text = html + plain
-    assert any(w in full_text for w in ("hoch", "mögl", "kein")), (
-        f"AC-6 RED: Gewitter Roh HIGH muss deutsches Wort enthalten. "
+    assert "hoch" in full_text, (
+        f"Issue #1491: Gewitter Roh HIGH muss das Wort 'hoch' enthalten. "
         f"HTML-Zellen: {cells!r}"
     )
 

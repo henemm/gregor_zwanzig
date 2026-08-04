@@ -47,7 +47,9 @@ from output.renderers.email.design_tokens import (
 )
 from output.renderers.email.outlook import build_outlook_row, render_outlook_table
 from output.renderers.email.profile_signature import profile_signature
-from output.metric_format import THUNDER_LABEL_DE, format_value, severity_for
+from output.metric_format import (
+    THUNDER_LABEL_DE, format_value, severity_for, thunder_ampel_band,
+)
 from utils.geo import degrees_to_compass
 from utils.timezone import (
     UTC, local_dt, local_hour, local_stamp, location_tz, tz_abbrev,
@@ -169,9 +171,11 @@ _THUNDER_LEVEL_LABEL = {
     "MED": THUNDER_LABEL_DE["MED"],
     "HIGH": THUNDER_LABEL_DE["HIGH"],
 }
-# LOW = "caution" -- naechstschwaechere Stufe unter warn/danger, passend zum
-# bestehenden Vier-Ampel-Vokabular ok/caution/warn/danger.
-_THUNDER_SEV = {"LOW": "caution", "MED": "warn", "HIGH": "danger"}
+# Issue #1491: die Ordnung stammt jetzt aus der EINEN geteilten Zuordnung
+# (metric_format.thunder_ampel_band) statt aus einem eigenen Woerterbuch --
+# uebersetzt ueber dieselbe _LEVEL_TO_COMPARE-Palette wie die anderen
+# Ampel-Metriken (green->ok, yellow->caution, orange->warn, red->danger).
+# Aussehen des Ortsvergleichs bleibt dadurch unveraendert (Spec AC-7).
 
 
 def _fmt_deg(v) -> str:
@@ -210,8 +214,7 @@ def _fmt_thunder(v) -> str:
 def _sev_thunder(v):
     if v is None:
         return None
-    key = v.value if hasattr(v, "value") else str(v)
-    return _THUNDER_SEV.get(key)
+    return _to_compare(thunder_ampel_band(v))
 
 
 def _sev_rain_safe(v) -> str:

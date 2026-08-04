@@ -18,7 +18,7 @@ from app.models import (
     Corridor, SegmentWeatherData, ThunderLevel, UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
-from output.metric_format import severity_for
+from output.metric_format import severity_for, thunder_ampel_band
 from output.renderers.email.corridor_mark import (
     is_marked_any, mark_cell_style, mark_lookup_multi,
 )
@@ -773,22 +773,18 @@ def _render_html_table(
                     "orange": "#fad6b8",
                     "red": "#f6c5bf",
                 }.get(level)
-            # Gewitter bleibt ausdrücklich außerhalb des Katalogs (Issue #1377:
-            # Datenform-Divergenz Prozentwert vs. Stufen, kein
-            # `display_thresholds` — s. Spec „Known Limitations").
-            # Issue #1418: Der Zellwert ist ein Stufenwert (`ThunderLevel`),
-            # `float(...)` scheitert daran → `numeric` war hier immer None und
-            # der Zweig strukturell nie erfüllt (Spalte nie gefärbt, obwohl der
-            # Punkt rot wurde). Gefragt wird jetzt dieselbe Stufenquelle wie für
-            # den Risiko-Punkt (`_thunder_risk_level`, inkl. Zahlen-Fallback) —
-            # zwei Stufenquellen nebeneinander wären die Doppelung, die #1418
-            # überhaupt erst erzeugt hat. Gewitter kennt nur zwei Warnstufen,
-            # deshalb rot/orange ohne Gelb.
+            # Gewitter ist seit Issue #1491 eine reguläre 4-stufige
+            # Ampel-Spalte (wie Wind/Böen/Regen/Regenwahrsch./CAPE) — die
+            # Tönung kommt aus derselben Quelle (`thunder_ampel_band`,
+            # metric_format.py) wie der Ampel-Kreis in `fmt_val()` (Issue
+            # #888: EINE Quelle fuer Punkt und Toenung). "green" bleibt
+            # ungetoent, wie bei den anderen Ampel-Spalten auch.
             elif key == "thunder":
                 cell_bg = {
-                    "risk": "#f6c5bf",
-                    "watch": "#fad6b8",
-                }.get(_thunder_risk_level(raw_val))
+                    "yellow": "#fbeeb8",
+                    "orange": "#fad6b8",
+                    "red": "#f6c5bf",
+                }.get(thunder_ampel_band(raw_val))
 
             # Issue #1425 Schritt 1: Korridor-mark-Markierung, geteilter
             # Baustein mit dem Compare-Renderer (corridor_mark.py). Trip-

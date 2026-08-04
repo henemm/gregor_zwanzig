@@ -16,13 +16,13 @@ GR20 E1: 17–18°C, gef. 11–12°C, ⛅, starker Regen max 8:00, mäßiger Win
   Sonne 150 min
 
 ━━ Segment 1: km 0.0–0.0 | 08:00–12:00 | ↑400m → 1200m ━━
-  Time   Temp   TmpMin   Feels   Wind   Gust   Rain   Thdr      SnowL   Cloud   Sun 
-  -----  -----  -------  ------  -----  -----  -----  --------  ------  ------  ----
-  08     16.8   16.8     11.2    15     70     18.5   ⚡ mögl.   –       ⛅       –   
-  09     17.1   17.1     11.4    16     37     0.0    ⚡ mögl.   –       ⛅       –   
-  10     17.4   17.4     11.6    16     38     0.0    ⚡ mögl.   –       ⛅       –   
-  11     17.7   17.7     11.8    16     39     0.0    ⚡ mögl.   –       ⛅       –   
-  12     18.0   18.0     12.0    17     40     0.0    ⚡ mögl.   –       ⛅       –   
+  Time   Temp   TmpMin   Feels   Wind   Gust   Rain   Thdr     SnowL   Cloud   Sun 
+  -----  -----  -------  ------  -----  -----  -----  -------  ------  ------  ----
+  08     16.8   16.8     11.2    15     70     18.5   mittel   –       ⛅       –   
+  09     17.1   17.1     11.4    16     37     0.0    mittel   –       ⛅       –   
+  10     17.4   17.4     11.6    16     38     0.0    mittel   –       ⛅       –   
+  11     17.7   17.7     11.8    16     39     0.0    mittel   –       ⛅       –   
+  12     18.0   18.0     12.0    17     40     0.0    mittel   –       ⛅       –   
 
 
 ── Antwort-Kommandos ──
