@@ -22,18 +22,31 @@ jobs:
       - name: Install Playwright-Browser (tests/visual Pixel-Diff)
         run: uv run playwright install --with-deps chromium
       - name: Run tests
+        # #1196 (PR #1497): Abbau der Pauschal-Ignores.
+        #
+        # 1) Egress-Waechter (#1337-Zielbild): pytest-socket blockt jeden
+        #    externen Netzzugriff; lokale Test-Server (localhost) und Unix-
+        #    Sockets (asyncio-Self-Pipes) bleiben erlaubt. Ein Kern-Test, der
+        #    externes Netz braucht, faellt damit per Bauart auf (Test-Politik:
+        #    Kern ohne Netz/Live-Dienste) — und ein versehentlicher Echt-
+        #    Versand (#1477-Klasse) ist auf dem Runner strukturell unmoeglich.
+        #
+        # 2) tests/tdd/ laeuft jetzt MIT (5472 Tests, vorher komplett blinder
+        #    Fleck) — ausgenommen die in .github/ci_tdd_excludes.txt
+        #    vermessenen offline-roten Dateien (Ratsche: Liste darf nur
+        #    schrumpfen, neue tdd-Dateien laufen automatisch mit).
+        #    tests/refactor/ und die 7 frueher einzeln ignorierten unit-
+        #    Dateien laufen wieder mit (2026-08-04 gruen nachgemessen).
+        #
+        # 3) tests/red/ bleibt draussen: RED-Artefakt-Ablage des TDD-
+        #    Workflows, kein Kern-Bestand.
         run: |
+          TDD_EXCLUDES=$(grep -v '^#' .github/ci_tdd_excludes.txt | sed 's/^/--ignore=/' | tr '\n' ' ')
           uv run pytest \
-            --ignore=tests/tdd/ \
+            --disable-socket --allow-unix-socket \
+            --allow-hosts=127.0.0.1,::1,localhost \
             --ignore=tests/red/ \
-            --ignore=tests/refactor/ \
-            --ignore=tests/unit/test_elevation_analysis.py \
-            --ignore=tests/unit/test_etappen_config.py \
-            --ignore=tests/unit/test_gpx_parser.py \
-            --ignore=tests/unit/test_gpx_import_in_trip_dialog.py \
-            --ignore=tests/unit/test_gpx_upload_page.py \
-            --ignore=tests/unit/test_hybrid_segmentation.py \
-            --ignore=tests/unit/test_segment_builder.py \
+            $TDD_EXCLUDES \
             -v
 
   go-test:
