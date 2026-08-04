@@ -62,17 +62,23 @@ _GOLDEN_DIR = _TESTS / "golden" / "email"
 GRID = [None, -12.5, 0, 0.4, 7.5, 42, 137.0, 1013.0, 20000]
 
 # sha256 der Tour-Mail-Goldens, aufgezeichnet vor Scheibe B (HEAD 1863e6c1).
+# Neu eingefroren 2026-08-04 (Issue #1491, PO-freigegeben): die
+# Gewitter-Spalte wurde von einem Text-/Emoji-Sonderfall zu einer regulaeren
+# 4-stufigen Ampel-Spalte (Kreis + Zell-Toenung wie Wind/Boeen/Regen). Ein
+# Diff gegen den Vorstand (c31f777c) zeigt: NUR die "Thdr"-Spalte weicht ab
+# (HTML-Zellen + Klartext-Label "kein"/"leicht"/"mittel"/"hoch" statt
+# "–"/"⚡ mögl."/"⚡⚡"), alles andere ist zeichengleich.
 GOLDEN_HASHES = {
-    "arlberg-winter-morning-html.txt": "951e2f4f6f8f18b6a2e43230c7c96951fac8a38640c018362585613308e64996",
-    "arlberg-winter-morning-plain.txt": "e4fbae1a7e3c5a84f5352f6e839bae59066346e5af968b9e7e252e9a02b1e755",
-    "corsica-vigilance-html.txt": "0b8777b7eb39c4ecb8b4eba72660cc1b9c64e7a31dccbc9147d9ff81b3e9da15",
-    "corsica-vigilance-plain.txt": "843866e094fcf4b0e5ff374e2a9464904330bac3c99296730927af0104516b13",
-    "gr20-spring-morning-html.txt": "1d3297fd786996ca727b91627363a0e04cf2f5460b3ad1f726bfe900aa280e5c",
-    "gr20-spring-morning-plain.txt": "1ba8e704824fd92d81f19cc038ba21079add1f0d7f20bd6063e65a439eef7504",
-    "gr20-summer-evening-html.txt": "8e2c8cef0a7b70cd43c15e47b26e5b2f4e8898534584129168d31aa5e5c42f2c",
-    "gr20-summer-evening-plain.txt": "7cbc95d4ce9de81716742ad61f25416aa1d2fa0e0f0c06e211eba3b386f51fc1",
-    "gr221-mallorca-evening-html.txt": "2fa21c9c15c1a0d2d473c420920ac11def90900e38c096e6dbab69944a3d4d31",
-    "gr221-mallorca-evening-plain.txt": "c6223539dd33009fecf32910e8cc9871a2b14dc03afdc4602407b3c4c1874bc4",
+    "arlberg-winter-morning-html.txt": "f5190879c865d905ef15c87437871bc6d95eb86d95abb47f3b61e7fd6fa9c9c8",
+    "arlberg-winter-morning-plain.txt": "46b27784d1fbe579c0c6db7fd3b40fdb173159a941a5a44dfd063137c2793900",
+    "corsica-vigilance-html.txt": "65d4fe8145b24d778b42c63ec7cbaddf67ede7d3b0b5b78ef5b9e81b12af7555",
+    "corsica-vigilance-plain.txt": "5c5c13ee3186c6ff305eada602dfe01a0d9228710d28761ae8aee09e5a2e4e3a",
+    "gr20-spring-morning-html.txt": "63521106b5615deacc9f3f57f3fa1946349f97db0eda77bfc83f4d12c213b3b3",
+    "gr20-spring-morning-plain.txt": "59a5597273e07bcbaa97b29fe0608ca838d1b975459247efb123bd8166be3752",
+    "gr20-summer-evening-html.txt": "2ee2f16223152ba11113b3128e0d091200fb47af9b772c0604d7b581a292d43e",
+    "gr20-summer-evening-plain.txt": "41c513accb3a541a62efd0574cd345a4496da5229ca80853fac1b92ecd5f7c45",
+    "gr221-mallorca-evening-html.txt": "fb5cbd8428e96b4af5b3e9ed70246360bd3a200bb70b931b8811bc17a301cc43",
+    "gr221-mallorca-evening-plain.txt": "08fb942aa9c164713c415eef5378e3c35a49643249227185dbee2398de006b2f",
 }
 
 # Tour-Orchestrierung, die der Vergleich NICHT importieren darf (Spec Known

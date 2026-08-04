@@ -779,12 +779,24 @@ def _render_html_table(
             # metric_format.py) wie der Ampel-Kreis in `fmt_val()` (Issue
             # #888: EINE Quelle fuer Punkt und Toenung). "green" bleibt
             # ungetoent, wie bei den anderen Ampel-Spalten auch.
+            # Fix #1491 (Issue 911 AC-10 Regression): manche Rows tragen
+            # `thunder` als reinen Zahlenwert statt ThunderLevel-Stufe (z.B.
+            # aeltere Test-/Datenpfade) -- `thunder_ampel_band` kennt nur
+            # Stufen und liefert dafuer still `None` (kein Hintergrund). Der
+            # Zahlen-Rueckfall ueber `_thunder_risk_level` (risk/watch,
+            # Stand vor #1491) bleibt an dieser EINEN Stelle erhalten.
             elif key == "thunder":
-                cell_bg = {
-                    "yellow": "#fbeeb8",
-                    "orange": "#fad6b8",
-                    "red": "#f6c5bf",
-                }.get(thunder_ampel_band(raw_val))
+                if isinstance(raw_val, str):
+                    cell_bg = {
+                        "yellow": "#fbeeb8",
+                        "orange": "#fad6b8",
+                        "red": "#f6c5bf",
+                    }.get(thunder_ampel_band(raw_val))
+                else:
+                    cell_bg = {
+                        "risk": "#f6c5bf",
+                        "watch": "#fad6b8",
+                    }.get(_thunder_risk_level(raw_val))
 
             # Issue #1425 Schritt 1: Korridor-mark-Markierung, geteilter
             # Baustein mit dem Compare-Renderer (corridor_mark.py). Trip-

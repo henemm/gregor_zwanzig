@@ -26,7 +26,7 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from app.metric_catalog import aggregation_label_de, get_metric
-from app.models import Corridor
+from app.models import Corridor, ThunderLevel
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
 from output.renderers.compare_hourly_metric_ids import (
@@ -212,7 +212,11 @@ def _fmt_thunder(v) -> str:
 
 
 def _sev_thunder(v):
-    if v is None:
+    # Issue #1491 Fix: `NONE` bleibt im Ortsvergleich bewusst UNMARKIERT
+    # (anders als die Trip-Stundentabelle, die dafuer einen gruenen Punkt
+    # zeigt) -- eigene Produktentscheidung, kein Versehen. LOW/MED/HIGH
+    # teilen weiterhin die eine Ampelband-Quelle (`thunder_ampel_band`).
+    if v is None or v == ThunderLevel.NONE:
         return None
     return _to_compare(thunder_ampel_band(v))
 
