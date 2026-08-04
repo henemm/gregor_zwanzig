@@ -1544,7 +1544,7 @@ class TripReportSchedulerService:
         konsistent statt einer zweiten, driftenden Kopie.
         """
         from app.models import ThunderLevel
-        from output.metric_format import thunder_label_value
+        from app.thunder_scale import thunder_label_value
 
         try:
             level = ThunderLevel[row.get("thunder") or "NONE"]
@@ -1684,7 +1684,7 @@ class TripReportSchedulerService:
         ist die geteilte Sortier-Skala -- kein zweites, driftendes Ordinal.
         """
         from app.models import ThunderLevel
-        from output.metric_format import thunder_ordinal
+        from app.thunder_scale import thunder_ordinal
 
         # Back-compat: accept a single SegmentWeatherData. Duck-typed rather
         # than isinstance() to survive the app.models / src.app.models

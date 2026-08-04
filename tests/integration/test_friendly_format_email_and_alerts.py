@@ -660,12 +660,13 @@ class TestAlertChangeDetectionSimulated:
 
 class TestThunderEnumAlerts:
     """
-    Thunder is an Enum (NONE/MED/HIGH) with ordinal comparison.
+    Thunder is an Enum (NONE/LOW/MED/HIGH) with ordinal comparison
+    (NONE=0 < LOW=1 < MED=2 < HIGH=3 since #1474 inserted LOW).
     Verify change detection works correctly with enum→ordinal conversion.
     """
 
     def test_thunder_none_to_high_detected(self):
-        """Thunder NONE→HIGH (ordinal 0→2, threshold 1.0) → detected."""
+        """Thunder NONE→HIGH (ordinal 0→3, threshold 1.0) → detected."""
         from services.weather_change_detection import WeatherChangeDetectionService
 
         cached = _make_segment_weather(
@@ -679,11 +680,11 @@ class TestThunderEnumAlerts:
 
         assert len(changes) == 1
         assert changes[0].metric == "thunder_level_max"
-        assert changes[0].delta == pytest.approx(2.0)  # HIGH(2) - NONE(0)
+        assert changes[0].delta == pytest.approx(3.0)  # HIGH(3) - NONE(0)
         assert changes[0].direction == "increase"
 
     def test_thunder_none_to_med_detected(self):
-        """Thunder NONE→MED (ordinal 0→1, threshold 1.0) → detected."""
+        """Thunder NONE→MED (ordinal 0→2, threshold 1.0) → detected."""
         from services.weather_change_detection import WeatherChangeDetectionService
 
         cached = _make_segment_weather(
@@ -695,8 +696,28 @@ class TestThunderEnumAlerts:
             thresholds={"thunder_level_max": 1.0})
         changes = service.detect_changes(cached, fresh)
 
-        # Delta = 1.0, threshold = 1.0 → abs(1) > 1.0 is False
-        # NB: Change detection uses > (strictly greater), so exactly at threshold = no alert
+        assert len(changes) == 1
+        assert changes[0].delta == pytest.approx(2.0)  # MED(2) - NONE(0)
+
+    def test_thunder_none_to_low_at_threshold_not_detected(self):
+        """Thunder NONE→LOW (ordinal 0→1, threshold 1.0) → NOT detected.
+
+        Delta = 1.0, threshold = 1.0 → abs(1) > 1.0 is False.
+        NB: Change detection uses > (strictly greater), so exactly at
+        threshold = no alert. (Before #1474 this at-threshold case was
+        NONE→MED; LOW now occupies ordinal 1.)
+        """
+        from services.weather_change_detection import WeatherChangeDetectionService
+
+        cached = _make_segment_weather(
+            summary=_make_summary(thunder_max=ThunderLevel.NONE))
+        fresh = _make_segment_weather(
+            summary=_make_summary(thunder_max=ThunderLevel.LOW))
+
+        service = WeatherChangeDetectionService(
+            thresholds={"thunder_level_max": 1.0})
+        changes = service.detect_changes(cached, fresh)
+
         assert len(changes) == 0
 
     def test_thunder_high_to_none_detected(self):
@@ -731,7 +752,11 @@ class TestThunderEnumAlerts:
         assert len(changes) == 0
 
     def test_thunder_2_stufen_threshold(self):
-        """Thunder with 2-Stufen threshold: NONE→MED (delta 1) → NOT detected."""
+        """Thunder with 2-Stufen threshold: NONE→MED (delta 2) → NOT detected.
+
+        Delta = 2, threshold = 2.0 → abs(2) > 2.0 is False (strictly greater);
+        exactly at threshold = no alert.
+        """
         from services.weather_change_detection import WeatherChangeDetectionService
 
         cached = _make_segment_weather(
@@ -743,10 +768,10 @@ class TestThunderEnumAlerts:
             thresholds={"thunder_level_max": 2.0})  # 2 Stufen
         changes = service.detect_changes(cached, fresh)
 
-        assert len(changes) == 0  # Delta 1 not > 2
+        assert len(changes) == 0  # Delta 2 not > 2
 
     def test_thunder_2_stufen_none_to_high(self):
-        """Thunder with 2-Stufen threshold: NONE→HIGH (delta 2) → NOT detected (not > 2)."""
+        """Thunder with 2-Stufen threshold: NONE→HIGH (delta 3) → detected (3 > 2)."""
         from services.weather_change_detection import WeatherChangeDetectionService
 
         cached = _make_segment_weather(
@@ -758,8 +783,9 @@ class TestThunderEnumAlerts:
             thresholds={"thunder_level_max": 2.0})
         changes = service.detect_changes(cached, fresh)
 
-        # Delta = 2, threshold = 2.0 → abs(2) > 2.0 is False
-        assert len(changes) == 0
+        assert len(changes) == 1
+        assert changes[0].delta == pytest.approx(3.0)  # HIGH(3) - NONE(0)
+        assert changes[0].direction == "increase"
 
 
 # ===========================================================================

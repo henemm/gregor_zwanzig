@@ -141,7 +141,11 @@ class TestBasicSummary:
         formatter = CompactSummaryFormatter()
         result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc, tz=ZoneInfo("UTC"))
 
-        assert "8" in result and "18" in result
+        # Fixture liefert t2m_c = 8+h fuer h in 9..16 → Spanne 17–24 °C.
+        # (Die fruehere Assertion "8"/"18" matchte nie die Temperaturen,
+        # sondern zufaellig die Boeen-Angabe — sie fiel um, als sich deren
+        # Darstellung aenderte.)
+        assert "17" in result and "24" in result
         assert "°C" in result
 
     def test_dry_conditions(self):

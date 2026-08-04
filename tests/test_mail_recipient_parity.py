@@ -214,6 +214,14 @@ def _python_entscheidung(host: str, to: str, data_root: Path) -> str:
     2. Datenwurzel ueber app.loader._DATA_ROOT setzen, NICHT ueber
        GZ_DATA_DIR -- _DATA_ROOT hat Vorrang (loader.py:1054) und
        tests/conftest.py setzt es bereits autouse.
+    3. Herkunftssperre (#1476) fuer die Dauer der Messung neutralisieren:
+       ``running_origin()`` erkennt Testlauf-Herkunft und schaltet JEDEN
+       Empfaenger auf die Test-Mailbox um, BEVOR das zu messende Regelwerk
+       entscheidet -- gemessen wuerde dann die Sperre statt des Regelwerks
+       (genau so brach dieser Laeufer am 2026-08-03, als #1476 landete).
+       Der Patch sitzt wie die SMTP-Sentinel im email_module-Namensraum und
+       misst die Produktions-Entscheidung ("prod"); gesendet wird nie, weil
+       die Sentinel den Transport ersetzt.
     """
     from app import loader
 
@@ -231,8 +239,10 @@ def _python_entscheidung(host: str, to: str, data_root: Path) -> str:
 
     zuvor = getattr(loader, "_DATA_ROOT", None)
     echtes_smtp = email_module.smtplib.SMTP
+    echte_herkunft = email_module.running_origin
     loader._DATA_ROOT = str(data_root)
     email_module.smtplib.SMTP = _raise_sentinel
+    email_module.running_origin = lambda _modulpfad: "prod"
     try:
         output.send("Paritaets-Pruefung", "Testkoerper", html=False, to=[to])
     except _TransportSentinel:
@@ -257,6 +267,7 @@ def _python_entscheidung(host: str, to: str, data_root: Path) -> str:
         )
     finally:
         email_module.smtplib.SMTP = echtes_smtp
+        email_module.running_origin = echte_herkunft
         loader._DATA_ROOT = zuvor
 
 
