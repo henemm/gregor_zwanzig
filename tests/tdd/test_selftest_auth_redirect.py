@@ -20,6 +20,7 @@ kein Mock/Patch der Probe-Logik selbst.
 """
 
 import importlib.util as _importlib_util
+import tempfile as _tempfile
 import json
 import shutil
 import threading
@@ -44,6 +45,13 @@ def _load_prod_selftest_module():
     assert spec is not None and spec.loader is not None
     mod = _importlib_util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    # Pfadregel #1409: der Hook traegt fest den Server-Pfad
+    # /home/hem/gregor_zwanzig (fuer den Prod-Betrieb korrekt, "geteilte
+    # Ablage"). Im Test MUSS er auf ein Wegwerf-Verzeichnis umgelenkt
+    # werden: existiert der Server-Pfad zufaellig (fremde Repo-Kopie),
+    # schreibt der Lauf dorthin und meldet falsches Gruen; fehlt er
+    # (CI-Runner), stirbt er mit FileNotFoundError (PR #1502, 2026-08-04).
+    mod.REPO_DIR = Path(_tempfile.mkdtemp(prefix="gz-selftest-repo-"))
     return mod
 
 
