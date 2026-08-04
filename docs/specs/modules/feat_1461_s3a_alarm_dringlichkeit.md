@@ -3,8 +3,8 @@ entity_id: feat_1461_s3a_alarm_dringlichkeit
 type: feature
 created: 2026-08-04
 updated: 2026-08-04
-status: draft
-version: "1.2"
+status: implemented
+version: "1.4"
 tags: [alerts, urgency, trip, compare, epic-1458, issue-1461, s3a]
 ---
 
