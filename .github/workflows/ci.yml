@@ -71,8 +71,10 @@ jobs:
     # Bei Verbesserung: Baseline-Werte hier absenken.
     runs-on: ubuntu-latest
     env:
-      BASELINE_ERRORS: 40
-      BASELINE_WARNINGS: 159
+      # Abgesenkt 2026-08-04 (#1196): 70/171 -> 36/141 nach Typ-Drift-Bereinigung
+      # der Compare-Editor-Tests + Entfernung toter CSS-Regeln in CompareTabs.
+      BASELINE_ERRORS: 36
+      BASELINE_WARNINGS: 141
     defaults:
       run:
         working-directory: frontend

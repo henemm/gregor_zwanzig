@@ -58,8 +58,8 @@ test('AC-1: liveTrip gibt den aktiven Trip zurück wenn heute im Reise-Zeitraum 
 	const now = new Date('2026-06-05T10:00:00Z');
 	const trip = makeTrip({
 		stages: [
-			{ date: '2026-06-01', name: 'Start', waypoints: [] },
-			{ date: '2026-06-10', name: 'Ende', waypoints: [] },
+			{ id: 's1', date: '2026-06-01', name: 'Start', waypoints: [] },
+			{ id: 's2', date: '2026-06-10', name: 'Ende', waypoints: [] },
 		],
 	});
 	const result = liveTrip([trip], now);
@@ -71,8 +71,8 @@ test('AC-2: liveTrip gibt null zurück wenn kein Trip heute aktiv ist', () => {
 	const now = new Date('2026-07-01T10:00:00Z');
 	const trip = makeTrip({
 		stages: [
-			{ date: '2026-06-01', name: 'Start', waypoints: [] },
-			{ date: '2026-06-10', name: 'Ende', waypoints: [] },
+			{ id: 's1', date: '2026-06-01', name: 'Start', waypoints: [] },
+			{ id: 's2', date: '2026-06-10', name: 'Ende', waypoints: [] },
 		],
 	});
 	const result = liveTrip([trip], now);

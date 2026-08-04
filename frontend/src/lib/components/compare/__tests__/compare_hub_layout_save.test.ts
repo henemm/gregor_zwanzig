@@ -63,8 +63,8 @@ describe('C2 AC-2: flushPendingLayoutSave — geänderter Snapshot → PUT-Paylo
 		// THEN: der PUT-Payload setzt display_config.hourly_metrics auf beide Keys
 		// RED heute: Import schlaegt fehl (flushPendingLayoutSave existiert nicht).
 		const preset = makePresetWithFullDisplayConfig();
-		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true };
-		const current: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true };
+		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
+		const current: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
 
 		const payload = flushPendingLayoutSave(preset, current, before);
 
@@ -79,8 +79,8 @@ describe('C2 AC-2: flushPendingLayoutSave — geänderter Snapshot → PUT-Paylo
 		// THEN: der PUT-Payload setzt hourly_enabled auf false
 		// RED heute: Import schlaegt fehl.
 		const preset = makePresetWithFullDisplayConfig();
-		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true };
-		const current: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: false };
+		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
+		const current: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: false, outlookMetricKeys: null, outlookEnabled: false };
 
 		const payload = flushPendingLayoutSave(preset, current, before);
 
@@ -104,8 +104,8 @@ describe('C2 AC-2: flushPendingLayoutSave — geänderter Snapshot → PUT-Paylo
 		// THEN: die Reihenfolge ist bedeutungstragend -> ein PUT mit der NEUEN
 		// Reihenfolge muss ausgeloest werden, kein No-Op mehr.
 		const preset = makePresetWithFullDisplayConfig();
-		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true };
-		const current: LayoutSnapshot = { hourlyMetricKeys: ['wind_kmh', 'temp_c'], hourlyEnabled: true };
+		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
+		const current: LayoutSnapshot = { hourlyMetricKeys: ['wind_kmh', 'temp_c'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
 
 		const payload = flushPendingLayoutSave(preset, current, before);
 
@@ -124,8 +124,8 @@ describe('C2 AC-2: flushPendingLayoutSave — geänderter Snapshot → PUT-Paylo
 		// THEN: weiterhin null — die #1299-Regel bleibt fuer ECHTE Identitaet
 		// richtig, nur "umsortiert" zaehlt seit #1361 nicht mehr als identisch.
 		const preset = makePresetWithFullDisplayConfig();
-		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true };
-		const current: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true };
+		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
+		const current: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
 
 		const payload = flushPendingLayoutSave(preset, current, before);
 
@@ -149,8 +149,8 @@ describe('C2 AC-5: leere hourlyMetricKeys werden als [] persistiert (Default "al
 		//       leeres Array — NICHT als fehlenden Schluessel (der Server-Merge kann
 		//       fehlende Keys nicht als "loeschen" interpretieren).
 		const preset = makePresetWithFullDisplayConfig();
-		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true };
-		const current: LayoutSnapshot = { hourlyMetricKeys: [], hourlyEnabled: true };
+		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
+		const current: LayoutSnapshot = { hourlyMetricKeys: [], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
 
 		const payload = flushPendingLayoutSave(preset, current, before);
 
@@ -175,8 +175,8 @@ describe('C2 AC-3 (PFLICHT Datenerhalt): top_n/metric_alert_levels/forecast_hour
 		// HubEdit-Luecke (hourlyMetricKeys/hourlyEnabled kommen bislang gar nicht bei
 		// buildHubPutPayload an) tatsaechlich geschlossen wurde, sobald er gruen wird.
 		const preset = makePresetWithFullDisplayConfig();
-		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true };
-		const current: LayoutSnapshot = { hourlyMetricKeys: ['wind_kmh'], hourlyEnabled: false };
+		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
+		const current: LayoutSnapshot = { hourlyMetricKeys: ['wind_kmh'], hourlyEnabled: false, outlookMetricKeys: null, outlookEnabled: false };
 
 		const payload = flushPendingLayoutSave(preset, current, before);
 

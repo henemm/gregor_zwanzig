@@ -43,7 +43,7 @@ function makePreset72(): ComparePreset {
 		schedule: 'daily',
 		previous_schedule: 'daily',
 		weekday: 4,
-		profil: 'skitour',
+		profil: 'wintersport',
 		hour_from: 7,
 		hour_to: 16,
 		empfaenger: ['a@example.com', 'b@example.com'],
@@ -56,7 +56,7 @@ function makePreset72(): ComparePreset {
 function baseEdits() {
 	return {
 		name: 'Skitouren Hochkönig',
-		activityProfile: 'skitour' as const,
+		activityProfile: 'wintersport' as const,
 		pickedIds: ['loc-1', 'loc-2'],
 		region: 'Salzburger Land',
 		idealRanges: {},
@@ -93,9 +93,10 @@ describe('buildComparePresetSavePayload — forecast_hours nicht mehr aus dem Ed
 describe('buildComparePresetSavePayload — forecast_hours Round-Trip (AC-3)', () => {
 	test('ohne Horizont-Änderung kommt der gespeicherte Wert (72) unverändert durch', () => {
 		const original = makePreset72(); // forecast_hours=72
+		// Issue #1268: forecastHours ist kein Editor-Edit mehr — der gespeicherte
+		// Wert wird per RMW-Merge erhalten, genau das prueft dieser Test.
 		const { body } = buildComparePresetSavePayload(original, {
-			...baseEdits(),
-			forecastHours: 72
+			...baseEdits()
 		});
 		assert.equal(
 			(body as ComparePreset).forecast_hours,

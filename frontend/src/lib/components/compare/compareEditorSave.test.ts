@@ -32,7 +32,7 @@ function makePreset(): ComparePreset {
 		schedule: 'daily',
 		previous_schedule: 'daily',
 		weekday: 4,
-		profil: 'skitour',
+		profil: 'wintersport',
 		hour_from: 7,
 		hour_to: 16,
 		empfaenger: ['a@example.com', 'b@example.com'],
@@ -45,7 +45,7 @@ describe('buildComparePresetSavePayload — Endpoint (AC-3)', () => {
 	test('zielt auf den Compare-Presets-Store, NICHT auf /api/subscriptions', () => {
 		const { url } = buildComparePresetSavePayload(makePreset(), {
 			name: 'Skitouren Hochkönig',
-			activityProfile: 'skitour',
+			activityProfile: 'wintersport',
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
@@ -60,7 +60,7 @@ describe('buildComparePresetSavePayload — Datenverlust-Schutz (AC-3)', () => {
 		const original = makePreset();
 		const { body } = buildComparePresetSavePayload(original, {
 			name: 'Neuer Name',
-			activityProfile: 'skitour',
+			activityProfile: 'wintersport',
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
@@ -73,7 +73,7 @@ describe('buildComparePresetSavePayload — Datenverlust-Schutz (AC-3)', () => {
 		const original = makePreset();
 		const { body } = buildComparePresetSavePayload(original, {
 			name: 'X',
-			activityProfile: 'skitour',
+			activityProfile: 'wintersport',
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
@@ -102,7 +102,7 @@ describe('buildComparePresetSavePayload — Datenverlust-Schutz (AC-3)', () => {
 		const original = makePreset();
 		const { body } = buildComparePresetSavePayload(original, {
 			name: 'Skitouren Hochkönig',
-			activityProfile: 'skitour',
+			activityProfile: 'wintersport',
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Tirol',
 			idealRanges: {},
@@ -117,7 +117,7 @@ describe('buildComparePresetSavePayload — Datenverlust-Schutz (AC-3)', () => {
 		const original = makePreset();
 		const { body } = buildComparePresetSavePayload(original, {
 			name: 'Y',
-			activityProfile: 'skitour',
+			activityProfile: 'wintersport',
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
@@ -132,7 +132,7 @@ describe('buildComparePresetSavePayload — Alarm-Konfiguration (Issue #1170)', 
 		const original = makePreset();
 		const { body } = buildComparePresetSavePayload(original, {
 			name: original.name,
-			activityProfile: 'skitour',
+			activityProfile: 'wintersport',
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
@@ -166,7 +166,7 @@ describe('buildComparePresetSavePayload — Alarm-Konfiguration (Issue #1170)', 
 		};
 		const { body } = buildComparePresetSavePayload(original, {
 			name: 'Nur der Name ändert sich',
-			activityProfile: 'skitour',
+			activityProfile: 'wintersport',
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
@@ -186,7 +186,7 @@ describe('buildComparePresetSavePayload — Alarm-Trigger + Kanäle (#1216)', ()
 		const original = makePreset();
 		const { body } = buildComparePresetSavePayload(original, {
 			name: original.name,
-			activityProfile: 'skitour',
+			activityProfile: 'wintersport',
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
@@ -207,7 +207,7 @@ describe('buildComparePresetSavePayload — Alarm-Trigger + Kanäle (#1216)', ()
 		const original = makePreset();
 		const { body } = buildComparePresetSavePayload(original, {
 			name: 'Nur Name',
-			activityProfile: 'skitour',
+			activityProfile: 'wintersport',
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
@@ -241,7 +241,7 @@ describe('buildComparePresetSavePayload — channel_layouts-Entfernung (#1351 AC
 		};
 		const { body } = buildComparePresetSavePayload(original, {
 			name: original.name,
-			activityProfile: 'skitour',
+			activityProfile: 'wintersport',
 			pickedIds: ['loc-1', 'loc-2'],
 			region: 'Salzburger Land',
 			idealRanges: {},
