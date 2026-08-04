@@ -141,16 +141,9 @@ export function presetLocationsLabel(p: ComparePreset): string {
 	return `${p.location_ids.length} ${p.location_ids.length === 1 ? 'Ort' : 'Orte'}`;
 }
 
-/**
- * Kanalanzahl → "N Kanäle" (Singular bei genau 1: "1 Kanal").
- *
- * Design-Fidelity 2026-07 Fix 1 — konsolidiert die zuvor duplizierte
- * Singular/Plural-Ternary aus CompareTabs.svelte:248 und
- * compare/[id]/+page.svelte:204 an einer Stelle.
- */
-export function channelCountLabel(n: number): string {
-	return `${n} ${n === 1 ? 'Kanal' : 'Kanäle'}`;
-}
+// Issue #1471 — `channelCountLabel()` entfernt: sie zaehlte dieselbe seit #1452
+// inerte `empfaenger`-Laenge wie der kaputte Sende-Dialog und war nachgemessen
+// tot (kein .svelte importierte sie). Nachfolgerin ist `channelNamesLabel()`.
 
 // Issue #488 — Kebab-Aktionen für die Compare-Kachel.
 // Spec: docs/specs/modules/issue_488_compare_tile_atoms.md §1

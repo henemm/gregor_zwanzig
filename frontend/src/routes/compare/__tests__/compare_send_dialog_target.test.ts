@@ -94,6 +94,18 @@ function identifiersDeep(expr: unknown, tiefe = 4): Set<string> {
 const attr = (inst: any, name: string): any =>
 	(inst.attributes ?? []).find((a: any) => a.type === 'Attribute' && a.name === name);
 
+/**
+ * Der JS-Ausdruck HINTER `name={...}` — nicht nur der Attribut-Knoten.
+ * Ohne ihn liesse sich nur pruefen, WOHER ein Wert stammt, nicht was er BEDEUTET:
+ * `disabled={sendZiel.deliverable}` (Umkehrung von AC-3/AC-4) stammt aus derselben
+ * Quelle wie `disabled={!sendZiel.deliverable}` und waere sonst ununterscheidbar.
+ */
+function attrExpression(inst: any, name: string): any {
+	const a = attr(inst, name);
+	const wert = Array.isArray(a?.value) ? a.value[0] : a?.value;
+	return wert?.type === 'ExpressionTag' ? wert.expression : undefined;
+}
+
 const componentInstances = (name: string): any[] =>
 	collect(ast.fragment, (n) => n.type === 'Component' && n.name === name);
 
@@ -144,6 +156,14 @@ describe('AC-1 (Dialog): die Empfaenger-Zaehlung ist aus dem Dialogtext verschwu
 				'`sendTargetLabel()` ab. Ohne den geteilten Baustein entstuende der Ziel-Text ' +
 				`erneut inline. Aufgeloeste Namen: ${[...tiefe].sort().join(', ')} (AC-1).`
 		);
+		// Herkunft allein genuegt nicht: `description={sendZiel.deliverable}` kaeme aus
+		// derselben Quelle und zeigte dem Nutzer "true"/"false" als Versandziel an.
+		const flach = identifiers(attr(sendDialogs[0], 'description'));
+		assert.ok(
+			flach.has('text'),
+			'Die Dialog-Beschreibung zeigt nicht das `text`-Feld aus `sendTargetLabel()` an, ' +
+				`sondern: ${[...flach].sort().join(', ')} (AC-1).`
+		);
 	});
 
 	test('`sendTargetLabel` wird aus dem geteilten versand-tab-Ordner importiert', () => {
@@ -181,6 +201,49 @@ describe('AC-3 / AC-4: nicht zustellbar → der Bestaetigen-Knopf ist gesperrt',
 			'Das `disabled` leitet sich nicht aus `sendTargetLabel()` ab — Text und Sperre koennten ' +
 				`dann auseinanderlaufen (Dialog erklaert "geht nicht", Knopf bleibt aktiv). ` +
 				`Aufgeloeste Namen: ${[...tiefe].sort().join(', ')} (AC-3/AC-4).`
+		);
+	});
+
+	// Die beiden Behauptungen darueber pruefen nur die HERKUNFT des Werts — sie bleiben
+	// gruen, wenn die Bedeutung verdreht wird.
+	//
+	// Die Frage wird deshalb UMGEDREHT: nicht "erkenne ich jede Verdreh-Form?" (das ist
+	// bodenlos — `!x` faengt man, `!!x` schon nicht mehr), sondern "welche Form ist hier
+	// ueberhaupt erlaubt?". Erlaubt ist genau ein nackter Feldzugriff auf das
+	// Sperr-Flag. Jede Verdrehung braucht zwingend einen Operator (`!`, `!!`, `&&`,
+	// Vergleich) oder ein Literal — und faellt damit durch, ohne dass dieser Test die
+	// Verdreh-Form vorher kennen muss. Die BEDEUTUNG von `gesperrt` prueft
+	// sendTargetLabel.test.ts als echten Verhaltenstest.
+	const NUR_FELDZUGRIFF = new Set(['MemberExpression', 'Identifier']);
+
+	test('`disabled` ist ein nackter Feldzugriff auf `gesperrt` — ohne jeden Operator', () => {
+		const ausdruck = attrExpression(sendDialogs[0], 'disabled');
+		assert.ok(ausdruck, 'Der Sende-Dialog reicht keinen `disabled`-Ausdruck durch.');
+
+		const typen = [
+			...new Set(collect(ausdruck, (n) => typeof n.type === 'string').map((n) => n.type))
+		].sort();
+		assert.deepEqual(
+			typen.filter((t) => !NUR_FELDZUGRIFF.has(t)),
+			[],
+			`Der \`disabled\`-Ausdruck enthaelt mehr als einen Feldzugriff: ${typen.join(', ')}. ` +
+				'Erlaubt ist ausschliesslich `disabled={<x>.gesperrt}`. Sobald dort gerechnet wird ' +
+				'(`!`, `!!`, `&&`, Vergleich, Literal), laesst sich die Sperre verdrehen, ohne dass ' +
+				'ein Test es merkt — die Negation gehoert in sendTargetLabel(), nicht ins Template ' +
+				'(AC-3/AC-4).'
+		);
+
+		const ids = identifiers(ausdruck);
+		assert.ok(
+			ids.has('gesperrt'),
+			'`disabled` bindet nicht das Sperr-Flag `gesperrt`, sondern: ' +
+				`${[...ids].sort().join(', ')}. \`disabled={sendZiel.deliverable}\` waere die exakte ` +
+				'Umkehrung: gesperrt wenn zustellbar, frei wenn nachweislich nichts ankommt (AC-3/AC-4).'
+		);
+		assert.ok(
+			identifiersDeep(ausdruck).has('sendTargetLabel'),
+			`Das Sperr-Flag stammt nicht aus \`sendTargetLabel()\`. Aufgeloeste Namen: ` +
+				`${[...identifiersDeep(ausdruck)].sort().join(', ')} (AC-3/AC-4).`
 		);
 	});
 

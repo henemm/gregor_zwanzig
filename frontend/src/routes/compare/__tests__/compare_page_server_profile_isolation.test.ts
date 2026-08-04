@@ -38,6 +38,8 @@ interface Aufruf {
 	session: string | null;
 }
 let aufrufe: Aufruf[] = [];
+/** Schaltet den Profil-Abruf auf Netzfehler (fuer den fail-soft-Nachweis). */
+let profilFaellt = false;
 
 function sessionAus(init: any): string | null {
 	const kopf = init?.headers ?? {};
@@ -53,7 +55,10 @@ async function fetchDouble(input: any, init?: any) {
 	const session = sessionAus(init);
 	aufrufe.push({ url, session });
 	if (!session) return fehler(401);
-	if (url.includes('/api/auth/profile')) return antwort(PROFIL[session] ?? {});
+	if (url.includes('/api/auth/profile')) {
+		if (profilFaellt) throw new TypeError('fetch failed');
+		return antwort(PROFIL[session] ?? {});
+	}
 	if (url.includes('/api/compare/presets')) return antwort(PRESETS[session] ?? []);
 	return fehler(404);
 }
@@ -151,5 +156,29 @@ describe('AC-5: jeder Nutzer bekommt genau sein eigenes Konto-Profil', () => {
 			['cmp-anna'],
 			'Die bestehende Preset-Ladung hat sich veraendert — der Fix ergaenzt nur das Profil.'
 		);
+	});
+
+	// Ohne diesen Fall ist das `.catch(() => null)` im Server-Load unbewacht: streicht es
+	// jemand, faellt die GANZE Vergleichs-Liste aus, weil der Profil-Abruf durchschlaegt.
+	test('faellt der Profil-Abruf aus, bleibt die Liste ladbar (profile = null)', async () => {
+		aufrufe = [];
+		profilFaellt = true;
+		try {
+			const ergebnis: any = await load(eventFuer('sess-anna'));
+			assert.equal(
+				ergebnis?.profile ?? null,
+				null,
+				`Bei ausgefallenem Profil-Abruf muss \`profile\` null sein, ist: ` +
+					`${JSON.stringify(ergebnis?.profile)}.`
+			);
+			assert.deepEqual(
+				(ergebnis?.presets ?? []).map((p: any) => p.id),
+				['cmp-anna'],
+				'Ein Fehler beim Profil-Abruf reisst die Vergleichs-Liste mit — der Profil-Abruf ' +
+					'muss fail-soft sein (Muster compare/new/+page.server.ts:16,20).'
+			);
+		} finally {
+			profilFaellt = false;
+		}
 	});
 });

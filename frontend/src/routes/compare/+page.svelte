@@ -24,6 +24,7 @@
 		type CompareStatus
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { buildFreshTogglePutPayload } from '$lib/components/compare/compareHubWizardBridge.js';
+	import { sendTargetLabel } from '$lib/components/shared/versand-tab/sendTargetLabel.js';
 	import MIcon from '$lib/components/mobile/MIcon.svelte';
 	import { topAppBarStore } from '$lib/stores/topAppBar.svelte';
 
@@ -37,6 +38,11 @@
 	let sendTarget: ComparePreset | null = $state(null);
 	let sendInfo: string | null = $state(null);
 	let error: string | null = $state(null);
+
+	// Issue #1471 — der Dialog nennt das tatsaechliche Ziel (Konto-Adresse + aktive
+	// Zusatzkanaele) statt der seit #1452 dauerhaft leeren `empfaenger`-Zaehlung.
+	// Text UND Sperre stammen aus derselben Ableitung, damit sie nicht auseinanderlaufen.
+	let sendZiel = $derived(sendTargetLabel(data.profile, sendTarget));
 
 	const STATUS_LABEL: Record<CompareStatus, string> = {
 		active: 'aktiv',
@@ -336,8 +342,9 @@
 <ConfirmDialog
 	open={sendTarget !== null}
 	title="Briefing jetzt senden?"
-	description={'An ' + (sendTarget?.empfaenger?.length ?? 0) + ' Empfänger senden?'}
+	description={sendZiel.text}
 	confirmLabel="Senden"
+	disabled={sendZiel.gesperrt}
 	onConfirm={confirmSend}
 	onCancel={() => (sendTarget = null)}
 	onOpenChange={(open) => { if (!open) sendTarget = null; }}

@@ -120,6 +120,38 @@ describe('AC-2: Zusatzkanaele nur, wenn im Vergleich aktiviert UND im Konto hint
 		assert.doesNotMatch(text, /telegram/i, `Telegram genannt, obwohl im Vergleich aus: "${text}".`);
 		assert.doesNotMatch(text, /sms/i, `SMS genannt, obwohl im Vergleich aus: "${text}".`);
 	});
+
+	// (e) laesst die Flags WEG (undefined). Der Normalfall nach dem Abwaehlen im Editor
+	// ist aber ein explizites `false`: `SendTelegram *bool json:"send_telegram,omitempty"`
+	// (internal/model/compare_preset.go:91) — der Pointer ist non-nil, `false` ueberlebt
+	// omitempty. Ohne die beiden Faelle bliebe `=== true` gegen `!== undefined`
+	// austauschbar, und ein abgewaehlter Kanal erschiene wieder im Ziel-Text.
+	test('(f) Telegram im Vergleich ABGEWAEHLT (false) trotz Chat-ID → nicht genannt', () => {
+		const { text } = sendTargetLabel(
+			{ mail_to: MAIL, email_verified: true, telegram_chat_id: '4711' },
+			{ send_telegram: false }
+		);
+		assert.doesNotMatch(
+			text,
+			/telegram/i,
+			`Der Ziel-Text nennt Telegram, obwohl der Kanal im Vergleich abgewaehlt ist ` +
+				`(send_telegram: false): "${text}" (AC-2f).`
+		);
+		assert.ok(text.includes(MAIL), `E-Mail fehlt im Ziel-Text: "${text}" (AC-2f).`);
+	});
+
+	test('(g) SMS im Vergleich ABGEWAEHLT (false) trotz hinterlegter Nummer → nicht genannt', () => {
+		const { text } = sendTargetLabel(
+			{ mail_to: MAIL, email_verified: true, sms_to: '+49150000000', sms_allowed: true },
+			{ send_sms: false }
+		);
+		assert.doesNotMatch(
+			text,
+			/sms/i,
+			`Der Ziel-Text nennt SMS, obwohl der Kanal im Vergleich abgewaehlt ist ` +
+				`(send_sms: false): "${text}" (AC-2g).`
+		);
+	});
 });
 
 describe('AC-3 / AC-4: nicht zustellbare Zustaende sperren und erklaeren sich unterschiedlich', () => {
@@ -172,6 +204,52 @@ describe('AC-3 / AC-4: nicht zustellbare Zustaende sperren und erklaeren sich un
 				'beiden Ursachen nicht auseinanderhalten (AC-3/AC-4).'
 		);
 	});
+});
+
+// Das Feld, das im Dialog DIREKT an `disabled` gebunden wird. Seine Bedeutung wird
+// hier geprueft — im Template ist nur noch ein nackter Feldzugriff erlaubt, dort ist
+// also nichts mehr zu bewerten. Ohne diese Faelle waere `gesperrt: !deliverable` gegen
+// `gesperrt: deliverable` austauschbar und der Knopf spraeche das Gegenteil des Textes.
+describe('AC-3 / AC-4: `gesperrt` steuert den Knopf und ist die Umkehrung von `deliverable`', () => {
+	const FAELLE = [
+		{ name: 'keine Adresse hinterlegt (AC-3)', profil: {}, preset: {}, gesperrt: true },
+		{
+			name: 'Adresse hinterlegt, nicht bestaetigt (AC-4)',
+			profil: { mail_to: MAIL, email_verified: false },
+			preset: {},
+			gesperrt: true
+		},
+		{
+			name: 'Adresse bestaetigt (AC-1)',
+			profil: { mail_to: MAIL, email_verified: true },
+			preset: {},
+			gesperrt: false
+		},
+		{
+			name: 'bestaetigt mit Zusatzkanal (AC-2a)',
+			profil: { mail_to: MAIL, email_verified: true, telegram_chat_id: '4711' },
+			preset: { send_telegram: true },
+			gesperrt: false
+		}
+	];
+
+	for (const fall of FAELLE) {
+		test(`${fall.name} → gesperrt === ${fall.gesperrt}`, () => {
+			const ziel = sendTargetLabel(fall.profil, fall.preset);
+			assert.equal(
+				ziel.gesperrt,
+				fall.gesperrt,
+				`\`gesperrt\` ist ${ziel.gesperrt}, erwartet ${fall.gesperrt}. Der Bestaetigen-Knopf ` +
+					`spraeche damit das Gegenteil des Ziel-Textes ("${ziel.text}") (AC-3/AC-4).`
+			);
+			assert.equal(
+				ziel.gesperrt,
+				!ziel.deliverable,
+				`\`gesperrt\` (${ziel.gesperrt}) ist nicht die Umkehrung von \`deliverable\` ` +
+					`(${ziel.deliverable}) — Text und Sperre laufen auseinander (AC-3/AC-4).`
+			);
+		});
+	}
 });
 
 describe('AC-6: der Ziel-Text widerspricht dem Verbindungsstatus des Versand-Reiters nicht', () => {
