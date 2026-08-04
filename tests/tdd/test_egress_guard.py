@@ -141,6 +141,23 @@ def test_declared_test_access_host_passes_through():
 
 
 # ---------------------------------------------------------------------------
+# Test 3b / AC-1 (Issue #1457 S2b) — opendata.dwd.de ist TEST_ACCESS und wird
+# durchgelassen (httpx), nicht nur Dict-Lookup.
+# ---------------------------------------------------------------------------
+
+
+def test_dwd_host_declared_and_passes_through():
+    assert INVENTORY["opendata.dwd.de"] is IsolationKind.TEST_ACCESS
+
+    _install_httpx_sentinel()
+    settings = Settings(is_test_mode=True)
+    install_egress_guard(settings)
+
+    with pytest.raises(AssertedNetworkTouch):
+        httpx.get("https://opendata.dwd.de/weather/some/path")
+
+
+# ---------------------------------------------------------------------------
 # Test 4 / AC-3 — Prod-No-Op: kein Patch gesetzt
 # ---------------------------------------------------------------------------
 
