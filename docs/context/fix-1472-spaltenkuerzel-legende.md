@@ -136,9 +136,16 @@ und harmlos, weil die Zeile ohnehin nur die sichtbaren Spalten führt.
 | Vergleich HTML (`compare_html.py:1241`) | `_units_legend_text()` → `format_units_legend()` | Legende erweitern |
 | **Vergleich Klartext** (`comparison.py`) | **keine Legende vorhanden** | **neu anlegen** |
 
-Drei der vier laufen durch `format_units_legend()` (`helpers.py:344`). Wird die Auflösung **dort**
-erzeugt, folgen Trip-HTML, Trip-Klartext und Vergleich-HTML ohne eigene Logik. Nur der
-Vergleichs-Klartext muss angeschlossen werden — dort fehlt die Zeile ganz.
+🔴 **Korrigiert nach dem RED-Lauf:** Die frühere Annahme „drei der vier folgen automatisch" ist
+**falsch**. `format_units_legend(label_units)` bekommt `(Kürzel, Einheit)`-Paare und sieht den
+ausgeschriebenen Namen nie — die Auflösung kann dort nicht entstehen. Es braucht einen eigenen
+Formatierer plus **vier** eigene Verdrahtungen (Trip HTML, Trip Klartext, Vergleich HTML,
+Vergleich Klartext). Der Aufwand liegt entsprechend höher als zunächst geschätzt.
+
+Zweite Korrektur aus demselben Lauf: Das **Kürzel** der Legende muss aus derselben Ableitung
+stammen wie der Spaltenkopf (`derive_row_labels` bzw. `visible_cols`), nicht aus dem Register —
+sonst erklärt die Legende bei kollidierenden Kurzformen `Temp`, während im Kopf `Temp max` steht.
+Dafür ist AC-8 ergänzt.
 
 ## Scope Assessment
 

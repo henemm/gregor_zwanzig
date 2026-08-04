@@ -86,15 +86,28 @@ Keine Pflegeliste, keine Präfix-Heuristik.
 | Vergleich HTML (`compare_html.py:1241`) | `_units_legend_text(...)` in `_render_units_legend()` | neue `_column_legend_text(visible)` (neben `_units_legend_text`, Zeile 1221) und zweiter `<div>` in `_render_units_legend()` bzw. `_render_legend()` (Zeile 1259 `units`-Variable erweitern) |
 | **Vergleich Klartext** (`comparison.py`) | **keine Legende vorhanden** | **neu:** `_units_legend_text` und `_column_legend_text` aus `compare_html` importieren (Import-Block Zeile 30–35 erweitern) und mit `_visible_hour_metrics(hourly_metrics)` aufrufen — Ergebnis als zwei Zeilen nach dem Stundenverlauf-Block einfügen (vor der `"---"`-Fußzeile, Zeile 316) |
 
-Trip: `build_column_legend(rows)` iteriert wie `build_units_legend` über `visible_cols(rows)` →
-`get_metric_by_col_key(col_key)` → Paar `(m.col_label, m.label_de)`.
+🔴 **Korrektur nach dem RED-Lauf (2026-08-04): Das Kürzel der Legende MUSS aus derselben
+Ableitung stammen wie der Spaltenkopf — nicht aus dem Katalog.**
 
-Vergleich: `_column_legend_text(visible)` iteriert wie `_units_legend_text` über die
-`HOUR_METRICS`-Zeilen (`metric_id` je Zeile vorhanden) → `get_metric(metric_id)` → Paar
-`(m.col_label, m.label_de)`.
+`derive_row_labels()` hängt bei gleichlautender Kurzform einen Auswertungs-Zusatz an
+(`compare_html.py:493-500`: `mehrfach` → `row["aggregation"]`), und **genau daraus entsteht die
+Spaltenüberschrift** (`compare_html.py:356-357`). Nähme die Legende stattdessen `col_label` direkt
+aus dem Register, stünde bei zwei Temperatur-Auswertungen `Temp max` im Kopf, aber `Temp =
+Temperatur` in der Legende — sie erklärte ein Kürzel, das in der Tabelle nicht vorkommt, und
+verfehlte damit ihren Zweck.
+
+- **Vergleich:** `_column_legend_text(visible)` bildet die Paare aus
+  `derive_row_labels(visible, form="short")` **und** `derive_row_labels(visible, form="long")` —
+  positionsgleich gezippt. Bei Kollision ergibt das korrekt
+  `Temp max = Temperatur Maximum` (die Langform trägt denselben Zusatz, `aggregation_label_de`).
+- **Trip:** `build_column_legend(rows)` nimmt das **`label` aus `visible_cols(rows)`** als Kürzel
+  (das ist der gerenderte Spaltenkopf, `helpers.py:231-237`) und
+  `get_metric_by_col_key(col_key).label_de` als Namen.
 
 **Keine zweite Namensquelle:** beide Wege lesen `col_label`/`label_de` aus derselben
-`MetricDefinition` im zentralen Register (`app/metric_catalog.py`) — nichts wird neu getippt.
+`MetricDefinition` im zentralen Register (`app/metric_catalog.py`) — nichts wird neu getippt. Neu
+ist nur, dass das **Kürzel** dem Kopf entnommen wird statt dem Register, damit beide
+deckungsgleich sind.
 
 ### Verworfene Alternative (nicht erneut vorschlagen)
 
@@ -160,6 +173,18 @@ und `Niederschlag` besteht nie eine Präfix-Beziehung). Verworfen zugunsten der 
   - Test: vier Renderläufe mit identischer Eingabe, Textfragmente paarweise vergleichen
     (A/B-Vergleich der Ausgaben, nicht Vergleich der aufgerufenen Funktionsnamen).
 
+- **AC-8 (ergänzt 2026-08-04 nach dem RED-Lauf):** Given eine Metrik-Auswahl mit **zwei
+  Auswertungen derselben Größe** (z. B. Temperatur Maximum **und** Minimum), sodass der
+  Spaltenkopf den Auswertungs-Zusatz trägt (`Temp max` / `Temp min`) / When die Legende gerendert
+  wird / Then nennt sie **exakt diese** Kürzel (`Temp max = Temperatur Maximum`) — nicht die
+  zusatzlose Registerform. Kein Kürzel steht in der Legende, das im Tabellenkopf fehlt, und
+  umgekehrt.
+  - Test: Auswahl mit kollidierender Kurzform rendern, die Kürzel aus **Tabellenkopf** und aus
+    **Legende** einsammeln und als Mengen vergleichen — Gleichheit behaupten, nicht Teilmenge.
+    Trefferzahl > 0 mitbehaupten, sonst ist die Aussage bei leerer Auswahl wahr.
+  - Begründung: Ohne diesen AC erklärt die Legende ein Kürzel, das es in der Tabelle nicht gibt —
+    der Zweck der ADR-0042-Bedingung wäre verfehlt. Gefunden vom RED-Lauf, bevor Code entstand.
+
 ## Was sich NICHT ändert
 
 - **Spaltenköpfe bleiben englisch** — ADR-0042 bestätigt (#862, #849). Diese Spec löst die
@@ -179,6 +204,12 @@ und `Niederschlag` besteht nie eine Präfix-Beziehung). Verworfen zugunsten der 
   denen Kürzel und Name sich stark ähneln, aber nicht identisch sind (`UV = UV-Index`, `Temp max =
   Temperatur Maximum`). Das ist der gemessene, akzeptierte Preis dafür, dass keine Pflegeliste
   entsteht (siehe "Verworfene Alternative").
+- **Einheitenlose Größen erscheinen nur in der Spalten-Zeile** (`Thdr` hat keine Einheit und fehlt
+  daher in `Einheiten:`, steht aber in `Spalten:`). Das entspricht der freigegebenen Vorschau, war
+  aber nirgends als Regel notiert — hiermit festgehalten.
+- **AC-4 „die Einheiten-Zeile bleibt unverändert" gilt nur für Trip und Vergleich-HTML.** Im
+  Vergleichs-**Klartext** gibt es heute keine Zeile, die bleiben könnte; dort entsteht sie neu
+  (AC-2). Kein Bestandsschutz, sondern Neubau.
 - **#1453-AC-7-Nachweis ist ein Quelltext-Test:** Der bestehende Nachweis, dass alle drei
   Namensformen (`label`, `col_label`, `sms_code`) in den vier Compare-Editoren vorkommen, prüft nur
   *Vorkommen im Code* (Svelte-Compiler-Scan), nicht *Sichtbarkeit am Bildschirm* — nach der Lehre
