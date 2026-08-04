@@ -121,7 +121,13 @@ export async function assertNotProdApiProxyTarget(target: string): Promise<void>
 				`abgelehnt statt durchgewinkt (Issue #1284, F004).`
 		);
 	}
-	const hostname = stripBrackets(parsed.hostname);
+	// Ein einzelner Trailing-Dot ist die root-verankerte Schreibweise
+	// DESSELBEN Namens (F011/F012: Wirkung zählt, nicht Schreibweise).
+	// Manche Resolver (CI-Runner, Container) lösen "localhost." nicht auf,
+	// während "localhost" auflöst — die Normalisierung macht den Check
+	// deterministisch und lässt "prodhost." in dieselbe Loopback+8090-Prüfung
+	// laufen wie "prodhost", statt fail-closed unterschiedlich zu enden.
+	const hostname = stripBrackets(parsed.hostname).replace(/\.$/, '');
 	let addresses: { address: string }[];
 	try {
 		addresses = await dns.lookup(hostname, { all: true });

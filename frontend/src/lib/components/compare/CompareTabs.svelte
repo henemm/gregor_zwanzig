@@ -1593,28 +1593,6 @@
 		padding: 1.5rem 0;
 	}
 
-	.monitoring-item {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-	.monitoring-item-col {
-		display: flex;
-		flex-direction: column;
-	}
-	.monitoring-label {
-		font-size: 0.75rem;
-		color: var(--g-ink-3);
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		font-family: var(--g-font-mono);
-	}
-	.monitoring-label-inline {
-		font-weight: 500;
-	}
-	.monitoring-value {
-		font-size: 0.875rem;
-	}
 
 	.empty-state {
 		font-size: 0.875rem;
@@ -1622,16 +1600,6 @@
 		padding: 1rem 0;
 	}
 
-	.placeholder {
-		font-size: 0.875rem;
-		color: var(--g-ink);
-		margin: 0 0 0.5rem 0;
-	}
-	.hint {
-		font-size: 0.8125rem;
-		color: var(--g-ink-3);
-		margin: 0 0 1rem 0;
-	}
 
 	.compare-tabs-content {
 		padding: 28px 40px 80px;
@@ -1670,85 +1638,6 @@
 	}
 
 	/* ── Vorschau-Tab (Issue #514) — Design nach HubPreview ─────────────────── */
-	.preview-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-end;
-		gap: 24px;
-		margin-bottom: 20px;
-		flex-wrap: wrap;
-	}
-	.preview-header-text {
-		max-width: 680px;
-	}
-	.preview-title {
-		font-size: 1.5rem;
-		font-weight: 600;
-		letter-spacing: -0.02em;
-		margin: 6px 0 6px;
-		color: var(--g-ink);
-	}
-	.preview-subtitle {
-		font-size: 0.84375rem;
-		color: var(--g-ink-3);
-		line-height: 1.5;
-		margin: 0;
-	}
-	.preview-header-right {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-end;
-		gap: 6px;
-		flex-shrink: 0;
-	}
-	.preview-disclaimer {
-		font-family: var(--g-font-mono);
-		font-size: 0.625rem;
-		color: var(--g-ink-4);
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-	}
-	.preview-stage {
-		display: flex;
-		justify-content: center;
-		padding: 24px;
-		background: #e9e6dc;
-		border-radius: var(--g-r-3, 0.75rem);
-		border: 1px solid var(--g-rule, #d8d3c7);
-		margin-bottom: 1rem;
-		min-height: 120px;
-		flex-direction: column;
-		align-items: center;
-	}
-	.preview-stage iframe {
-		width: 100%;
-		min-height: 500px;
-		border: 0;
-		display: block;
-	}
-	.preview-loading {
-		font-size: 0.875rem;
-		color: var(--g-ink-3);
-		margin: 0;
-	}
-	.preview-error {
-		font-size: 0.875rem;
-		color: var(--g-danger, #dc2626);
-		margin: 0;
-	}
-	.preview-sms-hint {
-		font-size: 0.875rem;
-		color: var(--g-ink-3);
-		margin: 0.5rem 0 0;
-		font-style: italic;
-	}
-	.preview-send {
-		margin-top: 0.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		align-items: flex-start;
-	}
 	.send-success {
 		font-size: 0.875rem;
 		color: var(--g-success, #16a34a);
@@ -1761,61 +1650,13 @@
 	}
 
 	@media (max-width: 899px) {
-		.preview-header {
-			flex-direction: column;
-			align-items: flex-start;
-		}
-		.preview-header-right {
-			align-items: flex-start;
-		}
-		.preview-stage {
-			padding: 12px;
-		}
 	}
 
 	/* ── Issue #526 — Übersicht-Tab ─────────────────────────────────────────── */
-	.monitoring-card {
-		margin-bottom: 1.5rem;
-	}
-	.monitoring-row {
-		display: flex;
-		gap: 2rem;
-		flex-wrap: wrap;
-		align-items: center;
-	}
 
-	.summary-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1rem;
-		margin-bottom: 1.5rem;
-	}
-	.summary-value {
-		font-size: 1rem;
-		font-weight: 600;
-		margin: 0.5rem 0 0.25rem;
-		color: var(--g-ink);
-	}
-	.summary-sub {
-		font-size: 0.8125rem;
-		color: var(--g-ink-3);
-		margin: 0 0 0.75rem;
-	}
 
-	.hint-box {
-		margin-top: 0.5rem;
-	}
-	.hint-text {
-		font-size: 0.875rem;
-		color: var(--g-ink-2);
-		line-height: 1.5;
-		margin: 0 0 0.75rem;
-	}
 
 	@media (max-width: 899px) {
-		.summary-grid {
-			grid-template-columns: 1fr;
-		}
 	}
 
 	/* ── Issue #1256 Scheibe 6 — Hub-Orte-Tab (Drag/Entfernen/Add-Panel) ──── */

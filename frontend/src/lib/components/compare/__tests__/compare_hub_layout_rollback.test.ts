@@ -52,7 +52,7 @@ describe('C2 AC-6: rollbackLayoutSnapshot — nur Layout-Felder zuruecksetzen', 
 		// THEN: state.hourlyMetricKeys/state.hourlyEnabled entsprechen exakt "before"
 		// RED heute: Import schlaegt fehl (rollbackLayoutSnapshot existiert nicht).
 		const state = makeStateWithUnrelatedFields();
-		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true };
+		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
 
 		rollbackLayoutSnapshot(state, before);
 
@@ -67,7 +67,7 @@ describe('C2 AC-6: rollbackLayoutSnapshot — nur Layout-Felder zuruecksetzen', 
 		// der Layout-Rollback darf NIE in andere Tabs hineinregieren.
 		// RED heute: Import schlaegt fehl.
 		const state = makeStateWithUnrelatedFields();
-		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true };
+		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
 
 		const expectedActiveMetricKeys = [...state.activeMetricKeys];
 		const expectedCorridors = JSON.parse(JSON.stringify(state.corridors));

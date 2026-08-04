@@ -37,7 +37,7 @@ function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 		name: 'Skitouren Hochkönig',
 		location_ids: ['loc-1', 'loc-2'],
 		schedule: 'daily',
-		profil: 'skitour',
+		profil: 'wintersport',
 		hour_from: 7,
 		hour_to: 16,
 		empfaenger: ['a@example.com'],
@@ -49,7 +49,7 @@ function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 
 const baseEditFields = {
 	name: 'Skitouren Hochkönig',
-	activityProfile: 'skitour' as const,
+	activityProfile: 'wintersport' as const,
 	pickedIds: ['loc-1', 'loc-2'],
 	region: 'Salzburger Land',
 	idealRanges: {},

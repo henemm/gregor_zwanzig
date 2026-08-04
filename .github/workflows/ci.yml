@@ -62,8 +62,28 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install dependencies
         run: npm ci
+      # Die LIVE-Katalog-Drift-Waechter (#1351 F003, #1424 AC-2, corridorMark)
+      # lesen den echten Backend-Katalog via `uv run python3` — ohne uv+Sync
+      # scheiterten genau diese 6 Tests seit jeher nur auf dem Runner (#1196).
+      - name: Install uv (fuer LIVE-Katalog-Drift-Waechter)
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - name: Set up Python + Projekt-Abhaengigkeiten
+        working-directory: .
+        run: |
+          uv python install 3.12
+          uv sync
       - name: Run frontend unit tests
-        run: npm test
+        # Kurzliste der Fehlschlaege ans Log-ENDE — das 17k-Zeilen-TAP-Log
+        # begraebt "not ok" sonst in der Mitte (#1196).
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee /tmp/fe-test.log || {
+            echo "=== FEHLGESCHLAGENE TESTS (Kurzliste) ==="
+            grep -nE "^\s*not ok" /tmp/fe-test.log | head -40
+            exit 1
+          }
 
   svelte-check:
     # Baseline-Gate (Issue #1018): darf nur "nicht schlechter werden".
@@ -71,8 +91,10 @@ jobs:
     # Bei Verbesserung: Baseline-Werte hier absenken.
     runs-on: ubuntu-latest
     env:
-      BASELINE_ERRORS: 40
-      BASELINE_WARNINGS: 159
+      # Abgesenkt 2026-08-04 (#1196): 70/171 -> 36/141 nach Typ-Drift-Bereinigung
+      # der Compare-Editor-Tests + Entfernung toter CSS-Regeln in CompareTabs.
+      BASELINE_ERRORS: 36
+      BASELINE_WARNINGS: 141
     defaults:
       run:
         working-directory: frontend
