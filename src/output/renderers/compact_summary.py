@@ -386,7 +386,7 @@ class CompactSummaryFormatter:
         if kind == "peak":
             return f"{adj} max {pattern['peak_hour']}:00"
         if kind == "starts_later":
-            return f"trocken, Regen ab {pattern['start_hour']}:00"
+            return f"trocken, {adj} ab {pattern['start_hour']}:00"
         if kind == "ends_early":
             end_h = pattern["end_hour"]
             dry_h = pattern.get("dry_from_hour", end_h + 1)

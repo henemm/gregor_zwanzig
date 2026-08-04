@@ -201,6 +201,32 @@ class TestRainTemporal:
 
         assert "13:00" in result or "13" in result
 
+    def test_rain_starts_later_keeps_adjective(self):
+        """Bug #1355: bei erheblichem Tagesregen (>10mm) darf der Satz nicht
+        unbedingt 'trocken, Regen ab HH:00' lauten — das Adjektiv aus
+        _precip_adjective (hier 'starker Regen') muss erhalten bleiben."""
+        from output.renderers.compact_summary import CompactSummaryFormatter
+
+        hourly = []
+        for h in range(9, 17):
+            precip = 3.0 if h >= 13 else 0.0
+            hourly.append(_make_dp(h, precip_1h_mm=precip))
+
+        # Tagessumme: 4h * 3.0mm = 12mm > 10mm-Schwelle -> "starker Regen"
+        segments = [_make_segment_weather_with_timeseries(1, hourly, precip_sum=12.0, pop_max=90)]
+        dc = _default_dc()
+
+        formatter = CompactSummaryFormatter()
+        result = formatter.format_stage_summary(segments, "Tag 1: von A nach B", dc, tz=ZoneInfo("UTC"))
+
+        assert "trocken, Regen ab" not in result, (
+            f"Irrefuehrend: 12mm Tagesregen ('starker Regen') wird als "
+            f"neutrales 'Regen' maskiert.\nErgebnis: {result!r}"
+        )
+        assert "starker Regen ab 13:00" in result, (
+            f"Erwartet 'starker Regen ab 13:00' im Ergebnis.\nErgebnis: {result!r}"
+        )
+
     def test_rain_ends_early(self):
         """Rain in morning, dry afternoon should indicate when it stops."""
         from output.renderers.compact_summary import CompactSummaryFormatter

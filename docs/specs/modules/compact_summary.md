@@ -2,9 +2,9 @@
 entity_id: compact_summary
 type: module
 created: 2026-02-17
-updated: 2026-07-16
+updated: 2026-08-04
 status: approved
-version: "1.3"
+version: "1.4"
 workflow: F2 Kompakt-Summary
 tags: [formatter, email, compare, shared-with-trip]
 ---
@@ -91,7 +91,7 @@ Die Summary analysiert die **stuendlichen Timeseries** und extrahiert zeitliche 
 | Regen durchgehend | "mäßiger Regen" (nur Adjektiv) |
 | Regen mit klarem Peak | "leichter Regen, max {HH}:00" |
 | Regen endet | "leichter Regen bis {HH}:00, trocken ab {HH}:00" |
-| Regen beginnt spaeter | "trocken, Regen ab {HH}:00" |
+| Regen beginnt spaeter | "trocken, {Adjektiv} ab {HH}:00" (Fix #1355 — Adjektiv statt neutralem "Regen") |
 
 **Wind:**
 | Muster | Output |
@@ -392,6 +392,11 @@ TripReportSchedulerService._send_trip_report()
    - WHEN: format_stage_summary(...)
    - THEN: Enthaelt "Regen ab 13:00"
 
+5. **test_rain_starts_later_keeps_adjective** (Fix #1355)
+   - GIVEN: Segments trocken 09-12h, Regen ab 13:00 mit Tagessumme 12mm (>10mm-Schwelle)
+   - WHEN: format_stage_summary(...)
+   - THEN: Enthaelt "starker Regen ab 13:00", NICHT das neutrale "trocken, Regen ab {HH}:00" — das Adjektiv aus `_precip_adjective` darf im `starts_later`-Zweig nicht verworfen werden
+
 5. **test_respects_disabled_metrics**
    - GIVEN: dc mit wind.enabled=False
    - WHEN: format_stage_summary(...)
@@ -458,6 +463,10 @@ TripReportSchedulerService._send_trip_report()
 
 ## Changelog
 
+- 2026-08-04: v1.4 — Fix #1355: `starts_later`-Zweig nennt jetzt das
+  Regen-Adjektiv (`"trocken, {Adjektiv} ab {HH}:00"`) statt es unbedingt
+  durch das neutrale "Regen" zu ersetzen. Betraf Muster-Tabelle (Niederschlag,
+  Zeile ~94) und AC-Abschnitt (`test_rain_starts_later`).
 - 2026-07-16: v1.3 — Zweiter Aufrufkontext (Issue #1278/#1285, s. auch
   `docs/specs/modules/compare_location_summary.md`). Der Baustein bekam
   einen kontextneutralen Kern `format_weather_summary()`
