@@ -70,8 +70,17 @@ würde jedoch zwei bestehende Konsumenten brechen, die exakt `Optional[list[dict
    Versandpfad — jede Formänderung des durchgereichten Werts riskiert Divergenz.
 
 **Design-Entscheidung:** `_build_stage_trend()` gibt neu ein `TrendResult`-Objekt
-(`@dataclass(frozen=True)`, definiert in `src/output/renderers/email/outlook_state_hint.py`) mit
-zwei Feldern zurück:
+(`@dataclass(frozen=True)`) mit zwei Feldern zurück:
+
+> **Korrektur zur Implementierung (2026-08-04, nach GREEN-Prüfung):** `TrendResult`/`OutlookState`
+> liegen tatsächlich in `src/app/models.py` (Domänen-Schicht), nicht in `outlook_state_hint.py` wie
+> ursprünglich hier geplant. Grund: `tests/unit/test_notification_service.py::
+> test_scheduler_has_no_output_imports` verbietet dem Scheduler jeden Renderer-Import bis auf eine
+> namentlich geprüfte Ausnahmezeile (Epic #1301 B4, `build_outlook_row`) — die Spec-Variante hätte
+> diesen Wächter rot gemacht. `outlook_state_hint.py` re-exportiert beide Typen und bleibt der Ort
+> für die vier Kanal-Render-Funktionen. Verifiziert: Wächter existiert wie beschrieben und bleibt
+> grün (`tests/unit/test_notification_service.py`, 16/16). Präzedenzfall: `ThunderLevel`/
+> `StabilityResult` liegen aus demselben Grund bereits in `models.py`.
 
 ```python
 @dataclass(frozen=True)
