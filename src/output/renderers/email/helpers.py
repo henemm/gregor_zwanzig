@@ -1388,7 +1388,6 @@ def _pill_for_metric(
     display_thresholds) (EIN Ampel-System mit der #759-Tabelle, AC-9), nie aus
     der Erwaehnungsschwelle. Klasse 2 (Bereich): „min–max Einheit", neutral.
     """
-    from app.models import ThunderLevel
     # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
     from output.metric_format import thunder_ordinal
 

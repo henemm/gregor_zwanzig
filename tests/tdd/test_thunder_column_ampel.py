@@ -463,7 +463,7 @@ def test_ac6_widerspruchsfreiheit_kurzfassung_und_stundentabelle():
 # ---------------------------------------------------------------------------
 
 def _compare_location(level: ThunderLevel):
-    from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
+    from app.models import ForecastDataPoint
     from app.user import ComparisonResult, LocationResult, SavedLocation
 
     dp = ForecastDataPoint(
