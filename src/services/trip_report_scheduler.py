@@ -875,9 +875,16 @@ class TripReportSchedulerService:
         # 6. Multi-day trend (configurable per report type — via Resolver, Issue #1208)
         #    Built BEFORE the thunder forecast (#1275): both must reflect the
         #    SAME actual future stage(s), never today's last segment.
+        #    Fix #1486: `.rows` ist der unveraenderte Bestandswert, `.state`/
+        #    `.horizon_days` benennen zusaetzlich, warum der Ausblick entfaellt.
         multi_day_trend = None
+        outlook_state = None
+        outlook_horizon_days = None
         if segment_weather and render_options.show_multi_day_trend:
-            multi_day_trend = self._build_stage_trend(trip, target_date, tz=trip_tz)
+            trend_result = self._build_stage_trend(trip, target_date, tz=trip_tz)
+            multi_day_trend = trend_result.rows
+            outlook_state = trend_result.state
+            outlook_horizon_days = trend_result.horizon_days
 
         # 5. Thunder forecast (+1/+2 days) — Issue #1275
         #    Same data source as the outlook table, so SMS/Telegram/E-Mail-
@@ -921,6 +928,8 @@ class TripReportSchedulerService:
             night_weather=night_weather,
             thunder_forecast=thunder_forecast,
             multi_day_trend=multi_day_trend,
+            outlook_state=outlook_state,
+            outlook_horizon_days=outlook_horizon_days,
             stability_result=stability_result,
             day_comparison=day_comparison,
             exposed_sections=exposed_sections,
@@ -994,6 +1003,8 @@ class TripReportSchedulerService:
         thunder_forecast: Optional[dict],
         multi_day_trend: Optional[list[dict]],
         stability_result: Optional[StabilityResult],
+        outlook_state=None,
+        outlook_horizon_days: Optional[int] = None,
         day_comparison: Optional[DayComparison],
         exposed_sections: list,
         allow_test_fallback: bool,
@@ -1020,6 +1031,8 @@ class TripReportSchedulerService:
             night_weather=night_weather,
             thunder_forecast=thunder_forecast,
             multi_day_trend=multi_day_trend,
+            outlook_state=outlook_state,
+            outlook_horizon_days=outlook_horizon_days,
             stability_result=stability_result,
             day_comparison=day_comparison,
             exposed_sections=exposed_sections,
@@ -1372,12 +1385,20 @@ class TripReportSchedulerService:
         trip,
         target_date: date,
         tz=None,
-    ) -> Optional[list[dict]]:
+    ):
         """
         Build trend rows for each future stage (v4.0 column layout).
 
-        SPEC: docs/specs/modules/multi_day_trend.md v4.0
+        SPEC: docs/specs/modules/multi_day_trend.md v5.0
+
+        Fix #1486: liefert ein ``TrendResult`` statt ``Optional[list[dict]]``.
+        ``result.rows`` ist UNVERAENDERT der bisherige Rueckgabewert (Liste
+        mit >= 1 Zeile oder ``None``) — der Thunder-Reuse-Pfad (#1275) und der
+        Vorschau-Vergleich (ADR-0025/#1297) lesen genau dieses Feld weiter.
+        ``result.state`` benennt zusaetzlich, WARUM der Ausblick entfaellt
+        (vorher fuenf Ausstiege, alle mit demselben stummen ``None``).
         """
+        from app.models import OutlookState, TrendResult
         from providers.openmeteo import (
             OPENMETEO_MAX_FORECAST_DAYS,
             is_within_forecast_horizon,
@@ -1388,24 +1409,46 @@ class TripReportSchedulerService:
 
         future_stages = trip.get_future_stages(target_date)
         if not future_stages:
-            return None
+            # Klasse A: normaler Tourabschluss — bewusst KEIN Log.
+            return TrendResult(rows=None, state=OutlookState.NO_STAGES)
 
         trend = []
+        # Fix #1486: Ausfallgruende sammeln. Kommt am Ende WENIGSTENS EINE
+        # Zeile zustande, gilt FOUND (Bestandsverhalten `trend if trend`);
+        # sonst gewinnt UNAVAILABLE vor BEYOND_HORIZON (Stoerung geht vor
+        # Information).
+        failures: set = set()
+        horizon_days: Optional[int] = None
         today = date.today()
         for stage in future_stages[:3]:
             if not is_within_forecast_horizon(stage.date, today):
-                logger.debug(
+                # Fix #1486: war logger.debug — im Betrieb unsichtbar.
+                logger.warning(
                     "Stage %s (%s) beyond Open-Meteo forecast horizon (today+%d), skipping trend",
                     stage.id, stage.date, OPENMETEO_MAX_FORECAST_DAYS,
                 )
+                failures.add(OutlookState.BEYOND_HORIZON)
+                horizon_days = OPENMETEO_MAX_FORECAST_DAYS
                 continue
             try:
                 segments = self._convert_trip_to_segments(trip, stage.date)
                 if not segments:
+                    # Fix #1486: bisher voellig stumm.
+                    logger.warning(
+                        "Stage %s (%s): kein Ausblick — keine Segmente aufloesbar",
+                        stage.id, stage.date,
+                    )
+                    failures.add(OutlookState.UNAVAILABLE)
                     continue
 
                 seg_weather = self._fetch_weather(segments)
                 if not seg_weather:
+                    # Fix #1486: bisher voellig stumm.
+                    logger.warning(
+                        "Stage %s (%s): kein Ausblick — keine Wetterdaten",
+                        stage.id, stage.date,
+                    )
+                    failures.add(OutlookState.UNAVAILABLE)
                     continue
 
                 # fix-911-visual-table AC-4: Ensemble-Confidence auch für die
@@ -1462,9 +1505,22 @@ class TripReportSchedulerService:
                 trend.append(row)
             except Exception as e:
                 logger.warning(f"Failed to build trend for stage {stage.id}: {e}")
+                failures.add(OutlookState.UNAVAILABLE)
                 continue
 
-        return trend if trend else None
+        if trend:
+            return TrendResult(rows=trend, state=OutlookState.FOUND)
+        if OutlookState.UNAVAILABLE in failures:
+            return TrendResult(rows=None, state=OutlookState.UNAVAILABLE)
+        if OutlookState.BEYOND_HORIZON in failures:
+            return TrendResult(
+                rows=None,
+                state=OutlookState.BEYOND_HORIZON,
+                horizon_days=horizon_days,
+            )
+        # Unerreichbar (future_stages ist hier nicht leer und jede Etappe
+        # nimmt genau einen der Ausgaenge) — fail-soft auf Klasse A.
+        return TrendResult(rows=None, state=OutlookState.NO_STAGES)
 
     def _build_thunder_forecast_from_trend_or_fetch(
         self,

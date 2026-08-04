@@ -195,65 +195,65 @@ Changelog dort).
 
 ## Acceptance Criteria
 
-**AC-1 (Klasse A — normaler Tourabschluss):** Given eine Tour ohne weitere Etappen nach dem
-Zieldatum / When das Briefing (gleich welcher Kanal) gerendert wird / Then erscheint der Satz
-„Keine weiteren Etappen — kein Ausblick." ohne Warn-/Danger-Styling (kein Rahmen, kein `⚠️`), UND
-es entsteht KEIN WARNING-Log-Eintrag.
+- **AC-1 (Klasse A — normaler Tourabschluss):** Given eine Tour ohne weitere Etappen nach dem
+  Zieldatum / When das Briefing (gleich welcher Kanal) gerendert wird / Then erscheint der Satz
+  „Keine weiteren Etappen — kein Ausblick." ohne Warn-/Danger-Styling (kein Rahmen, kein `⚠️`), UND
+  es entsteht KEIN WARNING-Log-Eintrag.
 - Test: Rendere ein Briefing für einen Trip, dessen letzte Etappe das Zieldatum ist; prüfe den
   sichtbaren Mail-/Telegram-Text auf den exakten Satz UND prüfe (per `caplog`), dass kein
   WARNING mit Bezug zu diesem Trend entsteht.
 
-**AC-2 (Klasse B — außerhalb Vorhersagehorizont):** Given eine Folge-Etappe jenseits von
-`OPENMETEO_MAX_FORECAST_DAYS` Tagen / When das Briefing gerendert wird / Then erscheint der Satz
-„Nächste Etappe liegt zu weit voraus (max. N Tage)." mit dem echten, aktuell konfigurierten `N` UND
-ein WARNING-Log-Eintrag entsteht (vorher `logger.debug`).
+- **AC-2 (Klasse B — außerhalb Vorhersagehorizont):** Given eine Folge-Etappe jenseits von
+  `OPENMETEO_MAX_FORECAST_DAYS` Tagen / When das Briefing gerendert wird / Then erscheint der Satz
+  „Nächste Etappe liegt zu weit voraus (max. N Tage)." mit dem echten, aktuell konfigurierten `N` UND
+  ein WARNING-Log-Eintrag entsteht (vorher `logger.debug`).
 - Test: Fixture-Etappe mit Datum `today + OPENMETEO_MAX_FORECAST_DAYS + 5`; prüfe gerenderten Text
   enthält die korrekte Zahl UND `caplog` enthält einen WARNING-Satz zu dieser Stage.
 
-**AC-3 (Klasse C — alle drei Ursachen gegenüberstellen):** Given fehlende Segmente ODER fehlende
-Wetterdaten ODER ein Fehler beim Zeilenbau (drei separate Testfälle im selben Modul) / When das
-Briefing gerendert wird / Then erscheint in allen drei Fällen „Vorhersage derzeit nicht abrufbar."
-mit Danger-Styling (Rahmen/`⚠️` bzw. `!!`), UND jeweils ein WARNING-Log-Eintrag entsteht.
+- **AC-3 (Klasse C — alle drei Ursachen gegenüberstellen):** Given fehlende Segmente ODER fehlende
+  Wetterdaten ODER ein Fehler beim Zeilenbau (drei separate Testfälle im selben Modul) / When das
+  Briefing gerendert wird / Then erscheint in allen drei Fällen „Vorhersage derzeit nicht abrufbar."
+  mit Danger-Styling (Rahmen/`⚠️` bzw. `!!`), UND jeweils ein WARNING-Log-Eintrag entsteht.
 - Test: Drei parametrisierte Fälle (leere Segmentliste, leere Wetterliste, patch-freie
   Exception-Provokation z.B. via kaputtes Aggregat) im selben Testmodul; jeder prüft Text +
   Styling-Marker (Rahmenfarbe/Symbol) + `caplog`.
 
-**AC-4 (Unterscheidbarkeit — Kern des Issues):** Given zwei Renderläufe, einer mit Klasse A und
-einer mit Klasse B bzw. C / When die gerenderten Texte verglichen werden / Then sind sie eindeutig
-unterschiedliche Zeichenketten (nicht dieselbe generische Phrase) — „für den Empfänger sehen alle
-fünf identisch aus" gilt nach dem Fix nicht mehr.
+- **AC-4 (Unterscheidbarkeit — Kern des Issues):** Given zwei Renderläufe, einer mit Klasse A und
+  einer mit Klasse B bzw. C / When die gerenderten Texte verglichen werden / Then sind sie eindeutig
+  unterschiedliche Zeichenketten (nicht dieselbe generische Phrase) — „für den Empfänger sehen alle
+  fünf identisch aus" gilt nach dem Fix nicht mehr.
 - Test: Rendere alle vier Zustände (FOUND-Tabelle ausgenommen: A, B, C) nacheinander und prüfe per
   Assertion, dass sich je zwei der drei Texte unterscheiden (`assert text_a != text_b != text_c`,
   paarweise).
 
-**AC-5 (vier Ausgabewege inkl. Telegram):** Given Klasse C tritt ein / When das Briefing über
-HTML-Mail, Klartext-Mail, Compact-Mail UND Telegram (`narrow.py`) gerendert wird / Then zeigt JEDER
-der vier Kanäle den Hinweis „Vorhersage derzeit nicht abrufbar." (bzw. seine Kanal-Fassung: HTML
-Danger-Box, Plain `⚠️`, Compact `!!`, Telegram-Bubble-Text).
+- **AC-5 (vier Ausgabewege inkl. Telegram):** Given Klasse C tritt ein / When das Briefing über
+  HTML-Mail, Klartext-Mail, Compact-Mail UND Telegram (`narrow.py`) gerendert wird / Then zeigt JEDER
+  der vier Kanäle den Hinweis „Vorhersage derzeit nicht abrufbar." (bzw. seine Kanal-Fassung: HTML
+  Danger-Box, Plain `⚠️`, Compact `!!`, Telegram-Bubble-Text).
 - Test: Ein Testfall pro Kanal (4 Assertions in einem oder vier Tests), jeweils gegen den echten
   Renderer-Aufruf, nicht gegen eine Zwischenrepräsentation.
 
-**AC-6 (Vorschau bleibt zeichengleich, ADR-0025/#1297):** Given identische Eingabedaten / When
-sowohl der Versandpfad (`trip_report_scheduler.py:879`) als auch der Vorschau-Pfad
-(`preview_service.py:190-192`) denselben Trend-Zustand erzeugen / Then ist das gerenderte Ergebnis
-byte-identisch — die `TrendResult`-Einführung darf die Vorschau nicht divergieren lassen.
+- **AC-6 (Vorschau bleibt zeichengleich, ADR-0025/#1297):** Given identische Eingabedaten / When
+  sowohl der Versandpfad (`trip_report_scheduler.py:879`) als auch der Vorschau-Pfad
+  (`preview_service.py:190-192`) denselben Trend-Zustand erzeugen / Then ist das gerenderte Ergebnis
+  byte-identisch — die `TrendResult`-Einführung darf die Vorschau nicht divergieren lassen.
 - Test: Rendere denselben Trip/dasselbe Zieldatum einmal über den Versandpfad-Aufbau und einmal
   über `preview_service`, vergleiche die erzeugten Mail-Strings zeichenweise (bestehendes
   ADR-0025-Testmuster erweitern, nicht neu erfinden).
 
-**AC-7 (Thunder-Reuse-Pfad #1275 bleibt unversehrt):** Given
-`_build_thunder_forecast_from_trend_or_fetch()` liest Trend-Zeilen per Datum wieder
-(`trip_report_scheduler.py:1493`ff.) / When `_build_stage_trend()` neu ein `TrendResult` statt
-`Optional[list[dict]]` zurückgibt / Then funktioniert der Thunder-Forecast-Reuse unverändert (kein
-`KeyError`, keine falsche `TH+:`-Ableitung).
+- **AC-7 (Thunder-Reuse-Pfad #1275 bleibt unversehrt):** Given
+  `_build_thunder_forecast_from_trend_or_fetch()` liest Trend-Zeilen per Datum wieder
+  (`trip_report_scheduler.py:1493`ff.) / When `_build_stage_trend()` neu ein `TrendResult` statt
+  `Optional[list[dict]]` zurückgibt / Then funktioniert der Thunder-Forecast-Reuse unverändert (kein
+  `KeyError`, keine falsche `TH+:`-Ableitung).
 - Test: Bestehende Suiten `tests/tdd/test_th_plus_follows_thunder_metric_and_gap.py` und die
   #874-Bestandssuite laufen unverändert grün gegen den neuen Rückgabetyp (Regressionslauf, keine
   neuen Assertions nötig — der Beweis ist, dass nichts bricht).
 
-**AC-8 (Morgen-Briefing-Testlücke aus #1388 schließen):** Given
-`multi_day_trend_reports=["morning"]` konfiguriert und ein Trend vorhanden / When das
-Morgen-Briefing gerendert wird / Then erscheint der Ausblick-Block genauso wie im
-Abend-Briefing — bisher deckten nur Golden-Mails den Abend ab.
+- **AC-8 (Morgen-Briefing-Testlücke aus #1388 schließen):** Given
+  `multi_day_trend_reports=["morning"]` konfiguriert und ein Trend vorhanden / When das
+  Morgen-Briefing gerendert wird / Then erscheint der Ausblick-Block genauso wie im
+  Abend-Briefing — bisher deckten nur Golden-Mails den Abend ab.
 - Test: Neuer oder erweiterter Testfall, der `report_type="morning"` UND
   `multi_day_trend_reports=["morning"]` setzt und den gerenderten Ausblick-Block auf Vorhandensein
   UND korrekten Inhalt prüft (nicht nur "kein Crash").

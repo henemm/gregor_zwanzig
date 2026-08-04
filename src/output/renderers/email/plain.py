@@ -18,6 +18,7 @@ from app.models import (
 
 if TYPE_CHECKING:
     from app.models import NormalizedTimeseries, StabilityResult
+    from output.renderers.email.outlook_state_hint import OutlookState
     from services.day_comparison import DayComparison
 from app.profile import ActivityProfile
 from utils.timezone import local_fmt
@@ -39,6 +40,9 @@ from output.renderers.email.unavailable_hint import (
 )
 # Epic #1301 B4: geteilter Ausblick-Renderer (Trip/Compare-Teilungs-Invariante)
 from output.renderers.email.outlook import render_outlook_plain
+from output.renderers.email.outlook_state_hint import (
+    OutlookState as _OutlookState, render_outlook_state_plain,
+)
 
 
 def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
@@ -93,6 +97,8 @@ def render_plain(
     stage_name: Optional[str],
     stage_stats: Optional[dict],
     multi_day_trend: Optional[list[dict]],
+    outlook_state: Optional["OutlookState"] = None,
+    outlook_horizon_days: Optional[int] = None,
     compact_summary: Optional[str],
     tz: ZoneInfo,
     friendly_keys: set[str],
@@ -296,6 +302,16 @@ def render_plain(
         # extrahiert (Trip/Compare-Teilungs-Invariante) -- show_acc=True
         # bleibt zeichengleich zum bisherigen Inline-Verhalten.
         lines.append(render_outlook_plain(multi_day_trend, show_acc=True))
+    elif (
+        show_outlook
+        and outlook_state is not None
+        and outlook_state != _OutlookState.FOUND
+    ):
+        # Fix #1486: der Ausblick entfaellt nicht mehr wortlos, er sagt warum.
+        # Aufrufer ohne `outlook_state` (Default None) bleiben unveraendert.
+        lines.append("━━ Nächste Etappen ━━")
+        lines.append(render_outlook_state_plain(outlook_state, outlook_horizon_days))
+        lines.append("")
 
     # Antwort-Kommandos (Issue #731: abruf-zentrierter Grundbefehlssatz)
     lines.append("")

@@ -187,9 +187,18 @@ class PreviewService:
         # — keine lokale Nachbau-Berechnung, sonst divergiert die Vorschau
         # strukturell (SMS immer `TH+:-`). Gate auf show_multi_day_trend identisch
         # zum Versand.
+        # Fix #1486: identisches Entpacken wie im Versandpfad
+        # (trip_report_scheduler.py:878-887) — `.rows` bleibt der bisherige
+        # Wert, `.state`/`.horizon_days` werden zusaetzlich durchgereicht.
+        # Jede Abweichung hier liesse die Vorschau wieder divergieren (AC-6).
         multi_day_trend = None
+        outlook_state = None
+        outlook_horizon_days = None
         if segment_weather and render_options.show_multi_day_trend:
-            multi_day_trend = scheduler._build_stage_trend(trip, target, tz=trip_tz)
+            trend_result = scheduler._build_stage_trend(trip, target, tz=trip_tz)
+            multi_day_trend = trend_result.rows
+            outlook_state = trend_result.state
+            outlook_horizon_days = trend_result.horizon_days
         thunder_forecast = scheduler._build_thunder_forecast_from_trend_or_fetch(
             trip, target, tz=trip_tz, multi_day_trend=multi_day_trend,
         )
@@ -228,6 +237,8 @@ class PreviewService:
             render_options=render_options,
             thunder_forecast=thunder_forecast,
             multi_day_trend=multi_day_trend,
+            outlook_state=outlook_state,
+            outlook_horizon_days=outlook_horizon_days,
             night_weather=night_weather,
         )
         return report, segment_weather, stage_name, trip_tz
@@ -245,6 +256,8 @@ class PreviewService:
         render_options=None,
         thunder_forecast=None,
         multi_day_trend=None,
+        outlook_state=None,
+        outlook_horizon_days=None,
         night_weather=None,
     ):
         """Einzelstelle für den E-Mail-Render-Aufruf in der Vorschau.
@@ -253,6 +266,9 @@ class PreviewService:
         damit die Vorschau denselben Gewitter-Wert wie der Versand zeigt (ADR-0025).
         Fix #1315: night_weather ebenso -- sonst zeigt die Vorschau nie die
         Sektion "Nacht am Ziel" (has_gap bleibt bewusst False, #1331).
+        Fix #1486: outlook_state/outlook_horizon_days ebenso -- die Naht muss
+        JEDEN ausblick-bezogenen Parameter des Renders durchreichen koennen,
+        sonst divergiert die Vorschau wieder strukturell.
         """
         from output.renderers.trip_report import TripReportFormatter
         return TripReportFormatter().format_email(
@@ -270,6 +286,8 @@ class PreviewService:
             render_options=render_options,
             thunder_forecast=thunder_forecast,
             multi_day_trend=multi_day_trend,
+            outlook_state=outlook_state,
+            outlook_horizon_days=outlook_horizon_days,
             night_weather=night_weather,
         )
 

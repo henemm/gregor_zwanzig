@@ -30,9 +30,13 @@ from output.renderers.alert.official_alerts import (
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable, render_official_alerts_unavailable_plain,
 )
+from output.renderers.email.outlook_state_hint import (
+    OutlookState as _OutlookState, render_outlook_state_plain,
+)
 
 if TYPE_CHECKING:
     from app.models import NormalizedTimeseries, StabilityResult
+    from output.renderers.email.outlook_state_hint import OutlookState
 from app.profile import ActivityProfile
 
 # ---------------------------------------------------------------------------
@@ -90,6 +94,8 @@ def render_compact(
     segments: list[SegmentWeatherData],
     dc: UnifiedWeatherDisplayConfig,
     multi_day_trend: Optional[list[dict]],
+    outlook_state: Optional["OutlookState"] = None,
+    outlook_horizon_days: Optional[int] = None,
     stability_result: Optional["StabilityResult"],
     tz: ZoneInfo,
     report_type: str,
@@ -224,6 +230,14 @@ def render_compact(
                 f"{tok['precip_str']:<5} {tok['wind_str']:<5} {tok['thunder_plain']}"
             )
             lines.append(_ascii(line))
+        lines.append("")
+    elif outlook_state is not None and outlook_state != _OutlookState.FOUND:
+        # Fix #1486: benannter Zustand statt stiller Leerstelle. ascii_safe,
+        # weil der Compact-Body durchgaengig ASCII ist ("!!" statt "⚠️").
+        lines.append("Naechste Etappen")
+        lines.append(_ascii(render_outlook_state_plain(
+            outlook_state, outlook_horizon_days, ascii_safe=True,
+        )))
         lines.append("")
 
     # --- Footer ---

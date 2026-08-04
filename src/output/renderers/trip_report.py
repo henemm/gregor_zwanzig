@@ -21,6 +21,7 @@ from zoneinfo import ZoneInfo
 
 if TYPE_CHECKING:
     from app.trip import Trip
+    from output.renderers.email.outlook_state_hint import OutlookState
     from services.day_comparison import DayComparison
 
 from utils.timezone import local_dt, local_fmt, local_hour
@@ -63,6 +64,8 @@ class TripReportFormatter:
         night_weather: Optional[NormalizedTimeseries] = None,
         thunder_forecast: Optional[dict] = None,
         multi_day_trend: Optional[list[dict]] = None,
+        outlook_state: Optional["OutlookState"] = None,
+        outlook_horizon_days: Optional[int] = None,
         changes: Optional[list[WeatherChange]] = None,
         stage_name: Optional[str] = None,
         stage_stats: Optional[dict] = None,
@@ -196,6 +199,8 @@ class TripReportFormatter:
             day_window_end_hour=_dw_end,
             thunder_forecast=thunder_forecast,
             multi_day_trend=effective_trend,
+            outlook_state=outlook_state,
+            outlook_horizon_days=outlook_horizon_days,
             changes=changes,
             stage_name=stage_name,
             stage_stats=stage_stats,
@@ -244,6 +249,8 @@ class TripReportFormatter:
             friendly_keys=self._friendly_keys,
             stability_result=stability_result,
             multi_day_trend=effective_trend,
+            outlook_state=outlook_state,
+            outlook_horizon_days=outlook_horizon_days,
             day_comparison=day_comparison,
             night_weather=night_weather,
             trip=trip,

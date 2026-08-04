@@ -727,6 +727,40 @@ class UnifiedWeatherDisplayConfig:
         return self.get_metrics_for_report_type(report_type)
 
 
+# --- Ausblick-Zustand (Fix #1486) ---
+
+class OutlookState(str, Enum):
+    """Warum der Mehrtages-Ausblick da ist — oder warum nicht.
+
+    Bis #1486 entfiel der Ausblick an fuenf Stellen mit demselben stummen
+    ``None``; fuer den Empfaenger sahen alle fuenf gleich aus. Hier liegt die
+    Domaenen-Seite (Zustands-Vokabular + Rueckgabetyp) — die vier
+    Kanal-Fassungen des Textes stehen in
+    ``output/renderers/email/outlook_state_hint.py``. Bewusst NICHT dort
+    definiert: der Scheduler darf laut Architektur-Waechter
+    (``tests/unit/test_notification_service.py::
+    test_scheduler_has_no_output_imports``) keine Renderer importieren.
+    """
+    FOUND = "found"                    # Trend vorhanden — Standard-Tabelle
+    NO_STAGES = "no_stages"            # Klasse A — normaler Tourabschluss
+    BEYOND_HORIZON = "beyond_horizon"  # Klasse B — jenseits Vorhersagehorizont
+    UNAVAILABLE = "unavailable"        # Klasse C — Stoerung (3 Ursachen)
+
+
+@dataclass(frozen=True)
+class TrendResult:
+    """Rueckgabe von ``TripReportSchedulerService._build_stage_trend()``.
+
+    ``rows`` behaelt EXAKT die bisherige Form (``list[dict]`` mit >= 1 Eintrag
+    oder ``None``) — der Thunder-Reuse-Pfad (#1275) und der Vorschau-Vergleich
+    (ADR-0025/#1297) lesen weiterhin nur dieses Feld und bleiben unveraendert.
+    ``horizon_days`` ist nur bei ``BEYOND_HORIZON`` gesetzt.
+    """
+    rows: Optional[list[dict]]
+    state: OutlookState
+    horizon_days: Optional[int] = None
+
+
 # --- Trip Report DTOs (Feature 3.1) ---
 
 @dataclass

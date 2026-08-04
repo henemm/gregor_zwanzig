@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 if TYPE_CHECKING:
     from app.models import NormalizedTimeseries
     from app.trip import Trip
+    from output.renderers.email.outlook_state_hint import OutlookState
     from services.day_comparison import DayComparison
 
 from app.metric_catalog import get_metric
@@ -36,6 +37,9 @@ from output.renderers.email.helpers import fmt_val, format_trend_tokens
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable,
     render_official_alerts_unavailable_plain,
+)
+from output.renderers.email.outlook_state_hint import (
+    OutlookState as _OutlookState, render_outlook_state_plain,
 )
 from services.trip_command_processor import ACTIONS_BUBBLE_BUTTONS
 
@@ -554,6 +558,8 @@ def render_telegram_bubbles(
     friendly_keys: Optional[set[str]] = None,
     stability_result: Optional[StabilityResult] = None,
     multi_day_trend: Optional[list[dict]] = None,
+    outlook_state: Optional["OutlookState"] = None,
+    outlook_horizon_days: Optional[int] = None,
     day_comparison: Optional["DayComparison"] = None,
     night_weather: Optional["NormalizedTimeseries"] = None,
     trip: Optional["Trip"] = None,
@@ -678,6 +684,13 @@ def render_telegram_bubbles(
     if multi_day_trend:
         outlook = [_esc(ln) for ln in _outlook_lines(multi_day_trend)]
         bubbles.append(TelegramBubble(text="\n".join(outlook)))
+    elif outlook_state is not None and outlook_state != _OutlookState.FOUND:
+        # Fix #1486: der vierte, gern vergessene Ausgabeweg — Telegram liess
+        # die Bubble bisher kommentarlos weg. Reiner Text, kein HTML-Kasten.
+        state_line = _esc(render_outlook_state_plain(
+            outlook_state, outlook_horizon_days,
+        ))
+        bubbles.append(TelegramBubble(text="Ausblick\n" + state_line))
 
     # 6. Aktionen-Bubble — einzige Bubble mit reply_markup.
     bubbles.append(TelegramBubble(text="Aktionen", reply_markup=ACTIONS_BUBBLE_BUTTONS))

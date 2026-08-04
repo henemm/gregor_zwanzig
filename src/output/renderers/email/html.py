@@ -25,6 +25,7 @@ from output.renderers.email.corridor_mark import (
 
 if TYPE_CHECKING:
     from app.models import NormalizedTimeseries, StabilityResult
+    from output.renderers.email.outlook_state_hint import OutlookState
     from services.day_comparison import DayComparison
 from app.profile import ActivityProfile
 from utils.timezone import local_dt, local_fmt, tz_abbrev
@@ -52,6 +53,9 @@ from output.renderers.alert.official_alerts import (
 )
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable, render_official_alerts_unavailable_html,
+)
+from output.renderers.email.outlook_state_hint import (
+    OutlookState as _OutlookState, render_outlook_state_html,
 )
 
 logger = logging.getLogger(__name__)
@@ -928,6 +932,8 @@ def render_html(
     stage_name: Optional[str],
     stage_stats: Optional[dict],
     multi_day_trend: Optional[list[dict]],
+    outlook_state: Optional["OutlookState"] = None,
+    outlook_horizon_days: Optional[int] = None,
     compact_summary: Optional[str],
     tz: ZoneInfo,
     friendly_keys: set[str],
@@ -1359,6 +1365,16 @@ def render_html(
             + _outlook_stability_html
             + outlook_table
             + outlook_legend
+            + "</div>"
+        )
+    elif outlook_state is not None and outlook_state != _OutlookState.FOUND:
+        # Fix #1486: statt der bisherigen unerklaerten Leerstelle benennt der
+        # Block, WARUM kein Ausblick da ist. Aufrufer ohne `outlook_state`
+        # (Default None) behalten das alte Verhalten (Block entfaellt).
+        trend_html = (
+            f'<div style="background:{G_HEADER_BG};padding:16px 28px;">'
+            + _eyebrow("Ausblick · nächste 3 Tage")
+            + render_outlook_state_html(outlook_state, outlook_horizon_days)
             + "</div>"
         )
 

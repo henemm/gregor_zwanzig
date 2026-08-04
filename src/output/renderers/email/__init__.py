@@ -27,6 +27,7 @@ from output.tokens.dto import TokenLine
 
 if TYPE_CHECKING:
     from app.models import StabilityResult
+    from output.renderers.email.outlook_state_hint import OutlookState
     from services.day_comparison import DayComparison
 
 
@@ -43,6 +44,8 @@ def render_email(
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,
     thunder_forecast: Optional[dict] = None,
     multi_day_trend: Optional[list[dict]] = None,
+    outlook_state: Optional["OutlookState"] = None,
+    outlook_horizon_days: Optional[int] = None,
     changes: Optional[list[WeatherChange]] = None,
     stage_name: Optional[str] = None,
     stage_stats: Optional[dict] = None,
@@ -105,6 +108,8 @@ def render_email(
             segments=segments,
             dc=display_config,
             multi_day_trend=multi_day_trend,
+            outlook_state=outlook_state,
+            outlook_horizon_days=outlook_horizon_days,
             stability_result=stability_result,
             tz=tz,
             report_type=report_type,
@@ -144,6 +149,8 @@ def render_email(
         stage_name=stage_name,
         stage_stats=stage_stats,
         multi_day_trend=multi_day_trend,
+        outlook_state=outlook_state,
+        outlook_horizon_days=outlook_horizon_days,
         compact_summary=compact_summary,
         tz=tz,
         friendly_keys=friendly_keys,
@@ -177,6 +184,8 @@ def render_email(
         stage_name=stage_name,
         stage_stats=stage_stats,
         multi_day_trend=multi_day_trend,
+        outlook_state=outlook_state,
+        outlook_horizon_days=outlook_horizon_days,
         compact_summary=compact_summary,
         tz=tz,
         friendly_keys=friendly_keys,

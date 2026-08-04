@@ -135,8 +135,15 @@ class TestForecastHorizonPureFunction:
 class TestFarStagesSkippedNoCall:
     """AC-1: Trip nur mit fernen Etappen → kein Trend, kein Open-Meteo-Call."""
 
-    def test_far_future_only_returns_none(self):
-        """Alle Etappen >15 Tage → ``_build_stage_trend`` liefert None."""
+    def test_far_future_only_returns_no_rows(self):
+        """Alle Etappen >15 Tage → ``_build_stage_trend`` liefert KEINE Zeilen.
+
+        Fix #1486: der Rückgabewert ist jetzt ein ``TrendResult``. Die
+        Zusicherung dieses Tests ("keine Trend-Zeile für ferne Etappen") liegt
+        unverändert in ``result.rows``; zusätzlich MUSS der Grund benannt sein
+        (``BEYOND_HORIZON``) statt wie früher stumm zu entfallen.
+        """
+        from output.renderers.email.outlook_state_hint import OutlookState
         from services.trip_report_scheduler import TripReportSchedulerService
 
         trip = _make_far_future_trip()
@@ -144,9 +151,13 @@ class TestFarStagesSkippedNoCall:
 
         result = service._build_stage_trend(trip, date.today(), tz=None)
 
-        assert result is None, (
+        assert result.rows is None, (
             "Ein Trip ausschließlich mit Etappen jenseits today+15 darf KEINE "
             f"Trend-Zeile erzeugen, bekam: {result!r}"
+        )
+        assert result.state is OutlookState.BEYOND_HORIZON, (
+            "Der Ausfallgrund muss benannt sein (Fix #1486), bekam: "
+            f"{result!r}"
         )
 
     def test_far_future_makes_no_trend_call(self):

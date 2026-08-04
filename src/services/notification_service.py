@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from app.models import (
         DayComparison,
         NormalizedTimeseries,
+        OutlookState,
         SegmentWeatherData,
         StabilityResult,
         TripReportConfig,
@@ -69,6 +70,10 @@ class TripReportRequest:
     night_weather: Optional["NormalizedTimeseries"] = None
     thunder_forecast: Optional[dict] = None
     multi_day_trend: Optional[list[dict]] = None
+    # Fix #1486: benennt, WARUM der Ausblick entfaellt (None = Altbestand-
+    # Aufrufer, dann bleibt der Block wie bisher kommentarlos weg).
+    outlook_state: Optional["OutlookState"] = None
+    outlook_horizon_days: Optional[int] = None
     stability_result: Optional["StabilityResult"] = None
     day_comparison: Optional["DayComparison"] = None
     exposed_sections: list = field(default_factory=list)
@@ -290,6 +295,8 @@ class NotificationService:
             night_weather=request.night_weather,
             thunder_forecast=request.thunder_forecast,
             multi_day_trend=request.multi_day_trend,
+            outlook_state=request.outlook_state,
+            outlook_horizon_days=request.outlook_horizon_days,
             stage_name=request.stage_name,
             stage_stats=request.stage_stats,
             exposed_sections=request.exposed_sections,
