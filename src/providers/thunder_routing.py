@@ -50,9 +50,20 @@ class _ThunderRegion(NamedTuple):
 # Bekannte Grenze: das Rechteck ist rund 17 % groesser als das eigentliche
 # Modellgebiet; ausserhalb davon liefert der Dienst einen Fuellwert, den der
 # Provider auf "keine Aussage" abbildet (Spec AC-2).
+# #1457 S2c: ICON-EU (~6,5 km) als Lueckenfueller fuer alles Uebrige. Diese
+# Zeile MUSS die LETZTE bleiben — sie trifft jede Koordinate. Stuende sie
+# frueher, verschluckte sie sowohl Frankreich (Blitzdichte, produktiv seit
+# S2a) als auch DE/Alpen/Oesterreich (Blitzpotenzial, produktiv seit S2b);
+# beide Gebiete bekaemen still die grobmaschigere Quelle, und an der Ausgabe
+# saehe man den Unterschied nicht (Spec AC-8).
+# Bekannte Grenze: das Rechteck ist absichtlich die ganze Welt, das
+# ICON-EU-Gitter deckt aber nur Europa ab (gemessen: -23,53..62,53 O /
+# 29,47..70,53 N). Ausserhalb liefert der Provider "keine Aussage" statt
+# eines geklemmten Randwerts (dwd_eu._read_point_value).
 _REGIONS: tuple[_ThunderRegion, ...] = (
     _ThunderRegion("FR", 41.3, 51.1, -5.2, 9.7, "fr_direct"),
     _ThunderRegion("DE_ALPEN", 43.17, 58.09, -3.95, 20.35, "de_direct"),
+    _ThunderRegion("EU_REST", -90.0, 90.0, -180.0, 180.0, "eu_direct"),
 )
 
 

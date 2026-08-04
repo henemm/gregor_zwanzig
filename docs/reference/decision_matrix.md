@@ -24,6 +24,7 @@ Wetterdaten über `get_provider("openmeteo")` — Registry in
 | `geosphere` | GeoSphere Austria (Direktanbindung, AT-Fallback-Basis) |
 | `fr_direct` | Météo-France AROME-WCS (Direktanbindung, FR-Fallback, #1143) — liefert seit #1457 S2a zusätzlich zu Temperatur/Wind/Niederschlag die erwartete Blitzdichte (`lightning_density_per_km2_3h`, nur Frankreich/Korsika; eigenes Feld, nicht mit dem DWD-Blitzpotenzial vermischt); Gewitter-Zuständigkeit läuft über eine eigene Tabelle, s. u. |
 | `de_direct` | DWD ICON-D2 Open Data (GRIB2-Direktanbindung, DE-Fallback, #1144) — liefert seit #1457 S2b zusätzlich zu Temperatur/Wind/Niederschlag Blitzpotenzial und Hagel-Potenzial (`lightning_potential_lpi_jkg` und `hail_potential_grau_gsp`, nur Deutschland/Alpen/Österreich; eigene Felder, nicht mit der Météo-France Blitzdichte vermischt); Gewitter-Zuständigkeit läuft über eine eigene Tabelle, s. u. |
+| `eu_direct` | DWD ICON-EU Open Data (GRIB2-Direktanbindung, ~6,5 km Maschenweite, `src/providers/dwd_eu.py`) — **nur** Gewittersignale, kein `fetch_forecast`. Liefert seit #1457 S2c Blitzpotenzial (`lightning_potential_lpi_jkg`, externer Abrufname `lpi_con_max`) als Lückenfüller für alle europäischen Orte außerhalb von FR/Korsika (`fr_direct`) und DE/Alpen/Österreich (`de_direct`); kein Hagel-Signal (ICON-EU liefert kein Pendant zu `grau_gsp`, beabsichtigt). Gewitter-Zuständigkeit läuft über die eigene Tabelle, s. u. — Catch-all, letzte Zeile. |
 | `brightsky` | DWD-Daten via BrightSky — genutzt im Radar-Pfad (`src/services/radar_service.py`) |
 | `radar_dpc` | Radar-Nowcast Italien (DPC) — Wetter-Provider, kein Warndienst; nicht zu verwechseln mit der amtlichen DPC-Warnquelle `DpcSource` (`src/services/official_alerts/dpc.py`, Issue #1427), die nicht in dieser Tabelle geführt wird (s.u.) |
 | `fixture` | Offline-Testmodus: aktiv wenn `GZ_TEST_FIXTURE_DIR` gesetzt (#346) — bedient `openmeteo`-Anfragen aus versionierten Fixtures |
@@ -46,6 +47,11 @@ Namen. Die Kurzform `LITOTA3` stand bis `c33e7b28` im Code — sie kommt im Ange
 Dienstes **0-mal** vor, jeder Abruf endete in 404, und weil fail-soft korrekt griff,
 blieb das Feld **lautlos** leer. 24 grüne Tests haben es nicht bemerkt: Sie lesen eine
 aufgezeichnete Datei, der Name steckt im **Abruf**pfad, nicht im **Lese**pfad.
+
+**`lpi_con_max` (ICON-EU, #1457 S2c): VERIFIZIERT.** Live-Test gegen den echten
+Verzeichnislisting-Dienst (`opendata.dwd.de`) bestanden — unter
+`.../icon-eu/grib/<HH>/` existiert der Ordner `lpi_con_max` tatsächlich (vorher als
+unverifizierte Konzept-Kurzform geführt).
 
 Dieselbe Prüfung hat nebenbei geklärt, dass Hagel regulär verfügbar ist
 (`HAIL__GROUND_OR_WATER_SURFACE`, `GRAUPEL__GROUND_OR_WATER_SURFACE`) — die als
@@ -119,9 +125,14 @@ nur in `thunder_routing.py` nach und ruft das optionale Protokoll
 `ThunderSignalProvider` (`src/providers/base.py`). Ein neuer Dienst wird
 wirksam, indem er das Protokoll erfüllt und eine Zeile in `thunder_routing.py`
 bekommt; die Anreicherungsstelle wird dabei nie angefasst. Heute trägt die
-Tabelle zwei Provider ein: `fr_direct` (Frankreich/Korsika, S2a) und `de_direct` (Deutschland/Alpen/Österreich, S2b). S2c
-(Lückenfüller) ergänzt weitere Zeilen. Fehlt ein Wert, bleibt das Feld
-`None` — „keine Aussage" ist nicht „keine Gefahr".
+Tabelle drei Provider ein, first-match-wins: `fr_direct` (Frankreich/Korsika, S2a),
+`de_direct` (Deutschland/Alpen/Österreich, S2b) und als **letzte, alles treffende
+Catch-all-Zeile** `eu_direct` (DWD ICON-EU, ~6,5 km, S2c — Lückenfüller für den Rest
+Europas, kein Hagel-Signal). Die Reihenfolge ist tragend: Stünde `EU_REST` vor FR/
+DE_ALPEN, verschluckte sie beide bereits produktiven Gebiete (first-match-wins). Damit
+ist die Landkarte der Gewittersignal-Beschaffung aus #1419 Schritt S2 vollständig
+(#1457). Fehlt ein Wert, bleibt das Feld `None` — „keine Aussage" ist nicht „keine
+Gefahr".
 
 ## Kontingent-Regeln (Open-Meteo)
 

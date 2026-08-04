@@ -214,9 +214,12 @@ def test_ac10_gewitter_zustaendigkeit_weicht_von_der_grundvorhersage_ab():
         ("Berlin", 52.52, 13.405, "de_direct"),
         ("Wien", 48.21, 16.37, "de_direct"),
         ("Innsbruck", 47.27, 11.39, "de_direct"),
-        # Ausserhalb des gemessenen ICON-D2-Gitters (43,17..58,09 N):
-        # kein Abruf, statt sinnloser Last.
-        ("Rom", 41.9, 12.5, None),
+        # Ausserhalb des gemessenen ICON-D2-Gitters (43,17..58,09 N). Bis S2b
+        # stand hier `None` ("kein Abruf, statt sinnloser Last"); seit #1457
+        # S2c uebernimmt dort die Catch-all-Zeile `EU_REST` mit ICON-EU. Die
+        # Aussage dieses Falls bleibt dieselbe — Rom faellt NICHT an den DWD —
+        # nur die Alternative ist jetzt eine Quelle statt gar keiner.
+        ("Rom", 41.9, 12.5, "eu_direct"),
     ],
 )
 def test_ac10_neue_zustaendigkeitszeile_haelt_die_gemessenen_gittergrenzen(

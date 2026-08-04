@@ -258,6 +258,12 @@ def _load_providers() -> None:
         pass
 
     try:
+        from providers.dwd_eu import DwdEuDirectProvider
+        register_provider("eu_direct", DwdEuDirectProvider)
+    except ImportError:
+        pass
+
+    try:
         from providers.radar_dpc import RadarDPCProvider
         register_provider("radar_dpc", RadarDPCProvider)
     except ImportError:

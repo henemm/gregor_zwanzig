@@ -317,9 +317,13 @@ def test_ac8_anschlussweg_kennt_keinen_providernamen():
         "vor, wo er hingehoert. Der Waechter wuerde nichts pruefen"
     )
 
+    # #1457 S2c: `eu_direct` und `DwdEuDirect` kommen mit der dritten Quelle
+    # (ICON-EU) hinzu. `lpi_con_max` stand hier bereits defensiv — es ist der
+    # beim echten Dienst verifizierte ICON-EU-Abrufname und gehoert damit
+    # ausschliesslich in `providers/dwd_eu.py`, nie in den gemeinsamen Weg.
     verboten = [
         mf.LIGHTNING_COVERAGE, "fr_direct", "MeteoFranceDirect",
-        "de_direct", "lpi_con_max",
+        "de_direct", "lpi_con_max", "eu_direct", "DwdEuDirect",
     ]
     treffer = [w for w in verboten if w in quelle]
     assert not treffer, (
