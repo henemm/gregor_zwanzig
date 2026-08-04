@@ -5,6 +5,29 @@
 >
 > Diese Datei bleibt als Detail-Referenz fuer Root-Cause-Analysen bestehen.
 
+## BUG-1264-CUTOVER-DEPLOY: Persistenz-Cutover (#1250 S7a) ohne Prod-Migration deployt — alle Trips im Frontend unsichtbar
+
+**Status:** RESOLVED (2026-07-16) | **Severity:** High (alle Nutzer, ~1 Tag unsichtbar; KEIN Datenverlust) | **GitHub Issue:** #1264
+
+### Symptom
+
+Am 2026-07-16 zeigte das Frontend fuer alle Nutzer (henning, default, steffi, admin) 0 Trips. Die Daten lagen unberuehrt in `data/users/<user>/trips/` — die App las nur am neuen, noch leeren Ort (`briefings/`). Orts-Vergleiche waren nicht betroffen.
+
+### Root Cause
+
+Der Persistenz-Cutover aus #1250 Scheibe 7a (`22732a1a`) stellt Go-Store und Python-Loader von `trips/*.json` auf `briefings/<id>.json` um (Lesen UND Schreiben) und setzt einen separaten, per-Host ausgefuehrten Daten-Umzug voraus (`scripts/migrate_1250_briefings.py`; `data/users/**` ist gitignored und pro Host). Der Prod-Deploy von #1260 syncte via `deploy-gregor-prod.sh` hart auf `origin/main` HEAD — der Cutover-Code kam als „blinder Passagier" mit (Vorfahre in der Historie), die begleitende Migration lief nie. Die Reihenfolge-Annahme „S7a wird koordiniert separat deployt" haelt strukturell nicht, weil der Deploy nicht commit-selektiv ist.
+
+### Fix (2026-07-16)
+
+`scripts/migrate_1250_briefings.py --root data/users --execute` auf Prod: 189 Dateien migriert, vorher Voll-Backup (`data/.backups/migrate-1250-20260716T041107Z.tar.gz`), Feld-fuer-Feld gegen die Originale verifiziert (nur `kind` additiv, kein Wert veraendert, `trips/`-Originale unangetastet). `LoadTrips` liest live — kein Restart noetig.
+
+### Lessons Learned
+
+1. **Kein Persistenz-Cutover-Commit nach `main`, bevor seine per-Host-Migration Teil des Deploys ist** — oder Cutover + Migration atomar im selben Zug ausliefern. Der Hard-Sync des Deploy-Scripts schleppt jeden Vorfahren auf `main` mit; „wird spaeter koordiniert deployt" ist keine haltbare Annahme.
+2. **Migrationen idempotent, mit Backup und No-Op-Erkennung bauen** — nur so kann der Deploy sie fuer die Dauer eines Cutover-Epics (#1250 S7b/S7c) bei jedem Lauf mit ausfuehren. Die Einhaengung liegt in `henemm/henemm-infra` (`deploy-gregor-prod.sh`) und ist mit der infra-Instanz abzustimmen.
+
+---
+
 ## BUG-1428-PREFLIGHT-SCOPE: staging_gate.py widersprach sich zwischen Preflight und Post-Reset-Check
 
 **Status:** RESOLVED (2026-07-30) | **Severity:** High (Ursache eines Produktionsausfalls) | **GitHub Issue:** #1428 (henemm-infra#148)
