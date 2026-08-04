@@ -434,6 +434,7 @@ class WeatherMetricsService:
         cloud_avg = self._compute_cloud_cover(timeseries)
         humidity_avg = self._compute_humidity(timeseries)
         thunder_max = self._compute_thunder_level(timeseries)
+        hail_flag = self._compute_hail_flag(timeseries)
         visibility_min = self._compute_visibility(timeseries)
 
         # DNI-based emoji aggregation (SPEC: weather_emoji_dni.md)
@@ -454,6 +455,7 @@ class WeatherMetricsService:
             cloud_avg_pct=cloud_avg,
             humidity_avg_pct=humidity_avg,
             thunder_level_max=thunder_max,
+            hail_flag=hail_flag,
             visibility_min_m=visibility_min,
             dominant_wmo_code=dominant_wmo,
             dni_avg_wm2=dni_avg,
@@ -468,6 +470,7 @@ class WeatherMetricsService:
                 "cloud_avg_pct": "avg",
                 "humidity_avg_pct": "avg",
                 "thunder_level_max": "max",
+                "hail_flag": "hail_priority",
                 "visibility_min_m": "min",
                 "dominant_wmo_code": "max_wmo_severity",
                 "dni_avg_wm2": "avg",
@@ -603,6 +606,21 @@ class WeatherMetricsService:
         # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
         from output.metric_format import max_thunder
         return max_thunder(levels)
+
+    def _compute_hail_flag(
+        self,
+        timeseries: NormalizedTimeseries,
+    ) -> Optional[bool]:
+        """
+        Hagel-Kennzeichen des Segments (#1475 S5a): Prioritaet ja > unbekannt
+        > nein.
+
+        BEWUSST ueber die ROHEN Punktwerte (KEINE Vorfilterung der ``None``) --
+        die Prioritaetsregel braucht die "unbekannt"-Werte, um sie von einem
+        spaeteren echten "nein" (S5b/S5c) unterscheiden zu koennen.
+        """
+        from output.metric_format import hail_priority
+        return hail_priority([dp.hail_flag for dp in timeseries.data])
 
     def _compute_visibility(
         self,
@@ -1120,6 +1138,20 @@ def aggregate_stage(
     # Build result dict by applying aggregation rules
     result_fields: dict = {}
     for field_name, agg_rule in agg_config.items():
+        if agg_rule == "hail_priority":
+            # #1475 S5a: BEWUSST VOR dem generischen ``is not None``-Vorfilter.
+            # Die Prioritaet ja > unbekannt > nein braucht die vollstaendige
+            # Werteliste INKLUSIVE der ``None`` ("unbekannt") — sonst koennte
+            # ein spaeteres echtes ``False`` ("nein", S5b/S5c) ein "unbekannt"
+            # ueberstimmen, statt von ihm ueberstimmt zu werden. Ausserdem
+            # entscheidet der Fallback-Zweig ``values[0]`` reihenfolgeabhaengig
+            # und damit falsch.
+            from output.metric_format import hail_priority
+            result_fields[field_name] = hail_priority(
+                [getattr(s, field_name, None) for s in summaries]
+            )
+            continue
+
         values = [
             getattr(s, field_name) for s in summaries
             if getattr(s, field_name, None) is not None

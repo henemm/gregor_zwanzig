@@ -104,6 +104,11 @@ def run_comparison(
                     "precip_1h_mm": dp.precip_1h_mm,
                     "cloud_total_pct": dp.cloud_total_pct,
                     "wmo_code": dp.wmo_code,
+                    # Issue #1475 S5a: Hagel-Kennzeichen im SELBEN hourly-
+                    # Eintrag wie sein Rohwert-Ursprung `wmo_code` -- sonst
+                    # stiller Feldverlust beim Serialisieren (Praezedenz
+                    # #1265/#1349).
+                    "hail_flag": dp.hail_flag,
                     "is_day": dp.is_day,
                 }
                 for dp in loc_result.hourly_data

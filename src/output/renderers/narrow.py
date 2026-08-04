@@ -247,6 +247,19 @@ def _tg_day_footer(
         else:
             thunder_word = THUNDER_LABEL_DE[_SEV_TO_THUNDER_LEVEL[max_thunder_sev]]
         parts.append(f"⚡ {thunder_word}")
+        # Issue #1475 S5a: Hagel-Kennzeichen rein deskriptiv NEBEN der
+        # Gewitterstufe -- derselbe geteilte Textbaustein wie Mail und
+        # `GEWITTER`-Kommando (#1481 DRY, call-time Import). Bei
+        # "unbekannt"/"nein" bleibt die Zeile zeichengleich (Spec AC-6).
+        from output.metric_format import format_hail_note, hail_priority
+        _hail_note = format_hail_note(hail_priority([
+            getattr(dp, "hail_flag", None) for dp in build_day_window_points(
+                segments, night_weather, tz,
+                start_hour=day_window_start_hour, end_hour=day_window_end_hour,
+            )
+        ]))
+        if _hail_note:
+            parts.append(_hail_note)
 
     # Sicht
     if "visibility" in enabled and min_vis is not None:

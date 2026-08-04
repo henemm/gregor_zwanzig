@@ -87,6 +87,14 @@ Tabellenzeile** an — Provider füllt nur Felder, die Einstufung liest nur Feld
 #1419 Abschnitt 5), wie beim Blitzpotenzial in #1474c geschehen. **Keine eigene
 Gewitter-Einstufung im Provider bauen.**
 
+✅ **Hagel (#1475 S5a): LIVE, aber KEIN Fusionssignal.** Anders als Blitzdichte/CAPE/
+Wettercode/Blitzpotenzial dockt Hagel **nicht** als fünfte Zeile an diese Tabelle an —
+es ist ein eigenständiges, rein deskriptives Kennzeichen (`hail_flag: Optional[bool]`,
+`True`=ja/`None`=unbekannt) neben `thunder_level`, nicht Teil von `max_thunder()`. S5a
+liest ausschließlich den bereits vorhandenen `wmo_code` (96/99 → `True`). Details, inkl.
+der beiden noch offenen Folgescheiben S5b (DWD `grau_gsp`) und S5c (Météo-France):
+`docs/specs/modules/feat_1475_s5a_hagel_wmo_flag.md`.
+
 **`None` ≠ `NONE`:** Liegt **kein** Signal vor, liefert die Fusion `None` („keine
 Aussage"). `ThunderLevel.NONE` bedeutet „mindestens ein Signal geprüft, unauffällig".
 Leer darf nie als Entwarnung gelesen werden.

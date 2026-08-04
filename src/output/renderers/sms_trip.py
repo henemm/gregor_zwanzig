@@ -26,7 +26,7 @@ from app.models import (
 from services.risk_engine import RiskEngine
 from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt, local_hour
-from output.metric_format import thunder_label_value
+from output.metric_format import hail_priority, thunder_label_value
 from output.renderers.alert.official_alerts import official_alerts_to_sms_entries
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, build_day_window_points,
@@ -239,6 +239,7 @@ def _segments_to_normalized_forecast(
     gust_samples: list[HourlyValue] = []
     pop_samples: list[HourlyValue] = []
     thunder_samples: list[HourlyValue] = []
+    hail_values: list[Optional[bool]] = []
 
     # Bug #925: Stunden-Token aus der ECHTEN Stunden-Zeitreihe (Ortszeit)
     # ableiten — deckungsgleich mit der E-Mail-Tabelle. Onset@h(Peak@h) statt
@@ -263,6 +264,10 @@ def _segments_to_normalized_forecast(
         th_val = thunder_label_value(dp.thunder_level)
         if th_val > 0:
             thunder_samples.append(HourlyValue(lh, float(th_val)))
+        # Issue #1475 S5a: Hagel-Kennzeichen aus DERSELBEN gefensterten
+        # Zeitreihe wie die Gewitterstufe -- die ROHEN Werte inkl. `None`
+        # ("unbekannt") sammeln, die Prioritaet entscheidet unten.
+        hail_values.append(getattr(dp, "hail_flag", None))
 
     # Fail-soft: Segmente ohne Stunden-Zeitreihe (Provider-Fehler) → Etappen-
     # Aggregat am Etappen-Start als Rückfall (Bug #398-Verhalten). Bleibt
@@ -282,6 +287,9 @@ def _segments_to_normalized_forecast(
             gust_samples.append(HourlyValue(hour, float(agg.gust_max_kmh)))
         if agg.pop_max_pct is not None and agg.pop_max_pct > 0:
             pop_samples.append(HourlyValue(hour, float(agg.pop_max_pct)))
+        # Issue #1475 S5a: derselbe Fail-soft-Rueckfall wie oben -- Segmente
+        # ohne Stunden-Zeitreihe steuern ihr Etappen-Aggregat bei.
+        hail_values.append(getattr(agg, "hail_flag", None))
 
     # Bug #925 / F002: Grenz-Stunden zwischen aufeinanderfolgenden Etappen
     # (seg1.end_h == seg2.start_h, beide inklusiv) können dieselbe Stunde doppelt
@@ -345,6 +353,10 @@ def _segments_to_normalized_forecast(
         snowfall_limit_m=day_snowfall_limit,
         snow_new_24h_cm=day_snow_new,
         wind_chill_c=felt_min,
+        # Issue #1475 S5a: Prioritaet ja > unbekannt > nein ueber die rohen
+        # Werte -- der EINE geteilte Aggregations-Helfer (kein zweiter
+        # Rechenweg neben `weather_metrics._compute_hail_flag`).
+        hail_flag=hail_priority(hail_values),
     )
     # Issue #1349: Flag ueber die Segmente aggregieren (Muster identisch zum
     # E-Mail-Renderer, output/renderers/email/unavailable_hint.py) — die

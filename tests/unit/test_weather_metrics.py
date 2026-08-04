@@ -126,11 +126,14 @@ class TestWeatherMetricsServiceKnownValues:
         """
         GIVEN: Timeseries
         WHEN: compute_basis_metrics(timeseries)
-        THEN: aggregation_config has 12 entries with correct functions
+        THEN: aggregation_config has 13 entries with correct functions
+
+        Issue #1475 S5a: 12 -> 13 Eintraege — `hail_flag` ("hail_priority")
+        ist als Tages-/Etappen-Aggregat hinzugekommen (Spec AC-4).
         """
         result = service.compute_basis_metrics(known_timeseries)
 
-        assert len(result.aggregation_config) == 12
+        assert len(result.aggregation_config) == 13
         assert result.aggregation_config["temp_min_c"] == "min"
         assert result.aggregation_config["temp_max_c"] == "max"
         assert result.aggregation_config["temp_avg_c"] == "avg"
@@ -143,6 +146,7 @@ class TestWeatherMetricsServiceKnownValues:
         assert result.aggregation_config["visibility_min_m"] == "min"
         assert result.aggregation_config["dominant_wmo_code"] == "max_wmo_severity"
         assert result.aggregation_config["dni_avg_wm2"] == "avg"
+        assert result.aggregation_config["hail_flag"] == "hail_priority"
 
 
 class TestWeatherMetricsServiceTemperature:

@@ -15,6 +15,14 @@ from output.tokens.metrics import (
 
 FORECAST_TH = "TH:"
 FORECAST_THP = "TH+:"
+
+# Issue #1475 S5a: Hagel-Kennzeichen der berichteten Etappe als fixer Suffix am
+# `TH:`-Token (KEIN eigenes Kuerzel, keine eigene Prioritaetsstufe) — es faellt
+# damit beim Kuerzen zusammen mit dem Gewitter-Token, das es beschreibt.
+# Sichtbar AUSSCHLIESSLICH bei `hail_flag is True`; "unbekannt"/"nein" lassen
+# die Zeile zeichengleich (Spec AC-6). `HG` kollidiert mit keinem Kuerzel des
+# amtlichen Warn-Katalogs (`tokens/hazard_symbols.py`).
+FORECAST_TH_HAIL_SUFFIX = "+HG"
 VIGI_TH = "TH:"
 VIGI_HR = "HR:"
 
@@ -110,7 +118,7 @@ def _spec_uses_friendly_token(spec: Optional[MetricSpec]) -> bool:
 
 def _mk_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
                rt: ReportType, is_level: bool = False,
-               has_gap: bool = False) -> Optional[Token]:
+               has_gap: bool = False, value_suffix: str = "") -> Optional[Token]:
     if not _visible(spec, rt):
         return None
     if spec and _spec_uses_friendly_token(spec) and spec.friendly_label:
@@ -126,7 +134,7 @@ def _mk_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
         if value == "-" and has_gap:
             value = "?"
     return Token(
-        symbol=symbol, value=value, category="forecast",
+        symbol=symbol, value=f"{value}{value_suffix}", category="forecast",
         priority=PRIORITY.get(symbol, 5),
         morning_visible=spec.morning_enabled if spec else True,
         evening_visible=spec.evening_enabled if spec else True,
@@ -282,8 +290,12 @@ def build_token_line(
         (FORECAST_TH, today.thunder_hourly, True),
     ]:
         spec = by_sym.get(sym) or by_sym.get(sym.rstrip(":"))
+        # Issue #1475 S5a: NUR das Gewitter-Token der berichteten Etappe traegt
+        # den Hagel-Suffix, und nur bei bestaetigtem Hagel ("ja").
+        suffix = (FORECAST_TH_HAIL_SUFFIX
+                  if sym == FORECAST_TH and today.hail_flag is True else "")
         tok = _mk_metric(sym, samples, spec, report_type, is_lvl,
-                          has_gap=today.has_data_gap)
+                          has_gap=today.has_data_gap, value_suffix=suffix)
         if tok:
             tokens.append(tok)
 

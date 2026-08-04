@@ -827,8 +827,16 @@ class TripCommandProcessor:
         thunder = max(thunder_vals, key=thunder_ordinal) if thunder_vals else TL.NONE
         precip = sum(p.metrics.precip_sum_mm for p in points if p.metrics.precip_sum_mm is not None)
         pop = max((p.metrics.pop_max_pct for p in points if p.metrics.pop_max_pct is not None), default=None)
+        # Issue #1475 S5a: Hagel-Kennzeichen ueber dieselbe Prioritaetsregel
+        # (ja > unbekannt > nein) wie die Tages-/Etappen-Aggregation -- die
+        # ROHEN Werte inkl. `None` ("unbekannt"), kein Vorfiltern.
+        from output.metric_format import hail_priority
+        hail_flag = hail_priority(
+            [getattr(p.metrics, "hail_flag", None) for p in points]
+        )
         return {"temp_max": temp_max, "temp_min": temp_min, "wind_max": wind_max,
-                "thunder": thunder, "precip": precip, "pop": pop}
+                "thunder": thunder, "precip": precip, "pop": pop,
+                "hail_flag": hail_flag}
 
     def _fmt_day_agg(self, agg: dict, label: str) -> str:
         """Formatiert Tages-Aggregat als kompakte Zeile."""
@@ -872,7 +880,14 @@ class TripCommandProcessor:
             return f"Heute ({today:%d.%m}): Keine Etappe geplant — kein Gewitter-Status."
         thunder = agg["thunder"]
         label = _THUNDER_LABEL.get(thunder.value if thunder else "NONE", "?")
-        return f"⛈ Gewitter heute ({today:%d.%m}): {label}"
+        # Issue #1475 S5a: derselbe geteilte Textbaustein wie in den Mail-
+        # Renderern (#1481 DRY, call-time Import) -- rein deskriptiv NEBEN der
+        # Gewitterstufe, ohne Handlungsempfehlung (ADR-0007, Spec AC-8). Bei
+        # "unbekannt"/"nein" bleibt die Antwort zeichengleich zu bisher.
+        from output.metric_format import format_hail_note
+        hail_note = format_hail_note(agg.get("hail_flag"))
+        suffix = f" · {hail_note}" if hail_note else ""
+        return f"⛈ Gewitter heute ({today:%d.%m}): {label}{suffix}"
 
     def _fmt_timeline(self, timeline, target_date, label: str, day_token: str) -> str:
         """Vertikale Timeline: pro Wegpunkt zwei Zeilen (Zeit/Höhe + Metriken)."""

@@ -642,6 +642,26 @@ class OpenMeteoProvider:
             return ThunderLevel.HIGH
         return ThunderLevel.NONE
 
+    def _parse_hail_flag(self, weather_code: Optional[int]) -> Optional[bool]:
+        """
+        Hagel-Kennzeichen aus dem WMO-Wettercode (#1475 S5a, Epic #1419).
+
+        BEWUSST getrennt von ``_parse_thunder_level`` — gleicher Rohwert,
+        andere Uebersetzung, anderer Rueckgabetyp und andere Aussagekraft.
+
+        WMO Codes:
+        - 96: Gewitter mit leichtem Hagel  -> True ("ja")
+        - 99: Gewitter mit starkem Hagel   -> True ("ja")
+        - 95: Gewitter ohne Hagel-Zusatzcode, jeder andere Code UND ein
+          fehlender Code -> ``None`` ("unbekannt")
+
+        Der WMO-Code kann Hagel nur BEJAHEN, nie VERNEINEN — deshalb wird hier
+        niemals ``False`` geliefert (Spec Known Limitation 1).
+        """
+        if weather_code in (96, 99):
+            return True
+        return None
+
     def _fetch_ensemble_spread(
         self,
         location: "Location",
@@ -825,6 +845,7 @@ class OpenMeteoProvider:
                     symbol=None,
                     thunder_level=self._parse_thunder_level(get_int("weather_code", i)),
                     wmo_code=get_int("weather_code", i),
+                    hail_flag=self._parse_hail_flag(get_int("weather_code", i)),
                     is_day=get_int("is_day", i),
                     dni_wm2=get_val("direct_normal_irradiance", i),
                     cape_jkg=get_val("cape", i),

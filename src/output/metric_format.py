@@ -368,3 +368,42 @@ def thunder_level_from_signals(
     if not signals:
         return None
     return max_thunder(signals)
+
+
+# ---------------------------------------------------------------------------
+# Hagel-Kennzeichen (#1475 S5a, Epic #1419)
+#
+# BEWUSST getrennt von der Gewitterstufe: Hagel ist ein dreiwertiges Flag
+# (ja/unbekannt/nein), keine vierstufige Leiter — deshalb KEIN Andocken an
+# `_thunder_level_from_ladder` und KEIN Eingang in `thunder_level_from_signals`
+# (Spec AC-3).
+# ---------------------------------------------------------------------------
+
+def hail_priority(values: Iterable[Optional[bool]]) -> Optional[bool]:
+    """Aggregiert Hagel-Kennzeichen nach der Prioritaet ja > unbekannt > nein.
+
+    Erwartet die ROHEN (nicht vorgefilterten) Werte — ein blosses
+    ``any()``/``max()`` waere bei einer Mischung aus ``True``/``None``/``False``
+    falsch (Spec Known Limitations Punkt 3). Eine leere Liste liefert ``None``
+    ("keine Aussage", nicht "nein").
+    """
+    vals = list(values)
+    if any(v is True for v in vals):
+        return True
+    if any(v is None for v in vals):
+        return None
+    if vals:
+        return False
+    return None
+
+
+def format_hail_note(hail_flag: Optional[bool]) -> Optional[str]:
+    """Der EINE gemeinsame Anzeige-Textbaustein fuer das Hagel-Kennzeichen
+    (Trip-/Compare-Mail-Renderer UND ``GEWITTER``-Kommando, #1481 DRY-Pflicht).
+
+    Rein deskriptiv, ohne Handlungsempfehlung (ADR-0007, Spec AC-8). Bei
+    "unbekannt"/"nein" gibt es KEINEN Zusatztext (kein Rauschen).
+    """
+    if hail_flag is True:
+        return "Hagel: ja"
+    return None

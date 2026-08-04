@@ -167,6 +167,16 @@ class ForecastDataPoint:
     # bedeutet "keine Aussage", nie "0%".
     thunder_probability_pct: Optional[int] = None
 
+    # Hagel als eigenes, rein deskriptives Kennzeichen (#1475 S5a, Epic #1419).
+    # BEWUSST dreiwertig und BEWUSST getrennt von `thunder_level`:
+    #   True  = "ja"        -- WMO-Code 96/99 bestaetigt Hagel
+    #   None  = "unbekannt" -- der WMO-Code kann Hagel nur BEJAHEN, nie
+    #                          VERNEINEN; Code 95, jeder andere Code UND ein
+    #                          fehlender Code landen hier
+    #   False = "nein"      -- in S5a strukturell unerreichbar, reserviert fuer
+    #                          S5b/S5c (DWD-Schwelle bzw. Meteo-France AROME)
+    hail_flag: Optional[bool] = None
+
     # Issue #435: Test-helper alias — some test helpers init with
     # `wind_dir_deg=` instead of `wind_direction_deg=`. We accept both;
     # __post_init__ canonicalises to wind_direction_deg.
@@ -427,6 +437,12 @@ class SegmentWeatherSummary:
 
     # Forecast confidence aggregation (Issue #121)
     confidence_pct_min: Optional[int] = None  # Min. Konfidenz ueber alle Stunden
+
+    # Hagel-Kennzeichen als Tages-/Etappen-Aggregat (#1475 S5a, Epic #1419).
+    # Aggregationsregel `hail_priority`: ja > unbekannt > nein — eine einzelne
+    # bestaetigte Hagelstunde darf nicht von umgebenden "unbekannt"-Stunden
+    # verdeckt werden. Semantik identisch zu ForecastDataPoint.hail_flag.
+    hail_flag: Optional[bool] = None
 
     # Metadata
     aggregation_config: dict[str, str] = field(default_factory=dict)

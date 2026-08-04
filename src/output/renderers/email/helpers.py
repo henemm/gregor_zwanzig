@@ -1588,16 +1588,27 @@ def _pill_for_metric(
             if thunder_ordinal(lvl) > thunder_ordinal(max_lvl):
                 max_lvl = lvl
                 peak_ts = dp.ts
+        # Issue #1475 S5a: Hagel ist ein eigenes, rein deskriptives Kennzeichen
+        # NEBEN der Gewitterstufe (nie ein Bestandteil davon, Spec AC-3). Der
+        # Zusatz erscheint nur bei "ja"; bei "unbekannt"/"nein" bleibt der Text
+        # zeichengleich zum bisherigen Stand (kein Rauschen, Spec AC-5).
+        # Call-time-Import auf den EINEN geteilten Textbaustein (#1481 DRY) --
+        # denselben, den `_fmt_gewitter()` nutzt.
+        from output.metric_format import format_hail_note, hail_priority
+        _hail_note = format_hail_note(
+            hail_priority([getattr(dp, "hail_flag", None) for dp in all_dps])
+        )
+        _hail_suffix = f" · {_hail_note}" if _hail_note else ""
         if first_thunder_ts is not None:
             first_hh = local_hour(first_thunder_ts, tz)
             peak_hh = local_hour(peak_ts or first_thunder_ts, tz)
-            return (f"Gewitter ab {first_hh:02d}:00 · stärkste {peak_hh:02d}:00",
-                    "ampel_red")
+            return (f"Gewitter ab {first_hh:02d}:00 · stärkste {peak_hh:02d}:00"
+                    f"{_hail_suffix}", "ampel_red")
         # Issue #1331: Ziel-Datenluecke (Ankunft->19 Uhr unbeobachtet) darf
         # keine positive Entwarnung "kein Gewitter" vortaeuschen.
         if has_gap:
-            return ("Gewitter ?", "ampel_yellow")
-        return ("kein Gewitter", "ampel_green")
+            return (f"Gewitter ?{_hail_suffix}", "ampel_yellow")
+        return (f"kein Gewitter{_hail_suffix}", "ampel_green")
 
     if metric_id == "visibility":
         # AC-8: gut → "Sicht min X km (HH:00)" statt "gute Sicht"

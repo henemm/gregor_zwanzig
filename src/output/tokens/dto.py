@@ -43,6 +43,10 @@ class DailyForecast:
     night_wind_chill_min_c: Optional[float] = None  # Nacht-Tiefst am Ziel, gefuehlt (FN)
     confidence_pct_min: Optional[int] = None  # Issue #121: worst-case daily confidence
     has_data_gap: bool = False  # Issue #1328: True -> "-" wird zu "?" (unbekannt)
+    # Issue #1475 S5a: Hagel-Kennzeichen des Tages (ja/unbekannt/nein). Additiv,
+    # Default None -> jeder Bestandsaufruf bleibt zeichengleich. NUR `True`
+    # erzeugt ueberhaupt ein sichtbares Zeichen (Suffix am `TH:`-Token).
+    hail_flag: Optional[bool] = None
 
 
 @dataclass(frozen=True)
