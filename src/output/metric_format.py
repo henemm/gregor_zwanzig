@@ -281,6 +281,37 @@ _LIGHTNING_LOW_MIN = 0.003
 _LIGHTNING_MED_MIN = 0.015
 _LIGHTNING_HIGH_MIN = 0.075
 
+# Blitzpotenzial-Schwellen (DWD ICON-D2/ICON-EU LPI, J/kg). Aeussere Grenzen
+# BELEGT: 5 J/kg = betrieblicher DWD-Schwellenwert (Blitz-ja/nein), 50 J/kg
+# = oberes Ende der publizierten Verifikationsspanne (dort ~90% Blitz-
+# wahrscheinlichkeit). Quellen: https://asr.copernicus.org/articles/19/29/2022/
+# und https://www.dwd.de/EN/ourservices/reports_on_icon/pdf_einzelbaende/2022_10.pdf
+# 20 J/kg ("leicht"->"mittel") ist NICHT publiziert, sondern innerhalb der
+# belegten Spanne interpoliert -- s. Spec Known Limitations.
+_LIGHTNING_POTENTIAL_LOW_MIN = 5.0
+_LIGHTNING_POTENTIAL_MED_MIN = 20.0
+_LIGHTNING_POTENTIAL_HIGH_MIN = 50.0
+
+
+def _thunder_level_from_ladder(
+    value: float, low_min: float, med_min: float, high_min: float,
+) -> ThunderLevel:
+    """Uebersetzt EINEN Messwert anhand einer Drei-Schwellen-Leiter in ein
+    ThunderLevel (>=high_min -> HIGH, >=med_min -> MED, >=low_min -> LOW,
+    sonst NONE). Geteilt von Blitzdichte UND Blitzpotenzial (Issue #1474c,
+    DRY-Pflicht #1481) -- jedes Signal bringt nur seine eigenen vier
+    Schwellenwerte mit, die Leiter selbst existiert genau einmal, damit ein
+    kuenftiges fuenftes Signal mit derselben Struktur andockt, ohne eine
+    weitere Kopie der if/elif-Kette zu erzeugen."""
+    if value >= high_min:
+        return ThunderLevel.HIGH
+    if value >= med_min:
+        return ThunderLevel.MED
+    if value >= low_min:
+        return ThunderLevel.LOW
+    return ThunderLevel.NONE
+
+
 def _cape_low_min_jkg() -> float:
     """CAPE-Schwelle fuer die Fusion — bewusst ENTKOPPELT von
     ``display_thresholds["cape"]`` (Anzeige-Ampel, Berg-kalibriert). Liest
@@ -296,17 +327,24 @@ def thunder_level_from_signals(
     wettercode_level: Optional[ThunderLevel],
     lightning_density: Optional[float],
     cape_jkg: Optional[float],
+    lightning_potential_jkg: Optional[float] = None,
 ) -> Optional[ThunderLevel]:
-    """Fusioniert Gewittersignale zu EINEM ``ThunderLevel`` (Issue #1474 Abschnitt 3).
+    """Fusioniert Gewittersignale zu EINEM ``ThunderLevel`` (Issue #1474 Abschnitt 3,
+    erweitert um Issue #1474c).
 
     Jedes Signal wird EIGENSTAENDIG uebersetzt (keine Sonderlogik fuer die
     Blitzdichte, damit ein kuenftiges Signal mit derselben Struktur andockt).
     Die Fusion liefert das schaerfste vorhandene Signal (``max_thunder()``
-    ueber die NICHT-``None``-Einzelsignale). Sind ALLE drei Signale ``None``,
+    ueber die NICHT-``None``-Einzelsignale). Sind ALLE vier Signale ``None``,
     liefert sie ``None`` ("keine Aussage" != "keine Gefahr", Spec AC-7).
 
     CAPE ist bei ``LOW`` gedeckelt und eskaliert NIE auf ``MED``/``HIGH``
     (misst Energie, kein Ereignis, Spec AC-6).
+
+    Das Blitzpotenzial (DWD ICON-D2/ICON-EU LPI, J/kg) ist das vierte Signal
+    seit Issue #1474c -- eigene Schwellentabelle (5/20/50 J/kg), weil es eine
+    andere Groesse auf einer anderen Skala ist als die Blitzdichte (#1419
+    Abs. 3.1, ADR-0025).
     """
     signals: list[ThunderLevel] = []
 
@@ -314,17 +352,18 @@ def thunder_level_from_signals(
         signals.append(wettercode_level)
 
     if lightning_density is not None:
-        if lightning_density >= _LIGHTNING_HIGH_MIN:
-            signals.append(ThunderLevel.HIGH)
-        elif lightning_density >= _LIGHTNING_MED_MIN:
-            signals.append(ThunderLevel.MED)
-        elif lightning_density >= _LIGHTNING_LOW_MIN:
-            signals.append(ThunderLevel.LOW)
-        else:
-            signals.append(ThunderLevel.NONE)
+        signals.append(_thunder_level_from_ladder(
+            lightning_density, _LIGHTNING_LOW_MIN, _LIGHTNING_MED_MIN, _LIGHTNING_HIGH_MIN,
+        ))
 
     if cape_jkg is not None:
         signals.append(ThunderLevel.LOW if cape_jkg >= _cape_low_min_jkg() else ThunderLevel.NONE)
+
+    if lightning_potential_jkg is not None:
+        signals.append(_thunder_level_from_ladder(
+            lightning_potential_jkg, _LIGHTNING_POTENTIAL_LOW_MIN,
+            _LIGHTNING_POTENTIAL_MED_MIN, _LIGHTNING_POTENTIAL_HIGH_MIN,
+        ))
 
     if not signals:
         return None

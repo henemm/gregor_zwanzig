@@ -270,18 +270,28 @@ _SIGNAL_ZU_FELD-Tabelle) sind bereits vorhanden und ausreichend.
     S2c hat den gemeinsamen Anschluss NICHT angefasst — nur Routing-
     Zeile und neue Provider-Klasse kamen hinzu.
 
-- **AC-10 (Abgrenzung, keine Stufenbildung, keine Ausgaben-Änderung):**
-  Given das Blitzpotenzial-Feld ist für einen ICON-EU-Datenpunkt gefüllt
-  / When Ausgaben gerendert werden (SMS, Trip-Briefing,
-  `thunder_level`-Berechnung) / Then bleiben diese Ausgaben
-  **unverändert** gegenüber dem Stand ohne ICON-EU — keine eigene
-  Einstufungs- oder Schwellenlogik entsteht in dieser Scheibe.
+- **AC-10 (HISTORISCH, abgelöst durch #1474c):** Given das
+  Blitzpotenzial-Feld ist für einen ICON-EU-Datenpunkt gefüllt / When
+  Ausgaben gerendert werden (SMS, Trip-Briefing, `thunder_level`-Berechnung)
+  / Then bleiben diese Ausgaben **unverändert** gegenüber dem Stand ohne
+  ICON-EU — keine eigene Einstufungs- oder Schwellenlogik entsteht in
+  dieser Scheibe.
   - Test: Ein Regressionstest rendert dieselbe Vorhersage einmal mit und
     einmal ohne gesetztes `lightning_potential_lpi_jkg` (ICON-EU-
     Herkunft) und vergleicht `thunder_level` sowie den gerenderten
     SMS-/Briefing-Text — beide müssen identisch sein. Gegenprobe: Fließt
     das Feld in eine bestehende Einstufungsfunktion ein, muss dieser
     Test rot werden (#1474, separate Scheibe, baut die Schwellenlogik).
+  - **Aufgehoben seit Issue #1474c (letzter Restpunkt zu Epic #1419,
+    2026-08-04):** `lightning_potential_lpi_jkg` fließt seit #1474c in die
+    Gewitterstufen-Fusion ein — für ICON-D2 UND ICON-EU, weil beide dasselbe
+    Feld befüllen (S2c-Entscheidung, s.o.). Die Aufhebung war für #1457 S2b
+    AC-8 in `feat_1474c_blitzpotenzial_stufen.md` dokumentiert, die
+    ICON-EU-Zwillingszusicherung hier wurde beim Erstellen dieser Spec
+    übersehen (Regressions-Fund, s. `feat_1474c_blitzpotenzial_stufen.md`
+    Changelog 2026-08-04). Der Nachweis, dass die Stufe sich jetzt SEHR WOHL
+    ändert, steht in
+    `tests/tdd/test_dwd_eu_thunder_signal_fetch.py::test_ac10_icon_eu_blitzpotenzial_wirkt_ueber_dieselbe_schwellenleiter_wie_icon_d2`.
 
 ## Known Limitations
 

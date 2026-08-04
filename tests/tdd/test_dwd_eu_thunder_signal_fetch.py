@@ -326,21 +326,42 @@ def test_ac5_zweiter_aufruf_auf_dieselbe_reihe_loest_keinen_zweiten_abruf_aus(
 
 
 # ---------------------------------------------------------------------------
-# AC-10 — keine Stufenbildung, keine Ausgaben-Aenderung in dieser Scheibe.
+# AC-10 — ABGELOEST durch #1474c: Blitzpotenzial wirkt jetzt auf die Stufe.
 # ---------------------------------------------------------------------------
+#
+# Die urspruengliche AC-10-Zusicherung dieser Scheibe ("keine Stufenbildung,
+# keine Ausgaben-Aenderung durch ICON-EU") ist seit Issue #1474c AUFGEHOBEN —
+# dieselbe Aufhebung, die #1474c bereits fuer S2b/ICON-D2 vornimmt (AC-8
+# dort), trifft zwangslaeufig auch ICON-EU, weil beide Quellen dasselbe Feld
+# `lightning_potential_lpi_jkg` befuellen (S2c-Entscheidung). Der Test prueft
+# deshalb seit #1474c das GEGENTEIL: ICON-EU-Blitzpotenzial wirkt ueber
+# dieselbe Schwellentabelle (5/20/50 J/kg) auf die Gewitterstufe wie
+# ICON-D2. Siehe docs/specs/modules/feat_1457_s2c_icon_eu_luekenfueller.md
+# AC-10 (dort als abgeloest vermerkt) und
+# docs/specs/modules/feat_1474c_blitzpotenzial_stufen.md (Dependencies,
+# Nachtrag 2026-08-04).
 
-def test_ac10_gewitterstufe_aendert_sich_durch_icon_eu_nicht(monkeypatch):
-    """AC-10: Given dieselbe Vorhersage einmal MIT ICON-EU-Blitzpotenzial und
-    einmal ohne jede Gewitterquelle, When beide ueber den regulaeren Weg
-    gebaut werden, Then sind die Gewitterstufen aller Datenpunkte identisch.
+def test_ac10_icon_eu_blitzpotenzial_wirkt_ueber_dieselbe_schwellenleiter_wie_icon_d2(
+    monkeypatch,
+):
+    """AC-10 (abgeloest durch #1474c): Given dieselbe Vorhersage einmal MIT
+    ICON-EU-Blitzpotenzial und einmal ohne jede Gewitterquelle, When beide
+    ueber den regulaeren Weg gebaut werden, Then unterscheiden sich die
+    Gewitterstufen -- und jeder Datenpunkt mit gesetztem Blitzpotenzial
+    traegt GENAU die Stufe, die dieselbe Leiter-Funktion
+    (`_thunder_level_from_ladder`, Schwellen 5/20/50 J/kg) fuer diesen Wert
+    liefert (#1474c AC-1/AC-2, dieselbe Tabelle wie fuer ICON-D2).
 
-    Diese Scheibe liefert nur Rohwerte; die Schwellenlogik baut #1474. Faengt
-    hier eine bestehende Einstufung an, das Feld mitzulesen, entstuenden zwei
-    konkurrierende Gewitter-Aussagen im selben Briefing (ADR-0025).
-    Ergaenzt den bestehenden Renderer-Nachweis
-    `test_thunder_raw_signals_do_not_change_outputs.py` (SMS/Stufe bei
-    gesetztem `lightning_potential_lpi_jkg`) um den Ende-zu-Ende-Weg.
+    Ergaenzt den Renderer-Nachweis
+    `test_thunder_raw_signals_do_not_change_outputs.py` (falls dessen Fall
+    unterhalb der LOW-Schwelle bleibt) um den Ende-zu-Ende-Weg fuer den
+    Fall, dass die Stufe sich sehr wohl aendert.
     """
+    from output.metric_format import (
+        _LIGHTNING_POTENTIAL_HIGH_MIN, _LIGHTNING_POTENTIAL_LOW_MIN,
+        _LIGHTNING_POTENTIAL_MED_MIN, _thunder_level_from_ladder,
+    )
+
     with hauptquelle_laeuft(monkeypatch, ABRUZZEN), eu_server(monkeypatch):
         mit = om.OpenMeteoProvider().fetch_forecast(ABRUZZEN, enrich_ensemble=False)
     with hauptquelle_laeuft(monkeypatch, ABRUZZEN):
@@ -356,9 +377,33 @@ def test_ac10_gewitterstufe_aendert_sich_durch_icon_eu_nicht(monkeypatch):
     assert all(dp.lightning_potential_lpi_jkg is None for dp in ohne.data), (
         "Der Gegenfall traegt trotzdem ein Blitzpotenzial"
     )
-    assert [dp.thunder_level for dp in mit.data] == [
+
+    treffer = [
+        dp for dp in mit.data
+        if dp.lightning_potential_lpi_jkg is not None
+        and dp.lightning_potential_lpi_jkg >= _LIGHTNING_POTENTIAL_LOW_MIN
+    ]
+    assert treffer, (
+        "Kein Datenpunkt traegt ein Blitzpotenzial ueber der LOW-Schwelle "
+        f"({_LIGHTNING_POTENTIAL_LOW_MIN} J/kg) -- die Aufzeichnung traegt "
+        "an dieser Koordinate ein echtes Gewitter (lpi 217,8), der Test "
+        "kann sonst nichts pruefen"
+    )
+    for dp in treffer:
+        erwartete_stufe = _thunder_level_from_ladder(
+            dp.lightning_potential_lpi_jkg, _LIGHTNING_POTENTIAL_LOW_MIN,
+            _LIGHTNING_POTENTIAL_MED_MIN, _LIGHTNING_POTENTIAL_HIGH_MIN,
+        )
+        assert dp.thunder_level == erwartete_stufe, (
+            f"Blitzpotenzial {dp.lightning_potential_lpi_jkg} J/kg (ICON-EU) "
+            f"liefert {dp.thunder_level!r} statt {erwartete_stufe!r} -- seit "
+            "#1474c muss ICON-EU ueber dieselbe Leiter wirken wie ICON-D2"
+        )
+
+    assert [dp.thunder_level for dp in mit.data] != [
         dp.thunder_level for dp in ohne.data
     ], (
-        "Die Gewitterstufen unterscheiden sich, sobald ICON-EU liefert — das "
-        "Blitzpotenzial fliesst in eine bestehende Einstufung ein"
+        "Die Gewitterstufen sind trotz ICON-EU-Blitzpotenzial identisch zum "
+        "Fall ohne jede Gewitterquelle -- das widerspricht #1474c, das "
+        "genau diese Aufhebung vornimmt (AC-1/AC-4)"
     )

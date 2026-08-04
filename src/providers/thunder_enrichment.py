@@ -83,8 +83,10 @@ def _bezugszeitpunkt(reihe: "NormalizedTimeseries") -> datetime:
 
 def _fuse_thunder_levels(data: list) -> None:
     """Issue #1474 Abschnitt 3: ergaenzt ``dp.thunder_level`` je Datenpunkt um
-    Blitzdichte- und CAPE-Signale (``thunder_level_from_signals()``,
-    ``metric_format.py`` -- dort wohnt die Skala, ADR-0025).
+    Blitzdichte-, CAPE- und Blitzpotenzial-Signale (``thunder_level_from_signals()``,
+    ``metric_format.py`` -- dort wohnt die Skala, ADR-0025). Blitzpotenzial
+    seit Issue #1474c; Hagel (``hail_potential_grau_gsp``) bleibt bewusst
+    aussen vor (S5/#1475).
 
     Ueberschreibt NUR, wenn die Fusion ein Ergebnis liefert -- liefert sie
     ``None`` ("keine Aussage"), bleibt ein bereits vorhandener Wert an
@@ -95,6 +97,7 @@ def _fuse_thunder_levels(data: list) -> None:
     for dp in data:
         fused = thunder_level_from_signals(
             dp.thunder_level, dp.lightning_density_per_km2_3h, dp.cape_jkg,
+            dp.lightning_potential_lpi_jkg,
         )
         if fused is not None:
             dp.thunder_level = fused
@@ -123,16 +126,19 @@ def enrich_thunder(
     ist nicht "keine Gefahr".
 
     Issue #1457 S2b: Quellen, die mehrere Signale getrennt und benannt liefern
-    (DWD: Blitzpotenzial/Hagel), fuellen ueber ``_SIGNAL_ZU_FELD`` eigene
-    Rohwert-Felder. Diese Rohwerte gehen BEWUSST nicht in die Stufen-Fusion
-    unten ein (S2b AC-8: keine Stufenbildung in dieser Scheibe).
+    (DWD: Blitzpotenzial/Hagelsignal), fuellen ueber ``_SIGNAL_ZU_FELD`` eigene
+    Rohwert-Felder. Das Blitzpotenzial geht seit #1474c zusaetzlich in die
+    Stufen-Fusion unten ein (S2b AC-8 ist damit fuer dieses Signal
+    aufgehoben). Das Hagelsignal bleibt weiterhin aussen vor -- das ist
+    S5/#1475.
 
-    Issue #1474 (AC-9): nach dem Fuellen von ``lightning_density_per_km2_3h``
-    wird zusaetzlich ``dp.thunder_level`` mit dem ueber Wettercode, Blitzdichte
-    UND CAPE fusionierten Ergebnis ueberschrieben -- EIN gemeinsamer
-    Anschluss, kein Sonderweg je Aufrufer (Trip/Ortsvergleich). Die Fusion
-    laeuft auch, wenn kein Gewitter-Anbieter fuer diesen Ort zustaendig ist
-    (dann bleibt die Blitzdichte leer, CAPE kann trotzdem "leicht" ausloesen).
+    Issue #1474 (AC-9), erweitert um #1474c: nach dem Fuellen von
+    ``lightning_density_per_km2_3h`` wird zusaetzlich ``dp.thunder_level`` mit
+    dem ueber Wettercode, Blitzdichte, CAPE UND Blitzpotenzial fusionierten
+    Ergebnis ueberschrieben -- EIN gemeinsamer Anschluss, kein Sonderweg je
+    Aufrufer (Trip/Ortsvergleich). Die Fusion laeuft auch, wenn kein
+    Gewitter-Anbieter fuer diesen Ort zustaendig ist (dann bleibt die
+    Blitzdichte leer, CAPE kann trotzdem "leicht" ausloesen).
     """
     if not reihe.data:
         return

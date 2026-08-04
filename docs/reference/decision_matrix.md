@@ -75,16 +75,17 @@ das schärfste vorhandene Ergebnis (`max_thunder()`).
 | Blitzdichte `lightning_density_per_km2_3h` | > 0,003 | ≥ 0,015 | ≥ 0,075 | FR/Korsika | ECMWF Forecast User Guide 8.1.13 (0,1 bzw. 0,5 Blitze/100 km²/h über 3 h) — 🔴 **die oberste Grenze ist NICHT publiziert**, dokumentierte Fortschreibung |
 | Gewitterenergie `cape_jkg` | ≥ 1000 | — **deckelt** | — | überall | `metric_catalog.py` `risk_thresholds["cape"]["medium"]`, deckt sich mit der NWS-Grenze zur „mäßigen Instabilität" |
 | Wettercode (WMO 95/96/99) | — | — | ✓ | überall | unverändert |
-| **DWD-Blitzpotenzial `lpi`** (J/kg) | **> 1** | **≥ 30** | **≥ 50** | DE/Alpen/AT | ⬜ **noch nicht angebunden** — #1457 S2b. COSMO-D2/ICON-D2-Verifikation (LPI > 1 trennt Blitz von kein Blitz), Prüfschwellen der Fachliteratur 30/40/50. 🔴 Nur die untere Grenze ist belastbar — an echten Messwerten gegenprüfen |
+| **DWD-Blitzpotenzial `lpi`** (J/kg) | **≥ 5** | **≥ 20** | **≥ 50** | DE/Alpen/AT + Rest-Europa (`eu_direct`) | ✅ **angebunden seit #1474c**. 5 J/kg = betrieblicher DWD-Schwellenwert (Blitz-ja/nein), 50 J/kg = oberes Ende der publizierten Verifikationsspanne (~90 % Blitzwahrscheinlichkeit) — [ASR 19, 29 (2022)](https://asr.copernicus.org/articles/19/29/2022/), [DWD ICON-Bericht 2022/10](https://www.dwd.de/EN/ourservices/reports_on_icon/pdf_einzelbaende/2022_10.pdf). 🔴 20 J/kg ("leicht"→"mittel") ist NICHT publiziert, sondern innerhalb der belegten Spanne interpoliert (PO-freigegeben 2026-08-04) |
 
 🔴 **CAPE deckelt bei „leicht" und eskaliert nie.** Es misst *verfügbare Energie*, kein
 Ereignis — ohne Auslöser passiert trotz hoher Werte nichts. „mittel"/„hoch" bleiben
 Signalen vorbehalten, die tatsächliche Blitzaktivität vorhersagen. CAPE ist zugleich die
 einzige Größe, die „leicht" **außerhalb Frankreichs** überhaupt erreichbar macht.
 
-**Für S2b und jede weitere Quelle:** Eine neue Größe dockt mit **einer Tabellenzeile**
-an — Provider füllt nur Felder, die Einstufung liest nur Felder (Konzept #1419
-Abschnitt 5). **Keine eigene Gewitter-Einstufung im Provider bauen.**
+**Für jede weitere Quelle (z. B. Hagel, S5/#1475):** Eine neue Größe dockt mit **einer
+Tabellenzeile** an — Provider füllt nur Felder, die Einstufung liest nur Felder (Konzept
+#1419 Abschnitt 5), wie beim Blitzpotenzial in #1474c geschehen. **Keine eigene
+Gewitter-Einstufung im Provider bauen.**
 
 **`None` ≠ `NONE`:** Liegt **kein** Signal vor, liefert die Fusion `None` („keine
 Aussage"). `ThunderLevel.NONE` bedeutet „mindestens ein Signal geprüft, unauffällig".
