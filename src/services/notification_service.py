@@ -519,6 +519,7 @@ class NotificationService:
         entities: list[tuple[str, list, list["WeatherChange"]]],
         effective_channels: set[str],
         mail_sink: Optional[object] = None,
+        location_positions: Optional[dict[str, int]] = None,
     ) -> NotificationResult:
         """Gebündelter Deviation-Alert-Versand für MEHRERE gleichzeitig
         betroffene Orte EINES Compare-Presets (Issue #1170, Adversary F001).
@@ -529,6 +530,11 @@ class NotificationService:
         Rendering/Versand bleiben geteilt).
 
         `entities`: `list[(location_name, points, changes)]`.
+
+        Issue #1467 S2 AG3b: `location_positions` (Ortsname → 1-basierte
+        Position in `preset["location_ids"]`) ist NEU und defaultiert — nur
+        der Ortsvergleich-Änderungspfad (`compare_alert.py`) setzt ihn und
+        bekommt dadurch die Orts-Zahlenkodierung in der Kurznachricht.
         """
         from utils.timezone import tz_for_coords
 
@@ -556,6 +562,7 @@ class NotificationService:
             radar_mode=False,
             alert_tz=alert_tz,
             telegram_groups=groups,
+            sms_location_positions=location_positions,
         )
 
     def send_multi_location_radar_alert(
@@ -1043,6 +1050,7 @@ class NotificationService:
         alert_tz: ZoneInfo,
         telegram_style: str = "rich",
         telegram_groups: Optional[list[tuple[str, list, object]]] = None,
+        sms_location_positions: Optional[dict[str, int]] = None,
     ) -> NotificationResult:
         """Versendet eine kanonische AlertMessage über die konfigurierten Kanäle.
 
@@ -1067,11 +1075,18 @@ class NotificationService:
         Ort auf (PO E2), statt der einen gebuendelten Nachricht. Alle
         anderen Aufrufer (Trip-Δ, Trip-Radar, Compare-Radar) lassen den
         Parameter auf `None` — ihr Verhalten bleibt unveraendert (AC-26).
+
+        Issue #1467 S2 AG3b: `sms_location_positions` ist die gleiche Mechanik
+        fuer die Kurznachricht — ebenfalls defaultiert, ebenfalls nur von
+        `send_multi_location_deviation_alert()` gesetzt. Ohne ihn bleibt der
+        SMS-Text der drei anderen Alarmwege byte-identisch.
         """
         subject = render_alert_subject(alert_msg)
         html, plain = render_alert_email(alert_msg)
         telegram_body = render_alert_telegram(alert_msg)
-        sms_body = render_alert_sms(alert_msg)
+        sms_body = render_alert_sms(
+            alert_msg, location_positions=sms_location_positions,
+        )
 
         if official_notices:
             from output.renderers.alert.official_alerts import (

@@ -582,10 +582,23 @@ def render_telegram(msg: AlertMessage) -> str:
     return "\n".join(lines)
 
 
-def _sms_token(e: AlertEvent) -> str:
+def _sms_token(
+    e: AlertEvent, location_positions: dict[str, int] | None = None,
+) -> str:
+    """Issue #1467 S2 AG3b: `location_positions` (Ortsname → 1-basierte Position
+    in `preset["location_ids"]`) ist ein NEUER, defaultierter Parameter. Ist er
+    gesetzt UND traegt das Ereignis ein `location_label` — das setzt
+    `to_multi_point_alert_message()` nur im gebuendelten Mehr-Orte-Fall
+    (`project.py:215`) —, wird die Ortsposition als ZAHL vorangestellt (PO E2:
+    Orte werden als Zahl gefuehrt, nicht ausgeschrieben). Ohne den Parameter
+    bleibt das Token byte-identisch zum bisherigen Verhalten (Trip-Δ,
+    Trip-Radar, Compare-Radar — AC-26-Zusicherung fuer SMS)."""
     sign = "+" if e.value_to >= e.value_from else "-"
     tok = f"{sign}{_code(e)}{int(round(e.value_to))}"
-    return tok + f"@{e.occurred_at[:2]}" if e.occurred_at else tok
+    if e.occurred_at:
+        tok = tok + f"@{e.occurred_at[:2]}"
+    pos = (location_positions or {}).get(e.location_label or "")
+    return f"{pos}:{tok}" if pos else tok
 
 
 def _render_sms_corridor_only(msg: AlertMessage, limit: int) -> str:
@@ -601,22 +614,48 @@ def _render_sms_corridor_only(msg: AlertMessage, limit: int) -> str:
     return body if len(body) <= limit else body[:limit]
 
 
-def render_sms(msg: AlertMessage, limit: int = 140) -> str:
+def render_sms(
+    msg: AlertMessage,
+    limit: int = 140,
+    location_positions: dict[str, int] | None = None,
+) -> str:
     """Längenbasierte Kürzung: Kopf immer; Tokens nach severity, solange das
-    Ergebnis inkl. evtl. ' +k'-Suffix ≤limit bleibt; Rest → ' +k'."""
+    Ergebnis inkl. evtl. ' +k'-Suffix ≤limit bleibt; Rest → ' +k'.
+
+    Issue #1467 S2 AG3b: `location_positions` ist NEU und defaultiert — ohne
+    ihn bleibt die Ausgabe byte-identisch (AC-26-Zusicherung fuer SMS). Gesetzt
+    wird er ausschliesslich vom Ortsvergleich-Änderungspfad; dort fuehrt er
+    (a) die Ortsposition als Zahl an jedem Ereignis-Token (`_sms_token`) und
+    (b) laesst den DOPPELTEN Ortslisten-Kopf entfallen: im Mehr-Orte-Fall
+    tragen `trip_short` UND `location_label` denselben `collective_label`
+    (`project.py:217-220`), die Ortsliste stand dadurch zweimal im Kopf. Sie
+    bleibt genau einmal stehen — als Schluessel, mit dem der Empfaenger die
+    Zahlen den Orten zuordnet — und zwar aus `location_label` (24-Zeichen-
+    Budget statt der 16 des `trip_short`, damit die Zuordnung nicht an einer
+    zu frueh abgeschnittenen Ortsliste scheitert).
+    """
     if msg.source is not None:
         return _render_sms_onset(msg, limit)
     if not msg.events and msg.corridor_events:
         return _render_sms_corridor_only(msg, limit)
     evs = _sorted(msg)
     trip = _ascii(msg.trip_short)[:16].rstrip(" (-_")
-    if msg.location_label:
+    # Nur der gebuendelte Mehr-Orte-Fall traegt per-Event-`location_label`
+    # (`project.py:215`); der Ein-Ort-Fall bleibt dadurch byte-identisch — auch
+    # dann, wenn eine Zuordnung uebergeben wurde. Der Wegfall des doppelten
+    # Kopfes haengt bewusst NICHT an `location_positions`: die Ortsliste stand
+    # im Mehr-Orte-Fall immer schon zweimal da, unabhaengig davon, ob der
+    # Aufrufer eine Positions-Zuordnung kennt.
+    multi_location = any(e.location_label for e in evs)
+    if multi_location:
+        head = f"{_ascii(msg.location_label or msg.trip_short)[:24]}: "
+    elif msg.location_label:
         head = f"{trip} {_ascii(msg.location_label)[:24]}: "
     else:
         a, b = km_span(msg.events)
         head = f"{trip} km{int(round(a))}-{int(round(b))}: "
     # Issue #1444 S1 (AC-6): Schwellen-Treffer-Tokens desselben Laufs mit.
-    tokens = [_sms_token(e) for e in evs] + [
+    tokens = [_sms_token(e, location_positions) for e in evs] + [
         _sms_corridor_token(ce) for ce in msg.corridor_events
     ]
 

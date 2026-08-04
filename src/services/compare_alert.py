@@ -23,6 +23,7 @@ from app.loader import compare_preset_to_dict, load_all_locations, load_compare_
 from services import alert_daily_limit, alert_log
 from services.alert_preset import _PRESET_TABLE
 from services.alert_state import AlertStateService
+from services.compare_alert_channels import effective_compare_channels
 from services.compare_location_weather_source import CompareLocationWeatherSource
 from services.compare_weather_snapshot import CompareWeatherSnapshotService
 from services.deviation_alert_engine import DeviationAlertEngine
@@ -162,6 +163,7 @@ class CompareAlertService:
                 entities=entities,
                 effective_channels=config.channels,
                 mail_sink=self._mail_sink,
+                location_positions=self._location_positions(location_ids, all_locations),
             )
             # Issue #1459: der Ortsvergleich protokollierte bisher gar nicht
             # (B1). Seit #1467 S1 traegt der Eintrag die Preset-Kennung im
@@ -186,6 +188,25 @@ class CompareAlertService:
             sent += 1
 
         return sent
+
+    @staticmethod
+    def _location_positions(location_ids: list[str], all_locations: dict) -> dict[str, int]:
+        """Ortsname → 1-basierte Position in der KONFIGURIERTEN Ortsliste des
+        Presets (Issue #1467 S2 AG3b, PO E2).
+
+        Quelle der Reihenfolge ist ausdruecklich `preset["location_ids"]` und
+        NICHT die Trefferreihenfolge — dieselbe Reihenfolge, in der die
+        Vergleichs-E-Mail ihre Ortsspalten fuehrt. Die Zuordnung deckt ALLE
+        Orte des Presets ab, auch die, die diesmal nicht ausgeloest haben:
+        sonst verschoeben sich die Zahlen von Lauf zu Lauf. Nicht aufloesbare
+        Orts-Kennungen behalten ihre Position (sie zaehlen in der Liste mit),
+        tragen aber keinen Namen bei."""
+        positions: dict[str, int] = {}
+        for index, location_id in enumerate(location_ids, start=1):
+            loc = all_locations.get(location_id)
+            if loc is not None:
+                positions[loc.name] = index
+        return positions
 
     def _detect_triggered_locations(
         self, preset_id: str, location_ids: list[str], all_locations: dict, config
@@ -254,7 +275,14 @@ class CompareAlertService:
 
     def _build_eval_config(self, preset: dict, cooldown_minutes) -> AlertEvaluationConfig:
         """B2-Defaults, vorwärtskompatible Overrides via `preset.get(feld, DEFAULT)`.
-        Kanal ist IMMER `{"email"}` — Compare-Versand ist heute E-Mail-only.
+
+        Issue #1467 S2 AG4: die Kanalliste war hier fest `{"email"}` verdrahtet —
+        der Telegram-/SMS-Schalter im Alarme-Tab (`AlertChannelPicker`,
+        `AlarmeTab.svelte:295`) war dadurch wirkungslos. Jetzt entscheidet der
+        EINE Compare-Kanal-Resolver aus AG1 (`compare_alert_channels.py`,
+        ADR-0021) — dieselbe Fassung, die `compare_official_alert.py` und
+        `scheduler_dispatch_service.py` schon nutzen; dies ist ihr dritter
+        Aufrufer, keine vierte Kopie.
 
         Bug #1191: `display_config` wird jetzt IMMER durchgereicht (analog
         Trip-Pfad `trip_alert.py:191`) — aus `active_metrics` (Summary-Keys)
@@ -269,7 +297,7 @@ class CompareAlertService:
                 (preset.get("display_config") or {}).get("metric_alert_levels")
                 or _STANDARD_METRIC_LEVELS
             ),
-            channels={"email"},
+            channels=effective_compare_channels(preset, self._settings, self._user_id),
             display_config=self._display_config_from_active_metrics(preset),
         )
 

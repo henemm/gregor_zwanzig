@@ -11,7 +11,10 @@ zweiten Consumer. Alle Tests folgen der Projektregel „keine Mocks" (CLAUDE.md)
 - Echte IMAP-Zustellung ins Stalwart-Test-Postfach `gregor-test@henemm.com`
   (Vorbild `test_773_alert_e2e.py::_imap_has_subject_token`).
 - Echter lokaler Telegram-HTTP-Sink (echtes Socket, kein `unittest.mock`) —
-  beweist, dass Compare-Alerts NIE Telegram bedienen (E-Mail-only, B2).
+  beweist, dass ein Preset OHNE Telegram-Opt-in Telegram nicht bedient.
+  (Bis #1467 S2 AG4 war das eine Systemeigenschaft: Compare-Alerts waren fest
+  E-Mail-only. Seither entscheidet das Preset-Feld `send_telegram` — die
+  Presets dieser Datei setzen es nicht, also bleibt Telegram stumm.)
 - Wo Determinismus für zwei aufeinanderfolgende Läufe (AC-2/AC-6) nötig ist,
   wird ein `weather_source`-Konstruktor-Seam auf `CompareAlertService`
   angenommen (analog zum bestehenden `radar_service`-/`mail_sink`-Seam auf
@@ -591,8 +594,13 @@ def test_ac6_cooldown_and_state_dedup_suppress_repeat_email_only_channel(telegra
     """AC-6: nach einem ausgelösten Alarm (Default-Cooldown 120 Min)
     unterdrückt ein zweiter Lauf innerhalb des Cooldown-Fensters den
     erneuten Versand; Alert-State-Dedup ist zusätzlich belegt; zu keinem
-    Zeitpunkt wird Telegram/SMS bedient (E-Mail-only, B2), obwohl Telegram
-    technisch konfiguriert ist.
+    Zeitpunkt wird Telegram/SMS bedient — nicht weil Compare-Alerts E-Mail-only
+    wären (das galt bis #1467 S2 AG4), sondern weil DIESES Preset kein
+    Kanal-Opt-in trägt: `send_telegram`/`send_sms` fehlen im Preset-Dict, und
+    ein fehlender Schlüssel gilt nie als „an" (Resolver
+    `compare_alert_channels.effective_compare_channels`, Spec-Risiko R4).
+    Telegram ist dabei technisch konfiguriert — es scheitert also am Opt-in,
+    nicht an der Fähigkeit.
 
     RED: `services.compare_alert` / `services.compare_weather_snapshot`
     existieren noch nicht (ImportError).
@@ -641,9 +649,12 @@ def test_ac6_cooldown_and_state_dedup_suppress_repeat_email_only_channel(telegra
         state = AlertStateService(user_id=uid).load(f"{preset_id}:loc-cd")
         assert state, "alert_state-Eintrag fehlt nach dem ersten Alarm"
 
-        # Zu keinem Zeitpunkt Telegram bedient, obwohl technisch konfiguriert.
+        # Zu keinem Zeitpunkt Telegram bedient, obwohl technisch konfiguriert:
+        # dieses Preset hat kein `send_telegram`-Opt-in. Seit #1467 S2 AG4
+        # bewacht diese Zeile AC-11 — ein fehlender Preset-Schlüssel darf nie
+        # als eingeschalteter Kanal gelten.
         assert telegram_sink.send_count() == 0, (
-            "Compare-Alerts sind E-Mail-only (B2-Default) — Telegram wurde dennoch bedient"
+            "Dieses Preset hat kein `send_telegram`-Opt-in — Telegram wurde dennoch bedient"
         )
     finally:
         _clean_user(uid)
