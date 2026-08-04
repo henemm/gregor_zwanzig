@@ -54,6 +54,16 @@
         ]
       },
       {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/touched_tests_gate.py\"",
+            "timeout": 600
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit",
         "hooks": [
           {
